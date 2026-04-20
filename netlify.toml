@@ -1,6 +1,6 @@
 [build]
   base = "desafio-gut"
-  command = "npm install --no-package-lock && npm run build"
+  command = "npm install --legacy-peer-deps && npm run build"
   publish = "dist"
 
 [build.environment]
