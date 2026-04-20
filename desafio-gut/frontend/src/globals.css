@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* ── Design Tokens extraídos das referências visuais ──────────────────────── */
+@theme {
+  /* Paleta base */
+  --color-gut-bg:          #04080f;
+  --color-gut-surface:     #08122480;
+  --color-gut-surface-2:   #0d1e37;
+  --color-gut-border:      rgba(0,212,170,0.18);
+  --color-gut-border-dim:  rgba(255,255,255,0.06);
+
+  /* Accent cripto (teal-green das refs) */
+  --color-gut-primary:     #00d4aa;
+  --color-gut-primary-dim: rgba(0,212,170,0.22);
+
+  /* Gold das refs (Brazino / Br4Bet) */
+  --color-gut-gold:        #f5a623;
+  --color-gut-gold-dim:    rgba(245,166,35,0.22);
+
+  /* Estados */
+  --color-gut-success:     #00c853;
+  --color-gut-danger:      #ff3d71;
+  --color-gut-warning:     #f97316;
+
+  /* Tipografia */
+  --color-gut-text:        #eef4ff;
+  --color-gut-muted:       #4a6080;
+
+  /* Shadcn compat */
+  --color-background:      #04080f;
+  --color-foreground:      #eef4ff;
+  --color-card:            #08122499;
+  --color-card-foreground: #eef4ff;
+  --color-border:          rgba(0,212,170,0.18);
+  --color-primary:         #00d4aa;
+  --color-primary-foreground: #04080f;
+  --color-muted:           #0d1e37;
+  --color-muted-foreground:#4a6080;
+  --color-destructive:     #ff3d71;
+  --color-accent:          #00d4aa;
+  --radius-card:           1rem;
+
+  /* Animações */
+  --animate-beam:          gut-beam 2.6s ease-in-out infinite;
+  --animate-glow-pulse:    gut-glow-pulse 2.2s ease-in-out infinite;
+  --animate-danger-pulse:  gut-danger-pulse 0.65s ease-in-out infinite;
+  --animate-gold-pulse:    gut-gold-pulse 2s ease-in-out infinite;
+}
+
+/* ── Keyframes ────────────────────────────────────────────────────────────── */
+@keyframes gut-beam {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes gut-glow-pulse {
+  0%,100% { box-shadow: 0 0 18px 2px rgba(0,212,170,0.22), inset 0 1px 0 rgba(255,255,255,0.06); }
+  50%      { box-shadow: 0 0 38px 8px rgba(0,212,170,0.48), inset 0 1px 0 rgba(255,255,255,0.10); }
+}
+
+@keyframes gut-gold-pulse {
+  0%,100% { box-shadow: 0 0 22px 4px rgba(245,166,35,0.30); }
+  50%      { box-shadow: 0 0 45px 12px rgba(245,166,35,0.60); }
+}
+
+@keyframes gut-danger-pulse {
+  0%,100% {
+    text-shadow: 0 0 8px #ff3d71, 0 0 18px #ff3d71;
+    transform: scale(1);
+  }
+  50% {
+    text-shadow: 0 0 22px #ff3d71, 0 0 44px #ff3d71aa;
+    transform: scale(1.06);
+  }
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--color-gut-bg);
+  color: var(--color-gut-text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Noise overlay ───────────────────────────────────────────────────────── */
+.gut-noise::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.032;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}

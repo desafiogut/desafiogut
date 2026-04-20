@@ -1,0 +1,1 @@
+const ethers = require('ethers'); require('dotenv').config(); async function main() { console.log('Preparando entrega do contrato...'); } main();

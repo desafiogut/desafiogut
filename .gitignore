@@ -1,0 +1,28 @@
+# ── Dependências ──────────────────────────────────────────────
+node_modules/
+
+# ── Build outputs ─────────────────────────────────────────────
+dist/
+artifacts/
+cache/
+typechain-types/
+
+# ── Variáveis de ambiente — NUNCA commitar ─────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+
+# ── Vercel (legado) ────────────────────────────────────────────
+.vercel/
+
+# ── Claude Code ───────────────────────────────────────────────
+.claude/
+
+# ── Sistema operacional ────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+npm-debug.log*
