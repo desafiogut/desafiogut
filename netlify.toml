@@ -1,4 +1,3 @@
 [build]
-base = 'frontend'
-command = 'npm install --legacy-peer-deps && npm run build'
-publish = 'dist'
+command = 'cd desafio-gut/frontend && npm install --legacy-peer-deps && npm run build'
+publish = 'desafio-gut/frontend/dist'
