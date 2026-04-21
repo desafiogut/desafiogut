@@ -16,12 +16,12 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-  },
-  headers: {
-    "Content-Security-Policy":
-      "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' http://127.0.0.1:8545 https://eth-sepolia.g.alchemy.com; style-src 'self' 'unsafe-inline' https://cdn.iubenda.com;",
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
+    headers: {
+      "Content-Security-Policy":
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://privy.io https://*.privy.io; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://privy.io https://*.privy.io; frame-src https://privy.io https://*.privy.io https://accounts.google.com; connect-src 'self' http://127.0.0.1:8545 https://privy.io https://*.privy.io wss://*.privy.io https://auth.privy.io https://telemetry.privy.io https://api.privy.io https://eth-sepolia.g.alchemy.com https://rpc.sepolia.org; worker-src blob:; object-src 'none'; base-uri 'self';",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+    },
   },
 });
