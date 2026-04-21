@@ -1,7 +1,7 @@
 [build]
-  base    = "desafio-gut/frontend"
+  base    = "frontend"
   command = "npm install --legacy-peer-deps && npm run build"
-  publish = "desafio-gut/frontend/dist"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
