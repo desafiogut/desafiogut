@@ -1,25 +1,4 @@
 [build]
-  base    = "frontend"
-  command = "npm install --legacy-peer-deps && npm run build"
-  publish = "dist"
-
-[build.environment]
-  NODE_VERSION = "20"
-
-# ── SPA routing ───────────────────────────────────────────────────────────────
-[[redirects]]
-  from   = "/*"
-  to     = "/index.html"
-  status = 200
-
-# ── Security headers ──────────────────────────────────────────────────────────
-[[headers]]
-  for = "/*"
-
-  [headers.values]
-    X-Content-Type-Options = "nosniff"
-    X-Frame-Options        = "DENY"
-    Referrer-Policy        = "strict-origin-when-cross-origin"
-    Permissions-Policy     = "camera=(), microphone=(), geolocation=()"
-
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://privy.io https://*.privy.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://privy.io https://*.privy.io https://*.walletconnect.com; frame-src https://privy.io https://*.privy.io https://accounts.google.com https://verify.walletconnect.com https://verify.walletconnect.org; connect-src 'self' https://privy.io https://*.privy.io wss://*.privy.io https://auth.privy.io https://telemetry.privy.io https://api.privy.io https://eth-sepolia.g.alchemy.com https://rpc.sepolia.org https://sepolia.infura.io https://*.infura.io https://ethereum-sepolia.publicnode.com wss://relay.walletconnect.com wss://www.walletlink.org https://*.walletconnect.com; worker-src blob:; object-src 'none'; base-uri 'self';"
+base = 'frontend'
+publish = 'dist'
+command = 'npm install --legacy-peer-deps && npm run build'
