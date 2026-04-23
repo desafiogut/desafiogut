@@ -16,10 +16,25 @@ const MOCK_MODE    = import.meta.env.VITE_MOCK_MODE === "true";
 const EDICAO_ATIVA = "R-1";
 const LS_LANCES    = "gut_lances_r1";
 
-// Durações por tipo de leilão (segundos)
+// Durações por tipo — Art. 8 do regulamento
 const DURACAO = {
-  flash:      MOCK_MODE ? 30  : 300,   // 5 min real | 30s mock
-  programado: MOCK_MODE ? 60  : 1800,  // 30 min real | 60s mock
+  flash:      MOCK_MODE ? 30  : 300,    // Relâmpago: 5 min
+  programado: MOCK_MODE ? 60  : 1800,   // Programado: 30 min
+};
+
+// Paleta azul marinho — Grupo União e Trabalho
+const COR = {
+  primary:    "#2563eb",
+  primaryDim: "rgba(37,99,235,0.18)",
+  gold:       "#f5a623",
+  bg:         "#030f24",
+  surface:    "rgba(8,30,64,0.82)",
+  text:       "#e8f0fe",
+  muted:      "#4a6490",
+  success:    "#10b981",
+  danger:     "#ef4444",
+  warning:    "#f97316",
+  blue300:    "#93c5fd",
 };
 
 const LANCES_MOCK = [
@@ -37,7 +52,7 @@ function Confetti() {
       left:     `${Math.random() * 100}%`,
       delay:    `${(Math.random() * 2.5).toFixed(2)}s`,
       duration: `${(1.8 + Math.random() * 2).toFixed(2)}s`,
-      color:    ["#fbbf24","#fcd34d","#6ee7b7","#f97316","#ffffff","#a78bfa","#f472b6"][i % 7],
+      color:    ["#fbbf24","#93c5fd","#6ee7b7","#f97316","#ffffff","#a78bfa","#f472b6"][i % 7],
       size:     `${6 + Math.floor(Math.random() * 9)}px`,
       rotate:   `${Math.floor(Math.random() * 360)}deg`,
     }))
@@ -88,15 +103,15 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada }) {
       `}</style>
       <div style={{
         position: "fixed", inset: 0, zIndex: 10000,
-        background: "rgba(0,0,0,0.88)", backdropFilter: "blur(6px)",
+        background: "rgba(0,0,0,0.90)", backdropFilter: "blur(6px)",
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: "1rem",
       }}>
         <div style={{
-          background: "linear-gradient(135deg,#1a1200 0%,#0f172a 60%)",
+          background: "linear-gradient(135deg,#0a1628 0%,#0f172a 60%)",
           border: "2px solid #fbbf24", borderRadius: "20px",
           padding: "2.5rem 2rem", maxWidth: "480px", width: "100%",
-          textAlign: "center", color: "#e2e8f0",
+          textAlign: "center", color: "#e8f0fe",
           animation: "gut-gold-pulse 2s ease-in-out infinite, gut-slide-up 0.5s ease-out both",
         }}>
           <div style={{ fontSize: "3.5rem", lineHeight: 1 }}>🏆</div>
@@ -105,20 +120,21 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada }) {
             LEILÃO ENCERRADO
           </h2>
           <p style={{ margin: "0 0 1.5rem", color: "#94a3b8", fontSize: "0.9rem" }}>
-            Edição <strong style={{ color: "#6ee7b7" }}>{EDICAO_ATIVA}</strong>
-            {" · "}{tipoLeilao === "flash" ? "⚡ Flash" : "🎫 Programado"}
+            <strong style={{ color: COR.blue300 }}>Desafio Gut</strong>
+            {" · Edição "}<strong style={{ color: COR.blue300 }}>{EDICAO_ATIVA}</strong>
+            {" · "}{tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
             {" · "}Menor Lance Único
           </p>
 
           {vencedor ? (
             <div style={{
-              background: "#0f2a1e", border: "1px solid #6ee7b7",
+              background: "#0a1e38", border: `1px solid ${COR.blue300}`,
               borderRadius: "12px", padding: "1.25rem", marginBottom: "1.5rem",
             }}>
               <p style={{ margin: "0 0 0.4rem", fontSize: "0.78rem", color: "#64748b",
                 textTransform: "uppercase", letterSpacing: "0.08em" }}>Carteira Vencedora</p>
               <p style={{ margin: "0 0 0.75rem", fontFamily: "monospace",
-                fontSize: "0.95rem", color: "#e2e8f0", wordBreak: "break-all" }}>
+                fontSize: "0.95rem", color: "#e8f0fe", wordBreak: "break-all" }}>
                 {enderecoAbrev}
               </p>
               <p style={{ margin: 0, fontSize: "2rem", fontWeight: "900",
@@ -126,7 +142,7 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada }) {
                 {valorFmt}
               </p>
               {MOCK_MODE && (
-                <p style={{ margin: "0.5rem 0 0", fontSize: "0.72rem", color: "#f97316" }}>
+                <p style={{ margin: "0.5rem 0 0", fontSize: "0.72rem", color: COR.warning }}>
                   🧪 Simulação MOCK — sem validade on-chain
                 </p>
               )}
@@ -158,8 +174,8 @@ export default function App() {
   // ── Consentimento LGPD ──────────────────────────────────────────────────────
   const [consentimentoAceito, setConsentimentoAceito] = useState(false);
 
-  // ── Tipo de leilão ──────────────────────────────────────────────────────────
-  const [tipoLeilao, setTipoLeilao] = useState("flash"); // 'flash' | 'programado'
+  // ── Tipo de leilão (Art. 8) ─────────────────────────────────────────────────
+  const [tipoLeilao, setTipoLeilao] = useState("flash");
 
   // ── Lances ──────────────────────────────────────────────────────────────────
   const [lances, setLances] = useState(() => {
@@ -169,20 +185,21 @@ export default function App() {
     } catch { return LANCES_MOCK; }
   });
 
-  // ── Timer: inicia sempre com a duração correta para o tipo ──────────────────
+  // ── Timer ────────────────────────────────────────────────────────────────────
   const [prazoTimestamp, setPrazoTimestamp] = useState(
     () => Math.floor(Date.now() / 1000) + DURACAO.flash
   );
-  const [encerrado,    setEncerrado]   = useState(false);
-  const [showOverlay,  setShowOverlay] = useState(false);
-  const [tempoRestante, setTempoRestante] = useState(DURACAO.flash);
+  const [encerrado,     setEncerrado]      = useState(false);
+  const [showOverlay,   setShowOverlay]    = useState(false);
+  const [tempoRestante, setTempoRestante]  = useState(DURACAO.flash);
+  const [lightningActive, setLightningActive] = useState(false);
 
-  // ── Carteiras internas (saldo beta) ─────────────────────────────────────────
+  // ── Carteiras internas (Art. 20: R$ 2,00/senha) ─────────────────────────────
   const [carteiraFlash,     setCarteiraFlash]     = useState(() => getCarteiraFlash());
   const [fichasProgramadas, setFichasProgramadas] = useState(() => getFichasProgramadas());
   const [erroCarteira,      setErroCarteira]      = useState("");
 
-  // ── Privy ────────────────────────────────────────────────────────────────────
+  // ── Privy ─────────────────────────────────────────────────────────────────
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { wallets } = useWallets();
 
@@ -202,7 +219,7 @@ export default function App() {
     user?.apple?.email  ||
     null;
 
-  // ── Vencedor (Menor Lance Único) — algoritmo puro client-side ───────────────
+  // ── Vencedor — Menor Lance Único (Art. 11) ──────────────────────────────────
   const vencedor = [...lances]
     .filter((l) => !l.repetido)
     .sort((a, b) => a.valor - b.valor)[0] ?? null;
@@ -213,7 +230,7 @@ export default function App() {
     catch {}
   }, [lances]);
 
-  // ── Consentimento (sessionStorage) ─────────────────────────────────────────
+  // ── Consentimento ───────────────────────────────────────────────────────────
   useEffect(() => {
     try {
       const salvo = sessionStorage.getItem("gut_consentimento");
@@ -224,24 +241,30 @@ export default function App() {
     } catch { sessionStorage.removeItem("gut_consentimento"); }
   }, []);
 
-  // ── Reset do timer ao trocar tipo de leilão ─────────────────────────────────
+  // ── Reset timer ao trocar tipo (Art. 8) ────────────────────────────────────
   useEffect(() => {
-    const duracao = DURACAO[tipoLeilao];
-    const novo    = Math.floor(Date.now() / 1000) + duracao;
+    const dur = DURACAO[tipoLeilao];
+    const novo = Math.floor(Date.now() / 1000) + dur;
     setPrazoTimestamp(novo);
     setEncerrado(false);
     setShowOverlay(false);
-    setTempoRestante(duracao);
+    setTempoRestante(dur);
+    setLightningActive(false);
   }, [tipoLeilao]);
 
-  // ── Timer regressivo ────────────────────────────────────────────────────────
+  // ── Timer regressivo + efeito relâmpago ─────────────────────────────────────
   useEffect(() => {
     const tick = () => {
       const restante = Math.max(0, prazoTimestamp - Math.floor(Date.now() / 1000));
       setTempoRestante(restante);
       if (restante === 0) {
         setEncerrado(true);
-        setShowOverlay(true);
+        // Dispara efeito relâmpago antes do overlay
+        setLightningActive(true);
+        setTimeout(() => {
+          setLightningActive(false);
+          setShowOverlay(true);
+        }, 1200);
       }
     };
     tick();
@@ -249,19 +272,19 @@ export default function App() {
     return () => clearInterval(id);
   }, [prazoTimestamp]);
 
-  // ── Formatação do timer ─────────────────────────────────────────────────────
+  // ── Timer display ───────────────────────────────────────────────────────────
   const timerDisplay = (() => {
     const m = String(Math.floor(tempoRestante / 60)).padStart(2, "0");
     const s = String(tempoRestante % 60).padStart(2, "0");
     return `${m}:${s}`;
   })();
 
-  const duracao      = DURACAO[tipoLeilao];
-  const timerCor     = encerrado ? "#ff3d71"
-    : tempoRestante <= 5         ? "#ff3d71"
-    : tempoRestante <= 15        ? "#f97316"
-    : tipoLeilao === "flash"     ? "#fbbf24"
-    : "#00d4aa";
+  const duracao     = DURACAO[tipoLeilao];
+  const timerCor    = encerrado ? COR.danger
+    : tempoRestante <= 5        ? COR.danger
+    : tempoRestante <= 15       ? COR.warning
+    : tipoLeilao === "flash"    ? COR.gold
+    : COR.primary;
   const timerPctDeg  = encerrado ? 0 : (tempoRestante / duracao) * 360;
   const timerUrgente = !encerrado && tempoRestante <= 5 && tempoRestante > 0;
 
@@ -295,10 +318,7 @@ export default function App() {
       setMockAddress("0xDEAD00000000000000000000000000000000BEEF");
       return;
     }
-    if (!ready) {
-      console.warn("Privy ainda carregando...");
-      return;
-    }
+    if (!ready) { console.warn("Privy ainda carregando..."); return; }
     login();
   }
 
@@ -322,12 +342,13 @@ export default function App() {
   // ── Nova Rodada ─────────────────────────────────────────────────────────────
   function handleNovaRodada() {
     localStorage.removeItem(LS_LANCES);
-    const duracao = DURACAO[tipoLeilao];
-    const novo    = Math.floor(Date.now() / 1000) + duracao;
+    const dur = DURACAO[tipoLeilao];
+    const novo = Math.floor(Date.now() / 1000) + dur;
     setPrazoTimestamp(novo);
     setEncerrado(false);
     setShowOverlay(false);
-    setTempoRestante(duracao);
+    setTempoRestante(dur);
+    setLightningActive(false);
     setLances(LANCES_MOCK);
   }
 
@@ -337,15 +358,12 @@ export default function App() {
       <style>{`
         body { margin: 0; }
         .gut-noise::before {
-          content: '';
-          position: fixed; inset: 0;
-          pointer-events: none; z-index: 0; opacity: 0.045;
+          content: ''; position: fixed; inset: 0;
+          pointer-events: none; z-index: 0; opacity: 0.028;
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
           background-repeat: repeat;
         }
-        @keyframes gut-danger-pulse {
-          0%,100% { opacity: 1; } 50% { opacity: 0.4; }
-        }
+        @keyframes gut-danger-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
         .gut-btn-tipo {
           padding: 0.28rem 0.7rem; border-radius: 16px; border: 1px solid;
           font-size: 0.72rem; font-weight: 700; cursor: pointer;
@@ -368,31 +386,38 @@ export default function App() {
 
         {/* ── Header ── */}
         <header style={estilos.header}>
+          {/* Logo + Guto placeholder */}
           <div style={estilos.logo}>
             <span style={{ fontSize: "2rem" }}>🏆</span>
+            {/* Placeholder mascote Guto */}
+            <div style={estilos.gutoPh} title="Guto — mascote Desafio Gut (em breve)">
+              <span style={{ fontSize: "1.4rem" }}>🦁</span>
+            </div>
             <div>
-              <h1 style={estilos.logoTitulo}>DESAFIOGUT</h1>
-              <p style={estilos.logoSub}>Menor Lance Único · Beta Interno</p>
+              <h1 style={estilos.logoTitulo}>Desafio Gut</h1>
+              <p style={estilos.logoSub}>E-commerce através de Dropshipping</p>
             </div>
           </div>
 
-          {/* Timer circular */}
+          {/* Timer circular com efeito relâmpago */}
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-            <p style={{ margin: 0, fontSize: "0.62rem", color: "#4a6080",
+            <p style={{ margin: 0, fontSize: "0.62rem", color: COR.muted,
               textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              {encerrado ? "encerrado" : tipoLeilao === "flash" ? "⚡ flash" : "🎫 programado"}
+              {encerrado ? "encerrado" : tipoLeilao === "flash" ? "⚡ relâmpago" : "🎫 programado"}
             </p>
-            <div style={{
-              position: "relative", width: "90px", height: "90px",
-              borderRadius: "50%",
-              background: `conic-gradient(${timerCor} ${timerPctDeg}deg, rgba(255,255,255,0.04) ${timerPctDeg}deg)`,
-              padding: "4px",
-              boxShadow: `0 0 ${timerUrgente ? "28px" : "12px"} ${timerCor}${timerUrgente ? "aa" : "44"}`,
-              transition: "box-shadow 0.6s",
-            }}>
+            <div
+              className={lightningActive ? "gut-lightning-active" : ""}
+              style={{
+                position: "relative", width: "90px", height: "90px",
+                borderRadius: "50%",
+                background: `conic-gradient(${timerCor} ${timerPctDeg}deg, rgba(255,255,255,0.04) ${timerPctDeg}deg)`,
+                padding: "4px",
+                boxShadow: `0 0 ${timerUrgente ? "28px" : "12px"} ${timerCor}${timerUrgente ? "aa" : "44"}`,
+                transition: "box-shadow 0.6s",
+              }}>
               <div style={{
                 width: "100%", height: "100%", borderRadius: "50%",
-                background: "#04080f",
+                background: COR.bg,
                 display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", gap: "1px",
               }}>
@@ -404,7 +429,7 @@ export default function App() {
                 }}>
                   {timerDisplay}
                 </span>
-                <span style={{ fontSize: "0.48rem", color: "#4a6080", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                <span style={{ fontSize: "0.48rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                   {encerrado ? "fim" : "min:seg"}
                 </span>
               </div>
@@ -426,7 +451,7 @@ export default function App() {
                 <span style={estilos.dot} />
                 <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
                   {userLabel && (
-                    <span style={{ fontSize: "0.72rem", color: "#6ee7b7", fontWeight: "700",
+                    <span style={{ fontSize: "0.72rem", color: COR.blue300, fontWeight: "700",
                       maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {userLabel}
                     </span>
@@ -440,67 +465,67 @@ export default function App() {
               </div>
             ) : (
               <button style={estilos.botaoEntrar} onClick={abrirModal}>
-                🎯 Entrar no Leilão
+                ⚡ Aceito o Desafio Gut
               </button>
             )}
             <div style={estilos.badges}>
               <span style={estilos.badge}>🔒 LGPD</span>
               <span style={estilos.badge}>🧪 Beta</span>
-              {MOCK_MODE && <span style={{ ...estilos.badge, color: "#fbbf24", borderColor: "#92400e" }}>🔧 MOCK</span>}
+              <span style={estilos.badge}>GUT</span>
+              {MOCK_MODE && <span style={{ ...estilos.badge, color: COR.gold, borderColor: "#92400e" }}>🔧 MOCK</span>}
             </div>
           </div>
         </header>
 
-        {/* ── Painel Beta: Carteiras + Tipo de Leilão ── */}
+        {/* ── Painel Beta: Carteiras + Tipo ── */}
         <div style={estilos.painelBeta}>
-          {/* Saldos */}
           <div style={{ display: "flex", gap: "1.25rem", alignItems: "center", flexWrap: "wrap" }}>
             <div style={estilos.saldoItem}>
-              <span style={{ fontSize: "0.68rem", color: "#4a6080", textTransform: "uppercase", letterSpacing: "0.07em" }}>Flash</span>
-              <span style={{ fontSize: "1rem", fontWeight: "800", color: "#00d4aa" }}>
+              <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>Flash</span>
+              <span style={{ fontSize: "1rem", fontWeight: "800", color: COR.primary }}>
                 R$ {carteiraFlash.toFixed(2)}
               </span>
             </div>
             <div style={estilos.saldoItem}>
-              <span style={{ fontSize: "0.68rem", color: "#4a6080", textTransform: "uppercase", letterSpacing: "0.07em" }}>Fichas</span>
+              <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>Fichas</span>
               <span style={{ fontSize: "1rem", fontWeight: "800", color: "#a78bfa" }}>
                 {fichasProgramadas} 🎫
               </span>
             </div>
-            <button onClick={handleSimularPix} style={estilos.botaoPix} title="Simula depósito de R$10 via PIX">
+            <button onClick={handleSimularPix} style={estilos.botaoPix} title="Simula depósito PIX de R$ 10,00 (Art. 21)">
               + PIX R$ 10,00
             </button>
             <button
               onClick={handleConverterFicha}
-              style={{ ...estilos.botaoConverter, opacity: carteiraFlash < CUSTO_FICHA_BRL ? 0.4 : 1, cursor: carteiraFlash < CUSTO_FICHA_BRL ? "not-allowed" : "pointer" }}
               disabled={carteiraFlash < CUSTO_FICHA_BRL}
-              title={`Converte R$ ${CUSTO_FICHA_BRL.toFixed(2)} em 1 ficha`}
+              style={{ ...estilos.botaoConverter, opacity: carteiraFlash < CUSTO_FICHA_BRL ? 0.4 : 1, cursor: carteiraFlash < CUSTO_FICHA_BRL ? "not-allowed" : "pointer" }}
+              title={`Converte R$ ${CUSTO_FICHA_BRL.toFixed(2)} → 1 ficha (Art. 20)`}
             >
               → 1 Ficha (R$ {CUSTO_FICHA_BRL.toFixed(2)})
             </button>
             {erroCarteira && (
-              <span style={{ fontSize: "0.72rem", color: "#ff3d71" }}>⚠️ {erroCarteira}</span>
+              <span style={{ fontSize: "0.72rem", color: COR.danger }}>⚠️ {erroCarteira}</span>
             )}
           </div>
 
           {/* Seletor de tipo */}
           <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-            <span style={{ fontSize: "0.68rem", color: "#4a6080", marginRight: "0.2rem" }}>Modo:</span>
+            <span style={{ fontSize: "0.68rem", color: COR.muted, marginRight: "0.2rem" }}>Modo:</span>
             {[
-              { id: "flash",      label: "⚡ Flash (5 min)" },
-              { id: "programado", label: "🎫 Programado"    },
+              { id: "flash",      label: "⚡ Relâmpago" },
+              { id: "programado", label: "🎫 Programado" },
             ].map(({ id, label }) => {
               const ativo = tipoLeilao === id;
-              const cor   = id === "flash" ? "#fbbf24" : "#a78bfa";
+              const cor   = id === "flash" ? COR.gold : "#a78bfa";
               return (
                 <button
                   key={id}
                   className="gut-btn-tipo"
                   onClick={() => setTipoLeilao(id)}
                   style={{
-                    color:       ativo ? cor    : "#4a6080",
-                    borderColor: ativo ? cor    : "rgba(255,255,255,0.1)",
-                    background:  ativo ? `${cor}18` : "transparent",
+                    color:       ativo ? cor : COR.muted,
+                    borderColor: ativo ? cor : "rgba(255,255,255,0.1)",
+                    background:  ativo ? `${cor}20` : "transparent",
                   }}
                 >
                   {label}
@@ -510,20 +535,18 @@ export default function App() {
           </div>
         </div>
 
-        {/* ── Aviso de rede ── */}
+        {/* ── Faixa de aviso ── */}
         <div style={estilos.avisoRede}>
-          ⚠️ <strong>Beta:</strong> Saldo interno · Sem rede blockchain ativa ·{" "}
-          <a href="https://sepolia.etherscan.io/address/0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
-            target="_blank" rel="noopener noreferrer" style={{ color: "#fbbf24" }}>
-            Contrato Sepolia ↗
-          </a>
+          <strong>Desafio Gut</strong>
+          {" — "}Grupo União e Trabalho · CNPJ 23.040.066/0001-00
+          {" · "}www.grupouniaoetrabalho.com.br
           {isConnected && (
             <span style={{ marginLeft: "1rem", color: "#86efac" }}>
               ✅ {address?.slice(0, 6)}...{address?.slice(-4)}
             </span>
           )}
           {encerrado && (
-            <span style={{ marginLeft: "1rem", color: "#ef4444", fontWeight: "700" }}>
+            <span style={{ marginLeft: "1rem", color: COR.danger, fontWeight: "700" }}>
               🔴 Leilão encerrado — novos lances bloqueados
             </span>
           )}
@@ -546,16 +569,17 @@ export default function App() {
               onRefreshSaldo={refreshSaldo}
             />
 
+            {/* Segurança */}
             <div style={estilos.segCard}>
-              <h4 style={estilos.segTitulo}>🛡️ Camadas de Segurança Ativas</h4>
+              <h4 style={estilos.segTitulo}>🛡️ Segurança e Transparência</h4>
               {[
                 ["Argon2id",       "Hash off-chain de cada lance (hash-wasm WASM)"],
                 ["EIP-191",        "Assinatura via Privy embedded wallet"],
                 ["Rate Limit",     "5 lances/min · cooldown 3s por carteira"],
                 ["DOMPurify",      "Sanitização contra XSS em todos os campos"],
-                ["Saldo Interno",  "Carteiras flash e fichas gerenciadas localmente"],
-                ["localStorage",   "Persistência local dos lances da sessão"],
-                ["Beta Mode",      "Sem transações on-chain — seguro para testes"],
+                ["Art. 20",        "Senha: R$ 2,00 por edição (Relâmpago ou Programado)"],
+                ["Art. 27",        "Lance mínimo: R$ 0,01 · máx. 2 casas decimais"],
+                ["Art. 26",        "Apuração automática pelo Painel interno de controle"],
               ].map(([nome, desc]) => (
                 <div key={nome} style={estilos.segItem}>
                   <span style={estilos.segNome}>{nome}</span>
@@ -574,17 +598,25 @@ export default function App() {
           </section>
         </main>
 
+        {/* ── Footer ── */}
         <footer style={estilos.footer}>
           <p>
-            © {new Date().getFullYear()} DESAFIOGUT ·{" "}
+            © {new Date().getFullYear()} <strong>Desafio Gut</strong> · Grupo União e Trabalho ·{" "}
             <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT"
-              target="_blank" rel="noopener noreferrer" style={{ color: "#6ee7b7" }}>Privacidade</a>
+              target="_blank" rel="noopener noreferrer" style={{ color: COR.blue300 }}>Privacidade</a>
             {" · "}
             <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT/cookie-policy"
-              target="_blank" rel="noopener noreferrer" style={{ color: "#6ee7b7" }}>Cookies</a>
+              target="_blank" rel="noopener noreferrer" style={{ color: COR.blue300 }}>Cookies</a>
+            {" · "}
+            <a href="https://www.grupouniaoetrabalho.com.br"
+              target="_blank" rel="noopener noreferrer" style={{ color: COR.blue300 }}>
+              grupouniaoetrabalho.com.br
+            </a>
           </p>
           <p style={{ fontSize: "0.72rem", color: "#334155" }}>
-            Beta v0.9 · React 18 · Vite 8 · Saldo Interno · Argon2id · DOMPurify
+            Implantação oficial: <strong style={{ color: COR.muted }}>1º de junho de 2026</strong>
+            {" · "}Beta v0.9 · React 18 · Vite 8 · Argon2id · DOMPurify
+            {" · "}Registrado RTD Manaus/AM
           </p>
         </footer>
       </div>
@@ -592,31 +624,31 @@ export default function App() {
   );
 }
 
-// ─── Estilos ──────────────────────────────────────────────────────────────────
+// ─── Estilos — Paleta Azul Marinho + Branco (Grupo União e Trabalho) ─────────
 const estilos = {
-  app:          { minHeight: "100vh", background: "radial-gradient(ellipse at 50% -10%, #0d1f38 0%, #060d1a 50%, #04080f 100%)", color: "#eef4ff", fontFamily: "'Segoe UI', system-ui, sans-serif", display: "flex", flexDirection: "column", position: "relative" },
-  header:       { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.25rem 2rem", background: "rgba(8,18,36,0.8)", borderBottom: "1px solid rgba(0,212,170,0.15)", flexWrap: "wrap", gap: "1rem", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" },
-  logo:         { display: "flex", alignItems: "center", gap: "0.75rem" },
-  logoTitulo:   { margin: 0, fontSize: "1.5rem", fontWeight: "900", color: "#00d4aa", letterSpacing: "0.04em", textShadow: "0 0 20px rgba(0,212,170,0.4)" },
-  logoSub:      { margin: 0, fontSize: "0.75rem", color: "#4a6080", letterSpacing: "0.05em" },
-  headerDireita:{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" },
-  badges:       { display: "flex", gap: "0.4rem" },
-  badge:        { padding: "0.2rem 0.65rem", background: "rgba(0,212,170,0.08)", borderRadius: "20px", fontSize: "0.7rem", border: "1px solid rgba(0,212,170,0.2)", color: "#00d4aa88" },
-  botaoEntrar:  { padding: "0.6rem 1.4rem", background: "linear-gradient(135deg,#f5a623,#f97316)", color: "#04080f", border: "none", borderRadius: "28px", fontWeight: "800", cursor: "pointer", fontSize: "0.88rem", letterSpacing: "0.03em", boxShadow: "0 4px 16px rgba(245,166,35,0.35)" },
-  carteiraHeader:{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(0,212,170,0.08)", padding: "0.45rem 1rem", borderRadius: "28px", border: "1px solid rgba(0,212,170,0.25)" },
-  dot:          { width: "8px", height: "8px", borderRadius: "50%", background: "#00c853", flexShrink: 0, boxShadow: "0 0 6px #00c853" },
-  // Painel Beta
-  painelBeta:   { background: "rgba(4,8,15,0.92)", borderBottom: "1px solid rgba(167,139,250,0.15)", padding: "0.6rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", backdropFilter: "blur(12px)" },
-  saldoItem:    { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "1px" },
-  botaoPix:     { padding: "0.3rem 0.85rem", background: "rgba(0,212,170,0.12)", border: "1px solid rgba(0,212,170,0.35)", borderRadius: "20px", color: "#00d4aa", fontSize: "0.72rem", fontWeight: "800", cursor: "pointer", letterSpacing: "0.02em" },
-  botaoConverter:{ padding: "0.3rem 0.85rem", background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.35)", borderRadius: "20px", color: "#a78bfa", fontSize: "0.72rem", fontWeight: "800", letterSpacing: "0.02em" },
-  avisoRede:    { background: "rgba(4,8,15,0.9)", borderBottom: "1px solid rgba(245,166,35,0.15)", padding: "0.45rem 2rem", fontSize: "0.8rem", color: "#f5a62388" },
-  grid:         { display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: "1.5rem", padding: "1.5rem 2rem", flex: 1 },
-  col:          { display: "flex", flexDirection: "column", gap: "1rem" },
-  segCard:      { background: "rgba(8,18,36,0.55)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRadius: "16px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem", border: "1px solid rgba(0,212,170,0.12)" },
-  segTitulo:    { margin: "0 0 0.5rem", color: "#00d4aa", fontSize: "0.88rem", fontWeight: "700" },
-  segItem:      { display: "flex", gap: "0.75rem", alignItems: "flex-start" },
-  segNome:      { minWidth: "110px", fontSize: "0.73rem", fontWeight: "700", color: "#00d4aa", background: "rgba(0,212,170,0.1)", padding: "0.2rem 0.5rem", borderRadius: "4px", flexShrink: 0, border: "1px solid rgba(0,212,170,0.2)" },
-  segDesc:      { fontSize: "0.76rem", color: "#4a6080", lineHeight: "1.5" },
-  footer:       { padding: "1rem 2rem", borderTop: "1px solid rgba(0,212,170,0.1)", textAlign: "center", fontSize: "0.76rem", color: "#4a6080" },
+  app:            { minHeight: "100vh", background: `radial-gradient(ellipse at 50% -10%, #0d1f4a 0%, #06122a 50%, ${COR.bg} 100%)`, color: COR.text, fontFamily: "'Segoe UI', system-ui, sans-serif", display: "flex", flexDirection: "column", position: "relative" },
+  header:         { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.25rem 2rem", background: "rgba(5,15,40,0.88)", borderBottom: `1px solid ${COR.primaryDim}`, flexWrap: "wrap", gap: "1rem", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" },
+  logo:           { display: "flex", alignItems: "center", gap: "0.75rem" },
+  gutoPh:         { width: "48px", height: "48px", borderRadius: "50%", background: `rgba(37,99,235,0.12)`, border: `2px dashed rgba(37,99,235,0.35)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  logoTitulo:     { margin: 0, fontSize: "1.5rem", fontWeight: "900", color: "#ffffff", letterSpacing: "0.04em", textShadow: `0 0 20px rgba(37,99,235,0.5)` },
+  logoSub:        { margin: 0, fontSize: "0.75rem", color: COR.blue300, letterSpacing: "0.04em", fontWeight: "600" },
+  headerDireita:  { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" },
+  badges:         { display: "flex", gap: "0.4rem" },
+  badge:          { padding: "0.2rem 0.65rem", background: COR.primaryDim, borderRadius: "20px", fontSize: "0.7rem", border: `1px solid rgba(37,99,235,0.28)`, color: "#93c5fd" },
+  botaoEntrar:    { padding: "0.6rem 1.4rem", background: `linear-gradient(135deg,${COR.primary},#1d40af)`, color: "#ffffff", border: "none", borderRadius: "28px", fontWeight: "800", cursor: "pointer", fontSize: "0.88rem", letterSpacing: "0.03em", boxShadow: `0 4px 18px rgba(37,99,235,0.45)` },
+  carteiraHeader: { display: "flex", alignItems: "center", gap: "0.5rem", background: COR.primaryDim, padding: "0.45rem 1rem", borderRadius: "28px", border: `1px solid rgba(37,99,235,0.30)` },
+  dot:            { width: "8px", height: "8px", borderRadius: "50%", background: COR.success, flexShrink: 0, boxShadow: `0 0 6px ${COR.success}` },
+  painelBeta:     { background: "rgba(3,10,28,0.92)", borderBottom: `1px solid rgba(37,99,235,0.18)`, padding: "0.6rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", backdropFilter: "blur(12px)" },
+  saldoItem:      { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "1px" },
+  botaoPix:       { padding: "0.3rem 0.85rem", background: COR.primaryDim, border: `1px solid rgba(37,99,235,0.38)`, borderRadius: "20px", color: COR.blue300, fontSize: "0.72rem", fontWeight: "800", cursor: "pointer" },
+  botaoConverter: { padding: "0.3rem 0.85rem", background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.38)", borderRadius: "20px", color: "#a78bfa", fontSize: "0.72rem", fontWeight: "800" },
+  avisoRede:      { background: "rgba(3,10,28,0.9)", borderBottom: `1px solid rgba(37,99,235,0.15)`, padding: "0.45rem 2rem", fontSize: "0.78rem", color: "#64748b" },
+  grid:           { display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: "1.5rem", padding: "1.5rem 2rem", flex: 1 },
+  col:            { display: "flex", flexDirection: "column", gap: "1rem" },
+  segCard:        { background: "rgba(5,15,40,0.6)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderRadius: "16px", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem", border: `1px solid rgba(37,99,235,0.15)` },
+  segTitulo:      { margin: "0 0 0.5rem", color: COR.blue300, fontSize: "0.88rem", fontWeight: "700" },
+  segItem:        { display: "flex", gap: "0.75rem", alignItems: "flex-start" },
+  segNome:        { minWidth: "78px", fontSize: "0.73rem", fontWeight: "700", color: COR.blue300, background: COR.primaryDim, padding: "0.2rem 0.5rem", borderRadius: "4px", flexShrink: 0, border: `1px solid rgba(37,99,235,0.25)` },
+  segDesc:        { fontSize: "0.76rem", color: COR.muted, lineHeight: "1.5" },
+  footer:         { padding: "1rem 2rem", borderTop: `1px solid rgba(37,99,235,0.12)`, textAlign: "center", fontSize: "0.76rem", color: "#4a6490" },
 };

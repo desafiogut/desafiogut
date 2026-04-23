@@ -29,6 +29,8 @@ const FASES = {
  *
  * Fluxo Flash:      Hash → Assinar → Registrar local (sem custo de ficha)
  * Fluxo Programado: Hash → Assinar → Consumir 1 ficha → Registrar local
+ *
+ * Art. 20 regulamento: R$ 2,00/senha  |  Art. 27: lance mín R$ 0,01
  */
 export default function CardLance({
   idEdicao,
@@ -65,7 +67,7 @@ export default function CardLance({
     // 1. Sanitização
     const valorCentavos = sanitizeLance(valor);
     if (valorCentavos === null) {
-      setErro("Valor inválido. Use um inteiro entre 1 e 999999 (centavos).");
+      setErro("Valor inválido. Use um inteiro entre 1 e 999999 (centavos). Art. 27: mín R$ 0,01.");
       return;
     }
 
@@ -75,7 +77,7 @@ export default function CardLance({
 
     // 3. Valida fichas para leilão programado
     if (isProgramado && fichasProgramadas <= 0) {
-      setErro("Sem fichas disponíveis. Converta saldo flash em fichas (R$ 2,00 / ficha).");
+      setErro("Sem fichas disponíveis. Converta saldo flash em fichas (Art. 20: R$ 2,00 / ficha).");
       return;
     }
 
@@ -172,7 +174,7 @@ export default function CardLance({
       <div style={estilos.conexaoArea}>
         {!isConnected ? (
           <button style={estilos.botaoConectar} onClick={onConnect}>
-            🎯 Entrar no Leilão
+            ⚡ Aceito o Desafio Gut
           </button>
         ) : (
           <div style={estilos.carteiraConectada}>
@@ -188,8 +190,8 @@ export default function CardLance({
         )}
         <p style={estilos.hintConexao}>
           {isProgramado
-            ? "Lance programado consome 1 ficha — converta saldo flash no painel acima."
-            : "Leilão Flash 5 min · lance livre · menor único vence."}
+            ? "Lance programado consome 1 ficha (Art. 20: R$ 2,00) — converta saldo flash no painel acima."
+            : "Desafio Gut Flash · 5 min · lance livre · menor lance único vence (Art. 8)."}
         </p>
       </div>
 
@@ -209,7 +211,7 @@ export default function CardLance({
           />
           {valorReais && <span style={estilos.valorPreview}>{valorReais}</span>}
         </div>
-        <p style={estilos.hintInput}>Mín: R$ 0,01 · Rate limit: 5 lances/min · Cooldown: 3s</p>
+        <p style={estilos.hintInput}>Art. 27: Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s</p>
       </div>
 
       {/* Pipeline de progresso */}
@@ -252,7 +254,7 @@ export default function CardLance({
           borderRadius: "8px", padding: "0.85rem", textAlign: "center",
           color: "#ef4444", fontWeight: "700", fontSize: "0.9rem",
         }}>
-          🔴 Leilão encerrado — novos lances bloqueados
+          🔴 Edição encerrada — novos lances bloqueados
         </div>
       )}
 
@@ -263,7 +265,7 @@ export default function CardLance({
           borderRadius: "10px", padding: "0.75rem 1rem",
           color: "#f5a623", fontSize: "0.85rem", fontWeight: "600", textAlign: "center",
         }}>
-          🎫 Sem fichas — use "→ 1 Ficha (R$ 2,00)" no painel acima para participar
+          🎫 Sem fichas — use "→ 1 Ficha (R$ 2,00)" no painel acima para participar (Art. 20)
         </div>
       )}
 
@@ -282,7 +284,7 @@ export default function CardLance({
             ? "⏳ Processando..."
             : isProgramado
               ? "🎫 Confirmar Lance (−1 ficha)"
-              : "🚀 Confirmar Lance"}
+              : "⚡ Confirmar Lance"}
         </button>
       )}
 
@@ -293,34 +295,34 @@ export default function CardLance({
   );
 }
 
-// ─── Estilos ──────────────────────────────────────────────────────────────────
+// ─── Estilos — paleta Azul Marinho GUT ───────────────────────────────────────
 const estilos = {
   header:          { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  titulo:          { margin: 0, fontSize: "1.05rem", fontWeight: "800", color: "#eef4ff", letterSpacing: "0.02em" },
-  edicaoBadge:     { fontSize: "0.72rem", color: "#00d4aa", background: "rgba(0,212,170,0.1)", padding: "0.22rem 0.75rem", borderRadius: "20px", border: "1px solid rgba(0,212,170,0.25)", fontWeight: "700" },
+  titulo:          { margin: 0, fontSize: "1.05rem", fontWeight: "800", color: "#e8f0fe", letterSpacing: "0.02em" },
+  edicaoBadge:     { fontSize: "0.72rem", color: "#93c5fd", background: "rgba(37,99,235,0.12)", padding: "0.22rem 0.75rem", borderRadius: "20px", border: "1px solid rgba(37,99,235,0.3)", fontWeight: "700" },
   mockBadge:       { fontSize: "0.7rem", fontWeight: "800", color: "#f5a623", background: "rgba(245,166,35,0.12)", padding: "0.2rem 0.6rem", borderRadius: "20px", border: "1px solid rgba(245,166,35,0.35)" },
   tipoBadge: (p)   => ({ fontSize: "0.72rem", fontWeight: "800", color: p ? "#a78bfa" : "#fbbf24", background: p ? "rgba(167,139,250,0.1)" : "rgba(251,191,36,0.1)", padding: "0.22rem 0.75rem", borderRadius: "20px", border: `1px solid ${p ? "rgba(167,139,250,0.3)" : "rgba(251,191,36,0.3)"}` }),
   conexaoArea:     { display: "flex", flexDirection: "column", gap: "0.4rem" },
-  botaoConectar:   { padding: "0.75rem 1rem", background: "linear-gradient(135deg,#f5a623,#f97316)", color: "#04080f", border: "none", borderRadius: "28px", fontWeight: "800", cursor: "pointer", fontSize: "0.92rem", letterSpacing: "0.03em", boxShadow: "0 4px 18px rgba(245,166,35,0.4)" },
-  carteiraConectada:{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(0,212,170,0.07)", padding: "0.6rem 1rem", borderRadius: "12px", border: "1px solid rgba(0,212,170,0.2)" },
+  botaoConectar:   { padding: "0.75rem 1rem", background: "linear-gradient(135deg,#f5a623,#f97316)", color: "#030f24", border: "none", borderRadius: "28px", fontWeight: "800", cursor: "pointer", fontSize: "0.92rem", letterSpacing: "0.03em", boxShadow: "0 4px 18px rgba(245,166,35,0.4)" },
+  carteiraConectada:{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(37,99,235,0.08)", padding: "0.6rem 1rem", borderRadius: "12px", border: "1px solid rgba(37,99,235,0.25)" },
   carteiraInfo:    { display: "flex", alignItems: "center", gap: "0.75rem" },
-  dot:             { width: "8px", height: "8px", borderRadius: "50%", background: "#00c853", flexShrink: 0, boxShadow: "0 0 6px #00c853" },
-  enderecoTexto:   { fontFamily: "monospace", fontSize: "0.85rem", color: "#eef4ff" },
-  saldoBadge:      { background: "rgba(0,200,83,0.15)", padding: "0.2rem 0.6rem", borderRadius: "12px", fontSize: "0.72rem", color: "#00c853", border: "1px solid rgba(0,200,83,0.3)" },
-  botaoSair:       { background: "transparent", border: "1px solid rgba(255,61,113,0.4)", color: "#ff3d71", borderRadius: "8px", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.75rem" },
-  hintConexao:     { margin: 0, fontSize: "0.7rem", color: "#4a6080" },
+  dot:             { width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", flexShrink: 0, boxShadow: "0 0 6px #10b981" },
+  enderecoTexto:   { fontFamily: "monospace", fontSize: "0.85rem", color: "#e8f0fe" },
+  saldoBadge:      { background: "rgba(16,185,129,0.15)", padding: "0.2rem 0.6rem", borderRadius: "12px", fontSize: "0.72rem", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)" },
+  botaoSair:       { background: "transparent", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: "8px", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.75rem" },
+  hintConexao:     { margin: 0, fontSize: "0.7rem", color: "#4a6490" },
   inputGroup:      { display: "flex", flexDirection: "column", gap: "0.4rem" },
-  labelInput:      { fontSize: "0.82rem", color: "#4a6080", fontWeight: "600", letterSpacing: "0.04em" },
+  labelInput:      { fontSize: "0.82rem", color: "#4a6490", fontWeight: "600", letterSpacing: "0.04em" },
   inputWrapper:    { position: "relative" },
-  input:           { width: "100%", padding: "0.75rem 1rem", background: "rgba(4,8,15,0.6)", border: "1px solid rgba(0,212,170,0.2)", borderRadius: "12px", color: "#eef4ff", fontSize: "1rem", boxSizing: "border-box", outline: "none" },
-  valorPreview:    { position: "absolute", right: "1rem", top: "50%", transform: "translateY(-50%)", color: "#00d4aa", fontWeight: "700", fontSize: "0.9rem", pointerEvents: "none" },
-  hintInput:       { margin: 0, fontSize: "0.7rem", color: "#4a6080" },
-  pipeline:        { background: "rgba(4,8,15,0.5)", padding: "1rem", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "0.5rem", border: "1px solid rgba(0,212,170,0.1)" },
-  pipelineItem:    { fontSize: "0.83rem", transition: "opacity 0.2s", color: "#eef4ff" },
-  boxSucesso:      { background: "rgba(0,200,83,0.12)", padding: "1rem", borderRadius: "12px", color: "#00c853", border: "1px solid rgba(0,200,83,0.3)" },
+  input:           { width: "100%", padding: "0.75rem 1rem", background: "rgba(3,15,36,0.7)", border: "1px solid rgba(37,99,235,0.25)", borderRadius: "12px", color: "#e8f0fe", fontSize: "1rem", boxSizing: "border-box", outline: "none" },
+  valorPreview:    { position: "absolute", right: "1rem", top: "50%", transform: "translateY(-50%)", color: "#93c5fd", fontWeight: "700", fontSize: "0.9rem", pointerEvents: "none" },
+  hintInput:       { margin: 0, fontSize: "0.7rem", color: "#4a6490" },
+  pipeline:        { background: "rgba(3,15,36,0.6)", padding: "1rem", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "0.5rem", border: "1px solid rgba(37,99,235,0.15)" },
+  pipelineItem:    { fontSize: "0.83rem", transition: "opacity 0.2s", color: "#e8f0fe" },
+  boxSucesso:      { background: "rgba(16,185,129,0.12)", padding: "1rem", borderRadius: "12px", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)" },
   txText:          { margin: "0.4rem 0 0", fontSize: "0.76rem", fontFamily: "monospace" },
-  hashText:        { margin: "0.25rem 0 0", fontSize: "0.72rem", color: "#4ade80", wordBreak: "break-all" },
-  boxErro:         { background: "rgba(255,61,113,0.12)", padding: "0.75rem 1rem", borderRadius: "12px", color: "#ff3d71", fontSize: "0.85rem", border: "1px solid rgba(255,61,113,0.3)" },
-  botaoLance:      { padding: "0.9rem", background: "linear-gradient(135deg,#00d4aa,#00c853)", color: "#04080f", border: "none", borderRadius: "28px", fontSize: "1rem", fontWeight: "900", transition: "opacity 0.2s", letterSpacing: "0.03em", boxShadow: "0 4px 20px rgba(0,212,170,0.4)" },
-  rodape:          { margin: 0, fontSize: "0.68rem", color: "#4a6080", textAlign: "center", letterSpacing: "0.03em" },
+  hashText:        { margin: "0.25rem 0 0", fontSize: "0.72rem", color: "#6ee7b7", wordBreak: "break-all" },
+  boxErro:         { background: "rgba(239,68,68,0.12)", padding: "0.75rem 1rem", borderRadius: "12px", color: "#ef4444", fontSize: "0.85rem", border: "1px solid rgba(239,68,68,0.3)" },
+  botaoLance:      { padding: "0.9rem", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", color: "#ffffff", border: "none", borderRadius: "28px", fontSize: "1rem", fontWeight: "900", transition: "opacity 0.2s", letterSpacing: "0.03em", boxShadow: "0 4px 20px rgba(37,99,235,0.45)" },
+  rodape:          { margin: 0, fontSize: "0.68rem", color: "#4a6490", textAlign: "center", letterSpacing: "0.03em" },
 };
