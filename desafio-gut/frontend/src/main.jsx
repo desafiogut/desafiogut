@@ -1,6 +1,7 @@
 import "./globals.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { sepolia as sepoliaChain } from "viem/chains"; // viem instalado como dep do Privy
 import App from "./App.jsx";
@@ -9,6 +10,7 @@ const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || "cmo51f3v300l90clgzksi
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
+    <BrowserRouter>
     <PrivyProvider
       appId={PRIVY_APP_ID}
       config={{
@@ -37,5 +39,6 @@ createRoot(document.getElementById("root")).render(
     >
       <App />
     </PrivyProvider>
+    </BrowserRouter>
   </StrictMode>
 );
