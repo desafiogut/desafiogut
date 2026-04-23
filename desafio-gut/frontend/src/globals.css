@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ── Design Tokens — Desafio Gut · Grupo União e Trabalho ─────────────────── */
+/* ── Design Tokens — DesafioGUT · Grupo União e Trabalho ──────────────────── */
 @theme {
   /* Azul Marinho + Branco — identidade GUT */
   --color-gut-bg:          #030f24;

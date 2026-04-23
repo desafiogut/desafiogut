@@ -174,7 +174,7 @@ export default function CardLance({
       <div style={estilos.conexaoArea}>
         {!isConnected ? (
           <button style={estilos.botaoConectar} onClick={onConnect}>
-            ⚡ Aceito o Desafio Gut
+            ⚡ Aceito o DesafioGUT
           </button>
         ) : (
           <div style={estilos.carteiraConectada}>
@@ -191,7 +191,7 @@ export default function CardLance({
         <p style={estilos.hintConexao}>
           {isProgramado
             ? "Lance programado consome 1 ficha (Art. 20: R$ 2,00) — converta saldo flash no painel acima."
-            : "Desafio Gut Flash · 5 min · lance livre · menor lance único vence (Art. 8)."}
+            : "DesafioGUT Flash · 5 min · lance livre · menor lance único vence (Art. 8)."}
         </p>
       </div>
 

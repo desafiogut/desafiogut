@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  *  - Valores numéricos são parseados como inteiros, nunca interpolados como HTML
  *  - Nenhum dado é passado para dangerouslySetInnerHTML
  *
- * Status messages alinhados ao Art. 24 do Regulamento Desafio Gut:
+ * Status messages alinhados ao Art. 24 do Regulamento DesafioGUT:
  *  a) menor e único → "Menor e Único 🏆"
  *  b) único não menor → "Único — tente menor"
  *  c) repetido → "Repetido — já recebido"

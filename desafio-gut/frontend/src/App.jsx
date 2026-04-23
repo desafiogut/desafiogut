@@ -120,7 +120,7 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada }) {
             LEILÃO ENCERRADO
           </h2>
           <p style={{ margin: "0 0 1.5rem", color: "#94a3b8", fontSize: "0.9rem" }}>
-            <strong style={{ color: COR.blue300 }}>Desafio Gut</strong>
+            <strong style={{ color: COR.blue300 }}>DesafioGUT</strong>
             {" · Edição "}<strong style={{ color: COR.blue300 }}>{EDICAO_ATIVA}</strong>
             {" · "}{tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
             {" · "}Menor Lance Único
@@ -390,11 +390,11 @@ export default function App() {
           <div style={estilos.logo}>
             <span style={{ fontSize: "2rem" }}>🏆</span>
             {/* Placeholder mascote Guto */}
-            <div style={estilos.gutoPh} title="Guto — mascote Desafio Gut (em breve)">
+            <div style={estilos.gutoPh} title="Guto — mascote DesafioGUT (em breve)">
               <span style={{ fontSize: "1.4rem" }}>🦁</span>
             </div>
             <div>
-              <h1 style={estilos.logoTitulo}>Desafio Gut</h1>
+              <h1 style={estilos.logoTitulo}>DesafioGUT</h1>
               <p style={estilos.logoSub}>E-commerce através de Dropshipping</p>
             </div>
           </div>
@@ -465,7 +465,7 @@ export default function App() {
               </div>
             ) : (
               <button style={estilos.botaoEntrar} onClick={abrirModal}>
-                ⚡ Aceito o Desafio Gut
+                ⚡ Aceito o DesafioGUT
               </button>
             )}
             <div style={estilos.badges}>
@@ -537,7 +537,7 @@ export default function App() {
 
         {/* ── Faixa de aviso ── */}
         <div style={estilos.avisoRede}>
-          <strong>Desafio Gut</strong>
+          <strong>DesafioGUT</strong>
           {" — "}Grupo União e Trabalho · CNPJ 23.040.066/0001-00
           {" · "}www.grupouniaoetrabalho.com.br
           {isConnected && (
@@ -601,7 +601,7 @@ export default function App() {
         {/* ── Footer ── */}
         <footer style={estilos.footer}>
           <p>
-            © {new Date().getFullYear()} <strong>Desafio Gut</strong> · Grupo União e Trabalho ·{" "}
+            © {new Date().getFullYear()} <strong>DesafioGUT</strong> · Grupo União e Trabalho ·{" "}
             <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT"
               target="_blank" rel="noopener noreferrer" style={{ color: COR.blue300 }}>Privacidade</a>
             {" · "}

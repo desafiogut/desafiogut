@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 /**
- * TermosConsentimento — Gate de compliance LGPD · Desafio Gut
+ * TermosConsentimento — Gate de compliance LGPD · DesafioGUT
  *
  * Exibe o regulamento oficial e bloqueia participação até aceitação total.
  * Artigos numerados em arábico conforme regulamento RTD Manaus/AM (1º mai/2026).
@@ -34,7 +34,7 @@ export default function TermosConsentimento({ onAceitar }) {
           <div style={estilos.logoArea}>
             <span style={estilos.logoEmoji}>⚡</span>
             <div>
-              <h2 style={estilos.titulo}>Desafio Gut</h2>
+              <h2 style={estilos.titulo}>DesafioGUT</h2>
               <p style={estilos.grupoNome}>Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
             </div>
           </div>
@@ -49,14 +49,14 @@ export default function TermosConsentimento({ onAceitar }) {
           <h3 style={estilos.secaoTitulo}>Regulamento Oficial — Resumo dos Artigos Principais</h3>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 1</strong> — O Desafio Gut é uma atividade
+            <strong style={estilos.artLabel}>Art. 1</strong> — O DesafioGUT é uma atividade
             comercial em formato de E-commerce através de Dropshipping, operada pelo Grupo União e
             Trabalho (GUT), CNPJ 23.040.066/0001-00, contato (92) 98428-5774,
             e-mail: grupouniaoetrabalhoam@gmail.com.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 4</strong> — O aplicativo Desafio Gut será
+            <strong style={estilos.artLabel}>Art. 4</strong> — O aplicativo DesafioGUT será
             implantado a partir do dia <strong>1º (primeiro) de junho de 2026</strong> por tempo
             indeterminado, sob coordenação da diretoria do Grupo União e Trabalho.
           </p>
@@ -68,7 +68,7 @@ export default function TermosConsentimento({ onAceitar }) {
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 8</strong> — O Desafio Gut funciona sempre
+            <strong style={estilos.artLabel}>Art. 8</strong> — O DesafioGUT funciona sempre
             através da pergunta: <em>"QUANTO VOCÊ PAGA POR ESSE BEM OU PRODUTO?"</em> —{" "}
             <strong style={{ color: "#f5a623" }}>O MENOR LANCE ÚNICO GANHA.</strong>
           </p>
@@ -133,7 +133,7 @@ export default function TermosConsentimento({ onAceitar }) {
           <p style={estilos.artigo}>
             <strong style={estilos.artLabel}>Art. 30</strong> — É proibida a participação de
             funcionários, colaboradores, prestadores de serviços e familiares de qualquer empresa
-            envolvida no Desafio Gut.
+            envolvida no DesafioGUT.
           </p>
 
           <p style={estilos.artigo}>
@@ -161,7 +161,7 @@ export default function TermosConsentimento({ onAceitar }) {
         <div style={estilos.checkboxes}>
           <label style={estilos.label}>
             <input type="checkbox" checked={lido} onChange={(e) => setLido(e.target.checked)} style={estilos.checkbox} />
-            <span>Li e compreendi o regulamento completo do Desafio Gut registrado em cartório.</span>
+            <span>Li e compreendi o regulamento completo do DesafioGUT registrado em cartório.</span>
           </label>
 
           <label style={estilos.label}>
@@ -191,7 +191,7 @@ export default function TermosConsentimento({ onAceitar }) {
           onClick={handleAceitar}
           disabled={!tudoAceito}
         >
-          ⚡ Aceito o Desafio Gut
+          ⚡ Aceito o DesafioGUT
         </button>
 
         <p style={estilos.rodapeLegal}>
