@@ -1,5 +1,6 @@
 import { BrowserProvider, Contract, JsonRpcProvider } from "ethers";
 import { argon2id } from "hash-wasm";
+import { getFichasProgramadas } from "./saldoInterno.js";
 
 // ─── ABI mínimo do contrato LeilaoGUT ───────────────────────────────────────
 export const ABI = [
@@ -101,16 +102,6 @@ export async function assinarLance(signer, idEdicao, valorEmCentavos) {
 }
 
 /**
- * Envia a transação darLance() para o contrato na rede Sepolia.
- */
-export async function enviarLance(signer, contratoEndereco, idEdicao, valorEmCentavos) {
-  const contrato = new Contract(contratoEndereco, ABI, signer);
-  const tx = await contrato.darLance(idEdicao, valorEmCentavos);
-  const receipt = await tx.wait();
-  return receipt;
-}
-
-/**
  * Lê o prazo (timestamp Unix) da edição diretamente da blockchain Sepolia.
  * Usa window.ethereum se disponível, ou JsonRpcProvider público como fallback.
  * Retorna null em caso de erro (UI usa localStorage como fallback).
@@ -131,11 +122,22 @@ export async function getEdicaoPrazo(idEdicao) {
 }
 
 /**
- * Consulta o saldo de senhas de um endereço.
+ * Consulta fichas do usuário.
+ * Beta: lê do localStorage via saldoInterno — sem chamada on-chain.
  */
-export async function consultarSaldo(walletProvider, contratoEndereco, address) {
-  const { provider } = await getSignerFromProvider(walletProvider);
-  const contrato = new Contract(contratoEndereco, ABI, provider);
-  const saldo = await contrato.saldoSenhas(address);
-  return Number(saldo);
+export function consultarSaldo(_walletProvider, _contratoEndereco, _address) {
+  return Promise.resolve(getFichasProgramadas());
+}
+
+/**
+ * Registra um lance localmente (Beta).
+ * Substitui enviarLance on-chain — gera receipt com hash sintético.
+ */
+export async function enviarLance(_signer, _contratoEndereco, _idEdicao, _valorEmCentavos) {
+  await new Promise((r) => setTimeout(r, 420)); // latência realista
+  const hash =
+    "0xBETA" +
+    Date.now().toString(16).toUpperCase() +
+    Math.random().toString(16).slice(2, 10).toUpperCase();
+  return { hash };
 }

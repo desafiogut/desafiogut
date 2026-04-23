@@ -1,16 +1,26 @@
 import { useState, useEffect, useMemo } from "react";
-import { getEdicaoPrazo } from "./utils/web3.js";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
+import {
+  getCarteiraFlash,
+  getFichasProgramadas,
+  simularDepositoPix,
+  converterEmFichas,
+  CUSTO_FICHA_BRL,
+} from "./utils/saldoInterno.js";
 import TermosConsentimento from "./components/TermosConsentimento.jsx";
 import TabelaLances from "./components/TabelaLances.jsx";
 import CardLance from "./components/CardLance.jsx";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
-const MOCK_MODE   = import.meta.env.VITE_MOCK_MODE === "true";
-const DURACAO_S   = MOCK_MODE ? 30 : 1800;           // segundos do leilão
+const MOCK_MODE    = import.meta.env.VITE_MOCK_MODE === "true";
 const EDICAO_ATIVA = "R-1";
-const LS_LANCES   = "gut_lances_r1";
-const LS_PRAZO    = "gut_prazo_r1";
+const LS_LANCES    = "gut_lances_r1";
+
+// Durações por tipo de leilão (segundos)
+const DURACAO = {
+  flash:      MOCK_MODE ? 30  : 300,   // 5 min real | 30s mock
+  programado: MOCK_MODE ? 60  : 1800,  // 30 min real | 60s mock
+};
 
 const LANCES_MOCK = [
   { endereco: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", valor: 5,  repetido: false, txHash: "0xabc123def456" },
@@ -54,8 +64,8 @@ function Confetti() {
   );
 }
 
-// ─── Overlay Vencedor ────────────────────────────────────────────────────────
-function OverlayVencedor({ vencedor, onNovaRodada }) {
+// ─── Overlay Vencedor ─────────────────────────────────────────────────────────
+function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada }) {
   const enderecoAbrev = vencedor
     ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
     : "—";
@@ -76,15 +86,12 @@ function OverlayVencedor({ vencedor, onNovaRodada }) {
           to   { transform: translateY(0)    scale(1);    opacity: 1; }
         }
       `}</style>
-
-      {/* Backdrop */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 10000,
         background: "rgba(0,0,0,0.88)", backdropFilter: "blur(6px)",
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: "1rem",
       }}>
-        {/* Card */}
         <div style={{
           background: "linear-gradient(135deg,#1a1200 0%,#0f172a 60%)",
           border: "2px solid #fbbf24", borderRadius: "20px",
@@ -98,7 +105,9 @@ function OverlayVencedor({ vencedor, onNovaRodada }) {
             LEILÃO ENCERRADO
           </h2>
           <p style={{ margin: "0 0 1.5rem", color: "#94a3b8", fontSize: "0.9rem" }}>
-            Edição <strong style={{ color: "#6ee7b7" }}>{EDICAO_ATIVA}</strong> · Menor Lance Único
+            Edição <strong style={{ color: "#6ee7b7" }}>{EDICAO_ATIVA}</strong>
+            {" · "}{tipoLeilao === "flash" ? "⚡ Flash" : "🎫 Programado"}
+            {" · "}Menor Lance Único
           </p>
 
           {vencedor ? (
@@ -146,9 +155,13 @@ function OverlayVencedor({ vencedor, onNovaRodada }) {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
+  // ── Consentimento LGPD ──────────────────────────────────────────────────────
   const [consentimentoAceito, setConsentimentoAceito] = useState(false);
 
-  // ── Lances: inicializa do localStorage ──
+  // ── Tipo de leilão ──────────────────────────────────────────────────────────
+  const [tipoLeilao, setTipoLeilao] = useState("flash"); // 'flash' | 'programado'
+
+  // ── Lances ──────────────────────────────────────────────────────────────────
   const [lances, setLances] = useState(() => {
     try {
       const salvo = localStorage.getItem(LS_LANCES);
@@ -156,33 +169,32 @@ export default function App() {
     } catch { return LANCES_MOCK; }
   });
 
-  // ── Prazo: reutiliza do localStorage se ainda válido, senão cria novo ──
-  const [prazoTimestamp, setPrazoTimestamp] = useState(() => {
-    try {
-      const salvo = parseInt(localStorage.getItem(LS_PRAZO) ?? "0", 10);
-      if (salvo > Date.now() / 1000) return salvo;
-    } catch {}
-    const novo = Math.floor(Date.now() / 1000) + DURACAO_S;
-    localStorage.setItem(LS_PRAZO, String(novo));
-    return novo;
-  });
+  // ── Timer: inicia sempre com a duração correta para o tipo ──────────────────
+  const [prazoTimestamp, setPrazoTimestamp] = useState(
+    () => Math.floor(Date.now() / 1000) + DURACAO.flash
+  );
+  const [encerrado,    setEncerrado]   = useState(false);
+  const [showOverlay,  setShowOverlay] = useState(false);
+  const [tempoRestante, setTempoRestante] = useState(DURACAO.flash);
 
-  // ── Privy: autenticação sem extensão, sem QR Code ────────────────────────
+  // ── Carteiras internas (saldo beta) ─────────────────────────────────────────
+  const [carteiraFlash,     setCarteiraFlash]     = useState(() => getCarteiraFlash());
+  const [fichasProgramadas, setFichasProgramadas] = useState(() => getFichasProgramadas());
+  const [erroCarteira,      setErroCarteira]      = useState("");
+
+  // ── Privy ────────────────────────────────────────────────────────────────────
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { wallets } = useWallets();
 
   console.log('Privy Ready:', ready);
 
-  // Prioriza embedded wallet (Privy); fallback para primeira carteira disponível
-  const privyWallet  = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
-  const realAddress  = privyWallet?.address ?? null;
+  const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
+  const realAddress = privyWallet?.address ?? null;
 
-  // MOCK_MODE usa endereço local; modo real usa Privy
   const [mockAddress, setMockAddress] = useState(null);
   const address     = MOCK_MODE ? mockAddress : realAddress;
   const isConnected = MOCK_MODE ? Boolean(mockAddress) : (authenticated && Boolean(realAddress));
 
-  // Nome/e-mail para exibição no header (Google > e-mail > Apple > endereço)
   const userLabel =
     user?.google?.name  ||
     user?.google?.email ||
@@ -190,32 +202,18 @@ export default function App() {
     user?.apple?.email  ||
     null;
 
-  const [encerrado,    setEncerrado]     = useState(false);
-  const [showOverlay,  setShowOverlay]   = useState(false);
-  const [tempoRestante, setTempoRestante] = useState(() =>
-    Math.max(0, prazoTimestamp - Math.floor(Date.now() / 1000))
-  );
+  // ── Vencedor (Menor Lance Único) — algoritmo puro client-side ───────────────
   const vencedor = [...lances]
     .filter((l) => !l.repetido)
     .sort((a, b) => a.valor - b.valor)[0] ?? null;
 
-  // ── Persistência de lances no localStorage ──
+  // ── Persistência de lances ──────────────────────────────────────────────────
   useEffect(() => {
     try { localStorage.setItem(LS_LANCES, JSON.stringify(lances)); }
     catch {}
   }, [lances]);
 
-  // ── Sincronizar prazo com blockchain (modo real apenas) ──
-  useEffect(() => {
-    if (MOCK_MODE) return;
-    getEdicaoPrazo(EDICAO_ATIVA).then((prazo) => {
-      if (!prazo || prazo <= 0) return; // mantém localStorage como fallback
-      setPrazoTimestamp(prazo);
-      try { localStorage.setItem(LS_PRAZO, String(prazo)); } catch {}
-    }).catch(() => { /* silencioso — usa localStorage como fallback */ });
-  }, []);
-
-  // ── Consentimento ──
+  // ── Consentimento (sessionStorage) ─────────────────────────────────────────
   useEffect(() => {
     try {
       const salvo = sessionStorage.getItem("gut_consentimento");
@@ -226,8 +224,17 @@ export default function App() {
     } catch { sessionStorage.removeItem("gut_consentimento"); }
   }, []);
 
+  // ── Reset do timer ao trocar tipo de leilão ─────────────────────────────────
+  useEffect(() => {
+    const duracao = DURACAO[tipoLeilao];
+    const novo    = Math.floor(Date.now() / 1000) + duracao;
+    setPrazoTimestamp(novo);
+    setEncerrado(false);
+    setShowOverlay(false);
+    setTempoRestante(duracao);
+  }, [tipoLeilao]);
 
-  // ── Timer regressivo ──
+  // ── Timer regressivo ────────────────────────────────────────────────────────
   useEffect(() => {
     const tick = () => {
       const restante = Math.max(0, prazoTimestamp - Math.floor(Date.now() / 1000));
@@ -242,30 +249,57 @@ export default function App() {
     return () => clearInterval(id);
   }, [prazoTimestamp]);
 
-  // ── Formata MM:SS ──
+  // ── Formatação do timer ─────────────────────────────────────────────────────
   const timerDisplay = (() => {
     const m = String(Math.floor(tempoRestante / 60)).padStart(2, "0");
     const s = String(tempoRestante % 60).padStart(2, "0");
     return `${m}:${s}`;
   })();
-  const timerCor = encerrado          ? "#ff3d71"
-    : tempoRestante <= 5              ? "#ff3d71"
-    : tempoRestante <= 15             ? "#f97316"
+
+  const duracao      = DURACAO[tipoLeilao];
+  const timerCor     = encerrado ? "#ff3d71"
+    : tempoRestante <= 5         ? "#ff3d71"
+    : tempoRestante <= 15        ? "#f97316"
+    : tipoLeilao === "flash"     ? "#fbbf24"
     : "#00d4aa";
-  const timerPctDeg = encerrado ? 0 : (tempoRestante / DURACAO_S) * 360;
+  const timerPctDeg  = encerrado ? 0 : (tempoRestante / duracao) * 360;
   const timerUrgente = !encerrado && tempoRestante <= 5 && tempoRestante > 0;
 
-  // ── Wallet ──
+  // ── Handlers de carteira ────────────────────────────────────────────────────
+  function refreshSaldo() {
+    setCarteiraFlash(getCarteiraFlash());
+    setFichasProgramadas(getFichasProgramadas());
+  }
+
+  function handleSimularPix() {
+    setErroCarteira("");
+    const novo = simularDepositoPix(10.00);
+    setCarteiraFlash(novo);
+  }
+
+  function handleConverterFicha() {
+    setErroCarteira("");
+    try {
+      const { saldoFlash, fichas } = converterEmFichas(1);
+      setCarteiraFlash(saldoFlash);
+      setFichasProgramadas(fichas);
+    } catch (err) {
+      setErroCarteira(err.message);
+      setTimeout(() => setErroCarteira(""), 4000);
+    }
+  }
+
+  // ── Wallet ──────────────────────────────────────────────────────────────────
   function abrirModal() {
     if (MOCK_MODE) {
       setMockAddress("0xDEAD00000000000000000000000000000000BEEF");
       return;
     }
     if (!ready) {
-      console.warn('Privy ainda carregando...');
+      console.warn("Privy ainda carregando...");
       return;
     }
-    login(); // Privy: abre modal com Google / E-mail / Apple — sem extensão, sem QR Code
+    login();
   }
 
   function desconectar() {
@@ -273,7 +307,7 @@ export default function App() {
     logout();
   }
 
-  // ── Lance ──
+  // ── Lance ───────────────────────────────────────────────────────────────────
   function handleLanceSucesso({ address: addr, valorCentavos, txHash }) {
     setLances((prev) => {
       const jaRepetido = prev.some((l) => l.valor === valorCentavos);
@@ -282,29 +316,40 @@ export default function App() {
         { endereco: addr, valor: valorCentavos, repetido: jaRepetido, txHash },
       ];
     });
+    refreshSaldo();
   }
 
-  // ── Nova Rodada: limpa localStorage e reinicia ──
+  // ── Nova Rodada ─────────────────────────────────────────────────────────────
   function handleNovaRodada() {
     localStorage.removeItem(LS_LANCES);
-    localStorage.removeItem(LS_PRAZO);
-    window.location.reload();
+    const duracao = DURACAO[tipoLeilao];
+    const novo    = Math.floor(Date.now() / 1000) + duracao;
+    setPrazoTimestamp(novo);
+    setEncerrado(false);
+    setShowOverlay(false);
+    setTempoRestante(duracao);
+    setLances(LANCES_MOCK);
   }
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Noise grain global */}
       <style>{`
         body { margin: 0; }
         .gut-noise::before {
           content: '';
-          position: fixed;
-          inset: 0;
-          pointer-events: none;
-          z-index: 0;
-          opacity: 0.045;
+          position: fixed; inset: 0;
+          pointer-events: none; z-index: 0; opacity: 0.045;
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
           background-repeat: repeat;
+        }
+        @keyframes gut-danger-pulse {
+          0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+        }
+        .gut-btn-tipo {
+          padding: 0.28rem 0.7rem; border-radius: 16px; border: 1px solid;
+          font-size: 0.72rem; font-weight: 700; cursor: pointer;
+          transition: all 0.18s; background: transparent;
         }
       `}</style>
 
@@ -312,7 +357,11 @@ export default function App() {
         <TermosConsentimento onAceitar={() => setConsentimentoAceito(true)} />
       )}
       {showOverlay && (
-        <OverlayVencedor vencedor={vencedor} onNovaRodada={handleNovaRodada} />
+        <OverlayVencedor
+          vencedor={vencedor}
+          tipoLeilao={tipoLeilao}
+          onNovaRodada={handleNovaRodada}
+        />
       )}
 
       <div className="gut-noise" style={estilos.app}>
@@ -323,7 +372,7 @@ export default function App() {
             <span style={{ fontSize: "2rem" }}>🏆</span>
             <div>
               <h1 style={estilos.logoTitulo}>DESAFIOGUT</h1>
-              <p style={estilos.logoSub}>Menor Lance Único · Blockchain Ethereum</p>
+              <p style={estilos.logoSub}>Menor Lance Único · Beta Interno</p>
             </div>
           </div>
 
@@ -331,9 +380,8 @@ export default function App() {
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
             <p style={{ margin: 0, fontSize: "0.62rem", color: "#4a6080",
               textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              {encerrado ? "encerrado" : "tempo"}
+              {encerrado ? "encerrado" : tipoLeilao === "flash" ? "⚡ flash" : "🎫 programado"}
             </p>
-            {/* Anel conic-gradient */}
             <div style={{
               position: "relative", width: "90px", height: "90px",
               borderRadius: "50%",
@@ -361,11 +409,10 @@ export default function App() {
                 </span>
               </div>
             </div>
-            {/* Barra linear secundária */}
             <div style={{ width: "90px", height: "3px", borderRadius: "2px", background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
               <div style={{
                 height: "100%", borderRadius: "2px",
-                width: `${encerrado ? 0 : (tempoRestante / DURACAO_S) * 100}%`,
+                width: `${encerrado ? 0 : (tempoRestante / duracao) * 100}%`,
                 background: `linear-gradient(90deg, ${timerCor}88, ${timerCor})`,
                 transition: "width 1s linear, background 0.4s",
                 boxShadow: `0 0 5px ${timerCor}`,
@@ -392,31 +439,87 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <button
-                style={estilos.botaoMetaMask}
-                onClick={abrirModal}
-              >
+              <button style={estilos.botaoEntrar} onClick={abrirModal}>
                 🎯 Entrar no Leilão
               </button>
             )}
             <div style={estilos.badges}>
               <span style={estilos.badge}>🔒 LGPD</span>
-              <span style={estilos.badge}>⛓️ Sepolia</span>
-              {MOCK_MODE && <span style={{ ...estilos.badge, color: "#fbbf24", borderColor: "#92400e" }}>🧪 MOCK</span>}
+              <span style={estilos.badge}>🧪 Beta</span>
+              {MOCK_MODE && <span style={{ ...estilos.badge, color: "#fbbf24", borderColor: "#92400e" }}>🔧 MOCK</span>}
             </div>
           </div>
         </header>
 
+        {/* ── Painel Beta: Carteiras + Tipo de Leilão ── */}
+        <div style={estilos.painelBeta}>
+          {/* Saldos */}
+          <div style={{ display: "flex", gap: "1.25rem", alignItems: "center", flexWrap: "wrap" }}>
+            <div style={estilos.saldoItem}>
+              <span style={{ fontSize: "0.68rem", color: "#4a6080", textTransform: "uppercase", letterSpacing: "0.07em" }}>Flash</span>
+              <span style={{ fontSize: "1rem", fontWeight: "800", color: "#00d4aa" }}>
+                R$ {carteiraFlash.toFixed(2)}
+              </span>
+            </div>
+            <div style={estilos.saldoItem}>
+              <span style={{ fontSize: "0.68rem", color: "#4a6080", textTransform: "uppercase", letterSpacing: "0.07em" }}>Fichas</span>
+              <span style={{ fontSize: "1rem", fontWeight: "800", color: "#a78bfa" }}>
+                {fichasProgramadas} 🎫
+              </span>
+            </div>
+            <button onClick={handleSimularPix} style={estilos.botaoPix} title="Simula depósito de R$10 via PIX">
+              + PIX R$ 10,00
+            </button>
+            <button
+              onClick={handleConverterFicha}
+              style={{ ...estilos.botaoConverter, opacity: carteiraFlash < CUSTO_FICHA_BRL ? 0.4 : 1, cursor: carteiraFlash < CUSTO_FICHA_BRL ? "not-allowed" : "pointer" }}
+              disabled={carteiraFlash < CUSTO_FICHA_BRL}
+              title={`Converte R$ ${CUSTO_FICHA_BRL.toFixed(2)} em 1 ficha`}
+            >
+              → 1 Ficha (R$ {CUSTO_FICHA_BRL.toFixed(2)})
+            </button>
+            {erroCarteira && (
+              <span style={{ fontSize: "0.72rem", color: "#ff3d71" }}>⚠️ {erroCarteira}</span>
+            )}
+          </div>
+
+          {/* Seletor de tipo */}
+          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+            <span style={{ fontSize: "0.68rem", color: "#4a6080", marginRight: "0.2rem" }}>Modo:</span>
+            {[
+              { id: "flash",      label: "⚡ Flash (5 min)" },
+              { id: "programado", label: "🎫 Programado"    },
+            ].map(({ id, label }) => {
+              const ativo = tipoLeilao === id;
+              const cor   = id === "flash" ? "#fbbf24" : "#a78bfa";
+              return (
+                <button
+                  key={id}
+                  className="gut-btn-tipo"
+                  onClick={() => setTipoLeilao(id)}
+                  style={{
+                    color:       ativo ? cor    : "#4a6080",
+                    borderColor: ativo ? cor    : "rgba(255,255,255,0.1)",
+                    background:  ativo ? `${cor}18` : "transparent",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* ── Aviso de rede ── */}
         <div style={estilos.avisoRede}>
-          ⚠️ <strong>Rede:</strong> Ethereum Sepolia (testnet) ·{" "}
+          ⚠️ <strong>Beta:</strong> Saldo interno · Sem rede blockchain ativa ·{" "}
           <a href="https://sepolia.etherscan.io/address/0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
             target="_blank" rel="noopener noreferrer" style={{ color: "#fbbf24" }}>
-            Ver contrato no Etherscan ↗
+            Contrato Sepolia ↗
           </a>
           {isConnected && (
             <span style={{ marginLeft: "1rem", color: "#86efac" }}>
-              ✅ Carteira: {address?.slice(0, 6)}...{address?.slice(-4)}
+              ✅ {address?.slice(0, 6)}...{address?.slice(-4)}
             </span>
           )}
           {encerrado && (
@@ -428,7 +531,6 @@ export default function App() {
 
         {/* ── Grid principal ── */}
         <main style={estilos.grid}>
-
           <section style={estilos.col}>
             <CardLance
               idEdicao={EDICAO_ATIVA}
@@ -438,18 +540,22 @@ export default function App() {
               onConnect={abrirModal}
               onDisconnect={desconectar}
               encerrado={encerrado}
+              tipoLeilao={tipoLeilao}
+              carteiraFlash={carteiraFlash}
+              fichasProgramadas={fichasProgramadas}
+              onRefreshSaldo={refreshSaldo}
             />
 
             <div style={estilos.segCard}>
               <h4 style={estilos.segTitulo}>🛡️ Camadas de Segurança Ativas</h4>
               {[
                 ["Argon2id",       "Hash off-chain de cada lance (hash-wasm WASM)"],
-                ["EIP-191",        "Assinatura MetaMask/WalletConnect no telemóvel"],
+                ["EIP-191",        "Assinatura via Privy embedded wallet"],
                 ["Rate Limit",     "5 lances/min · cooldown 3s por carteira"],
                 ["DOMPurify",      "Sanitização contra XSS em todos os campos"],
-                ["CSP Header",     "Content-Security-Policy no servidor Vite"],
+                ["Saldo Interno",  "Carteiras flash e fichas gerenciadas localmente"],
                 ["localStorage",   "Persistência local dos lances da sessão"],
-                ["Require on-chain","Validações Solidity: saldo, prazo, valor mín."],
+                ["Beta Mode",      "Sem transações on-chain — seguro para testes"],
               ].map(([nome, desc]) => (
                 <div key={nome} style={estilos.segItem}>
                   <span style={estilos.segNome}>{nome}</span>
@@ -478,7 +584,7 @@ export default function App() {
               target="_blank" rel="noopener noreferrer" style={{ color: "#6ee7b7" }}>Cookies</a>
           </p>
           <p style={{ fontSize: "0.72rem", color: "#334155" }}>
-            Frontend Beta v0.8 · React 18 · Vite 8 · ethers.js v6 · hash-wasm argon2id · DOMPurify
+            Beta v0.9 · React 18 · Vite 8 · Saldo Interno · Argon2id · DOMPurify
           </p>
         </footer>
       </div>
@@ -496,6 +602,14 @@ const estilos = {
   headerDireita:{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" },
   badges:       { display: "flex", gap: "0.4rem" },
   badge:        { padding: "0.2rem 0.65rem", background: "rgba(0,212,170,0.08)", borderRadius: "20px", fontSize: "0.7rem", border: "1px solid rgba(0,212,170,0.2)", color: "#00d4aa88" },
+  botaoEntrar:  { padding: "0.6rem 1.4rem", background: "linear-gradient(135deg,#f5a623,#f97316)", color: "#04080f", border: "none", borderRadius: "28px", fontWeight: "800", cursor: "pointer", fontSize: "0.88rem", letterSpacing: "0.03em", boxShadow: "0 4px 16px rgba(245,166,35,0.35)" },
+  carteiraHeader:{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(0,212,170,0.08)", padding: "0.45rem 1rem", borderRadius: "28px", border: "1px solid rgba(0,212,170,0.25)" },
+  dot:          { width: "8px", height: "8px", borderRadius: "50%", background: "#00c853", flexShrink: 0, boxShadow: "0 0 6px #00c853" },
+  // Painel Beta
+  painelBeta:   { background: "rgba(4,8,15,0.92)", borderBottom: "1px solid rgba(167,139,250,0.15)", padding: "0.6rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", backdropFilter: "blur(12px)" },
+  saldoItem:    { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "1px" },
+  botaoPix:     { padding: "0.3rem 0.85rem", background: "rgba(0,212,170,0.12)", border: "1px solid rgba(0,212,170,0.35)", borderRadius: "20px", color: "#00d4aa", fontSize: "0.72rem", fontWeight: "800", cursor: "pointer", letterSpacing: "0.02em" },
+  botaoConverter:{ padding: "0.3rem 0.85rem", background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.35)", borderRadius: "20px", color: "#a78bfa", fontSize: "0.72rem", fontWeight: "800", letterSpacing: "0.02em" },
   avisoRede:    { background: "rgba(4,8,15,0.9)", borderBottom: "1px solid rgba(245,166,35,0.15)", padding: "0.45rem 2rem", fontSize: "0.8rem", color: "#f5a62388" },
   grid:         { display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: "1.5rem", padding: "1.5rem 2rem", flex: 1 },
   col:          { display: "flex", flexDirection: "column", gap: "1rem" },
@@ -505,7 +619,4 @@ const estilos = {
   segNome:      { minWidth: "110px", fontSize: "0.73rem", fontWeight: "700", color: "#00d4aa", background: "rgba(0,212,170,0.1)", padding: "0.2rem 0.5rem", borderRadius: "4px", flexShrink: 0, border: "1px solid rgba(0,212,170,0.2)" },
   segDesc:      { fontSize: "0.76rem", color: "#4a6080", lineHeight: "1.5" },
   footer:       { padding: "1rem 2rem", borderTop: "1px solid rgba(0,212,170,0.1)", textAlign: "center", fontSize: "0.76rem", color: "#4a6080" },
-  botaoMetaMask:{ padding: "0.6rem 1.4rem", background: "linear-gradient(135deg,#f5a623,#f97316)", color: "#04080f", border: "none", borderRadius: "28px", fontWeight: "800", cursor: "pointer", fontSize: "0.88rem", letterSpacing: "0.03em", boxShadow: "0 4px 16px rgba(245,166,35,0.35)" },
-  carteiraHeader:{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(0,212,170,0.08)", padding: "0.45rem 1rem", borderRadius: "28px", border: "1px solid rgba(0,212,170,0.25)" },
-  dot:          { width: "8px", height: "8px", borderRadius: "50%", background: "#00c853", flexShrink: 0, boxShadow: "0 0 6px #00c853" },
 };
