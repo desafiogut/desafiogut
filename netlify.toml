@@ -3,16 +3,21 @@
   command = "npm run build"
   publish = "dist"
 
+# Variáveis de build — baked no bundle Vite durante npm run build.
+# VITE_PRIVY_APP_ID é credencial pública de frontend (sem segredo aqui).
+# VITE_RPC_URL_SEPOLIA e chaves privadas: definir SOMENTE no painel Netlify
+# (Site settings → Environment variables), nunca neste arquivo.
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION      = "20"
+  VITE_PRIVY_APP_ID = "cmo51f3v300l90clgzksivvad"
 
-# SPA rewrite: todas as rotas → index.html
+# SPA rewrite — todas as rotas servem index.html (React Router)
 [[redirects]]
   from   = "/*"
   to     = "/index.html"
   status = 200
 
-# Headers de segurança
+# Headers de segurança globais
 [[headers]]
   for = "/*"
   [headers.values]
@@ -21,6 +26,7 @@
     Referrer-Policy        = "strict-origin-when-cross-origin"
     Permissions-Policy     = "camera=(), microphone=(), geolocation=()"
 
+# Cache longo para assets com hash (JS/CSS/imagens do build)
 [[headers]]
   for = "/assets/*"
   [headers.values]
