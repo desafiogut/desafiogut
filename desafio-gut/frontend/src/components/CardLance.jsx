@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { sanitizeLance, sanitizeEdicaoId } from "../utils/sanitize.js";
 import { verificarRateLimit, registrarLance } from "../utils/rateLimiter.js";
 import { gastarFicha } from "../utils/saldoInterno.js";
+import { validarLance } from "../utils/validacao.js";
 import {
   getSignerFromProvider,
   assinarLance,
@@ -40,10 +41,11 @@ export default function CardLance({
   onConnect,
   onDisconnect,
   encerrado,
-  tipoLeilao       = "flash",   // 'flash' | 'programado'
-  carteiraFlash    = 0,          // number (R$) — passado pelo App
-  fichasProgramadas = 0,         // number (int) — passado pelo App
-  onRefreshSaldo,                // callback para atualizar saldos no App
+  tipoLeilao        = "flash",
+  carteiraFlash     = 0,
+  fichasProgramadas = 0,
+  isSepoliaOk       = null,     // null=verificando, true=OK, false=falhou
+  onRefreshSaldo,
 }) {
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
@@ -67,19 +69,25 @@ export default function CardLance({
     // 1. Sanitização
     const valorCentavos = sanitizeLance(valor);
     if (valorCentavos === null) {
-      setErro("Valor inválido. Use um inteiro entre 1 e 999999 (centavos). Art. 27: mín R$ 0,01.");
+      setErro("Valor inválido. Use um inteiro entre 1 e 999999 (centavos). Art. 23: mín R$ 0,01.");
       return;
     }
 
-    // 2. Rate Limit
+    // 2. Pré-validação de negócio (Ponto 3 — Validação de Transação)
+    const preCheck = validarLance({
+      valorEmCentavos: valorCentavos,
+      address,
+      isConnected,
+      encerrado,
+      tipoLeilao,
+      fichasProgramadas,
+      isSepoliaOk,
+    });
+    if (!preCheck.valido) { setErro(preCheck.motivo); return; }
+
+    // 3. Rate Limit
     const { permitido, motivo } = verificarRateLimit(address);
     if (!permitido) { setErro(motivo); return; }
-
-    // 3. Valida fichas para leilão programado
-    if (isProgramado && fichasProgramadas <= 0) {
-      setErro("Sem fichas disponíveis. Converta saldo flash em fichas (Art. 20: R$ 2,00 / ficha).");
-      return;
-    }
 
     try {
       // ── MOCK: pipeline simulado ──────────────────────────────────────────

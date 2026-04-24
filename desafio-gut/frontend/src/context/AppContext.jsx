@@ -7,6 +7,9 @@ import {
   converterEmFichas,
   CUSTO_FICHA_BRL,
 } from "../utils/saldoInterno.js";
+import { useBlockchain }    from "../hooks/useBlockchain.js";
+import { useNetworkStatus } from "../hooks/useNetworkStatus.js";
+import { NetworkAlert }     from "../components/ui/NetworkAlert.jsx";
 
 // ─── Constantes exportadas ────────────────────────────────────────────────────
 export const MOCK_MODE    = import.meta.env.VITE_MOCK_MODE === "true";
@@ -14,8 +17,8 @@ export const EDICAO_ATIVA = "R-1";
 const LS_LANCES           = "gut_lances_r1";
 
 export const DURACAO = {
-  flash:      MOCK_MODE ? 30  : 300,   // Relâmpago: 5 min
-  programado: MOCK_MODE ? 60  : 1800,  // Programado: 30 min
+  flash:      MOCK_MODE ? 30  : 300,
+  programado: MOCK_MODE ? 60  : 1800,
 };
 
 export const LANCES_MOCK = [
@@ -36,10 +39,8 @@ export function useAppContext() {
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function AppProvider({ children }) {
-  // Tipo de leilão (Art. 8)
   const [tipoLeilao, setTipoLeilao] = useState("flash");
 
-  // Lances — persistidos em localStorage
   const [lances, setLances] = useState(() => {
     try {
       const salvo = localStorage.getItem(LS_LANCES);
@@ -47,14 +48,12 @@ export function AppProvider({ children }) {
     } catch { return LANCES_MOCK; }
   });
 
-  // Timer
   const [prazoTimestamp,  setPrazoTimestamp]  = useState(() => Math.floor(Date.now() / 1000) + DURACAO.flash);
   const [encerrado,       setEncerrado]       = useState(false);
   const [showOverlay,     setShowOverlay]     = useState(false);
   const [tempoRestante,   setTempoRestante]   = useState(DURACAO.flash);
   const [lightningActive, setLightningActive] = useState(false);
 
-  // Carteiras internas — Art. 20: R$ 2,00/senha
   const [carteiraFlash,     setCarteiraFlash]     = useState(() => getCarteiraFlash());
   const [fichasProgramadas, setFichasProgramadas] = useState(() => getFichasProgramadas());
   const [erroCarteira,      setErroCarteira]      = useState("");
@@ -70,19 +69,54 @@ export function AppProvider({ children }) {
   const isConnected = MOCK_MODE ? Boolean(mockAddress) : (authenticated && Boolean(realAddress));
   const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || null;
 
-  // Vencedor — Menor Lance Único (Art. 8)
-  const vencedor = [...lances]
+  // ── Ponto 4: Monitoramento de rede ───────────────────────────────────────────
+  const {
+    isOnline,
+    isSepoliaOk,
+    networkError,
+    limparNetworkError,
+    recheckSepolia,
+  } = useNetworkStatus();
+
+  // ── Ponto 1 + 2: Saldo real e vencedor on-chain ───────────────────────────────
+  // Desabilitado em MOCK_MODE ou sem carteira conectada
+  const blockchainEnabled = !MOCK_MODE && Boolean(address);
+  const {
+    saldoSenhas:      saldoSenhasOnChain,
+    saldoETH,
+    vencedorOnChain,
+    isLoadingSaldo,
+    isLoadingVencedor,
+    erroBlockchain,
+    limparErroBlockchain,
+    refetchSaldo:    refetchSaldoOnChain,
+    refetchVencedor,
+  } = useBlockchain({
+    address,
+    idEdicao: EDICAO_ATIVA,
+    enabled:  blockchainEnabled,
+  });
+
+  // Alerta unificado: erros de rede têm prioridade sobre erros de contrato
+  const alertaMensagem = networkError || erroBlockchain || null;
+  const alertaTipo     = networkError ? "aviso" : "erro";
+  function limparAlerta() {
+    if (networkError)     limparNetworkError();
+    if (erroBlockchain)   limparErroBlockchain();
+  }
+
+  // Vencedor: prefere dado on-chain quando disponível; cai back para cálculo local
+  const vencedorLocal = [...lances]
     .filter((l) => !l.repetido)
     .sort((a, b) => a.valor - b.valor)[0] ?? null;
+  const vencedor = vencedorOnChain ?? vencedorLocal;
 
   // ── Efeitos ──────────────────────────────────────────────────────────────────
 
-  // Persistência de lances
   useEffect(() => {
     try { localStorage.setItem(LS_LANCES, JSON.stringify(lances)); } catch {}
   }, [lances]);
 
-  // Reset timer ao trocar tipo de leilão
   useEffect(() => {
     const dur = DURACAO[tipoLeilao];
     setPrazoTimestamp(Math.floor(Date.now() / 1000) + dur);
@@ -92,7 +126,6 @@ export function AppProvider({ children }) {
     setLightningActive(false);
   }, [tipoLeilao]);
 
-  // Timer regressivo + disparo do efeito relâmpago
   useEffect(() => {
     const tick = () => {
       const restante = Math.max(0, prazoTimestamp - Math.floor(Date.now() / 1000));
@@ -100,6 +133,8 @@ export function AppProvider({ children }) {
       if (restante === 0) {
         setEncerrado(true);
         setLightningActive(true);
+        // Ponto 2: ao encerrar, busca vencedor on-chain imediatamente
+        if (!MOCK_MODE) refetchVencedor();
         setTimeout(() => { setLightningActive(false); setShowOverlay(true); }, 1200);
       }
     };
@@ -113,6 +148,8 @@ export function AppProvider({ children }) {
   function refreshSaldo() {
     setCarteiraFlash(getCarteiraFlash());
     setFichasProgramadas(getFichasProgramadas());
+    // Ponto 1: também recarrega saldo real da blockchain
+    if (!MOCK_MODE && address) refetchSaldoOnChain();
   }
 
   function handleSimularPix() {
@@ -177,14 +214,21 @@ export function AppProvider({ children }) {
     showOverlay,
     tempoRestante,
     lightningActive,
-    // Carteiras
+    // Carteiras internas (localStorage)
     carteiraFlash,
     fichasProgramadas,
     erroCarteira,
     // Auth
     address, isConnected, userLabel, ready, authenticated, user,
-    // Vencedor
+    // Vencedor (on-chain preferred)
     vencedor,
+    // ── Pontos 1, 2, 3, 4, 5 ──
+    saldoSenhasOnChain,   // fichas on-chain (null = carregando/desconectado)
+    saldoETH,             // ETH balance Sepolia ("0.001234")
+    isLoadingSaldo,       // Ponto 5: skeleton de saldo
+    isLoadingVencedor,    // Ponto 5: skeleton de vencedor
+    isOnline,             // Ponto 4: conectividade do browser
+    isSepoliaOk,          // Ponto 4: saúde do RPC Sepolia
     // Handlers
     refreshSaldo,
     handleSimularPix,
@@ -193,7 +237,19 @@ export function AppProvider({ children }) {
     desconectar,
     handleLanceSucesso,
     handleNovaRodada,
+    recheckSepolia,       // Força re-check manual da rede
   };
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+      {/* Ponto 4: alerta global de erros de rede / blockchain */}
+      <NetworkAlert
+        mensagem={alertaMensagem}
+        tipo={alertaTipo}
+        onClose={limparAlerta}
+        autoCloseMs={alertaTipo === "aviso" ? 0 : 6000}
+      />
+    </AppContext.Provider>
+  );
 }

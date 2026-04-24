@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import CardLance from "../components/CardLance.jsx";
 import TabelaLances from "../components/TabelaLances.jsx";
+import { SaldoSkeleton } from "../components/ui/Skeleton.jsx";
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
 const COR = {
@@ -138,9 +139,11 @@ export default function MercadoLances() {
     carteiraFlash, fichasProgramadas, erroCarteira,
     address, isConnected, userLabel,
     vencedor,
+    saldoSenhasOnChain, saldoETH, isLoadingSaldo, isOnline, isSepoliaOk,
     handleSimularPix, handleConverterFicha,
     abrirModal, desconectar,
     handleLanceSucesso, handleNovaRodada, refreshSaldo,
+    recheckSepolia,
   } = useAppContext();
 
   // Timer display
@@ -262,13 +265,48 @@ export default function MercadoLances() {
         {/* ── Painel Beta: saldos + tipo ── */}
         <div style={estilos.painelBeta}>
           <div style={{ display: "flex", gap: "1.25rem", alignItems: "center", flexWrap: "wrap" }}>
-            <div style={estilos.saldoItem}>
-              <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>Flash</span>
-              <span style={{ fontSize: "1rem", fontWeight: "800", color: COR.primary }}>R$ {carteiraFlash.toFixed(2)}</span>
-            </div>
-            <div style={estilos.saldoItem}>
-              <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>Fichas</span>
-              <span style={{ fontSize: "1rem", fontWeight: "800", color: "#a78bfa" }}>{fichasProgramadas} 🎫</span>
+            {/* Ponto 5: skeleton enquanto saldo carrega */}
+            {isLoadingSaldo && isConnected ? (
+              <SaldoSkeleton />
+            ) : (
+              <div style={estilos.saldoItem}>
+                <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>Flash</span>
+                <span style={{ fontSize: "1rem", fontWeight: "800", color: COR.primary }}>R$ {carteiraFlash.toFixed(2)}</span>
+              </div>
+            )}
+            {isLoadingSaldo && isConnected ? (
+              <SaldoSkeleton />
+            ) : (
+              <div style={estilos.saldoItem}>
+                <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                  Fichas{saldoSenhasOnChain !== null ? " ⛓" : ""}
+                </span>
+                <span style={{ fontSize: "1rem", fontWeight: "800", color: "#a78bfa" }}>
+                  {saldoSenhasOnChain ?? fichasProgramadas} 🎫
+                </span>
+              </div>
+            )}
+            {/* Saldo ETH on-chain (só quando conectado em produção) */}
+            {!MOCK_MODE && isConnected && saldoETH !== null && (
+              <div style={estilos.saldoItem}>
+                <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>ETH Sepolia</span>
+                <span style={{ fontSize: "1rem", fontWeight: "800", color: "#fbbf24" }}>{saldoETH}</span>
+              </div>
+            )}
+            {/* Ponto 4: indicador de status da rede */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginLeft: "0.5rem" }}>
+              <span style={{
+                width: "7px", height: "7px", borderRadius: "50%", flexShrink: 0,
+                background: !isOnline ? COR.danger : isSepoliaOk === null ? COR.warning : isSepoliaOk ? COR.success : COR.danger,
+                boxShadow: `0 0 5px ${!isOnline ? COR.danger : isSepoliaOk ? COR.success : COR.warning}`,
+              }} />
+              <span style={{ fontSize: "0.65rem", color: COR.muted }}>
+                {!isOnline ? "Sem rede" : isSepoliaOk === null ? "Verificando…" : isSepoliaOk ? "Sepolia OK" : (
+                  <button onClick={recheckSepolia} style={{ background: "none", border: "none", color: COR.warning, cursor: "pointer", fontSize: "0.65rem", padding: 0 }}>
+                    Sepolia ↻
+                  </button>
+                )}
+              </span>
             </div>
             <button onClick={handleSimularPix} style={estilos.botaoPix} title="Simula depósito PIX de R$ 10,00 (Art. 21)">
               + PIX R$ 10,00
@@ -319,7 +357,8 @@ export default function MercadoLances() {
               encerrado={encerrado}
               tipoLeilao={tipoLeilao}
               carteiraFlash={carteiraFlash}
-              fichasProgramadas={fichasProgramadas}
+              fichasProgramadas={saldoSenhasOnChain ?? fichasProgramadas}
+              isSepoliaOk={isSepoliaOk}
               onRefreshSaldo={refreshSaldo}
             />
             {/* Segurança */}

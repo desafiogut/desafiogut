@@ -12,8 +12,15 @@ export const ABI = [
   "function edicoes(string) view returns (string nome, bool ativa, uint256 prazo)",
 ];
 
+// VITE_CONTRACT_ADDRESS tem prioridade; VITE_CONTRATO_SEPOLIA mantido como legado
 export const CONTRATO_SEPOLIA =
-  import.meta.env.VITE_CONTRATO_SEPOLIA ?? "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
+  import.meta.env.VITE_CONTRACT_ADDRESS ??
+  import.meta.env.VITE_CONTRATO_SEPOLIA ??
+  "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
+
+const SEPOLIA_RPC =
+  import.meta.env.VITE_RPC_URL_SEPOLIA ??
+  "https://eth-sepolia.g.alchemy.com/v2/demo";
 
 /**
  * Retorna um ethers BrowserProvider + Signer a partir de qualquer
@@ -111,7 +118,7 @@ export async function getEdicaoPrazo(idEdicao) {
     // Privy embedded wallet não injeta window.ethereum; usa RPC público como fallback
     const provider = window.ethereum
       ? new BrowserProvider(window.ethereum)
-      : new JsonRpcProvider("https://rpc2.sepolia.org");
+      : new JsonRpcProvider(SEPOLIA_RPC);
     const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
     const result = await contrato.edicoes(idEdicao);
     const prazo = Number(result[2]); // index 2 = uint256 prazo
