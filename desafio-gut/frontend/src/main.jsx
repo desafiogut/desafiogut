@@ -6,7 +6,8 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { sepolia as sepoliaChain } from "viem/chains"; // viem instalado como dep do Privy
 import App from "./App.jsx";
 
-const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || "cmo51f3v300l90clgzksivvad";
+const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID;
+if (!PRIVY_APP_ID) console.warn("[DesafioGUT] VITE_PRIVY_APP_ID não definido — login desativado.");
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -31,7 +32,7 @@ createRoot(document.getElementById("root")).render(
         appearance: {
           theme: "dark",
           accentColor: "#00d4aa",
-          logo: "https://frontend-one-tawny-20.vercel.app/favicon.ico",
+          logo: "/favicon.ico",
           showWalletLoginFirst: false,
           walletList: ["metamask", "coinbase_wallet"],
         },
