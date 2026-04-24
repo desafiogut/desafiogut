@@ -14,8 +14,11 @@ import App from "./App.jsx";
  * Fallback garante que o SDK sempre inicializa, mesmo que a env var seja omitida
  * no painel Netlify ou num build local sem .env.local.
  */
+// IMPORTANTE: usa || e não ?? porque ?? não captura string vazia "".
+// Se a env var estiver ausente OU vazia no build Netlify, o fallback garante
+// que o App ID correto sempre chega ao PrivyProvider.
 const PRIVY_APP_ID =
-  import.meta.env.VITE_PRIVY_APP_ID ?? "cmo51f3v300l90clgzksivvad";
+  import.meta.env.VITE_PRIVY_APP_ID || "cmo51f3v300l90clgzksivvad";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
