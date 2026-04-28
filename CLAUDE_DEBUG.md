@@ -3,9 +3,58 @@
 
 ---
 
-## Estado Atual da Investigação
+## Tentativa 2 — Diagnóstico Playwright + Bundle Live (2026-04-28)
 
-### Sintoma Relatado
+### Sintoma da Iteração 2
+Botão preso em "⏳ Aguarde..." → `ready: false`. Fix da iteração 1 não funcionou.
+
+### Auditoria do Bundle Live
+```
+Bundle live: index-CfY2sf-O.js
+App ID no bundle: cmo5113v300l90clgzksivvad ← AINDA ERRADO
+```
+**Causa:** Netlify dashboard tem `VITE_PRIVY_APP_ID=cmo5113v...` como env var.
+O Vite substitui `import.meta.env.VITE_PRIVY_APP_ID` em build time pelo valor do
+dashboard — o fallback `|| "cmo51f3v..."` no código NUNCA é atingido se o env var
+estiver definido, mesmo com valor errado.
+
+### Achados do Playwright (node playwright-debug.js)
+```
+[HTTP 400] https://auth.privy.io/api/v1/apps/cmo5113v300l90clgzksivvad
+  → App ID inválido → Privy não consegue buscar configuração do app
+
+[CONSOLE ERROR] Connecting to 'https://explorer-api.walletconnect.com/v3/wallets'
+  violates CSP connect-src → TypeError: Failed to fetch
+  → WalletConnect bloqueado pelo CSP → crash no inicializador Privy
+  → ready fica false permanentemente
+
+[CONSOLE ERROR] img-src CSP violation: https://frontend-one-tawny-20.vercel.app/favicon.ico
+  → Logo URL do Vercel bloqueada pelo CSP de imagens
+```
+
+### Fixes da Iteração 2 (commit 16068b0)
+1. **App ID hardcoded** em `main.jsx` sem `import.meta.env` — env var Netlify não pode interferir
+2. **`walletList` removido** do config Privy — eliminado WalletConnect fetch → CSP OK
+3. **Logo URL** corrigida para `silly-stardust-ca71bc.netlify.app` (mesma origem)
+4. **CSP expandido** no `netlify.toml` para cobrir todos os domínios WalletConnect
+
+### Resultado da Iteração 2 — Playwright Confirmado
+```
+[STATUS] ✅ SUCESSO — Privy ready=true. Botão ativo!
+[MODAL] iframes/elementos Privy: 1
+[MODAL] Botão Google encontrado: SIM ✅
+[RESULTADO FINAL] ✅ MODAL PRIVY ABRIU — TESTE DE CLIQUE: SUCESSO!
+```
+- Bundle live `index-DYzJoxu9.js` tem App ID correto `cmo51f3v300l90clgzksivvad`
+- 0 erros de CSP no Playwright
+- 0 erros de página
+- Modal Privy detectado (1 iframe + botão Google presente)
+
+---
+
+## Estado Anterior da Investigação
+
+### Sintoma Relatado (Iteração 1)
 Clicar no botão de login/lance na produção não dispara o modal da Privy.
 
 ---
