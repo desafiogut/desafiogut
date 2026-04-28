@@ -134,7 +134,11 @@ export function AppProvider({ children }) {
 
   function abrirModal() {
     if (MOCK_MODE) { setMockAddress("0xDEAD00000000000000000000000000000000BEEF"); return; }
-    if (!ready) return;
+    if (!ready) {
+      // Privy ainda inicializando — aguarda 1s e tenta novamente
+      const id = setTimeout(() => { if (ready) login(); }, 1000);
+      return () => clearTimeout(id);
+    }
     login();
   }
 

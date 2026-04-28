@@ -40,10 +40,11 @@ export default function CardLance({
   onConnect,
   onDisconnect,
   encerrado,
-  tipoLeilao       = "flash",   // 'flash' | 'programado'
-  carteiraFlash    = 0,          // number (R$) — passado pelo App
-  fichasProgramadas = 0,         // number (int) — passado pelo App
-  onRefreshSaldo,                // callback para atualizar saldos no App
+  tipoLeilao       = "flash",
+  carteiraFlash    = 0,
+  fichasProgramadas = 0,
+  onRefreshSaldo,
+  ready            = true,       // Privy SDK ready — false = ainda inicializando
 }) {
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
@@ -113,6 +114,7 @@ export default function CardLance({
       // 5. Assinatura EIP-191 via Privy embedded wallet
       setFase(FASES.ASSINANDO);
       if (!privyWallet) throw new Error("Carteira não encontrada. Faça login novamente.");
+      await privyWallet.switchChain(11155111); // garante rede Sepolia (Art. operação on-chain)
       const ethereumProvider = await privyWallet.getEthereumProvider();
       const { signer } = await getSignerFromProvider(ethereumProvider);
       await assinarLance(signer, edicaoSanitizada, valorCentavos);
@@ -173,8 +175,12 @@ export default function CardLance({
       {/* Conexão */}
       <div style={estilos.conexaoArea}>
         {!isConnected ? (
-          <button style={estilos.botaoConectar} onClick={onConnect}>
-            ⚡ Aceito o DesafioGUT
+          <button
+            style={{ ...estilos.botaoConectar, opacity: ready ? 1 : 0.7, cursor: ready ? "pointer" : "wait" }}
+            onClick={onConnect}
+            disabled={!ready}
+          >
+            {ready ? "⚡ Aceito o DesafioGUT" : "⏳ Aguarde..."}
           </button>
         ) : (
           <div style={estilos.carteiraConectada}>

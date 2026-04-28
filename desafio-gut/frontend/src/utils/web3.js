@@ -106,12 +106,16 @@ export async function assinarLance(signer, idEdicao, valorEmCentavos) {
  * Usa window.ethereum se disponível, ou JsonRpcProvider público como fallback.
  * Retorna null em caso de erro (UI usa localStorage como fallback).
  */
+const ALCHEMY_RPC =
+  import.meta.env.VITE_ALCHEMY_URL ||
+  "https://eth-sepolia.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B";
+
 export async function getEdicaoPrazo(idEdicao) {
   try {
-    // Privy embedded wallet não injeta window.ethereum; usa RPC público como fallback
+    // Privy embedded wallet não injeta window.ethereum; usa Alchemy como fallback
     const provider = window.ethereum
       ? new BrowserProvider(window.ethereum)
-      : new JsonRpcProvider("https://rpc2.sepolia.org");
+      : new JsonRpcProvider(ALCHEMY_RPC);
     const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
     const result = await contrato.edicoes(idEdicao);
     const prazo = Number(result[2]); // index 2 = uint256 prazo

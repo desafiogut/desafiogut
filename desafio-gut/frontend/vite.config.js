@@ -11,6 +11,12 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
+  define: {
+    global: "globalThis",
+  },
+  optimizeDeps: {
+    include: ["@privy-io/react-auth"],
+  },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },

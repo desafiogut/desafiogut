@@ -136,7 +136,7 @@ export default function MercadoLances() {
     lances,
     prazoTimestamp, encerrado, showOverlay, tempoRestante, lightningActive,
     carteiraFlash, fichasProgramadas, erroCarteira,
-    address, isConnected, userLabel,
+    address, isConnected, userLabel, ready,
     vencedor,
     handleSimularPix, handleConverterFicha,
     abrirModal, desconectar,
@@ -248,7 +248,13 @@ export default function MercadoLances() {
                 </div>
               </div>
             ) : (
-              <button style={estilos.botaoEntrar} onClick={abrirModal}>⚡ Aceito o DesafioGUT</button>
+              <button
+                style={{ ...estilos.botaoEntrar, opacity: ready ? 1 : 0.7, cursor: ready ? "pointer" : "wait" }}
+                onClick={abrirModal}
+                disabled={!ready}
+              >
+                {ready ? "⚡ Aceito o DesafioGUT" : "⏳ Aguarde..."}
+              </button>
             )}
             <div style={estilos.badges}>
               <span style={estilos.badge}>🔒 LGPD</span>
@@ -321,6 +327,7 @@ export default function MercadoLances() {
               carteiraFlash={carteiraFlash}
               fichasProgramadas={fichasProgramadas}
               onRefreshSaldo={refreshSaldo}
+              ready={ready}
             />
             {/* Segurança */}
             <div style={estilos.segCard}>
