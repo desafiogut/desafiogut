@@ -6,7 +6,11 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { sepolia as sepoliaChain } from "viem/chains"; // viem instalado como dep do Privy
 import App from "./App.jsx";
 
-const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || "cmo51f3v300l90clgzksivvad";
+// App ID validado via Privy Management API em 2026-04-28.
+// NÃO usar import.meta.env — o dashboard Netlify tem o valor ERRADO (cmo5113v)
+// que sobrescreve qualquer fallback em tempo de build. Hardcode obrigatório até
+// o env var VITE_PRIVY_APP_ID ser corrigido no painel Netlify para cmo51f3v.
+const PRIVY_APP_ID = "cmo51f3v300l90clgzksivvad";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -31,9 +35,10 @@ createRoot(document.getElementById("root")).render(
         appearance: {
           theme: "dark",
           accentColor: "#00d4aa",
-          logo: "https://frontend-one-tawny-20.vercel.app/favicon.ico",
+          logo: "https://silly-stardust-ca71bc.netlify.app/favicon.ico",
           showWalletLoginFirst: false,
-          walletList: ["metamask", "coinbase_wallet"],
+          // walletList removido: causava WalletConnect bloqueado pelo CSP
+          // → TypeError: Failed to fetch → ready: false permanente
         },
       }}
     >
