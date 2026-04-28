@@ -60,14 +60,69 @@ Clicar no botão de login/lance na produção não dispara o modal da Privy.
 
 ---
 
-## Próximos Passos
-- [ ] Deploy para produção (`vercel --prod` ou push para repo monitorado pelo Vercel)
-- [ ] Verificar no painel Privy → Settings → Allowed Origins: `https://frontend-one-tawny-20.vercel.app`
-- [ ] Verificar no painel Privy → Login Methods: Google, Email, Apple ATIVADOS
-- [ ] Testar clique do botão na URL de produção
-- [ ] Confirmar que modal Privy aparece em 3s
+## Handshake de API — Resultados (2026-04-28)
+
+### Privy Management API — GET /api/v1/apps/{app_id}
+```
+App ID: cmo51f3v300l90clgzksivvad ✅ VÁLIDO
+App Name: DESAFIOGUT
+```
+
+**`allowed_domains` atual:**
+```json
+["http://localhost:3000", "http://localhost:5173", "https://silly-stardust-ca71bc.netlify.app"]
+```
+- ✅ URL de produção Netlify já está na whitelist
+- ⚠️ URL Vercel (`https://frontend-one-tawny-20.vercel.app`) NÃO está — adicionar se usar Vercel
+- ⚠️ API Privy não aceita PUT/PATCH — atualizar manualmente via dashboard
+
+**Problemas encontrados:**
+- `apple_oauth: false` → Apple desabilitado, mas código listava `"apple"` em loginMethods → CORRIGIDO no código
+- `embedded_wallet_config.create_on_login: "users-without-wallets"` → difere do código `"all-users"` → sem impacto no SDK v3 (client-side prevalece)
+- `netlify.toml` tinha `X-Frame-Options: DENY` → bloqueia iframes → CORRIGIDO para SAMEORIGIN
+
+## Deploy
+- Push para `https://github.com/desafiogut/desafiogut.git` → commit `593ee2b` em 2026-04-28
+- Netlify auto-deploy acionado (~2 min para live)
+- URL de produção: `https://silly-stardust-ca71bc.netlify.app`
+
+## Ações Manuais Necessárias (não automatizáveis via API)
+
+### 1. Painel Privy → Settings → Login Methods
+- [ ] Verificar Google: ATIVO ✅
+- [ ] Verificar Email: ATIVO ✅  
+- [ ] Apple: DESATIVADO — ativar se quiser oferecer login Apple
+
+### 2. Painel Privy → Embedded Wallets
+- [ ] Confirmar "Create on login" → "All users" (ou manter "users-without-wallets")
+
+### 3. Netlify Dashboard → Environment Variables
+- [ ] Verificar se `VITE_PRIVY_APP_ID` está definido — SE SIM, confirmar que é `cmo51f3v300l90clgzksivvad` (não o antigo `cmo5113v`)
+- [ ] Adicionar `VITE_ALCHEMY_URL=https://eth-sepolia.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B`
+- [ ] Adicionar `VITE_CONTRATO_SEPOLIA=0xa513E6E4b8f2a923D98304ec87F64353C4D5C853`
 
 ---
 
-## Raiz do Erro (a preencher após sucesso)
-_Será preenchido após confirmação de sucesso em produção._
+## Raiz do Erro — Confirmado após Diagnóstico
+
+### Raiz Principal
+**App ID incorreto** em todos os arquivos de configuração:
+- Errado: `cmo5113v300l90clgzksivvad` (caractere 6 = `1`)
+- Correto: `cmo51f3v300l90clgzksivvad` (caractere 6 = `f`)
+- Origem provável: typo manual ao copiar o App ID do painel Privy (confusão entre `f` e `1` em fontes monospace)
+- Com ID errado, o SDK Privy inicializa apontando para um app inexistente. O SDK pode ficar em estado `ready: false` indefinidamente OU tentar `login()` contra um app inválido — em ambos os casos, o modal NUNCA abre.
+
+### Causas Secundárias
+1. **Sem polyfill `global`**: ethers.js e Privy SDK precisam de `global = globalThis`
+2. **Silêncio no `!ready`**: botão de login não dava feedback de loading → usuário achava que estava quebrado
+3. **`X-Frame-Options: DENY`**: bloquearia carregamento de iframes do Privy (auth modal usa iframes)
+4. **Sem `switchChain`**: transações podiam falhar em rede errada
+5. **Apple OAuth**: listado no código mas desabilitado no painel → erro ao tentar Apple login
+
+### Lógica da Solução
+1. Corrigir o App ID em TODOS os pontos de entrada (main.jsx fallback + todos os .env files)
+2. Adicionar `define: { global: 'globalThis' }` no Vite para polyfill browser
+3. Desabilitar botão enquanto `ready: false` e mostrar spinner — elimina confusão UX
+4. `X-Frame-Options: SAMEORIGIN` — permite iframes de mesmo domínio (necessário para Privy)
+5. `switchChain(11155111)` antes de assinar — garante Sepolia sempre
+6. Remover Apple de loginMethods até habilitar no painel Privy
