@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-04-18 | Marco Beta (90%)
+> Atualizado em: 2026-04-29 | Marco Beta (90%)
 
 ---
 
@@ -16,7 +16,7 @@
 | Rede | Ethereum **Sepolia Testnet** (chainId `11155111` / `0xaa36a7`) | — |
 | Hash off-chain | Argon2id via `hash-wasm` WASM | ^4.11.0 |
 | Sanitização | DOMPurify + regex custom | ^3.1.6 |
-| Deploy | Vercel (SPA rewrite) | — |
+| Deploy | Netlify (SPA rewrite) — https://silly-stardust-ca71bc.netlify.app | — |
 
 > ✅ **Privy é o padrão oficial de autenticação e gerenciamento de carteira.**
 > Objetivo: **zero barreira de entrada** — sem extensão de browser, sem QR Code, sem seed phrase.
@@ -46,10 +46,11 @@
 
 ### `LeilaoGUT` — Sepolia Testnet
 ```
-Endereço : 0xa513E6E4b8f2a923D98304ec87F64353C4D5C853
+Endereço : 0x273Ef96f5be04601FD39DAcDFB039d6fB552445e
 Rede     : Ethereum Sepolia (chainId 11155111)
-Etherscan: https://sepolia.etherscan.io/address/0xa513E6E4b8f2a923D98304ec87F64353C4D5C853
+Etherscan: https://sepolia.etherscan.io/address/0x273Ef96f5be04601FD39DAcDFB039d6fB552445e
 Arquivo  : desafio-gut/contracts/Leilao.sol
+Deploy   : Hardhat Ignition em 2026-04-28 (Iteração 5). Coordenacao = deployer.
 ```
 
 **ABI mínimo utilizado pelo frontend:**
@@ -70,17 +71,17 @@ function edicoes(string) view returns (string nome, bool ativa, uint256 prazo)
 
 | Variável | Valor | Arquivo |
 |---|---|---|
-| `VITE_PRIVY_APP_ID` | `clxxxxxxxxxxxxxxxxxxxxxxx` | `.env.local` + Vercel Dashboard |
-| `VITE_CONTRATO_SEPOLIA` | `0xa513E6E4b8f2a923D98304ec87F64353C4D5C853` | `.env.local` + `.env.production` |
+| `VITE_PRIVY_APP_ID` | `cmo51f3v300l90clgzksivvad` | `.env.local` + Netlify Dashboard |
+| `VITE_CONTRATO_SEPOLIA` | `0x273Ef96f5be04601FD39DAcDFB039d6fB552445e` | `.env.local` + `.env.production` |
+| `VITE_ALCHEMY_URL` | `https://eth-sepolia.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B` | `.env.production` + Netlify Dashboard |
 | `VITE_MOCK_MODE` | `false` em prod | `.env` |
 | `VITE_WC_PROJECT_ID` | legado — não usado na lógica ativa | `.env.local` |
 
 > ⚠️ **`VITE_PRIVY_APP_ID` é obrigatório.** Sem ele, o login não inicializa.
-> 1. Acesse https://privy.io → crie um projeto
-> 2. Em Settings → Basics → copie o **App ID** (formato `clxxxxxxx`)
-> 3. Em Settings → Login Methods → ative Google, Email, Apple
-> 4. Em Settings → Embedded Wallets → ative "Create on login" para "All users"
-> 5. Adicione `https://frontend-one-tawny-20.vercel.app` em Allowed Origins
+> 1. Acesse https://privy.io → projeto já criado (App ID `cmo51f3v300l90clgzksivvad`)
+> 2. Em Settings → Login Methods → Google + Email ativos (Apple ainda desabilitado no painel)
+> 3. Em Settings → Embedded Wallets → "Create on login" ativo para "All users"
+> 4. Em Allowed Origins: `https://silly-stardust-ca71bc.netlify.app`
 
 ---
 
@@ -93,8 +94,8 @@ desafio-gut/
 └── frontend/
     ├── .env                        ← VITE_MOCK_MODE (dev)
     ├── .env.local                  ← VITE_PRIVY_APP_ID + VITE_CONTRATO_SEPOLIA (não commitar)
-    ├── .env.production             ← Idem (deploy Vercel)
-    ├── vercel.json                 ← SPA rewrite + headers de segurança
+    ├── .env.production             ← Idem (deploy Netlify)
+    └── (raiz do repo) netlify.toml ← SPA rewrite + headers de segurança
     ├── vite.config.js              ← Tailwind v4 plugin + alias @
     └── src/
         ├── main.jsx                ← Entry point: PrivyProvider com Sepolia + Google/Email/Apple
@@ -166,9 +167,11 @@ desafio-gut/
 - [x] ~~Sincronizar timer com blockchain~~ — feito (`getEdicaoPrazo` + JsonRpcProvider fallback)
 - [x] ~~Verificar saldo de senhas~~ — feito
 - [x] ~~Privy como padrão oficial de autenticação~~ — feito
-- [ ] **Preencher `VITE_PRIVY_APP_ID`** em `.env.local` e no painel Vercel ← BLOQUEANTE
-- [ ] Configurar login methods no painel Privy (Google, Email, Apple)
-- [ ] Chamar `abrirEdicao("R-1", ...)` no contrato antes do lançamento real
+- [x] ~~Preencher `VITE_PRIVY_APP_ID` em `.env.local` e no painel Netlify~~ — feito (2026-04-28)
+- [x] ~~Configurar login methods no painel Privy~~ — Google + Email ativos (Apple pendente)
+- [x] ~~Chamar `abrirEdicao("R-1", ...)` no contrato~~ — feito (2026-04-29, tx `0x1767bffd…ce8e`)
+- [x] ~~Pipeline `darLance` validado on-chain ponta a ponta~~ — feito (2026-04-29, tx `0xf5991092…29cbd`)
+- [ ] Habilitar Apple OAuth no painel Privy
 - [ ] Adicionar `apurarVencedor()` público para exibição do vencedor real on-chain
 - [ ] Persistência multi-usuário dos lances (backend ou indexação de eventos)
 
@@ -179,6 +182,6 @@ desafio-gut/
 1. **Não leia o projeto inteiro.** Use foco em arquivo (`@file`).
 2. **Privy é o padrão oficial** — não substituir por MetaMask direta ou AppKit.
 3. **`wallets[0].getEthereumProvider()`** devolve o provider EIP-1193 da embedded wallet.
-4. **Toda alteração deve vir com `vercel --prod` e URL gerada.**
+4. **Deploy é Netlify** (auto-deploy ao push em `main` no repo `desafiogut/desafiogut`).
 5. **MOCK_MODE** controla o fluxo simulado sem Privy — não remover.
 6. **`VITE_PRIVY_APP_ID`** é obrigatório para o login funcionar em qualquer ambiente.

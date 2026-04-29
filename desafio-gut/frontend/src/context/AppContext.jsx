@@ -7,6 +7,7 @@ import {
   converterEmFichas,
   CUSTO_FICHA_BRL,
 } from "../utils/saldoInterno.js";
+import { subscribeLanceDado } from "../utils/web3.js";
 
 // ─── Constantes exportadas ────────────────────────────────────────────────────
 export const MOCK_MODE    = import.meta.env.VITE_MOCK_MODE === "true";
@@ -92,6 +93,28 @@ export function AppProvider({ children }) {
     setLightningActive(false);
   }, [tipoLeilao]);
 
+  // Listener on-chain do evento LanceDado — atualiza tabela em tempo real.
+  // Desativado em MOCK_MODE (UI roda sem rede).
+  useEffect(() => {
+    if (MOCK_MODE) return;
+    const unsubscribe = subscribeLanceDado(EDICAO_ATIVA, (lance) => {
+      setLances((prev) => {
+        if (prev.some((l) => l.txHash === lance.txHash)) return prev; // dedup
+        const valor = lance.valor;
+        return [
+          ...prev.map((l) => l.valor === valor ? { ...l, repetido: true } : l),
+          {
+            endereco: lance.endereco,
+            valor,
+            repetido: lance.repetido || prev.some((l) => l.valor === valor),
+            txHash:   lance.txHash,
+          },
+        ];
+      });
+    });
+    return unsubscribe;
+  }, []);
+
   // Timer regressivo + disparo do efeito relâmpago
   useEffect(() => {
     const tick = () => {
@@ -134,12 +157,32 @@ export function AppProvider({ children }) {
 
   function abrirModal() {
     if (MOCK_MODE) { setMockAddress("0xDEAD00000000000000000000000000000000BEEF"); return; }
+    console.info("[GUT-DEBUG] abrirModal", { ready, authenticated, hasUser: !!user });
     if (!ready) {
-      // Privy ainda inicializando — aguarda 1s e tenta novamente
+      console.warn("[GUT-DEBUG] abrirModal abortou: Privy ready=false. Reagendando em 1s.");
       const id = setTimeout(() => { if (ready) login(); }, 1000);
       return () => clearTimeout(id);
     }
-    login();
+    try {
+      const result = login();
+      if (result && typeof result.then === "function") {
+        result
+          .then(() => console.info("[GUT-DEBUG] login() resolveu"))
+          .catch((err) => {
+            console.error("[GUT-DEBUG] login() rejeitou", {
+              name:    err?.name,
+              message: err?.message,
+              code:    err?.code,
+              stack:   err?.stack,
+              raw:     err,
+            });
+          });
+      }
+    } catch (err) {
+      console.error("[GUT-DEBUG] login() jogou síncrono", {
+        name: err?.name, message: err?.message, stack: err?.stack, raw: err,
+      });
+    }
   }
 
   function desconectar() {
