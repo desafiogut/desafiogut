@@ -10,10 +10,13 @@ export const ABI = [
   "function coordenacao() public view returns (address)",
   "function abrirEdicao(string idEdicao, string nome, uint256 duracaoSegundos) public",
   "function edicoes(string) view returns (string nome, bool ativa, uint256 prazo)",
+  "event LanceDado(string idEdicao, address indexed lancador, uint256 valorEmCentavos, bool repetido, uint256 timestamp)",
+  "event EdicaoAberta(string idEdicao, string nome, uint256 prazo)",
+  "event SenhasCreditadas(address indexed usuario, uint256 quantidade)",
 ];
 
 export const CONTRATO_SEPOLIA =
-  import.meta.env.VITE_CONTRATO_SEPOLIA ?? "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
+  import.meta.env.VITE_CONTRATO_SEPOLIA ?? "0x273Ef96f5be04601FD39DAcDFB039d6fB552445e";
 
 /**
  * Retorna um ethers BrowserProvider + Signer a partir de qualquer
@@ -134,14 +137,51 @@ export function consultarSaldo(_walletProvider, _contratoEndereco, _address) {
 }
 
 /**
- * Registra um lance localmente (Beta).
- * Substitui enviarLance on-chain — gera receipt com hash sintético.
+ * Submete um lance on-chain chamando darLance(idEdicao, valorEmCentavos).
+ * Aguarda 1 confirmação e retorna { hash, blockNumber } do receipt real.
+ *
+ * Pré-condições no contrato:
+ *  - signer.address precisa ter saldoSenhas > 0
+ *  - edicao precisa estar ativa (abrirEdicao chamado pela coordenacao)
+ *  - block.timestamp <= edicao.prazo
  */
-export async function enviarLance(_signer, _contratoEndereco, _idEdicao, _valorEmCentavos) {
-  await new Promise((r) => setTimeout(r, 420)); // latência realista
-  const hash =
-    "0xBETA" +
-    Date.now().toString(16).toUpperCase() +
-    Math.random().toString(16).slice(2, 10).toUpperCase();
-  return { hash };
+export async function enviarLance(signer, contratoEndereco, idEdicao, valorEmCentavos) {
+  if (!signer)            throw new Error("Signer ausente — faça login antes de lançar.");
+  if (!contratoEndereco)  throw new Error("Endereço do contrato não configurado (VITE_CONTRATO_SEPOLIA).");
+
+  const contrato = new Contract(contratoEndereco, ABI, signer);
+  const tx       = await contrato.darLance(idEdicao, valorEmCentavos);
+  const receipt  = await tx.wait();
+  return { hash: receipt.hash, blockNumber: receipt.blockNumber };
+}
+
+/**
+ * Inscreve um listener para o evento LanceDado da edição informada.
+ * Usa JsonRpcProvider Alchemy (polling) — funciona mesmo quando o usuário
+ * não está autenticado (qualquer visitante vê lances entrando em tempo real).
+ *
+ * Retorna função de unsubscribe — chamar no cleanup do useEffect.
+ */
+export function subscribeLanceDado(idEdicao, onLance) {
+  const provider = new JsonRpcProvider(ALCHEMY_RPC);
+  const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
+
+  const handler = (eventoIdEdicao, lancador, valorEmCentavos, repetido, timestamp, ev) => {
+    if (eventoIdEdicao !== idEdicao) return; // filtra outras edições
+    onLance({
+      endereco:   lancador,
+      valor:      Number(valorEmCentavos),
+      repetido:   Boolean(repetido),
+      timestamp:  Number(timestamp),
+      txHash:     ev?.log?.transactionHash ?? null,
+      blockNumber: ev?.log?.blockNumber ?? null,
+    });
+  };
+
+  contrato.on("LanceDado", handler);
+
+  return () => {
+    try { contrato.off("LanceDado", handler); } catch {}
+    try { provider.destroy?.(); } catch {}
+  };
 }

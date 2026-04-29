@@ -1,0 +1,49 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_20-4deb3ca56ef469d4141dccd05e58bd587cd3c690",
+  "solcVersion": "0.8.20",
+  "solcLongVersion": "0.8.20+commit.a1b79de6",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.4.2"
+  },
+  "userSourceNameMap": {
+    "contracts/Leilao.sol": "project/contracts/Leilao.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/Leilao.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract LeilaoGUT {\n    address public coordenacao;\n\n    struct Edicao {\n        string nome;\n        bool ativa;\n        uint256 prazo;       // timestamp Unix de encerramento\n        uint256[] listaDeValores;\n        mapping(uint256 => address) lances;\n        mapping(uint256 => uint256) contagem;\n    }\n\n    mapping(string => Edicao) public edicoes; // Ex: \"R-1\", \"P-1\"\n    mapping(address => uint256) public saldoSenhas;\n\n    event LanceDado(\n        string idEdicao,\n        address indexed lancador,\n        uint256 valorEmCentavos,\n        bool repetido,\n        uint256 timestamp\n    );\n    event EdicaoAberta(string idEdicao, string nome, uint256 prazo);\n    event SenhasCreditadas(address indexed usuario, uint256 quantidade);\n\n    constructor() {\n        coordenacao = msg.sender;\n    }\n\n    modifier apenasCoordenacao() {\n        require(msg.sender == coordenacao, \"Acesso restrito a coordenacao\");\n        _;\n    }\n\n    // Coordenacao abre uma edicao com prazo em segundos a partir de agora\n    function abrirEdicao(string memory idEdicao, string memory nome, uint256 duracaoSegundos) public apenasCoordenacao {\n        Edicao storage e = edicoes[idEdicao];\n        e.nome = nome;\n        e.ativa = true;\n        e.prazo = block.timestamp + duracaoSegundos;\n        emit EdicaoAberta(idEdicao, nome, e.prazo);\n    }\n\n    // Artigo XVII e XXI: Coordenacao libera senhas apos PIX ou Bonus\n    function adicionarSenhas(address usuario, uint256 quantidade) public apenasCoordenacao {\n        saldoSenhas[usuario] += quantidade;\n        emit SenhasCreditadas(usuario, quantidade);\n    }\n\n    // Artigo VIII: O menor e unico ganha\n    function darLance(string memory idEdicao, uint256 valorEmCentavos) public {\n        require(saldoSenhas[msg.sender] > 0, \"Voce nao possui senhas disponiveis\");\n        require(valorEmCentavos >= 1, \"Lance minimo e R$ 0,01\"); // Artigo XXIII\n\n        Edicao storage e = edicoes[idEdicao];\n        require(e.ativa, \"Edicao nao esta ativa\");\n        require(block.timestamp <= e.prazo, \"Prazo da edicao encerrado\");\n\n        bool jaExistia = e.contagem[valorEmCentavos] > 0;\n        if (!jaExistia) {\n            e.listaDeValores.push(valorEmCentavos);\n        }\n\n        e.lances[valorEmCentavos] = msg.sender;\n        e.contagem[valorEmCentavos]++;\n        saldoSenhas[msg.sender]--; // Consome uma senha (R$ 2,00)\n\n        emit LanceDado(idEdicao, msg.sender, valorEmCentavos, jaExistia, block.timestamp);\n    }\n\n    // Artigo XXII: Apuracao automatica do vencedor\n    function apurarVencedor(string memory idEdicao) public view apenasCoordenacao returns (uint256, address) {\n        Edicao storage e = edicoes[idEdicao];\n        uint256 menorUnico = type(uint256).max;\n        address ganhador = address(0);\n\n        for (uint i = 0; i < e.listaDeValores.length; i++) {\n            uint256 v = e.listaDeValores[i];\n            if (e.contagem[v] == 1 && v < menorUnico) {\n                menorUnico = v;\n                ganhador = e.lances[v];\n            }\n        }\n        return (menorUnico, ganhador);\n    }\n}\n"
+      }
+    }
+  }
+}

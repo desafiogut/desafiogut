@@ -1,11 +1,21 @@
-require("dotenv").config();
+import "dotenv/config";
+import HardhatEthers from "@nomicfoundation/hardhat-ethers";
+import HardhatIgnitionEthers from "@nomicfoundation/hardhat-ignition-ethers";
 
-module.exports = {
-  solidity: "0.8.0",
+export default {
+  plugins: [HardhatEthers, HardhatIgnitionEthers],
+  solidity: {
+    version: "0.8.20",
+    settings: {
+      optimizer: { enabled: true, runs: 200 },
+    },
+  },
   networks: {
     sepolia: {
-      url: process.env.RPC_URL,
-      accounts: [process.env.PRIVATE_KEY],
+      type: "http",
+      url: process.env.RPC_URL || "",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 11155111,
     },
   },
 };
