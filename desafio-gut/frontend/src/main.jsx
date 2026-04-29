@@ -10,7 +10,24 @@ import App from "./App.jsx";
 // NÃO usar import.meta.env — o dashboard Netlify tem o valor ERRADO (cmo5113v)
 // que sobrescreve qualquer fallback em tempo de build. Hardcode obrigatório até
 // o env var VITE_PRIVY_APP_ID ser corrigido no painel Netlify para cmo51f3v.
-const PRIVY_APP_ID = "cmo51f3v300l90clgzksivvad";
+const PRIVY_APP_ID_RAW = "cmo51f3v300l90clgzksivvad";
+
+// Tentativa 7 — sanity check anti-whitespace/zero-width sneaky chars.
+// Strip de \s + zero-width space (U+200B), zero-width non-joiner (U+200C),
+// zero-width joiner (U+200D), BOM (U+FEFF). Garante que typo invisível nunca
+// degrade o appId em runtime.
+const PRIVY_APP_ID = PRIVY_APP_ID_RAW.replace(
+  /[\s​‌‍﻿]/g, ""
+);
+if (PRIVY_APP_ID !== PRIVY_APP_ID_RAW) {
+  console.error("[GUT-DEBUG] PRIVY_APP_ID continha caracteres invisíveis", {
+    raw: JSON.stringify(PRIVY_APP_ID_RAW),
+    cleaned: JSON.stringify(PRIVY_APP_ID),
+  });
+}
+if (!/^[a-z0-9]{20,30}$/.test(PRIVY_APP_ID)) {
+  console.error("[GUT-DEBUG] PRIVY_APP_ID não bate com [a-z0-9]{20,30}", PRIVY_APP_ID);
+}
 
 // ── Instrumentação Tentativa 6 — captura verbosa de falhas do Privy ──────────
 // Imprime QUALQUER erro/rejeição não tratada com tag [GUT-DEBUG] para que o
@@ -18,9 +35,13 @@ const PRIVY_APP_ID = "cmo51f3v300l90clgzksivvad";
 if (typeof window !== "undefined") {
   window.__GUT_DEBUG__ = {
     appId: PRIVY_APP_ID,
+    appIdLen: PRIVY_APP_ID.length,
     origin: window.location.origin,
     href:   window.location.href,
-    bundleBuiltAt: new Date().toISOString(),
+    sepoliaChainId: sepoliaChain?.id,
+    sepoliaName:    sepoliaChain?.name,
+    bundleBuiltAt:  new Date().toISOString(),
+    tentativa:      "7",
   };
   console.info("[GUT-DEBUG] boot", window.__GUT_DEBUG__);
 

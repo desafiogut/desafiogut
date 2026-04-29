@@ -3,6 +3,117 @@
 
 ---
 
+## Tentativa 7 — `frame-ancestors` da Privy + cache-bust + sanitização de App ID (2026-04-29)
+
+### Sintoma reportado pelo usuário (após deploy da Tentativa 6)
+> "Framing https://auth.privy.io/ violates the following Content Security Policy
+> directive: frame-ancestors self..." + "Privy iframe failed to load"
+
+### Descoberta crítica — `frame-ancestors` é setada pelo recurso, não pelo embedador
+
+`curl -I https://auth.privy.io/` (com e sem `?app_id=...`) devolve sempre:
+```
+content-security-policy: ...; frame-ancestors 'none'; ...
+x-frame-options: DENY
+```
+
+Implicação direta: **`auth.privy.io/` (rota raiz) é uma página de marketing/dashboard
+da Privy que recusa ser emoldurada por QUALQUER origem, inclusive pela própria Privy**.
+A nossa `frame-src` no `netlify.toml` é irrelevante aqui — `frame-src` controla o
+que NÓS podemos emoldurar; `frame-ancestors` é setada pela página emoldurada para
+controlar quem pode emoldurá-la.
+
+Ou seja: o erro é causado por algo no SDK/runtime tentando emoldurar a rota raiz
+(`/`) de `auth.privy.io` — o que é incorreto. O SDK Privy v3 deveria emoldurar
+endpoints embedáveis (ex: `auth.privy.io/embedded/...`), não a rota raiz.
+
+### Hipóteses operacionais
+| # | Hipótese | Plausibilidade |
+|---|---|---|
+| 1 | Bundle live antigo cacheado pelo browser/CDN — usuário ainda vê código pré-Tentativa 6, antes do `accountsgoogle.com` no script-src, e SDK fallback tenta framar `/` | Alta — explicaria por que `[GUT-DEBUG]` não foi visto |
+| 2 | App ID com whitespace invisível na string fonte (zero-width space colado de copy/paste) → SDK monta URL de iframe inválida → Privy serve a rota raiz como fallback | Baixa (string foi inspecionada byte-a-byte: 25 chars, todos `[a-z0-9]`) — mas vale instrumentar |
+| 3 | Algum middleware do Privy SDK detecta browser hostil (popup blocker, third-party cookies bloqueados em Brave/Safari) e cai num fallback que tenta emoldurar `/` | Plausível — Privy v3 tem fallback por iframe quando popup é bloqueado |
+| 4 | CSP do nosso site bloqueia carregamento do bundle correto da Privy ou do hcaptcha (precondition para o login Google) → SDK regredindo para fluxo iframe ruim | Plausível — Privy carrega hcaptcha em produção; se hcaptcha fica bloqueado, SDK pode fallback errado |
+
+### Correções aplicadas
+
+#### A) `netlify.toml` — CSP com explícitos da Privy + hCaptcha + cache-bust
+1. **Cache-Control agressivo no HTML** (causa raiz mais provável da regressão):
+   - `/index.html` e `/` → `no-store, must-revalidate, max-age=0` + `Pragma: no-cache` + `Expires: 0`
+   - `/assets/*` → `max-age=31536000, immutable` (assets têm hash no nome)
+   - **Por quê**: o erro do usuário pode ser do bundle anterior à Tentativa 6
+     (sem `accounts.google.com` em script-src, sem listeners `[GUT-DEBUG]`).
+     Sem cache-bust no HTML, ele continuaria vendo o velho mesmo após push.
+2. **CSP estendida** com `auth.privy.io` explícito em `script-src`, `frame-src`,
+   `child-src`, `connect-src`, `img-src` (apesar de `*.privy.io` já cobrir,
+   browsers às vezes têm matching estranho com wildcards — explicit é mais seguro).
+3. **`child-src` adicionado** (antes não existia) — fallback do `frame-src` que
+   alguns browsers ainda preferem para iframes embutidos.
+4. **`hcaptcha.com` + `*.hcaptcha.com` + `challenges.cloudflare.com`** adicionados
+   em `script-src`, `frame-src`, `child-src`, `connect-src`, `style-src` —
+   Privy carrega hCaptcha em produção como anti-bot do login Google. Se
+   hCaptcha era bloqueada por CSP, o login morria silencioso.
+5. **`*.rpc.privy.systems`** adicionado em `connect-src` — Privy v3 usa esse
+   domínio para o RPC do embedded wallet (visto na CSP do próprio auth.privy.io).
+6. **`worker-src`** mudado de só `blob:` para `'self' blob:` — Privy registra
+   service worker para captcha.
+
+#### B) `frontend/src/main.jsx` — sanitização defensiva do App ID
+- `PRIVY_APP_ID_RAW` (literal) → strip de whitespace + zero-width chars
+  (U+200B, U+200C, U+200D, U+FEFF) → `PRIVY_APP_ID`
+- Se a string foi modificada pela limpeza, loga `[GUT-DEBUG]` com `raw` vs `cleaned`
+- Schema regex `^[a-z0-9]{20,30}$` com log se falhar
+- `window.__GUT_DEBUG__` agora inclui `appIdLen`, `sepoliaChainId`, `sepoliaName`, `tentativa: "7"`
+
+#### C) NÃO modificado (já estava correto, verificado em src):
+- `supportedChains: [sepoliaChain]` — sepolia importada de `viem/chains` ✓
+- `defaultChain: sepoliaChain` ✓
+
+### Por que esta abordagem corrige o "iframe failed to load"
+- **Se hipótese 1 (cache stale)**: cache-bust força HTML novo no próximo refresh
+  → bundle novo carrega com listeners `[GUT-DEBUG]` → user finalmente vê os logs
+  → nos próximos passos a causa real fica visível.
+- **Se hipótese 4 (hcaptcha bloqueado)**: CSP agora libera hCaptcha + Cloudflare
+  challenges → Privy completa o anti-bot → login Google prossegue.
+- **Se hipótese 2 (App ID corrompido)**: sanitização + schema check exporiam
+  imediatamente no boot.
+- **Se hipótese 3 (fallback iframe ruim do SDK)**: nenhum fix nosso resolve;
+  precisamos do log `[GUT-DEBUG] window.error` mostrando a URL exata que falhou
+  para reportar à Privy ou trocar de SDK version. O cache-bust garante que esse
+  log apareça.
+
+### O que NÃO funcionaria (e por quê)
+- ❌ Adicionar `auth.privy.io` em `frame-ancestors` do nosso CSP — `frame-ancestors`
+  controla quem emoldura nosso site, não o que emoldurmos.
+- ❌ Setar `X-Frame-Options: ALLOWALL` no nosso site — afeta apenas quem nos
+  emoldura, não auth.privy.io.
+- ❌ Forçar Privy a aceitar emolduração da rota `/` — só Privy controla isso.
+
+### Pendência manual após este commit
+1. Push (autorizado pelo usuário)
+2. Aguardar Netlify auto-deploy
+3. Em aba anônima limpa, abrir https://silly-stardust-ca71bc.netlify.app
+4. Confirmar no console: `[GUT-DEBUG] boot { ..., tentativa: "7" }`
+5. Se `tentativa !== "7"` → cache ainda velho, hard refresh (Ctrl+Shift+R)
+6. Clicar Login → Continue with Google
+7. Cenários:
+   - **Funciona** ✅ → causa raiz era CSP de hCaptcha ou cache stale
+   - **Trava em iframe** com novo bundle → colar logs `[GUT-DEBUG]` para análise
+     (especialmente `window.error` com a URL do iframe que falhou)
+
+### Estado pós-Tentativa 7
+| Aspecto | Status |
+|---|---|
+| Cache-bust HTML | ✅ aplicado |
+| CSP com Privy + hCaptcha + Cloudflare explícitos | ✅ aplicado |
+| `child-src` adicionado | ✅ aplicado |
+| Sanitização App ID + schema check | ✅ aplicado |
+| `supportedChains` Sepolia | ✅ já estava (verificado) |
+| Logs verbose [GUT-DEBUG] (Tentativa 6) | ✅ ainda ativos |
+| Push para main + auto-deploy Netlify | ⏳ Em andamento |
+
+---
+
 ## Tentativa 6 — Modal Privy abre mas Google trava com "Something went wrong" (2026-04-29)
 
 ### Sintoma relatado pelo usuário

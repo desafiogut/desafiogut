@@ -8,10 +8,38 @@
   to     = "/index.html"
   status = 200
 
+# ── Cache-bust agressivo do HTML (Tentativa 7) ───────────────────────────────
+# index.html nunca deve ser cacheado por CDN/browser, senão clientes ficam
+# presos em deploys antigos com CSP velha. Os assets /assets/*.js já têm
+# hash no nome (immutable cache safe).
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate, no-store"
+    Pragma        = "no-cache"
+    Expires       = "0"
+
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate, no-store"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# ── CSP + headers de segurança ───────────────────────────────────────────────
 [[headers]]
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
     X-Frame-Options        = "SAMEORIGIN"
     Referrer-Policy        = "strict-origin-when-cross-origin"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://privy.io https://*.privy.io https://accounts.google.com https://apis.google.com https://*.gstatic.com https://walletconnect.com https://*.walletconnect.com https://*.walletconnect.org; style-src 'self' 'unsafe-inline' https://accounts.google.com; font-src 'self' data:; img-src 'self' data: blob: https://privy.io https://*.privy.io https://silly-stardust-ca71bc.netlify.app https://*.gstatic.com https://*.googleusercontent.com https://*.walletconnect.com; frame-src https://privy.io https://*.privy.io https://accounts.google.com https://*.google.com https://verify.walletconnect.com https://verify.walletconnect.org; connect-src 'self' http://127.0.0.1:8545 https://privy.io https://*.privy.io wss://*.privy.io https://auth.privy.io https://telemetry.privy.io https://api.privy.io https://accounts.google.com https://*.googleapis.com https://eth-sepolia.g.alchemy.com https://rpc.sepolia.org https://ethereum-sepolia-rpc.publicnode.com https://explorer-api.walletconnect.com https://*.walletconnect.com https://*.walletconnect.org wss://*.walletconnect.com wss://*.walletconnect.org; worker-src blob:; object-src 'none'; base-uri 'self';"
+    # NOTE: CSP frame-ancestors NÃO controla o que NÓS framamos — controla quem
+    # pode framar nosso site. Quem nós podemos framar é controlado por frame-src
+    # (e child-src como fallback). O erro "Framing https://auth.privy.io/
+    # violates frame-ancestors" vem da resposta do PRÓPRIO auth.privy.io e não
+    # pode ser revertido pelo nosso CSP — é necessário usar URL embedável Privy.
+    # Mantemos auth.privy.io explícito em frame-src + child-src para garantir.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://privy.io https://*.privy.io https://auth.privy.io https://accounts.google.com https://apis.google.com https://*.gstatic.com https://challenges.cloudflare.com https://hcaptcha.com https://*.hcaptcha.com https://walletconnect.com https://*.walletconnect.com https://*.walletconnect.org; style-src 'self' 'unsafe-inline' https://accounts.google.com https://hcaptcha.com https://*.hcaptcha.com https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://privy.io https://*.privy.io https://auth.privy.io https://silly-stardust-ca71bc.netlify.app https://*.gstatic.com https://*.googleusercontent.com https://*.walletconnect.com; child-src 'self' https://privy.io https://*.privy.io https://auth.privy.io https://accounts.google.com https://*.google.com https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com; frame-src 'self' https://privy.io https://*.privy.io https://auth.privy.io https://accounts.google.com https://*.google.com https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com https://verify.walletconnect.com https://verify.walletconnect.org; connect-src 'self' http://127.0.0.1:8545 https://privy.io https://*.privy.io https://auth.privy.io wss://*.privy.io https://*.rpc.privy.systems https://telemetry.privy.io https://api.privy.io https://accounts.google.com https://*.googleapis.com https://hcaptcha.com https://*.hcaptcha.com https://eth-sepolia.g.alchemy.com https://rpc.sepolia.org https://ethereum-sepolia-rpc.publicnode.com https://explorer-api.walletconnect.com https://*.walletconnect.com https://*.walletconnect.org wss://*.walletconnect.com wss://*.walletconnect.org; worker-src 'self' blob:; object-src 'none'; base-uri 'self';"
