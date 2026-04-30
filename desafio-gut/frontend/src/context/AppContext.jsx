@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import {
   getCarteiraFlash,
@@ -7,7 +7,11 @@ import {
   converterEmFichas,
   CUSTO_FICHA_BRL,
 } from "../utils/saldoInterno.js";
-import { subscribeLanceDado } from "../utils/web3.js";
+import {
+  subscribeLanceDado,
+  getSaldoSenhasOnChain,
+  subscribeSaldoSenhas,
+} from "../utils/web3.js";
 
 // ─── Constantes exportadas ────────────────────────────────────────────────────
 export const MOCK_MODE    = import.meta.env.VITE_MOCK_MODE === "true";
@@ -59,6 +63,13 @@ export function AppProvider({ children }) {
   const [carteiraFlash,     setCarteiraFlash]     = useState(() => getCarteiraFlash());
   const [fichasProgramadas, setFichasProgramadas] = useState(() => getFichasProgramadas());
   const [erroCarteira,      setErroCarteira]      = useState("");
+
+  // ── Saldo on-chain (Opção B Fase 3) ──────────────────────────────────────────
+  // Coexiste com fichasProgramadas (localStorage) durante a migração.
+  // saldoSenhas reflete saldoSenhas[address] no contrato; null = "ainda não sei"
+  // (distinto de 0, que é estado on-chain válido). Em MOCK_MODE permanece null.
+  const [saldoSenhas,       setSaldoSenhas]       = useState(null);
+  const [saldoSenhasStatus, setSaldoSenhasStatus] = useState("idle"); // idle | loading | ok | stale | error
 
   // Privy auth
   const { ready, authenticated, user, login, logout } = usePrivy();
@@ -114,6 +125,57 @@ export function AppProvider({ children }) {
     });
     return unsubscribe;
   }, []);
+
+  // ── Saldo on-chain: refetch + listener + polling guardião (Opção B Fase 3) ──
+  // refetchSaldo é exposto no value e estável por address para consumidores
+  // poderem usá-lo em useEffect sem recriar a cada render.
+  const refetchSaldo = useCallback(async () => {
+    if (MOCK_MODE)  return;
+    if (!address) {
+      setSaldoSenhas(null);
+      setSaldoSenhasStatus("idle");
+      return;
+    }
+    // Se já temos um valor "ok", mantemos visível enquanto recarrega; senão loading.
+    setSaldoSenhasStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
+    try {
+      const valor = await getSaldoSenhasOnChain(address);
+      setSaldoSenhas(valor);
+      setSaldoSenhasStatus("ok");
+    } catch (err) {
+      console.warn("[GUT-DEBUG] refetchSaldo falhou", {
+        address, message: err?.message, name: err?.name,
+      });
+      // Sem valor anterior → error (UI deve bloquear lance); com valor → stale (last-known-good).
+      setSaldoSenhasStatus((prev) => (prev === "ok" ? "stale" : "error"));
+    }
+  }, [address]);
+
+  // Fetch inicial ao logar / trocar de address. Reseta para idle ao deslogar.
+  useEffect(() => {
+    if (MOCK_MODE) return;
+    refetchSaldo();
+  }, [address, refetchSaldo]);
+
+  // Listener de SenhasCreditadas + LanceDado(meu) → refetch.
+  // Polling guardião de 30s como cinto-suspensório se ethers parar de receber
+  // eventos silenciosamente (mobile background, sleep do laptop, troca de rede).
+  useEffect(() => {
+    if (MOCK_MODE || !address) return;
+
+    const unsubscribe = subscribeSaldoSenhas(address, (event) => {
+      console.info("[GUT-DEBUG] saldoSenhas event", event);
+      refetchSaldo();
+    });
+    const intervalId = setInterval(refetchSaldo, 30000);
+
+    return () => {
+      try { unsubscribe(); } catch (e) {
+        console.warn("[GUT-DEBUG] unsubscribe falhou", e?.message);
+      }
+      clearInterval(intervalId);
+    };
+  }, [address, refetchSaldo]);
 
   // Timer regressivo + disparo do efeito relâmpago
   useEffect(() => {
@@ -228,6 +290,10 @@ export function AppProvider({ children }) {
     carteiraFlash,
     fichasProgramadas,
     erroCarteira,
+    // Saldo on-chain (Opção B Fase 3) — coexiste com fichasProgramadas
+    saldoSenhas,
+    saldoSenhasStatus,
+    refetchSaldo,
     // Auth
     address, isConnected, userLabel, ready, authenticated, user,
     // Vencedor
