@@ -185,3 +185,70 @@ export function subscribeLanceDado(idEdicao, onLance) {
     try { provider.destroy?.(); } catch {}
   };
 }
+
+/**
+ * Lê saldoSenhas(address) on-chain via JsonRpcProvider Alchemy.
+ * Fonte de verdade do gate de darLance — substitui a leitura localStorage
+ * de getFichasProgramadas() conforme migração para pipeline real (Opção B).
+ *
+ * Lança em caso de RPC down / address inválido — caller decide degradação.
+ * Retorna Number — saldoSenhas é uint256 mas valores reais ficam em
+ * dezenas/centenas (1 senha = R$ 2,00); cabe em Number.MAX_SAFE_INTEGER.
+ */
+export async function getSaldoSenhasOnChain(address) {
+  if (!address) throw new Error("address obrigatório para ler saldoSenhas");
+  const provider = new JsonRpcProvider(ALCHEMY_RPC);
+  const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
+  const raw = await contrato.saldoSenhas(address);
+  return Number(raw);
+}
+
+/**
+ * Inscreve listeners para os dois eventos que mudam saldoSenhas[address]:
+ *  - SenhasCreditadas(usuario, quantidade)  → coordenacao creditou
+ *  - LanceDado(idEdicao, lancador, ...)     → usuário gastou 1 senha
+ *
+ * Chama onUpdate({ kind, txHash, blockNumber, [quantidade] }) — o caller
+ * deve refazer fetch via getSaldoSenhasOnChain (refetch é robusto contra
+ * eventos perdidos/duplicados; somar quantidade derivava do estado prévio
+ * e drift acumulava em reconexões).
+ *
+ * Filtragem por address é feita handler-side (consistente com
+ * subscribeLanceDado, e mais à prova de variações do filter API entre
+ * versões de ethers).
+ *
+ * Retorna função de unsubscribe — chamar no cleanup do useEffect.
+ */
+export function subscribeSaldoSenhas(address, onUpdate) {
+  if (!address) throw new Error("address obrigatório para subscribe");
+  const provider = new JsonRpcProvider(ALCHEMY_RPC);
+  const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
+  const target   = String(address).toLowerCase();
+
+  const onCreditadas = (usuario, quantidade, ev) => {
+    if (String(usuario).toLowerCase() !== target) return;
+    onUpdate({
+      kind:        "SenhasCreditadas",
+      quantidade:  Number(quantidade),
+      txHash:      ev?.log?.transactionHash ?? null,
+      blockNumber: ev?.log?.blockNumber ?? null,
+    });
+  };
+  const onLance = (idEdicao, lancador, valorEmCentavos, repetido, timestamp, ev) => {
+    if (String(lancador).toLowerCase() !== target) return;
+    onUpdate({
+      kind:        "LanceDado",
+      txHash:      ev?.log?.transactionHash ?? null,
+      blockNumber: ev?.log?.blockNumber ?? null,
+    });
+  };
+
+  contrato.on("SenhasCreditadas", onCreditadas);
+  contrato.on("LanceDado", onLance);
+
+  return () => {
+    try { contrato.off("SenhasCreditadas", onCreditadas); } catch {}
+    try { contrato.off("LanceDado", onLance); } catch {}
+    try { provider.destroy?.(); } catch {}
+  };
+}
