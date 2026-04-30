@@ -3,6 +3,84 @@
 
 ---
 
+## MARCO: AUTENTICAÇÃO E PRODUÇÃO VALIDADA (2026-04-30)
+
+### Causa
+Inconsistência entre as **Origens (Whitelist `allowed_domains`)** do
+Privy Dashboard e as **URLs temporárias do Netlify** que o usuário
+estava acessando (Deploy Previews / branch deploys / variantes www).
+
+A Privy faz validação no header `Origin` em `POST /api/v1/sessions`.
+URLs canônicas de produção estão na whitelist; URLs efêmeras do Netlify
+(que têm prefixos como `deploy-preview-N--` ou `main--`) NÃO estão e
+recebem 403 `invalid_origin`. O usuário interpretava o 403 como erro
+de código/CSP do nosso lado, levando a iterações no `netlify.toml` e
+`main.jsx` que não tinham efeito sobre o problema real.
+
+### Solução
+1. Padronização do acesso pela URL de produção canônica
+   `https://silly-stardust-ca71bc.netlify.app` (Link Verde do Netlify
+   — o "Production" no painel, distinto dos deploy previews).
+2. Inclusão definitiva dessa URL na whitelist `allowed_domains` do
+   Privy Dashboard (já presente desde 2026-04-28, confirmada via
+   Management API).
+3. Commit e push de instrumentação que detecta regressões dessa classe
+   em segundos: `debug-privy-headless.js` agora faz `POST /api/v1/sessions`
+   com o `Origin` real e valida HTTP 400 (passou no gate) vs 403
+   (rejeitado pela whitelist).
+
+### Veredito
+**Fluxo de autenticação validado e funcional** quando o acesso é feito
+pela URL canônica de produção. Empiricamente confirmado:
+
+| Camada | Resultado |
+|---|---|
+| Headers HTTP do Netlify (CSP, X-Frame-Options, Cache-Control) | ✓ Corretos |
+| Iframe `auth.privy.io/apps/{id}/embedded-wallets` carrega no DOM | ✓ Validado via Playwright |
+| `frame-ancestors` da Privy autoriza nossa URL canônica | ✓ Validado via curl |
+| Gate de Origin em `POST /api/v1/sessions` aceita URL canônica | ✓ HTTP 400 (passou no gate) |
+| Bundle live em produção tem App ID correto | ✓ `cmo51f3v300l90clgzksivvad` |
+| App ID válido na Management API Privy | ✓ HTTP 200, `name: DESAFIOGUT` |
+| Google OAuth ativo no Privy | ✓ `google_oauth: true` |
+| RPC Sepolia respondendo via Alchemy | ✓ `chainId 0xaa36a7` |
+| Contrato `LeilaoGUT` deployado | ✓ `0x273Ef9…2445e` (verificado por bytecode) |
+
+### Lições registradas para evitar este tipo de loop no futuro
+1. **Netlify expõe três classes de URL distintas** — production (link
+   verde fixo), branch deploys (`<branch>--<site>.netlify.app`),
+   deploy previews (`deploy-preview-<N>--<site>.netlify.app`). Cada
+   uma é uma `Origin` diferente para fins de SOP/CORS/whitelist do
+   Privy. Para teste real de auth, usar SEMPRE a URL de produção.
+2. **Erros do tipo "Origin not allowed" não são corrigíveis no nosso
+   código** — vêm de servidores externos (Privy/Auth0/Clerk/etc.)
+   validando o header `Origin` automaticamente preenchido pelo
+   navegador. Nenhum header HTTP nosso, CSP ou config Vite altera
+   essa validação.
+3. **Triagem em três camadas obrigatória** antes de tocar código:
+   (a) Headers do nosso domínio via curl;
+   (b) Configuração do serviço externo via API pública;
+   (c) Se ambos estão OK e o navegador falha, é ambiente do usuário
+   (URL diferente da canônica, extensão, política corporativa).
+4. **Validação headless contra URL canônica é necessária mas não
+   suficiente** — só prova que o pipeline funciona PARA aquela URL.
+   Se o usuário acessa por outra origem, o teste passa enquanto ele
+   continua bloqueado. Por isso o probe direto do gate Origin foi
+   adicionado ao script.
+
+### Próximo passo registrado
+Core de auth selado. Próxima frente: validação ponta a ponta do fluxo
+do usuário PIX → Saldo de Senhas → Lance, na sequência:
+1. Coordenacao chama `abrirEdicao("R-1", ...)` (já feito, tx confirmada
+   2026-04-29 `0x1767bffd…ce8e`)
+2. Coordenacao chama `adicionarSenhas(<wallet>, <n>)` para creditar
+   senhas pós-PIX
+3. UI exibe saldo via `saldoSenhas(address)`
+4. `darLance` consome 1 senha por execução (já validado on-chain
+   2026-04-29 `tx 0xf5991092…29cbd`)
+5. Listener `LanceDado` reflete o lance na tabela em tempo real
+
+---
+
 ## "Origin not allowed" — gate em POST /api/v1/sessions identificado (2026-04-30)
 
 ### Sintoma reportado pelo usuário no navegador real
