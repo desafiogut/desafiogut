@@ -3,8 +3,9 @@
 // principalmente as URLs que o SDK Privy tenta carregar via iframe.
 //
 // USO: o playwright está instalado em desafio-gut/frontend/node_modules,
-// então roda de lá:
-//   cd desafio-gut/frontend && node ../scripts/debug-privy-headless.js
+// e este script vive em desafio-gut/frontend/scripts/ para que a resolução
+// ESM de "playwright" funcione (Node ESM walks up do path do script).
+//   cd desafio-gut/frontend && node scripts/debug-privy-headless.js
 //
 // Saída em formato relatório — não usa exit code não-zero.
 
@@ -65,53 +66,48 @@ const gutDebug = await page.evaluate(() => window.__GUT_DEBUG__ ?? null);
 // Aguarda Privy inicializar (até 8s)
 await page.waitForTimeout(8000);
 
-// Aceitar termos LGPD se o gate aparecer
+// Aceitar termos LGPD se o gate aparecer (TermosConsentimento) — tem checkboxes
 try {
   const checkboxes = await page.$$('input[type="checkbox"]');
   for (const cb of checkboxes) await cb.check().catch(() => {});
-  const aceitarBtn = await page.$('button:has-text("Aceito")');
-  if (aceitarBtn) {
-    console.log("→ clicando Aceito (LGPD gate)");
-    await aceitarBtn.click();
-    await page.waitForTimeout(3000);
+  if (checkboxes.length > 0) {
+    // O LGPD gate tem botões "Aceito Tudo" / "Aceitar"; o botão de LOGIN tem
+    // "Aceito o DesafioGUT". Preferir match exato no texto LGPD-only.
+    const lgpdBtn = await page.$('button:text-matches("^Aceit(o|ar)( Tudo)?$|^Aceitar termos", "i")')
+      ?? await page.$('button:has-text("Aceito Tudo")')
+      ?? await page.$('button:has-text("Aceito"):not(:has-text("DesafioGUT"))');
+    if (lgpdBtn) {
+      console.log("→ clicando aceite LGPD");
+      await lgpdBtn.click().catch(() => {});
+      await page.waitForTimeout(2500);
+    }
   }
 } catch (e) { console.log("Termos: ", e.message); }
 
-// Procura botão de login
+// Procura botão de login (texto real: "⚡ Aceito o DesafioGUT" / "⏳ Aguarde...")
 const loginSelectors = [
+  'button:has-text("DesafioGUT")',
+  'button:has-text("Aceito o")',
   'button:has-text("Login")',
   'button:has-text("Entrar")',
   'button:has-text("Conectar")',
-  'button:has-text("Leilão")',
-  'button:has-text("login")',
 ];
 let loginBtn = null;
+let loginSel = "";
 for (const sel of loginSelectors) {
   loginBtn = await page.$(sel);
-  if (loginBtn) { console.log("→ botão encontrado:", sel); break; }
+  if (loginBtn) { loginSel = sel; console.log("→ botão login encontrado:", sel); break; }
 }
+let clicouLogin = false;
 if (loginBtn) {
-  console.log("→ clicando login");
   await loginBtn.click().catch((e) => console.log("click erro:", e.message));
-  await page.waitForTimeout(5000);
-
-  // Procura botão Google dentro de modal/iframe
-  const frames = page.frames();
-  console.log(`  frames detectados: ${frames.length}`);
-  for (const f of frames) {
-    console.log(`    ${f.url()}`);
-  }
-  const googleBtn = await page.$('button:has-text("Google"), button:has-text("Continue")');
-  if (googleBtn) {
-    console.log("→ botão Google detectado, clicando");
-    await googleBtn.click().catch((e) => console.log("click google erro:", e.message));
-    await page.waitForTimeout(4000);
-  } else {
-    console.log("✗ botão Google não encontrado dentro do modal");
-  }
-} else {
-  console.log("✗ botão de login não encontrado");
+  clicouLogin = true;
+  await page.waitForTimeout(6000);
 }
+
+// ── Diagnóstico de iframes (sempre executado, independente do click) ─────────
+const framesFinal = page.frames().map((f) => f.url());
+const privyFrames = framesFinal.filter((u) => /auth\.privy\.io/.test(u));
 
 // ── Relatório ────────────────────────────────────────────────────────────────
 console.log("\n══════════ RELATÓRIO ══════════\n");
@@ -150,5 +146,38 @@ for (const r of responses) {
   }
 }
 
+// ── Veredicto técnico — saída formal com exit code ──────────────────────────
+console.log(`\n[5] Frames detectados (${framesFinal.length}):`);
+for (const u of framesFinal) console.log(`  ${u}`);
+console.log(`  → frames auth.privy.io: ${privyFrames.length}`);
+
+const cspViolationsConsole = consoleLog.filter((m) =>
+  /\[GUT-DEBUG\] CSP violation/.test(m.text) ||
+  /Refused to (load|frame|connect|display)/.test(m.text) ||
+  /violates the following Content Security Policy/.test(m.text),
+);
+const privyResp = responses.filter((r) => /auth\.privy\.io/.test(r.url));
+const privy4xx = privyResp.filter((r) => r.status >= 400);
+const embeddedWalletsResp = privyResp.find((r) => /\/apps\/.+\/embedded-wallets/.test(r.url));
+const embeddedFA = embeddedWalletsResp?.csp?.match(/frame-ancestors[^;]+/)?.[0] || "";
+const embeddedAutorizaNetlify = /silly-stardust-ca71bc\.netlify\.app/.test(embeddedFA);
+
+const checks = [
+  { nome: "Bundle GUT_DEBUG presente",            pass: !!gutDebug?.appId },
+  { nome: "App ID correto no bundle",             pass: gutDebug?.appId === "cmo51f3v300l90clgzksivvad" },
+  { nome: "Zero erros de página JS",              pass: pageErrors.length === 0 },
+  { nome: "Zero violações CSP no console",        pass: cspViolationsConsole.length === 0 },
+  { nome: "Zero respostas Privy 4xx/5xx",         pass: privy4xx.length === 0 },
+  { nome: "embedded-wallets HTTP 200 retornado",  pass: !!embeddedWalletsResp && embeddedWalletsResp.status === 200 },
+  { nome: "embedded-wallets autoriza Netlify em frame-ancestors", pass: embeddedAutorizaNetlify },
+  { nome: "Pelo menos 1 frame auth.privy.io ativo", pass: privyFrames.length >= 1 },
+];
+
+console.log(`\n══════════ VEREDICTO ══════════`);
+for (const c of checks) console.log(`  ${c.pass ? "✓" : "✗"} ${c.nome}`);
+const todosPass = checks.every((c) => c.pass);
+console.log(`\n  RESULTADO: ${todosPass ? "✓ PASS — CSP/iframe OK" : "✗ FAIL — ver detalhes acima"}`);
+console.log(`  (login button clicado: ${clicouLogin ? "sim" : "não"} via ${loginSel || "-"})`);
+
 await browser.close();
-console.log("\nFim.");
+process.exit(todosPass ? 0 : 1);

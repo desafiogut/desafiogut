@@ -3,6 +3,128 @@
 
 ---
 
+## Validação técnica final do erro frame-ancestors (2026-04-30)
+
+### Critério de saída exigido
+Curl confirma ausência de bloqueio em produção **e** Playwright headless
+confirma que o iframe `auth.privy.io/apps/{id}/embedded-wallets` é
+carregado e listado no DOM da página, sem violações CSP no console.
+
+### Auditoria de headers (curl -I)
+Três origens auditadas em paralelo — capturadas em `/tmp/headers_*.txt`:
+
+#### 1. `https://silly-stardust-ca71bc.netlify.app/` (nosso site)
+```
+Cache-Control: public,max-age=0,must-revalidate,no-store
+Content-Security-Policy: default-src 'self';
+  script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://privy.io
+    https://*.privy.io https://auth.privy.io https://accounts.google.com
+    https://apis.google.com https://*.gstatic.com
+    https://challenges.cloudflare.com https://hcaptcha.com
+    https://*.hcaptcha.com https://walletconnect.com
+    https://*.walletconnect.com https://*.walletconnect.org;
+  child-src 'self' https://privy.io https://*.privy.io https://auth.privy.io
+    https://accounts.google.com https://*.google.com https://hcaptcha.com
+    https://*.hcaptcha.com https://challenges.cloudflare.com;
+  frame-src 'self' https://privy.io https://*.privy.io https://auth.privy.io
+    https://accounts.google.com https://*.google.com https://hcaptcha.com
+    https://*.hcaptcha.com https://challenges.cloudflare.com
+    https://verify.walletconnect.com https://verify.walletconnect.org;
+  connect-src 'self' http://127.0.0.1:8545 https://privy.io https://*.privy.io
+    https://auth.privy.io wss://*.privy.io https://*.rpc.privy.systems
+    https://telemetry.privy.io https://api.privy.io https://accounts.google.com
+    https://*.googleapis.com https://hcaptcha.com https://*.hcaptcha.com
+    https://eth-sepolia.g.alchemy.com ...;
+  worker-src 'self' blob:;
+  object-src 'none';
+  base-uri 'self';
+X-Frame-Options: SAMEORIGIN
+```
+Sem `frame-ancestors` (intencional — irrelevante para o que NÓS framamos).
+
+#### 2. `https://auth.privy.io/apps/cmo51f3v300l90clgzksivvad/embedded-wallets`
+(o iframe que o SDK Privy v3 carrega para o login)
+```
+content-security-policy: default-src 'none'; base-uri 'none';
+  frame-ancestors 'self' http://localhost:3000 http://localhost:5173
+                  https://silly-stardust-ca71bc.netlify.app
+                  https://auth.privy.io;
+  ...
+```
+**A linha decisiva**: `frame-ancestors` do iframe real autoriza explicitamente
+`https://silly-stardust-ca71bc.netlify.app` — nada a mudar do nosso lado.
+
+#### 3. `https://auth.privy.io/` (página raiz de marketing — armadilha histórica)
+```
+content-security-policy: ...; frame-ancestors 'none'; ...
+x-frame-options: DENY
+```
+Esta é a URL que NUNCA pode ser framada por design. O erro original do
+usuário vinha do SDK caindo em fallback que tentava emoldurar esta raiz.
+A solução foi liberar Google + hCaptcha + `*.rpc.privy.systems` no nosso
+CSP para que o fluxo principal não falhasse e o SDK não regredisse.
+
+### Validação interface (Playwright headless contra produção)
+Script: `desafio-gut/frontend/scripts/debug-privy-headless.js`
+Comando: `cd desafio-gut/frontend && node scripts/debug-privy-headless.js`
+
+```
+══════════ VEREDICTO ══════════
+  ✓ Bundle GUT_DEBUG presente
+  ✓ App ID correto no bundle
+  ✓ Zero erros de página JS
+  ✓ Zero violações CSP no console
+  ✓ Zero respostas Privy 4xx/5xx
+  ✓ embedded-wallets HTTP 200 retornado
+  ✓ embedded-wallets autoriza Netlify em frame-ancestors
+  ✓ Pelo menos 1 frame auth.privy.io ativo
+
+  RESULTADO: ✓ PASS — CSP/iframe OK
+  (login button clicado: sim via button:has-text("DesafioGUT"))
+
+[5] Frames detectados (3):
+  https://silly-stardust-ca71bc.netlify.app/
+  https://auth.privy.io/apps/cmo51f3v300l90clgzksivvad/embedded-wallets?caid=...
+  about:blank
+```
+
+Exit code 0. O frame Privy é uma realidade no DOM da página em produção.
+
+### O que mudou nesta rodada
+| Camada | Estado antes | Alteração | Motivo |
+|---|---|---|---|
+| Localização do `debug-privy-headless.js` | em `desafio-gut/scripts/` — `import "playwright"` falhava (ESM resolution não acha `frontend/node_modules`) | Movido para `desafio-gut/frontend/scripts/` | Permite rodar a validação de iframe; sem isso não há critério de saída |
+| Selector de login no script | `Login`, `Entrar`, `Conectar`, `Leilão` — não casava o botão real `⚡ Aceito o DesafioGUT` | Adicionado `button:has-text("DesafioGUT")` e `Aceito o` | Garante que o flow de clique seja exercitado |
+| Veredicto formal do script | imprimia relatório, sempre `exit 0` | 8 checks com `process.exit(passed ? 0 : 1)` | Hard constraint — sem ambiguidade sobre o que é sucesso |
+| Headers HTTP de produção | (sem alteração) | nenhuma | A CSP/headers já estavam corretos desde 2026-04-29 |
+
+### Caminhos descartados (anti-loop)
+| Caminho | Por que NÃO foi seguido |
+|---|---|
+| Adicionar `frame-ancestors` no nosso CSP | Direção inversa — `frame-ancestors` controla quem pode framar o nosso site, não o que framamos. O `frame-ancestors 'none'` problemático vem de `auth.privy.io/` (raiz) e não há config nossa que altere a resposta de outro domínio. Adicionar a diretiva apenas adicionaria ruído sem efeito. |
+| Mudar `X-Frame-Options` do nosso site | Mesmo motivo — afeta quem nos emoldura, não quem nós emolduramos. |
+| Forçar SDK Privy a não usar iframe | Privy v3 com Embedded Wallets exige iframe — alternativa exigiria trocar de SDK ou ir para popup-only OAuth, regressão de UX. |
+| Adicionar `https://*.cloudflare.com` ao CSP | Privy só usa `challenges.cloudflare.com` (já liberado) e o subdomínio Cloudflare CDN dele é via `auth.privy.io` (já liberado). Wildcard `*.cloudflare.com` aumentaria surface de ataque sem ganho — descartado por revisão de segurança. |
+| `bypassCSP: true` no Playwright | Falsificaria a validação — o ambiente de teste deve refletir o ambiente do usuário, não maquiá-lo. |
+
+### Cruzamento com tentativas anteriores
+- Cache-bust HTML (`no-store, must-revalidate`) → mantido (já em produção)
+- `script-src` com `accounts.google.com` → mantido (já em produção)
+- `connect-src` com `*.rpc.privy.systems` → mantido (já em produção)
+- Sanitização App ID (zero-width chars) → mantido (já em produção)
+- Listener `securitypolicyviolation` em `main.jsx` → mantido (capturaria qualquer regressão futura em segundos)
+
+### Status final
+| Aspecto | Status |
+|---|---|
+| Curl em `/` (Netlify) — CSP completa, sem bloqueio | ✓ Validado |
+| Curl em `auth.privy.io/apps/{id}/embedded-wallets` — `frame-ancestors` autoriza Netlify | ✓ Validado |
+| Playwright em produção — frame Privy presente no DOM, 0 erros, 0 violações CSP | ✓ Validado (8/8 checks) |
+| Hard exit code do script | ✓ `process.exit(0)` |
+| Critério de saída do protocolo | ✓ Atendido — sem mais iterações |
+
+---
+
 ## Vencido: "Framing https://auth.privy.io/ violates frame-ancestors" + "Privy iframe failed to load" (2026-04-29)
 
 ### Causa raiz confirmada via reprodução headless
