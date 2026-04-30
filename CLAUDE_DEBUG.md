@@ -3,6 +3,107 @@
 
 ---
 
+## "Origin not allowed" — gate em POST /api/v1/sessions identificado (2026-04-30)
+
+### Sintoma reportado pelo usuário no navegador real
+> 403 Forbidden — "Origin not allowed" nas logs (não captado pelo teste headless)
+
+### Por que o teste headless da rodada anterior NÃO viu este erro
+O `debug-privy-headless.js` carrega `https://silly-stardust-ca71bc.netlify.app/`
+— a URL canônica que ESTÁ na whitelist `allowed_domains` do Privy. Como
+o gate de origem só dispara para URLs fora da whitelist, o teste passou
+8/8 enquanto o usuário continuava bloqueado por estar acessando por outra
+URL (preview deploy, branch deploy, custom domain ou www variante).
+
+**Lição aprendida**: validação headless contra a URL canônica é
+necessária mas insuficiente — não cobre o gate de Origin no servidor
+da Privy. Fix do script abaixo.
+
+### Status dos headers (curl -I) — sem alteração necessária
+Auditoria refeita. CSP/X-Frame-Options/Cache-Control da Netlify estão
+todos no estado correto da rodada anterior (ver seção 2026-04-30 acima).
+Nenhum header HTTP do nosso lado precisa mudar.
+
+### Onde o gate de Origin realmente está
+Probe direto contra a API Privy com `Origin` headers diferentes para
+mapear quais URLs passam o gate e quais retornam 403:
+
+| Origin no header HTTP | HTTP | Body |
+|---|---|---|
+| `https://silly-stardust-ca71bc.netlify.app`            | **400** | `Missing refresh token` (passou no gate) |
+| `https://silly-stardust-ca71bc.netlify.app:443`        | **400** | `Missing refresh token` (passou no gate) |
+| `http://localhost:3000`                                 | **400** | `Missing refresh token` (passou no gate) |
+| `http://localhost:5173`                                 | **400** | `Missing refresh token` (passou no gate) |
+| `http://silly-stardust-ca71bc.netlify.app`              | **403** | `{"error":"Origin not allowed","code":"invalid_origin"}` |
+| `https://www.silly-stardust-ca71bc.netlify.app`         | **403** | `{"error":"Origin not allowed","code":"invalid_origin"}` |
+| `https://main--silly-stardust-ca71bc.netlify.app`       | **403** | `{"error":"Origin not allowed","code":"invalid_origin"}` |
+| `https://deploy-preview-1--silly-...netlify.app`        | **403** | `{"error":"Origin not allowed","code":"invalid_origin"}` |
+| `https://desafiogut.netlify.app`                        | **403** | `{"error":"Origin not allowed","code":"invalid_origin"}` |
+| `https://desafiogut.com` / `.com.br` / `www.desafiogut.com` | **403** | `{"error":"Origin not allowed","code":"invalid_origin"}` |
+| `http://localhost:4173`                                 | **403** | `{"error":"Origin not allowed","code":"invalid_origin"}` |
+
+**Conclusão**: o erro 403 do usuário é assinatura exata
+(`code: invalid_origin`) do gate de origem em
+`POST https://auth.privy.io/api/v1/sessions`. O gate consulta o campo
+`allowed_domains` da configuração do app — não headers HTTP nem CSP.
+
+### `allowed_domains` atual no Privy (via Management API público)
+```
+[
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "https://silly-stardust-ca71bc.netlify.app"
+]
+```
+
+Apenas 3 origens. Qualquer outra URL → 403.
+
+### Caminhos descartados (anti-loop)
+| Caminho | Por que NÃO foi seguido |
+|---|---|
+| Mexer em `public/_headers` ou `netlify.toml` | O 403 vem do servidor `auth.privy.io`, não da resposta do nosso domínio. Nenhum header HTTP nosso afeta a validação que a Privy faz no header `Origin` da requisição. Já validado: a CSP atual passa, o iframe carrega, o problema é só o gate da API. |
+| Adicionar mais wildcards no CSP | A CSP nem é checada para esta requisição — é uma `fetch()` do navegador para `auth.privy.io`. CSP da Netlify cobre o que o navegador pode pedir; o que `auth.privy.io` responde é decisão do servidor Privy. |
+| Mudar User-Agent / Referer-Policy do nosso lado | A validação é no header `Origin`, automaticamente preenchido pelo navegador com `protocol://host[:port]` da página atual. Não dá pra forjar do nosso lado sem quebrar segurança da SOP. |
+| Update via Privy API com PUT/PATCH | API pública não aceita escrita. `allowed_domains` só é editável no Privy Dashboard. |
+
+### Ação necessária — usuário no Privy Dashboard
+1. Abrir https://dashboard.privy.io/apps/cmo51f3v300l90clgzksivvad/settings
+2. Settings → **Domains** (ou "Allowed Origins")
+3. Adicionar a URL EXATA em que o erro aparece (verificar barra de endereço
+   do navegador no momento do 403). Candidatos prováveis baseados nas
+   variantes 403'd:
+   - URL com `www.` → adicionar a versão exata com www
+   - Branch deploy `https://main--silly-stardust-ca71bc.netlify.app`
+   - Deploy preview `https://deploy-preview-N--silly-stardust-ca71bc.netlify.app`
+   - Custom domain do Netlify (Site settings → Domain management)
+4. Salvar; mudança propaga em < 1 min (sem rebuild necessário do nosso lado)
+
+### Validação após o usuário adicionar a URL
+```bash
+URL_USUARIO="<URL_EXATA_QUE_FOI_ADICIONADA>"
+curl -s -o /dev/null -w "HTTP=%{http_code}\n" \
+  -X POST -H "Origin: $URL_USUARIO" \
+  -H "Content-Type: application/json" \
+  -H "privy-app-id: cmo51f3v300l90clgzksivvad" \
+  -H "privy-client: react-auth:1.0" \
+  --data '{}' \
+  "https://auth.privy.io/api/v1/sessions"
+```
+- **HTTP 400** (`Missing refresh token`) → URL liberada, gate passou
+- **HTTP 403** (`Origin not allowed`) → ainda não propagou ou foi adicionada com diferença (http vs https, com vs sem www, etc)
+
+Critério de saída do protocolo: este teste retornar 400 com a URL real
+do usuário. Sem isso, a tarefa permanece aberta.
+
+### Atualização defensiva no script headless
+O `debug-privy-headless.js` ganhou também um probe de Origin direto:
+ele agora roda o mesmo teste `POST /api/v1/sessions` com a Origin da
+página alvo, garantindo que regressões futuras na whitelist sejam
+detectadas em segundos. Se o gate retornar 403, exit 1 — não importa
+se o iframe carregou.
+
+---
+
 ## Validação técnica final do erro frame-ancestors (2026-04-30)
 
 ### Critério de saída exigido

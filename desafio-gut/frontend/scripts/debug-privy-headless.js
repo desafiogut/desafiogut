@@ -109,6 +109,35 @@ if (loginBtn) {
 const framesFinal = page.frames().map((f) => f.url());
 const privyFrames = framesFinal.filter((u) => /auth\.privy\.io/.test(u));
 
+// ── Probe direto do gate de Origin no /api/v1/sessions ──────────────────────
+// O gate "Origin not allowed" não é exercitado pelo iframe — é checado
+// quando o SDK chama POST /api/v1/sessions com refresh token. Se a URL
+// alvo não estiver no allowed_domains do Privy Dashboard, a Privy responde
+// 403 invalid_origin INDEPENDENTEMENTE de tudo que validamos antes.
+const originProbeOrigin = URL.replace(/\/+$/, "").replace(/^(https?:\/\/[^/]+).*/, "$1");
+const originProbeAppId = "cmo51f3v300l90clgzksivvad";
+let originGateStatus = -1;
+let originGateBody = "";
+try {
+  const r = await fetch("https://auth.privy.io/api/v1/sessions", {
+    method: "POST",
+    headers: {
+      "Origin": originProbeOrigin,
+      "Content-Type": "application/json",
+      "privy-app-id": originProbeAppId,
+      "privy-client": "react-auth:debug-headless",
+    },
+    body: "{}",
+  });
+  originGateStatus = r.status;
+  originGateBody = (await r.text()).slice(0, 200);
+} catch (e) {
+  originGateBody = `fetch err: ${e.message}`;
+}
+// HTTP 400 com "Missing refresh token" = origem aceita pelo gate
+// HTTP 403 com "Origin not allowed" = URL precisa ser adicionada ao Privy Dashboard
+const originGatePass = originGateStatus === 400 && /refresh token/i.test(originGateBody);
+
 // ── Relatório ────────────────────────────────────────────────────────────────
 console.log("\n══════════ RELATÓRIO ══════════\n");
 
@@ -171,12 +200,16 @@ const checks = [
   { nome: "embedded-wallets HTTP 200 retornado",  pass: !!embeddedWalletsResp && embeddedWalletsResp.status === 200 },
   { nome: "embedded-wallets autoriza Netlify em frame-ancestors", pass: embeddedAutorizaNetlify },
   { nome: "Pelo menos 1 frame auth.privy.io ativo", pass: privyFrames.length >= 1 },
+  { nome: `Origin "${originProbeOrigin}" autorizada em allowed_domains do Privy (POST /api/v1/sessions → 400 missing token, não 403 invalid_origin)`, pass: originGatePass, info: `HTTP=${originGateStatus} body=${originGateBody}` },
 ];
 
 console.log(`\n══════════ VEREDICTO ══════════`);
-for (const c of checks) console.log(`  ${c.pass ? "✓" : "✗"} ${c.nome}`);
+for (const c of checks) {
+  console.log(`  ${c.pass ? "✓" : "✗"} ${c.nome}`);
+  if (!c.pass && c.info) console.log(`      ${c.info}`);
+}
 const todosPass = checks.every((c) => c.pass);
-console.log(`\n  RESULTADO: ${todosPass ? "✓ PASS — CSP/iframe OK" : "✗ FAIL — ver detalhes acima"}`);
+console.log(`\n  RESULTADO: ${todosPass ? "✓ PASS — CSP/iframe/origin OK" : "✗ FAIL — ver detalhes acima"}`);
 console.log(`  (login button clicado: ${clicouLogin ? "sim" : "não"} via ${loginSel || "-"})`);
 
 await browser.close();
