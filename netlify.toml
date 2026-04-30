@@ -8,7 +8,7 @@
   to     = "/index.html"
   status = 200
 
-# ── Cache-bust agressivo do HTML (Tentativa 7) ───────────────────────────────
+# ── Cache-bust agressivo do HTML ─────────────────────────────────────────────
 # index.html nunca deve ser cacheado por CDN/browser, senão clientes ficam
 # presos em deploys antigos com CSP velha. Os assets /assets/*.js já têm
 # hash no nome (immutable cache safe).

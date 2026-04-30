@@ -3,6 +3,135 @@
 
 ---
 
+## Vencido: "Framing https://auth.privy.io/ violates frame-ancestors" + "Privy iframe failed to load" (2026-04-29)
+
+### Causa raiz confirmada via reprodução headless
+Reprodução do site em produção via **Chromium headless (Playwright)** com cache
+zero, sem extensões, em `scripts/debug-privy-headless.js`. Resultado:
+
+```
+__GUT_DEBUG__ { appId: cmo51f3v300l90clgzksivvad, tentativa: "7", ... }
+[2] Erros de página (0)
+[1] Console: nenhuma violação CSP, nenhum erro
+[3] Privy carrega:
+    GET https://auth.privy.io/api/v1/apps/cmo51f3v300l90clgzksivvad → 200
+    GET https://auth.privy.io/apps/cmo51f3v300l90clgzksivvad/embedded-wallets → 200
+         ↳ frame-ancestors: 'self' http://localhost:3000 http://localhost:5173
+                            https://silly-stardust-ca71bc.netlify.app
+                            https://auth.privy.io
+    GET https://auth.privy.io/_next/static/chunks/* → 200 (todos)
+    POST https://eth-sepolia.g.alchemy.com/v2/... → 200
+```
+
+**O iframe Privy carrega 100% em ambiente limpo. O `frame-ancestors` do iframe
+real (`/apps/{id}/embedded-wallets`) inclui explicitamente o domínio Netlify.**
+
+### Por que o usuário viu o erro mesmo assim
+Duas causas plausíveis (não excludentes):
+
+1. **Bundle antigo cacheado.** Antes do cache-bust agressivo (`Cache-Control:
+   no-store, must-revalidate` em `/index.html`), browsers/CDN guardavam o HTML
+   por dias. O HTML antigo apontava para um bundle pré-CSP-Google → sem
+   `accounts.google.com` em `script-src` → fluxo Google falhava → SDK Privy
+   caía em fallback que tentava emoldurar a rota raiz `auth.privy.io/` (que
+   tem `frame-ancestors 'none'` por design — é a página de marketing).
+2. **Configuração de browser do usuário.** Brave/Safari/Chrome strict bloqueiam
+   third-party cookies e storage. Sem cookies/localStorage de `auth.privy.io`,
+   o SDK pode tentar fluxo de fallback que falha de modo similar.
+
+### O parâmetro exato que travava o botão
+- `script-src` da nossa CSP **não cobria `https://accounts.google.com`** →
+  Google Identity Services script bloqueado → handler do botão "Continue with
+  Google" nunca era anexado → clique morto.
+- `connect-src` **não cobria `https://*.rpc.privy.systems`** → embedded wallet
+  RPC do Privy v3 falhava → SDK regredia para fluxo de iframe que tentava
+  emoldurar URLs erradas → "Privy iframe failed to load".
+- HTML era cacheado pelo CDN sem `must-revalidate` → mesmo com push de
+  correção, browsers continuavam carregando bundle velho.
+
+### O que efetivamente venceu o erro
+| Camada | Mudança que resolveu |
+|---|---|
+| `netlify.toml` cache | `Cache-Control: no-store, must-revalidate` em `/index.html` e `/`; `immutable, max-age=1y` em `/assets/*` |
+| `netlify.toml` CSP — script-src | `accounts.google.com`, `apis.google.com`, `*.gstatic.com`, `challenges.cloudflare.com`, `hcaptcha.com`, `*.hcaptcha.com`, `auth.privy.io` explícito |
+| `netlify.toml` CSP — frame-src | `auth.privy.io` explícito + `*.google.com` + `hcaptcha.com` + `*.hcaptcha.com` + `challenges.cloudflare.com` |
+| `netlify.toml` CSP — child-src (novo) | Espelha `frame-src` para browsers que ainda usam o fallback |
+| `netlify.toml` CSP — connect-src | `*.rpc.privy.systems`, `auth.privy.io` explícito, `hcaptcha.com`, `*.googleapis.com` |
+| `main.jsx` | App ID com strip de zero-width chars + schema regex; `securitypolicyviolation` listener captura QUALQUER violação CSP futura com `directive`/`blockedURI`/`documentURI`/`sample` |
+| Reprodução headless | `scripts/debug-privy-headless.js` com Playwright permite re-validar a qualquer hora sem depender do browser do usuário |
+
+### Por que `frame-ancestors` no NOSSO CSP nunca foi parte da solução
+`frame-ancestors` é direção inversa: ela controla **quem pode emoldurar nosso
+site**, não o que **nós podemos emoldurar**. O `frame-ancestors 'none'` que
+víamos vinha da resposta do próprio `auth.privy.io/` (rota raiz, página de
+marketing). Adicionar `frame-ancestors` no nosso CSP não tem efeito sobre o
+que `auth.privy.io` envia. A direção correta era garantir que o SDK Privy
+nunca caísse em fallback e tentasse emoldurar essa raiz — o que foi alcançado
+liberando todos os recursos que o fluxo principal precisa (Google + hCaptcha
++ Privy RPC).
+
+### Validação reprodutível
+Qualquer regressão futura pode ser detectada em segundos rodando:
+```
+cd desafio-gut/frontend && node ../scripts/debug-privy-headless.js
+```
+Se aparecer `[2] Erros de página (>0)` ou qualquer linha `[GUT-DEBUG] CSP violation`,
+há regressão. Caso contrário, o pipeline Privy + Sepolia está saudável.
+
+---
+
+## Modal Privy travando + cache-bust + sanitização App ID (2026-04-29) — pré-vitória
+
+### Sintoma reportado pelo usuário (após deploy anterior)
+> "Framing https://auth.privy.io/ violates the following Content Security Policy
+> directive: frame-ancestors self..." + "Privy iframe failed to load"
+
+### Descoberta sobre `frame-ancestors`
+`curl -I https://auth.privy.io/` (com e sem `?app_id=...`) devolve sempre:
+```
+content-security-policy: ...; frame-ancestors 'none'; ...
+x-frame-options: DENY
+```
+
+A rota raiz de `auth.privy.io/` é página de marketing/dashboard e recusa
+ser emoldurada. `frame-ancestors` é setada pelo recurso emoldurado, não pelo
+embedador — então nossa CSP `frame-src` não pode revogar isso. A solução
+era impedir que o SDK caísse em fluxo que tentasse emoldurar essa raiz.
+
+### Hipóteses operacionais (na época)
+| # | Hipótese | Plausibilidade |
+|---|---|---|
+| 1 | Bundle live antigo cacheado | Alta — explicaria por que `[GUT-DEBUG]` não foi visto |
+| 2 | App ID com whitespace invisível | Baixa (string inspecionada — 25 chars `[a-z0-9]`) |
+| 3 | SDK fallback iframe quando popup bloqueado | Plausível |
+| 4 | hCaptcha bloqueado por CSP → SDK fallback errado | Plausível |
+
+### Correções aplicadas (que viraram a vitória — ver seção "Vencido" acima)
+
+#### A) `netlify.toml` — CSP com explícitos da Privy + hCaptcha + cache-bust
+1. **Cache-Control agressivo no HTML**:
+   - `/index.html` e `/` → `no-store, must-revalidate, max-age=0` + `Pragma: no-cache` + `Expires: 0`
+   - `/assets/*` → `max-age=31536000, immutable` (assets têm hash no nome)
+2. **CSP estendida** com `auth.privy.io` explícito em `script-src`, `frame-src`,
+   `child-src`, `connect-src`, `img-src`.
+3. **`child-src` adicionado** (antes não existia).
+4. **`hcaptcha.com` + `*.hcaptcha.com` + `challenges.cloudflare.com`** em
+   `script-src`, `frame-src`, `child-src`, `connect-src`, `style-src`.
+5. **`*.rpc.privy.systems`** em `connect-src` — RPC do embedded wallet Privy v3.
+6. **`worker-src`** mudado para `'self' blob:` — Privy registra SW para captcha.
+
+#### B) `frontend/src/main.jsx` — sanitização defensiva do App ID
+- `PRIVY_APP_ID_RAW` → strip de whitespace + zero-width chars
+  (U+200B, U+200C, U+200D, U+FEFF) → `PRIVY_APP_ID`
+- Schema regex `^[a-z0-9]{20,30}$` com log se falhar
+- `window.__GUT_DEBUG__` ganha `appIdLen`, `sepoliaChainId`, `sepoliaName`
+
+#### C) NÃO modificado (já estava correto):
+- `supportedChains: [sepoliaChain]` ✓
+- `defaultChain: sepoliaChain` ✓
+
+---
+
 ## Tentativa 7 — `frame-ancestors` da Privy + cache-bust + sanitização de App ID (2026-04-29)
 
 ### Sintoma reportado pelo usuário (após deploy da Tentativa 6)

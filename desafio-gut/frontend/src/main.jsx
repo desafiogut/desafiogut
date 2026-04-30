@@ -12,7 +12,7 @@ import App from "./App.jsx";
 // o env var VITE_PRIVY_APP_ID ser corrigido no painel Netlify para cmo51f3v.
 const PRIVY_APP_ID_RAW = "cmo51f3v300l90clgzksivvad";
 
-// Tentativa 7 — sanity check anti-whitespace/zero-width sneaky chars.
+// Sanity check anti-whitespace/zero-width sneaky chars.
 // Strip de \s + zero-width space (U+200B), zero-width non-joiner (U+200C),
 // zero-width joiner (U+200D), BOM (U+FEFF). Garante que typo invisível nunca
 // degrade o appId em runtime.
@@ -29,7 +29,7 @@ if (!/^[a-z0-9]{20,30}$/.test(PRIVY_APP_ID)) {
   console.error("[GUT-DEBUG] PRIVY_APP_ID não bate com [a-z0-9]{20,30}", PRIVY_APP_ID);
 }
 
-// ── Instrumentação Tentativa 6 — captura verbosa de falhas do Privy ──────────
+// ── Instrumentação verbosa — captura falhas do Privy/CSP ────────────────────
 // Imprime QUALQUER erro/rejeição não tratada com tag [GUT-DEBUG] para que o
 // usuário consiga colar o erro completo do console quando o modal trava.
 if (typeof window !== "undefined") {
@@ -41,7 +41,6 @@ if (typeof window !== "undefined") {
     sepoliaChainId: sepoliaChain?.id,
     sepoliaName:    sepoliaChain?.name,
     bundleBuiltAt:  new Date().toISOString(),
-    tentativa:      "7",
   };
   console.info("[GUT-DEBUG] boot", window.__GUT_DEBUG__);
 
@@ -62,6 +61,22 @@ if (typeof window !== "undefined") {
       reasonStr: ev.reason?.stack || String(ev.reason),
       message:   ev.reason?.message,
       name:      ev.reason?.name,
+    });
+  });
+
+  // Captura QUALQUER violação CSP (frame-ancestors, frame-src, script-src…)
+  // com o detalhe que o erro do console esconde.
+  document.addEventListener("securitypolicyviolation", (ev) => {
+    console.error("[GUT-DEBUG] CSP violation", {
+      directive:    ev.violatedDirective,
+      effective:    ev.effectiveDirective,
+      blockedURI:   ev.blockedURI,
+      documentURI:  ev.documentURI,
+      sourceFile:   ev.sourceFile,
+      lineNumber:   ev.lineNumber,
+      sample:       ev.sample,
+      disposition:  ev.disposition,
+      originalPolicy: ev.originalPolicy?.slice(0, 200),
     });
   });
 }
