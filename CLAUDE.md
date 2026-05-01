@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-04-29 | Marco Beta (90%)
+> Atualizado em: 2026-04-30 | Pipeline de lance 100% on-chain (Fase 6 — Faxina Final)
 
 ---
 
@@ -134,6 +134,13 @@ desafio-gut/
 
 ## Fluxo de um Lance (produção)
 
+> **Pré-requisito (leilão programado):** o endereço do usuário precisa ter
+> `saldoSenhas > 0` no contrato. O crédito é feito **on-chain pela coordenação**
+> via `adicionarSenhas(usuario, n)` após confirmação do PIX (Art. XVII/XXI) —
+> não há mais conversão local de saldo flash em ficha. O frontend lê o saldo
+> via `getSaldoSenhasOnChain` e escuta `SenhasCreditadas` + `LanceDado` para
+> manter a UI sincronizada (`AppContext.subscribeSaldoSenhas`).
+
 ```
 1. Usuário clica "🎯 Entrar no Leilão"
    └─ login() Privy → modal com Google / E-mail / Apple
@@ -146,7 +153,12 @@ desafio-gut/
    └─ usePrivy() → { authenticated: true, user: { google: { email, name } } }
    └─ useWallets() → { wallets: [{ address, walletClientType: 'privy' }] }
 
-3. Usuário digita valor (centavos) e clica "Confirmar Lance"
+3. AppContext lê saldoSenhas(address) on-chain (gate de darLance)
+   └─ getSaldoSenhasOnChain(address) → exposto como { saldoSenhas, saldoSenhasStatus }
+   └─ Botão "Confirmar Lance" fica disabled enquanto saldoSenhas == null/0
+      ou status ∈ { loading, error }.
+
+4. Usuário digita valor (centavos) e clica "Confirmar Lance"
    ├─ sanitizeLance()              → valida range 1–999999
    ├─ verificarRateLimit()         → token bucket client-side
    ├─ hashLance()                  → Argon2id WASM (prova off-chain)
@@ -155,8 +167,11 @@ desafio-gut/
    ├─ getSignerFromProvider()      → ethers.js BrowserProvider + Signer
    ├─ assinarLance()               → EIP-191 signMessage (popup Privy na tela)
    └─ enviarLance()                → darLance(idEdicao, valorEmCentavos) on-chain Sepolia
+                                     ↳ contrato decrementa saldoSenhas[msg.sender]
+                                       (não há gastarFicha localStorage no fluxo real)
 
-4. Confirmação da tx → receipt.hash exibido + tabela atualizada
+5. Confirmação da tx → receipt.hash exibido + tabela atualizada
+   └─ Listener LanceDado dispara refetchSaldo → badge 🔗 atualiza sozinho
 ```
 
 ---

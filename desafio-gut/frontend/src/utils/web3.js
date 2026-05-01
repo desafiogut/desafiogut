@@ -1,6 +1,5 @@
 import { BrowserProvider, Contract, JsonRpcProvider } from "ethers";
 import { argon2id } from "hash-wasm";
-import { getFichasProgramadas } from "./saldoInterno.js";
 
 // ─── ABI mínimo do contrato LeilaoGUT ───────────────────────────────────────
 export const ABI = [
@@ -129,14 +128,6 @@ export async function getEdicaoPrazo(idEdicao) {
 }
 
 /**
- * Consulta fichas do usuário.
- * Beta: lê do localStorage via saldoInterno — sem chamada on-chain.
- */
-export function consultarSaldo(_walletProvider, _contratoEndereco, _address) {
-  return Promise.resolve(getFichasProgramadas());
-}
-
-/**
  * Submete um lance on-chain chamando darLance(idEdicao, valorEmCentavos).
  * Aguarda 1 confirmação e retorna { hash, blockNumber } do receipt real.
  *
@@ -188,8 +179,7 @@ export function subscribeLanceDado(idEdicao, onLance) {
 
 /**
  * Lê saldoSenhas(address) on-chain via JsonRpcProvider Alchemy.
- * Fonte de verdade do gate de darLance — substitui a leitura localStorage
- * de getFichasProgramadas() conforme migração para pipeline real (Opção B).
+ * Fonte de verdade do gate de darLance.
  *
  * Lança em caso de RPC down / address inválido — caller decide degradação.
  * Retorna Number — saldoSenhas é uint256 mas valores reais ficam em
