@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useWallets } from "@privy-io/react-auth";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useAppContext } from "../context/AppContext.jsx";
 import { sanitizeLance, sanitizeEdicaoId } from "../utils/sanitize.js";
 import { verificarRateLimit, registrarLance } from "../utils/rateLimiter.js";
 import { gastarFicha } from "../utils/saldoInterno.js";
@@ -49,6 +50,11 @@ export default function CardLance({
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
 
+  // Saldo on-chain (Opção B Fase 4) — fonte de verdade do gate de darLance.
+  // fichasProgramadas (prop, vinda do localStorage) continua exibido em paralelo
+  // para comparação durante a migração — não é mais usado como gate.
+  const { saldoSenhas, saldoSenhasStatus } = useAppContext();
+
   const [valor,     setValor]     = useState("");
   const [fase,      setFase]      = useState(FASES.IDLE);
   const [erro,      setErro]      = useState("");
@@ -58,7 +64,17 @@ export default function CardLance({
   const edicaoSanitizada = sanitizeEdicaoId(idEdicao ?? "");
   const ocupado          = [FASES.HASHING, FASES.ASSINANDO, FASES.ENVIANDO].includes(fase);
   const isProgramado     = tipoLeilao === "programado";
-  const semFichas        = isProgramado && fichasProgramadas <= 0;
+
+  // ── Gate de saldo (Fase 4) ───────────────────────────────────────────────
+  // MOCK_MODE: localStorage (fichasProgramadas) — preserva comportamento Beta.
+  // Real:      saldoSenhas on-chain — fonte de verdade que o contrato usa.
+  const saldoCarregando = !MOCK_MODE && isProgramado &&
+                          (saldoSenhasStatus === "loading" || saldoSenhasStatus === "idle");
+  const saldoErro       = !MOCK_MODE && isProgramado && saldoSenhasStatus === "error";
+  const semFichas       = isProgramado && (
+    MOCK_MODE ? fichasProgramadas <= 0
+              : (saldoSenhas == null || saldoSenhas <= 0)
+  );
 
   // ── Lógica principal de lance ─────────────────────────────────────────────
   async function handleDarLance() {
@@ -76,10 +92,27 @@ export default function CardLance({
     const { permitido, motivo } = verificarRateLimit(address);
     if (!permitido) { setErro(motivo); return; }
 
-    // 3. Valida fichas para leilão programado
-    if (isProgramado && fichasProgramadas <= 0) {
-      setErro("Sem fichas disponíveis. Converta saldo flash em fichas (Art. 20: R$ 2,00 / ficha).");
-      return;
+    // 3. Valida saldo de senhas — em real, fonte é saldoSenhas on-chain (não mais localStorage).
+    if (isProgramado) {
+      if (MOCK_MODE) {
+        if (fichasProgramadas <= 0) {
+          setErro("Sem fichas disponíveis (MOCK). Converta saldo flash em fichas (Art. 20: R$ 2,00 / ficha).");
+          return;
+        }
+      } else {
+        if (saldoSenhasStatus === "loading" || saldoSenhasStatus === "idle") {
+          setErro("Carregando saldo on-chain — aguarde alguns segundos e tente novamente.");
+          return;
+        }
+        if (saldoSenhasStatus === "error") {
+          setErro("Erro ao ler saldo on-chain. Verifique sua conexão e tente novamente.");
+          return;
+        }
+        if (saldoSenhas == null || saldoSenhas <= 0) {
+          setErro("Saldo de senhas insuficiente na blockchain. Aguarde crédito da coordenacao após confirmação do PIX (Art. 20).");
+          return;
+        }
+      }
     }
 
     try {
@@ -119,10 +152,12 @@ export default function CardLance({
       const { signer } = await getSignerFromProvider(ethereumProvider);
       await assinarLance(signer, edicaoSanitizada, valorCentavos);
 
-      // 6. Consome ficha antes de registrar (programado)
-      if (isProgramado) gastarFicha();
-
-      // 7. Registro local beta (enviarLance não é mais on-chain)
+      // 6. Submissão on-chain — o contrato decrementa saldoSenhas[msg.sender]
+      // automaticamente em darLance (Leilao.sol:69). gastarFicha localStorage
+      // foi removido aqui (Fase 4): o listener subscribeSaldoSenhas em
+      // AppContext captura o evento LanceDado e dispara refetchSaldo,
+      // sincronizando a UI sem dupla contabilidade. Em MOCK_MODE acima,
+      // gastarFicha continua sendo chamado porque não há contrato.
       setFase(FASES.ENVIANDO);
       const receipt = await enviarLance(signer, CONTRATO_SEPOLIA, edicaoSanitizada, valorCentavos);
 
@@ -134,9 +169,18 @@ export default function CardLance({
       onLanceSucesso?.({ address, valorCentavos, txHash: receipt.hash });
 
     } catch (err) {
+      // Tradução de require() do contrato para mensagens user-friendly.
+      // Mantém fallback chain original — apenas intercepta os reverts conhecidos.
+      const reasonRaw = err?.revert?.args?.[0] ?? err?.reason ?? null;
+      const traduzirRevert = {
+        "Voce nao possui senhas disponiveis": "Saldo insuficiente na blockchain. Aguarde crédito da coordenacao após confirmação do PIX.",
+        "Edicao nao esta ativa":               "Edição não está ativa on-chain. Aguarde a coordenacao reabrir.",
+        "Prazo da edicao encerrado":           "Prazo da edição encerrado on-chain. Aguarde nova rodada.",
+        "Lance minimo e R$ 0,01":              "Lance mínimo é R$ 0,01 (Art. 27).",
+      };
       const msg =
-        err?.revert?.args?.[0] ??
-        err?.reason ??
+        traduzirRevert[reasonRaw] ??
+        reasonRaw ??
         (err?.code === "ACTION_REJECTED" ? "Assinatura cancelada." : null) ??
         err?.message ??
         "Erro desconhecido.";
@@ -149,7 +193,14 @@ export default function CardLance({
   const saldoLabel   = isProgramado
     ? `🎫 ${fichasProgramadas} ficha${fichasProgramadas !== 1 ? "s" : ""}`
     : `💰 R$ ${carteiraFlash.toFixed(2)}`;
-  const desabilitado = !isConnected || ocupado || !valor || semFichas;
+  const desabilitado = !isConnected || ocupado || !valor || semFichas || saldoCarregando || saldoErro;
+  const tooltipBotao =
+    saldoErro       ? "Erro ao ler saldo. Verifique sua conexão." :
+    saldoCarregando ? "Aguardando leitura do saldo on-chain." :
+    semFichas       ? (MOCK_MODE
+                        ? "Sem fichas (Art. 20)"
+                        : "Sem senhas on-chain — aguarde crédito da coordenacao") :
+    "";
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -190,6 +241,17 @@ export default function CardLance({
                 {address?.slice(0, 6)}...{address?.slice(-4)}
               </span>
               <span style={estilos.saldoBadge}>{saldoLabel}</span>
+              {!MOCK_MODE && isProgramado && (
+                <span
+                  style={estilos.saldoBadgeChain}
+                  title={`saldo on-chain — status: ${saldoSenhasStatus}`}
+                >
+                  🔗 {saldoSenhas ?? "—"}
+                  {saldoSenhasStatus === "loading" && " ⏳"}
+                  {saldoSenhasStatus === "stale"   && " (antigo)"}
+                  {saldoSenhasStatus === "error"   && " ✗"}
+                </span>
+              )}
             </div>
             <button style={estilos.botaoSair} onClick={onDisconnect}>Sair</button>
           </div>
@@ -264,14 +326,26 @@ export default function CardLance({
         </div>
       )}
 
-      {/* Sem fichas (só programado) */}
-      {isConnected && isProgramado && fichasProgramadas === 0 && !encerrado && (
+      {/* Saldo carregando — só programado, em real (Fase 4) */}
+      {isConnected && isProgramado && !encerrado && saldoCarregando && (
+        <div style={estilos.boxAvisoNeutro}>⏳ Carregando saldo on-chain — aguarde alguns segundos.</div>
+      )}
+
+      {/* Saldo com erro de RPC — só programado, em real (Fase 4) */}
+      {isConnected && isProgramado && !encerrado && saldoErro && (
+        <div style={estilos.boxErro}>⚠ Erro ao ler saldo on-chain. Verifique sua conexão e tente novamente.</div>
+      )}
+
+      {/* Sem saldo — fonte muda entre MOCK (localStorage) e real (saldoSenhas) */}
+      {isConnected && isProgramado && !encerrado && semFichas && !saldoCarregando && !saldoErro && (
         <div style={{
           background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.35)",
           borderRadius: "10px", padding: "0.75rem 1rem",
           color: "#f5a623", fontSize: "0.85rem", fontWeight: "600", textAlign: "center",
         }}>
-          🎫 Sem fichas — use "→ 1 Ficha (R$ 2,00)" no painel acima para participar (Art. 20)
+          {MOCK_MODE
+            ? '🎫 Sem fichas — use "→ 1 Ficha (R$ 2,00)" no painel acima para participar (Art. 20)'
+            : '🎫 Sem senhas on-chain — aguarde crédito da coordenacao após confirmação do PIX (Art. 20)'}
         </div>
       )}
 
@@ -285,9 +359,14 @@ export default function CardLance({
           }}
           onClick={handleDarLance}
           disabled={desabilitado}
+          title={tooltipBotao}
         >
           {ocupado
             ? "⏳ Processando..."
+            : saldoErro
+              ? "⚠ Erro ao ler saldo"
+            : saldoCarregando
+              ? "⏳ Carregando saldo..."
             : isProgramado
               ? "🎫 Confirmar Lance (−1 ficha)"
               : "⚡ Confirmar Lance"}
@@ -315,6 +394,8 @@ const estilos = {
   dot:             { width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", flexShrink: 0, boxShadow: "0 0 6px #10b981" },
   enderecoTexto:   { fontFamily: "monospace", fontSize: "0.85rem", color: "#e8f0fe" },
   saldoBadge:      { background: "rgba(16,185,129,0.15)", padding: "0.2rem 0.6rem", borderRadius: "12px", fontSize: "0.72rem", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)" },
+  saldoBadgeChain: { background: "rgba(167,139,250,0.15)", padding: "0.2rem 0.6rem", borderRadius: "12px", fontSize: "0.72rem", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.35)", fontWeight: "700" },
+  boxAvisoNeutro:  { background: "rgba(37,99,235,0.1)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: "10px", padding: "0.65rem 1rem", color: "#93c5fd", fontSize: "0.8rem", fontWeight: "600", textAlign: "center" },
   botaoSair:       { background: "transparent", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: "8px", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.75rem" },
   hintConexao:     { margin: 0, fontSize: "0.7rem", color: "#4a6490" },
   inputGroup:      { display: "flex", flexDirection: "column", gap: "0.4rem" },
