@@ -190,9 +190,27 @@ export default function CardLance({
   }
 
   const valorReais   = valor ? `R$ ${(parseInt(valor || "0", 10) / 100).toFixed(2)}` : "";
-  const saldoLabel   = isProgramado
-    ? `🎫 ${fichasProgramadas} ficha${fichasProgramadas !== 1 ? "s" : ""}`
-    : `💰 R$ ${carteiraFlash.toFixed(2)}`;
+
+  // Fonte unificada do saldo (Fase 5):
+  //   flash         → carteiraFlash (R$ — não tem equivalente on-chain)
+  //   programado MOCK → fichasProgramadas (localStorage)
+  //   programado REAL → saldoSenhas (on-chain, fonte de verdade do contrato)
+  let saldoLabel;
+  if (!isProgramado) {
+    saldoLabel = `💰 R$ ${carteiraFlash.toFixed(2)}`;
+  } else if (MOCK_MODE) {
+    saldoLabel = `🎫 ${fichasProgramadas} senha${fichasProgramadas !== 1 ? "s" : ""}`;
+  } else {
+    const n = saldoSenhas;
+    const sufixo =
+      saldoSenhasStatus === "loading" ? " ⏳" :
+      saldoSenhasStatus === "stale"   ? " (antigo)" :
+      saldoSenhasStatus === "error"   ? " ✗" : "";
+    saldoLabel = `🔗 ${n ?? "—"} senha${n === 1 ? "" : "s"}${sufixo}`;
+  }
+  const saldoTitle = (!MOCK_MODE && isProgramado)
+    ? `saldo on-chain — status: ${saldoSenhasStatus}`
+    : undefined;
   const desabilitado = !isConnected || ocupado || !valor || semFichas || saldoCarregando || saldoErro;
   const tooltipBotao =
     saldoErro       ? "Erro ao ler saldo. Verifique sua conexão." :
@@ -240,18 +258,7 @@ export default function CardLance({
               <span style={estilos.enderecoTexto}>
                 {address?.slice(0, 6)}...{address?.slice(-4)}
               </span>
-              <span style={estilos.saldoBadge}>{saldoLabel}</span>
-              {!MOCK_MODE && isProgramado && (
-                <span
-                  style={estilos.saldoBadgeChain}
-                  title={`saldo on-chain — status: ${saldoSenhasStatus}`}
-                >
-                  🔗 {saldoSenhas ?? "—"}
-                  {saldoSenhasStatus === "loading" && " ⏳"}
-                  {saldoSenhasStatus === "stale"   && " (antigo)"}
-                  {saldoSenhasStatus === "error"   && " ✗"}
-                </span>
-              )}
+              <span style={estilos.saldoBadge} title={saldoTitle}>{saldoLabel}</span>
             </div>
             <button style={estilos.botaoSair} onClick={onDisconnect}>Sair</button>
           </div>
@@ -394,7 +401,6 @@ const estilos = {
   dot:             { width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", flexShrink: 0, boxShadow: "0 0 6px #10b981" },
   enderecoTexto:   { fontFamily: "monospace", fontSize: "0.85rem", color: "#e8f0fe" },
   saldoBadge:      { background: "rgba(16,185,129,0.15)", padding: "0.2rem 0.6rem", borderRadius: "12px", fontSize: "0.72rem", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)" },
-  saldoBadgeChain: { background: "rgba(167,139,250,0.15)", padding: "0.2rem 0.6rem", borderRadius: "12px", fontSize: "0.72rem", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.35)", fontWeight: "700" },
   boxAvisoNeutro:  { background: "rgba(37,99,235,0.1)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: "10px", padding: "0.65rem 1rem", color: "#93c5fd", fontSize: "0.8rem", fontWeight: "600", textAlign: "center" },
   botaoSair:       { background: "transparent", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: "8px", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.75rem" },
   hintConexao:     { margin: 0, fontSize: "0.7rem", color: "#4a6490" },
