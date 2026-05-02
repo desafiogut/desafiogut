@@ -212,15 +212,18 @@ export default function CardLance({
 
   const valorReais   = valor ? `R$ ${(parseInt(valor || "0", 10) / 100).toFixed(2)}` : "";
 
-  // Fonte unificada do saldo (Fase 5):
-  //   flash         → carteiraFlash (R$ — não tem equivalente on-chain)
-  //   programado MOCK → fichasProgramadas (localStorage)
-  //   programado REAL → saldoSenhas (on-chain, fonte de verdade do contrato)
+  // Fonte do saldo:
+  //   MOCK_MODE flash      → carteiraFlash (R$ localStorage)
+  //   MOCK_MODE programado → fichasProgramadas (localStorage)
+  //   PRODUÇÃO (qualquer)  → saldoSenhas on-chain. O contrato (Leilao.sol:55)
+  //                          exige saldoSenhas > 0 para QUALQUER lance — flash
+  //                          ou programado consomem 1 senha cada. Por isso o
+  //                          label real é unificado fora de MOCK_MODE.
   let saldoLabel;
-  if (!isProgramado) {
-    saldoLabel = `💰 R$ ${carteiraFlash.toFixed(2)}`;
-  } else if (MOCK_MODE) {
-    saldoLabel = `🎫 ${fichasProgramadas} senha${fichasProgramadas !== 1 ? "s" : ""}`;
+  if (MOCK_MODE) {
+    saldoLabel = isProgramado
+      ? `🎫 ${fichasProgramadas} senha${fichasProgramadas !== 1 ? "s" : ""}`
+      : `💰 R$ ${carteiraFlash.toFixed(2)}`;
   } else {
     const n = saldoSenhas;
     const sufixo =
@@ -229,7 +232,7 @@ export default function CardLance({
       saldoSenhasStatus === "error"   ? " ✗" : "";
     saldoLabel = `🔗 ${n ?? "—"} senha${n === 1 ? "" : "s"}${sufixo}`;
   }
-  const saldoTitle = (!MOCK_MODE && isProgramado)
+  const saldoTitle = !MOCK_MODE
     ? `saldo on-chain — status: ${saldoSenhasStatus}`
     : undefined;
   const desabilitado = !isConnected || ocupado || !valor || semFichas || saldoCarregando || saldoErro;

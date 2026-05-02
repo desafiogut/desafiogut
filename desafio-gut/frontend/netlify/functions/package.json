@@ -1,0 +1,9 @@
+{
+  "name": "desafiogut-functions",
+  "private": true,
+  "type": "module",
+  "description": "Netlify Functions do DesafioGUT — server-only (não importar do frontend).",
+  "dependencies": {
+    "jose": "^5.9.6"
+  }
+}

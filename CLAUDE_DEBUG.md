@@ -1238,3 +1238,104 @@ Após `forwardConsole: false`, o render é estável e os ícones aparecem como e
 ```
 node scripts/check-icons-mobile.mjs   # exit 0 ⇒ 4 ícones OK
 ```
+
+---
+
+## MARCO: LIMPEZA DE PLACEHOLDERS — FRENTE A (em progresso, 2026-05-02)
+
+### Decisões aprovadas pelo usuário
+1. Frente A antes da Frente B.
+2. Saldo Flash R$: ocultar completamente em produção (não há equivalente real no fluxo PIX → senhas).
+3. Lances NÃO persistem em localStorage em produção. Fonte de verdade: listener on-chain `LanceDado`. Backfill via `queryFilter` fica para fase futura se necessário.
+4. Limite de compra (Frente B): 1 a 100 fichas por pedido.
+5. PIX provider Beta: `MockPixProvider`. MercadoPago como stub.
+
+### Subetapa A.1 — Gate MOCK_MODE no AppContext (concluída)
+Mudanças em `src/context/AppContext.jsx`:
+- `lances` initial: `MOCK_MODE ? (localStorage || LANCES_MOCK) : []`.
+- `carteiraFlash` / `fichasProgramadas` initial: `MOCK_MODE ? get*() : 0`.
+- Persistência localStorage (`gut_lances_r1`): só em MOCK_MODE.
+- Handlers `refreshSaldo`, `handleSimularPix`, `handleConverterFicha`: no-op fora de MOCK_MODE.
+- `handleNovaRodada`: limpa localStorage só em MOCK_MODE; reset para `MOCK_MODE ? LANCES_MOCK : []`.
+
+### Validação A.1
+- Build verde (`npm run build`): 4.65s.
+- Script `scripts/check-no-placeholders.mjs` (Playwright headless): injeta localStorage SUJO antes do bundle React (`gut_carteira_flash=196.00`, `gut_fichas_programadas=99`, 22 lances fake) e valida que **nenhum** desses valores chega ao DOM em produção. Exit 0.
+
+### Subetapa A.2 — UI cleanup nos 5 componentes (concluída)
+Mudanças por arquivo:
+
+| Arquivo | Mudança |
+|---|---|
+| `src/components/Sidebar.jsx` | Span `💰 R$ {carteiraFlash}` envelopado em `{MOCK_MODE && (...)}`. Em produção só aparece `🔗 saldoSenhas`. |
+| `src/pages/Dashboard.jsx` | KPI "Saldo Flash" removido do array `stats` em produção via spread condicional `...(MOCK_MODE ? [{...}] : [])`. Restam 3 KPIs (Senhas/Lances Únicos/Total). |
+| `src/pages/MinhaCarteira.jsx` | Bloco completo (saldos grid + Ações de Carteira com botões "+ PIX R$ 10" e "→ 1 Ficha") envelopado em `{MOCK_MODE && (<>...</>)}`. Texto descritivo do header também ramifica por modo. Permanecem em produção: header, dados de pagamento (PIX info real, Art. 21), Meus Lances, Account info. |
+| `src/pages/MercadoLances.jsx` | Painel saldos: lado esquerdo (Flash R$ / Fichas + chip buttons "+ PIX R$ 10" / "→ 1 Ficha") envelopado em `{MOCK_MODE ? (...) : <div />}`. Em produção, o seletor de modo Relâmpago/Programado fica alinhado à direita com `<div />` placeholder mantendo o `space-between`. |
+| `src/components/CardLance.jsx` | `saldoLabel` reorganizado: `MOCK_MODE` mantém comportamento por modo (flash → R$, programado → fichas); produção unifica para `🔗 saldoSenhas` em **ambos os modos** — o contrato `Leilao.sol:55` exige `saldoSenhas > 0` para qualquer lance, então a distinção flash/programado nesse label era incorreta. |
+
+### Validação A.2
+- Build verde (`npm run build`): 3.11s.
+- Script `scripts/check-no-placeholders.mjs` estendido para 6 rotas (`/`, `/carteira`, `/mercado`, `/ativos`, `/seguranca`, `/configuracoes`) e checagem de strings: `R$ 196`, `+ PIX R$ 10`, `→ 1 Ficha`, `Simulação Beta`, `SALDO FLASH`, `Saldo Flash`. Exit 0.
+- Screenshots gerados (`scripts/.out/no-placeholders-{dashboard,carteira,mercado}-390x844.png`):
+  - Dashboard: 3 KPIs (Senhas / Lances Únicos / Total de Lances) — sem "Saldo Flash".
+  - Carteira (deslogado): só o login prompt, copy ajustada para "Acompanhe seu saldo de senhas e seus lances no DesafioGUT".
+  - Mercado: painel sem saldos mockados, apenas toggle Modo Relâmpago/Programado à direita.
+
+### Limitação conhecida do script
+`scripts/check-no-placeholders.mjs` audita o DOM efetivamente renderizado. Em `/carteira`, os blocos mock-only ficam dentro do gate `{isConnected ? <painel> : <login>}`. Sem login real (Privy), o script não consegue verificar o painel autenticado. Cobertura compensada: o gate `{MOCK_MODE && ...}` está ESTRUTURALMENTE no JSX — se vazasse em prod, o teste em MOCK_MODE quebraria por estado simétrico. Backup: revisão visual manual após login real.
+
+### Achado lateral (não corrigido nesta frente)
+O gate `semFichas` em `CardLance.jsx:76-79` aplica-se apenas a `isProgramado`. Como o contrato exige `saldoSenhas > 0` mesmo em flash, um usuário com 0 senhas pode hoje clicar "Confirmar Lance" em flash e a transação reverter on-chain (gasto de gas inútil). Fix proposto (PR separada): remover `isProgramado &&` do `semFichas`. Anotado para não introduzir scope creep nesta subetapa.
+
+### Subetapa A.3 — Documentação (este bloco)
+Esta seção é a A.3.
+
+### Estado da Frente A
+✅ Frente A completa. Dashboard, Sidebar, Carteira, Mercado e CardLance mostram apenas saldo real (`🔗 saldoSenhas` on-chain) em produção. Botões mock e cards de "Saldo Flash"/"Fichas (localStorage)" aparecem **somente** em MOCK_MODE.
+
+### Próximos passos — Frente B
+- ✅ B.1: estrutura `netlify/functions/`, helpers `_lib/{jwt,validate}.mjs`, healthcheck.
+- ⏳ B.2: `iniciar-pagamento.mjs` + `MockPixProvider`.
+- ⏳ B.3: `confirmar-pagamento.mjs` + `_lib/contract.mjs` + chamada on-chain `adicionarSenhas`.
+- ⏳ B.4: `ComprarFichasModal.jsx` na MinhaCarteira (UI do fluxo).
+- ⏳ B.5: stub `MercadoPagoPixProvider` para troca futura.
+
+Variáveis de ambiente Netlify a serem criadas: `COORDENACAO_PRIVATE_KEY`, `RPC_URL`, `JWT_SECRET`, `PIX_PROVIDER=mock`. Sem prefixo `VITE_` (server-only).
+
+---
+
+## MARCO: FRENTE B — B.1 ESQUELETO NETLIFY FUNCTIONS (concluída, 2026-05-02)
+
+### Estrutura criada
+```
+desafio-gut/frontend/netlify/functions/
+├── package.json                    ← server-only deps (jose@^5.9.6)
+├── _lib/
+│   ├── jwt.mjs                     ← assinarPedido() / verificarPedido() HS256
+│   └── validate.mjs                ← validarEndereco / validarQuantidadeFichas
+│                                     calcularValorBRL / jsonResponse / jsonError
+│                                     parseJsonBody / ValidationError + LIMITES
+└── health.mjs                      ← GET /.netlify/functions/health
+```
+
+`netlify.toml` ganhou seção `[functions] directory = "netlify/functions"` + `node_bundler = "esbuild"`. Resolvido via `base` para `desafio-gut/frontend/netlify/functions/`.
+
+### Configuração de env vars
+Geradas/decididas:
+- **JWT_SECRET** = `6606b7e408abb0f92902356a523c69ecc8b797fb107fc6bf16d9861ccbcfb0ae` (32 bytes hex via `node -e "require('crypto').randomBytes(32).toString('hex')"`). Salvo em `.env.local` (gitignored). **Em produção: colar no Netlify Dashboard sem prefixo `VITE_`.**
+- **RPC_URL** = `https://eth-sepolia.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B` (mesma Alchemy do frontend). Salvo em `.env.local`.
+- **PIX_PROVIDER** = `mock`. Salvo em `.env.local`.
+- **COORDENACAO_PRIVATE_KEY** — pendente até B.3 (mesma chave do `.env` que roda `setup-operacional.js`).
+
+### Validação automática
+- `scripts/check-functions-health.mjs` (novo): carrega `.env.local`, importa `health.mjs` e invoca como Netlify runtime; valida `ok=true`, `status=200`, env mínima.
+- Smoke test JWT + validate (inline): roundtrip preserva payload; `validarEndereco` lowercaseia e rejeita strings inválidas; `validarQuantidadeFichas` rejeita 0/101/2.5; `calcularValorBRL(5)=10`, `(100)=200`.
+- `npm run build` verde: 5.14s.
+
+### Observações para deploy de B.1
+- Netlify CLI não instalado localmente; o script bypassa. Após push, validar via:
+  ```
+  curl https://silly-stardust-ca71bc.netlify.app/.netlify/functions/health
+  ```
+- Esperado: JSON com `ok: true`, `env.JWT_SECRET="set"`, `env.RPC_URL="set"`, `env.PIX_PROVIDER="mock"`, `env.COORDENACAO_PRIVATE_KEY="MISSING"` (ainda).
+- O SPA rewrite `/* → /index.html` no `netlify.toml` **não** intercepta `/.netlify/functions/*` — Netlify trata functions antes dos rewrites.

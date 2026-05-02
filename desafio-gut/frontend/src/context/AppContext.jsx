@@ -44,8 +44,10 @@ export function AppProvider({ children }) {
   // Tipo de leilão (Art. 8)
   const [tipoLeilao, setTipoLeilao] = useState("flash");
 
-  // Lances — persistidos em localStorage
+  // Lances — em MOCK_MODE persiste em localStorage (com seed LANCES_MOCK).
+  // Em produção começa vazio: a fonte de verdade é o listener on-chain LanceDado.
   const [lances, setLances] = useState(() => {
+    if (!MOCK_MODE) return [];
     try {
       const salvo = localStorage.getItem(LS_LANCES);
       return salvo ? JSON.parse(salvo) : LANCES_MOCK;
@@ -60,8 +62,12 @@ export function AppProvider({ children }) {
   const [lightningActive, setLightningActive] = useState(false);
 
   // Carteiras internas — Art. 20: R$ 2,00/senha
-  const [carteiraFlash,     setCarteiraFlash]     = useState(() => getCarteiraFlash());
-  const [fichasProgramadas, setFichasProgramadas] = useState(() => getFichasProgramadas());
+  // MOCK_MODE: lê localStorage (saldo simulado para dev local).
+  // Produção: zerados; o Saldo Flash R$ não existe conceitualmente no fluxo real
+  // (PIX → senhas é direto). fichasProgramadas é legado — em produção a UI deve
+  // consumir saldoSenhas on-chain, e os componentes que ainda leem aqui recebem 0.
+  const [carteiraFlash,     setCarteiraFlash]     = useState(() => MOCK_MODE ? getCarteiraFlash()     : 0);
+  const [fichasProgramadas, setFichasProgramadas] = useState(() => MOCK_MODE ? getFichasProgramadas() : 0);
   const [erroCarteira,      setErroCarteira]      = useState("");
 
   // ── Saldo on-chain (Opção B Fase 3) ──────────────────────────────────────────
@@ -89,8 +95,11 @@ export function AppProvider({ children }) {
 
   // ── Efeitos ──────────────────────────────────────────────────────────────────
 
-  // Persistência de lances
+  // Persistência de lances — apenas em MOCK_MODE.
+  // Em produção, persistir contamina sessões com lances de testes antigos; a
+  // tabela é hidratada pelo listener LanceDado e (futuro) backfill de eventos.
   useEffect(() => {
+    if (!MOCK_MODE) return;
     try { localStorage.setItem(LS_LANCES, JSON.stringify(lances)); } catch {}
   }, [lances]);
 
@@ -195,17 +204,26 @@ export function AppProvider({ children }) {
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
 
+  // Handlers de saldo interno — todos no-op fora de MOCK_MODE.
+  // Em produção, o crédito de senhas é feito via Netlify Function (Frente B):
+  // PIX confirmado → coordenacao chama adicionarSenhas() on-chain → listener
+  // SenhasCreditadas atualiza saldoSenhas automaticamente. Não há saldo flash
+  // intermediário nem conversão local de ficha.
+
   function refreshSaldo() {
+    if (!MOCK_MODE) return;
     setCarteiraFlash(getCarteiraFlash());
     setFichasProgramadas(getFichasProgramadas());
   }
 
   function handleSimularPix() {
+    if (!MOCK_MODE) return;
     setErroCarteira("");
     setCarteiraFlash(simularDepositoPix(10.00));
   }
 
   function handleConverterFicha() {
+    if (!MOCK_MODE) return;
     setErroCarteira("");
     try {
       const { saldoFlash, fichas } = converterEmFichas(1);
@@ -264,14 +282,14 @@ export function AppProvider({ children }) {
   }
 
   function handleNovaRodada() {
-    localStorage.removeItem(LS_LANCES);
+    if (MOCK_MODE) localStorage.removeItem(LS_LANCES);
     const dur = DURACAO[tipoLeilao];
     setPrazoTimestamp(Math.floor(Date.now() / 1000) + dur);
     setEncerrado(false);
     setShowOverlay(false);
     setTempoRestante(dur);
     setLightningActive(false);
-    setLances(LANCES_MOCK);
+    setLances(MOCK_MODE ? LANCES_MOCK : []);
   }
 
   // ── Value ─────────────────────────────────────────────────────────────────────

@@ -44,8 +44,9 @@ export default function Dashboard() {
     ? { label: "Fichas", value: `${fichasProgramadas}`,                     color: "#a78bfa", icon: "🎫", to: "/carteira" }
     : { label: "Senhas", value: `${saldoSenhas ?? "—"}${statusSuffix}`,     color: "#a78bfa", icon: "🔗", to: "/carteira" };
 
+  // "Saldo Flash" só existe em MOCK_MODE — em produção o fluxo é PIX → senhas direto.
   const stats = [
-    { label: "Saldo Flash",     value: `R$ ${carteiraFlash.toFixed(2)}`, color: COR.primary, icon: "💰", to: "/carteira" },
+    ...(MOCK_MODE ? [{ label: "Saldo Flash", value: `R$ ${carteiraFlash.toFixed(2)}`, color: COR.primary, icon: "💰", to: "/carteira" }] : []),
     senhasStat,
     { label: "Lances Únicos",   value: lancesUnicos,                     color: COR.success, icon: "✅", to: "/mercado"  },
     { label: "Total de Lances", value: totalLances,                      color: COR.blue300, icon: "📊", to: "/ativos"   },

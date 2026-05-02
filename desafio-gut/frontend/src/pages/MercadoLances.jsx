@@ -293,39 +293,46 @@ export default function MercadoLances() {
           gap: isMobile ? "0.6rem" : "0.75rem",
           backdropFilter: "blur(12px)",
         }}>
-          <div style={{
-            display: "flex",
-            gap: isMobile ? "0.6rem" : "1.25rem",
-            alignItems: "center",
-            flexWrap: "wrap",
-            justifyContent: isMobile ? "space-between" : "flex-start",
-          }}>
-            <div style={saldoItemStyle}>
-              <span style={saldoLabelStyle}>Flash</span>
-              <span style={{ ...saldoValueStyle, color: COR.primary }}>R$ {carteiraFlash.toFixed(2)}</span>
+          {/* Saldos internos (Flash R$ / Fichas) e botões de simulação:
+              apenas em MOCK_MODE. Em produção, o saldo real é o badge 🔗 no
+              Sidebar/Dashboard; a aquisição é via "Comprar Fichas" (Frente B). */}
+          {MOCK_MODE ? (
+            <div style={{
+              display: "flex",
+              gap: isMobile ? "0.6rem" : "1.25rem",
+              alignItems: "center",
+              flexWrap: "wrap",
+              justifyContent: isMobile ? "space-between" : "flex-start",
+            }}>
+              <div style={saldoItemStyle}>
+                <span style={saldoLabelStyle}>Flash</span>
+                <span style={{ ...saldoValueStyle, color: COR.primary }}>R$ {carteiraFlash.toFixed(2)}</span>
+              </div>
+              <div style={saldoItemStyle}>
+                <span style={saldoLabelStyle}>Fichas</span>
+                <span style={{ ...saldoValueStyle, color: "#a78bfa" }}>{fichasProgramadas} 🎫</span>
+              </div>
+              <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                <button onClick={handleSimularPix} style={chipBtnStyle("blue")}
+                  title="Simula depósito PIX de R$ 10,00 (Art. 21)">
+                  + PIX R$ 10
+                </button>
+                <button
+                  onClick={handleConverterFicha}
+                  disabled={carteiraFlash < CUSTO_FICHA_BRL}
+                  style={{
+                    ...chipBtnStyle("purple"),
+                    opacity: carteiraFlash < CUSTO_FICHA_BRL ? 0.4 : 1,
+                    cursor: carteiraFlash < CUSTO_FICHA_BRL ? "not-allowed" : "pointer",
+                  }}
+                  title={`Art. 20: R$ ${CUSTO_FICHA_BRL.toFixed(2)} → 1 ficha`}
+                >→ 1 Ficha (R$ {CUSTO_FICHA_BRL.toFixed(2)})</button>
+              </div>
+              {erroCarteira && <span style={{ fontSize: "0.72rem", color: COR.danger }}>⚠️ {erroCarteira}</span>}
             </div>
-            <div style={saldoItemStyle}>
-              <span style={saldoLabelStyle}>Fichas</span>
-              <span style={{ ...saldoValueStyle, color: "#a78bfa" }}>{fichasProgramadas} 🎫</span>
-            </div>
-            <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-              <button onClick={handleSimularPix} style={chipBtnStyle("blue")}
-                title="Simula depósito PIX de R$ 10,00 (Art. 21)">
-                + PIX R$ 10
-              </button>
-              <button
-                onClick={handleConverterFicha}
-                disabled={carteiraFlash < CUSTO_FICHA_BRL}
-                style={{
-                  ...chipBtnStyle("purple"),
-                  opacity: carteiraFlash < CUSTO_FICHA_BRL ? 0.4 : 1,
-                  cursor: carteiraFlash < CUSTO_FICHA_BRL ? "not-allowed" : "pointer",
-                }}
-                title={`Art. 20: R$ ${CUSTO_FICHA_BRL.toFixed(2)} → 1 ficha`}
-              >→ 1 Ficha (R$ {CUSTO_FICHA_BRL.toFixed(2)})</button>
-            </div>
-            {erroCarteira && <span style={{ fontSize: "0.72rem", color: COR.danger }}>⚠️ {erroCarteira}</span>}
-          </div>
+          ) : (
+            <div /> /* placeholder vazio — mantém o flex space-between alinhando o seletor de modo à direita */
+          )}
 
           <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontSize: "0.68rem", color: COR.muted, marginRight: "0.2rem" }}>Modo:</span>

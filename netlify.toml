@@ -3,6 +3,14 @@
   command = "npm install --legacy-peer-deps && npm run build"
   publish = "dist"
 
+# ── Netlify Functions ────────────────────────────────────────────────────────
+# Resolvido como `desafio-gut/frontend/netlify/functions/` (relativo ao base).
+# `node_bundler = "esbuild"` permite que cada função declare deps em
+# netlify/functions/package.json e serem bundled inline (jose, ethers, etc).
+[functions]
+  directory    = "netlify/functions"
+  node_bundler = "esbuild"
+
 [[redirects]]
   from   = "/*"
   to     = "/index.html"

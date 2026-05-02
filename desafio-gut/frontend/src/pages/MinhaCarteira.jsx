@@ -69,7 +69,9 @@ export default function MinhaCarteira() {
           fontWeight: "900", color: COR.text, lineHeight: 1.2,
         }}>💰 Minha Carteira</h1>
         <p style={{ margin: 0, color: COR.muted, fontSize: isMobile ? "0.82rem" : "0.88rem", lineHeight: 1.4 }}>
-          Gerencie seu saldo Flash e suas fichas para participar do DesafioGUT.
+          {MOCK_MODE
+            ? "Gerencie seu saldo Flash e suas fichas para participar do DesafioGUT."
+            : "Acompanhe seu saldo de senhas e seus lances no DesafioGUT."}
         </p>
       </header>
 
@@ -84,97 +86,103 @@ export default function MinhaCarteira() {
         </div>
       ) : (
         <>
-          {/* Saldos */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "1fr 1fr",
-            gap: isMobile ? "0.75rem" : "1rem",
-            marginBottom: sectionGap,
-          }}>
-            <div style={{ ...cardStyle, borderColor: "rgba(37,99,235,0.3)", minWidth: 0 }}>
+          {/* Saldos + Ações — apenas em MOCK_MODE.
+              Em produção, "Saldo Flash R$" e "Fichas (localStorage)" não existem;
+              o saldo real é o badge 🔗 no Sidebar/Dashboard, e a aquisição de
+              senhas será via botão "Comprar Fichas" (Frente B). */}
+          {MOCK_MODE && (
+            <>
               <div style={{
-                fontSize: "0.65rem", color: COR.muted,
-                textTransform: "uppercase", letterSpacing: "0.06em",
-                marginBottom: "0.4rem", fontWeight: "700",
-              }}>SALDO FLASH ⚡</div>
-              <div style={{
-                fontSize: isMobile ? "1.55rem" : "2.2rem",
-                fontWeight: "900", color: COR.primary, lineHeight: 1.1,
-                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              }}>R$ {carteiraFlash.toFixed(2)}</div>
-              <div style={{ fontSize: "0.7rem", color: COR.muted, marginTop: "0.3rem" }}>
-                Usado em leilões Relâmpago
-              </div>
-            </div>
-
-            <div style={{ ...cardStyle, borderColor: "rgba(167,139,250,0.3)", minWidth: 0 }}>
-              <div style={{
-                fontSize: "0.65rem", color: COR.muted,
-                textTransform: "uppercase", letterSpacing: "0.06em",
-                marginBottom: "0.4rem", fontWeight: "700",
-              }}>FICHAS 🎫</div>
-              <div style={{
-                fontSize: isMobile ? "1.55rem" : "2.2rem",
-                fontWeight: "900", color: COR.purple, lineHeight: 1.1,
-              }}>{fichasProgramadas}</div>
-              <div style={{ fontSize: "0.7rem", color: COR.muted, marginTop: "0.3rem" }}>
-                R$ {CUSTO_FICHA_BRL.toFixed(2)} / ficha (Art. 20)
-              </div>
-            </div>
-          </div>
-
-          {/* Ações */}
-          <div style={{ ...cardStyle, marginBottom: sectionGap }}>
-            <h3 style={tituloStyle}>⚡ Ações de Carteira</h3>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-              gap: isMobile ? "0.75rem" : "1rem",
-              marginBottom: erroCarteira ? "0.75rem" : 0,
-            }}>
-              <div>
-                <div style={{ fontSize: "0.78rem", color: COR.muted, marginBottom: "0.4rem", fontWeight: "600" }}>
-                  Depósito via PIX
+                display: "grid",
+                gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "1fr 1fr",
+                gap: isMobile ? "0.75rem" : "1rem",
+                marginBottom: sectionGap,
+              }}>
+                <div style={{ ...cardStyle, borderColor: "rgba(37,99,235,0.3)", minWidth: 0 }}>
+                  <div style={{
+                    fontSize: "0.65rem", color: COR.muted,
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                    marginBottom: "0.4rem", fontWeight: "700",
+                  }}>SALDO FLASH ⚡</div>
+                  <div style={{
+                    fontSize: isMobile ? "1.55rem" : "2.2rem",
+                    fontWeight: "900", color: COR.primary, lineHeight: 1.1,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>R$ {carteiraFlash.toFixed(2)}</div>
+                  <div style={{ fontSize: "0.7rem", color: COR.muted, marginTop: "0.3rem" }}>
+                    Usado em leilões Relâmpago
+                  </div>
                 </div>
-                <button onClick={handleSimularPix} style={botaoPrimario}>
-                  + PIX R$ 10,00 (Simulação Beta)
-                </button>
-                <p style={{ margin: "0.4rem 0 0", fontSize: "0.66rem", color: "#334155" }}>
-                  PIX real: desafiogut01@gmail.com (Art. 21)
-                </p>
-              </div>
 
-              <div>
-                <div style={{ fontSize: "0.78rem", color: COR.muted, marginBottom: "0.4rem", fontWeight: "600" }}>
-                  Converter em Ficha Programada
+                <div style={{ ...cardStyle, borderColor: "rgba(167,139,250,0.3)", minWidth: 0 }}>
+                  <div style={{
+                    fontSize: "0.65rem", color: COR.muted,
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                    marginBottom: "0.4rem", fontWeight: "700",
+                  }}>FICHAS 🎫</div>
+                  <div style={{
+                    fontSize: isMobile ? "1.55rem" : "2.2rem",
+                    fontWeight: "900", color: COR.purple, lineHeight: 1.1,
+                  }}>{fichasProgramadas}</div>
+                  <div style={{ fontSize: "0.7rem", color: COR.muted, marginTop: "0.3rem" }}>
+                    R$ {CUSTO_FICHA_BRL.toFixed(2)} / ficha (Art. 20)
+                  </div>
                 </div>
-                <button
-                  onClick={handleConverterFicha}
-                  disabled={carteiraFlash < CUSTO_FICHA_BRL}
-                  style={{
-                    ...botaoSecundario,
-                    opacity: carteiraFlash < CUSTO_FICHA_BRL ? 0.4 : 1,
-                    cursor: carteiraFlash < CUSTO_FICHA_BRL ? "not-allowed" : "pointer",
-                  }}
-                >→ 1 Ficha (R$ {CUSTO_FICHA_BRL.toFixed(2)})</button>
-                <p style={{ margin: "0.4rem 0 0", fontSize: "0.66rem", color: "#334155" }}>
-                  {carteiraFlash < CUSTO_FICHA_BRL
-                    ? "Saldo insuficiente"
-                    : `Saldo disponível: R$ ${carteiraFlash.toFixed(2)}`}
-                </p>
               </div>
-            </div>
 
-            {erroCarteira && (
-              <div style={{
-                padding: "0.6rem 0.85rem",
-                background: "rgba(239,68,68,0.12)",
-                border: "1px solid rgba(239,68,68,0.3)",
-                borderRadius: "10px", color: COR.danger,
-                fontSize: "0.82rem",
-              }}>⚠️ {erroCarteira}</div>
-            )}
-          </div>
+              <div style={{ ...cardStyle, marginBottom: sectionGap }}>
+                <h3 style={tituloStyle}>⚡ Ações de Carteira</h3>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                  gap: isMobile ? "0.75rem" : "1rem",
+                  marginBottom: erroCarteira ? "0.75rem" : 0,
+                }}>
+                  <div>
+                    <div style={{ fontSize: "0.78rem", color: COR.muted, marginBottom: "0.4rem", fontWeight: "600" }}>
+                      Depósito via PIX
+                    </div>
+                    <button onClick={handleSimularPix} style={botaoPrimario}>
+                      + PIX R$ 10,00 (Simulação Beta)
+                    </button>
+                    <p style={{ margin: "0.4rem 0 0", fontSize: "0.66rem", color: "#334155" }}>
+                      PIX real: desafiogut01@gmail.com (Art. 21)
+                    </p>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: "0.78rem", color: COR.muted, marginBottom: "0.4rem", fontWeight: "600" }}>
+                      Converter em Ficha Programada
+                    </div>
+                    <button
+                      onClick={handleConverterFicha}
+                      disabled={carteiraFlash < CUSTO_FICHA_BRL}
+                      style={{
+                        ...botaoSecundario,
+                        opacity: carteiraFlash < CUSTO_FICHA_BRL ? 0.4 : 1,
+                        cursor: carteiraFlash < CUSTO_FICHA_BRL ? "not-allowed" : "pointer",
+                      }}
+                    >→ 1 Ficha (R$ {CUSTO_FICHA_BRL.toFixed(2)})</button>
+                    <p style={{ margin: "0.4rem 0 0", fontSize: "0.66rem", color: "#334155" }}>
+                      {carteiraFlash < CUSTO_FICHA_BRL
+                        ? "Saldo insuficiente"
+                        : `Saldo disponível: R$ ${carteiraFlash.toFixed(2)}`}
+                    </p>
+                  </div>
+                </div>
+
+                {erroCarteira && (
+                  <div style={{
+                    padding: "0.6rem 0.85rem",
+                    background: "rgba(239,68,68,0.12)",
+                    border: "1px solid rgba(239,68,68,0.3)",
+                    borderRadius: "10px", color: COR.danger,
+                    fontSize: "0.82rem",
+                  }}>⚠️ {erroCarteira}</div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Dados de pagamento */}
           <div style={{ ...cardStyle, marginBottom: sectionGap }}>

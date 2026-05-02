@@ -156,9 +156,11 @@ export default function Sidebar() {
             </div>
           )}
           <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.35rem", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "0.63rem", color: "#10b981", fontWeight: "700" }}>
-              💰 R$ {carteiraFlash.toFixed(2)}
-            </span>
+            {MOCK_MODE && (
+              <span style={{ fontSize: "0.63rem", color: "#10b981", fontWeight: "700" }}>
+                💰 R$ {carteiraFlash.toFixed(2)}
+              </span>
+            )}
             {MOCK_MODE ? (
               <span style={{ fontSize: "0.63rem", color: "#a78bfa", fontWeight: "700" }}>
                 🎫 {fichasProgramadas}
