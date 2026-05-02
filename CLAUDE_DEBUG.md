@@ -1339,3 +1339,45 @@ Geradas/decididas:
   ```
 - Esperado: JSON com `ok: true`, `env.JWT_SECRET="set"`, `env.RPC_URL="set"`, `env.PIX_PROVIDER="mock"`, `env.COORDENACAO_PRIVATE_KEY="MISSING"` (ainda).
 - O SPA rewrite `/* → /index.html` no `netlify.toml` **não** intercepta `/.netlify/functions/*` — Netlify trata functions antes dos rewrites.
+
+### Validação em produção (commit 159d9e6)
+```
+$ curl https://silly-stardust-ca71bc.netlify.app/.netlify/functions/health
+{"ok":true,"service":"desafiogut-functions","node":"v22.22.2",
+ "env":{"JWT_SECRET":"set","COORDENACAO_PRIVATE_KEY":"MISSING",
+        "RPC_URL":"set","PIX_PROVIDER":"mock"}}
+```
+✅ B.1 verificada no ar. Pendência: configurar `COORDENACAO_PRIVATE_KEY` no Netlify Dashboard antes de B.3.
+
+---
+
+## MARCO: FRENTE B — B.2 INICIAR-PAGAMENTO + MOCKPIXPROVIDER (concluída, 2026-05-02)
+
+### Arquivos criados
+- `netlify/functions/iniciar-pagamento.mjs` — POST endpoint.
+- `netlify/functions/_lib/pix-provider/index.mjs` — factory por env `PIX_PROVIDER`.
+- `netlify/functions/_lib/pix-provider/mock.mjs` — gera EMV BR Code minimalista (chave fictícia, CRC fake — proposital, não-PIX-real).
+- `scripts/check-iniciar-pagamento.mjs` — 22 assertions (1 happy + 8 erros + JWT roundtrip).
+
+### Contrato HTTP
+- Request: `POST /.netlify/functions/iniciar-pagamento` com `{ endereco: "0x..", qtd: 1..100 }`.
+- Response 200: `{ pedidoId (UUID), valorBRL, qtd, qrCodeText, qrCodeImage:null, simulated:true, provider:"mock", validUntil (ISO), token (JWT HS256) }`.
+- Response 400/405: `{ error: { code, message, ...extra } }`.
+- TTL JWT: 15min (espaço suficiente para o usuário pagar PIX simulado).
+
+### Validação em produção (commit ac003da)
+```
+$ curl -X POST https://silly-stardust-ca71bc.netlify.app/.netlify/functions/iniciar-pagamento \
+       -H 'content-type: application/json' \
+       -d '{"endereco":"0xE1a0...","qtd":3}'
+HTTP 200 → { pedidoId: "cdb9cfda-...", valorBRL: 6, qtd: 3, ... }
+```
+- GET → 405 com `code: "metodo_invalido"`. ✓
+- `qtd: 200` → 400 com `code: "quantidade_fora_do_limite"`. ✓
+- `endereco: "lixo"` → 400 com `code: "endereco_invalido"`. ✓
+
+### Decisões de design
+- **pedidoId server-side** (`crypto.randomUUID()`) — não confiar no client.
+- **JWT carrega payload completo** (`pedidoId, endereco, qtd, valorBRL`) — `confirmar-pagamento` (B.3) verifica HMAC sem precisar de DB.
+- **Mock vs real**: `MockPixProvider` retorna texto BR Code reconhecível pela UI mas inválido para banco real (CRC fake). Garante que o usuário não confunde o ambiente Beta com PIX real.
+- **`mercadopago` já roteia pra mock** com warn — evita 500 se alguém setar a env errada antes de B.5 implementar o adapter.
