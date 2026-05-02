@@ -4,7 +4,47 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { PrivyProvider } from "@privy-io/react-auth";
 import { sepolia as sepoliaChain } from "viem/chains"; // viem instalado como dep do Privy
+import * as Sentry from "@sentry/react";
 import App from "./App.jsx";
+
+// Sentry init — no-op em ambientes sem VITE_SENTRY_DSN (dev local sem env).
+// beforeSend strippa qualquer payload contendo "argon2id_" como defesa em
+// profundidade contra vazar hash de prova de intenção do lance.
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
+const ARGON2ID_RE = /argon2id_/i;
+const scrubArgon2id = (obj) => {
+  if (!obj || typeof obj !== "object") return;
+  for (const k of Object.keys(obj)) {
+    const v = obj[k];
+    if (typeof v === "string" && ARGON2ID_RE.test(v)) obj[k] = "[REDACTED:argon2id]";
+    else if (v && typeof v === "object") scrubArgon2id(v);
+  }
+};
+Sentry.init({
+  dsn: SENTRY_DSN,
+  enabled: Boolean(SENTRY_DSN),
+  environment: import.meta.env.MODE,
+  integrations: [
+    Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false }),
+  ],
+  tracesSampleRate: 0.1,
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
+  beforeSend(event) {
+    if (event.extra) scrubArgon2id(event.extra);
+    if (event.contexts) scrubArgon2id(event.contexts);
+    if (event.breadcrumbs) {
+      event.breadcrumbs.forEach((b) => {
+        if (b.data) scrubArgon2id(b.data);
+        if (typeof b.message === "string" && ARGON2ID_RE.test(b.message)) {
+          b.message = "[REDACTED:argon2id]";
+        }
+      });
+    }
+    return event;
+  },
+});
 
 // App ID validado via Privy Management API em 2026-04-28.
 // NÃO usar import.meta.env — o dashboard Netlify tem o valor ERRADO (cmo5113v)
@@ -81,8 +121,16 @@ if (typeof window !== "undefined") {
   });
 }
 
+const SentryFallback = () => (
+  <div style={{ padding: "2rem", color: "#ef4444", textAlign: "center", fontFamily: "system-ui" }}>
+    <h2 style={{ margin: 0 }}>Erro inesperado</h2>
+    <p>A equipe foi notificada. Por favor, recarregue a página.</p>
+  </div>
+);
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
+    <Sentry.ErrorBoundary fallback={<SentryFallback />}>
     <BrowserRouter>
     <PrivyProvider
       appId={PRIVY_APP_ID}
@@ -121,5 +169,6 @@ createRoot(document.getElementById("root")).render(
       <App />
     </PrivyProvider>
     </BrowserRouter>
+    </Sentry.ErrorBoundary>
   </StrictMode>
 );

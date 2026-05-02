@@ -22,6 +22,12 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    // Vite 8: desativa o forwardConsole. Por default ele envolve console.error/warn
+    // e registra listeners globais de error/unhandledrejection que chamam ws.send()
+    // sem checar readyState. Como main.jsx loga via console na inicialização (antes
+    // do handshake do HMR) e dentro de handlers de erro, isso lança recursivamente
+    // "Cannot read properties of undefined (reading 'send')" e inunda o console.
+    forwardConsole: false,
     headers: {
       "Content-Security-Policy":
         "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://privy.io https://*.privy.io; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://privy.io https://*.privy.io; frame-src https://privy.io https://*.privy.io https://accounts.google.com; connect-src 'self' http://127.0.0.1:8545 https://privy.io https://*.privy.io wss://*.privy.io https://auth.privy.io https://telemetry.privy.io https://api.privy.io https://eth-sepolia.g.alchemy.com https://rpc.sepolia.org; worker-src blob:; object-src 'none'; base-uri 'self';",

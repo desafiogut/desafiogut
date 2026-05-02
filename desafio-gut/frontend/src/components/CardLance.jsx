@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useWallets } from "@privy-io/react-auth";
+import * as Sentry from "@sentry/react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useAppContext } from "../context/AppContext.jsx";
@@ -15,6 +16,7 @@ import {
 } from "../utils/web3.js";
 
 const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === "true";
+const SEPOLIA_CHAIN_ID = 11155111;
 
 const FASES = {
   IDLE:      "idle",
@@ -186,6 +188,25 @@ export default function CardLance({
         "Erro desconhecido.";
       setErro(msg);
       setFase(FASES.ERRO);
+
+      // Telemetria — captura falhas de tx (revert, rede, assinatura) com
+      // contexto on-chain. Hash Argon2id deliberadamente excluído (PII).
+      if (err?.code !== "ACTION_REJECTED") {
+        Sentry.captureException(err, {
+          tags: {
+            idEdicao: edicaoSanitizada,
+            wallet: address ?? "anonymous",
+            chainId: SEPOLIA_CHAIN_ID,
+            fase: fase,
+            mockMode: String(MOCK_MODE),
+          },
+          extra: {
+            reasonRaw,
+            valorCentavos,
+            isProgramado,
+          },
+        });
+      }
     }
   }
 

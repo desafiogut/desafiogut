@@ -1142,3 +1142,99 @@ App Name: DESAFIOGUT
 4. `X-Frame-Options: SAMEORIGIN` — permite iframes de mesmo domínio (necessário para Privy)
 5. `switchChain(11155111)` antes de assinar — garante Sepolia sempre
 6. Remover Apple de loginMethods até habilitar no painel Privy
+
+---
+
+## MARCO: ERRO `Cannot read properties of undefined (reading 'send')` (2026-05-02)
+
+### Sintoma
+Console do navegador inundado com:
+```
+[GUT-DEBUG] unhandledrejection
+TypeError: Cannot read properties of undefined (reading 'send')
+    at Object.send (http://localhost:3000/@vite/client:519:4)
+    at http://localhost:3000/src/main.jsx:93:11
+```
+A linha `main.jsx:93` na versão **servida** corresponde ao `console.error("[GUT-DEBUG] unhandledrejection", ...)` dentro do nosso handler global de rejeições. Não é o catch do `CardLance.jsx` nem do Sentry.
+
+### Causa raiz
+Vite 8 introduziu por default `server.forwardConsole = { enabled: true, unhandledErrors: true, logLevels: ["error","warn"] }`. Esse mecanismo (em `node_modules/vite/dist/client/client.mjs`):
+
+1. **Envolve** `console.error` e `console.warn` para encaminhar mensagens ao terminal Node via WebSocket (linhas ~507-513).
+2. **Registra** `window.addEventListener("error", ...)` e `("unhandledrejection", ...)` que também encaminham via WebSocket (linhas ~514-521).
+
+A função interna `transport.send(data)` cai em `ws.send(JSON.stringify(data))` na linha 437-439 do client servido, **sem checar `ws.readyState`**. Resultado: se o WebSocket ainda não está aberto (timing de boot, CSP, server reiniciado, etc), `ws.send` lança `TypeError: Cannot read properties of undefined (reading 'send')`.
+
+Loop infinito porque:
+- `main.jsx` faz `console.info("[GUT-DEBUG] boot", ...)` na inicialização → Vite intercepta → `ws.send` falha → vira unhandled rejection.
+- Nosso handler de `unhandledrejection` chama `console.error("[GUT-DEBUG] unhandledrejection", ...)` → Vite intercepta de novo → falha de novo → nova rejection.
+- Ciclo se repete a cada erro.
+
+### Solução
+`vite.config.js`: adicionar `forwardConsole: false` em `server`. Single-line, cirúrgico, não toca `main.jsx` nem `CardLance.jsx`.
+
+```js
+server: {
+  port: 3000,
+  forwardConsole: false,   // ← desativa o wrapping de console e listeners globais do Vite
+  headers: { ... }
+}
+```
+
+Após reiniciar o dev server, o client servido reflete:
+```js
+const forwardConsole = {"enabled":false,"unhandledErrors":false,"logLevels":[]};
+```
+e `setupForwardConsoleHandler` retorna logo no `if (!options.enabled) return;` — nenhuma intercepção é feita.
+
+### Validação automática
+Script `scripts/check-no-forward-console.sh` (executável após `npm run dev` estar rodando):
+```bash
+curl -sS http://localhost:3000/@vite/client | grep -E '"enabled":false' && echo "OK: forwardConsole desativado" || { echo "FAIL: forwardConsole ainda ativo"; exit 1; }
+```
+Build (`npm run build`): verde — `built in 3.92s`.
+
+### Como detectar regressão futura
+Se alguém remover a linha do `vite.config.js` (ou se um upgrade do Vite 9 mudar a API), o sintoma volta imediatamente no console. O grep do client servido detecta antes do erro chegar ao usuário.
+
+---
+
+## MARCO: ÍCONES SVG DO BOTTOMNAV — FALSO POSITIVO (2026-05-02)
+
+### Sintoma reportado
+"Ícones SVG quebrados no mobile (BottomNav e demais componentes em 375px)."
+
+### Investigação
+Sem acesso a navegador interativo, montei um teste headless com Playwright (`scripts/check-icons-mobile.mjs`) que:
+1. Renderiza `http://localhost:3000` em viewport 375×667 com `isMobile: true`.
+2. Pré-popula `sessionStorage["gut_consentimento"]` para pular o gate LGPD.
+3. Coleta bounding box, viewBox, stroke, color e childTags de cada SVG dentro de `nav[aria-label='Navegação principal']`.
+4. Captura screenshot full-page para inspeção visual.
+
+### Resultado empírico
+4 SVGs renderizam com geometria correta no BottomNav:
+
+| Tab | childTags | dims | color (active/idle) |
+|---|---|---|---|
+| Início (rota /) | 4× rect | 22×22 | `rgb(147,197,253)` (ativo) |
+| Lances | 3× circle | 22×22 | `rgb(74,100,144)` (idle) |
+| Carteira | 3× path | 22×22 | `rgb(74,100,144)` (idle) |
+| Mais | 3× circle (dots) | 22×22 | `rgb(74,100,144)` (idle) |
+
+BottomNav posicionado em `y=603, height=64`, ancorado no fundo de 667px. Screenshot (`scripts/.out/bottomnav-375x667.png`) confirma que cada ícone está visualmente distinto e legível.
+
+### Causa raiz provável do "sintoma"
+Não há ícone quebrado. O reporte é subproduto do erro da Fase 1:
+
+> Antes do fix `forwardConsole: false`, o loop de unhandled rejections deixava o React em estado degradado (Privy inicializava parcialmente, listeners de matchMedia disparavam após race conditions, etc). Em alguns frames a SPA renderizava com Sidebar visível mesmo em mobile, ou flickava entre Sidebar/BottomNav. O usuário interpretou isso como "ícones quebrados".
+
+Após `forwardConsole: false`, o render é estável e os ícones aparecem como esperado.
+
+### Ações pendentes (não bloqueantes)
+- **CSP**: bloqueio legítimo de `https://silly-stardust-ca71bc.netlify.app/favicon.ico` em `img-src` — usado como `logo` no `PrivyProvider.config.appearance.logo` (`main.jsx:162`). Trocar para asset local (`/favicon.ico`) elimina o ruído de console.
+- **WalletConnect explorer-api**: Privy SDK ainda chama `https://explorer-api.walletconnect.com` mesmo sem `walletList`. Bloqueado por CSP `connect-src`. Não impede o login Google/Email mas suja o console com `Failed to fetch`. Tratar na limpeza de mocks/CSP.
+
+### Validação automática
+```
+node scripts/check-icons-mobile.mjs   # exit 0 ⇒ 4 ícones OK
+```

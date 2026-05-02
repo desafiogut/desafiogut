@@ -69,7 +69,18 @@ const NAV_ITEMS = [
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const { isConnected, address, userLabel, carteiraFlash, fichasProgramadas, abrirModal, desconectar, MOCK_MODE } = useAppContext();
+  const {
+    isConnected, address, userLabel,
+    carteiraFlash, fichasProgramadas,
+    saldoSenhas, saldoSenhasStatus,
+    abrirModal, desconectar, MOCK_MODE,
+  } = useAppContext();
+
+  // Sufixo curto refletindo status de leitura on-chain (idle/ok = vazio).
+  const statusSuffix =
+    saldoSenhasStatus === "loading" ? " ⏳" :
+    saldoSenhasStatus === "stale"   ? " ◇" :
+    saldoSenhasStatus === "error"   ? " ✗" : "";
 
   const W = collapsed ? "72px" : "240px";
 
@@ -144,13 +155,26 @@ export default function Sidebar() {
               {address.slice(0, 8)}...{address.slice(-4)}
             </div>
           )}
-          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.35rem" }}>
+          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.35rem", flexWrap: "wrap" }}>
             <span style={{ fontSize: "0.63rem", color: "#10b981", fontWeight: "700" }}>
               💰 R$ {carteiraFlash.toFixed(2)}
             </span>
-            <span style={{ fontSize: "0.63rem", color: "#a78bfa", fontWeight: "700" }}>
-              🎫 {fichasProgramadas}
-            </span>
+            {MOCK_MODE ? (
+              <span style={{ fontSize: "0.63rem", color: "#a78bfa", fontWeight: "700" }}>
+                🎫 {fichasProgramadas}
+              </span>
+            ) : (
+              <span
+                style={{
+                  fontSize: "0.63rem",
+                  color: saldoSenhasStatus === "error" ? "#ef4444" : "#10b981",
+                  fontWeight: "700",
+                }}
+                title={`Saldo on-chain — status: ${saldoSenhasStatus}`}
+              >
+                🔗 {saldoSenhas ?? "—"}{statusSuffix}
+              </span>
+            )}
           </div>
         </div>
       )}

@@ -1,34 +1,33 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { sanitizeAddress, sanitizeString, sanitizeLance } from "../utils/sanitize.js";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { useIsMobile } from "../hooks/useIsMobile.js";
 
 /**
  * TabelaLances — exibe lances da edição ativa.
+ *  Desktop: <table> com 5 colunas.
+ *  Mobile:  cards verticais (1 lance por card).
  *
- * SEGURANÇA:
- *  - Todos os valores passam por sanitização antes de renderizar
- *  - Endereços são validados via regex antes de exibição
- *  - Valores numéricos são parseados como inteiros, nunca interpolados como HTML
- *  - Nenhum dado é passado para dangerouslySetInnerHTML
- *
- * Status messages alinhados ao Art. 24 do Regulamento DesafioGUT:
- *  a) menor e único → "Menor e Único 🏆"
- *  b) único não menor → "Único — tente menor"
- *  c) repetido → "Repetido — já recebido"
+ * Status messages alinhados ao Art. 24:
+ *  a) menor e único → 🏆
+ *  b) único não menor → ✅
+ *  c) repetido → ❌
  */
 
-/**
- * Ordena lances: únicos primeiro (valor asc) → repetidos depois (valor asc).
- * O menor lance único fica sempre no índice 0 (Rank #1).
- */
 function ordenarLances(lances) {
-  const unicos   = lances.filter((l) => !l.repetido).sort((a, b) => a.valor - b.valor);
-  const repetidos = lances.filter((l) => l.repetido).sort((a, b) => a.valor - b.valor);
+  const unicos    = lances.filter((l) => !l.repetido).sort((a, b) => a.valor - b.valor);
+  const repetidos = lances.filter((l) =>  l.repetido).sort((a, b) => a.valor - b.valor);
   return [...unicos, ...repetidos];
 }
 
+function statusFor(repetido, isVencedor) {
+  if (repetido)   return { label: "❌ Repetido",      variant: "warning" };
+  if (isVencedor) return { label: "🏆 Menor e Único", variant: "success" };
+  return                  { label: "✅ Único",         variant: "success" };
+}
+
 export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp }) {
+  const isMobile = useIsMobile();
   const edicaoSanitizada = sanitizeString(idEdicao ?? "");
   const agora = Date.now() / 1000;
   const encerrado = prazoTimestamp && agora > prazoTimestamp;
@@ -37,176 +36,256 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp }) 
     : "—";
 
   const lancesOrdenados = ordenarLances(lances);
-  // Índice (na lista ordenada) do menor lance único — recebe o efeito beam
   const idxVencedor = lancesOrdenados.findIndex((l) => !l.repetido);
 
   return (
-    <div style={estilos.container}>
+    <div style={{
+      ...estilos.container,
+      padding: isMobile ? "1rem" : "1.5rem",
+    }}>
       <style>{`
-        @keyframes gut-blink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.25; }
-        }
+        @keyframes gut-blink { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } }
         .gut-vencedor { animation: gut-blink 1.1s ease-in-out infinite; }
 
         @keyframes gut-beam {
           0%   { background-position: -200% 0; }
           100% { background-position:  200% 0; }
         }
-        .gut-beam-row {
-          position: relative;
-          overflow: hidden;
-        }
-        .gut-beam-row::after {
+        .gut-beam-row, .gut-beam-card { position: relative; overflow: hidden; }
+        .gut-beam-row::after, .gut-beam-card::after {
           content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(37,99,235,0.18) 40%,
-            rgba(255,255,255,0.22) 50%,
-            rgba(37,99,235,0.18) 60%,
-            transparent 100%
-          );
+          position: absolute; inset: 0;
+          background: linear-gradient(90deg, transparent 0%, rgba(37,99,235,0.18) 40%, rgba(255,255,255,0.22) 50%, rgba(37,99,235,0.18) 60%, transparent 100%);
           background-size: 200% 100%;
           animation: gut-beam 2.6s ease-in-out infinite;
           pointer-events: none;
         }
       `}</style>
 
-      <div style={estilos.header}>
-        <h3 style={estilos.titulo}>
+      <div style={{
+        ...estilos.header,
+        marginBottom: isMobile ? "0.75rem" : "1rem",
+        flexDirection: isMobile ? "column" : "row",
+        alignItems: isMobile ? "stretch" : "center",
+        gap: isMobile ? "0.4rem" : "0.5rem",
+      }}>
+        <h3 style={{ ...estilos.titulo, fontSize: isMobile ? "0.95rem" : "1.05rem" }}>
           📋 Lances — Edição{" "}
           <span style={{ color: "#93c5fd" }}>{edicaoSanitizada}</span>
         </h3>
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <span style={{ fontSize: "0.8rem", color: "#4a6490" }}>
+        <div style={{
+          display: "flex", gap: "0.6rem", alignItems: "center",
+          justifyContent: isMobile ? "space-between" : "flex-end",
+          flexWrap: "wrap",
+        }}>
+          <span style={{ fontSize: isMobile ? "0.7rem" : "0.78rem", color: "#4a6490" }}>
             Prazo: {prazoFormatado}
           </span>
-          <span style={{ ...estilos.badge, background: encerrado ? "#dc2626" : "#16a34a" }}>
+          <span style={{ ...estilos.statusBadge, background: encerrado ? "#dc2626" : "#16a34a" }}>
             {encerrado ? "🔴 Encerrado" : "🟢 Ativo"}
           </span>
         </div>
       </div>
 
       {lances.length === 0 ? (
-        <p style={estilos.vazio}>Nenhum lance registrado ainda. Seja o primeiro!</p>
-      ) : (
-        <div style={estilos.tabelaWrapper}>
-          <table style={estilos.tabela}>
-            <thead>
-              <tr>
-                <th style={estilos.th}>#</th>
-                <th style={estilos.th}>Participante</th>
-                <th style={estilos.th}>Valor (R$)</th>
-                <th style={estilos.th}>Status (Art. 24)</th>
-                <th style={estilos.th}>ID do Lance</th>
-              </tr>
-            </thead>
-            <AnimatePresence initial={false}>
-            <tbody>
-              {lancesOrdenados.map((lance, i) => {
-                const enderecoSanitizado = sanitizeAddress(lance.endereco ?? "");
-                const valorSanitizado = sanitizeLance(lance.valor);
-                const txHash = sanitizeString(lance.txHash ?? "");
-                const repetido = lance.repetido === true;
-                const isVencedor = i === idxVencedor;
-                const itemKey = `${enderecoSanitizado}-${valorSanitizado}`;
-
-                if (!enderecoSanitizado || valorSanitizado === null) return null;
-
-                const enderecoAbrev = `${enderecoSanitizado.slice(0, 6)}...${enderecoSanitizado.slice(-4)}`;
-                const valorFormatado = `R$ ${(valorSanitizado / 100).toFixed(2)}`;
-
-                // Art. 24 status labels
-                let statusLabel, statusVariant;
-                if (repetido) {
-                  statusLabel = "❌ Repetido";       // Art. 24-c
-                  statusVariant = "warning";
-                } else if (isVencedor) {
-                  statusLabel = "🏆 Menor e Único";  // Art. 24-a
-                  statusVariant = "success";
-                } else {
-                  statusLabel = "✅ Único";           // Art. 24-b (único, não o menor)
-                  statusVariant = "success";
-                }
-
-                return (
-                  <motion.tr
-                    key={itemKey}
-                    layoutId={itemKey}
-                    layout
-                    initial={{ opacity: 0, y: -14, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0,   scale: 1    }}
-                    exit={{    opacity: 0, y:  10,  scale: 0.97 }}
-                    transition={{ duration: 0.32, ease: "easeOut" }}
-                    className={isVencedor ? "gut-beam-row" : undefined}
-                    style={{
-                      ...estilos.tr,
-                      background: isVencedor
-                        ? "rgba(37,99,235,0.09)"
-                        : "transparent",
-                    }}
-                  >
-                    <td style={estilos.td}>{isVencedor ? "🏆" : i + 1}</td>
-                    <td style={{ ...estilos.td, fontFamily: "monospace", fontSize: "0.85rem" }}>
-                      {enderecoAbrev}
-                    </td>
-                    <td style={{
-                      ...estilos.td, fontWeight: "700",
-                      color: isVencedor ? "#93c5fd" : "#e8f0fe",
-                    }}>
-                      {valorFormatado}
-                    </td>
-                    <td style={estilos.td}>
-                      <Badge
-                        variant={statusVariant}
-                        className={isVencedor ? "gut-vencedor" : undefined}
-                      >
-                        {statusLabel}
-                      </Badge>
-                    </td>
-                    <td style={{ ...estilos.td, fontFamily: "monospace", fontSize: "0.75rem", color: "#4a6490" }}>
-                      {txHash ? `${txHash.slice(0, 10)}...` : "—"}
-                    </td>
-                  </motion.tr>
-                );
-              })}
-            </tbody>
-            </AnimatePresence>
-          </table>
+        <div style={{
+          color: "#4a6490",
+          textAlign: "center",
+          padding: "2rem 1rem",
+          display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "center",
+        }}>
+          <span style={{ fontSize: "1.6rem", opacity: 0.45 }}>📭</span>
+          <span style={{ fontSize: isMobile ? "0.85rem" : "0.9rem" }}>Nenhum lance registrado ainda.</span>
+          <span style={{ fontSize: "0.78rem", color: "#334155" }}>Seja o primeiro a lançar.</span>
         </div>
+      ) : isMobile ? (
+        <MobileList lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} />
+      ) : (
+        <DesktopTable lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} />
       )}
 
-      <p style={estilos.aviso}>
+      <p style={{
+        marginTop: "1rem", fontSize: isMobile ? "0.68rem" : "0.72rem", color: "#4a6490",
+        borderTop: "1px solid rgba(37,99,235,0.12)", paddingTop: "0.75rem",
+        textAlign: isMobile ? "center" : "left",
+      }}>
         🔒 Dados sanitizados · XSS-safe · Art. 26: apuração automática · Beta Interno
       </p>
     </div>
   );
 }
 
-// ─── Estilos — paleta Azul Marinho GUT ───────────────────────────────────────
+function MobileList({ lancesOrdenados, idxVencedor }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+      <AnimatePresence initial={false}>
+        {lancesOrdenados.map((lance, i) => {
+          const enderecoSanitizado = sanitizeAddress(lance.endereco ?? "");
+          const valorSanitizado = sanitizeLance(lance.valor);
+          const txHash = sanitizeString(lance.txHash ?? "");
+          if (!enderecoSanitizado || valorSanitizado === null) return null;
+
+          const repetido = lance.repetido === true;
+          const isVencedor = i === idxVencedor;
+          const itemKey = `${enderecoSanitizado}-${valorSanitizado}`;
+          const status = statusFor(repetido, isVencedor);
+          const enderecoAbrev = `${enderecoSanitizado.slice(0, 6)}...${enderecoSanitizado.slice(-4)}`;
+          const valorFormatado = `R$ ${(valorSanitizado / 100).toFixed(2)}`;
+
+          return (
+            <motion.div
+              key={itemKey}
+              layoutId={itemKey}
+              layout
+              initial={{ opacity: 0, y: -10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              transition={{ duration: 0.28, ease: "easeOut" }}
+              className={isVencedor ? "gut-beam-card" : undefined}
+              style={{
+                background: isVencedor ? "rgba(37,99,235,0.10)" : "rgba(8,24,64,0.55)",
+                border: `1px solid ${isVencedor ? "rgba(37,99,235,0.4)" : "rgba(37,99,235,0.14)"}`,
+                borderRadius: "12px",
+                padding: "0.75rem 0.85rem",
+                display: "grid",
+                gridTemplateColumns: "auto 1fr auto",
+                alignItems: "center",
+                columnGap: "0.75rem",
+                rowGap: "0.4rem",
+              }}
+            >
+              <div style={{
+                gridRow: "1 / span 2",
+                width: "32px", height: "32px", borderRadius: "50%",
+                background: isVencedor ? "rgba(245,166,35,0.18)" : "rgba(37,99,235,0.12)",
+                border: `1px solid ${isVencedor ? "rgba(245,166,35,0.4)" : "rgba(37,99,235,0.25)"}`,
+                color: isVencedor ? "#fbbf24" : "#93c5fd",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: "900", fontSize: "0.85rem",
+                flexShrink: 0,
+              }}>
+                {isVencedor ? "🏆" : i + 1}
+              </div>
+
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontFamily: "monospace", fontSize: "0.82rem",
+                  color: "#e8f0fe",
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>{enderecoAbrev}</div>
+                {txHash && (
+                  <div style={{
+                    fontFamily: "monospace", fontSize: "0.66rem", color: "#4a6490",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    marginTop: "1px",
+                  }}>{txHash.slice(0, 14)}...</div>
+                )}
+              </div>
+
+              <div style={{
+                fontWeight: "900",
+                fontSize: "1.05rem",
+                color: isVencedor ? "#fbbf24" : "#93c5fd",
+                fontFamily: "monospace",
+                whiteSpace: "nowrap",
+                textAlign: "right",
+              }}>{valorFormatado}</div>
+
+              <div style={{ gridColumn: "2 / span 2", display: "flex", justifyContent: "flex-end" }}>
+                <Badge
+                  variant={status.variant}
+                  className={isVencedor ? "gut-vencedor" : undefined}
+                >{status.label}</Badge>
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function DesktopTable({ lancesOrdenados, idxVencedor }) {
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th style={estilos.th}>#</th>
+            <th style={estilos.th}>Participante</th>
+            <th style={estilos.th}>Valor (R$)</th>
+            <th style={estilos.th}>Status (Art. 24)</th>
+            <th style={estilos.th}>ID do Lance</th>
+          </tr>
+        </thead>
+        <AnimatePresence initial={false}>
+          <tbody>
+            {lancesOrdenados.map((lance, i) => {
+              const enderecoSanitizado = sanitizeAddress(lance.endereco ?? "");
+              const valorSanitizado = sanitizeLance(lance.valor);
+              const txHash = sanitizeString(lance.txHash ?? "");
+              if (!enderecoSanitizado || valorSanitizado === null) return null;
+
+              const repetido = lance.repetido === true;
+              const isVencedor = i === idxVencedor;
+              const itemKey = `${enderecoSanitizado}-${valorSanitizado}`;
+              const status = statusFor(repetido, isVencedor);
+              const enderecoAbrev = `${enderecoSanitizado.slice(0, 6)}...${enderecoSanitizado.slice(-4)}`;
+              const valorFormatado = `R$ ${(valorSanitizado / 100).toFixed(2)}`;
+
+              return (
+                <motion.tr
+                  key={itemKey}
+                  layoutId={itemKey}
+                  layout
+                  initial={{ opacity: 0, y: -14, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.97 }}
+                  transition={{ duration: 0.32, ease: "easeOut" }}
+                  className={isVencedor ? "gut-beam-row" : undefined}
+                  style={{
+                    ...estilos.tr,
+                    background: isVencedor ? "rgba(37,99,235,0.09)" : "transparent",
+                  }}
+                >
+                  <td style={estilos.td}>{isVencedor ? "🏆" : i + 1}</td>
+                  <td style={{ ...estilos.td, fontFamily: "monospace", fontSize: "0.85rem" }}>{enderecoAbrev}</td>
+                  <td style={{ ...estilos.td, fontWeight: "700", color: isVencedor ? "#93c5fd" : "#e8f0fe" }}>{valorFormatado}</td>
+                  <td style={estilos.td}>
+                    <Badge variant={status.variant} className={isVencedor ? "gut-vencedor" : undefined}>
+                      {status.label}
+                    </Badge>
+                  </td>
+                  <td style={{ ...estilos.td, fontFamily: "monospace", fontSize: "0.75rem", color: "#4a6490" }}>
+                    {txHash ? `${txHash.slice(0, 10)}...` : "—"}
+                  </td>
+                </motion.tr>
+              );
+            })}
+          </tbody>
+        </AnimatePresence>
+      </table>
+    </div>
+  );
+}
+
 const estilos = {
   container: {
-    background: "rgba(8,24,64,0.6)", backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-    borderRadius: "16px", padding: "1.5rem", color: "#e8f0fe",
+    background: "rgba(8,24,64,0.6)",
+    backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+    borderRadius: "16px", color: "#e8f0fe",
     border: "1px solid rgba(37,99,235,0.18)",
     boxShadow: "0 24px 48px rgba(0,0,0,0.55)",
   },
   header: {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem",
+    display: "flex", justifyContent: "space-between",
+    flexWrap: "wrap",
   },
-  titulo: { margin: 0, fontSize: "1.05rem", fontWeight: "800", letterSpacing: "0.02em" },
-  badge: {
+  titulo: { margin: 0, fontWeight: "800", letterSpacing: "0.02em" },
+  statusBadge: {
     padding: "0.22rem 0.75rem", borderRadius: "20px",
-    fontSize: "0.72rem", fontWeight: "700", color: "#ffffff",
+    fontSize: "0.7rem", fontWeight: "700", color: "#fff",
   },
-  vazio: { color: "#4a6490", textAlign: "center", padding: "2rem 0" },
-  tabelaWrapper: { overflowX: "auto" },
-  tabela: { width: "100%", borderCollapse: "collapse" },
   th: {
     padding: "0.55rem 1rem", textAlign: "left", fontSize: "0.7rem",
     color: "#4a6490", borderBottom: "1px solid rgba(37,99,235,0.15)",
@@ -214,8 +293,4 @@ const estilos = {
   },
   tr: { borderBottom: "1px solid rgba(255,255,255,0.04)" },
   td: { padding: "0.7rem 1rem", fontSize: "0.86rem" },
-  aviso: {
-    marginTop: "1rem", fontSize: "0.72rem", color: "#4a6490",
-    borderTop: "1px solid rgba(37,99,235,0.12)", paddingTop: "0.75rem",
-  },
 };
