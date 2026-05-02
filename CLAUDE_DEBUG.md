@@ -1381,3 +1381,53 @@ HTTP 200 → { pedidoId: "cdb9cfda-...", valorBRL: 6, qtd: 3, ... }
 - **JWT carrega payload completo** (`pedidoId, endereco, qtd, valorBRL`) — `confirmar-pagamento` (B.3) verifica HMAC sem precisar de DB.
 - **Mock vs real**: `MockPixProvider` retorna texto BR Code reconhecível pela UI mas inválido para banco real (CRC fake). Garante que o usuário não confunde o ambiente Beta com PIX real.
 - **`mercadopago` já roteia pra mock** com warn — evita 500 se alguém setar a env errada antes de B.5 implementar o adapter.
+
+---
+
+## MARCO: FRENTE B — B.3 CONFIRMAR-PAGAMENTO + ON-CHAIN CREDIT (concluída, 2026-05-02)
+
+### Arquivos criados
+- `netlify/functions/_lib/contract.mjs` — wrapper ethers: `lerSaldoSenhas()`, `creditarSenhas()`, `verificarCoordenacao()`. Lazy init de `JsonRpcProvider`/`Wallet`/`Contract` com cache de `coordenacao()`.
+- `netlify/functions/confirmar-pagamento.mjs` — POST `{ token }` → verifica JWT → checa Netlify Blobs → chama `adicionarSenhas` on-chain → grava no Blob → devolve `{ txHash, saldoAntes, saldoDepois, etherscanUrl, ... }`.
+- `scripts/check-confirmar-pagamento.mjs` — E2E: iniciar → confirmar → assert `saldoDepois - saldoAntes === qtd`.
+
+### Deps adicionadas em `netlify/functions/package.json`
+- `ethers ^6.16.0` (sign + send tx)
+- `@netlify/blobs ^8.1.0` (idempotência)
+
+### Fluxo
+1. POST `{ token }` (JWT do `iniciar-pagamento`).
+2. `verificarPedido(token)` — extrai `{ pedidoId, endereco, qtd, valorBRL }`.
+3. `getStore("pedidos-pagos").get(pedidoId)` — se já processado, devolve `{ idempotent: true, ...resultado }` sem reprocessar.
+4. `lerSaldoSenhas(endereco)` — saldoAntes.
+5. `creditarSenhas(endereco, qtd)` — `tx.wait(1)`. Sanity: confirma `wallet.address === coordenacao()` (cache).
+6. `lerSaldoSenhas(endereco)` — saldoDepois.
+7. `store.setJSON(pedidoId, resultado)` — persiste para idempotência futura.
+8. Resposta 200.
+
+### Validação E2E na Sepolia (commit local antes do push)
+```
+node scripts/check-confirmar-pagamento.mjs
+…
+saldoSenhas[0xE1a0…2a4d] = 100
+⏳ aguardando 1 confirmação...
+status: 200, duração 14.7s
+txHash: 0xc9b7c2c2255e5ec48980a6a6bab5943e252629bb27f39a3c1dcf93ed14bb691b
+blockNumber: 10777265
+saldoAntes: 100 → saldoDepois: 101
+6/6 asserts ✓
+```
+Tx: https://sepolia.etherscan.io/tx/0xc9b7c2c2255e5ec48980a6a6bab5943e252629bb27f39a3c1dcf93ed14bb691b
+
+### Idempotência
+- **Local (sem `netlify dev`)**: Blobs lança "environment not configured" — código loga warn, segue sem persistência. Cada chamada cria crédito real → useful para teste de happy path, mas replays vão duplicar crédito.
+- **Produção**: Netlify auto-injeta `siteID`/`token`. Replay com mesmo JWT → 200 com `idempotent: true` e o txHash original; **não chama o contrato** segunda vez.
+
+### Segurança
+- `COORDENACAO_PRIVATE_KEY` em `.env.local` (gitignored) e Netlify Functions env (sem prefixo `VITE_`, marcada secret).
+- `_lib/contract.mjs` só importado por functions; nunca chega ao bundle frontend.
+- Erros logados com `err.message`/`err.shortMessage`, NÃO `err` cru (alguns providers ethers incluem RPC URL/chave em `err.info`).
+
+### Pendência antes da validação em produção
+- Usuário precisa adicionar `COORDENACAO_PRIVATE_KEY` no Netlify Dashboard (Functions scope, secret).
+- Sem isso, `/confirmar-pagamento` retorna 502 `credito_falhou` em prod com `COORDENACAO_PRIVATE_KEY não configurado`.
