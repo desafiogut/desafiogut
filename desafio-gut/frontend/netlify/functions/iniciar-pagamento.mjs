@@ -53,9 +53,15 @@ export default async (req) => {
 
   let pix;
   try {
-    pix = getPixProvider().gerarPedidoPix({ pedidoId, valorBRL });
+    // await aceita retorno síncrono (mock) e Promise (mercadopago).
+    pix = await getPixProvider().gerarPedidoPix({ pedidoId, valorBRL });
   } catch (err) {
-    console.error("[iniciar-pagamento] provider falhou", { name: err?.name, message: err?.message });
+    console.error("[iniciar-pagamento] provider falhou", {
+      name: err?.name, code: err?.code, message: err?.message, status: err?.status,
+    });
+    if (err?.code === "mp_config_invalida") {
+      return jsonError(500, "pix_provider_mal_configurado", "PIX provider sem credenciais válidas");
+    }
     return jsonError(502, "pix_provider_indisponivel", "não foi possível gerar pedido PIX agora");
   }
 
