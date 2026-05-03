@@ -28,10 +28,14 @@ const FASES = {
 };
 
 /**
- * CardLance — Submissão de lances com saldo interno Beta.
+ * CardLance — Submissão de lances on-chain (Sepolia) ou simulada (MOCK).
  *
- * Fluxo Flash:      Hash → Assinar → Registrar local (sem custo de ficha)
- * Fluxo Programado: Hash → Assinar → Consumir 1 ficha → Registrar local
+ * Em produção (MOCK_MODE=false): qualquer lance — Flash ou Programado —
+ * consome 1 senha (saldoSenhas[msg.sender] no contrato). Não há "saldo
+ * Flash em R$" separado: o pipeline é PIX → senhas → darLance.
+ *
+ * MOCK_MODE preserva a UX antiga: Flash debita carteiraFlash (R$),
+ * Programado debita fichasProgramadas (count) — ambos em localStorage.
  *
  * Art. 20 regulamento: R$ 2,00/senha  |  Art. 27: lance mín R$ 0,01
  */
@@ -288,9 +292,13 @@ export default function CardLance({
           </div>
         )}
         <p style={estilos.hintConexao}>
-          {isProgramado
-            ? "Lance programado consome 1 ficha (Art. 20: R$ 2,00) — converta saldo flash no painel acima."
-            : "DesafioGUT Flash · 5 min · lance livre · menor lance único vence (Art. 8)."}
+          {MOCK_MODE
+            ? (isProgramado
+                ? "Lance programado consome 1 ficha (Art. 20: R$ 2,00) — converta saldo flash no painel acima."
+                : "DesafioGUT Flash · 5 min · lance livre (MOCK) · menor lance único vence (Art. 8).")
+            : (isProgramado
+                ? "Lance programado consome 1 senha on-chain (Art. 20: R$ 2,00) — adquira via Comprar Fichas."
+                : "DesafioGUT Flash · 5 min · consome 1 senha on-chain · menor lance único vence (Art. 8).")}
         </p>
       </div>
 
@@ -319,7 +327,7 @@ export default function CardLance({
           {[
             { f: FASES.HASHING,   label: "Gerando hash Argon2id..." },
             { f: FASES.ASSINANDO, label: "Assinando lance (Privy)..." },
-            { f: FASES.ENVIANDO,  label: `Registrando lance Beta${isProgramado ? " · −1 ficha" : ""}...` },
+            { f: FASES.ENVIANDO,  label: `Registrando lance on-chain${MOCK_MODE && isProgramado ? " · −1 ficha" : !MOCK_MODE ? " · −1 senha" : ""}...` },
           ].map(({ f, label }) => (
             <div key={f} style={{
               ...estilos.pipelineItem,
@@ -398,9 +406,11 @@ export default function CardLance({
               ? "⚠ Erro ao ler saldo"
             : saldoCarregando
               ? "⏳ Carregando saldo..."
-            : isProgramado
+            : MOCK_MODE && isProgramado
               ? "🎫 Confirmar Lance (−1 ficha)"
-              : "⚡ Confirmar Lance"}
+            : !MOCK_MODE
+              ? `${isProgramado ? "🎫" : "⚡"} Confirmar Lance (−1 senha)`
+            : "⚡ Confirmar Lance"}
         </button>
       )}
 

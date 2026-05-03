@@ -44,7 +44,10 @@ function abrirStore(name) {
  */
 export async function gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paymentId }) {
   const store = abrirStore(BLOB_PEDIDOS_META);
-  if (!store) return false;
+  if (!store) {
+    console.warn("[credito] gravarMetaPedido: store indisponível", { pedidoId });
+    return false;
+  }
   try {
     await store.setJSON(pedidoId, {
       endereco,
@@ -53,20 +56,38 @@ export async function gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paym
       paymentId: paymentId ? String(paymentId) : null,
       criadoEm: new Date().toISOString(),
     });
+    console.info("[credito] meta gravada", { pedidoId, endereco, qtd, paymentId: paymentId ? String(paymentId) : null });
     return true;
   } catch (err) {
-    console.warn("[credito] gravarMetaPedido falhou (não-fatal):", err?.message);
+    console.error("[credito] gravarMetaPedido falhou:", { pedidoId, name: err?.name, message: err?.message });
     return false;
   }
 }
 
 export async function lerMetaPedido(pedidoId) {
   const store = abrirStore(BLOB_PEDIDOS_META);
+  if (!store) {
+    console.warn("[credito] lerMetaPedido: store indisponível", { pedidoId });
+    return null;
+  }
+  try {
+    const meta = await store.get(pedidoId, { type: "json" });
+    console.info("[credito] lerMetaPedido", { pedidoId, encontrado: !!meta, hasEndereco: !!meta?.endereco, hasQtd: !!meta?.qtd });
+    return meta;
+  } catch (err) {
+    console.error("[credito] lerMetaPedido falhou:", { pedidoId, name: err?.name, message: err?.message });
+    return null;
+  }
+}
+
+/** Lê o registro de crédito (pedidos-pagos) — usado por endpoints de debug. */
+export async function lerCreditoPedido(pedidoId) {
+  const store = abrirStore(BLOB_PEDIDOS_PAGOS);
   if (!store) return null;
   try {
     return await store.get(pedidoId, { type: "json" });
   } catch (err) {
-    console.warn("[credito] lerMetaPedido falhou (não-fatal):", err?.message);
+    console.warn("[credito] lerCreditoPedido falhou:", err?.message);
     return null;
   }
 }
@@ -82,6 +103,7 @@ export async function lerMetaPedido(pedidoId) {
  *   Não lança — sempre devolve um objeto. O caller decide HTTP status.
  */
 export async function creditarPedidoIdempotente({ pedidoId, endereco, qtd, fonte = "desconhecido" }) {
+  console.info(`[credito:${fonte}] início`, { pedidoId, endereco, qtd });
   const store = abrirStore(BLOB_PEDIDOS_PAGOS);
 
   // ── Idempotência: já creditado? ─────────────────────────────────────────
@@ -89,11 +111,14 @@ export async function creditarPedidoIdempotente({ pedidoId, endereco, qtd, fonte
     try {
       const existente = await store.get(pedidoId, { type: "json" });
       if (existente?.txHash) {
+        console.info(`[credito:${fonte}] idempotent — pedido já creditado`, { pedidoId, txHash: existente.txHash });
         return { ok: true, idempotent: true, resultado: existente };
       }
     } catch (err) {
       console.warn(`[credito:${fonte}] leitura pedidos-pagos falhou:`, err?.message);
     }
+  } else {
+    console.warn(`[credito:${fonte}] pedidos-pagos store indisponível — sem idempotência`);
   }
 
   // ── Crédito on-chain ────────────────────────────────────────────────────
@@ -133,10 +158,15 @@ export async function creditarPedidoIdempotente({ pedidoId, endereco, qtd, fonte
   if (store) {
     try {
       await store.setJSON(pedidoId, resultado);
+      console.info(`[credito:${fonte}] persistido em pedidos-pagos`, { pedidoId });
     } catch (err) {
       console.warn(`[credito:${fonte}] persistência pedidos-pagos falhou:`, err?.message);
     }
   }
 
+  console.info(`[credito:${fonte}] crédito concluído`, {
+    pedidoId, endereco, qtd, txHash: resultado.txHash,
+    saldoAntes: resultado.saldoAntes, saldoDepois: resultado.saldoDepois,
+  });
   return { ok: true, idempotent: false, resultado };
 }

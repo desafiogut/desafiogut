@@ -58,6 +58,9 @@ async function extrairPaymentId(req) {
 }
 
 export default async (req) => {
+  const t0 = Date.now();
+  console.info("[webhook-mp] recebido", { method: req.method, url: req.url });
+
   if (req.method !== "POST") {
     // MP só envia POST; aceita GET para teste manual mas sem efeito.
     return jsonResponse({ ok: true, hint: "use POST (MP envia notifications via POST)" });
@@ -66,6 +69,7 @@ export default async (req) => {
   let paymentId, topic;
   try {
     ({ paymentId, topic } = await extrairPaymentId(req));
+    console.info("[webhook-mp] payload parsed", { paymentId, topic });
   } catch (err) {
     console.warn("[webhook-mp] parse falhou:", err?.message);
     return jsonResponse({ ok: true, ignored: "parse_falhou" });
@@ -86,6 +90,12 @@ export default async (req) => {
   let pagamento;
   try {
     pagamento = await consultarPagamento(paymentId);
+    console.info("[webhook-mp] consulta MP ok", {
+      paymentId,
+      status: pagamento?.status,
+      external_reference: pagamento?.external_reference,
+      transaction_amount: pagamento?.transaction_amount,
+    });
   } catch (err) {
     console.error("[webhook-mp] consulta MP falhou:", {
       paymentId, name: err?.name, code: err?.code, status: err?.status, message: err?.message,
@@ -161,6 +171,7 @@ export default async (req) => {
     pedidoId, paymentId,
     txHash: credito.resultado.txHash,
     idempotent: credito.idempotent,
+    duracaoMs: Date.now() - t0,
   });
   return jsonResponse({
     ok: true,

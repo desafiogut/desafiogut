@@ -1554,3 +1554,129 @@ Auditoria via grep em `frontend/src/` por todos os placeholders citados
   aparece e se o badge 🔗 atualiza sem clicar "Já paguei".
 - Confirmar que `pedidos-meta` blob persiste corretamente (visível no
   Netlify Blobs UI ou via `getStore("pedidos-meta").list()`).
+
+---
+
+## MARCO: FRENTE B.8 — KPI SALDO (R$) + DEBUG WEBHOOK + WORDING (2026-05-03)
+
+Quatro frentes urgentes para o beta. Modelo financeiro adotado:
+**interpretação A — pragmática**, `Saldo (R$) = saldoSenhas × R$ 2,00`.
+Não mexe no contrato; é o valor financeiro do que está on-chain agora.
+Lance (qualquer modo) continua debitando 1 senha = R$ 2,00.
+
+### Tarefa 0 — Dashboard com 4 KPIs
+
+`Dashboard.jsx` agora exibe 4 stats em ordem fixa:
+1. **Saldo (R$)** — `saldoSenhas × R$ 2,00` (produção) ou `carteiraFlash`
+   (MOCK_MODE). Suffix de status (⏳/◇/✗) alinhado ao restante.
+2. **Senhas / Fichas** — saldo on-chain (produção, badge 🔗) ou
+   `fichasProgramadas` (MOCK_MODE).
+3. **Lances Únicos**
+4. **Total de Lances**
+
+Mobile fica 2×2 automaticamente via `repeat(2, minmax(0, 1fr))`.
+Atualização automática reaproveita o mesmo pipeline já existente
+(`subscribeSaldoSenhas` + polling 30s no AppContext).
+
+### Tarefa 1 — Wording de produção
+
+Auditoria reconfirmou que **todos** os placeholders mock (`SALDO FLASH`,
+`FICHAS`, `+ PIX R$ 10`, `→ 1 Ficha`, `LANCES_MOCK`, `localStorage`)
+estão sob `{MOCK_MODE && ...}` ou `import.meta.env.VITE_MOCK_MODE`.
+
+Hipóteses para o usuário ainda ver "FICHAS"/"FLASH" em produção:
+1. **Cache do CDN/browser** servindo build anterior.
+2. **Termos legítimos confundindo:** "⚡ Flash" e "🎫 Programado" são
+   tipos de leilão reais (Art. 8); "ficha" aparecia em alguns hints
+   de produção como sinônimo legacy de "senha".
+
+Correções de wording em `CardLance.jsx` para eliminar ambiguidade:
+- Pipeline label "Registrando lance Beta" → "Registrando lance on-chain · −1 senha"
+  em produção (ou "−1 ficha" em MOCK_MODE programado).
+- Hint de conexão diferenciado MOCK vs produção; em produção diz
+  "Lance programado consome 1 senha on-chain" e
+  "DesafioGUT Flash · 5 min · consome 1 senha on-chain".
+- Botão de confirmar lance em produção mostra "(−1 senha)" sempre.
+- Docstring do componente atualizado para refletir o modelo PIX → senhas.
+
+Em MOCK_MODE, copy original preservada.
+
+### Tarefa 2 — Debug do crédito automático
+
+**Hipótese principal:** pedido testado foi criado **antes** do deploy de
+ontem (b635cdd) — sem `pedidos-meta` blob, webhook não tem como
+descobrir o endereço a creditar. Logs do webhook gravavam
+`reason: meta_ausente` mas não eram visíveis sem inspecionar o painel
+Netlify.
+
+**Mudanças:**
+1. **Logs detalhados** em `_lib/credito.mjs`:
+   - `gravarMetaPedido` loga sucesso/falha com pedidoId+endereco+qtd.
+   - `lerMetaPedido` loga se encontrou e quais campos têm valor.
+   - `creditarPedidoIdempotente` loga início, idempotência detectada,
+     persistência e conclusão (com txHash + saldoAntes/Depois).
+2. **Logs detalhados em `webhook-mercadopago.mjs`:**
+   - `[webhook-mp] recebido` na entrada (method, url).
+   - `[webhook-mp] payload parsed` (paymentId, topic).
+   - `[webhook-mp] consulta MP ok` (status, external_reference, valor).
+   - `[webhook-mp] aprovado e creditado` com duração total em ms.
+3. **Novo endpoint `debug-pedido.mjs`:** GET com `?id=<pedidoId>` retorna
+   estado de TODOS os blobs do pedido (`pedidos-meta`, `mp-aprovados`,
+   `pedidos-pagos`) + flags de env (PIX_PROVIDER, MP_ACCESS_TOKEN_set,
+   etc, sem expor secrets) + diagnóstico humano:
+   - "⚠ pedidos-meta ausente — pedido criado antes do deploy"
+   - "⚠ mp-aprovados ausente — webhook ainda não chegou"
+   - "🔧 meta + aprovado existem mas pedidos-pagos não — webhook deveria
+     ter creditado, verifique logs"
+   - "✓ creditado on-chain: 0x... (webhook|confirmar-pagamento)"
+   Auth opcional via `DEBUG_TOKEN` env var.
+
+**Como debugar daqui pra frente:**
+1. Faça um pedido NOVO em produção após este deploy (importante: pedidos
+   antigos não terão `pedidos-meta`).
+2. Pague via PIX.
+3. Em paralelo, abra
+   `https://silly-stardust-ca71bc.netlify.app/.netlify/functions/debug-pedido?id=<pedidoId>`
+4. O diagnóstico no JSON dirá exatamente onde a cadeia parou.
+5. Se ainda travar: Netlify Dashboard → Functions → webhook-mercadopago
+   → Logs. Procurar por `[webhook-mp]` e `[credito:webhook]`.
+
+**Race window residual** (webhook + "Já paguei" simultâneos antes da
+gravação no blob `pedidos-pagos`) permanece teoricamente aberta mas
+mitigada por consistency:strong; aceita.
+
+### Tarefa 3 — Visor de R$ na Carteira
+
+`MinhaCarteira.jsx` reorganizado em produção:
+1. **Card "💰 Saldo Disponível" (NOVO):** valor R$ grande
+   (`saldoSenhas × R$ 2,00`), explicação "N senhas × R$ 2,00 disponíveis
+   para lance", **dois botões**:
+   - 🎫 **Comprar Fichas** → abre `ComprarFichasModal` (existente).
+   - ⚡ **Dar Lance Relâmpago** → seta `tipoLeilao="flash"` no AppContext
+     e navega para `/mercado` (disabled se saldo=0).
+2. **Card "🔗 Saldo de Senhas" (mantido):** view técnica do saldo on-chain.
+3. **Card "Comprar Fichas" antigo: removido** (botão agora vive no card 1).
+
+Atualização: ambos os cards usam `saldoSenhas` do AppContext que já tem
+listeners + polling — sincronização automática via badge 🔗.
+
+### Validação
+
+- `npm run build` → ✓ verde, sem novos warnings.
+- Sentry intacto (não tocamos `main.jsx` nem error boundaries).
+- Badge 🔗 intacto.
+- MOCK_MODE preservado (todos os blocos guardados; KPI Saldo cai em
+  `carteiraFlash`).
+- PRIVATE_KEY/MP_ACCESS_TOKEN: continuam só em functions; `debug-pedido`
+  expõe apenas booleans `_set` para esses, nunca o valor.
+
+### Arquivos tocados
+
+- `frontend/netlify/functions/debug-pedido.mjs` (novo)
+- `frontend/netlify/functions/_lib/credito.mjs` (logs detalhados +
+  `lerCreditoPedido`)
+- `frontend/netlify/functions/webhook-mercadopago.mjs` (logs detalhados)
+- `frontend/src/components/CardLance.jsx` (wording de produção)
+- `frontend/src/pages/Dashboard.jsx` (KPI Saldo R$ + reordenação)
+- `frontend/src/pages/MinhaCarteira.jsx` (card Saldo Disponível +
+  botões Comprar/Lance Relâmpago, remoção do card Comprar Fichas duplicado)

@@ -8,6 +8,8 @@ const COR = {
   success: "#10b981", blue300: "#93c5fd",
 };
 
+const VALOR_POR_SENHA_BRL = 2;
+
 const ATALHOS = [
   { label: "Depositar PIX",   icon: "💰", to: "/carteira"      },
   { label: "Converter Ficha", icon: "🎫", to: "/carteira"      },
@@ -40,13 +42,22 @@ export default function Dashboard() {
     return `${m}:${s}`;
   })();
 
+  // KPIs em ordem fixa: Saldo (R$) → Senhas → Lances Únicos → Total de Lances.
+  // Em produção: Saldo (R$) = saldoSenhas × R$ 2,00 (interpretação A — pragmática,
+  // sem mexer no contrato). Em MOCK_MODE: usa carteiraFlash legado.
+  const saldoReais = MOCK_MODE
+    ? carteiraFlash
+    : (saldoSenhas == null ? null : saldoSenhas * VALOR_POR_SENHA_BRL);
+  const saldoReaisStr = saldoReais == null
+    ? `R$ —${statusSuffix}`
+    : `R$ ${saldoReais.toFixed(2)}${MOCK_MODE ? "" : statusSuffix}`;
+
   const senhasStat = MOCK_MODE
     ? { label: "Fichas", value: `${fichasProgramadas}`,                     color: "#a78bfa", icon: "🎫", to: "/carteira" }
     : { label: "Senhas", value: `${saldoSenhas ?? "—"}${statusSuffix}`,     color: "#a78bfa", icon: "🔗", to: "/carteira" };
 
-  // "Saldo Flash" só existe em MOCK_MODE — em produção o fluxo é PIX → senhas direto.
   const stats = [
-    ...(MOCK_MODE ? [{ label: "Saldo Flash", value: `R$ ${carteiraFlash.toFixed(2)}`, color: COR.primary, icon: "💰", to: "/carteira" }] : []),
+    { label: "Saldo (R$)",      value: saldoReaisStr,                    color: COR.gold,    icon: "💰", to: "/carteira" },
     senhasStat,
     { label: "Lances Únicos",   value: lancesUnicos,                     color: COR.success, icon: "✅", to: "/mercado"  },
     { label: "Total de Lances", value: totalLances,                      color: COR.blue300, icon: "📊", to: "/ativos"   },
