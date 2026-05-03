@@ -67,7 +67,12 @@ export default async (req) => {
 
   let token;
   try {
-    token = await assinarPedido({ pedidoId, endereco, qtd, valorBRL }, TTL_SEC);
+    // paymentId só existe quando o provider real (mercadopago) é usado.
+    // No mock fica undefined → JWT sem paymentId → confirmar-pagamento
+    // mantém o caminho legado (trust JWT, sem checar MP).
+    const payload = { pedidoId, endereco, qtd, valorBRL };
+    if (pix.paymentId) payload.paymentId = pix.paymentId;
+    token = await assinarPedido(payload, TTL_SEC);
   } catch (err) {
     console.error("[iniciar-pagamento] jwt falhou", { name: err?.name, message: err?.message });
     return jsonError(500, "jwt_indisponivel", "configuração de servidor incompleta");

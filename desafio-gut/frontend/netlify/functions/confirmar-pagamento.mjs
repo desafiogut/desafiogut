@@ -24,16 +24,66 @@ import {
   getCoordenacaoAddress,
   CONTRATO_ADDRESS,
 } from "./_lib/contract.mjs";
+import { consultarPagamento, MercadoPagoApiError } from "./_lib/mp-client.mjs";
 
-const BLOB_STORE = "pedidos-pagos";
+const BLOB_STORE     = "pedidos-pagos";
+const BLOB_STORE_MP  = "mp-aprovados";
 
-function abrirStore() {
+function abrirStore(name = BLOB_STORE) {
   try {
-    return getStore({ name: BLOB_STORE, consistency: "strong" });
+    return getStore({ name, consistency: "strong" });
   } catch (err) {
-    console.warn("[confirmar-pagamento] Blobs indisponível:", err?.message);
+    console.warn(`[confirmar-pagamento] Blobs ${name} indisponível:`, err?.message);
     return null;
   }
+}
+
+// Verifica se o pagamento MP (referenciado pelo JWT) está aprovado.
+// Caminho rápido: Blob `mp-aprovados:${pedidoId}` (populado pelo webhook).
+// Fallback: GET /v1/payments/:id ao vivo (cobre janela antes do webhook).
+//
+// Retorno:
+//   { aprovado: true,  paymentId, source: "blob"|"live" }            → ok p/ creditar
+//   { aprovado: false, motivo: "<status>", paymentId, source }       → 402
+//   throw MercadoPagoApiError                                         → 502
+async function verificarStatusMP({ pedidoId, paymentId }) {
+  // 1) Blob (rápido, populado pelo webhook).
+  const storeMp = abrirStore(BLOB_STORE_MP);
+  if (storeMp) {
+    try {
+      const cached = await storeMp.get(pedidoId, { type: "json" });
+      if (cached?.status === "approved") {
+        return { aprovado: true, paymentId: cached.paymentId || paymentId, source: "blob" };
+      }
+    } catch (err) {
+      console.warn("[confirmar-pagamento] leitura mp-aprovados falhou (não-fatal):", err?.message);
+    }
+  }
+  // 2) Live API.
+  const pagamento = await consultarPagamento(paymentId);
+  if (pagamento?.status === "approved") {
+    // Persiste para evitar nova consulta live em replays.
+    if (storeMp) {
+      try {
+        await storeMp.setJSON(pedidoId, {
+          status: "approved",
+          paymentId: String(pagamento.id),
+          capturadoEm: new Date().toISOString(),
+          fonte: "confirmar-pagamento",
+        });
+      } catch (err) {
+        console.warn("[confirmar-pagamento] gravar mp-aprovados falhou (não-fatal):", err?.message);
+      }
+    }
+    return { aprovado: true, paymentId: String(pagamento.id), source: "live" };
+  }
+  return {
+    aprovado: false,
+    motivo:   pagamento?.status || "desconhecido",
+    detalhe:  pagamento?.status_detail || null,
+    paymentId,
+    source:   "live",
+  };
 }
 
 export default async (req) => {
@@ -61,12 +111,15 @@ export default async (req) => {
     const code = err?.code === "ERR_JWT_EXPIRED" ? "token_expirado" : "token_invalido";
     return jsonError(401, code, "token rejeitado");
   }
-  const { pedidoId, endereco, qtd } = payload;
+  const { pedidoId, endereco, qtd, paymentId } = payload;
   if (!pedidoId || !endereco || !qtd) {
     return jsonError(400, "payload_incompleto", "token sem campos obrigatórios");
   }
 
   // ── Idempotência via Blobs ────────────────────────────────────────────────
+  // Importante: idempotência ANTES da verificação MP. Replay de pedido já
+  // creditado responde do Blob sem nova chamada à API do MP (preserva
+  // contrato existente do mock e evita rate-limit do MP em retries).
   const store = abrirStore();
   if (store) {
     try {
@@ -83,6 +136,32 @@ export default async (req) => {
       }
     } catch (err) {
       console.warn("[confirmar-pagamento] leitura Blob falhou (não-fatal):", err?.message);
+    }
+  }
+
+  // ── Verificação MP (somente quando JWT carrega paymentId) ─────────────────
+  // JWT sem paymentId = pedido criado pelo provider mock → caminho legado
+  // (trust JWT). JWT com paymentId = provider real → exige status="approved"
+  // antes de creditar on-chain.
+  if (paymentId) {
+    let mpStatus;
+    try {
+      mpStatus = await verificarStatusMP({ pedidoId, paymentId });
+    } catch (err) {
+      console.error("[confirmar-pagamento] consulta MP falhou:", {
+        name: err?.name, code: err?.code, status: err?.status, message: err?.message,
+      });
+      if (err instanceof MercadoPagoApiError && err.status === 404) {
+        return jsonError(404, "pagamento_inexistente", `paymentId ${paymentId} não encontrado no Mercado Pago`);
+      }
+      return jsonError(502, "mp_indisponivel", "não foi possível verificar status do pagamento agora — tente novamente em instantes");
+    }
+    if (!mpStatus.aprovado) {
+      return jsonError(402, "pagamento_nao_confirmado", `pagamento ainda não aprovado (status: ${mpStatus.motivo})`, {
+        paymentId: mpStatus.paymentId,
+        status: mpStatus.motivo,
+        statusDetail: mpStatus.detalhe,
+      });
     }
   }
 
