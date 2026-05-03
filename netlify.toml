@@ -1,6 +1,6 @@
 [build]
   base    = "desafio-gut/frontend"
-  command = "npm install --legacy-peer-deps && npm run build"
+  command = "npm install --legacy-peer-deps && npm install --prefix netlify/functions --legacy-peer-deps && npm run build"
   publish = "dist"
 
 # ── Netlify Functions ────────────────────────────────────────────────────────
