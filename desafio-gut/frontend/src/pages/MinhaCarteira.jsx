@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
 
 const COR = {
   primary: "#2563eb", primaryDim: "rgba(37,99,235,0.15)",
@@ -21,7 +23,10 @@ export default function MinhaCarteira() {
     handleSimularPix, handleConverterFicha,
     CUSTO_FICHA_BRL, isConnected, abrirModal,
     address, userLabel, lances, MOCK_MODE,
+    saldoSenhas, saldoSenhasStatus, refetchSaldo,
   } = useAppContext();
+
+  const [comprarAberto, setComprarAberto] = useState(false);
 
   const meusLances = lances.filter(
     (l) => l.endereco?.toLowerCase() === address?.toLowerCase()
@@ -184,6 +189,43 @@ export default function MinhaCarteira() {
             </>
           )}
 
+          {/* Comprar Fichas — produção (não MOCK_MODE) */}
+          {!MOCK_MODE && (
+            <div style={{
+              ...cardStyle,
+              marginBottom: sectionGap,
+              borderColor: "rgba(245,166,35,0.3)",
+              background: "linear-gradient(180deg, rgba(8,24,64,0.6), rgba(245,166,35,0.04))",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", marginBottom: "0.85rem" }}>
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{ ...tituloStyle, margin: 0, color: COR.gold }}>🎫 Comprar Fichas</h3>
+                  <p style={{ margin: "0.3rem 0 0", fontSize: "0.78rem", color: COR.muted, lineHeight: 1.4 }}>
+                    Adquira senhas via PIX para participar do leilão. Crédito imediato on-chain.
+                  </p>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+                    Saldo
+                  </div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: 900, color: COR.gold, lineHeight: 1.1 }}>
+                    {saldoSenhasStatus === "loading" && saldoSenhas == null ? "…" : (saldoSenhas ?? "—")}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setComprarAberto(true)}
+                style={{
+                  ...botaoPrimario,
+                  background: "linear-gradient(135deg,#f5a623,#d97706)",
+                  boxShadow: "0 4px 14px rgba(245,166,35,0.35)",
+                }}
+              >
+                💸 Comprar com PIX
+              </button>
+            </div>
+          )}
+
           {/* Dados de pagamento */}
           <div style={{ ...cardStyle, marginBottom: sectionGap }}>
             <h3 style={tituloStyle}>🏦 Dados para Pagamento (Art. 21)</h3>
@@ -283,6 +325,13 @@ export default function MinhaCarteira() {
           </div>
         </>
       )}
+
+      <ComprarFichasModal
+        aberto={comprarAberto}
+        onFechar={() => setComprarAberto(false)}
+        address={address}
+        onSucesso={() => { try { refetchSaldo?.(); } catch {} }}
+      />
     </div>
   );
 }
