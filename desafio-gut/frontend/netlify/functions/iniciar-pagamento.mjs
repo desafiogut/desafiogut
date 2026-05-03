@@ -20,6 +20,7 @@ import {
   ValidationError,
 } from "./_lib/validate.mjs";
 import { getPixProvider, PIX_PROVIDER_NAME } from "./_lib/pix-provider/index.mjs";
+import { gravarMetaPedido } from "./_lib/credito.mjs";
 
 const TTL_SEC = 15 * 60; // 15 minutos para o usuário pagar
 
@@ -77,6 +78,10 @@ export default async (req) => {
     console.error("[iniciar-pagamento] jwt falhou", { name: err?.name, message: err?.message });
     return jsonError(500, "jwt_indisponivel", "configuração de servidor incompleta");
   }
+
+  // Persiste metadados para o webhook poder creditar sem o JWT (que vive
+  // só no cliente). Não-fatal: confirmar-pagamento ainda funciona via JWT.
+  await gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paymentId: pix.paymentId });
 
   return jsonResponse({
     pedidoId,

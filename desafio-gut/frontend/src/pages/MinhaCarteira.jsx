@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
+
+const VALOR_POR_SENHA_BRL = 2;
 
 const COR = {
   primary: "#2563eb", primaryDim: "rgba(37,99,235,0.15)",
@@ -18,6 +21,7 @@ const DADOS_PAGAMENTO = [
 
 export default function MinhaCarteira() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const {
     carteiraFlash, fichasProgramadas, erroCarteira,
     handleSimularPix, handleConverterFicha,
@@ -27,6 +31,14 @@ export default function MinhaCarteira() {
   } = useAppContext();
 
   const [comprarAberto, setComprarAberto] = useState(false);
+
+  // Saldo on-chain — sufixo de status alinhado ao Sidebar/Dashboard.
+  const saldoStatusSuffix =
+    saldoSenhasStatus === "loading" ? " ⏳" :
+    saldoSenhasStatus === "stale"   ? " ◇" :
+    saldoSenhasStatus === "error"   ? " ✗" : "";
+  const saldoNumero    = (saldoSenhas == null) ? null : Number(saldoSenhas);
+  const valorFinanceiro = saldoNumero == null ? null : saldoNumero * VALOR_POR_SENHA_BRL;
 
   const meusLances = lances.filter(
     (l) => l.endereco?.toLowerCase() === address?.toLowerCase()
@@ -189,6 +201,111 @@ export default function MinhaCarteira() {
             </>
           )}
 
+          {/* Saldo de Senhas — produção (não MOCK_MODE).
+              Fonte: saldoSenhas on-chain (AppContext). Atualiza via listener
+              SenhasCreditadas + LanceDado e polling guardião 30s — não precisa
+              hook próprio. */}
+          {!MOCK_MODE && (
+            <div style={{
+              ...cardStyle,
+              marginBottom: sectionGap,
+              borderColor: "rgba(16,185,129,0.28)",
+              background: "linear-gradient(180deg, rgba(8,24,64,0.6), rgba(16,185,129,0.04))",
+            }}>
+              <div style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                marginBottom: "0.6rem", gap: "0.5rem",
+              }}>
+                <h3 style={{ ...tituloStyle, margin: 0, color: COR.success }}>🔗 Saldo de Senhas</h3>
+                <span style={{
+                  fontSize: "0.62rem", fontWeight: 700,
+                  color: saldoSenhasStatus === "error" ? COR.danger : COR.muted,
+                  background: "rgba(3,15,36,0.6)",
+                  border: "1px solid rgba(37,99,235,0.18)",
+                  borderRadius: "999px",
+                  padding: "0.18rem 0.55rem",
+                  textTransform: "uppercase", letterSpacing: "0.06em",
+                }} title={`Status on-chain: ${saldoSenhasStatus}`}>
+                  on-chain
+                </span>
+              </div>
+
+              <div style={{
+                display: "flex", alignItems: "baseline", gap: "0.5rem",
+                marginBottom: "0.35rem", flexWrap: "wrap",
+              }}>
+                <span style={{
+                  fontSize: isMobile ? "2.6rem" : "3.2rem",
+                  fontWeight: 900, color: COR.success, lineHeight: 1,
+                }}>
+                  {saldoNumero == null
+                    ? (saldoSenhasStatus === "loading" ? "…" : "—")
+                    : saldoNumero}
+                </span>
+                <span style={{ fontSize: "0.85rem", color: COR.muted, fontWeight: 700 }}>
+                  {saldoNumero === 1 ? "senha" : "senhas"}{saldoStatusSuffix}
+                </span>
+              </div>
+
+              <div style={{
+                fontSize: isMobile ? "0.82rem" : "0.88rem",
+                color: COR.blue300, fontWeight: 600, marginBottom: "0.85rem",
+                lineHeight: 1.4,
+              }}>
+                {valorFinanceiro == null
+                  ? "Aguardando leitura on-chain…"
+                  : <>
+                      {saldoNumero} × R$ {VALOR_POR_SENHA_BRL.toFixed(2)} ={" "}
+                      <strong style={{ color: COR.gold }}>R$ {valorFinanceiro.toFixed(2)}</strong>
+                    </>
+                }
+              </div>
+
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                gap: "0.6rem",
+              }}>
+                <button
+                  onClick={() => navigate("/mercado")}
+                  disabled={!saldoNumero}
+                  style={{
+                    ...botaoPrimario,
+                    background: !saldoNumero
+                      ? "rgba(37,99,235,0.2)"
+                      : "linear-gradient(135deg,#2563eb,#1d4ed8)",
+                    boxShadow: !saldoNumero ? "none" : "0 4px 14px rgba(37,99,235,0.35)",
+                    cursor: !saldoNumero ? "not-allowed" : "pointer",
+                    opacity: !saldoNumero ? 0.5 : 1,
+                  }}
+                  title={!saldoNumero ? "Compre fichas para participar do leilão" : "Ir ao Mercado de Lances"}
+                >
+                  🎯 Usar no Mercado de Lances
+                </button>
+                <button
+                  onClick={() => { try { refetchSaldo?.(); } catch {} }}
+                  disabled={saldoSenhasStatus === "loading"}
+                  style={{
+                    ...botaoSecundario,
+                    cursor: saldoSenhasStatus === "loading" ? "wait" : "pointer",
+                    opacity: saldoSenhasStatus === "loading" ? 0.6 : 1,
+                  }}
+                >
+                  {saldoSenhasStatus === "loading" ? "Atualizando…" : "↻ Atualizar saldo"}
+                </button>
+              </div>
+
+              {saldoSenhasStatus === "error" && (
+                <p style={{
+                  margin: "0.6rem 0 0", fontSize: "0.72rem",
+                  color: COR.danger, lineHeight: 1.4,
+                }}>
+                  ⚠️ Não foi possível ler o saldo on-chain agora. Use “Atualizar saldo”.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Comprar Fichas — produção (não MOCK_MODE) */}
           {!MOCK_MODE && (
             <div style={{
@@ -201,16 +318,8 @@ export default function MinhaCarteira() {
                 <div style={{ minWidth: 0 }}>
                   <h3 style={{ ...tituloStyle, margin: 0, color: COR.gold }}>🎫 Comprar Fichas</h3>
                   <p style={{ margin: "0.3rem 0 0", fontSize: "0.78rem", color: COR.muted, lineHeight: 1.4 }}>
-                    Adquira senhas via PIX para participar do leilão. Crédito imediato on-chain.
+                    Adquira senhas via PIX para participar do leilão. Crédito automático on-chain após aprovação.
                   </p>
-                </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
-                    Saldo
-                  </div>
-                  <div style={{ fontSize: "1.4rem", fontWeight: 900, color: COR.gold, lineHeight: 1.1 }}>
-                    {saldoSenhasStatus === "loading" && saldoSenhas == null ? "…" : (saldoSenhas ?? "—")}
-                  </div>
                 </div>
               </div>
               <button

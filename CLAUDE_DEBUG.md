@@ -1431,3 +1431,126 @@ Tx: https://sepolia.etherscan.io/tx/0xc9b7c2c2255e5ec48980a6a6bab5943e252629bb27
 ### Pendência antes da validação em produção
 - Usuário precisa adicionar `COORDENACAO_PRIVATE_KEY` no Netlify Dashboard (Functions scope, secret).
 - Sem isso, `/confirmar-pagamento` retorna 502 `credito_falhou` em prod com `COORDENACAO_PRIVATE_KEY não configurado`.
+
+---
+
+## MARCO: FRENTE B.7 — CRÉDITO REATIVO + VISOR DE SALDO (2026-05-03)
+
+Pós-validação do PIX real (PIX_PROVIDER=mercadopago), três frentes para o
+beta final.
+
+### Frente 1 — Crédito automático no webhook
+
+**Problema:** `webhook-mercadopago.mjs` só persistia aprovação no blob
+`mp-aprovados`, não disparava `adicionarSenhas` on-chain. Usuário ainda
+precisava abrir o modal e clicar "Já paguei" para o crédito acontecer.
+
+**Solução:**
+1. `iniciar-pagamento.mjs` agora persiste metadados do pedido em blob
+   `pedidos-meta:${pedidoId}` (`{ endereco, qtd, valorBRL, paymentId }`).
+   Sem isso o webhook não tinha como saber qual carteira creditar — o MP
+   só devolve `external_reference` (= pedidoId), o JWT vive só no client.
+2. Novo `_lib/credito.mjs` extrai a lógica de crédito on-chain idempotente
+   em duas funções:
+   - `gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paymentId })`
+   - `lerMetaPedido(pedidoId)`
+   - `creditarPedidoIdempotente({ pedidoId, endereco, qtd, fonte })` →
+     lê blob `pedidos-pagos`, se já tem `txHash` retorna idempotent;
+     senão chama `creditarSenhas` on-chain e persiste.
+3. `webhook-mercadopago.mjs`: após persistir aprovação em `mp-aprovados`,
+   lê meta + chama `creditarPedidoIdempotente`. Se falhar, loga mas
+   retorna 200 (botão "Já paguei" continua como fallback). MP não
+   retenta agressivamente.
+4. `confirmar-pagamento.mjs`: refatorado para usar o helper
+   compartilhado. Idempotência se move do guard inicial para dentro do
+   helper — comportamento externo idêntico (`{ idempotent: true,
+   ...resultado }` quando blob já tem txHash).
+
+**Idempotência:** blob `pedidos-pagos:${pedidoId}` com
+`consistency: "strong"` é a fonte de verdade do crédito on-chain.
+Webhook + "Já paguei" simultâneos: ambos checam o blob antes de chamar
+o contrato; o segundo a chegar lê o resultado do primeiro e retorna
+idempotent. Race window residual (ambos lêem vazio antes de gravar)
+documentada como aceitável dado o volume — não há duplicação de
+pagamento real, só risco teórico de dupla creditação on-chain.
+
+**Fallback "Já paguei":** preservado. Se `pedidos-meta` não existir
+(Blobs indisponível durante iniciar-pagamento), webhook loga
+`reason: meta_ausente` e retorna 200 sem creditar. Confirmar-pagamento
+ainda funciona via JWT.
+
+**Badge 🔗:** intacto. O crédito on-chain emite `SenhasCreditadas`,
+o listener `subscribeSaldoSenhas` em `AppContext` dispara `refetchSaldo`
+e o badge atualiza sozinho — funciona tanto pelo webhook quanto pelo
+"Já paguei".
+
+### Frente 2 — Visor de Saldo na Carteira
+
+Card "Saldo de Senhas" em `MinhaCarteira.jsx`, antes de "Comprar Fichas":
+- Número grande (`saldoSenhas` do AppContext, fonte = `saldoSenhas(address)`
+  on-chain).
+- Equação financeira: `N × R$ 2,00 = R$ Y,00`.
+- Botão "Usar no Mercado de Lances" → navega para `/mercado` (disabled
+  quando saldo = 0).
+- Botão "Atualizar saldo" → chama `refetchSaldo()` do context.
+- Status visual via sufixo (⏳/◇/✗) alinhado ao Sidebar e Dashboard.
+- Erro renderiza nota inline em vermelho.
+
+Atualização automática reaproveita o pipeline existente: listener
+`SenhasCreditadas` + `LanceDado` + polling guardião de 30s no
+`AppContext`. Não foi necessário hook próprio.
+
+Card "Comprar Fichas" mantido logo abaixo, com copy ajustado para
+"Crédito automático on-chain após aprovação" (refletindo a nova Frente 1).
+O badge de saldo do header daquele card foi removido — saldo agora vive
+no novo card dedicado, sem duplicar.
+
+### Frente 3 — Limpeza de mocks (já resolvida)
+
+Auditoria via grep em `frontend/src/` por todos os placeholders citados
+(`R$ 196,00`, `22`, `FLASH R$ X,XX`, `FICHAS`, `+ PIX R$ 10`,
+`→ 1 Ficha`, `LANCES_MOCK`, `gut_lances_r1`, `localStorage`):
+
+- **Todos** os placeholders mocks ou estão em blocos `{MOCK_MODE && ...}`
+  ou em estado controlado por `import.meta.env.VITE_MOCK_MODE === "true"`.
+- Em produção (`MOCK_MODE=false`): placeholders não renderizam.
+  - `MinhaCarteira.jsx`: "+ PIX R$ 10,00 (Simulação Beta)" e
+    "→ 1 Ficha" gateados por `{MOCK_MODE && ...}`.
+  - `MercadoLances.jsx`: idem para os botões "+ PIX R$ 10" e
+    "→ 1 Ficha (R$ 2,00)".
+  - `Dashboard.jsx`: stat "Saldo Flash R$" só entra no array via
+    `...(MOCK_MODE ? [...] : [])`.
+  - `Sidebar.jsx` / `BottomNav.jsx`: badges "💰 R$" e "🎫 N" só em
+    MOCK_MODE; em produção mostra "🔗 saldoSenhas" + statusSuffix.
+  - `AppContext.jsx`: `LANCES_MOCK` seed e `localStorage` (LS_LANCES,
+    saldoInterno) só ativos em MOCK_MODE; em produção `lances` começa
+    vazio e é hidratado pelo listener `LanceDado` on-chain.
+- Nenhum hardcode de "R$ 196,00", "22" como saldo, ou "FLASH R$ X,XX"
+  encontrado no source — provavelmente removidos em iterações anteriores.
+
+**MOCK_MODE preservado** para dev local (Vite roda sem rede/Privy/Sepolia).
+
+### Validação
+
+- `npm run build` → ✓ verde (Vite 8, sem erros nem novos warnings;
+  warnings de chunk size pré-existentes).
+- Sentry intacto (não tocamos `main.jsx` nem error boundaries).
+- Badge 🔗 intacto: pipeline `SenhasCreditadas` → listener →
+  `refetchSaldo` → re-render do Sidebar/Dashboard/Carteira não foi
+  alterado.
+
+### Arquivos tocados
+
+- `frontend/netlify/functions/_lib/credito.mjs` (novo)
+- `frontend/netlify/functions/iniciar-pagamento.mjs` (grava meta)
+- `frontend/netlify/functions/webhook-mercadopago.mjs` (credita on-chain)
+- `frontend/netlify/functions/confirmar-pagamento.mjs` (usa helper)
+- `frontend/src/pages/MinhaCarteira.jsx` (card Saldo de Senhas)
+
+### Pendência antes da validação em produção
+
+- Smoke test do crédito reativo: criar pedido via "Comprar com PIX",
+  pagar, observar nos logs do Netlify se `[webhook-mp] aprovado e creditado`
+  aparece e se o badge 🔗 atualiza sem clicar "Já paguei".
+- Confirmar que `pedidos-meta` blob persiste corretamente (visível no
+  Netlify Blobs UI ou via `getStore("pedidos-meta").list()`).

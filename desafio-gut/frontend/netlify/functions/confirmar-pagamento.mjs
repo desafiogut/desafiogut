@@ -18,18 +18,12 @@ import {
   parseJsonBody,
   ValidationError,
 } from "./_lib/validate.mjs";
-import {
-  creditarSenhas,
-  lerSaldoSenhas,
-  getCoordenacaoAddress,
-  CONTRATO_ADDRESS,
-} from "./_lib/contract.mjs";
 import { consultarPagamento, MercadoPagoApiError } from "./_lib/mp-client.mjs";
+import { creditarPedidoIdempotente } from "./_lib/credito.mjs";
 
-const BLOB_STORE     = "pedidos-pagos";
 const BLOB_STORE_MP  = "mp-aprovados";
 
-function abrirStore(name = BLOB_STORE) {
+function abrirStore(name) {
   try {
     return getStore({ name, consistency: "strong" });
   } catch (err) {
@@ -116,33 +110,11 @@ export default async (req) => {
     return jsonError(400, "payload_incompleto", "token sem campos obrigatórios");
   }
 
-  // ── Idempotência via Blobs ────────────────────────────────────────────────
-  // Importante: idempotência ANTES da verificação MP. Replay de pedido já
-  // creditado responde do Blob sem nova chamada à API do MP (preserva
-  // contrato existente do mock e evita rate-limit do MP em retries).
-  const store = abrirStore();
-  if (store) {
-    try {
-      const existente = await store.get(pedidoId, { type: "json" });
-      if (existente?.txHash) {
-        return jsonResponse({
-          ok: true,
-          idempotent: true,
-          pedidoId,
-          endereco,
-          qtd,
-          ...existente,
-        });
-      }
-    } catch (err) {
-      console.warn("[confirmar-pagamento] leitura Blob falhou (não-fatal):", err?.message);
-    }
-  }
-
   // ── Verificação MP (somente quando JWT carrega paymentId) ─────────────────
   // JWT sem paymentId = pedido criado pelo provider mock → caminho legado
   // (trust JWT). JWT com paymentId = provider real → exige status="approved"
-  // antes de creditar on-chain.
+  // antes de creditar on-chain. Idempotência é tratada por creditarPedidoIdempotente,
+  // que checa o blob `pedidos-pagos` antes de chamar o contrato.
   if (paymentId) {
     let mpStatus;
     try {
@@ -165,39 +137,16 @@ export default async (req) => {
     }
   }
 
-  // ── Crédito on-chain ──────────────────────────────────────────────────────
-  let resultado;
-  try {
-    const saldoAntes = await lerSaldoSenhas(endereco);
-    const { txHash, blockNumber, gasUsed } = await creditarSenhas(endereco, qtd);
-    const saldoDepois = await lerSaldoSenhas(endereco);
-    resultado = {
-      pedidoId,
-      endereco,
-      qtd,
-      txHash,
-      blockNumber,
-      gasUsed: gasUsed?.toString?.(),
-      saldoAntes,
-      saldoDepois,
-      contrato: CONTRATO_ADDRESS,
-      coordenacao: getCoordenacaoAddress(),
-      etherscanUrl: `https://sepolia.etherscan.io/tx/${txHash}`,
-      processadoEm: new Date().toISOString(),
-    };
-  } catch (err) {
-    console.error("[confirmar-pagamento] erro on-chain:", { message: err?.message, code: err?.code, shortMessage: err?.shortMessage });
-    return jsonError(502, "credito_falhou", err?.shortMessage || err?.message || "erro inesperado on-chain");
+  // ── Crédito on-chain (idempotente) ────────────────────────────────────────
+  const credito = await creditarPedidoIdempotente({
+    pedidoId, endereco, qtd, fonte: "confirmar-pagamento",
+  });
+  if (!credito.ok) {
+    return jsonError(502, credito.code, credito.message);
   }
-
-  // ── Persiste para idempotência futura ─────────────────────────────────────
-  if (store) {
-    try {
-      await store.setJSON(pedidoId, resultado);
-    } catch (err) {
-      console.warn("[confirmar-pagamento] persistência Blob falhou (não-fatal):", err?.message);
-    }
-  }
-
-  return jsonResponse({ ok: true, idempotent: false, ...resultado });
+  return jsonResponse({
+    ok: true,
+    idempotent: credito.idempotent,
+    ...credito.resultado,
+  });
 };
