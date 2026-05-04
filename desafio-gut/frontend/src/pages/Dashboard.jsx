@@ -25,6 +25,7 @@ export default function Dashboard() {
   const {
     lances, vencedor, carteiraFlash, fichasProgramadas,
     saldoSenhas, saldoSenhasStatus,
+    saldoRsCentavos, saldoRsStatus,
     encerrado, tempoRestante, tipoLeilao, isConnected,
     address, userLabel, EDICAO_ATIVA, MOCK_MODE,
   } = useAppContext();
@@ -33,6 +34,10 @@ export default function Dashboard() {
     saldoSenhasStatus === "loading" ? " ⏳" :
     saldoSenhasStatus === "stale"   ? " (antigo)" :
     saldoSenhasStatus === "error"   ? " ✗" : "";
+  const statusRsSuffix =
+    saldoRsStatus === "loading" ? " ⏳" :
+    saldoRsStatus === "stale"   ? " (antigo)" :
+    saldoRsStatus === "error"   ? " ✗" : "";
 
   const totalLances  = lances.length;
   const lancesUnicos = lances.filter((l) => !l.repetido).length;
@@ -42,15 +47,16 @@ export default function Dashboard() {
     return `${m}:${s}`;
   })();
 
-  // KPIs em ordem fixa: Saldo (R$) → Senhas → Lances Únicos → Total de Lances.
-  // Em produção: Saldo (R$) = saldoSenhas × R$ 2,00 (interpretação A — pragmática,
-  // sem mexer no contrato). Em MOCK_MODE: usa carteiraFlash legado.
+  // Modelo dual (Frente B.9): "Saldo (R$)" = saldo-rs blob (PIX → +R$,
+  // comprar-senhas → -R$, lance-relâmpago → -R$). "Senhas" = saldoSenhas
+  // on-chain. Os dois nunca derivam um do outro — sem duplicação.
+  // Em MOCK_MODE: Saldo (R$) cai em carteiraFlash legado.
   const saldoReais = MOCK_MODE
     ? carteiraFlash
-    : (saldoSenhas == null ? null : saldoSenhas * VALOR_POR_SENHA_BRL);
+    : (saldoRsCentavos == null ? null : saldoRsCentavos / 100);
   const saldoReaisStr = saldoReais == null
-    ? `R$ —${statusSuffix}`
-    : `R$ ${saldoReais.toFixed(2)}${MOCK_MODE ? "" : statusSuffix}`;
+    ? `R$ —${statusRsSuffix}`
+    : `R$ ${saldoReais.toFixed(2)}${MOCK_MODE ? "" : statusRsSuffix}`;
 
   const senhasStat = MOCK_MODE
     ? { label: "Fichas", value: `${fichasProgramadas}`,                     color: "#a78bfa", icon: "🎫", to: "/carteira" }

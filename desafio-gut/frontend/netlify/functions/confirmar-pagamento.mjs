@@ -19,7 +19,7 @@ import {
   ValidationError,
 } from "./_lib/validate.mjs";
 import { consultarPagamento, MercadoPagoApiError } from "./_lib/mp-client.mjs";
-import { creditarPedidoIdempotente } from "./_lib/credito.mjs";
+import { creditarSaldoRsIdempotente } from "./_lib/saldoRs.mjs";
 
 const BLOB_STORE_MP  = "mp-aprovados";
 
@@ -105,10 +105,13 @@ export default async (req) => {
     const code = err?.code === "ERR_JWT_EXPIRED" ? "token_expirado" : "token_invalido";
     return jsonError(401, code, "token rejeitado");
   }
-  const { pedidoId, endereco, qtd, paymentId } = payload;
+  const { pedidoId, endereco, qtd, paymentId, valorBRL } = payload;
   if (!pedidoId || !endereco || !qtd) {
     return jsonError(400, "payload_incompleto", "token sem campos obrigatórios");
   }
+  // Modelo dual: PIX credita R$ (não senhas). qtd é mantido no JWT para
+  // compat com pedidos antigos, mas o crédito agora é em valorCentavos.
+  const valorCentavos = Math.round(Number(valorBRL || qtd * 2) * 100);
 
   // ── Verificação MP (somente quando JWT carrega paymentId) ─────────────────
   // JWT sem paymentId = pedido criado pelo provider mock → caminho legado
@@ -137,9 +140,11 @@ export default async (req) => {
     }
   }
 
-  // ── Crédito on-chain (idempotente) ────────────────────────────────────────
-  const credito = await creditarPedidoIdempotente({
-    pedidoId, endereco, qtd, fonte: "confirmar-pagamento",
+  // ── Crédito R$ off-chain (idempotente) ────────────────────────────────────
+  // Modelo dual: PIX aprovado = +R$ no blob saldo-rs. Senhas só são creditadas
+  // depois via /comprar-senhas (R$ → senhas on-chain).
+  const credito = await creditarSaldoRsIdempotente({
+    pedidoId, endereco, valorCentavos, fonte: "confirmar-pagamento",
   });
   if (!credito.ok) {
     return jsonError(502, credito.code, credito.message);
@@ -147,6 +152,13 @@ export default async (req) => {
   return jsonResponse({
     ok: true,
     idempotent: credito.idempotent,
-    ...credito.resultado,
+    pedidoId,
+    endereco,
+    qtd,
+    valorBRL: Number((valorCentavos / 100).toFixed(2)),
+    valorCentavos,
+    saldoRsAntesCentavos:  credito.resultado.saldoAntesCentavos,
+    saldoRsDepoisCentavos: credito.resultado.saldoDepoisCentavos,
+    processadoEm: credito.resultado.processadoEm,
   });
 };

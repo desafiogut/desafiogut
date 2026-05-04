@@ -39,6 +39,13 @@ async function postJson(url, body) {
   return data;
 }
 
+// Polling: a cada 3s o cliente chama confirmar-pagamento. O endpoint é
+// idempotente — quando MP retorna `approved`, o crédito on-chain dispara
+// automaticamente e o modal avança para sucesso sem o usuário clicar
+// "Já paguei". Cobre falha do webhook MP.
+const POLL_INTERVALO_MS = 3000;
+const POLL_TIMEOUT_MS   = 15 * 60 * 1000; // 15 min (igual TTL do JWT)
+
 export default function ComprarFichasModal({ aberto, onFechar, address, onSucesso }) {
   const isMobile = useIsMobile();
   const [etapa, setEtapa]           = useState("quantia"); // quantia | pagamento | sucesso
@@ -48,6 +55,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
   const [loading, setLoading]       = useState(false);
   const [erro, setErro]             = useState("");
   const [copiado, setCopiado]       = useState(false);
+  const [aguardandoPix, setAguardandoPix] = useState(false); // polling background ativo
 
   // Reset ao abrir
   useEffect(() => {
@@ -59,7 +67,54 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
     setLoading(false);
     setErro("");
     setCopiado(false);
+    setAguardandoPix(false);
   }, [aberto]);
+
+  // Polling automático — ativo enquanto etapa=="pagamento" e há pedido com token.
+  // Cada tick: POST confirmar-pagamento. Se MP ainda não aprovou → 402 silencioso
+  // (continua polling). Se aprovou → dispara o caminho de sucesso. Se erro real
+  // de servidor → marca erro mas mantém polling (auto-retry transparente).
+  useEffect(() => {
+    if (!aberto) return;
+    if (etapa !== "pagamento") return;
+    if (!pedido?.token) return;
+
+    let cancelado = false;
+    setAguardandoPix(true);
+    const inicio = Date.now();
+
+    const tick = async () => {
+      if (cancelado) return;
+      if (Date.now() - inicio > POLL_TIMEOUT_MS) {
+        if (!cancelado) setAguardandoPix(false);
+        return;
+      }
+      try {
+        const data = await postJson(ENDPOINT_CONFIRMAR, { token: pedido.token });
+        if (cancelado) return;
+        setResultado(data);
+        setEtapa("sucesso");
+        setAguardandoPix(false);
+        return;
+      } catch (err) {
+        // 402 pagamento_nao_confirmado é o caminho feliz do polling: ainda não
+        // aprovado. Outros erros podem ser transitórios (mp_indisponivel, rede).
+        const code = err?.code || "";
+        if (code !== "pagamento_nao_confirmado" && code !== "http_402") {
+          // Logar pra console mas não interromper — usuário ainda pode clicar
+          // "Já paguei" como fallback manual.
+          console.warn("[comprar-fichas] poll falhou", { code, message: err?.message });
+        }
+      }
+      if (!cancelado) setTimeout(tick, POLL_INTERVALO_MS);
+    };
+    const t0 = setTimeout(tick, POLL_INTERVALO_MS);
+    return () => {
+      cancelado = true;
+      clearTimeout(t0);
+      setAguardandoPix(false);
+    };
+  }, [aberto, etapa, pedido?.token]);
 
   // ESC fecha (exceto durante loading)
   useEffect(() => {
@@ -231,8 +286,8 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
       <div style={dialog} onClick={(e) => e.stopPropagation()}>
         <div style={cabecalho}>
           <div style={{ minWidth: 0 }}>
-            <h2 style={titulo}>🎫 Comprar Fichas</h2>
-            <p style={subTitulo}>R$ {VALOR_POR_SENHA_BRL.toFixed(2)} por senha (Art. 20)</p>
+            <h2 style={titulo}>💰 Depositar PIX</h2>
+            <p style={subTitulo}>Saldo R$ disponível para Lance Relâmpago ou troca por senhas</p>
           </div>
           <button onClick={fechar} aria-label="Fechar" style={btnFechar} disabled={loading}>×</button>
         </div>
@@ -341,21 +396,38 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
               </div>
             )}
 
+            {aguardandoPix && !loading && (
+              <div style={{
+                padding: "0.55rem 0.75rem",
+                background: "rgba(37,99,235,0.1)",
+                border: "1px solid rgba(37,99,235,0.3)",
+                borderRadius: "10px",
+                color: COR.blue300, fontSize: "0.74rem", fontWeight: 600,
+                marginBottom: "0.85rem", lineHeight: 1.4,
+                display: "flex", alignItems: "center", gap: "0.5rem",
+              }}>
+                <span style={{ fontSize: "0.95rem" }}>⏳</span>
+                <span>Aguardando confirmação do PIX… o crédito acontece automaticamente assim que o pagamento for aprovado.</span>
+              </div>
+            )}
+
             <button
               onClick={confirmarPagamento}
               disabled={loading}
               style={btnPrimario(loading)}
             >
-              {loading ? "Creditando on-chain…" : "✓ Já paguei — creditar senhas"}
+              {loading ? "Creditando on-chain…" : "✓ Já paguei — creditar agora"}
             </button>
             <button onClick={fechar} style={btnSecundario} disabled={loading}>
-              Cancelar
+              {aguardandoPix ? "Fechar (continuará processando em background)" : "Cancelar"}
             </button>
           </>
         )}
 
         {etapa === "sucesso" && resultado && (
           <>
+            {/* Modelo dual (Frente B.9): PIX aprovado credita R$ no blob saldo-rs.
+                Senhas só vêm depois via "Trocar R$ por Senhas" na carteira. */}
             <div style={{
               textAlign: "center", padding: "1rem 0 0.5rem",
             }}>
@@ -363,65 +435,57 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
                 {resultado.idempotent ? "🔁" : "✅"}
               </div>
               <div style={{ fontSize: "1.05rem", fontWeight: 800, color: COR.success, marginBottom: "0.3rem" }}>
-                {resultado.idempotent ? "Pedido já processado" : "Senhas creditadas!"}
+                {resultado.idempotent ? "Pedido já processado" : "PIX aprovado!"}
               </div>
               <div style={{ fontSize: "0.78rem", color: COR.muted, lineHeight: 1.45 }}>
-                {resultado.qtd} {resultado.qtd === 1 ? "senha creditada" : "senhas creditadas"} on-chain na carteira.
+                R$ {Number(resultado.valorBRL ?? (resultado.valorCentavos ? resultado.valorCentavos / 100 : 0)).toFixed(2)} creditados no seu saldo.
               </div>
             </div>
+
+            {(typeof resultado.saldoRsAntesCentavos === "number" && typeof resultado.saldoRsDepoisCentavos === "number") && (
+              <div style={{
+                display: "grid", gridTemplateColumns: "1fr 1fr",
+                gap: "0.5rem", margin: "1rem 0",
+              }}>
+                <div style={{
+                  background: "rgba(3,15,36,0.7)",
+                  border: "1px solid rgba(37,99,235,0.18)",
+                  borderRadius: "10px",
+                  padding: "0.65rem 0.75rem",
+                }}>
+                  <div style={{ fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.2rem", fontWeight: 700 }}>
+                    Saldo Antes
+                  </div>
+                  <div style={{ fontSize: "1.1rem", color: COR.blue300, fontWeight: 800 }}>
+                    R$ {(resultado.saldoRsAntesCentavos / 100).toFixed(2)}
+                  </div>
+                </div>
+                <div style={{
+                  background: "rgba(16,185,129,0.08)",
+                  border: "1px solid rgba(16,185,129,0.3)",
+                  borderRadius: "10px",
+                  padding: "0.65rem 0.75rem",
+                }}>
+                  <div style={{ fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.2rem", fontWeight: 700 }}>
+                    Saldo Depois
+                  </div>
+                  <div style={{ fontSize: "1.1rem", color: COR.success, fontWeight: 800 }}>
+                    R$ {(resultado.saldoRsDepoisCentavos / 100).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr",
-              gap: "0.5rem", margin: "1rem 0",
+              padding: "0.7rem 0.85rem",
+              background: "rgba(245,166,35,0.08)",
+              border: "1px solid rgba(245,166,35,0.25)",
+              borderRadius: "10px",
+              color: COR.gold, fontSize: "0.76rem", lineHeight: 1.45,
+              marginBottom: "1rem",
             }}>
-              <div style={{
-                background: "rgba(3,15,36,0.7)",
-                border: "1px solid rgba(37,99,235,0.18)",
-                borderRadius: "10px",
-                padding: "0.65rem 0.75rem",
-              }}>
-                <div style={{ fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.2rem", fontWeight: 700 }}>
-                  Antes
-                </div>
-                <div style={{ fontSize: "1.1rem", color: COR.blue300, fontWeight: 800 }}>
-                  {resultado.saldoAntes}
-                </div>
-              </div>
-              <div style={{
-                background: "rgba(16,185,129,0.08)",
-                border: "1px solid rgba(16,185,129,0.3)",
-                borderRadius: "10px",
-                padding: "0.65rem 0.75rem",
-              }}>
-                <div style={{ fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.2rem", fontWeight: 700 }}>
-                  Depois
-                </div>
-                <div style={{ fontSize: "1.1rem", color: COR.success, fontWeight: 800 }}>
-                  {resultado.saldoDepois}
-                </div>
-              </div>
+              💡 Para participar de Lance Programado, use <strong>Trocar R$ por Senhas</strong> na carteira (R$ 2,00 = 1 senha on-chain).
             </div>
-
-            <a
-              href={resultado.etherscanUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "block",
-                padding: "0.65rem 0.85rem",
-                background: "rgba(37,99,235,0.1)",
-                border: "1px solid rgba(37,99,235,0.3)",
-                borderRadius: "10px",
-                color: COR.blue300, fontSize: "0.78rem",
-                fontFamily: "monospace",
-                textDecoration: "none",
-                textAlign: "center",
-                marginBottom: "1rem",
-                wordBreak: "break-all",
-              }}
-            >
-              🔗 {resultado.txHash.slice(0, 10)}…{resultado.txHash.slice(-8)} (Etherscan)
-            </a>
 
             <button onClick={fecharComSucesso} style={btnPrimario(false)}>
               Fechar

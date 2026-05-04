@@ -1680,3 +1680,121 @@ listeners + polling — sincronização automática via badge 🔗.
 - `frontend/src/pages/Dashboard.jsx` (KPI Saldo R$ + reordenação)
 - `frontend/src/pages/MinhaCarteira.jsx` (card Saldo Disponível +
   botões Comprar/Lance Relâmpago, remoção do card Comprar Fichas duplicado)
+
+---
+
+## MARCO: FRENTE B.9 — MODELO DUAL R$ vs SENHAS + AUTO-CRÉDITO PIX (2026-05-04)
+
+Caveman pass: três entregas em sequência — limpeza de localStorage MOCK,
+auto-crédito do PIX sem clique manual, e separação contábil R$ vs Senhas.
+
+### BUG 1 — Limpeza de localStorage MOCK em produção
+
+`AppContext.jsx`: nova função `limparMockResidual()` chamada na carga do
+módulo. Em `!MOCK_MODE`, remove `gut_carteira_flash`, `gut_fichas_programadas`
+e `gut_lances_r1` do localStorage. Garante que dados de sessões MOCK_MODE
+anteriores não vazem para a UI de produção. Estado inicial em produção
+continua zerado/derivado do on-chain — agora também sem rastros no
+localStorage.
+
+### BUG 2 — Auto-crédito do PIX sem clique manual
+
+**Problema:** webhook MP é o único caminho automático. Se a URL do
+webhook não está configurada no painel MP, ou se o blob `pedidos-meta`
+falhou em iniciar-pagamento, o crédito só acontece quando o usuário
+volta ao modal e clica "Já paguei".
+
+**Fix (front, `ComprarFichasModal.jsx`):** polling de 3s do endpoint
+`confirmar-pagamento` enquanto o modal está em etapa "pagamento".
+`confirmar-pagamento` checa MP via `consultarPagamento(paymentId)` e,
+quando aprova, credita imediatamente. Polling é idempotente (mesmo
+JWT/pedidoId) e independente do webhook MP. Banner "⏳ Aguardando
+confirmação do PIX…" comunica o estado. Timeout 15min (= TTL JWT).
+
+Cobre as três armadilhas:
+1. Webhook MP não configurado → polling ainda credita.
+2. `pedidos-meta` ausente (Blobs falhou em iniciar-pagamento) → JWT no
+   client tem todos os campos, polling continua funcionando.
+3. Usuário fecha o modal antes da aprovação → caminho do webhook MP
+   continua ativo no servidor; badge atualiza ao voltar.
+
+### FEATURE — Modelo dual Saldo (R$) vs Senhas
+
+**Modelo:**
+- `Saldo R$`  = blob `saldo-rs:${endereco}` (centavos, off-chain).
+- `Senhas`    = `saldoSenhas[address]` no contrato (on-chain).
+- Os dois NUNCA derivam um do outro — sem duplicação contábil.
+
+**Fluxos:**
+- `PIX aprovado`        → `+R$` no blob (ex-`+senhas` on-chain).
+- `Trocar R$ por Senha` → `-R$ 2,00` no blob, `+1 senha` on-chain.
+- `Lance Relâmpago`     → `-centavos` do blob, registro em
+  `lances-relampago:${edicaoId}`.
+- `Lance Programado`    → consome `1 senha` on-chain (inalterado).
+
+**Backend novo:**
+- `_lib/saldoRs.mjs` — `lerSaldoRsCentavos`, `creditarSaldoRsIdempotente`
+  (idem por pedidoId via blob `saldo-rs-creditos`), `debitarSaldoRs`,
+  `reembolsarSaldoRs`.
+- `saldo-rs.mjs` (GET) — `?endereco=0x...` → `{saldoCentavos, saldoBRL}`.
+- `comprar-senhas.mjs` (POST) — `{endereco, qtd}` → debita R$, credita
+  senhas on-chain, reembolsa em falha on-chain.
+- `lance-relampago.mjs` (POST) — `{endereco, valorCentavos, edicaoId?}`
+  → debita R$, registra em `lances-relampago:${edicaoId}`.
+
+**Backend modificado:**
+- `confirmar-pagamento.mjs` — agora chama `creditarSaldoRsIdempotente`
+  (não mais `creditarPedidoIdempotente` on-chain). Resposta nova:
+  `{saldoRsAntesCentavos, saldoRsDepoisCentavos, valorBRL}`.
+- `webhook-mercadopago.mjs` — idem; lê `meta.valorBRL` do blob
+  `pedidos-meta`. Logs ajustados.
+
+**Frontend:**
+- `AppContext.jsx` — novo estado `saldoRsCentavos` + `saldoRsStatus`,
+  `refetchSaldoRs` exposto. Polling 5s enquanto address logado (sem
+  evento on-chain — confiamos em polling).
+- `Dashboard.jsx` — KPI "Saldo (R$)" lê `saldoRsCentavos / 100`
+  (em vez de `saldoSenhas × 2`). Senhas continua como KPI separado.
+- `MinhaCarteira.jsx` — card "Saldo Disponível" lê saldoRs, agora com
+  três botões: "💰 Depositar PIX" (abre modal), "🎫 Trocar R$ → Senha"
+  (chama `/comprar-senhas` direto, sem modal), "⚡ Lance Relâmpago".
+- `ComprarFichasModal.jsx` — header virou "Depositar PIX"; tela de
+  sucesso mostra saldo R$ antes/depois (sem txHash, já que PIX não vai
+  mais on-chain); orientação para usar "Trocar R$ por Senhas" depois.
+
+**Idempotência e segurança:**
+- `creditarSaldoRsIdempotente` guarda registro por `pedidoId` em blob
+  `saldo-rs-creditos`. Webhook + polling simultâneos retornam
+  idempotent.
+- `comprar-senhas` faz debit-then-credit com reembolso automático em
+  falha on-chain. Race window de double-spend (duas chamadas paralelas
+  lendo o mesmo saldo) aceita dado o volume baixo.
+- Sem auth nos novos endpoints — saldoRs é por endereço; um atacante
+  gastaria R$ alheio sem benefício próprio (senhas vão para o dono do
+  address). Hardening futuro: signMessage EIP-191.
+
+### Arquivos tocados
+
+- `frontend/netlify/functions/_lib/saldoRs.mjs` (novo)
+- `frontend/netlify/functions/saldo-rs.mjs` (novo)
+- `frontend/netlify/functions/comprar-senhas.mjs` (novo)
+- `frontend/netlify/functions/lance-relampago.mjs` (novo)
+- `frontend/netlify/functions/confirmar-pagamento.mjs` (R$ em vez de
+  senhas)
+- `frontend/netlify/functions/webhook-mercadopago.mjs` (R$ em vez de
+  senhas)
+- `frontend/src/context/AppContext.jsx` (saldoRs state + cleanup
+  localStorage MOCK em produção)
+- `frontend/src/pages/Dashboard.jsx` (Saldo R$ lê saldoRs blob)
+- `frontend/src/pages/MinhaCarteira.jsx` (3 botões + Trocar R$ → Senha)
+- `frontend/src/components/ComprarFichasModal.jsx` (polling auto-crédito
+  + tela sucesso adaptada para R$)
+
+### Pendências
+
+- Wire-up da `lance-relampago` na UI do `MercadoLances.jsx` (atualmente
+  o lance ainda passa pelo fluxo on-chain `darLance` — endpoint criado
+  mas não consumido).
+- Smoke test em produção: PIX → conferir badge R$ no Dashboard sobe
+  automaticamente sem clique; depois "Trocar R$ → Senha" → conferir
+  badge 🔗 sobe e R$ baixa em R$ 2,00.

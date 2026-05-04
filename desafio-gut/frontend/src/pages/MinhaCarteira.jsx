@@ -28,28 +28,66 @@ export default function MinhaCarteira() {
     CUSTO_FICHA_BRL, isConnected, abrirModal,
     address, userLabel, lances, MOCK_MODE,
     saldoSenhas, saldoSenhasStatus, refetchSaldo,
+    saldoRsCentavos, saldoRsStatus, refetchSaldoRs,
     setTipoLeilao,
   } = useAppContext();
 
   const [comprarAberto, setComprarAberto] = useState(false);
+  const [trocandoSenhas, setTrocandoSenhas] = useState(false);
+  const [trocaErro,  setTrocaErro]  = useState("");
+  const [trocaInfo,  setTrocaInfo]  = useState("");
 
   // Saldo on-chain — sufixo de status alinhado ao Sidebar/Dashboard.
   const saldoStatusSuffix =
     saldoSenhasStatus === "loading" ? " ⏳" :
     saldoSenhasStatus === "stale"   ? " ◇" :
     saldoSenhasStatus === "error"   ? " ✗" : "";
-  const saldoNumero    = (saldoSenhas == null) ? null : Number(saldoSenhas);
+  const saldoNumero     = (saldoSenhas == null) ? null : Number(saldoSenhas);
   const valorFinanceiro = saldoNumero == null ? null : saldoNumero * VALOR_POR_SENHA_BRL;
 
-  // Saldo Disponível (R$) — interpretação A: equivale ao valor financeiro das
-  // senhas on-chain. Em MOCK_MODE preserva carteiraFlash legado.
+  const statusRsSuffix =
+    saldoRsStatus === "loading" ? " ⏳" :
+    saldoRsStatus === "stale"   ? " ◇" :
+    saldoRsStatus === "error"   ? " ✗" : "";
+
+  // Modelo dual (Frente B.9): Saldo Disponível = saldo-rs (off-chain).
+  // PIX aprovado credita aqui; "Trocar por Senhas" debita aqui e credita
+  // saldoSenhas on-chain; Lance Relâmpago debita aqui em centavos.
   const saldoReais = MOCK_MODE
     ? carteiraFlash
-    : (saldoNumero == null ? null : valorFinanceiro);
+    : (saldoRsCentavos == null ? null : saldoRsCentavos / 100);
 
   function irParaLanceRelampago() {
     try { setTipoLeilao?.("flash"); } catch {}
     navigate("/mercado");
+  }
+
+  async function trocarPorSenhas(qtd = 1) {
+    if (!address || trocandoSenhas) return;
+    setTrocaErro("");
+    setTrocaInfo("");
+    setTrocandoSenhas(true);
+    try {
+      const resp = await fetch("/.netlify/functions/comprar-senhas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endereco: address, qtd }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const msg = data?.error?.message || `HTTP ${resp.status}`;
+        setTrocaErro(msg);
+        return;
+      }
+      setTrocaInfo(`✓ ${qtd} ${qtd === 1 ? "senha creditada" : "senhas creditadas"} on-chain`);
+      try { refetchSaldoRs?.(); } catch {}
+      try { refetchSaldo?.(); } catch {}
+      setTimeout(() => setTrocaInfo(""), 5000);
+    } catch (err) {
+      setTrocaErro(err?.message || "Falha na troca");
+    } finally {
+      setTrocandoSenhas(false);
+    }
   }
 
   const meusLances = lances.filter(
@@ -213,10 +251,9 @@ export default function MinhaCarteira() {
             </>
           )}
 
-          {/* Saldo Disponível (R$) — sempre visível em produção.
-              Em produção: saldoSenhas × R$ 2,00 (interpretação A — pragmática).
-              Em MOCK_MODE: equivalente a carteiraFlash (saldo R$ legado).
-              Atualiza via listeners do AppContext (SenhasCreditadas + LanceDado). */}
+          {/* Saldo Disponível (R$) — modelo dual Frente B.9.
+              Fonte: blob saldo-rs:${address}. PIX → +R$. /comprar-senhas → -R$.
+              /lance-relampago → -centavos. Em MOCK_MODE: carteiraFlash legado. */}
           {!MOCK_MODE && (
             <div style={{
               ...cardStyle,
@@ -231,14 +268,14 @@ export default function MinhaCarteira() {
                 <h3 style={{ ...tituloStyle, margin: 0, color: COR.gold }}>💰 Saldo Disponível</h3>
                 <span style={{
                   fontSize: "0.62rem", fontWeight: 700,
-                  color: saldoSenhasStatus === "error" ? COR.danger : COR.muted,
+                  color: saldoRsStatus === "error" ? COR.danger : COR.muted,
                   background: "rgba(3,15,36,0.6)",
                   border: "1px solid rgba(37,99,235,0.18)",
                   borderRadius: "999px",
                   padding: "0.18rem 0.55rem",
                   textTransform: "uppercase", letterSpacing: "0.06em",
-                }} title={`Calculado a partir de saldoSenhas × R$ ${VALOR_POR_SENHA_BRL.toFixed(2)} · status ${saldoSenhasStatus}`}>
-                  R$ on-chain
+                }} title={`Saldo R$ off-chain (blob saldo-rs) · status ${saldoRsStatus}`}>
+                  R$ off-chain
                 </span>
               </div>
 
@@ -248,10 +285,10 @@ export default function MinhaCarteira() {
                 marginBottom: "0.35rem",
               }}>
                 {saldoReais == null
-                  ? (saldoSenhasStatus === "loading" ? "R$ …" : "R$ —")
+                  ? (saldoRsStatus === "loading" ? "R$ …" : "R$ —")
                   : `R$ ${saldoReais.toFixed(2)}`}
                 <span style={{ fontSize: "0.85rem", color: COR.muted, fontWeight: 700, marginLeft: "0.4rem" }}>
-                  {saldoStatusSuffix}
+                  {statusRsSuffix}
                 </span>
               </div>
 
@@ -259,15 +296,12 @@ export default function MinhaCarteira() {
                 fontSize: isMobile ? "0.78rem" : "0.82rem",
                 color: COR.muted, marginBottom: "0.95rem", lineHeight: 1.4,
               }}>
-                {saldoNumero == null
-                  ? "Aguardando leitura on-chain…"
-                  : <>{saldoNumero} {saldoNumero === 1 ? "senha" : "senhas"} × R$ {VALOR_POR_SENHA_BRL.toFixed(2)} disponíveis para lance</>
-                }
+                Saldo em reais para Lance Relâmpago. Para Lance Programado, troque por Senhas (R$ {VALOR_POR_SENHA_BRL.toFixed(2)} cada).
               </div>
 
               <div style={{
                 display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
                 gap: "0.6rem",
               }}>
                 <button
@@ -277,31 +311,58 @@ export default function MinhaCarteira() {
                     background: "linear-gradient(135deg,#f5a623,#d97706)",
                     boxShadow: "0 4px 14px rgba(245,166,35,0.35)",
                   }}
-                  title="Adquira senhas via PIX (crédito automático on-chain)"
+                  title="Depósito PIX → +R$ (crédito automático após aprovação MP)"
                 >
-                  🎫 Comprar Fichas
+                  💰 Depositar PIX
+                </button>
+                <button
+                  onClick={() => trocarPorSenhas(1)}
+                  disabled={trocandoSenhas || (saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL}
+                  style={{
+                    ...botaoPrimario,
+                    background: (trocandoSenhas || (saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL)
+                      ? "rgba(167,139,250,0.25)"
+                      : "linear-gradient(135deg,#a78bfa,#7c3aed)",
+                    boxShadow: (trocandoSenhas || (saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL)
+                      ? "none" : "0 4px 14px rgba(167,139,250,0.35)",
+                    cursor: trocandoSenhas ? "wait" : ((saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL) ? "not-allowed" : "pointer",
+                    opacity: ((saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL) ? 0.5 : 1,
+                  }}
+                  title={`Trocar R$ ${VALOR_POR_SENHA_BRL.toFixed(2)} por 1 senha on-chain`}
+                >
+                  {trocandoSenhas ? "Trocando…" : `🎫 Trocar R$ ${VALOR_POR_SENHA_BRL.toFixed(2)} → 1 Senha`}
                 </button>
                 <button
                   onClick={irParaLanceRelampago}
-                  disabled={!saldoNumero}
+                  disabled={!saldoReais}
                   style={{
                     ...botaoPrimario,
-                    background: !saldoNumero
+                    background: !saldoReais
                       ? "rgba(37,99,235,0.2)"
                       : "linear-gradient(135deg,#2563eb,#1d4ed8)",
-                    boxShadow: !saldoNumero ? "none" : "0 4px 14px rgba(37,99,235,0.35)",
-                    cursor: !saldoNumero ? "not-allowed" : "pointer",
-                    opacity: !saldoNumero ? 0.5 : 1,
+                    boxShadow: !saldoReais ? "none" : "0 4px 14px rgba(37,99,235,0.35)",
+                    cursor: !saldoReais ? "not-allowed" : "pointer",
+                    opacity: !saldoReais ? 0.5 : 1,
                   }}
-                  title={!saldoNumero ? "Compre fichas primeiro" : "Vai ao Mercado de Lances em modo Relâmpago"}
+                  title={!saldoReais ? "Deposite PIX primeiro" : "Vai ao Mercado de Lances em modo Relâmpago"}
                 >
-                  ⚡ Dar Lance Relâmpago
+                  ⚡ Lance Relâmpago
                 </button>
               </div>
 
-              {saldoSenhasStatus === "error" && (
+              {trocaInfo && (
+                <p style={{ margin: "0.6rem 0 0", fontSize: "0.78rem", color: COR.success, lineHeight: 1.4, fontWeight: 700 }}>
+                  {trocaInfo}
+                </p>
+              )}
+              {trocaErro && (
                 <p style={{ margin: "0.6rem 0 0", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
-                  ⚠️ Não foi possível ler o saldo on-chain agora.
+                  ⚠️ {trocaErro}
+                </p>
+              )}
+              {saldoRsStatus === "error" && (
+                <p style={{ margin: "0.6rem 0 0", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
+                  ⚠️ Não foi possível ler o saldo R$ agora.
                 </p>
               )}
             </div>
@@ -516,7 +577,10 @@ export default function MinhaCarteira() {
         aberto={comprarAberto}
         onFechar={() => setComprarAberto(false)}
         address={address}
-        onSucesso={() => { try { refetchSaldo?.(); } catch {} }}
+        onSucesso={() => {
+          try { refetchSaldoRs?.(); } catch {}
+          try { refetchSaldo?.();   } catch {}
+        }}
       />
     </div>
   );

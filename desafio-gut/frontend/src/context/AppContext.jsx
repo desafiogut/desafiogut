@@ -17,6 +17,21 @@ import {
 export const MOCK_MODE    = import.meta.env.VITE_MOCK_MODE === "true";
 export const EDICAO_ATIVA = "R-1";
 const LS_LANCES           = "gut_lances_r1";
+const LS_KEYS_MOCK_LEGADO = ["gut_carteira_flash", "gut_fichas_programadas", "gut_lances_r1"];
+
+// Em produção, qualquer valor remanescente em localStorage de sessões MOCK_MODE
+// anteriores é lixo — o saldo real é on-chain (saldoSenhas) e a tabela de lances
+// é hidratada pelo listener LanceDado. Limpa proativamente no primeiro carregamento
+// para evitar UI mostrando saldo/fichas residuais. Roda só em browser (guarda
+// `typeof window`) e nunca em MOCK_MODE.
+function limparMockResidual() {
+  if (MOCK_MODE) return;
+  if (typeof window === "undefined") return;
+  try {
+    for (const k of LS_KEYS_MOCK_LEGADO) localStorage.removeItem(k);
+  } catch {}
+}
+limparMockResidual();
 
 export const DURACAO = {
   flash:      MOCK_MODE ? 30  : 300,   // Relâmpago: 5 min
@@ -76,6 +91,13 @@ export function AppProvider({ children }) {
   // (distinto de 0, que é estado on-chain válido). Em MOCK_MODE permanece null.
   const [saldoSenhas,       setSaldoSenhas]       = useState(null);
   const [saldoSenhasStatus, setSaldoSenhasStatus] = useState("idle"); // idle | loading | ok | stale | error
+
+  // ── Saldo R$ off-chain (Frente B.9 — modelo dual) ───────────────────────────
+  // Fonte: blob `saldo-rs:${address}` via GET /.netlify/functions/saldo-rs.
+  // PIX aprovado = +R$. /comprar-senhas = -R$ +senhas. /lance-relampago = -R$.
+  // saldoRsCentavos: number | null (null = ainda não consultado).
+  const [saldoRsCentavos, setSaldoRsCentavos] = useState(null);
+  const [saldoRsStatus,   setSaldoRsStatus]   = useState("idle");
 
   // Privy auth
   const { ready, authenticated, user, login, logout } = usePrivy();
@@ -185,6 +207,38 @@ export function AppProvider({ children }) {
       clearInterval(intervalId);
     };
   }, [address, refetchSaldo]);
+
+  // ── Saldo R$: refetch + polling (Frente B.9) ────────────────────────────────
+  // Sem evento on-chain — confiamos em polling 5s enquanto address está logado.
+  // Frequência maior que saldoSenhas porque PIX é o gatilho de UX mais imediato
+  // (usuário vê saldo subir após aprovação MP).
+  const refetchSaldoRs = useCallback(async () => {
+    if (MOCK_MODE) return;
+    if (!address) {
+      setSaldoRsCentavos(null);
+      setSaldoRsStatus("idle");
+      return;
+    }
+    setSaldoRsStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
+    try {
+      const resp = await fetch(`/.netlify/functions/saldo-rs?endereco=${encodeURIComponent(address)}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      setSaldoRsCentavos(Number(data?.saldoCentavos ?? 0));
+      setSaldoRsStatus("ok");
+    } catch (err) {
+      console.warn("[GUT-DEBUG] refetchSaldoRs falhou", { address, message: err?.message });
+      setSaldoRsStatus((prev) => (prev === "ok" ? "stale" : "error"));
+    }
+  }, [address]);
+
+  useEffect(() => {
+    if (MOCK_MODE) return;
+    refetchSaldoRs();
+    if (!address) return;
+    const id = setInterval(refetchSaldoRs, 5000);
+    return () => clearInterval(id);
+  }, [address, refetchSaldoRs]);
 
   // Timer regressivo + disparo do efeito relâmpago
   useEffect(() => {
@@ -312,6 +366,10 @@ export function AppProvider({ children }) {
     saldoSenhas,
     saldoSenhasStatus,
     refetchSaldo,
+    // Saldo R$ off-chain (Frente B.9 — modelo dual)
+    saldoRsCentavos,
+    saldoRsStatus,
+    refetchSaldoRs,
     // Auth
     address, isConnected, userLabel, ready, authenticated, user,
     // Vencedor

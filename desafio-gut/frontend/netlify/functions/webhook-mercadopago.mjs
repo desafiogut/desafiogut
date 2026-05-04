@@ -21,7 +21,8 @@
 import { getStore } from "@netlify/blobs";
 import { consultarPagamento, MercadoPagoApiError } from "./_lib/mp-client.mjs";
 import { jsonResponse, parseJsonBody } from "./_lib/validate.mjs";
-import { creditarPedidoIdempotente, lerMetaPedido } from "./_lib/credito.mjs";
+import { lerMetaPedido } from "./_lib/credito.mjs";
+import { creditarSaldoRsIdempotente } from "./_lib/saldoRs.mjs";
 
 const BLOB_STORE_MP = "mp-aprovados";
 
@@ -136,40 +137,40 @@ export default async (req) => {
     }
   }
 
-  // ── Crédito on-chain reativo ────────────────────────────────────────────
-  // Lê metadados do pedido (gravados em iniciar-pagamento) e credita
-  // automaticamente. Idempotência via blob `pedidos-pagos` impede dupla
-  // creditação quando o usuário também clicar "Já paguei".
-  // Se metadados não existirem (Blobs indisponível, pedido legado), o
-  // fallback "Já paguei" no front continua funcionando — o webhook
-  // apenas perdeu a janela reativa.
+  // ── Crédito R$ reativo ──────────────────────────────────────────────────
+  // Modelo dual (Frente B.9): aprovação MP credita R$ no blob saldo-rs.
+  // Senhas on-chain só vêm de /comprar-senhas (R$ → senhas). Lê metadados
+  // do pedido (gravados em iniciar-pagamento) para descobrir endereco/valor.
   const meta = await lerMetaPedido(pedidoId);
-  if (!meta?.endereco || !meta?.qtd) {
+  if (!meta?.endereco || !meta?.valorBRL) {
     console.warn("[webhook-mp] meta do pedido ausente, crédito ficará para confirmar-pagamento", {
       pedidoId, paymentId, hasMeta: !!meta,
     });
     return jsonResponse({ ok: true, recorded: true, credited: false, reason: "meta_ausente", pedidoId, paymentId });
   }
+  const valorCentavos = Math.round(Number(meta.valorBRL) * 100);
 
-  const credito = await creditarPedidoIdempotente({
+  const credito = await creditarSaldoRsIdempotente({
     pedidoId,
     endereco: meta.endereco,
-    qtd: meta.qtd,
+    valorCentavos,
     fonte: "webhook",
   });
 
   if (!credito.ok) {
-    // Não retornamos 5xx para o MP não retentar agressivamente — o usuário
-    // ainda pode usar o botão "Já paguei" como fallback.
-    console.error("[webhook-mp] credito on-chain falhou (fallback p/ confirmar-pagamento):", {
+    // Não retornamos 5xx para o MP não retentar agressivamente — o cliente
+    // ainda pode usar polling/confirmar-pagamento como fallback.
+    console.error("[webhook-mp] credito R$ falhou (fallback p/ confirmar-pagamento):", {
       pedidoId, code: credito.code, message: credito.message,
     });
     return jsonResponse({ ok: true, recorded: true, credited: false, reason: credito.code, pedidoId, paymentId });
   }
 
-  console.info("[webhook-mp] aprovado e creditado", {
+  console.info("[webhook-mp] aprovado e creditado em R$", {
     pedidoId, paymentId,
-    txHash: credito.resultado.txHash,
+    valorCentavos,
+    saldoAntes:  credito.resultado.saldoAntesCentavos,
+    saldoDepois: credito.resultado.saldoDepoisCentavos,
     idempotent: credito.idempotent,
     duracaoMs: Date.now() - t0,
   });
@@ -180,6 +181,7 @@ export default async (req) => {
     idempotent: credito.idempotent,
     pedidoId,
     paymentId,
-    txHash: credito.resultado.txHash,
+    valorCentavos,
+    saldoRsDepoisCentavos: credito.resultado.saldoDepoisCentavos,
   });
 };
