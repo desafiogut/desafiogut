@@ -101,8 +101,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
         // aprovado. Outros erros podem ser transitórios (mp_indisponivel, rede).
         const code = err?.code || "";
         if (code !== "pagamento_nao_confirmado" && code !== "http_402") {
-          // Logar pra console mas não interromper — usuário ainda pode clicar
-          // "Já paguei" como fallback manual.
+          // Erros transitórios (mp_indisponivel, rede): loga mas continua polling.
           console.warn("[comprar-fichas] poll falhou", { code, message: err?.message });
         }
       }
@@ -148,21 +147,6 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
       setEtapa("pagamento");
     } catch (err) {
       setErro(err?.message || "Falha ao gerar pedido PIX.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function confirmarPagamento() {
-    if (!pedido?.token) { setErro("Token do pedido ausente."); return; }
-    setLoading(true);
-    setErro("");
-    try {
-      const data = await postJson(ENDPOINT_CONFIRMAR, { token: pedido.token });
-      setResultado(data);
-      setEtapa("sucesso");
-    } catch (err) {
-      setErro(err?.message || "Falha ao confirmar pagamento.");
     } finally {
       setLoading(false);
     }
@@ -411,13 +395,6 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
               </div>
             )}
 
-            <button
-              onClick={confirmarPagamento}
-              disabled={loading}
-              style={btnPrimario(loading)}
-            >
-              {loading ? "Creditando on-chain…" : "✓ Já paguei — creditar agora"}
-            </button>
             <button onClick={fechar} style={btnSecundario} disabled={loading}>
               {aguardandoPix ? "Fechar (continuará processando em background)" : "Cancelar"}
             </button>

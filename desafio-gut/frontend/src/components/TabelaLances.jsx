@@ -3,17 +3,6 @@ import { sanitizeAddress, sanitizeString, sanitizeLance } from "../utils/sanitiz
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
-/**
- * TabelaLances — exibe lances da edição ativa.
- *  Desktop: <table> com 5 colunas.
- *  Mobile:  cards verticais (1 lance por card).
- *
- * Status messages alinhados ao Art. 24:
- *  a) menor e único → 🏆
- *  b) único não menor → ✅
- *  c) repetido → ❌
- */
-
 function ordenarLances(lances) {
   const unicos    = lances.filter((l) => !l.repetido).sort((a, b) => a.valor - b.valor);
   const repetidos = lances.filter((l) =>  l.repetido).sort((a, b) => a.valor - b.valor);
@@ -26,11 +15,18 @@ function statusFor(repetido, isVencedor) {
   return                  { label: "✅ Único",         variant: "success" };
 }
 
-export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp }) {
+function nomeOuEndereco(lance, enderecoAbrev) {
+  return lance.nomeExibicao || enderecoAbrev;
+}
+
+export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, encerrado: encerradoProp }) {
   const isMobile = useIsMobile();
   const edicaoSanitizada = sanitizeString(idEdicao ?? "");
   const agora = Date.now() / 1000;
-  const encerrado = prazoTimestamp && agora > prazoTimestamp;
+  const encerrado = encerradoProp != null
+    ? encerradoProp
+    : !!(prazoTimestamp && agora > prazoTimestamp);
+
   const prazoFormatado = prazoTimestamp
     ? new Date(prazoTimestamp * 1000).toLocaleString("pt-BR")
     : "—";
@@ -60,6 +56,12 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp }) 
           animation: gut-beam 2.6s ease-in-out infinite;
           pointer-events: none;
         }
+
+        @keyframes gut-reveal {
+          from { filter: blur(6px); opacity: 0.3; transform: scale(0.94); }
+          to   { filter: blur(0);   opacity: 1;   transform: scale(1);    }
+        }
+        .gut-valor-reveal { animation: gut-reveal 0.5s ease-out both; }
       `}</style>
 
       <div style={{
@@ -84,6 +86,11 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp }) 
           <span style={{ ...estilos.statusBadge, background: encerrado ? "#dc2626" : "#16a34a" }}>
             {encerrado ? "🔴 Encerrado" : "🟢 Ativo"}
           </span>
+          {!encerrado && lances.length > 0 && (
+            <span style={{ fontSize: isMobile ? "0.68rem" : "0.74rem", color: "#4a6490", fontStyle: "italic" }}>
+              🔒 valores ocultos até o fim
+            </span>
+          )}
         </div>
       </div>
 
@@ -99,9 +106,9 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp }) 
           <span style={{ fontSize: "0.78rem", color: "#334155" }}>Seja o primeiro a lançar.</span>
         </div>
       ) : isMobile ? (
-        <MobileList lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} />
+        <MobileList lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={encerrado} />
       ) : (
-        <DesktopTable lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} />
+        <DesktopTable lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={encerrado} />
       )}
 
       <p style={{
@@ -115,7 +122,7 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp }) 
   );
 }
 
-function MobileList({ lancesOrdenados, idxVencedor }) {
+function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
       <AnimatePresence initial={false}>
@@ -125,11 +132,12 @@ function MobileList({ lancesOrdenados, idxVencedor }) {
           const txHash = sanitizeString(lance.txHash ?? "");
           if (!enderecoSanitizado || valorSanitizado === null) return null;
 
-          const repetido = lance.repetido === true;
+          const repetido   = lance.repetido === true;
           const isVencedor = i === idxVencedor;
-          const itemKey = `${enderecoSanitizado}-${valorSanitizado}`;
-          const status = statusFor(repetido, isVencedor);
+          const itemKey    = `${enderecoSanitizado}-${valorSanitizado}`;
+          const status     = statusFor(repetido, isVencedor);
           const enderecoAbrev = `${enderecoSanitizado.slice(0, 6)}...${enderecoSanitizado.slice(-4)}`;
+          const nome       = nomeOuEndereco(lance, enderecoAbrev);
           const valorFormatado = `R$ ${(valorSanitizado / 100).toFixed(2)}`;
 
           return (
@@ -161,18 +169,16 @@ function MobileList({ lancesOrdenados, idxVencedor }) {
                 border: `1px solid ${isVencedor ? "rgba(245,166,35,0.4)" : "rgba(37,99,235,0.25)"}`,
                 color: isVencedor ? "#fbbf24" : "#93c5fd",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontWeight: "900", fontSize: "0.85rem",
-                flexShrink: 0,
+                fontWeight: "900", fontSize: "0.85rem", flexShrink: 0,
               }}>
                 {isVencedor ? "🏆" : i + 1}
               </div>
 
               <div style={{ minWidth: 0 }}>
                 <div style={{
-                  fontFamily: "monospace", fontSize: "0.82rem",
-                  color: "#e8f0fe",
+                  fontSize: "0.82rem", color: "#e8f0fe",
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>{enderecoAbrev}</div>
+                }}>{nome}</div>
                 {txHash && (
                   <div style={{
                     fontFamily: "monospace", fontSize: "0.66rem", color: "#4a6490",
@@ -182,14 +188,19 @@ function MobileList({ lancesOrdenados, idxVencedor }) {
                 )}
               </div>
 
-              <div style={{
+              <div className={encerrado ? "gut-valor-reveal" : undefined} style={{
                 fontWeight: "900",
-                fontSize: "1.05rem",
-                color: isVencedor ? "#fbbf24" : "#93c5fd",
+                fontSize: encerrado ? "1.05rem" : "0.9rem",
+                color: encerrado
+                  ? (isVencedor ? "#fbbf24" : "#93c5fd")
+                  : "#4a6490",
                 fontFamily: "monospace",
                 whiteSpace: "nowrap",
                 textAlign: "right",
-              }}>{valorFormatado}</div>
+                letterSpacing: encerrado ? "0.02em" : "0.05em",
+              }}>
+                {encerrado ? valorFormatado : "🔒"}
+              </div>
 
               <div style={{ gridColumn: "2 / span 2", display: "flex", justifyContent: "flex-end" }}>
                 <Badge
@@ -205,7 +216,7 @@ function MobileList({ lancesOrdenados, idxVencedor }) {
   );
 }
 
-function DesktopTable({ lancesOrdenados, idxVencedor }) {
+function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
   return (
     <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -213,7 +224,7 @@ function DesktopTable({ lancesOrdenados, idxVencedor }) {
           <tr>
             <th style={estilos.th}>#</th>
             <th style={estilos.th}>Participante</th>
-            <th style={estilos.th}>Valor (R$)</th>
+            <th style={estilos.th}>{encerrado ? "Valor (R$)" : "Valor 🔒"}</th>
             <th style={estilos.th}>Status (Art. 24)</th>
             <th style={estilos.th}>ID do Lance</th>
           </tr>
@@ -226,11 +237,12 @@ function DesktopTable({ lancesOrdenados, idxVencedor }) {
               const txHash = sanitizeString(lance.txHash ?? "");
               if (!enderecoSanitizado || valorSanitizado === null) return null;
 
-              const repetido = lance.repetido === true;
+              const repetido   = lance.repetido === true;
               const isVencedor = i === idxVencedor;
-              const itemKey = `${enderecoSanitizado}-${valorSanitizado}`;
-              const status = statusFor(repetido, isVencedor);
+              const itemKey    = `${enderecoSanitizado}-${valorSanitizado}`;
+              const status     = statusFor(repetido, isVencedor);
               const enderecoAbrev = `${enderecoSanitizado.slice(0, 6)}...${enderecoSanitizado.slice(-4)}`;
+              const nome       = nomeOuEndereco(lance, enderecoAbrev);
               const valorFormatado = `R$ ${(valorSanitizado / 100).toFixed(2)}`;
 
               return (
@@ -249,8 +261,21 @@ function DesktopTable({ lancesOrdenados, idxVencedor }) {
                   }}
                 >
                   <td style={estilos.td}>{isVencedor ? "🏆" : i + 1}</td>
-                  <td style={{ ...estilos.td, fontFamily: "monospace", fontSize: "0.85rem" }}>{enderecoAbrev}</td>
-                  <td style={{ ...estilos.td, fontWeight: "700", color: isVencedor ? "#93c5fd" : "#e8f0fe" }}>{valorFormatado}</td>
+                  <td style={{ ...estilos.td, fontSize: "0.85rem" }}>{nome}</td>
+                  <td
+                    className={encerrado ? "gut-valor-reveal" : undefined}
+                    style={{
+                      ...estilos.td,
+                      fontWeight: "700",
+                      color: encerrado
+                        ? (isVencedor ? "#93c5fd" : "#e8f0fe")
+                        : "#4a6490",
+                      fontFamily: encerrado ? "monospace" : undefined,
+                      letterSpacing: encerrado ? "0.02em" : "0.05em",
+                    }}
+                  >
+                    {encerrado ? valorFormatado : "🔒"}
+                  </td>
                   <td style={estilos.td}>
                     <Badge variant={status.variant} className={isVencedor ? "gut-vencedor" : undefined}>
                       {status.label}

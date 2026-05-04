@@ -39,10 +39,10 @@ export const DURACAO = {
 };
 
 export const LANCES_MOCK = [
-  { endereco: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", valor: 5, repetido: false, txHash: "0xabc123def456" },
-  { endereco: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4294ee", valor: 3, repetido: true,  txHash: "0xdef456abc789" },
-  { endereco: "0x90F79bf6EB2c4f870365E785982E1f101E93b906", valor: 3, repetido: true,  txHash: "0xghi789jkl012" },
-  { endereco: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65", valor: 8, repetido: false, txHash: "0xjkl012mno345" },
+  { endereco: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", valor: 5, repetido: false, txHash: "0xabc123def456", nomeExibicao: "Ana Souza" },
+  { endereco: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4294ee", valor: 3, repetido: true,  txHash: "0xdef456abc789", nomeExibicao: "Carlos B." },
+  { endereco: "0x90F79bf6EB2c4f870365E785982E1f101E93b906", valor: 3, repetido: true,  txHash: "0xghi789jkl012", nomeExibicao: "Fernanda L." },
+  { endereco: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65", valor: 8, repetido: false, txHash: "0xjkl012mno345", nomeExibicao: "João P." },
 ];
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -75,6 +75,7 @@ export function AppProvider({ children }) {
   const [showOverlay,     setShowOverlay]     = useState(false);
   const [tempoRestante,   setTempoRestante]   = useState(DURACAO.flash);
   const [lightningActive, setLightningActive] = useState(false);
+  const [showCountdown,   setShowCountdown]   = useState(false);
 
   // Carteiras internas — Art. 20: R$ 2,00/senha
   // MOCK_MODE: lê localStorage (saldo simulado para dev local).
@@ -125,13 +126,10 @@ export function AppProvider({ children }) {
     try { localStorage.setItem(LS_LANCES, JSON.stringify(lances)); } catch {}
   }, [lances]);
 
-  // Reset timer ao trocar tipo de leilão
+  // Ao trocar modo não reseta o timer — preserva rodada corrente.
+  // Timer só reseta no handleNovaRodada.
   useEffect(() => {
-    const dur = DURACAO[tipoLeilao];
-    setPrazoTimestamp(Math.floor(Date.now() / 1000) + dur);
-    setEncerrado(false);
     setShowOverlay(false);
-    setTempoRestante(dur);
     setLightningActive(false);
   }, [tipoLeilao]);
 
@@ -324,12 +322,12 @@ export function AppProvider({ children }) {
     logout();
   }
 
-  function handleLanceSucesso({ address: addr, valorCentavos, txHash }) {
+  function handleLanceSucesso({ address: addr, valorCentavos, txHash, nomeExibicao }) {
     setLances((prev) => {
       const jaRepetido = prev.some((l) => l.valor === valorCentavos);
       return [
         ...prev.map((l) => l.valor === valorCentavos ? { ...l, repetido: true } : l),
-        { endereco: addr, valor: valorCentavos, repetido: jaRepetido, txHash },
+        { endereco: addr, valor: valorCentavos, repetido: jaRepetido, txHash, nomeExibicao: nomeExibicao || null },
       ];
     });
     refreshSaldo();
@@ -337,13 +335,17 @@ export function AppProvider({ children }) {
 
   function handleNovaRodada() {
     if (MOCK_MODE) localStorage.removeItem(LS_LANCES);
-    const dur = DURACAO[tipoLeilao];
-    setPrazoTimestamp(Math.floor(Date.now() / 1000) + dur);
     setEncerrado(false);
     setShowOverlay(false);
-    setTempoRestante(dur);
     setLightningActive(false);
     setLances(MOCK_MODE ? LANCES_MOCK : []);
+    setShowCountdown(true);
+    setTimeout(() => {
+      const dur = DURACAO[tipoLeilao];
+      setPrazoTimestamp(Math.floor(Date.now() / 1000) + dur);
+      setTempoRestante(dur);
+      setShowCountdown(false);
+    }, 3500);
   }
 
   // ── Value ─────────────────────────────────────────────────────────────────────
@@ -356,6 +358,7 @@ export function AppProvider({ children }) {
     prazoTimestamp,
     encerrado,
     showOverlay,
+    showCountdown,
     tempoRestante,
     lightningActive,
     // Carteiras

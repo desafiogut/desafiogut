@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import CardLance from "../components/CardLance.jsx";
@@ -10,6 +10,52 @@ const COR = {
   text: "#e8f0fe", muted: "#4a6490",
   success: "#10b981", danger: "#ef4444", warning: "#f97316", blue300: "#93c5fd",
 };
+
+function CountdownOverlay() {
+  const [texto, setTexto] = useState("3");
+  useEffect(() => {
+    const seq = ["3", "2", "1", "VAI! ⚡"];
+    let idx = 0;
+    const id = setInterval(() => {
+      idx += 1;
+      if (idx < seq.length) setTexto(seq[idx]);
+    }, 800);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <>
+      <style>{`
+        @keyframes gut-countdown-pop {
+          from { transform: scale(1.7); opacity: 0; }
+          to   { transform: scale(1);   opacity: 1; }
+        }
+      `}</style>
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 10002,
+        background: "rgba(0,0,0,0.88)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        pointerEvents: "none",
+      }}>
+        <div
+          key={texto}
+          style={{
+            fontSize: "clamp(5rem, 18vw, 11rem)",
+            fontWeight: "900",
+            color: texto.startsWith("VAI") ? "#10b981" : "#fbbf24",
+            textShadow: texto.startsWith("VAI")
+              ? "0 0 40px #10b981, 0 0 80px #059669"
+              : "0 0 40px #fbbf24, 0 0 80px #f59e0b",
+            animation: "gut-countdown-pop 0.45s ease-out both",
+            lineHeight: 1,
+            userSelect: "none",
+          }}
+        >
+          {texto}
+        </div>
+      </div>
+    </>
+  );
+}
 
 function Confetti() {
   const pecas = useMemo(() =>
@@ -67,8 +113,9 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, MOC
         position: "fixed", inset: 0, zIndex: 10000,
         background: "rgba(0,0,0,0.90)", backdropFilter: "blur(6px)",
         display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
+        overflow: "hidden",
       }}>
-        <div style={{
+        <div onClick={(e) => e.stopPropagation()} style={{
           background: "linear-gradient(135deg,#0a1628 0%,#0f172a 60%)",
           border: "2px solid #fbbf24", borderRadius: "20px",
           padding: isMobile ? "1.75rem 1.25rem" : "2.5rem 2rem",
@@ -148,6 +195,7 @@ export default function MercadoLances() {
     carteiraFlash, fichasProgramadas, erroCarteira,
     address, isConnected, userLabel, ready,
     vencedor,
+    showCountdown,
     handleSimularPix, handleConverterFicha,
     abrirModal, desconectar,
     handleLanceSucesso, handleNovaRodada, refreshSaldo,
@@ -173,6 +221,8 @@ export default function MercadoLances() {
       <style>{`
         @keyframes gut-timer-pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
       `}</style>
+
+      {showCountdown && <CountdownOverlay />}
 
       {showOverlay && (
         <OverlayVencedor
@@ -435,7 +485,7 @@ export default function MercadoLances() {
             </div>
           </section>
           <section>
-            <TabelaLances lances={lances} idEdicao={EDICAO_ATIVA} prazoTimestamp={prazoTimestamp} />
+            <TabelaLances lances={lances} idEdicao={EDICAO_ATIVA} prazoTimestamp={prazoTimestamp} encerrado={encerrado} />
           </section>
         </main>
 
