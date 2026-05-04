@@ -38,3 +38,23 @@ export async function verificarPedido(token) {
 }
 
 export { joseErrors };
+
+export async function assinarLanceAuth(endereco, ttlSec = 600) {
+  if (!KEY) throw new Error("JWT_SECRET não configurado");
+  return await new SignJWT({ endereco, tipo: "lance-auth" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${ttlSec}s`)
+    .sign(KEY);
+}
+
+export async function verificarLanceAuth(token) {
+  if (!KEY) throw new Error("JWT_SECRET não configurado");
+  const { payload } = await jwtVerify(token, KEY, { algorithms: ["HS256"] });
+  if (payload.tipo !== "lance-auth") {
+    const err = new Error("token tipo inválido — esperado lance-auth");
+    err.code = "ERR_JWT_CLAIM_VALIDATION_FAILED";
+    throw err;
+  }
+  return payload;
+}

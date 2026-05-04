@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useWallets } from "@privy-io/react-auth";
+import { keccak256, toUtf8Bytes } from "ethers";
 import * as Sentry from "@sentry/react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -19,12 +20,13 @@ const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === "true";
 const SEPOLIA_CHAIN_ID = 11155111;
 
 const FASES = {
-  IDLE:      "idle",
-  HASHING:   "hashing",
-  ASSINANDO: "assinando",
-  ENVIANDO:  "enviando",
-  SUCESSO:   "sucesso",
-  ERRO:      "erro",
+  IDLE:         "idle",
+  AUTENTICANDO: "autenticando",
+  HASHING:      "hashing",
+  ASSINANDO:    "assinando",
+  ENVIANDO:     "enviando",
+  SUCESSO:      "sucesso",
+  ERRO:         "erro",
 };
 
 export default function CardLance({
@@ -57,9 +59,14 @@ export default function CardLance({
   const [ultimaTx,          setUltimaTx]          = useState(null);
   const [ultimaTxIsOnChain, setUltimaTxIsOnChain] = useState(false);
 
+  // Cache do token de auth (10 min) — evita popup de signMessage a cada lance
+  const flashAuthRef = useRef({ token: null, expiresAt: 0 });
+
   const edicaoSanitizada = sanitizeEdicaoId(idEdicao ?? "");
-  const ocupado          = [FASES.HASHING, FASES.ASSINANDO, FASES.ENVIANDO].includes(fase);
-  const isProgramado     = tipoLeilao === "programado";
+  const ocupado = [
+    FASES.AUTENTICANDO, FASES.HASHING, FASES.ASSINANDO, FASES.ENVIANDO,
+  ].includes(fase);
+  const isProgramado = tipoLeilao === "programado";
 
   const saldoCarregando = !MOCK_MODE && isProgramado &&
                           (saldoSenhasStatus === "loading" || saldoSenhasStatus === "idle");
@@ -72,6 +79,39 @@ export default function CardLance({
   const semSaldoRsFlash = !MOCK_MODE && !isProgramado &&
                           saldoRsCentavos !== null && valorParsed > 0 &&
                           saldoRsCentavos < valorParsed;
+
+  // Obtém token JWT de auth para flash (cached 10min). Abre popup Privy só se expirado.
+  async function getFlashAuthToken() {
+    const now = Date.now();
+    if (flashAuthRef.current.token && flashAuthRef.current.expiresAt > now + 60_000) {
+      return flashAuthRef.current.token;
+    }
+    if (!privyWallet) throw new Error("Carteira não conectada. Faça login novamente.");
+
+    const ts      = Date.now();
+    const message = `DESAFIOGUT-AUTH:${ts}:${address}`;
+    await privyWallet.switchChain(SEPOLIA_CHAIN_ID);
+    const provider = await privyWallet.getEthereumProvider();
+    const { signer } = await getSignerFromProvider(provider);
+    const signature = await signer.signMessage(message);
+
+    const resp = await fetch("/.netlify/functions/auth-lance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endereco: address, signature, message }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      const err = new Error(data?.error?.message || "Falha ao obter token de autenticação.");
+      err.code = data?.error?.code;
+      throw err;
+    }
+    flashAuthRef.current = {
+      token:     data.token,
+      expiresAt: now + (data.ttl || 600) * 1000,
+    };
+    return data.token;
+  }
 
   async function handleDarLance() {
     setErro("");
@@ -129,22 +169,45 @@ export default function CardLance({
         return;
       }
 
-      // ── REAL + FLASH: off-chain via lance-relampago ──────────────────────
+      // ── REAL + FLASH: auth → idempotência → off-chain via lance-relampago ──
       if (!isProgramado) {
+        // 1. Obter token de auth (cached 10min — Privy popup só na 1ª vez)
+        setFase(FASES.AUTENTICANDO);
+        const authToken = await getFlashAuthToken();
+
+        // 2. Idempotency key: keccak256(endereco:valorCentavos:edicaoId)
+        const idempotencyKey = keccak256(
+          toUtf8Bytes(`${address}:${valorCentavos}:${edicaoSanitizada}`)
+        );
+
+        // 3. Chamar lance-relampago com auth + idempotência
         setFase(FASES.ENVIANDO);
         const resp = await fetch("/.netlify/functions/lance-relampago", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ endereco: address, valorCentavos, edicaoId: edicaoSanitizada }),
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            endereco: address,
+            valorCentavos,
+            edicaoId: edicaoSanitizada,
+            idempotencyKey,
+            nomeExibicao: userLabel || null,
+          }),
         });
         const data = await resp.json();
         if (!resp.ok) {
+          if (resp.status === 401) flashAuthRef.current = { token: null, expiresAt: 0 };
           const msgMap = {
-            saldo_insuficiente: "Saldo R$ insuficiente. Recarregue via PIX.",
-            params_invalidos:   "Parâmetros inválidos.",
-            debito_falhou:      "Falha ao debitar saldo. Tente novamente.",
+            saldo_insuficiente:       "Saldo R$ insuficiente. Recarregue via PIX.",
+            params_invalidos:         "Parâmetros inválidos.",
+            debito_falhou:            "Falha ao debitar saldo. Tente novamente.",
+            token_expirado:           "Sessão expirada — nova autenticação necessária na próxima tentativa.",
+            token_invalido:           "Falha na autenticação. Tente novamente.",
+            endereco_nao_corresponde: "Endereço divergente. Saia e entre novamente.",
           };
-          throw new Error(msgMap[data?.code] ?? data?.message ?? "Erro no lance relâmpago.");
+          throw new Error(msgMap[data?.error?.code] ?? data?.error?.message ?? "Erro no lance relâmpago.");
         }
         registrarLance(address);
         setUltimaTx(data.lanceId);
@@ -165,7 +228,7 @@ export default function CardLance({
 
       setFase(FASES.ASSINANDO);
       if (!privyWallet) throw new Error("Carteira não encontrada. Faça login novamente.");
-      await privyWallet.switchChain(11155111);
+      await privyWallet.switchChain(SEPOLIA_CHAIN_ID);
       const ethereumProvider = await privyWallet.getEthereumProvider();
       const { signer } = await getSignerFromProvider(ethereumProvider);
       await assinarLance(signer, edicaoSanitizada, valorCentavos);
@@ -185,9 +248,9 @@ export default function CardLance({
       const reasonRaw = err?.revert?.args?.[0] ?? err?.reason ?? null;
       const traduzirRevert = {
         "Voce nao possui senhas disponiveis": "Saldo insuficiente na blockchain. Aguarde crédito da coordenacao após confirmação do PIX.",
-        "Edicao nao esta ativa":               "Edição não está ativa on-chain. Aguarde a coordenacao reabrir.",
-        "Prazo da edicao encerrado":           "Prazo da edição encerrado on-chain. Aguarde nova rodada.",
-        "Lance minimo e R$ 0,01":              "Lance mínimo é R$ 0,01 (Art. 27).",
+        "Edicao nao esta ativa":              "Edição não está ativa on-chain. Aguarde a coordenacao reabrir.",
+        "Prazo da edicao encerrado":          "Prazo da edição encerrado on-chain. Aguarde nova rodada.",
+        "Lance minimo e R$ 0,01":             "Lance mínimo é R$ 0,01 (Art. 27).",
       };
       const msg =
         traduzirRevert[reasonRaw] ??
@@ -251,12 +314,31 @@ export default function CardLance({
     "";
 
   const pipelineItens = !MOCK_MODE && !isProgramado
-    ? [{ f: FASES.ENVIANDO, label: "⚡ Creditando on-chain…" }]
+    ? [
+        { f: FASES.AUTENTICANDO, label: "🔐 Autenticando carteira…" },
+        { f: FASES.ENVIANDO,     label: "⚡ Creditando on-chain…" },
+      ]
     : [
         { f: FASES.HASHING,   label: "Gerando hash Argon2id..." },
         { f: FASES.ASSINANDO, label: "Assinando lance (Privy)..." },
         { f: FASES.ENVIANDO,  label: `Registrando lance on-chain${MOCK_MODE && isProgramado ? " · −1 ficha" : !MOCK_MODE ? " · −1 senha" : ""}...` },
       ];
+
+  const labelBotao = fase === FASES.AUTENTICANDO
+    ? "🔐 Autenticando…"
+    : ocupado
+      ? "⏳ Processando..."
+    : saldoErro
+      ? "⚠ Erro ao ler saldo"
+    : saldoCarregando
+      ? "⏳ Carregando saldo..."
+    : MOCK_MODE && isProgramado
+      ? "🎫 Confirmar Lance (−1 ficha)"
+    : !MOCK_MODE && isProgramado
+      ? "🎫 Confirmar Lance (−1 senha)"
+    : !MOCK_MODE
+      ? "⚡ Lance Relâmpago"
+    : "⚡ Confirmar Lance";
 
   return (
     <Card
@@ -305,7 +387,7 @@ export default function CardLance({
                 : "DesafioGUT Flash · 5 min · lance livre (MOCK) · menor lance único vence (Art. 8).")
             : (isProgramado
                 ? "Lance programado consome 1 senha on-chain (Art. 20: R$ 2,00) — adquira via Comprar Fichas."
-                : "DesafioGUT Flash · 5 min · debita saldo R$ off-chain · menor lance único vence (Art. 8).")}
+                : "DesafioGUT Flash · 5 min · debita saldo R$ · menor lance único vence (Art. 8).")}
         </p>
       </div>
 
@@ -421,19 +503,7 @@ export default function CardLance({
           disabled={desabilitado}
           title={tooltipBotao}
         >
-          {ocupado
-            ? "⏳ Processando..."
-            : saldoErro
-              ? "⚠ Erro ao ler saldo"
-            : saldoCarregando
-              ? "⏳ Carregando saldo..."
-            : MOCK_MODE && isProgramado
-              ? "🎫 Confirmar Lance (−1 ficha)"
-            : !MOCK_MODE && isProgramado
-              ? "🎫 Confirmar Lance (−1 senha)"
-            : !MOCK_MODE
-              ? "⚡ Lance Relâmpago"
-            : "⚡ Confirmar Lance"}
+          {labelBotao}
         </button>
       )}
 

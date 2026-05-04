@@ -1,14 +1,12 @@
 // POST /.netlify/functions/lance-relampago
-// Body: { endereco: "0x...", valorCentavos: 1..999999, edicaoId?: "R-1" }
-// Resposta 200: { ok, endereco, valorCentavos, saldoRsAntesCentavos, saldoRsDepoisCentavos, lanceId, edicaoId, processadoEm }
+// Header: Authorization: Bearer <token>  — JWT { endereco, tipo:"lance-auth" } emitido por /auth-lance
+// Body: { endereco, valorCentavos, edicaoId?, idempotencyKey?, nomeExibicao? }
+//
+// Resposta 200: { ..., idempotent: true }    — lance já processado (idempotência)
+// Resposta 201: { ok, lanceId, ... }          — lance novo criado
 // Resposta 400: saldo_insuficiente | params_invalidos
-//
-// Modelo dual (Frente B.9): Lance Relâmpago consome centavos do saldo R$
-// off-chain — não toca em senhas on-chain. O lance é registrado em blob
-// `lances-relampago:${edicaoId}` (lista) e fica disponível para a UI puxar.
-//
-// Auth: para o beta, sem auth (mesmo padrão de comprar-senhas). Hardening
-// futuro: exigir signMessage do address dono.
+// Resposta 401: token_ausente | token_expirado | token_invalido
+// Resposta 403: endereco_nao_corresponde
 
 import { getStore } from "@netlify/blobs";
 import { randomUUID } from "node:crypto";
@@ -17,11 +15,13 @@ import {
   parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
 import { debitarSaldoRs } from "./_lib/saldoRs.mjs";
+import { verificarLanceAuth } from "./_lib/jwt.mjs";
 
-const LANCE_MIN_CENTAVOS = 1;        // Art. XXIII
-const LANCE_MAX_CENTAVOS = 999999;   // R$ 9.999,99
+const LANCE_MIN_CENTAVOS = 1;
+const LANCE_MAX_CENTAVOS = 999999;
 const EDICAO_PADRAO      = "R-1";
 const BLOB_LANCES        = "lances-relampago";
+const BLOB_IDEM          = "lance-idem";
 
 function abrirStore(name) {
   try { return getStore({ name, consistency: "strong" }); }
@@ -44,6 +44,22 @@ export default async (req) => {
   if (req.method !== "POST") {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }
+
+  // ── 1. Auth: verificar JWT lance-auth ─────────────────────────────────────
+  const authHeader = req.headers.get("authorization") || "";
+  const authToken  = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!authToken) {
+    return jsonError(401, "token_ausente", "Authorization: Bearer <token> obrigatório — obtenha via POST /auth-lance");
+  }
+  let jwtPayload;
+  try {
+    jwtPayload = await verificarLanceAuth(authToken);
+  } catch (err) {
+    const code = err?.code === "ERR_JWT_EXPIRED" ? "token_expirado" : "token_invalido";
+    return jsonError(401, code, "token inválido ou expirado — obtenha novo via POST /auth-lance");
+  }
+
+  // ── 2. Body parse ──────────────────────────────────────────────────────────
   let body;
   try {
     body = await parseJsonBody(req);
@@ -53,6 +69,7 @@ export default async (req) => {
     throw err;
   }
 
+  // ── 3. Validar campos ──────────────────────────────────────────────────────
   let endereco, valorCentavos;
   try {
     endereco      = validarEndereco(body.endereco);
@@ -61,11 +78,39 @@ export default async (req) => {
     if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
     throw err;
   }
-  const edicaoId = String(body.edicaoId || EDICAO_PADRAO);
 
-  console.info("[lance-relampago] início", { endereco, valorCentavos, edicaoId });
+  // ── 4. JWT endereco deve corresponder ao body ──────────────────────────────
+  if (jwtPayload.endereco !== endereco) {
+    return jsonError(403, "endereco_nao_corresponde", "token não pertence ao endereço informado");
+  }
 
-  // Debita saldo R$.
+  const edicaoId       = String(body.edicaoId || EDICAO_PADRAO);
+  const idempotencyKey = typeof body.idempotencyKey === "string" && body.idempotencyKey.length > 0
+    ? body.idempotencyKey.slice(0, 66)
+    : null;
+  const nomeExibicao   = typeof body.nomeExibicao === "string"
+    ? body.nomeExibicao.slice(0, 80).trim() || null
+    : null;
+
+  console.info("[lance-relampago] início", { endereco, valorCentavos, edicaoId, idem: !!idempotencyKey });
+
+  // ── 5. Idempotência server-side ────────────────────────────────────────────
+  if (idempotencyKey) {
+    const idemStore = abrirStore(BLOB_IDEM);
+    if (idemStore) {
+      try {
+        const existente = await idemStore.get(idempotencyKey, { type: "json" });
+        if (existente?.lanceId) {
+          console.info("[lance-relampago] idempotent hit", { endereco, idempotencyKey });
+          return jsonResponse({ ...existente, idempotent: true });
+        }
+      } catch (err) {
+        console.warn("[lance-relampago] leitura lance-idem falhou (não-fatal):", err?.message);
+      }
+    }
+  }
+
+  // ── 6. Debitar saldo R$ ────────────────────────────────────────────────────
   const debito = await debitarSaldoRs({ endereco, valorCentavos, motivo: `lance-${edicaoId}` });
   if (!debito.ok) {
     const status = debito.code === "saldo_insuficiente" ? 400 : 502;
@@ -74,14 +119,13 @@ export default async (req) => {
 
   const lanceId = randomUUID();
   const registro = {
-    lanceId, edicaoId, endereco, valorCentavos,
+    lanceId, edicaoId, endereco, valorCentavos, nomeExibicao,
     saldoAntesCentavos:  debito.resultado.saldoAntesCentavos,
     saldoDepoisCentavos: debito.resultado.saldoDepoisCentavos,
     processadoEm: new Date().toISOString(),
   };
 
-  // Persiste em lista por edição. Em produção este blob é a fonte de verdade
-  // dos lances relâmpago — UI lê para popular a tabela.
+  // ── 7. Persistir lance em blob ─────────────────────────────────────────────
   const store = abrirStore(BLOB_LANCES);
   if (store) {
     try {
@@ -93,17 +137,36 @@ export default async (req) => {
       console.warn("[lance-relampago] persistir lance falhou (não-fatal):", err?.message);
     }
   }
+
+  // ── 8. Persistir chave de idempotência ────────────────────────────────────
+  if (idempotencyKey) {
+    const idemStore = abrirStore(BLOB_IDEM);
+    if (idemStore) {
+      try {
+        await idemStore.setJSON(idempotencyKey, {
+          lanceId, edicaoId, endereco, valorCentavos, nomeExibicao,
+          saldoRsAntesCentavos:  debito.resultado.saldoAntesCentavos,
+          saldoRsDepoisCentavos: debito.resultado.saldoDepoisCentavos,
+          processadoEm: registro.processadoEm,
+          ok: true,
+        });
+      } catch (err) {
+        console.warn("[lance-relampago] persistir lance-idem falhou (não-fatal):", err?.message);
+      }
+    }
+  }
+
   console.info("[lance-relampago] concluído", {
     endereco, valorCentavos, edicaoId, lanceId,
-    saldoAntes: debito.resultado.saldoAntesCentavos,
+    saldoAntes:  debito.resultado.saldoAntesCentavos,
     saldoDepois: debito.resultado.saldoDepoisCentavos,
   });
 
   return jsonResponse({
     ok: true,
-    lanceId, edicaoId, endereco, valorCentavos,
+    lanceId, edicaoId, endereco, valorCentavos, nomeExibicao,
     saldoRsAntesCentavos:  debito.resultado.saldoAntesCentavos,
     saldoRsDepoisCentavos: debito.resultado.saldoDepoisCentavos,
     processadoEm: registro.processadoEm,
-  });
+  }, 201);
 };

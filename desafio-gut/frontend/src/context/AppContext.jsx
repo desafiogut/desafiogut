@@ -59,8 +59,7 @@ export function AppProvider({ children }) {
   // Tipo de leilão (Art. 8)
   const [tipoLeilao, setTipoLeilao] = useState("flash");
 
-  // Lances — em MOCK_MODE persiste em localStorage (com seed LANCES_MOCK).
-  // Em produção começa vazio: a fonte de verdade é o listener on-chain LanceDado.
+  // lances: fonte on-chain (programado) + MOCK. lancesFlash: fonte off-chain (flash, polling).
   const [lances, setLances] = useState(() => {
     if (!MOCK_MODE) return [];
     try {
@@ -68,6 +67,7 @@ export function AppProvider({ children }) {
       return salvo ? JSON.parse(salvo) : LANCES_MOCK;
     } catch { return LANCES_MOCK; }
   });
+  const [lancesFlash, setLancesFlash] = useState([]);
 
   // Timer
   const [prazoTimestamp,  setPrazoTimestamp]  = useState(() => Math.floor(Date.now() / 1000) + DURACAO.flash);
@@ -111,8 +111,11 @@ export function AppProvider({ children }) {
   const isConnected = MOCK_MODE ? Boolean(mockAddress) : (authenticated && Boolean(realAddress));
   const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || null;
 
+  // MOCK → lances (localStorage). Flash real → lancesFlash (blob polling). Programado → lances (on-chain).
+  const lancesExibidos = MOCK_MODE ? lances : (tipoLeilao === "flash" ? lancesFlash : lances);
+
   // Vencedor — Menor Lance Único (Art. 8)
-  const vencedor = [...lances]
+  const vencedor = [...lancesExibidos]
     .filter((l) => !l.repetido)
     .sort((a, b) => a.valor - b.valor)[0] ?? null;
 
@@ -131,6 +134,25 @@ export function AppProvider({ children }) {
   useEffect(() => {
     setShowOverlay(false);
     setLightningActive(false);
+  }, [tipoLeilao]);
+
+  // Polling 3s de lances flash do blob (cross-user em tempo real).
+  // Só ativo em real + flash. MOCK usa lances[] do localStorage.
+  useEffect(() => {
+    if (MOCK_MODE || tipoLeilao !== "flash") return;
+    let cancelado = false;
+    const poll = async () => {
+      if (cancelado) return;
+      try {
+        const resp = await fetch(`/.netlify/functions/lances-flash?edicaoId=${EDICAO_ATIVA}`);
+        if (!resp.ok || cancelado) return;
+        const data = await resp.json();
+        if (!cancelado) setLancesFlash(data.lances || []);
+      } catch {}
+    };
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => { cancelado = true; clearInterval(id); };
   }, [tipoLeilao]);
 
   // Listener on-chain do evento LanceDado — atualiza tabela em tempo real.
@@ -323,11 +345,16 @@ export function AppProvider({ children }) {
   }
 
   function handleLanceSucesso({ address: addr, valorCentavos, txHash, nomeExibicao }) {
-    setLances((prev) => {
+    const novoLance = {
+      endereco: addr, valor: valorCentavos, txHash,
+      nomeExibicao: nomeExibicao || null,
+    };
+    const setter = (!MOCK_MODE && tipoLeilao === "flash") ? setLancesFlash : setLances;
+    setter((prev) => {
       const jaRepetido = prev.some((l) => l.valor === valorCentavos);
       return [
         ...prev.map((l) => l.valor === valorCentavos ? { ...l, repetido: true } : l),
-        { endereco: addr, valor: valorCentavos, repetido: jaRepetido, txHash, nomeExibicao: nomeExibicao || null },
+        { ...novoLance, repetido: jaRepetido },
       ];
     });
     refreshSaldo();
@@ -339,6 +366,7 @@ export function AppProvider({ children }) {
     setShowOverlay(false);
     setLightningActive(false);
     setLances(MOCK_MODE ? LANCES_MOCK : []);
+    setLancesFlash([]);
     setShowCountdown(true);
     setTimeout(() => {
       const dur = DURACAO[tipoLeilao];
@@ -354,7 +382,7 @@ export function AppProvider({ children }) {
     MOCK_MODE, EDICAO_ATIVA, DURACAO, LANCES_MOCK, CUSTO_FICHA_BRL,
     // Estado do leilão
     tipoLeilao, setTipoLeilao,
-    lances,
+    lances: lancesExibidos,
     prazoTimestamp,
     encerrado,
     showOverlay,
