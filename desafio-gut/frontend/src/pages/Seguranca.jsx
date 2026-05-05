@@ -2,9 +2,9 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 const COR = {
-  primary: "#2563eb", primaryDim: "rgba(37,99,235,0.15)",
+  primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
   text: "#e8f0fe", muted: "#4a6490",
-  success: "#10b981", danger: "#ef4444", blue300: "#93c5fd", gold: "#f5a623",
+  success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", gold: "#f5a623",
 };
 
 const CONTRATO_ENDERECO = "0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5";
@@ -36,8 +36,8 @@ export default function Seguranca() {
   const sectionGap = isMobile ? "1.25rem" : "1.5rem";
 
   const cardStyle = {
-    background: "rgba(8,24,64,0.6)",
-    border: "1px solid rgba(37,99,235,0.18)",
+    background: "rgba(10,16,42,0.6)",
+    border: "1px solid rgba(245,166,35,0.18)",
     borderRadius: "16px",
     padding: cardPad,
     backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
@@ -81,7 +81,7 @@ export default function Seguranca() {
           {sessionItems.map(({ label, value, color, mono }) => (
             <div key={label} style={{
               background: "rgba(3,15,36,0.6)", borderRadius: "10px",
-              padding: "0.75rem 0.85rem", border: "1px solid rgba(37,99,235,0.12)",
+              padding: "0.75rem 0.85rem", border: "1px solid rgba(245,166,35,0.12)",
               minWidth: 0,
             }}>
               <div style={{
@@ -154,7 +154,7 @@ export default function Seguranca() {
               display: "block",
               padding: isMobile ? "0.75rem 0.85rem" : "0.85rem",
               background: "rgba(3,15,36,0.6)", borderRadius: "10px",
-              border: "1px solid rgba(37,99,235,0.12)",
+              border: "1px solid rgba(245,166,35,0.12)",
               textDecoration: "none", transition: "all 0.15s",
             }}>
               <div style={{
@@ -170,9 +170,9 @@ export default function Seguranca() {
         <div style={{
           marginTop: "1rem",
           padding: isMobile ? "0.85rem" : "1rem",
-          background: "rgba(37,99,235,0.06)",
+          background: "rgba(245,166,35,0.06)",
           borderRadius: "10px",
-          border: "1px solid rgba(37,99,235,0.15)",
+          border: "1px solid rgba(245,166,35,0.15)",
         }}>
           <div style={{
             display: "flex", alignItems: "center",

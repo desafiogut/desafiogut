@@ -3,9 +3,9 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 const COR = {
-  primary: "#2563eb", primaryDim: "rgba(37,99,235,0.15)",
+  primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
   text: "#e8f0fe", muted: "#4a6490",
-  success: "#10b981", danger: "#ef4444", blue300: "#93c5fd", gold: "#f5a623",
+  success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", gold: "#f5a623",
 };
 
 export default function Configuracoes() {
@@ -29,8 +29,8 @@ export default function Configuracoes() {
   const sectionGap = isMobile ? "1.25rem" : "1.5rem";
 
   const cardStyle = {
-    background: "rgba(8,24,64,0.6)",
-    border: "1px solid rgba(37,99,235,0.18)",
+    background: "rgba(10,16,42,0.6)",
+    border: "1px solid rgba(245,166,35,0.18)",
     borderRadius: "16px",
     padding: cardPad,
     backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
@@ -85,7 +85,7 @@ export default function Configuracoes() {
               width: isMobile ? "100%" : "auto",
               padding: "0.7rem 1.4rem",
               background: "linear-gradient(135deg,#f5a623,#f97316)",
-              border: "none", borderRadius: "12px", color: "#030f24",
+              border: "none", borderRadius: "12px", color: "#0a0f1a",
               fontWeight: "800", cursor: "pointer", fontSize: "0.88rem",
               boxShadow: "0 4px 14px rgba(245,166,35,0.35)",
             }}>⚡ Aceito o DesafioGUT — Entrar</button>
@@ -152,7 +152,7 @@ export default function Configuracoes() {
               onChange={(e) => setIdioma(e.target.value)}
               style={{
                 background: "rgba(3,15,36,0.8)",
-                border: "1px solid rgba(37,99,235,0.25)",
+                border: "1px solid rgba(245,166,35,0.25)",
                 borderRadius: "8px", color: COR.blue300,
                 padding: "0.4rem 0.75rem",
                 fontSize: "0.82rem", cursor: "pointer",
@@ -184,7 +184,7 @@ export default function Configuracoes() {
                   disabled={!enabled}
                   style={{
                     padding: "0.4rem 0.85rem", borderRadius: "10px",
-                    border: `1px solid ${tema === id ? COR.primary : "rgba(37,99,235,0.2)"}`,
+                    border: `1px solid ${tema === id ? COR.primary : "rgba(245,166,35,0.2)"}`,
                     background: tema === id ? COR.primaryDim : "transparent",
                     color: tema === id ? COR.blue300 : COR.muted,
                     cursor: enabled ? "pointer" : "not-allowed",
@@ -233,13 +233,13 @@ export default function Configuracoes() {
             padding: "0.8rem 1.8rem",
             background: salvo
               ? "rgba(16,185,129,0.2)"
-              : "linear-gradient(135deg,#2563eb,#1d4ed8)",
+              : "linear-gradient(135deg,#f5a623,#e89400)",
             border: salvo ? "1px solid rgba(16,185,129,0.4)" : "none",
             borderRadius: "12px",
             color: salvo ? COR.success : "#fff",
             fontWeight: "800", cursor: "pointer", fontSize: "0.88rem",
             transition: "all 0.2s",
-            boxShadow: salvo ? "none" : "0 4px 14px rgba(37,99,235,0.35)",
+            boxShadow: salvo ? "none" : "0 4px 14px rgba(245,166,35,0.35)",
           }}
         >{salvo ? "✅ Salvo!" : "💾 Salvar Configurações"}</button>
       </div>
@@ -255,7 +255,7 @@ function InfoRow({ label, value, mono, breakable, valueColor, isMobile }) {
       justifyContent: "space-between",
       alignItems: isMobile && breakable ? "stretch" : "center",
       padding: "0.4rem 0",
-      borderBottom: "1px solid rgba(37,99,235,0.08)",
+      borderBottom: "1px solid rgba(245,166,35,0.08)",
       gap: "0.4rem",
     }}>
       <span style={{

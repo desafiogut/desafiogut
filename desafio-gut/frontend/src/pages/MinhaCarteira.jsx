@@ -9,9 +9,9 @@ import { getSignerFromProvider } from "../utils/web3.js";
 const VALOR_POR_SENHA_BRL = 2;
 
 const COR = {
-  primary: "#2563eb", primaryDim: "rgba(37,99,235,0.15)",
+  primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
   gold: "#f5a623", text: "#e8f0fe", muted: "#4a6490",
-  success: "#10b981", danger: "#ef4444", blue300: "#93c5fd", purple: "#a78bfa",
+  success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", purple: "#a78bfa",
 };
 
 const DADOS_PAGAMENTO = [
@@ -133,8 +133,8 @@ export default function MinhaCarteira() {
   const sectionGap = isMobile ? "1.25rem" : "1.5rem";
 
   const cardStyle = {
-    background: "rgba(8,24,64,0.6)",
-    border: "1px solid rgba(37,99,235,0.18)",
+    background: "rgba(10,16,42,0.6)",
+    border: "1px solid rgba(245,166,35,0.18)",
     borderRadius: "16px",
     padding: cardPad,
     backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
@@ -147,10 +147,10 @@ export default function MinhaCarteira() {
   const botaoPrimario = {
     width: "100%",
     padding: isMobile ? "0.75rem 1rem" : "0.7rem 1.2rem",
-    background: "linear-gradient(135deg,#2563eb,#1d4ed8)",
+    background: "linear-gradient(135deg,#f5a623,#e89400)",
     border: "none", borderRadius: "12px", color: "#fff",
     fontWeight: "800", fontSize: "0.85rem", cursor: "pointer",
-    boxShadow: "0 4px 14px rgba(37,99,235,0.35)",
+    boxShadow: "0 4px 14px rgba(245,166,35,0.35)",
   };
   const botaoSecundario = {
     width: "100%",
@@ -199,7 +199,7 @@ export default function MinhaCarteira() {
                 gap: isMobile ? "0.75rem" : "1rem",
                 marginBottom: sectionGap,
               }}>
-                <div style={{ ...cardStyle, borderColor: "rgba(37,99,235,0.3)", minWidth: 0 }}>
+                <div style={{ ...cardStyle, borderColor: "rgba(245,166,35,0.3)", minWidth: 0 }}>
                   <div style={{
                     fontSize: "0.65rem", color: COR.muted,
                     textTransform: "uppercase", letterSpacing: "0.06em",
@@ -293,7 +293,7 @@ export default function MinhaCarteira() {
               ...cardStyle,
               marginBottom: sectionGap,
               borderColor: "rgba(245,166,35,0.32)",
-              background: "linear-gradient(180deg, rgba(8,24,64,0.6), rgba(245,166,35,0.06))",
+              background: "linear-gradient(180deg, rgba(10,16,42,0.6), rgba(245,166,35,0.06))",
             }}>
               <div style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -304,7 +304,7 @@ export default function MinhaCarteira() {
                   fontSize: "0.62rem", fontWeight: 700,
                   color: saldoRsStatus === "error" ? COR.danger : COR.muted,
                   background: "rgba(3,15,36,0.6)",
-                  border: "1px solid rgba(37,99,235,0.18)",
+                  border: "1px solid rgba(245,166,35,0.18)",
                   borderRadius: "999px",
                   padding: "0.18rem 0.55rem",
                   textTransform: "uppercase", letterSpacing: "0.06em",
@@ -372,9 +372,9 @@ export default function MinhaCarteira() {
                   style={{
                     ...botaoPrimario,
                     background: !saldoReais
-                      ? "rgba(37,99,235,0.2)"
-                      : "linear-gradient(135deg,#2563eb,#1d4ed8)",
-                    boxShadow: !saldoReais ? "none" : "0 4px 14px rgba(37,99,235,0.35)",
+                      ? "rgba(245,166,35,0.2)"
+                      : "linear-gradient(135deg,#f5a623,#e89400)",
+                    boxShadow: !saldoReais ? "none" : "0 4px 14px rgba(245,166,35,0.35)",
                     cursor: !saldoReais ? "not-allowed" : "pointer",
                     opacity: !saldoReais ? 0.5 : 1,
                   }}
@@ -411,7 +411,7 @@ export default function MinhaCarteira() {
               ...cardStyle,
               marginBottom: sectionGap,
               borderColor: "rgba(16,185,129,0.28)",
-              background: "linear-gradient(180deg, rgba(8,24,64,0.6), rgba(16,185,129,0.04))",
+              background: "linear-gradient(180deg, rgba(10,16,42,0.6), rgba(16,185,129,0.04))",
             }}>
               <div style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -422,7 +422,7 @@ export default function MinhaCarteira() {
                   fontSize: "0.62rem", fontWeight: 700,
                   color: saldoSenhasStatus === "error" ? COR.danger : COR.muted,
                   background: "rgba(3,15,36,0.6)",
-                  border: "1px solid rgba(37,99,235,0.18)",
+                  border: "1px solid rgba(245,166,35,0.18)",
                   borderRadius: "999px",
                   padding: "0.18rem 0.55rem",
                   textTransform: "uppercase", letterSpacing: "0.06em",
@@ -473,9 +473,9 @@ export default function MinhaCarteira() {
                   style={{
                     ...botaoPrimario,
                     background: !saldoNumero
-                      ? "rgba(37,99,235,0.2)"
-                      : "linear-gradient(135deg,#2563eb,#1d4ed8)",
-                    boxShadow: !saldoNumero ? "none" : "0 4px 14px rgba(37,99,235,0.35)",
+                      ? "rgba(245,166,35,0.2)"
+                      : "linear-gradient(135deg,#f5a623,#e89400)",
+                    boxShadow: !saldoNumero ? "none" : "0 4px 14px rgba(245,166,35,0.35)",
                     cursor: !saldoNumero ? "not-allowed" : "pointer",
                     opacity: !saldoNumero ? 0.5 : 1,
                   }}
@@ -519,7 +519,7 @@ export default function MinhaCarteira() {
                 <div key={label} style={{
                   background: "rgba(3,15,36,0.6)", borderRadius: "10px",
                   padding: "0.7rem 0.85rem",
-                  border: "1px solid rgba(37,99,235,0.12)",
+                  border: "1px solid rgba(245,166,35,0.12)",
                   minWidth: 0,
                 }}>
                   <div style={{
@@ -553,7 +553,7 @@ export default function MinhaCarteira() {
                   <div key={i} style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                     padding: "0.7rem 0.85rem", background: "rgba(3,15,36,0.6)",
-                    borderRadius: "10px", border: "1px solid rgba(37,99,235,0.1)",
+                    borderRadius: "10px", border: "1px solid rgba(245,166,35,0.1)",
                     gap: "0.6rem",
                   }}>
                     <span style={{
@@ -579,9 +579,9 @@ export default function MinhaCarteira() {
           <div style={{
             marginTop: sectionGap,
             padding: isMobile ? "0.85rem" : "0.75rem 1rem",
-            background: "rgba(37,99,235,0.06)",
+            background: "rgba(245,166,35,0.06)",
             borderRadius: "12px",
-            border: "1px solid rgba(37,99,235,0.12)",
+            border: "1px solid rgba(245,166,35,0.12)",
           }}>
             <div style={{
               fontSize: "0.62rem", color: COR.muted,

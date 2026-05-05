@@ -87,8 +87,8 @@ export default function Sidebar() {
   return (
     <aside style={{
       width: W, minWidth: W, height: "100vh",
-      background: "linear-gradient(180deg, #050d1e 0%, #030f24 100%)",
-      borderRight: "1px solid rgba(37,99,235,0.15)",
+      background: "linear-gradient(180deg, #080d18 0%, #0a0f1a 100%)",
+      borderRight: "1px solid rgba(245,166,35,0.15)",
       display: "flex", flexDirection: "column",
       transition: "width 0.28s cubic-bezier(0.4,0,0.2,1), min-width 0.28s cubic-bezier(0.4,0,0.2,1)",
       position: "sticky", top: 0,
@@ -102,18 +102,18 @@ export default function Sidebar() {
         display: "flex", alignItems: "center",
         gap: collapsed ? 0 : "0.75rem",
         justifyContent: collapsed ? "center" : "flex-start",
-        borderBottom: "1px solid rgba(37,99,235,0.1)",
+        borderBottom: "1px solid rgba(245,166,35,0.1)",
         minHeight: "72px",
       }}>
         {/* Avatar circular */}
         <div style={{
           width: "40px", height: "40px", borderRadius: "50%", flexShrink: 0,
           background: isConnected
-            ? "linear-gradient(135deg, rgba(37,99,235,0.3), rgba(16,185,129,0.2))"
-            : "rgba(37,99,235,0.12)",
+            ? "linear-gradient(135deg, rgba(245,166,35,0.3), rgba(16,185,129,0.2))"
+            : "rgba(245,166,35,0.12)",
           border: isConnected
             ? "2px solid rgba(16,185,129,0.6)"
-            : "2px dashed rgba(37,99,235,0.4)",
+            : "2px dashed rgba(245,166,35,0.4)",
           display: "flex", alignItems: "center", justifyContent: "center",
           boxShadow: isConnected ? "0 0 10px rgba(16,185,129,0.3)" : "none",
           transition: "all 0.3s",
@@ -141,11 +141,11 @@ export default function Sidebar() {
       {!collapsed && isConnected && (
         <div style={{
           margin: "0.5rem 0.75rem", padding: "0.6rem 0.75rem",
-          background: "rgba(37,99,235,0.08)", borderRadius: "10px",
-          border: "1px solid rgba(37,99,235,0.15)",
+          background: "rgba(245,166,35,0.08)", borderRadius: "10px",
+          border: "1px solid rgba(245,166,35,0.15)",
         }}>
           {userLabel && (
-            <div style={{ fontSize: "0.72rem", color: "#93c5fd", fontWeight: "700",
+            <div style={{ fontSize: "0.72rem", color: "#fbbf24", fontWeight: "700",
               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "2px" }}>
               {userLabel}
             </div>
@@ -195,13 +195,13 @@ export default function Sidebar() {
               padding: collapsed ? "0.72rem" : "0.6rem 0.85rem",
               justifyContent: collapsed ? "center" : "flex-start",
               margin: "0 0.5rem", borderRadius: "10px",
-              color: isActive ? "#93c5fd" : "#4a6490",
-              background: isActive ? "rgba(37,99,235,0.14)" : "transparent",
+              color: isActive ? "#f5a623" : "#5a7090",
+              background: isActive ? "rgba(245,166,35,0.12)" : "transparent",
               textDecoration: "none",
               fontWeight: isActive ? "700" : "500",
               fontSize: "0.84rem",
               transition: "all 0.15s ease",
-              borderLeft: isActive ? "2px solid #2563eb" : "2px solid transparent",
+              borderLeft: isActive ? "2px solid #f5a623" : "2px solid transparent",
               flexShrink: 0,
             })}
           >
@@ -216,7 +216,7 @@ export default function Sidebar() {
       </nav>
 
       {/* ── Rodapé: Auth + Toggle ── */}
-      <div style={{ borderTop: "1px solid rgba(37,99,235,0.1)", padding: "0.75rem 0.5rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+      <div style={{ borderTop: "1px solid rgba(245,166,35,0.1)", padding: "0.75rem 0.5rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
         {/* Botão de login/logout */}
         {isConnected ? (
           <button
@@ -247,7 +247,7 @@ export default function Sidebar() {
               padding: collapsed ? "0.6rem" : "0.55rem 0.85rem",
               background: "linear-gradient(135deg, #f5a623, #f97316)",
               border: "none", borderRadius: "10px",
-              color: "#030f24", cursor: "pointer",
+              color: "#0a0f1a", cursor: "pointer",
               fontSize: collapsed ? "1rem" : "0.78rem",
               fontWeight: "800", transition: "all 0.15s", width: "100%",
             }}
@@ -263,8 +263,8 @@ export default function Sidebar() {
           title={collapsed ? "Expandir menu" : "Recolher menu"}
           style={{
             display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "0.45rem", background: "rgba(37,99,235,0.08)",
-            border: "1px solid rgba(37,99,235,0.2)", borderRadius: "8px",
+            padding: "0.45rem", background: "rgba(245,166,35,0.08)",
+            border: "1px solid rgba(245,166,35,0.2)", borderRadius: "8px",
             color: "#4a6490", cursor: "pointer", transition: "all 0.15s",
             width: "100%",
           }}

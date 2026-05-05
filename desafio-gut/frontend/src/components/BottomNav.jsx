@@ -71,7 +71,7 @@ export default function BottomNav() {
           height: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`,
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
           background: "linear-gradient(180deg, rgba(5,13,30,0.92), rgba(3,15,36,0.98))",
-          borderTop: "1px solid rgba(37,99,235,0.18)",
+          borderTop: "1px solid rgba(245,166,35,0.18)",
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
           boxShadow: "0 -4px 24px rgba(0,0,0,0.4)",
@@ -121,8 +121,8 @@ export default function BottomNav() {
             style={{
               position: "fixed", left: 0, right: 0, bottom: 0,
               maxHeight: "82vh", overflowY: "auto",
-              background: "linear-gradient(180deg, #050d1e, #030f24)",
-              borderTop: "1px solid rgba(37,99,235,0.25)",
+              background: "linear-gradient(180deg, #080d18, #0a0f1a)",
+              borderTop: "1px solid rgba(245,166,35,0.25)",
               borderTopLeftRadius: "20px", borderTopRightRadius: "20px",
               padding: "1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px))",
               zIndex: 70,
@@ -140,8 +140,8 @@ export default function BottomNav() {
                 onClick={() => setMoreOpen(false)}
                 aria-label="Fechar"
                 style={{
-                  background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.2)",
-                  borderRadius: "10px", padding: "0.5rem", color: "#93c5fd", cursor: "pointer",
+                  background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)",
+                  borderRadius: "10px", padding: "0.5rem", color: "#fbbf24", cursor: "pointer",
                   display: "flex",
                 }}
               >
@@ -175,7 +175,7 @@ export default function BottomNav() {
                   width: "100%", padding: "0.85rem", marginBottom: "0.5rem",
                   background: "linear-gradient(135deg,#f5a623,#f97316)",
                   border: "none", borderRadius: "12px",
-                  color: "#030f24", fontWeight: "800", fontSize: "0.95rem",
+                  color: "#0a0f1a", fontWeight: "800", fontSize: "0.95rem",
                   cursor: "pointer",
                 }}
               >
@@ -192,10 +192,10 @@ export default function BottomNav() {
                   style={{
                     display: "flex", alignItems: "center", gap: "0.75rem",
                     padding: "0.85rem 0.85rem",
-                    background: location.pathname.startsWith(path) ? "rgba(37,99,235,0.14)" : "transparent",
-                    border: "1px solid rgba(37,99,235,0.12)",
+                    background: location.pathname.startsWith(path) ? "rgba(245,166,35,0.14)" : "transparent",
+                    border: "1px solid rgba(245,166,35,0.12)",
                     borderRadius: "12px",
-                    color: location.pathname.startsWith(path) ? "#93c5fd" : "#e8f0fe",
+                    color: location.pathname.startsWith(path) ? "#fbbf24" : "#e8f0fe",
                     fontSize: "0.92rem", fontWeight: "600",
                     cursor: "pointer", textAlign: "left",
                   }}
@@ -250,11 +250,11 @@ function tabStyle(active) {
     padding: "0.4rem 0.25rem",
     background: "transparent",
     border: "none",
-    color: active ? "#93c5fd" : "#4a6490",
+    color: active ? "#f5a623" : "#5a7090",
     textDecoration: "none",
     cursor: "pointer",
     transition: "color 0.15s",
-    borderTop: active ? "2px solid #2563eb" : "2px solid transparent",
+    borderTop: active ? "2px solid #f5a623" : "2px solid transparent",
     minWidth: 0,
   };
 }

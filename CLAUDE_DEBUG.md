@@ -2078,3 +2078,93 @@ O contrato agora tem 117 linhas (era 89). Todas as funções existentes preserva
 
 ### Build
 `npm run build` — ✅ verde em 9.11s
+
+---
+
+## Deploy Contrato Corrigido — Sepolia (2026-05-05)
+
+### Contrato novo deployado
+
+| Campo | Valor |
+|---|---|
+| Endereço novo | `0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5` |
+| Endereço antigo | `0x273Ef96f5be04601FD39DAcDFB039d6fB552445e` |
+| Rede | Ethereum Sepolia (chainId 11155111) |
+| Deploy tx | Hardhat Ignition v3 — `LeilaoModule` |
+| Coordenação | `0xDa3a83A24b25aa71e1a9b5A74503fFA93487e84E` |
+
+### Edição R-1 aberta no novo contrato
+
+- **tx**: `0x9a340236268ba8073402d9109b00e60d31a3221ed3e3833657de9e7235e67cbb`
+- **Bloco**: 10793973
+- **Prazo**: 2026-05-06T09:23:48 UTC (24h)
+- **Nome**: "Edicao R-1 - Beta"
+
+### Smoke tests (RPC direto no novo contrato)
+- `apurarVencedor("R-1")` público ✅ — acessível sem restrição de endereço
+- Edição R-1 ativa ✅ — 23h59m restantes
+- `MAX_LANCES_UNICOS = 10000` ✅ — proteção DoS confirmada
+- Coordenação correta ✅
+
+### Arquivos atualizados com o novo endereço (7 total)
+- `desafio-gut/frontend/.env.production` ✓
+- `desafio-gut/frontend/.env.local` ✓
+- `desafio-gut/frontend/src/utils/web3.js` ✓
+- `desafio-gut/frontend/src/pages/Seguranca.jsx` ✓
+- `desafio-gut/scripts/setup-edicao.js` ✓
+- `desafio-gut/scripts/probe-saldo-onchain.js` ✓
+- `desafio-gut/scripts/test-darLance.js` + `test-lance.js` ✓
+- `CLAUDE.md` ✓
+
+### Fix de compilação
+- Em-dash `—` (U+2014) no require string causou `ParserError: Invalid character` — substituído por ` - ` (ASCII)
+
+### Smoke tests NOT APPLICABLE
+- `/health`, `/lances-flash`, `/saldo-rs` — não existem (SPA pura, sem backend)
+
+### Commit e Deploy
+- **commit**: `6eeba65` "deploy contrato corrigido Sepolia"
+- **push**: `main → origin/main` ✅ — Netlify deploy disparado automaticamente
+- **Netlify URL**: https://silly-stardust-ca71bc.netlify.app
+- **Build frontend**: ✅ verde em 5.54s
+
+---
+
+## Design System Aplicado — Frontend (2026-05-05)
+
+### Mudanças por camada
+
+| Camada | Mudança |
+|---|---|
+| `globals.css` | Tokens ouro (`f5a623`) como primário absoluto; bg `#0a0f1a`; glow-pulse dourado; `Inter` como body font; Google Fonts: Orbitron + JetBrains Mono + Inter |
+| `index.html` | `<link>` Google Fonts adicionado (preconnect + display=swap) |
+| `Layout.jsx` | Gradient: `radial(gold tint 6%)` + `Inter` como font-family do shell |
+| `Dashboard.jsx` | COR reescrito (gold-only); timer 3 estágios via `timerColor()`; botão →  `linear-gradient(gold,goldDark)`; `Orbitron` nos cardTitulos; `JetBrains Mono` no timer |
+| `CardLance.jsx` | `botaoLance` → gold gradient, texto `#0a0f1a`; `titulo` → Orbitron; `enderecoTexto` → JetBrains Mono |
+| `TabelaLances.jsx` | `titulo` → Orbitron gold; `container` border-radius 12px; beam animation → dourada |
+| `MercadoLances.jsx` | Título DesafioGUT → Orbitron gold; timer → JetBrains Mono; `COR.blue300` → `COR.gold` |
+| `BottomNav.jsx` | Tab ativa: cor `#f5a623`, muted `#5a7090` |
+| `Sidebar.jsx` | NavLink ativo: `#f5a623`, bg `rgba(245,166,35,0.12)` |
+
+### Bulk sed (automático)
+- `rgba(37,99,235,*)` → `rgba(245,166,35,*)` — todos os `.jsx`
+- `#2563eb` → `#f5a623` | `#1d4ed8` → `#e89400` | `#93c5fd` → `#fbbf24`
+- `rgba(8,24,64,*` → `rgba(10,16,42,*` | `#030f24` → `#0a0f1a`
+- Resultado: ✓ zero azuis restantes em todo o `src/`
+
+### Removido
+- Grid PCB, scanlines, glitch, chromatic aberration (nunca foram implementados no frontend real)
+- Azul `#2563eb` como cor primária (substituído por dourado integral)
+
+### Preservado
+- Badge 🔗 (saldo on-chain) ✓
+- KPI "Saldo (R$)" ✓
+- MOCK_MODE ✓
+- Mobile-first layout ✓
+- Gradiente de urgência do timer (verde > laranja > vermelho) ✓
+- Todas as animações funcionais (beam, gold-pulse, lightning, confetti) ✓
+
+### Builds
+- Build #1 (globals + Layout + Dashboard): ✅ 4.65s
+- Build #2 (CardLance + TabelaLances + Nav): ✅ 3.46s
+- Build #3 (MercadoLances + final): ✅ 3.87s

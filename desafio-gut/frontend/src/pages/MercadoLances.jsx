@@ -5,10 +5,10 @@ import CardLance from "../components/CardLance.jsx";
 import TabelaLances from "../components/TabelaLances.jsx";
 
 const COR = {
-  primary: "#2563eb", primaryDim: "rgba(37,99,235,0.18)",
-  gold: "#f5a623", bg: "#030f24", surface: "rgba(8,30,64,0.82)",
+  primary: "#f5a623", primaryDim: "rgba(245,166,35,0.18)",
+  gold: "#f5a623", bg: "#0a0f1a", surface: "rgba(8,30,64,0.82)",
   text: "#e8f0fe", muted: "#4a6490",
-  success: "#10b981", danger: "#ef4444", warning: "#f97316", blue300: "#93c5fd",
+  success: "#10b981", danger: "#ef4444", warning: "#f97316", blue300: "#fbbf24",
 };
 
 function CountdownOverlay() {
@@ -64,7 +64,7 @@ function Confetti() {
       left:     `${Math.random() * 100}%`,
       delay:    `${(Math.random() * 2.5).toFixed(2)}s`,
       duration: `${(1.8 + Math.random() * 2).toFixed(2)}s`,
-      color:    ["#fbbf24","#93c5fd","#6ee7b7","#f97316","#ffffff","#a78bfa","#f472b6"][i % 7],
+      color:    ["#fbbf24","#fbbf24","#6ee7b7","#f97316","#ffffff","#a78bfa","#f472b6"][i % 7],
       size:     `${6 + Math.floor(Math.random() * 9)}px`,
       rotate:   `${Math.floor(Math.random() * 360)}deg`,
     }))
@@ -132,8 +132,8 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, MOC
             textShadow: "0 0 20px #fbbf24",
           }}>LEILÃO ENCERRADO</h2>
           <p style={{ margin: "0 0 1.25rem", color: "#94a3b8", fontSize: isMobile ? "0.78rem" : "0.9rem", lineHeight: 1.5 }}>
-            <strong style={{ color: COR.blue300 }}>DesafioGUT</strong>
-            {" · Edição "}<strong style={{ color: COR.blue300 }}>{EDICAO_ATIVA}</strong>
+            <strong style={{ color: COR.gold }}>DesafioGUT</strong>
+            {" · Edição "}<strong style={{ color: COR.gold }}>{EDICAO_ATIVA}</strong>
             {" · "}{tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
           </p>
           {/* Produto em disputa */}
@@ -172,7 +172,7 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, MOC
 
           {vencedor ? (
             <div style={{
-              background: "#0a1e38", border: `1px solid ${COR.blue300}`,
+              background: "#0a1e38", border: `1px solid ${COR.gold}`,
               borderRadius: "12px", padding: isMobile ? "1rem" : "1.25rem",
               marginBottom: "1.25rem",
             }}>
@@ -280,7 +280,7 @@ export default function MercadoLances() {
           padding: isMobile ? "1rem" : "1.25rem 2rem",
           gap: isMobile ? "0.75rem" : "1rem",
           background: "rgba(5,15,40,0.88)",
-          borderBottom: "1px solid rgba(37,99,235,0.18)",
+          borderBottom: "1px solid rgba(245,166,35,0.18)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
         }}>
@@ -297,13 +297,14 @@ export default function MercadoLances() {
                 <h1 style={{
                   margin: 0,
                   fontSize: isMobile ? "1.05rem" : "1.5rem",
-                  fontWeight: "900", color: "#fff",
-                  letterSpacing: "0.04em",
-                  textShadow: "0 0 20px rgba(37,99,235,0.5)",
+                  fontWeight: "900", color: "#f5a623",
+                  fontFamily: "'Orbitron', sans-serif",
+                  letterSpacing: "0.06em",
+                  textShadow: "0 0 20px rgba(245,166,35,0.4)",
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}>DesafioGUT</h1>
                 {!isMobile && (
-                  <p style={{ margin: 0, fontSize: "0.75rem", color: COR.blue300, letterSpacing: "0.04em", fontWeight: "600" }}>
+                  <p style={{ margin: 0, fontSize: "0.75rem", color: COR.gold, letterSpacing: "0.04em", fontWeight: "600" }}>
                     E-commerce através de Dropshipping
                   </p>
                 )}
@@ -337,7 +338,7 @@ export default function MercadoLances() {
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1px",
               }}>
                 <span style={{
-                  fontSize: isMobile ? "1.55rem" : "1.25rem", fontWeight: "900", fontFamily: "monospace",
+                  fontSize: isMobile ? "1.55rem" : "1.25rem", fontWeight: "900", fontFamily: "'JetBrains Mono', monospace",
                   color: timerCor, lineHeight: 1,
                   animation: timerUrgente ? "gut-timer-pulse 0.65s ease-in-out infinite" : "none",
                   transition: "color 0.4s",
@@ -370,7 +371,7 @@ export default function MercadoLances() {
         {/* ── Painel saldos + tipo ── */}
         <div style={{
           background: "rgba(3,10,28,0.92)",
-          borderBottom: "1px solid rgba(37,99,235,0.18)",
+          borderBottom: "1px solid rgba(245,166,35,0.18)",
           padding: padTight,
           display: "flex", flexDirection: isMobile ? "column" : "row",
           justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center",
@@ -441,7 +442,7 @@ export default function MercadoLances() {
         {/* ── Aviso ── */}
         <div style={{
           background: "rgba(3,10,28,0.9)",
-          borderBottom: "1px solid rgba(37,99,235,0.15)",
+          borderBottom: "1px solid rgba(245,166,35,0.15)",
           padding: padTight,
           fontSize: isMobile ? "0.72rem" : "0.78rem",
           color: "#64748b",
@@ -497,9 +498,9 @@ export default function MercadoLances() {
               borderRadius: "16px",
               padding: isMobile ? "1rem" : "1.25rem",
               display: "flex", flexDirection: "column", gap: "0.5rem",
-              border: "1px solid rgba(37,99,235,0.15)",
+              border: "1px solid rgba(245,166,35,0.15)",
             }}>
-              <h4 style={{ margin: "0 0 0.5rem", color: COR.blue300, fontSize: "0.85rem", fontWeight: "700" }}>
+              <h4 style={{ margin: "0 0 0.5rem", color: COR.gold, fontSize: "0.85rem", fontWeight: "700" }}>
                 🛡️ Segurança e Transparência
               </h4>
               {SEGURANCA_ITENS.map(([nome, desc]) => (
@@ -507,10 +508,10 @@ export default function MercadoLances() {
                   <span style={{
                     minWidth: isMobile ? "70px" : "78px",
                     fontSize: "0.7rem", fontWeight: "700",
-                    color: COR.blue300, background: COR.primaryDim,
+                    color: COR.gold, background: COR.primaryDim,
                     padding: "0.2rem 0.5rem", borderRadius: "6px",
                     flexShrink: 0,
-                    border: "1px solid rgba(37,99,235,0.25)",
+                    border: "1px solid rgba(245,166,35,0.25)",
                     textAlign: "center",
                   }}>{nome}</span>
                   <span style={{ fontSize: "0.74rem", color: COR.muted, lineHeight: 1.5 }}>{desc}</span>
@@ -526,7 +527,7 @@ export default function MercadoLances() {
         {/* ── Footer ── */}
         <footer style={{
           padding: isMobile ? "1rem" : "1rem 2rem",
-          borderTop: "1px solid rgba(37,99,235,0.12)",
+          borderTop: "1px solid rgba(245,166,35,0.12)",
           textAlign: "center",
           fontSize: isMobile ? "0.7rem" : "0.76rem",
           color: COR.muted,
@@ -537,9 +538,9 @@ export default function MercadoLances() {
             {!isMobile && (
               <>
                 {" · "}
-                <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: COR.blue300 }}>Privacidade</a>
+                <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: COR.gold }}>Privacidade</a>
                 {" · "}
-                <a href="https://www.grupouniaoetrabalho.com.br" target="_blank" rel="noopener noreferrer" style={{ color: COR.blue300 }}>grupouniaoetrabalho.com.br</a>
+                <a href="https://www.grupouniaoetrabalho.com.br" target="_blank" rel="noopener noreferrer" style={{ color: COR.gold }}>grupouniaoetrabalho.com.br</a>
               </>
             )}
           </p>
@@ -568,7 +569,7 @@ const saldoValueStyle = {
 function chipBtnStyle(variant) {
   const palette = variant === "purple"
     ? { color: "#a78bfa", bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.38)" }
-    : { color: COR.blue300, bg: COR.primaryDim, border: "rgba(37,99,235,0.38)" };
+    : { color: COR.gold, bg: COR.primaryDim, border: "rgba(245,166,35,0.38)" };
   return {
     padding: "0.32rem 0.85rem",
     background: palette.bg,
@@ -588,13 +589,13 @@ function AuthArea({ isConnected, ready, address, userLabel, onLogin, compact, MO
         disabled={!ready}
         style={{
           padding: compact ? "0.45rem 0.9rem" : "0.6rem 1.4rem",
-          background: "linear-gradient(135deg,#2563eb,#1d40af)",
+          background: "linear-gradient(135deg,#f5a623,#1d40af)",
           color: "#fff", border: "none", borderRadius: "28px",
           fontWeight: "800", fontSize: compact ? "0.78rem" : "0.88rem",
           letterSpacing: "0.03em",
           cursor: ready ? "pointer" : "wait",
           opacity: ready ? 1 : 0.7,
-          boxShadow: "0 4px 14px rgba(37,99,235,0.4)",
+          boxShadow: "0 4px 14px rgba(245,166,35,0.4)",
           flexShrink: 0,
         }}
       >{ready ? "⚡ Entrar" : "⏳"}</button>
@@ -607,7 +608,7 @@ function AuthArea({ isConnected, ready, address, userLabel, onLogin, compact, MO
         display: "flex", alignItems: "center", gap: "0.45rem",
         background: COR.primaryDim, padding: compact ? "0.35rem 0.7rem" : "0.45rem 1rem",
         borderRadius: "28px",
-        border: "1px solid rgba(37,99,235,0.30)",
+        border: "1px solid rgba(245,166,35,0.30)",
       }}>
         <span style={{
           width: "8px", height: "8px", borderRadius: "50%",
@@ -617,7 +618,7 @@ function AuthArea({ isConnected, ready, address, userLabel, onLogin, compact, MO
         <div style={{ display: "flex", flexDirection: "column", gap: "1px", minWidth: 0 }}>
           {userLabel && !compact && (
             <span style={{
-              fontSize: "0.72rem", color: COR.blue300, fontWeight: "700",
+              fontSize: "0.72rem", color: COR.gold, fontWeight: "700",
               maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             }}>{userLabel}</span>
           )}
@@ -644,6 +645,6 @@ const badgeStyle = {
   background: COR.primaryDim,
   borderRadius: "20px",
   fontSize: "0.68rem",
-  border: "1px solid rgba(37,99,235,0.28)",
-  color: COR.blue300,
+  border: "1px solid rgba(245,166,35,0.28)",
+  color: COR.gold,
 };

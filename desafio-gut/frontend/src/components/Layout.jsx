@@ -18,9 +18,9 @@ export default function Layout() {
         display: "flex",
         height: "100vh",
         overflow: "hidden",
-        background: "radial-gradient(ellipse at 50% -10%, #0d1f4a 0%, #06122a 50%, #030f24 100%)",
+        background: "radial-gradient(ellipse at 50% -15%, rgba(245,166,35,0.06) 0%, #0c1120 40%, #0a0f1a 100%)",
         color: "#e8f0fe",
-        fontFamily: "'Segoe UI', system-ui, sans-serif",
+        fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
       }}
     >
       {!isMobile && <Sidebar />}

@@ -433,7 +433,7 @@ export default function CardLance({
                 <a
                   href={`https://sepolia.etherscan.io/tx/${ultimaTx}`}
                   target="_blank" rel="noopener noreferrer"
-                  style={{ color: "#93c5fd" }}
+                  style={{ color: "#fbbf24" }}
                 >
                   {ultimaTx.slice(0, 14)}…{ultimaTx.slice(-6)}
                 </a>{" "}🔗
@@ -516,32 +516,32 @@ export default function CardLance({
 
 const estilos = {
   header:           { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  titulo:           { margin: 0, fontSize: "1.05rem", fontWeight: "800", color: "#e8f0fe", letterSpacing: "0.02em" },
-  edicaoBadge:      { fontSize: "0.72rem", color: "#93c5fd", background: "rgba(37,99,235,0.12)", padding: "0.22rem 0.75rem", borderRadius: "20px", border: "1px solid rgba(37,99,235,0.3)", fontWeight: "700" },
+  titulo:           { margin: 0, fontSize: "1.05rem", fontWeight: "800", color: "#f5a623", letterSpacing: "0.05em", fontFamily: "'Orbitron', sans-serif" },
+  edicaoBadge:      { fontSize: "0.72rem", color: "#fbbf24", background: "rgba(245,166,35,0.12)", padding: "0.22rem 0.75rem", borderRadius: "20px", border: "1px solid rgba(245,166,35,0.3)", fontWeight: "700" },
   mockBadge:        { fontSize: "0.7rem", fontWeight: "800", color: "#f5a623", background: "rgba(245,166,35,0.12)", padding: "0.2rem 0.6rem", borderRadius: "20px", border: "1px solid rgba(245,166,35,0.35)" },
   tipoBadge: (p)    => ({ fontSize: "0.72rem", fontWeight: "800", color: p ? "#a78bfa" : "#fbbf24", background: p ? "rgba(167,139,250,0.1)" : "rgba(251,191,36,0.1)", padding: "0.22rem 0.75rem", borderRadius: "20px", border: `1px solid ${p ? "rgba(167,139,250,0.3)" : "rgba(251,191,36,0.3)"}` }),
   conexaoArea:      { display: "flex", flexDirection: "column", gap: "0.4rem" },
-  botaoConectar:    { padding: "0.75rem 1rem", background: "linear-gradient(135deg,#f5a623,#f97316)", color: "#030f24", border: "none", borderRadius: "28px", fontWeight: "800", cursor: "pointer", fontSize: "0.92rem", letterSpacing: "0.03em", boxShadow: "0 4px 18px rgba(245,166,35,0.4)" },
-  carteiraConectada:{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(37,99,235,0.08)", padding: "0.6rem 1rem", borderRadius: "12px", border: "1px solid rgba(37,99,235,0.25)" },
+  botaoConectar:    { padding: "0.75rem 1rem", background: "linear-gradient(135deg,#f5a623,#f97316)", color: "#0a0f1a", border: "none", borderRadius: "28px", fontWeight: "800", cursor: "pointer", fontSize: "0.92rem", letterSpacing: "0.03em", boxShadow: "0 4px 18px rgba(245,166,35,0.4)" },
+  carteiraConectada:{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(245,166,35,0.08)", padding: "0.6rem 1rem", borderRadius: "12px", border: "1px solid rgba(245,166,35,0.25)" },
   carteiraInfo:     { display: "flex", alignItems: "center", gap: "0.75rem" },
   dot:              { width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", flexShrink: 0, boxShadow: "0 0 6px #10b981" },
-  enderecoTexto:    { fontFamily: "monospace", fontSize: "0.85rem", color: "#e8f0fe" },
+  enderecoTexto:    { fontFamily: "'JetBrains Mono', monospace", fontSize: "0.85rem", color: "#e8f0fe" },
   saldoBadge:       { background: "rgba(16,185,129,0.15)", padding: "0.2rem 0.6rem", borderRadius: "12px", fontSize: "0.72rem", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)" },
-  boxAvisoNeutro:   { background: "rgba(37,99,235,0.1)", border: "1px solid rgba(37,99,235,0.3)", borderRadius: "10px", padding: "0.65rem 1rem", color: "#93c5fd", fontSize: "0.8rem", fontWeight: "600", textAlign: "center" },
+  boxAvisoNeutro:   { background: "rgba(245,166,35,0.1)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: "10px", padding: "0.65rem 1rem", color: "#fbbf24", fontSize: "0.8rem", fontWeight: "600", textAlign: "center" },
   botaoSair:        { background: "transparent", border: "1px solid rgba(239,68,68,0.4)", color: "#ef4444", borderRadius: "8px", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.75rem" },
   hintConexao:      { margin: 0, fontSize: "0.7rem", color: "#4a6490" },
   inputGroup:       { display: "flex", flexDirection: "column", gap: "0.4rem" },
   labelInput:       { fontSize: "0.82rem", color: "#4a6490", fontWeight: "600", letterSpacing: "0.04em" },
   inputWrapper:     { position: "relative" },
-  input:            { width: "100%", padding: "0.75rem 1rem", background: "rgba(3,15,36,0.7)", border: "1px solid rgba(37,99,235,0.25)", borderRadius: "12px", color: "#e8f0fe", fontSize: "1rem", boxSizing: "border-box", outline: "none" },
-  valorPreview:     { position: "absolute", right: "1rem", top: "50%", transform: "translateY(-50%)", color: "#93c5fd", fontWeight: "700", fontSize: "0.9rem", pointerEvents: "none" },
+  input:            { width: "100%", padding: "0.75rem 1rem", background: "rgba(3,15,36,0.7)", border: "1px solid rgba(245,166,35,0.25)", borderRadius: "12px", color: "#e8f0fe", fontSize: "1rem", boxSizing: "border-box", outline: "none" },
+  valorPreview:     { position: "absolute", right: "1rem", top: "50%", transform: "translateY(-50%)", color: "#fbbf24", fontWeight: "700", fontSize: "0.9rem", pointerEvents: "none" },
   hintInput:        { margin: 0, fontSize: "0.7rem", color: "#4a6490" },
-  pipeline:         { background: "rgba(3,15,36,0.6)", padding: "1rem", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "0.5rem", border: "1px solid rgba(37,99,235,0.15)" },
+  pipeline:         { background: "rgba(3,15,36,0.6)", padding: "1rem", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "0.5rem", border: "1px solid rgba(245,166,35,0.15)" },
   pipelineItem:     { fontSize: "0.83rem", transition: "opacity 0.2s", color: "#e8f0fe" },
   boxSucesso:       { background: "rgba(16,185,129,0.12)", padding: "1rem", borderRadius: "12px", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)" },
   txText:           { margin: "0.4rem 0 0", fontSize: "0.76rem", fontFamily: "monospace" },
   hashText:         { margin: "0.25rem 0 0", fontSize: "0.72rem", color: "#6ee7b7", wordBreak: "break-all" },
   boxErro:          { background: "rgba(239,68,68,0.12)", padding: "0.75rem 1rem", borderRadius: "12px", color: "#ef4444", fontSize: "0.85rem", border: "1px solid rgba(239,68,68,0.3)" },
-  botaoLance:       { padding: "0.9rem", background: "linear-gradient(135deg,#2563eb,#1d4ed8)", color: "#ffffff", border: "none", borderRadius: "28px", fontSize: "1rem", fontWeight: "900", transition: "opacity 0.2s", letterSpacing: "0.03em", boxShadow: "0 4px 20px rgba(37,99,235,0.45)" },
+  botaoLance:       { padding: "0.9rem", background: "linear-gradient(135deg,#f5a623,#e89400)", color: "#0a0f1a", border: "none", borderRadius: "28px", fontSize: "1rem", fontWeight: "900", fontFamily: "'Orbitron', sans-serif", transition: "opacity 0.2s", letterSpacing: "0.06em", boxShadow: "0 4px 24px rgba(245,166,35,0.50)" },
   rodape:           { margin: 0, fontSize: "0.68rem", color: "#4a6490", textAlign: "center", letterSpacing: "0.03em" },
 };

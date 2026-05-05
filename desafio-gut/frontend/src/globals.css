@@ -2,20 +2,19 @@
 
 /* ── Design Tokens — DesafioGUT · Grupo União e Trabalho ──────────────────── */
 @theme {
-  /* Azul Marinho + Branco — identidade GUT */
-  --color-gut-bg:          #030f24;
-  --color-gut-surface:     #08184099;
-  --color-gut-surface-2:   #0d2145;
-  --color-gut-border:      rgba(37,99,235,0.22);
-  --color-gut-border-dim:  rgba(255,255,255,0.06);
+  /* Fundo escuro profundo */
+  --color-gut-bg:          #0a0f1a;
+  --color-gut-surface:     rgba(12,18,38,0.75);
+  --color-gut-surface-2:   #0d1630;
+  --color-gut-border:      rgba(245,166,35,0.22);
+  --color-gut-border-dim:  rgba(245,166,35,0.10);
 
-  /* Azul Royal — primário */
-  --color-gut-primary:     #2563eb;
-  --color-gut-primary-dim: rgba(37,99,235,0.22);
-
-  /* Ouro — CTAs e destaques */
+  /* Dourado — primário absoluto */
+  --color-gut-primary:     #f5a623;
+  --color-gut-primary-dim: rgba(245,166,35,0.15);
   --color-gut-gold:        #f5a623;
-  --color-gut-gold-dim:    rgba(245,166,35,0.22);
+  --color-gut-gold-dim:    rgba(245,166,35,0.15);
+  --color-gut-gold-dark:   #e89400;
 
   /* Estados */
   --color-gut-success:     #10b981;
@@ -24,21 +23,21 @@
 
   /* Tipografia */
   --color-gut-text:        #e8f0fe;
-  --color-gut-muted:       #4a6490;
+  --color-gut-muted:       #5a7090;
 
   /* Shadcn compat */
-  --color-background:      #030f24;
+  --color-background:      #0a0f1a;
   --color-foreground:      #e8f0fe;
-  --color-card:            #08184099;
+  --color-card:            rgba(12,18,38,0.75);
   --color-card-foreground: #e8f0fe;
-  --color-border:          rgba(37,99,235,0.22);
-  --color-primary:         #2563eb;
-  --color-primary-foreground: #ffffff;
-  --color-muted:           #0d2145;
-  --color-muted-foreground:#4a6490;
+  --color-border:          rgba(245,166,35,0.22);
+  --color-primary:         #f5a623;
+  --color-primary-foreground: #0a0f1a;
+  --color-muted:           #0d1630;
+  --color-muted-foreground:#5a7090;
   --color-destructive:     #ef4444;
-  --color-accent:          #2563eb;
-  --radius-card:           1rem;
+  --color-accent:          #f5a623;
+  --radius-card:           0.75rem;
 
   /* Animações */
   --animate-beam:          gut-beam 2.6s ease-in-out infinite;
@@ -55,8 +54,8 @@
 }
 
 @keyframes gut-glow-pulse {
-  0%,100% { box-shadow: 0 0 18px 2px rgba(37,99,235,0.25), inset 0 1px 0 rgba(255,255,255,0.06); }
-  50%      { box-shadow: 0 0 40px 10px rgba(37,99,235,0.52), inset 0 1px 0 rgba(255,255,255,0.10); }
+  0%,100% { box-shadow: 0 0 18px 2px rgba(245,166,35,0.22), inset 0 1px 0 rgba(255,255,255,0.06); }
+  50%      { box-shadow: 0 0 40px 10px rgba(245,166,35,0.48), inset 0 1px 0 rgba(255,255,255,0.10); }
 }
 
 @keyframes gut-gold-pulse {
@@ -77,12 +76,12 @@
 
 /* ── Relâmpago — dispara ao revelar o vencedor ─────────────────────────────── */
 @keyframes gut-lightning {
-  0%   { box-shadow: none; background: rgba(37,99,235,0); }
-  8%   { box-shadow: 0 0 0 6px rgba(255,255,255,0.9), 0 0 80px 30px rgba(37,99,235,0.95); background: rgba(255,255,255,0.25); }
-  16%  { box-shadow: none; background: rgba(37,99,235,0); }
-  28%  { box-shadow: 0 0 0 4px rgba(255,255,255,0.7), 0 0 55px 20px rgba(37,99,235,0.75); background: rgba(255,255,255,0.12); }
-  40%  { box-shadow: none; background: rgba(37,99,235,0); }
-  60%  { box-shadow: 0 0 20px 6px rgba(37,99,235,0.35); }
+  0%   { box-shadow: none; background: rgba(245,166,35,0); }
+  8%   { box-shadow: 0 0 0 6px rgba(255,220,80,0.9), 0 0 80px 30px rgba(245,166,35,0.85); background: rgba(255,220,80,0.22); }
+  16%  { box-shadow: none; background: rgba(245,166,35,0); }
+  28%  { box-shadow: 0 0 0 4px rgba(255,220,80,0.7), 0 0 55px 20px rgba(245,166,35,0.65); background: rgba(255,220,80,0.10); }
+  40%  { box-shadow: none; background: rgba(245,166,35,0); }
+  60%  { box-shadow: 0 0 20px 6px rgba(245,166,35,0.30); }
   100% { box-shadow: none; }
 }
 
@@ -97,18 +96,22 @@ body {
   margin: 0;
   background: var(--color-gut-bg);
   color: var(--color-gut-text);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Noise overlay ───────────────────────────────────────────────────────── */
+/* ── Ruído sutil de textura ──────────────────────────────────────────────── */
 .gut-noise::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.028;
+  opacity: 0.022;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
 }
+
+/* ── Fontes utilitárias ─────────────────────────────────────────────────── */
+.font-orbitron { font-family: 'Orbitron', sans-serif; }
+.font-mono-gut { font-family: 'JetBrains Mono', monospace; }

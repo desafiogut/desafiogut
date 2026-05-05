@@ -3,10 +3,18 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 const COR = {
-  primary: "#2563eb", primaryDim: "rgba(37,99,235,0.15)",
-  gold: "#f5a623", text: "#e8f0fe", muted: "#4a6490",
-  success: "#10b981", blue300: "#93c5fd",
+  primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
+  gold: "#f5a623", goldDark: "#e89400",
+  text: "#e8f0fe", muted: "#5a7090",
+  success: "#10b981", amber: "#fbbf24", danger: "#ef4444", warning: "#f97316",
 };
+
+function timerColor(tempoRestante, totalSegundos = 1800) {
+  const ratio = tempoRestante / totalSegundos;
+  if (ratio > 0.6) return COR.success;   // verde
+  if (ratio > 0.3) return COR.warning;   // laranja
+  return COR.danger;                      // vermelho
+}
 
 const VALOR_POR_SENHA_BRL = 2;
 
@@ -66,7 +74,7 @@ export default function Dashboard() {
     { label: "Saldo (R$)",      value: saldoReaisStr,                    color: COR.gold,    icon: "💰", to: "/carteira" },
     senhasStat,
     { label: "Lances Únicos",   value: lancesUnicos,                     color: COR.success, icon: "✅", to: "/mercado"  },
-    { label: "Total de Lances", value: totalLances,                      color: COR.blue300, icon: "📊", to: "/ativos"   },
+    { label: "Total de Lances", value: totalLances,                      color: COR.amber,   icon: "📊", to: "/ativos"   },
   ];
 
   const cardPad   = isMobile ? "1rem" : "1.25rem";
@@ -74,8 +82,8 @@ export default function Dashboard() {
   const innerGap   = isMobile ? "0.75rem" : "1rem";
 
   const card = {
-    background: "rgba(8,24,64,0.6)",
-    border: "1px solid rgba(37,99,235,0.18)",
+    background: "rgba(10,16,42,0.6)",
+    border: "1px solid rgba(245,166,35,0.18)",
     borderRadius: "16px",
     padding: cardPad,
     backdropFilter: "blur(16px)",
@@ -85,8 +93,9 @@ export default function Dashboard() {
     margin: `0 0 ${isMobile ? "0.75rem" : "1rem"}`,
     fontSize: "0.85rem",
     fontWeight: "800",
-    color: COR.blue300,
+    color: COR.gold,
     letterSpacing: "0.04em",
+    fontFamily: "'Orbitron', sans-serif",
   };
 
   return (
@@ -168,9 +177,9 @@ export default function Dashboard() {
             <h3 style={{ ...cardTitulo, margin: 0 }}>🎯 Edição Ativa</h3>
             <span style={{
               fontSize: "0.7rem", fontWeight: "800",
-              color: COR.blue300,
-              background: "rgba(37,99,235,0.12)",
-              border: "1px solid rgba(37,99,235,0.3)",
+              color: COR.gold,
+              background: "rgba(245,166,35,0.12)",
+              border: "1px solid rgba(245,166,35,0.35)",
               borderRadius: "999px",
               padding: "0.2rem 0.6rem",
               letterSpacing: "0.04em",
@@ -217,10 +226,11 @@ export default function Dashboard() {
             <div style={{
               fontSize: isMobile ? "2.5rem" : "2.25rem",
               fontWeight: "900",
-              fontFamily: "monospace",
-              color: encerrado ? "#ef4444" : COR.gold,
+              fontFamily: "'JetBrains Mono', monospace",
+              color: encerrado ? COR.danger : timerColor(tempoRestante),
               letterSpacing: "0.02em",
               lineHeight: 1,
+              transition: "color 0.6s ease",
             }}>{timerDisplay}</div>
             <div style={{
               fontSize: "0.68rem", color: COR.muted,
@@ -241,13 +251,15 @@ export default function Dashboard() {
             style={{
               padding: "0.7rem 1rem",
               background: encerrado
-                ? "rgba(37,99,235,0.18)"
-                : "linear-gradient(135deg,#2563eb,#1d4ed8)",
+                ? "rgba(245,166,35,0.18)"
+                : "linear-gradient(135deg,#f5a623,#e89400)",
               border: "none", borderRadius: "10px",
-              color: encerrado ? COR.blue300 : "#fff",
+              color: encerrado ? COR.gold : "#0a0f1a",
               fontWeight: "800", cursor: "pointer",
               fontSize: "0.88rem", width: "100%",
-              boxShadow: encerrado ? "none" : "0 4px 14px rgba(37,99,235,0.35)",
+              fontFamily: "'Orbitron', sans-serif",
+              letterSpacing: "0.04em",
+              boxShadow: encerrado ? "none" : "0 4px 18px rgba(245,166,35,0.40)",
             }}
           >
             ⚡ Ir para o Mercado de Lances
@@ -300,10 +312,10 @@ export default function Dashboard() {
               style={{
                 display: "flex", alignItems: "center", gap: "0.45rem",
                 padding: "0.65rem 0.85rem",
-                background: COR.primaryDim,
-                border: "1px solid rgba(37,99,235,0.25)",
+                background: "rgba(245,166,35,0.08)",
+                border: "1px solid rgba(245,166,35,0.22)",
                 borderRadius: "10px",
-                color: COR.blue300,
+                color: COR.gold,
                 cursor: "pointer",
                 fontSize: "0.8rem", fontWeight: "600",
                 transition: "all 0.15s",
@@ -322,7 +334,7 @@ export default function Dashboard() {
       <footer style={{
         marginTop: sectionGap,
         paddingTop: "1rem",
-        borderTop: "1px solid rgba(37,99,235,0.08)",
+        borderTop: "1px solid rgba(245,166,35,0.08)",
         textAlign: "center",
         fontSize: "0.7rem",
         color: "#334155",

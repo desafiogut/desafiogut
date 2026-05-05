@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 const COR = {
-  primary: "#2563eb",
-  primaryDim: "rgba(37,99,235,0.15)",
+  primary: "#f5a623",
+  primaryDim: "rgba(245,166,35,0.15)",
   gold: "#f5a623",
   text: "#e8f0fe",
   muted: "#4a6490",
   success: "#10b981",
   danger: "#ef4444",
-  blue300: "#93c5fd",
+  blue300: "#fbbf24",
   purple: "#a78bfa",
 };
 
@@ -173,12 +173,12 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
   const dialog = {
     width: "100%", maxWidth: isMobile ? "100%" : "440px",
     maxHeight: isMobile ? "92vh" : "85vh",
-    background: "linear-gradient(180deg, rgba(8,24,64,0.96), rgba(3,15,36,0.96))",
-    border: "1px solid rgba(37,99,235,0.28)",
+    background: "linear-gradient(180deg, rgba(10,16,42,0.96), rgba(3,15,36,0.96))",
+    border: "1px solid rgba(245,166,35,0.28)",
     borderRadius: isMobile ? "20px 20px 0 0" : "20px",
     padding: isMobile ? "1.1rem" : "1.4rem",
     color: COR.text,
-    boxShadow: "0 -10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(37,99,235,0.08) inset",
+    boxShadow: "0 -10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,166,35,0.08) inset",
     overflowY: "auto",
   };
   const cabecalho = {
@@ -197,7 +197,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
   };
   const dotPasso = (ativo, completo) => ({
     flex: 1, height: "4px", borderRadius: "4px",
-    background: completo ? COR.success : ativo ? COR.primary : "rgba(37,99,235,0.18)",
+    background: completo ? COR.success : ativo ? COR.primary : "rgba(245,166,35,0.18)",
     transition: "background 0.2s",
   });
   const labelInput = {
@@ -207,8 +207,8 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
   };
   const presetBtn = (ativo) => ({
     flex: 1, padding: "0.65rem 0.4rem",
-    background: ativo ? COR.primary : "rgba(37,99,235,0.12)",
-    border: `1px solid ${ativo ? COR.primary : "rgba(37,99,235,0.3)"}`,
+    background: ativo ? COR.primary : "rgba(245,166,35,0.12)",
+    border: `1px solid ${ativo ? COR.primary : "rgba(245,166,35,0.3)"}`,
     borderRadius: "10px",
     color: ativo ? "#fff" : COR.blue300,
     fontWeight: 800, fontSize: "0.88rem",
@@ -217,7 +217,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
   const inputNum = {
     width: "100%", padding: "0.7rem 0.85rem",
     background: "rgba(3,15,36,0.7)",
-    border: "1px solid rgba(37,99,235,0.3)",
+    border: "1px solid rgba(245,166,35,0.3)",
     borderRadius: "10px",
     color: COR.text, fontSize: "0.95rem", fontWeight: 700,
     textAlign: "center",
@@ -233,11 +233,11 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
   };
   const btnPrimario = (disabled) => ({
     width: "100%", padding: "0.85rem 1rem",
-    background: disabled ? "rgba(37,99,235,0.3)" : "linear-gradient(135deg,#2563eb,#1d4ed8)",
+    background: disabled ? "rgba(245,166,35,0.3)" : "linear-gradient(135deg,#f5a623,#e89400)",
     border: "none", borderRadius: "12px",
     color: "#fff", fontWeight: 800, fontSize: "0.92rem",
     cursor: disabled ? "not-allowed" : "pointer",
-    boxShadow: disabled ? "none" : "0 4px 14px rgba(37,99,235,0.35)",
+    boxShadow: disabled ? "none" : "0 4px 14px rgba(245,166,35,0.35)",
   });
   const btnSecundario = {
     width: "100%", padding: "0.7rem 1rem",
@@ -353,7 +353,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
             <div style={{
               padding: "0.7rem 0.85rem",
               background: "rgba(3,15,36,0.7)",
-              border: "1px solid rgba(37,99,235,0.25)",
+              border: "1px solid rgba(245,166,35,0.25)",
               borderRadius: "10px",
               fontFamily: "monospace", fontSize: "0.7rem",
               color: COR.blue300, wordBreak: "break-all",
@@ -383,8 +383,8 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
             {aguardandoPix && !loading && (
               <div style={{
                 padding: "0.55rem 0.75rem",
-                background: "rgba(37,99,235,0.1)",
-                border: "1px solid rgba(37,99,235,0.3)",
+                background: "rgba(245,166,35,0.1)",
+                border: "1px solid rgba(245,166,35,0.3)",
                 borderRadius: "10px",
                 color: COR.blue300, fontSize: "0.74rem", fontWeight: 600,
                 marginBottom: "0.85rem", lineHeight: 1.4,
@@ -426,7 +426,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
               }}>
                 <div style={{
                   background: "rgba(3,15,36,0.7)",
-                  border: "1px solid rgba(37,99,235,0.18)",
+                  border: "1px solid rgba(245,166,35,0.18)",
                   borderRadius: "10px",
                   padding: "0.65rem 0.75rem",
                 }}>

@@ -178,7 +178,7 @@ export default function TermosConsentimento({ onAceitar }) {
             <input type="checkbox" checked={privacidade} onChange={(e) => setPrivacidade(e.target.checked)} style={estilos.checkbox} />
             <span>
               Concordo com o tratamento dos meus dados conforme a{" "}
-              <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: "#93c5fd" }}>
+              <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: "#fbbf24" }}>
                 Política de Privacidade
               </a>{" "}
               (LGPD/GDPR) e cedo minha imagem conforme Art. 33.
@@ -212,15 +212,15 @@ const estilos = {
   },
   modal: {
     background: "#0d2145",
-    border: "1px solid rgba(37,99,235,0.3)",
+    border: "1px solid rgba(245,166,35,0.3)",
     borderRadius: "16px", padding: "2rem",
     maxWidth: "620px", width: "100%", color: "#e8f0fe",
-    boxShadow: "0 25px 60px rgba(0,0,0,0.7), 0 0 40px rgba(37,99,235,0.15)",
+    boxShadow: "0 25px 60px rgba(0,0,0,0.7), 0 0 40px rgba(245,166,35,0.15)",
     maxHeight: "92vh", display: "flex", flexDirection: "column", gap: "1.25rem",
     overflowY: "auto",
   },
   header: {
-    borderBottom: "1px solid rgba(37,99,235,0.2)",
+    borderBottom: "1px solid rgba(245,166,35,0.2)",
     paddingBottom: "1rem",
   },
   logoArea: {
@@ -232,19 +232,19 @@ const estilos = {
   },
   titulo:   { margin: 0, fontSize: "1.5rem", fontWeight: "900", color: "#e8f0fe", letterSpacing: "0.04em" },
   grupoNome: { margin: 0, fontSize: "0.72rem", color: "#4a6490" },
-  subtitulo: { margin: 0, color: "#93c5fd", fontSize: "0.88rem", lineHeight: "1.5" },
+  subtitulo: { margin: 0, color: "#fbbf24", fontSize: "0.88rem", lineHeight: "1.5" },
   secaoTitulo: {
     margin: "0 0 1rem", fontSize: "0.9rem", fontWeight: "800",
-    color: "#93c5fd", letterSpacing: "0.05em", textTransform: "uppercase",
+    color: "#fbbf24", letterSpacing: "0.05em", textTransform: "uppercase",
   },
   scrollBox: {
     overflowY: "auto", maxHeight: "260px", padding: "1.25rem",
     background: "rgba(3,15,36,0.6)", borderRadius: "12px", fontSize: "0.84rem",
     lineHeight: "1.65", color: "#cbd5e1",
-    border: "1px solid rgba(37,99,235,0.15)",
+    border: "1px solid rgba(245,166,35,0.15)",
   },
   artigo: { margin: "0 0 0.9rem" },
-  artLabel: { color: "#93c5fd", fontWeight: "800" },
+  artLabel: { color: "#fbbf24", fontWeight: "800" },
   lista: {
     margin: "0.25rem 0 0.9rem 1.2rem",
     padding: 0,
@@ -253,12 +253,12 @@ const estilos = {
   },
   contatoBox: {
     marginTop: "1rem", padding: "0.75rem",
-    background: "rgba(37,99,235,0.08)",
+    background: "rgba(245,166,35,0.08)",
     borderRadius: "8px", textAlign: "center",
-    border: "1px solid rgba(37,99,235,0.15)",
+    border: "1px solid rgba(245,166,35,0.15)",
   },
   checkboxes: { display: "flex", flexDirection: "column", gap: "0.8rem" },
-  checkbox:   { accentColor: "#2563eb", width: "16px", height: "16px", flexShrink: 0, marginTop: "1px" },
+  checkbox:   { accentColor: "#f5a623", width: "16px", height: "16px", flexShrink: 0, marginTop: "1px" },
   label: {
     display: "flex", alignItems: "flex-start", gap: "0.6rem",
     fontSize: "0.86rem", cursor: "pointer", lineHeight: "1.5",
@@ -267,7 +267,7 @@ const estilos = {
   botao: {
     padding: "0.9rem",
     background: "linear-gradient(135deg,#f5a623,#f97316)",
-    color: "#030f24",
+    color: "#0a0f1a",
     border: "none", borderRadius: "28px",
     fontSize: "1rem", fontWeight: "900",
     transition: "opacity 0.2s",

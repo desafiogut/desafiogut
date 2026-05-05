@@ -51,7 +51,7 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
         .gut-beam-row::after, .gut-beam-card::after {
           content: '';
           position: absolute; inset: 0;
-          background: linear-gradient(90deg, transparent 0%, rgba(37,99,235,0.18) 40%, rgba(255,255,255,0.22) 50%, rgba(37,99,235,0.18) 60%, transparent 100%);
+          background: linear-gradient(90deg, transparent 0%, rgba(245,166,35,0.18) 40%, rgba(255,255,255,0.22) 50%, rgba(245,166,35,0.18) 60%, transparent 100%);
           background-size: 200% 100%;
           animation: gut-beam 2.6s ease-in-out infinite;
           pointer-events: none;
@@ -73,7 +73,7 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
       }}>
         <h3 style={{ ...estilos.titulo, fontSize: isMobile ? "0.95rem" : "1.05rem" }}>
           📋 Lances — Edição{" "}
-          <span style={{ color: "#93c5fd" }}>{edicaoSanitizada}</span>
+          <span style={{ color: "#fbbf24" }}>{edicaoSanitizada}</span>
         </h3>
         <div style={{
           display: "flex", gap: "0.6rem", alignItems: "center",
@@ -113,7 +113,7 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
 
       <p style={{
         marginTop: "1rem", fontSize: isMobile ? "0.68rem" : "0.72rem", color: "#4a6490",
-        borderTop: "1px solid rgba(37,99,235,0.12)", paddingTop: "0.75rem",
+        borderTop: "1px solid rgba(245,166,35,0.12)", paddingTop: "0.75rem",
         textAlign: isMobile ? "center" : "left",
       }}>
         🔒 Dados sanitizados · XSS-safe · Art. 26: apuração automática · Beta Interno
@@ -151,8 +151,8 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
               transition={{ duration: 0.28, ease: "easeOut" }}
               className={isVencedor ? "gut-beam-card" : undefined}
               style={{
-                background: isVencedor ? "rgba(37,99,235,0.10)" : "rgba(8,24,64,0.55)",
-                border: `1px solid ${isVencedor ? "rgba(37,99,235,0.4)" : "rgba(37,99,235,0.14)"}`,
+                background: isVencedor ? "rgba(245,166,35,0.10)" : "rgba(10,16,42,0.55)",
+                border: `1px solid ${isVencedor ? "rgba(245,166,35,0.4)" : "rgba(245,166,35,0.14)"}`,
                 borderRadius: "12px",
                 padding: "0.75rem 0.85rem",
                 display: "grid",
@@ -165,9 +165,9 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
               <div style={{
                 gridRow: "1 / span 2",
                 width: "32px", height: "32px", borderRadius: "50%",
-                background: isVencedor ? "rgba(245,166,35,0.18)" : "rgba(37,99,235,0.12)",
-                border: `1px solid ${isVencedor ? "rgba(245,166,35,0.4)" : "rgba(37,99,235,0.25)"}`,
-                color: isVencedor ? "#fbbf24" : "#93c5fd",
+                background: isVencedor ? "rgba(245,166,35,0.18)" : "rgba(245,166,35,0.12)",
+                border: `1px solid ${isVencedor ? "rgba(245,166,35,0.4)" : "rgba(245,166,35,0.25)"}`,
+                color: isVencedor ? "#fbbf24" : "#fbbf24",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontWeight: "900", fontSize: "0.85rem", flexShrink: 0,
               }}>
@@ -192,7 +192,7 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
                 fontWeight: "900",
                 fontSize: encerrado ? "1.05rem" : "0.9rem",
                 color: encerrado
-                  ? (isVencedor ? "#fbbf24" : "#93c5fd")
+                  ? (isVencedor ? "#fbbf24" : "#fbbf24")
                   : "#4a6490",
                 fontFamily: "monospace",
                 whiteSpace: "nowrap",
@@ -257,7 +257,7 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
                   className={isVencedor ? "gut-beam-row" : undefined}
                   style={{
                     ...estilos.tr,
-                    background: isVencedor ? "rgba(37,99,235,0.09)" : "transparent",
+                    background: isVencedor ? "rgba(245,166,35,0.09)" : "transparent",
                   }}
                 >
                   <td style={estilos.td}>{isVencedor ? "🏆" : i + 1}</td>
@@ -268,7 +268,7 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
                       ...estilos.td,
                       fontWeight: "700",
                       color: encerrado
-                        ? (isVencedor ? "#93c5fd" : "#e8f0fe")
+                        ? (isVencedor ? "#fbbf24" : "#e8f0fe")
                         : "#4a6490",
                       fontFamily: encerrado ? "monospace" : undefined,
                       letterSpacing: encerrado ? "0.02em" : "0.05em",
@@ -296,24 +296,24 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
 
 const estilos = {
   container: {
-    background: "rgba(8,24,64,0.6)",
+    background: "rgba(10,16,42,0.6)",
     backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-    borderRadius: "16px", color: "#e8f0fe",
-    border: "1px solid rgba(37,99,235,0.18)",
-    boxShadow: "0 24px 48px rgba(0,0,0,0.55)",
+    borderRadius: "12px", color: "#e8f0fe",
+    border: "1px solid rgba(245,166,35,0.22)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(245,166,35,0.08)",
   },
   header: {
     display: "flex", justifyContent: "space-between",
     flexWrap: "wrap",
   },
-  titulo: { margin: 0, fontWeight: "800", letterSpacing: "0.02em" },
+  titulo: { margin: 0, fontWeight: "800", letterSpacing: "0.04em", fontFamily: "'Orbitron', sans-serif", color: "#f5a623" },
   statusBadge: {
     padding: "0.22rem 0.75rem", borderRadius: "20px",
     fontSize: "0.7rem", fontWeight: "700", color: "#fff",
   },
   th: {
     padding: "0.55rem 1rem", textAlign: "left", fontSize: "0.7rem",
-    color: "#4a6490", borderBottom: "1px solid rgba(37,99,235,0.15)",
+    color: "#4a6490", borderBottom: "1px solid rgba(245,166,35,0.15)",
     textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: "700",
   },
   tr: { borderBottom: "1px solid rgba(255,255,255,0.04)" },

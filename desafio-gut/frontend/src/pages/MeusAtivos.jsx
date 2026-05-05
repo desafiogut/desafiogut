@@ -3,9 +3,9 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 const COR = {
-  primary: "#2563eb", primaryDim: "rgba(37,99,235,0.15)",
+  primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
   text: "#e8f0fe", muted: "#4a6490",
-  success: "#10b981", danger: "#ef4444", blue300: "#93c5fd", gold: "#f5a623",
+  success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", gold: "#f5a623",
 };
 
 const FILTROS = [
@@ -71,8 +71,8 @@ export default function MeusAtivos() {
       }}>
         {stats.map(({ label, value, color }) => (
           <div key={label} style={{
-            background: "rgba(8,24,64,0.6)",
-            border: "1px solid rgba(37,99,235,0.18)",
+            background: "rgba(10,16,42,0.6)",
+            border: "1px solid rgba(245,166,35,0.18)",
             borderRadius: "14px",
             padding: isMobile ? "0.85rem 0.9rem" : "1rem",
             minWidth: 0,
@@ -106,7 +106,7 @@ export default function MeusAtivos() {
               onClick={() => setFiltro(id)}
               style={{
                 padding: "0.32rem 0.85rem", borderRadius: "20px",
-                border: `1px solid ${filtro === id ? COR.primary : "rgba(37,99,235,0.2)"}`,
+                border: `1px solid ${filtro === id ? COR.primary : "rgba(245,166,35,0.2)"}`,
                 background: filtro === id ? COR.primaryDim : "transparent",
                 color: filtro === id ? COR.blue300 : COR.muted,
                 cursor: "pointer", fontSize: "0.76rem", fontWeight: "600",
@@ -125,8 +125,8 @@ export default function MeusAtivos() {
 
       {/* Lista */}
       <div style={{
-        background: "rgba(8,24,64,0.6)",
-        border: "1px solid rgba(37,99,235,0.18)",
+        background: "rgba(10,16,42,0.6)",
+        border: "1px solid rgba(245,166,35,0.18)",
         borderRadius: "16px",
         padding: isMobile ? "0.75rem" : 0,
         overflow: "hidden",
@@ -154,12 +154,12 @@ export default function MeusAtivos() {
         <div style={{ marginTop: sectionGap, textAlign: "center" }}>
           <button onClick={abrirModal} style={{
             padding: isMobile ? "0.75rem 1.25rem" : "0.7rem 1.5rem",
-            background: "linear-gradient(135deg,#2563eb,#1d4ed8)",
+            background: "linear-gradient(135deg,#f5a623,#e89400)",
             border: "none", borderRadius: "20px", color: "#fff",
             fontWeight: "800", cursor: "pointer",
             fontSize: isMobile ? "0.84rem" : "0.88rem",
             width: isMobile ? "100%" : "auto",
-            boxShadow: "0 4px 14px rgba(37,99,235,0.4)",
+            boxShadow: "0 4px 14px rgba(245,166,35,0.4)",
           }}>⚡ Aceito o DesafioGUT — Entrar para ver seus lances</button>
         </div>
       )}
@@ -167,7 +167,7 @@ export default function MeusAtivos() {
       <p style={{
         marginTop: sectionGap,
         paddingTop: "0.75rem",
-        borderTop: "1px solid rgba(37,99,235,0.08)",
+        borderTop: "1px solid rgba(245,166,35,0.08)",
         fontSize: "0.7rem", color: "#334155", textAlign: "center", lineHeight: 1.5,
       }}>
         Art. 26: Apuração automática · Art. 8: Menor lance único ganha · Beta Interno
@@ -184,8 +184,8 @@ function MobileList({ lances, filtro }) {
         const enderecoAbrev = `${lance.endereco?.slice(0, 6)}...${lance.endereco?.slice(-4)}`;
         return (
           <div key={i} style={{
-            background: isVencedor ? "rgba(37,99,235,0.10)" : "rgba(3,15,36,0.55)",
-            border: `1px solid ${isVencedor ? "rgba(37,99,235,0.4)" : "rgba(37,99,235,0.14)"}`,
+            background: isVencedor ? "rgba(245,166,35,0.10)" : "rgba(3,15,36,0.55)",
+            border: `1px solid ${isVencedor ? "rgba(245,166,35,0.4)" : "rgba(245,166,35,0.14)"}`,
             borderRadius: "12px",
             padding: "0.7rem 0.85rem",
             display: "grid",
@@ -197,8 +197,8 @@ function MobileList({ lances, filtro }) {
             <div style={{
               gridRow: "1 / span 2",
               width: "32px", height: "32px", borderRadius: "50%",
-              background: isVencedor ? "rgba(245,166,35,0.18)" : "rgba(37,99,235,0.12)",
-              border: `1px solid ${isVencedor ? "rgba(245,166,35,0.4)" : "rgba(37,99,235,0.25)"}`,
+              background: isVencedor ? "rgba(245,166,35,0.18)" : "rgba(245,166,35,0.12)",
+              border: `1px solid ${isVencedor ? "rgba(245,166,35,0.4)" : "rgba(245,166,35,0.25)"}`,
               color: isVencedor ? COR.gold : COR.blue300,
               display: "flex", alignItems: "center", justifyContent: "center",
               fontWeight: "900", fontSize: "0.85rem", flexShrink: 0,
@@ -243,7 +243,7 @@ function DesktopTable({ lances, filtro }) {
   return (
     <table style={{ width: "100%", borderCollapse: "collapse" }}>
       <thead>
-        <tr style={{ borderBottom: "1px solid rgba(37,99,235,0.15)" }}>
+        <tr style={{ borderBottom: "1px solid rgba(245,166,35,0.15)" }}>
           {["#", "Participante", "Valor (R$)", "Status", "ID do Lance"].map((h) => (
             <th key={h} style={{
               padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.7rem",
@@ -259,7 +259,7 @@ function DesktopTable({ lances, filtro }) {
           return (
             <tr key={i} style={{
               borderBottom: "1px solid rgba(255,255,255,0.04)",
-              background: isVencedor ? "rgba(37,99,235,0.08)" : "transparent",
+              background: isVencedor ? "rgba(245,166,35,0.08)" : "transparent",
             }}>
               <td style={{ padding: "0.7rem 1rem", fontSize: "0.85rem" }}>
                 {isVencedor ? "🏆" : i + 1}
