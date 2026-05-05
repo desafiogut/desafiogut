@@ -1,25 +1,26 @@
 // POST /.netlify/functions/comprar-senhas
+// Header: Authorization: Bearer <token>  — JWT { endereco, tipo:"lance-auth" } emitido por /auth-lance
 // Body: { endereco: "0x...", qtd: 1..100 }
 // Resposta 200: { ok, idempotent, qtd, valorCentavos,
 //                 saldoRsAntesCentavos, saldoRsDepoisCentavos,
 //                 senhasAntes, senhasDepois, txHash, blockNumber, etherscanUrl }
-// Resposta 400: saldo insuficiente / params inválidos
+// Resposta 401: token_ausente | token_expirado | token_invalido
+// Resposta 403: endereco_nao_corresponde
+// Resposta 400: saldo_insuficiente | params_invalidos
 // Resposta 502: falha on-chain (com auto-reembolso do R$ debitado)
 //
 // Fluxo:
-//   1) Valida endereco/qtd.
-//   2) Debita qtd*200 centavos do saldo R$ (off-chain).
-//   3) Chama adicionarSenhas on-chain (coordenacao).
-//   4) Em falha on-chain: reembolsa R$ best-effort.
-//
-// Auth: para o beta, sem auth — saldoRs é por endereço; um atacante teria de
-// gastar R$ alheio sem benefício próprio (senhas vão para o dono do address).
-// Hardening futuro: exigir signMessage com EIP-191 do address dono.
+//   1) Verifica JWT lance-auth (mesmo mecanismo do lance-relampago).
+//   2) Valida endereco/qtd.
+//   3) Debita qtd*200 centavos do saldo R$ (off-chain).
+//   4) Chama adicionarSenhas on-chain (coordenacao).
+//   5) Em falha on-chain: reembolsa R$ best-effort.
 
 import {
   jsonResponse, jsonError, validarEndereco, validarQuantidadeFichas,
   parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
+import { verificarLanceAuth } from "./_lib/jwt.mjs";
 import {
   debitarSaldoRs, reembolsarSaldoRs, lerSaldoRsCentavos,
 } from "./_lib/saldoRs.mjs";
@@ -31,6 +32,22 @@ export default async (req) => {
   if (req.method !== "POST") {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }
+
+  // ── 1. Auth: verificar JWT lance-auth ─────────────────────────────────────
+  const authHeader = req.headers.get("authorization") || "";
+  const authToken  = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!authToken) {
+    return jsonError(401, "token_ausente", "Authorization: Bearer <token> obrigatório — obtenha via POST /auth-lance");
+  }
+  let jwtPayload;
+  try {
+    jwtPayload = await verificarLanceAuth(authToken);
+  } catch (err) {
+    const code = err?.code === "ERR_JWT_EXPIRED" ? "token_expirado" : "token_invalido";
+    return jsonError(401, code, "token inválido ou expirado — obtenha novo via POST /auth-lance");
+  }
+
+  // ── 2. Body parse ──────────────────────────────────────────────────────────
   let body;
   try {
     body = await parseJsonBody(req);
@@ -40,6 +57,7 @@ export default async (req) => {
     throw err;
   }
 
+  // ── 3. Validar campos ──────────────────────────────────────────────────────
   let endereco, qtd;
   try {
     endereco = validarEndereco(body.endereco);
@@ -48,6 +66,12 @@ export default async (req) => {
     if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
     throw err;
   }
+
+  // ── 4. JWT endereco deve corresponder ao body ──────────────────────────────
+  if (jwtPayload.endereco !== endereco) {
+    return jsonError(403, "endereco_nao_corresponde", "token não pertence ao endereço informado");
+  }
+
   const valorCentavos = qtd * VALOR_POR_SENHA_CENTAVOS;
 
   console.info("[comprar-senhas] início", { endereco, qtd, valorCentavos });

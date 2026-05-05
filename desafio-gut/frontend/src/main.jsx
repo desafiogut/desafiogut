@@ -143,7 +143,7 @@ createRoot(document.getElementById("root")).render(
       }}
       config={{
         // ── Métodos de login: Google, E-mail, Apple ──────────────────────────
-        loginMethods: ["google", "email"],  // Apple desabilitado no painel Privy — ativar em Settings → Login Methods
+        loginMethods: ["google", "email", "apple"],
 
         // ── Embedded Wallet: criado automaticamente para todos os usuários ──
         embeddedWallets: {

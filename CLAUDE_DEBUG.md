@@ -1798,3 +1798,85 @@ Cobre as três armadilhas:
 - Smoke test em produção: PIX → conferir badge R$ no Dashboard sobe
   automaticamente sem clique; depois "Trocar R$ → Senha" → conferir
   badge 🔗 sobe e R$ baixa em R$ 2,00.
+
+---
+
+## Segurança: auth comprar-senhas + Apple OAuth (2026-05-05)
+
+### TASK 1 — Auth em comprar-senhas (commit desta sessão)
+
+**Problema**: `POST /comprar-senhas` aceitava qualquer `endereco` sem prova
+de posse. Um atacante poderia debitar R$ do saldo de outra wallet.
+
+**Solução**: mesmo mecanismo do `lance-relampago`:
+1. Frontend (`MinhaCarteira.jsx`) chama `getComprarAuthToken()` antes do fetch.
+   - Token cached em `comprarAuthRef` (useRef) por 10 min.
+   - Na primeira chamada: `signMessage("DESAFIOGUT-AUTH:<ts>:<address>")` via
+     Privy → `POST /auth-lance` → JWT `lance-auth`.
+   - Privy popup aparece somente na primeira chamada em 10 min.
+2. Backend (`comprar-senhas.mjs`) verifica `Authorization: Bearer <token>`
+   antes de qualquer operação. Sem token → 401. Token expirado → 401.
+   JWT.endereco ≠ body.endereco → 403.
+
+**Arquivos alterados**:
+- `netlify/functions/comprar-senhas.mjs`: import `verificarLanceAuth` + bloco auth no handler
+- `frontend/src/pages/MinhaCarteira.jsx`: imports `useRef`, `useWallets`, `getSignerFromProvider`;
+  `comprarAuthRef`; `getComprarAuthToken()`; `trocarPorSenhas` atualizada
+
+**Endpoints com auth JWT lance-auth agora**:
+| Endpoint | Auth |
+|---|---|
+| `POST /lance-relampago` | ✅ JWT lance-auth (desde commit 2cc8c59) |
+| `POST /comprar-senhas`  | ✅ JWT lance-auth (este commit) |
+| `POST /confirmar-pagamento` | JWT pedido (PIX) |
+| `POST /auth-lance` | EIP-191 signMessage (emite o JWT) |
+| `GET /saldo-rs` | sem auth (read-only, por endereço) |
+| `GET /lances-flash` | sem auth (dados públicos) |
+| `GET /health` | sem auth |
+| `GET /debug-pedido` | **pendente** (exposto sem auth — só debug) |
+
+---
+
+### TASK 2 — Apple OAuth habilitado (2026-05-05)
+
+**O que mudou em código**: `main.jsx` linha 146:
+```js
+// Antes:
+loginMethods: ["google", "email"]
+// Depois:
+loginMethods: ["google", "email", "apple"]
+```
+
+**Ação manual necessária no Privy Dashboard** (não automatizável via API):
+1. Acessar https://dashboard.privy.io/apps/cmo51f3v300l90clgzksivvad/settings
+2. Settings → Login Methods → Apple → Enable
+3. Configurar Apple OAuth App ID (requer conta Apple Developer)
+4. Salvar — sem rebuild necessário
+
+**Pré-requisito**: conta Apple Developer (USD 99/ano). Sem ela, `loginMethods: ["apple"]`
+fica ignorado silenciosamente pelo SDK mas não quebra os outros métodos.
+
+---
+
+### TASK 3 — Upgrade Privy obrigatório antes do lançamento (2026-05-05)
+
+**Plano Free (atual)**: limite de **100 Monthly Active Users (MAU)**.
+Após 100 MAU, novos logins são bloqueados pelo Privy com erro na sessão.
+
+**Plano necessário**: Privy Growth ou Enterprise.
+
+| Plano | MAU | Preço estimado |
+|---|---|---|
+| Free (atual) | 100 | USD 0/mês |
+| Starter | ~1.000 | USD 25/mês |
+| Growth | ~10.000 | USD 99/mês |
+| Scale / Enterprise | ilimitado | negociado |
+
+**Como verificar**: Privy Dashboard → Usage → Monthly Active Users.
+Se a barra estiver acima de 80%, fazer upgrade **antes** do lançamento público.
+
+**Impacto se não for feito**: qualquer usuário além do 100º recebe erro de login
+silencioso (sem mensagem clara no browser). Difícil de diagnosticar sem os logs
+do Privy. Bloqueador crítico para lançamento público.
+
+**Referência**: https://privy.io/pricing
