@@ -177,10 +177,42 @@ export default function Dashboard() {
             }}>{EDICAO_ATIVA}</span>
           </div>
 
+          {/* Produto em disputa */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: "0.65rem",
+            padding: "0.6rem 0.75rem",
+            background: "rgba(245,166,35,0.07)",
+            border: "1px solid rgba(245,166,35,0.22)",
+            borderRadius: "10px",
+            marginBottom: isMobile ? "0.6rem" : "0.75rem",
+          }}>
+            <img
+              src="/produtos/airfryer.jpeg"
+              alt="Airfryer Mondial Grand Family 5L"
+              style={{
+                width: "52px", height: "52px",
+                objectFit: "contain",
+                background: "#fff", borderRadius: "8px",
+                flexShrink: 0,
+              }}
+            />
+            <div>
+              <div style={{ fontSize: "0.58rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: "700", marginBottom: "0.15rem" }}>
+                🎁 Prêmio em Disputa
+              </div>
+              <div style={{ fontSize: isMobile ? "0.78rem" : "0.82rem", color: COR.gold, fontWeight: "800", lineHeight: 1.25 }}>
+                Airfryer Mondial
+              </div>
+              <div style={{ fontSize: "0.68rem", color: COR.muted, lineHeight: 1.2 }}>
+                Grand Family 5L
+              </div>
+            </div>
+          </div>
+
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center",
             gap: "0.15rem",
-            padding: isMobile ? "0.75rem 0 1rem" : "0.5rem 0 1rem",
+            padding: isMobile ? "0.5rem 0 0.85rem" : "0.25rem 0 0.85rem",
           }}>
             <div style={{
               fontSize: isMobile ? "2.5rem" : "2.25rem",

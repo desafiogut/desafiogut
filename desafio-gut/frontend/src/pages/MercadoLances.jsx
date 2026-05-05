@@ -136,6 +136,40 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, MOC
             {" · Edição "}<strong style={{ color: COR.blue300 }}>{EDICAO_ATIVA}</strong>
             {" · "}{tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
           </p>
+          {/* Produto em disputa */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: "0.85rem",
+            background: "rgba(245,166,35,0.07)",
+            border: "1px solid rgba(245,166,35,0.25)",
+            borderRadius: "12px",
+            padding: isMobile ? "0.75rem" : "0.9rem 1rem",
+            marginBottom: "1rem",
+          }}>
+            <img
+              src="/produtos/airfryer.jpeg"
+              alt="Airfryer Mondial Grand Family 5L"
+              style={{
+                width: isMobile ? "60px" : "70px",
+                height: isMobile ? "60px" : "70px",
+                objectFit: "contain",
+                background: "#fff",
+                borderRadius: "10px",
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ textAlign: "left" }}>
+              <div style={{ fontSize: "0.6rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.2rem" }}>
+                🎁 Prêmio do Leilão
+              </div>
+              <div style={{ fontSize: isMobile ? "0.9rem" : "1rem", color: "#fbbf24", fontWeight: "800", lineHeight: 1.2 }}>
+                Airfryer Mondial
+              </div>
+              <div style={{ fontSize: isMobile ? "0.72rem" : "0.78rem", color: "#94a3b8", lineHeight: 1.3 }}>
+                Grand Family 5L
+              </div>
+            </div>
+          </div>
+
           {vencedor ? (
             <div style={{
               background: "#0a1e38", border: `1px solid ${COR.blue300}`,
