@@ -15,7 +15,7 @@ export const ABI = [
 ];
 
 export const CONTRATO_SEPOLIA =
-  import.meta.env.VITE_CONTRATO_SEPOLIA ?? "0x273Ef96f5be04601FD39DAcDFB039d6fB552445e";
+  import.meta.env.VITE_CONTRATO_SEPOLIA ?? "0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5";
 
 /**
  * Retorna um ethers BrowserProvider + Signer a partir de qualquer

@@ -1,0 +1,546 @@
+name: "desafiogut-cyber"
+version: "1.0.0"
+generated_by: "hue v1.1.0 + OhMySkills/Cyberpunk"
+generated_at: "2026-05-05"
+philosophy: >
+  Menor Lance, Máximo Impacto. Enquanto os concorrentes (Brazino 777, Br4Bet) vivem
+  em verde tropical e ouro de cassino, o DesafioGUT fala a língua do underground
+  blockchain. É um terminal hackeado disfarçado de leilão — a intersecção entre
+  crypto-noir e energia de apostas brasileira. O void absoluto no fundo não é
+  ausência: é o espaço onde o menor lance ganha tudo.
+primary_mode: "dark"
+brand_domain: "leilão blockchain / menor lance único"
+brand_type: "ui-rich"
+mono_for_code: true
+mono_for_metrics: true  # Preços em R$, contadores, endereços de wallet
+
+# ── ANÁLISE DAS REFERÊNCIAS VISUAIS ──────────────────────────────────────────
+# Fontes: 5 imagens analisadas (DesafioGUT app, Brazino777 ×2, Br4Bet, Plataforma BR)
+visual_analysis:
+  desafiogut_own:
+    description: "Flyer promocional DesafioGUT — dark navy #04080f + teal #00d4aa + gold #f5a623. Botões pill arredondados. Tipografia bold uppercase. Cronômetro 24h DAS 07 ÀS 21H. Já carrega DNA cyberpunk sem explorar."
+    dominant_colors: ["#04080f", "#00d4aa", "#f5a623", "#ff3d71"]
+    cta_style: "pill, gold fill, dark text, uppercase"
+    typography_feel: "impact/bold, energy-driven"
+  brazino777_desktop:
+    description: "Design genérico de apostas BR — verde #1a6b2a, CTAs amarelo-ouro, thumbnails de slots. Navegação top mínima. Moedas 3D, imagens de casino. Identidade sem diferenciação."
+    dominant_colors: ["#1a6b2a", "#ffc700", "#ffffff", "#1a1a1a"]
+    cta_style: "pill, yellow fill"
+  brazino777_mobile:
+    description: "Mesmo verde/ouro. Botões pill duais: RECEBER (yellow) + DETALHES (outlined). Itens 3D coloridos — wallet, bolo, troféu. Estética gamificada tropical."
+    dominant_colors: ["#1a6b2a", "#ffc700", "#4a90d9"]
+  br4bet:
+    description: "Banner futebol com estádio noturno — fundo escuro iluminado, headlines ouro, ticket verde. Confetti. Energia de evento esportivo, não de tech."
+    dominant_colors: ["#0a1a0a", "#ffd700", "#00aa00"]
+  plataforma_5reais:
+    description: "Verde/amarelo/azul brasileiro, iconografia 3D de cassino (roleta, dados, bola, baralho). Festivo, tropical. Genérico máximo."
+    dominant_colors: ["#009c3b", "#ffdf00", "#002776"]
+  competitive_gap: >
+    Todos os concorrentes usam verde tropical + gold genérico + 3D festivo.
+    DesafioGUT se diferencia com dark void + teal cyberpunk + blockchain aesthetic.
+    Nenhum concorrente tem scanlines, chamfer, glitch effects ou circuit patterns.
+    Essa diferenciação é a identidade.
+
+# ── PRIMITIVES ───────────────────────────────────────────────────────────────
+primitives:
+  colors:
+    neutral:  # Cool-dark, ligeiro subtom azul (blockchain/tech feel)
+      50:  "#f0f4f8"
+      100: "#dce8f0"
+      200: "#b8cdd8"
+      300: "#8aabbc"
+      400: "#5d8a9e"
+      500: "#3d6a7e"
+      600: "#2a4e5c"
+      700: "#1a3240"
+      800: "#0f1e28"
+      900: "#081218"
+      950: "#04080f"   # gut-bg — o void
+
+    brand:  # Teal — accent primário DesafioGUT
+      50:  "#e6fff9"
+      100: "#b3ffef"
+      200: "#80ffe4"
+      300: "#4dffd9"
+      400: "#1affd0"
+      500: "#00d4aa"   # gut-primary — identidade DesafioGUT
+      600: "#00a884"
+      700: "#007d63"
+      800: "#005242"
+      900: "#002721"
+      950: "#001410"
+
+    gold:  # Gold — CTA principal, prêmios, valores
+      50:  "#fff8e1"
+      100: "#ffedb3"
+      200: "#ffe085"
+      300: "#ffd357"
+      400: "#ffc429"
+      500: "#f5a623"   # gut-gold
+      600: "#c47d00"
+      700: "#935d00"
+      800: "#623d00"
+      900: "#311e00"
+      950: "#180f00"
+
+    cyan:  # Cyan — terceiro acento cyberpunk (blockchain links, chain elements)
+      500: "#00d4ff"
+      600: "#00a8cc"
+      950: "#00141a"
+
+    magenta:  # Magenta — glitch effects, chave cyberpunk (uso sparing)
+      500: "#ff00ff"
+      950: "#1a001a"
+
+    red:   { 50: "#ffe6ef", 500: "#ff3d71", 900: "#7f0033" }   # gut-danger
+    green: { 50: "#e6fff0", 500: "#00c853", 900: "#003318" }   # gut-success
+    amber: { 50: "#fff3e0", 500: "#f97316", 900: "#7f3200" }   # gut-warning (timer 6–15s)
+
+  spacing: [0, 1, 2, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 64, 96]
+  radii: [0, 2, 4, 999]
+  # Filosofia de raios: quase tudo angular ou chamfered.
+  # Pill (999) reservado APENAS para CTA primário de lance.
+  # Cards, inputs, modals: chamfer via clip-path ou radius 2-4px.
+
+# ── SEMANTIC TOKENS ──────────────────────────────────────────────────────────
+tokens:
+  colors:
+    dark:  # Único modo — DesafioGUT é dark-only
+      background:     "{neutral.950}"   # #04080f — o void
+      surface1:       "{neutral.900}"   # #081218 — cards elevados
+      surface2:       "{neutral.800}"   # #0f1e28 — inputs, wells
+      surface3:       "{neutral.700}"   # #1a3240 — grupos, separadores
+      border:         "{neutral.800}"   # decorativo/estrutural
+      border_visible: "{neutral.600}"   # bordas intencionais
+      text1:          "{neutral.50}"    # #f0f4f8 — texto primário
+      text2:          "{neutral.300}"   # descrições, metadados
+      text3:          "{neutral.400}"   # placeholders, timestamps
+      text4:          "{neutral.500}"   # texto desabilitado
+      accent:         "{brand.500}"     # #00d4aa — interativos principais
+      accent_subtle:  "{brand.950}"     # #001410 — bg tinted accent
+      gold:           "{gold.500}"      # #f5a623 — CTAs, prêmios
+      gold_subtle:    "{gold.950}"      # #180f00 — bg tinted gold
+      cyan:           "{cyan.500}"      # #00d4ff — blockchain links
+      cyan_subtle:    "{cyan.950}"      # detalhes on-chain
+      glitch:         "{magenta.500}"   # #ff00ff — glitch effects (uso sparing)
+      success:        "{green.500}"     # #00c853 — lance confirmado
+      warning:        "{amber.500}"     # #f97316 — timer 6-15s
+      error:          "{red.500}"       # #ff3d71 — timer urgente ≤5s, erros
+
+  spacing:
+    2xs: 2    # separadores
+    xs:  4    # icon gap, tight padding
+    sm:  8    # elemento interno
+    md:  16   # card padding
+    lg:  24   # seção interna
+    xl:  32   # seção
+    2xl: 48   # hero gap
+    3xl: 64   # vertical section
+    4xl: 96   # full section padding
+
+  radii:
+    element:   2     # checkboxes, small ui elements
+    control:   4     # inputs (leve — não pill)
+    component: 0     # cards usam clip-path chamfer
+    container: 4     # modais — mínimo rounding
+    pill:      999   # CTA primário de lance (botão CONFIRMAR LANCE)
+    # Para chamfer via clip-path:
+    # clip-path: polygon(0 10px, 10px 0, calc(100%-10px) 0, 100% 10px,
+    #   100% calc(100%-10px), calc(100%-10px) 100%, 10px 100%, 0 calc(100%-10px))
+
+  typography:
+    display: { family: "Orbitron", size: "48px", weight: 900, line_height: 1.0, letter_spacing: "0.1em", transform: "uppercase" }
+    h1:      { family: "Orbitron", size: "32px", weight: 700, line_height: 1.1, letter_spacing: "0.06em", transform: "uppercase" }
+    h2:      { family: "Orbitron", size: "24px", weight: 600, line_height: 1.2, letter_spacing: "0.04em", transform: "uppercase" }
+    h3:      { family: "Inter",    size: "18px", weight: 600, line_height: 1.3, letter_spacing: "0.02em" }
+    body:    { family: "Inter",    size: "15px", weight: 400, line_height: 1.6, letter_spacing: "0" }
+    body_sm: { family: "Inter",    size: "13px", weight: 400, line_height: 1.5, letter_spacing: "0" }
+    caption: { family: "JetBrains Mono", size: "11px", weight: 400, line_height: 1.4, letter_spacing: "0.1em", transform: "uppercase" }
+    label:   { family: "JetBrains Mono", size: "12px", weight: 600, line_height: 1.0, letter_spacing: "0.15em", transform: "uppercase" }
+    mono:    { family: "JetBrains Mono", size: "13px", weight: 400, line_height: 1.5 }
+    # Notas de uso:
+    # display → "MENOR LANCE ÚNICO!", headline principal do leilão
+    # h1/h2 → headers de seção, nome do produto em leilão
+    # h3 → header de card, título de bloco
+    # body → regras do leilão, descrições
+    # label/caption → preços (R$ 0,01), timer countdown, wallet address
+    # mono → hash de transação, valores on-chain, saldos
+    google_fonts_import: "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+
+  elevation:
+    strategy: "glow"
+    # Flat para superfícies neutras. Glow neon para elementos interativos/destacados.
+    definitions:
+      flat:    "none"
+      subtle:  "0 1px 3px rgba(0,0,0,0.5)"
+      glow_teal: "0 0 5px #00d4aa, 0 0 10px rgba(0,212,170,0.4)"
+      glow_gold: "0 0 5px #f5a623, 0 0 10px rgba(245,166,35,0.4)"
+      glow_error: "0 0 5px #ff3d71, 0 0 10px rgba(255,61,113,0.4)"
+      glow_teal_lg: "0 0 10px #00d4aa, 0 0 20px rgba(0,212,170,0.6), 0 0 40px rgba(0,212,170,0.3)"
+      neon_text_teal: "0 0 10px rgba(0,212,170,0.5)"
+      neon_text_gold: "0 0 10px rgba(245,166,35,0.5)"
+
+  motion:
+    personality: "mechanical-digital"
+    easing: "cubic-bezier(0.4, 0, 0.2, 1)"
+    easing_digital: "steps(4)"   # para glitch effects
+    duration_instant: "0ms"
+    duration_fast:    "100ms"
+    duration_normal:  "150ms"
+    duration_slow:    "300ms"
+    keyframes:
+      blink: "50% { opacity: 0; }"
+      glitch: |
+        0%,100% { transform: translate(0); }
+        20% { transform: translate(-2px, 2px); }
+        40% { transform: translate(2px, -2px); }
+        60% { transform: translate(-1px, -1px); }
+        80% { transform: translate(1px, 1px); }
+      rgbShift: |
+        0%,100% { text-shadow: -2px 0 #ff00ff, 2px 0 #00d4ff; }
+        50% { text-shadow: 2px 0 #ff00ff, -2px 0 #00d4ff; }
+      scanline: |
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(100vh); }
+      pulse_glow: |
+        0%,100% { box-shadow: 0 0 5px #00d4aa, 0 0 10px rgba(0,212,170,0.4); }
+        50% { box-shadow: 0 0 10px #00d4aa, 0 0 20px rgba(0,212,170,0.6), 0 0 40px rgba(0,212,170,0.3); }
+
+  # ── HERO STAGE ─────────────────────────────────────────────────────────────
+  hero_stage:
+    preset: "luminous-on-gradient"
+    observed_style:
+      description: >
+        Void absoluto (#04080f) com glow teal emanando do centro — o timer/countdown
+        do leilão como sujeito luminoso. Circuit grid a 3% de opacidade sobre todo
+        o fundo. Competidores usam imagens 3D festivas; DesafioGUT usa luz pura.
+      where_used: ["hero section", "background global", "modal backdrop"]
+    background:
+      medium: "mesh"
+      color_mode: "dual-tone"       # void preto + teal
+      saturation: "vibrant"         # neon é a identidade
+      light_source: "center"        # glow radial do centro (o leilão em si)
+      falloff: "radial"
+      vignette: "subtle"
+      texture: "noise"              # circuit grid a 3% (PCB traces aesthetic)
+      motion: "pulse"               # breathing glow — o leilão está vivo
+      intensity: "bold"
+      safe_zone: "masked-for-text"
+      color_palette: ["#04080f", "#00d4aa", "#001410", "#0f1e28", "#00d4ff"]
+      circuit_grid_css: |
+        background-image:
+          linear-gradient(rgba(0, 212, 170, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 212, 170, 0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
+      scanlines_css: |
+        background: repeating-linear-gradient(
+          0deg, transparent, transparent 2px,
+          rgba(0,0,0,0.25) 2px, rgba(0,0,0,0.25) 4px
+        );
+    hero:
+      subject: "luminous"
+      form: "ring"                  # o timer countdown como anel luminoso
+      placement: "center"
+      scale: "large"
+      tint: "#00d4aa"
+    relation:
+      type: "glow"
+      bleed: 40
+
+  # ── ICONOGRAPHY ────────────────────────────────────────────────────────────
+  iconography:
+    observed_style:
+      description: "Refs competidores usam ícones 3D de cassino (dados, cartas, moedas). DesafioGUT precisa de ícones técnicos/blockchain: wallet, chain, shield, timer."
+      stroke_weight: "regular"
+      corner_treatment: "sharp"     # technical feel
+      fill_style: "outline"
+      form_language: "geometric"
+      visual_density: "minimal"
+    fallback_kit:
+      name: "Lucide"
+      weight: "regular"
+      stroke: "1.5px"
+      match_score: "high"
+      match_reasoning: "Lucide tem stroke leve (1.5px), terminais sharp, geometria técnica — combina com o aesthetic de HUD/terminal do DesafioGUT. Phosphor seria 2ª opção mas é mais humanista."
+      cdn: "https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"
+      glow_on_hover: "filter: drop-shadow(0 0 4px #00d4aa)"
+
+# ── COMPONENTS ───────────────────────────────────────────────────────────────
+components:
+  button_primary:
+    name: "Confirmar Lance (CTA principal)"
+    source: "observed"              # derivado da ref DesafioGUT
+    background: "{gold.500}"
+    color: "{neutral.950}"
+    padding: "14px 28px"
+    radius: "{radii.pill}"          # pill — mantém energia dos competidores
+    font: "Orbitron"
+    font_size: "14px"
+    font_weight: 700
+    text_transform: "uppercase"
+    letter_spacing: "0.1em"
+    hover:
+      background: "{gold.400}"
+      box_shadow: "{elevation.glow_gold}"
+      filter: "brightness(1.1)"
+
+  button_secondary:
+    name: "Botão Secundário (outline teal)"
+    source: "derived"
+    background: "transparent"
+    border: "2px solid {brand.500}"
+    color: "{brand.500}"
+    padding: "12px 24px"
+    clip_path: "chamfer"
+    font: "Orbitron"
+    font_size: "13px"
+    font_weight: 600
+    text_transform: "uppercase"
+    hover:
+      background: "{brand.500}"
+      color: "{neutral.950}"
+      box_shadow: "{elevation.glow_teal}"
+
+  button_ghost:
+    name: "Botão Ghost"
+    source: "derived"
+    background: "transparent"
+    color: "{neutral.300}"
+    padding: "10px 20px"
+    font_size: "13px"
+    hover:
+      color: "{brand.500}"
+      background: "{brand.950}"
+
+  card_default:
+    name: "Card de Lance / Produto"
+    source: "derived"
+    background: "{neutral.900}"
+    border: "1px solid {neutral.700}"
+    clip_path: "chamfer"            # chamfered corners — diferenciação dos concorrentes
+    padding: "16px"
+    hover:
+      border_color: "{brand.500}"
+      box_shadow: "{elevation.glow_teal}"
+      transform: "translateY(-1px)"
+
+  card_terminal:
+    name: "Card Terminal (informações técnicas / hash / tx)"
+    source: "derived"
+    background: "{neutral.950}"
+    border: "1px solid {neutral.700}"
+    clip_path: "chamfer"
+    header_bar:
+      height: "24px"
+      background: "{neutral.800}"
+      dots: ["#ff3d71", "#f5a623", "#00c853"]  # traffic lights decorativos
+    font: "JetBrains Mono"
+    color: "{brand.500}"
+
+  timer_display:
+    name: "Countdown Timer (peça central do leilão)"
+    source: "observed"             # presente na ref DesafioGUT
+    font: "JetBrains Mono"
+    size_normal:  "48px"           # timer em contagem normal
+    size_urgente: "64px"           # amplificado nos últimos 5s
+    color_normal:  "{brand.500}"   # teal
+    color_warning: "{amber.500}"   # 6-15s
+    color_danger:  "{red.500}"     # ≤5s + pulse_glow animation
+    background: "{neutral.900}"
+    border: "1px solid {neutral.700}"
+    clip_path: "chamfer"
+    colon_animation: "blink 1s step-end infinite"
+    urgency_animation: "pulse_glow 0.5s ease-in-out infinite"
+
+  lance_input:
+    name: "Input de Lance"
+    source: "observed"
+    prefix: "> R$"                 # terminal prompt aesthetic
+    prefix_color: "{brand.500}"
+    background: "{neutral.800}"
+    border: "1px solid {neutral.600}"
+    border_radius: "{radii.control}"
+    font: "JetBrains Mono"
+    font_size: "16px"
+    color: "{neutral.50}"
+    placeholder_color: "{neutral.500}"
+    placeholder_text: "0,01"
+    focus:
+      border_color: "{brand.500}"
+      box_shadow: "{elevation.glow_teal}"
+      outline: "none"
+
+  value_badge:
+    name: "Badge de Valor (preço, saldo, menor lance)"
+    source: "observed"
+    background: "{gold.950}"
+    border: "1px solid {gold.500}"
+    color: "{gold.500}"
+    font: "JetBrains Mono"
+    font_size: "20px"
+    font_weight: 600
+    padding: "8px 16px"
+    clip_path: "chamfer"
+    text_shadow: "{elevation.neon_text_gold}"
+    large_variant:
+      font_size: "36px"
+      font_weight: 900
+      box_shadow: "{elevation.glow_gold}"
+
+  bid_table_row:
+    name: "Linha da Tabela de Lances"
+    source: "observed"
+    background: "transparent"
+    font: "JetBrains Mono"
+    font_size: "13px"
+    border_bottom: "1px solid {neutral.800}"
+    hover:
+      background: "{neutral.900}"
+      border_left: "2px solid {brand.500}"
+
+  status_badge:
+    name: "Badge de Status (conectado, erro, pendente)"
+    source: "derived"
+    variants:
+      success: { background: "{green.50}", color: "{green.500}", border: "1px solid {green.500}" }
+      warning: { background: "{amber.50}", color: "{amber.500}", border: "1px solid {amber.500}" }
+      error:   { background: "{red.50}",   color: "{red.500}",   border: "1px solid {red.500}"   }
+    font: "JetBrains Mono"
+    font_size: "11px"
+    text_transform: "uppercase"
+    letter_spacing: "0.1em"
+    clip_path: "chamfer"
+
+# ── CSS CUSTOM PROPERTIES (Platform Mapping) ─────────────────────────────────
+css_variables: |
+  :root {
+    /* Backgrounds */
+    --background: #04080f;
+    --bg: #04080f;
+    --surface1: #081218;
+    --surface2: #0f1e28;
+    --surface3: #1a3240;
+    --border: #0f1e28;
+    --border-visible: #2a4e5c;
+
+    /* Text */
+    --text1: #f0f4f8;
+    --text2: #8aabbc;
+    --text3: #5d8a9e;
+    --text4: #3d6a7e;
+
+    /* Accents */
+    --accent: #00d4aa;
+    --accent-subtle: #001410;
+    --gold: #f5a623;
+    --gold-subtle: #180f00;
+    --cyan: #00d4ff;
+    --glitch: #ff00ff;
+
+    /* Semantic */
+    --success: #00c853;
+    --warning: #f97316;
+    --error: #ff3d71;
+
+    /* Glows */
+    --glow-teal: 0 0 5px #00d4aa, 0 0 10px rgba(0,212,170,0.4);
+    --glow-gold: 0 0 5px #f5a623, 0 0 10px rgba(245,166,35,0.4);
+    --glow-error: 0 0 5px #ff3d71, 0 0 10px rgba(255,61,113,0.4);
+    --glow-teal-lg: 0 0 10px #00d4aa, 0 0 20px rgba(0,212,170,0.6), 0 0 40px rgba(0,212,170,0.3);
+
+    /* Typography */
+    --font-display: 'Orbitron', monospace;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Spacing */
+    --space-2xs: 2px;
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+    --space-3xl: 64px;
+    --space-4xl: 96px;
+
+    /* Radii */
+    --radius-element: 2px;
+    --radius-control: 4px;
+    --radius-pill: 9999px;
+
+    /* Chamfer clip-path */
+    --chamfer-sm: polygon(0 6px, 6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px));
+    --chamfer-md: polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px));
+  }
+
+# ── TAILWIND EXTEND ──────────────────────────────────────────────────────────
+tailwind_extend: |
+  colors: {
+    gut: {
+      bg:      '#04080f',
+      surface: '#081218',
+      teal:    '#00d4aa',
+      gold:    '#f5a623',
+      danger:  '#ff3d71',
+      success: '#00c853',
+      warning: '#f97316',
+      cyan:    '#00d4ff',
+      glitch:  '#ff00ff',
+    }
+  },
+  fontFamily: {
+    display: ['Orbitron', 'monospace'],
+    body:    ['Inter', 'sans-serif'],
+    mono:    ['JetBrains Mono', 'monospace'],
+  },
+  boxShadow: {
+    'glow-teal':    '0 0 5px #00d4aa, 0 0 10px rgba(0,212,170,0.4)',
+    'glow-gold':    '0 0 5px #f5a623, 0 0 10px rgba(245,166,35,0.4)',
+    'glow-error':   '0 0 5px #ff3d71, 0 0 10px rgba(255,61,113,0.4)',
+    'glow-teal-lg': '0 0 10px #00d4aa, 0 0 20px rgba(0,212,170,0.6), 0 0 40px rgba(0,212,170,0.3)',
+  },
+
+# ── APP SCREEN ────────────────────────────────────────────────────────────────
+app_screen:
+  archetype: "dashboard"
+  frame: "browser"
+  frame_params:
+    url: "app.desafiogut.com/leilao/R-1"
+    title: "DesafioGUT — Leilão Relâmpago Airfryer"
+  content_seed: "Leilão Relâmpago: Airfryer Mondial 4L. Timer 5:32 restante. 47 lances na tabela. CTA 'Confirmar Lance' centralizado."
+  required_tokens_checklist:
+    - "background, surface1, surface2, surface3, border, border_visible"
+    - "text1, text2, text3, text4"
+    - "accent, accent_subtle, gold, gold_subtle, success, warning, error"
+    - "display, h1, h2, body, label, mono (todos os 6 papéis tipográficos)"
+    - "glow_teal, glow_gold (elevação)"
+    - "chamfer_md (clip-path em cards)"
+    - "pill (botão CTA)"
+
+# ── DESIGN ANTI-PATTERNS ──────────────────────────────────────────────────────
+anti_patterns:
+  - "Sem verde tropical (#1a6b2a) — cor de cassino BR. Isso é o que somos CONTRA."
+  - "Sem border-radius > 4px em cards — use clip-path chamfer ou 0px."
+  - "Sem gradientes de cor (linear-gradient entre hues) — gradients são de radial glow apenas."
+  - "Sem fundos brancos ou claros — dark mode é obrigatório e permanente."
+  - "Sem tipografia serif — tudo é geometric sans (Orbitron) ou mono (JetBrains)."
+  - "Sem imagens 3D de cassino (moedas, dados, slots) — estética blockchain, não Vegas."
+  - "Sem múltiplos CTAs de cor diferente na mesma tela — gold para lance, teal para ações secundárias."
+  - "Sem shadows convencionais — elevation via neon glow apenas."
+  - "Sem textos com mais de 2 cores cromáticas por tela — identidade por restraint."
+  - "Não usar Orbitron para body text (>15px blocos) — Inter para leitura, Orbitron para destaque."
+  - "Não omitir o circuit grid background — o padrão PCB é parte da identidade."
+  - "Não animar mais de 2 elementos simultaneamente — glitch é pontuação, não carpet."
+
+# ── TOKENS DE COMPATIBILIDADE (mapping dos tokens existentes) ─────────────────
+legacy_token_mapping:
+  # Tokens atuais em globals.css → novos tokens
+  "--color-gut-bg":      "--background"
+  "--color-gut-primary": "--accent"
+  "--color-gut-gold":    "--gold"
+  "--color-gut-danger":  "--error"
+  "--color-gut-success": "--success"
+  "--color-gut-warning": "--warning"
+  # Nota: Os tokens antigos podem coexistir no globals.css.
+  # O design-model.yaml é a fonte de verdade para novas implementações.

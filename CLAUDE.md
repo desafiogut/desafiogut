@@ -3,6 +3,16 @@
 
 ---
 
+## Instruções para Claude
+
+1. **Use `@file` para acesso focado** — leia arquivos individuais ao invés do projeto completo.
+2. **Privy é o padrão oficial** — use `wallets[0].getEthereumProvider()` (EIP-1193) para toda autenticação, assinatura e gestão de wallet.
+3. **Deploy é Netlify** — auto-deploy ao push em `main` no repo `desafiogut/desafiogut`.
+4. **Mantenha `MOCK_MODE`** — necessário para dev/test sem Privy.
+5. **`VITE_PRIVY_APP_ID`** é obrigatório para o login funcionar em qualquer ambiente.
+
+---
+
 ## Stack Oficial
 
 | Camada | Tecnologia | Versão |
@@ -46,9 +56,9 @@
 
 ### `LeilaoGUT` — Sepolia Testnet
 ```
-Endereço : 0x273Ef96f5be04601FD39DAcDFB039d6fB552445e
+Endereço : 0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5
 Rede     : Ethereum Sepolia (chainId 11155111)
-Etherscan: https://sepolia.etherscan.io/address/0x273Ef96f5be04601FD39DAcDFB039d6fB552445e
+Etherscan: https://sepolia.etherscan.io/address/0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5
 Arquivo  : desafio-gut/contracts/Leilao.sol
 Deploy   : Hardhat Ignition em 2026-04-28 (Iteração 5). Coordenacao = deployer.
 ```
@@ -72,7 +82,7 @@ function edicoes(string) view returns (string nome, bool ativa, uint256 prazo)
 | Variável | Valor | Arquivo |
 |---|---|---|
 | `VITE_PRIVY_APP_ID` | `cmo51f3v300l90clgzksivvad` | `.env.local` + Netlify Dashboard |
-| `VITE_CONTRATO_SEPOLIA` | `0x273Ef96f5be04601FD39DAcDFB039d6fB552445e` | `.env.local` + `.env.production` |
+| `VITE_CONTRATO_SEPOLIA` | `0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5` | `.env.local` + `.env.production` |
 | `VITE_ALCHEMY_URL` | `https://eth-sepolia.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B` | `.env.production` + Netlify Dashboard |
 | `VITE_MOCK_MODE` | `false` em prod | `.env` |
 | `VITE_WC_PROJECT_ID` | legado — não usado na lógica ativa | `.env.local` |
@@ -176,27 +186,8 @@ desafio-gut/
 
 ---
 
-## Pendências para Marco Beta 100%
+## Próximos Passos
 
-- [x] ~~VITE_MOCK_MODE=false~~ — feito
-- [x] ~~Sincronizar timer com blockchain~~ — feito (`getEdicaoPrazo` + JsonRpcProvider fallback)
-- [x] ~~Verificar saldo de senhas~~ — feito
-- [x] ~~Privy como padrão oficial de autenticação~~ — feito
-- [x] ~~Preencher `VITE_PRIVY_APP_ID` em `.env.local` e no painel Netlify~~ — feito (2026-04-28)
-- [x] ~~Configurar login methods no painel Privy~~ — Google + Email ativos (Apple pendente)
-- [x] ~~Chamar `abrirEdicao("R-1", ...)` no contrato~~ — feito (2026-04-29, tx `0x1767bffd…ce8e`)
-- [x] ~~Pipeline `darLance` validado on-chain ponta a ponta~~ — feito (2026-04-29, tx `0xf5991092…29cbd`)
 - [ ] Habilitar Apple OAuth no painel Privy
 - [ ] Adicionar `apurarVencedor()` público para exibição do vencedor real on-chain
 - [ ] Persistência multi-usuário dos lances (backend ou indexação de eventos)
-
----
-
-## Instrução de Memória para Claude
-
-1. **Não leia o projeto inteiro.** Use foco em arquivo (`@file`).
-2. **Privy é o padrão oficial** — não substituir por MetaMask direta ou AppKit.
-3. **`wallets[0].getEthereumProvider()`** devolve o provider EIP-1193 da embedded wallet.
-4. **Deploy é Netlify** (auto-deploy ao push em `main` no repo `desafiogut/desafiogut`).
-5. **MOCK_MODE** controla o fluxo simulado sem Privy — não remover.
-6. **`VITE_PRIVY_APP_ID`** é obrigatório para o login funcionar em qualquer ambiente.

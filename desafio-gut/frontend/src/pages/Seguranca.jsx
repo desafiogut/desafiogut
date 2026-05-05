@@ -7,7 +7,7 @@ const COR = {
   success: "#10b981", danger: "#ef4444", blue300: "#93c5fd", gold: "#f5a623",
 };
 
-const CONTRATO_ENDERECO = "0x273Ef96f5be04601FD39DAcDFB039d6fB552445e";
+const CONTRATO_ENDERECO = "0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5";
 
 const CHECKS = [
   { label: "Argon2id (hash-wasm WASM)",       desc: "Gera prova de intenção off-chain imutável para cada lance. Impossível forjar retroativamente.", status: "ok" },

@@ -15,7 +15,7 @@ import "dotenv/config";
 import { JsonRpcProvider, Contract } from "ethers";
 
 const RPC      = process.env.RPC_URL ?? "https://eth-sepolia.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B";
-const CONTRATO = "0x273Ef96f5be04601FD39DAcDFB039d6fB552445e";
+const CONTRATO = "0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5";
 const ABI      = ["function saldoSenhas(address) view returns (uint256)"];
 
 const padrao = [

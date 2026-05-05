@@ -10,7 +10,7 @@
 import "dotenv/config";
 import { JsonRpcProvider, Wallet, Contract, isAddress } from "ethers";
 
-const CONTRATO   = "0x273Ef96f5be04601FD39DAcDFB039d6fB552445e";
+const CONTRATO   = "0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5";
 const ID_EDICAO  = "R-1";
 const NOME       = "Edição R-1 — Beta";
 const DURACAO_S  = 1800;     // 30 minutos

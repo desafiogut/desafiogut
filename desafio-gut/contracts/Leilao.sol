@@ -3,6 +3,10 @@ pragma solidity ^0.8.0;
 
 contract LeilaoGUT {
     address public coordenacao;
+    address public coordenacaoPendente; // [M-02] two-step transfer
+
+    // [H-01] Limite máximo de lances únicos por edição (anti-DoS)
+    uint256 public constant MAX_LANCES_UNICOS = 10_000;
 
     struct Edicao {
         string nome;
@@ -25,6 +29,7 @@ contract LeilaoGUT {
     );
     event EdicaoAberta(string idEdicao, string nome, uint256 prazo);
     event SenhasCreditadas(address indexed usuario, uint256 quantidade);
+    event TransferenciaIniciada(address indexed novaCoordenacao); // [M-02]
 
     constructor() {
         coordenacao = msg.sender;
@@ -37,6 +42,9 @@ contract LeilaoGUT {
 
     // Coordenacao abre uma edicao com prazo em segundos a partir de agora
     function abrirEdicao(string memory idEdicao, string memory nome, uint256 duracaoSegundos) public apenasCoordenacao {
+        // [M-01] Impede reuso de ID — evita lances residuais de edições anteriores
+        require(edicoes[idEdicao].prazo == 0, "ID de edicao ja utilizado - use novo ID (ex: R-2)");
+
         Edicao storage e = edicoes[idEdicao];
         e.nome = nome;
         e.ativa = true;
@@ -61,6 +69,11 @@ contract LeilaoGUT {
 
         bool jaExistia = e.contagem[valorEmCentavos] > 0;
         if (!jaExistia) {
+            // [H-01] Proteção contra DoS por loop ilimitado em apurarVencedor
+            require(
+                e.listaDeValores.length < MAX_LANCES_UNICOS,
+                "Limite de lances unicos desta edicao atingido"
+            );
             e.listaDeValores.push(valorEmCentavos);
         }
 
@@ -72,7 +85,8 @@ contract LeilaoGUT {
     }
 
     // Artigo XXII: Apuracao automatica do vencedor
-    function apurarVencedor(string memory idEdicao) public view apenasCoordenacao returns (uint256, address) {
+    // [M-03] Removido apenasCoordenacao — função é view (só leitura), qualquer endereço pode verificar
+    function apurarVencedor(string memory idEdicao) public view returns (uint256, address) {
         Edicao storage e = edicoes[idEdicao];
         uint256 menorUnico = type(uint256).max;
         address ganhador = address(0);
@@ -85,5 +99,18 @@ contract LeilaoGUT {
             }
         }
         return (menorUnico, ganhador);
+    }
+
+    // [M-02] Two-step coordinator transfer — evita perda permanente por typo
+    function iniciarTransferenciaCoordenacao(address novaCoordenacao) public apenasCoordenacao {
+        require(novaCoordenacao != address(0), "Endereco invalido");
+        coordenacaoPendente = novaCoordenacao;
+        emit TransferenciaIniciada(novaCoordenacao);
+    }
+
+    function aceitarTransferenciaCoordenacao() public {
+        require(msg.sender == coordenacaoPendente, "Somente o novo coordenador pode aceitar");
+        coordenacao = coordenacaoPendente;
+        coordenacaoPendente = address(0);
     }
 }

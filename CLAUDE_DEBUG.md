@@ -1880,3 +1880,201 @@ silencioso (sem mensagem clara no browser). Difícil de diagnosticar sem os logs
 do Privy. Bloqueador crítico para lançamento público.
 
 **Referência**: https://privy.io/pricing
+
+---
+
+## Ambiente de Skills — Bloco 1 completo (2026-05-05)
+
+### Estado final do ambiente `~/.claude/`
+
+**Repos em `~/.claude/skills/`** (7 total):
+- `bearpaws` — Skills toolkit (TDD, debugging, planning, code-review). SessionStart hook ativo em `~/.claude/settings.json`: injeta `using-bearpaws/SKILL.md` no contexto a cada sessão.
+- `anthropic-grade-optimizer` — Auditor de artefatos Claude contra 189 regras Anthropic. CLAUDE.md auditado: nota 81/100 (B). F-001/F-002/F-003 aplicados.
+- `everything-claude-code` — Plugin multi-agente com 30+ skills. Frontend-patterns, market-research instalados como comandos globais.
+- `claude-code-stuff` — Context-manager plugin: `/save-context` e `/restore-context` instalados como comandos globais.
+- `hyperresearch` — Pipeline de pesquisa V8 em 16 etapas (light ~30min / full ~2h). Entry skill instalada como `/hyperresearch`. **Requer por projeto**: `pip install hyperresearch && hyperresearch init . --json && hyperresearch install --steps-only . --json`
+- `hue` — Meta-skill para gerar design language skills. Disponível via `/hue`.
+- `OhMySkills` — 30+ estilos de design (Web3, ModernDark, Cyberpunk, etc.) + design-system-analyzer. Instalados como `/design-style` e `/design-system-analyzer`.
+
+**Comandos globais em `~/.claude/commands/`** (13 total):
+```
+brainstorm.md           (bearpaws — deprecated, usar bp:brainstorming)
+execute-plan.md         (bearpaws — deprecated, usar bp:executing-plans)
+write-plan.md           (bearpaws — deprecated, usar bp:writing-plans)
+add-language-rules.md   (everything-claude-code)
+database-migration.md   (everything-claude-code)
+feature-development.md  (everything-claude-code)
+frontend-patterns.md    (everything-claude-code — React/state/performance)
+market-research.md      (everything-claude-code — TAM/SAM/competitive analysis)
+design-style.md         (OhMySkills — 30 estilos)
+design-system-analyzer.md (OhMySkills)
+hyperresearch.md        (hyperresearch — entry skill)
+save-context.md         (claude-code-stuff/context-manager)
+restore-context.md      (claude-code-stuff/context-manager)
+```
+
+### CLAUDE.md — otimizações aplicadas (Anthropic Grade Optimizer v1.2)
+
+| Regra | Mudança |
+|---|---|
+| F-001 (contexto) | Seção "Instruções para Claude" movida do rodapé para o topo |
+| F-002 (framing positivo) | 3 negativas reescritas como instruções positivas |
+| F-003 (tokens) | 14 checkboxes `[x]` removidos; seção renomeada para "Próximos Passos" |
+
+Nota pós-otimização estimada: 81 → ~87 (projeção; rescore completo pendente).
+
+### Comandos não instalados — e por quê
+
+| Comando solicitado | Status | Motivo |
+|---|---|---|
+| `npx skills add nextlevelbuilder/ui-ux-pro-max-skill` | ❌ Pulado | `npx skills` não existe — não é um pacote npm real |
+| `npx skills add pbakaus/impeccable` | ❌ Pulado | Mesmo motivo + `pbakaus/impeccable` retorna 404 no GitHub |
+| `claude plugin add anthropic/frontend-design` | ❌ Pulado | `claude plugin add` não existe; não há plugin Anthropic com esse nome. `frontend-patterns` (everything-claude-code) cobre o mesmo território |
+
+---
+
+## Bloco 2: Design System + Debugging (2026-05-05)
+
+### Debug Tools instalados
+
+**clog** ✅ — CLI de log ingestion para Claude Code (ferrucc-io/clog v0.1.2, Rust)
+- Binário: `C:\Users\Moltbot\.cargo\bin\clog.exe`
+- `clog init` executado: instalou skill `reproduce` em `.claude/skills/reproduce/SKILL.md`
+- `clog start` rodando na porta 2999 (pid ativo)
+- Skills detectadas pré-existentes no projeto: `caveman`, `clog`, `reproduce`, `systematic-debugging`
+- **Uso**: `clog start` inicia o servidor; Claude lê logs via skill `/reproduce`
+
+**debug-agent** ⚠️ — Requer interação manual
+- Instalado: `npx debug-agent@0.0.5` (npm: "Debugging skills for AI agents")
+- Bloqueou em prompt interativo (não tem flag `--yes`). Seleções pré-marcadas: Claude Code ✓, Cursor ✓, Gemini CLI ✓
+- **Para completar**: rode `! npx debug-agent@latest init` no terminal e pressione Enter para confirmar os defaults
+
+### Design System — docs/design-model.yaml gerado
+
+**Análise das 5 referências visuais:**
+
+| Imagem | Conteúdo | Insight |
+|---|---|---|
+| DesafioGUT app promo | Dark navy + teal + gold, pill buttons | JÁ tem DNA Cyberpunk latente |
+| Brazino777 (desktop) | Verde tropical #1a6b2a, gold CTAs, slots | Design genérico BR — o que ser contra |
+| Brazino777 (mobile) | Mesmo verde/ouro, itens 3D festivos | Confirma padrão de mercado |
+| Br4Bet (banner) | Estádio noturno, ouro, futebol | Energia esportiva, não tech |
+| "Plataforma 5 Reais" | Verde/amarelo/azul BR, 3D cassino | Genérico máximo |
+
+**Estratégia de diferenciação**: Todos os competidores usam verde tropical + dourado festivo + 3D de cassino. DesafioGUT se diferencia com dark void cyberpunk + blockchain aesthetic — categoria diferente.
+
+**Fusão DesafioGUT + Cyberpunk aplicada:**
+
+| Elemento | Competidores | DesafioGUT Cyber |
+|---|---|---|
+| Background | Verde tropical / banco escuro genérico | Void `#04080f` + circuit grid 3% |
+| Accent primário | Gold/verde | Teal `#00d4aa` + glow neon |
+| CTA | Pill amarelo genérico | Pill gold `#f5a623` + Orbitron uppercase |
+| Cards | Rounded corners | Chamfered corners (clip-path) |
+| Tipografia | Impact/Arial Bold | Orbitron (display) + JetBrains Mono (valores) |
+| Timer | Numeral simples | JetBrains Mono + blinking cursor + urgency glow |
+| Fundos | Imagens 3D festivas | Circuit PCB pattern + scanlines overlay |
+| Glitch | Ausente | RGB chromatic aberration (uso sparing) |
+
+**Arquivo gerado**: `docs/design-model.yaml`
+- Primitivos: neutrals (cool-dark), brand (teal), gold, cyan, magenta (glitch), red/green/amber
+- Semantic tokens: dark mode only (mandatory)
+- Tipografia: Orbitron + Inter + JetBrains Mono (3 roles distintos)
+- 12 componentes especificados: button_primary, button_secondary, card_default, card_terminal, timer_display, lance_input, value_badge, bid_table_row, status_badge + variantes
+- Mapeamento de compatibilidade: tokens antigos `--color-gut-*` → novos tokens
+- Hero stage: luminous-on-gradient com circuit grid + teal glow central
+- CSS custom properties + Tailwind extend prontos para uso
+- 12 anti-patterns explícitos (incluindo "sem verde tropical")
+
+### Build
+`npm run build` — ✅ verde em 4.55s (warnings de chunk size são pré-existentes, não relacionados)
+
+---
+
+## Bloco 3: Auditoria + Quality Gates (2026-05-05)
+
+### Debug Tools — estado final
+
+| Ferramenta | Status | Localização |
+|---|---|---|
+| `debug-agent` | ✅ Instalado | `DESAFIOGUT/.agents/skills/debug-agent/` — Claude Code + Cursor + Gemini CLI |
+| `clog` | ✅ Ativo | `~/.cargo/bin/clog.exe`, servidor na porta 2999, skill `reproduce` em `.claude/skills/reproduce/` |
+
+### Skills de Auditoria instaladas em `~/.claude/skills/`
+
+| Repo | Stars | Descrição | Tipo |
+|---|---|---|---|
+| `krait` (ZealynxSecurity) | 10 | Auditor Solidity 4-phase, 101 heurísticas, 50 shadow audits | Solidity security |
+| `web3-skills` (DarkNavySecurity) | 58 | Smart contract auditing + blockchain client + exploit investigation | Web3 security |
+| `trailofbits` | 4999 | Trail of Bits skills: audit prep, static analysis, semgrep, constant-time, variant analysis | Security research |
+| `claude-devtools` (hitoshura25) | 3 | Ferramentas de dev para Claude Code | Dev tooling |
+| `forefy-context` | — | Security audit skills kit (forefy/.context) | Security audit |
+
+**forefy installer**: requer `/dev/tty` — não funciona em shell não-interativo do Windows. Clonado diretamente como `forefy-context`. Para instalar via script: `! curl -fsSL https://raw.githubusercontent.com/forefy/.context/main/install.sh | bash` no terminal.
+
+**Comandos globais adicionados**: `krait.md`, `krait-quick.md` → `~/.claude/commands/`
+
+### Auditoria LeilaoGUT.sol — Sumário
+
+**Arquivo**: `docs/auditoria-contrato.md` (gerado)  
+**Metodologia**: Krait 4-phase + DarkNavy/web3-skills analysis-checklist + Trail of Bits principles
+
+| Severidade | Finding | Ação necessária |
+|---|---|---|
+| 🔴 ALTA | H-01: Loop ilimitado em `apurarVencedor` → DoS com >37k lances únicos | Adicionar `MAX_LANCES_UNICOS = 10_000` em `darLance` |
+| 🟡 MÉDIA | M-01: `abrirEdicao` não reseta lances ao reusar ID de edição | Proibir reuso de ID (require `prazo == 0`) |
+| 🟡 MÉDIA | M-02: `coordenacao` é EOA único sem transferência — single point of failure | Implementar two-step transfer |
+| 🟡 MÉDIA | M-03: `apurarVencedor` restrito à coordenação — sem verificação pública | Remover `apenasCoordenacao` (função é `view`) |
+| 🟢 BAIXA | L-01: Frontrunning estrutural no mempool | Post-MVP: commit-reveal scheme |
+| ⚪ INFO | I-01/I-02/I-03: timestamp, sem emergency close, sem evento de apuração | Melhorias incrementais |
+
+**CRÍTICAS**: 0 (sem ETH armazenado, sem drain possível)
+
+Contrato corrigido com todas as mitigações sugerido no final de `docs/auditoria-contrato.md`.
+
+### Build
+`npm run build` — ✅ verde em 3.15s
+
+---
+
+## Bloco 4: Correções do Contrato + Stress Test (2026-05-05)
+
+### Correções aplicadas ao contrato (`desafio-gut/contracts/Leilao.sol`)
+
+Krait re-audit confirma todos os 4 findings resolvidos:
+
+| Finding | Fix aplicado | Localização |
+|---|---|---|
+| H-01 (DoS loop) | `require(listaDeValores.length < 10_000)` antes do push | linha 73-76 |
+| M-01 (stale bids) | `require(edicoes[idEdicao].prazo == 0, ...)` em abrirEdicao | linha 46 |
+| M-02 (single EOA) | `coordenacaoPendente` + `iniciarTransferenciaCoordenacao` + `aceitarTransferenciaCoordenacao` | linhas 104-115 |
+| M-03 (apurar privado) | Removido `apenasCoordenacao` de `apurarVencedor` | linha 89 |
+
+O contrato agora tem 117 linhas (era 89). Todas as funções existentes preservadas sem breaking changes para o frontend — o ABI público não mudou em assinaturas.
+
+**⚠️ NOTA PARA DEPLOY**: O contrato corrigido precisa ser re-deployado em Sepolia (novo endereço) e o `VITE_CONTRATO_SEPOLIA` atualizado. O contrato atual em `0x273Ef96f5be04601FD39DAcDFB039d6fB552445e` ainda usa o código antigo com as vulnerabilidades.
+
+### Skills de Stress Test instaladas
+
+| Repo | Stars | Skills relevantes |
+|---|---|---|
+| `Jeffallan/claude-skills` | 8775 | `test-master` (k6/Artillery), `chaos-engineer`, `sre-engineer` |
+| `aj-geddes/useful-ai-prompts` | 196 | Coleção de prompts para testes |
+
+### Stress Test — Achados Críticos
+
+**Arquivo**: `docs/stress-test.md` (gerado com scripts k6 prontos)
+
+**Descoberta principal**: Os endpoints listados (`/.netlify/functions/lance-relampago`, `/lances-flash`, `comprar-senhas`) **não existem** — o sistema é uma SPA pura sem backend. Superfícies reais testadas:
+
+| Superfície | Breaking Point | Status | Ação |
+|---|---|---|---|
+| Netlify CDN (assets) | >10.000 VUs | ✅ Safe | Nenhuma |
+| **Alchemy RPC Free tier** | ~13 VUs contínuos | ⚠️ GARGALO | Upgrade para Growth antes do lançamento |
+| Smart contract Sepolia | ~31 tx/s | Arquitetural | Limite da rede |
+| Rate limiter client-side | 5 lances/min/user | ✅ Safe | Adicionar validação server-side futuro |
+
+**Gargalo crítico identificado**: Alchemy Free (300M CUs/mês = ~13 req/s sustentados). Com 100+ usuários ativos, o limite é atingido em ~6 horas. Upgrade para Growth (~$49/mês) necessário antes do lançamento público.
+
+### Build
+`npm run build` — ✅ verde em 9.11s
