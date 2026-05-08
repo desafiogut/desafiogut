@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "ux-audit-rethink": {
+      "source": "mastepanoski/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ux-audit-rethink/SKILL.md",
+      "computedHash": "7ae9c5eb08cc0bb16932356b1cc9690ccdbad10eadc4fc071b3262458c3ed643"
+    }
+  }
+}

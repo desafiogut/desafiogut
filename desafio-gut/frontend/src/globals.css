@@ -115,3 +115,20 @@ body {
 /* ── Fontes utilitárias ─────────────────────────────────────────────────── */
 .font-orbitron { font-family: 'Orbitron', sans-serif; }
 .font-mono-gut { font-family: 'JetBrains Mono', monospace; }
+
+/* ── Motion Accessibility: Respeitar preferência de movimento reduzido ──────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .gut-lightning-active,
+  [class*="animate-"] {
+    animation: none !important;
+  }
+}

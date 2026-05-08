@@ -36,9 +36,9 @@ const IconClose = (p) => (
 );
 
 const MAIN_TABS = [
-  { path: "/",         label: "Início",   Icon: IconDashboard, end: true  },
-  { path: "/mercado",  label: "Lances",   Icon: IconTarget,    end: false },
-  { path: "/carteira", label: "Carteira", Icon: IconWallet,    end: false },
+  { path: "/",         label: "Início",   Icon: IconDashboard, end: true,  ariaLabel: "Ir para Dashboard" },
+  { path: "/mercado",  label: "Lances",   Icon: IconTarget,    end: false, ariaLabel: "Ir para Mercado de Lances" },
+  { path: "/carteira", label: "Carteira", Icon: IconWallet,    end: false, ariaLabel: "Ir para Minha Carteira" },
 ];
 
 const SECONDARY_LINKS = [
@@ -79,11 +79,12 @@ export default function BottomNav() {
           zIndex: 50,
         }}
       >
-        {MAIN_TABS.map(({ path, label, Icon, end }) => (
+        {MAIN_TABS.map(({ path, label, Icon, end, ariaLabel }) => (
           <NavLink
             key={path}
             to={path}
             end={end}
+            aria-label={ariaLabel || label}
             style={({ isActive }) => tabStyle(isActive)}
           >
             <Icon />

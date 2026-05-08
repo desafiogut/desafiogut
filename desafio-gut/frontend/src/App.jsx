@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { AppProvider } from "./context/AppContext.jsx";
 import TermosConsentimento from "./components/TermosConsentimento.jsx";
 import Layout from "./components/Layout.jsx";
+import { ToastContainer, useToast } from "./components/Toast.jsx";
 import Dashboard       from "./pages/Dashboard.jsx";
 import MinhaCarteira   from "./pages/MinhaCarteira.jsx";
 import MercadoLances   from "./pages/MercadoLances.jsx";
@@ -23,6 +24,7 @@ import Configuracoes   from "./pages/Configuracoes.jsx";
  */
 export default function App() {
   const [consentimentoAceito, setConsentimentoAceito] = useState(false);
+  const { toasts, add, remove } = useToast();
 
   // Recupera consentimento da sessão (recarregamento de página)
   useEffect(() => {
@@ -41,7 +43,8 @@ export default function App() {
 
   // ── Aplicação principal ────────────────────────────────────────────────────
   return (
-    <AppProvider>
+    <AppProvider toastApi={{ add, remove }}>
+      <ToastContainer toasts={toasts} onDismiss={remove} />
       <Routes>
         <Route element={<Layout />}>
           <Route index              element={<Dashboard />}     />
