@@ -1,50 +1,123 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap');
 
-/* ── Design Tokens — DesafioGUT · Grupo União e Trabalho ──────────────────── */
+/* ── Design Tokens — DesafioGUT v3 · Navy × Orange Fire ──────────────────── */
 @theme {
-  /* Fundo escuro profundo */
-  --color-gut-bg:          #0a0f1a;
-  --color-gut-surface:     rgba(12,18,38,0.75);
-  --color-gut-surface-2:   #0d1630;
-  --color-gut-border:      rgba(245,166,35,0.22);
-  --color-gut-border-dim:  rgba(245,166,35,0.10);
+  /* Backgrounds — Navy Void */
+  --color-gut-bg:           #050818;
+  --color-gut-bg-dark:      #030611;
+  --color-gut-surface:      #0d1235;
+  --color-gut-surface-alt:  #131844;
+  --color-gut-surface-hover:#1a2060;
+  --color-gut-surface-glass:rgba(13,18,53,0.85);
 
-  /* Dourado — primário absoluto */
-  --color-gut-primary:     #f5a623;
-  --color-gut-primary-dim: rgba(245,166,35,0.15);
-  --color-gut-gold:        #f5a623;
-  --color-gut-gold-dim:    rgba(245,166,35,0.15);
-  --color-gut-gold-dark:   #e89400;
+  /* Borders */
+  --color-gut-border:       rgba(255,107,53,0.14);
+  --color-gut-border-hover: rgba(255,107,53,0.42);
+  --color-gut-border-active:rgba(255,107,53,0.65);
+  --color-gut-border-white: rgba(255,255,255,0.08);
 
-  /* Estados */
-  --color-gut-success:     #10b981;
-  --color-gut-danger:      #ef4444;
-  --color-gut-warning:     #f97316;
+  /* Orange — acento primário */
+  --color-gut-primary:      #ff6b35;
+  --color-gut-primary-dim:  rgba(255,107,53,0.12);
+  --color-gut-orange-vivid: #ff7a45;
+  --color-gut-orange-warm:  #ff9500;
+  --color-gut-orange-deep:  #e55520;
+  --color-gut-orange-glow:  rgba(255,107,53,0.40);
+  --color-gut-orange-soft:  rgba(255,107,53,0.12);
+  --color-gut-orange-ultra: rgba(255,107,53,0.06);
 
-  /* Tipografia */
-  --color-gut-text:        #e8f0fe;
-  --color-gut-muted:       #5a7090;
+  /* Mantém aliases antigos para não quebrar código existente */
+  --color-gut-gold:         #ff9500;
+  --color-gut-gold-dim:     rgba(255,149,0,0.15);
+  --color-gut-gold-dark:    #e55520;
+
+  /* Text */
+  --color-gut-text:         #ffffff;
+  --color-gut-text-body:    #c8d0f0;
+  --color-gut-muted:        #6b7db8;
+  --color-gut-faint:        #3d4f8a;
+
+  /* Semantic */
+  --color-gut-success:      #00e5a0;
+  --color-gut-success-dim:  rgba(0,229,160,0.12);
+  --color-gut-danger:       #ff3d71;
+  --color-gut-danger-dim:   rgba(255,61,113,0.12);
+  --color-gut-warning:      #ffb830;
+  --color-gut-warning-dim:  rgba(255,184,48,0.12);
+
+  /* Urgency (countdown) */
+  --color-gut-urgent-30:    #ff4500;
+  --color-gut-urgent-10:    #ff2000;
 
   /* Shadcn compat */
-  --color-background:      #0a0f1a;
-  --color-foreground:      #e8f0fe;
-  --color-card:            rgba(12,18,38,0.75);
-  --color-card-foreground: #e8f0fe;
-  --color-border:          rgba(245,166,35,0.22);
-  --color-primary:         #f5a623;
-  --color-primary-foreground: #0a0f1a;
-  --color-muted:           #0d1630;
-  --color-muted-foreground:#5a7090;
-  --color-destructive:     #ef4444;
-  --color-accent:          #f5a623;
-  --radius-card:           0.75rem;
+  --color-background:           #050818;
+  --color-foreground:           #ffffff;
+  --color-card:                 #0d1235;
+  --color-card-foreground:      #ffffff;
+  --color-border:               rgba(255,107,53,0.14);
+  --color-primary:              #ff6b35;
+  --color-primary-foreground:   #ffffff;
+  --color-muted:                #131844;
+  --color-muted-foreground:     #6b7db8;
+  --color-destructive:          #ff3d71;
+  --color-accent:               #ff6b35;
+  --color-accent-foreground:    #ffffff;
+  --radius-card:                0.75rem;
+
+  /* Typography */
+  --font-display: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
 
   /* Animações */
   --animate-beam:          gut-beam 2.6s ease-in-out infinite;
   --animate-glow-pulse:    gut-glow-pulse 2.2s ease-in-out infinite;
   --animate-danger-pulse:  gut-danger-pulse 0.65s ease-in-out infinite;
-  --animate-gold-pulse:    gut-gold-pulse 2s ease-in-out infinite;
+  --animate-orange-pulse:  gut-orange-pulse 2s ease-in-out infinite;
   --animate-lightning:     gut-lightning 1.2s ease-out forwards;
+  --animate-scale-in:      gut-scale-in 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  --animate-slide-up:      gut-slide-up 0.35s cubic-bezier(0,0,0.2,1) forwards;
+}
+
+/* ── CSS Custom Properties (fora do @theme, para uso direto) ── */
+:root {
+  color-scheme: dark;
+
+  /* Gradients */
+  --gradient-hero:     linear-gradient(160deg, #0d1235 0%, #050818 55%, #0a0e1f 100%);
+  --gradient-orange:   linear-gradient(135deg, #ff6b35 0%, #ff9500 100%);
+  --gradient-surface:  linear-gradient(145deg, #131844 0%, #0d1235 100%);
+  --gradient-overlay:  linear-gradient(180deg, rgba(5,8,24,0) 0%, rgba(5,8,24,0.97) 100%);
+  --gradient-glow:     radial-gradient(ellipse 70% 50% at 50% -10%, rgba(255,107,53,0.20) 0%, transparent 65%);
+  --gradient-winner:   radial-gradient(ellipse 80% 60% at 50% 40%, rgba(255,149,0,0.28) 0%, rgba(255,107,53,0.14) 40%, transparent 70%);
+  --gradient-shimmer:  linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
+
+  /* Shadows */
+  --shadow-orange:     0 4px 24px rgba(255,107,53,0.35), 0 2px 8px rgba(255,107,53,0.25);
+  --shadow-orange-lg:  0 8px 48px rgba(255,107,53,0.50), 0 4px 16px rgba(255,107,53,0.35);
+  --shadow-orange-xl:  0 16px 80px rgba(255,107,53,0.60), 0 8px 32px rgba(255,107,53,0.40);
+  --shadow-card:       0 0 0 1px rgba(255,107,53,0.12), 0 8px 32px rgba(5,8,24,0.60);
+  --shadow-card-hover: 0 0 0 1px rgba(255,107,53,0.35), 0 12px 48px rgba(5,8,24,0.70), 0 4px 16px rgba(255,107,53,0.20);
+
+  /* Layout */
+  --page-padding:        20px;
+  --nav-height:          60px;
+  --bottom-nav-height:   72px;
+  --content-padding-bot: calc(72px + 16px + env(safe-area-inset-bottom, 0px));
+
+  /* Border radius */
+  --radius-xs:   0.25rem;
+  --radius-sm:   0.375rem;
+  --radius-md:   0.75rem;
+  --radius-lg:   1rem;
+  --radius-xl:   1.5rem;
+  --radius-2xl:  2rem;
+  --radius-full: 9999px;
+
+  /* Motion */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out:    cubic-bezier(0, 0, 0.2, 1);
 }
 
 /* ── Keyframes ────────────────────────────────────────────────────────────── */
@@ -54,81 +127,111 @@
 }
 
 @keyframes gut-glow-pulse {
-  0%,100% { box-shadow: 0 0 18px 2px rgba(245,166,35,0.22), inset 0 1px 0 rgba(255,255,255,0.06); }
-  50%      { box-shadow: 0 0 40px 10px rgba(245,166,35,0.48), inset 0 1px 0 rgba(255,255,255,0.10); }
+  0%,100% { box-shadow: 0 0 18px 2px rgba(255,107,53,0.22); }
+  50%      { box-shadow: 0 0 40px 10px rgba(255,107,53,0.48); }
 }
 
-@keyframes gut-gold-pulse {
-  0%,100% { box-shadow: 0 0 22px 4px rgba(245,166,35,0.30); }
-  50%      { box-shadow: 0 0 45px 12px rgba(245,166,35,0.60); }
+@keyframes gut-orange-pulse {
+  0%,100% { box-shadow: var(--shadow-orange); }
+  50%      { box-shadow: var(--shadow-orange-lg); }
 }
 
 @keyframes gut-danger-pulse {
   0%,100% {
-    text-shadow: 0 0 8px #ef4444, 0 0 18px #ef4444;
+    text-shadow: 0 0 8px #ff3d71, 0 0 18px #ff3d71;
     transform: scale(1);
   }
   50% {
-    text-shadow: 0 0 22px #ef4444, 0 0 44px #ef444488;
+    text-shadow: 0 0 22px #ff3d71, 0 0 44px rgba(255,61,113,0.55);
     transform: scale(1.06);
   }
 }
 
-/* ── Relâmpago — dispara ao revelar o vencedor ─────────────────────────────── */
 @keyframes gut-lightning {
-  0%   { box-shadow: none; background: rgba(245,166,35,0); }
-  8%   { box-shadow: 0 0 0 6px rgba(255,220,80,0.9), 0 0 80px 30px rgba(245,166,35,0.85); background: rgba(255,220,80,0.22); }
-  16%  { box-shadow: none; background: rgba(245,166,35,0); }
-  28%  { box-shadow: 0 0 0 4px rgba(255,220,80,0.7), 0 0 55px 20px rgba(245,166,35,0.65); background: rgba(255,220,80,0.10); }
-  40%  { box-shadow: none; background: rgba(245,166,35,0); }
-  60%  { box-shadow: 0 0 20px 6px rgba(245,166,35,0.30); }
+  0%   { box-shadow: none; background: rgba(255,107,53,0); }
+  8%   { box-shadow: 0 0 0 6px rgba(255,149,0,0.90), 0 0 80px 30px rgba(255,107,53,0.85); background: rgba(255,149,0,0.20); }
+  16%  { box-shadow: none; background: rgba(255,107,53,0); }
+  28%  { box-shadow: 0 0 0 4px rgba(255,149,0,0.70), 0 0 55px 20px rgba(255,107,53,0.65); background: rgba(255,149,0,0.10); }
+  40%  { box-shadow: none; background: rgba(255,107,53,0); }
+  60%  { box-shadow: 0 0 20px 6px rgba(255,107,53,0.30); }
   100% { box-shadow: none; }
 }
 
-.gut-lightning-active {
-  animation: gut-lightning 1.2s ease-out forwards;
+@keyframes gut-scale-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
 }
+
+@keyframes gut-slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gut-timer-pulse {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+
+@keyframes gut-float {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+.gut-lightning-active { animation: gut-lightning 1.2s ease-out forwards; }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
-body {
-  margin: 0;
-  background: var(--color-gut-bg);
-  color: var(--color-gut-text);
-  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* ── Ruído sutil de textura ──────────────────────────────────────────────── */
+body {
+  margin: 0;
+  background: #050818;
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+img, svg { display: block; }
+
+/* ── Noise texture sutil ──────────────────────────────────────────────────── */
 .gut-noise::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.022;
+  opacity: 0.018;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
 }
 
-/* ── Fontes utilitárias ─────────────────────────────────────────────────── */
-.font-orbitron { font-family: 'Orbitron', sans-serif; }
+/* ── Font utilities ───────────────────────────────────────────────────────── */
+.font-display  { font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif; }
 .font-mono-gut { font-family: 'JetBrains Mono', monospace; }
 
-/* ── Motion Accessibility: Respeitar preferência de movimento reduzido ──────── */
+/* ── Motion Accessibility ─────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  
   .gut-lightning-active,
-  [class*="animate-"] {
-    animation: none !important;
+  [class*="animate-"] { animation: none !important; }
+}
+
+/* ── High Contrast ────────────────────────────────────────────────────────── */
+@media (prefers-contrast: more) {
+  :root {
+    --color-gut-muted: #9aaad0;
+    --color-gut-border: rgba(255,107,53,0.30);
   }
 }

@@ -1,0 +1,267 @@
+/* ============================================================
+   DESAFIOGUT — LUXURY DESIGN TOKENS v3
+   Direção: Navy Deep × Orange Fire × White Platinum
+   Mobile-first: 390px
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap');
+
+:root {
+  /* ── BACKGROUNDS — Navy Deep ── */
+  --bg:               #050818;         /* void navy — app root */
+  --bg-dark:          #080c20;         /* section alternada mais escura */
+  --surface:          #0d1235;         /* cards, modais */
+  --surface-alt:      #131844;         /* painéis elevados */
+  --surface-hover:    #1a2060;         /* hover state */
+  --surface-glass:    rgba(13,18,53,0.85);   /* glassmorphism */
+  --surface-frost:    rgba(8,12,32,0.70);    /* frosted overlay */
+
+  /* ── BORDERS ── */
+  --border:           rgba(255,107,53,0.15);  /* padrão — laranja translúcido */
+  --border-hover:     rgba(255,107,53,0.45);  /* hover */
+  --border-white:     rgba(255,255,255,0.10); /* branco sutil */
+  --border-premium:   rgba(255,149,0,0.30);   /* premium glow border */
+  --border-strong:    rgba(255,107,53,0.65);  /* foco/ativo */
+
+  /* ── TEXT ── */
+  --text:             #ffffff;
+  --text-body:        #c8d0f0;          /* corpo — branco com tint navy */
+  --text-muted:       #6b7db8;          /* helper, labels secundários */
+  --text-faint:       #3d4f8a;          /* placeholder, desabilitado */
+  --text-on-orange:   #ffffff;
+  --text-on-light:    #050818;          /* sobre bg branco */
+  --text-on-surface:  #e8eaf6;
+
+  /* ── ORANGE — acento primário ── */
+  --orange:           #ff6b35;          /* CTA primário */
+  --orange-vivid:     #ff7a45;          /* hover */
+  --orange-warm:      #ff9500;          /* amber — preços, destaques quentes */
+  --orange-deep:      #e85520;          /* pressed */
+  --orange-pale:      #ff8c5a;          /* variante clara */
+  --orange-glow:      rgba(255,107,53,0.40);
+  --orange-soft:      rgba(255,107,53,0.12);
+  --orange-ultra:     rgba(255,107,53,0.06);
+
+  /* ── WHITE / LIGHT ── */
+  --white:            #ffffff;
+  --off-white:        #f8f9ff;          /* off-white com tint azul frio */
+  --light-surface:    #e8eaf6;
+  --light-muted:      #b8c0e8;
+  --light-faint:      #d0d5f0;
+
+  /* ── NAVY SCALE ── */
+  --navy-void:        #020510;
+  --navy-deep:        #050818;
+  --navy-mid:         #0d1235;
+  --navy-light:       #1a2260;
+  --navy-bright:      #2d3a8c;
+  --navy-accent:      #3d52c0;
+
+  /* ── SEMANTIC ── */
+  --success:          #00e5a0;          /* teal-green — contraste máximo no navy */
+  --success-soft:     rgba(0,229,160,0.15);
+  --error:            #ff3d71;
+  --error-soft:       rgba(255,61,113,0.15);
+  --warning:          #ffd54f;
+  --warning-soft:     rgba(255,213,79,0.15);
+  --info:             #4facfe;
+  --info-soft:        rgba(79,172,254,0.15);
+
+  /* ── PREMIUM ACCENTS ── */
+  --gold-luxury:      #d4af37;          /* dourado para momentos premium */
+  --gold-bright:      #f0c040;
+  --platinum:         rgba(200,208,240,0.60);
+  --shimmer:          linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+
+  /* ── RGB HELPERS ── */
+  --bg-rgb:           5,8,24;
+  --orange-rgb:       255,107,53;
+  --orange-warm-rgb:  255,149,0;
+  --white-rgb:        255,255,255;
+  --success-rgb:      0,229,160;
+  --error-rgb:        255,61,113;
+  --navy-mid-rgb:     13,18,53;
+
+  /* ──────────────────────────────────────────────────────────
+     TYPOGRAPHY
+     ────────────────────────────────────────────────────────── */
+
+  --font-display:   'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  --font-body:      'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono:      'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Scale — mobile-first 390px */
+  --text-xs:    0.6875rem;  /* 11px */
+  --text-sm:    0.8125rem;  /* 13px */
+  --text-base:  1rem;       /* 16px */
+  --text-lg:    1.125rem;   /* 18px */
+  --text-xl:    1.25rem;    /* 20px */
+  --text-2xl:   1.5rem;     /* 24px */
+  --text-3xl:   1.875rem;   /* 30px */
+  --text-4xl:   2.25rem;    /* 36px */
+  --text-5xl:   3rem;       /* 48px */
+  --text-6xl:   3.75rem;    /* 60px */
+  --text-hero:  4.5rem;     /* 72px — display hero mobile */
+
+  /* Weight scale */
+  --weight-light:     300;
+  --weight-regular:   400;
+  --weight-medium:    500;
+  --weight-semibold:  600;
+  --weight-bold:      700;
+  --weight-extrabold: 800;
+  --weight-black:     900;
+
+  /* Leading */
+  --leading-tight:   0.95;
+  --leading-snug:    1.1;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+
+  /* Tracking */
+  --tracking-tight:  -0.02em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.04em;
+  --tracking-wider:   0.08em;
+  --tracking-widest:  0.12em;
+
+  /* ──────────────────────────────────────────────────────────
+     SPACING — 4px base grid
+     ────────────────────────────────────────────────────────── */
+
+  --space-1:   0.25rem;   /* 4px */
+  --space-2:   0.5rem;    /* 8px */
+  --space-3:   0.75rem;   /* 12px */
+  --space-4:   1rem;      /* 16px */
+  --space-5:   1.25rem;   /* 20px */
+  --space-6:   1.5rem;    /* 24px */
+  --space-7:   1.75rem;   /* 28px */
+  --space-8:   2rem;      /* 32px */
+  --space-10:  2.5rem;    /* 40px */
+  --space-12:  3rem;      /* 48px */
+  --space-14:  3.5rem;    /* 56px */
+  --space-16:  4rem;      /* 64px */
+  --space-20:  5rem;      /* 80px */
+  --space-24:  6rem;      /* 96px */
+
+  /* Layout — mobile 390px */
+  --page-padding:      var(--space-5);   /* 20px */
+  --page-padding-lg:   var(--space-6);   /* 24px */
+  --nav-height:        64px;
+  --bottom-nav-height: 72px;
+  --card-padding:      var(--space-5);   /* 20px */
+  --card-padding-sm:   var(--space-4);   /* 16px */
+
+  /* ──────────────────────────────────────────────────────────
+     SHADOWS
+     ────────────────────────────────────────────────────────── */
+
+  --shadow-sm:        0 1px 3px rgba(5,8,24,0.50), 0 1px 2px rgba(5,8,24,0.40);
+  --shadow-md:        0 4px 16px rgba(5,8,24,0.55), 0 2px 6px rgba(5,8,24,0.40);
+  --shadow-lg:        0 8px 32px rgba(5,8,24,0.65), 0 4px 12px rgba(5,8,24,0.50);
+  --shadow-xl:        0 16px 64px rgba(5,8,24,0.75), 0 8px 24px rgba(5,8,24,0.55);
+
+  --shadow-orange:    0 4px 24px rgba(255,107,53,0.35), 0 2px 8px rgba(255,107,53,0.25);
+  --shadow-orange-lg: 0 8px 48px rgba(255,107,53,0.50), 0 4px 16px rgba(255,107,53,0.35);
+  --shadow-orange-xl: 0 16px 80px rgba(255,107,53,0.60), 0 8px 32px rgba(255,107,53,0.40);
+
+  --shadow-glow:      0 0 40px rgba(255,107,53,0.30), 0 0 80px rgba(255,107,53,0.15);
+  --shadow-glow-sm:   0 0 20px rgba(255,107,53,0.25), 0 0 40px rgba(255,107,53,0.10);
+  --shadow-card:      0 0 0 1px rgba(255,107,53,0.12), 0 8px 32px rgba(5,8,24,0.60);
+  --shadow-card-hover:0 0 0 1px rgba(255,107,53,0.35), 0 12px 48px rgba(5,8,24,0.70), 0 4px 16px rgba(255,107,53,0.20);
+  --shadow-inner:     inset 0 2px 8px rgba(5,8,24,0.60);
+  --shadow-inset-orange: inset 0 0 20px rgba(255,107,53,0.10);
+
+  /* ──────────────────────────────────────────────────────────
+     BORDER RADIUS
+     ────────────────────────────────────────────────────────── */
+
+  --radius-xs:   0.25rem;   /* 4px — badges pequenos */
+  --radius-sm:   0.375rem;  /* 6px — inputs, pequenos */
+  --radius-md:   0.75rem;   /* 12px — cards padrão */
+  --radius-lg:   1rem;      /* 16px — cards grandes */
+  --radius-xl:   1.5rem;    /* 24px — sheets, modais */
+  --radius-2xl:  2rem;      /* 32px — hero cards */
+  --radius-full: 9999px;    /* pill — CTAs, badges */
+
+  /* ──────────────────────────────────────────────────────────
+     ANIMATION
+     ────────────────────────────────────────────────────────── */
+
+  --duration-instant:  80ms;
+  --duration-fast:     120ms;
+  --duration-normal:   200ms;
+  --duration-slow:     350ms;
+  --duration-slower:   500ms;
+  --duration-slowest:  800ms;
+
+  --ease-default:  cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out:      cubic-bezier(0, 0, 0.2, 1);
+  --ease-in:       cubic-bezier(0.4, 0, 1, 1);
+  --ease-bounce:   cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* ──────────────────────────────────────────────────────────
+     Z-INDEX
+     ────────────────────────────────────────────────────────── */
+
+  --z-base:     0;
+  --z-above:    10;
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-overlay:  300;
+  --z-modal:    400;
+  --z-toast:    500;
+  --z-tooltip:  600;
+}
+
+/* ── GRADIENTS — named ── */
+:root {
+  --gradient-hero:     linear-gradient(160deg, #0d1235 0%, #050818 50%, #0a0e27 100%);
+  --gradient-orange:   linear-gradient(135deg, #ff6b35 0%, #ff9500 100%);
+  --gradient-orange-v: linear-gradient(180deg, #ff9500 0%, #ff6b35 100%);
+  --gradient-navy:     linear-gradient(180deg, #1a2260 0%, #0d1235 100%);
+  --gradient-surface:  linear-gradient(145deg, #131844 0%, #0d1235 100%);
+  --gradient-premium:  linear-gradient(135deg, #1a2260 0%, #0d1235 40%, #130f30 100%);
+  --gradient-glow:     radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255,107,53,0.20) 0%, transparent 70%);
+  --gradient-shimmer:  linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+  --gradient-dark-overlay: linear-gradient(180deg, rgba(5,8,24,0) 0%, rgba(5,8,24,0.95) 100%);
+}
+
+/* ── KEYFRAMES ── */
+@keyframes gut-pulse-orange {
+  0%, 100% { box-shadow: var(--shadow-orange); }
+  50%       { box-shadow: var(--shadow-orange-lg); }
+}
+
+@keyframes gut-glow {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
+}
+
+@keyframes gut-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes gut-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes gut-scale-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes gut-slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gut-count-down {
+  0%   { transform: scale(1.2); opacity: 0; }
+  30%  { transform: scale(1);   opacity: 1; }
+  70%  { transform: scale(1);   opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0; }
+}

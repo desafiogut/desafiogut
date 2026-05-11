@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Fintech</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        :root {
+            --bg-color: #050a18;
+            --card-bg: #0d152b;
+            --accent-orange: #ff8c00;
+            --text-main: #ffffff;
+            --text-dim: #8a99b1;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            width: 375px;
+            height: 812px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .container {
+            padding: 40px 24px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            margin-bottom: 32px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin: 0;
+            color: var(--text-main);
+            text-transform: uppercase;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent-orange);
+        }
+
+        .timer-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, rgba(255, 140, 0, 0.1) 0%, transparent 70%);
+            border-radius: 30px;
+            position: relative;
+        }
+
+        .timer-label {
+            font-size: 14px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+        }
+
+        .timer-value {
+            font-size: 64px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -2px;
+            background: linear-gradient(180deg, #ffffff 0%, #a1a1a1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .timer-circle {
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            border: 2px solid rgba(255, 255, 255, 0.03);
+            border-radius: 50%;
+        }
+
+        .timer-glow {
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            border: 1px solid rgba(255, 140, 0, 0.2);
+            border-radius: 50%;
+            filter: blur(4px);
+        }
+
+        .footer-action {
+            margin-top: 32px;
+            background-color: var(--accent-orange);
+            color: #000;
+            padding: 18px;
+            border-radius: 16px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>OLÁ, DESAFIOGUT</h1>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">SALDO ATUAL</div>
+                <div class="stat-value">R$ 12.450</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">INVESTIDO</div>
+                <div class="stat-value">R$ 8.900</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">GANHOS</div>
+                <div class="stat-value">R$ 1.230</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">META</div>
+                <div class="stat-value">85%</div>
+            </div>
+        </div>
+
+        <div class="timer-container">
+            <div class="timer-glow"></div>
+            <div class="timer-circle"></div>
+            <div class="timer-label">CONTAGEM REGRESSIVA</div>
+            <div class="timer-value">45:00:00</div>
+        </div>
+
+        <div class="footer-action">
+            ACESSAR DASHBOARD COMPLETO
+        </div>
+    </div>
+</body>
+</html>
