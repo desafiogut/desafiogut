@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { useAppContext } from "../context/AppContext.jsx";
+import { useAppContext } from "../../context/AppContext.jsx";
 
 // ─── Ícones SVG inline — sem dependência externa ──────────────────────────────
 const IconDashboard = () => (

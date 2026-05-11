@@ -1,7 +1,7 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import BottomNav, { BOTTOM_NAV_HEIGHT } from "./BottomNav.jsx";
-import { useIsMobile } from "../hooks/useIsMobile.js";
+import { useIsMobile } from "../../hooks/useIsMobile.js";
 
 /**
  * Layout — Shell da aplicação.
