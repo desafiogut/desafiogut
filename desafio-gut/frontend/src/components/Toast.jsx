@@ -15,6 +15,13 @@ const toastStateMap = {
     text: 'text-blue-300',
     pulse: true,
   },
+  info: {
+    icon: 'ℹ️',
+    bg: 'bg-sky-500/10',
+    border: 'border-sky-500/25',
+    text: 'text-sky-300',
+    pulse: false,
+  },
   success: {
     icon: '✅',
     bg: 'bg-green-500/10',
