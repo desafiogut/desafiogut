@@ -16,6 +16,7 @@
 //   4) Chama adicionarSenhas on-chain (coordenacao).
 //   5) Em falha on-chain: reembolsa R$ best-effort.
 
+import { getStore } from "@netlify/blobs";
 import {
   jsonResponse, jsonError, validarEndereco, validarQuantidadeFichas,
   parseJsonBody, ValidationError,
@@ -27,6 +28,33 @@ import {
 import { creditarSenhas, lerSaldoSenhas, CONTRATO_ADDRESS } from "./_lib/contract.mjs";
 
 const VALOR_POR_SENHA_CENTAVOS = 200; // R$ 2,00
+
+// Voucher de Networking (REQ-26): isenção total da compra quando válido.
+const BLOB_VOUCHER  = "voucher";
+const REGEX_VOUCHER = /^GUT-[A-F0-9]{8}$/;
+
+function abrirVoucherStore() {
+  try { return getStore({ name: BLOB_VOUCHER, consistency: "strong" }); }
+  catch (err) {
+    console.warn("[comprar-senhas] Blob voucher indisponível:", err?.message);
+    return null;
+  }
+}
+
+// Validação prévia do voucher — antes de qualquer débito.
+// Retorna { ok:true, registro } se aplicável; { ok:false, code, message } se inválido.
+async function validarVoucher(codigo, endereco) {
+  if (typeof codigo !== "string" || !REGEX_VOUCHER.test(codigo)) {
+    return { ok: false, code: "voucher_codigo_invalido", message: "codigo deve casar com GUT-XXXXXXXX (8 hex maiúsculos)" };
+  }
+  const store = abrirVoucherStore();
+  if (!store) return { ok: false, code: "store_indisponivel", message: "Netlify Blobs indisponível" };
+  const v = await store.get(codigo, { type: "json" });
+  if (!v) return { ok: false, code: "voucher_inexistente", message: "voucher não encontrado" };
+  if (v.resgatadoPor) return { ok: false, code: "voucher_ja_resgatado", message: `voucher já resgatado por ${v.resgatadoPor} em ${v.resgatadoEm}` };
+  if (v.emissor === endereco) return { ok: false, code: "voucher_emissor_nao_resgata", message: "o emissor não pode resgatar o próprio voucher" };
+  return { ok: true, registro: v, store };
+}
 
 export default async (req) => {
   if (req.method !== "POST") {
@@ -72,24 +100,47 @@ export default async (req) => {
     return jsonError(403, "endereco_nao_corresponde", "token não pertence ao endereço informado");
   }
 
-  const valorCentavos = qtd * VALOR_POR_SENHA_CENTAVOS;
+  const valorBruto    = qtd * VALOR_POR_SENHA_CENTAVOS;
+  const voucherCodigo = typeof body.voucherCodigo === "string" && body.voucherCodigo.length > 0
+    ? body.voucherCodigo.toUpperCase().trim()
+    : null;
 
-  console.info("[comprar-senhas] início", { endereco, qtd, valorCentavos });
+  // 5. Voucher (REQ-26): validar ANTES de qualquer débito.
+  // Se aplicado, valorCentavos vira 0 (isenção total).
+  // Só é marcado como resgatado APÓS sucesso on-chain (igual reembolso é só após falha).
+  let voucherValido = null;
+  if (voucherCodigo) {
+    const v = await validarVoucher(voucherCodigo, endereco);
+    if (!v.ok) return jsonError(400, v.code, v.message);
+    voucherValido = v;
+  }
+  const valorCentavos = voucherValido ? 0 : valorBruto;
 
-  // 1) Verifica saldo + debita.
-  const saldoAtual = await lerSaldoRsCentavos(endereco);
-  if (saldoAtual < valorCentavos) {
-    return jsonError(400, "saldo_insuficiente",
-      `Saldo R$ ${(saldoAtual/100).toFixed(2)} < custo R$ ${(valorCentavos/100).toFixed(2)}`,
-      { saldoCentavos: saldoAtual, requeridoCentavos: valorCentavos });
+  console.info("[comprar-senhas] início", {
+    endereco, qtd, valorBruto, valorCentavos,
+    voucher: voucherValido ? voucherCodigo : null,
+  });
+
+  // 6. Saldo + débito (pulado se voucher zerou o valor).
+  let debito;
+  if (valorCentavos > 0) {
+    const saldoAtual = await lerSaldoRsCentavos(endereco);
+    if (saldoAtual < valorCentavos) {
+      return jsonError(400, "saldo_insuficiente",
+        `Saldo R$ ${(saldoAtual/100).toFixed(2)} < custo R$ ${(valorCentavos/100).toFixed(2)}`,
+        { saldoCentavos: saldoAtual, requeridoCentavos: valorCentavos });
+    }
+    debito = await debitarSaldoRs({ endereco, valorCentavos, motivo: "comprar-senhas" });
+    if (!debito.ok) {
+      return jsonError(400, debito.code || "debito_falhou", debito.message || "não foi possível debitar saldo R$");
+    }
+  } else {
+    // Voucher: sem mudança no saldo R$ — registramos para a resposta.
+    const saldoAtual = await lerSaldoRsCentavos(endereco);
+    debito = { ok: true, resultado: { saldoAntesCentavos: saldoAtual, saldoDepoisCentavos: saldoAtual } };
   }
 
-  const debito = await debitarSaldoRs({ endereco, valorCentavos, motivo: "comprar-senhas" });
-  if (!debito.ok) {
-    return jsonError(400, debito.code || "debito_falhou", debito.message || "não foi possível debitar saldo R$");
-  }
-
-  // 2) Crédito on-chain. Em falha → reembolsa.
+  // 7. Crédito on-chain. Em falha → reembolsa (se houve débito).
   let resultadoOnChain;
   let senhasAntes, senhasDepois;
   try {
@@ -100,14 +151,38 @@ export default async (req) => {
     console.error("[comprar-senhas] credito on-chain falhou — reembolsando R$:", {
       endereco, qtd, valorCentavos, message: err?.message, code: err?.code,
     });
-    const reembolso = await reembolsarSaldoRs({ endereco, valorCentavos, motivo: "comprar-senhas-falha" });
+    let reembolso = { ok: true };
+    if (valorCentavos > 0) {
+      reembolso = await reembolsarSaldoRs({ endereco, valorCentavos, motivo: "comprar-senhas-falha" });
+    }
+    // Voucher NÃO foi marcado como resgatado ainda — segue ativo para o usuário tentar de novo.
     return jsonError(502, "credito_onchain_falhou", err?.shortMessage || err?.message || "falha on-chain", {
       reembolsado: reembolso.ok,
+      voucher_preservado: !!voucherValido,
     });
+  }
+
+  // 8. Consumir voucher (best-effort) — apenas após sucesso on-chain.
+  let voucherResgatadoEm = null;
+  if (voucherValido) {
+    voucherResgatadoEm = new Date().toISOString();
+    try {
+      await voucherValido.store.setJSON(voucherCodigo, {
+        ...voucherValido.registro,
+        resgatadoPor: endereco,
+        resgatadoEm:  voucherResgatadoEm,
+        resgatadoEm_contexto: "comprar-senhas",
+      });
+    } catch (err) {
+      // Não falha a compra — voucher pode ser reconciliado depois pelo Admin.
+      console.warn("[comprar-senhas] consumir voucher falhou (não-fatal):", { voucherCodigo, message: err?.message });
+    }
   }
 
   console.info("[comprar-senhas] concluído", {
     endereco, qtd,
+    valorCentavos, valorBruto,
+    voucher: voucherCodigo,
     saldoRsAntes: debito.resultado.saldoAntesCentavos,
     saldoRsDepois: debito.resultado.saldoDepoisCentavos,
     senhasAntes, senhasDepois,
@@ -117,7 +192,15 @@ export default async (req) => {
   return jsonResponse({
     ok: true,
     idempotent: false,
-    endereco, qtd, valorCentavos,
+    endereco, qtd,
+    valorBrutoCentavos: valorBruto,
+    valorCentavos,                                  // pago de fato (0 se voucher)
+    voucher: voucherValido ? {
+      codigo: voucherCodigo,
+      emissor: voucherValido.registro.emissor,
+      resgatadoEm: voucherResgatadoEm,
+      descontoCentavos: valorBruto,
+    } : null,
     saldoRsAntesCentavos:  debito.resultado.saldoAntesCentavos,
     saldoRsDepoisCentavos: debito.resultado.saldoDepoisCentavos,
     senhasAntes, senhasDepois,

@@ -9,6 +9,7 @@ import Dashboard       from "./pages/Dashboard.jsx";
 import MinhaCarteira   from "./pages/MinhaCarteira.jsx";
 import MercadoLances   from "./pages/MercadoLances.jsx";
 import Vitrine         from "./pages/Vitrine.jsx";
+import ScheduleView    from "./components/ScheduleView.jsx";
 import MeusAtivos      from "./pages/MeusAtivos.jsx";
 import Seguranca       from "./pages/Seguranca.jsx";
 import Configuracoes   from "./pages/Configuracoes.jsx";
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/mercado"    element={<MercadoLances />} />
           <Route path="/vitrine"       element={<Vitrine />} />
           <Route path="/vitrine/:slot" element={<Vitrine />} />
+          <Route path="/programacao"   element={<ScheduleView />} />
           <Route path="/ativos"     element={<MeusAtivos />}    />
           <Route path="/seguranca"  element={<Seguranca />}     />
           <Route path="/configuracoes" element={<Configuracoes />} />

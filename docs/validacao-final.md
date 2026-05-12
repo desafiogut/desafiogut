@@ -1,22 +1,46 @@
 # Validação Final — Estado vs Especificação Refatorada
 
-**Data:** 2026-05-12
-**Branch:** `main` @ `41368c7` (commit do Bloco 1 de refator de navegação)
-**Tipo:** auditoria de leitura — **nenhuma alteração de código** nesta sessão.
+**Data:** 2026-05-12 (atualizado pós-Onda 4 Tier 1)
+**Branch:** `main` @ `b4c778f` + Onda 4 (M-06, M-09, M-11) — commit pendente
+**Tipo:** auditoria de leitura inicial + atualização após Onda 4 Tier 1.
 **Referência:** `docs/especificacao-extraida.md` (29 REQs · REQ-01 a REQ-29) extraídos do PDF *Especificação Técnica Refatorada (Junho/2026)*.
 
 ---
 
 ## Sumário executivo
 
+### Estado anterior (b4c778f — antes da Onda 4)
+
 | Status | Total | % |
 |---|---|---|
-| ✅ IMPLEMENTADO | **10** | 34% |
-| ⚠️ PARCIAL | **12** | 41% |
-| ❌ AUSENTE | **6** | 21% |
-| n/a (objetivo de negócio) | **1** | 3% |
+| ✅ IMPLEMENTADO | 10 | 34% |
+| ⚠️ PARCIAL | 12 | 41% |
+| ❌ AUSENTE | 6 | 21% |
+| n/a | 1 | 3% |
 
-**Build:** ✅ verde — `✓ built in 3.85s` (warning de chunk size não-bloqueante).
+### Estado atual (pós-Onda 4 Tier 1: M-06, M-09, M-11)
+
+| Status | Total | % | Δ |
+|---|---|---|---|
+| ✅ IMPLEMENTADO | **14** | 48% | +4 |
+| ⚠️ PARCIAL | **11** | 38% | -1 |
+| ❌ AUSENTE | **3** | 10% | -3 |
+| n/a | **1** | 3% | 0 |
+
+**REQs movidos para ✅ na Onda 4 Tier 1:**
+- REQ-02 (grade sem ambiguidade) — ❌ → ✅ via `/programacao` (ScheduleView)
+- REQ-26 (isenção 1ª participação) — ⚠️ → ✅ via integração voucher×comprar-senhas
+- REQ-28 (grade Seg-Sáb × 4 semanas) — ❌ → ✅ via ScheduleView com seletor de semana
+- REQ-29 (Domingos exclusivos) — ❌ → ✅ via filtro automático na ScheduleView
+
+**Não movido nesta sessão (Tier 2/3 — adiados):**
+- REQ-04..08 (cotas/visibilidade) — segue ⚠️ (M-07 deferido)
+- REQ-10 (reset 00:00 auto) — segue ❌ (não escopado nesta onda)
+- REQ-17, REQ-19 (regra Vale-Crédito / consumidor premium) — segue ⚠️
+- REQ-20 (PIX Adesão + Admin workflow) — segue ⚠️ (Admin real depende de M-08/10 + decisão de gate)
+- REQ-22, REQ-23 (banners) — segue ❌ (M-08, M-10 adiados)
+
+**Build:** ✅ verde após cada implementação (`✓ built in 5.31s` para M-06; `3.33s` para M-09).
 
 ---
 
@@ -139,7 +163,7 @@ $ grep -nE "gut_reset_v|LS_RESET_VERSION|LS_RESET_KEY" src/context/AppContext.js
 | ID | Descrição | Status | Evidência |
 |---|---|---|---|
 | **REQ-01** | Plataforma híbrida: publicidade (banners) + leilões | ⚠️ PARCIAL | Leilões existem (`/mercado`, `/vitrine`); camada de **publicidade/banners ausente** (REQ-22/23 ❌) |
-| **REQ-02** | Eliminar ambiguidades na grade de horários | ❌ AUSENTE | Sem grade/calendário no código (REQ-28/29 ❌) |
+| **REQ-02** | Eliminar ambiguidades na grade de horários | ✅ | `/programacao` (`ScheduleView.jsx`) + dados em `src/data/programacao-junho-2026.js` codificam horários por tipo de dia |
 | **REQ-03** | Automatizar processos financeiros | ⚠️ PARCIAL | Pipeline MP/Fichas automatizado (REQ-21 ✅); Adesão (REQ-20) ainda manual; sem automação de renovação/premium |
 
 ### §2 — Categorias e Hierarquia de Cotas
@@ -198,15 +222,15 @@ $ grep -nE "gut_reset_v|LS_RESET_VERSION|LS_RESET_KEY" src/context/AppContext.js
 |---|---|---|---|
 | **REQ-24** | 10 bônus = vouchers de networking | ✅ | Modelo no `voucher.mjs`; lista no `VoucherPanel.jsx` |
 | **REQ-25** | Diamante gera código único de convite | ✅ | `voucher.mjs` `acao=gerar` retorna `GUT-XXXXXXXX` |
-| **REQ-26** | Indicado: isenção 1ª compra de fichas | ⚠️ PARCIAL | Resgate persiste estado; **`comprar-senhas.mjs` não consome `voucherCodigo` ainda** |
+| **REQ-26** | Indicado: isenção 1ª compra de fichas | ✅ | `comprar-senhas.mjs` aceita `voucherCodigo`, valida via blob `voucher:{codigo}`, aplica `valorCentavos=0`, marca como resgatado após sucesso on-chain |
 | **REQ-27** | Objetivo: estimular entrada de novos usuários | n/a | Requisito de objetivo de negócio, não de código |
 
 ### §8 — Calendário e Loop
 
 | ID | Descrição | Status | Evidência |
 |---|---|---|---|
-| **REQ-28** | Grade semanal Seg–Sáb × 4 semanas | ❌ AUSENTE | Sem grade nem replicação |
-| **REQ-29** | Domingos: filtro só Prata + Diamante | ❌ AUSENTE | Sem filtro de dia da semana |
+| **REQ-28** | Grade semanal Seg–Sáb × 4 semanas | ✅ | `ScheduleView.jsx` com seletor de semana 1–4 + `DATAS_JUNHO` por dia da semana |
+| **REQ-29** | Domingos: filtro só Prata + Diamante | ✅ | `tiersPorHorario` em `programacao-junho-2026.js` aplica filtro automático quando `diaKey === "sunday"` |
 
 ---
 

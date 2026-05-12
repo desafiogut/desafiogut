@@ -62,6 +62,7 @@ const NAV_ITEMS = [
   { path: "/carteira",      label: "Minha Carteira",    icon: <IconWallet />,    end: false },
   { path: "/mercado",       label: "Mercado de Lances", icon: <IconTarget />,    end: false },
   { path: "/vitrine",       label: "Vitrine (4 Slots)", icon: <IconTarget />,    end: false },
+  { path: "/programacao",   label: "Programação",       icon: <IconTarget />,    end: false },
   { path: "/ativos",        label: "Meus Ativos",       icon: <IconTrending />,  end: false },
   { path: "/seguranca",     label: "Segurança",         icon: <IconShield />,    end: false },
   { path: "/configuracoes", label: "Configurações",     icon: <IconSettings />,  end: false },
