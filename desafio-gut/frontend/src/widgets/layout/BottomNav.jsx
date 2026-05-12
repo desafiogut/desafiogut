@@ -42,9 +42,10 @@ const MAIN_TABS = [
 ];
 
 const SECONDARY_LINKS = [
-  { path: "/ativos",        label: "Meus Ativos",   Icon: IconTrending },
-  { path: "/seguranca",     label: "Segurança",     Icon: IconShield   },
-  { path: "/configuracoes", label: "Configurações", Icon: IconSettings },
+  { path: "/vitrine",       label: "Vitrine (4 Slots)", Icon: IconTarget   },
+  { path: "/ativos",        label: "Meus Ativos",       Icon: IconTrending },
+  { path: "/seguranca",     label: "Segurança",         Icon: IconShield   },
+  { path: "/configuracoes", label: "Configurações",     Icon: IconSettings },
 ];
 
 const NAV_HEIGHT = 64;

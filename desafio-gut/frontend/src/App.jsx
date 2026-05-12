@@ -8,6 +8,7 @@ import { ToastContainer, useToast } from "./widgets/toast/Toast.jsx";
 import Dashboard       from "./pages/Dashboard.jsx";
 import MinhaCarteira   from "./pages/MinhaCarteira.jsx";
 import MercadoLances   from "./pages/MercadoLances.jsx";
+import Vitrine         from "./pages/Vitrine.jsx";
 import MeusAtivos      from "./pages/MeusAtivos.jsx";
 import Seguranca       from "./pages/Seguranca.jsx";
 import Configuracoes   from "./pages/Configuracoes.jsx";
@@ -51,6 +52,7 @@ export default function App() {
           <Route index              element={<Dashboard />}     />
           <Route path="/carteira"   element={<MinhaCarteira />} />
           <Route path="/mercado"    element={<MercadoLances />} />
+          <Route path="/vitrine"    element={<Vitrine />}       />
           <Route path="/ativos"     element={<MeusAtivos />}    />
           <Route path="/seguranca"  element={<Seguranca />}     />
           <Route path="/configuracoes" element={<Configuracoes />} />

@@ -10,11 +10,19 @@ import {
 export const EDICAO_ATIVA = "R-1";
 
 // Duração das rodadas — aderente à Especificação Refatorada (Junho/2026):
-// - Relâmpago (Bronze/Prata): 1800s = 30 min
-// - Programado (Ouro/Diamante): 86400s = 24 h, reset diário às 00:00
+// - Relâmpago (Bronze/Prata): 30 min a 1 h (1800-3600s), configurável via
+//   VITE_DURACAO_FLASH_SECONDS. Valores fora do intervalo caem no fallback 1800.
+// - Programado (Ouro/Diamante): 86400s = 24 h, reset diário às 00:00.
+const FLASH_MIN = 1800;
+const FLASH_MAX = 3600;
+function lerDuracaoFlash() {
+  const raw = Number(import.meta.env?.VITE_DURACAO_FLASH_SECONDS);
+  if (!Number.isFinite(raw) || raw < FLASH_MIN || raw > FLASH_MAX) return FLASH_MIN;
+  return Math.floor(raw);
+}
 export const DURACAO = {
-  flash:      1800,    // 30 min
-  programado: 86400,   // 24 h
+  flash:      lerDuracaoFlash(),
+  programado: 86400,
 };
 
 // Chaves legadas em localStorage criadas por versões anteriores com MOCK_MODE.
