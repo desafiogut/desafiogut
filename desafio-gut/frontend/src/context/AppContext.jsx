@@ -20,9 +20,11 @@ export const DURACAO = {
 // Chaves legadas em localStorage criadas por versões anteriores com MOCK_MODE.
 // Removidas uma única vez via reset versionado para não vazar dados fake.
 const LS_RESET_KEY        = "gut_reset_v";
-const LS_RESET_VERSION    = "2026-05-11";
+const LS_RESET_VERSION    = "2026-05-11-v2";
 const LS_KEYS_LEGADO_MOCK = [
   "gut_lances_r1",
+  "lances",
+  "LS_LANCES",
   "gut_carteira_flash",
   "gut_fichas_programadas",
   "carteiraFlash",
