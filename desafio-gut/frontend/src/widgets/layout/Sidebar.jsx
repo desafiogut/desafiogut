@@ -71,9 +71,8 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const {
     isConnected, address, userLabel,
-    carteiraFlash, fichasProgramadas,
     saldoSenhas, saldoSenhasStatus,
-    abrirModal, desconectar, MOCK_MODE,
+    abrirModal, desconectar,
   } = useAppContext();
 
   // Sufixo curto refletindo status de leitura on-chain (idle/ok = vazio).
@@ -156,27 +155,16 @@ export default function Sidebar() {
             </div>
           )}
           <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.35rem", flexWrap: "wrap" }}>
-            {MOCK_MODE && (
-              <span style={{ fontSize: "0.63rem", color: "#10b981", fontWeight: "700" }}>
-                💰 R$ {carteiraFlash.toFixed(2)}
-              </span>
-            )}
-            {MOCK_MODE ? (
-              <span style={{ fontSize: "0.63rem", color: "#a78bfa", fontWeight: "700" }}>
-                🎫 {fichasProgramadas}
-              </span>
-            ) : (
-              <span
-                style={{
-                  fontSize: "0.63rem",
-                  color: saldoSenhasStatus === "error" ? "#ef4444" : "#10b981",
-                  fontWeight: "700",
-                }}
-                title={`Saldo on-chain — status: ${saldoSenhasStatus}`}
-              >
-                🔗 {saldoSenhas ?? "—"}{statusSuffix}
-              </span>
-            )}
+            <span
+              style={{
+                fontSize: "0.63rem",
+                color: saldoSenhasStatus === "error" ? "#ef4444" : "#10b981",
+                fontWeight: "700",
+              }}
+              title={`Saldo on-chain — status: ${saldoSenhasStatus}`}
+            >
+              🔗 {saldoSenhas ?? "—"}{statusSuffix}
+            </span>
           </div>
         </div>
       )}
@@ -272,14 +260,6 @@ export default function Sidebar() {
           {collapsed ? <IconChevronRight /> : <IconChevronLeft />}
           {!collapsed && <span style={{ fontSize: "0.68rem", marginLeft: "0.4rem" }}>Recolher</span>}
         </button>
-
-        {/* MOCK badge */}
-        {MOCK_MODE && !collapsed && (
-          <div style={{ textAlign: "center", fontSize: "0.62rem", color: "#f5a623",
-            background: "rgba(245,166,35,0.08)", borderRadius: "6px", padding: "0.2rem" }}>
-            🧪 MOCK MODE
-          </div>
-        )}
       </div>
     </aside>
   );

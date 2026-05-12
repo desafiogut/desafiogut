@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { useAppContext } from "../context/AppContext.jsx";
 import { sanitizeLance, sanitizeEdicaoId } from "../utils/sanitize.js";
 import { verificarRateLimit, registrarLance } from "../utils/rateLimiter.js";
-import { gastarFicha } from "../utils/saldoInterno.js";
 import {
   getSignerFromProvider,
   assinarLance,
@@ -16,7 +15,6 @@ import {
   CONTRATO_SEPOLIA,
 } from "../utils/web3.js";
 
-const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === "true";
 const SEPOLIA_CHAIN_ID = 11155111;
 
 const FASES = {
@@ -37,11 +35,8 @@ export default function CardLance({
   onConnect,
   onDisconnect,
   encerrado,
-  tipoLeilao        = "flash",
-  carteiraFlash     = 0,
-  fichasProgramadas = 0,
-  onRefreshSaldo,
-  ready             = true,
+  tipoLeilao = "flash",
+  ready      = true,
 }) {
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
@@ -68,15 +63,12 @@ export default function CardLance({
   ].includes(fase);
   const isProgramado = tipoLeilao === "programado";
 
-  const saldoCarregando = !MOCK_MODE && isProgramado &&
+  const saldoCarregando = isProgramado &&
                           (saldoSenhasStatus === "loading" || saldoSenhasStatus === "idle");
-  const saldoErro       = !MOCK_MODE && isProgramado && saldoSenhasStatus === "error";
-  const semFichas       = isProgramado && (
-    MOCK_MODE ? fichasProgramadas <= 0
-              : (saldoSenhas == null || saldoSenhas <= 0)
-  );
+  const saldoErro       = isProgramado && saldoSenhasStatus === "error";
+  const semFichas       = isProgramado && (saldoSenhas == null || saldoSenhas <= 0);
   const valorParsed     = parseInt(valor || "0", 10);
-  const semSaldoRsFlash = !MOCK_MODE && !isProgramado &&
+  const semSaldoRsFlash = !isProgramado &&
                           saldoRsCentavos !== null && valorParsed > 0 &&
                           saldoRsCentavos < valorParsed;
 
@@ -127,49 +119,22 @@ export default function CardLance({
     if (!permitido) { setErro(motivo); return; }
 
     if (isProgramado) {
-      if (MOCK_MODE) {
-        if (fichasProgramadas <= 0) {
-          setErro("Sem fichas disponíveis (MOCK). Converta saldo flash em fichas (Art. 20: R$ 2,00 / ficha).");
-          return;
-        }
-      } else {
-        if (saldoSenhasStatus === "loading" || saldoSenhasStatus === "idle") {
-          setErro("Carregando saldo on-chain — aguarde alguns segundos e tente novamente.");
-          return;
-        }
-        if (saldoSenhasStatus === "error") {
-          setErro("Erro ao ler saldo on-chain. Verifique sua conexão e tente novamente.");
-          return;
-        }
-        if (saldoSenhas == null || saldoSenhas <= 0) {
-          setErro("Saldo de senhas insuficiente na blockchain. Aguarde crédito da coordenacao após confirmação do PIX (Art. 20).");
-          return;
-        }
+      if (saldoSenhasStatus === "loading" || saldoSenhasStatus === "idle") {
+        setErro("Carregando saldo on-chain — aguarde alguns segundos e tente novamente.");
+        return;
+      }
+      if (saldoSenhasStatus === "error") {
+        setErro("Erro ao ler saldo on-chain. Verifique sua conexão e tente novamente.");
+        return;
+      }
+      if (saldoSenhas == null || saldoSenhas <= 0) {
+        setErro("Saldo de senhas insuficiente na blockchain. Aguarde crédito da coordenacao após confirmação do PIX (Art. 20).");
+        return;
       }
     }
 
     try {
-      // ── MOCK ────────────────────────────────────────────────────────────
-      if (MOCK_MODE) {
-        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-        setFase(FASES.HASHING);   await sleep(700);
-        setFase(FASES.ASSINANDO); await sleep(600);
-        setFase(FASES.ENVIANDO);  await sleep(450);
-        if (isProgramado) gastarFicha();
-        registrarLance(address);
-        const fakeTx   = "0xBETA" + Math.random().toString(16).slice(2, 14).toUpperCase();
-        const fakeHash = "argon2id_beta_" + Math.random().toString(16).slice(2, 14);
-        setUltimaTx(fakeTx);
-        setUltimoHash(fakeHash);
-        setUltimaTxIsOnChain(false);
-        setFase(FASES.SUCESSO);
-        setValor("");
-        onRefreshSaldo?.();
-        onLanceSucesso?.({ address, valorCentavos, txHash: fakeTx, nomeExibicao: userLabel || null });
-        return;
-      }
-
-      // ── REAL + FLASH: auth → idempotência → off-chain via lance-relampago ──
+      // ── FLASH: auth → idempotência → off-chain via lance-relampago ──────
       if (!isProgramado) {
         // 1. Obter token de auth (cached 10min — Privy popup só na 1ª vez)
         setFase(FASES.AUTENTICANDO);
@@ -216,12 +181,11 @@ export default function CardLance({
         setFase(FASES.SUCESSO);
         setValor("");
         refetchSaldoRs();
-        onRefreshSaldo?.();
         onLanceSucesso?.({ address, valorCentavos, txHash: data.lanceId, nomeExibicao: userLabel || null });
         return;
       }
 
-      // ── REAL + PROGRAMADO: Hash → Assinar → on-chain ─────────────────────
+      // ── PROGRAMADO: Hash → Assinar → on-chain ────────────────────────────
       setFase(FASES.HASHING);
       const hash = await hashLance(address, edicaoSanitizada, valorCentavos);
       setUltimoHash(hash);
@@ -241,7 +205,6 @@ export default function CardLance({
       setUltimaTxIsOnChain(true);
       setFase(FASES.SUCESSO);
       setValor("");
-      onRefreshSaldo?.();
       onLanceSucesso?.({ address, valorCentavos, txHash: receipt.hash, nomeExibicao: userLabel || null });
 
     } catch (err) {
@@ -268,7 +231,6 @@ export default function CardLance({
             wallet:   address ?? "anonymous",
             chainId:  SEPOLIA_CHAIN_ID,
             fase,
-            mockMode: String(MOCK_MODE),
           },
           extra: { reasonRaw, valorCentavos, isProgramado },
         });
@@ -279,11 +241,7 @@ export default function CardLance({
   const valorReais = valor ? `R$ ${(parseInt(valor || "0", 10) / 100).toFixed(2)}` : "";
 
   let saldoLabel;
-  if (MOCK_MODE) {
-    saldoLabel = isProgramado
-      ? `🎫 ${fichasProgramadas} senha${fichasProgramadas !== 1 ? "s" : ""}`
-      : `💰 R$ ${carteiraFlash.toFixed(2)}`;
-  } else if (!isProgramado) {
+  if (!isProgramado) {
     const r  = saldoRsCentavos;
     const sx = saldoRsStatus === "loading" ? " ⏳"
              : saldoRsStatus === "stale"   ? " (antigo)"
@@ -296,24 +254,20 @@ export default function CardLance({
              : saldoSenhasStatus === "error"   ? " ✗" : "";
     saldoLabel = `🔗 ${n ?? "—"} senha${n === 1 ? "" : "s"}${sx}`;
   }
-  const saldoTitle = !MOCK_MODE
-    ? (!isProgramado
-        ? `saldo R$ — status: ${saldoRsStatus}`
-        : `saldo on-chain — status: ${saldoSenhasStatus}`)
-    : undefined;
+  const saldoTitle = !isProgramado
+    ? `saldo R$ — status: ${saldoRsStatus}`
+    : `saldo on-chain — status: ${saldoSenhasStatus}`;
 
   const desabilitado = !isConnected || ocupado || !valor || semFichas ||
                        saldoCarregando || saldoErro || semSaldoRsFlash;
   const tooltipBotao =
     saldoErro       ? "Erro ao ler saldo. Verifique sua conexão." :
     saldoCarregando ? "Aguardando leitura do saldo on-chain." :
-    semFichas       ? (MOCK_MODE
-                        ? "Sem fichas (Art. 20)"
-                        : "Sem senhas on-chain — aguarde crédito da coordenacao") :
+    semFichas       ? "Sem senhas on-chain — aguarde crédito da coordenacao" :
     semSaldoRsFlash ? `Saldo R$ insuficiente (R$ ${saldoRsCentavos != null ? (saldoRsCentavos / 100).toFixed(2) : "0"} disponível)` :
     "";
 
-  const pipelineItens = !MOCK_MODE && !isProgramado
+  const pipelineItens = !isProgramado
     ? [
         { f: FASES.AUTENTICANDO, label: "🔐 Autenticando carteira…" },
         { f: FASES.ENVIANDO,     label: "⚡ Creditando on-chain…" },
@@ -321,7 +275,7 @@ export default function CardLance({
     : [
         { f: FASES.HASHING,   label: "Gerando hash Argon2id..." },
         { f: FASES.ASSINANDO, label: "Assinando lance (Privy)..." },
-        { f: FASES.ENVIANDO,  label: `Registrando lance on-chain${MOCK_MODE && isProgramado ? " · −1 ficha" : !MOCK_MODE ? " · −1 senha" : ""}...` },
+        { f: FASES.ENVIANDO,  label: "Registrando lance on-chain · −1 senha..." },
       ];
 
   const labelBotao = fase === FASES.AUTENTICANDO
@@ -332,13 +286,9 @@ export default function CardLance({
       ? "⚠ Erro ao ler saldo"
     : saldoCarregando
       ? "⏳ Carregando saldo..."
-    : MOCK_MODE && isProgramado
-      ? "🎫 Confirmar Lance (−1 ficha)"
-    : !MOCK_MODE && isProgramado
+    : isProgramado
       ? "🎫 Confirmar Lance (−1 senha)"
-    : !MOCK_MODE
-      ? "⚡ Lance Relâmpago"
-    : "⚡ Confirmar Lance";
+    : "⚡ Lance Relâmpago";
 
   return (
     <Card
@@ -351,7 +301,6 @@ export default function CardLance({
       <div style={estilos.header}>
         <h3 style={estilos.titulo}>🎯 Dar Lance</h3>
         <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-          {MOCK_MODE && <span style={estilos.mockBadge}>🧪 MOCK</span>}
           <span style={estilos.tipoBadge(isProgramado)}>
             {isProgramado ? "🎫 Programado" : "⚡ Flash"}
           </span>
@@ -381,13 +330,9 @@ export default function CardLance({
           </div>
         )}
         <p style={estilos.hintConexao}>
-          {MOCK_MODE
-            ? (isProgramado
-                ? "Lance programado consome 1 ficha (Art. 20: R$ 2,00) — converta saldo flash no painel acima."
-                : "DesafioGUT Flash · 5 min · lance livre (MOCK) · menor lance único vence (Art. 8).")
-            : (isProgramado
-                ? "Lance programado consome 1 senha on-chain (Art. 20: R$ 2,00) — adquira via Comprar Fichas."
-                : "DesafioGUT Flash · 5 min · debita saldo R$ · menor lance único vence (Art. 8).")}
+          {isProgramado
+            ? "Lance programado consome 1 senha on-chain (Art. 20: R$ 2,00) — adquira via Comprar Fichas."
+            : "DesafioGUT Flash · 30 min · debita saldo R$ · menor lance único vence (Art. 8)."}
         </p>
       </div>
 
@@ -474,13 +419,11 @@ export default function CardLance({
           borderRadius: "10px", padding: "0.75rem 1rem",
           color: "#f5a623", fontSize: "0.85rem", fontWeight: "600", textAlign: "center",
         }}>
-          {MOCK_MODE
-            ? '🎫 Sem fichas — use "→ 1 Ficha (R$ 2,00)" no painel acima para participar (Art. 20)'
-            : '🎫 Sem senhas on-chain — aguarde crédito da coordenacao após confirmação do PIX (Art. 20)'}
+          🎫 Sem senhas on-chain — aguarde crédito da coordenacao após confirmação do PIX (Art. 20)
         </div>
       )}
 
-      {isConnected && !isProgramado && !MOCK_MODE && !encerrado && semSaldoRsFlash && (
+      {isConnected && !isProgramado && !encerrado && semSaldoRsFlash && (
         <div style={{
           background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)",
           borderRadius: "10px", padding: "0.75rem 1rem",
@@ -518,7 +461,6 @@ const estilos = {
   header:           { display: "flex", justifyContent: "space-between", alignItems: "center" },
   titulo:           { margin: 0, fontSize: "1.05rem", fontWeight: "800", color: "#f5a623", letterSpacing: "0.05em", fontFamily: "'Orbitron', sans-serif" },
   edicaoBadge:      { fontSize: "0.72rem", color: "#fbbf24", background: "rgba(245,166,35,0.12)", padding: "0.22rem 0.75rem", borderRadius: "20px", border: "1px solid rgba(245,166,35,0.3)", fontWeight: "700" },
-  mockBadge:        { fontSize: "0.7rem", fontWeight: "800", color: "#f5a623", background: "rgba(245,166,35,0.12)", padding: "0.2rem 0.6rem", borderRadius: "20px", border: "1px solid rgba(245,166,35,0.35)" },
   tipoBadge: (p)    => ({ fontSize: "0.72rem", fontWeight: "800", color: p ? "#a78bfa" : "#fbbf24", background: p ? "rgba(167,139,250,0.1)" : "rgba(251,191,36,0.1)", padding: "0.22rem 0.75rem", borderRadius: "20px", border: `1px solid ${p ? "rgba(167,139,250,0.3)" : "rgba(251,191,36,0.3)"}` }),
   conexaoArea:      { display: "flex", flexDirection: "column", gap: "0.4rem" },
   botaoConectar:    { padding: "0.75rem 1rem", background: "linear-gradient(135deg,#f5a623,#f97316)", color: "#0a0f1a", border: "none", borderRadius: "28px", fontWeight: "800", cursor: "pointer", fontSize: "0.92rem", letterSpacing: "0.03em", boxShadow: "0 4px 18px rgba(245,166,35,0.4)" },

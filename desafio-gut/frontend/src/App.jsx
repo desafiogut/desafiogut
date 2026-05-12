@@ -1,3 +1,4 @@
+// force deploy 2026-05-11 — reset versionado + MOCK_MODE removido
 import { useState, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import { AppProvider } from "./context/AppContext.jsx";

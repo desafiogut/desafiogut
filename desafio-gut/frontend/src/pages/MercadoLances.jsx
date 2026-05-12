@@ -90,7 +90,7 @@ function Confetti() {
   );
 }
 
-function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, MOCK_MODE, isMobile }) {
+function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, isMobile }) {
   const enderecoAbrev = vencedor
     ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
     : "—";
@@ -136,40 +136,6 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, MOC
             {" · Edição "}<strong style={{ color: COR.gold }}>{EDICAO_ATIVA}</strong>
             {" · "}{tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
           </p>
-          {/* Produto em disputa */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: "0.85rem",
-            background: "rgba(245,166,35,0.07)",
-            border: "1px solid rgba(245,166,35,0.25)",
-            borderRadius: "12px",
-            padding: isMobile ? "0.75rem" : "0.9rem 1rem",
-            marginBottom: "1rem",
-          }}>
-            <img
-              src="/produtos/airfryer.jpeg"
-              alt="Airfryer Mondial Grand Family 5L"
-              style={{
-                width: isMobile ? "60px" : "70px",
-                height: isMobile ? "60px" : "70px",
-                objectFit: "contain",
-                background: "#fff",
-                borderRadius: "10px",
-                flexShrink: 0,
-              }}
-            />
-            <div style={{ textAlign: "left" }}>
-              <div style={{ fontSize: "0.6rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.2rem" }}>
-                🎁 Prêmio do Leilão
-              </div>
-              <div style={{ fontSize: isMobile ? "0.9rem" : "1rem", color: "#fbbf24", fontWeight: "800", lineHeight: 1.2 }}>
-                Airfryer Mondial
-              </div>
-              <div style={{ fontSize: isMobile ? "0.72rem" : "0.78rem", color: "#94a3b8", lineHeight: 1.3 }}>
-                Grand Family 5L
-              </div>
-            </div>
-          </div>
-
           {vencedor ? (
             <div style={{
               background: "#0a1e38", border: `1px solid ${COR.gold}`,
@@ -184,11 +150,6 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, MOC
               </p>
               <p style={{ margin: 0, fontSize: isMobile ? "1.7rem" : "2rem", fontWeight: "900",
                 color: "#fbbf24", textShadow: "0 0 12px #fbbf24" }}>{valorFmt}</p>
-              {MOCK_MODE && (
-                <p style={{ margin: "0.5rem 0 0", fontSize: "0.7rem", color: COR.warning }}>
-                  🧪 Simulação MOCK — sem validade on-chain
-                </p>
-              )}
             </div>
           ) : (
             <div style={{ padding: "1.25rem", color: "#64748b", marginBottom: "1.25rem" }}>
@@ -222,17 +183,15 @@ const SEGURANCA_ITENS = [
 export default function MercadoLances() {
   const isMobile = useIsMobile();
   const {
-    MOCK_MODE, EDICAO_ATIVA, DURACAO, CUSTO_FICHA_BRL,
+    EDICAO_ATIVA, DURACAO,
     tipoLeilao, setTipoLeilao,
     lances,
     prazoTimestamp, encerrado, showOverlay, tempoRestante, lightningActive,
-    carteiraFlash, fichasProgramadas, erroCarteira,
     address, isConnected, userLabel, ready,
     vencedor,
     showCountdown,
-    handleSimularPix, handleConverterFicha,
     abrirModal, desconectar,
-    handleLanceSucesso, handleNovaRodada, refreshSaldo,
+    handleLanceSucesso, handleNovaRodada,
   } = useAppContext();
 
   const timerDisplay = (() => {
@@ -264,7 +223,6 @@ export default function MercadoLances() {
           tipoLeilao={tipoLeilao}
           onNovaRodada={handleNovaRodada}
           EDICAO_ATIVA={EDICAO_ATIVA}
-          MOCK_MODE={MOCK_MODE}
           isMobile={isMobile}
         />
       )}
@@ -363,7 +321,7 @@ export default function MercadoLances() {
           {!isMobile && (
             <AuthArea
               isConnected={isConnected} ready={ready} address={address} userLabel={userLabel}
-              onLogin={abrirModal} MOCK_MODE={MOCK_MODE}
+              onLogin={abrirModal}
             />
           )}
         </header>
@@ -378,46 +336,10 @@ export default function MercadoLances() {
           gap: isMobile ? "0.6rem" : "0.75rem",
           backdropFilter: "blur(12px)",
         }}>
-          {/* Saldos internos (Flash R$ / Fichas) e botões de simulação:
-              apenas em MOCK_MODE. Em produção, o saldo real é o badge 🔗 no
-              Sidebar/Dashboard; a aquisição é via "Comprar Fichas" (Frente B). */}
-          {MOCK_MODE ? (
-            <div style={{
-              display: "flex",
-              gap: isMobile ? "0.6rem" : "1.25rem",
-              alignItems: "center",
-              flexWrap: "wrap",
-              justifyContent: isMobile ? "space-between" : "flex-start",
-            }}>
-              <div style={saldoItemStyle}>
-                <span style={saldoLabelStyle}>Flash</span>
-                <span style={{ ...saldoValueStyle, color: COR.primary }}>R$ {carteiraFlash.toFixed(2)}</span>
-              </div>
-              <div style={saldoItemStyle}>
-                <span style={saldoLabelStyle}>Fichas</span>
-                <span style={{ ...saldoValueStyle, color: "#a78bfa" }}>{fichasProgramadas} 🎫</span>
-              </div>
-              <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                <button onClick={handleSimularPix} style={chipBtnStyle("blue")}
-                  title="Simula depósito PIX de R$ 10,00 (Art. 21)">
-                  + PIX R$ 10
-                </button>
-                <button
-                  onClick={handleConverterFicha}
-                  disabled={carteiraFlash < CUSTO_FICHA_BRL}
-                  style={{
-                    ...chipBtnStyle("purple"),
-                    opacity: carteiraFlash < CUSTO_FICHA_BRL ? 0.4 : 1,
-                    cursor: carteiraFlash < CUSTO_FICHA_BRL ? "not-allowed" : "pointer",
-                  }}
-                  title={`Art. 20: R$ ${CUSTO_FICHA_BRL.toFixed(2)} → 1 ficha`}
-                >→ 1 Ficha (R$ {CUSTO_FICHA_BRL.toFixed(2)})</button>
-              </div>
-              {erroCarteira && <span style={{ fontSize: "0.72rem", color: COR.danger }}>⚠️ {erroCarteira}</span>}
-            </div>
-          ) : (
-            <div /> /* placeholder vazio — mantém o flex space-between alinhando o seletor de modo à direita */
-          )}
+          {/* Em produção o saldo aparece no Sidebar/Dashboard.
+              Placeholder vazio mantém o flex space-between alinhando o
+              seletor de modo à direita. */}
+          <div />
 
           <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontSize: "0.68rem", color: COR.muted, marginRight: "0.2rem" }}>Modo:</span>
@@ -486,9 +408,6 @@ export default function MercadoLances() {
               onDisconnect={desconectar}
               encerrado={encerrado}
               tipoLeilao={tipoLeilao}
-              carteiraFlash={carteiraFlash}
-              fichasProgramadas={fichasProgramadas}
-              onRefreshSaldo={refreshSaldo}
               ready={ready}
             />
 
@@ -581,7 +500,7 @@ function chipBtnStyle(variant) {
   };
 }
 
-function AuthArea({ isConnected, ready, address, userLabel, onLogin, compact, MOCK_MODE }) {
+function AuthArea({ isConnected, ready, address, userLabel, onLogin, compact }) {
   if (!isConnected) {
     return (
       <button
@@ -633,7 +552,6 @@ function AuthArea({ isConnected, ready, address, userLabel, onLogin, compact, MO
         <div style={{ display: "flex", gap: "0.35rem" }}>
           <span style={badgeStyle}>🔒 LGPD</span>
           <span style={badgeStyle}>🧪 Beta</span>
-          {MOCK_MODE && <span style={{ ...badgeStyle, color: COR.gold, borderColor: "#92400e" }}>🔧 MOCK</span>}
         </div>
       )}
     </div>

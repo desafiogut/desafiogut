@@ -31,11 +31,11 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const {
-    lances, vencedor, carteiraFlash, fichasProgramadas,
+    lances, vencedor,
     saldoSenhas, saldoSenhasStatus,
     saldoRsCentavos, saldoRsStatus,
     encerrado, tempoRestante, tipoLeilao, isConnected,
-    address, userLabel, EDICAO_ATIVA, MOCK_MODE,
+    address, userLabel, EDICAO_ATIVA,
   } = useAppContext();
 
   const statusSuffix =
@@ -58,17 +58,12 @@ export default function Dashboard() {
   // Modelo dual (Frente B.9): "Saldo (R$)" = saldo-rs blob (PIX → +R$,
   // comprar-senhas → -R$, lance-relâmpago → -R$). "Senhas" = saldoSenhas
   // on-chain. Os dois nunca derivam um do outro — sem duplicação.
-  // Em MOCK_MODE: Saldo (R$) cai em carteiraFlash legado.
-  const saldoReais = MOCK_MODE
-    ? carteiraFlash
-    : (saldoRsCentavos == null ? null : saldoRsCentavos / 100);
+  const saldoReais = saldoRsCentavos == null ? null : saldoRsCentavos / 100;
   const saldoReaisStr = saldoReais == null
     ? `R$ —${statusRsSuffix}`
-    : `R$ ${saldoReais.toFixed(2)}${MOCK_MODE ? "" : statusRsSuffix}`;
+    : `R$ ${saldoReais.toFixed(2)}${statusRsSuffix}`;
 
-  const senhasStat = MOCK_MODE
-    ? { label: "Fichas", value: `${fichasProgramadas}`,                     color: "#a78bfa", icon: "🎫", to: "/carteira" }
-    : { label: "Senhas", value: `${saldoSenhas ?? "—"}${statusSuffix}`,     color: "#a78bfa", icon: "🔗", to: "/carteira" };
+  const senhasStat = { label: "Senhas", value: `${saldoSenhas ?? "—"}${statusSuffix}`, color: "#a78bfa", icon: "🔗", to: "/carteira" };
 
   const stats = [
     { label: "Saldo (R$)",      value: saldoReaisStr,                    color: COR.gold,    icon: "💰", to: "/carteira" },
@@ -186,7 +181,9 @@ export default function Dashboard() {
             }}>{EDICAO_ATIVA}</span>
           </div>
 
-          {/* Produto em disputa */}
+          {/* Prêmio em Disputa — placeholder até integração com a grade
+              da Especificação Refatorada (slots Bronze/Prata/Ouro/Diamante).
+              Por enquanto exibe apenas o card vazio com mensagem genérica. */}
           <div style={{
             display: "flex", alignItems: "center", gap: "0.65rem",
             padding: "0.6rem 0.75rem",
@@ -195,25 +192,21 @@ export default function Dashboard() {
             borderRadius: "10px",
             marginBottom: isMobile ? "0.6rem" : "0.75rem",
           }}>
-            <img
-              src="/produtos/airfryer.jpeg"
-              alt="Airfryer Mondial Grand Family 5L"
-              style={{
-                width: "52px", height: "52px",
-                objectFit: "contain",
-                background: "#fff", borderRadius: "8px",
-                flexShrink: 0,
-              }}
-            />
+            <div style={{
+              width: "52px", height: "52px",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(245,166,35,0.12)",
+              borderRadius: "8px", flexShrink: 0, fontSize: "1.5rem",
+            }} aria-hidden="true">🎁</div>
             <div>
               <div style={{ fontSize: "0.58rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: "700", marginBottom: "0.15rem" }}>
-                🎁 Prêmio em Disputa
+                Prêmio em Disputa
               </div>
               <div style={{ fontSize: isMobile ? "0.78rem" : "0.82rem", color: COR.gold, fontWeight: "800", lineHeight: 1.25 }}>
-                Airfryer Mondial
+                Em breve
               </div>
               <div style={{ fontSize: "0.68rem", color: COR.muted, lineHeight: 1.2 }}>
-                Grand Family 5L
+                Aguardando catálogo
               </div>
             </div>
           </div>
@@ -343,7 +336,6 @@ export default function Dashboard() {
         DesafioGUT · Grupo União e Trabalho
         <br />
         CNPJ 23.040.066/0001-00
-        {MOCK_MODE && <div style={{ color: COR.gold, marginTop: "0.4rem", fontWeight: "700" }}>🧪 Beta Interno</div>}
       </footer>
     </div>
   );

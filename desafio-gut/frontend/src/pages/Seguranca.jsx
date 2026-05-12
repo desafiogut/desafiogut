@@ -29,7 +29,7 @@ const LGPD_LINKS = [
 
 export default function Seguranca() {
   const isMobile = useIsMobile();
-  const { isConnected, address, userLabel, MOCK_MODE } = useAppContext();
+  const { isConnected, address, userLabel } = useAppContext();
 
   const pad        = isMobile ? "1rem" : "2rem";
   const cardPad    = isMobile ? "1rem" : "1.25rem";
@@ -50,7 +50,7 @@ export default function Seguranca() {
 
   const sessionItems = [
     { label: "Autenticação", value: isConnected ? "✅ Conectado" : "❌ Desconectado", color: isConnected ? COR.success : COR.danger },
-    { label: "Método",       value: MOCK_MODE ? "🧪 Mock (Beta)" : "Privy Embedded Wallet",  color: COR.blue300 },
+    { label: "Método",       value: "Privy Embedded Wallet",  color: COR.blue300 },
     { label: "Carteira",     value: address ? `${address.slice(0, 8)}...${address.slice(-4)}` : "—", color: COR.blue300, mono: true },
     { label: "Usuário",      value: userLabel || (isConnected ? "Anônimo" : "—"),               color: COR.text },
   ];

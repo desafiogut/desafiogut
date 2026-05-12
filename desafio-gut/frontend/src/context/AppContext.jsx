@@ -1,51 +1,35 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import {
-  getCarteiraFlash,
-  getFichasProgramadas,
-  simularDepositoPix,
-  converterEmFichas,
-  CUSTO_FICHA_BRL,
-} from "../utils/saldoInterno.js";
-import {
   subscribeLanceDado,
   getSaldoSenhasOnChain,
   subscribeSaldoSenhas,
 } from "../utils/web3.js";
 
-// ─── Constantes exportadas ────────────────────────────────────────────────────
-export const MOCK_MODE    = import.meta.env.VITE_MOCK_MODE === "true";
+// ─── Constantes ──────────────────────────────────────────────────────────────
 export const EDICAO_ATIVA = "R-1";
-const LS_LANCES           = "gut_lances_r1";
-const LS_KEYS_MOCK_LEGADO = ["gut_carteira_flash", "gut_fichas_programadas", "gut_lances_r1"];
 
-// Em produção, qualquer valor remanescente em localStorage de sessões MOCK_MODE
-// anteriores é lixo — o saldo real é on-chain (saldoSenhas) e a tabela de lances
-// é hidratada pelo listener LanceDado. Limpa proativamente no primeiro carregamento
-// para evitar UI mostrando saldo/fichas residuais. Roda só em browser (guarda
-// `typeof window`) e nunca em MOCK_MODE.
-function limparMockResidual() {
-  if (MOCK_MODE) return;
-  if (typeof window === "undefined") return;
-  try {
-    for (const k of LS_KEYS_MOCK_LEGADO) localStorage.removeItem(k);
-  } catch {}
-}
-limparMockResidual();
-
+// Duração das rodadas — aderente à Especificação Refatorada (Junho/2026):
+// - Relâmpago (Bronze/Prata): 1800s = 30 min
+// - Programado (Ouro/Diamante): 86400s = 24 h, reset diário às 00:00
 export const DURACAO = {
-  flash:      MOCK_MODE ? 30  : 300,   // Relâmpago: 5 min
-  programado: MOCK_MODE ? 60  : 1800,  // Programado: 30 min
+  flash:      1800,    // 30 min
+  programado: 86400,   // 24 h
 };
 
-export const LANCES_MOCK = [
-  { endereco: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", valor: 5, repetido: false, txHash: "0xabc123def456", nomeExibicao: "Ana Souza" },
-  { endereco: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4294ee", valor: 3, repetido: true,  txHash: "0xdef456abc789", nomeExibicao: "Carlos B." },
-  { endereco: "0x90F79bf6EB2c4f870365E785982E1f101E93b906", valor: 3, repetido: true,  txHash: "0xghi789jkl012", nomeExibicao: "Fernanda L." },
-  { endereco: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65", valor: 8, repetido: false, txHash: "0xjkl012mno345", nomeExibicao: "João P." },
+// Chaves legadas em localStorage criadas por versões anteriores com MOCK_MODE.
+// Removidas uma única vez via reset versionado para não vazar dados fake.
+const LS_RESET_KEY        = "gut_reset_v";
+const LS_RESET_VERSION    = "2026-05-11";
+const LS_KEYS_LEGADO_MOCK = [
+  "gut_lances_r1",
+  "gut_carteira_flash",
+  "gut_fichas_programadas",
+  "carteiraFlash",
+  "fichasProgramadas",
 ];
 
-// ─── Context ──────────────────────────────────────────────────────────────────
+// ─── Context ─────────────────────────────────────────────────────────────────
 const AppContext = createContext(null);
 
 export function useAppContext() {
@@ -54,20 +38,14 @@ export function useAppContext() {
   return ctx;
 }
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
+// ─── Provider ────────────────────────────────────────────────────────────────
 export function AppProvider({ children }) {
   // Tipo de leilão (Art. 8)
   const [tipoLeilao, setTipoLeilao] = useState("flash");
 
-  // lances: fonte on-chain (programado) + MOCK. lancesFlash: fonte off-chain (flash, polling).
-  const [lances, setLances] = useState(() => {
-    if (!MOCK_MODE) return [];
-    try {
-      const salvo = localStorage.getItem(LS_LANCES);
-      return salvo ? JSON.parse(salvo) : LANCES_MOCK;
-    } catch { return LANCES_MOCK; }
-  });
-  const [lancesFlash, setLancesFlash] = useState([]);
+  // lances on-chain (programado). lancesFlash off-chain (polling do blob).
+  const [lances,       setLances]       = useState([]);
+  const [lancesFlash,  setLancesFlash]  = useState([]);
 
   // Timer
   const [prazoTimestamp,  setPrazoTimestamp]  = useState(() => Math.floor(Date.now() / 1000) + DURACAO.flash);
@@ -77,69 +55,66 @@ export function AppProvider({ children }) {
   const [lightningActive, setLightningActive] = useState(false);
   const [showCountdown,   setShowCountdown]   = useState(false);
 
-  // Carteiras internas — Art. 20: R$ 2,00/senha
-  // MOCK_MODE: lê localStorage (saldo simulado para dev local).
-  // Produção: zerados; o Saldo Flash R$ não existe conceitualmente no fluxo real
-  // (PIX → senhas é direto). fichasProgramadas é legado — em produção a UI deve
-  // consumir saldoSenhas on-chain, e os componentes que ainda leem aqui recebem 0.
-  const [carteiraFlash,     setCarteiraFlash]     = useState(() => MOCK_MODE ? getCarteiraFlash()     : 0);
-  const [fichasProgramadas, setFichasProgramadas] = useState(() => MOCK_MODE ? getFichasProgramadas() : 0);
-  const [erroCarteira,      setErroCarteira]      = useState("");
-
-  // ── Saldo on-chain (Opção B Fase 3) ──────────────────────────────────────────
-  // Coexiste com fichasProgramadas (localStorage) durante a migração.
-  // saldoSenhas reflete saldoSenhas[address] no contrato; null = "ainda não sei"
-  // (distinto de 0, que é estado on-chain válido). Em MOCK_MODE permanece null.
+  // Saldo on-chain — saldoSenhas[address] no contrato.
+  // null = "ainda não consultado" (distinto de 0, que é estado on-chain válido).
   const [saldoSenhas,       setSaldoSenhas]       = useState(null);
   const [saldoSenhasStatus, setSaldoSenhasStatus] = useState("idle"); // idle | loading | ok | stale | error
 
-  // ── Saldo R$ off-chain (Frente B.9 — modelo dual) ───────────────────────────
-  // Fonte: blob `saldo-rs:${address}` via GET /.netlify/functions/saldo-rs.
+  // Saldo R$ off-chain — blob `saldo-rs:${address}` (Frente B.9).
   // PIX aprovado = +R$. /comprar-senhas = -R$ +senhas. /lance-relampago = -R$.
-  // saldoRsCentavos: number | null (null = ainda não consultado).
   const [saldoRsCentavos, setSaldoRsCentavos] = useState(null);
   const [saldoRsStatus,   setSaldoRsStatus]   = useState("idle");
 
   // Privy auth
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { wallets } = useWallets();
-  const privyWallet  = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
-  const realAddress  = privyWallet?.address ?? null;
-  const [mockAddress, setMockAddress] = useState(null);
-
-  const address     = MOCK_MODE ? mockAddress : realAddress;
-  const isConnected = MOCK_MODE ? Boolean(mockAddress) : (authenticated && Boolean(realAddress));
+  const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
+  const address     = privyWallet?.address ?? null;
+  const isConnected = authenticated && Boolean(address);
   const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || null;
 
-  // MOCK → lances (localStorage). Flash real → lancesFlash (blob polling). Programado → lances (on-chain).
-  const lancesExibidos = MOCK_MODE ? lances : (tipoLeilao === "flash" ? lancesFlash : lances);
+  const lancesExibidos = tipoLeilao === "flash" ? lancesFlash : lances;
 
   // Vencedor — Menor Lance Único (Art. 8)
   const vencedor = [...lancesExibidos]
     .filter((l) => !l.repetido)
     .sort((a, b) => a.valor - b.valor)[0] ?? null;
 
-  // ── Efeitos ──────────────────────────────────────────────────────────────────
-
-  // Persistência de lances — apenas em MOCK_MODE.
-  // Em produção, persistir contamina sessões com lances de testes antigos; a
-  // tabela é hidratada pelo listener LanceDado e (futuro) backfill de eventos.
+  // ── Reset versionado ─────────────────────────────────────────────────────
+  // Limpa localStorage legado e desloga a sessão Privy UMA ÚNICA VEZ por
+  // dispositivo, quando a versão do reset muda. Evita arrastar dados de
+  // teste antigos (MOCK_MODE removido em 2026-05-11) sem afetar usuários
+  // que já passaram pelo reset ou que fazem login após a virada.
   useEffect(() => {
-    if (!MOCK_MODE) return;
-    try { localStorage.setItem(LS_LANCES, JSON.stringify(lances)); } catch {}
-  }, [lances]);
+    if (typeof window === "undefined") return;
+    let aplicado;
+    try {
+      aplicado = localStorage.getItem(LS_RESET_KEY);
+    } catch { return; }
+    if (aplicado === LS_RESET_VERSION) return;
+    try {
+      for (const k of LS_KEYS_LEGADO_MOCK) localStorage.removeItem(k);
+      localStorage.setItem(LS_RESET_KEY, LS_RESET_VERSION);
+    } catch {}
+    // Sessão Privy antiga é descartada apenas na primeira execução do reset.
+    // Usuário re-loga em seguida — UX aceitável porque é one-shot.
+    if (authenticated) {
+      try { logout(); } catch (err) {
+        console.warn("[GUT-DEBUG] reset versionado: logout falhou", err?.message);
+      }
+    }
+  }, [authenticated, logout]);
 
-  // Ao trocar modo não reseta o timer — preserva rodada corrente.
-  // Timer só reseta no handleNovaRodada.
+  // ── Efeitos ──────────────────────────────────────────────────────────────
+
   useEffect(() => {
     setShowOverlay(false);
     setLightningActive(false);
   }, [tipoLeilao]);
 
   // Polling 3s de lances flash do blob (cross-user em tempo real).
-  // Só ativo em real + flash. MOCK usa lances[] do localStorage.
   useEffect(() => {
-    if (MOCK_MODE || tipoLeilao !== "flash") return;
+    if (tipoLeilao !== "flash") return;
     let cancelado = false;
     const poll = async () => {
       if (cancelado) return;
@@ -156,9 +131,7 @@ export function AppProvider({ children }) {
   }, [tipoLeilao]);
 
   // Listener on-chain do evento LanceDado — atualiza tabela em tempo real.
-  // Desativado em MOCK_MODE (UI roda sem rede).
   useEffect(() => {
-    if (MOCK_MODE) return;
     const unsubscribe = subscribeLanceDado(EDICAO_ATIVA, (lance) => {
       setLances((prev) => {
         if (prev.some((l) => l.txHash === lance.txHash)) return prev; // dedup
@@ -177,17 +150,13 @@ export function AppProvider({ children }) {
     return unsubscribe;
   }, []);
 
-  // ── Saldo on-chain: refetch + listener + polling guardião (Opção B Fase 3) ──
-  // refetchSaldo é exposto no value e estável por address para consumidores
-  // poderem usá-lo em useEffect sem recriar a cada render.
+  // ── Saldo on-chain: refetch + listener + polling guardião ───────────────
   const refetchSaldo = useCallback(async () => {
-    if (MOCK_MODE)  return;
     if (!address) {
       setSaldoSenhas(null);
       setSaldoSenhasStatus("idle");
       return;
     }
-    // Se já temos um valor "ok", mantemos visível enquanto recarrega; senão loading.
     setSaldoSenhasStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
     try {
       const valor = await getSaldoSenhasOnChain(address);
@@ -197,29 +166,21 @@ export function AppProvider({ children }) {
       console.warn("[GUT-DEBUG] refetchSaldo falhou", {
         address, message: err?.message, name: err?.name,
       });
-      // Sem valor anterior → error (UI deve bloquear lance); com valor → stale (last-known-good).
       setSaldoSenhasStatus((prev) => (prev === "ok" ? "stale" : "error"));
     }
   }, [address]);
 
-  // Fetch inicial ao logar / trocar de address. Reseta para idle ao deslogar.
   useEffect(() => {
-    if (MOCK_MODE) return;
     refetchSaldo();
   }, [address, refetchSaldo]);
 
-  // Listener de SenhasCreditadas + LanceDado(meu) → refetch.
-  // Polling guardião de 30s como cinto-suspensório se ethers parar de receber
-  // eventos silenciosamente (mobile background, sleep do laptop, troca de rede).
   useEffect(() => {
-    if (MOCK_MODE || !address) return;
-
+    if (!address) return;
     const unsubscribe = subscribeSaldoSenhas(address, (event) => {
       console.info("[GUT-DEBUG] saldoSenhas event", event);
       refetchSaldo();
     });
     const intervalId = setInterval(refetchSaldo, 30000);
-
     return () => {
       try { unsubscribe(); } catch (e) {
         console.warn("[GUT-DEBUG] unsubscribe falhou", e?.message);
@@ -228,12 +189,8 @@ export function AppProvider({ children }) {
     };
   }, [address, refetchSaldo]);
 
-  // ── Saldo R$: refetch + polling (Frente B.9) ────────────────────────────────
-  // Sem evento on-chain — confiamos em polling 5s enquanto address está logado.
-  // Frequência maior que saldoSenhas porque PIX é o gatilho de UX mais imediato
-  // (usuário vê saldo subir após aprovação MP).
+  // ── Saldo R$ off-chain: polling 5s ──────────────────────────────────────
   const refetchSaldoRs = useCallback(async () => {
-    if (MOCK_MODE) return;
     if (!address) {
       setSaldoRsCentavos(null);
       setSaldoRsStatus("idle");
@@ -253,7 +210,6 @@ export function AppProvider({ children }) {
   }, [address]);
 
   useEffect(() => {
-    if (MOCK_MODE) return;
     refetchSaldoRs();
     if (!address) return;
     const id = setInterval(refetchSaldoRs, 5000);
@@ -276,41 +232,9 @@ export function AppProvider({ children }) {
     return () => clearInterval(id);
   }, [prazoTimestamp]);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────────
-
-  // Handlers de saldo interno — todos no-op fora de MOCK_MODE.
-  // Em produção, o crédito de senhas é feito via Netlify Function (Frente B):
-  // PIX confirmado → coordenacao chama adicionarSenhas() on-chain → listener
-  // SenhasCreditadas atualiza saldoSenhas automaticamente. Não há saldo flash
-  // intermediário nem conversão local de ficha.
-
-  function refreshSaldo() {
-    if (!MOCK_MODE) return;
-    setCarteiraFlash(getCarteiraFlash());
-    setFichasProgramadas(getFichasProgramadas());
-  }
-
-  function handleSimularPix() {
-    if (!MOCK_MODE) return;
-    setErroCarteira("");
-    setCarteiraFlash(simularDepositoPix(10.00));
-  }
-
-  function handleConverterFicha() {
-    if (!MOCK_MODE) return;
-    setErroCarteira("");
-    try {
-      const { saldoFlash, fichas } = converterEmFichas(1);
-      setCarteiraFlash(saldoFlash);
-      setFichasProgramadas(fichas);
-    } catch (err) {
-      setErroCarteira(err.message);
-      setTimeout(() => setErroCarteira(""), 4000);
-    }
-  }
+  // ── Handlers ─────────────────────────────────────────────────────────────
 
   function abrirModal() {
-    if (MOCK_MODE) { setMockAddress("0xDEAD00000000000000000000000000000000BEEF"); return; }
     console.info("[GUT-DEBUG] abrirModal", { ready, authenticated, hasUser: !!user });
     if (!ready) {
       console.warn("[GUT-DEBUG] abrirModal abortou: Privy ready=false. Reagendando em 1s.");
@@ -340,7 +264,6 @@ export function AppProvider({ children }) {
   }
 
   function desconectar() {
-    if (MOCK_MODE) { setMockAddress(null); return; }
     logout();
   }
 
@@ -349,7 +272,7 @@ export function AppProvider({ children }) {
       endereco: addr, valor: valorCentavos, txHash,
       nomeExibicao: nomeExibicao || null,
     };
-    const setter = (!MOCK_MODE && tipoLeilao === "flash") ? setLancesFlash : setLances;
+    const setter = tipoLeilao === "flash" ? setLancesFlash : setLances;
     setter((prev) => {
       const jaRepetido = prev.some((l) => l.valor === valorCentavos);
       return [
@@ -357,15 +280,13 @@ export function AppProvider({ children }) {
         { ...novoLance, repetido: jaRepetido },
       ];
     });
-    refreshSaldo();
   }
 
   function handleNovaRodada() {
-    if (MOCK_MODE) localStorage.removeItem(LS_LANCES);
     setEncerrado(false);
     setShowOverlay(false);
     setLightningActive(false);
-    setLances(MOCK_MODE ? LANCES_MOCK : []);
+    setLances([]);
     setLancesFlash([]);
     setShowCountdown(true);
     setTimeout(() => {
@@ -376,11 +297,9 @@ export function AppProvider({ children }) {
     }, 3500);
   }
 
-  // ── Value ─────────────────────────────────────────────────────────────────────
+  // ── Value ────────────────────────────────────────────────────────────────
   const value = {
-    // Constantes
-    MOCK_MODE, EDICAO_ATIVA, DURACAO, LANCES_MOCK, CUSTO_FICHA_BRL,
-    // Estado do leilão
+    EDICAO_ATIVA, DURACAO,
     tipoLeilao, setTipoLeilao,
     lances: lancesExibidos,
     prazoTimestamp,
@@ -389,26 +308,14 @@ export function AppProvider({ children }) {
     showCountdown,
     tempoRestante,
     lightningActive,
-    // Carteiras
-    carteiraFlash,
-    fichasProgramadas,
-    erroCarteira,
-    // Saldo on-chain (Opção B Fase 3) — coexiste com fichasProgramadas
     saldoSenhas,
     saldoSenhasStatus,
     refetchSaldo,
-    // Saldo R$ off-chain (Frente B.9 — modelo dual)
     saldoRsCentavos,
     saldoRsStatus,
     refetchSaldoRs,
-    // Auth
     address, isConnected, userLabel, ready, authenticated, user,
-    // Vencedor
     vencedor,
-    // Handlers
-    refreshSaldo,
-    handleSimularPix,
-    handleConverterFicha,
     abrirModal,
     desconectar,
     handleLanceSucesso,

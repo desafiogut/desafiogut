@@ -14,11 +14,14 @@ const COR = {
   success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", purple: "#a78bfa",
 };
 
+// Dois fluxos de pagamento (Especificação Refatorada §5):
+// 1) Adesão (Consultoria): PIX direto → familiaquildo@gmail.com (manual)
+// 2) Operação Interna (Fichas): Mercado Pago → desafiogut@gmail.com (webhook)
 const DADOS_PAGAMENTO = [
-  { label: "PIX (e-mail)",    value: "desafiogut01@gmail.com"        },
-  { label: "Banco do Brasil", value: "Ag. 181627 · CC 847534"        },
-  { label: "Cartão Débito",   value: "Nacional e Internacional"      },
-  { label: "Custo por senha", value: "R$ 2,00 por edição (Art. 20)"  },
+  { label: "Adesão (PIX manual)",     value: "familiaquildo@gmail.com (Banco do Brasil)" },
+  { label: "Fichas (Mercado Pago)",   value: "desafiogut@gmail.com — automatizado"        },
+  { label: "Custo por senha",         value: "R$ 2,00 por edição (Art. 20)"               },
+  { label: "Cartão Débito",           value: "Nacional e Internacional"                   },
 ];
 
 export default function MinhaCarteira() {
@@ -28,10 +31,8 @@ export default function MinhaCarteira() {
   const privyWallet   = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
   const comprarAuthRef = useRef({ token: null, expiresAt: 0 });
   const {
-    carteiraFlash, fichasProgramadas, erroCarteira,
-    handleSimularPix, handleConverterFicha,
-    CUSTO_FICHA_BRL, isConnected, abrirModal,
-    address, userLabel, lances, MOCK_MODE,
+    isConnected, abrirModal,
+    address, userLabel, lances,
     saldoSenhas, saldoSenhasStatus, refetchSaldo,
     saldoRsCentavos, saldoRsStatus, refetchSaldoRs,
     setTipoLeilao,
@@ -58,9 +59,7 @@ export default function MinhaCarteira() {
   // Modelo dual (Frente B.9): Saldo Disponível = saldo-rs (off-chain).
   // PIX aprovado credita aqui; "Trocar por Senhas" debita aqui e credita
   // saldoSenhas on-chain; Lance Relâmpago debita aqui em centavos.
-  const saldoReais = MOCK_MODE
-    ? carteiraFlash
-    : (saldoRsCentavos == null ? null : saldoRsCentavos / 100);
+  const saldoReais = saldoRsCentavos == null ? null : saldoRsCentavos / 100;
 
   function irParaLanceRelampago() {
     try { setTipoLeilao?.("flash"); } catch {}
@@ -170,9 +169,7 @@ export default function MinhaCarteira() {
           fontWeight: "900", color: COR.text, lineHeight: 1.2,
         }}>💰 Minha Carteira</h1>
         <p style={{ margin: 0, color: COR.muted, fontSize: isMobile ? "0.82rem" : "0.88rem", lineHeight: 1.4 }}>
-          {MOCK_MODE
-            ? "Gerencie seu saldo Flash e suas fichas para participar do DesafioGUT."
-            : "Acompanhe seu saldo de senhas e seus lances no DesafioGUT."}
+          Acompanhe seu saldo de senhas e seus lances no DesafioGUT.
         </p>
       </header>
 
@@ -187,109 +184,10 @@ export default function MinhaCarteira() {
         </div>
       ) : (
         <>
-          {/* Saldos + Ações — apenas em MOCK_MODE.
-              Em produção, "Saldo Flash R$" e "Fichas (localStorage)" não existem;
-              o saldo real é o badge 🔗 no Sidebar/Dashboard, e a aquisição de
-              senhas será via botão "Comprar Fichas" (Frente B). */}
-          {MOCK_MODE && (
-            <>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "1fr 1fr",
-                gap: isMobile ? "0.75rem" : "1rem",
-                marginBottom: sectionGap,
-              }}>
-                <div style={{ ...cardStyle, borderColor: "rgba(245,166,35,0.3)", minWidth: 0 }}>
-                  <div style={{
-                    fontSize: "0.65rem", color: COR.muted,
-                    textTransform: "uppercase", letterSpacing: "0.06em",
-                    marginBottom: "0.4rem", fontWeight: "700",
-                  }}>SALDO FLASH ⚡</div>
-                  <div style={{
-                    fontSize: isMobile ? "1.55rem" : "2.2rem",
-                    fontWeight: "900", color: COR.primary, lineHeight: 1.1,
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  }}>R$ {carteiraFlash.toFixed(2)}</div>
-                  <div style={{ fontSize: "0.7rem", color: COR.muted, marginTop: "0.3rem" }}>
-                    Usado em leilões Relâmpago
-                  </div>
-                </div>
-
-                <div style={{ ...cardStyle, borderColor: "rgba(167,139,250,0.3)", minWidth: 0 }}>
-                  <div style={{
-                    fontSize: "0.65rem", color: COR.muted,
-                    textTransform: "uppercase", letterSpacing: "0.06em",
-                    marginBottom: "0.4rem", fontWeight: "700",
-                  }}>FICHAS 🎫</div>
-                  <div style={{
-                    fontSize: isMobile ? "1.55rem" : "2.2rem",
-                    fontWeight: "900", color: COR.purple, lineHeight: 1.1,
-                  }}>{fichasProgramadas}</div>
-                  <div style={{ fontSize: "0.7rem", color: COR.muted, marginTop: "0.3rem" }}>
-                    R$ {CUSTO_FICHA_BRL.toFixed(2)} / ficha (Art. 20)
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ ...cardStyle, marginBottom: sectionGap }}>
-                <h3 style={tituloStyle}>⚡ Ações de Carteira</h3>
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-                  gap: isMobile ? "0.75rem" : "1rem",
-                  marginBottom: erroCarteira ? "0.75rem" : 0,
-                }}>
-                  <div>
-                    <div style={{ fontSize: "0.78rem", color: COR.muted, marginBottom: "0.4rem", fontWeight: "600" }}>
-                      Depósito via PIX
-                    </div>
-                    <button onClick={handleSimularPix} style={botaoPrimario}>
-                      + PIX R$ 10,00 (Simulação Beta)
-                    </button>
-                    <p style={{ margin: "0.4rem 0 0", fontSize: "0.66rem", color: "#334155" }}>
-                      PIX real: desafiogut01@gmail.com (Art. 21)
-                    </p>
-                  </div>
-
-                  <div>
-                    <div style={{ fontSize: "0.78rem", color: COR.muted, marginBottom: "0.4rem", fontWeight: "600" }}>
-                      Converter em Ficha Programada
-                    </div>
-                    <button
-                      onClick={handleConverterFicha}
-                      disabled={carteiraFlash < CUSTO_FICHA_BRL}
-                      style={{
-                        ...botaoSecundario,
-                        opacity: carteiraFlash < CUSTO_FICHA_BRL ? 0.4 : 1,
-                        cursor: carteiraFlash < CUSTO_FICHA_BRL ? "not-allowed" : "pointer",
-                      }}
-                    >→ 1 Ficha (R$ {CUSTO_FICHA_BRL.toFixed(2)})</button>
-                    <p style={{ margin: "0.4rem 0 0", fontSize: "0.66rem", color: "#334155" }}>
-                      {carteiraFlash < CUSTO_FICHA_BRL
-                        ? "Saldo insuficiente"
-                        : `Saldo disponível: R$ ${carteiraFlash.toFixed(2)}`}
-                    </p>
-                  </div>
-                </div>
-
-                {erroCarteira && (
-                  <div style={{
-                    padding: "0.6rem 0.85rem",
-                    background: "rgba(239,68,68,0.12)",
-                    border: "1px solid rgba(239,68,68,0.3)",
-                    borderRadius: "10px", color: COR.danger,
-                    fontSize: "0.82rem",
-                  }}>⚠️ {erroCarteira}</div>
-                )}
-              </div>
-            </>
-          )}
-
           {/* Saldo Disponível (R$) — modelo dual Frente B.9.
               Fonte: blob saldo-rs:${address}. PIX → +R$. /comprar-senhas → -R$.
-              /lance-relampago → -centavos. Em MOCK_MODE: carteiraFlash legado. */}
-          {!MOCK_MODE && (
-            <div style={{
+              /lance-relampago → -centavos. */}
+          <div style={{
               ...cardStyle,
               marginBottom: sectionGap,
               borderColor: "rgba(245,166,35,0.32)",
@@ -400,14 +298,11 @@ export default function MinhaCarteira() {
                 </p>
               )}
             </div>
-          )}
 
-          {/* Saldo de Senhas — produção (não MOCK_MODE).
-              Fonte: saldoSenhas on-chain (AppContext). Atualiza via listener
-              SenhasCreditadas + LanceDado e polling guardião 30s — não precisa
-              hook próprio. */}
-          {!MOCK_MODE && (
-            <div style={{
+          {/* Saldo de Senhas — fonte: saldoSenhas on-chain (AppContext).
+              Atualiza via listener SenhasCreditadas + LanceDado e polling
+              guardião 30s — não precisa hook próprio. */}
+          <div style={{
               ...cardStyle,
               marginBottom: sectionGap,
               borderColor: "rgba(16,185,129,0.28)",
@@ -505,7 +400,6 @@ export default function MinhaCarteira() {
                 </p>
               )}
             </div>
-          )}
 
           {/* Dados de pagamento */}
           <div style={{ ...cardStyle, marginBottom: sectionGap }}>
@@ -596,12 +490,6 @@ export default function MinhaCarteira() {
               <div style={{ fontSize: "0.72rem", color: COR.muted, marginTop: "0.35rem" }}>
                 {userLabel}
               </div>
-            )}
-            {MOCK_MODE && (
-              <div style={{
-                fontSize: "0.66rem", color: COR.gold, marginTop: "0.35rem",
-                fontWeight: "700",
-              }}>🧪 Modo Beta Interno — saldo em localStorage</div>
             )}
           </div>
         </>

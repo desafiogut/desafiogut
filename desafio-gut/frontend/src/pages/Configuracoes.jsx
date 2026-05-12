@@ -10,7 +10,7 @@ const COR = {
 
 export default function Configuracoes() {
   const isMobile = useIsMobile();
-  const { isConnected, address, userLabel, desconectar, abrirModal, MOCK_MODE } = useAppContext();
+  const { isConnected, address, userLabel, desconectar, abrirModal } = useAppContext();
 
   const [notifLances,    setNotifLances]    = useState(true);
   const [notifVencedor,  setNotifVencedor]  = useState(true);
@@ -61,7 +61,7 @@ export default function Configuracoes() {
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <InfoRow label="Usuário" value={userLabel || "—"} isMobile={isMobile} />
             <InfoRow label="Carteira" value={address} mono breakable isMobile={isMobile} />
-            <InfoRow label="Tipo de Auth" value={MOCK_MODE ? "🧪 Mock Beta" : "Privy Embedded Wallet"} isMobile={isMobile} />
+            <InfoRow label="Tipo de Auth" value="Privy Embedded Wallet" isMobile={isMobile} />
             <InfoRow label="Status" value="✅ Conectado" valueColor={COR.success} isMobile={isMobile} />
 
             <div style={{ marginTop: "0.75rem" }}>

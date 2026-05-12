@@ -55,7 +55,7 @@ export default function BottomNav() {
   const location = useLocation();
   const {
     isConnected, address, userLabel,
-    abrirModal, desconectar, MOCK_MODE,
+    abrirModal, desconectar,
   } = useAppContext();
 
   useEffect(() => { setMoreOpen(false); }, [location.pathname]);
@@ -222,14 +222,6 @@ export default function BottomNav() {
                 <IconLogOut />
                 Sair
               </button>
-            )}
-
-            {MOCK_MODE && (
-              <div style={{ marginTop: "0.6rem", textAlign: "center", fontSize: "0.65rem",
-                color: "#f5a623", background: "rgba(245,166,35,0.08)",
-                borderRadius: "8px", padding: "0.3rem" }}>
-                🧪 MOCK MODE
-              </div>
             )}
           </div>
 
