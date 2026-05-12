@@ -105,7 +105,7 @@ function formatarTimer(segundosRestantes) {
   return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
 
-function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer }) {
+function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInfo }) {
   return (
     <article
       style={{
@@ -181,7 +181,12 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer }) {
       </header>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem 0.75rem" }}>
-        <Info label="Cotas" value={`${slot.cotasDisponiveis}`} />
+        <Info
+          label="Cotas"
+          value={cotaInfo?.atribuidas != null
+            ? `${cotaInfo.atribuidas} de ${cotaInfo.total}`
+            : `${slot.cotasDisponiveis}`}
+        />
         <Info label="Tipo" value={slot.tipoLeilao} small />
         <Info label="Contrato" value={slot.valorContrato} />
         <Info label="Mín. produto" value={slot.valorMinProduto} />
@@ -330,6 +335,17 @@ export default function Vitrine() {
     return () => clearInterval(id);
   }, []);
 
+  // Cotas reais por categoria (M-16). Buscamos o resumo agregado uma vez.
+  const [resumoCotas, setResumoCotas] = useState(null);
+  useEffect(() => {
+    let cancelado = false;
+    fetch("/.netlify/functions/cotas")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (!cancelado && data) setResumoCotas(data.resumo || null); })
+      .catch(() => {});
+    return () => { cancelado = true; };
+  }, []);
+
   // Rota /vitrine/:slot — exibe detalhe do slot.
   if (slotId) {
     const slot = SLOTS.find((s) => s.id === slotId);
@@ -348,6 +364,12 @@ export default function Vitrine() {
   const slotStatusMap = Object.fromEntries(
     SLOTS.map((s) => [s.id, statusDoSlot(s.id, visibilidade, tz)])
   );
+
+  // Resumo de cotas atribuídas vs total declarado por cada slot (M-16).
+  const slotCotasMap = Object.fromEntries(SLOTS.map((s) => {
+    const atribuidas = resumoCotas?.[s.id]?.total_atribuidas ?? null;
+    return [s.id, { atribuidas, total: s.cotasDisponiveis }];
+  }));
 
   // Timer por slot — Diamante/Ouro consomem prazoProgramado; Prata/Bronze
   // consomem prazoFlash. Slots inativos não exibem timer (badge "Agendado").
@@ -401,7 +423,7 @@ export default function Vitrine() {
         }}
       >
         {sticky.map((slot) => (
-          <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={isMobile} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} />
+          <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={isMobile} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} cotaInfo={slotCotasMap[slot.id]} />
         ))}
       </section>
 
@@ -429,14 +451,14 @@ export default function Vitrine() {
           >
             {carossel.map((slot) => (
               <div key={slot.id} style={{ flex: "0 0 86%", scrollSnapAlign: "start" }}>
-                <SlotCard slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} />
+                <SlotCard slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} cotaInfo={slotCotasMap[slot.id]} />
               </div>
             ))}
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
             {carossel.map((slot) => (
-              <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} />
+              <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} cotaInfo={slotCotasMap[slot.id]} />
             ))}
           </div>
         )}

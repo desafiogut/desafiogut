@@ -1,7 +1,7 @@
 # Validação Final — Estado vs Especificação Refatorada
 
-**Data:** 2026-05-12 (atualizado pós-Onda 5 FASE 0 + M-12 + M-13)
-**Branch:** `main` @ `9893ca1` + Onda 5 (FASE 0 timer fix, M-12, M-13) — commit pendente
+**Data:** 2026-05-12 (atualizado pós-Onda 6 Admin + Cotas)
+**Branch:** `main` @ `8a94909` + Onda 6 (M-14, M-14b, M-15, M-16, M-17) — commit pendente
 **Tipo:** auditoria de leitura inicial + atualizações após cada onda.
 **Referência:** `docs/especificacao-extraida.md` (29 REQs · REQ-01 a REQ-29) extraídos do PDF *Especificação Técnica Refatorada (Junho/2026)*.
 
@@ -36,16 +36,33 @@
 | ❌ AUSENTE | 1 | -2 |
 | n/a | 1 | 0 |
 
-### Estado atual (pós-Onda 5: timer fix + M-12 + M-13)
+### Estado pós-Onda 5 (timer fix + M-12 + M-13)
 
-| Status | Total | % | Δ vs Onda 4 |
+| Status | Total | Δ vs Onda 4 |
+|---|---|---|
+| ✅ IMPLEMENTADO | 19 | +1 |
+| ⚠️ PARCIAL | 9 | 0 |
+| ❌ AUSENTE | 0 | -1 |
+| n/a | 1 | 0 |
+
+### Estado atual (pós-Onda 6: M-14, M-14b, M-15, M-16, M-17)
+
+| Status | Total | % | Δ vs Onda 5 |
 |---|---|---|---|
-| ✅ IMPLEMENTADO | **19** | 66% | +1 |
-| ⚠️ PARCIAL | **9** | 31% | 0 |
-| ❌ AUSENTE | **0** | 0% | -1 |
+| ✅ IMPLEMENTADO | **25** | 86% | +6 |
+| ⚠️ PARCIAL | **3** | 10% | -6 |
+| ❌ AUSENTE | **0** | 0% | 0 |
 | n/a | **1** | 3% | 0 |
 
-🎉 **Zero requisitos AUSENTES.** Todos os 9 ⚠️ restantes têm infraestrutura presente — esperam apenas o **sistema de cotas reais (vendido/disponível)** ou **UI Admin com role-based access** (frentes não-escopadas).
+**REQs movidos para ✅ na Onda 6:**
+- REQ-04, REQ-05, REQ-06, REQ-07 — cotas Bronze/Prata/Ouro/Diamante: storage real (`cotas:{cliente_id}`) + endpoint CRUD (`cotas.mjs`) + painel Admin para criar/atualizar + indicador na Vitrine e ScheduleView (resumo "X / Y atribuídas")
+- REQ-08 — visibilidade dinâmica reforçada: Vitrine agora mostra atribuídas/total real por cota
+- REQ-20 — PIX Adesão + workflow Admin: `admin-list.mjs` + `admin-aprovacao.mjs` + `AdminPanel.jsx` com 3 abas (Aprovações / Cotas / Admins); rota `/admin` com gate via `useAdmin` (hook); coordenação admin automática
+
+**Os 3 ⚠️ que restam:**
+- REQ-01 (publicidade + leilões) — leilões + Vitrine + Banners existem; integração visual completa do banner do cliente no leilão ativo ainda parcial
+- REQ-03 (automação financeira) — PIX/MP/Voucher/Wallet automatizados; "renovação de adesão" ainda sem fluxo
+- REQ-17 (regra Vale-Crédito automática) — storage existe; cálculo `Valor_Produto < Mín_Cota` ainda não dispara crédito automaticamente (requer pipeline de venda do produto, não escopado)
 
 **Mudanças na Onda 5:**
 - **FASE 0 timer fix** (Timer 1-4): não fecha REQ específico mas elimina bug crítico de timer zerando ao recarregar. `prazoTimestamp` agora persistido em `localStorage` (`gut_prazo_flash`/`gut_prazo_programado`); hidratação via `getEdicaoPrazo(R-1)` on-chain a cada 60s; cálculo absoluto; tick 250ms; `visibilitychange` re-sincroniza ao voltar de aba.
@@ -197,17 +214,17 @@ $ grep -nE "gut_reset_v|LS_RESET_VERSION|LS_RESET_KEY" src/context/AppContext.js
 
 | ID | Descrição | Status | Evidência |
 |---|---|---|---|
-| **REQ-04** | Bronze: 27 cotas não exclusivas, R$ 2.640/660 | ⚠️ PARCIAL | Dados estáticos em `Vitrine.jsx:74-86`; **sem sistema de cota vendida vs disponível** |
-| **REQ-05** | Prata: 81 cotas exclusivas, R$ 5.600/1.350 | ⚠️ PARCIAL | idem `Vitrine.jsx:58-70` |
-| **REQ-06** | Ouro: 1 cota exclusiva, R$ 11.000/2.250 | ⚠️ PARCIAL | idem `Vitrine.jsx:42-54` |
-| **REQ-07** | Diamante: 1 cota exclusiva, R$ 18.000/4.500 + 10 bônus | ⚠️ PARCIAL | idem `Vitrine.jsx:26-38`; bônus exibido mas sem gate de cota |
+| **REQ-04** | Bronze: 27 cotas não exclusivas, R$ 2.640/660 | ✅ | `cotas.mjs` GET/POST/DELETE; Blob `cotas:{cliente_id}` + índice por categoria; AdminPanel CRUD; Vitrine mostra "X / 27" |
+| **REQ-05** | Prata: 81 cotas exclusivas, R$ 5.600/1.350 | ✅ | idem; Vitrine mostra "X / 81" |
+| **REQ-06** | Ouro: 1 cota exclusiva, R$ 11.000/2.250 | ✅ | idem; Vitrine mostra "X / 1" |
+| **REQ-07** | Diamante: 1 cota exclusiva, R$ 18.000/4.500 + 10 bônus | ✅ | idem; bônus via voucher (REQ-24/25 já ✅) |
 | **REQ-08** | Cotas determinam visibilidade e prioridade na UI | ✅ | `tiersAgoraVisiveis()` aplica filtro de domingo + `tierAtivoAgora()` adiciona badge "AO VIVO/Agendado" por cota em tempo real (refresh 30s) |
 
 ### §3.1 — Tipos de Leilão
 
 | ID | Descrição | Status | Evidência |
 |---|---|---|---|
-| **REQ-09** | Programado (Ouro/Diamante): 24 h, fixado no topo | ⚠️ PARCIAL | Sticky implementado na `/vitrine` (Onda 2); `/mercado` mantém toggle flash/programado (intencional na decisão de coexistir) |
+| **REQ-09** | Programado (Ouro/Diamante): 24 h, fixado no topo | ✅ | Sticky na `/vitrine`; M-12 reset automático 00:00; timer imune a refresh hidratado via `getEdicaoPrazo` on-chain |
 | **REQ-10** | Reset automático às 00:00 | ✅ | `cron-reset-programado.mjs` MVP off-chain: idempotência por data ISO no fuso config, apura vencedor a partir do snapshot, persiste `resultado-programado:{edicao}:{data}`, limpa lances. Doc com 3 opções de cron (GH Actions / cron-job.org / Netlify Scheduled) |
 | **REQ-11** | Relâmpago (Bronze/Prata): 30 min – 1 h | ✅ | `AppContext.jsx:16-25` — `DURACAO.flash` ∈ [1800, 3600] via env `VITE_DURACAO_FLASH_SECONDS` |
 | **REQ-12** | Leilão Relâmpago em seção "Oportunidade Agora" | ✅ | `Vitrine.jsx:220` — `<h2>⚡ Oportunidade Agora</h2>` |
@@ -233,7 +250,7 @@ $ grep -nE "gut_reset_v|LS_RESET_VERSION|LS_RESET_KEY" src/context/AppContext.js
 
 | ID | Descrição | Status | Evidência |
 |---|---|---|---|
-| **REQ-20** | PIX Adesão `familiaquildo@gmail.com` + aprovação manual Admin | ⚠️ PARCIAL | Emails canônicos em `pix-config.mjs`; **workflow Admin de aprovação ausente** |
+| **REQ-20** | PIX Adesão `familiaquildo@gmail.com` + aprovação manual Admin | ✅ | Workflow completo: cliente inscreve via `admin-aprovacao.mjs` acao=inscrever (público); admin aprova/rejeita via AdminPanel `/admin` gated por `useAdmin` + ADMIN_TOKEN; histórico de transições preservado no Blob `admin-aprovacao:{cliente_id}` |
 | **REQ-21** | Fichas MP `desafiogut@gmail.com` automatizado via webhook | ✅ | `webhook-mercadopago.mjs` + `confirmar-pagamento.mjs` (pipeline B.3–B.6 validado em produção) |
 
 ### §6 — Banners e Artes

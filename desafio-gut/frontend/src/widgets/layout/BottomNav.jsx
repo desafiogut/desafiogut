@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
+import { useAdmin } from "../../hooks/useAdmin.js";
 
 const Icon = ({ d, size = 22 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -59,10 +60,14 @@ export default function BottomNav() {
     isConnected, address, userLabel,
     abrirModal, desconectar,
   } = useAppContext();
+  const { isAdmin } = useAdmin(address);
+  const linksSecundarios = isAdmin
+    ? [...SECONDARY_LINKS, { path: "/admin", label: "⚙️ Admin", Icon: IconSettings }]
+    : SECONDARY_LINKS;
 
   useEffect(() => { setMoreOpen(false); }, [location.pathname]);
 
-  const isOnSecondaryRoute = SECONDARY_LINKS.some((l) => location.pathname.startsWith(l.path));
+  const isOnSecondaryRoute = linksSecundarios.some((l) => location.pathname.startsWith(l.path));
 
   return (
     <>
@@ -187,7 +192,7 @@ export default function BottomNav() {
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "0.5rem" }}>
-              {SECONDARY_LINKS.map(({ path, label, Icon }) => (
+              {linksSecundarios.map(({ path, label, Icon }) => (
                 <button
                   type="button"
                   key={path}

@@ -13,6 +13,7 @@ import ScheduleView    from "./components/ScheduleView.jsx";
 import MeusAtivos      from "./pages/MeusAtivos.jsx";
 import Seguranca       from "./pages/Seguranca.jsx";
 import Configuracoes   from "./pages/Configuracoes.jsx";
+import AdminPanel      from "./pages/AdminPanel.jsx";
 
 /**
  * App — Raiz da aplicação DesafioGUT.
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="/ativos"     element={<MeusAtivos />}    />
           <Route path="/seguranca"  element={<Seguranca />}     />
           <Route path="/configuracoes" element={<Configuracoes />} />
+          <Route path="/admin"      element={<AdminPanel />} />
         </Route>
       </Routes>
     </AppProvider>

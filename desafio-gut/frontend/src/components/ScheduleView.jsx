@@ -68,6 +68,17 @@ export default function ScheduleView() {
     return () => { cancelado = true; };
   }, []);
 
+  // Resumo de cotas vendidas/disponíveis por categoria (M-17).
+  const [resumoCotas, setResumoCotas] = useState(null);
+  useEffect(() => {
+    let cancelado = false;
+    fetch("/.netlify/functions/cotas")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (!cancelado && data) setResumoCotas(data.resumo || null); })
+      .catch(() => {});
+    return () => { cancelado = true; };
+  }, []);
+
   const horarios = useMemo(() => horariosDoDia(diaAtivo), [diaAtivo]);
   const datasDoDia = DATAS_JUNHO[diaAtivo] || [];
   const dataIso = datasDoDia[semana - 1];
@@ -188,6 +199,39 @@ export default function ScheduleView() {
           a grade exibe apenas <strong>Prata (repetição)</strong> e <strong>Diamante</strong> fixo.
           Bronze e Ouro não aparecem aos domingos.
         </div>
+      )}
+
+      {/* Resumo de cotas atribuídas por categoria (M-17). */}
+      {resumoCotas && (
+        <section aria-label="Resumo de cotas atribuídas" style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gap: "0.5rem",
+        }}>
+          {[
+            { id: "diamante", label: "Diamante", cor: "#00d4ff", total: 1  },
+            { id: "ouro",     label: "Ouro",     cor: COR.primary, total: 1  },
+            { id: "prata",    label: "Prata",    cor: "#cbd5e1",   total: 81 },
+            { id: "bronze",   label: "Bronze",   cor: "#cd7f32",   total: 27 },
+          ].map((t) => {
+            const atribuidas = resumoCotas?.[t.id]?.total_atribuidas ?? 0;
+            return (
+              <div key={t.id} style={{
+                padding: "0.5rem 0.7rem",
+                background: "rgba(5,15,40,0.55)",
+                border: `1px solid ${t.cor}44`,
+                borderRadius: "10px",
+                display: "flex", flexDirection: "column", gap: "0.2rem",
+              }}>
+                <span style={{ fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>{t.label}</span>
+                <strong style={{ fontSize: "0.95rem", color: t.cor, fontWeight: 800 }}>
+                  {atribuidas} / {t.total}
+                </strong>
+                <span style={{ fontSize: "0.6rem", color: COR.muted }}>cotas atribuídas</span>
+              </div>
+            );
+          })}
+        </section>
       )}
 
       {/* Grade de horários */}

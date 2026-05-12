@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
+import { useAdmin } from "../../hooks/useAdmin.js";
 
 // ─── Ícones SVG inline — sem dependência externa ──────────────────────────────
 const IconDashboard = () => (
@@ -69,6 +70,8 @@ const NAV_ITEMS = [
 ];
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
+const ADMIN_ITEM = { path: "/admin", label: "⚙️ Admin", icon: <IconSettings />, end: false };
+
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const {
@@ -76,6 +79,8 @@ export default function Sidebar() {
     saldoSenhas, saldoSenhasStatus,
     abrirModal, desconectar,
   } = useAppContext();
+  const { isAdmin } = useAdmin(address);
+  const itensNav = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS;
 
   // Sufixo curto refletindo status de leitura on-chain (idle/ok = vazio).
   const statusSuffix =
@@ -173,7 +178,7 @@ export default function Sidebar() {
 
       {/* ── Navegação ── */}
       <nav style={{ flex: 1, padding: "0.5rem 0", display: "flex", flexDirection: "column", gap: "2px", overflowY: "auto" }}>
-        {NAV_ITEMS.map(({ path, label, icon, end }) => (
+        {itensNav.map(({ path, label, icon, end }) => (
           <NavLink
             key={path}
             to={path}
