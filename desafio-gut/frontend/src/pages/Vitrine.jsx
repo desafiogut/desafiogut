@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { useAppContext } from "../context/AppContext.jsx";
 import { tiersAgoraVisiveis, tierAtivoAgora } from "../data/programacao-junho-2026.js";
 
 const TZ_PADRAO = "America/Sao_Paulo";
@@ -95,7 +96,16 @@ const SLOTS = [
   },
 ];
 
-function SlotCard({ slot, isMobile, sticky, hrefOverride, status }) {
+function formatarTimer(segundosRestantes) {
+  if (!Number.isFinite(segundosRestantes) || segundosRestantes <= 0) return null;
+  const h = Math.floor(segundosRestantes / 3600);
+  const m = Math.floor((segundosRestantes % 3600) / 60);
+  const s = segundosRestantes % 60;
+  if (h > 0) return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer }) {
   return (
     <article
       style={{
@@ -152,6 +162,20 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status }) {
             }}>
               {status.texto}
             </span>
+          )}
+          {timer?.display && (
+            <span
+              aria-label={`Tempo restante: ${timer.display}`}
+              title="Tempo restante do leilão"
+              style={{
+                fontSize: "0.74rem", fontWeight: 900,
+                fontFamily: "'JetBrains Mono', monospace",
+                color: slot.cor, letterSpacing: "0.06em",
+                padding: "0.12rem 0.5rem",
+                background: "rgba(0,0,0,0.35)", borderRadius: "6px",
+                border: `1px solid ${slot.corBorda}`,
+              }}
+            >⏱ {timer.display}</span>
           )}
         </div>
       </header>
@@ -296,11 +320,13 @@ export default function Vitrine() {
   const isMobile = useIsMobile();
   const { slot: slotId } = useParams();
   const tz = getTimezone();
+  const { prazoFlash, prazoProgramado } = useAppContext();
 
-  // Tick a cada 30s para refletir mudança de horário/dia na vitrine.
+  // Tick a cada 1s para atualizar timers visíveis nos cards (Onda 5 FASE 0).
+  // Cálculo é absoluto: `prazo - now`, então não acumula drift.
   const [, setTick] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), 30_000);
+    const id = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -322,6 +348,17 @@ export default function Vitrine() {
   const slotStatusMap = Object.fromEntries(
     SLOTS.map((s) => [s.id, statusDoSlot(s.id, visibilidade, tz)])
   );
+
+  // Timer por slot — Diamante/Ouro consomem prazoProgramado; Prata/Bronze
+  // consomem prazoFlash. Slots inativos não exibem timer (badge "Agendado").
+  const agora = Math.floor(Date.now() / 1000);
+  const slotTimerMap = Object.fromEntries(SLOTS.map((s) => {
+    const ativo = visibilidade.tiers.includes(s.id) && tierAtivoAgora(s.id, tz);
+    if (!ativo) return [s.id, { display: null }];
+    const prazo = (s.id === "diamante" || s.id === "ouro") ? prazoProgramado : prazoFlash;
+    const restante = Math.max(0, prazo - agora);
+    return [s.id, { display: formatarTimer(restante) }];
+  }));
 
   return (
     <div style={{ padding: isMobile ? "1rem" : "1.5rem 2rem", color: COR.text, display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -364,7 +401,7 @@ export default function Vitrine() {
         }}
       >
         {sticky.map((slot) => (
-          <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={isMobile} status={slotStatusMap[slot.id]} />
+          <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={isMobile} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} />
         ))}
       </section>
 
@@ -392,14 +429,14 @@ export default function Vitrine() {
           >
             {carossel.map((slot) => (
               <div key={slot.id} style={{ flex: "0 0 86%", scrollSnapAlign: "start" }}>
-                <SlotCard slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} />
+                <SlotCard slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} />
               </div>
             ))}
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
             {carossel.map((slot) => (
-              <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} />
+              <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} />
             ))}
           </div>
         )}

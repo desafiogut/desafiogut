@@ -9,11 +9,13 @@ const COR = {
   success: "#10b981", amber: "#fbbf24", danger: "#ef4444", warning: "#f97316",
 };
 
-function timerColor(tempoRestante, totalSegundos = 1800) {
-  const ratio = tempoRestante / totalSegundos;
-  if (ratio > 0.6) return COR.success;   // verde
-  if (ratio > 0.3) return COR.warning;   // laranja
-  return COR.danger;                      // vermelho
+// 3 estágios de cor proporcionais à duração (escala para flash 30min e programado 24h).
+function timerColor(tempoRestante, totalSegundos) {
+  const total = Number.isFinite(totalSegundos) && totalSegundos > 0 ? totalSegundos : 1800;
+  const ratio = tempoRestante / total;
+  if (ratio > 0.6) return COR.success;   // verde   (>60% restante)
+  if (ratio > 0.3) return COR.warning;   // laranja (30–60% restante)
+  return COR.danger;                      // vermelho (<30% restante)
 }
 
 const VALOR_POR_SENHA_BRL = 2;
@@ -35,7 +37,7 @@ export default function Dashboard() {
     lances, vencedor,
     saldoSenhas, saldoSenhasStatus,
     saldoRsCentavos, saldoRsStatus,
-    encerrado, tempoRestante, tipoLeilao, isConnected,
+    encerrado, tempoRestante, tipoLeilao, isConnected, DURACAO,
     address, userLabel, EDICAO_ATIVA,
   } = useAppContext();
 
@@ -221,7 +223,7 @@ export default function Dashboard() {
               fontSize: isMobile ? "2.5rem" : "2.25rem",
               fontWeight: "900",
               fontFamily: "'JetBrains Mono', monospace",
-              color: encerrado ? COR.danger : timerColor(tempoRestante),
+              color: encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[tipoLeilao]),
               letterSpacing: "0.02em",
               lineHeight: 1,
               transition: "color 0.6s ease",

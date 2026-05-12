@@ -1,7 +1,7 @@
 # Validação Final — Estado vs Especificação Refatorada
 
-**Data:** 2026-05-12 (atualizado pós-Onda 4 Tier 1 + Tier 2/3)
-**Branch:** `main` @ `f8e8e08` + Onda 4 Tier 2/3 (M-07, M-08, M-10) — commit pendente
+**Data:** 2026-05-12 (atualizado pós-Onda 5 FASE 0 + M-12 + M-13)
+**Branch:** `main` @ `9893ca1` + Onda 5 (FASE 0 timer fix, M-12, M-13) — commit pendente
 **Tipo:** auditoria de leitura inicial + atualizações após cada onda.
 **Referência:** `docs/especificacao-extraida.md` (29 REQs · REQ-01 a REQ-29) extraídos do PDF *Especificação Técnica Refatorada (Junho/2026)*.
 
@@ -27,16 +27,33 @@
 | ❌ AUSENTE | 3 | -3 |
 | n/a | 1 | 0 |
 
-### Estado atual (pós-Onda 4 Tier 2/3: M-07, M-08, M-10)
+### Estado pós-Onda 4 Tier 2/3 (M-07, M-08, M-10)
 
-| Status | Total | % | Δ vs Tier 1 |
+| Status | Total | Δ vs Tier 1 |
+|---|---|---|
+| ✅ IMPLEMENTADO | 18 | +4 |
+| ⚠️ PARCIAL | 9 | -2 |
+| ❌ AUSENTE | 1 | -2 |
+| n/a | 1 | 0 |
+
+### Estado atual (pós-Onda 5: timer fix + M-12 + M-13)
+
+| Status | Total | % | Δ vs Onda 4 |
 |---|---|---|---|
-| ✅ IMPLEMENTADO | **18** | 62% | +4 |
-| ⚠️ PARCIAL | **9** | 31% | -2 |
-| ❌ AUSENTE | **1** | 3% | -2 |
+| ✅ IMPLEMENTADO | **19** | 66% | +1 |
+| ⚠️ PARCIAL | **9** | 31% | 0 |
+| ❌ AUSENTE | **0** | 0% | -1 |
 | n/a | **1** | 3% | 0 |
 
-**Único REQ ❌ restante:** REQ-10 (reset automático às 00:00 do leilão Programado).
+🎉 **Zero requisitos AUSENTES.** Todos os 9 ⚠️ restantes têm infraestrutura presente — esperam apenas o **sistema de cotas reais (vendido/disponível)** ou **UI Admin com role-based access** (frentes não-escopadas).
+
+**Mudanças na Onda 5:**
+- **FASE 0 timer fix** (Timer 1-4): não fecha REQ específico mas elimina bug crítico de timer zerando ao recarregar. `prazoTimestamp` agora persistido em `localStorage` (`gut_prazo_flash`/`gut_prazo_programado`); hidratação via `getEdicaoPrazo(R-1)` on-chain a cada 60s; cálculo absoluto; tick 250ms; `visibilitychange` re-sincroniza ao voltar de aba.
+- **REQ-10 (reset 00:00 do Programado)** — ❌ → ✅ via `cron-reset-programado.mjs` (MVP off-chain) com idempotência por data ISO no fuso `RESET_TIMEZONE`. Doc `docs/configuracao-cron-reset.md` com 3 opções (GitHub Actions / cron-job.org / Netlify Scheduled).
+- **REQ-04..07 cotas** — segue ⚠️: `schedule.mjs` (GET público + POST admin) prepara terreno; frontend tenta `buscarGradeRemota` com fallback estático. Badge "fonte: Blob/estática" no header da `/programacao`. **Sistema de cota vendida vs disponível** ainda não — depende do painel Admin (Onda futura).
+
+**Único REQ ❌ restante:** nenhum — REQ-10 saiu da lista após M-12.
+**Os 8 ⚠️ que sobram:** REQ-01, REQ-03, REQ-04..07, REQ-09, REQ-17, REQ-20. Todos esperam **sistema de cotas reais** (vendido/disponível) ou **UI Admin com role-based access**.
 
 **REQs movidos para ✅ na Onda 4 Tier 2/3:**
 - REQ-08 (visibilidade por cota) — ⚠️ → ✅ via `tiersAgoraVisiveis` + filtro de domingo + badges AO VIVO/Agendado na `Vitrine.jsx`
@@ -191,7 +208,7 @@ $ grep -nE "gut_reset_v|LS_RESET_VERSION|LS_RESET_KEY" src/context/AppContext.js
 | ID | Descrição | Status | Evidência |
 |---|---|---|---|
 | **REQ-09** | Programado (Ouro/Diamante): 24 h, fixado no topo | ⚠️ PARCIAL | Sticky implementado na `/vitrine` (Onda 2); `/mercado` mantém toggle flash/programado (intencional na decisão de coexistir) |
-| **REQ-10** | Reset automático às 00:00 | ❌ AUSENTE | Reset hoje é manual via "Nova Rodada" (`MercadoLances.jsx` → `handleNovaRodada`) |
+| **REQ-10** | Reset automático às 00:00 | ✅ | `cron-reset-programado.mjs` MVP off-chain: idempotência por data ISO no fuso config, apura vencedor a partir do snapshot, persiste `resultado-programado:{edicao}:{data}`, limpa lances. Doc com 3 opções de cron (GH Actions / cron-job.org / Netlify Scheduled) |
 | **REQ-11** | Relâmpago (Bronze/Prata): 30 min – 1 h | ✅ | `AppContext.jsx:16-25` — `DURACAO.flash` ∈ [1800, 3600] via env `VITE_DURACAO_FLASH_SECONDS` |
 | **REQ-12** | Leilão Relâmpago em seção "Oportunidade Agora" | ✅ | `Vitrine.jsx:220` — `<h2>⚡ Oportunidade Agora</h2>` |
 

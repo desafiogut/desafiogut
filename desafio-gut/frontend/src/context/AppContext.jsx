@@ -4,7 +4,30 @@ import {
   subscribeLanceDado,
   getSaldoSenhasOnChain,
   subscribeSaldoSenhas,
+  getEdicaoPrazo,
 } from "../utils/web3.js";
+
+// Persistência do prazoTimestamp (Onda 5 FASE 0): o timer é IMUNE a refresh
+// porque cada tipo de leilão guarda seu próprio prazo no localStorage. Cálculo
+// é sempre absoluto (`prazo - now`) — o setInterval só re-renderiza.
+const LS_PRAZO_FLASH = "gut_prazo_flash";
+const LS_PRAZO_PROG  = "gut_prazo_programado";
+function lerPrazoStorage(chave) {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = window.localStorage.getItem(chave);
+    if (!v) return null;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    // Descarta prazos vencidos há mais de 10 min (evita prender em "encerrado").
+    if (n + 600 < Math.floor(Date.now() / 1000)) return null;
+    return n;
+  } catch { return null; }
+}
+function gravarPrazoStorage(chave, prazo) {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.setItem(chave, String(prazo)); } catch {}
+}
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 export const EDICAO_ATIVA = "R-1";
@@ -57,13 +80,35 @@ export function AppProvider({ children }) {
   const [lances,       setLances]       = useState([]);
   const [lancesFlash,  setLancesFlash]  = useState([]);
 
-  // Timer
-  const [prazoTimestamp,  setPrazoTimestamp]  = useState(() => Math.floor(Date.now() / 1000) + DURACAO.flash);
+  // Timer (Onda 5 FASE 0) — 2 prazos persistidos, prazoTimestamp deriva do tipo.
+  // Inicializa do localStorage; se ausente, computa default. Programado é
+  // hidratado on-chain via polling (getEdicaoPrazo) logo após o mount.
+  const [prazoFlash, setPrazoFlash] = useState(() =>
+    lerPrazoStorage(LS_PRAZO_FLASH) ?? (Math.floor(Date.now() / 1000) + DURACAO.flash)
+  );
+  const [prazoProgramado, setPrazoProgramado] = useState(() =>
+    lerPrazoStorage(LS_PRAZO_PROG) ?? (Math.floor(Date.now() / 1000) + DURACAO.programado)
+  );
+  const prazoTimestamp = tipoLeilao === "flash" ? prazoFlash : prazoProgramado;
+
   const [encerrado,       setEncerrado]       = useState(false);
   const [showOverlay,     setShowOverlay]     = useState(false);
-  const [tempoRestante,   setTempoRestante]   = useState(DURACAO.flash);
+  const [tempoRestante,   setTempoRestante]   = useState(() => Math.max(0,
+    (tipoLeilao === "flash" ? prazoFlash : prazoProgramado) - Math.floor(Date.now() / 1000)
+  ));
   const [lightningActive, setLightningActive] = useState(false);
   const [showCountdown,   setShowCountdown]   = useState(false);
+
+  // Setter que troca o prazo do tipo CORRENTE e persiste.
+  const setPrazoTimestamp = useCallback((novo) => {
+    if (tipoLeilao === "flash") {
+      setPrazoFlash(novo);
+      gravarPrazoStorage(LS_PRAZO_FLASH, novo);
+    } else {
+      setPrazoProgramado(novo);
+      gravarPrazoStorage(LS_PRAZO_PROG, novo);
+    }
+  }, [tipoLeilao]);
 
   // Saldo on-chain — saldoSenhas[address] no contrato.
   // null = "ainda não consultado" (distinto de 0, que é estado on-chain válido).
@@ -237,7 +282,38 @@ export function AppProvider({ children }) {
     return () => clearInterval(id);
   }, [address, refetchSaldoRs]);
 
-  // Timer regressivo + disparo do efeito relâmpago
+  // Polling on-chain do prazo do Programado (Onda 5 FASE 0).
+  // Contrato é fonte da verdade do REQ-10. Polling a cada 60s; também escuta
+  // visibilitychange para re-sincronizar quando a aba volta a foco.
+  useEffect(() => {
+    let cancelado = false;
+    const fetchOnchain = async () => {
+      try {
+        const onchain = await getEdicaoPrazo(EDICAO_ATIVA);
+        if (cancelado || !onchain || onchain <= 0) return;
+        setPrazoProgramado((prev) => {
+          if (prev === onchain) return prev;
+          gravarPrazoStorage(LS_PRAZO_PROG, onchain);
+          return onchain;
+        });
+      } catch (err) {
+        console.warn("[GUT-DEBUG] getEdicaoPrazo falhou (timer offline-tolerante):", err?.message);
+      }
+    };
+    fetchOnchain();
+    const id  = setInterval(fetchOnchain, 60_000);
+    const vis = () => { if (document.visibilityState === "visible") fetchOnchain(); };
+    document.addEventListener("visibilitychange", vis);
+    return () => {
+      cancelado = true;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", vis);
+    };
+  }, []);
+
+  // Timer regressivo + disparo do efeito relâmpago.
+  // Cálculo é ABSOLUTO: `prazo - now`. setInterval só re-renderiza (250ms),
+  // nunca decrementa segundos. Resultado: imune a refresh e troca de aba.
   useEffect(() => {
     const tick = () => {
       const restante = Math.max(0, prazoTimestamp - Math.floor(Date.now() / 1000));
@@ -246,12 +322,21 @@ export function AppProvider({ children }) {
         setEncerrado(true);
         setLightningActive(true);
         setTimeout(() => { setLightningActive(false); setShowOverlay(true); }, 1200);
+      } else if (encerrado) {
+        // Caso o prazo seja atualizado on-chain depois do encerrado, reabre.
+        setEncerrado(false);
+        setShowOverlay(false);
       }
     };
     tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [prazoTimestamp]);
+    const id  = setInterval(tick, 250);
+    const vis = () => { if (document.visibilityState === "visible") tick(); };
+    document.addEventListener("visibilitychange", vis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", vis);
+    };
+  }, [prazoTimestamp, encerrado]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -312,6 +397,7 @@ export function AppProvider({ children }) {
     setShowCountdown(true);
     setTimeout(() => {
       const dur = DURACAO[tipoLeilao];
+      // setPrazoTimestamp também persiste no localStorage (chave do tipo atual).
       setPrazoTimestamp(Math.floor(Date.now() / 1000) + dur);
       setTempoRestante(dur);
       setShowCountdown(false);
@@ -324,6 +410,7 @@ export function AppProvider({ children }) {
     tipoLeilao, setTipoLeilao,
     lances: lancesExibidos,
     prazoTimestamp,
+    prazoFlash, prazoProgramado,
     encerrado,
     showOverlay,
     showCountdown,

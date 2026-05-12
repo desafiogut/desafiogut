@@ -16,6 +16,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import {
   DIAS, DATAS_JUNHO, NOTA_OVERNIGHT,
   tiersPorHorario, horariosDoDia, diaDaSemanaHoje, horaAgora, slotAtivoAgora,
+  buscarGradeRemota,
 } from "../data/programacao-junho-2026.js";
 
 const COR = {
@@ -47,6 +48,7 @@ export default function ScheduleView() {
   const [agora, setAgora]   = useState(() => horaAgora(tz));
   const [diaAtivo, setDiaAtivo] = useState(() => diaDaSemanaHoje(tz));
   const [semana, setSemana] = useState(1);
+  const [fonteGrade, setFonteGrade] = useState("estatica"); // "estatica" | "remota"
 
   // Refresh "agora" a cada 30s para destacar o slot ativo.
   useEffect(() => {
@@ -56,6 +58,15 @@ export default function ScheduleView() {
     }, 30_000);
     return () => clearInterval(id);
   }, [tz]);
+
+  // Tenta buscar grade publicada (M-13). Se 404, mantém fallback estático.
+  useEffect(() => {
+    let cancelado = false;
+    buscarGradeRemota("2026-06").then((g) => {
+      if (!cancelado && g) setFonteGrade("remota");
+    });
+    return () => { cancelado = true; };
+  }, []);
 
   const horarios = useMemo(() => horariosDoDia(diaAtivo), [diaAtivo]);
   const datasDoDia = DATAS_JUNHO[diaAtivo] || [];
@@ -81,6 +92,18 @@ export default function ScheduleView() {
         <p style={{ margin: "0.25rem 0 0", fontSize: isMobile ? "0.78rem" : "0.86rem", color: COR.muted, lineHeight: 1.5 }}>
           Grade semanal seg–sáb replicada por 4 semanas; domingos exclusivos com
           apenas Prata (repetição) e Diamante fixo. Fuso: <code style={{ color: COR.primary }}>{tz}</code> · agora: <strong>{agora}</strong>.
+          <span style={{
+            marginLeft: "0.5rem",
+            fontSize: "0.66rem",
+            padding: "0.12rem 0.45rem",
+            borderRadius: "999px",
+            color: fonteGrade === "remota" ? COR.active : COR.muted,
+            background: fonteGrade === "remota" ? `${COR.active}1f` : "rgba(255,255,255,0.05)",
+            border: `1px solid ${fonteGrade === "remota" ? COR.active : "rgba(255,255,255,0.1)"}55`,
+            verticalAlign: "middle",
+          }} title={fonteGrade === "remota" ? "Grade publicada pelo Admin (Blob)" : "Grade estática local (fallback)"}>
+            {fonteGrade === "remota" ? "● fonte: Blob" : "○ fonte: estática"}
+          </span>
         </p>
       </header>
 

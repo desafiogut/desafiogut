@@ -202,9 +202,17 @@ export default function MercadoLances() {
   })();
 
   const duracao     = DURACAO[tipoLeilao];
-  const timerCor    = encerrado ? COR.danger : tempoRestante <= 5 ? COR.danger : tempoRestante <= 15 ? COR.warning : tipoLeilao === "flash" ? COR.gold : COR.primary;
+  // Onda 5 FASE 0: cores proporcionais à duração (escala para flash 30min e
+  // programado 24h). Urgência só dispara quando < 1% restante (mantém efeito
+  // visual no fim de cada modalidade sem disparar em programado o dia inteiro).
+  const ratio = duracao > 0 ? tempoRestante / duracao : 0;
+  const timerCor = encerrado
+    ? COR.danger
+    : ratio < 0.10 ? COR.danger
+    : ratio < 0.30 ? COR.warning
+    : tipoLeilao === "flash" ? COR.gold : COR.primary;
   const timerPctDeg = encerrado ? 0 : (tempoRestante / duracao) * 360;
-  const timerUrgente = !encerrado && tempoRestante <= 5 && tempoRestante > 0;
+  const timerUrgente = !encerrado && ratio < 0.01 && tempoRestante > 0;
   const timerSize   = isMobile ? 110 : 90;
 
   const pad      = isMobile ? "1rem" : "2rem";

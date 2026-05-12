@@ -76,6 +76,20 @@ export function horariosDoDia(diaKey) {
   return HORARIOS[dia.tipo] || [];
 }
 
+// Tenta buscar a grade publicada pelo Admin (Blob `schedule:{mes}`).
+// Se 404 ou erro de rede, retorna null e o consumidor deve cair no fallback
+// estático exportado deste módulo. Não bloqueia render — pode rodar em useEffect.
+export async function buscarGradeRemota(mes = "2026-06") {
+  try {
+    const resp = await fetch(`/.netlify/functions/schedule?mes=${encodeURIComponent(mes)}`);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data?.grade ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // Resolve "qual dia da semana é hoje" no fuso configurável.
 // TZ vem de import.meta.env.VITE_TIMEZONE; default "America/Sao_Paulo".
 export function diaDaSemanaHoje(timezone) {
