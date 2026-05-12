@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -152,15 +153,7 @@ export default function MeusAtivos() {
 
       {!isConnected && (
         <div style={{ marginTop: sectionGap, textAlign: "center" }}>
-          <button onClick={abrirModal} style={{
-            padding: isMobile ? "0.75rem 1.25rem" : "0.7rem 1.5rem",
-            background: "linear-gradient(135deg,#f5a623,#e89400)",
-            border: "none", borderRadius: "20px", color: "#fff",
-            fontWeight: "800", cursor: "pointer",
-            fontSize: isMobile ? "0.84rem" : "0.88rem",
-            width: isMobile ? "100%" : "auto",
-            boxShadow: "0 4px 14px rgba(245,166,35,0.4)",
-          }}>⚡ Aceito o DesafioGUT — Entrar para ver seus lances</button>
+          <BotaoLoginPrincipal onClick={abrirModal} size={isMobile ? "md" : "md"} fullWidth={isMobile} />
         </div>
       )}
 

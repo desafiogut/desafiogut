@@ -19,12 +19,13 @@ function timerColor(tempoRestante, totalSegundos = 1800) {
 const VALOR_POR_SENHA_BRL = 2;
 
 const ATALHOS = [
-  { label: "Depositar PIX",   icon: "💰", to: "/carteira"      },
-  { label: "Converter Ficha", icon: "🎫", to: "/carteira"      },
-  { label: "Dar Lance",       icon: "🎯", to: "/mercado"       },
-  { label: "Meus Ativos",     icon: "📊", to: "/ativos"        },
-  { label: "Segurança",       icon: "🛡️", to: "/seguranca"     },
-  { label: "Configurações",   icon: "⚙️", to: "/configuracoes" },
+  { label: "Depositar PIX",     icon: "💰", to: "/carteira"      },
+  { label: "Converter Ficha",   icon: "🎫", to: "/carteira"      },
+  { label: "Dar Lance",         icon: "🎯", to: "/mercado"       },
+  { label: "Vitrine 4 Slots",   icon: "🪟", to: "/vitrine"       },
+  { label: "Meus Ativos",       icon: "📊", to: "/ativos"        },
+  { label: "Segurança",         icon: "🛡️", to: "/seguranca"     },
+  { label: "Configurações",     icon: "⚙️", to: "/configuracoes" },
 ];
 
 export default function Dashboard() {

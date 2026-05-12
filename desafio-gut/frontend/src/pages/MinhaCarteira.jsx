@@ -6,6 +6,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
 import WalletCard from "../components/WalletCard.jsx";
 import VoucherPanel from "../components/VoucherPanel.jsx";
+import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 import { getSignerFromProvider } from "../utils/web3.js";
 
 const VALOR_POR_SENHA_BRL = 2;
@@ -180,9 +181,7 @@ export default function MinhaCarteira() {
           <p style={{ color: COR.muted, marginBottom: "1rem", fontSize: isMobile ? "0.85rem" : "0.9rem" }}>
             Faça login para visualizar e gerenciar sua carteira.
           </p>
-          <button onClick={abrirModal} style={{ ...botaoPrimario, width: isMobile ? "100%" : "auto" }}>
-            ⚡ Aceito o DesafioGUT — Entrar
-          </button>
+          <BotaoLoginPrincipal onClick={abrirModal} size="md" fullWidth={isMobile} />
         </div>
       ) : (
         <>

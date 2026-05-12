@@ -3,6 +3,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import CardLance from "../components/CardLance.jsx";
 import TabelaLances from "../components/TabelaLances.jsx";
+import { LABEL_LOGIN } from "../components/BotaoLoginPrincipal.jsx";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.18)",
@@ -517,7 +518,8 @@ function AuthArea({ isConnected, ready, address, userLabel, onLogin, compact }) 
           boxShadow: "0 4px 14px rgba(245,166,35,0.4)",
           flexShrink: 0,
         }}
-      >{ready ? "⚡ Entrar" : "⏳"}</button>
+        aria-label={LABEL_LOGIN}
+      >{ready ? LABEL_LOGIN : "⏳"}</button>
     );
   }
 

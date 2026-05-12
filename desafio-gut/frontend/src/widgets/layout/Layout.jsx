@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, Link } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import BottomNav, { BOTTOM_NAV_HEIGHT } from "./BottomNav.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
@@ -8,6 +8,32 @@ import { useIsMobile } from "../../hooks/useIsMobile.js";
  *  Desktop (>=768px): Sidebar lateral retrátil.
  *  Mobile  (<768px):  BottomNav fixa com tabs + sheet "Mais".
  */
+function FooterGlobal({ isMobile }) {
+  return (
+    <footer
+      aria-label="Rodapé"
+      style={{
+        padding: isMobile ? "12px 16px" : "16px 24px",
+        borderTop: "1px solid rgba(245,166,35,0.18)",
+        background: "rgba(10,15,26,0.8)",
+        fontSize: "11px",
+        textAlign: "center",
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        gap: isMobile ? "12px" : "24px",
+        color: "#5a7090",
+        rowGap: isMobile ? "6px" : undefined,
+      }}
+    >
+      <Link to="/seguranca" style={{ color: "inherit", textDecoration: "none" }}>Privacidade</Link>
+      <a href="https://www.iubenda.com/terms-and-conditions/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Termos</a>
+      <a href="mailto:desafiogut01@gmail.com" style={{ color: "inherit", textDecoration: "none" }}>Suporte</a>
+      <span style={{ width: isMobile ? "100%" : "auto" }}>© 2026 DesafioGUT. Grupo União e Trabalho.</span>
+    </footer>
+  );
+}
+
 export default function Layout() {
   const isMobile = useIsMobile();
 
@@ -38,30 +64,17 @@ export default function Layout() {
               : 0,
           }}
         >
-          <Outlet />
+          <div style={{ flex: 1 }}>
+            <Outlet />
+          </div>
+          {/* Em mobile o footer vai DENTRO do main para rolar com o conteúdo
+              e ficar acima do BottomNav fixo. */}
+          {isMobile && <FooterGlobal isMobile />}
         </main>
       </div>
 
-      {!isMobile && (
-        <footer
-          style={{
-            padding: "16px 24px",
-            borderTop: "1px solid rgba(245,166,35,0.18)",
-            background: "rgba(10,15,26,0.8)",
-            fontSize: "11px",
-            textAlign: "center",
-            display: "flex",
-            justifyContent: "center",
-            gap: "24px",
-            color: "#5a7090",
-          }}
-        >
-          <a href="#privacidade" style={{ color: "inherit", textDecoration: "none" }}>Privacidade</a>
-          <a href="#termos" style={{ color: "inherit", textDecoration: "none" }}>Termos</a>
-          <a href="#suporte" style={{ color: "inherit", textDecoration: "none" }}>Suporte</a>
-          <span>© 2026 DesafioGUT. Grupo União e Trabalho.</span>
-        </footer>
-      )}
+      {/* Desktop: footer fora do main (sticky no final do viewport). */}
+      {!isMobile && <FooterGlobal isMobile={false} />}
 
       {isMobile && <BottomNav />}
     </div>

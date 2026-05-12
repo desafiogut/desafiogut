@@ -52,7 +52,8 @@ export default function App() {
           <Route index              element={<Dashboard />}     />
           <Route path="/carteira"   element={<MinhaCarteira />} />
           <Route path="/mercado"    element={<MercadoLances />} />
-          <Route path="/vitrine"    element={<Vitrine />}       />
+          <Route path="/vitrine"       element={<Vitrine />} />
+          <Route path="/vitrine/:slot" element={<Vitrine />} />
           <Route path="/ativos"     element={<MeusAtivos />}    />
           <Route path="/seguranca"  element={<Seguranca />}     />
           <Route path="/configuracoes" element={<Configuracoes />} />

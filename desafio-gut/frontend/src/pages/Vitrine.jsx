@@ -9,7 +9,7 @@
 // cotas (Wallet, voucher, estado vendido/disponível) é implementado em ondas
 // posteriores; aqui ficam os dados estáticos da spec.
 
-import { Link } from "react-router-dom";
+import { Link, useParams, Navigate } from "react-router-dom";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 const COR = {
@@ -88,7 +88,7 @@ const SLOTS = [
   },
 ];
 
-function SlotCard({ slot, isMobile, sticky }) {
+function SlotCard({ slot, isMobile, sticky, hrefOverride }) {
   return (
     <article
       style={{
@@ -152,7 +152,7 @@ function SlotCard({ slot, isMobile, sticky }) {
       </ul>
 
       <Link
-        to="/mercado"
+        to={hrefOverride ?? `/vitrine/${slot.id}`}
         style={{
           marginTop: "auto",
           display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -163,7 +163,7 @@ function SlotCard({ slot, isMobile, sticky }) {
           letterSpacing: "0.04em",
           boxShadow: `0 4px 14px ${slot.corDim}`,
         }}
-      >Participar do leilão →</Link>
+      >{hrefOverride ? "Ir para o leilão →" : "Ver detalhes →"}</Link>
     </article>
   );
 }
@@ -177,8 +177,98 @@ function Info({ label, value, small }) {
   );
 }
 
+function VitrineDetalhe({ slot, isMobile }) {
+  return (
+    <div style={{ padding: isMobile ? "1rem" : "1.5rem 2rem", color: "#e8f0fe", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      <nav aria-label="Trilha de navegação" style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+        <Link to="/vitrine" style={{ color: "#f5a623", textDecoration: "none", fontWeight: 600 }}>← Voltar à Vitrine</Link>
+      </nav>
+
+      <header>
+        <h1 style={{
+          margin: 0,
+          fontSize: isMobile ? "1.4rem" : "1.8rem",
+          fontWeight: 900,
+          color: slot.cor,
+          fontFamily: "'Orbitron', sans-serif",
+          letterSpacing: "0.05em",
+        }}>{slot.emoji} Slot {slot.posicao} — {slot.nome}</h1>
+        <p style={{ margin: "0.25rem 0 0", fontSize: isMobile ? "0.78rem" : "0.86rem", color: "#94a3b8", lineHeight: 1.5 }}>
+          {slot.rotuloSecao} · {slot.tipoLeilao}
+        </p>
+      </header>
+
+      <section style={{
+        background: "linear-gradient(155deg, rgba(5,15,40,0.92) 0%, rgba(8,30,64,0.85) 100%)",
+        border: `1px solid ${slot.corBorda}`,
+        borderRadius: "16px",
+        padding: isMobile ? "1.25rem" : "1.75rem",
+        display: "flex", flexDirection: "column", gap: "1rem",
+        boxShadow: `0 4px 18px rgba(0,0,0,0.35), 0 0 0 1px ${slot.corDim}`,
+      }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: "0.75rem" }}>
+          <Info label="Cotas disponíveis" value={`${slot.cotasDisponiveis}`} />
+          <Info label="Exclusividade" value={slot.exclusiva ? "Sim" : "Não"} small />
+          <Info label="Valor de contrato" value={slot.valorContrato} />
+          <Info label="Valor mín. produto" value={slot.valorMinProduto} />
+        </div>
+
+        <div>
+          <h2 style={{ margin: "0 0 0.5rem", fontSize: "0.85rem", fontWeight: 800, color: slot.cor, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+            Benefícios de visibilidade
+          </h2>
+          <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+            {slot.beneficios.map((b) => (
+              <li key={b} style={{ fontSize: "0.84rem", color: "#e8f0fe", display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+                <span style={{ color: slot.cor, fontWeight: 800 }} aria-hidden="true">✦</span>
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div style={{
+          padding: "0.85rem 1rem",
+          background: "rgba(5,15,40,0.6)",
+          borderRadius: "10px",
+          border: "1px dashed rgba(255,255,255,0.1)",
+          fontSize: "0.78rem", color: "#94a3b8", lineHeight: 1.5,
+        }}>
+          ⚠ <strong style={{ color: "#fbbf24" }}>Aviso</strong>: o sistema de cotas Diamante/Ouro/Prata/Bronze
+          ainda não está ativo no contrato. O CTA abaixo leva ao leilão atual
+          em produção (Edição R-1) — quando os 4 leilões paralelos da spec
+          forem implementados, cada slot terá seu próprio destino.
+        </div>
+
+        <Link
+          to="/mercado"
+          style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            padding: "0.85rem 1rem",
+            background: `linear-gradient(135deg, ${slot.cor}, ${slot.cor}cc)`,
+            color: "#0f172a", fontWeight: 800, fontSize: "0.92rem",
+            borderRadius: "12px", textDecoration: "none",
+            letterSpacing: "0.04em",
+            boxShadow: `0 4px 14px ${slot.corDim}`,
+          }}
+        >Ir para o leilão atual (R-1) →</Link>
+      </section>
+    </div>
+  );
+}
+
 export default function Vitrine() {
   const isMobile = useIsMobile();
+  const { slot: slotId } = useParams();
+
+  // Rota /vitrine/:slot — exibe detalhe do slot.
+  if (slotId) {
+    const slot = SLOTS.find((s) => s.id === slotId);
+    if (!slot) return <Navigate to="/vitrine" replace />;
+    return <VitrineDetalhe slot={slot} isMobile={isMobile} />;
+  }
+
+  // Rota /vitrine — lista os 4 slots.
   const sticky   = SLOTS.filter((s) => s.posicao <= 2);   // Diamante + Ouro
   const carossel = SLOTS.filter((s) => s.posicao > 2);    // Prata + Bronze
 

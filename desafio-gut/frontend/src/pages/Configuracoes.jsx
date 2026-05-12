@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -81,14 +82,7 @@ export default function Configuracoes() {
             <p style={{ color: COR.muted, marginBottom: "1rem", fontSize: isMobile ? "0.85rem" : "0.9rem" }}>
               Faça login para acessar as configurações da sua conta.
             </p>
-            <button onClick={abrirModal} style={{
-              width: isMobile ? "100%" : "auto",
-              padding: "0.7rem 1.4rem",
-              background: "linear-gradient(135deg,#f5a623,#f97316)",
-              border: "none", borderRadius: "12px", color: "#0a0f1a",
-              fontWeight: "800", cursor: "pointer", fontSize: "0.88rem",
-              boxShadow: "0 4px 14px rgba(245,166,35,0.35)",
-            }}>⚡ Aceito o DesafioGUT — Entrar</button>
+            <BotaoLoginPrincipal onClick={abrirModal} size="md" fullWidth={isMobile} />
           </div>
         )}
       </div>
