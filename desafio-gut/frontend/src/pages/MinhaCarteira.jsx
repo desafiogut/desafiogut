@@ -4,6 +4,8 @@ import { useWallets } from "@privy-io/react-auth";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
+import WalletCard from "../components/WalletCard.jsx";
+import VoucherPanel from "../components/VoucherPanel.jsx";
 import { getSignerFromProvider } from "../utils/web3.js";
 
 const VALOR_POR_SENHA_BRL = 2;
@@ -298,6 +300,18 @@ export default function MinhaCarteira() {
                 </p>
               )}
             </div>
+
+          {/* Wallet Digital — Vale-Crédito (Especificação Refatorada §4).
+              Read-only para o usuário; mutações via Admin (x-admin-token). */}
+          <div style={{ marginBottom: sectionGap }}>
+            <WalletCard endereco={address} isMobile={isMobile} />
+          </div>
+
+          {/* Vouchers de Networking — Bônus Diamante (Especificação Refatorada §7).
+              Emissão via Admin; resgate será integrado no fluxo de comprar-senhas. */}
+          <div style={{ marginBottom: sectionGap }}>
+            <VoucherPanel endereco={address} isMobile={isMobile} />
+          </div>
 
           {/* Saldo de Senhas — fonte: saldoSenhas on-chain (AppContext).
               Atualiza via listener SenhasCreditadas + LanceDado e polling
