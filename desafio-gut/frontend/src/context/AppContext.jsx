@@ -98,6 +98,17 @@ export function AppProvider({ children }) {
       for (const k of LS_KEYS_LEGADO_MOCK) localStorage.removeItem(k);
       localStorage.setItem(LS_RESET_KEY, LS_RESET_VERSION);
     } catch {}
+    // Purga Blob server-side de lances residuais da Edição R-1 (one-shot,
+    // disparado quando a versão do reset muda neste dispositivo).
+    fetch("/.netlify/functions/purge-lances", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ edicaoId: EDICAO_ATIVA }),
+    }).then((resp) => {
+      if (!resp.ok) console.warn("[GUT-DEBUG] purge-lances HTTP", resp.status);
+    }).catch((err) => {
+      console.warn("[GUT-DEBUG] purge-lances falhou", err?.message);
+    });
     // Sessão Privy antiga é descartada apenas na primeira execução do reset.
     // Usuário re-loga em seguida — UX aceitável porque é one-shot.
     if (authenticated) {
