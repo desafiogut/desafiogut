@@ -9,8 +9,15 @@
 // cotas (Wallet, voucher, estado vendido/disponível) é implementado em ondas
 // posteriores; aqui ficam os dados estáticos da spec.
 
+import { useEffect, useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { tiersAgoraVisiveis, tierAtivoAgora } from "../data/programacao-junho-2026.js";
+
+const TZ_PADRAO = "America/Sao_Paulo";
+function getTimezone() {
+  return import.meta.env?.VITE_TIMEZONE || TZ_PADRAO;
+}
 
 const COR = {
   bg:      "#0a0f1a",
@@ -88,7 +95,7 @@ const SLOTS = [
   },
 ];
 
-function SlotCard({ slot, isMobile, sticky, hrefOverride }) {
+function SlotCard({ slot, isMobile, sticky, hrefOverride, status }) {
   return (
     <article
       style={{
@@ -125,14 +132,28 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride }) {
             </p>
           </div>
         </div>
-        <span style={{
-          fontSize: "0.62rem", fontWeight: 800, letterSpacing: "0.08em",
-          padding: "0.22rem 0.55rem", borderRadius: "999px",
-          color: slot.cor, background: slot.corDim, border: `1px solid ${slot.corBorda}`,
-          textTransform: "uppercase", whiteSpace: "nowrap",
-        }}>
-          {slot.exclusiva ? "Exclusiva" : "Não exclusiva"}
-        </span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem" }}>
+          <span style={{
+            fontSize: "0.62rem", fontWeight: 800, letterSpacing: "0.08em",
+            padding: "0.22rem 0.55rem", borderRadius: "999px",
+            color: slot.cor, background: slot.corDim, border: `1px solid ${slot.corBorda}`,
+            textTransform: "uppercase", whiteSpace: "nowrap",
+          }}>
+            {slot.exclusiva ? "Exclusiva" : "Não exclusiva"}
+          </span>
+          {status && (
+            <span aria-label={status.ariaLabel} style={{
+              fontSize: "0.6rem", fontWeight: 800, letterSpacing: "0.08em",
+              padding: "0.18rem 0.5rem", borderRadius: "999px",
+              color: status.cor,
+              background: `${status.cor}1f`,
+              border: `1px solid ${status.cor}55`,
+              textTransform: "uppercase", whiteSpace: "nowrap",
+            }}>
+              {status.texto}
+            </span>
+          )}
+        </div>
       </header>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem 0.75rem" }}>
@@ -257,9 +278,31 @@ function VitrineDetalhe({ slot, isMobile }) {
   );
 }
 
+function statusDoSlot(slotId, visibilidade, tz) {
+  if (!visibilidade.tiers.includes(slotId)) {
+    return { texto: "Oculto · regra §8", cor: "#6b7280", ariaLabel: "Tier oculto pela regra de domingo" };
+  }
+  const ativo = tierAtivoAgora(slotId, tz);
+  if (ativo) {
+    if (slotId === "diamante" || slotId === "ouro") {
+      return { texto: "● Programado 24h", cor: "#10b981", ariaLabel: "Leilão programado ativo agora" };
+    }
+    return { texto: "● Ao vivo agora", cor: "#10b981", ariaLabel: "Leilão ativo agora" };
+  }
+  return { texto: "Agendado", cor: "#94a3b8", ariaLabel: "Sem leilão ativo no horário atual" };
+}
+
 export default function Vitrine() {
   const isMobile = useIsMobile();
   const { slot: slotId } = useParams();
+  const tz = getTimezone();
+
+  // Tick a cada 30s para refletir mudança de horário/dia na vitrine.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Rota /vitrine/:slot — exibe detalhe do slot.
   if (slotId) {
@@ -268,9 +311,17 @@ export default function Vitrine() {
     return <VitrineDetalhe slot={slot} isMobile={isMobile} />;
   }
 
-  // Rota /vitrine — lista os 4 slots.
-  const sticky   = SLOTS.filter((s) => s.posicao <= 2);   // Diamante + Ouro
-  const carossel = SLOTS.filter((s) => s.posicao > 2);    // Prata + Bronze
+  // Regra §8: domingos ocultam Bronze e Ouro.
+  const visibilidade = tiersAgoraVisiveis(tz);
+  const slotsVisiveis = SLOTS.filter((s) => visibilidade.tiers.includes(s.id));
+
+  // Rota /vitrine — lista os slots visíveis hoje.
+  const sticky   = slotsVisiveis.filter((s) => s.posicao <= 2);   // Diamante + Ouro
+  const carossel = slotsVisiveis.filter((s) => s.posicao > 2);    // Prata + Bronze
+
+  const slotStatusMap = Object.fromEntries(
+    SLOTS.map((s) => [s.id, statusDoSlot(s.id, visibilidade, tz)])
+  );
 
   return (
     <div style={{ padding: isMobile ? "1rem" : "1.5rem 2rem", color: COR.text, display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -288,6 +339,19 @@ export default function Vitrine() {
           Diamante e Ouro são <strong style={{ color: "#f5a623" }}>fixos no topo</strong>;
           Prata e Bronze rodam em <strong style={{ color: "#f5a623" }}>Oportunidade Agora</strong>.
         </p>
+        {visibilidade.regra === "sunday" && (
+          <div style={{
+            marginTop: "0.5rem",
+            padding: "0.6rem 0.85rem",
+            background: "rgba(0,212,255,0.06)",
+            border: "1px solid rgba(0,212,255,0.3)",
+            borderRadius: "10px",
+            fontSize: "0.78rem", color: COR.text, lineHeight: 1.5,
+          }}>
+            <strong style={{ color: "#00d4ff" }}>💎 Domingo exclusivo (§8 da spec):</strong>{" "}
+            Bronze e Ouro ocultos; apenas Diamante fixo + Prata (repetições) visíveis.
+          </div>
+        )}
       </header>
 
       {/* ── Destaques sempre visíveis (sticky em mobile, primeiras 2 colunas em desktop) ── */}
@@ -300,7 +364,7 @@ export default function Vitrine() {
         }}
       >
         {sticky.map((slot) => (
-          <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={isMobile} />
+          <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={isMobile} status={slotStatusMap[slot.id]} />
         ))}
       </section>
 
@@ -328,14 +392,14 @@ export default function Vitrine() {
           >
             {carossel.map((slot) => (
               <div key={slot.id} style={{ flex: "0 0 86%", scrollSnapAlign: "start" }}>
-                <SlotCard slot={slot} isMobile={isMobile} sticky={false} />
+                <SlotCard slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} />
               </div>
             ))}
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
             {carossel.map((slot) => (
-              <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={false} />
+              <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} />
             ))}
           </div>
         )}

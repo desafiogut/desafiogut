@@ -95,6 +95,39 @@ export function horaAgora(timezone) {
   return fmt.format(new Date()); // "14:23"
 }
 
+// Tiers visíveis agora, considerando dia da semana corrente no fuso configurado.
+// Aplica regra de §8 da spec (domingo exclusivo: apenas Prata + Diamante).
+// Retorna: { tiers: string[], regra: "weekday"|"saturday"|"sunday", diaKey }
+export function tiersAgoraVisiveis(timezone) {
+  const diaKey = diaDaSemanaHoje(timezone);
+  if (diaKey === "sunday") {
+    return { tiers: ["diamante", "prata"], regra: "sunday", diaKey };
+  }
+  // Dias úteis e sábado: todos os 4 tiers visíveis na vitrine.
+  // Bronze/Prata aparecem como "agendados" se não há sessão ativa no momento.
+  return {
+    tiers: ["diamante", "ouro", "prata", "bronze"],
+    regra: diaKey === "saturday" ? "saturday" : "weekday",
+    diaKey,
+  };
+}
+
+// Determina se o tier tem sessão ativa AGORA no fuso configurado.
+// Diamante e Ouro são "programado 24h" → sempre ativos durante o dia.
+// Bronze e Prata são "relâmpago 30-60min" → ativos se hora atual cai em algum slot.
+export function tierAtivoAgora(tier, timezone) {
+  const diaKey = diaDaSemanaHoje(timezone);
+  if (diaKey === "sunday") {
+    // Domingo: só Diamante + Prata (repeats) ativos
+    return tier === "diamante" || tier === "prata";
+  }
+  if (tier === "diamante" || tier === "ouro") return true;   // programado 24h
+  // Bronze / Prata: ativo se hora atual está dentro de algum slot do dia.
+  const horarios = horariosDoDia(diaKey);
+  const agora    = horaAgora(timezone);
+  return horarios.some((h) => slotAtivoAgora(h, horarios, agora));
+}
+
 // Determina se um slot está ativo no momento (considerando overnight 21h → 07h).
 export function slotAtivoAgora(horarioSlot, todosHorarios, agora) {
   if (!agora) return false;

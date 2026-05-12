@@ -6,6 +6,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
 import WalletCard from "../components/WalletCard.jsx";
 import VoucherPanel from "../components/VoucherPanel.jsx";
+import BannerUpload from "../components/BannerUpload.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 import { getSignerFromProvider } from "../utils/web3.js";
 
@@ -310,6 +311,11 @@ export default function MinhaCarteira() {
               Emissão via Admin; resgate será integrado no fluxo de comprar-senhas. */}
           <div style={{ marginBottom: sectionGap }}>
             <VoucherPanel endereco={address} isMobile={isMobile} />
+          </div>
+
+          {/* Banners (§6 da spec): auto-gerador SVG + upload manual + premium via Wallet. */}
+          <div style={{ marginBottom: sectionGap }}>
+            <BannerUpload endereco={address} isMobile={isMobile} getAuthToken={getComprarAuthToken} />
           </div>
 
           {/* Saldo de Senhas — fonte: saldoSenhas on-chain (AppContext).

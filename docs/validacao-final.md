@@ -1,8 +1,8 @@
 # Validação Final — Estado vs Especificação Refatorada
 
-**Data:** 2026-05-12 (atualizado pós-Onda 4 Tier 1)
-**Branch:** `main` @ `b4c778f` + Onda 4 (M-06, M-09, M-11) — commit pendente
-**Tipo:** auditoria de leitura inicial + atualização após Onda 4 Tier 1.
+**Data:** 2026-05-12 (atualizado pós-Onda 4 Tier 1 + Tier 2/3)
+**Branch:** `main` @ `f8e8e08` + Onda 4 Tier 2/3 (M-07, M-08, M-10) — commit pendente
+**Tipo:** auditoria de leitura inicial + atualizações após cada onda.
 **Referência:** `docs/especificacao-extraida.md` (29 REQs · REQ-01 a REQ-29) extraídos do PDF *Especificação Técnica Refatorada (Junho/2026)*.
 
 ---
@@ -18,29 +18,39 @@
 | ❌ AUSENTE | 6 | 21% |
 | n/a | 1 | 3% |
 
-### Estado atual (pós-Onda 4 Tier 1: M-06, M-09, M-11)
+### Estado pós-Onda 4 Tier 1 (M-06, M-09, M-11)
 
-| Status | Total | % | Δ |
+| Status | Total | Δ vs anterior |
+|---|---|---|
+| ✅ IMPLEMENTADO | 14 | +4 |
+| ⚠️ PARCIAL | 11 | -1 |
+| ❌ AUSENTE | 3 | -3 |
+| n/a | 1 | 0 |
+
+### Estado atual (pós-Onda 4 Tier 2/3: M-07, M-08, M-10)
+
+| Status | Total | % | Δ vs Tier 1 |
 |---|---|---|---|
-| ✅ IMPLEMENTADO | **14** | 48% | +4 |
-| ⚠️ PARCIAL | **11** | 38% | -1 |
-| ❌ AUSENTE | **3** | 10% | -3 |
+| ✅ IMPLEMENTADO | **18** | 62% | +4 |
+| ⚠️ PARCIAL | **9** | 31% | -2 |
+| ❌ AUSENTE | **1** | 3% | -2 |
 | n/a | **1** | 3% | 0 |
 
-**REQs movidos para ✅ na Onda 4 Tier 1:**
-- REQ-02 (grade sem ambiguidade) — ❌ → ✅ via `/programacao` (ScheduleView)
-- REQ-26 (isenção 1ª participação) — ⚠️ → ✅ via integração voucher×comprar-senhas
-- REQ-28 (grade Seg-Sáb × 4 semanas) — ❌ → ✅ via ScheduleView com seletor de semana
-- REQ-29 (Domingos exclusivos) — ❌ → ✅ via filtro automático na ScheduleView
+**Único REQ ❌ restante:** REQ-10 (reset automático às 00:00 do leilão Programado).
 
-**Não movido nesta sessão (Tier 2/3 — adiados):**
-- REQ-04..08 (cotas/visibilidade) — segue ⚠️ (M-07 deferido)
-- REQ-10 (reset 00:00 auto) — segue ❌ (não escopado nesta onda)
-- REQ-17, REQ-19 (regra Vale-Crédito / consumidor premium) — segue ⚠️
-- REQ-20 (PIX Adesão + Admin workflow) — segue ⚠️ (Admin real depende de M-08/10 + decisão de gate)
-- REQ-22, REQ-23 (banners) — segue ❌ (M-08, M-10 adiados)
+**REQs movidos para ✅ na Onda 4 Tier 2/3:**
+- REQ-08 (visibilidade por cota) — ⚠️ → ✅ via `tiersAgoraVisiveis` + filtro de domingo + badges AO VIVO/Agendado na `Vitrine.jsx`
+- REQ-22 (auto-gerador banner) — ❌ → ✅ via `banners.mjs` SVG template GET fallback
+- REQ-23 (premium via Wallet) — ❌ → ✅ via `BannerUpload.jsx` com flag `premium=true` debitando Wallet
 
-**Build:** ✅ verde após cada implementação (`✓ built in 5.31s` para M-06; `3.33s` para M-09).
+**Continua ⚠️ ou ❌:**
+- REQ-04..07 (cotas Bronze/Prata/Ouro/Diamante) — segue ⚠️: dados estáticos exibidos + visibilidade dinâmica agora, **mas sistema de cota vendida vs disponível ainda inexistente**
+- REQ-10 (reset 00:00 auto) — segue ❌ (fora do escopo desta onda)
+- REQ-17 (regra Valor_Produto<Mín_Cota automática) — segue ⚠️ (storage existe, cálculo depende de cota real)
+- REQ-20 (PIX Adesão + Admin workflow) — segue ⚠️ (Admin via x-admin-token; UI Admin ausente)
+- REQ-19 (saldo abate premium) — agora ✅ porque BannerUpload com `premium=true` debita Wallet — atualizado para ✅
+
+**Build:** ✅ verde após cada item (`✓ built in 4.23s` M-07; `3.67s` M-08; `3.58s` M-10).
 
 ---
 
@@ -174,7 +184,7 @@ $ grep -nE "gut_reset_v|LS_RESET_VERSION|LS_RESET_KEY" src/context/AppContext.js
 | **REQ-05** | Prata: 81 cotas exclusivas, R$ 5.600/1.350 | ⚠️ PARCIAL | idem `Vitrine.jsx:58-70` |
 | **REQ-06** | Ouro: 1 cota exclusiva, R$ 11.000/2.250 | ⚠️ PARCIAL | idem `Vitrine.jsx:42-54` |
 | **REQ-07** | Diamante: 1 cota exclusiva, R$ 18.000/4.500 + 10 bônus | ⚠️ PARCIAL | idem `Vitrine.jsx:26-38`; bônus exibido mas sem gate de cota |
-| **REQ-08** | Cotas determinam visibilidade e prioridade na UI | ⚠️ PARCIAL | Vitrine prioriza visualmente (sticky D+O / carrossel P+B); **sem ordenação dinâmica nos leilões reais** |
+| **REQ-08** | Cotas determinam visibilidade e prioridade na UI | ✅ | `tiersAgoraVisiveis()` aplica filtro de domingo + `tierAtivoAgora()` adiciona badge "AO VIVO/Agendado" por cota em tempo real (refresh 30s) |
 
 ### §3.1 — Tipos de Leilão
 
@@ -200,7 +210,7 @@ $ grep -nE "gut_reset_v|LS_RESET_VERSION|LS_RESET_KEY" src/context/AppContext.js
 | **REQ-16** | Wallet virtual para Vale-Crédito | ✅ | `netlify/functions/wallet.mjs` + `src/components/WalletCard.jsx` |
 | **REQ-17** | Regra: `Valor_Produto < Valor_Min_Cota` gera diferença em crédito | ⚠️ PARCIAL | Storage existe; **cálculo automático ausente** (depende de REQ-04..07 reais) |
 | **REQ-18** | Persistir em Netlify Blob `wallet:{cliente_id}` consistência forte | ✅ | `wallet.mjs:13` — `getStore({ name, consistency: "strong" })` |
-| **REQ-19** | Saldo abate renovação/premium | ⚠️ PARCIAL | Débito funcional via POST admin; **consumidores (banner premium) inexistentes** |
+| **REQ-19** | Saldo abate renovação/premium | ✅ | `BannerUpload` com `premium=true` chama `banners.mjs` que debita Wallet via `debitarWallet()` antes de persistir |
 
 ### §5 — Pagamento
 
@@ -213,8 +223,8 @@ $ grep -nE "gut_reset_v|LS_RESET_VERSION|LS_RESET_KEY" src/context/AppContext.js
 
 | ID | Descrição | Status | Evidência |
 |---|---|---|---|
-| **REQ-22** | Auto-gerador de banner (título + logo) | ❌ AUSENTE | Sem endpoint nem componente |
-| **REQ-23** | Solicitação Premium debitando Wallet | ❌ AUSENTE | Sem endpoint nem componente |
+| **REQ-22** | Auto-gerador de banner (título + logo) | ✅ | `banners.mjs` GET retorna SVG template inline com cliente_id + tier inferido + nome quando não há upload; `BannerCard.jsx` consome |
+| **REQ-23** | Solicitação Premium debitando Wallet | ✅ | `banners.mjs` POST aceita `premium=true` + `valorCentavos`; débito atômico via `debitarWallet()` antes de persistir |
 
 ### §7 — Bônus Diamante (Vouchers)
 
