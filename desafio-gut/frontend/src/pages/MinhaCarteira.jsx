@@ -7,6 +7,7 @@ import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
 import WalletCard from "../components/WalletCard.jsx";
 import VoucherPanel from "../components/VoucherPanel.jsx";
 import BannerUpload from "../components/BannerUpload.jsx";
+import RenovacaoCard from "../components/RenovacaoCard.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 import { getSignerFromProvider } from "../utils/web3.js";
 
@@ -305,6 +306,11 @@ export default function MinhaCarteira() {
               Read-only para o usuário; mutações via Admin (x-admin-token). */}
           <div style={{ marginBottom: sectionGap }}>
             <WalletCard endereco={address} isMobile={isMobile} />
+          </div>
+
+          {/* Renovação de Adesão (Especificação Refatorada §5 — REQ-03). */}
+          <div style={{ marginBottom: sectionGap }}>
+            <RenovacaoCard endereco={address} isMobile={isMobile} />
           </div>
 
           {/* Vouchers de Networking — Bônus Diamante (Especificação Refatorada §7).

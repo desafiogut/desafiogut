@@ -3,7 +3,30 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import CardLance from "../components/CardLance.jsx";
 import TabelaLances from "../components/TabelaLances.jsx";
+import BannerCard from "../components/BannerCard.jsx";
 import { LABEL_LOGIN } from "../components/BotaoLoginPrincipal.jsx";
+
+// REQ-01: descobre o cliente cujo leilão está ativo no momento, conforme
+// a categoria correspondente ao tipoLeilao atual. Sem cota cadastrada:
+// retorna null e o banner não é exibido.
+const CATEGORIAS_POR_TIPO = {
+  flash:      ["bronze", "prata"],   // relâmpago
+  programado: ["diamante", "ouro"],  // 24h fixo
+};
+async function buscarClienteDoLeilaoAtivo(tipo) {
+  const cats = CATEGORIAS_POR_TIPO[tipo] || [];
+  for (const cat of cats) {
+    try {
+      const resp = await fetch(`/.netlify/functions/cotas?categoria=${cat}`);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      const cotas = Array.isArray(data?.cotas) ? data.cotas : [];
+      const ativa = cotas.find((c) => c?.disponivel || c?.vendida);
+      if (ativa?.cliente_id) return { cliente_id: ativa.cliente_id, categoria: cat, nome: ativa.cliente_nome };
+    } catch {}
+  }
+  return null;
+}
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.18)",
@@ -200,6 +223,14 @@ export default function MercadoLances() {
     const s = String(tempoRestante % 60).padStart(2, "0");
     return `${m}:${s}`;
   })();
+
+  // REQ-01: banner do cliente do leilão ativo.
+  const [clienteAtivo, setClienteAtivo] = useState(null);
+  useEffect(() => {
+    let cancelado = false;
+    buscarClienteDoLeilaoAtivo(tipoLeilao).then((c) => { if (!cancelado) setClienteAtivo(c); });
+    return () => { cancelado = true; };
+  }, [tipoLeilao]);
 
   const duracao     = DURACAO[tipoLeilao];
   // Onda 5 FASE 0: cores proporcionais à duração (escala para flash 30min e
@@ -398,6 +429,29 @@ export default function MercadoLances() {
             }}>🔴 Leilão encerrado — novos lances bloqueados</span>
           )}
         </div>
+
+        {/* ── Banner do cliente do leilão ativo (REQ-01) ── */}
+        {clienteAtivo?.cliente_id && (
+          <div style={{
+            padding: isMobile ? "0.75rem 1rem 0" : "1rem 2rem 0",
+          }}>
+            <BannerCard
+              clienteId={clienteAtivo.cliente_id}
+              formato={isMobile ? "app" : "site"}
+              style={{ width: "100%" }}
+            />
+            {clienteAtivo.nome && (
+              <p style={{
+                margin: "0.4rem 0 0", fontSize: "0.72rem", color: COR.muted,
+                textAlign: "center", letterSpacing: "0.04em",
+              }}>
+                Leilão {tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"} ·
+                cliente <strong style={{ color: COR.gold }}>{clienteAtivo.nome}</strong>
+                {" "}({clienteAtivo.categoria})
+              </p>
+            )}
+          </div>
+        )}
 
         {/* ── Grid principal ── */}
         <main style={{

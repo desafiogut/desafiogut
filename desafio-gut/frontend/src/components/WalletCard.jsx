@@ -155,7 +155,9 @@ export default function WalletCard({ endereco, isMobile = false }) {
                     <span style={{ color: t.operacao === "credito" ? COR.success : COR.danger, fontWeight: 800 }}>
                       {t.operacao === "credito" ? "+" : "−"}
                     </span>
-                    <span style={{ color: COR.muted, fontSize: "0.72rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ color: COR.muted, fontSize: "0.72rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                          title={t.origem === "cotas-vale-credito-automatico" ? "Crédito automático: produto abaixo do mínimo da cota" : undefined}>
+                      {t.origem === "cotas-vale-credito-automatico" && <span aria-label="Automático" style={{ marginRight: "0.3rem" }}>⚙️</span>}
                       {t.motivo}
                     </span>
                     <span style={{ fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>

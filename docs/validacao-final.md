@@ -1,7 +1,7 @@
 # Validação Final — Estado vs Especificação Refatorada
 
-**Data:** 2026-05-12 (atualizado pós-Onda 6 Admin + Cotas)
-**Branch:** `main` @ `8a94909` + Onda 6 (M-14, M-14b, M-15, M-16, M-17) — commit pendente
+**Data:** 2026-05-12 (atualizado pós-Onda 7 — fechamento dos 3 parciais)
+**Branch:** `main` @ `2c76660` + Onda 7 (REQ-01, REQ-03, REQ-17) — commit pendente
 **Tipo:** auditoria de leitura inicial + atualizações após cada onda.
 **Referência:** `docs/especificacao-extraida.md` (29 REQs · REQ-01 a REQ-29) extraídos do PDF *Especificação Técnica Refatorada (Junho/2026)*.
 
@@ -45,24 +45,30 @@
 | ❌ AUSENTE | 0 | -1 |
 | n/a | 1 | 0 |
 
-### Estado atual (pós-Onda 6: M-14, M-14b, M-15, M-16, M-17)
+### Estado pós-Onda 6 (M-14, M-14b, M-15, M-16, M-17)
 
-| Status | Total | % | Δ vs Onda 5 |
+| Status | Total | Δ vs Onda 5 |
+|---|---|---|
+| ✅ IMPLEMENTADO | 25 | +6 |
+| ⚠️ PARCIAL | 3 | -6 |
+| ❌ AUSENTE | 0 | 0 |
+| n/a | 1 | 0 |
+
+### Estado atual (pós-Onda 7: REQ-01, REQ-03, REQ-17)
+
+| Status | Total | % | Δ vs Onda 6 |
 |---|---|---|---|
-| ✅ IMPLEMENTADO | **25** | 86% | +6 |
-| ⚠️ PARCIAL | **3** | 10% | -6 |
+| ✅ IMPLEMENTADO | **28** | 97% | +3 |
+| ⚠️ PARCIAL | **0** | 0% | -3 |
 | ❌ AUSENTE | **0** | 0% | 0 |
 | n/a | **1** | 3% | 0 |
 
-**REQs movidos para ✅ na Onda 6:**
-- REQ-04, REQ-05, REQ-06, REQ-07 — cotas Bronze/Prata/Ouro/Diamante: storage real (`cotas:{cliente_id}`) + endpoint CRUD (`cotas.mjs`) + painel Admin para criar/atualizar + indicador na Vitrine e ScheduleView (resumo "X / Y atribuídas")
-- REQ-08 — visibilidade dinâmica reforçada: Vitrine agora mostra atribuídas/total real por cota
-- REQ-20 — PIX Adesão + workflow Admin: `admin-list.mjs` + `admin-aprovacao.mjs` + `AdminPanel.jsx` com 3 abas (Aprovações / Cotas / Admins); rota `/admin` com gate via `useAdmin` (hook); coordenação admin automática
+🏆 **Zero REQs pendentes** (apenas REQ-27, objetivo de negócio sem implementação direta, fica n/a). De 1 ✅ na auditoria inicial → **28 ✅** em 7 ondas.
 
-**Os 3 ⚠️ que restam:**
-- REQ-01 (publicidade + leilões) — leilões + Vitrine + Banners existem; integração visual completa do banner do cliente no leilão ativo ainda parcial
-- REQ-03 (automação financeira) — PIX/MP/Voucher/Wallet automatizados; "renovação de adesão" ainda sem fluxo
-- REQ-17 (regra Vale-Crédito automática) — storage existe; cálculo `Valor_Produto < Mín_Cota` ainda não dispara crédito automaticamente (requer pipeline de venda do produto, não escopado)
+**REQs movidos para ✅ na Onda 7:**
+- **REQ-01** — banner do cliente no leilão ativo: `MercadoLances.jsx` busca primeira cota da categoria correspondente (Bronze/Prata para flash, Diamante/Ouro para programado) via `GET /cotas?categoria=`, e renderiza `<BannerCard>` acima do grid principal com nome do cliente
+- **REQ-03** — renovação de adesão: `renovacao-adesao.mjs` (GET status público + POST solicitar/confirmar) + `RenovacaoCard.jsx` integrado em `MinhaCarteira` + `docs/fluxo-renovacao-adesao.md`. Status calculado on-read: nao-iniciada / pendente / ativa / vencendo / vencida
+- **REQ-17** — Vale-Crédito automático: `cotas.mjs` POST agora calcula `diferenca = MIN_POR_CATEGORIA_BRL[categoria] - valor_produto`; se positiva, credita automaticamente na Wallet do cliente com `origem: cotas-vale-credito-automatico`. `WalletCard.jsx` destaca essas transações com ícone ⚙️ + tooltip explicativo
 
 **Mudanças na Onda 5:**
 - **FASE 0 timer fix** (Timer 1-4): não fecha REQ específico mas elimina bug crítico de timer zerando ao recarregar. `prazoTimestamp` agora persistido em `localStorage` (`gut_prazo_flash`/`gut_prazo_programado`); hidratação via `getEdicaoPrazo(R-1)` on-chain a cada 60s; cálculo absoluto; tick 250ms; `visibilitychange` re-sincroniza ao voltar de aba.
@@ -206,9 +212,9 @@ $ grep -nE "gut_reset_v|LS_RESET_VERSION|LS_RESET_KEY" src/context/AppContext.js
 
 | ID | Descrição | Status | Evidência |
 |---|---|---|---|
-| **REQ-01** | Plataforma híbrida: publicidade (banners) + leilões | ⚠️ PARCIAL | Leilões existem (`/mercado`, `/vitrine`); camada de **publicidade/banners ausente** (REQ-22/23 ❌) |
+| **REQ-01** | Plataforma híbrida: publicidade (banners) + leilões | ✅ | Banner do cliente da cota ativa aparece em `/mercado` (BannerCard acima do grid). Vitrine + Banners + Leilões integrados |
 | **REQ-02** | Eliminar ambiguidades na grade de horários | ✅ | `/programacao` (`ScheduleView.jsx`) + dados em `src/data/programacao-junho-2026.js` codificam horários por tipo de dia |
-| **REQ-03** | Automatizar processos financeiros | ⚠️ PARCIAL | Pipeline MP/Fichas automatizado (REQ-21 ✅); Adesão (REQ-20) ainda manual; sem automação de renovação/premium |
+| **REQ-03** | Automatizar processos financeiros | ✅ | MP/Fichas (REQ-21), Voucher (REQ-26), Premium Wallet (REQ-23), **Renovação Adesão (REQ-03 endpoint próprio)** e Reset 00:00 (REQ-10). PIX manual restante (REQ-20) tem workflow Admin ativo |
 
 ### §2 — Categorias e Hierarquia de Cotas
 
@@ -242,7 +248,7 @@ $ grep -nE "gut_reset_v|LS_RESET_VERSION|LS_RESET_KEY" src/context/AppContext.js
 | ID | Descrição | Status | Evidência |
 |---|---|---|---|
 | **REQ-16** | Wallet virtual para Vale-Crédito | ✅ | `netlify/functions/wallet.mjs` + `src/components/WalletCard.jsx` |
-| **REQ-17** | Regra: `Valor_Produto < Valor_Min_Cota` gera diferença em crédito | ⚠️ PARCIAL | Storage existe; **cálculo automático ausente** (depende de REQ-04..07 reais) |
+| **REQ-17** | Regra: `Valor_Produto < Valor_Min_Cota` gera diferença em crédito | ✅ | `cotas.mjs` POST credita automaticamente Wallet quando produto < mínimo da categoria (`creditarValeCreditoAutomatico`); WalletCard mostra origem com ícone ⚙️ |
 | **REQ-18** | Persistir em Netlify Blob `wallet:{cliente_id}` consistência forte | ✅ | `wallet.mjs:13` — `getStore({ name, consistency: "strong" })` |
 | **REQ-19** | Saldo abate renovação/premium | ✅ | `BannerUpload` com `premium=true` chama `banners.mjs` que debita Wallet via `debitarWallet()` antes de persistir |
 
