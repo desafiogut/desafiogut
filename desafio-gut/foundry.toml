@@ -1,0 +1,20 @@
+# Foundry config — MC4 / Item 2.
+# Roda local apenas. Setup:
+#   cd desafio-gut
+#   forge install foundry-rs/forge-std --no-git --no-commit
+#   forge test -vv
+
+[profile.default]
+src         = "contracts"
+test        = "tests/foundry"
+out         = "out"
+cache_path  = "cache_forge"
+libs        = ["lib"]
+solc        = "0.8.20"
+optimizer   = true
+optimizer_runs = 200
+verbosity   = 2
+
+# Forge não precisa de remappings explícitos para forge-std quando instalado em lib/.
+# Se OpenZeppelin for adicionado no futuro:
+# remappings = ["@openzeppelin/=lib/openzeppelin-contracts/"]

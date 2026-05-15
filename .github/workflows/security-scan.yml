@@ -92,3 +92,41 @@ jobs:
         with:
           fail-on: critical,high
           path: desafio-gut/frontend
+
+  # ── Job 5: Slither análise estática do contrato ─────────────────────
+  # MC4 / Item 3. Analisa contracts/Leilao.sol; falha o build em high severity.
+  # Roda independente dos outros jobs (não bloqueia npm-audit nem socket).
+  slither-scan:
+    name: slither
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desafio-gut/package-lock.json
+
+      - name: Install Slither
+        run: pip install slither-analyzer
+
+      - name: Install Hardhat deps
+        working-directory: desafio-gut
+        run: npm ci
+
+      # Slither tenta auto-detectar o framework. Hardhat v3 (ESM) pode confundir
+      # a detecção; se falhar, o passo de fallback abaixo analisa o arquivo
+      # solidity isolado. Ambos respeitam slither.config.json (fail_on: high).
+      - name: Run Slither (framework auto-detect)
+        id: slither_auto
+        working-directory: desafio-gut
+        continue-on-error: true
+        run: slither . --config-file slither.config.json
+
+      - name: Run Slither (fallback solc direto)
+        if: steps.slither_auto.outcome == 'failure'
+        working-directory: desafio-gut
+        run: slither contracts/Leilao.sol --solc-remaps "" --config-file slither.config.json

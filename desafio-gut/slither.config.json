@@ -1,0 +1,13 @@
+{
+  "detectors_to_exclude": "",
+  "filter_paths": "node_modules,tests/foundry,tests/fuzzing,lib",
+  "exclude_dependencies": true,
+  "exclude_low": false,
+  "exclude_medium": false,
+  "exclude_high": false,
+  "exclude_optimization": true,
+  "exclude_informational": true,
+  "fail_on": "high",
+  "solc_disable_warnings": false,
+  "disable_color": true
+}

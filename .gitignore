@@ -32,3 +32,14 @@ npm-debug.log*
 
 # Diagnostic artifacts (Playwright screenshots/JSON do check-icons-mobile.mjs)
 desafio-gut/frontend/scripts/.out/
+
+# ── MC4: Foundry + Echidna artefatos locais ──────────────────────────────
+# Foundry build outputs (gerados por `forge test`).
+desafio-gut/out/
+desafio-gut/cache_forge/
+# forge-std baixado via `forge install` — instala em lib/ mas é externo,
+# não commitamos (cada dev/CI baixa).
+desafio-gut/lib/
+# Echidna corpus + coverage (gerados por cada run de fuzzing).
+desafio-gut/tests/fuzzing/corpus/
+desafio-gut/crytic-export/
