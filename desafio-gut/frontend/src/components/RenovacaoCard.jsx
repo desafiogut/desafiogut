@@ -4,6 +4,7 @@
 // Fluxo: cliente solicita → vê PIX para pagar → admin confirma manualmente.
 
 import { useEffect, useState, useCallback } from "react";
+import { useAppContext } from "../context/AppContext.jsx";
 
 const COR = {
   primary: "#f5a623",
@@ -33,25 +34,28 @@ function formatData(iso) {
 }
 
 export default function RenovacaoCard({ endereco, isMobile = false }) {
+  const { authToken } = useAppContext();
   const [estado, setEstado] = useState({ status: "idle", dados: null, erro: null });
   const [solicitando, setSolicitando] = useState(false);
   const [msgSolicit, setMsgSolicit] = useState("");
 
   const carregar = useCallback(async () => {
-    if (!endereco) {
+    if (!endereco || !authToken) {
       setEstado({ status: "idle", dados: null, erro: null });
       return;
     }
     setEstado((s) => ({ ...s, status: s.dados ? "stale" : "loading", erro: null }));
     try {
-      const resp = await fetch(`/.netlify/functions/renovacao-adesao?cliente_id=${encodeURIComponent(endereco)}`);
+      const resp = await fetch(`/.netlify/functions/renovacao-adesao?cliente_id=${encodeURIComponent(endereco)}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       setEstado({ status: "ok", dados: data, erro: null });
     } catch (err) {
       setEstado((s) => ({ status: "error", dados: s.dados, erro: err?.message || "falha" }));
     }
-  }, [endereco]);
+  }, [endereco, authToken]);
 
   useEffect(() => { carregar(); }, [carregar]);
 

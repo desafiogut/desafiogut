@@ -72,3 +72,21 @@ export async function parseJsonBody(req) {
     throw new ValidationError("body_invalido", "body deve ser JSON válido");
   }
 }
+
+// ── Anti-IDOR ────────────────────────────────────────────────────────────────
+// Helper para endpoints GET que recebem endereco/cliente_id e expõem dado
+// sensível: caller deve ser o owner (JWT.endereco === recurso) OU admin.
+//
+// jwtPayload   — payload decodificado do user-session/admin JWT, ou null.
+// recurso      — endereco/cliente_id alvo da requisição (string lowercase).
+// adminAddrs   — array lowercase de endereços admin (vem de getAdminAddresses).
+//
+// Retorno: { ok, papel } onde papel ∈ "owner"|"admin"|null.
+export function validarOwnerOuAdmin(jwtPayload, recurso, adminAddrs = []) {
+  const owner = String(jwtPayload?.endereco || "").toLowerCase();
+  const alvo  = String(recurso || "").toLowerCase();
+  if (!owner) return { ok: false, papel: null };
+  if (owner === alvo) return { ok: true, papel: "owner" };
+  if (adminAddrs.includes(owner)) return { ok: true, papel: "admin" };
+  return { ok: false, papel: null };
+}

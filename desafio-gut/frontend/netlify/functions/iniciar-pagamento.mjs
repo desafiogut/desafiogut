@@ -21,6 +21,7 @@ import {
 } from "./_lib/validate.mjs";
 import { getPixProvider, PIX_PROVIDER_NAME } from "./_lib/pix-provider/index.mjs";
 import { gravarMetaPedido } from "./_lib/credito.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 
 const TTL_SEC = 15 * 60; // 15 minutos para o usuário pagar
 
@@ -28,6 +29,9 @@ export default async (req) => {
   if (req.method !== "POST") {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }
+
+  const rl = await aplicarRateLimit(req, "iniciar-pagamento", 5);
+  if (rl) return rl;
 
   let body;
   try {

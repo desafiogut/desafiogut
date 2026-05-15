@@ -18,6 +18,8 @@ import { getStore } from "@netlify/blobs";
 import {
   jsonResponse, jsonError, parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { guardAdmin } from "./_lib/admin-auth.mjs";
 
 const BLOB_SCHEDULE = "schedule";
 const REGEX_MES     = /^\d{4}-\d{2}$/;
@@ -55,10 +57,8 @@ async function handleGet(req) {
 }
 
 async function handlePost(req) {
-  const adminToken = req.headers.get("x-admin-token") || "";
-  const expected   = process.env.ADMIN_TOKEN;
-  if (!expected) return jsonError(503, "admin_token_nao_configurado", "ADMIN_TOKEN ausente no ambiente");
-  if (adminToken !== expected) return jsonError(401, "admin_token_invalido", "x-admin-token inválido ou ausente");
+  const denied = await guardAdmin(req);
+  if (denied) return denied;
 
   let body;
   try {
@@ -97,7 +97,15 @@ async function handlePost(req) {
 }
 
 export default async (req) => {
-  if (req.method === "GET")  return handleGet(req);
-  if (req.method === "POST") return handlePost(req);
+  if (req.method === "GET") {
+    const rl = await aplicarRateLimit(req, "schedule-get", 30);
+    if (rl) return rl;
+    return handleGet(req);
+  }
+  if (req.method === "POST") {
+    const rl = await aplicarRateLimit(req, "schedule-post", 10);
+    if (rl) return rl;
+    return handlePost(req);
+  }
   return jsonError(405, "metodo_invalido", "use GET ou POST", { allowed: ["GET", "POST"] });
 };

@@ -1,5 +1,84 @@
 # Validação Final — Estado vs Especificação Refatorada
 
+## Mega Comando 1 — Blindagem APIs + Admin + Headers (2026-05-15)
+
+Evidências brutas dos 5 itens (grep + npm run build).
+
+### Item 1 — Rate Limiting Server-Side
+16 funções integradas (5/min críticos, 10/min admin, 30/min GET públicos). Middleware `_lib/rate-limiter.mjs` (fixed-window, Netlify Blobs, fail-open).
+
+```
+$ grep -l "aplicarRateLimit" netlify/functions/*.mjs | xargs -n1 basename
+admin-aprovacao.mjs   admin-list.mjs     auth-admin.mjs        auth-user.mjs
+banners.mjs           comprar-senhas.mjs confirmar-pagamento.mjs cotas.mjs
+cron-reset-programado.mjs                iniciar-pagamento.mjs lance-relampago.mjs
+renovacao-adesao.mjs  saldo-rs.mjs       schedule.mjs          voucher.mjs
+wallet.mjs
+```
+
+Resposta 429 inclui: `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+
+### Item 2 — Headers de Segurança
+6 headers no bloco `/*` do `netlify.toml`:
+
+```
+Referrer-Policy                 = "strict-origin-when-cross-origin"
+Strict-Transport-Security       = "max-age=63072000; includeSubDomains; preload"
+Cross-Origin-Opener-Policy      = "same-origin"
+Cross-Origin-Embedder-Policy    = "require-corp"
+Cross-Origin-Resource-Policy    = "same-origin"
+Permissions-Policy              = "camera=(), microphone=(), geolocation=()"
+```
+
+⚠️ Pós-deploy: smoke do login Privy. Se COEP=require-corp quebrar OAuth, baixar para `credentialless`.
+
+### Item 3 — Anti-IDOR
+4 GETs sensíveis exigem `Authorization: Bearer <user-session JWT>` + `validarOwnerOuAdmin`:
+- `wallet.mjs` GET (linha ~70)
+- `saldo-rs.mjs` (linha ~30)
+- `renovacao-adesao.mjs` GET (linha ~70)
+- `voucher.mjs` GET (linha ~205)
+
+Novo endpoint `auth-user.mjs` (EIP-191 → JWT user-session 24h). Frontend `AppContext.jsx` adquire o JWT após login Privy e injeta em todos os fetches. Componentes atualizados: `WalletCard`, `RenovacaoCard`, `VoucherPanel`.
+
+### Item 4 — JWT Admin Curta Duração
+- `_lib/admin-auth.mjs` (emitirParAdmin, rotacionarRefresh, revogarAdmin, autenticarAdmin, guardAdmin)
+- `/auth-admin` com 3 ações (login | refresh | logout)
+- Access 15min + Refresh 7d (hash SHA-256 em Blob `admin-refresh:{endereco}`, máx 5 paralelos)
+- Guarda dupla em 9 funções admin (Bearer JWT preferido, x-admin-token legado fallback)
+- `docs/migracao-admin-token-jwt.md` documenta cronograma de deprecação
+
+### Item 5 — RBAC Granular
+- `_lib/rbac.mjs`: `getRole(endereco)` → admin | cliente | user (cache 5 min)
+  - admin = ∈ admin-list:admins ∪ COORDENACAO
+  - cliente = blob `cotas:{endereco}` existe OU `renovacao-adesao.status === "ativa"` dentro da validade
+  - user = default
+- `requireRole(papel, minimo)` (hierarquia admin > cliente > user)
+- Aplicado em `comprar-senhas.mjs` e `lance-relampago.mjs` (exige cliente+)
+- `admin-list.mjs` GET aceita `?endereco=` opcional e devolve `{ role, fonte }`
+- `useAdmin.js` expõe `role` adicional
+
+### Build
+`npm run build` — verde, 4.90s, sem warnings novos (apenas o warning pré-existente de chunk size > 500KB).
+
+### Smoke pós-deploy (a executar)
+```bash
+# 1. Headers
+curl -sI https://silly-stardust-ca71bc.netlify.app/ | grep -iE 'strict-transport|cross-origin|permissions-policy|referrer'
+
+# 2. Rate limit
+for i in {1..6}; do
+  curl -s -o /dev/null -w "%{http_code}\n" \
+    -X POST https://silly-stardust-ca71bc.netlify.app/.netlify/functions/comprar-senhas \
+    -H 'Content-Type: application/json' -d '{}'
+done    # 5x 401/400, 6º 429
+
+# 3. IDOR
+curl -i https://silly-stardust-ca71bc.netlify.app/.netlify/functions/wallet?endereco=0xAAA   # 401
+```
+
+---
+
 **Data:** 2026-05-12 (atualizado pós-Onda 7 — fechamento dos 3 parciais)
 **Branch:** `main` @ `2c76660` + Onda 7 (REQ-01, REQ-03, REQ-17) — commit pendente
 **Tipo:** auditoria de leitura inicial + atualizações após cada onda.

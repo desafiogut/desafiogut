@@ -17,6 +17,9 @@ import { getStore } from "@netlify/blobs";
 import {
   jsonResponse, jsonError, validarEndereco, parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { guardAdmin } from "./_lib/admin-auth.mjs";
+import { getRole } from "./_lib/rbac.mjs";
 
 const BLOB_ADMINS = "admin-list";
 const COORDENACAO = "0xDa3a83A24b25aa71e1a9b5A74503fFA93487e84E".toLowerCase();
@@ -46,18 +49,29 @@ async function salvarLista(admins) {
   await store.setJSON("admins", { admins, atualizadoEm: new Date().toISOString() });
 }
 
-async function handleGet() {
+async function handleGet(req) {
   const admins = await carregarLista();
   // Coordenação sempre incluída
   const todos = Array.from(new Set([COORDENACAO, ...admins]));
+  // Opcional: ?endereco=0x... → também devolve o papel RBAC daquele endereço.
+  const url = new URL(req.url);
+  const enderecoQuery = url.searchParams.get("endereco");
+  if (enderecoQuery) {
+    let enderecoLower;
+    try { enderecoLower = validarEndereco(enderecoQuery); }
+    catch (err) {
+      if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
+      throw err;
+    }
+    const { role, fonte } = await getRole(enderecoLower);
+    return jsonResponse({ admins: todos, coordenacao: COORDENACAO, role, fonte, endereco: enderecoLower });
+  }
   return jsonResponse({ admins: todos, coordenacao: COORDENACAO });
 }
 
 async function handlePost(req) {
-  const adminToken = req.headers.get("x-admin-token") || "";
-  const expected   = process.env.ADMIN_TOKEN;
-  if (!expected) return jsonError(503, "admin_token_nao_configurado", "ADMIN_TOKEN ausente no ambiente");
-  if (adminToken !== expected) return jsonError(401, "admin_token_invalido", "x-admin-token inválido ou ausente");
+  const denied = await guardAdmin(req);
+  if (denied) return denied;
 
   let body;
   try {
@@ -92,7 +106,9 @@ async function handlePost(req) {
 }
 
 export default async (req) => {
-  if (req.method === "GET")  return handleGet();
+  const rl = await aplicarRateLimit(req, "admin-list", 10);
+  if (rl) return rl;
+  if (req.method === "GET")  return handleGet(req);
   if (req.method === "POST") return handlePost(req);
   return jsonError(405, "metodo_invalido", "use GET ou POST", { allowed: ["GET", "POST"] });
 };

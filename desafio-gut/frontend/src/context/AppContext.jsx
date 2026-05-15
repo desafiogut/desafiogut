@@ -5,6 +5,7 @@ import {
   getSaldoSenhasOnChain,
   subscribeSaldoSenhas,
   getEdicaoPrazo,
+  getSignerFromProvider,
 } from "../utils/web3.js";
 
 // Persistência do prazoTimestamp (Onda 5 FASE 0): o timer é IMUNE a refresh
@@ -119,6 +120,23 @@ export function AppProvider({ children }) {
   // PIX aprovado = +R$. /comprar-senhas = -R$ +senhas. /lance-relampago = -R$.
   const [saldoRsCentavos, setSaldoRsCentavos] = useState(null);
   const [saldoRsStatus,   setSaldoRsStatus]   = useState("idle");
+
+  // ── User-session JWT (Anti-IDOR — Mega Comando 1 / Item 3) ───────────────
+  // Obtido após login Privy via assinatura EIP-191. TTL 24h. Cache em
+  // sessionStorage para sobreviver a refresh de página dentro da sessão.
+  // Injetado em Authorization: Bearer nos GETs sensíveis (saldo-rs, wallet,
+  // renovacao-adesao, voucher).
+  const [authToken, setAuthToken] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem("gut_auth_user");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.token) return null;
+      if (typeof parsed.expiresAt === "number" && Date.now() >= parsed.expiresAt) return null;
+      return parsed.token;
+    } catch { return null; }
+  });
 
   // Privy auth
   const { ready, authenticated, user, login, logout } = usePrivy();
@@ -255,16 +273,64 @@ export function AppProvider({ children }) {
     };
   }, [address, refetchSaldo]);
 
-  // ── Saldo R$ off-chain: polling 5s ──────────────────────────────────────
-  const refetchSaldoRs = useCallback(async () => {
+  // ── User-session JWT: obter via assinatura EIP-191 após login Privy ─────
+  const obterAuthToken = useCallback(async () => {
+    if (!address || !privyWallet) return null;
+    try {
+      const ts = Date.now();
+      const enderecoLower = address.toLowerCase();
+      const message = `DESAFIOGUT-AUTH:${ts}:${enderecoLower}`;
+      const provider  = await privyWallet.getEthereumProvider();
+      const { signer } = await getSignerFromProvider(provider);
+      const signature = await signer.signMessage(message);
+      const resp = await fetch("/.netlify/functions/auth-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endereco: enderecoLower, signature, message }),
+      });
+      if (!resp.ok) {
+        console.warn("[GUT-DEBUG] auth-user HTTP", resp.status);
+        return null;
+      }
+      const data = await resp.json();
+      if (!data?.token) return null;
+      const expiresAt = Date.now() + (Number(data.ttl) || 86400) * 1000;
+      try { sessionStorage.setItem("gut_auth_user", JSON.stringify({ token: data.token, expiresAt })); } catch {}
+      setAuthToken(data.token);
+      return data.token;
+    } catch (err) {
+      console.warn("[GUT-DEBUG] obterAuthToken falhou", err?.message);
+      return null;
+    }
+  }, [address, privyWallet]);
+
+  useEffect(() => {
     if (!address) {
+      setAuthToken(null);
+      try { sessionStorage.removeItem("gut_auth_user"); } catch {}
+      return;
+    }
+    if (!authToken) obterAuthToken();
+  }, [address, authToken, obterAuthToken]);
+
+  // ── Saldo R$ off-chain: polling 5s (gated em authToken para anti-IDOR) ──
+  const refetchSaldoRs = useCallback(async () => {
+    if (!address || !authToken) {
       setSaldoRsCentavos(null);
       setSaldoRsStatus("idle");
       return;
     }
     setSaldoRsStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
     try {
-      const resp = await fetch(`/.netlify/functions/saldo-rs?endereco=${encodeURIComponent(address)}`);
+      const resp = await fetch(`/.netlify/functions/saldo-rs?endereco=${encodeURIComponent(address)}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (resp.status === 401) {
+        // Token expirado/inválido — limpa e re-obtém.
+        setAuthToken(null);
+        try { sessionStorage.removeItem("gut_auth_user"); } catch {}
+        throw new Error("token expirado");
+      }
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       setSaldoRsCentavos(Number(data?.saldoCentavos ?? 0));
@@ -273,14 +339,14 @@ export function AppProvider({ children }) {
       console.warn("[GUT-DEBUG] refetchSaldoRs falhou", { address, message: err?.message });
       setSaldoRsStatus((prev) => (prev === "ok" ? "stale" : "error"));
     }
-  }, [address]);
+  }, [address, authToken]);
 
   useEffect(() => {
     refetchSaldoRs();
-    if (!address) return;
+    if (!address || !authToken) return;
     const id = setInterval(refetchSaldoRs, 5000);
     return () => clearInterval(id);
-  }, [address, refetchSaldoRs]);
+  }, [address, authToken, refetchSaldoRs]);
 
   // Polling on-chain do prazo do Programado (Onda 5 FASE 0).
   // Contrato é fonte da verdade do REQ-10. Polling a cada 60s; também escuta
@@ -422,6 +488,8 @@ export function AppProvider({ children }) {
     saldoRsCentavos,
     saldoRsStatus,
     refetchSaldoRs,
+    authToken,
+    obterAuthToken,
     address, isConnected, userLabel, ready, authenticated, user,
     vencedor,
     abrirModal,

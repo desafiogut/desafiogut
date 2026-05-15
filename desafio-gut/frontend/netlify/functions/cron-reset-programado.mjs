@@ -23,6 +23,8 @@
 
 import { getStore } from "@netlify/blobs";
 import { jsonResponse, jsonError } from "./_lib/validate.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { guardAdmin } from "./_lib/admin-auth.mjs";
 
 const BLOB_RESULTADO        = "resultado-programado";
 const BLOB_ULTIMO_RESET     = "ultimo-reset-programado";
@@ -150,11 +152,11 @@ async function executar({ edicaoId, timezone, dryRun }) {
 }
 
 export default async (req) => {
-  // Auth: admin token obrigatório (gate dos endpoints de mutação).
-  const adminToken = req.headers.get("x-admin-token") || "";
-  const expected   = process.env.ADMIN_TOKEN;
-  if (!expected) return jsonError(503, "admin_token_nao_configurado", "ADMIN_TOKEN ausente no ambiente");
-  if (adminToken !== expected) return jsonError(401, "admin_token_invalido", "x-admin-token inválido ou ausente");
+  const rl = await aplicarRateLimit(req, "cron-reset", 10);
+  if (rl) return rl;
+  // Auth: admin (Bearer admin-JWT preferido OR x-admin-token legado).
+  const denied = await guardAdmin(req);
+  if (denied) return denied;
 
   const url      = new URL(req.url);
   const edicaoId = url.searchParams.get("edicaoId") || EDICAO_PADRAO;

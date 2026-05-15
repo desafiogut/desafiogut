@@ -20,6 +20,7 @@ import {
 } from "./_lib/validate.mjs";
 import { consultarPagamento, MercadoPagoApiError } from "./_lib/mp-client.mjs";
 import { creditarSaldoRsIdempotente } from "./_lib/saldoRs.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 
 const BLOB_STORE_MP  = "mp-aprovados";
 
@@ -84,6 +85,9 @@ export default async (req) => {
   if (req.method !== "POST") {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }
+
+  const rl = await aplicarRateLimit(req, "confirmar-pagamento", 5);
+  if (rl) return rl;
 
   // ── Parse + valida body ────────────────────────────────────────────────────
   let body;

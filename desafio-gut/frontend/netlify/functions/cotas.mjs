@@ -22,6 +22,8 @@ import { getStore } from "@netlify/blobs";
 import {
   jsonResponse, jsonError, validarEndereco, parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { guardAdmin } from "./_lib/admin-auth.mjs";
 
 const BLOB_COTAS  = "cotas";
 const BLOB_INDICE = "cotas-indice";
@@ -193,10 +195,8 @@ async function handleGet(req) {
 }
 
 async function handlePost(req) {
-  const adminToken = req.headers.get("x-admin-token") || "";
-  const expected   = process.env.ADMIN_TOKEN;
-  if (!expected) return jsonError(503, "admin_token_nao_configurado", "ADMIN_TOKEN ausente no ambiente");
-  if (adminToken !== expected) return jsonError(401, "admin_token_invalido", "x-admin-token inválido ou ausente");
+  const denied = await guardAdmin(req);
+  if (denied) return denied;
 
   let body;
   try {
@@ -269,10 +269,8 @@ async function handlePost(req) {
 }
 
 async function handleDelete(req) {
-  const adminToken = req.headers.get("x-admin-token") || "";
-  const expected   = process.env.ADMIN_TOKEN;
-  if (!expected) return jsonError(503, "admin_token_nao_configurado", "ADMIN_TOKEN ausente no ambiente");
-  if (adminToken !== expected) return jsonError(401, "admin_token_invalido", "x-admin-token inválido ou ausente");
+  const denied = await guardAdmin(req);
+  if (denied) return denied;
 
   const url = new URL(req.url);
   let endereco;
@@ -291,8 +289,20 @@ async function handleDelete(req) {
 }
 
 export default async (req) => {
-  if (req.method === "GET")    return handleGet(req);
-  if (req.method === "POST")   return handlePost(req);
-  if (req.method === "DELETE") return handleDelete(req);
+  if (req.method === "GET") {
+    const rl = await aplicarRateLimit(req, "cotas-get", 30);
+    if (rl) return rl;
+    return handleGet(req);
+  }
+  if (req.method === "POST") {
+    const rl = await aplicarRateLimit(req, "cotas-post", 10);
+    if (rl) return rl;
+    return handlePost(req);
+  }
+  if (req.method === "DELETE") {
+    const rl = await aplicarRateLimit(req, "cotas-delete", 10);
+    if (rl) return rl;
+    return handleDelete(req);
+  }
   return jsonError(405, "metodo_invalido", "use GET, POST ou DELETE", { allowed: ["GET", "POST", "DELETE"] });
 };

@@ -58,3 +58,47 @@ export async function verificarLanceAuth(token) {
   }
   return payload;
 }
+
+// User session JWT — usado por endpoints GET sensíveis (wallet, saldo-rs,
+// renovacao-adesao, voucher) para protegê-los contra IDOR. TTL 24h por padrão.
+export async function assinarUserSession(endereco, ttlSec = 86400) {
+  if (!KEY) throw new Error("JWT_SECRET não configurado");
+  return await new SignJWT({ endereco, tipo: "user-session" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${ttlSec}s`)
+    .sign(KEY);
+}
+
+export async function verificarUserSession(token) {
+  if (!KEY) throw new Error("JWT_SECRET não configurado");
+  const { payload } = await jwtVerify(token, KEY, { algorithms: ["HS256"] });
+  if (payload.tipo !== "user-session" && payload.tipo !== "admin-access") {
+    // admin-access também desbloqueia rotas user-session (admin sees all).
+    const err = new Error("token tipo inválido — esperado user-session ou admin-access");
+    err.code = "ERR_JWT_CLAIM_VALIDATION_FAILED";
+    throw err;
+  }
+  return payload;
+}
+
+// Admin access JWT — emitido por /auth-admin, TTL 15 min por padrão.
+export async function assinarAdminAccess(endereco, ttlSec = 900) {
+  if (!KEY) throw new Error("JWT_SECRET não configurado");
+  return await new SignJWT({ endereco, tipo: "admin-access" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${ttlSec}s`)
+    .sign(KEY);
+}
+
+export async function verificarAdminAccess(token) {
+  if (!KEY) throw new Error("JWT_SECRET não configurado");
+  const { payload } = await jwtVerify(token, KEY, { algorithms: ["HS256"] });
+  if (payload.tipo !== "admin-access") {
+    const err = new Error("token tipo inválido — esperado admin-access");
+    err.code = "ERR_JWT_CLAIM_VALIDATION_FAILED";
+    throw err;
+  }
+  return payload;
+}

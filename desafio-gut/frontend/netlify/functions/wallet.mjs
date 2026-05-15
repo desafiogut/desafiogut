@@ -21,8 +21,12 @@ import { getStore } from "@netlify/blobs";
 import { randomUUID } from "node:crypto";
 import {
   jsonResponse, jsonError, validarEndereco,
-  parseJsonBody, ValidationError,
+  parseJsonBody, ValidationError, validarOwnerOuAdmin,
 } from "./_lib/validate.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { verificarUserSession } from "./_lib/jwt.mjs";
+import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
+import { guardAdmin } from "./_lib/admin-auth.mjs";
 
 const BLOB_WALLET   = "wallet";
 const BLOB_IDEM     = "wallet-idem";
@@ -61,15 +65,29 @@ async function handleGet(req) {
     if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
     throw err;
   }
+
+  // Anti-IDOR: exige JWT user-session OU admin-access. Owner do recurso
+  // (jwtPayload.endereco === query.endereco) ou admin podem ler.
+  const authHeader = req.headers.get("authorization") || "";
+  const authToken  = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!authToken) return jsonError(401, "token_ausente", "Authorization: Bearer <user-session> obrigatório — obtenha via POST /auth-user");
+  let jwtPayload;
+  try { jwtPayload = await verificarUserSession(authToken); }
+  catch (err) {
+    const code = err?.code === "ERR_JWT_EXPIRED" ? "token_expirado" : "token_invalido";
+    return jsonError(401, code, "token de sessão inválido ou expirado");
+  }
+  const admins = await getAdminAddresses();
+  const guard  = validarOwnerOuAdmin(jwtPayload, endereco, admins);
+  if (!guard.ok) return jsonError(403, "acesso_negado", "token não pertence ao endereço solicitado e não é admin");
+
   const wallet = await getWallet(endereco);
-  return jsonResponse({ endereco, ...wallet });
+  return jsonResponse({ endereco, papel: guard.papel, ...wallet });
 }
 
 async function handlePost(req) {
-  const adminToken = req.headers.get("x-admin-token") || "";
-  const expected   = process.env.ADMIN_TOKEN;
-  if (!expected) return jsonError(503, "admin_token_nao_configurado", "ADMIN_TOKEN ausente no ambiente");
-  if (adminToken !== expected) return jsonError(401, "admin_token_invalido", "x-admin-token inválido ou ausente");
+  const denied = await guardAdmin(req);
+  if (denied) return denied;
 
   let body;
   try {
@@ -175,7 +193,15 @@ async function handlePost(req) {
 }
 
 export default async (req) => {
-  if (req.method === "GET")  return handleGet(req);
-  if (req.method === "POST") return handlePost(req);
+  if (req.method === "GET") {
+    const rl = await aplicarRateLimit(req, "wallet-get", 30);
+    if (rl) return rl;
+    return handleGet(req);
+  }
+  if (req.method === "POST") {
+    const rl = await aplicarRateLimit(req, "wallet-post", 5);
+    if (rl) return rl;
+    return handlePost(req);
+  }
   return jsonError(405, "metodo_invalido", "use GET ou POST", { allowed: ["GET", "POST"] });
 };

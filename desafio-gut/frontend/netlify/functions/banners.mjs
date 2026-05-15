@@ -27,6 +27,8 @@ import {
   parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
 import { verificarLanceAuth } from "./_lib/jwt.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { autenticarAdmin } from "./_lib/admin-auth.mjs";
 
 const BLOB_BANNER = "banner";
 const BLOB_WALLET = "wallet";
@@ -187,17 +189,18 @@ async function debitarWallet(cliente, valorCentavos, motivo) {
 }
 
 async function handlePost(req) {
-  // Modo de autenticação: Admin (x-admin-token) OU Cliente (JWT lance-auth).
-  const adminToken = req.headers.get("x-admin-token") || "";
-  const adminEnv   = process.env.ADMIN_TOKEN;
-  const isAdmin    = !!adminEnv && adminToken === adminEnv;
+  // Modo de autenticação tri-state:
+  //   1) Admin (Bearer admin-JWT OR x-admin-token legado, via autenticarAdmin).
+  //   2) Cliente (Authorization: Bearer <lance-auth JWT>).
+  const adminCheck = await autenticarAdmin(req);
+  const isAdmin    = !!adminCheck?.ok;
 
   let jwtPayload = null;
   if (!isAdmin) {
     const authHeader = req.headers.get("authorization") || "";
     const authToken  = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!authToken) {
-      return jsonError(401, "auth_obrigatorio", "envie x-admin-token (admin) ou Authorization: Bearer <token> (cliente)");
+      return jsonError(401, "auth_obrigatorio", "envie admin (Bearer admin-JWT ou x-admin-token) OU Authorization: Bearer <lance-auth>");
     }
     try { jwtPayload = await verificarLanceAuth(authToken); }
     catch (err) {
@@ -280,7 +283,15 @@ async function handlePost(req) {
 }
 
 export default async (req) => {
-  if (req.method === "GET")  return handleGet(req);
-  if (req.method === "POST") return handlePost(req);
+  if (req.method === "GET") {
+    const rl = await aplicarRateLimit(req, "banners-get", 30);
+    if (rl) return rl;
+    return handleGet(req);
+  }
+  if (req.method === "POST") {
+    const rl = await aplicarRateLimit(req, "banners-post", 5);
+    if (rl) return rl;
+    return handlePost(req);
+  }
   return jsonError(405, "metodo_invalido", "use GET ou POST", { allowed: ["GET", "POST"] });
 };

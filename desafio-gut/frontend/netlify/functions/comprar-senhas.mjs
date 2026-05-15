@@ -22,6 +22,8 @@ import {
   parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
 import { verificarLanceAuth } from "./_lib/jwt.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { getRole, requireRole } from "./_lib/rbac.mjs";
 import {
   debitarSaldoRs, reembolsarSaldoRs, lerSaldoRsCentavos,
 } from "./_lib/saldoRs.mjs";
@@ -61,6 +63,10 @@ export default async (req) => {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }
 
+  // ── 0. Rate limit por IP (5/min) ───────────────────────────────────────────
+  const rl = await aplicarRateLimit(req, "comprar-senhas", 5);
+  if (rl) return rl;
+
   // ── 1. Auth: verificar JWT lance-auth ─────────────────────────────────────
   const authHeader = req.headers.get("authorization") || "";
   const authToken  = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
@@ -98,6 +104,14 @@ export default async (req) => {
   // ── 4. JWT endereco deve corresponder ao body ──────────────────────────────
   if (jwtPayload.endereco !== endereco) {
     return jsonError(403, "endereco_nao_corresponde", "token não pertence ao endereço informado");
+  }
+
+  // ── 4.5. RBAC: somente cliente+ (cota ativa ou admin) pode comprar fichas ─
+  const { role } = await getRole(endereco);
+  if (!requireRole(role, "cliente")) {
+    return jsonError(403, "papel_insuficiente",
+      "compra de fichas requer cota ativa ou adesão ativa — papel atual: " + role,
+      { role });
   }
 
   const valorBruto    = qtd * VALOR_POR_SENHA_CENTAVOS;

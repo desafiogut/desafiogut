@@ -24,6 +24,8 @@ import { getStore } from "@netlify/blobs";
 import {
   jsonResponse, jsonError, validarEndereco, parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { guardAdmin } from "./_lib/admin-auth.mjs";
 
 const BLOB_APROVACAO = "admin-aprovacao";
 const STATUS_VALIDOS = new Set(["pendente", "aprovado", "rejeitado"]);
@@ -126,10 +128,8 @@ async function acaoInscrever(body) {
 }
 
 async function acaoTransicao(req, body, novoStatus) {
-  const adminToken = req.headers.get("x-admin-token") || "";
-  const expected   = process.env.ADMIN_TOKEN;
-  if (!expected) return jsonError(503, "admin_token_nao_configurado", "ADMIN_TOKEN ausente no ambiente");
-  if (adminToken !== expected) return jsonError(401, "admin_token_invalido", "x-admin-token inválido ou ausente");
+  const denied = await guardAdmin(req);
+  if (denied) return denied;
 
   let endereco;
   try { endereco = validarEndereco(body.cliente_id); }
@@ -184,6 +184,8 @@ async function handlePost(req) {
 }
 
 export default async (req) => {
+  const rl = await aplicarRateLimit(req, "admin-aprovacao", 10);
+  if (rl) return rl;
   if (req.method === "GET")  return handleGet(req);
   if (req.method === "POST") return handlePost(req);
   return jsonError(405, "metodo_invalido", "use GET ou POST", { allowed: ["GET", "POST"] });

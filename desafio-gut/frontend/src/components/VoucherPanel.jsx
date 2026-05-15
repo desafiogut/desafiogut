@@ -13,6 +13,7 @@
 // mostra o estado.
 
 import { useEffect, useState, useCallback } from "react";
+import { useAppContext } from "../context/AppContext.jsx";
 
 const COR = {
   diamond:   "#00d4ff",
@@ -32,25 +33,28 @@ function formatData(iso) {
 }
 
 export default function VoucherPanel({ endereco, isMobile = false }) {
+  const { authToken } = useAppContext();
   const [emitidos, setEmitidos] = useState({ status: "idle", vouchers: [], erro: null });
   const [codigoBusca, setCodigoBusca] = useState("");
   const [consulta, setConsulta] = useState({ status: "idle", resultado: null, erro: null });
 
   const carregarEmitidos = useCallback(async () => {
-    if (!endereco) {
+    if (!endereco || !authToken) {
       setEmitidos({ status: "idle", vouchers: [], erro: null });
       return;
     }
     setEmitidos((s) => ({ ...s, status: s.vouchers.length ? "stale" : "loading", erro: null }));
     try {
-      const resp = await fetch(`/.netlify/functions/voucher?endereco_emissor=${encodeURIComponent(endereco)}`);
+      const resp = await fetch(`/.netlify/functions/voucher?endereco_emissor=${encodeURIComponent(endereco)}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       setEmitidos({ status: "ok", vouchers: data.vouchers || [], erro: null });
     } catch (err) {
       setEmitidos((s) => ({ status: "error", vouchers: s.vouchers, erro: err?.message || "falha" }));
     }
-  }, [endereco]);
+  }, [endereco, authToken]);
 
   useEffect(() => { carregarEmitidos(); }, [carregarEmitidos]);
 

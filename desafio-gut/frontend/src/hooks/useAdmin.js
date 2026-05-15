@@ -37,36 +37,37 @@ export function useAdmin(endereco) {
   const [estado, setEstado] = useState(() => {
     const c = lerCache();
     if (c && c.endereco === (endereco || "").toLowerCase()) {
-      return { isAdmin: !!c.isAdmin, loading: false, error: null, admins: c.admins || [], coordenacao: c.coordenacao || null };
+      return { isAdmin: !!c.isAdmin, role: c.role || (c.isAdmin ? "admin" : "user"), loading: false, error: null, admins: c.admins || [], coordenacao: c.coordenacao || null };
     }
-    return { isAdmin: false, loading: !!endereco, error: null, admins: [], coordenacao: null };
+    return { isAdmin: false, role: "user", loading: !!endereco, error: null, admins: [], coordenacao: null };
   });
 
   const carregar = async (force = false) => {
     if (!endereco) {
-      setEstado({ isAdmin: false, loading: false, error: null, admins: [], coordenacao: null });
+      setEstado({ isAdmin: false, role: "user", loading: false, error: null, admins: [], coordenacao: null });
       return;
     }
     const enderecoLower = endereco.toLowerCase();
     if (!force) {
       const c = lerCache();
       if (c && c.endereco === enderecoLower) {
-        setEstado({ isAdmin: !!c.isAdmin, loading: false, error: null, admins: c.admins || [], coordenacao: c.coordenacao || null });
+        setEstado({ isAdmin: !!c.isAdmin, role: c.role || (c.isAdmin ? "admin" : "user"), loading: false, error: null, admins: c.admins || [], coordenacao: c.coordenacao || null });
         return;
       }
     }
     setEstado((s) => ({ ...s, loading: true, error: null }));
     try {
-      const resp = await fetch("/.netlify/functions/admin-list");
+      const resp = await fetch(`/.netlify/functions/admin-list?endereco=${encodeURIComponent(enderecoLower)}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data    = await resp.json();
       const admins  = Array.isArray(data?.admins) ? data.admins.map((a) => String(a).toLowerCase()) : [];
       const coord   = (data?.coordenacao || "").toLowerCase() || null;
       const isAdmin = admins.includes(enderecoLower);
-      gravarCache({ endereco: enderecoLower, isAdmin, admins, coordenacao: coord });
-      setEstado({ isAdmin, loading: false, error: null, admins, coordenacao: coord });
+      const role    = data?.role || (isAdmin ? "admin" : "user");
+      gravarCache({ endereco: enderecoLower, isAdmin, role, admins, coordenacao: coord });
+      setEstado({ isAdmin, role, loading: false, error: null, admins, coordenacao: coord });
     } catch (err) {
-      setEstado({ isAdmin: false, loading: false, error: err?.message || "falha", admins: [], coordenacao: null });
+      setEstado({ isAdmin: false, role: "user", loading: false, error: err?.message || "falha", admins: [], coordenacao: null });
     }
   };
 

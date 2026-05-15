@@ -16,6 +16,8 @@ import {
 } from "./_lib/validate.mjs";
 import { debitarSaldoRs } from "./_lib/saldoRs.mjs";
 import { verificarLanceAuth } from "./_lib/jwt.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { getRole, requireRole } from "./_lib/rbac.mjs";
 
 const LANCE_MIN_CENTAVOS = 1;
 const LANCE_MAX_CENTAVOS = 999999;
@@ -44,6 +46,10 @@ export default async (req) => {
   if (req.method !== "POST") {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }
+
+  // ── 0. Rate limit por IP (5/min) ───────────────────────────────────────────
+  const rl = await aplicarRateLimit(req, "lance-relampago", 5);
+  if (rl) return rl;
 
   // ── 1. Auth: verificar JWT lance-auth ─────────────────────────────────────
   const authHeader = req.headers.get("authorization") || "";
@@ -82,6 +88,14 @@ export default async (req) => {
   // ── 4. JWT endereco deve corresponder ao body ──────────────────────────────
   if (jwtPayload.endereco !== endereco) {
     return jsonError(403, "endereco_nao_corresponde", "token não pertence ao endereço informado");
+  }
+
+  // ── 4.5. RBAC: lance requer cliente+ (cota ativa, adesão ativa OU admin) ──
+  const { role } = await getRole(endereco);
+  if (!requireRole(role, "cliente")) {
+    return jsonError(403, "papel_insuficiente",
+      "lance requer cota ativa ou adesão ativa — papel atual: " + role,
+      { role });
   }
 
   const edicaoId       = String(body.edicaoId || EDICAO_PADRAO);
