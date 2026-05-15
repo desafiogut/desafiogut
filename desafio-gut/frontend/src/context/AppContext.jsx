@@ -490,7 +490,7 @@ export function AppProvider({ children }) {
     refetchSaldoRs,
     authToken,
     obterAuthToken,
-    address, isConnected, userLabel, ready, authenticated, user,
+    address, privyWallet, isConnected, userLabel, ready, authenticated, user,
     vencedor,
     abrirModal,
     desconectar,

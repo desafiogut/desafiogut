@@ -1,5 +1,26 @@
 # Validação Final — Estado vs Especificação Refatorada
 
+## Ajuste Pós-MC1 — COEP credentialless (2026-05-15, mesmo dia)
+
+`netlify.toml` linha 49 trocado: `Cross-Origin-Embedder-Policy: require-corp` → `credentialless`.
+
+**Motivo**: `require-corp` exige que TODO recurso cross-origin envie `CORP` ou seja `credentialless`. Privy abre popups/iframes OAuth (Google/Apple) que tipicamente NÃO enviam esses headers, o que quebra o fluxo de login real-world. `credentialless` mantém o isolamento Spectre/XS-Leaks exigido por OWASP ASVS 5.0 §V14 mas permite recursos cross-origin sem credenciais (cookies/auth) sem exigir CORP — adequado para popups OAuth de terceiros.
+
+**Trade-off**: aceito. Não é regressão de segurança, é ajuste de UX. As outras 5 headers (HSTS, COOP, CORP, Permissions-Policy, Referrer-Policy + CSP completa) permanecem intactas.
+
+## Ajuste Pós-MC1 — AdminPanel migra para JWT Admin (2026-05-15)
+
+`src/pages/AdminPanel.jsx` migrado de `x-admin-token` (sessionStorage eterno) para fluxo JWT:
+- `accessToken` em `useRef` (memória apenas, 15min TTL)
+- `refreshToken` em `sessionStorage.gut_admin_refresh` (7d TTL)
+- Login: 1× Privy signMessage `DESAFIOGUT-ADMIN:<ts>:<addr>` + cola `ADMIN_TOKEN` legado UMA vez → POST `/auth-admin {acao:"login"}`
+- Auto-refresh: `setInterval` 12min POST `/auth-admin {acao:"refresh"}`
+- Fetches dos 3 tabs (Aprovações/Cotas/Admins): `Authorization: Bearer <access>`
+
+Backend permanece dual-mode (legado `x-admin-token` ainda aceito por consumidores externos como cron). Cronograma de remoção do legado em `desafio-gut/docs/migracao-admin-token-jwt.md`.
+
+---
+
 ## Mega Comando 1 — Blindagem APIs + Admin + Headers (2026-05-15)
 
 Evidências brutas dos 5 itens (grep + npm run build).

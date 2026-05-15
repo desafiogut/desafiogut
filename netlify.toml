@@ -46,7 +46,7 @@
     Referrer-Policy                 = "strict-origin-when-cross-origin"
     Strict-Transport-Security       = "max-age=63072000; includeSubDomains; preload"
     Cross-Origin-Opener-Policy      = "same-origin"
-    Cross-Origin-Embedder-Policy    = "require-corp"
+    Cross-Origin-Embedder-Policy    = "credentialless"
     Cross-Origin-Resource-Policy    = "same-origin"
     Permissions-Policy              = "camera=(), microphone=(), geolocation=()"
     # NOTE: CSP frame-ancestors NÃO controla o que NÓS framamos — controla quem
