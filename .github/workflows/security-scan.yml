@@ -113,20 +113,10 @@ jobs:
       - name: Install Slither
         run: pip install slither-analyzer
 
-      - name: Install Hardhat deps
+      # Slither com `compile_force_framework: solc` no slither.config.json
+      # bypassa o auto-detect (que tropeçaria em foundry.toml e tentaria
+      # invocar `forge`, não instalado no runner). Analisa contracts/Leilao.sol
+      # via solc nativo, respeitando fail_on: high.
+      - name: Run Slither
         working-directory: desafio-gut
-        run: npm ci
-
-      # Slither tenta auto-detectar o framework. Hardhat v3 (ESM) pode confundir
-      # a detecção; se falhar, o passo de fallback abaixo analisa o arquivo
-      # solidity isolado. Ambos respeitam slither.config.json (fail_on: high).
-      - name: Run Slither (framework auto-detect)
-        id: slither_auto
-        working-directory: desafio-gut
-        continue-on-error: true
-        run: slither . --config-file slither.config.json
-
-      - name: Run Slither (fallback solc direto)
-        if: steps.slither_auto.outcome == 'failure'
-        working-directory: desafio-gut
-        run: slither contracts/Leilao.sol --solc-remaps "" --config-file slither.config.json
+        run: slither contracts/Leilao.sol --config-file slither.config.json

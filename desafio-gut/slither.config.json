@@ -1,6 +1,7 @@
 {
   "detectors_to_exclude": "",
   "filter_paths": "node_modules,tests/foundry,tests/fuzzing,lib",
+  "compile_force_framework": "solc",
   "exclude_dependencies": true,
   "exclude_low": false,
   "exclude_medium": false,
