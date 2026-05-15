@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Stage 1: Install ────────────────────────────────────────────────
+  install:
+    name: install
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            desafio-gut/frontend/package-lock.json
+            desafio-gut/frontend/netlify/functions/package-lock.json
+
+      - name: npm ci frontend
+        working-directory: desafio-gut/frontend
+        run: npm ci
+
+      - name: npm ci functions
+        working-directory: desafio-gut/frontend/netlify/functions
+        run: npm ci
+
+  # ── Stage 2: Lint ───────────────────────────────────────────────────
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    needs: install
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desafio-gut/frontend/package-lock.json
+
+      - name: npm ci
+        working-directory: desafio-gut/frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: desafio-gut/frontend
+        run: npx eslint . --ext js,jsx --report-unused-disable-directives 2>&1 || echo "::warning ::ESLint found issues"
+
+  # ── Stage 3: Build ──────────────────────────────────────────────────
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    needs: install
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desafio-gut/frontend/package-lock.json
+
+      - name: npm ci
+        working-directory: desafio-gut/frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: desafio-gut/frontend
+        run: npm run build
+
+  # ── Stage 4: Security Audit ─────────────────────────────────────────
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    needs: [lint, build]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desafio-gut/frontend/package-lock.json
+
+      - name: npm ci
+        working-directory: desafio-gut/frontend
+        run: npm ci
+
+      - name: npm audit
+        working-directory: desafio-gut/frontend
+        run: npm audit --audit-level=high

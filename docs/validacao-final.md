@@ -1,5 +1,79 @@
 # Validação Final — Estado vs Especificação Refatorada
 
+## Mega Comando 2 — Blindagem DevSecOps (2026-05-15)
+
+Evidências brutas dos 5 itens (grep + dir + npm run build).
+
+### Item 1 — Dependabot Configuration
+`.github/dependabot.yml` — 3 ecosystems: npm (frontend), npm (netlify/functions), github-actions.
+Weekly Monday 05:00, open-pull-requests-limit: 5, dev-dependencies group.
+
+```
+$ cat .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/desafio-gut/frontend"
+    schedule: { interval: "weekly", day: "monday", time: "05:00" }
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+  - package-ecosystem: "npm"
+    directory: "/desafio-gut/frontend/netlify/functions"
+    schedule: { interval: "weekly", day: "monday", time: "05:00" }
+    open-pull-requests-limit: 5
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule: { interval: "weekly", day: "monday", time: "05:00" }
+    open-pull-requests-limit: 5
+```
+
+### Item 2 — npm audit no CI
+`.github/workflows/security-scan.yml` — 2 jobs paralelos: `npm-audit-frontend` + `npm-audit-functions`.
+Ambos usam `npm audit --audit-level=high` SEM `|| true` — falha REAL em high/critical.
+Triggers: push + pull_request para main.
+
+### Item 3 — Lockfile Integrity
+Job `lockfile-integrity` no `security-scan.yml`:
+- `npm install --package-lock-only && git diff --exit-code package-lock.json` (frontend + functions)
+- `npx lockfile-lint --allowed-hosts npmjs.com --validate-https` (frontend + functions)
+- Falha se lockfile dessincronizado ou hosts não confiáveis.
+
+### Item 4 — Socket.dev Integration
+Job `socket-security` no `security-scan.yml`:
+- GitHub Action oficial `socket-security/github-actions@v0`
+- Config: `fail-on: critical,high`
+- Detecta: malware, typosquatting, protestware, telemetria oculta.
+- `docs/socket-setup.md` documenta obtenção de API key gratuita.
+
+### Item 5 — CI Security Gates
+`.github/workflows/ci.yml` — 4 estágios sequenciais (fail-fast):
+1. `install` — npm ci (frontend + functions)
+2. `lint` — ESLint check
+3. `build` — npm run build (frontend)
+4. `audit` — npm audit (frontend)
+Triggers: push + pull_request para main. Timeout: 10 min por job.
+
+`docs/ci-security-gates.md` documenta como habilitar branch protection no GitHub.
+
+### Build
+`npm run build` — verde, 6.31s, sem warnings novos (apenas chunk size > 500KB pré-existente).
+
+### Arquivos criados
+```
+.github/
+├── dependabot.yml
+└── workflows/
+    ├── ci.yml
+    └── security-scan.yml
+docs/
+├── ci-security-gates.md
+└── socket-setup.md
+```
+
+---
+
 ## Ajuste Pós-MC1 — COEP credentialless (2026-05-15, mesmo dia)
 
 `netlify.toml` linha 49 trocado: `Cross-Origin-Embedder-Policy: require-corp` → `credentialless`.

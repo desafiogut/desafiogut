@@ -1,0 +1,94 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Job 1: npm audit no frontend ────────────────────────────────────
+  npm-audit-frontend:
+    name: npm audit (frontend)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desafio-gut/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desafio-gut/frontend/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
+
+  # ── Job 2: npm audit nas Netlify Functions ──────────────────────────
+  npm-audit-functions:
+    name: npm audit (functions)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desafio-gut/frontend/netlify/functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desafio-gut/frontend/netlify/functions/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
+
+  # ── Job 3: Lockfile integrity ───────────────────────────────────────
+  lockfile-integrity:
+    name: Lockfile integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # Frontend lockfile sync
+      - name: Verify frontend lockfile sync
+        working-directory: desafio-gut/frontend
+        run: |
+          npm install --package-lock-only
+          git diff --exit-code package-lock.json
+
+      - name: lockfile-lint frontend
+        working-directory: desafio-gut/frontend
+        run: npx lockfile-lint --path package-lock.json --allowed-hosts npmjs.com --validate-https
+
+      # Functions lockfile sync
+      - name: Verify functions lockfile sync
+        working-directory: desafio-gut/frontend/netlify/functions
+        run: |
+          npm install --package-lock-only
+          git diff --exit-code package-lock.json
+
+      - name: lockfile-lint functions
+        working-directory: desafio-gut/frontend/netlify/functions
+        run: npx lockfile-lint --path package-lock.json --allowed-hosts npmjs.com --validate-https
+
+  # ── Job 4: Socket.dev security ──────────────────────────────────────
+  socket-security:
+    name: Socket.dev scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install frontend deps
+        working-directory: desafio-gut/frontend
+        run: npm install
+
+      - name: Socket.dev scan frontend
+        uses: socket-security/github-actions@v0
+        with:
+          fail-on: critical,high
+          path: desafio-gut/frontend
