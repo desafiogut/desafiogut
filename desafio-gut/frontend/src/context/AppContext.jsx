@@ -7,6 +7,13 @@ import {
   getEdicaoPrazo,
   getSignerFromProvider,
 } from "../utils/web3.js";
+import {
+  checkJwtFailures,
+  checkRateLimit,
+  checkBurstCompras,
+  checkGeoAnomaly,
+} from "../lib/sentry-alerts.js";
+import { getVisitorId, getCachedVisitorId } from "../lib/fingerprint.js";
 
 // Persistência do prazoTimestamp (Onda 5 FASE 0): o timer é IMUNE a refresh
 // porque cada tipo de leilão guarda seu próprio prazo no localStorage. Cálculo
@@ -120,6 +127,16 @@ export function AppProvider({ children }) {
   // PIX aprovado = +R$. /comprar-senhas = -R$ +senhas. /lance-relampago = -R$.
   const [saldoRsCentavos, setSaldoRsCentavos] = useState(null);
   const [saldoRsStatus,   setSaldoRsStatus]   = useState("idle");
+
+  // ── FingerprintJS visitorId (anti-Sybil — Mega Comando 3 / Item 3) ──────
+  // Carregado uma vez no mount, cacheado em localStorage. Enviado em
+  // X-Visitor-ID nos fetches sensíveis.
+  const [visitorId, setVisitorId] = useState(() => getCachedVisitorId());
+  useEffect(() => {
+    let cancelado = false;
+    getVisitorId().then((id) => { if (!cancelado && id) setVisitorId(id); });
+    return () => { cancelado = true; };
+  }, []);
 
   // ── User-session JWT (Anti-IDOR — Mega Comando 1 / Item 3) ───────────────
   // Obtido após login Privy via assinatura EIP-191. TTL 24h. Cache em
@@ -285,7 +302,10 @@ export function AppProvider({ children }) {
       const signature = await signer.signMessage(message);
       const resp = await fetch("/.netlify/functions/auth-user", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
+        },
         body: JSON.stringify({ endereco: enderecoLower, signature, message }),
       });
       if (!resp.ok) {
@@ -302,7 +322,7 @@ export function AppProvider({ children }) {
       console.warn("[GUT-DEBUG] obterAuthToken falhou", err?.message);
       return null;
     }
-  }, [address, privyWallet]);
+  }, [address, privyWallet, visitorId]);
 
   useEffect(() => {
     if (!address) {
@@ -323,13 +343,23 @@ export function AppProvider({ children }) {
     setSaldoRsStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
     try {
       const resp = await fetch(`/.netlify/functions/saldo-rs?endereco=${encodeURIComponent(address)}`, {
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
+        },
       });
       if (resp.status === 401) {
         // Token expirado/inválido — limpa e re-obtém.
+        checkJwtFailures("saldo-rs");
         setAuthToken(null);
         try { sessionStorage.removeItem("gut_auth_user"); } catch {}
         throw new Error("token expirado");
+      }
+      if (resp.status === 429) {
+        // Servidor pode anexar X-RateLimit-Limit; usamos como count se vier.
+        const count = Number(resp.headers.get("x-ratelimit-limit")) || NaN;
+        checkRateLimit("saldo-rs", count, null);
+        throw new Error("HTTP 429 rate limited");
       }
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
@@ -339,7 +369,7 @@ export function AppProvider({ children }) {
       console.warn("[GUT-DEBUG] refetchSaldoRs falhou", { address, message: err?.message });
       setSaldoRsStatus((prev) => (prev === "ok" ? "stale" : "error"));
     }
-  }, [address, authToken]);
+  }, [address, authToken, visitorId]);
 
   useEffect(() => {
     refetchSaldoRs();
@@ -440,6 +470,11 @@ export function AppProvider({ children }) {
   }
 
   function handleLanceSucesso({ address: addr, valorCentavos, txHash, nomeExibicao }) {
+    // Sentry security alert: detecta burst de lances por endereço (>10/min)
+    // e checa anomalia geográfica (3+ timezones em 5 min). Captura passiva,
+    // não bloqueia o fluxo.
+    checkBurstCompras(addr);
+    checkGeoAnomaly();
     const novoLance = {
       endereco: addr, valor: valorCentavos, txHash,
       nomeExibicao: nomeExibicao || null,

@@ -11,8 +11,14 @@
 // do Blobs não deve derrubar tráfego legítimo.
 
 import { getStore } from "@netlify/blobs";
+import { captureSecurityAlert } from "./sentry-server.mjs";
 
 const STORE_NAME = "rate-limit";
+
+// Limiar para acionar o alerta de Sentry. NÃO é o mesmo que `limite` —
+// `limite` é por endpoint/IP/min e bloqueia HTTP 429; ALERTA_THRESHOLD é
+// um piso global a partir do qual a tentativa vira sinal de incidente.
+const ALERTA_THRESHOLD = 50;
 
 function extrairIp(req) {
   const nfHeader = req.headers.get("x-nf-client-connection-ip");
@@ -62,6 +68,16 @@ export async function aplicarRateLimit(req, endpoint, limite) {
   const retryAfterSeg  = Math.max(1, proximaJanela - epochAgoraSeg);
 
   if (atual >= limite) {
+    // Alerta Sentry: quem está sendo bloqueado pelo rate-limit é informação
+    // de segurança. Acima de ALERTA_THRESHOLD vira sinal de incidente real
+    // (caso comum: bot legítimo passa do limite por endpoint pesado e a
+    // mensagem de 429 já basta).
+    if (atual >= ALERTA_THRESHOLD) {
+      // fire-and-forget: não bloqueia a resposta 429 ao caller.
+      captureSecurityAlert("rate_limit", {
+        endpoint, ip, count: atual, limite, retryAfterSeg,
+      }).catch(() => {});
+    }
     return new Response(
       JSON.stringify({
         error: {

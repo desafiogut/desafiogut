@@ -18,6 +18,9 @@ const ABI = [
   "function saldoSenhas(address) public view returns (uint256)",
   "function coordenacao() public view returns (address)",
   "event SenhasCreditadas(address indexed usuario, uint256 quantidade)",
+  // Evento emitido por darLance(idEdicao, valorEmCentavos) — usado pelo
+  // monitor-onchain.mjs para detectar padrões anômalos (Mega Comando 3 / Item 4).
+  "event LanceDado(string idEdicao, address indexed lancador, uint256 valorEmCentavos, bool repetido, uint256 timestamp)",
 ];
 
 export const CONTRATO_ADDRESS =
@@ -91,4 +94,37 @@ export async function creditarSenhas(endereco, qtd) {
 export function getCoordenacaoAddress() {
   const { wallet } = getInstance();
   return wallet.address;
+}
+
+/**
+ * Lê eventos LanceDado do contrato em um intervalo de blocos.
+ * Usa o provider read-only — não exige COORDENACAO_PRIVATE_KEY.
+ *
+ * @param {number|"latest"} fromBlock
+ * @param {number|"latest"} toBlock
+ * @returns {Promise<Array<{lancador: string, valor: number, repetido: boolean, idEdicao: string, blockNumber: number, txHash: string, timestamp: number}>>}
+ */
+export async function getLanceDadoEvents(fromBlock, toBlock = "latest") {
+  const ro = getReadOnlyContract();
+  const filter = ro.filters.LanceDado();
+  const logs = await ro.queryFilter(filter, fromBlock, toBlock);
+  return logs.map((log) => {
+    const args = log.args || [];
+    return {
+      idEdicao:    String(args[0] ?? ""),
+      lancador:    String(args[1] ?? "").toLowerCase(),
+      valor:       Number(args[2] ?? 0),
+      repetido:    Boolean(args[3]),
+      timestamp:   Number(args[4] ?? 0),
+      blockNumber: log.blockNumber,
+      txHash:      log.transactionHash,
+    };
+  });
+}
+
+/** Obtém o bloco atual via provider read-only. */
+export async function getBlocoAtual() {
+  ensureEnv();
+  const provider = new JsonRpcProvider(process.env.RPC_URL);
+  return await provider.getBlockNumber();
 }

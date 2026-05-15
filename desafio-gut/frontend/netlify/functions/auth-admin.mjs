@@ -22,6 +22,7 @@ import {
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { emitirParAdmin, rotacionarRefresh, revogarAdmin, TTL_ACCESS_SEC, TTL_REFRESH_SEC } from "./_lib/admin-auth.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
+import { registrarFalhaJwt } from "./_lib/jwt-fail-counter.mjs";
 
 export default async (req) => {
   if (req.method !== "POST") {
@@ -40,14 +41,14 @@ export default async (req) => {
   }
 
   switch (body.acao) {
-    case "login":   return acaoLogin(body);
-    case "refresh": return acaoRefresh(body);
+    case "login":   return acaoLogin(body, req);
+    case "refresh": return acaoRefresh(body, req);
     case "logout":  return acaoLogout(body);
     default: return jsonError(400, "acao_invalida", 'acao deve ser "login", "refresh" ou "logout"');
   }
 };
 
-async function acaoLogin(body) {
+async function acaoLogin(body, req) {
   let endereco;
   try { endereco = validarEndereco(body.endereco); }
   catch (err) {
@@ -63,7 +64,10 @@ async function acaoLogin(body) {
   // ADMIN_TOKEN legado: aceita só durante a janela de migração.
   const expected = process.env.ADMIN_TOKEN;
   if (!expected)         return jsonError(503, "admin_token_nao_configurado", "ADMIN_TOKEN ausente no ambiente");
-  if (adminToken !== expected) return jsonError(401, "admin_token_invalido", "adminToken legado inválido");
+  if (adminToken !== expected) {
+    await registrarFalhaJwt(req, "auth-admin");
+    return jsonError(401, "admin_token_invalido", "adminToken legado inválido");
+  }
 
   // Mensagem com formato + timestamp (anti-replay).
   if (!message.startsWith("DESAFIOGUT-ADMIN:")) {
@@ -80,13 +84,18 @@ async function acaoLogin(body) {
 
   let recovered;
   try { recovered = verifyMessage(message, signature).toLowerCase(); }
-  catch { return jsonError(400, "assinatura_invalida", "não foi possível verificar a assinatura"); }
+  catch {
+    await registrarFalhaJwt(req, "auth-admin");
+    return jsonError(400, "assinatura_invalida", "não foi possível verificar a assinatura");
+  }
   if (recovered !== endereco) {
+    await registrarFalhaJwt(req, "auth-admin");
     return jsonError(401, "assinatura_nao_corresponde", "assinatura não pertence ao endereço informado");
   }
 
   const admins = await getAdminAddresses();
   if (!admins.includes(endereco)) {
+    await registrarFalhaJwt(req, "auth-admin");
     return jsonError(403, "endereco_nao_admin", "endereço não está na lista de admins (Blob admin-list:admins ou coordenação)");
   }
 
@@ -107,7 +116,7 @@ async function acaoLogin(body) {
   });
 }
 
-async function acaoRefresh(body) {
+async function acaoRefresh(body, req) {
   let endereco;
   try { endereco = validarEndereco(body.endereco); }
   catch (err) {
@@ -126,6 +135,7 @@ async function acaoRefresh(body) {
   let par;
   try { par = await rotacionarRefresh(endereco, body.refreshToken); }
   catch (err) {
+    await registrarFalhaJwt(req, "auth-admin-refresh");
     return jsonError(401, err?.code || "refresh_invalido", err?.message || "refresh rejeitado");
   }
   return jsonResponse({

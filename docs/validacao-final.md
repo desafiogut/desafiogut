@@ -1,5 +1,103 @@
 # Validação Final — Estado vs Especificação Refatorada
 
+## Mega Comando 3 — Detecção + Compliance + Sybil + On-chain (2026-05-15)
+
+Evidências brutas dos 4 itens (grep + ls + npm run build).
+
+### Item 1 — Alertas automáticos Sentry
+
+- `src/lib/sentry-alerts.js` — 4 helpers client-side (`checkRateLimit`, `checkJwtFailures`, `checkBurstCompras`, `checkGeoAnomaly`).
+- `netlify/functions/_lib/sentry-server.mjs` — wrapper `@sentry/node` com `captureSecurityAlert(kind, payload)` + flush em Lambda.
+- `netlify/functions/_lib/jwt-fail-counter.mjs` — contador persistente em Blob `jwt-fail-counter:{ip}:{minuto}` (cobre o problema de Lambdas ephemeral). Alerta ao cruzar 5 falhas/min.
+- Integração em `auth-user.mjs`, `auth-admin.mjs` (login + refresh), `exportar-dados.mjs`, `rate-limiter.mjs` (>50/min vira alerta), `AppContext.jsx` (401/429 + burst de lances + tz proxy).
+
+```
+$ grep -rn "captureSecurityAlert\|registrarFalhaJwt" netlify/functions/ | wc -l
+13
+$ grep -n "from \"../lib/sentry-alerts.js\"\|checkBurstCompras\|checkGeoAnomaly\|checkJwtFailures\|checkRateLimit" src/context/AppContext.jsx
+11..15  (imports)
+336     checkJwtFailures("saldo-rs");
+344     checkRateLimit("saldo-rs", count, null);
+459     checkBurstCompras(addr);
+460     checkGeoAnomaly();
+$ grep "@sentry/node" netlify/functions/package.json
+    "@sentry/node": "^9.0.0",
+```
+
+### Item 2 — Compliance LGPD
+
+- `docs/lgpd-politica-retencao.md` — política formal de retenção (13m audit, 10a contábil, 30d sessão, 5a consentimento, 24h fingerprint).
+- `netlify/functions/purge-logs.mjs` — admin-gated, idempotente, GET dryRun + POST.
+- `netlify/functions/exportar-dados.mjs` — endpoint art. 18 LGPD, autorização via `validarOwnerOuAdmin` (MC1) + JWT user-session.
+- `consent-log:{timestamp}:{endereco}` gravado em `comprar-senhas.mjs` (linha 236), termo versão `v2026-05`, inclui IP + UA.
+
+```
+$ ls -la docs/lgpd-politica-retencao.md netlify/functions/exportar-dados.mjs netlify/functions/purge-logs.mjs
+docs/lgpd-politica-retencao.md            (4753 bytes)
+netlify/functions/exportar-dados.mjs      (5143 bytes)
+netlify/functions/purge-logs.mjs          (5428 bytes)
+$ grep -n "consent-log\|TERMO_VERSAO\|gravarConsentLog" netlify/functions/comprar-senhas.mjs
+35:const TERMO_VERSAO = "v2026-05";
+36:const BLOB_CONSENT = "consent-log";
+54:async function gravarConsentLog(req, endereco) { … }
+236:  await gravarConsentLog(req, endereco);
+```
+
+### Item 3 — FingerprintJS anti-Sybil
+
+- `@fingerprintjs/fingerprintjs ^4.6.0` instalado via npm (CDN jsdelivr é bloqueado pela CSP em `netlify.toml:58`).
+- `src/lib/fingerprint.js` — `getVisitorId()` (async) + `getCachedVisitorId()` (sync para headers); cache em `localStorage.gut_visitor_id`.
+- `netlify/functions/_lib/sybil-check.mjs` — `registerVisitor` + `checkSybil` + `registerAndCheck` (limiar 3 addresses/24h → `sybil_suspect` Sentry alert).
+- `AppContext.jsx` — useEffect carrega visitor no mount; X-Visitor-ID anexado em fetches de `auth-user` e `saldo-rs`.
+- `auth-user.mjs` lê o header e chama `registerAndCheck` após sessão emitida (passive monitoring, não bloqueia).
+
+```
+$ grep "fingerprintjs" frontend/package.json
+    "@fingerprintjs/fingerprintjs": "^4.6.0",
+$ grep -n "X-Visitor-ID" src/context/AppContext.jsx
+307     ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
+348     ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
+$ grep -n "registerAndCheck\|x-visitor-id" netlify/functions/auth-user.mjs
+21      import { registerAndCheck } from "./_lib/sybil-check.mjs";
+95      const visitorId = req.headers.get("x-visitor-id");
+97        await registerAndCheck(visitorId, endereco, "auth-user")
+```
+
+### Item 4 — Monitor on-chain
+
+- ABI estendido em `netlify/functions/_lib/contract.mjs`: adicionado evento `LanceDado(string,address,uint256,bool,uint256)` (não havia no MC2; era só ABI de crédito).
+- `_lib/contract.mjs` exporta `getLanceDadoEvents(fromBlock, toBlock)` + `getBlocoAtual()`.
+- `netlify/functions/monitor-onchain.mjs` — endpoint admin-gated, idempotente via `ultimo-bloco-processado:R-1`. Alertas:
+  - `onchain_burst`: >5 lances do mesmo `lancador` na janela (≈30 min).
+  - `onchain_outlier`: valor a >3σ da média histórica (Welford online em `onchain-stats:R-1`); só dispara após 20 amostras.
+
+```
+$ grep -n "LanceDado\|getLanceDadoEvents" netlify/functions/_lib/contract.mjs
+23:  "event LanceDado(string idEdicao, address indexed lancador, uint256 valorEmCentavos, bool repetido, uint256 timestamp)",
+107: export async function getLanceDadoEvents(fromBlock, toBlock = "latest") { … }
+$ ls -la netlify/functions/monitor-onchain.mjs
+netlify/functions/monitor-onchain.mjs    (8061 bytes)
+```
+
+### Build verde
+
+```
+$ npm install --legacy-peer-deps                                  → added 1, removed 3, audited 750 packages in 6s
+$ npm install --prefix netlify/functions --legacy-peer-deps        → added 76, audited 88 packages in 11s
+$ npm run build                                                    → ✓ built in 5.36s
+```
+
+### Decisões corretivas vs briefing (já documentadas via /AskUserQuestion)
+
+| Briefing | Realidade | Decisão |
+|---|---|---|
+| FingerprintJS via CDN jsdelivr | CSP de MC1 não permite | npm install local |
+| `purge-logs.mjs` já existe | só `purge-lances.mjs` | criado novo, separado |
+| Sentry só client-side | rate-limit/JWT são server-side | `@sentry/node` em functions |
+| Evento `LanceEfetuado` | contrato emite `LanceDado` | usado o nome real |
+
+---
+
 ## Mega Comando 2 — Blindagem DevSecOps (2026-05-15)
 
 Evidências brutas dos 5 itens (grep + dir + npm run build).
