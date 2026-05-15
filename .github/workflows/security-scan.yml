@@ -60,7 +60,7 @@ jobs:
 
       - name: lockfile-lint frontend
         working-directory: desafio-gut/frontend
-        run: npx lockfile-lint --path package-lock.json --allowed-hosts npmjs.com --validate-https
+        run: npx lockfile-lint --path package-lock.json --allowed-hosts npm --validate-https
 
       # Functions lockfile sync
       - name: Verify functions lockfile sync
@@ -71,7 +71,7 @@ jobs:
 
       - name: lockfile-lint functions
         working-directory: desafio-gut/frontend/netlify/functions
-        run: npx lockfile-lint --path package-lock.json --allowed-hosts npmjs.com --validate-https
+        run: npx lockfile-lint --path package-lock.json --allowed-hosts npm --validate-https
 
   # ── Job 4: Socket.dev security ──────────────────────────────────────
   socket-security:
