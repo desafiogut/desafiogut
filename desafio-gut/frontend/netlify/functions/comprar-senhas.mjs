@@ -31,6 +31,45 @@ import { creditarSenhas, lerSaldoSenhas, CONTRATO_ADDRESS } from "./_lib/contrac
 
 const VALOR_POR_SENHA_CENTAVOS = 200; // R$ 2,00
 
+// LGPD — versão do termo de consentimento atualmente exigido (sincronizar com TermosConsentimento.jsx).
+const TERMO_VERSAO = "v2026-05";
+const BLOB_CONSENT = "consent-log";
+
+function abrirConsentStore() {
+  try { return getStore({ name: BLOB_CONSENT, consistency: "strong" }); }
+  catch (err) {
+    console.warn("[comprar-senhas] Blob consent-log indisponível:", err?.message);
+    return null;
+  }
+}
+
+function extrairIp(req) {
+  const nfHeader = req.headers.get("x-nf-client-connection-ip");
+  if (nfHeader) return nfHeader.trim();
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0].trim();
+  return "unknown";
+}
+
+async function gravarConsentLog(req, endereco) {
+  const store = abrirConsentStore();
+  if (!store) return;
+  const ts  = Date.now();
+  const key = `${ts}:${endereco}`;
+  try {
+    await store.setJSON(key, {
+      endereco,
+      aceiteEm:    new Date(ts).toISOString(),
+      termoVersao: TERMO_VERSAO,
+      ip:          extrairIp(req),
+      userAgent:   req.headers.get("user-agent") || "unknown",
+      contexto:    "comprar-senhas",
+    });
+  } catch (err) {
+    console.warn("[comprar-senhas] gravar consent-log falhou (não-fatal):", err?.message);
+  }
+}
+
 // Voucher de Networking (REQ-26): isenção total da compra quando válido.
 const BLOB_VOUCHER  = "voucher";
 const REGEX_VOUCHER = /^GUT-[A-F0-9]{8}$/;
@@ -192,6 +231,9 @@ export default async (req) => {
       console.warn("[comprar-senhas] consumir voucher falhou (não-fatal):", { voucherCodigo, message: err?.message });
     }
   }
+
+  // LGPD: registra consentimento auditável (art. 7, I) — pós-sucesso on-chain.
+  await gravarConsentLog(req, endereco);
 
   console.info("[comprar-senhas] concluído", {
     endereco, qtd,

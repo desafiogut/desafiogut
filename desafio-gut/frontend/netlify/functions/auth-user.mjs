@@ -17,6 +17,8 @@ import {
   parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { registrarFalhaJwt } from "./_lib/jwt-fail-counter.mjs";
+import { registerAndCheck } from "./_lib/sybil-check.mjs";
 
 const TTL_USER_SESSION = 24 * 60 * 60; // 24h
 
@@ -72,9 +74,11 @@ export default async (req) => {
   try {
     recovered = verifyMessage(message, signature).toLowerCase();
   } catch {
+    await registrarFalhaJwt(req, "auth-user");
     return jsonError(400, "assinatura_invalida", "não foi possível verificar a assinatura");
   }
   if (recovered !== endereco) {
+    await registrarFalhaJwt(req, "auth-user");
     return jsonError(401, "assinatura_nao_corresponde", "assinatura não pertence ao endereço informado");
   }
 
@@ -86,6 +90,15 @@ export default async (req) => {
     return jsonError(500, "jwt_indisponivel", "configuração de servidor incompleta");
   }
 
-  console.info("[auth-user] sessão emitida", { endereco });
+  // Anti-Sybil: registra visitorId ↔ endereco; alerta passivo se 3+ addresses no mesmo
+  // visitorId em 24h. Não bloqueia o login — só sinaliza.
+  const visitorId = req.headers.get("x-visitor-id");
+  if (visitorId) {
+    await registerAndCheck(visitorId, endereco, "auth-user").catch((err) => {
+      console.warn("[auth-user] sybil-check falhou (não-fatal):", err?.message);
+    });
+  }
+
+  console.info("[auth-user] sessão emitida", { endereco, visitorId: visitorId ? "presente" : "ausente" });
   return jsonResponse({ token, ttl: TTL_USER_SESSION });
 };
