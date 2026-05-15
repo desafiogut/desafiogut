@@ -1,5 +1,135 @@
 # Validação Final — Estado vs Especificação Refatorada
 
+## Mega Comando 4 — Análise Estática + Fuzzing + WAF (2026-05-15)
+
+Última onda de blindagem. Foca no contrato (Slither/Foundry/Echidna) e no edge (Cloudflare WAF doc).
+
+### Item 1 — Echidna fuzzing (LOCAL)
+
+- `desafio-gut/tests/fuzzing/LeilaoGUT.sol` — harness `LeilaoGUTFuzzing` que herda `LeilaoGUT`, pré-abre edição `R-FUZZ` e pré-credita 1000 senhas em 3 wallets do pool de senders.
+- 6 invariants Echidna ancorados no contrato real:
+  1. `echidna_coordenacao_nao_zero()` — sanity.
+  2. `echidna_listaDeValores_limitada()` — `length <= MAX_LANCES_UNICOS` (10_000).
+  3. `echidna_unicidade_para_ganhar()` — `apurarVencedor` só elege quando `contagem[v] == 1`.
+  4. `echidna_lance_consome_senha()` — conservação total via shadow accounting.
+  5. `echidna_apenas_coordenacao_credita()` — bots não-coord falham `adicionarSenhas`.
+  6. `echidna_two_step_transfer()` — coord só muda via `aceitar()`.
+- `desafio-gut/echidna.yaml` — testLimit 50000, seqLen 100, workers 4, deployer/sender pool configurados.
+
+```
+$ grep -c "function echidna_" desafio-gut/tests/fuzzing/LeilaoGUT.sol
+6
+$ grep "testLimit\|seqLen\|workers" desafio-gut/echidna.yaml
+testLimit: 50000
+seqLen: 100
+workers: 4
+```
+
+Comando local:
+```
+docker run --rm -v $(pwd):/code ghcr.io/crytic/echidna/echidna:latest \
+  echidna /code/desafio-gut/tests/fuzzing/LeilaoGUT.sol \
+  --contract LeilaoGUTFuzzing --config /code/desafio-gut/echidna.yaml
+```
+
+### Item 2 — Foundry test suite (LOCAL)
+
+- `desafio-gut/tests/foundry/LeilaoGUT.t.sol` — 16 testes (briefing pedia ≥12):
+  - 3× acesso (reuso de id, apenasCoord abre, apenasCoord credita)
+  - 4× gates de `darLance` (sem saldo, prazo expirado, valor 0, valor 1)
+  - 3× `apurarVencedor` (menor único, vazio, todos repetidos)
+  - 1× limite anti-DoS (10_000 lances únicos)
+  - 5× two-step transfer (happy path, sem aceitar, aceitar sem iniciar, aceitar por outro, iniciar com zero)
+- `desafio-gut/foundry.toml` — src=contracts, test=tests/foundry, solc 0.8.20, optimizer 200.
+- `.gitignore` atualizado: `out/`, `cache_forge/`, `lib/`, `tests/fuzzing/corpus/`, `crytic-export/`.
+
+```
+$ grep -c "function test_" desafio-gut/tests/foundry/LeilaoGUT.t.sol
+16
+$ cat desafio-gut/foundry.toml | grep -E "src|test|solc"
+src         = "contracts"
+test        = "tests/foundry"
+solc        = "0.8.20"
+```
+
+Comando local:
+```
+cd desafio-gut
+forge install foundry-rs/forge-std --no-git --no-commit
+forge test -vv
+```
+
+### Item 3 — Slither no CI
+
+- `desafio-gut/slither.config.json` — `fail_on: high`, `exclude_dependencies: true`, `filter_paths` cobre node_modules + tests + lib.
+- Job `slither-scan` em `.github/workflows/security-scan.yml`:
+  - Python 3.11 + Node 24
+  - `pip install slither-analyzer`
+  - `npm ci` no diretório `desafio-gut/`
+  - Run Slither com auto-detect; fallback para `slither contracts/Leilao.sol` direto se o auto-detect tropeçar no Hardhat v3 ESM.
+- Independente dos jobs MC2 (axios/hono pre-existentes) — não fica bloqueado por checks vermelhos não relacionados.
+
+```
+$ ls desafio-gut/slither.config.json
+desafio-gut/slither.config.json
+$ grep -c "slither\|Slither" .github/workflows/security-scan.yml
+13
+$ grep "fail_on" desafio-gut/slither.config.json
+  "fail_on": "high",
+```
+
+### Item 4 — Cloudflare WAF (docs)
+
+- `docs/cloudflare-waf-setup.md` — 10 seções + checklist final cobrindo:
+  - Pré-requisitos (token API, scopes)
+  - Onboarding (zona, nameservers, CNAME proxied, SSL Full Strict, Netlify accept domain)
+  - 3 cURLs API prontos:
+    - **Regra 1**: rate-limit `requests_per_period:50, period:60, mitigation_timeout:600, characteristics:["ip.src"]`
+    - **Regra 2**: OWASP Core Ruleset (`efb7b8c949ac4650a09736fc376e9aee`) paranoia 1, action block
+    - **Regra 3**: JS Challenge para `cf.bot_management.score lt 30` (Free fallback: `cf.threat_score gt 30`), excluindo `/.netlify/functions/health`
+  - Verificação pós-setup (4 testes: `cf-ray`, flood 429, XSS 403, bot 403)
+  - Limitações (Free 5 regras max, bot management precisa Pro+, JS challenge bloqueia REST sem JS)
+  - Rollback (DELETE + esvaziamento do managed entrypoint)
+  - Observabilidade (Dashboard Security + Notifications WAF Spike + Logpush)
+
+```
+$ ls docs/cloudflare-waf-setup.md
+docs/cloudflare-waf-setup.md
+$ grep -c "^## " docs/cloudflare-waf-setup.md
+11
+$ grep -c "curl -sS" docs/cloudflare-waf-setup.md
+5
+```
+
+⚠️ Sem credenciais Cloudflare nem domínio próprio nesta sessão, MC4 entrega só docs/playbook. Quando o domínio estiver pronto, executar passos 1–9 da checklist (Seção 10 do doc).
+
+### Build verde
+
+```
+$ cd desafio-gut && npx hardhat compile
+Compiled 1 Solidity file with solc 0.8.20 (evm target: shanghai)
+```
+
+### Decisões corretivas vs briefing (já documentadas via /AskUserQuestion)
+
+| Briefing | Realidade | Decisão |
+|---|---|---|
+| 6 invariants citados (resetEdicao, voucher etc.) | `resetEdicao` não existe; voucher é off-chain; `senhaNuncaDuplica` contradiz menor único; `totalCreditos` exigiria accumulator | 6 invariants ancorados no contrato real |
+| Echidna+Foundry no CI | Binários pesados (echidna docker, foundryup) | Só Slither no CI; Echidna+Foundry local com comandos doc |
+| Cloudflare WAF setup completo | Sem domínio nem token nesta sessão | Docs + cURLs prontos pra colar |
+| `git push origin main` direto | Branch protection bloqueia (MC2) | Branch + PR + janela de bypass admin curta (padrão MC3) |
+
+### Resumo geral dos 4 MCs
+
+| Camada | Mega Comando |
+|---|---|
+| Aplicação — rate-limit + JWT + RBAC + anti-IDOR | MC1 |
+| Supply chain — Dependabot + audit + lockfile + Socket | MC2 |
+| Detecção — Sentry + LGPD + FingerprintJS + monitor on-chain | MC3 |
+| Contrato + Edge — Slither (CI) + Foundry/Echidna (local) + Cloudflare WAF (docs) | MC4 |
+
+---
+
 ## Mega Comando 3 — Detecção + Compliance + Sybil + On-chain (2026-05-15)
 
 Evidências brutas dos 4 itens (grep + ls + npm run build).

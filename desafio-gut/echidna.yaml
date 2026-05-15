@@ -1,0 +1,32 @@
+# Echidna config — MC4 / Item 1.
+# Roda local apenas (não no CI). Comando:
+#   docker run --rm -v $(pwd):/code ghcr.io/crytic/echidna/echidna:latest \
+#     echidna /code/desafio-gut/tests/fuzzing/LeilaoGUT.sol \
+#     --contract LeilaoGUTFuzzing --config /code/desafio-gut/echidna.yaml
+
+testLimit: 50000
+seqLen: 100
+workers: 4
+corpusDir: "tests/fuzzing/corpus"
+
+# Pool de senders aleatórios. O constructor do harness pré-credita
+# saldoSenhas para esses 3 addresses, então darLance(...) tem hit rate alto
+# em vez de reverter por "Voce nao possui senhas".
+deployer: "0x30000"
+sender:
+  - "0x10000"
+  - "0x20000"
+  - "0x30000"
+
+# Modo de teste: invariants (echidna_*) ao final de cada sequência.
+testMode: "property"
+
+# Coverage-guided fuzzing — mantém corpus dos inputs interessantes.
+coverage: true
+
+# Stops on first counterexample to make debugging fast.
+stopOnFail: true
+
+# Não usa Slither aqui (vai rodar separado no CI).
+cryticArgs:
+  - "--solc-disable-warnings"
