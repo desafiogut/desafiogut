@@ -113,10 +113,10 @@ jobs:
       - name: Install Slither
         run: pip install slither-analyzer
 
-      # Slither com `compile_force_framework: solc` no slither.config.json
-      # bypassa o auto-detect (que tropeçaria em foundry.toml e tentaria
-      # invocar `forge`, não instalado no runner). Analisa contracts/Leilao.sol
-      # via solc nativo, respeitando fail_on: high.
+      # `compile_force_framework: solc` no JSON é ignorado pelo crytic-compile;
+      # passar como CLI flag (--compile-force-framework solc) força solc puro
+      # e bypassa o auto-detect (que tropeçaria em foundry.toml e chamaria
+      # forge, não instalado no runner).
       - name: Run Slither
         working-directory: desafio-gut
-        run: slither contracts/Leilao.sol --config-file slither.config.json
+        run: slither contracts/Leilao.sol --compile-force-framework solc --config-file slither.config.json
