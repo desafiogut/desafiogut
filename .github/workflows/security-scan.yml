@@ -113,10 +113,14 @@ jobs:
       - name: Install Slither
         run: pip install slither-analyzer
 
-      # `compile_force_framework: solc` no JSON é ignorado pelo crytic-compile;
-      # passar como CLI flag (--compile-force-framework solc) força solc puro
-      # e bypassa o auto-detect (que tropeçaria em foundry.toml e chamaria
-      # forge, não instalado no runner).
+      # crytic-compile detecta `foundry.toml` no working dir ANTES de aplicar
+      # --compile-force-framework (bug conhecido em algumas versões). Renomeamos
+      # o toml apenas durante a execução do Slither pra forçar solc puro.
+      # `trap` garante restauração mesmo em falha do slither.
       - name: Run Slither
         working-directory: desafio-gut
-        run: slither contracts/Leilao.sol --compile-force-framework solc --config-file slither.config.json
+        run: |
+          set -e
+          trap "[ -f foundry.toml.bak ] && mv foundry.toml.bak foundry.toml" EXIT
+          mv foundry.toml foundry.toml.bak
+          slither contracts/Leilao.sol --config-file slither.config.json
