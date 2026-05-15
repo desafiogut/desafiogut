@@ -96,6 +96,21 @@ $ npm run build                                                    → ✓ built
 | Sentry só client-side | rate-limit/JWT são server-side | `@sentry/node` em functions |
 | Evento `LanceEfetuado` | contrato emite `LanceDado` | usado o nome real |
 
+### Scheduled functions (Netlify) — adendo pós-merge inicial
+
+- `netlify/functions/monitor-onchain-scheduled.mjs` — cron `*/30 * * * *` chamando `executar()` (named export do monitor-onchain).
+- `netlify/functions/purge-logs-scheduled.mjs` — cron `0 3 * * *` chamando `executar(false)` (named export do purge-logs).
+- `monitor-onchain.mjs` e `purge-logs.mjs` ganharam o `export` na função `executar` (para o wrapper chamar core sem precisar de Request/admin gate; cron é trigger confiável).
+- `@netlify/functions ^3.0.0` adicionado em `netlify/functions/package.json`.
+
+### npm audit — vulns pré-existentes (não causadas pelo MC3)
+
+`npm audit --audit-level=high` falha em axios@1.15.0 (via `@coinbase/cdp-sdk` ← Privy/Wagmi) e hono@4.12.14 (via `@wagmi/connectors/porto`). **Estas versões já estavam em `main` (commit 346af25) antes do MC3** — confirmado por `git show origin/main:.../package-lock.json | grep '1.15.0'`. Advisories foram publicadas após o CI verde do MC2. Unblock requer ação fora do escopo do MC3:
+
+1. **Recomendado**: aguardar Privy/Wagmi liberar versão com axios ≥1.17.
+2. **Alternativo**: relaxar `npm audit --audit-level=critical` no `.github/workflows/security-scan.yml` (não recomendado — perde detecção de high).
+3. **Hack**: adicionar overrides manuais e revalidar (tentado em MC3 com `axios:^1.17.0` mas cdp-sdk rejeita — pin não cola).
+
 ---
 
 ## Mega Comando 2 — Blindagem DevSecOps (2026-05-15)

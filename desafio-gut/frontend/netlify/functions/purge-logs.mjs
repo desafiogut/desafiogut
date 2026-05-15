@@ -101,7 +101,9 @@ async function purgarStore(nome, cfg, agoraMs, dryRun) {
   return { store: nome, status: "ok", deleted, kept, cutoffIso: new Date(cutoff).toISOString() };
 }
 
-async function executar(dryRun) {
+// Exportado para que purge-logs-scheduled.mjs (cron Netlify) chame a lógica
+// diretamente sem Request/admin gate.
+export async function executar(dryRun) {
   const agoraMs = Date.now();
   const resultados = [];
   for (const [nome, cfg] of Object.entries(POLITICA)) {

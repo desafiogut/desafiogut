@@ -98,7 +98,9 @@ function detectarOutliers(eventos, stats) {
   return out;
 }
 
-async function executar({ edicaoId, dryRun }) {
+// Exportado para que monitor-onchain-scheduled.mjs (cron Netlify) possa
+// chamar a lógica diretamente sem precisar de Request/admin gate.
+export async function executar({ edicaoId, dryRun }) {
   const blocoAtual = await getBlocoAtual();
 
   const storeUltimo = abrirStore(BLOB_ULTIMO);
