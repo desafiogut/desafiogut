@@ -26,7 +26,8 @@ import {
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
-import { guardAdmin } from "./_lib/admin-auth.mjs";
+import { autenticarAdmin } from "./_lib/admin-auth.mjs";
+import { requireMfa } from "./_lib/require-mfa.mjs";
 
 const BLOB_WALLET   = "wallet";
 const BLOB_IDEM     = "wallet-idem";
@@ -86,8 +87,16 @@ async function handleGet(req) {
 }
 
 async function handlePost(req) {
-  const denied = await guardAdmin(req);
-  if (denied) return denied;
+  const auth = await autenticarAdmin(req);
+  if (!auth.ok) {
+    let status = 401;
+    if (auth.code === "admin_token_nao_configurado") status = 503;
+    else if (auth.code === "admin_removido")         status = 403;
+    return jsonError(status, auth.code, auth.message);
+  }
+  // MC7: MFA gate — controlado por env MFA_ENFORCEMENT (off|warn|enforce)
+  const mfaBlock = requireMfa(req, auth.payload, "wallet-post");
+  if (mfaBlock) return mfaBlock;
 
   let body;
   try {

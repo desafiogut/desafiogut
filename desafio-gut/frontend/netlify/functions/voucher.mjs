@@ -41,7 +41,8 @@ import {
 import { verificarLanceAuth, verificarUserSession } from "./_lib/jwt.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
-import { guardAdmin } from "./_lib/admin-auth.mjs";
+import { autenticarAdmin } from "./_lib/admin-auth.mjs";
+import { requireMfa } from "./_lib/require-mfa.mjs";
 
 const BLOB_VOUCHER  = "voucher";
 const BLOB_INDICE   = "vouchers-emissor";
@@ -82,8 +83,16 @@ async function indexarVoucher(emissor, codigo) {
 }
 
 async function acaoGerar(req, body) {
-  const denied = await guardAdmin(req);
-  if (denied) return denied;
+  const auth = await autenticarAdmin(req);
+  if (!auth.ok) {
+    let status = 401;
+    if (auth.code === "admin_token_nao_configurado") status = 503;
+    else if (auth.code === "admin_removido")         status = 403;
+    return jsonError(status, auth.code, auth.message);
+  }
+  // MC7: MFA gate — controlado por env MFA_ENFORCEMENT (off|warn|enforce)
+  const mfaBlock = requireMfa(req, auth.payload, "voucher-gerar");
+  if (mfaBlock) return mfaBlock;
 
   let emissor;
   try { emissor = validarEndereco(body.endereco_emissor); }
@@ -143,6 +152,9 @@ async function acaoResgatar(req, body) {
     const code = err?.code === "ERR_JWT_EXPIRED" ? "token_expirado" : "token_invalido";
     return jsonError(401, code, "token inválido ou expirado");
   }
+  // MC7: MFA gate — controlado por env MFA_ENFORCEMENT (off|warn|enforce)
+  const mfaBlock = requireMfa(req, jwtPayload, "voucher-resgatar");
+  if (mfaBlock) return mfaBlock;
 
   let codigo, resgatador;
   try {

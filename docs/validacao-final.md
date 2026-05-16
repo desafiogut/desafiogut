@@ -1,5 +1,6 @@
 # Validação Final — Estado vs Especificação Refatorada
 
+<<<<<<< HEAD
 ## Mega Comando 6 — Cloudflare WAF Automatizado + Backup Blobs + DR (2026-05-16)
 
 Última camada operacional: automatiza o WAF (antes era playbook manual MC4), adiciona backup diário dos Blobs (cobertura para corrupção/purge acidental), e fecha com playbook de Disaster Recovery cobrindo 4 cenários. Sem ambiente standby físico (desproporcional para beta).
@@ -48,11 +49,66 @@ $ grep -c "store\|backup\|Blob" desafio-gut/frontend/netlify/functions/backup-bl
 ```
 $ grep -c "RTO\|RPO\|cenário\|restauração" docs/disaster-recovery.md
 26   (≥ 8 ✅)
+=======
+## Mega Comando 7 — MFA + Incident Response + Auditoria Externa (2026-05-16)
+
+Última onda do programa de blindagem. Wira a base do MFA (scaffolding com feature flag, sem quebrar produção), documenta playbook de IR complementar ao DR (MC6), e finaliza com preparação para auditoria externa profissional. **Estado pós-MC7: 95% de blindagem completa** — o 5% restante é Phase 2 do MFA (wiring `/auth-admin` + `/auth-user` com Privy MFA API) e contratação efetiva da auditoria, ambos fora do escopo de hardening puro.
+
+> Nota: este branch (`security/mc7-mfa-ir-audit`) foi criado a partir do main local com apenas o commit MC5. A seção do MC6 (Cloudflare WAF automatizado + Backup Blobs + DR) está na branch `security/mc6-cf-waf-backup-dr` (PR #13). Após merge de ambas PRs (#12 MC5, #13 MC6, #14 MC7), o arquivo final terá as 3 seções em ordem reverso-cronológica.
+
+### Item 1 — MFA Obrigatório (scaffolding base)
+
+- **`_lib/require-mfa.mjs`** (NEW) — middleware com 3 modos via env `MFA_ENFORCEMENT`:
+  - `off` (default): no-op, compatibilidade total com pré-MFA
+  - `warn`: log `console.warn` mas permite (observabilidade)
+  - `enforce`: 403 com `{mfa_required: true}` se claim `mfa_verified` ausente
+- **`_lib/jwt.mjs`** (modificado, additive): `assinarAdminAccess`, `assinarUserSession`, `assinarLanceAuth` agora aceitam param opcional `mfaVerified=false` que injeta claim no payload
+- **`_lib/admin-auth.mjs`** (modificado, additive): `autenticarAdmin` retorna também `payload` (era descartado) — middleware precisa pra ler claims
+- **5 endpoints integrados**: `admin-aprovacao`, `comprar-senhas`, `lance-relampago`, `wallet` (POST), `voucher` (gerar + resgatar). Endpoints que usavam `guardAdmin` foram migrados para `autenticarAdmin` para expor payload.
+- **`docs/mfa-setup.md`** (NEW): política por papel (admin obrigatório, cliente sensível obrigatório, user opcional), setup Dashboard Privy (TOTP/Passkeys/SMS), enforcement flag, Phase 2 wiring de `/auth-*` com Privy MFA API.
+
+```
+$ grep -rn "require-mfa\|requireMfa" desafio-gut/frontend/netlify/functions/
+15 ocorrências em 7 arquivos (≥ 5 ✅)
+```
+
+**Decisão crítica alinhada com user**: deploy seguro via feature flag default `off`. Ligar `warn` por ~1 semana em prod pra mapear, depois `enforce` quando Phase 2 estiver pronta.
+
+### Item 2 — Incident Response Plan
+
+- **`docs/incident-response.md`** (NEW) — complementa `docs/disaster-recovery.md` (MC6). DR cobre falhas técnicas; IR cobre incidentes de segurança (vazamento, comprometimento, exploit ativo).
+  - **Matriz de severidade**: Crítica / Alta / Média / Baixa com RTO de contenção e gatilho de notificação ANPD
+  - **Playbook 3 fases**: Detecção < 1h, Contenção < 4h, Notificação < 24h
+  - **Ações de contenção por tipo**: credencial admin / exploit / vazamento Blobs / coordenação on-chain / DDoS
+  - **Canais**: Slack `#incidentes`, e-mail suporte, Twitter, Privy/Cloudflare Dashboards
+  - **Template post-mortem** com timeline, causa raiz, action items, lições
+  - **Testes semestrais** com calendário 2026-Q4 → 2027-Q4
+
+```
+$ grep -c "severidade\|contenção\|notificação\|playbook" docs/incident-response.md
+15  (≥ 8 ✅)
+```
+
+### Item 3 — Auditoria Externa (preparação)
+
+- **`docs/auditoria-externa.md`** (NEW) — documento preparatório, NÃO contrata firma.
+  - **4 firmas comparadas**: OpenZeppelin (gold standard), Trail of Bits (forte off-chain), Cantina (custo/benefício fixed-price), Code4rena (competition, público)
+  - **3 ondas de escopo**: Onda 1 contrato Solidity / Onda 2 Netlify Functions + RBAC + LGPD / Onda 3 infra (Cloudflare/Netlify/GitHub Actions/Privy)
+  - **Orçamento estimado**: Econômico US$ 25k (Cantina + bounty C4) / Recomendado US$ 90k (Cantina + Trail of Bits) / Gold US$ 125-150k (OpenZeppelin completo)
+  - **Checklist pré-auditoria 6 categorias**: docs, cobertura testes, análise estática, código, postura operacional, LGPD compliance
+  - **Roadmap sugerido**: 2026-Q3 cumprir checklist, 2026-Q4 orçamentos, 2027-Q1 Onda 1, 2027-Q2 fixes + Onda 2, 2027-Q3 publicar
+  - **Bug bounty complementar**: Immunefi com tiers US$ 500-50k
+
+```
+$ grep -c "OpenZeppelin\|Trail of Bits\|escopo\|orçamento" docs/auditoria-externa.md
+14  (≥ 6 ✅)
+>>>>>>> 0a5ee09 (security: mega comando 7 — mfa obrigatorio + incident response plan + auditoria externa docs)
 ```
 
 ### Validação cruzada
 
 ```
+<<<<<<< HEAD
 $ Test-Path scripts/apply-waf.mjs                                                          → True
 $ Test-Path docs/cloudflare-waf-execucao.md                                                 → True
 $ Test-Path desafio-gut/frontend/netlify/functions/backup-blobs.mjs                         → True
@@ -68,6 +124,47 @@ $ cd desafio-gut/frontend && npm run build
 ✓ built in 7.85s  (warnings pré-existentes do projeto, não MC6)
 ```
 
+=======
+$ Test-Path desafio-gut/frontend/netlify/functions/_lib/require-mfa.mjs   → True
+$ Test-Path docs/mfa-setup.md                                              → True
+$ Test-Path docs/incident-response.md                                      → True
+$ Test-Path docs/auditoria-externa.md                                      → True
+
+$ node --check (em todos os .mjs modificados e criados)
+jwt.mjs                  → OK
+admin-auth.mjs           → OK
+require-mfa.mjs          → OK
+admin-aprovacao.mjs      → OK
+comprar-senhas.mjs       → OK
+lance-relampago.mjs      → OK
+wallet.mjs               → OK
+voucher.mjs              → OK
+
+$ cd desafio-gut/frontend && npm run build
+✓ built in 4.63s   (warnings pré-existentes do projeto, não MC7)
+```
+
+### Estado pós-MC7: 95% blindagem
+
+**O que ficou completo (MC1-MC7):**
+- ✅ APIs hardened (JWT, rate-limit, anti-IDOR, RBAC)
+- ✅ Supply chain (Dependabot, npm audit, Socket.dev, lockfile-lint)
+- ✅ Observabilidade (Sentry server-side + frontend, monitor on-chain)
+- ✅ LGPD (consent-log, purge-logs com retenção por categoria)
+- ✅ Contrato (Foundry 16 testes, Echidna 6 invariants, Slither CI)
+- ✅ SBOM CycloneDX automatizado com versionamento diário
+- ✅ Cloudflare WAF automatizado (3 regras, idempotente)
+- ✅ Backups Blobs (Scheduled Function 02:00 UTC, retenção 30d)
+- ✅ Disaster Recovery playbook (4 cenários, RTO/RPO)
+- ✅ Incident Response playbook (severidade, 3 fases, ANPD)
+- ✅ MFA scaffolding (middleware + claim + flag)
+- ✅ Auditoria externa documentada (firmas, escopo, orçamento)
+
+**5% restantes (Phase 2 — fora deste programa):**
+- ⏳ Wiring efetivo do MFA em `/auth-admin` + `/auth-user` com Privy MFA API (depende de upgrade Privy para Builder tier)
+- ⏳ Contratação da auditoria externa (depende de validação product-market fit e budget)
+
+>>>>>>> 0a5ee09 (security: mega comando 7 — mfa obrigatorio + incident response plan + auditoria externa docs)
 ---
 
 ## Mega Comando 5 — Foundry CI + Echidna CI + SBOM (2026-05-16)
