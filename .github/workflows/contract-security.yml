@@ -1,0 +1,96 @@
+name: Contract Security
+
+# MC5 — Foundry CI + Echidna CI + SBOM CycloneDX.
+# Três jobs paralelos. Slither continua em security-scan.yml (MC4).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'desafio-gut/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'desafio-gut/**'
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Job 1: Foundry test suite ───────────────────────────────────────
+  # MC5 / Item 1. Roda tests/foundry/*.t.sol com forge-std instalado on-the-fly.
+  foundry-test:
+    name: foundry
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ./desafio-gut
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry toolchain
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install forge-std (foundry dep)
+        run: forge install foundry-rs/forge-std --no-commit
+
+      - name: Run foundry tests
+        run: forge test -vv
+
+  # ── Job 2: Echidna property-based fuzzing ───────────────────────────
+  # MC5 / Item 2. Harness em tests/fuzzing/LeilaoGUT.sol. Config em echidna.yaml.
+  # solc 0.8.20 trava com hardhat.config.js + foundry.toml + bytecode deployado.
+  echidna-fuzz:
+    name: echidna
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: ./desafio-gut
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Echidna fuzzing
+        uses: crytic/echidna-action@v1
+        with:
+          files: .
+          contract: LeilaoGUTFuzzing
+          config: echidna.yaml
+          solc-version: 0.8.20
+          crytic-args: --solc-disable-warnings
+
+  # ── Job 3: SBOM CycloneDX ───────────────────────────────────────────
+  # MC5 / Item 3. Gera sbom.cyclonedx.json do desafio-gut/, sobe como artifact,
+  # e em push para main commita docs/sbom/sbom-YYYYMMDD.json com [skip ci].
+  sbom-generate:
+    name: sbom
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate SBOM (CycloneDX)
+        uses: anchore/sbom-action@v0
+        with:
+          path: ./desafio-gut
+          format: cyclonedx-json
+          output-file: sbom.cyclonedx.json
+          upload-artifact: true
+          artifact-name: sbom-cyclonedx
+
+      - name: Persist SBOM in repo (push to main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p docs/sbom
+          DATE=$(date -u +%Y%m%d)
+          cp sbom.cyclonedx.json "docs/sbom/sbom-${DATE}.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "docs/sbom/sbom-${DATE}.json"
+          if git diff --staged --quiet; then
+            echo "No SBOM changes to commit"
+          else
+            git commit -m "chore(sbom): update SBOM for ${DATE} [skip ci]"
+            git push
+          fi
