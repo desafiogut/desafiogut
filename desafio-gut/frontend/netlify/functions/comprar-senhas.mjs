@@ -24,6 +24,7 @@ import {
 import { verificarLanceAuth } from "./_lib/jwt.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { getRole, requireRole } from "./_lib/rbac.mjs";
+import { requireMfa } from "./_lib/require-mfa.mjs";
 import {
   debitarSaldoRs, reembolsarSaldoRs, lerSaldoRsCentavos,
 } from "./_lib/saldoRs.mjs";
@@ -119,6 +120,10 @@ export default async (req) => {
     const code = err?.code === "ERR_JWT_EXPIRED" ? "token_expirado" : "token_invalido";
     return jsonError(401, code, "token inválido ou expirado — obtenha novo via POST /auth-lance");
   }
+
+  // ── 1.5. MFA gate (MC7) — controlado por env MFA_ENFORCEMENT ──────────────
+  const mfaBlock = requireMfa(req, jwtPayload, "comprar-senhas");
+  if (mfaBlock) return mfaBlock;
 
   // ── 2. Body parse ──────────────────────────────────────────────────────────
   let body;

@@ -39,9 +39,11 @@ export async function verificarPedido(token) {
 
 export { joseErrors };
 
-export async function assinarLanceAuth(endereco, ttlSec = 600) {
+export async function assinarLanceAuth(endereco, ttlSec = 600, mfaVerified = false) {
   if (!KEY) throw new Error("JWT_SECRET não configurado");
-  return await new SignJWT({ endereco, tipo: "lance-auth" })
+  const claims = { endereco, tipo: "lance-auth" };
+  if (mfaVerified) claims.mfa_verified = true;
+  return await new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${ttlSec}s`)
@@ -61,9 +63,12 @@ export async function verificarLanceAuth(token) {
 
 // User session JWT — usado por endpoints GET sensíveis (wallet, saldo-rs,
 // renovacao-adesao, voucher) para protegê-los contra IDOR. TTL 24h por padrão.
-export async function assinarUserSession(endereco, ttlSec = 86400) {
+// MC7: aceita mfaVerified opcional — Phase 2 (/auth-user com Privy MFA) ativa.
+export async function assinarUserSession(endereco, ttlSec = 86400, mfaVerified = false) {
   if (!KEY) throw new Error("JWT_SECRET não configurado");
-  return await new SignJWT({ endereco, tipo: "user-session" })
+  const claims = { endereco, tipo: "user-session" };
+  if (mfaVerified) claims.mfa_verified = true;
+  return await new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${ttlSec}s`)
@@ -83,9 +88,12 @@ export async function verificarUserSession(token) {
 }
 
 // Admin access JWT — emitido por /auth-admin, TTL 15 min por padrão.
-export async function assinarAdminAccess(endereco, ttlSec = 900) {
+// MC7: aceita mfaVerified opcional — Phase 2 (/auth-admin com Privy MFA) ativa.
+export async function assinarAdminAccess(endereco, ttlSec = 900, mfaVerified = false) {
   if (!KEY) throw new Error("JWT_SECRET não configurado");
-  return await new SignJWT({ endereco, tipo: "admin-access" })
+  const claims = { endereco, tipo: "admin-access" };
+  if (mfaVerified) claims.mfa_verified = true;
+  return await new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${ttlSec}s`)

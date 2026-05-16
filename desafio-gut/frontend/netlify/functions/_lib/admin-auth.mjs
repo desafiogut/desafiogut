@@ -139,13 +139,16 @@ export async function revogarAdmin(endereco) {
 /**
  * Dual guard: aceita Bearer admin-JWT (preferido) ou x-admin-token (legado).
  * Retorna:
- *   { ok: true, papel: "admin-jwt",    endereco, fonte: "jwt" }
- *   { ok: true, papel: "admin-legado", endereco: null, fonte: "x-admin-token" }
+ *   { ok: true, papel: "admin-jwt",    endereco, fonte: "jwt", payload }
+ *   { ok: true, papel: "admin-legado", endereco: null, fonte: "x-admin-token", payload: null }
  *   { ok: false, papel: null, code, message }
  *
  * Se papel === "admin-jwt", também valida que o endereco do JWT continua na
  * lista de admins (revogações imediatas — o admin removido da lista perde
  * acesso mesmo com JWT ainda dentro do TTL).
+ *
+ * MC7: `payload` exposto no sucesso para que middlewares posteriores
+ * (ex: require-mfa) possam ler claims como `mfa_verified` sem reverificar.
  */
 export async function autenticarAdmin(req) {
   // 1) Preferido: Bearer admin-JWT.
@@ -163,7 +166,7 @@ export async function autenticarAdmin(req) {
     if (!admins.includes(endereco)) {
       return { ok: false, papel: null, code: "admin_removido", message: "endereço não é mais admin" };
     }
-    return { ok: true, papel: "admin-jwt", endereco, fonte: "jwt" };
+    return { ok: true, papel: "admin-jwt", endereco, fonte: "jwt", payload };
   }
 
   // 2) Legado: x-admin-token. Mantido durante a janela de migração.
@@ -178,7 +181,7 @@ export async function autenticarAdmin(req) {
   if (legacy !== expected) {
     return { ok: false, papel: null, code: "admin_token_invalido", message: "x-admin-token inválido" };
   }
-  return { ok: true, papel: "admin-legado", endereco: null, fonte: "x-admin-token" };
+  return { ok: true, papel: "admin-legado", endereco: null, fonte: "x-admin-token", payload: null };
 }
 
 /**
