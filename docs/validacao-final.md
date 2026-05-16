@@ -1,5 +1,79 @@
 # Validação Final — Estado vs Especificação Refatorada
 
+## Mega Comando 5 — Foundry CI + Echidna CI + SBOM (2026-05-16)
+
+Move Foundry e Echidna para o CI (antes só locais — MC4) e adiciona SBOM CycloneDX formal versionado. Slither continua em `security-scan.yml` (MC4). Tudo em um único workflow novo: `.github/workflows/contract-security.yml`, 3 jobs paralelos, paths-filter `desafio-gut/**`.
+
+### Item 1 — Foundry no CI
+
+- Job `foundry-test` em `.github/workflows/contract-security.yml`:
+  - `runs-on: ubuntu-latest`, `working-directory: ./desafio-gut`
+  - `foundry-rs/foundry-toolchain@v1` instala forge
+  - `forge install foundry-rs/forge-std --no-commit` resolve dep do `tests/foundry/LeilaoGUT.t.sol` (forge-std não é commitado)
+  - `forge test -vv` roda os 16 testes existentes
+- Trigger: push/pull_request em `main`, paths `desafio-gut/**`
+
+```
+$ grep -c -i "foundry" .github/workflows/contract-security.yml
+10   (≥ 3 ✅)
+```
+
+### Item 2 — Echidna no CI
+
+- Job `echidna-fuzz` no mesmo workflow:
+  - `crytic/echidna-action@v1` com `files: .`, `contract: LeilaoGUTFuzzing`, `config: echidna.yaml`
+  - **`solc-version: 0.8.20`** — alinhado com `hardhat.config.js`, `foundry.toml` e bytecode deployado na Sepolia (spec original sugeria 0.8.28 mas projeto trava em 0.8.20)
+  - `timeout-minutes: 35` cobre os 50000 iterations do `echidna.yaml` com margem sobre os 30 min
+- `crytic-args: --solc-disable-warnings` para output limpo
+
+```
+$ grep -c -i "echidna" .github/workflows/contract-security.yml
+7   (≥ 3 ✅)
+```
+
+### Item 3 — SBOM CycloneDX
+
+- Job `sbom-generate` no mesmo workflow:
+  - `anchore/sbom-action@v0` gera `sbom.cyclonedx.json` do `./desafio-gut`
+  - `upload-artifact: true` + `artifact-name: sbom-cyclonedx` permite download de qualquer build (PRs e push)
+  - Step de auto-commit roda apenas em `github.event_name == 'push' && github.ref == 'refs/heads/main'`:
+    - cria `docs/sbom/sbom-YYYYMMDD.json`
+    - committer `github-actions[bot]`
+    - mensagem inclui `[skip ci]` (defesa em profundidade contra loop; GITHUB_TOKEN padrão já não re-triggers)
+    - `git diff --staged --quiet` previne commit vazio em runs idempotentes do mesmo dia
+- `docs/sbom/.gitkeep` criado para garantir que o diretório existe no primeiro run
+
+```
+$ grep -c -i "sbom" .github/workflows/contract-security.yml
+16   (≥ 3 ✅)
+```
+
+### Validação cruzada
+
+```
+$ grep -E "^  [a-z][a-z-]+:$" .github/workflows/contract-security.yml | grep -v "push\|run"
+22:  foundry-test:
+44:  echidna-fuzz:
+66:  sbom-generate:
+   (3 jobs ✅)
+
+$ cd desafio-gut && npx hardhat compile --force
+Compiled 1 Solidity file with solc 0.8.20 (evm target: shanghai)
+   (baseline verde ✅ — MC5 não toca em .sol)
+```
+
+### Permissions e Branch Protection
+
+Para o auto-commit do SBOM funcionar, o workflow declara `permissions: contents: write` no nível do arquivo (apenas `sbom-generate` realmente usa). Os outros 2 jobs só leem.
+
+Quando habilitar branch protection para os novos checks no GitHub Settings → Branches:
+
+- `contract-security / foundry`
+- `contract-security / echidna`
+- `contract-security / sbom`
+
+---
+
 ## Mega Comando 4 — Análise Estática + Fuzzing + WAF (2026-05-15)
 
 Última onda de blindagem. Foca no contrato (Slither/Foundry/Echidna) e no edge (Cloudflare WAF doc).
