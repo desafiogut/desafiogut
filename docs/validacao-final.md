@@ -1,5 +1,75 @@
 # Validação Final — Estado vs Especificação Refatorada
 
+## Mega Comando 6 — Cloudflare WAF Automatizado + Backup Blobs + DR (2026-05-16)
+
+Última camada operacional: automatiza o WAF (antes era playbook manual MC4), adiciona backup diário dos Blobs (cobertura para corrupção/purge acidental), e fecha com playbook de Disaster Recovery cobrindo 4 cenários. Sem ambiente standby físico (desproporcional para beta).
+
+### Item 1 — Cloudflare WAF Automatizado
+
+- `scripts/apply-waf.mjs` — Node ESM puro, sem deps, usa `fetch` nativo. Idempotente: GET ruleset por nome → PUT se existe, POST se não.
+  - **Regra 1**: rate-limit `phase=http_ratelimit`, 50 req/min/IP, action=block, mitigation_timeout 600s
+  - **Regra 2**: OWASP CRS managed, ID `4814384a9e5d4951ca4e3d97527332ec` (oficial Cloudflare — corrige typo do doc MC4), paranoia-level-1 only
+  - **Regra 3**: bot challenge action=`managed_challenge`, expression `cf.threat_score gt 30` (Free plan — divergência consciente da spec original que usava `cf.bot_management.score < 30` Pro+)
+- Variáveis: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID`
+- `docs/cloudflare-waf-execucao.md` — pré-requisitos (token + escopos), execução, verificação pós (cf-ray, lista de rulesets, smoke tests), rollback manual
+
+```
+$ grep -c "rulesets" scripts/apply-waf.mjs
+10   (≥ 3 ✅)
+```
+
+### Item 2 — Backup de Blobs Netlify
+
+- `desafio-gut/frontend/netlify/functions/backup-blobs.mjs` — segue padrão `purge-logs.mjs`:
+  - `executar()` exportada (chamada pelo cron) + `default` handler HTTP admin-gated
+  - Stores cobertos: 8 críticos (`audit`, `audit-admin`, `lance-idem`, `pedidos`, `webhook-mp`, `consent-log`, `admin-refresh`, `fingerprint`)
+  - Stores excluídos: `rate-limit`, `jwt-fail-counter` (ephemeral, baixo valor); `backups` (evita recursão); `purge-logs-meta`
+  - Dump no Blob store `backups` com chave `backup:YYYY-MM-DD`
+  - GC automático: retenção 30 dias
+  - HTTP: GET lista backups disponíveis, POST executa
+- `desafio-gut/frontend/netlify/functions/backup-blobs-scheduled.mjs` — cron wrapper `schedule("0 2 * * *", ...)` — 02:00 UTC = 23:00 BRT do dia anterior, 1h antes do `purge-logs`
+- `docs/backup-blobs.md` — operação manual, restauração via Netlify CLI, Fase 2 (S3) documentada mas não implementada, verificação periódica mensal
+
+```
+$ grep -c "store\|backup\|Blob" desafio-gut/frontend/netlify/functions/backup-blobs.mjs
+39   (≥ 5 ✅)
+```
+
+### Item 3 — Disaster Recovery Playbook
+
+- `docs/disaster-recovery.md` — 7 seções: 4 cenários + RTO/RPO + ativação + checklist por cenário + contatos + testes trimestrais + anti-padrões.
+  - **Cenário A** (Blobs): RTO 2h / RPO 24h — restaurar do backup diário
+  - **Cenário B** (Netlify outage): RTO 4h / RPO 0 — failover para Cloudflare Pages (read-only, sem Functions)
+  - **Cenário C** (Alchemy down): RTO 1h / RPO 0 — swap `VITE_ALCHEMY_URL` para publicnode (já no CSP)
+  - **Cenário D** (Privy comprometido): RTO 24h / RPO 0 — rotação App Secret + força logout
+- Contatos: Netlify Support, Alchemy Support, Privy Support, Cloudflare, GitHub (+ status pages)
+- Testes DR trimestrais com log em `docs/dr-test-log.md` (criar no 1º teste)
+
+```
+$ grep -c "RTO\|RPO\|cenário\|restauração" docs/disaster-recovery.md
+26   (≥ 8 ✅)
+```
+
+### Validação cruzada
+
+```
+$ Test-Path scripts/apply-waf.mjs                                                          → True
+$ Test-Path docs/cloudflare-waf-execucao.md                                                 → True
+$ Test-Path desafio-gut/frontend/netlify/functions/backup-blobs.mjs                         → True
+$ Test-Path desafio-gut/frontend/netlify/functions/backup-blobs-scheduled.mjs               → True
+$ Test-Path docs/backup-blobs.md                                                            → True
+$ Test-Path docs/disaster-recovery.md                                                       → True
+
+$ node --check scripts/apply-waf.mjs                                                        → OK
+$ node --check desafio-gut/frontend/netlify/functions/backup-blobs.mjs                      → OK
+$ node --check desafio-gut/frontend/netlify/functions/backup-blobs-scheduled.mjs            → OK
+
+$ cd desafio-gut/frontend && npm run build
+✓ built in 7.85s  (warnings pré-existentes do projeto, não MC6)
+```
+
+---
+
 ## Mega Comando 5 — Foundry CI + Echidna CI + SBOM (2026-05-16)
 
 Move Foundry e Echidna para o CI (antes só locais — MC4) e adiciona SBOM CycloneDX formal versionado. Slither continua em `security-scan.yml` (MC4). Tudo em um único workflow novo: `.github/workflows/contract-security.yml`, 3 jobs paralelos, paths-filter `desafio-gut/**`.
