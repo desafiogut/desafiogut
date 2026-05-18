@@ -6,6 +6,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
 import WalletCard from "../components/WalletCard.jsx";
 import VoucherPanel from "../components/VoucherPanel.jsx";
+import PainelIndicacao from "../components/PainelIndicacao.jsx";
 import BannerUpload from "../components/BannerUpload.jsx";
 import RenovacaoCard from "../components/RenovacaoCard.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
@@ -317,6 +318,11 @@ export default function MinhaCarteira() {
               Emissão via Admin; resgate será integrado no fluxo de comprar-senhas. */}
           <div style={{ marginBottom: sectionGap }}>
             <VoucherPanel endereco={address} isMobile={isMobile} />
+          </div>
+
+          {/* MC10 — Sistema "Indique e Ganhe" (Growth Viral). */}
+          <div style={{ marginBottom: sectionGap }}>
+            <PainelIndicacao isMobile={isMobile} />
           </div>
 
           {/* Banners (§6 da spec): auto-gerador SVG + upload manual + premium via Wallet. */}

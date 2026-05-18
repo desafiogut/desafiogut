@@ -29,6 +29,7 @@ import {
   debitarSaldoRs, reembolsarSaldoRs, lerSaldoRsCentavos,
 } from "./_lib/saldoRs.mjs";
 import { creditarSenhas, lerSaldoSenhas, CONTRATO_ADDRESS } from "./_lib/contract.mjs";
+import { buscarVinculoPorIndicado, registrarConversao } from "./_lib/referral.mjs";
 
 const VALOR_POR_SENHA_CENTAVOS = 200; // R$ 2,00
 
@@ -239,6 +240,24 @@ export default async (req) => {
 
   // LGPD: registra consentimento auditável (art. 7, I) — pós-sucesso on-chain.
   await gravarConsentLog(req, endereco);
+
+  // MC10 (Growth Viral): se este indicado foi referenciado, concede +1 senha
+  // bônus ao indicador na PRIMEIRA compra. Idempotente em referral-convertido.
+  // Falha aqui NÃO derruba a compra — é fire-and-forget logado.
+  let referralBonus = null;
+  try {
+    const vinculo = await buscarVinculoPorIndicado(endereco);
+    if (vinculo && vinculo.indicador) {
+      referralBonus = await registrarConversao(vinculo, {
+        contexto: "comprar-senhas", txHashCompra: resultadoOnChain.txHash, qtd,
+      });
+      console.info("[comprar-senhas] referral check", {
+        indicado: endereco, indicador: vinculo.indicador, codigo: vinculo.codigo, referralBonus,
+      });
+    }
+  } catch (err) {
+    console.warn("[comprar-senhas] referral hook falhou (não-fatal):", err?.message);
+  }
 
   console.info("[comprar-senhas] concluído", {
     endereco, qtd,

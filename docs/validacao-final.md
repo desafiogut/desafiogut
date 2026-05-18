@@ -1,5 +1,101 @@
 # Validação Final — Estado vs Especificação Refatorada
 
+## Mega Comando 10 — Growth Viral / "Indique e Ganhe" (2026-05-18)
+
+Crescimento por indicação com recompensa **on-chain** (+1 senha via `LeilaoGUT.adicionarSenhas`) ao indicador quando o indicado faz a primeira compra. Anti-fraude em 4 camadas (FingerprintJS + Sybil check) e limite de 10 conversões/mês. Feature flag `REFERRAL_ATIVO` (default `on`).
+
+### Item 1 — Biblioteca de Indicação
+
+- `desafio-gut/frontend/netlify/functions/_lib/referral.mjs`:
+  - `gerarCodigoIndicacao(endereco)` — idempotente, retorna `IND-XXXXXX` (3 letras + 6 chars do alfabeto `[A-Z0-9]` via `crypto.randomBytes`). Persiste `referral-code:{endereco}` + índice reverso `referral-code-reverso:{codigo}`.
+  - `validarCodigoIndicacao(codigo)` — lookup O(1) via blob reverso.
+  - `verificarFraude(codigo, novoEndereco, visitorId)` — 4 motivos: `codigo_inexistente`, `auto_indicacao`, `mesmo_dispositivo` (visitorId batendo com address já vinculado do indicador), `sybil_suspeito` (≥3 endereços no mesmo visitor em 24h).
+  - `registrarIndicacao()` — persiste `referral:{codigo}:{indicado}` com status `pendente`; idempotente; persiste rejeições em `referral-fraud:` + Sentry alert.
+  - `verificarLimiteMensal(endereco, mes)` — 10 conversões/mês máximo, contador em `referral-monthly:{endereco}:{AAAA-MM}`.
+  - `concederBonus(indicador)` — chama `creditarSenhas(indicador, 1)` (mesma função on-chain usada por `comprar-senhas.mjs`); atualiza histórico + contador mensal.
+  - `registrarConversao(vinculo)` — ciclo completo idempotente (marca `referral-convertido:` antes de conceder bônus). Caller único: `comprar-senhas.mjs`.
+  - `estatisticasIndicador(endereco)` — total indicados, total convertidos, senhas ganhas (para o painel).
+  - `referralAtivo()` — lê env `REFERRAL_ATIVO`, default `on`.
+
+```
+$ grep -c "gerarCodigoIndicacao\|validarCodigoIndicacao\|registrarIndicacao\|concederBonus" desafio-gut/frontend/netlify/functions/_lib/referral.mjs
+10   (≥ 10 ✅)
+$ node --check desafio-gut/frontend/netlify/functions/_lib/referral.mjs
+OK
+```
+
+### Item 2 — Endpoint /referral
+
+- `desafio-gut/frontend/netlify/functions/referral.mjs`:
+  - `GET ?acao=meu-codigo&endereco=0x...` — anti-IDOR via JWT user-session do owner OU admin (mesmo `validarOwnerOuAdmin` de `/saldo-rs` e `/wallet`). Retorna `{ codigo, total_indicados, total_convertidos, senhas_ganhas }`. Gera o código no primeiro acesso (idempotente).
+  - `POST ?acao=usar-codigo` — body `{ codigo_indicacao, endereco }`, header `X-Visitor-ID` recomendado. JWT user-session do próprio indicado. Mapeia motivos de fraude para HTTP status (400/403/404/503).
+  - Rate-limit **5/min/IP** via `_lib/rate-limiter.mjs` (padrão MC1).
+  - Feature flag `REFERRAL_ATIVO=off` → 503 imediato.
+
+```
+$ grep -c "meu-codigo\|usar-codigo\|referral" desafio-gut/frontend/netlify/functions/referral.mjs
+12   (≥ 6 ✅)
+$ node --check desafio-gut/frontend/netlify/functions/referral.mjs
+OK
+```
+
+### Item 3 — Hook em comprar-senhas.mjs
+
+- Adição de ~15 linhas pós-`gravarConsentLog` (após sucesso on-chain confirmado): `buscarVinculoPorIndicado(endereco)` → se houver vínculo, `registrarConversao(vinculo, contexto)`. Try/catch envolve tudo — falha aqui **não derruba** a compra (fire-and-forget logado em console.warn). Idempotência protege contra duplo crédito em retries.
+- Import adicionado: `{ buscarVinculoPorIndicado, registrarConversao } from "./_lib/referral.mjs"`.
+
+```
+$ grep -c "referral\|concederBonus\|indicado\|indicador" desafio-gut/frontend/netlify/functions/comprar-senhas.mjs
+9   (≥ 5 ✅)
+$ node --check desafio-gut/frontend/netlify/functions/comprar-senhas.mjs
+OK
+```
+
+### Item 4 — Painel "Indique e Ganhe" (Frontend)
+
+- `desafio-gut/frontend/src/components/PainelIndicacao.jsx`:
+  - Código pessoal em monospace + 2 botões (`📋 Copiar` via `navigator.clipboard.writeText`, `📤 Compartilhar` via `navigator.share()` com fallback clipboard).
+  - 3 cards de stats: `👥 Indicados`, `✅ Converteram`, `🎁 Senhas Ganhas` em grid responsivo (3 colunas desktop / 1 coluna mobile).
+  - Lista anonimizada (`Indicado 1`, `Indicado 2`, ...) limitada a 10 chips.
+  - Estado `off` quando a API retorna 503 (feature flag desligada).
+  - Estilo inline-CSS aderente ao padrão dos componentes vizinhos (`WalletCard`, `VoucherPanel`, `RenovacaoCard`) + Framer Motion `initial/animate`.
+- Integrado em `src/pages/MinhaCarteira.jsx` na rota `/carteira` (entre `VoucherPanel` e `BannerUpload`).
+
+```
+$ grep -c "IND-\|indicados\|converteram\|senhas.*ganhas\|compartilhar" desafio-gut/frontend/src/components/PainelIndicacao.jsx
+13   (≥ 8 ✅)
+$ grep -n "PainelIndicacao" desafio-gut/frontend/src/pages/MinhaCarteira.jsx
+9:import PainelIndicacao from "../components/PainelIndicacao.jsx";
+325:            <PainelIndicacao isMobile={isMobile} />
+```
+
+### Item 5 — Documentação
+
+- `docs/growth-viral.md` — 105 linhas, cobrindo: como funciona, fluxo de conversão, regras de recompensa (1 senha/conversão, máx 10/mês), 4 camadas anti-fraude, feature flag, endpoints, schema de blobs, rate limit, integração frontend, observabilidade.
+
+```
+$ wc -l docs/growth-viral.md
+105   (≥ 40 ✅)
+```
+
+### Validação cruzada
+
+- `node --check` nos 3 `.mjs` MC10 (`_lib/referral.mjs`, `referral.mjs`, `comprar-senhas.mjs` modificado) → OK
+- `npm run build` (frontend) → `✓ built in 7.62s` (sem regressões)
+- 4 artefatos novos + 1 modificado + 1 modificado frontend confirmados via `ls -la`
+
+### Configuração de Produção
+
+- **Env var obrigatória:** `REFERRAL_ATIVO=on` no Netlify Dashboard.
+- **Rollback instantâneo:** `REFERRAL_ATIVO=off` → endpoint responde 503, hook em `comprar-senhas.mjs` pula concessão de bônus (mesmo se houver vínculo persistido), sem necessidade de redeploy.
+- **Capacidade on-chain:** cada conversão consome gas Sepolia (≈30k–50k para `adicionarSenhas`). Garantir saldo de ETH na wallet `coordenacao` (mesma usada por `comprar-senhas.mjs`).
+- **Próximos passos sugeridos:**
+  1. Adicionar TTLs ao `purge-logs.mjs`: `referral-fraud:` 90 dias, `referral-monthly:` 13 meses.
+  2. Pré-fill do código via query `?ref=IND-XXXXXX` no fluxo de cadastro (frontend).
+  3. Notificação push/email para o indicador quando uma conversão acontece.
+
+---
+
 ## Mega Comando 8 — IA Preditiva (Motor de Leilões Relâmpago Automáticos) (2026-05-18)
 
 Inovação operacional: o motor lê eventos de engajamento coletados no frontend (pageview, click_botao_comprar, tempo_sessao, scroll), agrega janelas de 15 min comparando com média de 60 min, e decide automaticamente quando abrir um leilão relâmpago via `LeilaoGUT.abrirEdicao(...)` on-chain. Feature flag `IA_PREDICTIVA` controla `off` / `warn` (default) / `auto`.
