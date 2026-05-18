@@ -52,7 +52,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Echidna fuzzing
-        uses: crytic/echidna-action@v1
+        uses: crytic/echidna-action@v2
         with:
           files: .
           contract: LeilaoGUTFuzzing
