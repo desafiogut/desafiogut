@@ -1,5 +1,107 @@
 # Validação Final — Estado vs Especificação Refatorada
 
+## Mega Comando 9 — IA Cognitiva (Chatbot RAG 24/7) (2026-05-18)
+
+Assistente conversacional disponível em todas as rotas do app que responde dúvidas sobre o regulamento usando RAG (Retrieval-Augmented Generation). Pipeline: embeddings OpenAI `text-embedding-3-small` (1536 dim) sobre `docs/chatbot/regulamento.md`, busca por cosine similarity em Netlify Blobs, top-3 chunks injetados no prompt do LLM (default DeepSeek V4 Flash). Feature flag `CHATBOT_ATIVO` (default `on`).
+
+### Item 1 — Base de Conhecimento
+
+- `docs/chatbot/regulamento.md` — 237 linhas consolidadas a partir de `DESAFIOGUT-MASTER.md` e `ESPECIFICACAO-TECNICA-DEFINITIVA.md`: regras do leilão (Art. VIII menor único, lance min/máx, hash Argon2id + EIP-191), 4 cotas (Bronze/Prata/Ouro/Diamante com valores, exclusividade e banners), Vale-Crédito Automático (REQ-17), pagamentos (PIX Adesão + Mercado Pago Fichas), Vouchers Diamante (`GUT-XXXXXXXX`, REQ-26), sistema "Indique e Ganhe" (MC10), segurança/LGPD e **25 perguntas de FAQ** cobrindo onboarding, modalidades, valores, anti-fraude e operação.
+
+```
+$ wc -l docs/chatbot/regulamento.md
+237   (≥ 100 ✅)
+```
+
+### Item 2 — Motor RAG
+
+- `desafio-gut/frontend/netlify/functions/_lib/rag.mjs` — Node ESM puro (sem deps além de fetch):
+  - `splitIntoChunks(texto, tamanho=500, overlap=50)` — chunking word-based; valida `overlap < tamanho`; retorna `[]` em texto vazio.
+  - `cosineSimilarity(a, b)` — produto escalar normalizado; lança em dimensões diferentes; retorna `NaN` em vetor zero (caller decide).
+  - `buscarChunksRelevantes(store, embedding, topK=3)` — lê `rag:meta`, itera `rag:{i}`, ranqueia por similaridade, retorna top-K com `{ id, ordem, texto, score }`.
+  - `gerarEmbedding(texto, opts)` — chamada compatível com OpenAI Embeddings, AbortController 20s timeout, env vars `OPENAI_API_KEY` + `OPENAI_BASE_URL` + `EMBED_MODEL`.
+  - `montarContexto(chunks, maxCaracteres=4000)` — concatena para injeção no prompt sem estourar limite.
+
+- `scripts/build-rag-index.mjs` — script CLI Node ESM idempotente:
+  - Lê `docs/chatbot/regulamento.md` (ou `--fonte custom.md`).
+  - Resolve `@netlify/blobs` via path absoluto para `desafio-gut/frontend/netlify/functions/node_modules`.
+  - Requer `NETLIFY_SITE_ID` + `NETLIFY_AUTH_TOKEN` + `OPENAI_API_KEY`.
+  - Pergunta antes de sobrescrever (`--yes` para CI).
+  - Persiste `rag:{n}` + `rag:meta`.
+
+- `desafio-gut/frontend/netlify/functions/chatbot.mjs` — POST handler:
+  - Rate-limit 10/min/IP via `_lib/rate-limiter.mjs`.
+  - Validação: `pergunta` string, ≤500 caracteres.
+  - Feature flag `CHATBOT_ATIVO=off` → 503 imediato.
+  - Pipeline: `gerarEmbedding(pergunta)` → `buscarChunksRelevantes(store, top-3)` → `chamarLLM(pergunta, contexto)` com `temperature: 0.2`, `max_tokens: 512`.
+  - Prompt system restritivo: "Responda APENAS com base no contexto. Se a pergunta não for coberta, diga claramente: 'Não tenho essa informação...'".
+  - LLM via env vars `LLM_API_KEY` + `LLM_BASE_URL` (default `https://api.deepseek.com/v1`) + `LLM_MODEL` (default `deepseek-chat`).
+  - Retorna `{ resposta, fontes: [{id, score}] }`.
+
+```
+$ grep -c "splitIntoChunks\|cosineSimilarity\|buscarChunksRelevantes\|gerarEmbedding" desafio-gut/frontend/netlify/functions/_lib/rag.mjs
+10   (≥ 8 ✅)
+$ node --check desafio-gut/frontend/netlify/functions/_lib/rag.mjs
+OK
+$ node --check desafio-gut/frontend/netlify/functions/chatbot.mjs
+OK
+$ node --check scripts/build-rag-index.mjs
+OK
+```
+
+### Item 3 — ChatbotWidget (Frontend)
+
+- `desafio-gut/frontend/src/components/ChatbotWidget.jsx`:
+  - Botão flutuante 💬 fixo no canto inferior direito (z-index 9998), pulse sutil quando idle via Framer Motion.
+  - Modal 400×500 desktop / fullscreen mobile (≤540px) via `useIsMobile()`.
+  - Header com nome + subtítulo + botões "Limpar" e fechar.
+  - Mensagens em balões: gradiente teal-cripto à direita (user), cinza translúcido à esquerda (bot) + chips de fontes em `chunk_ids`.
+  - Indicador de digitação: 3 dots animados sequencialmente via Framer Motion.
+  - Input `<textarea>` com Enter envia / Shift+Enter quebra linha; cap em 500+ caracteres.
+  - Histórico persistido em `localStorage.gut_chat_history` (bounded a 40 mensagens — evita estouro).
+  - Tratamento de erros: 503 (feature flag) / 429 (rate limit) / fallback genérico.
+  - Auto-scroll para última mensagem.
+- Integrado em `src/App.jsx` após `<Routes>` para ser global em todas as rotas.
+
+```
+$ grep -c "ChatbotWidget\|chatbot\|gut_chat" desafio-gut/frontend/src/components/ChatbotWidget.jsx
+11   (≥ 10 ✅)
+$ grep -n "ChatbotWidget" desafio-gut/frontend/src/App.jsx
+17:import ChatbotWidget   from "./components/ChatbotWidget.jsx";
+68:      <ChatbotWidget />
+```
+
+### Item 4 — Documentação e Script
+
+- `docs/ia-cognitiva.md` — 164 linhas: visão geral, **diagrama ASCII das duas fases (indexação + consulta)**, modelos utilizados (OpenAI embeddings + DeepSeek V4 Flash), custos estimados (~$0,50–$1/mês uso real / $5–$15 stress), tabela de env vars, feature flag, rate limit, convenções de Blob, limitações conhecidas, playbook de operação (atualizar base, trocar provedor LLM, debugar respostas ruins), observabilidade e próximos passos (re-rank, multi-turn, quotas, stream, eval automática).
+- Script `build:rag` adicionado em `desafio-gut/frontend/package.json` apontando para `../../scripts/build-rag-index.mjs`.
+
+```
+$ grep -n "build:rag" desafio-gut/frontend/package.json
+10:    "build:rag": "node ../../scripts/build-rag-index.mjs"
+```
+
+### Validação cruzada
+
+- `node --check` em 3 `.mjs` → OK (`_lib/rag.mjs`, `chatbot.mjs`, `scripts/build-rag-index.mjs`)
+- `npm run build` (frontend) → `✓ built in 7.20s` (sem regressões)
+- 6 artefatos confirmados via `ls -la`: regulamento, _lib/rag, build-script, chatbot endpoint, widget, ia-cognitiva.md
+- `App.jsx` integra `<ChatbotWidget />` global após `<Routes>`
+
+### Configuração de Produção
+
+- **Env vars obrigatórias** no Netlify Dashboard:
+  - `OPENAI_API_KEY` — embeddings (recompensa OPCIONAL: troque para qualquer provider OpenAI-compat via `OPENAI_BASE_URL`).
+  - `LLM_API_KEY` — chat completions DeepSeek (default) ou outro compat OpenAI.
+  - `CHATBOT_ATIVO=on` — explícito para auditoria (default no código é `on`).
+- **Build do índice (ação manual pós-deploy):**
+  1. Configurar env locais: `NETLIFY_SITE_ID`, `NETLIFY_AUTH_TOKEN`, `OPENAI_API_KEY`.
+  2. `cd desafio-gut/frontend && npm run build:rag` (custo único < $0,01).
+- **Rollback:** `CHATBOT_ATIVO=off` → endpoint 503 + widget mostra "indisponível", sem necessidade de redeploy.
+- **Custos:** ~$0,50–$1/mês em uso moderado (50 perguntas/dia); stress 10/min/IP → $5–$15/mês.
+
+---
+
 ## Mega Comando 10 — Growth Viral / "Indique e Ganhe" (2026-05-18)
 
 Crescimento por indicação com recompensa **on-chain** (+1 senha via `LeilaoGUT.adicionarSenhas`) ao indicador quando o indicado faz a primeira compra. Anti-fraude em 4 camadas (FingerprintJS + Sybil check) e limite de 10 conversões/mês. Feature flag `REFERRAL_ATIVO` (default `on`).
