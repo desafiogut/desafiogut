@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import {
   subscribeLanceDado,
@@ -14,6 +15,12 @@ import {
   checkGeoAnomaly,
 } from "../lib/sentry-alerts.js";
 import { getVisitorId, getCachedVisitorId } from "../lib/fingerprint.js";
+import {
+  trackPageview,
+  trackClickComprar,
+  trackTempoSessao,
+  trackScroll,
+} from "../lib/analytics.js";
 
 // Persistência do prazoTimestamp (Onda 5 FASE 0): o timer é IMUNE a refresh
 // porque cada tipo de leilão guarda seu próprio prazo no localStorage. Cálculo
@@ -137,6 +144,49 @@ export function AppProvider({ children }) {
     getVisitorId().then((id) => { if (!cancelado && id) setVisitorId(id); });
     return () => { cancelado = true; };
   }, []);
+
+  // ── Analytics (MC8 / Item 1) — coleta de eventos para motor IA preditiva ──
+  // Fire-and-forget: nunca bloqueia render nem propaga erro. visitorId é lido
+  // do localStorage dentro de analytics.js para sobreviver a mudanças de estado.
+  const location = useLocation();
+  useEffect(() => {
+    trackPageview(location.pathname);
+  }, [location.pathname]);
+
+  // Tempo de sessão: marca início no mount e envia ao unload via Page Lifecycle.
+  // pagehide é mais confiável que beforeunload no Mobile/iOS Safari.
+  const sessaoInicioRef = useRef(Date.now());
+  useEffect(() => {
+    const onPageHide = () => {
+      const segundos = Math.floor((Date.now() - sessaoInicioRef.current) / 1000);
+      trackTempoSessao(segundos, location?.pathname);
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, [location?.pathname]);
+
+  // Profundidade de scroll: rastreia o MÁXIMO atingido por rota.
+  // Reseta o teto ao trocar de rota e dispara no unload da rota corrente.
+  useEffect(() => {
+    let maxProf = 0;
+    let rafId   = null;
+    const computar = () => {
+      const el = document.documentElement;
+      const total = (el.scrollHeight - el.clientHeight) || 1;
+      const prof  = Math.floor(((window.scrollY || 0) / total) * 100);
+      if (prof > maxProf) maxProf = prof;
+      rafId = null;
+    };
+    const onScroll = () => {
+      if (rafId == null) rafId = window.requestAnimationFrame(computar);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (rafId) window.cancelAnimationFrame(rafId);
+      if (maxProf > 0) trackScroll(maxProf, location?.pathname);
+    };
+  }, [location?.pathname]);
 
   // ── User-session JWT (Anti-IDOR — Mega Comando 1 / Item 3) ───────────────
   // Obtido após login Privy via assinatura EIP-191. TTL 24h. Cache em
@@ -531,6 +581,8 @@ export function AppProvider({ children }) {
     desconectar,
     handleLanceSucesso,
     handleNovaRodada,
+    // ── Analytics (MC8) ────────────────────────────────────────────────────
+    trackPageview, trackClickComprar, trackTempoSessao, trackScroll,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

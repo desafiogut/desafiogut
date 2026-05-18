@@ -1,5 +1,84 @@
 # Validação Final — Estado vs Especificação Refatorada
 
+## Mega Comando 8 — IA Preditiva (Motor de Leilões Relâmpago Automáticos) (2026-05-18)
+
+Inovação operacional: o motor lê eventos de engajamento coletados no frontend (pageview, click_botao_comprar, tempo_sessao, scroll), agrega janelas de 15 min comparando com média de 60 min, e decide automaticamente quando abrir um leilão relâmpago via `LeilaoGUT.abrirEdicao(...)` on-chain. Feature flag `IA_PREDICTIVA` controla `off` / `warn` (default) / `auto`.
+
+### Item 1 — Coleta de Eventos (Frontend)
+
+- `desafio-gut/frontend/src/lib/analytics.js` — 4 trackers fire-and-forget (`trackPageview`, `trackClickComprar`, `trackTempoSessao`, `trackScroll`) que enviam POST para `/.netlify/functions/analytics` com `keepalive: true` (sobrevive a navegação/unload). visitorId é lido do `localStorage.gut_visitor_id` (gravado pelo FingerprintJS — MC3 / Item 3).
+- Integração `src/context/AppContext.jsx`:
+  - `useLocation()` + `useEffect([location.pathname], () => trackPageview(...))` → pageview por troca de rota
+  - `pagehide` listener envia `trackTempoSessao(segundos)` no unload (Page Lifecycle, robusto no iOS Safari)
+  - Scroll handler com `requestAnimationFrame` rastreia profundidade máxima por rota; envia `trackScroll(max)` ao desmontar a rota
+  - As 4 funções também são expostas pelo `AppContext.value` para uso direto nos componentes (ex.: `trackClickComprar` no botão Comprar)
+
+```
+$ grep -c "trackPageview\|analytics" desafio-gut/frontend/src/lib/analytics.js
+6   (≥ 5 ✅)
+$ node --check desafio-gut/frontend/src/lib/analytics.js
+OK
+```
+
+### Item 2 — Endpoint /analytics
+
+- `desafio-gut/frontend/netlify/functions/analytics.mjs` — POST handler:
+  - Rate-limit 30 reqs/min/IP via `_lib/rate-limiter.mjs` (padrão MC1)
+  - Validação: `evento` ∈ {pageview, click_botao_comprar, tempo_sessao, scroll}, `visitorId` regex `[a-zA-Z0-9_-]{4,128}` (cobre hex do FingerprintJS e fallback)
+  - Persiste em Blob `analytics:{minuto}:{visitorId}` agregando contagens por evento e contagens por rota (read-modify-write tolerante a contention)
+  - Fail-open em Blobs indisponível (mesma filosofia do rate-limiter) — UX fire-and-forget preservada
+
+```
+$ grep -c "Blob\|analytics\|rate" desafio-gut/frontend/netlify/functions/analytics.mjs
+14   (≥ 5 ✅)
+$ node --check desafio-gut/frontend/netlify/functions/analytics.mjs
+OK
+```
+
+### Item 3 — Motor de Decisão
+
+- `desafio-gut/frontend/netlify/functions/_lib/ia-preditiva.mjs`:
+  - `analisarEngajamento()` — lista Blobs `analytics:{m}:*` minuto a minuto, agrega `usuarios_ativos` (Set de visitorIds), `cliques_compra`, calcula `taxa_clique_compra`, `tendencia` (Δ ativos vs janela anterior de 15 min) e `fator_ativos` (ativos / média baseline de 60 min)
+  - Thresholds: `fator_ativos > 2`, `taxa_clique > 0.15`, `tendencia > 0`. 3/3 → dispara.
+  - `executarAcao(modo, metricas, threshold, disparado)`:
+    - `off` → `console.info`
+    - `warn` → `captureSecurityAlert("ia_preditiva_disparo", ...)` + Blob `ia-decisao:{ts}`
+    - `auto` → verifica `coordenacao()` == wallet, chama `abrirEdicao(idEdicao, nome, 1800)` on-chain (`idEdicao = "FLASH-AUTO-{ts}"`, duração 30 min)
+  - Toda execução é auditada em Blob `ia-execucao:{ts}` (sucesso, falha, sem-disparo) — nunca throw para não derrubar o cron
+  - Reusa `CONTRATO_ADDRESS` de `_lib/contract.mjs` e `captureSecurityAlert` de `_lib/sentry-server.mjs`
+
+```
+$ grep -c "analisarEngajamento\|threshold\|IA_PREDICTIVA\|abrirEdicao" desafio-gut/frontend/netlify/functions/_lib/ia-preditiva.mjs
+33   (≥ 8 ✅)
+$ node --check desafio-gut/frontend/netlify/functions/_lib/ia-preditiva.mjs
+OK
+```
+
+### Item 4 — Cron Wrapper (5 min)
+
+- `desafio-gut/frontend/netlify/functions/ia-preditiva-scheduled.mjs` — `schedule("*/5 * * * *", ...)` com retorno 200 mesmo em erro (mesma filosofia de `purge-logs-scheduled.mjs` / `monitor-onchain-scheduled.mjs` / `backup-blobs-scheduled.mjs`). Log estruturado com `modo`, `disparado`, `acao`, `ativos`, `taxa`, `tendencia`, `condicoes`.
+
+```
+$ grep -c "schedule\|analisarEngajamento" desafio-gut/frontend/netlify/functions/ia-preditiva-scheduled.mjs
+7   (≥ 3 ✅)
+$ node --check desafio-gut/frontend/netlify/functions/ia-preditiva-scheduled.mjs
+OK
+```
+
+### Validação Cruzada
+
+- `node --check` em todos os 3 `.mjs` → OK
+- `npm run build` (frontend) → ✓ built in 7.66s (sem regressões)
+- 4 artefatos novos confirmados: `src/lib/analytics.js`, `netlify/functions/analytics.mjs`, `netlify/functions/_lib/ia-preditiva.mjs`, `netlify/functions/ia-preditiva-scheduled.mjs`
+
+### Configuração de Produção
+
+- **Env var obrigatória:** `IA_PREDICTIVA=warn` no Netlify Dashboard (default seguro — observa, alerta, não dispara on-chain)
+- Promoção para `auto` SOMENTE após: (a) coleta de baseline real ≥ 7 dias, (b) revisão dos Blobs `ia-execucao:*` para confirmar que os thresholds não estão falsos-positivos, (c) garantia de saldo de gas na wallet `coordenacao`
+- Rollback: `IA_PREDICTIVA=off` desliga o motor em ~5 min (próximo tick do cron)
+
+---
+
 <<<<<<< HEAD
 ## Mega Comando 6 — Cloudflare WAF Automatizado + Backup Blobs + DR (2026-05-16)
 
