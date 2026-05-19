@@ -67,6 +67,9 @@ const NAV_ITEMS = [
   { path: "/ativos",        label: "Meus Ativos",       icon: <IconTrending />,  end: false },
   { path: "/seguranca",     label: "Segurança",         icon: <IconShield />,    end: false },
   { path: "/configuracoes", label: "Configurações",     icon: <IconSettings />,  end: false },
+  // MC11.1 — Seção pública "Seja Nosso Parceiro" (visível a TODOS: não logados,
+  // comuns e lojistas). Porta de entrada para o fluxo corporativo.
+  { path: "/seja-nosso-parceiro", label: "🤝 Seja nosso parceiro!", icon: <IconTrending />, end: false },
 ];
 
 // MC11 — Itens exclusivos do Usuário Corporativo (Lojista). Renderizados
