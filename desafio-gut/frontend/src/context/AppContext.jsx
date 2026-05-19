@@ -234,6 +234,28 @@ export function AppProvider({ children }) {
   const isConnected = authenticated && Boolean(address);
   const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || null;
 
+  // ── MC11.4 — Timeout do gap "Criando carteira" (Hipótese A) ──────────────
+  // Sem isso, o usuário fica preso no spinner indefinidamente se Privy não
+  // popular `wallets[0].address` (CSP block, slow net, falha silenciosa).
+  // Após 10s no gap `authenticated && !address`, flipa para UI de recuperação
+  // ("Tentar novamente" → logout, libera CTA "Aceito" para retry limpo).
+  // O cleanup do useEffect (re-run em mudança de deps) cancela o timer quando
+  // a transição ocorre — sem risco de race.
+  const WALLET_STUCK_TIMEOUT_MS = 10_000;
+  const [walletCreationStuck, setWalletCreationStuck] = useState(false);
+  useEffect(() => {
+    if (!authenticated || address) {
+      setWalletCreationStuck(false);
+      return undefined;
+    }
+    const id = setTimeout(() => setWalletCreationStuck(true), WALLET_STUCK_TIMEOUT_MS);
+    return () => clearTimeout(id);
+  }, [authenticated, address]);
+  const tentarRecuperarCarteira = useCallback(() => {
+    setWalletCreationStuck(false);
+    try { logout(); } catch {}
+  }, [logout]);
+
   const lancesExibidos = tipoLeilao === "flash" ? lancesFlash : lances;
 
   // Vencedor — Menor Lance Único (Art. 8)
@@ -654,6 +676,8 @@ export function AppProvider({ children }) {
     authToken,
     obterAuthToken,
     address, privyWallet, isConnected, userLabel, ready, authenticated, user,
+    // MC11.4 — recovery do trap "Criando carteira" (timeout + retry).
+    walletCreationStuck, tentarRecuperarCarteira,
     vencedor,
     abrirModal,
     desconectar,
