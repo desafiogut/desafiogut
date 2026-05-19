@@ -69,6 +69,15 @@ const NAV_ITEMS = [
   { path: "/configuracoes", label: "Configurações",     icon: <IconSettings />,  end: false },
 ];
 
+// MC11 — Itens exclusivos do Usuário Corporativo (Lojista). Renderizados
+// SOMENTE quando tipoUsuario === "corporativo". Usuário Comum não vê.
+const CORPORATIVO_ITEMS = [
+  { path: "/corporativo",           label: "🏢 Painel Lojista", icon: <IconDashboard />, end: true  },
+  { path: "/corporativo/cotas",     label: "📢 Minhas Cotas",   icon: <IconTarget />,    end: false },
+  { path: "/corporativo/banners",   label: "🖼️ Meus Banners",  icon: <IconTrending />,  end: false },
+  { path: "/corporativo/analytics", label: "📊 Analytics",      icon: <IconTrending />,  end: false },
+];
+
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 const ADMIN_ITEM = { path: "/admin", label: "⚙️ Admin", icon: <IconSettings />, end: false };
 
@@ -78,9 +87,17 @@ export default function Sidebar() {
     isConnected, address, userLabel,
     saldoSenhas, saldoSenhasStatus,
     abrirModal, desconectar,
+    tipoUsuario,
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
-  const itensNav = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS;
+  // MC11 — montagem condicional da navegação:
+  //   - corporativo: links comuns + bloco corporativo (Painel/Cotas/Banners/Analytics)
+  //   - comum:        apenas links comuns (sem regressão)
+  //   - admin:        ainda recebe o item Admin no final (preserva RBAC)
+  const itensCorporativo = tipoUsuario === "corporativo" ? CORPORATIVO_ITEMS : [];
+  const itensNav = isAdmin
+    ? [...NAV_ITEMS, ...itensCorporativo, ADMIN_ITEM]
+    : [...NAV_ITEMS, ...itensCorporativo];
 
   // Sufixo curto refletindo status de leitura on-chain (idle/ok = vazio).
   const statusSuffix =

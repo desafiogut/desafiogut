@@ -135,6 +135,13 @@ export function AppProvider({ children }) {
   const [saldoRsCentavos, setSaldoRsCentavos] = useState(null);
   const [saldoRsStatus,   setSaldoRsStatus]   = useState("idle");
 
+  // MC11 — Usuário Corporativo (Lojista): tipo='comum'|'corporativo'.
+  // Detecção automática: GET /cotas?cliente_id={address} — 200 = cota ativa
+  // ⇒ corporativo; 404 ⇒ comum. Status auxilia gating de UI sem flicker.
+  const [tipoUsuario,    setTipoUsuario]    = useState("comum");
+  const [cotaCorporativa, setCotaCorporativa] = useState(null);
+  const [tipoStatus,     setTipoStatus]     = useState("idle");
+
   // ── FingerprintJS visitorId (anti-Sybil — Mega Comando 3 / Item 3) ──────
   // Carregado uma vez no mount, cacheado em localStorage. Enviado em
   // X-Visitor-ID nos fetches sensíveis.
@@ -428,6 +435,49 @@ export function AppProvider({ children }) {
     return () => clearInterval(id);
   }, [address, authToken, refetchSaldoRs]);
 
+  // MC11 — detectar tipo corporativo após login. Endpoint /cotas é público
+  // e retorna 404 quando não há cota ativa para o cliente_id. Polling 60s
+  // cobre upgrade pós-aprovação de cota sem reload manual.
+  const detectarTipoCorporativo = useCallback(async () => {
+    if (!address) {
+      setTipoUsuario("comum");
+      setCotaCorporativa(null);
+      setTipoStatus("idle");
+      return;
+    }
+    setTipoStatus((prev) => (prev === "ok" ? prev : "loading"));
+    try {
+      const resp = await fetch(`/.netlify/functions/cotas?cliente_id=${encodeURIComponent(address)}`);
+      if (resp.status === 404) {
+        setTipoUsuario("comum");
+        setCotaCorporativa(null);
+        setTipoStatus("ok");
+        return;
+      }
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const cota = await resp.json();
+      if (cota && cota.cliente_id) {
+        setCotaCorporativa(cota);
+        setTipoUsuario("corporativo");
+        setTipoStatus("ok");
+      } else {
+        setTipoUsuario("comum");
+        setCotaCorporativa(null);
+        setTipoStatus("ok");
+      }
+    } catch (err) {
+      console.warn("[GUT-DEBUG] detectarTipoCorporativo falhou", err?.message);
+      setTipoStatus((prev) => (prev === "ok" ? "stale" : "error"));
+    }
+  }, [address]);
+
+  useEffect(() => {
+    detectarTipoCorporativo();
+    if (!address) return;
+    const id = setInterval(detectarTipoCorporativo, 60_000);
+    return () => clearInterval(id);
+  }, [address, detectarTipoCorporativo]);
+
   // Polling on-chain do prazo do Programado (Onda 5 FASE 0).
   // Contrato é fonte da verdade do REQ-10. Polling a cada 60s; também escuta
   // visibilitychange para re-sincronizar quando a aba volta a foco.
@@ -573,6 +623,11 @@ export function AppProvider({ children }) {
     saldoRsCentavos,
     saldoRsStatus,
     refetchSaldoRs,
+    // MC11 — tipo de usuário (comum | corporativo) e cota corporativa.
+    tipoUsuario,
+    cotaCorporativa,
+    tipoStatus,
+    detectarTipoCorporativo,
     authToken,
     obterAuthToken,
     address, privyWallet, isConnected, userLabel, ready, authenticated, user,
