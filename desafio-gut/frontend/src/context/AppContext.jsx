@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { usePrivy, useWallets, useLogin } from "@privy-io/react-auth";
+import { usePrivy, useWallets, useLogin, useCreateWallet } from "@privy-io/react-auth";
 import {
   subscribeLanceDado,
   getSaldoSenhasOnChain,
@@ -228,33 +228,57 @@ export function AppProvider({ children }) {
     }
   }, [navigate]);
   const { login } = useLogin({ onComplete: onLoginComplete });
+  // MC11.5 — fallback explícito para criação de embedded wallet. Doc Privy:
+  // "createWallet runs when called manually OR when createOnLogin triggers".
+  // Se createOnLogin falhar silenciosamente (CSP, rate limit, race), invocamos
+  // createWallet() defensivamente no gap; se ambos falharem, recovery UI.
+  const { createWallet } = useCreateWallet();
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
   const address     = privyWallet?.address ?? null;
   const isConnected = authenticated && Boolean(address);
   const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || null;
 
-  // ── MC11.4 — Timeout do gap "Criando carteira" (Hipótese A) ──────────────
-  // Sem isso, o usuário fica preso no spinner indefinidamente se Privy não
-  // popular `wallets[0].address` (CSP block, slow net, falha silenciosa).
-  // Após 10s no gap `authenticated && !address`, flipa para UI de recuperação
-  // ("Tentar novamente" → logout, libera CTA "Aceito" para retry limpo).
-  // O cleanup do useEffect (re-run em mudança de deps) cancela o timer quando
-  // a transição ocorre — sem risco de race.
+  // ── MC11.4+MC11.5 — Recovery do trap "Criando carteira" ──────────────────
+  // Dois timers no gap `authenticated && !address`:
+  //   5s  → chama createWallet() defensivamente (caso createOnLogin tenha
+  //         falhado silenciosamente — CSP, rate limit, race).
+  //   10s → flipa walletCreationStuck=true e renderiza UI de recovery.
+  // O cleanup do useEffect (re-run em mudança de deps) cancela ambos os timers
+  // quando address chega ou o usuário desloga — sem risco de race.
+  const WALLET_RETRY_AT_MS    = 5_000;
   const WALLET_STUCK_TIMEOUT_MS = 10_000;
   const [walletCreationStuck, setWalletCreationStuck] = useState(false);
+  // Ref para createWallet evita re-trigger do useEffect se o hook reemitir.
+  const createWalletRef = useRef(createWallet);
+  useEffect(() => { createWalletRef.current = createWallet; }, [createWallet]);
   useEffect(() => {
     if (!authenticated || address) {
       setWalletCreationStuck(false);
       return undefined;
     }
-    const id = setTimeout(() => setWalletCreationStuck(true), WALLET_STUCK_TIMEOUT_MS);
-    return () => clearTimeout(id);
+    const retryId = setTimeout(() => {
+      // .catch silencioso — se Privy já criou (race) ou erro de qualquer tipo,
+      // o próximo timer (stuck) ainda decide o destino do usuário.
+      try { createWalletRef.current()?.catch?.(() => {}); } catch {}
+    }, WALLET_RETRY_AT_MS);
+    const stuckId = setTimeout(() => setWalletCreationStuck(true), WALLET_STUCK_TIMEOUT_MS);
+    return () => {
+      clearTimeout(retryId);
+      clearTimeout(stuckId);
+    };
   }, [authenticated, address]);
-  const tentarRecuperarCarteira = useCallback(() => {
+  const tentarRecuperarCarteira = useCallback(async () => {
     setWalletCreationStuck(false);
+    // 1ª tentativa: createWallet() direto — UX leve, sem reauth.
+    try {
+      await createWallet();
+      return;
+    } catch {
+      // 2ª: logout para limpar a sessão e permitir nova tentativa pelo "Aceito".
+    }
     try { logout(); } catch {}
-  }, [logout]);
+  }, [createWallet, logout]);
 
   const lancesExibidos = tipoLeilao === "flash" ? lancesFlash : lances;
 
