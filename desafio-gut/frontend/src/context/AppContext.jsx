@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { useLocation } from "react-router-dom";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useLocation, useNavigate } from "react-router-dom";
+import { usePrivy, useWallets, useLogin } from "@privy-io/react-auth";
 import {
   subscribeLanceDado,
   getSaldoSenhasOnChain,
@@ -213,7 +213,21 @@ export function AppProvider({ children }) {
   });
 
   // Privy auth
-  const { ready, authenticated, user, login, logout } = usePrivy();
+  // MC11.3 — substitui usePrivy().login por useLogin({ onComplete }): hook
+  // canônico do Privy que dispara callback ao final do fluxo de autenticação,
+  // mais cedo e mais confiável que observar o flip de `authenticated`.
+  // Importante: useNavigate dentro do AppProvider só funciona porque <App/>
+  // monta o <BrowserRouter> antes de <AppProvider> (ver main.jsx).
+  const { ready, authenticated, user, logout } = usePrivy();
+  const navigate = useNavigate();
+  const onLoginComplete = useCallback(() => {
+    // Redirect pós-login obrigatório: /seja-nosso-parceiro → /.
+    // Em outras rotas, NÃO mexe (usuário pode estar logando em /carteira etc).
+    if (typeof window !== "undefined" && window.location?.pathname === "/seja-nosso-parceiro") {
+      navigate("/", { replace: true });
+    }
+  }, [navigate]);
+  const { login } = useLogin({ onComplete: onLoginComplete });
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
   const address     = privyWallet?.address ?? null;

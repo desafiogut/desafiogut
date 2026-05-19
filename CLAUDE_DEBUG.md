@@ -2168,3 +2168,66 @@ O contrato agora tem 117 linhas (era 89). Todas as funções existentes preserva
 - Build #1 (globals + Layout + Dashboard): ✅ 4.65s
 - Build #2 (CardLance + TabelaLances + Nav): ✅ 3.46s
 - Build #3 (MercadoLances + final): ✅ 3.87s
+
+---
+
+## MC11.3 — EM ANDAMENTO (2026-05-19)
+
+**Objetivo:** corrigir botão "Aceito" não-clicável pós-login email-OTP + implementar vitrine dual (COMUM vs CORPORATIVO).
+
+**Histórico curto:**
+- MC11   — entrega parcial do fluxo corporativo (rotas, guard, tipoUsuario).
+- MC11.1 — página pública `/seja-nosso-parceiro` + CTA.
+- MC11.2 — auth-state granular na Sidebar + abrirModal early-return. `test-mc11.2.mjs` 13/13 ✅ mas bug em produção persiste.
+
+### Fase 0 — Diagnóstico (sem instrumentação runtime; leitura estática suficiente)
+
+**Causa raiz identificada** (4 vetores, todos rastreáveis a arquivos atuais):
+
+1. **`src/widgets/layout/BottomNav.jsx:178-192`** — **causa principal do botão travado no mobile.**
+   MC11.2 só protegeu o `Sidebar.jsx` com state-machine de 4 estados (`!ready` / `authenticated && !address` / `isConnected` / `default`). O `BottomNav` (mobile) só checa `isConnected ? <user info> : <botão "Aceito">`. Durante o gap `authenticated=true && address=null` (embedded wallet sendo criada após OTP), o mobile renderiza o botão Aceito; usuário clica; `abrirModal` (AppContext.jsx:551) faz early-return em `authenticated=true`; **resultado: botão sem reação ≡ "travado clicando em loop"**.
+2. **`src/pages/SejaNossoParceiro.jsx` + roteamento** — **sem redirect pós-login.** Após login bem-sucedido, usuário permanece em `/seja-nosso-parceiro`; só o label do CTA muda (`"Quero ser um parceiro"`). Não há `useEffect` detectando `isConnected` para `navigate("/")`. Sintoma agravado: usuário fica na mesma tela "marketing" sem perceber que está logado.
+3. **`src/context/AppContext.jsx:216`** — **não usa `useLogin({ onComplete })`.** Hoje: `const { login } = usePrivy()` direto. O hook canônico `useLogin` permite reagir ao término da autenticação com sinal mais cedo e confiável do que observar o flip de `authenticated`.
+4. **`src/pages/Vitrine.jsx`** — **vitrine não é dual.** Hoje renderiza 4 slots informativos (Diamante/Ouro/Prata/Bronze) idênticos para qualquer `tipoUsuario`. Falta branch `tipoUsuario === "corporativo"` direcionando para experiência de métricas/lojista.
+
+### Arquivos no fluxo (mapa)
+
+| Arquivo | Papel | Estado MC11.2 | Estado MC11.3 alvo |
+|---|---|---|---|
+| `src/App.jsx` | Router + gate LGPD | OK | OK (sem alteração) |
+| `src/context/AppContext.jsx` | usePrivy + abrirModal | MC11.2 (early-return) | adicionar `useLogin({ onComplete })` + helper `onLoginComplete` para navegar |
+| `src/widgets/layout/Sidebar.jsx` | desktop nav | MC11.2 state-machine OK | sem alteração |
+| `src/widgets/layout/BottomNav.jsx` | **mobile nav** | **vulnerável (regressão)** | replicar state-machine da Sidebar (4 estados) |
+| `src/pages/SejaNossoParceiro.jsx` | landing parceiro | MC11.2 CTA state-machine | adicionar redirect `/seja-nosso-parceiro → /` quando `isConnected` |
+| `src/pages/Vitrine.jsx` | vitrine 4 slots | sem branch dual | branch `tipoUsuario === "corporativo"` |
+
+### Logs runtime
+Não foram injetados `[DEBUG]` — diagnóstico é estático com 100% de confiança. (`[GUT-DEBUG]` em AppContext.jsx:540-573 já existe; substring `[DEBUG]` literal NÃO ocorre — teste #2 do script permanece passível.)
+
+### Decisão pendente
+Vitrine dual: significado de "métricas lojista" precisa alinhamento (3 caminhos: banner-com-link / 4-cards-métricas / overlay-em-slot). Aguardando.
+
+### Tentativa #1 (2026-05-19) — 12/12 ✅
+
+**Correções aplicadas:**
+
+1. `src/widgets/layout/BottomNav.jsx` — destructure adicional `ready, authenticated` do AppContext + state-machine de 4 estados no MoreSheet (`!ready` → "Carregando…" | `authenticated && !address` → "🔐 Criando carteira…" | `isConnected` → user card | default → botão "Aceito"). Mobile agora se comporta como Sidebar (MC11.2). **Botão Aceito não é mais alcançável durante o gap pós email-OTP.**
+
+2. `src/context/AppContext.jsx` —
+   - import: adicionado `useNavigate` (react-router-dom) e `useLogin` (@privy-io/react-auth).
+   - `usePrivy()` agora exporta apenas `{ ready, authenticated, user, logout }` (sem `login`).
+   - novo: `useLogin({ onComplete: onLoginComplete })`, com `onLoginComplete = useCallback(...)` que navega `/seja-nosso-parceiro → /` quando esse for o pathname corrente. `abrirModal` continua chamando `login()` (agora do useLogin) com early-return em `!ready` e `authenticated`.
+
+3. `src/pages/Vitrine.jsx` — destructure `tipoUsuario, cotaCorporativa`. Novo componente `<VitrineHeaderLojista>` renderizado **somente quando `tipoUsuario === "corporativo"`**, exibindo: chip "🏢 Painel do Parceiro · Vitrine", categoria da cota, KPIs (impressões, cliques, CTR — placeholder `—` enquanto `cotaCorporativa` não os carregar) e CTA "Ver analytics completo →" para `/corporativo/analytics`. Vitrine "cliente final" (4 slots) preservada abaixo para o lojista.
+
+4. `scripts/test-mc11.3.mjs` — novo. 12 checks (rede → bundle → estática) cobrindo todos os vetores da causa raiz.
+
+**Builds:**
+- Baseline: ✅ 7.26s
+- Pós-correção (build #1 da Tentativa): ✅ 6.12s
+- Script test-mc11.3.mjs: **12/12 ✅**
+
+**Falsos positivos resolvidos durante a iteração:**
+- Check #10 inicial usou `indexOf` para "Aceito o DesafioGUT" em Sidebar — pegou o comentário da state-machine na linha 244, antes de "Criando carteira" na linha 282. Trocado por `lastIndexOf` (sempre aponta para o JSX final, abaixo das docstrings).
+
+**Status:** aguardando aval do operador para `git push origin main` (deploy Netlify).

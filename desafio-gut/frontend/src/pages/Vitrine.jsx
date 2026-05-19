@@ -15,6 +15,58 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useAppContext } from "../context/AppContext.jsx";
 import { tiersAgoraVisiveis, tierAtivoAgora } from "../data/programacao-junho-2026.js";
 
+// MC11.3 — Header dual da Vitrine. Renderizado SOMENTE quando
+// tipoUsuario === "corporativo": dá ao lojista um resumo da cota ativa +
+// atalho para /corporativo/analytics, mantendo abaixo a vitrine "cliente
+// final" para ele ver o que o usuário comum enxerga.
+function VitrineHeaderLojista({ cota, isMobile }) {
+  const categoria = cota?.categoria || "—";
+  const impressoes = cota?.impressoes != null ? cota.impressoes : "—";
+  const cliques    = cota?.cliques    != null ? cota.cliques    : "—";
+  const ctr        = cota?.ctr        != null ? `${cota.ctr.toFixed(1)}%` : "—";
+  return (
+    <section
+      aria-label="Painel do Parceiro"
+      style={{
+        padding: isMobile ? "1rem" : "1.25rem 1.5rem",
+        background: "linear-gradient(135deg, rgba(0,212,170,0.10), rgba(245,166,35,0.06))",
+        border: "1px solid rgba(0,212,170,0.35)",
+        borderRadius: "16px",
+        display: "flex", flexDirection: isMobile ? "column" : "row",
+        alignItems: isMobile ? "flex-start" : "center",
+        justifyContent: "space-between",
+        gap: "0.75rem",
+      }}
+    >
+      <div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: "0.5rem",
+          fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.08em",
+          color: "#00d4aa", textTransform: "uppercase",
+        }}>
+          🏢 Painel do Parceiro · Vitrine
+        </div>
+        <div style={{ marginTop: "0.35rem", fontSize: isMobile ? "0.92rem" : "1.02rem", color: "#e8f0fe", fontWeight: 700 }}>
+          Cota <strong style={{ color: "#f5a623" }}>{categoria}</strong>
+          {" "}· {impressoes} imp · {cliques} cliq · {ctr} CTR
+        </div>
+      </div>
+      <Link
+        to="/corporativo/analytics"
+        style={{
+          padding: "0.6rem 0.9rem",
+          background: "linear-gradient(135deg,#00d4aa,#00a888)",
+          color: "#0a0f1a", fontWeight: 800, fontSize: "0.8rem",
+          textDecoration: "none", borderRadius: "10px",
+          letterSpacing: "0.04em", whiteSpace: "nowrap",
+        }}
+      >
+        Ver analytics completo →
+      </Link>
+    </section>
+  );
+}
+
 const TZ_PADRAO = "America/Sao_Paulo";
 function getTimezone() {
   return import.meta.env?.VITE_TIMEZONE || TZ_PADRAO;
@@ -325,7 +377,9 @@ export default function Vitrine() {
   const isMobile = useIsMobile();
   const { slot: slotId } = useParams();
   const tz = getTimezone();
-  const { prazoFlash, prazoProgramado } = useAppContext();
+  // MC11.3 — vitrine dual via tipoUsuario: comum vê só os 4 slots;
+  // corporativo vê header lojista (cota + atalho analytics) acima dos slots.
+  const { prazoFlash, prazoProgramado, tipoUsuario, cotaCorporativa } = useAppContext();
 
   // Tick a cada 1s para atualizar timers visíveis nos cards (Onda 5 FASE 0).
   // Cálculo é absoluto: `prazo - now`, então não acumula drift.
@@ -384,6 +438,9 @@ export default function Vitrine() {
 
   return (
     <div style={{ padding: isMobile ? "1rem" : "1.5rem 2rem", color: COR.text, display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {tipoUsuario === "corporativo" && (
+        <VitrineHeaderLojista cota={cotaCorporativa} isMobile={isMobile} />
+      )}
       <header>
         <h1 style={{
           margin: 0,

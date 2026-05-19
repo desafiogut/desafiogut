@@ -59,6 +59,10 @@ export default function BottomNav() {
   const {
     isConnected, address, userLabel,
     abrirModal, desconectar,
+    // MC11.3 — auth-state granular (espelha Sidebar): mobile também precisa
+    // proteger o botão "Aceito" durante o gap authenticated && !address (pós
+    // email-OTP, embedded wallet em criação). Sem isso o botão fica travado.
+    ready, authenticated,
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
   const linksSecundarios = isAdmin
@@ -157,7 +161,47 @@ export default function BottomNav() {
               </button>
             </div>
 
-            {isConnected ? (
+            {/* MC11.3 — Auth-state granular (4 estados, espelha Sidebar):
+               1. !ready                 → spinner "Carregando…"
+               2. authenticated && !addr → spinner "Criando carteira…" (gap email-OTP)
+               3. isConnected            → user card
+               4. default                → botão "Aceito o DesafioGUT"
+               Estados 1+2 NUNCA renderizam o botão de login → não pode "travar". */}
+            {!ready ? (
+              <div
+                role="status"
+                aria-live="polite"
+                style={{
+                  width: "100%", padding: "0.85rem", marginBottom: "0.5rem",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  gap: "0.5rem",
+                  background: "rgba(245,166,35,0.06)",
+                  border: "1px dashed rgba(245,166,35,0.25)",
+                  borderRadius: "12px", color: "#5a7090",
+                  fontSize: "0.9rem", fontWeight: 700,
+                }}
+              >
+                <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
+                <span>Carregando…</span>
+              </div>
+            ) : authenticated && !address ? (
+              <div
+                role="status"
+                aria-live="polite"
+                style={{
+                  width: "100%", padding: "0.85rem", marginBottom: "0.5rem",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  gap: "0.5rem",
+                  background: "rgba(0,212,170,0.08)",
+                  border: "1px solid rgba(0,212,170,0.3)",
+                  borderRadius: "12px", color: "#00d4aa",
+                  fontSize: "0.9rem", fontWeight: 800,
+                }}
+              >
+                <span>🔐</span>
+                <span>Criando carteira…</span>
+              </div>
+            ) : isConnected ? (
               <div style={{
                 margin: "0.5rem 0 0.75rem", padding: "0.7rem 0.85rem",
                 background: "rgba(16,185,129,0.08)", borderRadius: "12px",
