@@ -2411,4 +2411,22 @@ Cenários que MC11.5 NÃO resolve (porque NÃO É o problema endereçado):
 - Funding de gas das embedded wallets (sem código de paymaster/fundWallet). Usuário ainda precisa de Sepolia ETH para `darLance`. Documentado em `CLAUDE_DEBUG.md:963` desde abril/2026.
 - Privy SDK bug fundamental (versão `^3.22.1`). Se for esse caso, escalar para Privy support.
 
-**Status:** ✅ **RESOLVIDO local (com escopo claro)** — aguardando aval do operador para `git push origin main`.
+**Status:** ✅ **RESOLVIDO (tentativa #1)** — deploy propagado e validado em produção.
+
+### Deploy
+- commit: `f8783a1` "fix: mc11.5 — createWallet defensivo + retry leve no recovery"
+- push: `33dc0ee..f8783a1  main -> main` (bypass autorizado).
+- Bundle pré-deploy: `index-BBz2dfIA.js` (MC11.4)
+- Bundle pós-deploy: `index-u4SCO6Nq.js` (MC11.5) — propagado em ~2 min.
+- Smoke do bundle deployado contém: `createOnLogin`, `createWallet`, `walletCreationStuck`, `Criando carteira`, `Tentar novamente`.
+- `node scripts/test-mc11.5.mjs` final: **15/15 ✅**.
+
+### Próximos passos do operador
+- [ ] **Refunder coordenação** `0xDa3a83…e84E` em Sepolia via faucet (atual: 0.049 ETH ≈ 30-50 chamadas a `adicionarSenhas`). Faucets: `sepoliafaucet.com` (Alchemy), `cloud.google.com/application/web3/faucet/ethereum/sepolia`.
+- [ ] **Testar runtime** no fluxo email-OTP: confirmar que (a) Privy cria carteira em <5s (cenário feliz, sem recovery), OU (b) aos 5s o `createWallet()` defensivo recupera, OU (c) aos 10s a UI "Tentar novamente" funciona e cria a carteira sem forçar logout. Coletar console se persistir.
+- [ ] **Se trap persistir mesmo com MC11.5**: provavelmente bug fundamental do Privy SDK v3.22.1 — escalar para Privy support com `userId` + `appId cmo51f3v300l90clgzksivvad` + logs de console (`[GUT-DEBUG]` + `unhandledrejection` já ativos em main.jsx).
+
+### MC11.6 — EM ANDAMENTO
+Causa raiz: COOP: same-origin bloqueia popup Coinbase/Base SDK + falta polyfills Node.js (process/Buffer) no Vite.
+Fix: same-origin → same-origin-allow-popups no netlify.toml + vite-plugin-node-polyfills no vite.config.js.
+Ref: docs.base.org (same-origin quebra popup, same-origin-allow-popups = recomendado), docs.privy.io (process is not defined → vite-plugin-node-polyfills), Chrome Developers blog (same-origin bloqueia toda interação cross-origin com pop-ups).
