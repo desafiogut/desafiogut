@@ -120,10 +120,11 @@ export default function SejaNossoParceiro() {
   };
 
   const wrap = {
-    padding: isMobile ? "1rem" : "2rem",
+    padding: "1rem 0",
     maxWidth: "1200px",
     margin: "0 auto",
   };
+  const wrapClass = "px-4 md:px-8";
   const card = {
     background: COR.bg,
     border: "1px solid rgba(245,166,35,0.18)",
@@ -133,7 +134,7 @@ export default function SejaNossoParceiro() {
   };
 
   return (
-    <div style={wrap}>
+    <div style={wrap} className={wrapClass}>
       {/* ── HERO ── */}
       <motion.header
         initial={{ opacity: 0, y: 20 }}
@@ -158,13 +159,14 @@ export default function SejaNossoParceiro() {
         </div>
         <h1 style={{
           margin: 0,
-          fontSize: isMobile ? "1.8rem" : "2.6rem",
           fontWeight: 900,
           color: COR.text,
           lineHeight: 1.15,
           fontFamily: "'Orbitron', sans-serif",
           letterSpacing: "0.01em",
-        }}>
+        }}
+          className="text-2xl md:text-4xl"
+        >
           Seja Nosso Parceiro!
         </h1>
         <p style={{
@@ -185,6 +187,7 @@ export default function SejaNossoParceiro() {
           onClick={handleCTA}
           disabled={ctaDisabled}
           aria-busy={ctaDisabled}
+          className="w-full md:w-auto"
           style={{
             marginTop: "1.5rem",
             padding: "0.9rem 2rem",
@@ -216,13 +219,9 @@ export default function SejaNossoParceiro() {
         }}>
           📦 Escolha o plano que combina com sua empresa
         </h2>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: isMobile
-            ? "1fr"
-            : "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "1rem",
-        }}>
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        >
           {PLANOS.map((p, i) => (
             <motion.div
               key={p.nome}
@@ -293,11 +292,9 @@ export default function SejaNossoParceiro() {
         }}>
           🛠️ Como funciona
         </h2>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-          gap: "1rem",
-        }}>
+        <div
+          className="flex flex-col md:flex-row gap-4"
+        >
           {PASSOS.map((p) => (
             <div key={p.n} style={{
               padding: "1rem",
@@ -357,6 +354,7 @@ export default function SejaNossoParceiro() {
           onClick={handleCTA}
           disabled={ctaDisabled}
           aria-busy={ctaDisabled}
+          className="w-full md:w-auto"
           style={{
             padding: "0.85rem 2rem",
             background: ctaDisabled

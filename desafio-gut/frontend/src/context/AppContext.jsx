@@ -608,8 +608,13 @@ export function AppProvider({ children }) {
       console.warn("[GUT-DEBUG] abrirModal ignorado: Privy ready=false (UI deve mostrar skeleton).");
       return;
     }
-    if (authenticated) {
-      console.info("[GUT-DEBUG] abrirModal ignorado: já autenticado.");
+    if (authenticated && address) {
+      console.info("[GUT-DEBUG] abrirModal ignorado: já autenticado e com carteira.");
+      return;
+    }
+    if (authenticated && !address) {
+      console.info("[GUT-DEBUG] abrirModal: autenticado sem carteira, criando...");
+      createWallet();
       return;
     }
     try {
