@@ -2426,7 +2426,12 @@ Cenários que MC11.5 NÃO resolve (porque NÃO É o problema endereçado):
 - [ ] **Testar runtime** no fluxo email-OTP: confirmar que (a) Privy cria carteira em <5s (cenário feliz, sem recovery), OU (b) aos 5s o `createWallet()` defensivo recupera, OU (c) aos 10s a UI "Tentar novamente" funciona e cria a carteira sem forçar logout. Coletar console se persistir.
 - [ ] **Se trap persistir mesmo com MC11.5**: provavelmente bug fundamental do Privy SDK v3.22.1 — escalar para Privy support com `userId` + `appId cmo51f3v300l90clgzksivvad` + logs de console (`[GUT-DEBUG]` + `unhandledrejection` já ativos em main.jsx).
 
-### MC11.6 — EM ANDAMENTO
+### MC11.6 — ✅ RESOLVIDO (tentativa #1)
 Causa raiz: COOP: same-origin bloqueia popup Coinbase/Base SDK + falta polyfills Node.js (process/Buffer) no Vite.
 Fix: same-origin → same-origin-allow-popups no netlify.toml + vite-plugin-node-polyfills no vite.config.js.
 Ref: docs.base.org (same-origin quebra popup, same-origin-allow-popups = recomendado), docs.privy.io (process is not defined → vite-plugin-node-polyfills), Chrome Developers blog (same-origin bloqueia toda interação cross-origin com pop-ups).
+
+**Build:** ✅ 5.10s.
+**Script:** **10/10 ✅** (scripts/test-mc11.6.mjs).
+**Deploy propagado:** COOP header confirmado `same-origin-allow-popups` em `/` e `/seja-nosso-parceiro`.
+**Commit:** `f6c4945` "fix: mc11.6 — COOP same-origin-allow-popups + vite-plugin-node-polyfills para embedded wallets (Coinbase/Base SDK)"
