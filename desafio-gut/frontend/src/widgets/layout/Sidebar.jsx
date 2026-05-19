@@ -91,6 +91,11 @@ export default function Sidebar() {
     saldoSenhas, saldoSenhasStatus,
     abrirModal, desconectar,
     tipoUsuario,
+    // MC11.2 — auth-state granular: ready (Privy SDK bootou) e authenticated
+    // (sessão Privy ativa). authenticated=true && address=null = embedded
+    // wallet sendo criada (gap após email-OTP). Sem isso o usuário via o
+    // botão "Aceito" travado clicando em loop.
+    ready, authenticated,
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
   // MC11 — montagem condicional da navegação:
@@ -232,8 +237,51 @@ export default function Sidebar() {
 
       {/* ── Rodapé: Auth + Toggle ── */}
       <div style={{ borderTop: "1px solid rgba(245,166,35,0.1)", padding: "0.75rem 0.5rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-        {/* Botão de login/logout */}
-        {isConnected ? (
+        {/* MC11.2 — Auth-state granular (4 estados):
+           1. !ready                 → Privy SDK ainda bootando
+           2. authenticated && !addr → embedded wallet em criação (pós OTP)
+           3. isConnected            → logado com address → botão Sair
+           4. default                → não logado → botão "Aceito o DesafioGUT"
+           Estados 1+2 mostram skeleton/spinner (NUNCA o botão de login travado). */}
+        {!ready ? (
+          <div
+            role="status"
+            aria-live="polite"
+            title="Carregando autenticação…"
+            style={{
+              display: "flex", alignItems: "center",
+              gap: collapsed ? 0 : "0.5rem",
+              justifyContent: "center",
+              padding: collapsed ? "0.6rem" : "0.55rem 0.85rem",
+              background: "rgba(245,166,35,0.06)",
+              border: "1px dashed rgba(245,166,35,0.25)",
+              borderRadius: "10px", color: "#5a7090",
+              fontSize: collapsed ? "1rem" : "0.75rem", fontWeight: 600,
+            }}
+          >
+            <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
+            {!collapsed && <span>Carregando…</span>}
+          </div>
+        ) : authenticated && !address ? (
+          <div
+            role="status"
+            aria-live="polite"
+            title="Criando sua carteira…"
+            style={{
+              display: "flex", alignItems: "center",
+              gap: collapsed ? 0 : "0.5rem",
+              justifyContent: "center",
+              padding: collapsed ? "0.6rem" : "0.55rem 0.85rem",
+              background: "rgba(0,212,170,0.08)",
+              border: "1px solid rgba(0,212,170,0.3)",
+              borderRadius: "10px", color: "#00d4aa",
+              fontSize: collapsed ? "1rem" : "0.75rem", fontWeight: 700,
+            }}
+          >
+            <span>🔐</span>
+            {!collapsed && <span>Criando carteira…</span>}
+          </div>
+        ) : isConnected ? (
           <button
             onClick={desconectar}
             title={collapsed ? "Sair" : undefined}

@@ -537,11 +537,20 @@ export function AppProvider({ children }) {
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   function abrirModal() {
-    console.info("[GUT-DEBUG] abrirModal", { ready, authenticated, hasUser: !!user });
+    console.info("[GUT-DEBUG] abrirModal", { ready, authenticated, hasUser: !!user, hasAddress: !!address });
+    // MC11.2 — fix bug: re-clique no botão "Aceito" após email-OTP travava
+    // a UI porque login() é no-op quando authenticated=true. Hoje:
+    //   1. SDK não pronto       → ignora (UI já mostra spinner)
+    //   2. Já autenticado       → no-op explícito (UI já mostra "Criando carteira…")
+    //   3. Não autenticado      → dispara login()
+    // (Removido: setTimeout com stale closure que nunca disparava login().)
     if (!ready) {
-      console.warn("[GUT-DEBUG] abrirModal abortou: Privy ready=false. Reagendando em 1s.");
-      const id = setTimeout(() => { if (ready) login(); }, 1000);
-      return () => clearTimeout(id);
+      console.warn("[GUT-DEBUG] abrirModal ignorado: Privy ready=false (UI deve mostrar skeleton).");
+      return;
+    }
+    if (authenticated) {
+      console.info("[GUT-DEBUG] abrirModal ignorado: já autenticado.");
+      return;
     }
     try {
       const result = login();

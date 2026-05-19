@@ -81,22 +81,42 @@ const PASSOS = [
 export default function SejaNossoParceiro() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { isConnected, tipoUsuario, abrirModal } = useAppContext();
+  const { isConnected, tipoUsuario, abrirModal, ready, authenticated, address } = useAppContext();
+
+  // MC11.2 — CTA com 5 estados explícitos:
+  //   - !ready                    → desabilitado, label "Carregando…"
+  //   - authenticated && !address → desabilitado, label "Criando carteira…"
+  //   - !isConnected              → habilitado, label "Quero ser um parceiro" → abrirModal
+  //   - corporativo               → habilitado, label "Ir ao Painel Lojista" → /corporativo
+  //   - logado sem cota           → habilitado, label "Quero ser um parceiro" → /carteira
+  const ctaState = !ready
+    ? "loading"
+    : authenticated && !address
+      ? "wallet-creating"
+      : isConnected
+        ? (tipoUsuario === "corporativo" ? "lojista" : "logado-sem-cota")
+        : "anonimo";
+
+  const ctaLabel =
+    ctaState === "loading"          ? "⏳ Carregando…" :
+    ctaState === "wallet-creating"  ? "🔐 Criando carteira…" :
+    ctaState === "lojista"          ? "🏢 Ir ao Painel Lojista" :
+                                      "⚡ Quero ser um parceiro";
+
+  const ctaDisabled = ctaState === "loading" || ctaState === "wallet-creating";
 
   const handleCTA = () => {
-    if (!isConnected) {
-      // Não logado → abre modal Privy. Após login, AppContext detecta tipo
-      // automaticamente; se ainda não tem cota, mantém em "comum" e pode
-      // navegar manualmente após contratar pela coordenação.
+    if (ctaDisabled) return;
+    if (ctaState === "anonimo") {
       abrirModal();
       return;
     }
-    if (tipoUsuario === "corporativo") {
+    if (ctaState === "lojista") {
       navigate("/corporativo");
-    } else {
-      // Logado mas sem cota — leva para Carteira para realizar PIX.
-      navigate("/carteira");
+      return;
     }
+    // logado-sem-cota → leva para Carteira (fluxo PIX para contratar cota).
+    navigate("/carteira");
   };
 
   const wrap = {
@@ -160,23 +180,28 @@ export default function SejaNossoParceiro() {
         </p>
 
         <motion.button
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={ctaDisabled ? {} : { scale: 1.04 }}
+          whileTap={ctaDisabled ? {} : { scale: 0.98 }}
           onClick={handleCTA}
+          disabled={ctaDisabled}
+          aria-busy={ctaDisabled}
           style={{
             marginTop: "1.5rem",
             padding: "0.9rem 2rem",
-            background: `linear-gradient(135deg, ${COR.primary}, #e89400)`,
+            background: ctaDisabled
+              ? "rgba(245,166,35,0.25)"
+              : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
             border: "none", borderRadius: "12px",
-            color: "#0a0f1a",
+            color: ctaDisabled ? "#5a7090" : "#0a0f1a",
             fontFamily: "'Orbitron', sans-serif",
             fontWeight: 800, fontSize: "0.95rem",
             letterSpacing: "0.05em",
-            cursor: "pointer",
-            boxShadow: "0 10px 30px rgba(245,166,35,0.35)",
+            cursor: ctaDisabled ? "wait" : "pointer",
+            opacity: ctaDisabled ? 0.7 : 1,
+            boxShadow: ctaDisabled ? "none" : "0 10px 30px rgba(245,166,35,0.35)",
           }}
         >
-          ⚡ Quero ser um parceiro
+          {ctaLabel}
         </motion.button>
       </motion.header>
 
@@ -327,26 +352,29 @@ export default function SejaNossoParceiro() {
             : "Cadastre-se em segundos com Google, e-mail ou Apple."}
         </p>
         <motion.button
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={ctaDisabled ? {} : { scale: 1.04 }}
+          whileTap={ctaDisabled ? {} : { scale: 0.98 }}
           onClick={handleCTA}
+          disabled={ctaDisabled}
+          aria-busy={ctaDisabled}
           style={{
             padding: "0.85rem 2rem",
-            background: tipoUsuario === "corporativo"
-              ? `linear-gradient(135deg, ${COR.teal}, #00a888)`
-              : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
+            background: ctaDisabled
+              ? "rgba(245,166,35,0.25)"
+              : tipoUsuario === "corporativo"
+                ? `linear-gradient(135deg, ${COR.teal}, #00a888)`
+                : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
             border: "none", borderRadius: "12px",
-            color: "#0a0f1a",
+            color: ctaDisabled ? "#5a7090" : "#0a0f1a",
             fontFamily: "'Orbitron', sans-serif",
             fontWeight: 800, fontSize: "0.9rem",
             letterSpacing: "0.05em",
-            cursor: "pointer",
-            boxShadow: "0 8px 24px rgba(245,166,35,0.3)",
+            cursor: ctaDisabled ? "wait" : "pointer",
+            opacity: ctaDisabled ? 0.7 : 1,
+            boxShadow: ctaDisabled ? "none" : "0 8px 24px rgba(245,166,35,0.3)",
           }}
         >
-          {tipoUsuario === "corporativo"
-            ? "🏢 Ir ao Painel Lojista"
-            : "⚡ Quero ser um parceiro"}
+          {ctaLabel}
         </motion.button>
       </section>
     </div>
