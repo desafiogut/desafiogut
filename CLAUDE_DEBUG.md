@@ -2436,5 +2436,10 @@ Ref: docs.base.org (same-origin quebra popup, same-origin-allow-popups = recomen
 **Deploy propagado:** COOP header confirmado `same-origin-allow-popups` em `/` e `/seja-nosso-parceiro`.
 **Commit:** `f6c4945` "fix: mc11.6 — COOP same-origin-allow-popups + vite-plugin-node-polyfills para embedded wallets (Coinbase/Base SDK)"
 
-### MC11.7 — EM ANDAMENTO
+### MC11.7 — ✅ RESOLVIDO (tentativa #1)
 Bug: abrirModal bloqueia createWallet() quando authenticated=true mas hasAddress=false. Secundário: SejaNossoParceiro sem responsividade mobile. Fix: early-return só quando authenticated + hasAddress; chamar createWallet() quando authenticated sem carteira + adaptar SejaNossoParceiro para mobile.
+
+**Build:** ✅ 5.62s.
+**Script:** **10/10 ✅** (scripts/test-mc11.7.mjs).
+**Deploy propagado:** `/` → 200, `/seja-nosso-parceiro` → 200.
+**Commit:** `fix: mc11.7 — abrirModal permite createWallet + SejaNossoParceiro responsivo mobile`
