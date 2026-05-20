@@ -3,6 +3,28 @@
 
 ---
 
+### MC11.18 — LOGIN REAL + CARTEIRA USUÁRIO COMUM. Data: 2026-05-20.
+Objetivo: login real com desafiogut@gmail.com, confirmar carteira carregada e perfil aberto.
+Estado inicial (MC11.17): login() via usePrivy direto, sem useLogin/useCreateWallet, createOnLogin:"all-users" ativo.
+
+**CAUSA RAIZ ENCONTRADA (diagnóstico de rede via chrome-devtools MCP):**
+```
+reqid=2442 GET https://auth.privy.io/apps/cmo51f3v300l90clgzksivvad/embedded-wallets?caid=... [net::ERR_BLOCKED_BY_RESPONSE]
+```
+O browser bloqueou o iframe do Privy Embedded Wallet com ERR_BLOCKED_BY_RESPONSE.
+Causa: `Cross-Origin-Embedder-Policy: credentialless` no netlify.toml exige que recursos cross-origin
+tenham CORP header. O servidor do Privy não envia CORP header no iframe `/embedded-wallets`.
+Resultado: iframe bloqueado → "Privy iframe failed to load: Exceeded max attempts" → carteira nunca criada.
+Confirmação: `[issue] Specify a Cross-Origin Resource Policy to prevent a resource from being blocked` no console.
+
+**Fix aplicado:** Removido `Cross-Origin-Embedder-Policy: credentialless` do netlify.toml.
+O COEP era desnecessário (o app não usa SharedArrayBuffer/Atomics que requerem COEP).
+
+**Status:** ⏳ Deploy em andamento. Teste visual pendente (blocker: Google OAuth bloqueado por automação,
+OTP de email requer acesso à caixa de entrada).
+
+---
+
 ### MC11.17 — ISOLAMENTO DO SEJA NOSSO PARCEIRO + RESTAURAÇÃO DO USUÁRIO COMUM. Data: 2026-05-20.
 Estratégia: transformar SejaNossoParceiro em mock (puramente informativo, sem login/wallet) e garantir que o fluxo de criação de carteira do usuário comum volte a funcionar como antes do MC10.
 

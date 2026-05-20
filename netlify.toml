@@ -46,7 +46,11 @@
     Referrer-Policy                 = "strict-origin-when-cross-origin"
     Strict-Transport-Security       = "max-age=63072000; includeSubDomains; preload"
     Cross-Origin-Opener-Policy      = "same-origin-allow-popups"
-    Cross-Origin-Embedder-Policy    = "credentialless"
+    # MC11.18 — COEP removido: bloqueava iframe do Privy Embedded Wallet
+    # (auth.privy.io/apps/.../embedded-wallets → ERR_BLOCKED_BY_RESPONSE).
+    # O COEP "credentialless" exige que recursos cross-origin tenham CORP header;
+    # o Privy não envia CORP no iframe, causando bloqueio e falha de carteira.
+    # Sem COEP, o iframe carrega normalmente. CORP "same-origin" mantido.
     Cross-Origin-Resource-Policy    = "same-origin"
     Permissions-Policy              = "camera=(), microphone=(), geolocation=()"
     # NOTE: CSP frame-ancestors NÃO controla o que NÓS framamos — controla quem
