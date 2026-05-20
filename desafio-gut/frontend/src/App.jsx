@@ -26,12 +26,10 @@ import SejaNossoParceiro    from "./pages/SejaNossoParceiro.jsx";
 // MC11 — guard de rota corporativa. Bloqueia acesso para tipoUsuario !== "corporativo"
 // redirecionando para "/". Aguarda tipoStatus terminar de carregar para evitar
 // flicker (status "loading" → mostra fallback). Usuário Comum nunca vê o painel.
+// MC12 — CorporativoRoute usa tipoUsuario derivado de customMetadata (sem tipoStatus).
 function CorporativoRoute({ children }) {
-  const { tipoUsuario, tipoStatus, isConnected } = useAppContext();
+  const { tipoUsuario, isConnected } = useAppContext();
   if (!isConnected) return <Navigate to="/" replace />;
-  if (tipoStatus === "loading" || tipoStatus === "idle") {
-    return <div style={{ padding: "2rem", color: "#5a7090" }}>Carregando perfil corporativo…</div>;
-  }
   if (tipoUsuario !== "corporativo") return <Navigate to="/" replace />;
   return children;
 }

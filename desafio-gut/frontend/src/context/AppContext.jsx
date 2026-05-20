@@ -135,12 +135,8 @@ export function AppProvider({ children }) {
   const [saldoRsCentavos, setSaldoRsCentavos] = useState(null);
   const [saldoRsStatus,   setSaldoRsStatus]   = useState("idle");
 
-  // MC11 — Usuário Corporativo (Lojista): tipo='comum'|'corporativo'.
-  // Detecção automática: GET /cotas?cliente_id={address} — 200 = cota ativa
-  // ⇒ corporativo; 404 ⇒ comum. Status auxilia gating de UI sem flicker.
-  const [tipoUsuario,    setTipoUsuario]    = useState("comum");
+  // MC12 — cotaCorporativa buscada uma vez após login (sem polling).
   const [cotaCorporativa, setCotaCorporativa] = useState(null);
-  const [tipoStatus,     setTipoStatus]     = useState("idle");
 
   // ── FingerprintJS visitorId (anti-Sybil — Mega Comando 3 / Item 3) ──────
   // Carregado uma vez no mount, cacheado em localStorage. Enviado em
@@ -212,25 +208,40 @@ export function AppProvider({ children }) {
     } catch { return null; }
   });
 
-  // Privy auth — MC11.17: volta a usar login() direto do usePrivy (pré-MC11.3).
-  // Removidos: useLogin/onComplete (MC11.3), useCreateWallet/createWallet (MC11.2).
-  // A criação da carteira fica inteiramente a cargo do createOnLogin: "all-users"
-  // configurado no PrivyProvider (main.jsx). O fluxo do usuário comum não é
-  // interferido por redirect ou createWallet chamados aqui.
-  // Nota: useNavigate mantido para o redirect /seja-nosso-parceiro → / (UX).
-  // ATENÇÃO: useWallets/address devem ser declarados ANTES de qualquer hook
-  // que use `address` em dependency array — const TDZ (mc11.16-t2).
+  // Privy auth — MC12: customMetadata como fonte de verdade do tipoUsuario.
+  // ATENÇÃO: useWallets/address ANTES de qualquer hook que os use em deps (TDZ mc11.16-t2).
   const { ready, authenticated, user, login, logout } = usePrivy();
   const navigate = useNavigate();
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
   const address     = privyWallet?.address ?? null;
-  // Redireciona usuário logado + com carteira para fora da página de parceiro.
+
+  // MC12 — tipoUsuario derivado de user.customMetadata (sem polling, sem estado).
+  // Atualiza imediatamente junto com user do Privy após setCustomMetadata.
+  const tipoUsuario = user?.customMetadata?.tipo === "corporativo"
+    ? "corporativo" : "comum";
+
+  // MC12 — carteira corporativa: wallets[1] criado após cadastro corporativo.
+  // Fallback para wallets[0] se wallets[1] ainda não existe (transição).
+  const corporativoWallet = tipoUsuario === "corporativo"
+    ? (wallets[1] ?? wallets[0] ?? null)
+    : null;
+  const addressCorporativo = corporativoWallet?.address ?? null;
+
+  // MC12 — cota corporativa: buscada uma vez após login, sem polling.
   useEffect(() => {
-    if (authenticated && address && typeof window !== "undefined" && window.location?.pathname === "/seja-nosso-parceiro") {
-      navigate("/", { replace: true });
+    if (!address || tipoUsuario !== "corporativo") {
+      setCotaCorporativa(null);
+      return;
     }
-  }, [authenticated, address, navigate]);
+    let cancel = false;
+    fetch(`/.netlify/functions/cotas?cliente_id=${encodeURIComponent(address)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (!cancel && data?.cliente_id) setCotaCorporativa(data); })
+      .catch(() => {});
+    return () => { cancel = true; };
+  }, [address, tipoUsuario]);
+
   const isConnected = authenticated && Boolean(address);
   const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || null;
 
@@ -449,48 +460,8 @@ export function AppProvider({ children }) {
     return () => clearInterval(id);
   }, [address, authToken, refetchSaldoRs]);
 
-  // MC11 — detectar tipo corporativo após login. Endpoint /cotas é público
-  // e retorna 404 quando não há cota ativa para o cliente_id. Polling 60s
-  // cobre upgrade pós-aprovação de cota sem reload manual.
-  const detectarTipoCorporativo = useCallback(async () => {
-    if (!address) {
-      setTipoUsuario("comum");
-      setCotaCorporativa(null);
-      setTipoStatus("idle");
-      return;
-    }
-    setTipoStatus((prev) => (prev === "ok" ? prev : "loading"));
-    try {
-      const resp = await fetch(`/.netlify/functions/cotas?cliente_id=${encodeURIComponent(address)}`);
-      if (resp.status === 404) {
-        setTipoUsuario("comum");
-        setCotaCorporativa(null);
-        setTipoStatus("ok");
-        return;
-      }
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const cota = await resp.json();
-      if (cota && cota.cliente_id) {
-        setCotaCorporativa(cota);
-        setTipoUsuario("corporativo");
-        setTipoStatus("ok");
-      } else {
-        setTipoUsuario("comum");
-        setCotaCorporativa(null);
-        setTipoStatus("ok");
-      }
-    } catch (err) {
-      console.warn("[GUT-DEBUG] detectarTipoCorporativo falhou", err?.message);
-      setTipoStatus((prev) => (prev === "ok" ? "stale" : "error"));
-    }
-  }, [address]);
-
-  useEffect(() => {
-    detectarTipoCorporativo();
-    if (!address) return;
-    const id = setInterval(detectarTipoCorporativo, 60_000);
-    return () => clearInterval(id);
-  }, [address, detectarTipoCorporativo]);
+  // MC12: detectarTipoCorporativo e polling removidos. tipoUsuario vem de
+  // user.customMetadata (ver bloco Privy auth acima).
 
   // Polling on-chain do prazo do Programado (Onda 5 FASE 0).
   // Contrato é fonte da verdade do REQ-10. Polling a cada 60s; também escuta
@@ -647,11 +618,11 @@ export function AppProvider({ children }) {
     saldoRsCentavos,
     saldoRsStatus,
     refetchSaldoRs,
-    // MC11 — tipo de usuário (comum | corporativo) e cota corporativa.
+    // MC12 — tipo de usuário (customMetadata), cota e carteiras corporativas.
     tipoUsuario,
     cotaCorporativa,
-    tipoStatus,
-    detectarTipoCorporativo,
+    corporativoWallet,
+    addressCorporativo,
     authToken,
     obterAuthToken,
     address, privyWallet, isConnected, userLabel, ready, authenticated, user,
