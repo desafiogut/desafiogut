@@ -3,6 +3,15 @@
 
 ---
 
+### MC11.17 — ISOLAMENTO DO SEJA NOSSO PARCEIRO + RESTAURAÇÃO DO USUÁRIO COMUM. Data: 2026-05-20.
+Estratégia: transformar SejaNossoParceiro em mock (puramente informativo, sem login/wallet) e garantir que o fluxo de criação de carteira do usuário comum volte a funcionar como antes do MC10.
+Mudanças planejadas:
+1. SejaNossoParceiro.jsx — CTA vira modal "em breve", sem chamada a abrirModal
+2. AppContext.jsx — remover useLogin/useCreateWallet/onLoginComplete (MC11.3), restaurar login direto do usePrivy, abrirModal sem createWallet (deixa createOnLogin agir)
+3. Manter: manualChunks (MC11.16), headers cache (MC11.12), COOP (MC11.6), tipoUsuario/corporativo
+
+---
+
 ### MC11.16 — LOOP COM TESTE VISUAL. Data: 2026-05-20.
 MC11.15 (manualChunks) + MC11.16 (shim farcaster) foram marcados como resolvidos mas o browser ainda exibe crash.
 **Erro persiste em produção:** `ReferenceError: Cannot access 'we' before initialization` em `index-eyF3UqWj.js:6:41066`.

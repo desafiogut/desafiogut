@@ -5,9 +5,8 @@
 // Valores das cotas (Bronze/Prata/Ouro/Diamante) refletem os mínimos
 // definidos em netlify/functions/cotas.mjs (MIN_POR_CATEGORIA_BRL).
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 const COR = {
@@ -79,45 +78,15 @@ const PASSOS = [
 ];
 
 export default function SejaNossoParceiro() {
-  const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { isConnected, tipoUsuario, abrirModal, ready, authenticated, address } = useAppContext();
-
-  // MC11.2 — CTA com 5 estados explícitos:
-  //   - !ready                    → desabilitado, label "Carregando…"
-  //   - authenticated && !address → desabilitado, label "Criando carteira…"
-  //   - !isConnected              → habilitado, label "Quero ser um parceiro" → abrirModal
-  //   - corporativo               → habilitado, label "Ir ao Painel Lojista" → /corporativo
-  //   - logado sem cota           → habilitado, label "Quero ser um parceiro" → /carteira
-  const ctaState = !ready
-    ? "loading"
-    : authenticated && !address
-      ? "wallet-creating"
-      : isConnected
-        ? (tipoUsuario === "corporativo" ? "lojista" : "logado-sem-cota")
-        : "anonimo";
-
-  const ctaLabel =
-    ctaState === "loading"          ? "⏳ Carregando…" :
-    ctaState === "wallet-creating"  ? "🔐 Criando carteira…" :
-    ctaState === "lojista"          ? "🏢 Ir ao Painel Lojista" :
-                                      "⚡ Quero ser um parceiro";
-
-  const ctaDisabled = ctaState === "loading" || ctaState === "wallet-creating";
-
-  const handleCTA = () => {
-    if (ctaDisabled) return;
-    if (ctaState === "anonimo") {
-      abrirModal();
-      return;
-    }
-    if (ctaState === "lojista") {
-      navigate("/corporativo");
-      return;
-    }
-    // logado-sem-cota → leva para Carteira (fluxo PIX para contratar cota).
-    navigate("/carteira");
-  };
+  // MC11.17 — página convertida para modo demonstração (mock).
+  // O cadastro de parceiros ainda não está aberto. O CTA exibe um modal
+  // informativo sem disparar login, createWallet ou qualquer side-effect
+  // no estado global. Não interfere no fluxo do usuário comum.
+  const [showComingSoon, setShowComingSoon] = useState(false);
+  const ctaLabel = "⚡ Quero ser um parceiro";
+  const ctaDisabled = false;
+  const handleCTA = () => setShowComingSoon(true);
 
   const wrap = {
     padding: "1rem 0",
@@ -342,11 +311,7 @@ export default function SejaNossoParceiro() {
           Pronto para começar?
         </h2>
         <p style={{ margin: "0 0 1.5rem", color: COR.muted, fontSize: "0.9rem" }}>
-          {isConnected
-            ? (tipoUsuario === "corporativo"
-                ? "Você já é um parceiro! Acesse seu painel."
-                : "Você está logado. Finalize sua adesão pela carteira.")
-            : "Cadastre-se em segundos com Google, e-mail ou Apple."}
+          Cadastre-se em segundos. O cadastro de parceiros será liberado em breve.
         </p>
         <motion.button
           whileHover={ctaDisabled ? {} : { scale: 1.04 }}
@@ -375,6 +340,56 @@ export default function SejaNossoParceiro() {
           {ctaLabel}
         </motion.button>
       </section>
+
+      {/* MC11.17 — Modal "em breve" (mock) */}
+      {showComingSoon && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Cadastro de parceiros em breve"
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(4,8,15,0.85)", backdropFilter: "blur(8px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "1rem",
+          }}
+          onClick={() => setShowComingSoon(false)}
+        >
+          <div
+            style={{
+              background: "rgba(10,16,42,0.95)",
+              border: "1px solid rgba(245,166,35,0.35)",
+              borderRadius: "20px",
+              padding: isMobile ? "1.5rem" : "2.5rem",
+              maxWidth: "420px", width: "100%",
+              textAlign: "center",
+              boxShadow: "0 20px 60px rgba(245,166,35,0.15)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>🚧</div>
+            <h2 style={{ margin: "0 0 0.75rem", color: COR.primary, fontSize: "1.2rem", fontWeight: 900 }}>
+              Em breve!
+            </h2>
+            <p style={{ margin: "0 0 1.5rem", color: COR.text, lineHeight: 1.6, fontSize: "0.95rem" }}>
+              O cadastro de parceiros será liberado em breve.{" "}
+              Enquanto isso, aproveite o DesafioGUT como usuário!
+            </p>
+            <button
+              onClick={() => setShowComingSoon(false)}
+              style={{
+                padding: "0.7rem 2rem",
+                background: `linear-gradient(135deg, ${COR.primary}, #e89400)`,
+                border: "none", borderRadius: "10px",
+                color: "#0a0f1a", fontWeight: 800, fontSize: "0.9rem",
+                cursor: "pointer",
+              }}
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

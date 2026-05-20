@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { usePrivy, useWallets, useLogin, useCreateWallet } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import {
   subscribeLanceDado,
   getSaldoSenhasOnChain,
@@ -212,38 +212,25 @@ export function AppProvider({ children }) {
     } catch { return null; }
   });
 
-  // Privy auth
-  // MC11.3 — substitui usePrivy().login por useLogin({ onComplete }): hook
-  // canônico do Privy que dispara callback ao final do fluxo de autenticação,
-  // mais cedo e mais confiável que observar o flip de `authenticated`.
-  // Importante: useNavigate dentro do AppProvider só funciona porque <App/>
-  // monta o <BrowserRouter> antes de <AppProvider> (ver main.jsx).
-  // MC11.9 — onComplete só redireciona se address já existir (createOnLogin
-  // completou). Se ainda não, o useEffect [authenticated, address] fará o
-  // redirect quando a carteira ficar pronta. Evita interromper createOnLogin.
-  const { ready, authenticated, user, logout } = usePrivy();
-  const navigate = useNavigate();
+  // Privy auth — MC11.17: volta a usar login() direto do usePrivy (pré-MC11.3).
+  // Removidos: useLogin/onComplete (MC11.3), useCreateWallet/createWallet (MC11.2).
+  // A criação da carteira fica inteiramente a cargo do createOnLogin: "all-users"
+  // configurado no PrivyProvider (main.jsx). O fluxo do usuário comum não é
+  // interferido por redirect ou createWallet chamados aqui.
+  // Nota: useNavigate mantido para o redirect /seja-nosso-parceiro → / (UX).
   // ATENÇÃO: useWallets/address devem ser declarados ANTES de qualquer hook
   // que use `address` em dependency array — const TDZ (mc11.16-t2).
+  const { ready, authenticated, user, login, logout } = usePrivy();
+  const navigate = useNavigate();
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
   const address     = privyWallet?.address ?? null;
-  const onLoginComplete = useCallback(() => {
-    if (typeof window !== "undefined" && window.location?.pathname === "/seja-nosso-parceiro") {
-      if (address) {
-        navigate("/", { replace: true });
-      }
-    }
-  }, [navigate, address]);
-  const { login } = useLogin({ onComplete: onLoginComplete });
-  // MC11.9 — redirect pós-login na /seja-nosso-parceiro: aguarda address
-  // existir antes de redirecionar (evita interromper createOnLogin assíncrono).
+  // Redireciona usuário logado + com carteira para fora da página de parceiro.
   useEffect(() => {
     if (authenticated && address && typeof window !== "undefined" && window.location?.pathname === "/seja-nosso-parceiro") {
       navigate("/", { replace: true });
     }
   }, [authenticated, address, navigate]);
-  const { createWallet } = useCreateWallet();
   const isConnected = authenticated && Boolean(address);
   const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || null;
 
@@ -565,12 +552,9 @@ export function AppProvider({ children }) {
 
   function abrirModal() {
     console.info("[GUT-DEBUG] abrirModal", { ready, authenticated, hasUser: !!user, hasAddress: !!address });
-    // MC11.2 — fix bug: re-clique no botão "Aceito" após email-OTP travava
-    // a UI porque login() é no-op quando authenticated=true. Hoje:
-    //   1. SDK não pronto       → ignora (UI já mostra spinner)
-    //   2. Já autenticado       → no-op explícito (UI já mostra "Criando carteira…")
-    //   3. Não autenticado      → dispara login()
-    // (Removido: setTimeout com stale closure que nunca disparava login().)
+    // MC11.17: abrirModal restaurado ao comportamento pré-MC11.2.
+    // createOnLogin: "all-users" no PrivyProvider cria a carteira automaticamente
+    // após o login — não é necessário chamar createWallet() aqui.
     if (!ready) {
       console.warn("[GUT-DEBUG] abrirModal ignorado: Privy ready=false (UI deve mostrar skeleton).");
       return;
@@ -580,8 +564,7 @@ export function AppProvider({ children }) {
       return;
     }
     if (authenticated && !address) {
-      console.info("[GUT-DEBUG] abrirModal: autenticado sem carteira, criando...");
-      createWallet();
+      console.info("[GUT-DEBUG] abrirModal: aguardando createOnLogin criar carteira automaticamente.");
       return;
     }
     try {
