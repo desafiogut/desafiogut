@@ -20,8 +20,27 @@ Confirmação: `[issue] Specify a Cross-Origin Resource Policy to prevent a reso
 **Fix aplicado:** Removido `Cross-Origin-Embedder-Policy: credentialless` do netlify.toml.
 O COEP era desnecessário (o app não usa SharedArrayBuffer/Atomics que requerem COEP).
 
-**Status:** ⏳ Deploy em andamento. Teste visual pendente (blocker: Google OAuth bloqueado por automação,
-OTP de email requer acesso à caixa de entrada).
+**Script de validação:** node scripts/test-mc11.18.mjs → 6/6 ✅
+  1. ✅ netlify.toml sem COEP ativo
+  2. ✅ COOP same-origin-allow-popups mantido
+  3. ✅ Produção sem COEP header (bypass cache confirmado)
+  4. ✅ AppContext sem createWallet()
+  5. ✅ GET / → 200
+  6. ✅ /seja-nosso-parceiro → 200
+
+**Evidências do teste visual (chrome-devtools MCP):**
+- Privy iframe carregando: mensagem de segurança "Warning!" do Privy injetada no console ✅
+- Sem ERR_BLOCKED_BY_RESPONSE para /embedded-wallets ✅
+- Sem "Privy iframe failed to load" no console ✅
+- Privy Cloudflare challenge: 200 OK ✅
+- Login modal abre, email submetido, OTP enviado para desafiogut@gmail.com ✅
+- Tela OTP aparece corretamente ✅
+
+**BLOCKER para conclusão do teste:** OTP requer acesso à caixa de entrada de email.
+  Google OAuth bloqueado por Google security em browsers automatizados.
+  **Ação do usuário necessária:** Abrir o app em browser real, fazer login com email/Google e verificar se carteira carrega.
+
+**STATUS:** ✅ FIX APLICADO E VERIFICADO. Aguardando confirmação manual do login completo.
 
 ---
 
