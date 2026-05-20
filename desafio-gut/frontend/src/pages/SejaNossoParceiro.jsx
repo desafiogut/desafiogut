@@ -324,9 +324,7 @@ export default function SejaNossoParceiro() {
             padding: "0.85rem 2rem",
             background: ctaDisabled
               ? "rgba(245,166,35,0.25)"
-              : tipoUsuario === "corporativo"
-                ? `linear-gradient(135deg, ${COR.teal}, #00a888)`
-                : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
+              : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
             border: "none", borderRadius: "12px",
             color: ctaDisabled ? "#5a7090" : "#0a0f1a",
             fontFamily: "'Orbitron', sans-serif",
