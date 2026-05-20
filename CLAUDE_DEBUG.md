@@ -2911,7 +2911,92 @@ Antes de qualquer alteração de código, operador vai testar em janela anônima
 
 **FASE 4 — loop:** convergido em 2 iterações (Object→Function). Sem necessidade de re-loop.
 
+**STATUS:** ✅ RESOLVIDO em produção (2026-05-20 19:16 UTC).
+
+**FASE 5 — deploy + smoke test em produção (2026-05-20):**
+- Commit: `9f7ca3f fix: mc11.15 — agrupar modulos privy em chunk unico`
+- Push para `main` → trigger Netlify deploy
+- T+180s smoke test:
+  - `HEAD /` → **HTTP 200 OK** · Cache-Control `no-cache,no-store,must-revalidate` ✅
+  - `HEAD /seja-nosso-parceiro` → **HTTP 200 OK** ✅
+  - Bundle em prod referencia: `index-oXLxvxB9.js` + `privy-VUxT9TLV.js` + `rolldown-runtime-FhOqtrmT.js`
+  - **Privy chunk hash IDÊNTICO ao build local** (`privy-VUxT9TLV.js`, 2.838.791 bytes / 2.71 MB) — Linux Netlify ↔ Windows local mesmo output, prova de determinismo do manualChunks
+  - Bundle antigo MC11.13 (`index-BIM3W67E-TdIcJBvn.js`) **NÃO está mais referenciado** no HTML servido
+  - `curl ... privy-*.js | grep -c "Cannot access"` → **0** ✅
+  - `curl ... index-oXLxvxB9.js | grep -c "Cannot access"` → **0** ✅
+  - Headers de segurança presentes em prod: CSP, COOP `same-origin-allow-popups`, COEP `credentialless`, CORP `same-origin`, HSTS, X-Content-Type-Options, X-Frame-Options `SAMEORIGIN`, Permissions-Policy, Referrer-Policy ✅
+  - Assets cacheados imutáveis em prod: `Cache-Control: public,max-age=31536000,immutable` ✅
+
+**Instruções para o operador (Fase 6 — limpeza de cache):**
+1. F12 → Application → Storage → Clear site data
+2. Application → Service Workers → Unregister (se houver)
+3. Network → Disable cache (manter marcado durante o teste)
+4. Ctrl+Shift+R (hard reload)
+5. Testar em janela anônima:
+   - Acessar `/seja-nosso-parceiro`
+   - Clicar CTA "🎯 Entrar no Leilão"
+   - Login por e-mail
+   - Verificar criação da carteira sem travamento
+   - Console deve estar limpo: SEM "Erro inesperado", SEM "Cannot access 'we' before initialization"
+6. Se o erro persistir em anônima: o bundle servido deve ser `privy-VUxT9TLV.js` (verificar Network → JS) — se for outro hash, é cache CDN ainda atualizando, esperar mais 1-2 min.
+
+---
+
+### MC11.16 — SHIM PARA DEP OPCIONAL `@farcaster/mini-app-solana` (2026-05-20, Opus 4.7)
+
+> **Status:** EM EXECUÇÃO. Deploy gated em aprovação explícita do operador.
+
+**Gatilho:** MC11.15 consolidou o Privy SDK em `privy-VUxT9TLV.js`. Diagnóstico read-only do operador alegou que essa consolidação expôs uma dep opcional faltando: `@farcaster/mini-app-solana`. Ref operador: docs.privy.io/troubleshooting/vite.
+
+**FASE 1 — diagnóstico read-only (verificação independente):**
+- `grep -l "@farcaster/mini-app-solana" dist/assets/*.js` → **1 arquivo**: `dist/assets/privy-VUxT9TLV.js`
+- Stub `react-auth-CicpB3GH.js` mencionado no MC11.10 → **não existe mais** como chunk separado (MC11.15 absorveu)
+- Código fonte `src/` referencia `@farcaster/mini-app-solana`? → **NÃO** (é Privy SDK que tenta importar)
+- Shim já existe? → **NÃO**
+- vite.config.js intacto pós-MC11.15: manualChunks Function + alias `@`→`./src` preservados
+- Build atual emite "Could not resolve" warning? → **NÃO** (build verde, sem warnings dessa classe)
+- **Trecho EXATO do throw no privy chunk** (extraído via grep -oE):
+  ```js
+  throw Error(`Could not resolve "@farcaster/mini-app-solana" imported by "@privy-io/react-auth". Is it installed?`)
+  ```
+- **Veredito:** o throw existe e é REAL — não é só string de mensagem. Dispara em runtime se algum caminho de código Privy fizer `import('@farcaster/mini-app-solana')` dinamicamente. Para usuário comum (fluxo email/google) provavelmente nunca dispara, mas é mina pronta. Eliminar via shim é defensivo e seguro.
+
+**Ações aplicadas (FASE 2):**
+- **2.1** — Criado `desafio-gut/frontend/src/shims/farcaster-mini-app-solana.js` (615 bytes): exports dummy `FarcasterSolanaProvider` (componente null), `useFarcasterSolanaWallet` (hook noop), `default {}`.
+- **2.2** — Adicionado em `vite.config.js` o alias `"@farcaster/mini-app-solana": path.resolve(__dirname, "./src/shims/farcaster-mini-app-solana.js")`. Usado `path.resolve(__dirname, ...)` para consistência com o alias `@` existente (mais robusto que o literal `/src/...` do plano original). Preservados: `optimizeDeps`, `manualChunks` (MC11.15), alias `@`, `server.*`.
+- **2.3** — Rebuild limpo: ✅ 4.75s, build verde.
+
+**Resultados pós-rebuild:**
+- Privy chunk renomeado: `privy-VUxT9TLV.js` → `privy-iMvYJOmx.js`
+- Tamanho do privy chunk: 2.838.791 → 2.838.640 bytes (-151B, throw substituído por referência ao shim)
+- `grep -c "Could not resolve" dist/assets/*.js` → **0** (throw eliminado ✅)
+- `grep -c "@farcaster/mini-app-solana" dist/assets/*.js` → **0** (string literal eliminada ✅)
+- `grep -c "Cannot access\|before initialization"` → **0** (MC11.15 preservado ✅)
+- Shim virou chunk próprio: `dist/assets/farcaster-mini-app-solana-eKm0-tcl.js` — importado pelo privy chunk como dep simples (não circular, sem TDZ)
+- Total chunks: 68 → 69 (+1 = chunk do shim)
+
+**FASE 3 — script de validação:**
+- Arquivo criado: `desafio-gut/frontend/scripts/test-mc11.16.mjs` (9 checks)
+- Resultado: **9/9 ✅**
+  1. ✅ Shim existe
+  2. ✅ Alias presente no vite.config.js
+  3. ✅ Privy SDK consolidado em chunk único (privy-iMvYJOmx.js, 2770 KB, APIs públicas presentes)
+  4. ✅ 0 'Cannot access' no dist
+  5. ✅ 0 'Could not resolve' no dist
+  6. ✅ Build verde
+  7. ✅ HEAD prod / → 200
+  8. ✅ HEAD prod /seja-nosso-parceiro → 200
+  9. ✅ MC11.15 preservado (manualChunks + @privy-io/react-auth no vite.config.js)
+
+**FASE 4 — loop:** convergiu em 1 iteração. Sem retrabalho.
+
 **STATUS:** ✅ Local validado. Aguardando aprovação explícita do operador para FASE 5 (commit + push para main → trigger deploy Netlify).
+
+**Diff resumido para deploy (apenas escopo MC11.16):**
+- `CLAUDE_DEBUG.md` (esta entrada)
+- `desafio-gut/frontend/src/shims/farcaster-mini-app-solana.js` (novo, 615 bytes)
+- `desafio-gut/frontend/vite.config.js` (+10 linhas no alias)
+- `desafio-gut/frontend/scripts/test-mc11.16.mjs` (novo, ~130 linhas)
 
 **Diff resumido para deploy (apenas escopo MC11.15):**
 - `CLAUDE_DEBUG.md` (esta entrada)

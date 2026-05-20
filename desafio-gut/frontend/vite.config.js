@@ -28,7 +28,15 @@ export default defineConfig({
     },
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      // MC11.16 — alias para shim da dep opcional `@farcaster/mini-app-solana`
+      // que o Privy SDK referencia mas não usamos. Evita throw em runtime.
+      "@farcaster/mini-app-solana": path.resolve(
+        __dirname,
+        "./src/shims/farcaster-mini-app-solana.js",
+      ),
+    },
   },
   server: {
     port: 3000,
