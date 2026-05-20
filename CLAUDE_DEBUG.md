@@ -3,6 +3,31 @@
 
 ---
 
+### MC11.16 — LOOP COM TESTE VISUAL. Data: 2026-05-20.
+MC11.15 (manualChunks) + MC11.16 (shim farcaster) foram marcados como resolvidos mas o browser ainda exibe crash.
+**Erro persiste em produção:** `ReferenceError: Cannot access 'we' before initialization` em `index-eyF3UqWj.js:6:41066`.
+Diagnóstico: a grep anterior verificou strings literais no bundle — não detecta erros TDZ de runtime.
+O erro TDZ está no bundle PRINCIPAL (`index-eyF3UqWj.js`), não no chunk Privy.
+A variável `we` (minificada) é acessada antes de sua inicialização — dependência circular ou ordem de execução errada entre chunks.
+Loop de até 8 tentativas. Cada tentativa validada no navegador via chrome-devtools MCP.
+
+#### T1 — React em chunk próprio + cobertura Privy ampliada (2026-05-20)
+**Hipótese:** React estava no index chunk. Privy chunk importava React do index chunk → ciclo → TDZ.
+**Ação:** `manualChunks` ampliado para incluir `node_modules/react/`, `node_modules/react-dom/`, `node_modules/scheduler/` no chunk "react".
+**Resultado inesperado mas correto:** Rolldown moveu React PARA DENTRO do privy chunk (autossuficiente).
+  - `privy-BeZrmHAS.js` → importa APENAS `rolldown-runtime` (React inline)
+  - `index-IR3MHUeE.js` → importa de `privy`, `react-stub`, `rolldown-runtime`
+  - `react-CXB7vL0e.js` → stub 0.18kB re-exportando createRoot do privy chunk
+  - Nenhum chunk importa do `index` → **DAG perfeito, zero dep circular**
+**Build:** ✅ verde 5.94s
+**Grafo de deps confirmado via grep (saída bruta):**
+  - index imports: `privy-BeZrmHAS.js`, `react-CXB7vL0e.js`, `rolldown-runtime`
+  - privy imports: APENAS `rolldown-runtime`
+  - core/basic/dist/ApiController: importam apenas `privy` e `rolldown-runtime`
+**Status:** ⏳ Aguardando teste visual no browser pós-deploy.
+
+---
+
 ## MARCO: AUTENTICAÇÃO E PRODUÇÃO VALIDADA (2026-04-30)
 
 ### Causa
@@ -2990,13 +3015,31 @@ Antes de qualquer alteração de código, operador vai testar em janela anônima
 
 **FASE 4 — loop:** convergiu em 1 iteração. Sem retrabalho.
 
-**STATUS:** ✅ Local validado. Aguardando aprovação explícita do operador para FASE 5 (commit + push para main → trigger deploy Netlify).
+**STATUS:** ✅ RESOLVIDO em produção (2026-05-20).
 
-**Diff resumido para deploy (apenas escopo MC11.16):**
-- `CLAUDE_DEBUG.md` (esta entrada)
-- `desafio-gut/frontend/src/shims/farcaster-mini-app-solana.js` (novo, 615 bytes)
-- `desafio-gut/frontend/vite.config.js` (+10 linhas no alias)
-- `desafio-gut/frontend/scripts/test-mc11.16.mjs` (novo, ~130 linhas)
+**FASE 5 — deploy + smoke test em produção:**
+- Commit: `e6c40bc fix: mc11.16 — shim para @farcaster/mini-app-solana`
+- Push para `main` → trigger Netlify deploy
+- T+180s smoke test:
+  - `HEAD /` → **HTTP 200 OK** · Cache-Control `no-cache,no-store,must-revalidate` ✅
+  - `HEAD /seja-nosso-parceiro` → **HTTP 200 OK** ✅
+  - Bundles em prod: `index-eyF3UqWj.js` + **`privy-iMvYJOmx.js`** + `rolldown-runtime-FhOqtrmT.js`
+  - **Privy chunk em prod hash IDÊNTICO ao build local** (`privy-iMvYJOmx.js`) — determinismo Linux Netlify ↔ Windows local confirmado pela 2ª vez consecutiva
+  - `curl ... privy-iMvYJOmx.js | grep -c "Could not resolve"` → **0** ✅ (throw eliminado em produção)
+  - `curl ... privy-iMvYJOmx.js | grep -c "Cannot access"` → **0** ✅ (MC11.15 preservado em prod, sem regressão)
+
+**Instruções para o operador (Fase 6 — limpeza de cache):**
+1. F12 → Application → Storage → Clear site data
+2. Application → Service Workers → Unregister (se houver)
+3. Network → Disable cache (manter marcado durante o teste)
+4. Ctrl+Shift+R (hard reload)
+5. Testar em janela anônima:
+   - Acessar `/seja-nosso-parceiro`
+   - Clicar CTA "🎯 Entrar no Leilão"
+   - Login por e-mail (ou Google)
+   - Verificar criação da carteira sem travamento
+   - Console deve estar limpo: SEM "Cannot access 'we' before initialization" (MC11.15) E SEM "Could not resolve @farcaster/mini-app-solana" (MC11.16)
+6. Se algum erro persistir em anônima: confirmar no Network que o bundle servido é `privy-iMvYJOmx.js`. Se for outro hash (ex: `VUxT9TLV` do MC11.15), é cache CDN ainda propagando — esperar mais 1-2 min e Ctrl+Shift+R.
 
 **Diff resumido para deploy (apenas escopo MC11.15):**
 - `CLAUDE_DEBUG.md` (esta entrada)

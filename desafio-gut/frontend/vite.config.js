@@ -14,15 +14,29 @@ export default defineConfig({
   optimizeDeps: {
     include: ["@privy-io/react-auth"],
   },
-  // MC11.15 — agrupa todo o SDK Privy num único chunk para eliminar
-  // dependência circular entre chunks (TDZ "Cannot access 'we' before
-  // initialization") causada pela fragmentação em ~253 chunks.
-  // Rolldown (engine do Vite 8) só aceita manualChunks como Function.
+  // MC11.16-T1 — Separa React em chunk próprio para quebrar dependência circular:
+  //   index-chunk importa privy-chunk (PrivyProvider)
+  //   privy-chunk importa React do index-chunk → CICLO → TDZ
+  // Com React em chunk separado (react-chunk), o grafo fica acíclico:
+  //   react-chunk (sem deps customizadas) ← privy-chunk ← index-chunk
+  // Também amplia cobertura Privy para incluir @coinbase/* e deps afins.
   build: {
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes("@privy-io/react-auth")) return "privy";
+          // React core (+ scheduler que é peer dep do react-dom) → chunk isolado
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/scheduler/")
+          )
+            return "react";
+          // Privy SDK + dependências Coinbase/WalletConnect → chunk isolado
+          if (
+            id.includes("node_modules/@privy-io") ||
+            id.includes("node_modules/@coinbase")
+          )
+            return "privy";
         },
       },
     },
