@@ -1,12 +1,12 @@
 // MC11.1 — Seção pública "Seja Nosso Parceiro!".
-// Rota: /seja-nosso-parceiro (pública — visível para qualquer usuário,
-// logado ou não). Porta de entrada para o fluxo de cadastro corporativo.
-//
-// Valores das cotas (Bronze/Prata/Ouro/Diamante) refletem os mínimos
-// definidos em netlify/functions/cotas.mjs (MIN_POR_CATEGORIA_BRL).
+// MC12 — formulário de cadastro corporativo funcional (CNPJ, empresa, etc.)
+// Rota: /seja-nosso-parceiro (pública — visível para qualquer usuário).
 
 import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { usePrivy, useWallets, useCreateWallet } from "@privy-io/react-auth";
+import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 const COR = {
@@ -77,22 +77,90 @@ const PASSOS = [
     texto: "Suba seu banner, acompanhe impressões e cliques no Painel Lojista." },
 ];
 
+const SEGMENTOS = ["Varejo", "Serviços", "Tecnologia", "Saúde", "Educação", "Alimentação", "Outro"];
+
+// Validação de CNPJ (algoritmo dígitos verificadores).
+function validarCNPJ(cnpj) {
+  const nums = cnpj.replace(/\D/g, "");
+  if (nums.length !== 14) return false;
+  if (/^(\d)\1+$/.test(nums)) return false;
+  const calc = (arr, len) => {
+    let sum = 0, pos = len - 7;
+    for (let i = len; i >= 1; i--) {
+      sum += arr[len - i] * pos--;
+      if (pos < 2) pos = 9;
+    }
+    return sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  };
+  const arr = nums.split("").map(Number);
+  return calc(arr, 12) === arr[12] && calc(arr, 13) === arr[13];
+}
+
+function mascaraCNPJ(v) {
+  return v.replace(/\D/g, "")
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2")
+    .slice(0, 18);
+}
+
+function validarURL(url) {
+  if (!url) return true;
+  try { const u = new URL(url); return u.protocol === "http:" || u.protocol === "https:"; }
+  catch { return false; }
+}
+
 export default function SejaNossoParceiro() {
   const isMobile = useIsMobile();
-  // MC11.17 — página convertida para modo demonstração (mock).
-  // O cadastro de parceiros ainda não está aberto. O CTA exibe um modal
-  // informativo sem disparar login, createWallet ou qualquer side-effect
-  // no estado global. Não interfere no fluxo do usuário comum.
-  const [showComingSoon, setShowComingSoon] = useState(false);
-  const ctaLabel = "⚡ Quero ser um parceiro";
-  const ctaDisabled = false;
-  const handleCTA = () => setShowComingSoon(true);
+  const navigate = useNavigate();
 
-  const wrap = {
-    padding: "1rem 0",
-    maxWidth: "1200px",
-    margin: "0 auto",
+  // MC12 — ATENÇÃO: useWallets ANTES de hooks que usam wallets nas deps (TDZ).
+  const { wallets } = useWallets();
+  const { user, setCustomMetadata, authenticated } = usePrivy();
+  const { createWallet } = useCreateWallet();
+  const { isConnected, tipoUsuario, abrirModal } = useAppContext();
+
+  // Estados do formulário
+  const [cnpj,     setCnpj]     = useState("");
+  const [empresa,  setEmpresa]  = useState("");
+  const [segmento, setSegmento] = useState("Varejo");
+  const [site,     setSite]     = useState("");
+  const [logoUrl,  setLogoUrl]  = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [erro,     setErro]     = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!authenticated) { setErro("Faça login primeiro."); return; }
+    if (!validarCNPJ(cnpj)) { setErro("CNPJ inválido. Verifique os dígitos."); return; }
+    if (!empresa.trim()) { setErro("Nome da empresa é obrigatório."); return; }
+    if (!validarURL(site)) { setErro("URL do site inválida (use http:// ou https://)."); return; }
+    if (!validarURL(logoUrl)) { setErro("URL do logo inválida (use http:// ou https://)."); return; }
+    setEnviando(true);
+    setErro(null);
+    try {
+      await setCustomMetadata({
+        tipo: "corporativo",
+        cnpj: cnpj.replace(/\D/g, ""),
+        empresa: empresa.trim(),
+        segmento,
+        site: site.trim() || null,
+        logoUrl: logoUrl.trim() || null,
+        cadastradoEm: new Date().toISOString(),
+      });
+      if (wallets.length < 2) {
+        await createWallet({ createAdditional: true });
+      }
+      navigate("/corporativo");
+    } catch (err) {
+      setErro(err?.message || "Erro ao cadastrar. Tente novamente.");
+    } finally {
+      setEnviando(false);
+    }
   };
+
+  const wrap = { padding: "1rem 0", maxWidth: "1200px", margin: "0 auto" };
   const wrapClass = "px-4 md:px-8";
   const card = {
     background: COR.bg,
@@ -100,6 +168,19 @@ export default function SejaNossoParceiro() {
     borderRadius: "16px",
     padding: isMobile ? "1.25rem" : "1.5rem",
     backdropFilter: "blur(16px)",
+  };
+  const inputStyle = {
+    width: "100%", padding: "0.7rem 0.9rem",
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(245,166,35,0.25)",
+    borderRadius: "8px", color: COR.text,
+    fontSize: "0.92rem", outline: "none",
+    boxSizing: "border-box",
+  };
+  const labelStyle = {
+    display: "block", marginBottom: "0.4rem",
+    color: COR.muted, fontSize: "0.8rem", fontWeight: 600,
+    letterSpacing: "0.04em", textTransform: "uppercase",
   };
 
   return (
@@ -126,268 +207,372 @@ export default function SejaNossoParceiro() {
         }}>
           🤝 PARCEIROS DO DESAFIOGUT
         </div>
-        <h1 style={{
-          margin: 0,
-          fontWeight: 900,
-          color: COR.text,
-          lineHeight: 1.15,
-          fontFamily: "'Orbitron', sans-serif",
-          letterSpacing: "0.01em",
-        }}
+        <h1
+          style={{
+            margin: 0, fontWeight: 900, color: COR.text, lineHeight: 1.15,
+            fontFamily: "'Orbitron', sans-serif", letterSpacing: "0.01em",
+          }}
           className="text-2xl md:text-4xl"
         >
           Seja Nosso Parceiro!
         </h1>
         <p style={{
-          margin: "0.75rem auto 0",
-          maxWidth: "680px",
-          color: COR.muted,
-          fontSize: isMobile ? "0.92rem" : "1.05rem",
-          lineHeight: 1.55,
+          margin: "0.75rem auto 0", maxWidth: "680px",
+          color: COR.muted, fontSize: isMobile ? "0.92rem" : "1.05rem", lineHeight: 1.55,
         }}>
           Anuncie no DesafioGUT e alcance milhares de usuários que disputam o
           menor lance único todos os dias. Quatro planos, exposição garantida,
           métricas em tempo real.
         </p>
 
-        <motion.button
-          whileHover={ctaDisabled ? {} : { scale: 1.04 }}
-          whileTap={ctaDisabled ? {} : { scale: 0.98 }}
-          onClick={handleCTA}
-          disabled={ctaDisabled}
-          aria-busy={ctaDisabled}
-          className="w-full md:w-auto"
-          style={{
-            marginTop: "1.5rem",
-            padding: "0.9rem 2rem",
-            background: ctaDisabled
-              ? "rgba(245,166,35,0.25)"
-              : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
-            border: "none", borderRadius: "12px",
-            color: ctaDisabled ? "#5a7090" : "#0a0f1a",
-            fontFamily: "'Orbitron', sans-serif",
-            fontWeight: 800, fontSize: "0.95rem",
-            letterSpacing: "0.05em",
-            cursor: ctaDisabled ? "wait" : "pointer",
-            opacity: ctaDisabled ? 0.7 : 1,
-            boxShadow: ctaDisabled ? "none" : "0 10px 30px rgba(245,166,35,0.35)",
-          }}
-        >
-          {ctaLabel}
-        </motion.button>
+        {/* CTA condicional */}
+        {!isConnected && (
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={abrirModal}
+            className="w-full md:w-auto"
+            style={{
+              marginTop: "1.5rem", padding: "0.9rem 2rem",
+              background: `linear-gradient(135deg, ${COR.primary}, #e89400)`,
+              border: "none", borderRadius: "12px",
+              color: "#0a0f1a", fontFamily: "'Orbitron', sans-serif",
+              fontWeight: 800, fontSize: "0.95rem", letterSpacing: "0.05em",
+              cursor: "pointer", boxShadow: "0 10px 30px rgba(245,166,35,0.35)",
+            }}
+          >
+            ⚡ Fazer login para se cadastrar
+          </motion.button>
+        )}
+        {isConnected && tipoUsuario === "corporativo" && (
+          <div style={{ marginTop: "1.5rem" }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: "0.5rem",
+              padding: "0.6rem 1.2rem",
+              background: "rgba(0,212,170,0.12)",
+              border: "1px solid rgba(0,212,170,0.3)",
+              borderRadius: "10px", color: COR.teal, fontWeight: 700,
+            }}>
+              ✅ Você já é parceiro!
+            </div>
+            <div style={{ marginTop: "0.75rem" }}>
+              <Link
+                to="/corporativo"
+                style={{
+                  color: COR.primary, fontWeight: 700,
+                  textDecoration: "none", fontSize: "0.95rem",
+                }}
+              >
+                Ir ao Painel Lojista →
+              </Link>
+            </div>
+          </div>
+        )}
       </motion.header>
 
+      {/* ── FORMULÁRIO DE CADASTRO (usuário comum logado) ── */}
+      {isConnected && tipoUsuario !== "corporativo" && (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          style={{ ...card, marginBottom: isMobile ? "2rem" : "3rem" }}
+          aria-label="Cadastro de Parceiro"
+        >
+          <h2 style={{
+            margin: "0 0 0.25rem", color: COR.primary,
+            fontSize: isMobile ? "1.05rem" : "1.25rem", fontWeight: 900,
+          }}>
+            🏢 Cadastro Corporativo
+          </h2>
+          <p style={{ margin: "0 0 1.5rem", color: COR.muted, fontSize: "0.85rem" }}>
+            Preencha os dados da sua empresa para ativar o Painel Lojista.
+          </p>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div>
+              <label style={labelStyle}>CNPJ *</label>
+              <input
+                type="text"
+                placeholder="00.000.000/0000-00"
+                value={cnpj}
+                onChange={e => setCnpj(mascaraCNPJ(e.target.value))}
+                maxLength={18}
+                required
+                style={{
+                  ...inputStyle,
+                  borderColor: cnpj && !validarCNPJ(cnpj)
+                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
+                }}
+              />
+              {cnpj && !validarCNPJ(cnpj) && (
+                <span style={{ color: "#ff3d71", fontSize: "0.75rem" }}>CNPJ inválido</span>
+              )}
+            </div>
+            <div>
+              <label style={labelStyle}>Nome da Empresa *</label>
+              <input
+                type="text"
+                placeholder="Razão social ou nome fantasia"
+                value={empresa}
+                onChange={e => setEmpresa(e.target.value.slice(0, 100))}
+                required
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Segmento *</label>
+              <select
+                value={segmento}
+                onChange={e => setSegmento(e.target.value)}
+                style={{ ...inputStyle, cursor: "pointer" }}
+              >
+                {SEGMENTOS.map(s => (
+                  <option key={s} value={s} style={{ background: "#0a0f1a" }}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Site (opcional)</label>
+              <input
+                type="url"
+                placeholder="https://suaempresa.com.br"
+                value={site}
+                onChange={e => setSite(e.target.value)}
+                style={{
+                  ...inputStyle,
+                  borderColor: site && !validarURL(site)
+                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
+                }}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>URL do Logo (opcional)</label>
+              <input
+                type="url"
+                placeholder="https://suaempresa.com.br/logo.png"
+                value={logoUrl}
+                onChange={e => setLogoUrl(e.target.value)}
+                style={{
+                  ...inputStyle,
+                  borderColor: logoUrl && !validarURL(logoUrl)
+                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
+                }}
+              />
+            </div>
+            {erro && (
+              <div style={{
+                padding: "0.7rem 1rem", background: "rgba(255,61,113,0.12)",
+                border: "1px solid rgba(255,61,113,0.3)", borderRadius: "8px",
+                color: "#ff3d71", fontSize: "0.85rem",
+              }}>
+                ⚠️ {erro}
+              </div>
+            )}
+            <motion.button
+              type="submit"
+              disabled={enviando}
+              whileHover={enviando ? {} : { scale: 1.02 }}
+              whileTap={enviando ? {} : { scale: 0.98 }}
+              style={{
+                padding: "0.85rem 1.5rem",
+                background: enviando
+                  ? "rgba(245,166,35,0.3)"
+                  : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
+                border: "none", borderRadius: "10px",
+                color: enviando ? COR.muted : "#0a0f1a",
+                fontFamily: "'Orbitron', sans-serif",
+                fontWeight: 800, fontSize: "0.9rem",
+                cursor: enviando ? "wait" : "pointer",
+                opacity: enviando ? 0.7 : 1,
+                marginTop: "0.5rem",
+              }}
+            >
+              {enviando ? "⏳ Cadastrando…" : "⚡ Ativar Painel Lojista"}
+            </motion.button>
+          </form>
+        </motion.section>
+      )}
+
       {/* ── PLANOS ── */}
-      <section style={{ marginBottom: isMobile ? "2rem" : "3rem" }}>
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.05 }}
+        style={{ marginBottom: isMobile ? "2rem" : "3rem" }}
+        aria-label="Planos de parceria"
+      >
         <h2 style={{
-          margin: "0 0 1.25rem",
-          fontSize: isMobile ? "1.15rem" : "1.4rem",
-          color: COR.primary,
-          fontWeight: 800, letterSpacing: "0.04em",
-          textAlign: isMobile ? "left" : "center",
+          textAlign: "center", margin: "0 0 1.5rem",
+          color: COR.primary, fontSize: isMobile ? "1.05rem" : "1.25rem",
+          fontWeight: 900, letterSpacing: "0.02em",
         }}>
           📦 Escolha o plano que combina com sua empresa
         </h2>
-        <div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
-        >
-          {PLANOS.map((p, i) => (
-            <motion.div
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)",
+          gap: isMobile ? "0.75rem" : "1rem",
+        }}>
+          {PLANOS.map(p => (
+            <div
               key={p.nome}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: i * 0.07 }}
               style={{
                 ...card,
                 border: p.destaque
                   ? `2px solid ${p.cor}`
                   : "1px solid rgba(245,166,35,0.18)",
                 position: "relative",
-                transform: p.destaque && !isMobile ? "translateY(-8px)" : "none",
-                boxShadow: p.destaque ? `0 12px 40px ${p.cor}33` : "none",
               }}
             >
               {p.destaque && (
                 <span style={{
-                  position: "absolute",
-                  top: "-10px", left: "50%", transform: "translateX(-50%)",
-                  padding: "0.2rem 0.7rem",
+                  position: "absolute", top: "-10px", left: "50%",
+                  transform: "translateX(-50%)",
                   background: p.cor, color: "#0a0f1a",
-                  fontSize: "0.62rem", fontWeight: 900, letterSpacing: "0.1em",
-                  borderRadius: "999px",
+                  fontSize: "0.65rem", fontWeight: 800,
+                  padding: "0.2rem 0.6rem", borderRadius: "999px",
+                  letterSpacing: "0.06em", whiteSpace: "nowrap",
                 }}>
                   MAIS POPULAR
                 </span>
               )}
-              <div style={{ fontSize: "2rem", marginBottom: "0.3rem" }}>{p.icone}</div>
+              <div style={{ fontSize: isMobile ? "1.5rem" : "2rem", marginBottom: "0.5rem" }}>
+                {p.icone}
+              </div>
               <h3 style={{
-                margin: 0, color: p.cor, fontWeight: 900,
-                fontSize: "1.3rem", letterSpacing: "0.04em",
+                margin: "0 0 0.25rem", color: p.cor,
+                fontSize: isMobile ? "0.95rem" : "1.05rem", fontWeight: 900,
               }}>
                 {p.nome}
               </h3>
               <div style={{
-                margin: "0.5rem 0 1rem",
-                fontSize: "1.7rem", fontWeight: 900, color: COR.text,
+                color: COR.primary, fontWeight: 800,
+                fontSize: isMobile ? "1rem" : "1.15rem", marginBottom: "0.75rem",
               }}>
-                R$ {p.valor.toLocaleString("pt-BR")}
-                <span style={{ fontSize: "0.7rem", color: COR.muted, fontWeight: 600, marginLeft: "0.3rem" }}>
-                  /mês
-                </span>
+                R$ <strong>{p.valor.toLocaleString("pt-BR")}</strong>
+                <span style={{ color: COR.muted, fontSize: "0.8rem" }}>/mês</span>
               </div>
-              <ul style={{
-                margin: 0, padding: 0, listStyle: "none",
-                display: "flex", flexDirection: "column", gap: "0.45rem",
-                fontSize: "0.82rem", color: COR.text,
-              }}>
-                {p.beneficios.map((b) => (
-                  <li key={b} style={{ display: "flex", gap: "0.4rem", lineHeight: 1.4 }}>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                {p.beneficios.map(b => (
+                  <li key={b} style={{
+                    display: "flex", gap: "0.4rem", alignItems: "flex-start",
+                    color: COR.muted, fontSize: "0.78rem", marginBottom: "0.3rem",
+                  }}>
                     <span style={{ color: COR.success, flexShrink: 0 }}>✓</span>
-                    <span>{b}</span>
+                    {b}
                   </li>
                 ))}
               </ul>
-            </motion.div>
+            </div>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       {/* ── COMO FUNCIONA ── */}
-      <section style={{ ...card, marginBottom: isMobile ? "2rem" : "3rem" }}>
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.1 }}
+        style={{ marginBottom: isMobile ? "2rem" : "3rem" }}
+        aria-label="Como funciona"
+      >
         <h2 style={{
-          margin: "0 0 1.5rem",
-          fontSize: isMobile ? "1.1rem" : "1.3rem",
-          color: COR.primary, fontWeight: 800, letterSpacing: "0.04em",
+          textAlign: "center", margin: "0 0 1.5rem",
+          color: COR.text, fontSize: isMobile ? "1.05rem" : "1.25rem",
+          fontWeight: 900,
         }}>
           🛠️ Como funciona
         </h2>
-        <div
-          className="flex flex-col md:flex-row gap-4"
-        >
-          {PASSOS.map((p) => (
-            <div key={p.n} style={{
-              padding: "1rem",
-              background: COR.bgSoft,
-              border: `1px solid ${COR.primary}33`,
-              borderRadius: "12px",
-              textAlign: "left",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                <span style={{
-                  width: "32px", height: "32px",
-                  background: COR.primary, color: "#0a0f1a",
-                  borderRadius: "50%",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontWeight: 900, fontSize: "0.9rem",
-                }}>
-                  {p.n}
-                </span>
-                <strong style={{ color: COR.text, fontSize: "0.95rem" }}>
-                  {p.icone} {p.titulo}
-                </strong>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)",
+          gap: "1rem",
+        }}>
+          {PASSOS.map(p => (
+            <div key={p.n} style={{ ...card, textAlign: "center" }}>
+              <div style={{
+                width: "2rem", height: "2rem",
+                background: `${COR.primary}22`,
+                border: `2px solid ${COR.primary}55`,
+                borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 0.75rem",
+                color: COR.primary, fontWeight: 900, fontSize: "0.85rem",
+              }}>
+                {p.n}
               </div>
-              <p style={{ margin: 0, color: COR.muted, fontSize: "0.85rem", lineHeight: 1.5 }}>
+              <span style={{ fontSize: "1.5rem" }}>{p.icone}</span>
+              <h3 style={{
+                margin: "0.5rem 0 0.25rem", color: COR.text,
+                fontSize: "0.95rem", fontWeight: 800,
+              }}>
+                {" "}{p.titulo}
+              </h3>
+              <p style={{ margin: 0, color: COR.muted, fontSize: "0.82rem", lineHeight: 1.5 }}>
                 {p.texto}
               </p>
             </div>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       {/* ── CTA FINAL ── */}
-      <section style={{
-        textAlign: "center",
-        padding: isMobile ? "1.5rem 1rem" : "2.5rem",
-        background: `linear-gradient(135deg, ${COR.bg}, rgba(245,166,35,0.05))`,
-        borderRadius: "16px",
-        border: `1px solid ${COR.primary}33`,
-        marginBottom: "2rem",
-      }}>
+      <section style={{ ...card, textAlign: "center", marginBottom: "2rem" }}>
         <h2 style={{
-          margin: "0 0 0.5rem",
-          fontSize: isMobile ? "1.2rem" : "1.5rem",
-          color: COR.text, fontWeight: 900,
+          margin: "0 0 0.5rem", color: COR.text,
+          fontSize: isMobile ? "1.2rem" : "1.5rem", fontWeight: 900,
         }}>
           Pronto para começar?
         </h2>
         <p style={{ margin: "0 0 1.5rem", color: COR.muted, fontSize: "0.9rem" }}>
-          Cadastre-se em segundos. O cadastro de parceiros será liberado em breve.
+          Cadastre-se em segundos. O painel é ativado imediatamente após o cadastro.
         </p>
-        <motion.button
-          whileHover={ctaDisabled ? {} : { scale: 1.04 }}
-          whileTap={ctaDisabled ? {} : { scale: 0.98 }}
-          onClick={handleCTA}
-          disabled={ctaDisabled}
-          aria-busy={ctaDisabled}
-          className="w-full md:w-auto"
-          style={{
-            padding: "0.85rem 2rem",
-            background: ctaDisabled
-              ? "rgba(245,166,35,0.25)"
-              : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
-            border: "none", borderRadius: "12px",
-            color: ctaDisabled ? "#5a7090" : "#0a0f1a",
-            fontFamily: "'Orbitron', sans-serif",
-            fontWeight: 800, fontSize: "0.9rem",
-            letterSpacing: "0.05em",
-            cursor: ctaDisabled ? "wait" : "pointer",
-            opacity: ctaDisabled ? 0.7 : 1,
-            boxShadow: ctaDisabled ? "none" : "0 8px 24px rgba(245,166,35,0.3)",
-          }}
-        >
-          {ctaLabel}
-        </motion.button>
+        {!isConnected ? (
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={abrirModal}
+            className="w-full md:w-auto"
+            style={{
+              padding: "0.85rem 2rem",
+              background: `linear-gradient(135deg, ${COR.primary}, #e89400)`,
+              border: "none", borderRadius: "12px",
+              color: "#0a0f1a", fontFamily: "'Orbitron', sans-serif",
+              fontWeight: 800, fontSize: "0.9rem", letterSpacing: "0.05em",
+              cursor: "pointer", boxShadow: "0 8px 24px rgba(245,166,35,0.3)",
+            }}
+          >
+            ⚡ Quero ser um parceiro
+          </motion.button>
+        ) : tipoUsuario === "corporativo" ? (
+          <Link
+            to="/corporativo"
+            style={{
+              display: "inline-block",
+              padding: "0.85rem 2rem",
+              background: `linear-gradient(135deg, ${COR.teal}, #00a888)`,
+              borderRadius: "12px",
+              color: "#0a0f1a", fontFamily: "'Orbitron', sans-serif",
+              fontWeight: 800, fontSize: "0.9rem", letterSpacing: "0.05em",
+              textDecoration: "none",
+            }}
+          >
+            🏢 Ir ao Painel Lojista
+          </Link>
+        ) : (
+          <p style={{ color: COR.muted, fontSize: "0.85rem" }}>
+            Preencha o formulário acima para ativar seu Painel Lojista.
+          </p>
+        )}
       </section>
 
-      {/* MC11.17 — Modal "em breve" (mock) */}
-      {showComingSoon && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Cadastro de parceiros em breve"
-          style={{
-            position: "fixed", inset: 0, zIndex: 9999,
-            background: "rgba(4,8,15,0.85)", backdropFilter: "blur(8px)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "1rem",
-          }}
-          onClick={() => setShowComingSoon(false)}
-        >
-          <div
-            style={{
-              background: "rgba(10,16,42,0.95)",
-              border: "1px solid rgba(245,166,35,0.35)",
-              borderRadius: "20px",
-              padding: isMobile ? "1.5rem" : "2.5rem",
-              maxWidth: "420px", width: "100%",
-              textAlign: "center",
-              boxShadow: "0 20px 60px rgba(245,166,35,0.15)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>🚧</div>
-            <h2 style={{ margin: "0 0 0.75rem", color: COR.primary, fontSize: "1.2rem", fontWeight: 900 }}>
-              Em breve!
-            </h2>
-            <p style={{ margin: "0 0 1.5rem", color: COR.text, lineHeight: 1.6, fontSize: "0.95rem" }}>
-              O cadastro de parceiros será liberado em breve.{" "}
-              Enquanto isso, aproveite o DesafioGUT como usuário!
-            </p>
-            <button
-              onClick={() => setShowComingSoon(false)}
-              style={{
-                padding: "0.7rem 2rem",
-                background: `linear-gradient(135deg, ${COR.primary}, #e89400)`,
-                border: "none", borderRadius: "10px",
-                color: "#0a0f1a", fontWeight: 800, fontSize: "0.9rem",
-                cursor: "pointer",
-              }}
-            >
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ── Rodapé ── */}
+      <footer style={{
+        textAlign: "center", padding: "1rem 0 2rem",
+        color: COR.muted, fontSize: "0.75rem",
+      }}>
+        Grupo União e Trabalho · CNPJ 23.040.066/0001-00 · Manaus/AM, Brasil
+      </footer>
     </div>
   );
 }
