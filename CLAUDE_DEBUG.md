@@ -5,10 +5,25 @@
 
 ### MC11.17 — ISOLAMENTO DO SEJA NOSSO PARCEIRO + RESTAURAÇÃO DO USUÁRIO COMUM. Data: 2026-05-20.
 Estratégia: transformar SejaNossoParceiro em mock (puramente informativo, sem login/wallet) e garantir que o fluxo de criação de carteira do usuário comum volte a funcionar como antes do MC10.
-Mudanças planejadas:
-1. SejaNossoParceiro.jsx — CTA vira modal "em breve", sem chamada a abrirModal
-2. AppContext.jsx — remover useLogin/useCreateWallet/onLoginComplete (MC11.3), restaurar login direto do usePrivy, abrirModal sem createWallet (deixa createOnLogin agir)
-3. Manter: manualChunks (MC11.16), headers cache (MC11.12), COOP (MC11.6), tipoUsuario/corporativo
+
+**Mudanças aplicadas:**
+1. `SejaNossoParceiro.jsx` — CTA vira modal "em breve" (🚧 Em breve!), sem chamada a abrirModal, sem imports Privy/AppContext
+2. `AppContext.jsx` — removidos useLogin/useCreateWallet/onLoginComplete (MC11.3), restaurado login() direto do usePrivy, abrirModal sem createWallet (createOnLogin:"all-users" cria carteira)
+3. Commit de correção: `tipoUsuario` residual no segundo botão do SejaNossoParceiro (causava ReferenceError)
+4. Mantidos: manualChunks (MC11.16), headers cache, COOP, tipoUsuario/corporativo no AppContext
+
+**Script de validação:** node scripts/test-mc11.17.mjs → 8/8 ✅
+
+**Teste visual (chrome-devtools MCP):**
+- `/` carrega sem crash, console limpo ✅
+- "⚡ Aceito o DesafioGUT" abre modal Privy (Login) para usuário comum ✅
+- `[GUT-DEBUG] abrirModal` + `login() resolveu` no console ✅
+- `/seja-nosso-parceiro` carrega sem crash, console limpo ✅
+- CTA "Quero ser um parceiro" exibe modal "🚧 Em breve!" (sem login, sem wallet) ✅
+- Console zero erros em ambas as rotas ✅
+
+**Commits:** `0143906` + `1881677`
+**STATUS:** ✅ RESOLVIDO em produção (2026-05-20)
 
 ---
 
