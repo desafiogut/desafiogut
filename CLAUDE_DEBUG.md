@@ -2554,3 +2554,219 @@ Mas o `useLogin({ onComplete })` (MC11.3) AINDA redireciona da `/seja-nosso-parc
 | `AppContext.jsx:223-229` | Remover `useLogin({ onComplete })`; voltar para `usePrivy().login`; mover redirect para `useEffect` que observa `authenticated` e `address` | **BAIXO** | `useLogin` é semanticamente idêntico a `usePrivy().login` exceto pelo callback `onComplete`. O redirect deve acontecer APÓS `createOnLogin` completar (quando `address` não for mais `null`), não imediatamente após `authenticated`. A mudança afeta apenas o fluxo `/seja-nosso-parceiro`; o fluxo normal (`/`) não tem redirect. |
 | `AppContext.jsx:252-281` | Remover timers MC11.4/11.5 (5s retry + 10s stuck) — redundantes com MC11.7 | **BAIXO** | O `abrirModal` do MC11.7 já chama `createWallet()` diretamente. A recovery UI ("Tentar novamente") nunca é alcançada porque `createOnLogin` + `createWallet()` cobrem todos os caminhos. Os timers adicionam complexidade sem benefício. |
 | `AppContext.jsx:599-617` | Manter `abrirModal` do MC11.7 como está (com `authenticated && address` + `authenticated && !address`). | **N/A** | Já está correto. |
+
+---
+
+## MC11.10 — DIAGNÓSTICO: ReferenceError 'Cannot access we before initialization' (2026-05-20)
+
+> **Modo:** Só leitura. **NÃO** editar, build, commit, ou deploy.
+> **Erro reportado:** `ReferenceError: Cannot access 'we' before initialization` em produção.
+> **Hipótese do operador:** vite-plugin-node-polyfills (MC11.6) ou manualChunks causaram dependência circular nos módulos do Privy SDK.
+
+### FASE 1 — vite.config.js completo (HEAD = commit `efe7c0a`)
+
+```js
+// desafio-gut/frontend/vite.config.js (40 linhas)
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { nodePolyfills } from "vite-plugin-node-polyfills";  // ← MC11.6 (f6c4945)
+import { fileURLToPath } from "url";
+import path from "path";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig({
+  plugins: [
+    nodePolyfills({ globals: { Buffer: true, global: true, process: true } }), // ← 1º plugin
+    tailwindcss(),
+    react(),
+  ],
+  define: {
+    global: "globalThis",  // ← DUPLO global: define + nodePolyfills
+  },
+  optimizeDeps: {
+    include: ["@privy-io/react-auth"],
+  },
+  // ... resolve, server (CSP, forwardConsole, etc) — sem alterações
+});
+```
+
+**Achados críticos:**
+- **NÃO há `build.rollupOptions`** no vite.config.js do usuário
+- **NÃO há `output.manualChunks`**, `entryFileNames`, ou `chunkFileNames` configurados
+- `define: { global: "globalThis" }` **pré-existe** desde commit `593ee2b` (anterior a MC11.6)
+- `nodePolyfills({ globals: { global: true } })` foi **adicionado em MC11.6** (`f6c4945`)
+- **Ambos definem `global`** → conflito.
+
+### FASE 2 — Versões de dependências
+
+| Dependência | Versão | Nota |
+|---|---|---|
+| vite | ^8.0.8 | Usa **rolldown** (Rust), não rollup |
+| @vitejs/plugin-react | ^6.0.1 | |
+| vite-plugin-node-polyfills | ^0.28.0 | Suporte a rolldown é **parcial/experimental** |
+| @privy-io/react-auth | ^3.22.1 | Inalterado desde MC10 |
+
+### FASE 3 — Commit MC11.6
+
+```
+f6c4945 @ fix: mc11.6 — COOP same-origin-allow-popups + vite-plugin-node-polyfills
+```
+
+Diff de vite.config.js entre MC10 (`1470369`) e MC11.6 (`f6c4945`):
+```diff
++import { nodePolyfills } from "vite-plugin-node-polyfills";
+ plugins: [
++  nodePolyfills({ globals: { Buffer: true, global: true, process: true } }),
+   tailwindcss(),
+   react(),
+ ],
+```
+
+`define: { global: "globalThis" }` **NÃO foi adicionado em MC11.6** — já existia desde `593ee2b`.
+
+### FASE 4 — ANÁLISE: 5 Perguntas
+
+#### Q1: vite-plugin-node-polyfills está presente? Desde qual commit?
+
+**Sim.** Presente desde `f6c4945` (MC11.6, 2026-05-19). Configurado com:
+```js
+nodePolyfills({ globals: { Buffer: true, global: true, process: true } })
+```
+
+#### Q2: Há manualChunks configurado?
+
+**Não.** Nenhum `manualChunks` no `vite.config.js` do usuário. O plugin **internamente** manipula `rollupOptions` (onwarn + transform.inject) mas não adiciona manualChunks.
+
+#### Q3: Há rollupOptions com output.entryFileNames ou chunkFileNames?
+
+**Não no código do usuário.** Mas o plugin internamente define:
+```js
+// node_modules/vite-plugin-node-polyfills/dist/index.js:184-195
+build: {
+    rollupOptions: {
+        onwarn: ...,                                  // handler de warning circular
+        ...Object.keys(f).length > 0 && v ? {         // v = !!this?.meta?.rolldownVersion
+            transform: { inject: f }                   // f = { Buffer, global, process → shims }
+        } : {}
+    }
+}
+```
+
+#### Q4: A ordem dos chunks pode estar causando dependência circular nos módulos do Privy?
+
+**SIM. Confirmação com 4 evidências independentes:**
+
+**E1 — DUPLO `global`: conflito `define` + `nodePolyfills`:**
+```
+Mecanismo 1: define: { global: "globalThis" }
+  → Substitui TODAS as ocorrências de `global` por `globalThis` em todos os módulos (string replace)
+
+Mecanismo 2: nodePolyfills({ globals: { global: true } })
+  → Injeta `import __global_polyfill from "vite-plugin-node-polyfills/shims/global"`
+  → Substitui referências a `global` por `__global_polyfill`
+```
+
+Dois mecanismos competindo pela mesma variável `global` no mesmo bundle. O `define` processa a string inteira (incluindo o código do polyfill). O `inject` do rolldown processa a AST. Ordem de aplicação: **define primeiro (Vite core) → inject depois (rolldown plugin transform)**. Resultado imprevisível quando ambos tocam o mesmo identificador.
+
+**E2 — O polyfill `global` é corrompido pelo `define`:**
+```js
+// Antes do define (shims/global/dist/index.js):
+const global = globalThis || void 0 || self;
+export { global as default, global };
+
+// Depois do define (simulado):
+const globalThis = globalThis || void 0 || self;  // re-declara globalThis como const local!
+export { globalThis as default, globalThis };
+```
+
+Isso **redeclara `globalThis` como `const` local** dentro do módulo polyfill. Qualquer módulo que importe esse polyfill recebe o `globalThis` local, não o verdadeiro `globalThis`. Se outro módulo depende do `globalThis` real (para acessar `window`, `self`, etc.), ocorre TDZ.
+
+**E3 — Plugin tem suporte parcial a rolldown (código fonte, linhas 172-195):**
+```js
+const v = !!this?.meta?.rolldownVersion;  // detecta rolldown
+const S = a && v;                          // isRolldownBuild = true
+return u = Object.keys(f).length > 0 && !S ? z(f) : !1;
+//                                       ^^
+// Quando rolldown: NÃO usa @rollup/plugin-inject (z(f))
+// Em vez disso: usa rolldown nativo transform.inject
+```
+
+O plugin **desabilita** `@rollup/plugin-inject` no rolldown e delega ao `transform.inject` nativo. Mas o `transform.inject` do rolldown é **diferente** do `@rollup/plugin-inject` — o comportamento exato de injeção de imports pode divergir, especialmente na ordem de resolução de módulos.
+
+**E4 — Estrutura do bundle confirma complexidade:**
+```
+index-BIM3W67E-C3B_3a94.js (1073.7KB) → importa de 12+ chunks
+index-BngEs-Ax.js          (1037.5KB) → importa de chunk-CFjPhJqf, jsx-runtime, react-dom, etc.
+chunk-CFjPhJqf.js          — CJS/ESM interop helpers
+_esm-BH3R72V8.js           — polyfill chunk, importa de ccip, secp256k1, chunk-CFjPhJqf
+react-auth-CicpB3GH.js     — STUB: throw Error('@farcaster/mini-app-solana not found')
+```
+
+O `react-auth-CicpB3GH.js` é um **stub quebrado** — ele só contém um `throw Error`. O chunk real do Privy SDK está distribuído entre `index-BIM3W67E`, `ccip-D4Y6NNBB.js`, `PrivyPluginContext-GEag3Hr8-DR3MDb1M.js` e outros. Essa fragmentação + polyfills injetados cria o ambiente perfeito para TDZ.
+
+#### Q5: Correção proposta: (a) remover nodePolyfills, (b) ajustar manualChunks, ou (c) ambos?
+
+**Recomendação: (a) Remover nodePolyfills + remover `define: { global: "globalThis" }` redundante.**
+
+| Ação | Arquivo | Justificativa |
+|---|---|---|
+| **Remover** `nodePolyfills` | vite.config.js linha 4 + linha 12 | Buffer/process não são necessários — o Privy SDK é browser-native, ethers.js v6 funciona sem polyfills, e o fix real para Coinbase SDK foi o COOP header (MC11.6) |
+| **Remover** `define: { global: "globalThis" }` | vite.config.js linhas 16-18 | Redundante — `globalThis` já é o global padrão em todos os browsers modernos. O `define` foi adicionado em `593ee2b` como workaround para libs que referenciam `global`, mas (a) o Vite já shimma `global` no browser, (b) nenhum código do projeto referencia `global` diretamente |
+| **Manter** `optimizeDeps.include: ["@privy-io/react-auth"]` | vite.config.js linha 20 | Necessário para pre-bundling correto do Privy |
+
+**Alternativa (b) — NÃO recomendada:**
+Ajustar manualChunks para isolar polyfills **não resolve** o conflito `define` + `nodePolyfills` porque:
+- O `define` é aplicado ANTES do chunking (string replace global)
+- O `inject` é aplicado DURANTE o chunking (rolldown transform)
+- Isolar em chunks diferentes não impede o `define` de corromper o código do polyfill
+
+**Alternativa (c) — Ambos:**
+Remover ambos (nodePolyfills + define) é a opção mais limpa e tem o menor risco de regressão.
+
+### Evidência de que os polyfills são desnecessários
+
+1. **Privy SDK** (`@privy-io/react-auth`) — browser-first, não referencia `Buffer` ou `process` diretamente. Usa APIs web padrão.
+2. **ethers.js v6** — funciona nativamente em browsers modernos sem polyfills desde a v6.
+3. **O fix do popup Coinbase** foi o header `Cross-Origin-Opener-Policy: same-origin-allow-popups` — os polyfills foram adicionados na mesma commit por precaução, mas o COOP era o fix real.
+4. **Nenhum código do projeto** (`src/`) referencia `Buffer`, `process`, ou `global` diretamente.
+5. **`vite-plugin-node-polyfills` v0.28.0 não foi testado com Vite 8/rolldown** — o suporte a rolldown no plugin é marcado como parcial (o código fonte tem branches específicos `if (v)` para rolldown, indicando que é um caminho de código diferente e menos testado).
+
+### ⚠️ Recomendação Final
+
+**Ação mínima (menor risco, maior probabilidade de resolver):**
+
+```diff
+- import { nodePolyfills } from "vite-plugin-node-polyfills";
+  // ...
+  plugins: [
+-   nodePolyfills({ globals: { Buffer: true, global: true, process: true } }),
+    tailwindcss(),
+    react(),
+  ],
+- define: {
+-   global: "globalThis",
+- },
+```
+
+Remover 6 linhas. Build limpo. Sem polyfills conflitantes. Sem double-define de `global`.
+
+Se o erro persistir após essa remoção, o problema NÃO é o polyfill — seria um bug do Privy SDK ou do Vite 8/rolldown com `optimizeDeps`. Mas a evidência aponta fortemente para o conflito `define` + `nodePolyfills` como causa do TDZ.
+
+### Verificação pós-correção (quando autorizada)
+
+1. `npm run build` — deve passar verde (remoção de polyfills não quebra nada que não dependa deles)
+2. Deploy em staging e teste do fluxo completo: login Google/email → criar carteira → dar lance
+3. Verificar console do browser para ausência do erro `Cannot access 'we' before initialization`
+4. Se o erro sumir: ✅ confirmado. Se persistir: investigar `optimizeDeps` + `@privy-io/react-auth` + rolldown.
+
+---
+**STATUS: DIAGNÓSTICO CONCLUÍDO. AGUARDANDO APROVAÇÃO DO OPERADOR PARA EXECUTAR CORREÇÃO.**
+
+---
+
+### MC11.11 — CORREÇÃO DO BUNDLE (EM ANDAMENTO)
+
+Diagnóstico MC11.10: vite-plugin-node-polyfills + define global competem → dependência circular nos chunks do Privy → ReferenceError em produção. 
+Fix: remover nodePolyfills + remover define: { global: "globalThis" } + npm uninstall vite-plugin-node-polyfills.
