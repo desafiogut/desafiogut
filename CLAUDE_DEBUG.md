@@ -2766,7 +2766,22 @@ Se o erro persistir após essa remoção, o problema NÃO é o polyfill — seri
 
 ---
 
-### MC11.11 — CORREÇÃO DO BUNDLE (EM ANDAMENTO)
+### MC11.11 — ✅ RESOLVIDO (tentativa #1)
 
 Diagnóstico MC11.10: vite-plugin-node-polyfills + define global competem → dependência circular nos chunks do Privy → ReferenceError em produção. 
 Fix: remover nodePolyfills + remover define: { global: "globalThis" } + npm uninstall vite-plugin-node-polyfills.
+
+**Correções aplicadas:**
+1. `vite.config.js` — removido `import { nodePolyfills }`, removido plugin `nodePolyfills(...)`, removido bloco `define: { global: "globalThis" }` (-6 linhas)
+2. `package.json` — `npm uninstall vite-plugin-node-polyfills` (removido 100 pacotes transitivos)
+
+**Build:** ✅ 6.29s (6788 modules, sem alteração vs antes).
+**Bundle:** Sem TDZ ("Cannot access\|before initialization" → ZERO matches). Privy SDK presente em 3 chunks (28 referências).
+**Deploy:** `/` → 200, `/seja-nosso-parceiro` → 200.
+**Commit:** `9a11f16` "fix: mc11.11 — remover nodePolyfills + define globalThis (dependencia circular Privy)"
+
+---
+
+### MC11.12 — CORREÇÃO DO CDN (EM ANDAMENTO)
+
+MC11.11 removeu polyfills mas usuário ainda via erro Cannot access 'we'. Causa: Netlify CDN servia index.html antigo referenciando bundle quebrado. Fix: skew protection + cache-control forte no index.html. Ref: docs.netlify.com (skew protection), web.dev (cache-control para SPAs).
