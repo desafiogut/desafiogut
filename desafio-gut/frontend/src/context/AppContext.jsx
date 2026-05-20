@@ -223,6 +223,11 @@ export function AppProvider({ children }) {
   // redirect quando a carteira ficar pronta. Evita interromper createOnLogin.
   const { ready, authenticated, user, logout } = usePrivy();
   const navigate = useNavigate();
+  // ATENÇÃO: useWallets/address devem ser declarados ANTES de qualquer hook
+  // que use `address` em dependency array — const TDZ (mc11.16-t2).
+  const { wallets } = useWallets();
+  const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
+  const address     = privyWallet?.address ?? null;
   const onLoginComplete = useCallback(() => {
     if (typeof window !== "undefined" && window.location?.pathname === "/seja-nosso-parceiro") {
       if (address) {
@@ -239,9 +244,6 @@ export function AppProvider({ children }) {
     }
   }, [authenticated, address, navigate]);
   const { createWallet } = useCreateWallet();
-  const { wallets } = useWallets();
-  const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
-  const address     = privyWallet?.address ?? null;
   const isConnected = authenticated && Boolean(address);
   const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || null;
 

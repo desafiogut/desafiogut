@@ -24,6 +24,17 @@ Loop de até 8 tentativas. Cada tentativa validada no navegador via chrome-devto
   - index imports: `privy-BeZrmHAS.js`, `react-CXB7vL0e.js`, `rolldown-runtime`
   - privy imports: APENAS `rolldown-runtime`
   - core/basic/dist/ApiController: importam apenas `privy` e `rolldown-runtime`
+**Resultado do teste visual:** ❌ FALHOU. Erro persiste em `index-Bt87IGFq.js:6:41066` — mesma posição. Conclusão: T1 não mudou nada relevante pois o bug está NO SOURCE CODE, não na estrutura de chunks.
+
+#### T2 — Fix da causa raiz: TDZ de `address` no AppContext.jsx (2026-05-20)
+**Causa raiz REAL:** Em `AppContext.jsx` (mc11.9), `const address = privyWallet?.address ?? null` foi declarada na linha 244, mas usada em dependency arrays de `useCallback` (linha 232) e `useEffect` (linha 240). Em ES modules com `const`, isso cria TDZ: o binding existe desde o topo da função mas a atribuição ainda não ocorreu → ReferenceError ao acessar `address` nos deps arrays.
+**Por que Rollup (Vite 7) não mostrava este erro:** Rollup reorganizava/hoistava o código ao minificar. Rolldown (Vite 8) respeita rigorosamente a TDZ de ES modules.
+**Fix aplicado:** Mover `const { wallets } = useWallets()`, derivação de `privyWallet` e `const address` para ANTES do `useCallback` que usa `address` nos deps.
+**Verificação no bundle novo (`index-CVSSATm_.js`):**
+  - `we` não aparece mais como `address` antes de declaração
+  - `we` agora = `createWallet` (declarada antes do uso ✅)
+  - `address` → `Se` no bundle, declarada antes de todos os deps arrays ✅
+**Build:** ✅ verde 6.29s
 **Status:** ⏳ Aguardando teste visual no browser pós-deploy.
 
 ---
