@@ -3,14 +3,6 @@
   command = "npm install --legacy-peer-deps && npm install --prefix netlify/functions --legacy-peer-deps && npm run build"
   publish = "dist"
 
-# ── Skew Protection ───────────────────────────────────────────────────────────
-# Evita que o CDN sirva index.html de um deploy e assets de outro (race condition
-# no atomic deploy). Com skew_protection, o Netlify garante que todos os arquivos
-# do deploy são do mesmo commit atômico antes de liberar o tráfego.
-# Ref: https://docs.netlify.com/edge-functions/skew-protection/
-[edge_functions]
-  skew_protection = true
-
 # ── Netlify Functions ────────────────────────────────────────────────────────
 # Resolvido como `desafio-gut/frontend/netlify/functions/` (relativo ao base).
 # `node_bundler = "esbuild"` permite que cada função declare deps em
