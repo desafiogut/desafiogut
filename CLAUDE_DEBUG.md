@@ -2444,9 +2444,14 @@ Bug: abrirModal bloqueia createWallet() quando authenticated=true mas hasAddress
 **Deploy propagado:** `/` → 200, `/seja-nosso-parceiro` → 200.
 **Commit:** `fix: mc11.7 — abrirModal permite createWallet + SejaNossoParceiro responsivo mobile`
 
-### MC11.9 — CORREÇÃO DEFINITIVA
+### MC11.9 — ✅ RESOLVIDO (tentativa #1)
 Diagnóstico MC11.8 confirmou: commit 0d6f84f (MC11.2) introduziu bloqueio em abrirModal.
 Correções: P0) useLogin redireciona só após address existir. P1) Remover timers paliativos MC11.4/11.5. P2) Manter abrirModal do MC11.7.
+
+**Build:** ✅ 3.82s (6788 modules).
+**Script:** **10/10 ✅** (scripts/test-mc11.9.mjs).
+**Deploy propagado:** `/` → 200, `/seja-nosso-parceiro` → 200.
+**Arquivos alterados:** AppContext.jsx (+useEffect redirect, -timers), Sidebar.jsx (-recovery UI), BottomNav.jsx (-recovery UI).
 
 ---
 
