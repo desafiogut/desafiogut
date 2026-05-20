@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
+import DOMPurify from "dompurify";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useAppContext } from "../context/AppContext.jsx";
 import { tiersAgoraVisiveis, tierAtivoAgora } from "../data/programacao-junho-2026.js";
@@ -157,7 +158,10 @@ function formatarTimer(segundosRestantes) {
   return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
 
-function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInfo }) {
+function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInfo, bannerSvg }) {
+  const safeBannerSvg = bannerSvg
+    ? DOMPurify.sanitize(bannerSvg, { USE_PROFILES: { svg: true } })
+    : null;
   return (
     <article
       style={{
@@ -252,6 +256,19 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
           </li>
         ))}
       </ul>
+
+      {/* MC12 — banner real para corporativo */}
+      {safeBannerSvg && (
+        <div
+          aria-label="Banner publicitário do parceiro"
+          style={{
+            borderRadius: "8px", overflow: "hidden",
+            border: `1px solid ${slot.corBorda}`,
+            maxHeight: "100px",
+          }}
+          dangerouslySetInnerHTML={{ __html: safeBannerSvg }}
+        />
+      )}
 
       <Link
         to={hrefOverride ?? `/vitrine/${slot.id}`}
@@ -377,9 +394,30 @@ export default function Vitrine() {
   const isMobile = useIsMobile();
   const { slot: slotId } = useParams();
   const tz = getTimezone();
-  // MC11.3 — vitrine dual via tipoUsuario: comum vê só os 4 slots;
-  // corporativo vê header lojista (cota + atalho analytics) acima dos slots.
-  const { prazoFlash, prazoProgramado, tipoUsuario, cotaCorporativa } = useAppContext();
+  // MC12 — vitrine dual: tipoUsuario + addressCorporativo para banners reais.
+  const { prazoFlash, prazoProgramado, tipoUsuario, cotaCorporativa, addressCorporativo } = useAppContext();
+
+  // MC12 — banners reais para usuário corporativo (app + site).
+  const [bannerData, setBannerData] = useState({ app: null, site: null });
+  useEffect(() => {
+    if (tipoUsuario !== "corporativo" || !addressCorporativo) {
+      setBannerData({ app: null, site: null });
+      return;
+    }
+    let cancel = false;
+    Promise.all([
+      fetch(`/.netlify/functions/banners?cliente_id=${encodeURIComponent(addressCorporativo)}&formato=app`),
+      fetch(`/.netlify/functions/banners?cliente_id=${encodeURIComponent(addressCorporativo)}&formato=site`),
+    ])
+      .then(async ([rApp, rSite]) => {
+        if (cancel) return;
+        const app  = rApp.ok  ? await rApp.json()  : null;
+        const site = rSite.ok ? await rSite.json() : null;
+        setBannerData({ app, site });
+      })
+      .catch(() => {});
+    return () => { cancel = true; };
+  }, [tipoUsuario, addressCorporativo]);
 
   // Tick a cada 1s para atualizar timers visíveis nos cards (Onda 5 FASE 0).
   // Cálculo é absoluto: `prazo - now`, então não acumula drift.
@@ -480,7 +518,20 @@ export default function Vitrine() {
         }}
       >
         {sticky.map((slot) => (
-          <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={isMobile} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} cotaInfo={slotCotasMap[slot.id]} />
+          <SlotCard
+            key={slot.id}
+            slot={slot}
+            isMobile={isMobile}
+            sticky={isMobile}
+            status={slotStatusMap[slot.id]}
+            timer={slotTimerMap[slot.id]}
+            cotaInfo={slotCotasMap[slot.id]}
+            bannerSvg={tipoUsuario === "corporativo"
+              ? (slot.id === "diamante" || slot.id === "ouro"
+                  ? bannerData.site?.svg ?? null
+                  : bannerData.app?.svg ?? null)
+              : null}
+          />
         ))}
       </section>
 
@@ -508,14 +559,31 @@ export default function Vitrine() {
           >
             {carossel.map((slot) => (
               <div key={slot.id} style={{ flex: "0 0 86%", scrollSnapAlign: "start" }}>
-                <SlotCard slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} cotaInfo={slotCotasMap[slot.id]} />
+                <SlotCard
+                  slot={slot}
+                  isMobile={isMobile}
+                  sticky={false}
+                  status={slotStatusMap[slot.id]}
+                  timer={slotTimerMap[slot.id]}
+                  cotaInfo={slotCotasMap[slot.id]}
+                  bannerSvg={tipoUsuario === "corporativo" ? (bannerData.app?.svg ?? null) : null}
+                />
               </div>
             ))}
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
             {carossel.map((slot) => (
-              <SlotCard key={slot.id} slot={slot} isMobile={isMobile} sticky={false} status={slotStatusMap[slot.id]} timer={slotTimerMap[slot.id]} cotaInfo={slotCotasMap[slot.id]} />
+              <SlotCard
+                key={slot.id}
+                slot={slot}
+                isMobile={isMobile}
+                sticky={false}
+                status={slotStatusMap[slot.id]}
+                timer={slotTimerMap[slot.id]}
+                cotaInfo={slotCotasMap[slot.id]}
+                bannerSvg={tipoUsuario === "corporativo" ? (bannerData.app?.svg ?? null) : null}
+              />
             ))}
           </div>
         )}
