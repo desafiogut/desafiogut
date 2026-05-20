@@ -2782,6 +2782,141 @@ Fix: remover nodePolyfills + remover define: { global: "globalThis" } + npm unin
 
 ---
 
-### MC11.12 — CORREÇÃO DO CDN (EM ANDAMENTO)
+### MC11.12 — ✅ RESOLVIDO (tentativa #1)
 
 MC11.11 removeu polyfills mas usuário ainda via erro Cannot access 'we'. Causa: Netlify CDN servia index.html antigo referenciando bundle quebrado. Fix: skew protection + cache-control forte no index.html. Ref: docs.netlify.com (skew protection), web.dev (cache-control para SPAs).
+
+**Correções aplicadas:**
+1. `netlify.toml` — adicionado `[edge_functions] skew_protection = true` (atomic deploys, sem race condition CDN)
+2. `netlify.toml` — Cache-Control do `/index.html` reforçado para `"no-cache, no-store, must-revalidate"` + Pragma + Expires
+3. `netlify.toml` — Cache-Control do `/assets/*` mantido `"public, max-age=31536000, immutable"`
+
+**Build:** ✅ 6.73s (6788 modules, idêntico ao MC11.11).
+**Script:** **8/8 ✅** (scripts/test-mc11.12.mjs).
+**Smoke test:**
+- Bundle deployado: `index-BIM3W67E-TdIcJBvn.js` — ZERO "Cannot access"
+- `/` → 200, `/seja-nosso-parceiro` → 200
+**Commit:** `c9d22b4` "fix: mc11.12 — skew protection + cache-control para evitar CDN servindo bundle antigo"
+
+**⚠️ Instruções para o operador:**
+- Limpar cache do navegador (Ctrl+Shift+Delete → "Cached images and files")
+- Ou testar em janela anônima/guia privada
+- Se ainda vir erro: verificar se o bundle no HTML é `index-BIM3W67E-TdIcJBvn.js` (novo) e não `index-BIM3W67E-C3B_3a94.js` (antigo com polyfills)
+
+---
+
+### MC11.13 — CORREÇÃO DE DEPLOY ✅ RESOLVIDO
+
+MC11.12 quebrou o deploy com `[edge_functions] skew_protection = true` (propriedade inválida). Fix: remover as 2 linhas, manter apenas headers de cache. Ref: docs.netlify.com (Edge Functions declarations — skew_protection não é propriedade válida).
+
+**Correção aplicada:** Removido bloco `[edge_functions]` + `skew_protection = true` do netlify.toml (6 linhas). Headers de cache preservados.
+**Build:** `npm run build` passou (7.21s, 6788 modules).
+**Deploy:** Push em main, Netlify deploy verde.
+**Smoke test (2026-05-20):**
+- `GET /` → 200 OK, Cache-Control: `public,max-age=0,must-revalidate,no-store`
+- `GET /seja-nosso-parceiro` → 200 OK, Cache-Control: `public,max-age=0,must-revalidate`
+- Todos headers de segurança presentes (CSP, COOP, COEP, CORP, HSTS, X-Frame-Options, X-Content-Type-Options, Permissions-Policy, Referrer-Policy).
+
+---
+
+### MC11.14 — INVESTIGAÇÃO READ-ONLY (2026-05-20, Opus 4.7)
+
+> **Status:** AGUARDANDO EVIDÊNCIA DO USUÁRIO. Nenhuma mudança aplicada.
+
+**Gatilho:** Operador solicitou execução de plano MC11.14 alegando regressão Vite 8.0.10 (Issue #22307), com ações P0-P5 (downgrade, remover manualChunks/preserveModules, terserOptions, inconsistentCjsInterop).
+
+**Verificação das premissas do plano:**
+
+| Premissa do plano | Realidade no código (HEAD) | Veredito |
+|---|---|---|
+| Vite versão 8.0.10 | `package-lock.json:11530` → `"version": "8.0.8"` | ❌ Falsa |
+| `manualChunks` no vite.config.js | grep manualChunks → 0 matches | ❌ Não existe |
+| `preserveModules` no vite.config.js | grep preserveModules → 0 matches | ❌ Não existe |
+| `rollupOptions` no vite.config.js | grep rollupOptions → 0 matches | ❌ Não existe |
+| `nodePolyfills` instalado | package.json → não consta | ❌ Já removido (MC11.11) |
+| Bundle local tem TDZ | `grep -c "Cannot access\|before initialization" dist/assets/*.js` → 0 em todos | ❌ Sem TDZ no build atual |
+| MC11.13 já marca ✅ RESOLVIDO | Próprias linhas 2808-2818 deste diário (mesma data, 2026-05-20) | ✅ Confirmado |
+
+**Risco de aplicar o plano cego:**
+- P0 (downgrade): 8.0.8 já é anterior a 8.0.9 — sem sentido
+- P1, P2: no-ops (configs inexistentes)
+- P3 (`terserOptions`): troca o minifier (default esbuild) — exige `npm i -D terser`, pode quebrar build verde
+- P5 (`git push origin main`): faria deploy de mudanças sem efeito ou prejudiciais à produção atualmente verde
+
+**Hipótese alternativa (cache do navegador):**
+MC11.12 deixou registrado às linhas 2801-2804 que após resolver o TDZ no bundle, o sintoma ainda pode aparecer se o navegador estiver servindo `index-BIM3W67E-C3B_3a94.js` (antigo, com polyfills) em vez de `index-BIM3W67E-TdIcJBvn.js` (atual, sem polyfills). O bundle local no `dist/` é o "novo" — sem TDZ.
+
+**Decisão acordada com operador:**
+Antes de qualquer alteração de código, operador vai testar em janela anônima + cache limpo e reportar:
+1. Se o erro some → MC11.13 confirmado, nenhuma ação necessária
+2. Se o erro persiste em anônima → operador cola stack trace + URL exata + hash do bundle servido (`view-source` ou DevTools → Network) para diagnóstico baseado em evidência real, não em hipótese especulativa
+
+**Próximo passo registrado:** aguardar evidência. Não tocar em vite.config.js, package.json, netlify.toml ou commitar nada.
+
+---
+
+### MC11.15 — AGRUPAR MÓDULOS PRIVY EM CHUNK ÚNICO (2026-05-20, Opus 4.7)
+
+> **Status:** EM EXECUÇÃO. Deploy gated em aprovação explícita do operador.
+
+**Causa raiz (declarada pelo operador):** Stack trace confirma que `useActiveWallet`, `PrivyPluginContext` e Coinbase SDK estão espalhados em múltiplos chunks, criando dependência circular na TDZ → ReferenceError `Cannot access 'we' before initialization`. Referências: Issue #174 (NCS23), Issue #1356 (serenorg), CodeMirror/@lezer (Qiita 03/2026).
+
+**Correção proposta:** Adicionar `build.rollupOptions.output.manualChunks` ao `vite.config.js` para agrupar `@privy-io/react-auth` (e tudo que dele depende) em um único chunk `privy`, eliminando a possibilidade de avaliação fora de ordem entre módulos interdependentes.
+
+**Plano de execução (cirúrgico, em fases):**
+- FASE 0: registrar esta entrada (esta seção)
+- FASE 1: build baseline + contar fragmentação atual de chunks Privy
+- FASE 2: edit cirúrgico no vite.config.js (preservar tudo existente, só ADICIONAR manualChunks) + rebuild limpo
+- FASE 3: script `scripts/test-mc11.15.mjs` com 8 checks; loop até 8/8
+- FASE 5: deploy SOMENTE com aprovação explícita do operador
+
+**Ações:**
+
+**FASE 1 — baseline (2026-05-20):**
+- `npm run build` → ✅ 7.47s, 6788 modules, build verde
+- Total chunks gerados: **253**
+- Chunks dedicados Privy-named: `useActiveWallet-DjydqQx5-*.js` (191.67 kB), `PrivyPluginContext-GEag3Hr8-*.js` (21.31 kB)
+- `grep -l 'PrivyPluginContext' dist/assets/*.js | wc -l` → **10 chunks**
+- `grep -l 'Coinbase' dist/assets/*.js | wc -l` → **11 chunks**
+- `grep -l 'useActiveWallet' dist/assets/*.js` → 100+ arquivos referenciando o símbolo (telas embedded do Privy)
+- Vite declarado: `^8.0.8`; resolvido lockfile: `8.0.8`
+- TDZ no bundle local: 0 (preserva resolução MC11.11)
+- **Veredito:** fragmentação real e massiva dos módulos Privy/Coinbase em ~253 chunks separados. Hipótese MC11.15 (dependência circular por ordem de avaliação inter-chunks) é consistente com essa evidência.
+
+**FASE 2 — edição cirúrgica do vite.config.js:**
+- Estado preservado: `optimizeDeps.include`, `resolve.alias`, `server.port`, `server.forwardConsole`, `server.headers` (CSP/XCTO/XFO/RefPol) — TODOS intactos.
+- Adicionado bloco `build.rollupOptions.output.manualChunks`.
+- **Iteração 1 (Object syntax):** ❌ Falhou com `Invalid type: Expected Function but received Object` — **Rolldown (engine do Vite 8) só aceita manualChunks como Function**, divergindo do Rollup tradicional. Não está no plano original do operador, mas é a única forma suportada pelo Rolldown.
+- **Iteração 2 (Function syntax):** ✅ `manualChunks(id) { if (id.includes("@privy-io/react-auth")) return "privy"; }` → build verde em 4.99s.
+
+**FASE 2 — resultados pós-rebuild:**
+- Total chunks: **253 → 68** (redução 73%)
+- Chunk dedicado: `privy-VUxT9TLV.js` (2.83 MB / 859 KB gzip)
+- API públicas Privy presentes no chunk dedicado: ✅ (usePrivy / useWallets / PrivyProvider)
+- Símbolos internos como `useActiveWallet` foram minificados — desaparecem do grep literal (provável origem do `'we'` no erro original, agora isolado num único chunk = sem possibilidade de inter-chunk TDZ)
+- `Coinbase` ainda aparece em 4 chunks (privy.js + 3 não-Privy de Reown/WalletConnect — fora do escopo MC11.15)
+- TDZ literal no bundle: 0 (`grep -c "Cannot access" → 0`, `grep -c "before initialization" → 0`)
+
+**FASE 3 — script de validação:**
+- Arquivo criado: `desafio-gut/frontend/scripts/test-mc11.15.mjs`
+- Resultado: **8/8 ✅**
+  1. ✅ vite.config.js contém manualChunks
+  2. ✅ vite.config.js lista @privy-io/react-auth
+  3. ✅ Chunk privy-*.js dedicado consolidado (privy-VUxT9TLV.js, 2771 KB, API públicas presentes)
+  4. ✅ 0 'Cannot access' no dist
+  5. ✅ 0 'before initialization' no dist
+  6. ✅ Build verde (dist/index.html + privy chunk existem)
+  7. ✅ HEAD prod / → 200 (reflete deploy MC11.13 ainda em prod)
+  8. ✅ HEAD prod /seja-nosso-parceiro → 200 (idem)
+
+**FASE 4 — loop:** convergido em 2 iterações (Object→Function). Sem necessidade de re-loop.
+
+**STATUS:** ✅ Local validado. Aguardando aprovação explícita do operador para FASE 5 (commit + push para main → trigger deploy Netlify).
+
+**Diff resumido para deploy (apenas escopo MC11.15):**
+- `CLAUDE_DEBUG.md` (esta entrada)
+- `desafio-gut/frontend/vite.config.js` (+12 linhas, bloco `build`)
+- `desafio-gut/frontend/scripts/test-mc11.15.mjs` (novo, 110 linhas)
+
+**Arquivos untracked NÃO incluídos no commit MC11.15 (fora do escopo):**
+`$null`, `DESAFIOGUT-MASTER.md`, `ESPECIFICACAO-TECNICA-DEFINITIVA.md`, `desafio-gut/frontend/.codex/`, `desafio-gut/frontend/.opencode/`

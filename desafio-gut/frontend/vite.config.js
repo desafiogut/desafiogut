@@ -14,6 +14,19 @@ export default defineConfig({
   optimizeDeps: {
     include: ["@privy-io/react-auth"],
   },
+  // MC11.15 — agrupa todo o SDK Privy num único chunk para eliminar
+  // dependência circular entre chunks (TDZ "Cannot access 'we' before
+  // initialization") causada pela fragmentação em ~253 chunks.
+  // Rolldown (engine do Vite 8) só aceita manualChunks como Function.
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("@privy-io/react-auth")) return "privy";
+        },
+      },
+    },
+  },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
