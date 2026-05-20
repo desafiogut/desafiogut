@@ -63,9 +63,6 @@ export default function BottomNav() {
     // proteger o botão "Aceito" durante o gap authenticated && !address (pós
     // email-OTP, embedded wallet em criação). Sem isso o botão fica travado.
     ready, authenticated,
-    // MC11.4 — após 10s no gap acima, walletCreationStuck=true → mostra
-    // "Tentar novamente" (logout) para o usuário sair do trap.
-    walletCreationStuck, tentarRecuperarCarteira,
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
   const linksSecundarios = isAdmin
@@ -188,42 +185,6 @@ export default function BottomNav() {
                 <span>Carregando…</span>
               </div>
             ) : authenticated && !address ? (
-              walletCreationStuck ? (
-                <div
-                  role="alert"
-                  aria-live="assertive"
-                  style={{
-                    width: "100%", padding: "0.85rem", marginBottom: "0.5rem",
-                    display: "flex", flexDirection: "column",
-                    gap: "0.55rem",
-                    background: "rgba(239,68,68,0.08)",
-                    border: "1px solid rgba(239,68,68,0.32)",
-                    borderRadius: "12px", color: "#ef4444",
-                  }}
-                >
-                  <div style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    gap: "0.4rem",
-                    fontSize: "0.92rem", fontWeight: 800,
-                  }}>
-                    <span>⚠️</span>
-                    <span>Não conseguimos criar sua carteira</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => { tentarRecuperarCarteira(); setMoreOpen(false); }}
-                    style={{
-                      width: "100%", padding: "0.7rem",
-                      background: "linear-gradient(135deg,#f5a623,#f97316)",
-                      border: "none", borderRadius: "10px",
-                      color: "#0a0f1a", fontWeight: 800, fontSize: "0.88rem",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Tentar novamente
-                  </button>
-                </div>
-              ) : (
                 <div
                   role="status"
                   aria-live="polite"
@@ -240,7 +201,6 @@ export default function BottomNav() {
                   <span>🔐</span>
                   <span>Criando carteira…</span>
                 </div>
-              )
             ) : isConnected ? (
               <div style={{
                 margin: "0.5rem 0 0.75rem", padding: "0.7rem 0.85rem",

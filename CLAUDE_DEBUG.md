@@ -2443,3 +2443,109 @@ Bug: abrirModal bloqueia createWallet() quando authenticated=true mas hasAddress
 **Script:** **10/10 ✅** (scripts/test-mc11.7.mjs).
 **Deploy propagado:** `/` → 200, `/seja-nosso-parceiro` → 200.
 **Commit:** `fix: mc11.7 — abrirModal permite createWallet + SejaNossoParceiro responsivo mobile`
+
+### MC11.9 — CORREÇÃO DEFINITIVA
+Diagnóstico MC11.8 confirmou: commit 0d6f84f (MC11.2) introduziu bloqueio em abrirModal.
+Correções: P0) useLogin redireciona só após address existir. P1) Remover timers paliativos MC11.4/11.5. P2) Manter abrirModal do MC11.7.
+
+---
+
+## Diagnóstico MC11.8 — Regressão Embedded Wallet Creation
+
+> **Data:** 2026-05-19
+> **Objetivo:** Encontrar o commit exato que quebrou a criação de carteiras embedded entre MC10 (bom) e HEAD (quebrado).
+
+### Linha do Tempo
+| Commit | Descrição | Tipo |
+|---|---|---|
+| `1470369` | Mega Comando 10 — growth viral (MC10) | **ÚLTIMO BOM** |
+| `17536e8` | MC11 — interface do lojista | ⚠️ suspeito |
+| `0373f10` | MC11.1 — seja nosso parceiro | ⚠️ novo fluxo |
+| `0d6f84f` | **MC11.2 — botao aceito desafio nao clicavel** | ❌ **CAUSA RAIZ** |
+| `93f9a82` | MC11.3 — correcao botao travado + vitrine | ⚠️ agravou |
+| `33dc0ee` | MC11.4 — correcao travamento criando carteira | 🩹 paliativo |
+| `f8783a1` | MC11.5 — createWallet defensivo | 🩹 paliativo |
+| `f6c4945` | MC11.6 — COOP + polyfills | ✅ não relacionado |
+| `6f12847` | **MC11.7 — abrirModal + mobile** | ✅ correção parcial |
+| `9994c3d` | docs MC11.7 → RESOLVED | HEAD |
+
+### 🎯 CAUSA RAIZ — 3 EVIDÊNCIAS
+
+**E1 — Commit `0d6f84f` (MC11.2) introduziu o bloqueio:**
+
+ANTES (MC10 — funcionava):
+```js
+function abrirModal() {
+    if (!ready) {
+      // Retry com setTimeout — polling até ficar ready
+      const id = setTimeout(() => { if (ready) login(); }, 1000);
+      return () => clearTimeout(id);
+    }
+    // SEMPRE chama login() — sem gate
+    login();
+}
+```
+
+DEPOIS (MC11.2 — quebrou):
+```js
+function abrirModal() {
+    if (!ready) {
+      return;  // 👈 Silencioso — sem retry!
+    }
+    if (authenticated) {       // 👈 NOVO GATE
+      console.info("...ignorado: já autenticado.");  // 👈 BLOQUEIA MESMO SEM CARTEIRA!
+      return;
+    }
+    login();
+}
+```
+
+**O bug:** `authenticated` vira `true` no fim do fluxo Privy (Google/email), mas `createOnLogin: "all-users"` é ASSÍNCRONO — a carteira leva 1-5 segundos para ser criada. Nesse gap: `authenticated = true` + `address = null`. Qualquer clique no botão "Entrar no Leilão" durante esse gap batia no `if (authenticated) { return; }` e era ignorado. O usuário ficava preso no estado "Criando carteira…" para sempre.
+
+**E2 — Commit `93f9a82` (MC11.3) agravou o problema:**
+
+Troca de `usePrivy().login` → `useLogin({ onComplete })`. O `onComplete` faz `navigate("/")` a partir de `/seja-nosso-parceiro`, redirecionando o usuário DURANTE a criação da carteira. A mudança de rota força re-render da árvore React enquanto o Privy SDK ainda está criando a embedded wallet. Isso pode causar perda do estado `createOnLogin` em andamento.
+
+**E3 — MC11.7 (`6f12847`) aplicou correção PARCIAL em `abrirModal`:**
+
+O `if (authenticated)` foi substituído por:
+```js
+if (authenticated && address) { return; }          // ok — já tem carteira
+if (authenticated && !address) { createWallet(); return; }  // ok — cria carteira
+```
+Mas o `useLogin({ onComplete })` (MC11.3) AINDA redireciona da `/seja-nosso-parceiro` durante o fluxo. E os timers MC11.4/11.5 (5s retry, 10s stuck) introduziram complexidade que pode ter seu próprio race condition.
+
+### 📊 Respostas às 8 Perguntas
+
+| # | Pergunta | Resposta |
+|---|---|---|
+| 1 | Commit que alterou o fluxo de autenticação? | `0d6f84f` (MC11.2) — `abrirModal` com gate `authenticated` sem checar `address` |
+| 2 | Arquivo/linha específico? | `desafio-gut/frontend/src/context/AppContext.jsx:611` — `if (authenticated) { return; }` |
+| 3 | Intencional ou colateral? | **Colateral (bug).** A intenção do MC11.2 era evitar re-clique no botão "Aceito" pós email-OTP. O gate `authenticated` fazia sentido lógico, mas ignorou o timing assíncrono do `createOnLogin`. |
+| 4 | Antes vs Agora? | **Antes:** `login()` sempre chamado, Privy fazia no-op se já autenticado. **Agora:** gate explícito bloqueava, mas sem distinguir "autenticado com carteira" de "autenticado sem carteira". |
+| 5 | MC11.7 corrigiu corretamente? | **Parcialmente.** O gate em `abrirModal` foi consertado (agora checa `address` + chama `createWallet()`). Mas o `useLogin({ onComplete })` do MC11.3 ainda redireciona de `/seja-nosso-parceiro` durante o fluxo, podendo interromper `createOnLogin`. |
+| 6 | PrivyProvider foi alterado? | **NÃO.** `main.jsx` é IDÊNTICO entre MC10 e HEAD. `createOnLogin: "all-users"`, `PrivyProvider` config, `appId` — tudo igual. |
+| 7 | Dependência do Privy mudou? | **NÃO.** `@privy-io/react-auth: ^3.22.1` em ambos MC10 e HEAD. |
+| 8 | Fluxo de autenticação (JWT, auth-user) mudou? | **NÃO.** Nenhum arquivo em `netlify/functions/_lib/` ou `auth-*.mjs` foi alterado entre MC10 e HEAD. |
+
+### ⚠️ Risco Identificado: `useLogin({ onComplete })` × `createOnLogin`
+
+**Mecanismo de falha no fluxo `/seja-nosso-parceiro`:**
+1. Usuário em `/seja-nosso-parceiro` → clica CTA
+2. `abrirModal` → `login()` (useLogin)
+3. Privy completa autenticação → `onComplete` dispara
+4. `onComplete` → `navigate("/", { replace: true })` ← **REDIRECT IMEDIATO**
+5. `createOnLogin: "all-users"` ainda está criando a carteira embedded
+6. Navegação força re-render da árvore React → possível perda de estado do `createOnLogin`
+
+**Para usuário COMUM (fluxo `/`):** O bug MC11.2 foi corrigido pelo MC11.7. O `abrirModal` agora corretamente chama `createWallet()` quando `authenticated && !address`. Os timers de recovery (MC11.4/11.5) são redundantes neste caso, mas não causam dano.
+
+**Para usuário em `/seja-nosso-parceiro`:** O redirect `onComplete` pode interromper `createOnLogin`. Após o redirect para `/`, o `AppContext` detecta `authenticated && !address` e os timers tentam `createWallet()` após 5s. Isso FUNCIONA, mas adiciona latência desnecessária (0-5s).
+
+### 🔧 Correção Proposta (APENAS PROPOSTA — não executar)
+
+| Arquivo | Mudança | Risco | Justificativa |
+|---|---|---|---|
+| `AppContext.jsx:223-229` | Remover `useLogin({ onComplete })`; voltar para `usePrivy().login`; mover redirect para `useEffect` que observa `authenticated` e `address` | **BAIXO** | `useLogin` é semanticamente idêntico a `usePrivy().login` exceto pelo callback `onComplete`. O redirect deve acontecer APÓS `createOnLogin` completar (quando `address` não for mais `null`), não imediatamente após `authenticated`. A mudança afeta apenas o fluxo `/seja-nosso-parceiro`; o fluxo normal (`/`) não tem redirect. |
+| `AppContext.jsx:252-281` | Remover timers MC11.4/11.5 (5s retry + 10s stuck) — redundantes com MC11.7 | **BAIXO** | O `abrirModal` do MC11.7 já chama `createWallet()` diretamente. A recovery UI ("Tentar novamente") nunca é alcançada porque `createOnLogin` + `createWallet()` cobrem todos os caminhos. Os timers adicionam complexidade sem benefício. |
+| `AppContext.jsx:599-617` | Manter `abrirModal` do MC11.7 como está (com `authenticated && address` + `authenticated && !address`). | **N/A** | Já está correto. |

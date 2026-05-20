@@ -96,9 +96,6 @@ export default function Sidebar() {
     // wallet sendo criada (gap após email-OTP). Sem isso o usuário via o
     // botão "Aceito" travado clicando em loop.
     ready, authenticated,
-    // MC11.4 — após 10s no gap acima sem carteira, walletCreationStuck=true e
-    // a UI mostra "Tentar novamente" (chama tentarRecuperarCarteira = logout).
-    walletCreationStuck, tentarRecuperarCarteira,
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
   // MC11 — montagem condicional da navegação:
@@ -266,46 +263,6 @@ export default function Sidebar() {
             {!collapsed && <span>Carregando…</span>}
           </div>
         ) : authenticated && !address ? (
-          walletCreationStuck ? (
-            <div
-              role="alert"
-              aria-live="assertive"
-              title="Não conseguimos criar sua carteira"
-              style={{
-                display: "flex", flexDirection: "column",
-                gap: "0.4rem",
-                padding: collapsed ? "0.5rem" : "0.55rem 0.65rem",
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.32)",
-                borderRadius: "10px", color: "#ef4444",
-              }}
-            >
-              <div style={{
-                display: "flex", alignItems: "center",
-                gap: collapsed ? 0 : "0.4rem",
-                justifyContent: collapsed ? "center" : "flex-start",
-                fontSize: collapsed ? "1rem" : "0.72rem", fontWeight: 800,
-              }}>
-                <span>⚠️</span>
-                {!collapsed && <span>Não conseguimos criar sua carteira</span>}
-              </div>
-              <button
-                type="button"
-                onClick={tentarRecuperarCarteira}
-                title="Tentar novamente"
-                style={{
-                  padding: "0.4rem 0.6rem",
-                  background: "linear-gradient(135deg,#f5a623,#f97316)",
-                  border: "none", borderRadius: "8px",
-                  color: "#0a0f1a", fontWeight: 800,
-                  fontSize: collapsed ? "0.7rem" : "0.74rem",
-                  cursor: "pointer", width: "100%",
-                }}
-              >
-                {collapsed ? "↻" : "Tentar novamente"}
-              </button>
-            </div>
-          ) : (
             <div
               role="status"
               aria-live="polite"
@@ -324,7 +281,6 @@ export default function Sidebar() {
               <span>🔐</span>
               {!collapsed && <span>Criando carteira…</span>}
             </div>
-          )
         ) : isConnected ? (
           <button
             onClick={desconectar}
