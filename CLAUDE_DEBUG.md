@@ -35,7 +35,19 @@ Loop de até 8 tentativas. Cada tentativa validada no navegador via chrome-devto
   - `we` agora = `createWallet` (declarada antes do uso ✅)
   - `address` → `Se` no bundle, declarada antes de todos os deps arrays ✅
 **Build:** ✅ verde 6.29s
-**Status:** ⏳ Aguardando teste visual no browser pós-deploy.
+
+**RESULTADO DO TESTE VISUAL (chrome-devtools MCP):** ✅ PASSOU
+- Página `/seja-nosso-parceiro` carregou sem crash
+- Console: `[GUT-DEBUG] boot` presente, ZERO `Cannot access 'we' before initialization`
+- Aviso não-crítico: `Privy iframe failed to load: Exceeded max attempts` (embedded wallet, não bloqueia auth)
+- CTA "Quero ser um parceiro" clicado → modal Privy abriu (email + Google + Apple)
+- Email `desafiogut@gmail.com` digitado → tela "Enter confirmation code" exibida → OTP enviado ✅
+- Erros residuais não-críticos:
+  - `analytics` function → 400 (bug separado na Netlify function)
+  - `ERR_HTTP2_PROTOCOL_ERROR` → transiente, não bloqueou o fluxo de OTP
+
+**STATUS:** ✅ RESOLVIDO em produção (2026-05-20) — mc11.16-t2
+**Commits:** `11adfa3` (T1 — React chunk) + `b9abbcb` (T2 — fix TDZ source)
 
 ---
 
