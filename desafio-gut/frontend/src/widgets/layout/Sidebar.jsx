@@ -102,10 +102,13 @@ export default function Sidebar() {
   //   - corporativo: links comuns + bloco corporativo (Painel/Cotas/Banners/Analytics)
   //   - comum:        apenas links comuns (sem regressão)
   //   - admin:        ainda recebe o item Admin no final (preserva RBAC)
+  const itensComuns = tipoUsuario === "corporativo"
+    ? NAV_ITEMS.filter(i => i.path !== "/seja-nosso-parceiro")
+    : NAV_ITEMS;
   const itensCorporativo = tipoUsuario === "corporativo" ? CORPORATIVO_ITEMS : [];
   const itensNav = isAdmin
-    ? [...NAV_ITEMS, ...itensCorporativo, ADMIN_ITEM]
-    : [...NAV_ITEMS, ...itensCorporativo];
+    ? [...itensComuns, ...itensCorporativo, ADMIN_ITEM]
+    : [...itensComuns, ...itensCorporativo];
 
   // Sufixo curto refletindo status de leitura on-chain (idle/ok = vazio).
   const statusSuffix =
