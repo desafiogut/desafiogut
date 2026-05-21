@@ -1,12 +1,13 @@
 // MC11.1 — Seção pública "Seja Nosso Parceiro!".
 // MC12 — formulário de cadastro corporativo funcional (CNPJ, empresa, etc.)
 // MC12.3 — Login Corporativo Independente: form sem login prévio, porta separada.
+// MC12.3.1 — Cadastro DIRETO sem email-OTP: POST register-corporativo no submit,
+//            sem disparar modal Privy. cliente_id derivado do CNPJ no servidor.
 // Rota: /seja-nosso-parceiro (pública — visível para qualquer usuário).
 
-import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { getVisitorId } from "../lib/fingerprint.js";
@@ -119,12 +120,6 @@ const CORPORATIVO_ATIVO = import.meta.env.VITE_CORPORATIVO_ATIVO !== "false";
 
 export default function SejaNossoParceiro() {
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
-
-  // MC12.3 — porta separada: login agora é DISPARADO pelo submit (não antes).
-  // useWallets ANTES de hooks que usam wallets nas deps (TDZ MC11.16-t2).
-  const { wallets } = useWallets();
-  const { authenticated, getAccessToken, login } = usePrivy();
   const { isConnected, tipoUsuario, atualizarTipoCorporativo } = useAppContext();
 
   // Estados do formulário
@@ -136,17 +131,17 @@ export default function SejaNossoParceiro() {
   const [logoUrl,  setLogoUrl]  = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erro,     setErro]     = useState(null);
-  const [cnpjJaExiste, setCnpjJaExiste] = useState(false); // MC12.3 — duplicidade
+  const [cnpjJaExiste, setCnpjJaExiste] = useState(false);
+  const [sucesso, setSucesso] = useState(null); // MC12.3.1 — UI sucesso pós-cadastro
 
-  // MC12.3 — dados pendentes do submit, consumidos no useEffect [authenticated]
-  // (Item 3). Ref evita re-render desnecessário entre submit e auth callback.
-  const dadosPendentesRef = useRef(null);
-
+  // MC12.3.1 — Cadastro DIRETO sem email-OTP.
+  // Fluxo: validar client → GET ?cnpj (duplicidade) → POST register-corporativo
+  // → UI de sucesso. Sem login Privy. Login fica para depois (acessar painel).
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErro(null);
+    setSucesso(null);
     setCnpjJaExiste(false);
-    // FASE A — validação client-side
     if (!validarCNPJ(cnpj)) { setErro("CNPJ inválido. Verifique os dígitos."); return; }
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       setErro("Email inválido."); return;
@@ -157,94 +152,58 @@ export default function SejaNossoParceiro() {
     setEnviando(true);
     try {
       const cnpjNums = cnpj.replace(/\D/g, "");
-      // FASE B — verificar duplicidade no servidor (MC12.3 Item 2)
+      // FASE B — verificar duplicidade no servidor
       const checkRes = await fetch(`/.netlify/functions/cotas?cnpj=${cnpjNums}`);
       if (checkRes.ok) {
         setCnpjJaExiste(true);
-        if (!window.confirm("Este CNPJ já está cadastrado. Deseja fazer login na conta existente?")) {
-          setEnviando(false);
-          return;
-        }
+        setErro("Este CNPJ já está cadastrado. Faça login com o email da empresa para acessar o painel.");
+        setEnviando(false);
+        return;
       } else if (checkRes.status !== 404) {
         throw new Error("Erro ao verificar CNPJ. Tente novamente.");
       }
-      // FASE C — guardar dados pendentes + disparar Privy email-OTP (MC12.3 Item 3)
-      dadosPendentesRef.current = {
-        cnpj: cnpjNums,
-        email: email.trim().toLowerCase(),
-        empresa: empresa.trim(),
-        segmento,
-        site: site.trim() || null,
-        logoUrl: logoUrl.trim() || null,
-      };
-      if (authenticated && wallets[0]?.address) {
-        // Já autenticado — o useEffect abaixo dispara o registro imediatamente.
-        return;
+      // FASE C — POST register-corporativo DIRETO (sem login Privy)
+      const visitorId = await getVisitorId();
+      const res = await fetch("/.netlify/functions/cotas?action=register-corporativo", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
+        },
+        body: JSON.stringify({
+          cnpj: cnpjNums,
+          empresa: empresa.trim(),
+          segmento,
+          site: site.trim() || null,
+          logoUrl: logoUrl.trim() || null,
+          email: email.trim().toLowerCase(),
+        }),
+      });
+      if (!res.ok) {
+        if (res.status === 409) {
+          throw new Error("CNPJ já cadastrado em outra conta.");
+        }
+        if (res.status === 429) {
+          throw new Error("Limite de cadastros atingido. Tente novamente em alguns minutos.");
+        }
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || "Erro ao registrar.");
       }
-      // Dispara modal Privy email-OTP. O fluxo continua em useEffect [authenticated].
-      await login();
+      const registro = await res.json();
+      // Atualiza estado local quando AppContext está disponível (logado).
+      // Cadastros anônimos não atualizam tipoUsuario — login posterior faz isso.
+      if (isConnected) atualizarTipoCorporativo(registro);
+      setSucesso({
+        empresa: registro.empresa,
+        email: registro.email,
+        cnpj: registro.cnpj,
+      });
     } catch (err) {
-      dadosPendentesRef.current = null;
       setErro(err?.message || "Erro ao cadastrar. Tente novamente.");
+    } finally {
       setEnviando(false);
     }
   };
-
-  // MC12.3 Item 3 — pós-login: dispara register-corporativo se há dados pendentes.
-  useEffect(() => {
-    if (!authenticated) return;
-    const address = wallets[0]?.address;
-    if (!address) return;
-    if (!dadosPendentesRef.current) return;
-    let cancel = false;
-    (async () => {
-      try {
-        const accessToken = await getAccessToken();
-        if (!accessToken) throw new Error("Sessão Privy inválida.");
-        const dados = dadosPendentesRef.current;
-        const visitorId = await getVisitorId();
-        const res = await fetch("/.netlify/functions/cotas?action=register-corporativo", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
-          },
-          body: JSON.stringify({
-            accessToken,
-            endereco: address,
-            cnpj: dados.cnpj,
-            empresa: dados.empresa,
-            segmento: dados.segmento,
-            site: dados.site,
-            logoUrl: dados.logoUrl,
-            email: dados.email,
-          }),
-        });
-        if (!res.ok) {
-          if (res.status === 409) {
-            throw new Error("CNPJ pertence a outra conta. Faça login com o email original.");
-          }
-          if (res.status === 429) {
-            throw new Error("Limite de cadastros atingido. Tente novamente em alguns minutos.");
-          }
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err?.error?.message || "Erro ao registrar.");
-        }
-        const registro = await res.json();
-        if (cancel) return;
-        atualizarTipoCorporativo(registro);
-        dadosPendentesRef.current = null;
-        navigate("/corporativo", { replace: true });
-      } catch (err) {
-        if (cancel) return;
-        dadosPendentesRef.current = null;
-        setErro(err?.message || "Erro ao registrar.");
-        setEnviando(false);
-      }
-    })();
-    return () => { cancel = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, wallets[0]?.address]);
 
   const wrap = { padding: "1rem 0", maxWidth: "1200px", margin: "0 auto" };
   const wrapClass = "px-4 md:px-8";
@@ -370,8 +329,52 @@ export default function SejaNossoParceiro() {
         )}
       </motion.header>
 
+      {/* ── MC12.3.1 — UI DE SUCESSO PÓS-CADASTRO ── */}
+      {sucesso && (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          style={{
+            ...card,
+            marginBottom: isMobile ? "2rem" : "3rem",
+            borderColor: "rgba(0,212,170,0.4)",
+            background: "rgba(0,212,170,0.06)",
+          }}
+          aria-label="Cadastro realizado"
+        >
+          <h2 style={{
+            margin: "0 0 0.5rem", color: COR.teal,
+            fontSize: isMobile ? "1.05rem" : "1.25rem", fontWeight: 900,
+          }}>
+            ✅ Cadastro corporativo realizado!
+          </h2>
+          <p style={{ margin: "0 0 0.75rem", color: COR.text, fontSize: "0.9rem" }}>
+            <strong>{sucesso.empresa}</strong> (CNPJ {sucesso.cnpj}) está
+            registrado. Confirmamos os dados pelo email <strong>{sucesso.email}</strong>.
+          </p>
+          <p style={{ margin: "0 0 1rem", color: COR.muted, fontSize: "0.85rem" }}>
+            Próximo passo: a coordenação entrará em contato em até 48h para
+            ativar o seu Painel Lojista e definir o plano (Bronze / Prata / Ouro / Diamante).
+          </p>
+          <Link
+            to="/"
+            style={{
+              display: "inline-block",
+              padding: "0.6rem 1.25rem",
+              background: `linear-gradient(135deg, ${COR.teal}, #00a888)`,
+              borderRadius: "10px", color: "#0a0f1a",
+              fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
+              fontSize: "0.85rem", textDecoration: "none",
+            }}
+          >
+            🏠 Voltar ao início
+          </Link>
+        </motion.section>
+      )}
+
       {/* ── FORMULÁRIO DE CADASTRO ── MC12.3: visível SEM login prévio. */}
-      {tipoUsuario !== "corporativo" && (
+      {!sucesso && tipoUsuario !== "corporativo" && (
         <motion.section
           id="form-corporativo"
           initial={{ opacity: 0, y: 16 }}
@@ -387,8 +390,8 @@ export default function SejaNossoParceiro() {
             🏢 Cadastro Corporativo
           </h2>
           <p style={{ margin: "0 0 1.5rem", color: COR.muted, fontSize: "0.85rem" }}>
-            Preencha os dados da sua empresa. Você receberá um código por email
-            para ativar o Painel Lojista — sem necessidade de senha.
+            Preencha os dados da sua empresa para se cadastrar como parceiro.
+            A coordenação entrará em contato pelo email informado.
           </p>
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div>
@@ -411,7 +414,7 @@ export default function SejaNossoParceiro() {
               )}
               {cnpjJaExiste && (
                 <span style={{ color: COR.primary, fontSize: "0.75rem" }}>
-                  ⚠️ Este CNPJ já está cadastrado — faremos login na conta existente.
+                  ⚠️ Este CNPJ já está cadastrado.
                 </span>
               )}
             </div>
@@ -428,7 +431,7 @@ export default function SejaNossoParceiro() {
                 style={inputStyle}
               />
               <span style={{ color: COR.muted, fontSize: "0.72rem" }}>
-                Usaremos esse email para enviar o código de login (OTP).
+                Usaremos esse email para confirmar o cadastro e o contato da coordenação.
               </span>
             </div>
             <div>
@@ -510,7 +513,7 @@ export default function SejaNossoParceiro() {
                 marginTop: "0.5rem",
               }}
             >
-              {enviando ? "⏳ Enviando código por email…" : "⚡ Receber código e ativar Painel"}
+              {enviando ? "⏳ Enviando cadastro…" : "⚡ Enviar cadastro corporativo"}
             </motion.button>
           </form>
         </motion.section>

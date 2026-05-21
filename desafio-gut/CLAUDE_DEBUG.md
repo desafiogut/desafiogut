@@ -8,7 +8,48 @@
 **Plano:** `C:\Users\Moltbot\Desktop\MC12.3.txt`
 **Sessão:** execução guiada por documento (Opus 4.7)
 
-### Itens 1–5 ✅ — script test-mc12-3.mjs: 10/10 OK
+### MC12.3.1 — Cadastro corporativo DIRETO sem email-OTP ✅
+
+**Problema:** após MC12.3, o submit do formulário disparava `login()` Privy
+(modal email-OTP). O usuário pediu cadastro DIRETO, sem etapa OTP.
+
+**Diagnóstico (grep SejaNossoParceiro.jsx):**
+- Linha 127: `usePrivy` importava `login`
+- Linha 185: `await login()` abria modal Privy email-OTP
+- Linha 195/247: `useEffect [authenticated, wallets[0]?.address]` aguardava
+  autenticação para fazer POST
+- Servidor `cotas.mjs` exigia `accessToken` Privy JWT obrigatório
+
+**Correção T1+T3 (cliente + servidor):**
+- `SejaNossoParceiro.jsx`:
+  - Imports `usePrivy`, `useWallets`, `useNavigate`, `useEffect`, `useRef` removidos
+  - `handleSubmit` agora faz POST DIRETO após GET ?cnpj (404→continua)
+  - `dadosPendentesRef` + `useEffect [authenticated]` removidos
+  - Estado `sucesso` adicionado + UI de sucesso pós-cadastro (não redireciona;
+    coordenação entra em contato pelo email)
+- `cotas.mjs` register-corporativo:
+  - `accessToken` opcional (era 401 token_invalido obrigatório)
+  - `endereco` opcional (cadastro sem login → `cliente_id = "cnpj:" + cnpjNums`)
+  - `origem` registrada no blob: "autenticado" ou "direto"
+  - Índice `cotas-cnpj` agora indexa por `cliente_id` (não mais por `endereco`)
+
+**Validação visual MCP local:**
+- `/seja-nosso-parceiro` → form aparece sem login
+- Preencher CNPJ + email + empresa → click "⚡ Enviar cadastro corporativo"
+- **Resultado:** banner "Este CNPJ já está cadastrado" inline (sem modal Privy)
+- Console: apenas CSP/walletconnect pré-existentes (zero novos erros)
+
+**Script `test-mc12.3.1.mjs`:** 6/6 ✅
+1. Build verde
+2. Zero TDZ
+3. Sem login()/useEffect[authenticated]/usePrivy/useWallets em SejaNossoParceiro
+4. POST register-corporativo dentro do handleSubmit
+5. cotas.mjs: accessToken/endereco opcionais + cliente_id pseudo "cnpj:"
+6. UI sucesso (state `sucesso`) presente
+
+---
+
+### Itens 1–5 (MC12.3 original) ✅ — script test-mc12-3.mjs: 10/10 OK
 
 ### Item 1 — Remover login prévio no SejaNossoParceiro ✅
 

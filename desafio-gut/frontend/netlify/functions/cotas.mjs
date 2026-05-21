@@ -242,20 +242,25 @@ async function handlePost(req) {
       throw err;
     }
     const { accessToken, endereco: enderecoRaw, cnpj, empresa, segmento, site, logoUrl, email } = body;
-    if (!accessToken || typeof accessToken !== "string" || !accessToken.startsWith("eyJ")) {
-      return jsonError(401, "token_invalido", "accessToken Privy obrigatório");
+    // MC12.3.1 — accessToken e endereco passam a ser OPCIONAIS.
+    // Cadastro direto (sem login Privy): cliente_id derivado do CNPJ.
+    // Cadastro autenticado (logado): cliente_id = endereco da carteira.
+    if (accessToken && (typeof accessToken !== "string" || !accessToken.startsWith("eyJ"))) {
+      return jsonError(401, "token_invalido", "accessToken inválido (deve ser JWT Privy)");
     }
-    // MC12.3 Item 3 — X-Visitor-ID obrigatório (FingerprintJS — anti-fraude).
+    // MC12.3 — X-Visitor-ID obrigatório (FingerprintJS — anti-fraude).
     const visitorId = req.headers.get("x-visitor-id");
     if (!visitorId || typeof visitorId !== "string" || visitorId.length < 16) {
       return jsonError(400, "visitor_id_obrigatorio",
         "X-Visitor-ID header obrigatório para anti-fraude.");
     }
-    let endereco;
-    try { endereco = validarEndereco(enderecoRaw); }
-    catch (err) {
-      if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
-      throw err;
+    let endereco = null;
+    if (enderecoRaw) {
+      try { endereco = validarEndereco(enderecoRaw); }
+      catch (err) {
+        if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
+        throw err;
+      }
     }
     if (!validarCNPJ(cnpj)) {
       return jsonError(400, "cnpj_invalido", "CNPJ inválido — verifique os dígitos");
@@ -267,15 +272,17 @@ async function handlePost(req) {
       return jsonError(400, "email_invalido", "email inválido");
     }
     const cnpjNums = String(cnpj).replace(/\D/g, "");
+    // MC12.3.1 — cliente_id: endereço da carteira se logado, ou "cnpj:..." se cadastro direto.
+    const clienteId = endereco ?? `cnpj:${cnpjNums}`;
 
     // MC12.3 Item 2 — Guard anti-duplicidade: mesmo CNPJ não pode ser
-    // registrado em endereços diferentes.
+    // registrado em cliente_id diferente (endereco ou pseudo "cnpj:").
     const idxCnpj = abrirStore(BLOB_COTAS_CNPJ);
     if (idxCnpj) {
       const existente = await idxCnpj.get(cnpjNums, { type: "json" });
-      if (existente && existente.endereco !== endereco) {
+      if (existente && existente.cliente_id !== clienteId) {
         return jsonError(409, "cnpj_duplicado",
-          "CNPJ já cadastrado em outra conta. Faça login com o email original.");
+          "CNPJ já cadastrado em outra conta.");
       }
     }
 
@@ -302,7 +309,8 @@ async function handlePost(req) {
     if (!store) return jsonError(502, "store_indisponivel", "Netlify Blobs indisponível");
     const agora = new Date().toISOString();
     const registro = {
-      cliente_id:   endereco,
+      cliente_id:   clienteId,
+      endereco:     endereco, // null em cadastro direto, address em cadastro autenticado
       tipo:         "corporativo",
       cnpj:         cnpjNums,
       empresa:      empresa.trim().slice(0, 100),
@@ -310,6 +318,7 @@ async function handlePost(req) {
       site:         site ? String(site).slice(0, 200) : null,
       logoUrl:      logoUrl ? String(logoUrl).slice(0, 500) : null,
       email:        email ? String(email).slice(0, 120).toLowerCase() : null,
+      origem:       endereco ? "autenticado" : "direto", // MC12.3.1
       cadastradoEm: agora,
       updatedAt:    agora,
       categoria:    null,
@@ -317,15 +326,17 @@ async function handlePost(req) {
       disponivel:   false,
       valor:        0,
     };
-    await store.setJSON(endereco, registro);
+    await store.setJSON(clienteId, registro);
 
-    // MC12.3 Item 2 — grava índice CNPJ→endereço (chave para anti-duplicidade).
+    // MC12.3 Item 2 — grava índice CNPJ→cliente_id (chave para anti-duplicidade).
     if (idxCnpj) {
       try {
         await idxCnpj.setJSON(cnpjNums, {
           cnpj: cnpjNums,
+          cliente_id: clienteId,
           endereco,
           empresa: registro.empresa,
+          email: registro.email,
           cadastradoEm: agora,
         });
       } catch (err) {
@@ -353,7 +364,8 @@ async function handlePost(req) {
     }
 
     console.info("[cotas] register-corporativo", {
-      endereco, empresa: registro.empresa, cnpj: registro.cnpj,
+      cliente_id: clienteId, endereco, origem: registro.origem,
+      empresa: registro.empresa, cnpj: registro.cnpj,
       visitorId: visitorId.slice(0, 8) + "…",
     });
     return jsonResponse(registro, 201);
