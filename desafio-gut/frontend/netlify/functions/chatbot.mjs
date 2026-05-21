@@ -127,7 +127,8 @@ export default async (req) => {
   try { embedding = await gerarEmbedding(pergunta); }
   catch (err) {
     console.error("[chatbot] gerarEmbedding falhou:", err?.message);
-    return jsonError(503, "embedding_indisponivel", "não foi possível gerar embedding (configure OPENAI_API_KEY)");
+    return jsonError(503, "embedding_indisponivel",
+      `não foi possível gerar embedding (provisione HF_API_TOKEN no Netlify env): ${err?.message?.slice(0, 120) || "erro desconhecido"}`);
   }
 
   // 2. Busca top-K chunks. Se o índice estiver vazio, segue sem contexto

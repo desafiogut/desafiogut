@@ -25,8 +25,11 @@
 // `external_node_modules = ["@xenova/transformers"]` no netlify.toml evita
 // que o esbuild bundle o pacote (sharp não-disponível no Lambda Linux).
 
-const HF_MODEL    = "sentence-transformers/all-MiniLM-L6-v2";
-const HF_EMBED_URL = `https://api-inference.huggingface.co/pipeline/feature-extraction/${HF_MODEL}`;
+const HF_MODEL     = "sentence-transformers/all-MiniLM-L6-v2";
+// HF Inference API: router.huggingface.co é a nova URL desde 2025 (a antiga
+// api-inference.huggingface.co foi sunset). EXIGE HF_API_TOKEN — anonymous
+// retorna 401. Provisionar em Netlify env: HF_API_TOKEN=hf_xxx
+const HF_EMBED_URL = `https://router.huggingface.co/hf-inference/models/${HF_MODEL}/pipeline/feature-extraction`;
 
 /**
  * Divide um texto longo em chunks de aproximadamente `tamanho` "palavras"
