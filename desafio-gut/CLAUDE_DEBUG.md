@@ -47,6 +47,22 @@
 5. cotas.mjs: accessToken/endereco opcionais + cliente_id pseudo "cnpj:"
 6. UI sucesso (state `sucesso`) presente
 
+**Validação produção (commit 165d541 deploy ~16:15):**
+- `GET /cotas?cnpj=11444777000161` → antes do cadastro: 404 livre ✅
+- Form preenchido (CNPJ 11.444.777/0001-61, email teste@corporativo.com,
+  empresa "Teste MC12.3.1", segmento Varejo) + click submit
+- **UI exibe imediatamente:** "✅ Cadastro corporativo realizado!" sem modal Privy
+- `GET /cotas?cnpj=11444777000161` → após cadastro: 200 com
+  `{cliente_id: "cnpj:11444777000161", endereco: null, email: "teste@corporativo.com"}`
+- Screenshot: `CLAUDE_DEBUG_screenshots/mc12-3-1-prod-sucesso.png`
+- ✅ **RESOLVIDO**
+
+**Tech debt:** `GET /cotas?cliente_id=cnpj:XXX` retorna 400 `endereco_invalido`
+porque o branch `clienteId` em handleGet ainda chama `validarEndereco()`.
+Sem impacto no fluxo atual (AppContext busca por `address` Privy, não por
+pseudo-id). Se cadastro direto + login Privy posterior precisar buscar o
+blob original, criar branch separado em handleGet para `cliente_id=cnpj:...`.
+
 ---
 
 ### Itens 1–5 (MC12.3 original) ✅ — script test-mc12-3.mjs: 10/10 OK
