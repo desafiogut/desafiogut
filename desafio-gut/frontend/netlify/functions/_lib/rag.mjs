@@ -17,6 +17,8 @@
 // Tudo aqui é puro Node ESM — funciona tanto em Lambda do Netlify quanto em
 // `node scripts/build-rag-index.mjs` local.
 
+import { pipeline } from "@xenova/transformers";
+
 const DEFAULT_EMBED_MODEL = "text-embedding-3-small";
 const DEFAULT_EMBED_URL   = "https://api.openai.com/v1/embeddings";
 
@@ -127,55 +129,30 @@ export async function buscarChunksRelevantes(store, embedding, topK = 3) {
 }
 
 /**
- * Gera embedding via API compatível com OpenAI Embeddings.
+ * Gera embedding localmente usando @xenova/transformers (modelo
+ * Xenova/all-MiniLM-L6-v2). Retorna float[384].
  *
- * Variáveis de ambiente suportadas (caller pode também passar via `opts`):
- *   OPENAI_API_KEY   — obrigatório para o modelo default
- *   OPENAI_BASE_URL  — opcional (default https://api.openai.com/v1)
- *   EMBED_MODEL      — opcional (default text-embedding-3-small)
+ * Sem dependências externas (sem API key, sem rede). O modelo é baixado
+ * uma única vez no primeiro uso e cacheado pelo @xenova/transformers.
  *
  * @param {string} texto
- * @param {{ apiKey?: string, baseUrl?: string, model?: string, timeoutMs?: number }} opts
  * @returns {Promise<number[]>}
  */
+let _embedderPromise = null;
+function getEmbedder() {
+  if (!_embedderPromise) {
+    _embedderPromise = pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+  }
+  return _embedderPromise;
+}
+
 export async function gerarEmbedding(texto, opts = {}) {
   if (typeof texto !== "string" || !texto.trim()) {
     throw new Error("texto_obrigatorio");
   }
-  const apiKey  = opts.apiKey  || process.env.OPENAI_API_KEY;
-  const baseUrl = (opts.baseUrl || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
-  const model   = opts.model   || process.env.EMBED_MODEL || DEFAULT_EMBED_MODEL;
-  if (!apiKey) throw new Error("apiKey_ausente (configure OPENAI_API_KEY)");
-
-  const url = `${baseUrl}/embeddings`;
-  const body = JSON.stringify({ input: texto, model });
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), opts.timeoutMs || 20_000);
-  let resp;
-  try {
-    resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body,
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timer);
-  }
-  if (!resp.ok) {
-    const errText = await resp.text().catch(() => "");
-    throw new Error(`embedding_http_${resp.status}: ${errText.slice(0, 200)}`);
-  }
-  const data = await resp.json();
-  const vec = data?.data?.[0]?.embedding;
-  if (!Array.isArray(vec) || vec.length === 0) {
-    throw new Error("embedding_resposta_invalida");
-  }
-  return vec;
+  const embedder = await getEmbedder();
+  const result = await embedder(texto, { pooling: "mean", normalize: true });
+  return Array.from(result.data);
 }
 
 /**
@@ -198,3 +175,4 @@ export function montarContexto(chunks, maxCaracteres = 4000) {
   }
   return out;
 }
+

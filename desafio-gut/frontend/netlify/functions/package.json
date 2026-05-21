@@ -4,9 +4,10 @@
   "type": "module",
   "description": "Netlify Functions do DesafioGUT — server-only (não importar do frontend).",
   "dependencies": {
-    "@netlify/blobs": "^8.1.0",
+    "@netlify/blobs": "^8.2.0",
     "@netlify/functions": "^3.0.0",
     "@sentry/node": "^9.0.0",
+    "@xenova/transformers": "^2.17.2",
     "ethers": "^6.16.0",
     "jose": "^5.9.6"
   }

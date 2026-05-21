@@ -36,7 +36,7 @@ const { splitIntoChunks, gerarEmbedding } = await import(`file://${RAG_LIB.repla
 
 // @netlify/blobs vive em node_modules de functions. Resolvemos manualmente
 // porque este script está fora desse package.
-const BLOBS_PKG = join(REPO_ROOT, "desafio-gut", "frontend", "netlify", "functions", "node_modules", "@netlify", "blobs", "dist", "node.js");
+const BLOBS_PKG = join(REPO_ROOT, "desafio-gut", "frontend", "netlify", "functions", "node_modules", "@netlify", "blobs", "dist", "main.js");
 const { getStore } = await import(`file://${BLOBS_PKG.replace(/\\/g, "/")}`);
 
 const STORE_NAME = "rag";
@@ -86,9 +86,8 @@ async function main() {
   const chunks = splitIntoChunks(texto, TAMANHO_CHUNK, OVERLAP);
   console.log(`[build-rag] ${chunks.length} chunks (alvo ${TAMANHO_CHUNK} palavras / overlap ${OVERLAP})`);
 
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY é obrigatório (text-embedding-3-small)");
-  }
+  // MC12.3.x — embedding agora é local (Xenova/all-MiniLM-L6-v2, 384 dim).
+  // Sem dependência de OPENAI_API_KEY. Modelo baixado no primeiro uso.
 
   const store = abrirStore();
 
@@ -125,7 +124,7 @@ async function main() {
   const meta = {
     totalChunks: chunks.length,
     dimensao,
-    modelo:   process.env.EMBED_MODEL || "text-embedding-3-small",
+    modelo:   process.env.EMBED_MODEL || "Xenova/all-MiniLM-L6-v2",
     tamanho:  TAMANHO_CHUNK,
     overlap:  OVERLAP,
     fonte:    args.fonte || "docs/chatbot/regulamento.md",
