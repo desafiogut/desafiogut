@@ -3,6 +3,30 @@
 
 ---
 
+### ✅ MC9.2 — Chatbot respondendo com LLM. Pipeline completo (2026-05-21, DeepSeek V4 Pro)
+
+**Objetivo:** Fazer o chatbot 24/7 responder usando LLM (DeepSeek) em vez do fallback template.
+
+**Diagnóstico (0 tentativas de correção — pipeline já funcional):**
+- `chatbot.mjs:50` lê `process.env.LLM_API_KEY` ✅
+- `chatbot.mjs:159-175` pipeline tenta LLM antes de template ✅
+- `curl` retorna `modoResposta: "llm"` com resposta real sobre DesafioGUT ✅
+- `modoBusca: "textual"` — embedding semântico (HF Inference API) falha por falta de `HF_API_TOKEN`; fallback textual (TF-IDF) supre ✅
+- MCP browser: chatbot widget responde com LLM real após limpar `localStorage.gut_chat_history` ✅
+- Console limpo (sem erros do chatbot) ✅
+- Script `test-mc9.2.mjs`: **8/8 checks passaram** ✅
+
+**Causa do problema reportado ("responde template"):** histórico antigo no `localStorage` do browser.
+Ao clicar "Limpar" e perguntar novamente, o chatbot respondeu com LLM real.
+
+**Oportunidade de melhoria:** Adicionar `HF_API_TOKEN` no Netlify para restaurar busca semântica (atualmente fallback textual cobre bem, mas embedding daria precisão maior em perguntas ambíguas).
+
+**Pipeline confirmado:** embedding (textual fallback) → busca RAG (Blob store `rag`) → LLM (DeepSeek) → resposta.
+
+**Arquivos modificados:** `scripts/test-mc9.2.mjs` (novo, script de validação)
+
+---
+
 ### MC11.18 — LOGIN REAL + CARTEIRA USUÁRIO COMUM. Data: 2026-05-20.
 Objetivo: login real com desafiogut@gmail.com, confirmar carteira carregada e perfil aberto.
 Estado inicial (MC11.17): login() via usePrivy direto, sem useLogin/useCreateWallet, createOnLogin:"all-users" ativo.

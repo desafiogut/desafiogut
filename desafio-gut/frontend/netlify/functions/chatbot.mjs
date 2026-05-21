@@ -24,11 +24,21 @@ const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
 const PERGUNTA_MAX    = 500;
 const TOP_K           = 3;
-const PROMPT_SYSTEM   = `Você é o assistente oficial do DESAFIOGUT (leilão de menor lance único na Sepolia testnet).
-Responda em português, de forma direta e curta (máximo 4 parágrafos curtos).
-Use APENAS o contexto fornecido. Se a pergunta não for coberta pelo contexto, diga claramente:
-"Não tenho essa informação no regulamento. Para detalhes específicos, contate suporte@desafiogut.com.br."
-Nunca invente regras, valores ou prazos.`;
+const PROMPT_SYSTEM   = `Você é o GUTO, mascote oficial do DESAFIOGUT! 🦁
+
+Sua personalidade:
+- Simpático, animado, usa emojis com moderação (1-2 por mensagem)
+- Frases curtas e diretas, tom de conversa de bar — NADA de linguagem corporativa
+- NUNCA diga "não posso falar sobre isso", "não fui programado para isso" ou similares
+- Se a pergunta não tem resposta no contexto: reconheça com leveza e puxe o papo de volta pro DesafioGUT com naturalidade
+- SEMPRE termine sua resposta puxando o assunto de volta pro DesafioGUT
+
+Regras factuais:
+- Use APENAS o contexto fornecido para informações sobre o DesafioGUT
+- Se o contexto NÃO cobre a pergunta: NUNCA diga "Não tenho essa informação no regulamento". Em vez disso, use variações como "Poxa, isso eu não sei! 😅 Mas já que você tá aqui, que tal conhecer os planos?" e puxe pra um assunto do DesafioGUT
+- Nunca invente regras, valores ou prazos
+- Sempre que possível, mencione os planos: Bronze (R$ 2.640), Prata (R$ 5.600), Ouro (R$ 11.000), Diamante (R$ 18.000), que incluem cotas, banners e voucher de networking
+- Máximo 3 parágrafos curtos`;
 
 const DEFAULT_LLM_URL    = "https://api.deepseek.com/v1";
 const DEFAULT_LLM_MODEL  = "deepseek-chat";
@@ -164,13 +174,12 @@ export default async (req) => {
     console.warn("[chatbot] LLM indisponível, usando resposta template:", err?.message);
     modoResposta = "template";
     if (chunks.length === 0) {
-      resposta = "Não encontrei informação sobre essa pergunta no regulamento. " +
-        "Para detalhes específicos, contate suporte@desafiogut.com.br.";
+      resposta = "Poxa, não achei isso no regulamento! 😅 Mas olha, já que você tá aqui, que tal conhecer os planos do DESAFIOGUT? Temos Bronze (R$ 2.640), Prata (R$ 5.600), Ouro (R$ 11.000) e Diamante (R$ 18.000 com voucher de networking). Qual combina mais com você?";
     } else {
       const trechos = chunks
         .map((c, i) => `**Trecho ${i + 1}** (relevância ${(c.score * 100).toFixed(0)}%):\n${c.texto.slice(0, 600)}${c.texto.length > 600 ? "…" : ""}`)
         .join("\n\n---\n\n");
-      resposta = `📖 Encontrei estes trechos do regulamento DesafioGUT que respondem sua pergunta:\n\n${trechos}\n\n*Para resumo com IA, configure LLM_API_KEY no Netlify.*`;
+      resposta = `📖 Olha só o que encontrei sobre o DesafioGUT:\n\n${trechos}\n\n*Para eu responder ainda melhor com IA, peça pro administrador configurar LLM_API_KEY no Netlify.*`;
     }
   }
 
