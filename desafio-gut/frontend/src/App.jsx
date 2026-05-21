@@ -23,13 +23,12 @@ import CorporativoAnalytics from "./pages/CorporativoAnalytics.jsx";
 // MC11.1 — Seção pública (porta de entrada para o fluxo corporativo).
 import SejaNossoParceiro    from "./pages/SejaNossoParceiro.jsx";
 
-// MC11 — guard de rota corporativa. Bloqueia acesso para tipoUsuario !== "corporativo"
-// redirecionando para "/". Aguarda tipoStatus terminar de carregar para evitar
-// flicker (status "loading" → mostra fallback). Usuário Comum nunca vê o painel.
-// MC12 — CorporativoRoute usa tipoUsuario derivado de customMetadata (sem tipoStatus).
+// MC12.2 — CorporativoRoute usa tipoUsuario derivado de cotas blob.
+// tipoCarregando evita redirect prematuro enquanto o fetch do blob está pendente.
 function CorporativoRoute({ children }) {
-  const { tipoUsuario, isConnected } = useAppContext();
+  const { tipoUsuario, tipoCarregando, isConnected } = useAppContext();
   if (!isConnected) return <Navigate to="/" replace />;
+  if (tipoCarregando) return null;
   if (tipoUsuario !== "corporativo") return <Navigate to="/" replace />;
   return children;
 }

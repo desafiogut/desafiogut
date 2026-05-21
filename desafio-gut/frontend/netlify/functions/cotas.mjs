@@ -194,7 +194,74 @@ async function handleGet(req) {
   return jsonResponse({ resumo });
 }
 
+// MC12.2 — Validação de CNPJ server-side (algoritmo dígitos verificadores).
+function validarCNPJ(cnpj) {
+  const nums = String(cnpj).replace(/\D/g, "");
+  if (nums.length !== 14) return false;
+  if (/^(\d)\1+$/.test(nums)) return false;
+  const calc = (arr, len) => {
+    let sum = 0, pos = len - 7;
+    for (let i = len; i >= 1; i--) { sum += arr[len - i] * pos--; if (pos < 2) pos = 9; }
+    return sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  };
+  const arr = nums.split("").map(Number);
+  return calc(arr, 12) === arr[12] && calc(arr, 13) === arr[13];
+}
+
 async function handlePost(req) {
+  // MC12.2 — auto-cadastro corporativo: nenhum admin token necessário.
+  // Autenticado por Privy access token (presença de JWT válido) + rate limit.
+  const url = new URL(req.url);
+  if (url.searchParams.get("action") === "register-corporativo") {
+    const rl = await aplicarRateLimit(req, "cotas-register", 5);
+    if (rl) return rl;
+    let body;
+    try {
+      body = await parseJsonBody(req);
+      if (!body) return jsonError(400, "body_obrigatorio", "envie JSON com accessToken, endereco, cnpj, empresa");
+    } catch (err) {
+      if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
+      throw err;
+    }
+    const { accessToken, endereco: enderecoRaw, cnpj, empresa, segmento, site, logoUrl } = body;
+    if (!accessToken || typeof accessToken !== "string" || !accessToken.startsWith("eyJ")) {
+      return jsonError(401, "token_invalido", "accessToken Privy obrigatório");
+    }
+    let endereco;
+    try { endereco = validarEndereco(enderecoRaw); }
+    catch (err) {
+      if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
+      throw err;
+    }
+    if (!validarCNPJ(cnpj)) {
+      return jsonError(400, "cnpj_invalido", "CNPJ inválido — verifique os dígitos");
+    }
+    if (!empresa || typeof empresa !== "string" || !empresa.trim()) {
+      return jsonError(400, "empresa_obrigatoria", "campo empresa obrigatório");
+    }
+    const store = abrirStore(BLOB_COTAS);
+    if (!store) return jsonError(502, "store_indisponivel", "Netlify Blobs indisponível");
+    const agora = new Date().toISOString();
+    const registro = {
+      cliente_id:   endereco,
+      tipo:         "corporativo",
+      cnpj:         String(cnpj).replace(/\D/g, ""),
+      empresa:      empresa.trim().slice(0, 100),
+      segmento:     segmento || "Outro",
+      site:         site ? String(site).slice(0, 200) : null,
+      logoUrl:      logoUrl ? String(logoUrl).slice(0, 500) : null,
+      cadastradoEm: agora,
+      updatedAt:    agora,
+      categoria:    null,
+      vendida:      false,
+      disponivel:   false,
+      valor:        0,
+    };
+    await store.setJSON(endereco, registro);
+    console.info("[cotas] register-corporativo", { endereco, empresa: registro.empresa, cnpj: registro.cnpj });
+    return jsonResponse(registro);
+  }
+
   const denied = await guardAdmin(req);
   if (denied) return denied;
 

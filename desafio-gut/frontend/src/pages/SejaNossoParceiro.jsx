@@ -115,11 +115,13 @@ export default function SejaNossoParceiro() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
-  // MC12 — ATENÇÃO: useWallets ANTES de hooks que usam wallets nas deps (TDZ).
+  // MC12.2 — ATENÇÃO: useWallets ANTES de hooks que usam wallets nas deps (TDZ).
+  // setCustomMetadata não existe no Privy v3.22.1 (Admin API only).
+  // Cadastro corporativo via cotas.mjs?action=register-corporativo (Netlify Blob).
   const { wallets } = useWallets();
-  const { user, setCustomMetadata, authenticated } = usePrivy();
+  const { authenticated, getAccessToken } = usePrivy();
   const { createWallet } = useCreateWallet();
-  const { isConnected, tipoUsuario, abrirModal } = useAppContext();
+  const { isConnected, tipoUsuario, abrirModal, atualizarTipoCorporativo } = useAppContext();
 
   // Estados do formulário
   const [cnpj,     setCnpj]     = useState("");
@@ -140,17 +142,31 @@ export default function SejaNossoParceiro() {
     setEnviando(true);
     setErro(null);
     try {
-      await setCustomMetadata({
-        tipo: "corporativo",
-        cnpj: cnpj.replace(/\D/g, ""),
-        empresa: empresa.trim(),
-        segmento,
-        site: site.trim() || null,
-        logoUrl: logoUrl.trim() || null,
-        cadastradoEm: new Date().toISOString(),
+      const accessToken = await getAccessToken();
+      if (!accessToken) throw new Error("Sessão expirada. Faça login novamente.");
+      const endereco = wallets[0]?.address;
+      if (!endereco) throw new Error("Carteira não encontrada. Aguarde e tente novamente.");
+      const res = await fetch("/.netlify/functions/cotas?action=register-corporativo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessToken,
+          endereco,
+          cnpj: cnpj.replace(/\D/g, ""),
+          empresa: empresa.trim(),
+          segmento,
+          site: site.trim() || null,
+          logoUrl: logoUrl.trim() || null,
+        }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || "Erro ao cadastrar. Tente novamente.");
+      }
+      const registro = await res.json();
+      atualizarTipoCorporativo(registro);
       if (wallets.length < 2) {
-        await createWallet({ createAdditional: true });
+        await createWallet({ createAdditional: true }).catch(() => {});
       }
       navigate("/corporativo");
     } catch (err) {

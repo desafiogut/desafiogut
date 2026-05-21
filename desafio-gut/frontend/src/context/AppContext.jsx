@@ -135,8 +135,11 @@ export function AppProvider({ children }) {
   const [saldoRsCentavos, setSaldoRsCentavos] = useState(null);
   const [saldoRsStatus,   setSaldoRsStatus]   = useState("idle");
 
-  // MC12 — cotaCorporativa buscada uma vez após login (sem polling).
+  // MC12.2 — cotaCorporativa buscada uma vez após login para TODOS os usuários
+  // autenticados. tipoUsuario é derivado do campo tipo no blob (não de customMetadata,
+  // que exige Admin API no Privy v3.22.1). tipoCarregando evita redirect prematuro.
   const [cotaCorporativa, setCotaCorporativa] = useState(null);
+  const [tipoCarregando,  setTipoCarregando]  = useState(false);
 
   // ── FingerprintJS visitorId (anti-Sybil — Mega Comando 3 / Item 3) ──────
   // Carregado uma vez no mount, cacheado em localStorage. Enviado em
@@ -216,10 +219,32 @@ export function AppProvider({ children }) {
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
   const address     = privyWallet?.address ?? null;
 
-  // MC12 — tipoUsuario derivado de user.customMetadata (sem polling, sem estado).
-  // Atualiza imediatamente junto com user do Privy após setCustomMetadata.
-  const tipoUsuario = user?.customMetadata?.tipo === "corporativo"
-    ? "corporativo" : "comum";
+  // MC12.2 — cota corporativa: buscada uma vez para QUALQUER usuário logado.
+  // tipoUsuario é derivado do campo tipo no blob (não de user.customMetadata).
+  // Privy v3.22.1 removeu setCustomMetadata client-side; a persistência agora
+  // fica em Netlify Blobs via cotas.mjs (POST action=register-corporativo).
+  useEffect(() => {
+    if (!address) { setCotaCorporativa(null); setTipoCarregando(false); return; }
+    setTipoCarregando(true);
+    let cancel = false;
+    fetch(`/.netlify/functions/cotas?cliente_id=${encodeURIComponent(address)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!cancel) {
+          setCotaCorporativa(data || null);
+          setTipoCarregando(false);
+        }
+      })
+      .catch(() => { if (!cancel) { setCotaCorporativa(null); setTipoCarregando(false); } });
+    return () => { cancel = true; };
+  }, [address]);
+
+  // MC12.2 — tipoUsuario derivado do blob cotas (não de customMetadata).
+  const tipoUsuario = cotaCorporativa?.tipo === "corporativo" ? "corporativo" : "comum";
+
+  // Atualiza cotaCorporativa em memória após auto-cadastro (SejaNossoParceiro)
+  // sem aguardar novo fetch do servidor.
+  const atualizarTipoCorporativo = (data) => { setCotaCorporativa(data); setTipoCarregando(false); };
 
   // MC12 — carteira corporativa: wallets[1] criado após cadastro corporativo.
   // Fallback para wallets[0] se wallets[1] ainda não existe (transição).
@@ -227,20 +252,6 @@ export function AppProvider({ children }) {
     ? (wallets[1] ?? wallets[0] ?? null)
     : null;
   const addressCorporativo = corporativoWallet?.address ?? null;
-
-  // MC12 — cota corporativa: buscada uma vez após login, sem polling.
-  useEffect(() => {
-    if (!address || tipoUsuario !== "corporativo") {
-      setCotaCorporativa(null);
-      return;
-    }
-    let cancel = false;
-    fetch(`/.netlify/functions/cotas?cliente_id=${encodeURIComponent(address)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (!cancel && data?.cliente_id) setCotaCorporativa(data); })
-      .catch(() => {});
-    return () => { cancel = true; };
-  }, [address, tipoUsuario]);
 
   const isConnected = authenticated && Boolean(address);
   const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || null;
@@ -618,8 +629,10 @@ export function AppProvider({ children }) {
     saldoRsCentavos,
     saldoRsStatus,
     refetchSaldoRs,
-    // MC12 — tipo de usuário (customMetadata), cota e carteiras corporativas.
+    // MC12.2 — tipo de usuário (cotas blob), cota e carteiras corporativas.
     tipoUsuario,
+    tipoCarregando,
+    atualizarTipoCorporativo,
     cotaCorporativa,
     corporativoWallet,
     addressCorporativo,

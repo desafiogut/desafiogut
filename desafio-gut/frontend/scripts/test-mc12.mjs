@@ -22,11 +22,11 @@ function check(n, label, fn) {
   }
 }
 
-// 1. tipoUsuario é derivado (não useState) — sem polling setTipoUsuario
-check(1, "AppContext: tipoUsuario derivado de customMetadata (sem useState)", () => {
+// 1. tipoUsuario derivado de cotaCorporativa?.tipo (não de customMetadata)
+check(1, "AppContext: tipoUsuario derivado de cotaCorporativa.tipo (cotas blob)", () => {
   const src = fs.readFileSync(path.join(SRC, "context/AppContext.jsx"), "utf8");
   const hasState = src.includes("setTipoUsuario");
-  const hasDerived = /tipoUsuario\s*=\s*user\?\.customMetadata/.test(src);
+  const hasDerived = /tipoUsuario\s*=\s*cotaCorporativa\?\.tipo/.test(src);
   return !hasState && hasDerived;
 });
 
@@ -59,13 +59,15 @@ check(5, "Sidebar: oculta /seja-nosso-parceiro para tipoUsuario === 'corporativo
          src.includes("corporativo");
 });
 
-// 6. SejaNossoParceiro: usa setCustomMetadata (registro real)
-check(6, "SejaNossoParceiro: chama setCustomMetadata no submit", () => {
+// 6. SejaNossoParceiro: POSTa para cotas?action=register-corporativo (sem setCustomMetadata)
+check(6, "SejaNossoParceiro: POSTa para cotas register-corporativo (sem setCustomMetadata)", () => {
   const src = fs.readFileSync(
     path.join(SRC, "pages/SejaNossoParceiro.jsx"), "utf8"
   );
-  return src.includes("setCustomMetadata") && src.includes("tipo") &&
-         src.includes("corporativo");
+  const noComments = src.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  return !noComments.includes("setCustomMetadata") &&
+         noComments.includes("register-corporativo") &&
+         noComments.includes("getAccessToken");
 });
 
 // 7. SejaNossoParceiro: cria carteira adicional somente para corporativo
