@@ -213,6 +213,78 @@ export async function gerarEmbedding(texto, opts = {}) {
   return Array.from(result.data);
 }
 
+// MC9.1 — Stopwords pt-br básicas usadas pelo fallback de busca textual.
+const STOPWORDS_PT = new Set([
+  "a","o","as","os","um","uma","uns","umas","de","do","da","dos","das",
+  "e","ou","mas","que","se","em","no","na","nos","nas","por","para","com",
+  "sem","sob","sobre","entre","ate","até","ao","aos","à","às","é","são","foi",
+  "ser","ter","tem","tens","tinha","tinham","seu","sua","seus","suas","meu",
+  "minha","meus","minhas","nosso","nossa","nossos","nossas","esse","essa",
+  "esses","essas","este","esta","estes","estas","isso","isto","aquele",
+  "aquela","aqueles","aquelas","aquilo","quando","onde","como","porque",
+  "qual","quais","quanto","quantos","quanta","quantas","quem","mais","menos",
+  "muito","muita","muitos","muitas","pouco","pouca","poucos","poucas",
+  "não","nao","sim","só","apenas","já","ainda","tambem","também",
+]);
+
+function tokenizar(texto) {
+  return String(texto)
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")  // remove acentos
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(t => t.length >= 2 && !STOPWORDS_PT.has(t));
+}
+
+/**
+ * MC9.1 — Fallback de busca textual baseado em TF-IDF leve. Ativado quando
+ * gerarEmbedding falha (sem HF_API_TOKEN, sem OPENAI_API_KEY). Não usa
+ * embeddings — varre `rag:meta` e ranqueia chunks por contagem normalizada
+ * de termos da pergunta presentes no chunk. Funciona com qualquer índice
+ * RAG existente porque depende apenas do campo `texto`.
+ *
+ * @param {object} store         Netlify Blobs store já aberto
+ * @param {string} pergunta      texto bruto da pergunta
+ * @param {number} topK          (default 3)
+ * @returns {Promise<Array<{id,ordem,texto,score}>>}
+ */
+export async function buscarChunksTextual(store, pergunta, topK = 3) {
+  if (!store) throw new Error("store_obrigatorio");
+  const termos = tokenizar(pergunta);
+  if (termos.length === 0) return [];
+  let meta;
+  try { meta = await store.get("rag:meta", { type: "json" }); }
+  catch { return []; }
+  if (!meta || !Number.isInteger(meta.totalChunks) || meta.totalChunks <= 0) return [];
+  const scores = [];
+  for (let i = 0; i < meta.totalChunks; i++) {
+    const key = `rag:${i}`;
+    let chunk;
+    try { chunk = await store.get(key, { type: "json" }); }
+    catch { continue; }
+    if (!chunk?.texto) continue;
+    const tokensChunk = tokenizar(chunk.texto);
+    if (tokensChunk.length === 0) continue;
+    // TF da pergunta no chunk, normalizado pelo tamanho do chunk e
+    // ponderado pela raridade (IDF aproximado por log(N/df) seria mais
+    // preciso, mas com 5 chunks o IDF degenera; usar TF normalizado).
+    const setChunk = new Set(tokensChunk);
+    let hits = 0;
+    let cobertura = 0;
+    for (const t of termos) {
+      if (setChunk.has(t)) { hits += 1; cobertura += 1; }
+      // bônus por ocorrências repetidas
+      const ocorr = tokensChunk.filter(x => x === t).length;
+      hits += Math.min(ocorr - (setChunk.has(t) ? 1 : 0), 3);
+    }
+    if (hits === 0) continue;
+    const score = (cobertura / termos.length) * 0.7 + (hits / tokensChunk.length) * 0.3;
+    scores.push({ id: key, ordem: chunk.ordem ?? i, texto: chunk.texto, score });
+  }
+  scores.sort((a, b) => b.score - a.score);
+  return scores.slice(0, Math.max(1, topK));
+}
+
 /**
  * Helper de conveniência usado tanto pelo build script quanto pelo endpoint:
  * concatena chunks vencedores num "contexto" pronto para injeção no prompt.

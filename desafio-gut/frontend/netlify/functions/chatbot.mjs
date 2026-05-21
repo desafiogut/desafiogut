@@ -18,7 +18,7 @@
 import { getStore } from "@netlify/blobs";
 import { jsonResponse, jsonError, parseJsonBody, ValidationError } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
-import { gerarEmbedding, buscarChunksRelevantes, montarContexto } from "./_lib/rag.mjs";
+import { gerarEmbedding, buscarChunksRelevantes, buscarChunksTextual, montarContexto } from "./_lib/rag.mjs";
 
 const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
@@ -122,36 +122,65 @@ export default async (req) => {
     return jsonError(400, "pergunta_longa", `máximo ${PERGUNTA_MAX} caracteres`);
   }
 
-  // 1. Embedding da pergunta.
-  let embedding;
-  try { embedding = await gerarEmbedding(pergunta); }
-  catch (err) {
-    console.error("[chatbot] gerarEmbedding falhou:", err?.message);
-    return jsonError(503, "embedding_indisponivel",
-      `não foi possível gerar embedding (provisione HF_API_TOKEN no Netlify env): ${err?.message?.slice(0, 120) || "erro desconhecido"}`);
-  }
-
-  // 2. Busca top-K chunks. Se o índice estiver vazio, segue sem contexto
-  // (o LLM cairá no fallback "não tenho essa informação...").
+  // MC9.1 — Pipeline em camadas com fallback gracioso:
+  //   1. Tenta busca SEMÂNTICA (HF Inference API embedding + cosineSimilarity)
+  //   2. Se gerarEmbedding falhar → busca TEXTUAL (TF-IDF leve, sem deps externas)
+  //   3. Se LLM disponível → resposta gerada com contexto
+  //      Senão → resposta TEMPLATE com os top-K chunks como markdown
+  // Resultado: chatbot SEMPRE responde algo útil, mesmo sem credentials.
   const store = abrirStore();
   let chunks = [];
-  if (store) {
-    try { chunks = await buscarChunksRelevantes(store, embedding, TOP_K); }
-    catch (err) { console.warn("[chatbot] buscarChunks falhou:", err?.message); }
+  let modoBusca = "semantica";
+
+  // 1. Embedding semântico (HF API se em Lambda, Xenova se local).
+  try {
+    const embedding = await gerarEmbedding(pergunta);
+    if (store) {
+      chunks = await buscarChunksRelevantes(store, embedding, TOP_K);
+    }
+  } catch (err) {
+    console.warn("[chatbot] embedding semântico falhou, fallback para textual:", err?.message);
+    modoBusca = "textual";
   }
+
+  // 2. Fallback textual quando semântica falhou ou retornou vazio.
+  if (chunks.length === 0 && store) {
+    try {
+      chunks = await buscarChunksTextual(store, pergunta, TOP_K);
+      modoBusca = modoBusca === "semantica" ? "semantica-vazia-fallback-textual" : "textual";
+    } catch (err) {
+      console.warn("[chatbot] buscarChunksTextual falhou:", err?.message);
+    }
+  }
+
   const contexto = montarContexto(chunks);
 
-  // 3. Chama LLM.
+  // 3. Tenta LLM; se falhar OU LLM_API_KEY ausente, monta resposta template.
   let resposta;
-  try { resposta = await chamarLLM(pergunta, contexto); }
-  catch (err) {
-    console.error("[chatbot] LLM falhou:", err?.message);
-    return jsonError(502, "llm_indisponivel", "não foi possível gerar resposta agora — tente novamente em instantes");
+  let modoResposta = "llm";
+  try {
+    resposta = await chamarLLM(pergunta, contexto);
+  } catch (err) {
+    console.warn("[chatbot] LLM indisponível, usando resposta template:", err?.message);
+    modoResposta = "template";
+    if (chunks.length === 0) {
+      resposta = "Não encontrei informação sobre essa pergunta no regulamento. " +
+        "Para detalhes específicos, contate suporte@desafiogut.com.br.";
+    } else {
+      const trechos = chunks
+        .map((c, i) => `**Trecho ${i + 1}** (relevância ${(c.score * 100).toFixed(0)}%):\n${c.texto.slice(0, 600)}${c.texto.length > 600 ? "…" : ""}`)
+        .join("\n\n---\n\n");
+      resposta = `📖 Encontrei estes trechos do regulamento DesafioGUT que respondem sua pergunta:\n\n${trechos}\n\n*Para resumo com IA, configure LLM_API_KEY no Netlify.*`;
+    }
   }
 
   const fontes = chunks.map((c) => ({ id: c.id, score: Number(c.score.toFixed(4)) }));
   console.info("[chatbot] resposta gerada", {
-    perguntaLen: pergunta.length, chunks: chunks.length, scoreTop: fontes[0]?.score,
+    perguntaLen: pergunta.length,
+    chunks: chunks.length,
+    scoreTop: fontes[0]?.score,
+    modoBusca,
+    modoResposta,
   });
-  return jsonResponse({ resposta, fontes });
+  return jsonResponse({ resposta, fontes, modoBusca, modoResposta });
 };
