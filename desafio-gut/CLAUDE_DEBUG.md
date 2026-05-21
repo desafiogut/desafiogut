@@ -2,6 +2,98 @@
 
 ---
 
+## MC12.3 — Login Corporativo Independente via CNPJ
+
+**Data:** 2026-05-21
+**Plano:** `C:\Users\Moltbot\Desktop\MC12.3.txt`
+**Sessão:** execução guiada por documento (Opus 4.7)
+
+### Itens 1–5 ✅ — script test-mc12-3.mjs: 10/10 OK
+
+### Item 1 — Remover login prévio no SejaNossoParceiro ✅
+
+**Mudanças em `src/pages/SejaNossoParceiro.jsx`:**
+- Removido botão "⚡ Fazer login para se cadastrar" do hero (chamava `abrirModal`)
+- Removida dependência de `abrirModal` no `useAppContext`
+- Substituído `useCreateWallet` por `login` direto de `usePrivy()`
+- Adicionado campo NOVO: `email` da empresa (input type="email")
+- Adicionado estado `cnpjJaExiste` (banner amarelo se duplicado)
+- Adicionada feature flag `VITE_CORPORATIVO_ATIVO` (default ON)
+- Gate `{isConnected && tipoUsuario !== "corporativo"}` → `{tipoUsuario !== "corporativo"}`
+- handleSubmit reordenado: validação → GET cnpj → login Privy OTP → useEffect dispara POST
+- CTA final "Quero ser um parceiro" agora faz scroll para `#form-corporativo`
+
+**Build:** ✓ built in 5.50s (`npm run build`)
+**TDZ check:** `grep -c "Cannot access" dist/assets/*.js` → 0
+**Validação visual (MCP chrome-devtools):**
+- Screenshot: `CLAUDE_DEBUG_screenshots/mc12-3-item1-form-sem-login.png`
+- Formulário visível imediatamente sem login prévio ✅
+- Campo "Email da Empresa" presente ✅
+- Botão "⚡ Receber código e ativar Painel" (texto novo) ✅
+- Console errors: apenas CSP/WalletConnect/Sentry pré-existentes (não regressão)
+
+### Item 2 — Validação CNPJ + endpoint GET ?cnpj=XXX ✅
+
+**Mudanças em `netlify/functions/cotas.mjs`:**
+- Constantes `BLOB_COTAS_CNPJ` e `BLOB_COTAS_FP` adicionadas
+- `validarCNPJ()` movido para escopo superior (uso em GET e POST)
+- `handleGet` aceita `?cnpj=XXX` → 200 (existe) ou 404 (livre) via blob `cotas-cnpj:{cnpj}`
+- `handlePost` register-corporativo: guard `cnpj_duplicado` (409) se CNPJ pertence a endereço diferente
+- Após `setJSON` em `cotas:{endereco}`, grava índice em `cotas-cnpj:{cnpj}` (não-fatal se falhar)
+
+**handleSubmit cliente:**
+- FASE A: validação CNPJ + email + URLs client-side
+- FASE B: `fetch('/.netlify/functions/cotas?cnpj=' + cnpjNums)` — 404 segue, 200 pede confirmação
+- Banner amarelo "Este CNPJ já está cadastrado" quando `cnpjJaExiste === true`
+
+### Item 3 — Register pós-Privy OTP + X-Visitor-ID ✅
+
+**Mudanças em `netlify/functions/cotas.mjs`:**
+- Header `X-Visitor-ID` obrigatório (≥ 16 chars) — `visitor_id_obrigatorio` (400) se ausente
+- Campo `email` aceito no body (validação regex)
+- Response `register-corporativo` retorna 201 (criado) em vez de 200
+
+**handleSubmit cliente (consolidado no Item 1):**
+- `dadosPendentesRef` guarda dados antes de chamar `login()` Privy
+- `useEffect([authenticated, address])` dispara POST quando Privy resolve OTP
+- POST envia `X-Visitor-ID` via `getVisitorId()` (FingerprintJS MC3)
+- Após 201: `atualizarTipoCorporativo(registro)` + `navigate('/corporativo', { replace: true })`
+- Trata 409 (CNPJ outra conta) e 429 (rate-limit/Sybil) com mensagens específicas
+
+### Item 4 — Redirect automático + sidebar isolada ✅
+
+**Mudanças em `src/App.jsx`:**
+- Wrapper `DashboardOuCorporativo` na rota raiz → redirecciona corporativos para `/corporativo`
+- Zero regressão para visitantes/comuns: continua renderizando `<Dashboard />`
+
+**Mudanças em `src/context/AppContext.jsx`:**
+- `useEffect([tipoUsuario, location.pathname])`: se corporativo cair em `/`, `/carteira`, `/mercado`, `/vitrine`, `/programacao`, `/ativos`, `/seguranca` → redirect para `/corporativo` com `replace: true`
+
+**Mudanças em `src/widgets/layout/Sidebar.jsx`:**
+- Corporativo vê apenas: `CORPORATIVO_ITEMS` + Configurações + Admin (se isAdmin)
+- Comum/visitante: comportamento atual preservado
+
+### Item 5 — Feature flag + anti-Sybil + script validação ✅
+
+**Mudanças em `.env`, `.env.local`, `.env.production`:**
+- `VITE_CORPORATIVO_ATIVO=true` (default ON; OFF esconde formulário)
+
+**Mudanças em `netlify/functions/cotas.mjs`:**
+- Anti-Sybil: blob `cotas-fingerprint:{visitorId}` registra CNPJs criados nas últimas 24h
+- Se já tem 1 CNPJ DIFERENTE no mesmo visitorId em 24h → `sybil_detectado` (429)
+- Atualiza histórico após sucesso (idempotente para mesmo CNPJ)
+
+**Novo arquivo `scripts/test-mc12-3.mjs`:**
+- 10 checks: build, TDZ, abrirModal removido, campo email, GET ?cnpj, blob cotas-cnpj, X-Visitor-ID, 409, DashboardOuCorporativo, feature flag
+- **Resultado:** 10/10 ✅
+
+**Validação visual final:**
+- `/seja-nosso-parceiro` deslogado → formulário direto ✅
+- `/` deslogado → Dashboard normal (zero regressão) ✅
+- Screenshot: `CLAUDE_DEBUG_screenshots/mc12-3-item5-form-final.png`
+
+---
+
 ## MC12.2 — "i is not a function" ao submeter CNPJ no SejaNossoParceiro
 
 **Data:** 2026-05-21  

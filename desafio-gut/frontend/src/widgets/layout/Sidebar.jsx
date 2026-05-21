@@ -98,17 +98,24 @@ export default function Sidebar() {
     ready, authenticated,
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
-  // MC11 — montagem condicional da navegação:
-  //   - corporativo: links comuns + bloco corporativo (Painel/Cotas/Banners/Analytics)
-  //   - comum:        apenas links comuns (sem regressão)
-  //   - admin:        ainda recebe o item Admin no final (preserva RBAC)
-  const itensComuns = tipoUsuario === "corporativo"
-    ? NAV_ITEMS.filter(i => i.path !== "/seja-nosso-parceiro")
-    : NAV_ITEMS;
-  const itensCorporativo = tipoUsuario === "corporativo" ? CORPORATIVO_ITEMS : [];
-  const itensNav = isAdmin
-    ? [...itensComuns, ...itensCorporativo, ADMIN_ITEM]
-    : [...itensComuns, ...itensCorporativo];
+  // MC12.3 Item 4 — Isolamento do mundo lojista. Corporativo NÃO vê links
+  // comuns de Leilão (Dashboard de leilão, carteira pessoal, mercado, vitrine,
+  // programação, ativos, segurança, "seja nosso parceiro"). Vê apenas:
+  //   - 🏢 Painel Lojista + 📢 Cotas + 🖼️ Banners + 📊 Analytics (CORPORATIVO_ITEMS)
+  //   - ⚙️ Configurações (compartilhado)
+  //   - ⚙️ Admin (se isAdmin, preserva RBAC)
+  // Comum/visitante: comportamento atual (sem regressão R1).
+  const configItem = NAV_ITEMS.find(i => i.path === "/configuracoes");
+  let itensNav;
+  if (tipoUsuario === "corporativo") {
+    itensNav = [
+      ...CORPORATIVO_ITEMS,
+      ...(configItem ? [configItem] : []),
+      ...(isAdmin ? [ADMIN_ITEM] : []),
+    ];
+  } else {
+    itensNav = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS;
+  }
 
   // Sufixo curto refletindo status de leitura on-chain (idle/ok = vazio).
   const statusSuffix =

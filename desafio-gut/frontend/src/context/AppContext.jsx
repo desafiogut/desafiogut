@@ -246,6 +246,22 @@ export function AppProvider({ children }) {
   // sem aguardar novo fetch do servidor.
   const atualizarTipoCorporativo = (data) => { setCotaCorporativa(data); setTipoCarregando(false); };
 
+  // MC12.3 Item 4 — Isolamento do mundo lojista. Se um corporativo cair em
+  // rota de usuário comum (Dashboard, carteira, mercado, vitrine, ativos…),
+  // redireciona automaticamente para /corporativo. Replace para não
+  // poluir o histórico do navegador.
+  useEffect(() => {
+    if (tipoCarregando) return;
+    if (tipoUsuario !== "corporativo") return;
+    const rotasProibidas = new Set([
+      "/", "/carteira", "/mercado", "/vitrine", "/programacao",
+      "/ativos", "/seguranca",
+    ]);
+    if (rotasProibidas.has(location.pathname)) {
+      navigate("/corporativo", { replace: true });
+    }
+  }, [tipoUsuario, tipoCarregando, location.pathname, navigate]);
+
   // MC12 — carteira corporativa: wallets[1] criado após cadastro corporativo.
   // Fallback para wallets[0] se wallets[1] ainda não existe (transição).
   const corporativoWallet = tipoUsuario === "corporativo"

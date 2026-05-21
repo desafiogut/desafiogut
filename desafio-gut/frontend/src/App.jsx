@@ -33,6 +33,16 @@ function CorporativoRoute({ children }) {
   return children;
 }
 
+// MC12.3 Item 4 — wrapper da rota raiz: lojistas autenticados NUNCA veem
+// o Dashboard de leilão. Vão direto para /corporativo. Comuns/visitantes
+// continuam vendo o Dashboard normal (zero regressão R1).
+function DashboardOuCorporativo() {
+  const { tipoUsuario, tipoCarregando, isConnected } = useAppContext();
+  if (isConnected && tipoCarregando) return null;
+  if (tipoUsuario === "corporativo") return <Navigate to="/corporativo" replace />;
+  return <Dashboard />;
+}
+
 /**
  * App — Raiz da aplicação DesafioGUT.
  *
@@ -69,7 +79,7 @@ export default function App() {
       <ToastContainer toasts={toasts} onDismiss={remove} />
       <Routes>
         <Route element={<Layout />}>
-          <Route index              element={<Dashboard />}     />
+          <Route index              element={<DashboardOuCorporativo />} />
           <Route path="/carteira"   element={<MinhaCarteira />} />
           <Route path="/mercado"    element={<MercadoLances />} />
           <Route path="/vitrine"       element={<Vitrine />} />

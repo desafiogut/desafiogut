@@ -28,6 +28,9 @@ import { guardAdmin } from "./_lib/admin-auth.mjs";
 const BLOB_COTAS  = "cotas";
 const BLOB_INDICE = "cotas-indice";
 const BLOB_WALLET = "wallet";
+// MC12.3 — índice CNPJ→endereço (anti-duplicidade O(1)) e fingerprint anti-Sybil.
+const BLOB_COTAS_CNPJ = "cotas-cnpj";
+const BLOB_COTAS_FP   = "cotas-fingerprint";
 const CATEGORIAS  = new Set(["bronze", "prata", "ouro", "diamante"]);
 
 // REQ-17: mínimos por categoria em BRL. Se valor_produto < mínimo,
@@ -161,10 +164,39 @@ async function resumoAgregado() {
   return resumo;
 }
 
+// MC12.3 — Validação de CNPJ (algoritmo dígitos verificadores). Definida aqui
+// para uso em handleGet (?cnpj=) e handlePost (register-corporativo).
+function validarCNPJ(cnpj) {
+  const nums = String(cnpj).replace(/\D/g, "");
+  if (nums.length !== 14) return false;
+  if (/^(\d)\1+$/.test(nums)) return false;
+  const calc = (arr, len) => {
+    let sum = 0, pos = len - 7;
+    for (let i = len; i >= 1; i--) { sum += arr[len - i] * pos--; if (pos < 2) pos = 9; }
+    return sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  };
+  const arr = nums.split("").map(Number);
+  return calc(arr, 12) === arr[12] && calc(arr, 13) === arr[13];
+}
+
 async function handleGet(req) {
   const url       = new URL(req.url);
   const clienteId = url.searchParams.get("cliente_id");
   const categoria = url.searchParams.get("categoria");
+  const cnpjParam = url.searchParams.get("cnpj"); // MC12.3 — anti-duplicidade
+
+  // MC12.3 — verifica se CNPJ já está cadastrado. Retorna 200 com índice ou 404.
+  if (cnpjParam) {
+    const nums = String(cnpjParam).replace(/\D/g, "");
+    if (!validarCNPJ(nums)) {
+      return jsonError(400, "cnpj_invalido", "CNPJ inválido");
+    }
+    const idxCnpj = abrirStore(BLOB_COTAS_CNPJ);
+    if (!idxCnpj) return jsonError(502, "store_indisponivel", "Netlify Blobs indisponível");
+    const reg = await idxCnpj.get(nums, { type: "json" });
+    if (!reg) return jsonError(404, "cnpj_nao_encontrado", "CNPJ livre");
+    return jsonResponse(reg);
+  }
 
   if (clienteId) {
     let endereco;
@@ -194,20 +226,6 @@ async function handleGet(req) {
   return jsonResponse({ resumo });
 }
 
-// MC12.2 — Validação de CNPJ server-side (algoritmo dígitos verificadores).
-function validarCNPJ(cnpj) {
-  const nums = String(cnpj).replace(/\D/g, "");
-  if (nums.length !== 14) return false;
-  if (/^(\d)\1+$/.test(nums)) return false;
-  const calc = (arr, len) => {
-    let sum = 0, pos = len - 7;
-    for (let i = len; i >= 1; i--) { sum += arr[len - i] * pos--; if (pos < 2) pos = 9; }
-    return sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  };
-  const arr = nums.split("").map(Number);
-  return calc(arr, 12) === arr[12] && calc(arr, 13) === arr[13];
-}
-
 async function handlePost(req) {
   // MC12.2 — auto-cadastro corporativo: nenhum admin token necessário.
   // Autenticado por Privy access token (presença de JWT válido) + rate limit.
@@ -223,9 +241,15 @@ async function handlePost(req) {
       if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
       throw err;
     }
-    const { accessToken, endereco: enderecoRaw, cnpj, empresa, segmento, site, logoUrl } = body;
+    const { accessToken, endereco: enderecoRaw, cnpj, empresa, segmento, site, logoUrl, email } = body;
     if (!accessToken || typeof accessToken !== "string" || !accessToken.startsWith("eyJ")) {
       return jsonError(401, "token_invalido", "accessToken Privy obrigatório");
+    }
+    // MC12.3 Item 3 — X-Visitor-ID obrigatório (FingerprintJS — anti-fraude).
+    const visitorId = req.headers.get("x-visitor-id");
+    if (!visitorId || typeof visitorId !== "string" || visitorId.length < 16) {
+      return jsonError(400, "visitor_id_obrigatorio",
+        "X-Visitor-ID header obrigatório para anti-fraude.");
     }
     let endereco;
     try { endereco = validarEndereco(enderecoRaw); }
@@ -239,17 +263,53 @@ async function handlePost(req) {
     if (!empresa || typeof empresa !== "string" || !empresa.trim()) {
       return jsonError(400, "empresa_obrigatoria", "campo empresa obrigatório");
     }
+    if (email && (typeof email !== "string" || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) {
+      return jsonError(400, "email_invalido", "email inválido");
+    }
+    const cnpjNums = String(cnpj).replace(/\D/g, "");
+
+    // MC12.3 Item 2 — Guard anti-duplicidade: mesmo CNPJ não pode ser
+    // registrado em endereços diferentes.
+    const idxCnpj = abrirStore(BLOB_COTAS_CNPJ);
+    if (idxCnpj) {
+      const existente = await idxCnpj.get(cnpjNums, { type: "json" });
+      if (existente && existente.endereco !== endereco) {
+        return jsonError(409, "cnpj_duplicado",
+          "CNPJ já cadastrado em outra conta. Faça login com o email original.");
+      }
+    }
+
+    // MC12.3 Item 5B — Anti-Sybil: 1 CNPJ por visitorId a cada 24h.
+    const idxFp = abrirStore(BLOB_COTAS_FP);
+    if (idxFp) {
+      try {
+        const fpData = (await idxFp.get(visitorId, { type: "json" })) ||
+                       { cnpjs: [] };
+        const agora24h = Date.now() - 24 * 60 * 60 * 1000;
+        const recentes = (fpData.cnpjs || []).filter(c =>
+          new Date(c.em).getTime() > agora24h);
+        const diferentes = recentes.filter(c => c.cnpj !== cnpjNums);
+        if (diferentes.length >= 1) {
+          return jsonError(429, "sybil_detectado",
+            "Limite de 1 CNPJ por dispositivo a cada 24h.");
+        }
+      } catch (err) {
+        console.warn("[cotas] anti-Sybil check falhou (não-fatal):", err?.message);
+      }
+    }
+
     const store = abrirStore(BLOB_COTAS);
     if (!store) return jsonError(502, "store_indisponivel", "Netlify Blobs indisponível");
     const agora = new Date().toISOString();
     const registro = {
       cliente_id:   endereco,
       tipo:         "corporativo",
-      cnpj:         String(cnpj).replace(/\D/g, ""),
+      cnpj:         cnpjNums,
       empresa:      empresa.trim().slice(0, 100),
       segmento:     segmento || "Outro",
       site:         site ? String(site).slice(0, 200) : null,
       logoUrl:      logoUrl ? String(logoUrl).slice(0, 500) : null,
+      email:        email ? String(email).slice(0, 120).toLowerCase() : null,
       cadastradoEm: agora,
       updatedAt:    agora,
       categoria:    null,
@@ -258,8 +318,45 @@ async function handlePost(req) {
       valor:        0,
     };
     await store.setJSON(endereco, registro);
-    console.info("[cotas] register-corporativo", { endereco, empresa: registro.empresa, cnpj: registro.cnpj });
-    return jsonResponse(registro);
+
+    // MC12.3 Item 2 — grava índice CNPJ→endereço (chave para anti-duplicidade).
+    if (idxCnpj) {
+      try {
+        await idxCnpj.setJSON(cnpjNums, {
+          cnpj: cnpjNums,
+          endereco,
+          empresa: registro.empresa,
+          cadastradoEm: agora,
+        });
+      } catch (err) {
+        console.warn("[cotas] indice CNPJ falhou (não-fatal):", err?.message);
+      }
+    }
+
+    // MC12.3 Item 5B — atualiza histórico anti-Sybil (visitorId → CNPJs 24h).
+    if (idxFp) {
+      try {
+        const fpData = (await idxFp.get(visitorId, { type: "json" })) ||
+                       { cnpjs: [] };
+        const agora24h = Date.now() - 24 * 60 * 60 * 1000;
+        const recentes = (fpData.cnpjs || []).filter(c =>
+          new Date(c.em).getTime() > agora24h);
+        await idxFp.setJSON(visitorId, {
+          cnpjs: [...recentes.filter(c => c.cnpj !== cnpjNums),
+                  { cnpj: cnpjNums, em: agora }],
+          ultimoCnpj: cnpjNums,
+          ultimoEm:   agora,
+        });
+      } catch (err) {
+        console.warn("[cotas] anti-Sybil update falhou (não-fatal):", err?.message);
+      }
+    }
+
+    console.info("[cotas] register-corporativo", {
+      endereco, empresa: registro.empresa, cnpj: registro.cnpj,
+      visitorId: visitorId.slice(0, 8) + "…",
+    });
+    return jsonResponse(registro, 201);
   }
 
   const denied = await guardAdmin(req);
