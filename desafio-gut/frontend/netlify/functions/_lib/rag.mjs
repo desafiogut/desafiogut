@@ -17,10 +17,16 @@
 // Tudo aqui é puro Node ESM — funciona tanto em Lambda do Netlify quanto em
 // `node scripts/build-rag-index.mjs` local.
 
-import { pipeline } from "@xenova/transformers";
+// MC9.1 — gerarEmbedding usa Xenova LOCAL em ambiente Node (build:rag) e
+// Hugging Face Inference API HTTP em produção (Lambda). Mesma dim (384) e
+// mesmo modelo (sentence-transformers/all-MiniLM-L6-v2), zero divergência
+// de espaço vetorial. O import de @xenova/transformers fica em dynamic
+// import dentro do branch local — Lambda jamais executa o branch, então
+// `external_node_modules = ["@xenova/transformers"]` no netlify.toml evita
+// que o esbuild bundle o pacote (sharp não-disponível no Lambda Linux).
 
-const DEFAULT_EMBED_MODEL = "text-embedding-3-small";
-const DEFAULT_EMBED_URL   = "https://api.openai.com/v1/embeddings";
+const HF_MODEL    = "sentence-transformers/all-MiniLM-L6-v2";
+const HF_EMBED_URL = `https://api-inference.huggingface.co/pipeline/feature-extraction/${HF_MODEL}`;
 
 /**
  * Divide um texto longo em chunks de aproximadamente `tamanho` "palavras"
@@ -129,28 +135,77 @@ export async function buscarChunksRelevantes(store, embedding, topK = 3) {
 }
 
 /**
- * Gera embedding localmente usando @xenova/transformers (modelo
- * Xenova/all-MiniLM-L6-v2). Retorna float[384].
+ * Gera embedding usando MiniLM-L6-v2 (dim 384, normalizado).
  *
- * Sem dependências externas (sem API key, sem rede). O modelo é baixado
- * uma única vez no primeiro uso e cacheado pelo @xenova/transformers.
+ * Em produção (Lambda Netlify): chama Hugging Face Inference API por HTTP —
+ * sem precisar bundlar @xenova/transformers e sua sub-dep nativa `sharp`
+ * (que falha no Lambda Linux por libvips ausente). Free tier funciona sem
+ * token; se HF_API_TOKEN estiver setado, usa o token (maior throughput).
+ *
+ * Local (script build:rag): usa @xenova/transformers via dynamic import.
+ * Modelo Xenova/all-MiniLM-L6-v2 é baixado uma vez e cacheado em disco.
+ *
+ * Detecção de ambiente:
+ *   process.env.NETLIFY === "true"     → produção (build/runtime Netlify)
+ *   process.env.AWS_LAMBDA_FUNCTION_NAME → runtime Lambda
+ *   HF_API_TOKEN ou HF_FORCE_REMOTE     → força HTTP mesmo localmente
+ *   caso contrário                      → Xenova local
  *
  * @param {string} texto
  * @returns {Promise<number[]>}
  */
 let _embedderPromise = null;
-function getEmbedder() {
+async function getEmbedderLocal() {
   if (!_embedderPromise) {
+    const { pipeline } = await import("@xenova/transformers");
     _embedderPromise = pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
   }
   return _embedderPromise;
 }
 
+async function gerarEmbeddingHF(texto, token, timeoutMs = 25_000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(HF_EMBED_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ inputs: texto, options: { wait_for_model: true } }),
+      signal: controller.signal,
+    });
+    if (!resp.ok) {
+      const txt = await resp.text().catch(() => "");
+      throw new Error(`hf_http_${resp.status}: ${txt.slice(0, 200)}`);
+    }
+    const data = await resp.json();
+    // HF pipeline feature-extraction retorna: number[] (já com mean pooling
+    // e normalize quando pedido). all-MiniLM-L6-v2 com pooling default
+    // retorna [[...]] (1 token), mas sentence-transformers tem mean pool
+    // automático no pipeline — saída esperada: number[384].
+    if (Array.isArray(data) && Array.isArray(data[0])) return data[0];
+    if (Array.isArray(data)) return data;
+    throw new Error("hf_resposta_invalida");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const ehProducaoLambda = () =>
+  process.env.NETLIFY === "true" ||
+  Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+  process.env.HF_FORCE_REMOTE === "1";
+
 export async function gerarEmbedding(texto, opts = {}) {
   if (typeof texto !== "string" || !texto.trim()) {
     throw new Error("texto_obrigatorio");
   }
-  const embedder = await getEmbedder();
+  if (ehProducaoLambda() || opts.backend === "hf") {
+    return gerarEmbeddingHF(texto, opts.hfToken || process.env.HF_API_TOKEN);
+  }
+  const embedder = await getEmbedderLocal();
   const result = await embedder(texto, { pooling: "mean", normalize: true });
   return Array.from(result.data);
 }

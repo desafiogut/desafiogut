@@ -10,6 +10,12 @@
 [functions]
   directory    = "netlify/functions"
   node_bundler = "esbuild"
+  # MC9.1 — @xenova/transformers é usado APENAS no script local build:rag.
+  # Em runtime Lambda, gerarEmbedding chama Hugging Face Inference API por HTTP.
+  # Marcar como external evita bundling do pacote (e da sub-dep nativa `sharp`,
+  # que precisa de libvips Linux e quebrava o cold start: "libvips-cpp.so.42
+  # cannot open shared object file").
+  external_node_modules = ["@xenova/transformers"]
 
 [[redirects]]
   from   = "/*"
