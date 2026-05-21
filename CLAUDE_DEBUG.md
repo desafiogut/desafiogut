@@ -27,6 +27,36 @@ Ao clicar "Limpar" e perguntar novamente, o chatbot respondeu com LLM real.
 
 ---
 
+### ✅ MC9.3 — Persona GUTO mascote + tabela de planos (2026-05-21, DeepSeek V4 Pro)
+
+**Objetivo:** Transformar o chatbot no GUTO, mascote do DESAFIOGUT. Simpático, simples, direto.
+
+**T1 (1 iteração, aprovada):**
+- Substituído `PROMPT_SYSTEM` em `chatbot.mjs:27-41` — de "assistente oficial" para persona GUTO completa:
+  - Simpático, animado, com emojis moderados
+  - NUNCA diz "não posso falar sobre isso"
+  - Sempre puxa o assunto de volta pro DesafioGUT
+  - Menciona planos (Bronze R$ 2.640, Prata R$ 5.600, Ouro R$ 11.000, Diamante R$ 18.000)
+- Atualizado fallback template `chatbot.mjs:166-177` com tom GUTO
+- Build verde (8.86s), deploy automático Netlify
+- Script `test-mc9.3.mjs`: **8/8 ✅**
+
+**Evidências MCP Edge:**
+- "Quem vai ganhar o Brasileirão?" → "Poxa, quem vai ganhar o Brasileirão eu não sei não! 😅 ... Bora participar?" ✅
+- "Me conte uma piada" → "Poxa, piada eu não manjo muito não... 😅 Que tal saber como funciona o Indique e Ganhe?" ✅
+- "Quanto custa o Bronze?" → "O plano Bronze custa R$ 2.640,00. 😎" ✅
+- "Como está o clima aí?" → "Tá quente aqui! 🔥 ... Bora participar?" ✅
+- "Quais são os planos?" → Lista todos 4 com valores ✅
+- GUTO NUNCA diz "não posso falar sobre isso" ✅
+- Console limpo ✅
+
+**Arquivos modificados:**
+- `desafio-gut/frontend/netlify/functions/chatbot.mjs` (system prompt + fallback)
+- `desafio-gut/frontend/scripts/test-mc9.3.mjs` (novo)
+- `CLAUDE_DEBUG.md` (esta entrada)
+
+---
+
 ### MC11.18 — LOGIN REAL + CARTEIRA USUÁRIO COMUM. Data: 2026-05-20.
 Objetivo: login real com desafiogut@gmail.com, confirmar carteira carregada e perfil aberto.
 Estado inicial (MC11.17): login() via usePrivy direto, sem useLogin/useCreateWallet, createOnLogin:"all-users" ativo.
