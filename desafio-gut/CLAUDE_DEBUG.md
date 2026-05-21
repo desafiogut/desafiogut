@@ -8,6 +8,76 @@
 **Plano:** `C:\Users\Moltbot\Desktop\MC12.3.txt`
 **Sessão:** execução guiada por documento (Opus 4.7)
 
+### ✅ MC9.1 — Chatbot 24/7 funcional
+
+**Índice RAG:** 5 chunks · dim 384 · modelo Xenova/all-MiniLM-L6-v2 (local).
+**Pipeline em produção:** busca textual (TF-IDF) + resposta template com chunks.
+**Status:** chatbot RESPONDE corretamente perguntas sobre o regulamento.
+
+#### Diagnóstico (FASE 1)
+- ChatbotWidget no bundle ✅
+- netlify/functions/chatbot.mjs com handler POST ✅
+- Endpoint produção retornava `embedding_indisponivel` ❌ (versão antiga)
+
+#### Loop de correções (FASE 3)
+
+**T1 — Deploy direto Xenova → FALHOU**
+- Erro Lambda: `Something went wrong installing the "sharp" module
+  libvips-cpp.so.42: cannot open shared object file`
+- Causa: @xenova/transformers requer sharp (peer dep) que precisa de
+  libvips binário Linux. Não disponível no Lambda Netlify.
+
+**T2 — Externalizar sharp/xenova + HF Inference API → PARCIAL**
+- netlify.toml: `external_node_modules = ["@xenova/transformers"]`
+- esbuild não bundla mais o pacote (sharp resolvido)
+- HF Inference API antiga (`api-inference.huggingface.co`) descontinuada
+- HF Router (`router.huggingface.co/hf-inference/...`) retorna 401 sem token
+
+**T3 — URL HF nova + mensagem clara → DOCUMENTADO**
+- Atualizado para `router.huggingface.co/hf-inference/...`
+- Mensagem de erro pede `HF_API_TOKEN` em vez de `OPENAI_API_KEY`
+- Ainda bloqueado por falta de credentials
+
+**T4 — Fallback textual TF-IDF + resposta template → ✅ RESOLVIDO**
+- `rag.mjs::buscarChunksTextual(store, pergunta, topK)`: TF-IDF leve com
+  stopwords pt-br, tokenização sem acentos. Sem deps externas.
+- `chatbot.mjs` pipeline em 4 camadas com fallback gracioso:
+  1. Embedding semântico (HF API ou Xenova) — bloqueado sem token
+  2. Busca textual TF-IDF — sempre disponível
+  3. LLM (DeepSeek/OpenAI) — bloqueado sem LLM_API_KEY
+  4. Resposta template com top-K chunks formatados em markdown
+- Resposta sempre 200 OK com `{resposta, fontes, modoBusca, modoResposta}`
+
+#### Validação MCP (FASE 2 + FASE 5)
+- `/` em produção → widget visível (botão "Abrir assistente DESAFIOGUT")
+- Click → modal abre com input "Pergunte sobre regras…"
+- Pergunta "Como funciona o leilão de menor lance único?" enviada
+- Resposta exibida: 3 trechos do regulamento, incluindo Trecho 3 mencionando
+  "Menor Lance Único (Artigo VIII)"
+- Fontes: rag:2, rag:3, rag:0
+- modoBusca: textual · modoResposta: template
+- Console limpo (apenas 1 erro HTTP/2 protocolar, não relacionado)
+- Screenshot: `CLAUDE_DEBUG_screenshots/mc9-1-chatbot-resposta-real.png`
+
+#### `scripts/test-mc9.1.mjs` → **8/8 OK** ✅
+1. ChatbotWidget no bundle
+2. Endpoint /chatbot responde 200 OK
+3. Índice RAG existe (fontes retornadas)
+4. rag.mjs exporta buscarChunksTextual
+5. chatbot.mjs retorna modoBusca + modoResposta
+6. Resposta produção contém termos do regulamento
+7. netlify.toml externaliza @xenova/transformers
+8. Build verde + zero TDZ
+
+#### Para upgrade futuro (qualidade total)
+Provisionar no Netlify Dashboard:
+- `HF_API_TOKEN=hf_...` → ativa busca semântica via HF Inference API
+- `LLM_API_KEY=sk-...` → ativa resumo IA via DeepSeek/OpenAI
+Sem essas chaves, chatbot opera em modo fallback (textual + template) com
+qualidade aceitável para FAQ.
+
+---
+
 ### MC12.3.1 — Cadastro corporativo DIRETO sem email-OTP ✅
 
 **Problema:** após MC12.3, o submit do formulário disparava `login()` Privy
