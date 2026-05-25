@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "../lib/utils";
 
 const ASSET_BASE = "/assets/guto/v3";
@@ -10,29 +10,47 @@ const VARIANT_MAP = {
   celebrando: "guto-celebrando-v3",
 };
 
+const ALT_DEFAULT = {
+  avatar: "Mascote GUTO do DESAFIOGUT",
+  icon: "Ícone do GUTO",
+  logo: "GUTO — Logótipo do DESAFIOGUT",
+  celebrando: "GUTO celebrando",
+  expressao: "GUTO — Expressão do mascote",
+};
+
 const FALLBACK_EMOJI = {
   avatar: "👤",
   icon: "💬",
   logo: "👤",
   celebrando: "🎉",
+  expressao: "👤",
 };
 
 export default function GutoAvatar({
   variant = "avatar",
   size = 48,
   animate = true,
+  alt,
+  expression,
   className,
   style,
 }) {
-  const isCircular = variant === "avatar";
-  const assetName = VARIANT_MAP[variant] || VARIANT_MAP.avatar;
+  const prefersReduced = useReducedMotion();
+  const isCircular = variant === "avatar" || variant === "expressao";
+  const isExpressao = variant === "expressao";
+  const expr = expression ?? "neutro";
+
+  const assetName = isExpressao
+    ? `expressoes/guto-${expr}`
+    : VARIANT_MAP[variant] || VARIANT_MAP.avatar;
   const webpSrc = `${ASSET_BASE}/${assetName}.webp`;
   const pngSrc = `${ASSET_BASE}/${assetName}.png`;
+  const altText = alt ?? ALT_DEFAULT[variant] ?? "GUTO mascote";
 
   const img = (
     <img
       src={webpSrc}
-      alt="GUTO mascote"
+      alt={altText}
       width={size}
       height={size}
       style={{ width: size, height: size, display: "block" }}
@@ -72,8 +90,13 @@ export default function GutoAvatar({
     </div>
   );
 
+  const aspectRatio = variant === "logo" ? "2 / 1" : "1 / 1";
+
   const wrapperStyle = {
     flexShrink: 0,
+    width: variant === "logo" ? size * 2 : size,
+    height: size,
+    aspectRatio,
     ...(isCircular
       ? {
           borderRadius: "50%",
@@ -97,7 +120,7 @@ export default function GutoAvatar({
     <motion.div
       className={cn(className)}
       style={wrapperStyle}
-      whileHover={{ scale: 1.08 }}
+      whileHover={prefersReduced ? { opacity: 0.85 } : { scale: 1.08 }}
       transition={{ duration: 0.2 }}
     >
       {inner}

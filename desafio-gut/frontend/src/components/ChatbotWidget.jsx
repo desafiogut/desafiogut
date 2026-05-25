@@ -11,6 +11,10 @@
 //
 // Aderente ao design system do projeto (inline-style + Framer Motion).
 // Mobile-friendly: vira fullscreen quando largura ≤ 540px.
+//
+// MC14.2 — Estados visuais interativos do GUTO:
+//   idle = acolhedor | listening = curioso | thinking = pensativo
+//   responding = feliz | celebrating = orgulhoso
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -32,6 +36,14 @@ const COR = {
   bubbleUser: "linear-gradient(135deg,#00d4aa,#0aa37e)",
   bubbleBot:  "rgba(255,255,255,0.05)",
   danger:     "#ef4444",
+};
+
+const GUTO_STATE_MAP = {
+  idle:        "acolhedor",
+  listening:   "curioso",
+  thinking:    "pensativo",
+  responding:  "feliz",
+  celebrating: "orgulhoso",
 };
 
 function carregarHistorico() {
@@ -57,7 +69,9 @@ export default function ChatbotWidget() {
   const [pergunta, setPergunta] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
+  const [gutoState, setGutoState] = useState("idle");
   const scrollRef = useRef(null);
+  const idleTimerRef = useRef(null);
 
   useEffect(() => { salvarHistorico(mensagens); }, [mensagens]);
 
@@ -67,6 +81,21 @@ export default function ChatbotWidget() {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [aberto, mensagens, carregando]);
+
+  // Reset GUTO to idle when chat is closed.
+  useEffect(() => {
+    if (!aberto) setGutoState("idle");
+  }, [aberto]);
+
+  // Cleanup idle timer on unmount.
+  useEffect(() => {
+    return () => { if (idleTimerRef.current) clearTimeout(idleTimerRef.current); };
+  }, []);
+
+  const resetToIdle = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => setGutoState("idle"), 4000);
+  }, []);
 
   const enviar = useCallback(async () => {
     const texto = pergunta.trim();
@@ -79,6 +108,11 @@ export default function ChatbotWidget() {
     setMensagens((prev) => [...prev, { role: "user", texto, em: Date.now() }]);
     setPergunta("");
     setCarregando(true);
+
+    // GUTO state transitions: listening → thinking → responding → idle
+    setGutoState("listening");
+    setTimeout(() => setGutoState("thinking"), 600);
+
     try {
       const resp = await fetch("/.netlify/functions/chatbot", {
         method: "POST",
@@ -86,6 +120,8 @@ export default function ChatbotWidget() {
         body: JSON.stringify({ pergunta: texto }),
       });
       if (resp.status === 503) {
+        setGutoState("responding");
+        resetToIdle();
         setMensagens((prev) => [...prev, {
           role: "bot",
           texto: "O assistente está temporariamente indisponível. Tente novamente em alguns minutos.",
@@ -94,6 +130,8 @@ export default function ChatbotWidget() {
         return;
       }
       if (resp.status === 429) {
+        setGutoState("responding");
+        resetToIdle();
         setMensagens((prev) => [...prev, {
           role: "bot",
           texto: "Muitas perguntas em pouco tempo. Aguarde 1 minuto e tente novamente.",
@@ -105,6 +143,8 @@ export default function ChatbotWidget() {
       if (!resp.ok) {
         throw new Error(data?.error?.message || `HTTP ${resp.status}`);
       }
+      setGutoState("responding");
+      resetToIdle();
       setMensagens((prev) => [...prev, {
         role: "bot",
         texto: data.resposta || "(resposta vazia)",
@@ -113,6 +153,8 @@ export default function ChatbotWidget() {
       }]);
     } catch (err) {
       console.warn("[ChatbotWidget] falha ao consultar /chatbot:", err?.message);
+      setGutoState("responding");
+      resetToIdle();
       setMensagens((prev) => [...prev, {
         role: "bot",
         texto: "Desculpe, não foi possível responder agora. Tente novamente em instantes.",
@@ -121,7 +163,7 @@ export default function ChatbotWidget() {
     } finally {
       setCarregando(false);
     }
-  }, [pergunta, carregando]);
+  }, [pergunta, carregando, resetToIdle]);
 
   const limparHistorico = useCallback(() => {
     setMensagens([]);
@@ -134,6 +176,8 @@ export default function ChatbotWidget() {
       enviar();
     }
   };
+
+  const gutoExpression = GUTO_STATE_MAP[gutoState] || GUTO_STATE_MAP.idle;
 
   // Dimensões do modal — fullscreen em mobile.
   const tamanhoModal = useMemo(() => isMobile
@@ -204,13 +248,22 @@ export default function ChatbotWidget() {
               gap: "0.5rem",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                <GutoAvatar variant="avatar" size={36} animate={false} />
+                <GutoAvatar
+                  variant="expressao"
+                  expression={gutoExpression}
+                  size={36}
+                  animate={gutoState !== "idle"}
+                />
                 <div>
                   <div style={{ fontSize: "0.95rem", fontWeight: 800, color: COR.primary }}>
                     GUTO — Assistente DESAFIOGUT
                   </div>
                   <div style={{ fontSize: "0.7rem", color: COR.muted }}>
-                    Responde com base no regulamento oficial.
+                    {gutoState === "thinking" && "A pensar…"}
+                    {gutoState === "listening" && "A ouvir…"}
+                    {gutoState === "responding" && "A responder…"}
+                    {gutoState === "celebrating" && "A celebrar!"}
+                    {gutoState === "idle" && "Responde com base no regulamento oficial."}
                   </div>
                 </div>
               </div>
