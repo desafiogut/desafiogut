@@ -184,7 +184,7 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
     >
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span style={{ fontSize: isMobile ? "1.5rem" : "1.75rem", lineHeight: 1 }} aria-hidden="true">{slot.emoji}</span>
+          <GutoAvatar custom={`vitrine-slot-${slot.id}`} size={isMobile ? 28 : 32} animate={false} />
           <div>
             <h3 style={{
               margin: 0,
@@ -481,7 +481,7 @@ export default function Vitrine() {
         <VitrineHeaderLojista cota={cotaCorporativa} isMobile={isMobile} />
       )}
       <header style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.6rem" : "1rem", flexWrap: "wrap" }}>
-        <GutoAvatar variant="logo" size={isMobile ? 40 : 56} animate={false} />
+        <GutoAvatar custom="vitrine-header-confiante" size={isMobile ? 40 : 56} animate={false} />
         <h1 style={{
           margin: 0,
           fontSize: isMobile ? "1.35rem" : "1.75rem",

@@ -39,7 +39,7 @@ const COR = {
 };
 
 const GUTO_STATE_MAP = {
-  idle:        "acolhedor",
+  idle:        "sorrindo",
   listening:   "curioso",
   thinking:    "pensativo",
   responding:  "feliz",
@@ -214,7 +214,11 @@ export default function ChatbotWidget() {
           justifyContent: "center",
         }}
       >
-        {aberto ? "✕" : <GutoAvatar variant="icon" size={28} animate={false} />}
+        {aberto
+          ? (gutoState === "thinking"
+            ? <GutoAvatar custom="chatbot-thinking-pensativo" size={28} animate />
+            : "✕")
+          : <GutoAvatar custom="chatbot-idle-curioso" size={28} animate={false} />}
       </motion.button>
 
       {/* Modal de chat */}

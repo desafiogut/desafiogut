@@ -93,7 +93,7 @@ export default function CorporativoDashboard() {
     <div style={{ padding: isMobile ? "1rem" : "1.25rem", flex: 1 }}>
       <header style={{ marginBottom: isMobile ? "1.25rem" : "2rem" }}>
         <div style={{ marginBottom: "0.6rem" }}>
-          <GutoAvatar variant="avatar" size={isMobile ? 40 : 52} animate />
+          <GutoAvatar custom="corp-dashboard-determinado" size={isMobile ? 40 : 52} animate />
         </div>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: "0.5rem",

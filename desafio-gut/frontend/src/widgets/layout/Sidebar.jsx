@@ -162,7 +162,7 @@ export default function Sidebar() {
           cursor: "pointer",
         }} title={isConnected ? (userLabel || address) : "Fazer login"} onClick={!isConnected ? abrirModal : undefined}>
           <GutoAvatar
-            variant={isConnected ? "avatar" : "icon"}
+            custom={isConnected ? (collapsed ? "sidebar-collapsed-sereno" : "sidebar-expanded-acolhedor") : "sidebar-desconectado-curioso"}
             size={32}
             animate={isConnected}
           />

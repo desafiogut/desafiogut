@@ -278,7 +278,7 @@ export default function SejaNossoParceiro() {
           transition={{ delay: 0.1, duration: 0.4 }}
           style={{ marginBottom: "0.75rem" }}
         >
-          <GutoAvatar variant="logo" size={isMobile ? 70 : 100} animate />
+          <GutoAvatar custom="parceiro-hero-orgulhoso" size={isMobile ? 70 : 100} animate />
         </motion.div>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: "0.5rem",
@@ -358,6 +358,7 @@ export default function SejaNossoParceiro() {
           }}>
             ✅ Cadastro corporativo realizado!
           </h2>
+          <GutoAvatar custom="parceiro-sucesso-celebrando" size={56} animate />
           <p style={{ margin: "0 0 0.75rem", color: COR.text, fontSize: "0.9rem" }}>
             <strong>{sucesso.empresa}</strong> (CNPJ {sucesso.cnpj}) está
             registrado. Confirmamos os dados pelo email <strong>{sucesso.email}</strong>.
