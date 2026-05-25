@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import GutoAvatar from "./GutoAvatar.jsx";
 
 const LS_KEY      = "gut_chat_history";
 const LS_MAX_MSGS = 40;            // histórico bounded — evita estourar localStorage
@@ -169,7 +170,7 @@ export default function ChatbotWidget() {
           justifyContent: "center",
         }}
       >
-        {aberto ? "✕" : "💬"}
+        {aberto ? "✕" : <GutoAvatar variant="icon" size={28} animate={false} />}
       </motion.button>
 
       {/* Modal de chat */}
@@ -202,12 +203,15 @@ export default function ChatbotWidget() {
               display: "flex", justifyContent: "space-between", alignItems: "center",
               gap: "0.5rem",
             }}>
-              <div>
-                <div style={{ fontSize: "0.95rem", fontWeight: 800, color: COR.primary }}>
-                  Assistente DESAFIOGUT
-                </div>
-                <div style={{ fontSize: "0.7rem", color: COR.muted }}>
-                  Responde com base no regulamento oficial.
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <GutoAvatar variant="avatar" size={36} animate={false} />
+                <div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: COR.primary }}>
+                    GUTO — Assistente DESAFIOGUT
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: COR.muted }}>
+                    Responde com base no regulamento oficial.
+                  </div>
                 </div>
               </div>
               <div style={{ display: "flex", gap: "0.4rem" }}>

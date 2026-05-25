@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { getVisitorId } from "../lib/fingerprint.js";
+import GutoAvatar from "../components/GutoAvatar.jsx";
 
 const COR = {
   text: "#e8f0fe", muted: "#5a7090", primary: "#f5a623",
@@ -271,6 +272,14 @@ export default function SejaNossoParceiro() {
           padding: isMobile ? "1.5rem 0.5rem" : "3rem 1rem",
         }}
       >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          style={{ marginBottom: "0.75rem" }}
+        >
+          <GutoAvatar variant="logo" size={isMobile ? 70 : 100} animate />
+        </motion.div>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: "0.5rem",
           padding: "0.35rem 0.85rem",

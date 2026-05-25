@@ -14,6 +14,7 @@ import { Link, useParams, Navigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useAppContext } from "../context/AppContext.jsx";
+import GutoAvatar from "../components/GutoAvatar.jsx";
 import { tiersAgoraVisiveis, tierAtivoAgora } from "../data/programacao-junho-2026.js";
 
 // MC11.3 — Header dual da Vitrine. Renderizado SOMENTE quando
@@ -479,7 +480,8 @@ export default function Vitrine() {
       {tipoUsuario === "corporativo" && (
         <VitrineHeaderLojista cota={cotaCorporativa} isMobile={isMobile} />
       )}
-      <header>
+      <header style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.6rem" : "1rem", flexWrap: "wrap" }}>
+        <GutoAvatar variant="logo" size={isMobile ? 40 : 56} animate={false} />
         <h1 style={{
           margin: 0,
           fontSize: isMobile ? "1.35rem" : "1.75rem",

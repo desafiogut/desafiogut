@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdmin } from "../../hooks/useAdmin.js";
+import GutoAvatar from "../../components/GutoAvatar.jsx";
 
 // ─── Ícones SVG inline — sem dependência externa ──────────────────────────────
 const IconDashboard = () => (
@@ -160,9 +161,11 @@ export default function Sidebar() {
           transition: "all 0.3s",
           cursor: "pointer",
         }} title={isConnected ? (userLabel || address) : "Fazer login"} onClick={!isConnected ? abrirModal : undefined}>
-          <span style={{ fontSize: "1.1rem" }}>
-            {isConnected ? "👤" : "🦁"}
-          </span>
+          <GutoAvatar
+            variant={isConnected ? "avatar" : "icon"}
+            size={32}
+            animate={isConnected}
+          />
         </div>
 
         {/* Nome do app — oculto quando recolhido */}

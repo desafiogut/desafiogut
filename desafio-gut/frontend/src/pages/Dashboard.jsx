@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import GutoAvatar from "../components/GutoAvatar.jsx";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -99,29 +101,42 @@ export default function Dashboard() {
   return (
     <div style={{ padding: cardPad, flex: 1 }}>
       {/* ── Saudação ── */}
-      <header style={{ marginBottom: sectionGap }}>
-        <h1 style={{
-          margin: "0 0 0.35rem",
-          fontSize: isMobile ? "1.3rem" : "1.6rem",
-          fontWeight: "900", color: COR.text,
-          lineHeight: 1.2,
-          wordBreak: "break-word",
-        }}>
-          {isConnected
-            ? `Olá, ${userLabel || (address ? address.slice(0, 8) + "..." : "Participante")} 👋`
-            : "Bem-vindo ao DesafioGUT 👋"}
-        </h1>
-        <p style={{
-          margin: 0,
-          color: COR.muted,
-          fontSize: isMobile ? "0.82rem" : "0.92rem",
-          lineHeight: 1.4,
-        }}>
-          {isConnected
-            ? "Acompanhe seus dados e acesse o mercado de lances."
-            : "Faça login para participar e dar seu lance agora."}
-        </p>
-      </header>
+      <motion.header
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        style={{
+          marginBottom: sectionGap,
+          display: "flex",
+          alignItems: "center",
+          gap: isMobile ? "0.75rem" : "1rem",
+        }}
+      >
+        <GutoAvatar variant="logo" size={isMobile ? 50 : 72} animate />
+        <div>
+          <h1 style={{
+            margin: "0 0 0.35rem",
+            fontSize: isMobile ? "1.3rem" : "1.6rem",
+            fontWeight: "900", color: COR.text,
+            lineHeight: 1.2,
+            wordBreak: "break-word",
+          }}>
+            {isConnected
+              ? `Olá, ${userLabel || (address ? address.slice(0, 8) + "..." : "Participante")}!`
+              : "Bem-vindo ao DesafioGUT!"}
+          </h1>
+          <p style={{
+            margin: 0,
+            color: COR.muted,
+            fontSize: isMobile ? "0.82rem" : "0.92rem",
+            lineHeight: 1.4,
+          }}>
+            {isConnected
+              ? "Acompanhe seus dados e acesse o mercado de lances."
+              : "Faça login para participar e dar seu lance agora."}
+          </p>
+        </div>
+      </motion.header>
 
       {/* ── KPIs ── */}
       <section style={{

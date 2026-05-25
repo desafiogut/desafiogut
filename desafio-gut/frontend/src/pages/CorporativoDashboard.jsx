@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import GutoAvatar from "../components/GutoAvatar.jsx";
 
 const COR = {
   primary: "#f5a623", text: "#e8f0fe", muted: "#5a7090",
@@ -91,6 +92,9 @@ export default function CorporativoDashboard() {
   return (
     <div style={{ padding: isMobile ? "1rem" : "1.25rem", flex: 1 }}>
       <header style={{ marginBottom: isMobile ? "1.25rem" : "2rem" }}>
+        <div style={{ marginBottom: "0.6rem" }}>
+          <GutoAvatar variant="avatar" size={isMobile ? 40 : 52} animate />
+        </div>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: "0.5rem",
           padding: "0.3rem 0.7rem",
