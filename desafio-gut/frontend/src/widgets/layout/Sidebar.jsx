@@ -147,26 +147,14 @@ export default function Sidebar() {
         borderBottom: "1px solid rgba(245,166,35,0.1)",
         minHeight: "72px",
       }}>
-        {/* Avatar circular */}
-        <div style={{
-          width: "40px", height: "40px", borderRadius: "50%", flexShrink: 0,
-          background: isConnected
-            ? "linear-gradient(135deg, rgba(245,166,35,0.3), rgba(16,185,129,0.2))"
-            : "rgba(245,166,35,0.12)",
-          border: isConnected
-            ? "2px solid rgba(16,185,129,0.6)"
-            : "2px dashed rgba(245,166,35,0.4)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: isConnected ? "0 0 10px rgba(16,185,129,0.3)" : "none",
-          transition: "all 0.3s",
-          cursor: "pointer",
-        }} title={isConnected ? (userLabel || address) : "Fazer login"} onClick={!isConnected ? abrirModal : undefined}>
-          <GutoAvatar
-            custom={isConnected ? (collapsed ? "sidebar-collapsed-sereno" : "sidebar-expanded-acolhedor") : "sidebar-desconectado-curioso"}
-            size={32}
-            animate={isConnected}
-          />
-        </div>
+        <img
+          src="/assets/guto/custom/guto-sidebar.png"
+          alt="GUTO sorrindo"
+          width={48} height={48}
+          style={{ flexShrink: 0, borderRadius: "50%", cursor: "pointer" }}
+          title={isConnected ? (userLabel || address) : "Fazer login"}
+          onClick={!isConnected ? abrirModal : undefined}
+        />
 
         {/* Nome do app — oculto quando recolhido */}
         {!collapsed && (

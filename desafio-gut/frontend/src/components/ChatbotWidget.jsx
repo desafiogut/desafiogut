@@ -216,9 +216,9 @@ export default function ChatbotWidget() {
       >
         {aberto
           ? (gutoState === "thinking"
-            ? <GutoAvatar custom="chatbot-thinking-pensativo" size={28} animate />
+            ? <img src="/assets/guto/custom/guto-chat.png" alt="GUTO pensando" width={28} height={28} style={{ borderRadius: "50%" }} />
             : "✕")
-          : <GutoAvatar custom="chatbot-idle-curioso" size={28} animate={false} />}
+          : <img src="/assets/guto/custom/guto-chat.png" alt="GUTO confiante" width={56} height={56} style={{ borderRadius: "50%" }} />}
       </motion.button>
 
       {/* Modal de chat */}

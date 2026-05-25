@@ -112,7 +112,12 @@ export default function Dashboard() {
           gap: isMobile ? "0.75rem" : "1rem",
         }}
       >
-        <GutoAvatar custom="dashboard-hero-animado" size={isMobile ? 50 : 72} animate />
+        <img
+          src="/assets/guto/custom/guto-bemvindo.png"
+          alt="GUTO feliz — corpo inteiro"
+          width={120} height={120}
+          style={{ flexShrink: 0, imageRendering: "auto" }}
+        />
         <div>
           <h1 style={{
             margin: "0 0 0.35rem",
