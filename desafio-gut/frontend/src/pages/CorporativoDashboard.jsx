@@ -92,19 +92,11 @@ export default function CorporativoDashboard() {
   return (
     <div style={{ padding: isMobile ? "1rem" : "1.25rem", flex: 1 }}>
       <header style={{ marginBottom: isMobile ? "1.25rem" : "2rem" }}>
-        <div style={{ marginBottom: "0.6rem" }}>
-          <GutoAvatar custom="corp-dashboard-determinado" size={isMobile ? 40 : 52} animate />
-        </div>
-        <div style={{
-          display: "inline-flex", alignItems: "center", gap: "0.5rem",
-          padding: "0.3rem 0.7rem",
-          background: "rgba(245,166,35,0.12)",
-          border: "1px solid rgba(245,166,35,0.3)",
-          borderRadius: "999px", color: COR.primary,
-          fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.06em",
-          marginBottom: "0.6rem",
-        }}>
-          🏢 PAINEL DO LOJISTA
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.6rem" }}>
+          <GutoAvatar custom="corp-dashboard-determinado" size={isMobile ? 32 : 40} animate />
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.3rem 0.7rem", background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: "999px", color: COR.primary, fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.06em" }}>
+            🏢 PAINEL DO LOJISTA
+          </div>
         </div>
         <h1 style={{
           margin: 0, fontSize: isMobile ? "1.3rem" : "1.6rem",

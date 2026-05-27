@@ -32,7 +32,15 @@ export default function TermosConsentimento({ onAceitar }) {
         {/* Cabeçalho */}
         <div style={estilos.header}>
           <div style={estilos.logoArea}>
-            <span style={estilos.logoEmoji}>⚡</span>
+            <div style={estilos.gutoWrapper}>
+              <img
+                src="/assets/guto/custom/guto-bemvindo.png"
+                alt="GUTO mascote - pensativo"
+                width={96}
+                height={96}
+                style={{ imageRendering: "auto" }}
+              />
+            </div>
             <div>
               <h2 style={estilos.titulo}>DesafioGUT</h2>
               <p style={estilos.grupoNome}>Grupo União e Trabalho · CNPJ 23.040.066/0001-00</p>
@@ -219,16 +227,12 @@ const estilos = {
     maxHeight: "92vh", display: "flex", flexDirection: "column", gap: "1.25rem",
     overflowY: "auto",
   },
-  header: {
-    borderBottom: "1px solid rgba(245,166,35,0.2)",
-    paddingBottom: "1rem",
-  },
   logoArea: {
     display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem",
+    flexDirection: "column",
   },
-  logoEmoji: {
-    fontSize: "2rem",
-    filter: "drop-shadow(0 0 8px rgba(245,166,35,0.6))",
+  gutoWrapper: {
+    marginBottom: "0.75rem",
   },
   titulo:   { margin: 0, fontSize: "1.5rem", fontWeight: "900", color: "#e8f0fe", letterSpacing: "0.04em" },
   grupoNome: { margin: 0, fontSize: "0.72rem", color: "#4a6490" },

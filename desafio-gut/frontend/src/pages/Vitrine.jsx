@@ -480,17 +480,17 @@ export default function Vitrine() {
       {tipoUsuario === "corporativo" && (
         <VitrineHeaderLojista cota={cotaCorporativa} isMobile={isMobile} />
       )}
-      <header style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.6rem" : "1rem", flexWrap: "wrap" }}>
-        <GutoAvatar custom="vitrine-header-confiante" size={isMobile ? 40 : 56} animate={false} />
+      <div style={{ textAlign: "center", marginBottom: isMobile ? "1rem" : "1.5rem" }}>
+        <GutoAvatar custom="vitrine-header-confiante" size={isMobile ? 32 : 48} animate={false} />
         <h1 style={{
-          margin: 0,
+          margin: "0.5rem 0 0.25rem",
           fontSize: isMobile ? "1.35rem" : "1.75rem",
           fontWeight: 900,
           color: "#f5a623",
           fontFamily: "'Orbitron', sans-serif",
           letterSpacing: "0.05em",
         }}>Vitrine — Slots por Categoria</h1>
-        <p style={{ margin: "0.25rem 0 0", fontSize: isMobile ? "0.78rem" : "0.86rem", color: COR.muted, lineHeight: 1.5 }}>
+        <p style={{ margin: 0, fontSize: isMobile ? "0.78rem" : "0.86rem", color: COR.muted, lineHeight: 1.5 }}>
           Quatro slots paralelos da Especificação Refatorada §2 e §3.2.
           Diamante e Ouro são <strong style={{ color: "#f5a623" }}>fixos no topo</strong>;
           Prata e Bronze rodam em <strong style={{ color: "#f5a623" }}>Oportunidade Agora</strong>.
@@ -508,7 +508,7 @@ export default function Vitrine() {
             Bronze e Ouro ocultos; apenas Diamante fixo + Prata (repetições) visíveis.
           </div>
         )}
-      </header>
+      </div>
 
       {/* ── Destaques sempre visíveis (sticky em mobile, primeiras 2 colunas em desktop) ── */}
       <section
@@ -539,14 +539,16 @@ export default function Vitrine() {
 
       {/* ── Oportunidade Agora ── */}
       <section aria-label="Oportunidade Agora — Prata e Bronze">
-        <h2 style={{
-          margin: "0 0 0.6rem",
-          fontSize: isMobile ? "0.85rem" : "0.95rem",
-          fontWeight: 800,
-          color: COR.text,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-        }}>⚡ Oportunidade Agora</h2>
+        <div style={{ textAlign: "center", marginBottom: isMobile ? "0.75rem" : "1rem" }}>
+          <h2 style={{
+            margin: 0,
+            fontSize: isMobile ? "0.85rem" : "0.95rem",
+            fontWeight: 800,
+            color: COR.text,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+          }}>⚡ Oportunidade Agora</h2>
+        </div>
 
         {isMobile ? (
           <div

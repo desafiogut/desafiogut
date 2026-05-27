@@ -107,17 +107,17 @@ export default function Dashboard() {
         transition={{ duration: 0.5 }}
         style={{
           marginBottom: sectionGap,
-          display: "flex",
-          alignItems: "center",
-          gap: isMobile ? "0.75rem" : "1rem",
         }}
       >
-        <img
-          src="/assets/guto/custom/guto-bemvindo.png"
-          alt="GUTO feliz — corpo inteiro"
-          width={120} height={120}
-          style={{ flexShrink: 0, imageRendering: "auto" }}
-        />
+        <div style={{ textAlign: "center", marginBottom: isMobile ? "0.75rem" : "1rem" }}>
+          <img
+            src="/assets/guto/custom/guto-bemvindo.png"
+            alt="GUTO feliz — corpo inteiro"
+            width={isMobile ? 80 : 120}
+            height={isMobile ? 80 : 120}
+            style={{ imageRendering: "auto", marginBottom: "0.75rem" }}
+          />
+        </div>
         <div>
           <h1 style={{
             margin: "0 0 0.35rem",

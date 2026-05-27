@@ -272,28 +272,28 @@ export default function SejaNossoParceiro() {
           padding: isMobile ? "1.5rem 0.5rem" : "3rem 1rem",
         }}
       >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-          style={{ marginBottom: "0.75rem" }}
-        >
-          <GutoAvatar custom="parceiro-hero-orgulhoso" size={isMobile ? 70 : 100} animate />
-        </motion.div>
         <div style={{
-          display: "inline-flex", alignItems: "center", gap: "0.5rem",
-          padding: "0.35rem 0.85rem",
-          background: COR.bgSoft,
-          border: `1px solid ${COR.primary}55`,
-          borderRadius: "999px", color: COR.primary,
-          fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.08em",
-          marginBottom: "1rem",
+          textAlign: "center",
+          marginBottom: isMobile ? "0.75rem" : "1rem",
         }}>
+          <GutoAvatar custom="parceiro-hero-orgulhoso" size={isMobile ? 70 : 100} animate />
+        </div>
+        <div
+          style={{
+            display: "inline-flex", alignItems: "center", gap: "0.5rem",
+            padding: "0.35rem 0.85rem",
+            background: COR.bgSoft,
+            border: `1px solid ${COR.primary}55`,
+            borderRadius: "999px", color: COR.primary,
+            fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.08em",
+            marginBottom: "1rem",
+          }}
+        >
           🤝 PARCEIROS DO DESAFIOGUT
         </div>
         <h1
           style={{
-            margin: 0, fontWeight: 900, color: COR.text, lineHeight: 1.15,
+            margin: "0.5rem 0 0.25rem", fontWeight: 900, color: COR.text, lineHeight: 1.15,
             fontFamily: "'Orbitron', sans-serif", letterSpacing: "0.01em",
           }}
           className="text-2xl md:text-4xl"
@@ -301,7 +301,7 @@ export default function SejaNossoParceiro() {
           Seja Nosso Parceiro!
         </h1>
         <p style={{
-          margin: "0.75rem auto 0", maxWidth: "680px",
+          margin: "0 auto", maxWidth: "680px",
           color: COR.muted, fontSize: isMobile ? "0.92rem" : "1.05rem", lineHeight: 1.55,
         }}>
           Anuncie no DesafioGUT e alcance milhares de usuários que disputam o
