@@ -23,9 +23,12 @@ export default function CorporativoDashboard() {
     saldoRsCentavos, atualizarTipoCorporativo,
   } = useAppContext();
 
-  // MC17 — consome flag de sessão pós-cadastro ao montar o painel
+  // MC17 — limpa ?rc=1 da URL ao montar o painel pós-cadastro
   useEffect(() => {
-    try { sessionStorage.removeItem("gut_corp_recem_cadastrado"); } catch {}
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("rc") === "1") {
+      navigate("/corporativo", { replace: true });
+    }
   }, []);
 
   const [bannerInfo, setBannerInfo] = useState({ app: null, site: null });

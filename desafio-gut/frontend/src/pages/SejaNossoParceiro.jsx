@@ -417,8 +417,7 @@ export default function SejaNossoParceiro() {
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => {
-                try { sessionStorage.setItem("gut_corp_recem_cadastrado", "1"); } catch {}
-                navigate("/corporativo", { replace: true });
+                navigate("/corporativo?rc=1", { replace: true });
               }}
               style={{
                 display: "inline-block",
