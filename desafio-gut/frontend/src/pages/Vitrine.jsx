@@ -159,7 +159,7 @@ function formatarTimer(segundosRestantes) {
   return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
 
-function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInfo, bannerSvg }) {
+function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInfo, bannerSvg, produtos }) {
   const safeBannerSvg = bannerSvg
     ? DOMPurify.sanitize(bannerSvg, { USE_PROFILES: { svg: true } })
     : null;
@@ -269,6 +269,60 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
           }}
           dangerouslySetInnerHTML={{ __html: safeBannerSvg }}
         />
+      )}
+
+      {/* MC15 ITEM 3 — produtos reais no slot */}
+      {produtos && produtos.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.25rem" }}>
+          {produtos.slice(0, 3).map((p) => (
+            <Link
+              key={p.id}
+              to={`/produto/${p.id}`}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.6rem",
+                padding: "0.5rem 0.6rem",
+                background: "rgba(5,15,40,0.7)",
+                border: `1px solid ${slot.corBorda}55`,
+                borderRadius: "10px",
+                textDecoration: "none",
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = slot.cor; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${slot.cor}55`; }}
+            >
+              <div style={{
+                width: "40px", height: "40px", borderRadius: "8px", overflow: "hidden",
+                flexShrink: 0, background: "rgba(0,0,0,0.3)",
+                border: `1px solid ${slot.cor}33`,
+              }}>
+                {(p.imagemBase64 || p.imagem_url) ? (
+                  <img
+                    src={p.imagemBase64 ? `data:${p.mime || "image/png"};base64,${p.imagemBase64}` : p.imagem_url}
+                    alt={p.nome}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    onError={(e) => { e.target.style.display = "none"; }}
+                  />
+                ) : (
+                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%", fontSize: "1rem" }}>📦</span>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, color: COR.text, fontSize: "0.78rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {p.nome}
+                </div>
+                <div style={{ fontSize: "0.66rem", color: slot.cor, fontWeight: 800, marginTop: "0.1rem" }}>
+                  R$ {(p.preco / 100).toFixed(2)}
+                </div>
+              </div>
+              <GutoAvatar custom={`vitrine-slot-${slot.id}`} size={24} animate={false} />
+            </Link>
+          ))}
+          {produtos.length > 3 && (
+            <p style={{ margin: 0, fontSize: "0.64rem", color: COR.muted, textAlign: "center" }}>
+              +{produtos.length - 3} produto{produtos.length - 3 > 1 ? "s" : ""} neste slot
+            </p>
+          )}
+        </div>
       )}
 
       <Link
@@ -439,6 +493,27 @@ export default function Vitrine() {
     return () => { cancelado = true; };
   }, []);
 
+  // MC15 ITEM 3 — produtos reais por slot
+  const [produtosPorCat, setProdutosPorCat] = useState({});
+  useEffect(() => {
+    let cancelado = false;
+    Promise.all(
+      SLOTS.map((s) =>
+        fetch(`/.netlify/functions/produtos?categoria=${s.id}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      )
+    ).then((results) => {
+      if (cancelado) return;
+      const map = {};
+      results.forEach((data, i) => {
+        map[SLOTS[i].id] = data?.produtos || [];
+      });
+      setProdutosPorCat(map);
+    });
+    return () => { cancelado = true; };
+  }, []);
+
   // Rota /vitrine/:slot — exibe detalhe do slot.
   if (slotId) {
     const slot = SLOTS.find((s) => s.id === slotId);
@@ -528,6 +603,7 @@ export default function Vitrine() {
             status={slotStatusMap[slot.id]}
             timer={slotTimerMap[slot.id]}
             cotaInfo={slotCotasMap[slot.id]}
+            produtos={produtosPorCat[slot.id] || []}
             bannerSvg={tipoUsuario === "corporativo"
               ? (slot.id === "diamante" || slot.id === "ouro"
                   ? bannerData.site?.svg ?? null
@@ -570,6 +646,7 @@ export default function Vitrine() {
                   status={slotStatusMap[slot.id]}
                   timer={slotTimerMap[slot.id]}
                   cotaInfo={slotCotasMap[slot.id]}
+                  produtos={produtosPorCat[slot.id] || []}
                   bannerSvg={tipoUsuario === "corporativo" ? (bannerData.app?.svg ?? null) : null}
                 />
               </div>
@@ -586,6 +663,7 @@ export default function Vitrine() {
                 status={slotStatusMap[slot.id]}
                 timer={slotTimerMap[slot.id]}
                 cotaInfo={slotCotasMap[slot.id]}
+                produtos={produtosPorCat[slot.id] || []}
                 bannerSvg={tipoUsuario === "corporativo" ? (bannerData.app?.svg ?? null) : null}
               />
             ))}

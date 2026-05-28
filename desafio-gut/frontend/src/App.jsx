@@ -22,6 +22,8 @@ import CorporativoBanners   from "./pages/CorporativoBanners.jsx";
 import CorporativoAnalytics from "./pages/CorporativoAnalytics.jsx";
 // MC11.1 — Seção pública (porta de entrada para o fluxo corporativo).
 import SejaNossoParceiro    from "./pages/SejaNossoParceiro.jsx";
+// MC15 ITEM 4 — página de detalhe de produto
+import DetalheProduto      from "./pages/DetalheProduto.jsx";
 
 // MC12.2 — CorporativoRoute usa tipoUsuario derivado de cotas blob.
 // tipoCarregando evita redirect prematuro enquanto o fetch do blob está pendente.
@@ -84,6 +86,8 @@ export default function App() {
           <Route path="/mercado"    element={<MercadoLances />} />
           <Route path="/vitrine"       element={<Vitrine />} />
           <Route path="/vitrine/:slot" element={<Vitrine />} />
+          {/* MC15 ITEM 4 — detalhe de produto do marketplace */}
+          <Route path="/produto/:id" element={<DetalheProduto />} />
           <Route path="/programacao"   element={<ScheduleView />} />
           <Route path="/ativos"     element={<MeusAtivos />}    />
           <Route path="/seguranca"  element={<Seguranca />}     />
