@@ -1,7 +1,9 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { useLanceFeedback } from "../hooks/useLanceFeedback.js";
 import CardLance from "../components/CardLance.jsx";
+import LanceStatusBadge from "../components/LanceStatusBadge.jsx";
 import TabelaLances from "../components/TabelaLances.jsx";
 import BannerCard from "../components/BannerCard.jsx";
 import { LABEL_LOGIN } from "../components/BotaoLoginPrincipal.jsx";
@@ -223,6 +225,18 @@ export default function MercadoLances() {
     const s = String(tempoRestante % 60).padStart(2, "0");
     return `${m}:${s}`;
   })();
+
+  // ── Feedback de lance em tempo real ──
+  const [meuUltimoLance, setMeuUltimoLance] = useState(null); // { valor, edicao }
+  const { status: lanceStatus, mudou: lanceMudou } = useLanceFeedback(
+    meuUltimoLance?.edicao ?? null,
+    meuUltimoLance?.valor ?? null
+  );
+
+  const onLanceSucessoWrapper = useCallback((info) => {
+    setMeuUltimoLance({ valor: info.valorCentavos, edicao: EDICAO_ATIVA });
+    handleLanceSucesso?.(info);
+  }, [handleLanceSucesso, EDICAO_ATIVA]);
 
   // REQ-01: banner do cliente do leilão ativo.
   const [clienteAtivo, setClienteAtivo] = useState(null);
@@ -464,7 +478,7 @@ export default function MercadoLances() {
           <section style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <CardLance
               idEdicao={EDICAO_ATIVA}
-              onLanceSucesso={handleLanceSucesso}
+              onLanceSucesso={onLanceSucessoWrapper}
               address={address}
               isConnected={isConnected}
               onConnect={abrirModal}
@@ -472,6 +486,12 @@ export default function MercadoLances() {
               encerrado={encerrado}
               tipoLeilao={tipoLeilao}
               ready={ready}
+            />
+
+            <LanceStatusBadge
+              valor={meuUltimoLance?.valor}
+              status={lanceStatus}
+              mudou={lanceMudou}
             />
 
             <div style={{

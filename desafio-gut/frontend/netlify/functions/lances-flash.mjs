@@ -24,6 +24,34 @@ export default async (req) => {
 
   const url      = new URL(req.url);
   const edicaoId = url.searchParams.get("edicaoId") || EDICAO_PADRAO;
+  const acao     = url.searchParams.get("acao");
+
+  // ── Verificação de unicidade por valor ──────────────────────────────────
+  if (acao === "verificar") {
+    const valorRaw = url.searchParams.get("valor");
+    if (valorRaw == null || valorRaw === "") {
+      return jsonError(400, "valor_ausente", "query param 'valor' obrigatório para verificar");
+    }
+    const valor = parseFloat(valorRaw);
+    if (!Number.isFinite(valor)) {
+      return jsonError(400, "valor_invalido", "query param 'valor' deve ser número");
+    }
+
+    const store = abrirStore(BLOB_LANCES);
+    if (!store) return jsonResponse({ edicaoId, valor, count: 0, unico: false });
+
+    let rawLances = [];
+    try {
+      const blob = await store.get(edicaoId, { type: "json" });
+      rawLances = blob?.lances ?? [];
+    } catch (err) {
+      console.warn("[lances-flash] verificar blob falhou:", err?.message);
+      return jsonResponse({ edicaoId, valor, count: 0, unico: false });
+    }
+
+    const count = rawLances.filter((l) => l.valorCentavos === valor).length;
+    return jsonResponse({ edicaoId, valor, count, unico: count === 1 });
+  }
 
   const store = abrirStore(BLOB_LANCES);
   if (!store) {
