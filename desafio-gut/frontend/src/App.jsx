@@ -100,6 +100,8 @@ export default function App() {
           <Route path="/admin"      element={<AdminPanel />} />
           {/* MC11.1 — rota pública: Seja Nosso Parceiro. Sem proteção. */}
           <Route path="/seja-nosso-parceiro" element={<SejaNossoParceiro />} />
+          {/* MC17 — rota direta pós-cadastro (sem gate). */}
+          <Route path="/corp" element={<CorporativoDashboard />} />
           {/* MC11 — rotas corporativas (gated por CorporativoRoute). */}
           <Route path="/corporativo"            element={<CorporativoRoute><CorporativoDashboard /></CorporativoRoute>} />
           <Route path="/corporativo/cotas"      element={<CorporativoRoute><CorporativoCotas /></CorporativoRoute>} />

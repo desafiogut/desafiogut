@@ -416,9 +416,7 @@ export default function SejaNossoParceiro() {
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                window.location.replace("/corporativo?rc=1");
-              }}
+              onClick={() => navigate("/corp", { replace: true })}
               style={{
                 display: "inline-block",
                 padding: "0.7rem 1.5rem",
