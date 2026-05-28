@@ -29,6 +29,7 @@ const ATALHOS = [
   { label: "Vitrine 4 Slots",   icon: "🪟", to: "/vitrine"       },
   { label: "Meus Ativos",       icon: "📊", to: "/ativos"        },
   { label: "Segurança",         icon: "🛡️", to: "/seguranca"     },
+  { label: "Seja Nosso Parceiro", icon: "🤝", to: "/seja-nosso-parceiro" },
   { label: "Configurações",     icon: "⚙️", to: "/configuracoes" },
 ];
 
@@ -288,7 +289,7 @@ export default function Dashboard() {
           {vencedor ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
               <div style={{ fontFamily: "monospace", fontSize: "0.78rem", color: COR.blue300 }}>
-                {vencedor.endereco.slice(0, 10)}...{vencedor.endereco.slice(-6)}
+                {vencedor.endereco ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}` : "—"}
               </div>
               <div style={{
                 fontSize: isMobile ? "1.85rem" : "2rem",

@@ -43,11 +43,12 @@ const MAIN_TABS = [
 ];
 
 const SECONDARY_LINKS = [
-  { path: "/vitrine",       label: "Vitrine (4 Slots)", Icon: IconTarget   },
-  { path: "/programacao",   label: "Programação",       Icon: IconTarget   },
-  { path: "/ativos",        label: "Meus Ativos",       Icon: IconTrending },
-  { path: "/seguranca",     label: "Segurança",         Icon: IconShield   },
-  { path: "/configuracoes", label: "Configurações",     Icon: IconSettings },
+  { path: "/vitrine",             label: "Vitrine (4 Slots)",      Icon: IconTarget   },
+  { path: "/programacao",         label: "Programação",            Icon: IconTarget   },
+  { path: "/ativos",              label: "Meus Ativos",            Icon: IconTrending },
+  { path: "/seguranca",           label: "Segurança",              Icon: IconShield   },
+  { path: "/seja-nosso-parceiro", label: "🤝 Seja nosso parceiro!", Icon: IconTrending },
+  { path: "/configuracoes",       label: "Configurações",          Icon: IconSettings },
 ];
 
 const NAV_HEIGHT = 64;
@@ -63,15 +64,37 @@ export default function BottomNav() {
     // proteger o botão "Aceito" durante o gap authenticated && !address (pós
     // email-OTP, embedded wallet em criação). Sem isso o botão fica travado.
     ready, authenticated,
+    tipoUsuario,
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
-  const linksSecundarios = isAdmin
+
+  // MC14.10.1 ITEM 3 — mobile copia lógica de Sidebar.jsx:110-119
+  const CORP_TABS = [
+    { path: "/corporativo",          label: "Painel",   Icon: IconDashboard, end: true,  ariaLabel: "Painel Lojista" },
+    { path: "/corporativo/cotas",    label: "Cotas",    Icon: IconTarget,    end: false, ariaLabel: "Minhas Cotas" },
+    { path: "/corporativo/banners",  label: "Banners",  Icon: IconTrending,  end: false, ariaLabel: "Meus Banners" },
+  ];
+
+  const baseLinks = isAdmin
     ? [...SECONDARY_LINKS, { path: "/admin", label: "⚙️ Admin", Icon: IconSettings }]
     : SECONDARY_LINKS;
 
+  const tabsAtivas = tipoUsuario === "corporativo" ? CORP_TABS : MAIN_TABS;
+  const secundariosAtivos = tipoUsuario === "corporativo"
+    ? [
+        { path: "/corporativo/analytics", label: "📊 Analytics", Icon: IconTrending },
+        { path: "/configuracoes", label: "Configurações", Icon: IconSettings },
+      ]
+    : baseLinks;
+
+  // MC14.10.1 ITEM 1 — esconder link de parceria para lojista (já cadastrado)
+  const linksSecundarios = tipoUsuario === "corporativo"
+    ? secundariosAtivos
+    : baseLinks;
+
   useEffect(() => { setMoreOpen(false); }, [location.pathname]);
 
-  const isOnSecondaryRoute = linksSecundarios.some((l) => location.pathname.startsWith(l.path));
+  const isOnSecondaryRoute = secundariosAtivos.some((l) => location.pathname.startsWith(l.path));
 
   return (
     <>
@@ -90,7 +113,7 @@ export default function BottomNav() {
           zIndex: 50,
         }}
       >
-        {MAIN_TABS.map(({ path, label, Icon, end, ariaLabel }) => (
+        {tabsAtivas.map(({ path, label, Icon, end, ariaLabel }) => (
           <NavLink
             key={path}
             to={path}
@@ -236,7 +259,7 @@ export default function BottomNav() {
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "0.5rem" }}>
-              {linksSecundarios.map(({ path, label, Icon }) => (
+              {secundariosAtivos.map(({ path, label, Icon }) => (
                 <button
                   type="button"
                   key={path}

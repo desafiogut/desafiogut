@@ -227,17 +227,26 @@ export function AppProvider({ children }) {
     if (!address) { setCotaCorporativa(null); setTipoCarregando(false); return; }
     setTipoCarregando(true);
     let cancel = false;
-    fetch(`/.netlify/functions/cotas?cliente_id=${encodeURIComponent(address)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
+    const buscarCota = async () => {
+      try {
+        const respAddr = await fetch(`/.netlify/functions/cotas?cliente_id=${encodeURIComponent(address)}`);
+        let data = respAddr.ok ? await respAddr.json() : null;
+        // MC14.10.1 ITEM 2 — fallback por email para cadastros directos cnpj:XXXXX
+        if (!data && user?.email?.address) {
+          const respEmail = await fetch(`/.netlify/functions/cotas?email=${encodeURIComponent(user.email.address)}`);
+          if (respEmail.ok) data = await respEmail.json();
+        }
         if (!cancel) {
           setCotaCorporativa(data || null);
           setTipoCarregando(false);
         }
-      })
-      .catch(() => { if (!cancel) { setCotaCorporativa(null); setTipoCarregando(false); } });
+      } catch {
+        if (!cancel) { setCotaCorporativa(null); setTipoCarregando(false); }
+      }
+    };
+    buscarCota();
     return () => { cancel = true; };
-  }, [address]);
+  }, [address, user?.email?.address]);
 
   // MC12.2 — tipoUsuario derivado do blob cotas (não de customMetadata).
   const tipoUsuario = cotaCorporativa?.tipo === "corporativo" ? "corporativo" : "comum";
@@ -270,7 +279,7 @@ export function AppProvider({ children }) {
   const addressCorporativo = corporativoWallet?.address ?? null;
 
   const isConnected = authenticated && Boolean(address);
-  const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || null;
+  const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || (tipoUsuario === "corporativo" ? cotaCorporativa?.empresa : null) || null;
 
   const lancesExibidos = tipoLeilao === "flash" ? lancesFlash : lances;
 

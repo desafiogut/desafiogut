@@ -197,7 +197,7 @@ export default function ChatbotWidget() {
         style={{
           position: "fixed",
           right: "1.25rem",
-          bottom: "1.25rem",
+          bottom: isMobile ? "5rem" : "1.25rem",
           width: "56px",
           height: "56px",
           borderRadius: "50%",

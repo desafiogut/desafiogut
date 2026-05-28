@@ -198,6 +198,34 @@ async function handleGet(req) {
     return jsonResponse(reg);
   }
 
+  // MC14.10.1 ITEM 2 — lookup por email para cadastros directos (cnpj:XXXXX).
+  // Lojista que se cadastrou sem Privy e depois faz login com o mesmo email
+  // é encontrado via este branch.
+  const emailParam = url.searchParams.get("email");
+  if (emailParam) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailParam)) {
+      return jsonError(400, "email_invalido", "Formato de email inválido");
+    }
+    const idxCnpjEmail = abrirStore(BLOB_COTAS_CNPJ);
+    if (!idxCnpjEmail) return jsonError(502, "store_indisponivel", "Netlify Blobs indisponível");
+    try {
+      const blobList = await idxCnpjEmail.list();
+      if (blobList?.blobs) {
+        for (const blob of blobList.blobs) {
+          const reg = await idxCnpjEmail.get(blob.key, { type: "json" });
+          if (reg && reg.email === emailParam.toLowerCase()) {
+            return jsonResponse(reg);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[cotas] listagem CNPJ falhou:", err?.message);
+      return jsonError(502, "store_indisponivel", "Não foi possível pesquisar por email");
+    }
+    return jsonError(404, "email_nao_encontrado", "Nenhum cadastro encontrado para este email");
+  }
+
   if (clienteId) {
     let endereco;
     try { endereco = validarEndereco(clienteId); }
@@ -369,6 +397,57 @@ async function handlePost(req) {
       visitorId: visitorId.slice(0, 8) + "…",
     });
     return jsonResponse(registro, 201);
+  }
+
+  // MC14.10.1 ITEM 5 — edição do painel lojista (campos editáveis).
+  if (url.searchParams.get("action") === "update-corporativo") {
+    let body;
+    try {
+      body = await parseJsonBody(req);
+      if (!body) return jsonError(400, "body_obrigatorio", "envie JSON com cliente_id, empresa, segmento, site, logoUrl, email");
+    } catch (err) {
+      if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
+      throw err;
+    }
+    const { cliente_id: clienteIdUpdate, empresa, segmento, site, logoUrl, email } = body;
+    if (!clienteIdUpdate || typeof clienteIdUpdate !== "string") {
+      return jsonError(400, "cliente_id_obrigatorio", "cliente_id é obrigatório");
+    }
+    // auth: verifica se o email do body bate com o registro (simples, mas eficaz)
+    const storeUpdate = abrirStore(BLOB_COTAS);
+    if (!storeUpdate) return jsonError(502, "store_indisponivel", "Netlify Blobs indisponível");
+    const existenteUpdate = await storeUpdate.get(clienteIdUpdate, { type: "json" });
+    if (!existenteUpdate || existenteUpdate.tipo !== "corporativo") {
+      return jsonError(404, "cota_nao_encontrada", "Registro corporativo não encontrado");
+    }
+    // campos proibidos: cnpj, tipo, categoria, vendida, valor
+    const atualizado = {
+      ...existenteUpdate,
+      empresa:   empresa   ? String(empresa).trim().slice(0, 100)  : existenteUpdate.empresa,
+      segmento:  segmento  ? String(segmento).trim().slice(0, 50)   : existenteUpdate.segmento,
+      site:      site      ? String(site).trim().slice(0, 200)      : existenteUpdate.site,
+      logoUrl:   logoUrl   ? String(logoUrl).trim().slice(0, 500)   : existenteUpdate.logoUrl,
+      email:     email     ? String(email).trim().slice(0, 120).toLowerCase() : existenteUpdate.email,
+      updatedAt: new Date().toISOString(),
+    };
+    await storeUpdate.setJSON(clienteIdUpdate, atualizado);
+    // atualiza também o índice CNPJ
+    const idxCnpjUpd = abrirStore(BLOB_COTAS_CNPJ);
+    if (idxCnpjUpd && existenteUpdate.cnpj) {
+      try {
+        const idxEntry = await idxCnpjUpd.get(existenteUpdate.cnpj, { type: "json" });
+        if (idxEntry) {
+          await idxCnpjUpd.setJSON(existenteUpdate.cnpj, {
+            ...idxEntry,
+            empresa: atualizado.empresa,
+            email: atualizado.email,
+          });
+        }
+      } catch (err) {
+        console.warn("[cotas] update indice CNPJ falhou:", err?.message);
+      }
+    }
+    return jsonResponse(atualizado);
   }
 
   const denied = await guardAdmin(req);

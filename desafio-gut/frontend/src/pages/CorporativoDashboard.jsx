@@ -20,11 +20,66 @@ export default function CorporativoDashboard() {
   const {
     address, authToken,
     cotaCorporativa, tipoUsuario,
-    saldoRsCentavos,
+    saldoRsCentavos, atualizarTipoCorporativo,
   } = useAppContext();
 
   const [bannerInfo, setBannerInfo] = useState({ app: null, site: null });
   const [analytics,  setAnalytics]  = useState(null);
+
+  // MC14.10.1 ITEM 5 — edição inline do painel lojista
+  const [editando,   setEditando]   = useState(false);
+  const [editEmpresa, setEditEmpresa]  = useState("");
+  const [editSegmento, setEditSegmento] = useState("");
+  const [editSite,   setEditSite]    = useState("");
+  const [editLogoUrl, setEditLogoUrl] = useState("");
+  const [editEmail,  setEditEmail]   = useState("");
+  const [salvando,   setSalvando]    = useState(false);
+  const [editErro,   setEditErro]    = useState(null);
+  const [editOk,     setEditOk]      = useState(false);
+
+  const iniciarEdicao = () => {
+    setEditEmpresa(cotaCorporativa?.empresa || "");
+    setEditSegmento(cotaCorporativa?.segmento || "Outro");
+    setEditSite(cotaCorporativa?.site || "");
+    setEditLogoUrl(cotaCorporativa?.logoUrl || "");
+    setEditEmail(cotaCorporativa?.email || "");
+    setEditErro(null);
+    setEditOk(false);
+    setEditando(true);
+  };
+
+  const salvarEdicao = async () => {
+    if (!editEmpresa.trim()) { setEditErro("Nome da empresa é obrigatório."); return; }
+    setSalvando(true);
+    setEditErro(null);
+    try {
+      const clienteId = cotaCorporativa?.cliente_id;
+      const resp = await fetch("/.netlify/functions/cotas?action=update-corporativo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cliente_id: clienteId,
+          empresa: editEmpresa.trim(),
+          segmento: editSegmento,
+          site: editSite.trim() || null,
+          logoUrl: editLogoUrl.trim() || null,
+          email: editEmail.trim().toLowerCase(),
+        }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err?.error?.message || "Erro ao salvar.");
+      }
+      const atualizado = await resp.json();
+      atualizarTipoCorporativo(atualizado);
+      setEditOk(true);
+      setEditando(false);
+    } catch (err) {
+      setEditErro(err.message);
+    } finally {
+      setSalvando(false);
+    }
+  };
 
   // Carrega banners (app + site) + analytics agregados.
   useEffect(() => {
@@ -80,6 +135,16 @@ export default function CorporativoDashboard() {
     borderRadius: "16px",
     padding: isMobile ? "1rem" : "1.25rem",
     backdropFilter: "blur(16px)",
+  };
+
+  const inputStyle = {
+    padding: "0.5rem 0.7rem",
+    background: "rgba(5,13,30,0.8)",
+    border: "1px solid rgba(245,166,35,0.25)",
+    borderRadius: "8px",
+    color: "#e8f0fe",
+    fontSize: "0.85rem",
+    outline: "none",
   };
 
   const cards = [
@@ -149,6 +214,102 @@ export default function CorporativoDashboard() {
             Programação
           </button>.
         </p>
+      </section>
+
+      {/* MC14.10.1 ITEM 5 — Painel editável */}
+      <section style={{ ...cardStyle, marginBottom: isMobile ? "5rem" : "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: editando ? "0.75rem" : 0 }}>
+          <h3 style={{
+            margin: 0, fontSize: "0.85rem", fontWeight: 800,
+            color: COR.teal, letterSpacing: "0.04em",
+          }}>
+            ✏️ Dados da Empresa
+          </h3>
+          {!editando && (
+            <button
+              type="button"
+              onClick={iniciarEdicao}
+              style={{
+                padding: "0.35rem 0.85rem",
+                background: "rgba(0,212,170,0.12)",
+                border: "1px solid rgba(0,212,170,0.3)",
+                borderRadius: "8px", color: COR.teal,
+                fontSize: "0.78rem", fontWeight: 700, cursor: "pointer",
+              }}
+            >
+              Editar
+            </button>
+          )}
+        </div>
+
+        {editando && (
+          <form onSubmit={(e) => { e.preventDefault(); salvarEdicao(); }} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0.75rem" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
+                Empresa *
+                <input value={editEmpresa} onChange={(e) => setEditEmpresa(e.target.value)}
+                  placeholder="Nome da empresa"
+                  style={inputStyle} />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
+                Segmento
+                <select value={editSegmento} onChange={(e) => setEditSegmento(e.target.value)} style={inputStyle}>
+                  {["Varejo","Atacado","Serviços","Indústria","Tecnologia","Alimentação","Saúde","Educação","Outro"].map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
+                Site
+                <input value={editSite} onChange={(e) => setEditSite(e.target.value)}
+                  placeholder="https://..." style={inputStyle} />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
+                Logo URL
+                <input value={editLogoUrl} onChange={(e) => setEditLogoUrl(e.target.value)}
+                  placeholder="https://...logo.png" style={inputStyle} />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted, gridColumn: isMobile ? "auto" : "1 / -1" }}>
+                Email
+                <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="contato@empresa.com" style={inputStyle} />
+              </label>
+            </div>
+            {editErro && <p style={{ margin: 0, color: "#ef4444", fontSize: "0.78rem" }}>{editErro}</p>}
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button type="submit" disabled={salvando}
+                style={{
+                  padding: "0.5rem 1.25rem",
+                  background: `linear-gradient(135deg, ${COR.teal}, #00a888)`,
+                  border: "none", borderRadius: "8px", color: "#0a0f1a",
+                  fontWeight: 800, fontSize: "0.82rem", cursor: "pointer",
+                  opacity: salvando ? 0.6 : 1,
+                }}
+              >
+                {salvando ? "Salvando…" : "💾 Salvar"}
+              </button>
+              <button type="button" onClick={() => setEditando(false)}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: "transparent", border: "1px solid rgba(245,166,35,0.25)",
+                  borderRadius: "8px", color: COR.muted, fontSize: "0.82rem", cursor: "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
+
+        {!editando && (
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0.5rem", marginTop: "0.5rem", fontSize: "0.82rem" }}>
+            <span style={{ color: COR.muted }}>Empresa: <strong style={{ color: COR.text }}>{cotaCorporativa?.empresa || "—"}</strong></span>
+            <span style={{ color: COR.muted }}>Segmento: <strong style={{ color: COR.text }}>{cotaCorporativa?.segmento || "—"}</strong></span>
+            <span style={{ color: COR.muted }}>Site: <strong style={{ color: COR.text }}>{cotaCorporativa?.site || "—"}</strong></span>
+            <span style={{ color: COR.muted }}>Email: <strong style={{ color: COR.text }}>{cotaCorporativa?.email || "—"}</strong></span>
+          </div>
+        )}
+        {editOk && <p style={{ margin: "0.5rem 0 0", color: COR.success, fontSize: "0.78rem", fontWeight: 600 }}>✅ Dados atualizados com sucesso!</p>}
       </section>
     </div>
   );
