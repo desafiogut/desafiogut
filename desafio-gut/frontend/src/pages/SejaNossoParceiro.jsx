@@ -172,11 +172,11 @@ export default function SejaNossoParceiro() {
       // FASE B — verificar duplicidade no servidor
       const checkRes = await fetch(`/.netlify/functions/cotas?cnpj=${cnpjNums}`);
       if (checkRes.ok) {
-        const { status, endereco } = await checkRes.json();
+        const { endereco, email: emailCadastrado, empresa: empresaCadastrada } = await checkRes.json();
         setCnpjJaExiste(true);
         setErro(null);
         if (isConnected) {
-          // MC14.10.1 BUGFIX — já logado: verifica se address bate com o cadastro
+          // Já logado: verifica se address bate com o cadastro
           if (address && endereco && address.toLowerCase() === endereco.toLowerCase()) {
             navigate("/corporativo", { replace: true });
             return;
@@ -185,9 +185,14 @@ export default function SejaNossoParceiro() {
           setEnviando(false);
           return;
         }
-        // não logado → dispara login Privy normal (sem expor email do blob)
-        setCnpjEndereco(endereco);
-        abrirModal();
+        // MC17 — CNPJ já cadastrado: usar email do blob, NUNCA abrir Privy.
+        // Mostra sucesso com os dados já registados, sem pedir novo email.
+        setSucesso({
+          empresa: empresaCadastrada || empresa.trim(),
+          email: emailCadastrado || email.trim().toLowerCase(),
+          cnpj: cnpjNums,
+          jaCadastrado: true,
+        });
         setEnviando(false);
         return;
       } else if (checkRes.status !== 404) {
@@ -386,16 +391,19 @@ export default function SejaNossoParceiro() {
             margin: "0 0 0.5rem", color: COR.teal,
             fontSize: isMobile ? "1.05rem" : "1.25rem", fontWeight: 900,
           }}>
-            ✅ Cadastro corporativo realizado!
+            {sucesso.jaCadastrado ? "📋 CNPJ já cadastrado!" : "✅ Cadastro corporativo realizado!"}
           </h2>
           <GutoAvatar custom="parceiro-sucesso-celebrando" size={56} animate />
           <p style={{ margin: "0 0 0.75rem", color: COR.text, fontSize: "0.9rem" }}>
             <strong>{sucesso.empresa}</strong> (CNPJ {sucesso.cnpj}) está
-            registrado. Confirmamos os dados pelo email <strong>{sucesso.email}</strong>.
+            {sucesso.jaCadastrado ? " " : " "}
+            registrado. O email associado é <strong>{sucesso.email}</strong>.
           </p>
           <p style={{ margin: "0 0 1rem", color: COR.muted, fontSize: "0.85rem" }}>
-            Próximo passo: a coordenação entrará em contato em até 48h para
-            ativar o seu Painel Lojista e definir o plano (Bronze / Prata / Ouro / Diamante).
+            {sucesso.jaCadastrado
+              ? "Este CNPJ já possui cadastro ativo. A coordenação pode ser contatada pelo email acima."
+              : "Próximo passo: a coordenação entrará em contato em até 48h para ativar o seu Painel Lojista e definir o plano (Bronze / Prata / Ouro / Diamante)."
+            }
           </p>
           <Link
             to="/"
