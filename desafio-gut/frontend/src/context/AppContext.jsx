@@ -534,6 +534,10 @@ export function AppProvider({ children }) {
     };
   }, []);
 
+  // MC16 — refs anti-duplicação da animação de fim do cronómetro.
+  const fimDisparadoRef = useRef(false);
+  const timeoutAnimRef = useRef(null);
+
   // Timer regressivo + disparo do efeito relâmpago.
   // Cálculo é ABSOLUTO: `prazo - now`. setInterval só re-renderiza (250ms),
   // nunca decrementa segundos. Resultado: imune a refresh e troca de aba.
@@ -543,12 +547,24 @@ export function AppProvider({ children }) {
       setTempoRestante(restante);
       if (restante === 0) {
         setEncerrado(true);
-        setLightningActive(true);
-        setTimeout(() => { setLightningActive(false); setShowOverlay(true); }, 1200);
+        // MC16 — flag impede múltiplos disparos quando encerrado
+        // muda e o efeito re-executa com restante ainda === 0.
+        if (!fimDisparadoRef.current) {
+          fimDisparadoRef.current = true;
+          setLightningActive(true);
+          // Limpa timeout anterior (defesa em profundidade)
+          if (timeoutAnimRef.current) clearTimeout(timeoutAnimRef.current);
+          timeoutAnimRef.current = setTimeout(() => {
+            setLightningActive(false);
+            setShowOverlay(true);
+            timeoutAnimRef.current = null;
+          }, 1200);
+        }
       } else if (encerrado) {
         // Caso o prazo seja atualizado on-chain depois do encerrado, reabre.
         setEncerrado(false);
         setShowOverlay(false);
+        fimDisparadoRef.current = false;
       }
     };
     tick();
@@ -557,6 +573,7 @@ export function AppProvider({ children }) {
     document.addEventListener("visibilitychange", vis);
     return () => {
       clearInterval(id);
+      if (timeoutAnimRef.current) clearTimeout(timeoutAnimRef.current);
       document.removeEventListener("visibilitychange", vis);
     };
   }, [prazoTimestamp, encerrado]);
@@ -633,6 +650,9 @@ export function AppProvider({ children }) {
     setLances([]);
     setLancesFlash([]);
     setShowCountdown(true);
+    // MC16 — reseta flag para animação disparar na nova edição
+    fimDisparadoRef.current = false;
+    if (timeoutAnimRef.current) { clearTimeout(timeoutAnimRef.current); timeoutAnimRef.current = null; }
     setTimeout(() => {
       const dur = DURACAO[tipoLeilao];
       // setPrazoTimestamp também persiste no localStorage (chave do tipo atual).
