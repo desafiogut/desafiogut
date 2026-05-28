@@ -221,9 +221,15 @@ export default function MercadoLances() {
   } = useAppContext();
 
   const timerDisplay = (() => {
-    const m = String(Math.floor(tempoRestante / 60)).padStart(2, "0");
-    const s = String(tempoRestante % 60).padStart(2, "0");
-    return `${m}:${s}`;
+    const t = Math.max(0, tempoRestante);
+    const d = Math.floor(t / 86400);
+    const h = Math.floor((t % 86400) / 3600);
+    const m = Math.floor((t % 3600) / 60);
+    const s = t % 60;
+    const pad = (n) => String(n).padStart(2, "0");
+    if (d > 0) return `${d}d ${pad(h)}:${pad(m)}:${pad(s)}`;
+    if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    return `${pad(m)}:${pad(s)}`;
   })();
 
   // ── Feedback de lance em tempo real ──
@@ -356,7 +362,7 @@ export default function MercadoLances() {
                   transition: "color 0.4s",
                 }}>{timerDisplay}</span>
                 <span style={{ fontSize: "0.5rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                  {encerrado ? "fim" : "min:seg"}
+                  {encerrado ? "fim" : "DD:HH:MM:SS"}
                 </span>
               </div>
             </div>

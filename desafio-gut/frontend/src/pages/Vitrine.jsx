@@ -152,11 +152,14 @@ const SLOTS = [
 
 function formatarTimer(segundosRestantes) {
   if (!Number.isFinite(segundosRestantes) || segundosRestantes <= 0) return null;
-  const h = Math.floor(segundosRestantes / 3600);
+  const d = Math.floor(segundosRestantes / 86400);
+  const h = Math.floor((segundosRestantes % 86400) / 3600);
   const m = Math.floor((segundosRestantes % 3600) / 60);
   const s = segundosRestantes % 60;
-  if (h > 0) return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-  return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  const pad = (n) => String(n).padStart(2, "0");
+  if (d > 0) return `${d}d ${pad(h)}:${pad(m)}:${pad(s)}`;
+  if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  return `${pad(m)}:${pad(s)}`;
 }
 
 function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInfo, bannerSvg, produtos }) {
