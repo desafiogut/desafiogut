@@ -111,3 +111,38 @@ ZERO warnings React novos.
 - Mobile 375×812: NENHUM email exposto ✅
 - Console: sem novos erros React ✅
 - Screenshots: `bugfix-cnpj-desktop-no-email.png`, `bugfix-cnpj-mobile-no-email.png`
+
+---
+
+## BUGFIX 2 — Cronómetro zera no F5 (REQ-10 imunidade a refresh)
+
+**Diagnóstico:**
+- `AppContext.jsx:101-106`: `prazoFlash`/`prazoProgramado` inicializados via `useState(() => lerPrazoStorage(...) ?? Date.now()+dur)`
+- O fallback `Date.now()+dur` NUNCA era persistido no localStorage
+- `gravarPrazoStorage` só era chamado por `setPrazoTimestamp` (em `handleNovaRodada`) e pelo polling on-chain (apenas prazoProgramado)
+- Resultado: localStorage `gut_prazo_flash` ficava `null` → cada F5 gerava novo deadline de 30min do zero
+
+**Correção (1 arquivo, +6 linhas):**
+
+### `src/context/AppContext.jsx` (linhas 117-121)
+- Adicionados 2 `useEffect` que persistem `prazoFlash` e `prazoProgramado` no localStorage sempre que mudam
+- Incluindo o valor inicial de fallback (`Date.now()+dur`) → localStorage nunca mais fica `null`
+- F5 lê o valor persistido → cronómetro continua de onde parou
+
+### Validação produção (3 cargas de página consecutivas):
+- Carga 1: 29:57 → localStorage `gut_prazo_flash: "1779932039"` ✅
+- Carga 2 (F5): 29:37 (~20s decorridos) — NÃO resetou ✅
+- Carga 3 (F5): 29:22 (~15s decorridos) — NÃO resetou ✅
+- Console: ZERO erros ✅
+- Screenshot: `bugfix-timer-f5-immune.png`
+
+---
+
+## Validação Final — Ambos os Bugs
+
+| Bug | Status | Evidência |
+|---|---|---|
+| Cronómetro F5 | ✅ FIXED | 3 cargas consecutivas: 29:57→29:37→29:22 |
+| CNPJ "desafiogut@gmail.com" | ✅ FIXED | Privy modal abre normal, sem email fixo |
+
+**Build:** `DSvt4x91` em produção — ZERO erros, ZERO regressão.
