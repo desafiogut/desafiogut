@@ -151,6 +151,13 @@ export default function SejaNossoParceiro() {
     }
   }, [isConnected, address, cnpjJaExiste, cnpjEndereco, navigate]);
 
+  // MC17 — redirect automático quando lojista fica corporate + conectado
+  useEffect(() => {
+    if (isConnected && tipoUsuario === "corporativo") {
+      navigate("/corporativo", { replace: true });
+    }
+  }, [isConnected, tipoUsuario, navigate]);
+
   // MC12.3.1 — Cadastro DIRETO sem email-OTP.
   // Fluxo: validar client → GET ?cnpj (duplicidade) → POST register-corporativo
   // → UI de sucesso. Sem login Privy. Login fica para depois (acessar painel).
@@ -405,6 +412,40 @@ export default function SejaNossoParceiro() {
               : "Próximo passo: a coordenação entrará em contato em até 48h para ativar o seu Painel Lojista e definir o plano (Bronze / Prata / Ouro / Diamante)."
             }
           </p>
+          {!isConnected ? (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => abrirModal()}
+              style={{
+                display: "inline-block",
+                padding: "0.7rem 1.5rem",
+                background: `linear-gradient(135deg, ${COR.primary}, #e89400)`,
+                border: "none", borderRadius: "10px", color: "#0a0f1a",
+                fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
+                fontSize: "0.9rem", cursor: "pointer",
+                boxShadow: "0 4px 18px rgba(245,166,35,0.35)",
+                marginRight: "0.75rem",
+              }}
+            >
+              🔐 Acessar Painel do Lojista
+            </motion.button>
+          ) : (
+            <Link
+              to="/corporativo"
+              style={{
+                display: "inline-block",
+                padding: "0.7rem 1.5rem",
+                background: `linear-gradient(135deg, ${COR.teal}, #00a888)`,
+                borderRadius: "10px", color: "#0a0f1a",
+                fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
+                fontSize: "0.9rem", textDecoration: "none",
+                marginRight: "0.75rem",
+              }}
+            >
+              🏢 Ir ao Painel Lojista
+            </Link>
+          )}
           <Link
             to="/"
             style={{

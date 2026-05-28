@@ -270,7 +270,7 @@ export function AppProvider({ children }) {
     if (tipoUsuario !== "corporativo") return;
     const rotasProibidas = new Set([
       "/", "/carteira", "/mercado", "/vitrine", "/programacao",
-      "/ativos", "/seguranca",
+      "/ativos", "/seguranca", "/seja-nosso-parceiro",
     ]);
     if (rotasProibidas.has(location.pathname)) {
       navigate("/corporativo", { replace: true });
