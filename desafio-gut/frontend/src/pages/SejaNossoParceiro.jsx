@@ -417,7 +417,7 @@ export default function SejaNossoParceiro() {
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => {
-                navigate("/corporativo?rc=1", { replace: true });
+                window.location.replace("/corporativo?rc=1");
               }}
               style={{
                 display: "inline-block",

@@ -1,6 +1,6 @@
 // force deploy 2026-05-11 — reset versionado + MOCK_MODE removido
 import { useState, useEffect } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext } from "./context/AppContext.jsx";
 import TermosConsentimento from "./components/TermosConsentimento.jsx";
 import Layout from "./widgets/layout/Layout.jsx";
@@ -28,13 +28,11 @@ import DetalheProduto      from "./pages/DetalheProduto.jsx";
 // MC12.2 — CorporativoRoute usa tipoUsuario derivado de cotas blob.
 // tipoCarregando evita redirect prematuro enquanto o fetch do blob está pendente.
 // MC17 — query param ?rc=1: acesso direto sem Privy após cadastro.
-// Usa useLocation (React Router) — window.location não atualiza durante render.
+// Usa window.location (full page reload garante search params corretos).
 function CorporativoRoute({ children }) {
   const { tipoUsuario, tipoCarregando, isConnected } = useAppContext();
-  const location = useLocation();
   if (!isConnected) {
-    const params = new URLSearchParams(location.search);
-    if (params.get("rc") !== "1") return <Navigate to="/" replace />;
+    if (!window.location.search.includes("rc=1")) return <Navigate to="/" replace />;
     return children;
   }
   if (tipoCarregando) return null;
