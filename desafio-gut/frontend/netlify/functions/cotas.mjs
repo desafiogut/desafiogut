@@ -215,7 +215,16 @@ async function handleGet(req) {
         for (const blob of blobList.blobs) {
           const reg = await idxCnpjEmail.get(blob.key, { type: "json" });
           if (reg && reg.email === emailParam.toLowerCase()) {
-            return jsonResponse(reg);
+            // MC17 — retorna registo COMPLETO (BLOB_COTAS) com tipo: "corporativo".
+            // O índice CNPJ só tem {cnpj, cliente_id, empresa, email} — sem tipo.
+            // Sem o tipo, AppContext define tipoUsuario="comum" e perde o perfil.
+            const storeCot = abrirStore(BLOB_COTAS);
+            if (storeCot && reg.cliente_id) {
+              const completo = await storeCot.get(reg.cliente_id, { type: "json" });
+              if (completo) return jsonResponse(completo);
+            }
+            // Fallback: adiciona tipo manualmente se não achou o registo completo
+            return jsonResponse({ ...reg, tipo: "corporativo" });
           }
         }
       }
