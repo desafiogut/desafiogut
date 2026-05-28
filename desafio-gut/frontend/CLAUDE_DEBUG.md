@@ -146,3 +146,74 @@ ZERO warnings React novos.
 | CNPJ "desafiogut@gmail.com" | ✅ FIXED | Privy modal abre normal, sem email fixo |
 
 **Build:** `DSvt4x91` em produção — ZERO erros, ZERO regressão.
+
+---
+
+## MC15 — Feedback de Lance em Tempo Real
+
+**Sessão:** 2026-05-27 | **Modelo:** DeepSeek V4 Pro
+**Objetivo:** Implementar feedback visual para o utilizador saber se o lance continua único ou foi repetido, com polling a cada 5s.
+
+---
+
+### Alterações Realizadas (4 arquivos, +147 linhas)
+
+### 1. `netlify/functions/lances-flash.mjs`
+- **+28 linhas** — Novo branch `?acao=verificar&valor=X` no GET handler
+  - Lê o blob `lances-relampago:{edicaoId}`
+  - Conta ocorrências do valor: `rawLances.filter(l => l.valorCentavos === valor).length`
+  - Devolve `{ edicaoId, valor, count, unico: count === 1 }`
+  - Validação: 400 se `valor` ausente ou inválido
+  - Edição inexistente devolve `count:0, unico:false` (graceful)
+
+### 2. `src/hooks/useLanceFeedback.js` (NOVO)
+- **+46 linhas** — Hook customizado com polling 5s
+  - `useLanceFeedback(edicaoId, meuValor)` → `{ status, mudou }`
+  - `status`: `{ count, unico }` do endpoint
+  - `mudou`: deteta transição `unico → repetido`, auto-reset após 5s
+  - Só faz fetch se ambos `edicaoId` e `meuValor` definidos
+  - Cancelamento limpo no unmount (cancelado + clearInterval)
+
+### 3. `src/components/LanceStatusBadge.jsx` (NOVO)
+- **+51 linhas** — Componente visual com Framer Motion
+  - Exibe "✅ Único" (verde) ou "❌ Repetido" (laranja)
+  - Alerta ⚠️ animado quando estado muda de único → repetido
+  - `AnimatePresence` para transições suaves
+  - Retorna `null` se `!status` (sem lance dado)
+
+### 4. `src/pages/MercadoLances.jsx`
+- **+24 linhas** — Integração do badge na página de leilão
+  - Estado `meuUltimoLance` guarda `{ valor, edicao }` do último lance
+  - `onLanceSucessoWrapper` — intercepta callback do CardLance para registar valor
+  - `<LanceStatusBadge>` renderizado entre CardLance e Segurança
+  - Imports: `useLanceFeedback`, `LanceStatusBadge`, `useCallback`
+
+---
+
+### Build
+```
+npm run build → ✓ built in 8.26s
+ZERO erros de compilação.
+ZERO warnings React novos.
+```
+
+### Validação Backend
+- `?acao=verificar&valor=0.07` → `{"edicaoId":"R-1","valor":0.07,"count":0,"unico":false}` ✅
+- Sem valor → 400 `valor_ausente` ✅
+- Valor inválido (abc) → 400 `valor_invalido` ✅
+- Edição inexistente (R-99) → `count:0, unico:false` ✅
+- Múltiplos valores testados (7, 0.01, 999999) — todos corretos ✅
+
+### Validação Frontend (MCP chrome-devtools)
+- Desktop 1440×900: página carrega sem crashes ✅
+- LanceStatusBadge oculto quando sem lance (comportamento correto) ✅
+- CardLance, TabelaLances, Segurança — sem regressão ✅
+- Console: ZERO erros React ✅
+- Leilão ativo (30:00 ⚡ RELÂMPAGO) — UI correta ✅
+
+### Limitação
+- Não foi possível testar o fluxo completo (login → lance → badge → polling) porque o Privy OAuth requer uma conta Google/Apple real, indisponível no ambiente MCP.
+- A validação funcional completa requer um teste manual com conta real.
+
+### Commit
+`317224b` — `feat: feedback de lance em tempo real — status unico/repetido com polling 5s`
