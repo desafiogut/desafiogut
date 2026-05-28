@@ -416,7 +416,10 @@ export default function SejaNossoParceiro() {
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => abrirModal()}
+              onClick={() => {
+                try { sessionStorage.setItem("gut_corp_recem_cadastrado", "1"); } catch {}
+                navigate("/corporativo", { replace: true });
+              }}
               style={{
                 display: "inline-block",
                 padding: "0.7rem 1.5rem",

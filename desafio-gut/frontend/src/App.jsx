@@ -27,9 +27,19 @@ import DetalheProduto      from "./pages/DetalheProduto.jsx";
 
 // MC12.2 — CorporativoRoute usa tipoUsuario derivado de cotas blob.
 // tipoCarregando evita redirect prematuro enquanto o fetch do blob está pendente.
+// MC17 — flag gut_corp_recem_cadastrado: acesso direto sem Privy após cadastro.
 function CorporativoRoute({ children }) {
   const { tipoUsuario, tipoCarregando, isConnected } = useAppContext();
-  if (!isConnected) return <Navigate to="/" replace />;
+  if (!isConnected) {
+    // Acesso pós-cadastro direto (sem Privy): flag de sessão única
+    const recemCadastrado = (() => {
+      try { return sessionStorage.getItem("gut_corp_recem_cadastrado") === "1"; } catch { return false; }
+    })();
+    if (!recemCadastrado) return <Navigate to="/" replace />;
+    // Consome a flag para evitar reutilização
+    try { sessionStorage.removeItem("gut_corp_recem_cadastrado"); } catch {}
+    return children;
+  }
   if (tipoCarregando) return null;
   if (tipoUsuario !== "corporativo") return <Navigate to="/" replace />;
   return children;
