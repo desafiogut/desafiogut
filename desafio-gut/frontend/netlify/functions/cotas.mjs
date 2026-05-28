@@ -195,7 +195,7 @@ async function handleGet(req) {
     if (!idxCnpj) return jsonError(502, "store_indisponivel", "Netlify Blobs indisponível");
     const reg = await idxCnpj.get(nums, { type: "json" });
     if (!reg) return jsonError(404, "cnpj_nao_encontrado", "CNPJ livre");
-    return jsonResponse(reg);
+    return jsonResponse({ status: "cnpj_ja_registado", endereco: reg.endereco });
   }
 
   // MC14.10.1 ITEM 2 — lookup por email para cadastros directos (cnpj:XXXXX).

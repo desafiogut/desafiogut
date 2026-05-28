@@ -72,3 +72,42 @@ ZERO warnings React novos.
 - `C:\Users\Moltbot\Desktop\mc14-screenshots\mobile-mais-menu.png`
 - `C:\Users\Moltbot\Desktop\mc14-screenshots\mobile-dashboard-pos-consent.png`
 - `C:\Users\Moltbot\Desktop\mc14-screenshots\desktop-dashboard-final.png`
+
+---
+
+## BUGFIX — "desafiogut@gmail.com" exposto ao submeter CNPJ já registrado
+
+**Diagnóstico:**
+- `cotas.mjs:198` retornava o registro completo do blob BLOB_COTAS_CNPJ (incluindo `email`)
+- `SejaNossoParceiro.jsx:170-173` exibia `reg.email` diretamente na UI com botão "Fazer login com {email}"
+- O blob do CNPJ 23.040.066/0001-00 continha `email: "desafiogut@gmail.com"` (email de contato da org)
+
+**Correção (3 arquivos):**
+
+### `netlify/functions/cotas.mjs` (linha 198)
+- `return jsonResponse(reg)` → `return jsonResponse({ status: "cnpj_ja_registado", endereco: reg.endereco })`
+- Backend agora NÃO expõe email/cnpj/empresa do blob — apenas status + endereco da wallet
+
+### `src/pages/SejaNossoParceiro.jsx`
+- **Linha 8:** `useState` → `useState, useEffect`
+- **Linha 124:** Adicionado `address` na desestruturação de `useAppContext()`
+- **Linha 138:** Novo estado `cnpjEndereco` para validação pós-login
+- **Linhas 142-152:** Novo `useEffect` — após login Privy disparado por CNPJ existente, verifica se `address` bate com `cnpjEndereco` e redireciona para `/corporativo`
+- **Linhas 174-191:** CNPJ duplicado agora:
+  - Logado → verifica `address === endereco` antes de redirecionar (em vez de `atualizarTipoCorporativo(reg)` cego)
+  - Não-logado → `setCnpjEndereco(endereco)` + `abrirModal()` (login Privy normal, sem expor email)
+- **Removido:** Bloco `sucesso.loginPendente` (~42 linhas) que exibia "Fazer login com {email}"
+
+### Fluxo corrigido:
+1. CNPJ já existe → backend retorna `{ status: "cnpj_ja_registado", endereco: "0x..." }`
+2. Usuário NÃO logado → dispara login Privy normal (abrirModal)
+3. Após login → useEffect verifica address === endereco → redireciona /corporativo
+4. Usuário logado com address correto → redireciona /corporativo
+5. Usuário logado com address diferente → erro "CNPJ já registrado em outra conta"
+
+### Validação:
+- Build: ✓ ZERO erros
+- Desktop 1440×900: NENHUM "desafiogut@gmail.com" na tela ✅
+- Mobile 375×812: NENHUM email exposto ✅
+- Console: sem novos erros React ✅
+- Screenshots: `bugfix-cnpj-desktop-no-email.png`, `bugfix-cnpj-mobile-no-email.png`

@@ -5,7 +5,7 @@
 //            sem disparar modal Privy. cliente_id derivado do CNPJ no servidor.
 // Rota: /seja-nosso-parceiro (pública — visível para qualquer usuário).
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext.jsx";
@@ -121,7 +121,7 @@ const CORPORATIVO_ATIVO = import.meta.env.VITE_CORPORATIVO_ATIVO !== "false";
 
 export default function SejaNossoParceiro() {
   const isMobile = useIsMobile();
-  const { isConnected, tipoUsuario, atualizarTipoCorporativo, abrirModal } = useAppContext();
+  const { isConnected, tipoUsuario, atualizarTipoCorporativo, abrirModal, address } = useAppContext();
   const navigate = useNavigate();
 
   // Estados do formulário
@@ -135,6 +135,21 @@ export default function SejaNossoParceiro() {
   const [erro,     setErro]     = useState(null);
   const [cnpjJaExiste, setCnpjJaExiste] = useState(false);
   const [sucesso, setSucesso] = useState(null); // MC12.3.1 — UI sucesso pós-cadastro
+  const [cnpjEndereco, setCnpjEndereco] = useState(null); // MC14.10.1 BUGFIX — endereco esperado pós-cnpj-ja-existe
+
+  // MC14.10.1 BUGFIX — após login Privy disparado por CNPJ já existente,
+  // verifica se o address bate com o endereco do cadastro e redireciona.
+  useEffect(() => {
+    if (cnpjJaExiste && isConnected && address && cnpjEndereco) {
+      if (address.toLowerCase() === cnpjEndereco.toLowerCase()) {
+        navigate("/corporativo", { replace: true });
+      } else {
+        setErro("CNPJ já registrado em outra conta. Faça login com a conta correta.");
+        setCnpjJaExiste(false);
+        setCnpjEndereco(null);
+      }
+    }
+  }, [isConnected, address, cnpjJaExiste, cnpjEndereco, navigate]);
 
   // MC12.3.1 — Cadastro DIRETO sem email-OTP.
   // Fluxo: validar client → GET ?cnpj (duplicidade) → POST register-corporativo
@@ -157,20 +172,22 @@ export default function SejaNossoParceiro() {
       // FASE B — verificar duplicidade no servidor
       const checkRes = await fetch(`/.netlify/functions/cotas?cnpj=${cnpjNums}`);
       if (checkRes.ok) {
-        const reg = await checkRes.json();
+        const { status, endereco } = await checkRes.json();
         setCnpjJaExiste(true);
+        setErro(null);
         if (isConnected) {
-          // MC14.10.1 ITEM 4 — já logado → painel directamente
-          atualizarTipoCorporativo(reg);
-          navigate("/corporativo", { replace: true });
+          // MC14.10.1 BUGFIX — já logado: verifica se address bate com o cadastro
+          if (address && endereco && address.toLowerCase() === endereco.toLowerCase()) {
+            navigate("/corporativo", { replace: true });
+            return;
+          }
+          setErro("CNPJ já registrado em outra conta. Faça login com a conta correta.");
+          setEnviando(false);
           return;
         }
-        // não logado → UI de login pendente
-        setErro(null);
-        setSucesso({
-          empresa: reg.empresa, email: reg.email, cnpj: reg.cnpj,
-          loginPendente: true,
-        });
+        // não logado → dispara login Privy normal (sem expor email do blob)
+        setCnpjEndereco(endereco);
+        abrirModal();
         setEnviando(false);
         return;
       } else if (checkRes.status !== 404) {
@@ -351,52 +368,8 @@ export default function SejaNossoParceiro() {
         )}
       </motion.header>
 
-      {/* ── MC14.10.1 ITEM 4 — UI CNPJ JÁ EXISTENTE (LOGIN PENDENTE) ── */}
-      {sucesso && sucesso.loginPendente && (
-        <motion.section
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          style={{
-            ...card,
-            marginBottom: isMobile ? "2rem" : "3rem",
-            borderColor: "rgba(245,166,35,0.4)",
-            background: "rgba(245,166,35,0.08)",
-          }}
-          aria-label="CNPJ já cadastrado"
-        >
-          <h2 style={{
-            margin: "0 0 0.5rem", color: COR.primary,
-            fontSize: isMobile ? "1.05rem" : "1.25rem", fontWeight: 900,
-          }}>
-            ✅ CNPJ já cadastrado!
-          </h2>
-          <p style={{ margin: "0 0 0.75rem", color: COR.text, fontSize: "0.9rem" }}>
-            <strong>{sucesso.empresa}</strong> (CNPJ {sucesso.cnpj}) já está
-            registrado com o email <strong>{sucesso.email}</strong>.
-          </p>
-          <p style={{ margin: "0 0 1rem", color: COR.muted, fontSize: "0.85rem" }}>
-            Faça login com o email da empresa para acessar o painel corporativo.
-          </p>
-          <button
-            type="button"
-            onClick={abrirModal}
-            style={{
-              display: "inline-block",
-              padding: "0.6rem 1.25rem",
-              background: `linear-gradient(135deg, ${COR.primary}, #e89500)`,
-              borderRadius: "10px", color: "#0a0f1a",
-              fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
-              fontSize: "0.85rem", border: "none", cursor: "pointer",
-            }}
-          >
-            🔐 Fazer login com {sucesso.email}
-          </button>
-        </motion.section>
-      )}
-
       {/* ── MC12.3.1 — UI DE SUCESSO PÓS-CADASTRO ── */}
-      {sucesso && !sucesso.loginPendente && (
+      {sucesso && (
         <motion.section
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
