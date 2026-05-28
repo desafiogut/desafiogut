@@ -114,6 +114,12 @@ export function AppProvider({ children }) {
   const [lightningActive, setLightningActive] = useState(false);
   const [showCountdown,   setShowCountdown]   = useState(false);
 
+  // Persiste prazos no localStorage sempre que mudam — garante que o valor
+  // inicial (inclusive fallback Date.now()+dur) seja escrito. Sem isso, F5
+  // lê localStorage null e gera novo deadline, zerando o cronómetro.
+  useEffect(() => { gravarPrazoStorage(LS_PRAZO_FLASH, prazoFlash); }, [prazoFlash]);
+  useEffect(() => { gravarPrazoStorage(LS_PRAZO_PROG, prazoProgramado); }, [prazoProgramado]);
+
   // Setter que troca o prazo do tipo CORRENTE e persiste.
   const setPrazoTimestamp = useCallback((novo) => {
     if (tipoLeilao === "flash") {
