@@ -43,7 +43,7 @@ export default function Dashboard() {
     saldoRsCentavos, saldoRsStatus,
     encerrado, tempoRestante, tipoLeilao, isConnected, DURACAO,
     address, userLabel, EDICAO_ATIVA,
-    showOverlay, showCountdown, handleNovaRodada,
+    showOverlay, showCountdown, handleNovaRodada, setPrazoTimestamp,
   } = useAppContext();
 
   const statusSuffix =
@@ -357,6 +357,45 @@ export default function Dashboard() {
           onNovaRodada={handleNovaRodada}
           EDICAO_ATIVA={EDICAO_ATIVA}
         />
+      )}
+
+      {/* MC16 — botões temporários de teste do cronómetro (DEV only) */}
+      {import.meta.env.DEV && (
+        <div style={{
+          position: "fixed", bottom: "80px", right: "16px", zIndex: 9999,
+          display: "flex", gap: "6px", flexWrap: "wrap",
+          background: "rgba(0,0,0,0.85)", padding: "10px 12px",
+          borderRadius: "12px", border: "1px solid rgba(255,107,53,0.35)",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+        }}>
+          {[
+            { label: "5s",  sec: 5 },
+            { label: "10s", sec: 10 },
+            { label: "30s", sec: 30 },
+            { label: "1min", sec: 60 },
+            { label: "2min", sec: 120 },
+          ].map(({ label, sec }) => (
+            <button
+              key={sec}
+              onClick={() => {
+                const novo = Math.floor(Date.now() / 1000) + sec;
+                setPrazoTimestamp(novo);
+              }}
+              style={{
+                background: "linear-gradient(135deg, #ff6b35, #e55a25)",
+                color: "#fff", border: "none",
+                padding: "5px 10px", borderRadius: "6px",
+                cursor: "pointer", fontWeight: "bold", fontSize: "12px",
+                whiteSpace: "nowrap",
+              }}
+            >{label}</button>
+          ))}
+          <span style={{
+            color: "#ff6b35", fontSize: "10px", fontWeight: 700,
+            display: "flex", alignItems: "center", marginLeft: "4px",
+            letterSpacing: "0.04em",
+          }}>⏱️ TESTE</span>
+        </div>
       )}
 
       {/* ── Footer info ── */}

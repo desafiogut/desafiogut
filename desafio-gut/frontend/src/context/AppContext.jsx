@@ -573,7 +573,11 @@ export function AppProvider({ children }) {
     document.addEventListener("visibilitychange", vis);
     return () => {
       clearInterval(id);
-      if (timeoutAnimRef.current) clearTimeout(timeoutAnimRef.current);
+      // MC16 — NÃO limpar timeoutAnimRef aqui. Quando encerrado
+      // muda (restante===0), a cleanup mata o setTimeout que ia
+      // disparar showOverlay. O timeout é auto-limpante (seta
+      // timeoutAnimRef=null ao executar) e handleNovaRodada faz
+      // cleanup explícito.
       document.removeEventListener("visibilitychange", vis);
     };
   }, [prazoTimestamp, encerrado]);
@@ -667,7 +671,7 @@ export function AppProvider({ children }) {
     EDICAO_ATIVA, DURACAO,
     tipoLeilao, setTipoLeilao,
     lances: lancesExibidos,
-    prazoTimestamp,
+    prazoTimestamp, setPrazoTimestamp,
     prazoFlash, prazoProgramado,
     encerrado,
     showOverlay,
