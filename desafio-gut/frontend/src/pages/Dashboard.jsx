@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
+import FimLeilaoOverlay from "../components/FimLeilaoOverlay.jsx";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -42,6 +43,7 @@ export default function Dashboard() {
     saldoRsCentavos, saldoRsStatus,
     encerrado, tempoRestante, tipoLeilao, isConnected, DURACAO,
     address, userLabel, EDICAO_ATIVA,
+    showOverlay, showCountdown, handleNovaRodada,
   } = useAppContext();
 
   const statusSuffix =
@@ -346,6 +348,16 @@ export default function Dashboard() {
           ))}
         </div>
       </section>
+
+      {/* MC16 — overlay de fim de leilão (relâmpago e programado) */}
+      {showOverlay && (
+        <FimLeilaoOverlay
+          vencedor={vencedor}
+          tipoLeilao={tipoLeilao}
+          onNovaRodada={handleNovaRodada}
+          EDICAO_ATIVA={EDICAO_ATIVA}
+        />
+      )}
 
       {/* ── Footer info ── */}
       <footer style={{
