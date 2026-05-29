@@ -5,7 +5,7 @@
 //            sem disparar modal Privy. cliente_id derivado do CNPJ no servidor.
 // Rota: /seja-nosso-parceiro (pública — visível para qualquer usuário).
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useLoginWithEmail } from "@privy-io/react-auth";
@@ -145,6 +145,10 @@ export default function SejaNossoParceiro() {
   const [emailOtp,  setEmailOtp]  = useState("");    // email destino do OTP
   const [codigo,    setCodigo]    = useState("");    // 6 dígitos digitados
   const [otpErro,   setOtpErro]   = useState(null);
+  // MC15.7 — guarda contra dupla chamada concorrente a sendCode/loginWithCode.
+  // Um segundo sendCode invalida o OTP anterior ("expirado"); um segundo
+  // loginWithCode (Enter + clique) falha porque o código já foi consumido.
+  const otpBusyRef = useRef(false);
 
   // MC14.10.1 BUGFIX — após login Privy disparado por CNPJ já existente,
   // verifica se o address bate com o endereco do cadastro e redireciona.
@@ -167,10 +171,24 @@ export default function SejaNossoParceiro() {
     }
   }, [isConnected, tipoUsuario, navigate]);
 
+  // MC15.7 — envia o OTP UMA única vez por disparo. A guarda otpBusyRef evita
+  // que dois sendCode concorrentes invalidem o código (causa de "expirado").
+  const enviarOtp = async (emailDestino) => {
+    if (otpBusyRef.current) return;
+    otpBusyRef.current = true;
+    try {
+      setEmailOtp(emailDestino);
+      await sendCode({ email: emailDestino });
+      setOtpAberto(true);
+    } finally {
+      otpBusyRef.current = false;
+    }
+  };
+
   // MC15.4 — Cadastro DIRETO sem etapa intermediária.
   // Fluxo: validar client → GET ?cnpj (duplicidade) → POST register-corporativo
-  // → guarda email no sessionStorage → login Privy DIRETO (ou navigate se já
-  // autenticado). O redirect p/ /corporativo é reativo (useEffect tipoUsuario).
+  // → guarda email no sessionStorage → envia OTP (sendCode). O redirect p/
+  // /corporativo é reativo (useEffect tipoUsuario).
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErro(null);
@@ -208,9 +226,7 @@ export default function SejaNossoParceiro() {
         try { sessionStorage.setItem("gut_corp_recem_cadastrado", emailJaCad); } catch {}
         // MC15.6 — envia o OTP direto ao email do cadastro e abre o campo de
         // código (sem modal de email). O redirect p/ /corporativo é reativo.
-        setEmailOtp(emailJaCad);
-        await sendCode({ email: emailJaCad });
-        setOtpAberto(true);
+        await enviarOtp(emailJaCad);
         setEnviando(false);
         return;
       } else if (checkRes.status !== 404) {
@@ -255,9 +271,7 @@ export default function SejaNossoParceiro() {
         navigate("/corporativo", { replace: true });
       } else {
         // MC15.6 — envia o OTP direto ao email do cadastro e abre o campo de código.
-        setEmailOtp(registro.email);
-        await sendCode({ email: registro.email });
-        setOtpAberto(true);
+        await enviarOtp(registro.email);
       }
     } catch (err) {
       setErro(err?.message || "Erro ao cadastrar. Tente novamente.");
@@ -270,20 +284,34 @@ export default function SejaNossoParceiro() {
   // carteira (createOnLogin); o AppContext resolve o perfil corporativo e o
   // useEffect (isConnected && tipoUsuario==="corporativo") redireciona ao painel.
   const confirmarCodigo = async () => {
+    // MC15.7 — evita dupla submissão (Enter + clique): a 2ª chamada falharia
+    // porque o código já teria sido consumido, aparecendo como "expirado".
+    if (otpBusyRef.current) return;
     setOtpErro(null);
-    const code = codigo.replace(/\D/g, "");
+    const code = codigo.replace(/\D/g, "").trim();
     if (code.length < 6) { setOtpErro("Digite os 6 dígitos do código."); return; }
+    otpBusyRef.current = true;
     try {
       await loginWithCode({ code });
-    } catch {
-      setOtpErro("Código inválido ou expirado. Verifique e tente novamente.");
+      // sucesso: o useEffect (isConnected && corporativo) redireciona ao painel.
+    } catch (e) {
+      const msg = `${e?.message || ""} ${e?.code || ""}`.toLowerCase();
+      if (/expir/.test(msg)) {
+        setOtpErro('O código expirou. Toque em "Reenviar código" para receber um novo.');
+      } else if (/attempt|too many|max/.test(msg)) {
+        setOtpErro('Muitas tentativas. Toque em "Reenviar código" para receber um novo.');
+      } else {
+        setOtpErro("Código incorreto. Confira os 6 dígitos e tente novamente.");
+      }
+    } finally {
+      otpBusyRef.current = false;
     }
   };
 
   const reenviarCodigo = async () => {
     setOtpErro(null);
     setCodigo("");
-    try { await sendCode({ email: emailOtp }); }
+    try { await enviarOtp(emailOtp); }
     catch { setOtpErro("Não foi possível reenviar o código. Tente novamente."); }
   };
 
