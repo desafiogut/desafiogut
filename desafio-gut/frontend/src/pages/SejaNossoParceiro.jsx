@@ -295,14 +295,6 @@ export default function SejaNossoParceiro() {
       await loginWithCode({ code });
       // sucesso: o useEffect (isConnected && corporativo) redireciona ao painel.
     } catch (e) {
-      console.error("🔴 loginWithCode FAIL:", {
-        message: e?.message,
-        code: e?.code,
-        name: e?.name,
-        stack: e?.stack?.split("\n").slice(0,3).join("\n"),
-        otpState,
-        codigoUsado: codigo
-      });
       const msg = `${e?.message || ""} ${e?.code || ""}`.toLowerCase();
       if (/expir/.test(msg)) {
         setOtpErro('O código expirou. Toque em "Reenviar código" para receber um novo.');
