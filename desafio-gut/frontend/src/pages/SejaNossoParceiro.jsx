@@ -134,7 +134,6 @@ export default function SejaNossoParceiro() {
   const [enviando, setEnviando] = useState(false);
   const [erro,     setErro]     = useState(null);
   const [cnpjJaExiste, setCnpjJaExiste] = useState(false);
-  const [sucesso, setSucesso] = useState(null); // MC12.3.1 — UI sucesso pós-cadastro
   const [cnpjEndereco, setCnpjEndereco] = useState(null); // MC14.10.1 BUGFIX — endereco esperado pós-cnpj-ja-existe
 
   // MC14.10.1 BUGFIX — após login Privy disparado por CNPJ já existente,
@@ -158,13 +157,13 @@ export default function SejaNossoParceiro() {
     }
   }, [isConnected, tipoUsuario, navigate]);
 
-  // MC12.3.1 — Cadastro DIRETO sem email-OTP.
+  // MC15.4 — Cadastro DIRETO sem etapa intermediária.
   // Fluxo: validar client → GET ?cnpj (duplicidade) → POST register-corporativo
-  // → UI de sucesso. Sem login Privy. Login fica para depois (acessar painel).
+  // → guarda email no sessionStorage → login Privy DIRETO (ou navigate se já
+  // autenticado). O redirect p/ /corporativo é reativo (useEffect tipoUsuario).
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErro(null);
-    setSucesso(null);
     setCnpjJaExiste(false);
     if (!validarCNPJ(cnpj)) { setErro("CNPJ inválido. Verifique os dígitos."); return; }
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
@@ -192,17 +191,12 @@ export default function SejaNossoParceiro() {
           setEnviando(false);
           return;
         }
-        // MC17 — CNPJ já cadastrado: usar email do blob, NUNCA abrir Privy.
-        // Mostra sucesso com os dados já registados, sem pedir novo email.
+        // MC15.4 — CNPJ já cadastrado: guarda o email e vai DIRETO ao login,
+        // sem tela intermediária. O redirect p/ /corporativo é reativo (useEffect
+        // tipoUsuario==="corporativo") assim que o AppContext resolve o perfil.
         const emailJaCad = emailCadastrado || email.trim().toLowerCase();
-        // MC15.3 — guarda o email para o AppContext resolver o perfil no login.
         try { sessionStorage.setItem("gut_corp_recem_cadastrado", emailJaCad); } catch {}
-        setSucesso({
-          empresa: empresaCadastrada || empresa.trim(),
-          email: emailJaCad,
-          cnpj: cnpjNums,
-          jaCadastrado: true,
-        });
+        abrirModal();
         setEnviando(false);
         return;
       } else if (checkRes.status !== 404) {
@@ -236,17 +230,18 @@ export default function SejaNossoParceiro() {
         throw new Error(err?.error?.message || "Erro ao registrar.");
       }
       const registro = await res.json();
-      // Atualiza estado local quando AppContext está disponível (logado).
-      // Cadastros anônimos não atualizam tipoUsuario — login posterior faz isso.
-      if (isConnected) atualizarTipoCorporativo(registro);
-      // MC15.3 — guarda o email do cadastro para o AppContext resolver o perfil
-      // corporativo no login seguinte, mesmo que a identidade Privy use outro email.
+      // MC15.4 — guarda o email do cadastro para o AppContext resolver o perfil
+      // corporativo no login seguinte (mesmo que a identidade Privy use outro email).
       try { sessionStorage.setItem("gut_corp_recem_cadastrado", registro.email); } catch {}
-      setSucesso({
-        empresa: registro.empresa,
-        email: registro.email,
-        cnpj: registro.cnpj,
-      });
+      // Vai DIRETO ao painel, sem tela intermediária: se já autenticado, navega;
+      // senão, abre o login. O redirect pós-login é reativo (useEffect
+      // tipoUsuario==="corporativo").
+      if (isConnected) {
+        atualizarTipoCorporativo(registro);
+        navigate("/corporativo", { replace: true });
+      } else {
+        abrirModal();
+      }
     } catch (err) {
       setErro(err?.message || "Erro ao cadastrar. Tente novamente.");
     } finally {
@@ -386,90 +381,11 @@ export default function SejaNossoParceiro() {
         )}
       </motion.header>
 
-      {/* ── MC12.3.1 — UI DE SUCESSO PÓS-CADASTRO ── */}
-      {sucesso && (
-        <motion.section
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          style={{
-            ...card,
-            marginBottom: isMobile ? "2rem" : "3rem",
-            borderColor: "rgba(0,212,170,0.4)",
-            background: "rgba(0,212,170,0.06)",
-          }}
-          aria-label="Cadastro realizado"
-        >
-          <h2 style={{
-            margin: "0 0 0.5rem", color: COR.teal,
-            fontSize: isMobile ? "1.05rem" : "1.25rem", fontWeight: 900,
-          }}>
-            {sucesso.jaCadastrado ? "📋 CNPJ já cadastrado!" : "✅ Cadastro corporativo realizado!"}
-          </h2>
-          <GutoAvatar custom="parceiro-sucesso-celebrando" size={56} animate />
-          <p style={{ margin: "0 0 0.75rem", color: COR.text, fontSize: "0.9rem" }}>
-            <strong>{sucesso.empresa}</strong> (CNPJ {sucesso.cnpj}) está
-            {sucesso.jaCadastrado ? " " : " "}
-            registrado. O email associado é <strong>{sucesso.email}</strong>.
-          </p>
-          <p style={{ margin: "0 0 1rem", color: COR.muted, fontSize: "0.85rem" }}>
-            {sucesso.jaCadastrado
-              ? "Este CNPJ já possui cadastro ativo. A coordenação pode ser contatada pelo email acima."
-              : "Próximo passo: a coordenação entrará em contato em até 48h para ativar o seu Painel Lojista e definir o plano (Bronze / Prata / Ouro / Diamante)."
-            }
-          </p>
-          {!isConnected ? (
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => abrirModal()}
-              style={{
-                display: "inline-block",
-                padding: "0.7rem 1.5rem",
-                background: `linear-gradient(135deg, ${COR.primary}, #e89400)`,
-                border: "none", borderRadius: "10px", color: "#0a0f1a",
-                fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
-                fontSize: "0.9rem", cursor: "pointer",
-                boxShadow: "0 4px 18px rgba(245,166,35,0.35)",
-                marginRight: "0.75rem",
-              }}
-            >
-              🔐 Entrar e acessar o Painel do Lojista
-            </motion.button>
-          ) : (
-            <Link
-              to="/corporativo"
-              style={{
-                display: "inline-block",
-                padding: "0.7rem 1.5rem",
-                background: `linear-gradient(135deg, ${COR.teal}, #00a888)`,
-                borderRadius: "10px", color: "#0a0f1a",
-                fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
-                fontSize: "0.9rem", textDecoration: "none",
-                marginRight: "0.75rem",
-              }}
-            >
-              🏢 Ir ao Painel Lojista
-            </Link>
-          )}
-          <Link
-            to="/"
-            style={{
-              display: "inline-block",
-              padding: "0.6rem 1.25rem",
-              background: `linear-gradient(135deg, ${COR.teal}, #00a888)`,
-              borderRadius: "10px", color: "#0a0f1a",
-              fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
-              fontSize: "0.85rem", textDecoration: "none",
-            }}
-          >
-            🏠 Voltar ao início
-          </Link>
-        </motion.section>
-      )}
+      {/* MC15.4 — UI de sucesso intermediária REMOVIDA: o submit vai direto ao
+          login e o redirect p/ /corporativo é reativo, sem etapa de "Entrar". */}
 
       {/* ── FORMULÁRIO DE CADASTRO ── MC12.3: visível SEM login prévio. */}
-      {!sucesso && tipoUsuario !== "corporativo" && (
+      {tipoUsuario !== "corporativo" && (
         <motion.section
           id="form-corporativo"
           initial={{ opacity: 0, y: 16 }}
