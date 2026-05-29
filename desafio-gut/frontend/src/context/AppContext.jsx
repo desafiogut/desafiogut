@@ -604,7 +604,7 @@ export function AppProvider({ children }) {
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
-  function abrirModal() {
+  function abrirModal(opts) {
     console.info("[GUT-DEBUG] abrirModal", { ready, authenticated, hasUser: !!user, hasAddress: !!address });
     // MC11.17: abrirModal restaurado ao comportamento pré-MC11.2.
     // createOnLogin: "all-users" no PrivyProvider cria a carteira automaticamente
@@ -622,7 +622,11 @@ export function AppProvider({ children }) {
       return;
     }
     try {
-      const result = login();
+      // MC15.5 — repassa opções ao login() (ex.: prefill de email do cadastro
+      // corporativo) só quando vier um objeto de configuração válido. Os vários
+      // onClick={abrirModal} passam um MouseEvent → login() sem args.
+      const loginOpts = opts && (opts.prefill || opts.loginMethods) ? opts : undefined;
+      const result = loginOpts ? login(loginOpts) : login();
       if (result && typeof result.then === "function") {
         result
           .then(() => console.info("[GUT-DEBUG] login() resolveu"))

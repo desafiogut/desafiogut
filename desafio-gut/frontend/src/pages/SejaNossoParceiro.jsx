@@ -196,7 +196,8 @@ export default function SejaNossoParceiro() {
         // tipoUsuario==="corporativo") assim que o AppContext resolve o perfil.
         const emailJaCad = emailCadastrado || email.trim().toLowerCase();
         try { sessionStorage.setItem("gut_corp_recem_cadastrado", emailJaCad); } catch {}
-        abrirModal();
+        // MC15.5 — login com email JÁ preenchido: o lojista só digita o OTP.
+        abrirModal({ prefill: { type: "email", value: emailJaCad } });
         setEnviando(false);
         return;
       } else if (checkRes.status !== 404) {
@@ -240,7 +241,8 @@ export default function SejaNossoParceiro() {
         atualizarTipoCorporativo(registro);
         navigate("/corporativo", { replace: true });
       } else {
-        abrirModal();
+        // MC15.5 — login com email JÁ preenchido: o lojista só digita o OTP.
+        abrirModal({ prefill: { type: "email", value: registro.email } });
       }
     } catch (err) {
       setErro(err?.message || "Erro ao cadastrar. Tente novamente.");
