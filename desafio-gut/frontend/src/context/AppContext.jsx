@@ -237,9 +237,14 @@ export function AppProvider({ children }) {
       try {
         const respAddr = await fetch(`/.netlify/functions/cotas?cliente_id=${encodeURIComponent(address)}`);
         let data = respAddr.ok ? await respAddr.json() : null;
-        // MC14.10.1 ITEM 2 — fallback por email para cadastros directos cnpj:XXXXX
-        if (!data && user?.email?.address) {
-          const respEmail = await fetch(`/.netlify/functions/cotas?email=${encodeURIComponent(user.email.address)}`);
+        // MC15.2 — fallback por email cobre QUALQUER método de login.
+        // O email do utilizador pode vir de email-OTP, Google ou Apple; antes
+        // (MC14.10.1) só user.email.address disparava o fetch, deixando logins
+        // Google/Apple sem reconhecer o perfil corporativo.
+        const emailLogin =
+          user?.email?.address || user?.google?.email || user?.apple?.email || null;
+        if (!data && emailLogin) {
+          const respEmail = await fetch(`/.netlify/functions/cotas?email=${encodeURIComponent(emailLogin)}`);
           if (respEmail.ok) data = await respEmail.json();
         }
         if (!cancel) {
@@ -252,7 +257,7 @@ export function AppProvider({ children }) {
     };
     buscarCota();
     return () => { cancel = true; };
-  }, [address, user?.email?.address]);
+  }, [address, user?.email?.address, user?.google?.email, user?.apple?.email]);
 
   // MC12.2 — tipoUsuario derivado do blob cotas (não de customMetadata).
   const tipoUsuario = cotaCorporativa?.tipo === "corporativo" ? "corporativo" : "comum";
