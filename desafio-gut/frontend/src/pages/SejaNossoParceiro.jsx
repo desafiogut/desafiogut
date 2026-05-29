@@ -8,6 +8,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useLoginWithEmail } from "@privy-io/react-auth";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { getVisitorId } from "../lib/fingerprint.js";
@@ -121,8 +122,11 @@ const CORPORATIVO_ATIVO = import.meta.env.VITE_CORPORATIVO_ATIVO !== "false";
 
 export default function SejaNossoParceiro() {
   const isMobile = useIsMobile();
-  const { isConnected, tipoUsuario, atualizarTipoCorporativo, abrirModal, address } = useAppContext();
+  const { isConnected, tipoUsuario, atualizarTipoCorporativo, address } = useAppContext();
   const navigate = useNavigate();
+  // MC15.6 — login via One-Time Code (headless): envia o OTP direto ao email
+  // do cadastro e mostra só o campo de código, sem o modal de email do Privy.
+  const { sendCode, loginWithCode, state: otpState } = useLoginWithEmail();
 
   // Estados do formulário
   const [cnpj,     setCnpj]     = useState("");
@@ -135,6 +139,12 @@ export default function SejaNossoParceiro() {
   const [erro,     setErro]     = useState(null);
   const [cnpjJaExiste, setCnpjJaExiste] = useState(false);
   const [cnpjEndereco, setCnpjEndereco] = useState(null); // MC14.10.1 BUGFIX — endereco esperado pós-cnpj-ja-existe
+
+  // MC15.6 — UI de One-Time Code pós-cadastro.
+  const [otpAberto, setOtpAberto] = useState(false); // mostra o campo de código
+  const [emailOtp,  setEmailOtp]  = useState("");    // email destino do OTP
+  const [codigo,    setCodigo]    = useState("");    // 6 dígitos digitados
+  const [otpErro,   setOtpErro]   = useState(null);
 
   // MC14.10.1 BUGFIX — após login Privy disparado por CNPJ já existente,
   // verifica se o address bate com o endereco do cadastro e redireciona.
@@ -196,8 +206,11 @@ export default function SejaNossoParceiro() {
         // tipoUsuario==="corporativo") assim que o AppContext resolve o perfil.
         const emailJaCad = emailCadastrado || email.trim().toLowerCase();
         try { sessionStorage.setItem("gut_corp_recem_cadastrado", emailJaCad); } catch {}
-        // MC15.5 — login com email JÁ preenchido: o lojista só digita o OTP.
-        abrirModal({ prefill: { type: "email", value: emailJaCad } });
+        // MC15.6 — envia o OTP direto ao email do cadastro e abre o campo de
+        // código (sem modal de email). O redirect p/ /corporativo é reativo.
+        setEmailOtp(emailJaCad);
+        await sendCode({ email: emailJaCad });
+        setOtpAberto(true);
         setEnviando(false);
         return;
       } else if (checkRes.status !== 404) {
@@ -241,14 +254,37 @@ export default function SejaNossoParceiro() {
         atualizarTipoCorporativo(registro);
         navigate("/corporativo", { replace: true });
       } else {
-        // MC15.5 — login com email JÁ preenchido: o lojista só digita o OTP.
-        abrirModal({ prefill: { type: "email", value: registro.email } });
+        // MC15.6 — envia o OTP direto ao email do cadastro e abre o campo de código.
+        setEmailOtp(registro.email);
+        await sendCode({ email: registro.email });
+        setOtpAberto(true);
       }
     } catch (err) {
       setErro(err?.message || "Erro ao cadastrar. Tente novamente.");
     } finally {
       setEnviando(false);
     }
+  };
+
+  // MC15.6 — confirma o One-Time Code. Em sucesso, o Privy autentica e cria a
+  // carteira (createOnLogin); o AppContext resolve o perfil corporativo e o
+  // useEffect (isConnected && tipoUsuario==="corporativo") redireciona ao painel.
+  const confirmarCodigo = async () => {
+    setOtpErro(null);
+    const code = codigo.replace(/\D/g, "");
+    if (code.length < 6) { setOtpErro("Digite os 6 dígitos do código."); return; }
+    try {
+      await loginWithCode({ code });
+    } catch {
+      setOtpErro("Código inválido ou expirado. Verifique e tente novamente.");
+    }
+  };
+
+  const reenviarCodigo = async () => {
+    setOtpErro(null);
+    setCodigo("");
+    try { await sendCode({ email: emailOtp }); }
+    catch { setOtpErro("Não foi possível reenviar o código. Tente novamente."); }
   };
 
   const wrap = { padding: "1rem 0", maxWidth: "1200px", margin: "0 auto" };
@@ -383,11 +419,89 @@ export default function SejaNossoParceiro() {
         )}
       </motion.header>
 
-      {/* MC15.4 — UI de sucesso intermediária REMOVIDA: o submit vai direto ao
-          login e o redirect p/ /corporativo é reativo, sem etapa de "Entrar". */}
+      {/* MC15.6 — UI de One-Time Code: só o campo de código (sem campo de email).
+          O OTP já foi enviado por sendCode no submit. */}
+      {otpAberto && tipoUsuario !== "corporativo" && (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          style={{
+            ...card,
+            marginBottom: isMobile ? "2rem" : "3rem",
+            borderColor: "rgba(0,212,170,0.4)",
+            background: "rgba(0,212,170,0.06)",
+            maxWidth: "460px",
+          }}
+          aria-label="Confirmação por código"
+        >
+          <h2 style={{
+            margin: "0 0 0.5rem", color: COR.teal,
+            fontSize: isMobile ? "1.05rem" : "1.25rem", fontWeight: 900,
+          }}>
+            📩 Digite o código de acesso
+          </h2>
+          <p style={{ margin: "0 0 1rem", color: COR.muted, fontSize: "0.88rem" }}>
+            Enviámos um código de 6 dígitos para <strong style={{ color: COR.text }}>{emailOtp}</strong>.
+            Digite-o abaixo para entrar no Painel do Lojista.
+          </p>
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            onKeyDown={(e) => { if (e.key === "Enter") confirmarCodigo(); }}
+            placeholder="••••••"
+            aria-label="Código de 6 dígitos"
+            style={{
+              ...inputStyle,
+              letterSpacing: "0.5em", textAlign: "center",
+              fontSize: "1.3rem", fontWeight: 800,
+            }}
+          />
+          {otpErro && (
+            <p role="alert" style={{ margin: "0.6rem 0 0", color: COR.primary, fontSize: "0.82rem" }}>
+              ⚠️ {otpErro}
+            </p>
+          )}
+          <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem", flexWrap: "wrap" }}>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={confirmarCodigo}
+              disabled={otpState.status === "submitting-code" || codigo.length < 6}
+              style={{
+                padding: "0.7rem 1.5rem",
+                background: `linear-gradient(135deg, ${COR.teal}, #00a888)`,
+                border: "none", borderRadius: "10px", color: "#0a0f1a",
+                fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
+                fontSize: "0.9rem",
+                cursor: otpState.status === "submitting-code" || codigo.length < 6 ? "not-allowed" : "pointer",
+                opacity: otpState.status === "submitting-code" || codigo.length < 6 ? 0.6 : 1,
+              }}
+            >
+              {otpState.status === "submitting-code" ? "Verificando…" : "Confirmar código"}
+            </motion.button>
+            <button
+              onClick={reenviarCodigo}
+              disabled={otpState.status === "sending-code"}
+              style={{
+                padding: "0.7rem 1rem", background: "transparent",
+                border: `1px solid ${COR.muted}55`, borderRadius: "10px",
+                color: COR.muted, fontWeight: 700, fontSize: "0.85rem",
+                cursor: otpState.status === "sending-code" ? "not-allowed" : "pointer",
+              }}
+            >
+              {otpState.status === "sending-code" ? "Enviando…" : "Reenviar código"}
+            </button>
+          </div>
+        </motion.section>
+      )}
 
       {/* ── FORMULÁRIO DE CADASTRO ── MC12.3: visível SEM login prévio. */}
-      {tipoUsuario !== "corporativo" && (
+      {!otpAberto && tipoUsuario !== "corporativo" && (
         <motion.section
           id="form-corporativo"
           initial={{ opacity: 0, y: 16 }}
