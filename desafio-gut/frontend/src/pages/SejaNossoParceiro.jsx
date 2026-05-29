@@ -150,6 +150,13 @@ export default function SejaNossoParceiro() {
   // loginWithCode (Enter + clique) falha porque o código já foi consumido.
   const otpBusyRef = useRef(false);
 
+  // MC15.3 — abas "Novo Cadastro" / "Já Tenho Cadastro" + estado do login de lojista.
+  const [aba, setAba] = useState("novo"); // MC15.3 — "novo" | "existente"
+  const [cnpjLogin, setCnpjLogin] = useState("");
+  const [empresaLogin, setEmpresaLogin] = useState("");
+  const [erroLogin, setErroLogin] = useState(null);
+  const [enviandoLogin, setEnviandoLogin] = useState(false);
+
   // MC14.10.1 BUGFIX — após login Privy disparado por CNPJ já existente,
   // verifica se o address bate com o endereco do cadastro e redireciona.
   useEffect(() => {
@@ -277,6 +284,35 @@ export default function SejaNossoParceiro() {
       setErro(err?.message || "Erro ao cadastrar. Tente novamente.");
     } finally {
       setEnviando(false);
+    }
+  };
+
+  // MC15.3 — login de lojista já cadastrado: verifica CNPJ + Nome da Empresa,
+  // guarda o email no sessionStorage e reutiliza o fluxo OTP existente (enviarOtp).
+  const handleLoginExistente = async (e) => {
+    e.preventDefault();
+    setErroLogin(null);
+    if (!validarCNPJ(cnpjLogin)) { setErroLogin("CNPJ inválido. Verifique os dígitos."); return; }
+    if (empresaLogin.trim().length < 3) { setErroLogin("Informe o nome da empresa (mín. 3 caracteres)."); return; }
+    setEnviandoLogin(true);
+    try {
+      const cnpjNums = cnpjLogin.replace(/\D/g, "");
+      const res = await fetch(`/.netlify/functions/cotas?acao=verificar-login&cnpj=${cnpjNums}&empresa=${encodeURIComponent(empresaLogin.trim())}`);
+      if (!res.ok) {
+        setErroLogin("CNPJ ou Nome da Empresa não encontrados. Verifique os dados.");
+        return;
+      }
+      const data = await res.json();
+      if (!data?.email) {
+        setErroLogin("Cadastro encontrado, mas sem email associado. Contacte a coordenação.");
+        return;
+      }
+      try { sessionStorage.setItem("gut_corp_recem_cadastrado", data.email); } catch {}
+      await enviarOtp(data.email); // REUTILIZA o fluxo OTP — abre o card de código
+    } catch {
+      setErroLogin("Erro ao verificar. Tente novamente.");
+    } finally {
+      setEnviandoLogin(false);
     }
   };
 
@@ -528,8 +564,56 @@ export default function SejaNossoParceiro() {
         </motion.section>
       )}
 
-      {/* ── FORMULÁRIO DE CADASTRO ── MC12.3: visível SEM login prévio. */}
+      {/* ── MC15.3 — ABAS: Novo Cadastro / Já Tenho Cadastro ── */}
       {!otpAberto && tipoUsuario !== "corporativo" && (
+        <div
+          role="tablist"
+          aria-label="Modo de acesso corporativo"
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            maxWidth: "640px",
+            margin: "0 auto",
+            marginBottom: "1rem",
+          }}
+        >
+          {[
+            { id: "novo", rotulo: "Novo Cadastro" },
+            { id: "existente", rotulo: "Já Tenho Cadastro" },
+          ].map((t) => {
+            const ativo = aba === t.id;
+            return (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={ativo}
+                onClick={() => setAba(t.id)}
+                style={{
+                  flex: 1,
+                  padding: "0.7rem 1rem",
+                  background: ativo ? COR.primary : "transparent",
+                  border: ativo
+                    ? `1px solid ${COR.primary}`
+                    : `1px solid rgba(245,166,35,0.3)`,
+                  borderRadius: "10px",
+                  color: ativo ? "#0a0f1a" : COR.muted,
+                  fontFamily: "'Orbitron', sans-serif",
+                  fontWeight: 800,
+                  fontSize: "0.82rem",
+                  letterSpacing: "0.02em",
+                  cursor: "pointer",
+                  outlineOffset: "2px",
+                }}
+              >
+                {t.rotulo}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── FORMULÁRIO DE CADASTRO ── MC12.3: visível SEM login prévio. */}
+      {!otpAberto && tipoUsuario !== "corporativo" && aba === "novo" && (
         <motion.section
           id="form-corporativo"
           initial={{ opacity: 0, y: 16 }}
@@ -669,6 +753,89 @@ export default function SejaNossoParceiro() {
               }}
             >
               {enviando ? "⏳ Enviando cadastro…" : "⚡ Enviar cadastro corporativo"}
+            </motion.button>
+          </form>
+        </motion.section>
+      )}
+
+      {/* ── MC15.3 — JÁ TENHO CADASTRO: login de lojista via CNPJ + Nome da Empresa ── */}
+      {!otpAberto && tipoUsuario !== "corporativo" && aba === "existente" && (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          style={{ ...card, marginBottom: isMobile ? "2rem" : "3rem" }}
+          aria-label="Login de Parceiro"
+        >
+          <h2 style={{
+            margin: "0 0 0.25rem", color: COR.primary,
+            fontSize: isMobile ? "1.05rem" : "1.25rem", fontWeight: 900,
+          }}>
+            🔑 Já Tenho Cadastro
+          </h2>
+          <p style={{ margin: "0 0 1.5rem", color: COR.muted, fontSize: "0.85rem" }}>
+            Acesse o seu Painel Lojista com CNPJ e Nome da Empresa.
+          </p>
+          <form onSubmit={handleLoginExistente} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div>
+              <label style={labelStyle}>CNPJ *</label>
+              <input
+                type="text"
+                placeholder="00.000.000/0000-00"
+                value={cnpjLogin}
+                onChange={e => setCnpjLogin(mascaraCNPJ(e.target.value))}
+                maxLength={18}
+                required
+                style={{
+                  ...inputStyle,
+                  borderColor: cnpjLogin && !validarCNPJ(cnpjLogin)
+                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
+                }}
+              />
+              {cnpjLogin && !validarCNPJ(cnpjLogin) && (
+                <span style={{ color: "#ff3d71", fontSize: "0.75rem" }}>CNPJ inválido</span>
+              )}
+            </div>
+            <div>
+              <label style={labelStyle}>Nome da Empresa *</label>
+              <input
+                type="text"
+                placeholder="Razão social ou nome fantasia"
+                value={empresaLogin}
+                onChange={e => setEmpresaLogin(e.target.value.slice(0, 100))}
+                required
+                style={inputStyle}
+              />
+            </div>
+            {erroLogin && (
+              <div style={{
+                padding: "0.7rem 1rem", background: "rgba(255,61,113,0.12)",
+                border: "1px solid rgba(255,61,113,0.3)", borderRadius: "8px",
+                color: "#ff3d71", fontSize: "0.85rem",
+              }}>
+                ⚠️ {erroLogin}
+              </div>
+            )}
+            <motion.button
+              type="submit"
+              disabled={enviandoLogin}
+              whileHover={enviandoLogin ? {} : { scale: 1.02 }}
+              whileTap={enviandoLogin ? {} : { scale: 0.98 }}
+              style={{
+                padding: "0.85rem 1.5rem",
+                background: enviandoLogin
+                  ? "rgba(245,166,35,0.3)"
+                  : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
+                border: "none", borderRadius: "10px",
+                color: enviandoLogin ? COR.muted : "#0a0f1a",
+                fontFamily: "'Orbitron', sans-serif",
+                fontWeight: 800, fontSize: "0.9rem",
+                cursor: enviandoLogin ? "wait" : "pointer",
+                opacity: enviandoLogin ? 0.7 : 1,
+                marginTop: "0.5rem",
+              }}
+            >
+              {enviandoLogin ? "⏳ Verificando…" : "Entrar no Meu Painel"}
             </motion.button>
           </form>
         </motion.section>

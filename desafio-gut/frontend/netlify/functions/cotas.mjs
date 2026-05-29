@@ -179,11 +179,55 @@ function validarCNPJ(cnpj) {
   return calc(arr, 12) === arr[12] && calc(arr, 13) === arr[13];
 }
 
+// MC15.3 — Normaliza nome de empresa para comparação insensível a acentos/maiúsculas/espaços.
+function normalizarEmpresa(v) {
+  return String(v || "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "") // MC15.3 — remove acentos
+    .toLowerCase().trim().replace(/\s+/g, " ");
+}
+
 async function handleGet(req) {
   const url       = new URL(req.url);
   const clienteId = url.searchParams.get("cliente_id");
   const categoria = url.searchParams.get("categoria");
   const cnpjParam = url.searchParams.get("cnpj"); // MC12.3 — anti-duplicidade
+  const acao      = url.searchParams.get("acao");  // MC15.3 — roteamento por ação
+
+  // MC15.3 — autenticação de lojista já cadastrado por CNPJ + Nome da Empresa.
+  if (acao === "verificar-login") {
+    // MC15.3 — rate limit primeiro (10 req/min, padrão MC1).
+    const rl = await aplicarRateLimit(req, "cotas-login-cnpj", 10);
+    if (rl) return rl;
+
+    // MC15.3 — lê e normaliza CNPJ (apenas dígitos).
+    const cnpjRaw = url.searchParams.get("cnpj");
+    const empresa = url.searchParams.get("empresa");
+    const cnpjNums = String(cnpjRaw || "").replace(/\D/g, "");
+
+    // MC15.3 — valida CNPJ.
+    if (!validarCNPJ(cnpjNums)) return jsonError(400, "cnpj_invalido", "CNPJ inválido");
+
+    // MC15.3 — valida Nome da Empresa (mínimo 3 caracteres).
+    const empresaTrim = String(empresa || "").trim();
+    if (empresaTrim.length < 3) return jsonError(400, "empresa_invalida", "Nome da Empresa inválido");
+
+    // MC15.3 — abre índice CNPJ.
+    const idx = abrirStore(BLOB_COTAS_CNPJ);
+    if (!idx) return jsonError(502, "store_indisponivel", "Netlify Blobs indisponível");
+
+    // MC15.3 — busca registro pelo CNPJ.
+    const reg = await idx.get(cnpjNums, { type: "json" });
+
+    // MC15.3 — compara nomes normalizados (anti-enumeração: mensagem genérica).
+    if (!reg || normalizarEmpresa(reg.empresa) !== normalizarEmpresa(empresaTrim)) {
+      console.warn("[cotas] verificar-login falhou", { cnpj: cnpjNums.slice(0, 4) + "…", match: false });
+      return jsonError(404, "login_nao_confere", "CNPJ ou Nome da Empresa não encontrados. Verifique os dados.");
+    }
+
+    // MC15.3 — match ok: retorna email para envio de OTP client-side (email NUNCA em log).
+    console.info("[cotas] verificar-login ok", { cnpj: cnpjNums.slice(0, 4) + "…", match: true });
+    return jsonResponse({ ok: true, email: reg.email || null, endereco: reg.endereco || null });
+  }
 
   // MC12.3 — verifica se CNPJ já está cadastrado. Retorna 200 com índice ou 404.
   if (cnpjParam) {
