@@ -247,6 +247,21 @@ export function AppProvider({ children }) {
           const respEmail = await fetch(`/.netlify/functions/cotas?email=${encodeURIComponent(emailLogin)}`);
           if (respEmail.ok) data = await respEmail.json();
         }
+        // MC15.3 — fallback final: email do cadastro recém-feito em
+        // SejaNossoParceiro, guardado no sessionStorage antes do login. Cobre
+        // o caso de o email do cadastro diferir da identidade Privy do login.
+        if (!data) {
+          let emailCadastro = null;
+          try { emailCadastro = sessionStorage.getItem("gut_corp_recem_cadastrado"); } catch {}
+          if (emailCadastro && emailCadastro !== emailLogin) {
+            const respCad = await fetch(`/.netlify/functions/cotas?email=${encodeURIComponent(emailCadastro)}`);
+            if (respCad.ok) data = await respCad.json();
+          }
+        }
+        // Consome a flag de cadastro recente assim que o perfil é reconhecido.
+        if (data?.tipo === "corporativo") {
+          try { sessionStorage.removeItem("gut_corp_recem_cadastrado"); } catch {}
+        }
         if (!cancel) {
           setCotaCorporativa(data || null);
           setTipoCarregando(false);

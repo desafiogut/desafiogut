@@ -194,9 +194,12 @@ export default function SejaNossoParceiro() {
         }
         // MC17 — CNPJ já cadastrado: usar email do blob, NUNCA abrir Privy.
         // Mostra sucesso com os dados já registados, sem pedir novo email.
+        const emailJaCad = emailCadastrado || email.trim().toLowerCase();
+        // MC15.3 — guarda o email para o AppContext resolver o perfil no login.
+        try { sessionStorage.setItem("gut_corp_recem_cadastrado", emailJaCad); } catch {}
         setSucesso({
           empresa: empresaCadastrada || empresa.trim(),
-          email: emailCadastrado || email.trim().toLowerCase(),
+          email: emailJaCad,
           cnpj: cnpjNums,
           jaCadastrado: true,
         });
@@ -236,6 +239,9 @@ export default function SejaNossoParceiro() {
       // Atualiza estado local quando AppContext está disponível (logado).
       // Cadastros anônimos não atualizam tipoUsuario — login posterior faz isso.
       if (isConnected) atualizarTipoCorporativo(registro);
+      // MC15.3 — guarda o email do cadastro para o AppContext resolver o perfil
+      // corporativo no login seguinte, mesmo que a identidade Privy use outro email.
+      try { sessionStorage.setItem("gut_corp_recem_cadastrado", registro.email); } catch {}
       setSucesso({
         empresa: registro.empresa,
         email: registro.email,
@@ -416,7 +422,7 @@ export default function SejaNossoParceiro() {
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate("/corp", { replace: true })}
+              onClick={() => abrirModal()}
               style={{
                 display: "inline-block",
                 padding: "0.7rem 1.5rem",
@@ -428,7 +434,7 @@ export default function SejaNossoParceiro() {
                 marginRight: "0.75rem",
               }}
             >
-              🔐 Acessar Painel do Lojista
+              🔐 Entrar e acessar o Painel do Lojista
             </motion.button>
           ) : (
             <Link
