@@ -62,22 +62,38 @@ const DEFAULT_LLM_MODEL  = "deepseek-chat";
 // função, que é não-confiável em Lambda). origem="guto" na auditoria (D7).
 const RL_GUTO_ADMIN_RPM = 5; // comandos admin do GUTO (R6)
 
-// Nota (desvio mínimo do plano): o plano especifica /criar.*edi[çc][ãa]o.../,
-// mas o próprio exemplo de aceitação do ITEM 3 usa "cria uma edição" (sem o
-// "r"). Ampliei o radical para cri[ae]r? para cobrir cria/criar/crie/criem
-// sem regredir nenhum caso do plano. Igual para encerr-/fech-/list-.
+// MC15.4.3 — Padrões operam sobre texto SEM acentos + minúsculas (ver
+// detectarIntent, que normaliza ANTES de testar). Cobrem variações naturais:
+//   criar:    cria/criar/crie/criem, abre/abra/abrir, "nova edição"
+//   listar:   lista/listar/liste, mostra/mostrar, quais
+//   encerrar: encerra/encerrar, fecha/fechar, finaliza/finalizar
+// "edição"/"edições" → "edicao"/"edicoes" após desacentuar. Encerrar também
+// casa quando vem só o id (ex.: "encerra RELAMP-2", sem a palavra "edição").
 const INTENT_PATTERNS = {
-  criar_edicao:    /\bcri[ae]r?\b.*edi[çc][ãa]o|nova edi[çc][ãa]o/i,
-  listar_edicoes:  /\blist[ae]r?\b.*edi[çc][õo]es|quais.*edi[çc][õo]es/i,
-  encerrar_edicao: /\b(encerr[ae]r?|fech[ae]r?)\b.*edi[çc][ãa]o/i,
+  criar_edicao:    /\b(cri[ae]r?|abr[ae]|abrir)\b.*\bedic(ao|oes)\b|nova edic(ao|oes)/,
+  listar_edicoes:  /\b(list[ae]r?|mostr[ae]r?|quais)\b.*\bedic(ao|oes)\b/,
+  encerrar_edicao: /\b(encerr[ae]r?|fech[ae]r?|finaliz[ae]r?)\b.*\b(edic(ao|oes)|(?:prog|relamp)-\d)/,
 };
 
-/** Detecta a intenção da frase. Retorna o nome do intent ou null (→ RAG). */
+/**
+ * Detecta a intenção da frase. Retorna o nome do intent ou null (→ RAG).
+ *
+ * MC15.4.3 — BUG corrigido: input Unicode NFD-decomposto ("edição" como
+ * e,d,i,c,U+0327,a,U+0303,o) NÃO casava edi[çc][ãa]o e caía no RAG genérico.
+ * Agora removemos os diacríticos combinantes (NFD → strip U+0300–U+036F) e
+ * passamos a minúsculas ANTES de testar, então NFC e NFD casam igual. A
+ * extração de parâmetros (extrairProduto/Tipo/Duracao/EdicaoId) continua a
+ * usar o texto ORIGINAL — só a DETECÇÃO normaliza.
+ */
 function detectarIntent(texto) {
+  const t = String(texto || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // remove acentos combinantes (NFD)
+    .toLowerCase();
   // ordem importa: encerrar/listar antes de criar para evitar falso-positivo.
-  if (INTENT_PATTERNS.encerrar_edicao.test(texto)) return "encerrar_edicao";
-  if (INTENT_PATTERNS.listar_edicoes.test(texto))  return "listar_edicoes";
-  if (INTENT_PATTERNS.criar_edicao.test(texto))    return "criar_edicao";
+  if (INTENT_PATTERNS.encerrar_edicao.test(t)) return "encerrar_edicao";
+  if (INTENT_PATTERNS.listar_edicoes.test(t))  return "listar_edicoes";
+  if (INTENT_PATTERNS.criar_edicao.test(t))    return "criar_edicao";
   return null;
 }
 
