@@ -3190,3 +3190,30 @@ Antes de qualquer alteração de código, operador vai testar em janela anônima
 
 **Arquivos untracked NÃO incluídos no commit MC11.15 (fora do escopo):**
 `$null`, `DESAFIOGUT-MASTER.md`, `ESPECIFICACAO-TECNICA-DEFINITIVA.md`, `desafio-gut/frontend/.codex/`, `desafio-gut/frontend/.opencode/`
+
+---
+
+## MC15.4.2 — GUTO controlador de edições: diagnóstico em produção (2026-05-30)
+
+**Contexto:** PR feat/mc15.4 mergeado em main + deploy Netlify. Objetivo: validar GUTO criando/listando/encerrando edições.
+
+**Smoke tests backend (prod, sem login) — PASSARAM:**
+- GET /edicoes → 200 (R-1) — deploy confirmado.
+- POST /chatbot "lista as edicoes" → 200, intent=listar_edicoes, modoResposta=recusa-nao-admin (router vivo + gating ok).
+- POST /chatbot "Como funciona o leilao?" → 200, RAG semantica (anti-regressao ok).
+
+**CAUSA RAIZ #1 (bloqueio principal):** conta de teste NAO e admin.
+GET /admin-list → admins:["0xda3a83a24b25aa71e1a9b5a74503ffa93487e84e"] (=coordenacao).
+Login feito como desafiogut@gmail.com → 0x6ac980...674d (tipo corporativo/Lojista) — fora da admin-list.
+=> GUTO recusar e CORRETO. Para validar happy-path: logar como 0xda3a83...e84e OU adicionar 0x6ac980...674d a admin-list.
+
+**CAUSA RAIZ #2 (lacuna real):** ChatbotWidget.jsx:117 nao envia header Authorization.
+**CAUSA RAIZ #3 (descompasso design):** autenticarAdmin exige admin-access JWT (so emitido pelo painel /admin);
+login normal Privy da user-session token — recusado pelo gate. Mesmo o admin real, logado normal, nao passaria.
+
+**Correcao proposta (NAO aplicada — requer decisao):**
+1) ChatbotWidget envia Authorization: Bearer <user-session> (AppContext.obterAuthToken).
+2) Gate do intent-router do chatbot aceita user-session JWT com endereco in admin-list (endpoint /edicoes POST continua estrito).
+
+**Iteracoes de patch automatico: 0** — causa e config/decisao, nao regressao. Nenhum codigo alterado nesta sessao.
+Relatorio completo: Desktop/MC15.4.2-relatorio.md
