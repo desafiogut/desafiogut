@@ -15,6 +15,7 @@ import {
   checkGeoAnomaly,
 } from "../lib/sentry-alerts.js";
 import { getVisitorId, getCachedVisitorId } from "../lib/fingerprint.js";
+import { useEdicoes } from "../hooks/useEdicoes.js";
 import {
   trackPageview,
   trackClickComprar,
@@ -87,9 +88,24 @@ export function useAppContext() {
 }
 
 // ─── Provider ────────────────────────────────────────────────────────────────
+// MC15.4 — deriva timeLeft (segundos) de uma edição a partir do termino_em
+// ISO-8601 server-authoritative (D2/D4/R4). Cálculo ABSOLUTO, igual ao padrão
+// do timer R-1: nunca um contador mutável → imune a F5/login.
+export function timeLeftEdicaoSegundos(edicao) {
+  if (!edicao || !edicao.termino_em) return 0;
+  const fim = Date.parse(edicao.termino_em);
+  if (Number.isNaN(fim)) return 0;
+  return Math.max(0, Math.floor((fim - Date.now()) / 1000));
+}
+
 export function AppProvider({ children }) {
   // Tipo de leilão (Art. 8)
   const [tipoLeilao, setTipoLeilao] = useState("flash");
+
+  // MC15.4 ITEM 5/6 — múltiplas edições (mapa keyed por id). Sempre tem ao
+  // menos R-1 (real ou fallback sintetizado). Aditivo: o fluxo R-1 abaixo
+  // (prazoFlash/prazoProgramado/tempoRestante) permanece intacto.
+  const { edicoes, edicoesStatus } = useEdicoes();
 
   // lances on-chain (programado). lancesFlash off-chain (polling do blob).
   const [lances,       setLances]       = useState([]);
@@ -558,6 +574,28 @@ export function AppProvider({ children }) {
   const fimDisparadoRef = useRef(false);
   const timeoutAnimRef = useRef(null);
 
+  // MC15.4 ITEM 6/13 — refs de "fim disparado" POR edição. Substitui o uso
+  // global do fimDisparadoRef nas páginas multi-edição: a animação de fim só
+  // dispara para a edição que terminou, sem vazar estado entre edições.
+  // A edição R-1 / tipoLeilao corrente continua a usar fimDisparadoRef acima.
+  const fimDisparadoMapRef = useRef(new Map());
+  const getFimDisparadoRef = useCallback((edicaoId) => {
+    const mapa = fimDisparadoMapRef.current;
+    if (!mapa.has(edicaoId)) mapa.set(edicaoId, { current: false });
+    return mapa.get(edicaoId);
+  }, []);
+
+  // Tick global (1s) para re-render das páginas que derivam timeLeft por
+  // edição (Dashboard/Vitrine/MercadoLances). Cálculo permanece absoluto
+  // (termino_em - now); o tick só força o re-render, nunca decrementa.
+  const [edicoesTick, setEdicoesTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setEdicoesTick((n) => (n + 1) % 1_000_000), 1000);
+    const vis = () => { if (document.visibilityState === "visible") setEdicoesTick((n) => (n + 1) % 1_000_000); };
+    document.addEventListener("visibilitychange", vis);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", vis); };
+  }, []);
+
   // Timer regressivo + disparo do efeito relâmpago.
   // Cálculo é ABSOLUTO: `prazo - now`. setInterval só re-renderiza (250ms),
   // nunca decrementa segundos. Resultado: imune a refresh e troca de aba.
@@ -694,6 +732,11 @@ export function AppProvider({ children }) {
   const value = {
     EDICAO_ATIVA, DURACAO,
     tipoLeilao, setTipoLeilao,
+    // MC15.4 — múltiplas edições (aditivo). edicoes nunca é vazio (R-1 garantida).
+    edicoes, edicoesStatus,
+    getFimDisparadoRef,
+    timeLeftEdicaoSegundos,
+    edicoesTick,
     lances: lancesExibidos,
     prazoTimestamp, setPrazoTimestamp,
     prazoFlash, prazoProgramado,
