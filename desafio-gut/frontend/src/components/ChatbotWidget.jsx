@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "./GutoAvatar.jsx";
+import { useAppContext } from "../context/AppContext.jsx";
 
 const LS_KEY      = "gut_chat_history";
 const LS_MAX_MSGS = 40;            // histórico bounded — evita estourar localStorage
@@ -64,6 +65,10 @@ function salvarHistorico(hist) {
 
 export default function ChatbotWidget() {
   const isMobile = useIsMobile();
+  // MC15.4.2 — token de user-session p/ o GUTO autenticar comandos de admin
+  // (criar/listar/encerrar edição). Para visitantes deslogados é null → o
+  // backend recusa intents de admin (comportamento correto).
+  const { authToken } = useAppContext();
   const [aberto, setAberto] = useState(false);
   const [mensagens, setMensagens] = useState(() => carregarHistorico());
   const [pergunta, setPergunta] = useState("");
@@ -116,7 +121,10 @@ export default function ChatbotWidget() {
     try {
       const resp = await fetch("/.netlify/functions/chatbot", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
         body: JSON.stringify({ pergunta: texto }),
       });
       if (resp.status === 503) {
@@ -163,7 +171,7 @@ export default function ChatbotWidget() {
     } finally {
       setCarregando(false);
     }
-  }, [pergunta, carregando, resetToIdle]);
+  }, [pergunta, carregando, resetToIdle, authToken]);
 
   const limparHistorico = useCallback(() => {
     setMensagens([]);

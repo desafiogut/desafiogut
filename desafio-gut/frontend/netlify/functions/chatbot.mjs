@@ -20,6 +20,8 @@ import { jsonResponse, jsonError, parseJsonBody, ValidationError } from "./_lib/
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { gerarEmbedding, buscarChunksRelevantes, buscarChunksTextual, montarContexto } from "./_lib/rag.mjs";
 import { autenticarAdmin } from "./_lib/admin-auth.mjs";
+import { verificarUserSession } from "./_lib/jwt.mjs";
+import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import {
   listarEdicoes, criarEdicao, encerrarEdicao,
   normalizarTipo, sanitizarProduto, EDICAO_ID_RE,
@@ -114,6 +116,42 @@ function extrairEdicaoId(texto) {
 }
 
 /**
+ * Confirma admin para o intent-router do GUTO (MC15.4.2).
+ *
+ * Diferente do endpoint /edicoes (estrito: admin-access JWT), o GUTO é usado
+ * por utilizadores logados normalmente — que possuem um JWT de *user-session*
+ * (de /auth-user), não um admin-access JWT (só emitido pelo painel /admin).
+ * Por isso aceitamos DOIS caminhos:
+ *   1) autenticarAdmin → admin-access JWT ou x-admin-token legado (preferido).
+ *   2) user-session JWT válido cujo endereço ∈ admin-list (getAdminAddresses).
+ * Sem token, ou endereço fora da admin-list → { ok:false } (recusa). Segurança
+ * preservada: o user-session é assinado (JWT_SECRET) e o gate de admin-list é o
+ * mesmo do resto do sistema. O endpoint /edicoes POST continua estrito.
+ *
+ * @returns {Promise<{ ok: boolean, endereco?: string|null }>}
+ */
+async function confirmarAdminChat(req) {
+  // 1) Caminho estrito (admin-access JWT / x-admin-token legado).
+  const adm = await autenticarAdmin(req);
+  if (adm.ok) return { ok: true, endereco: adm.endereco || null };
+
+  // 2) Caminho user-session + admin-list (GUTO usado por admin logado normal).
+  const authHeader = req.headers.get("authorization") || "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!bearer) return { ok: false };
+  try {
+    const payload = await verificarUserSession(bearer);
+    const endereco = String(payload?.endereco || "").toLowerCase();
+    if (!endereco) return { ok: false };
+    const admins = await getAdminAddresses();
+    if (admins.includes(endereco)) return { ok: true, endereco };
+  } catch {
+    // token inválido/expirado → trata como não-admin (recusa silenciosa).
+  }
+  return { ok: false };
+}
+
+/**
  * Processa uma intenção admin de edição. Confirma admin via Authorization
  * repassado pelo ChatbotWidget. Não-admin → recusa gentil, cria NADA.
  * Mantém o shape de resposta backward-compatible ({ resposta, fontes, ... }).
@@ -134,8 +172,9 @@ async function tratarIntentEdicoes(req, pergunta) {
     });
   }
 
-  // Confirma admin (mesmo módulo do endpoint: autenticarAdmin).
-  const auth = await autenticarAdmin(req);
+  // Confirma admin: admin-access JWT/x-admin-token OU user-session com
+  // endereço ∈ admin-list (GUTO é usado por admin logado normalmente — MC15.4.2).
+  const auth = await confirmarAdminChat(req);
   const isAdmin = auth.ok;
   const adminEndereco = isAdmin ? (auth.endereco || null) : null;
 
