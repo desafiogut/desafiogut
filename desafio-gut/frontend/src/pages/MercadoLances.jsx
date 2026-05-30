@@ -218,10 +218,24 @@ export default function MercadoLances() {
     showCountdown,
     abrirModal, desconectar,
     handleLanceSucesso, handleNovaRodada,
+    edicoes, edicoesTick, timeLeftEdicaoSegundos,
   } = useAppContext();
 
+  // MC15.4 ITEM 9 — o dial usa termino_em da edição correspondente ao tipo
+  // selecionado (relâmpago: 1ª edição "relampago" aberta; programado: 1ª
+  // "programado" aberta). DERIVADO de termino_em → imune a F5/login. Sem
+  // edição correspondente (fallback R-1 sob vite puro) cai em tempoRestante.
+  void edicoesTick; // lido só para re-render a cada segundo
+  const tipoEdicaoSelecionado = tipoLeilao === "flash" ? "relampago" : "programado";
+  const edicaoAtivaSel = Object.values(edicoes || {}).find(
+    (e) => e && e.status === "aberto" && e.tipo === tipoEdicaoSelecionado
+  ) || null;
+  const tempoRestanteEdicao = edicaoAtivaSel
+    ? timeLeftEdicaoSegundos(edicaoAtivaSel)
+    : tempoRestante;
+
   const timerDisplay = (() => {
-    const t = Math.max(0, tempoRestante);
+    const t = Math.max(0, tempoRestanteEdicao);
     const d = Math.floor(t / 86400);
     const h = Math.floor((t % 86400) / 3600);
     const m = Math.floor((t % 3600) / 60);
@@ -256,14 +270,14 @@ export default function MercadoLances() {
   // Onda 5 FASE 0: cores proporcionais à duração (escala para flash 30min e
   // programado 24h). Urgência só dispara quando < 1% restante (mantém efeito
   // visual no fim de cada modalidade sem disparar em programado o dia inteiro).
-  const ratio = duracao > 0 ? tempoRestante / duracao : 0;
+  const ratio = duracao > 0 ? tempoRestanteEdicao / duracao : 0;
   const timerCor = encerrado
     ? COR.danger
     : ratio < 0.10 ? COR.danger
     : ratio < 0.30 ? COR.warning
     : tipoLeilao === "flash" ? COR.gold : COR.primary;
-  const timerPctDeg = encerrado ? 0 : (tempoRestante / duracao) * 360;
-  const timerUrgente = !encerrado && ratio < 0.01 && tempoRestante > 0;
+  const timerPctDeg = encerrado ? 0 : Math.min(360, (tempoRestanteEdicao / duracao) * 360);
+  const timerUrgente = !encerrado && ratio < 0.01 && tempoRestanteEdicao > 0;
   const timerSize   = isMobile ? 110 : 90;
 
   const pad      = isMobile ? "1rem" : "2rem";
@@ -369,7 +383,7 @@ export default function MercadoLances() {
             <div style={{ width: `${timerSize}px`, height: "3px", borderRadius: "2px", background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
               <div style={{
                 height: "100%", borderRadius: "2px",
-                width: `${encerrado ? 0 : (tempoRestante / duracao) * 100}%`,
+                width: `${encerrado ? 0 : Math.min(100, (tempoRestanteEdicao / duracao) * 100)}%`,
                 background: `linear-gradient(90deg, ${timerCor}88, ${timerCor})`,
                 transition: "width 1s linear, background 0.4s",
                 boxShadow: `0 0 5px ${timerCor}`,

@@ -453,7 +453,11 @@ export default function Vitrine() {
   const { slot: slotId } = useParams();
   const tz = getTimezone();
   // MC12 — vitrine dual: tipoUsuario + addressCorporativo para banners reais.
-  const { prazoFlash, prazoProgramado, tipoUsuario, cotaCorporativa, addressCorporativo } = useAppContext();
+  // MC15.4 — edicoes (mapa multi-edição) para cronómetro por slot.
+  const {
+    prazoFlash, prazoProgramado, tipoUsuario, cotaCorporativa, addressCorporativo,
+    edicoes, edicoesTick, timeLeftEdicaoSegundos,
+  } = useAppContext();
 
   // MC12 — banners reais para usuário corporativo (app + site).
   const [bannerData, setBannerData] = useState({ app: null, site: null });
@@ -542,13 +546,32 @@ export default function Vitrine() {
     return [s.id, { atribuidas, total: s.cotasDisponiveis }];
   }));
 
-  // Timer por slot — Diamante/Ouro consomem prazoProgramado; Prata/Bronze
-  // consomem prazoFlash. Slots inativos não exibem timer (badge "Agendado").
+  // MC15.4 ITEM 8 — Timer por slot ligado às edições.
+  // Diamante/Ouro → edição "programado"; Prata/Bronze → edição "relampago".
+  // Procura a 1ª edição ABERTA do tipo correspondente em `edicoes`; o tempo é
+  // DERIVADO de termino_em (server-authoritative, imune a F5/login). Sem edição
+  // aberta correspondente → sem timer → badge "Agendado" via statusDoSlot.
+  // `edicoesTick` é lido só para re-render a cada segundo (cálculo é absoluto).
+  void edicoesTick;
   const agora = Math.floor(Date.now() / 1000);
+  const edicoesAbertas = Object.values(edicoes || {}).filter(
+    (e) => e && e.status === "aberto"
+  );
+  function primeiraEdicaoAberta(tipo) {
+    return edicoesAbertas.find((e) => e.tipo === tipo) || null;
+  }
   const slotTimerMap = Object.fromEntries(SLOTS.map((s) => {
     const ativo = visibilidade.tiers.includes(s.id) && tierAtivoAgora(s.id, tz);
     if (!ativo) return [s.id, { display: null }];
-    const prazo = (s.id === "diamante" || s.id === "ouro") ? prazoProgramado : prazoFlash;
+    const tipoEdicao = (s.id === "diamante" || s.id === "ouro") ? "programado" : "relampago";
+    const edicao = primeiraEdicaoAberta(tipoEdicao);
+    if (edicao) {
+      const restante = timeLeftEdicaoSegundos(edicao);
+      if (restante <= 0) return [s.id, { display: null }];
+      return [s.id, { display: formatarTimer(restante) }];
+    }
+    // Fallback de compat (R-1 sob vite puro): prazos legados em segundos.
+    const prazo = tipoEdicao === "programado" ? prazoProgramado : prazoFlash;
     const restante = Math.max(0, prazo - agora);
     return [s.id, { display: formatarTimer(restante) }];
   }));
