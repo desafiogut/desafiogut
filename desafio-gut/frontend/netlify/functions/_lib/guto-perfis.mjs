@@ -119,6 +119,20 @@ export const respostasPorPerfil = {
     admin: (p) => formatarPulso(p),
   },
 
+  // MC15.6 ITEM 7 — kill switch (admin-only; sem emoji). Inferiores: recusa.
+  panic: {
+    visitante: () => "Esse comando é restrito à administração.",
+    comum: () => "Esse comando é restrito à administração.",
+    corporativo: () => "Esse comando é restrito à coordenação.",
+    admin: (p) => `Sistema PAUSADO (modo pânico). Novos lances serão rejeitados. Em: ${g(p.timestamp)}. Use /unpanic para reativar.`,
+  },
+  unpanic: {
+    visitante: () => "Esse comando é restrito à administração.",
+    comum: () => "Esse comando é restrito à administração.",
+    corporativo: () => "Esse comando é restrito à coordenação.",
+    admin: (p) => `Sistema REATIVADO. Lances voltam a ser aceites. Em: ${g(p.timestamp)}.`,
+  },
+
   listar_edicoes: {
     visitante: () => "Temos edições a decorrer! Cria uma conta para ver os detalhes e participar. 😊",
     comum: (p) => `As edições ativas são: ${g(p.lista)}. Queres saber mais sobre alguma? 🙂`,

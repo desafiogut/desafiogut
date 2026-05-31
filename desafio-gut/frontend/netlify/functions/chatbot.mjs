@@ -30,6 +30,7 @@ import { obterResposta, obterPromptSystem } from "./_lib/guto-perfis.mjs";
 import { lerSessaoWizard, salvarSessaoWizard, limparSessaoWizard } from "./_lib/wizard-session.mjs";
 import { simularVencedorMenorLance, rotuloVencedor, brlCentavos } from "./_lib/simulador.mjs";
 import { obterMetricasPulso } from "./_lib/pulso.mjs";
+import { escreverEstadoSistema, lerEstadoSistema } from "./_lib/system-state.mjs";
 
 const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
@@ -87,6 +88,9 @@ const INTENT_PATTERNS = {
   simular_vencedor: /quem (ganha|ganharia|venceria|vence)|vencedor provisorio|se (o leilao )?terminasse agora|simul[ae]r?( o)? (resultado|vencedor)|apurar( agora)?/,
   // MC15.6 ITEM 6 — relatório de pulso (admin + corporativo).
   pulso_edicao: /\bpulso\b|como esta (a edicao|o leilao|indo)|metric[ao]s|relatorio de (pulso|desempenho)|desempenho da edicao/,
+  // MC15.6 ITEM 7 — kill switch (admin-only). unpanic ANTES de panic na ordem.
+  unpanic: /\/?unpanic\b|retomar( sistema)?|reativar( sistema)?|sair do (modo )?panico|despausar/,
+  panic:   /\/?panic\b|modo panico|parar tudo|congelar (sistema|tudo)|emergencia/,
 };
 
 /**
@@ -109,6 +113,8 @@ function detectarIntent(texto) {
   if (INTENT_PATTERNS.dados_mercado.test(t))   return "dados_mercado";
   if (INTENT_PATTERNS.simular_vencedor.test(t)) return "simular_vencedor";
   if (INTENT_PATTERNS.pulso_edicao.test(t))    return "pulso_edicao";
+  if (INTENT_PATTERNS.unpanic.test(t))         return "unpanic";
+  if (INTENT_PATTERNS.panic.test(t))           return "panic";
   if (INTENT_PATTERNS.encerrar_edicao.test(t)) return "encerrar_edicao";
   if (INTENT_PATTERNS.listar_edicoes.test(t))  return "listar_edicoes";
   if (INTENT_PATTERNS.criar_edicao_wizard.test(t)) return "criar_edicao_wizard";
@@ -489,6 +495,37 @@ async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
       }),
       fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, simulacao: sim,
     });
+  }
+
+  // MC15.6 ITEM 7 — kill switch (ADMIN-ONLY): /panic e /unpanic.
+  if (intent === "panic" || intent === "unpanic") {
+    if (!ehAdmin) {
+      return jsonResponse({
+        resposta: obterResposta(intent, perfil, {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    const rl = await aplicarRateLimit(req, "guto-admin", RL_GUTO_ADMIN_RPM);
+    if (rl) {
+      return jsonResponse({
+        resposta: "Limite de comandos administrativos atingido. Aguarde um minuto e tente novamente.",
+        fontes: [], modoBusca: "intent", modoResposta: "rate-limit", intent, perfil,
+      });
+    }
+    const novoStatus = intent === "panic" ? "paused" : "active";
+    try {
+      const estado = await escreverEstadoSistema(novoStatus, intent === "panic" ? "acionado via GUTO" : null);
+      return jsonResponse({
+        resposta: obterResposta(intent, "admin", { timestamp: estado.timestamp }),
+        fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, systemState: estado,
+      });
+    } catch (err) {
+      console.warn("[chatbot] kill switch falhou:", err?.message);
+      return jsonResponse({
+        resposta: `Não foi possível ${intent === "panic" ? "pausar" : "reativar"} o sistema agora: ${err?.message || "erro"}.`,
+        fontes: [], modoBusca: "intent", modoResposta: "erro", intent, perfil, erro: "system_state_falhou",
+      });
+    }
   }
 
   // MC15.6 ITEM 6 — pulso_edicao (admin + corporativo). 4 métricas vitais.
