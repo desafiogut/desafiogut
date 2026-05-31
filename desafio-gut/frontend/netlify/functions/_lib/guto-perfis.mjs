@@ -74,6 +74,16 @@ export const respostasPorPerfil = {
     admin: (p) => `Edição criada. Id: ${g(p.id)}. Tipo: ${g(p.tipo)}. Produto: ${g(p.produto)}. Termina em: ${g(p.termino)}.`,
   },
 
+  // MC15.6 ITEM 3 — Wizard de criação (admin). Perfis inferiores: recusa adequada.
+  // Para admin, o chatbot compõe o texto de cada passo e passa em params.msg
+  // (mantém o gate por perfil aqui, sem emoji para admin).
+  criar_edicao_wizard: {
+    visitante: () => "Criar edições é exclusivo para administradores. Cria uma conta para participar! 😊",
+    comum: () => "Só a coordenação pode criar edições. Mas podes dar lances nas edições ativas! 🙂",
+    corporativo: () => "A criação de edições é feita pela coordenação. Como lojista, acompanhe as edições no Painel.",
+    admin: (p) => g(p.msg, "Assistente de criação de edição iniciado."),
+  },
+
   listar_edicoes: {
     visitante: () => "Temos edições a decorrer! Cria uma conta para ver os detalhes e participar. 😊",
     comum: (p) => `As edições ativas são: ${g(p.lista)}. Queres saber mais sobre alguma? 🙂`,

@@ -27,6 +27,7 @@ import {
   normalizarTipo, sanitizarProduto, EDICAO_ID_RE,
 } from "./_lib/edicoes-core.mjs";
 import { obterResposta, obterPromptSystem } from "./_lib/guto-perfis.mjs";
+import { lerSessaoWizard, salvarSessaoWizard, limparSessaoWizard } from "./_lib/wizard-session.mjs";
 
 const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
@@ -71,6 +72,9 @@ const RL_GUTO_ADMIN_RPM = 5; // comandos admin do GUTO (R6)
 // "edição"/"edições" → "edicao"/"edicoes" após desacentuar. Encerrar também
 // casa quando vem só o id (ex.: "encerra RELAMP-2", sem a palavra "edição").
 const INTENT_PATTERNS = {
+  // MC15.6 ITEM 3 — wizard (gatilhos EXPLÍCITOS; não colide com o one-shot
+  // criar_edicao). Testado ANTES de criar_edicao em detectarIntent.
+  criar_edicao_wizard: /\bwizard\b|\bsetup\b|assistente|passo a passo|novo leilao|criar.*guiad|edicao guiad/,
   criar_edicao:    /\b(cri[ae]r?|abr[ae]|abrir)\b.*\bedic(ao|oes)\b|nova edic(ao|oes)/,
   listar_edicoes:  /\b(list[ae]r?|mostr[ae]r?|quais)\b.*\bedic(ao|oes)\b/,
   encerrar_edicao: /\b(encerr[ae]r?|fech[ae]r?|finaliz[ae]r?)\b.*\b(edic(ao|oes)|(?:prog|relamp)-\d)/,
@@ -99,6 +103,7 @@ function detectarIntent(texto) {
   if (INTENT_PATTERNS.dados_mercado.test(t))   return "dados_mercado";
   if (INTENT_PATTERNS.encerrar_edicao.test(t)) return "encerrar_edicao";
   if (INTENT_PATTERNS.listar_edicoes.test(t))  return "listar_edicoes";
+  if (INTENT_PATTERNS.criar_edicao_wizard.test(t)) return "criar_edicao_wizard";
   if (INTENT_PATTERNS.criar_edicao.test(t))    return "criar_edicao";
   return null;
 }
@@ -250,6 +255,134 @@ async function lerAuditoria(n = 5) {
   }
 }
 
+// ── MC15.6 ITEM 3 — Wizard de criação de edição (máquina de 3 passos) ────────
+const WIZARD_INCREMENTO_PADRAO_CENTAVOS = 500; // R$ 5,00 (sugestão D4)
+
+/** Parseia um valor monetário em centavos. "R$ 50" → 5000; "5,50" → 550. */
+function parseDinheiroCentavos(texto) {
+  const m = String(texto || "").match(/r?\$?\s*([0-9]{1,9}(?:[.,][0-9]{1,2})?)\s*(?:reais|brl)?/i);
+  if (!m) return null;
+  let raw = m[1];
+  if (raw.includes(",")) raw = raw.replace(/\./g, "").replace(",", "."); // BR: ponto=milhar, vírgula=decimal
+  const num = Number(raw);
+  if (!Number.isFinite(num) || num < 0) return null;
+  return Math.round(num * 100);
+}
+
+function normalizarTexto(texto) {
+  return String(texto || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+function ehCancelar(texto) { return /\b(cancela|cancelar|abortar|sair|desistir)\b/.test(normalizarTexto(texto)); }
+function ehConfirmar(texto) { return /\b(publicar|publica|confirmar|confirma|criar|cria|sim|ok)\b/.test(normalizarTexto(texto)); }
+
+/** Formata centavos como BRL "R$ 5,00". */
+function brl(centavos) {
+  if (!Number.isInteger(centavos)) return "—";
+  return "R$ " + (centavos / 100).toFixed(2).replace(".", ",");
+}
+
+const WIZ_Q1 = "Passo 1/3 — Qual o produto e o valor mínimo (base)? Ex.: iPhone 15, R$ 50.";
+const WIZ_Q2 = "Passo 2/3 — Tipo e duração? Relâmpago ou Programado, e por quanto tempo (ex.: relâmpago, 30 min).";
+function wizQ3() { return `Passo 3/3 — Valor mínimo de incremento? Sugestão: ${brl(WIZARD_INCREMENTO_PADRAO_CENTAVOS)}. Responda com o valor ou 'padrão'.`; }
+
+/** Resposta de um passo do wizard (modoResposta "wizard" + payload p/ UI). */
+function respostaWizard(perfil, msg, wizard) {
+  return jsonResponse({
+    resposta: obterResposta("criar_edicao_wizard", perfil, { msg }),
+    fontes: [], modoBusca: "intent", modoResposta: "wizard",
+    intent: "criar_edicao_wizard", perfil, wizard,
+  });
+}
+
+async function iniciarWizard(perfil, endereco) {
+  await salvarSessaoWizard(endereco, { etapa: 1 });
+  return respostaWizard(perfil, WIZ_Q1, { etapa: 1, passo: "1/3", opcoes: ["Cancelar"] });
+}
+
+/** Continua o wizard com a sessão ativa (admin). Retorna sempre um Response. */
+async function continuarWizard(req, pergunta, perfil, endereco, sessao) {
+  if (ehCancelar(pergunta)) {
+    await limparSessaoWizard(endereco);
+    return respostaWizard(perfil, "Assistente cancelado. Nenhuma edição foi criada.", { etapa: "cancelado", concluido: true });
+  }
+
+  // Passo 1 — produto + valor base.
+  if (sessao.etapa === 1) {
+    const valorBaseCentavos = parseDinheiroCentavos(pergunta);
+    let produto = String(pergunta || "").replace(/r?\$?\s*[0-9]{1,9}(?:[.,][0-9]{1,2})?\s*(?:reais|brl)?/ig, " ");
+    produto = sanitizarProduto(produto.replace(/[,;]+/g, " "));
+    if (!produto || !Number.isInteger(valorBaseCentavos) || valorBaseCentavos < 1) {
+      return respostaWizard(perfil, "Não consegui ler o produto e a base. " + WIZ_Q1, { etapa: 1, passo: "1/3", opcoes: ["Cancelar"] });
+    }
+    await salvarSessaoWizard(endereco, { ...sessao, etapa: 2, produto, valorBaseCentavos });
+    return respostaWizard(perfil, WIZ_Q2, { etapa: 2, passo: "2/3", opcoes: ["Relâmpago", "Programado", "Cancelar"] });
+  }
+
+  // Passo 2 — tipo + duração.
+  if (sessao.etapa === 2) {
+    const tipo = normalizarTipo(pergunta);
+    const duracaoSegundos = extrairDuracaoSegundos(pergunta);
+    if (!tipo || !duracaoSegundos) {
+      return respostaWizard(perfil, "Preciso do tipo e da duração. " + WIZ_Q2, { etapa: 2, passo: "2/3", opcoes: ["Relâmpago", "Programado", "Cancelar"] });
+    }
+    await salvarSessaoWizard(endereco, { ...sessao, etapa: 3, tipo, duracaoSegundos });
+    return respostaWizard(perfil, wizQ3(), { etapa: 3, passo: "3/3", opcoes: ["Padrão (R$ 5)", "Cancelar"] });
+  }
+
+  // Passo 3 — incremento (default R$ 5).
+  if (sessao.etapa === 3) {
+    const t = normalizarTexto(pergunta);
+    let incrementoCentavos = parseDinheiroCentavos(pergunta);
+    if (incrementoCentavos == null && /\b(padrao|default|sugest|sim|ok)\b/.test(t)) {
+      incrementoCentavos = WIZARD_INCREMENTO_PADRAO_CENTAVOS;
+    }
+    if (!Number.isInteger(incrementoCentavos) || incrementoCentavos < 1) {
+      incrementoCentavos = WIZARD_INCREMENTO_PADRAO_CENTAVOS;
+    }
+    const sessaoFinal = { ...sessao, etapa: "confirmacao", incrementoCentavos };
+    await salvarSessaoWizard(endereco, sessaoFinal);
+    const resumo = {
+      produto: sessaoFinal.produto,
+      tipo: sessaoFinal.tipo,
+      duracaoMin: Math.round(sessaoFinal.duracaoSegundos / 60),
+      valorBase: brl(sessaoFinal.valorBaseCentavos),
+      incremento: brl(sessaoFinal.incrementoCentavos),
+    };
+    const msg = `Resumo — Produto: ${resumo.produto}. Tipo: ${resumo.tipo}. Duração: ${resumo.duracaoMin} min. Base: ${resumo.valorBase}. Incremento: ${resumo.incremento}. Confirmar publicação?`;
+    return respostaWizard(perfil, msg, { etapa: "confirmacao", passo: "3/3", resumo, opcoes: ["Publicar Agora", "Cancelar"] });
+  }
+
+  // Confirmação — publicar ou re-perguntar.
+  if (sessao.etapa === "confirmacao") {
+    if (!ehConfirmar(pergunta)) {
+      return respostaWizard(perfil, "Responda 'publicar agora' para criar ou 'cancelar'.", { etapa: "confirmacao", opcoes: ["Publicar Agora", "Cancelar"] });
+    }
+    const rl = await aplicarRateLimit(req, "guto-admin", RL_GUTO_ADMIN_RPM);
+    if (rl) return respostaWizard(perfil, "Limite de comandos administrativos atingido. Aguarde um minuto.", { etapa: "confirmacao", opcoes: ["Publicar Agora", "Cancelar"] });
+    const res = await criarEdicao({
+      tipo: sessao.tipo, produto: sessao.produto, duracaoSegundos: sessao.duracaoSegundos,
+      criadoPor: endereco, origem: "guto",
+      valorBaseCentavos: sessao.valorBaseCentavos, incrementoCentavos: sessao.incrementoCentavos,
+    });
+    await limparSessaoWizard(endereco);
+    if (!res.ok) {
+      return respostaWizard(perfil, `Não foi possível criar a edição: ${res.message}`, { etapa: "erro", concluido: true });
+    }
+    return jsonResponse({
+      resposta: obterResposta("criar_edicao", "admin", {
+        id: res.edicao.id, tipo: res.edicao.tipo, produto: res.edicao.produto, termino: res.edicao.termino_em,
+      }),
+      fontes: [], modoBusca: "intent", modoResposta: "acao",
+      intent: "criar_edicao_wizard", perfil, edicao: res.edicao,
+      wizard: { etapa: "publicado", concluido: true },
+    });
+  }
+
+  // etapa desconhecida/corrompida → limpa e cai no fluxo normal.
+  await limparSessaoWizard(endereco);
+  return null;
+}
+
 /**
  * Processa uma intenção admin de edição. Confirma admin via Authorization
  * repassado pelo ChatbotWidget. Não-admin → recusa gentil, cria NADA.
@@ -259,10 +392,39 @@ async function lerAuditoria(n = 5) {
  *                                   null para cair no RAG (ex.: sem intent).
  */
 async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
+  const ehAdmin = perfil === "admin";
+
+  // MC15.6 ITEM 3 — Wizard: se há sessão ativa para este admin, a mensagem é a
+  // resposta ao passo corrente (intercepta ANTES do roteamento por intent).
+  if (ehAdmin && adminEndereco) {
+    try {
+      const sessao = await lerSessaoWizard(adminEndereco);
+      if (sessao) return await continuarWizard(req, pergunta, perfil, adminEndereco, sessao);
+    } catch (err) {
+      console.warn("[chatbot] wizard ativo falhou (ignora):", err?.message);
+    }
+  }
+
   const intent = detectarIntent(pergunta);
   if (!intent) return null; // sem intenção → RAG normal (anti-regressão)
 
-  const ehAdmin = perfil === "admin";
+  // MC15.6 ITEM 3 — início do wizard (gatilho explícito; admin-only).
+  if (intent === "criar_edicao_wizard") {
+    if (!ehAdmin) {
+      return jsonResponse({
+        resposta: obterResposta("criar_edicao_wizard", perfil, {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    const rl = await aplicarRateLimit(req, "guto-admin", RL_GUTO_ADMIN_RPM);
+    if (rl) {
+      return jsonResponse({
+        resposta: "Limite de comandos administrativos atingido. Aguarde um minuto e tente novamente.",
+        fontes: [], modoBusca: "intent", modoResposta: "rate-limit", intent, perfil,
+      });
+    }
+    return await iniciarWizard(perfil, adminEndereco);
+  }
 
   // MC15.5 — auditoria (admin-only): dados reais do Blob "auditoria".
   if (intent === "auditoria") {
