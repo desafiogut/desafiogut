@@ -47,15 +47,25 @@ const CARD_CORES = {
   notificacao: { titulo: "Notificação",          bg: "rgba(245,166,35,0.12)", borda: "rgba(245,166,35,0.45)", barra: "#f5a623" },
   pulso:       { titulo: "Pulso da Edição",      bg: "rgba(0,200,83,0.12)",   borda: "rgba(0,200,83,0.45)",  barra: "#00c853" },
   panic:       { titulo: "Alerta do Sistema",    bg: "rgba(239,68,68,0.14)",  borda: "rgba(239,68,68,0.5)",  barra: "#ef4444" },
+  // MC15.7 — cards do PARTICIPANTE.
+  lance_unico:          { titulo: "🎯 Lance único!",         bg: "rgba(0,200,83,0.12)",   borda: "rgba(0,200,83,0.45)",  barra: "#00c853" },
+  perdeu_exclusividade: { titulo: "⚠️ Perdeste exclusividade", bg: "rgba(249,115,22,0.12)", borda: "rgba(249,115,22,0.45)", barra: "#f97316" },
+  voce_venceu:          { titulo: "🏆 Ganhaste!",            bg: "rgba(0,200,83,0.14)",   borda: "rgba(0,200,83,0.5)",   barra: "#00c853" },
+  resumo_edicao:        { titulo: "🏁 Edição encerrada",     bg: "rgba(59,130,246,0.12)", borda: "rgba(59,130,246,0.45)", barra: "#60a5fa" },
   default:     { titulo: "GUTO",                 bg: "rgba(0,212,170,0.10)",  borda: "rgba(0,212,170,0.4)",  barra: "#00d4aa" },
 };
 
-// MC15.6 ITEM 11 — mapeia o tipo de evento de /notificacoes para a cor do card.
+// MC15.6 ITEM 11 / MC15.7 — mapeia o tipo de evento de /notificacoes para a cor.
 const NOTIF_CARD_KIND = {
+  // Sistema (admin) — MC15.6.
   sistema_pausado:  "panic",
   tempo_limite_5min: "notificacao",
-  edicao_encerrada:  "notificacao",
+  edicao_encerrada:  "resumo_edicao",
   lance_invalido:    "notificacao",
+  // Participante — MC15.7.
+  lance_unico:          "lance_unico",
+  perdeu_exclusividade: "perdeu_exclusividade",
+  voce_venceu:          "voce_venceu",
 };
 
 const GUTO_STATE_MAP = {
@@ -115,19 +125,26 @@ export default function ChatbotWidget() {
 
   useEffect(() => { salvarHistorico(mensagens); }, [mensagens]);
 
-  // MC15.6 ITEM 11 — injeta notificações NOVAS como cards no chat, sem mexer no
-  // campo de texto (não interrompe a digitação — `pergunta` fica intacto).
+  // MC15.6 ITEM 11 / MC15.7 ITEM 5 — injeta notificações como cards no chat, sem
+  // mexer no campo de texto (não interrompe a digitação — `pergunta` fica intacto).
+  // Dedupe por id (participante) ou tipo:timestamp (eventos de sistema/admin).
+  // Seed: na 1ª leitura suprime o backlog de EVENTOS DE SISTEMA (admin, sem
+  // campo `lida`) e de participante JÁ LIDAS; mas o backlog NÃO-LIDO do
+  // participante (lida===false) é injetado como card (MC15.7: abrir → ver cards).
   useEffect(() => {
     const lista = Array.isArray(notificacoes) ? notificacoes : [];
+    const sigOf = (n) => (n.id ? `id:${n.id}` : `${n.tipo}:${n.timestamp}`);
     if (!notifSeedRef.current) {
-      // primeira leitura: semeia o backlog como visto (não despeja cards).
-      for (const n of lista) notifInjetadasRef.current.add(`${n.tipo}:${n.timestamp}`);
       notifSeedRef.current = true;
-      return;
+      for (const n of lista) {
+        const participanteNaoLida = typeof n.lida === "boolean" && n.lida === false;
+        if (!participanteNaoLida) notifInjetadasRef.current.add(sigOf(n));
+      }
+      // NÃO retorna: deixa cair para injetar o backlog não-lido do participante.
     }
-    const novas = lista.filter((n) => !notifInjetadasRef.current.has(`${n.tipo}:${n.timestamp}`));
+    const novas = lista.filter((n) => !notifInjetadasRef.current.has(sigOf(n)));
     if (novas.length === 0) return;
-    for (const n of novas) notifInjetadasRef.current.add(`${n.tipo}:${n.timestamp}`);
+    for (const n of novas) notifInjetadasRef.current.add(sigOf(n));
     setMensagens((prev) => [
       ...prev,
       ...novas.map((n) => ({
