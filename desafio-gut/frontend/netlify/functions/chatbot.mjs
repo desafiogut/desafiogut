@@ -74,6 +74,9 @@ const INTENT_PATTERNS = {
   criar_edicao:    /\b(cri[ae]r?|abr[ae]|abrir)\b.*\bedic(ao|oes)\b|nova edic(ao|oes)/,
   listar_edicoes:  /\b(list[ae]r?|mostr[ae]r?|quais)\b.*\bedic(ao|oes)\b/,
   encerrar_edicao: /\b(encerr[ae]r?|fech[ae]r?|finaliz[ae]r?)\b.*\b(edic(ao|oes)|(?:prog|relamp)-\d)/,
+  // MC15.5 — dados diferenciados: auditoria (admin) e dados_mercado (corporativo).
+  auditoria:       /\bauditoria\b|log de edic(ao|oes)|estatisticas?/,
+  dados_mercado:   /volume de lances|cotas comerciais|relatorio de mercado|dados de mercado/,
 };
 
 /**
@@ -91,7 +94,9 @@ function detectarIntent(texto) {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "") // remove acentos combinantes (NFD)
     .toLowerCase();
-  // ordem importa: encerrar/listar antes de criar para evitar falso-positivo.
+  // ordem importa: específicos (auditoria/dados) antes; encerrar/listar antes de criar.
+  if (INTENT_PATTERNS.auditoria.test(t))       return "auditoria";
+  if (INTENT_PATTERNS.dados_mercado.test(t))   return "dados_mercado";
   if (INTENT_PATTERNS.encerrar_edicao.test(t)) return "encerrar_edicao";
   if (INTENT_PATTERNS.listar_edicoes.test(t))  return "listar_edicoes";
   if (INTENT_PATTERNS.criar_edicao.test(t))    return "criar_edicao";
@@ -222,6 +227,30 @@ async function detectarPerfil(req) {
 }
 
 /**
+ * MC15.5 — Lê as últimas N entradas do Blob "auditoria" (mais recentes primeiro).
+ * Chaves = `${Date.now()}-${rand}` → ordenação lexicográfica desc ≈ cronológica.
+ * Read-only; fail-soft (falha → { qtd:0, linhas:"" }).
+ */
+async function lerAuditoria(n = 5) {
+  try {
+    const store = getStore({ name: "auditoria", consistency: "strong" });
+    const { blobs } = await store.list();
+    const chaves = blobs.map((b) => b.key).sort().reverse().slice(0, n);
+    const linhas = [];
+    for (const k of chaves) {
+      try {
+        const r = await store.get(k, { type: "json" });
+        if (r) linhas.push(`${r.acao} ${r.edicaoId} (${r.origem})`);
+      } catch { /* ignora entrada corrompida */ }
+    }
+    return { qtd: linhas.length, linhas: linhas.join("; ") };
+  } catch (err) {
+    console.warn("[chatbot] leitura de auditoria falhou:", err?.message);
+    return { qtd: 0, linhas: "" };
+  }
+}
+
+/**
  * Processa uma intenção admin de edição. Confirma admin via Authorization
  * repassado pelo ChatbotWidget. Não-admin → recusa gentil, cria NADA.
  * Mantém o shape de resposta backward-compatible ({ resposta, fontes, ... }).
@@ -234,6 +263,38 @@ async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
   if (!intent) return null; // sem intenção → RAG normal (anti-regressão)
 
   const ehAdmin = perfil === "admin";
+
+  // MC15.5 — auditoria (admin-only): dados reais do Blob "auditoria".
+  if (intent === "auditoria") {
+    if (!ehAdmin) {
+      return jsonResponse({
+        resposta: obterResposta("auditoria", perfil, {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    const { qtd, linhas } = await lerAuditoria(5);
+    return jsonResponse({
+      resposta: obterResposta("auditoria", "admin", { qtd, linhas }),
+      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil,
+    });
+  }
+
+  // MC15.5 — dados_mercado (corporativo + admin): resumo seguro. NÃO promete volume
+  // global (não existe store — V4); usa contagem real de edições ativas + Painel.
+  if (intent === "dados_mercado") {
+    if (perfil !== "corporativo" && perfil !== "admin") {
+      return jsonResponse({
+        resposta: obterResposta("dados_mercado", perfil, {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    const { edicoes } = await listarEdicoes();
+    const edicoesAtivas = Object.values(edicoes).filter((e) => e.status === "aberto").length;
+    return jsonResponse({
+      resposta: obterResposta("dados_mercado", perfil, { edicoesAtivas }),
+      fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
+    });
+  }
 
   // listar_edicoes: a lista de edições é PÚBLICA (GET /edicoes). Logados veem-na
   // com tom do seu perfil; visitante recebe convite (não é dado sensível).
