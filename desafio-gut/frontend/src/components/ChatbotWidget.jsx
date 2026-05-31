@@ -40,11 +40,22 @@ const COR = {
   danger:     "#ef4444",
 };
 
-// MC15.6 ITEM 4/11 — paleta dos cards por tipo (wizard=azul; demais tipos
-// chegam no ITEM 11: notificação=amarelo, pulso=verde, panic=vermelho).
+// MC15.6 ITEM 4/11 — paleta dos cards por tipo:
+// wizard=azul, notificação=amarelo, pulso=verde, panic=vermelho.
 const CARD_CORES = {
-  wizard:  { titulo: "Assistente de Edição", bg: "rgba(59,130,246,0.12)", borda: "rgba(59,130,246,0.45)", barra: "#60a5fa" },
-  default: { titulo: "GUTO", bg: "rgba(0,212,170,0.10)", borda: "rgba(0,212,170,0.4)", barra: "#00d4aa" },
+  wizard:      { titulo: "Assistente de Edição", bg: "rgba(59,130,246,0.12)", borda: "rgba(59,130,246,0.45)", barra: "#60a5fa" },
+  notificacao: { titulo: "Notificação",          bg: "rgba(245,166,35,0.12)", borda: "rgba(245,166,35,0.45)", barra: "#f5a623" },
+  pulso:       { titulo: "Pulso da Edição",      bg: "rgba(0,200,83,0.12)",   borda: "rgba(0,200,83,0.45)",  barra: "#00c853" },
+  panic:       { titulo: "Alerta do Sistema",    bg: "rgba(239,68,68,0.14)",  borda: "rgba(239,68,68,0.5)",  barra: "#ef4444" },
+  default:     { titulo: "GUTO",                 bg: "rgba(0,212,170,0.10)",  borda: "rgba(0,212,170,0.4)",  barra: "#00d4aa" },
+};
+
+// MC15.6 ITEM 11 — mapeia o tipo de evento de /notificacoes para a cor do card.
+const NOTIF_CARD_KIND = {
+  sistema_pausado:  "panic",
+  tempo_limite_5min: "notificacao",
+  edicao_encerrada:  "notificacao",
+  lance_invalido:    "notificacao",
 };
 
 const GUTO_STATE_MAP = {
@@ -76,7 +87,10 @@ export default function ChatbotWidget() {
   // MC15.4.2 — token de user-session p/ o GUTO autenticar comandos de admin
   // (criar/listar/encerrar edição). Para visitantes deslogados é null → o
   // backend recusa intents de admin (comportamento correto).
-  const { authToken, tipoUsuario, address, systemPausado } = useAppContext();
+  const {
+    authToken, tipoUsuario, address, systemPausado,
+    notificacoes, notificacoesNaoLidas, marcarNotificacoesLidas,
+  } = useAppContext();
   const { isAdmin } = useAdmin(address);
   // MC15.5 — badge de perfil no cabeçalho (cosmético; o backend é a fonte de
   // verdade do perfil — R4). visitante: sem badge; comum: ●; lojista/admin: rótulo.
@@ -93,8 +107,43 @@ export default function ChatbotWidget() {
   const [gutoState, setGutoState] = useState("idle");
   const scrollRef = useRef(null);
   const idleTimerRef = useRef(null);
+  // MC15.6 ITEM 11 — assinaturas de notificações já injetadas como card (evita
+  // duplicar a cada poll). seedRef: na 1ª leitura, marca o backlog como visto
+  // SEM despejar cards — só eventos que surgem DURANTE a sessão viram card.
+  const notifInjetadasRef = useRef(new Set());
+  const notifSeedRef = useRef(false);
 
   useEffect(() => { salvarHistorico(mensagens); }, [mensagens]);
+
+  // MC15.6 ITEM 11 — injeta notificações NOVAS como cards no chat, sem mexer no
+  // campo de texto (não interrompe a digitação — `pergunta` fica intacto).
+  useEffect(() => {
+    const lista = Array.isArray(notificacoes) ? notificacoes : [];
+    if (!notifSeedRef.current) {
+      // primeira leitura: semeia o backlog como visto (não despeja cards).
+      for (const n of lista) notifInjetadasRef.current.add(`${n.tipo}:${n.timestamp}`);
+      notifSeedRef.current = true;
+      return;
+    }
+    const novas = lista.filter((n) => !notifInjetadasRef.current.has(`${n.tipo}:${n.timestamp}`));
+    if (novas.length === 0) return;
+    for (const n of novas) notifInjetadasRef.current.add(`${n.tipo}:${n.timestamp}`);
+    setMensagens((prev) => [
+      ...prev,
+      ...novas.map((n) => ({
+        role: "bot",
+        type: "card",
+        cardKind: NOTIF_CARD_KIND[n.tipo] || "notificacao",
+        texto: n.mensagem || "Notificação do sistema.",
+        em: Date.now(),
+      })),
+    ]);
+  }, [notificacoes]);
+
+  // MC15.6 ITEM 11 — ao abrir o chat, zera o badge de não lidas.
+  useEffect(() => {
+    if (aberto) marcarNotificacoesLidas?.();
+  }, [aberto, marcarNotificacoesLidas]);
 
   // Auto-scroll para a última mensagem sempre que algo entra.
   useEffect(() => {
@@ -274,6 +323,25 @@ export default function ChatbotWidget() {
             : "✕")
           : <img src="/assets/guto/custom/guto-chat.png" alt="GUTO confiante" width={56} height={56} style={{ borderRadius: "50%" }} />}
       </motion.button>
+
+      {/* MC15.6 ITEM 11 — badge de notificações não lidas (chat fechado). */}
+      {!aberto && notificacoesNaoLidas > 0 && (
+        <span aria-label={`${notificacoesNaoLidas} notificações`} style={{
+          position: "fixed",
+          right: "1rem",
+          bottom: isMobile ? "7.6rem" : "3.85rem",
+          minWidth: "20px", height: "20px",
+          padding: "0 5px",
+          borderRadius: "10px",
+          background: "#ef4444", color: "#fff",
+          fontSize: "0.7rem", fontWeight: 900,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 9999, pointerEvents: "none",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+        }}>
+          🔔 {notificacoesNaoLidas}
+        </span>
+      )}
 
       {/* Modal de chat */}
       <AnimatePresence>
