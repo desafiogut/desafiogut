@@ -122,6 +122,11 @@ export function AppProvider({ children }) {
   );
   const prazoTimestamp = tipoLeilao === "flash" ? prazoFlash : prazoProgramado;
 
+  // MC15.6 ITEM 2 — ref do prazo corrente para o polling de notificações decidir
+  // a cadência (2s nos 5 min finais) SEM re-criar o timer a cada segundo.
+  const prazoNotifRef = useRef(prazoTimestamp);
+  useEffect(() => { prazoNotifRef.current = prazoTimestamp; }, [prazoTimestamp]);
+
   const [encerrado,       setEncerrado]       = useState(false);
   const [showOverlay,     setShowOverlay]     = useState(false);
   const [tempoRestante,   setTempoRestante]   = useState(() => Math.max(0,
@@ -156,6 +161,14 @@ export function AppProvider({ children }) {
   // PIX aprovado = +R$. /comprar-senhas = -R$ +senhas. /lance-relampago = -R$.
   const [saldoRsCentavos, setSaldoRsCentavos] = useState(null);
   const [saldoRsStatus,   setSaldoRsStatus]   = useState("idle");
+
+  // MC15.6 ITEM 2 — Notificações proativas do GUTO (polling adaptativo).
+  // notificacoes: array de eventos vindos de GET /notificacoes (admin-only).
+  // notificacoesNaoLidas: badge "🔔 N"; zera quando o admin abre o chat.
+  // notifSigVistaRef: assinatura do último conjunto marcado como lido.
+  const [notificacoes, setNotificacoes] = useState([]);
+  const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
+  const notifSigVistaRef = useRef("");
 
   // MC12.2 — cotaCorporativa buscada uma vez após login para TODOS os usuários
   // autenticados. tipoUsuario é derivado do campo tipo no blob (não de customMetadata,
@@ -538,6 +551,64 @@ export function AppProvider({ children }) {
     return () => clearInterval(id);
   }, [address, authToken, refetchSaldoRs]);
 
+  // ── MC15.6 ITEM 2 — Notificações proativas: polling ADAPTATIVO ───────────
+  // 10s em operação normal; 2s nos 5 min finais (tempoRestante <= 300s) da
+  // edição corrente. Self-rescheduling setTimeout: cada tick relê a cadência
+  // de prazoNotifRef — sem timers duplicados, sem recriar o efeito a cada
+  // segundo. Pausa quando a aba não está visível (visibilitychange). Gated em
+  // authToken: /notificacoes é admin-only e devolve [] aos demais perfis.
+  const refetchNotificacoes = useCallback(async () => {
+    if (!address || !authToken) { setNotificacoes([]); setNotificacoesNaoLidas(0); return; }
+    try {
+      const resp = await fetch("/.netlify/functions/notificacoes", {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
+        },
+      });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const lista = Array.isArray(data?.notificacoes) ? data.notificacoes : [];
+      setNotificacoes(lista);
+      const sig = lista.map((n) => `${n.tipo}:${n.timestamp}`).join("|");
+      setNotificacoesNaoLidas(sig && sig !== notifSigVistaRef.current ? lista.length : 0);
+    } catch (err) {
+      // fail-soft: notificações nunca quebram a app
+      console.warn("[GUT-DEBUG] refetchNotificacoes falhou", err?.message);
+    }
+  }, [address, authToken, visitorId]);
+
+  // Marca as notificações atuais como lidas (chamado ao abrir o chat — ITEM 11).
+  const marcarNotificacoesLidas = useCallback(() => {
+    notifSigVistaRef.current = notificacoes.map((n) => `${n.tipo}:${n.timestamp}`).join("|");
+    setNotificacoesNaoLidas(0);
+  }, [notificacoes]);
+
+  useEffect(() => {
+    if (!address || !authToken) return;
+    let cancelado = false;
+    let timerId = null;
+    const calcularIntervalo = () => {
+      const restante = Math.max(0, (prazoNotifRef.current || 0) - Math.floor(Date.now() / 1000));
+      return restante > 0 && restante <= 300 ? 2000 : 10000;
+    };
+    const tick = async () => {
+      if (cancelado) return;
+      if (document.visibilityState === "visible") await refetchNotificacoes();
+      if (cancelado) return;
+      timerId = setTimeout(tick, calcularIntervalo());
+    };
+    refetchNotificacoes();
+    timerId = setTimeout(tick, calcularIntervalo());
+    const vis = () => { if (document.visibilityState === "visible") refetchNotificacoes(); };
+    document.addEventListener("visibilitychange", vis);
+    return () => {
+      cancelado = true;
+      if (timerId) clearTimeout(timerId);
+      document.removeEventListener("visibilitychange", vis);
+    };
+  }, [address, authToken, refetchNotificacoes]);
+
   // MC12: detectarTipoCorporativo e polling removidos. tipoUsuario vem de
   // user.customMetadata (ver bloco Privy auth acima).
 
@@ -751,6 +822,11 @@ export function AppProvider({ children }) {
     saldoRsCentavos,
     saldoRsStatus,
     refetchSaldoRs,
+    // MC15.6 ITEM 2 — notificações proativas (polling adaptativo).
+    notificacoes,
+    notificacoesNaoLidas,
+    refetchNotificacoes,
+    marcarNotificacoesLidas,
     // MC12.2 — tipo de usuário (cotas blob), cota e carteiras corporativas.
     tipoUsuario,
     tipoCarregando,
