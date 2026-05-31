@@ -62,6 +62,15 @@ export function obterPromptSystem(perfil) {
 /** Guard: devolve fallback se o valor for null/undefined/"". */
 const g = (v, fb = "—") => (v === null || v === undefined || v === "" ? fb : v);
 
+// MC15.6 ITEM 5 — texto da simulação (admin/corporativo, sem emoji).
+function formatarSimulacao(p) {
+  if (p?.erro) return `Não foi possível ler os lances da edição ${g(p.edicaoId)} agora.`;
+  if (!p?.ok) {
+    return `Edição ${g(p.edicaoId)} — sem vencedor provisório: nenhum lance único entre ${g(p.totalLances, "0")} lance(s).`;
+  }
+  return `Se o leilão terminasse agora, o vencedor provisório da edição ${g(p.edicaoId)} seria ${g(p.vencedor)} com lance único de ${g(p.valor)}. (${g(p.totalLances, "0")} lances, ${g(p.lancesUnicos, "0")} únicos.)`;
+}
+
 // ── Dicionário de respostas por intent × perfil ──────────────────────────────
 // Funções recebem `params` e devolvem string. Para `saudacao` são strings fixas.
 
@@ -82,6 +91,15 @@ export const respostasPorPerfil = {
     comum: () => "Só a coordenação pode criar edições. Mas podes dar lances nas edições ativas! 🙂",
     corporativo: () => "A criação de edições é feita pela coordenação. Como lojista, acompanhe as edições no Painel.",
     admin: (p) => g(p.msg, "Assistente de criação de edição iniciado."),
+  },
+
+  // MC15.6 ITEM 5 — simulação de vencedor (admin + corporativo; sem emoji).
+  // Perfis inferiores: recusa adequada.
+  simular_vencedor: {
+    visitante: () => "A simulação de vencedor é uma função interna. Cria uma conta para participar dos leilões! 😊",
+    comum: () => "A simulação de vencedor é exclusiva da coordenação e parceiros. Posso ajudar com os teus lances! 🙂",
+    corporativo: (p) => formatarSimulacao(p),
+    admin: (p) => formatarSimulacao(p),
   },
 
   listar_edicoes: {
