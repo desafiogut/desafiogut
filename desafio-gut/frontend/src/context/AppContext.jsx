@@ -551,12 +551,12 @@ export function AppProvider({ children }) {
     return () => clearInterval(id);
   }, [address, authToken, refetchSaldoRs]);
 
-  // ── MC15.6 ITEM 2 — Notificações proativas: polling ADAPTATIVO ───────────
+  // ── MC15.6 ITEM 2 / MC15.7 ITEM 4 — Notificações proativas: polling ADAPTATIVO
   // 10s em operação normal; 2s nos 5 min finais (tempoRestante <= 300s) da
   // edição corrente. Self-rescheduling setTimeout: cada tick relê a cadência
   // de prazoNotifRef — sem timers duplicados, sem recriar o efeito a cada
   // segundo. Pausa quando a aba não está visível (visibilitychange). Gated em
-  // authToken: /notificacoes é admin-only e devolve [] aos demais perfis.
+  // authToken: serve admin (eventos de sistema) E participante (Blob próprio).
   const refetchNotificacoes = useCallback(async () => {
     if (!address || !authToken) { setNotificacoes([]); setNotificacoesNaoLidas(0); return; }
     try {
@@ -570,8 +570,18 @@ export function AppProvider({ children }) {
       const data = await resp.json();
       const lista = Array.isArray(data?.notificacoes) ? data.notificacoes : [];
       setNotificacoes(lista);
-      const sig = lista.map((n) => `${n.tipo}:${n.timestamp}`).join("|");
-      setNotificacoesNaoLidas(sig && sig !== notifSigVistaRef.current ? lista.length : 0);
+      // MC15.7 ITEM 4 — contagem de não-lidas:
+      // - PARTICIPANTE: notificações têm campo `lida` (persistido no Blob) →
+      //   badge = nº com lida === false. Some de forma estável após marcar_lidas.
+      // - ADMIN: eventos de sistema NÃO têm `lida` → mantém o comportamento
+      //   MC15.6 (assinatura; zera localmente ao abrir o chat).
+      const temFlagLida = lista.some((n) => typeof n.lida === "boolean");
+      if (temFlagLida) {
+        setNotificacoesNaoLidas(lista.filter((n) => n.lida === false).length);
+      } else {
+        const sig = lista.map((n) => `${n.tipo}:${n.timestamp}`).join("|");
+        setNotificacoesNaoLidas(sig && sig !== notifSigVistaRef.current ? lista.length : 0);
+      }
     } catch (err) {
       // fail-soft: notificações nunca quebram a app
       console.warn("[GUT-DEBUG] refetchNotificacoes falhou", err?.message);
