@@ -26,6 +26,7 @@ import {
   listarEdicoes, criarEdicao, encerrarEdicao,
   normalizarTipo, sanitizarProduto, EDICAO_ID_RE,
 } from "./_lib/edicoes-core.mjs";
+import { obterResposta, obterPromptSystem } from "./_lib/guto-perfis.mjs";
 
 const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
@@ -73,6 +74,9 @@ const INTENT_PATTERNS = {
   criar_edicao:    /\b(cri[ae]r?|abr[ae]|abrir)\b.*\bedic(ao|oes)\b|nova edic(ao|oes)/,
   listar_edicoes:  /\b(list[ae]r?|mostr[ae]r?|quais)\b.*\bedic(ao|oes)\b/,
   encerrar_edicao: /\b(encerr[ae]r?|fech[ae]r?|finaliz[ae]r?)\b.*\b(edic(ao|oes)|(?:prog|relamp)-\d)/,
+  // MC15.5 — dados diferenciados: auditoria (admin) e dados_mercado (corporativo).
+  auditoria:       /\bauditoria\b|log de edic(ao|oes)|estatisticas?/,
+  dados_mercado:   /volume de lances|cotas comerciais|relatorio de mercado|dados de mercado/,
 };
 
 /**
@@ -90,7 +94,9 @@ function detectarIntent(texto) {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "") // remove acentos combinantes (NFD)
     .toLowerCase();
-  // ordem importa: encerrar/listar antes de criar para evitar falso-positivo.
+  // ordem importa: específicos (auditoria/dados) antes; encerrar/listar antes de criar.
+  if (INTENT_PATTERNS.auditoria.test(t))       return "auditoria";
+  if (INTENT_PATTERNS.dados_mercado.test(t))   return "dados_mercado";
   if (INTENT_PATTERNS.encerrar_edicao.test(t)) return "encerrar_edicao";
   if (INTENT_PATTERNS.listar_edicoes.test(t))  return "listar_edicoes";
   if (INTENT_PATTERNS.criar_edicao.test(t))    return "criar_edicao";
@@ -167,6 +173,83 @@ async function confirmarAdminChat(req) {
   return { ok: false };
 }
 
+// MC15.5 — store das cotas corporativas (cliente_id = endereço para "autenticado").
+const STORE_COTAS = "cotas";
+
+/**
+ * MC15.5 — Determina o perfil do utilizador a partir do pedido.
+ *
+ * Perfis: "visitante" | "comum" | "corporativo" | "admin".
+ *
+ * IMPORTANTE (V1 do MC15.5): o JWT (user-session E admin-access) só carrega
+ * { endereco, tipo, mfa_verified? } — NÃO existe role/metadata. Por isso o
+ * "corporativo" NÃO se lê do token: faz-se LOOKUP no Blob "cotas"
+ * (campo tipo === "corporativo"). O caso "admin" reutiliza confirmarAdminChat
+ * (mesmo gate de segurança do MC15.4.2 — zero regressão, R0/R2).
+ *
+ * Fonte de verdade é SEMPRE o backend (R4): nunca confiar em role enviado pelo cliente.
+ *
+ * @returns {Promise<{ perfil: "visitante"|"comum"|"corporativo"|"admin", endereco: string|null }>}
+ */
+async function detectarPerfil(req) {
+  // 1) admin — admin-access JWT / x-admin-token / user-session ∈ admin-list.
+  const adm = await confirmarAdminChat(req);
+  if (adm.ok) return { perfil: "admin", endereco: adm.endereco || null };
+
+  // 2) sem Bearer → visitante.
+  const authHeader = req.headers.get("authorization") || "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!bearer) return { perfil: "visitante", endereco: null };
+
+  // 3) user-session válido? (token inválido/expirado → visitante, nunca 500).
+  let endereco;
+  try {
+    const payload = await verificarUserSession(bearer);
+    endereco = String(payload?.endereco || "").toLowerCase();
+  } catch {
+    return { perfil: "visitante", endereco: null };
+  }
+  if (!endereco) return { perfil: "visitante", endereco: null };
+
+  // 4) corporativo? lookup TOLERANTE no Blob "cotas" (falha/ausente → comum).
+  try {
+    const store = getStore({ name: STORE_COTAS, consistency: "strong" });
+    const cota = await store.get(endereco, { type: "json" });
+    if (cota && cota.tipo === "corporativo") {
+      return { perfil: "corporativo", endereco };
+    }
+  } catch (err) {
+    console.warn("[chatbot] lookup cotas falhou (trata como comum):", err?.message);
+  }
+
+  // 5) default: comum (autenticado, sem cota corporativa, ∉ admin-list).
+  return { perfil: "comum", endereco };
+}
+
+/**
+ * MC15.5 — Lê as últimas N entradas do Blob "auditoria" (mais recentes primeiro).
+ * Chaves = `${Date.now()}-${rand}` → ordenação lexicográfica desc ≈ cronológica.
+ * Read-only; fail-soft (falha → { qtd:0, linhas:"" }).
+ */
+async function lerAuditoria(n = 5) {
+  try {
+    const store = getStore({ name: "auditoria", consistency: "strong" });
+    const { blobs } = await store.list();
+    const chaves = blobs.map((b) => b.key).sort().reverse().slice(0, n);
+    const linhas = [];
+    for (const k of chaves) {
+      try {
+        const r = await store.get(k, { type: "json" });
+        if (r) linhas.push(`${r.acao} ${r.edicaoId} (${r.origem})`);
+      } catch { /* ignora entrada corrompida */ }
+    }
+    return { qtd: linhas.length, linhas: linhas.join("; ") };
+  } catch (err) {
+    console.warn("[chatbot] leitura de auditoria falhou:", err?.message);
+    return { qtd: 0, linhas: "" };
+  }
+}
+
 /**
  * Processa uma intenção admin de edição. Confirma admin via Authorization
  * repassado pelo ChatbotWidget. Não-admin → recusa gentil, cria NADA.
@@ -175,44 +258,76 @@ async function confirmarAdminChat(req) {
  * @returns {Promise<Response|null>} Response do GUTO se a intenção foi tratada;
  *                                   null para cair no RAG (ex.: sem intent).
  */
-async function tratarIntentEdicoes(req, pergunta) {
+async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
   const intent = detectarIntent(pergunta);
   if (!intent) return null; // sem intenção → RAG normal (anti-regressão)
 
-  // Rate-limit específico dos comandos admin do GUTO (5/min — R6).
+  const ehAdmin = perfil === "admin";
+
+  // MC15.5 — auditoria (admin-only): dados reais do Blob "auditoria".
+  if (intent === "auditoria") {
+    if (!ehAdmin) {
+      return jsonResponse({
+        resposta: obterResposta("auditoria", perfil, {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    const { qtd, linhas } = await lerAuditoria(5);
+    return jsonResponse({
+      resposta: obterResposta("auditoria", "admin", { qtd, linhas }),
+      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil,
+    });
+  }
+
+  // MC15.5 — dados_mercado (corporativo + admin): resumo seguro. NÃO promete volume
+  // global (não existe store — V4); usa contagem real de edições ativas + Painel.
+  if (intent === "dados_mercado") {
+    if (perfil !== "corporativo" && perfil !== "admin") {
+      return jsonResponse({
+        resposta: obterResposta("dados_mercado", perfil, {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    const { edicoes } = await listarEdicoes();
+    const edicoesAtivas = Object.values(edicoes).filter((e) => e.status === "aberto").length;
+    return jsonResponse({
+      resposta: obterResposta("dados_mercado", perfil, { edicoesAtivas }),
+      fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
+    });
+  }
+
+  // listar_edicoes: a lista de edições é PÚBLICA (GET /edicoes). Logados veem-na
+  // com tom do seu perfil; visitante recebe convite (não é dado sensível).
+  if (intent === "listar_edicoes") {
+    let lista = "";
+    let total = 0;
+    if (perfil !== "visitante") {
+      const { edicoes } = await listarEdicoes();
+      const ids = Object.keys(edicoes);
+      total = ids.length;
+      lista = ids.map((id) => `${id} (${edicoes[id].tipo}, ${edicoes[id].status})`).join("; ");
+    }
+    return jsonResponse({
+      resposta: obterResposta("listar_edicoes", perfil, { lista, total }),
+      fontes: [], modoBusca: "intent", modoResposta: ehAdmin ? "acao" : "perfil", intent, perfil,
+    });
+  }
+
+  // criar_edicao / encerrar_edicao: comandos MUTANTES → admin-only (gate inalterado).
+  // Não-admin recebe recusa adequada ao perfil (NUNCA executa, NUNCA vaza dados).
+  if (!ehAdmin) {
+    return jsonResponse({
+      resposta: obterResposta(intent, perfil, {}),
+      fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+    });
+  }
+
+  // admin: rate-limit dos comandos mutantes (5/min — R6).
   const rl = await aplicarRateLimit(req, "guto-admin", RL_GUTO_ADMIN_RPM);
   if (rl) {
     return jsonResponse({
-      resposta: "Opa, calma aí! 😅 Recebi muitos comandos seguidos. Espera um minutinho e tenta de novo, tá?",
-      fontes: [], modoBusca: "intent", modoResposta: "rate-limit", intent,
-    });
-  }
-
-  // Confirma admin: admin-access JWT/x-admin-token OU user-session com
-  // endereço ∈ admin-list (GUTO é usado por admin logado normalmente — MC15.4.2).
-  const auth = await confirmarAdminChat(req);
-  const isAdmin = auth.ok;
-  const adminEndereco = isAdmin ? (auth.endereco || null) : null;
-
-  // listar_edicoes é admin-only nesta intenção (gestão). Não-admin → recusa.
-  if (!isAdmin) {
-    return jsonResponse({
-      resposta: "Poxa, criar ou mexer em edições é coisa de admin! 🔒 Eu não posso fazer isso por aqui. Mas posso te explicar como o leilão funciona, que tal?",
-      fontes: [], modoBusca: "intent", modoResposta: "recusa-nao-admin", intent,
-    });
-  }
-
-  if (intent === "listar_edicoes") {
-    const { edicoes } = await listarEdicoes();
-    const ids = Object.keys(edicoes);
-    const resumo = ids.map((id) => {
-      const e = edicoes[id];
-      return `• ${id} (${e.tipo}, ${e.status})`;
-    }).join("\n");
-    return jsonResponse({
-      resposta: `Boa! Temos ${ids.length} edição(ões) no ar:\n${resumo}`,
-      fontes: [], modoBusca: "intent", modoResposta: "acao", intent,
-      edicoes,
+      resposta: "Limite de comandos administrativos atingido. Aguarde um minuto e tente novamente.",
+      fontes: [], modoBusca: "intent", modoResposta: "rate-limit", intent, perfil,
     });
   }
 
@@ -220,20 +335,20 @@ async function tratarIntentEdicoes(req, pergunta) {
     const id = extrairEdicaoId(pergunta);
     if (!EDICAO_ID_RE.test(id)) {
       return jsonResponse({
-        resposta: "Hum, pra encerrar preciso do id da edição, tipo PROG-3 ou RELAMP-7. Me diz qual? 🙂",
-        fontes: [], modoBusca: "intent", modoResposta: "faltam-dados", intent,
+        resposta: "Para encerrar, indique o id da edição (ex.: PROG-3 ou RELAMP-7).",
+        fontes: [], modoBusca: "intent", modoResposta: "faltam-dados", intent, perfil,
       });
     }
     const res = await encerrarEdicao({ edicaoId: id, endereco: adminEndereco, origem: "guto" });
     if (!res.ok) {
       return jsonResponse({
-        resposta: `Eita, não consegui encerrar ${id}: ${res.message}`,
-        fontes: [], modoBusca: "intent", modoResposta: "erro", intent, erro: res.code,
+        resposta: `Não foi possível encerrar ${id}: ${res.message}`,
+        fontes: [], modoBusca: "intent", modoResposta: "erro", intent, perfil, erro: res.code,
       });
     }
     return jsonResponse({
-      resposta: `Pronto! Encerrei a edição ${id}. ✅`,
-      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, edicao: res.edicao,
+      resposta: obterResposta("encerrar_edicao", "admin", { id: res.edicao.id }),
+      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, edicao: res.edicao,
     });
   }
 
@@ -248,8 +363,8 @@ async function tratarIntentEdicoes(req, pergunta) {
       !produto ? "o produto" : null,
     ].filter(Boolean).join(", ");
     return jsonResponse({
-      resposta: `Quase lá! Pra criar a edição ainda preciso de: ${faltam}. Me passa esses dados? 🙂`,
-      fontes: [], modoBusca: "intent", modoResposta: "faltam-dados", intent,
+      resposta: `Para criar a edição preciso de: ${faltam}.`,
+      fontes: [], modoBusca: "intent", modoResposta: "faltam-dados", intent, perfil,
     });
   }
 
@@ -259,13 +374,15 @@ async function tratarIntentEdicoes(req, pergunta) {
   });
   if (!res.ok) {
     return jsonResponse({
-      resposta: `Ops, não rolou criar a edição: ${res.message}`,
-      fontes: [], modoBusca: "intent", modoResposta: "erro", intent, erro: res.code,
+      resposta: `Não foi possível criar a edição: ${res.message}`,
+      fontes: [], modoBusca: "intent", modoResposta: "erro", intent, perfil, erro: res.code,
     });
   }
   return jsonResponse({
-    resposta: `Show! Criei a edição ${res.edicao.id} (${res.edicao.tipo}) pro produto "${res.edicao.produto}". Termina em ${res.edicao.termino_em}. 🚀`,
-    fontes: [], modoBusca: "intent", modoResposta: "acao", intent, edicao: res.edicao,
+    resposta: obterResposta("criar_edicao", "admin", {
+      id: res.edicao.id, tipo: res.edicao.tipo, produto: res.edicao.produto, termino: res.edicao.termino_em,
+    }),
+    fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, edicao: res.edicao,
   });
 }
 
@@ -293,10 +410,11 @@ async function chamarLLM(pergunta, contexto, opts = {}) {
     ? `Contexto extraído do regulamento DESAFIOGUT:\n\n${contexto}\n\nPergunta do usuário: ${pergunta}`
     : `Pergunta do usuário (sem contexto encontrado): ${pergunta}`;
 
+  const systemPrompt = opts.systemPrompt || PROMPT_SYSTEM;
   const body = JSON.stringify({
     model,
     messages: [
-      { role: "system", content: PROMPT_SYSTEM },
+      { role: "system", content: systemPrompt },
       { role: "user",   content: userContent  },
     ],
     temperature: 0.7,
@@ -362,8 +480,20 @@ export default async (req) => {
   // Reconhece intenções de gestão de edições (criar/listar/encerrar). Se casar,
   // trata e responde no tom do GUTO. Se NÃO casar, retorna null e o fluxo segue
   // para o pipeline RAG normal (anti-regressão — ITEM 3).
+  // MC15.5 — perfil determina TOM, dados e capacidades. Derivado só no backend (R4).
+  // Fail-soft: se a deteção falhar, trata como visitante (nunca quebra o GUTO).
+  let perfil = "visitante";
+  let perfilEndereco = null;
   try {
-    const intentResp = await tratarIntentEdicoes(req, pergunta);
+    const p = await detectarPerfil(req);
+    perfil = p.perfil;
+    perfilEndereco = p.endereco;
+  } catch (err) {
+    console.warn("[chatbot] detectarPerfil falhou, assume visitante:", err?.message);
+  }
+
+  try {
+    const intentResp = await tratarIntentEdicoes(req, pergunta, perfil, perfilEndereco);
     if (intentResp) return intentResp;
   } catch (err) {
     console.warn("[chatbot] intent router falhou, caindo no RAG:", err?.message);
@@ -407,7 +537,7 @@ export default async (req) => {
   let resposta;
   let modoResposta = "llm";
   try {
-    resposta = await chamarLLM(pergunta, contexto);
+    resposta = await chamarLLM(pergunta, contexto, { systemPrompt: obterPromptSystem(perfil) });
   } catch (err) {
     console.warn("[chatbot] LLM indisponível, usando resposta template:", err?.message);
     modoResposta = "template";
@@ -421,6 +551,10 @@ export default async (req) => {
     }
   }
 
+  // MC15.5 — enquadra a resposta RAG conforme o perfil (visitante recebe convite;
+  // demais perfis recebem a resposta tal qual, já no tom do system prompt do perfil).
+  const respostaFinal = obterResposta("fallback_rag", perfil, { respostaRAG: resposta });
+
   const fontes = chunks.map((c) => ({ id: c.id, score: Number(c.score.toFixed(4)) }));
   console.info("[chatbot] resposta gerada", {
     perguntaLen: pergunta.length,
@@ -428,6 +562,7 @@ export default async (req) => {
     scoreTop: fontes[0]?.score,
     modoBusca,
     modoResposta,
+    perfil,
   });
-  return jsonResponse({ resposta, fontes, modoBusca, modoResposta });
+  return jsonResponse({ resposta: respostaFinal, fontes, modoBusca, modoResposta, perfil });
 };

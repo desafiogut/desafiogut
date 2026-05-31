@@ -21,6 +21,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "./GutoAvatar.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
+import { useAdmin } from "../hooks/useAdmin.js";
 
 const LS_KEY      = "gut_chat_history";
 const LS_MAX_MSGS = 40;            // histórico bounded — evita estourar localStorage
@@ -68,7 +69,15 @@ export default function ChatbotWidget() {
   // MC15.4.2 — token de user-session p/ o GUTO autenticar comandos de admin
   // (criar/listar/encerrar edição). Para visitantes deslogados é null → o
   // backend recusa intents de admin (comportamento correto).
-  const { authToken } = useAppContext();
+  const { authToken, tipoUsuario, address } = useAppContext();
+  const { isAdmin } = useAdmin(address);
+  // MC15.5 — badge de perfil no cabeçalho (cosmético; o backend é a fonte de
+  // verdade do perfil — R4). visitante: sem badge; comum: ●; lojista/admin: rótulo.
+  const perfilBadge =
+    isAdmin ? { txt: "⚡ Admin", cor: "#f5a623" }
+    : tipoUsuario === "corporativo" ? { txt: "◈ Lojista", cor: "#00d4aa" }
+    : (authToken || address) ? { txt: "●", cor: "#00c853" }
+    : null;
   const [aberto, setAberto] = useState(false);
   const [mensagens, setMensagens] = useState(() => carregarHistorico());
   const [pergunta, setPergunta] = useState("");
@@ -269,6 +278,19 @@ export default function ChatbotWidget() {
                 <div>
                   <div style={{ fontSize: "0.95rem", fontWeight: 800, color: COR.primary }}>
                     GUTO — Assistente DESAFIOGUT
+                    {perfilBadge && (
+                      <span style={{
+                        marginLeft: "0.45rem",
+                        fontSize: "0.62rem",
+                        fontWeight: 900,
+                        color: perfilBadge.cor,
+                        border: `1px solid ${perfilBadge.cor}`,
+                        borderRadius: "4px",
+                        padding: "0.05rem 0.3rem",
+                        verticalAlign: "middle",
+                        whiteSpace: "nowrap",
+                      }}>{perfilBadge.txt}</span>
+                    )}
                   </div>
                   <div style={{ fontSize: "0.7rem", color: COR.muted }}>
                     {gutoState === "thinking" && "A pensar…"}
