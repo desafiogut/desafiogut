@@ -19,6 +19,7 @@ import { verificarLanceAuth } from "./_lib/jwt.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { getRole, requireRole } from "./_lib/rbac.mjs";
 import { requireMfa } from "./_lib/require-mfa.mjs";
+import { lerEstadoSistema, sistemaPausado } from "./_lib/system-state.mjs";
 
 const LANCE_MIN_CENTAVOS = 1;
 const LANCE_MAX_CENTAVOS = 999999;
@@ -51,6 +52,13 @@ export default async (req) => {
   // ── 0. Rate limit por IP (5/min) ───────────────────────────────────────────
   const rl = await aplicarRateLimit(req, "lance-relampago", 5);
   if (rl) return rl;
+
+  // ── 0.5. Kill switch (MC15.6 ITEM 8) ──────────────────────────────────────
+  // Se o sistema está em modo pânico (/panic), rejeita novos lances com 503.
+  // Fail-soft: leitura do Blob falha → NÃO bloqueia (pânico é opt-in explícito).
+  if (sistemaPausado(await lerEstadoSistema())) {
+    return jsonError(503, "sistema_pausado", "Sistema em manutenção. Tente novamente em breve.");
+  }
 
   // ── 1. Auth: verificar JWT lance-auth ─────────────────────────────────────
   const authHeader = req.headers.get("authorization") || "";

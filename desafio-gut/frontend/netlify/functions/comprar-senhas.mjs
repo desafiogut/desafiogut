@@ -108,6 +108,12 @@ export default async (req) => {
   const rl = await aplicarRateLimit(req, "comprar-senhas", 5);
   if (rl) return rl;
 
+  // ── 0.5. Kill switch (MC15.6 ITEM 8) ──────────────────────────────────────
+  // Modo pânico (/panic) bloqueia mutações financeiras. Fail-soft na leitura.
+  if (sistemaPausado(await lerEstadoSistema())) {
+    return jsonError(503, "sistema_pausado", "Sistema em manutenção. Tente novamente em breve.");
+  }
+
   // ── 1. Auth: verificar JWT lance-auth ─────────────────────────────────────
   const authHeader = req.headers.get("authorization") || "";
   const authToken  = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;

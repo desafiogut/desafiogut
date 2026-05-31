@@ -62,6 +62,24 @@ export function obterPromptSystem(perfil) {
 /** Guard: devolve fallback se o valor for null/undefined/"". */
 const g = (v, fb = "—") => (v === null || v === undefined || v === "" ? fb : v);
 
+// MC15.6 ITEM 5 — texto da simulação (admin/corporativo, sem emoji).
+function formatarSimulacao(p) {
+  if (p?.erro) return `Não foi possível ler os lances da edição ${g(p.edicaoId)} agora.`;
+  if (!p?.ok) {
+    return `Edição ${g(p.edicaoId)} — sem vencedor provisório: nenhum lance único entre ${g(p.totalLances, "0")} lance(s).`;
+  }
+  return `Se o leilão terminasse agora, o vencedor provisório da edição ${g(p.edicaoId)} seria ${g(p.vencedor)} com lance único de ${g(p.valor)}. (${g(p.totalLances, "0")} lances, ${g(p.lancesUnicos, "0")} únicos.)`;
+}
+
+// MC15.6 ITEM 6 — texto do pulso (admin/corporativo, sem emoji). 4 métricas.
+function formatarPulso(p) {
+  const vol = p?.volumePorMin == null ? "—" : `${p.volumePorMin}/min`;
+  const lic = g(p?.licitantesUnicos, "0");
+  const val = p?.valorizacaoPct == null ? "n/d (sem base)" : `${p.valorizacaoPct}%`;
+  const aba = p?.abandonoCheckoutPct == null ? "n/d" : `${p.abandonoCheckoutPct}%`;
+  return `Pulso da edição ${g(p?.edicaoId)} — Volume: ${vol}. Licitantes únicos: ${lic}. Valorização (menor lance sobre base): ${val}. Abandono de checkout: ${aba}. Total de lances: ${g(p?.totalLances, "0")}.`;
+}
+
 // ── Dicionário de respostas por intent × perfil ──────────────────────────────
 // Funções recebem `params` e devolvem string. Para `saudacao` são strings fixas.
 
@@ -72,6 +90,57 @@ export const respostasPorPerfil = {
     corporativo: () => "A criação de edições é feita pela coordenação. Como lojista, podes acompanhar as edições no Painel.",
     // admin: sucesso operacional (zero emoji). Recebe a edição criada.
     admin: (p) => `Edição criada. Id: ${g(p.id)}. Tipo: ${g(p.tipo)}. Produto: ${g(p.produto)}. Termina em: ${g(p.termino)}.`,
+  },
+
+  // MC15.6 ITEM 3 — Wizard de criação (admin). Perfis inferiores: recusa adequada.
+  // Para admin, o chatbot compõe o texto de cada passo e passa em params.msg
+  // (mantém o gate por perfil aqui, sem emoji para admin).
+  criar_edicao_wizard: {
+    visitante: () => "Criar edições é exclusivo para administradores. Cria uma conta para participar! 😊",
+    comum: () => "Só a coordenação pode criar edições. Mas podes dar lances nas edições ativas! 🙂",
+    corporativo: () => "A criação de edições é feita pela coordenação. Como lojista, acompanhe as edições no Painel.",
+    admin: (p) => g(p.msg, "Assistente de criação de edição iniciado."),
+  },
+
+  // MC15.6 ITEM 5 — simulação de vencedor (admin + corporativo; sem emoji).
+  // Perfis inferiores: recusa adequada.
+  simular_vencedor: {
+    visitante: () => "A simulação de vencedor é uma função interna. Cria uma conta para participar dos leilões! 😊",
+    comum: () => "A simulação de vencedor é exclusiva da coordenação e parceiros. Posso ajudar com os teus lances! 🙂",
+    corporativo: (p) => formatarSimulacao(p),
+    admin: (p) => formatarSimulacao(p),
+  },
+
+  // MC15.6 ITEM 6 — pulso (admin + corporativo; sem emoji). Inferiores: recusa.
+  pulso_edicao: {
+    visitante: () => "Os relatórios de pulso são internos. Cria uma conta para participar dos leilões! 😊",
+    comum: () => "Os relatórios de pulso são exclusivos da coordenação e parceiros. Posso ajudar com os teus lances! 🙂",
+    corporativo: (p) => formatarPulso(p),
+    admin: (p) => formatarPulso(p),
+  },
+
+  // MC15.6 ITEM 7 — kill switch (admin-only; sem emoji). Inferiores: recusa.
+  panic: {
+    visitante: () => "Esse comando é restrito à administração.",
+    comum: () => "Esse comando é restrito à administração.",
+    corporativo: () => "Esse comando é restrito à coordenação.",
+    admin: (p) => `Sistema PAUSADO (modo pânico). Novos lances serão rejeitados. Em: ${g(p.timestamp)}. Use /unpanic para reativar.`,
+  },
+  unpanic: {
+    visitante: () => "Esse comando é restrito à administração.",
+    comum: () => "Esse comando é restrito à administração.",
+    corporativo: () => "Esse comando é restrito à coordenação.",
+    admin: (p) => `Sistema REATIVADO. Lances voltam a ser aceites. Em: ${g(p.timestamp)}.`,
+  },
+
+  // MC15.6 ITEM 10 — memória operacional (admin-only; sem emoji).
+  memoria: {
+    visitante: () => "O histórico operacional é restrito à administração.",
+    comum: () => "O histórico operacional é restrito à administração.",
+    corporativo: () => "O histórico operacional é restrito à coordenação.",
+    admin: (p) => p?.achou
+      ? `Em situações anteriores (${g(p.trigger)}), você aplicou: ${g(p.action)} (em ${g(p.quando)}). Deseja repetir? [${g(p.total, "0")} decisões no histórico.]`
+      : `Sem decisões semelhantes no histórico${p?.total ? ` (${p.total} registadas)` : ""}.`,
   },
 
   listar_edicoes: {
