@@ -76,9 +76,15 @@ const RL_GUTO_ADMIN_RPM = 5; // comandos admin do GUTO (R6)
 // "edição"/"edições" → "edicao"/"edicoes" após desacentuar. Encerrar também
 // casa quando vem só o id (ex.: "encerra RELAMP-2", sem a palavra "edição").
 const INTENT_PATTERNS = {
-  // MC15.6 ITEM 3 — wizard (gatilhos EXPLÍCITOS; não colide com o one-shot
-  // criar_edicao). Testado ANTES de criar_edicao em detectarIntent.
-  criar_edicao_wizard: /\bwizard\b|\bsetup\b|assistente|passo a passo|novo leilao|criar.*guiad|edicao guiad/,
+  // MC15.6.2 — wizard é agora o fluxo PADRÃO de criação. Captura tanto os
+  // gatilhos explícitos (wizard/setup/assistente) como o pedido genérico de
+  // criação ("quero criar", "criar edição", "novo leilão", "nova edição").
+  // Testado ANTES de criar_edicao em detectarIntent → qualquer pedido de
+  // criação inicia o fluxo guiado de 3 passos. encerrar/listar são testados
+  // ANTES (ordem em detectarIntent), portanto não há colisão com este padrão.
+  criar_edicao_wizard: /\bwizard\b|\bsetup\b|assistente|passo a passo|novo leilao|quero criar|\b(cri[ae]r?|abr[ae]|abrir)\b.*\bedic(ao|oes)\b|nova edic(ao|oes)|criar.*guiad|edicao guiad/,
+  // Mantido como fallback legado (one-shot). Após MC15.6.2 os pedidos de
+  // criação caem no wizard acima; este padrão fica como rede de segurança.
   criar_edicao:    /\b(cri[ae]r?|abr[ae]|abrir)\b.*\bedic(ao|oes)\b|nova edic(ao|oes)/,
   listar_edicoes:  /\b(list[ae]r?|mostr[ae]r?|quais)\b.*\bedic(ao|oes)\b/,
   encerrar_edicao: /\b(encerr[ae]r?|fech[ae]r?|finaliz[ae]r?)\b.*\b(edic(ao|oes)|(?:prog|relamp)-\d)/,
