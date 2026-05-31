@@ -31,7 +31,7 @@ import { lerSessaoWizard, salvarSessaoWizard, limparSessaoWizard } from "./_lib/
 import { simularVencedorMenorLance, rotuloVencedor, brlCentavos } from "./_lib/simulador.mjs";
 import { obterMetricasPulso } from "./_lib/pulso.mjs";
 import { escreverEstadoSistema, lerEstadoSistema } from "./_lib/system-state.mjs";
-import { registrarDecisao } from "./_lib/log-operacional.mjs";
+import { registrarDecisao, buscarDecisaoSemelhante } from "./_lib/log-operacional.mjs";
 
 const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
@@ -92,6 +92,8 @@ const INTENT_PATTERNS = {
   // MC15.6 ITEM 7 — kill switch (admin-only). unpanic ANTES de panic na ordem.
   unpanic: /\/?unpanic\b|retomar( sistema)?|reativar( sistema)?|sair do (modo )?panico|despausar/,
   panic:   /\/?panic\b|modo panico|parar tudo|congelar (sistema|tudo)|emergencia/,
+  // MC15.6 ITEM 10 — memória operacional (admin-only).
+  memoria: /memoria( operacional| evolutiva)?|historico de (decis|acoe)|como (resolvi|resolveu|fiz)( isso)?( antes)?|decis(ao|oes) (passad|anterior)|o que (fiz|fizemos) (antes|da ultima)/,
 };
 
 /**
@@ -116,6 +118,7 @@ function detectarIntent(texto) {
   if (INTENT_PATTERNS.pulso_edicao.test(t))    return "pulso_edicao";
   if (INTENT_PATTERNS.unpanic.test(t))         return "unpanic";
   if (INTENT_PATTERNS.panic.test(t))           return "panic";
+  if (INTENT_PATTERNS.memoria.test(t))         return "memoria";
   if (INTENT_PATTERNS.encerrar_edicao.test(t)) return "encerrar_edicao";
   if (INTENT_PATTERNS.listar_edicoes.test(t))  return "listar_edicoes";
   if (INTENT_PATTERNS.criar_edicao_wizard.test(t)) return "criar_edicao_wizard";
@@ -497,6 +500,29 @@ async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
         lancesUnicos: sim.lancesUnicos,
       }),
       fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, simulacao: sim,
+    });
+  }
+
+  // MC15.6 ITEM 10 — memória operacional (ADMIN-ONLY): busca decisão semelhante.
+  if (intent === "memoria") {
+    if (!ehAdmin) {
+      return jsonResponse({
+        resposta: obterResposta("memoria", perfil, {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    let achado = null;
+    try { achado = await buscarDecisaoSemelhante(pergunta); }
+    catch (err) { console.warn("[chatbot] buscarDecisaoSemelhante falhou:", err?.message); }
+    return jsonResponse({
+      resposta: obterResposta("memoria", "admin", {
+        achou: !!achado,
+        trigger: achado?.entrada?.trigger || null,
+        action: achado?.entrada?.action || null,
+        quando: achado?.entrada?.timestamp || null,
+        total: achado?.total || 0,
+      }),
+      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, memoria: achado,
     });
   }
 

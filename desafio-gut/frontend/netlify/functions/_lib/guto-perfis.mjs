@@ -133,6 +133,16 @@ export const respostasPorPerfil = {
     admin: (p) => `Sistema REATIVADO. Lances voltam a ser aceites. Em: ${g(p.timestamp)}.`,
   },
 
+  // MC15.6 ITEM 10 — memória operacional (admin-only; sem emoji).
+  memoria: {
+    visitante: () => "O histórico operacional é restrito à administração.",
+    comum: () => "O histórico operacional é restrito à administração.",
+    corporativo: () => "O histórico operacional é restrito à coordenação.",
+    admin: (p) => p?.achou
+      ? `Em situações anteriores (${g(p.trigger)}), você aplicou: ${g(p.action)} (em ${g(p.quando)}). Deseja repetir? [${g(p.total, "0")} decisões no histórico.]`
+      : `Sem decisões semelhantes no histórico${p?.total ? ` (${p.total} registadas)` : ""}.`,
+  },
+
   listar_edicoes: {
     visitante: () => "Temos edições a decorrer! Cria uma conta para ver os detalhes e participar. 😊",
     comum: (p) => `As edições ativas são: ${g(p.lista)}. Queres saber mais sobre alguma? 🙂`,

@@ -66,6 +66,49 @@ async function podarFIFO(store) {
   }
 }
 
+// MC15.6 ITEM 10 — stopwords PT para a similaridade simples por keywords.
+const STOPWORDS = new Set([
+  "a","o","os","as","de","da","do","das","dos","e","ou","um","uma","para","por",
+  "com","no","na","nos","nas","que","como","esta","este","isso","ao","aos","se",
+  "foi","ser","sao","the","of","to","in","is","como","resolvi","resolveu","fiz",
+]);
+
+/** Tokeniza: NFD-desacentua, minúsculas, remove stopwords e tokens curtos. */
+function tokenizar(texto) {
+  return String(texto || "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+}
+
+/**
+ * MC15.6 ITEM 10 — Busca a decisão passada mais semelhante ao `trigger` por
+ * sobreposição simples de keywords (sem embeddings). Devolve { entrada, score,
+ * total } ou null se não houver histórico/relevância. Fail-soft.
+ *
+ * @param {string} trigger texto/keywords do problema atual
+ * @param {number} [minScore=1] mínimo de tokens em comum para considerar relevante
+ */
+export async function buscarDecisaoSemelhante(trigger, minScore = 1) {
+  const alvo = new Set(tokenizar(trigger));
+  if (alvo.size === 0) return null;
+  const entradas = await lerDecisoes(MAX_ENTRADAS);
+  if (entradas.length === 0) return null;
+
+  let melhor = null;
+  let melhorScore = 0;
+  for (const e of entradas) {
+    const toks = new Set(tokenizar(`${e.trigger} ${e.action}`));
+    let score = 0;
+    for (const t of alvo) if (toks.has(t)) score++;
+    // desempate por recência: entradas já vêm desc, então > (não >=) mantém a 1ª.
+    if (score > melhorScore) { melhorScore = score; melhor = e; }
+  }
+  if (!melhor || melhorScore < minScore) return null;
+  return { entrada: melhor, score: melhorScore, total: entradas.length };
+}
+
 /**
  * Lê as últimas N entradas (mais recentes primeiro). Fail-soft → [].
  * @param {number} [n=500]
