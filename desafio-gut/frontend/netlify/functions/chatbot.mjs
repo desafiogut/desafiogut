@@ -167,6 +167,59 @@ async function confirmarAdminChat(req) {
   return { ok: false };
 }
 
+// MC15.5 — store das cotas corporativas (cliente_id = endereço para "autenticado").
+const STORE_COTAS = "cotas";
+
+/**
+ * MC15.5 — Determina o perfil do utilizador a partir do pedido.
+ *
+ * Perfis: "visitante" | "comum" | "corporativo" | "admin".
+ *
+ * IMPORTANTE (V1 do MC15.5): o JWT (user-session E admin-access) só carrega
+ * { endereco, tipo, mfa_verified? } — NÃO existe role/metadata. Por isso o
+ * "corporativo" NÃO se lê do token: faz-se LOOKUP no Blob "cotas"
+ * (campo tipo === "corporativo"). O caso "admin" reutiliza confirmarAdminChat
+ * (mesmo gate de segurança do MC15.4.2 — zero regressão, R0/R2).
+ *
+ * Fonte de verdade é SEMPRE o backend (R4): nunca confiar em role enviado pelo cliente.
+ *
+ * @returns {Promise<{ perfil: "visitante"|"comum"|"corporativo"|"admin", endereco: string|null }>}
+ */
+async function detectarPerfil(req) {
+  // 1) admin — admin-access JWT / x-admin-token / user-session ∈ admin-list.
+  const adm = await confirmarAdminChat(req);
+  if (adm.ok) return { perfil: "admin", endereco: adm.endereco || null };
+
+  // 2) sem Bearer → visitante.
+  const authHeader = req.headers.get("authorization") || "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!bearer) return { perfil: "visitante", endereco: null };
+
+  // 3) user-session válido? (token inválido/expirado → visitante, nunca 500).
+  let endereco;
+  try {
+    const payload = await verificarUserSession(bearer);
+    endereco = String(payload?.endereco || "").toLowerCase();
+  } catch {
+    return { perfil: "visitante", endereco: null };
+  }
+  if (!endereco) return { perfil: "visitante", endereco: null };
+
+  // 4) corporativo? lookup TOLERANTE no Blob "cotas" (falha/ausente → comum).
+  try {
+    const store = getStore({ name: STORE_COTAS, consistency: "strong" });
+    const cota = await store.get(endereco, { type: "json" });
+    if (cota && cota.tipo === "corporativo") {
+      return { perfil: "corporativo", endereco };
+    }
+  } catch (err) {
+    console.warn("[chatbot] lookup cotas falhou (trata como comum):", err?.message);
+  }
+
+  // 5) default: comum (autenticado, sem cota corporativa, ∉ admin-list).
+  return { perfil: "comum", endereco };
+}
+
 /**
  * Processa uma intenção admin de edição. Confirma admin via Authorization
  * repassado pelo ChatbotWidget. Não-admin → recusa gentil, cria NADA.
