@@ -16,12 +16,13 @@
 // Rate-limit: 60/min/IP ("notificacoes") — leitura, janela generosa (R5).
 
 import { getStore } from "@netlify/blobs";
-import { jsonResponse, jsonError } from "./_lib/validate.mjs";
+import { jsonResponse, jsonError, parseJsonBody } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { autenticarAdmin } from "./_lib/admin-auth.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { lerEstadoSistema } from "./_lib/system-state.mjs";
+import { lerNotificacoes, marcarLidas } from "./_lib/notificacoes-usuario.mjs";
 
 const RL_NOTIFICACOES_RPM = 60;
 const JANELA_FIM_SEG = 300;                  // 5 min — tempo_limite_5min
@@ -53,6 +54,24 @@ async function confirmarAdmin(req) {
   return { ok: false };
 }
 
+/**
+ * MC15.7 — extrai o endereço do PARTICIPANTE a partir do user-session JWT
+ * (qualquer utilizador autenticado, admin ou não). null se sem/inválido token.
+ * @returns {Promise<string|null>}
+ */
+async function getParticipante(req) {
+  const authHeader = req.headers.get("authorization") || "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!bearer) return null;
+  try {
+    const payload = await verificarUserSession(bearer);
+    const endereco = String(payload?.endereco || "").toLowerCase();
+    return endereco || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Lê os metadados crus das edições (com encerradoEm), fail-soft → []. */
 async function lerEdicoesRaw() {
   try {
@@ -73,24 +92,8 @@ async function lerEdicoesRaw() {
   }
 }
 
-export default async (req) => {
-  if (req.method !== "GET") {
-    return jsonError(405, "metodo_invalido", "use GET", { allowed: ["GET"] });
-  }
-
-  const rl = await aplicarRateLimit(req, "notificacoes", RL_NOTIFICACOES_RPM);
-  if (rl) return rl;
-
-  // Admin-only. Não-admin → lista vazia (200, sem vazar estado). Fail-soft.
-  let ehAdmin = false;
-  try {
-    const adm = await confirmarAdmin(req);
-    ehAdmin = adm.ok;
-  } catch (err) {
-    console.warn("[notificacoes] auth falhou (trata como não-admin):", err?.message);
-  }
-  if (!ehAdmin) return jsonResponse({ notificacoes: [] });
-
+/** Monta os eventos de SISTEMA para o admin (MC15.6, comportamento intacto). */
+async function montarEventosAdmin() {
   const agora = Date.now();
   const nowIso = new Date(agora).toISOString();
   const notificacoes = [];
@@ -145,6 +148,47 @@ export default async (req) => {
     console.warn("[notificacoes] edicoes falhou:", err?.message);
   }
 
+  notificacoes.sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
+  return notificacoes;
+}
+
+export default async (req) => {
+  const rl = await aplicarRateLimit(req, "notificacoes", RL_NOTIFICACOES_RPM);
+  if (rl) return rl;
+
+  // ── POST — marcar notificações do participante como lidas (MC15.7 R10/D5) ──
+  if (req.method === "POST") {
+    const endereco = await getParticipante(req);
+    if (!endereco) return jsonError(401, "nao_autenticado", "sessão de utilizador obrigatória");
+    let body = null;
+    try { body = await parseJsonBody(req); } catch { body = null; }
+    if (body?.acao !== "marcar_lidas") {
+      return jsonError(400, "acao_invalida", 'use { acao: "marcar_lidas" }');
+    }
+    const ok = await marcarLidas(endereco);
+    return jsonResponse({ ok });
+  }
+
+  if (req.method !== "GET") {
+    return jsonError(405, "metodo_invalido", "use GET ou POST", { allowed: ["GET", "POST"] });
+  }
+
+  // ── ADMIN → eventos de sistema (MC15.6, intacto) ──────────────────────────
+  let admin = { ok: false };
+  try {
+    admin = await confirmarAdmin(req);
+  } catch (err) {
+    console.warn("[notificacoes] auth admin falhou:", err?.message);
+  }
+  if (admin.ok) {
+    const notificacoes = await montarEventosAdmin();
+    return jsonResponse({ notificacoes });
+  }
+
+  // ── PARTICIPANTE → notificações pessoais do Blob (MC15.7) ──────────────────
+  const endereco = await getParticipante(req);
+  if (!endereco) return jsonError(401, "nao_autenticado", "token obrigatório");
+  const notificacoes = await lerNotificacoes(endereco);
   notificacoes.sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
   return jsonResponse({ notificacoes });
 };

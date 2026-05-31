@@ -20,6 +20,7 @@ import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { getRole, requireRole } from "./_lib/rbac.mjs";
 import { requireMfa } from "./_lib/require-mfa.mjs";
 import { lerEstadoSistema, sistemaPausado } from "./_lib/system-state.mjs";
+import { registrarEventosDeLance } from "./_lib/notificacoes-usuario.mjs";
 
 const LANCE_MIN_CENTAVOS = 1;
 const LANCE_MAX_CENTAVOS = 999999;
@@ -160,6 +161,14 @@ export default async (req) => {
       existente.lances.push(registro);
       existente.atualizadoEm = new Date().toISOString();
       await store.setJSON(edicaoId, existente);
+      // ── MC15.7 ITEM 1 — notificações de unicidade (fail-soft; nunca quebra o lance)
+      try {
+        await registrarEventosDeLance({
+          lances: existente.lances, valorCentavos, edicaoId, autorEndereco: endereco,
+        });
+      } catch (err) {
+        console.warn("[lance-relampago] notificação de unicidade falhou (não-fatal):", err?.message);
+      }
     } catch (err) {
       console.warn("[lance-relampago] persistir lance falhou (não-fatal):", err?.message);
     }
