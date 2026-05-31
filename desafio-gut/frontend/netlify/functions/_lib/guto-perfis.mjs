@@ -71,6 +71,15 @@ function formatarSimulacao(p) {
   return `Se o leilão terminasse agora, o vencedor provisório da edição ${g(p.edicaoId)} seria ${g(p.vencedor)} com lance único de ${g(p.valor)}. (${g(p.totalLances, "0")} lances, ${g(p.lancesUnicos, "0")} únicos.)`;
 }
 
+// MC15.6 ITEM 6 — texto do pulso (admin/corporativo, sem emoji). 4 métricas.
+function formatarPulso(p) {
+  const vol = p?.volumePorMin == null ? "—" : `${p.volumePorMin}/min`;
+  const lic = g(p?.licitantesUnicos, "0");
+  const val = p?.valorizacaoPct == null ? "n/d (sem base)" : `${p.valorizacaoPct}%`;
+  const aba = p?.abandonoCheckoutPct == null ? "n/d" : `${p.abandonoCheckoutPct}%`;
+  return `Pulso da edição ${g(p?.edicaoId)} — Volume: ${vol}. Licitantes únicos: ${lic}. Valorização (menor lance sobre base): ${val}. Abandono de checkout: ${aba}. Total de lances: ${g(p?.totalLances, "0")}.`;
+}
+
 // ── Dicionário de respostas por intent × perfil ──────────────────────────────
 // Funções recebem `params` e devolvem string. Para `saudacao` são strings fixas.
 
@@ -100,6 +109,14 @@ export const respostasPorPerfil = {
     comum: () => "A simulação de vencedor é exclusiva da coordenação e parceiros. Posso ajudar com os teus lances! 🙂",
     corporativo: (p) => formatarSimulacao(p),
     admin: (p) => formatarSimulacao(p),
+  },
+
+  // MC15.6 ITEM 6 — pulso (admin + corporativo; sem emoji). Inferiores: recusa.
+  pulso_edicao: {
+    visitante: () => "Os relatórios de pulso são internos. Cria uma conta para participar dos leilões! 😊",
+    comum: () => "Os relatórios de pulso são exclusivos da coordenação e parceiros. Posso ajudar com os teus lances! 🙂",
+    corporativo: (p) => formatarPulso(p),
+    admin: (p) => formatarPulso(p),
   },
 
   listar_edicoes: {

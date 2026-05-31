@@ -29,6 +29,7 @@ import {
 import { obterResposta, obterPromptSystem } from "./_lib/guto-perfis.mjs";
 import { lerSessaoWizard, salvarSessaoWizard, limparSessaoWizard } from "./_lib/wizard-session.mjs";
 import { simularVencedorMenorLance, rotuloVencedor, brlCentavos } from "./_lib/simulador.mjs";
+import { obterMetricasPulso } from "./_lib/pulso.mjs";
 
 const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
@@ -84,6 +85,8 @@ const INTENT_PATTERNS = {
   dados_mercado:   /volume de lances|cotas comerciais|relatorio de mercado|dados de mercado/,
   // MC15.6 ITEM 5 — simulação de vencedor (admin + corporativo).
   simular_vencedor: /quem (ganha|ganharia|venceria|vence)|vencedor provisorio|se (o leilao )?terminasse agora|simul[ae]r?( o)? (resultado|vencedor)|apurar( agora)?/,
+  // MC15.6 ITEM 6 — relatório de pulso (admin + corporativo).
+  pulso_edicao: /\bpulso\b|como esta (a edicao|o leilao|indo)|metric[ao]s|relatorio de (pulso|desempenho)|desempenho da edicao/,
 };
 
 /**
@@ -105,6 +108,7 @@ function detectarIntent(texto) {
   if (INTENT_PATTERNS.auditoria.test(t))       return "auditoria";
   if (INTENT_PATTERNS.dados_mercado.test(t))   return "dados_mercado";
   if (INTENT_PATTERNS.simular_vencedor.test(t)) return "simular_vencedor";
+  if (INTENT_PATTERNS.pulso_edicao.test(t))    return "pulso_edicao";
   if (INTENT_PATTERNS.encerrar_edicao.test(t)) return "encerrar_edicao";
   if (INTENT_PATTERNS.listar_edicoes.test(t))  return "listar_edicoes";
   if (INTENT_PATTERNS.criar_edicao_wizard.test(t)) return "criar_edicao_wizard";
@@ -484,6 +488,29 @@ async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
         lancesUnicos: sim.lancesUnicos,
       }),
       fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, simulacao: sim,
+    });
+  }
+
+  // MC15.6 ITEM 6 — pulso_edicao (admin + corporativo). 4 métricas vitais.
+  if (intent === "pulso_edicao") {
+    if (perfil !== "admin" && perfil !== "corporativo") {
+      return jsonResponse({
+        resposta: obterResposta("pulso_edicao", perfil, {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    const edicaoId = extrairEdicaoId(pergunta) || "R-1";
+    const m = await obterMetricasPulso(edicaoId);
+    return jsonResponse({
+      resposta: obterResposta("pulso_edicao", perfil, {
+        edicaoId,
+        volumePorMin: m.volumePorMin,
+        licitantesUnicos: m.licitantesUnicos,
+        valorizacaoPct: m.valorizacaoPct,
+        abandonoCheckoutPct: m.abandonoCheckoutPct,
+        totalLances: m.totalLances,
+      }),
+      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, pulso: m,
     });
   }
 
