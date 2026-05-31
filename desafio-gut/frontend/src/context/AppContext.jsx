@@ -593,11 +593,34 @@ export function AppProvider({ children }) {
   // lances é server-side (gate 503 nas Functions — R10); aqui é só UX/congelamento.
   const systemPausado = notificacoes.some((n) => n.tipo === "sistema_pausado");
 
-  // Marca as notificações atuais como lidas (chamado ao abrir o chat — ITEM 11).
-  const marcarNotificacoesLidas = useCallback(() => {
+  // MC15.6 ITEM 11 / MC15.7 ITEM 6 — marca notificações como lidas.
+  // PARTICIPANTE (notificações com campo `lida`): PERSISTE via POST
+  // /notificacoes {acao:"marcar_lidas"} (R10/D5 — sem isto o badge reaparecia no
+  // poll seguinte). Só zera o badge após resposta 200; falha de rede MANTÉM o
+  // badge (fail-safe, não perde notificações). ADMIN (eventos de sistema, sem
+  // `lida`): mantém o comportamento MC15.6 (assinatura local).
+  const marcarNotificacoesLidas = useCallback(async () => {
+    const temFlagLida = notificacoes.some((n) => typeof n.lida === "boolean");
+    if (temFlagLida && address && authToken) {
+      try {
+        const resp = await fetch("/.netlify/functions/notificacoes", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+            ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
+          },
+          body: JSON.stringify({ acao: "marcar_lidas" }),
+        });
+        if (!resp.ok) return; // fail-safe: mantém o badge
+      } catch (err) {
+        console.warn("[GUT-DEBUG] marcar_lidas falhou", err?.message);
+        return; // fail-safe: mantém o badge
+      }
+    }
     notifSigVistaRef.current = notificacoes.map((n) => `${n.tipo}:${n.timestamp}`).join("|");
     setNotificacoesNaoLidas(0);
-  }, [notificacoes]);
+  }, [notificacoes, address, authToken, visitorId]);
 
   useEffect(() => {
     if (!address || !authToken) return;
