@@ -76,7 +76,7 @@ export default function ChatbotWidget() {
   // MC15.4.2 — token de user-session p/ o GUTO autenticar comandos de admin
   // (criar/listar/encerrar edição). Para visitantes deslogados é null → o
   // backend recusa intents de admin (comportamento correto).
-  const { authToken, tipoUsuario, address } = useAppContext();
+  const { authToken, tipoUsuario, address, systemPausado } = useAppContext();
   const { isAdmin } = useAdmin(address);
   // MC15.5 — badge de perfil no cabeçalho (cosmético; o backend é a fonte de
   // verdade do perfil — R4). visitante: sem badge; comum: ●; lojista/admin: rótulo.
@@ -227,6 +227,21 @@ export default function ChatbotWidget() {
 
   return (
     <>
+      {/* MC15.6 ITEM 8 — banner global de modo pânico (kill switch ativo). */}
+      {systemPausado && (
+        <div role="alert" style={{
+          position: "fixed", top: 0, left: 0, right: 0,
+          zIndex: 10000,
+          background: "#ef4444", color: "#fff",
+          padding: "0.5rem 1rem", textAlign: "center",
+          fontSize: "0.85rem", fontWeight: 800,
+          letterSpacing: "0.02em",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.35)",
+        }}>
+          SISTEMA PAUSADO — novos lances estão temporariamente bloqueados.
+        </div>
+      )}
+
       {/* Botão flutuante */}
       <motion.button
         aria-label={aberto ? "Fechar assistente" : "Abrir assistente DESAFIOGUT"}

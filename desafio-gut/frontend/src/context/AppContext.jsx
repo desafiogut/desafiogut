@@ -578,6 +578,11 @@ export function AppProvider({ children }) {
     }
   }, [address, authToken, visitorId]);
 
+  // MC15.6 ITEM 8 — estado de pânico refletido no cliente. Derivado do polling
+  // de notificações (admin recebe o evento sistema_pausado). A proteção REAL de
+  // lances é server-side (gate 503 nas Functions — R10); aqui é só UX/congelamento.
+  const systemPausado = notificacoes.some((n) => n.tipo === "sistema_pausado");
+
   // Marca as notificações atuais como lidas (chamado ao abrir o chat — ITEM 11).
   const marcarNotificacoesLidas = useCallback(() => {
     notifSigVistaRef.current = notificacoes.map((n) => `${n.tipo}:${n.timestamp}`).join("|");
@@ -827,6 +832,8 @@ export function AppProvider({ children }) {
     notificacoesNaoLidas,
     refetchNotificacoes,
     marcarNotificacoesLidas,
+    // MC15.6 ITEM 8 — kill switch refletido no cliente.
+    systemPausado,
     // MC12.2 — tipo de usuário (cotas blob), cota e carteiras corporativas.
     tipoUsuario,
     tipoCarregando,
