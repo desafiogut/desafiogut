@@ -40,6 +40,13 @@ const COR = {
   danger:     "#ef4444",
 };
 
+// MC15.6 ITEM 4/11 — paleta dos cards por tipo (wizard=azul; demais tipos
+// chegam no ITEM 11: notificação=amarelo, pulso=verde, panic=vermelho).
+const CARD_CORES = {
+  wizard:  { titulo: "Assistente de Edição", bg: "rgba(59,130,246,0.12)", borda: "rgba(59,130,246,0.45)", barra: "#60a5fa" },
+  default: { titulo: "GUTO", bg: "rgba(0,212,170,0.10)", borda: "rgba(0,212,170,0.4)", barra: "#00d4aa" },
+};
+
 const GUTO_STATE_MAP = {
   idle:        "sorrindo",
   listening:   "curioso",
@@ -111,8 +118,10 @@ export default function ChatbotWidget() {
     idleTimerRef.current = setTimeout(() => setGutoState("idle"), 4000);
   }, []);
 
-  const enviar = useCallback(async () => {
-    const texto = pergunta.trim();
+  // MC15.6 ITEM 4 — enviarMensagem(texto) é o core (reutilizado pelos botões de
+  // resposta rápida do wizard). enviar() envia o conteúdo da caixa de texto.
+  const enviarMensagem = useCallback(async (textoArg) => {
+    const texto = String(textoArg ?? "").trim();
     if (!texto || carregando) return;
     if (texto.length > PERGUNTA_MAX) {
       setErro(`Máximo ${PERGUNTA_MAX} caracteres.`);
@@ -162,10 +171,21 @@ export default function ChatbotWidget() {
       }
       setGutoState("responding");
       resetToIdle();
+      // MC15.6 ITEM 4 — se a resposta traz estado de wizard, renderiza um CARD
+      // (passo, resumo e botões de resposta rápida). Caso contrário, texto normal.
+      const wiz = data.wizard || null;
       setMensagens((prev) => [...prev, {
         role: "bot",
         texto: data.resposta || "(resposta vazia)",
         fontes: data.fontes || [],
+        ...(wiz ? {
+          type: "card",
+          cardKind: "wizard",
+          passo: wiz.passo || null,
+          resumo: wiz.resumo || null,
+          buttons: Array.isArray(wiz.opcoes) ? wiz.opcoes : null,
+          concluido: !!wiz.concluido,
+        } : {}),
         em: Date.now(),
       }]);
     } catch (err) {
@@ -180,7 +200,9 @@ export default function ChatbotWidget() {
     } finally {
       setCarregando(false);
     }
-  }, [pergunta, carregando, resetToIdle, authToken]);
+  }, [carregando, resetToIdle, authToken]);
+
+  const enviar = useCallback(() => enviarMensagem(pergunta), [enviarMensagem, pergunta]);
 
   const limparHistorico = useCallback(() => {
     setMensagens([]);
@@ -329,31 +351,107 @@ export default function ChatbotWidget() {
                   Pergunte sobre regras, cotas, pagamentos, vouchers ou o sistema "Indique e Ganhe".
                 </div>
               )}
-              {mensagens.map((m, i) => (
-                <div key={i} style={{
-                  alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                  maxWidth: "85%",
-                }}>
-                  <div style={{
-                    padding: "0.55rem 0.85rem",
-                    borderRadius: "14px",
-                    background: m.role === "user" ? COR.bubbleUser : COR.bubbleBot,
-                    color: m.role === "user" ? "#04080f" : COR.text,
-                    fontSize: "0.86rem",
-                    lineHeight: 1.45,
-                    whiteSpace: "pre-wrap", wordBreak: "break-word",
-                    border: m.role === "bot" ? `1px solid ${COR.border}` : "none",
-                    fontWeight: m.role === "user" ? 700 : 400,
-                  }}>
-                    {m.texto}
-                  </div>
-                  {m.fontes && m.fontes.length > 0 && (
-                    <div style={{ fontSize: "0.62rem", color: COR.muted, marginTop: "0.2rem", paddingLeft: "0.5rem" }}>
-                      fontes: {m.fontes.map((f) => f.id).join(", ")}
+              {mensagens.map((m, i) => {
+                const ehUltima = i === mensagens.length - 1;
+                // MC15.6 ITEM 4 — mensagem tipo "card" (wizard). Botões de
+                // resposta rápida só na ÚLTIMA mensagem (passos antigos ficam
+                // estáticos, evitando reenvio acidental).
+                if (m.type === "card") {
+                  const cor = CARD_CORES[m.cardKind] || CARD_CORES.default;
+                  return (
+                    <div key={i} style={{ alignSelf: "flex-start", maxWidth: "92%", width: "92%" }}>
+                      <div style={{
+                        borderRadius: "14px",
+                        background: cor.bg,
+                        border: `1px solid ${cor.borda}`,
+                        overflow: "hidden",
+                      }}>
+                        <div style={{
+                          padding: "0.4rem 0.7rem",
+                          background: cor.barra,
+                          color: "#04080f",
+                          fontSize: "0.68rem",
+                          fontWeight: 900,
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                        }}>
+                          <span>{cor.titulo}</span>
+                          {m.passo && <span>Passo {m.passo}</span>}
+                        </div>
+                        <div style={{
+                          padding: "0.6rem 0.8rem",
+                          color: COR.text,
+                          fontSize: "0.84rem",
+                          lineHeight: 1.45,
+                          whiteSpace: "pre-wrap", wordBreak: "break-word",
+                        }}>
+                          {m.texto}
+                          {m.resumo && (
+                            <div style={{
+                              marginTop: "0.5rem", padding: "0.5rem 0.6rem",
+                              background: "rgba(0,0,0,0.25)", borderRadius: "8px",
+                              fontSize: "0.78rem", lineHeight: 1.5,
+                            }}>
+                              <div><b>Produto:</b> {m.resumo.produto}</div>
+                              <div><b>Tipo:</b> {m.resumo.tipo} · <b>Duração:</b> {m.resumo.duracaoMin} min</div>
+                              <div><b>Base:</b> {m.resumo.valorBase} · <b>Incremento:</b> {m.resumo.incremento}</div>
+                            </div>
+                          )}
+                        </div>
+                        {ehUltima && !carregando && Array.isArray(m.buttons) && m.buttons.length > 0 && (
+                          <div style={{
+                            display: "flex", flexWrap: "wrap", gap: "0.4rem",
+                            padding: "0 0.8rem 0.7rem",
+                          }}>
+                            {m.buttons.map((label, bi) => {
+                              const principal = /publicar/i.test(label);
+                              const cancelar = /cancelar/i.test(label);
+                              return (
+                                <button key={bi}
+                                  onClick={() => enviarMensagem(label)}
+                                  style={{
+                                    padding: "0.45rem 0.75rem",
+                                    borderRadius: "9px",
+                                    border: cancelar ? `1px solid ${COR.muted}` : "none",
+                                    background: principal ? COR.primary : cancelar ? "transparent" : cor.barra,
+                                    color: cancelar ? COR.muted : "#04080f",
+                                    fontSize: "0.78rem", fontWeight: 800, cursor: "pointer",
+                                  }}>
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
+                  );
+                }
+                return (
+                  <div key={i} style={{
+                    alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+                    maxWidth: "85%",
+                  }}>
+                    <div style={{
+                      padding: "0.55rem 0.85rem",
+                      borderRadius: "14px",
+                      background: m.role === "user" ? COR.bubbleUser : COR.bubbleBot,
+                      color: m.role === "user" ? "#04080f" : COR.text,
+                      fontSize: "0.86rem",
+                      lineHeight: 1.45,
+                      whiteSpace: "pre-wrap", wordBreak: "break-word",
+                      border: m.role === "bot" ? `1px solid ${COR.border}` : "none",
+                      fontWeight: m.role === "user" ? 700 : 400,
+                    }}>
+                      {m.texto}
+                    </div>
+                    {m.fontes && m.fontes.length > 0 && (
+                      <div style={{ fontSize: "0.62rem", color: COR.muted, marginTop: "0.2rem", paddingLeft: "0.5rem" }}>
+                        fontes: {m.fontes.map((f) => f.id).join(", ")}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {carregando && (
                 <div style={{ alignSelf: "flex-start", maxWidth: "85%" }}>
                   <div style={{
