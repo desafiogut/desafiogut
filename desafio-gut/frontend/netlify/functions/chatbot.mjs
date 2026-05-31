@@ -31,6 +31,7 @@ import { lerSessaoWizard, salvarSessaoWizard, limparSessaoWizard } from "./_lib/
 import { simularVencedorMenorLance, rotuloVencedor, brlCentavos } from "./_lib/simulador.mjs";
 import { obterMetricasPulso } from "./_lib/pulso.mjs";
 import { escreverEstadoSistema, lerEstadoSistema } from "./_lib/system-state.mjs";
+import { registrarDecisao } from "./_lib/log-operacional.mjs";
 
 const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
@@ -382,6 +383,8 @@ async function continuarWizard(req, pergunta, perfil, endereco, sessao) {
     if (!res.ok) {
       return respostaWizard(perfil, `Não foi possível criar a edição: ${res.message}`, { etapa: "erro", concluido: true });
     }
+    // ITEM 9 — log de decisão (fail-soft).
+    await registrarDecisao({ trigger: "criar_edicao_wizard", action: `${res.edicao.id} criada (${res.edicao.tipo})`, userId: endereco });
     return jsonResponse({
       resposta: obterResposta("criar_edicao", "admin", {
         id: res.edicao.id, tipo: res.edicao.tipo, produto: res.edicao.produto, termino: res.edicao.termino_em,
@@ -515,6 +518,8 @@ async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
     const novoStatus = intent === "panic" ? "paused" : "active";
     try {
       const estado = await escreverEstadoSistema(novoStatus, intent === "panic" ? "acionado via GUTO" : null);
+      // ITEM 9 — log de decisão (fail-soft).
+      await registrarDecisao({ trigger: intent, action: `sistema ${novoStatus}`, userId: adminEndereco });
       return jsonResponse({
         resposta: obterResposta(intent, "admin", { timestamp: estado.timestamp }),
         fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, systemState: estado,
@@ -601,6 +606,8 @@ async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
         fontes: [], modoBusca: "intent", modoResposta: "erro", intent, perfil, erro: res.code,
       });
     }
+    // ITEM 9 — log de decisão (fail-soft).
+    await registrarDecisao({ trigger: "encerrar_edicao", action: `${res.edicao.id} encerrada`, userId: adminEndereco });
     return jsonResponse({
       resposta: obterResposta("encerrar_edicao", "admin", { id: res.edicao.id }),
       fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, edicao: res.edicao,
@@ -633,6 +640,8 @@ async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
       fontes: [], modoBusca: "intent", modoResposta: "erro", intent, perfil, erro: res.code,
     });
   }
+  // ITEM 9 — log de decisão (fail-soft).
+  await registrarDecisao({ trigger: "criar_edicao", action: `${res.edicao.id} criada (${res.edicao.tipo})`, userId: adminEndereco });
   return jsonResponse({
     resposta: obterResposta("criar_edicao", "admin", {
       id: res.edicao.id, tipo: res.edicao.tipo, produto: res.edicao.produto, termino: res.edicao.termino_em,
