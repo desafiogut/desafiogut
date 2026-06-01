@@ -27,6 +27,7 @@ import {
   normalizarTipo, sanitizarProduto, EDICAO_ID_RE,
 } from "./_lib/edicoes-core.mjs";
 import { obterResposta, obterPromptSystem } from "./_lib/guto-perfis.mjs";
+import { gerarRelatorioIndicacoes } from "./_lib/referral.mjs";
 import { lerSessaoWizard, salvarSessaoWizard, limparSessaoWizard } from "./_lib/wizard-session.mjs";
 import { simularVencedorMenorLance, rotuloVencedor, brlCentavos } from "./_lib/simulador.mjs";
 import { obterMetricasPulso } from "./_lib/pulso.mjs";
@@ -100,6 +101,9 @@ const INTENT_PATTERNS = {
   panic:   /\/?panic\b|modo panico|parar tudo|congelar (sistema|tudo)|emergencia/,
   // MC15.6 ITEM 10 — memória operacional (admin-only).
   memoria: /memoria( operacional| evolutiva)?|historico de (decis|acoe)|como (resolvi|resolveu|fiz)( isso)?( antes)?|decis(ao|oes) (passad|anterior)|o que (fiz|fizemos) (antes|da ultima)/,
+  // MC15.8.1 ITEM 8 — relatório de indicações (admin-only). Testado ANTES de
+  // auditoria para "estatisticas de indicacoes" cair aqui (e não em auditoria).
+  relatorio_indicacoes: /relatorio.*indica|indica.*relatorio|indique e ganhe relatorio|como estao as indica|estatisticas? de indica/,
 };
 
 /**
@@ -118,6 +122,7 @@ function detectarIntent(texto) {
     .replace(/[̀-ͯ]/g, "") // remove acentos combinantes (NFD)
     .toLowerCase();
   // ordem importa: específicos (auditoria/dados) antes; encerrar/listar antes de criar.
+  if (INTENT_PATTERNS.relatorio_indicacoes.test(t)) return "relatorio_indicacoes";
   if (INTENT_PATTERNS.auditoria.test(t))       return "auditoria";
   if (INTENT_PATTERNS.dados_mercado.test(t))   return "dados_mercado";
   if (INTENT_PATTERNS.simular_vencedor.test(t)) return "simular_vencedor";
@@ -463,6 +468,26 @@ async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
     const { qtd, linhas } = await lerAuditoria(5);
     return jsonResponse({
       resposta: obterResposta("auditoria", "admin", { qtd, linhas }),
+      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil,
+    });
+  }
+
+  // MC15.8.1 ITEM 8 — relatório de indicações (admin-only). Read-only, informativo.
+  if (intent === "relatorio_indicacoes") {
+    if (!ehAdmin) {
+      return jsonResponse({
+        resposta: obterResposta("relatorio_indicacoes", perfil, {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    let relatorio = "";
+    try { relatorio = (await gerarRelatorioIndicacoes()).texto; }
+    catch (err) {
+      console.warn("[chatbot] gerarRelatorioIndicacoes falhou:", err?.message);
+      relatorio = "Nao foi possivel compilar o relatorio de indicacoes agora.";
+    }
+    return jsonResponse({
+      resposta: obterResposta("relatorio_indicacoes", "admin", { relatorio }),
       fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil,
     });
   }

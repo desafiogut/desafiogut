@@ -23,7 +23,7 @@ import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { lerEstadoSistema } from "./_lib/system-state.mjs";
 import { lerNotificacoes, marcarLidas } from "./_lib/notificacoes-usuario.mjs";
-import { lerInducoesPendentes, marcarInducoesLidas } from "./_lib/referral.mjs";
+import { lerInducoesPendentes, marcarInducoesLidas, gerarRelatorioIndicacoes } from "./_lib/referral.mjs";
 
 const RL_NOTIFICACOES_RPM = 60;
 const JANELA_FIM_SEG = 300;                  // 5 min — tempo_limite_5min
@@ -147,6 +147,23 @@ async function montarEventosAdmin() {
     }
   } catch (err) {
     console.warn("[notificacoes] edicoes falhou:", err?.message);
+  }
+
+  // MC15.8.1 ITEM 8 — relatório diário de indicações às 9h BRT (= 12h UTC).
+  // Emitido apenas na janela das 12h UTC; timestamp ESTÁVEL (dia BRT) → o
+  // dedupe do frontend (tipo:timestamp) mostra-o uma vez por dia. Read-only.
+  try {
+    if (new Date(agora).getUTCHours() === 12) {
+      const rel = await gerarRelatorioIndicacoes();
+      notificacoes.push({
+        tipo: "relatorio_indicacoes",
+        mensagem: rel.texto,
+        timestamp: `${rel.dia}T12:00:00.000Z`,
+        dados: { dia: rel.dia, totalConversoes: rel.totalConversoes, senhasCreditadas: rel.senhasCreditadas },
+      });
+    }
+  } catch (err) {
+    console.warn("[notificacoes] relatório de indicações falhou (não-fatal):", err?.message);
   }
 
   notificacoes.sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));

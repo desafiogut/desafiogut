@@ -172,6 +172,14 @@ export const respostasPorPerfil = {
     admin: (p) => `Auditoria (últimas ${g(p.qtd, "0")}): ${g(p.linhas, "sem registos")}.`,
   },
 
+  // MC15.8.1 ITEM 8 — relatório de indicações (admin-only; sem emoji, formato relatório).
+  relatorio_indicacoes: {
+    visitante: () => "Os relatórios de indicação são internos. Cria uma conta para participar! 😊",
+    comum: () => "Os relatórios de indicação são da coordenação. Posso ajudar com os teus lances! 🙂",
+    corporativo: () => "Os relatórios consolidados de indicação são da coordenação.",
+    admin: (p) => g(p.relatorio, "Sem dados de indicações para hoje."),
+  },
+
   // Wrapper do RAG: respostaRAG é a resposta gerada; cada perfil acrescenta o seu enquadramento.
   fallback_rag: {
     visitante: (p) => `${g(p.respostaRAG, "")} Cria uma conta para participar dos leilões! 😊`.trim(),
