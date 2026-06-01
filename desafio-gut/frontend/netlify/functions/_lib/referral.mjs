@@ -107,6 +107,103 @@ export async function lerReferralLog(dia = diaBRT()) {
   } catch { return []; }
 }
 
+// ── MC15.8.1 — GUTO Indutor: notificação agrupada ao indicador ───────────────
+// O texto é recalculado na leitura a partir do contador, para o singular/plural
+// refletir sempre o agregado do dia. O nome usado é o do PRIMEIRO indicado do dia.
+
+/** Texto da mensagem indutiva (singular vs plural) a partir do agregado do dia. */
+export function mensagemInducao(contador, primeiroNome) {
+  const n = Number(contador || 0);
+  if (n <= 1) {
+    const quem = primeiroNome ? `O teu amigo ${primeiroNome}` : "Um amigo teu";
+    return `Parabéns! ${quem} entrou no DESAFIOGUT. +1 senha creditada!`;
+  }
+  return `${n} amigos teus entraram hoje no DESAFIOGUT! +${n} senhas creditadas.`;
+}
+
+/**
+ * Regista/agrupa uma conversão indutiva no Blob referral-induzido:{end}:{dia BRT}.
+ * Agrupamento (ITEM 4): se já há entrada NÃO-LIDA hoje, incrementa o contador.
+ * Limite (ITEM 6): se a entrada de hoje já foi LIDA/exibida, NÃO gera mais
+ * (conversões extra ficam para o relatório diário). 100% fail-soft.
+ * @returns {Promise<boolean>} true se criou/atualizou; false em no-op/erro.
+ */
+export async function registrarInducaoConvertida(enderecoIndicador, nomeIndicado = null) {
+  const end = String(enderecoIndicador || "").toLowerCase();
+  if (!/^0x[a-f0-9]{40}$/.test(end)) return false;
+  const store = abrirStore(STORE_INDUZIDO);
+  if (!store) return false;
+  const chave = `${end}:${diaBRT()}`;
+  const agora = new Date().toISOString();
+  try {
+    const doc = await store.get(chave, { type: "json" });
+    if (!doc) {
+      await store.setJSON(chave, {
+        tipo: "indicacao_convertida", contador: 1,
+        primeiroNome: nomeIndicado || null, lida: false,
+        criadoEm: agora, atualizadoEm: agora,
+      });
+      return true;
+    }
+    if (doc.lida) return false; // ITEM 6 — já exibida hoje → não gera mais
+    doc.contador = Number(doc.contador || 0) + 1;
+    if (!doc.primeiroNome && nomeIndicado) doc.primeiroNome = nomeIndicado;
+    doc.atualizadoEm = agora;
+    await store.setJSON(chave, doc);
+    return true;
+  } catch (err) {
+    console.warn("[referral] registrarInducaoConvertida falhou (não-fatal):", err?.message);
+    return false;
+  }
+}
+
+/**
+ * Lê a indução PENDENTE (não-lida) de hoje para o indicador, no formato de
+ * notificação consumido pelo /notificacoes (ITEM 5). Fail-soft → [].
+ */
+export async function lerInducoesPendentes(enderecoIndicador) {
+  const end = String(enderecoIndicador || "").toLowerCase();
+  if (!end) return [];
+  const store = abrirStore(STORE_INDUZIDO);
+  if (!store) return [];
+  const dia = diaBRT();
+  try {
+    const doc = await store.get(`${end}:${dia}`, { type: "json" });
+    if (!doc || doc.lida || !(Number(doc.contador) > 0)) return [];
+    return [{
+      id: `induzido-${end}-${dia}`,
+      tipo: "indicacao_convertida",
+      edicaoId: null,
+      valor: Number(doc.contador),
+      lida: false,
+      timestamp: doc.atualizadoEm || doc.criadoEm || new Date().toISOString(),
+      mensagem: mensagemInducao(doc.contador, doc.primeiroNome),
+    }];
+  } catch { return []; }
+}
+
+/** Marca a indução de hoje como lida (ITEM 6). Fail-soft → true (no-op se ausente). */
+export async function marcarInducoesLidas(enderecoIndicador) {
+  const end = String(enderecoIndicador || "").toLowerCase();
+  if (!end) return false;
+  const store = abrirStore(STORE_INDUZIDO);
+  if (!store) return false;
+  const chave = `${end}:${diaBRT()}`;
+  try {
+    const doc = await store.get(chave, { type: "json" });
+    if (!doc) return true;
+    if (!doc.lida) {
+      doc.lida = true;
+      doc.lidaEm = new Date().toISOString();
+      await store.setJSON(chave, doc);
+    }
+    return true;
+  } catch (err) {
+    console.warn("[referral] marcarInducoesLidas falhou (não-fatal):", err?.message);
+    return false;
+  }
+}
+
 /**
  * Gera (ou retorna o já existente) código de indicação para `endereco`.
  * Formato: `IND-XXXXXX`. Idempotente — chamadas repetidas devolvem o mesmo código.
@@ -431,6 +528,12 @@ export async function registrarConversao(vinculo, contexto = {}) {
     tipo: "conversao", codigo: vinculo.codigo, indicador, indicado,
     semBonusIndicador, origem: contexto?.contexto || null,
   });
+
+  // Notificação indutiva agrupada ao indicador (ITEM 4). Só quando houve bónus
+  // efetivo (se bateu o limite mensal, o indicador não ganhou senha → sem indução).
+  if (bonus.ok) {
+    await registrarInducaoConvertida(indicador, contexto?.nomeIndicado || null);
+  }
 
   return {
     ok: true,

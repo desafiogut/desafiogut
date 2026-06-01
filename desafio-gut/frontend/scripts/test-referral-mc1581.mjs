@@ -24,8 +24,16 @@ const requeridas = [
   "registrarConversao", "concederBonus", "verificarLimiteMensal", "verificarFraude",
   // novas (MC15.8.1)
   "appendReferralLog", "lerReferralLog", "diaBRT",
+  "mensagemInducao", "registrarInducaoConvertida", "lerInducoesPendentes", "marcarInducoesLidas",
 ];
 for (const f of requeridas) ok(typeof ref[f] === "function", `exporta ${f}()`);
+
+// 1b) mensagemInducao — singular (com e sem nome) vs plural.
+ok(ref.mensagemInducao(1, "Ana").includes("O teu amigo Ana") && ref.mensagemInducao(1, "Ana").includes("+1 senha"),
+  "mensagemInducao singular com nome");
+ok(ref.mensagemInducao(1, null).includes("Um amigo teu"), "mensagemInducao singular sem nome");
+ok(ref.mensagemInducao(3, "Ana").includes("3 amigos") && ref.mensagemInducao(3, "Ana").includes("+3 senhas"),
+  "mensagemInducao plural agregado");
 
 // 2) diaBRT — fuso Brasília (UTC-3). 01:00Z cai no dia anterior em BRT; 12:00Z
 //    (= 09:00 BRT, hora do relatório) cai no mesmo dia.
