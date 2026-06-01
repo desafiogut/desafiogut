@@ -216,6 +216,8 @@ export async function registrarIndicacao(codigo, novoEndereco, visitorIdNovo) {
         codigo, novoEndereco: novoLower, motivo: fraude.motivo,
       }).catch(() => {});
     }
+    // ITEM 2 — regista a anomalia no log diário (alimenta o relatório admin).
+    await appendReferralLog({ tipo: "fraude", motivo: fraude.motivo, codigo, indicado: novoLower });
     return { ok: false, code: fraude.motivo, message: `indicação rejeitada: ${fraude.motivo}` };
   }
   const indicador = await validarCodigoIndicacao(codigo);
@@ -224,10 +226,18 @@ export async function registrarIndicacao(codigo, novoEndereco, visitorIdNovo) {
   const linksStore = abrirStore(STORE_LINKS);
   if (!linksStore) return { ok: false, code: "store_indisponivel", message: "Blobs indisponível" };
 
-  // Idempotência: se já registrado, não duplica.
+  // Idempotência: se já registrado com ESTE código, não duplica.
   const chaveLink = `referral:${codigo}:${novoLower}`;
   const ja = await linksStore.get(chaveLink, { type: "json" });
   if (ja) return { ok: true, indicador, idempotent: true };
+
+  // ITEM 2 — uma carteira só pode ser indicada UMA vez: se já existe vínculo
+  // por OUTRO código, rejeita (evita "trocar de padrinho" / farmar bónus).
+  const vinculoExistente = await buscarVinculoPorIndicado(novoLower);
+  if (vinculoExistente && vinculoExistente.codigo && vinculoExistente.codigo !== codigo) {
+    await appendReferralLog({ tipo: "fraude", motivo: "ja_indicado", codigo, indicado: novoLower, codigoExistente: vinculoExistente.codigo });
+    return { ok: false, code: "ja_indicado", message: "esta carteira já foi indicada por outro código" };
+  }
 
   try {
     await linksStore.setJSON(chaveLink, {
@@ -359,6 +369,12 @@ export async function registrarConversao(vinculo, contexto = {}) {
   }
   const indicador = String(vinculo.indicador).toLowerCase();
   const indicado  = String(vinculo.indicado).toLowerCase();
+  // ITEM 2 — guarda defensiva: nunca converte uma auto-indicação (mesmo que um
+  // vínculo inválido tenha sido persistido). Regista a anomalia no log diário.
+  if (indicador === indicado) {
+    await appendReferralLog({ tipo: "fraude", motivo: "auto_indicacao", codigo: vinculo.codigo, indicador, indicado });
+    return { ok: false, code: "auto_indicacao" };
+  }
   const linksStore = abrirStore(STORE_LINKS);
   if (!linksStore) return { ok: false, code: "store_indisponivel" };
 
