@@ -41,5 +41,13 @@ ok(ref.diaBRT(new Date("2026-06-01T01:00:00Z")) === "2026-05-31", "diaBRT 01:00Z
 ok(ref.diaBRT(new Date("2026-06-01T12:00:00Z")) === "2026-06-01", "diaBRT 12:00Z -> mesmo dia (BRT)");
 ok(/^\d{4}-\d{2}-\d{2}$/.test(ref.diaBRT()), "diaBRT() formato YYYY-MM-DD");
 
+// 3) gerarRelatorioIndicacoes — sem Blobs cai em fail-soft (relatório a zeros)
+//    mas devolve sempre um objeto bem-formado com texto string.
+ok(typeof ref.gerarRelatorioIndicacoes === "function", "exporta gerarRelatorioIndicacoes()");
+const rel = await ref.gerarRelatorioIndicacoes("2026-06-01");
+ok(rel && typeof rel.texto === "string" && rel.texto.includes("Indique e Ganhe"), "relatório tem texto formatado");
+ok(rel.totalConversoes === 0 && rel.senhasCreditadas === 0 && Array.isArray(rel.topIndicadores),
+  "relatório fail-soft a zeros sem Blobs");
+
 if (falhas > 0) { console.error(`\nFALHOU: ${falhas} verificação(ões).`); process.exit(1); }
 console.log("\nOK — referral MC15.8.1 íntegro.");

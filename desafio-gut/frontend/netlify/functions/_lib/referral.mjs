@@ -182,6 +182,59 @@ export async function lerInducoesPendentes(enderecoIndicador) {
   } catch { return []; }
 }
 
+/** Abrevia um endereço 0x para exibição (0x1234…abcd). */
+function abreviarEndereco(end) {
+  const e = String(end || "");
+  return e.length >= 12 ? `${e.slice(0, 6)}…${e.slice(-4)}` : e || "—";
+}
+
+/**
+ * MC15.8.1 ITEM 7 — relatório diário de indicações (admin only). Lê o log do dia
+ * (BRT) e compila: total de conversões, senhas creditadas (indicado sempre +1;
+ * indicador +1 salvo limite mensal), top 3 indicadores e anomalias (fraudes).
+ * Fail-soft: sem log/Blobs → relatório a zeros. Texto conciso, sem emojis.
+ * @returns {Promise<{dia,totalConversoes,senhasCreditadas,topIndicadores,anomalias,falhasTransitorias,texto}>}
+ */
+export async function gerarRelatorioIndicacoes(dia = diaBRT()) {
+  const eventos = await lerReferralLog(dia);
+  const conversoes = eventos.filter((e) => e?.tipo === "conversao");
+  const fraudes    = eventos.filter((e) => e?.tipo === "fraude");
+  const falhas     = eventos.filter((e) => e?.tipo === "conversao_falha");
+
+  const totalConversoes = conversoes.length;
+  // Senhas creditadas no dia: cada conversão dá +1 ao indicado e +1 ao indicador
+  // (exceto quando o indicador bateu o limite mensal → semBonusIndicador).
+  const senhasCreditadas = conversoes.reduce(
+    (acc, c) => acc + 1 + (c.semBonusIndicador ? 0 : 1), 0,
+  );
+
+  const porIndicador = {};
+  for (const c of conversoes) {
+    const k = String(c.indicador || "").toLowerCase();
+    if (k) porIndicador[k] = (porIndicador[k] || 0) + 1;
+  }
+  const topIndicadores = Object.entries(porIndicador)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([end, n]) => `${abreviarEndereco(end)} (${n})`);
+
+  const porMotivo = {};
+  for (const f of fraudes) {
+    const m = String(f.motivo || "desconhecido");
+    porMotivo[m] = (porMotivo[m] || 0) + 1;
+  }
+  const anomalias = Object.entries(porMotivo).map(([m, n]) => `${m}: ${n}`);
+
+  const texto =
+    `Indique e Ganhe (${dia}). Conversoes: ${totalConversoes}. ` +
+    `Senhas creditadas: ${senhasCreditadas}. ` +
+    `Top indicadores: ${topIndicadores.length ? topIndicadores.join("; ") : "—"}. ` +
+    `Anomalias: ${anomalias.length ? anomalias.join("; ") : "nenhuma"}.` +
+    (falhas.length ? ` Falhas transitorias: ${falhas.length}.` : "");
+
+  return { dia, totalConversoes, senhasCreditadas, topIndicadores, anomalias, falhasTransitorias: falhas.length, texto };
+}
+
 /** Marca a indução de hoje como lida (ITEM 6). Fail-soft → true (no-op se ausente). */
 export async function marcarInducoesLidas(enderecoIndicador) {
   const end = String(enderecoIndicador || "").toLowerCase();
