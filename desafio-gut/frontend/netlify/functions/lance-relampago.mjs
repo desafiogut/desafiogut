@@ -21,6 +21,7 @@ import { getRole, requireRole } from "./_lib/rbac.mjs";
 import { requireMfa } from "./_lib/require-mfa.mjs";
 import { lerEstadoSistema, sistemaPausado } from "./_lib/system-state.mjs";
 import { registrarEventosDeLance } from "./_lib/notificacoes-usuario.mjs";
+import { buscarVinculoPorIndicado, registrarConversao } from "./_lib/referral.mjs";
 
 const LANCE_MIN_CENTAVOS = 1;
 const LANCE_MAX_CENTAVOS = 999999;
@@ -168,6 +169,29 @@ export default async (req) => {
         });
       } catch (err) {
         console.warn("[lance-relampago] notificação de unicidade falhou (não-fatal):", err?.message);
+      }
+      // ── MC15.8.1 ITEM 1 — conversão de indicação no PRIMEIRO lance do indicado.
+      // Gate barato em memória: só corre quando este é o 1.º lance do autor NESTA
+      // edição. O marcador referral-convertido garante idempotência mesmo entre
+      // edições/compras. Fail-soft: nunca quebra o lance.
+      try {
+        const lancesDoAutor = existente.lances.filter(
+          (l) => String(l?.endereco || "").toLowerCase() === String(endereco).toLowerCase(),
+        ).length;
+        if (lancesDoAutor === 1) {
+          const vinculo = await buscarVinculoPorIndicado(endereco);
+          if (vinculo && vinculo.indicador) {
+            const conv = await registrarConversao(vinculo, {
+              contexto: "primeiro-lance", edicaoId, nomeIndicado: nomeExibicao,
+            });
+            console.info("[lance-relampago] conversão de indicação", {
+              indicado: endereco, indicador: vinculo.indicador, codigo: vinculo.codigo,
+              idempotent: !!conv?.idempotent, ok: !!conv?.ok,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("[lance-relampago] conversão de indicação falhou (não-fatal):", err?.message);
       }
     } catch (err) {
       console.warn("[lance-relampago] persistir lance falhou (não-fatal):", err?.message);
