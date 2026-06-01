@@ -23,7 +23,7 @@ import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { lerEstadoSistema } from "./_lib/system-state.mjs";
 import { lerNotificacoes, marcarLidas } from "./_lib/notificacoes-usuario.mjs";
-import { lerInducoesPendentes } from "./_lib/referral.mjs";
+import { lerInducoesPendentes, marcarInducoesLidas } from "./_lib/referral.mjs";
 
 const RL_NOTIFICACOES_RPM = 60;
 const JANELA_FIM_SEG = 300;                  // 5 min — tempo_limite_5min
@@ -167,6 +167,9 @@ export default async (req) => {
       return jsonError(400, "acao_invalida", 'use { acao: "marcar_lidas" }');
     }
     const ok = await marcarLidas(endereco);
+    // MC15.8.1 ITEM 6 — a indução de hoje segue o mesmo fluxo: ao marcar lidas,
+    // fecha-se o dia (extras vão para o relatório, nunca geram nova notificação).
+    await marcarInducoesLidas(endereco);
     return jsonResponse({ ok });
   }
 
