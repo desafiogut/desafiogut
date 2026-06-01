@@ -26,6 +26,10 @@ import { captureSecurityAlert } from "./sentry-server.mjs";
 const STORE_CODES     = "referral-codes";       // referral-code:* + referral-code-reverso:*
 const STORE_LINKS     = "referral-links";       // referral:* + referral-convertido:* + referral-fraud:*
 const STORE_BONUS     = "referral-bonus";       // bonus por indicador + contador mensal
+// MC15.8.1 — log de auditoria diário + indução agrupada (GUTO Indutor).
+const STORE_LOG       = "referral-log";         // log:{AAAA-MM-DD} → { eventos:[...] } (FIFO)
+const STORE_INDUZIDO  = "referral-induzido";    // {endereco}:{AAAA-MM-DD} → indução agrupada do dia
+const MAX_LOG_EVENTOS = 500;
 const LIMITE_MENSAL   = 10;
 const PREFIXO_CODIGO  = "IND";
 const ALFABETO        = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -57,6 +61,200 @@ function mesAtualKey(date = new Date()) {
   const ano = date.getUTCFullYear();
   const mes = String(date.getUTCMonth() + 1).padStart(2, "0");
   return `${ano}-${mes}`;
+}
+
+// MC15.8.1 — dia YYYY-MM-DD no fuso de Brasília (UTC-3). Usado para o
+// agrupamento diário das induções e do log (o relatório admin sai às 9h BRT).
+export function diaBRT(date = new Date()) {
+  const brt = new Date(date.getTime() - 3 * 60 * 60 * 1000);
+  const ano = brt.getUTCFullYear();
+  const mes = String(brt.getUTCMonth() + 1).padStart(2, "0");
+  const dia = String(brt.getUTCDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+/**
+ * MC15.8.1 — append fail-soft de um evento ao log diário de indicações
+ * (`referral-log` → key `log:{dia BRT}`). FIFO máx MAX_LOG_EVENTOS. Nunca lança.
+ * Tipos: "conversao" | "conversao_falha" | "fraude".
+ */
+export async function appendReferralLog(evento) {
+  try {
+    const store = abrirStore(STORE_LOG);
+    if (!store) return false;
+    const chave = `log:${diaBRT()}`;
+    const doc = (await store.get(chave, { type: "json" })) || { eventos: [] };
+    const lista = Array.isArray(doc.eventos) ? doc.eventos : [];
+    lista.push({ ...evento, ts: new Date().toISOString() });
+    await store.setJSON(chave, {
+      eventos: lista.slice(-MAX_LOG_EVENTOS),
+      atualizadoEm: new Date().toISOString(),
+    });
+    return true;
+  } catch (err) {
+    console.warn("[referral] appendReferralLog falhou (não-fatal):", err?.message);
+    return false;
+  }
+}
+
+/** Lê os eventos do log de um dia (YYYY-MM-DD BRT). Fail-soft → []. */
+export async function lerReferralLog(dia = diaBRT()) {
+  try {
+    const store = abrirStore(STORE_LOG);
+    if (!store) return [];
+    const doc = await store.get(`log:${dia}`, { type: "json" });
+    return Array.isArray(doc?.eventos) ? doc.eventos : [];
+  } catch { return []; }
+}
+
+// ── MC15.8.1 — GUTO Indutor: notificação agrupada ao indicador ───────────────
+// O texto é recalculado na leitura a partir do contador, para o singular/plural
+// refletir sempre o agregado do dia. O nome usado é o do PRIMEIRO indicado do dia.
+
+/** Texto da mensagem indutiva (singular vs plural) a partir do agregado do dia. */
+export function mensagemInducao(contador, primeiroNome) {
+  const n = Number(contador || 0);
+  if (n <= 1) {
+    const quem = primeiroNome ? `O teu amigo ${primeiroNome}` : "Um amigo teu";
+    return `Parabéns! ${quem} entrou no DESAFIOGUT. +1 senha creditada!`;
+  }
+  return `${n} amigos teus entraram hoje no DESAFIOGUT! +${n} senhas creditadas.`;
+}
+
+/**
+ * Regista/agrupa uma conversão indutiva no Blob referral-induzido:{end}:{dia BRT}.
+ * Agrupamento (ITEM 4): se já há entrada NÃO-LIDA hoje, incrementa o contador.
+ * Limite (ITEM 6): se a entrada de hoje já foi LIDA/exibida, NÃO gera mais
+ * (conversões extra ficam para o relatório diário). 100% fail-soft.
+ * @returns {Promise<boolean>} true se criou/atualizou; false em no-op/erro.
+ */
+export async function registrarInducaoConvertida(enderecoIndicador, nomeIndicado = null) {
+  const end = String(enderecoIndicador || "").toLowerCase();
+  if (!/^0x[a-f0-9]{40}$/.test(end)) return false;
+  const store = abrirStore(STORE_INDUZIDO);
+  if (!store) return false;
+  const chave = `${end}:${diaBRT()}`;
+  const agora = new Date().toISOString();
+  try {
+    const doc = await store.get(chave, { type: "json" });
+    if (!doc) {
+      await store.setJSON(chave, {
+        tipo: "indicacao_convertida", contador: 1,
+        primeiroNome: nomeIndicado || null, lida: false,
+        criadoEm: agora, atualizadoEm: agora,
+      });
+      return true;
+    }
+    if (doc.lida) return false; // ITEM 6 — já exibida hoje → não gera mais
+    doc.contador = Number(doc.contador || 0) + 1;
+    if (!doc.primeiroNome && nomeIndicado) doc.primeiroNome = nomeIndicado;
+    doc.atualizadoEm = agora;
+    await store.setJSON(chave, doc);
+    return true;
+  } catch (err) {
+    console.warn("[referral] registrarInducaoConvertida falhou (não-fatal):", err?.message);
+    return false;
+  }
+}
+
+/**
+ * Lê a indução PENDENTE (não-lida) de hoje para o indicador, no formato de
+ * notificação consumido pelo /notificacoes (ITEM 5). Fail-soft → [].
+ */
+export async function lerInducoesPendentes(enderecoIndicador) {
+  const end = String(enderecoIndicador || "").toLowerCase();
+  if (!end) return [];
+  const store = abrirStore(STORE_INDUZIDO);
+  if (!store) return [];
+  const dia = diaBRT();
+  try {
+    const doc = await store.get(`${end}:${dia}`, { type: "json" });
+    if (!doc || doc.lida || !(Number(doc.contador) > 0)) return [];
+    return [{
+      id: `induzido-${end}-${dia}`,
+      tipo: "indicacao_convertida",
+      edicaoId: null,
+      valor: Number(doc.contador),
+      lida: false,
+      timestamp: doc.atualizadoEm || doc.criadoEm || new Date().toISOString(),
+      mensagem: mensagemInducao(doc.contador, doc.primeiroNome),
+    }];
+  } catch { return []; }
+}
+
+/** Abrevia um endereço 0x para exibição (0x1234…abcd). */
+function abreviarEndereco(end) {
+  const e = String(end || "");
+  return e.length >= 12 ? `${e.slice(0, 6)}…${e.slice(-4)}` : e || "—";
+}
+
+/**
+ * MC15.8.1 ITEM 7 — relatório diário de indicações (admin only). Lê o log do dia
+ * (BRT) e compila: total de conversões, senhas creditadas (indicado sempre +1;
+ * indicador +1 salvo limite mensal), top 3 indicadores e anomalias (fraudes).
+ * Fail-soft: sem log/Blobs → relatório a zeros. Texto conciso, sem emojis.
+ * @returns {Promise<{dia,totalConversoes,senhasCreditadas,topIndicadores,anomalias,falhasTransitorias,texto}>}
+ */
+export async function gerarRelatorioIndicacoes(dia = diaBRT()) {
+  const eventos = await lerReferralLog(dia);
+  const conversoes = eventos.filter((e) => e?.tipo === "conversao");
+  const fraudes    = eventos.filter((e) => e?.tipo === "fraude");
+  const falhas     = eventos.filter((e) => e?.tipo === "conversao_falha");
+
+  const totalConversoes = conversoes.length;
+  // Senhas creditadas no dia: cada conversão dá +1 ao indicado e +1 ao indicador
+  // (exceto quando o indicador bateu o limite mensal → semBonusIndicador).
+  const senhasCreditadas = conversoes.reduce(
+    (acc, c) => acc + 1 + (c.semBonusIndicador ? 0 : 1), 0,
+  );
+
+  const porIndicador = {};
+  for (const c of conversoes) {
+    const k = String(c.indicador || "").toLowerCase();
+    if (k) porIndicador[k] = (porIndicador[k] || 0) + 1;
+  }
+  const topIndicadores = Object.entries(porIndicador)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([end, n]) => `${abreviarEndereco(end)} (${n})`);
+
+  const porMotivo = {};
+  for (const f of fraudes) {
+    const m = String(f.motivo || "desconhecido");
+    porMotivo[m] = (porMotivo[m] || 0) + 1;
+  }
+  const anomalias = Object.entries(porMotivo).map(([m, n]) => `${m}: ${n}`);
+
+  const texto =
+    `Indique e Ganhe (${dia}). Conversoes: ${totalConversoes}. ` +
+    `Senhas creditadas: ${senhasCreditadas}. ` +
+    `Top indicadores: ${topIndicadores.length ? topIndicadores.join("; ") : "—"}. ` +
+    `Anomalias: ${anomalias.length ? anomalias.join("; ") : "nenhuma"}.` +
+    (falhas.length ? ` Falhas transitorias: ${falhas.length}.` : "");
+
+  return { dia, totalConversoes, senhasCreditadas, topIndicadores, anomalias, falhasTransitorias: falhas.length, texto };
+}
+
+/** Marca a indução de hoje como lida (ITEM 6). Fail-soft → true (no-op se ausente). */
+export async function marcarInducoesLidas(enderecoIndicador) {
+  const end = String(enderecoIndicador || "").toLowerCase();
+  if (!end) return false;
+  const store = abrirStore(STORE_INDUZIDO);
+  if (!store) return false;
+  const chave = `${end}:${diaBRT()}`;
+  try {
+    const doc = await store.get(chave, { type: "json" });
+    if (!doc) return true;
+    if (!doc.lida) {
+      doc.lida = true;
+      doc.lidaEm = new Date().toISOString();
+      await store.setJSON(chave, doc);
+    }
+    return true;
+  } catch (err) {
+    console.warn("[referral] marcarInducoesLidas falhou (não-fatal):", err?.message);
+    return false;
+  }
 }
 
 /**
@@ -168,6 +366,8 @@ export async function registrarIndicacao(codigo, novoEndereco, visitorIdNovo) {
         codigo, novoEndereco: novoLower, motivo: fraude.motivo,
       }).catch(() => {});
     }
+    // ITEM 2 — regista a anomalia no log diário (alimenta o relatório admin).
+    await appendReferralLog({ tipo: "fraude", motivo: fraude.motivo, codigo, indicado: novoLower });
     return { ok: false, code: fraude.motivo, message: `indicação rejeitada: ${fraude.motivo}` };
   }
   const indicador = await validarCodigoIndicacao(codigo);
@@ -176,10 +376,18 @@ export async function registrarIndicacao(codigo, novoEndereco, visitorIdNovo) {
   const linksStore = abrirStore(STORE_LINKS);
   if (!linksStore) return { ok: false, code: "store_indisponivel", message: "Blobs indisponível" };
 
-  // Idempotência: se já registrado, não duplica.
+  // Idempotência: se já registrado com ESTE código, não duplica.
   const chaveLink = `referral:${codigo}:${novoLower}`;
   const ja = await linksStore.get(chaveLink, { type: "json" });
   if (ja) return { ok: true, indicador, idempotent: true };
+
+  // ITEM 2 — uma carteira só pode ser indicada UMA vez: se já existe vínculo
+  // por OUTRO código, rejeita (evita "trocar de padrinho" / farmar bónus).
+  const vinculoExistente = await buscarVinculoPorIndicado(novoLower);
+  if (vinculoExistente && vinculoExistente.codigo && vinculoExistente.codigo !== codigo) {
+    await appendReferralLog({ tipo: "fraude", motivo: "ja_indicado", codigo, indicado: novoLower, codigoExistente: vinculoExistente.codigo });
+    return { ok: false, code: "ja_indicado", message: "esta carteira já foi indicada por outro código" };
+  }
 
   try {
     await linksStore.setJSON(chaveLink, {
@@ -309,36 +517,84 @@ export async function registrarConversao(vinculo, contexto = {}) {
   if (!vinculo?.codigo || !vinculo?.indicador || !vinculo?.indicado) {
     return { ok: false, code: "vinculo_invalido" };
   }
+  const indicador = String(vinculo.indicador).toLowerCase();
+  const indicado  = String(vinculo.indicado).toLowerCase();
+  // ITEM 2 — guarda defensiva: nunca converte uma auto-indicação (mesmo que um
+  // vínculo inválido tenha sido persistido). Regista a anomalia no log diário.
+  if (indicador === indicado) {
+    await appendReferralLog({ tipo: "fraude", motivo: "auto_indicacao", codigo: vinculo.codigo, indicador, indicado });
+    return { ok: false, code: "auto_indicacao" };
+  }
   const linksStore = abrirStore(STORE_LINKS);
   if (!linksStore) return { ok: false, code: "store_indisponivel" };
-  const chaveConv = `referral-convertido:${vinculo.codigo}:${vinculo.indicado}`;
+
+  // Idempotência (R2): o marcador referral-convertido é a FONTE ÚNICA. Já
+  // convertido (via primeiro lance OU primeira compra) → no-op silencioso.
+  const chaveConv = `referral-convertido:${vinculo.codigo}:${indicado}`;
   const ja = await linksStore.get(chaveConv, { type: "json" });
   if (ja) return { ok: true, idempotent: true };
 
-  // Concede bônus (limite mensal já validado dentro).
-  const bonus = await concederBonus(vinculo.indicador, { ...contexto, codigo: vinculo.codigo, indicado: vinculo.indicado });
-  if (!bonus.ok) {
-    // Se foi limite mensal, marca como convertido para histórico mas sem bônus.
-    if (bonus.code === "limite_mensal_excedido") {
-      try {
-        await linksStore.setJSON(chaveConv, { em: Date.now(), txHash: null, semBonus: true, motivo: bonus.code });
-      } catch {}
-    }
+  // +1 senha ao INDICADOR (limite mensal de 10 validado dentro de concederBonus).
+  const bonus = await concederBonus(indicador, { ...contexto, codigo: vinculo.codigo, indicado });
+  // Falha TRANSITÓRIA (ex.: on-chain) → NÃO marca convertido (permite retry no
+  // próximo lance/compra) e NÃO credita o indicado ainda. Só limite mensal
+  // (estado terminal do mês) segue para marcar convertido sem bónus ao indicador.
+  if (!bonus.ok && bonus.code !== "limite_mensal_excedido") {
+    await appendReferralLog({ tipo: "conversao_falha", codigo: vinculo.codigo, indicador, indicado, motivo: bonus.code });
     return bonus;
   }
 
+  // +1 senha ao INDICADO (MC15.8.1 R4 — bónus de boas-vindas; independente do
+  // limite mensal do indicador). Fail-soft: falha aqui não desfaz a conversão.
+  let txHashIndicado = null;
   try {
-    await linksStore.setJSON(chaveConv, { em: Date.now(), txHash: bonus.txHash, semBonus: false });
+    const r = await creditarSenhas(indicado, 1);
+    txHashIndicado = r?.txHash || null;
+  } catch (err) {
+    console.warn("[referral] crédito ao indicado falhou (não-fatal):", err?.message);
+  }
+
+  const semBonusIndicador = !bonus.ok; // true só quando limite mensal excedido
+  try {
+    await linksStore.setJSON(chaveConv, {
+      em: Date.now(),
+      txHashIndicador: bonus.ok ? bonus.txHash : null,
+      txHashIndicado,
+      semBonusIndicador,
+      motivo: bonus.ok ? null : bonus.code,
+    });
     // Atualiza status do vínculo para "convertido".
-    const vinculoKey = `referral:${vinculo.codigo}:${vinculo.indicado}`;
+    const vinculoKey = `referral:${vinculo.codigo}:${indicado}`;
     const vinculoReg = await linksStore.get(vinculoKey, { type: "json" });
     if (vinculoReg) {
-      await linksStore.setJSON(vinculoKey, { ...vinculoReg, status: "convertido", convertidoEm: Date.now(), txHashBonus: bonus.txHash });
+      await linksStore.setJSON(vinculoKey, {
+        ...vinculoReg, status: "convertido", convertidoEm: Date.now(),
+        txHashBonus: bonus.ok ? bonus.txHash : null,
+      });
     }
   } catch (err) {
     console.warn("[referral] marcar convertido falhou (não-fatal):", err?.message);
   }
-  return { ok: true, txHash: bonus.txHash };
+
+  // Auditoria do log diário (alimenta o relatório admin — ITEM 7).
+  await appendReferralLog({
+    tipo: "conversao", codigo: vinculo.codigo, indicador, indicado,
+    semBonusIndicador, origem: contexto?.contexto || null,
+  });
+
+  // Notificação indutiva agrupada ao indicador (ITEM 4). Só quando houve bónus
+  // efetivo (se bateu o limite mensal, o indicador não ganhou senha → sem indução).
+  if (bonus.ok) {
+    await registrarInducaoConvertida(indicador, contexto?.nomeIndicado || null);
+  }
+
+  return {
+    ok: true,
+    txHash: bonus.ok ? bonus.txHash : null,
+    txHashIndicado,
+    bonusIndicador: bonus.ok,
+    bonusIndicadorCode: bonus.ok ? null : bonus.code,
+  };
 }
 
 /**

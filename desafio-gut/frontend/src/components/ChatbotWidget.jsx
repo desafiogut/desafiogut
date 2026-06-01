@@ -52,6 +52,8 @@ const CARD_CORES = {
   perdeu_exclusividade: { titulo: "⚠️ Perdeste exclusividade", bg: "rgba(249,115,22,0.12)", borda: "rgba(249,115,22,0.45)", barra: "#f97316" },
   voce_venceu:          { titulo: "🏆 Ganhaste!",            bg: "rgba(0,200,83,0.14)",   borda: "rgba(0,200,83,0.5)",   barra: "#00c853" },
   resumo_edicao:        { titulo: "🏁 Edição encerrada",     bg: "rgba(59,130,246,0.12)", borda: "rgba(59,130,246,0.45)", barra: "#60a5fa" },
+  // MC15.8.1 — Indique e Ganhe (roxo). Indução de conversão + card on-demand.
+  indicacao:            { titulo: "👥 Indique e Ganhe",      bg: "rgba(168,85,247,0.12)", borda: "rgba(168,85,247,0.45)", barra: "#a855f7" },
   default:     { titulo: "GUTO",                 bg: "rgba(0,212,170,0.10)",  borda: "rgba(0,212,170,0.4)",  barra: "#00d4aa" },
 };
 
@@ -66,6 +68,9 @@ const NOTIF_CARD_KIND = {
   lance_unico:          "lance_unico",
   perdeu_exclusividade: "perdeu_exclusividade",
   voce_venceu:          "voce_venceu",
+  // MC15.8.1 — indução do Indique e Ganhe (card roxo) + relatório admin.
+  indicacao_convertida: "indicacao",
+  relatorio_indicacoes: "indicacao",
 };
 
 const GUTO_STATE_MAP = {
@@ -90,6 +95,53 @@ function salvarHistorico(hist) {
   if (typeof window === "undefined") return;
   try { localStorage.setItem(LS_KEY, JSON.stringify(hist.slice(-LS_MAX_MSGS))); }
   catch (err) { console.warn("[ChatbotWidget] salvar localStorage falhou:", err?.message); }
+}
+
+// MC15.8.1 ITEM 9 — bloco do card roxo "Indique e Ganhe" (on-demand): código
+// pessoal, link copiável e estatísticas. Gere o próprio estado de "copiado".
+function CardIndicacao({ indicacao }) {
+  const [copiado, setCopiado] = useState(false);
+  const codigo = indicacao?.codigo || "—";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const link = codigo && codigo !== "—" ? `${origin}/?ref=${codigo}` : "";
+  const copiar = useCallback(async () => {
+    if (!link) return;
+    try {
+      if (navigator?.share) { await navigator.share({ title: "DESAFIOGUT — Indique e Ganhe", url: link }); }
+      else { await navigator.clipboard.writeText(link); }
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch { /* utilizador cancelou ou clipboard indisponível */ }
+  }, [link]);
+  const stat = (rotulo, valor) => (
+    <div style={{ flex: 1, textAlign: "center" }}>
+      <div style={{ fontSize: "1.05rem", fontWeight: 900, color: "#c4a4f7" }}>{valor ?? 0}</div>
+      <div style={{ fontSize: "0.6rem", color: COR.muted }}>{rotulo}</div>
+    </div>
+  );
+  return (
+    <div style={{ marginTop: "0.5rem" }}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem",
+        padding: "0.5rem 0.6rem", background: "rgba(0,0,0,0.25)", borderRadius: "8px",
+      }}>
+        <code style={{ fontSize: "0.92rem", fontWeight: 900, color: "#e8f0fe", letterSpacing: "0.04em" }}>{codigo}</code>
+        <button onClick={copiar} disabled={!link} aria-label="Copiar link de indicação"
+          style={{
+            padding: "0.35rem 0.6rem", borderRadius: "8px", border: "none",
+            background: link ? "#a855f7" : "rgba(168,85,247,0.3)", color: "#fff",
+            fontSize: "0.72rem", fontWeight: 800, cursor: link ? "pointer" : "not-allowed", whiteSpace: "nowrap",
+          }}>
+          {copiado ? "✓ Copiado!" : "Copiar link"}
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.5rem" }}>
+        {stat("Indicados", indicacao?.total_indicados)}
+        {stat("Converteram", indicacao?.total_convertidos)}
+        {stat("Senhas ganhas", indicacao?.senhas_ganhas)}
+      </div>
+    </div>
+  );
 }
 
 export default function ChatbotWidget() {
@@ -238,13 +290,19 @@ export default function ChatbotWidget() {
       setGutoState("responding");
       resetToIdle();
       // MC15.6 ITEM 4 — se a resposta traz estado de wizard, renderiza um CARD
-      // (passo, resumo e botões de resposta rápida). Caso contrário, texto normal.
+      // (passo, resumo e botões de resposta rápida). MC15.8.1 ITEM 9 — se traz
+      // `indicacao`, renderiza o card roxo Indique e Ganhe. Caso contrário, texto.
       const wiz = data.wizard || null;
+      const ind = data.indicacao || null;
       setMensagens((prev) => [...prev, {
         role: "bot",
         texto: data.resposta || "(resposta vazia)",
         fontes: data.fontes || [],
-        ...(wiz ? {
+        ...(ind ? {
+          type: "card",
+          cardKind: "indicacao",
+          indicacao: ind,
+        } : wiz ? {
           type: "card",
           cardKind: "wizard",
           passo: wiz.passo || null,
@@ -485,6 +543,7 @@ export default function ChatbotWidget() {
                           whiteSpace: "pre-wrap", wordBreak: "break-word",
                         }}>
                           {m.texto}
+                          {m.indicacao && <CardIndicacao indicacao={m.indicacao} />}
                           {m.resumo && (
                             <div style={{
                               marginTop: "0.5rem", padding: "0.5rem 0.6rem",

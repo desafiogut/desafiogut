@@ -23,6 +23,7 @@ import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { lerEstadoSistema } from "./_lib/system-state.mjs";
 import { lerNotificacoes, marcarLidas } from "./_lib/notificacoes-usuario.mjs";
+import { lerInducoesPendentes, marcarInducoesLidas, gerarRelatorioIndicacoes } from "./_lib/referral.mjs";
 
 const RL_NOTIFICACOES_RPM = 60;
 const JANELA_FIM_SEG = 300;                  // 5 min — tempo_limite_5min
@@ -148,6 +149,23 @@ async function montarEventosAdmin() {
     console.warn("[notificacoes] edicoes falhou:", err?.message);
   }
 
+  // MC15.8.1 ITEM 8 — relatório diário de indicações às 9h BRT (= 12h UTC).
+  // Emitido apenas na janela das 12h UTC; timestamp ESTÁVEL (dia BRT) → o
+  // dedupe do frontend (tipo:timestamp) mostra-o uma vez por dia. Read-only.
+  try {
+    if (new Date(agora).getUTCHours() === 12) {
+      const rel = await gerarRelatorioIndicacoes();
+      notificacoes.push({
+        tipo: "relatorio_indicacoes",
+        mensagem: rel.texto,
+        timestamp: `${rel.dia}T12:00:00.000Z`,
+        dados: { dia: rel.dia, totalConversoes: rel.totalConversoes, senhasCreditadas: rel.senhasCreditadas },
+      });
+    }
+  } catch (err) {
+    console.warn("[notificacoes] relatório de indicações falhou (não-fatal):", err?.message);
+  }
+
   notificacoes.sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
   return notificacoes;
 }
@@ -166,6 +184,9 @@ export default async (req) => {
       return jsonError(400, "acao_invalida", 'use { acao: "marcar_lidas" }');
     }
     const ok = await marcarLidas(endereco);
+    // MC15.8.1 ITEM 6 — a indução de hoje segue o mesmo fluxo: ao marcar lidas,
+    // fecha-se o dia (extras vão para o relatório, nunca geram nova notificação).
+    await marcarInducoesLidas(endereco);
     return jsonResponse({ ok });
   }
 
@@ -185,10 +206,13 @@ export default async (req) => {
     return jsonResponse({ notificacoes });
   }
 
-  // ── PARTICIPANTE → notificações pessoais do Blob (MC15.7) ──────────────────
+  // ── PARTICIPANTE → notificações pessoais (MC15.7) + indução (MC15.8.1 ITEM 5)
   const endereco = await getParticipante(req);
   if (!endereco) return jsonError(401, "nao_autenticado", "token obrigatório");
-  const notificacoes = await lerNotificacoes(endereco);
+  const pessoais = await lerNotificacoes(endereco);
+  // Indução do "Indique e Ganhe" (card roxo): pendente de hoje, agrupada. Fail-soft.
+  const inducoes = await lerInducoesPendentes(endereco);
+  const notificacoes = [...pessoais, ...inducoes];
   notificacoes.sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
   return jsonResponse({ notificacoes });
 };

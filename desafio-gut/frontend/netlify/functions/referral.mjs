@@ -115,6 +115,7 @@ async function handleUsarCodigo(req) {
     const status =
       r.code === "feature_desligada"     ? 503 :
       r.code === "auto_indicacao"        ? 400 :
+      r.code === "ja_indicado"           ? 409 :
       r.code === "codigo_inexistente"    ? 404 :
       r.code === "mesmo_dispositivo"     ? 403 :
       r.code === "sybil_suspeito"        ? 403 :

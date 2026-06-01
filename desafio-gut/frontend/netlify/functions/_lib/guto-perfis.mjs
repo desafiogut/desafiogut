@@ -172,6 +172,23 @@ export const respostasPorPerfil = {
     admin: (p) => `Auditoria (últimas ${g(p.qtd, "0")}): ${g(p.linhas, "sem registos")}.`,
   },
 
+  // MC15.8.1 ITEM 10 — Indique e Ganhe (comum/corporativo/admin). Visitante: CTA.
+  // comum: amigável com emoji; corporativo/admin: sem emoji.
+  indique_e_ganhe: {
+    visitante: () => "Indique e Ganhe é para membros! Cria a tua conta e, por cada amigo que entrar e der o primeiro lance, ganhas +1 senha. 😊",
+    comum: (p) => `Aqui está o teu Indique e Ganhe! 🎁 Partilha o teu link: por cada amigo que entrar e der o primeiro lance, ganhas +1 senha (e o teu amigo também). Código: ${g(p.codigo)}.`,
+    corporativo: (p) => `Indique e Ganhe — código ${g(p.codigo)}. Por cada indicado que faça o primeiro lance: +1 senha para si e +1 para o indicado. Indicados: ${g(p.total_indicados, "0")}; convertidos: ${g(p.total_convertidos, "0")}; senhas ganhas: ${g(p.senhas_ganhas, "0")}.`,
+    admin: (p) => `Indique e Ganhe — código ${g(p.codigo)}. Indicados: ${g(p.total_indicados, "0")}; convertidos: ${g(p.total_convertidos, "0")}; senhas: ${g(p.senhas_ganhas, "0")}.`,
+  },
+
+  // MC15.8.1 ITEM 8 — relatório de indicações (admin-only; sem emoji, formato relatório).
+  relatorio_indicacoes: {
+    visitante: () => "Os relatórios de indicação são internos. Cria uma conta para participar! 😊",
+    comum: () => "Os relatórios de indicação são da coordenação. Posso ajudar com os teus lances! 🙂",
+    corporativo: () => "Os relatórios consolidados de indicação são da coordenação.",
+    admin: (p) => g(p.relatorio, "Sem dados de indicações para hoje."),
+  },
+
   // Wrapper do RAG: respostaRAG é a resposta gerada; cada perfil acrescenta o seu enquadramento.
   fallback_rag: {
     visitante: (p) => `${g(p.respostaRAG, "")} Cria uma conta para participar dos leilões! 😊`.trim(),

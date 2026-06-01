@@ -27,6 +27,7 @@ import {
   normalizarTipo, sanitizarProduto, EDICAO_ID_RE,
 } from "./_lib/edicoes-core.mjs";
 import { obterResposta, obterPromptSystem } from "./_lib/guto-perfis.mjs";
+import { gerarCodigoIndicacao, estatisticasIndicador, gerarRelatorioIndicacoes, referralAtivo } from "./_lib/referral.mjs";
 import { lerSessaoWizard, salvarSessaoWizard, limparSessaoWizard } from "./_lib/wizard-session.mjs";
 import { simularVencedorMenorLance, rotuloVencedor, brlCentavos } from "./_lib/simulador.mjs";
 import { obterMetricasPulso } from "./_lib/pulso.mjs";
@@ -100,6 +101,12 @@ const INTENT_PATTERNS = {
   panic:   /\/?panic\b|modo panico|parar tudo|congelar (sistema|tudo)|emergencia/,
   // MC15.6 ITEM 10 — memória operacional (admin-only).
   memoria: /memoria( operacional| evolutiva)?|historico de (decis|acoe)|como (resolvi|resolveu|fiz)( isso)?( antes)?|decis(ao|oes) (passad|anterior)|o que (fiz|fizemos) (antes|da ultima)/,
+  // MC15.8.1 ITEM 8 — relatório de indicações (admin-only). Testado ANTES de
+  // auditoria para "estatisticas de indicacoes" cair aqui (e não em auditoria).
+  relatorio_indicacoes: /relatorio.*indica|indica.*relatorio|indique e ganhe relatorio|como estao as indica|estatisticas? de indica/,
+  // MC15.8.1 ITEM 10 — Indique e Ganhe (comum/corporativo/admin). Testado DEPOIS
+  // de relatorio_indicacoes, para "indique e ganhe relatorio" cair no relatório.
+  indique_e_ganhe: /indique e ganh|codigo de indicac|meu (codigo|link)|link de indicac|ganhar (senhas? )?(com |por )?indicac|programa de indicac|minhas indicac|como indic|convidar amigo/,
 };
 
 /**
@@ -112,12 +119,14 @@ const INTENT_PATTERNS = {
  * extração de parâmetros (extrairProduto/Tipo/Duracao/EdicaoId) continua a
  * usar o texto ORIGINAL — só a DETECÇÃO normaliza.
  */
-function detectarIntent(texto) {
+export function detectarIntent(texto) {
   const t = String(texto || "")
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "") // remove acentos combinantes (NFD)
     .toLowerCase();
   // ordem importa: específicos (auditoria/dados) antes; encerrar/listar antes de criar.
+  if (INTENT_PATTERNS.relatorio_indicacoes.test(t)) return "relatorio_indicacoes";
+  if (INTENT_PATTERNS.indique_e_ganhe.test(t)) return "indique_e_ganhe";
   if (INTENT_PATTERNS.auditoria.test(t))       return "auditoria";
   if (INTENT_PATTERNS.dados_mercado.test(t))   return "dados_mercado";
   if (INTENT_PATTERNS.simular_vencedor.test(t)) return "simular_vencedor";
@@ -464,6 +473,65 @@ async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
     return jsonResponse({
       resposta: obterResposta("auditoria", "admin", { qtd, linhas }),
       fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil,
+    });
+  }
+
+  // MC15.8.1 ITEM 8 — relatório de indicações (admin-only). Read-only, informativo.
+  if (intent === "relatorio_indicacoes") {
+    if (!ehAdmin) {
+      return jsonResponse({
+        resposta: obterResposta("relatorio_indicacoes", perfil, {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    let relatorio = "";
+    try { relatorio = (await gerarRelatorioIndicacoes()).texto; }
+    catch (err) {
+      console.warn("[chatbot] gerarRelatorioIndicacoes falhou:", err?.message);
+      relatorio = "Nao foi possivel compilar o relatorio de indicacoes agora.";
+    }
+    return jsonResponse({
+      resposta: obterResposta("relatorio_indicacoes", "admin", { relatorio }),
+      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil,
+    });
+  }
+
+  // MC15.8.1 ITEM 10 — Indique e Ganhe (comum/corporativo/admin). Visitante
+  // recebe CTA de registo (sem código). Devolve `indicacao` → card roxo no front.
+  if (intent === "indique_e_ganhe") {
+    if (perfil === "visitante" || !adminEndereco) {
+      return jsonResponse({
+        resposta: obterResposta("indique_e_ganhe", "visitante", {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    if (!referralAtivo()) {
+      return jsonResponse({
+        resposta: "O programa Indique e Ganhe está temporariamente desligado. Volta em breve!",
+        fontes: [], modoBusca: "intent", modoResposta: "feature-off", intent, perfil,
+      });
+    }
+    let indicacao = null;
+    try {
+      const codigoInfo = await gerarCodigoIndicacao(adminEndereco);
+      const stats = await estatisticasIndicador(adminEndereco);
+      indicacao = {
+        codigo: codigoInfo.codigo,
+        total_indicados:   stats.total_indicados,
+        total_convertidos: stats.total_convertidos,
+        senhas_ganhas:     stats.senhas_ganhas,
+      };
+    } catch (err) {
+      console.warn("[chatbot] indique_e_ganhe dados falharam:", err?.message);
+      return jsonResponse({
+        resposta: "Não consegui buscar o teu código de indicação agora. Tenta daqui a pouco!",
+        fontes: [], modoBusca: "intent", modoResposta: "erro", intent, perfil,
+      });
+    }
+    return jsonResponse({
+      resposta: obterResposta("indique_e_ganhe", perfil, indicacao),
+      indicacao,
+      fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
     });
   }
 
