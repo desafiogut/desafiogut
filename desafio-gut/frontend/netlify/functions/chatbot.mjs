@@ -119,7 +119,7 @@ const INTENT_PATTERNS = {
  * extração de parâmetros (extrairProduto/Tipo/Duracao/EdicaoId) continua a
  * usar o texto ORIGINAL — só a DETECÇÃO normaliza.
  */
-function detectarIntent(texto) {
+export function detectarIntent(texto) {
   const t = String(texto || "")
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "") // remove acentos combinantes (NFD)
