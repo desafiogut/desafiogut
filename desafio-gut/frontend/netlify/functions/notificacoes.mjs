@@ -23,6 +23,7 @@ import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { lerEstadoSistema } from "./_lib/system-state.mjs";
 import { lerNotificacoes, marcarLidas } from "./_lib/notificacoes-usuario.mjs";
+import { lerInducoesPendentes } from "./_lib/referral.mjs";
 
 const RL_NOTIFICACOES_RPM = 60;
 const JANELA_FIM_SEG = 300;                  // 5 min — tempo_limite_5min
@@ -185,10 +186,13 @@ export default async (req) => {
     return jsonResponse({ notificacoes });
   }
 
-  // ── PARTICIPANTE → notificações pessoais do Blob (MC15.7) ──────────────────
+  // ── PARTICIPANTE → notificações pessoais (MC15.7) + indução (MC15.8.1 ITEM 5)
   const endereco = await getParticipante(req);
   if (!endereco) return jsonError(401, "nao_autenticado", "token obrigatório");
-  const notificacoes = await lerNotificacoes(endereco);
+  const pessoais = await lerNotificacoes(endereco);
+  // Indução do "Indique e Ganhe" (card roxo): pendente de hoje, agrupada. Fail-soft.
+  const inducoes = await lerInducoesPendentes(endereco);
+  const notificacoes = [...pessoais, ...inducoes];
   notificacoes.sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
   return jsonResponse({ notificacoes });
 };

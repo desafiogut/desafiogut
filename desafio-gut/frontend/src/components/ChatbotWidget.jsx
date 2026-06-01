@@ -52,6 +52,8 @@ const CARD_CORES = {
   perdeu_exclusividade: { titulo: "⚠️ Perdeste exclusividade", bg: "rgba(249,115,22,0.12)", borda: "rgba(249,115,22,0.45)", barra: "#f97316" },
   voce_venceu:          { titulo: "🏆 Ganhaste!",            bg: "rgba(0,200,83,0.14)",   borda: "rgba(0,200,83,0.5)",   barra: "#00c853" },
   resumo_edicao:        { titulo: "🏁 Edição encerrada",     bg: "rgba(59,130,246,0.12)", borda: "rgba(59,130,246,0.45)", barra: "#60a5fa" },
+  // MC15.8.1 — Indique e Ganhe (roxo). Indução de conversão + card on-demand.
+  indicacao:            { titulo: "👥 Indique e Ganhe",      bg: "rgba(168,85,247,0.12)", borda: "rgba(168,85,247,0.45)", barra: "#a855f7" },
   default:     { titulo: "GUTO",                 bg: "rgba(0,212,170,0.10)",  borda: "rgba(0,212,170,0.4)",  barra: "#00d4aa" },
 };
 
@@ -66,6 +68,9 @@ const NOTIF_CARD_KIND = {
   lance_unico:          "lance_unico",
   perdeu_exclusividade: "perdeu_exclusividade",
   voce_venceu:          "voce_venceu",
+  // MC15.8.1 — indução do Indique e Ganhe (card roxo) + relatório admin.
+  indicacao_convertida: "indicacao",
+  relatorio_indicacoes: "indicacao",
 };
 
 const GUTO_STATE_MAP = {
