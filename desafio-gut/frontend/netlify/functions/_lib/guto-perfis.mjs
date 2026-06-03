@@ -193,9 +193,13 @@ export const respostasPorPerfil = {
   // Inclui o aviso de expiração (5 dias) quando aplicável.
   meu_saldo: {
     visitante: () => "O saldo de senhas é para membros. Cria a tua conta e participa dos leilões! 😊",
-    comum: (p) => `Tens ${g(p.saldoTroco, "0")} senha(s) válida(s).` +
+    comum: (p) =>
+      (Number(p.senhasExpiradasAgora) > 0 ? `${p.senhasExpiradasAgora} senhas expiraram hoje. ` : "") +
+      `Tens ${g(p.saldoTroco, "0")} senha(s) válida(s).` +
       (Number(p.expiramEmBreve) > 0 ? ` Atenção: tens ${p.expiramEmBreve} senhas que expiram em 5 dias. Usa-as nos leilões! 🙂` : " 🙂"),
-    corporativo: (p) => `Saldo de senhas de troco: ${g(p.saldoTroco, "0")} (válidas 30 dias, consumo FIFO).` +
+    corporativo: (p) =>
+      (Number(p.senhasExpiradasAgora) > 0 ? `${p.senhasExpiradasAgora} senhas expiraram hoje. ` : "") +
+      `Saldo de senhas de troco: ${g(p.saldoTroco, "0")} (válidas 30 dias, consumo FIFO).` +
       (Number(p.expiramEmBreve) > 0 ? ` Tens ${p.expiramEmBreve} senhas que expiram em 5 dias. Usa-as nos leilões.` : "") +
       " Converta e licite em Carteira do Lojista.",
     admin: (p) => `Troco de ${g(p.endereco)}: ${g(p.saldoTroco, "0")} ativas; ${g(p.expiramEmBreve, "0")} a expirar em 5 dias.`,
