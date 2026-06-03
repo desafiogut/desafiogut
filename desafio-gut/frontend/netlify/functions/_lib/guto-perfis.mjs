@@ -189,6 +189,42 @@ export const respostasPorPerfil = {
     admin: (p) => g(p.relatorio, "Sem dados de indicações para hoje."),
   },
 
+  // MC17.1 — saldo de senhas de troco (comum/corporativo/admin). Visitante: CTA.
+  // Inclui o aviso de expiração (5 dias) quando aplicável.
+  meu_saldo: {
+    visitante: () => "O saldo de senhas é para membros. Cria a tua conta e participa dos leilões! 😊",
+    comum: (p) => `Tens ${g(p.saldoTroco, "0")} senha(s) válida(s).` +
+      (Number(p.expiramEmBreve) > 0 ? ` Atenção: tens ${p.expiramEmBreve} senhas que expiram em 5 dias. Usa-as nos leilões! 🙂` : " 🙂"),
+    corporativo: (p) => `Saldo de senhas de troco: ${g(p.saldoTroco, "0")} (válidas 30 dias, consumo FIFO).` +
+      (Number(p.expiramEmBreve) > 0 ? ` Tens ${p.expiramEmBreve} senhas que expiram em 5 dias. Usa-as nos leilões.` : "") +
+      " Converta e licite em Carteira do Lojista.",
+    admin: (p) => `Troco de ${g(p.endereco)}: ${g(p.saldoTroco, "0")} ativas; ${g(p.expiramEmBreve, "0")} a expirar em 5 dias.`,
+  },
+
+  // MC17.1 — contratar cota comercial (lojista). Valores oficiais (REQ-04..07).
+  comprar_cotas: {
+    visitante: () => "Para anunciar e obter senhas, torna-te parceiro. Cria uma conta! 😊",
+    comum: () => "A contratação de cotas é para lojistas. Posso ajudar com os teus lances! 🙂",
+    corporativo: () => "Contrate a sua cota comercial em Carteira do Lojista: Bronze R$ 2.640, Prata R$ 5.600, Ouro R$ 11.000 ou Diamante R$ 18.000. Pagamento por PIX com confirmação da coordenação. As senhas para licitar vêm do excedente da cota.",
+    admin: () => "Contratação de cota: o lojista solicita no Painel (Adesão/PIX) e a coordenação confirma. As senhas vêm do excedente da cota (não há compra avulsa).",
+  },
+
+  // MC17.1 — preços/pacotes das cotas comerciais.
+  pacotes_cotas: {
+    visitante: () => "Temos 4 cotas: Bronze, Prata, Ouro e Diamante. Cria uma conta para contratar! 😊",
+    comum: () => "As cotas comerciais são para lojistas: Bronze, Prata, Ouro e Diamante. 🙂",
+    corporativo: () => "Cotas comerciais: Bronze R$ 2.640 (produto mín. R$ 660), Prata R$ 5.600 (R$ 1.350), Ouro R$ 11.000 (R$ 2.250), Diamante R$ 18.000 (R$ 4.500). Produto abaixo do mínimo gera senhas de troco (R$ 2 cada, válidas 30 dias).",
+    admin: () => "Cotas (contrato/produto-mín): Bronze 2640/660, Prata 5600/1350, Ouro 11000/2250, Diamante 18000/4500. Excedente do produto -> senhas de troco (30d, FIFO).",
+  },
+
+  // MC17.1 — relatório de compras/senhas para o admin.
+  relatorio_compras: {
+    visitante: () => "Os relatórios de compras são internos. Cria uma conta para participar! 😊",
+    comum: () => "Os relatórios de compras são da coordenação. Posso ajudar com os teus lances! 🙂",
+    corporativo: () => "Os relatórios consolidados de compras são da coordenação. No Painel tens os teus próprios dados.",
+    admin: (p) => `Relatório de senhas — troco ativo: ${g(p.senhasAtivas, "0")} senha(s) em ${g(p.lojistas, "0")} lojista(s). Expiradas (acumulado): ${g(p.senhasExpiradas, "0")}.`,
+  },
+
   // Wrapper do RAG: respostaRAG é a resposta gerada; cada perfil acrescenta o seu enquadramento.
   fallback_rag: {
     visitante: (p) => `${g(p.respostaRAG, "")} Cria uma conta para participar dos leilões! 😊`.trim(),

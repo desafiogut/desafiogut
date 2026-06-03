@@ -33,6 +33,8 @@ import { simularVencedorMenorLance, rotuloVencedor, brlCentavos } from "./_lib/s
 import { obterMetricasPulso } from "./_lib/pulso.mjs";
 import { escreverEstadoSistema, lerEstadoSistema } from "./_lib/system-state.mjs";
 import { registrarDecisao, buscarDecisaoSemelhante } from "./_lib/log-operacional.mjs";
+// MC17.1 — saldo de senhas de troco do lojista + resumo para o admin.
+import { lerTroco, resumoTrocoAdmin } from "./_lib/troco-senhas.mjs";
 
 const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
@@ -107,6 +109,14 @@ const INTENT_PATTERNS = {
   // MC15.8.1 ITEM 10 — Indique e Ganhe (comum/corporativo/admin). Testado DEPOIS
   // de relatorio_indicacoes, para "indique e ganhe relatorio" cair no relatório.
   indique_e_ganhe: /indique e ganh|codigo de indicac|meu (codigo|link)|link de indicac|ganhar (senhas? )?(com |por )?indicac|programa de indicac|minhas indicac|como indic|convidar amigo/,
+  // MC17.1 — relatório de compras/senhas (admin-only).
+  relatorio_compras: /relatorio de (compras|vendas)|quem comprou (cotas|senhas)|vendas de senhas|senhas (vendidas|expiradas)|relatorio de senhas/,
+  // MC17.1 — preços/pacotes das cotas comerciais (lojista).
+  pacotes_cotas: /pacotes? de cota|precos? das cotas|quanto custa[m]? (a |as )?cotas?|planos de cota|tabela de cotas|valores das cotas/,
+  // MC17.1 — contratar cota comercial (lojista).
+  comprar_cotas: /comprar (uma )?cota|contratar (uma )?cota|quero (uma )?cota|adquirir cota|contratar (bronze|prata|ouro|diamante)/,
+  // MC17.1 — saldo de senhas de troco (perfis autenticados).
+  meu_saldo: /\bmeu saldo\b|minhas senhas|quantas senhas (eu )?tenho|saldo de (senhas|troco)|senhas de troco/,
 };
 
 /**
@@ -125,8 +135,12 @@ export function detectarIntent(texto) {
     .replace(/[̀-ͯ]/g, "") // remove acentos combinantes (NFD)
     .toLowerCase();
   // ordem importa: específicos (auditoria/dados) antes; encerrar/listar antes de criar.
+  if (INTENT_PATTERNS.relatorio_compras.test(t)) return "relatorio_compras";
   if (INTENT_PATTERNS.relatorio_indicacoes.test(t)) return "relatorio_indicacoes";
   if (INTENT_PATTERNS.indique_e_ganhe.test(t)) return "indique_e_ganhe";
+  if (INTENT_PATTERNS.pacotes_cotas.test(t))   return "pacotes_cotas";
+  if (INTENT_PATTERNS.comprar_cotas.test(t))   return "comprar_cotas";
+  if (INTENT_PATTERNS.meu_saldo.test(t))       return "meu_saldo";
   if (INTENT_PATTERNS.auditoria.test(t))       return "auditoria";
   if (INTENT_PATTERNS.dados_mercado.test(t))   return "dados_mercado";
   if (INTENT_PATTERNS.simular_vencedor.test(t)) return "simular_vencedor";
@@ -548,6 +562,54 @@ async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
     const edicoesAtivas = Object.values(edicoes).filter((e) => e.status === "aberto").length;
     return jsonResponse({
       resposta: obterResposta("dados_mercado", perfil, { edicoesAtivas }),
+      fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
+    });
+  }
+
+  // MC17.1 — relatório de compras/senhas (admin-only): total ativo e expirado.
+  if (intent === "relatorio_compras") {
+    if (!ehAdmin) {
+      return jsonResponse({
+        resposta: obterResposta("relatorio_compras", perfil, {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    let resumo = { lojistas: 0, senhasAtivas: 0, senhasExpiradas: 0 };
+    try { resumo = await resumoTrocoAdmin(); }
+    catch (err) { console.warn("[chatbot] resumoTrocoAdmin falhou:", err?.message); }
+    return jsonResponse({
+      resposta: obterResposta("relatorio_compras", "admin", resumo),
+      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil,
+    });
+  }
+
+  // MC17.1 — saldo de senhas de troco (autenticados; visitante recebe CTA).
+  if (intent === "meu_saldo") {
+    if (perfil === "visitante" || !adminEndereco) {
+      return jsonResponse({
+        resposta: obterResposta("meu_saldo", "visitante", {}),
+        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
+      });
+    }
+    let troco = { saldoTroco: 0, expiramEmBreve: 0 };
+    try { troco = await lerTroco(adminEndereco); }
+    catch (err) { console.warn("[chatbot] lerTroco falhou:", err?.message); }
+    return jsonResponse({
+      resposta: obterResposta("meu_saldo", perfil, { ...troco, endereco: adminEndereco }),
+      fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
+    });
+  }
+
+  // MC17.1 — contratar cota comercial / pacotes (informativo, por perfil).
+  if (intent === "comprar_cotas") {
+    return jsonResponse({
+      resposta: obterResposta("comprar_cotas", perfil, {}),
+      fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
+    });
+  }
+  if (intent === "pacotes_cotas") {
+    return jsonResponse({
+      resposta: obterResposta("pacotes_cotas", perfil, {}),
       fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
     });
   }
