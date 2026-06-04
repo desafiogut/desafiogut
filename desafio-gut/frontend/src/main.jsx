@@ -2,10 +2,11 @@ import "./globals.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { PrivyProvider } from "@privy-io/react-auth";
+import { PrivyProvider, useLogin, useCreateWallet } from "@privy-io/react-auth";
 import { sepolia as sepoliaChain } from "viem/chains"; // viem instalado como dep do Privy
 import * as Sentry from "@sentry/react";
 import App from "./App.jsx";
+import ReferralTracker from "./components/ReferralTracker.jsx";
 
 // Sentry init — no-op em ambientes sem VITE_SENTRY_DSN (dev local sem env).
 // beforeSend strippa qualquer payload contendo "argon2id_" como defesa em
@@ -44,6 +45,36 @@ Sentry.init({
     }
     return event;
   },
+});
+
+// MC17.3.1.1 — enriquece os erros com a URL e o contexto de referral, para
+// correlacionar crashes de cold-start (ex.: createWallet) com o link de entrada.
+// Corre ANTES do beforeSend (que mantém o scrub argon2id intacto — sem PII nova
+// além da href e do código IND). privy_token_exists é uma heurística leve.
+function privyTokenExists() {
+  try {
+    if (typeof document !== "undefined" && /privy-token=/.test(document.cookie || "")) return true;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("privy:")) return true;
+    }
+  } catch { /* sem storage: ignora */ }
+  return false;
+}
+Sentry.addEventProcessor((event) => {
+  try {
+    const url = typeof window !== "undefined" ? window.location.href : null;
+    if (url) event.request = { ...(event.request || {}), url };
+    event.contexts = {
+      ...(event.contexts || {}),
+      "Referral Context": {
+        current_url: url,
+        stored_ref_code: (() => { try { return sessionStorage.getItem("desafiogut_ref"); } catch { return null; } })(),
+        privy_token_exists: privyTokenExists(),
+      },
+    };
+  } catch { /* nunca quebrar o pipeline do Sentry */ }
+  return event;
 });
 
 // App ID validado via Privy Management API em 2026-04-28.
@@ -128,27 +159,54 @@ const SentryFallback = () => (
   </div>
 );
 
+// MC17.3.1.1 — PrivyEventsBridge: registar os callbacks de evento do Privy v3.
+// É a CORREÇÃO do crash "Cannot destructure property 'onSuccess' of
+// 'i.createWallet' as it is undefined": com `createOnLogin: all-users`, ao logar
+// um utilizador NOVO o SDK auto-cria a embedded wallet e despacha o evento
+// `createWallet`, fazendo internamente `const { onSuccess } = events.createWallet`.
+// Sem nenhum useCreateWallet registado, `events.createWallet` é undefined e o
+// destructure rebenta. Registar os hooks aqui DEFINE events.createWallet/login.
+// Montado dentro do PrivyProvider e o mais cedo possível (irmão de <App/>),
+// para o handler existir antes de qualquer fluxo de login. Sem UI.
+function PrivyEventsBridge() {
+  useCreateWallet({
+    onSuccess: ({ wallet }) =>
+      console.info("[GUT] embedded wallet criada", { address: wallet?.address }),
+    onError: (error) =>
+      console.warn("[GUT] createWallet erro", error),
+  });
+  useLogin({
+    onComplete: ({ isNewUser, wasAlreadyAuthenticated }) =>
+      console.info("[GUT] login completo", { isNewUser, wasAlreadyAuthenticated }),
+    onError: (error) =>
+      console.warn("[GUT] login erro", error),
+  });
+  return null;
+}
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <Sentry.ErrorBoundary fallback={<SentryFallback />}>
     <BrowserRouter>
+    {/* MC17.3.1.1 — captura ?ref=IND-... para sessionStorage antes do Privy. */}
+    <ReferralTracker />
     <PrivyProvider
       appId={PRIVY_APP_ID}
-      onSuccess={(user, isNewUser) => {
-        console.info("[GUT-DEBUG] PrivyProvider.onSuccess", {
-          isNewUser,
-          userId: user?.id,
-          linkedAccounts: user?.linkedAccounts?.map((a) => a.type),
-        });
-      }}
       config={{
         // ── Métodos de login: Google, E-mail, Apple ──────────────────────────
         loginMethods: ["google", "email", "apple"],
 
         // ── Embedded Wallet: criado automaticamente para todos os usuários ──
+        // MC17.3.1.1 — forma ANINHADA por chain exigida pelo Privy v3
+        // (embeddedWallets.ethereum.createOnLogin). A forma plana legada
+        // (createOnLogin no topo) ficou fora do tipo v3 e o callback do evento
+        // createWallet não era registado, disparando o crash em utilizadores
+        // novos. O registo do callback é feito por hooks (ver PrivyEventsBridge).
+        // Nota: a prop global `onSuccess` foi removida — não existe na v3
+        // (PrivyProviderProps só aceita appId/clientId/config/children); os
+        // callbacks passam a vir de useLogin/useCreateWallet.
         embeddedWallets: {
-          createOnLogin: "all-users",
-          noPromptOnSignature: false,
+          ethereum: { createOnLogin: "all-users" },
         },
 
         // ── Rede: Sepolia via viem/chains (definição oficial) ────────────────
@@ -166,6 +224,8 @@ createRoot(document.getElementById("root")).render(
         },
       }}
     >
+      {/* MC17.3.1.1 — regista os callbacks de evento (fix do crash createWallet). */}
+      <PrivyEventsBridge />
       <App />
     </PrivyProvider>
     </BrowserRouter>

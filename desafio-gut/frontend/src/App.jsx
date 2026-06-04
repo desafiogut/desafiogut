@@ -5,6 +5,7 @@ import { AppProvider, useAppContext } from "./context/AppContext.jsx";
 import TermosConsentimento from "./components/TermosConsentimento.jsx";
 import Layout from "./widgets/layout/Layout.jsx";
 import { ToastContainer, useToast } from "./widgets/toast/Toast.jsx";
+import ReferralRegistrar from "./components/ReferralRegistrar.jsx";
 import Dashboard       from "./pages/Dashboard.jsx";
 import MinhaCarteira   from "./pages/MinhaCarteira.jsx";
 import MercadoLances   from "./pages/MercadoLances.jsx";
@@ -85,6 +86,8 @@ export default function App() {
   // ── Aplicação principal ────────────────────────────────────────────────────
   return (
     <AppProvider toastApi={{ add, remove }}>
+      {/* MC17.3.1.1 — regista o vínculo de indicação (?ref=) quando address+authToken prontos. */}
+      <ReferralRegistrar />
       <ToastContainer toasts={toasts} onDismiss={remove} />
       <Routes>
         <Route element={<Layout />}>
