@@ -18,7 +18,7 @@
 // 503 service_unavailable. concederBonus respeita o mesmo flag.
 
 import { getStore } from "@netlify/blobs";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { creditarSenhas } from "./contract.mjs";
 import { checkSybil, registerVisitor } from "./sybil-check.mjs";
 import { captureSecurityAlert } from "./sentry-server.mjs";
@@ -29,6 +29,7 @@ const STORE_BONUS     = "referral-bonus";       // bonus por indicador + contado
 // MC15.8.1 — log de auditoria diário + indução agrupada (GUTO Indutor).
 const STORE_LOG       = "referral-log";         // log:{AAAA-MM-DD} → { eventos:[...] } (FIFO)
 const STORE_INDUZIDO  = "referral-induzido";    // {endereco}:{AAAA-MM-DD} → indução agrupada do dia
+const STORE_IP        = "referral-ip";          // ip:{ipHash}:{AAAA-MM-DD-HH} → { count } (anti-Sybil MC17.4.1)
 const MAX_LOG_EVENTOS = 500;
 const LIMITE_MENSAL   = 10;
 const PREFIXO_CODIGO  = "IND";
@@ -71,6 +72,32 @@ export function diaBRT(date = new Date()) {
   const mes = String(brt.getUTCMonth() + 1).padStart(2, "0");
   const dia = String(brt.getUTCDate()).padStart(2, "0");
   return `${ano}-${mes}-${dia}`;
+}
+
+// MC17.4.1 — throttle anti-Sybil por IP: limita conversões de indicação por
+// IP/hora (COMPLEMENTA o checkSybil por visitorId; não o substitui). O IP é
+// guardado apenas como hash truncado (privacidade). Fail-open: sem IP/Blobs não
+// bloqueia. Permite LIMITE_CONVERSOES_IP_HORA por janela; a partir daí → ok:false.
+const LIMITE_CONVERSOES_IP_HORA = 2;
+export async function registrarTentativaConversaoIp(ip) {
+  if (!ip) return { ok: true, count: 0, fonte: "sem-ip" };
+  const store = abrirStore(STORE_IP);
+  if (!store) return { ok: true, count: 0, fonte: "fail-open" };
+  const now = new Date();
+  const janela =
+    `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}` +
+    `-${String(now.getUTCDate()).padStart(2, "0")}-${String(now.getUTCHours()).padStart(2, "0")}`;
+  const ipHash = createHash("sha256").update(String(ip)).digest("hex").slice(0, 16);
+  const chave = `ip:${ipHash}:${janela}`;
+  let count = 0;
+  try { const doc = await store.get(chave, { type: "json" }); count = Number(doc?.count || 0); }
+  catch { /* fail-open */ }
+  if (count >= LIMITE_CONVERSOES_IP_HORA) {
+    return { ok: false, count, limite: LIMITE_CONVERSOES_IP_HORA };
+  }
+  try { await store.setJSON(chave, { count: count + 1, atualizadoEm: Date.now() }); }
+  catch { /* não-fatal */ }
+  return { ok: true, count: count + 1, limite: LIMITE_CONVERSOES_IP_HORA };
 }
 
 /**

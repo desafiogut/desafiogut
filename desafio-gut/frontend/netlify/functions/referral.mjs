@@ -21,6 +21,7 @@ import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import {
   gerarCodigoIndicacao, validarCodigoIndicacao, registrarIndicacao,
   registrarConversao, estatisticasIndicador, referralAtivo,
+  registrarTentativaConversaoIp, appendReferralLog,
 } from "./_lib/referral.mjs";
 
 const RATE_LIMIT_RPM = 5;
@@ -125,18 +126,44 @@ async function handleUsarCodigo(req) {
   }
 
   // MC17.4.1 — recompensa IMEDIATA no registo (antes: só no 1.º lance).
-  // Reusa registrarConversao: +1 senha ao indicador (respeita o limite mensal 10)
-  // e +1 senha ao indicado, idempotente via marcador único referral-convertido.
-  // Fail-soft: se falhar (ex.: on-chain transitório), o vínculo permanece e a
-  // conversão é retentada numa próxima chamada (idempotente) — nunca duplica.
+  // Anti-Sybil complementar (além do checkSybil por visitorId em registrarIndicacao):
+  //   • throttle por IP/hora (x-nf-client-connection-ip) → excedido ⇒ vincula mas
+  //     NÃO credita (suspeita auditável no referral-log);
+  //   • X-Device-Tracked é sinal fraco → não bloqueia, apenas regista.
+  // A conversão reusa registrarConversao: +1 senha ao indicador (limite mensal 10)
+  // e +1 ao indicado, idempotente via marcador único referral-convertido. Fail-soft.
+  const ip = req.headers.get("x-nf-client-connection-ip") || null;
+  const deviceTracked = req.headers.get("x-device-tracked") === "true";
+  const ipGate = await registrarTentativaConversaoIp(ip);
+
   let conversao = null;
-  try {
-    conversao = await registrarConversao(
-      { codigo, indicador: r.indicador, indicado: endereco },
-      { contexto: "registo" },
-    );
-  } catch (err) {
-    console.warn("[referral] registrarConversao no registo falhou (não-fatal):", err?.message);
+  if (!ipGate.ok) {
+    // Excedeu o limite por IP/hora → vincula mas NÃO credita (auditável).
+    try {
+      await appendReferralLog({
+        tipo: "suspeita", motivo: "ip_excedido", codigo,
+        indicado: endereco, indicador: r.indicador,
+        count: ipGate.count, deviceTracked,
+      });
+    } catch { /* não-fatal */ }
+    conversao = { ok: false, code: "suspeita_sybil_ip" };
+  } else {
+    try {
+      conversao = await registrarConversao(
+        { codigo, indicador: r.indicador, indicado: endereco },
+        { contexto: "registo" },
+      );
+    } catch (err) {
+      console.warn("[referral] registrarConversao no registo falhou (não-fatal):", err?.message);
+    }
+    if (deviceTracked) {
+      try {
+        await appendReferralLog({
+          tipo: "suspeita", motivo: "device_tracked", codigo,
+          indicado: endereco, indicador: r.indicador,
+        });
+      } catch { /* não-fatal */ }
+    }
   }
 
   return jsonResponse({
