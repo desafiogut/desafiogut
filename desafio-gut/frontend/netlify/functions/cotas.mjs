@@ -26,6 +26,8 @@ import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";
 // MC17.1 — o excedente da cota comercial gera SENHAS DE TROCO (off-chain, 30d).
 import { creditarTroco, senhasDoExcedente, TROCO_VALIDADE_DIAS } from "./_lib/troco-senhas.mjs";
+// MC17.1 — mínimos por categoria centralizados (fonte única; usados no troco).
+import { MIN_POR_CATEGORIA_BRL } from "./_lib/cota-ativacao.mjs";
 
 const BLOB_COTAS  = "cotas";
 const BLOB_INDICE = "cotas-indice";
@@ -34,14 +36,8 @@ const BLOB_COTAS_CNPJ = "cotas-cnpj";
 const BLOB_COTAS_FP   = "cotas-fingerprint";
 const CATEGORIAS  = new Set(["bronze", "prata", "ouro", "diamante"]);
 
-// REQ-17: mínimos por categoria em BRL. Se valor_produto < mínimo,
-// a diferença gera Vale-Crédito automático na Wallet do cliente.
-const MIN_POR_CATEGORIA_BRL = {
-  bronze:   660,
-  prata:    1350,
-  ouro:     2250,
-  diamante: 4500,
-};
+// MC17.1 — MIN_POR_CATEGORIA_BRL importado de cota-ativacao.mjs (fonte única).
+// O excedente (produto < mínimo) gera senhas de troco (ver creditarTrocoExcedente).
 
 function abrirStore(name) {
   try { return getStore({ name, consistency: "strong" }); }

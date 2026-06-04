@@ -42,7 +42,7 @@ function abrirStore(name) {
  * metadados para descobrir endereco/qtd a creditar — o MP só nos devolve o
  * `external_reference` (= pedidoId), não o destino on-chain.
  */
-export async function gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paymentId }) {
+export async function gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paymentId, tipo = null, categoria = null, produtoValor = null, produtoNome = null }) {
   const store = abrirStore(BLOB_PEDIDOS_META);
   if (!store) {
     console.warn("[credito] gravarMetaPedido: store indisponível", { pedidoId });
@@ -54,6 +54,11 @@ export async function gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paym
       qtd,
       valorBRL,
       paymentId: paymentId ? String(paymentId) : null,
+      // MC17.1 — pedidos de cota carregam tipo/categoria/produto para ativação automática.
+      tipo,
+      categoria,
+      produtoValor,
+      produtoNome,
       criadoEm: new Date().toISOString(),
     });
     console.info("[credito] meta gravada", { pedidoId, endereco, qtd, paymentId: paymentId ? String(paymentId) : null });
