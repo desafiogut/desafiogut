@@ -23,6 +23,8 @@ import { consultarPagamento, MercadoPagoApiError } from "./_lib/mp-client.mjs";
 import { jsonResponse, parseJsonBody } from "./_lib/validate.mjs";
 import { lerMetaPedido } from "./_lib/credito.mjs";
 import { creditarSaldoRsIdempotente } from "./_lib/saldoRs.mjs";
+// MC17.1 — pedidos de cota ativam a cota automaticamente (sem aprovação manual).
+import { ativarCotaPaga } from "./_lib/cota-ativacao.mjs";
 
 const BLOB_STORE_MP = "mp-aprovados";
 
@@ -142,6 +144,23 @@ export default async (req) => {
   // Senhas on-chain só vêm de /comprar-senhas (R$ → senhas). Lê metadados
   // do pedido (gravados em iniciar-pagamento) para descobrir endereco/valor.
   const meta = await lerMetaPedido(pedidoId);
+
+  // MC17.1 — pedido de COTA: ativa a cota e credita o troco automaticamente
+  // (sem aprovação manual do admin). Idempotente por pedidoId em cota-ativacao.
+  if (meta?.tipo === "cota") {
+    const ativacao = await ativarCotaPaga({
+      pedidoId, endereco: meta.endereco, categoria: meta.categoria,
+      produtoValor: meta.produtoValor, produtoNome: meta.produtoNome, fonte: "webhook",
+    });
+    console.info("[webhook-mp] cota ativada", {
+      pedidoId, categoria: meta.categoria, ok: ativacao.ok, idempotent: !!ativacao.idempotent,
+    });
+    return jsonResponse({
+      ok: true, recorded: true, cota_ativada: ativacao.ok, idempotent: !!ativacao.idempotent,
+      pedidoId, paymentId, categoria: meta.categoria, troco: ativacao.resultado?.troco || null,
+    });
+  }
+
   if (!meta?.endereco || !meta?.valorBRL) {
     console.warn("[webhook-mp] meta do pedido ausente, crédito ficará para confirmar-pagamento", {
       pedidoId, paymentId, hasMeta: !!meta,
