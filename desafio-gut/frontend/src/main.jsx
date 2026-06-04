@@ -6,6 +6,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { sepolia as sepoliaChain } from "viem/chains"; // viem instalado como dep do Privy
 import * as Sentry from "@sentry/react";
 import App from "./App.jsx";
+import ReferralTracker from "./components/ReferralTracker.jsx";
 
 // Sentry init — no-op em ambientes sem VITE_SENTRY_DSN (dev local sem env).
 // beforeSend strippa qualquer payload contendo "argon2id_" como defesa em
@@ -132,6 +133,8 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <Sentry.ErrorBoundary fallback={<SentryFallback />}>
     <BrowserRouter>
+    {/* MC17.3.1.1 — captura ?ref=IND-... para sessionStorage antes do Privy. */}
+    <ReferralTracker />
     <PrivyProvider
       appId={PRIVY_APP_ID}
       config={{
