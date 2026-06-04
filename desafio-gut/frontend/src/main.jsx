@@ -134,21 +134,21 @@ createRoot(document.getElementById("root")).render(
     <BrowserRouter>
     <PrivyProvider
       appId={PRIVY_APP_ID}
-      onSuccess={(user, isNewUser) => {
-        console.info("[GUT-DEBUG] PrivyProvider.onSuccess", {
-          isNewUser,
-          userId: user?.id,
-          linkedAccounts: user?.linkedAccounts?.map((a) => a.type),
-        });
-      }}
       config={{
         // ── Métodos de login: Google, E-mail, Apple ──────────────────────────
         loginMethods: ["google", "email", "apple"],
 
         // ── Embedded Wallet: criado automaticamente para todos os usuários ──
+        // MC17.3.1.1 — forma ANINHADA por chain exigida pelo Privy v3
+        // (embeddedWallets.ethereum.createOnLogin). A forma plana legada
+        // (createOnLogin no topo) ficou fora do tipo v3 e o callback do evento
+        // createWallet não era registado, disparando o crash em utilizadores
+        // novos. O registo do callback é feito por hooks (ver PrivyEventsBridge).
+        // Nota: a prop global `onSuccess` foi removida — não existe na v3
+        // (PrivyProviderProps só aceita appId/clientId/config/children); os
+        // callbacks passam a vir de useLogin/useCreateWallet.
         embeddedWallets: {
-          createOnLogin: "all-users",
-          noPromptOnSignature: false,
+          ethereum: { createOnLogin: "all-users" },
         },
 
         // ── Rede: Sepolia via viem/chains (definição oficial) ────────────────
