@@ -20,7 +20,7 @@ import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import {
   gerarCodigoIndicacao, validarCodigoIndicacao, registrarIndicacao,
-  estatisticasIndicador, referralAtivo,
+  registrarConversao, estatisticasIndicador, referralAtivo,
 } from "./_lib/referral.mjs";
 
 const RATE_LIMIT_RPM = 5;
@@ -123,12 +123,31 @@ async function handleUsarCodigo(req) {
       r.code === "persistencia_falhou"   ? 502 : 400;
     return jsonError(status, r.code, r.message);
   }
+
+  // MC17.4.1 — recompensa IMEDIATA no registo (antes: só no 1.º lance).
+  // Reusa registrarConversao: +1 senha ao indicador (respeita o limite mensal 10)
+  // e +1 senha ao indicado, idempotente via marcador único referral-convertido.
+  // Fail-soft: se falhar (ex.: on-chain transitório), o vínculo permanece e a
+  // conversão é retentada numa próxima chamada (idempotente) — nunca duplica.
+  let conversao = null;
+  try {
+    conversao = await registrarConversao(
+      { codigo, indicador: r.indicador, indicado: endereco },
+      { contexto: "registo" },
+    );
+  } catch (err) {
+    console.warn("[referral] registrarConversao no registo falhou (não-fatal):", err?.message);
+  }
+
   return jsonResponse({
     sucesso:    true,
     idempotent: !!r.idempotent,
     codigo,
     indicador:  r.indicador,
     indicado:   endereco,
+    conversao: conversao
+      ? { ok: !!conversao.ok, idempotent: !!conversao.idempotent, code: conversao.code || null }
+      : { ok: false, code: "conversao_falhou" },
   });
 }
 
