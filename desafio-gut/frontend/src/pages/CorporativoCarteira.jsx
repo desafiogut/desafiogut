@@ -42,12 +42,14 @@ export default function CorporativoCarteira() {
   const { getAuthToken } = useTrocarPorSenhas(); // lance-auth para converter troco
 
   const [cota,   setCota]   = useState(cotaCorporativa || null);
-  const [adesao, setAdesao] = useState(null);
   const [troco,  setTroco]  = useState(null);
   const [tier,   setTier]   = useState(null);
+  const [produtoValor, setProdutoValor] = useState("");
   const [contratando, setContratando] = useState(false);
   const [convertendo, setConvertendo] = useState(false);
   const [qtdConv, setQtdConv] = useState(1);
+  const [pedido, setPedido] = useState(null);          // resposta iniciar-cota (QR + token)
+  const [pagStatus, setPagStatus] = useState("idle");  // idle | aguardando | confirmado
   const [msg, setMsg] = useState("");
   const [erro, setErro] = useState("");
 
@@ -59,11 +61,6 @@ export default function CorporativoCarteira() {
     } catch { /* não-fatal */ }
     if (!authToken) return;
     try {
-      const ra = await fetch(`/.netlify/functions/renovacao-adesao?cliente_id=${address}`,
-        { headers: { Authorization: `Bearer ${authToken}` } });
-      if (ra.ok) setAdesao(await ra.json());
-    } catch { /* não-fatal */ }
-    try {
       const rt = await fetch(`/.netlify/functions/troco?cliente_id=${address}`,
         { headers: { Authorization: `Bearer ${authToken}` } });
       if (rt.ok) setTroco(await rt.json());
@@ -72,25 +69,55 @@ export default function CorporativoCarteira() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  // MC17.1 — contratar cota via Mercado Pago (SEM aprovação manual).
+  // Inicia o pedido PIX; o webhook ativa a cota ao aprovar (polling como fallback).
   async function contratar() {
     if (!tier || !address) return;
-    setContratando(true); setErro(""); setMsg("");
+    setContratando(true); setErro(""); setMsg(""); setPagStatus("idle"); setPedido(null);
     try {
-      const resp = await fetch("/.netlify/functions/renovacao-adesao", {
+      const resp = await fetch("/.netlify/functions/iniciar-cota", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ acao: "solicitar", cliente_id: address, valor: tier.preco }),
+        body: JSON.stringify({
+          endereco: address, categoria: tier.id,
+          produtoValor: produtoValor === "" ? null : Number(produtoValor),
+        }),
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) { setErro(data?.error?.message || `HTTP ${resp.status}`); return; }
-      setMsg(`Solicitação registada para a cota ${tier.nome} (${brl(tier.preco)}). Pague o PIX abaixo; a coordenação confirma manualmente.`);
-      carregar();
+      setPedido(data);
+      setPagStatus("aguardando");
     } catch (err) {
-      setErro(err?.message || "Falha ao solicitar contratação.");
+      setErro(err?.message || "Falha ao iniciar contratação.");
     } finally {
       setContratando(false);
     }
   }
+
+  // Polling: confirma o pagamento; ao aprovar, a cota é ativada automaticamente.
+  useEffect(() => {
+    if (pagStatus !== "aguardando" || !pedido?.token) return;
+    let cancel = false;
+    const inicio = Date.now();
+    const tick = async () => {
+      if (cancel || Date.now() - inicio > 15 * 60 * 1000) return;
+      try {
+        const r = await fetch("/.netlify/functions/confirmar-pagamento", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: pedido.token }),
+        });
+        if (!cancel && r.ok) {
+          setPagStatus("confirmado");
+          setMsg("Pagamento confirmado — cota ativada.");
+          carregar();
+          return;
+        }
+      } catch { /* transitório: continua */ }
+      if (!cancel) setTimeout(tick, 3000);
+    };
+    const t = setTimeout(tick, 3000);
+    return () => { cancel = true; clearTimeout(t); };
+  }, [pagStatus, pedido?.token, carregar]);
 
   async function converter() {
     if (!address || convertendo) return;
@@ -183,15 +210,14 @@ export default function CorporativoCarteira() {
           {/* Cota atual */}
           <div style={card}>
             <div style={lbl}>Cota atual</div>
-            {cota?.categoria ? (
+            {cota?.categoria && cota?.vendida ? (
               <div style={{ marginTop: "0.4rem", color: "#e8f0fe" }}>
                 Categoria <strong style={{ color: COTAS.find(c => c.id === cota.categoria)?.cor || "#f5a623", textTransform: "uppercase" }}>{cota.categoria}</strong>
-                {" · "}{cota.vendida ? "ativa" : "inativa"}
-                {adesao?.status ? ` · adesão ${adesao.status}` : ""}
+                {" · "}<span style={{ color: "#10b981", fontWeight: 700 }}>ativa</span>
               </div>
             ) : (
               <div style={{ marginTop: "0.4rem", color: "#5a7090" }}>
-                Sem cota ativa. Contrate uma abaixo. {adesao?.status && adesao.status !== "nao-iniciada" ? `(adesão: ${adesao.status})` : ""}
+                Sem cota ativa. Contrate uma abaixo.
               </div>
             )}
           </div>
@@ -213,15 +239,51 @@ export default function CorporativoCarteira() {
                 </button>
               ))}
             </div>
-            <button onClick={contratar} disabled={!tier || contratando} style={{ ...btn("#f5a623", !tier || contratando), marginTop: "0.8rem" }}>
-              {contratando ? "A solicitar..." : tier ? `Contratar ${tier.nome} via PIX (${brl(tier.preco)})` : "Selecione uma cota"}
+            {/* Valor do produto a anunciar (opcional) — define o troco do excedente. */}
+            {tier && (
+              <div style={{ marginTop: "0.8rem" }}>
+                <label style={{ ...lbl, display: "block", marginBottom: "0.3rem" }}>
+                  Valor do produto a anunciar (opcional)
+                </label>
+                <input
+                  type="number" min={0} value={produtoValor}
+                  onChange={(e) => setProdutoValor(e.target.value)}
+                  placeholder={`mínimo ${brl(tier.minimo)}`}
+                  style={{ width: "100%", padding: "0.6rem 0.8rem", background: "rgba(3,15,36,0.7)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: "10px", color: "#e8f0fe", fontWeight: 700, outline: "none" }}
+                  aria-label="Valor do produto a anunciar"
+                />
+                {produtoValor !== "" && Number(produtoValor) >= 0 && Number(produtoValor) < tier.minimo && (
+                  <p style={{ margin: "0.3rem 0 0", fontSize: "0.74rem", color: "#10b981" }}>
+                    Gera {Math.floor((tier.minimo - Number(produtoValor)) / 2)} senha(s) de troco ao ativar.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <button onClick={contratar} disabled={!tier || contratando || pagStatus === "aguardando"}
+              style={{ ...btn("#f5a623", !tier || contratando || pagStatus === "aguardando"), marginTop: "0.8rem" }}>
+              {contratando ? "A gerar PIX..." : tier ? `Contratar ${tier.nome} via PIX (${brl(tier.preco)})` : "Selecione uma cota"}
             </button>
 
-            {adesao?.status === "pendente" && adesao?.pix && (
-              <div style={{ marginTop: "0.8rem", padding: "0.8rem", borderRadius: "10px", background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.3)", fontSize: "0.8rem", color: "#e8f0fe", lineHeight: 1.6 }}>
-                <strong style={{ color: "#fbbf24" }}>Pague o PIX para confirmar a cota:</strong><br />
-                Chave PIX: <strong style={{ color: "#f5a623" }}>{adesao.pix.email}</strong> · Banco: {adesao.pix.banco}<br />
-                <span style={{ color: "#5a7090", fontSize: "0.74rem" }}>Após o pagamento, a coordenação confirma manualmente (até 24h).</span>
+            {/* Pagamento Mercado Pago: QR + estado. Cota ativa automaticamente ao aprovar. */}
+            {pedido?.qrCodeText && pagStatus !== "confirmado" && (
+              <div style={{ marginTop: "0.8rem", padding: "0.8rem", borderRadius: "10px", background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.3)", fontSize: "0.78rem", color: "#e8f0fe", lineHeight: 1.6 }}>
+                <strong style={{ color: "#fbbf24" }}>Pague com PIX (Mercado Pago) — {brl(pedido.valorBRL)}:</strong>
+                <div style={{ marginTop: "0.4rem", padding: "0.5rem", background: "rgba(3,15,36,0.7)", borderRadius: "8px", fontFamily: "monospace", fontSize: "0.68rem", color: "#fbbf24", wordBreak: "break-all", maxHeight: "100px", overflowY: "auto" }}>
+                  {pedido.qrCodeText}
+                </div>
+                <button onClick={() => { try { navigator.clipboard.writeText(pedido.qrCodeText); } catch {} }}
+                  style={{ ...btn("#00d4aa", false), marginTop: "0.5rem", padding: "0.45rem 0.9rem", fontSize: "0.78rem" }}>
+                  Copiar código PIX
+                </button>
+                <p style={{ margin: "0.5rem 0 0", color: "#5a7090", fontSize: "0.74rem" }}>
+                  Aguardando confirmação do pagamento… a cota é ativada automaticamente assim que o pagamento for aprovado.
+                </p>
+              </div>
+            )}
+            {pagStatus === "confirmado" && (
+              <div style={{ marginTop: "0.8rem", padding: "0.8rem", borderRadius: "10px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.35)", fontSize: "0.82rem", color: "#10b981", fontWeight: 700 }}>
+                Pagamento confirmado — cota ativada.
               </div>
             )}
           </div>
