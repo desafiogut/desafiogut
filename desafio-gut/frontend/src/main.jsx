@@ -2,7 +2,7 @@ import "./globals.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { PrivyProvider } from "@privy-io/react-auth";
+import { PrivyProvider, useLogin, useCreateWallet } from "@privy-io/react-auth";
 import { sepolia as sepoliaChain } from "viem/chains"; // viem instalado como dep do Privy
 import * as Sentry from "@sentry/react";
 import App from "./App.jsx";
@@ -129,6 +129,31 @@ const SentryFallback = () => (
   </div>
 );
 
+// MC17.3.1.1 — PrivyEventsBridge: registar os callbacks de evento do Privy v3.
+// É a CORREÇÃO do crash "Cannot destructure property 'onSuccess' of
+// 'i.createWallet' as it is undefined": com `createOnLogin: all-users`, ao logar
+// um utilizador NOVO o SDK auto-cria a embedded wallet e despacha o evento
+// `createWallet`, fazendo internamente `const { onSuccess } = events.createWallet`.
+// Sem nenhum useCreateWallet registado, `events.createWallet` é undefined e o
+// destructure rebenta. Registar os hooks aqui DEFINE events.createWallet/login.
+// Montado dentro do PrivyProvider e o mais cedo possível (irmão de <App/>),
+// para o handler existir antes de qualquer fluxo de login. Sem UI.
+function PrivyEventsBridge() {
+  useCreateWallet({
+    onSuccess: ({ wallet }) =>
+      console.info("[GUT] embedded wallet criada", { address: wallet?.address }),
+    onError: (error) =>
+      console.warn("[GUT] createWallet erro", error),
+  });
+  useLogin({
+    onComplete: ({ isNewUser, wasAlreadyAuthenticated }) =>
+      console.info("[GUT] login completo", { isNewUser, wasAlreadyAuthenticated }),
+    onError: (error) =>
+      console.warn("[GUT] login erro", error),
+  });
+  return null;
+}
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <Sentry.ErrorBoundary fallback={<SentryFallback />}>
@@ -169,6 +194,8 @@ createRoot(document.getElementById("root")).render(
         },
       }}
     >
+      {/* MC17.3.1.1 — regista os callbacks de evento (fix do crash createWallet). */}
+      <PrivyEventsBridge />
       <App />
     </PrivyProvider>
     </BrowserRouter>
