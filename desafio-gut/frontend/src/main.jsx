@@ -47,6 +47,36 @@ Sentry.init({
   },
 });
 
+// MC17.3.1.1 — enriquece os erros com a URL e o contexto de referral, para
+// correlacionar crashes de cold-start (ex.: createWallet) com o link de entrada.
+// Corre ANTES do beforeSend (que mantém o scrub argon2id intacto — sem PII nova
+// além da href e do código IND). privy_token_exists é uma heurística leve.
+function privyTokenExists() {
+  try {
+    if (typeof document !== "undefined" && /privy-token=/.test(document.cookie || "")) return true;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("privy:")) return true;
+    }
+  } catch { /* sem storage: ignora */ }
+  return false;
+}
+Sentry.addEventProcessor((event) => {
+  try {
+    const url = typeof window !== "undefined" ? window.location.href : null;
+    if (url) event.request = { ...(event.request || {}), url };
+    event.contexts = {
+      ...(event.contexts || {}),
+      "Referral Context": {
+        current_url: url,
+        stored_ref_code: (() => { try { return sessionStorage.getItem("desafiogut_ref"); } catch { return null; } })(),
+        privy_token_exists: privyTokenExists(),
+      },
+    };
+  } catch { /* nunca quebrar o pipeline do Sentry */ }
+  return event;
+});
+
 // App ID validado via Privy Management API em 2026-04-28.
 // NÃO usar import.meta.env — o dashboard Netlify tem o valor ERRADO (cmo5113v)
 // que sobrescreve qualquer fallback em tempo de build. Hardcode obrigatório até
