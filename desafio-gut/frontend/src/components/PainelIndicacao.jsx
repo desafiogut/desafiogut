@@ -79,7 +79,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
 
   async function compartilhar() {
     if (!linkConvite) return;
-    const texto = `🎯 Te convido para o DesafioGUT! Use meu código ${dados.codigo} ao se cadastrar e nós dois saímos ganhando.`;
+    const texto = `🎯 Te convido para o DesafioGUT! Use meu código ${dados.codigo} e, no teu 1º lance, nós dois ganhamos +1 senha.`;
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({ title: "DesafioGUT — Indique e Ganhe", text: texto, url: linkConvite });
@@ -171,8 +171,8 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
       </div>
 
       <p style={{ margin: "0 0 1rem", fontSize: isMobile ? "0.85rem" : "0.9rem", color: COR.text, lineHeight: 1.5 }}>
-        A cada amigo que comprar uma senha usando seu código,
-        <strong style={{ color: COR.primary }}> você ganha +1 senha bônus! </strong>
+        Quando um amigo entra com o seu código e dá o
+        <strong style={{ color: COR.primary }}> 1º lance, vocês dois ganham +1 senha! </strong>
         Compartilhe e cresça com a gente.
       </p>
 

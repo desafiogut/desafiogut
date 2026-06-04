@@ -346,7 +346,7 @@ export default function CorporativoDashboard() {
     { label: "Cota ativa",     value: categoria.toUpperCase(),  color: COR.primary, icon: "📢", to: "/corporativo/cotas" },
     { label: "Banners ativos", value: bannersAtivos,            color: COR.teal,    icon: "🖼️", to: "/corporativo/banners" },
     { label: "Impressões 30d", value: impressoes.toLocaleString("pt-BR"), color: COR.amber, icon: "📊", to: "/corporativo/analytics" },
-    { label: "Saldo wallet",   value: saldoBrl,                 color: COR.success, icon: "💰", to: "/carteira" },
+    { label: "Saldo wallet",   value: saldoBrl,                 color: COR.success, icon: "💰", to: "/corporativo/carteira" },
   ];
 
   return (

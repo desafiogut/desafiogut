@@ -4,11 +4,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
-import WalletCard from "../components/WalletCard.jsx";
-import VoucherPanel from "../components/VoucherPanel.jsx";
 import PainelIndicacao from "../components/PainelIndicacao.jsx";
-import BannerUpload from "../components/BannerUpload.jsx";
-import RenovacaoCard from "../components/RenovacaoCard.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 
 const VALOR_POR_SENHA_BRL = 2;
@@ -19,14 +15,13 @@ const COR = {
   success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", purple: "#a78bfa",
 };
 
-// Dois fluxos de pagamento (Especificação Refatorada §5):
-// 1) Adesão (Consultoria): PIX direto → familiaquildo@gmail.com (manual)
-// 2) Operação Interna (Fichas): Mercado Pago → desafiogut@gmail.com (webhook)
+// MC17.3 — apenas o fluxo de pagamento do utilizador COMUM (Operação Interna):
+// Fichas via Mercado Pago → desafiogut@gmail.com (webhook automatizado).
+// DESCONTINUADO no comum: "Adesão (Consultoria)" (pertence ao universo
+// corporativo — RenovacaoCard movida em MC17.3) e a linha legada "Cartão Débito".
 const DADOS_PAGAMENTO = [
-  { label: "Adesão (PIX manual)",     value: "familiaquildo@gmail.com (Banco do Brasil)" },
-  { label: "Fichas (Mercado Pago)",   value: "desafiogut@gmail.com — automatizado"        },
-  { label: "Custo por senha",         value: "R$ 2,00 por edição (Art. 20)"               },
-  { label: "Cartão Débito",           value: "Nacional e Internacional"                   },
+  { label: "Fichas (Mercado Pago)",   value: "desafiogut@gmail.com — automatizado" },
+  { label: "Custo por senha",         value: "R$ 2,00 por edição (Art. 20)"        },
 ];
 
 export default function MinhaCarteira() {
@@ -47,7 +42,6 @@ export default function MinhaCarteira() {
     carregando: trocandoSenhas,
     erro: trocaErro,
     sucesso: trocaInfo,
-    getAuthToken: getComprarAuthToken,
   } = useTrocarPorSenhas();
 
   const [comprarAberto, setComprarAberto] = useState(false);
@@ -249,31 +243,9 @@ export default function MinhaCarteira() {
               )}
             </div>
 
-          {/* Wallet Digital — Vale-Crédito (Especificação Refatorada §4).
-              Read-only para o usuário; mutações via Admin (x-admin-token). */}
-          <div style={{ marginBottom: sectionGap }}>
-            <WalletCard endereco={address} isMobile={isMobile} />
-          </div>
-
-          {/* Renovação de Adesão (Especificação Refatorada §5 — REQ-03). */}
-          <div style={{ marginBottom: sectionGap }}>
-            <RenovacaoCard endereco={address} isMobile={isMobile} />
-          </div>
-
-          {/* Vouchers de Networking — Bônus Diamante (Especificação Refatorada §7).
-              Emissão via Admin; resgate será integrado no fluxo de comprar-senhas. */}
-          <div style={{ marginBottom: sectionGap }}>
-            <VoucherPanel endereco={address} isMobile={isMobile} />
-          </div>
-
           {/* MC10 — Sistema "Indique e Ganhe" (Growth Viral). */}
           <div style={{ marginBottom: sectionGap }}>
             <PainelIndicacao isMobile={isMobile} />
-          </div>
-
-          {/* Banners (§6 da spec): auto-gerador SVG + upload manual + premium via Wallet. */}
-          <div style={{ marginBottom: sectionGap }}>
-            <BannerUpload endereco={address} isMobile={isMobile} getAuthToken={getComprarAuthToken} />
           </div>
 
           {/* Saldo de Senhas — fonte: saldoSenhas on-chain (AppContext).
