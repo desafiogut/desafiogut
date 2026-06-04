@@ -15,14 +15,13 @@ const COR = {
   success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", purple: "#a78bfa",
 };
 
-// Dois fluxos de pagamento (Especificação Refatorada §5):
-// 1) Adesão (Consultoria): PIX direto → familiaquildo@gmail.com (manual)
-// 2) Operação Interna (Fichas): Mercado Pago → desafiogut@gmail.com (webhook)
+// MC17.3 — apenas o fluxo de pagamento do utilizador COMUM (Operação Interna):
+// Fichas via Mercado Pago → desafiogut@gmail.com (webhook automatizado).
+// DESCONTINUADO no comum: "Adesão (Consultoria)" (pertence ao universo
+// corporativo — RenovacaoCard movida em MC17.3) e a linha legada "Cartão Débito".
 const DADOS_PAGAMENTO = [
-  { label: "Adesão (PIX manual)",     value: "familiaquildo@gmail.com (Banco do Brasil)" },
-  { label: "Fichas (Mercado Pago)",   value: "desafiogut@gmail.com — automatizado"        },
-  { label: "Custo por senha",         value: "R$ 2,00 por edição (Art. 20)"               },
-  { label: "Cartão Débito",           value: "Nacional e Internacional"                   },
+  { label: "Fichas (Mercado Pago)",   value: "desafiogut@gmail.com — automatizado" },
+  { label: "Custo por senha",         value: "R$ 2,00 por edição (Art. 20)"        },
 ];
 
 export default function MinhaCarteira() {
