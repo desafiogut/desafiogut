@@ -18,7 +18,7 @@ const fakeStore = {
 mock.module("@netlify/blobs", { namedExports: { getStore: () => fakeStore } });
 
 let mod;
-before(async () => { mod = await import("./_lib/troco-senhas.mjs"); });
+before(async () => { mod = await import("../_lib/troco-senhas.mjs"); });
 
 const ADDR = "0xabc0000000000000000000000000000000000001";
 
