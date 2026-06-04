@@ -4,20 +4,24 @@
 // Pausar/Ativar é controle local (placeholder UI — backend não exposto).
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
+// MC17.3 — upload de banner realocado da MinhaCarteira (utilizador comum) para
+// o mundo lojista. O botão "Novo banner" deixa de navegar para /carteira.
+import BannerUpload from "../components/BannerUpload.jsx";
 
 const COR = { text: "#e8f0fe", muted: "#5a7090", primary: "#f5a623", success: "#10b981" };
 
 export default function CorporativoBanners() {
-  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { address, authToken } = useAppContext();
+  const { getAuthToken } = useTrocarPorSenhas(); // lance-auth para o POST /banners
 
   const [banners,  setBanners]  = useState({ app: null, site: null });
   const [analytics, setAnalytics] = useState(null);
   const [pausas,    setPausas]    = useState({ app: false, site: false });
+  const [mostrarUpload, setMostrarUpload] = useState(false);
 
   useEffect(() => {
     if (!address) return;
@@ -151,7 +155,7 @@ export default function CorporativoBanners() {
                   {pausado ? "▶️ Ativar" : "⏸️ Pausar"}
                 </button>
                 <button
-                  onClick={() => navigate("/carteira")}
+                  onClick={() => setMostrarUpload(true)}
                   style={{
                     padding: "0.5rem 1rem",
                     background: COR.primary, color: "#0a0f1a",
@@ -166,6 +170,14 @@ export default function CorporativoBanners() {
           );
         })}
       </div>
+
+      {/* MC17.3 — Upload de banner (realocado do comum). Abre on-demand pelo
+          botão "Novo banner"; usa lance-auth (getAuthToken) para o POST /banners. */}
+      {mostrarUpload && (
+        <div style={{ marginTop: "1rem" }}>
+          <BannerUpload endereco={address} isMobile={isMobile} getAuthToken={getAuthToken} />
+        </div>
+      )}
     </div>
   );
 }

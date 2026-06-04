@@ -4,11 +4,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
-import WalletCard from "../components/WalletCard.jsx";
-import VoucherPanel from "../components/VoucherPanel.jsx";
 import PainelIndicacao from "../components/PainelIndicacao.jsx";
-import BannerUpload from "../components/BannerUpload.jsx";
-import RenovacaoCard from "../components/RenovacaoCard.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 
 const VALOR_POR_SENHA_BRL = 2;
@@ -47,7 +43,6 @@ export default function MinhaCarteira() {
     carregando: trocandoSenhas,
     erro: trocaErro,
     sucesso: trocaInfo,
-    getAuthToken: getComprarAuthToken,
   } = useTrocarPorSenhas();
 
   const [comprarAberto, setComprarAberto] = useState(false);
@@ -249,31 +244,9 @@ export default function MinhaCarteira() {
               )}
             </div>
 
-          {/* Wallet Digital — Vale-Crédito (Especificação Refatorada §4).
-              Read-only para o usuário; mutações via Admin (x-admin-token). */}
-          <div style={{ marginBottom: sectionGap }}>
-            <WalletCard endereco={address} isMobile={isMobile} />
-          </div>
-
-          {/* Renovação de Adesão (Especificação Refatorada §5 — REQ-03). */}
-          <div style={{ marginBottom: sectionGap }}>
-            <RenovacaoCard endereco={address} isMobile={isMobile} />
-          </div>
-
-          {/* Vouchers de Networking — Bônus Diamante (Especificação Refatorada §7).
-              Emissão via Admin; resgate será integrado no fluxo de comprar-senhas. */}
-          <div style={{ marginBottom: sectionGap }}>
-            <VoucherPanel endereco={address} isMobile={isMobile} />
-          </div>
-
           {/* MC10 — Sistema "Indique e Ganhe" (Growth Viral). */}
           <div style={{ marginBottom: sectionGap }}>
             <PainelIndicacao isMobile={isMobile} />
-          </div>
-
-          {/* Banners (§6 da spec): auto-gerador SVG + upload manual + premium via Wallet. */}
-          <div style={{ marginBottom: sectionGap }}>
-            <BannerUpload endereco={address} isMobile={isMobile} getAuthToken={getComprarAuthToken} />
           </div>
 
           {/* Saldo de Senhas — fonte: saldoSenhas on-chain (AppContext).
