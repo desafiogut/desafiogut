@@ -20,6 +20,8 @@ import CorporativoDashboard from "./pages/CorporativoDashboard.jsx";
 import CorporativoCotas     from "./pages/CorporativoCotas.jsx";
 import CorporativoBanners   from "./pages/CorporativoBanners.jsx";
 import CorporativoAnalytics from "./pages/CorporativoAnalytics.jsx";
+// MC17.1 — carteira do lojista (contratar cota + senhas de troco).
+import CorporativoCarteira  from "./pages/CorporativoCarteira.jsx";
 // MC11.1 — Seção pública (porta de entrada para o fluxo corporativo).
 import SejaNossoParceiro    from "./pages/SejaNossoParceiro.jsx";
 // MC15 ITEM 4 — página de detalhe de produto
@@ -107,6 +109,9 @@ export default function App() {
           <Route path="/corporativo/cotas"      element={<CorporativoRoute><CorporativoCotas /></CorporativoRoute>} />
           <Route path="/corporativo/banners"    element={<CorporativoRoute><CorporativoBanners /></CorporativoRoute>} />
           <Route path="/corporativo/analytics"  element={<CorporativoRoute><CorporativoAnalytics /></CorporativoRoute>} />
+          {/* MC17.1 — carteira do lojista + mercado dedicado (isolamento R4 preservado). */}
+          <Route path="/corporativo/carteira"   element={<CorporativoRoute><CorporativoCarteira /></CorporativoRoute>} />
+          <Route path="/corporativo/mercado"    element={<CorporativoRoute><MercadoLances /></CorporativoRoute>} />
         </Route>
       </Routes>
       {/* MC9 — IA Cognitiva: chatbot RAG 24/7 (botão flutuante em todas as rotas). */}

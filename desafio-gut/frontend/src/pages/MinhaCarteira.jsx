@@ -1,8 +1,8 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useWallets } from "@privy-io/react-auth";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
 import WalletCard from "../components/WalletCard.jsx";
 import VoucherPanel from "../components/VoucherPanel.jsx";
@@ -10,7 +10,6 @@ import PainelIndicacao from "../components/PainelIndicacao.jsx";
 import BannerUpload from "../components/BannerUpload.jsx";
 import RenovacaoCard from "../components/RenovacaoCard.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
-import { getSignerFromProvider } from "../utils/web3.js";
 
 const VALOR_POR_SENHA_BRL = 2;
 
@@ -33,9 +32,6 @@ const DADOS_PAGAMENTO = [
 export default function MinhaCarteira() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { wallets } = useWallets();
-  const privyWallet   = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
-  const comprarAuthRef = useRef({ token: null, expiresAt: 0 });
   const {
     isConnected, abrirModal,
     address, userLabel, lances,
@@ -44,10 +40,17 @@ export default function MinhaCarteira() {
     setTipoLeilao,
   } = useAppContext();
 
+  // MC17.1 ITEM 1 — lógica de compra de senhas extraída para hook reutilizável.
+  // Aliases preservam os nomes usados no JSX (zero alteração de comportamento — R2).
+  const {
+    trocarPorSenhas,
+    carregando: trocandoSenhas,
+    erro: trocaErro,
+    sucesso: trocaInfo,
+    getAuthToken: getComprarAuthToken,
+  } = useTrocarPorSenhas();
+
   const [comprarAberto, setComprarAberto] = useState(false);
-  const [trocandoSenhas, setTrocandoSenhas] = useState(false);
-  const [trocaErro,  setTrocaErro]  = useState("");
-  const [trocaInfo,  setTrocaInfo]  = useState("");
 
   // Saldo on-chain — sufixo de status alinhado ao Sidebar/Dashboard.
   const saldoStatusSuffix =
@@ -70,63 +73,6 @@ export default function MinhaCarteira() {
   function irParaLanceRelampago() {
     try { setTipoLeilao?.("flash"); } catch {}
     navigate("/mercado");
-  }
-
-  // Obtém token JWT de auth (cached 10min). Abre Privy popup só se expirado.
-  async function getComprarAuthToken() {
-    const now = Date.now();
-    if (comprarAuthRef.current.token && comprarAuthRef.current.expiresAt > now + 60_000) {
-      return comprarAuthRef.current.token;
-    }
-    if (!privyWallet) throw new Error("Carteira não conectada. Faça login novamente.");
-    const ts      = Date.now();
-    const message = `DESAFIOGUT-AUTH:${ts}:${address}`;
-    await privyWallet.switchChain(11155111);
-    const provider = await privyWallet.getEthereumProvider();
-    const { signer } = await getSignerFromProvider(provider);
-    const signature = await signer.signMessage(message);
-    const resp = await fetch("/.netlify/functions/auth-lance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endereco: address, signature, message }),
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data?.error?.message || "Falha ao autenticar.");
-    comprarAuthRef.current = { token: data.token, expiresAt: now + (data.ttl || 600) * 1000 };
-    return data.token;
-  }
-
-  async function trocarPorSenhas(qtd = 1) {
-    if (!address || trocandoSenhas) return;
-    setTrocaErro("");
-    setTrocaInfo("");
-    setTrocandoSenhas(true);
-    try {
-      const authToken = await getComprarAuthToken();
-      const resp = await fetch("/.netlify/functions/comprar-senhas", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ endereco: address, qtd }),
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) {
-        if (resp.status === 401) comprarAuthRef.current = { token: null, expiresAt: 0 };
-        const msg = data?.error?.message || `HTTP ${resp.status}`;
-        setTrocaErro(msg);
-        return;
-      }
-      setTrocaInfo(`✓ ${qtd} ${qtd === 1 ? "senha creditada" : "senhas creditadas"} on-chain`);
-      try { refetchSaldoRs?.(); } catch {}
-      try { refetchSaldo?.(); } catch {}
-      setTimeout(() => setTrocaInfo(""), 5000);
-    } catch (err) {
-      setTrocaErro(err?.message || "Falha na troca");
-    } finally {
-      setTrocandoSenhas(false);
-    }
   }
 
   const meusLances = lances.filter(

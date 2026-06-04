@@ -24,10 +24,11 @@ import {
 } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";
+// MC17.1 — o excedente da cota comercial gera SENHAS DE TROCO (off-chain, 30d).
+import { creditarTroco, senhasDoExcedente, TROCO_VALIDADE_DIAS } from "./_lib/troco-senhas.mjs";
 
 const BLOB_COTAS  = "cotas";
 const BLOB_INDICE = "cotas-indice";
-const BLOB_WALLET = "wallet";
 // MC12.3 — índice CNPJ→endereço (anti-duplicidade O(1)) e fingerprint anti-Sybil.
 const BLOB_COTAS_CNPJ = "cotas-cnpj";
 const BLOB_COTAS_FP   = "cotas-fingerprint";
@@ -105,47 +106,39 @@ async function listarCategoria(categoria) {
   return cotas;
 }
 
-// REQ-17 helper: credita Vale-Crédito automático na Wallet do cliente.
-// Idempotente por `idem_key` (cota_cliente + valor_produto + atualizadoEm)
-// — re-execução do mesmo upsert não credita duas vezes.
-async function creditarValeCreditoAutomatico({ cliente_id, categoria, valorProduto, motivo }) {
+// MC17.1 — Conversão do excedente da cota em SENHAS DE TROCO.
+// Regra (validada pelo cliente): se o produto anunciado vale menos que o mínimo
+// da categoria, a diferença vira senhas (R$ 2,00 cada), válidas 30 dias (FIFO).
+// SUBSTITUI o antigo Vale-Crédito em R$ (REQ-17) neste fluxo.
+// Idempotente por idemKey (cliente+categoria+valor) — re-upsert não duplica.
+async function creditarTrocoExcedente({ cliente_id, categoria, valorProduto }) {
   const minimoBrl = MIN_POR_CATEGORIA_BRL[categoria];
   if (!minimoBrl) return null;
   if (!Number.isFinite(valorProduto) || valorProduto >= minimoBrl) return null;
 
-  const diferencaBrl = minimoBrl - valorProduto;
+  const diferencaBrl      = minimoBrl - valorProduto;
   const diferencaCentavos = Math.round(diferencaBrl * 100);
+  const senhas = senhasDoExcedente(diferencaCentavos);
+  if (senhas <= 0) return null;
 
-  const walletStore = abrirStore(BLOB_WALLET);
-  if (!walletStore) return null;
-  try {
-    const atual = (await walletStore.get(cliente_id, { type: "json" })) || { saldoCentavos: 0, transacoes: [] };
-    const saldoAntes  = Number(atual.saldoCentavos || 0);
-    const saldoDepois = saldoAntes + diferencaCentavos;
-    const agora       = new Date().toISOString();
-    const tx = {
-      id: `vc-${cliente_id}-${Date.now()}`,
-      operacao: "credito",
-      valorCentavos: diferencaCentavos,
-      motivo: motivo || `Vale-Crédito automático (${categoria}: produto R$ ${valorProduto.toFixed(2)} < mín R$ ${minimoBrl.toFixed(2)})`,
-      origem: "cotas-vale-credito-automatico",
-      saldoAntesCentavos: saldoAntes,
-      saldoDepoisCentavos: saldoDepois,
-      em: agora,
-    };
-    await walletStore.setJSON(cliente_id, {
-      saldoCentavos: saldoDepois,
-      atualizadoEm:  agora,
-      transacoes: [tx, ...(atual.transacoes || [])].slice(0, 50),
-    });
-    return {
-      diferencaBrl, diferencaCentavos, saldoAntes, saldoDepois,
-      transacaoId: tx.id,
-    };
-  } catch (err) {
-    console.warn("[cotas] crédito automático Wallet falhou (não-fatal):", err?.message);
+  const res = await creditarTroco({
+    endereco: cliente_id,
+    senhas,
+    origem: `excedente-${categoria}`,
+    idemKey: `cota-${String(cliente_id).toLowerCase()}-${categoria}-${Math.round(valorProduto * 100)}`,
+  });
+  if (!res.ok) {
+    console.warn("[cotas] crédito de troco falhou (não-fatal):", res.code, res.message);
     return null;
   }
+  return {
+    senhas,
+    diferencaBrl,
+    diferencaCentavos,
+    validadeDias: TROCO_VALIDADE_DIAS,
+    idempotent: res.idempotent,
+    saldoTroco: res.saldoTroco,
+  };
 }
 
 async function resumoAgregado() {
@@ -550,29 +543,28 @@ async function handlePost(req) {
   await store.setJSON(endereco, registro);
   await atualizarIndice(categoria, endereco, "adicionar");
 
-  // REQ-17: Vale-Crédito automático se valor_produto < mínimo da categoria.
+  // MC17.1: senhas de troco se valor_produto < mínimo da categoria.
   // Só gera no PRIMEIRO upsert OU quando valor/categoria mudaram — evita
   // creditar duas vezes na mesma operação.
-  let valeCredito = null;
+  let trocoSenhas = null;
   const mudouValor = !existente || existente.valor !== registro.valor;
   const mudouCategoria = !existente || existente.categoria !== registro.categoria;
   if (registro.valor != null && (mudouValor || mudouCategoria)) {
-    valeCredito = await creditarValeCreditoAutomatico({
+    trocoSenhas = await creditarTrocoExcedente({
       cliente_id: endereco,
       categoria,
       valorProduto: registro.valor,
-      motivo: `Vale-Crédito ${categoria.toUpperCase()} (produto: ${registro.produto_nome || "—"})`,
     });
   }
 
   console.info("[cotas] upsert", {
     endereco, categoria, vendida: registro.vendida,
-    vale_credito: valeCredito ? { transacaoId: valeCredito.transacaoId, diferencaBrl: valeCredito.diferencaBrl } : null,
+    troco_senhas: trocoSenhas ? { senhas: trocoSenhas.senhas, diferencaBrl: trocoSenhas.diferencaBrl } : null,
   });
   return jsonResponse({
     ok: true,
     ...registro,
-    vale_credito: valeCredito,
+    troco_senhas: trocoSenhas,
   }, existente ? 200 : 201);
 }
 

@@ -46,7 +46,7 @@ export default function CorporativoCotas() {
     return () => { cancel = true; };
   }, [address]);
 
-  const handleRenovar = () => navigate("/carteira");
+  const handleRenovar = () => navigate("/corporativo/carteira");
   const handleUpgrade = () => {
     detectarTipoCorporativo();
     alert("Upgrade de cota requer aprovação da coordenação. Entre em contato.");
