@@ -21,6 +21,8 @@ import {
 import { consultarPagamento, MercadoPagoApiError } from "./_lib/mp-client.mjs";
 import { creditarSaldoRsIdempotente } from "./_lib/saldoRs.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+// MC17.1 — fallback de ativação de cota (caso o webhook atrase/falhe).
+import { ativarCotaPaga } from "./_lib/cota-ativacao.mjs";
 
 const BLOB_STORE_MP  = "mp-aprovados";
 
@@ -109,8 +111,8 @@ export default async (req) => {
     const code = err?.code === "ERR_JWT_EXPIRED" ? "token_expirado" : "token_invalido";
     return jsonError(401, code, "token rejeitado");
   }
-  const { pedidoId, endereco, qtd, paymentId, valorBRL } = payload;
-  if (!pedidoId || !endereco || !qtd) {
+  const { pedidoId, endereco, qtd, paymentId, valorBRL, tipo, categoria, produtoValor, produtoNome } = payload;
+  if (!pedidoId || !endereco || (tipo !== "cota" && !qtd)) {
     return jsonError(400, "payload_incompleto", "token sem campos obrigatórios");
   }
   // Modelo dual: PIX credita R$ (não senhas). qtd é mantido no JWT para
@@ -142,6 +144,20 @@ export default async (req) => {
         statusDetail: mpStatus.detalhe,
       });
     }
+  }
+
+  // ── MC17.1 — pedido de COTA: ativa a cota + troco (sem aprovação manual) ──
+  // Fallback do webhook: se o polling do cliente chegar primeiro, ativa aqui.
+  // Idempotente por pedidoId (cota-ativacao) — webhook e polling não duplicam.
+  if (tipo === "cota") {
+    const ativacao = await ativarCotaPaga({
+      pedidoId, endereco, categoria, produtoValor, produtoNome, fonte: "confirmar-pagamento",
+    });
+    if (!ativacao.ok) return jsonError(502, ativacao.code, ativacao.message);
+    return jsonResponse({
+      ok: true, idempotent: !!ativacao.idempotent, tipo: "cota",
+      pedidoId, endereco, categoria, cota: ativacao.resultado,
+    });
   }
 
   // ── Crédito R$ off-chain (idempotente) ────────────────────────────────────
