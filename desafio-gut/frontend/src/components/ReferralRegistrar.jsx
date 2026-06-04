@@ -25,6 +25,11 @@ import { REF_STORAGE_KEY } from "./ReferralTracker.jsx";
 //  200 ok · 400 auto_indicacao/codigo_invalido · 403 endereco_nao_corresponde
 //  404 codigo_inexistente · 409 ja_indicado
 const STATUS_TERMINAIS = new Set([200, 400, 403, 404, 409]);
+// MC17.4.1 — sinal anti-Sybil de dispositivo. Marca este dispositivo após a 1.ª
+// tentativa de registo com referral; em registos seguintes do MESMO dispositivo,
+// envia X-Device-Tracked: true. O backend trata isto como sinal fraco (só regista
+// no referral-log, NÃO bloqueia) — por isso é zero-regressão.
+const DEVICE_KEY = "desafiogut_device_tracked";
 
 export default function ReferralRegistrar() {
   const { address, authToken, visitorId } = useAppContext();
@@ -36,12 +41,15 @@ export default function ReferralRegistrar() {
 
     let cancel = false;
     (async () => {
+      let deviceTracked = "false";
+      try { deviceTracked = localStorage.getItem(DEVICE_KEY) ? "true" : "false"; } catch { /* sem storage */ }
       try {
         const resp = await fetch("/.netlify/functions/referral?acao=usar-codigo", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${authToken}`,
+            "X-Device-Tracked": deviceTracked,
             ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
           },
           body: JSON.stringify({ codigo_indicacao: codigo, endereco: address }),
@@ -50,6 +58,7 @@ export default function ReferralRegistrar() {
         if (STATUS_TERMINAIS.has(resp.status)) {
           // Sucesso ou rejeição definitiva → não repetir.
           try { sessionStorage.removeItem(REF_STORAGE_KEY); } catch {}
+          try { localStorage.setItem(DEVICE_KEY, "true"); } catch { /* sem storage */ }
           console.info("[GUT] referral usar-codigo", { status: resp.status });
         }
         // 429/5xx/erro de rede → mantém a flag para nova tentativa.
