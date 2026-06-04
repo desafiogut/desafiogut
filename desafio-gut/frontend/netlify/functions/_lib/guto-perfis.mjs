@@ -175,9 +175,9 @@ export const respostasPorPerfil = {
   // MC15.8.1 ITEM 10 — Indique e Ganhe (comum/corporativo/admin). Visitante: CTA.
   // comum: amigável com emoji; corporativo/admin: sem emoji.
   indique_e_ganhe: {
-    visitante: () => "Indique e Ganhe é para membros! Cria a tua conta e, por cada amigo que entrar e der o primeiro lance, ganhas +1 senha. 😊",
-    comum: (p) => `Aqui está o teu Indique e Ganhe! 🎁 Partilha o teu link: por cada amigo que entrar e der o primeiro lance, ganhas +1 senha (e o teu amigo também). Código: ${g(p.codigo)}.`,
-    corporativo: (p) => `Indique e Ganhe — código ${g(p.codigo)}. Por cada indicado que faça o primeiro lance: +1 senha para si e +1 para o indicado. Indicados: ${g(p.total_indicados, "0")}; convertidos: ${g(p.total_convertidos, "0")}; senhas ganhas: ${g(p.senhas_ganhas, "0")}.`,
+    visitante: () => "Indique e Ganhe é para membros! Cria a tua conta e, por cada amigo que se registar com o teu código, ganhas +1 senha na hora (e o teu amigo também). 😊",
+    comum: (p) => `Aqui está o teu Indique e Ganhe! 🎁 Partilha o teu link: por cada amigo que criar a conta com o teu código, ganhas +1 senha na hora (e o teu amigo também) — já não é preciso esperar pelo primeiro lance. Código: ${g(p.codigo)}.`,
+    corporativo: (p) => `Indique e Ganhe — código ${g(p.codigo)}. Por cada indicado que crie a conta com o seu código: +1 senha para si e +1 para o indicado, creditadas imediatamente no registo. Indicados: ${g(p.total_indicados, "0")}; convertidos: ${g(p.total_convertidos, "0")}; senhas ganhas: ${g(p.senhas_ganhas, "0")}.`,
     admin: (p) => `Indique e Ganhe — código ${g(p.codigo)}. Indicados: ${g(p.total_indicados, "0")}; convertidos: ${g(p.total_convertidos, "0")}; senhas: ${g(p.senhas_ganhas, "0")}.`,
   },
 
