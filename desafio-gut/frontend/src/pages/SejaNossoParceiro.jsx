@@ -20,67 +20,9 @@ const COR = {
   teal: "#00d4aa", success: "#10b981",
 };
 
-// Planos sincronizados com MIN_POR_CATEGORIA_BRL em cotas.mjs.
-const PLANOS = [
-  {
-    nome: "Bronze",
-    valor: 660,
-    cor: "#cd7f32",
-    icone: "🥉",
-    beneficios: [
-      "Banner publicitário (formato app)",
-      "Exposição em horários de Relâmpago",
-      "1 voucher promocional / mês",
-      "Dashboard com métricas básicas",
-    ],
-  },
-  {
-    nome: "Prata",
-    valor: 1350,
-    cor: "#cbd5e1",
-    icone: "🥈",
-    beneficios: [
-      "Tudo do Bronze",
-      "Banner formato site (1200×300)",
-      "3 vouchers promocionais / mês",
-      "Analytics 30 dias",
-    ],
-  },
-  {
-    nome: "Ouro",
-    valor: 2250,
-    cor: "#f5a623",
-    icone: "🥇",
-    destaque: true,
-    beneficios: [
-      "Tudo do Prata",
-      "Exposição em leilões Programados (24h)",
-      "10 vouchers promocionais / mês",
-      "Analytics 90 dias + geolocalização",
-    ],
-  },
-  {
-    nome: "Diamante",
-    valor: 4500,
-    cor: "#00d4ff",
-    icone: "💎",
-    beneficios: [
-      "Tudo do Ouro",
-      "Slot exclusivo na Vitrine (4 Slots)",
-      "Vouchers ilimitados",
-      "Suporte prioritário + co-marketing",
-    ],
-  },
-];
-
-const PASSOS = [
-  { n: 1, icone: "🎯", titulo: "Escolha o plano",
-    texto: "Bronze, Prata, Ouro ou Diamante — cada um com um nível de exposição." },
-  { n: 2, icone: "💳", titulo: "Pague via PIX",
-    texto: "Pagamento confirmado libera a cota no painel da coordenação." },
-  { n: 3, icone: "📣", titulo: "Anuncie e meça",
-    texto: "Suba seu banner, acompanhe impressões e cliques no Painel Lojista." },
-];
+// MC17.2.1 — Conteúdo comercial (PLANOS e PASSOS) REMOVIDO da página pública.
+// A página passa a ser um GATE de lojista (Novo cadastro / Já tenho conta).
+// Os planos e a contratação vivem apenas no Painel Lojista (/corporativo, MC17.1).
 
 const SEGMENTOS = ["Varejo", "Serviços", "Tecnologia", "Saúde", "Educação", "Alimentação", "Outro"];
 
@@ -151,7 +93,7 @@ export default function SejaNossoParceiro() {
   const otpBusyRef = useRef(false);
 
   // MC15.3 — abas "Novo Cadastro" / "Já Tenho Cadastro" + estado do login de lojista.
-  const [aba, setAba] = useState("novo"); // MC15.3 — "novo" | "existente"
+  const [aba, setAba] = useState(null); // MC17.2.1 — null = gate (só os 2 CTAs) | "novo" | "existente"
   const [cnpjLogin, setCnpjLogin] = useState("");
   const [empresaLogin, setEmpresaLogin] = useState("");
   const [erroLogin, setErroLogin] = useState(null);
@@ -449,9 +391,8 @@ export default function SejaNossoParceiro() {
           margin: "0 auto", maxWidth: "680px",
           color: COR.muted, fontSize: isMobile ? "0.92rem" : "1.05rem", lineHeight: 1.55,
         }}>
-          Anuncie no DesafioGUT e alcance milhares de usuários que disputam o
-          menor lance único todos os dias. Quatro planos, exposição garantida,
-          métricas em tempo real.
+          Faça parte do DESAFIOGUT como lojista. Crie a sua conta ou entre para
+          aceder ao Painel Lojista, onde gere as suas cotas e campanhas.
         </p>
 
         {/* MC12.3 — botão "Fazer login para se cadastrar" REMOVIDO.
@@ -578,8 +519,8 @@ export default function SejaNossoParceiro() {
           }}
         >
           {[
-            { id: "novo", rotulo: "Novo Cadastro" },
-            { id: "existente", rotulo: "Já Tenho Cadastro" },
+            { id: "novo", rotulo: "Novo cadastro" },
+            { id: "existente", rotulo: "Já tenho conta" },
           ].map((t) => {
             const ativo = aba === t.id;
             return (
@@ -841,177 +782,9 @@ export default function SejaNossoParceiro() {
         </motion.section>
       )}
 
-      {/* ── PLANOS ── */}
-      <motion.section
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.05 }}
-        style={{ marginBottom: isMobile ? "2rem" : "3rem" }}
-        aria-label="Planos de parceria"
-      >
-        <h2 style={{
-          textAlign: "center", margin: "0 0 1.5rem",
-          color: COR.primary, fontSize: isMobile ? "1.05rem" : "1.25rem",
-          fontWeight: 900, letterSpacing: "0.02em",
-        }}>
-          📦 Escolha o plano que combina com sua empresa
-        </h2>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)",
-          gap: isMobile ? "0.75rem" : "1rem",
-        }}>
-          {PLANOS.map(p => (
-            <div
-              key={p.nome}
-              style={{
-                ...card,
-                border: p.destaque
-                  ? `2px solid ${p.cor}`
-                  : "1px solid rgba(245,166,35,0.18)",
-                position: "relative",
-              }}
-            >
-              {p.destaque && (
-                <span style={{
-                  position: "absolute", top: "-10px", left: "50%",
-                  transform: "translateX(-50%)",
-                  background: p.cor, color: "#0a0f1a",
-                  fontSize: "0.65rem", fontWeight: 800,
-                  padding: "0.2rem 0.6rem", borderRadius: "999px",
-                  letterSpacing: "0.06em", whiteSpace: "nowrap",
-                }}>
-                  MAIS POPULAR
-                </span>
-              )}
-              <div style={{ fontSize: isMobile ? "1.5rem" : "2rem", marginBottom: "0.5rem" }}>
-                {p.icone}
-              </div>
-              <h3 style={{
-                margin: "0 0 0.25rem", color: p.cor,
-                fontSize: isMobile ? "0.95rem" : "1.05rem", fontWeight: 900,
-              }}>
-                {p.nome}
-              </h3>
-              <div style={{
-                color: COR.primary, fontWeight: 800,
-                fontSize: isMobile ? "1rem" : "1.15rem", marginBottom: "0.75rem",
-              }}>
-                R$ <strong>{p.valor.toLocaleString("pt-BR")}</strong>
-                <span style={{ color: COR.muted, fontSize: "0.8rem" }}>/mês</span>
-              </div>
-              <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
-                {p.beneficios.map(b => (
-                  <li key={b} style={{
-                    display: "flex", gap: "0.4rem", alignItems: "flex-start",
-                    color: COR.muted, fontSize: "0.78rem", marginBottom: "0.3rem",
-                  }}>
-                    <span style={{ color: COR.success, flexShrink: 0 }}>✓</span>
-                    {b}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </motion.section>
-
-      {/* ── COMO FUNCIONA ── */}
-      <motion.section
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.1 }}
-        style={{ marginBottom: isMobile ? "2rem" : "3rem" }}
-        aria-label="Como funciona"
-      >
-        <h2 style={{
-          textAlign: "center", margin: "0 0 1.5rem",
-          color: COR.text, fontSize: isMobile ? "1.05rem" : "1.25rem",
-          fontWeight: 900,
-        }}>
-          🛠️ Como funciona
-        </h2>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)",
-          gap: "1rem",
-        }}>
-          {PASSOS.map(p => (
-            <div key={p.n} style={{ ...card, textAlign: "center" }}>
-              <div style={{
-                width: "2rem", height: "2rem",
-                background: `${COR.primary}22`,
-                border: `2px solid ${COR.primary}55`,
-                borderRadius: "50%",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 0.75rem",
-                color: COR.primary, fontWeight: 900, fontSize: "0.85rem",
-              }}>
-                {p.n}
-              </div>
-              <span style={{ fontSize: "1.5rem" }}>{p.icone}</span>
-              <h3 style={{
-                margin: "0.5rem 0 0.25rem", color: COR.text,
-                fontSize: "0.95rem", fontWeight: 800,
-              }}>
-                {" "}{p.titulo}
-              </h3>
-              <p style={{ margin: 0, color: COR.muted, fontSize: "0.82rem", lineHeight: 1.5 }}>
-                {p.texto}
-              </p>
-            </div>
-          ))}
-        </div>
-      </motion.section>
-
-      {/* ── CTA FINAL ── */}
-      <section style={{ ...card, textAlign: "center", marginBottom: "2rem" }}>
-        <h2 style={{
-          margin: "0 0 0.5rem", color: COR.text,
-          fontSize: isMobile ? "1.2rem" : "1.5rem", fontWeight: 900,
-        }}>
-          Pronto para começar?
-        </h2>
-        <p style={{ margin: "0 0 1.5rem", color: COR.muted, fontSize: "0.9rem" }}>
-          Cadastre-se em segundos. O painel é ativado imediatamente após o cadastro.
-        </p>
-        {tipoUsuario !== "corporativo" ? (
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => {
-              const el = document.getElementById("form-corporativo");
-              if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-            }}
-            className="w-full md:w-auto"
-            style={{
-              padding: "0.85rem 2rem",
-              background: `linear-gradient(135deg, ${COR.primary}, #e89400)`,
-              border: "none", borderRadius: "12px",
-              color: "#0a0f1a", fontFamily: "'Orbitron', sans-serif",
-              fontWeight: 800, fontSize: "0.9rem", letterSpacing: "0.05em",
-              cursor: "pointer", boxShadow: "0 8px 24px rgba(245,166,35,0.3)",
-            }}
-          >
-            ⚡ Quero ser um parceiro
-          </motion.button>
-        ) : (
-          <Link
-            to="/corporativo"
-            style={{
-              display: "inline-block",
-              padding: "0.85rem 2rem",
-              background: `linear-gradient(135deg, ${COR.teal}, #00a888)`,
-              borderRadius: "12px",
-              color: "#0a0f1a", fontFamily: "'Orbitron', sans-serif",
-              fontWeight: 800, fontSize: "0.9rem", letterSpacing: "0.05em",
-              textDecoration: "none",
-            }}
-          >
-            🏢 Ir ao Painel Lojista
-          </Link>
-        )}
-      </section>
+      {/* MC17.2.1 — Secções PLANOS, "Como funciona" e CTA comercial REMOVIDAS.
+          A página pública é um GATE de lojista (Novo cadastro / Já tenho conta).
+          Os planos e a contratação ficam exclusivos do Painel Lojista (MC17.1). */}
 
       {/* ── Rodapé ── */}
       <footer style={{
