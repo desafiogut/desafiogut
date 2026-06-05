@@ -57,6 +57,8 @@ export default function ReferralRegistrar() {
       let deviceTracked = "false";
       try { deviceTracked = localStorage.getItem(DEVICE_KEY) ? "true" : "false"; } catch { /* sem storage */ }
       console.log("[GUT][MC17.4.2] T4 POST usar-codigo", { codigo, endereco: address, deviceTracked });
+      // MC17.5.1 [LOG TEMPORÁRIO] T3 — POST enviado (espera por address+authToken garantida acima).
+      console.log("[MC17.5.1] T3 POST enviado", { codigo, endereco: address, temAuthToken: !!authToken, deviceTracked });
       try {
         const resp = await fetch("/.netlify/functions/referral?acao=usar-codigo", {
           method: "POST",
@@ -71,18 +73,39 @@ export default function ReferralRegistrar() {
         if (cancel) return;
         let data = null;
         try { data = await resp.clone().json(); } catch {}
+        const conv = data?.conversao || {};
         console.log("[GUT][MC17.4.2] T5/T6 resposta usar-codigo", {
           status: resp.status,
           idempotent: data?.idempotent,
           conversao: data?.conversao,
         });
-        if (STATUS_TERMINAIS.has(resp.status)) {
+        // MC17.5.1 [LOG TEMPORÁRIO] T4 — resposta do backend (resultado do crédito on-chain).
+        console.log("[MC17.5.1] T4 resposta backend", {
+          status: resp.status, vinculoIdempotent: data?.idempotent,
+          conversaoOk: conv.ok, conversaoIdempotent: conv.idempotent, conversaoCode: conv.code,
+        });
+        // MC17.5.1 RC-3 — uma falha RECUPERÁVEL de crédito (on-chain/Blobs) com
+        // HTTP 200 NÃO deve selar o referral: o vínculo já existe mas o marcador
+        // referral-convertido ainda não foi escrito, logo um retry posterior pode
+        // creditar. Mantemos o código (localStorage) para nova tentativa no
+        // próximo mount/login. Rejeições definitivas continuam a selar.
+        const RECUPERAVEIS = new Set([
+          "credito_onchain_falhou", "conversao_falhou", "store_indisponivel", "credito_indicado_falhou",
+        ]);
+        const conversaoRecuperavel =
+          resp.status === 200 && !conv.ok && !conv.idempotent && RECUPERAVEIS.has(conv.code);
+        if (STATUS_TERMINAIS.has(resp.status) && !conversaoRecuperavel) {
           // Sucesso ou rejeição definitiva → não repetir. Limpa ambas as chaves.
           try { localStorage.removeItem(REF_STORAGE_KEY); } catch {}
           try { sessionStorage.removeItem(REF_STORAGE_KEY_LEGACY); } catch {}
           try { localStorage.setItem(DEVICE_KEY, "true"); } catch { /* sem storage */ }
           console.info("[GUT][MC17.4.2] T6 referral terminal", {
             status: resp.status, conversaoOk: data?.conversao?.ok, conversaoCode: data?.conversao?.code,
+          });
+        } else if (conversaoRecuperavel) {
+          // MC17.5.1 [LOG TEMPORÁRIO] — código mantido para retry.
+          console.warn("[MC17.5.1] T6 conversão recuperável — código MANTIDO para retry", {
+            conversaoCode: conv.code,
           });
         }
         // 429/5xx/erro de rede → mantém a flag para nova tentativa.
