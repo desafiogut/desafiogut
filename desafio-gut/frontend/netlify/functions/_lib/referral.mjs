@@ -563,10 +563,6 @@ export async function registrarConversao(vinculo, contexto = {}) {
 
   // +1 senha ao INDICADOR (limite mensal de 10 validado dentro de concederBonus).
   const bonus = await concederBonus(indicador, { ...contexto, codigo: vinculo.codigo, indicado });
-  // MC17.5.1 [LOG TEMPORÁRIO] T6 — resultado do crédito ao indicador.
-  console.log("[MC17.5.1] T6 concederBonus(indicador)", {
-    indicador, bonusOk: bonus.ok, bonusCode: bonus.code || null, txHash: bonus.txHash || null,
-  });
   // Falha TRANSITÓRIA (ex.: on-chain) → NÃO marca convertido (permite retry no
   // próximo lance/compra) e NÃO credita o indicado ainda. Só limite mensal
   // (estado terminal do mês) segue para marcar convertido sem bónus ao indicador.
@@ -584,8 +580,6 @@ export async function registrarConversao(vinculo, contexto = {}) {
   } catch (err) {
     console.warn("[referral] crédito ao indicado falhou (não-fatal):", err?.message);
   }
-  // MC17.5.1 [LOG TEMPORÁRIO] T6 — resultado do crédito ao indicado (+1 senha).
-  console.log("[MC17.5.1] T6 crédito indicado", { indicado, txHashIndicado });
 
   const semBonusIndicador = !bonus.ok; // true só quando limite mensal excedido
   try {

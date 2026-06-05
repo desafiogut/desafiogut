@@ -28,9 +28,6 @@ const ABI = [
 // garantindo que o backend NUNCA credita num contrato diferente do que a UI lê
 // o saldo. Só recorre ao endereço fixo quando NENHUMA env existe. Aditivo e
 // zero-regressão: com CONTRATO_SEPOLIA definido, o comportamento é idêntico.
-const _CONTRATO_FONTE =
-  process.env.CONTRATO_SEPOLIA       ? "CONTRATO_SEPOLIA" :
-  process.env.VITE_CONTRATO_SEPOLIA  ? "VITE_CONTRATO_SEPOLIA" : "fallback-hardcoded";
 export const CONTRATO_ADDRESS =
   process.env.CONTRATO_SEPOLIA ||
   process.env.VITE_CONTRATO_SEPOLIA ||
@@ -59,15 +56,6 @@ function getInstance() {
   _provider = new JsonRpcProvider(process.env.RPC_URL);
   _wallet   = new Wallet(resolverChaveCoordenacao(), _provider);
   _contract = new Contract(CONTRATO_ADDRESS, ABI, _wallet);
-  // MC17.5.1 [LOG TEMPORÁRIO] — revela o contrato/chave resolvidos para
-  // diagnosticar desalinhamento de ambiente (NUNCA loga o valor da chave).
-  console.log("[MC17.5.1] contract.getInstance", {
-    contrato: CONTRATO_ADDRESS,
-    fonteContrato: _CONTRATO_FONTE,
-    chaveCoordenacao: process.env.COORDENACAO_PRIVATE_KEY ? "COORDENACAO_PRIVATE_KEY"
-      : process.env.COORDENACAO_PRIVATE ? "COORDENACAO_PRIVATE" : "ausente",
-    temRpc: !!process.env.RPC_URL,
-  });
   return { provider: _provider, wallet: _wallet, contract: _contract };
 }
 

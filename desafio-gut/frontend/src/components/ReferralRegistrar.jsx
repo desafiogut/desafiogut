@@ -57,8 +57,6 @@ export default function ReferralRegistrar() {
       let deviceTracked = "false";
       try { deviceTracked = localStorage.getItem(DEVICE_KEY) ? "true" : "false"; } catch { /* sem storage */ }
       console.log("[GUT][MC17.4.2] T4 POST usar-codigo", { codigo, endereco: address, deviceTracked });
-      // MC17.5.1 [LOG TEMPORÁRIO] T3 — POST enviado (espera por address+authToken garantida acima).
-      console.log("[MC17.5.1] T3 POST enviado", { codigo, endereco: address, temAuthToken: !!authToken, deviceTracked });
       try {
         const resp = await fetch("/.netlify/functions/referral?acao=usar-codigo", {
           method: "POST",
@@ -79,11 +77,6 @@ export default function ReferralRegistrar() {
           idempotent: data?.idempotent,
           conversao: data?.conversao,
         });
-        // MC17.5.1 [LOG TEMPORÁRIO] T4 — resposta do backend (resultado do crédito on-chain).
-        console.log("[MC17.5.1] T4 resposta backend", {
-          status: resp.status, vinculoIdempotent: data?.idempotent,
-          conversaoOk: conv.ok, conversaoIdempotent: conv.idempotent, conversaoCode: conv.code,
-        });
         // MC17.5.1 RC-3 — uma falha RECUPERÁVEL de crédito (on-chain/Blobs) com
         // HTTP 200 NÃO deve selar o referral: o vínculo já existe mas o marcador
         // referral-convertido ainda não foi escrito, logo um retry posterior pode
@@ -102,13 +95,8 @@ export default function ReferralRegistrar() {
           console.info("[GUT][MC17.4.2] T6 referral terminal", {
             status: resp.status, conversaoOk: data?.conversao?.ok, conversaoCode: data?.conversao?.code,
           });
-        } else if (conversaoRecuperavel) {
-          // MC17.5.1 [LOG TEMPORÁRIO] — código mantido para retry.
-          console.warn("[MC17.5.1] T6 conversão recuperável — código MANTIDO para retry", {
-            conversaoCode: conv.code,
-          });
         }
-        // 429/5xx/erro de rede → mantém a flag para nova tentativa.
+        // 429/5xx/erro de rede OU conversão recuperável → mantém a flag para nova tentativa.
       } catch (err) {
         // Transitório (rede): mantém a flag; tenta no próximo ciclo.
         console.warn("[GUT][MC17.4.2] referral usar-codigo falhou (transitório)", err?.message);

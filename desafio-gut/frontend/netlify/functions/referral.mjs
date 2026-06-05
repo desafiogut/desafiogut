@@ -150,8 +150,6 @@ async function handleUsarCodigo(req) {
     } catch { /* não-fatal */ }
     conversao = { ok: false, code: "suspeita_sybil_ip" };
   } else {
-    // MC17.5.1 [LOG TEMPORÁRIO] T5 — conversão imediata acionada no registo.
-    console.log("[MC17.5.1] T5 registrarConversao acionado", { codigo, indicador: r.indicador, indicado: endereco });
     try {
       conversao = await registrarConversao(
         { codigo, indicador: r.indicador, indicado: endereco },
