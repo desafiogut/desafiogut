@@ -1,5 +1,5 @@
 import "./globals.css";
-import { StrictMode } from "react";
+import { Component, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { PrivyProvider, useLogin, useCreateWallet } from "@privy-io/react-auth";
@@ -159,27 +159,85 @@ const SentryFallback = () => (
   </div>
 );
 
-// MC17.3.1.1 — PrivyEventsBridge: registar os callbacks de evento do Privy v3.
-// É a CORREÇÃO do crash "Cannot destructure property 'onSuccess' of
-// 'i.createWallet' as it is undefined": com `createOnLogin: all-users`, ao logar
-// um utilizador NOVO o SDK auto-cria a embedded wallet e despacha o evento
-// `createWallet`, fazendo internamente `const { onSuccess } = events.createWallet`.
-// Sem nenhum useCreateWallet registado, `events.createWallet` é undefined e o
-// destructure rebenta. Registar os hooks aqui DEFINE events.createWallet/login.
-// Montado dentro do PrivyProvider e o mais cedo possível (irmão de <App/>),
-// para o handler existir antes de qualquer fluxo de login. Sem UI.
+// MC17.3.1.2.1 — rede de segurança: se (residualmente) o crash da race do
+// createWallet ainda escapar, auto-recupera com UM reload (guardado por 30s para
+// nunca entrar em loop). Erros NÃO relacionados são RE-LANÇADOS intactos para o
+// Sentry.ErrorBoundary acima — zero regressão no reporting/UX existente.
+class PrivyCrashBoundary extends Component {
+  constructor(props) { super(props); this.state = { err: null, reloading: false }; }
+  static getDerivedStateFromError(err) { return { err }; }
+  componentDidCatch(err) {
+    const msg = String(err?.message || err || "");
+    const race = /createWallet/i.test(msg) && /(onSuccess|undefined)/i.test(msg);
+    if (!race) return; // não relacionado → render() re-lança para o Sentry boundary
+    let last = 0;
+    try { last = Number(sessionStorage.getItem("gut_privy_autoreload") || 0); } catch { /* sem storage */ }
+    if (Date.now() - last > 30000) {
+      try { sessionStorage.setItem("gut_privy_autoreload", String(Date.now())); } catch { /* sem storage */ }
+      console.warn("[MC17.3.1.2.1] crash createWallet detetado — auto-reload único");
+      this.setState({ reloading: true });
+      window.location.reload();
+    }
+    // else: loop-guard (já recarregou < 30s) → render() re-lança → Sentry fallback (sem loop)
+  }
+  render() {
+    if (this.state.reloading) return null;
+    if (this.state.err) throw this.state.err;
+    return this.props.children;
+  }
+}
+
+// MC17.3.1.1 → MC17.3.1.2.1 — PrivyEventsBridge.
+// O crash "Cannot destructure property 'onSuccess' of 'i.createWallet' as it is
+// undefined" vinha do despacho AUTOMÁTICO de createWallet (createOnLogin:"all-users"):
+// no 1.º login de utilizador NOVO o SDK auto-criava a wallet e lia
+// events.createWallet ANTES de o handler do useCreateWallet estar registado (race),
+// rebentando o destructure. MC17.3.1.1 registou o handler (mitigou o caso comum) mas
+// a race persistia no cold start (confirmado no MC17.5.1).
+//
+// MC17.3.1.2.1 — elimina a race na ORIGEM: createOnLogin passa a "off" (sem
+// auto-criação), e a embedded wallet é criada EXPLICITAMENTE no onComplete do login,
+// momento em que o useCreateWallet (e o seu onSuccess) já está montado. Como a
+// chamada parte do próprio hook, NÃO há leitura de events.createWallet por um
+// caminho sem handler. onComplete corre tanto no login novo como no já-autenticado
+// (cobre um eventual utilizador autenticado sem wallet). Sem UI.
+function temEmbeddedWallet(user) {
+  if (!user) return false;
+  return (user.linkedAccounts || []).some(
+    (a) => a?.type === "wallet" && a?.walletClientType === "privy",
+  );
+}
+
 function PrivyEventsBridge() {
-  useCreateWallet({
-    onSuccess: ({ wallet }) =>
-      console.info("[GUT] embedded wallet criada", { address: wallet?.address }),
-    onError: (error) =>
-      console.warn("[GUT] createWallet erro", error),
+  const { createWallet } = useCreateWallet({
+    onSuccess: ({ wallet }) => {
+      console.info("[GUT] embedded wallet criada", { address: wallet?.address });
+      console.log("[MC17.3.1.2.1] T4 createWallet.onSuccess", { address: wallet?.address });
+    },
+    onError: (error) => console.warn("[GUT] createWallet erro", error),
   });
+  // [MC17.3.1.2.1] T1 — handler do useCreateWallet registado (no render do bridge,
+  // antes de qualquer login possível).
+  console.log("[MC17.3.1.2.1] T1 useCreateWallet registado (bridge montado)");
+
   useLogin({
-    onComplete: ({ isNewUser, wasAlreadyAuthenticated }) =>
-      console.info("[GUT] login completo", { isNewUser, wasAlreadyAuthenticated }),
-    onError: (error) =>
-      console.warn("[GUT] login erro", error),
+    onComplete: async ({ user, isNewUser, wasAlreadyAuthenticated }) => {
+      console.info("[GUT] login completo", { isNewUser, wasAlreadyAuthenticated });
+      console.log("[MC17.3.1.2.1] T2 login onComplete", {
+        isNewUser, wasAlreadyAuthenticated, temWallet: temEmbeddedWallet(user),
+      });
+      // Criação EXPLÍCITA quando ainda não há embedded wallet. createWallet() lança
+      // se o user já tiver wallet → guard + try/catch (idempotente e anti-corrida).
+      if (!temEmbeddedWallet(user)) {
+        try {
+          console.log("[MC17.3.1.2.1] T3 createWallet() chamado (user sem wallet)");
+          await createWallet();
+        } catch (err) {
+          console.warn("[MC17.3.1.2.1] createWallet() falhou (pode já existir)", err?.message);
+        }
+      }
+    },
+    onError: (error) => console.warn("[GUT] login erro", error),
   });
   return null;
 }
@@ -187,6 +245,9 @@ function PrivyEventsBridge() {
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <Sentry.ErrorBoundary fallback={<SentryFallback />}>
+    {/* MC17.3.1.2.1 — rede de segurança que auto-recupera (1 reload) do crash
+        residual do createWallet; demais erros sobem intactos ao Sentry boundary. */}
+    <PrivyCrashBoundary>
     <BrowserRouter>
     {/* MC17.3.1.1 — captura ?ref=IND-... para sessionStorage antes do Privy. */}
     <ReferralTracker />
@@ -196,17 +257,16 @@ createRoot(document.getElementById("root")).render(
         // ── Métodos de login: Google, E-mail, Apple ──────────────────────────
         loginMethods: ["google", "email", "apple"],
 
-        // ── Embedded Wallet: criado automaticamente para todos os usuários ──
-        // MC17.3.1.1 — forma ANINHADA por chain exigida pelo Privy v3
-        // (embeddedWallets.ethereum.createOnLogin). A forma plana legada
-        // (createOnLogin no topo) ficou fora do tipo v3 e o callback do evento
-        // createWallet não era registado, disparando o crash em utilizadores
-        // novos. O registo do callback é feito por hooks (ver PrivyEventsBridge).
-        // Nota: a prop global `onSuccess` foi removida — não existe na v3
-        // (PrivyProviderProps só aceita appId/clientId/config/children); os
-        // callbacks passam a vir de useLogin/useCreateWallet.
+        // ── Embedded Wallet: criação EXPLÍCITA (não automática) ──────────────
+        // MC17.3.1.2.1 — createOnLogin:"off". A auto-criação no login era o
+        // gatilho do crash "Cannot destructure ... createWallet" (despacho do
+        // evento antes do handler registar, no cold start de utilizador novo).
+        // Com "off", o SDK NÃO auto-cria; a wallet é criada explicitamente no
+        // onComplete do PrivyEventsBridge (quando o handler já está montado),
+        // eliminando a race sem necessidade de reload. A forma continua aninhada
+        // por chain (exigida pelo Privy v3). Callbacks vêm de useLogin/useCreateWallet.
         embeddedWallets: {
-          ethereum: { createOnLogin: "all-users" },
+          ethereum: { createOnLogin: "off" },
         },
 
         // ── Rede: Sepolia via viem/chains (definição oficial) ────────────────
@@ -229,6 +289,7 @@ createRoot(document.getElementById("root")).render(
       <App />
     </PrivyProvider>
     </BrowserRouter>
+    </PrivyCrashBoundary>
     </Sentry.ErrorBoundary>
   </StrictMode>
 );
