@@ -174,7 +174,7 @@ class PrivyCrashBoundary extends Component {
     try { last = Number(sessionStorage.getItem("gut_privy_autoreload") || 0); } catch { /* sem storage */ }
     if (Date.now() - last > 30000) {
       try { sessionStorage.setItem("gut_privy_autoreload", String(Date.now())); } catch { /* sem storage */ }
-      console.warn("[MC17.3.1.2.1] crash createWallet detetado — auto-reload único");
+      console.warn("[GUT] crash createWallet detetado — auto-reload único (MC17.3.1.2.1)");
       this.setState({ reloading: true });
       window.location.reload();
     }
@@ -210,30 +210,21 @@ function temEmbeddedWallet(user) {
 
 function PrivyEventsBridge() {
   const { createWallet } = useCreateWallet({
-    onSuccess: ({ wallet }) => {
-      console.info("[GUT] embedded wallet criada", { address: wallet?.address });
-      console.log("[MC17.3.1.2.1] T4 createWallet.onSuccess", { address: wallet?.address });
-    },
+    onSuccess: ({ wallet }) =>
+      console.info("[GUT] embedded wallet criada", { address: wallet?.address }),
     onError: (error) => console.warn("[GUT] createWallet erro", error),
   });
-  // [MC17.3.1.2.1] T1 — handler do useCreateWallet registado (no render do bridge,
-  // antes de qualquer login possível).
-  console.log("[MC17.3.1.2.1] T1 useCreateWallet registado (bridge montado)");
 
   useLogin({
     onComplete: async ({ user, isNewUser, wasAlreadyAuthenticated }) => {
       console.info("[GUT] login completo", { isNewUser, wasAlreadyAuthenticated });
-      console.log("[MC17.3.1.2.1] T2 login onComplete", {
-        isNewUser, wasAlreadyAuthenticated, temWallet: temEmbeddedWallet(user),
-      });
       // Criação EXPLÍCITA quando ainda não há embedded wallet. createWallet() lança
       // se o user já tiver wallet → guard + try/catch (idempotente e anti-corrida).
       if (!temEmbeddedWallet(user)) {
         try {
-          console.log("[MC17.3.1.2.1] T3 createWallet() chamado (user sem wallet)");
           await createWallet();
         } catch (err) {
-          console.warn("[MC17.3.1.2.1] createWallet() falhou (pode já existir)", err?.message);
+          console.warn("[GUT] createWallet() no onComplete falhou (pode já existir)", err?.message);
         }
       }
     },
