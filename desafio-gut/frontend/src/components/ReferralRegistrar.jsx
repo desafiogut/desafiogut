@@ -1,8 +1,9 @@
-// ReferralRegistrar — MC17.3.1.1
+// ReferralRegistrar — MC17.3.1.1 · MC17.4.2
 //
 // Liga o registo do vínculo de indicação que NUNCA esteve ativo no frontend.
 // Quando a sessão tem `address` E `authToken` (user-session JWT cunhado pelo
-// /auth-user), e existe um código pendente em sessionStorage('desafiogut_ref'),
+// /auth-user), e existe um código pendente em localStorage('desafiogut:ref_code')
+// — com fallback à chave legada sessionStorage('desafiogut_ref') para migração —
 // chama o endpoint existente para registar a indicação. Idempotente: o backend
 // (_lib/referral.mjs) garante vínculo único e rejeita auto-indicação/ja-indicado.
 //
@@ -19,7 +20,7 @@
 
 import { useEffect } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
-import { REF_STORAGE_KEY } from "./ReferralTracker.jsx";
+import { REF_STORAGE_KEY, REF_STORAGE_KEY_LEGACY } from "./ReferralTracker.jsx";
 
 // Estados TERMINAIS do registo — consumir a flag sem retry (não são transitórios).
 //  200 ok · 400 auto_indicacao/codigo_invalido · 403 endereco_nao_corresponde
@@ -35,14 +36,27 @@ export default function ReferralRegistrar() {
   const { address, authToken, visitorId } = useAppContext();
 
   useEffect(() => {
-    let codigo;
-    try { codigo = sessionStorage.getItem(REF_STORAGE_KEY); } catch { codigo = null; }
-    if (!address || !authToken || !codigo) return;
+    // MC17.4.2 — lê o código persistido: localStorage (canónico) com fallback à
+    // chave legada em sessionStorage (migração sem perder códigos pré-deploy).
+    let codigo = null;
+    try { codigo = localStorage.getItem(REF_STORAGE_KEY); } catch {}
+    if (!codigo) { try { codigo = sessionStorage.getItem(REF_STORAGE_KEY_LEGACY); } catch {} }
+
+    // T2/T3 — ESPERA explícita por address + authToken. Como ambos são deps deste
+    // efeito, ele re-corre quando o authToken é cunhado (POST /auth-user). Logo o
+    // POST (T4) NUNCA dispara com authToken=undefined → evita o 401 por T4<T3.
+    if (!address || !authToken || !codigo) {
+      console.log("[GUT][MC17.4.2] T2/T3 a aguardar pré-condições", {
+        temAddress: !!address, temAuthToken: !!authToken, temCodigo: !!codigo,
+      });
+      return;
+    }
 
     let cancel = false;
     (async () => {
       let deviceTracked = "false";
       try { deviceTracked = localStorage.getItem(DEVICE_KEY) ? "true" : "false"; } catch { /* sem storage */ }
+      console.log("[GUT][MC17.4.2] T4 POST usar-codigo", { codigo, endereco: address, deviceTracked });
       try {
         const resp = await fetch("/.netlify/functions/referral?acao=usar-codigo", {
           method: "POST",
@@ -55,16 +69,26 @@ export default function ReferralRegistrar() {
           body: JSON.stringify({ codigo_indicacao: codigo, endereco: address }),
         });
         if (cancel) return;
+        let data = null;
+        try { data = await resp.clone().json(); } catch {}
+        console.log("[GUT][MC17.4.2] T5/T6 resposta usar-codigo", {
+          status: resp.status,
+          idempotent: data?.idempotent,
+          conversao: data?.conversao,
+        });
         if (STATUS_TERMINAIS.has(resp.status)) {
-          // Sucesso ou rejeição definitiva → não repetir.
-          try { sessionStorage.removeItem(REF_STORAGE_KEY); } catch {}
+          // Sucesso ou rejeição definitiva → não repetir. Limpa ambas as chaves.
+          try { localStorage.removeItem(REF_STORAGE_KEY); } catch {}
+          try { sessionStorage.removeItem(REF_STORAGE_KEY_LEGACY); } catch {}
           try { localStorage.setItem(DEVICE_KEY, "true"); } catch { /* sem storage */ }
-          console.info("[GUT] referral usar-codigo", { status: resp.status });
+          console.info("[GUT][MC17.4.2] T6 referral terminal", {
+            status: resp.status, conversaoOk: data?.conversao?.ok, conversaoCode: data?.conversao?.code,
+          });
         }
         // 429/5xx/erro de rede → mantém a flag para nova tentativa.
       } catch (err) {
         // Transitório (rede): mantém a flag; tenta no próximo ciclo.
-        console.warn("[GUT] referral usar-codigo falhou (transitório)", err?.message);
+        console.warn("[GUT][MC17.4.2] referral usar-codigo falhou (transitório)", err?.message);
       }
     })();
     return () => { cancel = true; };

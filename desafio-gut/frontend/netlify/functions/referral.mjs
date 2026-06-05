@@ -88,6 +88,7 @@ async function handleUsarCodigo(req) {
 
   const codigo = typeof body.codigo_indicacao === "string" ? body.codigo_indicacao.trim().toUpperCase() : null;
   if (!codigo || !/^IND-[A-Z0-9]{6}$/.test(codigo)) {
+    console.error("[MC17.4.2] payload inválido: codigo_indicacao", { recebido: body?.codigo_indicacao ?? null });
     return jsonError(400, "codigo_invalido", "codigo_indicacao deve casar com IND-XXXXXX (6 alfanuméricos maiúsculos)");
   }
 
@@ -103,6 +104,7 @@ async function handleUsarCodigo(req) {
   const auth = await autenticarUser(req);
   if (!auth.ok) return jsonError(401, auth.code, auth.message);
   if (auth.payload?.endereco !== endereco) {
+    console.error("[MC17.4.2] endereco_nao_corresponde", { tokenEndereco: auth.payload?.endereco ?? null, bodyEndereco: endereco });
     return jsonError(403, "endereco_nao_corresponde", "token não pertence ao endereço informado");
   }
 
@@ -165,6 +167,23 @@ async function handleUsarCodigo(req) {
       } catch { /* não-fatal */ }
     }
   }
+
+  // [MC17.4.2] Rastreio do crédito: revela QUAL ramo anti-fraude (ip/limite/
+  // idempotência/on-chain) eventualmente saltou o crédito num teste manual.
+  console.log("[MC17.4.2] usar-codigo resultado", {
+    codigo,
+    indicado:             endereco,
+    indicador:            r.indicador,
+    vinculoIdempotent:    !!r.idempotent,
+    ipGateOk:             ipGate.ok,
+    ipCount:              ipGate.count,
+    deviceTracked,
+    conversaoOk:          conversao?.ok || false,
+    conversaoCode:        conversao?.code || null,
+    conversaoIdempotent:  conversao?.idempotent || false,
+    bonusIndicador:       conversao?.bonusIndicador ?? null,
+    bonusIndicadorCode:   conversao?.bonusIndicadorCode ?? null,
+  });
 
   return jsonResponse({
     sucesso:    true,
