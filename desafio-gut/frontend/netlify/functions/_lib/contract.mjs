@@ -23,8 +23,17 @@ const ABI = [
   "event LanceDado(string idEdicao, address indexed lancador, uint256 valorEmCentavos, bool repetido, uint256 timestamp)",
 ];
 
+// MC17.5.1 — resolução ROBUSTA do contrato. Aceita a variável de backend
+// (CONTRATO_SEPOLIA) e, como fallback, a do frontend (VITE_CONTRATO_SEPOLIA),
+// garantindo que o backend NUNCA credita num contrato diferente do que a UI lê
+// o saldo. Só recorre ao endereço fixo quando NENHUMA env existe. Aditivo e
+// zero-regressão: com CONTRATO_SEPOLIA definido, o comportamento é idêntico.
+const _CONTRATO_FONTE =
+  process.env.CONTRATO_SEPOLIA       ? "CONTRATO_SEPOLIA" :
+  process.env.VITE_CONTRATO_SEPOLIA  ? "VITE_CONTRATO_SEPOLIA" : "fallback-hardcoded";
 export const CONTRATO_ADDRESS =
   process.env.CONTRATO_SEPOLIA ||
+  process.env.VITE_CONTRATO_SEPOLIA ||
   "0x273Ef96f5be04601FD39DAcDFB039d6fB552445e";
 
 let _provider;
@@ -32,17 +41,33 @@ let _wallet;
 let _contract;
 let _coordenacaoCache;   // cache do `coordenacao()` para evitar RPC em todo confirm
 
+// MC17.5.1 — aceita o nome canónico COORDENACAO_PRIVATE_KEY e, como fallback,
+// COORDENACAO_PRIVATE (variante sem o sufixo _KEY usada nalguns ambientes).
+// Aditivo: se a chave canónica existir, é a usada (zero-regressão).
+function resolverChaveCoordenacao() {
+  return process.env.COORDENACAO_PRIVATE_KEY || process.env.COORDENACAO_PRIVATE || null;
+}
+
 function ensureEnv() {
   if (!process.env.RPC_URL) throw new Error("RPC_URL não configurado");
-  if (!process.env.COORDENACAO_PRIVATE_KEY) throw new Error("COORDENACAO_PRIVATE_KEY não configurado");
+  if (!resolverChaveCoordenacao()) throw new Error("COORDENACAO_PRIVATE_KEY não configurado");
 }
 
 function getInstance() {
   if (_contract) return { provider: _provider, wallet: _wallet, contract: _contract };
   ensureEnv();
   _provider = new JsonRpcProvider(process.env.RPC_URL);
-  _wallet   = new Wallet(process.env.COORDENACAO_PRIVATE_KEY, _provider);
+  _wallet   = new Wallet(resolverChaveCoordenacao(), _provider);
   _contract = new Contract(CONTRATO_ADDRESS, ABI, _wallet);
+  // MC17.5.1 [LOG TEMPORÁRIO] — revela o contrato/chave resolvidos para
+  // diagnosticar desalinhamento de ambiente (NUNCA loga o valor da chave).
+  console.log("[MC17.5.1] contract.getInstance", {
+    contrato: CONTRATO_ADDRESS,
+    fonteContrato: _CONTRATO_FONTE,
+    chaveCoordenacao: process.env.COORDENACAO_PRIVATE_KEY ? "COORDENACAO_PRIVATE_KEY"
+      : process.env.COORDENACAO_PRIVATE ? "COORDENACAO_PRIVATE" : "ausente",
+    temRpc: !!process.env.RPC_URL,
+  });
   return { provider: _provider, wallet: _wallet, contract: _contract };
 }
 
