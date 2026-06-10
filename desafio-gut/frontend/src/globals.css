@@ -229,12 +229,25 @@ body::after {
   background-position: center;
   background-repeat: no-repeat;
 }
+/* Scrim navy (MC19.1 ITEM 3): escurece topo (cabeçalhos) e base (nav/rodapé)
+   mantendo o centro mais limpo, para contraste WCAG AA do texto sem lavar a arte.
+   Só paleta navy #050818 (@taste-engineering). Vai como 1ª camada (por cima da
+   imagem) em cada pseudo, logo acompanha o crossfade do ITEM 4. */
+:root {
+  --gut-bg-scrim: linear-gradient(
+    180deg,
+    rgba(5, 8, 24, 0.62) 0%,
+    rgba(5, 8, 24, 0.30) 34%,
+    rgba(5, 8, 24, 0.34) 66%,
+    rgba(5, 8, 24, 0.70) 100%
+  );
+}
 body::before {  /* mobile (base) */
-  background-image: url("/assets/backgrounds/background-mobile.webp");
+  background-image: var(--gut-bg-scrim), url("/assets/backgrounds/background-mobile.webp");
   opacity: 1;
 }
 body::after {   /* desktop (>=768px) */
-  background-image: url("/assets/backgrounds/background-desktop.webp");
+  background-image: var(--gut-bg-scrim), url("/assets/backgrounds/background-desktop.webp");
   opacity: 0;
 }
 @media (min-width: 768px) {
