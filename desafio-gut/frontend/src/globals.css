@@ -212,6 +212,36 @@ img, svg { display: block; }
   background-repeat: repeat;
 }
 
+/* ── Fundo oficial responsivo (MC19.1) ───────────────────────────────────────
+   Duas camadas fixas, atrás de TODO o conteúdo (z-index:-1, acima do #050818 do
+   body que fica como fallback). Mobile = base; desktop trocado por opacidade no
+   breakpoint 768px (alinhado a useIsMobile / MOBILE_BREAKPOINT_PX). cover+center
+   preserva o centro limpo das imagens oficiais; fixed dá o efeito parallax sutil
+   e reserva o viewport inteiro (anti-CLS — @impeccable-design). */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+body::before {  /* mobile (base) */
+  background-image: url("/assets/backgrounds/background-mobile.webp");
+  opacity: 1;
+}
+body::after {   /* desktop (>=768px) */
+  background-image: url("/assets/backgrounds/background-desktop.webp");
+  opacity: 0;
+}
+@media (min-width: 768px) {
+  body::before { opacity: 0; }
+  body::after  { opacity: 1; }
+}
+
 /* ── Font utilities ───────────────────────────────────────────────────────── */
 .font-display  { font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif; }
 .font-mono-gut { font-family: 'JetBrains Mono', monospace; }
