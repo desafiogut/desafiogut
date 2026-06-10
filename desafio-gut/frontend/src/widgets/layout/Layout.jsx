@@ -45,7 +45,9 @@ export default function Layout() {
         flexDirection: "column",
         height: "100vh",
         overflow: "hidden",
-        background: "radial-gradient(ellipse at 50% -15%, rgba(245,166,35,0.06) 0%, #0c1120 40%, #0a0f1a 100%)",
+        // MC19.1 — transparente para revelar o fundo oficial (body::before/::after
+        // em globals.css). O #050818 do body fica como fallback atrás da imagem.
+        background: "transparent",
         color: "#e8f0fe",
         fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
       }}
