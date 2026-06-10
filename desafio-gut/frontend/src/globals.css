@@ -228,6 +228,15 @@ body::after {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  /* MC19.1 ITEM 4 — crossfade fluido entre mobile/desktop ao cruzar 768px
+     (@design-engineering, easing do app). */
+  transition: opacity 0.6s var(--ease-out);
+}
+/* Fade-in inicial limpo (imagem aparece sobre o navy) sem conflitar com a
+   troca por media query: @starting-style define a opacidade de arranque. */
+@starting-style {
+  body::before,
+  body::after { opacity: 0; }
 }
 /* Scrim navy (MC19.1 ITEM 3): escurece topo (cabeçalhos) e base (nav/rodapé)
    mantendo o centro mais limpo, para contraste WCAG AA do texto sem lavar a arte.
