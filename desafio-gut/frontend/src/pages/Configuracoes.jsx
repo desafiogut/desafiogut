@@ -30,7 +30,7 @@ export default function Configuracoes() {
   const sectionGap = isMobile ? "1.25rem" : "1.5rem";
 
   const cardStyle = {
-    background: "rgba(10,16,42,0.6)",
+    background: "rgba(255,255,255,0.03)",
     border: "1px solid rgba(245,166,35,0.18)",
     borderRadius: "16px",
     padding: cardPad,
@@ -145,7 +145,7 @@ export default function Configuracoes() {
               value={idioma}
               onChange={(e) => setIdioma(e.target.value)}
               style={{
-                background: "rgba(3,15,36,0.8)",
+                background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(245,166,35,0.25)",
                 borderRadius: "8px", color: COR.blue300,
                 padding: "0.4rem 0.75rem",

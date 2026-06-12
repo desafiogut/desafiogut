@@ -147,7 +147,7 @@ export default function CorporativoCarteira() {
   }
 
   const card = {
-    background: "rgba(10,16,42,0.6)", border: "1px solid rgba(245,166,35,0.18)",
+    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(245,166,35,0.18)",
     borderRadius: "16px", padding: isMobile ? "1rem" : "1.25rem",
     backdropFilter: "blur(16px)", marginBottom: isMobile ? "1rem" : "1.25rem",
   };
@@ -201,7 +201,7 @@ export default function CorporativoCarteira() {
             <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap" }}>
               <input type="number" min={1} max={Math.max(1, saldoTroco)} value={qtdConv}
                 onChange={(e) => setQtdConv(Math.max(1, Math.min(saldoTroco || 1, parseInt(e.target.value, 10) || 1)))}
-                style={{ width: "5rem", padding: "0.5rem", background: "rgba(3,15,36,0.7)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: "8px", color: "#e8f0fe", textAlign: "center", fontWeight: 700 }}
+                style={{ width: "5rem", padding: "0.5rem", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: "8px", color: "#e8f0fe", textAlign: "center", fontWeight: 700 }}
                 aria-label="Quantidade de troco a converter" />
               <button onClick={converter} disabled={convertendo || saldoTroco < 1} style={btn("#10b981", convertendo || saldoTroco < 1)}>
                 {convertendo ? "A converter..." : "Converter para licitar"}
@@ -234,7 +234,7 @@ export default function CorporativoCarteira() {
               {COTAS.map((c) => (
                 <button key={c.id} onClick={() => setTier(c)} style={{
                   textAlign: "left", padding: "0.8rem", borderRadius: "12px", cursor: "pointer",
-                  background: tier?.id === c.id ? "rgba(245,166,35,0.12)" : "rgba(3,15,36,0.6)",
+                  background: tier?.id === c.id ? "rgba(245,166,35,0.12)" : "rgba(255,255,255,0.03)",
                   border: `1px solid ${tier?.id === c.id ? c.cor : "rgba(245,166,35,0.15)"}`,
                 }}>
                   <div style={{ fontWeight: 900, color: c.cor, textTransform: "uppercase", fontSize: "0.95rem" }}>{c.nome}</div>
@@ -254,7 +254,7 @@ export default function CorporativoCarteira() {
                   type="number" min={0} value={produtoValor}
                   onChange={(e) => setProdutoValor(e.target.value)}
                   placeholder={`mínimo ${brl(tier.minimo)}`}
-                  style={{ width: "100%", padding: "0.6rem 0.8rem", background: "rgba(3,15,36,0.7)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: "10px", color: "#e8f0fe", fontWeight: 700, outline: "none" }}
+                  style={{ width: "100%", padding: "0.6rem 0.8rem", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(245,166,35,0.3)", borderRadius: "10px", color: "#e8f0fe", fontWeight: 700, outline: "none" }}
                   aria-label="Valor do produto a anunciar"
                 />
                 {produtoValor !== "" && Number(produtoValor) >= 0 && Number(produtoValor) < tier.minimo && (
@@ -274,7 +274,7 @@ export default function CorporativoCarteira() {
             {pedido?.qrCodeText && pagStatus !== "confirmado" && (
               <div style={{ marginTop: "0.8rem", padding: "0.8rem", borderRadius: "10px", background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.3)", fontSize: "0.78rem", color: "#e8f0fe", lineHeight: 1.6 }}>
                 <strong style={{ color: "#fbbf24" }}>Pague com PIX (Mercado Pago) — {brl(pedido.valorBRL)}:</strong>
-                <div style={{ marginTop: "0.4rem", padding: "0.5rem", background: "rgba(3,15,36,0.7)", borderRadius: "8px", fontFamily: "monospace", fontSize: "0.68rem", color: "#fbbf24", wordBreak: "break-all", maxHeight: "100px", overflowY: "auto" }}>
+                <div style={{ marginTop: "0.4rem", padding: "0.5rem", background: "rgba(255,255,255,0.03)", borderRadius: "8px", fontFamily: "monospace", fontSize: "0.68rem", color: "#fbbf24", wordBreak: "break-all", maxHeight: "100px", overflowY: "auto" }}>
                   {pedido.qrCodeText}
                 </div>
                 <button onClick={() => { try { navigator.clipboard.writeText(pedido.qrCodeText); } catch {} }}

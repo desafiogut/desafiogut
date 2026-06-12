@@ -143,7 +143,7 @@ export default function DetalheProduto() {
         <div style={{
           borderRadius: "16px", overflow: "hidden",
           border: `1px solid ${catColor}44`,
-          background: "rgba(5,15,40,0.8)",
+          background: "rgba(255,255,255,0.03)",
           aspectRatio: "4/3",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
@@ -218,7 +218,7 @@ export default function DetalheProduto() {
           {produto.status === "ativo" && !encerrado && (
             <div style={{
               padding: "0.85rem", borderRadius: "12px",
-              background: "rgba(5,15,40,0.6)", border: `1px solid ${catColor}33`,
+              background: "rgba(255,255,255,0.03)", border: `1px solid ${catColor}33`,
               display: "flex", flexDirection: "column", gap: "0.5rem",
             }}>
               <label style={{ fontSize: "0.72rem", color: COR.muted, fontWeight: 700 }}>
@@ -232,7 +232,7 @@ export default function DetalheProduto() {
                   placeholder="Ex: 150"
                   style={{
                     flex: 1, padding: "0.55rem 0.7rem",
-                    background: "rgba(5,13,30,0.8)",
+                    background: "rgba(255,255,255,0.03)",
                     border: `1px solid ${catColor}44`,
                     borderRadius: "8px", color: COR.text, fontSize: "0.9rem", outline: "none",
                   }}
