@@ -16,7 +16,7 @@ import GutoAvatar from "../components/GutoAvatar.jsx";
 
 const COR = {
   text: "#e8f0fe", muted: "#5a7090", primary: "#f5a623",
-  bg: "rgba(10,16,42,0.6)", bgSoft: "rgba(245,166,35,0.07)",
+  bg: "rgba(255,255,255,0.03)", bgSoft: "rgba(245,166,35,0.07)",
   teal: "#00d4aa", success: "#10b981",
 };
 
