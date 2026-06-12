@@ -49,3 +49,25 @@ GutoSpritePlayer, parallax) + 1 hook utilitário (`useShakeOnError`) + integraç
 trigger thinking. **Zero alteração ao caminho transacional/on-chain** (R1). Itens ⏸️
 (ITEM 7 Mercado Pago, ITEM 10 optimistic, teste de concorrência) ficam como **gates futuros**
 e não bloqueiam este merge porque não foram tocados.
+
+---
+
+## VEREDICTO MC21.1 — refundação visual (biblioteca Glass UI + vidro no visitante)
+Escopo: **100% apresentação**. (1) `globals.css`: novo `.glass-panel` + migração do `.gut-glass`
+para base neutra (white/0.03, blur-off mobile, `backdrop-saturate` corrigido). (2) 10 primitivos
+novos em `src/components/ui/` (sem lógica de negócio). (3) `Layout.jsx` rodapé e `MercadoLances.jsx`
+3 barras do topo: `background` opaco (0.80–0.92) → vidro neutro.
+- **Integridade de transação / idempotência:** N/A — `CardLance`, `web3.js`, idempotencyKey,
+  State Lock, EIP-191 **não tocados**. ✅
+- **Zero-trust:** sem novas rotas/inputs/chaves. Primitivos são puramente visuais. ✅
+- **Auditoria de código:** sem `console.log` novo; sem código morto; `node --check` `.mjs` limpo +
+  `npm run build` verde a cada commit; primitivos <100 linhas (R3). ✅
+- **Regra de Ouro (arena visível):** validado via MCP como visitante (`/`, `/mercado`, `/carteira`,
+  `/vitrine`, `/seja-nosso-parceiro`, chatbot) — arena transparece; CLS=0 (residual 0.008 no
+  `/mercado` = cronómetro ao vivo, não o redesign); consola só ruído pré-existente. ✅
+- **WCAG AA:** texto do aviso do Mercado clareado (#64748b→#94a3b8) sobre vidro. ✅
+- ⏸️ **Pendente (MC21.2):** corporativo/admin + painéis auth-gated + forms profundos — **NÃO**
+  validados visualmente (login Privy não automatizável via CDP). Refator desses fica para MC21.2
+  com validação autenticada. **Não bloqueiam este PR porque não foram tocados.**
+
+**APROVADO para merge** (escopo entregue). O caminho transacional/on-chain permanece intacto (R1).
