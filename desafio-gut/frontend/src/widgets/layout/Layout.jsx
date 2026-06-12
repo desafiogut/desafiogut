@@ -52,8 +52,6 @@ export default function Layout() {
       }}
     >
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {!isMobile && <Sidebar />}
-
         <main
           style={{
             flex: 1,
@@ -72,6 +70,11 @@ export default function Layout() {
               e ficar acima do BottomNav fixo. */}
           {isMobile && <FooterGlobal isMobile />}
         </main>
+
+        {/* MC21.1 — Rail de DESKTOP à DIREITA: o GUTO oficial vive no canto
+            inferior-ESQUERDO; mover o Nav Dock para a direita evita a sobreposição.
+            Mobile mantém o BottomNav central (sem conflito). Lógica/rotas intactas. */}
+        {!isMobile && <Sidebar />}
       </div>
 
       {/* Desktop: footer fora do main (sticky no final do viewport). */}
