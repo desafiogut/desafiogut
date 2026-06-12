@@ -132,20 +132,15 @@ export default function Sidebar() {
   const W = collapsed ? "72px" : "240px";
 
   return (
-    <aside style={{
-      /* MC20.2 ITEM 5 — rail flutuante glassmorphic (apresentação). Lógica intacta. */
+    <aside className="gut-glass" style={{
+      /* MC20.2 — rail flutuante em vidro temperado (.gut-glass). Lógica intacta. */
       width: W, minWidth: W, height: "calc(100vh - 24px)",
       margin: "12px 0 12px 12px",
-      background: "rgba(13,18,53,0.55)",
-      border: "1px solid rgba(255,255,255,0.08)",
       borderRadius: "18px",
-      backdropFilter: "blur(16px) saturate(140%)",
-      WebkitBackdropFilter: "blur(16px) saturate(140%)",
       display: "flex", flexDirection: "column",
       transition: "width 0.28s cubic-bezier(0.4,0,0.2,1), min-width 0.28s cubic-bezier(0.4,0,0.2,1)",
       position: "sticky", top: "12px",
       overflow: "hidden", flexShrink: 0,
-      boxShadow: "0 8px 32px rgba(5,8,24,0.55), 0 2px 8px rgba(255,107,53,0.10)",
     }}>
 
       {/* ── Avatar + Logo ── */}

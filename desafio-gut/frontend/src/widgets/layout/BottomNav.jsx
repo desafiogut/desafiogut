@@ -111,18 +111,14 @@ export default function BottomNav() {
           desliza entre as tabs principais; "Mais" mantém highlight estático. */}
       <nav
         aria-label="Navegação principal"
+        className="gut-glass"
         style={{
           position: "fixed",
           bottom: `calc(${DOCK_MARGIN}px + env(safe-area-inset-bottom, 0px))`,
           left: "50%", transform: "translateX(-50%)",
           width: `calc(100% - ${DOCK_MARGIN * 2}px)`, maxWidth: "460px",
           height: `${DOCK_HEIGHT}px`,
-          background: "rgba(13,18,53,0.55)",
-          border: "1px solid rgba(255,255,255,0.08)",
           borderRadius: "20px",
-          backdropFilter: "blur(16px) saturate(140%)",
-          WebkitBackdropFilter: "blur(16px) saturate(140%)",
-          boxShadow: "0 8px 32px rgba(5,8,24,0.55), 0 2px 8px rgba(255,107,53,0.10)",
           display: "flex", alignItems: "stretch",
           padding: "6px", gap: "2px",
           zIndex: 50,
@@ -174,15 +170,13 @@ export default function BottomNav() {
             role="dialog"
             aria-modal="true"
             aria-label="Mais opções"
+            className="gut-glass"
             style={{
               position: "fixed", left: 0, right: 0, bottom: 0,
               maxHeight: "82vh", overflowY: "auto",
-              background: "linear-gradient(180deg, #080d18, #0a0f1a)",
-              borderTop: "1px solid rgba(245,166,35,0.25)",
               borderTopLeftRadius: "20px", borderTopRightRadius: "20px",
               padding: "1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px))",
               zIndex: 70,
-              boxShadow: "0 -16px 40px rgba(0,0,0,0.6)",
               animation: "gut-slide-up 0.22s cubic-bezier(0.4,0,0.2,1)",
             }}
           >

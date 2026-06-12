@@ -434,17 +434,14 @@ export default function ChatbotWidget() {
             transition={{ duration: 0.18 }}
             role="dialog"
             aria-label="Assistente DESAFIOGUT"
+            className="gut-glass"
             style={{
               position: "fixed",
               ...tamanhoModal,
-              background: COR.bgLight,
-              border: `1px solid ${COR.border}`,
-              backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
               zIndex: 9999,
               display: "flex",
               flexDirection: "column",
               color: COR.text,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
             }}
           >
             {/* Header */}

@@ -294,6 +294,53 @@ img, svg { display: block; }
   isolation: isolate;
 }
 
+/* ── MC20.2 — Vidro temperado (tempered glass): assinatura visual única ────────
+   bg navy/25 + backdrop-blur-xl + border white/10 + shadow + ring-inset white/5,
+   reflexo superior (::before, white/5→transparent) e estados hover/active.
+   @taste-engineering (dessaturado, navy #0d1235 + acentos laranja preservados) +
+   @impeccable-design (consistência; anti-CLS — só blur/opacity/transform animam).
+   Aplicado aos PAINÉIS (Nav Dock, cards, modais); o plano GlassSurface recebe só o
+   tint+reflexo (sem blur de ecrã inteiro) para não duplicar o desfoque nem lavar a arte. */
+.gut-glass {
+  position: relative;
+  background: rgba(13, 18, 53, 0.25);
+  backdrop-filter: blur(24px) saturate(135%);
+  -webkit-backdrop-filter: blur(24px) saturate(135%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.40),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.gut-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 40%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent);
+  pointer-events: none;
+}
+.gut-glass:hover {
+  background: rgba(13, 18, 53, 0.30);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+/* press: só em elementos interativos (Nav Dock/botões), nunca em superfícies grandes. */
+.gut-glass--press:active {
+  transform: scale(0.98);
+}
+
+/* Plano GlassSurface — reflexo + tint muito subtil, SEM blur de ecrã inteiro. */
+.gut-surface::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 160px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* ── MC20.2 ITEM 11 — GutoSpritePlayer (GUTO animado) ─────────────────────────
    Canto inferior-esquerdo (onde estava o GUTO oficial removido no MC20.PRE.2).
    MESMA fonte de vídeo em desktop e mobile (MC20.1); só posição/tamanho mudam.
