@@ -233,7 +233,9 @@ img, svg { display: block; }
    preserva o centro limpo das imagens oficiais (R5). */
 .gut-bg-canvas {
   position: fixed;
-  inset: 0;
+  /* folga (inset negativo) para o parallax translateX (ITEM 12) nunca revelar
+     bordas; o transform do canvas torna-o containing block dos .gut-bg-layer fixos. */
+  inset: -28px;
   z-index: -50;
   pointer-events: none;
 }
