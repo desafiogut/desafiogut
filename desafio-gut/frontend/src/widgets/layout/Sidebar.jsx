@@ -135,7 +135,8 @@ export default function Sidebar() {
     <aside className="gut-glass" style={{
       /* MC20.2 — rail flutuante em vidro temperado (.gut-glass). Lógica intacta. */
       width: W, minWidth: W, height: "calc(100vh - 24px)",
-      margin: "12px 0 12px 12px",
+      /* MC21.1 — rail movido para a DIREITA (margem à direita): GUTO fica livre à esquerda. */
+      margin: "12px 12px 12px 0",
       borderRadius: "18px",
       display: "flex", flexDirection: "column",
       transition: "width 0.28s cubic-bezier(0.4,0,0.2,1), min-width 0.28s cubic-bezier(0.4,0,0.2,1)",
@@ -355,7 +356,8 @@ export default function Sidebar() {
             width: "100%",
           }}
         >
-          {collapsed ? <IconChevronRight /> : <IconChevronLeft />}
+          {/* MC21.1 — rail à direita: recolher aponta para a direita (borda). */}
+          {collapsed ? <IconChevronLeft /> : <IconChevronRight />}
           {!collapsed && <span style={{ fontSize: "0.68rem", marginLeft: "0.4rem" }}>Recolher</span>}
         </button>
       </div>

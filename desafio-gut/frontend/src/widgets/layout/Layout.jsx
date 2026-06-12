@@ -12,10 +12,9 @@ function FooterGlobal({ isMobile }) {
   return (
     <footer
       aria-label="Rodapé"
+      className="glass-panel"
       style={{
         padding: isMobile ? "12px 16px" : "16px 24px",
-        borderTop: "1px solid rgba(245,166,35,0.18)",
-        background: "rgba(10,15,26,0.8)",
         fontSize: "11px",
         textAlign: "center",
         display: "flex",
@@ -53,8 +52,6 @@ export default function Layout() {
       }}
     >
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {!isMobile && <Sidebar />}
-
         <main
           style={{
             flex: 1,
@@ -73,6 +70,11 @@ export default function Layout() {
               e ficar acima do BottomNav fixo. */}
           {isMobile && <FooterGlobal isMobile />}
         </main>
+
+        {/* MC21.1 — Rail de DESKTOP à DIREITA: o GUTO oficial vive no canto
+            inferior-ESQUERDO; mover o Nav Dock para a direita evita a sobreposição.
+            Mobile mantém o BottomNav central (sem conflito). Lógica/rotas intactas. */}
+        {!isMobile && <Sidebar />}
       </div>
 
       {/* Desktop: footer fora do main (sticky no final do viewport). */}

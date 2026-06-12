@@ -301,16 +301,31 @@ img, svg { display: block; }
    @impeccable-design (consistência; anti-CLS — só blur/opacity/transform animam).
    Aplicado aos PAINÉIS (Nav Dock, cards, modais); o plano GlassSurface recebe só o
    tint+reflexo (sem blur de ecrã inteiro) para não duplicar o desfoque nem lavar a arte. */
+/* ── MC21.1 — Trindade do Vidro (.glass-panel): sistema ÚNICO e canónico ───────
+   Contrato técnico do pesquisador: bg white/[0.03] (tinta NEUTRA, arena visível
+   através de cada painel — Regra de Ouro), DESFOQUE VIVO (blur OFF em mobile p/
+   60fps, blur-xl em md+), backdrop-saturate-150 (corrigido: backdrop, não filter
+   do conteúdo), luz de borda white/10 e profundidade shadow 0_8px_32px/0.37.
+   .gut-glass (MC20.2) foi MIGRADO para esta base neutra → Card e Nav Dock herdam
+   o vidro unificado sem mudança de lógica (R1 funcional preservado). */
+.glass-panel {
+  @apply bg-white/[0.03] backdrop-blur-none md:backdrop-blur-xl backdrop-saturate-150 border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)];
+}
 .gut-glass {
   position: relative;
-  background: rgba(13, 18, 53, 0.25);
-  backdrop-filter: blur(24px) saturate(135%);
-  -webkit-backdrop-filter: blur(24px) saturate(135%);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.10);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.40),
+    0 8px 32px 0 rgba(0, 0, 0, 0.37),
     inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+/* DESFOQUE VIVO: desligado em mobile (perf/60fps), ligado em desktop. */
+@media (min-width: 768px) {
+  .gut-glass {
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+  }
 }
 .gut-glass::before {
   content: "";
@@ -322,7 +337,7 @@ img, svg { display: block; }
   pointer-events: none;
 }
 .gut-glass:hover {
-  background: rgba(13, 18, 53, 0.30);
+  background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.15);
 }
 /* press: só em elementos interativos (Nav Dock/botões), nunca em superfícies grandes. */

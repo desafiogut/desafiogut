@@ -311,8 +311,8 @@ export default function MercadoLances() {
           alignItems: "center",
           padding: isMobile ? "1rem" : "1.25rem 2rem",
           gap: isMobile ? "0.75rem" : "1rem",
-          background: "rgba(5,15,40,0.88)",
-          borderBottom: "1px solid rgba(245,166,35,0.18)",
+          background: "rgba(255,255,255,0.03)",
+          borderBottom: "1px solid rgba(255,255,255,0.10)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
         }}>
@@ -402,8 +402,8 @@ export default function MercadoLances() {
 
         {/* ── Painel saldos + tipo ── */}
         <div style={{
-          background: "rgba(3,10,28,0.92)",
-          borderBottom: "1px solid rgba(245,166,35,0.18)",
+          background: "rgba(255,255,255,0.03)",
+          borderBottom: "1px solid rgba(255,255,255,0.10)",
           padding: padTight,
           display: "flex", flexDirection: isMobile ? "column" : "row",
           justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center",
@@ -437,11 +437,11 @@ export default function MercadoLances() {
 
         {/* ── Aviso ── */}
         <div style={{
-          background: "rgba(3,10,28,0.9)",
-          borderBottom: "1px solid rgba(245,166,35,0.15)",
+          background: "rgba(255,255,255,0.03)",
+          borderBottom: "1px solid rgba(255,255,255,0.10)",
           padding: padTight,
           fontSize: isMobile ? "0.72rem" : "0.78rem",
-          color: "#64748b",
+          color: "#94a3b8",
           lineHeight: 1.4,
         }}>
           <strong>DesafioGUT</strong>{" — "}Grupo União e Trabalho · CNPJ 23.040.066/0001-00
