@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdmin } from "../../hooks/useAdmin.js";
 import GutoAvatar from "../../components/GutoAvatar.jsx";
+
+// MC20.2 ITEM 5 — spring do Active Indicator elástico (rail desktop).
+const RAIL_SPRING = { type: "spring", stiffness: 380, damping: 30 };
 
 // ─── Ícones SVG inline — sem dependência externa ──────────────────────────────
 const IconDashboard = () => (
@@ -99,6 +103,7 @@ export default function Sidebar() {
     ready, authenticated,
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
+  const reduce = useReducedMotion();
   // MC12.3 Item 4 — Isolamento do mundo lojista. Corporativo NÃO vê links
   // comuns de Leilão (Dashboard de leilão, carteira pessoal, mercado, vitrine,
   // programação, ativos, segurança, "seja nosso parceiro"). Vê apenas:
@@ -128,14 +133,19 @@ export default function Sidebar() {
 
   return (
     <aside style={{
-      width: W, minWidth: W, height: "100vh",
-      background: "linear-gradient(180deg, #080d18 0%, #0a0f1a 100%)",
-      borderRight: "1px solid rgba(245,166,35,0.15)",
+      /* MC20.2 ITEM 5 — rail flutuante glassmorphic (apresentação). Lógica intacta. */
+      width: W, minWidth: W, height: "calc(100vh - 24px)",
+      margin: "12px 0 12px 12px",
+      background: "rgba(13,18,53,0.55)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: "18px",
+      backdropFilter: "blur(16px) saturate(140%)",
+      WebkitBackdropFilter: "blur(16px) saturate(140%)",
       display: "flex", flexDirection: "column",
       transition: "width 0.28s cubic-bezier(0.4,0,0.2,1), min-width 0.28s cubic-bezier(0.4,0,0.2,1)",
-      position: "sticky", top: 0,
+      position: "sticky", top: "12px",
       overflow: "hidden", flexShrink: 0,
-      boxShadow: "4px 0 24px rgba(0,0,0,0.4)",
+      boxShadow: "0 8px 32px rgba(5,8,24,0.55), 0 2px 8px rgba(255,107,53,0.10)",
     }}>
 
       {/* ── Avatar + Logo ── */}
@@ -211,26 +221,43 @@ export default function Sidebar() {
             end={end}
             title={collapsed ? label : undefined}
             style={({ isActive }) => ({
+              position: "relative",
               display: "flex", alignItems: "center",
               gap: collapsed ? 0 : "0.65rem",
               padding: collapsed ? "0.72rem" : "0.6rem 0.85rem",
               justifyContent: collapsed ? "center" : "flex-start",
-              margin: "0 0.5rem", borderRadius: "10px",
-              color: isActive ? "#f5a623" : "#5a7090",
-              background: isActive ? "rgba(245,166,35,0.12)" : "transparent",
+              margin: "0 0.5rem", borderRadius: "12px",
+              color: isActive ? "#ff7a45" : "#6b7db8",
               textDecoration: "none",
               fontWeight: isActive ? "700" : "500",
               fontSize: "0.84rem",
-              transition: "all 0.15s ease",
-              borderLeft: isActive ? "2px solid #f5a623" : "2px solid transparent",
+              transition: "color 0.15s ease",
               flexShrink: 0,
             })}
           >
-            <span style={{ flexShrink: 0 }}>{icon}</span>
-            {!collapsed && (
-              <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {label}
-              </span>
+            {({ isActive }) => (
+              <>
+                {/* MC20.2 ITEM 5 — Active Indicator elástico partilhado (desliza com spring). */}
+                {isActive && (
+                  <motion.span
+                    layoutId="gut-rail-ind"
+                    transition={reduce ? { duration: 0 } : RAIL_SPRING}
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute", inset: 0, borderRadius: "12px",
+                      background: "rgba(255,107,53,0.12)",
+                      border: "1px solid rgba(255,107,53,0.28)",
+                      zIndex: 0,
+                    }}
+                  />
+                )}
+                <span style={{ position: "relative", zIndex: 1, flexShrink: 0, display: "flex", alignItems: "center" }}>{icon}</span>
+                {!collapsed && (
+                  <span style={{ position: "relative", zIndex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {label}
+                  </span>
+                )}
+              </>
             )}
           </NavLink>
         ))}

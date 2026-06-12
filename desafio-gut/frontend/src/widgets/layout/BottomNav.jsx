@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdmin } from "../../hooks/useAdmin.js";
 
@@ -51,7 +52,13 @@ const SECONDARY_LINKS = [
   { path: "/configuracoes",       label: "Configurações",          Icon: IconSettings },
 ];
 
-const NAV_HEIGHT = 64;
+// MC20.2 ITEM 5 — Nav Dock flutuante (cápsula). DOCK_HEIGHT = altura visual do dock;
+// BOTTOM_NAV_HEIGHT (exportado) = espaço total que o Layout reserva (margem + dock + margem),
+// para o conteúdo nunca ficar oculto sob o dock flutuante (anti-CLS / sem overlap).
+const DOCK_HEIGHT = 60;
+const DOCK_MARGIN = 14;
+const NAV_HEIGHT = DOCK_HEIGHT + DOCK_MARGIN * 2; // 88
+const SPRING = { type: "spring", stiffness: 380, damping: 28 };
 
 export default function BottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
@@ -67,6 +74,7 @@ export default function BottomNav() {
     tipoUsuario,
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
+  const reduce = useReducedMotion();
 
   // MC14.10.1 ITEM 3 — mobile copia lógica de Sidebar.jsx:110-119
   const CORP_TABS = [
@@ -98,18 +106,25 @@ export default function BottomNav() {
 
   return (
     <>
+      {/* MC20.2 ITEM 5 — Nav Dock flutuante (cápsula glassmorphic). Mesma lógica de
+          rotas/tabs; só a apresentação mudou. Active Indicator elástico (layoutId+spring)
+          desliza entre as tabs principais; "Mais" mantém highlight estático. */}
       <nav
         aria-label="Navegação principal"
         style={{
-          position: "fixed", bottom: 0, left: 0, right: 0,
-          height: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`,
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
-          background: "linear-gradient(180deg, rgba(5,13,30,0.92), rgba(3,15,36,0.98))",
-          borderTop: "1px solid rgba(245,166,35,0.18)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          boxShadow: "0 -4px 24px rgba(0,0,0,0.4)",
-          display: "flex",
+          position: "fixed",
+          bottom: `calc(${DOCK_MARGIN}px + env(safe-area-inset-bottom, 0px))`,
+          left: "50%", transform: "translateX(-50%)",
+          width: `calc(100% - ${DOCK_MARGIN * 2}px)`, maxWidth: "460px",
+          height: `${DOCK_HEIGHT}px`,
+          background: "rgba(13,18,53,0.55)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "20px",
+          backdropFilter: "blur(16px) saturate(140%)",
+          WebkitBackdropFilter: "blur(16px) saturate(140%)",
+          boxShadow: "0 8px 32px rgba(5,8,24,0.55), 0 2px 8px rgba(255,107,53,0.10)",
+          display: "flex", alignItems: "stretch",
+          padding: "6px", gap: "2px",
           zIndex: 50,
         }}
       >
@@ -119,10 +134,14 @@ export default function BottomNav() {
             to={path}
             end={end}
             aria-label={ariaLabel || label}
-            style={({ isActive }) => tabStyle(isActive)}
+            style={dockLinkStyle}
           >
-            <Icon />
-            <span style={{ fontSize: "0.66rem", fontWeight: "700", letterSpacing: "0.02em" }}>{label}</span>
+            {({ isActive }) => (
+              <DockItem active={isActive} reduce={reduce}>
+                <Icon />
+                <span style={dockLabelStyle}>{label}</span>
+              </DockItem>
+            )}
           </NavLink>
         ))}
         <button
@@ -130,10 +149,12 @@ export default function BottomNav() {
           onClick={() => setMoreOpen(true)}
           aria-label="Mais opções"
           aria-expanded={moreOpen}
-          style={tabStyle(moreOpen || isOnSecondaryRoute)}
+          style={{ ...dockLinkStyle, background: "transparent", border: "none", cursor: "pointer" }}
         >
-          <IconMore />
-          <span style={{ fontSize: "0.66rem", fontWeight: "700", letterSpacing: "0.02em" }}>Mais</span>
+          <DockItem active={moreOpen || isOnSecondaryRoute} reduce={reduce} indicator={false}>
+            <IconMore />
+            <span style={dockLabelStyle}>Mais</span>
+          </DockItem>
         </button>
       </nav>
 
@@ -309,21 +330,56 @@ export default function BottomNav() {
   );
 }
 
-function tabStyle(active) {
-  return {
-    flex: 1,
-    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-    gap: "3px",
-    padding: "0.4rem 0.25rem",
-    background: "transparent",
-    border: "none",
-    color: active ? "#f5a623" : "#5a7090",
-    textDecoration: "none",
-    cursor: "pointer",
-    transition: "color 0.15s",
-    borderTop: active ? "2px solid #f5a623" : "2px solid transparent",
-    minWidth: 0,
-  };
+// MC20.2 ITEM 5 — estilos e item do Nav Dock (apenas apresentação).
+const dockLinkStyle = {
+  flex: 1, minWidth: 0,
+  display: "flex", alignItems: "stretch",
+  textDecoration: "none", padding: 0,
+};
+const dockLabelStyle = {
+  fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.02em", lineHeight: 1,
+};
+
+// DockItem — cápsula de cada tab. Quando ativo e indicator=true, renderiza o
+// Active Indicator partilhado (layoutId) que desliza com spring entre as tabs.
+// whileTap dá o feedback tátil (scale 0.9); useReducedMotion desativa tudo.
+function DockItem({ active, reduce, indicator = true, children }) {
+  return (
+    <motion.span
+      whileTap={reduce ? undefined : { scale: 0.9 }}
+      style={{
+        position: "relative", flex: 1,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        gap: "3px", height: "100%", borderRadius: "14px",
+        color: active ? "#ff7a45" : "#6b7db8",
+        transition: "color 0.18s",
+      }}
+    >
+      {active && indicator && (
+        <motion.span
+          layoutId="gut-dock-ind"
+          transition={reduce ? { duration: 0 } : SPRING}
+          aria-hidden="true"
+          style={{
+            position: "absolute", inset: 0, borderRadius: "14px",
+            background: "rgba(255,107,53,0.14)",
+            border: "1px solid rgba(255,107,53,0.30)",
+            boxShadow: "0 2px 10px rgba(255,107,53,0.18)",
+            zIndex: 0,
+          }}
+        />
+      )}
+      {active && !indicator && (
+        <span aria-hidden="true" style={{
+          position: "absolute", inset: 0, borderRadius: "14px",
+          background: "rgba(255,107,53,0.10)", zIndex: 0,
+        }} />
+      )}
+      <span style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px" }}>
+        {children}
+      </span>
+    </motion.span>
+  );
 }
 
 export { NAV_HEIGHT as BOTTOM_NAV_HEIGHT };
