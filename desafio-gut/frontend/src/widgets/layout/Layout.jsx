@@ -12,10 +12,9 @@ function FooterGlobal({ isMobile }) {
   return (
     <footer
       aria-label="Rodapé"
+      className="glass-panel"
       style={{
         padding: isMobile ? "12px 16px" : "16px 24px",
-        borderTop: "1px solid rgba(245,166,35,0.18)",
-        background: "rgba(10,15,26,0.8)",
         fontSize: "11px",
         textAlign: "center",
         display: "flex",
