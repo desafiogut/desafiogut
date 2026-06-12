@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useWallets } from "@privy-io/react-auth";
 import { keccak256, toUtf8Bytes } from "ethers";
+import { motion, useReducedMotion } from "framer-motion";
 import * as Sentry from "@sentry/react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ export default function CardLance({
 }) {
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
+  const reduce = useReducedMotion(); // MC20.2 ITEM 6 — morph só-visual do CTA
 
   const {
     saldoSenhas, saldoSenhasStatus,
@@ -436,7 +438,10 @@ export default function CardLance({
       )}
 
       {!encerrado && (
-        <button
+        // MC20.2 ITEM 6 — botão morphing (apresentação): feedback elástico whileTap/
+        // whileHover por spring. onClick/disabled/title/label e TODA a lógica de lance
+        // (handleDarLance) ficam intactos (R1 — fluxo on-chain não alterado).
+        <motion.button
           style={{
             ...estilos.botaoLance,
             opacity: desabilitado ? 0.4 : 1,
@@ -445,9 +450,12 @@ export default function CardLance({
           onClick={handleDarLance}
           disabled={desabilitado}
           title={tooltipBotao}
+          whileHover={desabilitado || reduce ? undefined : { scale: 1.02 }}
+          whileTap={desabilitado || reduce ? undefined : { scale: 0.96 }}
+          transition={{ type: "spring", stiffness: 420, damping: 22 }}
         >
           {labelBotao}
-        </button>
+        </motion.button>
       )}
 
       <p style={estilos.rodape}>
