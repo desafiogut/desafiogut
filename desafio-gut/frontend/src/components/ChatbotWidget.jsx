@@ -21,6 +21,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "./GutoAvatar.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
+import { useAppEnvironment } from "../context/useAppContextEnvironment.jsx";
 import { useAdmin } from "../hooks/useAdmin.js";
 
 const LS_KEY      = "gut_chat_history";
@@ -154,6 +155,9 @@ export default function ChatbotWidget() {
     notificacoes, notificacoesNaoLidas, marcarNotificacoesLidas,
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
+  // MC20.2 ITEM 11/13 — sincroniza o GutoSpritePlayer global: thinking ao perguntar,
+  // idle quando a resposta chega (aditivo; não altera o fluxo do chat).
+  const { signalThinking, signalIdle } = useAppEnvironment();
   // MC15.5 — badge de perfil no cabeçalho (cosmético; o backend é a fonte de
   // verdade do perfil — R4). visitante: sem badge; comum: ●; lojista/admin: rótulo.
   const perfilBadge =
@@ -253,6 +257,7 @@ export default function ChatbotWidget() {
     // GUTO state transitions: listening → thinking → responding → idle
     setGutoState("listening");
     setTimeout(() => setGutoState("thinking"), 600);
+    signalThinking(); // MC20.2 — GUTO global → thinking.webm enquanto processa
 
     try {
       const resp = await fetch("/.netlify/functions/chatbot", {
@@ -323,8 +328,9 @@ export default function ChatbotWidget() {
       }]);
     } finally {
       setCarregando(false);
+      signalIdle(); // MC20.2 — resposta chegou (ou falhou): GUTO global volta a idle
     }
-  }, [carregando, resetToIdle, authToken]);
+  }, [carregando, resetToIdle, authToken, signalThinking, signalIdle]);
 
   const enviar = useCallback(() => enviarMensagem(pergunta), [enviarMensagem, pergunta]);
 

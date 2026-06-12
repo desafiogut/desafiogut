@@ -292,6 +292,32 @@ img, svg { display: block; }
   isolation: isolate;
 }
 
+/* ── MC20.2 ITEM 11 — GutoSpritePlayer (GUTO animado) ─────────────────────────
+   Canto inferior-esquerdo (onde estava o GUTO oficial removido no MC20.PRE.2).
+   MESMA fonte de vídeo em desktop e mobile (MC20.1); só posição/tamanho mudam.
+   pointer-events:none para não interceptar cliques; acima do dock no mobile. */
+.gut-sprite {
+  position: fixed;
+  left: 16px;
+  bottom: 18px;
+  width: clamp(112px, 12vw, 152px);
+  aspect-ratio: 1 / 1;
+  pointer-events: none;
+  z-index: 6;
+  /* O webm tem fundo navy opaco (#050818, = chão da arena): a máscara radial funde
+     as bordas duras da caixa para o GUTO "emergir" do chão sem retângulo visível. */
+  -webkit-mask-image: radial-gradient(ellipse 70% 82% at 50% 42%, #000 48%, transparent 94%);
+  mask-image: radial-gradient(ellipse 70% 82% at 50% 42%, #000 48%, transparent 94%);
+}
+@media (max-width: 767px) {
+  .gut-sprite {
+    left: 10px;
+    /* acima do Nav Dock flutuante (BOTTOM_NAV_HEIGHT 88 + folga) */
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    width: 92px;
+  }
+}
+
 /* ── Font utilities ───────────────────────────────────────────────────────── */
 .font-display  { font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif; }
 .font-mono-gut { font-family: 'JetBrains Mono', monospace; }
