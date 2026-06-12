@@ -144,6 +144,9 @@ ChatbotWidget) **não** são refatorados retroativamente sem necessidade (evita 
 | FASE 2 — Nav Dock flutuante + Active Indicator + morph do "Dar Lance" | ✅ |
 | FASE 3 — GutoSpritePlayer + parallax + useShakeOnError | ✅ |
 | Vidro temperado (`.gut-glass`) nos componentes glassmórficos | ✅ |
+| **MC21.1 FASE 1 — Biblioteca Glass UI** (`.glass-panel` + 10 primitivos + migração `.gut-glass`→neutro) | ✅ (PR feat/mc21.1) |
+| **MC21.1 FASE 2 — Vidro no visitante** (rodapé global + MercadoLances; Dashboard/Vitrine/SejaParceiro/Chatbot já compatíveis) | ✅ parcial |
+| **MC21.2 (adiado)** — corporativo/admin + painéis auth-gated + forms profundos + adoção dos primitivos | ⏸️ não validável sem sessão Privy (CDP) |
 | ITEM 7 — prefetch Mercado Pago | ⏸️ sem credenciais (achado A) — faseável |
 | ITEM 10 — Optimistic Updates no lance | ⏸️ **RISCO ADIADO** — ver §abaixo |
 
@@ -157,8 +160,13 @@ e correr o checklist de concorrência do `security_audit.md`.
 
 ## 7. Paleta e tokens (globals.css @theme)
 - Navy: `#050818` (void) · `#0d1235` / `#131844` (superfícies). Acentos laranja: `#ff6b35` / `#ff9500`.
-- Vidro temperado: `.gut-glass` — bg navy/25, backdrop-blur-xl, border white/10, shadow,
-  ring-inset white/5, reflexo superior (::before), hover/active.
+- Vidro temperado (sistema único MC21.1): **`.glass-panel`** canónico — `bg-white/[0.03]`
+  (tinta NEUTRA, arena visível através de cada painel = Regra de Ouro), DESFOQUE VIVO
+  (`backdrop-blur-none` mobile / `md:backdrop-blur-xl` p/ 60fps), `backdrop-saturate-150`,
+  border white/10, shadow `0_8px_32px/0.37`. `.gut-glass` foi MIGRADO para esta base neutra
+  (Card + Nav Dock herdam-na; lógica intacta). Biblioteca em `src/components/ui/` (barrel
+  `index.js`): GlassCard, Button (spring), Input, Table, Modal (spring), Empty, ErrorState,
+  Tooltip, Skeleton — + os legados Card/Badge/Progress.
 - Z-Index Matrix: `-z-50` Arena (BackgroundCanvas) · `-z-40` Atmosfera · `z-0` Superfície.
 
 ---
