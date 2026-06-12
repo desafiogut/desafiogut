@@ -212,36 +212,9 @@ img, svg { display: block; }
   background-repeat: repeat;
 }
 
-/* ── Fundo oficial responsivo (MC19.1) ───────────────────────────────────────
-   Duas camadas fixas, atrás de TODO o conteúdo (z-index:-1, acima do #050818 do
-   body que fica como fallback). Mobile = base; desktop trocado por opacidade no
-   breakpoint 768px (alinhado a useIsMobile / MOBILE_BREAKPOINT_PX). cover+center
-   preserva o centro limpo das imagens oficiais; fixed dá o efeito parallax sutil
-   e reserva o viewport inteiro (anti-CLS — @impeccable-design). */
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  /* MC19.1 ITEM 4 — crossfade fluido entre mobile/desktop ao cruzar 768px
-     (@design-engineering, easing do app). */
-  transition: opacity 0.6s var(--ease-out);
-}
-/* Fade-in inicial limpo (imagem aparece sobre o navy) sem conflitar com a
-   troca por media query: @starting-style define a opacidade de arranque. */
-@starting-style {
-  body::before,
-  body::after { opacity: 0; }
-}
-/* Scrim navy (MC19.1 ITEM 3): escurece topo (cabeçalhos) e base (nav/rodapé)
-   mantendo o centro mais limpo, para contraste WCAG AA do texto sem lavar a arte.
-   Só paleta navy #050818 (@taste-engineering). Vai como 1ª camada (por cima da
-   imagem) em cada pseudo, logo acompanha o crossfade do ITEM 4. */
+/* ── Scrim navy (MC19.1 ITEM 3, preservado) ──────────────────────────────────
+   Escurece topo (cabeçalhos) e base (nav/rodapé) mantendo o centro mais limpo,
+   para contraste WCAG AA sem lavar a arte. Reutilizado pelo BackgroundCanvas. */
 :root {
   --gut-bg-scrim: linear-gradient(
     180deg,
@@ -251,17 +224,72 @@ body::after {
     rgba(5, 8, 24, 0.70) 100%
   );
 }
-body::before {  /* mobile (base) */
+
+/* ── MC20.2 ITEM 2a/12 — Camada Base "A Arena" (-z-50) ────────────────────────
+   Migração controlada do MC19.1 (achado C): o MESMO scrim+WebP oficial+crossfade
+   @768px, movido de body::before/::after para os divs do BackgroundCanvas. Evita
+   duplo fundo. Visualmente idêntico ao MC19.1 — validar ANTES/DEPOIS via MCP (R6).
+   fixed reserva o viewport inteiro (anti-CLS — @impeccable-design); cover+center
+   preserva o centro limpo das imagens oficiais (R5). */
+.gut-bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: -50;
+  pointer-events: none;
+}
+.gut-bg-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* crossfade fluido mobile/desktop ao cruzar 768px (@design-engineering). */
+  transition: opacity 0.6s var(--ease-out);
+}
+/* Fade-in inicial limpo (imagem aparece sobre o navy). */
+@starting-style {
+  .gut-bg-layer { opacity: 0; }
+}
+.gut-bg-layer--mobile {
   background-image: var(--gut-bg-scrim), url("/assets/backgrounds/background-mobile.webp");
   opacity: 1;
 }
-body::after {   /* desktop (>=768px) */
+.gut-bg-layer--desktop {
   background-image: var(--gut-bg-scrim), url("/assets/backgrounds/background-desktop.webp");
   opacity: 0;
 }
 @media (min-width: 768px) {
-  body::before { opacity: 0; }
-  body::after  { opacity: 1; }
+  .gut-bg-layer--mobile { opacity: 0; }
+  .gut-bg-layer--desktop { opacity: 1; }
+}
+
+/* ── MC20.2 ITEM 2b — Atmosfera "Vinheta de Foco" (-z-40) ─────────────────────
+   Entre a Arena e a Superfície. O AtmosphereFilter (Motion) anima
+   backdrop-filter/opacity por appState; aqui ficam só os estados de repouso. */
+.gut-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -40;
+  pointer-events: none;
+  background-color: rgba(0, 0, 0, 0);
+}
+.gut-atmosphere__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--gradient-glow);
+  opacity: 0.05;
+}
+
+/* ── MC20.2 ITEM 2c — Superfície Flutuante (z-0) ──────────────────────────────
+   Contexto de empilhamento do conteúdo, acima das camadas -z-40/-z-50. SEM
+   backdrop-blur de ecrã inteiro: preserva o centro limpo da arte oficial (R5); o
+   glassmorphism vive nos cards/Nav Dock, não no plano todo (@taste-engineering). */
+.gut-surface {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
 }
 
 /* ── Font utilities ───────────────────────────────────────────────────────── */
