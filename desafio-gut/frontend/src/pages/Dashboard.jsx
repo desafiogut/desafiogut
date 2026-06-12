@@ -223,13 +223,16 @@ export default function Dashboard() {
   const sectionGap = isMobile ? "1.25rem" : "2rem";
   const innerGap   = isMobile ? "0.75rem" : "1rem";
 
+  // MC20.2 — vidro temperado (assinatura .gut-glass) nos cards da Dashboard:
+  // navy/25 + backdrop-blur-xl + border white/10 + shadow + ring-inset white/5.
   const card = {
-    background: "rgba(10,16,42,0.6)",
-    border: "1px solid rgba(245,166,35,0.18)",
+    background: "rgba(13,18,53,0.25)",
+    border: "1px solid rgba(255,255,255,0.10)",
     borderRadius: "16px",
     padding: cardPad,
-    backdropFilter: "blur(16px)",
-    WebkitBackdropFilter: "blur(16px)",
+    backdropFilter: "blur(24px) saturate(135%)",
+    WebkitBackdropFilter: "blur(24px) saturate(135%)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05)",
   };
   const cardTitulo = {
     margin: `0 0 ${isMobile ? "0.75rem" : "1rem"}`,

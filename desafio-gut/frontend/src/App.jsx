@@ -3,7 +3,9 @@ import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext } from "./context/AppContext.jsx";
 import TermosConsentimento from "./components/TermosConsentimento.jsx";
-import Layout from "./widgets/layout/Layout.jsx";
+import AppLayout from "./widgets/layout/AppLayout.jsx";
+import BackgroundCanvas from "./widgets/layout/BackgroundCanvas.jsx";
+import { AppEnvironmentProvider } from "./context/useAppContextEnvironment.jsx";
 import { ToastContainer, useToast } from "./widgets/toast/Toast.jsx";
 import ReferralRegistrar from "./components/ReferralRegistrar.jsx";
 import Dashboard       from "./pages/Dashboard.jsx";
@@ -80,17 +82,34 @@ export default function App() {
 
   // ── Gate LGPD ─────────────────────────────────────────────────────────────
   if (!consentimentoAceito) {
-    return <TermosConsentimento onAceitar={() => setConsentimentoAceito(true)} />;
+    return (
+      <>
+        {/* MC20.2 — Arena oficial (-z-50) GLOBAL: visível também no gate LGPD,
+            paridade exata com o fundo body-level do MC19.1 (R1/R5). */}
+        <BackgroundCanvas />
+        <TermosConsentimento onAceitar={() => setConsentimentoAceito(true)} />
+      </>
+    );
   }
 
   // ── Aplicação principal ────────────────────────────────────────────────────
   return (
+    <>
+    {/* MC20.2 — Arena oficial (-z-50) GLOBAL atrás de tudo (paridade body-level MC19.1). */}
+    <BackgroundCanvas />
     <AppProvider toastApi={{ add, remove }}>
+      {/* MC20.2 FASE 1 · ITEM 3 — Provider de ambiente ANINHADO (appState/gutoMood/
+          activeTab) a envolver Routes + ChatbotWidget, para sincronizar as 3 camadas
+          e o GUTO em qualquer rota. Compõe com o AppProvider, nunca o substitui (R1). */}
+      <AppEnvironmentProvider>
       {/* MC17.3.1.1 — regista o vínculo de indicação (?ref=) quando address+authToken prontos. */}
       <ReferralRegistrar />
       <ToastContainer toasts={toasts} onDismiss={remove} />
       <Routes>
-        <Route element={<Layout />}>
+        {/* MC20.2 FASE 1 · ITEM 2 — AppLayout (3 camadas) substitui Layout como
+            rota-mãe; renderiza o Layout existente intacto na superfície (zero
+            regressão de rotas/navegação — R1). */}
+        <Route element={<AppLayout />}>
           <Route index              element={<DashboardOuCorporativo />} />
           <Route path="/carteira"   element={<MinhaCarteira />} />
           <Route path="/mercado"    element={<MercadoLances />} />
@@ -119,7 +138,9 @@ export default function App() {
       </Routes>
       {/* MC9 — IA Cognitiva: chatbot RAG 24/7 (botão flutuante em todas as rotas). */}
       <ChatbotWidget />
+      </AppEnvironmentProvider>
     </AppProvider>
+    </>
   );
 }
 
