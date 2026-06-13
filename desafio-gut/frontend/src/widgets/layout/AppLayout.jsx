@@ -24,9 +24,8 @@ export default function AppLayout() {
       <AtmosphereFilter />
       <div className="gut-surface">
         <Layout />
-        {/* MC22.1 SECÇÃO D — o GUTO deixou de ser fixo global; passou a ser companion
-            INLINE de cada edição (Dashboard: Edição Ativa + Outras Edições, junto do
-            cronómetro). O import permanece para compatibilidade, mas não se monta aqui. */}
+        {/* MC22.1/MC22.2 — GUTO apenas INLINE junto dos cronómetros (Dashboard:
+            Edição Ativa + Outras Edições). Sem GUTO global no canto. */}
       </div>
     </>
   );

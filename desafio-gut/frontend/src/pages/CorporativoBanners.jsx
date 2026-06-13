@@ -63,7 +63,7 @@ export default function CorporativoBanners() {
     setPausas((p) => ({ ...p, [formato]: !p[formato] }));
 
   const cardStyle = {
-    background: "rgba(255,255,255,0.03)",
+    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
     border: "1px solid rgba(245,166,35,0.18)",
     borderRadius: "16px",
     padding: isMobile ? "1rem" : "1.25rem",

@@ -36,7 +36,7 @@ export default function Seguranca() {
   const sectionGap = isMobile ? "1.25rem" : "1.5rem";
 
   const cardStyle = {
-    background: "rgba(255,255,255,0.03)",
+    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
     border: "1px solid rgba(245,166,35,0.18)",
     borderRadius: "16px",
     padding: cardPad,
@@ -80,7 +80,7 @@ export default function Seguranca() {
         }}>
           {sessionItems.map(({ label, value, color, mono }) => (
             <div key={label} style={{
-              background: "rgba(255,255,255,0.03)", borderRadius: "10px",
+              background: "rgba(255,255,255, var(--glass-opacity, 0.03))", borderRadius: "10px",
               padding: "0.75rem 0.85rem", border: "1px solid rgba(245,166,35,0.12)",
               minWidth: 0,
             }}>
@@ -153,7 +153,7 @@ export default function Seguranca() {
             <a key={label} href={href} target="_blank" rel="noopener noreferrer" style={{
               display: "block",
               padding: isMobile ? "0.75rem 0.85rem" : "0.85rem",
-              background: "rgba(255,255,255,0.03)", borderRadius: "10px",
+              background: "rgba(255,255,255, var(--glass-opacity, 0.03))", borderRadius: "10px",
               border: "1px solid rgba(245,166,35,0.12)",
               textDecoration: "none", transition: "all 0.15s",
             }}>

@@ -132,11 +132,12 @@ export default function Sidebar() {
   const W = collapsed ? "72px" : "240px";
 
   return (
-    <aside className="gut-glass" style={{
-      /* MC20.2 — rail flutuante em vidro temperado (.gut-glass). Lógica intacta. */
+    <aside className="nav-glass" style={{
+      /* MC22.2 — rail flutuante com piso de opacidade próprio (.nav-glass navy/0.66).
+         Independente do --glass-opacity: nunca mais desaparece na Arena (D5). */
       width: W, minWidth: W, height: "calc(100vh - 24px)",
-      /* MC21.1 — rail movido para a DIREITA (margem à direita): GUTO fica livre à esquerda. */
-      margin: "12px 12px 12px 0",
+      /* MC22.2 — rail à ESQUERDA (margem à esquerda). */
+      margin: "12px 0 12px 12px",
       borderRadius: "18px",
       display: "flex", flexDirection: "column",
       transition: "width 0.28s cubic-bezier(0.4,0,0.2,1), min-width 0.28s cubic-bezier(0.4,0,0.2,1)",
@@ -356,8 +357,8 @@ export default function Sidebar() {
             width: "100%",
           }}
         >
-          {/* MC21.1 — rail à direita: recolher aponta para a direita (borda). */}
-          {collapsed ? <IconChevronLeft /> : <IconChevronRight />}
+          {/* MC22.2 — rail à esquerda: recolher aponta para a esquerda (borda). */}
+          {collapsed ? <IconChevronRight /> : <IconChevronLeft />}
           {!collapsed && <span style={{ fontSize: "0.68rem", marginLeft: "0.4rem" }}>Recolher</span>}
         </button>
       </div>
