@@ -132,8 +132,9 @@ export default function Sidebar() {
   const W = collapsed ? "72px" : "240px";
 
   return (
-    <aside className="gut-glass" style={{
-      /* MC20.2 — rail flutuante em vidro temperado (.gut-glass). Lógica intacta. */
+    <aside className="nav-glass" style={{
+      /* MC22.2 — rail flutuante com piso de opacidade próprio (.nav-glass navy/0.66).
+         Independente do --glass-opacity: nunca mais desaparece na Arena (D5). */
       width: W, minWidth: W, height: "calc(100vh - 24px)",
       /* MC21.1 — rail movido para a DIREITA (margem à direita): GUTO fica livre à esquerda. */
       margin: "12px 12px 12px 0",
