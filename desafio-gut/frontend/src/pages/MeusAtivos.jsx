@@ -72,7 +72,7 @@ export default function MeusAtivos() {
       }}>
         {stats.map(({ label, value, color }) => (
           <div key={label} style={{
-            background: "rgba(255,255,255,0.03)",
+            background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
             border: "1px solid rgba(245,166,35,0.18)",
             borderRadius: "14px",
             padding: isMobile ? "0.85rem 0.9rem" : "1rem",
@@ -126,7 +126,7 @@ export default function MeusAtivos() {
 
       {/* Lista */}
       <div style={{
-        background: "rgba(255,255,255,0.03)",
+        background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
         border: "1px solid rgba(245,166,35,0.18)",
         borderRadius: "16px",
         padding: isMobile ? "0.75rem" : 0,

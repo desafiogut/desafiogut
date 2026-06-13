@@ -325,7 +325,7 @@ export default function CorporativoDashboard() {
   const saldoBrl   = saldoRsCentavos == null ? "—" : `R$ ${(saldoRsCentavos / 100).toFixed(2)}`;
 
   const cardStyle = {
-    background: "rgba(255,255,255,0.03)",
+    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
     border: "1px solid rgba(245,166,35,0.18)",
     borderRadius: "16px",
     padding: isMobile ? "1rem" : "1.25rem",
@@ -334,7 +334,7 @@ export default function CorporativoDashboard() {
 
   const inputStyle = {
     padding: "0.5rem 0.7rem",
-    background: "rgba(255,255,255,0.03)",
+    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
     border: "1px solid rgba(245,166,35,0.25)",
     borderRadius: "8px",
     color: "#e8f0fe",
@@ -610,7 +610,7 @@ export default function CorporativoDashboard() {
               <div key={p.id} style={{
                 display: "flex", gap: "0.75rem", alignItems: "center",
                 padding: "0.65rem 0.75rem",
-                background: "rgba(255,255,255,0.03)",
+                background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
                 border: "1px solid rgba(245,166,35,0.12)",
                 borderRadius: "10px",
               }}>
