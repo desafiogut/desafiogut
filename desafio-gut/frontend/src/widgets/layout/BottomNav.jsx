@@ -111,7 +111,7 @@ export default function BottomNav() {
           desliza entre as tabs principais; "Mais" mantém highlight estático. */}
       <nav
         aria-label="Navegação principal"
-        className="gut-glass"
+        className="nav-glass"
         style={{
           position: "fixed",
           bottom: `calc(${DOCK_MARGIN}px + env(safe-area-inset-bottom, 0px))`,
@@ -172,9 +172,9 @@ export default function BottomNav() {
             aria-label="Mais opções"
             style={{
               position: "fixed", left: 0, right: 0, bottom: 0,
-              /* MC22.1 SECÇÃO C — superfície DENSA dedicada (não o .gut-glass ultra-transparente
-                 com blur OFF no mobile): é um modal sobre overlay escuro, legibilidade crítica. */
-              background: "rgba(13,18,53,0.94)",
+              /* MC22.2 SECÇÃO C — superfície de navegação UNIFICADA (.nav-glass):
+                 mesmo navy translúcido do Nav Dock, blur sempre ligado. */
+              background: "var(--nav-glass)",
               backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)",
               borderTop: "1px solid rgba(255,255,255,0.10)",
               boxShadow: "0 -8px 32px rgba(0,0,0,0.5)",

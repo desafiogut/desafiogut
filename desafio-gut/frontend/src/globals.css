@@ -350,6 +350,19 @@ img, svg { display: block; }
   transform: scale(0.98);
 }
 
+/* ── MC22.2 SECÇÃO C — .nav-glass: superfície de navegação (dock / sheet "Mais" / rail)
+   Navy translúcido intermédio (nem opaco 0.94, nem fantasma 0.03). Independente do
+   --glass-opacity para garantir presença visual mesmo com slider no mínimo.
+   blur SEMPRE ligado (mobile + desktop) — o dock não pode desaparecer na Arena. */
+:root { --nav-glass: rgba(13,18,53,0.66); }
+.nav-glass {
+  background: var(--nav-glass);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
+}
+
 /* Plano GlassSurface — reflexo + tint muito subtil, SEM blur de ecrã inteiro. */
 .gut-surface::before {
   content: "";
