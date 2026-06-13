@@ -17,7 +17,6 @@
 // negativo empilham por viewport, independentemente do aninhamento DOM.
 import AtmosphereFilter from "./AtmosphereFilter.jsx";
 import Layout from "./Layout.jsx";
-import GutoSpritePlayer from "../../components/GutoSpritePlayer.jsx";
 
 export default function AppLayout() {
   return (
@@ -25,9 +24,8 @@ export default function AppLayout() {
       <AtmosphereFilter />
       <div className="gut-surface">
         <Layout />
-        {/* MC22.2 SECÇÃO E — GUTO global restaurado no canto inferior-esquerdo
-            (.gut-sprite). Coexiste com os companions inline dos cronómetros (SECÇÃO D). */}
-        <GutoSpritePlayer variant="global" />
+        {/* MC22.1/MC22.2 — GUTO apenas INLINE junto dos cronómetros (Dashboard:
+            Edição Ativa + Outras Edições). Sem GUTO global no canto. */}
       </div>
     </>
   );
