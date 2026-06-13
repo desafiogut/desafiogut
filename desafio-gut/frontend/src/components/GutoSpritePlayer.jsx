@@ -13,10 +13,13 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAppEnvironment } from "../context/useAppContextEnvironment.jsx";
 
+// MC22.2 SECÇÃO D — versão ?v=mc222 força o browser/CDN a servir os webm
+// re-encodados com canal alfa (VP9 yuva420p, colorkey #050818). Sem o query param
+// browsers com cache agressivo mostrariam o .webm opaco antigo.
 const SRC = {
-  breathing:   "/assets/guto/animations/idle.webm",
-  analyzing:   "/assets/guto/animations/thinking.webm",
-  celebrating: "/assets/guto/animations/celebration.webm",
+  breathing:   "/assets/guto/animations/idle.webm?v=mc222",
+  analyzing:   "/assets/guto/animations/thinking.webm?v=mc222",
+  celebrating: "/assets/guto/animations/celebration.webm?v=mc222",
 };
 
 // MC22.1 SECÇÃO D — variant:
