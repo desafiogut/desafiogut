@@ -3,6 +3,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIdioma } from "../context/IdiomaContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
+import SliderOpacidade from "../components/SliderOpacidade.jsx";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -18,7 +19,6 @@ export default function Configuracoes() {
   const [notifLances,    setNotifLances]    = useState(true);
   const [notifVencedor,  setNotifVencedor]  = useState(true);
   const [notifPix,       setNotifPix]       = useState(false);
-  const [tema,           setTema]           = useState("dark");
   const [salvo,          setSalvo]          = useState(false);
 
   function handleSalvar() {
@@ -160,38 +160,8 @@ export default function Configuracoes() {
             </select>
           </div>
 
-          {/* Tema */}
-          <div style={{
-            display: "flex",
-            flexDirection: isMobile ? "column" : "row",
-            justifyContent: "space-between",
-            alignItems: isMobile ? "stretch" : "center",
-            gap: "0.5rem",
-          }}>
-            <span style={{ fontSize: isMobile ? "0.84rem" : "0.86rem", color: COR.text }}>Tema</span>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {[
-                { id: "dark",  label: "🌙 Dark", enabled: true  },
-                { id: "light", label: "☀️ Light (em breve)", enabled: false },
-              ].map(({ id, label, enabled }) => (
-                <button
-                  key={id}
-                  onClick={() => enabled && setTema(id)}
-                  disabled={!enabled}
-                  style={{
-                    padding: "0.4rem 0.85rem", borderRadius: "10px",
-                    border: `1px solid ${tema === id ? COR.primary : "rgba(245,166,35,0.2)"}`,
-                    background: tema === id ? COR.primaryDim : "transparent",
-                    color: tema === id ? COR.blue300 : COR.muted,
-                    cursor: enabled ? "pointer" : "not-allowed",
-                    fontSize: "0.78rem", fontWeight: "600",
-                    opacity: enabled ? 1 : 0.5,
-                    flex: isMobile ? 1 : "none",
-                  }}
-                >{label}</button>
-              ))}
-            </div>
-          </div>
+          {/* MC22.1 SECÇÃO B — Intensidade do vidro (substitui o antigo toggle "Tema", inerte). */}
+          <SliderOpacidade label={t("config.intensidadeVidro")} isMobile={isMobile} />
         </div>
       </div>
 
