@@ -311,7 +311,7 @@ export default function MercadoLances() {
           alignItems: "center",
           padding: isMobile ? "1rem" : "1.25rem 2rem",
           gap: isMobile ? "0.75rem" : "1rem",
-          background: "rgba(255,255,255,0.03)",
+          background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
           borderBottom: "1px solid rgba(255,255,255,0.10)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
@@ -402,13 +402,14 @@ export default function MercadoLances() {
 
         {/* ── Painel saldos + tipo ── */}
         <div style={{
-          background: "rgba(255,255,255,0.03)",
+          background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
           borderBottom: "1px solid rgba(255,255,255,0.10)",
           padding: padTight,
           display: "flex", flexDirection: isMobile ? "column" : "row",
           justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center",
           gap: isMobile ? "0.6rem" : "0.75rem",
-          backdropFilter: "blur(12px)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
         }}>
           {/* Em produção o saldo aparece no Sidebar/Dashboard.
               Placeholder vazio mantém o flex space-between alinhando o
@@ -437,12 +438,14 @@ export default function MercadoLances() {
 
         {/* ── Aviso ── */}
         <div style={{
-          background: "rgba(255,255,255,0.03)",
+          background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
           borderBottom: "1px solid rgba(255,255,255,0.10)",
           padding: padTight,
           fontSize: isMobile ? "0.72rem" : "0.78rem",
           color: "#94a3b8",
           lineHeight: 1.4,
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
         }}>
           <strong>DesafioGUT</strong>{" — "}Grupo União e Trabalho · CNPJ 23.040.066/0001-00
           {!isMobile && " · www.grupouniaoetrabalho.com.br"}
@@ -515,8 +518,8 @@ export default function MercadoLances() {
             />
 
             <div style={{
-              background: "rgba(255,255,255,0.03)",
-              backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+              background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+              backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
               borderRadius: "16px",
               padding: isMobile ? "1rem" : "1.25rem",
               display: "flex", flexDirection: "column", gap: "0.5rem",
