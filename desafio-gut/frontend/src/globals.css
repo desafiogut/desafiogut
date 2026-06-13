@@ -363,6 +363,18 @@ img, svg { display: block; }
   box-shadow: 0 8px 32px 0 rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
 }
 
+/* ── MC23.1.1 SECÇÃO A — vidro de REPOUSO uniforme dos ícones do Nav Dock ───────
+   Todos os itens do dock (Início, Lances, Carteira, Mais) recebem a MESMA cápsula
+   de vidro subtil em repouso, eliminando a perceção de inconsistência. O Active
+   Indicator elástico (layoutId="gut-dock-ind") continua a deslizar POR CIMA desta
+   base como camada de destaque (laranja). Translúcido (sem cor sólida); raio 14px
+   alinhado ao indicador. box-sizing:border-box (preflight Tailwind) → 0 CLS. */
+.dock-icon {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 14px;
+}
+
 /* Plano GlassSurface — reflexo + tint muito subtil, SEM blur de ecrã inteiro. */
 .gut-surface::before {
   content: "";

@@ -345,6 +345,7 @@ const dockLabelStyle = {
 function DockItem({ active, reduce, indicator = true, children }) {
   return (
     <motion.span
+      className="dock-icon"
       whileTap={reduce ? undefined : { scale: 0.9 }}
       style={{
         position: "relative", flex: 1,
@@ -369,9 +370,15 @@ function DockItem({ active, reduce, indicator = true, children }) {
         />
       )}
       {active && !indicator && (
+        /* MC23.1.1 A3 — "Mais" usa highlight estático (não entra no layoutId
+           partilhado), mas com o MESMO vidro dos tabs principais: 0.14 + borda +
+           sombra. Sem isto destoava (0.10, sem borda) dos restantes ícones. */
         <span aria-hidden="true" style={{
           position: "absolute", inset: 0, borderRadius: "14px",
-          background: "rgba(255,107,53,0.10)", zIndex: 0,
+          background: "rgba(255,107,53,0.14)",
+          border: "1px solid rgba(255,107,53,0.30)",
+          boxShadow: "0 2px 10px rgba(255,107,53,0.18)",
+          zIndex: 0,
         }} />
       )}
       <span style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px" }}>
