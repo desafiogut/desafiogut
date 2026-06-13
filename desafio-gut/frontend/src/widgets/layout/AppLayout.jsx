@@ -17,7 +17,6 @@
 // negativo empilham por viewport, independentemente do aninhamento DOM.
 import AtmosphereFilter from "./AtmosphereFilter.jsx";
 import Layout from "./Layout.jsx";
-import GutoSpritePlayer from "../../components/GutoSpritePlayer.jsx";
 
 export default function AppLayout() {
   return (
@@ -25,10 +24,9 @@ export default function AppLayout() {
       <AtmosphereFilter />
       <div className="gut-surface">
         <Layout />
-        {/* MC20.2 ITEM 11/13 — GUTO animado na superfície, canto inferior-esquerdo
-            (onde estava o GUTO oficial removido no MC20.PRE.2). Mesmo ficheiro em
-            desktop e mobile (MC20.1). */}
-        <GutoSpritePlayer />
+        {/* MC22.1 SECÇÃO D — o GUTO deixou de ser fixo global; passou a ser companion
+            INLINE de cada edição (Dashboard: Edição Ativa + Outras Edições, junto do
+            cronómetro). O import permanece para compatibilidade, mas não se monta aqui. */}
       </div>
     </>
   );

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
+import { useIdioma } from "../context/IdiomaContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
+import SliderOpacidade from "../components/SliderOpacidade.jsx";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -12,12 +14,11 @@ const COR = {
 export default function Configuracoes() {
   const isMobile = useIsMobile();
   const { isConnected, address, userLabel, desconectar, abrirModal } = useAppContext();
+  const { lang, setLang, t } = useIdioma();
 
   const [notifLances,    setNotifLances]    = useState(true);
   const [notifVencedor,  setNotifVencedor]  = useState(true);
   const [notifPix,       setNotifPix]       = useState(false);
-  const [idioma,         setIdioma]         = useState("pt-BR");
-  const [tema,           setTema]           = useState("dark");
   const [salvo,          setSalvo]          = useState(false);
 
   function handleSalvar() {
@@ -49,15 +50,15 @@ export default function Configuracoes() {
           margin: "0 0 0.35rem",
           fontSize: isMobile ? "1.3rem" : "1.5rem",
           fontWeight: "900", color: COR.text, lineHeight: 1.2,
-        }}>⚙️ Configurações</h1>
+        }}>{t("config.titulo")}</h1>
         <p style={{ margin: 0, color: COR.muted, fontSize: isMobile ? "0.82rem" : "0.88rem", lineHeight: 1.4 }}>
-          Ajustes de conta, notificações e preferências do DesafioGUT.
+          {t("config.subtitulo")}
         </p>
       </header>
 
       {/* Conta */}
       <div style={{ ...cardStyle, marginBottom: sectionGap }}>
-        <h3 style={cardTituloStyle}>👤 Conta</h3>
+        <h3 style={cardTituloStyle}>{t("config.conta")}</h3>
         {isConnected ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <InfoRow label="Usuário" value={userLabel || "—"} isMobile={isMobile} />
@@ -74,7 +75,7 @@ export default function Configuracoes() {
                 borderRadius: "10px",
                 color: COR.danger, cursor: "pointer",
                 fontWeight: "700", fontSize: "0.84rem",
-              }}>🚪 Desconectar conta</button>
+              }}>{t("config.desconectar")}</button>
             </div>
           </div>
         ) : (
@@ -90,20 +91,20 @@ export default function Configuracoes() {
       {/* Notificações */}
       <div style={{ ...cardStyle, marginBottom: sectionGap }}>
         <h3 style={{ ...cardTituloStyle, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span>🔔 Notificações</span>
+          <span>{t("config.notificacoes")}</span>
           <span style={{
             fontSize: "0.6rem", color: COR.gold,
             background: "rgba(245,166,35,0.12)",
             border: "1px solid rgba(245,166,35,0.3)",
             padding: "0.15rem 0.5rem", borderRadius: "10px",
             letterSpacing: "0.04em",
-          }}>EM BREVE</span>
+          }}>{t("config.emBreve")}</span>
         </h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
           {[
-            { label: "Novos lances na edição",      value: notifLances,   setter: setNotifLances   },
-            { label: "Resultado do vencedor",       value: notifVencedor, setter: setNotifVencedor },
-            { label: "Confirmação de depósito PIX", value: notifPix,      setter: setNotifPix      },
+            { label: t("config.notifLances"),      value: notifLances,   setter: setNotifLances   },
+            { label: t("config.notifVencedor"),       value: notifVencedor, setter: setNotifVencedor },
+            { label: t("config.notifPix"), value: notifPix,      setter: setNotifPix      },
           ].map(({ label, value, setter }) => (
             <div key={label} style={{
               display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem",
@@ -133,17 +134,18 @@ export default function Configuracoes() {
 
       {/* Preferências */}
       <div style={{ ...cardStyle, marginBottom: sectionGap }}>
-        <h3 style={cardTituloStyle}>🌐 Preferências</h3>
+        <h3 style={cardTituloStyle}>{t("config.preferencias")}</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {/* Idioma */}
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
             gap: "0.75rem", flexWrap: "wrap",
           }}>
-            <span style={{ fontSize: isMobile ? "0.84rem" : "0.86rem", color: COR.text }}>Idioma</span>
+            <span style={{ fontSize: isMobile ? "0.84rem" : "0.86rem", color: COR.text }}>{t("config.idioma")}</span>
             <select
-              value={idioma}
-              onChange={(e) => setIdioma(e.target.value)}
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              aria-label={t("config.idioma")}
               style={{
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(245,166,35,0.25)",
@@ -152,50 +154,20 @@ export default function Configuracoes() {
                 fontSize: "0.82rem", cursor: "pointer",
               }}
             >
-              <option value="pt-BR">🇧🇷 Português (Brasil)</option>
-              <option value="en-US">🇺🇸 English (US)</option>
+              <option value="pt">🇧🇷 Português (Brasil)</option>
+              <option value="en">🇺🇸 English (US)</option>
               <option value="es">🇪🇸 Español</option>
             </select>
           </div>
 
-          {/* Tema */}
-          <div style={{
-            display: "flex",
-            flexDirection: isMobile ? "column" : "row",
-            justifyContent: "space-between",
-            alignItems: isMobile ? "stretch" : "center",
-            gap: "0.5rem",
-          }}>
-            <span style={{ fontSize: isMobile ? "0.84rem" : "0.86rem", color: COR.text }}>Tema</span>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {[
-                { id: "dark",  label: "🌙 Dark", enabled: true  },
-                { id: "light", label: "☀️ Light (em breve)", enabled: false },
-              ].map(({ id, label, enabled }) => (
-                <button
-                  key={id}
-                  onClick={() => enabled && setTema(id)}
-                  disabled={!enabled}
-                  style={{
-                    padding: "0.4rem 0.85rem", borderRadius: "10px",
-                    border: `1px solid ${tema === id ? COR.primary : "rgba(245,166,35,0.2)"}`,
-                    background: tema === id ? COR.primaryDim : "transparent",
-                    color: tema === id ? COR.blue300 : COR.muted,
-                    cursor: enabled ? "pointer" : "not-allowed",
-                    fontSize: "0.78rem", fontWeight: "600",
-                    opacity: enabled ? 1 : 0.5,
-                    flex: isMobile ? 1 : "none",
-                  }}
-                >{label}</button>
-              ))}
-            </div>
-          </div>
+          {/* MC22.1 SECÇÃO B — Intensidade do vidro (substitui o antigo toggle "Tema", inerte). */}
+          <SliderOpacidade label={t("config.intensidadeVidro")} isMobile={isMobile} />
         </div>
       </div>
 
       {/* Sobre */}
       <div style={cardStyle}>
-        <h3 style={cardTituloStyle}>ℹ️ Sobre o DesafioGUT</h3>
+        <h3 style={cardTituloStyle}>{t("config.sobre")}</h3>
         <div style={{
           display: "flex", flexDirection: "column", gap: "0.5rem",
           fontSize: isMobile ? "0.8rem" : "0.84rem", color: COR.muted, lineHeight: 1.5,
@@ -235,7 +207,7 @@ export default function Configuracoes() {
             transition: "all 0.2s",
             boxShadow: salvo ? "none" : "0 4px 14px rgba(245,166,35,0.35)",
           }}
-        >{salvo ? "✅ Salvo!" : "💾 Salvar Configurações"}</button>
+        >{salvo ? t("config.salvo") : t("config.salvar")}</button>
       </div>
     </div>
   );

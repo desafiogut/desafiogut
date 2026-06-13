@@ -19,13 +19,22 @@ const SRC = {
   celebrating: "/assets/guto/animations/celebration.webm",
 };
 
-export default function GutoSpritePlayer() {
+// MC22.1 SECÇÃO D — variant:
+//   "global" → comportamento legado (fixo .gut-sprite no canto). [já não montado por padrão]
+//   "inline" → companion de uma edição: container relativo dimensionado (size), junto do timer.
+// mood (opcional) sobrepõe o gutoMood global — usado por edição (ex.: celebrating ao encerrar).
+export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }) {
   const { gutoMood } = useAppEnvironment();
   const reduce = useReducedMotion();
-  const src = SRC[gutoMood] || SRC.breathing;
+  const src = SRC[mood || gutoMood] || SRC.breathing;
+  const isInline = variant === "inline";
 
   return (
-    <div className="gut-sprite" aria-hidden="true">
+    <div
+      className={isInline ? undefined : "gut-sprite"}
+      aria-hidden="true"
+      style={isInline ? { position: "relative", width: size, height: size, flexShrink: 0, pointerEvents: "none" } : undefined}
+    >
       <AnimatePresence initial={false}>
         <motion.video
           key={src}

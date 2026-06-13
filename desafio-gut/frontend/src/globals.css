@@ -308,12 +308,17 @@ img, svg { display: block; }
    do conteúdo), luz de borda white/10 e profundidade shadow 0_8px_32px/0.37.
    .gut-glass (MC20.2) foi MIGRADO para esta base neutra → Card e Nav Dock herdam
    o vidro unificado sem mudança de lógica (R1 funcional preservado). */
+/* MC22.1 — opacidade do vidro CONTROLÁVEL pelo utilizador (slider em Configurações).
+   Default 0.03 = aparência da Trindade do Vidro (zero regressão). O slider altera
+   --glass-opacity em :root em tempo real; persiste em localStorage (gut_glass_opacity). */
+:root { --glass-opacity: 0.03; }
 .glass-panel {
-  @apply bg-white/[0.03] backdrop-blur-none md:backdrop-blur-xl backdrop-saturate-150 border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)];
+  background: rgba(255, 255, 255, var(--glass-opacity, 0.03));
+  @apply backdrop-blur-none md:backdrop-blur-xl backdrop-saturate-150 border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)];
 }
 .gut-glass {
   position: relative;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, var(--glass-opacity, 0.03));
   border: 1px solid rgba(255, 255, 255, 0.10);
   box-shadow:
     0 8px 32px 0 rgba(0, 0, 0, 0.37),
@@ -368,10 +373,8 @@ img, svg { display: block; }
   aspect-ratio: 1 / 1;
   pointer-events: none;
   z-index: 6;
-  /* O webm tem fundo navy opaco (#050818, = chão da arena): a máscara radial funde
-     as bordas duras da caixa para o GUTO "emergir" do chão sem retângulo visível. */
-  -webkit-mask-image: radial-gradient(ellipse 70% 82% at 50% 42%, #000 48%, transparent 94%);
-  mask-image: radial-gradient(ellipse 70% 82% at 50% 42%, #000 48%, transparent 94%);
+  /* MC22.1 — os 3 webm foram re-encodados com canal alfa (fundo #050818 keyed via
+     ffmpeg colorkey); o quadrado deixou de existir, por isso a máscara radial foi removida. */
 }
 @media (max-width: 767px) {
   .gut-sprite {

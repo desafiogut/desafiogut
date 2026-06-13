@@ -170,9 +170,14 @@ export default function BottomNav() {
             role="dialog"
             aria-modal="true"
             aria-label="Mais opções"
-            className="gut-glass"
             style={{
               position: "fixed", left: 0, right: 0, bottom: 0,
+              /* MC22.1 SECÇÃO C — superfície DENSA dedicada (não o .gut-glass ultra-transparente
+                 com blur OFF no mobile): é um modal sobre overlay escuro, legibilidade crítica. */
+              background: "rgba(13,18,53,0.94)",
+              backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)",
+              borderTop: "1px solid rgba(255,255,255,0.10)",
+              boxShadow: "0 -8px 32px rgba(0,0,0,0.5)",
               maxHeight: "82vh", overflowY: "auto",
               borderTopLeftRadius: "20px", borderTopRightRadius: "20px",
               padding: "1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px))",
@@ -282,7 +287,7 @@ export default function BottomNav() {
                   style={{
                     display: "flex", alignItems: "center", gap: "0.75rem",
                     padding: "0.85rem 0.85rem",
-                    background: location.pathname.startsWith(path) ? "rgba(245,166,35,0.14)" : "transparent",
+                    background: location.pathname.startsWith(path) ? "rgba(245,166,35,0.14)" : "rgba(255,255,255,0.08)",
                     border: "1px solid rgba(245,166,35,0.12)",
                     borderRadius: "12px",
                     color: location.pathname.startsWith(path) ? "#fbbf24" : "#e8f0fe",

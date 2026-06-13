@@ -6,6 +6,7 @@ import TermosConsentimento from "./components/TermosConsentimento.jsx";
 import AppLayout from "./widgets/layout/AppLayout.jsx";
 import BackgroundCanvas from "./widgets/layout/BackgroundCanvas.jsx";
 import { AppEnvironmentProvider } from "./context/useAppContextEnvironment.jsx";
+import { IdiomaProvider } from "./context/IdiomaContext.jsx";
 import { ToastContainer, useToast } from "./widgets/toast/Toast.jsx";
 import ReferralRegistrar from "./components/ReferralRegistrar.jsx";
 import Dashboard       from "./pages/Dashboard.jsx";
@@ -97,6 +98,8 @@ export default function App() {
     <>
     {/* MC20.2 — Arena oficial (-z-50) GLOBAL atrás de tudo (paridade body-level MC19.1). */}
     <BackgroundCanvas />
+    {/* MC22.1 — Provider i18n (PT/EN/ES) ANINHADO no topo; compõe, não substitui (R1). */}
+    <IdiomaProvider>
     <AppProvider toastApi={{ add, remove }}>
       {/* MC20.2 FASE 1 · ITEM 3 — Provider de ambiente ANINHADO (appState/gutoMood/
           activeTab) a envolver Routes + ChatbotWidget, para sincronizar as 3 camadas
@@ -140,6 +143,7 @@ export default function App() {
       <ChatbotWidget />
       </AppEnvironmentProvider>
     </AppProvider>
+    </IdiomaProvider>
     </>
   );
 }

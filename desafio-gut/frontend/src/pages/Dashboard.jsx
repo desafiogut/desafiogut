@@ -5,6 +5,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import FimLeilaoOverlay from "../components/FimLeilaoOverlay.jsx";
+import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -102,22 +103,26 @@ function EdicaoTimerCard({ edicao, isMobile, cardStyle, cardTituloStyle }) {
       </div>
 
       <div style={{
-        display: "flex", flexDirection: "column", alignItems: "center",
-        gap: "0.15rem", padding: isMobile ? "0.4rem 0 0.6rem" : "0.25rem 0 0.6rem",
+        display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center",
+        gap: "0.6rem", padding: isMobile ? "0.4rem 0 0.6rem" : "0.25rem 0 0.6rem",
       }}>
-        <div style={{
-          fontSize: isMobile ? "2.1rem" : "1.95rem",
-          fontWeight: "900",
-          fontFamily: "'JetBrains Mono', monospace",
-          color: encerrada ? COR.danger : timerColor(restante, total),
-          letterSpacing: "0.02em", lineHeight: 1,
-          transition: "color 0.6s ease",
-        }}>{formatarTempoEdicao(restante, edicao.tipo)}</div>
-        <div style={{
-          fontSize: "0.66rem", color: encerrada ? "#fca5a5" : COR.text,
-          marginTop: "0.3rem", textAlign: "center",
-        }}>
-          {encerrada ? "Encerrada" : "Em andamento — lance já!"}
+        {/* MC22.1 SECÇÃO D — GUTO companion desta edição (celebra ao encerrar). */}
+        <GutoSpritePlayer variant="inline" size={isMobile ? 52 : 60} mood={encerrada ? "celebrating" : undefined} />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem" }}>
+          <div style={{
+            fontSize: isMobile ? "2.1rem" : "1.95rem",
+            fontWeight: "900",
+            fontFamily: "'JetBrains Mono', monospace",
+            color: encerrada ? COR.danger : timerColor(restante, total),
+            letterSpacing: "0.02em", lineHeight: 1,
+            transition: "color 0.6s ease",
+          }}>{formatarTempoEdicao(restante, edicao.tipo)}</div>
+          <div style={{
+            fontSize: "0.66rem", color: encerrada ? "#fca5a5" : COR.text,
+            marginTop: "0.3rem", textAlign: "center",
+          }}>
+            {encerrada ? "Encerrada" : "Em andamento — lance já!"}
+          </div>
         </div>
       </div>
 
@@ -380,30 +385,34 @@ export default function Dashboard() {
           </div>
 
           <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center",
-            gap: "0.15rem",
+            display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center",
+            gap: isMobile ? "0.6rem" : "0.9rem",
             padding: isMobile ? "0.5rem 0 0.85rem" : "0.25rem 0 0.85rem",
           }}>
-            <div style={{
-              fontSize: isMobile ? "2.5rem" : "2.25rem",
-              fontWeight: "900",
-              fontFamily: "'JetBrains Mono', monospace",
-              color: encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[tipoLeilao]),
-              letterSpacing: "0.02em",
-              lineHeight: 1,
-              transition: "color 0.6s ease",
-            }}>{timerDisplay}</div>
-            <div style={{
-              fontSize: "0.68rem", color: COR.muted,
-              textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: "700",
-            }}>
-              {encerrado ? "ENCERRADO" : tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
-            </div>
-            <div style={{
-              fontSize: "0.78rem", color: encerrado ? "#fca5a5" : COR.text,
-              marginTop: "0.4rem", textAlign: "center",
-            }}>
-              {encerrado ? "Aguardando nova rodada" : "Em andamento — lance já!"}
+            {/* MC22.1 SECÇÃO D — GUTO companion da Edição Ativa (celebra ao encerrar). */}
+            <GutoSpritePlayer variant="inline" size={isMobile ? 64 : 76} mood={encerrado ? "celebrating" : undefined} />
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem" }}>
+              <div style={{
+                fontSize: isMobile ? "2.5rem" : "2.25rem",
+                fontWeight: "900",
+                fontFamily: "'JetBrains Mono', monospace",
+                color: encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[tipoLeilao]),
+                letterSpacing: "0.02em",
+                lineHeight: 1,
+                transition: "color 0.6s ease",
+              }}>{timerDisplay}</div>
+              <div style={{
+                fontSize: "0.68rem", color: COR.muted,
+                textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: "700",
+              }}>
+                {encerrado ? "ENCERRADO" : tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
+              </div>
+              <div style={{
+                fontSize: "0.78rem", color: encerrado ? "#fca5a5" : COR.text,
+                marginTop: "0.4rem", textAlign: "center",
+              }}>
+                {encerrado ? "Aguardando nova rodada" : "Em andamento — lance já!"}
+              </div>
             </div>
           </div>
 
