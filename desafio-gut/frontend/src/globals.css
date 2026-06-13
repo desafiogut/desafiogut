@@ -378,20 +378,19 @@ img, svg { display: block; }
    Canto inferior-esquerdo (onde estava o GUTO oficial removido no MC20.PRE.2).
    MESMA fonte de vídeo em desktop e mobile (MC20.1); só posição/tamanho mudam.
    pointer-events:none para não interceptar cliques; acima do dock no mobile. */
+/* MC22.2 — GUTO no canto inferior-DIREITO (sidebar à esquerda, sem sobreposição). */
 .gut-sprite {
   position: fixed;
-  left: 16px;
+  right: 16px;
   bottom: 18px;
   width: clamp(112px, 12vw, 152px);
   aspect-ratio: 1 / 1;
   pointer-events: none;
   z-index: 6;
-  /* MC22.1 — os 3 webm foram re-encodados com canal alfa (fundo #050818 keyed via
-     ffmpeg colorkey); o quadrado deixou de existir, por isso a máscara radial foi removida. */
 }
 @media (max-width: 767px) {
   .gut-sprite {
-    left: 10px;
+    right: 10px;
     /* acima do Nav Dock flutuante (BOTTOM_NAV_HEIGHT 88 + folga) */
     bottom: calc(96px + env(safe-area-inset-bottom, 0px));
     width: 92px;
