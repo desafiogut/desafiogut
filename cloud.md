@@ -146,7 +146,11 @@ ChatbotWidget) **não** são refatorados retroativamente sem necessidade (evita 
 | Vidro temperado (`.gut-glass`) nos componentes glassmórficos | ✅ |
 | **MC21.1 FASE 1 — Biblioteca Glass UI** (`.glass-panel` + 10 primitivos + migração `.gut-glass`→neutro) | ✅ (PR feat/mc21.1) |
 | **MC21.1 FASE 2 — Vidro no visitante** (rodapé global + MercadoLances; Dashboard/Vitrine/SejaParceiro/Chatbot já compatíveis) | ✅ parcial |
-| **MC21.2 (adiado)** — corporativo/admin + painéis auth-gated + forms profundos + adoção dos primitivos | ⏸️ não validável sem sessão Privy (CDP) |
+| **MC21.2** — Trindade do Vidro nas páginas corporativo/admin/auth-gated + visitante restante | ✅ (PR #48, merged) |
+| **MC22.1 SecA** — i18n PT/EN/ES (`IdiomaProvider`+`useT()`, `src/i18n/*`, persiste `gut_lang`, `<html lang>`); Configuracoes migrado; shell faseável | ✅ |
+| **MC22.1 SecB** — slider de opacidade do vidro: `--glass-opacity` em `:root`, `.glass-panel`/`.gut-glass` ligados; `SliderOpacidade` persiste `gut_glass_opacity` | ✅ |
+| **MC22.1 SecC** — menu "Mais" denso e legível (não usa o `.gut-glass` ultra-transparente) | ✅ |
+| **MC22.1 SecD** — GUTO: webm re-encodados c/ canal alfa (sem quadrado); `GutoSpritePlayer variant="inline"`; companion do cronómetro (Edição Ativa + Outras Edições); removido do global | ✅ |
 | ITEM 7 — prefetch Mercado Pago | ⏸️ sem credenciais (achado A) — faseável |
 | ITEM 10 — Optimistic Updates no lance | ⏸️ **RISCO ADIADO** — ver §abaixo |
 
