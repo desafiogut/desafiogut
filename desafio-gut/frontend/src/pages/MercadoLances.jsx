@@ -515,7 +515,7 @@ export default function MercadoLances() {
             />
 
             <div style={{
-              background: "rgba(5,15,40,0.6)",
+              background: "rgba(255,255,255,0.03)",
               backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
               borderRadius: "16px",
               padding: isMobile ? "1rem" : "1.25rem",
