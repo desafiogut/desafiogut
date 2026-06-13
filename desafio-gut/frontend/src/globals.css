@@ -363,6 +363,35 @@ img, svg { display: block; }
   box-shadow: 0 8px 32px 0 rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
 }
 
+/* ── MC23.1.1 SECÇÃO A — vidro de REPOUSO uniforme dos ícones do Nav Dock ───────
+   Todos os itens do dock (Início, Lances, Carteira, Mais) recebem a MESMA cápsula
+   de vidro subtil em repouso, eliminando a perceção de inconsistência. O Active
+   Indicator elástico (layoutId="gut-dock-ind") continua a deslizar POR CIMA desta
+   base como camada de destaque (laranja). Translúcido (sem cor sólida); raio 14px
+   alinhado ao indicador. box-sizing:border-box (preflight Tailwind) → 0 CLS. */
+.dock-icon {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 14px;
+}
+
+/* ── MC23.1.1 SECÇÃO B — superfície de LEITURA do Chatbot (GUTO) ───────────────
+   O painel do chat usava .gut-glass (rgba(255,255,255,var(--glass-opacity,0.03)),
+   blur SÓ em desktop) → em mobile ficava 3% transparente e SEM blur, deixando o
+   conteúdo da página atravessar e o texto sobrepor-se (queixa do operador).
+   .chat-glass dá-lhe um PISO de opacidade navy próprio (0.92) + blur SEMPRE ligado
+   (mobile + desktop), INDEPENDENTE do slider --glass-opacity — espelha o padrão
+   MC22.2 (.nav-glass), mas com alpha mais alto por ser superfície de leitura.
+   Continua Glass (alpha<1 + backdrop-blur), NUNCA cor sólida. */
+:root { --chat-glass: rgba(13,18,53,0.92); }
+.chat-glass {
+  background: var(--chat-glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.05);
+}
+
 /* Plano GlassSurface — reflexo + tint muito subtil, SEM blur de ecrã inteiro. */
 .gut-surface::before {
   content: "";
