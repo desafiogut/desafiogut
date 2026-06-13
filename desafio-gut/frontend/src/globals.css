@@ -373,10 +373,8 @@ img, svg { display: block; }
   aspect-ratio: 1 / 1;
   pointer-events: none;
   z-index: 6;
-  /* O webm tem fundo navy opaco (#050818, = chão da arena): a máscara radial funde
-     as bordas duras da caixa para o GUTO "emergir" do chão sem retângulo visível. */
-  -webkit-mask-image: radial-gradient(ellipse 70% 82% at 50% 42%, #000 48%, transparent 94%);
-  mask-image: radial-gradient(ellipse 70% 82% at 50% 42%, #000 48%, transparent 94%);
+  /* MC22.1 — os 3 webm foram re-encodados com canal alfa (fundo #050818 keyed via
+     ffmpeg colorkey); o quadrado deixou de existir, por isso a máscara radial foi removida. */
 }
 @media (max-width: 767px) {
   .gut-sprite {
