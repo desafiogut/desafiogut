@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 // Atualiza --glass-opacity (globals.css) em tempo real e persiste em localStorage.
 // O valor persistido é re-aplicado no boot por applyStoredGlassOpacity() (main.jsx).
 export const GLASS_OPACITY_KEY = "gut_glass_opacity";
-const DEFAULT = 0.03;
+const DEFAULT = 0.06;
 const MIN = 0;
 const MAX = 0.15;
 const STEP = 0.005;

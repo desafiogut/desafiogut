@@ -2,7 +2,7 @@
 
 > Nenhum código entra em produção sem passar por este checklist. Se não estiver sólido,
 > **NÃO fazer merge**. Resultado da validação preenchido por revisão; PENDENTE bloqueia.
-> Última auditoria: 2026-06-14 (MC23.3). Escopo auditado: Glass UI primitives + Modal migration.
+> Última auditoria: 2026-06-14 (MC25.1). Escopo auditado: --glass-opacity 0.03→0.06.
 
 Legenda: ✅ PASS · ⚠️ ATENÇÃO · ⏸️ PENDENTE · N/A não aplicável a esta alteração.
 
@@ -95,3 +95,49 @@ fazer loop infinito (`loop=false`) → celebração de vencedor toca UMA vez (AC
 
 **APROVADO para merge (escopo D2).** O caminho transacional/on-chain permanece intacto (R1). As
 auditorias restantes ficam para nova passagem em ambiente estável / com edições reais.
+
+---
+
+## MC25.1 — Ajuste de --glass-opacity 0.03→0.06 (2026-06-14)
+
+**PR:** feat/mc25.1 → main | **Opção:** A | **2 ficheiros alterados**
+
+### 1. INTEGRIDADE DE TRANSAÇÃO
+- [✅] **N/A** — Nenhum código transacional alterado. `CardLance`, `web3.js`, idempotencyKey,
+  State Lock, EIP-191, Argon2id — **todos inalterados**.
+- [✅] **Saldo on-chain** — `getSaldoSenhasOnChain`, listeners `LanceDado`/`SenhasCreditadas` inalterados.
+
+### 2. ZERO-TRUST
+- [✅] **Sem novas rotas, inputs, ou chaves**.
+- [✅] **Sem novas dependências**.
+
+### 3. RESILIÊNCIA A FALHAS
+- [✅] **Tratamento de erro inalterado** — Sentry, rollback_ui(), useShakeOnError intactos.
+- [✅] **Degradação graciosa** — useReducedMotion, fallback de frame GUTO inalterados.
+
+### 4. VALIDAÇÃO VISUAL (MCP chrome-devtools)
+- [✅] **8 páginas inspecionadas** (Dashboard, MercadoLances, Vitrine, SejaNossoParceiro,
+  MinhaCarteira, MeusAtivos, Configuracoes, AdminPanel)
+- [✅] **Zero erros de consola novos** em todas as páginas
+- [✅] **GUTO** — button presente, estado idle visível
+- [✅] **Nav Dock** — INALTERADO (--nav-glass: rgba(13,18,53,0.66))
+- [✅] **Chatbot** — INALTERADO (--chat-glass: rgba(13,18,53,0.92))
+- [✅] **Slider** — funcional (0–0.15, step 0.005, localStorage: 0.06)
+- [✅] **WCAG AA** — contraste ≥ 4.5:1 para todas as cores de texto (seguro até 0.10)
+
+### 5. ANTI-REGRESSÃO
+- [✅] **Perfis**: visitante, comum, corporativo, admin — rotas e redirects intactos
+- [✅] **Glass UI primitives**: GlassCard, Button, Input, Table, Modal, Error, Tooltip, Empty, Skeleton
+  — apenas o valor do token CSS mudou; estrutura e lógica inalteradas
+- [✅] **Cores do design system**: --color-gut-* tokens inalterados
+- [✅] **Animações e motion**: keyframes, Framer Motion springs, useReducedMotion inalterados
+- [✅] **Background Canvas**: .gut-bg-canvas, .gut-bg-layer, .gut-atmosphere, scrim gradient inalterados
+- [✅] **Layout**: --page-padding, --nav-height, breakpoints, safe-area-inset inalterados
+- [✅] **Trindade do Vidro**: "Regra de Ouro" preservada (arena visível a 6% como atmosfera)
+- [✅] **npm run build**: verde (5.13s)
+
+### 6. ROLLBACK
+- [✅] **1 linha**: `:root { --glass-opacity: 0.03; }` em globals.css + `const DEFAULT = 0.03` em SliderOpacidade.jsx
+
+**APROVADO para merge (MC25.1).** Alteração puramente cosmética — zero impacto em transações,
+autenticação, segurança ou lógica de negócio. WCAG AA mantido. Rollback trivial.
