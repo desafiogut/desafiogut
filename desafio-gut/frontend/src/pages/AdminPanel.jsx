@@ -16,7 +16,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useAdmin } from "../hooks/useAdmin.js";
 import { getSignerFromProvider } from "../utils/web3.js";
-import { Button } from "../components/ui/Button.jsx";
+import { Button, Input } from "../components/ui";
 
 const COR = {
   primary: "#f5a623",
@@ -345,18 +345,14 @@ function TabCotas({ chamarAdmin, isMobile, onLoginNeeded }) {
         <h4 style={{ margin: 0, fontSize: "0.78rem", color: COR.primary, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase" }}>
           Nova/atualizar cota ({catSel})
         </h4>
-        <input type="text" placeholder="cliente_id (0x...)" value={form.cliente_id}
-               onChange={(e) => setForm({ ...form, cliente_id: e.target.value })}
-               style={inputStyle} required />
-        <input type="text" placeholder="nome do cliente" value={form.cliente_nome}
-               onChange={(e) => setForm({ ...form, cliente_nome: e.target.value })}
-               style={inputStyle} />
-        <input type="text" placeholder="produto" value={form.produto_nome}
-               onChange={(e) => setForm({ ...form, produto_nome: e.target.value })}
-               style={inputStyle} />
-        <input type="number" placeholder="valor (BRL)" step="0.01" value={form.valor}
-               onChange={(e) => setForm({ ...form, valor: e.target.value })}
-               style={inputStyle} />
+        <Input type="text" placeholder="cliente_id (0x...)" value={form.cliente_id}
+               onChange={(e) => setForm({ ...form, cliente_id: e.target.value })} required />
+        <Input type="text" placeholder="nome do cliente" value={form.cliente_nome}
+               onChange={(e) => setForm({ ...form, cliente_nome: e.target.value })} />
+        <Input type="text" placeholder="produto" value={form.produto_nome}
+               onChange={(e) => setForm({ ...form, produto_nome: e.target.value })} />
+        <Input type="number" placeholder="valor (BRL)" step="0.01" value={form.valor}
+               onChange={(e) => setForm({ ...form, valor: e.target.value })} />
         <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontSize: "0.78rem", color: COR.text }}>
           <input type="checkbox" checked={form.vendida}
                  onChange={(e) => setForm({ ...form, vendida: e.target.checked })} />
@@ -431,8 +427,8 @@ function TabAdmins({ chamarAdmin, onLoginNeeded }) {
       </ul>
       <form onSubmit={(e) => { e.preventDefault(); executar("adicionar", novo); }}
         style={{ display: "flex", gap: "0.4rem", marginTop: "0.5rem" }}>
-        <input type="text" placeholder="0x... (novo admin)" value={novo}
-               onChange={(e) => setNovo(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+        <Input type="text" placeholder="0x... (novo admin)" value={novo}
+               onChange={(e) => setNovo(e.target.value)} className="flex-1" />
         <Button type="submit" variant="primary" size="sm" disabled={!novo}>
           + Adicionar
         </Button>
@@ -442,16 +438,6 @@ function TabAdmins({ chamarAdmin, onLoginNeeded }) {
   );
 }
 
-const inputStyle = {
-  padding: "0.45rem 0.7rem",
-  background: "rgba(0,0,0,0.4)",
-  border: "1px solid rgba(255,255,255,0.1)",
-  borderRadius: "8px",
-  color: "#e8f0fe",
-  fontSize: "0.82rem",
-  fontFamily: "'Inter', sans-serif",
-  outline: "none",
-};
 
 export default function AdminPanel() {
   const isMobile = useIsMobile();
@@ -710,8 +696,8 @@ export default function AdminPanel() {
           <span style={{ fontSize: "0.72rem", color: COR.muted, width: "100%" }}>
             Cole o <strong>ADMIN_TOKEN</strong> legado (último uso). Depois sua wallet Privy vai assinar a mensagem para emitir o JWT.
           </span>
-          <input type="password" placeholder="ADMIN_TOKEN legado" value={adminTokenInput}
-                 onChange={(e) => setAdminTokenInput(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 200 }} autoFocus />
+          <Input type="password" placeholder="ADMIN_TOKEN legado" value={adminTokenInput}
+                 onChange={(e) => setAdminTokenInput(e.target.value)} className="flex-1 min-w-[200px]" autoFocus />
           <Button type="submit" variant="primary" size="sm" disabled={!adminTokenInput || authState === "logging-in"}>
             {authState === "logging-in" ? "⏳ Assinando…" : "Login"}
           </Button>

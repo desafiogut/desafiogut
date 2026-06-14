@@ -13,7 +13,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { getVisitorId } from "../lib/fingerprint.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
-import { Button } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 
 const COR = {
   text: "#e8f0fe", muted: "#6b7db8", primary: "#f5a623",
@@ -303,14 +303,6 @@ export default function SejaNossoParceiro() {
     padding: isMobile ? "1.25rem" : "1.5rem",
     backdropFilter: "blur(16px)",
   };
-  const inputStyle = {
-    width: "100%", padding: "0.7rem 0.9rem",
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(245,166,35,0.25)",
-    borderRadius: "8px", color: COR.text,
-    fontSize: "0.92rem", outline: "none",
-    boxSizing: "border-box",
-  };
   const labelStyle = {
     display: "block", marginBottom: "0.4rem",
     color: COR.muted, fontSize: "0.8rem", fontWeight: 600,
@@ -451,7 +443,7 @@ export default function SejaNossoParceiro() {
             Enviámos um código de 6 dígitos para <strong style={{ color: COR.text }}>{emailOtp}</strong>.
             Digite-o abaixo para entrar no Painel do Lojista.
           </p>
-          <input
+          <Input
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
@@ -461,11 +453,7 @@ export default function SejaNossoParceiro() {
             onKeyDown={(e) => { if (e.key === "Enter") confirmarCodigo(); }}
             placeholder="••••••"
             aria-label="Código de 6 dígitos"
-            style={{
-              ...inputStyle,
-              letterSpacing: "0.5em", textAlign: "center",
-              fontSize: "1.3rem", fontWeight: 800,
-            }}
+            className="tracking-[0.5em] text-center !text-2xl !font-extrabold"
           />
           {otpErro && (
             <p role="alert" style={{ margin: "0.6rem 0 0", color: COR.primary, fontSize: "0.82rem" }}>
@@ -545,18 +533,14 @@ export default function SejaNossoParceiro() {
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div>
               <label style={labelStyle}>CNPJ *</label>
-              <input
+              <Input
                 type="text"
                 placeholder="00.000.000/0000-00"
                 value={cnpj}
                 onChange={e => setCnpj(mascaraCNPJ(e.target.value))}
                 maxLength={18}
                 required
-                style={{
-                  ...inputStyle,
-                  borderColor: cnpj && !validarCNPJ(cnpj)
-                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
-                }}
+                error={cnpj && !validarCNPJ(cnpj)}
               />
               {cnpj && !validarCNPJ(cnpj) && (
                 <span style={{ color: "#ff3d71", fontSize: "0.75rem" }}>CNPJ inválido</span>
@@ -569,7 +553,7 @@ export default function SejaNossoParceiro() {
             </div>
             <div>
               <label style={labelStyle}>Email da Empresa *</label>
-              <input
+              <Input
                 type="email"
                 placeholder="contato@suaempresa.com.br"
                 value={email}
@@ -577,7 +561,6 @@ export default function SejaNossoParceiro() {
                 maxLength={120}
                 required
                 autoComplete="email"
-                style={inputStyle}
               />
               <span style={{ color: COR.muted, fontSize: "0.72rem" }}>
                 Usaremos esse email para confirmar o cadastro e o contato da coordenação.
@@ -585,13 +568,12 @@ export default function SejaNossoParceiro() {
             </div>
             <div>
               <label style={labelStyle}>Nome da Empresa *</label>
-              <input
+              <Input
                 type="text"
                 placeholder="Razão social ou nome fantasia"
                 value={empresa}
                 onChange={e => setEmpresa(e.target.value.slice(0, 100))}
                 required
-                style={inputStyle}
               />
             </div>
             <div>
@@ -608,30 +590,22 @@ export default function SejaNossoParceiro() {
             </div>
             <div>
               <label style={labelStyle}>Site (opcional)</label>
-              <input
+              <Input
                 type="url"
                 placeholder="https://suaempresa.com.br"
                 value={site}
                 onChange={e => setSite(e.target.value)}
-                style={{
-                  ...inputStyle,
-                  borderColor: site && !validarURL(site)
-                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
-                }}
+                error={site && !validarURL(site)}
               />
             </div>
             <div>
               <label style={labelStyle}>URL do Logo (opcional)</label>
-              <input
+              <Input
                 type="url"
                 placeholder="https://suaempresa.com.br/logo.png"
                 value={logoUrl}
                 onChange={e => setLogoUrl(e.target.value)}
-                style={{
-                  ...inputStyle,
-                  borderColor: logoUrl && !validarURL(logoUrl)
-                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
-                }}
+                error={logoUrl && !validarURL(logoUrl)}
               />
             </div>
             {erro && (
@@ -672,18 +646,14 @@ export default function SejaNossoParceiro() {
           <form onSubmit={handleLoginExistente} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div>
               <label style={labelStyle}>CNPJ *</label>
-              <input
+              <Input
                 type="text"
                 placeholder="00.000.000/0000-00"
                 value={cnpjLogin}
                 onChange={e => setCnpjLogin(mascaraCNPJ(e.target.value))}
                 maxLength={18}
                 required
-                style={{
-                  ...inputStyle,
-                  borderColor: cnpjLogin && !validarCNPJ(cnpjLogin)
-                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
-                }}
+                error={cnpjLogin && !validarCNPJ(cnpjLogin)}
               />
               {cnpjLogin && !validarCNPJ(cnpjLogin) && (
                 <span style={{ color: "#ff3d71", fontSize: "0.75rem" }}>CNPJ inválido</span>
@@ -691,13 +661,12 @@ export default function SejaNossoParceiro() {
             </div>
             <div>
               <label style={labelStyle}>Nome da Empresa *</label>
-              <input
+              <Input
                 type="text"
                 placeholder="Razão social ou nome fantasia"
                 value={empresaLogin}
                 onChange={e => setEmpresaLogin(e.target.value.slice(0, 100))}
                 required
-                style={inputStyle}
               />
             </div>
             {erroLogin && (

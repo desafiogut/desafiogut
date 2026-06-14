@@ -7,8 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
-import { GlassCard } from "@/components/ui";
-import { Button } from "@/components/ui";
+import { GlassCard, Button, Input } from "@/components/ui";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 
 const COR = {
@@ -328,15 +327,6 @@ export default function CorporativoDashboard() {
 
   const cardCls = isMobile ? "p-4" : "p-5";
 
-  const inputStyle = {
-    padding: "0.5rem 0.7rem",
-    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-    border: "1px solid rgba(245,166,35,0.25)",
-    borderRadius: "8px",
-    color: "#e8f0fe",
-    fontSize: "0.85rem",
-    outline: "none",
-  };
 
   const cards = [
     { label: "Cota ativa",     value: categoria.toUpperCase(),  color: COR.primary, icon: "📢", to: "/corporativo/cotas" },
@@ -428,9 +418,8 @@ export default function CorporativoDashboard() {
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0.75rem" }}>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
                 Empresa *
-                <input value={editEmpresa} onChange={(e) => setEditEmpresa(e.target.value)}
-                  placeholder="Nome da empresa"
-                  style={inputStyle} />
+                <Input value={editEmpresa} onChange={(e) => setEditEmpresa(e.target.value)}
+                  placeholder="Nome da empresa" />
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
                 Segmento
@@ -442,18 +431,18 @@ export default function CorporativoDashboard() {
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
                 Site
-                <input value={editSite} onChange={(e) => setEditSite(e.target.value)}
-                  placeholder="https://..." style={inputStyle} />
+                <Input value={editSite} onChange={(e) => setEditSite(e.target.value)}
+                  placeholder="https://..." />
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
                 Logo URL
-                <input value={editLogoUrl} onChange={(e) => setEditLogoUrl(e.target.value)}
-                  placeholder="https://...logo.png" style={inputStyle} />
+                <Input value={editLogoUrl} onChange={(e) => setEditLogoUrl(e.target.value)}
+                  placeholder="https://...logo.png" />
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted, gridColumn: isMobile ? "auto" : "1 / -1" }}>
                 Email
-                <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)}
-                  placeholder="contato@empresa.com" style={inputStyle} />
+                <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="contato@empresa.com" />
               </label>
             </div>
             {editErro && <p style={{ margin: 0, color: "#ef4444", fontSize: "0.78rem" }}>{editErro}</p>}
@@ -500,13 +489,13 @@ export default function CorporativoDashboard() {
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0.75rem" }}>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
                 Nome do produto *
-                <input value={prodNome} onChange={(e) => setProdNome(e.target.value)}
-                  placeholder="Nome do produto" style={inputStyle} />
+                <Input value={prodNome} onChange={(e) => setProdNome(e.target.value)}
+                  placeholder="Nome do produto" />
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
                 Preço (centavos) *
-                <input value={prodPreco} onChange={(e) => setProdPreco(e.target.value)}
-                  placeholder="Ex: 2990 (= R$ 29,90)" type="number" min="1" style={inputStyle} />
+                <Input value={prodPreco} onChange={(e) => setProdPreco(e.target.value)}
+                  placeholder="Ex: 2990 (= R$ 29,90)" type="number" min="1" />
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted, gridColumn: isMobile ? "auto" : "1 / -1" }}>
                 Descrição
@@ -524,8 +513,8 @@ export default function CorporativoDashboard() {
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
                 Imagem URL
-                <input value={prodImagemUrl} onChange={(e) => setProdImagemUrl(e.target.value)}
-                  placeholder="https://...foto.jpg" style={inputStyle} />
+                <Input value={prodImagemUrl} onChange={(e) => setProdImagemUrl(e.target.value)}
+                  placeholder="https://...foto.jpg" />
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
                 Ou upload de imagem
