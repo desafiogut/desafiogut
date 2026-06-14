@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
+import { Button } from "@/components/ui";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 
 const COR = {
@@ -372,15 +373,16 @@ export default function CorporativoDashboard() {
         marginBottom: isMobile ? "1.25rem" : "2rem",
       }}>
         {cards.map(({ label, value, color, icon, to }) => (
-          <button
+          <Button
             key={label}
+            variant="ghost"
             onClick={() => navigate(to)}
-            className={`${cardCls} flex flex-col gap-1 text-left cursor-pointer`}
+            className={`${cardCls} !flex !flex-col !items-start !gap-1 !text-left !h-auto`}
           >
             <span style={{ fontSize: "1.3rem" }}>{icon}</span>
             <span style={{ fontSize: "1.4rem", fontWeight: 900, color }}>{value}</span>
             <span style={{ fontSize: "0.72rem", color: COR.muted, fontWeight: 600 }}>{label}</span>
-          </button>
+          </Button>
         ))}
       </section>
 
@@ -394,12 +396,13 @@ export default function CorporativoDashboard() {
         <p style={{ margin: 0, color: COR.text, fontSize: "0.9rem", lineHeight: 1.5 }}>
           Seus banners serão exibidos hoje às <strong>11h</strong>, <strong>15h</strong> e <strong>19h</strong>.
           Veja a grade completa em{" "}
-          <button
+          <Button
+            variant="ghost" size="sm"
             onClick={() => navigate("/programacao")}
-            style={{ background: "none", border: "none", color: COR.teal, cursor: "pointer", textDecoration: "underline" }}
+            className="!text-[#00d4aa] !underline !p-0 !h-auto !min-h-0"
           >
             Programação
-          </button>.
+          </Button>.
         </p>
       </GlassCard>
 
@@ -413,19 +416,10 @@ export default function CorporativoDashboard() {
             ✏️ Dados da Empresa
           </h3>
           {!editando && (
-            <button
-              type="button"
-              onClick={iniciarEdicao}
-              style={{
-                padding: "0.35rem 0.85rem",
-                background: "rgba(0,212,170,0.12)",
-                border: "1px solid rgba(0,212,170,0.3)",
-                borderRadius: "8px", color: COR.teal,
-                fontSize: "0.78rem", fontWeight: 700, cursor: "pointer",
-              }}
-            >
+            <Button variant="ghost" size="sm" type="button" onClick={iniciarEdicao}
+              className="!border-[#00d4aa]/30 !bg-[#00d4aa]/[0.12] !text-[#00d4aa]">
               Editar
-            </button>
+            </Button>
           )}
         </div>
 
@@ -464,26 +458,14 @@ export default function CorporativoDashboard() {
             </div>
             {editErro && <p style={{ margin: 0, color: "#ef4444", fontSize: "0.78rem" }}>{editErro}</p>}
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button type="submit" disabled={salvando}
-                style={{
-                  padding: "0.5rem 1.25rem",
-                  background: `linear-gradient(135deg, ${COR.teal}, #00a888)`,
-                  border: "none", borderRadius: "8px", color: "#0a0f1a",
-                  fontWeight: 800, fontSize: "0.82rem", cursor: "pointer",
-                  opacity: salvando ? 0.6 : 1,
-                }}
-              >
+              <Button type="submit" variant="primary" size="md" disabled={salvando}
+                className="!bg-gradient-to-br !from-[#00d4aa] !to-[#00a888] hover:!from-[#00e4ba] hover:!to-[#00b898] !shadow-none">
                 {salvando ? "Salvando…" : "💾 Salvar"}
-              </button>
-              <button type="button" onClick={() => setEditando(false)}
-                style={{
-                  padding: "0.5rem 1rem",
-                  background: "transparent", border: "1px solid rgba(245,166,35,0.25)",
-                  borderRadius: "8px", color: COR.muted, fontSize: "0.82rem", cursor: "pointer",
-                }}
-              >
+              </Button>
+              <Button type="button" variant="ghost" size="md" onClick={() => setEditando(false)}
+                className="!border-[#f5a623]/25">
                 Cancelar
-              </button>
+              </Button>
             </div>
           </form>
         )}
@@ -506,14 +488,9 @@ export default function CorporativoDashboard() {
             🛍️ Meus Produtos
           </h3>
           {!formAberto && (
-            <button type="button" onClick={abrirFormNovo}
-              style={{
-                padding: "0.35rem 0.85rem",
-                background: `linear-gradient(135deg, ${COR.primary}, #f97316)`,
-                border: "none", borderRadius: "8px", color: "#0a0f1a",
-                fontSize: "0.78rem", fontWeight: 800, cursor: "pointer",
-              }}
-            >+ Novo Produto</button>
+            <Button variant="primary" size="sm" type="button" onClick={abrirFormNovo}>
+              + Novo Produto
+            </Button>
           )}
         </div>
 
@@ -563,22 +540,13 @@ export default function CorporativoDashboard() {
             )}
             {prodErro && <p style={{ margin: 0, color: "#ef4444", fontSize: "0.78rem" }}>{prodErro}</p>}
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button type="submit" disabled={prodSalvando}
-                style={{
-                  padding: "0.5rem 1.25rem",
-                  background: `linear-gradient(135deg, ${COR.primary}, #f97316)`,
-                  border: "none", borderRadius: "8px", color: "#0a0f1a",
-                  fontWeight: 800, fontSize: "0.82rem", cursor: "pointer",
-                  opacity: prodSalvando ? 0.6 : 1,
-                }}
-              >{prodSalvando ? "Salvando…" : editandoProduto ? "💾 Atualizar" : "➕ Adicionar"}</button>
-              <button type="button" onClick={fecharForm}
-                style={{
-                  padding: "0.5rem 1rem", background: "transparent",
-                  border: "1px solid rgba(245,166,35,0.25)", borderRadius: "8px",
-                  color: COR.muted, fontSize: "0.82rem", cursor: "pointer",
-                }}
-              >Cancelar</button>
+              <Button type="submit" variant="primary" size="md" disabled={prodSalvando}>
+                {prodSalvando ? "Salvando…" : editandoProduto ? "💾 Atualizar" : "➕ Adicionar"}
+              </Button>
+              <Button type="button" variant="ghost" size="md" onClick={fecharForm}
+                className="!border-[#f5a623]/25">
+                Cancelar
+              </Button>
             </div>
           </form>
         )}
@@ -642,32 +610,23 @@ export default function CorporativoDashboard() {
                 </div>
                 {/* Ações */}
                 <div style={{ display: "flex", gap: "0.3rem", flexShrink: 0 }}>
-                  <button type="button" onClick={() => abrirFormEditar(p)}
+                  <Button type="button" variant="ghost" size="sm" onClick={() => abrirFormEditar(p)}
                     title="Editar"
-                    style={{
-                      padding: "0.3rem 0.55rem", background: "rgba(0,212,170,0.1)",
-                      border: "1px solid rgba(0,212,170,0.25)", borderRadius: "6px",
-                      color: COR.teal, fontSize: "0.7rem", cursor: "pointer", fontWeight: 700,
-                    }}
-                  >✏️</button>
+                    className="!border-[#00d4aa]/25 !bg-[#00d4aa]/[0.1] !text-[#00d4aa] !rounded-md !h-8 !w-8 !p-0 !min-w-0">
+                    ✏️
+                  </Button>
                   {p.status === "vendido" && (
-                    <button type="button" onClick={() => marcarEntregue(p)}
+                    <Button type="button" variant="ghost" size="sm" onClick={() => marcarEntregue(p)}
                       title="Marcar como Entregue"
-                      style={{
-                        padding: "0.3rem 0.55rem", background: "rgba(245,166,35,0.12)",
-                        border: "1px solid rgba(245,166,35,0.3)", borderRadius: "6px",
-                        color: COR.primary, fontSize: "0.7rem", cursor: "pointer", fontWeight: 700,
-                      }}
-                    >📦</button>
+                      className="!border-[#f5a623]/30 !bg-[#f5a623]/[0.12] !text-[#f5a623] !rounded-md !h-8 !w-8 !p-0 !min-w-0">
+                      📦
+                    </Button>
                   )}
-                  <button type="button" onClick={() => removerProduto(p)}
+                  <Button type="button" variant="ghost" size="sm" onClick={() => removerProduto(p)}
                     title="Remover"
-                    style={{
-                      padding: "0.3rem 0.55rem", background: "rgba(239,68,68,0.1)",
-                      border: "1px solid rgba(239,68,68,0.25)", borderRadius: "6px",
-                      color: "#ef4444", fontSize: "0.7rem", cursor: "pointer", fontWeight: 700,
-                    }}
-                  >🗑️</button>
+                    className="!border-[#ef4444]/25 !bg-[#ef4444]/[0.1] !text-[#ef4444] !rounded-md !h-8 !w-8 !p-0 !min-w-0">
+                    🗑️
+                  </Button>
                 </div>
               </div>
             ))}
