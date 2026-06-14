@@ -266,6 +266,39 @@ img, svg { display: block; }
   .gut-bg-layer--desktop { opacity: 1; }
 }
 
+/* ── MC27 — Camada de vídeo em looping (sobrepõe .gut-bg-layer) ─────────────────
+   Mesmo posicionamento que .gut-bg-layer para anti-CLS (R4).
+   object-fit: cover replica o comportamento de background-size: cover.
+   pointer-events: none preserva a interatividade da UI (mesma regra das
+   camadas irmãs). Transição de opacidade para crossfade mobile/desktop
+   idêntico ao existente. */
+.gut-bg-video {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.6s var(--ease-out);
+}
+@starting-style {
+  .gut-bg-video { opacity: 0; }
+}
+.gut-bg-video--mobile {
+  opacity: 1;
+}
+.gut-bg-video--desktop {
+  opacity: 0;
+}
+@media (min-width: 768px) {
+  .gut-bg-video--mobile  { opacity: 0; }
+  .gut-bg-video--desktop { opacity: 1; }
+}
+/* Defesa em profundidade (R3): CSS esconde o vídeo mesmo que o JS falhe. */
+@media (prefers-reduced-motion: reduce) {
+  .gut-bg-video { display: none; }
+}
+
 /* ── MC20.2 ITEM 2b — Atmosfera "Vinheta de Foco" (-z-40) ─────────────────────
    Entre a Arena e a Superfície. O AtmosphereFilter (Motion) anima
    backdrop-filter/opacity por appState; aqui ficam só os estados de repouso. */

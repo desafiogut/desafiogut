@@ -10,8 +10,14 @@
 // env context — funciona em qualquer rota dentro do BrowserRouter. O .gut-bg-canvas
 // tem folga (inset negativo, em globals.css) para o translate nunca revelar bordas.
 // useReducedMotion() → sem parallax (complementa o guard global, anti-CLS — só transform).
+//
+// MC27 — Fundo animado em looping (par v3 "Profundidade Cinemática").
+// Melhoria progressiva: <video> com fallback estático (WebP) via onError.
+// prefers-reduced-motion → apenas imagem estática (R3).
+// Anti-CLS: poster = imagem estática oficial, mesmas dimensões do vídeo (R4).
 import { motion, useReducedMotion } from "framer-motion";
 import { useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 function offsetFor(pathname) {
   const p = (pathname || "/").toLowerCase();
@@ -27,6 +33,26 @@ export default function BackgroundCanvas() {
   const reduce = useReducedMotion();
   const x = reduce ? 0 : offsetFor(pathname);
 
+  // MC27 — Estado do vídeo: tenta reproduzir por padrão; fallback estático se
+  // o browser não suportar WebM/VP9 ou se o utilizador preferir redução de movimento.
+  const [videoEnabled, setVideoEnabled] = useState(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return true;
+    return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
+  const [videoError, setVideoError] = useState(false);
+
+  // Listener para mudanças em tempo real de prefers-reduced-motion (R3).
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handler = (e) => setVideoEnabled(!e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
+  // Dupla defesa: useReducedMotion() do framer-motion + matchMedia explícito.
+  const showVideo = videoEnabled && !videoError && !reduce;
+
   return (
     <motion.div
       className="gut-bg-canvas"
@@ -35,6 +61,32 @@ export default function BackgroundCanvas() {
       animate={{ x }}
       transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 55, damping: 20 }}
     >
+      {/* MC27 — Vídeo em looping (melhoria progressiva).
+          Renderizado DEPOIS dos <div>s no DOM → mesma z-index (-50), pinta por cima.
+          Quando falha (onError) ou prefers-reduced-motion, o vídeo é removido e os
+          <div>s .gut-bg-layer voltam a ser visíveis (comportamento MC26.1). */}
+      {showVideo && (
+        <>
+          <video
+            className="gut-bg-video gut-bg-video--mobile"
+            src="/assets/backgrounds/loops/fundo-loop-v3-mobile.webm"
+            poster="/assets/backgrounds/background-mobile.webp"
+            autoPlay muted loop playsInline disableRemotePlayback
+            onError={() => setVideoError(true)}
+            aria-hidden="true"
+          />
+          <video
+            className="gut-bg-video gut-bg-video--desktop"
+            src="/assets/backgrounds/loops/fundo-loop-v3-desktop.webm"
+            poster="/assets/backgrounds/background-desktop.webp"
+            autoPlay muted loop playsInline disableRemotePlayback
+            onError={() => setVideoError(true)}
+            aria-hidden="true"
+          />
+        </>
+      )}
+      {/* Fallback estático (MC26.1) — sempre presente. Coberto pelo vídeo quando
+          este carrega com sucesso (DOM order: vídeo depois = pinta por cima). */}
       <div className="gut-bg-layer gut-bg-layer--mobile" />
       <div className="gut-bg-layer gut-bg-layer--desktop" />
     </motion.div>
