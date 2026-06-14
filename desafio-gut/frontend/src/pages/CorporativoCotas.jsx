@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
 
 const COR_CATEGORIA = {
   bronze:   "#cd7f32",
@@ -52,13 +53,7 @@ export default function CorporativoCotas() {
     alert("Upgrade de cota requer aprovação da coordenação. Entre em contato.");
   };
 
-  const cardStyle = {
-    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-    border: "1px solid rgba(245,166,35,0.18)",
-    borderRadius: "16px",
-    padding: isMobile ? "1rem" : "1.25rem",
-    backdropFilter: "blur(16px)",
-  };
+  const cardCls = isMobile ? "p-4" : "p-5";
 
   const proximaCategoria = (() => {
     if (!cota?.categoria) return null;
@@ -79,13 +74,13 @@ export default function CorporativoCotas() {
       </header>
 
       {loading ? (
-        <div style={{ ...cardStyle, color: "#6b7db8" }}>Carregando cota…</div>
+        <GlassCard className={`${cardCls} text-[#6b7db8]`}>Carregando cota…</GlassCard>
       ) : !cota ? (
-        <div style={{ ...cardStyle, color: "#6b7db8" }}>
+        <GlassCard className={`${cardCls} text-[#6b7db8]`}>
           Nenhuma cota ativa. Fale com a coordenação para contratar uma.
-        </div>
+        </GlassCard>
       ) : (
-        <div style={cardStyle}>
+        <GlassCard className={cardCls}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
             <div>
               <div style={{ fontSize: "0.7rem", color: "#6b7db8", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
@@ -126,7 +121,7 @@ export default function CorporativoCotas() {
               </button>
             )}
           </div>
-        </div>
+        </GlassCard>
       )}
     </div>
   );
