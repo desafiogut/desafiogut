@@ -33,7 +33,7 @@ async function buscarClienteDoLeilaoAtivo(tipo) {
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.18)",
   gold: "#f5a623", bg: "#0a0f1a", surface: "rgba(8,30,64,0.82)",
-  text: "#e8f0fe", muted: "#4a6490",
+  text: "#e8f0fe", muted: "#6b7db8",
   success: "#10b981", danger: "#ef4444", warning: "#f97316", blue300: "#fbbf24",
 };
 

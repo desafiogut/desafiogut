@@ -188,7 +188,7 @@ export default function BottomNav() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
               <div>
                 <div style={{ fontWeight: "900", fontSize: "0.95rem", color: "#e8f0fe", letterSpacing: "0.02em" }}>DesafioGUT</div>
-                <div style={{ fontSize: "0.65rem", color: "#4a6490" }}>Grupo União e Trabalho</div>
+                <div style={{ fontSize: "0.65rem", color: "#6b7db8" }}>Grupo União e Trabalho</div>
               </div>
               <button
                 type="button"
@@ -220,7 +220,7 @@ export default function BottomNav() {
                   gap: "0.5rem",
                   background: "rgba(245,166,35,0.06)",
                   border: "1px dashed rgba(245,166,35,0.25)",
-                  borderRadius: "12px", color: "#5a7090",
+                  borderRadius: "12px", color: "#6b7db8",
                   fontSize: "0.9rem", fontWeight: 700,
                 }}
               >
@@ -257,7 +257,7 @@ export default function BottomNav() {
                   </div>
                 )}
                 {address && (
-                  <div style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "#4a6490", marginTop: "2px" }}>
+                  <div style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "#6b7db8", marginTop: "2px" }}>
                     {address.slice(0, 8)}...{address.slice(-6)}
                   </div>
                 )}

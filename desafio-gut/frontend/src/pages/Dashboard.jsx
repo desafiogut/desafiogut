@@ -10,7 +10,7 @@ import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
   gold: "#f5a623", goldDark: "#e89400",
-  text: "#e8f0fe", muted: "#5a7090",
+  text: "#e8f0fe", muted: "#6b7db8",
   success: "#10b981", amber: "#fbbf24", danger: "#ef4444", warning: "#f97316",
 };
 

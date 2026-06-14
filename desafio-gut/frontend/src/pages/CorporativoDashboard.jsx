@@ -10,7 +10,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 
 const COR = {
-  primary: "#f5a623", text: "#e8f0fe", muted: "#5a7090",
+  primary: "#f5a623", text: "#e8f0fe", muted: "#6b7db8",
   success: "#10b981", amber: "#fbbf24", teal: "#00d4aa",
 };
 

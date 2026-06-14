@@ -7,7 +7,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 const COR = {
-  text: "#e8f0fe", muted: "#5a7090", primary: "#f5a623",
+  text: "#e8f0fe", muted: "#6b7db8", primary: "#f5a623",
   success: "#10b981", teal: "#00d4aa", amber: "#fbbf24",
 };
 
@@ -168,7 +168,7 @@ function MetricaCard({ label, value, color, icon }) {
     }}>
       <span style={{ fontSize: "1.2rem" }}>{icon}</span>
       <span style={{ fontSize: "1.3rem", fontWeight: 900, color }}>{value}</span>
-      <span style={{ fontSize: "0.7rem", color: "#5a7090", fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: "0.7rem", color: "#6b7db8", fontWeight: 600 }}>{label}</span>
     </div>
   );
 }

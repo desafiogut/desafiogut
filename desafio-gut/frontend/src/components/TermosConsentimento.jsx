@@ -157,7 +157,7 @@ export default function TermosConsentimento({ onAceitar }) {
           </p>
 
           <div style={estilos.contatoBox}>
-            <p style={{ margin: 0, fontSize: "0.78rem", color: "#4a6490" }}>
+            <p style={{ margin: 0, fontSize: "0.78rem", color: "#6b7db8" }}>
               📧 Dúvidas: desafiogut01@gmail.com &nbsp;·&nbsp;
               📞 (92) 98428-5774 &nbsp;·&nbsp;
               🌐 www.grupouniaoetrabalho.com.br
@@ -235,7 +235,7 @@ const estilos = {
     marginBottom: "0.75rem",
   },
   titulo:   { margin: 0, fontSize: "1.5rem", fontWeight: "900", color: "#e8f0fe", letterSpacing: "0.04em" },
-  grupoNome: { margin: 0, fontSize: "0.72rem", color: "#4a6490" },
+  grupoNome: { margin: 0, fontSize: "0.72rem", color: "#6b7db8" },
   subtitulo: { margin: 0, color: "#fbbf24", fontSize: "0.88rem", lineHeight: "1.5" },
   secaoTitulo: {
     margin: "0 0 1rem", fontSize: "0.9rem", fontWeight: "800",
@@ -279,7 +279,7 @@ const estilos = {
     boxShadow: "0 4px 20px rgba(245,166,35,0.4)",
   },
   rodapeLegal: {
-    margin: 0, fontSize: "0.68rem", color: "#4a6490",
+    margin: 0, fontSize: "0.68rem", color: "#6b7db8",
     textAlign: "center", letterSpacing: "0.03em",
   },
 };
