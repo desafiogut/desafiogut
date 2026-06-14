@@ -6,6 +6,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import FimLeilaoOverlay from "../components/FimLeilaoOverlay.jsx";
 import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
+import { GlassCard } from "@/components/ui";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -52,7 +53,7 @@ const TOTAL_POR_TIPO = { relampago: 1800, programado: 86400 };
 // MC15.4 ITEM 7 — card de cronómetro independente por edição. timeLeft é
 // derivado de termino_em (server-authoritative) a cada tick → imune a F5/login.
 // A animação de fim usa a ref desta edição (Map), isolando-a das demais (ITEM 13).
-function EdicaoTimerCard({ edicao, isMobile, cardStyle, cardTituloStyle }) {
+function EdicaoTimerCard({ edicao, isMobile, cardCls, cardTituloStyle }) {
   const navigate = useNavigate();
   const {
     edicoesTick, timeLeftEdicaoSegundos, getFimDisparadoRef,
@@ -81,7 +82,7 @@ function EdicaoTimerCard({ edicao, isMobile, cardStyle, cardTituloStyle }) {
   const tipoLabel = edicao.tipo === "programado" ? "🎫 Programado" : "⚡ Relâmpago";
 
   return (
-    <div style={cardStyle}>
+    <GlassCard className={cardCls}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? "0.5rem" : "0.75rem" }}>
         <h3 style={{ ...cardTituloStyle, margin: 0 }}>{tipoLabel}</h3>
         <span style={{
@@ -150,7 +151,7 @@ function EdicaoTimerCard({ edicao, isMobile, cardStyle, cardTituloStyle }) {
           EDICAO_ATIVA={edicao.id}
         />
       )}
-    </div>
+    </GlassCard>
   );
 }
 
@@ -228,17 +229,8 @@ export default function Dashboard() {
   const sectionGap = isMobile ? "1.25rem" : "2rem";
   const innerGap   = isMobile ? "0.75rem" : "1rem";
 
-  // MC20.2 — vidro temperado (assinatura .gut-glass) nos cards da Dashboard:
-  // navy/25 + backdrop-blur-xl + border white/10 + shadow + ring-inset white/5.
-  const card = {
-    background: "rgba(13,18,53,0.25)",
-    border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: "16px",
-    padding: cardPad,
-    backdropFilter: "blur(24px) saturate(135%)",
-    WebkitBackdropFilter: "blur(24px) saturate(135%)",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05)",
-  };
+  // MC23.3 — GlassCard primitivo substitui o objeto inline card.
+  const cardCls = isMobile ? "p-4" : "p-5";
   const cardTitulo = {
     margin: `0 0 ${isMobile ? "0.75rem" : "1rem"}`,
     fontSize: "0.85rem",
@@ -340,7 +332,7 @@ export default function Dashboard() {
         marginBottom: sectionGap,
       }}>
         {/* Status do leilão */}
-        <div style={card}>
+        <GlassCard className={cardCls}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? "0.5rem" : "0.75rem" }}>
             <h3 style={{ ...cardTitulo, margin: 0 }}>🎯 Edição Ativa</h3>
             <span style={{
@@ -434,10 +426,10 @@ export default function Dashboard() {
           >
             ⚡ Ir para o Mercado de Lances
           </button>
-        </div>
+        </GlassCard>
 
         {/* Vencedor atual */}
-        <div style={{ ...card, minHeight: isMobile ? "152px" : "auto", display: "flex", flexDirection: "column" }}>
+        <GlassCard className={`${cardCls} flex flex-col ${isMobile ? 'min-h-[152px]' : ''}`}>
           <h3 style={cardTitulo}>🏆 Menor Lance Único</h3>
           {vencedor ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
@@ -464,7 +456,7 @@ export default function Dashboard() {
               <div>Nenhum lance único ainda.</div>
             </div>
           )}
-        </div>
+        </GlassCard>
       </section>
 
       {/* ── MC15.4 ITEM 7 — Outras edições com cronómetros independentes ── */}
@@ -481,7 +473,7 @@ export default function Dashboard() {
                 key={ed.id}
                 edicao={ed}
                 isMobile={isMobile}
-                cardStyle={card}
+                cardCls={cardCls}
                 cardTituloStyle={cardTitulo}
               />
             ))}
@@ -490,7 +482,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Atalhos ── */}
-      <section style={card}>
+      <GlassCard as="section" className={cardCls}>
         <h3 style={cardTitulo}>🚀 Acesso Rápido</h3>
         <div style={{
           display: "grid",
@@ -520,7 +512,7 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
-      </section>
+      </GlassCard>
 
       {/* MC16 — overlay de fim de leilão (relâmpago e programado) */}
       {showOverlay && (
