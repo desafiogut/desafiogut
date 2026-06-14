@@ -61,10 +61,16 @@ export default function BackgroundCanvas() {
       animate={{ x }}
       transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 55, damping: 20 }}
     >
+      {/* Fallback estático (MC26.1) — sempre presente no DOM. Renderizado PRIMEIRO
+          para que os <video> (renderizados depois) pintem por cima no mesmo z-index
+          (-50). Quando o vídeo falha (onError) ou prefers-reduced-motion, o vídeo
+          é removido e estas layers voltam a ser visíveis (comportamento MC26.1). */}
+      <div className="gut-bg-layer gut-bg-layer--mobile" />
+      <div className="gut-bg-layer gut-bg-layer--desktop" />
       {/* MC27 — Vídeo em looping (melhoria progressiva).
-          Renderizado DEPOIS dos <div>s no DOM → mesma z-index (-50), pinta por cima.
-          Quando falha (onError) ou prefers-reduced-motion, o vídeo é removido e os
-          <div>s .gut-bg-layer voltam a ser visíveis (comportamento MC26.1). */}
+          Renderizado DEPOIS dos <div>s no DOM → mesma z-index (-50), pinta por cima
+          (DOM paint order). Quando falha (onError) ou prefers-reduced-motion, o
+          vídeo é removido e os <div>s .gut-bg-layer voltam a ser visíveis. */}
       {showVideo && (
         <>
           <video
@@ -85,10 +91,6 @@ export default function BackgroundCanvas() {
           />
         </>
       )}
-      {/* Fallback estático (MC26.1) — sempre presente. Coberto pelo vídeo quando
-          este carrega com sucesso (DOM order: vídeo depois = pinta por cima). */}
-      <div className="gut-bg-layer gut-bg-layer--mobile" />
-      <div className="gut-bg-layer gut-bg-layer--desktop" />
     </motion.div>
   );
 }
