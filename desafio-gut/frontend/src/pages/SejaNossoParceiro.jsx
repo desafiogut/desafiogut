@@ -303,6 +303,14 @@ export default function SejaNossoParceiro() {
     padding: isMobile ? "1.25rem" : "1.5rem",
     backdropFilter: "blur(16px)",
   };
+  // MC24 — selectStyle preservado para <select> (não migrado para Input componente).
+  const selectStyle = {
+    width: "100%", padding: "0.7rem 0.9rem",
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(245,166,35,0.25)",
+    borderRadius: "8px", color: COR.text,
+    fontSize: "0.92rem", outline: "none",
+  };
   const labelStyle = {
     display: "block", marginBottom: "0.4rem",
     color: COR.muted, fontSize: "0.8rem", fontWeight: 600,
@@ -581,7 +589,7 @@ export default function SejaNossoParceiro() {
               <select
                 value={segmento}
                 onChange={e => setSegmento(e.target.value)}
-                style={{ ...inputStyle, cursor: "pointer" }}
+                style={{ ...selectStyle, cursor: "pointer" }}
               >
                 {SEGMENTOS.map(s => (
                   <option key={s} value={s} style={{ background: "#0a0f1a" }}>{s}</option>

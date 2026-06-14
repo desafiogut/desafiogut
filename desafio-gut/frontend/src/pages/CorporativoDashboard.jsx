@@ -327,6 +327,19 @@ export default function CorporativoDashboard() {
 
   const cardCls = isMobile ? "p-4" : "p-5";
 
+  // MC24 — inputStyle preservado para <select> e <textarea> (não migrados para Input componente).
+  const inputStyle = {
+    padding: "0.5rem 0.7rem",
+    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+    border: "1px solid rgba(245,166,35,0.25)",
+    borderRadius: "8px",
+    color: "#e8f0fe",
+    fontSize: "0.88rem",
+    outline: "none",
+    width: "100%",
+    boxSizing: "border-box",
+  };
+
 
   const cards = [
     { label: "Cota ativa",     value: categoria.toUpperCase(),  color: COR.primary, icon: "📢", to: "/corporativo/cotas" },
