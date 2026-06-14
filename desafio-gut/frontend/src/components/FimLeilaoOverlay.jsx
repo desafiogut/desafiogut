@@ -2,6 +2,7 @@
 // Disparado via showOverlay (AppContext) com flag anti-duplicação fimDisparadoRef.
 
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
 import Confetti from "./Confetti.jsx";
 
 const COR = { gold: "#f5a623" };
@@ -32,14 +33,10 @@ export default function FimLeilaoOverlay({ vencedor, tipoLeilao, onNovaRodada, E
         display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
         overflow: "hidden",
       }}>
-        <div onClick={(e) => e.stopPropagation()} style={{
-          background: "linear-gradient(135deg,#0a1628 0%,#0f172a 60%)",
-          border: "2px solid #fbbf24", borderRadius: "20px",
-          padding: isMobile ? "1.75rem 1.25rem" : "2.5rem 2rem",
-          maxWidth: "480px", width: "100%",
-          textAlign: "center", color: "#e8f0fe",
-          animation: "gut-gold-pulse-mc16 2s ease-in-out infinite, gut-slide-up-modal-mc16 0.5s ease-out both",
-        }}>
+        <GlassCard
+          onClick={(e) => e.stopPropagation()}
+          className={`text-center max-w-[480px] w-full !border-2 !border-[#fbbf24] !rounded-[20px] ${isMobile ? 'p-7' : 'p-10'} [animation:gut-gold-pulse-mc16_2s_ease-in-out_infinite,gut-slide-up-modal-mc16_0.5s_ease-out_both]`}
+        >
           <div style={{ fontSize: isMobile ? "2.75rem" : "3.5rem", lineHeight: 1 }}>🏆</div>
           <h2 style={{
             margin: "0.75rem 0 0.25rem",
@@ -54,11 +51,7 @@ export default function FimLeilaoOverlay({ vencedor, tipoLeilao, onNovaRodada, E
             {" · "}{tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
           </p>
           {vencedor ? (
-            <div style={{
-              background: "#0a1e38", border: `1px solid ${COR.gold}`,
-              borderRadius: "12px", padding: isMobile ? "1rem" : "1.25rem",
-              marginBottom: "1.25rem",
-            }}>
+            <GlassCard className={`!border-[#fbbf24] !rounded-xl ${isMobile ? 'p-4' : 'p-5'} mb-5`}>
               <p style={{ margin: "0 0 0.4rem", fontSize: "0.72rem", color: "#6b7db8",
                 textTransform: "uppercase", letterSpacing: "0.08em" }}>Carteira Vencedora</p>
               <p style={{ margin: "0 0 0.75rem", fontFamily: "monospace",
@@ -67,7 +60,7 @@ export default function FimLeilaoOverlay({ vencedor, tipoLeilao, onNovaRodada, E
               </p>
               <p style={{ margin: 0, fontSize: isMobile ? "1.7rem" : "2rem", fontWeight: "900",
                 color: "#fbbf24", textShadow: "0 0 12px #fbbf24" }}>{valorFmt}</p>
-            </div>
+            </GlassCard>
           ) : (
             <div style={{ padding: "1.25rem", color: "#6b7db8", marginBottom: "1.25rem" }}>
               Nenhum lance único registrado.
@@ -84,7 +77,7 @@ export default function FimLeilaoOverlay({ vencedor, tipoLeilao, onNovaRodada, E
           >
             ⚡ NOVA RODADA
           </button>
-        </div>
+        </GlassCard>
       </div>
     </>
   );
