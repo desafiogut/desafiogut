@@ -1,4 +1,4 @@
-// Vitrine — 4 slots de categoria conforme Especificação Refatorada §2 e §3.2.
+﻿// Vitrine — 4 slots de categoria conforme Especificação Refatorada §2 e §3.2.
 //
 // REQ-13 (Desktop): grid de 4 slots simultaneamente visíveis.
 // REQ-14 (Mobile <768px): Slot 1 (Diamante) e Slot 2 (Ouro) sticky no topo.
@@ -270,7 +270,7 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
               style={{
                 display: "flex", alignItems: "center", gap: "0.6rem",
                 padding: "0.5rem 0.6rem",
-                background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+                background: "rgba(13,18,53,0.25)",
                 border: `1px solid ${slot.corBorda}55`,
                 borderRadius: "10px",
                 textDecoration: "none",
@@ -392,7 +392,7 @@ function VitrineDetalhe({ slot, isMobile }) {
 
         <div style={{
           padding: "0.85rem 1rem",
-          background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+          background: "rgba(13,18,53,0.25)",
           borderRadius: "10px",
           border: "1px dashed rgba(255,255,255,0.1)",
           fontSize: "0.78rem", color: "#94a3b8", lineHeight: 1.5,

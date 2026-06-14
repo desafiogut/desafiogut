@@ -133,9 +133,9 @@ export default function Sidebar() {
   const W = collapsed ? "72px" : "240px";
 
   return (
-    <aside className="nav-glass" style={{
-      /* MC22.2 — rail flutuante com piso de opacidade próprio (.nav-glass navy/0.66).
-         Independente do --glass-opacity: nunca mais desaparece na Arena (D5). */
+    <aside className="gut-glass-standard" style={{
+      /* MC25.3 — rail flutuante com .gut-glass-standard (navy/0.25 fixo).
+         Padrão único e imutável. */
       width: W, minWidth: W, height: "calc(100vh - 24px)",
       /* MC22.2 — rail à ESQUERDA (margem à esquerda). */
       margin: "12px 0 12px 12px",

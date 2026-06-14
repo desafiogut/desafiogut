@@ -7,11 +7,9 @@ import { sepolia as sepoliaChain } from "viem/chains"; // viem instalado como de
 import * as Sentry from "@sentry/react";
 import App from "./App.jsx";
 import ReferralTracker from "./components/ReferralTracker.jsx";
-import { applyStoredGlassOpacity } from "./components/SliderOpacidade.jsx";
 
-// MC22.1 SECÇÃO B — re-aplica a opacidade do vidro escolhida pelo utilizador no boot
-// (antes do primeiro paint), para valer em TODAS as rotas, não só em Configurações.
-applyStoredGlassOpacity();
+// MC25.3 — SliderOpacidade removido. O vidro agora é fixo (.gut-glass-standard),
+// padrão navy-based imutável. Nenhuma opacidade dinâmica para restaurar.
 
 // Sentry init — no-op em ambientes sem VITE_SENTRY_DSN (dev local sem env).
 // beforeSend strippa qualquer payload contendo "argon2id_" como defesa em

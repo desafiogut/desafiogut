@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { useAppContext } from "../../context/AppContext.jsx";
@@ -112,7 +112,7 @@ export default function BottomNav() {
           desliza entre as tabs principais; "Mais" mantém highlight estático. */}
       <nav
         aria-label="Navegação principal"
-        className="nav-glass"
+        className="gut-glass-standard"
         style={{
           position: "fixed",
           bottom: `calc(${DOCK_MARGIN}px + env(safe-area-inset-bottom, 0px))`,
@@ -173,12 +173,12 @@ export default function BottomNav() {
             aria-label="Mais opções"
             style={{
               position: "fixed", left: 0, right: 0, bottom: 0,
-              /* MC22.2 SECÇÃO C — superfície de navegação UNIFICADA (.nav-glass):
-                 mesmo navy translúcido do Nav Dock, blur sempre ligado. */
-              background: "var(--nav-glass)",
-              backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)",
+              /* MC25.3 — .gut-glass-standard inline: navy/0.25 fixo, blur(24px)
+                 saturate(135%), border white/10, shadow + ring-inset white/5. */
+              background: "rgba(13,18,53,0.25)",
+              backdropFilter: "blur(24px) saturate(135%)", WebkitBackdropFilter: "blur(24px) saturate(135%)",
               borderTop: "1px solid rgba(255,255,255,0.10)",
-              boxShadow: "0 -8px 32px rgba(0,0,0,0.5)",
+              boxShadow: "0 -8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05)",
               maxHeight: "82vh", overflowY: "auto",
               borderTopLeftRadius: "20px", borderTopRightRadius: "20px",
               padding: "1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px))",

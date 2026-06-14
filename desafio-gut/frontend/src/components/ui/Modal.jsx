@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 /**
  * Modal — MC21.1 / MC23.3
  * Overlay bg-black/60 (escurece a arena sem a tapar com cor sólida de painel) +
- * conteúdo em vidro temperado (.glass-panel). Entrada com spring (scale 0.95→1).
+ * conteúdo em .gut-glass-standard (MC25.3). Entrada com spring (scale 0.95→1).
  * Fecha por backdrop ou Esc. @design-engineering (spring) + @impeccable-design.
  *
  * @param {"center"|"bottom"} position — "center" (default) centrado com spring scale;
@@ -64,7 +64,7 @@ function Modal({ open, onClose, children, className, labelledBy, position = "cen
             {...panelAnim}
             transition={panelTransition}
             className={cn(
-              "glass-panel relative z-10 w-full max-w-lg rounded-2xl p-6 text-[var(--color-gut-text)]",
+              "gut-glass-standard relative z-10 w-full max-w-lg rounded-2xl p-6 text-[var(--color-gut-text)]",
               isBottom && "rounded-b-none max-w-full",
               className
             )}

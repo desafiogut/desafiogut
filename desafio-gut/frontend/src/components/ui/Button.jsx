@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
  * Button — MC21.1
  * Variantes:
  *  - primary   → acento cirúrgico laranja (1 CTA por vista, @impeccable-design).
- *  - secondary → vidro temperado (.glass-panel).
+ *  - secondary → .gut-glass-standard (MC25.3, navy-based fixo).
  *  - ghost     → transparente.
  * Spring physics (@design-engineering): whileTap scale 0.98, stiffness 400 / damping 25.
  * useReducedMotion desativa o movimento.
@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 const VARIANTS = {
   primary:
     "bg-orange-500 text-[#0a0f1a] font-bold hover:bg-orange-400 shadow-[0_4px_24px_rgba(255,107,53,0.35)]",
-  secondary: "glass-panel text-[var(--color-gut-text)] hover:bg-white/[0.06]",
+  secondary: "gut-glass-standard gut-glass--interactive text-[var(--color-gut-text)]",
   ghost:
     "bg-transparent text-[var(--color-gut-text)] hover:bg-white/[0.04] border border-transparent",
 };

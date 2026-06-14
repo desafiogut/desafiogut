@@ -18,7 +18,7 @@ function Tooltip({ label, children, side = "top", className }) {
         role="tooltip"
         className={cn(
           "pointer-events-none absolute left-1/2 -translate-x-1/2 z-50 whitespace-nowrap",
-          "glass-panel rounded-lg px-2.5 py-1.5 text-xs text-[var(--color-gut-text)]",
+          "gut-glass-standard rounded-lg px-2.5 py-1.5 text-xs text-[var(--color-gut-text)]",
           "opacity-0 translate-y-1 transition-all duration-150",
           "group-hover:opacity-100 group-hover:translate-y-0",
           "group-focus-within:opacity-100 group-focus-within:translate-y-0",
