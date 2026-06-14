@@ -2,7 +2,7 @@
 
 > Nenhum código entra em produção sem passar por este checklist. Se não estiver sólido,
 > **NÃO fazer merge**. Resultado da validação preenchido por revisão; PENDENTE bloqueia.
-> Última auditoria: 2026-06-12 (MC20.3). Escopo auditado: redesign frontend MC20.x (UI/UX).
+> Última auditoria: 2026-06-14 (MC23.3). Escopo auditado: Glass UI primitives + Modal migration.
 
 Legenda: ✅ PASS · ⚠️ ATENÇÃO · ⏸️ PENDENTE · N/A não aplicável a esta alteração.
 
@@ -28,6 +28,7 @@ Legenda: ✅ PASS · ⚠️ ATENÇÃO · ⏸️ PENDENTE · N/A não aplicável 
 - [✅] **Logs com metadados** — Sentry com tags `{idEdicao, wallet, chainId, fase}` + scrub de `argon2id_`; `[GUT-DEBUG]` para CSP/erros/unhandledrejection.
 - [✅] **rollback_ui()** — hoje o saldo só muda após confirmação on-chain (não há estado otimista a reverter). `useShakeOnError` (MC20.3) está PRONTO para ligar ao rollback quando o ITEM 10 avançar.
 - **MC20.x:** AtmosphereFilter/GutoSpritePlayer degradam graciosamente (`useReducedMotion`, fallback de frame). ✅
+- **MC23.3:** Migração Glass UI — `.glass-panel` consistente substitui estilos inline dispersos (`backdropFilter`, `rgba()`, `boxShadow`). 5 primitivos (GlassCard, Button, Input, Table, Modal) com API auditada. Redução de superfície: 34→15 ficheiros com estilos glass inline. Nenhuma lógica de negócio alterada. ✅
 
 ## 4. AUDITORIA DE CÓDIGO
 - [✅] **Lógica de lance alterada nas últimas 24h?** — Sim, mas **só apresentação** (motion.button). Lógica de negócio/on-chain intacta → teste de concorrência não exigido para esta alteração (sem mudança no caminho transacional).
