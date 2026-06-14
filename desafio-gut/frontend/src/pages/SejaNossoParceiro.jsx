@@ -1,4 +1,4 @@
-// MC11.1 — Seção pública "Seja Nosso Parceiro!".
+﻿// MC11.1 — Seção pública "Seja Nosso Parceiro!".
 // MC12 — formulário de cadastro corporativo funcional (CNPJ, empresa, etc.)
 // MC12.3 — Login Corporativo Independente: form sem login prévio, porta separada.
 // MC12.3.1 — Cadastro DIRETO sem email-OTP: POST register-corporativo no submit,
@@ -17,7 +17,7 @@ import { Button, Input } from "@/components/ui";
 
 const COR = {
   text: "#e8f0fe", muted: "#6b7db8", primary: "#f5a623",
-  bg: "rgba(255,255,255, var(--glass-opacity, 0.03))", bgSoft: "rgba(245,166,35,0.07)",
+  bg: "rgba(13,18,53,0.25)", bgSoft: "rgba(245,166,35,0.07)",
   teal: "#00d4aa", success: "#10b981",
 };
 

@@ -1,11 +1,11 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIdioma } from "../context/IdiomaContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 import { Button } from "@/components/ui";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
-import SliderOpacidade from "../components/SliderOpacidade.jsx";
+// MC25.3 — SliderOpacidade removido. Vidro fixo (.gut-glass-standard).
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -138,7 +138,7 @@ export default function Configuracoes() {
               onChange={(e) => setLang(e.target.value)}
               aria-label={t("config.idioma")}
               style={{
-                background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+                background: "rgba(13,18,53,0.25)",
                 border: "1px solid rgba(245,166,35,0.25)",
                 borderRadius: "8px", color: COR.blue300,
                 padding: "0.4rem 0.75rem",
@@ -151,8 +151,7 @@ export default function Configuracoes() {
             </select>
           </div>
 
-          {/* MC22.1 SECÇÃO B — Intensidade do vidro (substitui o antigo toggle "Tema", inerte). */}
-          <SliderOpacidade label={t("config.intensidadeVidro")} isMobile={isMobile} />
+          {/* MC25.3 — Slider de opacidade removido. O vidro .gut-glass-standard é fixo e imutável. */}
         </div>
       </GlassCard>
 

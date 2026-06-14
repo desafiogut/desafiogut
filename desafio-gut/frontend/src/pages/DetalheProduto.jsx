@@ -1,4 +1,4 @@
-// DetalheProduto — Página de detalhe de um produto do Marketplace (MC15 ITEM 4).
+﻿// DetalheProduto — Página de detalhe de um produto do Marketplace (MC15 ITEM 4).
 // Rota: /produto/:id
 // Exibe foto, descrição, preço, loja, GUTO apresentador, input de lance,
 // LanceStatusBadge, cronômetro da edição e histórico de lances.
@@ -230,7 +230,7 @@ export default function DetalheProduto() {
                   placeholder="Ex: 150"
                   style={{
                     flex: 1, padding: "0.55rem 0.7rem",
-                    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+                    background: "rgba(13,18,53,0.25)",
                     border: `1px solid ${catColor}44`,
                     borderRadius: "8px", color: COR.text, fontSize: "0.9rem", outline: "none",
                   }}

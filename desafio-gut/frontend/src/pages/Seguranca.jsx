@@ -1,4 +1,4 @@
-import { useAppContext } from "../context/AppContext.jsx";
+﻿import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 
@@ -75,7 +75,7 @@ export default function Seguranca() {
         }}>
           {sessionItems.map(({ label, value, color, mono }) => (
             <div key={label} style={{
-              background: "rgba(255,255,255, var(--glass-opacity, 0.03))", borderRadius: "10px",
+              background: "rgba(13,18,53,0.25)", borderRadius: "10px",
               padding: "0.75rem 0.85rem", border: "1px solid rgba(245,166,35,0.12)",
               minWidth: 0,
             }}>
@@ -148,7 +148,7 @@ export default function Seguranca() {
             <a key={label} href={href} target="_blank" rel="noopener noreferrer" style={{
               display: "block",
               padding: isMobile ? "0.75rem 0.85rem" : "0.85rem",
-              background: "rgba(255,255,255, var(--glass-opacity, 0.03))", borderRadius: "10px",
+              background: "rgba(13,18,53,0.25)", borderRadius: "10px",
               border: "1px solid rgba(245,166,35,0.12)",
               textDecoration: "none", transition: "all 0.15s",
             }}>

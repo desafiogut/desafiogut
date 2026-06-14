@@ -11,7 +11,7 @@ function ErrorState({ title, hint, action, className }) {
     <div
       role="alert"
       className={cn(
-        "glass-panel rounded-2xl border-rose-500/20 text-center",
+        "gut-glass-standard rounded-[14px] border-rose-500/20 text-center",
         "flex flex-col items-center justify-center gap-2 py-8 px-6",
         className
       )}

@@ -5,9 +5,9 @@ const Card = React.forwardRef(({ className, glow, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      // MC20.2 — vidro temperado (assinatura única .gut-glass): bg navy/25,
-      // backdrop-blur-xl, border white/10, shadow, ring-inset white/5 + reflexo.
-      "gut-glass rounded-2xl text-[var(--color-gut-text)]",
+      // MC25.3 — .gut-glass-standard: padrão navy-based fixo (rgba(13,18,53,0.25)),
+      // blur(24px) saturate(135%) sempre ligado, border white/10, shadow + ring-inset.
+      "gut-glass-standard rounded-[14px] text-[var(--color-gut-text)]",
       // conditional glow animation (sobrepõe o box-shadow durante o pulso — efeito desejado)
       glow === "primary" && "[animation:var(--animate-glow-pulse)]",
       glow === "gold"    && "[animation:var(--animate-gold-pulse)]",

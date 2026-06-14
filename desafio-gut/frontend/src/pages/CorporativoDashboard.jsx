@@ -1,4 +1,4 @@
-// MC11 — Painel do Lojista (Usuário Corporativo).
+﻿// MC11 — Painel do Lojista (Usuário Corporativo).
 // Exibe cards de cotas ativas, banners ativos, impressões e saldo wallet.
 // Dados via /cotas + /banners + /corporativo-analytics (endpoint MC11).
 // Acesso gated em App.jsx — usuário comum é redirecionado para "/".
@@ -330,7 +330,7 @@ export default function CorporativoDashboard() {
   // MC24 — inputStyle preservado para <select> e <textarea> (não migrados para Input componente).
   const inputStyle = {
     padding: "0.5rem 0.7rem",
-    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+    background: "rgba(13,18,53,0.25)",
     border: "1px solid rgba(245,166,35,0.25)",
     borderRadius: "8px",
     color: "#e8f0fe",
@@ -572,7 +572,7 @@ export default function CorporativoDashboard() {
               <div key={p.id} style={{
                 display: "flex", gap: "0.75rem", alignItems: "center",
                 padding: "0.65rem 0.75rem",
-                background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+                background: "rgba(13,18,53,0.25)",
                 border: "1px solid rgba(245,166,35,0.12)",
                 borderRadius: "10px",
               }}>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import Confetti from "../components/Confetti.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
@@ -465,7 +465,7 @@ export default function MercadoLances() {
             />
 
             <div style={{
-              background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+              background: "rgba(13,18,53,0.25)",
               backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
               borderRadius: "16px",
               padding: isMobile ? "1rem" : "1.25rem",
