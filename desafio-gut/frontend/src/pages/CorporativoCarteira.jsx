@@ -13,6 +13,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 // MC17.3 — elementos do lojista realocados da MinhaCarteira (utilizador comum):
@@ -146,11 +147,7 @@ export default function CorporativoCarteira() {
     }
   }
 
-  const card = {
-    background: "rgba(255,255,255, var(--glass-opacity, 0.03))", border: "1px solid rgba(245,166,35,0.18)",
-    borderRadius: "16px", padding: isMobile ? "1rem" : "1.25rem",
-    backdropFilter: "blur(16px)", marginBottom: isMobile ? "1rem" : "1.25rem",
-  };
+  const cardCls = `${isMobile ? 'p-4 mb-4' : 'p-5 mb-5'}`;
   const lbl = { fontSize: "0.7rem", color: "#6b7db8", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 };
   const btn = (cor, off) => ({
     padding: "0.65rem 1rem", background: off ? "rgba(245,166,35,0.2)" : `linear-gradient(135deg,${cor},${cor}cc)`,

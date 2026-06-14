@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
 import PainelIndicacao from "../components/PainelIndicacao.jsx";
@@ -77,13 +78,7 @@ export default function MinhaCarteira() {
   const cardPad    = isMobile ? "1rem" : "1.25rem";
   const sectionGap = isMobile ? "1.25rem" : "1.5rem";
 
-  const cardStyle = {
-    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-    border: "1px solid rgba(245,166,35,0.18)",
-    borderRadius: "16px",
-    padding: cardPad,
-    backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-  };
+  const cardCls = isMobile ? "p-4" : "p-5";
   const tituloStyle = {
     margin: `0 0 ${isMobile ? "0.75rem" : "1rem"}`,
     fontSize: isMobile ? "0.85rem" : "0.88rem",

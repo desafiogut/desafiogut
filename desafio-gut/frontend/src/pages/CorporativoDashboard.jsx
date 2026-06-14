@@ -7,6 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 
 const COR = {
@@ -324,13 +325,7 @@ export default function CorporativoDashboard() {
   const impressoes = analytics?.totais?.impressoes ?? 0;
   const saldoBrl   = saldoRsCentavos == null ? "—" : `R$ ${(saldoRsCentavos / 100).toFixed(2)}`;
 
-  const cardStyle = {
-    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-    border: "1px solid rgba(245,166,35,0.18)",
-    borderRadius: "16px",
-    padding: isMobile ? "1rem" : "1.25rem",
-    backdropFilter: "blur(16px)",
-  };
+  const cardCls = isMobile ? "p-4" : "p-5";
 
   const inputStyle = {
     padding: "0.5rem 0.7rem",
