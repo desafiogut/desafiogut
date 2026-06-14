@@ -13,6 +13,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { getVisitorId } from "../lib/fingerprint.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
+import { Button } from "@/components/ui";
 
 const COR = {
   text: "#e8f0fe", muted: "#6b7db8", primary: "#f5a623",
@@ -472,35 +473,16 @@ export default function SejaNossoParceiro() {
             </p>
           )}
           <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem", flexWrap: "wrap" }}>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={confirmarCodigo}
+            <Button variant="primary" size="md" onClick={confirmarCodigo}
               disabled={otpState.status === "submitting-code" || codigo.length < 6}
-              style={{
-                padding: "0.7rem 1.5rem",
-                background: `linear-gradient(135deg, ${COR.teal}, #00a888)`,
-                border: "none", borderRadius: "10px", color: "#0a0f1a",
-                fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
-                fontSize: "0.9rem",
-                cursor: otpState.status === "submitting-code" || codigo.length < 6 ? "not-allowed" : "pointer",
-                opacity: otpState.status === "submitting-code" || codigo.length < 6 ? 0.6 : 1,
-              }}
-            >
+              className="!bg-gradient-to-br !from-[#00d4aa] !to-[#00a888] hover:!from-[#00e4ba] hover:!to-[#00b898] !shadow-none font-['Orbitron']">
               {otpState.status === "submitting-code" ? "Verificando…" : "Confirmar código"}
-            </motion.button>
-            <button
-              onClick={reenviarCodigo}
+            </Button>
+            <Button variant="ghost" size="md" onClick={reenviarCodigo}
               disabled={otpState.status === "sending-code"}
-              style={{
-                padding: "0.7rem 1rem", background: "transparent",
-                border: `1px solid ${COR.muted}55`, borderRadius: "10px",
-                color: COR.muted, fontWeight: 700, fontSize: "0.85rem",
-                cursor: otpState.status === "sending-code" ? "not-allowed" : "pointer",
-              }}
-            >
+              className="!border-[#6b7db8]/33 !text-[#6b7db8]">
               {otpState.status === "sending-code" ? "Enviando…" : "Reenviar código"}
-            </button>
+            </Button>
           </div>
         </motion.section>
       )}
@@ -524,30 +506,17 @@ export default function SejaNossoParceiro() {
           ].map((t) => {
             const ativo = aba === t.id;
             return (
-              <button
+              <Button
                 key={t.id}
+                variant={ativo ? "primary" : "ghost"}
+                size="md"
                 role="tab"
                 aria-selected={ativo}
                 onClick={() => setAba(t.id)}
-                style={{
-                  flex: 1,
-                  padding: "0.7rem 1rem",
-                  background: ativo ? COR.primary : "transparent",
-                  border: ativo
-                    ? `1px solid ${COR.primary}`
-                    : `1px solid rgba(245,166,35,0.3)`,
-                  borderRadius: "10px",
-                  color: ativo ? "#0a0f1a" : COR.muted,
-                  fontFamily: "'Orbitron', sans-serif",
-                  fontWeight: 800,
-                  fontSize: "0.82rem",
-                  letterSpacing: "0.02em",
-                  cursor: "pointer",
-                  outlineOffset: "2px",
-                }}
+                className={ativo ? "flex-1 font-['Orbitron'] tracking-[0.02em]" : "flex-1 !border-[#f5a623]/30 !text-[#6b7db8] font-['Orbitron'] tracking-[0.02em]"}
               >
                 {t.rotulo}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -674,27 +643,10 @@ export default function SejaNossoParceiro() {
                 ⚠️ {erro}
               </div>
             )}
-            <motion.button
-              type="submit"
-              disabled={enviando}
-              whileHover={enviando ? {} : { scale: 1.02 }}
-              whileTap={enviando ? {} : { scale: 0.98 }}
-              style={{
-                padding: "0.85rem 1.5rem",
-                background: enviando
-                  ? "rgba(245,166,35,0.3)"
-                  : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
-                border: "none", borderRadius: "10px",
-                color: enviando ? COR.muted : "#0a0f1a",
-                fontFamily: "'Orbitron', sans-serif",
-                fontWeight: 800, fontSize: "0.9rem",
-                cursor: enviando ? "wait" : "pointer",
-                opacity: enviando ? 0.7 : 1,
-                marginTop: "0.5rem",
-              }}
-            >
+            <Button type="submit" variant="primary" size="lg" disabled={enviando}
+              className="w-full mt-2 font-['Orbitron']">
               {enviando ? "⏳ Enviando cadastro…" : "⚡ Enviar cadastro corporativo"}
-            </motion.button>
+            </Button>
           </form>
         </motion.section>
       )}
@@ -757,27 +709,10 @@ export default function SejaNossoParceiro() {
                 ⚠️ {erroLogin}
               </div>
             )}
-            <motion.button
-              type="submit"
-              disabled={enviandoLogin}
-              whileHover={enviandoLogin ? {} : { scale: 1.02 }}
-              whileTap={enviandoLogin ? {} : { scale: 0.98 }}
-              style={{
-                padding: "0.85rem 1.5rem",
-                background: enviandoLogin
-                  ? "rgba(245,166,35,0.3)"
-                  : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
-                border: "none", borderRadius: "10px",
-                color: enviandoLogin ? COR.muted : "#0a0f1a",
-                fontFamily: "'Orbitron', sans-serif",
-                fontWeight: 800, fontSize: "0.9rem",
-                cursor: enviandoLogin ? "wait" : "pointer",
-                opacity: enviandoLogin ? 0.7 : 1,
-                marginTop: "0.5rem",
-              }}
-            >
+            <Button type="submit" variant="primary" size="lg" disabled={enviandoLogin}
+              className="w-full mt-2 font-['Orbitron']">
               {enviandoLogin ? "⏳ Verificando…" : "Entrar no Meu Painel"}
-            </motion.button>
+            </Button>
           </form>
         </motion.section>
       )}
