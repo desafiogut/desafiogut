@@ -1,9 +1,9 @@
 # DESAFIOGUT — cloud.md (Documentação Viva do Sistema)
 
 > Manifesto único do sistema auto-governado. O projeto deve ser compreensível
-> apenas lendo este ficheiro. Atualizado em: 2026-06-14 (MC25.1).
+> apenas lendo este ficheiro. Atualizado em: 2026-06-14 (MC25.3).
 > Pilares: **Superpers** (auto-revisão) · **Everything Cloud Code** (modular) · **RUFLO** (orquestração de agentes).
-> MC25.1: Ajuste de --glass-opacity 0.03→0.06 (equilíbrio arena/legibilidade).
+> MC25.3: Unificação total do vidro — .gut-glass-standard (navy-based fixo, padrão único).
 
 ---
 
@@ -39,7 +39,7 @@ não por acoplamento direto. Cada agente é um conjunto lógico de módulos (map
 
 ### 🎨 Agente de Interface (UI/UX, GUTO, animações)
 - **Dono de:** AppLayout (3 camadas), Nav Dock, GutoSpritePlayer, BackgroundCanvas,
-  AtmosphereFilter, vidro temperado (`.gut-glass`), ChatbotWidget (apresentação), cards.
+  AtmosphereFilter, vidro temperado (`.gut-glass-standard`), ChatbotWidget (apresentação), cards.
 - **Estado partilhado:** `useAppContextEnvironment` (`appState`, `gutoMood`, `activeTab`).
 - **Animações do GUTO (MC-PRE20):** `idle.webm` (respiração, constante) · `thinking.webm`
   (pergunta no chatbot) · `celebration.webm` (fim de rodada com vencedor). Mesmo ficheiro
@@ -231,6 +231,94 @@ de branco fazia a arena WebP dominar visualmente todos os painéis ("vidro fanta
 - ✅ Slider funcional (localStorage: gut_glass_opacity = 0.06)
 - ✅ WCAG AA preservado (contraste ≥ 4.5:1 para todas as cores de texto)
 - ✅ npm run build verde (5.13s)
+
+---
+
+## 7.2 MC25.3 — Unificação total do vidro: .gut-glass-standard (2026-06-14)
+
+**PR:** feat/mc25.3 → main | **Opção:** C (Padrão Único e Imutável)
+
+### Causa Raiz
+5 sistemas de vidro em conflito (.glass-panel, .gut-glass, .nav-glass, .chat-glass, +
+~30 referências inline a --glass-opacity) com propriedades divergentes (white-based vs
+navy-based, blur só desktop vs sempre ligado, saturate 135/140/150, borderRadius
+14/16/18/20px). Os 4 cards KPI do Dashboard usam inline navy/0.25 + blur(24px)
+saturate(135%) como padrão-ouro — mas nenhum outro componente seguia este padrão.
+
+### Solução
+Criação de UMA classe CSS canónica `.gut-glass-standard` com o padrão extraído dos
+4 cards KPI do Dashboard (Saldo, Senhas, Lances Únicos, Total de Lances):
+
+```css
+.gut-glass-standard {
+  background: rgba(13,18,53,0.25);        /* navy 25%, FIXO */
+  backdrop-filter: blur(24px) saturate(135%); /* SEMPRE ligado */
+  -webkit-backdrop-filter: blur(24px) saturate(135%);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
+  border-radius: 14px;                    /* raio canónico */
+}
+```
+
+### Alterações (26 ficheiros)
+
+**Removido (Segmento 2):**
+- --glass-opacity, --nav-glass, --chat-glass do :root — 3 tokens CSS obsoletos
+- .glass-panel, .gut-glass, .nav-glass, .chat-glass — 4 classes CSS conflituantes
+- SliderOpacidade.jsx (68 linhas) — componente e applyStoredGlassOpacity()
+- Secção "Intensidade do vidro" em Configuracoes.jsx — UI do slider
+- ::before reflexo do .gut-glass — elemento decorativo desnecessário
+
+**Substituído (Segmento 3):**
+- Glass UI (8 componentes): GlassCard, Button (secondary), Input, Modal, Table/THead,
+  ErrorState, Tooltip, Card (shadcn legado) → .gut-glass-standard
+- Layout (4 widgets): BottomNav (Nav Dock + sheet "Mais"), Sidebar, Footer, ChatbotWidget
+- Páginas (11): AdminPanel, Configuracoes, CorporativoAnalytics, CorporativoCarteira,
+  CorporativoDashboard, DetalheProduto, MercadoLances, MinhaCarteira, Seguranca,
+  SejaNossoParceiro, Vitrine
+- ~26 referências inline: rgba(255,255,255,var(--glass-opacity,0.03)) →
+  rgba(13,18,53,0.25) navy fixo
+
+### Não alterado
+- 4 cards KPI do Dashboard (Saldo, Senhas, Lances Únicos, Total de Lances) —
+  **inalterados**, são o padrão-ouro
+- Paleta de cores, tipografia, animações, estrutura de layout
+- BackgroundCanvas, AtmosphereFilter, GUTO (GutoSpritePlayer)
+- Lógica de negócio (AppContext, lances, auth)
+- .dock-icon — cápsula de ícone, não é vidro
+
+### Comportamento
+| Propriedade | Antes (MC25.1) | Depois (MC25.3) |
+|---|---|---|
+| Cor base | white/0.06 (lavava dark mode) | navy/0.25 (tom sobre tom) |
+| Blur mobile | OFF (fantasma) | blur(24px) SEMPRE |
+| Blur desktop | blur-xl (24px) | blur(24px) |
+| Saturate | 150% | 135% (padrão-ouro) |
+| Border-radius | 16/18/20px (inconsistente) | 14px (canónico) |
+| ::before reflexo | Sim (.gut-glass) | Não |
+| Slider | Sim (white-based 0–0.15) | Não (valor fixo imutável) |
+| Nav Dock opacidade | 66% (2.6× padrão) | 25% |
+| Chatbot opacidade | 92% (3.7× padrão) | 25% |
+
+### Validação
+- ✅ MCP chrome-devtools: Dashboard, MercadoLances, Vitrine, Configuracoes, MinhaCarteira,
+  AdminPanel, SejaNossoParceiro
+- ✅ ZERO classes antigas (.glass-panel, .nav-glass, .chat-glass) em TODAS as páginas
+- ✅ 4 cards KPI do Dashboard INALTERADOS (padrão-ouro preservado)
+- ✅ .gut-glass-standard presente em todas as páginas com bg/blur/shadow corretos
+- ✅ SliderOpacidade completamente removido (componente, import, UI, localStorage)
+- ✅ Secção "Intensidade do vidro" removida de Configuracoes
+- ✅ Zero erros de console novos (apenas CSP/Sentry/WalletConnect pré-existentes)
+- ✅ npm run build verde (5.71s)
+- ✅ node --check limpo para todos os .mjs
+
+### Lição Aprendida
+**Um padrão, uma fonte de verdade.** 5 sistemas de vidro criaram inconsistência visual
+acumulada ao longo de 6 PRs (MC20–MC25.1). A convergência para um único token fixo,
+extraído diretamente do padrão-ouro (cards KPI do Dashboard), elimina a classe inteira
+de bugs de vidro. O slider de opacidade, embora flexível, introduzia uma variável de
+inconsistência — cada utilizador via um vidro diferente, violando @taste-engineering
+regra 7 (consistência) e @impeccable-design regra 5 (glass comedido).
 
 ---
 
