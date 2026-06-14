@@ -1,43 +1,10 @@
 // MC16 — Overlay de fim de leilão compartilhado entre Dashboard e MercadoLances.
 // Disparado via showOverlay (AppContext) com flag anti-duplicação fimDisparadoRef.
 
-import { useMemo } from "react";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import Confetti from "./Confetti.jsx";
 
 const COR = { gold: "#f5a623" };
-
-function Confetti() {
-  const pecas = useMemo(() =>
-    Array.from({ length: 70 }, (_, i) => ({
-      id: i,
-      left:     `${Math.random() * 100}%`,
-      delay:    `${(Math.random() * 2.5).toFixed(2)}s`,
-      duration: `${(1.8 + Math.random() * 2).toFixed(2)}s`,
-      color:    ["#fbbf24","#fbbf24","#6ee7b7","#f97316","#ffffff","#a78bfa","#f472b6"][i % 7],
-      size:     `${6 + Math.floor(Math.random() * 9)}px`,
-      rotate:   `${Math.floor(Math.random() * 360)}deg`,
-    }))
-  , []);
-  return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 10001, overflow: "hidden" }}>
-      <style>{`
-        @keyframes gut-confetti-mc16 {
-          0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
-          85%  { opacity: 1; }
-          100% { transform: translateY(108vh) rotate(720deg); opacity: 0; }
-        }
-      `}</style>
-      {pecas.map((p) => (
-        <div key={p.id} style={{
-          position: "absolute", top: "-12px", left: p.left,
-          width: p.size, height: p.size, borderRadius: "2px",
-          background: p.color, transform: `rotate(${p.rotate})`,
-          animation: `gut-confetti-mc16 ${p.duration} ${p.delay} ease-in forwards`,
-        }} />
-      ))}
-    </div>
-  );
-}
 
 export default function FimLeilaoOverlay({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA }) {
   const isMobile = useIsMobile();
