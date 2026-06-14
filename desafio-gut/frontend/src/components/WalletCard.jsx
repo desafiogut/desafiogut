@@ -11,6 +11,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
+import { GlassCard } from "@/components/ui";
 
 const COR = {
   primary:   "#a78bfa",
@@ -66,17 +67,10 @@ export default function WalletCard({ endereco, isMobile = false }) {
   const transacoes = estado.dados?.transacoes ?? [];
 
   return (
-    <section
+    <GlassCard
+      as="section"
       aria-label="Wallet Digital"
-      style={{
-        background: "linear-gradient(155deg, rgba(167,139,250,0.08) 0%, rgba(8,30,64,0.85) 100%)",
-        border: `1px solid ${COR.border}`,
-        borderRadius: "14px",
-        padding: isMobile ? "1rem" : "1.25rem",
-        display: "flex", flexDirection: "column", gap: "0.75rem",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-      }}
+      className={`flex flex-col ${isMobile ? 'gap-3 p-4' : 'gap-3 p-5'}`}
     >
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -179,6 +173,6 @@ export default function WalletCard({ endereco, isMobile = false }) {
           </div>
         </>
       )}
-    </section>
+    </GlassCard>
   );
 }

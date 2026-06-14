@@ -5,6 +5,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
+import { GlassCard } from "@/components/ui";
 
 const COR = {
   primary: "#f5a623",
@@ -88,15 +89,10 @@ export default function RenovacaoCard({ endereco, isMobile = false }) {
   const podeSolicitar = statusAtual === "nao-iniciada" || statusAtual === "vencendo" || statusAtual === "vencida";
 
   return (
-    <section
+    <GlassCard
+      as="section"
       aria-label="Status da adesão e renovação"
-      style={{
-        background: "linear-gradient(155deg, rgba(245,166,35,0.06) 0%, rgba(8,30,64,0.85) 100%)",
-        border: `1px solid ${COR.border}`,
-        borderRadius: "14px",
-        padding: isMobile ? "1rem" : "1.25rem",
-        display: "flex", flexDirection: "column", gap: "0.75rem",
-      }}
+      className={`flex flex-col ${isMobile ? 'gap-3 p-4' : 'gap-3 p-5'}`}
     >
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -223,6 +219,6 @@ export default function RenovacaoCard({ endereco, isMobile = false }) {
           )}
         </>
       )}
-    </section>
+    </GlassCard>
   );
 }

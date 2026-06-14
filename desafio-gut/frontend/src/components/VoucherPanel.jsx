@@ -14,6 +14,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
+import { GlassCard } from "@/components/ui";
 
 const COR = {
   diamond:   "#00d4ff",
@@ -81,17 +82,10 @@ export default function VoucherPanel({ endereco, isMobile = false }) {
   }
 
   return (
-    <section
+    <GlassCard
+      as="section"
       aria-label="Vouchers de Networking"
-      style={{
-        background: "linear-gradient(155deg, rgba(0,212,255,0.06) 0%, rgba(8,30,64,0.85) 100%)",
-        border: `1px solid ${COR.border}`,
-        borderRadius: "14px",
-        padding: isMobile ? "1rem" : "1.25rem",
-        display: "flex", flexDirection: "column", gap: "0.85rem",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-      }}
+      className={`flex flex-col ${isMobile ? 'gap-4 p-4' : 'gap-4 p-5'}`}
     >
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -240,6 +234,6 @@ export default function VoucherPanel({ endereco, isMobile = false }) {
           <p style={{ margin: "0.4rem 0 0", fontSize: "0.72rem", color: COR.warn }}>{consulta.erro}</p>
         )}
       </div>
-    </section>
+    </GlassCard>
   );
 }
