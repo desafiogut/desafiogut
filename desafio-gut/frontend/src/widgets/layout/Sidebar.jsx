@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdmin } from "../../hooks/useAdmin.js";
+import { Button } from "@/components/ui";
 import GutoAvatar from "../../components/GutoAvatar.jsx";
 
 // MC20.2 ITEM 5 — spring do Active Indicator elástico (rail desktop).
@@ -307,60 +308,28 @@ export default function Sidebar() {
               {!collapsed && <span>Criando carteira…</span>}
             </div>
         ) : isConnected ? (
-          <button
-            onClick={desconectar}
+          <Button variant="ghost" size="md" onClick={desconectar}
             title={collapsed ? "Sair" : undefined}
-            style={{
-              display: "flex", alignItems: "center",
-              gap: collapsed ? 0 : "0.5rem",
-              justifyContent: collapsed ? "center" : "flex-start",
-              padding: collapsed ? "0.6rem" : "0.55rem 0.85rem",
-              background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
-              borderRadius: "10px", color: "#ef4444",
-              cursor: "pointer", fontSize: "0.78rem", fontWeight: "600",
-              transition: "all 0.15s", width: "100%",
-            }}
-          >
+            className={`w-full !border-[#ef4444]/20 !bg-[#ef4444]/[0.08] !text-[#ef4444] ${collapsed ? "!justify-center !px-0" : "!justify-start"}`}>
             <IconLogOut />
             {!collapsed && <span>Sair</span>}
-          </button>
+          </Button>
         ) : (
-          <button
-            onClick={abrirModal}
+          <Button variant="primary" size="md" onClick={abrirModal}
             title={collapsed ? "⚡ Aceito o DesafioGUT" : undefined}
-            style={{
-              display: "flex", alignItems: "center",
-              gap: collapsed ? 0 : "0.5rem",
-              justifyContent: collapsed ? "center" : "flex-start",
-              padding: collapsed ? "0.6rem" : "0.55rem 0.85rem",
-              background: "linear-gradient(135deg, #f5a623, #f97316)",
-              border: "none", borderRadius: "10px",
-              color: "#0a0f1a", cursor: "pointer",
-              fontSize: collapsed ? "1rem" : "0.78rem",
-              fontWeight: "800", transition: "all 0.15s", width: "100%",
-            }}
-          >
+            className={`w-full ${collapsed ? "!justify-center !px-0 !text-lg" : "!justify-start"}`}>
             <span>⚡</span>
             {!collapsed && <span>Aceito o DesafioGUT</span>}
-          </button>
+          </Button>
         )}
 
         {/* Botão de recolher */}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
+        <Button variant="ghost" size="sm" onClick={() => setCollapsed((c) => !c)}
           title={collapsed ? "Expandir menu" : "Recolher menu"}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "0.45rem", background: "rgba(245,166,35,0.08)",
-            border: "1px solid rgba(245,166,35,0.2)", borderRadius: "8px",
-            color: "#6b7db8", cursor: "pointer", transition: "all 0.15s",
-            width: "100%",
-          }}
-        >
-          {/* MC22.2 — rail à esquerda: recolher aponta para a esquerda (borda). */}
+          className="w-full !border-[#f5a623]/20 !bg-[#f5a623]/[0.08] !text-[#6b7db8] !rounded-lg !justify-center">
           {collapsed ? <IconChevronRight /> : <IconChevronLeft />}
-          {!collapsed && <span style={{ fontSize: "0.68rem", marginLeft: "0.4rem" }}>Recolher</span>}
-        </button>
+          {!collapsed && <span className="text-[0.68rem] ml-1">Recolher</span>}
+        </Button>
       </div>
     </aside>
   );
