@@ -168,7 +168,7 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, isM
               borderRadius: "12px", padding: isMobile ? "1rem" : "1.25rem",
               marginBottom: "1.25rem",
             }}>
-              <p style={{ margin: "0 0 0.4rem", fontSize: "0.72rem", color: "#64748b",
+              <p style={{ margin: "0 0 0.4rem", fontSize: "0.72rem", color: "#6b7db8",
                 textTransform: "uppercase", letterSpacing: "0.08em" }}>Carteira Vencedora</p>
               <p style={{ margin: "0 0 0.75rem", fontFamily: "monospace",
                 fontSize: isMobile ? "0.85rem" : "0.95rem", color: "#e8f0fe", wordBreak: "break-all" }}>
@@ -178,7 +178,7 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, isM
                 color: "#fbbf24", textShadow: "0 0 12px #fbbf24" }}>{valorFmt}</p>
             </div>
           ) : (
-            <div style={{ padding: "1.25rem", color: "#64748b", marginBottom: "1.25rem" }}>
+            <div style={{ padding: "1.25rem", color: "#6b7db8", marginBottom: "1.25rem" }}>
               Nenhum lance único registrado.
             </div>
           )}

@@ -248,7 +248,7 @@ function InfoRow({ label, value, mono, breakable, valueColor, isMobile }) {
 function SobreItem({ label, value, valueColor }) {
   return (
     <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-      <span style={{ fontWeight: "700", color: "#64748b", flexShrink: 0 }}>{label}:</span>
+      <span style={{ fontWeight: "700", color: "#6b7db8", flexShrink: 0 }}>{label}:</span>
       <span style={{ color: valueColor || "inherit" }}>{value}</span>
     </div>
   );
