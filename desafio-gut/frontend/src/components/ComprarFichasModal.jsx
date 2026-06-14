@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { Modal } from "@/components/ui";
 
 const COR = {
   primary: "#f5a623",
@@ -115,16 +116,7 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
     };
   }, [aberto, etapa, pedido?.token]);
 
-  // ESC fecha (exceto durante loading)
-  useEffect(() => {
-    if (!aberto) return;
-    const onKey = (e) => { if (e.key === "Escape" && !loading) fechar(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [aberto, loading]);
-
-  if (!aberto) return null;
-
+  // ESC fecha via Modal (MC23.3)
   const valorBRL = qtd * VALOR_POR_SENHA_BRL;
 
   function fechar() {
@@ -164,23 +156,6 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
   }
 
   // ── Estilos ──────────────────────────────────────────────────────────────────
-  const overlay = {
-    position: "fixed", inset: 0, zIndex: 1000,
-    background: "rgba(2,6,20,0.78)", backdropFilter: "blur(6px)",
-    display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center",
-    padding: isMobile ? 0 : "1.5rem",
-  };
-  const dialog = {
-    width: "100%", maxWidth: isMobile ? "100%" : "440px",
-    maxHeight: isMobile ? "92vh" : "85vh",
-    background: "linear-gradient(180deg, rgba(10,16,42,0.96), rgba(3,15,36,0.96))",
-    border: "1px solid rgba(245,166,35,0.28)",
-    borderRadius: isMobile ? "20px 20px 0 0" : "20px",
-    padding: isMobile ? "1.1rem" : "1.4rem",
-    color: COR.text,
-    boxShadow: "0 -10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,166,35,0.08) inset",
-    overflowY: "auto",
-  };
   const cabecalho = {
     display: "flex", justifyContent: "space-between", alignItems: "center",
     marginBottom: "1rem", gap: "0.5rem",
@@ -266,9 +241,13 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
   };
 
   return (
-    <div role="dialog" aria-modal="true" style={overlay} onClick={fechar}>
-      <div style={dialog} onClick={(e) => e.stopPropagation()}>
-        <div style={cabecalho}>
+    <Modal
+      open={aberto}
+      onClose={fechar}
+      position={isMobile ? "bottom" : "center"}
+      className={`w-full !max-w-[440px] ${isMobile ? '!max-w-full !max-h-[92vh] !rounded-t-[20px] !rounded-b-none !p-[1.1rem]' : '!max-h-[85vh] !rounded-[20px] !p-[1.4rem]'} overflow-y-auto`}
+    >
+      <div style={{ ...cabecalho, ...(!isMobile && { paddingTop: "0.25rem" }) }}>
           <div style={{ minWidth: 0 }}>
             <h2 style={titulo}>💰 Depositar PIX</h2>
             <p style={subTitulo}>Saldo R$ disponível para Lance Relâmpago ou troca por senhas</p>
@@ -469,7 +448,6 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
             </button>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
