@@ -103,7 +103,7 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
         }}>
           <span style={{ fontSize: "1.6rem", opacity: 0.45 }}>📭</span>
           <span style={{ fontSize: isMobile ? "0.85rem" : "0.9rem" }}>Nenhum lance registrado ainda.</span>
-          <span style={{ fontSize: "0.78rem", color: "#334155" }}>Seja o primeiro a lançar.</span>
+          <span style={{ fontSize: "0.78rem", color: "#6b7db8" }}>Seja o primeiro a lançar.</span>
         </div>
       ) : isMobile ? (
         <MobileList lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={encerrado} />

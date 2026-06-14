@@ -570,7 +570,7 @@ export default function MercadoLances() {
             )}
           </p>
           {!isMobile && (
-            <p style={{ margin: "0.4rem 0 0", fontSize: "0.72rem", color: "#334155" }}>
+            <p style={{ margin: "0.4rem 0 0", fontSize: "0.72rem", color: "#6b7db8" }}>
               Implantação: <strong style={{ color: COR.muted }}>1º de junho de 2026</strong>
               {" · "}Beta v0.9 · React 18 · Vite 8
             </p>

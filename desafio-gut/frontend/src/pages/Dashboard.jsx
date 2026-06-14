@@ -578,7 +578,7 @@ export default function Dashboard() {
         borderTop: "1px solid rgba(245,166,35,0.08)",
         textAlign: "center",
         fontSize: "0.7rem",
-        color: "#334155",
+        color: "#6b7db8",
         lineHeight: 1.5,
       }}>
         DesafioGUT · Grupo União e Trabalho
