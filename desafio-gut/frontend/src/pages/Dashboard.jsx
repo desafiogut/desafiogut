@@ -299,7 +299,11 @@ export default function Dashboard() {
             key={label}
             onClick={() => navigate(to)}
             style={{
-              ...card,
+              background: "rgba(13,18,53,0.25)",
+              border: "1px solid rgba(255,255,255,0.10)",
+              backdropFilter: "blur(24px) saturate(135%)",
+              WebkitBackdropFilter: "blur(24px) saturate(135%)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05)",
               padding: isMobile ? "0.85rem 0.9rem" : "1.1rem 1.25rem",
               borderRadius: "14px",
               textAlign: "left",
