@@ -7,10 +7,11 @@
 //
 // Auth JWT: pede assinatura única (cached 10min em ref via prop opcional).
 // Para esta primeira versão, exige `getAuthToken()` injetado pelo parent.
+// MC23.3 — outer section migrado para GlassCard as="section".
 
 import { useRef, useState } from "react";
 import BannerCard from "./BannerCard.jsx";
-import { Button } from "@/components/ui";
+import { Button, GlassCard } from "@/components/ui";
 
 const COR = {
   primary: "#f5a623",
@@ -124,14 +125,14 @@ export default function BannerUpload({ endereco, isMobile = false, getAuthToken 
   const info = DIMENSAO_INFO[dimensao];
 
   return (
-    <section
+    <GlassCard
+      as="section"
       aria-label="Painel de upload de banner"
+      className="!rounded-[14px] flex flex-col gap-3"
       style={{
-        background: "linear-gradient(155deg, rgba(245,166,35,0.06) 0%, rgba(8,30,64,0.85) 100%)",
-        border: `1px solid ${COR.border}`,
-        borderRadius: "14px",
         padding: isMobile ? "1rem" : "1.25rem",
-        display: "flex", flexDirection: "column", gap: "0.75rem",
+        background: "linear-gradient(155deg, rgba(245,166,35,0.06) 0%, rgba(8,30,64,0.85) 100%)",
+        borderColor: COR.border,
       }}
     >
       <header style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -260,6 +261,6 @@ export default function BannerUpload({ endereco, isMobile = false, getAuthToken 
         Upload pelo cliente entra como <strong>pendente</strong> até aprovação Admin.
         Premium debita Wallet (REQ-23).
       </p>
-    </section>
+    </GlassCard>
   );
 }
