@@ -394,6 +394,32 @@ img, svg { display: block; }
   box-shadow: 0 8px 32px 0 rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.05);
 }
 
+/* ── MC25.3 — .gut-glass-standard: padrão ÚNICO e IMUTÁVEL de vidro ──────────────
+   Extraído dos 4 cards KPI do Dashboard (Saldo, Senhas, Lances Únicos, Total de
+   Lances). Navy-based fixo (rgba(13,18,53,0.25)), blur SEMPRE ligado (mobile +
+   desktop), saturate(135%), border white/10, shadow + ring-inset white/5.
+   NÃO responde a slider. NÃO tem ::before reflexo. NÃO tem @media queries.
+   Este é o padrão-ouro — todas as superfícies de vidro do app usam esta classe. */
+.gut-glass-standard {
+  background: rgba(13,18,53,0.25);
+  backdrop-filter: blur(24px) saturate(135%);
+  -webkit-backdrop-filter: blur(24px) saturate(135%);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
+  border-radius: 14px;
+}
+/* Estados interativos — só para elementos clicáveis (botões, nav items, etc.) */
+.gut-glass-standard.gut-glass--interactive {
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.gut-glass-standard.gut-glass--interactive:hover {
+  background: rgba(13,18,53,0.35);
+  border-color: rgba(255,255,255,0.18);
+}
+.gut-glass-standard.gut-glass--interactive:active {
+  transform: scale(0.98);
+}
+
 /* Plano GlassSurface — reflexo + tint muito subtil, SEM blur de ecrã inteiro. */
 .gut-surface::before {
   content: "";
