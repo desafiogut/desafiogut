@@ -15,6 +15,7 @@ import DOMPurify from "dompurify";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useAppContext } from "../context/AppContext.jsx";
 import GutoAvatar from "../components/GutoAvatar.jsx";
+import { GlassCard } from "@/components/ui";
 import { tiersAgoraVisiveis, tierAtivoAgora } from "../data/programacao-junho-2026.js";
 
 // MC11.3 — Header dual da Vitrine. Renderizado SOMENTE quando
@@ -27,18 +28,10 @@ function VitrineHeaderLojista({ cota, isMobile }) {
   const cliques    = cota?.cliques    != null ? cota.cliques    : "—";
   const ctr        = cota?.ctr        != null ? `${cota.ctr.toFixed(1)}%` : "—";
   return (
-    <section
+    <GlassCard
+      as="section"
       aria-label="Painel do Parceiro"
-      style={{
-        padding: isMobile ? "1rem" : "1.25rem 1.5rem",
-        background: "linear-gradient(135deg, rgba(0,212,170,0.10), rgba(245,166,35,0.06))",
-        border: "1px solid rgba(0,212,170,0.35)",
-        borderRadius: "16px",
-        display: "flex", flexDirection: isMobile ? "column" : "row",
-        alignItems: isMobile ? "flex-start" : "center",
-        justifyContent: "space-between",
-        gap: "0.75rem",
-      }}
+      className={`flex gap-3 ${isMobile ? 'flex-col items-start p-4' : 'flex-row items-center justify-between px-6 py-5'}`}
     >
       <div>
         <div style={{
@@ -65,7 +58,7 @@ function VitrineHeaderLojista({ cota, isMobile }) {
       >
         Ver analytics completo →
       </Link>
-    </section>
+    </GlassCard>
   );
 }
 
@@ -167,22 +160,15 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
     ? DOMPurify.sanitize(bannerSvg, { USE_PROFILES: { svg: true } })
     : null;
   return (
-    <article
+    <GlassCard
+      as="article"
+      className={`flex flex-col gap-2.5 ${isMobile ? 'p-4' : 'p-5'} ${!isMobile ? 'min-h-[320px]' : ''}`}
       style={{
         position: sticky ? "sticky" : "relative",
         top:      sticky ? "0.5rem" : undefined,
         zIndex:   sticky ? 5 : undefined,
-        background:    "linear-gradient(155deg, rgba(5,15,40,0.92) 0%, rgba(8,30,64,0.85) 100%)",
-        border:        `1px solid ${slot.corBorda}`,
-        borderRadius:  "16px",
-        padding:       isMobile ? "1rem" : "1.25rem",
-        display:       "flex",
-        flexDirection: "column",
-        gap:           "0.6rem",
-        boxShadow:     `0 4px 18px rgba(0,0,0,0.35), 0 0 0 1px ${slot.corDim}`,
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        minHeight:     isMobile ? undefined : "320px",
+        borderColor: slot.corBorda,
+        boxShadow: `0 4px 18px rgba(0,0,0,0.35), 0 0 0 1px ${slot.corDim}`,
       }}
     >
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
@@ -341,7 +327,7 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
           boxShadow: `0 4px 14px ${slot.corDim}`,
         }}
       >{hrefOverride ? "Ir para o leilão →" : "Ver detalhes →"}</Link>
-    </article>
+    </GlassCard>
   );
 }
 
