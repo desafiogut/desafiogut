@@ -375,10 +375,7 @@ export default function CorporativoDashboard() {
           <button
             key={label}
             onClick={() => navigate(to)}
-            style={{
-              ...cardStyle, textAlign: "left", cursor: "pointer",
-              display: "flex", flexDirection: "column", gap: "0.35rem",
-            }}
+            className={`${cardCls} flex flex-col gap-1 text-left cursor-pointer`}
           >
             <span style={{ fontSize: "1.3rem" }}>{icon}</span>
             <span style={{ fontSize: "1.4rem", fontWeight: 900, color }}>{value}</span>
@@ -387,7 +384,7 @@ export default function CorporativoDashboard() {
         ))}
       </section>
 
-      <section style={{ ...cardStyle, marginBottom: "1rem" }}>
+      <GlassCard as="section" className={`${cardCls} mb-4`}>
         <h3 style={{
           margin: "0 0 0.75rem", fontSize: "0.85rem", fontWeight: 800,
           color: COR.primary, letterSpacing: "0.04em",
@@ -404,10 +401,10 @@ export default function CorporativoDashboard() {
             Programação
           </button>.
         </p>
-      </section>
+      </GlassCard>
 
       {/* MC14.10.1 ITEM 5 — Painel editável */}
-      <section style={{ ...cardStyle, marginBottom: isMobile ? "5rem" : "1rem" }}>
+      <GlassCard as="section" className={`${cardCls} ${isMobile ? 'mb-20' : 'mb-4'}`}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: editando ? "0.75rem" : 0 }}>
           <h3 style={{
             margin: 0, fontSize: "0.85rem", fontWeight: 800,
@@ -500,10 +497,10 @@ export default function CorporativoDashboard() {
           </div>
         )}
         {editOk && <p style={{ margin: "0.5rem 0 0", color: COR.success, fontSize: "0.78rem", fontWeight: 600 }}>✅ Dados atualizados com sucesso!</p>}
-      </section>
+      </GlassCard>
 
       {/* MC15 ITEM 2 — Meus Produtos */}
-      <section style={{ ...cardStyle, marginBottom: isMobile ? "5rem" : "1rem" }}>
+      <GlassCard as="section" className={`${cardCls} ${isMobile ? 'mb-20' : 'mb-4'}`}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
           <h3 style={{ margin: 0, fontSize: "0.85rem", fontWeight: 800, color: COR.primary, letterSpacing: "0.04em" }}>
             🛍️ Meus Produtos
@@ -676,7 +673,7 @@ export default function CorporativoDashboard() {
             ))}
           </div>
         )}
-      </section>
+      </GlassCard>
     </div>
   );
 }
