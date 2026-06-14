@@ -2,6 +2,7 @@
 // Rota: /produto/:id
 // Exibe foto, descrição, preço, loja, GUTO apresentador, input de lance,
 // LanceStatusBadge, cronômetro da edição e histórico de lances.
+// MC23.3 — cards migrados para GlassCard (foto + input lance).
 
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
@@ -9,6 +10,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import LanceStatusBadge from "../components/LanceStatusBadge.jsx";
+import { GlassCard } from "@/components/ui";
 
 const COR = {
   bg: "#0a0f1a", surface: "rgba(8,30,64,0.82)", text: "#e8f0fe",
@@ -140,13 +142,13 @@ export default function DetalheProduto() {
         gap: "1.25rem",
       }}>
         {/* Foto grande */}
-        <div style={{
-          borderRadius: "16px", overflow: "hidden",
-          border: `1px solid ${catColor}44`,
-          background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-          aspectRatio: "4/3",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
+        <GlassCard
+          className="!rounded-2xl overflow-hidden !p-0 flex items-center justify-center"
+          style={{
+            aspectRatio: "4/3",
+            borderColor: `${catColor}44`,
+          }}
+        >
           {(produto.imagemBase64 || produto.imagem_url) ? (
             <img
               src={produto.imagemBase64 ? `data:${produto.mime || "image/png"};base64,${produto.imagemBase64}` : produto.imagem_url}
@@ -156,7 +158,7 @@ export default function DetalheProduto() {
           ) : (
             <span style={{ fontSize: "3rem" }}>📦</span>
           )}
-        </div>
+        </GlassCard>
 
         {/* Info + Lance */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
@@ -216,11 +218,7 @@ export default function DetalheProduto() {
 
           {/* Input de lance */}
           {produto.status === "ativo" && !encerrado && (
-            <div style={{
-              padding: "0.85rem", borderRadius: "12px",
-              background: "rgba(255,255,255, var(--glass-opacity, 0.03))", border: `1px solid ${catColor}33`,
-              display: "flex", flexDirection: "column", gap: "0.5rem",
-            }}>
+            <GlassCard className="!rounded-xl !p-[0.85rem] flex flex-col gap-2" style={{ borderColor: `${catColor}33` }}>
               <label style={{ fontSize: "0.72rem", color: COR.muted, fontWeight: 700 }}>
                 🎯 Seu lance (centavos) — menor lance único vence
               </label>
@@ -252,37 +250,33 @@ export default function DetalheProduto() {
                   🎯 Dar Lance
                 </button>
               </div>
-            </div>
+            </GlassCard>
           )}
 
           {produto.status === "vendido" && produto.vencedor && (
-            <div style={{
-              padding: "0.85rem", borderRadius: "12px",
-              background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.3)",
-              fontSize: "0.82rem", color: COR.primary, fontWeight: 700,
-            }}>
+            <GlassCard className="!rounded-xl !p-[0.85rem] text-[#f5a623] font-bold text-sm" style={{ borderColor: "rgba(245,166,35,0.3)", background: "rgba(245,166,35,0.08)" }}>
               🏆 Produto vendido! Vencedor registrado.
-            </div>
+            </GlassCard>
           )}
 
           {produto.status === "entregue" && (
-            <div style={{
-              padding: "0.85rem", borderRadius: "12px",
-              background: "rgba(0,212,170,0.08)", border: "1px solid rgba(0,212,170,0.3)",
-              fontSize: "0.82rem", color: COR.teal, fontWeight: 700,
-            }}>
+            <GlassCard className="!rounded-xl !p-[0.85rem] text-[#00d4aa] font-bold text-sm" style={{ borderColor: "rgba(0,212,170,0.3)", background: "rgba(0,212,170,0.08)" }}>
               📦 Entregue em {produto.entregue_em ? new Date(produto.entregue_em).toLocaleDateString("pt-BR") : "—"}
-            </div>
+            </GlassCard>
           )}
         </div>
       </section>
 
       {/* Histórico de lances */}
-      <section style={{
-        borderRadius: "16px", padding: isMobile ? "1rem" : "1.25rem",
-        background: "linear-gradient(155deg, rgba(5,15,40,0.92), rgba(8,30,64,0.85))",
-        border: `1px solid ${catColor}33`,
-      }}>
+      <GlassCard
+        as="section"
+        className="!rounded-2xl"
+        style={{
+          padding: isMobile ? "1rem" : "1.25rem",
+          background: "linear-gradient(155deg, rgba(5,15,40,0.92), rgba(8,30,64,0.85))",
+          borderColor: `${catColor}33`,
+        }}
+      >
         <h2 style={{
           margin: "0 0 0.75rem", fontSize: "0.9rem", fontWeight: 800,
           color: COR.primary, letterSpacing: "0.04em", textTransform: "uppercase",
@@ -327,7 +321,7 @@ export default function DetalheProduto() {
             </table>
           </div>
         )}
-      </section>
+      </GlassCard>
     </div>
   );
 }
