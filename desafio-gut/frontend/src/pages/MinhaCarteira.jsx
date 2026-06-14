@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
@@ -138,7 +138,7 @@ export default function MinhaCarteira() {
                 <span style={{
                   fontSize: "0.62rem", fontWeight: 700,
                   color: saldoRsStatus === "error" ? COR.danger : COR.muted,
-                  background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+                  background: "rgba(13,18,53,0.25)",
                   border: "1px solid rgba(245,166,35,0.18)",
                   borderRadius: "999px",
                   padding: "0.18rem 0.55rem",
@@ -256,7 +256,7 @@ export default function MinhaCarteira() {
                 <span style={{
                   fontSize: "0.62rem", fontWeight: 700,
                   color: saldoSenhasStatus === "error" ? COR.danger : COR.muted,
-                  background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+                  background: "rgba(13,18,53,0.25)",
                   border: "1px solid rgba(245,166,35,0.18)",
                   borderRadius: "999px",
                   padding: "0.18rem 0.55rem",
@@ -351,7 +351,7 @@ export default function MinhaCarteira() {
             }}>
               {DADOS_PAGAMENTO.map(({ label, value }) => (
                 <div key={label} style={{
-                  background: "rgba(255,255,255, var(--glass-opacity, 0.03))", borderRadius: "10px",
+                  background: "rgba(13,18,53,0.25)", borderRadius: "10px",
                   padding: "0.7rem 0.85rem",
                   border: "1px solid rgba(245,166,35,0.12)",
                   minWidth: 0,
@@ -386,7 +386,7 @@ export default function MinhaCarteira() {
                 {meusLances.map((l, i) => (
                   <div key={i} style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "0.7rem 0.85rem", background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+                    padding: "0.7rem 0.85rem", background: "rgba(13,18,53,0.25)",
                     borderRadius: "10px", border: "1px solid rgba(245,166,35,0.1)",
                     gap: "0.6rem",
                   }}>

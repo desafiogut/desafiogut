@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Table — MC21.1
- * Tabela translúcida: header em vidro, linhas separadas por border-white/5,
+ * Tabela translúcida: header em .gut-glass-standard, linhas border-white/5,
  * hover bg-white/[0.03]. A arena permanece visível (Regra de Ouro). Sem fundo opaco.
  */
 function Table({ className, ...props }) {
@@ -17,7 +17,7 @@ function Table({ className, ...props }) {
 function THead({ className, ...props }) {
   return (
     <thead
-      className={cn("glass-panel text-left text-white/70 uppercase text-xs tracking-wide", className)}
+      className={cn("gut-glass-standard text-left text-white/70 uppercase text-xs tracking-wide", className)}
       {...props}
     />
   );

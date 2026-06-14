@@ -434,10 +434,9 @@ export default function ChatbotWidget() {
             transition={{ duration: 0.18 }}
             role="dialog"
             aria-label="Assistente DESAFIOGUT"
-            /* MC23.1.1 SECÇÃO B — .chat-glass (navy 0.92 + blur sempre ligado,
-               independente do slider) em vez de .gut-glass (3% + blur só desktop),
-               que deixava o conteúdo atravessar e o texto sobrepor-se em mobile. */
-            className="chat-glass"
+            /* MC25.3 — .gut-glass-standard (navy 0.25 + blur sempre ligado),
+               padrão único imutável para todas as superfícies de vidro. */
+            className="gut-glass-standard"
             style={{
               position: "fixed",
               ...tamanhoModal,

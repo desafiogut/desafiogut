@@ -1,4 +1,4 @@
-// MC11 — Analytics Corporativo.
+﻿// MC11 — Analytics Corporativo.
 // Métricas agregadas do lojista (impressões, cliques, conversão) com
 // seletor de período 7/30/90 dias. Backend: /corporativo-analytics.
 
@@ -164,7 +164,7 @@ export default function CorporativoAnalytics() {
 function MetricaCard({ label, value, color, icon }) {
   return (
     <div style={{
-      background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+      background: "rgba(13,18,53,0.25)",
       border: "1px solid rgba(245,166,35,0.18)",
       borderRadius: "14px",
       padding: "1rem",

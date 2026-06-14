@@ -1,4 +1,4 @@
-// AdminPanel — painel de administração (REQ-20 + REQ-04..07).
+﻿// AdminPanel — painel de administração (REQ-20 + REQ-04..07).
 //
 // Acessível em /admin. Gate frontend: apenas endereços listados em admin-list
 // ou a coordenação. Operações de mutação exigem Bearer JWT admin emitido
@@ -168,7 +168,7 @@ function TabAprovacoes({ chamarAdmin, isMobile, onLoginNeeded }) {
         {lista.map((p) => (
           <li key={p.cliente_id} style={{
             padding: "0.7rem 0.85rem",
-            background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+            background: "rgba(13,18,53,0.25)",
             border: `1px solid rgba(245,166,35,0.15)`,
             borderRadius: "10px",
             display: "grid",
@@ -275,7 +275,7 @@ function TabCotas({ chamarAdmin, isMobile, onLoginNeeded }) {
         {TIERS.map((t) => (
           <div key={t.id} style={{
             padding: "0.6rem 0.75rem",
-            background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+            background: "rgba(13,18,53,0.25)",
             border: `1px solid ${t.cor}55`,
             borderRadius: "10px",
             display: "flex", flexDirection: "column", gap: "0.2rem",
@@ -308,7 +308,7 @@ function TabCotas({ chamarAdmin, isMobile, onLoginNeeded }) {
         {cotas.map((c) => (
           <li key={c.cliente_id} style={{
             padding: "0.6rem 0.75rem",
-            background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+            background: "rgba(13,18,53,0.25)",
             border: "1px solid rgba(245,166,35,0.12)",
             borderRadius: "10px",
             fontSize: "0.78rem", color: COR.text,
@@ -337,7 +337,7 @@ function TabCotas({ chamarAdmin, isMobile, onLoginNeeded }) {
       {/* Formulário de criação/atualização */}
       <form onSubmit={salvar} style={{
         marginTop: "0.5rem", padding: "0.85rem",
-        background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+        background: "rgba(13,18,53,0.25)",
         border: "1px dashed rgba(255,255,255,0.12)",
         borderRadius: "10px",
         display: "flex", flexDirection: "column", gap: "0.5rem",
@@ -409,7 +409,7 @@ function TabAdmins({ chamarAdmin, onLoginNeeded }) {
           <li key={a} style={{
             display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem",
             padding: "0.45rem 0.7rem",
-            background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
+            background: "rgba(13,18,53,0.25)",
             border: "1px solid rgba(245,166,35,0.12)",
             borderRadius: "8px",
           }}>
