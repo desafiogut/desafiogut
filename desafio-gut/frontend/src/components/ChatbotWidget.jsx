@@ -434,9 +434,12 @@ export default function ChatbotWidget() {
             transition={{ duration: 0.18 }}
             role="dialog"
             aria-label="Assistente DESAFIOGUT"
-            /* MC25.3 — .gut-glass-standard (navy 0.25 + blur sempre ligado),
-               padrão único imutável para todas as superfícies de vidro. */
-            className="gut-glass-standard"
+            /* MC25.3 — .gut-glass-standard (vidro unificado, navy + blur sempre
+               ligado). MC25.7 — + .gut-glass--solid: sobe a opacidade para navy
+               0.92 SÓ neste painel de leitura, restaurando a legibilidade que o
+               MC23.1.1 garantia e a unificação do MC25.3 perdeu (texto da página
+               atravessava o chat translúcido). Os KPIs e o Glass UI ficam intactos. */
+            className="gut-glass-standard gut-glass--solid"
             style={{
               position: "fixed",
               ...tamanhoModal,

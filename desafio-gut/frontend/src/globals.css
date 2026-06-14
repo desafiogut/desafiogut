@@ -333,6 +333,14 @@ img, svg { display: block; }
 .gut-glass-standard.gut-glass--interactive:active {
   transform: scale(0.98);
 }
+/* MC25.7 — modificador de LEITURA: vidro standard mas OPACO (navy 0.92), para
+   superfícies que rolam texto longo (painel de chat do GUTO). Restaura a
+   legibilidade que o MC23.1.1 garantia via .chat-glass e que a unificação do
+   MC25.3 perdeu ao baixar a opacidade para 0.25 (texto da página atravessava).
+   Mantém blur/saturate/border/shadow do standard — só sobe o background. */
+.gut-glass-standard.gut-glass--solid {
+  background: rgba(13,18,53,0.92);
+}
 
 /* Plano GlassSurface — reflexo + tint muito subtil, SEM blur de ecrã inteiro. */
 .gut-surface::before {
