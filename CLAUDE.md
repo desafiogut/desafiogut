@@ -1,5 +1,18 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-04-30 | Pipeline de lance 100% on-chain (Fase 6 — Faxina Final)
+> Atualizado em: 2026-06-14 | MC24 hotfix aplicado | Pipeline de lance 100% on-chain (Fase 6 — Faxina Final)
+
+---
+
+## Active Premium Skills
+
+Skills padronizadas em `~\.claude\skills\<nome>\SKILL.md` (formato SKILL.md, ativas no Claude Code):
+
+- @design-engineering — spring physics, layout anti-CLS, optimistic updates no pipeline de lance.
+- @impeccable-design — cores dessaturadas + acento cirúrgico, dark mode profundo, contraste WCAG AA, foco visível.
+- @taste-engineering — minimalismo funcional, copy honesta, microcopy de confiança em fluxo cripto/financeiro.
+- @graphify — knowledge graph do codebase (`graphify update .`); query/path/explain sobre `graphify-out/`.
+
+> Skills de infraestrutura adicionais (não-DESAFIOGUT, mesmo local): `aidesigner-frontend`, `skillcam-distill`.
 
 ---
 
@@ -191,3 +204,30 @@ desafio-gut/
 - [ ] Habilitar Apple OAuth no painel Privy
 - [ ] Adicionar `apurarVencedor()` público para exibição do vencedor real on-chain
 - [ ] Persistência multi-usuário dos lances (backend ou indexação de eventos)
+
+---
+
+## MC24 — Hotfix ReferenceError `card is not defined` (2026-06-14)
+
+**PR:** [#55](https://github.com/desafiogut/desafiogut/pull/55) | **Branch:** `feat/mc24` → `main`
+
+### Bugs Corrigidos
+
+| # | Ficheiro | Erro | Causa |
+|---|---|---|---|
+| 1 | `Dashboard.jsx:302` | `...card` → undefined | Objeto `card` deletado no commit `b6ef24c` (MC23.3 GlassCard) |
+| 2 | `CorporativoAnalytics.jsx:98,114` | `...cardStyle` → undefined | `cardStyle` nunca definido |
+| 3 | `SejaNossoParceiro.jsx:584` | `...inputStyle` → undefined | `inputStyle` removido; `<select>` não usa `<Input>` |
+| 4 | `CorporativoDashboard.jsx:426,503,507` | `inputStyle` → undefined | `inputStyle` removido; `<select>`/`<textarea>` não migrados |
+
+### Lição Aprendida
+
+**Ao substituir objetos de estilo inline por componentes primitivos, verificar TODOS os spreads residuais.**  
+`grep -rn '\.\.\.varName' src/` deve retornar vazio ou ter definição correspondente.
+
+### Regra Adicionada ao Pipeline
+
+Antes de merge de migração de UI:
+1. `rg '\.\.\.(card|cardStyle|inputStyle|buttonStyle|modalStyle|tableStyle|badgeStyle)[^a-zA-Z]' src/` → cada spread deve ter `const` correspondente no mesmo ficheiro
+2. `npm run build` → verde obrigatório
+3. Smoke test MCP em `/` (Dashboard) — página mais complexa
