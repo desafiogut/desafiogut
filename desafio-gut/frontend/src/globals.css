@@ -377,21 +377,36 @@ img, svg { display: block; }
   border-radius: 14px;
 }
 
-/* ── MC23.1.1 SECÇÃO B — superfície de LEITURA do Chatbot (GUTO) ───────────────
-   O painel do chat usava .gut-glass (rgba(255,255,255,var(--glass-opacity,0.03)),
-   blur SÓ em desktop) → em mobile ficava 3% transparente e SEM blur, deixando o
-   conteúdo da página atravessar e o texto sobrepor-se (queixa do operador).
-   .chat-glass dá-lhe um PISO de opacidade navy próprio (0.92) + blur SEMPRE ligado
-   (mobile + desktop), INDEPENDENTE do slider --glass-opacity — espelha o padrão
-   MC22.2 (.nav-glass), mas com alpha mais alto por ser superfície de leitura.
-   Continua Glass (alpha<1 + backdrop-blur), NUNCA cor sólida. */
-:root { --chat-glass: rgba(13,18,53,0.92); }
-.chat-glass {
-  background: var(--chat-glass);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid rgba(255,255,255,0.10);
-  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.05);
+/* ── MC25.4 — .gut-glass-standard: padrão ÚNICO e IMUTÁVEL de vidro ──────────────
+   Extraído dos 4 cards KPI do Dashboard (Saldo, Senhas, Lances Únicos, Total de
+   Lances). Navy-based fixo (rgba(13,18,53,0.25)), blur SEMPRE ligado (mobile +
+   desktop), saturate(135%), border white/10, shadow + ring-inset white/5.
+   NÃO responde a slider. NÃO tem ::before reflexo. NÃO tem @media queries.
+   Este é o padrão-ouro — todas as superfícies de vidro do app usam esta classe.
+
+   MC25.4: Envolvido em @layer utilities + @apply para que o backdrop-filter
+   sobreviva ao build do Tailwind v4 (que remove a propriedade raw de classes
+   CSS custom por ser uma "managed property"). Sem @apply, o blur era stripado
+   e o vidro ficava excessivamente transparente em mobile. */
+@layer utilities {
+  .gut-glass-standard {
+    background: rgba(13,18,53,0.25);
+    @apply backdrop-blur-[24px] backdrop-saturate-[135];
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
+    border-radius: 14px;
+  }
+}
+/* Estados interativos — só para elementos clicáveis (botões, nav items, etc.) */
+.gut-glass-standard.gut-glass--interactive {
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.gut-glass-standard.gut-glass--interactive:hover {
+  background: rgba(13,18,53,0.35);
+  border-color: rgba(255,255,255,0.18);
+}
+.gut-glass-standard.gut-glass--interactive:active {
+  transform: scale(0.98);
 }
 
 /* Plano GlassSurface — reflexo + tint muito subtil, SEM blur de ecrã inteiro. */
