@@ -322,6 +322,70 @@ regra 7 (consistência) e @impeccable-design regra 5 (glass comedido).
 
 ---
 
+## 7.3 MC27.1 — Fundo animado em looping (par v3: Profundidade Cinemática) (2026-06-14)
+
+**PR:** feat/mc27.1 → main | **Branch:** feat/mc27.1
+
+### Objetivo
+Integrar o par de animações v3 (Profundidade Cinemática) como fundo animado oficial.
+Melhoria progressiva: `<video>` WebM VP9 com fallback estático WebP intacto.
+
+### Alterações
+| Ficheiro | Linhas | Descrição |
+|---|---|---|
+| `src/widgets/layout/BackgroundCanvas.jsx` | +46 / −7 | Adiciona elementos `<video>` com autoPlay/muted/loop/playsInline, state `videoEnabled`/`videoError`, listener `prefers-reduced-motion`, fallback estático preservado |
+| `src/globals.css` | +28 | Adiciona classes `.gut-bg-video`, `.gut-bg-video--mobile`, `.gut-bg-video--desktop` com crossfade idêntico às layers + `@media (prefers-reduced-motion: reduce) { display: none }` |
+
+### Comportamento
+| Condição | Vídeo renderiza? | Fundo estático? |
+|---|---|---|
+| Browser suporta WebM/VP9 | Sim (loop seamless 5s) | Coberto pelo vídeo (DOM order) |
+| Browser NÃO suporta | Não (onError) | Sim (.gut-bg-layer) |
+| prefers-reduced-motion | Não (JS + CSS) | Sim (.gut-bg-layer) |
+| Erro de carregamento | Não (onError) | Sim (.gut-bg-layer) |
+| Rede lenta | Poster visível (anti-flash) | Sim (fallback layer) |
+
+### Estratégia de fallback
+- **DOM order**: `<div>` layers renderizadas PRIMEIRO, `<video>` DEPOIS → mesmo z-index (-50), vídeo pinta por cima. Quando removido (erro/reduced-motion), layers voltam a ser visíveis.
+- **Poster**: imagem estática oficial (WebP) → anti-flash + anti-CLS.
+- **Dupla defesa acessibilidade**: JS (`matchMedia` listener + `useReducedMotion`) + CSS (`@media` query).
+- **onError** no `<video>` → `setVideoError(true)` → React remove o vídeo do DOM.
+
+### Arquivos de mídia
+| Ficheiro | Dimensões | Tamanho | Codec |
+|---|---|---|---|
+| `fundo-loop-v3-desktop.webm` | 1920×1288 | 354 KB | VP9, 24fps, 5s seamless |
+| `fundo-loop-v3-mobile.webm` | 1080×1935 | 411 KB | VP9, 24fps, 5s seamless |
+| `background-desktop.webp` (poster/fallback) | 1920×1288 | 109 KB | WebP |
+| `background-mobile.webp` (poster/fallback) | 1080×1935 | 200 KB | WebP |
+
+### Não alterado
+- App.jsx — BackgroundCanvas já montado globalmente (2×: gate LGPD + app principal)
+- AppLayout.jsx — arquitetura de camadas inalterada
+- AtmosphereFilter.jsx (-z-40), Layout, Sidebar, BottomNav — sem alterações
+- Z-index Matrix: -50 (bg) → -40 (atmosfera) → 0 (superfície) → 6 (GUTO)
+- Paleta navy+laranja, scrim (`--gut-bg-scrim`), Glass UI (`.gut-glass-standard`)
+- GUTO (GutoSpritePlayer), Nav Dock, Chatbot — todos intactos
+
+### Validação
+- ✅ Vídeo desktop (1440px) a reproduzir em looping (readyState 4, 5s seamless)
+- ✅ Vídeo mobile (375px) a reproduzir com crossfade CSS correto
+- ✅ CLS = 0 (PerformanceObserver, poster = mesmas dimensões do vídeo)
+- ✅ Fallback: onError → 0 vídeos no DOM, layers WebP estáticas visíveis
+- ✅ prefers-reduced-motion: 0 vídeos (JS matchMedia + CSS @media)
+- ✅ Zero erros de consola novos (apenas CSP/Sentry/WalletConnect pré-existentes)
+- ✅ npm run build verde (4.93s)
+- ✅ Cross-page smoke test: Dashboard, MercadoLances, Carteira, Corporativo
+
+### Lição Aprendida
+**DOM order determina paint order no mesmo z-index.** A primeira versão do MC27.1 renderizava
+`<video>` antes das `<div>` layers no DOM. Como partilham `z-index: -50` e `position: fixed`,
+as layers pintavam por cima e cobriam o vídeo completamente. A correção (1 iteração Boulder Loop)
+foi inverter a ordem: layers primeiro, vídeo depois → vídeo pinta por cima, fallback automático
+quando o vídeo é removido.
+
+---
+
 ## 8. Como contribuir (resumo operacional)
 1. Branch a partir do último estado validado. Commits atómicos (1 por item/fase).
 2. A cada commit: `node --check` `.mjs` + `npm run build` verde.
