@@ -156,8 +156,20 @@ ChatbotWidget) **não** são refatorados retroativamente sem necessidade (evita 
 | **MC22.2 SecC** — `--nav-glass` (`rgba(13,18,53,0.66)`): barrinha + menu "Mais" unificados; `.nav-glass` com blur(22px) sempre ligado | ✅ |
 | **MC22.2 SecD** — Webm re-encodados com canal alfa REAL (VP9 yuva420p, colorkey #050818); cache-busting `?v=mc222` | ✅ |
 | **MC22.2 SecE** — Barra lateral restaurada com `.nav-glass` (piso próprio); GUTO global reposto no canto (.gut-sprite) | ✅ |
+| **MC23.1.1** — Nav Dock unificado (`.dock-icon` em todos os ícones) + Chatbot legível (`.chat-glass`, navy 0.92, blur sempre, independente do slider) | ✅ (merged) |
+| **MC23.I/D2** — Celebração de vencedor do GUTO toca UMA vez (`GutoSpritePlayer` `loop=false` p/ `celebrating`); idle/thinking continuam em loop | ✅ |
+| **MC23.I/D1** — Múltiplos `FimLeilaoOverlay` fullscreen empilhados quando >1 edição encerra junto (guards não coordenados: global `fimDisparadoRef` vs `fimDisparadoMapRef`) | ⏸️ não reproduzível em dev (edições vêm de Blobs/404 local) — ver §abaixo |
 | ITEM 7 — prefetch Mercado Pago | ⏸️ sem credenciais (achado A) — faseável |
 | ITEM 10 — Optimistic Updates no lance | ⏸️ **RISCO ADIADO** — ver §abaixo |
+
+### MC23.I/D1 (overlay de vencedor duplicado) — registado para ambiente reproduzível
+Quando >1 edição encerra em simultâneo, cada `FimLeilaoOverlay` é um modal fullscreen
+(`fixed inset:0 z:10000`) com Confetti próprio → empilham-se 2-3 overlays (Dashboard.jsx:526
+overlay global da edição ativa + Dashboard.jsx:145 overlay por-card de cada "Outra Edição").
+Os guards não se coordenam. Correção proposta: coordenador ÚNICO (um overlay por encerramento)
+ou cards só mostram estado "Encerrada" sem modal próprio. NÃO implementado nesta passagem por
+não ser reproduzível/validável em dev (edições vêm de Netlify Blobs, 404 local) — implementar
+e validar onde haja múltiplas edições reais (R1: zero-regressão exige validação visual).
 
 ### ITEM 10 (optimistic updates) — risco registado
 Decremento otimista do saldo na UI + rollback + reconciliação com `LanceDado`/`SenhasCreditadas`.

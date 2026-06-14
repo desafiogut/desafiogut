@@ -71,3 +71,26 @@ novos em `src/components/ui/` (sem lógica de negócio). (3) `Layout.jsx` rodap�
   com validação autenticada. **Não bloqueiam este PR porque não foram tocados.**
 
 **APROVADO para merge** (escopo entregue). O caminho transacional/on-chain permanece intacto (R1).
+
+---
+
+## VEREDICTO MC23.I — auditoria de design/UX (FASE 1 parcial)
+Escopo entregue: **100% apresentação**. (1) `GutoSpritePlayer.jsx`: mood `celebrating` deixa de
+fazer loop infinito (`loop=false`) → celebração de vencedor toca UMA vez (ACHADO A2/D2).
+- **Integridade de transação / idempotência:** N/A — `CardLance`, `web3.js`, idempotencyKey,
+  State Lock, EIP-191 **não tocados**. ✅
+- **Zero-trust:** sem novas rotas/inputs/chaves; alteração é um booleano de vídeo. ✅
+- **Auditoria de código:** `npm run build` verde (6.91s); sem `console.log` novo; sem código morto. ✅
+- **Validação visual (MCP, 375px):** ANTES `loop=true` (infinito); DEPOIS `loop=false`, `ended=true`
+  (4s, 1×), e após "Nova Rodada" GUTO volta a `idle.webm` (loop). `prefers-reduced-motion` intacto. ✅
+- ⏸️ **Pendente / não bloqueia este escopo:**
+  - **D1** (overlays de vencedor empilhados): não reproduzível em dev (edições via Blobs, 404 local) —
+    requer ambiente com múltiplas edições para validar sem regressão.
+  - **A1** (fallback do chatbot cego ao perfil quando o LLM cai): é **backend** (`chatbot.mjs`) — fora
+    do escopo desta branch visual; candidato a MC próprio (MC23.G).
+  - **Auditorias 1, 2, 4, 5** (vidro/contraste/layout/primitivos): varredura MCP **não concluída** —
+    limitação ambiental (o build nativo rolldown/win32 faz access-violation sob pressão de memória,
+    obrigando a fechar o Chrome/MCP antes de cada build; loop MCP↔build instável nesta máquina).
+
+**APROVADO para merge (escopo D2).** O caminho transacional/on-chain permanece intacto (R1). As
+auditorias restantes ficam para nova passagem em ambiente estável / com edições reais.
