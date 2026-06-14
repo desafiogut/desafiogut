@@ -29,8 +29,14 @@ const SRC = {
 export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }) {
   const { gutoMood } = useAppEnvironment();
   const reduce = useReducedMotion();
-  const src = SRC[mood || gutoMood] || SRC.breathing;
+  const effectiveMood = mood || gutoMood;
+  const src = SRC[effectiveMood] || SRC.breathing;
   const isInline = variant === "inline";
+  // MC23.I (ACHADO A2/D2) — a celebração de vencedor é um EVENTO ÚNICO: toca uma vez
+  // e congela no último frame. idle/thinking são contínuos (loop). Sem isto, o mood
+  // "celebrating" mantinha celebration.webm em loop infinito enquanto a edição ficasse
+  // encerrada — a "animação de vencedor a repetir" reportada pelo operador.
+  const isCelebrating = effectiveMood === "celebrating";
 
   return (
     <div
@@ -43,7 +49,7 @@ export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }
           key={src}
           src={src}
           autoPlay={!reduce}
-          loop={!reduce}
+          loop={!reduce && !isCelebrating}
           muted
           playsInline
           preload="auto"
