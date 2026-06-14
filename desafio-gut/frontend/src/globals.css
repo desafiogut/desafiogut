@@ -317,7 +317,7 @@ img, svg { display: block; }
    (raw backdrop-filter é stripado por ser "managed property" no build). */
 .gut-glass-standard {
   background: rgba(13,18,53,0.25);
-  @apply backdrop-blur-[24px] backdrop-saturate-[135];
+  @apply backdrop-blur-[24px] backdrop-saturate-[1.35];
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
   border-radius: 14px;
