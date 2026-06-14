@@ -308,10 +308,12 @@ img, svg { display: block; }
    do conteúdo), luz de borda white/10 e profundidade shadow 0_8px_32px/0.37.
    .gut-glass (MC20.2) foi MIGRADO para esta base neutra → Card e Nav Dock herdam
    o vidro unificado sem mudança de lógica (R1 funcional preservado). */
-/* MC22.1 — opacidade do vidro CONTROLÁVEL pelo utilizador (slider em Configurações).
-   Default 0.03 = aparência da Trindade do Vidro (zero regressão). O slider altera
-   --glass-opacity em :root em tempo real; persiste em localStorage (gut_glass_opacity). */
-:root { --glass-opacity: 0.03; }
+/* MC25.1 — opacidade do vidro ajustada de 0.03 → 0.06 (Opção A).
+   Após a migração Glass UI (MC23.3), o vidro a 3% era demasiado transparente:
+   30+ referências inline + 9 componentes sobrepostos deixavam a arena WebP
+   dominar visualmente. A 6%, o vidro mantém translucidez ("Regra de Ouro")
+   mas garante legibilidade WCAG AA. Slider continua 0–0.15, step 0.005. */
+:root { --glass-opacity: 0.06; }
 .glass-panel {
   background: rgba(255, 255, 255, var(--glass-opacity, 0.03));
   @apply backdrop-blur-none md:backdrop-blur-xl backdrop-saturate-150 border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)];
