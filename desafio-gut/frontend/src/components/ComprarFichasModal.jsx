@@ -6,7 +6,7 @@ const COR = {
   primaryDim: "rgba(245,166,35,0.15)",
   gold: "#f5a623",
   text: "#e8f0fe",
-  muted: "#4a6490",
+  muted: "#6b7db8",
   success: "#10b981",
   danger: "#ef4444",
   blue300: "#fbbf24",

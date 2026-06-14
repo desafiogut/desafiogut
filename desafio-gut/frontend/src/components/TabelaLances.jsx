@@ -80,14 +80,14 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
           justifyContent: isMobile ? "space-between" : "flex-end",
           flexWrap: "wrap",
         }}>
-          <span style={{ fontSize: isMobile ? "0.7rem" : "0.78rem", color: "#4a6490" }}>
+          <span style={{ fontSize: isMobile ? "0.7rem" : "0.78rem", color: "#6b7db8" }}>
             Prazo: {prazoFormatado}
           </span>
           <span style={{ ...estilos.statusBadge, background: encerrado ? "#dc2626" : "#16a34a" }}>
             {encerrado ? "🔴 Encerrado" : "🟢 Ativo"}
           </span>
           {!encerrado && lances.length > 0 && (
-            <span style={{ fontSize: isMobile ? "0.68rem" : "0.74rem", color: "#4a6490", fontStyle: "italic" }}>
+            <span style={{ fontSize: isMobile ? "0.68rem" : "0.74rem", color: "#6b7db8", fontStyle: "italic" }}>
               🔒 valores ocultos até o fim
             </span>
           )}
@@ -96,14 +96,14 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
 
       {lances.length === 0 ? (
         <div style={{
-          color: "#4a6490",
+          color: "#6b7db8",
           textAlign: "center",
           padding: "2rem 1rem",
           display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "center",
         }}>
           <span style={{ fontSize: "1.6rem", opacity: 0.45 }}>📭</span>
           <span style={{ fontSize: isMobile ? "0.85rem" : "0.9rem" }}>Nenhum lance registrado ainda.</span>
-          <span style={{ fontSize: "0.78rem", color: "#334155" }}>Seja o primeiro a lançar.</span>
+          <span style={{ fontSize: "0.78rem", color: "#6b7db8" }}>Seja o primeiro a lançar.</span>
         </div>
       ) : isMobile ? (
         <MobileList lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={encerrado} />
@@ -112,7 +112,7 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
       )}
 
       <p style={{
-        marginTop: "1rem", fontSize: isMobile ? "0.68rem" : "0.72rem", color: "#4a6490",
+        marginTop: "1rem", fontSize: isMobile ? "0.68rem" : "0.72rem", color: "#6b7db8",
         borderTop: "1px solid rgba(245,166,35,0.12)", paddingTop: "0.75rem",
         textAlign: isMobile ? "center" : "left",
       }}>
@@ -181,7 +181,7 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
                 }}>{nome}</div>
                 {txHash && (
                   <div style={{
-                    fontFamily: "monospace", fontSize: "0.66rem", color: "#4a6490",
+                    fontFamily: "monospace", fontSize: "0.66rem", color: "#6b7db8",
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     marginTop: "1px",
                   }}>{txHash.slice(0, 14)}...</div>
@@ -193,7 +193,7 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
                 fontSize: encerrado ? "1.05rem" : "0.9rem",
                 color: encerrado
                   ? (isVencedor ? "#fbbf24" : "#fbbf24")
-                  : "#4a6490",
+                  : "#6b7db8",
                 fontFamily: "monospace",
                 whiteSpace: "nowrap",
                 textAlign: "right",
@@ -269,7 +269,7 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
                       fontWeight: "700",
                       color: encerrado
                         ? (isVencedor ? "#fbbf24" : "#e8f0fe")
-                        : "#4a6490",
+                        : "#6b7db8",
                       fontFamily: encerrado ? "monospace" : undefined,
                       letterSpacing: encerrado ? "0.02em" : "0.05em",
                     }}
@@ -281,7 +281,7 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
                       {status.label}
                     </Badge>
                   </td>
-                  <td style={{ ...estilos.td, fontFamily: "monospace", fontSize: "0.75rem", color: "#4a6490" }}>
+                  <td style={{ ...estilos.td, fontFamily: "monospace", fontSize: "0.75rem", color: "#6b7db8" }}>
                     {txHash ? `${txHash.slice(0, 10)}...` : "—"}
                   </td>
                 </motion.tr>
@@ -313,7 +313,7 @@ const estilos = {
   },
   th: {
     padding: "0.55rem 1rem", textAlign: "left", fontSize: "0.7rem",
-    color: "#4a6490", borderBottom: "1px solid rgba(245,166,35,0.15)",
+    color: "#6b7db8", borderBottom: "1px solid rgba(245,166,35,0.15)",
     textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: "700",
   },
   tr: { borderBottom: "1px solid rgba(255,255,255,0.04)" },

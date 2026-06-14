@@ -11,7 +11,7 @@ import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 // o mundo lojista. O botão "Novo banner" deixa de navegar para /carteira.
 import BannerUpload from "../components/BannerUpload.jsx";
 
-const COR = { text: "#e8f0fe", muted: "#5a7090", primary: "#f5a623", success: "#10b981" };
+const COR = { text: "#e8f0fe", muted: "#6b7db8", primary: "#f5a623", success: "#10b981" };
 
 export default function CorporativoBanners() {
   const isMobile = useIsMobile();
@@ -189,7 +189,7 @@ function Metric({ label, value }) {
       border: "1px solid rgba(245,166,35,0.15)",
       borderRadius: "8px", padding: "0.5rem 0.65rem",
     }}>
-      <div style={{ fontSize: "0.62rem", color: "#5a7090", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>
+      <div style={{ fontSize: "0.62rem", color: "#6b7db8", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.04em" }}>
         {label}
       </div>
       <div style={{ fontSize: "0.9rem", color: "#e8f0fe", fontWeight: 800 }}>{value}</div>

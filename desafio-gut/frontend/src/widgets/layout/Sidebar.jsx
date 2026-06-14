@@ -169,7 +169,7 @@ export default function Sidebar() {
             <div style={{ fontWeight: "900", fontSize: "0.92rem", color: "#e8f0fe", letterSpacing: "0.02em" }}>
               DesafioGUT
             </div>
-            <div style={{ fontSize: "0.62rem", color: "#4a6490", letterSpacing: "0.03em" }}>
+            <div style={{ fontSize: "0.62rem", color: "#6b7db8", letterSpacing: "0.03em" }}>
               Grupo União e Trabalho
             </div>
           </div>
@@ -190,7 +190,7 @@ export default function Sidebar() {
             </div>
           )}
           {address && (
-            <div style={{ fontFamily: "monospace", fontSize: "0.68rem", color: "#4a6490" }}>
+            <div style={{ fontFamily: "monospace", fontSize: "0.68rem", color: "#6b7db8" }}>
               {address.slice(0, 8)}...{address.slice(-4)}
             </div>
           )}
@@ -280,7 +280,7 @@ export default function Sidebar() {
               padding: collapsed ? "0.6rem" : "0.55rem 0.85rem",
               background: "rgba(245,166,35,0.06)",
               border: "1px dashed rgba(245,166,35,0.25)",
-              borderRadius: "10px", color: "#5a7090",
+              borderRadius: "10px", color: "#6b7db8",
               fontSize: collapsed ? "1rem" : "0.75rem", fontWeight: 600,
             }}
           >
@@ -353,7 +353,7 @@ export default function Sidebar() {
             display: "flex", alignItems: "center", justifyContent: "center",
             padding: "0.45rem", background: "rgba(245,166,35,0.08)",
             border: "1px solid rgba(245,166,35,0.2)", borderRadius: "8px",
-            color: "#4a6490", cursor: "pointer", transition: "all 0.15s",
+            color: "#6b7db8", cursor: "pointer", transition: "all 0.15s",
             width: "100%",
           }}
         >

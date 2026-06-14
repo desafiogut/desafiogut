@@ -151,7 +151,7 @@ export default function CorporativoCarteira() {
     borderRadius: "16px", padding: isMobile ? "1rem" : "1.25rem",
     backdropFilter: "blur(16px)", marginBottom: isMobile ? "1rem" : "1.25rem",
   };
-  const lbl = { fontSize: "0.7rem", color: "#5a7090", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 };
+  const lbl = { fontSize: "0.7rem", color: "#6b7db8", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 };
   const btn = (cor, off) => ({
     padding: "0.65rem 1rem", background: off ? "rgba(245,166,35,0.2)" : `linear-gradient(135deg,${cor},${cor}cc)`,
     border: "none", borderRadius: "10px", color: off ? "#9bb0c9" : "#0a0f1a",
@@ -166,14 +166,14 @@ export default function CorporativoCarteira() {
     <div style={{ padding: isMobile ? "1rem" : "1.25rem", flex: 1 }}>
       <header style={{ marginBottom: "1.5rem" }}>
         <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 900, color: "#e8f0fe" }}>Carteira do Lojista</h1>
-        <p style={{ margin: "0.35rem 0 0", color: "#5a7090", fontSize: "0.85rem" }}>
+        <p style={{ margin: "0.35rem 0 0", color: "#6b7db8", fontSize: "0.85rem" }}>
           {cotaCorporativa?.empresa ? `${cotaCorporativa.empresa} · ` : ""}
           Contrate a sua cota comercial. As senhas para licitar vêm do excedente da cota.
         </p>
       </header>
 
       {!isConnected ? (
-        <div style={{ ...card, color: "#5a7090" }}>
+        <div style={{ ...card, color: "#6b7db8" }}>
           <p style={{ marginTop: 0, fontSize: "0.9rem" }}>Inicie sessão como lojista para gerir a sua carteira.</p>
           <BotaoLoginPrincipal onClick={abrirModal} size="md" fullWidth={isMobile} />
         </div>
@@ -185,9 +185,9 @@ export default function CorporativoCarteira() {
             <div style={{ display: "flex", gap: "1.5rem", alignItems: "baseline", flexWrap: "wrap", margin: "0.4rem 0" }}>
               <div>
                 <span style={{ fontSize: "2rem", fontWeight: 900, color: "#10b981" }}>{saldoTroco}</span>
-                <span style={{ fontSize: "0.8rem", color: "#5a7090", marginLeft: "0.4rem" }}>válidas (30 dias, FIFO)</span>
+                <span style={{ fontSize: "0.8rem", color: "#6b7db8", marginLeft: "0.4rem" }}>válidas (30 dias, FIFO)</span>
               </div>
-              <div style={{ fontSize: "0.8rem", color: "#5a7090" }}>
+              <div style={{ fontSize: "0.8rem", color: "#6b7db8" }}>
                 On-chain (para licitar): <strong style={{ color: "#e8f0fe" }}>
                   {saldoOnChain == null ? (saldoSenhasStatus === "loading" ? "..." : "—") : saldoOnChain}
                 </strong>
@@ -221,7 +221,7 @@ export default function CorporativoCarteira() {
                 {" · "}<span style={{ color: "#10b981", fontWeight: 700 }}>ativa</span>
               </div>
             ) : (
-              <div style={{ marginTop: "0.4rem", color: "#5a7090" }}>
+              <div style={{ marginTop: "0.4rem", color: "#6b7db8" }}>
                 Sem cota ativa. Contrate uma abaixo.
               </div>
             )}
@@ -239,7 +239,7 @@ export default function CorporativoCarteira() {
                 }}>
                   <div style={{ fontWeight: 900, color: c.cor, textTransform: "uppercase", fontSize: "0.95rem" }}>{c.nome}</div>
                   <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "#e8f0fe" }}>{brl(c.preco)}</div>
-                  <div style={{ fontSize: "0.72rem", color: "#5a7090" }}>produto mínimo {brl(c.minimo)}</div>
+                  <div style={{ fontSize: "0.72rem", color: "#6b7db8" }}>produto mínimo {brl(c.minimo)}</div>
                   <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: "0.3rem" }}>{c.beneficios}</div>
                 </button>
               ))}
@@ -281,7 +281,7 @@ export default function CorporativoCarteira() {
                   style={{ ...btn("#00d4aa", false), marginTop: "0.5rem", padding: "0.45rem 0.9rem", fontSize: "0.78rem" }}>
                   Copiar código PIX
                 </button>
-                <p style={{ margin: "0.5rem 0 0", color: "#5a7090", fontSize: "0.74rem" }}>
+                <p style={{ margin: "0.5rem 0 0", color: "#6b7db8", fontSize: "0.74rem" }}>
                   Aguardando confirmação do pagamento… a cota é ativada automaticamente assim que o pagamento for aprovado.
                 </p>
               </div>

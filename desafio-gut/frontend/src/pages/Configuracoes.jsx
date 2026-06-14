@@ -7,7 +7,7 @@ import SliderOpacidade from "../components/SliderOpacidade.jsx";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
-  text: "#e8f0fe", muted: "#4a6490",
+  text: "#e8f0fe", muted: "#6b7db8",
   success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", gold: "#f5a623",
 };
 
@@ -225,7 +225,7 @@ function InfoRow({ label, value, mono, breakable, valueColor, isMobile }) {
       gap: "0.4rem",
     }}>
       <span style={{
-        fontSize: "0.74rem", color: "#4a6490", fontWeight: "600",
+        fontSize: "0.74rem", color: "#6b7db8", fontWeight: "600",
         flexShrink: 0,
       }}>{label}</span>
       <span style={{
@@ -248,7 +248,7 @@ function InfoRow({ label, value, mono, breakable, valueColor, isMobile }) {
 function SobreItem({ label, value, valueColor }) {
   return (
     <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-      <span style={{ fontWeight: "700", color: "#64748b", flexShrink: 0 }}>{label}:</span>
+      <span style={{ fontWeight: "700", color: "#6b7db8", flexShrink: 0 }}>{label}:</span>
       <span style={{ color: valueColor || "inherit" }}>{value}</span>
     </div>
   );

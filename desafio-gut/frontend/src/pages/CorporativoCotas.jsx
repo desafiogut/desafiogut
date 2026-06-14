@@ -73,22 +73,22 @@ export default function CorporativoCotas() {
         <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 900, color: "#e8f0fe" }}>
           📢 Minhas Cotas
         </h1>
-        <p style={{ margin: "0.35rem 0 0", color: "#5a7090", fontSize: "0.85rem" }}>
+        <p style={{ margin: "0.35rem 0 0", color: "#6b7db8", fontSize: "0.85rem" }}>
           Categorias contratadas e ações disponíveis.
         </p>
       </header>
 
       {loading ? (
-        <div style={{ ...cardStyle, color: "#5a7090" }}>Carregando cota…</div>
+        <div style={{ ...cardStyle, color: "#6b7db8" }}>Carregando cota…</div>
       ) : !cota ? (
-        <div style={{ ...cardStyle, color: "#5a7090" }}>
+        <div style={{ ...cardStyle, color: "#6b7db8" }}>
           Nenhuma cota ativa. Fale com a coordenação para contratar uma.
         </div>
       ) : (
         <div style={cardStyle}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
             <div>
-              <div style={{ fontSize: "0.7rem", color: "#5a7090", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+              <div style={{ fontSize: "0.7rem", color: "#6b7db8", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
                 Categoria
               </div>
               <div style={{
@@ -135,7 +135,7 @@ export default function CorporativoCotas() {
 function Info({ label, value }) {
   return (
     <div>
-      <div style={{ fontSize: "0.65rem", color: "#5a7090", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+      <div style={{ fontSize: "0.65rem", color: "#6b7db8", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
         {label}
       </div>
       <div style={{ fontSize: "0.95rem", color: "#e8f0fe", fontWeight: 600 }}>{value}</div>

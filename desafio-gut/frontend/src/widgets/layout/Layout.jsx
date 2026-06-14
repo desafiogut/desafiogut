@@ -21,7 +21,7 @@ function FooterGlobal({ isMobile }) {
         flexWrap: "wrap",
         justifyContent: "center",
         gap: isMobile ? "12px" : "24px",
-        color: "#5a7090",
+        color: "#6b7db8",
         rowGap: isMobile ? "6px" : undefined,
       }}
     >

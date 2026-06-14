@@ -5,7 +5,7 @@ import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
-  text: "#e8f0fe", muted: "#4a6490",
+  text: "#e8f0fe", muted: "#6b7db8",
   success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", gold: "#f5a623",
 };
 
@@ -161,7 +161,7 @@ export default function MeusAtivos() {
         marginTop: sectionGap,
         paddingTop: "0.75rem",
         borderTop: "1px solid rgba(245,166,35,0.08)",
-        fontSize: "0.7rem", color: "#334155", textAlign: "center", lineHeight: 1.5,
+        fontSize: "0.7rem", color: "#6b7db8", textAlign: "center", lineHeight: 1.5,
       }}>
         Art. 26: Apuração automática · Art. 8: Menor lance único ganha · Beta Interno
       </p>

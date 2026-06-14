@@ -3,7 +3,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
-  text: "#e8f0fe", muted: "#4a6490",
+  text: "#e8f0fe", muted: "#6b7db8",
   success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", gold: "#f5a623",
 };
 

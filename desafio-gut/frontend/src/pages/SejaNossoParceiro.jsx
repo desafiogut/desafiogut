@@ -15,7 +15,7 @@ import { getVisitorId } from "../lib/fingerprint.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 
 const COR = {
-  text: "#e8f0fe", muted: "#5a7090", primary: "#f5a623",
+  text: "#e8f0fe", muted: "#6b7db8", primary: "#f5a623",
   bg: "rgba(255,255,255, var(--glass-opacity, 0.03))", bgSoft: "rgba(245,166,35,0.07)",
   teal: "#00d4aa", success: "#10b981",
 };
