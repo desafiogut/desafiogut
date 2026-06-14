@@ -1,9 +1,9 @@
 # DESAFIOGUT — cloud.md (Documentação Viva do Sistema)
 
 > Manifesto único do sistema auto-governado. O projeto deve ser compreensível
-> apenas lendo este ficheiro. Atualizado em: 2026-06-14 (MC23.3).
+> apenas lendo este ficheiro. Atualizado em: 2026-06-14 (MC25.1).
 > Pilares: **Superpers** (auto-revisão) · **Everything Cloud Code** (modular) · **RUFLO** (orquestração de agentes).
-> MC23.3: Biblioteca Glass UI completa (GlassCard, Button, Input, Table, Modal).
+> MC25.1: Ajuste de --glass-opacity 0.03→0.06 (equilíbrio arena/legibilidade).
 
 ---
 
@@ -183,18 +183,54 @@ e correr o checklist de concorrência do `security_audit.md`.
 
 ## 7. Paleta e tokens (globals.css @theme)
 - Navy: `#050818` (void) · `#0d1235` / `#131844` (superfícies). Acentos laranja: `#ff6b35` / `#ff9500`.
-- Vidro temperado (sistema único MC21.1): **`.glass-panel`** canónico — `bg-white/[0.03]`
-  (tinta NEUTRA, arena visível através de cada painel = Regra de Ouro), DESFOQUE VIVO
-  (`backdrop-blur-none` mobile / `md:backdrop-blur-xl` p/ 60fps), `backdrop-saturate-150`,
-  border white/10, shadow `0_8px_32px/0.37`. `.gut-glass` foi MIGRADO para esta base neutra
-  (Card + Nav Dock herdam-na; lógica intacta). Biblioteca em `src/components/ui/` (barrel
-  `index.js`): GlassCard, Button (spring), Input, Table, Modal (spring), Empty, ErrorState,
-  Tooltip, Skeleton — + os legados Card/Badge/Progress.
+- Vidro temperado (sistema único MC21.1/MC25.1): **`.glass-panel`** canónico — `bg-white/[0.06]`
+  (tinta NEUTRA, arena visível como ATMOSFERA — "Regra de Ouro" preservada).
+  MC25.1 (2026-06-14) duplicou --glass-opacity de 0.03 → 0.06: após a migração Glass UI
+  (MC23.3) universalizar o vidro por 30+ referências inline + 9 componentes, 3% era demasiado
+  transparente (arena WebP dominava todos os painéis). A 6%, o vidro mantém translucidez mas
+  garante hierarquia visual e legibilidade WCAG AA (contraste ≥ 4.5:1 até 0.10).
+  DESFOQUE VIVO (`backdrop-blur-none` mobile / `md:backdrop-blur-xl` p/ 60fps),
+  `backdrop-saturate-150`, border white/10, shadow `0_8px_32px/0.37`.
 - Z-Index Matrix: `-z-50` Arena (BackgroundCanvas) · `-z-40` Atmosfera · `z-0` Superfície.
 - **MC22.2 — `.nav-glass`**: superfície de navegação com piso de opacidade INDEPENDENTE do slider.
   Token `--nav-glass: rgba(13,18,53,0.66)` (navy translúcido intermédio). blur(22px) SEMPRE ligado
   (mobile + desktop). Aplicado ao Nav Dock, sheet "Mais" e Sidebar — nunca mais desaparecem na Arena.
-  Todos os painéis `rgba(255,255,255,0.03)` → `rgba(255,255,255,var(--glass-opacity,0.03))`.
+  NÃO alterado pelo MC25.1 (já denso a 66% navy, não apresentava problema de legibilidade).
+  Todos os painéis `rgba(255,255,255,0.03)` → `rgba(255,255,255,var(--glass-opacity,0.06))`.
+
+---
+
+## 7.1 MC25.1 — Ajuste de --glass-opacity (2026-06-14)
+
+**PR:** feat/mc25.1 → main | **Opção:** A | **Branch:** feat/mc25.1
+
+### Causa Raiz
+Após a migração Glass UI (MC23.3) universalizar `.glass-panel` e `.gut-glass` para TODOS os
+componentes (GlassCard, Button secondary, Input, Table, Modal, Error, Tooltip, Empty, Skeleton,
+Card) + 30+ referências inline em 13 páginas, o valor `--glass-opacity: 0.03` calibrado no
+MC21.1 tornou-se demasiado baixo. O efeito cumulativo de mais de 40 superfícies com apenas 3%
+de branco fazia a arena WebP dominar visualmente todos os painéis ("vidro fantasma").
+
+### Alterações
+| Ficheiro | Linha | Antes | Depois |
+|---|---|---|---|
+| globals.css | L314 | `:root { --glass-opacity: 0.03 }` | `:root { --glass-opacity: 0.06 }` |
+| SliderOpacidade.jsx | L7 | `const DEFAULT = 0.03` | `const DEFAULT = 0.06` |
+
+### Não alterado
+- --nav-glass: rgba(13,18,53,0.66) — independente do slider, já denso
+- --chat-glass: rgba(13,18,53,0.92) — independente do slider
+- .dock-icon: rgba(255,255,255,0.06) — hardcoded
+- Slider: continua 0–0.15, step 0.005 (20% = valor antigo acessível)
+
+### Validação
+- ✅ MCP chrome-devtools: 8 páginas inspecionadas (Dashboard, MercadoLances, Vitrine,
+  SejaNossoParceiro, MinhaCarteira, MeusAtivos, Configuracoes, AdminPanel)
+- ✅ Zero erros de consola novos
+- ✅ GUTO, Nav Dock, Chatbot presentes e funcionais
+- ✅ Slider funcional (localStorage: gut_glass_opacity = 0.06)
+- ✅ WCAG AA preservado (contraste ≥ 4.5:1 para todas as cores de texto)
+- ✅ npm run build verde (5.13s)
 
 ---
 
