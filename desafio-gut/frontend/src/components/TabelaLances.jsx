@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { sanitizeAddress, sanitizeString, sanitizeLance } from "../utils/sanitize.js";
 import { Badge } from "@/components/ui/badge";
+import { THead, TH, TD } from "@/components/ui";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 function ordenarLances(lances) {
@@ -218,17 +219,17 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
 
 function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
+    <div className="w-full overflow-x-auto rounded-2xl">
+      <table className="w-full border-collapse text-sm">
+        <THead>
           <tr>
-            <th style={estilos.th}>#</th>
-            <th style={estilos.th}>Participante</th>
-            <th style={estilos.th}>{encerrado ? "Valor (R$)" : "Valor 🔒"}</th>
-            <th style={estilos.th}>Status (Art. 24)</th>
-            <th style={estilos.th}>ID do Lance</th>
+            <TH>#</TH>
+            <TH>Participante</TH>
+            <TH>{encerrado ? "Valor (R$)" : "Valor 🔒"}</TH>
+            <TH>Status (Art. 24)</TH>
+            <TH>ID do Lance</TH>
           </tr>
-        </thead>
+        </THead>
         <AnimatePresence initial={false}>
           <tbody>
             {lancesOrdenados.map((lance, i) => {
@@ -260,12 +261,11 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
                     background: isVencedor ? "rgba(245,166,35,0.09)" : "transparent",
                   }}
                 >
-                  <td style={estilos.td}>{isVencedor ? "🏆" : i + 1}</td>
-                  <td style={{ ...estilos.td, fontSize: "0.85rem" }}>{nome}</td>
-                  <td
+                  <TD>{isVencedor ? "🏆" : i + 1}</TD>
+                  <TD className="!text-sm">{nome}</TD>
+                  <TD
                     className={encerrado ? "gut-valor-reveal" : undefined}
                     style={{
-                      ...estilos.td,
                       fontWeight: "700",
                       color: encerrado
                         ? (isVencedor ? "#fbbf24" : "#e8f0fe")
@@ -275,15 +275,15 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
                     }}
                   >
                     {encerrado ? valorFormatado : "🔒"}
-                  </td>
-                  <td style={estilos.td}>
+                  </TD>
+                  <TD>
                     <Badge variant={status.variant} className={isVencedor ? "gut-vencedor" : undefined}>
                       {status.label}
                     </Badge>
-                  </td>
-                  <td style={{ ...estilos.td, fontFamily: "monospace", fontSize: "0.75rem", color: "#6b7db8" }}>
+                  </TD>
+                  <TD className="!font-mono !text-xs !text-[#6b7db8]">
                     {txHash ? `${txHash.slice(0, 10)}...` : "—"}
-                  </td>
+                  </TD>
                 </motion.tr>
               );
             })}
@@ -311,11 +311,5 @@ const estilos = {
     padding: "0.22rem 0.75rem", borderRadius: "20px",
     fontSize: "0.7rem", fontWeight: "700", color: "#fff",
   },
-  th: {
-    padding: "0.55rem 1rem", textAlign: "left", fontSize: "0.7rem",
-    color: "#6b7db8", borderBottom: "1px solid rgba(245,166,35,0.15)",
-    textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: "700",
-  },
   tr: { borderBottom: "1px solid rgba(255,255,255,0.04)" },
-  td: { padding: "0.7rem 1rem", fontSize: "0.86rem" },
 };
