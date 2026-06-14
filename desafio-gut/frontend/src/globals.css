@@ -313,18 +313,14 @@ img, svg { display: block; }
    NÃO responde a slider. NÃO tem ::before reflexo. NÃO tem @media queries.
    Este é o padrão-ouro — todas as superfícies de vidro do app usam esta classe.
 
-   MC25.4: Envolvido em @layer utilities + @apply para que o backdrop-filter
-   sobreviva ao build do Tailwind v4 (que remove a propriedade raw de classes
-   CSS custom por ser uma "managed property"). Sem @apply, o blur era stripado
-   e o vidro ficava excessivamente transparente em mobile. */
-@layer utilities {
-  .gut-glass-standard {
-    background: rgba(13,18,53,0.25);
-    @apply backdrop-blur-[24px] backdrop-saturate-[135];
-    border: 1px solid rgba(255,255,255,0.10);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
-    border-radius: 14px;
-  }
+   MC25.4: @apply no backdrop-filter para que o Tailwind v4 gere o CSS real
+   (raw backdrop-filter é stripado por ser "managed property" no build). */
+.gut-glass-standard {
+  background: rgba(13,18,53,0.25);
+  @apply backdrop-blur-[24px] backdrop-saturate-[135];
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
+  border-radius: 14px;
 }
 /* Estados interativos — só para elementos clicáveis (botões, nav items, etc.) */
 .gut-glass-standard.gut-glass--interactive {
