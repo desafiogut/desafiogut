@@ -16,6 +16,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useAdmin } from "../hooks/useAdmin.js";
 import { getSignerFromProvider } from "../utils/web3.js";
+import { Button } from "../components/ui/Button.jsx";
 
 const COR = {
   primary: "#f5a623",
@@ -35,6 +36,14 @@ const TIERS = [
   { id: "prata",    label: "Prata",    cor: "#cbd5e1" },
   { id: "bronze",   label: "Bronze",   cor: "#cd7f32" },
 ];
+
+// Classes Tailwind estáticas por tier (JIT-safe)
+const TIER_ACTIVE_CLASS = {
+  diamante: "!border-[#00d4ff]/55 !bg-[#00d4ff]/[0.12] !text-[#00d4ff] rounded-full",
+  ouro:     "!border-[#f5a623]/55 !bg-[#f5a623]/[0.12] !text-[#f5a623] rounded-full",
+  prata:    "!border-[#cbd5e1]/55 !bg-[#cbd5e1]/[0.12] !text-[#cbd5e1] rounded-full",
+  bronze:   "!border-[#cd7f32]/55 !bg-[#cd7f32]/[0.12] !text-[#cd7f32] rounded-full",
+};
 
 // ── Persistência do refresh token (sessionStorage só) ────────────────────────
 const REFRESH_SS_KEY     = "gut_admin_refresh";
@@ -141,21 +150,15 @@ function TabAprovacoes({ chamarAdmin, isMobile, onLoginNeeded }) {
       <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
         <span style={{ fontSize: "0.72rem", color: COR.muted, fontWeight: 700 }}>Filtro:</span>
         {["pendente", "aprovado", "rejeitado"].map((s) => (
-          <button key={s} type="button" onClick={() => setFiltro(s)} aria-pressed={filtro === s}
-            style={{
-              padding: "0.28rem 0.7rem", borderRadius: "20px",
-              border: `1px solid ${filtro === s ? COR.primary : "rgba(255,255,255,0.1)"}`,
-              background: filtro === s ? COR.primaryDim : "transparent",
-              color: filtro === s ? COR.primary : COR.muted,
-              fontSize: "0.72rem", fontWeight: 700, cursor: "pointer",
-            }}>{s}</button>
+          <Button key={s} variant="ghost" size="sm" onClick={() => setFiltro(s)} aria-pressed={filtro === s}
+            className={filtro === s ? "!border-[#f5a623] !bg-[#f5a623]/[0.16] !text-[#f5a623] rounded-full" : "rounded-full text-[#94a3b8]"}>
+            {s}
+          </Button>
         ))}
-        <button onClick={carregar} disabled={carregando} aria-label="Recarregar"
-          style={{
-            marginLeft: "auto", padding: "0.28rem 0.7rem", borderRadius: "20px",
-            background: "transparent", border: `1px solid ${COR.border}`,
-            color: COR.primary, fontSize: "0.72rem", fontWeight: 700, cursor: "pointer",
-          }}>{carregando ? "⏳" : "↻"}</button>
+        <Button variant="ghost" size="sm" onClick={carregar} disabled={carregando} aria-label="Recarregar"
+          className="ml-auto rounded-full !border-[#f5a623]/30 !text-[#f5a623]">
+          {carregando ? "⏳" : "↻"}
+        </Button>
       </div>
       {erro && <p role="alert" style={{ color: COR.danger, fontSize: "0.78rem" }}>{erro}</p>}
       {lista.length === 0 && !carregando && (
@@ -184,14 +187,14 @@ function TabAprovacoes({ chamarAdmin, isMobile, onLoginNeeded }) {
             </div>
             {p.status === "pendente" && (
               <div style={{ display: "flex", gap: "0.4rem", alignSelf: "center" }}>
-                <button onClick={() => decidir(p.cliente_id, "aprovado")}
-                  style={{ padding: "0.4rem 0.8rem", background: COR.success, color: "#0a0f1a", border: "none", borderRadius: "8px", fontWeight: 800, fontSize: "0.78rem", cursor: "pointer" }}>
+                <Button variant="primary" size="sm" onClick={() => decidir(p.cliente_id, "aprovado")}
+                  className="!bg-[#10b981] hover:!bg-[#059669] !shadow-none">
                   ✓ Aprovar
-                </button>
-                <button onClick={() => decidir(p.cliente_id, "rejeitado")}
-                  style={{ padding: "0.4rem 0.8rem", background: `${COR.danger}22`, color: COR.danger, border: `1px solid ${COR.danger}55`, borderRadius: "8px", fontWeight: 800, fontSize: "0.78rem", cursor: "pointer" }}>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => decidir(p.cliente_id, "rejeitado")}
+                  className="!border-[#ef4444]/55 !text-[#ef4444] !bg-[#ef4444]/[0.13] hover:!bg-[#ef4444]/[0.20]">
                   ✗ Rejeitar
-                </button>
+                </Button>
               </div>
             )}
             {acao.id === p.cliente_id && (
@@ -289,14 +292,10 @@ function TabCotas({ chamarAdmin, isMobile, onLoginNeeded }) {
       {/* Seletor de categoria */}
       <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
         {TIERS.map((t) => (
-          <button key={t.id} type="button" onClick={() => setCatSel(t.id)} aria-pressed={catSel === t.id}
-            style={{
-              padding: "0.32rem 0.85rem", borderRadius: "20px",
-              border: `1px solid ${catSel === t.id ? t.cor : "rgba(255,255,255,0.1)"}`,
-              background: catSel === t.id ? `${t.cor}1f` : "transparent",
-              color: catSel === t.id ? t.cor : COR.muted,
-              fontSize: "0.78rem", fontWeight: 700, cursor: "pointer",
-            }}>{t.label}</button>
+          <Button key={t.id} variant="ghost" size="sm" onClick={() => setCatSel(t.id)} aria-pressed={catSel === t.id}
+            className={catSel === t.id ? TIER_ACTIVE_CLASS[t.id] : "rounded-full text-[#94a3b8]"}>
+            {t.label}
+          </Button>
         ))}
       </div>
 
@@ -363,14 +362,10 @@ function TabCotas({ chamarAdmin, isMobile, onLoginNeeded }) {
                  onChange={(e) => setForm({ ...form, vendida: e.target.checked })} />
           Marcar como vendida (não disponível)
         </label>
-        <button type="submit" disabled={salvando || !form.cliente_id}
-          style={{
-            padding: "0.5rem", background: form.cliente_id ? `linear-gradient(135deg,${COR.primary},#f97316)` : "rgba(255,255,255,0.05)",
-            border: "none", borderRadius: "10px",
-            color: form.cliente_id ? "#0a0f1a" : COR.muted,
-            fontWeight: 800, fontSize: "0.82rem",
-            cursor: form.cliente_id && !salvando ? "pointer" : "not-allowed",
-          }}>{salvando ? "⏳ Salvando…" : "💾 Salvar cota"}</button>
+        <Button type="submit" variant="primary" size="md" disabled={salvando || !form.cliente_id}
+          className="w-full">
+          {salvando ? "⏳ Salvando…" : "💾 Salvar cota"}
+        </Button>
         {msgForm && <p style={{ margin: 0, fontSize: "0.74rem", color: msgForm.startsWith("✓") ? COR.success : COR.danger }}>{msgForm}</p>}
       </form>
     </div>
@@ -426,10 +421,10 @@ function TabAdmins({ chamarAdmin, onLoginNeeded }) {
               {a}{a === coord && <span style={{ marginLeft: "0.5rem", fontSize: "0.62rem", color: COR.warn }}>(coordenação)</span>}
             </code>
             {a !== coord && (
-              <button onClick={() => executar("remover", a)}
-                style={{ padding: "0.28rem 0.6rem", background: `${COR.danger}22`, color: COR.danger, border: `1px solid ${COR.danger}55`, borderRadius: "6px", fontSize: "0.7rem", fontWeight: 700, cursor: "pointer" }}>
+              <Button variant="ghost" size="sm" onClick={() => executar("remover", a)}
+                className="!border-[#ef4444]/55 !text-[#ef4444] !bg-[#ef4444]/[0.13] hover:!bg-[#ef4444]/[0.20] !rounded-lg !text-xs">
                 Remover
-              </button>
+              </Button>
             )}
           </li>
         ))}
@@ -438,15 +433,9 @@ function TabAdmins({ chamarAdmin, onLoginNeeded }) {
         style={{ display: "flex", gap: "0.4rem", marginTop: "0.5rem" }}>
         <input type="text" placeholder="0x... (novo admin)" value={novo}
                onChange={(e) => setNovo(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
-        <button type="submit" disabled={!novo}
-          style={{
-            padding: "0.45rem 0.85rem",
-            background: novo ? COR.primary : "rgba(255,255,255,0.05)",
-            border: "none", borderRadius: "8px",
-            color: novo ? "#0a0f1a" : COR.muted,
-            fontWeight: 800, fontSize: "0.78rem",
-            cursor: novo ? "pointer" : "not-allowed",
-          }}>+ Adicionar</button>
+        <Button type="submit" variant="primary" size="sm" disabled={!novo}>
+          + Adicionar
+        </Button>
       </form>
       {msg && <p style={{ margin: 0, fontSize: "0.74rem", color: msg.startsWith("✓") ? COR.success : COR.danger }}>{msg}</p>}
     </div>
@@ -641,10 +630,9 @@ export default function AdminPanel() {
       <div style={{ padding: "2rem", color: COR.text, textAlign: "center" }}>
         <h1 style={{ fontSize: "1.4rem", color: COR.primary }}>⚙️ Painel Admin</h1>
         <p style={{ color: COR.muted, marginBottom: "1rem" }}>Faça login para verificar privilégios.</p>
-        <button onClick={abrirModal}
-          style={{ padding: "0.7rem 1.4rem", background: `linear-gradient(135deg,${COR.primary},#f97316)`, border: "none", borderRadius: "12px", color: "#0a0f1a", fontWeight: 800, cursor: "pointer" }}>
+        <Button variant="primary" size="lg" onClick={abrirModal}>
           ⚡ Entrar
-        </button>
+        </Button>
       </div>
     );
   }
@@ -705,15 +693,15 @@ export default function AdminPanel() {
       }}>
         <span>{statusTexto}</span>
         {statusOk ? (
-          <button onClick={logoutAdmin}
-            style={{ padding: "0.28rem 0.7rem", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "6px", color: COR.muted, fontSize: "0.72rem", cursor: "pointer" }}>
+          <Button variant="ghost" size="sm" onClick={logoutAdmin}
+            className="!border-white/15 !text-[#94a3b8] !rounded-md">
             Logout admin
-          </button>
+          </Button>
         ) : (
-          <button onClick={() => setPedindoLogin(true)} disabled={authState === "logging-in"}
-            style={{ padding: "0.28rem 0.7rem", background: COR.warn, color: "#0a0f1a", border: "none", borderRadius: "6px", fontSize: "0.72rem", fontWeight: 800, cursor: authState === "logging-in" ? "wait" : "pointer" }}>
+          <Button variant="primary" size="sm" onClick={() => setPedindoLogin(true)} disabled={authState === "logging-in"}
+            className="!bg-[#fbbf24] hover:!bg-[#f59e0b] !shadow-none !rounded-md">
             Login Admin
-          </button>
+          </Button>
         )}
       </div>
 
@@ -724,26 +712,23 @@ export default function AdminPanel() {
           </span>
           <input type="password" placeholder="ADMIN_TOKEN legado" value={adminTokenInput}
                  onChange={(e) => setAdminTokenInput(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 200 }} autoFocus />
-          <button type="submit" disabled={!adminTokenInput || authState === "logging-in"}
-            style={{ padding: "0.45rem 0.85rem", background: adminTokenInput ? COR.primary : "rgba(255,255,255,0.05)", border: "none", borderRadius: "8px", color: adminTokenInput ? "#0a0f1a" : COR.muted, fontWeight: 800, cursor: adminTokenInput ? "pointer" : "not-allowed" }}>
+          <Button type="submit" variant="primary" size="sm" disabled={!adminTokenInput || authState === "logging-in"}>
             {authState === "logging-in" ? "⏳ Assinando…" : "Login"}
-          </button>
-          <button type="button" onClick={() => { setPedindoLogin(false); setAdminTokenInput(""); }}
-            style={{ padding: "0.45rem 0.85rem", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", color: COR.muted, cursor: "pointer" }}>Cancelar</button>
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => { setPedindoLogin(false); setAdminTokenInput(""); }}
+            className="!border-white/15 !text-[#94a3b8]">
+            Cancelar
+          </Button>
         </form>
       )}
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
         {ABAS.map((a) => (
-          <button key={a.id} onClick={() => setAba(a.id)} aria-pressed={aba === a.id}
-            style={{
-              padding: "0.4rem 0.85rem", borderRadius: "10px",
-              border: `1px solid ${aba === a.id ? COR.primary : "rgba(255,255,255,0.1)"}`,
-              background: aba === a.id ? COR.primaryDim : "transparent",
-              color: aba === a.id ? COR.primary : COR.muted,
-              fontSize: "0.82rem", fontWeight: 700, cursor: "pointer",
-            }}>{a.label}</button>
+          <Button key={a.id} variant="ghost" size="md" onClick={() => setAba(a.id)} aria-pressed={aba === a.id}
+            className={aba === a.id ? "!border-[#f5a623]/55 !bg-[#f5a623]/[0.16] !text-[#f5a623]" : "!text-[#94a3b8]"}>
+            {a.label}
+          </Button>
         ))}
       </div>
 
