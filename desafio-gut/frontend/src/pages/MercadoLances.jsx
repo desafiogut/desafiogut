@@ -1,11 +1,13 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
+import Confetti from "../components/Confetti.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useLanceFeedback } from "../hooks/useLanceFeedback.js";
 import CardLance from "../components/CardLance.jsx";
 import LanceStatusBadge from "../components/LanceStatusBadge.jsx";
 import TabelaLances from "../components/TabelaLances.jsx";
 import BannerCard from "../components/BannerCard.jsx";
+import { GlassCard } from "@/components/ui";
 import { LABEL_LOGIN } from "../components/BotaoLoginPrincipal.jsx";
 
 // REQ-01: descobre o cliente cujo leilão está ativo no momento, conforme
@@ -80,39 +82,6 @@ function CountdownOverlay() {
         </div>
       </div>
     </>
-  );
-}
-
-function Confetti() {
-  const pecas = useMemo(() =>
-    Array.from({ length: 70 }, (_, i) => ({
-      id: i,
-      left:     `${Math.random() * 100}%`,
-      delay:    `${(Math.random() * 2.5).toFixed(2)}s`,
-      duration: `${(1.8 + Math.random() * 2).toFixed(2)}s`,
-      color:    ["#fbbf24","#fbbf24","#6ee7b7","#f97316","#ffffff","#a78bfa","#f472b6"][i % 7],
-      size:     `${6 + Math.floor(Math.random() * 9)}px`,
-      rotate:   `${Math.floor(Math.random() * 360)}deg`,
-    }))
-  , []);
-  return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 10001, overflow: "hidden" }}>
-      <style>{`
-        @keyframes gut-confetti {
-          0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
-          85%  { opacity: 1; }
-          100% { transform: translateY(108vh) rotate(720deg); opacity: 0; }
-        }
-      `}</style>
-      {pecas.map((p) => (
-        <div key={p.id} style={{
-          position: "absolute", top: "-12px", left: p.left,
-          width: p.size, height: p.size, borderRadius: "2px",
-          background: p.color, transform: `rotate(${p.rotate})`,
-          animation: `gut-confetti ${p.duration} ${p.delay} ease-in forwards`,
-        }} />
-      ))}
-    </div>
   );
 }
 
@@ -304,18 +273,10 @@ export default function MercadoLances() {
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
 
         {/* ── Header ── */}
-        <header style={{
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: isMobile ? "1rem" : "1.25rem 2rem",
-          gap: isMobile ? "0.75rem" : "1rem",
-          background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-          borderBottom: "1px solid rgba(255,255,255,0.10)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-        }}>
+        <GlassCard
+          as="header"
+          className={`flex !rounded-none border-0 border-b border-white/10 ${isMobile ? 'flex-col gap-3 p-4' : 'flex-row justify-between items-center gap-4 px-8 py-5'}`}
+        >
           {/* Linha superior em mobile: logo + auth lado a lado */}
           <div style={{
             display: "flex", alignItems: "center",
@@ -398,19 +359,12 @@ export default function MercadoLances() {
               onLogin={abrirModal}
             />
           )}
-        </header>
+        </GlassCard>
 
         {/* ── Painel saldos + tipo ── */}
-        <div style={{
-          background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-          borderBottom: "1px solid rgba(255,255,255,0.10)",
-          padding: padTight,
-          display: "flex", flexDirection: isMobile ? "column" : "row",
-          justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center",
-          gap: isMobile ? "0.6rem" : "0.75rem",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-        }}>
+        <GlassCard
+          className={`flex !rounded-none border-0 border-b border-white/10 ${isMobile ? 'flex-col items-stretch gap-2.5 px-3 py-3' : 'flex-row justify-between items-center gap-3 px-8 py-2.5'}`}
+        >
           {/* Em produção o saldo aparece no Sidebar/Dashboard.
               Placeholder vazio mantém o flex space-between alinhando o
               seletor de modo à direita. */}
@@ -434,19 +388,12 @@ export default function MercadoLances() {
               );
             })}
           </div>
-        </div>
+        </GlassCard>
 
         {/* ── Aviso ── */}
-        <div style={{
-          background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-          borderBottom: "1px solid rgba(255,255,255,0.10)",
-          padding: padTight,
-          fontSize: isMobile ? "0.72rem" : "0.78rem",
-          color: "#94a3b8",
-          lineHeight: 1.4,
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-        }}>
+        <GlassCard
+          className={`!rounded-none border-0 border-b border-white/10 text-[#94a3b8] leading-relaxed ${isMobile ? 'text-xs px-3 py-3' : 'text-sm px-8 py-3'}`}
+        >
           <strong>DesafioGUT</strong>{" — "}Grupo União e Trabalho · CNPJ 23.040.066/0001-00
           {!isMobile && " · www.grupouniaoetrabalho.com.br"}
           {isConnected && (
@@ -465,7 +412,7 @@ export default function MercadoLances() {
               color: COR.danger, fontWeight: "700",
             }}>🔴 Leilão encerrado — novos lances bloqueados</span>
           )}
-        </div>
+        </GlassCard>
 
         {/* ── Banner do cliente do leilão ativo (REQ-01) ── */}
         {clienteAtivo?.cliente_id && (

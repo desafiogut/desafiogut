@@ -3,8 +3,10 @@
 // Consome /.netlify/functions/banners?cliente_id=...&formato=app|site.
 // Se houver upload, exibe; senão, mostra o template SVG auto-gerado pelo backend.
 // Animação sutil de fade-in ao montar.
+// MC23.3 — containers de estado migrados para GlassCard.
 
 import { useEffect, useState } from "react";
+import { GlassCard } from "@/components/ui";
 
 const COR = {
   border: "rgba(245,166,35,0.25)",
@@ -51,51 +53,55 @@ export default function BannerCard({ clienteId, formato = "app", style = {}, mos
 
   if (!clienteId) {
     return (
-      <div role="status" style={{
-        aspectRatio: String(aspect),
-        background: "rgba(5,15,40,0.55)",
-        border: `1px dashed ${COR.border}`,
-        borderRadius: "12px",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: COR.muted, fontSize: "0.78rem",
-        ...style,
-      }}>
+      <GlassCard
+        role="status"
+        className="!rounded-xl flex items-center justify-center text-[#94a3b8] text-xs"
+        style={{
+          aspectRatio: String(aspect),
+          borderStyle: "dashed",
+          borderColor: COR.border,
+          background: "rgba(5,15,40,0.55)",
+          ...style,
+        }}
+      >
         Faça login para ver o banner do cliente.
-      </div>
+      </GlassCard>
     );
   }
 
   if (estado.status === "loading") {
     return (
-      <div role="status" aria-live="polite" style={{
-        aspectRatio: String(aspect),
-        background: "rgba(5,15,40,0.45)",
-        border: `1px solid ${COR.border}`,
-        borderRadius: "12px",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: COR.muted, fontSize: "0.78rem",
-        animation: "gut-pulse-banner 1.4s ease-in-out infinite",
-        ...style,
-      }}>
+      <GlassCard
+        role="status" aria-live="polite"
+        className="!rounded-xl flex items-center justify-center text-[#94a3b8] animate-pulse"
+        style={{
+          aspectRatio: String(aspect),
+          borderColor: COR.border,
+          background: "rgba(5,15,40,0.45)",
+          animation: "gut-pulse-banner 1.4s ease-in-out infinite",
+          ...style,
+        }}
+      >
         ⏳ Carregando banner…
         <style>{`@keyframes gut-pulse-banner { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }`}</style>
-      </div>
+      </GlassCard>
     );
   }
 
   if (estado.status === "error") {
     return (
-      <div role="alert" style={{
-        aspectRatio: String(aspect),
-        background: "rgba(239,68,68,0.06)",
-        border: `1px solid rgba(239,68,68,0.35)`,
-        borderRadius: "12px",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: COR.danger, fontSize: "0.78rem",
-        ...style,
-      }}>
+      <GlassCard
+        role="alert"
+        className="!rounded-xl flex items-center justify-center text-[#ef4444] text-xs"
+        style={{
+          aspectRatio: String(aspect),
+          borderColor: "rgba(239,68,68,0.35)",
+          background: "rgba(239,68,68,0.06)",
+          ...style,
+        }}
+      >
         ✗ Não foi possível carregar o banner ({estado.erro})
-      </div>
+      </GlassCard>
     );
   }
 
@@ -108,15 +114,18 @@ export default function BannerCard({ clienteId, formato = "app", style = {}, mos
     : null;
 
   return (
-    <figure role="img" aria-label={alt} style={{
-      margin: 0,
-      aspectRatio: String(aspect),
-      borderRadius: "12px",
-      overflow: "hidden",
-      border: `1px solid ${COR.border}`,
-      animation: "gut-fade-in-banner 0.35s ease-out both",
-      ...style,
-    }}>
+    <GlassCard
+      as="figure"
+      role="img" aria-label={alt}
+      className="!rounded-xl !p-0 overflow-hidden"
+      style={{
+        margin: 0,
+        aspectRatio: String(aspect),
+        borderColor: COR.border,
+        animation: "gut-fade-in-banner 0.35s ease-out both",
+        ...style,
+      }}
+    >
       <style>{`@keyframes gut-fade-in-banner { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }`}</style>
       {conteudo}
       {mostrarFonte && estado.fonte && (
@@ -126,6 +135,6 @@ export default function BannerCard({ clienteId, formato = "app", style = {}, mos
           display: "inline-block", borderRadius: "0 0 6px 0",
         }}>fonte: {estado.fonte}</figcaption>
       )}
-    </figure>
+    </GlassCard>
   );
 }

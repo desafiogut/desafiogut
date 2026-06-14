@@ -1,8 +1,9 @@
 # DESAFIOGUT — cloud.md (Documentação Viva do Sistema)
 
 > Manifesto único do sistema auto-governado. O projeto deve ser compreensível
-> apenas lendo este ficheiro. Atualizado em: 2026-06-13 (MC22.2).
+> apenas lendo este ficheiro. Atualizado em: 2026-06-14 (MC23.3).
 > Pilares: **Superpers** (auto-revisão) · **Everything Cloud Code** (modular) · **RUFLO** (orquestração de agentes).
+> MC23.3: Biblioteca Glass UI completa (GlassCard, Button, Input, Table, Modal).
 
 ---
 
@@ -98,7 +99,7 @@ DESAFIOGUT/
     ├── [AGENTE INTERFACE]
     │   ├── widgets/layout/{AppLayout,BackgroundCanvas,AtmosphereFilter,Layout,Sidebar,BottomNav}.jsx
     │   ├── components/{GutoSpritePlayer,GutoAvatar,ChatbotWidget}.jsx
-    │   ├── components/ui/{card,badge,progress}.jsx   (+ .gut-glass em globals.css)
+    │   ├── components/ui/{GlassCard,Button,Input,Table,Modal}.jsx   (MC23.3 Glass UI primitives)
     │   └── context/useAppContextEnvironment.jsx      (estado de ambiente)
     ├── [AGENTE TRANSACAO]
     │   ├── components/{CardLance,TabelaLances}.jsx
@@ -144,7 +145,7 @@ ChatbotWidget) **não** são refatorados retroativamente sem necessidade (evita 
 | FASE 2 — Nav Dock flutuante + Active Indicator + morph do "Dar Lance" | ✅ |
 | FASE 3 — GutoSpritePlayer + parallax + useShakeOnError | ✅ |
 | Vidro temperado (`.gut-glass`) nos componentes glassmórficos | ✅ |
-| **MC21.1 FASE 1 — Biblioteca Glass UI** (`.glass-panel` + 10 primitivos + migração `.gut-glass`→neutro) | ✅ (PR feat/mc21.1) |
+| **MC23.3 — Adoção completa Glass UI** (5 primitivos: GlassCard, Button, Input, Table, Modal; 19 ficheiros migrados; `.glass-panel` padrão) | ✅ (PR #54 feat/mc23.3) |
 | **MC21.1 FASE 2 — Vidro no visitante** (rodapé global + MercadoLances; Dashboard/Vitrine/SejaParceiro/Chatbot já compatíveis) | ✅ parcial |
 | **MC21.2** — Trindade do Vidro nas páginas corporativo/admin/auth-gated + visitante restante | ✅ (PR #48, merged) |
 | **MC22.1 SecA** — i18n PT/EN/ES (`IdiomaProvider`+`useT()`, `src/i18n/*`, persiste `gut_lang`, `<html lang>`); Configuracoes migrado; shell faseável | ✅ |

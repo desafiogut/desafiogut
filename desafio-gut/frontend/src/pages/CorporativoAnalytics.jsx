@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
 
 const COR = {
   text: "#e8f0fe", muted: "#6b7db8", primary: "#f5a623",
@@ -50,13 +51,7 @@ export default function CorporativoAnalytics() {
     return () => { cancel = true; };
   }, [address, authToken, periodo]);
 
-  const cardStyle = {
-    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-    border: "1px solid rgba(245,166,35,0.18)",
-    borderRadius: "16px",
-    padding: isMobile ? "1rem" : "1.25rem",
-    backdropFilter: "blur(16px)",
-  };
+  const cardCls = isMobile ? "p-4" : "p-5";
 
   const impressoes  = analytics?.totais?.impressoes ?? 0;
   const cliques     = analytics?.totais?.cliques ?? 0;
@@ -142,7 +137,7 @@ export default function CorporativoAnalytics() {
         })}
       </section>
 
-      <section style={cardStyle}>
+      <GlassCard as="section" className={cardCls}>
         <h3 style={{ margin: "0 0 0.5rem", fontSize: "0.9rem", color: COR.primary, fontWeight: 800 }}>
           🌎 Distribuição geográfica
         </h3>
@@ -152,7 +147,7 @@ export default function CorporativoAnalytics() {
             ? `${analytics.geografia.length} regiões detectadas no período.`
             : "Sem dados suficientes no período selecionado."}
         </p>
-      </section>
+      </GlassCard>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { getVisitorId } from "../lib/fingerprint.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
+import { Button, Input } from "@/components/ui";
 
 const COR = {
   text: "#e8f0fe", muted: "#6b7db8", primary: "#f5a623",
@@ -302,14 +303,6 @@ export default function SejaNossoParceiro() {
     padding: isMobile ? "1.25rem" : "1.5rem",
     backdropFilter: "blur(16px)",
   };
-  const inputStyle = {
-    width: "100%", padding: "0.7rem 0.9rem",
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(245,166,35,0.25)",
-    borderRadius: "8px", color: COR.text,
-    fontSize: "0.92rem", outline: "none",
-    boxSizing: "border-box",
-  };
   const labelStyle = {
     display: "block", marginBottom: "0.4rem",
     color: COR.muted, fontSize: "0.8rem", fontWeight: 600,
@@ -450,7 +443,7 @@ export default function SejaNossoParceiro() {
             Enviámos um código de 6 dígitos para <strong style={{ color: COR.text }}>{emailOtp}</strong>.
             Digite-o abaixo para entrar no Painel do Lojista.
           </p>
-          <input
+          <Input
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
@@ -460,11 +453,7 @@ export default function SejaNossoParceiro() {
             onKeyDown={(e) => { if (e.key === "Enter") confirmarCodigo(); }}
             placeholder="••••••"
             aria-label="Código de 6 dígitos"
-            style={{
-              ...inputStyle,
-              letterSpacing: "0.5em", textAlign: "center",
-              fontSize: "1.3rem", fontWeight: 800,
-            }}
+            className="tracking-[0.5em] text-center !text-2xl !font-extrabold"
           />
           {otpErro && (
             <p role="alert" style={{ margin: "0.6rem 0 0", color: COR.primary, fontSize: "0.82rem" }}>
@@ -472,35 +461,16 @@ export default function SejaNossoParceiro() {
             </p>
           )}
           <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem", flexWrap: "wrap" }}>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={confirmarCodigo}
+            <Button variant="primary" size="md" onClick={confirmarCodigo}
               disabled={otpState.status === "submitting-code" || codigo.length < 6}
-              style={{
-                padding: "0.7rem 1.5rem",
-                background: `linear-gradient(135deg, ${COR.teal}, #00a888)`,
-                border: "none", borderRadius: "10px", color: "#0a0f1a",
-                fontFamily: "'Orbitron', sans-serif", fontWeight: 800,
-                fontSize: "0.9rem",
-                cursor: otpState.status === "submitting-code" || codigo.length < 6 ? "not-allowed" : "pointer",
-                opacity: otpState.status === "submitting-code" || codigo.length < 6 ? 0.6 : 1,
-              }}
-            >
+              className="!bg-gradient-to-br !from-[#00d4aa] !to-[#00a888] hover:!from-[#00e4ba] hover:!to-[#00b898] !shadow-none font-['Orbitron']">
               {otpState.status === "submitting-code" ? "Verificando…" : "Confirmar código"}
-            </motion.button>
-            <button
-              onClick={reenviarCodigo}
+            </Button>
+            <Button variant="ghost" size="md" onClick={reenviarCodigo}
               disabled={otpState.status === "sending-code"}
-              style={{
-                padding: "0.7rem 1rem", background: "transparent",
-                border: `1px solid ${COR.muted}55`, borderRadius: "10px",
-                color: COR.muted, fontWeight: 700, fontSize: "0.85rem",
-                cursor: otpState.status === "sending-code" ? "not-allowed" : "pointer",
-              }}
-            >
+              className="!border-[#6b7db8]/33 !text-[#6b7db8]">
               {otpState.status === "sending-code" ? "Enviando…" : "Reenviar código"}
-            </button>
+            </Button>
           </div>
         </motion.section>
       )}
@@ -524,30 +494,17 @@ export default function SejaNossoParceiro() {
           ].map((t) => {
             const ativo = aba === t.id;
             return (
-              <button
+              <Button
                 key={t.id}
+                variant={ativo ? "primary" : "ghost"}
+                size="md"
                 role="tab"
                 aria-selected={ativo}
                 onClick={() => setAba(t.id)}
-                style={{
-                  flex: 1,
-                  padding: "0.7rem 1rem",
-                  background: ativo ? COR.primary : "transparent",
-                  border: ativo
-                    ? `1px solid ${COR.primary}`
-                    : `1px solid rgba(245,166,35,0.3)`,
-                  borderRadius: "10px",
-                  color: ativo ? "#0a0f1a" : COR.muted,
-                  fontFamily: "'Orbitron', sans-serif",
-                  fontWeight: 800,
-                  fontSize: "0.82rem",
-                  letterSpacing: "0.02em",
-                  cursor: "pointer",
-                  outlineOffset: "2px",
-                }}
+                className={ativo ? "flex-1 font-['Orbitron'] tracking-[0.02em]" : "flex-1 !border-[#f5a623]/30 !text-[#6b7db8] font-['Orbitron'] tracking-[0.02em]"}
               >
                 {t.rotulo}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -576,18 +533,14 @@ export default function SejaNossoParceiro() {
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div>
               <label style={labelStyle}>CNPJ *</label>
-              <input
+              <Input
                 type="text"
                 placeholder="00.000.000/0000-00"
                 value={cnpj}
                 onChange={e => setCnpj(mascaraCNPJ(e.target.value))}
                 maxLength={18}
                 required
-                style={{
-                  ...inputStyle,
-                  borderColor: cnpj && !validarCNPJ(cnpj)
-                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
-                }}
+                error={cnpj && !validarCNPJ(cnpj)}
               />
               {cnpj && !validarCNPJ(cnpj) && (
                 <span style={{ color: "#ff3d71", fontSize: "0.75rem" }}>CNPJ inválido</span>
@@ -600,7 +553,7 @@ export default function SejaNossoParceiro() {
             </div>
             <div>
               <label style={labelStyle}>Email da Empresa *</label>
-              <input
+              <Input
                 type="email"
                 placeholder="contato@suaempresa.com.br"
                 value={email}
@@ -608,7 +561,6 @@ export default function SejaNossoParceiro() {
                 maxLength={120}
                 required
                 autoComplete="email"
-                style={inputStyle}
               />
               <span style={{ color: COR.muted, fontSize: "0.72rem" }}>
                 Usaremos esse email para confirmar o cadastro e o contato da coordenação.
@@ -616,13 +568,12 @@ export default function SejaNossoParceiro() {
             </div>
             <div>
               <label style={labelStyle}>Nome da Empresa *</label>
-              <input
+              <Input
                 type="text"
                 placeholder="Razão social ou nome fantasia"
                 value={empresa}
                 onChange={e => setEmpresa(e.target.value.slice(0, 100))}
                 required
-                style={inputStyle}
               />
             </div>
             <div>
@@ -639,30 +590,22 @@ export default function SejaNossoParceiro() {
             </div>
             <div>
               <label style={labelStyle}>Site (opcional)</label>
-              <input
+              <Input
                 type="url"
                 placeholder="https://suaempresa.com.br"
                 value={site}
                 onChange={e => setSite(e.target.value)}
-                style={{
-                  ...inputStyle,
-                  borderColor: site && !validarURL(site)
-                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
-                }}
+                error={site && !validarURL(site)}
               />
             </div>
             <div>
               <label style={labelStyle}>URL do Logo (opcional)</label>
-              <input
+              <Input
                 type="url"
                 placeholder="https://suaempresa.com.br/logo.png"
                 value={logoUrl}
                 onChange={e => setLogoUrl(e.target.value)}
-                style={{
-                  ...inputStyle,
-                  borderColor: logoUrl && !validarURL(logoUrl)
-                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
-                }}
+                error={logoUrl && !validarURL(logoUrl)}
               />
             </div>
             {erro && (
@@ -674,27 +617,10 @@ export default function SejaNossoParceiro() {
                 ⚠️ {erro}
               </div>
             )}
-            <motion.button
-              type="submit"
-              disabled={enviando}
-              whileHover={enviando ? {} : { scale: 1.02 }}
-              whileTap={enviando ? {} : { scale: 0.98 }}
-              style={{
-                padding: "0.85rem 1.5rem",
-                background: enviando
-                  ? "rgba(245,166,35,0.3)"
-                  : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
-                border: "none", borderRadius: "10px",
-                color: enviando ? COR.muted : "#0a0f1a",
-                fontFamily: "'Orbitron', sans-serif",
-                fontWeight: 800, fontSize: "0.9rem",
-                cursor: enviando ? "wait" : "pointer",
-                opacity: enviando ? 0.7 : 1,
-                marginTop: "0.5rem",
-              }}
-            >
+            <Button type="submit" variant="primary" size="lg" disabled={enviando}
+              className="w-full mt-2 font-['Orbitron']">
               {enviando ? "⏳ Enviando cadastro…" : "⚡ Enviar cadastro corporativo"}
-            </motion.button>
+            </Button>
           </form>
         </motion.section>
       )}
@@ -720,18 +646,14 @@ export default function SejaNossoParceiro() {
           <form onSubmit={handleLoginExistente} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div>
               <label style={labelStyle}>CNPJ *</label>
-              <input
+              <Input
                 type="text"
                 placeholder="00.000.000/0000-00"
                 value={cnpjLogin}
                 onChange={e => setCnpjLogin(mascaraCNPJ(e.target.value))}
                 maxLength={18}
                 required
-                style={{
-                  ...inputStyle,
-                  borderColor: cnpjLogin && !validarCNPJ(cnpjLogin)
-                    ? "rgba(255,61,113,0.5)" : "rgba(245,166,35,0.25)",
-                }}
+                error={cnpjLogin && !validarCNPJ(cnpjLogin)}
               />
               {cnpjLogin && !validarCNPJ(cnpjLogin) && (
                 <span style={{ color: "#ff3d71", fontSize: "0.75rem" }}>CNPJ inválido</span>
@@ -739,13 +661,12 @@ export default function SejaNossoParceiro() {
             </div>
             <div>
               <label style={labelStyle}>Nome da Empresa *</label>
-              <input
+              <Input
                 type="text"
                 placeholder="Razão social ou nome fantasia"
                 value={empresaLogin}
                 onChange={e => setEmpresaLogin(e.target.value.slice(0, 100))}
                 required
-                style={inputStyle}
               />
             </div>
             {erroLogin && (
@@ -757,27 +678,10 @@ export default function SejaNossoParceiro() {
                 ⚠️ {erroLogin}
               </div>
             )}
-            <motion.button
-              type="submit"
-              disabled={enviandoLogin}
-              whileHover={enviandoLogin ? {} : { scale: 1.02 }}
-              whileTap={enviandoLogin ? {} : { scale: 0.98 }}
-              style={{
-                padding: "0.85rem 1.5rem",
-                background: enviandoLogin
-                  ? "rgba(245,166,35,0.3)"
-                  : `linear-gradient(135deg, ${COR.primary}, #e89400)`,
-                border: "none", borderRadius: "10px",
-                color: enviandoLogin ? COR.muted : "#0a0f1a",
-                fontFamily: "'Orbitron', sans-serif",
-                fontWeight: 800, fontSize: "0.9rem",
-                cursor: enviandoLogin ? "wait" : "pointer",
-                opacity: enviandoLogin ? 0.7 : 1,
-                marginTop: "0.5rem",
-              }}
-            >
+            <Button type="submit" variant="primary" size="lg" disabled={enviandoLogin}
+              className="w-full mt-2 font-['Orbitron']">
               {enviandoLogin ? "⏳ Verificando…" : "Entrar no Meu Painel"}
-            </motion.button>
+            </Button>
           </form>
         </motion.section>
       )}

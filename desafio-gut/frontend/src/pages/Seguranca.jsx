@@ -1,5 +1,6 @@
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -35,13 +36,7 @@ export default function Seguranca() {
   const cardPad    = isMobile ? "1rem" : "1.25rem";
   const sectionGap = isMobile ? "1.25rem" : "1.5rem";
 
-  const cardStyle = {
-    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-    border: "1px solid rgba(245,166,35,0.18)",
-    borderRadius: "16px",
-    padding: cardPad,
-    backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-  };
+  const cardCls = isMobile ? "p-4" : "p-5";
   const cardTituloStyle = {
     margin: `0 0 ${isMobile ? "0.75rem" : "1rem"}`,
     fontSize: isMobile ? "0.88rem" : "0.9rem",
@@ -69,7 +64,7 @@ export default function Seguranca() {
       </header>
 
       {/* Status da sessão */}
-      <div style={{ ...cardStyle, marginBottom: sectionGap }}>
+      <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
         <h3 style={cardTituloStyle}>🔐 Status da Sessão</h3>
         <div style={{
           display: "grid",
@@ -97,10 +92,10 @@ export default function Seguranca() {
             </div>
           ))}
         </div>
-      </div>
+      </GlassCard>
 
       {/* Checklist */}
-      <div style={{ ...cardStyle, marginBottom: sectionGap }}>
+      <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
         <h3 style={cardTituloStyle}>🔒 Checklist de Proteção</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
           {CHECKS.map(({ label, desc, status }) => (
@@ -139,10 +134,10 @@ export default function Seguranca() {
             </div>
           ))}
         </div>
-      </div>
+      </GlassCard>
 
       {/* LGPD */}
-      <div style={cardStyle}>
+      <GlassCard className={cardCls}>
         <h3 style={cardTituloStyle}>⚖️ Compliance LGPD</h3>
         <div style={{
           display: "grid",
@@ -209,7 +204,7 @@ export default function Seguranca() {
             fontSize: "0.66rem", color: COR.muted, marginTop: "0.35rem",
           }}>Toque para abrir no Etherscan</div>
         </div>
-      </div>
+      </GlassCard>
     </div>
   );
 }

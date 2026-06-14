@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdmin } from "../../hooks/useAdmin.js";
+import { Button } from "@/components/ui";
 
 const Icon = ({ d, size = 22 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -190,18 +191,11 @@ export default function BottomNav() {
                 <div style={{ fontWeight: "900", fontSize: "0.95rem", color: "#e8f0fe", letterSpacing: "0.02em" }}>DesafioGUT</div>
                 <div style={{ fontSize: "0.65rem", color: "#6b7db8" }}>Grupo União e Trabalho</div>
               </div>
-              <button
-                type="button"
-                onClick={() => setMoreOpen(false)}
-                aria-label="Fechar"
-                style={{
-                  background: "rgba(245,166,35,0.08)", border: "1px solid rgba(245,166,35,0.2)",
-                  borderRadius: "10px", padding: "0.5rem", color: "#fbbf24", cursor: "pointer",
-                  display: "flex",
-                }}
-              >
+              <Button variant="ghost" size="sm" type="button"
+                onClick={() => setMoreOpen(false)} aria-label="Fechar"
+                className="!border-[#f5a623]/20 !bg-[#f5a623]/[0.08] !text-[#fbbf24] !rounded-xl !p-2 !min-w-0">
                 <IconClose size={18} />
-              </button>
+              </Button>
             </div>
 
             {/* MC11.3 — Auth-state granular (4 estados, espelha Sidebar):
@@ -263,19 +257,11 @@ export default function BottomNav() {
                 )}
               </div>
             ) : (
-              <button
-                type="button"
+              <Button variant="primary" size="lg" type="button"
                 onClick={() => { abrirModal(); setMoreOpen(false); }}
-                style={{
-                  width: "100%", padding: "0.85rem", marginBottom: "0.5rem",
-                  background: "linear-gradient(135deg,#f5a623,#f97316)",
-                  border: "none", borderRadius: "12px",
-                  color: "#0a0f1a", fontWeight: "800", fontSize: "0.95rem",
-                  cursor: "pointer",
-                }}
-              >
+                className="w-full mb-2 !rounded-xl">
                 ⚡ Aceito o DesafioGUT
-              </button>
+              </Button>
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "0.5rem" }}>
@@ -302,20 +288,12 @@ export default function BottomNav() {
             </div>
 
             {isConnected && (
-              <button
-                type="button"
+              <Button variant="ghost" size="md" type="button"
                 onClick={() => { desconectar(); setMoreOpen(false); }}
-                style={{
-                  width: "100%", marginTop: "0.75rem", padding: "0.75rem",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
-                  background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.22)",
-                  borderRadius: "12px", color: "#ef4444",
-                  fontSize: "0.88rem", fontWeight: "700", cursor: "pointer",
-                }}
-              >
+                className="w-full mt-3 !border-[#ef4444]/22 !bg-[#ef4444]/[0.08] !text-[#ef4444] !rounded-xl">
                 <IconLogOut />
                 Sair
-              </button>
+              </Button>
             )}
           </div>
 

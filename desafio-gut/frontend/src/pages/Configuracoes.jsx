@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIdioma } from "../context/IdiomaContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
+import { Button } from "@/components/ui";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 import SliderOpacidade from "../components/SliderOpacidade.jsx";
 
@@ -30,13 +32,7 @@ export default function Configuracoes() {
   const cardPad    = isMobile ? "1rem" : "1.25rem";
   const sectionGap = isMobile ? "1.25rem" : "1.5rem";
 
-  const cardStyle = {
-    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-    border: "1px solid rgba(245,166,35,0.18)",
-    borderRadius: "16px",
-    padding: cardPad,
-    backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-  };
+  const cardCls = isMobile ? "p-4" : "p-5";
   const cardTituloStyle = {
     margin: `0 0 ${isMobile ? "0.75rem" : "1rem"}`,
     fontSize: isMobile ? "0.88rem" : "0.9rem",
@@ -57,7 +53,7 @@ export default function Configuracoes() {
       </header>
 
       {/* Conta */}
-      <div style={{ ...cardStyle, marginBottom: sectionGap }}>
+      <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
         <h3 style={cardTituloStyle}>{t("config.conta")}</h3>
         {isConnected ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -67,15 +63,10 @@ export default function Configuracoes() {
             <InfoRow label="Status" value="✅ Conectado" valueColor={COR.success} isMobile={isMobile} />
 
             <div style={{ marginTop: "0.75rem" }}>
-              <button onClick={desconectar} style={{
-                width: isMobile ? "100%" : "auto",
-                padding: "0.6rem 1.2rem",
-                background: "rgba(239,68,68,0.1)",
-                border: "1px solid rgba(239,68,68,0.3)",
-                borderRadius: "10px",
-                color: COR.danger, cursor: "pointer",
-                fontWeight: "700", fontSize: "0.84rem",
-              }}>{t("config.desconectar")}</button>
+              <Button variant="ghost" size="md" onClick={desconectar}
+                className={`${isMobile ? "w-full" : ""} !border-[#ef4444]/30 !bg-[#ef4444]/[0.1] !text-[#ef4444]`}>
+                {t("config.desconectar")}
+              </Button>
             </div>
           </div>
         ) : (
@@ -86,10 +77,10 @@ export default function Configuracoes() {
             <BotaoLoginPrincipal onClick={abrirModal} size="md" fullWidth={isMobile} />
           </div>
         )}
-      </div>
+      </GlassCard>
 
       {/* Notificações */}
-      <div style={{ ...cardStyle, marginBottom: sectionGap }}>
+      <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
         <h3 style={{ ...cardTituloStyle, display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <span>{t("config.notificacoes")}</span>
           <span style={{
@@ -130,10 +121,10 @@ export default function Configuracoes() {
             </div>
           ))}
         </div>
-      </div>
+      </GlassCard>
 
       {/* Preferências */}
-      <div style={{ ...cardStyle, marginBottom: sectionGap }}>
+      <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
         <h3 style={cardTituloStyle}>{t("config.preferencias")}</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {/* Idioma */}
@@ -163,10 +154,10 @@ export default function Configuracoes() {
           {/* MC22.1 SECÇÃO B — Intensidade do vidro (substitui o antigo toggle "Tema", inerte). */}
           <SliderOpacidade label={t("config.intensidadeVidro")} isMobile={isMobile} />
         </div>
-      </div>
+      </GlassCard>
 
       {/* Sobre */}
-      <div style={cardStyle}>
+      <GlassCard className={cardCls}>
         <h3 style={cardTituloStyle}>{t("config.sobre")}</h3>
         <div style={{
           display: "flex", flexDirection: "column", gap: "0.5rem",
@@ -185,29 +176,17 @@ export default function Configuracoes() {
             >www.grupouniaoetrabalho.com.br ↗</a>
           </div>
         </div>
-      </div>
+      </GlassCard>
 
       {/* Salvar */}
       <div style={{
         marginTop: sectionGap,
         display: "flex", justifyContent: isMobile ? "stretch" : "flex-end",
       }}>
-        <button
-          onClick={handleSalvar}
-          style={{
-            width: isMobile ? "100%" : "auto",
-            padding: "0.8rem 1.8rem",
-            background: salvo
-              ? "rgba(16,185,129,0.2)"
-              : "linear-gradient(135deg,#f5a623,#e89400)",
-            border: salvo ? "1px solid rgba(16,185,129,0.4)" : "none",
-            borderRadius: "12px",
-            color: salvo ? COR.success : "#fff",
-            fontWeight: "800", cursor: "pointer", fontSize: "0.88rem",
-            transition: "all 0.2s",
-            boxShadow: salvo ? "none" : "0 4px 14px rgba(245,166,35,0.35)",
-          }}
-        >{salvo ? t("config.salvo") : t("config.salvar")}</button>
+        <Button variant="primary" size="lg" onClick={handleSalvar}
+          className={`${isMobile ? "w-full" : ""} ${salvo ? "!bg-[#10b981]/[0.2] !border !border-[#10b981]/40 !text-[#10b981] !shadow-none" : ""}`}>
+          {salvo ? t("config.salvo") : t("config.salvar")}
+        </Button>
       </div>
     </div>
   );

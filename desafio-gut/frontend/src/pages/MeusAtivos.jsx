@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 
 const COR = {
@@ -71,13 +72,7 @@ export default function MeusAtivos() {
         marginBottom: sectionGap,
       }}>
         {stats.map(({ label, value, color }) => (
-          <div key={label} style={{
-            background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-            border: "1px solid rgba(245,166,35,0.18)",
-            borderRadius: "14px",
-            padding: isMobile ? "0.85rem 0.9rem" : "1rem",
-            minWidth: 0,
-          }}>
+          <GlassCard key={label} className={isMobile ? "!rounded-[14px] p-3.5" : "!rounded-[14px] p-4"}>
             <div style={{
               fontSize: isMobile ? "1.15rem" : "1.5rem",
               fontWeight: "900", color, lineHeight: 1.1,
@@ -87,7 +82,7 @@ export default function MeusAtivos() {
               fontSize: isMobile ? "0.7rem" : "0.72rem",
               color: COR.muted, marginTop: "0.25rem", fontWeight: "600",
             }}>{label}</div>
-          </div>
+          </GlassCard>
         ))}
       </div>
 
@@ -125,14 +120,7 @@ export default function MeusAtivos() {
       </div>
 
       {/* Lista */}
-      <div style={{
-        background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-        border: "1px solid rgba(245,166,35,0.18)",
-        borderRadius: "16px",
-        padding: isMobile ? "0.75rem" : 0,
-        overflow: "hidden",
-        backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-      }}>
+      <GlassCard className={`overflow-hidden ${isMobile ? 'p-3' : 'p-0'}`}>
         {lancesExibidos.length === 0 ? (
           <div style={{
             padding: isMobile ? "2rem 1rem" : "3rem",
@@ -149,7 +137,7 @@ export default function MeusAtivos() {
         ) : (
           <DesktopTable lances={lancesExibidos} filtro={filtro} />
         )}
-      </div>
+      </GlassCard>
 
       {!isConnected && (
         <div style={{ marginTop: sectionGap, textAlign: "center" }}>

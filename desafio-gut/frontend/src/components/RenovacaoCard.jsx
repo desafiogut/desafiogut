@@ -5,6 +5,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
+import { GlassCard } from "@/components/ui";
+import { Button } from "@/components/ui";
 
 const COR = {
   primary: "#f5a623",
@@ -88,15 +90,10 @@ export default function RenovacaoCard({ endereco, isMobile = false }) {
   const podeSolicitar = statusAtual === "nao-iniciada" || statusAtual === "vencendo" || statusAtual === "vencida";
 
   return (
-    <section
+    <GlassCard
+      as="section"
       aria-label="Status da adesão e renovação"
-      style={{
-        background: "linear-gradient(155deg, rgba(245,166,35,0.06) 0%, rgba(8,30,64,0.85) 100%)",
-        border: `1px solid ${COR.border}`,
-        borderRadius: "14px",
-        padding: isMobile ? "1rem" : "1.25rem",
-        display: "flex", flexDirection: "column", gap: "0.75rem",
-      }}
+      className={`flex flex-col ${isMobile ? 'gap-3 p-4' : 'gap-3 p-5'}`}
     >
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -110,21 +107,12 @@ export default function RenovacaoCard({ endereco, isMobile = false }) {
             </p>
           </div>
         </div>
-        <button
-          onClick={carregar}
+        <Button variant="ghost" size="sm" onClick={carregar}
           disabled={!endereco || estado.status === "loading"}
           aria-label="Atualizar status da adesão"
-          style={{
-            padding: "0.32rem 0.7rem",
-            background: COR.primaryDim,
-            border: `1px solid ${COR.border}`,
-            borderRadius: "20px",
-            color: COR.primary,
-            fontSize: "0.7rem", fontWeight: 700,
-            cursor: endereco && estado.status !== "loading" ? "pointer" : "not-allowed",
-            opacity: endereco ? 1 : 0.5,
-          }}
-        >{estado.status === "loading" ? "⏳" : "↻"}</button>
+          className="rounded-full !border-[#f5a623]/30 !bg-[#f5a623]/[0.15] !text-[#f5a623]">
+          {estado.status === "loading" ? "⏳" : "↻"}
+        </Button>
       </header>
 
       {!endereco ? (
@@ -161,21 +149,11 @@ export default function RenovacaoCard({ endereco, isMobile = false }) {
           {/* Solicitar */}
           {podeSolicitar && (
             <div>
-              <button
-                type="button"
-                onClick={solicitar}
-                disabled={solicitando}
-                aria-label="Solicitar renovação de adesão"
-                style={{
-                  width: "100%", padding: "0.7rem 0.9rem",
-                  background: "linear-gradient(135deg,#f5a623,#f97316)",
-                  border: "none", borderRadius: "10px",
-                  color: "#0a0f1a", fontWeight: 800, fontSize: "0.85rem",
-                  cursor: solicitando ? "wait" : "pointer",
-                }}
-              >
+              <Button variant="primary" size="md" type="button" onClick={solicitar}
+                disabled={solicitando} aria-label="Solicitar renovação de adesão"
+                className="w-full">
                 {solicitando ? "⏳ Solicitando…" : `📋 Solicitar renovação (R$ ${VALOR_RENOVACAO_BRL})`}
-              </button>
+              </Button>
               {msgSolicit && (
                 <p style={{ margin: "0.4rem 0 0", fontSize: "0.74rem", color: msgSolicit.startsWith("✓") ? COR.success : COR.danger }}>
                   {msgSolicit}
@@ -223,6 +201,6 @@ export default function RenovacaoCard({ endereco, isMobile = false }) {
           )}
         </>
       )}
-    </section>
+    </GlassCard>
   );
 }

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
 
 const COR = {
   primary:    "#00d4aa",
@@ -94,14 +95,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
     }
   }
 
-  const cardStyle = {
-    background:      "rgba(10,16,42,0.6)",
-    border:          `1px solid ${COR.border}`,
-    borderRadius:    "16px",
-    padding:         isMobile ? "1rem" : "1.25rem",
-    backdropFilter:  "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-    marginBottom:    isMobile ? "1.25rem" : "1.5rem",
-  };
+  const cardCls = isMobile ? "mb-5 p-4" : "mb-6 p-5";
   const tituloStyle = {
     margin:        `0 0 ${isMobile ? "0.6rem" : "0.8rem"}`,
     fontSize:      isMobile ? "0.85rem" : "0.88rem",
@@ -133,29 +127,30 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
 
   if (!isConnected) {
     return (
-      <div style={cardStyle}>
+      <GlassCard className={cardCls}>
         <h3 style={tituloStyle}>🎁 Indique e Ganhe</h3>
         <p style={{ margin: 0, color: COR.muted, fontSize: "0.85rem" }}>
           Faça login para obter seu código e começar a indicar amigos.
         </p>
-      </div>
+      </GlassCard>
     );
   }
 
   if (dados.status === "off") {
     return (
-      <div style={cardStyle}>
+      <GlassCard className={cardCls}>
         <h3 style={tituloStyle}>🎁 Indique e Ganhe</h3>
         <p style={{ margin: 0, color: COR.muted, fontSize: "0.82rem" }}>
           O programa de indicação está temporariamente desligado.
         </p>
-      </div>
+      </GlassCard>
     );
   }
 
   return (
-    <motion.div
-      style={cardStyle}
+    <GlassCard
+      as={motion.div}
+      className={cardCls}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
@@ -272,6 +267,6 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
       }}>
         Limite: até <strong>10 indicações convertidas por mês</strong>. Anti-fraude: FingerprintJS + Sybil check (MC3) rejeita indicações do mesmo dispositivo.
       </div>
-    </motion.div>
+    </GlassCard>
   );
 }

@@ -7,9 +7,11 @@
 //
 // Auth JWT: pede assinatura única (cached 10min em ref via prop opcional).
 // Para esta primeira versão, exige `getAuthToken()` injetado pelo parent.
+// MC23.3 — outer section migrado para GlassCard as="section".
 
 import { useRef, useState } from "react";
 import BannerCard from "./BannerCard.jsx";
+import { Button, GlassCard } from "@/components/ui";
 
 const COR = {
   primary: "#f5a623",
@@ -123,14 +125,14 @@ export default function BannerUpload({ endereco, isMobile = false, getAuthToken 
   const info = DIMENSAO_INFO[dimensao];
 
   return (
-    <section
+    <GlassCard
+      as="section"
       aria-label="Painel de upload de banner"
+      className="!rounded-[14px] flex flex-col gap-3"
       style={{
-        background: "linear-gradient(155deg, rgba(245,166,35,0.06) 0%, rgba(8,30,64,0.85) 100%)",
-        border: `1px solid ${COR.border}`,
-        borderRadius: "14px",
         padding: isMobile ? "1rem" : "1.25rem",
-        display: "flex", flexDirection: "column", gap: "0.75rem",
+        background: "linear-gradient(155deg, rgba(245,166,35,0.06) 0%, rgba(8,30,64,0.85) 100%)",
+        borderColor: COR.border,
       }}
     >
       <header style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -157,20 +159,13 @@ export default function BannerUpload({ endereco, isMobile = false, getAuthToken 
       <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
         <span style={{ fontSize: "0.72rem", color: COR.muted, fontWeight: 700 }}>Formato:</span>
         {["app", "site"].map((k) => (
-          <button
+          <Button
             key={k}
-            type="button"
+            variant="ghost" size="sm"
             onClick={() => setDimensao(k)}
             aria-pressed={dimensao === k}
-            style={{
-              padding: "0.3rem 0.8rem",
-              background: dimensao === k ? COR.primaryDim : "transparent",
-              border: `1px solid ${dimensao === k ? COR.primary : "rgba(255,255,255,0.1)"}`,
-              borderRadius: "20px",
-              color: dimensao === k ? COR.primary : COR.muted,
-              fontSize: "0.74rem", fontWeight: 700, cursor: "pointer",
-            }}
-          >{DIMENSAO_INFO[k].label} ({DIMENSAO_INFO[k].largura}×{DIMENSAO_INFO[k].altura})</button>
+            className={dimensao === k ? "!border-[#f5a623] !bg-[#f5a623]/[0.15] !text-[#f5a623] rounded-full" : "rounded-full text-[#94a3b8]"}
+          >{DIMENSAO_INFO[k].label} ({DIMENSAO_INFO[k].largura}×{DIMENSAO_INFO[k].altura})</Button>
         ))}
       </div>
 
@@ -234,35 +229,17 @@ export default function BannerUpload({ endereco, isMobile = false, getAuthToken 
         )}
 
         <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={enviar}
+          <Button variant="primary" size="md" type="button" onClick={enviar}
             disabled={!arquivo || status.tipo === "enviando" || !endereco}
-            style={{
-              flex: "1 1 auto",
-              padding: "0.5rem 0.9rem",
-              background: arquivo && endereco ? "linear-gradient(135deg,#f5a623,#f97316)" : "rgba(255,255,255,0.05)",
-              border: "none", borderRadius: "10px",
-              color: arquivo && endereco ? "#0a0f1a" : COR.muted,
-              fontWeight: 800, fontSize: "0.82rem",
-              cursor: arquivo && endereco && status.tipo !== "enviando" ? "pointer" : "not-allowed",
-            }}
-          >
+            className="flex-1">
             {status.tipo === "enviando" ? "⏳ Enviando…" : "📤 Enviar banner"}
-          </button>
+          </Button>
           {arquivo && (
-            <button
-              type="button"
-              onClick={limpar}
+            <Button variant="ghost" size="md" type="button" onClick={limpar}
               aria-label="Limpar seleção de arquivo"
-              style={{
-                padding: "0.5rem 0.9rem",
-                background: "transparent",
-                border: "1px solid rgba(255,255,255,0.15)",
-                borderRadius: "10px",
-                color: COR.muted, fontSize: "0.78rem", cursor: "pointer",
-              }}
-            >Limpar</button>
+              className="!border-white/15 !text-[#94a3b8]">
+              Limpar
+            </Button>
           )}
         </div>
 
@@ -284,6 +261,6 @@ export default function BannerUpload({ endereco, isMobile = false, getAuthToken 
         Upload pelo cliente entra como <strong>pendente</strong> até aprovação Admin.
         Premium debita Wallet (REQ-23).
       </p>
-    </section>
+    </GlassCard>
   );
 }

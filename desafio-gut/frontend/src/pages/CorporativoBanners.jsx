@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 // MC17.3 — upload de banner realocado da MinhaCarteira (utilizador comum) para
 // o mundo lojista. O botão "Novo banner" deixa de navegar para /carteira.
@@ -62,13 +63,7 @@ export default function CorporativoBanners() {
   const togglePausa = (formato) =>
     setPausas((p) => ({ ...p, [formato]: !p[formato] }));
 
-  const cardStyle = {
-    background: "rgba(255,255,255, var(--glass-opacity, 0.03))",
-    border: "1px solid rgba(245,166,35,0.18)",
-    borderRadius: "16px",
-    padding: isMobile ? "1rem" : "1.25rem",
-    backdropFilter: "blur(16px)",
-  };
+  const cardCls = isMobile ? "p-4" : "p-5";
 
   const formatosCfg = [
     { key: "app",  rotulo: "App (800×200)",   dimensao: "800×200" },
@@ -94,7 +89,7 @@ export default function CorporativoBanners() {
           const impress = analytics?.banners?.[key]?.impressoes ?? 0;
           const cliques = analytics?.banners?.[key]?.cliques ?? 0;
           return (
-            <div key={key} style={cardStyle}>
+            <GlassCard key={key} className={cardCls}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", flexWrap: "wrap", gap: "0.5rem" }}>
                 <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: COR.primary }}>
                   {rotulo}
@@ -166,7 +161,7 @@ export default function CorporativoBanners() {
                   📤 Novo banner
                 </button>
               </div>
-            </div>
+            </GlassCard>
           );
         })}
       </div>

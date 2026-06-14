@@ -13,6 +13,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { GlassCard } from "@/components/ui";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 // MC17.3 — elementos do lojista realocados da MinhaCarteira (utilizador comum):
@@ -146,11 +147,7 @@ export default function CorporativoCarteira() {
     }
   }
 
-  const card = {
-    background: "rgba(255,255,255, var(--glass-opacity, 0.03))", border: "1px solid rgba(245,166,35,0.18)",
-    borderRadius: "16px", padding: isMobile ? "1rem" : "1.25rem",
-    backdropFilter: "blur(16px)", marginBottom: isMobile ? "1rem" : "1.25rem",
-  };
+  const cardCls = `${isMobile ? 'p-4 mb-4' : 'p-5 mb-5'}`;
   const lbl = { fontSize: "0.7rem", color: "#6b7db8", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 };
   const btn = (cor, off) => ({
     padding: "0.65rem 1rem", background: off ? "rgba(245,166,35,0.2)" : `linear-gradient(135deg,${cor},${cor}cc)`,
@@ -173,14 +170,14 @@ export default function CorporativoCarteira() {
       </header>
 
       {!isConnected ? (
-        <div style={{ ...card, color: "#6b7db8" }}>
+        <GlassCard className={`${cardCls} text-[#6b7db8]`}>
           <p style={{ marginTop: 0, fontSize: "0.9rem" }}>Inicie sessão como lojista para gerir a sua carteira.</p>
           <BotaoLoginPrincipal onClick={abrirModal} size="md" fullWidth={isMobile} />
-        </div>
+        </GlassCard>
       ) : (
         <>
           {/* Senhas de troco */}
-          <div style={{ ...card, borderColor: "rgba(16,185,129,0.28)" }}>
+          <GlassCard className={`${cardCls} !border-[rgba(16,185,129,0.28)]`}>
             <div style={lbl}>Senhas de troco (excedente da cota)</div>
             <div style={{ display: "flex", gap: "1.5rem", alignItems: "baseline", flexWrap: "wrap", margin: "0.4rem 0" }}>
               <div>
@@ -210,10 +207,10 @@ export default function CorporativoCarteira() {
                 Ir dar lances
               </button>
             </div>
-          </div>
+          </GlassCard>
 
           {/* Cota atual */}
-          <div style={card}>
+          <GlassCard className={cardCls}>
             <div style={lbl}>Cota atual</div>
             {cota?.categoria && cota?.vendida ? (
               <div style={{ marginTop: "0.4rem", color: "#e8f0fe" }}>
@@ -225,10 +222,10 @@ export default function CorporativoCarteira() {
                 Sem cota ativa. Contrate uma abaixo.
               </div>
             )}
-          </div>
+          </GlassCard>
 
           {/* Contratar cota comercial */}
-          <div style={card}>
+          <GlassCard className={cardCls}>
             <div style={{ ...lbl, marginBottom: "0.6rem" }}>Contratar cota comercial</div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0.6rem" }}>
               {COTAS.map((c) => (
@@ -291,7 +288,7 @@ export default function CorporativoCarteira() {
                 Pagamento confirmado — cota ativada.
               </div>
             )}
-          </div>
+          </GlassCard>
 
           {msg && <p style={{ fontSize: "0.82rem", color: "#10b981", fontWeight: 700 }}>{msg}</p>}
           {erro && <p style={{ fontSize: "0.8rem", color: "#ef4444" }}>{erro}</p>}
