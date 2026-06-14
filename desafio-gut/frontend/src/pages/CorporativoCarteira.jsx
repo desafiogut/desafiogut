@@ -170,14 +170,14 @@ export default function CorporativoCarteira() {
       </header>
 
       {!isConnected ? (
-        <div style={{ ...card, color: "#6b7db8" }}>
+        <GlassCard className={`${cardCls} text-[#6b7db8]`}>
           <p style={{ marginTop: 0, fontSize: "0.9rem" }}>Inicie sessão como lojista para gerir a sua carteira.</p>
           <BotaoLoginPrincipal onClick={abrirModal} size="md" fullWidth={isMobile} />
-        </div>
+        </GlassCard>
       ) : (
         <>
           {/* Senhas de troco */}
-          <div style={{ ...card, borderColor: "rgba(16,185,129,0.28)" }}>
+          <GlassCard className={`${cardCls} !border-[rgba(16,185,129,0.28)]`}>
             <div style={lbl}>Senhas de troco (excedente da cota)</div>
             <div style={{ display: "flex", gap: "1.5rem", alignItems: "baseline", flexWrap: "wrap", margin: "0.4rem 0" }}>
               <div>
@@ -207,10 +207,10 @@ export default function CorporativoCarteira() {
                 Ir dar lances
               </button>
             </div>
-          </div>
+          </GlassCard>
 
           {/* Cota atual */}
-          <div style={card}>
+          <GlassCard className={cardCls}>
             <div style={lbl}>Cota atual</div>
             {cota?.categoria && cota?.vendida ? (
               <div style={{ marginTop: "0.4rem", color: "#e8f0fe" }}>
@@ -222,10 +222,10 @@ export default function CorporativoCarteira() {
                 Sem cota ativa. Contrate uma abaixo.
               </div>
             )}
-          </div>
+          </GlassCard>
 
           {/* Contratar cota comercial */}
-          <div style={card}>
+          <GlassCard className={cardCls}>
             <div style={{ ...lbl, marginBottom: "0.6rem" }}>Contratar cota comercial</div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0.6rem" }}>
               {COTAS.map((c) => (
@@ -288,7 +288,7 @@ export default function CorporativoCarteira() {
                 Pagamento confirmado — cota ativada.
               </div>
             )}
-          </div>
+          </GlassCard>
 
           {msg && <p style={{ fontSize: "0.82rem", color: "#10b981", fontWeight: 700 }}>{msg}</p>}
           {erro && <p style={{ fontSize: "0.8rem", color: "#ef4444" }}>{erro}</p>}

@@ -115,20 +115,18 @@ export default function MinhaCarteira() {
       </header>
 
       {!isConnected ? (
-        <div style={cardStyle}>
+        <GlassCard className={cardCls}>
           <p style={{ color: COR.muted, marginBottom: "1rem", fontSize: isMobile ? "0.85rem" : "0.9rem" }}>
             Faça login para visualizar e gerenciar sua carteira.
           </p>
           <BotaoLoginPrincipal onClick={abrirModal} size="md" fullWidth={isMobile} />
-        </div>
+        </GlassCard>
       ) : (
         <>
           {/* Saldo Disponível (R$) — modelo dual Frente B.9.
               Fonte: blob saldo-rs:${address}. PIX → +R$. /comprar-senhas → -R$.
               /lance-relampago → -centavos. */}
-          <div style={{
-              ...cardStyle,
-              marginBottom: sectionGap,
+          <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`} style={{
               borderColor: "rgba(245,166,35,0.32)",
               background: "linear-gradient(180deg, rgba(10,16,42,0.6), rgba(245,166,35,0.06))",
             }}>
@@ -236,7 +234,7 @@ export default function MinhaCarteira() {
                   ⚠️ Não foi possível ler o saldo R$ agora.
                 </p>
               )}
-            </div>
+            </GlassCard>
 
           {/* MC10 — Sistema "Indique e Ganhe" (Growth Viral). */}
           <div style={{ marginBottom: sectionGap }}>
@@ -246,9 +244,7 @@ export default function MinhaCarteira() {
           {/* Saldo de Senhas — fonte: saldoSenhas on-chain (AppContext).
               Atualiza via listener SenhasCreditadas + LanceDado e polling
               guardião 30s — não precisa hook próprio. */}
-          <div style={{
-              ...cardStyle,
-              marginBottom: sectionGap,
+          <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`} style={{
               borderColor: "rgba(16,185,129,0.28)",
               background: "linear-gradient(180deg, rgba(10,16,42,0.6), rgba(16,185,129,0.04))",
             }}>
@@ -343,10 +339,10 @@ export default function MinhaCarteira() {
                   ⚠️ Não foi possível ler o saldo on-chain agora. Use “Atualizar saldo”.
                 </p>
               )}
-            </div>
+            </GlassCard>
 
           {/* Dados de pagamento */}
-          <div style={{ ...cardStyle, marginBottom: sectionGap }}>
+          <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
             <h3 style={tituloStyle}>🏦 Dados para Pagamento (Art. 21)</h3>
             <div style={{
               display: "grid",
@@ -372,10 +368,10 @@ export default function MinhaCarteira() {
                 </div>
               ))}
             </div>
-          </div>
+          </GlassCard>
 
           {/* Meus lances */}
-          <div style={cardStyle}>
+          <GlassCard className={cardCls}>
             <h3 style={tituloStyle}>📋 Meus Lances ({meusLances.length})</h3>
             {meusLances.length === 0 ? (
               <div style={{
@@ -411,7 +407,7 @@ export default function MinhaCarteira() {
                 ))}
               </div>
             )}
-          </div>
+          </GlassCard>
 
           {/* Account info */}
           <div style={{
