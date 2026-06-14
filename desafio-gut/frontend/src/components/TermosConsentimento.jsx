@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { Modal } from "@/components/ui";
 
 /**
  * TermosConsentimento — Gate de compliance LGPD · DesafioGUT
  *
  * Exibe o regulamento oficial e bloqueia participação até aceitação total.
  * Artigos numerados em arábico conforme regulamento RTD Manaus/AM (1º mai/2026).
+ * MC23.3 — overlay migrado para <Modal> (spring entry + backdrop bg-black/60).
  */
 export default function TermosConsentimento({ onAceitar }) {
   const [lido,       setLido]       = useState(false);
@@ -26,8 +28,11 @@ export default function TermosConsentimento({ onAceitar }) {
   }
 
   return (
-    <div style={estilos.overlay}>
-      <div style={estilos.modal}>
+    <Modal
+      open
+      className="!max-w-[620px] w-full !rounded-2xl p-8 flex flex-col gap-5 overflow-y-auto !max-h-[92vh] !bg-[#0d2145] !border !border-[rgba(245,166,35,0.3)]"
+      style={{ boxShadow: "0 25px 60px rgba(0,0,0,0.7), 0 0 40px rgba(245,166,35,0.15)" }}
+    >
 
         {/* Cabeçalho */}
         <div style={estilos.header}>
@@ -205,28 +210,12 @@ export default function TermosConsentimento({ onAceitar }) {
         <p style={estilos.rodapeLegal}>
           Grupo União e Trabalho · CNPJ 23.040.066/0001-00 · Manaus/AM, Brasil
         </p>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
 // ─── Estilos — paleta Azul Marinho GUT ───────────────────────────────────────
 const estilos = {
-  overlay: {
-    position: "fixed", inset: 0,
-    background: "rgba(3,15,36,0.92)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    zIndex: 1000, padding: "1rem",
-  },
-  modal: {
-    background: "#0d2145",
-    border: "1px solid rgba(245,166,35,0.3)",
-    borderRadius: "16px", padding: "2rem",
-    maxWidth: "620px", width: "100%", color: "#e8f0fe",
-    boxShadow: "0 25px 60px rgba(0,0,0,0.7), 0 0 40px rgba(245,166,35,0.15)",
-    maxHeight: "92vh", display: "flex", flexDirection: "column", gap: "1.25rem",
-    overflowY: "auto",
-  },
   logoArea: {
     display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem",
     flexDirection: "column",
