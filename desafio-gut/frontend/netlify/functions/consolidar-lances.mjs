@@ -23,7 +23,7 @@ const ZERO             = "0x0000000000000000000000000000000000000000";
 const TIMEOUT_MINER_MS = 90_000; // janela de mineração antes de reportar "pendente"
 
 /** Menor valor que aparece EXATAMENTE uma vez (Artigo VIII). null se não houver. */
-function apurarMenorUnico(lances) {
+export function apurarMenorUnico(lances) {
   const cont = new Map();
   for (const l of lances) cont.set(l.valorCentavos, (cont.get(l.valorCentavos) || 0) + 1);
   let menor = Infinity, vencedor = ZERO;
