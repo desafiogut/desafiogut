@@ -20,6 +20,27 @@ contract LeilaoGUT {
     mapping(string => Edicao) public edicoes; // Ex: "R-1", "P-1"
     mapping(address => uint256) public saldoSenhas;
 
+    // ── MC28.1: Blindagem de privacidade (Blind Commitment — Abordagem A2) ─────
+    // Aditivo e zero-regressão: as funções legadas (darLance/apurarVencedor) e a
+    // interface `string idEdicao` permanecem intactas para a Sepolia/localhost.
+    // NOTA (ITEM 1.1): a conversão idEdicao→bytes32 foi DELIBERADAMENTE não
+    // aplicada — o contrato Sepolia já deployado usa `string` e R1/R9 exigem zero
+    // regressão no legado. bytes32 é otimização; R1 é absoluto → mantém-se `string`.
+    // Ver security_audit.md (separação EIP-712 off-chain vs edicaoNonce on-chain).
+
+    // Compromisso cego por (edição, lançador): keccak256(abi.encode(valor, lancador)).
+    // A coordenação (relayer confiável) regista APONTANDO para o endereço real do
+    // participante → auditabilidade pública sem 2ª assinatura (UX 1 clique mantida).
+    mapping(string => mapping(address => bytes32)) public lancesComprometidos;
+
+    // Nonce auto-incremental por edição — anti-replay nativo on-chain. Queimado a
+    // cada consolidarResultado (independente da assinatura EIP-712 off-chain).
+    mapping(string => uint256) public edicaoNonce;
+
+    // Resultado consolidado O(1) — escrito uma única vez pela coordenação no fecho.
+    struct Resultado { uint256 menorUnico; address vencedor; bool consolidado; }
+    mapping(string => Resultado) public resultados;
+
     event LanceDado(
         string idEdicao,
         address indexed lancador,
@@ -30,6 +51,10 @@ contract LeilaoGUT {
     event EdicaoAberta(string idEdicao, string nome, uint256 prazo);
     event SenhasCreditadas(address indexed usuario, uint256 quantidade);
     event TransferenciaIniciada(address indexed novaCoordenacao); // [M-02]
+
+    // ── MC28.1: eventos da blindagem ──────────────────────────────────────────
+    event LanceComprometido(string idEdicao, address indexed lancador, bytes32 hashLance);
+    event ResultadoConsolidado(string idEdicao, address indexed vencedor, uint256 menorUnico, uint256 nonce);
 
     constructor() {
         coordenacao = msg.sender;
@@ -112,5 +137,32 @@ contract LeilaoGUT {
         require(msg.sender == coordenacaoPendente, "Somente o novo coordenador pode aceitar");
         coordenacao = coordenacaoPendente;
         coordenacaoPendente = address(0);
+    }
+
+    // ── MC28.1: Blindagem de privacidade dos lances (Anti-Bot) ─────────────────
+    // [ITEM 1.2/A2] Registo do compromisso cego. A coordenação (relayer confiável)
+    // submete o hash em nome do participante `lancador`, preservando a UX de 1
+    // clique. A elegibilidade (saldo de senhas / edição ativa) é validada no
+    // backend ANTES desta chamada. O valor real NUNCA toca a cadeia até à
+    // consolidação — só o hash fica on-chain, invisível a bots no mempool.
+    function comprometerLance(string memory idEdicao, address lancador, bytes32 hashLance)
+        public apenasCoordenacao
+    {
+        require(lancador != address(0), "Lancador invalido");
+        lancesComprometidos[idEdicao][lancador] = hashLance;
+        emit LanceComprometido(idEdicao, lancador, hashLance);
+    }
+
+    // [ITEM 1.4] Consolidação O(1). A coordenação calcula o menor lance único
+    // OFF-CHAIN (Artigo VIII; desempate resolvido off-chain) e publica apenas a
+    // decisão final — valor SINGULAR, sem arrays dinâmicos (gás constante).
+    // edicaoNonce++ queima o nonce do leilão → anti-replay nativo on-chain.
+    function consolidarResultado(string memory idEdicao, address vencedor, uint256 menorUnico)
+        public apenasCoordenacao
+    {
+        require(!resultados[idEdicao].consolidado, "Resultado ja consolidado");
+        resultados[idEdicao] = Resultado(menorUnico, vencedor, true);
+        edicaoNonce[idEdicao]++;
+        emit ResultadoConsolidado(idEdicao, vencedor, menorUnico, edicaoNonce[idEdicao]);
     }
 }

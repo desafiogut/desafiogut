@@ -5,8 +5,11 @@ import { THead, TH, TD } from "@/components/ui";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 function ordenarLances(lances) {
-  const unicos    = lances.filter((l) => !l.repetido).sort((a, b) => a.valor - b.valor);
-  const repetidos = lances.filter((l) =>  l.repetido).sort((a, b) => a.valor - b.valor);
+  // MC28.1: cmp null-safe — lances blindados (valor null em mainnet) mantêm ordem
+  // estável; no Sepolia (valor numérico) a ordenação é idêntica à anterior.
+  const cmp = (a, b) => (a.valor ?? 0) - (b.valor ?? 0);
+  const unicos    = lances.filter((l) => !l.repetido).sort(cmp);
+  const repetidos = lances.filter((l) =>  l.repetido).sort(cmp);
   return [...unicos, ...repetidos];
 }
 
@@ -128,18 +131,20 @@ function MobileList({ lancesOrdenados, idxVencedor, encerrado }) {
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
       <AnimatePresence initial={false}>
         {lancesOrdenados.map((lance, i) => {
+          // MC28.1: linha blindada (mainnet) — valor nunca revelado nesta tabela.
+          const oculto = lance.oculto === true;
           const enderecoSanitizado = sanitizeAddress(lance.endereco ?? "");
-          const valorSanitizado = sanitizeLance(lance.valor);
+          const valorSanitizado = oculto ? null : sanitizeLance(lance.valor);
           const txHash = sanitizeString(lance.txHash ?? "");
-          if (!enderecoSanitizado || valorSanitizado === null) return null;
+          if (!enderecoSanitizado || (!oculto && valorSanitizado === null)) return null;
 
-          const repetido   = lance.repetido === true;
-          const isVencedor = i === idxVencedor;
-          const itemKey    = `${enderecoSanitizado}-${valorSanitizado}`;
-          const status     = statusFor(repetido, isVencedor);
+          const repetido   = !oculto && lance.repetido === true;
+          const isVencedor = !oculto && i === idxVencedor;
+          const itemKey    = oculto ? `${enderecoSanitizado}-${i}` : `${enderecoSanitizado}-${valorSanitizado}`;
+          const status     = oculto ? { label: "🔒 Blindado", variant: "success" } : statusFor(repetido, isVencedor);
           const enderecoAbrev = `${enderecoSanitizado.slice(0, 6)}...${enderecoSanitizado.slice(-4)}`;
           const nome       = nomeOuEndereco(lance, enderecoAbrev);
-          const valorFormatado = `R$ ${(valorSanitizado / 100).toFixed(2)}`;
+          const valorFormatado = oculto ? "🔒" : `R$ ${(valorSanitizado / 100).toFixed(2)}`;
 
           return (
             <motion.div
@@ -233,18 +238,20 @@ function DesktopTable({ lancesOrdenados, idxVencedor, encerrado }) {
         <AnimatePresence initial={false}>
           <tbody>
             {lancesOrdenados.map((lance, i) => {
+              // MC28.1: linha blindada (mainnet) — valor nunca revelado nesta tabela.
+              const oculto = lance.oculto === true;
               const enderecoSanitizado = sanitizeAddress(lance.endereco ?? "");
-              const valorSanitizado = sanitizeLance(lance.valor);
+              const valorSanitizado = oculto ? null : sanitizeLance(lance.valor);
               const txHash = sanitizeString(lance.txHash ?? "");
-              if (!enderecoSanitizado || valorSanitizado === null) return null;
+              if (!enderecoSanitizado || (!oculto && valorSanitizado === null)) return null;
 
-              const repetido   = lance.repetido === true;
-              const isVencedor = i === idxVencedor;
-              const itemKey    = `${enderecoSanitizado}-${valorSanitizado}`;
-              const status     = statusFor(repetido, isVencedor);
+              const repetido   = !oculto && lance.repetido === true;
+              const isVencedor = !oculto && i === idxVencedor;
+              const itemKey    = oculto ? `${enderecoSanitizado}-${i}` : `${enderecoSanitizado}-${valorSanitizado}`;
+              const status     = oculto ? { label: "🔒 Blindado", variant: "success" } : statusFor(repetido, isVencedor);
               const enderecoAbrev = `${enderecoSanitizado.slice(0, 6)}...${enderecoSanitizado.slice(-4)}`;
               const nome       = nomeOuEndereco(lance, enderecoAbrev);
-              const valorFormatado = `R$ ${(valorSanitizado / 100).toFixed(2)}`;
+              const valorFormatado = oculto ? "🔒" : `R$ ${(valorSanitizado / 100).toFixed(2)}`;
 
               return (
                 <motion.tr

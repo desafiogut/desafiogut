@@ -21,6 +21,10 @@ import { getRole, requireRole } from "./_lib/rbac.mjs";
 import { requireMfa } from "./_lib/require-mfa.mjs";
 import { lerEstadoSistema, sistemaPausado } from "./_lib/system-state.mjs";
 import { registrarEventosDeLance } from "./_lib/notificacoes-usuario.mjs";
+// ── MC28.1: blindagem (ativa só em NETWORK_STAGE === 'mainnet') ──────────────
+import { gravarBid } from "./_lib/bids-store.mjs";
+import { comprometerLanceOnchain } from "./_lib/contract.mjs";
+import { keccak256, AbiCoder } from "ethers";
 
 const LANCE_MIN_CENTAVOS = 1;
 const LANCE_MAX_CENTAVOS = 999999;
@@ -153,30 +157,53 @@ export default async (req) => {
     processadoEm: new Date().toISOString(),
   };
 
-  // ── 7. Persistir lance em blob ─────────────────────────────────────────────
-  const store = abrirStore(BLOB_LANCES);
-  if (store) {
+  // ── 7. Persistir lance ─────────────────────────────────────────────────────
+  // R9 — Isolamento por ambiente: a blindagem só corre em mainnet. Em
+  // Sepolia/localhost mantém-se o comportamento legado (blob único, texto limpo).
+  if (process.env.NETWORK_STAGE === "mainnet") {
+    // ── MAINNET: Compromisso Cego (A2) + Key-Per-Bid ─────────────────────────
+    // O valor real NUNCA toca a cadeia: on-chain vai só o hash; o valor fica num
+    // Blob por-lance, isolado e imutável (sem race; G-3 resolvido).
     try {
-      const existente = (await store.get(edicaoId, { type: "json" })) || { lances: [] };
-      existente.lances.push(registro);
-      existente.atualizadoEm = new Date().toISOString();
-      await store.setJSON(edicaoId, existente);
-      // ── MC15.7 ITEM 1 — notificações de unicidade (fail-soft; nunca quebra o lance)
-      try {
-        await registrarEventosDeLance({
-          lances: existente.lances, valorCentavos, edicaoId, autorEndereco: endereco,
-        });
-      } catch (err) {
-        console.warn("[lance-relampago] notificação de unicidade falhou (não-fatal):", err?.message);
-      }
-      // MC17.4.1 — DEPRECATED: a conversão de indicação (+1 senha indicador / +1
-      // indicado) foi MIGRADA para o momento do REGISTO. O endpoint referral.mjs
-      // (?acao=usar-codigo) dispara registrarConversao assim que o vínculo é criado,
-      // tornando a recompensa imediata (sem exigir 1.º lance). O gancho do 1.º lance
-      // foi removido para o gatilho ser único; a idempotência (referral-convertido)
-      // continua a impedir duplo-crédito.
+      // Hash ESPELHANDO o empacotamento da EVM (ITEM 2.1): keccak256(abi.encode(...)).
+      const hashLance = keccak256(
+        AbiCoder.defaultAbiCoder().encode(["uint256", "address"], [valorCentavos, endereco]));
+      // 7a. Commitment on-chain (coordenação assina; aponta para o endereço real).
+      await comprometerLanceOnchain(edicaoId, endereco, hashLance);
+      registro.commitmentHash = hashLance;
+      // 7b. Valor real → Blob Key-Per-Bid (chave isolada + sufixo aleatório).
+      registro.key = await gravarBid({ edicaoId, endereco, registro });
     } catch (err) {
-      console.warn("[lance-relampago] persistir lance falhou (não-fatal):", err?.message);
+      // Em mainnet a falha é FATAL: não gravar lance sem o commitment correspondente.
+      console.error("[lance-relampago] blindagem (commit/KPB) falhou:", err?.message);
+      return jsonError(502, "blindagem_falhou", "não foi possível registar o lance blindado");
+    }
+  } else {
+    // ── LEGADO (Sepolia/localhost): blob único em texto limpo — INTOCADO ──────
+    const store = abrirStore(BLOB_LANCES);
+    if (store) {
+      try {
+        const existente = (await store.get(edicaoId, { type: "json" })) || { lances: [] };
+        existente.lances.push(registro);
+        existente.atualizadoEm = new Date().toISOString();
+        await store.setJSON(edicaoId, existente);
+        // ── MC15.7 ITEM 1 — notificações de unicidade (fail-soft; nunca quebra o lance)
+        try {
+          await registrarEventosDeLance({
+            lances: existente.lances, valorCentavos, edicaoId, autorEndereco: endereco,
+          });
+        } catch (err) {
+          console.warn("[lance-relampago] notificação de unicidade falhou (não-fatal):", err?.message);
+        }
+        // MC17.4.1 — DEPRECATED: a conversão de indicação (+1 senha indicador / +1
+        // indicado) foi MIGRADA para o momento do REGISTO. O endpoint referral.mjs
+        // (?acao=usar-codigo) dispara registrarConversao assim que o vínculo é criado,
+        // tornando a recompensa imediata (sem exigir 1.º lance). O gancho do 1.º lance
+        // foi removido para o gatilho ser único; a idempotência (referral-convertido)
+        // continua a impedir duplo-crédito.
+      } catch (err) {
+        console.warn("[lance-relampago] persistir lance falhou (não-fatal):", err?.message);
+      }
     }
   }
 
@@ -190,6 +217,7 @@ export default async (req) => {
           saldoRsAntesCentavos:  debito.resultado.saldoAntesCentavos,
           saldoRsDepoisCentavos: debito.resultado.saldoDepoisCentavos,
           processadoEm: registro.processadoEm,
+          commitmentHash: registro.commitmentHash ?? null,
           ok: true,
         });
       } catch (err) {
@@ -210,5 +238,6 @@ export default async (req) => {
     saldoRsAntesCentavos:  debito.resultado.saldoAntesCentavos,
     saldoRsDepoisCentavos: debito.resultado.saldoDepoisCentavos,
     processadoEm: registro.processadoEm,
+    commitmentHash: registro.commitmentHash ?? null,
   }, 201);
 };

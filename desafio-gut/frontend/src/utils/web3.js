@@ -12,6 +12,14 @@ export const ABI = [
   "event LanceDado(string idEdicao, address indexed lancador, uint256 valorEmCentavos, bool repetido, uint256 timestamp)",
   "event EdicaoAberta(string idEdicao, string nome, uint256 prazo)",
   "event SenhasCreditadas(address indexed usuario, uint256 quantidade)",
+  // ── MC28.1: blindagem de privacidade (Compromisso Cego A2) — aditivo ───────
+  // darLance permanece para o legado Sepolia/localhost (R9). Estas entradas
+  // expõem só leitura/eventos da nova camada; o commit on-chain é feito pelo
+  // backend (coordenação), nunca pelo utilizador.
+  "function resultados(string) view returns (uint256 menorUnico, address vencedor, bool consolidado)",
+  "function edicaoNonce(string) view returns (uint256)",
+  "event LanceComprometido(string idEdicao, address indexed lancador, bytes32 hashLance)",
+  "event ResultadoConsolidado(string idEdicao, address indexed vencedor, uint256 menorUnico, uint256 nonce)",
 ];
 
 export const CONTRATO_SEPOLIA =

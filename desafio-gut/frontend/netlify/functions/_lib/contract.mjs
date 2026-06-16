@@ -21,6 +21,13 @@ const ABI = [
   // Evento emitido por darLance(idEdicao, valorEmCentavos) — usado pelo
   // monitor-onchain.mjs para detectar padrões anômalos (Mega Comando 3 / Item 4).
   "event LanceDado(string idEdicao, address indexed lancador, uint256 valorEmCentavos, bool repetido, uint256 timestamp)",
+  // ── MC28.1: blindagem de privacidade (Compromisso Cego A2) ─────────────────
+  "function comprometerLance(string idEdicao, address lancador, bytes32 hashLance) public",
+  "function consolidarResultado(string idEdicao, address vencedor, uint256 menorUnico) public",
+  "function edicaoNonce(string) view returns (uint256)",
+  "function resultados(string) view returns (uint256 menorUnico, address vencedor, bool consolidado)",
+  "event LanceComprometido(string idEdicao, address indexed lancador, bytes32 hashLance)",
+  "event ResultadoConsolidado(string idEdicao, address indexed vencedor, uint256 menorUnico, uint256 nonce)",
 ];
 
 // MC17.5.1 — resolução ROBUSTA do contrato. Aceita a variável de backend
@@ -152,4 +159,24 @@ export async function getBlocoAtual() {
   ensureEnv();
   const provider = new JsonRpcProvider(process.env.RPC_URL);
   return await provider.getBlockNumber();
+}
+
+// ── MC28.1: blindagem de privacidade (Compromisso Cego A2) ───────────────────
+
+/**
+ * Submete o compromisso cego on-chain em nome do participante (Abordagem A2).
+ * A coordenação (relayer) assina; o hash aponta para o endereço real `lancador`.
+ * @returns {{ txHash: string, blockNumber: number }}
+ */
+export async function comprometerLanceOnchain(idEdicao, lancador, hashLance) {
+  const { contract } = getInstance();
+  const tx = await contract.comprometerLance(idEdicao, lancador, hashLance);
+  const receipt = await tx.wait(1);
+  return { txHash: receipt.hash, blockNumber: receipt.blockNumber };
+}
+
+/** Lê o nonce atual da edição (domínio EIP-712 + anti-replay da consolidação). */
+export async function lerEdicaoNonce(idEdicao) {
+  const ro = getReadOnlyContract();
+  return Number(await ro.edicaoNonce(idEdicao));
 }
