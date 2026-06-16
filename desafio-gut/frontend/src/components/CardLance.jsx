@@ -18,6 +18,10 @@ import {
 
 const SEPOLIA_CHAIN_ID = 11155111;
 
+// MC28.1 R9 — blindagem ativa só em mainnet. No Sepolia/localhost (MAINNET=false)
+// todo o fluxo abaixo é byte-idêntico ao legado (zero regressão).
+const MAINNET = import.meta.env.VITE_NETWORK_STAGE === "mainnet";
+
 const FASES = {
   IDLE:         "idle",
   AUTENTICANDO: "autenticando",
@@ -120,7 +124,9 @@ export default function CardLance({
     const { permitido, motivo } = verificarRateLimit(address);
     if (!permitido) { setErro(motivo); return; }
 
-    if (isProgramado) {
+    // MC28.1: em mainnet o programado é roteado pelo backend blindado (saldo R$),
+    // logo NÃO se aplica o gate on-chain saldoSenhas. No Sepolia, gate legado.
+    if (isProgramado && !MAINNET) {
       if (saldoSenhasStatus === "loading" || saldoSenhasStatus === "idle") {
         setErro("Carregando saldo on-chain — aguarde alguns segundos e tente novamente.");
         return;
@@ -136,8 +142,10 @@ export default function CardLance({
     }
 
     try {
-      // ── FLASH: auth → idempotência → off-chain via lance-relampago ──────
-      if (!isProgramado) {
+      // ── FLASH (e PROGRAMADO em mainnet): auth → idempotência → backend blindado
+      // MC28.1: em mainnet ambas as modalidades passam pelo backend (Compromisso
+      // Cego + Key-Per-Bid). No Sepolia, só o flash usa este ramo (legado).
+      if (!isProgramado || MAINNET) {
         // 1. Obter token de auth (cached 10min — Privy popup só na 1ª vez)
         setFase(FASES.AUTENTICANDO);
         const authToken = await getFlashAuthToken();
@@ -178,7 +186,8 @@ export default function CardLance({
         }
         registrarLance(address);
         setUltimaTx(data.lanceId);
-        setUltimoHash(null);
+        // MC28.1: em mainnet exibe o commitment on-chain como prova de participação.
+        setUltimoHash(data.commitmentHash ?? null);
         setUltimaTxIsOnChain(false);
         setFase(FASES.SUCESSO);
         setValor("");
@@ -385,7 +394,7 @@ export default function CardLance({
                   {ultimaTx.slice(0, 14)}…{ultimaTx.slice(-6)}
                 </a>{" "}🔗
               </p>
-              {ultimoHash && <p style={estilos.hashText}>🔐 Argon2id: {ultimoHash.slice(0, 22)}...</p>}
+              {ultimoHash && <p style={estilos.hashText}>🔐 {MAINNET ? "Commitment" : "Argon2id"}: {ultimoHash.slice(0, 22)}...</p>}
             </>
           ) : ultimaTx ? (
             <p style={estilos.txText}>🔗 Recibo: {ultimaTx.slice(0, 18)}…</p>

@@ -28,6 +28,11 @@ export default async (req) => {
 
   // ── Verificação de unicidade por valor ──────────────────────────────────
   if (acao === "verificar") {
+    // MC28.1 R9: em mainnet a unicidade fica oculta durante o leilão (anti-bot).
+    if (process.env.NETWORK_STAGE === "mainnet") {
+      return jsonError(403, "verificacao_indisponivel",
+        "verificação de unicidade fica blindada durante o leilão na mainnet");
+    }
     const valorRaw = url.searchParams.get("valor");
     if (valorRaw == null || valorRaw === "") {
       return jsonError(400, "valor_ausente", "query param 'valor' obrigatório para verificar");
@@ -65,6 +70,24 @@ export default async (req) => {
   } catch (err) {
     console.warn("[lances-flash] leitura blob falhou:", err?.message);
     return jsonResponse({ edicaoId, lances: [] });
+  }
+
+  // ── MC28.1 R9: em mainnet, o valor NUNCA sai em claro no corpo HTTP (G-2).
+  // Devolvem-se só participações blindadas (oculto:true) — sem valor nem
+  // unicidade — até à consolidação. Em Sepolia/localhost: comportamento legado.
+  const MAINNET = process.env.NETWORK_STAGE === "mainnet";
+  if (MAINNET) {
+    const lances = rawLances.map((l) => ({
+      lanceId:        l.lanceId,
+      endereco:       l.endereco,
+      valor:          null,            // blindado — não revelar durante o leilão
+      oculto:         true,
+      commitmentHash: l.commitmentHash ?? null,
+      nomeExibicao:   l.nomeExibicao ?? null,
+      txHash:         l.lanceId,
+      repetido:       null,            // não vazar unicidade ao bot
+    }));
+    return jsonResponse({ edicaoId, ocultoAteConsolidar: true, lances });
   }
 
   // Computa repetido: valores com count > 1 são repetidos
