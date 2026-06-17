@@ -11,7 +11,13 @@
 //   - Erros são logados com .message, NÃO com `err` cru — alguns providers
 //     incluem o RPC URL completo em err.info, e queremos minimizar superfície.
 
-import { Contract, JsonRpcProvider, Wallet } from "ethers";
+import { Contract, JsonRpcProvider } from "ethers";
+import {
+  resolverChaveCoordenacao,
+  obterSignerCoordenacao,
+  backendAssinatura,
+  getCoordenacaoAddressCache,
+} from "./signer.mjs";
 
 const ABI = [
   "function adicionarSenhas(address usuario, uint256 quantidade) public",
@@ -43,39 +49,39 @@ export const CONTRATO_ADDRESS =
   process.env.VITE_CONTRATO_SEPOLIA ||
   "0x273Ef96f5be04601FD39DAcDFB039d6fB552445e";
 
-let _provider;
-let _wallet;
-let _contract;
+let _instancePromise;    // cache do { provider, signer, contract } resolvido
 let _coordenacaoCache;   // cache do `coordenacao()` para evitar RPC em todo confirm
-
-// MC17.5.1 — aceita o nome canónico COORDENACAO_PRIVATE_KEY e, como fallback,
-// COORDENACAO_PRIVATE (variante sem o sufixo _KEY usada nalguns ambientes).
-// Aditivo: se a chave canónica existir, é a usada (zero-regressão).
-function resolverChaveCoordenacao() {
-  return process.env.COORDENACAO_PRIVATE_KEY || process.env.COORDENACAO_PRIVATE || null;
-}
+let _coordWalletAddress = null; // endereço público (sync para getCoordenacaoAddress)
 
 function ensureEnv() {
   if (!process.env.RPC_URL) throw new Error("RPC_URL não configurado");
-  if (!resolverChaveCoordenacao()) throw new Error("COORDENACAO_PRIVATE_KEY não configurado");
+  // A chave bruta só é exigida no backend 'local-key' (testnet/dev). No backend
+  // 'defender' (mainnet) a chave vive no HSM e NÃO está no env (MC30.1).
+  if (backendAssinatura() === "local-key" && !resolverChaveCoordenacao()) {
+    throw new Error("COORDENACAO_PRIVATE_KEY não configurado");
+  }
 }
 
-function getInstance() {
-  if (_contract) return { provider: _provider, wallet: _wallet, contract: _contract };
+// MC30.1 — a assinatura é delegada ao módulo central _lib/signer.mjs, que
+// seleciona o backend (local-key | defender). getInstance passa a ser async
+// porque o backend Defender resolve o signer via API (HSM).
+async function getInstance() {
+  if (_instancePromise) return _instancePromise;
   ensureEnv();
-  _provider = new JsonRpcProvider(process.env.RPC_URL);
-  _wallet   = new Wallet(resolverChaveCoordenacao(), _provider);
-  _contract = new Contract(CONTRATO_ADDRESS, ABI, _wallet);
-  // MC17.5.1 [LOG TEMPORÁRIO] — revela o contrato/chave resolvidos para
-  // diagnosticar desalinhamento de ambiente (NUNCA loga o valor da chave).
-  console.log("[MC17.5.1] contract.getInstance", {
-    contrato: CONTRATO_ADDRESS,
-    fonteContrato: _CONTRATO_FONTE,
-    chaveCoordenacao: process.env.COORDENACAO_PRIVATE_KEY ? "COORDENACAO_PRIVATE_KEY"
-      : process.env.COORDENACAO_PRIVATE ? "COORDENACAO_PRIVATE" : "ausente",
-    temRpc: !!process.env.RPC_URL,
-  });
-  return { provider: _provider, wallet: _wallet, contract: _contract };
+  _instancePromise = (async () => {
+    const { provider, signer, address } = await obterSignerCoordenacao(process.env.RPC_URL);
+    _coordWalletAddress = address;
+    const contract = new Contract(CONTRATO_ADDRESS, ABI, signer);
+    // [LOG] — revela contrato/backend resolvidos (NUNCA loga a chave/segredo).
+    console.log("[MC30.1] contract.getInstance", {
+      contrato: CONTRATO_ADDRESS,
+      fonteContrato: _CONTRATO_FONTE,
+      backend: backendAssinatura(),
+      temRpc: !!process.env.RPC_URL,
+    });
+    return { provider, signer, contract, address };
+  })().catch((err) => { _instancePromise = undefined; throw err; });
+  return _instancePromise;
 }
 
 // Provider read-only (sem signer) — usado para leituras que não exigem privkey.
@@ -94,11 +100,11 @@ export async function lerSaldoSenhas(endereco) {
 
 /** Sanity: confirma que a wallet configurada == coordenacao() do contrato. */
 export async function verificarCoordenacao() {
-  const { contract, wallet } = getInstance();
-  if (_coordenacaoCache) return _coordenacaoCache === wallet.address.toLowerCase();
+  const { contract, address } = await getInstance();
+  if (_coordenacaoCache) return _coordenacaoCache === address.toLowerCase();
   const coord = (await contract.coordenacao()).toLowerCase();
   _coordenacaoCache = coord;
-  return coord === wallet.address.toLowerCase();
+  return coord === address.toLowerCase();
 }
 
 /**
@@ -108,10 +114,9 @@ export async function verificarCoordenacao() {
  * @returns {{ txHash: string, blockNumber: number, gasUsed: bigint }}
  */
 export async function creditarSenhas(endereco, qtd) {
-  const { contract } = getInstance();
+  const { contract, address } = await getInstance();
   if (!(await verificarCoordenacao())) {
-    const { wallet } = getInstance();
-    throw new Error(`wallet ${wallet.address} não é coordenacao do contrato ${CONTRATO_ADDRESS}`);
+    throw new Error(`wallet ${address} não é coordenacao do contrato ${CONTRATO_ADDRESS}`);
   }
   const tx = await contract.adicionarSenhas(endereco, qtd);
   const receipt = await tx.wait(1);
@@ -122,10 +127,14 @@ export async function creditarSenhas(endereco, qtd) {
   };
 }
 
-/** Endereço da coordenacao (apenas leitura, não retorna a privkey). */
+/**
+ * Endereço da coordenacao (apenas leitura, não retorna a privkey). Síncrono:
+ * devolve o endereço em cache resolvido na última assinatura (ou null se ainda
+ * não houve nenhuma). Em _lib/credito.mjs é chamado após `creditarSenhas`, que
+ * já resolveu o signer — logo o cache está preenchido.
+ */
 export function getCoordenacaoAddress() {
-  const { wallet } = getInstance();
-  return wallet.address;
+  return _coordWalletAddress || getCoordenacaoAddressCache();
 }
 
 /**
@@ -169,7 +178,7 @@ export async function getBlocoAtual() {
  * @returns {{ txHash: string, blockNumber: number }}
  */
 export async function comprometerLanceOnchain(idEdicao, lancador, hashLance) {
-  const { contract } = getInstance();
+  const { contract } = await getInstance();
   const tx = await contract.comprometerLance(idEdicao, lancador, hashLance);
   const receipt = await tx.wait(1);
   return { txHash: receipt.hash, blockNumber: receipt.blockNumber };
