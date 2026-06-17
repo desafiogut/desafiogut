@@ -74,3 +74,88 @@ Build: `vite build` verde · Contrato: `hardhat compile` verde (solc 0.8.20).
   passo de validação visual (claude-eyes) em staging com `NETWORK_STAGE=mainnet`.
 - **`saldoRs.mjs`** mantém o padrão read-modify-write (mitigado por idempotência);
   fora do âmbito do MC28.1 (G-5, iteração futura).
+
+---
+
+# Security Audit — MC30.1 (Isolamento da Chave Mestra · OpenZeppelin Defender Relay)
+
+> PILAR 1 (SUPERPERS): este apêndice cobre a migração da assinatura da coordenação.
+> Branch `feat/mc30.1` · Endurece a camada introduzida no MC28.1 (consolidação
+> assinada pela coordenação). Baseado em `MC30.plano.txt`.
+
+## 1. Ameaça resolvida
+
+A `COORDENACAO_PRIVATE_KEY` era lida de `process.env` e injetada num `ethers.Wallet`
+na RAM da Function em **três** sítios independentes (`_lib/contract.mjs:67`,
+`consolidar-lances.mjs:68`, `_lib/ia-preditiva.mjs:274`). Quem detivesse a chave
+podia cunhar senhas, abrir edições, forjar compromissos e **decidir o vencedor**
+(`apenasCoordenacao` em `Leilao.sol`). Superfície crítica:
+
+| ID | Risco | Mitigação MC30.1 |
+|----|-------|------------------|
+| S-1 | Env do Netlify comprometido → chave bruta lida das vars | Em mainnet a chave deixa de existir no env; só credenciais de API escopadas e **revogáveis** do Defender. |
+| S-2 | Supply-chain npm in-process lê `process.env`/hooka `Wallet` | A chave **nunca entra no processo** — vive no HSM do Defender; o backend só fala API. |
+| S-4 | Chave persistida em RAM no container quente | Sem chave em RAM no backend Defender. |
+
+## 2. Nova fronteira de confiança
+
+- **Assinatura centralizada** em `_lib/signer.mjs` (fachada única). `new Wallet(...)`
+  existe agora **apenas** nesse ficheiro (verificado por grep) — de 3 pontos de
+  exposição para 1.
+- **Backend selecionável** por `SIGNER_BACKEND` (explícito) ou `NETWORK_STAGE`
+  (`mainnet → defender`, restante → `local-key`). Isolamento por ambiente (R3):
+  Sepolia/localhost mantêm uma chave de testnet de baixo valor; mainnet usa o HSM.
+- **Defender Relay (HSM)** via `@openzeppelin/defender-sdk` (Ethers v6). O Relayer
+  envia a tx como o **seu próprio EOA**; basta transferir a coordenação para esse
+  endereço pelo two-step já existente (`iniciarTransferenciaCoordenacao` +
+  `aceitarTransferenciaCoordenacao`) — **zero alteração no `Leilao.sol`** (R10).
+- **Recibo EIP-712** continua a ser produzido pelo signer ativo (Defender suporta
+  `signTypedData`); permanece auditoria off-chain, **não** gate de segurança
+  (anti-replay é o `edicaoNonce` on-chain — coerente com o MC28.1).
+
+## 3. Guarda anti-reintrodução (ITEM 3.5)
+
+`assertChaveBrutaAusenteEmMainnet()` é chamada no início de
+`obterSignerCoordenacao`: se `NETWORK_STAGE==='mainnet'` **e** uma chave bruta
+estiver presente, recusa arrancar. `health.mjs` expõe `CHAVE_BRUTA_EM_MAINNET:
+ALERT` no mesmo caso. `health.mjs`/`debug-pedido.mjs` reportam agora o **modo**
+de assinatura (`SIGNER_BACKEND`), não a presença da chave.
+
+## 4. Resultados dos testes (offline, `node --test`)
+
+| Suite | Cobertura | Estado |
+|-------|-----------|--------|
+| `mc30-signer.test.mjs` | seleção de backend, local-key, handshake Defender (mock), rejeição da chave bruta em mainnet | 8/8 ✅ |
+| `mc30-integracao.test.mjs` | `creditarSenhas`/`comprometerLanceOnchain` assinam via fachada | 3/3 ✅ |
+| Suites pré-existentes (regressão) | mc28 + cota + referral + troco | 27/27 ✅ |
+| **Total** | | **38/38 ✅** |
+
+Build `vite build` verde. `node --check` verde em todos os `.mjs`.
+
+## 5. AÇÕES HUMANAS PENDENTES (fora do alcance do código — não executadas neste PR)
+
+> Estas etapas exigem credenciais reais e/ou transações on-chain irreversíveis.
+> O código está pronto; **a migração só se completa após estes passos**, nesta ordem:
+
+1. **Criar a conta + Relayer no OpenZeppelin Defender** (mainnet) e registar a
+   chave da coordenação no HSM. Obter `DEFENDER_API_KEY`/`DEFENDER_API_SECRET`
+   (e, opcionalmente, `DEFENDER_RELAYER_ADDRESS`). — ITEM 2.1.
+2. **Validar o handshake real** contra o Relayer (o teste de handshake do PR é
+   mockado; só com credenciais reais se confirma o endereço e a assinatura).
+3. **Transferir a coordenação on-chain** para o endereço do Relayer pelo two-step
+   (`iniciarTransferenciaCoordenacao` → `aceitarTransferenciaCoordenacao`) e
+   **confirmar** `coordenacao() == endereço do Relayer` ANTES do passo 4. — ITEM 3.3.
+4. **Remover `COORDENACAO_PRIVATE_KEY`/`COORDENACAO_PRIVATE` do env de mainnet do
+   Netlify** e definir `SIGNER_BACKEND=defender`/`NETWORK_STAGE=mainnet`. A guarda
+   de runtime impede a reintrodução acidental. — ITEM 3.5 / SEGMENTO 6.
+5. **(Opcional, recomendado) Gnosis Safe** como coordenação (multisig) para
+   eliminar o single-point-of-failure — também via two-step, sem mudar o contrato. — SEGMENTO 7.
+
+## 6. Limitações honestas
+
+- O **backend Defender não foi exercitado contra a API real** (sem credenciais no
+  ambiente de dev). A wiring segue os tipos do `@openzeppelin/defender-sdk` v6
+  (`DefenderRelayProvider`/`DefenderRelaySigner`) e está coberta por handshake
+  mockado; requer a validação do passo 2 acima antes do cutover.
+- A `COORDENACAO_PRIVATE_KEY` **permanece** no caminho `local-key` (testnet) por
+  desenho (R3) — a remoção total da R9 aplica-se ao **ambiente de mainnet**.
