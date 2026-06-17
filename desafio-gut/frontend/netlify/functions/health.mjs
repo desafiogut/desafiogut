@@ -4,12 +4,24 @@
 // scripts/check-functions-health.sh e pelo monitoramento manual pós-deploy.
 
 import { jsonResponse } from "./_lib/validate.mjs";
+import { backendAssinatura, resolverChaveCoordenacao } from "./_lib/signer.mjs";
 
 export default async () => {
   const provider = (process.env.PIX_PROVIDER || "mock").toLowerCase();
+
+  // MC30.1 — reporta o MODO de assinatura (backend), não a presença da chave.
+  const backend = backendAssinatura();
+  const signerReady = backend === "defender"
+    ? (!!process.env.DEFENDER_API_KEY && !!process.env.DEFENDER_API_SECRET)
+    : !!resolverChaveCoordenacao();
+  const chaveBrutaEmMainnet = process.env.NETWORK_STAGE === "mainnet" && !!resolverChaveCoordenacao();
+
   const env = {
     JWT_SECRET:              process.env.JWT_SECRET              ? "set" : "MISSING",
-    COORDENACAO_PRIVATE_KEY: process.env.COORDENACAO_PRIVATE_KEY ? "set" : "MISSING",
+    SIGNER_BACKEND:          backend,
+    SIGNER_READY:            signerReady ? "set" : "MISSING",
+    // Alerta de segurança: chave bruta NÃO pode existir em mainnet (R9/ITEM 3.5).
+    CHAVE_BRUTA_EM_MAINNET:  chaveBrutaEmMainnet ? "ALERT" : "ok",
     RPC_URL:                 process.env.RPC_URL                 ? "set" : "MISSING",
     PIX_PROVIDER:            provider,
     // MP_ACCESS_TOKEN só é exigido quando PIX_PROVIDER=mercadopago.
