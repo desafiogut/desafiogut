@@ -50,6 +50,21 @@ export function getCoordenacaoAddressCache() {
 }
 
 /**
+ * Guarda anti-reintrodução (ITEM 3.5 / R9): em mainnet a chave privada bruta NÃO
+ * pode existir no ambiente — a assinatura é feita no HSM do Defender. Se a chave
+ * reaparecer (deploy acidental, rollback de env), recusamos arrancar.
+ * @throws {Error} se NETWORK_STAGE==='mainnet' e uma chave bruta estiver presente.
+ */
+export function assertChaveBrutaAusenteEmMainnet() {
+  if (process.env.NETWORK_STAGE === "mainnet" && resolverChaveCoordenacao()) {
+    throw new Error(
+      "MC30.1: COORDENACAO_PRIVATE_KEY presente em mainnet — a chave bruta deve " +
+      "ser removida do ambiente (R9/ITEM 3.5). Use o backend Defender (HSM).",
+    );
+  }
+}
+
+/**
  * Cria o signer da coordenação para o backend ativo.
  *
  * @param {string} rpcUrl  URL do provider JSON-RPC (usado SÓ no backend local-key;
@@ -60,6 +75,9 @@ export function getCoordenacaoAddressCache() {
  *   - `provider` expõe `waitForTransaction` / `getBlockNumber`.
  */
 export async function obterSignerCoordenacao(rpcUrl) {
+  // Guarda de runtime: em mainnet a chave bruta nunca pode estar presente.
+  assertChaveBrutaAusenteEmMainnet();
+
   const backend = backendAssinatura();
 
   if (backend === "defender") {
