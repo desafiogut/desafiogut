@@ -78,14 +78,47 @@ export async function obterSignerCoordenacao(rpcUrl) {
 }
 
 /**
- * Backend Defender — implementado no SEGMENTO 3 (ITEM 3.2), depois de a
- * dependência `@openzeppelin/defender-sdk` ser adicionada (ITEM 3.1). Até lá,
- * selecionar este backend falha de forma explícita (nenhum ambiente de teste o
- * seleciona: testnet/localhost usam 'local-key').
+ * Backend Defender (ITEM 3.2) — a chave privada da coordenação vive no HSM do
+ * OpenZeppelin Defender Relayer e NUNCA entra neste processo. Assinamos/enviamos
+ * via API com credenciais ESCOPADAS e REVOGÁVEIS (DEFENDER_API_KEY/SECRET).
+ *
+ * Usa o pacote mantido e compatível com Ethers v6 `@openzeppelin/defender-sdk`
+ * (o antigo `@openzeppelin/defender-relay-client` está DEPRECATED e é da era v5).
+ * Import dinâmico (lazy): em testnet/localhost este caminho nunca é tocado, pelo
+ * que build, `node --check` e testes não dependem do pacote estar instalado.
+ *
+ * O endereço do Relayer é, por desenho, o MESMO endereço público da coordenação
+ * (a autoridade on-chain é transferida para ele via o two-step do contrato —
+ * ITEM 3.3). `apenasCoordenacao` continua a validar sem mudar o Leilao.sol.
  */
 async function criarSignerDefender() {
-  throw new Error(
-    "backend de assinatura 'defender' ainda não disponível (MC30.1 SEG3). " +
-    "Defina SIGNER_BACKEND=local-key em testnet/localhost.",
+  const apiKey = process.env.DEFENDER_API_KEY;
+  const apiSecret = process.env.DEFENDER_API_SECRET;
+  if (!apiKey || !apiSecret) {
+    throw new Error("DEFENDER_API_KEY/DEFENDER_API_SECRET não configurados");
+  }
+
+  // Import por caminho v6 do SDK (estes módulos expõem as classes ethers v6).
+  const { DefenderRelayProvider } = await import(
+    "@openzeppelin/defender-sdk-relay-signer-client/lib/ethers/provider.js"
   );
+  const { DefenderRelaySigner } = await import(
+    "@openzeppelin/defender-sdk-relay-signer-client/lib/ethers/signer.js"
+  );
+
+  const credenciais = { apiKey, apiSecret };
+  const provider = new DefenderRelayProvider(credenciais);
+
+  // Endereço do Relayer: env explícita (evita um round-trip) ou resolvido via API.
+  let address = process.env.DEFENDER_RELAYER_ADDRESS || null;
+  if (!address) {
+    const base = await provider.getSigner();
+    address = await base.getAddress();
+  }
+
+  const signer = new DefenderRelaySigner(credenciais, provider, address, {
+    speed: "fast",
+    ethersVersion: "v6",
+  });
+  return { provider, signer, address };
 }
