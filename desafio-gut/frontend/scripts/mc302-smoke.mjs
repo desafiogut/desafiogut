@@ -35,7 +35,8 @@ try {
 
 // Defaults fornecidos pelo operador (sobrepostos pelo ambiente/.env.local se presentes).
 if (!process.env.BICONOMY_PROJECT_ID) process.env.BICONOMY_PROJECT_ID = "e59cc5f3-c894-408a-8d95-4dea202638bb";
-if (!process.env.BICONOMY_BUNDLER_URL) process.env.BICONOMY_BUNDLER_URL = "https://bundler.biconomy.io/api/v2/80002/e59cc5f3-c894-408a-8d95-4dea202638bb";
+// Alvo: Ethereum Sepolia (chainId 11155111) — alinhado com o contrato LeilaoGUT.
+if (!process.env.BICONOMY_BUNDLER_URL) process.env.BICONOMY_BUNDLER_URL = "https://bundler.biconomy.io/api/v2/11155111/e59cc5f3-c894-408a-8d95-4dea202638bb";
 
 // Mapeia APP_AWS_* → AWS_* (o @aws-sdk e aws-kms.mjs leem os nomes padrão).
 // Guardas evitam atribuir a string "undefined" a process.env.

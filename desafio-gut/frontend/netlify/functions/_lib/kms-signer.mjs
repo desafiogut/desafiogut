@@ -149,7 +149,8 @@ export async function criarKmsSigner(provider = null) {
   if (!keyId) throw new Error("KMS_KEY_ID não configurado");
 
   if (kmsProvider === "aws") {
-    const region = process.env.AWS_REGION;
+    // APP_AWS_REGION tem precedência (AWS_REGION é reservado no runtime Netlify).
+    const region = process.env.APP_AWS_REGION || process.env.AWS_REGION;
     const { awsGetPublicKeyDer, awsSignDigest } = await import("./kms/aws-kms.mjs");
     return new KmsSigner({
       provider,
