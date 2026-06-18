@@ -5,10 +5,14 @@
 // no Bundler. NÃO envia transações nem faz nada irreversível.
 //
 // Uso: node scripts/mc302-smoke.mjs
-//   Requer no ambiente (ou em .env.local): KMS_PROVIDER=aws, KMS_KEY_ID, AWS_REGION,
-//   AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY (ou papel IAM), BICONOMY_BUNDLER_URL,
-//   RPC_URL e CONTRATO_MAINNET (ou CONTRATO_SEPOLIA). COORDENACAO_PRIVATE_KEY deve
-//   estar AUSENTE. Exit 0 se todos os estágios passam; 1 caso contrário.
+//   Requer no ambiente (ou em .env.local): KMS_PROVIDER=aws, KMS_KEY_ID, APP_AWS_REGION,
+//   APP_AWS_ACCESS_KEY_ID/APP_AWS_SECRET_ACCESS_KEY (ou papel IAM), BICONOMY_BUNDLER_URL,
+//   BICONOMY_PROJECT_ID, RPC_URL e CONTRATO_MAINNET (ou CONTRATO_SEPOLIA).
+//   COORDENACAO_PRIVATE_KEY deve estar AUSENTE. Exit 0 se todos passam; 1 caso contrário.
+//
+//   Nota: o prefixo APP_AWS_* evita colidir com as variáveis AWS_* que o runtime das
+//   Netlify Functions injeta para o seu próprio papel de execução. Este script mapeia
+//   APP_AWS_* → AWS_* para o SDK, sem alterar o código de produção.
 
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -29,6 +33,16 @@ try {
   console.warn("aviso: .env.local não encontrado — env vars devem estar no shell\n");
 }
 
+// Defaults fornecidos pelo operador (sobrepostos pelo ambiente/.env.local se presentes).
+if (!process.env.BICONOMY_PROJECT_ID) process.env.BICONOMY_PROJECT_ID = "e59cc5f3-c894-408a-8d95-4dea202638bb";
+if (!process.env.BICONOMY_BUNDLER_URL) process.env.BICONOMY_BUNDLER_URL = "https://bundler.biconomy.io/api/v2/80002/e59cc5f3-c894-408a-8d95-4dea202638bb";
+
+// Mapeia APP_AWS_* → AWS_* (o @aws-sdk e aws-kms.mjs leem os nomes padrão).
+// Guardas evitam atribuir a string "undefined" a process.env.
+if (process.env.APP_AWS_ACCESS_KEY_ID && !process.env.AWS_ACCESS_KEY_ID) process.env.AWS_ACCESS_KEY_ID = process.env.APP_AWS_ACCESS_KEY_ID;
+if (process.env.APP_AWS_SECRET_ACCESS_KEY && !process.env.AWS_SECRET_ACCESS_KEY) process.env.AWS_SECRET_ACCESS_KEY = process.env.APP_AWS_SECRET_ACCESS_KEY;
+if (process.env.APP_AWS_REGION && !process.env.AWS_REGION) process.env.AWS_REGION = process.env.APP_AWS_REGION;
+
 const importLib = (rel) => import(pathToFileURL(resolve(repoFrontend, "netlify/functions/_lib", rel)).href);
 
 let falhas = 0;
@@ -40,8 +54,10 @@ console.log("MC30.2.1 — Smoke handshake REAL (KMS + Biconomy) · READ-ONLY\n")
 
 // ── Estágio 1: variáveis de ambiente (set/missing — sem expor valores) ───────
 sec("1. Ambiente (set/missing — valores nunca impressos)");
-const obrigatorias = ["KMS_PROVIDER", "KMS_KEY_ID", "AWS_REGION", "BICONOMY_BUNDLER_URL", "RPC_URL"];
+const obrigatorias = ["KMS_PROVIDER", "KMS_KEY_ID", "APP_AWS_REGION", "BICONOMY_BUNDLER_URL", "RPC_URL"];
 for (const k of obrigatorias) (process.env[k] ? ok(`${k} set`) : bad(`${k} EM FALTA`));
+console.log(`  ℹ️  BICONOMY_PROJECT_ID: ${process.env.BICONOMY_PROJECT_ID} (não consumido pelo signer; o id já está no BUNDLER_URL)`);
+console.log(`  ℹ️  APP_AWS_ACCESS_KEY_ID: ${process.env.APP_AWS_ACCESS_KEY_ID ? "set" : "missing"} · APP_AWS_SECRET_ACCESS_KEY: ${process.env.APP_AWS_SECRET_ACCESS_KEY ? "set" : "missing"}`);
 const contrato = process.env.CONTRATO_MAINNET || process.env.CONTRATO_SEPOLIA || null;
 contrato ? ok("CONTRATO_MAINNET/SEPOLIA set") : console.log("  ⚠️  CONTRATO_* ausente — verificação on-chain saltada");
 if (!process.env.SIGNER_BACKEND) console.log("  ⚠️  SIGNER_BACKEND não definido — o smoke força 'biconomy' só para esta validação");
