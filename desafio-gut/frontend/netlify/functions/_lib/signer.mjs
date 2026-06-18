@@ -56,17 +56,42 @@ export function getCoordenacaoAddressCache() {
 }
 
 /**
- * Guarda anti-reintrodução (ITEM 3.5 / R9): em mainnet a chave privada bruta NÃO
- * pode existir no ambiente — a assinatura é feita no HSM do Defender. Se a chave
- * reaparecer (deploy acidental, rollback de env), recusamos arrancar.
- * @throws {Error} se NETWORK_STAGE==='mainnet' e uma chave bruta estiver presente.
+ * Guarda anti-reintrodução (ITEM 3.5/4.1 · R9/R12): a chave privada bruta NÃO
+ * pode coexistir com um backend isolado. Se a chave reaparecer (deploy acidental,
+ * rollback de env), recusamos arrancar. Além disso, o backend 'biconomy' exige a
+ * configuração mínima do owner KMS + Bundler antes de assinar seja o que for.
+ * @throws {Error} em mainnet com chave bruta, ou em 'biconomy' mal configurado.
  */
 export function assertChaveBrutaAusenteEmMainnet() {
-  if (process.env.NETWORK_STAGE === "mainnet" && resolverChaveCoordenacao()) {
+  const temChaveBruta = !!resolverChaveCoordenacao();
+
+  // Regra MC30.1: em mainnet a chave bruta nunca pode existir (HSM/KMS assina).
+  if (process.env.NETWORK_STAGE === "mainnet" && temChaveBruta) {
     throw new Error(
       "MC30.1: COORDENACAO_PRIVATE_KEY presente em mainnet — a chave bruta deve " +
-      "ser removida do ambiente (R9/ITEM 3.5). Use o backend Defender (HSM).",
+      "ser removida do ambiente (R9/ITEM 3.5). Use o backend Defender (HSM) ou Biconomy (KMS).",
     );
+  }
+
+  // Regra MC30.2.1: o backend Biconomy exige owner KMS e proíbe a chave bruta.
+  if (backendAssinatura() === "biconomy") {
+    if (temChaveBruta) {
+      throw new Error(
+        "MC30.2.1: COORDENACAO_PRIVATE_KEY presente com SIGNER_BACKEND=biconomy — a " +
+        "chave bruta deve ser removida do ambiente (R9/R12). O owner assina via KMS.",
+      );
+    }
+    const kmsProvider = String(process.env.KMS_PROVIDER || "aws").toLowerCase();
+    if (!["aws", "turnkey", "fireblocks"].includes(kmsProvider)) {
+      throw new Error(`MC30.2.1: KMS_PROVIDER='${kmsProvider}' não reconhecido (aws|turnkey|fireblocks).`);
+    }
+    if (!process.env.KMS_KEY_ID) {
+      throw new Error("MC30.2.1: KMS_KEY_ID não configurado — owner do Smart Account via KMS (R12).");
+    }
+    if (!process.env.BICONOMY_BUNDLER_URL) {
+      throw new Error("MC30.2.1: BICONOMY_BUNDLER_URL não configurado — Bundler ERC-4337 (ITEM 4.1).");
+    }
+    // BICONOMY_API_KEY/PAYMASTER_URL são OPCIONAIS (só p/ subsídio de gás).
   }
 }
 
