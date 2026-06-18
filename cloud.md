@@ -386,6 +386,40 @@ quando o vídeo é removido.
 
 ---
 
+## MC30.2.1 — Migração da assinatura isolada (Defender → Biconomy + KMS)
+
+**Branch:** `feat/mc30.2.1` | **Motivação:** sunset do OpenZeppelin Defender (2026-07-01).
+
+### O que mudou
+- Novo backend de assinatura **`biconomy`** (ERC-4337) na fachada `_lib/signer.mjs`,
+  selecionável por `SIGNER_BACKEND=biconomy`. `defender` mantido como **fallback** (R11);
+  `local-key` (testnet) inalterado. Os **3 call-sites não foram tocados** (adapter ethers v6).
+- **Owner via KMS** (`_lib/kms-signer.mjs` + `_lib/kms/aws-kms.mjs`): a chave privada da
+  coordenação vive no KMS/HSM remoto e **nunca entra no processo** (R9/R12). Normalização
+  DER → low-S + recovery id `v` validada contra `ethers`.
+- **Adapter** `BiconomySmartAccountSigner`: traduz `contract.metodo(...)` em UserOperation
+  (Bundler resolve nonces; Paymaster opcional subsidia gás) e expõe o hash real + recibo.
+- Guarda `assertChaveBrutaAusenteEmMainnet` endurecida para o modo biconomy.
+- Dependências: `@biconomy/account` v4 (+ `viem ^2` peer) e `@aws-sdk/client-kms`.
+
+### Mudança de endereço (achado #1)
+Em ERC-4337 o `msg.sender` on-chain é o **Smart Account** (≠ EOA). Autoridade transferida
+via two-step do contrato (`iniciar`/`aceitarTransferenciaCoordenacao`) — `Leilao.sol` **não muda**.
+
+### Validação
+- ✅ Suíte de funções **57/57** (38 originais + 19 novos: kms 6, biconomy 3, guarda 5, integração 5).
+- ✅ `node --check` verde em 89 `.mjs`; `npm run build` verde (6.52s).
+- ✅ Zero alterações em `src/`, GUTO, Glass UI, fundo animado, `Leilao.sol`.
+
+### Pendente (runbook do operador — `security_audit.md` §MC30.2.1)
+Provisionar KMS + Biconomy reais, validar handshake real, transferir coordenação on-chain
+(two-step), remover `COORDENACAO_PRIVATE_KEY`/`DEFENDER_*` do env de mainnet, remover o
+backend `defender` (SEG 8) e, opcionalmente, migrar para Gnosis Safe (SEG 9).
+
+> Detalhe completo: `desafio-gut/docs/MC30.2.1-isolamento-chave.md`.
+
+---
+
 ## 8. Como contribuir (resumo operacional)
 1. Branch a partir do último estado validado. Commits atómicos (1 por item/fase).
 2. A cada commit: `node --check` `.mjs` + `npm run build` verde.
