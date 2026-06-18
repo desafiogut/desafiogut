@@ -66,6 +66,7 @@ mock.module("@biconomy/account", {
   namedExports: {
     createSmartAccountClient: async (cfg) => { createCfg = cfg; return fakeSA; },
     PaymasterMode: { SPONSORED: "SPONSORED", ERC20: "ERC20" },
+    extractChainIdFromBundlerUrl: () => 11155111,
   },
 });
 

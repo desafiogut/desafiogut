@@ -198,13 +198,25 @@ async function criarSignerBiconomy(rpcUrl) {
   const paymasterUrl = process.env.BICONOMY_PAYMASTER_URL || null;
   const effectiveRpc = rpcUrl || process.env.RPC_URL;
 
+  // Importa o SDK primeiro para derivar o chainId do bundler e FIXAR a rede do
+  // provider (staticNetwork) — evita um round-trip de deteção de rede por escrita.
+  const { createSmartAccountClient, PaymasterMode, extractChainIdFromBundlerUrl } = await import("@biconomy/account");
+  let chainId = null;
+  try {
+    if (typeof extractChainIdFromBundlerUrl === "function") chainId = Number(extractChainIdFromBundlerUrl(bundlerUrl));
+  } catch { /* chainId fica null → provider com deteção normal */ }
+
   // Owner via KMS — a chave privada vive no KMS, fora deste processo.
-  const provider = new JsonRpcProvider(effectiveRpc);
+  // `Network` é importado LAZY (igual ao AbstractSigner) — só o caminho 'biconomy'
+  // o puxa, mantendo intactos os testes que mockam 'ethers' com exports mínimos.
+  const { Network } = await import("ethers");
+  const provider = chainId
+    ? new JsonRpcProvider(effectiveRpc, Network.from(chainId), { staticNetwork: true })
+    : new JsonRpcProvider(effectiveRpc);
   const { criarKmsSigner } = await import("./kms-signer.mjs");
   const owner = await criarKmsSigner(provider);
 
   // Smart Account ERC-4337 + Bundler (+ Paymaster opcional).
-  const { createSmartAccountClient, PaymasterMode } = await import("@biconomy/account");
   const smartAccount = await createSmartAccountClient({
     signer: owner,
     bundlerUrl,
