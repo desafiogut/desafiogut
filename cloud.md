@@ -416,6 +416,18 @@ Provisionar KMS + Biconomy reais, validar handshake real, transferir coordenaç�
 (two-step), remover `COORDENACAO_PRIVATE_KEY`/`DEFENDER_*` do env de mainnet, remover o
 backend `defender` (SEG 8) e, opcionalmente, migrar para Gnosis Safe (SEG 9).
 
+### Runbook — tooling e correções (2026-06-18)
+- **Smoke real:** `scripts/mc302-smoke.mjs` valida o handshake KMS+Biconomy com
+  credenciais **reais** (read-only; os testes em `_tests/` são mockados e NÃO validam
+  creds reais). Uso: `node scripts/mc302-smoke.mjs`. Imprime owner EOA (KMS), endereço
+  do Smart Account e o estado da transferência on-chain. Nunca envia transações.
+- **Variável correta:** o código lê **`KMS_KEY_ID`** (o ARN é o valor), `KMS_PROVIDER=aws`,
+  `AWS_REGION` — não `KMS_KEY_ARN`.
+- **Alvo da transferência two-step = endereço do Smart Account** (contrato ERC-4337),
+  **≠** EOA owner e ≠ coordenação atual (achado #1). O owner KMS é uma **chave nova**
+  gerada no KMS (decisão do operador: isolamento máximo, R3). Não há "fazer coincidir
+  com a coordenação atual".
+
 > Detalhe completo: `desafio-gut/docs/MC30.2.1-isolamento-chave.md`.
 
 ---
