@@ -1,26 +1,40 @@
 // netlify/functions/mc302-diagnostico.mjs — Diagnóstico READ-ONLY do MC30.2.1.
-// GET /.netlify/functions/mc302-diagnostico  (ADMIN-GATED)
+// GET /.netlify/functions/mc302-diagnostico  (gated por TOKEN)
+//   Header obrigatório:  x-mc302-diag-token: <MC302_DIAG_TOKEN>
 //
 // Corre DENTRO do Netlify, com os segredos REAIS (KMS_KEY_ID, APP_AWS_*, Biconomy),
 // e devolve: backend ativo, presença da chave bruta (R9), owner EOA (KMS), endereço
 // da Smart Account e o estado on-chain da coordenação. NUNCA devolve segredos nem
 // envia transações — só leituras (KMS GetPublicKey, getAccountAddress, view coordenacao()).
 //
-// É o substituto seguro do smoke local quando as credenciais vivem só no Netlify:
-// os segredos nunca saem do ambiente; a resposta contém apenas endereços públicos.
+// Gate: token dedicado e DESCARTÁVEL em `MC302_DIAG_TOKEN` (comparação em tempo
+// constante). Se a env var não estiver definida, o endpoint recusa (503) — nunca
+// fica aberto. REMOVER `MC302_DIAG_TOKEN` do ambiente após concluir a migração.
 
+import { createHash, timingSafeEqual } from "node:crypto";
 import { JsonRpcProvider, Contract, Network } from "ethers";
 import { jsonResponse, jsonError } from "./_lib/validate.mjs";
-import { guardAdmin } from "./_lib/admin-auth.mjs";
 import { criarKmsSigner } from "./_lib/kms-signer.mjs";
 import { backendAssinatura, resolverChaveCoordenacao } from "./_lib/signer.mjs";
 
 const ABI_RO = ["function coordenacao() view returns (address)"];
 
+// Compara o token fornecido com MC302_DIAG_TOKEN em tempo constante (via SHA-256
+// de ambos → buffers de igual comprimento, sem fuga por timing nem por tamanho).
+function verificarToken(fornecido) {
+  const esperado = process.env.MC302_DIAG_TOKEN;
+  if (!esperado) return jsonError(503, "config_ausente", "MC302_DIAG_TOKEN não configurado — endpoint desativado");
+  if (!fornecido) return jsonError(401, "token_ausente", "header x-mc302-diag-token em falta");
+  const a = createHash("sha256").update(String(fornecido)).digest();
+  const b = createHash("sha256").update(String(esperado)).digest();
+  if (!timingSafeEqual(a, b)) return jsonError(401, "token_invalido", "token inválido");
+  return null;
+}
+
 export default async (req) => {
-  // Gate de administração — só a coordenação/admin pode consultar.
-  const denied = await guardAdmin(req);
-  if (denied) return denied;
+  // Gate por token de uso único (descartável). Sem admin auth.
+  const negado = verificarToken(req.headers.get("x-mc302-diag-token"));
+  if (negado) return negado;
 
   const rpcUrl = process.env.RPC_URL;
   const bundlerUrl = process.env.BICONOMY_BUNDLER_URL;
