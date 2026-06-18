@@ -15,7 +15,16 @@ const _clients = new Map(); // region → KMSClient (cache por região)
 async function getClient(region) {
   if (_clients.has(region)) return _clients.get(region);
   const { KMSClient } = await import("@aws-sdk/client-kms");
-  const client = new KMSClient(region ? { region } : {});
+  const cfg = {};
+  if (region) cfg.region = region;
+  // Em Netlify Functions o prefixo AWS_* é RESERVADO: o runtime Lambda injeta as
+  // suas próprias AWS_ACCESS_KEY_ID/SECRET (papel de execução, sem permissão KMS).
+  // Por isso o operador usa APP_AWS_* — passados aqui EXPLICITAMENTE ao cliente.
+  // Fallback: se APP_AWS_* ausentes, usa a cadeia de credenciais padrão do SDK.
+  const accessKeyId = process.env.APP_AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.APP_AWS_SECRET_ACCESS_KEY;
+  if (accessKeyId && secretAccessKey) cfg.credentials = { accessKeyId, secretAccessKey };
+  const client = new KMSClient(cfg);
   _clients.set(region, client);
   return client;
 }
