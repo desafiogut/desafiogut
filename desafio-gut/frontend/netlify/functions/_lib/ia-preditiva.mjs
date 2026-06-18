@@ -18,9 +18,10 @@
 // 5 min. Toda execução grava `ia-execucao:{ts}` para auditoria (com ou sem ação).
 
 import { getStore } from "@netlify/blobs";
-import { JsonRpcProvider, Wallet, Contract } from "ethers";
+import { Contract } from "ethers";
 import { captureSecurityAlert } from "./sentry-server.mjs";
 import { CONTRATO_ADDRESS } from "./contract.mjs";
+import { obterSignerCoordenacao, backendAssinatura, resolverChaveCoordenacao } from "./signer.mjs";
 
 const STORE_ANALYTICS = "analytics";
 const STORE_DECISOES  = "ia-decisoes";
@@ -263,22 +264,26 @@ export async function executarAcao(modo, metricas, threshold, disparado) {
  * Sequência id: "FLASH-AUTO-{ts}" para evitar colisão; duracao = 30 min (1800s).
  */
 async function dispararEdicaoAutomatica(metricas, threshold) {
-  if (!process.env.RPC_URL || !process.env.COORDENACAO_PRIVATE_KEY) {
-    console.error("[ia-preditiva] modo=auto sem RPC_URL/COORDENACAO_PRIVATE_KEY — abortando");
+  const backend = backendAssinatura();
+  const semCreds =
+    !process.env.RPC_URL ||
+    (backend === "local-key" && !resolverChaveCoordenacao()) ||
+    (backend === "defender" && (!process.env.DEFENDER_API_KEY || !process.env.DEFENDER_API_SECRET));
+  if (semCreds) {
+    console.error("[ia-preditiva] modo=auto sem credenciais de assinatura — abortando");
     await captureSecurityAlert("ia_preditiva_auto_sem_creds", {
       metricas, threshold,
     }, "error").catch(() => {});
     return "abort-no-creds";
   }
-  const provider = new JsonRpcProvider(process.env.RPC_URL);
-  const wallet   = new Wallet(process.env.COORDENACAO_PRIVATE_KEY, provider);
-  const contrato = new Contract(CONTRATO_ADDRESS, ABRIR_EDICAO_ABI, wallet);
+  const { signer, address } = await obterSignerCoordenacao(process.env.RPC_URL);
+  const contrato = new Contract(CONTRATO_ADDRESS, ABRIR_EDICAO_ABI, signer);
 
-  // Sanity: confirma que a wallet é coordenacao.
+  // Sanity: confirma que o signer é coordenacao.
   try {
     const coord = (await contrato.coordenacao()).toLowerCase();
-    if (coord !== wallet.address.toLowerCase()) {
-      throw new Error(`wallet ${wallet.address} não é coordenacao (${coord})`);
+    if (coord !== address.toLowerCase()) {
+      throw new Error(`wallet ${address} não é coordenacao (${coord})`);
     }
   } catch (err) {
     console.error("[ia-preditiva] verificarCoordenacao falhou:", err?.message);

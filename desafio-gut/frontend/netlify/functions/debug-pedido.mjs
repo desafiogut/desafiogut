@@ -15,6 +15,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { jsonResponse, jsonError } from "./_lib/validate.mjs";
+import { backendAssinatura } from "./_lib/signer.mjs";
 
 const STORES = ["pedidos-meta", "mp-aprovados", "pedidos-pagos"];
 
@@ -63,7 +64,9 @@ export default async (req) => {
     PIX_PROVIDER: process.env.PIX_PROVIDER || "mock",
     MP_ACCESS_TOKEN_set: !!process.env.MP_ACCESS_TOKEN,
     RPC_URL_set: !!process.env.RPC_URL,
-    COORDENACAO_PRIVATE_KEY_set: !!process.env.COORDENACAO_PRIVATE_KEY,
+    // MC30.1 — reporta o MODO de assinatura, não a presença da chave bruta.
+    signer_backend: backendAssinatura(),
+    defender_creds_set: !!process.env.DEFENDER_API_KEY && !!process.env.DEFENDER_API_SECRET,
     CONTRATO_SEPOLIA: process.env.CONTRATO_SEPOLIA || "(default)",
     DEBUG_TOKEN_set: !!process.env.DEBUG_TOKEN,
   };

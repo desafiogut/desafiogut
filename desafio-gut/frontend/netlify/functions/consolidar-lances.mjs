@@ -10,10 +10,11 @@
 //
 // Só corre em NETWORK_STAGE === 'mainnet' (R9).
 
-import { JsonRpcProvider, Wallet, Contract } from "ethers";
+import { Contract } from "ethers";
 import { jsonResponse, jsonError, parseJsonBody } from "./_lib/validate.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";
 import { listarBids, marcarConsolidado, estaConsolidado } from "./_lib/bids-store.mjs";
+import { obterSignerCoordenacao, backendAssinatura } from "./_lib/signer.mjs";
 
 const ABI = [
   "function consolidarResultado(string idEdicao, address vencedor, uint256 menorUnico) public",
@@ -53,8 +54,11 @@ export default async (req) => {
   const jaFechado = await estaConsolidado(edicaoId);
   if (jaFechado) return jsonResponse({ ok: true, idempotent: true, edicaoId, ...jaFechado });
 
-  // 4. ENV obrigatórias
-  for (const k of ["CONSOLIDATION_RPC_URL", "COORDENACAO_PRIVATE_KEY", "CONTRATO_MAINNET", "MAINNET_CHAIN_ID"]) {
+  // 4. ENV obrigatórias — credenciais conforme o backend de assinatura (MC30.1)
+  const requeridas = ["CONSOLIDATION_RPC_URL", "CONTRATO_MAINNET", "MAINNET_CHAIN_ID"];
+  if (backendAssinatura() === "local-key") requeridas.push("COORDENACAO_PRIVATE_KEY");
+  else requeridas.push("DEFENDER_API_KEY", "DEFENDER_API_SECRET");
+  for (const k of requeridas) {
     if (!process.env[k]) return jsonError(503, "config_ausente", `${k} não configurado`);
   }
 
@@ -63,10 +67,11 @@ export default async (req) => {
   const apurado = apurarMenorUnico(lances);
   if (!apurado) return jsonError(422, "sem_vencedor", "nenhum lance único nesta edição");
 
-  // 6. Provider Flashbots Protect (anti-MEV) + wallet da coordenação
-  const provider = new JsonRpcProvider(process.env.CONSOLIDATION_RPC_URL);
-  const wallet   = new Wallet(process.env.COORDENACAO_PRIVATE_KEY, provider);
-  const contrato = new Contract(process.env.CONTRATO_MAINNET, ABI, wallet);
+  // 6. Signer da coordenação via módulo central (MC30.1). No backend local-key
+  //    o provider é o Flashbots Protect (CONSOLIDATION_RPC_URL); no backend
+  //    'defender' o envio/assinatura ocorrem no HSM do Relayer.
+  const { provider, signer } = await obterSignerCoordenacao(process.env.CONSOLIDATION_RPC_URL);
+  const contrato = new Contract(process.env.CONTRATO_MAINNET, ABI, signer);
 
   // 7. EIP-712 (recibo de auditoria off-chain) — nonce do leilão (anti-replay)
   const nonce  = Number(await contrato.edicaoNonce(edicaoId));
@@ -82,7 +87,7 @@ export default async (req) => {
     { name: "nonce",      type: "uint256" },
   ] };
   const value = { idEdicao: edicaoId, vencedor: apurado.vencedor, menorUnico: apurado.menorUnico, nonce };
-  const assinaturaEip712 = await wallet.signTypedData(domain, types, value);
+  const assinaturaEip712 = await signer.signTypedData(domain, types, value);
 
   // 8. Enviar consolidarResultado via Flashbots (fora do mempool público)
   let tx;
