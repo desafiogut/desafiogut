@@ -159,3 +159,61 @@ Build `vite build` verde. `node --check` verde em todos os `.mjs`.
   mockado; requer a validação do passo 2 acima antes do cutover.
 - A `COORDENACAO_PRIVATE_KEY` **permanece** no caminho `local-key` (testnet) por
   desenho (R3) — a remoção total da R9 aplica-se ao **ambiente de mainnet**.
+
+---
+
+# §MC30.2.1 — Migração Defender → Biconomy + KMS
+
+> Branch `feat/mc30.2.1`. Motivação: **sunset do OpenZeppelin Defender a 2026-07-01**.
+> Substitui o HSM do Defender por **Biconomy (ERC-4337)** com **owner em KMS remoto**.
+> Ver `docs/MC30.2.1-isolamento-chave.md`. O contrato `Leilao.sol` NÃO é alterado (R10).
+
+## 1. Modelo de ameaças (alterações)
+
+| # | Ameaça | Mitigação MC30.2.1 |
+|---|--------|--------------------|
+| S-1 | Exfiltração da chave da coordenação do env serverless | A chave **owner** vive no **KMS** (AWS KMS); nunca entra no processo Node. O KMS só recebe digests e devolve assinaturas DER. |
+| S-2 | Reintrodução acidental da chave bruta | Guarda `assertChaveBrutaAusenteEmMainnet`: com `biconomy`, recusa arrancar se houver chave bruta **ou** faltar `KMS_KEY_ID`/`BICONOMY_BUNDLER_URL`. |
+| S-3 | Concorrência de nonces (lances simultâneos) | Resolvida **nativamente** pelo Bundler ERC-4337 (sem fila/lock no cliente) — validado em `mc302-integracao` (ITEM 6.5). |
+| S-4 | Assinatura forjada do recibo de consolidação | `signTypedData` (EIP-712) delegado ao owner KMS → ECDSA recuperável à EOA owner (idêntico ao MC30.1). |
+| S-5 | `msg.sender` errado on-chain (Smart Account ≠ EOA) | Autoridade transferida ao Smart Account via two-step do contrato; `apenasCoordenacao` continua a validar sem alterar `Leilao.sol`. |
+
+## 2. Superfície de chave
+
+- **Antes (MC30.1):** chave no HSM do Defender (API escopada/revogável).
+- **Depois (MC30.2.1):** chave **owner** no KMS; credenciais IAM escopadas/revogáveis
+  substituem o segredo do ambiente. A chave privada **nunca** sai do KMS.
+- A normalização criptográfica (DER → low-S + recovery id `v`) foi **validada
+  ponta-a-ponta** contra `ethers` (`verifyMessage`/`verifyTypedData`).
+
+## 3. Testes
+
+`kms-handshake` (6/6) · `biconomy-handshake` (3/3) · `mc302-guarda` (5/5) ·
+`mc302-integracao` (5/5). Regressão: **57/57**, `vite build` verde, `node --check`
+verde em 89 `.mjs`. Nenhuma alteração em `src/`, GUTO, Glass UI ou `Leilao.sol`.
+
+## 4. AÇÕES HUMANAS PENDENTES (não executadas neste PR — runbook do operador)
+
+> Exigem credenciais reais e transações on-chain **irreversíveis**. Ordem obrigatória:
+
+1. **Provisionar a chave no AWS KMS** (`ECC_SECG_P256K1`) + papel IAM escopado;
+   definir `KMS_PROVIDER`/`KMS_KEY_ID`/`AWS_REGION`. — SEG 1/2.
+2. **Configurar `BICONOMY_*`** (Bundler/Paymaster/API) e **validar o handshake real**
+   (KMS + Bundler) — os handshakes do PR são mockados. — SEG 5.
+3. **Resolver o endereço do Smart Account** e financiá-lo (ou ativar Paymaster). — SEG 7.
+4. **Transferir a coordenação on-chain** (two-step) e **confirmar**
+   `coordenacao() == smartAccount` ANTES do passo 5. — SEG 7.2/7.3.
+5. **Remover `COORDENACAO_PRIVATE_KEY` e `DEFENDER_*`** do env de mainnet do Netlify (R9). — SEG 8.
+6. **Remover o backend `defender`** do código após validação completa. — SEG 8.
+7. **(Opcional) Gnosis Safe** multisig como coordenação (via two-step). — SEG 9.
+
+## 5. Limitações honestas
+
+- O backend **Biconomy não foi exercitado contra Bundler/Paymaster/KMS reais** (sem
+  credenciais no dev). A wiring segue a API real da `@biconomy/account` v4
+  (`createSmartAccountClient`, `PaymasterMode`, `extractChainIdFromBundlerUrl`),
+  inspecionada no pacote instalado, e está coberta por handshake mockado.
+- O **owner KMS** assume `KMS_PROVIDER=aws`; `turnkey`/`fireblocks` têm o desenho
+  preparado mas a implementação é futura (a guarda aceita os três nomes).
+- A `COORDENACAO_PRIVATE_KEY` **permanece** no caminho `local-key` (testnet) por
+  desenho — a R9 aplica-se ao **ambiente de mainnet/biconomy**.
