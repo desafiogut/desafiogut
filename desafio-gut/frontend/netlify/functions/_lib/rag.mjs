@@ -160,7 +160,14 @@ export async function buscarChunksRelevantes(store, embedding, topK = 3) {
 let _embedderPromise = null;
 async function getEmbedderLocal() {
   if (!_embedderPromise) {
-    const { pipeline } = await import("@xenova/transformers");
+    // Especificador COMPUTADO (não literal) de propósito: impede o esbuild/zip-it
+    // de rastrear e EMPACOTAR @xenova/transformers (+ onnxruntime/sharp, ~270MB)
+    // em TODAS as funções — o que estourava o limite de 50MB da AWS Lambda nas
+    // scheduled functions. Em runtime Netlify este caminho NUNCA corre (usa a HF
+    // API por HTTP); só é alcançado no script local `build:rag`, onde o pacote é
+    // resolvido normalmente a partir do node_modules local.
+    const xenovaPkg = ["@xenova", "transformers"].join("/");
+    const { pipeline } = await import(xenovaPkg);
     _embedderPromise = pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
   }
   return _embedderPromise;

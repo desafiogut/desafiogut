@@ -21,12 +21,15 @@
 [functions]
   directory    = "netlify/functions"
   node_bundler = "esbuild"
-  # MC9.1 — @xenova/transformers é usado APENAS no script local build:rag.
-  # Em runtime Lambda, gerarEmbedding chama Hugging Face Inference API por HTTP.
-  # Marcar como external evita bundling do pacote (e da sub-dep nativa `sharp`,
-  # que precisa de libvips Linux e quebrava o cold start: "libvips-cpp.so.42
-  # cannot open shared object file").
-  external_node_modules = ["@xenova/transformers"]
+  # MC9.1 — @xenova/transformers é usado APENAS no script local build:rag; em
+  # runtime Lambda gerarEmbedding usa a Hugging Face Inference API por HTTP.
+  #
+  # Já NÃO está em external_node_modules (fix do deploy 2026-06-19): externalizá-lo
+  # fazia o zip-it FORÇAR a sua inclusão (+ onnxruntime/sharp, ~270MB) em TODAS as
+  # scheduled functions, estourando o limite de 50MB da AWS Lambda ("Invalid AWS
+  # Lambda parameters"). Em _lib/rag.mjs o import passou a ter especificador
+  # COMPUTADO (não literal), pelo que o esbuild já não tenta empacotá-lo (nem ao
+  # `sharp` nativo) e não o inclui em função nenhuma. Resultado: 0 funções >50MB.
 
 [[redirects]]
   from   = "/*"
