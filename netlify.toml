@@ -3,6 +3,17 @@
   command = "npm install --legacy-peer-deps && npm install --prefix netlify/functions --legacy-peer-deps && npm run build"
   publish = "dist"
 
+# ── Secrets scanning ─────────────────────────────────────────────────────────
+# O Netlify falha o build se o VALOR de uma env var aparecer no output. Estas
+# chaves têm valores PÚBLICOS que aparecem legitimamente no build (endereços de
+# contrato, RPCs, IDs VITE_/Biconomy) — são omitidas. As chaves REALMENTE secretas
+# (JWT_SECRET, COORDENACAO_PRIVATE_KEY, APP_AWS_SECRET_ACCESS_KEY, ADMIN_TOKEN,
+# MP_ACCESS_TOKEN, KMS_KEY_ID, MC302_DIAG_TOKEN, BICONOMY_API_KEY, tokens LLM/HF)
+# CONTINUAM a ser verificadas — se alguma vazar para o build, o deploy falha (correto).
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "CONTRATO_SEPOLIA,RPC_URL,BICONOMY_BUNDLER_URL,BICONOMY_PROJECT_ID,VITE_CONTRATO_SEPOLIA,VITE_CONTRACT_ADDRESS,VITE_ALCHEMY_URL,VITE_RPC_URL_SEPOLIA,VITE_PRIVY_APP_ID,VITE_WC_PROJECT_ID,VITE_SENTRY_DSN,VITE_MOCK_MODE,SENTRY_DNS"
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+
 # ── Netlify Functions ────────────────────────────────────────────────────────
 # Resolvido como `desafio-gut/frontend/netlify/functions/` (relativo ao base).
 # `node_bundler = "esbuild"` permite que cada função declare deps em
