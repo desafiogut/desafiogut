@@ -141,3 +141,48 @@ auditorias restantes ficam para nova passagem em ambiente estável / com ediçõ
 
 **APROVADO para merge (MC25.1).** Alteração puramente cosmética — zero impacto em transações,
 autenticação, segurança ou lógica de negócio. WCAG AA mantido. Rollback trivial.
+
+---
+
+## MC29.1 — Modelo de Entrega Híbrido e Transparente
+
+**Branch:** `feat/mc29.1` · **Data:** 2026-06-20 · **Baseline:** main `172acf9` (PR #77)
+
+### 1. Âmbito
+Camada de abstração de dados (adapters), configuração remota por plataforma,
+placeholders de conformidade (iOS/Android) e GUTO adaptável. Modelo TRANSPARENTE
+(rejeitada a camuflagem — Apple Guideline 2.3.1).
+
+### 2. Superfície de segurança alterada
+- [✅] **Novo endpoint público** `recursos-app` (GET) — só LEITURA de flags
+  públicas (não-segredas). Sem dados sensíveis, sem escrita. Fail-soft → default.
+- [✅] **`chatbot.mjs`** passa a ler `body.plataforma` (string) e resolve flags
+  via adapter. Input validado por `resolverRecursos` (normaliza plataforma
+  desconhecida → 'pwa'). Sem novo vetor de injeção.
+- [✅] **Adapter `data-store`** — `setConfig` é admin-only NO CHAMADOR (nenhum
+  endpoint público escreve config; a escrita só ocorre via `scripts/seed-…`
+  com `NETLIFY_SITE_ID/AUTH_TOKEN`).
+- [✅] **Lances (MC28) intactos** — `data-store-blobs` apenas DELEGA em
+  `bids-store.mjs` (Key-Per-Bid). Zero alteração à blindagem de lances.
+
+### 3. Anti-regressão (R1)
+- [✅] Deteção de plataforma não penaliza o utilizador real: browser puro →
+  'pwa' → leilão ATIVO. Só wrapper nativo/override ativam conformidade.
+- [✅] PWA validado a 375/1440: leilão real intacto (timer, CardLance R-1,
+  seletor de modo). 4 personas do GUTO preservadas no PWA.
+- [✅] `node --check` limpo em todos os `.mjs` novos/alterados.
+- [✅] `npm run build` verde em cada commit.
+- [✅] Sem novos erros de console (apenas warn fail-soft intencional, espelhando
+  o padrão existente `useEdicoes` 404 em vite local).
+
+### 4. Conformidade — pendências NÃO cobertas por este MC (caveats)
+- [ ] Parecer jurídico sobre "menor lance único" como jogo (vale para o PWA também).
+- [ ] Revisão das regras anti-steering da Apple para o CTA "Abrir versão Web".
+- [ ] App da loja genuína (Vitrine + Apple IAP / Google Play Billing — a implementar).
+- [ ] Conta de teste do revisor documentada nas notas de submissão.
+
+### 5. Veredicto
+**APROVADO para merge (MC29.1).** Alteração aditiva e de baixo risco: novo
+endpoint só-leitura, adapter que preserva 1:1 o comportamento dos Blobs, e gating
+de UI fail-soft que nunca degrada o utilizador real. As pendências da secção 4
+são de produto/jurídico/submissão, NÃO bloqueiam o merge do código.
