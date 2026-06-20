@@ -335,3 +335,26 @@ via de produção é `biconomy` (Smart Account ERC-4337 + owner KMS).
 `npm run build` verde confirma a empacotabilidade; a verificação HTTP 200 ocorre no deploy
 pós-merge. O smoke real KMS+Biconomy (`scripts/mc302-smoke.mjs`) não foi reexecutado por não
 haver alteração no caminho de assinatura biconomy (apenas a remoção do caminho defender).
+
+## 4. Proxy de imagem de produto (`img-proxy.mjs`) — SSRF (validação visual MC31)
+
+**Contexto:** o formulário de produto do lojista oferece "Imagem URL" (externa) **ou** upload.
+O CSP estrito (`img-src 'self' data: blob: …`) bloqueia imagens cross-origin → URLs externas
+nunca apareciam e geravam violações de CSP no console. **Decisão:** NÃO alargar o `img-src` a
+domínios arbitrários (enfraqueceria o CSP, contra o pilar SUPERPERS). Em vez disso, um proxy
+**same-origin** (`/.netlify/functions/img-proxy`, coberto por `img-src 'self'`) busca a imagem
+no servidor. **O CSP não foi alterado.**
+
+**Modelo de ameaças (SSRF) e mitigações:**
+
+| # | Ameaça | Mitigação |
+|---|--------|-----------|
+| P-1 | Acesso a serviços internos / metadata cloud (169.254.169.254) | `isBlockedIp`/`isBlockedHostname` bloqueiam loopback/privado/link-local/CGNAT/multicast (IPv4+IPv6, incl. IPv4-mapped) |
+| P-2 | Hostname público que resolve para IP privado (DNS) | resolução DNS (`dns/promises.lookup` all) + bloqueio se QUALQUER endereço for privado; **fail-closed** se não resolver |
+| P-3 | Bypass por redirect para destino privado | `fetch(..., { redirect: "error" })` — qualquer 3xx falha |
+| P-4 | Esquema não-HTTP (file:, gopher:, etc.) | só `http:`/`https:` |
+| P-5 | Exfiltração de não-imagem / amplificação | valida `content-type: image/*`; limites `MAX_BYTES=5MB` e `TIMEOUT=6s`; resposta com `X-Content-Type-Options: nosniff` + `CSP default-src 'none'` |
+
+**Testes:** `img-proxy` (4/4) cobre `isBlockedIp`/`isBlockedHostname` (ranges privados bloqueados,
+públicos permitidos). Suíte total **61/61**. Limitação honesta: imagens servidas atrás de
+redirect não carregam (`redirect: "error"`) — o lojista usa URL direta ou upload (base64).

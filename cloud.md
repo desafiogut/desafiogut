@@ -490,6 +490,16 @@ A coordenação foi **transferida on-chain** para o Smart Account ERC-4337 com *
   consistente, **CLS=0**, sem novos erros de console (apenas ruído walletconnect/CSP pré-existente).
 - ✅ Zero alterações em GUTO, Indique e Ganhe, edições, fluxo corporativo, `Leilao.sol`.
 
+### 4. Proxy de imagem de produto (validação visual em produção)
+A validação MCP em produção apanhou um produto com "Imagem URL" externa bloqueada pelo CSP
+(`img-src`). Em vez de alargar o CSP a domínios arbitrários, adicionou-se **`netlify/functions/
+img-proxy.mjs`** — proxy **same-origin** (coberto por `img-src 'self'`) com guardas SSRF (só
+http(s); bloqueio de IPs privados/loopback/link-local por literal + resolução DNS fail-closed;
+`redirect: "error"`; valida `content-type image/*`; limites de tamanho/tempo). Frontend: helper
+`src/lib/imagem.js` (`imagemProdutoSrc`) roteia URLs externas pelo proxy nos 3 render sites
+(Vitrine, CorporativoDashboard, DetalheProduto). Uploads (base64) e blob: continuam diretos.
+**CSP inalterado.** Testes: `img-proxy` 4/4 → suíte **61/61**. Detalhe: `security_audit.md` §MC31.4.
+
 > Relatório: `Desktop/MC31-final.md`. Detalhe de segurança: `desafio-gut/security_audit.md` §MC31.
 
 ---
