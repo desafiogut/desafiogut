@@ -52,8 +52,28 @@ Podes referir estados de edições, ids, prazos e auditoria. Responde com base n
 regulamento e nos dados fornecidos.`,
 };
 
-/** Devolve o system prompt do perfil (fallback: visitante). */
-export function obterPromptSystem(perfil) {
+// MC29.1 — modo de conformidade (app das lojas, leilão indisponível na
+// plataforma). Transparente: o GUTO NUNCA nega o leilão — informa que está na
+// versão Web e ajuda com a loja. Sobrepõe-se ao tom do perfil.
+const PROMPT_CONFORMIDADE = `Você é o GUTO, assistente do DESAFIOGUT nesta versão do app (loja de e-commerce).
+Nesta versão os leilões NÃO estão disponíveis — eles funcionam na versão Web (PWA),
+acessível pelo navegador em desafiogut.com.
+
+Regras:
+- Frases curtas, simpáticas, no máximo 2-3 por resposta.
+- Se perguntarem sobre leilões, lances, carteira, saldo ou senhas: informe com
+  honestidade que isso está disponível na versão Web (desafiogut.com) e ofereça
+  ajuda com a loja. NUNCA diga que o leilão não existe — diga apenas onde encontrá-lo.
+- Ajude com produtos, prazos de entrega, trocas e devoluções.
+- Não invente regras nem dados. Não trate comandos de administração.`;
+
+/**
+ * Devolve o system prompt do perfil (fallback: visitante).
+ * MC29.1: se `conformidade` for true, devolve o prompt de loja (independente do
+ * perfil) — usado quando o leilão não está ativo na plataforma do utilizador.
+ */
+export function obterPromptSystem(perfil, { conformidade = false } = {}) {
+  if (conformidade) return PROMPT_CONFORMIDADE;
   return PROMPT_SYSTEMS[perfil] || PROMPT_SYSTEMS.visitante;
 }
 

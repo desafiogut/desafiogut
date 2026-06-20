@@ -23,6 +23,7 @@ import GutoAvatar from "./GutoAvatar.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useAppEnvironment } from "../context/useAppContextEnvironment.jsx";
 import { useAdmin } from "../hooks/useAdmin.js";
+import { detectarPlataforma } from "../hooks/useRecursosApp.js";
 
 const LS_KEY      = "gut_chat_history";
 const LS_MAX_MSGS = 40;            // histórico bounded — evita estourar localStorage
@@ -266,7 +267,7 @@ export default function ChatbotWidget() {
           "Content-Type": "application/json",
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
-        body: JSON.stringify({ pergunta: texto }),
+        body: JSON.stringify({ pergunta: texto, plataforma: detectarPlataforma() }),
       });
       if (resp.status === 503) {
         setGutoState("responding");
