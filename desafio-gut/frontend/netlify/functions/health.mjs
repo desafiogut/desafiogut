@@ -11,8 +11,8 @@ export default async () => {
 
   // MC30.1 — reporta o MODO de assinatura (backend), não a presença da chave.
   const backend = backendAssinatura();
-  const signerReady = backend === "defender"
-    ? (!!process.env.DEFENDER_API_KEY && !!process.env.DEFENDER_API_SECRET)
+  const signerReady = backend === "biconomy"
+    ? (!!process.env.KMS_KEY_ID && !!process.env.BICONOMY_BUNDLER_URL)
     : !!resolverChaveCoordenacao();
   const chaveBrutaEmMainnet = process.env.NETWORK_STAGE === "mainnet" && !!resolverChaveCoordenacao();
 

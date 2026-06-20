@@ -205,8 +205,8 @@ verde em 89 `.mjs`. Nenhuma alteração em `src/`, GUTO, Glass UI ou `Leilao.sol
 | 3 | Resolver e financiar o Smart Account | ✅ `0xdEbe637d7f74C4bfe71263920F68589f0c672D92`, financiado 0.05 ETH Sepolia (SA paga o próprio gás; sem Paymaster) |
 | 4 | Transferir a coordenação on-chain (two-step) e confirmar | ✅ `coordenacao() == smartAccount`, `coordenacaoPendente() == 0x0` |
 | 5 | Remover `COORDENACAO_PRIVATE_KEY` e `DEFENDER_*` do env (R9) | ✅ removidas do Netlify (production) + redeploy; site HTTP 200 |
-| 6 | Remover o backend `defender` do código | ⏳ follow-up (executar na migração de mainnet) |
-| 7 | (Opcional) Gnosis Safe multisig | ⏳ follow-up recomendado |
+| 6 | Remover o backend `defender` do código | ✅ MC31 (`feat/mc31`): backend, `criarSignerDefender`, `@openzeppelin/defender-sdk` e `DEFENDER_*` removidos; default mainnet → `biconomy`. Ver §MC31. |
+| 7 | (Opcional) Gnosis Safe multisig | 📄 MC31: runbook documentado (ver §MC31). Sem transações on-chain neste PR. |
 
 **Provas on-chain (Sepolia, `LeilaoGUT 0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5`):**
 - Owner KMS (EOA derivada da chave pública): `0xAEFe11EDBb32fb6727693e5994a51df8ADb5EdFF`
@@ -219,8 +219,8 @@ removido → HTTP 503); credenciais lidas apenas em runtime, nunca persistidas n
 
 ### Pendentes residuais (não-bloqueantes para o isolamento)
 
-1. **Remover o backend `defender`** do código após o cutover de mainnet. — SEG 8.
-2. **(Opcional) Gnosis Safe** multisig como coordenação (via two-step). — SEG 9.
+1. ~~**Remover o backend `defender`** do código após o cutover de mainnet. — SEG 8.~~ ✅ **feito no MC31** (§MC31).
+2. **(Opcional) Gnosis Safe** multisig como coordenação (via two-step). — SEG 9 → runbook documentado no MC31 (§MC31); execução on-chain continua pendente.
 3. `COORDENACAO_PRIVATE_KEY` permanece **apenas** no caminho `local-key` (testnet) por desenho (R3).
 
 ## 5. Limitações honestas
@@ -233,3 +233,105 @@ removido → HTTP 503); credenciais lidas apenas em runtime, nunca persistidas n
   preparado mas a implementação é futura (a guarda aceita os três nomes).
 - A `COORDENACAO_PRIVATE_KEY` **permanece** no caminho `local-key` (testnet) por
   desenho — a R9 aplica-se ao **ambiente de mainnet/biconomy**.
+
+---
+
+# §MC31 — Consolidação: remoção do Defender + Endurecimento via Gnosis Safe
+
+> Branch `feat/mc31`. Conclui o **SEG 8** (remover o backend Defender do código) e
+> documenta o **SEG 9** (runbook da Gnosis Safe multisig). `Leilao.sol` NÃO é
+> alterado (R10). Nenhuma transação on-chain é executada neste PR.
+
+## 1. SEG 8 — Backend Defender REMOVIDO do código
+
+O backend `defender` deixou de existir. Alterações (`feat/mc31`):
+
+| Área | Alteração |
+|------|-----------|
+| `_lib/signer.mjs` | Removidos: caminho `'defender'` de `backendAssinatura()`, branch no dispatcher e a função `criarSignerDefender()` (imports do SDK incluídos). Default mainnet passa de `'defender'` para `'biconomy'`. |
+| Consumidores | `consolidar-lances`, `ia-preditiva`, `health`, `debug-pedido`, `contract` deixam de ramificar em `backend==='defender'`/`DEFENDER_*`; o caminho não-`local-key` exige agora `KMS_KEY_ID`/`BICONOMY_BUNDLER_URL`. |
+| `package.json` | `@openzeppelin/defender-sdk` desinstalado. |
+| `.env.example` | Bloco `DEFENDER_API_KEY`/`DEFENDER_API_SECRET` removido; `SIGNER_BACKEND ∈ {biconomy, local-key}`. |
+| Testes | `mc30-signer`: handshake Defender substituído por guarda KMS + teste MC31 (`SIGNER_BACKEND=defender` deixa de ser reconhecido). |
+
+**Postura de segurança:** a remoção **reduz a superfície de confiança** — elimina um
+caminho de assinatura inteiro (credenciais de API do Relayer) e um pacote de
+dependência. O isolamento da chave mestra (MC30.2.1) permanece intacto: a única
+via de produção é `biconomy` (Smart Account ERC-4337 + owner KMS).
+
+**Validação:** suíte **57/57** verde, `vite build` verde, `node --check` verde nos
+9 `.mjs` alterados. Nenhuma alteração em `src/`, GUTO, Glass UI ou `Leilao.sol`.
+
+## 2. SEG 9 — Runbook: Gnosis Safe multisig (2/3) como coordenação
+
+> **Apenas documentação.** Migra a coordenação do Smart Account de owner único
+> (KMS) para uma **Gnosis Safe multisig 2/3**, eliminando o ponto único de falha
+> do owner. Reutiliza o mesmo mecanismo two-step do contrato (`Leilao.sol`
+> inalterado). **Não executar on-chain sem aprovação humana.**
+
+### Pré-condição
+
+- Coordenação atual = Smart Account `0xdEbe637d7f74C4bfe71263920F68589f0c672D92`
+  (owner KMS `0xAEFe11EDBb32fb6727693e5994a51df8ADb5EdFF`), confirmada on-chain
+  no MC30.2.1.
+
+### Passos
+
+1. **Criar a Gnosis Safe (multisig 2/3)** com signers de confiança.
+   - Via Safe{Wallet} (app.safe.global) na mesma rede do `LeilaoGUT`.
+   - 3 signers independentes (ex.: owner KMS atual + 2 hardware wallets de
+     custódia distinta); threshold = 2. Registar o `enderecoSafe`.
+   - **Não** reutilizar a EOA owner KMS como signer único — anula o ganho do multisig.
+
+2. **Iniciar a transferência (Etapa 1)** a partir da coordenação atual.
+   - A coordenação (Smart Account, via owner KMS) submete a UserOp que chama
+     `iniciarTransferenciaCoordenacao(enderecoSafe)`.
+   - Confirmar `coordenacaoPendente() == enderecoSafe`.
+
+3. **Aceitar a transferência (Etapa 2)** a partir da Safe.
+   - Um dos signers da Safe propõe a chamada `aceitarTransferenciaCoordenacao()`;
+     um segundo signer aprova (threshold 2/3); a Safe executa a transação.
+   - Por ser two-step *pull*, só a `coordenacaoPendente` pode aceitar — evita
+     transferir a autoridade para um endereço que não controla a chave.
+
+4. **Verificar on-chain.**
+   - `coordenacao() == enderecoSafe` **e** `coordenacaoPendente() == 0x0`.
+   - Smoke: `health` reporta `signer_backend` esperado; um lance/consolidação de
+     teste em ambiente controlado confirma `apenasCoordenacao` a validar a Safe.
+
+### Rollback / segurança operacional
+
+- Enquanto a Etapa 2 não é aceite, a coordenação **permanece** no Smart Account
+  atual — a Etapa 1 é reversível repetindo `iniciarTransferenciaCoordenacao` com
+  outro alvo (ou o próprio Smart Account).
+- Guardar as seed phrases dos signers da Safe em custódia separada; perder 2/3
+  signers torna a coordenação irrecuperável (trade-off do multisig).
+
+### Limitações honestas
+
+- Runbook **não exercitado on-chain** neste PR — apenas desenho. Os endereços de
+  signers e o `enderecoSafe` são placeholders até à execução humana.
+- `apenasCoordenacao` no `Leilao.sol` valida `msg.sender == coordenacao()`: como a
+  Safe é o `msg.sender` efetivo das suas execuções, nenhuma alteração de contrato
+  é necessária — a assunção deve ser reconfirmada com um lance de teste pós-migração.
+
+## 3. VEREDICTO DA AUDITORIA MC31 (2026-06-20)
+
+> **Aprovado.** A remoção do Defender reduz a superfície de confiança sem regressão; o
+> isolamento da chave mestra (MC30.2.1) e a blindagem de lances (MC28) permanecem intactos.
+
+| Critério | Resultado |
+|----------|-----------|
+| Suíte de funções (regressão) | ✅ **57/57** verde |
+| MC28 — blindagem de lances | ✅ `mc28-keyperbid` 4/4 · `mc28-seguranca` 6/6 |
+| MC30.2.1 — isolamento da chave | ✅ `mc302-guarda` 5/5 · `mc302-integracao` 5/5 · `kms-handshake` 6/6 · `biconomy-handshake` 3/3 |
+| `node --check` | ✅ verde em todos os `.mjs` das functions |
+| `npm run build` | ✅ verde |
+| Validação visual MCP (Dashboard) | ✅ 4 KPI gold-standard inalterados · vidro consistente · **CLS=0** · sem novos erros |
+| Superfície de chave | ✅ inalterada vs MC30.2.1 — única via de produção é `biconomy` (Smart Account + owner KMS) |
+| `Leilao.sol` / GUTO / Indique / edições / corporativo | ✅ não alterados |
+
+**Limitação honesta:** o site de produção (Netlify) não foi redeployado nesta auditoria — o
+`npm run build` verde confirma a empacotabilidade; a verificação HTTP 200 ocorre no deploy
+pós-merge. O smoke real KMS+Biconomy (`scripts/mc302-smoke.mjs`) não foi reexecutado por não
+haver alteração no caminho de assinatura biconomy (apenas a remoção do caminho defender).

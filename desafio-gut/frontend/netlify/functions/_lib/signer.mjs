@@ -8,12 +8,12 @@
 //
 // Este módulo unifica essa lógica num ÚNICO ponto de assinatura. Isto:
 //   1) reduz a superfície de exposição da chave de 3 para 1 ficheiro;
-//   2) permite trocar o BACKEND de assinatura (chave bruta ↔ OpenZeppelin
-//      Defender Relay, com a chave num HSM) editando apenas este ficheiro.
+//   2) permite trocar o BACKEND de assinatura (chave bruta ↔ Smart Account
+//      ERC-4337 com owner em KMS remoto) editando apenas este ficheiro.
 //
-// Seleção de backend (ITEM 3.2/3.9 do MC30.plano):
-//   - SIGNER_BACKEND explícito ('defender' | 'local-key') tem precedência;
-//   - caso contrário: NETWORK_STAGE === 'mainnet'  → 'defender' (HSM, sem chave bruta)
+// Seleção de backend (MC31 — backend 'defender' removido):
+//   - SIGNER_BACKEND explícito ('biconomy' | 'local-key') tem precedência;
+//   - caso contrário: NETWORK_STAGE === 'mainnet'  → 'biconomy' (Smart Account + KMS)
 //                     restante (sepolia/localhost) → 'local-key' (chave de testnet, R3)
 //
 // SEGURANÇA: a chave privada NUNCA é logada nem exportada por este módulo.
@@ -31,18 +31,17 @@ export function resolverChaveCoordenacao() {
 
 /**
  * Decide o backend de assinatura ativo.
- *   - SIGNER_BACKEND explícito ('biconomy' | 'defender' | 'local-key') tem precedência;
- *   - caso contrário: NETWORK_STAGE === 'mainnet' → 'defender' (fallback legado, R11);
+ *   - SIGNER_BACKEND explícito ('biconomy' | 'local-key') tem precedência;
+ *   - caso contrário: NETWORK_STAGE === 'mainnet' → 'biconomy' (Smart Account + KMS);
  *                     restante (sepolia/localhost) → 'local-key'.
- * MC30.2.1: o ALVO de produção é 'biconomy' (ERC-4337 + owner KMS), selecionado
- * por SIGNER_BACKEND=biconomy. O default mainnet permanece 'defender' enquanto o
- * Defender for mantido como fallback (será removido no SEGMENTO 8 → default vira 'biconomy').
- * @returns {"biconomy"|"defender"|"local-key"}
+ * MC31: o backend 'defender' (OpenZeppelin Defender Relay) foi REMOVIDO. O ALVO de
+ * produção é 'biconomy' (ERC-4337 + owner KMS) e passa a ser o default em mainnet.
+ * @returns {"biconomy"|"local-key"}
  */
 export function backendAssinatura() {
   const explicito = String(process.env.SIGNER_BACKEND || "").toLowerCase();
-  if (explicito === "biconomy" || explicito === "defender" || explicito === "local-key") return explicito;
-  return process.env.NETWORK_STAGE === "mainnet" ? "defender" : "local-key";
+  if (explicito === "biconomy" || explicito === "local-key") return explicito;
+  return process.env.NETWORK_STAGE === "mainnet" ? "biconomy" : "local-key";
 }
 
 // Cache do endereço público resolvido — permite a `getCoordenacaoAddress()`
@@ -69,7 +68,7 @@ export function assertChaveBrutaAusenteEmMainnet() {
   if (process.env.NETWORK_STAGE === "mainnet" && temChaveBruta) {
     throw new Error(
       "MC30.1: COORDENACAO_PRIVATE_KEY presente em mainnet — a chave bruta deve " +
-      "ser removida do ambiente (R9/ITEM 3.5). Use o backend Defender (HSM) ou Biconomy (KMS).",
+      "ser removida do ambiente (R9/ITEM 3.5). Use o backend Biconomy (Smart Account + KMS).",
     );
   }
 
@@ -98,8 +97,8 @@ export function assertChaveBrutaAusenteEmMainnet() {
 /**
  * Cria o signer da coordenação para o backend ativo.
  *
- * @param {string} rpcUrl  URL do provider JSON-RPC (usado SÓ no backend local-key;
- *                         o Defender usa a rede configurada no próprio Relayer).
+ * @param {string} rpcUrl  URL do provider JSON-RPC (backend local-key e RPC do
+ *                         Smart Account no backend biconomy).
  * @returns {Promise<{ provider: object, signer: object, address: string, backend: string }>}
  *   - `signer` é compatível com ethers v6: pode ser passado a `new Contract(addr, abi, signer)`
  *     e expõe `signTypedData(domain, types, value)`.
@@ -117,12 +116,6 @@ export async function obterSignerCoordenacao(rpcUrl) {
     return { ...r, backend };
   }
 
-  if (backend === "defender") {
-    const r = await criarSignerDefender();
-    if (r.address) _coordenacaoAddressCache = r.address;
-    return { ...r, backend };
-  }
-
   // ── backend 'local-key' (default; testnet/dev) — comportamento legado ──────
   const chave = resolverChaveCoordenacao();
   if (!chave) throw new Error("COORDENACAO_PRIVATE_KEY não configurado");
@@ -133,59 +126,13 @@ export async function obterSignerCoordenacao(rpcUrl) {
 }
 
 /**
- * Backend Defender (ITEM 3.2) — a chave privada da coordenação vive no HSM do
- * OpenZeppelin Defender Relayer e NUNCA entra neste processo. Assinamos/enviamos
- * via API com credenciais ESCOPADAS e REVOGÁVEIS (DEFENDER_API_KEY/SECRET).
- *
- * Usa o pacote mantido e compatível com Ethers v6 `@openzeppelin/defender-sdk`
- * (o antigo `@openzeppelin/defender-relay-client` está DEPRECATED e é da era v5).
- * Import dinâmico (lazy): em testnet/localhost este caminho nunca é tocado, pelo
- * que build, `node --check` e testes não dependem do pacote estar instalado.
- *
- * O endereço do Relayer é, por desenho, o MESMO endereço público da coordenação
- * (a autoridade on-chain é transferida para ele via o two-step do contrato —
- * ITEM 3.3). `apenasCoordenacao` continua a validar sem mudar o Leilao.sol.
- */
-async function criarSignerDefender() {
-  const apiKey = process.env.DEFENDER_API_KEY;
-  const apiSecret = process.env.DEFENDER_API_SECRET;
-  if (!apiKey || !apiSecret) {
-    throw new Error("DEFENDER_API_KEY/DEFENDER_API_SECRET não configurados");
-  }
-
-  // Import por caminho v6 do SDK (estes módulos expõem as classes ethers v6).
-  const { DefenderRelayProvider } = await import(
-    "@openzeppelin/defender-sdk-relay-signer-client/lib/ethers/provider.js"
-  );
-  const { DefenderRelaySigner } = await import(
-    "@openzeppelin/defender-sdk-relay-signer-client/lib/ethers/signer.js"
-  );
-
-  const credenciais = { apiKey, apiSecret };
-  const provider = new DefenderRelayProvider(credenciais);
-
-  // Endereço do Relayer: env explícita (evita um round-trip) ou resolvido via API.
-  let address = process.env.DEFENDER_RELAYER_ADDRESS || null;
-  if (!address) {
-    const base = await provider.getSigner();
-    address = await base.getAddress();
-  }
-
-  const signer = new DefenderRelaySigner(credenciais, provider, address, {
-    speed: "fast",
-    ethersVersion: "v6",
-  });
-  return { provider, signer, address };
-}
-
-/**
  * Backend Biconomy (MC30.2.1) — ALVO de produção. A coordenação executa as
  * transações através de um Smart Account ERC-4337: o Bundler resolve nativamente
  * a concorrência de nonces (lances simultâneos) e o Paymaster subsidia o gás.
  *
  * O OWNER do Smart Account é uma chave em KMS remoto (R9/R12): a chave privada
  * bruta NUNCA entra neste processo. Import dinâmico (lazy) de @biconomy/account e
- * de ./kms-signer.mjs → testnet/local-key/defender não dependem destes pacotes,
+ * de ./kms-signer.mjs → testnet/local-key não dependem destes pacotes,
  * e os testes mockam-nos via mock.module().
  *
  * IMPORTANTE (achado #1): o endereço on-chain passa a ser o do Smart Account
@@ -231,9 +178,9 @@ async function criarSignerBiconomy(rpcUrl) {
   return { provider, signer, address };
 }
 
-// Cache do construtor do adapter. AbstractSigner é importado LAZY (igual ao
-// Defender) — só o caminho 'biconomy' o puxa, mantendo os testes que mockam
-// 'ethers' com exports mínimos (local-key) intactos.
+// Cache do construtor do adapter. AbstractSigner é importado LAZY — só o caminho
+// 'biconomy' o puxa, mantendo os testes que mockam 'ethers' com exports mínimos
+// (local-key) intactos.
 let _AdapterClass = null;
 
 /**

@@ -66,7 +66,7 @@ export default async (req) => {
     RPC_URL_set: !!process.env.RPC_URL,
     // MC30.1 — reporta o MODO de assinatura, não a presença da chave bruta.
     signer_backend: backendAssinatura(),
-    defender_creds_set: !!process.env.DEFENDER_API_KEY && !!process.env.DEFENDER_API_SECRET,
+    biconomy_kms_set: !!process.env.KMS_KEY_ID && !!process.env.BICONOMY_BUNDLER_URL,
     CONTRATO_SEPOLIA: process.env.CONTRATO_SEPOLIA || "(default)",
     DEBUG_TOKEN_set: !!process.env.DEBUG_TOKEN,
   };

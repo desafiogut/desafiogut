@@ -4,21 +4,20 @@
 // Cobre:
 //   · seleção de backend por NETWORK_STAGE/SIGNER_BACKEND (ITEM 3.2/3.9);
 //   · backend local-key: signer correto + cache de endereço (SEG5);
-//   · handshake com o Defender (mockado, ITEM 4.1) — sem expor chave privada;
+//   · MC31: backend 'defender' REMOVIDO — default mainnet passa a 'biconomy';
 //   · rejeição da chave bruta em mainnet (ITEM 3.5/4.2).
 //
 // Chave de TESTE descartável (conta #0 do Hardhat) — NUNCA é uma chave real.
-import { test, mock, beforeEach, afterEach } from "node:test";
+import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
 const TEST_PK   = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 const TEST_ADDR = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"; // derivado de TEST_PK
-const RELAYER_ADDR = "0xda3a83C9F3eD27c1c89d2b3bB7d1b1d1d1d1e84e";
 
 // Snapshot do env relevante para isolar cada teste.
 const ENV_KEYS = [
   "NETWORK_STAGE", "SIGNER_BACKEND", "COORDENACAO_PRIVATE_KEY", "COORDENACAO_PRIVATE",
-  "DEFENDER_API_KEY", "DEFENDER_API_SECRET", "DEFENDER_RELAYER_ADDRESS",
+  "KMS_KEY_ID", "BICONOMY_BUNDLER_URL",
 ];
 let _snap;
 beforeEach(() => {
@@ -37,7 +36,7 @@ const signer = await import("../_lib/signer.mjs");
 
 test("backendAssinatura: default por NETWORK_STAGE", () => {
   process.env.NETWORK_STAGE = "mainnet";
-  assert.equal(signer.backendAssinatura(), "defender");
+  assert.equal(signer.backendAssinatura(), "biconomy");
   process.env.NETWORK_STAGE = "sepolia";
   assert.equal(signer.backendAssinatura(), "local-key");
   delete process.env.NETWORK_STAGE;
@@ -49,8 +48,18 @@ test("backendAssinatura: SIGNER_BACKEND explícito tem precedência", () => {
   process.env.SIGNER_BACKEND = "local-key";
   assert.equal(signer.backendAssinatura(), "local-key");
   process.env.NETWORK_STAGE = "sepolia";
+  process.env.SIGNER_BACKEND = "biconomy";
+  assert.equal(signer.backendAssinatura(), "biconomy");
+});
+
+test("MC31: SIGNER_BACKEND=defender já não é reconhecido (cai no default)", () => {
+  // O backend Defender foi removido — um valor 'defender' explícito é ignorado
+  // e a seleção recai no default por NETWORK_STAGE (biconomy em mainnet).
   process.env.SIGNER_BACKEND = "defender";
-  assert.equal(signer.backendAssinatura(), "defender");
+  process.env.NETWORK_STAGE = "sepolia";
+  assert.equal(signer.backendAssinatura(), "local-key");
+  process.env.NETWORK_STAGE = "mainnet";
+  assert.equal(signer.backendAssinatura(), "biconomy");
 });
 
 test("resolverChaveCoordenacao: canónica + fallback legado", () => {
@@ -89,43 +98,13 @@ test("ITEM 3.5/4.2: chave bruta presente em mainnet é REJEITADA (não instancia
   );
 });
 
-test("mainnet/defender sem creds: falha nas credenciais, NUNCA na chave", async () => {
-  process.env.NETWORK_STAGE = "mainnet"; // backend = defender, sem chave bruta
+test("mainnet/biconomy sem config: falha na configuração KMS, NUNCA na chave", async () => {
+  process.env.NETWORK_STAGE = "mainnet"; // backend = biconomy, sem chave bruta
+  // Sem KMS_KEY_ID/BUNDLER a guarda recusa arrancar — falha na configuração do
+  // owner KMS, jamais por instanciar uma Wallet com chave bruta.
   await assert.rejects(
     () => signer.obterSignerCoordenacao("http://localhost:8545"),
-    /DEFENDER_API_KEY\/DEFENDER_API_SECRET não configurados/,
+    /KMS_KEY_ID não configurado/,
   );
-});
-
-test("ITEM 4.1: handshake com o Defender (mockado) — endereço esperado, sem chave privada", async () => {
-  let credenciaisRecebidas = null;
-  class FakeProvider {
-    constructor(creds) { credenciaisRecebidas = creds; }
-  }
-  class FakeSigner {
-    constructor(creds, provider, address, options) {
-      this.address = address; this.options = options;
-    }
-    async getAddress() { return this.address; }
-    async signTypedData() { return "0xassinatura-de-teste"; }
-  }
-  mock.module("@openzeppelin/defender-sdk-relay-signer-client/lib/ethers/provider.js", {
-    namedExports: { DefenderRelayProvider: FakeProvider },
-  });
-  mock.module("@openzeppelin/defender-sdk-relay-signer-client/lib/ethers/signer.js", {
-    namedExports: { DefenderRelaySigner: FakeSigner },
-  });
-
-  process.env.NETWORK_STAGE = "mainnet";
-  process.env.DEFENDER_API_KEY = "ak_teste";
-  process.env.DEFENDER_API_SECRET = "as_teste";
-  process.env.DEFENDER_RELAYER_ADDRESS = RELAYER_ADDR;
-
-  const { signer: s, address, backend } = await signer.obterSignerCoordenacao("ignorado");
-  assert.equal(backend, "defender");
-  assert.equal(address, RELAYER_ADDR);
-  assert.deepEqual(credenciaisRecebidas, { apiKey: "ak_teste", apiSecret: "as_teste" });
-  // A assinatura de typed data funciona via Defender, sem qualquer chave no env.
-  assert.equal(await s.signTypedData({}, {}, {}), "0xassinatura-de-teste");
   assert.equal(signer.resolverChaveCoordenacao(), null);
 });

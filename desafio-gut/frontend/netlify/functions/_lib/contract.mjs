@@ -56,15 +56,15 @@ let _coordWalletAddress = null; // endereço público (sync para getCoordenacaoA
 function ensureEnv() {
   if (!process.env.RPC_URL) throw new Error("RPC_URL não configurado");
   // A chave bruta só é exigida no backend 'local-key' (testnet/dev). No backend
-  // 'defender' (mainnet) a chave vive no HSM e NÃO está no env (MC30.1).
+  // 'biconomy' (mainnet) o owner vive no KMS e NÃO está no env (MC30.1/MC30.2.1).
   if (backendAssinatura() === "local-key" && !resolverChaveCoordenacao()) {
     throw new Error("COORDENACAO_PRIVATE_KEY não configurado");
   }
 }
 
 // MC30.1 — a assinatura é delegada ao módulo central _lib/signer.mjs, que
-// seleciona o backend (local-key | defender). getInstance passa a ser async
-// porque o backend Defender resolve o signer via API (HSM).
+// seleciona o backend (local-key | biconomy). getInstance passa a ser async
+// porque o backend Biconomy resolve o signer via Smart Account (owner KMS).
 async function getInstance() {
   if (_instancePromise) return _instancePromise;
   ensureEnv();

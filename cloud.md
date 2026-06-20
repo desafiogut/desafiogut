@@ -431,8 +431,9 @@ A coordenação foi **transferida on-chain** para o Smart Account ERC-4337 com *
 > `assertChaveBrutaAusenteEmMainnet` continua a impedir a reintrodução de chave bruta.
 
 ### Pendente (follow-ups não-bloqueantes)
-- Remover o backend `defender` do código quando a migração de mainnet for executada (SEG 8).
-- (Opcional, recomendado) migrar a coordenação para **Gnosis Safe** (multisig) via two-step (SEG 9).
+- ✅ **SEG 8 — concluído no MC31:** backend `defender` removido do código (ver §MC31).
+- 📄 **SEG 9 — documentado no MC31:** runbook da **Gnosis Safe** (multisig 2/3) no
+  `security_audit.md` (§MC31). Execução on-chain continua pendente (decisão do operador).
 - `COORDENACAO_PRIVATE_KEY` permanece **apenas** no caminho `local-key` (testnet) por desenho (R3).
 
 ### Runbook — tooling e correções (2026-06-18)
@@ -448,6 +449,48 @@ A coordenação foi **transferida on-chain** para o Smart Account ERC-4337 com *
   com a coordenação atual".
 
 > Detalhe completo: `desafio-gut/docs/MC30.2.1-isolamento-chave.md`.
+
+---
+
+## MC31 — Consolidação: remover Defender, preparar Gnosis Safe, adotar primitivos Glass UI (2026-06-20)
+
+> Branch `feat/mc31`. Três tarefas de consolidação. `Leilao.sol` **não muda**;
+> nenhuma transação on-chain executada.
+
+### 1. Backend Defender removido (SEG 8 do MC30.2.1)
+- `_lib/signer.mjs`: removido o caminho `'defender'` de `backendAssinatura()`, a função
+  `criarSignerDefender()` e os imports do `@openzeppelin/defender-sdk`. **Default mainnet
+  passa de `defender` para `biconomy`.** Mantidos `local-key` (testnet) e `biconomy` (mainnet).
+- Consumidores atualizados (sem regressão no caminho biconomy): `consolidar-lances`,
+  `ia-preditiva`, `health`, `debug-pedido`, `contract` deixam de exigir `DEFENDER_*` e
+  passam a exigir `KMS_KEY_ID`/`BICONOMY_BUNDLER_URL` no caminho não-`local-key`.
+- `@openzeppelin/defender-sdk` desinstalado; `.env.example` limpo do bloco `DEFENDER_*`.
+- Testes `mc30-signer`: handshake Defender → guarda KMS + teste MC31 (defender deixa de
+  ser reconhecido). **Reduz a superfície de confiança** (menos um backend e uma dependência).
+
+### 2. Gnosis Safe multisig — runbook (SEG 9 do MC30.2.1)
+- Apenas **documentação**: `security_audit.md` §MC31 descreve a migração da coordenação do
+  Smart Account (owner único KMS) para uma **Gnosis Safe 2/3** via o two-step do contrato.
+  Sem transações on-chain.
+
+### 3. Adoção dos primitivos Glass UI (Auditoria 5 do MC23)
+- Auditoria (ITEM 3.1): a adoção dos primitivos foi concluída em MC21–MC25. O **único
+  duplicado ad-hoc exato** de `.gut-glass-standard` que restava — `CorporativoAnalytics`
+  (objeto inline `cardStyle`) — foi migrado para `<GlassCard>` (mudança visual **nula**).
+- Exceções deliberadas preservadas (converter = redesign, viola R1): os **4 cards KPI do
+  Dashboard** (padrão-ouro, fonte do `.gut-glass-standard`), `BottomNav` (chrome), overlays
+  e painel da página crítica `MercadoLances` (MC28), `motion.section` com tint em
+  `SejaNossoParceiro`, tabelas custom (`MeusAtivos`/`DetalheProduto`), `<select>`/`<textarea>`
+  (sem primitivo `<input>`-equivalente) e estilos de tipografia.
+
+### Validação
+- ✅ Suíte de funções **57/57**; `node --check` verde em todos os `.mjs`; `npm run build` verde.
+- ✅ MC28 (keyperbid 4 + seguranca 6) e MC30.2.1 (guarda 5 + integração 5 + kms 6 + biconomy 3) verdes.
+- ✅ Visual MCP (chrome-devtools): Dashboard 1440px + estreito, **4 KPI inalterados**, vidro
+  consistente, **CLS=0**, sem novos erros de console (apenas ruído walletconnect/CSP pré-existente).
+- ✅ Zero alterações em GUTO, Indique e Ganhe, edições, fluxo corporativo, `Leilao.sol`.
+
+> Relatório: `Desktop/MC31-final.md`. Detalhe de segurança: `desafio-gut/security_audit.md` §MC31.
 
 ---
 

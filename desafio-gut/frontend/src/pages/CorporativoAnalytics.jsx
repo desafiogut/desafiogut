@@ -52,15 +52,6 @@ export default function CorporativoAnalytics() {
   }, [address, authToken, periodo]);
 
   const cardCls = isMobile ? "p-4" : "p-5";
-  const cardStyle = {
-    background: "rgba(13,18,53,0.25)",
-    border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: "16px",
-    padding: isMobile ? "1rem" : "1.25rem",
-    backdropFilter: "blur(24px) saturate(135%)",
-    WebkitBackdropFilter: "blur(24px) saturate(135%)",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05)",
-  };
 
   const impressoes  = analytics?.totais?.impressoes ?? 0;
   const cliques     = analytics?.totais?.cliques ?? 0;
@@ -104,9 +95,9 @@ export default function CorporativoAnalytics() {
       </div>
 
       {erro && (
-        <div style={{ ...cardStyle, color: "#ef4444", marginBottom: "1rem" }}>
+        <GlassCard className={cardCls} style={{ color: "#ef4444", marginBottom: "1rem" }}>
           Erro: {erro}
-        </div>
+        </GlassCard>
       )}
 
       <section style={{
@@ -120,7 +111,7 @@ export default function CorporativoAnalytics() {
         <MetricaCard label="Conversão"  value={`${taxaConv.toFixed(2)}%`}           color={COR.success} icon="✅" />
       </section>
 
-      <section style={{ ...cardStyle, marginBottom: "1rem" }}>
+      <GlassCard as="section" className={cardCls} style={{ marginBottom: "1rem" }}>
         <h3 style={{ margin: "0 0 0.85rem", fontSize: "0.9rem", color: COR.primary, fontWeight: 800, letterSpacing: "0.03em" }}>
           📊 Impressões por banner
         </h3>
@@ -144,7 +135,7 @@ export default function CorporativoAnalytics() {
             </div>
           );
         })}
-      </section>
+      </GlassCard>
 
       <GlassCard as="section" className={cardCls}>
         <h3 style={{ margin: "0 0 0.5rem", fontSize: "0.9rem", color: COR.primary, fontWeight: 800 }}>

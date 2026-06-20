@@ -1,7 +1,7 @@
 // _lib/kms-signer.mjs — OWNER do Smart Account via KMS/signer remoto (MC30.2.1)
 //
 // A Biconomy precisa de um OWNER signer para autorizar UserOperations (não tem
-// HSM próprio como o Defender). Para preservar o isolamento do MC30.1 (R9/R12),
+// HSM próprio embutido). Para preservar o isolamento do MC30.1 (R9/R12),
 // esse owner é uma chave que vive num KMS/HSM remoto: a chave privada BRUTA
 // NUNCA entra no processo Node das Netlify Functions.
 //
