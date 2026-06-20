@@ -378,7 +378,7 @@ export default function CorporativoDashboard() {
         {cards.map(({ label, value, color, icon, to }) => (
           <Button
             key={label}
-            variant="ghost"
+            variant="secondary"
             onClick={() => navigate(to)}
             className={`${cardCls} !flex !flex-col !items-start !gap-1 !text-left !h-auto`}
           >

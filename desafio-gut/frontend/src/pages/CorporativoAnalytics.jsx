@@ -154,16 +154,10 @@ export default function CorporativoAnalytics() {
 
 function MetricaCard({ label, value, color, icon }) {
   return (
-    <div style={{
-      background: "rgba(13,18,53,0.25)",
-      border: "1px solid rgba(245,166,35,0.18)",
-      borderRadius: "14px",
-      padding: "1rem",
-      display: "flex", flexDirection: "column", gap: "0.25rem",
-    }}>
+    <GlassCard className="p-4 flex flex-col gap-1">
       <span style={{ fontSize: "1.2rem" }}>{icon}</span>
       <span style={{ fontSize: "1.3rem", fontWeight: 900, color }}>{value}</span>
       <span style={{ fontSize: "0.7rem", color: "#6b7db8", fontWeight: 600 }}>{label}</span>
-    </div>
+    </GlassCard>
   );
 }
