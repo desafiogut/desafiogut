@@ -268,7 +268,7 @@ async function dispararEdicaoAutomatica(metricas, threshold) {
   const semCreds =
     !process.env.RPC_URL ||
     (backend === "local-key" && !resolverChaveCoordenacao()) ||
-    (backend === "defender" && (!process.env.DEFENDER_API_KEY || !process.env.DEFENDER_API_SECRET));
+    (backend === "biconomy" && (!process.env.KMS_KEY_ID || !process.env.BICONOMY_BUNDLER_URL));
   if (semCreds) {
     console.error("[ia-preditiva] modo=auto sem credenciais de assinatura — abortando");
     await captureSecurityAlert("ia_preditiva_auto_sem_creds", {

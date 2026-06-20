@@ -57,7 +57,7 @@ export default async (req) => {
   // 4. ENV obrigatórias — credenciais conforme o backend de assinatura (MC30.1)
   const requeridas = ["CONSOLIDATION_RPC_URL", "CONTRATO_MAINNET", "MAINNET_CHAIN_ID"];
   if (backendAssinatura() === "local-key") requeridas.push("COORDENACAO_PRIVATE_KEY");
-  else requeridas.push("DEFENDER_API_KEY", "DEFENDER_API_SECRET");
+  else requeridas.push("KMS_KEY_ID", "BICONOMY_BUNDLER_URL");
   for (const k of requeridas) {
     if (!process.env[k]) return jsonError(503, "config_ausente", `${k} não configurado`);
   }
@@ -69,7 +69,7 @@ export default async (req) => {
 
   // 6. Signer da coordenação via módulo central (MC30.1). No backend local-key
   //    o provider é o Flashbots Protect (CONSOLIDATION_RPC_URL); no backend
-  //    'defender' o envio/assinatura ocorrem no HSM do Relayer.
+  //    'biconomy' o envio/assinatura ocorrem via Smart Account ERC-4337 (owner KMS).
   const { provider, signer } = await obterSignerCoordenacao(process.env.CONSOLIDATION_RPC_URL);
   const contrato = new Contract(process.env.CONTRATO_MAINNET, ABI, signer);
 

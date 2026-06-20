@@ -6,7 +6,7 @@
 // (low-S, recovery id) e a derivação de endereço vivem em _lib/kms-signer.mjs
 // (agnóstico ao provider) — este ficheiro só fala "AWS".
 //
-// Import dinâmico (lazy) de @aws-sdk/client-kms: em testnet/local-key/defender
+// Import dinâmico (lazy) de @aws-sdk/client-kms: em testnet/local-key
 // este caminho nunca é tocado, pelo que build e `node --check` não dependem do
 // pacote, e os testes mockam o módulo via mock.module().
 
