@@ -9,6 +9,7 @@ import TabelaLances from "../components/TabelaLances.jsx";
 import BannerCard from "../components/BannerCard.jsx";
 import { GlassCard } from "@/components/ui";
 import { LABEL_LOGIN } from "../components/BotaoLoginPrincipal.jsx";
+import { useRecursosApp } from "../hooks/useRecursosApp.js";
 
 // REQ-01: descobre o cliente cujo leilão está ativo no momento, conforme
 // a categoria correspondente ao tipoLeilao atual. Sem cota cadastrada:
@@ -190,6 +191,11 @@ export default function MercadoLances() {
     edicoes, edicoesTick, timeLeftEdicaoSegundos,
   } = useAppContext();
 
+  // MC29.1 — modelo de entrega híbrido transparente. No app das lojas
+  // (isLeilaoAtivo=false) os componentes de leilão NÃO são montados; em seu
+  // lugar uma vista de conformidade declara que o leilão está na versão Web.
+  const { isLeilaoAtivo, isLoading: recursosCarregando } = useRecursosApp();
+
   // MC15.4 ITEM 9 — o dial usa termino_em da edição correspondente ao tipo
   // selecionado (relâmpago: 1ª edição "relampago" aberta; programado: 1ª
   // "programado" aberta). DERIVADO de termino_em → imune a F5/login. Sem
@@ -251,6 +257,12 @@ export default function MercadoLances() {
 
   const pad      = isMobile ? "1rem" : "2rem";
   const padTight = isMobile ? "0.75rem 1rem" : "0.6rem 2rem";
+
+  // MC29.1 — gate de plataforma. Skeleton enquanto a config carrega (CLS=0);
+  // vista de conformidade quando o leilão não está ativo nesta plataforma.
+  // Os componentes de leilão (CardLance, TabelaLances, timers) ficam DESMONTADOS.
+  if (recursosCarregando) return <MercadoSkeleton isMobile={isMobile} />;
+  if (!isLeilaoAtivo)     return <MercadoConformidade isMobile={isMobile} />;
 
   return (
     <>
@@ -620,3 +632,88 @@ const badgeStyle = {
   border: "1px solid rgba(245,166,35,0.28)",
   color: COR.gold,
 };
+
+// ── MC29.1 — Vista de conformidade (modo loja iOS/Android) ───────────────────
+// Transparente: declara que o leilão está na versão Web, sem o esconder e sem
+// dark patterns (taste-engineering). Glass UI .gut-glass-standard (impeccable-
+// design), contraste WCAG AA, acento laranja cirúrgico. Dimensões fixas → CLS=0.
+const PWA_URL = "https://desafiogut.com";
+
+function MercadoConformidade({ isMobile }) {
+  return (
+    <div style={{
+      minHeight: "100%",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: isMobile ? "1.5rem 1rem" : "3rem 2rem",
+    }}>
+      <GlassCard style={{
+        maxWidth: "520px", width: "100%",
+        padding: isMobile ? "1.75rem 1.5rem" : "2.5rem 2.25rem",
+        textAlign: "center",
+      }}>
+        <div style={{ fontSize: isMobile ? "2.5rem" : "3rem", lineHeight: 1 }} aria-hidden="true">🛍️</div>
+        <h2 style={{
+          margin: "1rem 0 0.5rem",
+          fontSize: isMobile ? "1.25rem" : "1.5rem",
+          fontWeight: 800, color: COR.text, letterSpacing: "0.01em",
+        }}>Leilões na versão Web</h2>
+        <p style={{
+          margin: "0 0 1.5rem", color: COR.muted,
+          fontSize: isMobile ? "0.9rem" : "0.95rem", lineHeight: 1.6,
+        }}>
+          Os leilões do DesafioGUT acontecem na nossa versão Web. Abre{" "}
+          <strong style={{ color: COR.gold }}>desafiogut.com</strong> no teu navegador
+          para participar com saldo, lances e carteira — tudo o que já usas.
+          Por aqui, continua a explorar a loja e os produtos.
+        </p>
+        <a
+          href={PWA_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-block",
+            padding: "0.8rem 1.6rem", borderRadius: "28px",
+            background: "linear-gradient(135deg,#f5a623,#e89400)",
+            color: "#0a0f1a", fontWeight: 800, fontSize: "0.95rem",
+            textDecoration: "none", letterSpacing: "0.02em",
+            boxShadow: "0 4px 18px rgba(245,166,35,0.35)",
+          }}
+        >Abrir versão Web</a>
+        <p style={{ margin: "1.25rem 0 0", color: COR.muted, fontSize: "0.78rem", lineHeight: 1.5 }}>
+          Esta versão da loja não inclui o leilão. Nada fica escondido — é só uma
+          questão de onde cada funcionalidade vive.
+        </p>
+      </GlassCard>
+    </div>
+  );
+}
+
+// Skeleton com o MESMO contentor/dimensões da vista de conformidade → sem salto
+// de layout (CLS=0) entre o estado de carregamento e o estado resolvido.
+function MercadoSkeleton({ isMobile }) {
+  const barra = (w) => ({
+    height: "0.9rem", width: w, borderRadius: "6px",
+    background: "rgba(255,255,255,0.06)", margin: "0.5rem auto",
+  });
+  return (
+    <div style={{
+      minHeight: "100%",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: isMobile ? "1.5rem 1rem" : "3rem 2rem",
+    }}>
+      <GlassCard style={{
+        maxWidth: "520px", width: "100%",
+        padding: isMobile ? "1.75rem 1.5rem" : "2.5rem 2.25rem",
+        textAlign: "center",
+      }} aria-busy="true" aria-label="A carregar">
+        <div style={{
+          width: "3rem", height: "3rem", borderRadius: "50%",
+          background: "rgba(255,255,255,0.06)", margin: "0 auto 1rem",
+        }} />
+        <div style={barra("60%")} />
+        <div style={barra("90%")} />
+        <div style={barra("80%")} />
+      </GlassCard>
+    </div>
+  );
+}
