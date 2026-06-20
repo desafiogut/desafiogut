@@ -192,20 +192,36 @@ Build `vite build` verde. `node --check` verde em todos os `.mjs`.
 `mc302-integracao` (5/5). Regressão: **57/57**, `vite build` verde, `node --check`
 verde em 89 `.mjs`. Nenhuma alteração em `src/`, GUTO, Glass UI ou `Leilao.sol`.
 
-## 4. AÇÕES HUMANAS PENDENTES (não executadas neste PR — runbook do operador)
+## 4. EXECUÇÃO DO RUNBOOK — ✅ ISOLAMENTO DA CHAVE MESTRA CONCLUÍDO (2026-06-20)
 
-> Exigem credenciais reais e transações on-chain **irreversíveis**. Ordem obrigatória:
+> Veredicto: **a chave mestra da coordenação está isolada.** A autoridade on-chain pertence
+> agora a um Smart Account ERC-4337 cujo owner é uma chave **AWS KMS** que nunca entra no
+> processo Node. As chaves antigas foram removidas do ambiente. Estado verificado on-chain.
 
-1. **Provisionar a chave no AWS KMS** (`ECC_SECG_P256K1`) + papel IAM escopado;
-   definir `KMS_PROVIDER`/`KMS_KEY_ID`/`AWS_REGION`. — SEG 1/2.
-2. **Configurar `BICONOMY_*`** (Bundler/Paymaster/API) e **validar o handshake real**
-   (KMS + Bundler) — os handshakes do PR são mockados. — SEG 5.
-3. **Resolver o endereço do Smart Account** e financiá-lo (ou ativar Paymaster). — SEG 7.
-4. **Transferir a coordenação on-chain** (two-step) e **confirmar**
-   `coordenacao() == smartAccount` ANTES do passo 5. — SEG 7.2/7.3.
-5. **Remover `COORDENACAO_PRIVATE_KEY` e `DEFENDER_*`** do env de mainnet do Netlify (R9). — SEG 8.
-6. **Remover o backend `defender`** do código após validação completa. — SEG 8.
-7. **(Opcional) Gnosis Safe** multisig como coordenação (via two-step). — SEG 9.
+| # | Ação do runbook | Estado |
+|---|-----------------|--------|
+| 1 | Chave no AWS KMS (`ECC_SECG_P256K1`) + IAM escopado; `KMS_PROVIDER`/`KMS_KEY_ID`/`APP_AWS_REGION` | ✅ provisionada; policy IAM `KMS-Sign-Key` concede `kms:Sign`+`kms:GetPublicKey` só no ARN da chave |
+| 2 | `BICONOMY_*` + handshake real (KMS + Bundler) | ✅ validado em produção (build+assinatura via SDK Biconomy + owner KMS) |
+| 3 | Resolver e financiar o Smart Account | ✅ `0xdEbe637d7f74C4bfe71263920F68589f0c672D92`, financiado 0.05 ETH Sepolia (SA paga o próprio gás; sem Paymaster) |
+| 4 | Transferir a coordenação on-chain (two-step) e confirmar | ✅ `coordenacao() == smartAccount`, `coordenacaoPendente() == 0x0` |
+| 5 | Remover `COORDENACAO_PRIVATE_KEY` e `DEFENDER_*` do env (R9) | ✅ removidas do Netlify (production) + redeploy; site HTTP 200 |
+| 6 | Remover o backend `defender` do código | ⏳ follow-up (executar na migração de mainnet) |
+| 7 | (Opcional) Gnosis Safe multisig | ⏳ follow-up recomendado |
+
+**Provas on-chain (Sepolia, `LeilaoGUT 0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5`):**
+- Owner KMS (EOA derivada da chave pública): `0xAEFe11EDBb32fb6727693e5994a51df8ADb5EdFF`
+- Etapa 1 `iniciarTransferenciaCoordenacao`: `0xa32aaea1bad595d45c105a48b562ac4afe47a19d272be3b65c242da9f5908f5a`
+- Etapa 2 `aceitarTransferenciaCoordenacao`: `0xb8d92cae7a5d2b54cb5823a8fc1448e842d706a5f63f780b2b12811c8b150812` (`success=true`)
+- UserOp enviada via **bundler da Alchemy** (o Bundler v2 da Biconomy descontinuou Sepolia — eth_sendUserOperation raw, mantendo build/assinatura via SDK Biconomy + KMS).
+
+**Higiene pós-operação:** endpoint admin `mc302-aceitar` desativado (token `MC302_DIAG_TOKEN`
+removido → HTTP 503); credenciais lidas apenas em runtime, nunca persistidas no bundle.
+
+### Pendentes residuais (não-bloqueantes para o isolamento)
+
+1. **Remover o backend `defender`** do código após o cutover de mainnet. — SEG 8.
+2. **(Opcional) Gnosis Safe** multisig como coordenação (via two-step). — SEG 9.
+3. `COORDENACAO_PRIVATE_KEY` permanece **apenas** no caminho `local-key` (testnet) por desenho (R3).
 
 ## 5. Limitações honestas
 

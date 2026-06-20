@@ -411,10 +411,29 @@ via two-step do contrato (`iniciar`/`aceitarTransferenciaCoordenacao`) — `Leil
 - ✅ `node --check` verde em 89 `.mjs`; `npm run build` verde (6.52s).
 - ✅ Zero alterações em `src/`, GUTO, Glass UI, fundo animado, `Leilao.sol`.
 
-### Pendente (runbook do operador — `security_audit.md` §MC30.2.1)
-Provisionar KMS + Biconomy reais, validar handshake real, transferir coordenação on-chain
-(two-step), remover `COORDENACAO_PRIVATE_KEY`/`DEFENDER_*` do env de mainnet, remover o
-backend `defender` (SEG 8) e, opcionalmente, migrar para Gnosis Safe (SEG 9).
+### ✅ Conclusão — isolamento da chave concluído (2026-06-20)
+A coordenação foi **transferida on-chain** para o Smart Account ERC-4337 com **owner em AWS KMS**:
+
+- **Smart Account (nova coordenação):** `0xdEbe637d7f74C4bfe71263920F68589f0c672D92`
+- **Owner KMS (EOA):** `0xAEFe11EDBb32fb6727693e5994a51df8ADb5EdFF` — a chave privada **vive no
+  AWS KMS** (`ECC_SECG_P256K1`) e **nunca entra no processo Node**; o KMS só recebe digests
+  e devolve assinaturas DER.
+- **Transferência two-step (Sepolia, contrato `0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5`):**
+  - Etapa 1 `iniciarTransferenciaCoordenacao` — tx `0xa32aaea1bad595d45c105a48b562ac4afe47a19d272be3b65c242da9f5908f5a`
+  - Etapa 2 `aceitarTransferenciaCoordenacao` — tx `0xb8d92cae7a5d2b54cb5823a8fc1448e842d706a5f63f780b2b12811c8b150812` (`success=true`)
+  - Estado final: `coordenacao()` = Smart Account · `coordenacaoPendente()` = `0x0` · Smart Account deployado.
+- **Chaves antigas removidas do Netlify:** `COORDENACAO_PRIVATE_KEY`, `DEFENDER_API_KEY`,
+  `DEFENDER_API_SECRET` (production) + redeploy. Endpoint de diagnóstico `mc302-aceitar`
+  desativado (token `MC302_DIAG_TOKEN` removido → HTTP 503).
+
+> Notas operacionais da execução: o Bundler v2 da Biconomy descontinuou Sepolia; a UserOp
+> foi enviada via **bundler da Alchemy** (build/assinatura via SDK Biconomy + KMS). A guarda
+> `assertChaveBrutaAusenteEmMainnet` continua a impedir a reintrodução de chave bruta.
+
+### Pendente (follow-ups não-bloqueantes)
+- Remover o backend `defender` do código quando a migração de mainnet for executada (SEG 8).
+- (Opcional, recomendado) migrar a coordenação para **Gnosis Safe** (multisig) via two-step (SEG 9).
+- `COORDENACAO_PRIVATE_KEY` permanece **apenas** no caminho `local-key` (testnet) por desenho (R3).
 
 ### Runbook — tooling e correções (2026-06-18)
 - **Smoke real:** `scripts/mc302-smoke.mjs` valida o handshake KMS+Biconomy com
