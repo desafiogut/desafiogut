@@ -314,3 +314,24 @@ via de produção é `biconomy` (Smart Account ERC-4337 + owner KMS).
 - `apenasCoordenacao` no `Leilao.sol` valida `msg.sender == coordenacao()`: como a
   Safe é o `msg.sender` efetivo das suas execuções, nenhuma alteração de contrato
   é necessária — a assunção deve ser reconfirmada com um lance de teste pós-migração.
+
+## 3. VEREDICTO DA AUDITORIA MC31 (2026-06-20)
+
+> **Aprovado.** A remoção do Defender reduz a superfície de confiança sem regressão; o
+> isolamento da chave mestra (MC30.2.1) e a blindagem de lances (MC28) permanecem intactos.
+
+| Critério | Resultado |
+|----------|-----------|
+| Suíte de funções (regressão) | ✅ **57/57** verde |
+| MC28 — blindagem de lances | ✅ `mc28-keyperbid` 4/4 · `mc28-seguranca` 6/6 |
+| MC30.2.1 — isolamento da chave | ✅ `mc302-guarda` 5/5 · `mc302-integracao` 5/5 · `kms-handshake` 6/6 · `biconomy-handshake` 3/3 |
+| `node --check` | ✅ verde em todos os `.mjs` das functions |
+| `npm run build` | ✅ verde |
+| Validação visual MCP (Dashboard) | ✅ 4 KPI gold-standard inalterados · vidro consistente · **CLS=0** · sem novos erros |
+| Superfície de chave | ✅ inalterada vs MC30.2.1 — única via de produção é `biconomy` (Smart Account + owner KMS) |
+| `Leilao.sol` / GUTO / Indique / edições / corporativo | ✅ não alterados |
+
+**Limitação honesta:** o site de produção (Netlify) não foi redeployado nesta auditoria — o
+`npm run build` verde confirma a empacotabilidade; a verificação HTTP 200 ocorre no deploy
+pós-merge. O smoke real KMS+Biconomy (`scripts/mc302-smoke.mjs`) não foi reexecutado por não
+haver alteração no caminho de assinatura biconomy (apenas a remoção do caminho defender).
