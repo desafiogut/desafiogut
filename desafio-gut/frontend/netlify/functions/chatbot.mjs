@@ -27,6 +27,8 @@ import {
   normalizarTipo, sanitizarProduto, EDICAO_ID_RE,
 } from "./_lib/edicoes-core.mjs";
 import { obterResposta, obterPromptSystem } from "./_lib/guto-perfis.mjs";
+import { getConfig } from "./_lib/data-store.mjs";
+import { resolverRecursos } from "./_lib/recursos-app-config.mjs";
 import { gerarCodigoIndicacao, estatisticasIndicador, gerarRelatorioIndicacoes, referralAtivo } from "./_lib/referral.mjs";
 import { lerSessaoWizard, salvarSessaoWizard, limparSessaoWizard } from "./_lib/wizard-session.mjs";
 import { simularVencedorMenorLance, rotuloVencedor, brlCentavos } from "./_lib/simulador.mjs";
@@ -918,6 +920,19 @@ export default async (req) => {
     console.warn("[chatbot] detectarPerfil falhou, assume visitante:", err?.message);
   }
 
+  // MC29.1 — modo de conformidade: se o leilão não está ativo na plataforma do
+  // utilizador (app das lojas), o GUTO assume a persona de loja e informa que o
+  // leilão está na versão Web. Fail-soft: erro de leitura → leilão ativo (PWA),
+  // nunca degrada o utilizador real.
+  let modoConformidade = false;
+  try {
+    const plataforma = typeof body.plataforma === "string" ? body.plataforma : "pwa";
+    const config = await getConfig("recursos_app");
+    modoConformidade = !resolverRecursos(config, plataforma).isLeilaoAtivo;
+  } catch (err) {
+    console.warn("[chatbot] resolução de plataforma falhou (fail-soft → leilão ativo):", err?.message);
+  }
+
   try {
     const intentResp = await tratarIntentEdicoes(req, pergunta, perfil, perfilEndereco);
     if (intentResp) return intentResp;
@@ -963,7 +978,7 @@ export default async (req) => {
   let resposta;
   let modoResposta = "llm";
   try {
-    resposta = await chamarLLM(pergunta, contexto, { systemPrompt: obterPromptSystem(perfil) });
+    resposta = await chamarLLM(pergunta, contexto, { systemPrompt: obterPromptSystem(perfil, { conformidade: modoConformidade }) });
   } catch (err) {
     console.warn("[chatbot] LLM indisponível, usando resposta template:", err?.message);
     modoResposta = "template";

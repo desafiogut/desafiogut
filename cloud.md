@@ -510,3 +510,105 @@ http(s); bloqueio de IPs privados/loopback/link-local por literal + resolução 
 3. Validar via MCP (chrome-devtools) a 375px e 1440px; CLS=0.
 4. Registar a alteração neste `cloud.md` e o veredicto no `security_audit.md`.
 5. PR para `main` (sem merge direto).
+
+---
+
+## 9. MC29.1 — Modelo de Entrega Híbrido e Transparente
+
+### 9.1 Objetivo
+Permitir a distribuição nas lojas (Apple App Store / Google Play) em conformidade
+com as diretrizes, SEM esconder funcionalidades (rejeitámos o modelo de
+camuflagem por violar a Apple Guideline 2.3.1). Cada plataforma recebe a
+experiência adequada às suas regras, de forma TRANSPARENTE:
+
+- **PWA (versão Web):** experiência completa — leilão de menor lance único Web3.
+- **iOS / Android (app das lojas):** o leilão é DECLARADO como disponível na
+  versão Web; em seu lugar surge um placeholder transparente. Nada é escondido.
+
+### 9.2 Camada de Abstração de Dados (adapters)
+Preparação para trocar Netlify Blobs → Supabase sem alterar a lógica de negócio.
+
+```
+_lib/data-store.mjs          ← facade único (getConfig/setConfig/getLances/addLance)
+   ├─ data-store-blobs.mjs    ← backend ATUAL (Netlify Blobs) — delega lances no
+   │                            bids-store.mjs (Key-Per-Bid MC28, intacto)
+   └─ data-store-supabase.mjs ← backend FUTURO (a criar no MC-Supabase)
+```
+
+- Seleção por env `DATA_STORE_BACKEND` (default `blobs`), carregada em runtime.
+- Regra: código novo NUNCA importa `@netlify/blobs` diretamente — só o adapter.
+- A migração dos módulos legados é incremental (fora do âmbito do MC29.1).
+
+### 9.3 Configuração remota por plataforma
+- Blob `config-experiencia:recursos_app` (via `scripts/seed-recursos-app.mjs`).
+- Endpoint `GET /.netlify/functions/recursos-app?plataforma=ios|android|pwa`
+  → `{ plataforma, isLeilaoAtivo, isPagamentoNativoAtivo }`.
+- Hook `src/hooks/useRecursosApp.js` — deteção de plataforma honesta: browser
+  puro NUNCA é classificado como nativo (sem regressão para iOS/Android em
+  Safari/Chrome); só o wrapper da loja (`window.GUT_NATIVE.platform`) ou o
+  override `?plataforma=` ativam o modo de conformidade. Fail-soft → PWA com
+  leilão ativo (o utilizador real nunca é penalizado por falha de leitura).
+- Defaults: `isLeilaoAtivo { ios:false, android:false, pwa:true }`,
+  `isPagamentoNativoAtivo { ios:false, android:false, pwa:false }`.
+
+### 9.4 Superfícies de conformidade
+- `MercadoLances.jsx`: em modo loja, os componentes de leilão (CardLance,
+  TabelaLances, timers, overlays) ficam DESMONTADOS; surge `MercadoConformidade`
+  (Glass UI `.gut-glass-standard`, dimensões fixas → CLS=0) com aviso transparente.
+- `CardLance.jsx`: rede de segurança — skeleton em modo loja; o formulário
+  on-chain nunca é montado.
+- GUTO (`chatbot.mjs` + `guto-perfis.mjs`): persona de loja que NUNCA nega o
+  leilão — informa que está na versão Web e ajuda com produtos/entregas/trocas.
+  No PWA, as 4 personas (visitante/comum/corporativo/admin) ficam intactas.
+
+### 9.5 Desenho Conceptual Supabase (DESENHO — NÃO IMPLEMENTADO)
+> ESTAS TABELAS NÃO ESTÃO IMPLEMENTADAS. São o desenho conceptual para o
+> MC-Supabase. Hoje os dados vivem em Netlify Blobs atrás do adapter.
+
+```sql
+-- recursos_app: flags de funcionalidade por plataforma
+create table recursos_app (
+  chave          text    not null,                       -- ex: 'isLeilaoAtivo'
+  plataforma     text    not null check (plataforma in ('ios','android','pwa')),
+  valor_booleano boolean not null default false,
+  atualizado_em  timestamptz not null default now(),
+  primary key (chave, plataforma)
+);
+-- RLS: SELECT público (flags não são segredo); escrita só service_role.
+alter table recursos_app enable row level security;
+create policy recursos_app_leitura on recursos_app for select using (true);
+
+-- lances: migração futura dos Blobs Key-Per-Bid (MC28)
+create table lances (
+  id              uuid primary key default gen_random_uuid(),
+  edicao_id       text        not null,
+  lancador        text        not null,                  -- endereço (lowercase)
+  commitment_hash text        not null,                  -- prova Argon2id off-chain
+  valor_centavos  integer     not null check (valor_centavos between 1 and 999999),
+  criado_em       timestamptz not null default now()
+);
+-- RLS: leitura pública OCULTA por prazo — só revela valor_centavos após o fecho
+-- da edição (anti-sniping; espelha a blindagem MC28). Inserção via Relayer/service.
+alter table lances enable row level security;
+
+-- configuracao_geografica: bloqueio regional (desenho)
+create table configuracao_geografica (
+  regiao      text primary key,                          -- ex: 'BR-AM', 'US'
+  bloqueado   boolean not null default false,
+  motivo      text
+);
+-- RLS: SELECT público; escrita só service_role. Política de app: se a região do
+-- utilizador estiver bloqueada, o leilão é tratado como inativo (conformidade).
+alter table configuracao_geografica enable row level security;
+```
+
+### 9.6 Caveats de conformidade (ler antes de submeter)
+- **Gambling não é só problema de loja:** "menor lance único" pode ser jogo
+  regulado em várias jurisdições independentemente da plataforma. O PWA precisa
+  de parecer jurídico próprio — tirar o leilão das lojas não resolve esse risco.
+- **Anti-steering da Apple:** apontar utilizadores iOS para a Web tem regras
+  estritas (entitlements de external link). O CTA "Abrir versão Web" pode exigir
+  revisão/entitlement; pode ter de ser texto informativo em vez de botão.
+- **App genuína:** a loja (Vitrine + IAP, a implementar) tem de ser funcional.
+- **Conta de teste do revisor:** documentar nas notas de revisão acesso ao fluxo
+  completo — é o que torna o modelo transparente.

@@ -6,6 +6,7 @@ import * as Sentry from "@sentry/react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useAppContext } from "../context/AppContext.jsx";
+import { useRecursosApp } from "../hooks/useRecursosApp.js";
 import { sanitizeLance, sanitizeEdicaoId } from "../utils/sanitize.js";
 import { verificarRateLimit, registrarLance } from "../utils/rateLimiter.js";
 import {
@@ -46,6 +47,12 @@ export default function CardLance({
   const { wallets } = useWallets();
   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
   const reduce = useReducedMotion(); // MC20.2 ITEM 6 — morph só-visual do CTA
+
+  // MC29.1 — rede de segurança de conformidade: mesmo que algum ecrã renderize
+  // o CardLance no app das lojas (isLeilaoAtivo=false), o formulário de lance
+  // on-chain NUNCA é montado — mostra-se um skeleton. Em produção (PWA) o
+  // MercadoLances já desmonta o leilão; isto é defesa em profundidade.
+  const { isLeilaoAtivo, isLoading: recursosCarregando } = useRecursosApp();
 
   const {
     saldoSenhas, saldoSenhasStatus,
@@ -300,6 +307,18 @@ export default function CardLance({
     : isProgramado
       ? "🎫 Confirmar Lance (−1 senha)"
     : "⚡ Lance Relâmpago";
+
+  // MC29.1 — skeleton de conformidade (não monta o formulário on-chain).
+  if (recursosCarregando || !isLeilaoAtivo) {
+    return (
+      <Card glow="primary" className="p-6 flex flex-col gap-4" aria-busy={recursosCarregando} aria-hidden="true">
+        <div style={{ height: "1.2rem", width: "40%", borderRadius: "6px", background: "rgba(255,255,255,0.06)" }} />
+        <div style={{ height: "3rem", borderRadius: "12px", background: "rgba(255,255,255,0.05)" }} />
+        <div style={{ height: "3rem", borderRadius: "12px", background: "rgba(255,255,255,0.05)" }} />
+        <div style={{ height: "2.6rem", borderRadius: "28px", background: "rgba(255,255,255,0.05)" }} />
+      </Card>
+    );
+  }
 
   return (
     <Card
