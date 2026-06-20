@@ -11,6 +11,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import LanceStatusBadge from "../components/LanceStatusBadge.jsx";
 import { GlassCard } from "@/components/ui";
+import { imagemProdutoSrc } from "../lib/imagem.js";
 
 const COR = {
   bg: "#0a0f1a", surface: "rgba(8,30,64,0.82)", text: "#e8f0fe",
@@ -151,9 +152,10 @@ export default function DetalheProduto() {
         >
           {(produto.imagemBase64 || produto.imagem_url) ? (
             <img
-              src={produto.imagemBase64 ? `data:${produto.mime || "image/png"};base64,${produto.imagemBase64}` : produto.imagem_url}
+              src={imagemProdutoSrc(produto)}
               alt={produto.nome}
               style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              onError={(e) => { e.target.style.display = "none"; }}
             />
           ) : (
             <span style={{ fontSize: "3rem" }}>📦</span>

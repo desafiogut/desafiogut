@@ -9,6 +9,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard, Button, Input } from "@/components/ui";
 import GutoAvatar from "../components/GutoAvatar.jsx";
+import { imagemProdutoSrc } from "../lib/imagem.js";
 
 const COR = {
   primary: "#f5a623", text: "#e8f0fe", muted: "#6b7db8",
@@ -584,7 +585,7 @@ export default function CorporativoDashboard() {
                 }}>
                   {(p.imagemBase64 || p.imagem_url) ? (
                     <img
-                      src={p.imagemBase64 ? `data:${p.mime || "image/png"};base64,${p.imagemBase64}` : p.imagem_url}
+                      src={imagemProdutoSrc(p)}
                       alt={p.nome}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                       onError={(e) => { e.target.style.display = "none"; }}

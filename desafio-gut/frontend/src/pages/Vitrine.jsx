@@ -16,6 +16,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useAppContext } from "../context/AppContext.jsx";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import { GlassCard } from "@/components/ui";
+import { imagemProdutoSrc } from "../lib/imagem.js";
 import { tiersAgoraVisiveis, tierAtivoAgora } from "../data/programacao-junho-2026.js";
 
 // MC11.3 — Header dual da Vitrine. Renderizado SOMENTE quando
@@ -286,7 +287,7 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
               }}>
                 {(p.imagemBase64 || p.imagem_url) ? (
                   <img
-                    src={p.imagemBase64 ? `data:${p.mime || "image/png"};base64,${p.imagemBase64}` : p.imagem_url}
+                    src={imagemProdutoSrc(p)}
                     alt={p.nome}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     onError={(e) => { e.target.style.display = "none"; }}
