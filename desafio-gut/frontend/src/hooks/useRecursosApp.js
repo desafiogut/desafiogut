@@ -15,11 +15,30 @@
 // DEFAULT local resolvido para a plataforma detetada — pwa mantém o leilão ativo.
 
 import { useState, useEffect } from "react";
+import { supabaseConfigurado, getSupabaseBrowser } from "../lib/supabaseClient";
 
 const DEFAULT_RECURSOS = {
   isLeilaoAtivo:          { ios: false, android: false, pwa: true },
   isPagamentoNativoAtivo: { ios: false, android: false, pwa: false },
 };
+
+const CHAVE_RECURSOS = "recursos_app";
+
+/** Resolve os booleanos da plataforma a partir do objeto de config (espelha
+ *  resolverRecursos do backend — _lib/recursos-app-config.mjs). */
+function resolverParaPlataforma(config, plataforma) {
+  const plat = ["ios", "android", "pwa"].includes(plataforma) ? plataforma : "pwa";
+  const cfg = config && typeof config === "object" ? config : DEFAULT_RECURSOS;
+  const ler = (chave) => {
+    const mapa = cfg[chave] && typeof cfg[chave] === "object" ? cfg[chave] : DEFAULT_RECURSOS[chave];
+    return Boolean(mapa?.[plat]);
+  };
+  return {
+    plataforma: plat,
+    isLeilaoAtivo: ler("isLeilaoAtivo"),
+    isPagamentoNativoAtivo: ler("isPagamentoNativoAtivo"),
+  };
+}
 
 export function detectarPlataforma() {
   if (typeof window === "undefined") return "pwa";
@@ -50,6 +69,27 @@ let _promessa = null;
 
 async function carregarRecursos() {
   const plataforma = detectarPlataforma();
+
+  // MC32.1 — leitura direta de config_remota via Supabase (ANON_KEY, RLS pública),
+  // só quando VITE_SUPABASE_* estão definidos. Sem config → cai no caminho atual
+  // (função recursos-app) → ZERO regressão. Falha de leitura → fail-soft p/ função.
+  if (supabaseConfigurado()) {
+    try {
+      const sb = await getSupabaseBrowser();
+      if (sb) {
+        const { data, error } = await sb
+          .from("config_remota")
+          .select("valor")
+          .eq("chave", CHAVE_RECURSOS)
+          .maybeSingle();
+        if (error) throw error;
+        return resolverParaPlataforma(data?.valor, plataforma);
+      }
+    } catch (err) {
+      console.warn("[useRecursosApp] Supabase indisponível, fallback função:", err?.message);
+    }
+  }
+
   try {
     const resp = await fetch(`/.netlify/functions/recursos-app?plataforma=${plataforma}`, {
       headers: { Accept: "application/json" },
