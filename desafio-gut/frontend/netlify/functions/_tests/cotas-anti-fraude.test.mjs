@@ -1,13 +1,32 @@
-// MC37 — Testes de anti-fraude do handler cotas.mjs (baseline → preservados no refactor).
-// Cobre: (a) anti-duplicidade CNPJ, (b) anti-Sybil fingerprint, (c) login lookup por
-// cliente_id, (d) lookup por email, (e) CRUD admin. Mocka a camada de storage + os
-// guards (rate-limit/admin) para exercitar a LÓGICA do handler.
+// MC37 — Testes de anti-fraude do handler cotas.mjs (pós-refactor: cotas-store/Supabase).
+// As MESMAS asserções do baseline; muda só a camada mockada (cotas-store em vez de Blobs).
+// Cobre: (a) anti-duplicidade CNPJ, (b) anti-Sybil, (c) login lookup, (d) email lookup, (e) CRUD admin.
 //
 // node --test --experimental-test-module-mocks _tests/cotas-anti-fraude.test.mjs
 import { test, mock, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-// --- storage Blob em memória (baseline; após refactor o cotas-store é mockado) ---
+// --- mock cotas-store (Supabase) em memória ---
+const cotasMem = new Map(); // cliente_id -> registro
+const fpMem = new Map();     // visitor_id -> { cnpjs: [...] }
+mock.module("../_lib/cotas-store.mjs", {
+  namedExports: {
+    getCota:        async (id) => cotasMem.get(String(id)) ?? null,
+    upsertCota:     async (id, reg) => { cotasMem.set(String(id), reg); return reg; },
+    deleteCota:     async (id) => { cotasMem.delete(String(id)); },
+    getCotaByCnpj:  async (cnpj) => [...cotasMem.values()].find((r) => r.cnpj === String(cnpj)) ?? null,
+    getCotaByEmail: async (email) => [...cotasMem.values()].find((r) => (r.email || "").toLowerCase() === String(email).toLowerCase()) ?? null,
+    listarCategoria: async (cat) => [...cotasMem.values()].filter((r) => r.categoria === cat),
+    resumoCotas:    async (cats) => { const o = {}; for (const c of cats) o[c] = { total_atribuidas: 0, cliente_ids: [] }; for (const r of cotasMem.values()) if (o[r.categoria]) { o[r.categoria].cliente_ids.push(r.cliente_id); o[r.categoria].total_atribuidas++; } return o; },
+    getFingerprint: async (vid) => fpMem.get(String(vid)) ?? null,
+    setFingerprint: async (vid, reg) => { fpMem.set(String(vid), reg); },
+    // exports usados por cota-ativacao.mjs (importado por cotas.mjs via MIN_POR_CATEGORIA_BRL)
+    getCotaPaga: async () => null,
+    setCotaPaga: async () => {},
+  },
+});
+
+// --- mock @netlify/blobs (troco-senhas + cotas-fallback legado, vazio) ---
 const stores = new Map();
 function getStoreMock({ name }) {
   if (!stores.has(name)) stores.set(name, new Map());
@@ -20,15 +39,13 @@ function getStoreMock({ name }) {
   };
 }
 mock.module("@netlify/blobs", { namedExports: { getStore: getStoreMock } });
-// guards: permitir (rate-limit ok, admin ok)
 mock.module("../_lib/rate-limiter.mjs", { namedExports: { aplicarRateLimit: async () => null } });
 mock.module("../_lib/admin-auth.mjs", { namedExports: { guardAdmin: async () => null } });
 
 let handler;
 before(async () => { handler = (await import("../cotas.mjs")).default; });
-beforeEach(() => { stores.clear(); });
+beforeEach(() => { cotasMem.clear(); fpMem.clear(); stores.clear(); });
 
-// Gera um CNPJ válido (mesmos dígitos verificadores que validarCNPJ).
 function gerarCnpj(base12) {
   const calc = (arr, len) => { let s = 0, p = len - 7; for (let i = len; i >= 1; i--) { s += arr[len - i] * p--; if (p < 2) p = 9; } return s % 11 < 2 ? 0 : 11 - (s % 11); };
   const a = base12.split("").map(Number);
