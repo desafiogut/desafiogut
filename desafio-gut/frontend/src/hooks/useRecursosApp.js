@@ -16,6 +16,7 @@
 
 import { useState, useEffect } from "react";
 import { supabaseConfigurado, getSupabaseBrowser } from "../lib/supabaseClient";
+import { useRealtimeConfig } from "./useRealtimeConfig";
 
 const DEFAULT_RECURSOS = {
   isLeilaoAtivo:          { ios: false, android: false, pwa: true },
@@ -126,6 +127,13 @@ export function useRecursosApp() {
       });
     return () => { vivo = false; };
   }, []);
+
+  // MC34 — atualização em tempo real: quando config_remota:recursos_app muda,
+  // re-resolve para a plataforma atual sem recarregar a página. Inerte sem
+  // VITE_SUPABASE_* (mantém o carregamento inicial como fallback → zero regressão).
+  useRealtimeConfig(CHAVE_RECURSOS, (valor) => {
+    setEstado({ ...resolverParaPlataforma(valor, detectarPlataforma()), isLoading: false });
+  });
 
   return estado;
 }
