@@ -656,3 +656,43 @@ aninhado (`recursos_app`); `lances.payload` guarda o registro imutável completo
 
 **Anti-Split-Brain (R11):** a fachada carrega UM só backend; nenhum módulo
 escreve em Blobs e Supabase ao mesmo tempo.
+
+### 9.8 MC33 — Runbook de flip/rollback (FASE C) + validação (FASES A/B/D)
+> Estado: validações técnicas FEITAS em staging (MC33.1, PR #81). O flip de
+> PRODUÇÃO permanece uma ação OPERACIONAL do operador — só com os pré-requisitos
+> abaixo cumpridos e a janela certa.
+
+**Validações já concluídas (staging `gjuelqjjhuuwnlsjyeai`):**
+- FASE A (carga): 50/100/200/1500/2500 → 0 erros, persistidos==N, keys únicas,
+  apuração idêntica; 2500 confirma o fix K1 (paginação) no PostgREST real.
+- FASE B (RLS): anon lê `[]` e escrita bloqueada (401/42501); service_role total.
+- FASE D (visual): 375/1440, CLS=0, sem novos erros de console.
+- Harnesses: `netlify/functions/_tests/mc33-load.mjs` e `mc33-rls.mjs` (manuais).
+
+**Pré-flip (checklist obrigatório):**
+1. FASE A/B/D verdes (acima). 68/68 suite + build verdes.
+2. Env de PRODUÇÃO no Netlify: `DATA_STORE_BACKEND=supabase`, `SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY` (backend) e, p/ o frontend, `VITE_SUPABASE_URL`,
+   `VITE_SUPABASE_ANON_KEY`. Schema + emenda JSONB aplicados na BD de produção.
+3. **Janela ENTRE edições** (sem lances em curso) — mitiga K2 (split-brain): com a
+   escrita exclusiva por backend (R11), lances feitos em Supabase não existem nos
+   Blobs; trocar a meio de uma edição deixaria lances órfãos.
+
+**Procedimento de ATIVAÇÃO (flip):**
+1. Definir `DATA_STORE_BACKEND=supabase` no painel Netlify.
+2. Trigger de deploy de produção; aguardar `state=ready`.
+3. Smoke: 1 lance real numa edição de teste → confirmar persistência + `getLances`
+   + apuração; confirmar leitura de `config_remota` no frontend.
+4. Monitorizar erro/latência (critério: latência ≤ 2× Blobs p95; 0% erro).
+
+**Procedimento de ROLLBACK (imediato):**
+1. Repor `DATA_STORE_BACKEND=blobs` no Netlify; deploy; aguardar `ready`.
+2. Smoke nos Blobs.
+3. K2: se a janela NÃO foi entre edições, fazer backfill dos lances gravados no
+   Supabase durante a janela → Blobs (leitura de histórico pode usar os dois; a
+   ESCRITA nunca). Se foi entre edições, nada fica órfão.
+
+**Critérios de sucesso / observação:** 0% erro nos lances; apuração idêntica à
+referência (Blobs); latência ≤ 2× Blobs (p95); RLS conforme; frontend CLS=0.
+Observar 24h com métricas antes de considerar o flip permanente; gatilho de
+rollback se qualquer critério falhar.
