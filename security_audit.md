@@ -264,3 +264,35 @@ realtime do frontend; reconciliação `lojistas` (cotas/wallet) num MC seguinte.
 confirmado. O flip de PRODUÇÃO é ação operacional (runbook em cloud.md §9.8): exige
 env de produção + **janela entre edições** (mitiga K2 split-brain) + observação 24h
 com gatilho de rollback. NÃO ativar a meio de uma edição.
+
+---
+
+## MC34 — Realtime Supabase (config_remota) · auditoria 2026-06-21
+> Escopo deliberadamente reduzido a `config_remota` (push instantâneo de flags).
+
+### 1. Anti-sniping / MC28 (crítico)
+- [✅] **`lances` NÃO entram no realtime** — a publicação só inclui `config_remota`.
+  A RLS continua a ocultar `lances` do anon; a blindagem anti-sniping permanece intacta.
+- [✅] Decisão registada: realtime de lances ao público quebraria o "menor lance único"
+  → rejeitado por design (só faria sentido pós-fecho ou via Broadcast mediado pelo backend).
+
+### 2. Zero-Trust
+- [✅] Frontend usa só `ANON_KEY` (sujeita a RLS); `config_remota` tem SELECT público.
+  Nenhuma chave nova; `useRealtimeConfig` inerte sem `VITE_SUPABASE_*`.
+
+### 3. Anti-regressão (R1)
+- [✅] Aditivo ao `useRecursosApp` (MC29.1) reusando `resolverParaPlataforma` — conformidade
+  por plataforma intacta. Sem realtime/config = comportamento byte-idêntico (fallback fetch).
+- [✅] 68/68 testes; `node --check` limpo; `npm run build` verde; visual CLS=0, sem novos erros.
+- [✅] MC28/MC30/MC33 não tocados (mudança é frontend + 1 migração aditiva de publicação).
+
+### 4. Validação de realtime
+- [✅] Caminho do cliente: smoke contra staging → `status=SUBSCRIBED` (subscrição OK).
+- [⏸️] Entrega de eventos E2E: **pendente** da migração `20260621_enable_realtime_config.sql`
+  ser aplicada (produção+staging) — sem MCP/CLI nesta sessão. Após aplicar, confirmar
+  que um UPDATE em `config_remota` chega aos clientes.
+
+### 5. Veredicto
+**APROVADO (código).** Realtime de `config_remota` aditivo, fail-soft e sem risco MC28.
+**Pendência operacional (não bloqueia o merge do código):** aplicar a migração de
+publicação para ativar a entrega de eventos.
