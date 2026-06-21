@@ -766,3 +766,26 @@ rollback se qualquer critério falhar.
   idênticos Blob==Supabase (nenhum registo só-em-Blob → nenhum 404); o único fingerprint Blob
   tem ~27 dias (>>24h), já ignorado pelo filtro anti-Sybil — sem perda. Escrita já era
   só-Supabase (R11). Rollback: `git revert` + redeploy (Blobs e backup MC36 intactos).
+
+### 9.11 MC36.1 — Migração financeira (saldo-rs/troco-senhas/wallet) para Supabase
+> Fluxo de dinheiro/senhas off-chain. Mesma estratégia do MC37 (escrita só Supabase R11 +
+> fallback de leitura transitório). É o MC mais sensível: toca o **fluxo de lance**.
+
+- **Tabelas** (`20260621_saldo_troco_wallet_schema.sql`, prod+staging, payload jsonb fiel):
+  `saldo_rs`, `saldo_rs_creditos` (idempotência crédito PIX), `saldo_rs_debitos` (opcional),
+  `troco_senhas` (lotes FIFO 30d), `wallet`, `wallet_idem`. RLS role-based (só `service_role`;
+  frontend lê via funções com guard owner/admin por JWT). `CREATE IF NOT EXISTS` (sem DROP).
+- **Stores:** `_lib/saldoRs-store.mjs`, `troco-senhas-store.mjs`, `wallet-store.mjs`
+  (cliente globalizado R10). **Fallback:** `_lib/financeiro-fallback.mjs` (leitura legada Blob).
+- **Handlers refatorados:** `_lib/saldoRs.mjs` (crédito idempotente, débito, reembolso —
+  consumido por `lance-relampago`), `_lib/troco-senhas.mjs` (FIFO/expiração/`resumoTrocoAdmin`
+  via `listTroco`), `wallet.mjs` (saldo + transações + idempotência). Escrita só Supabase (R11);
+  leitura com fallback Blob. Semântica preservada (débito checked-then-set inalterado).
+- **Migração de dados:** **saldo_rs 5/5 + saldo_rs_creditos 8/8 byte-fiel** em staging e
+  produção; `troco-senhas`/`wallet`/`wallet-idem`/`saldo-rs-debitos` estavam **vazios** (só schema).
+  Backup fresco em `Desktop\mc36.1-blobs-backup-20260621\` (R13).
+- **Suite:** 83/83 (+5 `mc361-saldo-rs.test.mjs`: crédito idempotente, débito suficiente/
+  insuficiente, reembolso). Frontend byte-idêntico (sem alteração em `src/`).
+- **Pendente (MC seguinte):** remover o fallback financeiro após janela de confirmação;
+  (opcional) endurecer o débito com `UPDATE ... WHERE centavos >= :v` atómico.
+  ⚠️ NÃO re-executar nenhuma migração com `DROP TABLE`.
