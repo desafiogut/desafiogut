@@ -752,3 +752,13 @@ rollback se qualquer critério falhar.
 - **Pendente (MC seguinte):** remover o fallback de leitura após janela de confirmação;
   reconciliar `troco-senhas`/`saldo-rs`/`wallet` (MC36.1). ⚠️ NÃO re-executar
   `20260621_cotas_schema.sql` (faz `DROP TABLE` — apagaria os dados migrados).
+- **Veredicto pós-deploy (PR #87 mergeado com `--admin` → `main` @ `758f9ae`):** deploy de
+  produção `6a38525053a63a0008679bbc` (ctx=production, commit `758f9ae`) **state=ready**.
+  Validação em produção: `GET /` 200; `recursos-app?plataforma=pwa` → `isLeilaoAtivo:true`;
+  `GET /cotas` (resumo) e `GET /cotas?cliente_id=<migrado>` servidos **via Supabase** (código
+  novo live), registo migrado retornado (corporativo, cnpj+empresa), inexistente → 404;
+  `SELECT count(*) cotas` (service_role) = **7**, `payload` byte-fiel 7/7; **RLS** anon → 0
+  linhas (leitura anónima bloqueada); visual MCP 1440/375 **CLS=0.00**, sem erros de consola.
+- **MC38 (registado):** remover o fallback de leitura (`cotas-fallback.mjs` + os `?? lerXLegado`
+  em `cotas.mjs`) após ~24h de monitorização sem erros — consolidando 100% Supabase para
+  dados corporativos. Pré-condição: zero writes legados na janela; logs de função limpos.

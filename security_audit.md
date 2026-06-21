@@ -371,5 +371,14 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   Credenciais só via env (R9): staging `~/.mc33-staging.env`, produção via `netlify env` (contexto
   production), capturadas para ficheiro temp 0600 e apagadas no fim — nunca impressas nem committadas.
 - [✅] **`iniciar-cota.mjs`** sem alteração (não toca cotas). **`wallet.mjs`** fora de âmbito (MC36.1).
-- [⏸️] Pendente (MC seguinte): remover o fallback de leitura após janela de confirmação; MC36.1
-  (saldo-rs/troco/wallet). ⚠️ Não re-executar `20260621_cotas_schema.sql` (DROP TABLE).
+- [✅] **Validação pós-deploy (PR #87 → `main` @ `758f9ae`, merge `--admin`)** — deploy prod
+  `6a38525053a63a0008679bbc` **ready**. Produção: `GET /` 200; `recursos-app` pwa `isLeilaoAtivo:true`;
+  `/cotas` servido via Supabase (código live), registo migrado retornado e inexistente → 404.
+- [✅] **Dados em produção (service_role):** `count(cotas)`=7, `payload` byte-fiel 7/7.
+- [✅] **RLS em produção:** leitura anónima (ANON_KEY) de `cotas` → **0 linhas** (bloqueada; espelha
+  o padrão anti-sniping de `lances`). Só `service_role` lê os 7 registos.
+- [✅] **Visual MCP** 1440px + 375px no site live: **CLS=0.00**, zero erros de consola, render OK
+  (gate de consentimento). Frontend byte-idêntico (sem alteração em `src/`).
+- [⏸️] Pendente — **MC38**: remover o fallback de leitura (`cotas-fallback.mjs`) após ~24h de
+  monitorização sem erros. **MC36.1**: saldo-rs/troco/wallet. ⚠️ Não re-executar
+  `20260621_cotas_schema.sql` (DROP TABLE).
