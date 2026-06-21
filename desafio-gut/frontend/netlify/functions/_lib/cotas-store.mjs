@@ -44,12 +44,14 @@ export async function getCota(clienteId) {
   return data?.payload ?? null;
 }
 
-/** Lê uma cota pelo CNPJ (anti-duplicidade). Devolve o registo ou null. */
+/** Lê uma cota pelo CNPJ (anti-duplicidade). Devolve o 1.º registo ou null.
+ *  Usa limit(1) (não maybeSingle) porque os dados reais podem ter o mesmo CNPJ
+ *  em cliente_ids diferentes (registo direto "cnpj:" + registo autenticado). */
 export async function getCotaByCnpj(cnpj) {
   const { data, error } = await getSupabase()
-    .from(T_COTAS).select("payload").eq("cnpj", String(cnpj)).maybeSingle();
+    .from(T_COTAS).select("payload").eq("cnpj", String(cnpj)).limit(1);
   if (error) throw new Error(`[cotas-store] getCotaByCnpj falhou: ${error.message}`);
-  return data?.payload ?? null;
+  return data?.[0]?.payload ?? null;
 }
 
 /** Lê uma cota pelo email (lookup de login direto). Devolve o registo ou null. */

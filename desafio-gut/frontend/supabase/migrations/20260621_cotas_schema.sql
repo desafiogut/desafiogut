@@ -20,7 +20,9 @@ DROP TABLE IF EXISTS cota_fingerprints CASCADE;
 CREATE TABLE cotas (
   cliente_id    TEXT PRIMARY KEY,          -- = chave Blob (endereco.toLowerCase() | "cnpj:{cnpj}")
   endereco      TEXT,                       -- nullable (cadastro direto sem carteira)
-  cnpj          TEXT UNIQUE,                -- nullable; anti-duplicidade (1 CNPJ por conta)
+  cnpj          TEXT,                       -- nullable; NÃO UNIQUE (dados reais têm o mesmo
+                                            -- CNPJ em registo direto "cnpj:" + autenticado).
+                                            -- Anti-duplicidade é aplicacional (como nos Blobs).
   email         TEXT,                       -- para lookup por email
   categoria     TEXT,                       -- bronze|prata|ouro|diamante | null
   vendida       BOOLEAN DEFAULT FALSE,
@@ -45,6 +47,7 @@ CREATE TABLE cota_fingerprints (            -- anti-Sybil (visitorId → CNPJs 2
 CREATE INDEX idx_cotas_categoria ON cotas(categoria);
 CREATE INDEX idx_cotas_endereco ON cotas(endereco);
 CREATE INDEX idx_cotas_email ON cotas(email);
+CREATE INDEX idx_cotas_cnpj ON cotas(cnpj); -- lookup anti-duplicidade (não-único)
 
 ALTER TABLE cotas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cotas_pagas ENABLE ROW LEVEL SECURITY;
