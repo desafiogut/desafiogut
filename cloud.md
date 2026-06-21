@@ -612,3 +612,47 @@ alter table configuracao_geografica enable row level security;
 - **App genuína:** a loja (Vitrine + IAP, a implementar) tem de ser funcional.
 - **Conta de teste do revisor:** documentar nas notas de revisão acesso ao fluxo
   completo — é o que torna o modelo transparente.
+
+### 9.7 MC32.1 — Integração Supabase (IMPLEMENTADO, backend ainda em Blobs)
+> O adapter Supabase existe e está testado, mas `DATA_STORE_BACKEND` continua
+> `blobs` (R3.4). A escrita real ainda vai para Netlify Blobs → zero regressão.
+> O flip para `supabase` é um passo operacional futuro (definir env + validar).
+
+**Schema real** (versionado em `supabase/migrations/`, já aplicado no projeto
+`vjslwowwrpcawijdiksm`). Difere do desenho conceptual §9.5 — usar este como verdade:
+- `produtos(id, nome, descricao, preco, imagem, categoria, created_at)`
+- `lojistas(id, endereco, cota, saldo_senhas, created_at)`
+- `lances(id, edicao_id, endereco, hash_lance, valor_centavos, created_at, payload jsonb)`
+- `config_remota(chave PK, valor_booleano, versao_alvo, atualizado_em, valor jsonb)`
+- RLS ativa em todas; SELECT público em `produtos`/`config_remota`; escrita
+  exclusiva do `service_role` em `lances`/`lojistas`/`config_remota`.
+
+**Emenda JSONB** (`20260620_amend_jsonb_payload.sql`) — necessária para fidelidade
+aos contratos existentes (R1): `config_remota.valor` guarda o objeto de config
+aninhado (`recursos_app`); `lances.payload` guarda o registro imutável completo
+(espelha o Key-Per-Bid MC28 — nome/saldos/lanceId não cabem em colunas planas);
+`hash_lance` passou a NULLable (caminho legado Sepolia/local não tem commitment).
+
+**Adapter** `_lib/data-store-supabase.mjs`:
+- Implementa a interface da fachada (`getConfig/setConfig/getLances/addLance`).
+- Cliente globalizado `_lib/supabase-client.mjs` (R10), `SERVICE_ROLE_KEY` env-only (R9).
+- `getConfig` → `config_remota.valor` (fail-soft → null); `addLance`/`getLances` →
+  `lances.payload` + colunas planas indexáveis; gera a key Key-Per-Bid (anti-colisão).
+- Teste offline `_tests/mc321-data-store-supabase.test.mjs` (mock do client).
+
+**Handlers roteados pela fachada** (escopo mínimo byte-idêntico, R3.4):
+- `lance-relampago.mjs` (escrita mainnet KPB) → `dataStore.addLance`.
+- `consolidar-lances.mjs` (leitura) → `dataStore.getLances` (markers ficam no bids-store).
+- Config já passava pela fachada desde MC29.1 (`recursos-app.mjs`, `chatbot.mjs`).
+- Fora de âmbito: `referral/cotas/wallet` (stores distintos, sem método na fachada);
+  `lances-flash/purge-lances` (sem equivalente; não force-fit para não arriscar MC28).
+
+**Frontend** (`src/lib/supabaseClient.js` + `useRecursosApp.js`):
+- Cliente público (ANON_KEY) lazy + dynamic import (chunk async, bundle lean).
+- `useRecursosApp` lê `config_remota` direto quando `VITE_SUPABASE_*` definidos;
+  senão mantém o fetch da função (sem env = byte-idêntico, R1). Fail-soft.
+- **Realtime ADIADO**: a escrita continua em Blobs → um canal Supabase ficaria
+  inerte. Ativar junto com o flip de backend.
+
+**Anti-Split-Brain (R11):** a fachada carrega UM só backend; nenhum módulo
+escreve em Blobs e Supabase ao mesmo tempo.
