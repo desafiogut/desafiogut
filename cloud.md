@@ -706,15 +706,22 @@ rollback se qualquer critério falhar.
 
 - **Backend:** migração `supabase/migrations/20260621_enable_realtime_config.sql`
   (aditiva/idempotente): `REPLICA IDENTITY FULL` + adiciona `config_remota` à
-  publicação `supabase_realtime`. **Execução manual** no painel (produção+staging) —
-  sem MCP/CLI autenticado. Sem isto, o cliente subscreve mas não recebe eventos.
+  publicação `supabase_realtime`. **APLICADA (2026-06-21)** em produção
+  (`vjslwowwrpcawijdiksm`) e staging (`gjuelqjjhuuwnlsjyeai`) via `supabase db query
+  --linked` (CLI autenticada — Management API, não a password). Validado por query:
+  `config_remota` está na publicação em ambos.
+- **Seed:** `config_remota.recursos_app` semeado na forma **feature-major** correta
+  (`{isLeilaoAtivo:{ios,android,pwa}, isPagamentoNativoAtivo:{...}}` = defaults atuais
+  → zero regressão) em prod+staging. NOTA: o seed do plano original era platform-major
+  e teria sido ignorado pelo `resolverRecursos`; campos como dataEncerramento/
+  modoManutencao/layoutProfile NÃO são lidos por nenhum código (seriam inertes).
 - **Frontend:** `src/hooks/useRealtimeConfig.js` — subscreve `config_remota` (filtro
   por chave), reconnect com backoff exponencial (1→30s), canal removido na
   desmontagem, **inerte sem `VITE_SUPABASE_*`** (cliente lazy). `useRecursosApp` usa-o
   para re-resolver `recursos_app` por plataforma em tempo real, mantendo o
   carregamento inicial (função/Supabase one-shot) como **fallback** → zero regressão.
-- **Validação:** smoke confirmou `status=SUBSCRIBED` (caminho do cliente OK) contra
-  staging; entrega de eventos depende da migração estar aplicada. Build verde,
-  CLS=0, 68/68 testes, sem novos erros de console.
+- **Validação:** realtime **E2E confirmado** (staging E produção): UPDATE em
+  `config_remota` → evento entregue ao cliente subscrito (chave temporária, sem tocar
+  no `recursos_app` real). Build verde, CLS=0, 68/68 testes, sem novos erros de console.
 - **Rollback:** remover `VITE_SUPABASE_*` (ou reverter o uso no `useRecursosApp`) →
   volta ao carregamento por fetch; opcionalmente remover `config_remota` da publicação.
