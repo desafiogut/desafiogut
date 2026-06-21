@@ -43,3 +43,7 @@ desafio-gut/lib/
 # Echidna corpus + coverage (gerados por cada run de fuzzing).
 desafio-gut/tests/fuzzing/corpus/
 desafio-gut/crytic-export/
+
+# Supabase CLI local state (linked project, temp)
+supabase/.temp/
+supabase/.branches/

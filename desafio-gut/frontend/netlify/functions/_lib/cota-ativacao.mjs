@@ -7,7 +7,8 @@
 // Idempotente por pedidoId (blob cotas-pagas:{pedidoId}) — webhook e polling
 // podem disparar em paralelo sem ativar/creditar duas vezes.
 
-import { getStore } from "@netlify/blobs";
+import { getCota, upsertCota, getCotaPaga, setCotaPaga } from "./cotas-store.mjs";
+import { lerCotaLegado } from "./cotas-fallback.mjs";
 import { creditarTroco, senhasDoExcedente, TROCO_VALIDADE_DIAS } from "./troco-senhas.mjs";
 
 // Valores oficiais (ESPECIFICACAO-TECNICA REQ-04..07; confirmados pelo cliente).
@@ -15,23 +16,8 @@ export const COTA_PRECO_CONTRATO_BRL = Object.freeze({ bronze: 2640, prata: 5600
 export const MIN_POR_CATEGORIA_BRL   = Object.freeze({ bronze: 660,  prata: 1350, ouro: 2250,  diamante: 4500 });
 export const CATEGORIAS = new Set(["bronze", "prata", "ouro", "diamante"]);
 
-const BLOB_COTAS = "cotas", BLOB_INDICE = "cotas-indice", BLOB_PAGAS = "cotas-pagas";
-
-function abrir(name) {
-  try { return getStore({ name, consistency: "strong" }); }
-  catch (err) { console.warn(`[cota-ativacao] Blobs ${name} indisponível:`, err?.message); return null; }
-}
-
-async function adicionarAoIndice(categoria, clienteId) {
-  const idx = abrir(BLOB_INDICE);
-  if (!idx) return;
-  try {
-    const atual = (await idx.get(categoria, { type: "json" })) || { cliente_ids: [] };
-    const set = new Set(atual.cliente_ids || []);
-    set.add(clienteId);
-    await idx.setJSON(categoria, { categoria, cliente_ids: [...set], atualizadoEm: new Date().toISOString() });
-  } catch (err) { console.warn("[cota-ativacao] índice falhou (não-fatal):", err?.message); }
-}
+// MC37 — dados de cota agora em Supabase (cotas-store). O índice por categoria
+// deixou de existir (categoria é coluna → query). troco-senhas mantém-se em Blobs (MC36.1).
 
 /**
  * Ativa a cota paga e credita o troco do excedente. Idempotente por pedidoId.
@@ -42,19 +28,13 @@ export async function ativarCotaPaga({ pedidoId, endereco, categoria, produtoVal
   if (!CATEGORIAS.has(cat)) return { ok: false, code: "categoria_invalida", message: `categoria inválida: ${categoria}` };
   if (!endereco) return { ok: false, code: "endereco_ausente", message: "endereco obrigatório" };
 
-  const pagas = abrir(BLOB_PAGAS);
-  if (pagas) {
-    try {
-      const j = await pagas.get(pedidoId, { type: "json" });
-      if (j?.ativadaEm) return { ok: true, idempotent: true, resultado: j };
-    } catch { /* segue e ativa */ }
-  }
-
-  const cotasStore = abrir(BLOB_COTAS);
-  if (!cotasStore) return { ok: false, code: "store_indisponivel", message: "Netlify Blobs indisponível" };
+  // Idempotência de ativação (cotas_pagas no Supabase).
+  const jaPago = await getCotaPaga(pedidoId);
+  if (jaPago?.ativadaEm) return { ok: true, idempotent: true, resultado: jaPago };
 
   const k = String(endereco).toLowerCase();
-  const existente = (await cotasStore.get(k, { type: "json" })) || {};
+  // MC37 — lê Supabase; fallback de leitura para o Blob legado durante a transição.
+  const existente = (await getCota(k)) ?? (await lerCotaLegado(k)) ?? {};
   const agora = new Date().toISOString();
   const valor = Number.isFinite(Number(produtoValor)) ? Number(produtoValor) : (existente.valor ?? null);
 
@@ -74,8 +54,7 @@ export async function ativarCotaPaga({ pedidoId, endereco, categoria, produtoVal
     atualizadoEm: agora,
     criadoEm:   existente.criadoEm || agora,
   };
-  await cotasStore.setJSON(k, registro);
-  await adicionarAoIndice(cat, k);
+  await upsertCota(k, registro); // escrita só Supabase (R11); categoria é coluna (sem índice store)
 
   // Troco do excedente (produto < mínimo da categoria). Idempotente por pedidoId.
   let troco = null;
@@ -89,6 +68,6 @@ export async function ativarCotaPaga({ pedidoId, endereco, categoria, produtoVal
   }
 
   const resultado = { pedidoId, endereco: k, categoria: cat, valor, troco, ativadaEm: agora, fonte };
-  if (pagas) { try { await pagas.setJSON(pedidoId, resultado); } catch (err) { console.warn("[cota-ativacao] marcar pago falhou:", err?.message); } }
+  try { await setCotaPaga(pedidoId, resultado); } catch (err) { console.warn("[cota-ativacao] marcar pago falhou:", err?.message); }
   return { ok: true, idempotent: false, resultado };
 }

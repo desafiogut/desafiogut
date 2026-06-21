@@ -355,3 +355,21 @@ sem alteração de código. Achados de segurança (por evidência):
 
 **Veredicto:** estado do projeto **saudável**; sem bloqueadores de produção. Pendências
 são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relatório.
+
+---
+
+## MC37 — Refactor cotas.mjs (anti-fraude) para Supabase · 2026-06-21
+- [✅] **Anti-fraude preservado** — teste dedicado `cotas-anti-fraude.test.mjs` (5 cenários:
+  anti-duplicidade CNPJ 409, anti-Sybil 429, login lookup, email lookup, CRUD admin)
+  verde ANTES (baseline Blobs) e DEPOIS (cotas-store) — comportamento idêntico.
+- [✅] **Anti-duplicidade aplicacional** — `getCotaByCnpj` (coluna `cnpj` indexada, **não-única**:
+  dados reais repetem o CNPJ entre o registo direto "cnpj:" e o autenticado). Guard 409 preservado.
+- [✅] **R11 anti-split-brain** — escrita só Supabase; leitura com fallback Blob legado (transitório).
+- [✅] Suite **79/79**, build verde, node --check limpo. Frontend byte-idêntico (zero alteração em `src/`).
+- [✅] **Migração de dados executada** — 7/7 registos Blob→Supabase em **staging** e **produção**;
+  `payload` byte-fiel (exatos 7/7), `cnpj`/`tipo`/`vendida` conferem. Backup MC36 disponível (R13).
+  Credenciais só via env (R9): staging `~/.mc33-staging.env`, produção via `netlify env` (contexto
+  production), capturadas para ficheiro temp 0600 e apagadas no fim — nunca impressas nem committadas.
+- [✅] **`iniciar-cota.mjs`** sem alteração (não toca cotas). **`wallet.mjs`** fora de âmbito (MC36.1).
+- [⏸️] Pendente (MC seguinte): remover o fallback de leitura após janela de confirmação; MC36.1
+  (saldo-rs/troco/wallet). ⚠️ Não re-executar `20260621_cotas_schema.sql` (DROP TABLE).

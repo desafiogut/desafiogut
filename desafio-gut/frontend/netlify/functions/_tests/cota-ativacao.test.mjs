@@ -1,9 +1,24 @@
-// MC17.1 — Testes da ativação automática de cota (offline, mock @netlify/blobs).
+// MC17.1/MC37 — Testes da ativação automática de cota.
+// MC37: cota agora em Supabase (cotas-store); troco continua em Blobs.
+// Mock de ../_lib/cotas-store.mjs (cota) + @netlify/blobs (troco-senhas + cotas-fallback).
 // node --test --experimental-test-module-mocks _tests/cota-ativacao.test.mjs
 import { test, mock, before } from "node:test";
 import assert from "node:assert/strict";
 
-const stores = new Map(); // name -> Map(key -> json string)
+// --- mock cotas-store (Supabase) — cota em memória ---
+const cotasMem = new Map(); // cliente_id -> registro
+const pagasMem = new Map(); // pedidoId -> resultado
+mock.module("../_lib/cotas-store.mjs", {
+  namedExports: {
+    getCota:     async (id)  => cotasMem.get(String(id)) ?? null,
+    upsertCota:  async (id, reg) => { cotasMem.set(String(id), reg); return reg; },
+    getCotaPaga: async (pid) => pagasMem.get(String(pid)) ?? null,
+    setCotaPaga: async (pid, reg) => { pagasMem.set(String(pid), reg); },
+  },
+});
+
+// --- mock @netlify/blobs (troco-senhas + cotas-fallback) ---
+const stores = new Map();
 function getStoreMock({ name }) {
   if (!stores.has(name)) stores.set(name, new Map());
   const m = stores.get(name);
@@ -16,6 +31,8 @@ function getStoreMock({ name }) {
 }
 mock.module("@netlify/blobs", { namedExports: { getStore: getStoreMock } });
 
+function limpar() { cotasMem.clear(); pagasMem.clear(); stores.clear(); }
+
 let cota, troco;
 before(async () => {
   cota  = await import("../_lib/cota-ativacao.mjs");
@@ -25,12 +42,12 @@ before(async () => {
 const ADDR = "0xDe70000000000000000000000000000000000009";
 
 test("ativa cota Bronze e credita troco do excedente (R$500 -> 80 senhas)", async () => {
-  stores.clear();
+  limpar();
   const r = await cota.ativarCotaPaga({ pedidoId: "p1", endereco: ADDR, categoria: "bronze", produtoValor: 500 });
   assert.equal(r.ok, true);
   assert.equal(r.idempotent, false);
   assert.equal(r.resultado.troco.senhas, 80); // (660-500)/2
-  const reg = await getStoreMock({ name: "cotas" }).get(ADDR.toLowerCase(), { type: "json" });
+  const reg = cotasMem.get(ADDR.toLowerCase());
   assert.equal(reg.vendida, true);
   assert.equal(reg.categoria, "bronze");
   const t = await troco.lerTroco(ADDR);
@@ -38,7 +55,7 @@ test("ativa cota Bronze e credita troco do excedente (R$500 -> 80 senhas)", asyn
 });
 
 test("idempotência por pedidoId não duplica troco nem reativa", async () => {
-  // mesmo pedidoId do teste anterior NÃO deve creditar mais troco
+  // mesmo pedidoId do teste anterior NÃO deve creditar mais troco (estado persiste)
   const r2 = await cota.ativarCotaPaga({ pedidoId: "p1", endereco: ADDR, categoria: "bronze", produtoValor: 500 });
   assert.equal(r2.idempotent, true);
   const t = await troco.lerTroco(ADDR);
@@ -46,11 +63,11 @@ test("idempotência por pedidoId não duplica troco nem reativa", async () => {
 });
 
 test("produto >= mínimo não gera troco mas ativa a cota", async () => {
-  stores.clear();
+  limpar();
   const r = await cota.ativarCotaPaga({ pedidoId: "p2", endereco: ADDR, categoria: "ouro", produtoValor: 3000 });
   assert.equal(r.ok, true);
   assert.equal(r.resultado.troco, null); // 3000 >= 2250
-  const reg = await getStoreMock({ name: "cotas" }).get(ADDR.toLowerCase(), { type: "json" });
+  const reg = cotasMem.get(ADDR.toLowerCase());
   assert.equal(reg.categoria, "ouro");
   assert.equal(reg.vendida, true);
 });
@@ -62,13 +79,24 @@ test("categoria inválida falha", async () => {
 });
 
 test("preserva tipo corporativo existente ao ativar", async () => {
-  stores.clear();
-  await getStoreMock({ name: "cotas" }).setJSON(ADDR.toLowerCase(),
+  limpar();
+  cotasMem.set(ADDR.toLowerCase(),
     { cliente_id: ADDR, tipo: "corporativo", empresa: "Loja X", cnpj: "11222333000181" });
   await cota.ativarCotaPaga({ pedidoId: "p4", endereco: ADDR, categoria: "prata", produtoValor: 1000 });
-  const reg = await getStoreMock({ name: "cotas" }).get(ADDR.toLowerCase(), { type: "json" });
+  const reg = cotasMem.get(ADDR.toLowerCase());
   assert.equal(reg.tipo, "corporativo");
   assert.equal(reg.empresa, "Loja X");
   assert.equal(reg.categoria, "prata");
+  assert.equal(reg.vendida, true);
+});
+
+test("MC37 — fallback de leitura: cota só no Blob legado é mesclada", async () => {
+  limpar();
+  // registo existente apenas no Blob legado (cotas) — Supabase vazio
+  await getStoreMock({ name: "cotas" }).setJSON(ADDR.toLowerCase(),
+    { cliente_id: ADDR, tipo: "corporativo", empresa: "Legado SA" });
+  await cota.ativarCotaPaga({ pedidoId: "p5", endereco: ADDR, categoria: "bronze", produtoValor: 660 });
+  const reg = cotasMem.get(ADDR.toLowerCase()); // escrita foi para Supabase
+  assert.equal(reg.empresa, "Legado SA");        // mesclado via fallback de leitura
   assert.equal(reg.vendida, true);
 });
