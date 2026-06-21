@@ -759,6 +759,10 @@ rollback se qualquer critério falhar.
   novo live), registo migrado retornado (corporativo, cnpj+empresa), inexistente → 404;
   `SELECT count(*) cotas` (service_role) = **7**, `payload` byte-fiel 7/7; **RLS** anon → 0
   linhas (leitura anónima bloqueada); visual MCP 1440/375 **CLS=0.00**, sem erros de consola.
-- **MC38 (registado):** remover o fallback de leitura (`cotas-fallback.mjs` + os `?? lerXLegado`
-  em `cotas.mjs`) após ~24h de monitorização sem erros — consolidando 100% Supabase para
-  dados corporativos. Pré-condição: zero writes legados na janela; logs de função limpos.
+- **MC38 (EXECUTADO):** fallback de leitura **removido** — leitura de cotas 100% Supabase.
+  Apagado `_lib/cotas-fallback.mjs`; removidas as cláusulas `?? lerXLegado(...)` de `cotas.mjs`
+  (9) e `cota-ativacao.mjs` (1); teste de cenário-fallback removido (suite 78/78). **Gate de
+  segurança verificado antes da remoção** (CLI/REST service_role): os 7 `cotas` keys são
+  idênticos Blob==Supabase (nenhum registo só-em-Blob → nenhum 404); o único fingerprint Blob
+  tem ~27 dias (>>24h), já ignorado pelo filtro anti-Sybil — sem perda. Escrita já era
+  só-Supabase (R11). Rollback: `git revert` + redeploy (Blobs e backup MC36 intactos).

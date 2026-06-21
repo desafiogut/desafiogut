@@ -379,6 +379,19 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   o padrão anti-sniping de `lances`). Só `service_role` lê os 7 registos.
 - [✅] **Visual MCP** 1440px + 375px no site live: **CLS=0.00**, zero erros de consola, render OK
   (gate de consentimento). Frontend byte-idêntico (sem alteração em `src/`).
-- [⏸️] Pendente — **MC38**: remover o fallback de leitura (`cotas-fallback.mjs`) após ~24h de
-  monitorização sem erros. **MC36.1**: saldo-rs/troco/wallet. ⚠️ Não re-executar
+- [⏸️] Pendente — **MC36.1**: saldo-rs/troco/wallet. ⚠️ Não re-executar
   `20260621_cotas_schema.sql` (DROP TABLE).
+
+## MC38 — Remoção do fallback de leitura de cotas (100% Supabase) · 2026-06-21
+- [✅] **Gate de segurança (pré-remoção, CLI/REST service_role):** `netlify blobs:list cotas` = 7 keys
+  **idênticos** aos 7 do Supabase (nenhum registo só-em-Blob → impossível 404 pós-remoção). Único
+  fingerprint Blob (`cotas-fingerprint`) de 2026-05-25 (~27 dias) → já fora da janela anti-Sybil de
+  24h (a lógica live filtra por `agora24h`), e não estava no Supabase porque expirou → remoção de
+  `lerFingerprintLegado` sem perda. Conclusão: o requisito "≥24h" foi satisfeito de facto.
+- [✅] **Remoção:** apagado `_lib/cotas-fallback.mjs`; removidas as cláusulas `?? lerXLegado(...)`
+  de `cotas.mjs` (9) e `cota-ativacao.mjs` (1); import removido; comentários atualizados.
+- [✅] **R11:** leitura e escrita agora 100% Supabase (escrita já era só-Supabase desde o MC37).
+- [✅] Suite **78/78** (−1 = teste de cenário-fallback removido por design), `node --check` limpo,
+  `npm run build` verde. Frontend byte-idêntico (sem alteração em `src/`).
+- [✅] **Rollback:** `git revert` + redeploy; Blobs legados e backup MC36 intactos (R13).
+- [ ] Veredicto pós-deploy (HTTP/smoke/visual) → registado em `Desktop\MC38-final.md`.
