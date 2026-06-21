@@ -13,7 +13,8 @@
 import { Contract } from "ethers";
 import { jsonResponse, jsonError, parseJsonBody } from "./_lib/validate.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";
-import { listarBids, marcarConsolidado, estaConsolidado } from "./_lib/bids-store.mjs";
+import { marcarConsolidado, estaConsolidado } from "./_lib/bids-store.mjs";
+import { getLances } from "./_lib/data-store.mjs";
 import { obterSignerCoordenacao, backendAssinatura } from "./_lib/signer.mjs";
 
 const ABI = [
@@ -62,8 +63,9 @@ export default async (req) => {
     if (!process.env[k]) return jsonError(503, "config_ausente", `${k} não configurado`);
   }
 
-  // 5. Apurar menor lance único OFF-CHAIN
-  const lances  = await listarBids(edicaoId);
+  // 5. Apurar menor lance único OFF-CHAIN — leitura via fachada data-store
+  //    (MC32.1). Backend 'blobs' = listarBids (byte-idêntico); pronto p/ Supabase.
+  const lances  = await getLances(edicaoId);
   const apurado = apurarMenorUnico(lances);
   if (!apurado) return jsonError(422, "sem_vencedor", "nenhum lance único nesta edição");
 
