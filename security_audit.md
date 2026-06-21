@@ -228,3 +228,39 @@ ativo continua Blobs, o adapter/handlers preservam o comportamento 1:1, e o
 frontend só muda quando as env Supabase existirem. Pendências (operacional, não
 bloqueiam o merge): flip de `DATA_STORE_BACKEND=supabase` com validação de carga;
 realtime do frontend; reconciliação `lojistas` (cotas/wallet) num MC seguinte.
+
+---
+
+## MC33.1 — Validação de carga + RLS + runbook · auditoria 2026-06-21
+> Escopo: FASES A (carga), B (RLS), C (runbook flip/rollback) e D (visual) do MC33,
+> contra staging `gjuelqjjhuuwnlsjyeai` (ref distinto da produção). Backend de
+> escrita de produção continua `blobs` — nenhum flip de produção feito.
+
+### 1. Carga e integridade (FASE A)
+- [✅] 50/100/200/1500/2500 lances → **0% erro**, persistidos==N, keys 100% únicas.
+- [✅] **K1 confirmado no PostgREST real** — 2500 lidos sem truncar (paginação .range).
+- [✅] Apuração do menor lance único **idêntica** ao esperado em todos os cenários.
+- [✅] Limpeza dos dados de teste verificada (edicaoId isolado MC33-LOAD-<uuid>).
+
+### 2. RLS (FASE B)
+- [✅] Leitura anónima de `lances` → `200 []` (RLS oculta linhas; anti-sniping).
+- [✅] Escrita anónima de `lances` → `401` (`42501` row-level security policy).
+- [✅] `service_role` → GET/POST totais (com limpeza da prova).
+
+### 3. Credenciais / Zero-Trust
+- [✅] Creds só via env, ficheiro fora do repo — nunca committadas (R6/R9).
+- [⚠️] As chaves do operador vinham com **rótulos trocados** (anon↔service_role);
+  detetado por decode do JWT e usadas pela role real. Recomenda-se corrigir os
+  rótulos na origem para evitar confusão futura.
+
+### 4. Anti-regressão (FASE D + suite)
+- [✅] Visual 375/1440, **CLS=0**, sem novos erros de console (só ruído CSP pré-existente).
+- [✅] 68/68 testes; `node --check` limpo; `npm run build` verde. Harnesses MC33 são
+  manuais (não `*.test.mjs`) → não correm na CI.
+- [✅] MC28/MC30/MC29.1/MC31, GUTO, Glass UI, fundo animado intactos (MC33 é dados/infra).
+
+### 5. Veredicto
+**GO técnico para o flip Supabase.** FASES A/B/D verdes em staging; K1 corrigido e
+confirmado. O flip de PRODUÇÃO é ação operacional (runbook em cloud.md §9.8): exige
+env de produção + **janela entre edições** (mitiga K2 split-brain) + observação 24h
+com gatilho de rollback. NÃO ativar a meio de uma edição.
