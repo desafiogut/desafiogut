@@ -324,13 +324,16 @@ frontend + reconciliação `lojistas` num MC futuro.
 - [✅] 68/68 testes; `node --check` limpo; `npm run build` verde; visual CLS=0, sem novos erros.
 - [✅] MC28/MC30/MC33 não tocados (mudança é frontend + 1 migração aditiva de publicação).
 
-### 4. Validação de realtime
-- [✅] Caminho do cliente: smoke contra staging → `status=SUBSCRIBED` (subscrição OK).
-- [⏸️] Entrega de eventos E2E: **pendente** da migração `20260621_enable_realtime_config.sql`
-  ser aplicada (produção+staging) — sem MCP/CLI nesta sessão. Após aplicar, confirmar
-  que um UPDATE em `config_remota` chega aos clientes.
+### 4. Validação de realtime (AUTOMAÇÃO 2026-06-21)
+- [✅] Migração de publicação **aplicada** em produção e staging via `supabase db query
+  --linked` (CLI autenticada). `config_remota` confirmada na publicação `supabase_realtime`.
+- [✅] Seed corrigido (feature-major) aplicado em prod+staging (= defaults; zero regressão).
+- [✅] Entrega de eventos **E2E confirmada** (staging E produção): UPDATE → evento entregue
+  ao cliente (chave temporária, sem tocar no `recursos_app` real). Limpeza feita.
 
 ### 5. Veredicto
-**APROVADO (código).** Realtime de `config_remota` aditivo, fail-soft e sem risco MC28.
-**Pendência operacional (não bloqueia o merge do código):** aplicar a migração de
-publicação para ativar a entrega de eventos.
+**APROVADO e ATIVO.** Realtime de `config_remota` aditivo, fail-soft, sem risco MC28,
+agora **funcional em produção** (E2E verificado). Sem pendências operacionais para o realtime.
+Nota: a chave de SERVICE_ROLE de produção foi usada via Netlify env / CLI sem nunca ser
+exposta no chat; chaves vinham com rótulos trocados em entregas anteriores — usar sempre
+a role real do JWT.
