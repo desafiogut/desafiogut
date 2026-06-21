@@ -337,3 +337,21 @@ agora **funcional em produção** (E2E verificado). Sem pendências operacionais
 Nota: a chave de SERVICE_ROLE de produção foi usada via Netlify env / CLI sem nunca ser
 exposta no chat; chaves vinham com rótulos trocados em entregas anteriores — usar sempre
 a role real do JWT.
+
+---
+
+## MC35 — Auditoria topográfica (read-only) · 2026-06-21
+Relatório completo: `AUDITORIA-TOPOGRAFICA.md` (raiz do repo + Desktop). Auditoria
+sem alteração de código. Achados de segurança (por evidência):
+- [✅] RLS anti-sniping: `lances` anónimo bloqueado (testado prod+staging).
+- [✅] `service_role` ausente do bundle `dist/`; zero JWT/segredos hardcoded em `src/`.
+- [✅] Contrato `Leilao.sol`: `tx.origin`=0, `apenasCoordenacao`×7, Solidity 0.8.
+- [✅] 68/68 testes, build verde, CLS=0, deploy prod `ready`.
+- [⚠️] Dívidas priorizadas: reconciliação `lojistas` (P1); realtime lances/edições por
+  redesenho (P1); bundle Privy 2.7MB (P2); duplicação `resolverRecursos` front/back (P2);
+  cache Graphify stale (recomendado `graphify update .`).
+- [ℹ️] Inventário: 45 functions, 36 _lib, 17 testes, 32 componentes, 8 hooks, 15 páginas,
+  1 contrato, 3 migrations.
+
+**Veredicto:** estado do projeto **saudável**; sem bloqueadores de produção. Pendências
+são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relatório.
