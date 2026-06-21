@@ -355,3 +355,14 @@ sem alteração de código. Achados de segurança (por evidência):
 
 **Veredicto:** estado do projeto **saudável**; sem bloqueadores de produção. Pendências
 são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relatório.
+
+---
+
+## MC37 — Refactor cotas.mjs (anti-fraude) para Supabase · 2026-06-21
+- [✅] **Anti-fraude preservado** — teste dedicado `cotas-anti-fraude.test.mjs` (5 cenários:
+  anti-duplicidade CNPJ 409, anti-Sybil 429, login lookup, email lookup, CRUD admin)
+  verde ANTES (baseline Blobs) e DEPOIS (cotas-store) — comportamento idêntico.
+- [✅] **Anti-duplicidade reforçada** — `cnpj UNIQUE` no DB além da verificação aplicacional.
+- [✅] **R11 anti-split-brain** — escrita só Supabase; leitura com fallback Blob legado (transitório).
+- [✅] Suite **79/79**, build verde, node --check limpo, CLS=0.
+- [⏸️] Pendente: migração dos 7 registos reais (dry-run+consistência) + frontend + remoção do fallback.

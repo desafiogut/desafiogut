@@ -725,3 +725,17 @@ rollback se qualquer critério falhar.
   no `recursos_app` real). Build verde, CLS=0, 68/68 testes, sem novos erros de console.
 - **Rollback:** remover `VITE_SUPABASE_*` (ou reverter o uso no `useRecursosApp`) →
   volta ao carregamento por fetch; opcionalmente remover `config_remota` da publicação.
+
+### 9.10 MC36/37 — Migração de cotas (corporativo) para Supabase (EM CURSO)
+> Fase 1: dados corporativos (cotas). saldo-rs/wallet (fluxo de dinheiro/lance) = MC36.1.
+
+- **Tabelas** (prod+staging): `cotas` (cliente_id PK, cnpj UNIQUE, email, categoria,
+  vendida, payload jsonb), `cotas_pagas` (idempotência), `cota_fingerprints` (anti-Sybil).
+- **Acesso:** `_lib/cotas-store.mjs` (Supabase, service_role). `_lib/cotas-fallback.mjs`
+  (leitura legada transitória — Blob; remover após confirmar migração).
+- **Handlers migrados:** `cota-ativacao.mjs` (ativação pós-pagamento) e `cotas.mjs`
+  (register-corporativo, anti-duplicidade CNPJ, anti-Sybil, login/lookup, CRUD admin).
+  Escrita só Supabase (R11); leitura com fallback Blob. Anti-duplicidade reforçada por
+  `cnpj UNIQUE` no DB; índices `cotas-cnpj`/`cotas-indice` substituídos por colunas/queries.
+- **Pendente:** `iniciar-cota.mjs`; migração dos 7 registos reais (dry-run→consistência);
+  frontend corporativo; remoção do fallback. troco-senhas continua em Blobs (MC36.1).
