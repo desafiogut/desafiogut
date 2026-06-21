@@ -267,6 +267,44 @@ com gatilho de rollback. NÃO ativar a meio de uma edição.
 
 ---
 
+## MC33 — Flip Supabase EXECUTADO em produção · 2026-06-21
+**DataStore de produção agora é Supabase** (`DATA_STORE_BACKEND=supabase`).
+Deploy publicado: `6a377f7b1862bc5800e6bbe5` (state ready, 2026-06-21T06:06Z).
+
+### Pré-condições (cumpridas)
+- [✅] Janela ENTRE edições confirmada pelo operador (sem leilões ativos) — K2.
+- [✅] Env de produção no Netlify, chaves VALIDADAS pelo claim do JWT (ref
+  `vjslwowwrpcawijdiksm`): `SUPABASE_SERVICE_ROLE_KEY` (role service_role) e
+  `VITE_SUPABASE_ANON_KEY` (role anon). URLs apontam para produção.
+- [⚠️] `SUPABASE_ANON_KEY` (backend) ausente — inócuo (o adaptador usa só service_role).
+- [ℹ️] Os commits vazios de flip foram cancelados pelo Netlify ("no content change");
+  o flip só ficou live com um **deploy real forçado** (`netlify deploy --build --prod`).
+  **Nota de rollback:** o método "commit vazio + push" NÃO redesdobra — o rollback
+  real exige `netlify env:unset DATA_STORE_BACKEND` (ou =blobs) + deploy forçado.
+
+### Validações pós-deploy (todas passaram)
+- [✅] Frontend `GET /` → 200.
+- [✅] `recursos-app` pwa (isLeilaoAtivo=true) e ios (false) → conformidade MC29.1 intacta.
+- [✅] Supabase produção `lances` com service_role → 200 (conectividade + chave válida).
+- [✅] RLS: `lances` anónimo → 200 `[]` (linhas ocultas); escrita anónima continua
+  bloqueada (validado em staging FASE B; mesmas políticas no schema de produção).
+- [✅] `config_remota` anónimo → 200 (leitura pública). **0 linhas em prod** → backend
+  usa defaults (fail-soft); fazer *seed* se forem precisas flags personalizadas.
+- [ℹ️] [2.6] bundle contém literais (`darLance`, endereço do contrato): PRÉ-EXISTENTE,
+  não introduzido pelo flip; MC29.1 é conformidade por plataforma, não ofuscação de
+  bundle. Não-crítico (não dispara rollback). Rever noutro MC se ofuscação for desejada.
+- [—] Logs do Supabase (2.4): não acessíveis pelas ferramentas desta sessão (sem MCP);
+  cobertos indiretamente pelo smoke REST (sem erros de permissão).
+
+### Veredicto
+**MC33 — Flip Supabase concluído com sucesso.** Sem falhas críticas; rollback NÃO
+executado. Recomendação operacional: observar métricas/erros nas próximas 24h; manter
+o rollback pronto (env→blobs + deploy forçado). Pendências menores: seed de
+`config_remota` em prod; definir `SUPABASE_ANON_KEY` backend (cosmético); realtime
+frontend + reconciliação `lojistas` num MC futuro.
+
+---
+
 ## MC34 — Realtime Supabase (config_remota) · auditoria 2026-06-21
 > Escopo deliberadamente reduzido a `config_remota` (push instantâneo de flags).
 
