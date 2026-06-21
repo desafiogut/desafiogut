@@ -8,7 +8,6 @@
 // podem disparar em paralelo sem ativar/creditar duas vezes.
 
 import { getCota, upsertCota, getCotaPaga, setCotaPaga } from "./cotas-store.mjs";
-import { lerCotaLegado } from "./cotas-fallback.mjs";
 import { creditarTroco, senhasDoExcedente, TROCO_VALIDADE_DIAS } from "./troco-senhas.mjs";
 
 // Valores oficiais (ESPECIFICACAO-TECNICA REQ-04..07; confirmados pelo cliente).
@@ -33,8 +32,8 @@ export async function ativarCotaPaga({ pedidoId, endereco, categoria, produtoVal
   if (jaPago?.ativadaEm) return { ok: true, idempotent: true, resultado: jaPago };
 
   const k = String(endereco).toLowerCase();
-  // MC37 — lê Supabase; fallback de leitura para o Blob legado durante a transição.
-  const existente = (await getCota(k)) ?? (await lerCotaLegado(k)) ?? {};
+  // MC38 — lê só Supabase (fallback de leitura removido; migração de cotas consolidada).
+  const existente = (await getCota(k)) ?? {};
   const agora = new Date().toISOString();
   const valor = Number.isFinite(Number(produtoValor)) ? Number(produtoValor) : (existente.valor ?? null);
 

@@ -1,6 +1,6 @@
-// MC17.1/MC37 — Testes da ativação automática de cota.
-// MC37: cota agora em Supabase (cotas-store); troco continua em Blobs.
-// Mock de ../_lib/cotas-store.mjs (cota) + @netlify/blobs (troco-senhas + cotas-fallback).
+// MC17.1/MC37/MC38 — Testes da ativação automática de cota.
+// MC37: cota em Supabase (cotas-store); troco continua em Blobs. MC38: fallback removido.
+// Mock de ../_lib/cotas-store.mjs (cota) + @netlify/blobs (troco-senhas).
 // node --test --experimental-test-module-mocks _tests/cota-ativacao.test.mjs
 import { test, mock, before } from "node:test";
 import assert from "node:assert/strict";
@@ -17,7 +17,7 @@ mock.module("../_lib/cotas-store.mjs", {
   },
 });
 
-// --- mock @netlify/blobs (troco-senhas + cotas-fallback) ---
+// --- mock @netlify/blobs (troco-senhas) ---
 const stores = new Map();
 function getStoreMock({ name }) {
   if (!stores.has(name)) stores.set(name, new Map());
@@ -87,16 +87,5 @@ test("preserva tipo corporativo existente ao ativar", async () => {
   assert.equal(reg.tipo, "corporativo");
   assert.equal(reg.empresa, "Loja X");
   assert.equal(reg.categoria, "prata");
-  assert.equal(reg.vendida, true);
-});
-
-test("MC37 — fallback de leitura: cota só no Blob legado é mesclada", async () => {
-  limpar();
-  // registo existente apenas no Blob legado (cotas) — Supabase vazio
-  await getStoreMock({ name: "cotas" }).setJSON(ADDR.toLowerCase(),
-    { cliente_id: ADDR, tipo: "corporativo", empresa: "Legado SA" });
-  await cota.ativarCotaPaga({ pedidoId: "p5", endereco: ADDR, categoria: "bronze", produtoValor: 660 });
-  const reg = cotasMem.get(ADDR.toLowerCase()); // escrita foi para Supabase
-  assert.equal(reg.empresa, "Legado SA");        // mesclado via fallback de leitura
   assert.equal(reg.vendida, true);
 });

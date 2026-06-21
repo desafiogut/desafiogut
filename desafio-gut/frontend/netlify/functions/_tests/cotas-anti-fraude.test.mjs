@@ -26,7 +26,7 @@ mock.module("../_lib/cotas-store.mjs", {
   },
 });
 
-// --- mock @netlify/blobs (troco-senhas + cotas-fallback legado, vazio) ---
+// --- mock @netlify/blobs (troco-senhas — usado por cotas.mjs via creditarTrocoExcedente) ---
 const stores = new Map();
 function getStoreMock({ name }) {
   if (!stores.has(name)) stores.set(name, new Map());
