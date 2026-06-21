@@ -12,20 +12,10 @@
 // - Débito é checked-then-set; race window residual aceita (mesmo padrão do
 //   `pedidos-pagos`). Volume baixo torna o risco prático irrelevante.
 
-import { getStore } from "@netlify/blobs";
-
-const BLOB_SALDO         = "saldo-rs";
-const BLOB_SALDO_CREDITOS = "saldo-rs-creditos";   // idempotência por pedidoId
-const BLOB_SALDO_DEBITOS  = "saldo-rs-debitos";    // idempotência por operacaoId (opcional)
-
-function abrir(name) {
-  try {
-    return getStore({ name, consistency: "strong" });
-  } catch (err) {
-    console.warn(`[saldoRs] Blobs ${name} indisponível:`, err?.message);
-    return null;
-  }
-}
+// MC36.1 — saldo R$ em Supabase (saldoRs-store). Escrita só Supabase (R11);
+// leitura com fallback para o Blob legado durante a transição (financeiro-fallback).
+import { getSaldo, setSaldo, getCredito, setCredito } from "./saldoRs-store.mjs";
+import { lerSaldoLegado, lerCreditoLegado } from "./financeiro-fallback.mjs";
 
 function chave(endereco) {
   return endereco.toLowerCase();
@@ -33,10 +23,9 @@ function chave(endereco) {
 
 /** Lê saldo em centavos. Retorna 0 se ausente. */
 export async function lerSaldoRsCentavos(endereco) {
-  const store = abrir(BLOB_SALDO);
-  if (!store) return 0;
   try {
-    const v = await store.get(chave(endereco), { type: "json" });
+    const k = chave(endereco);
+    const v = (await getSaldo(k)) ?? (await lerSaldoLegado(k)); // MC36.1 Supabase + fallback Blob
     return Number(v?.centavos ?? 0);
   } catch (err) {
     console.warn("[saldoRs] lerSaldoRsCentavos falhou:", err?.message);
@@ -45,11 +34,8 @@ export async function lerSaldoRsCentavos(endereco) {
 }
 
 async function gravarSaldoRsCentavos(endereco, centavos) {
-  const store = abrir(BLOB_SALDO);
-  if (!store) {
-    throw new Error("saldo-rs blob indisponível");
-  }
-  await store.setJSON(chave(endereco), {
+  // MC36.1 — escrita só Supabase (R11).
+  await setSaldo(chave(endereco), {
     centavos: Math.max(0, Math.floor(centavos)),
     atualizadoEm: new Date().toISOString(),
   });
@@ -72,21 +58,16 @@ export async function creditarSaldoRsIdempotente({ pedidoId, endereco, valorCent
   }
   console.info(`[saldoRs:${fonte}] credito início`, { pedidoId, endereco: ender, valorCentavos: valor });
 
-  const idem = abrir(BLOB_SALDO_CREDITOS);
-
   // Idempotência: se este pedidoId já foi creditado, retorna o registro.
-  if (idem) {
-    try {
-      const existente = await idem.get(pedidoId, { type: "json" });
-      if (existente?.processado) {
-        console.info(`[saldoRs:${fonte}] idempotent — pedido já creditado em R$`, { pedidoId });
-        return { ok: true, idempotent: true, resultado: existente };
-      }
-    } catch (err) {
-      console.warn(`[saldoRs:${fonte}] leitura saldo-rs-creditos falhou:`, err?.message);
+  // MC36.1 — Supabase (saldo_rs_creditos) + fallback de leitura Blob legado.
+  try {
+    const existente = (await getCredito(pedidoId)) ?? (await lerCreditoLegado(pedidoId));
+    if (existente?.processado) {
+      console.info(`[saldoRs:${fonte}] idempotent — pedido já creditado em R$`, { pedidoId });
+      return { ok: true, idempotent: true, resultado: existente };
     }
-  } else {
-    console.warn(`[saldoRs:${fonte}] saldo-rs-creditos indisponível — sem idempotência`);
+  } catch (err) {
+    console.warn(`[saldoRs:${fonte}] leitura saldo-rs-creditos falhou:`, err?.message);
   }
 
   // Lê saldo atual e credita.
@@ -115,10 +96,8 @@ export async function creditarSaldoRsIdempotente({ pedidoId, endereco, valorCent
     fonte,
   };
 
-  if (idem) {
-    try { await idem.setJSON(pedidoId, resultado); }
-    catch (err) { console.warn(`[saldoRs:${fonte}] persistir saldo-rs-creditos falhou:`, err?.message); }
-  }
+  try { await setCredito(pedidoId, resultado); } // MC36.1 — escrita só Supabase (R11)
+  catch (err) { console.warn(`[saldoRs:${fonte}] persistir saldo-rs-creditos falhou:`, err?.message); }
   console.info(`[saldoRs:${fonte}] credito concluído`, {
     pedidoId, endereco: ender, valorCentavos: valor,
     saldoAntes, saldoDepois,

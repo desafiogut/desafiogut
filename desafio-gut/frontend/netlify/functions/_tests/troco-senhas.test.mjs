@@ -1,21 +1,21 @@
-// MC17.1 — Testes do ledger de senhas de troco (offline, mock @netlify/blobs).
+// MC17.1/MC36.1 — Testes do ledger de senhas de troco (offline).
+// MC36.1: troco em Supabase (troco-senhas-store) — mocka o store + fallback (vazio).
 // Executar: node --test --experimental-test-module-mocks troco-senhas.test.mjs
 import { test, mock, before } from "node:test";
 import assert from "node:assert/strict";
 
+// mem: cliente_id -> JSON string do payload (os testes de expiração inserem direto).
 const mem = new Map();
-const fakeStore = {
-  async get(k, { type } = {}) {
-    const v = mem.get(k);
-    if (v === undefined) return null;
-    return type === "json" ? JSON.parse(v) : v;
+mock.module("../_lib/troco-senhas-store.mjs", {
+  namedExports: {
+    getTroco:  async (id) => { const v = mem.get(String(id)); return v === undefined ? null : JSON.parse(v); },
+    setTroco:  async (id, payload) => { mem.set(String(id), JSON.stringify(payload)); },
+    listTroco: async () => [...mem.entries()].map(([cliente_id, v]) => ({ cliente_id, payload: JSON.parse(v) })),
   },
-  async setJSON(k, o) { mem.set(k, JSON.stringify(o)); },
-  async list() { return { blobs: [...mem.keys()].map((key) => ({ key })) }; },
-  async delete(k) { mem.delete(k); },
-};
-
-mock.module("@netlify/blobs", { namedExports: { getStore: () => fakeStore } });
+});
+mock.module("../_lib/financeiro-fallback.mjs", {
+  namedExports: { lerTrocoLegado: async () => null },
+});
 
 let mod;
 before(async () => { mod = await import("../_lib/troco-senhas.mjs"); });

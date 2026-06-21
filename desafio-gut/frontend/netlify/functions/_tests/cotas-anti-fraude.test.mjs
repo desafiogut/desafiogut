@@ -39,12 +39,22 @@ function getStoreMock({ name }) {
   };
 }
 mock.module("@netlify/blobs", { namedExports: { getStore: getStoreMock } });
+// MC36.1 — troco em Supabase: mocka o store (em memória) + fallback vazio.
+const trocoMem = new Map();
+mock.module("../_lib/troco-senhas-store.mjs", {
+  namedExports: {
+    getTroco:  async (id) => { const v = trocoMem.get(String(id)); return v === undefined ? null : JSON.parse(v); },
+    setTroco:  async (id, payload) => { trocoMem.set(String(id), JSON.stringify(payload)); },
+    listTroco: async () => [...trocoMem.entries()].map(([cliente_id, v]) => ({ cliente_id, payload: JSON.parse(v) })),
+  },
+});
+mock.module("../_lib/financeiro-fallback.mjs", { namedExports: { lerTrocoLegado: async () => null } });
 mock.module("../_lib/rate-limiter.mjs", { namedExports: { aplicarRateLimit: async () => null } });
 mock.module("../_lib/admin-auth.mjs", { namedExports: { guardAdmin: async () => null } });
 
 let handler;
 before(async () => { handler = (await import("../cotas.mjs")).default; });
-beforeEach(() => { cotasMem.clear(); fpMem.clear(); stores.clear(); });
+beforeEach(() => { cotasMem.clear(); fpMem.clear(); stores.clear(); trocoMem.clear(); });
 
 function gerarCnpj(base12) {
   const calc = (arr, len) => { let s = 0, p = len - 7; for (let i = len; i >= 1; i--) { s += arr[len - i] * p--; if (p < 2) p = 9; } return s % 11 < 2 ? 0 : 11 - (s % 11); };

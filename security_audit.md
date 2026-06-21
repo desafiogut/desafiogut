@@ -394,4 +394,25 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [✅] Suite **78/78** (−1 = teste de cenário-fallback removido por design), `node --check` limpo,
   `npm run build` verde. Frontend byte-idêntico (sem alteração em `src/`).
 - [✅] **Rollback:** `git revert` + redeploy; Blobs legados e backup MC36 intactos (R13).
-- [ ] Veredicto pós-deploy (HTTP/smoke/visual) → registado em `Desktop\MC38-final.md`.
+- [✅] Veredicto pós-deploy (HTTP/smoke/visual) → `Desktop\MC38-final.md` (deploy `e44f467` ready, CLS=0).
+
+## MC36.1 — Migração financeira saldo-rs/troco-senhas/wallet para Supabase · 2026-06-21
+- [✅] **Backup obrigatório (R13)** antes de tocar: `Desktop\mc36.1-blobs-backup-20260621\`
+  (saldo-rs 5 + saldo-rs-creditos 8); `troco-senhas`/`wallet`/`wallet-idem`/`saldo-rs-debitos`
+  confirmados **vazios** via `netlify blobs:list`. Backup NÃO committado (dados financeiros).
+- [✅] **Schema + RLS** (`20260621_saldo_troco_wallet_schema.sql`): 6 tabelas payload jsonb,
+  RLS só `service_role`, `CREATE IF NOT EXISTS` (sem DROP). Aplicado em staging+prod via
+  `supabase db query --linked`.
+- [✅] **Migração de dados:** saldo_rs 5/5 + saldo_rs_creditos 8/8 **byte-fiel** em staging E
+  produção (consistência verificada por contagem + `norm(payload)`). Creds só via env (R9):
+  prod via `netlify env`, ficheiro temp 0600 apagado no fim.
+- [✅] **R11 anti-split-brain:** handlers (saldoRs/troco-senhas/wallet) escrevem só Supabase;
+  leitura com fallback Blob legado (`financeiro-fallback.mjs`, transitório).
+- [✅] **Semântica preservada (R1):** débito checked-then-set do `saldoRs` (usado por
+  `lance-relampago`) inalterado; FIFO/expiração 30d do troco; idempotência de crédito (pedidoId)
+  e de wallet. Teste dedicado `mc361-saldo-rs.test.mjs` (crédito idempotente, débito
+  suficiente/insuficiente, reembolso). Suite **83/83**, `node --check` limpo, build verde.
+- [✅] Frontend byte-idêntico (sem alteração em `src/`).
+- [ ] Veredicto pós-deploy (HTTP/smoke/fluxo de lance/visual) → `Desktop\MC36.1-final.md`.
+- [⏸️] Pendente: remover o fallback financeiro (MC seguinte); opcional débito atómico
+  (`UPDATE ... WHERE centavos >= :v`). ⚠️ Não re-executar migrações com `DROP TABLE`.

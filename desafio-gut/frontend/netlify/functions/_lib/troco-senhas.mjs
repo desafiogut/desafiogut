@@ -16,21 +16,15 @@
 //   { lotes: [ { id, senhas, origem, criadoEm, expiraEm } ],
 //     expiradosAcum, senhasExpiradasAcum, atualizadoEm }
 
-import { getStore } from "@netlify/blobs";
+// MC36.1 — troco em Supabase (troco-senhas-store). Escrita só Supabase (R11);
+// leitura com fallback para o Blob legado (financeiro-fallback) durante a transição.
+import { getTroco, setTroco, listTroco } from "./troco-senhas-store.mjs";
+import { lerTrocoLegado } from "./financeiro-fallback.mjs";
 
 export const VALOR_POR_SENHA_CENTAVOS = 200;       // R$ 2,00 por senha
 export const TROCO_VALIDADE_DIAS      = 30;        // validade do troco
 export const TROCO_AVISO_DIAS         = 5;         // aviso GUTO antes de expirar
 const MS_DIA   = 24 * 60 * 60 * 1000;
-const BLOB     = "troco-senhas";
-
-function abrirStore() {
-  try { return getStore({ name: BLOB, consistency: "strong" }); }
-  catch (err) {
-    console.warn("[troco-senhas] Blobs indisponível:", err?.message);
-    return null;
-  }
-}
 
 function chave(endereco) {
   return String(endereco || "").toLowerCase();
@@ -86,12 +80,10 @@ export async function creditarTroco({ endereco, senhas, origem = "excedente-cota
   if (!Number.isFinite(n) || n <= 0) {
     return { ok: false, code: "senhas_invalidas", message: "senhas deve ser inteiro > 0" };
   }
-  const store = abrirStore();
-  if (!store) return { ok: false, code: "store_indisponivel", message: "Netlify Blobs indisponível" };
-
   const k     = chave(endereco);
   const agora = Date.now();
-  const atual = (await store.get(k, { type: "json" })) || registroVazio();
+  // MC36.1 — lê Supabase + fallback Blob legado; escrita só Supabase.
+  const atual = (await getTroco(k)) ?? (await lerTrocoLegado(k)) ?? registroVazio();
 
   // Expira o que já venceu antes de creditar o novo lote.
   const { registro: limpo } = aplicarExpiracao(atual, agora);
@@ -108,26 +100,22 @@ export async function creditarTroco({ endereco, senhas, origem = "excedente-cota
     expiraEm: new Date(agora + TROCO_VALIDADE_DIAS * MS_DIA).toISOString(),
   };
   const registro = { ...limpo, lotes: [...limpo.lotes, lote], atualizadoEm: lote.criadoEm };
-  await store.setJSON(k, registro);
+  await setTroco(k, registro);
   return { ok: true, idempotent: false, lote, registro, saldoTroco: somaSenhas(registro.lotes) };
 }
 
 // Lê o saldo de troco, aplicando expiração (persistente). Distingue ativo de
 // "a expirar em <=5 dias". Útil para UI, GUTO e leitura geral.
 export async function lerTroco(endereco) {
-  const store = abrirStore();
-  if (!store) {
-    return { saldoTroco: 0, lotes: [], expiramEmBreve: 0, lotesExpirando: [],
-             senhasExpiradasAgora: 0, expiradosAcum: 0, senhasExpiradasAcum: 0 };
-  }
   const k     = chave(endereco);
   const agora = Date.now();
-  const atual = (await store.get(k, { type: "json" })) || registroVazio();
+  // MC36.1 — lê Supabase + fallback Blob legado.
+  const atual = (await getTroco(k)) ?? (await lerTrocoLegado(k)) ?? registroVazio();
   const { registro, senhasExpiradasAgora } = aplicarExpiracao(atual, agora);
 
   // Persiste a remoção dos expirados só se houve mudança (evita escrita à toa).
   if (senhasExpiradasAgora > 0 || registro.lotes.length !== (atual.lotes?.length || 0)) {
-    await store.setJSON(k, registro);
+    await setTroco(k, registro); // escrita só Supabase (R11)
   }
 
   const limiteAviso = agora + TROCO_AVISO_DIAS * MS_DIA;
@@ -150,17 +138,15 @@ export async function consumirTrocoFIFO({ endereco, qtd }) {
   if (!Number.isFinite(pedir) || pedir <= 0) {
     return { ok: false, code: "qtd_invalida", message: "qtd deve ser inteiro > 0" };
   }
-  const store = abrirStore();
-  if (!store) return { ok: false, code: "store_indisponivel", message: "Netlify Blobs indisponível" };
-
   const k     = chave(endereco);
   const agora = Date.now();
-  const atual = (await store.get(k, { type: "json" })) || registroVazio();
+  // MC36.1 — lê Supabase + fallback Blob legado.
+  const atual = (await getTroco(k)) ?? (await lerTrocoLegado(k)) ?? registroVazio();
   const { registro } = aplicarExpiracao(atual, agora);
 
   const disponivel = somaSenhas(registro.lotes);
   if (disponivel < pedir) {
-    await store.setJSON(k, registro); // persiste expiração mesmo sem consumo
+    await setTroco(k, registro); // persiste expiração mesmo sem consumo (só Supabase)
     return { ok: false, code: "troco_insuficiente",
              message: `Troco insuficiente: ${disponivel} < ${pedir}`,
              saldoTroco: disponivel };
@@ -176,21 +162,19 @@ export async function consumirTrocoFIFO({ endereco, qtd }) {
     if (sobra > 0) novosLotes.push({ ...lote, senhas: sobra });
   }
   const final = { ...registro, lotes: novosLotes, atualizadoEm: new Date(agora).toISOString() };
-  await store.setJSON(k, final);
+  await setTroco(k, final); // escrita só Supabase (R11)
   return { ok: true, consumidas: pedir, restante: somaSenhas(novosLotes), saldoDepois: somaSenhas(novosLotes) };
 }
 
 // Resumo agregado para o relatório do Admin: total ativo e total expirado.
 export async function resumoTrocoAdmin() {
-  const store = abrirStore();
-  if (!store) return { lojistas: 0, senhasAtivas: 0, senhasExpiradas: 0, detalhe: [] };
   const agora = Date.now();
   let senhasAtivas = 0, senhasExpiradas = 0, lojistas = 0;
   const detalhe = [];
   try {
-    const lista = await store.list();
-    for (const b of (lista?.blobs || [])) {
-      const reg = await store.get(b.key, { type: "json" });
+    // MC36.1 — lista via Supabase (substitui store.list() do Blob).
+    const lista = await listTroco();
+    for (const { cliente_id, payload: reg } of lista) {
       if (!reg) continue;
       lojistas += 1;
       const { ativos } = separar(reg.lotes, agora);
@@ -201,7 +185,7 @@ export async function resumoTrocoAdmin() {
       const expiradasReg = Number(reg.senhasExpiradasAcum || 0) + venceuNaoPurgado;
       senhasAtivas += ativasReg;
       senhasExpiradas += expiradasReg;
-      detalhe.push({ lojista: b.key, ativas: ativasReg, expiradas: expiradasReg });
+      detalhe.push({ lojista: cliente_id, ativas: ativasReg, expiradas: expiradasReg });
     }
   } catch (err) {
     console.warn("[troco-senhas] resumoTrocoAdmin falhou:", err?.message);
