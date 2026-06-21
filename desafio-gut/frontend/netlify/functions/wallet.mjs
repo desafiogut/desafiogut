@@ -17,8 +17,14 @@
 //     no próprio saldo — Wallet é abastecida pela regra REQ-17 (Valor_Produto
 //     < Valor_Minimo_Cota gera Vale-Crédito) e debitada por compra de premium.
 
-import { getStore } from "@netlify/blobs";
 import { randomUUID } from "node:crypto";
+// MC36.1 — wallet em Supabase (wallet-store). Escrita só Supabase (R11); leitura
+// com fallback para o Blob legado (financeiro-fallback) durante a transição.
+import {
+  getWallet as getWalletSb, setWallet as setWalletSb,
+  getWalletIdem as getWalletIdemSb, setWalletIdem as setWalletIdemSb,
+} from "./_lib/wallet-store.mjs";
+import { lerWalletLegado, lerWalletIdemLegado } from "./_lib/financeiro-fallback.mjs";
 import {
   jsonResponse, jsonError, validarEndereco,
   parseJsonBody, ValidationError, validarOwnerOuAdmin,
@@ -29,28 +35,17 @@ import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { autenticarAdmin } from "./_lib/admin-auth.mjs";
 import { requireMfa } from "./_lib/require-mfa.mjs";
 
-const BLOB_WALLET   = "wallet";
-const BLOB_IDEM     = "wallet-idem";
 const VAL_MIN       = 1;
 const VAL_MAX       = 100_000_000;
-
-function abrirStore(name) {
-  try { return getStore({ name, consistency: "strong" }); }
-  catch (err) {
-    console.warn(`[wallet] Blobs ${name} indisponível:`, err?.message);
-    return null;
-  }
-}
 
 function lerWalletInicial() {
   return { saldoCentavos: 0, atualizadoEm: null, transacoes: [] };
 }
 
 async function getWallet(endereco) {
-  const store = abrirStore(BLOB_WALLET);
-  if (!store) return lerWalletInicial();
+  // MC36.1 — lê Supabase + fallback Blob legado.
   try {
-    const data = await store.get(endereco, { type: "json" });
+    const data = (await getWalletSb(endereco)) ?? (await lerWalletLegado(endereco));
     return data ?? lerWalletInicial();
   } catch (err) {
     console.warn("[wallet] get falhou:", err?.message);
@@ -132,16 +127,13 @@ async function handlePost(req) {
 
   // Idempotência
   if (idempotencyKey) {
-    const idemStore = abrirStore(BLOB_IDEM);
-    if (idemStore) {
-      try {
-        const existente = await idemStore.get(idempotencyKey, { type: "json" });
-        if (existente?.transacaoId) {
-          return jsonResponse({ ...existente, idempotent: true });
-        }
-      } catch (err) {
-        console.warn("[wallet] leitura idem falhou (não-fatal):", err?.message);
+    try {
+      const existente = (await getWalletIdemSb(idempotencyKey)) ?? (await lerWalletIdemLegado(idempotencyKey));
+      if (existente?.transacaoId) {
+        return jsonResponse({ ...existente, idempotent: true });
       }
+    } catch (err) {
+      console.warn("[wallet] leitura idem falhou (não-fatal):", err?.message);
     }
   }
 
@@ -169,27 +161,22 @@ async function handlePost(req) {
     transacoes: [transacao, ...(wallet.transacoes || [])].slice(0, 50),
   };
 
-  const store = abrirStore(BLOB_WALLET);
-  if (store) {
-    try { await store.setJSON(endereco, novaWallet); }
-    catch (err) {
-      console.error("[wallet] persistir falhou:", err?.message);
-      return jsonError(502, "persistencia_falhou", "não foi possível salvar wallet");
-    }
+  // MC36.1 — escrita só Supabase (R11).
+  try { await setWalletSb(endereco, novaWallet); }
+  catch (err) {
+    console.error("[wallet] persistir falhou:", err?.message);
+    return jsonError(502, "persistencia_falhou", "não foi possível salvar wallet");
   }
 
   if (idempotencyKey) {
-    const idemStore = abrirStore(BLOB_IDEM);
-    if (idemStore) {
-      try {
-        await idemStore.setJSON(idempotencyKey, {
-          transacaoId, endereco,
-          saldoAntesCentavos:  saldoAntes,
-          saldoDepoisCentavos: saldoDepois,
-        });
-      } catch (err) {
-        console.warn("[wallet] persistir idem falhou (não-fatal):", err?.message);
-      }
+    try {
+      await setWalletIdemSb(idempotencyKey, {
+        transacaoId, endereco,
+        saldoAntesCentavos:  saldoAntes,
+        saldoDepoisCentavos: saldoDepois,
+      });
+    } catch (err) {
+      console.warn("[wallet] persistir idem falhou (não-fatal):", err?.message);
     }
   }
 

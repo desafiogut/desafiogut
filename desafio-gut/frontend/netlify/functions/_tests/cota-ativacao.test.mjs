@@ -17,21 +17,20 @@ mock.module("../_lib/cotas-store.mjs", {
   },
 });
 
-// --- mock @netlify/blobs (troco-senhas) ---
-const stores = new Map();
-function getStoreMock({ name }) {
-  if (!stores.has(name)) stores.set(name, new Map());
-  const m = stores.get(name);
-  return {
-    async get(k, { type } = {}) { const v = m.get(k); return v === undefined ? null : (type === "json" ? JSON.parse(v) : v); },
-    async setJSON(k, o) { m.set(k, JSON.stringify(o)); },
-    async list() { return { blobs: [...m.keys()].map((key) => ({ key })) }; },
-    async delete(k) { m.delete(k); },
-  };
-}
-mock.module("@netlify/blobs", { namedExports: { getStore: getStoreMock } });
+// --- mock troco-senhas-store (Supabase) + fallback vazio (MC36.1) ---
+const trocoMem = new Map(); // cliente_id -> JSON string do payload
+mock.module("../_lib/troco-senhas-store.mjs", {
+  namedExports: {
+    getTroco:  async (id) => { const v = trocoMem.get(String(id)); return v === undefined ? null : JSON.parse(v); },
+    setTroco:  async (id, payload) => { trocoMem.set(String(id), JSON.stringify(payload)); },
+    listTroco: async () => [...trocoMem.entries()].map(([cliente_id, v]) => ({ cliente_id, payload: JSON.parse(v) })),
+  },
+});
+mock.module("../_lib/financeiro-fallback.mjs", {
+  namedExports: { lerTrocoLegado: async () => null },
+});
 
-function limpar() { cotasMem.clear(); pagasMem.clear(); stores.clear(); }
+function limpar() { cotasMem.clear(); pagasMem.clear(); trocoMem.clear(); }
 
 let cota, troco;
 before(async () => {
