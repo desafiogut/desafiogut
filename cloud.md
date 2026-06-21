@@ -696,3 +696,25 @@ escreve em Blobs e Supabase ao mesmo tempo.
 referência (Blobs); latência ≤ 2× Blobs (p95); RLS conforme; frontend CLS=0.
 Observar 24h com métricas antes de considerar o flip permanente; gatilho de
 rollback se qualquer critério falhar.
+
+### 9.9 MC34 — Realtime do Supabase (config_remota)
+> Decisão de escopo: realtime **apenas** de `config_remota`. `lances` ficam de fora
+> de propósito — a RLS oculta-os do anon (blindagem anti-sniping MC28) e expô-los ao
+> realtime público quebraria o "menor lance único". `edicoes`/`notificacoes` não
+> existem como tabelas Supabase (edições vêm de `/.netlify/functions/edicoes`;
+> notificações vivem em Blobs).
+
+- **Backend:** migração `supabase/migrations/20260621_enable_realtime_config.sql`
+  (aditiva/idempotente): `REPLICA IDENTITY FULL` + adiciona `config_remota` à
+  publicação `supabase_realtime`. **Execução manual** no painel (produção+staging) —
+  sem MCP/CLI autenticado. Sem isto, o cliente subscreve mas não recebe eventos.
+- **Frontend:** `src/hooks/useRealtimeConfig.js` — subscreve `config_remota` (filtro
+  por chave), reconnect com backoff exponencial (1→30s), canal removido na
+  desmontagem, **inerte sem `VITE_SUPABASE_*`** (cliente lazy). `useRecursosApp` usa-o
+  para re-resolver `recursos_app` por plataforma em tempo real, mantendo o
+  carregamento inicial (função/Supabase one-shot) como **fallback** → zero regressão.
+- **Validação:** smoke confirmou `status=SUBSCRIBED` (caminho do cliente OK) contra
+  staging; entrega de eventos depende da migração estar aplicada. Build verde,
+  CLS=0, 68/68 testes, sem novos erros de console.
+- **Rollback:** remover `VITE_SUPABASE_*` (ou reverter o uso no `useRecursosApp`) →
+  volta ao carregamento por fetch; opcionalmente remover `config_remota` da publicação.
