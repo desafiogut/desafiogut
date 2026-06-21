@@ -14,13 +14,13 @@
 // DELETE /.netlify/functions/cotas?cliente_id=0x...
 //   Gated por x-admin-token. Remove a cota.
 //
-// Persistência (MC37 — Supabase, ver _lib/cotas-store.mjs):
+// Persistência (MC37/MC38 — Supabase, ver _lib/cotas-store.mjs):
 //   cotas:{cliente_id}             → tabela `cotas` (payload jsonb + colunas índice)
 //   cotas-cnpj:{cnpj}              → coluna `cotas.cnpj` (anti-duplicidade, query WHERE)
 //   cotas-indice:{categoria}       → query WHERE categoria= (deixou de ser store)
 //   cotas-fingerprint:{visitorId}  → tabela `cota_fingerprints` (anti-Sybil)
-//   Escrita SÓ no Supabase (R11); leitura com fallback para os Blobs legados
-//   (_lib/cotas-fallback.mjs) durante a transição — remover após confirmar migração.
+//   Leitura e escrita 100% Supabase (R11). MC38 removeu o fallback de leitura dos
+//   Blobs legados (migração de cotas confirmada: 7/7 byte-fiel em prod+staging).
 
 import {
   jsonResponse, jsonError, validarEndereco, parseJsonBody, ValidationError,
@@ -31,15 +31,13 @@ import { guardAdmin } from "./_lib/admin-auth.mjs";
 import { creditarTroco, senhasDoExcedente, TROCO_VALIDADE_DIAS } from "./_lib/troco-senhas.mjs";
 // MC17.1 — mínimos por categoria centralizados (fonte única; usados no troco).
 import { MIN_POR_CATEGORIA_BRL } from "./_lib/cota-ativacao.mjs";
-// MC37 — cotas em Supabase (cotas-store). Escrita só Supabase (R11); leitura com
-// fallback para os Blobs legados durante a transição (cotas-fallback). O índice
-// CNPJ vira coluna `cnpj UNIQUE`; o anti-Sybil vira tabela cota_fingerprints;
-// o índice por categoria vira query WHERE.
+// MC37/MC38 — cotas em Supabase (cotas-store), leitura e escrita 100% Supabase (R11).
+// O índice CNPJ vira coluna `cnpj` (não-única; anti-duplicidade aplicacional); o
+// anti-Sybil vira tabela cota_fingerprints; o índice por categoria vira query WHERE.
 import {
   getCota, getCotaByCnpj, getCotaByEmail, listarCategoria as listarCategoriaStore,
   resumoCotas, upsertCota, deleteCota, getFingerprint, setFingerprint,
 } from "./_lib/cotas-store.mjs";
-import { lerCotaLegado, lerCnpjLegado, lerFingerprintLegado } from "./_lib/cotas-fallback.mjs";
 
 const CATEGORIAS  = new Set(["bronze", "prata", "ouro", "diamante"]);
 
@@ -155,7 +153,7 @@ async function handleGet(req) {
     if (empresaTrim.length < 3) return jsonError(400, "empresa_invalida", "Nome da Empresa inválido");
 
     // MC37 — busca pelo CNPJ no Supabase (coluna cnpj), fallback Blob legado.
-    const reg = (await getCotaByCnpj(cnpjNums)) ?? (await lerCnpjLegado(cnpjNums));
+    const reg = await getCotaByCnpj(cnpjNums);
 
     // MC15.3 — compara nomes normalizados (anti-enumeração: mensagem genérica).
     if (!reg || normalizarEmpresa(reg.empresa) !== normalizarEmpresa(empresaTrim)) {
@@ -174,7 +172,7 @@ async function handleGet(req) {
     if (!validarCNPJ(nums)) {
       return jsonError(400, "cnpj_invalido", "CNPJ inválido");
     }
-    const reg = (await getCotaByCnpj(nums)) ?? (await lerCnpjLegado(nums));
+    const reg = await getCotaByCnpj(nums);
     if (!reg) return jsonError(404, "cnpj_nao_encontrado", "CNPJ livre");
     return jsonResponse({ status: "cnpj_ja_registado", endereco: reg.endereco, email: reg.email || null, empresa: reg.empresa || null });
   }
@@ -207,7 +205,7 @@ async function handleGet(req) {
       if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
       throw err;
     }
-    const reg = (await getCota(endereco)) ?? (await lerCotaLegado(endereco));
+    const reg = await getCota(endereco);
     if (!reg) return jsonError(404, "cota_nao_encontrada", "cliente não tem cota atribuída");
     return jsonResponse(reg);
   }
@@ -279,16 +277,15 @@ async function handlePost(req) {
     // registrado em cliente_id diferente (endereco ou pseudo "cnpj:").
     // MC12.3 Item 2 / MC37 — anti-duplicidade: getCotaByCnpj (coluna cnpj UNIQUE no
     // Supabase) + fallback Blob legado. Mesmo CNPJ em cliente diferente → 409.
-    const existenteCnpj = (await getCotaByCnpj(cnpjNums)) ?? (await lerCnpjLegado(cnpjNums));
+    const existenteCnpj = await getCotaByCnpj(cnpjNums);
     if (existenteCnpj && existenteCnpj.cliente_id !== clienteId) {
       return jsonError(409, "cnpj_duplicado", "CNPJ já cadastrado em outra conta.");
     }
 
     // MC12.3 Item 5B / MC37 — Anti-Sybil: 1 CNPJ por visitorId a cada 24h (tabela
-    // cota_fingerprints + fallback Blob legado).
+    // cota_fingerprints).
     try {
-      const fpData = (await getFingerprint(visitorId)) ??
-                     (await lerFingerprintLegado(visitorId)) ?? { cnpjs: [] };
+      const fpData = (await getFingerprint(visitorId)) ?? { cnpjs: [] };
       const agora24h = Date.now() - 24 * 60 * 60 * 1000;
       const recentes = (fpData.cnpjs || []).filter(c =>
         new Date(c.em).getTime() > agora24h);
@@ -327,8 +324,7 @@ async function handlePost(req) {
 
     // MC12.3 Item 5B / MC37 — atualiza histórico anti-Sybil (cota_fingerprints).
     try {
-      const fpData = (await getFingerprint(visitorId)) ??
-                     (await lerFingerprintLegado(visitorId)) ?? { cnpjs: [] };
+      const fpData = (await getFingerprint(visitorId)) ?? { cnpjs: [] };
       const agora24h = Date.now() - 24 * 60 * 60 * 1000;
       const recentes = (fpData.cnpjs || []).filter(c =>
         new Date(c.em).getTime() > agora24h);
@@ -364,7 +360,7 @@ async function handlePost(req) {
       return jsonError(400, "cliente_id_obrigatorio", "cliente_id é obrigatório");
     }
     // auth: verifica se o email do body bate com o registro (simples, mas eficaz)
-    const existenteUpdate = (await getCota(clienteIdUpdate)) ?? (await lerCotaLegado(clienteIdUpdate));
+    const existenteUpdate = await getCota(clienteIdUpdate);
     if (!existenteUpdate || existenteUpdate.tipo !== "corporativo") {
       return jsonError(404, "cota_nao_encontrada", "Registro corporativo não encontrado");
     }
@@ -402,7 +398,7 @@ async function handlePost(req) {
     throw err;
   }
 
-  const existente = (await getCota(endereco)) ?? (await lerCotaLegado(endereco));
+  const existente = await getCota(endereco);
   // MC37 — índice por categoria eliminado (categoria é coluna); sem manutenção de índice.
 
   const agora = new Date().toISOString();
@@ -457,7 +453,7 @@ async function handleDelete(req) {
     if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
     throw err;
   }
-  const existente = (await getCota(endereco)) ?? (await lerCotaLegado(endereco));
+  const existente = await getCota(endereco);
   if (!existente) return jsonError(404, "cota_nao_encontrada", "cliente não tem cota atribuída");
   await deleteCota(endereco); // MC37 — só Supabase (R11)
   return jsonResponse({ ok: true, removido: endereco });
