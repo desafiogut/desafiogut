@@ -13,17 +13,18 @@ const db = { config: new Map(), lances: [] };
 let seq = 0; // ordem de inserção → created_at monotónico
 
 function builder(table) {
-  const st = { table, filters: {} };
+  const st = { table, filters: {}, count: false };
   const api = {
-    select() { return api; },
+    select(_cols, opts) { if (opts && opts.count) st.count = true; return api; },
     eq(col, val) { st.filters[col] = val; return api; },
-    order() {
-      // getLances: filtra por edicao_id e ordena por created_at asc
-      const rows = db.lances
+    order() { return api; }, // encadeável; a ordenação real é simulada no range()
+    range(from, to) {
+      // getLances paginado: filtra por edicao_id, ordena por created_at e fatia.
+      const all = db.lances
         .filter((r) => r.edicao_id === st.filters.edicao_id)
-        .sort((a, b) => a.created_at - b.created_at)
-        .map((r) => ({ payload: r.payload }));
-      return Promise.resolve({ data: rows, error: null });
+        .sort((a, b) => a.created_at - b.created_at);
+      const slice = all.slice(from, to + 1).map((r) => ({ payload: r.payload }));
+      return Promise.resolve({ data: slice, error: null, count: st.count ? all.length : null });
     },
     maybeSingle() {
       const row = db.config.get(st.filters.chave);
@@ -100,4 +101,25 @@ test("getLances devolve payloads na ordem cronológica, fiéis ao registro", asy
   assert.deepEqual(lances.map((l) => l.nomeExibicao), ["A", "B"]);
   assert.equal(lances[0].valorCentavos, 1);
   assert.ok(lances[0].key); // key preservada no payload
+});
+
+test("getLances pagina >1000 lances sem truncar (K1/MC33) — 2500 inteiros", async () => {
+  const N = 2500; // > 2 páginas de 1000 → expõe o cap do PostgREST se não paginar
+  for (let i = 1; i <= N; i++) {
+    db.lances.push({
+      edicao_id: "R-1",
+      endereco: ADDR.toLowerCase(),
+      hash_lance: null,
+      valor_centavos: i,
+      payload: { valorCentavos: i, key: `bid:R-1:x:${i}` },
+      created_at: i, // ordem determinística
+    });
+  }
+  const lances = await store.getLances("R-1");
+  assert.equal(lances.length, N, "deve devolver TODOS os 2500 (leitura exaustiva)");
+  // integridade: conjunto completo e sem duplicados/saltos nas fronteiras de página
+  const valores = lances.map((l) => l.valorCentavos);
+  assert.equal(new Set(valores).size, N, "sem duplicados nem perdas entre páginas");
+  assert.equal(valores[0], 1);
+  assert.equal(valores[N - 1], N);
 });
