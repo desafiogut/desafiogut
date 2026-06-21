@@ -12,11 +12,15 @@
 //   Gated por x-admin-token. Cria/atualiza a cota e o índice da categoria.
 //
 // DELETE /.netlify/functions/cotas?cliente_id=0x...
-//   Gated por x-admin-token. Remove a cota e atualiza o índice.
+//   Gated por x-admin-token. Remove a cota.
 //
-// Blobs:
-//   cotas:{cliente_id}             → registro individual
-//   cotas-indice:{categoria}       → { cliente_ids: [...] }
+// Persistência (MC37 — Supabase, ver _lib/cotas-store.mjs):
+//   cotas:{cliente_id}             → tabela `cotas` (payload jsonb + colunas índice)
+//   cotas-cnpj:{cnpj}              → coluna `cotas.cnpj` (anti-duplicidade, query WHERE)
+//   cotas-indice:{categoria}       → query WHERE categoria= (deixou de ser store)
+//   cotas-fingerprint:{visitorId}  → tabela `cota_fingerprints` (anti-Sybil)
+//   Escrita SÓ no Supabase (R11); leitura com fallback para os Blobs legados
+//   (_lib/cotas-fallback.mjs) durante a transição — remover após confirmar migração.
 
 import {
   jsonResponse, jsonError, validarEndereco, parseJsonBody, ValidationError,

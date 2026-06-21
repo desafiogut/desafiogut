@@ -726,16 +726,29 @@ rollback se qualquer critério falhar.
 - **Rollback:** remover `VITE_SUPABASE_*` (ou reverter o uso no `useRecursosApp`) →
   volta ao carregamento por fetch; opcionalmente remover `config_remota` da publicação.
 
-### 9.10 MC36/37 — Migração de cotas (corporativo) para Supabase (EM CURSO)
+### 9.10 MC36/37 — Migração de cotas (corporativo) para Supabase (CONCLUÍDA — Fase 1)
 > Fase 1: dados corporativos (cotas). saldo-rs/wallet (fluxo de dinheiro/lance) = MC36.1.
 
-- **Tabelas** (prod+staging): `cotas` (cliente_id PK, cnpj UNIQUE, email, categoria,
-  vendida, payload jsonb), `cotas_pagas` (idempotência), `cota_fingerprints` (anti-Sybil).
-- **Acesso:** `_lib/cotas-store.mjs` (Supabase, service_role). `_lib/cotas-fallback.mjs`
-  (leitura legada transitória — Blob; remover após confirmar migração).
+- **Tabelas** (prod+staging): `cotas` (cliente_id PK; `cnpj` indexado **não-único** —
+  dados reais têm o mesmo CNPJ em registo direto "cnpj:" + autenticado; anti-duplicidade
+  é aplicacional, como nos Blobs), `email`, `categoria`, `vendida`, `payload` jsonb;
+  `cotas_pagas` (idempotência de ativação); `cota_fingerprints` (anti-Sybil). RLS role-based
+  (só `service_role`; o frontend lê via funções, nunca direto).
+- **Acesso:** `_lib/cotas-store.mjs` (Supabase, service_role, cliente globalizado R10).
+  `_lib/cotas-fallback.mjs` (leitura legada transitória — Blob; remover após confirmar).
 - **Handlers migrados:** `cota-ativacao.mjs` (ativação pós-pagamento) e `cotas.mjs`
   (register-corporativo, anti-duplicidade CNPJ, anti-Sybil, login/lookup, CRUD admin).
-  Escrita só Supabase (R11); leitura com fallback Blob. Anti-duplicidade reforçada por
-  `cnpj UNIQUE` no DB; índices `cotas-cnpj`/`cotas-indice` substituídos por colunas/queries.
-- **Pendente:** `iniciar-cota.mjs`; migração dos 7 registos reais (dry-run→consistência);
-  frontend corporativo; remoção do fallback. troco-senhas continua em Blobs (MC36.1).
+  Escrita só Supabase (R11); leitura com fallback Blob. Índices `cotas-cnpj`/`cotas-indice`
+  substituídos por coluna `cnpj`/query `WHERE categoria=`.
+- **`iniciar-cota.mjs`:** sem alteração — não lê/escreve cotas (gera pedido PIX + usa
+  constantes de `cota-ativacao.mjs`). **`wallet.mjs`:** fora de âmbito (Vale-Crédito /
+  fluxo de dinheiro = MC36.1; sem tabela Supabase própria).
+- **Migração de dados (7 registos, Blob→Supabase via cotas-store):** executada e validada
+  em **staging** e **produção** — 7/7 registos, `payload` byte-fiel (exatos=7/7),
+  `cnpj`/`tipo`/`vendida` conferem; `cotas_pagas`/`cota_fingerprints` vazias (esperado).
+  Backup em `Desktop\mc36-blobs-backup-20260621\` (rollback, R13). Blobs intactos.
+- **Suite:** 79/79 verde (inclui `cotas-anti-fraude.test.mjs`, 5 cenários). Frontend
+  byte-idêntico (consome via `functions/cotas.mjs`; contrato de resposta inalterado).
+- **Pendente (MC seguinte):** remover o fallback de leitura após janela de confirmação;
+  reconciliar `troco-senhas`/`saldo-rs`/`wallet` (MC36.1). ⚠️ NÃO re-executar
+  `20260621_cotas_schema.sql` (faz `DROP TABLE` — apagaria os dados migrados).
