@@ -186,3 +186,45 @@ placeholders de conformidade (iOS/Android) e GUTO adaptável. Modelo TRANSPARENT
 endpoint só-leitura, adapter que preserva 1:1 o comportamento dos Blobs, e gating
 de UI fail-soft que nunca degrada o utilizador real. As pendências da secção 4
 são de produto/jurídico/submissão, NÃO bloqueiam o merge do código.
+
+---
+
+## MC32.1 — Integração Supabase (camada de dados) · auditoria 2026-06-20
+> Escopo: adapter Supabase + refactor mínimo de lances para a fachada + scaffold
+> de leitura de config no frontend. `DATA_STORE_BACKEND` permanece `blobs` (R3.4).
+
+### 1. Integridade de transação / Lances (MC28)
+- [✅] **MC28 intacto** — `lance-relampago` e `consolidar-lances` passaram a usar a
+  fachada `data-store` (`addLance`/`getLances`); com backend `blobs` delegam em
+  `bids-store` (Key-Per-Bid) → byte-idêntico. Markers de consolidação ficam no
+  bids-store. Suite `mc28-seguranca` (que exercita `lance-relampago`) **10/10 verde**.
+- [✅] **Adapter Supabase fiel** — `lances.payload` guarda o registro imutável
+  completo; key Key-Per-Bid anti-colisão preservada. 6 testes offline verdes.
+- [✅] **Anti-Split-Brain (R11)** — a fachada carrega UM só backend; nenhum módulo
+  escreve em Blobs e Supabase simultaneamente.
+
+### 2. Zero-Trust / credenciais
+- [✅] **Sem segredos no código (R9)** — `SUPABASE_URL`/`SERVICE_ROLE_KEY` (backend) e
+  `VITE_SUPABASE_URL`/`ANON_KEY` (frontend) só de env; `.env.example` com placeholders.
+- [✅] **Service role só no backend** — `supabase-client.mjs` usa SERVICE_ROLE (ignora
+  RLS) e nunca é importado pelo frontend; o frontend usa ANON_KEY (sujeita a RLS).
+- [✅] **RLS** — versionada no schema: SELECT público só em `produtos`/`config_remota`;
+  escrita exclusiva do `service_role` em `lances`/`lojistas`/`config_remota`.
+- [⚠️] **MCP Supabase indisponível na sessão** — a validação de schema/RLS foi feita
+  contra o script SQL autoritativo (fornecido pelo operador, já aplicado), não via MCP.
+
+### 3. Anti-regressão (R1)
+- [✅] **Suite completa 67/67 verde** (≥61 baseline + 6 novos); MC28/MC30/MC29.1 intactos.
+- [✅] **Frontend byte-idêntico sem env** — sem `VITE_SUPABASE_*`, `useRecursosApp`
+  mantém o fetch da função (caminho atual). Supabase é dynamic import (chunk async,
+  bundle principal não cresce).
+- [✅] **node --check** limpo em todos os `.mjs` novos/alterados; **build verde** em cada commit.
+- [✅] **Visual MCP 375/1440 + CLS = 0.00** — gate LGPD renderiza; sem novos erros de
+  console (apenas o ruído CSP/walletconnect pré-existente).
+
+### 4. Veredicto
+**APROVADO para merge (MC32.1).** Alteração aditiva e de baixo risco: o backend
+ativo continua Blobs, o adapter/handlers preservam o comportamento 1:1, e o
+frontend só muda quando as env Supabase existirem. Pendências (operacional, não
+bloqueiam o merge): flip de `DATA_STORE_BACKEND=supabase` com validação de carga;
+realtime do frontend; reconciliação `lojistas` (cotas/wallet) num MC seguinte.

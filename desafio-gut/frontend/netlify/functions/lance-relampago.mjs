@@ -22,7 +22,7 @@ import { requireMfa } from "./_lib/require-mfa.mjs";
 import { lerEstadoSistema, sistemaPausado } from "./_lib/system-state.mjs";
 import { registrarEventosDeLance } from "./_lib/notificacoes-usuario.mjs";
 // ── MC28.1: blindagem (ativa só em NETWORK_STAGE === 'mainnet') ──────────────
-import { gravarBid } from "./_lib/bids-store.mjs";
+import { addLance } from "./_lib/data-store.mjs";
 import { comprometerLanceOnchain } from "./_lib/contract.mjs";
 import { keccak256, AbiCoder } from "ethers";
 
@@ -171,8 +171,10 @@ export default async (req) => {
       // 7a. Commitment on-chain (coordenação assina; aponta para o endereço real).
       await comprometerLanceOnchain(edicaoId, endereco, hashLance);
       registro.commitmentHash = hashLance;
-      // 7b. Valor real → Blob Key-Per-Bid (chave isolada + sufixo aleatório).
-      registro.key = await gravarBid({ edicaoId, endereco, registro });
+      // 7b. Valor real → data-store (Key-Per-Bid). Via a fachada (MC32.1): com
+      //     DATA_STORE_BACKEND=blobs o comportamento é byte-idêntico ao gravarBid;
+      //     o flip para Supabase não exige tocar aqui (R3.4, anti-split-brain R11).
+      registro.key = await addLance(edicaoId, registro);
     } catch (err) {
       // Em mainnet a falha é FATAL: não gravar lance sem o commitment correspondente.
       console.error("[lance-relampago] blindagem (commit/KPB) falhou:", err?.message);
