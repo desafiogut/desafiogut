@@ -56,28 +56,18 @@ const TOTAL_POR_TIPO = { relampago: 1800, programado: 86400 };
 function EdicaoTimerCard({ edicao, isMobile, cardCls, cardTituloStyle }) {
   const navigate = useNavigate();
   const {
-    edicoesTick, timeLeftEdicaoSegundos, getFimDisparadoRef,
-    vencedor, handleNovaRodada,
+    edicoesTick, timeLeftEdicaoSegundos,
   } = useAppContext();
 
   const restante = timeLeftEdicaoSegundos(edicao); // recalculado a cada edicoesTick
   const encerrada = restante <= 0;
   const total = TOTAL_POR_TIPO[edicao.tipo] || 1800;
 
-  const [mostrarOverlay, setMostrarOverlay] = useState(false);
-  const fimRef = getFimDisparadoRef(edicao.id);
-  useEffect(() => {
-    if (encerrada) {
-      if (!fimRef.current) {
-        fimRef.current = true;
-        setMostrarOverlay(true);
-      }
-    } else if (fimRef.current) {
-      // termino_em recuou (reabriu) — reseta a flag desta edição.
-      fimRef.current = false;
-      setMostrarOverlay(false);
-    }
-  }, [encerrada, fimRef, edicoesTick]);
+  // MC39.3.1 (#5) — os cards de edição EXTRA já NÃO montam o FimLeilaoOverlay
+  // full-screen (eliminava a duplicação/empilhamento quando >1 edição encerrava).
+  // O overlay de vencedor é ÚNICO, ao nível da página, para a EDICAO_ATIVA. Este
+  // card mostra apenas o seu estado "Encerrada" inline + GUTO a celebrar (size pequeno).
+  void edicoesTick; // consumido só para forçar o re-render por tick (timer).
 
   const tipoLabel = edicao.tipo === "programado" ? "🎫 Programado" : "⚡ Relâmpago";
 
@@ -143,14 +133,6 @@ function EdicaoTimerCard({ edicao, isMobile, cardCls, cardTituloStyle }) {
         }}
       >⚡ Ir para o Mercado</button>
 
-      {mostrarOverlay && (
-        <FimLeilaoOverlay
-          vencedor={vencedor}
-          tipoLeilao={edicao.tipo === "programado" ? "programado" : "flash"}
-          onNovaRodada={() => { setMostrarOverlay(false); handleNovaRodada?.(); }}
-          EDICAO_ATIVA={edicao.id}
-        />
-      )}
     </GlassCard>
   );
 }
