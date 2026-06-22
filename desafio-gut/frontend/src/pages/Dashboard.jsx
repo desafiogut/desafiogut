@@ -143,7 +143,8 @@ const ATALHOS = [
   { label: "Dar Lance",         icon: "🎯", to: "/mercado"       },
   { label: "Vitrine 4 Slots",   icon: "🪟", to: "/vitrine"       },
   { label: "Meus Ativos",       icon: "📊", to: "/ativos"        },
-  { label: "Segurança",         icon: "🛡️", to: "/seguranca"     },
+  // MC39.3.1 (#7): atalho "Segurança" removido do Dashboard do utilizador comum —
+  // o checklist de proteção passou a ser exclusivo do painel corporativo (lojista).
   { label: "Seja Nosso Parceiro", icon: "🤝", to: "/seja-nosso-parceiro" },
   { label: "Configurações",     icon: "⚙️", to: "/configuracoes" },
 ];
