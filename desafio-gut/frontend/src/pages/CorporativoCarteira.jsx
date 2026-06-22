@@ -16,11 +16,11 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
-// MC17.3 — elementos do lojista realocados da MinhaCarteira (utilizador comum):
-// Wallet Digital (Vale-Crédito), Renovação de Adesão/Consultoria e Vouchers.
+// MC17.3 — Wallet Digital (Vale-Crédito) realocada da MinhaCarteira (utilizador comum).
+// MC39.7.1 — "Adesão (Consultoria)" e "Vouchers de Networking" removidos da carteira
+// (cards + componentes RenovacaoCard/VoucherPanel). Backend intacto (renovacao-adesao.mjs,
+// voucher.mjs, comprar-senhas.mjs, rbac.mjs).
 import WalletCard from "../components/WalletCard.jsx";
-import RenovacaoCard from "../components/RenovacaoCard.jsx";
-import VoucherPanel from "../components/VoucherPanel.jsx";
 
 // Valores oficiais (ESPECIFICACAO-TECNICA REQ-04..07; confirmados pelo cliente):
 //   preco   = valor do contrato da cota (o que o lojista paga via Adesão)
@@ -299,15 +299,6 @@ export default function CorporativoCarteira() {
             <WalletCard endereco={address} isMobile={isMobile} />
           </div>
 
-          {/* MC17.3 — Renovação de Adesão / Consultoria (MC17.1 §8) realocada do comum. */}
-          <div style={{ marginBottom: isMobile ? "1rem" : "1.25rem" }}>
-            <RenovacaoCard endereco={address} isMobile={isMobile} />
-          </div>
-
-          {/* MC17.3 — Vouchers de Networking (benefício de cota) realocados do comum. */}
-          <div style={{ marginBottom: isMobile ? "1rem" : "1.25rem" }}>
-            <VoucherPanel endereco={address} isMobile={isMobile} />
-          </div>
         </>
       )}
     </div>
