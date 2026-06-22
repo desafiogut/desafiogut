@@ -12,7 +12,7 @@
 # CONTINUAM a ser verificadas — se alguma vazar para o build, o deploy falha (correto).
 [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "CONTRATO_SEPOLIA,RPC_URL,BICONOMY_BUNDLER_URL,BICONOMY_PROJECT_ID,VITE_CONTRATO_SEPOLIA,VITE_CONTRACT_ADDRESS,VITE_ALCHEMY_URL,VITE_RPC_URL_SEPOLIA,VITE_PRIVY_APP_ID,VITE_WC_PROJECT_ID,VITE_SENTRY_DSN,VITE_MOCK_MODE,SENTRY_DNS"
-  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "true"
 
 # ── Netlify Functions ────────────────────────────────────────────────────────
 # Resolvido como `desafio-gut/frontend/netlify/functions/` (relativo ao base).
