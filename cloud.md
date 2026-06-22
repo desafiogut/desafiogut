@@ -938,3 +938,25 @@ Execução do plano MC39.7 (decisões D1/D2: excluir ambos). Mudança **frontend
 (`mixBlendMode:screen`, `opacity:1`) + loop visual MCP (375px/1440px), console limpo. Deploy
 `6a3970d8`. Nota: identidade pixel-perfect com o estático exigiria reencodar os .webm com alfa
 limpo (decisão adiada; o operador aprovou manter o fix `screen`).
+
+### 9.21 MC39.9 — GUTO animado: correção definitiva (diagnóstico do MC39.8 estava errado)
+**Reabertura:** operador reportou "ainda esta opaco" após o MC39.8. Investigação por
+`ffprobe` + MCP pixel-level revelou que o diagnóstico do MC39.8 estava **incorreto**:
+- `ffprobe -show_streams` simples só mostra `pix_fmt=yuv420p` (o plano de cor) e NÃO revela
+  o canal alfa. Um segundo `ffprobe -show_entries stream_tags` expôs `alpha_mode: "1"` —
+  os `.webm` (idle/thinking/celebration) **sempre tiveram** alfa real via side-channel VP9
+  (convenção "AlphaMode" da Matroska).
+- Confirmado ao vivo via MCP: um `<video>` simples, sem nenhum CSS, já compõe esse alfa
+  corretamente no Chrome (fundo do GUTO genuinamente transparente). O ficheiro nunca foi o
+  problema — não havia "fundo escuro residual baked no .webm" como o MC39.8 concluiu.
+- A "caixa"/opacidade reportada veio do próprio fix do MC39.8: `mix-blend-mode: screen` +
+  `filter` aplicados sobre um vídeo que já tinha alfa correto interagem mal com o
+  `backdrop-filter: blur()` do GlassCard por trás, produzindo o artefacto E lavando as cores.
+**Correção (`GutoSpritePlayer.jsx`, frontend-only, reversível):** removidos `mix-blend-mode`,
+`filter` e qualquer canvas/chroma-key — voltou a um `<video>` simples (sem CSS hacks),
+exatamente o mesmo princípio "zero filtro CSS" do `GutoAvatar.jsx` estático.
+**Validação:** build verde; `node --check` limpo; suite **83/83**. Loop visual MCP em
+375px e 1440px, 3 moods (breathing/idle, analyzing/thinking, celebrating/celebration) —
+sem caixa, cores navy/dourado saturadas, idênticas ao estático. Console limpo (só ruído
+pré-existente: CSP, 404 de functions locais). CLS=0 (`aria-hidden` + `pointer-events:none`
+mantidos).
