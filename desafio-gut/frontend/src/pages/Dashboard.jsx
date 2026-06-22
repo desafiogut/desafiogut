@@ -369,7 +369,8 @@ export default function Dashboard() {
             padding: isMobile ? "0.5rem 0 0.85rem" : "0.25rem 0 0.85rem",
           }}>
             {/* MC22.1 SECÇÃO D — GUTO companion da Edição Ativa (celebra ao encerrar). */}
-            <GutoSpritePlayer variant="inline" size={isMobile ? 64 : 76} mood={encerrado ? "celebrating" : undefined} />
+            {/* MC39.4.1 (#guto) — GUTO do "início" maior (era 64/76) p/ legibilidade. */}
+            <GutoSpritePlayer variant="inline" size={isMobile ? 88 : 104} mood={encerrado ? "celebrating" : undefined} />
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem" }}>
               <div style={{
                 fontSize: isMobile ? "2.5rem" : "2.25rem",

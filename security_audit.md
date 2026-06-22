@@ -477,3 +477,15 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   contraste). **#2 diferido** (subjetivo + não-validável sem login).
 - [✅] Suite **83/83**, `node --check` limpo, `npm run build` verde. Sem alteração de backend/.mjs.
 - [ ] Veredicto pós-deploy → `Desktop\MC39.3.1-final.md`. Produção segue em Sepolia.
+
+## MC39.4.1 — Correção do gating de /seguranca (regressão #7) + GUTO · 2026-06-22
+- [✅] **RBAC /seguranca:** mantém-se gated por `CorporativoRoute` (intenção do #7). Corrigido o
+  bounce do utilizador COMUM: removido o item "Segurança" do nav comum (BottomNav/Sidebar);
+  `CorporativoRoute` agora espera `ready` do Privy antes de redirecionar (sem bounce em hard-reload).
+- [✅] **LGPD pública preservada:** o rodapé "Privacidade" deixou de apontar para a rota gated e
+  passa a abrir a Política de Privacidade pública (Iubenda) — o utilizador comum mantém acesso à
+  política (compliance), evitando esconder a privacidade atrás do gate corporativo.
+- [ℹ️] **#GUTO** — só UI (tamanho/contraste), sem impacto de segurança.
+- [✅] Suite **83/83**, `node --check` limpo, `npm run build` verde. Frontend apenas.
+- [ ] Validação AUTENTICADA (fluxo corporativo de /seguranca + afinação do GUTO) → pendente:
+  login Privy (OTP por email / Google OAuth) não automatizável por CDP. Ver `MC39.4.1-final.md`.

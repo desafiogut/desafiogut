@@ -36,7 +36,11 @@ import DetalheProduto      from "./pages/DetalheProduto.jsx";
 // MC17 — query param ?rc=1: acesso direto sem Privy após cadastro.
 // Usa window.location (full page reload garante search params corretos).
 function CorporativoRoute({ children }) {
-  const { tipoUsuario, tipoCarregando, isConnected } = useAppContext();
+  const { tipoUsuario, tipoCarregando, isConnected, ready } = useAppContext();
+  // MC39.4.1 — esperar o Privy inicializar antes de decidir o redirect. Sem isto, um
+  // hard-reload de uma rota gated (ex.: /seguranca) bouncava o lojista para "/" porque
+  // isConnected ainda era false durante a inicialização do Privy.
+  if (!ready) return null;
   if (!isConnected) {
     if (!window.location.search.includes("rc=1")) return <Navigate to="/" replace />;
     return children;

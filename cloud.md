@@ -852,3 +852,15 @@ rollback se qualquer critério falhar.
   do ScheduleView é coerente (gold/tier diamante); requer direção visual do operador + sessão
   autenticada. Ver `MC39.3.1-final.md`.
 - Suite 83/83, build verde, node --check limpo. Frontend; produção segue em Sepolia.
+
+### 9.16 MC39.4.1 — Pós-correção: Segurança (bounce) + GUTO (legibilidade)
+- **#Segurança (regressão do #7):** a rota `/seguranca` foi gated no MC39.3.1, mas links comuns
+  ficaram a apontar para lá → o utilizador comum era atirado para "/" ("travava"). Correção:
+  item "Segurança" removido do nav comum (BottomNav/Sidebar — lojista acede via card do
+  CorporativoDashboard); rodapé "Privacidade" repointado para a Política de Privacidade pública
+  (Iubenda) mantendo o acesso LGPD ao comum; `CorporativoRoute` espera `ready` do Privy antes de
+  redirecionar (sem bounce em hard-reload). `Seguranca.jsx` é estática (sem trava interna).
+- **#GUTO:** GUTO do "início" 64/76 → 88/104px; halo radial mais forte + `filter`
+  (drop-shadow+brightness+contrast) no `<video>` para realçar o sprite (webm alfa) sobre o navy.
+- Suite 83/83, build verde. ⚠️ Afinação visual fina + fluxo corporativo de /seguranca pendentes
+  de validação AUTENTICADA (login Privy via OTP/OAuth não automatizável por CDP). Produção: Sepolia.
