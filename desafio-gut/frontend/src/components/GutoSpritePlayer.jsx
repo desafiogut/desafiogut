@@ -47,10 +47,12 @@ export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }
       {/* MC39.3.1 (#4) — halo/scrim subtil ATRÁS do GUTO: os webm têm canal alfa
           (colorkey #050818) e o sprite "apagava" sobre o fundo navy. Um halo radial
           leve levanta o contraste sem lavar a arte. aria-hidden + pointer-events:none
-          (não afeta layout → CLS=0). Reversível. Confirmação visual fina pendente. */}
+          (não afeta layout → CLS=0). Reversível.
+          MC39.8 (#guto) — halo reforçado (0.36→0.52, spread maior) para o GUTO animado
+          ler tão nítido quanto o GUTO estático (guto-bemvindo.png), que é raster sólido. */}
       <div aria-hidden="true" style={{
-        position: "absolute", inset: "-12%", pointerEvents: "none", borderRadius: "50%",
-        background: "radial-gradient(circle at 50% 46%, rgba(132,152,218,0.36) 0%, rgba(10,14,34,0.18) 56%, rgba(5,8,24,0) 78%)",
+        position: "absolute", inset: "-14%", pointerEvents: "none", borderRadius: "50%",
+        background: "radial-gradient(circle at 50% 46%, rgba(132,152,218,0.52) 0%, rgba(10,14,34,0.24) 58%, rgba(5,8,24,0) 80%)",
       }} />
       <AnimatePresence initial={false}>
         <motion.video
@@ -75,7 +77,10 @@ export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }
             width: "100%", height: "100%",
             objectFit: "contain", display: "block",
             // MC39.4.1 (#guto) — realça o sprite (alfa sobre navy) sem lavar a arte.
-            filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.55)) brightness(1.07) contrast(1.06)",
+            // MC39.8 (#guto) — boost de saturação/brilho/contraste para igualar a
+            // vivacidade do GUTO estático (raster sólido). O webm-alfa compõe sobre navy
+            // e aparecia dessaturado/opaco; saturate(1.22) + brightness(1.14) recuperam-no.
+            filter: "drop-shadow(0 2px 7px rgba(0,0,0,0.6)) brightness(1.14) contrast(1.12) saturate(1.22)",
           }}
         />
       </AnimatePresence>
