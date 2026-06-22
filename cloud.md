@@ -871,3 +871,18 @@ rollback se qualquer critério falhar.
   era redirecionado IMEDIATAMENTE de volta para `/corporativo` (clique "não funcionava").
 - Fix: `/seguranca` removida de `rotasProibidas` (a rota é exclusiva do corporativo, gated por
   CorporativoRoute desde o MC39.3.1). Demais rotas comuns mantêm o isolamento. Build verde, 83/83.
+
+### 9.18 MC39.6 — Reposicionar "Segurança" do dashboard corporativo para o menu "Mais"
+**Diagnóstico (Graphify + leitura direta dos componentes de navegação):**
+- "Segurança" do painel corporativo NÃO vivia na navegação — era um **card no grid**
+  `cards[]` de `CorporativoDashboard.jsx` (`{ label:"Segurança", icon:"🛡️", to:"/seguranca" }`),
+  ao lado de Cota ativa / Banners / Impressões / Saldo. É esse grid que o operador chama de
+  "menu principal".
+- O menu **"Mais"** (canto inferior direito) existe APENAS no `BottomNav.jsx` (mobile <768px):
+  botão "Mais" → sheet com `secundariosAtivos`. Para corporativo, era `[Analytics, Configurações]`.
+- No desktop (≥768px) há só a `Sidebar.jsx` plana (corporativo: Painel/Cotas/Banners/Analytics/
+  Configurações), sem secção "Mais".
+- **Plano:** remover o card de `CorporativoDashboard.cards`; adicionar "Segurança" ao
+  `secundariosAtivos` corporativo do BottomNav (sheet "Mais" mobile) e ao grupo corporativo da
+  Sidebar (cauda, junto a Configurações) para manter acessível no desktop sem regredir o acesso
+  ganho no MC39.4.2. Rota `/seguranca` permanece gated por CorporativoRoute.
