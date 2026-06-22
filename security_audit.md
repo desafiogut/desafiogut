@@ -461,3 +461,19 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [✅] Pré-requisitos manuais MC40 documentados: `desafio-gut/docs/mainnet-prerequisites.md`.
 - [✅] Suite **83/83** (incl. biconomy-handshake/mc302 intactos), `node --check` limpo, build verde.
 - [ ] Veredicto pós-deploy → `Desktop\MC39.2-final.md`. Produção segue em Sepolia.
+
+## MC39.3.1 — Correções de Frontend/UX (impacto de segurança/RBAC) · 2026-06-22
+- [✅] **#6 — Supressão da confirmação de assinatura (`showWalletUIs:false`):** o modal de
+  confirmação da embedded wallet (login + EIP-191 do lance) deixa de aparecer. TRADE-OFF aceite
+  pelo operador: reduz fricção, mas remove a confirmação explícita do utilizador. Posse garantida
+  por Privy + JWT; o valor do lance é validado no backend (anti-sniping MC28). É GLOBAL (também o
+  lance). Não há transações de valor com confirmação a preservar neste fluxo.
+- [✅] **#7 — RBAC do checklist de segurança:** `/seguranca` passa a ser gated por `CorporativoRoute`
+  (comum/visitante → redireciona para "/"); o componente (CHECKS) é reutilizado no painel
+  corporativo. Reduz a exposição da página de transparência ao perfil pretendido (lojista).
+- [✅] **#8 — Dados B2B na vitrine:** "Contrato"/"Mín. produto" deixam de ser expostos ao utilizador
+  comum (gateados por `tipoUsuario==="corporativo"`). Não eram segredos, mas eram dados internos.
+- [ℹ️] **#5/#1/#3/#4** — correções de UI sem impacto de segurança (overlay, GlassCard, filtro,
+  contraste). **#2 diferido** (subjetivo + não-validável sem login).
+- [✅] Suite **83/83**, `node --check` limpo, `npm run build` verde. Sem alteração de backend/.mjs.
+- [ ] Veredicto pós-deploy → `Desktop\MC39.3.1-final.md`. Produção segue em Sepolia.

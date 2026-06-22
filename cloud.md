@@ -832,3 +832,23 @@ rollback se qualquer critério falhar.
 - **Pré-requisitos manuais MC40:** `desafio-gut/docs/mainnet-prerequisites.md` (auditoria externa,
   deploy do contrato, financiar Smart Account, two-step, painel Privy, vars reais, flip, rollback).
 - Suite 83/83, build verde, node --check limpo. Produção segue em Sepolia.
+
+### 9.15 MC39.3.1 — Correções de Frontend/UX (plano MC39.3 executado)
+- **#5** vencedor duplicado: `EdicaoTimerCard` (edições EXTRA) deixou de montar o
+  `FimLeilaoOverlay` full-screen → overlay ÚNICO ao nível da página (EDICAO_ATIVA); fim do
+  empilhamento (MC23.I/D1).
+- **#6** sign message: `PrivyProvider.embeddedWallets.showWalletUIs=false` → login/lance sem
+  modal de confirmação (ver security_audit; trade-off aceite pelo operador).
+- **#1** "Carteira Conectada": `<div>` ad-hoc → `<GlassCard>` (.gut-glass-standard).
+- **#3** horários da Programação clicáveis → filtram a grade por horário (toggle + teclado +
+  "Limpar filtro"); abordagem (i) (a página exibe a grade, não lances).
+- **#7** checklist de segurança: `/seguranca` gated por `CorporativoRoute`; atalho removido do
+  Dashboard comum; card "Segurança" no CorporativoDashboard (ver security_audit).
+- **#8** vitrine: "Contrato"/"Mín. produto" (dados B2B) gateados por `corporativo` em SlotCard/
+  VitrineDetalhe; utilizador final vê Cotas/Tipo/benefícios.
+- **#4** GUTO legibilidade: halo/scrim radial atrás do sprite (webm alfa sobre navy); afinação
+  visual fina pendente de validação autenticada.
+- **#2 — DIFERIDO** (subjetivo + não-validável sem login): a convenção da app é emoji e a paleta
+  do ScheduleView é coerente (gold/tier diamante); requer direção visual do operador + sessão
+  autenticada. Ver `MC39.3.1-final.md`.
+- Suite 83/83, build verde, node --check limpo. Frontend; produção segue em Sepolia.
