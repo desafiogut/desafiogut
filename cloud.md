@@ -918,3 +918,23 @@ Execução do plano MC39.7 (decisões D1/D2: excluir ambos). Mudança **frontend
   cards, Wallet Digital por último, console limpo, CLS=0. Deploy de produção `6a39638c`.
 - Vouchers: feature mantida no backend para reavaliação futura (ver MC39.7 §ITEM 2 — gaps de UI
   e geração admin-only documentados).
+
+### 9.20 MC39.8 — GUTO animado: visibilidade igual ao GUTO estático (mix-blend-mode)
+**Causa raiz (isolada via MCP, evidência de DOM + experimentos visuais):**
+- O GUTO animado (`GutoSpritePlayer` → `<video>` webm) parecia opaco/baço vs. o GUTO estático
+  (`guto-bemvindo.png`, raster sólido). NÃO era herança do Glass: a `opacity` é **1** em todos os
+  ancestrais (incl. `.gut-glass-standard`), e `backdrop-filter` filtra o backdrop, não os filhos.
+- A causa real é um **fundo escuro residual baked no .webm** (colorkey #050818 imperfeito) — uma
+  "caixa" escura à volta do personagem. Confirmado: com a animação opaca/sem blend a caixa aparece;
+  só desligar o halo não a remove.
+**Correção (`GutoSpritePlayer.jsx`, frontend-only, reversível):**
+- `mix-blend-mode: screen` no `<video>` → dissolve os pixels escuros residuais sobre o navy,
+  eliminando a "caixa" e igualando a nitidez do raster sólido.
+- `filter` suavizado para `brightness(1.1) contrast(1.1) saturate(1.2)` (drop-shadow removido —
+  anulado por screen).
+- halo só-claro (removido o stop navy 0.24 que pintava um anel escuro sobre a arena).
+- `aria-hidden` + `pointer-events:none` → CLS=0. Sem reencode de asset.
+**Validação:** build verde; `node --check` limpo; suite **83/83**. Confirmado live por DOM
+(`mixBlendMode:screen`, `opacity:1`) + loop visual MCP (375px/1440px), console limpo. Deploy
+`6a3970d8`. Nota: identidade pixel-perfect com o estático exigiria reencodar os .webm com alfa
+limpo (decisão adiada; o operador aprovou manter o fix `screen`).
