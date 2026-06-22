@@ -449,4 +449,15 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [✅] **Runbook de incidentes:** `desafio-gut/docs/runbook-incidentes.md` versionado (P0/P1).
 - [✅] **supportedChains:** Privy `[sepolia, mainnet]`; `defaultChain` continua Sepolia.
 - [✅] Suite **83/83**, `node --check` limpo, `npm run build` verde.
-- [ ] Veredicto pós-deploy (HTTP/CSP no domínio real/visual) → `Desktop\MC39.1-final.md`.
+- [✅] Veredicto pós-deploy (HTTP/CSP no domínio real/visual) → `Desktop\MC39.1-final.md` (deploy
+  `33396f54` ready; CSP live sem unsafe-inline; consola sem violações; CLS=0).
+
+## MC39.2 — Fallbacks de resiliência (RPC/Flashbots + Bundler) + pré-requisitos MC40 · 2026-06-22
+- [✅] **Fallback opt-in** (`_lib/rpc-fallback.mjs`): `escolherRpc`/`escolherBundler` com health-probe
+  (`eth_blockNumber`/`eth_chainId`, timeout 4s). **Sem `*_FALLBACK` definido → primário sem probe
+  (zero regressão; prod Sepolia e testes byte-idênticos).** Nunca loga URLs (R9).
+- [✅] `consolidar-lances` → `CONSOLIDATION_RPC_URL_FALLBACK`; `signer.criarSignerBiconomy` →
+  `BICONOMY_BUNDLER_URL_FALLBACK`. `.env.example` atualizado (vazias por default). Caminho mainnet inativo.
+- [✅] Pré-requisitos manuais MC40 documentados: `desafio-gut/docs/mainnet-prerequisites.md`.
+- [✅] Suite **83/83** (incl. biconomy-handshake/mc302 intactos), `node --check` limpo, build verde.
+- [ ] Veredicto pós-deploy → `Desktop\MC39.2-final.md`. Produção segue em Sepolia.

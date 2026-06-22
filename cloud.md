@@ -823,3 +823,12 @@ rollback se qualquer critério falhar.
 5. **supportedChains:** Privy passa a `[sepolia, mainnet]`; `defaultChain` continua Sepolia
    (login Sepolia até o cutover MC40).
 - Suite 83/83, build verde, node --check limpo. Produção segue em Sepolia (NETWORK_STAGE ausente).
+
+### 9.14 MC39.2 — Fallbacks de resiliência + pré-requisitos MC40 (sem deploy do contrato)
+- **Fallback RPC/Flashbots e Bundler (opt-in):** `_lib/rpc-fallback.mjs` (`escolherRpc`/`escolherBundler`,
+  health-probe `eth_blockNumber`/`eth_chainId`, nunca loga URLs). `consolidar-lances` usa
+  `CONSOLIDATION_RPC_URL_FALLBACK`; `signer.criarSignerBiconomy` usa `BICONOMY_BUNDLER_URL_FALLBACK`.
+  **Sem fallback configurado → primário sem probe (zero mudança).** Caminho mainnet inativo.
+- **Pré-requisitos manuais MC40:** `desafio-gut/docs/mainnet-prerequisites.md` (auditoria externa,
+  deploy do contrato, financiar Smart Account, two-step, painel Privy, vars reais, flip, rollback).
+- Suite 83/83, build verde, node --check limpo. Produção segue em Sepolia.

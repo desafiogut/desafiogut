@@ -16,6 +16,7 @@ import { guardAdmin } from "./_lib/admin-auth.mjs";
 import { marcarConsolidado, estaConsolidado } from "./_lib/bids-store.mjs";
 import { getLances } from "./_lib/data-store.mjs";
 import { obterSignerCoordenacao, backendAssinatura } from "./_lib/signer.mjs";
+import { escolherRpc } from "./_lib/rpc-fallback.mjs"; // MC39.2 — fallback RPC/Flashbots (opt-in)
 
 const ABI = [
   "function consolidarResultado(string idEdicao, address vencedor, uint256 menorUnico) public",
@@ -72,7 +73,13 @@ export default async (req) => {
   // 6. Signer da coordenação via módulo central (MC30.1). No backend local-key
   //    o provider é o Flashbots Protect (CONSOLIDATION_RPC_URL); no backend
   //    'biconomy' o envio/assinatura ocorrem via Smart Account ERC-4337 (owner KMS).
-  const { provider, signer } = await obterSignerCoordenacao(process.env.CONSOLIDATION_RPC_URL);
+  // MC39.2 — fallback de RPC/Flashbots: se CONSOLIDATION_RPC_URL_FALLBACK estiver
+  // definido, escolhe o 1.º endpoint saudável; sem fallback, usa o primário (zero mudança).
+  const rpcConsolidacao = await escolherRpc(
+    process.env.CONSOLIDATION_RPC_URL,
+    process.env.CONSOLIDATION_RPC_URL_FALLBACK,
+  );
+  const { provider, signer } = await obterSignerCoordenacao(rpcConsolidacao);
   const contrato = new Contract(process.env.CONTRATO_MAINNET, ABI, signer);
 
   // 7. EIP-712 (recibo de auditoria off-chain) — nonce do leilão (anti-replay)
