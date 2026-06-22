@@ -409,13 +409,11 @@ export default function MinhaCarteira() {
             )}
           </GlassCard>
 
-          {/* Account info */}
-          <div style={{
+          {/* Account info — MC39.3.1 (#1): padronizado com GlassCard (.gut-glass-standard)
+              em vez do <div> ad-hoc; mantém padding/margem, dropa background/border ad-hoc. */}
+          <GlassCard style={{
             marginTop: sectionGap,
             padding: isMobile ? "0.85rem" : "0.75rem 1rem",
-            background: "rgba(245,166,35,0.06)",
-            borderRadius: "12px",
-            border: "1px solid rgba(245,166,35,0.12)",
           }}>
             <div style={{
               fontSize: "0.62rem", color: COR.muted,
@@ -431,7 +429,7 @@ export default function MinhaCarteira() {
                 {userLabel}
               </div>
             )}
-          </div>
+          </GlassCard>
         </>
       )}
 

@@ -156,7 +156,7 @@ function formatarTimer(segundosRestantes) {
   return `${pad(m)}:${pad(s)}`;
 }
 
-function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInfo, bannerSvg, produtos }) {
+function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInfo, bannerSvg, produtos, corporativo }) {
   const safeBannerSvg = bannerSvg
     ? DOMPurify.sanitize(bannerSvg, { USE_PROFILES: { svg: true } })
     : null;
@@ -235,8 +235,10 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
             : `${slot.cotasDisponiveis}`}
         />
         <Info label="Tipo" value={slot.tipoLeilao} small />
-        <Info label="Contrato" value={slot.valorContrato} />
-        <Info label="Mín. produto" value={slot.valorMinProduto} />
+        {/* MC39.3.1 (#8): "Contrato"/"Mín. produto" são dados internos do lojista —
+            só visíveis ao perfil corporativo. O utilizador final vê Cotas + Tipo + benefícios. */}
+        {corporativo && <Info label="Contrato" value={slot.valorContrato} />}
+        {corporativo && <Info label="Mín. produto" value={slot.valorMinProduto} />}
       </div>
 
       <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
@@ -341,7 +343,7 @@ function Info({ label, value, small }) {
   );
 }
 
-function VitrineDetalhe({ slot, isMobile }) {
+function VitrineDetalhe({ slot, isMobile, corporativo }) {
   return (
     <div style={{ padding: isMobile ? "1rem" : "1.5rem 2rem", color: "#e8f0fe", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       <nav aria-label="Trilha de navegação" style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
@@ -373,8 +375,9 @@ function VitrineDetalhe({ slot, isMobile }) {
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: "0.75rem" }}>
           <Info label="Cotas disponíveis" value={`${slot.cotasDisponiveis}`} />
           <Info label="Exclusividade" value={slot.exclusiva ? "Sim" : "Não"} small />
-          <Info label="Valor de contrato" value={slot.valorContrato} />
-          <Info label="Valor mín. produto" value={slot.valorMinProduto} />
+          {/* MC39.3.1 (#8): dados internos do lojista — só perfil corporativo. */}
+          {corporativo && <Info label="Valor de contrato" value={slot.valorContrato} />}
+          {corporativo && <Info label="Valor mín. produto" value={slot.valorMinProduto} />}
         </div>
 
         <div>
@@ -512,7 +515,7 @@ export default function Vitrine() {
   if (slotId) {
     const slot = SLOTS.find((s) => s.id === slotId);
     if (!slot) return <Navigate to="/vitrine" replace />;
-    return <VitrineDetalhe slot={slot} isMobile={isMobile} />;
+    return <VitrineDetalhe slot={slot} isMobile={isMobile} corporativo={tipoUsuario === "corporativo"} />;
   }
 
   // Regra §8: domingos ocultam Bronze e Ouro.
@@ -617,6 +620,7 @@ export default function Vitrine() {
             timer={slotTimerMap[slot.id]}
             cotaInfo={slotCotasMap[slot.id]}
             produtos={produtosPorCat[slot.id] || []}
+            corporativo={tipoUsuario === "corporativo"}
             bannerSvg={tipoUsuario === "corporativo"
               ? (slot.id === "diamante" || slot.id === "ouro"
                   ? bannerData.site?.svg ?? null
@@ -660,6 +664,7 @@ export default function Vitrine() {
                   timer={slotTimerMap[slot.id]}
                   cotaInfo={slotCotasMap[slot.id]}
                   produtos={produtosPorCat[slot.id] || []}
+                  corporativo={tipoUsuario === "corporativo"}
                   bannerSvg={tipoUsuario === "corporativo" ? (bannerData.app?.svg ?? null) : null}
                 />
               </div>
@@ -677,6 +682,7 @@ export default function Vitrine() {
                 timer={slotTimerMap[slot.id]}
                 cotaInfo={slotCotasMap[slot.id]}
                 produtos={produtosPorCat[slot.id] || []}
+                corporativo={tipoUsuario === "corporativo"}
                 bannerSvg={tipoUsuario === "corporativo" ? (bannerData.app?.svg ?? null) : null}
               />
             ))}

@@ -122,7 +122,9 @@ export default function App() {
           <Route path="/produto/:id" element={<DetalheProduto />} />
           <Route path="/programacao"   element={<ScheduleView />} />
           <Route path="/ativos"     element={<MeusAtivos />}    />
-          <Route path="/seguranca"  element={<Seguranca />}     />
+          {/* MC39.3.1 (#7): checklist de segurança é só para o lojista (corporativo).
+              Comum/visitante → CorporativoRoute redireciona para "/". */}
+          <Route path="/seguranca"  element={<CorporativoRoute><Seguranca /></CorporativoRoute>} />
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="/admin"      element={<AdminPanel />} />
           {/* MC11.1 — rota pública: Seja Nosso Parceiro. Sem proteção. */}
