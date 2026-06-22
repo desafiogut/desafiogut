@@ -416,3 +416,20 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [ ] Veredicto pós-deploy (HTTP/smoke/fluxo de lance/visual) → `Desktop\MC36.1-final.md`.
 - [⏸️] Pendente: remover o fallback financeiro (MC seguinte); opcional débito atómico
   (`UPDATE ... WHERE centavos >= :v`). ⚠️ Não re-executar migrações com `DROP TABLE`.
+
+## MC39 — Mainnet Readiness (preparação SEM ativação) · 2026-06-21
+- [✅] **Diagnóstico (production):** `NETWORK_STAGE` ausente (=Sepolia); `COORDENACAO_PRIVATE_KEY`
+  ausente (R9/MC30); `DATA_STORE_BACKEND=supabase`; Biconomy+KMS presentes; `SIGNER_BACKEND` ausente
+  (default por `NETWORK_STAGE` → local-key em Sepolia).
+- [🛑] **Decisão de segurança (R1/R8):** **NÃO** foi definido `NETWORK_STAGE=mainnet`. Análise do
+  código (grep, graphify stale) confirmou que `=mainnet` ativa, no site live e de imediato:
+  `lance-relampago` → blindagem MC28 on-chain (`comprometerLanceOnchain` via Biconomy chain 1);
+  `consolidar-lances` → `new Contract(CONTRATO_MAINNET=0x000…0)` + EIP-712 com `verifyingContract`
+  no endereço zero; `signer.mjs` → biconomy. Como o contrato mainnet não existe (MC40 pendente) e o
+  Smart Account/KMS foi montado só na Sepolia, ativar agora quebraria o fluxo de lance real. Operador
+  confirmou "preparar sem ativar".
+- [✅] **Configurado (inerte até `NETWORK_STAGE=mainnet`; gate em `consolidar-lances:42` antes de
+  ler):** `MAINNET_CHAIN_ID=1` (production). `CONSOLIDATION_RPC_URL`/`CONTRATO_MAINNET` deixados por
+  definir no MC40 (sem valores fabricados — R9/integridade).
+- [✅] **Zero código alterado; sem deploy.** Produção segue em Sepolia (comportamento legado intacto).
+  Reversão trivial: `netlify env:unset MAINNET_CHAIN_ID`. Checklist de ativação em `Desktop\MC40-checklist.md`.
