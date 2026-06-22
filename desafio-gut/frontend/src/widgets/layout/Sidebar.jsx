@@ -91,6 +91,10 @@ const CORPORATIVO_ITEMS = [
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 const ADMIN_ITEM = { path: "/admin", label: "⚙️ Admin", icon: <IconSettings />, end: false };
+// MC39.6 (#segurança): "Segurança" deixa de ser card do CorporativoDashboard e passa para a
+// navegação. No desktop (sem secção "Mais") fica na cauda do rail corporativo, junto às utilidades
+// (Configurações). Exclusivo do corporativo; rota /seguranca gated por CorporativoRoute.
+const SEGURANCA_ITEM = { path: "/seguranca", label: "Segurança", icon: <IconShield />, end: false };
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -120,6 +124,7 @@ export default function Sidebar() {
     itensNav = [
       ...CORPORATIVO_ITEMS,
       ...(configItem ? [configItem] : []),
+      SEGURANCA_ITEM,
       ...(isAdmin ? [ADMIN_ITEM] : []),
     ];
   } else {
