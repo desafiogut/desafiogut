@@ -49,6 +49,7 @@ export default function ScheduleView() {
   const [diaAtivo, setDiaAtivo] = useState(() => diaDaSemanaHoje(tz));
   const [semana, setSemana] = useState(1);
   const [fonteGrade, setFonteGrade] = useState("estatica"); // "estatica" | "remota"
+  const [filtroHorario, setFiltroHorario] = useState(null);  // MC39.3.1 (#3) — filtro por horário
 
   // Refresh "agora" a cada 30s para destacar o slot ativo.
   useEffect(() => {
@@ -80,6 +81,10 @@ export default function ScheduleView() {
   }, []);
 
   const horarios = useMemo(() => horariosDoDia(diaAtivo), [diaAtivo]);
+  // MC39.3.1 (#3) — clicar num horário filtra a grade para esse horário; mudar de
+  // dia/semana limpa o filtro (evita filtro órfão de um horário inexistente no novo dia).
+  useEffect(() => { setFiltroHorario(null); }, [diaAtivo, semana]);
+  const horariosVisiveis = filtroHorario ? horarios.filter((h) => h === filtroHorario) : horarios;
   const datasDoDia = DATAS_JUNHO[diaAtivo] || [];
   const dataIso = datasDoDia[semana - 1];
   const eHoje = diaAtivo === hoje;
@@ -236,23 +241,49 @@ export default function ScheduleView() {
 
       {/* Grade de horários */}
       <section aria-label={`Horários de ${DIAS.find((d) => d.key === diaAtivo)?.label} semana ${semana}`}>
+        {/* MC39.3.1 (#3) — barra de filtro ativo por horário. */}
+        {filtroHorario && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem", fontSize: "0.74rem", color: COR.muted }}>
+            <span>Filtrado por horário: <strong style={{ color: COR.primary }}>{filtroHorario}</strong></span>
+            <button
+              onClick={() => setFiltroHorario(null)}
+              style={{
+                padding: "0.2rem 0.6rem", borderRadius: "999px", cursor: "pointer",
+                background: COR.primaryDim, border: `1px solid ${COR.primary}`,
+                color: COR.primary, fontSize: "0.7rem", fontWeight: 700,
+              }}
+            >Limpar filtro ✕</button>
+          </div>
+        )}
         <ul style={{
           margin: 0, padding: 0, listStyle: "none",
           display: "flex", flexDirection: "column", gap: "0.5rem",
         }}>
-          {horarios.map((h, idx) => {
+          {horariosVisiveis.map((h) => {
             const ativo = eHoje && slotAtivoAgora(h, horarios, agora);
             const { tags } = tiersPorHorario({ diaKey: diaAtivo, semana, horario: h });
-            const overnight = idx === horarios.length - 1 && h === "21:00";
+            const overnight = h === "21:00" && horarios[horarios.length - 1] === "21:00";
+            const selecionado = filtroHorario === h;
+            // MC39.3.1 (#3) — clicar no horário filtra a grade para esse horário (toggle).
+            const toggleFiltro = () => setFiltroHorario((atual) => (atual === h ? null : h));
             return (
-              <li key={h} style={{
+              <li
+                key={h}
+                role="button"
+                tabIndex={0}
+                aria-pressed={selecionado}
+                aria-label={`Filtrar pelo horário ${h}`}
+                onClick={toggleFiltro}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleFiltro(); } }}
+                style={{
                 display: "grid",
                 gridTemplateColumns: isMobile ? "auto 1fr" : "84px 1fr auto",
                 gap: isMobile ? "0.5rem" : "0.85rem",
                 alignItems: "center",
                 padding: "0.7rem 0.85rem",
-                background: ativo ? "rgba(16,185,129,0.10)" : "rgba(5,15,40,0.55)",
-                border: `1px solid ${ativo ? "rgba(16,185,129,0.4)" : "rgba(245,166,35,0.14)"}`,
+                cursor: "pointer",
+                background: ativo ? "rgba(16,185,129,0.10)" : (selecionado ? "rgba(245,166,35,0.12)" : "rgba(5,15,40,0.55)"),
+                border: `1px solid ${ativo ? "rgba(16,185,129,0.4)" : (selecionado ? COR.primary : "rgba(245,166,35,0.14)")}`,
                 borderRadius: "12px",
               }}>
                 <div style={{
