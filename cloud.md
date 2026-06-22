@@ -789,3 +789,23 @@ rollback se qualquer critério falhar.
 - **Pendente (MC seguinte):** remover o fallback financeiro após janela de confirmação;
   (opcional) endurecer o débito com `UPDATE ... WHERE centavos >= :v` atómico.
   ⚠️ NÃO re-executar nenhuma migração com `DROP TABLE`.
+
+### 9.12 MC39 — Mainnet Readiness (preparação SEM ativação)
+> 100% operacional, zero alteração de código. **Produção mantém-se em Sepolia.**
+
+- **Gate de ambiente:** `NETWORK_STAGE` (backend) separa Sepolia de Mainnet. Quando `=mainnet`
+  ativa, de uma vez: `signer.mjs` → biconomy (Smart Account + KMS, chain `MAINNET_CHAIN_ID`);
+  `lance-relampago` → blindagem MC28 (Compromisso Cego on-chain via `comprometerLanceOnchain`);
+  `consolidar-lances` → consolidação EIP-712 contra `CONTRATO_MAINNET` (Flashbots por
+  `CONSOLIDATION_RPC_URL`). O frontend usa `VITE_NETWORK_STAGE` (separado do backend).
+- **Decisão MC39 (operador):** **NÃO** definir `NETWORK_STAGE=mainnet` agora — ativaria o modo
+  mainnet no site **live** contra um contrato inexistente (placeholder `0x000…0`) e um Smart
+  Account/KMS montado só na Sepolia (MC30.2.1) → quebraria o fluxo de lance real (R1). A ativação
+  fica para **depois do MC40** (deploy do contrato mainnet + `CONTRATO_MAINNET` real).
+- **Configurado agora (inerte até `NETWORK_STAGE=mainnet`):** `MAINNET_CHAIN_ID=1` no Netlify
+  (contexto production). `CONSOLIDATION_RPC_URL` e `CONTRATO_MAINNET` ficam por definir no MC40
+  (precisam de um RPC mainnet real e do endereço do contrato deployado — não fabricados).
+- **Estado verificado (production):** `NETWORK_STAGE` ausente (=Sepolia); `COORDENACAO_PRIVATE_KEY`
+  ausente (R9, MC30); `DATA_STORE_BACKEND=supabase`; Biconomy+KMS presentes; `SIGNER_BACKEND`
+  ausente (recai no default por `NETWORK_STAGE` = local-key em Sepolia). Sem deploy nesta sessão.
+- **Checklist de ativação:** `Desktop\MC40-checklist.md`.
