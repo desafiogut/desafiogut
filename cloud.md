@@ -864,3 +864,10 @@ rollback se qualquer critério falhar.
   (drop-shadow+brightness+contrast) no `<video>` para realçar o sprite (webm alfa) sobre o navy.
 - Suite 83/83, build verde. ⚠️ Afinação visual fina + fluxo corporativo de /seguranca pendentes
   de validação AUTENTICADA (login Privy via OTP/OAuth não automatizável por CDP). Produção: Sepolia.
+
+### 9.17 MC39.4.2 — Card "Segurança" do painel corporativo agora navega
+- Causa raiz: o efeito "Isolamento do mundo lojista" (AppContext MC12.3 Item 4) tinha `/seguranca`
+  em `rotasProibidas` → ao clicar no card "Segurança" do CorporativoDashboard (#7), o corporativo
+  era redirecionado IMEDIATAMENTE de volta para `/corporativo` (clique "não funcionava").
+- Fix: `/seguranca` removida de `rotasProibidas` (a rota é exclusiva do corporativo, gated por
+  CorporativoRoute desde o MC39.3.1). Demais rotas comuns mantêm o isolamento. Build verde, 83/83.

@@ -489,3 +489,11 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [✅] Suite **83/83**, `node --check` limpo, `npm run build` verde. Frontend apenas.
 - [ ] Validação AUTENTICADA (fluxo corporativo de /seguranca + afinação do GUTO) → pendente:
   login Privy (OTP por email / Google OAuth) não automatizável por CDP. Ver `MC39.4.1-final.md`.
+
+## MC39.4.2 — Card "Segurança" corporativo navegável (RBAC do isolamento lojista) · 2026-06-22
+- [✅] Causa raiz: o efeito de isolamento do lojista (AppContext) listava `/seguranca` em
+  `rotasProibidas` e bouncava o corporativo de volta a `/corporativo` ao clicar no card "Segurança".
+- [✅] Fix: `/seguranca` removida de `rotasProibidas` — a rota é exclusiva do corporativo (gated por
+  `CorporativoRoute`), portanto não pertence ao conjunto de rotas "comuns" isoladas. Comum continua
+  sem acesso (gate + sem nav link). Build verde, 83/83.
+- [ ] Veredicto pós-deploy (clique do card → /seguranca renderiza) → `Desktop\MC39.4.2-final.md`.
