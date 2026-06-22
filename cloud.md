@@ -901,3 +901,20 @@ rollback se qualquer critério falhar.
     `/seguranca` renderiza; console limpo.
 - Anti-regressão: itens de menu comuns inalterados (item só nos ramos `corporativo`); demais
   cards/links intactos. Deploy de produção `6a395844` (45 functions intactas).
+
+### 9.19 MC39.7.1 — Remover "Adesão (Consultoria)" e "Vouchers de Networking" da carteira corporativa
+Execução do plano MC39.7 (decisões D1/D2: excluir ambos). Mudança **frontend-only**.
+- `CorporativoCarteira.jsx`: removidos os imports + blocos JSX de `<RenovacaoCard>` e
+  `<VoucherPanel>`. Ordem final da carteira: Senhas de troco → Cota atual → Contratar cota →
+  **Wallet Digital (último card)**.
+- Apagados os componentes órfãos `src/components/RenovacaoCard.jsx` e
+  `src/components/VoucherPanel.jsx` (sem outros consumidores; grep confirmou só comentários).
+- **Backend NÃO tocado** (R1): `renovacao-adesao.mjs`, `voucher.mjs`, `comprar-senhas.mjs` (REQ-26)
+  e `_lib/rbac.mjs` permanecem. Conta com adesão "ativa" continua a receber papel "cliente"
+  (rbac.mjs:59-70); o resgate de voucher em `comprar-senhas.mjs` segue funcional no backend.
+- Infra: `.gitignore` passou a ignorar `**/supabase/.temp/` (CLI corre em desafio-gut/frontend).
+- Validação: `node --check` limpo; suite **83/83**; `npm run build` verde. Loop visual MCP
+  autenticado (conta corporativa), 1ª iteração PASS em **375px e 1440px**: carteira sem os dois
+  cards, Wallet Digital por último, console limpo, CLS=0. Deploy de produção `6a39638c`.
+- Vouchers: feature mantida no backend para reavaliação futura (ver MC39.7 §ITEM 2 — gaps de UI
+  e geração admin-only documentados).

@@ -509,3 +509,16 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   (45 functions intactas).
 - [✅] Validação visual MCP autenticada (375px + 1440px), 1ª iteração PASS, console limpo →
   `Desktop\MC39.6-final.md` + `Desktop\MC39.6-shots\`.
+
+## MC39.7.1 — Remover "Adesão (Consultoria)" e "Vouchers de Networking" da carteira (UX, backend intacto) · 2026-06-22
+- [✅] Remoção FRONTEND-ONLY: `CorporativoCarteira.jsx` (imports + blocos JSX) + exclusão dos
+  componentes órfãos `RenovacaoCard.jsx` e `VoucherPanel.jsx`. Nenhum `.mjs` alterado.
+- [✅] Sem impacto de RBAC/negócio: `_lib/rbac.mjs` (papel "cliente" por cota OU adesão ativa),
+  `renovacao-adesao.mjs`, `voucher.mjs` e `comprar-senhas.mjs` (REQ-26, resgate de voucher)
+  permanecem intactos. Adesões ativas existentes continuam a conceder acesso; fluxo de compra de
+  senhas com voucher segue funcional no backend (apenas a UI foi removida).
+- [✅] Higiene de repo: `.gitignore` passou a ignorar `**/supabase/.temp/` (evita commit de cache
+  da CLI Supabase); `package-lock.json` mantido idêntico ao de `main` (sem drift de deps).
+- [✅] `node --check` limpo; suite **83/83**; `npm run build` verde. Validação visual MCP
+  autenticada (375px + 1440px), 1ª iteração PASS, console limpo, CLS=0; Wallet Digital é o último
+  card → `Desktop\MC39.7.1-final.md` + `Desktop\MC39.7.1-shots\`. Deploy `6a39638c`.
