@@ -3,7 +3,7 @@ import { Component, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { PrivyProvider, useLogin, useCreateWallet } from "@privy-io/react-auth";
-import { sepolia as sepoliaChain } from "viem/chains"; // viem instalado como dep do Privy
+import { sepolia as sepoliaChain, mainnet as mainnetChain } from "viem/chains"; // viem instalado como dep do Privy
 import * as Sentry from "@sentry/react";
 import App from "./App.jsx";
 import ReferralTracker from "./components/ReferralTracker.jsx";
@@ -263,9 +263,11 @@ createRoot(document.getElementById("root")).render(
           ethereum: { createOnLogin: "off" },
         },
 
-        // ── Rede: Sepolia via viem/chains (definição oficial) ────────────────
+        // ── Rede: Sepolia (default atual) + Mainnet disponível (MC39.1, prep MC40) ──
+        // defaultChain permanece Sepolia até o cutover (MC40). Mainnet listada como
+        // suportada para permitir switchChain(1) sem regressão (login segue Sepolia).
         defaultChain: sepoliaChain,
-        supportedChains: [sepoliaChain],
+        supportedChains: [sepoliaChain, mainnetChain],
 
         // ── Aparência: alinhada ao design DESAFIOGUT ─────────────────────────
         appearance: {

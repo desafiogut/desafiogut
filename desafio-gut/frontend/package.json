@@ -21,7 +21,7 @@
     "aws-sdk": "^2.1693.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dompurify": "^3.1.6",
+    "dompurify": "^3.4.11",
     "ethers": "^6.16.0",
     "framer-motion": "^12.38.0",
     "hash-wasm": "^4.11.0",
@@ -39,7 +39,7 @@
     "vite": "^8.0.8"
   },
   "overrides": {
-    "axios": "^1.14.1",
+    "axios": "^1.18.0",
     "axios-retry": "^4.0.0"
   }
 }

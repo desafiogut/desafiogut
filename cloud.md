@@ -809,3 +809,17 @@ rollback se qualquer critério falhar.
   ausente (R9, MC30); `DATA_STORE_BACKEND=supabase`; Biconomy+KMS presentes; `SIGNER_BACKEND`
   ausente (recai no default por `NETWORK_STAGE` = local-key em Sepolia). Sem deploy nesta sessão.
 - **Checklist de ativação:** `Desktop\MC40-checklist.md`.
+
+### 9.13 MC39.1 — Hardening pré-Mainnet (5 itens da auditoria, sem deploy do contrato)
+1. **Dependências:** `dompurify ^3.1.6→^3.4.11` (XSS) e override `axios ^1.14.1→^1.18.0`
+   (resolvia 1.15.0 vulnerável → 1.18.0). Privy não tocado (R1). Restantes advisories do stack
+   Privy/wallet/transformers (incl. 1 critical `protobufjs`) ficam como dívida (major upgrades).
+2. **Secret scanning:** `SECRETS_SCAN_SMART_DETECTION_ENABLED false→true` (validado com `netlify
+   build` — sem falsos-positivos). OMIT_KEYS (públicos) mantido.
+3. **CSP:** `script-src` deixa de permitir `'unsafe-inline'` (mantém `'self'`+`'wasm-unsafe-eval'`+
+   allowlist; `style-src` mantém `'unsafe-inline'` p/ Framer Motion/React). Validado servindo o
+   `dist` com o CSP de produção no browser → app renderiza, zero violação de script-src.
+4. **Runbook de incidentes:** `desafio-gut/docs/runbook-incidentes.md` (matriz P0/P1).
+5. **supportedChains:** Privy passa a `[sepolia, mainnet]`; `defaultChain` continua Sepolia
+   (login Sepolia até o cutover MC40).
+- Suite 83/83, build verde, node --check limpo. Produção segue em Sepolia (NETWORK_STAGE ausente).

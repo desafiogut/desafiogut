@@ -433,3 +433,20 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   definir no MC40 (sem valores fabricados — R9/integridade).
 - [✅] **Zero código alterado; sem deploy.** Produção segue em Sepolia (comportamento legado intacto).
   Reversão trivial: `netlify env:unset MAINNET_CHAIN_ID`. Checklist de ativação em `Desktop\MC40-checklist.md`.
+
+## MC39.1 — Hardening pré-Mainnet (5 itens da auditoria SEGURANCA-MAINNET-READINESS) · 2026-06-21
+- [✅] **Dep axios (HIGH):** override `^1.14.1→^1.18.0` (resolvia 1.15.0 ∈ range vulnerável ≤1.15.2).
+  Mesmo major 1.x (compatível com @coinbase/cdp-sdk). Privy não tocado (R1).
+- [✅] **Dep DOMPurify (MODERATE):** `^3.1.6→^3.4.11` (fix XSS IN_PLACE / poluição allowedTags).
+- [⏸️] **Dívida remanescente:** stack Privy/wallet/transformers tem ~39 advisories transitivos
+  (incl. 1 critical `protobufjs` via transformers/onnx) — exigem upgrades major (risco R1) →
+  fora do MC39.1; tratar com upgrade de SDK quando upstream publicar.
+- [✅] **Secret scanning:** `SMART_DETECTION false→true`. Validado com `netlify build` completo
+  (sem falso-positivo). Segredos reais já eram verificados; OMIT_KEYS só de públicos.
+- [✅] **CSP:** removido `'unsafe-inline'` de `script-src` (mantém `'self'`+`'wasm-unsafe-eval'`).
+  **Validação real:** `dist` servido com o CSP de produção exato + carregado no browser (MCP) →
+  app renderiza, **zero violação de script-src/inline**. `style-src` mantém `'unsafe-inline'`. Reduz XSS.
+- [✅] **Runbook de incidentes:** `desafio-gut/docs/runbook-incidentes.md` versionado (P0/P1).
+- [✅] **supportedChains:** Privy `[sepolia, mainnet]`; `defaultChain` continua Sepolia.
+- [✅] Suite **83/83**, `node --check` limpo, `npm run build` verde.
+- [ ] Veredicto pós-deploy (HTTP/CSP no domínio real/visual) → `Desktop\MC39.1-final.md`.
