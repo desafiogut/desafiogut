@@ -44,6 +44,14 @@ export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }
       aria-hidden="true"
       style={isInline ? { position: "relative", width: size, height: size, flexShrink: 0, pointerEvents: "none" } : undefined}
     >
+      {/* MC39.3.1 (#4) — halo/scrim subtil ATRÁS do GUTO: os webm têm canal alfa
+          (colorkey #050818) e o sprite "apagava" sobre o fundo navy. Um halo radial
+          leve levanta o contraste sem lavar a arte. aria-hidden + pointer-events:none
+          (não afeta layout → CLS=0). Reversível. Confirmação visual fina pendente. */}
+      <div aria-hidden="true" style={{
+        position: "absolute", inset: 0, pointerEvents: "none", borderRadius: "50%",
+        background: "radial-gradient(circle at 50% 46%, rgba(120,140,205,0.20) 0%, rgba(5,8,24,0.10) 52%, rgba(5,8,24,0) 72%)",
+      }} />
       <AnimatePresence initial={false}>
         <motion.video
           key={src}
