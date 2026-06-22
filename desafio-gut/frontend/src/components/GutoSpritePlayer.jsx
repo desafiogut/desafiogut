@@ -10,16 +10,66 @@
 // dispositivo). useIsMobile só posiciona/dimensiona via CSS; a fonte é a mesma.
 // useReducedMotion() → congela no 1º frame (vídeo pausado), complementando o guard global.
 // O fundo oficial já não tem GUTO embutido (MC20.PRE.2), por isso este player é o único GUTO.
+//
+// MC39.9 (#guto) — DIAGNÓSTICO CORRIGIDO. A tentativa inicial deste MC (canvas +
+// chroma-key per-pixel) partiu de um ffprobe incompleto: `pix_fmt=yuv420p` só descreve
+// o plano de cor. Um segundo ffprobe (`-show_entries stream_tags`) revelou
+// `alpha_mode: "1"` — o WebM tem um canal alfa real via side-channel VP9 (convenção
+// "AlphaMode" da Matroska), e o Chrome COMPÕE esse alfa nativamente em <video>, tal
+// como confirmado ao vivo via MCP (um <video> simples, sem nenhum filtro, já mostra o
+// fundo do GUTO totalmente transparente). Ou seja: o ficheiro nunca foi o problema.
+// A "caixa" relatada após o MC39.8 veio do próprio `mix-blend-mode: screen` +
+// `filter` daquele MC — aplicados a um vídeo que já tinha alfa correto, esses hacks
+// CSS interagem mal com o `backdrop-filter: blur()` do GlassCard por trás (a região
+// transparente do vídeo deixa de amostrar o fundo correctamente sob blend-mode),
+// produzindo o artefacto visual E lavando as cores do GUTO (perda de contraste).
+// Fix real: voltar a um <video> simples, sem canvas, sem blend-mode, sem filtro —
+// exactamente o mesmo princípio "zero filtro CSS" já usado pelo GutoAvatar estático.
+import { useEffect, useRef } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAppEnvironment } from "../context/useAppContextEnvironment.jsx";
 
-// MC22.2 SECÇÃO D — versão ?v=mc222 força o browser/CDN a servir os webm
-// re-encodados com canal alfa (VP9 yuva420p, colorkey #050818). Sem o query param
-// browsers com cache agressivo mostrariam o .webm opaco antigo.
+function GutoVideo({ src, reduce, loop }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !reduce) return undefined;
+
+    const freezeFirstFrame = () => {
+      try {
+        video.pause();
+        video.currentTime = 0;
+      } catch {
+        /* noop */
+      }
+    };
+
+    video.addEventListener("loadeddata", freezeFirstFrame);
+    if (video.readyState >= 2) freezeFirstFrame();
+
+    return () => video.removeEventListener("loadeddata", freezeFirstFrame);
+  }, [src, reduce]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      autoPlay={!reduce}
+      loop={loop}
+      muted
+      playsInline
+      preload="auto"
+      aria-hidden="true"
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
+    />
+  );
+}
+
 const SRC = {
-  breathing:   "/assets/guto/animations/idle.webm?v=mc222",
-  analyzing:   "/assets/guto/animations/thinking.webm?v=mc222",
-  celebrating: "/assets/guto/animations/celebration.webm?v=mc222",
+  breathing:   "/assets/guto/animations/idle.webm?v=mc399",
+  analyzing:   "/assets/guto/animations/thinking.webm?v=mc399",
+  celebrating: "/assets/guto/animations/celebration.webm?v=mc399",
 };
 
 // MC22.1 SECÇÃO D — variant:
@@ -45,47 +95,22 @@ export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }
       style={isInline ? { position: "relative", width: size, height: size, flexShrink: 0, pointerEvents: "none" } : undefined}
     >
       {/* MC39.3.1 (#4) — halo/scrim subtil ATRÁS do GUTO. aria-hidden + pointer-events:none
-          (não afeta layout → CLS=0). Reversível.
-          MC39.8 (#guto) — causa raiz da baixa visibilidade vs. o GUTO estático: o webm
-          carrega um FUNDO ESCURO RESIDUAL (colorkey #050818 imperfeito) que aparecia como
-          uma "caixa" opaca à volta do GUTO. A correção real é `mix-blend-mode: screen` no
-          vídeo (ver abaixo), que dissolve os pixels escuros sobre o navy. O halo passou a ser
-          só-claro (removido o stop navy 0.24, que pintava um anel ESCURO sobre a arena). */}
+          (não afeta layout → CLS=0). Reversível. */}
       <div aria-hidden="true" style={{
         position: "absolute", inset: "-14%", pointerEvents: "none", borderRadius: "50%",
         background: "radial-gradient(circle at 50% 46%, rgba(150,170,235,0.26) 0%, rgba(150,170,235,0.07) 50%, rgba(5,8,24,0) 78%)",
       }} />
       <AnimatePresence initial={false}>
-        <motion.video
+        <motion.div
           key={src}
-          src={src}
-          autoPlay={!reduce}
-          loop={!reduce && !isCelebrating}
-          muted
-          playsInline
-          preload="auto"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: reduce ? 0 : 0.15 }}
-          onLoadedData={
-            reduce
-              ? (e) => { try { e.currentTarget.pause(); e.currentTarget.currentTime = 0; } catch { /* noop */ } }
-              : undefined
-          }
-          style={{
-            position: "absolute", inset: 0,
-            width: "100%", height: "100%",
-            objectFit: "contain", display: "block",
-            // MC39.8 (#guto) — `screen` dissolve o fundo escuro residual do webm (pixels
-            // ~#050818 → transparentes sobre o navy), eliminando a "caixa" opaca à volta do
-            // GUTO e igualando a visibilidade do GUTO estático. O drop-shadow foi removido
-            // (sob `screen` a sombra escura desaparece). Boost suave de brilho/contraste/
-            // saturação para a vivacidade do raster sólido, sem lavar a arte.
-            mixBlendMode: "screen",
-            filter: "brightness(1.1) contrast(1.1) saturate(1.2)",
-          }}
-        />
+          style={{ position: "absolute", inset: 0 }}
+        >
+          <GutoVideo src={src} reduce={reduce} loop={!reduce && !isCelebrating} />
+        </motion.div>
       </AnimatePresence>
     </div>
   );

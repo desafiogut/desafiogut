@@ -533,3 +533,19 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   Glass (opacity=1 em todos os níveis; backdrop-filter não afeta filhos) — era o asset .webm.
   Loop visual MCP (375/1440), console limpo. Deploy `6a3970d8` → `Desktop\MC39.8-final.md` +
   `Desktop\MC39.8-shots\`.
+
+## MC39.9 — GUTO animado: correção definitiva (diagnóstico do MC39.8 estava errado) · 2026-06-22
+- [✅] Reabertura por relato direto do operador ("ainda esta opaco"). `ffprobe -show_entries
+  stream_tags` revelou `alpha_mode: "1"` — os `.webm` sempre tiveram alfa real (VP9 side-channel,
+  convenção Matroska AlphaMode); o diagnóstico do MC39.8 ("fundo escuro residual baked no .webm")
+  estava errado. O Chrome compõe esse alfa nativamente em `<video>` simples, sem CSS algum.
+- [✅] Causa real da "caixa": o próprio `mix-blend-mode: screen` + `filter` do MC39.8, aplicados a
+  um vídeo já com alfa correto, interagiam mal com o `backdrop-filter: blur()` do GlassCard.
+- [✅] Mudança puramente visual/CSS em `GutoSpritePlayer.jsx` (frontend-only): removidos
+  `mix-blend-mode`, `filter` e qualquer canvas/chroma-key — `<video>` simples, sem CSS hacks
+  (mesmo princípio do `GutoAvatar.jsx` estático). `aria-hidden` + `pointer-events:none` (CLS=0).
+- [✅] Sem superfície de ataque nova; nenhum `.mjs` alterado; fluxo de lance/compra e RBAC intactos
+  (diff = só `GutoSpritePlayer.jsx`). `node --check` limpo; suite **83/83**; build verde.
+- [✅] Loop visual MCP (375px/1440px), 3 moods (breathing/analyzing/celebrating) sem caixa, cores
+  navy/dourado saturadas. Console limpo (só ruído pré-existente). →
+  `Desktop\MC39.9-final.md` + `Desktop\MC39.9-shots\`.
