@@ -140,7 +140,14 @@ export async function obterSignerCoordenacao(rpcUrl) {
  * (iniciar/aceitarTransferenciaCoordenacao) — Leilao.sol NÃO é alterado.
  */
 async function criarSignerBiconomy(rpcUrl) {
-  const bundlerUrl = process.env.BICONOMY_BUNDLER_URL;
+  // MC39.2 — fallback de Bundler: se BICONOMY_BUNDLER_URL_FALLBACK estiver definido,
+  // escolhe o 1.º bundler saudável (probe eth_chainId); sem fallback, usa o primário
+  // SEM probe (zero mudança de comportamento / testes intactos).
+  const { escolherBundler } = await import("./rpc-fallback.mjs");
+  const bundlerUrl = await escolherBundler(
+    process.env.BICONOMY_BUNDLER_URL,
+    process.env.BICONOMY_BUNDLER_URL_FALLBACK,
+  );
   if (!bundlerUrl) throw new Error("BICONOMY_BUNDLER_URL não configurado");
   const paymasterUrl = process.env.BICONOMY_PAYMASTER_URL || null;
   const effectiveRpc = rpcUrl || process.env.RPC_URL;
