@@ -48,7 +48,9 @@ const SECONDARY_LINKS = [
   { path: "/vitrine",             label: "Vitrine (4 Slots)",      Icon: IconTarget   },
   { path: "/programacao",         label: "Programação",            Icon: IconTarget   },
   { path: "/ativos",              label: "Meus Ativos",            Icon: IconTrending },
-  { path: "/seguranca",           label: "Segurança",              Icon: IconShield   },
+  // MC39.4.1 (#segurança): "Segurança" removido do nav do utilizador COMUM — a rota
+  // /seguranca é gated (corporativo) desde o MC39.3.1; o comum era atirado para "/".
+  // O lojista acede via card no CorporativoDashboard.
   { path: "/seja-nosso-parceiro", label: "🤝 Seja nosso parceiro!", Icon: IconTrending },
   { path: "/configuracoes",       label: "Configurações",          Icon: IconSettings },
 ];

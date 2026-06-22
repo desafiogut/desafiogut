@@ -1,4 +1,4 @@
-import { Outlet, Link } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import BottomNav, { BOTTOM_NAV_HEIGHT } from "./BottomNav.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
@@ -25,7 +25,10 @@ function FooterGlobal({ isMobile }) {
         rowGap: isMobile ? "6px" : undefined,
       }}
     >
-      <Link to="/seguranca" style={{ color: "inherit", textDecoration: "none" }}>Privacidade</Link>
+      {/* MC39.4.1 (#segurança): "Privacidade" deixa de apontar para /seguranca (rota agora
+          gated p/ corporativo) — passa a abrir a Política de Privacidade pública (Iubenda),
+          mantendo o acesso LGPD ao utilizador comum (compliance), à imagem de "Termos". */}
+      <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Privacidade</a>
       <a href="https://www.iubenda.com/terms-and-conditions/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Termos</a>
       <a href="mailto:desafiogut01@gmail.com" style={{ color: "inherit", textDecoration: "none" }}>Suporte</a>
       <span style={{ width: isMobile ? "100%" : "auto" }}>© 2026 DesafioGUT. Grupo União e Trabalho.</span>

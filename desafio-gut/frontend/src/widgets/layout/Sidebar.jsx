@@ -71,7 +71,9 @@ const NAV_ITEMS = [
   { path: "/vitrine",       label: "Vitrine (4 Slots)", icon: <IconTarget />,    end: false },
   { path: "/programacao",   label: "Programação",       icon: <IconTarget />,    end: false },
   { path: "/ativos",        label: "Meus Ativos",       icon: <IconTrending />,  end: false },
-  { path: "/seguranca",     label: "Segurança",         icon: <IconShield />,    end: false },
+  // MC39.4.1 (#segurança): "Segurança" removido do nav do utilizador COMUM (rota gated
+  // p/ corporativo desde o MC39.3.1; o comum era redirecionado para "/"). Lojista acede
+  // via card no CorporativoDashboard.
   { path: "/configuracoes", label: "Configurações",     icon: <IconSettings />,  end: false },
   // MC11.1 — Seção pública "Seja Nosso Parceiro" (visível a TODOS: não logados,
   // comuns e lojistas). Porta de entrada para o fluxo corporativo.
