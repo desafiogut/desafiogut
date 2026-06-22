@@ -497,3 +497,15 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   `CorporativoRoute`), portanto não pertence ao conjunto de rotas "comuns" isoladas. Comum continua
   sem acesso (gate + sem nav link). Build verde, 83/83.
 - [ ] Veredicto pós-deploy (clique do card → /seguranca renderiza) → `Desktop\MC39.4.2-final.md`.
+
+## MC39.6 — Reposicionar "Segurança" do dashboard para o menu "Mais" (UX, sem impacto de RBAC) · 2026-06-22
+- [✅] Mudança puramente de navegação/UX: o acesso a "Segurança" saiu do grid de cards do
+  `CorporativoDashboard` e passou para a navegação — sheet "Mais" no `BottomNav` (mobile) e cauda
+  da `Sidebar` (desktop). Itens adicionados APENAS nos ramos `tipoUsuario === "corporativo"`.
+- [✅] Sem nova superfície de ataque: a rota `/seguranca` continua gated por `CorporativoRoute`
+  (RBAC inalterado). O utilizador comum continua sem o item (NAV_ITEMS/SECONDARY_LINKS sem
+  Segurança desde o MC39.4.1) e sem acesso à rota.
+- [✅] `node --check` limpo; suite **83/83**; `npm run build` verde. Deploy de produção `6a395844`
+  (45 functions intactas).
+- [✅] Validação visual MCP autenticada (375px + 1440px), 1ª iteração PASS, console limpo →
+  `Desktop\MC39.6-final.md` + `Desktop\MC39.6-shots\`.

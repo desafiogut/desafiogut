@@ -886,3 +886,18 @@ rollback se qualquer critério falhar.
   `secundariosAtivos` corporativo do BottomNav (sheet "Mais" mobile) e ao grupo corporativo da
   Sidebar (cauda, junto a Configurações) para manter acessível no desktop sem regredir o acesso
   ganho no MC39.4.2. Rota `/seguranca` permanece gated por CorporativoRoute.
+
+**Execução e validação (CONCLUÍDA):**
+- `CorporativoDashboard.jsx`: card "Segurança" removido de `cards[]`.
+- `BottomNav.jsx`: `{ path:"/seguranca", label:"Segurança", Icon:IconShield }` no `secundariosAtivos`
+  corporativo (sheet "Mais").
+- `Sidebar.jsx`: `SEGURANCA_ITEM` na cauda do grupo corporativo (após Configurações).
+- `AppContext.jsx`: comentário do isolamento atualizado (sem mudança de comportamento).
+- `node --check` limpo; suite **83/83**; `npm run build` verde.
+- Validação visual MCP autenticada (conta corporativa de teste), 1ª iteração PASS:
+  - **375px (mobile):** dashboard sem o card "Segurança"; "Mais" → contém "Segurança"; clique →
+    `/seguranca` renderiza (checklist), sem bounce; console limpo.
+  - **1440px (desktop):** dashboard sem o card; Sidebar mostra "Segurança" na cauda; clique →
+    `/seguranca` renderiza; console limpo.
+- Anti-regressão: itens de menu comuns inalterados (item só nos ramos `corporativo`); demais
+  cards/links intactos. Deploy de produção `6a395844` (45 functions intactas).
