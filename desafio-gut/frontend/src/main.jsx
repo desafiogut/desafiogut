@@ -259,7 +259,13 @@ createRoot(document.getElementById("root")).render(
         // onComplete do PrivyEventsBridge (quando o handler já está montado),
         // eliminando a race sem necessidade de reload. A forma continua aninhada
         // por chain (exigida pelo Privy v3). Callbacks vêm de useLogin/useCreateWallet.
+        // MC39.3.1 (#6) — showWalletUIs:false suprime o modal de confirmação de
+        // assinatura da embedded wallet em ações INICIADAS PELA APP (login direto
+        // sem prompt + assinatura EIP-191 do lance sem modal). Trade-off de UX
+        // aceite pelo operador: reduz fricção; a posse é garantida via Privy + JWT,
+        // e o valor do lance é validado no backend (anti-sniping MC28).
         embeddedWallets: {
+          showWalletUIs: false,
           ethereum: { createOnLogin: "off" },
         },
 
