@@ -522,3 +522,14 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [✅] `node --check` limpo; suite **83/83**; `npm run build` verde. Validação visual MCP
   autenticada (375px + 1440px), 1ª iteração PASS, console limpo, CLS=0; Wallet Digital é o último
   card → `Desktop\MC39.7.1-final.md` + `Desktop\MC39.7.1-shots\`. Deploy `6a39638c`.
+
+## MC39.8 — GUTO animado: visibilidade (mix-blend-mode; sem impacto funcional) · 2026-06-22
+- [✅] Mudança puramente visual/CSS em `GutoSpritePlayer.jsx` (frontend-only): `mix-blend-mode:
+  screen` + filtro suavizado + halo só-claro para dissolver o fundo escuro residual do .webm e
+  igualar a nitidez do GUTO estático. Sem reencode, `aria-hidden` + `pointer-events:none` (CLS=0).
+- [✅] Sem superfície de ataque nova; nenhum `.mjs` alterado; fluxo de lance/compra e RBAC intactos
+  (diff = só `GutoSpritePlayer.jsx`). `node --check` limpo; suite **83/83**; build verde.
+- [✅] Diagnóstico evidence-based (DOM): a baixa visibilidade NÃO era herança de opacity/blur do
+  Glass (opacity=1 em todos os níveis; backdrop-filter não afeta filhos) — era o asset .webm.
+  Loop visual MCP (375/1440), console limpo. Deploy `6a3970d8` → `Desktop\MC39.8-final.md` +
+  `Desktop\MC39.8-shots\`.
