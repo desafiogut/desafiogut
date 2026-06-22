@@ -47,3 +47,6 @@ desafio-gut/crytic-export/
 # Supabase CLI local state (linked project, temp)
 supabase/.temp/
 supabase/.branches/
+# CLI Supabase também é executada em desafio-gut/frontend/ → ignorar o .temp aninhado
+**/supabase/.temp/
+**/supabase/.branches/
