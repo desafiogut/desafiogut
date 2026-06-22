@@ -95,6 +95,9 @@ export default function BottomNav() {
     ? [
         { path: "/corporativo/analytics", label: "📊 Analytics", Icon: IconTrending },
         { path: "/configuracoes", label: "Configurações", Icon: IconSettings },
+        // MC39.6 (#segurança): "Segurança" deixa de ser card do dashboard e passa para o
+        // menu "Mais" (canto inferior direito). Rota /seguranca gated por CorporativoRoute.
+        { path: "/seguranca", label: "Segurança", Icon: IconShield },
       ]
     : baseLinks;
 
