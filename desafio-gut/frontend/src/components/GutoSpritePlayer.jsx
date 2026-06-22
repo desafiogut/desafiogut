@@ -44,15 +44,16 @@ export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }
       aria-hidden="true"
       style={isInline ? { position: "relative", width: size, height: size, flexShrink: 0, pointerEvents: "none" } : undefined}
     >
-      {/* MC39.3.1 (#4) — halo/scrim subtil ATRÁS do GUTO: os webm têm canal alfa
-          (colorkey #050818) e o sprite "apagava" sobre o fundo navy. Um halo radial
-          leve levanta o contraste sem lavar a arte. aria-hidden + pointer-events:none
+      {/* MC39.3.1 (#4) — halo/scrim subtil ATRÁS do GUTO. aria-hidden + pointer-events:none
           (não afeta layout → CLS=0). Reversível.
-          MC39.8 (#guto) — halo reforçado (0.36→0.52, spread maior) para o GUTO animado
-          ler tão nítido quanto o GUTO estático (guto-bemvindo.png), que é raster sólido. */}
+          MC39.8 (#guto) — causa raiz da baixa visibilidade vs. o GUTO estático: o webm
+          carrega um FUNDO ESCURO RESIDUAL (colorkey #050818 imperfeito) que aparecia como
+          uma "caixa" opaca à volta do GUTO. A correção real é `mix-blend-mode: screen` no
+          vídeo (ver abaixo), que dissolve os pixels escuros sobre o navy. O halo passou a ser
+          só-claro (removido o stop navy 0.24, que pintava um anel ESCURO sobre a arena). */}
       <div aria-hidden="true" style={{
         position: "absolute", inset: "-14%", pointerEvents: "none", borderRadius: "50%",
-        background: "radial-gradient(circle at 50% 46%, rgba(132,152,218,0.52) 0%, rgba(10,14,34,0.24) 58%, rgba(5,8,24,0) 80%)",
+        background: "radial-gradient(circle at 50% 46%, rgba(150,170,235,0.26) 0%, rgba(150,170,235,0.07) 50%, rgba(5,8,24,0) 78%)",
       }} />
       <AnimatePresence initial={false}>
         <motion.video
@@ -76,11 +77,13 @@ export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }
             position: "absolute", inset: 0,
             width: "100%", height: "100%",
             objectFit: "contain", display: "block",
-            // MC39.4.1 (#guto) — realça o sprite (alfa sobre navy) sem lavar a arte.
-            // MC39.8 (#guto) — boost de saturação/brilho/contraste para igualar a
-            // vivacidade do GUTO estático (raster sólido). O webm-alfa compõe sobre navy
-            // e aparecia dessaturado/opaco; saturate(1.22) + brightness(1.14) recuperam-no.
-            filter: "drop-shadow(0 2px 7px rgba(0,0,0,0.6)) brightness(1.14) contrast(1.12) saturate(1.22)",
+            // MC39.8 (#guto) — `screen` dissolve o fundo escuro residual do webm (pixels
+            // ~#050818 → transparentes sobre o navy), eliminando a "caixa" opaca à volta do
+            // GUTO e igualando a visibilidade do GUTO estático. O drop-shadow foi removido
+            // (sob `screen` a sombra escura desaparece). Boost suave de brilho/contraste/
+            // saturação para a vivacidade do raster sólido, sem lavar a arte.
+            mixBlendMode: "screen",
+            filter: "brightness(1.1) contrast(1.1) saturate(1.2)",
           }}
         />
       </AnimatePresence>
