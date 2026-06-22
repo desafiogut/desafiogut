@@ -317,9 +317,14 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (tipoCarregando) return;
     if (tipoUsuario !== "corporativo") return;
+    // MC39.4.2 (#segurança): "/seguranca" REMOVIDO das rotas proibidas. Desde o MC39.3.1
+    // (#7) a página de segurança é EXCLUSIVA do corporativo (gated por CorporativoRoute) e
+    // o CorporativoDashboard tem um card "Segurança" → /seguranca. Este isolamento bouncava
+    // o lojista de volta para /corporativo ao clicar (o clique "não funcionava"). Mantém-se
+    // o isolamento das demais rotas comuns.
     const rotasProibidas = new Set([
       "/", "/carteira", "/mercado", "/vitrine", "/programacao",
-      "/ativos", "/seguranca", "/seja-nosso-parceiro",
+      "/ativos", "/seja-nosso-parceiro",
     ]);
     if (rotasProibidas.has(location.pathname)) {
       navigate("/corporativo", { replace: true });
