@@ -549,3 +549,24 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [✅] Loop visual MCP (375px/1440px), 3 moods (breathing/analyzing/celebrating) sem caixa, cores
   navy/dourado saturadas. Console limpo (só ruído pré-existente). →
   `Desktop\MC39.9-final.md` + `Desktop\MC39.9-shots\`.
+
+## MC39.12 — Migração Mercado Pago para produção (APP_USR-) · 2026-06-23
+- [✅] Mudança de **configuração apenas** (zero código): `MP_ACCESS_TOKEN` trocado de
+  `TEST-…` (sandbox) para `APP_USR-…` (produção) no Netlify + redeploy (Segmentos 0–3 pelo
+  operador). O token é lido em runtime (`mp-client.mjs::lerTokenObrigatorio`), sem ramo
+  test/prod no código — sem superfície de ataque nova, nenhum `.mjs` alterado.
+- [✅] Confirmação de estado: `/health` → `PIX_PROVIDER:"mercadopago"`, `MP_ACCESS_TOKEN:"set"`.
+  O valor completo do token NUNCA é exibido nem logado — só o prefixo (R14). `netlify.toml`
+  mantém `MP_ACCESS_TOKEN` na lista verificada do secrets-scan (vazamento no build = deploy falha).
+- [✅] Verificação de credenciais: nenhum token MP hardcoded no repositório (R9). Grep por
+  `APP_USR-`/`TEST-` no código-fonte = vazio; provider lê só de `process.env`.
+- [✅] Fluxo PIX revalidado por leitura de código: crédito dual idempotente por `pedidoId`
+  (`webhook-mercadopago.mjs` + `confirmar-pagamento.mjs` → `creditarSaldoRsIdempotente`),
+  escrita de saldo só Supabase (R11/MC36.1). `/saldo-rs` mantém anti-IDOR (Bearer user-session
+  + `validarOwnerOuAdmin`). Webhook ainda confia no `paymentId` (hardening HMAC `x-signature`
+  via `MP_WEBHOOK_SECRET` continua como follow-up registado, não-bloqueante).
+- [✅] Regressão: `node --check` limpo (356 `.mjs`); suite **111/111**; `npm run build` verde.
+- [⏳] **Teste controlado R$ 2,00 (1 ficha) — gate de operador.** Pagamento real via app
+  bancário + login Privy auth-gated não são automatizáveis pelo agente. Runbook + verificação
+  (`saldo_rs` via REST service_role, R12) e runbook de rollback em `Desktop\MC39.12-final.md`.
+  Resultado a registar após execução do operador.

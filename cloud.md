@@ -960,3 +960,50 @@ exatamente o mesmo princípio "zero filtro CSS" do `GutoAvatar.jsx` estático.
 sem caixa, cores navy/dourado saturadas, idênticas ao estático. Console limpo (só ruído
 pré-existente: CSP, 404 de functions locais). CLS=0 (`aria-hidden` + `pointer-events:none`
 mantidos).
+
+### 9.22 MC39.12 — Migração do Mercado Pago para produção (token APP_USR-) (2026-06-23)
+**Objetivo:** concluir a migração da carteira Mercado Pago de sandbox (`TEST-…`) para
+produção (`APP_USR-…`) no canal PIX de fichas (`PIX_FICHAS`), validando o fluxo comum
+com um teste controlado de R$ 2,00 (1 ficha), sem regressão.
+
+**Natureza da mudança — só configuração, zero código.** O provider PIX lê o token em
+runtime via `mp-client.mjs::lerTokenObrigatorio()` (`process.env.MP_ACCESS_TOKEN`); não há
+ramificação test/prod no código — o ambiente é determinado apenas pelo prefixo do token.
+Logo a migração é a substituição de uma única variável de ambiente no Netlify + redeploy
+(executado pelo operador nos Segmentos 0–3 prévios).
+
+**Estado verificado (2026-06-23):**
+- `/.netlify/functions/health` → `PIX_PROVIDER:"mercadopago"`, `MP_ACCESS_TOKEN:"set"`. ✅
+- Token de produção (prefixo `APP_USR-`) configurado no Netlify (produção). O valor completo
+  nunca é exibido/logado (R14). ✅
+- Webhook de produção: `Settings → Webhooks → URL = https://silly-stardust-ca71bc.netlify.app/.netlify/functions/webhook-mercadopago`, evento "Pagamentos" — a confirmar no painel MP (passo do operador).
+
+**Fluxo PIX validado por leitura de código (SUPERPERS):**
+1. `iniciar-pagamento.mjs` → `_lib/pix-provider/mercadopago.mjs::gerarPedidoPix()` →
+   `POST /v1/payments` (idempotência por `pedidoId`), devolve `qr_code` + `paymentId`;
+   `paymentId` embutido no JWT do pedido e metadados gravados.
+2. **Confirmação dual idempotente** (ambos creditam `saldo-rs` via
+   `_lib/saldoRs.mjs::creditarSaldoRsIdempotente`, idempotente por `pedidoId`):
+   - **Webhook** (`webhook-mercadopago.mjs`): MP envia push → consulta `GET /v1/payments/:id`
+     → se `status="approved"` grava `mp-aprovados:${pedidoId}` e credita R$ (ou ativa cota).
+   - **Polling/fallback** (`confirmar-pagamento.mjs`): valida `status="approved"` (blob rápido
+     ou live API) antes de creditar — cobre a janela antes do webhook.
+3. Crédito em **centavos** (Supabase `saldo_rs`, escrita só Supabase por R11/MC36.1; leitura
+   com fallback ao Blob legado). Senhas on-chain só saem depois via `/comprar-senhas`
+   (R$ → senhas) — modelo dual mantido.
+
+**Regressão (baseline desta branch, antes de qualquer alteração):**
+- `node --check` em 356 `.mjs` (excl. node_modules): **0 falhas**. ✅
+- `node --test --experimental-test-module-mocks` (netlify/functions): **111/111** pass. ✅
+- `npm run build` (frontend): **verde** (✓ built ~6s). ✅
+- Esta entrega só toca documentação (`cloud.md`, `security_audit.md`) — não altera código,
+  portanto não há risco de regressão no fluxo.
+
+**Teste controlado R$ 2,00 — gate de operador (AGUARDANDO).** A compra real de 1 ficha exige
+pagamento PIX com dinheiro real via app bancário e login numa página Privy auth-gated —
+nenhum dos dois é automatizável pelo agente. Runbook de execução + verificação no relatório
+`Desktop\MC39.12-final.md` (consultar `saldo_rs` via REST service_role — R12). Resultado a
+registar aqui após execução.
+
+**Rollback:** trocar `MP_ACCESS_TOKEN` de volta para o `TEST-…` e redeploy
+(runbook no relatório MC39.12-final.md / Segmento 4). Reversível em 1 variável.
