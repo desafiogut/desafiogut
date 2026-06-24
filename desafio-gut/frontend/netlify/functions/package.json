@@ -5,7 +5,7 @@
   "description": "Netlify Functions do DesafioGUT — server-only (não importar do frontend).",
   "dependencies": {
     "@netlify/blobs": "^8.2.0",
-    "@netlify/functions": "^3.0.0",
+    "@netlify/functions": "^5.3.0",
     "@sentry/node": "^9.0.0",
     "@supabase/supabase-js": "^2.108.2",
     "aws-sdk": "^2.1693.0",
