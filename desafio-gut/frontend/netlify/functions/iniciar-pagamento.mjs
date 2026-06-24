@@ -56,10 +56,25 @@ export default async (req) => {
   const issuedAt = Date.now();
   const validUntil = new Date(issuedAt + TTL_SEC * 1000).toISOString();
 
+  // Dados opcionais do pagador (CPF/e-mail/nome) — quando o frontend os coletar.
+  // Contas de produção do MP podem exigir payer.identification; sem isso o
+  // provider cai para o fallback de env (MP_PAYER_*). Campos só lidos se forem
+  // strings; documento é normalizado para dígitos no provider.
+  let pagador;
+  if (body.pagador && typeof body.pagador === "object") {
+    const p = body.pagador;
+    pagador = {
+      email:   typeof p.email   === "string" ? p.email.slice(0, 254) : undefined,
+      cpf:     typeof p.cpf     === "string" ? p.cpf.slice(0, 32)     : undefined,
+      tipoDoc: typeof p.tipoDoc === "string" ? p.tipoDoc.slice(0, 8)  : undefined,
+      nome:    typeof p.nome    === "string" ? p.nome.slice(0, 140)   : undefined,
+    };
+  }
+
   let pix;
   try {
     // await aceita retorno síncrono (mock) e Promise (mercadopago).
-    pix = await getPixProvider().gerarPedidoPix({ pedidoId, valorBRL });
+    pix = await getPixProvider().gerarPedidoPix({ pedidoId, valorBRL, pagador });
   } catch (err) {
     console.error("[iniciar-pagamento] provider falhou", {
       name: err?.name, code: err?.code, message: err?.message, status: err?.status,

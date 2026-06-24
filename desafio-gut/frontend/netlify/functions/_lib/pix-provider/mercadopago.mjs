@@ -14,20 +14,61 @@
 
 import { fetchMP } from "../mp-client.mjs";
 
-export async function gerarPedidoPix({ pedidoId, valorBRL }) {
+// Só dígitos. Aceita CPF (11) ou CNPJ (14). Retorna null se ausente/inválido —
+// evita mandar um documento malformado que o MP rejeitaria.
+function normalizarDoc(numero) {
+  if (!numero) return null;
+  const digitos = String(numero).replace(/\D/g, "");
+  return (digitos.length === 11 || digitos.length === 14) ? digitos : null;
+}
+
+// Monta o objeto `payer` do MP. Contas de produção homologadas costumam exigir
+// `payer.identification` (CPF/CNPJ) além do e-mail — sua ausência faz o
+// POST /v1/payments falhar (→ 502 pix_provider_indisponivel a montante).
+//
+// R9 (sem hardcode de credenciais): o documento NUNCA é embutido no código —
+// vem do pagador (request) ou de variáveis de ambiente do operador. Se nenhum
+// estiver disponível, `identification` é omitido (comportamento legado), em vez
+// de enviar um CPF falso que o MP recusaria na validação de dígitos.
+function montarPayer({ email, cpf, tipoDoc, nome } = {}) {
+  const payer = {
+    // MP exige email do payer mesmo para PIX. Usa o do pagador se fornecido,
+    // senão um placeholder configurável; o próprio MP coleta o real via app
+    // bancário no momento do pagamento.
+    email: email || process.env.MP_PAYER_EMAIL || "pagador@desafiogut.com.br",
+  };
+
+  const numero = normalizarDoc(cpf) || normalizarDoc(process.env.MP_PAYER_ID_NUMBER);
+  if (numero) {
+    const type = (tipoDoc || process.env.MP_PAYER_ID_TYPE ||
+      (numero.length === 14 ? "CNPJ" : "CPF")).toUpperCase();
+    payer.identification = { type, number: numero };
+  }
+
+  // first_name/last_name — opcionais, ajudam algumas contas de produção.
+  // Derivados do nome do pagador (ou env); omitidos se ausentes.
+  const nomeCompleto = (nome || process.env.MP_PAYER_NOME || "").trim();
+  if (nomeCompleto) {
+    const partes = nomeCompleto.split(/\s+/);
+    payer.first_name = partes[0];
+    if (partes.length > 1) payer.last_name = partes.slice(1).join(" ");
+  }
+
+  return payer;
+}
+
+export async function gerarPedidoPix({ pedidoId, valorBRL, pagador } = {}) {
   const data = await fetchMP("/v1/payments", {
     method: "POST",
+    // pedidoId é um UUID v4 (randomUUID) — já serve como X-Idempotency-Key
+    // dinâmico (mp-client.fetchMP o envia no header). Não duplicar.
     idempotencyKey: pedidoId,
     body: {
       transaction_amount: Number(valorBRL),
       description: `DesafioGUT — pedido ${pedidoId}`,
       payment_method_id: "pix",
       external_reference: pedidoId,
-      payer: {
-        // MP exige email do payer mesmo para PIX. Usamos placeholder e o
-        // próprio MP coleta o real do pagador via app bancário.
-        email: "pagador@desafiogut.com.br",
-      },
+      payer: montarPayer(pagador),
     },
   });
 

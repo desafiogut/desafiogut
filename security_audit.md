@@ -549,3 +549,26 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [✅] Loop visual MCP (375px/1440px), 3 moods (breathing/analyzing/celebrating) sem caixa, cores
   navy/dourado saturadas. Console limpo (só ruído pré-existente). →
   `Desktop\MC39.9-final.md` + `Desktop\MC39.9-shots\`.
+
+## MC39.13 — Correção do 502 PIX: payer.identification no payload · 2026-06-23
+- [✅] **Causa do 502 isolada por leitura de código:** `iniciar-pagamento.mjs` converte
+  qualquer falha de `gerarPedidoPix` em `502 pix_provider_indisponivel`; com o provider
+  `mercadopago` isso = `POST /v1/payments` rejeitado. Faltava `payer.identification`.
+- [✅] **Sem segredo hardcoded (R9):** o documento do payer vem do request (`body.pagador`)
+  ou de env do operador (`MP_PAYER_ID_NUMBER`/`_TYPE`/`MP_PAYER_EMAIL`/`MP_PAYER_NOME`).
+  Se ausente, `identification` é **omitido** — nenhum CPF/CNPJ falso embutido no repo.
+- [✅] **Sem nova superfície de ataque relevante:** `body.pagador` é opcional e os campos
+  são lidos só se forem string e **truncados** (email≤254, cpf≤32, nome≤140); documento
+  normalizado para dígitos. Vão para o payload do MP (validado pelo MP), sem persistência
+  nem reflexão no HTML → sem XSS/injeção. RBAC, JWT e idempotência **inalterados**.
+- [✅] **Idempotência preservada:** `X-Idempotency-Key` continua = `pedidoId` (UUID v4);
+  nada duplicado. Diagnóstico do "header faltando" revisado e refutado pelo código.
+- [✅] **Script de diagnóstico** `scripts/test-mp-token.ps1`: token via param/env (nunca
+  hardcoded, R9), mascarado nos logs (R10/R14), ASCII-only. Sintaxe validada (AST, 0 erros).
+- [✅] **Regressão:** `node --check` limpo (2 `.mjs` alterados); **suite 111/111**; build verde.
+  Mudança aditiva, nenhum teste cobre o provider MP → sem regressão. Reversível (`git revert`).
+- [N/A] **Validação visual MCP:** não aplicável a esta mudança (backend de pagamento; o fluxo
+  é auth-gated/Privy, não automatizável). Gate manual do operador: KYC + chave PIX na conta
+  MP, webhook de produção, teste R$ 2,00 → `Desktop\MC39.13-manual-steps.txt`.
+- **VEREDICTO:** APROVADO para merge (escopo backend aditivo, R1 mantido). A conclusão
+  end-to-end depende dos passos manuais do operador (conta/KYC/webhook/teste R$ 2,00).

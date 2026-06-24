@@ -960,3 +960,42 @@ exatamente o mesmo princípio "zero filtro CSS" do `GutoAvatar.jsx` estático.
 sem caixa, cores navy/dourado saturadas, idênticas ao estático. Console limpo (só ruído
 pré-existente: CSP, 404 de functions locais). CLS=0 (`aria-hidden` + `pointer-events:none`
 mantidos).
+
+### 9.23 MC39.13 — Correção do 502 `pix_provider_indisponivel` (payload PIX + script de teste) (2026-06-23)
+> Numeração: §9.22 fica reservada para o MC39.12 (PR #104 em aberto). Este é §9.23.
+
+**Sintoma:** ao comprar fichas em produção, `iniciar-pagamento` retornava
+**502 `pix_provider_indisponivel`**. Causa: esse 502 é o catch-all de
+`iniciar-pagamento.mjs` (≈linha 70) — qualquer falha de `gerarPedidoPix` vira 502.
+Com o provider `mercadopago`, isso significa que o `POST /v1/payments` foi **rejeitado**.
+
+**Diagnóstico (revisado — SUPERPERS):** o vídeo do MP apontou 3 faltas; a verificação
+contra o código real mostrou que **uma já estava correta**:
+- ❌ `payer.identification` (CPF/CNPJ) **ausente** no payload → contas de produção
+  homologadas exigem; sua falta faz o MP recusar. **(causa de código — corrigida)**
+- ✅ `X-Idempotency-Key` **já era enviado** — `mp-client.fetchMP` o injeta a partir de
+  `idempotencyKey = pedidoId`, e `pedidoId` é um `randomUUID()` (v4). **Não duplicado.**
+- ⚠️ Token `APP_USR-` possivelmente **sem KYC/chave PIX** na conta → **passo manual**.
+
+**Correção de código (frontend/netlify/functions):**
+- `_lib/pix-provider/mercadopago.mjs`: novo `montarPayer()` adiciona
+  `payer.identification` (`type`+`number`) e `first_name`/`last_name`. Origem dos dados:
+  o **pagador** (request) **ou** variáveis de ambiente do operador (`MP_PAYER_ID_NUMBER`,
+  `MP_PAYER_ID_TYPE`, `MP_PAYER_EMAIL`, `MP_PAYER_NOME`). Documento normalizado para
+  dígitos; se nenhum disponível, `identification` é **omitido** (comportamento legado) —
+  **sem CPF falso hardcoded (R9)**.
+- `iniciar-pagamento.mjs`: aceita `body.pagador` opcional (`email`/`cpf`/`tipoDoc`/`nome`),
+  com truncagem defensiva, e encaminha ao provider. Mock ignora o campo (sem efeito).
+
+**Ferramenta de diagnóstico:** `scripts/test-mp-token.ps1` — chama o `POST /v1/payments`
+**direto** na API do MP (sem a Netlify Function), com o payload corrigido, para isolar se o
+problema é token/conta vs. payload. Token via `-Token`/`$env:MP_ACCESS_TOKEN` (nunca
+hardcoded, R9), mascarado nos logs (R10/R14). ASCII-only (PS 5.1 corromperia UTF-8 sem BOM).
+
+**Passos manuais (operador):** KYC + chave PIX na conta MP, webhook de produção, definir
+`MP_PAYER_ID_NUMBER` no Netlify se o frontend ainda não coleta CPF, e o teste R$ 2,00.
+Runbook completo: `Desktop\MC39.13-manual-steps.txt` + relatório `Desktop\MC39.13-final.md`.
+
+**Regressão:** `node --check` limpo nos 2 `.mjs` alterados; **suite 111/111**; `npm run build`
+verde. Nenhum teste cobre o provider MP (sem snapshot de payload), e o `identification` só é
+**aditivo** → zero regressão. Reversível por `git revert` (código) + rollback de token (env).
