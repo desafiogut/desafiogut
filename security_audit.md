@@ -597,3 +597,26 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - **Pendente (operador):** smoke real R$ 2,00 em produção com CPF (QR + crédito) — exige login
   Privy real, fora do alcance do MCP.
 - **VEREDICTO:** APROVADO para merge (frontend aditivo, R1 mantido, R9/LGPD ok).
+
+## MC39.15.1 — CPF automático: campo manual removido, email do Privy · 2026-06-26
+- [✅] **Motivação:** o sistema não coleta/armazena CPF de individuais (confirmado no schema e no
+  contexto). Manter input manual era a única forma de obter o CPF real, mas o operador optou pelo
+  fallback de env. Removido o campo; envia-se só o `email` (Privy) no `pagador`.
+- [✅] **Menos PII no client (melhora):** o frontend deixa de manipular CPF do usuário. Trafega
+  apenas o `email` (próprio do usuário) para o `payer` do MP — finalidade legítima (LGPD).
+  Nenhum CPF é coletado, exibido, logado ou persistido no client.
+- [✅] **Sem segredo hardcoded (R9):** o documento do payer vem de `MP_PAYER_ID_NUMBER` (env do
+  operador), nunca do código. Email do usuário é dado de runtime do login.
+- [⚠️] **Risco operacional (R1) — env obrigatória:** se `MP_PAYER_ID_NUMBER` **não** estiver setado
+  no Netlify, `identification` é omitido e contas MP homologadas recusam o `POST /v1/payments`
+  → **502** (regressão do MC39.13). **Gate:** operador deve confirmar a env antes/no smoke. Mitiga-se
+  por env (reversível), não por código.
+- [✅] **Sem nova superfície de ataque:** `email` é normalizado (`trim`) e só enviado se string;
+  vai ao backend (que trunca ≤254 e valida). Sem reflexão em HTML (input controlado removido) → sem
+  XSS. JWT/RBAC/idempotência inalterados.
+- [✅] **Regressão:** `npm run build` verde; `node --check` N/A (`.jsx`); diff net −39 (2 arquivos);
+  `iniciar-pagamento` caller único; corporativo (cotas/voucher) não usa PIX → intacto.
+- [✅] **Validação visual MCP (375 + 1440):** campo CPF ausente, botão habilitado sem CPF, console
+  limpo (preview isolado; Privy/OAuth não automatizável — MC39.3.1).
+- **VEREDICTO:** APROVADO para merge, **condicionado** à confirmação de `MP_PAYER_ID_NUMBER` no
+  Netlify (senão o 502 do MC39.13 retorna). Mudança de código é redução de PII + simplificação.

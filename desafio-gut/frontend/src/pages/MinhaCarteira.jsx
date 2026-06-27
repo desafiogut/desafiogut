@@ -30,11 +30,17 @@ export default function MinhaCarteira() {
   const navigate = useNavigate();
   const {
     isConnected, abrirModal,
-    address, userLabel, lances,
+    address, userLabel, lances, user,
     saldoSenhas, saldoSenhasStatus, refetchSaldo,
     saldoRsCentavos, saldoRsStatus, refetchSaldoRs,
     setTipoLeilao,
   } = useAppContext();
+
+  // Email do pagador para o PIX (MC39.15.1): coletado automaticamente do login
+  // Privy (e-mail/Google/Apple). O CPF NÃO é coletado — o documento do payer é
+  // resolvido no backend (env MP_PAYER_ID_NUMBER).
+  const emailPagador =
+    user?.email?.address || user?.google?.email || user?.apple?.email || null;
 
   // MC17.1 ITEM 1 — lógica de compra de senhas extraída para hook reutilizável.
   // Aliases preservam os nomes usados no JSX (zero alteração de comportamento — R2).
@@ -437,6 +443,7 @@ export default function MinhaCarteira() {
         aberto={comprarAberto}
         onFechar={() => setComprarAberto(false)}
         address={address}
+        email={emailPagador}
         onSucesso={() => {
           try { refetchSaldoRs?.(); } catch {}
           try { refetchSaldo?.();   } catch {}
