@@ -1063,3 +1063,27 @@ intermediário. O `email` enviado passa a ser o do próprio usuário (melhor que
 **Regressão:** `npm run build` verde; `node --check` N/A (`.jsx`); diff net **−39** (2 arquivos,
 +22/-61); `iniciar-pagamento` caller único; corporativo intacto. **Pendente (operador):** confirmar
 `MP_PAYER_ID_NUMBER` no Netlify + smoke real R$ 2,00. Relatório: `Desktop\MC39.15.1-final.md`.
+
+### 9.26 MC39.17.1 — Hardening: correção dos 2 bloqueadores P0 da auditoria (2026-06-27)
+> Sequência da auditoria read-only MC39.17. Branch `feat/mc39.17.1`. Correções cirúrgicas de
+> backend (`.mjs`), baixo risco, **zero regressão**. Sem mudança visual.
+
+**B-P0-1 — `purge-lances.mjs` estava destrutivo SEM autenticação.** O endpoint apaga todos os
+lances da edição ativa (blob `lances-relampago` + entradas `lance-idem`) e qualquer pessoa na
+internet podia chamá-lo (`POST {edicaoId}`) — sabotagem trivial de um leilão em curso.
+- **Correção:** `import { guardAdmin } from "./_lib/admin-auth.mjs"` + guard como 1ª checagem do
+  handler (`const denied = await guardAdmin(req); if (denied) return denied;`), padrão idêntico a
+  `consolidar-lances.mjs`. Agora só admin (Bearer admin-jwt ou `x-admin-token` legado) executa o purge.
+
+**B-P0-2 — `comprar-senhas.mjs` quebrado por import faltando.** A linha do kill-switch chamava
+`sistemaPausado(await lerEstadoSistema())` sem o import → `ReferenceError` em **todo** POST: compra
+de senhas fora do ar e o `/panic` (modo pânico) inoperante.
+- **Correção:** `import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs"`.
+  Compra de senhas volta a operar; kill-switch responde 503 `sistema_pausado` quando ativo.
+
+**Cobertura de teste:** `_tests/mc39171-p0-fixes.test.mjs` (5 casos, offline com module-mocks).
+Suíte total **116/116** verde; `node --check` limpo (111 `.mjs`); `npm run build` verde.
+
+**Modelo de confiança (inalterado):** `purge-lances` agora compartilha a mesma porta admin de
+`consolidar-lances`/demais mutações sensíveis. Os 7 P1 da auditoria seguem em aberto para o pré-MC40.
+Relatório: `Desktop\MC39.17.1-final.md`.
