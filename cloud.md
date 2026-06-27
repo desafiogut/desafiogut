@@ -999,3 +999,35 @@ Runbook completo: `Desktop\MC39.13-manual-steps.txt` + relatório `Desktop\MC39.
 **Regressão:** `node --check` limpo nos 2 `.mjs` alterados; **suite 111/111**; `npm run build`
 verde. Nenhum teste cobre o provider MP (sem snapshot de payload), e o `identification` só é
 **aditivo** → zero regressão. Reversível por `git revert` (código) + rollback de token (env).
+
+### 9.24 MC39.15 — Frontend captura o CPF do pagador no fluxo PIX (2026-06-26)
+> Fecha o ciclo aberto pelo MC39.13: o backend já aceitava `body.pagador.cpf`; faltava o
+> frontend coletar e enviar. (MC39.14 foi *no-op* — o backend já estava pronto desde o MC39.13.)
+
+**Sintoma:** o backend monta `payer.identification` a partir de `body.pagador.cpf`, mas o
+`ComprarFichasModal` enviava só `{ endereco, qtd }`. Sem CPF no request, `montarPayer` dependia
+do fallback de env (`MP_PAYER_ID_NUMBER`) — frágil para o usuário final.
+
+**Correção de código (`src/components/ComprarFichasModal.jsx`, único caller de `iniciar-pagamento`):**
+- Campo **"CPF do pagador"** na etapa *quantia*, `type=tel`/`inputMode=numeric`, com máscara
+  `000.000.000-00` (`formatarCpf`). O estado guarda **só dígitos**; o display é mascarado.
+- Validação de **11 dígitos** (mesmo critério do backend, `_lib/validate`/`montarPayer` —
+  anti-split-brain). Hint inline + `aria-invalid`; botão "Continuar" **desabilitado** até válido.
+- `iniciarPagamento` envia o **contrato estruturado**: `{ endereco, qtd, pagador: { cpf } }`
+  (dígitos). **Não** usa `body.cpf` plano (seria ignorado pelo backend). Guard antes do POST.
+- Erros do backend já são exibidos pelo `postJson` (`data.error.message`).
+
+**Cobertura:** PIX de fichas tem **um único ponto** no frontend (`ComprarFichasModal`, montado em
+`MinhaCarteira`), usado por usuário comum e corporativo. O fluxo corporativo de *cotas*
+(`cotas`/`voucher`/`comprar-senhas`) **não** usa PIX → fora do escopo. Uma mudança cobre tudo.
+
+**Validação visual (375px + 1440px):** via preview isolado descartável (o gate Privy/OAuth não é
+automatizável por MCP — MC39.3.1; `netlify dev` não sobe functions local). Confirmado:
+vazio→botão desabilitado, `123`→hint vermelho "CPF deve ter 11 dígitos"+disabled,
+`12345678909`→máscara `123.456.789-09`+botão habilitado; bottom-sheet ok no mobile; console limpo
+(só 404 de favicon). Shots: `Desktop\MC39.15-shots\`.
+
+**Regressão:** `npm run build` verde; `node --check` N/A (só `.jsx`); diff aditivo de 1 arquivo
+(+60/-3); `iniciar-pagamento` segue com caller único → zero regressão. **Pendente (operador):**
+smoke real R$ 2,00 em produção com CPF (geração de QR + crédito) — requer login Privy real.
+Relatório: `Desktop\MC39.15-final.md`.
