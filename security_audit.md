@@ -572,3 +572,28 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   MP, webhook de produção, teste R$ 2,00 → `Desktop\MC39.13-manual-steps.txt`.
 - **VEREDICTO:** APROVADO para merge (escopo backend aditivo, R1 mantido). A conclusão
   end-to-end depende dos passos manuais do operador (conta/KYC/webhook/teste R$ 2,00).
+
+## MC39.15 — Frontend captura o CPF do pagador no fluxo PIX · 2026-06-26
+- [✅] **Escopo:** apenas `src/components/ComprarFichasModal.jsx` (único caller de
+  `iniciar-pagamento`). Sem mudança de backend. Frontend agora envia `{ endereco, qtd,
+  pagador: { cpf } }` — alinhado ao contrato que o backend já validava (MC39.13).
+- [✅] **Validação de CPF no client (defesa em profundidade):** 11 dígitos numéricos,
+  mesmo critério do backend (`montarPayer.normalizarDoc`). É **complementar**, não substitui —
+  o backend continua validando/normalizando. Botão de compra bloqueado até CPF válido.
+- [✅] **Sem segredo hardcoded (R9):** CPF é dado do usuário digitado em runtime; nada embutido
+  no repo. Nenhum CPF de teste comitado no código (o `12345678909` aparece só na auditoria/doc).
+- [✅] **Sem nova superfície de ataque:** CPF é normalizado para dígitos (`replace(/\D/g,"")`)
+  antes do envio; só trafega no body do POST para `iniciar-pagamento` (backend trunca/valida).
+  Renderizado apenas no próprio `<input>` controlado (sem `dangerouslySetInnerHTML`) → sem XSS.
+  Não é persistido em localStorage nem logado. JWT/RBAC/idempotência **inalterados**.
+- [✅] **PII (LGPD):** CPF não é gravado no client nem exposto em logs; usado apenas para a
+  cobrança PIX (finalidade legítima). Sem retenção no frontend.
+- [✅] **Regressão:** `npm run build` verde; `node --check` N/A (apenas `.jsx`); diff aditivo
+  (1 arquivo, +60/-3); `iniciar-pagamento` segue com caller único; fluxo corporativo (cotas/
+  voucher/comprar-senhas) não usa PIX → intacto. Reversível por `git revert`.
+- [✅] **Validação visual MCP (375px + 1440px):** realizada via preview isolado (gate Privy/OAuth
+  não automatizável — MC39.3.1). Estados vazio/inválido/válido + máscara + botão
+  habilitado/desabilitado confirmados; console sem erros (só 404 de favicon).
+- **Pendente (operador):** smoke real R$ 2,00 em produção com CPF (QR + crédito) — exige login
+  Privy real, fora do alcance do MCP.
+- **VEREDICTO:** APROVADO para merge (frontend aditivo, R1 mantido, R9/LGPD ok).
