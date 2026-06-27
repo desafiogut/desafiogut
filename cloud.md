@@ -1031,3 +1031,35 @@ vazio→botão desabilitado, `123`→hint vermelho "CPF deve ter 11 dígitos"+di
 (+60/-3); `iniciar-pagamento` segue com caller único → zero regressão. **Pendente (operador):**
 smoke real R$ 2,00 em produção com CPF (geração de QR + crédito) — requer login Privy real.
 Relatório: `Desktop\MC39.15-final.md`.
+
+### 9.25 MC39.15.1 — CPF automático: campo manual removido, email do Privy (2026-06-26)
+> Correção de rumo do MC39.15: o usuário **não** deve digitar o CPF.
+
+**Achado (diagnóstico):** o sistema **não armazena CPF em lugar nenhum**. Schema Supabase sem
+coluna `cpf` (`lojistas`/`saldo_rs`/`wallet`/`troco_senhas`); CNPJ só na tabela `cotas`
+(corporativo, que **não** usa PIX). Usuário individual (quem usa o `ComprarFichasModal`) tem
+apenas **email + carteira** via Privy. Logo, "buscar CPF do cadastro" é impossível sem antes
+coletá-lo. **Decisão do operador:** usar o fallback de env já existente.
+
+**Correção de código:**
+- `ComprarFichasModal.jsx`: **removido** o campo de CPF (input/label/estado/máscara/validação e o
+  gate do botão). Nova prop `email`; `iniciarPagamento` envia `pagador: { email }` quando
+  disponível (senão `{ endereco, qtd }`). O documento (`payer.identification`) é resolvido no
+  **backend** via `MP_PAYER_ID_NUMBER` (fallback do `montarPayer`, MC39.13).
+- `MinhaCarteira.jsx`: deriva `emailPagador` de `user` (Privy: email/google/apple) e passa via prop.
+
+**⚠️ Dependência de produção (operador):** `MP_PAYER_ID_NUMBER` **deve estar setado** no Netlify
+(CPF/CNPJ do operador), senão `identification` é omitido e contas de produção homologadas voltam a
+recusar o `POST /v1/payments` → **502** (o mesmo do MC39.13). `MP_PAYER_EMAIL` continua como
+fallback de email. Sem credencial hardcoded (R9).
+
+**Semântica PIX:** usar um documento fixo do operador no `payer` é comum em PIX — o pagador real é
+identificado pelo banco no momento do pagamento; o `identification` da cobrança é o do recebedor/
+intermediário. O `email` enviado passa a ser o do próprio usuário (melhor que o placeholder).
+
+**Validação visual (375 + 1440):** preview isolado descartável — campo CPF **ausente**, botão
+**habilitado** sem CPF, mobile bottom-sheet ok, console limpo. Shots: `Desktop\MC39.15.1-shots\`.
+
+**Regressão:** `npm run build` verde; `node --check` N/A (`.jsx`); diff net **−39** (2 arquivos,
++22/-61); `iniciar-pagamento` caller único; corporativo intacto. **Pendente (operador):** confirmar
+`MP_PAYER_ID_NUMBER` no Netlify + smoke real R$ 2,00. Relatório: `Desktop\MC39.15.1-final.md`.
