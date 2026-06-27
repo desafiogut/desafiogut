@@ -550,6 +550,24 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   navy/dourado saturadas. Console limpo (só ruído pré-existente). →
   `Desktop\MC39.9-final.md` + `Desktop\MC39.9-shots\`.
 
+## MC39.17.1 — Correção dos 2 bloqueadores P0 da auditoria MC39.17 · 2026-06-27
+> Branch `feat/mc39.17.1`. Correções de poucas linhas, baixo risco, **zero regressão**.
+> Suite **116/116** verde (era 83/83 — suíte cresceu); `node --check` limpo (111 `.mjs`); `npm run build` verde.
+
+- [✅] **B-P0-1 — `purge-lances.mjs` agora exige `guardAdmin`.** Adicionado
+  `import { guardAdmin } from "./_lib/admin-auth.mjs"` + `const denied = await guardAdmin(req); if (denied) return denied;`
+  como **1ª checagem** do handler (após o gate de método), espelhando `consolidar-lances.mjs:47`.
+  Requisição não-admin é rejeitada (401/403) **antes** de tocar qualquer Blob — fim da sabotagem trivial.
+- [✅] **B-P0-2 — `comprar-senhas.mjs` import de `system-state` restaurado.** Adicionado
+  `import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs"`. Fim do `ReferenceError`
+  em todo POST: compra de senhas volta a funcionar e o kill-switch (`/panic` → 503 `sistema_pausado`) opera.
+- [✅] **Teste de regressão** `_tests/mc39171-p0-fixes.test.mjs` (5 casos, offline/module-mocks):
+  purge-lances bloqueia antes dos Blobs quando não-admin / prossegue quando admin / 405 em não-POST;
+  comprar-senhas passa do kill-switch sem ReferenceError (sistema ok → 401 token_ausente) e devolve 503 quando pausado.
+- [✅] **Sem mudança visual** (R4 N/A — apenas backend `.mjs`). RBAC, fluxo de lance/compra e demais endpoints intactos.
+- [⏳] **P1 da auditoria permanecem abertos** (webhook HMAC, PII admin-aprovacao, débito atômico, rate-limit auth-lance,
+  centralização da coordenação, protobufjs, SVG DOMPurify) — a tratar antes do MC40.
+
 ## MC39.13 — Correção do 502 PIX: payer.identification no payload · 2026-06-23
 - [✅] **Causa do 502 isolada por leitura de código:** `iniciar-pagamento.mjs` converte
   qualquer falha de `gerarPedidoPix` em `502 pix_provider_indisponivel`; com o provider

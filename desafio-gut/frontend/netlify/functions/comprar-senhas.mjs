@@ -30,6 +30,7 @@ import {
 } from "./_lib/saldoRs.mjs";
 import { creditarSenhas, lerSaldoSenhas, CONTRATO_ADDRESS } from "./_lib/contract.mjs";
 import { buscarVinculoPorIndicado, registrarConversao } from "./_lib/referral.mjs";
+import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 
 const VALOR_POR_SENHA_CENTAVOS = 200; // R$ 2,00
 
