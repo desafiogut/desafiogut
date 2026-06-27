@@ -22,20 +22,10 @@ const VALOR_POR_SENHA_BRL = 2;
 const ENDPOINT_INICIAR   = "/.netlify/functions/iniciar-pagamento";
 const ENDPOINT_CONFIRMAR = "/.netlify/functions/confirmar-pagamento";
 
-// CPF: o MP exige payer.identification em contas de produção. O backend
-// (iniciar-pagamento → mercadopago.montarPayer) normaliza para dígitos e exige
-// 11 (CPF). Aqui mascaramos para leitura e validamos a contagem de dígitos —
-// mesmo critério do backend (anti-split-brain). Sem checksum: o MP valida o
-// documento na criação da cobrança.
-const CPF_DIGITOS = 11;
-const soDigitos = (v) => String(v ?? "").replace(/\D/g, "");
-function formatarCpf(valor) {
-  const d = soDigitos(valor).slice(0, CPF_DIGITOS);
-  if (d.length <= 3)  return d;
-  if (d.length <= 6)  return `${d.slice(0, 3)}.${d.slice(3)}`;
-  if (d.length <= 9)  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-}
+// CPF do pagador NÃO é digitado: o sistema não coleta CPF de usuários
+// individuais (só email + carteira). O documento (payer.identification) é
+// resolvido no backend via env do operador (MP_PAYER_ID_NUMBER) — MC39.15.1.
+// Enviamos apenas o `email` do usuário (Privy) para o payer do MP.
 
 async function postJson(url, body) {
   const resp = await fetch(url, {
@@ -62,11 +52,10 @@ async function postJson(url, body) {
 const POLL_INTERVALO_MS = 3000;
 const POLL_TIMEOUT_MS   = 15 * 60 * 1000; // 15 min (igual TTL do JWT)
 
-export default function ComprarFichasModal({ aberto, onFechar, address, onSucesso }) {
+export default function ComprarFichasModal({ aberto, onFechar, address, email, onSucesso }) {
   const isMobile = useIsMobile();
   const [etapa, setEtapa]           = useState("quantia"); // quantia | pagamento | sucesso
   const [qtd, setQtd]               = useState(1);
-  const [cpf, setCpf]               = useState("");        // mascarado p/ leitura; enviado só dígitos
   const [pedido, setPedido]         = useState(null);      // resposta iniciar-pagamento
   const [resultado, setResultado]   = useState(null);      // resposta confirmar-pagamento
   const [loading, setLoading]       = useState(false);
@@ -79,7 +68,6 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
     if (!aberto) return;
     setEtapa("quantia");
     setQtd(1);
-    setCpf("");
     setPedido(null);
     setResultado(null);
     setLoading(false);
@@ -136,11 +124,6 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
   // ESC fecha via Modal (MC23.3)
   const valorBRL = qtd * VALOR_POR_SENHA_BRL;
 
-  // CPF — dígitos para envio/validação; mesmo critério (11) do backend.
-  const cpfDigitos = soDigitos(cpf);
-  const cpfValido  = cpfDigitos.length === CPF_DIGITOS;
-  const cpfTocado  = cpfDigitos.length > 0;
-
   function fechar() {
     if (loading) return;
     onFechar?.();
@@ -153,17 +136,16 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
 
   async function iniciarPagamento() {
     if (!address) { setErro("Endereço da carteira não disponível."); return; }
-    if (!cpfValido) { setErro("Informe um CPF válido (11 dígitos) para gerar o PIX."); return; }
     setLoading(true);
     setErro("");
     try {
-      // Contrato do backend (MC39.13/14): CPF vai em pagador.cpf (estruturado),
-      // normalizado para dígitos. NÃO usar body.cpf plano (seria ignorado).
-      const data = await postJson(ENDPOINT_INICIAR, {
-        endereco: address,
-        qtd,
-        pagador: { cpf: cpfDigitos },
-      });
+      // CPF não é coletado do usuário (MC39.15.1): o documento do payer vem do
+      // backend (env MP_PAYER_ID_NUMBER). Enviamos só o `email` do usuário (Privy)
+      // quando disponível — o backend usa MP_PAYER_EMAIL como fallback.
+      const emailPagador = typeof email === "string" ? email.trim() : "";
+      const body = { endereco: address, qtd };
+      if (emailPagador) body.pagador = { email: emailPagador };
+      const data = await postJson(ENDPOINT_INICIAR, body);
       setPedido(data);
       setEtapa("pagamento");
     } catch (err) {
@@ -328,38 +310,10 @@ export default function ComprarFichasModal({ aberto, onFechar, address, onSucess
               </div>
             </div>
 
-            <label style={labelInput} htmlFor="cpf-pagador">CPF do pagador</label>
-            <input
-              id="cpf-pagador"
-              type="tel"
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="000.000.000-00"
-              value={formatarCpf(cpf)}
-              onChange={(e) => setCpf(soDigitos(e.target.value))}
-              maxLength={14}
-              aria-label="CPF do pagador"
-              aria-invalid={cpfTocado && !cpfValido}
-              style={{
-                ...inputNum,
-                textAlign: "left",
-                letterSpacing: "0.04em",
-                borderColor: cpfTocado && !cpfValido ? "rgba(239,68,68,0.5)" : "rgba(245,166,35,0.3)",
-              }}
-            />
-            <p style={{
-              fontSize: "0.7rem", lineHeight: 1.4, margin: "0.4rem 0 0.9rem",
-              color: cpfTocado && !cpfValido ? COR.danger : COR.muted,
-            }}>
-              {cpfTocado && !cpfValido
-                ? "CPF deve ter 11 dígitos."
-                : "Exigido pelo provedor PIX (Mercado Pago) para gerar a cobrança."}
-            </p>
-
             <button
               onClick={iniciarPagamento}
-              disabled={loading || !address || !cpfValido}
-              style={btnPrimario(loading || !address || !cpfValido)}
+              disabled={loading || !address}
+              style={btnPrimario(loading || !address)}
             >
               {loading ? "Gerando PIX…" : "Continuar para pagamento →"}
             </button>
