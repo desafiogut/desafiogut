@@ -28,6 +28,29 @@ export async function setSaldo(clienteId, payload) {
   if (error) throw new Error(`[saldoRs-store] setSaldo falhou: ${error.message}`);
 }
 
+/**
+ * MC39.17.2 (B-P1-3) — Compare-And-Swap atômico do saldo.
+ * Faz UPDATE … WHERE cliente_id=$ AND payload->>'centavos' = <esperado>, devolvendo
+ * as linhas afetadas. A condição é avaliada atomicamente pelo Postgres → fecha a
+ * janela TOCTOU do débito (double-spend) sem migração nem RPC (R12).
+ *
+ * @param {string} clienteId
+ * @param {number} expectedCentavos — valor lido antes do débito (guarda do CAS).
+ * @param {object} payload — novo payload a gravar ({ centavos, atualizadoEm }).
+ * @returns {Promise<boolean>} true se exatamente 1 linha foi trocada (CAS venceu);
+ *   false se 0 linhas (saldo mudou sob concorrência → caller deve reler e repetir).
+ */
+export async function casSaldo(clienteId, expectedCentavos, payload) {
+  const { data, error } = await getSupabase()
+    .from(T_SALDO)
+    .update({ payload, atualizado_em: new Date().toISOString() })
+    .eq("cliente_id", String(clienteId))
+    .eq("payload->>centavos", String(Math.floor(Number(expectedCentavos))))
+    .select("cliente_id");
+  if (error) throw new Error(`[saldoRs-store] casSaldo falhou: ${error.message}`);
+  return Array.isArray(data) && data.length === 1;
+}
+
 /** Idempotência de crédito: lê o registo por pedidoId ou null. */
 export async function getCredito(pedidoId) {
   const { data, error } = await getSupabase()

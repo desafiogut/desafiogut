@@ -9,12 +9,12 @@
 //   Conversões R$ ↔ centavos só nas bordas (input/output).
 // - Idempotência por pedidoId via blob `saldo-rs-creditos:${pedidoId}` para PIX.
 //   Replays do webhook + confirmar-pagamento simultâneos retornam idempotent.
-// - Débito é checked-then-set; race window residual aceita (mesmo padrão do
-//   `pedidos-pagos`). Volume baixo torna o risco prático irrelevante.
+// - MC39.17.2 (B-P1-3): o débito é ATÔMICO via Compare-And-Swap (casSaldo) — a
+//   condição roda no Postgres, fechando a janela TOCTOU/double-spend concorrente.
 
 // MC36.1 — saldo R$ em Supabase (saldoRs-store). Escrita só Supabase (R11);
 // leitura com fallback para o Blob legado durante a transição (financeiro-fallback).
-import { getSaldo, setSaldo, getCredito, setCredito } from "./saldoRs-store.mjs";
+import { getSaldo, setSaldo, casSaldo, getCredito, setCredito } from "./saldoRs-store.mjs";
 import { lerSaldoLegado, lerCreditoLegado } from "./financeiro-fallback.mjs";
 
 function chave(endereco) {
@@ -106,13 +106,17 @@ export async function creditarSaldoRsIdempotente({ pedidoId, endereco, valorCent
 }
 
 /**
- * Debita R$. Lança se insuficiente. Não é idempotente por padrão — o caller
- * deve garantir uma execução por operação (ex: usar UUID em comprar-senhas
- * dentro de um fluxo que evita double-click).
+ * Debita R$ de forma ATÔMICA (B-P1-3). Usa Compare-And-Swap (casSaldo): lê o
+ * saldo, e só grava `saldo-valor` se o saldo no banco ainda for o valor lido —
+ * a verificação roda no Postgres, então dois débitos concorrentes não podem
+ * ambos "ver" o mesmo saldo e debitar duas vezes (double-spend). Em conflito de
+ * concorrência, relê e repete (até MAX_TENTATIVAS).
  *
  * @returns { ok, resultado: { saldoAntesCentavos, saldoDepoisCentavos, valorCentavos } }
- *        | { ok: false, code, message }
+ *        | { ok: false, code, message }   // code ∈ saldo_insuficiente | conflito_concorrencia | ...
  */
+const MAX_TENTATIVAS_DEBITO = 5;
+
 export async function debitarSaldoRs({ endereco, valorCentavos, motivo = "desconhecido" }) {
   if (!endereco || !valorCentavos) {
     return { ok: false, code: "params_invalidos", message: "endereco e valorCentavos obrigatórios" };
@@ -124,21 +128,50 @@ export async function debitarSaldoRs({ endereco, valorCentavos, motivo = "descon
   }
   console.info(`[saldoRs:debito:${motivo}] início`, { endereco: ender, valorCentavos: valor });
 
-  const saldoAntes = await lerSaldoRsCentavos(ender);
-  if (saldoAntes < valor) {
-    console.warn(`[saldoRs:debito:${motivo}] saldo insuficiente`, { endereco: ender, saldoAntes, valor });
-    return { ok: false, code: "saldo_insuficiente", message: `saldo R$ ${(saldoAntes/100).toFixed(2)} < valor R$ ${(valor/100).toFixed(2)}` };
+  for (let tentativa = 1; tentativa <= MAX_TENTATIVAS_DEBITO; tentativa++) {
+    let saldoAntes;
+    try {
+      saldoAntes = await lerSaldoRsCentavos(ender);
+    } catch (err) {
+      return { ok: false, code: "leitura_saldo_falhou", message: err?.message };
+    }
+    if (saldoAntes < valor) {
+      console.warn(`[saldoRs:debito:${motivo}] saldo insuficiente`, { endereco: ender, saldoAntes, valor });
+      return { ok: false, code: "saldo_insuficiente", message: `saldo R$ ${(saldoAntes/100).toFixed(2)} < valor R$ ${(valor/100).toFixed(2)}` };
+    }
+    const saldoDepois = saldoAntes - valor;
+    const novoPayload = { centavos: saldoDepois, atualizadoEm: new Date().toISOString() };
+
+    // Garante que a linha existe no Supabase para o CAS ter alvo de UPDATE
+    // (durante a transição MC36.1 o saldo pode existir só no Blob legado).
+    try {
+      const existe = await getSaldo(ender);
+      if (existe == null) {
+        await setSaldo(ender, { centavos: saldoAntes, atualizadoEm: new Date().toISOString() });
+      }
+    } catch (err) {
+      return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
+    }
+
+    let trocou;
+    try {
+      trocou = await casSaldo(ender, saldoAntes, novoPayload);
+    } catch (err) {
+      return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
+    }
+
+    if (trocou) {
+      console.info(`[saldoRs:debito:${motivo}] concluído`, {
+        endereco: ender, saldoAntes, saldoDepois, valorCentavos: valor, tentativa,
+      });
+      return { ok: true, resultado: { saldoAntesCentavos: saldoAntes, saldoDepoisCentavos: saldoDepois, valorCentavos: valor } };
+    }
+    // CAS perdeu: outro débito alterou o saldo entre a leitura e a escrita.
+    console.warn(`[saldoRs:debito:${motivo}] CAS perdeu (tentativa ${tentativa}/${MAX_TENTATIVAS_DEBITO}) — relendo saldo`, { endereco: ender });
   }
-  const saldoDepois = saldoAntes - valor;
-  try {
-    await gravarSaldoRsCentavos(ender, saldoDepois);
-  } catch (err) {
-    return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
-  }
-  console.info(`[saldoRs:debito:${motivo}] concluído`, {
-    endereco: ender, saldoAntes, saldoDepois, valorCentavos: valor,
-  });
-  return { ok: true, resultado: { saldoAntesCentavos: saldoAntes, saldoDepoisCentavos: saldoDepois, valorCentavos: valor } };
+
+  console.error(`[saldoRs:debito:${motivo}] conflito de concorrência após ${MAX_TENTATIVAS_DEBITO} tentativas`, { endereco: ender, valor });
+  return { ok: false, code: "conflito_concorrencia", message: "débito não aplicado após múltiplas tentativas (concorrência alta)" };
 }
 
 /** Devolve R$ ao saldo (compensação após falha em fluxo combinado). */
