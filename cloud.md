@@ -543,6 +543,31 @@ A maior exposição de mainnet é a **chave única da coordenação**: uma EOA c
 
 ---
 
+## MC39.17.3 — Pendências do MC39.17.2 resolvidas (2026-06-29)
+
+> Branch `feat/mc39.17.3`. Fecha as 4 pendências antes do MC40. Detalhe: `security_audit.md` §MC39.17.3.
+
+### P2 residuais (npm) — eliminados
+Bumps **forward** (mesmo major — nunca downgrade) + overrides transitivos no `package.json` do frontend:
+- diretos: `vite ^8.1.0` (era 8.0.8), `react-router-dom ^7.18.0` (era 7.14.2 → puxa react-router 7.18).
+- overrides transitivos: `form-data ^4.0.6`, `hono ^4.12.27`, `js-cookie ^3.0.8`, `ws ^8.21.0`.
+- **Resultado:** `npm audit` 35 (7 high) → **12 moderate, 0 high, 0 critical**. Build verde; suíte 104/104.
+- **Moderates remanescentes (P3, aceitos):** cadeia de wallet (`@privy-io/*`, `@metamask/*`, `wagmi`,
+  `@wagmi/connectors`, `x402`, `@gemini-wallet/core`), `aws-sdk`, `uuid` — só resolvíveis com bump **major**
+  do Privy/wagmi (alto risco de regressão de auth) → adiados para uma janela dedicada de upgrade do Privy.
+
+### Code-splitting do bundle Privy (plano P2)
+O chunk `privy-*.js` (~2.84 MB / 859 KB gz) domina o bundle. **Estratégia recomendada (não-bloqueante):**
+1. **Lazy-load das rotas** com `React.lazy` + `Suspense` no `App.jsx` (cada `<Route>` carrega seu chunk sob
+   demanda) — separa páginas pesadas (Dashboard, MercadoLances, Corporativo) do caminho crítico de entrada.
+2. **Adiar a inicialização do Privy** para quando o utilizador clica "Entrar" (o `PrivyProvider` já é montado
+   no topo; avaliar mover o SDK pesado para trás de um `lazy` no fluxo de login).
+3. **`build.rolldownOptions.output.codeSplitting`** / `manualChunks` para isolar `@privy-io`, `wagmi` e
+   `@walletconnect` em chunks assíncronos.
+> Perf, não segurança (P2). Reduz o bundle **e**, ao atualizar o Privy, abre caminho para zerar os moderates P3.
+
+---
+
 ## 8. Como contribuir (resumo operacional)
 1. Branch a partir do último estado validado. Commits atómicos (1 por item/fase).
 2. A cada commit: `node --check` `.mjs` + `npm run build` verde.
