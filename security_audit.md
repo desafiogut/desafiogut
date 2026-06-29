@@ -599,6 +599,28 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [⏳] **P1 da auditoria permanecem abertos** (webhook HMAC, PII admin-aprovacao, débito atômico, rate-limit auth-lance,
   centralização da coordenação, protobufjs, SVG DOMPurify) — a tratar antes do MC40.
 
+## MC39.20 — Escalabilidade Ondas 5-8 (perf, infra inerte) · 2026-06-29
+> Branch `feat/mc39.20`. Ondas 5-8 do plano MC39.18 (10k usuários). Mudanças de PERFORMANCE/infra,
+> escritas DEFENSIVAMENTE → zero regressão (R1). Suíte 110→**115/115**; `node --check` 124 `.mjs`;
+> build verde; validação visual MCP 375/1440 (Onda 5).
+
+**Postura de segurança:**
+- [✅] **Onda 5 — `useMemo` em TabelaLances:** apenas memoização de dado derivado (ordenação/apuração);
+  resultado idêntico, sem mudança de comportamento nem de RBAC. Sem nova superfície.
+- [✅] **Onda 6 — Materialized Views (migração, NÃO aplicada):** `mv_lances_por_edicao`, `mv_cotas_disponiveis`.
+  **MVs não suportam RLS** → controlado por GRANT: `REVOKE` de anon/authenticated + `GRANT SELECT` só a
+  `service_role` (backend-only, mantém o padrão de `lances`/`cotas`). Nenhum dado novo exposto ao cliente.
+- [✅] **Onda 7 — Fila Postgres (migração + libs, INERTE):** tabela `fila_tarefas` com **RLS `FOR ALL TO
+  service_role`**; RPC `reservar_tarefas` com `REVOKE` de anon/authenticated + `GRANT EXECUTE` só service_role.
+  Claim atômico (`FOR UPDATE SKIP LOCKED`) evita double-processing. `_lib/fila.mjs` é **inerte** até a migração
+  ser aplicada (RPC ausente → no-op). Nenhum fluxo síncrono foi reescrito (zero regressão); produtores adotam
+  sob demanda. `fila-processor-scheduled.mjs` roda */5min e no-opa enquanto a tabela não existir.
+- [✅] **Onda 8 — RUM web-vitals:** `web-vitals` → Sentry (já inicializado, com scrub argon2id intacto). Só
+  envia evento quando o vital é "poor" (anti-ruído + alimenta alerta); demais viram breadcrumb. Sem PII nova
+  (só métricas de performance). No-op se `VITE_SENTRY_DSN` ausente.
+- **VEREDICTO:** performance/infra, zero regressão, sem nova superfície de ataque. As migrações de MV e fila
+  ficam para o operador aplicar (R12); a fila e as MVs ativam só após aplicação.
+
 ## MC39.19 — Escalabilidade Ondas 1-4 (perf, env-gated) · 2026-06-29
 > Branch `feat/mc39.19`. Ondas 1-4 do plano MC39.18 (10k usuários). Mudanças de PERFORMANCE,
 > escritas DEFENSIVAMENTE (env-gated) → zero regressão (R1). Suíte 104→**110/110**; `node --check`
