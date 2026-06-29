@@ -599,6 +599,46 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [⏳] **P1 da auditoria permanecem abertos** (webhook HMAC, PII admin-aprovacao, débito atômico, rate-limit auth-lance,
   centralização da coordenação, protobufjs, SVG DOMPurify) — a tratar antes do MC40.
 
+## MC39.17.2 — Correção dos 7 P1 da auditoria MC39.17 · 2026-06-29
+> Branch `feat/mc39.17.2` (a partir de `main` com #108/#110). Navegação via Graphify (R7).
+> Baseline **88/88** (`_tests/*.test.mjs`) + build verde → após as correções **95/95** + build verde;
+> `node --check` limpo em todos os `.mjs` tocados. Ritmo lento e profundo (R8), zero regressão (R1).
+
+- [✅] **P1-2 — `protobufjs` crítico eliminado.** `package.json` (frontend) ganhou
+  `overrides.protobufjs: "^7.6.4"`. A vuln vinha de `@xenova/transformers→onnxruntime-web→onnx-proto`
+  (protobufjs 6.11.6), não da cadeia Privy como o relatório supôs. `npm audit`: **39 → 35**
+  (1 critical→0, 10 high→7, 28 moderate). 7.6.4 zera **todos** os GHSA do protobufjs (ranges ≤7.6.2) e
+  mantém compat com `onnx-proto` (^6.8.0). Highs restantes (`react-router`, `vite`, `ws`, `hono`,
+  `form-data`, `js-cookie`) são major-bump da toolchain/Privy → **follow-up P2** (fora do escopo do P1-2).
+- [✅] **P1-3 — SVG sanitizado (stored XSS cross-user).** Cliente (autoritativo): `BannerCard.jsx:110`
+  e `CorporativoBanners.jsx` passam o SVG por `DOMPurify.sanitize(svg,{USE_PROFILES:{svg:true}})` antes do
+  `dangerouslySetInnerHTML` (mesmo padrão já em `Vitrine.jsx`). Backend (defesa em profundidade): novo
+  `_lib/svg-sanitize.mjs` (scrub regex sem dependências — `script`/`on*`/`href javascript:`/`foreignObject`/
+  `iframe`) aplicado em `banners.mjs` no ponto de entrega do SVG armazenado. Teste `mc3917-svg-sanitize` (6/6).
+- [✅] **B-P1-1 — Webhook MP com HMAC.** Novo `_lib/mp-signature.mjs` valida `x-signature` (`ts,v1`)
+  contra o manifest `id:<data.id>;request-id:<x-request-id>;ts:<ts>;` via HMAC-SHA256 (`MP_WEBHOOK_SECRET`)
+  + `timingSafeEqual`; wired em `webhook-mercadopago.mjs` (401 se inválida). **Rollout seguro (R1):**
+  fail-open enquanto `MP_WEBHOOK_SECRET` não estiver set (comportamento legado). `.env.example` documentado.
+  Teste `mc3917-mp-signature` (5/5).
+- [✅] **B-P1-2 — GET `admin-aprovacao` autenticado (PII/LGPD).** `handleGet` exige JWT user-session/admin
+  (padrão anti-IDOR de `saldo-rs.mjs`): com `?cliente_id` → `validarOwnerOuAdmin`; sem cliente_id (listar tudo) →
+  só admin. Frontend (`AdminPanel`) carrega a lista via `chamarAdmin` (Bearer admin-access + auto-refresh).
+  Fim do `store.list()` público.
+- [✅] **B-P1-3 — Débito de saldo atômico (double-spend).** Nova primitiva `casSaldo()` em `saldoRs-store.mjs`
+  (UPDATE … WHERE `payload->>centavos`=lido, com RETURNING — CAS avaliado pelo Postgres, **sem migração**, R12).
+  `debitarSaldoRs` agora é loop CAS com retry (materializa a linha se só existir no Blob legado). Novo code
+  `conflito_concorrencia`. Teste de débito concorrente (3×400 sobre 1000 → 2 ok + 1 falha; saldo final 200).
+- [✅] **B-P1-4 — `auth-lance` com rate-limit + fail-counter.** Espelha `auth-user.mjs`:
+  `aplicarRateLimit(req,"auth-lance",10)` + `registrarFalhaJwt` nas duas falhas de assinatura.
+- [📋] **P1-1 — Centralização da coordenação (PLANO, não código).** Documentado em `cloud.md` §MC39.17.2:
+  após o deploy MC40, transferir `coordenacao` (two-step do contrato) para **Gnosis Safe 2/3** ou manter o
+  **owner em KMS** (linha MC30.2.1 Biconomy+KMS). Runbook Gnosis Safe já referenciado em §MC31. Em Sepolia o
+  risco é aceitável; a transferência é obrigatória **antes** de qualquer valor real em mainnet.
+- [⚠️] **Validação visual MCP (R4):** as correções de frontend são lógica-only (sanitização envolve o
+  render existente; AdminPanel troca o transporte do fetch). Os renders de banner não são validáveis
+  localmente (functions 404 + auth gate — MC39.3.1); smoke diferido à produção (operador).
+- **VEREDICTO:** os 7 P1 endereçados. P1-1 é plano operacional pós-MC40; demais shipped com testes + build verde.
+
 ## MC39.13 — Correção do 502 PIX: payer.identification no payload · 2026-06-23
 - [✅] **Causa do 502 isolada por leitura de código:** `iniciar-pagamento.mjs` converte
   qualquer falha de `gerarPedidoPix` em `502 pix_provider_indisponivel`; com o provider

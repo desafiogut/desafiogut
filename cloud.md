@@ -504,6 +504,44 @@ http(s); bloqueio de IPs privados/loopback/link-local por literal + resolução 
 
 ---
 
+## MC39.17.2 — Hardening P1 pré-Mainnet (2026-06-29)
+
+> Branch `feat/mc39.17.2`. Correção dos 7 P1 da auditoria MC39.17. Detalhe e validação em
+> `security_audit.md` §MC39.17.2. `Leilao.sol` **não muda**; nenhuma transação on-chain executada.
+
+### Correções de código (shipped)
+- **Dependências (P1-2):** `overrides.protobufjs ^7.6.4` no `package.json` do frontend — elimina a
+  única vuln *critical* do `npm audit` (39→35; 0 critical).
+- **XSS de SVG (P1-3):** DOMPurify svg-profile no cliente (`BannerCard`, `CorporativoBanners`) +
+  scrub server-side `_lib/svg-sanitize.mjs` em `banners.mjs` (defesa em profundidade).
+- **Webhook MP (B-P1-1):** HMAC `x-signature` via `_lib/mp-signature.mjs` (`MP_WEBHOOK_SECRET`,
+  fail-open enquanto o segredo não está set).
+- **PII/LGPD (B-P1-2):** GET `admin-aprovacao` exige JWT (owner-ou-admin / admin p/ listar).
+- **Double-spend (B-P1-3):** débito de saldo R$ atômico via CAS (`casSaldo` em `saldoRs-store`).
+- **Brute-force (B-P1-4):** rate-limit + fail-counter em `auth-lance` (espelha `auth-user`).
+
+### P1-1 — Plano de descentralização da `coordenacao` (operacional, pós-MC40)
+A maior exposição de mainnet é a **chave única da coordenação**: uma EOA controla `adicionarSenhas`
+(cunha saldo), `comprometerLance` e `consolidarResultado`. **Mitigação obrigatória antes de valor real:**
+
+1. **Deploy MC40** do `LeilaoGUT` em mainnet com `coordenacao = deployer` (EOA/Smart Account de deploy).
+2. **Escolher o dono final** (decisão do operador):
+   - **Opção A — Gnosis Safe 2/3 (recomendada):** multisig com 3 signatários (ex.: 2 hardware + 1 KMS),
+     limiar 2. Remove o ponto único de falha; runbook em `security_audit.md` §MC31.
+   - **Opção B — Owner em KMS (MC30.2.1):** Smart Account ERC-4337 com owner AWS KMS (chave nunca sai do
+     KMS). Menos resiliente que multisig, mas já implementado e endurecido (guarda de mainnet no `signer.mjs`).
+3. **Transferir via two-step do contrato:** `iniciarTransferenciaCoordenacao(<novoDono>)` pela coordenação
+   atual → `aceitarTransferenciaCoordenacao()` pelo novo dono (Safe/KMS). O two-step evita transferir para
+   um endereço errado/sem controlo.
+4. **Verificar on-chain:** `coordenacao()` retorna o novo endereço; revogar/retirar a chave de deploy do ambiente.
+5. **Hardening complementar (P2, registado):** considerar verificação on-chain do compromisso do vencedor em
+   `consolidarResultado` e desabilitar `darLance` (valor em claro) para edições reais em mainnet.
+
+> ⚠️ Não flipar `NETWORK_STAGE=mainnet` antes do contrato mainnet existir (ver `Desktop/MC40-checklist.md`).
+> Relatório desta entrega: `Desktop/MC39.17.2-final.md`.
+
+---
+
 ## 8. Como contribuir (resumo operacional)
 1. Branch a partir do último estado validado. Commits atómicos (1 por item/fase).
 2. A cada commit: `node --check` `.mjs` + `npm run build` verde.
