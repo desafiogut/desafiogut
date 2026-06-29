@@ -599,6 +599,35 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [⏳] **P1 da auditoria permanecem abertos** (webhook HMAC, PII admin-aprovacao, débito atômico, rate-limit auth-lance,
   centralização da coordenação, protobufjs, SVG DOMPurify) — a tratar antes do MC40.
 
+## MC39.17.3 — Resolução das 4 pendências do MC39.17.2 · 2026-06-29
+> Branch `feat/mc39.17.3` (a partir de `main` com #111). PR #112 (mergeado `--admin`) + PR de docs de fechamento.
+> Baseline **100/100** → **104/104** (`_tests/*.test.mjs`); `node --check` limpo em 117 `.mjs`; build verde.
+> Deploy validado em produção (Sepolia).
+
+- [✅] **Pendência 1 — Ativação do HMAC do webhook MP documentada.** `docs/mainnet-prerequisites.md` §1:
+  obter o secret no painel MP, `netlify env:set MP_WEBHOOK_SECRET … --context production`, redeploy e
+  verificação fail-closed (`POST` sem assinatura → 401). É config operacional do operador (sem mudança de código);
+  o código fail-open já estava pronto (MC39.17.2). `cloud.md` aponta para o doc.
+- [✅] **Pendência 2 — Smoke visual dos banners (MCP 375/1440).** Vitrine em produção (chrome-devtools, consent
+  aceito): render limpo a **1440** e **375**; console só com ruído pré-existente (Privy CORS + 404 favicon) —
+  **zero erro de SVG/XSS/CSP**. Limitação registrada: sem banner corporativo/auto ativo na conta de prod, o render
+  do SVG sanitizado não foi observável ao vivo (coberto por teste `scrubSvg` 6/6 + padrão idêntico já em prod).
+- [✅] **Pendência 3 — Double-spend (CAS) com teste dedicado.** `_tests/mc3917-double-spend.test.mjs` (4 casos
+  determinísticos, sem depender de timing): retry após escrita concorrente injetada entre leitura e CAS (competidor
+  300 + débito 600 sobre 1000 → saldo 100); contenção perpétua → `conflito_concorrencia` com saldo intacto;
+  2×500 sobre 500 → só um vence; boundary (débito == saldo). Confirma a atomicidade do `casSaldo` (UPDATE+RETURNING).
+- [✅] **Pendência 4 — P2 residuais (npm highs) eliminados.** Bumps **forward** no `package.json` (frontend):
+  `vite ^8.1.0`, `react-router-dom ^7.18.0` + overrides transitivos `form-data ^4.0.6`, `hono ^4.12.27`,
+  `js-cookie ^3.0.8`, `ws ^8.21.0`. **`npm audit`: 35 (7 high) → 12 moderate, 0 high, 0 critical.** ⚠️ As versões
+  do plano (`react-router 6.28`, `vite 5.4`, `js-cookie 3.0.5`) eram **downgrade/ainda-vulneráveis** → substituídas.
+  Build verde (vite 8.1 + router 7.18) e roteamento validado em prod (Vitrine/Dashboard renderizam, sem white-screen)
+  → **zero regressão (R1)**. Code-splitting do Privy documentado (`cloud.md` §MC39.17.3, plano P2).
+- [📌] **Moderates remanescentes (P3, aceitos):** cadeia de wallet (`@privy-io/*`, `@metamask/*`, `wagmi`,
+  `@wagmi/connectors`, `x402`, `@gemini-wallet/core`), `aws-sdk`, `uuid` — só resolvíveis com bump **major** do
+  Privy/wagmi (alto risco de regressão de auth) → janela de upgrade dedicada, fora do gate pré-MC40.
+- **VEREDICTO:** 4 pendências fechadas. Sistema sem high/critical no `npm audit`; gates de código (P1/P0) verdes.
+  Resta ao operador: setar `MP_WEBHOOK_SECRET` (ativa HMAC) e, pós-MC40, a transferência da coordenação (P1-1).
+
 ## MC39.17.2 — Correção dos 7 P1 da auditoria MC39.17 · 2026-06-29
 > Branch `feat/mc39.17.2` (a partir de `main` com #108/#110). Navegação via Graphify (R7).
 > Baseline **88/88** (`_tests/*.test.mjs`) + build verde → após as correções **100/100** + build verde;
