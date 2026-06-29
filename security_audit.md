@@ -541,6 +541,37 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   estava errado. O Chrome compõe esse alfa nativamente em `<video>` simples, sem CSS algum.
 - [✅] Causa real da "caixa": o próprio `mix-blend-mode: screen` + `filter` do MC39.8, aplicados a
   um vídeo já com alfa correto, interagiam mal com o `backdrop-filter: blur()` do GlassCard.
+
+## MC39.17 — Auditoria pré-Mainnet (read-only) · 2026-06-27
+> Auditoria estática + Node (Foundry/Echidna/AgentShield N/A local → CI). Relatório completo:
+> `Desktop\MC39.17-auditoria.md`. Suite **83/83** verde; `npm run build` verde. **Nenhum código alterado.**
+>
+> **VEREDICTO: NÃO PRONTO para Mainnet.** 2 bloqueadores P0 ativos (já em Sepolia) + 5 P1.
+
+- [🔴] **P0 (corrigir já — poucas linhas):**
+  - `purge-lances.mjs:5,22-73` — endpoint destrutivo **sem autenticação**: qualquer um apaga todos os
+    lances da edição ativa via `POST {edicaoId}`. → adicionar `guardAdmin` (ou remover o endpoint).
+  - `comprar-senhas.mjs:113` — `sistemaPausado`/`lerEstadoSistema` usados **sem import** → `ReferenceError`
+    em todo POST: compra de senhas fora do ar + kill-switch inoperante. → importar de `_lib/system-state.mjs`.
+- [🟠] **P1 (antes do mainnet):**
+  - Contrato: centralização da `coordenacao` (EOA única emite saldo, compromete e **consolida vencedor**
+    off-chain sem prova on-chain) → transferir p/ Gnosis Safe/KMS pós-deploy (`Leilao.sol:60,81,160`).
+  - `webhook-mercadopago.mjs:14-15` — sem HMAC `x-signature` (mitigado por re-fetch MP + idempotência).
+  - `admin-aprovacao.mjs:49-88` — GET sem auth vaza PII de todos os clientes (LGPD).
+  - `_lib/saldoRs.mjs:127-141` — débito não-atômico (TOCTOU/double-spend) → CAS atômico.
+  - `auth-lance.mjs` — sem rate-limit/`registrarFalhaJwt` (espelhar `auth-user.mjs`).
+  - Frontend: `npm audit` 1 critical (`protobufjs`) + 9 high (transitivos via Privy→x402→wagmi, **enviados
+    ao cliente**) → `override` de `protobufjs`; SVG sem DOMPurify em `BannerCard.jsx:110` /
+    `CorporativoBanners.jsx:117` (padrão correto já em `Vitrine.jsx:262`).
+- [✅] **Verificado LIMPO (evidência de linha):** JWT sem alg-confusion/`none` + `JWT_SECRET` obrigatório
+  (`_lib/jwt.mjs`); KMS — chave nunca sai do processo + guard de mainnet (`_lib/signer.mjs:64-94`);
+  Supabase `service_role` singleton server-only nunca exposto + PostgREST sem SQLi (`_lib/supabase-client.mjs`,
+  `data-store-supabase.mjs`); RLS uniforme `service_role`-only nas tabelas financeiras; webhook usa valor da
+  API MP (sem double-credit); SSRF bloqueado em `img-proxy.mjs`; `consolidar-lances.mjs:41-48` com guard
+  mainnet+anti-replay; `.env` fora do git; `hardhat.config.js` lê `PRIVATE_KEY` do env (sem hardcode);
+  headers/CSP fortes (`netlify.toml`).
+- [⏳] **Pendências de processo:** Foundry+Echidna+AgentShield em CI; auditoria externa do contrato antes do MC40;
+  manter `NETWORK_STAGE=Sepolia` até o contrato mainnet existir.
 - [✅] Mudança puramente visual/CSS em `GutoSpritePlayer.jsx` (frontend-only): removidos
   `mix-blend-mode`, `filter` e qualquer canvas/chroma-key — `<video>` simples, sem CSS hacks
   (mesmo princípio do `GutoAvatar.jsx` estático). `aria-hidden` + `pointer-events:none` (CLS=0).

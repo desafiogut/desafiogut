@@ -27,10 +27,26 @@ export class MercadoPagoApiError extends Error {
 }
 
 export function lerTokenObrigatorio() {
-  const token = process.env.MP_ACCESS_TOKEN;
-  if (!token || typeof token !== "string" || token.length < 10) {
+  const raw = process.env.MP_ACCESS_TOKEN;
+  if (!raw || typeof raw !== "string") {
     throw new MercadoPagoConfigError(
-      "MP_ACCESS_TOKEN ausente ou inválido — configure no Netlify (Functions, secret)"
+      "MP_ACCESS_TOKEN ausente — configure no Netlify (Functions, secret)"
+    );
+  }
+  // Trim defensivo: um newline/espaço acidental no valor da env quebraria o header.
+  const token = raw.trim();
+  // MC39.16 — fail-fast de formato. Tokens do MP são "APP_USR-..." (produção) ou
+  // "TEST-..." (sandbox). Um valor fora desse formato (placeholder de 20 chars,
+  // token de outro contexto) passava a checagem antiga (length>=10) e ia ao MP,
+  // que respondia 401 "authorization value not present" → 502 confuso a montante.
+  // Agora falha cedo como erro de configuração (→ 500 pix_provider_mal_configurado),
+  // sinalizando claramente "corrija o MP_ACCESS_TOKEN por contexto no Netlify".
+  const formatoValido =
+    token.length >= 20 && (token.startsWith("APP_USR-") || token.startsWith("TEST-"));
+  if (!formatoValido) {
+    throw new MercadoPagoConfigError(
+      "MP_ACCESS_TOKEN com formato inválido — esperado 'APP_USR-...' (produção) ou " +
+      "'TEST-...' (sandbox). Verifique o valor POR CONTEXTO no Netlify."
     );
   }
   return token;
