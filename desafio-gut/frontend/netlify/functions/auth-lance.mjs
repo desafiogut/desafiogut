@@ -13,6 +13,8 @@ import {
   jsonResponse, jsonError,
   parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
+import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { registrarFalhaJwt } from "./_lib/jwt-fail-counter.mjs";
 
 const TTL_LANCE_AUTH = 10 * 60; // 10 min
 
@@ -20,6 +22,11 @@ export default async (req) => {
   if (req.method !== "POST") {
     return jsonError(405, "metodo_invalido", "use POST");
   }
+
+  // B-P1-4 (MC39.17.2) — rate-limit espelhando auth-user (porta o token do
+  // fluxo de dinheiro real). 10 req/min/IP.
+  const rl = await aplicarRateLimit(req, "auth-lance", 10);
+  if (rl) return rl;
 
   let body;
   try {
@@ -69,10 +76,12 @@ export default async (req) => {
   try {
     recovered = verifyMessage(message, signature).toLowerCase();
   } catch {
+    await registrarFalhaJwt(req, "auth-lance");
     return jsonError(400, "assinatura_invalida", "não foi possível verificar a assinatura");
   }
 
   if (recovered !== endereco) {
+    await registrarFalhaJwt(req, "auth-lance");
     return jsonError(401, "assinatura_nao_corresponde", "assinatura não pertence ao endereço informado");
   }
 

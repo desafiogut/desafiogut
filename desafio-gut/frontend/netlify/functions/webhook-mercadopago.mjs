@@ -10,9 +10,10 @@
 // expira o webhook se demorar muito e marca como "Falhou" no painel. A
 // chamada GET /v1/payments/:id é síncrona aqui mas com timeout de 12s.
 //
-// Segurança: por ora confiamos que apenas o MP conhece o paymentId real;
-// ataques injetando paymentIds aleatórios resultam em 404 do MP. Hardening
-// futuro: validar HMAC `x-signature` quando MP_WEBHOOK_SECRET estiver set.
+// Segurança (MC39.17.2 / B-P1-1): valida HMAC `x-signature` quando
+// MP_WEBHOOK_SECRET está configurado (ver _lib/mp-signature.mjs). Enquanto o
+// segredo não estiver set, mantém o comportamento anterior (fail-open) — o
+// valor/status são re-buscados na API do MP e há idempotência por pedidoId.
 //
 // Configurar no painel do Mercado Pago:
 //   Settings → Webhooks → URL = https://silly-stardust-ca71bc.netlify.app/.netlify/functions/webhook-mercadopago
@@ -20,11 +21,13 @@
 
 import { getStore } from "@netlify/blobs";
 import { consultarPagamento, MercadoPagoApiError } from "./_lib/mp-client.mjs";
-import { jsonResponse, parseJsonBody } from "./_lib/validate.mjs";
+import { jsonResponse, jsonError, parseJsonBody } from "./_lib/validate.mjs";
 import { lerMetaPedido } from "./_lib/credito.mjs";
 import { creditarSaldoRsIdempotente } from "./_lib/saldoRs.mjs";
 // MC17.1 — pedidos de cota ativam a cota automaticamente (sem aprovação manual).
 import { ativarCotaPaga } from "./_lib/cota-ativacao.mjs";
+// MC39.17.2 (B-P1-1) — validação HMAC da assinatura do webhook.
+import { validarAssinaturaMp } from "./_lib/mp-signature.mjs";
 
 const BLOB_STORE_MP = "mp-aprovados";
 
@@ -67,6 +70,19 @@ export default async (req) => {
   if (req.method !== "POST") {
     // MP só envia POST; aceita GET para teste manual mas sem efeito.
     return jsonResponse({ ok: true, hint: "use POST (MP envia notifications via POST)" });
+  }
+
+  // B-P1-1 — valida HMAC x-signature. O manifest usa `data.id` da query.
+  // Fail-open enquanto MP_WEBHOOK_SECRET não estiver configurado.
+  const dataIdQuery = new URL(req.url).searchParams.get("data.id")
+    || new URL(req.url).searchParams.get("id");
+  const sig = validarAssinaturaMp(req, dataIdQuery);
+  if (!sig.ok) {
+    console.warn("[webhook-mp] assinatura rejeitada", { motivo: sig.motivo });
+    return jsonError(401, "assinatura_invalida", "x-signature ausente ou inválida");
+  }
+  if (!sig.enforced) {
+    console.info("[webhook-mp] HMAC não aplicado (MP_WEBHOOK_SECRET ausente)");
   }
 
   let paymentId, topic;

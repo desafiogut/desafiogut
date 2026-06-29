@@ -29,6 +29,7 @@ import {
 import { verificarLanceAuth } from "./_lib/jwt.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { autenticarAdmin } from "./_lib/admin-auth.mjs";
+import { scrubSvg } from "./_lib/svg-sanitize.mjs";
 
 const BLOB_BANNER = "banner";
 const BLOB_WALLET = "wallet";
@@ -125,7 +126,10 @@ async function handleGet(req) {
   if (store) {
     try {
       const dados = await store.get(`${cli}:${dimensao}`, { type: "json" });
-      if (dados?.svg) { svg = dados.svg; mime = "image/svg+xml"; fonte = "upload-svg"; }
+      // P1-3 (MC39.17.2) — defesa em profundidade: SVG armazenado (upload de
+      // lojista) é entregue cross-user; faz scrub no servidor antes de devolver.
+      // A sanitização autoritativa continua no cliente (DOMPurify svg-profile).
+      if (dados?.svg) { svg = scrubSvg(dados.svg); mime = "image/svg+xml"; fonte = "upload-svg"; }
       else if (dados?.imagemBase64) {
         if (raw) {
           // Retorna binário decodificado direto

@@ -107,12 +107,14 @@ function TabAprovacoes({ chamarAdmin, isMobile, onLoginNeeded }) {
   const [acao, setAcao] = useState({ id: null, msg: "" });
 
   async function carregar() {
+    // B-P1-2 (MC39.17.2): GET passou a exigir JWT admin (lista expõe PII).
+    // Sem sessão admin autenticada, não chama o backend (evita 401 ruidoso).
+    if (!chamarAdmin) { setLista([]); setErro(""); return; }
     setCarregando(true);
     setErro("");
     try {
-      // GET é livre (sem auth) — fetch direto.
       const url = `/.netlify/functions/admin-aprovacao?status=${encodeURIComponent(filtro)}`;
-      const resp = await fetch(url);
+      const resp = await chamarAdmin(url, { method: "GET" });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data?.error?.message || `HTTP ${resp.status}`);
       setLista(data.aprovacoes || []);
@@ -122,7 +124,7 @@ function TabAprovacoes({ chamarAdmin, isMobile, onLoginNeeded }) {
       setCarregando(false);
     }
   }
-  useEffect(() => { carregar(); /* eslint-disable-next-line */ }, [filtro]);
+  useEffect(() => { carregar(); /* eslint-disable-next-line */ }, [filtro, chamarAdmin]);
 
   async function decidir(cliente_id, novoStatus) {
     if (!chamarAdmin) { onLoginNeeded(); return; }

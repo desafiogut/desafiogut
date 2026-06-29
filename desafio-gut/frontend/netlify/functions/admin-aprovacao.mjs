@@ -4,8 +4,9 @@
 //   ?status=pendente|aprovado|rejeitado (opcional)
 //   ?cliente_id=0x... (opcional — retorna 1 registro)
 //   → lista os pedidos de aprovação.
-//   Endpoint público (a lista é vista pelos admins; clientes podem
-//   consultar o próprio status).
+//   REQUER JWT user-session (B-P1-2/MC39.17.2): com ?cliente_id, owner-ou-admin
+//   (cliente vê o próprio status); sem cliente_id (listar tudo), só admin —
+//   fecha o vazamento de PII (LGPD).
 //
 // POST /.netlify/functions/admin-aprovacao
 //   Body { acao: "inscrever", cliente_id, nome?, email?, observacao? }
@@ -23,10 +24,13 @@
 import { getStore } from "@netlify/blobs";
 import {
   jsonResponse, jsonError, validarEndereco, parseJsonBody, ValidationError,
+  validarOwnerOuAdmin,
 } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { autenticarAdmin } from "./_lib/admin-auth.mjs";
 import { requireMfa } from "./_lib/require-mfa.mjs";
+import { verificarUserSession } from "./_lib/jwt.mjs";
+import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 
 const BLOB_APROVACAO = "admin-aprovacao";
 const STATUS_VALIDOS = new Set(["pendente", "aprovado", "rejeitado"]);
@@ -51,6 +55,21 @@ async function handleGet(req) {
   const statusFiltro = url.searchParams.get("status");
   const clienteId    = url.searchParams.get("cliente_id");
 
+  // B-P1-2 (MC39.17.2) — GET passa a exigir JWT (fecha vazamento de PII/LGPD).
+  // Espelha o padrão anti-IDOR de saldo-rs.mjs.
+  const authHeader = req.headers.get("authorization") || "";
+  const authToken  = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!authToken) {
+    return jsonError(401, "token_ausente", "Authorization: Bearer <user-session> obrigatório — obtenha via POST /auth-user");
+  }
+  let jwtPayload;
+  try { jwtPayload = await verificarUserSession(authToken); }
+  catch (err) {
+    const code = err?.code === "ERR_JWT_EXPIRED" ? "token_expirado" : "token_invalido";
+    return jsonError(401, code, "token de sessão inválido ou expirado");
+  }
+  const admins = await getAdminAddresses();
+
   const store = abrirStore(BLOB_APROVACAO);
   if (!store) return jsonResponse({ aprovacoes: [] });
 
@@ -61,9 +80,17 @@ async function handleGet(req) {
       if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
       throw err;
     }
+    // Owner (próprio status) OU admin.
+    const guard = validarOwnerOuAdmin(jwtPayload, endereco, admins);
+    if (!guard.ok) return jsonError(403, "acesso_negado", "token não pertence ao cliente solicitado e não é admin");
     const reg = await store.get(endereco, { type: "json" });
     if (!reg) return jsonError(404, "nao_encontrado", "cliente não tem pedido de aprovação");
     return jsonResponse(reg);
+  }
+
+  // Listar TODOS expõe PII de múltiplos clientes → exige admin.
+  if (!admins.includes(String(jwtPayload?.endereco || "").toLowerCase())) {
+    return jsonError(403, "admin_obrigatorio", "listar aprovações requer um endereço admin");
   }
 
   // Lista todos via store.list() e filtra
