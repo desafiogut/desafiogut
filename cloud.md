@@ -543,6 +543,20 @@ A maior exposição de mainnet é a **chave única da coordenação**: uma EOA c
 
 ---
 
+## MC39.18 — Plano de escalabilidade pré-Mainnet (read-only, 2026-06-29)
+
+> Branch `feat/mc39.18`. Análise read-only (R1 — sem código) dos 42 itens de escalabilidade
+> para 10k usuários simultâneos. Plano executável completo em `docs/MC39.18-escalabilidade.md`
+> (espelho do entregável `Desktop/MC39.18-escalabilidade.txt`).
+> Embasado por skills (busca no filesystem): react-performance, supabase-postgres-best-practices,
+> backend-patterns, vite-patterns, redis-patterns, postgres-patterns.
+> Síntese: 33 itens de código (~45-55 commits/8-10 sessões, 8 ondas), 6 de plataforma (operador),
+> 3 descopes justificados (Selective Hydration / Streaming SSR / Module Federation — SPA Vite sem SSR).
+> Gargalos reais priorizados: bundle Privy (~2.84MB), Supavisor transaction pooling, cache Redis
+> (Upstash REST), Realtime (10k WS), índices compostos/parciais em `lances`. Implementação em
+> MCs 39.18.x (cada um sob Superpers/security_audit.md). `/caveman /clog /reproduce` localizadas mas
+> não aplicáveis a planeamento read-only (debugging/tooling) — reservadas aos MCs de implementação.
+
 ## MC39.17.3 — Pendências do MC39.17.2 resolvidas (2026-06-29)
 
 > Branch `feat/mc39.17.3`. Fecha as 4 pendências antes do MC40. Detalhe: `security_audit.md` §MC39.17.3.
