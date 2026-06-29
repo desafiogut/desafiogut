@@ -12,6 +12,9 @@
 
 import { getStore } from "@netlify/blobs";
 import { captureSecurityAlert } from "./sentry-server.mjs";
+// MC39.19 (Onda 3, item 19) — contador de rate-limit em Redis (Upstash) quando
+// configurado; fallback transparente ao Netlify Blobs (zero regressão).
+import { cacheConfigurado, cacheIncr } from "./cache.mjs";
 
 const STORE_NAME = "rate-limit";
 
@@ -51,32 +54,16 @@ export async function aplicarRateLimit(req, endpoint, limite) {
   const agora   = Date.now();
   const minuto  = Math.floor(agora / 60000);
   const chave   = `${ip}:${endpoint}:${minuto}`;
-  const store   = abrirStore();
-  if (!store) return null;
-
-  let atual = 0;
-  try {
-    const raw = await store.get(chave);
-    atual = Number(raw) || 0;
-  } catch (err) {
-    console.warn("[rate-limiter] leitura falhou (fail-open):", { chave, message: err?.message });
-    return null;
-  }
 
   const proximaJanela  = (minuto + 1) * 60;             // epoch seg
   const epochAgoraSeg  = Math.floor(agora / 1000);
   const retryAfterSeg  = Math.max(1, proximaJanela - epochAgoraSeg);
 
-  if (atual >= limite) {
-    // Alerta Sentry: quem está sendo bloqueado pelo rate-limit é informação
-    // de segurança. Acima de ALERTA_THRESHOLD vira sinal de incidente real
-    // (caso comum: bot legítimo passa do limite por endpoint pesado e a
-    // mensagem de 429 já basta).
-    if (atual >= ALERTA_THRESHOLD) {
-      // fire-and-forget: não bloqueia a resposta 429 ao caller.
-      captureSecurityAlert("rate_limit", {
-        endpoint, ip, count: atual, limite, retryAfterSeg,
-      }).catch(() => {});
+  // 429 padronizado (+ alerta Sentry acima do threshold). Compartilhado pelos
+  // dois backends (Redis / Blobs).
+  const montar429 = (count) => {
+    if (count >= ALERTA_THRESHOLD) {
+      captureSecurityAlert("rate_limit", { endpoint, ip, count, limite, retryAfterSeg }).catch(() => {});
     }
     return new Response(
       JSON.stringify({
@@ -98,7 +85,32 @@ export async function aplicarRateLimit(req, endpoint, limite) {
         },
       },
     );
+  };
+
+  // MC39.19 (item 19) — Redis (Upstash) quando configurado: INCR atômico devolve a
+  // contagem pós-incremento; > limite bloqueia. Fail-open: null → cai no Blobs.
+  if (cacheConfigurado()) {
+    const novo = await cacheIncr(chave, retryAfterSeg + 1);
+    if (novo != null) {
+      return novo > limite ? montar429(novo) : null;
+    }
+    // novo == null (erro de Redis) → degradação graciosa para o Blobs abaixo.
   }
+
+  // Fallback: Netlify Blobs (shared-store, strong consistency) — comportamento atual.
+  const store = abrirStore();
+  if (!store) return null;
+
+  let atual = 0;
+  try {
+    const raw = await store.get(chave);
+    atual = Number(raw) || 0;
+  } catch (err) {
+    console.warn("[rate-limiter] leitura falhou (fail-open):", { chave, message: err?.message });
+    return null;
+  }
+
+  if (atual >= limite) return montar429(atual);
 
   try {
     await store.set(chave, String(atual + 1));
