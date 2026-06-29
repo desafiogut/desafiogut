@@ -25,6 +25,17 @@ import {
 } from "./_lib/validate.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+// MC39.19 (Onda 3) — cache distribuído (itens 20/33), ETag/SWR (16/17). Env-gated:
+// sem REDIS_* o cache no-opa → comportamento atual (zero regressão).
+import { cacheAside, cacheDel } from "./_lib/cache.mjs";
+import { jsonCacheavel } from "./_lib/http-cache.mjs";
+
+// Chave de cache da listagem pública por categoria (vitrine).
+const cacheKeyCategoria = (cat) => `produtos:cat:${cat}`;
+// Invalida o cache de uma categoria (write-through na escrita — R11). No-op sem cache.
+async function invalidarCategoria(cat) {
+  if (cat) await cacheDel(cacheKeyCategoria(cat));
+}
 
 const BLOB_PRODUTOS = "produtos";
 const BLOB_INDICE   = "produtos-indice";
@@ -159,17 +170,19 @@ async function handleGet(req) {
     const idxCat = abrirStore(BLOB_INDICE_CAT);
     if (!idxCat) return jsonError(502, "store_indisponivel", "Netlify Blobs indisponível");
     try {
-      const idxData = await idxCat.get(cat, { type: "json" });
-      const ids = (idxData?.ids ?? []).filter(Boolean);
-      const produtos = [];
-      for (const pid of ids) {
-        try {
-          const reg = await store.get(`produto:${pid}`, { type: "json" });
-          // Só retorna ativos para a vitrine
-          if (reg && reg.status === "ativo") produtos.push(reg);
-        } catch {}
-      }
-      return jsonResponse({ categoria: cat, total: produtos.length, produtos });
+      // MC39.19 — cache-aside (item 20/33): em miss/sem-cache, computa a listagem.
+      const body = await cacheAside(cacheKeyCategoria(cat), 60, async () => {
+        const idxData = await idxCat.get(cat, { type: "json" });
+        const ids = (idxData?.ids ?? []).filter(Boolean);
+        // Item 21 (N+1): busca os produtos em PARALELO (era sequencial).
+        const regs = await Promise.all(
+          ids.map((pid) => store.get(`produto:${pid}`, { type: "json" }).catch(() => null)),
+        );
+        const produtos = regs.filter((reg) => reg && reg.status === "ativo");
+        return { categoria: cat, total: produtos.length, produtos };
+      });
+      // Itens 16/17 — ETag + Cache-Control stale-while-revalidate (304 em revalidação).
+      return jsonCacheavel(req, body, { maxAge: 60, swr: 300 });
     } catch (err) {
       console.warn("[produtos] listagem por categoria falhou:", err?.message);
       return jsonError(502, "leitura_falhou", "não foi possível listar produtos");
@@ -298,6 +311,7 @@ async function handlePost(req) {
   }
 
   await atualizarIndices(produto, "adicionar");
+  await invalidarCategoria(produto.categoria); // write-through (R11)
 
   console.info("[produtos] criado", { id, lojista, categoria, preco });
   return jsonResponse({ ok: true, produto }, 201);
@@ -359,6 +373,7 @@ async function handlePut(req) {
     produto.entregue_em = new Date().toISOString();
     produto.atualizado_em = new Date().toISOString();
     await store.setJSON(`produto:${id}`, produto);
+    await invalidarCategoria(produto.categoria); // write-through (R11)
     console.info("[produtos] marcado como entregue", { id });
     return jsonResponse({ ok: true, produto });
   }
@@ -375,6 +390,7 @@ async function handlePut(req) {
     produto.vendido_em = new Date().toISOString();
     produto.atualizado_em = new Date().toISOString();
     await store.setJSON(`produto:${id}`, produto);
+    await invalidarCategoria(produto.categoria); // write-through (R11)
     console.info("[produtos] vencedor registrado", { id });
     return jsonResponse({ ok: true, produto });
   }
@@ -433,6 +449,7 @@ async function handlePut(req) {
 
   produto.atualizado_em = new Date().toISOString();
   await store.setJSON(`produto:${id}`, produto);
+  await invalidarCategoria(produto.categoria); // write-through (R11; staleness ≤TTL em troca de categoria)
 
   console.info("[produtos] editado", { id });
   return jsonResponse({ ok: true, produto });
@@ -482,6 +499,7 @@ async function handleDelete(req) {
 
   await atualizarIndices(produto, "remover");
   await store.delete(`produto:${id}`);
+  await invalidarCategoria(produto.categoria); // write-through (R11)
 
   console.info("[produtos] removido", { id });
   return jsonResponse({ ok: true, removido: id });
