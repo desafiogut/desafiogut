@@ -1,5 +1,5 @@
 // force deploy 2026-05-11 — reset versionado + MOCK_MODE removido
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext } from "./context/AppContext.jsx";
 import TermosConsentimento from "./components/TermosConsentimento.jsx";
@@ -9,27 +9,40 @@ import { AppEnvironmentProvider } from "./context/useAppContextEnvironment.jsx";
 import { IdiomaProvider } from "./context/IdiomaContext.jsx";
 import { ToastContainer, useToast } from "./widgets/toast/Toast.jsx";
 import ReferralRegistrar from "./components/ReferralRegistrar.jsx";
+// MC39.19 (Onda 2, item 3) — code-splitting por rota. Páginas CRÍTICAS de entrada
+// (Dashboard/Vitrine) ficam EAGER (evita flash de Suspense no first paint); as demais
+// via React.lazy → saem do chunk inicial e carregam sob demanda. LazyBoundary trata
+// chunk-404 pós-deploy (reload). ChatbotWidget é eager (botão flutuante global).
 import Dashboard       from "./pages/Dashboard.jsx";
-import MinhaCarteira   from "./pages/MinhaCarteira.jsx";
-import MercadoLances   from "./pages/MercadoLances.jsx";
 import Vitrine         from "./pages/Vitrine.jsx";
-import ScheduleView    from "./components/ScheduleView.jsx";
-import MeusAtivos      from "./pages/MeusAtivos.jsx";
-import Seguranca       from "./pages/Seguranca.jsx";
-import Configuracoes   from "./pages/Configuracoes.jsx";
-import AdminPanel      from "./pages/AdminPanel.jsx";
 import ChatbotWidget   from "./components/ChatbotWidget.jsx";
-// MC11 — páginas do Usuário Corporativo (Lojista).
-import CorporativoDashboard from "./pages/CorporativoDashboard.jsx";
-import CorporativoCotas     from "./pages/CorporativoCotas.jsx";
-import CorporativoBanners   from "./pages/CorporativoBanners.jsx";
-import CorporativoAnalytics from "./pages/CorporativoAnalytics.jsx";
-// MC17.1 — carteira do lojista (contratar cota + senhas de troco).
-import CorporativoCarteira  from "./pages/CorporativoCarteira.jsx";
-// MC11.1 — Seção pública (porta de entrada para o fluxo corporativo).
-import SejaNossoParceiro    from "./pages/SejaNossoParceiro.jsx";
-// MC15 ITEM 4 — página de detalhe de produto
-import DetalheProduto      from "./pages/DetalheProduto.jsx";
+import LazyBoundary    from "./components/LazyBoundary.jsx";
+
+const MinhaCarteira        = lazy(() => import("./pages/MinhaCarteira.jsx"));
+const MercadoLances        = lazy(() => import("./pages/MercadoLances.jsx"));
+const ScheduleView         = lazy(() => import("./components/ScheduleView.jsx"));
+const MeusAtivos           = lazy(() => import("./pages/MeusAtivos.jsx"));
+const Seguranca            = lazy(() => import("./pages/Seguranca.jsx"));
+const Configuracoes        = lazy(() => import("./pages/Configuracoes.jsx"));
+const AdminPanel           = lazy(() => import("./pages/AdminPanel.jsx"));
+const CorporativoDashboard = lazy(() => import("./pages/CorporativoDashboard.jsx"));
+const CorporativoCotas     = lazy(() => import("./pages/CorporativoCotas.jsx"));
+const CorporativoBanners   = lazy(() => import("./pages/CorporativoBanners.jsx"));
+const CorporativoAnalytics = lazy(() => import("./pages/CorporativoAnalytics.jsx"));
+const CorporativoCarteira  = lazy(() => import("./pages/CorporativoCarteira.jsx"));
+const SejaNossoParceiro    = lazy(() => import("./pages/SejaNossoParceiro.jsx"));
+const DetalheProduto       = lazy(() => import("./pages/DetalheProduto.jsx"));
+
+// Fallback discreto enquanto um chunk de rota carrega (sem layout shift agressivo).
+function RouteFallback() {
+  return (
+    <div role="status" aria-live="polite" aria-label="Carregando…"
+      style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50vh", color: "#94a3b8" }}>
+      <span style={{ animation: "gut-fade 1.2s ease-in-out infinite" }}>⏳ Carregando…</span>
+      <style>{`@keyframes gut-fade { 0%,100% { opacity: 0.5 } 50% { opacity: 1 } }`}</style>
+    </div>
+  );
+}
 
 // MC12.2 — CorporativoRoute usa tipoUsuario derivado de cotas blob.
 // tipoCarregando evita redirect prematuro enquanto o fetch do blob está pendente.
@@ -112,6 +125,10 @@ export default function App() {
       {/* MC17.3.1.1 — regista o vínculo de indicação (?ref=) quando address+authToken prontos. */}
       <ReferralRegistrar />
       <ToastContainer toasts={toasts} onDismiss={remove} />
+      {/* MC39.19 (Onda 2, item 3) — LazyBoundary (chunk-404 pós-deploy → reload) +
+          Suspense (fallback enquanto o chunk da rota carrega). Zero regressão de rotas. */}
+      <LazyBoundary>
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         {/* MC20.2 FASE 1 · ITEM 2 — AppLayout (3 camadas) substitui Layout como
             rota-mãe; renderiza o Layout existente intacto na superfície (zero
@@ -145,6 +162,8 @@ export default function App() {
           <Route path="/corporativo/mercado"    element={<CorporativoRoute><MercadoLances /></CorporativoRoute>} />
         </Route>
       </Routes>
+      </Suspense>
+      </LazyBoundary>
       {/* MC9 — IA Cognitiva: chatbot RAG 24/7 (botão flutuante em todas as rotas). */}
       <ChatbotWidget />
       </AppEnvironmentProvider>

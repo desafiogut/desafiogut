@@ -37,6 +37,13 @@ export default defineConfig({
             id.includes("node_modules/@coinbase")
           )
             return "privy";
+          // MC39.19 (Onda 2, item 2) — framer-motion (usado em ~17 componentes) → chunk
+          // próprio, fora do chunk `index` do caminho crítico. NÃO super-fragmentar:
+          // um único chunk "motion" (vite-patterns). @xenova/transformers NÃO entra
+          // (é backend-only, ausente do bundle do cliente); ethers/viem ficam com privy
+          // por entrelaçamento (evita ciclo TDZ, ver nota acima).
+          if (id.includes("node_modules/framer-motion"))
+            return "motion";
         },
       },
     },
