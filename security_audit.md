@@ -601,7 +601,7 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 
 ## MC39.17.2 — Correção dos 7 P1 da auditoria MC39.17 · 2026-06-29
 > Branch `feat/mc39.17.2` (a partir de `main` com #108/#110). Navegação via Graphify (R7).
-> Baseline **88/88** (`_tests/*.test.mjs`) + build verde → após as correções **95/95** + build verde;
+> Baseline **88/88** (`_tests/*.test.mjs`) + build verde → após as correções **100/100** + build verde;
 > `node --check` limpo em todos os `.mjs` tocados. Ritmo lento e profundo (R8), zero regressão (R1).
 
 - [✅] **P1-2 — `protobufjs` crítico eliminado.** `package.json` (frontend) ganhou
