@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sanitizeAddress, sanitizeString, sanitizeLance } from "../utils/sanitize.js";
 import { Badge } from "@/components/ui/badge";
@@ -35,8 +36,10 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
     ? new Date(prazoTimestamp * 1000).toLocaleString("pt-BR")
     : "—";
 
-  const lancesOrdenados = ordenarLances(lances);
-  const idxVencedor = lancesOrdenados.findIndex((l) => !l.repetido);
+  // MC39.20 (Onda 5, item 4) — memoiza a ordenação/apuração: evita re-sort a cada
+  // re-render do pai (ex.: tick do timer) quando `lances` não mudou. Resultado idêntico.
+  const lancesOrdenados = useMemo(() => ordenarLances(lances), [lances]);
+  const idxVencedor = useMemo(() => lancesOrdenados.findIndex((l) => !l.repetido), [lancesOrdenados]);
 
   return (
     <div style={{
