@@ -16,6 +16,8 @@
 
 import { useEffect, useRef } from "react";
 import { supabaseConfigurado, getSupabaseBrowser } from "../lib/supabaseClient";
+// MC39.19 (Onda 4, item 32) — observabilidade de canais Realtime ativos.
+import { canalAberto, canalFechado } from "../lib/realtimeMetrics";
 
 const BACKOFF_MS = [1000, 2000, 4000, 8000, 16000, 30000];
 
@@ -35,6 +37,7 @@ export function useRealtimeConfig(chave, onValor) {
       if (!canal) return;
       try { const sb = await getSupabaseBrowser(); sb?.removeChannel(canal); } catch { /* noop */ }
       canal = null;
+      canalFechado(); // item 32 — métrica: canal removido
     };
 
     const reagendar = () => {
@@ -69,6 +72,7 @@ export function useRealtimeConfig(chave, onValor) {
             reagendar();
           }
         });
+      canalAberto(); // item 32 — métrica: 1 canal criado (balanceado em limparCanal)
     };
 
     ligar();
