@@ -543,6 +543,37 @@ A maior exposição de mainnet é a **chave única da coordenação**: uma EOA c
 
 ---
 
+## MC39.19 — Escalabilidade Ondas 1-4 (2026-06-29)
+
+> Branch `feat/mc39.19`. Executa as Ondas 1-4 do plano MC39.18. Detalhe de segurança: `security_audit.md`
+> §MC39.19. Estratégia: Onda 2 (bundle) completa; Ondas 1/3/4 **env-gated** (sobem inertes, ativam quando o
+> operador provisiona a infra da Onda 0) → zero regressão.
+
+### O que entrou (código)
+- **Onda 1 — BD:** migração `20260629_indices_escalabilidade.sql` (índices compostos `(edicao_id,created_at)`
+  e `(edicao_id,valor_centavos)` + parcial `cotas(categoria) WHERE vendida=false`); `getSupabaseReadOnly()`
+  (env `SUPABASE_READ_REPLICA_URL`, fallback ao primário). **Migração NÃO aplicada** — operador via CLI (R12).
+- **Onda 2 — bundle:** `React.lazy`+`Suspense` em 13 rotas não-críticas + `LazyBoundary` (reload em chunk-404);
+  chunk `motion` (framer-motion). **Chunk inicial `index` −28% (1.137kB→819kB)**; páginas sob demanda.
+- **Onda 3 — cache:** `_lib/cache.mjs` (Upstash REST, fetch nativo) + `_lib/http-cache.mjs` (ETag/SWR);
+  rate-limiter com path Redis (fallback Blobs); `produtos.mjs?categoria` com cache-aside + ETag + N+1
+  paralelizado + invalidação write-through. Tudo **env-gated** por `REDIS_URL`/`REDIS_TOKEN`.
+- **Onda 4 — realtime:** `src/lib/realtimeMetrics.js` (contagem de canais ativos/pico); item 32 já tinha
+  cleanup no unmount; item 31 confirmado (config_remota filtrado, sem `table:'*'`).
+
+### Ativação pela Onda 0 (operador) — itens inertes até provisionar
+- `REDIS_URL`+`REDIS_TOKEN` (Upstash) → ativa cache + rate-limit Redis.
+- `SUPABASE_READ_REPLICA_URL` → ativa leitura na réplica (dashboards/relatórios).
+- Aplicar a migração de índices (`supabase db query --linked`).
+- **Netlify Pro** → itens 15 (Edge Functions) e 18 (memória/vCPU), NÃO implementados (operator-gated).
+
+### Métricas (baseline → meta)
+- Bundle inicial: índice 1.137kB → **819kB (−28%)** já medido; meta −30-40% atingível ao lazy-carregar o Privy.
+- Latência leituras quentes (produtos): cache-aside Upstash 50-200ms → 1-5ms quando `REDIS_*` ativo.
+- Validar p95<500ms, 10k WS, FCP<1.5s/LCP<2.5s com teste de carga (k6) em staging antes do MC40.
+
+---
+
 ## MC39.18 — Plano de escalabilidade pré-Mainnet (read-only, 2026-06-29)
 
 > Branch `feat/mc39.18`. Análise read-only (R1 — sem código) dos 42 itens de escalabilidade

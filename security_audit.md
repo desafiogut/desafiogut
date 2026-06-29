@@ -599,6 +599,33 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 - [⏳] **P1 da auditoria permanecem abertos** (webhook HMAC, PII admin-aprovacao, débito atômico, rate-limit auth-lance,
   centralização da coordenação, protobufjs, SVG DOMPurify) — a tratar antes do MC40.
 
+## MC39.19 — Escalabilidade Ondas 1-4 (perf, env-gated) · 2026-06-29
+> Branch `feat/mc39.19`. Ondas 1-4 do plano MC39.18 (10k usuários). Mudanças de PERFORMANCE,
+> escritas DEFENSIVAMENTE (env-gated) → zero regressão (R1). Suíte 104→**110/110**; `node --check`
+> limpo em 121 `.mjs`; build verde; validação visual MCP local 375/1440 (Onda 2).
+
+**Postura de segurança (sem nova superfície de ataque):**
+- [✅] **Onda 1 — `getSupabaseReadOnly()` (item 28):** env-gated por `SUPABASE_READ_REPLICA_URL` com
+  fallback ao primário; usa o mesmo `service_role` (server-only, nunca exposto). **ESCRITA nunca passa pela
+  réplica** (R11). Migração de índices NÃO aplicada à prod (operador, R12) — schema-válida (corrige plano:
+  lances sem `consolidado`; usa `cotas.vendida`). Item 27 (pooling) N/A: Data API HTTP sem pool TCP.
+- [✅] **Onda 2 — code-splitting (itens 2/3):** React.lazy + Suspense + `LazyBoundary` (reload em chunk-404
+  pós-deploy, guard anti-loop). Sem mudança de RBAC/rotas (CorporativoRoute/gates intactos). Chunk inicial
+  `index` 1.137kB→819kB (−28%). Risco: nenhum dado sensível em chunk; apenas separação de carregamento.
+- [✅] **Onda 3 — cache/rate-limit (itens 16/17/19/20/21/33):** `_lib/cache.mjs` (Upstash REST via fetch,
+  sem dep nova) e rate-limiter Redis são **ENV-GATED**: sem `REDIS_*` → no-op/Blobs (comportamento atual).
+  `cacheConfigurado()` gateia tudo; falha-aberto (erro de Redis → miss, nunca 5xx). Cache aplicado SÓ em
+  `produtos.mjs?categoria` (listagem **pública** de produtos ativos — sem PII/segredo); invalidação
+  write-through em POST/PUT/DELETE (R11). ETag/`Cache-Control` só nesse GET público. Rate-limiter mantém
+  o 429/headers/alerta Sentry idênticos; novo path Redis inerte até `REDIS_*` setado → o teste de
+  rate-limit (comprar-senhas) continua verde. Credenciais Redis só em env (R9). Itens 15 (Edge) e 18
+  (memória) NÃO implementados — exigem Netlify Pro (operator-gated).
+- [✅] **Onda 4 — métrica Realtime (item 32):** contador em memória de canais ativos (sem rede, sem PII);
+  o cleanup no unmount já existia. Item 31: config_remota permanece `postgres_changes` filtrado (não
+  `table:'*'`); sem evento de alto fanout a converter (lances ocultos por RLS anti-sniping).
+- **VEREDICTO:** mudanças de performance, zero regressão (suíte/build/visual), sem nova superfície. Ativação
+  plena depende da Onda 0 (operador: Redis/Upstash, read replica, Netlify Pro) + aplicar a migração de índices.
+
 ## MC39.17.3 — Resolução das 4 pendências do MC39.17.2 · 2026-06-29
 > Branch `feat/mc39.17.3` (a partir de `main` com #111). PR #112 (mergeado `--admin`) + PR de docs de fechamento.
 > Baseline **100/100** → **104/104** (`_tests/*.test.mjs`); `node --check` limpo em 117 `.mjs`; build verde.
