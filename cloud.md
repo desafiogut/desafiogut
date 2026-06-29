@@ -543,6 +543,32 @@ A maior exposição de mainnet é a **chave única da coordenação**: uma EOA c
 
 ---
 
+## MC39.20 — Escalabilidade Ondas 5-8 (2026-06-29)
+
+> Branch `feat/mc39.20`. Conclui as Ondas 5-8 do plano MC39.18. Detalhe de segurança: `security_audit.md`
+> §MC39.20. Mudanças seguras; migrações de BD escritas mas NÃO aplicadas (operador, R12); fila inerte até aplicar.
+
+### O que entrou (código)
+- **Onda 5 — render:** `useMemo` na ordenação/apuração de `TabelaLances` (evita re-sort por tick do timer;
+  comportamento idêntico). Memo/virtualização agressivos deferidos (framer-motion no pipeline crítico, R1).
+- **Onda 6 — Materialized Views:** migração `20260629_materialized_views.sql` (`mv_lances_por_edicao`,
+  `mv_cotas_disponiveis`) + índices únicos (REFRESH CONCURRENTLY) + grants backend-only. Read-paths de
+  relatório adotam via `getSupabaseReadOnly()` após aplicar. Particionamento deferido (transacoes N/A; lances
+  prematuro).
+- **Onda 7 — fila Postgres:** migração `20260629_fila_tarefas.sql` (tabela + RPC `reservar_tarefas` SKIP LOCKED
+  + DLQ + RLS service_role); `_lib/fila.mjs` (enfileirar/processarLote, inerte sem migração);
+  `fila-processor-scheduled.mjs` (*/5min). Nenhum fluxo síncrono reescrito — adoção sob demanda.
+- **Onda 8 — RUM:** `web-vitals` → Sentry (LCP/INP/CLS/TTFB); evento só em vital "poor" (alimenta alerta),
+  demais como breadcrumb.
+
+### Ativação (operador)
+- **Aplicar migrações:** `20260629_materialized_views.sql` e `20260629_fila_tarefas.sql` (`supabase db query --linked`).
+- **REFRESH das MVs:** agendar via pg_cron (snippet no .sql). **Fila:** registrar handlers em
+  `fila-processor-scheduled.mjs` e chamar `enfileirar()` nos produtores que se quer tornar assíncronos.
+- **Alertas Sentry (item 36):** criar regras no painel — erro>5%, p95>1s, web-vital "poor", conexões Realtime.
+
+---
+
 ## MC39.19 — Escalabilidade Ondas 1-4 (2026-06-29)
 
 > Branch `feat/mc39.19`. Executa as Ondas 1-4 do plano MC39.18. Detalhe de segurança: `security_audit.md`
