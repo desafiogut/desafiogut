@@ -515,7 +515,8 @@ http(s); bloqueio de IPs privados/loopback/link-local por literal + resolução 
 - **XSS de SVG (P1-3):** DOMPurify svg-profile no cliente (`BannerCard`, `CorporativoBanners`) +
   scrub server-side `_lib/svg-sanitize.mjs` em `banners.mjs` (defesa em profundidade).
 - **Webhook MP (B-P1-1):** HMAC `x-signature` via `_lib/mp-signature.mjs` (`MP_WEBHOOK_SECRET`,
-  fail-open enquanto o segredo não está set).
+  fail-open enquanto o segredo não está set). **Ativação (fail-closed):** `docs/mainnet-prerequisites.md`
+  §1 — `netlify env:set MP_WEBHOOK_SECRET … --context production` + redeploy (MC39.17.3).
 - **PII/LGPD (B-P1-2):** GET `admin-aprovacao` exige JWT (owner-ou-admin / admin p/ listar).
 - **Double-spend (B-P1-3):** débito de saldo R$ atômico via CAS (`casSaldo` em `saldoRs-store`).
 - **Brute-force (B-P1-4):** rate-limit + fail-counter em `auth-lance` (espelha `auth-user`).
