@@ -45,3 +45,22 @@ export function getSupabase() {
   });
   return _client;
 }
+
+// MC39.19 (Onda 1, item 28) — cliente de LEITURA (read replica). Para dashboards/
+// relatórios/analytics que não precisam do primário. Env-gated e zero-regressão:
+// se SUPABASE_READ_REPLICA_URL não estiver setado, devolve o cliente primário
+// (mesmo comportamento atual). ESCRITA NUNCA passa por aqui (R11 anti-split-brain).
+// Usa a Data API (PostgREST/HTTP) da réplica — sem pool TCP (item 27 N/A nesta arq.).
+let _clientRO = null;
+export function getSupabaseReadOnly() {
+  if (_clientRO) return _clientRO;
+  const replicaUrl = process.env.SUPABASE_READ_REPLICA_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Sem réplica configurada → fallback transparente ao primário (zero regressão).
+  if (!replicaUrl || !serviceRoleKey) return getSupabase();
+  _clientRO = createClient(replicaUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { "x-application-name": "desafiogut-functions-ro" } },
+  });
+  return _clientRO;
+}
