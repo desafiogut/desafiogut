@@ -7,6 +7,8 @@ import { sepolia as sepoliaChain, mainnet as mainnetChain } from "viem/chains"; 
 import * as Sentry from "@sentry/react";
 import App from "./App.jsx";
 import ReferralTracker from "./components/ReferralTracker.jsx";
+// MC39.20 (Onda 8, item 35) — Real User Monitoring (Core Web Vitals → Sentry).
+import { reportWebVitals } from "./lib/webVitals.js";
 
 // MC25.3 — SliderOpacidade removido. O vidro agora é fixo (.gut-glass-standard),
 // padrão navy-based imutável. Nenhuma opacidade dinâmica para restaurar.
@@ -79,6 +81,10 @@ Sentry.addEventProcessor((event) => {
   } catch { /* nunca quebrar o pipeline do Sentry */ }
   return event;
 });
+
+// MC39.20 (Onda 8) — começa a coletar Core Web Vitals (LCP/INP/CLS/TTFB) da
+// sessão real e reporta ao Sentry. No-op se o Sentry estiver desabilitado.
+reportWebVitals();
 
 // App ID validado via Privy Management API em 2026-04-28.
 // NÃO usar import.meta.env — o dashboard Netlify tem o valor ERRADO (cmo5113v)
