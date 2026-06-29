@@ -4,6 +4,7 @@
 // Pausar/Ativar é controle local (placeholder UI — backend não exposto).
 
 import { useEffect, useState } from "react";
+import DOMPurify from "dompurify";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
@@ -114,7 +115,8 @@ export default function CorporativoBanners() {
               }}>
                 {banner?.svg && (
                   <div
-                    dangerouslySetInnerHTML={{ __html: banner.svg }}
+                    /* P1-3 (MC39.17.2) — sanitiza SVG do backend (padrão Vitrine.jsx). */
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(banner.svg, { USE_PROFILES: { svg: true } }) }}
                     style={{ width: "100%", height: "100%" }}
                   />
                 )}

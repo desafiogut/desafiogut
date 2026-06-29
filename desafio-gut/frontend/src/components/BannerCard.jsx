@@ -6,6 +6,7 @@
 // MC23.3 — containers de estado migrados para GlassCard.
 
 import { useEffect, useState } from "react";
+import DOMPurify from "dompurify";
 import { GlassCard } from "@/components/ui";
 
 const COR = {
@@ -106,8 +107,10 @@ export default function BannerCard({ clienteId, formato = "app", style = {}, mos
   }
 
   // Renderização: SVG inline OU imagem binária base64.
+  // P1-3 (MC39.17.2) — SVG vem do backend (upload de lojista, cross-user):
+  // sanitizar com DOMPurify svg-profile antes de injetar (mesmo padrão de Vitrine.jsx).
   const conteudo = estado.svg
-    ? <div dangerouslySetInnerHTML={{ __html: estado.svg }} style={{ width: "100%", height: "100%" }} />
+    ? <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(estado.svg, { USE_PROFILES: { svg: true } }) }} style={{ width: "100%", height: "100%" }} />
     : estado.imagemBase64
     ? <img src={`data:${estado.mime || "image/png"};base64,${estado.imagemBase64}`} alt={alt}
            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
