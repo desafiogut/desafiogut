@@ -763,5 +763,32 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   `iniciar-pagamento` caller único; corporativo (cotas/voucher) não usa PIX → intacto.
 - [✅] **Validação visual MCP (375 + 1440):** campo CPF ausente, botão habilitado sem CPF, console
   limpo (preview isolado; Privy/OAuth não automatizável — MC39.3.1).
+## MC39.22 — Plano de enxugamento Ponytail (DIAGNÓSTICO read-only) · 2026-06-29
+- [✅] **Escopo:** auditoria de gordura de código + geração do plano em
+  `Desktop\MC39.22-plano-enxugamento.txt`. **R1: ZERO alteração de código** no DESAFIOGUT.
+  Branch `feat/mc39.22` (read-only). Único arquivo do repo tocado: este `security_audit.md`.
+- [✅] **Sem nova superfície de ataque:** nenhuma rota, input, chave, dependência ou
+  permissão adicionada/alterada. Análise puramente estática (leitura + `wc`/`grep`).
+- [✅] **Achados (29.564 → ~25.708 LOC; ~13%):** gordura é LOCALIZADA, não estrutural.
+  Top alvos: (EX-1) `chatbot.mjs` despacho de intents 39× repetido → tabela (−~359);
+  (EX-2) ausência de cliente HTTP único no frontend, 27 `fetch` crus em 16 ficheiros (−~200);
+  (EX-3) `Sidebar`+`BottomNav` duplicam config de navegação (−~120); (EX-4) caminho morto
+  `financeiro-fallback`/adaptadores pós-Supabase (−~120); (EX-5) tiles de KPI inline (−~250).
+- [⚠️] **GATE para a implementação (MC39.22.1) — bloqueia merge:** os refactors que tocam
+  superfície sensível NÃO entram sem nova entrada neste arquivo:
+    · EX-1 (chatbot) altera o gate RBAC de comandos admin do GUTO → re-auditar §2 ZERO-TRUST,
+      provando paridade 1:1 do gate por-intent (recusa-perfil para visitante/comum/corporativo).
+    · EX-4 (data-store) toca caminho de dados financeiros → confirmar `caller=0` por grep ANTES
+      de remover; **nunca** tocar migrações com DROP TABLE.
+- [✅] **Contrato `Leilao.sol`:** deliberadamente FORA do escopo de corte (audited/security-critical);
+  alterações só em janela de auditoria formal (Slither/Echidna/Foundry). Plano marca como P2/diferido.
+- [✅] **Regressão:** nenhuma — diagnóstico não executa código nem altera o bundle. Reversível
+  (este doc) por `git revert`. Suite 115/115 e build inalterados (nada foi modificado).
+- **VEREDICTO:** APROVADO (diagnóstico). A IMPLEMENTAÇÃO permanece **PENDENTE** de auditoria
+  por-PR conforme o gate acima (RUFLO: Transação audita, Monitoramento valida).
+
+---
+
+## MC39.15.1 — VEREDICTO (continuação)
 - **VEREDICTO:** APROVADO para merge, **condicionado** à confirmação de `MP_PAYER_ID_NUMBER` no
   Netlify (senão o 502 do MC39.13 retorna). Mudança de código é redução de PII + simplificação.
