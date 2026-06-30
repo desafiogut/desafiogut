@@ -21,6 +21,19 @@ sender:
 # Modo de teste: invariants (echidna_*) ao final de cada sequência.
 testMode: "property"
 
+# MC40-CI: whitelist de funções fuzzadas (filterBlacklist:false = só estas são
+# chamadas como tx). Sem isto, o Echidna chamava os mutadores HERDADOS crus
+# (darLance, aceitarTransferenciaCoordenacao) direto, furando os wrappers de
+# shadow-accounting → falsos positivos em echidna_lance_consome_senha (conservação)
+# e echidna_two_step_transfer. Forçar o fuzz pelos wrappers do harness mantém os
+# contadores shadow/flags sincronizados (intenção original do harness).
+filterBlacklist: false
+filterFunctions:
+  - "LeilaoGUTFuzzing.darLanceComShadow(string,uint256)"
+  - "LeilaoGUTFuzzing.adicionarSenhasComShadow(address,uint256)"
+  - "LeilaoGUTFuzzing.aceitarComHook()"
+  - "LeilaoGUTFuzzing.consolidarResultadoFuzz(address,uint256)"
+
 # Coverage-guided fuzzing — mantém corpus dos inputs interessantes.
 coverage: true
 
