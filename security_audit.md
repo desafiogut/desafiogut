@@ -789,6 +789,34 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
 
 ---
 
+## MC39.22.1 — Implementação dos cortes P0 (consolidação estrutural) · 2026-06-29
+Branch `feat/mc39.22.1`. Levanta o GATE deixado no MC39.22 para os refactors sensíveis.
+- [✅] **EX-1 (chatbot) — gate RBAC re-auditado (§2 ZERO-TRUST), paridade 1:1 PROVADA.** A
+  cadeia de `if (intent===...)` virou tabela `INTENT_HANDLERS`; o gate de perfil por-intent
+  (admin / corp+admin / autenticado / qualquer) e a recusa-perfil são aplicados de forma
+  uniforme. Paridade comprovada por caracterização: `_tests/chatbot-dispatch.test.mjs` (14
+  casos cobrindo recusa-perfil de visitante/comum nos intents admin-only + intents públicos)
+  foi capturado **contra o código ORIGINAL** (golden, 14/14) e re-executado **verde** após o
+  refactor. `detectarIntent` 20/20 inalterado. Comandos mutantes (criar/encerrar/panic/wizard)
+  mantêm `rl` (rate-limit guto-admin) e o gate admin. **Zero alteração de privilégio.**
+- [✅] **EX-2 (HTTP client) — sem nova superfície.** `apiGet`/`apiPost` (fetch nativo, sem nova
+  dep) só centralizam header/body/parse; Authorization Bearer continua a vir do mesmo token do
+  caller. 13 sites migrados com semântica idêntica; auth-admin lifecycle e cadeia de perfil do
+  AppContext **NÃO** tocados (diferidos a MC39.22.2). JWT/RBAC/idempotência inalterados.
+- [✅] **EX-3 (navModel) — sem superfície; DOM idêntico.** Só consolida paths SVG; lógica de
+  perfil/admin dos menus intacta. `aria-hidden` agora também no desktop (melhoria a11y).
+- [N/A] **EX-4 (data-store fallback) NÃO executado** nesta sessão — permanece sob o gate do
+  MC39.22 (confirmar `caller=0` + nunca DROP). Fica para MC39.22.2.
+- [✅] **Regressão:** `node --check` limpo (122 `.mjs`); suíte **124/124** (110 base + 14 novos);
+  `npm run build` verde; MCP visual 1440 + 375 (Sidebar/BottomNav OK, console só ruído pré-existente).
+  Reversível por `git revert` (4 commits atômicos).
+- [✅] **Honestidade de LOC (SUPERPERS):** os cortes renderam **~flat/+78 LOC**, não −679 — o
+  código já era enxuto; o ganho é estrutural (declarativo/DRY) + cobertura nova. Reportado sem maquiagem.
+- **VEREDICTO:** APROVADO para merge (refactor behavior-preserving, R1 mantido, gate EX-1 levantado
+  com prova de paridade). EX-4 e migração HTTP restante seguem PENDENTES para MC39.22.2.
+
+---
+
 ## MC39.15.1 — VEREDICTO (continuação)
 - **VEREDICTO:** APROVADO para merge, **condicionado** à confirmação de `MP_PAYER_ID_NUMBER` no
   Netlify (senão o 502 do MC39.13 retorna). Mudança de código é redução de PII + simplificação.
