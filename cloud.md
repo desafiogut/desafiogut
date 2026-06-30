@@ -1323,3 +1323,24 @@ Plano: instrumentar HIT → backfill idempotente (operador) → janela HIT=0 (�
 
 **Validação:** `node --check` 122 `.mjs`; suíte **129/129**; `npm run build` verde; MCP prod (sessão
 logada) pós-deploy. Relatório: `Desktop\MC39.22.2-final.md`.
+
+### 9.27.3 MC39.22.3 — EX-4 Fase A: instrumentação do financeiro-fallback (2026-06-30)
+> Branch `feat/mc39.22.3`. Instrumentação ADITIVA e fail-soft (zero regressão) para medir o uso
+> real dos fallbacks financeiros em produção — pré-requisito do plano de remoção EX-4 (Fases B–D).
+
+`_lib/financeiro-fallback.mjs` ganhou `registrarFallback(fn, store, hit)`: como cada `lerXLegado` só
+é chamado após um miss do Supabase (`getX() ?? lerXLegado()`), um retorno **não-nulo = HIT** (o Blob
+legado serviu um dado que o Supabase não tinha) — o sinal que **bloqueia a remoção**. No HIT:
+`console.warn("[EX-4] fallback-hit", {fn, store, hit, ts})` (greppável nos logs Netlify, canal primário
+de medição) + `Sentry.addBreadcrumb` warning (best-effort, sem flush). Miss não loga no console (evita
+ruído no hot path do saldo-rs, polled a 5s). **Sem PII** nos logs (só fn/store/hit/ts — nunca endereço/
+chave; R9). try/catch interno garante que a instrumentação **nunca lança nem altera o valor lido** (R1).
+
+**Como medir (Fase A → C):** após o deploy, greppar `[EX-4]` nos logs das Netlify Functions por ≥30
+dias (cobre o ciclo de troco FIFO). HIT=0 sustentado + backfill idempotente (operador, Fase B) →
+habilita a Fase D (remover o módulo + re-auditar). Achado: `lerDebitoLegado` é export morto (sem
+consumidor) → remover na Fase D.
+
+**Cobertura/validação:** `_tests/ex4-instrumentacao.test.mjs` (3 casos). Suíte **132/132**; `node
+--check` 122 `.mjs`; `npm run build` verde. Relatório: `Desktop\MC39.22.3-final.md` (plano de coleta
+em `Desktop\EX-4-auditoria.md`).
