@@ -22,28 +22,18 @@ import {
   trackTempoSessao,
   trackScroll,
 } from "../lib/analytics.js";
+import {
+  LS_PRAZO_FLASH,
+  LS_PRAZO_PROG,
+  lerPrazoStorage,
+  gravarPrazoStorage,
+} from "../lib/leilaoTimer.js";
 
 // Persistência do prazoTimestamp (Onda 5 FASE 0): o timer é IMUNE a refresh
 // porque cada tipo de leilão guarda seu próprio prazo no localStorage. Cálculo
 // é sempre absoluto (`prazo - now`) — o setInterval só re-renderiza.
-const LS_PRAZO_FLASH = "gut_prazo_flash";
-const LS_PRAZO_PROG  = "gut_prazo_programado";
-function lerPrazoStorage(chave) {
-  if (typeof window === "undefined") return null;
-  try {
-    const v = window.localStorage.getItem(chave);
-    if (!v) return null;
-    const n = Number(v);
-    if (!Number.isFinite(n) || n <= 0) return null;
-    // Descarta prazos vencidos há mais de 10 min (evita prender em "encerrado").
-    if (n + 600 < Math.floor(Date.now() / 1000)) return null;
-    return n;
-  } catch { return null; }
-}
-function gravarPrazoStorage(chave, prazo) {
-  if (typeof window === "undefined") return;
-  try { window.localStorage.setItem(chave, String(prazo)); } catch {}
-}
+// MC39.22.1 (EX-7): helpers puros extraídos para ../lib/leilaoTimer.js (sem
+// alteração de comportamento). A máquina de estado do timer permanece aqui.
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 export const EDICAO_ATIVA = "R-1";
