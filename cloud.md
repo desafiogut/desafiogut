@@ -140,6 +140,13 @@ ChatbotWidget) **não** são refatorados retroativamente sem necessidade (evita 
    **encerramento único** (`consolidarResultado` não consolida 2×), unicidade do vencedor, two-step
    transfer, coordenação ≠ 0. Pré-requisito do MC40 (deploy mainnet). Owner: Agente de Transação
    (config CI); validação: Agente de Monitoramento (RUFLO).
+7. **Gate de CI de configs de agentes (MC40-AgentShield):** `.github/workflows/agentshield.yml` roda
+   `npx ecc-agentshield@1.4.0 scan` a cada push/PR que toque a config de agentes (`.agents/**`,
+   `.claude/**`, `.mcp.json`, `**/CLAUDE.md`). Audita segredos hardcoded, permissões perigosas, hooks,
+   MCP servers auto-aprovados e prompt-injection. Reprova o PR em finding **critical/high**; relatório
+   (md+json) vai p/ artifact + job summary. Scan estático/determinístico (sem `--opus`/`--injection`),
+   versão fixada, `permissions: contents:read`. Escaneia a config **commitada** (não o `~/.claude/` do
+   runner). Pré-requisito de segurança do MC40. Owner: Agente de Transação; validação: Agente de Monitoramento.
 
 ---
 

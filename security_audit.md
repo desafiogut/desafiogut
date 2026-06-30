@@ -570,9 +570,9 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   API MP (sem double-credit); SSRF bloqueado em `img-proxy.mjs`; `consolidar-lances.mjs:41-48` com guard
   mainnet+anti-replay; `.env` fora do git; `hardhat.config.js` lê `PRIVATE_KEY` do env (sem hardcode);
   headers/CSP fortes (`netlify.toml`).
-- [⏳] **Pendências de processo:** ~~Foundry+Echidna~~ (✅ em CI desde MC40-CI, ver secção MC40-CI) +
-  AgentShield em CI; auditoria externa do contrato antes do MC40;
-  manter `NETWORK_STAGE=Sepolia` até o contrato mainnet existir.
+- [⏳] **Pendências de processo:** ~~Foundry+Echidna~~ (✅ em CI desde MC40-CI) +
+  ~~AgentShield em CI~~ (✅ desde MC40-AgentShield, ver secção própria); auditoria externa do contrato
+  antes do MC40; manter `NETWORK_STAGE=Sepolia` até o contrato mainnet existir.
 - [✅] Mudança puramente visual/CSS em `GutoSpritePlayer.jsx` (frontend-only): removidos
   `mix-blend-mode`, `filter` e qualquer canvas/chroma-key — `<video>` simples, sem CSS hacks
   (mesmo princípio do `GutoAvatar.jsx` estático). `aria-hidden` + `pointer-events:none` (CLS=0).
@@ -986,3 +986,32 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
 - **VEREDICTO:** APROVADO — gate de CI aditivo e **verde**, sem código de produção tocado. Resolve a
   pendência de processo "Foundry+Echidna em CI" do MC39.17. AgentShield e auditoria externa do contrato
   seguem pendentes para o MC40; `NETWORK_STAGE=Sepolia` mantido.
+
+---
+
+## MC40-AgentShield — Auditoria de configs de agentes em CI (pré-requisito Mainnet) · 2026-06-30
+> Escopo: **CI-only**. Diff = `.github/workflows/agentshield.yml` (novo). NENHUM código de
+> produção alterado. Aditivo, zero-regressão (R1). Fecha a 2ª metade da pendência de processo
+> do MC39.17 (linha 573): AgentShield em CI. Owner: Agente de Transação; valida: Agente de Monitoramento.
+
+- [✅] **O que faz:** `npx ecc-agentshield@1.4.0 scan` a cada push/PR que toque a config de agentes
+  (`.agents/**`, `.claude/**`, `.mcp.json`, `**/CLAUDE.md`, o próprio workflow). Audita segredos
+  hardcoded, permissões perigosas (interpretadores/comandos amplos), hooks, MCP servers auto-aprovados
+  e padrões de prompt-injection nas configs. Gate reprova o PR em qualquer finding **critical/high**.
+- [✅] **Escopo correto (lição):** o plano sugeria escanear `~/.claude/` do runner — **errado**, o runner
+  não tem essa pasta. O scan corre sobre o **checkout do repo** (config commitada). `.claude/settings.local.json`
+  é **untracked/gitignored** → não entra no checkout do CI, logo os findings locais dele (1 critical
+  `enableAllProjectMcpServers`, vários highs de permissão) **não** afetam o CI. Auditar a config commitada
+  é exatamente o modelo de ameaça certo (repo clonado por terceiros).
+- [✅] **Determinístico:** sem `--opus`/`--injection`/`--sandbox` (precisariam de API/rede e seriam
+  não-determinísticos). Scan estático cobre as 5 categorias (Secrets/Permissions/Hooks/MCP/Agents).
+  Versão fixada `@1.4.0` → release novo não muda findings sem revisão.
+- [✅] **Privilégio mínimo:** `permissions: contents: read`. O scan não escreve no repo; relatório
+  (md+json) vai p/ artifact + job summary.
+- [⏳] **Validação:** flags do plano (`--no-llm`/`--output`) não existem no CLI 1.4.0 → corrigidas.
+  Simulação de escopo-CI via `git archive HEAD` (árvore tracked, sem `.claude/`): **Grade A (97/100)**,
+  0 critical; o único high local (`CLAUDE.md 0o666`) é artefacto do Windows (Git reporta world-writable);
+  no runner Linux o checkout é `0644` (não world-writable) → não dispara. Confirmação final = run do CI.
+- **VEREDICTO:** APROVADO — gate aditivo, CI-only, sem código de produção. Com Foundry+Echidna (MC40-CI),
+  fecha a pendência de processo "Foundry+Echidna+AgentShield em CI" do MC39.17. Restam para o MC40:
+  auditoria externa do contrato + deploy mainnet; `NETWORK_STAGE=Sepolia` mantido.
