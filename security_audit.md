@@ -909,6 +909,22 @@ Branch `feat/mc39.22.3` (de `main`). Instrumentação ADITIVA para medir o uso r
 - **VEREDICTO:** APROVADO (instrumentação aditiva, R1 mantido, sem PII). EX-4 segue BLOQUEADO; após
   ≥30d de coleta com **HIT=0** + backfill (operador, Fase B/C) → Fase D remove o módulo e re-audita.
 
+## MC39.23 — Planejamento estratégico (improve): planos MC40 / Playstore / Campanha · 2026-06-30
+Branch `feat/mc39.23` (read-only). **NENHUM código alterado** — só `plans/` + docs. Skill `improve` (plan).
+- [✅] **Zero alteração de produção.** Os 3 planos (`plans/001-mc40-mainnet-deploy.md`,
+  `plans/002-playstore-submission.md`, `plans/003-launch-campaign.md`) são handoff documental; não
+  executam nada. Recon foi read-only (R1/R2 N/A — sem build/teste de código).
+- [✅] **Sem segredo exposto (R9/R10).** Os planos referenciam variáveis/chaves por NOME e `file:line`
+  (ex.: `CONTRATO_MAINNET`, `KMS_KEY_ID`, `DEPLOYER_PRIVATE_KEY`, keystore `.jks`) — **nunca** valores.
+  Passos com segredo/serviço externo/dinheiro real marcados `[OPERADOR]`.
+- [⚠️] **GATE de execução (este documento permanece o gate):** a execução de cada plano é um MC dedicado
+  e **não entra em produção sem nova entrada aqui**. Em particular o **001 (MC40)** exige: auditoria
+  externa do contrato sem HIGH/CRITICAL, `coordenacao()`==Smart Account após two-step, `/health` com
+  `chaveBrutaEmMainnet=false`, e validação on-chain — só então o flip `NETWORK_STAGE=mainnet`.
+- [ℹ️] **Recomendação:** `improve review-plan` com executor de contexto fresco antes de executar o 001.
+- **VEREDICTO:** APROVADO como planejamento (read-only). Execução dos planos = MCs futuros, cada um com
+  seu próprio gate SUPERPERS. Relatório: `Desktop\MC39.23-planejamento.md`.
+
 ---
 
 ## MC39.15.1 — VEREDICTO (continuação)
