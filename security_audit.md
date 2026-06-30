@@ -925,6 +925,30 @@ Branch `feat/mc39.23` (read-only). **NENHUM código alterado** — só `plans/` 
 - **VEREDICTO:** APROVADO como planejamento (read-only). Execução dos planos = MCs futuros, cada um com
   seu próprio gate SUPERPERS. Relatório: `Desktop\MC39.23-planejamento.md`.
 
+## MC40 — Deploy mainnet: PREPARAÇÃO feita; deploy/flip NÃO executado (operador) · 2026-06-30
+Branch `feat/mc40`. Tentativa de executar o `plans/001`. **Resultado honesto: o contrato NÃO foi
+deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, por design e por segurança.
+- [✅] **Review do plano** (`improve review-plan`) — achados críticos incorporados ao `plans/001`
+  (ver secção "Review-plan refinements"): o `aceitarTransferenciaCoordenacao()` de uma Smart Account
+  ERC-4337 **não pode** usar `cast --private-key` (é UserOp via KMS/Biconomy); verificar o endereço
+  da Smart Account como KMS-controlado ANTES do transfer; dry-run em fork; `etherscan` apiKey p/ verify.
+- [✅] **Prep de código (agente):** rede `mainnet` (chainId 1) adicionada a `desafio-gut/hardhat.config.js`
+  (inerte sem `MAINNET_RPC_URL`+`DEPLOYER_PRIVATE_KEY` e sem `--network mainnet`). `node --check` OK;
+  `.mjs` OK; `npm run build` verde. Wiring do flip já existe no código (`NETWORK_STAGE`/`CONTRATO_MAINNET`/
+  `MAINNET_CHAIN_ID` em signer/consolidar-lances/health; `/health` reporta `CHAVE_BRUTA_EM_MAINNET`).
+- [⛔] **NÃO executado (OPERADOR-ONLY) — motivos firmes:**
+  1. **Segredos mainnet ausentes** nesta sessão (`MAINNET_RPC_URL`/`DEPLOYER_PRIVATE_KEY`/`KMS_KEY_ID`/
+     `CONSOLIDATION_RPC_URL`) e proibido manuseá-los (R9/R14) → deploy impossível daqui.
+  2. **Auditoria externa do contrato NÃO confirmada** (MC40-checklist marca pendente) → STOP do gate.
+  3. **Irreversível + ETH real** → exige condução do operador, com confirmação por ação; não-autônomo.
+  4. **ERC-4337**: aceitar a coordenação exige UserOp KMS/Biconomy, não `cast --private-key` (comando do
+     prompt falharia / arriscaria coordenação presa).
+- **VEREDICTO:** PREPARAÇÃO aprovada (prep aditiva/inerte, R1 mantido). **Deploy/transfer/flip mainnet
+  PERMANECEM PENDENTES e BLOQUEADOS** até o operador: (a) concluir auditoria externa sem HIGH/CRITICAL,
+  (b) financiar/confirmar a Smart Account KMS, (c) executar deploy+two-step+flip conforme `plans/001` e o
+  runbook `Desktop\MC40-final.md`, com `/health` `chaveBrutaEmMainnet=false` e validação on-chain. Só então
+  nova entrada aqui aprova a ida a produção mainnet.
+
 ---
 
 ## MC39.15.1 — VEREDICTO (continuação)

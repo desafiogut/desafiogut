@@ -1365,3 +1365,16 @@ em `Desktop\EX-4-auditoria.md`).
 Índice + dependências em `plans/README.md` (ordem 001 → 002/003; 001 é a raiz). **Execução = MCs
 futuros, cada um com seu gate `security_audit.md`** (ver §MC39.23 lá). Relatório consolidado:
 `Desktop\MC39.23-planejamento.md`.
+
+### 10.1 MC40 — PREPARADO, ainda NÃO live (2026-06-30)
+> Branch `feat/mc40`. O contrato **NÃO** está em mainnet ainda — não há endereço/tx para registar.
+> Esta sessão fez só a PREPARAÇÃO segura; o deploy/flip é OPERADOR-ONLY (ETH real, irreversível, KMS).
+
+- **Feito (agente):** review do `plans/001` (`improve review-plan`, achados críticos incorporados) +
+  rede `mainnet` (chainId 1) adicionada ao `hardhat.config.js` (inerte sem segredos/flag). Wiring do
+  flip já existe (`NETWORK_STAGE`/`CONTRATO_MAINNET`/`MAINNET_CHAIN_ID`; `/health` reporta `CHAVE_BRUTA_EM_MAINNET`).
+- **Pendente (operador):** auditoria externa sem HIGH/CRITICAL → financiar/confirmar Smart Account KMS →
+  deploy (Ignition `LeilaoModule`) → two-step transfer (aceitar = **UserOp KMS/Biconomy**, não `cast
+  --private-key`) → `CONTRATO_MAINNET` no Netlify → flip `NETWORK_STAGE=mainnet` → validação on-chain.
+  Runbook completo: `Desktop\MC40-final.md` + `plans/001-mc40-mainnet-deploy.md`.
+- Quando o deploy ocorrer, registar AQUI o endereço mainnet + tx do two-step (hoje inexistentes).
