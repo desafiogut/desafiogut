@@ -33,7 +33,9 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Install forge-std (foundry dep)
-        run: forge install foundry-rs/forge-std --no-commit
+        # MC40-CI: a flag `--no-commit` foi removida no Foundry novo (erro "unexpected
+        # argument '--no-commit'"); o default já não comita. Instala sem a flag.
+        run: forge install foundry-rs/forge-std
 
       - name: Run foundry tests
         run: forge test -vv
@@ -53,10 +55,15 @@ jobs:
 
       - name: Run Echidna fuzzing
         uses: crytic/echidna-action@v1
+        # MC40-CI: a action roda num container com workdir=raiz-do-repo (o
+        # `working-directory: ./desafio-gut` NÃO se aplica a actions de container),
+        # por isso os paths são relativos à RAIZ (antes `.`/`echidna.yaml` davam
+        # "echidna.yaml: does not exist"). O harness importa ../../contracts/Leilao.sol
+        # por path relativo ao próprio ficheiro → compila como ficheiro único.
         with:
-          files: .
+          files: desafio-gut/tests/fuzzing/LeilaoGUT.sol
           contract: LeilaoGUTFuzzing
-          config: echidna.yaml
+          config: desafio-gut/echidna.yaml
           solc-version: 0.8.20
           crytic-args: --solc-disable-warnings
 
@@ -80,6 +87,9 @@ jobs:
           artifact-name: sbom-cyclonedx
 
       - name: Persist SBOM in repo (push to main only)
+        # MC40-CI: best-effort — o push do bot p/ a main protegida pode falhar (branch
+        # protection); o artifact do SBOM já subiu acima. Não reprovar o workflow por isto.
+        continue-on-error: true
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           mkdir -p docs/sbom
