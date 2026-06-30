@@ -1344,3 +1344,24 @@ consumidor) → remover na Fase D.
 **Cobertura/validação:** `_tests/ex4-instrumentacao.test.mjs` (3 casos). Suíte **132/132**; `node
 --check` 122 `.mjs`; `npm run build` verde. Relatório: `Desktop\MC39.22.3-final.md` (plano de coleta
 em `Desktop\EX-4-auditoria.md`).
+
+## 10. Planejamento Estratégico — MC39.23 (improve)
+> Branch `feat/mc39.23` (read-only). A skill `improve` (shadcn, variante `plan`) gerou 3 planos de
+> implementação **autocontidos** em `plans/` — handoff para outro agente/operador executar. **Nenhum
+> código alterado** (R1). Cada plano: objetivo, estado atual (`arquivo:linha`), passos com comandos de
+> verificação, done criteria machine-checkable, STOP conditions, esforço; passos com segredo/serviço
+> externo/dinheiro real marcados `[OPERADOR]`.
+
+- **`plans/001-mc40-mainnet-deploy.md`** (P1) — deploy do `LeilaoGUT` em mainnet + two-step transfer da
+  coordenação p/ Smart Account (KMS). Aterrado em `Leilao.sol:130-140` (two-step), `hardhat.config.js`
+  (só sepolia → add mainnet), Ignition `LeilaoModule`, `MC40-checklist.md`, `docs/mainnet-prerequisites.md`.
+- **`plans/002-playstore-submission.md`** (P2) — empacotar a PWA como app Android (Capacitor → AAB) e
+  submeter à Play Store. Greenfield (sem `android/`); injeta `window.GUT_NATIVE.platform` (consumido por
+  `useRecursosApp.js`); keystore, targetSdk≥36, data-safety/Web3, closed testing 12 testadores/14d.
+- **`plans/003-launch-campaign.md`** (P2) — campanha de lançamento E-mail+WhatsApp. Segmentos derivados
+  dos perfis (`AppContext.tipoUsuario`: corporativo/comum + leads); opt-in LGPD, SPF/DKIM/DMARC + HSM
+  WhatsApp, cronograma 4 semanas, métricas (abertura/CTR/conversão via UTM).
+
+Índice + dependências em `plans/README.md` (ordem 001 → 002/003; 001 é a raiz). **Execução = MCs
+futuros, cada um com seu gate `security_audit.md`** (ver §MC39.23 lá). Relatório consolidado:
+`Desktop\MC39.23-planejamento.md`.
