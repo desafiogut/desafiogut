@@ -891,6 +891,24 @@ Branch `feat/mc39.22.2` (de `main`). Escopo: evoluir cliente HTTP, migrar não-c
 - **VEREDICTO:** APROVADO para merge (migrações behavior-preserving; anti-fraude preservado; EX-4
   só documentado). Núcleo crítico + remoção EX-4 (após backfill) → MC futuro.
 
+## MC39.22.3 — EX-4 Fase A: instrumentação do financeiro-fallback · 2026-06-30
+Branch `feat/mc39.22.3` (de `main`). Instrumentação ADITIVA para medir o uso real do fallback.
+- [✅] **Aditiva e fail-soft — ZERO mudança de comportamento (R1).** `registrarFallback(fn, store, hit)`
+  loga **só no HIT** (retorno não-nulo do Blob = dado que o Supabase não tinha): `console.warn("[EX-4]
+  fallback-hit", {fn, store, hit, ts})` (greppável nos logs Netlify) + `Sentry.addBreadcrumb` warning
+  (best-effort, sem flush → sem latência). `miss` não loga no console (hot path saldo-rs poll 5s). O
+  `ler` ganhou o nome da fn (sem `new Error().stack`). try/catch interno: a instrumentação NUNCA lança
+  nem altera o valor lido — testado.
+- [✅] **Sem PII / sem segredo (R9/R10).** Os logs/breadcrumbs contêm apenas `fn`/`store`/`hit`/`ts` —
+  **nunca** o endereço, chave, pedidoId ou idemKey. Coberto por teste (assert de ausência de endereço).
+- [✅] **Sem nova superfície de ataque.** Só leitura/observação; nenhuma rota, input, permissão ou
+  dependência nova (Sentry já integrado). Endpoints e RBAC inalterados.
+- [✅] **Cobertura:** `_tests/ex4-instrumentacao.test.mjs` (3 casos: HIT loga+preserva valor+sem PII;
+  miss silencioso; fail-soft). Suíte **132/132**; `node --check` 122 `.mjs`; `npm run build` verde.
+- [ℹ️] **Achado:** `lerDebitoLegado` é export **sem consumidor** (morto) — remover na Fase D.
+- **VEREDICTO:** APROVADO (instrumentação aditiva, R1 mantido, sem PII). EX-4 segue BLOQUEADO; após
+  ≥30d de coleta com **HIT=0** + backfill (operador, Fase B/C) → Fase D remove o módulo e re-audita.
+
 ---
 
 ## MC39.15.1 — VEREDICTO (continuação)
