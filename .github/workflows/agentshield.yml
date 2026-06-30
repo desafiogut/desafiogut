@@ -1,0 +1,82 @@
+name: AgentShield
+
+# MC40-AgentShield — auditoria de segurança das configurações de agentes IA
+# (skills, MCP servers, hooks, permissões, CLAUDE.md). Pré-requisito de segurança do MC40.
+# Aditivo / zero-regressão (R1): roda só sobre a config de agentes, não toca build/app.
+# Estático e determinístico: SEM --opus/--injection/--sandbox (não precisam de API/rede).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.agents/**'
+      - '.claude/**'
+      - '.mcp.json'
+      - '**/CLAUDE.md'
+      - '.github/workflows/agentshield.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.agents/**'
+      - '.claude/**'
+      - '.mcp.json'
+      - '**/CLAUDE.md'
+      - '.github/workflows/agentshield.yml'
+
+# Privilégio mínimo: só leitura. O scan não escreve no repo (relatório vai p/ artifact).
+permissions:
+  contents: read
+
+jobs:
+  agentshield:
+    name: agentshield
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Versão fixada (@1.4.0) para o gate ser reprodutível — um release novo não
+      # pode mudar findings/quebrar o gate sem revisão. `|| true`: o scan não decide
+      # o resultado aqui; quem decide é o passo "Gate" com base na contagem do JSON.
+      - name: Run AgentShield scan (markdown — relatório humano)
+        run: npx -y ecc-agentshield@1.4.0 scan -p . -f markdown > agentshield-report.md || true
+
+      - name: Run AgentShield scan (JSON — para o gate)
+        run: npx -y ecc-agentshield@1.4.0 scan -p . -f json > agentshield-report.json || true
+
+      - name: Publicar relatório no resumo do job
+        if: always()
+        run: cat agentshield-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload do relatório (artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentshield-report
+          path: |
+            agentshield-report.md
+            agentshield-report.json
+
+      # Gate: reprova o PR se houver QUALQUER finding critical OU high. A config
+      # commitada (tracked) deve ficar limpa; um novo skill/MCP/secret/permissão
+      # arriscada introduzida num PR reprova aqui. Contagem vem de summary.{critical,high}.
+      - name: Gate — falhar em findings CRITICAL/HIGH
+        run: |
+          node -e '
+            const fs = require("fs");
+            let s;
+            try { s = JSON.parse(fs.readFileSync("agentshield-report.json", "utf8")).summary; }
+            catch (e) { console.error("AgentShield: relatorio JSON ilegivel:", e.message); process.exit(1); }
+            const c = s.critical || 0, h = s.high || 0;
+            console.log(`AgentShield: critical=${c} high=${h} medium=${s.medium || 0} files=${s.filesScanned}`);
+            if (c > 0 || h > 0) {
+              console.error(`::error::AgentShield reprovou: ${c} critical + ${h} high. Ver artifact agentshield-report.`);
+              process.exit(1);
+            }
+            console.log("AgentShield: sem findings critical/high. OK.");
+          '
