@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
+import { apiGet } from "../lib/api.js";
 
 const COR = {
   text: "#e8f0fe", muted: "#6b7db8", primary: "#f5a623",
@@ -32,16 +33,15 @@ export default function CorporativoAnalytics() {
     setErro(null);
     (async () => {
       try {
-        const resp = await fetch(
-          `/.netlify/functions/corporativo-analytics?endereco=${address}&periodo=${periodo}`,
-          { headers: { Authorization: `Bearer ${authToken}` } },
+        const resp = await apiGet(
+          `corporativo-analytics?endereco=${address}&periodo=${periodo}`,
+          { token: authToken },
         );
         if (cancel) return;
         if (!resp.ok) {
-          const txt = await resp.text();
-          throw new Error(`HTTP ${resp.status} ${txt.slice(0, 120)}`);
+          throw new Error(`HTTP ${resp.status} ${(resp.text || "").slice(0, 120)}`);
         }
-        const data = await resp.json();
+        const data = resp.data;
         if (!cancel) setAnalytics(data);
       } catch (err) {
         console.warn("[CorporativoAnalytics] falhou:", err?.message);

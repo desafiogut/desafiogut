@@ -20,6 +20,7 @@
 
 import { useEffect } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
+import { apiPost } from "../lib/api.js";
 import { REF_STORAGE_KEY, REF_STORAGE_KEY_LEGACY } from "./ReferralTracker.jsx";
 
 // Estados TERMINAIS do registo — consumir a flag sem retry (não são transitórios).
@@ -60,19 +61,17 @@ export default function ReferralRegistrar() {
       // MC17.5.1 [LOG TEMPORÁRIO] T3 — POST enviado (espera por address+authToken garantida acima).
       console.log("[MC17.5.1] T3 POST enviado", { codigo, endereco: address, temAuthToken: !!authToken, deviceTracked });
       try {
-        const resp = await fetch("/.netlify/functions/referral?acao=usar-codigo", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`,
-            "X-Device-Tracked": deviceTracked,
-            ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
-          },
-          body: JSON.stringify({ codigo_indicacao: codigo, endereco: address }),
-        });
+        const resp = await apiPost("referral?acao=usar-codigo",
+          { codigo_indicacao: codigo, endereco: address },
+          {
+            token: authToken,
+            headers: {
+              "X-Device-Tracked": deviceTracked,
+              ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
+            },
+          });
         if (cancel) return;
-        let data = null;
-        try { data = await resp.clone().json(); } catch {}
+        const data = resp.data;
         const conv = data?.conversao || {};
         console.log("[GUT][MC17.4.2] T5/T6 resposta usar-codigo", {
           status: resp.status,
