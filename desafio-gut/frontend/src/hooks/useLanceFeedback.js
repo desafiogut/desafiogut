@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { apiGet } from "../lib/api.js";
 
 export function useLanceFeedback(edicaoId, meuValor) {
   const [status, setStatus] = useState(null);
@@ -16,11 +17,10 @@ export function useLanceFeedback(edicaoId, meuValor) {
 
     const verificar = async () => {
       try {
-        const resp = await fetch(
-          `/.netlify/functions/lances-flash?edicaoId=${encodeURIComponent(edicaoId)}&acao=verificar&valor=${encodeURIComponent(meuValor)}`
+        const { ok, data } = await apiGet(
+          `lances-flash?edicaoId=${encodeURIComponent(edicaoId)}&acao=verificar&valor=${encodeURIComponent(meuValor)}`
         );
-        if (!resp.ok) return;
-        const data = await resp.json();
+        if (!ok) return;
         if (cancelado) return;
         setStatus(data);
 

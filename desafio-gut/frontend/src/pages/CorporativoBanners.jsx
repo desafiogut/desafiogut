@@ -8,6 +8,7 @@ import DOMPurify from "dompurify";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
+import { apiGet } from "../lib/api.js";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 // MC17.3 — upload de banner realocado da MinhaCarteira (utilizador comum) para
 // o mundo lojista. O botão "Novo banner" deixa de navegar para /carteira.
@@ -31,9 +32,9 @@ export default function CorporativoBanners() {
     (async () => {
       const carregar = async (formato) => {
         try {
-          const resp = await fetch(`/.netlify/functions/banners?cliente_id=${address}&formato=${formato}`);
-          if (!resp.ok) return null;
-          return await resp.json();
+          const { ok, data } = await apiGet(`banners?cliente_id=${address}&formato=${formato}`);
+          if (!ok) return null;
+          return data;
         } catch { return null; }
       };
       const [app, site] = await Promise.all([carregar("app"), carregar("site")]);
@@ -47,12 +48,11 @@ export default function CorporativoBanners() {
     let cancel = false;
     (async () => {
       try {
-        const resp = await fetch(
-          `/.netlify/functions/corporativo-analytics?endereco=${address}&periodo=30`,
-          { headers: { Authorization: `Bearer ${authToken}` } },
+        const { ok, data } = await apiGet(
+          `corporativo-analytics?endereco=${address}&periodo=30`,
+          { token: authToken },
         );
-        if (!resp.ok || cancel) return;
-        const data = await resp.json();
+        if (!ok || cancel) return;
         if (!cancel) setAnalytics(data);
       } catch (err) {
         console.warn("[CorporativoBanners] analytics falhou:", err?.message);

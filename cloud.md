@@ -1260,3 +1260,40 @@ não validável por MCP, mas usa o MESMO conjunto `NavIcon` já provado.
 −679. As estimativas do MC39.22 não se concretizaram porque o codebase já estava enxuto; o entregue
 é consolidação estrutural (declarativo/DRY) + nova cobertura, com zero regressão. Relatório:
 `Desktop\MC39.22.1-final.md`. Pendências P1 + restante da migração HTTP → MC39.22.2.
+
+### 9.27.1 MC39.22.1 (2ª parte) — conclusão dos P0 pendentes (2026-06-30)
+> Continuação na mesma branch `feat/mc39.22.1`. Escopo aprovado pelo operador:
+> **subset seguro + EX-5 + EX-7**. Tudo behavior-preserving, zero regressão.
+
+**EX-4 (remover `financeiro-fallback`) — BLOQUEADO, NÃO executado.** O módulo NÃO é
+código morto: tem **3 consumidores vivos** (`wallet.mjs`, `_lib/saldoRs.mjs`,
+`_lib/troco-senhas.mjs`) como read-fallback da transição Supabase. O gate do MC39.22
+(`caller=0`) NÃO está satisfeito → remover arriscaria saldos financeiros legados.
+Fica para MC39.22.2 após auditoria de dados confirmar migração 100% (nunca DROP).
+
+**EX-5 — `<StatTile>` (`src/components/StatTile.jsx`).** Tile de KPI no padrão único
+(Button `variant="secondary"` = `.gut-glass-standard`). Refatorados os 2 usos reais:
+Dashboard (era `<button>` glass cru responsivo) e CorporativoDashboard (era Button
+secondary inline). MCP 1440+375: KPIs renderizam igual ao original, sem overflow.
+(Demais páginas Corporativo* NÃO tinham o tile — plano superestimou "várias páginas".)
+
+**EX-7 — `src/lib/leilaoTimer.js`.** Extraídos os helpers PUROS de persistência do
+prazo (`LS_PRAZO_*`, `lerPrazoStorage`, `gravarPrazoStorage`) de AppContext, sem mudar
+comportamento. MCP: timer persiste e conta (imune a F5). A máquina de estado do timer
+NÃO foi movida — está entrelaçada com notificações/on-chain/`encerrado` e NÃO é
+duplicação; extraí-la seria reescrita do núcleo (deferido).
+
+**HTTP (Segmento 1).** Migrados ~27 call-sites (15 ficheiros) para `apiGet`/`apiPost`
+(+`apiDelete`): reads, `.then`/`Promise.all` e POST público (ChatbotWidget). Total
+acumulado: **40 de ~54** sites em `api.js`. EXCLUÍDOS por fidelidade/segurança (não são
+fetch trivial): headers anti-fraude `X-Visitor-ID`/`X-Device-Tracked` (ReferralRegistrar,
+saldo-rs, notificações, register-corporativo), leitura de header de resposta/`resp.text()`
+(saldo-rs, CorporativoAnalytics), e o núcleo fora de escopo (CardLance lance on-chain,
+ComprarFichasModal pagamento, auth-user sessão, auth-admin lifecycle + `chamarAdmin`,
+analytics keepalive, mutações de produto do CorporativoDashboard, BannerUpload). Estes
+vão para MC39.22.2 (apiPost precisaria suportar headers custom + leitura de resposta crua).
+
+**Validação:** `node --check` 122 `.mjs`; suíte **124/124**; `npm run build` verde; MCP
+1440+375 (Dashboard/StatTile/nav/timer OK; network confirma URLs corretas de
+`edicoes`/`lances-flash`/`chatbot`; console só ruído pré-existente). Relatório:
+`Desktop\MC39.22.1-final-v2.md`. Restante (EX-4, headers custom, núcleo) → MC39.22.2.

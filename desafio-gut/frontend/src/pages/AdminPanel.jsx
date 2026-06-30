@@ -16,6 +16,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useAdmin } from "../hooks/useAdmin.js";
 import { getSignerFromProvider } from "../utils/web3.js";
+import { apiGet } from "../lib/api.js";
 import { Button, Input } from "../components/ui";
 
 const COR = {
@@ -221,17 +222,15 @@ function TabCotas({ chamarAdmin, isMobile, onLoginNeeded }) {
 
   async function carregarResumo() {
     try {
-      const resp = await fetch("/.netlify/functions/cotas");
-      const data = await resp.json();
+      const { data } = await apiGet("cotas");
       setResumo(data?.resumo || {});
     } catch {}
   }
   async function carregarCategoria() {
     setCarregando(true); setErro("");
     try {
-      const resp = await fetch(`/.netlify/functions/cotas?categoria=${catSel}`);
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data?.error?.message || `HTTP ${resp.status}`);
+      const { ok, status, data } = await apiGet(`cotas?categoria=${catSel}`);
+      if (!ok) throw new Error(data?.error?.message || `HTTP ${status}`);
       setCotas(data.cotas || []);
     } catch (err) {
       setErro(err?.message || "falha");
@@ -378,8 +377,7 @@ function TabAdmins({ chamarAdmin, onLoginNeeded }) {
 
   async function carregar() {
     try {
-      const resp = await fetch("/.netlify/functions/admin-list");
-      const data = await resp.json();
+      const { data } = await apiGet("admin-list");
       setAdmins(data?.admins || []);
       setCoord(data?.coordenacao || null);
     } catch {}

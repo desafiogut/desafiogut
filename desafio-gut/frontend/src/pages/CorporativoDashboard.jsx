@@ -9,6 +9,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard, Button, Input } from "@/components/ui";
 import GutoAvatar from "../components/GutoAvatar.jsx";
+import StatTile from "../components/StatTile.jsx";
 import { imagemProdutoSrc } from "../lib/imagem.js";
 import { apiGet, apiPost } from "../lib/api.js";
 
@@ -123,12 +124,12 @@ export default function CorporativoDashboard() {
     (async () => {
       try {
         const [respApp, respSite] = await Promise.all([
-          fetch(`/.netlify/functions/banners?cliente_id=${address}&formato=app`),
-          fetch(`/.netlify/functions/banners?cliente_id=${address}&formato=site`),
+          apiGet(`banners?cliente_id=${address}&formato=app`),
+          apiGet(`banners?cliente_id=${address}&formato=site`),
         ]);
         if (cancel) return;
-        const app  = respApp.ok  ? await respApp.json()  : null;
-        const site = respSite.ok ? await respSite.json() : null;
+        const app  = respApp.ok  ? respApp.data  : null;
+        const site = respSite.ok ? respSite.data : null;
         setBannerInfo({ app, site });
       } catch (err) {
         console.warn("[CorporativoDashboard] banners falhou:", err?.message);
@@ -142,12 +143,11 @@ export default function CorporativoDashboard() {
     let cancel = false;
     (async () => {
       try {
-        const resp = await fetch(
-          `/.netlify/functions/corporativo-analytics?endereco=${address}&periodo=30`,
-          { headers: { Authorization: `Bearer ${authToken}` } },
+        const { ok, data } = await apiGet(
+          `corporativo-analytics?endereco=${address}&periodo=30`,
+          { token: authToken },
         );
-        if (!resp.ok || cancel) return;
-        const data = await resp.json();
+        if (!ok || cancel) return;
         if (!cancel) setAnalytics(data);
       } catch (err) {
         console.warn("[CorporativoDashboard] analytics falhou:", err?.message);
@@ -374,16 +374,7 @@ export default function CorporativoDashboard() {
         marginBottom: isMobile ? "1.25rem" : "2rem",
       }}>
         {cards.map(({ label, value, color, icon, to }) => (
-          <Button
-            key={label}
-            variant="secondary"
-            onClick={() => navigate(to)}
-            className={`${cardCls} !flex !flex-col !items-start !gap-1 !text-left !h-auto`}
-          >
-            <span style={{ fontSize: "1.3rem" }}>{icon}</span>
-            <span style={{ fontSize: "1.4rem", fontWeight: 900, color }}>{value}</span>
-            <span style={{ fontSize: "0.72rem", color: COR.muted, fontWeight: 600 }}>{label}</span>
-          </Button>
+          <StatTile key={label} label={label} value={value} color={color} icon={icon} to={to} className={cardCls} />
         ))}
       </section>
 

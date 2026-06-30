@@ -17,6 +17,7 @@
 import { useState, useEffect } from "react";
 import { supabaseConfigurado, getSupabaseBrowser } from "../lib/supabaseClient";
 import { useRealtimeConfig } from "./useRealtimeConfig";
+import { apiGet } from "../lib/api.js";
 
 const DEFAULT_RECURSOS = {
   isLeilaoAtivo:          { ios: false, android: false, pwa: true },
@@ -92,11 +93,8 @@ async function carregarRecursos() {
   }
 
   try {
-    const resp = await fetch(`/.netlify/functions/recursos-app?plataforma=${plataforma}`, {
-      headers: { Accept: "application/json" },
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
+    const { ok, status, data } = await apiGet(`recursos-app?plataforma=${plataforma}`);
+    if (!ok) throw new Error(`HTTP ${status}`);
     return {
       plataforma: data.plataforma ?? plataforma,
       isLeilaoAtivo: Boolean(data.isLeilaoAtivo),

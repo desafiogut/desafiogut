@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import DOMPurify from "dompurify";
 import { GlassCard } from "@/components/ui";
+import { apiGet } from "../lib/api.js";
 
 const COR = {
   border: "rgba(245,166,35,0.25)",
@@ -30,10 +31,10 @@ export default function BannerCard({ clienteId, formato = "app", style = {}, mos
     }
     let cancelado = false;
     setEstado((s) => ({ ...s, status: "loading", erro: null }));
-    fetch(`/.netlify/functions/banners?cliente_id=${encodeURIComponent(clienteId)}&formato=${formato}`)
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const data = await r.json();
+    (async () => {
+      try {
+        const { ok, status, data } = await apiGet(`banners?cliente_id=${encodeURIComponent(clienteId)}&formato=${formato}`);
+        if (!ok) throw new Error(`HTTP ${status}`);
         if (!cancelado) setEstado({
           status: "ok",
           svg:    data.svg ?? null,
@@ -42,10 +43,10 @@ export default function BannerCard({ clienteId, formato = "app", style = {}, mos
           fonte:  data.fonte ?? null,
           erro:   null,
         });
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!cancelado) setEstado({ status: "error", svg: null, fonte: null, erro: err?.message || "falha" });
-      });
+      }
+    })();
     return () => { cancelado = true; };
   }, [clienteId, formato]);
 

@@ -12,6 +12,7 @@ import { useLoginWithEmail } from "@privy-io/react-auth";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { getVisitorId } from "../lib/fingerprint.js";
+import { apiGet } from "../lib/api.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import { Button, Input } from "@/components/ui";
 
@@ -154,9 +155,9 @@ export default function SejaNossoParceiro() {
     try {
       const cnpjNums = cnpj.replace(/\D/g, "");
       // FASE B — verificar duplicidade no servidor
-      const checkRes = await fetch(`/.netlify/functions/cotas?cnpj=${cnpjNums}`);
+      const checkRes = await apiGet(`cotas?cnpj=${cnpjNums}`);
       if (checkRes.ok) {
-        const { endereco, email: emailCadastrado, empresa: empresaCadastrada } = await checkRes.json();
+        const { endereco, email: emailCadastrado, empresa: empresaCadastrada } = checkRes.data;
         setCnpjJaExiste(true);
         setErro(null);
         if (isConnected) {
@@ -240,12 +241,12 @@ export default function SejaNossoParceiro() {
     setEnviandoLogin(true);
     try {
       const cnpjNums = cnpjLogin.replace(/\D/g, "");
-      const res = await fetch(`/.netlify/functions/cotas?acao=verificar-login&cnpj=${cnpjNums}&empresa=${encodeURIComponent(empresaLogin.trim())}`);
+      const res = await apiGet(`cotas?acao=verificar-login&cnpj=${cnpjNums}&empresa=${encodeURIComponent(empresaLogin.trim())}`);
       if (!res.ok) {
         setErroLogin("CNPJ ou Nome da Empresa não encontrados. Verifique os dados.");
         return;
       }
-      const data = await res.json();
+      const data = res.data;
       if (!data?.email) {
         setErroLogin("Cadastro encontrado, mas sem email associado. Contacte a coordenação.");
         return;

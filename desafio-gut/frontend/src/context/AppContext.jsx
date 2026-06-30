@@ -22,28 +22,19 @@ import {
   trackTempoSessao,
   trackScroll,
 } from "../lib/analytics.js";
+import {
+  LS_PRAZO_FLASH,
+  LS_PRAZO_PROG,
+  lerPrazoStorage,
+  gravarPrazoStorage,
+} from "../lib/leilaoTimer.js";
+import { apiGet } from "../lib/api.js";
 
 // Persistência do prazoTimestamp (Onda 5 FASE 0): o timer é IMUNE a refresh
 // porque cada tipo de leilão guarda seu próprio prazo no localStorage. Cálculo
 // é sempre absoluto (`prazo - now`) — o setInterval só re-renderiza.
-const LS_PRAZO_FLASH = "gut_prazo_flash";
-const LS_PRAZO_PROG  = "gut_prazo_programado";
-function lerPrazoStorage(chave) {
-  if (typeof window === "undefined") return null;
-  try {
-    const v = window.localStorage.getItem(chave);
-    if (!v) return null;
-    const n = Number(v);
-    if (!Number.isFinite(n) || n <= 0) return null;
-    // Descarta prazos vencidos há mais de 10 min (evita prender em "encerrado").
-    if (n + 600 < Math.floor(Date.now() / 1000)) return null;
-    return n;
-  } catch { return null; }
-}
-function gravarPrazoStorage(chave, prazo) {
-  if (typeof window === "undefined") return;
-  try { window.localStorage.setItem(chave, String(prazo)); } catch {}
-}
+// MC39.22.1 (EX-7): helpers puros extraídos para ../lib/leilaoTimer.js (sem
+// alteração de comportamento). A máquina de estado do timer permanece aqui.
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 export const EDICAO_ATIVA = "R-1";
@@ -264,8 +255,8 @@ export function AppProvider({ children }) {
     let cancel = false;
     const buscarCota = async () => {
       try {
-        const respAddr = await fetch(`/.netlify/functions/cotas?cliente_id=${encodeURIComponent(address)}`);
-        let data = respAddr.ok ? await respAddr.json() : null;
+        const respAddr = await apiGet(`cotas?cliente_id=${encodeURIComponent(address)}`);
+        let data = respAddr.ok ? respAddr.data : null;
         // MC15.2 — fallback por email cobre QUALQUER método de login.
         // O email do utilizador pode vir de email-OTP, Google ou Apple; antes
         // (MC14.10.1) só user.email.address disparava o fetch, deixando logins
@@ -273,8 +264,8 @@ export function AppProvider({ children }) {
         const emailLogin =
           user?.email?.address || user?.google?.email || user?.apple?.email || null;
         if (!data && emailLogin) {
-          const respEmail = await fetch(`/.netlify/functions/cotas?email=${encodeURIComponent(emailLogin)}`);
-          if (respEmail.ok) data = await respEmail.json();
+          const respEmail = await apiGet(`cotas?email=${encodeURIComponent(emailLogin)}`);
+          if (respEmail.ok) data = respEmail.data;
         }
         // MC15.3 — fallback final: email do cadastro recém-feito em
         // SejaNossoParceiro, guardado no sessionStorage antes do login. Cobre
@@ -283,8 +274,8 @@ export function AppProvider({ children }) {
           let emailCadastro = null;
           try { emailCadastro = sessionStorage.getItem("gut_corp_recem_cadastrado"); } catch {}
           if (emailCadastro && emailCadastro !== emailLogin) {
-            const respCad = await fetch(`/.netlify/functions/cotas?email=${encodeURIComponent(emailCadastro)}`);
-            if (respCad.ok) data = await respCad.json();
+            const respCad = await apiGet(`cotas?email=${encodeURIComponent(emailCadastro)}`);
+            if (respCad.ok) data = respCad.data;
           }
         }
         // Consome a flag de cadastro recente assim que o perfil é reconhecido.
@@ -399,9 +390,8 @@ export function AppProvider({ children }) {
     const poll = async () => {
       if (cancelado) return;
       try {
-        const resp = await fetch(`/.netlify/functions/lances-flash?edicaoId=${EDICAO_ATIVA}`);
-        if (!resp.ok || cancelado) return;
-        const data = await resp.json();
+        const { ok, data } = await apiGet(`lances-flash?edicaoId=${EDICAO_ATIVA}`);
+        if (!ok || cancelado) return;
         if (!cancelado) setLancesFlash(data.lances || []);
       } catch {}
     };

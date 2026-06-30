@@ -15,8 +15,8 @@
 // NUNCA devolve null/vazio: edicoes é sempre um objeto com pelo menos R-1.
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { apiGet } from "../lib/api.js";
 
-const ENDPOINT = "/.netlify/functions/edicoes";
 const POLL_MS = 60_000;
 const EDICAO_FALLBACK_ID = "R-1";
 
@@ -92,11 +92,8 @@ export function useEdicoes() {
   const buscar = useCallback(async () => {
     setEdicoesStatus((prev) => (prev === "ok" ? prev : "loading"));
     try {
-      const resp = await fetch(ENDPOINT, {
-        headers: { Accept: "application/json" },
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
+      const { ok, status, data } = await apiGet("edicoes");
+      if (!ok) throw new Error(`HTTP ${status}`);
       const normalizado = normalizarEdicoes(data);
       if (!normalizado) throw new Error("payload_invalido");
       if (canceladoRef.current) return;

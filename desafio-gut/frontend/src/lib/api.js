@@ -50,3 +50,15 @@ export async function apiPost(path, body, { token, signal, keepalive } = {}) {
   const data = await resp.json().catch(() => ({}));
   return { ok: resp.ok, status: resp.status, data };
 }
+
+/**
+ * DELETE numa Netlify Function (sem corpo).
+ * @param {string} path  nome da função + query (ex.: `produtos?id=123`).
+ * @param {{ token?: string, signal?: AbortSignal }} [opts]
+ * @returns {Promise<{ ok: boolean, status: number, data: any }>}
+ */
+export async function apiDelete(path, { token, signal } = {}) {
+  const resp = await fetch(BASE + path, { method: "DELETE", headers: montarHeaders(token, false), signal });
+  const data = await resp.json().catch(() => ({}));
+  return { ok: resp.ok, status: resp.status, data };
+}

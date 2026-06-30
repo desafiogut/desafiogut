@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
+import { apiGet } from "../lib/api.js";
 
 const COR = {
   primary:    "#00d4aa",
@@ -39,15 +40,12 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
     }
     setDados((s) => ({ ...s, status: "loading", erro: null }));
     try {
-      const resp = await fetch(`/.netlify/functions/referral?acao=meu-codigo&endereco=${encodeURIComponent(address)}`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      if (resp.status === 503) {
+      const { ok, status, data: d } = await apiGet(`referral?acao=meu-codigo&endereco=${encodeURIComponent(address)}`, { token: authToken });
+      if (status === 503) {
         setDados({ status: "off", codigo: null, total_indicados: 0, total_convertidos: 0, senhas_ganhas: 0, erro: null });
         return;
       }
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const d = await resp.json();
+      if (!ok) throw new Error(`HTTP ${status}`);
       setDados({
         status: "ok",
         codigo: d.codigo,
