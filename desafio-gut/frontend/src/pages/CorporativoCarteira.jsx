@@ -15,6 +15,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
+import { apiGet, apiPost } from "../lib/api.js";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 // MC17.3 — Wallet Digital (Vale-Crédito) realocada da MinhaCarteira (utilizador comum).
 // MC39.7.1 — "Adesão (Consultoria)" e "Vouchers de Networking" removidos da carteira
@@ -62,14 +63,13 @@ export default function CorporativoCarteira() {
   const carregar = useCallback(async () => {
     if (!address) return;
     try {
-      const rc = await fetch(`/.netlify/functions/cotas?cliente_id=${address}`);
-      setCota(rc.status === 404 ? null : (rc.ok ? await rc.json() : null));
+      const rc = await apiGet(`cotas?cliente_id=${address}`);
+      setCota(rc.status === 404 ? null : (rc.ok ? rc.data : null));
     } catch { /* não-fatal */ }
     if (!authToken) return;
     try {
-      const rt = await fetch(`/.netlify/functions/troco?cliente_id=${address}`,
-        { headers: { Authorization: `Bearer ${authToken}` } });
-      if (rt.ok) setTroco(await rt.json());
+      const rt = await apiGet(`troco?cliente_id=${address}`, { token: authToken });
+      if (rt.ok) setTroco(rt.data);
     } catch { /* não-fatal */ }
   }, [address, authToken]);
 
@@ -81,16 +81,11 @@ export default function CorporativoCarteira() {
     if (!tier || !address) return;
     setContratando(true); setErro(""); setMsg(""); setPagStatus("idle"); setPedido(null);
     try {
-      const resp = await fetch("/.netlify/functions/iniciar-cota", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endereco: address, categoria: tier.id,
-          produtoValor: produtoValor === "" ? null : Number(produtoValor),
-        }),
+      const { ok, status, data } = await apiPost("iniciar-cota", {
+        endereco: address, categoria: tier.id,
+        produtoValor: produtoValor === "" ? null : Number(produtoValor),
       });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) { setErro(data?.error?.message || `HTTP ${resp.status}`); return; }
+      if (!ok) { setErro(data?.error?.message || `HTTP ${status}`); return; }
       setPedido(data);
       setPagStatus("aguardando");
     } catch (err) {
@@ -108,10 +103,7 @@ export default function CorporativoCarteira() {
     const tick = async () => {
       if (cancel || Date.now() - inicio > 15 * 60 * 1000) return;
       try {
-        const r = await fetch("/.netlify/functions/confirmar-pagamento", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: pedido.token }),
-        });
+        const r = await apiPost("confirmar-pagamento", { token: pedido.token });
         if (!cancel && r.ok) {
           setPagStatus("confirmado");
           setMsg("Pagamento confirmado — cota ativada.");
@@ -130,13 +122,8 @@ export default function CorporativoCarteira() {
     setConvertendo(true); setErro(""); setMsg("");
     try {
       const token = await getAuthToken();
-      const resp = await fetch("/.netlify/functions/troco?action=converter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ endereco: address, qtd: qtdConv }),
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) { setErro(data?.error?.message || `HTTP ${resp.status}`); return; }
+      const { ok, status, data } = await apiPost("troco?action=converter", { endereco: address, qtd: qtdConv }, { token });
+      if (!ok) { setErro(data?.error?.message || `HTTP ${status}`); return; }
       setMsg(`${qtdConv} senha(s) de troco convertidas para on-chain. Já pode licitar.`);
       try { refetchSaldo?.(); } catch {}
       carregar();

@@ -10,6 +10,7 @@ import BannerCard from "../components/BannerCard.jsx";
 import { GlassCard } from "@/components/ui";
 import { LABEL_LOGIN } from "../components/BotaoLoginPrincipal.jsx";
 import { useRecursosApp } from "../hooks/useRecursosApp.js";
+import { apiGet } from "../lib/api.js";
 
 // REQ-01: descobre o cliente cujo leilão está ativo no momento, conforme
 // a categoria correspondente ao tipoLeilao atual. Sem cota cadastrada:
@@ -22,9 +23,8 @@ async function buscarClienteDoLeilaoAtivo(tipo) {
   const cats = CATEGORIAS_POR_TIPO[tipo] || [];
   for (const cat of cats) {
     try {
-      const resp = await fetch(`/.netlify/functions/cotas?categoria=${cat}`);
-      if (!resp.ok) continue;
-      const data = await resp.json();
+      const { ok, data } = await apiGet(`cotas?categoria=${cat}`);
+      if (!ok) continue;
       const cotas = Array.isArray(data?.cotas) ? data.cotas : [];
       const ativa = cotas.find((c) => c?.disponivel || c?.vendida);
       if (ativa?.cliente_id) return { cliente_id: ativa.cliente_id, categoria: cat, nome: ativa.cliente_nome };

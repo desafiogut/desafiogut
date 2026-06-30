@@ -10,6 +10,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard, Button, Input } from "@/components/ui";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import { imagemProdutoSrc } from "../lib/imagem.js";
+import { apiGet, apiPost } from "../lib/api.js";
 
 const COR = {
   primary: "#f5a623", text: "#e8f0fe", muted: "#6b7db8",
@@ -94,24 +95,18 @@ export default function CorporativoDashboard() {
     setEditErro(null);
     try {
       const clienteId = cotaCorporativa?.cliente_id;
-      const resp = await fetch("/.netlify/functions/cotas?action=update-corporativo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cliente_id: clienteId,
-          empresa: editEmpresa.trim(),
-          segmento: editSegmento,
-          site: editSite.trim() || null,
-          logoUrl: editLogoUrl.trim() || null,
-          email: editEmail.trim().toLowerCase(),
-        }),
+      const { ok, data } = await apiPost("cotas?action=update-corporativo", {
+        cliente_id: clienteId,
+        empresa: editEmpresa.trim(),
+        segmento: editSegmento,
+        site: editSite.trim() || null,
+        logoUrl: editLogoUrl.trim() || null,
+        email: editEmail.trim().toLowerCase(),
       });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err?.error?.message || "Erro ao salvar.");
+      if (!ok) {
+        throw new Error(data?.error?.message || "Erro ao salvar.");
       }
-      const atualizado = await resp.json();
-      atualizarTipoCorporativo(atualizado);
+      atualizarTipoCorporativo(data);
       setEditOk(true);
       setEditando(false);
     } catch (err) {
@@ -167,9 +162,8 @@ export default function CorporativoDashboard() {
     if (!clienteId) { setProdutos([]); return; }
     setProdutosLoading(true);
     try {
-      const resp = await fetch(`/.netlify/functions/produtos?lojista=${encodeURIComponent(clienteId)}`);
-      if (resp.ok) {
-        const data = await resp.json();
+      const { ok, data } = await apiGet(`produtos?lojista=${encodeURIComponent(clienteId)}`);
+      if (ok) {
         setProdutos(data.produtos || []);
       }
     } catch (err) {

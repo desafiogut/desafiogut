@@ -5,6 +5,7 @@
 // Cache em sessionStorage por 5 min para evitar polling excessivo.
 
 import { useEffect, useState } from "react";
+import { apiGet } from "../lib/api.js";
 
 const CACHE_KEY    = "gut_admin_check";
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -57,9 +58,8 @@ export function useAdmin(endereco) {
     }
     setEstado((s) => ({ ...s, loading: true, error: null }));
     try {
-      const resp = await fetch(`/.netlify/functions/admin-list?endereco=${encodeURIComponent(enderecoLower)}`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data    = await resp.json();
+      const { ok, status, data } = await apiGet(`admin-list?endereco=${encodeURIComponent(enderecoLower)}`);
+      if (!ok) throw new Error(`HTTP ${status}`);
       const admins  = Array.isArray(data?.admins) ? data.admins.map((a) => String(a).toLowerCase()) : [];
       const coord   = (data?.coordenacao || "").toLowerCase() || null;
       const isAdmin = admins.includes(enderecoLower);
