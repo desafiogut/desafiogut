@@ -12,7 +12,7 @@ import { useLoginWithEmail } from "@privy-io/react-auth";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { getVisitorId } from "../lib/fingerprint.js";
-import { apiGet } from "../lib/api.js";
+import { apiGet, apiPost } from "../lib/api.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import { Button, Input } from "@/components/ui";
 
@@ -185,21 +185,16 @@ export default function SejaNossoParceiro() {
       }
       // FASE C — POST register-corporativo DIRETO (sem login Privy)
       const visitorId = await getVisitorId();
-      const res = await fetch("/.netlify/functions/cotas?action=register-corporativo", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
-        },
-        body: JSON.stringify({
+      const res = await apiPost("cotas?action=register-corporativo",
+        {
           cnpj: cnpjNums,
           empresa: empresa.trim(),
           segmento,
           site: site.trim() || null,
           logoUrl: logoUrl.trim() || null,
           email: email.trim().toLowerCase(),
-        }),
-      });
+        },
+        { headers: visitorId ? { "X-Visitor-ID": visitorId } : undefined });
       if (!res.ok) {
         if (res.status === 409) {
           throw new Error("CNPJ já cadastrado em outra conta.");
@@ -207,10 +202,9 @@ export default function SejaNossoParceiro() {
         if (res.status === 429) {
           throw new Error("Limite de cadastros atingido. Tente novamente em alguns minutos.");
         }
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error?.message || "Erro ao registrar.");
+        throw new Error(res.data?.error?.message || "Erro ao registrar.");
       }
-      const registro = await res.json();
+      const registro = res.data;
       // MC15.4 — guarda o email do cadastro para o AppContext resolver o perfil
       // corporativo no login seguinte (mesmo que a identidade Privy use outro email).
       try { sessionStorage.setItem("gut_corp_recem_cadastrado", registro.email); } catch {}

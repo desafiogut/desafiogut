@@ -863,6 +863,34 @@ Mesma branch `feat/mc39.22.1`. Escopo aprovado: subset seguro + EX-5 + EX-7.
 - **VEREDICTO:** APROVADO para merge. EX-4 + migração HTTP restante (headers custom, núcleo) →
   MC39.22.2 (exige `api.js` com suporte a headers custom/resposta crua + auditoria de dados p/ EX-4).
 
+## MC39.22.2 — api.js evoluído + 6 migrações HTTP + auditoria EX-4 · 2026-06-30
+Branch `feat/mc39.22.2` (de `main`). Escopo: evoluir cliente HTTP, migrar não-críticos, auditar EX-4.
+- [✅] **api.js evoluído — backward-compatible.** `montarHeaders` aceita `headers` custom; novo
+  `lerResposta` lê o corpo UMA vez (texto) → `data` (JSON ou fallback) + expõe `text` e `headers`
+  crus. Retorno `{ ok, status, data, text, headers }`. Os 46 call-sites mantêm `{ok,status,data}`
+  (campos novos são aditivos). Sem nova dependência (fetch nativo).
+- [✅] **6 sites migrados com FIDELIDADE — anti-fraude/rate-limit PRESERVADOS.** ReferralRegistrar
+  (`X-Device-Tracked`+`X-Visitor-ID`), saldo-rs (`X-Visitor-ID` + lê `x-ratelimit-limit` no 429 →
+  `checkRateLimit`), notificações GET+POST (`X-Visitor-ID`), register-corporativo (`X-Visitor-ID`),
+  CorporativoAnalytics (lê `resp.text()` no erro). Headers custom e leitura de resposta crua agora
+  passam pelo helper — **nenhum sinal anti-fraude ou de rate-limit foi perdido**. Idempotência,
+  401/429/409 e mensagens de erro preservados 1:1.
+- [✅] **Núcleo crítico NÃO tocado (objetivo #4):** CardLance (lance on-chain), ComprarFichasModal
+  (pagamento), AppContext auth-user (sessão) + purge-lances (destrutivo), AdminPanel auth-admin
+  lifecycle + `chamarAdmin` (retry 401), CorporativoDashboard mutações de produto, BannerUpload,
+  analytics (keepalive). Exigem gate de runtime (smoke login real) → MC futuro. **46/54 sites em api.js.**
+- [⛔] **EX-4 — auditoria feita; permanece BLOQUEADO.** Relatório `Desktop\EX-4-auditoria.md`
+  documenta os 3 consumidores (padrão Supabase-first `?? ` Blob-fallback) e o **risco financeiro**:
+  além de saldo indisponível, `lerCreditoLegado`/`lerDebitoLegado`/`lerWalletIdemLegado` são guardas
+  de idempotência — removê-las antes do backfill arriscaria **double-credit** em webhook reprocessado
+  (regressão do anti-double-spend MC39.17). Plano seguro: Fase A instrumentar HIT → Fase B backfill
+  idempotente (operador, R12) → Fase C janela HIT=0 (≥30d p/ troco FIFO) → Fase D remover + re-auditar.
+  **Nunca DROP** (R13). NENHUMA alteração em `financeiro-fallback.mjs` nesta sessão.
+- [✅] **Regressão:** `node --check` 122 `.mjs`; suíte **129/129**; `npm run build` verde; validação
+  MCP em prod (sessão logada) pós-deploy. Reversível por `git revert`.
+- **VEREDICTO:** APROVADO para merge (migrações behavior-preserving; anti-fraude preservado; EX-4
+  só documentado). Núcleo crítico + remoção EX-4 (após backfill) → MC futuro.
+
 ---
 
 ## MC39.15.1 — VEREDICTO (continuação)

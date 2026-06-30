@@ -28,7 +28,7 @@ import {
   lerPrazoStorage,
   gravarPrazoStorage,
 } from "../lib/leilaoTimer.js";
-import { apiGet } from "../lib/api.js";
+import { apiGet, apiPost } from "../lib/api.js";
 
 // Persistência do prazoTimestamp (Onda 5 FASE 0): o timer é IMUNE a refresh
 // porque cada tipo de leilão guarda seu próprio prazo no localStorage. Cálculo
@@ -511,11 +511,9 @@ export function AppProvider({ children }) {
     }
     setSaldoRsStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
     try {
-      const resp = await fetch(`/.netlify/functions/saldo-rs?endereco=${encodeURIComponent(address)}`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
-        },
+      const resp = await apiGet(`saldo-rs?endereco=${encodeURIComponent(address)}`, {
+        token: authToken,
+        headers: visitorId ? { "X-Visitor-ID": visitorId } : undefined,
       });
       if (resp.status === 401) {
         // Token expirado/inválido — limpa e re-obtém.
@@ -531,7 +529,7 @@ export function AppProvider({ children }) {
         throw new Error("HTTP 429 rate limited");
       }
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
+      const data = resp.data;
       setSaldoRsCentavos(Number(data?.saldoCentavos ?? 0));
       setSaldoRsStatus("ok");
     } catch (err) {
@@ -556,14 +554,12 @@ export function AppProvider({ children }) {
   const refetchNotificacoes = useCallback(async () => {
     if (!address || !authToken) { setNotificacoes([]); setNotificacoesNaoLidas(0); return; }
     try {
-      const resp = await fetch("/.netlify/functions/notificacoes", {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
-        },
+      const resp = await apiGet("notificacoes", {
+        token: authToken,
+        headers: visitorId ? { "X-Visitor-ID": visitorId } : undefined,
       });
       if (!resp.ok) return;
-      const data = await resp.json();
+      const data = resp.data;
       const lista = Array.isArray(data?.notificacoes) ? data.notificacoes : [];
       setNotificacoes(lista);
       // MC15.7 ITEM 4 — contagem de não-lidas:
@@ -599,14 +595,9 @@ export function AppProvider({ children }) {
     const temFlagLida = notificacoes.some((n) => typeof n.lida === "boolean");
     if (temFlagLida && address && authToken) {
       try {
-        const resp = await fetch("/.netlify/functions/notificacoes", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`,
-            ...(visitorId ? { "X-Visitor-ID": visitorId } : {}),
-          },
-          body: JSON.stringify({ acao: "marcar_lidas" }),
+        const resp = await apiPost("notificacoes", { acao: "marcar_lidas" }, {
+          token: authToken,
+          headers: visitorId ? { "X-Visitor-ID": visitorId } : undefined,
         });
         if (!resp.ok) return; // fail-safe: mantém o badge
       } catch (err) {
