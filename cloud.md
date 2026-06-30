@@ -1297,3 +1297,29 @@ vão para MC39.22.2 (apiPost precisaria suportar headers custom + leitura de res
 1440+375 (Dashboard/StatTile/nav/timer OK; network confirma URLs corretas de
 `edicoes`/`lances-flash`/`chatbot`; console só ruído pré-existente). Relatório:
 `Desktop\MC39.22.1-final-v2.md`. Restante (EX-4, headers custom, núcleo) → MC39.22.2.
+
+### 9.27.2 MC39.22.2 — api.js evoluído + 6 migrações + auditoria EX-4 (2026-06-30)
+> Branch `feat/mc39.22.2`. Conclui o viável das pendências, com fidelidade e zero regressão.
+
+**api.js evoluído (backward-compatible).** `montarHeaders(token, temBody, extra)` aceita headers
+custom por chamada; `lerResposta(resp, fallback)` lê o corpo UMA vez (texto) → `data` + expõe `text`
+(corpo cru) e `headers` (Headers da resposta). Retorno: `{ ok, status, data, text, headers }`. Os 46
+call-sites continuam usando `{ok,status,data}` (campos novos aditivos).
+
+**6 sites HTTP migrados (não-críticos):** ReferralRegistrar (`X-Device-Tracked`+`X-Visitor-ID`),
+AppContext saldo-rs (`X-Visitor-ID` + lê `x-ratelimit-limit` no 429 → `checkRateLimit`), notificações
+GET+POST (`X-Visitor-ID`), SejaNossoParceiro register-corporativo (`X-Visitor-ID`), CorporativoAnalytics
+(lê `resp.text()` no erro). **Anti-fraude e rate-limit PRESERVADOS.** **46 de ~54** sites em `api.js`.
+
+**Núcleo crítico NÃO tocado** (objetivo #4; exige gate de runtime/smoke login): CardLance (lance),
+ComprarFichasModal (pagamento), auth-user, purge-lances, auth-admin lifecycle + `chamarAdmin`, mutações
+de produto, BannerUpload, analytics keepalive. → MC futuro.
+
+**EX-4 — auditado, BLOQUEADO.** `Desktop\EX-4-auditoria.md`: 3 consumidores (Supabase-first ??
+Blob-fallback). Removê-lo agora arriscaria saldo indisponível e — pior — **double-credit** (reads de
+idempotência `lerCreditoLegado`/`lerDebitoLegado`/`lerWalletIdemLegado` falhariam p/ registros só-Blob).
+Plano: instrumentar HIT → backfill idempotente (operador) → janela HIT=0 (≥30d) → remover + re-auditar;
+**nunca DROP** (R13). Nenhuma alteração no módulo.
+
+**Validação:** `node --check` 122 `.mjs`; suíte **129/129**; `npm run build` verde; MCP prod (sessão
+logada) pós-deploy. Relatório: `Desktop\MC39.22.2-final.md`.
