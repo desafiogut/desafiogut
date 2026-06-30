@@ -6,6 +6,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import FimLeilaoOverlay from "../components/FimLeilaoOverlay.jsx";
 import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
+import StatTile from "../components/StatTile.jsx";
 import { GlassCard } from "@/components/ui";
 
 const COR = {
@@ -278,36 +279,7 @@ export default function Dashboard() {
         marginBottom: sectionGap,
       }}>
         {stats.map(({ label, value, color, icon, to }) => (
-          <button
-            key={label}
-            onClick={() => navigate(to)}
-            style={{
-              background: "rgba(13,18,53,0.25)",
-              border: "1px solid rgba(255,255,255,0.10)",
-              backdropFilter: "blur(24px) saturate(135%)",
-              WebkitBackdropFilter: "blur(24px) saturate(135%)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05)",
-              padding: isMobile ? "0.85rem 0.9rem" : "1.1rem 1.25rem",
-              borderRadius: "14px",
-              textAlign: "left",
-              cursor: "pointer", transition: "all 0.18s",
-              display: "flex", flexDirection: "column", gap: "0.35rem",
-              minWidth: 0,
-            }}
-          >
-            <span style={{ fontSize: isMobile ? "1.1rem" : "1.4rem", lineHeight: 1 }}>{icon}</span>
-            <span style={{
-              fontSize: isMobile ? "1.15rem" : "1.5rem",
-              fontWeight: "900", color,
-              lineHeight: 1.1,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>{value}</span>
-            <span style={{
-              fontSize: isMobile ? "0.7rem" : "0.75rem",
-              color: COR.muted, fontWeight: "600",
-              letterSpacing: "0.02em",
-            }}>{label}</span>
-          </button>
+          <StatTile key={label} label={label} value={value} color={color} icon={icon} to={to} />
         ))}
       </section>
 

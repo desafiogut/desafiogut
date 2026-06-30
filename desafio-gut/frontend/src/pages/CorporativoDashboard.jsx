@@ -9,6 +9,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard, Button, Input } from "@/components/ui";
 import GutoAvatar from "../components/GutoAvatar.jsx";
+import StatTile from "../components/StatTile.jsx";
 import { imagemProdutoSrc } from "../lib/imagem.js";
 import { apiGet, apiPost } from "../lib/api.js";
 
@@ -374,16 +375,7 @@ export default function CorporativoDashboard() {
         marginBottom: isMobile ? "1.25rem" : "2rem",
       }}>
         {cards.map(({ label, value, color, icon, to }) => (
-          <Button
-            key={label}
-            variant="secondary"
-            onClick={() => navigate(to)}
-            className={`${cardCls} !flex !flex-col !items-start !gap-1 !text-left !h-auto`}
-          >
-            <span style={{ fontSize: "1.3rem" }}>{icon}</span>
-            <span style={{ fontSize: "1.4rem", fontWeight: 900, color }}>{value}</span>
-            <span style={{ fontSize: "0.72rem", color: COR.muted, fontWeight: 600 }}>{label}</span>
-          </Button>
+          <StatTile key={label} label={label} value={value} color={color} icon={icon} to={to} className={cardCls} />
         ))}
       </section>
 
