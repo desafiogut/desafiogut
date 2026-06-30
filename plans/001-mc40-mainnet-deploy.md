@@ -17,6 +17,26 @@
 - **Depends on**: none (é o marco-raiz; Plan 002/003 dependem deste estar concluído)
 - **Category**: migration / security
 - **Planned at**: commit `e842d4b`, 2026-06-30
+- **Atualizado em**: 2026-06-30 — pré-requisitos de CI **concluídos** (Foundry+Echidna #124,
+  AgentShield #125; ver secção "Pré-requisitos de CI" abaixo). Bloqueadores restantes: auditoria
+  externa do contrato + deploy on-chain (ambos `[OPERADOR]`).
+
+## Pré-requisitos de CI — status (atualizado 2026-06-30)
+Gates de CI exigidos pelo MC40 (pendência de processo do MC39.17 *"Foundry+Echidna+AgentShield em CI"*):
+- ✅ **Foundry + Echidna em CI** — CONCLUÍDO (MC40-CI, **PR #124**, squash `2e71fb1` na `main`).
+  `.github/workflows/contract-security.yml` **verde**: `forge test` + fuzzing Echidna (7 invariantes,
+  campanha 50000/50000, **0/7 falhas**) + SBOM CycloneDX. Veredicto APROVADO em `security_audit.md`
+  §MC40-CI; documentado em `cloud.md §5 item 6`.
+- ✅ **AgentShield em CI** — CONCLUÍDO (MC40-AgentShield, **PR #125**, squash `aca313d` na `main`).
+  `.github/workflows/agentshield.yml` **verde**: escaneia configs de agentes (skills/MCP/hooks/
+  permissões/CLAUDE.md), gate reprova em finding critical/high. Veredicto APROVADO em
+  `security_audit.md` §MC40-AgentShield; documentado em `cloud.md §5 item 7`.
+- ⏳ **Auditoria externa do contrato** — PENDENTE (Step 2, `[OPERADOR]`; gate de bloqueio).
+- ⏳ **Deploy do contrato em mainnet** — PENDENTE (Step 4, `[OPERADOR]`).
+
+> Consequência: os gates Foundry/Echidna/AgentShield **rodam automaticamente** a cada push/PR — já
+> não é preciso anexar a saída manual deles ao PR (a Nota em "Commands you will need" foi atualizada).
+> Os bloqueadores restantes do MC40 são **humanos/on-chain** (auditoria externa + deploy), não CI.
 
 ## Review-plan refinements (revisão de contexto fresco · 2026-06-30, MC40 session)
 Achados da revisão (`improve review-plan`) — incorporar ANTES de executar:
@@ -85,8 +105,10 @@ aqui é caro e, on-chain, irreversível. O código já foi preparado em MC39 SEM
 | Deploy mainnet | `npx hardhat ignition deploy ignition/modules/Leilao.js --network mainnet` | imprime endereço deployado |
 | Verificar Etherscan | `npx hardhat verify --network mainnet <ADDR>` | "Successfully verified" |
 
-> **Nota:** CI (foundry/echidna/audit) está historicamente vermelho na `main` por infra/deps
-> (memória `ci-checks-vermelhos`); rode estes gates LOCALMENTE e anexe a saída ao PR.
+> **Nota (atualizada 2026-06-30):** `foundry`, `echidna` e `agentshield` agora rodam **VERDES**
+> em CI (MC40-CI #124 / MC40-AgentShield #125) — já não é preciso rodá-los localmente e anexar a
+> saída. Seguem vermelhos por infra/deps (memória `ci-checks-vermelhos`) **apenas** `Socket.dev scan`
+> e `npm audit (functions)`; por isso o merge na `main` ainda exige `--admin`.
 
 ## Scope
 **In scope** (arquivos que este plano pode tocar):
@@ -127,7 +149,8 @@ mainnet: {
 Contratar/concluir a auditoria externa do `Leilao.sol` (pré-requisito firme do MC40 —
 `mainnet-prerequisites.md`). Anexar o relatório ao PR. **STOP se a auditoria apontar HIGH/CRITICAL** não resolvido.
 
-**Verify**: relatório de auditoria anexado + `npx hardhat test` + `forge test` + `echidna` verdes localmente (saída anexada).
+**Verify**: relatório de auditoria anexado + `forge test`/`echidna` verdes no CI (`contract-security.yml`,
+MC40-CI #124) + `npx hardhat test` local verde (saída anexada).
 
 ### Step 3 — `[OPERADOR]` Provisionar infra mainnet
 - RPC mainnet (Alchemy/Infura) → valor de `MAINNET_RPC_URL` e `CONSOLIDATION_RPC_URL` (Flashbots Protect) + fallback `CONSOLIDATION_RPC_URL_FALLBACK`.
@@ -174,7 +197,8 @@ Seguir `Desktop\MC40-checklist.md` seção B/C exatamente:
 **Verify**: cada item acima confirmado; tx reais visíveis no Etherscan mainnet.
 
 ## Test plan
-- Pré-deploy: `npx hardhat test` + `forge test` + `echidna` localmente, saída anexada ao PR.
+- Pré-deploy: `forge test` + `echidna` já cobertos pelo CI (`contract-security.yml`, MC40-CI #124 —
+  verde); rodar localmente só `npx hardhat test` (Hardhat não roda no CI) e anexar a saída.
 - Pós-deploy: smoke controlado (1 lance + 1 consolidação) com valores mínimos reais; registrar tx hashes.
 - Não há "novos testes" de código — o contrato é imutável; o gate é a auditoria + os testes existentes verdes.
 
