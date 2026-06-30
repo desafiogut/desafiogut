@@ -12,6 +12,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { GlassCard } from "@/components/ui";
+import { apiGet } from "../lib/api.js";
 
 const COR = {
   primary:   "#a78bfa",
@@ -49,11 +50,8 @@ export default function WalletCard({ endereco, isMobile = false }) {
     }
     setEstado((s) => ({ ...s, status: s.dados ? "stale" : "loading", erro: null }));
     try {
-      const resp = await fetch(`/.netlify/functions/wallet?endereco=${encodeURIComponent(endereco)}`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const dados = await resp.json();
+      const { ok, status, data: dados } = await apiGet(`wallet?endereco=${encodeURIComponent(endereco)}`, { token: authToken });
+      if (!ok) throw new Error(`HTTP ${status}`);
       setEstado({ status: "ok", dados, erro: null });
     } catch (err) {
       console.warn("[WalletCard] carregar falhou", err?.message);

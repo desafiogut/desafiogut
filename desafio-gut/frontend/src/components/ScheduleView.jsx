@@ -13,6 +13,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { apiGet } from "../lib/api.js";
 import {
   DIAS, DATAS_JUNHO, NOTA_OVERNIGHT,
   tiersPorHorario, horariosDoDia, diaDaSemanaHoje, horaAgora, slotAtivoAgora,
@@ -73,10 +74,12 @@ export default function ScheduleView() {
   const [resumoCotas, setResumoCotas] = useState(null);
   useEffect(() => {
     let cancelado = false;
-    fetch("/.netlify/functions/cotas")
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (!cancelado && data) setResumoCotas(data.resumo || null); })
-      .catch(() => {});
+    (async () => {
+      try {
+        const { ok, data } = await apiGet("cotas");
+        if (!cancelado && ok && data) setResumoCotas(data.resumo || null);
+      } catch { /* silencioso (igual ao .catch anterior) */ }
+    })();
     return () => { cancelado = true; };
   }, []);
 

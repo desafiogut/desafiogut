@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+import { apiGet } from "../lib/api.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import LanceStatusBadge from "../components/LanceStatusBadge.jsx";
 import { GlassCard } from "@/components/ui";
@@ -50,21 +51,21 @@ export default function DetalheProduto() {
     if (!id) return;
     let cancel = false;
     setLoading(true);
-    fetch(`/.netlify/functions/produtos?id=${encodeURIComponent(id)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
+    (async () => {
+      try {
+        const { ok, data } = await apiGet(`produtos?id=${encodeURIComponent(id)}`);
         if (cancel) return;
-        if (data) {
+        if (ok && data) {
           setProduto(data);
           setErro(null);
         } else {
           setErro("Produto não encontrado");
         }
         setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!cancel) { setErro(err.message); setLoading(false); }
-      });
+      }
+    })();
     return () => { cancel = true; };
   }, [id]);
 

@@ -24,6 +24,7 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useAppEnvironment } from "../context/useAppContextEnvironment.jsx";
 import { useAdmin } from "../hooks/useAdmin.js";
 import { detectarPlataforma } from "../hooks/useRecursosApp.js";
+import { apiPost } from "../lib/api.js";
 
 const LS_KEY      = "gut_chat_history";
 const LS_MAX_MSGS = 40;            // histórico bounded — evita estourar localStorage
@@ -261,15 +262,12 @@ export default function ChatbotWidget() {
     signalThinking(); // MC20.2 — GUTO global → thinking.webm enquanto processa
 
     try {
-      const resp = await fetch("/.netlify/functions/chatbot", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
-        body: JSON.stringify({ pergunta: texto, plataforma: detectarPlataforma() }),
-      });
-      if (resp.status === 503) {
+      const { ok, status, data } = await apiPost(
+        "chatbot",
+        { pergunta: texto, plataforma: detectarPlataforma() },
+        { token: authToken },
+      );
+      if (status === 503) {
         setGutoState("responding");
         resetToIdle();
         setMensagens((prev) => [...prev, {
@@ -279,7 +277,7 @@ export default function ChatbotWidget() {
         }]);
         return;
       }
-      if (resp.status === 429) {
+      if (status === 429) {
         setGutoState("responding");
         resetToIdle();
         setMensagens((prev) => [...prev, {
@@ -289,9 +287,8 @@ export default function ChatbotWidget() {
         }]);
         return;
       }
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) {
-        throw new Error(data?.error?.message || `HTTP ${resp.status}`);
+      if (!ok) {
+        throw new Error(data?.error?.message || `HTTP ${status}`);
       }
       setGutoState("responding");
       resetToIdle();

@@ -18,6 +18,7 @@ import GutoAvatar from "../components/GutoAvatar.jsx";
 import { GlassCard } from "@/components/ui";
 import { imagemProdutoSrc } from "../lib/imagem.js";
 import { tiersAgoraVisiveis, tierAtivoAgora } from "../data/programacao-junho-2026.js";
+import { apiGet } from "../lib/api.js";
 
 // MC11.3 — Header dual da Vitrine. Renderizado SOMENTE quando
 // tipoUsuario === "corporativo": dá ao lojista um resumo da cota ativa +
@@ -458,13 +459,13 @@ export default function Vitrine() {
     }
     let cancel = false;
     Promise.all([
-      fetch(`/.netlify/functions/banners?cliente_id=${encodeURIComponent(addressCorporativo)}&formato=app`),
-      fetch(`/.netlify/functions/banners?cliente_id=${encodeURIComponent(addressCorporativo)}&formato=site`),
+      apiGet(`banners?cliente_id=${encodeURIComponent(addressCorporativo)}&formato=app`),
+      apiGet(`banners?cliente_id=${encodeURIComponent(addressCorporativo)}&formato=site`),
     ])
-      .then(async ([rApp, rSite]) => {
+      .then(([rApp, rSite]) => {
         if (cancel) return;
-        const app  = rApp.ok  ? await rApp.json()  : null;
-        const site = rSite.ok ? await rSite.json() : null;
+        const app  = rApp.ok  ? rApp.data  : null;
+        const site = rSite.ok ? rSite.data : null;
         setBannerData({ app, site });
       })
       .catch(() => {});
@@ -483,10 +484,12 @@ export default function Vitrine() {
   const [resumoCotas, setResumoCotas] = useState(null);
   useEffect(() => {
     let cancelado = false;
-    fetch("/.netlify/functions/cotas")
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (!cancelado && data) setResumoCotas(data.resumo || null); })
-      .catch(() => {});
+    (async () => {
+      try {
+        const { ok, data } = await apiGet("cotas");
+        if (!cancelado && ok && data) setResumoCotas(data.resumo || null);
+      } catch { /* silencioso (igual ao .catch anterior) */ }
+    })();
     return () => { cancelado = true; };
   }, []);
 
@@ -496,8 +499,8 @@ export default function Vitrine() {
     let cancelado = false;
     Promise.all(
       SLOTS.map((s) =>
-        fetch(`/.netlify/functions/produtos?categoria=${s.id}`)
-          .then((r) => (r.ok ? r.json() : null))
+        apiGet(`produtos?categoria=${s.id}`)
+          .then((r) => (r.ok ? r.data : null))
           .catch(() => null)
       )
     ).then((results) => {
