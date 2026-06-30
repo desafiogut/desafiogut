@@ -434,15 +434,343 @@ async function continuarWizard(req, pergunta, perfil, endereco, sessao) {
   return null;
 }
 
+// ── Helpers de resposta do intent-router (MC39.22.1) ─────────────────────────
+// Toda resposta de intent partilha o shape { resposta, fontes:[], modoBusca:
+// "intent", modoResposta, intent, perfil, ...extra }. Antes repetido ~39× inline
+// (e o bloco recusa-perfil 12× verbatim) — agora dois helpers + tabela declarativa.
+const RL_MSG_ADMIN = "Limite de comandos administrativos atingido. Aguarde um minuto e tente novamente.";
+
+function intentResp(perfil, intent, { resposta, modoResposta, ...extra }) {
+  return jsonResponse({ resposta, fontes: [], modoBusca: "intent", modoResposta, intent, perfil, ...extra });
+}
+
+/** Recusa por perfil (modoResposta "recusa-perfil"). NUNCA executa lógica nem vaza dados. */
+function recusa(perfil, intent, data = {}) {
+  return intentResp(perfil, intent, {
+    resposta: obterResposta(intent, perfil, data),
+    modoResposta: "recusa-perfil",
+  });
+}
+
+// Predicados de perfil (gate declarativo por intent).
+const ehAdminPerfil  = (perfil) => perfil === "admin";
+const ehCorpOuAdmin  = (perfil) => perfil === "admin" || perfil === "corporativo";
+const ehAutenticado  = (perfil, endereco) => perfil !== "visitante" && !!endereco;
+const qualquerPerfil = () => true;
+
+// kill switch (panic/unpanic) — ADMIN-ONLY. Handler único (MC15.6 ITEM 7).
+async function killSwitch(intent, perfil, endereco) {
+  const novoStatus = intent === "panic" ? "paused" : "active";
+  try {
+    const estado = await escreverEstadoSistema(novoStatus, intent === "panic" ? "acionado via GUTO" : null);
+    // ITEM 9 — log de decisão (fail-soft).
+    await registrarDecisao({ trigger: intent, action: `sistema ${novoStatus}`, userId: endereco });
+    return intentResp(perfil, intent, {
+      resposta: obterResposta(intent, "admin", { timestamp: estado.timestamp }),
+      modoResposta: "acao", systemState: estado,
+    });
+  } catch (err) {
+    console.warn("[chatbot] kill switch falhou:", err?.message);
+    return intentResp(perfil, intent, {
+      resposta: `Não foi possível ${intent === "panic" ? "pausar" : "reativar"} o sistema agora: ${err?.message || "erro"}.`,
+      modoResposta: "erro", erro: "system_state_falhou",
+    });
+  }
+}
+
+// ── Tabela de despacho declarativa (MC39.22.1) ───────────────────────────────
+// Substitui a cadeia de ~16 `if (intent === ...)`. Cada intent declara: o gate
+// de perfil (`gate`), se a recusa usa um tom de perfil diferente (`recusaRole`,
+// p.ex. indique_e_ganhe/meu_saldo recusam sempre como "visitante"), se exige
+// rate-limit admin (`rl`), e o handler de SUCESSO (`run`). O gate, a recusa e o
+// rate-limit são aplicados de forma UNIFORME em tratarIntentEdicoes — a ordem de
+// teste é irrelevante porque detectarIntent devolve exatamente UM intent (D7).
+// Gates/segurança e shapes de resposta preservados 1:1 face ao MC17.1 (R0/SUPERPERS).
+const INTENT_HANDLERS = {
+  // MC15.6 ITEM 3 — início do wizard (gatilho explícito; admin-only).
+  criar_edicao_wizard: {
+    gate: ehAdminPerfil, rl: true,
+    run: ({ perfil, endereco }) => iniciarWizard(perfil, endereco),
+  },
+
+  // MC15.5 — auditoria (admin-only): dados reais do Blob "auditoria".
+  auditoria: {
+    gate: ehAdminPerfil,
+    run: async ({ perfil }) => {
+      const { qtd, linhas } = await lerAuditoria(5);
+      return intentResp(perfil, "auditoria", {
+        resposta: obterResposta("auditoria", "admin", { qtd, linhas }),
+        modoResposta: "acao",
+      });
+    },
+  },
+
+  // MC15.8.1 ITEM 8 — relatório de indicações (admin-only). Read-only, informativo.
+  relatorio_indicacoes: {
+    gate: ehAdminPerfil,
+    run: async ({ perfil }) => {
+      let relatorio = "";
+      try { relatorio = (await gerarRelatorioIndicacoes()).texto; }
+      catch (err) {
+        console.warn("[chatbot] gerarRelatorioIndicacoes falhou:", err?.message);
+        relatorio = "Nao foi possivel compilar o relatorio de indicacoes agora.";
+      }
+      return intentResp(perfil, "relatorio_indicacoes", {
+        resposta: obterResposta("relatorio_indicacoes", "admin", { relatorio }),
+        modoResposta: "acao",
+      });
+    },
+  },
+
+  // MC15.8.1 ITEM 10 — Indique e Ganhe (comum/corporativo/admin). Visitante (ou
+  // sem endereço) recebe CTA de registo. Devolve `indicacao` → card roxo no front.
+  indique_e_ganhe: {
+    gate: ehAutenticado, recusaRole: "visitante",
+    run: async ({ perfil, endereco }) => {
+      if (!referralAtivo()) {
+        return intentResp(perfil, "indique_e_ganhe", {
+          resposta: "O programa Indique e Ganhe está temporariamente desligado. Volta em breve!",
+          modoResposta: "feature-off",
+        });
+      }
+      let indicacao = null;
+      try {
+        const codigoInfo = await gerarCodigoIndicacao(endereco);
+        const stats = await estatisticasIndicador(endereco);
+        indicacao = {
+          codigo: codigoInfo.codigo,
+          total_indicados:   stats.total_indicados,
+          total_convertidos: stats.total_convertidos,
+          senhas_ganhas:     stats.senhas_ganhas,
+        };
+      } catch (err) {
+        console.warn("[chatbot] indique_e_ganhe dados falharam:", err?.message);
+        return intentResp(perfil, "indique_e_ganhe", {
+          resposta: "Não consegui buscar o teu código de indicação agora. Tenta daqui a pouco!",
+          modoResposta: "erro",
+        });
+      }
+      return intentResp(perfil, "indique_e_ganhe", {
+        resposta: obterResposta("indique_e_ganhe", perfil, indicacao),
+        modoResposta: "perfil", indicacao,
+      });
+    },
+  },
+
+  // MC15.5 — dados_mercado (corporativo + admin): resumo seguro (edições ativas).
+  dados_mercado: {
+    gate: ehCorpOuAdmin,
+    run: async ({ perfil }) => {
+      const { edicoes } = await listarEdicoes();
+      const edicoesAtivas = Object.values(edicoes).filter((e) => e.status === "aberto").length;
+      return intentResp(perfil, "dados_mercado", {
+        resposta: obterResposta("dados_mercado", perfil, { edicoesAtivas }),
+        modoResposta: "perfil",
+      });
+    },
+  },
+
+  // MC17.1 — relatório de compras/senhas (admin-only): total ativo e expirado.
+  relatorio_compras: {
+    gate: ehAdminPerfil,
+    run: async ({ perfil }) => {
+      let resumo = { lojistas: 0, senhasAtivas: 0, senhasExpiradas: 0 };
+      try { resumo = await resumoTrocoAdmin(); }
+      catch (err) { console.warn("[chatbot] resumoTrocoAdmin falhou:", err?.message); }
+      return intentResp(perfil, "relatorio_compras", {
+        resposta: obterResposta("relatorio_compras", "admin", resumo),
+        modoResposta: "acao",
+      });
+    },
+  },
+
+  // MC17.1 — saldo de senhas de troco (autenticados; visitante recebe CTA).
+  meu_saldo: {
+    gate: ehAutenticado, recusaRole: "visitante",
+    run: async ({ perfil, endereco }) => {
+      let troco = { saldoTroco: 0, expiramEmBreve: 0 };
+      try { troco = await lerTroco(endereco); }
+      catch (err) { console.warn("[chatbot] lerTroco falhou:", err?.message); }
+      return intentResp(perfil, "meu_saldo", {
+        resposta: obterResposta("meu_saldo", perfil, { ...troco, endereco }),
+        modoResposta: "perfil",
+      });
+    },
+  },
+
+  // MC17.1 — contratar cota comercial / pacotes (informativo, por perfil).
+  comprar_cotas: {
+    gate: qualquerPerfil,
+    run: ({ perfil }) => intentResp(perfil, "comprar_cotas", {
+      resposta: obterResposta("comprar_cotas", perfil, {}), modoResposta: "perfil",
+    }),
+  },
+  pacotes_cotas: {
+    gate: qualquerPerfil,
+    run: ({ perfil }) => intentResp(perfil, "pacotes_cotas", {
+      resposta: obterResposta("pacotes_cotas", perfil, {}), modoResposta: "perfil",
+    }),
+  },
+
+  // MC15.6 ITEM 5 — simular_vencedor (admin + corporativo). Menor lance único.
+  simular_vencedor: {
+    gate: ehCorpOuAdmin,
+    run: async ({ perfil, pergunta }) => {
+      const edicaoId = extrairEdicaoId(pergunta) || "R-1";
+      const sim = await simularVencedorMenorLance(edicaoId);
+      return intentResp(perfil, "simular_vencedor", {
+        resposta: obterResposta("simular_vencedor", perfil, {
+          edicaoId,
+          ok: sim.ok,
+          erro: !!sim.erro,
+          vencedor: sim.ok ? rotuloVencedor(sim) : null,
+          valor: sim.ok ? brlCentavos(sim.valorCentavos) : null,
+          totalLances: sim.totalLances,
+          lancesUnicos: sim.lancesUnicos,
+        }),
+        modoResposta: "acao", simulacao: sim,
+      });
+    },
+  },
+
+  // MC15.6 ITEM 10 — memória operacional (ADMIN-ONLY): decisão semelhante.
+  memoria: {
+    gate: ehAdminPerfil,
+    run: async ({ perfil, pergunta }) => {
+      let achado = null;
+      try { achado = await buscarDecisaoSemelhante(pergunta); }
+      catch (err) { console.warn("[chatbot] buscarDecisaoSemelhante falhou:", err?.message); }
+      return intentResp(perfil, "memoria", {
+        resposta: obterResposta("memoria", "admin", {
+          achou: !!achado,
+          trigger: achado?.entrada?.trigger || null,
+          action: achado?.entrada?.action || null,
+          quando: achado?.entrada?.timestamp || null,
+          total: achado?.total || 0,
+        }),
+        modoResposta: "acao", memoria: achado,
+      });
+    },
+  },
+
+  // MC15.6 ITEM 7 — kill switch (ADMIN-ONLY): /panic e /unpanic.
+  panic:   { gate: ehAdminPerfil, rl: true, run: ({ perfil, endereco }) => killSwitch("panic", perfil, endereco) },
+  unpanic: { gate: ehAdminPerfil, rl: true, run: ({ perfil, endereco }) => killSwitch("unpanic", perfil, endereco) },
+
+  // MC15.6 ITEM 6 — pulso_edicao (admin + corporativo). 4 métricas vitais.
+  pulso_edicao: {
+    gate: ehCorpOuAdmin,
+    run: async ({ perfil, pergunta }) => {
+      const edicaoId = extrairEdicaoId(pergunta) || "R-1";
+      const m = await obterMetricasPulso(edicaoId);
+      return intentResp(perfil, "pulso_edicao", {
+        resposta: obterResposta("pulso_edicao", perfil, {
+          edicaoId,
+          volumePorMin: m.volumePorMin,
+          licitantesUnicos: m.licitantesUnicos,
+          valorizacaoPct: m.valorizacaoPct,
+          abandonoCheckoutPct: m.abandonoCheckoutPct,
+          totalLances: m.totalLances,
+        }),
+        modoResposta: "acao", pulso: m,
+      });
+    },
+  },
+
+  // listar_edicoes: lista é PÚBLICA (GET /edicoes). Logados veem-na no tom do
+  // perfil; visitante recebe convite (não é dado sensível).
+  listar_edicoes: {
+    gate: qualquerPerfil,
+    run: async ({ perfil }) => {
+      let lista = "";
+      let total = 0;
+      if (perfil !== "visitante") {
+        const { edicoes } = await listarEdicoes();
+        const ids = Object.keys(edicoes);
+        total = ids.length;
+        lista = ids.map((id) => `${id} (${edicoes[id].tipo}, ${edicoes[id].status})`).join("; ");
+      }
+      return intentResp(perfil, "listar_edicoes", {
+        resposta: obterResposta("listar_edicoes", perfil, { lista, total }),
+        modoResposta: perfil === "admin" ? "acao" : "perfil",
+      });
+    },
+  },
+
+  // encerrar_edicao: comando MUTANTE → admin-only + rate-limit (gate inalterado).
+  encerrar_edicao: {
+    gate: ehAdminPerfil, rl: true,
+    run: async ({ perfil, pergunta, endereco }) => {
+      const id = extrairEdicaoId(pergunta);
+      if (!EDICAO_ID_RE.test(id)) {
+        return intentResp(perfil, "encerrar_edicao", {
+          resposta: "Para encerrar, indique o id da edição (ex.: PROG-3 ou RELAMP-7).",
+          modoResposta: "faltam-dados",
+        });
+      }
+      const res = await encerrarEdicao({ edicaoId: id, endereco, origem: "guto" });
+      if (!res.ok) {
+        return intentResp(perfil, "encerrar_edicao", {
+          resposta: `Não foi possível encerrar ${id}: ${res.message}`,
+          modoResposta: "erro", erro: res.code,
+        });
+      }
+      // ITEM 9 — log de decisão (fail-soft).
+      await registrarDecisao({ trigger: "encerrar_edicao", action: `${res.edicao.id} encerrada`, userId: endereco });
+      return intentResp(perfil, "encerrar_edicao", {
+        resposta: obterResposta("encerrar_edicao", "admin", { id: res.edicao.id }),
+        modoResposta: "acao", edicao: res.edicao,
+      });
+    },
+  },
+
+  // criar_edicao (one-shot legado): comando MUTANTE → admin-only + rate-limit.
+  criar_edicao: {
+    gate: ehAdminPerfil, rl: true,
+    run: async ({ perfil, pergunta, endereco }) => {
+      const tipo = extrairTipo(pergunta);
+      const duracaoSegundos = extrairDuracaoSegundos(pergunta);
+      const produto = extrairProduto(pergunta);
+      if (!tipo || !duracaoSegundos || !produto) {
+        const faltam = [
+          !tipo ? "o tipo (relâmpago ou programado)" : null,
+          !duracaoSegundos ? "a duração (ex.: 30 min)" : null,
+          !produto ? "o produto" : null,
+        ].filter(Boolean).join(", ");
+        return intentResp(perfil, "criar_edicao", {
+          resposta: `Para criar a edição preciso de: ${faltam}.`,
+          modoResposta: "faltam-dados",
+        });
+      }
+      const res = await criarEdicao({ tipo, produto, duracaoSegundos, criadoPor: endereco, origem: "guto" });
+      if (!res.ok) {
+        return intentResp(perfil, "criar_edicao", {
+          resposta: `Não foi possível criar a edição: ${res.message}`,
+          modoResposta: "erro", erro: res.code,
+        });
+      }
+      // ITEM 9 — log de decisão (fail-soft).
+      await registrarDecisao({ trigger: "criar_edicao", action: `${res.edicao.id} criada (${res.edicao.tipo})`, userId: endereco });
+      return intentResp(perfil, "criar_edicao", {
+        resposta: obterResposta("criar_edicao", "admin", {
+          id: res.edicao.id, tipo: res.edicao.tipo, produto: res.edicao.produto, termino: res.edicao.termino_em,
+        }),
+        modoResposta: "acao", edicao: res.edicao,
+      });
+    },
+  },
+};
+
 /**
- * Processa uma intenção admin de edição. Confirma admin via Authorization
- * repassado pelo ChatbotWidget. Não-admin → recusa gentil, cria NADA.
- * Mantém o shape de resposta backward-compatible ({ resposta, fontes, ... }).
+ * Intent-router do GUTO (MC15.4+). Confirma admin via Authorization repassado
+ * pelo ChatbotWidget. Mantém o shape de resposta backward-compatible.
  *
- * @returns {Promise<Response|null>} Response do GUTO se a intenção foi tratada;
- *                                   null para cair no RAG (ex.: sem intent).
+ * Fluxo: (1) wizard ativo intercepta; (2) detectarIntent; (3) tabela de despacho
+ * aplica gate de perfil → recusa-perfil; rate-limit admin (se `rl`); handler.
+ *
+ * @returns {Promise<Response|null>} Response do GUTO se tratada; null → RAG.
  */
-async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
+export async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
   const ehAdmin = perfil === "admin";
 
   // MC15.6 ITEM 3 — Wizard: se há sessão ativa para este admin, a mensagem é a
@@ -459,359 +787,24 @@ async function tratarIntentEdicoes(req, pergunta, perfil, adminEndereco) {
   const intent = detectarIntent(pergunta);
   if (!intent) return null; // sem intenção → RAG normal (anti-regressão)
 
-  // MC15.6 ITEM 3 — início do wizard (gatilho explícito; admin-only).
-  if (intent === "criar_edicao_wizard") {
-    if (!ehAdmin) {
-      return jsonResponse({
-        resposta: obterResposta("criar_edicao_wizard", perfil, {}),
-        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-      });
-    }
-    const rl = await aplicarRateLimit(req, "guto-admin", RL_GUTO_ADMIN_RPM);
-    if (rl) {
-      return jsonResponse({
-        resposta: "Limite de comandos administrativos atingido. Aguarde um minuto e tente novamente.",
-        fontes: [], modoBusca: "intent", modoResposta: "rate-limit", intent, perfil,
-      });
-    }
-    return await iniciarWizard(perfil, adminEndereco);
+  const spec = INTENT_HANDLERS[intent];
+  if (!spec) return null; // intent sem handler → RAG (fail-soft)
+
+  // Gate de perfil declarativo. Não-admin/perfil insuficiente → recusa-perfil
+  // (NUNCA executa, NUNCA vaza dados). recusaRole força o tom (ex.: "visitante").
+  if (!spec.gate(perfil, adminEndereco)) {
+    return recusa(spec.recusaRole || perfil, intent);
   }
 
-  // MC15.5 — auditoria (admin-only): dados reais do Blob "auditoria".
-  if (intent === "auditoria") {
-    if (!ehAdmin) {
-      return jsonResponse({
-        resposta: obterResposta("auditoria", perfil, {}),
-        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-      });
-    }
-    const { qtd, linhas } = await lerAuditoria(5);
-    return jsonResponse({
-      resposta: obterResposta("auditoria", "admin", { qtd, linhas }),
-      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil,
-    });
-  }
-
-  // MC15.8.1 ITEM 8 — relatório de indicações (admin-only). Read-only, informativo.
-  if (intent === "relatorio_indicacoes") {
-    if (!ehAdmin) {
-      return jsonResponse({
-        resposta: obterResposta("relatorio_indicacoes", perfil, {}),
-        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-      });
-    }
-    let relatorio = "";
-    try { relatorio = (await gerarRelatorioIndicacoes()).texto; }
-    catch (err) {
-      console.warn("[chatbot] gerarRelatorioIndicacoes falhou:", err?.message);
-      relatorio = "Nao foi possivel compilar o relatorio de indicacoes agora.";
-    }
-    return jsonResponse({
-      resposta: obterResposta("relatorio_indicacoes", "admin", { relatorio }),
-      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil,
-    });
-  }
-
-  // MC15.8.1 ITEM 10 — Indique e Ganhe (comum/corporativo/admin). Visitante
-  // recebe CTA de registo (sem código). Devolve `indicacao` → card roxo no front.
-  if (intent === "indique_e_ganhe") {
-    if (perfil === "visitante" || !adminEndereco) {
-      return jsonResponse({
-        resposta: obterResposta("indique_e_ganhe", "visitante", {}),
-        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-      });
-    }
-    if (!referralAtivo()) {
-      return jsonResponse({
-        resposta: "O programa Indique e Ganhe está temporariamente desligado. Volta em breve!",
-        fontes: [], modoBusca: "intent", modoResposta: "feature-off", intent, perfil,
-      });
-    }
-    let indicacao = null;
-    try {
-      const codigoInfo = await gerarCodigoIndicacao(adminEndereco);
-      const stats = await estatisticasIndicador(adminEndereco);
-      indicacao = {
-        codigo: codigoInfo.codigo,
-        total_indicados:   stats.total_indicados,
-        total_convertidos: stats.total_convertidos,
-        senhas_ganhas:     stats.senhas_ganhas,
-      };
-    } catch (err) {
-      console.warn("[chatbot] indique_e_ganhe dados falharam:", err?.message);
-      return jsonResponse({
-        resposta: "Não consegui buscar o teu código de indicação agora. Tenta daqui a pouco!",
-        fontes: [], modoBusca: "intent", modoResposta: "erro", intent, perfil,
-      });
-    }
-    return jsonResponse({
-      resposta: obterResposta("indique_e_ganhe", perfil, indicacao),
-      indicacao,
-      fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
-    });
-  }
-
-  // MC15.5 — dados_mercado (corporativo + admin): resumo seguro. NÃO promete volume
-  // global (não existe store — V4); usa contagem real de edições ativas + Painel.
-  if (intent === "dados_mercado") {
-    if (perfil !== "corporativo" && perfil !== "admin") {
-      return jsonResponse({
-        resposta: obterResposta("dados_mercado", perfil, {}),
-        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-      });
-    }
-    const { edicoes } = await listarEdicoes();
-    const edicoesAtivas = Object.values(edicoes).filter((e) => e.status === "aberto").length;
-    return jsonResponse({
-      resposta: obterResposta("dados_mercado", perfil, { edicoesAtivas }),
-      fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
-    });
-  }
-
-  // MC17.1 — relatório de compras/senhas (admin-only): total ativo e expirado.
-  if (intent === "relatorio_compras") {
-    if (!ehAdmin) {
-      return jsonResponse({
-        resposta: obterResposta("relatorio_compras", perfil, {}),
-        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-      });
-    }
-    let resumo = { lojistas: 0, senhasAtivas: 0, senhasExpiradas: 0 };
-    try { resumo = await resumoTrocoAdmin(); }
-    catch (err) { console.warn("[chatbot] resumoTrocoAdmin falhou:", err?.message); }
-    return jsonResponse({
-      resposta: obterResposta("relatorio_compras", "admin", resumo),
-      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil,
-    });
-  }
-
-  // MC17.1 — saldo de senhas de troco (autenticados; visitante recebe CTA).
-  if (intent === "meu_saldo") {
-    if (perfil === "visitante" || !adminEndereco) {
-      return jsonResponse({
-        resposta: obterResposta("meu_saldo", "visitante", {}),
-        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-      });
-    }
-    let troco = { saldoTroco: 0, expiramEmBreve: 0 };
-    try { troco = await lerTroco(adminEndereco); }
-    catch (err) { console.warn("[chatbot] lerTroco falhou:", err?.message); }
-    return jsonResponse({
-      resposta: obterResposta("meu_saldo", perfil, { ...troco, endereco: adminEndereco }),
-      fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
-    });
-  }
-
-  // MC17.1 — contratar cota comercial / pacotes (informativo, por perfil).
-  if (intent === "comprar_cotas") {
-    return jsonResponse({
-      resposta: obterResposta("comprar_cotas", perfil, {}),
-      fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
-    });
-  }
-  if (intent === "pacotes_cotas") {
-    return jsonResponse({
-      resposta: obterResposta("pacotes_cotas", perfil, {}),
-      fontes: [], modoBusca: "intent", modoResposta: "perfil", intent, perfil,
-    });
-  }
-
-  // MC15.6 ITEM 5 — simular_vencedor (admin + corporativo). Apura o menor lance
-  // único da edição em memória (espelha apurarVencedor on-chain — R7).
-  if (intent === "simular_vencedor") {
-    if (perfil !== "admin" && perfil !== "corporativo") {
-      return jsonResponse({
-        resposta: obterResposta("simular_vencedor", perfil, {}),
-        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-      });
-    }
-    const edicaoId = extrairEdicaoId(pergunta) || "R-1";
-    const sim = await simularVencedorMenorLance(edicaoId);
-    return jsonResponse({
-      resposta: obterResposta("simular_vencedor", perfil, {
-        edicaoId,
-        ok: sim.ok,
-        erro: !!sim.erro,
-        vencedor: sim.ok ? rotuloVencedor(sim) : null,
-        valor: sim.ok ? brlCentavos(sim.valorCentavos) : null,
-        totalLances: sim.totalLances,
-        lancesUnicos: sim.lancesUnicos,
-      }),
-      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, simulacao: sim,
-    });
-  }
-
-  // MC15.6 ITEM 10 — memória operacional (ADMIN-ONLY): busca decisão semelhante.
-  if (intent === "memoria") {
-    if (!ehAdmin) {
-      return jsonResponse({
-        resposta: obterResposta("memoria", perfil, {}),
-        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-      });
-    }
-    let achado = null;
-    try { achado = await buscarDecisaoSemelhante(pergunta); }
-    catch (err) { console.warn("[chatbot] buscarDecisaoSemelhante falhou:", err?.message); }
-    return jsonResponse({
-      resposta: obterResposta("memoria", "admin", {
-        achou: !!achado,
-        trigger: achado?.entrada?.trigger || null,
-        action: achado?.entrada?.action || null,
-        quando: achado?.entrada?.timestamp || null,
-        total: achado?.total || 0,
-      }),
-      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, memoria: achado,
-    });
-  }
-
-  // MC15.6 ITEM 7 — kill switch (ADMIN-ONLY): /panic e /unpanic.
-  if (intent === "panic" || intent === "unpanic") {
-    if (!ehAdmin) {
-      return jsonResponse({
-        resposta: obterResposta(intent, perfil, {}),
-        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-      });
-    }
-    const rl = await aplicarRateLimit(req, "guto-admin", RL_GUTO_ADMIN_RPM);
-    if (rl) {
-      return jsonResponse({
-        resposta: "Limite de comandos administrativos atingido. Aguarde um minuto e tente novamente.",
-        fontes: [], modoBusca: "intent", modoResposta: "rate-limit", intent, perfil,
-      });
-    }
-    const novoStatus = intent === "panic" ? "paused" : "active";
-    try {
-      const estado = await escreverEstadoSistema(novoStatus, intent === "panic" ? "acionado via GUTO" : null);
-      // ITEM 9 — log de decisão (fail-soft).
-      await registrarDecisao({ trigger: intent, action: `sistema ${novoStatus}`, userId: adminEndereco });
-      return jsonResponse({
-        resposta: obterResposta(intent, "admin", { timestamp: estado.timestamp }),
-        fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, systemState: estado,
-      });
-    } catch (err) {
-      console.warn("[chatbot] kill switch falhou:", err?.message);
-      return jsonResponse({
-        resposta: `Não foi possível ${intent === "panic" ? "pausar" : "reativar"} o sistema agora: ${err?.message || "erro"}.`,
-        fontes: [], modoBusca: "intent", modoResposta: "erro", intent, perfil, erro: "system_state_falhou",
-      });
+  // Rate-limit de comandos admin mutantes (R6) — só para intents marcados `rl`.
+  if (spec.rl) {
+    const limited = await aplicarRateLimit(req, "guto-admin", RL_GUTO_ADMIN_RPM);
+    if (limited) {
+      return intentResp(perfil, intent, { resposta: RL_MSG_ADMIN, modoResposta: "rate-limit" });
     }
   }
 
-  // MC15.6 ITEM 6 — pulso_edicao (admin + corporativo). 4 métricas vitais.
-  if (intent === "pulso_edicao") {
-    if (perfil !== "admin" && perfil !== "corporativo") {
-      return jsonResponse({
-        resposta: obterResposta("pulso_edicao", perfil, {}),
-        fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-      });
-    }
-    const edicaoId = extrairEdicaoId(pergunta) || "R-1";
-    const m = await obterMetricasPulso(edicaoId);
-    return jsonResponse({
-      resposta: obterResposta("pulso_edicao", perfil, {
-        edicaoId,
-        volumePorMin: m.volumePorMin,
-        licitantesUnicos: m.licitantesUnicos,
-        valorizacaoPct: m.valorizacaoPct,
-        abandonoCheckoutPct: m.abandonoCheckoutPct,
-        totalLances: m.totalLances,
-      }),
-      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, pulso: m,
-    });
-  }
-
-  // listar_edicoes: a lista de edições é PÚBLICA (GET /edicoes). Logados veem-na
-  // com tom do seu perfil; visitante recebe convite (não é dado sensível).
-  if (intent === "listar_edicoes") {
-    let lista = "";
-    let total = 0;
-    if (perfil !== "visitante") {
-      const { edicoes } = await listarEdicoes();
-      const ids = Object.keys(edicoes);
-      total = ids.length;
-      lista = ids.map((id) => `${id} (${edicoes[id].tipo}, ${edicoes[id].status})`).join("; ");
-    }
-    return jsonResponse({
-      resposta: obterResposta("listar_edicoes", perfil, { lista, total }),
-      fontes: [], modoBusca: "intent", modoResposta: ehAdmin ? "acao" : "perfil", intent, perfil,
-    });
-  }
-
-  // criar_edicao / encerrar_edicao: comandos MUTANTES → admin-only (gate inalterado).
-  // Não-admin recebe recusa adequada ao perfil (NUNCA executa, NUNCA vaza dados).
-  if (!ehAdmin) {
-    return jsonResponse({
-      resposta: obterResposta(intent, perfil, {}),
-      fontes: [], modoBusca: "intent", modoResposta: "recusa-perfil", intent, perfil,
-    });
-  }
-
-  // admin: rate-limit dos comandos mutantes (5/min — R6).
-  const rl = await aplicarRateLimit(req, "guto-admin", RL_GUTO_ADMIN_RPM);
-  if (rl) {
-    return jsonResponse({
-      resposta: "Limite de comandos administrativos atingido. Aguarde um minuto e tente novamente.",
-      fontes: [], modoBusca: "intent", modoResposta: "rate-limit", intent, perfil,
-    });
-  }
-
-  if (intent === "encerrar_edicao") {
-    const id = extrairEdicaoId(pergunta);
-    if (!EDICAO_ID_RE.test(id)) {
-      return jsonResponse({
-        resposta: "Para encerrar, indique o id da edição (ex.: PROG-3 ou RELAMP-7).",
-        fontes: [], modoBusca: "intent", modoResposta: "faltam-dados", intent, perfil,
-      });
-    }
-    const res = await encerrarEdicao({ edicaoId: id, endereco: adminEndereco, origem: "guto" });
-    if (!res.ok) {
-      return jsonResponse({
-        resposta: `Não foi possível encerrar ${id}: ${res.message}`,
-        fontes: [], modoBusca: "intent", modoResposta: "erro", intent, perfil, erro: res.code,
-      });
-    }
-    // ITEM 9 — log de decisão (fail-soft).
-    await registrarDecisao({ trigger: "encerrar_edicao", action: `${res.edicao.id} encerrada`, userId: adminEndereco });
-    return jsonResponse({
-      resposta: obterResposta("encerrar_edicao", "admin", { id: res.edicao.id }),
-      fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, edicao: res.edicao,
-    });
-  }
-
-  // criar_edicao
-  const tipo = extrairTipo(pergunta);
-  const duracaoSegundos = extrairDuracaoSegundos(pergunta);
-  const produto = extrairProduto(pergunta);
-  if (!tipo || !duracaoSegundos || !produto) {
-    const faltam = [
-      !tipo ? "o tipo (relâmpago ou programado)" : null,
-      !duracaoSegundos ? "a duração (ex.: 30 min)" : null,
-      !produto ? "o produto" : null,
-    ].filter(Boolean).join(", ");
-    return jsonResponse({
-      resposta: `Para criar a edição preciso de: ${faltam}.`,
-      fontes: [], modoBusca: "intent", modoResposta: "faltam-dados", intent, perfil,
-    });
-  }
-
-  const res = await criarEdicao({
-    tipo, produto, duracaoSegundos,
-    criadoPor: adminEndereco, origem: "guto",
-  });
-  if (!res.ok) {
-    return jsonResponse({
-      resposta: `Não foi possível criar a edição: ${res.message}`,
-      fontes: [], modoBusca: "intent", modoResposta: "erro", intent, perfil, erro: res.code,
-    });
-  }
-  // ITEM 9 — log de decisão (fail-soft).
-  await registrarDecisao({ trigger: "criar_edicao", action: `${res.edicao.id} criada (${res.edicao.tipo})`, userId: adminEndereco });
-  return jsonResponse({
-    resposta: obterResposta("criar_edicao", "admin", {
-      id: res.edicao.id, tipo: res.edicao.tipo, produto: res.edicao.produto, termino: res.edicao.termino_em,
-    }),
-    fontes: [], modoBusca: "intent", modoResposta: "acao", intent, perfil, edicao: res.edicao,
-  });
+  return spec.run({ req, pergunta, perfil, endereco: adminEndereco });
 }
 
 function chatbotAtivo() {

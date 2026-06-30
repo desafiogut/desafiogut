@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
+import { apiGet } from "../lib/api.js";
 
 const COR_CATEGORIA = {
   bronze:   "#cd7f32",
@@ -33,11 +34,10 @@ export default function CorporativoCotas() {
     let cancel = false;
     (async () => {
       try {
-        const resp = await fetch(`/.netlify/functions/cotas?cliente_id=${address}`);
+        const { ok, status, data } = await apiGet(`cotas?cliente_id=${address}`);
         if (cancel) return;
-        if (resp.status === 404) { setCota(null); setLoading(false); return; }
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
+        if (status === 404) { setCota(null); setLoading(false); return; }
+        if (!ok) throw new Error(`HTTP ${status}`);
         if (!cancel) { setCota(data); setLoading(false); }
       } catch (err) {
         console.warn("[CorporativoCotas] falhou:", err?.message);

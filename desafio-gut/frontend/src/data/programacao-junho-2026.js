@@ -76,14 +76,15 @@ export function horariosDoDia(diaKey) {
   return HORARIOS[dia.tipo] || [];
 }
 
+import { apiGet } from "../lib/api.js";
+
 // Tenta buscar a grade publicada pelo Admin (Blob `schedule:{mes}`).
 // Se 404 ou erro de rede, retorna null e o consumidor deve cair no fallback
 // estático exportado deste módulo. Não bloqueia render — pode rodar em useEffect.
 export async function buscarGradeRemota(mes = "2026-06") {
   try {
-    const resp = await fetch(`/.netlify/functions/schedule?mes=${encodeURIComponent(mes)}`);
-    if (!resp.ok) return null;
-    const data = await resp.json();
+    const { ok, data } = await apiGet(`schedule?mes=${encodeURIComponent(mes)}`);
+    if (!ok) return null;
     return data?.grade ?? null;
   } catch {
     return null;

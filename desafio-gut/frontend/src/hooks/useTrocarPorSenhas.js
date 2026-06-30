@@ -16,6 +16,7 @@
 import { useRef, useState, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { getSignerFromProvider } from "../utils/web3.js";
+import { apiPost } from "../lib/api.js";
 
 const SUCESSO_LIMPAR_MS = 5000;
 
@@ -40,13 +41,8 @@ export function useTrocarPorSenhas() {
     const provider = await privyWallet.getEthereumProvider();
     const { signer } = await getSignerFromProvider(provider);
     const signature = await signer.signMessage(message);
-    const resp = await fetch("/.netlify/functions/auth-lance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endereco: address, signature, message }),
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data?.error?.message || "Falha ao autenticar.");
+    const { ok, data } = await apiPost("auth-lance", { endereco: address, signature, message });
+    if (!ok) throw new Error(data?.error?.message || "Falha ao autenticar.");
     authRef.current = { token: data.token, expiresAt: now + (data.ttl || 600) * 1000 };
     return data.token;
   }, [address, privyWallet]);
@@ -58,19 +54,11 @@ export function useTrocarPorSenhas() {
     setCarregando(true);
     try {
       const authToken = await getAuthToken();
-      const resp = await fetch("/.netlify/functions/comprar-senhas", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ endereco: address, qtd }),
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) {
+      const { ok, status, data } = await apiPost("comprar-senhas", { endereco: address, qtd }, { token: authToken });
+      if (!ok) {
         // 401 invalida o cache do token para forçar nova assinatura.
-        if (resp.status === 401) authRef.current = { token: null, expiresAt: 0 };
-        const msg = data?.error?.message || `HTTP ${resp.status}`;
+        if (status === 401) authRef.current = { token: null, expiresAt: 0 };
+        const msg = data?.error?.message || `HTTP ${status}`;
         setErro(msg);
         return { ok: false, code: data?.error?.code, message: msg };
       }

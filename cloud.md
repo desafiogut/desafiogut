@@ -1222,3 +1222,41 @@ Suíte total **116/116** verde; `node --check` limpo (111 `.mjs`); `npm run buil
 **Modelo de confiança (inalterado):** `purge-lances` agora compartilha a mesma porta admin de
 `consolidar-lances`/demais mutações sensíveis. Os 7 P1 da auditoria seguem em aberto para o pré-MC40.
 Relatório: `Desktop\MC39.17.1-final.md`.
+
+### 9.27 MC39.22.1 — Enxugamento Ponytail, cortes P0 (consolidação estrutural) (2026-06-29)
+> Execução dos 3 cortes P0 do plano MC39.22. Branch `feat/mc39.22.1`. Refactors
+> behavior-preserving (zero regressão) + cobertura de teste nova. **Achado honesto
+> (SUPERPERS): as estimativas de LOC do plano estavam erradas** — o código já era
+> enxuto, então o ganho real é ESTRUTURAL (DRY/declarativo), não redução de linhas.
+
+**P0-1 — `chatbot.mjs`: despacho de intents declarativo.** A cadeia de ~16 `if (intent
+=== ...)` em `tratarIntentEdicoes` virou a tabela `INTENT_HANDLERS` (cada intent declara
+`gate` de perfil, `recusaRole`, `rl` de rate-limit, e `run`). O shape de resposta (antes
+39× inline) é o helper `intentResp()`; a recusa-perfil (antes 12× verbatim) é o helper
+`recusa()`. LOC ~flat (1009→1002), NÃO −359 (a maior parte é lógica de negócio irredutível).
+Ganho: gate RBAC declarativo e único. Novo `_tests/chatbot-dispatch.test.mjs` (14 casos de
+caracterização capturados contra o código original → golden → re-verde pós-refactor).
+
+**P0-2 — `src/lib/api.js`: cliente HTTP centralizado.** `apiGet`/`apiPost` (fetch nativo)
+centralizam BASE + headers (Content-Type/Bearer) + `JSON.stringify` + parse tolerante,
+devolvendo `{ ok, status, data }` e **nunca lançando** (tratamento de erro fica no caller).
+Migrados 13 de 27 call-sites (7 ficheiros). Os 14 restantes (auth-admin lifecycle, cadeia de
+perfil do AppContext, `.then()`/`Promise.all`, analytics keepalive, DELETE) **diferidos para
+MC39.22.2** por exigirem gate de runtime inexistente nesta sessão (sem harness de teste de
+frontend; MCP não automatiza OAuth Privy — MC39.3.1). Lote ~neutro em LOC (não −200).
+
+**P0-3 — `src/widgets/layout/navModel.jsx`: ícones de navegação em fonte única.** Os 7 ícones
+SVG estavam duplicados verbatim em `Sidebar.jsx` e `BottomNav.jsx`; extraídos para `<NavIcon>`.
+Cada componente mantém os seus rótulos/agrupamento (rail desktop vs 3 tabs + "Mais" mobile —
+divergência de superfície, não duplicação). DOM idêntico por construção (+`aria-hidden`, melhoria
+de a11y). Net ~+57 LOC (módulo partilhado custa mais que a dedupe), ganho = DRY.
+
+**Validação:** `node --check` limpo (122 `.mjs`); suíte **124/124** verde; `npm run build` verde;
+**MCP visual 1440 + 375** (Dashboard público: Sidebar e BottomNav renderizam todos os `NavIcon`,
+active indicator OK, console só com ruído pré-existente CSP/favicon). Nav corporativo (auth-gated)
+não validável por MCP, mas usa o MESMO conjunto `NavIcon` já provado.
+
+**Resultado honesto:** MC39.22.1 ADICIONA ~+78 linhas de produção (+ teste de 95) em vez de cortar
+−679. As estimativas do MC39.22 não se concretizaram porque o codebase já estava enxuto; o entregue
+é consolidação estrutural (declarativo/DRY) + nova cobertura, com zero regressão. Relatório:
+`Desktop\MC39.22.1-final.md`. Pendências P1 + restante da migração HTTP → MC39.22.2.

@@ -785,5 +785,60 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   `iniciar-pagamento` caller único; corporativo (cotas/voucher) não usa PIX → intacto.
 - [✅] **Validação visual MCP (375 + 1440):** campo CPF ausente, botão habilitado sem CPF, console
   limpo (preview isolado; Privy/OAuth não automatizável — MC39.3.1).
+## MC39.22 — Plano de enxugamento Ponytail (DIAGNÓSTICO read-only) · 2026-06-29
+- [✅] **Escopo:** auditoria de gordura de código + geração do plano em
+  `Desktop\MC39.22-plano-enxugamento.txt`. **R1: ZERO alteração de código** no DESAFIOGUT.
+  Branch `feat/mc39.22` (read-only). Único arquivo do repo tocado: este `security_audit.md`.
+- [✅] **Sem nova superfície de ataque:** nenhuma rota, input, chave, dependência ou
+  permissão adicionada/alterada. Análise puramente estática (leitura + `wc`/`grep`).
+- [✅] **Achados (29.564 → ~25.708 LOC; ~13%):** gordura é LOCALIZADA, não estrutural.
+  Top alvos: (EX-1) `chatbot.mjs` despacho de intents 39× repetido → tabela (−~359);
+  (EX-2) ausência de cliente HTTP único no frontend, 27 `fetch` crus em 16 ficheiros (−~200);
+  (EX-3) `Sidebar`+`BottomNav` duplicam config de navegação (−~120); (EX-4) caminho morto
+  `financeiro-fallback`/adaptadores pós-Supabase (−~120); (EX-5) tiles de KPI inline (−~250).
+- [⚠️] **GATE para a implementação (MC39.22.1) — bloqueia merge:** os refactors que tocam
+  superfície sensível NÃO entram sem nova entrada neste arquivo:
+    · EX-1 (chatbot) altera o gate RBAC de comandos admin do GUTO → re-auditar §2 ZERO-TRUST,
+      provando paridade 1:1 do gate por-intent (recusa-perfil para visitante/comum/corporativo).
+    · EX-4 (data-store) toca caminho de dados financeiros → confirmar `caller=0` por grep ANTES
+      de remover; **nunca** tocar migrações com DROP TABLE.
+- [✅] **Contrato `Leilao.sol`:** deliberadamente FORA do escopo de corte (audited/security-critical);
+  alterações só em janela de auditoria formal (Slither/Echidna/Foundry). Plano marca como P2/diferido.
+- [✅] **Regressão:** nenhuma — diagnóstico não executa código nem altera o bundle. Reversível
+  (este doc) por `git revert`. Suite 115/115 e build inalterados (nada foi modificado).
+- **VEREDICTO:** APROVADO (diagnóstico). A IMPLEMENTAÇÃO permanece **PENDENTE** de auditoria
+  por-PR conforme o gate acima (RUFLO: Transação audita, Monitoramento valida).
+
+---
+
+## MC39.22.1 — Implementação dos cortes P0 (consolidação estrutural) · 2026-06-29
+Branch `feat/mc39.22.1`. Levanta o GATE deixado no MC39.22 para os refactors sensíveis.
+- [✅] **EX-1 (chatbot) — gate RBAC re-auditado (§2 ZERO-TRUST), paridade 1:1 PROVADA.** A
+  cadeia de `if (intent===...)` virou tabela `INTENT_HANDLERS`; o gate de perfil por-intent
+  (admin / corp+admin / autenticado / qualquer) e a recusa-perfil são aplicados de forma
+  uniforme. Paridade comprovada por caracterização: `_tests/chatbot-dispatch.test.mjs` (14
+  casos cobrindo recusa-perfil de visitante/comum nos intents admin-only + intents públicos)
+  foi capturado **contra o código ORIGINAL** (golden, 14/14) e re-executado **verde** após o
+  refactor. `detectarIntent` 20/20 inalterado. Comandos mutantes (criar/encerrar/panic/wizard)
+  mantêm `rl` (rate-limit guto-admin) e o gate admin. **Zero alteração de privilégio.**
+- [✅] **EX-2 (HTTP client) — sem nova superfície.** `apiGet`/`apiPost` (fetch nativo, sem nova
+  dep) só centralizam header/body/parse; Authorization Bearer continua a vir do mesmo token do
+  caller. 13 sites migrados com semântica idêntica; auth-admin lifecycle e cadeia de perfil do
+  AppContext **NÃO** tocados (diferidos a MC39.22.2). JWT/RBAC/idempotência inalterados.
+- [✅] **EX-3 (navModel) — sem superfície; DOM idêntico.** Só consolida paths SVG; lógica de
+  perfil/admin dos menus intacta. `aria-hidden` agora também no desktop (melhoria a11y).
+- [N/A] **EX-4 (data-store fallback) NÃO executado** nesta sessão — permanece sob o gate do
+  MC39.22 (confirmar `caller=0` + nunca DROP). Fica para MC39.22.2.
+- [✅] **Regressão:** `node --check` limpo (122 `.mjs`); suíte **124/124** (110 base + 14 novos);
+  `npm run build` verde; MCP visual 1440 + 375 (Sidebar/BottomNav OK, console só ruído pré-existente).
+  Reversível por `git revert` (4 commits atômicos).
+- [✅] **Honestidade de LOC (SUPERPERS):** os cortes renderam **~flat/+78 LOC**, não −679 — o
+  código já era enxuto; o ganho é estrutural (declarativo/DRY) + cobertura nova. Reportado sem maquiagem.
+- **VEREDICTO:** APROVADO para merge (refactor behavior-preserving, R1 mantido, gate EX-1 levantado
+  com prova de paridade). EX-4 e migração HTTP restante seguem PENDENTES para MC39.22.2.
+
+---
+
+## MC39.15.1 — VEREDICTO (continuação)
 - **VEREDICTO:** APROVADO para merge, **condicionado** à confirmação de `MP_PAYER_ID_NUMBER` no
   Netlify (senão o 502 do MC39.13 retorna). Mudança de código é redução de PII + simplificação.
