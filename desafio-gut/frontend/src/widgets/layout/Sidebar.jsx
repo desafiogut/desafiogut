@@ -5,63 +5,21 @@ import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdmin } from "../../hooks/useAdmin.js";
 import { Button } from "@/components/ui";
 import GutoAvatar from "../../components/GutoAvatar.jsx";
+import { NavIcon } from "./navModel.jsx";
 
 // MC20.2 ITEM 5 — spring do Active Indicator elástico (rail desktop).
 const RAIL_SPRING = { type: "spring", stiffness: 380, damping: 30 };
 
-// ─── Ícones SVG inline — sem dependência externa ──────────────────────────────
-const IconDashboard = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-    <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
-  </svg>
-);
-const IconWallet = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
-    <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
-    <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
-  </svg>
-);
-const IconTarget = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
-  </svg>
-);
-const IconTrending = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-    <polyline points="16 7 22 7 22 13"/>
-  </svg>
-);
-const IconShield = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-  </svg>
-);
-const IconSettings = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3"/>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-  </svg>
-);
-const IconChevronLeft = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 18 9 12 15 6"/>
-  </svg>
-);
-const IconChevronRight = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 18 15 12 9 6"/>
-  </svg>
-);
-const IconLogOut = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-    <polyline points="16 17 21 12 16 7"/>
-    <line x1="21" y1="12" x2="9" y2="12"/>
-  </svg>
-);
+// ─── Ícones — aliases finos sobre o NavIcon partilhado (navModel.jsx, MC39.22.1) ─
+const IconDashboard    = () => <NavIcon name="dashboard" />;
+const IconWallet       = () => <NavIcon name="wallet" />;
+const IconTarget       = () => <NavIcon name="target" />;
+const IconTrending     = () => <NavIcon name="trending" />;
+const IconShield       = () => <NavIcon name="shield" />;
+const IconSettings     = () => <NavIcon name="settings" />;
+const IconChevronLeft  = () => <NavIcon name="chevronLeft" size={16} strokeWidth={2.5} />;
+const IconChevronRight = () => <NavIcon name="chevronRight" size={16} strokeWidth={2.5} />;
+const IconLogOut       = () => <NavIcon name="logout" size={16} />;
 
 // ─── Itens de navegação ────────────────────────────────────────────────────────
 const NAV_ITEMS = [
