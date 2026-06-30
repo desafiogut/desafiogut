@@ -815,6 +815,32 @@ Branch `feat/mc39.22.1`. Levanta o GATE deixado no MC39.22 para os refactors sen
 - **VEREDICTO:** APROVADO para merge (refactor behavior-preserving, R1 mantido, gate EX-1 levantado
   com prova de paridade). EX-4 e migração HTTP restante seguem PENDENTES para MC39.22.2.
 
+## MC39.22.1 (2ª parte) — P0 pendentes: EX-5, EX-7, HTTP subset · 2026-06-30
+Mesma branch `feat/mc39.22.1`. Escopo aprovado: subset seguro + EX-5 + EX-7.
+- [⛔] **EX-4 — BLOQUEADO (gate do MC39.22 NÃO satisfeito).** `_lib/financeiro-fallback.mjs`
+  tem **3 consumidores vivos** (`wallet.mjs`, `_lib/saldoRs.mjs`, `_lib/troco-senhas.mjs`)
+  como read-fallback da transição Supabase. `caller=0` é FALSO → **não removido** (remover
+  arriscaria saldo financeiro legado indisponível). Requer auditoria de dados (Supabase CLI +
+  Blobs) provando migração 100% antes; **nunca** DROP. Diferido a MC39.22.2.
+- [✅] **EX-5 (`<StatTile>`) — sem superfície de risco; validado.** Componente no padrão
+  documentado (Button secondary). Dashboard (público) validado por MCP 1440+375: KPIs iguais,
+  sem overflow. CorporativoDashboard DOM-equivalente. Sem dados sensíveis; só apresentação.
+- [✅] **EX-7 (`leilaoTimer.js`) — pure helpers; zero risco.** Só funções puras de localStorage
+  extraídas; máquina de estado intacta. MCP: timer persiste/conta (imune a F5).
+- [✅] **HTTP subset — fidelidade preservada; exclusões por SEGURANÇA.** 27 sites migrados
+  (reads/`.then`/POST público). **Anti-fraude preservado:** os call-sites com `X-Visitor-ID`/
+  `X-Device-Tracked` (ReferralRegistrar, saldo-rs, notificações, register-corporativo) e os que
+  leem header de resposta `x-ratelimit-limit` (saldo-rs, alimenta `checkRateLimit`) ou `resp.text()`
+  no erro (CorporativoAnalytics) **NÃO** foram migrados — o helper minimal `api.js` não envia
+  headers custom nem expõe a resposta crua; migrá-los degradaria sinais anti-fraude/rate-limit.
+  Núcleo financeiro/sessão (CardLance, ComprarFichasModal, auth-user, auth-admin lifecycle,
+  mutações de produto, BannerUpload) intacto. JWT/RBAC/idempotência inalterados.
+- [✅] **Regressão:** `node --check` 122 `.mjs`; suíte 124/124; `npm run build` verde; MCP
+  1440+375 (Dashboard/StatTile/nav/timer OK; network confirma URLs corretas dos apiGet/apiPost,
+  sem base duplicada). Reversível por `git revert`.
+- **VEREDICTO:** APROVADO para merge. EX-4 + migração HTTP restante (headers custom, núcleo) →
+  MC39.22.2 (exige `api.js` com suporte a headers custom/resposta crua + auditoria de dados p/ EX-4).
+
 ---
 
 ## MC39.15.1 — VEREDICTO (continuação)
