@@ -976,9 +976,13 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   `require(!resultados[id].consolidado)` de `consolidarResultado`). +unicidade, +two-step, +coord≠0.
 - [✅] **Harness não vaza p/ produção:** `LeilaoGUTFuzzing` vive só em `tests/fuzzing/`; `foundry.toml`
   tem `src=contracts`/`test=tests/foundry` — o harness de fuzzing não é compilado no build do contrato.
-- [⏳] **Validação local:** `forge`/`echidna`/`docker` ausentes na máquina (Windows). YAML validado
-  (pyyaml OK); compilação/fuzz reais ocorrem no CI ao push. Revisão Solidity manual: a invariante nova
-  não toca storage lido pelas invariantes 1–6 → sem regressão entre invariantes.
-- **VEREDICTO:** APROVADO — gate de CI aditivo, sem código de produção tocado. Resolve a pendência de
-  processo "Foundry+Echidna em CI" do MC39.17. AgentShield e auditoria externa do contrato seguem
-  pendentes para o MC40; `NETWORK_STAGE=Sepolia` mantido.
+- [✅] **Validação no CI (run 28441451275, commit 28f51db):** `foundry` ✅ + `echidna` ✅
+  (50000/50000 fuzz, **0/7 falhas**) + `sbom` ✅. As 7 invariantes passam:
+  conservação, onlyCoordenacao, MAX_LANCES_UNICOS, encerramento único, unicidade, two-step, coord≠0.
+- [✅] **Falsos positivos corrigidos:** o 1º run (ce47fcf) acusou `echidna_lance_consome_senha` e
+  `echidna_two_step_transfer` — o Echidna chamava os mutadores HERDADOS crus (`darLance`,
+  `aceitarTransferenciaCoordenacao`) furando os wrappers de shadow-accounting. Fix config-only:
+  `filterBlacklist:false` + whitelist dos 4 wrappers do harness (`echidna.yaml`). NÃO é bug de contrato.
+- **VEREDICTO:** APROVADO — gate de CI aditivo e **verde**, sem código de produção tocado. Resolve a
+  pendência de processo "Foundry+Echidna em CI" do MC39.17. AgentShield e auditoria externa do contrato
+  seguem pendentes para o MC40; `NETWORK_STAGE=Sepolia` mantido.
