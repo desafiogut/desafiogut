@@ -13,7 +13,7 @@ atualize a sua linha de status aqui ao concluir.
 
 | Plan | Title | Priority | Effort | Risk | Depends on | Status |
 |------|-------|----------|--------|------|------------|--------|
-| 001  | MC40 — Deploy do LeilaoGUT na mainnet + transferência da coordenação (KMS) | P1 | L | HIGH | — | TODO |
+| 001  | MC40 — Deploy do LeilaoGUT na mainnet + transferência da coordenação (KMS) | P1 | L | HIGH | — | IN PROGRESS — pré-reqs CI ✅ (#124 Foundry+Echidna, #125 AgentShield); aguarda auditoria externa + deploy on-chain |
 | 002  | Playstore — empacotar como app Android (Capacitor/AAB) e submeter | P2 | L | MED | 001 (build de produção aponta mainnet) | TODO |
 | 003  | Campanha de lançamento (E-mail + WhatsApp) | P2 | M | MED | 001 (produto em produção); 002 p/ link da loja | TODO |
 
