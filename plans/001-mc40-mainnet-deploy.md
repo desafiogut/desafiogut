@@ -18,6 +18,37 @@
 - **Category**: migration / security
 - **Planned at**: commit `e842d4b`, 2026-06-30
 
+## Review-plan refinements (revisão de contexto fresco · 2026-06-30, MC40 session)
+Achados da revisão (`improve review-plan`) — incorporar ANTES de executar:
+1. **[CRÍTICO] O `aceitarTransferenciaCoordenacao()` da Smart Account NÃO pode usar
+   `cast send --private-key`.** A coordenação-alvo é uma **Smart Account ERC-4337** (Biconomy,
+   owner AWS KMS) — uma **conta-contrato sem chave privada bruta**. A chamada de aceitação tem de
+   ser submetida como **UserOperation** assinada pelo owner KMS, via o caminho Biconomy/KMS já no
+   projeto (`_lib/signer.mjs`, `_lib/kms-signer.mjs`, `_lib/kms/aws-kms.mjs`), **nunca** via
+   `--private-key <SMART_ACCOUNT_KEY>` (esse argumento não existe para uma Smart Account). Usar
+   `cast --private-key` aqui falha ou, pior, assina com uma EOA errada → coordenação presa.
+2. **[ALTO] Verificar o endereço da Smart Account ANTES do transfer.** Se o `aceitarTransferencia`
+   vier de um endereço que o KMS NÃO controla, a coordenação fica **permanentemente perdida** (só o
+   `coordenacaoPendente` pode aceitar). Antes do Step 5: derivar/confirmar via KMS+Biconomy que o
+   endereço alvo (ex.: o fornecido pelo operador) é exatamente a Smart Account cujo owner é a chave KMS
+   configurada, e que ela consegue assinar um UserOp de teste (ex.: uma tx no-op/aprovação barata).
+3. **[ALTO] Dry-run em fork de mainnet antes do deploy real.** Ensaiar deploy + two-step num
+   `hardhat node --fork $MAINNET_RPC_URL` (ou Foundry `--fork-url`) custa ~0 e valida o fluxo
+   inteiro (deploy → iniciar → aceitar → `coordenacao()`) sem gastar ETH real. Adicionar como
+   pré-passo do Step 4.
+4. **[MÉDIO] `npx hardhat verify` exige um bloco `etherscan` (apiKey) no config** — hoje ausente.
+   Adicionar no Step 1 (apiKey via env, ex.: `ETHERSCAN_API_KEY`), senão o Step 4 (verify) falha.
+5. **[ESCLARECIMENTO] "Deploy via KMS" vs DEPLOYER raw key.** A coordenação final é KMS (Smart
+   Account). O **deployer** pode ser uma **EOA efêmera** (chave raw, financiada só p/ o deploy) que é
+   **totalmente divestida** pelo two-step transfer — esse é o caminho mais simples e seguro. Se o
+   operador exigir deploy assinado por KMS, é preciso um provider/signer KMS no Hardhat (custom) —
+   decisão de arquitetura; documentar qual caminho foi escolhido antes do Step 4.
+6. **[INFRA] Esta sessão de agente NÃO tem os segredos mainnet** (`MAINNET_RPC_URL`,
+   `DEPLOYER_PRIVATE_KEY`, `KMS_KEY_ID`, `CONSOLIDATION_RPC_URL` ausentes) e NÃO deve manuseá-los
+   (R9/R14). Os Steps 2–7 (deploy, on-chain, env, flip) são **OPERADOR-ONLY** — gastam ETH real, são
+   irreversíveis e exigem segredos/KMS. Um agente prepara o código (Step 1) e o runbook; **não executa**
+   a transação mainnet sem o operador conduzir, com confirmação explícita por ação irreversível.
+
 ## Why this matters
 O DESAFIOGUT roda hoje **propositadamente em Sepolia testnet** (`NETWORK_STAGE`≠mainnet).
 Para operar com valor real, o contrato `LeilaoGUT` precisa ser deployado na Ethereum
