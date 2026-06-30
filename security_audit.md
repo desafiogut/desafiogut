@@ -570,7 +570,8 @@ são evolutivas (não-bloqueantes). Ver matriz de riscos e cronograma no relató
   API MP (sem double-credit); SSRF bloqueado em `img-proxy.mjs`; `consolidar-lances.mjs:41-48` com guard
   mainnet+anti-replay; `.env` fora do git; `hardhat.config.js` lê `PRIVATE_KEY` do env (sem hardcode);
   headers/CSP fortes (`netlify.toml`).
-- [⏳] **Pendências de processo:** Foundry+Echidna+AgentShield em CI; auditoria externa do contrato antes do MC40;
+- [⏳] **Pendências de processo:** ~~Foundry+Echidna~~ (✅ em CI desde MC40-CI, ver secção MC40-CI) +
+  AgentShield em CI; auditoria externa do contrato antes do MC40;
   manter `NETWORK_STAGE=Sepolia` até o contrato mainnet existir.
 - [✅] Mudança puramente visual/CSS em `GutoSpritePlayer.jsx` (frontend-only): removidos
   `mix-blend-mode`, `filter` e qualquer canvas/chroma-key — `<video>` simples, sem CSS hacks
@@ -954,3 +955,34 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
 ## MC39.15.1 — VEREDICTO (continuação)
 - **VEREDICTO:** APROVADO para merge, **condicionado** à confirmação de `MP_PAYER_ID_NUMBER` no
   Netlify (senão o 502 do MC39.13 retorna). Mudança de código é redução de PII + simplificação.
+
+---
+
+## MC40-CI — Fuzzing on-chain em CI (pré-requisito Mainnet) · 2026-06-30
+> Escopo: **CI-only + harness de teste**. NENHUM `.mjs`/`.jsx`/`contracts/Leilao.sol` de produção
+> alterado. Diff = `.github/workflows/contract-security.yml` (correções) + `tests/fuzzing/LeilaoGUT.sol`
+> (1 invariante nova). Aditivo, zero-regressão (R1). Fecha a pendência de processo do MC39.17 (linha 573).
+
+- [✅] **Superfície de ataque:** nenhuma nova. Workflow GitHub Actions e harness só rodam em CI/local,
+  fora do bundle e do runtime de produção. `permissions: contents: write` já existia (MC5, p/ SBOM);
+  o push do SBOM agora é `continue-on-error` (branch protection) → não escala privilégio.
+- [✅] **Correções no workflow (por que):** (a) `forge install` sem `--no-commit` (flag depreciada no
+  Foundry novo causava `unexpected argument`); (b) paths do Echidna relativos à RAIZ —
+  `crytic/echidna-action@v1` roda em container e ignora `working-directory`; (c) SBOM push best-effort.
+- [✅] **Cobertura de invariantes (4 propriedades exigidas + 3):** saldo/conservação
+  (`echidna_lance_consome_senha`), `onlyCoordenacao` (`echidna_apenas_coordenacao_credita`),
+  `MAX_LANCES_UNICOS` (`echidna_listaDeValores_limitada`) e **encerramento único**
+  (`echidna_encerramento_unico` — NOVO: `edicaoNonce[R-FUZZ] <= 1`, fuzza o guard
+  `require(!resultados[id].consolidado)` de `consolidarResultado`). +unicidade, +two-step, +coord≠0.
+- [✅] **Harness não vaza p/ produção:** `LeilaoGUTFuzzing` vive só em `tests/fuzzing/`; `foundry.toml`
+  tem `src=contracts`/`test=tests/foundry` — o harness de fuzzing não é compilado no build do contrato.
+- [✅] **Validação no CI (run 28441451275, commit 28f51db):** `foundry` ✅ + `echidna` ✅
+  (50000/50000 fuzz, **0/7 falhas**) + `sbom` ✅. As 7 invariantes passam:
+  conservação, onlyCoordenacao, MAX_LANCES_UNICOS, encerramento único, unicidade, two-step, coord≠0.
+- [✅] **Falsos positivos corrigidos:** o 1º run (ce47fcf) acusou `echidna_lance_consome_senha` e
+  `echidna_two_step_transfer` — o Echidna chamava os mutadores HERDADOS crus (`darLance`,
+  `aceitarTransferenciaCoordenacao`) furando os wrappers de shadow-accounting. Fix config-only:
+  `filterBlacklist:false` + whitelist dos 4 wrappers do harness (`echidna.yaml`). NÃO é bug de contrato.
+- **VEREDICTO:** APROVADO — gate de CI aditivo e **verde**, sem código de produção tocado. Resolve a
+  pendência de processo "Foundry+Echidna em CI" do MC39.17. AgentShield e auditoria externa do contrato
+  seguem pendentes para o MC40; `NETWORK_STAGE=Sepolia` mantido.

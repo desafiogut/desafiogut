@@ -133,6 +133,13 @@ ChatbotWidget) **não** são refatorados retroativamente sem necessidade (evita 
 5. **Skills de design** consultadas antes de cada implementação visual: @design-engineering
    (spring/anti-CLS), @impeccable-design (consistência/contraste), @taste-engineering
    (minimalismo, copy honesta) (R11).
+6. **Gate de CI on-chain (MC40-CI):** `.github/workflows/contract-security.yml` roda a cada push/PR
+   que toque `desafio-gut/**` — `forge test` (Foundry) + fuzzing property-based com **Echidna**
+   (`crytic/echidna-action`, harness `tests/fuzzing/LeilaoGUT.sol`, config `desafio-gut/echidna.yaml`)
+   + SBOM CycloneDX. 7 invariantes: conservação de senhas, `onlyCoordenacao`, `MAX_LANCES_UNICOS`,
+   **encerramento único** (`consolidarResultado` não consolida 2×), unicidade do vencedor, two-step
+   transfer, coordenação ≠ 0. Pré-requisito do MC40 (deploy mainnet). Owner: Agente de Transação
+   (config CI); validação: Agente de Monitoramento (RUFLO).
 
 ---
 

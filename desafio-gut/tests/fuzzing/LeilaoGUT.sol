@@ -88,6 +88,15 @@ contract LeilaoGUTFuzzing is LeilaoGUT {
         }
     }
 
+    // MC40-CI: expõe consolidarResultado para os bots fuzzarem o fecho da edição.
+    // Chamada INTERNA (sem `this.`) → msg.sender propaga: só o sender == coordenacao
+    // (deployer 0x30000 do echidna.yaml) consegue consolidar; os demais revertem.
+    // O guard `require(!consolidado)` no contrato impede 2º fecho bem-sucedido, então
+    // edicaoNonce[EDICAO_FUZZ] só pode ir de 0→1 — nunca 2 (ver invariante 7).
+    function consolidarResultadoFuzz(address vencedor, uint256 menorUnico) public {
+        consolidarResultado(EDICAO_FUZZ, vencedor, menorUnico);
+    }
+
     // ── Invariants Echidna (funções `echidna_*` retornam bool; false = breach)
 
     /// Invariante 1: coordenacao nunca é address(0) (sanity, two-step previne).
@@ -130,5 +139,14 @@ contract LeilaoGUTFuzzing is LeilaoGUT {
     function echidna_two_step_transfer() public view returns (bool) {
         if (coordenacao == coordenacaoOriginal) return true;
         return coordenacaoMudouViaAceitar;
+    }
+
+    /// Invariante 7 (MC40-CI): edição não pode ser encerrada (consolidada) duas vezes.
+    /// `consolidarResultado` incrementa edicaoNonce exatamente 1× por fecho e o guard
+    /// `require(!resultados[id].consolidado, "Resultado ja consolidado")` reverte a 2ª
+    /// tentativa. Logo, por mais que os bots chamem consolidarResultadoFuzz, o nonce
+    /// do leilão de fuzz nunca passa de 1. Quebra desta invariante = fecho duplicado.
+    function echidna_encerramento_unico() public view returns (bool) {
+        return edicaoNonce[EDICAO_FUZZ] <= 1;
     }
 }
