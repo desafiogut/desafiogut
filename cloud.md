@@ -1431,3 +1431,31 @@ futuros, cada um com seu gate `security_audit.md`** (ver §MC39.23 lá). Relató
 system — nada de `rgba` inline ad-hoc. Regra reforçada: *painel de vidro = classe, nunca rgba solto*.
 **Ficheiros:** `MercadoLances.jsx`, `Vitrine.jsx`, `ScheduleView.jsx`, `globals.css` (limpeza do
 modificador `--bar` não usado). Relatório: `Desktop\MC42-final.md` + shots em `Desktop\MC42-shots\`.
+
+---
+
+## Transições Suaves — MC43 (2026-07-01)
+> Branch `feat/mc43` (de `origin/main`). Padroniza a transição de ENTRADA de todas
+> as abas ao padrão do ícone “Indique e Ganhe” (`components/PainelIndicacao.jsx`):
+> `opacity 0→1`, `y 8→0`, `duration 0.35s` (framer-motion, ease default).
+
+- **Fonte única (design system):** `src/lib/motion.js` — `GUT_ENTRANCE`,
+  `GUT_ENTRANCE_STATIC`, `gutEntrance(reduce)`, `GUT_STAGGER_CONTAINER`,
+  `GUT_STAGGER_ITEM`. Regra: *transição de entrada = helper, nunca ad-hoc*.
+- **Todas as abas num único ponto:** `widgets/layout/Layout.jsx` envolve o
+  `<Outlet/>` num `motion.div` chaveado pelo 1º segmento da rota. Trocar de aba
+  re-dispara a entrada; navegar por parâmetro dentro da mesma aba (`/vitrine/:slot`,
+  `/produto/:id`) NÃO re-monta (sem flash / sem perda de estado — R1).
+- **Menu “Mais” (BottomNav):** os itens internos entram em cascata (stagger 50ms,
+  `GUT_STAGGER_*`). A ABERTURA do sheet (`gut-slide-up 0.22s`) e o spring do Active
+  Indicator do dock permanecem **inalterados** (protegidos).
+- **Normalização de divergências:** `SejaNossoParceiro.jsx` (2 headers y:20/0.4s →
+  estáticos; a entrada passa a ser a da página) e reveals condicionais y:16→y:8;
+  `Dashboard.jsx` (header y:-12/0.5s → estático).
+- **Acessibilidade:** `prefers-reduced-motion` → entrada instantânea (medido:
+  wrapper mantém `opacity 1 / transform none`). CLS=0 (só opacity+transform).
+
+**Prova (chrome-devtools, amostragem ao vivo):** ao trocar de aba, o wrapper anima
+`opacity 0.08→1` e `translateY 6.2px→0` em ~0.35s; em reduced-motion fica estático;
+itens do “Mais” abrem escalonados (`[0.61,0.44,0.24,0.01]` a 225ms). Relatório:
+`Desktop\MC43-final.md`; protótipo: `Desktop\MC43-proto\transicoes.html`.
