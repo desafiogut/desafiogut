@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import {
@@ -78,6 +78,20 @@ export function useAppContext() {
   return ctx;
 }
 
+// MC44 P0 — contexto SEPARADO para o estado de timer de alta frequência
+// (tempoRestante a 250ms, edicoesTick a 1s). Antes estes campos viviam no value
+// do AppContext → cada tick recriava o value e re-renderizava TODOS os
+// consumidores de useAppContext (~1–2×/s, contínuo → "app pesado/engasgado").
+// Isolando-os aqui, só os componentes de timer (que usam useAppTimer) re-render
+// por tick; o resto do app fica estável.
+const AppTimerContext = createContext(null);
+
+export function useAppTimer() {
+  const ctx = useContext(AppTimerContext);
+  if (!ctx) throw new Error("useAppTimer deve ser usado dentro de <AppProvider>");
+  return ctx;
+}
+
 // ─── Provider ────────────────────────────────────────────────────────────────
 // MC15.4 — deriva timeLeft (segundos) de uma edição a partir do termino_em
 // ISO-8601 server-authoritative (D2/D4/R4). Cálculo ABSOLUTO, igual ao padrão
@@ -120,9 +134,8 @@ export function AppProvider({ children }) {
 
   const [encerrado,       setEncerrado]       = useState(false);
   const [showOverlay,     setShowOverlay]     = useState(false);
-  const [tempoRestante,   setTempoRestante]   = useState(() => Math.max(0,
-    (tipoLeilao === "flash" ? prazoFlash : prazoProgramado) - Math.floor(Date.now() / 1000)
-  ));
+  // MC44 P0 — tempoRestante (display, 250ms) migrado para o TimerProvider; aqui
+  // ficou só a máquina de estado de fim de leilão (encerrado/overlay/lightning).
   const [lightningActive, setLightningActive] = useState(false);
   const [showCountdown,   setShowCountdown]   = useState(false);
 
@@ -681,24 +694,16 @@ export function AppProvider({ children }) {
     return mapa.get(edicaoId);
   }, []);
 
-  // Tick global (1s) para re-render das páginas que derivam timeLeft por
-  // edição (Dashboard/Vitrine/MercadoLances). Cálculo permanece absoluto
-  // (termino_em - now); o tick só força o re-render, nunca decrementa.
-  const [edicoesTick, setEdicoesTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setEdicoesTick((n) => (n + 1) % 1_000_000), 1000);
-    const vis = () => { if (document.visibilityState === "visible") setEdicoesTick((n) => (n + 1) % 1_000_000); };
-    document.addEventListener("visibilitychange", vis);
-    return () => { clearInterval(id); document.removeEventListener("visibilitychange", vis); };
-  }, []);
+  // MC44 P0 — edicoesTick (1s) migrado para o TimerProvider (era um gatilho de
+  // re-render de alta frequência no value do AppContext).
 
-  // Timer regressivo + disparo do efeito relâmpago.
-  // Cálculo é ABSOLUTO: `prazo - now`. setInterval só re-renderiza (250ms),
-  // nunca decrementa segundos. Resultado: imune a refresh e troca de aba.
+  // Máquina de fim de leilão. Cálculo é ABSOLUTO: `prazo - now`. O setInterval
+  // (250ms) NÃO seta mais tempoRestante (isso é do TimerProvider) — só dispara
+  // encerrado/overlay/lightning quando o prazo chega a 0, pelo que o AppProvider
+  // re-renderiza apenas no fim do leilão, não a cada tick.
   useEffect(() => {
     const tick = () => {
       const restante = Math.max(0, prazoTimestamp - Math.floor(Date.now() / 1000));
-      setTempoRestante(restante);
       if (restante === 0) {
         setEncerrado(true);
         // MC16 — flag impede múltiplos disparos quando encerrado
@@ -818,8 +823,9 @@ export function AppProvider({ children }) {
     setTimeout(() => {
       const dur = DURACAO[tipoLeilao];
       // setPrazoTimestamp também persiste no localStorage (chave do tipo atual).
+      // MC44 P0 — tempoRestante recalcula-se sozinho no TimerProvider (cálculo
+      // absoluto a partir do novo prazoTimestamp); não há setter local a chamar.
       setPrazoTimestamp(Math.floor(Date.now() / 1000) + dur);
-      setTempoRestante(dur);
       setShowCountdown(false);
     }, 3500);
   }
@@ -831,15 +837,14 @@ export function AppProvider({ children }) {
     // MC15.4 — múltiplas edições (aditivo). edicoes nunca é vazio (R-1 garantida).
     edicoes, edicoesStatus,
     getFimDisparadoRef,
-    timeLeftEdicaoSegundos,
-    edicoesTick,
+    // MC44 P0 — timeLeftEdicaoSegundos/edicoesTick/tempoRestante movidos para
+    // o AppTimerContext (useAppTimer); fora do value estável do AppContext.
     lances: lancesExibidos,
     prazoTimestamp, setPrazoTimestamp,
     prazoFlash, prazoProgramado,
     encerrado,
     showOverlay,
     showCountdown,
-    tempoRestante,
     lightningActive,
     saldoSenhas,
     saldoSenhasStatus,
@@ -873,5 +878,48 @@ export function AppProvider({ children }) {
     trackPageview, trackClickComprar, trackTempoSessao, trackScroll,
   };
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={value}>
+      <TimerProvider>{children}</TimerProvider>
+    </AppContext.Provider>
+  );
+}
+
+// MC44 P0 — Provider ANINHADO que possui o estado de timer de alta frequência.
+// Fica abaixo do AppContext.Provider (lê prazo/tipo via useAppContext), pelo que
+// o seu re-render a cada tick NÃO afeta o AppProvider nem os consumidores de
+// useAppContext — só quem usa useAppTimer (os componentes de cronómetro).
+function TimerProvider({ children }) {
+  const { prazoTimestamp, tipoLeilao, prazoFlash, prazoProgramado } = useAppContext();
+
+  // Cronómetro da edição ativa (display). Cálculo ABSOLUTO (prazo - now); o
+  // setInterval só re-renderiza (250ms) e React ignora o setState quando o
+  // inteiro de segundos não muda → re-render efetivo ~1×/s, só aqui.
+  const [tempoRestante, setTempoRestante] = useState(() => Math.max(0,
+    (tipoLeilao === "flash" ? prazoFlash : prazoProgramado) - Math.floor(Date.now() / 1000)
+  ));
+  useEffect(() => {
+    const tick = () => setTempoRestante(Math.max(0, prazoTimestamp - Math.floor(Date.now() / 1000)));
+    tick();
+    const id = setInterval(tick, 250);
+    const vis = () => { if (document.visibilityState === "visible") tick(); };
+    document.addEventListener("visibilitychange", vis);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", vis); };
+  }, [prazoTimestamp]);
+
+  // Tick global (1s) para re-render das grelhas que derivam timeLeft por edição
+  // (Dashboard/Vitrine/MercadoLances). Cálculo permanece absoluto; só força o render.
+  const [edicoesTick, setEdicoesTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setEdicoesTick((n) => (n + 1) % 1_000_000), 1000);
+    const vis = () => { if (document.visibilityState === "visible") setEdicoesTick((n) => (n + 1) % 1_000_000); };
+    document.addEventListener("visibilitychange", vis);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", vis); };
+  }, []);
+
+  const timerValue = useMemo(
+    () => ({ tempoRestante, edicoesTick, timeLeftEdicaoSegundos }),
+    [tempoRestante, edicoesTick]
+  );
+  return <AppTimerContext.Provider value={timerValue}>{children}</AppTimerContext.Provider>;
 }
