@@ -1403,7 +1403,6 @@ futuros, cada um com seu gate `security_audit.md`** (ver §MC39.23 lá). Relató
 
 ---
 
-<<<<<<< HEAD
 ## Transições Suaves — MC43 (2026-07-01)
 > Branch `feat/mc43` (de `origin/main`). Padroniza a transição de ENTRADA de todas
 > as abas ao padrão do ícone “Indique e Ganhe” (`components/PainelIndicacao.jsx`):
@@ -1429,7 +1428,9 @@ futuros, cada um com seu gate `security_audit.md`** (ver §MC39.23 lá). Relató
 `opacity 0.08→1` e `translateY 6.2px→0` em ~0.35s; em reduced-motion fica estático;
 itens do “Mais” abrem escalonados (`[0.61,0.44,0.24,0.01]` a 225ms). Relatório:
 `Desktop\MC43-final.md`; protótipo: `Desktop\MC43-proto\transicoes.html`.
-=======
+
+---
+
 ## Glass UI — Correções MC42 (2026-07-01)
 > Branch `feat/mc42`. Agente de Interface (RUFLO Pilar 3). Padronização de 3 pontos
 > do frontend ao `.gut-glass-standard`. Validação visual @375/768/1440 (chrome-devtools,
@@ -1458,7 +1459,30 @@ itens do “Mais” abrem escalonados (`[0.61,0.44,0.24,0.01]` a 225ms). Relató
 system — nada de `rgba` inline ad-hoc. Regra reforçada: *painel de vidro = classe, nunca rgba solto*.
 **Ficheiros:** `MercadoLances.jsx`, `Vitrine.jsx`, `ScheduleView.jsx`, `globals.css` (limpeza do
 modificador `--bar` não usado). Relatório: `Desktop\MC42-final.md` + shots em `Desktop\MC42-shots\`.
->>>>>>> origin/main
+
+---
+
+## Padrão de Edição — MC45 (2026-07-01)
+> Branch `feat/mc45`. Banner da edição em formato QUADRADO e CLICÁVEL, em TODAS as edições.
+
+- **`components/EdicaoBanner.jsx`** (novo) — banner quadrado 1:1 CLICÁVEL. Só o quadrado
+  é o alvo (`<Link to="/edicao/:id">`), não o card. Mostra `edicao.imagem_url` (object-fit:
+  cover) quando existir; senão placeholder padrão (🎁 em gradiente âmbar) — nunca vazio/quebrado.
+  A11y: `aria-label`, foco visível (`.gut-edicao-banner:focus-visible`), hover sutil.
+  Prop `clicavel={false}` para uso estático (página de detalhe).
+- **`components/EdicaoCard.jsx`** (novo) — card reutilizável de edição (GlassCard + caixa
+  âmbar com EdicaoBanner + info + cronómetro por edição + CTA). Substitui o antigo
+  `EdicaoTimerCard` inline do Dashboard (removido, junto com os helpers órfãos).
+- **`pages/EdicaoDetalhe.jsx`** + rota **`/edicao/:id`** (App.jsx, lazy) — destino do clique:
+  info da edição (tipo, estado, cronómetro, produto, banner) + CTA → /mercado; estado
+  "não encontrada" gracioso se o id não estiver na grelha (nunca 404/branco). Só leitura.
+- **Dashboard** — a "Edição Ativa" passa a usar o EdicaoBanner clicável no lugar do 🎁
+  estático (resto do card intacto); as "Outras Edições" passam a usar EdicaoCard (ganham o banner).
+- **`hooks/useEdicoes.js`** — passa `imagem_url` (aliases banner_url/imagem; aditivo) para o
+  banner ser real quando o backend fornecer a imagem; `null` → placeholder.
+
+Regra: card de edição = `EdicaoCard`; banner de edição = `EdicaoBanner` (quadrado, clicável).
+Relatório: `Desktop\MC45-final.md`; shots em `Desktop\MC45-shots\`.
 
 ---
 

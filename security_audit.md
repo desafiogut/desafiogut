@@ -1049,7 +1049,6 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   sem lógica, sem rede. Deploy via merge→Netlify (após aprovação humana — gate não automatizado).
 ---
 
-<<<<<<< HEAD
 ## MC43 — Padronização de transições suaves (2026-07-01) — GATE SUPERPERS
 > Branch `feat/mc43`. Mudança **puramente visual/animação** (framer-motion + 1
 > helper). Sem nova superfície de ataque. Ficheiros: `lib/motion.js` (novo),
@@ -1068,7 +1067,9 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   Build verde; zero novos erros de consola (só ruído CSP/404 pré-existente).
 - **VEREDICTO:** APROVADO — animação/UI sem impacto de segurança. Deploy via
   merge→Netlify (após aprovação humana; merge na main exige `--admin`).
-=======
+
+---
+
 ## MC42 — Padronização Glass UI (2026-07-01) — GATE SUPERPERS
 > Branch `feat/mc42`. Mudança **puramente visual** (CSS/layout JSX). Sem nova superfície
 > de ataque. Ficheiros: `pages/MercadoLances.jsx`, `pages/Vitrine.jsx`,
@@ -1091,7 +1092,29 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   scrollWidth>clientWidth).
 - **VEREDICTO:** APROVADO — alteração de UI sem impacto de segurança. Deploy via merge→Netlify
   (após aprovação humana; merge na main exige `--admin` pelos checks de infra sempre-vermelhos).
->>>>>>> origin/main
+
+---
+
+## MC45 — Padrão de edição (banner clicável) (2026-07-01) — GATE SUPERPERS
+> Branch `feat/mc45`. Novos componentes de UI + rota de LEITURA. Ficheiros:
+> `components/EdicaoBanner.jsx`, `components/EdicaoCard.jsx`, `pages/EdicaoDetalhe.jsx`,
+> `App.jsx`, `pages/Dashboard.jsx`, `hooks/useEdicoes.js`, `globals.css`.
+
+- [✅] **Sem segredos / rede sensível / RBAC:** EdicaoDetalhe é só leitura do mapa
+  `edicoes` já existente. Nenhuma env/token/permissão tocada. Fluxo de lance/compra intacto
+  (Agente de Transação): a página só oferece CTA de navegação para /mercado.
+- [✅] **Sem novas dependências.**
+- [✅] **Rota nova `/edicao/:id`** é aditiva (não altera rotas existentes). Id inexistente →
+  estado gracioso (sem crash/branco). Sem parâmetros a injetar em queries/DOM perigoso.
+- [⚠️] **NOTA (imagem futura):** o EdicaoBanner renderiza `edicao.imagem_url` como `<img src>`.
+  Hoje é sempre `null` (placeholder) → sem superfície. QUANDO o backend fornecer `imagem_url`:
+  (a) a origem da imagem tem de constar no CSP `img-src` (hoje 'self' data: blob: privy) senão
+  é bloqueada; (b) validar/allowlist a URL (https, origem confiável) — é conteúdo cross-user
+  potencial (upload de lojista), mesmo cuidado do BannerCard. Não injetar SVG sem DOMPurify.
+- [✅] **Sem regressão (R1) — validado ao vivo:** banner da edição ativa = `<a href="/edicao/R-1">`
+  cursor:pointer; clique navega e a página renderiza; card ativo/cronómetro/"Menor Lance Único"
+  intactos; zero novos erros de consola; CLS neutro. Build verde em cada commit.
+- **VEREDICTO:** APROVADO (com a nota de CSP/validação de URL quando a imagem real entrar).
 
 ---
 

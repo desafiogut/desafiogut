@@ -32,6 +32,7 @@ const CorporativoAnalytics = lazy(() => import("./pages/CorporativoAnalytics.jsx
 const CorporativoCarteira  = lazy(() => import("./pages/CorporativoCarteira.jsx"));
 const SejaNossoParceiro    = lazy(() => import("./pages/SejaNossoParceiro.jsx"));
 const DetalheProduto       = lazy(() => import("./pages/DetalheProduto.jsx"));
+const EdicaoDetalhe        = lazy(() => import("./pages/EdicaoDetalhe.jsx"));
 
 // Fallback discreto enquanto um chunk de rota carrega (sem layout shift agressivo).
 function RouteFallback() {
@@ -141,6 +142,8 @@ export default function App() {
           <Route path="/vitrine/:slot" element={<Vitrine />} />
           {/* MC15 ITEM 4 — detalhe de produto do marketplace */}
           <Route path="/produto/:id" element={<DetalheProduto />} />
+          {/* MC45 — informações de uma edição (destino do banner clicável) */}
+          <Route path="/edicao/:id" element={<EdicaoDetalhe />} />
           <Route path="/programacao"   element={<ScheduleView />} />
           <Route path="/ativos"     element={<MeusAtivos />}    />
           {/* MC39.3.1 (#7): checklist de segurança é só para o lojista (corporativo).
