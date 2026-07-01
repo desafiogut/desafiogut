@@ -1015,3 +1015,35 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
 - **VEREDICTO:** APROVADO — gate aditivo, CI-only, sem código de produção. Com Foundry+Echidna (MC40-CI),
   fecha a pendência de processo "Foundry+Echidna+AgentShield em CI" do MC39.17. Restam para o MC40:
   auditoria externa do contrato + deploy mainnet; `NETWORK_STAGE=Sepolia` mantido.
+
+---
+
+## MC41 — Visibilidade do GUTO animado (frontend-visual) · 2026-07-01 (v2.1)
+> Escopo: **frontend-visual** — os 3 assets `.webm` (idle/thinking/celebration) reprocessados +
+> `GutoSpritePlayer.jsx` (bump `?v=` + remoção do div de halo). NENHUMA lógica/contrato/rede
+> alterado; sem nova superfície de ataque. Operador autorizou explicitamente a Solução B
+> (re-export de asset) após a via CSS ser provada inviável.
+> NOTA: substitui a 1ª tentativa (v1: `eq`+`lut c3`), que introduziu tom amarelo e não solidificou.
+
+- [✅] **Causa raiz (medida ao vivo + análise do asset):** NÃO era opacidade CSS (opacity:1 em toda
+  a cadeia, getComputedStyle). Eram DOIS defeitos no próprio `.webm`: (a) o personagem ocupava ~8%
+  do quadro 600² (object-fit:contain → minúsculo); (b) o "canal alfa" era na verdade um **matte de
+  LUMINÂNCIA** (alfa≈luma) → as roupas ESCURAS (fato) ficavam translúcidas/washed. O RGB cru, porém,
+  estava correto e sólido: **fato azul + colete dourado**, idêntico ao estático `guto-bemvindo.png`.
+- [✅] **Correção v2 (ffmpeg, pose de púlpito mantida):** decode `-c:v libvpx-vp9` → `crop` ao bbox
+  de alfa (união de todos os frames, sem cortar o "respirar") → **descartar o alfa-luminância quebrado
+  e recompor a máscara por `colorkey` do fundo navy (#070a16, similarity 0.07) sobre o RGB VERDADEIRO**
+  (preserva a cor real: azul+dourado; distância suit↔bg ≈0.25 ≫ similarity → fato fica sólido) →
+  `unsharp` (nitidez p/ leitura em caixas pequenas 52–104px) → `pad` quadrado + 512² → re-encode
+  `libvpx-vp9 -pix_fmt yuva420p -auto-alt-ref 0 -crf 18` (flag obrigatória p/ preservar alfa). Loop
+  preservado. Backup dos originais em `Desktop\MC41-webm-backup-20260630`.
+- [✅] **Componente (CSS, reversível):** removido o div de halo/scrim radial (MC39.3.1) — lia-se como
+  "círculo branco" atrás do personagem; com o asset sólido e recortado é desnecessário. `GutoSpritePlayer`
+  continua `<video>` simples, `aria-hidden` (decorativo → sem requisito WCAG de contraste), reduced-motion
+  intacto (congela 1º frame), CLS=0 (caixa de tamanho fixo). Sem alteração de lógica/props.
+- [✅] **Validação objetiva (browser-qa/chrome-devtools, guest/mock — sem login Privy, R12):** amostragem
+  de pixels do `<video>` real → **opaqueFrac 0.30** (era 0.08; **paridade** com o estático `guto-bemvindo`
+  = 0.31; meanAlpha 9→66). 3 viewports (375/768/1440) sólidos e coloridos. Zero novos erros de consola
+  (só ruído CSP/404 pré-existente). `npm run build` verde.
+- **VEREDICTO:** APROVADO — assets visuais + CSS (remoção de halo) + 1 linha de SRC; sem segredos,
+  sem lógica, sem rede. Deploy via merge→Netlify (após aprovação humana — gate não automatizado).
