@@ -1047,3 +1047,23 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   (só ruído CSP/404 pré-existente). `npm run build` verde.
 - **VEREDICTO:** APROVADO — assets visuais + CSS (remoção de halo) + 1 linha de SRC; sem segredos,
   sem lógica, sem rede. Deploy via merge→Netlify (após aprovação humana — gate não automatizado).
+---
+
+## MC43 — Padronização de transições suaves (2026-07-01) — GATE SUPERPERS
+> Branch `feat/mc43`. Mudança **puramente visual/animação** (framer-motion + 1
+> helper). Sem nova superfície de ataque. Ficheiros: `lib/motion.js` (novo),
+> `widgets/layout/Layout.jsx`, `widgets/layout/BottomNav.jsx`,
+> `pages/SejaNossoParceiro.jsx`, `pages/Dashboard.jsx`.
+
+- [✅] **Sem segredos / rede / lógica de negócio:** nenhuma env/token/RBAC/pipeline
+  de lance/compra tocada (R9/R10). Só props de animação e um wrapper de layout.
+- [✅] **Sem novas dependências** (framer-motion já era dependência).
+- [✅] **Sem regressão de navegação (R1):** wrapper chaveado pelo 1º segmento da
+  rota → rotas com parâmetro (`/vitrine/:slot`, `/produto/:id`) NÃO re-montam;
+  estado e fetches preservados. Sheet “Mais” e spring do dock inalterados.
+- [✅] **Acessibilidade:** `prefers-reduced-motion` respeitado (entrada estática,
+  medido ao vivo). Sem impacto em foco/ordem de tabulação (só opacity/transform).
+- [✅] **CLS=0:** animações usam apenas `opacity` e `transform` (não afetam layout).
+  Build verde; zero novos erros de consola (só ruído CSP/404 pré-existente).
+- **VEREDICTO:** APROVADO — animação/UI sem impacto de segurança. Deploy via
+  merge→Netlify (após aprovação humana; merge na main exige `--admin`).
