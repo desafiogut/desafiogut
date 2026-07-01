@@ -100,7 +100,12 @@ export default function ScheduleView() {
       color: COR.text,
       display: "flex", flexDirection: "column", gap: "1.25rem",
     }}>
-      <header>
+      {/* MC42 P3 — cabecalho em vidro para a descricao (texto muted) nao ficar
+          ilegivel sobre o fundo animado (confetti). */}
+      <header className="gut-glass-standard" style={{
+        padding: isMobile ? "0.75rem 1rem" : "1rem 1.25rem",
+        borderRadius: "12px",
+      }}>
         <h1 style={{
           margin: 0,
           fontSize: isMobile ? "1.35rem" : "1.65rem",
@@ -157,8 +162,12 @@ export default function ScheduleView() {
 
       {/* Seletor de dia da semana */}
       <section aria-label="Dia da semana">
-        <div style={{
+        {/* MC42 P3 — mesma barra de vidro do seletor de semana: o fundo animado
+            deixa de atravessar as chips de dia. */}
+        <div className="gut-glass-standard" style={{
           display: "flex", gap: "0.4rem", flexWrap: "wrap",
+          padding: "0.5rem", borderRadius: "10px",
+          border: `1px solid ${COR.border}`,
         }}>
           {DIAS.map((d) => {
             const ativo  = d.key === diaAtivo;
