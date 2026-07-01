@@ -1049,6 +1049,7 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   sem lógica, sem rede. Deploy via merge→Netlify (após aprovação humana — gate não automatizado).
 ---
 
+<<<<<<< HEAD
 ## MC43 — Padronização de transições suaves (2026-07-01) — GATE SUPERPERS
 > Branch `feat/mc43`. Mudança **puramente visual/animação** (framer-motion + 1
 > helper). Sem nova superfície de ataque. Ficheiros: `lib/motion.js` (novo),
@@ -1067,3 +1068,27 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   Build verde; zero novos erros de consola (só ruído CSP/404 pré-existente).
 - **VEREDICTO:** APROVADO — animação/UI sem impacto de segurança. Deploy via
   merge→Netlify (após aprovação humana; merge na main exige `--admin`).
+=======
+## MC42 — Padronização Glass UI (2026-07-01) — GATE SUPERPERS
+> Branch `feat/mc42`. Mudança **puramente visual** (CSS/layout JSX). Sem nova superfície
+> de ataque. Ficheiros: `pages/MercadoLances.jsx`, `pages/Vitrine.jsx`,
+> `components/ScheduleView.jsx`, `globals.css`.
+
+- [✅] **Sem segredos / credenciais:** nenhuma env/token/chave tocada (R9/R10). Diff é
+  só `className`/`style` e uma classe CSS. `grep` de segredos no diff = vazio.
+- [✅] **Sem rede / sem lógica:** zero alteração a fetch, RBAC, pipeline de lance, compras
+  ou sanitização. Agente de Transação: fluxo de lance/compra/RBAC inalterado (só o
+  contentor visual do header/selectores mudou; handlers `onClick`/`setTipoLeilao`/
+  `setSemana`/`setDiaAtivo`/`toggleFiltro` preservados).
+- [✅] **Sem novas dependências.** `package.json` intacto.
+- [✅] **Acessibilidade (melhoria):** P3 resolve contraste instável — texto (dias/horários/
+  descrição) deixava o fundo animado atravessar (WCAG 1.4.3). Agora sobre `.gut-glass--solid`
+  (navy 0.92) / vidro com blur → fundo estável. Ordem de tabulação e `aria-*` preservados.
+- [✅] **Sem regressão (R1):** `npm run build` verde em cada commit; validação visual
+  @375/768/1440 (chrome-devtools, guest/mock) com `getComputedStyle` provando
+  `background`/`backdrop-filter`; zero novos erros de consola (só ruído CSP/404/walletconnect
+  pré-existente). Sem overflow horizontal na Vitrine (medido: 0 elementos `overflowX` com
+  scrollWidth>clientWidth).
+- **VEREDICTO:** APROVADO — alteração de UI sem impacto de segurança. Deploy via merge→Netlify
+  (após aprovação humana; merge na main exige `--admin` pelos checks de infra sempre-vermelhos).
+>>>>>>> origin/main
