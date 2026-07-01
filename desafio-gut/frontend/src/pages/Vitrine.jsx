@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import DOMPurify from "dompurify";
 import { useIsMobile } from "../hooks/useIsMobile.js";
-import { useAppContext } from "../context/AppContext.jsx";
+import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import { GlassCard } from "@/components/ui";
 import { imagemProdutoSrc } from "../lib/imagem.js";
@@ -448,8 +448,10 @@ export default function Vitrine() {
   // MC15.4 — edicoes (mapa multi-edição) para cronómetro por slot.
   const {
     prazoFlash, prazoProgramado, tipoUsuario, cotaCorporativa, addressCorporativo,
-    edicoes, edicoesTick, timeLeftEdicaoSegundos,
+    edicoes,
   } = useAppContext();
+  // MC44 P0 — timer via contexto isolado.
+  const { edicoesTick, timeLeftEdicaoSegundos } = useAppTimer();
 
   // MC12 — banners reais para usuário corporativo (app + site).
   const [bannerData, setBannerData] = useState({ app: null, site: null });
