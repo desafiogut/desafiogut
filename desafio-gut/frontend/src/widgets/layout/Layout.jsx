@@ -1,7 +1,9 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import Sidebar from "./Sidebar.jsx";
 import BottomNav, { BOTTOM_NAV_HEIGHT } from "./BottomNav.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
+import { gutEntrance } from "../../lib/motion.js";
 
 /**
  * Layout — Shell da aplicação.
@@ -38,6 +40,12 @@ function FooterGlobal({ isMobile }) {
 
 export default function Layout() {
   const isMobile = useIsMobile();
+  const location = useLocation();
+  const reduce = useReducedMotion();
+  // MC43 — chaveia pelo 1º segmento da rota: troca de ABA re-dispara a entrada
+  // padrão; navegação com parâmetro dentro da mesma aba (ex.: /vitrine/:slot,
+  // /produto/:id) NÃO re-monta → sem flash nem perda de estado (R1).
+  const segmentoRota = "/" + (location.pathname.split("/")[1] || "");
 
   return (
     <div
@@ -68,9 +76,11 @@ export default function Layout() {
               : 0,
           }}
         >
-          <div style={{ flex: 1 }}>
+          {/* MC43 — entrada suave PADRÃO (= "Indique e Ganhe") para todas as abas,
+              num único ponto. reduced-motion → instantâneo (gutEntrance trata). */}
+          <motion.div key={segmentoRota} {...gutEntrance(reduce)} style={{ flex: 1 }}>
             <Outlet />
-          </div>
+          </motion.div>
           {/* Em mobile o footer vai DENTRO do main para rolar com o conteúdo
               e ficar acima do BottomNav fixo. */}
           {isMobile && <FooterGlobal isMobile />}
