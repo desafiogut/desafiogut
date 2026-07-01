@@ -287,7 +287,7 @@ export default function MercadoLances() {
         {/* ── Header ── */}
         <GlassCard
           as="header"
-          className={`flex !rounded-none border-0 border-b border-white/10 ${isMobile ? 'flex-col gap-3 p-4' : 'flex-row justify-between items-center gap-4 px-8 py-5'}`}
+          className={`flex gut-glass--bar ${isMobile ? 'flex-col gap-3 p-4' : 'flex-row justify-between items-center gap-4 px-8 py-5'}`}
         >
           {/* Linha superior em mobile: logo + auth lado a lado */}
           <div style={{
@@ -375,7 +375,7 @@ export default function MercadoLances() {
 
         {/* ── Painel saldos + tipo ── */}
         <GlassCard
-          className={`flex !rounded-none border-0 border-b border-white/10 ${isMobile ? 'flex-col items-stretch gap-2.5 px-3 py-3' : 'flex-row justify-between items-center gap-3 px-8 py-2.5'}`}
+          className={`flex gut-glass--bar ${isMobile ? 'flex-col items-stretch gap-2.5 px-3 py-3' : 'flex-row justify-between items-center gap-3 px-8 py-2.5'}`}
         >
           {/* Em produção o saldo aparece no Sidebar/Dashboard.
               Placeholder vazio mantém o flex space-between alinhando o
@@ -404,7 +404,7 @@ export default function MercadoLances() {
 
         {/* ── Aviso ── */}
         <GlassCard
-          className={`!rounded-none border-0 border-b border-white/10 text-[#94a3b8] leading-relaxed ${isMobile ? 'text-xs px-3 py-3' : 'text-sm px-8 py-3'}`}
+          className={`gut-glass--bar text-[#94a3b8] leading-relaxed ${isMobile ? 'text-xs px-3 py-3' : 'text-sm px-8 py-3'}`}
         >
           <strong>DesafioGUT</strong>{" — "}Grupo União e Trabalho · CNPJ 23.040.066/0001-00
           {!isMobile && " · www.grupouniaoetrabalho.com.br"}

@@ -374,6 +374,18 @@ img, svg { display: block; }
 .gut-glass-standard.gut-glass--solid {
   background: rgba(13,18,53,0.92);
 }
+/* MC42 P1 — modificador "app-bar": barras de cabeçalho full-width empilhadas.
+   Sobre .gut-glass-standard remove raio + shadow e troca a BORDA COMPLETA por
+   um ÚNICO divisor inferior. Resolve o bug em que `border-0` (Tailwind) não
+   vence o shorthand `border:1px` do standard, deixando borda+shadow completos
+   por barra ("costuras"). Mantém bg 0.25 + blur(24px) + saturate(1.35). O
+   seletor composto (0,2,0) vence as utilities rounded-[14px]/border-b. */
+.gut-glass-standard.gut-glass--bar {
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+  border-radius: 0;
+  box-shadow: none;
+}
 
 /* Plano GlassSurface — reflexo + tint muito subtil, SEM blur de ecrã inteiro. */
 .gut-surface::before {
