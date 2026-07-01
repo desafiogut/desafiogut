@@ -7,7 +7,7 @@
 // edicoesTick), consistente com o resto do app. Sem lógica de lance/RBAC (só leitura).
 
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useAppContext } from "../context/AppContext.jsx";
+import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import EdicaoBanner from "../components/EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
@@ -42,7 +42,9 @@ export default function EdicaoDetalhe() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { edicoes, edicoesTick, timeLeftEdicaoSegundos, EDICAO_ATIVA } = useAppContext();
+  const { edicoes, EDICAO_ATIVA } = useAppContext();
+  // MC45+MC44 — timer via contexto isolado (useAppTimer), pós-MC44.
+  const { edicoesTick, timeLeftEdicaoSegundos } = useAppTimer();
 
   void edicoesTick; // re-render por segundo (cronómetro absoluto).
   const edicao = edicoes?.[id] || null;

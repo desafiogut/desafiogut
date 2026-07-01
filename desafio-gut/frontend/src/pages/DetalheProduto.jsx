@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useAppContext } from "../context/AppContext.jsx";
+import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { apiGet } from "../lib/api.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
@@ -35,7 +35,8 @@ function formatarTimer(segundosRestantes) {
 export default function DetalheProduto() {
   const { id } = useParams();
   const isMobile = useIsMobile();
-  const { prazoFlash, prazoProgramado, lances, vencedor, tempoRestante, encerrado } = useAppContext();
+  const { prazoFlash, prazoProgramado, lances, vencedor, encerrado } = useAppContext();
+  const { tempoRestante } = useAppTimer(); // MC44 P0 — timer isolado
 
   const [produto, setProduto] = useState(null);
   const [loading, setLoading] = useState(true);

@@ -1403,7 +1403,6 @@ futuros, cada um com seu gate `security_audit.md`** (ver §MC39.23 lá). Relató
 
 ---
 
-<<<<<<< HEAD
 ## Transições Suaves — MC43 (2026-07-01)
 > Branch `feat/mc43` (de `origin/main`). Padroniza a transição de ENTRADA de todas
 > as abas ao padrão do ícone “Indique e Ganhe” (`components/PainelIndicacao.jsx`):
@@ -1429,7 +1428,9 @@ futuros, cada um com seu gate `security_audit.md`** (ver §MC39.23 lá). Relató
 `opacity 0.08→1` e `translateY 6.2px→0` em ~0.35s; em reduced-motion fica estático;
 itens do “Mais” abrem escalonados (`[0.61,0.44,0.24,0.01]` a 225ms). Relatório:
 `Desktop\MC43-final.md`; protótipo: `Desktop\MC43-proto\transicoes.html`.
-=======
+
+---
+
 ## Glass UI — Correções MC42 (2026-07-01)
 > Branch `feat/mc42`. Agente de Interface (RUFLO Pilar 3). Padronização de 3 pontos
 > do frontend ao `.gut-glass-standard`. Validação visual @375/768/1440 (chrome-devtools,
@@ -1458,7 +1459,6 @@ itens do “Mais” abrem escalonados (`[0.61,0.44,0.24,0.01]` a 225ms). Relató
 system — nada de `rgba` inline ad-hoc. Regra reforçada: *painel de vidro = classe, nunca rgba solto*.
 **Ficheiros:** `MercadoLances.jsx`, `Vitrine.jsx`, `ScheduleView.jsx`, `globals.css` (limpeza do
 modificador `--bar` não usado). Relatório: `Desktop\MC42-final.md` + shots em `Desktop\MC42-shots\`.
->>>>>>> origin/main
 
 ---
 
@@ -1483,3 +1483,26 @@ modificador `--bar` não usado). Relatório: `Desktop\MC42-final.md` + shots em 
 
 Regra: card de edição = `EdicaoCard`; banner de edição = `EdicaoBanner` (quadrado, clicável).
 Relatório: `Desktop\MC45-final.md`; shots em `Desktop\MC45-shots\`.
+
+---
+
+## Performance — MC44 (2026-07-01)
+> Branch `feat/mc44` (sobre main = MC42+MC43 mergeados). Diagnóstico medido + P0.
+
+- **Causa-raiz da lentidão (P0 — corrigido):** `AppContext` tinha `tempoRestante`
+  (250ms) e `edicoesTick` (1s) no `value` não-memoizado → cada tick recriava o value
+  e re-renderizava TODOS os consumidores de `useAppContext` (~1–2×/s, contínuo).
+  **Fix:** novo `AppTimerContext` + `useAppTimer` + `TimerProvider` aninhado que possui
+  o estado de timer; o `AppProvider` mantém só a máquina de fim de leilão. Os 4
+  consumidores de timer (MercadoLances/Dashboard/Vitrine/DetalheProduto) usam `useAppTimer`.
+  **Provado ao vivo:** em `/configuracoes` idle 4s, `BottomNav` (consumidor de
+  `useAppContext`, sem timer) re-renderizou **0×** enquanto o React fez 8 commits (o
+  tick isolado); timer conta e o overlay de fim de leilão dispara. Regra: *estado de
+  alta frequência vai em contexto próprio, nunca no value partilhado*.
+- **Bundle (P1 — investigado, sem alteração):** o "total 5.4MB" é enganoso. No arranque
+  carregam só ~1.26MB (raw): `privy` 821KB + `index` 276KB + 1 dep 120KB + `motion` 44KB
+  (~400KB gzip no Netlify). O grosso do WalletConnect/Reown (~760KB: w3m-modal, wui-ux,
+  core, ApiController) já é **lazy** (nunca carrega — login é Google/Email/Apple, sem
+  wallet externa). Remover o WC transitivo do Privy seria arriscado (auth, R1) e daria
+  ~0 de ganho no arranque; reverter o eager de Vitrine reintroduz o flash removido no
+  MC39.19. Conclusão: bundle NÃO é o gargalo; o P0 foi a correção real.

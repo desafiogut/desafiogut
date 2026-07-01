@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from "react";
-import { useAppContext } from "../context/AppContext.jsx";
+import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import Confetti from "../components/Confetti.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useLanceFeedback } from "../hooks/useLanceFeedback.js";
@@ -182,14 +182,17 @@ export default function MercadoLances() {
     EDICAO_ATIVA, DURACAO,
     tipoLeilao, setTipoLeilao,
     lances,
-    prazoTimestamp, encerrado, showOverlay, tempoRestante, lightningActive,
+    prazoTimestamp, encerrado, showOverlay, lightningActive,
     address, isConnected, userLabel, ready,
     vencedor,
     showCountdown,
     abrirModal, desconectar,
     handleLanceSucesso, handleNovaRodada,
-    edicoes, edicoesTick, timeLeftEdicaoSegundos,
+    edicoes,
   } = useAppContext();
+  // MC44 P0 — campos de timer via contexto isolado (não re-renderiza esta página
+  // por outras mudanças do AppContext; e o tick não re-renderiza o resto do app).
+  const { tempoRestante, edicoesTick, timeLeftEdicaoSegundos } = useAppTimer();
 
   // MC29.1 — modelo de entrega híbrido transparente. No app das lojas
   // (isLeilaoAtivo=false) os componentes de leilão NÃO são montados; em seu

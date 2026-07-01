@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useAppContext } from "../context/AppContext.jsx";
+import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import FimLeilaoOverlay from "../components/FimLeilaoOverlay.jsx";
@@ -48,11 +48,12 @@ export default function Dashboard() {
     lances, vencedor,
     saldoSenhas, saldoSenhasStatus,
     saldoRsCentavos, saldoRsStatus,
-    encerrado, tempoRestante, tipoLeilao, isConnected, DURACAO,
+    encerrado, tipoLeilao, isConnected, DURACAO,
     address, userLabel, EDICAO_ATIVA,
     showOverlay, showCountdown, handleNovaRodada, setPrazoTimestamp,
     edicoes,
   } = useAppContext();
+  const { tempoRestante } = useAppTimer(); // MC44 P0 — timer isolado
 
   // MC15.4 ITEM 7 — edições adicionais (todas menos R-1, que já tem o card
   // "Edição Ativa" abaixo). Cada uma renderiza um cronómetro independente.

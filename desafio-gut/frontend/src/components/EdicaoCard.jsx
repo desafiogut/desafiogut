@@ -10,7 +10,7 @@
 // EdicaoBanner dentro do seu card rico (Dashboard.jsx).
 
 import { useNavigate } from "react-router-dom";
-import { useAppContext } from "../context/AppContext.jsx";
+import { useAppTimer } from "../context/AppContext.jsx";
 import GutoSpritePlayer from "./GutoSpritePlayer.jsx";
 import EdicaoBanner from "./EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
@@ -48,7 +48,8 @@ function formatarTempoEdicao(segundos, tipo) {
 
 export default function EdicaoCard({ edicao, isMobile, cardCls = "p-4", cardTituloStyle }) {
   const navigate = useNavigate();
-  const { edicoesTick, timeLeftEdicaoSegundos } = useAppContext();
+  // MC45+MC44 — campos de timer via contexto isolado (useAppTimer), pós-MC44.
+  const { edicoesTick, timeLeftEdicaoSegundos } = useAppTimer();
 
   const restante = timeLeftEdicaoSegundos(edicao); // recalculado a cada edicoesTick
   const encerrada = restante <= 0;

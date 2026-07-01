@@ -1049,7 +1049,6 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   sem lógica, sem rede. Deploy via merge→Netlify (após aprovação humana — gate não automatizado).
 ---
 
-<<<<<<< HEAD
 ## MC43 — Padronização de transições suaves (2026-07-01) — GATE SUPERPERS
 > Branch `feat/mc43`. Mudança **puramente visual/animação** (framer-motion + 1
 > helper). Sem nova superfície de ataque. Ficheiros: `lib/motion.js` (novo),
@@ -1068,7 +1067,9 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   Build verde; zero novos erros de consola (só ruído CSP/404 pré-existente).
 - **VEREDICTO:** APROVADO — animação/UI sem impacto de segurança. Deploy via
   merge→Netlify (após aprovação humana; merge na main exige `--admin`).
-=======
+
+---
+
 ## MC42 — Padronização Glass UI (2026-07-01) — GATE SUPERPERS
 > Branch `feat/mc42`. Mudança **puramente visual** (CSS/layout JSX). Sem nova superfície
 > de ataque. Ficheiros: `pages/MercadoLances.jsx`, `pages/Vitrine.jsx`,
@@ -1091,7 +1092,6 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   scrollWidth>clientWidth).
 - **VEREDICTO:** APROVADO — alteração de UI sem impacto de segurança. Deploy via merge→Netlify
   (após aprovação humana; merge na main exige `--admin` pelos checks de infra sempre-vermelhos).
->>>>>>> origin/main
 
 ---
 
@@ -1115,3 +1115,22 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   cursor:pointer; clique navega e a página renderiza; card ativo/cronómetro/"Menor Lance Único"
   intactos; zero novos erros de consola; CLS neutro. Build verde em cada commit.
 - **VEREDICTO:** APROVADO (com a nota de CSP/validação de URL quando a imagem real entrar).
+
+---
+
+## MC44 — Performance (timer isolation) (2026-07-01) — GATE SUPERPERS
+> Branch `feat/mc44`. Mudança de arquitetura de estado no cliente (React context).
+> Ficheiros: `context/AppContext.jsx`, `pages/{MercadoLances,Dashboard,Vitrine,DetalheProduto}.jsx`.
+
+- [✅] **Sem segredos / rede / RBAC:** nenhuma env/token/endpoint/permissão tocada. Só
+  separação de estado de UI (timer) num segundo contexto React.
+- [✅] **Sem novas dependências.** `package.json` intacto (P1 não alterou bundle).
+- [✅] **Sem regressão funcional (R1) — validado ao vivo:** cronómetro conta
+  (29:45→29:42); máquina de fim de leilão dispara `encerrado`/overlay ao chegar a 0
+  (botão DEV 5s); nenhuma perda de estado. Build verde.
+- [✅] **Ganho de performance medido:** tick por segundo deixou de cascatear para
+  componentes sem timer (BottomNav: 0 renders/4s idle vs ~8 antes).
+- [✅] **P1 (bundle):** investigado; sem alteração (WC/Reown já lazy; cortar seria risco
+  de auth sem ganho de arranque). Sem impacto de segurança.
+- **VEREDICTO:** APROVADO — otimização de re-render sem impacto de segurança. Deploy via
+  merge→Netlify (após aprovação humana; merge na main exige `--admin`).
