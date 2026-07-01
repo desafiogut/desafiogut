@@ -6,10 +6,12 @@
 // nunca uma página em branco/404. Cronómetro absoluto (timeLeftEdicaoSegundos +
 // edicoesTick), consistente com o resto do app. Sem lógica de lance/RBAC (só leitura).
 
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import EdicaoBanner from "../components/EdicaoBanner.jsx";
+import ImageModal from "../components/ImageModal.jsx";
 import { GlassCard } from "@/components/ui";
 
 const COR = {
@@ -45,6 +47,8 @@ export default function EdicaoDetalhe() {
   const { edicoes, EDICAO_ATIVA } = useAppContext();
   // MC45+MC44 — timer via contexto isolado (useAppTimer), pós-MC44.
   const { edicoesTick, timeLeftEdicaoSegundos } = useAppTimer();
+  // MC46 — modal (lightbox) da imagem do banner.
+  const [modalAberto, setModalAberto] = useState(false);
 
   void edicoesTick; // re-render por segundo (cronómetro absoluto).
   const edicao = edicoes?.[id] || null;
@@ -99,7 +103,7 @@ export default function EdicaoDetalhe() {
           }}>{encerrada ? "Encerrada" : ativa ? "Ativa" : "Em andamento"}</span>
         </div>
 
-        {/* Banner grande (estático aqui — já estamos na página da edição). */}
+        {/* Banner grande — CLICÁVEL: abre a imagem ampliada num modal (MC46), sem navegar. */}
         <div style={{
           display: "flex", alignItems: "center", gap: "1rem",
           padding: "0.85rem 1rem",
@@ -107,7 +111,7 @@ export default function EdicaoDetalhe() {
           border: "1px solid rgba(245,166,35,0.22)",
           borderRadius: "12px",
         }}>
-          <EdicaoBanner edicao={edicao} size={isMobile ? 84 : 104} radius={12} clicavel={false} />
+          <EdicaoBanner edicao={edicao} size={isMobile ? 84 : 104} radius={12} onClick={() => setModalAberto(true)} />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>
               {tipoLabel}
@@ -142,6 +146,15 @@ export default function EdicaoDetalhe() {
           }}
         >⚡ Ir para o Mercado de Lances</button>
       </GlassCard>
+
+      {/* MC46 — modal (lightbox) da imagem do banner: abre SOBRE a página, sem navegar. */}
+      {modalAberto && (
+        <ImageModal
+          src={edicao.imagem_url || edicao.banner_url || edicao.imagem || null}
+          alt={`Imagem da edição ${edicao.id}`}
+          onClose={() => setModalAberto(false)}
+        />
+      )}
     </div>
   );
 }

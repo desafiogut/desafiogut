@@ -1506,3 +1506,24 @@ Relatório: `Desktop\MC45-final.md`; shots em `Desktop\MC45-shots\`.
   wallet externa). Remover o WC transitivo do Privy seria arriscado (auth, R1) e daria
   ~0 de ganho no arranque; reverter o eager de Vitrine reintroduz o flash removido no
   MC39.19. Conclusão: bundle NÃO é o gargalo; o P0 foi a correção real.
+
+---
+
+## Banner na página de detalhes — MC46 (2026-07-01)
+> Branch `feat/mc46`. Na página `/edicao/:id`, o banner passa a abrir a imagem num
+> MODAL (lightbox) SOBRE a página, sem navegar para outra rota.
+
+- **`components/ImageModal.jsx`** (novo) — lightbox via **portal** em `document.body`
+  (escapa ao wrapper com `transform` do MC43 no Layout, garantindo `position:fixed`
+  a cobrir o viewport real). Imagem ampliada (`max 90vw/90vh`, `object-fit:contain`)
+  OU placeholder gracioso quando `imagem_url` é `null`. Fecha por: **X**, **clique fora**
+  (overlay) e **ESC**. A11y: `role="dialog"` + `aria-modal`, foco inicial no X, focus-trap
+  (Tab cicla), restauro do foco ao banner ao fechar, scroll do body bloqueado.
+- **`components/EdicaoBanner.jsx`** — novo modo: prop `onClick` → renderiza `<button>`
+  (dispara ação sem navegar). Sem `onClick`, mantém o `<Link>` (Dashboard → `/edicao/:id`)
+  ou o quadrado estático. Ou seja: mesmo banner, 3 modos (Link / ação / estático).
+- **`pages/EdicaoDetalhe.jsx`** — o banner usa `onClick` para abrir o `ImageModal`
+  (antes era `clicavel={false}`), passando `edicao.imagem_url`.
+
+Regra: ampliar imagem = `ImageModal` (portal + a11y); banner com `onClick` = ação, não rota.
+Relatório: `Desktop\MC46-final.md`; shots em `Desktop\MC46-shots\`.

@@ -1134,3 +1134,23 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   de auth sem ganho de arranque). Sem impacto de segurança.
 - **VEREDICTO:** APROVADO — otimização de re-render sem impacto de segurança. Deploy via
   merge→Netlify (após aprovação humana; merge na main exige `--admin`).
+
+---
+
+## MC46 — Modal da imagem do banner (2026-07-01) — GATE SUPERPERS
+> Branch `feat/mc46`. Componente de UI (lightbox) client-side. Ficheiros:
+> `components/ImageModal.jsx` (novo), `components/EdicaoBanner.jsx`, `pages/EdicaoDetalhe.jsx`.
+
+- [✅] **Sem segredos / rede / RBAC:** modal puramente client-side (overlay + `<img>`).
+  Nenhuma env/token/endpoint/permissão tocada. Fluxo de lance/compra/RBAC intacto
+  (Agente de Transação): o banner deixou de navegar; nada mais mudou.
+- [✅] **Sem novas dependências** (`react-dom` `createPortal` já disponível).
+- [⚠️] **NOTA (imagem futura):** o modal amplia `edicao.imagem_url` via `<img src>`.
+  Hoje é sempre `null` (placeholder) → sem superfície. QUANDO o backend fornecer a imagem,
+  aplica-se a mesma nota do MC45: origem no CSP `img-src` + validar/allowlist a URL
+  (conteúdo cross-user). O modal não injeta HTML/SVG (só `<img>` e texto) → sem XSS.
+- [✅] **Sem regressão (R1) — validado ao vivo 390/768/1440:** clique abre o modal SEM
+  mudar de rota (url estável); X/fora/ESC fecham; foco no X ao abrir e restaurado ao
+  banner ao fechar; scroll bloqueado; overlay cobre o viewport (portal). Zero novos
+  erros de consola; CLS neutro (overlay fixed). Build verde.
+- **VEREDICTO:** APROVADO (com a nota de CSP/URL da imagem, herdada do MC45).
