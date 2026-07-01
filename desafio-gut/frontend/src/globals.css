@@ -374,6 +374,18 @@ img, svg { display: block; }
 .gut-glass-standard.gut-glass--solid {
   background: rgba(13,18,53,0.92);
 }
+/* MC45 — banner quadrado clicável da edição: hover sutil + foco visível (a11y). */
+.gut-edicao-banner {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.gut-edicao-banner:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 14px rgba(245,166,35,0.35);
+}
+.gut-edicao-banner:focus-visible {
+  outline: 2px solid #f5a623;
+  outline-offset: 2px;
+}
 
 /* Plano GlassSurface — reflexo + tint muito subtil, SEM blur de ecrã inteiro. */
 .gut-surface::before {

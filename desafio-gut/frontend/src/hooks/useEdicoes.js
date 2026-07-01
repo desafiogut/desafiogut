@@ -51,6 +51,7 @@ function sintetizarR1() {
       termino_em: new Date(terminoMs).toISOString(),
       lances: 0,
       status: "aberto",
+      imagem_url: null, // MC45 — fallback sem imagem → placeholder do EdicaoBanner
     },
   };
 }
@@ -75,6 +76,9 @@ function normalizarEdicoes(payload) {
       termino_em: termino,
       lances: Number.isFinite(e.lances) ? e.lances : 0,
       status: e.status || "aberto",
+      // MC45 — imagem do banner da edição (quando o backend a fornecer). Aceita
+      // aliases; null → EdicaoBanner usa o placeholder padrão.
+      imagem_url: e.imagem_url ?? e.banner_url ?? e.imagem ?? null,
     };
   }
   if (Object.keys(out).length === 0) return null;
