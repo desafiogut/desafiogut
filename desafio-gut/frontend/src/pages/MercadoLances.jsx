@@ -284,11 +284,15 @@ export default function MercadoLances() {
 
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
 
-        {/* ── Header ── */}
-        <GlassCard
-          as="header"
-          className={`flex !rounded-none border-0 border-b border-white/10 ${isMobile ? 'flex-col gap-3 p-4' : 'flex-row justify-between items-center gap-4 px-8 py-5'}`}
-        >
+        {/* ── Cabeçalho (MC42: card ÚNICO arredondado .gut-glass-standard com
+             divisores internos finos entre as 3 secções — logo/timer, modo,
+             disclaimer. Envolvido em padding para os cantos redondos aparecerem
+             e alinhar com o card "Dar Lance" abaixo). ── */}
+        <div style={{ padding: isMobile ? "1rem 1rem 0" : "1.5rem 2rem 0" }}>
+        <GlassCard as="header" className="overflow-hidden">
+
+          {/* Secção 1 — logo + auth + timer */}
+          <div className={`flex border-b border-white/10 ${isMobile ? 'flex-col gap-3 p-4' : 'flex-row justify-between items-center gap-4 px-8 py-5'}`}>
           {/* Linha superior em mobile: logo + auth lado a lado */}
           <div style={{
             display: "flex", alignItems: "center",
@@ -371,12 +375,10 @@ export default function MercadoLances() {
               onLogin={abrirModal}
             />
           )}
-        </GlassCard>
+          </div>
 
-        {/* ── Painel saldos + tipo ── */}
-        <GlassCard
-          className={`flex !rounded-none border-0 border-b border-white/10 ${isMobile ? 'flex-col items-stretch gap-2.5 px-3 py-3' : 'flex-row justify-between items-center gap-3 px-8 py-2.5'}`}
-        >
+          {/* Secção 2 — saldos + seletor de modo */}
+          <div className={`flex border-b border-white/10 ${isMobile ? 'flex-col items-stretch gap-2.5 px-3 py-3' : 'flex-row justify-between items-center gap-3 px-8 py-2.5'}`}>
           {/* Em produção o saldo aparece no Sidebar/Dashboard.
               Placeholder vazio mantém o flex space-between alinhando o
               seletor de modo à direita. */}
@@ -400,12 +402,10 @@ export default function MercadoLances() {
               );
             })}
           </div>
-        </GlassCard>
+          </div>
 
-        {/* ── Aviso ── */}
-        <GlassCard
-          className={`!rounded-none border-0 border-b border-white/10 text-[#94a3b8] leading-relaxed ${isMobile ? 'text-xs px-3 py-3' : 'text-sm px-8 py-3'}`}
-        >
+          {/* Secção 3 — disclaimer */}
+          <div className={`text-[#94a3b8] leading-relaxed ${isMobile ? 'text-xs px-3 py-3' : 'text-sm px-8 py-3'}`}>
           <strong>DesafioGUT</strong>{" — "}Grupo União e Trabalho · CNPJ 23.040.066/0001-00
           {!isMobile && " · www.grupouniaoetrabalho.com.br"}
           {isConnected && (
@@ -424,7 +424,10 @@ export default function MercadoLances() {
               color: COR.danger, fontWeight: "700",
             }}>🔴 Leilão encerrado — novos lances bloqueados</span>
           )}
+          </div>
+
         </GlassCard>
+        </div>
 
         {/* ── Banner do cliente do leilão ativo (REQ-01) ── */}
         {clienteAtivo?.cliente_id && (

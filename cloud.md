@@ -1400,3 +1400,34 @@ futuros, cada um com seu gate `security_audit.md`** (ver §MC39.23 lá). Relató
   --private-key`) → `CONTRATO_MAINNET` no Netlify → flip `NETWORK_STAGE=mainnet` → validação on-chain.
   Runbook completo: `Desktop\MC40-final.md` + `plans/001-mc40-mainnet-deploy.md`.
 - Quando o deploy ocorrer, registar AQUI o endereço mainnet + tx do two-step (hoje inexistentes).
+
+---
+
+## Glass UI — Correções MC42 (2026-07-01)
+> Branch `feat/mc42`. Agente de Interface (RUFLO Pilar 3). Padronização de 3 pontos
+> do frontend ao `.gut-glass-standard`. Validação visual @375/768/1440 (chrome-devtools,
+> guest/mock) com `getComputedStyle` ao vivo. `npm run build` verde em cada commit.
+
+- **P1 — Header da Aba Lances (`pages/MercadoLances.jsx`).** As 3 barras empilhadas
+  (cabeçalho/timer, modo, disclaimer) usavam `!rounded-none border-0 border-b`; o
+  `border-0` não vence o shorthand `border:1px` do standard → borda+shadow completos
+  por barra ("costuras"). **Solução final (após feedback):** envolver as 3 secções num
+  ÚNICO `GlassCard` arredondado (`rounded-[14px]` + border + shadow, `overflow-hidden`),
+  com divisores internos finos (`border-b border-white/10`) entre secções. Fica coerente
+  com o card "Dar Lance". (Uma 1ª tentativa com modificador `.gut-glass--bar` app-bar flat
+  foi descartada — o padrão é arredondado.)
+- **P2 — Vitrine (`pages/Vitrine.jsx`).** A secção "Oportunidade Agora" (Prata/Bronze) em
+  mobile usava carrossel horizontal (`overflowX:auto` + `scrollSnapType:x mandatory`,
+  scrollWidth 791 > client 453). Trocado por stack vertical (`flexDirection:column`);
+  slots empilham como Diamante/Ouro. Página passa a ter apenas scroll vertical. Desktop
+  (grid 1fr 1fr) intacto.
+- **P3 — Programado (`components/ScheduleView.jsx`).** Painéis eram `rgba(5,15,40,0.4/0.55)`
+  inline SEM `backdrop-filter` → fundo animado (MC26.1) atravessava o texto (a11y, WCAG 1.4.3).
+  Migrados para `.gut-glass-standard`: cabeçalho + seletor de semana + seletor de dia (blur 24px);
+  grelha de horários + cartões de cotas usam `.gut-glass--solid` (navy 0.92, regra MC25.7 —
+  texto denso). Estados ativo/selecionado mantêm o tint de acento sobre o blur.
+
+**Conformidade (`@skill-comply`):** todas as superfícies passam a usar a classe do design
+system — nada de `rgba` inline ad-hoc. Regra reforçada: *painel de vidro = classe, nunca rgba solto*.
+**Ficheiros:** `MercadoLances.jsx`, `Vitrine.jsx`, `ScheduleView.jsx`, `globals.css` (limpeza do
+modificador `--bar` não usado). Relatório: `Desktop\MC42-final.md` + shots em `Desktop\MC42-shots\`.
