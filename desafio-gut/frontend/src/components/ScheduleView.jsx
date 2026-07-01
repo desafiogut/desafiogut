@@ -128,9 +128,11 @@ export default function ScheduleView() {
 
       {/* Seletor de semana */}
       <section aria-label="Semana">
-        <div style={{
+        {/* MC42 P3 — barra de controlo em vidro padrao (blur 24px): o fundo animado
+            deixa de atravessar. Mantem o borderRadius/border laranja como acento. */}
+        <div className="gut-glass-standard" style={{
           display: "flex", gap: "0.5rem", flexWrap: "wrap",
-          padding: "0.5rem", background: "rgba(5,15,40,0.4)", borderRadius: "10px",
+          padding: "0.5rem", borderRadius: "10px",
           border: `1px solid ${COR.border}`,
         }}>
           <span style={{ fontSize: "0.74rem", color: COR.muted, fontWeight: 700, padding: "0.3rem 0.5rem" }}>Semana:</span>
@@ -196,7 +198,7 @@ export default function ScheduleView() {
 
       {/* Aviso para domingo */}
       {ehDomingo && (
-        <div style={{
+        <div className="gut-glass-standard" style={{
           padding: "0.85rem 1rem",
           background: "rgba(0,212,255,0.06)",
           border: "1px solid rgba(0,212,255,0.3)",
@@ -224,9 +226,8 @@ export default function ScheduleView() {
           ].map((t) => {
             const atribuidas = resumoCotas?.[t.id]?.total_atribuidas ?? 0;
             return (
-              <div key={t.id} style={{
+              <div key={t.id} className="gut-glass-standard gut-glass--solid" style={{
                 padding: "0.5rem 0.7rem",
-                background: "rgba(5,15,40,0.55)",
                 border: `1px solid ${t.cor}44`,
                 borderRadius: "10px",
                 display: "flex", flexDirection: "column", gap: "0.2rem",
@@ -268,6 +269,8 @@ export default function ScheduleView() {
             const overnight = h === "21:00" && horarios[horarios.length - 1] === "21:00";
             const selecionado = filtroHorario === h;
             // MC39.3.1 (#3) — clicar no horário filtra a grade para esse horário (toggle).
+            // MC42 P3 — linha de texto denso: .gut-glass--solid (navy 0.92, MC25.7)
+            // no repouso; ativo/selecionado mantem o tint de acento sobre o blur.
             const toggleFiltro = () => setFiltroHorario((atual) => (atual === h ? null : h));
             return (
               <li
@@ -278,6 +281,7 @@ export default function ScheduleView() {
                 aria-label={`Filtrar pelo horário ${h}`}
                 onClick={toggleFiltro}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleFiltro(); } }}
+                className="gut-glass-standard gut-glass--solid"
                 style={{
                 display: "grid",
                 gridTemplateColumns: isMobile ? "auto 1fr" : "84px 1fr auto",
@@ -285,7 +289,7 @@ export default function ScheduleView() {
                 alignItems: "center",
                 padding: "0.7rem 0.85rem",
                 cursor: "pointer",
-                background: ativo ? "rgba(16,185,129,0.10)" : (selecionado ? "rgba(245,166,35,0.12)" : "rgba(5,15,40,0.55)"),
+                background: ativo ? "rgba(16,185,129,0.10)" : (selecionado ? "rgba(245,166,35,0.12)" : undefined),
                 border: `1px solid ${ativo ? "rgba(16,185,129,0.4)" : (selecionado ? COR.primary : "rgba(245,166,35,0.14)")}`,
                 borderRadius: "12px",
               }}>
