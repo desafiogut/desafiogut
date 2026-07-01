@@ -44,6 +44,14 @@ não por acoplamento direto. Cada agente é um conjunto lógico de módulos (map
 - **Animações do GUTO (MC-PRE20):** `idle.webm` (respiração, constante) · `thinking.webm`
   (pergunta no chatbot) · `celebration.webm` (fim de rodada com vencedor). Mesmo ficheiro
   desktop/mobile. Fundo oficial **limpo** (sem GUTO estático, MC20.PRE.2).
+  - **MC41 (visibilidade — v2.1):** os 3 `.webm` tinham um **matte de luminância** (alfa≈luma → roupas
+    escuras translúcidas) e ocupavam ~8% do quadro. Fix: descartar o alfa quebrado e **recompor a máscara
+    por `colorkey` do fundo navy sobre o RGB verdadeiro** (preserva o **fato azul + colete dourado**, iguais
+    ao `guto-bemvindo.png`), com `crop` ao personagem (preenche a caixa), `unsharp` (nitidez em tamanho
+    pequeno) e re-encode `libvpx-vp9 -pix_fmt yuva420p -auto-alt-ref 0 -crf 18`. Pose de púlpito mantida.
+    `?v=mc41c`. Componente: `<video>` simples (aria-hidden, reduced-motion, CLS=0) + **halo/scrim radial
+    removido** (lia-se como "círculo branco"). Validado por browser-qa: opaqueFrac 0.08→0.30 (paridade
+    com o estático). Backup dos originais em `Desktop\MC41-webm-backup-20260630`.
 
 ### 🔐 Agente de Transação (segurança on-chain, PIX, cotas)
 - **Dono de:** fluxo de lance (CardLance + `web3.js`), idempotência, rate limit, assinatura

@@ -67,9 +67,15 @@ function GutoVideo({ src, reduce, loop }) {
 }
 
 const SRC = {
-  breathing:   "/assets/guto/animations/idle.webm?v=mc399",
-  analyzing:   "/assets/guto/animations/thinking.webm?v=mc399",
-  celebrating: "/assets/guto/animations/celebration.webm?v=mc399",
+  // MC41 — assets reenquadrados p/ paridade com o GUTO estático. Causa raiz do "opaco/
+  // amarelado": o .webm original tinha um matte de LUMINÂNCIA (alfa≈luma → roupas escuras
+  // ficavam translúcidas) e o pipeline v1 agravou com eq amarelo. Fix v2: descartar o alfa
+  // quebrado, recompor a máscara por colorkey do fundo navy sobre o RGB VERDADEIRO (fato
+  // azul + colete dourado, iguais ao guto-bemvindo.png) e recortar ao personagem (preenche
+  // a caixa). 100% opaco, cores corretas, pose de púlpito mantida. ?v bump força re-download.
+  breathing:   "/assets/guto/animations/idle.webm?v=mc41c",
+  analyzing:   "/assets/guto/animations/thinking.webm?v=mc41c",
+  celebrating: "/assets/guto/animations/celebration.webm?v=mc41c",
 };
 
 // MC22.1 SECÇÃO D — variant:
@@ -94,12 +100,9 @@ export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }
       aria-hidden="true"
       style={isInline ? { position: "relative", width: size, height: size, flexShrink: 0, pointerEvents: "none" } : undefined}
     >
-      {/* MC39.3.1 (#4) — halo/scrim subtil ATRÁS do GUTO. aria-hidden + pointer-events:none
-          (não afeta layout → CLS=0). Reversível. */}
-      <div aria-hidden="true" style={{
-        position: "absolute", inset: "-14%", pointerEvents: "none", borderRadius: "50%",
-        background: "radial-gradient(circle at 50% 46%, rgba(150,170,235,0.26) 0%, rgba(150,170,235,0.07) 50%, rgba(5,8,24,0) 78%)",
-      }} />
+      {/* MC41 — halo/scrim radial REMOVIDO. Lia-se como um "círculo branco" atrás do
+          personagem. Com o asset agora sólido e recortado (preenche a caixa), o backing
+          é desnecessário; o GUTO destaca-se sozinho. */}
       <AnimatePresence initial={false}>
         <motion.div
           key={src}
