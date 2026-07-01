@@ -11,7 +11,7 @@
 
 import { Link } from "react-router-dom";
 
-export default function EdicaoBanner({ edicao, size = 52, radius = 8, clicavel = true, className = "" }) {
+export default function EdicaoBanner({ edicao, size = 52, radius = 8, clicavel = true, onClick, className = "" }) {
   const id = edicao?.id;
   const imagem = edicao?.imagem_url || edicao?.banner_url || edicao?.imagem || null;
 
@@ -32,6 +32,22 @@ export default function EdicaoBanner({ edicao, size = 52, radius = 8, clicavel =
         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
       />
     : <span aria-hidden="true" style={{ fontSize: `${Math.round(size * 0.42)}px`, lineHeight: 1 }}>🎁</span>;
+
+  // MC46 — modo AÇÃO: onClick fornecido → botão que dispara a ação (ex.: abrir
+  // modal de imagem), SEM navegar. Mantém a aparência/foco do banner.
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={`Ampliar imagem da edição ${id ?? ""}`.trim()}
+        className={`gut-edicao-banner ${className}`.trim()}
+        style={{ ...box, cursor: "pointer", padding: 0 }}
+      >
+        {conteudo}
+      </button>
+    );
+  }
 
   // Sem id ou não clicável → quadrado estático (defensivo, sem navegação).
   if (!id || !clicavel) {
