@@ -226,11 +226,8 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: cardPad, flex: 1 }}>
-      {/* ── Saudação ── */}
+      {/* ── Saudação ── (MC43: entrada dada pelo wrapper padrão no Layout) */}
       <motion.header
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
         style={{
           marginBottom: sectionGap,
         }}
