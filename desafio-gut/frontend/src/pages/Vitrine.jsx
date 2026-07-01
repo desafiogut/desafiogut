@@ -2,7 +2,8 @@
 //
 // REQ-13 (Desktop): grid de 4 slots simultaneamente visíveis.
 // REQ-14 (Mobile <768px): Slot 1 (Diamante) e Slot 2 (Ouro) sticky no topo.
-// REQ-15 (Mobile <768px): Slot 3 (Prata) e Slot 4 (Bronze) em carrossel horizontal.
+// REQ-15 (Mobile <768px): Slot 3 (Prata) e Slot 4 (Bronze) empilhados na vertical
+//   (MC42: carrossel horizontal removido — a página passa a ter scroll único vertical).
 //
 // Esta rota COEXISTE com /mercado (página atual de leilão R-1 preservada).
 // Cada SlotCard hoje é vitrine informativa + CTA → /mercado. O backend de
@@ -650,15 +651,12 @@ export default function Vitrine() {
           <div
             style={{
               display: "flex",
+              flexDirection: "column",
               gap: "0.75rem",
-              overflowX: "auto",
-              scrollSnapType: "x mandatory",
-              paddingBottom: "0.5rem",
-              WebkitOverflowScrolling: "touch",
             }}
           >
             {carossel.map((slot) => (
-              <div key={slot.id} style={{ flex: "0 0 86%", scrollSnapAlign: "start" }}>
+              <div key={slot.id}>
                 <SlotCard
                   slot={slot}
                   isMobile={isMobile}
