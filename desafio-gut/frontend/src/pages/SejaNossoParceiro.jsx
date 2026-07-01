@@ -316,10 +316,9 @@ export default function SejaNossoParceiro() {
   if (!CORPORATIVO_ATIVO) {
     return (
       <div style={wrap} className={wrapClass}>
+        {/* MC43 — entrada da página é dada pelo wrapper padrão no Layout; este
+            header deixa de animar por conta própria (evita entrada dupla). */}
         <motion.header
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
           style={{
             textAlign: "center",
             padding: isMobile ? "1.5rem 0.5rem" : "3rem 1rem",
@@ -344,11 +343,8 @@ export default function SejaNossoParceiro() {
 
   return (
     <div style={wrap} className={wrapClass}>
-      {/* ── HERO ── */}
+      {/* ── HERO ── (MC43: entrada dada pelo wrapper padrão no Layout) */}
       <motion.header
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
         style={{
           textAlign: "center",
           marginBottom: isMobile ? "2rem" : "3rem",
@@ -424,7 +420,7 @@ export default function SejaNossoParceiro() {
           O OTP já foi enviado por sendCode no submit. */}
       {otpAberto && tipoUsuario !== "corporativo" && (
         <motion.section
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
           style={{
@@ -517,7 +513,7 @@ export default function SejaNossoParceiro() {
       {!otpAberto && tipoUsuario !== "corporativo" && aba === "novo" && (
         <motion.section
           id="form-corporativo"
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
           style={{ ...card, marginBottom: isMobile ? "2rem" : "3rem" }}
@@ -631,7 +627,7 @@ export default function SejaNossoParceiro() {
       {/* ── MC15.3 — JÁ TENHO CADASTRO: login de lojista via CNPJ + Nome da Empresa ── */}
       {!otpAberto && tipoUsuario !== "corporativo" && aba === "existente" && (
         <motion.section
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
           style={{ ...card, marginBottom: isMobile ? "2rem" : "3rem" }}

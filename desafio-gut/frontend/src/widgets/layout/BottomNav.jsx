@@ -5,6 +5,7 @@ import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdmin } from "../../hooks/useAdmin.js";
 import { Button } from "@/components/ui";
 import { NavIcon } from "./navModel.jsx";
+import { GUT_STAGGER_CONTAINER, GUT_STAGGER_ITEM } from "../../lib/motion.js";
 
 // ─── Ícones — aliases finos sobre o NavIcon partilhado (navModel.jsx, MC39.22.1) ─
 const IconDashboard = (p) => <NavIcon name="dashboard" size={22} {...p} />;
@@ -248,9 +249,16 @@ export default function BottomNav() {
               </Button>
             )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "0.5rem" }}>
+            {/* MC43 — itens internos do "Mais" entram em cascata (stagger 50ms),
+                seguindo o padrão de entrada. A ABERTURA do sheet (gut-slide-up
+                0.22s) permanece INALTERADA. reduced-motion → sem stagger. */}
+            <motion.div
+              style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "0.5rem" }}
+              {...(reduce ? {} : GUT_STAGGER_CONTAINER)}
+            >
               {secundariosAtivos.map(({ path, label, Icon }) => (
-                <button
+                <motion.button
+                  {...(reduce ? {} : GUT_STAGGER_ITEM)}
                   type="button"
                   key={path}
                   onClick={() => { navigate(path); setMoreOpen(false); }}
@@ -267,9 +275,9 @@ export default function BottomNav() {
                 >
                   <Icon />
                   <span>{label}</span>
-                </button>
+                </motion.button>
               ))}
-            </div>
+            </motion.div>
 
             {isConnected && (
               <Button variant="ghost" size="md" type="button"

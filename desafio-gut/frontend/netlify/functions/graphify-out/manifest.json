@@ -1,0 +1,562 @@
+{
+  "_lib/admin-auth.mjs": {
+    "mtime": 1779129088.322389,
+    "ast_hash": "c4b20abb450d19262731796ee0976ad2",
+    "semantic_hash": ""
+  },
+  "_lib/admin-helpers.mjs": {
+    "mtime": 1778847224.0784612,
+    "ast_hash": "0fe42e92bec2322ebc289bdf4c75659e",
+    "semantic_hash": ""
+  },
+  "_lib/bids-store.mjs": {
+    "mtime": 1781644016.6987228,
+    "ast_hash": "5a4f7207233b314333d6772cbad025d2",
+    "semantic_hash": ""
+  },
+  "_lib/contract.mjs": {
+    "mtime": 1782021338.087428,
+    "ast_hash": "1ff021ccff34fd0ee2ed6c6269945cbe",
+    "semantic_hash": ""
+  },
+  "_lib/cota-ativacao.mjs": {
+    "mtime": 1782080918.6913457,
+    "ast_hash": "8b24293fcab257ecff27cf7c43e9533d",
+    "semantic_hash": ""
+  },
+  "_lib/cotas-store.mjs": {
+    "mtime": 1782076279.8934422,
+    "ast_hash": "57b1660ea213b64acb38d0c682539f2b",
+    "semantic_hash": ""
+  },
+  "_lib/credito.mjs": {
+    "mtime": 1780549012.9031994,
+    "ast_hash": "86a2e1f2be0555d90a0859f26ce12c40",
+    "semantic_hash": ""
+  },
+  "_lib/data-store-blobs.mjs": {
+    "mtime": 1782021338.0894308,
+    "ast_hash": "95e92dcf181b22f71f350ada4d2b9af0",
+    "semantic_hash": ""
+  },
+  "_lib/data-store-supabase.mjs": {
+    "mtime": 1782021338.0904298,
+    "ast_hash": "4441e68f7bbd8d7898e279b10cc7faa9",
+    "semantic_hash": ""
+  },
+  "_lib/data-store.mjs": {
+    "mtime": 1782021338.0924304,
+    "ast_hash": "d27208e939ef69b7c3d0fa55f472e677",
+    "semantic_hash": ""
+  },
+  "_lib/edicoes-core.mjs": {
+    "mtime": 1780266860.1391745,
+    "ast_hash": "02015dee7e07575401b13c5a3856413e",
+    "semantic_hash": ""
+  },
+  "_lib/financeiro-fallback.mjs": {
+    "mtime": 1782090836.644483,
+    "ast_hash": "14665fd23df293057b142b3cea857e0e",
+    "semantic_hash": ""
+  },
+  "_lib/guto-perfis.mjs": {
+    "mtime": 1782021338.0944326,
+    "ast_hash": "6ecbebc782239234ac8ad1b822a989d3",
+    "semantic_hash": ""
+  },
+  "_lib/ia-preditiva.mjs": {
+    "mtime": 1782021338.0971315,
+    "ast_hash": "ed3d82ee6cfa311211f383cdd64c0e08",
+    "semantic_hash": ""
+  },
+  "_lib/jwt-fail-counter.mjs": {
+    "mtime": 1778876324.3033805,
+    "ast_hash": "b68da2841a7abc22da025089cb4eddde",
+    "semantic_hash": ""
+  },
+  "_lib/jwt.mjs": {
+    "mtime": 1779129088.324386,
+    "ast_hash": "9700bcc8c3e53dac6e6d39a8f760fc54",
+    "semantic_hash": ""
+  },
+  "_lib/kms-signer.mjs": {
+    "mtime": 1782021338.0991561,
+    "ast_hash": "09ecdc6a040dccce81ffa373a00cdf13",
+    "semantic_hash": ""
+  },
+  "_lib/kms/aws-kms.mjs": {
+    "mtime": 1782021338.1013772,
+    "ast_hash": "10bdeac36cbf3aaf720920ed013b1775",
+    "semantic_hash": ""
+  },
+  "_lib/log-operacional.mjs": {
+    "mtime": 1780263579.759821,
+    "ast_hash": "af37460620ea2a3a5a9d836c66b7bbdc",
+    "semantic_hash": ""
+  },
+  "_lib/mp-client.mjs": {
+    "mtime": 1782530571.117216,
+    "ast_hash": "08104c019b86c6af88bfcab56e63d0da",
+    "semantic_hash": ""
+  },
+  "_lib/notificacoes-usuario.mjs": {
+    "mtime": 1780266860.1411924,
+    "ast_hash": "aeabdbb8406b15a2399e2245fc95651f",
+    "semantic_hash": ""
+  },
+  "_lib/pix-config.mjs": {
+    "mtime": 1778556113.4027188,
+    "ast_hash": "3ca47c76d1cd30783c54ce9c600884f2",
+    "semantic_hash": ""
+  },
+  "_lib/pix-provider/index.mjs": {
+    "mtime": 1777772221.3157885,
+    "ast_hash": "3558c0bfa9a63b376798bc78bcf6bac7",
+    "semantic_hash": ""
+  },
+  "_lib/pix-provider/mercadopago.mjs": {
+    "mtime": 1782259478.417813,
+    "ast_hash": "05e0b4630044a7a17d07bc4c590fef74",
+    "semantic_hash": ""
+  },
+  "_lib/pix-provider/mock.mjs": {
+    "mtime": 1777751331.9667866,
+    "ast_hash": "c0a5d1d3731a012548575b9c5fe43e16",
+    "semantic_hash": ""
+  },
+  "_lib/pulso.mjs": {
+    "mtime": 1780263579.759821,
+    "ast_hash": "1848432c638b81e6cd9e57b622034867",
+    "semantic_hash": ""
+  },
+  "_lib/rag.mjs": {
+    "mtime": 1782021338.1033766,
+    "ast_hash": "2668f81319eaee72b1a22c6699e8141d",
+    "semantic_hash": ""
+  },
+  "_lib/rate-limiter.mjs": {
+    "mtime": 1778876309.9357178,
+    "ast_hash": "772ba83731151146094c9923f9effc3b",
+    "semantic_hash": ""
+  },
+  "_lib/rbac.mjs": {
+    "mtime": 1778847789.1755402,
+    "ast_hash": "990033673e928f57da7d75ab05ef340f",
+    "semantic_hash": ""
+  },
+  "_lib/recursos-app-config.mjs": {
+    "mtime": 1782021338.1043773,
+    "ast_hash": "2c8c887407e62666a111c2e813c0b3e9",
+    "semantic_hash": ""
+  },
+  "_lib/referral.mjs": {
+    "mtime": 1780642144.692389,
+    "ast_hash": "8351bfbca5b56c733971c269288f93eb",
+    "semantic_hash": ""
+  },
+  "_lib/require-mfa.mjs": {
+    "mtime": 1779129088.327386,
+    "ast_hash": "3bf683b82cef6b7ea6d4e2b281dcac59",
+    "semantic_hash": ""
+  },
+  "_lib/rpc-fallback.mjs": {
+    "mtime": 1782103818.0639143,
+    "ast_hash": "4a69679a8bf1fd9530878dbb0cd967c8",
+    "semantic_hash": ""
+  },
+  "_lib/saldoRs-store.mjs": {
+    "mtime": 1782090836.6467009,
+    "ast_hash": "4453937ea6e5b87ee5aef61cf83d7974",
+    "semantic_hash": ""
+  },
+  "_lib/saldoRs.mjs": {
+    "mtime": 1782090836.6486964,
+    "ast_hash": "304de8a20302801e29aa4388bc810c44",
+    "semantic_hash": ""
+  },
+  "_lib/sentry-server.mjs": {
+    "mtime": 1778876289.4409502,
+    "ast_hash": "a954adaf02dccd35c3d0605209c9d20d",
+    "semantic_hash": ""
+  },
+  "_lib/signer.mjs": {
+    "mtime": 1782103818.087041,
+    "ast_hash": "ec5499d11076d5001374cc92392ad169",
+    "semantic_hash": ""
+  },
+  "_lib/simulador.mjs": {
+    "mtime": 1780263579.759821,
+    "ast_hash": "d4014236b897cfb6e05699aa6f068a5a",
+    "semantic_hash": ""
+  },
+  "_lib/supabase-client.mjs": {
+    "mtime": 1782021338.1073773,
+    "ast_hash": "66857cbfa041086d46231709eccf4a96",
+    "semantic_hash": ""
+  },
+  "_lib/sybil-check.mjs": {
+    "mtime": 1778876618.6245105,
+    "ast_hash": "8e821c7c93140e5edd75428c86bb35e6",
+    "semantic_hash": ""
+  },
+  "_lib/system-state.mjs": {
+    "mtime": 1780263579.7691503,
+    "ast_hash": "93507a91d3629e3ae871ae7eb5c1a87c",
+    "semantic_hash": ""
+  },
+  "_lib/troco-senhas-store.mjs": {
+    "mtime": 1782090836.6496983,
+    "ast_hash": "291bd42318c9ffb2b02d691c9ffb9aff",
+    "semantic_hash": ""
+  },
+  "_lib/troco-senhas.mjs": {
+    "mtime": 1782090836.652696,
+    "ast_hash": "a6878fb243dc3becd2a8f3dbef4121d3",
+    "semantic_hash": ""
+  },
+  "_lib/validate.mjs": {
+    "mtime": 1778847202.627883,
+    "ast_hash": "9bc412c92bde588e8961934823f1e2c3",
+    "semantic_hash": ""
+  },
+  "_lib/wallet-store.mjs": {
+    "mtime": 1782090836.6536992,
+    "ast_hash": "3e88ff3afa69ec53b4a8c9c6cf7813bd",
+    "semantic_hash": ""
+  },
+  "_lib/wizard-session.mjs": {
+    "mtime": 1780263579.7711647,
+    "ast_hash": "dcdcf4cd57263eaf9776c0de82b7e991",
+    "semantic_hash": ""
+  },
+  "_tests/biconomy-handshake.test.mjs": {
+    "mtime": 1782021338.1093774,
+    "ast_hash": "18fdf4958df0b8174d1dc01aa4ebbcc2",
+    "semantic_hash": ""
+  },
+  "_tests/cota-ativacao.test.mjs": {
+    "mtime": 1782090836.655697,
+    "ast_hash": "73a014dd95272666921c6cceff424aa0",
+    "semantic_hash": ""
+  },
+  "_tests/cotas-anti-fraude.test.mjs": {
+    "mtime": 1782090836.6576967,
+    "ast_hash": "985f8fecdbce2070432a7f1dcbe89de3",
+    "semantic_hash": ""
+  },
+  "_tests/img-proxy.test.mjs": {
+    "mtime": 1782021338.1113784,
+    "ast_hash": "40907b340f9d05e3b6359ca28fe578ce",
+    "semantic_hash": ""
+  },
+  "_tests/kms-handshake.test.mjs": {
+    "mtime": 1782021338.1123788,
+    "ast_hash": "670bd9983dc54019993f5e52303e30be",
+    "semantic_hash": ""
+  },
+  "_tests/mc1741-referral-ip-throttle.test.mjs": {
+    "mtime": 1780642144.692389,
+    "ast_hash": "869217987d2f24ea8d86d9f3c3acc976",
+    "semantic_hash": ""
+  },
+  "_tests/mc28-keyperbid.test.mjs": {
+    "mtime": 1781644016.7034347,
+    "ast_hash": "cfd52b0339ba60af05dd845b4d2a80a2",
+    "semantic_hash": ""
+  },
+  "_tests/mc28-seguranca.test.mjs": {
+    "mtime": 1781644016.7034347,
+    "ast_hash": "defdfd6b64adea020e1bd5bab01dbc3f",
+    "semantic_hash": ""
+  },
+  "_tests/mc30-integracao.test.mjs": {
+    "mtime": 1782021338.1160328,
+    "ast_hash": "babd12dac31d7268a252c263f26f6b11",
+    "semantic_hash": ""
+  },
+  "_tests/mc30-signer.test.mjs": {
+    "mtime": 1782021338.1160328,
+    "ast_hash": "2dca0c1451c1287256df97765f31176e",
+    "semantic_hash": ""
+  },
+  "_tests/mc302-guarda.test.mjs": {
+    "mtime": 1782021338.1160328,
+    "ast_hash": "f62cc9d9fa52ffd38bc83b348ca92602",
+    "semantic_hash": ""
+  },
+  "_tests/mc302-integracao.test.mjs": {
+    "mtime": 1782021338.1160328,
+    "ast_hash": "0edc8cd5ed096af0538c54c81ae95acf",
+    "semantic_hash": ""
+  },
+  "_tests/mc321-data-store-supabase.test.mjs": {
+    "mtime": 1782021338.1160328,
+    "ast_hash": "8f692be54824d493c63bd8b35cd3c3f6",
+    "semantic_hash": ""
+  },
+  "_tests/mc33-load.mjs": {
+    "mtime": 1782021338.1160328,
+    "ast_hash": "88a75fa425f9728e17d045f11fa8fc22",
+    "semantic_hash": ""
+  },
+  "_tests/mc33-rls.mjs": {
+    "mtime": 1782021338.1160328,
+    "ast_hash": "d7aab9d3d167535d147b73cd3f16c77c",
+    "semantic_hash": ""
+  },
+  "_tests/mc36-cotas-store.test.mjs": {
+    "mtime": 1782076279.8984485,
+    "ast_hash": "14a7a41e998236f379c650db1bb6433e",
+    "semantic_hash": ""
+  },
+  "_tests/mc361-saldo-rs.test.mjs": {
+    "mtime": 1782090836.6586974,
+    "ast_hash": "b3a151c1a6085528851ab7b0ecb4f939",
+    "semantic_hash": ""
+  },
+  "_tests/test-conversao-e2e-mc1581.mjs": {
+    "mtime": 1780539576.5937872,
+    "ast_hash": "c5dcda2e7142447449289457157e548c",
+    "semantic_hash": ""
+  },
+  "_tests/test-intents-mc1581.mjs": {
+    "mtime": 1780539576.5947864,
+    "ast_hash": "54289434fae5cdd1feba004f79f63ee8",
+    "semantic_hash": ""
+  },
+  "_tests/troco-senhas.test.mjs": {
+    "mtime": 1782090836.6614385,
+    "ast_hash": "9cc2e8debfa1f79e9059c42ae0f31923",
+    "semantic_hash": ""
+  },
+  "admin-aprovacao.mjs": {
+    "mtime": 1779129088.3284862,
+    "ast_hash": "8918bb35eec862041bb3d9a7806595d0",
+    "semantic_hash": ""
+  },
+  "admin-list.mjs": {
+    "mtime": 1778847819.805276,
+    "ast_hash": "0e9e39dc96924e050879cb17d04560a8",
+    "semantic_hash": ""
+  },
+  "analytics.mjs": {
+    "mtime": 1779128537.6605449,
+    "ast_hash": "8ccafb7e77b03ce49eb5dcf865859f62",
+    "semantic_hash": ""
+  },
+  "auth-admin.mjs": {
+    "mtime": 1778876382.660788,
+    "ast_hash": "168e10b678199ecf7abdb9fde0cbf874",
+    "semantic_hash": ""
+  },
+  "auth-lance.mjs": {
+    "mtime": 1777934345.443439,
+    "ast_hash": "de0dd4f2d2715a1bafb2535408fd85bb",
+    "semantic_hash": ""
+  },
+  "auth-user.mjs": {
+    "mtime": 1778876677.0835776,
+    "ast_hash": "58a097c439f9a8fa7e4be4035eede1dc",
+    "semantic_hash": ""
+  },
+  "backup-blobs-scheduled.mjs": {
+    "mtime": 1779129088.3304942,
+    "ast_hash": "919ad17b70f8f7fd9e81f2fc66dacea8",
+    "semantic_hash": ""
+  },
+  "backup-blobs.mjs": {
+    "mtime": 1779129088.3314939,
+    "ast_hash": "7bb60fbd68e72deb5bf69b8bd3655e7e",
+    "semantic_hash": ""
+  },
+  "banners.mjs": {
+    "mtime": 1778847681.675861,
+    "ast_hash": "65250203904bb5ba63a25fb382107515",
+    "semantic_hash": ""
+  },
+  "chatbot.mjs": {
+    "mtime": 1782021338.1160328,
+    "ast_hash": "3663cb6812092f2e2826ea1749694519",
+    "semantic_hash": ""
+  },
+  "comprar-senhas.mjs": {
+    "mtime": 1780263579.77557,
+    "ast_hash": "936bfcaaa82c2ced5fdd500c7e088743",
+    "semantic_hash": ""
+  },
+  "confirmar-pagamento.mjs": {
+    "mtime": 1780549012.9112012,
+    "ast_hash": "8c9f6391acf6e3395888911b2cb8919e",
+    "semantic_hash": ""
+  },
+  "consolidar-lances.mjs": {
+    "mtime": 1782103818.1004555,
+    "ast_hash": "203f874f1f1e8271211c2ebfde96590c",
+    "semantic_hash": ""
+  },
+  "corporativo-analytics.mjs": {
+    "mtime": 1779153546.9178867,
+    "ast_hash": "32f28632aa62ac87856d64ee2dd1d6a1",
+    "semantic_hash": ""
+  },
+  "cotas.mjs": {
+    "mtime": 1782080918.6961787,
+    "ast_hash": "91c02a9ec19e7fd8903913868d456268",
+    "semantic_hash": ""
+  },
+  "cron-reset-programado.mjs": {
+    "mtime": 1778847635.4388683,
+    "ast_hash": "48007bb2d95d5d5f043a2f8b44b66cac",
+    "semantic_hash": ""
+  },
+  "debug-pedido.mjs": {
+    "mtime": 1782021338.1316714,
+    "ast_hash": "f71cc6d12e25f909f44573cb2c44d2d3",
+    "semantic_hash": ""
+  },
+  "edicoes.mjs": {
+    "mtime": 1780189338.2456326,
+    "ast_hash": "72d290703e5e88145864729b3c47e9c3",
+    "semantic_hash": ""
+  },
+  "exportar-dados.mjs": {
+    "mtime": 1778876543.436027,
+    "ast_hash": "82c6e83fdda499bf802f51898862d020",
+    "semantic_hash": ""
+  },
+  "health.mjs": {
+    "mtime": 1782021338.133669,
+    "ast_hash": "71271e7987c6071d0fc09e7976cffa13",
+    "semantic_hash": ""
+  },
+  "ia-preditiva-scheduled.mjs": {
+    "mtime": 1779128666.888226,
+    "ast_hash": "210d50c53220ff907d4313b4611bfa8e",
+    "semantic_hash": ""
+  },
+  "img-proxy.mjs": {
+    "mtime": 1782021338.1356597,
+    "ast_hash": "1a014719df93249370b154898f758f0e",
+    "semantic_hash": ""
+  },
+  "info-pagamento.mjs": {
+    "mtime": 1778556120.20933,
+    "ast_hash": "ccf11d3cc7adcfafd929aae31f4d7c70",
+    "semantic_hash": ""
+  },
+  "iniciar-cota.mjs": {
+    "mtime": 1780549012.9176788,
+    "ast_hash": "8620822d88b5e87200d8583cb869c7fe",
+    "semantic_hash": ""
+  },
+  "iniciar-pagamento.mjs": {
+    "mtime": 1782259478.417813,
+    "ast_hash": "14ad298446fba80661cedde9960029a8",
+    "semantic_hash": ""
+  },
+  "lance-relampago.mjs": {
+    "mtime": 1782021338.1366627,
+    "ast_hash": "157c4d4751b94d662aa55cf0b9ad8814",
+    "semantic_hash": ""
+  },
+  "lances-flash.mjs": {
+    "mtime": 1781644016.7106602,
+    "ast_hash": "a9922120230d86d880b158cd4970856e",
+    "semantic_hash": ""
+  },
+  "mc302-aceitar.mjs": {
+    "mtime": 1782021338.1386602,
+    "ast_hash": "bed421d644f8c6afd1312c28e6959462",
+    "semantic_hash": ""
+  },
+  "mc302-diagnostico.mjs": {
+    "mtime": 1782021338.1396606,
+    "ast_hash": "8e23b5a8742bfc72df3827a87cecdb23",
+    "semantic_hash": ""
+  },
+  "monitor-onchain-scheduled.mjs": {
+    "mtime": 1778881705.681087,
+    "ast_hash": "6d371ab346a18e706dd3a4918c494045",
+    "semantic_hash": ""
+  },
+  "monitor-onchain.mjs": {
+    "mtime": 1778881705.682816,
+    "ast_hash": "9088c21e3da15dfde2ed922f3427902b",
+    "semantic_hash": ""
+  },
+  "notificacoes.mjs": {
+    "mtime": 1780539576.6071813,
+    "ast_hash": "28ee8d022893edf9e147d46eb0f4f840",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1782021338.1446707,
+    "ast_hash": "4634cba744ca1f8f0c9598fab2a7b4fe",
+    "semantic_hash": ""
+  },
+  "produtos.mjs": {
+    "mtime": 1779985730.5110395,
+    "ast_hash": "8278566780c505fc27633ff31c611a50",
+    "semantic_hash": ""
+  },
+  "purge-lances.mjs": {
+    "mtime": 1778554209.209882,
+    "ast_hash": "4170864cfb5d1490532e78e1e0b5c084",
+    "semantic_hash": ""
+  },
+  "purge-logs-scheduled.mjs": {
+    "mtime": 1778881705.6908216,
+    "ast_hash": "876c30b6b32889554fb084920808e22f",
+    "semantic_hash": ""
+  },
+  "purge-logs.mjs": {
+    "mtime": 1778881705.692822,
+    "ast_hash": "ff97568341e0bb55ab9eb25f7876d490",
+    "semantic_hash": ""
+  },
+  "recursos-app.mjs": {
+    "mtime": 1782021338.1471026,
+    "ast_hash": "fd902aeacc1b656f7e8f30794384ceab",
+    "semantic_hash": ""
+  },
+  "referral.mjs": {
+    "mtime": 1780642144.7082565,
+    "ast_hash": "24ec183e189650e0af45229d53824bc8",
+    "semantic_hash": ""
+  },
+  "renovacao-adesao.mjs": {
+    "mtime": 1778847647.4543672,
+    "ast_hash": "17a67770817e066dd01ebd69b5ba882f",
+    "semantic_hash": ""
+  },
+  "saldo-rs.mjs": {
+    "mtime": 1778847268.41304,
+    "ast_hash": "c8f9261ee134331506f9505c6cd1b2e8",
+    "semantic_hash": ""
+  },
+  "schedule.mjs": {
+    "mtime": 1778847628.9528224,
+    "ast_hash": "360d0cdf8944115c4b83ba317c096c16",
+    "semantic_hash": ""
+  },
+  "troco.mjs": {
+    "mtime": 1780539576.6121728,
+    "ast_hash": "0c4c70446a425cdd4f481bfc021485c7",
+    "semantic_hash": ""
+  },
+  "voucher.mjs": {
+    "mtime": 1779129088.3358285,
+    "ast_hash": "1b42dbcd5e125128db0adeef918bf4ee",
+    "semantic_hash": ""
+  },
+  "wallet.mjs": {
+    "mtime": 1782090836.6646917,
+    "ast_hash": "762d129777edce86204ef815fb7b5f2e",
+    "semantic_hash": ""
+  },
+  "webhook-mercadopago.mjs": {
+    "mtime": 1780549012.9196794,
+    "ast_hash": "8466e26af0115696ef77c5e63261dd91",
+    "semantic_hash": ""
+  }
+}
