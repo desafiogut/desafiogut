@@ -7,6 +7,8 @@ import GutoAvatar from "../components/GutoAvatar.jsx";
 import FimLeilaoOverlay from "../components/FimLeilaoOverlay.jsx";
 import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
 import StatTile from "../components/StatTile.jsx";
+import EdicaoCard from "../components/EdicaoCard.jsx";
+import EdicaoBanner from "../components/EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
 
 const COR = {
@@ -26,117 +28,6 @@ function timerColor(tempoRestante, totalSegundos) {
 }
 
 const VALOR_POR_SENHA_BRL = 2;
-
-// MC15.4 D6 — formato de exibição por tipo.
-// programado: DD:HH:MM:SS (colapsa para HH:MM:SS / MM:SS quando não há dias/horas).
-// relâmpago : MM:SS.
-function formatarTempoEdicao(segundos, tipo) {
-  const t = Math.max(0, Number.isFinite(segundos) ? segundos : 0);
-  const pad = (n) => String(n).padStart(2, "0");
-  if (tipo === "relampago") {
-    const m = Math.floor(t / 60);
-    const s = t % 60;
-    return `${pad(m)}:${pad(s)}`;
-  }
-  const d = Math.floor(t / 86400);
-  const h = Math.floor((t % 86400) / 3600);
-  const m = Math.floor((t % 3600) / 60);
-  const s = t % 60;
-  if (d > 0) return `${pad(d)}:${pad(h)}:${pad(m)}:${pad(s)}`;
-  if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
-  return `${pad(m)}:${pad(s)}`;
-}
-
-// Duração total assumida por tipo (apenas para a escala de cor do timerColor):
-// relâmpago 30 min, programado 24 h — alinhado às durações canónicas do app.
-const TOTAL_POR_TIPO = { relampago: 1800, programado: 86400 };
-
-// MC15.4 ITEM 7 — card de cronómetro independente por edição. timeLeft é
-// derivado de termino_em (server-authoritative) a cada tick → imune a F5/login.
-// A animação de fim usa a ref desta edição (Map), isolando-a das demais (ITEM 13).
-function EdicaoTimerCard({ edicao, isMobile, cardCls, cardTituloStyle }) {
-  const navigate = useNavigate();
-  const {
-    edicoesTick, timeLeftEdicaoSegundos,
-  } = useAppContext();
-
-  const restante = timeLeftEdicaoSegundos(edicao); // recalculado a cada edicoesTick
-  const encerrada = restante <= 0;
-  const total = TOTAL_POR_TIPO[edicao.tipo] || 1800;
-
-  // MC39.3.1 (#5) — os cards de edição EXTRA já NÃO montam o FimLeilaoOverlay
-  // full-screen (eliminava a duplicação/empilhamento quando >1 edição encerrava).
-  // O overlay de vencedor é ÚNICO, ao nível da página, para a EDICAO_ATIVA. Este
-  // card mostra apenas o seu estado "Encerrada" inline + GUTO a celebrar (size pequeno).
-  void edicoesTick; // consumido só para forçar o re-render por tick (timer).
-
-  const tipoLabel = edicao.tipo === "programado" ? "🎫 Programado" : "⚡ Relâmpago";
-
-  return (
-    <GlassCard className={cardCls}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? "0.5rem" : "0.75rem" }}>
-        <h3 style={{ ...cardTituloStyle, margin: 0 }}>{tipoLabel}</h3>
-        <span style={{
-          fontSize: "0.7rem", fontWeight: "800",
-          color: COR.gold,
-          background: "rgba(245,166,35,0.12)",
-          border: "1px solid rgba(245,166,35,0.35)",
-          borderRadius: "999px",
-          padding: "0.2rem 0.6rem",
-          letterSpacing: "0.04em",
-        }}>{edicao.id}</span>
-      </div>
-
-      <div style={{
-        fontSize: "0.6rem", color: COR.muted, textTransform: "uppercase",
-        letterSpacing: "0.07em", fontWeight: "700", marginBottom: "0.35rem",
-      }}>
-        {edicao.produto ? `Produto · ${edicao.produto}` : "Produto a anunciar"}
-      </div>
-
-      <div style={{
-        display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center",
-        gap: "0.6rem", padding: isMobile ? "0.4rem 0 0.6rem" : "0.25rem 0 0.6rem",
-      }}>
-        {/* MC22.1 SECÇÃO D — GUTO companion desta edição (celebra ao encerrar). */}
-        <GutoSpritePlayer variant="inline" size={isMobile ? 52 : 60} mood={encerrada ? "celebrating" : undefined} />
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem" }}>
-          <div style={{
-            fontSize: isMobile ? "2.1rem" : "1.95rem",
-            fontWeight: "900",
-            fontFamily: "'JetBrains Mono', monospace",
-            color: encerrada ? COR.danger : timerColor(restante, total),
-            letterSpacing: "0.02em", lineHeight: 1,
-            transition: "color 0.6s ease",
-          }}>{formatarTempoEdicao(restante, edicao.tipo)}</div>
-          <div style={{
-            fontSize: "0.66rem", color: encerrada ? "#fca5a5" : COR.text,
-            marginTop: "0.3rem", textAlign: "center",
-          }}>
-            {encerrada ? "Encerrada" : "Em andamento — lance já!"}
-          </div>
-        </div>
-      </div>
-
-      <button
-        onClick={() => navigate("/mercado")}
-        style={{
-          padding: "0.6rem 1rem",
-          background: encerrada
-            ? "rgba(245,166,35,0.18)"
-            : "linear-gradient(135deg,#f5a623,#e89400)",
-          border: "none", borderRadius: "10px",
-          color: encerrada ? COR.gold : "#0a0f1a",
-          fontWeight: "800", cursor: "pointer",
-          fontSize: "0.82rem", width: "100%",
-          fontFamily: "'Orbitron', sans-serif",
-          letterSpacing: "0.04em",
-        }}
-      >⚡ Ir para o Mercado</button>
-
-    </GlassCard>
-  );
-}
 
 const ATALHOS = [
   { label: "Depositar PIX",     icon: "💰", to: "/carteira"      },
@@ -168,6 +59,13 @@ export default function Dashboard() {
   const edicoesExtra = Object.values(edicoes || {}).filter(
     (e) => e && e.id !== EDICAO_ATIVA
   );
+
+  // MC45 — edição ativa (objeto) para o banner clicável. Fallback defensivo
+  // garante sempre um id navegável mesmo antes de o mapa hidratar.
+  const edicaoAtiva = (edicoes && edicoes[EDICAO_ATIVA]) || {
+    id: EDICAO_ATIVA,
+    tipo: tipoLeilao === "flash" ? "relampago" : "programado",
+  };
 
   const statusSuffix =
     saldoSenhasStatus === "loading" ? " ⏳" :
@@ -313,12 +211,9 @@ export default function Dashboard() {
             borderRadius: "10px",
             marginBottom: isMobile ? "0.6rem" : "0.75rem",
           }}>
-            <div style={{
-              width: "52px", height: "52px",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(245,166,35,0.12)",
-              borderRadius: "8px", flexShrink: 0, fontSize: "1.5rem",
-            }} aria-hidden="true">🎁</div>
+            {/* MC45 — banner QUADRADO clicável da edição ativa (antes: 🎁 estático). */}
+            <EdicaoBanner edicao={edicaoAtiva} size={52} />
+
             <div>
               <div style={{ fontSize: "0.58rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: "700", marginBottom: "0.15rem" }}>
                 Prêmio em Disputa
@@ -426,7 +321,7 @@ export default function Dashboard() {
             gap: innerGap,
           }}>
             {edicoesExtra.map((ed) => (
-              <EdicaoTimerCard
+              <EdicaoCard
                 key={ed.id}
                 edicao={ed}
                 isMobile={isMobile}
