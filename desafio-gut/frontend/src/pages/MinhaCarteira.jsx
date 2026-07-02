@@ -182,9 +182,12 @@ export default function MinhaCarteira() {
                 <button
                   onClick={() => setComprarAberto(true)}
                   style={{
+                    // MC48 P2 — azul suave (depósito), no idioma glass do design system.
                     ...botaoPrimario,
-                    background: "linear-gradient(135deg,#f5a623,#d97706)",
-                    boxShadow: "0 4px 14px rgba(245,166,35,0.35)",
+                    background: "rgba(0,212,255,0.14)",
+                    border: "1px solid rgba(0,212,255,0.4)",
+                    color: "#00d4ff",
+                    boxShadow: "none",
                   }}
                   title="Depósito PIX → +R$ (crédito automático após aprovação MP)"
                 >
@@ -211,11 +214,12 @@ export default function MinhaCarteira() {
                   onClick={irParaLanceRelampago}
                   disabled={!saldoReais}
                   style={{
+                    // MC48 P2 — laranja suave (CTA de lance).
                     ...botaoPrimario,
-                    background: !saldoReais
-                      ? "rgba(245,166,35,0.2)"
-                      : "linear-gradient(135deg,#f5a623,#e89400)",
-                    boxShadow: !saldoReais ? "none" : "0 4px 14px rgba(245,166,35,0.35)",
+                    background: "rgba(245,166,35,0.14)",
+                    border: "1px solid rgba(245,166,35,0.4)",
+                    color: "#f5a623",
+                    boxShadow: "none",
                     cursor: !saldoReais ? "not-allowed" : "pointer",
                     opacity: !saldoReais ? 0.5 : 1,
                   }}
@@ -312,11 +316,12 @@ export default function MinhaCarteira() {
                   onClick={() => navigate("/mercado")}
                   disabled={!saldoNumero}
                   style={{
+                    // MC48 P2 — laranja suave (CTA mercado).
                     ...botaoPrimario,
-                    background: !saldoNumero
-                      ? "rgba(245,166,35,0.2)"
-                      : "linear-gradient(135deg,#f5a623,#e89400)",
-                    boxShadow: !saldoNumero ? "none" : "0 4px 14px rgba(245,166,35,0.35)",
+                    background: "rgba(245,166,35,0.14)",
+                    border: "1px solid rgba(245,166,35,0.4)",
+                    color: "#f5a623",
+                    boxShadow: "none",
                     cursor: !saldoNumero ? "not-allowed" : "pointer",
                     opacity: !saldoNumero ? 0.5 : 1,
                   }}
