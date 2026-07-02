@@ -1228,3 +1228,47 @@ saldo R$ suficiente (≥ R$ 2,00/senha) pode converter o próprio saldo em senha
 - **VEREDICTO:** APROVADO EM CÓDIGO (132/132, build verde, superfície de auth intacta
   exceto o gate intencionalmente removido). Pendente: validação viva do operador +
   autorização explícita para deploy/merge.
+
+## MC49.4.1 — COORDENACAO_PRIVATE_KEY (correção de configuração) (2026-07-02) — GATE SUPERPERS
+> Branch `feat/mc49.4.1`. **ZERO alteração de código (R1)** — correção 100% de
+> configuração de ambiente (Netlify). ⏳ **RASCUNHO** — veredicto condicionado à
+> configuração da chave e validação visual. Runbook: `desafio-gut/docs/MC49.4.1-operador.md`.
+> Diagnóstico: `desafio-gut/docs/MC49.4.1-diagnostico.md`.
+
+**Problema:** o crédito de senhas on-chain falha com `COORDENACAO_PRIVATE_KEY não
+configurado`. O backend `local-key` (Sepolia) exige essa env, ausente em produção
+(`/health → SIGNER_READY:"MISSING"`).
+
+**Impacto:** compra de senhas (`comprar-senhas`) **e** crédito PIX (`credito.mjs →
+creditarPedidoIdempotente`) bloqueados — ambos partilham o sink `creditarSenhas()`
+(`contract.mjs:116`). Sem perda de saldo: `comprar-senhas.mjs:225` reembolsa e devolve 502.
+
+- [✅] **Sem exposição de segredo (R9/R10):** a chave é configurada **pelo operador** via
+  `netlify env:set` na própria shell; **nunca** passa pelo agente, chat, CLI do agente ou
+  commit. Diagnóstico usou apenas `/health` (presença/ausência, não valor).
+- [✅] **Carteira correta confirmada on-chain (read-only):** a chave DEVE ser da
+  `coordenacao()` do contrato **live** `0x59A73Acc…F6D5`, que é
+  `0xdEbe637d7f74C4bfe71263920F68589f0c672D92`. Isto evita a armadilha "wallet X não é
+  coordenacao" (`contract.mjs:118-119`). O fallback hardcoded `0x273Ef96f…445e`
+  (`contract.mjs:50`) está obsoleto (coordenacao `0xDa3a83…e84E`) e não é usado em prod.
+- [✅] **Sem regressão (R1):** nenhum ficheiro de código alterado; só documentação e
+  configuração de ambiente. `node --check`/`npm run build` não se aplicam.
+- [✅] **Mainnet-readiness preservada:** `NETWORK_STAGE` permanece Sepolia; o backend
+  `local-key` é o correto para testnet. **Não** flipar para mainnet (R3); em mainnet a
+  chave bruta é proibida (`signer.mjs:64-73`).
+- [✅] **Fail-safe intacta:** o caminho de erro (reembolso + 502) permanece; a config só
+  remove a causa, sem alterar a proteção de saldo.
+- [⏳] **Critérios de sucesso (a validar após config + deploy):**
+  (1) `/health → SIGNER_READY:"set"` (era `MISSING`);
+  (2) compra R$ 2,00 → 1 senha: sem erro de chave, saldo R$ −R$ 2,00, senhas +1 on-chain,
+  resposta com `txHash` + `etherscanUrl`;
+  (3) revalidar 1 crédito PIX (mesma raiz);
+  (4) validação visual 375/768/1440, console sem erros novos, CLS sem regressão.
+- [⏳] **Validação viva:** fluxo é auth-gated (Privy OAuth, não automatizável por MCP) —
+  exige login manual do operador. **Deploy da chave e validação NÃO executados** até o
+  operador configurar.
+- **VEREDICTO:** **APROVADO CONDICIONALMENTE** — a correção é de configuração e não
+  introduz superfície de código. Aprovação definitiva registada aqui após:
+  `SIGNER_READY:"set"` + compra R$ 2,00 → 1 senha comprovada + validação visual.
+  Hardening futuro (guarda fail-fast antes do débito + não vazar o nome da env na UI) fica
+  para MC49.5 (não bloqueante — a fail-safe de reembolso já evita perda).
