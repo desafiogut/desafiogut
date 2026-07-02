@@ -1598,50 +1598,59 @@ por Senhas (comprar-senhas) → −R$ 2,00/senha, +1 senha on-chain**; Lance Pro
 Suite 132/132, build verde. Deploy/merge pendentes de validação viva + go do operador.
 Relatório: `Desktop\MC49.3-final.md`.
 
-## Configuração — COORDENACAO_PRIVATE_KEY MC49.4.1 (2026-07-02)
-> Branch `feat/mc49.4.1`. **Correção de configuração — ZERO alteração de código (R1).**
-> ⏳ **RASCUNHO** — conteúdo final pendente de configuração da chave + validação visual.
-> Runbook completo: `desafio-gut/docs/MC49.4.1-operador.md`. Diagnóstico:
-> `desafio-gut/docs/MC49.4.1-diagnostico.md`.
+## Migração para Biconomy/KMS em Sepolia — MC49.4.1 (2026-07-02)
+> Branch `feat/mc49.4.1`. **ZERO alteração de código (R1)** — só configuração de ambiente.
+> ✅ **ANÁLISE/DECISÃO CONCLUÍDA** (direção: Biconomy) · ⏳ **execução + validação em produção PENDENTES**
+> (operador). Runbook: `desafio-gut/docs/MC49.4.1-biconomy-runbook.md`. Investigação on-chain:
+> `Desktop\MC49.4.1-investigacao.md`. Diagnóstico inicial: `desafio-gut/docs/MC49.4.1-diagnostico.md`.
 
-**Erro:** ao trocar R$ 2,00 → 1 senha, a UI mostra `⚠️ COORDENACAO_PRIVATE_KEY não
-configurado` e a compra falha (HTTP 502 `credito_onchain_falhou`; o R$ é reembolsado
-automaticamente — sem perda de saldo).
+**Sintoma:** ao trocar R$ 2,00 → 1 senha, a compra falha (`/health → SIGNER_READY:"MISSING"`).
+Sem perda de saldo: `comprar-senhas.mjs:225` reembolsa e devolve 502.
 
-**Causa raiz (lacuna de config, não bug):** o backend de assinatura resolve para
-`local-key` em Sepolia (`_lib/signer.mjs:41-45`, pois `NETWORK_STAGE ≠ mainnet`) e esse
-backend **exige** a env `COORDENACAO_PRIVATE_KEY` (`signer.mjs:120-121`,
-`contract.mjs:60-61`). A variável está **ausente** no ambiente de produção do Netlify.
-Prova sem expor segredos: `GET /.netlify/functions/health` → `SIGNER_BACKEND:"local-key"`,
-`SIGNER_READY:"MISSING"`.
+**Correção de rota (importante):** a hipótese inicial — setar `COORDENACAO_PRIVATE_KEY`
+(backend `local-key`) — foi **descartada** após verificação on-chain. A `coordenacao()` do
+contrato **live** `0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5` **já é uma Biconomy Smart
+Account V2** (ERC-4337): `0xdEbe637d7f74C4bfe71263920F68589f0c672D92` (EntryPoint v0.6
+`0x5FF1…2789`, impl `0x0000002512…`, `VERSION 2.0.0`, financiada ~0.049 ETH). O backend
+`local-key` assina de uma **EOA**, e `verificarCoordenacao()` (`contract.mjs:118-119`) exige
+`signer.address == coordenacao()` — uma EOA **nunca** iguala o endereço de um contrato. Logo
+`local-key` é **arquiteturalmente incompatível** e configurar a chave seria inútil (o erro
+só mudaria para `"wallet X não é coordenacao"`).
 
-**Raio de impacto:** o mesmo sink `creditarSenhas()` (`contract.mjs:116`) é usado pelo
-fluxo PIX (`credito.mjs → creditarPedidoIdempotente`). Enquanto a chave faltar, o crédito
-de senhas on-chain está quebrado **também** por esse caminho.
+**Solução correta — completar o backend Biconomy** (a transferência on-chain da coordenação
+para a Smart Account **já está feita**; falta apenas configuração no Netlify):
 
-**Solução (operador):** definir `COORDENACAO_PRIVATE_KEY` no Netlify (contexto
-`production`) com a chave privada da carteira que é a `coordenacao()` do contrato **live**
-`0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5`. Essa carteira foi confirmada on-chain (read-only):
+1. `SIGNER_BACKEND=biconomy`.
+2. `KMS_KEY_ID` — chave AWS KMS cujo endereço derivado é o **owner** da Smart Account
+   (`0xAEFe11EDBb32fb6727693e5994a51df8ADb5EdFF`, módulo ECDSA `0x0000001c…`). É o owner que
+   assina as UserOperations; a chave privada vive no KMS (`_lib/kms-signer.mjs`).
+3. `BICONOMY_BUNDLER_URL` — bundler ERC-4337 na Sepolia (`eth_chainId` = `0xaa36a7`).
+4. **Remover** `COORDENACAO_PRIVATE_KEY` — o guard `assertChaveBrutaAusenteEmMainnet()`
+   (`signer.mjs:76-82`) **rejeita** a chave bruta quando `SIGNER_BACKEND=biconomy`.
+5. Redeploy (as functions só releem env num novo deploy).
 
-```
-coordenacao(0x59A73Acc…F6D5) = 0xdEbe637d7f74C4bfe71263920F68589f0c672D92
-```
-
-`NETWORK_STAGE` permanece Sepolia — **não** flipar para mainnet (R3). A chave **nunca**
-passa pelo agente (R9/R10); é o operador quem a configura. Resumo dos comandos (detalhe no
-runbook):
+Resumo dos comandos (executados **pelo operador**; segredos nunca no chat — R9/R10; detalhe
+e GATE de pré-requisitos no runbook):
 
 ```bash
-netlify env:set COORDENACAO_PRIVATE_KEY "0x<chave-da-0xdEbe637d>" --context production
-netlify deploy --build --prod --message "chore(mc49.4.1): configurar COORDENACAO_PRIVATE_KEY"
+netlify env:list --context production          # confirmar KMS_KEY_ID + BICONOMY_BUNDLER_URL (presença)
+netlify env:set SIGNER_BACKEND "biconomy" --context production
+netlify env:unset COORDENACAO_PRIVATE_KEY --context production
+netlify deploy --build --prod --message "chore(mc49.4.1): migrar para Biconomy em Sepolia"
 ```
 
-**Critérios de sucesso (a validar após config + deploy):**
-- `GET /health` → `SIGNER_BACKEND:"local-key"` **e** `SIGNER_READY:"set"` (era `MISSING`).
-- Compra R$ 2,00 → 1 senha: sem erro de chave; saldo R$ debitado em R$ 2,00; senhas +1
-  on-chain; resposta com `txHash` + `etherscanUrl` (Sepolia).
+**Dependências já presentes:** `@biconomy/account ^4.5.7`, `@aws-sdk/client-kms ^3.1072`.
+`NETWORK_STAGE` permanece Sepolia (não flipar para mainnet — R3).
+
+**Raio de impacto:** o mesmo sink `creditarSenhas()` (`contract.mjs:116`) serve o fluxo PIX
+(`credito.mjs → creditarPedidoIdempotente`) — a migração restaura **ambos** os caminhos.
+
+**Critérios de sucesso (a validar após config + deploy — pendentes):**
+- `GET /health` → `SIGNER_BACKEND:"biconomy"` **e** `SIGNER_READY:"set"` (era `local-key`/`MISSING`).
+- Compra R$ 2,00 → 1 senha: sem `COORDENACAO_PRIVATE_KEY não configurado` nem `wallet X não
+  é coordenacao`; saldo R$ −R$ 2,00; senhas +1 on-chain; resposta com `txHash` (UserOp) +
+  `etherscanUrl` (Sepolia).
 - Sem regressão de código (não há código alterado); CLS sem regressão na UI.
 
-**Nota:** a validação final (visual 375/768/1440 + fluxo real logado) depende da
-configuração da chave pelo operador e será registada aqui e em `security_audit.md` após
-concluída.
+**Nota:** a validação viva (visual 375/768/1440 + fluxo real logado) depende do operador
+completar a configuração; o resultado será registado aqui e em `security_audit.md`.

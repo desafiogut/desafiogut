@@ -1229,46 +1229,61 @@ saldo R$ suficiente (≥ R$ 2,00/senha) pode converter o próprio saldo em senha
   exceto o gate intencionalmente removido). Pendente: validação viva do operador +
   autorização explícita para deploy/merge.
 
-## MC49.4.1 — COORDENACAO_PRIVATE_KEY (correção de configuração) (2026-07-02) — GATE SUPERPERS
-> Branch `feat/mc49.4.1`. **ZERO alteração de código (R1)** — correção 100% de
-> configuração de ambiente (Netlify). ⏳ **RASCUNHO** — veredicto condicionado à
-> configuração da chave e validação visual. Runbook: `desafio-gut/docs/MC49.4.1-operador.md`.
-> Diagnóstico: `desafio-gut/docs/MC49.4.1-diagnostico.md`.
+## MC49.4.1 — Migração para Biconomy/KMS em Sepolia (2026-07-02) — GATE SUPERPERS
+> Branch `feat/mc49.4.1`. **ZERO alteração de código (R1)** — correção 100% de configuração
+> de ambiente (Netlify). ✅ **ANÁLISE/DECISÃO CONCLUÍDA** (direção: Biconomy) ·
+> ⏳ **execução + validação em produção PENDENTES** (operador). Runbook:
+> `desafio-gut/docs/MC49.4.1-biconomy-runbook.md`. Investigação on-chain:
+> `Desktop\MC49.4.1-investigacao.md`.
 
-**Problema:** o crédito de senhas on-chain falha com `COORDENACAO_PRIVATE_KEY não
-configurado`. O backend `local-key` (Sepolia) exige essa env, ausente em produção
-(`/health → SIGNER_READY:"MISSING"`).
+**Problema:** o crédito de senhas on-chain falha (`/health → SIGNER_BACKEND:"local-key"`,
+`SIGNER_READY:"MISSING"`). Sem perda de saldo: `comprar-senhas.mjs:225` reembolsa e devolve 502.
 
 **Impacto:** compra de senhas (`comprar-senhas`) **e** crédito PIX (`credito.mjs →
 creditarPedidoIdempotente`) bloqueados — ambos partilham o sink `creditarSenhas()`
-(`contract.mjs:116`). Sem perda de saldo: `comprar-senhas.mjs:225` reembolsa e devolve 502.
+(`contract.mjs:116`).
 
-- [✅] **Sem exposição de segredo (R9/R10):** a chave é configurada **pelo operador** via
-  `netlify env:set` na própria shell; **nunca** passa pelo agente, chat, CLI do agente ou
-  commit. Diagnóstico usou apenas `/health` (presença/ausência, não valor).
-- [✅] **Carteira correta confirmada on-chain (read-only):** a chave DEVE ser da
-  `coordenacao()` do contrato **live** `0x59A73Acc…F6D5`, que é
-  `0xdEbe637d7f74C4bfe71263920F68589f0c672D92`. Isto evita a armadilha "wallet X não é
-  coordenacao" (`contract.mjs:118-119`). O fallback hardcoded `0x273Ef96f…445e`
-  (`contract.mjs:50`) está obsoleto (coordenacao `0xDa3a83…e84E`) e não é usado em prod.
+**Correção de rota (auditada on-chain):** a hipótese inicial (setar `COORDENACAO_PRIVATE_KEY`
+no backend `local-key`) foi **descartada**. A `coordenacao()` do contrato **live**
+`0x59A73Acc…F6D5` **já é uma Biconomy Smart Account V2** (`0xdEbe637d…2D92`; EntryPoint v0.6
+`0x5FF1…2789`, impl `0x0000002512…`, VERSION 2.0.0). O backend `local-key` (signer EOA) nunca
+satisfaz `verificarCoordenacao()` (`contract.mjs:118-119`, exige `signer.address ==
+coordenacao()`) → o erro só mudaria para `"wallet X não é coordenacao"`. **A solução correta
+é completar o backend `biconomy`.**
+
+- [✅] **Sem exposição de segredo (R9/R10):** todas as envs (`KMS_KEY_ID`,
+  `BICONOMY_BUNDLER_URL`) são configuradas **pelo operador** na própria shell; **nunca**
+  passam pelo agente, chat, CLI do agente ou commit. A chave privada do owner vive no KMS
+  (`_lib/kms-signer.mjs`) — a chave bruta **nunca** entra no processo Node. Diagnóstico usou
+  só `/health` e leitura on-chain pública (endereços, não valores).
+- [✅] **Autoridade on-chain verificada (read-only):** `coordenacao()` = Smart Account
+  `0xdEbe637d…2D92`; owner (módulo ECDSA `0x0000001c…`) = `0xAEFe11ED…EdFF`. O `KMS_KEY_ID`
+  **tem de derivar exatamente para `0xAEFe11ED…EdFF`** — senão a SA reconstruída difere e a
+  validação falha. Confirmação pelo operador (GATE do runbook, §2.3).
+- [✅] **Remoção segura da chave bruta:** o guard `assertChaveBrutaAusenteEmMainnet()`
+  (`signer.mjs:76-82`) **rejeita** `COORDENACAO_PRIVATE_KEY` coexistindo com `biconomy` — o
+  runbook exige `env:unset` antes/junto ao flip. Reduz a superfície da chave bruta a zero.
 - [✅] **Sem regressão (R1):** nenhum ficheiro de código alterado; só documentação e
-  configuração de ambiente. `node --check`/`npm run build` não se aplicam.
-- [✅] **Mainnet-readiness preservada:** `NETWORK_STAGE` permanece Sepolia; o backend
-  `local-key` é o correto para testnet. **Não** flipar para mainnet (R3); em mainnet a
-  chave bruta é proibida (`signer.mjs:64-73`).
-- [✅] **Fail-safe intacta:** o caminho de erro (reembolso + 502) permanece; a config só
-  remove a causa, sem alterar a proteção de saldo.
+  configuração de ambiente. `node --check`/`npm run build` não se aplicam. Deps já
+  instaladas (`@biconomy/account ^4.5.7`, `@aws-sdk/client-kms ^3.1072`) — sem mudança de bundle.
+- [✅] **Escopo de rede correto:** `NETWORK_STAGE` permanece Sepolia (não flipar para
+  mainnet — R3). Em Sepolia o backend passa a ser `biconomy` por configuração explícita
+  (`SIGNER_BACKEND`), não por default.
+- [✅] **Fail-safe intacta:** o caminho de erro (reembolso + 502) permanece; a migração só
+  restaura o caminho de sucesso, sem alterar a proteção de saldo.
+- [⚠️] **Pré-condição bloqueante (não verificável pelo agente):** presença de `KMS_KEY_ID`
+  e `BICONOMY_BUNDLER_URL` em `production` e a derivação KMS → `0xAEFe11ED…EdFF`. Invisível
+  no `/health` enquanto backend=local-key. **Operador confirma via GATE §2 do runbook.**
 - [⏳] **Critérios de sucesso (a validar após config + deploy):**
-  (1) `/health → SIGNER_READY:"set"` (era `MISSING`);
-  (2) compra R$ 2,00 → 1 senha: sem erro de chave, saldo R$ −R$ 2,00, senhas +1 on-chain,
-  resposta com `txHash` + `etherscanUrl`;
+  (1) `/health → SIGNER_BACKEND:"biconomy"` **e** `SIGNER_READY:"set"`;
+  (2) compra R$ 2,00 → 1 senha: sem os dois erros de chave/coordenação, saldo R$ −R$ 2,00,
+  senhas +1 on-chain, resposta com `txHash` (UserOp) + `etherscanUrl`;
   (3) revalidar 1 crédito PIX (mesma raiz);
   (4) validação visual 375/768/1440, console sem erros novos, CLS sem regressão.
-- [⏳] **Validação viva:** fluxo é auth-gated (Privy OAuth, não automatizável por MCP) —
-  exige login manual do operador. **Deploy da chave e validação NÃO executados** até o
-  operador configurar.
-- **VEREDICTO:** **APROVADO CONDICIONALMENTE** — a correção é de configuração e não
-  introduz superfície de código. Aprovação definitiva registada aqui após:
-  `SIGNER_READY:"set"` + compra R$ 2,00 → 1 senha comprovada + validação visual.
-  Hardening futuro (guarda fail-fast antes do débito + não vazar o nome da env na UI) fica
-  para MC49.5 (não bloqueante — a fail-safe de reembolso já evita perda).
+- [⏳] **Validação viva:** fluxo auth-gated (Privy OAuth, não automatizável por MCP) — exige
+  login manual do operador. **Config, deploy e validação NÃO executados** até o operador agir.
+- **VEREDICTO:** **APROVADO CONDICIONALMENTE** — a direção (Biconomy) está auditada e
+  correta, e não introduz superfície de código. **Aprovação definitiva** só após:
+  `SIGNER_BACKEND:"biconomy"` + `SIGNER_READY:"set"` + compra R$ 2,00 → 1 senha comprovada +
+  validação visual + revalidação PIX. Rollback documentado (com o aviso de que reverter env
+  **não** restaura o crédito — a coordenação on-chain é a Smart Account).
