@@ -23,7 +23,7 @@ import {
 } from "./_lib/validate.mjs";
 import { verificarLanceAuth } from "./_lib/jwt.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
-import { getRole, requireRole } from "./_lib/rbac.mjs";
+import { getRole } from "./_lib/rbac.mjs";
 import { requireMfa } from "./_lib/require-mfa.mjs";
 import {
   debitarSaldoRs, reembolsarSaldoRs, lerSaldoRsCentavos,
@@ -158,13 +158,15 @@ export default async (req) => {
     return jsonError(403, "endereco_nao_corresponde", "token não pertence ao endereço informado");
   }
 
-  // ── 4.5. RBAC: somente cliente+ (cota ativa ou admin) pode comprar fichas ─
+  // ── 4.5. MC49.3 — Compra de fichas liberada para QUALQUER carteira autenticada
+  //   com saldo R$ suficiente (≥ R$ 2,00/senha), independentemente de cota/adesão.
+  //   Racional: o utilizador só gasta o PRÓPRIO saldo R$ (que ele depositou via
+  //   PIX). A posse da carteira já é provada pelo JWT lance-auth (passo 1); o MFA
+  //   gate (passo 1.5) e a checagem atómica de saldo (passo 6) permanecem intactos.
+  //   Removido o gate `requireRole(role, "cliente")` que retornava 403
+  //   "papel_insuficiente" para o papel 'user'. O papel continua a ser resolvido e
+  //   registado apenas para AUDITORIA (SUPERPERS), não bloqueia mais o fluxo.
   const { role } = await getRole(endereco);
-  if (!requireRole(role, "cliente")) {
-    return jsonError(403, "papel_insuficiente",
-      "compra de fichas requer cota ativa ou adesão ativa — papel atual: " + role,
-      { role });
-  }
 
   const valorBruto    = qtd * VALOR_POR_SENHA_CENTAVOS;
   const voucherCodigo = typeof body.voucherCodigo === "string" && body.voucherCodigo.length > 0
@@ -185,6 +187,7 @@ export default async (req) => {
   console.info("[comprar-senhas] início", {
     endereco, qtd, valorBruto, valorCentavos,
     voucher: voucherValido ? voucherCodigo : null,
+    role, // MC49.3 — auditoria: papel do comprador (não bloqueia; ver passo 4.5)
   });
 
   // 6. Saldo + débito (pulado se voucher zerou o valor).
