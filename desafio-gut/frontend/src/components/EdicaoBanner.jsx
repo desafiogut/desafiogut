@@ -1,17 +1,23 @@
-// EdicaoBanner — MC45: banner QUADRADO (1:1) e CLICÁVEL de uma edição.
+// EdicaoBanner — MC45/MC47: banner QUADRADO (1:1) e CLICÁVEL de uma edição.
 //
-// Requisito: o elemento clicável é o BANNER (o quadrado), não o card inteiro.
-// Envolve só o quadrado num <Link to="/edicao/:id">. Mostra edicao.imagem_url
-// quando existir (object-fit:cover); senão, um placeholder quadrado (imagem
-// padrão) — nunca quadrado vazio nem imagem quebrada. A11y: aria-label, foco
-// visível (.gut-edicao-banner:focus-visible em globals.css), alvo ≥ tamanho.
+// MC47 — comportamento UNIFICADO: clicar no banner ABRE a imagem num MODAL
+// (ImageModal) SOBRE a página, SEM navegar para outra rota/aba. Vale em TODOS os
+// contextos (Dashboard "Edição Ativa", EdicaoCard das "Outras Edições" e a própria
+// página /edicao/:id). O banner é sempre um <button> (nunca <Link>) — elimina a
+// "página/aba" desnecessária que o clique abria antes (navegava para /edicao/:id).
 //
-// clicavel=false → renderiza o quadrado estático (ex.: na própria página de
-// detalhe da edição, onde um self-link não faz sentido).
+// Mostra edicao.imagem_url quando existir (object-fit:cover); senão, placeholder
+// quadrado (🎁). A11y: aria-label + aria-haspopup="dialog", foco visível
+// (.gut-edicao-banner:focus-visible em globals.css); o ImageModal trata
+// role="dialog"/aria-modal, focus-trap, ESC, clique-fora e restauro do foco.
+//
+// clicavel=false → quadrado estático (sem clique/modal).
 
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import ImageModal from "./ImageModal.jsx";
 
-export default function EdicaoBanner({ edicao, size = 52, radius = 8, clicavel = true, onClick, className = "" }) {
+export default function EdicaoBanner({ edicao, size = 52, radius = 8, clicavel = true, className = "" }) {
+  const [aberto, setAberto] = useState(false);
   const id = edicao?.id;
   const imagem = edicao?.imagem_url || edicao?.banner_url || edicao?.imagem || null;
 
@@ -33,35 +39,31 @@ export default function EdicaoBanner({ edicao, size = 52, radius = 8, clicavel =
       />
     : <span aria-hidden="true" style={{ fontSize: `${Math.round(size * 0.42)}px`, lineHeight: 1 }}>🎁</span>;
 
-  // MC46 — modo AÇÃO: onClick fornecido → botão que dispara a ação (ex.: abrir
-  // modal de imagem), SEM navegar. Mantém a aparência/foco do banner.
-  if (onClick) {
-    return (
+  // Não clicável → quadrado estático.
+  if (!clicavel) {
+    return <div className={className} style={box}>{conteudo}</div>;
+  }
+
+  // Clicável → botão que abre o MODAL da imagem (sem navegar), em qualquer contexto.
+  return (
+    <>
       <button
         type="button"
-        onClick={onClick}
+        onClick={() => setAberto(true)}
         aria-label={`Ampliar imagem da edição ${id ?? ""}`.trim()}
+        aria-haspopup="dialog"
         className={`gut-edicao-banner ${className}`.trim()}
         style={{ ...box, cursor: "pointer", padding: 0 }}
       >
         {conteudo}
       </button>
-    );
-  }
-
-  // Sem id ou não clicável → quadrado estático (defensivo, sem navegação).
-  if (!id || !clicavel) {
-    return <div className={className} style={box}>{conteudo}</div>;
-  }
-
-  return (
-    <Link
-      to={`/edicao/${encodeURIComponent(id)}`}
-      aria-label={`Ver informações da edição ${id}`}
-      className={`gut-edicao-banner ${className}`.trim()}
-      style={{ ...box, cursor: "pointer" }}
-    >
-      {conteudo}
-    </Link>
+      {aberto && (
+        <ImageModal
+          src={imagem}
+          alt={`Imagem da edição ${id ?? ""}`.trim()}
+          onClose={() => setAberto(false)}
+        />
+      )}
+    </>
   );
 }
