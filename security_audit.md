@@ -1192,3 +1192,39 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   de cor (azul/laranja suave; roxo mantido nas senhas) foi aplicada por código + build
   verde; a validação VISUAL tem de ser feita LOGADO (operador). Sem impacto de segurança.
 - **VEREDICTO:** APROVADO (P2 a confirmar visualmente logado; sem risco de segurança).
+
+## MC49.3 — Liberar compra de senhas para papel 'user' (2026-07-02) — GATE SUPERPERS
+> Branch `feat/mc49.3`. Alteração de **autorização** (loosening de RBAC). Ficheiro:
+> `netlify/functions/comprar-senhas.mjs`. Decisão de produto do operador.
+
+**Mudança:** removido o gate `requireRole(role, "cliente")` que retornava 403
+`papel_insuficiente` em `comprar-senhas`. Agora qualquer carteira autenticada com
+saldo R$ suficiente (≥ R$ 2,00/senha) pode converter o próprio saldo em senhas.
+
+- [✅] **Superfície de auth preservada:** o gate removido NÃO era a única barreira.
+  Permanecem, na ordem original: (1) rate-limit por IP; (2) kill-switch/pânico;
+  (3) **JWT lance-auth** (assinatura EIP-191 → prova posse da carteira); (4) MFA gate
+  (env `MFA_ENFORCEMENT`); (5) `jwtPayload.endereco === endereco` (anti-IDOR);
+  (6) checagem **atómica** de saldo (CAS, MC39.17.2). O 403 removido era o passo 4.5.
+- [✅] **Sem escalonamento de privilégio:** o utilizador só gasta o PRÓPRIO saldo R$
+  (depositado por ele via PIX). Não há acesso a fundos/recursos de terceiros; o débito
+  continua ligado ao `endereco` do JWT. `admin`/`cliente` continuam a existir para
+  outros fins; só deixaram de ser exigidos AQUI.
+- [✅] **Auditoria mantida:** `getRole()` continua a ser chamado e o papel é gravado no
+  `console.info("[comprar-senhas] início", { …, role })` — rasto de quem comprou.
+- [✅] **Sem regressão (R1):** suite **132/132** verde (baseline idêntico ao de `main`);
+  `node --check` limpo; `npm run build` verde. Import `requireRole` removido (sem
+  variável/símbolo órfão). Nenhum outro ficheiro alterado.
+- [⚠️] **Nota de compliance (decisão do operador):** senhas são o mecanismo de entrada
+  do leilão programado (Art. XVII/XXI). Permitir compra sem cota/adesão amplia quem
+  pode participar. O operador confirmou ser o comportamento desejado; registado aqui
+  para ciência explícita. Reversível: reintroduzir o gate restaura o modelo anterior.
+- [⚠️] **Fora de escopo (mesmo gate):** `lance-relampago.mjs:113` tem
+  `requireRole(role, "cliente")` idêntico — um 'user' com saldo ainda NÃO faz lance
+  relâmpago. NÃO alterado (objetivo MC49.3 = só compra de senhas). Decisão futura.
+- [⏳] **Validação viva:** fluxo é auth-gated (Privy OAuth, não automatizável por MCP).
+  A prova R$ 2,00 → 1 senha (saldo −R$2, senhas +1) tem de ser feita pelo operador
+  logado. **Deploy a produção e merge NÃO executados** — aguardam go explícito.
+- **VEREDICTO:** APROVADO EM CÓDIGO (132/132, build verde, superfície de auth intacta
+  exceto o gate intencionalmente removido). Pendente: validação viva do operador +
+  autorização explícita para deploy/merge.
