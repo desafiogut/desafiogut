@@ -167,16 +167,23 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
       as="article"
       className={`flex flex-col gap-2.5 ${isMobile ? 'p-4' : 'p-5'} ${!isMobile ? 'min-h-[320px]' : ''}`}
       style={{
-        position: sticky ? "sticky" : "relative",
-        top:      sticky ? "0.5rem" : undefined,
-        zIndex:   sticky ? 5 : undefined,
+        // MC48 P4 — sticky removido: Diamante e Ouro (antes ambos sticky top:0.5rem
+        // → sobrepunham-se ao rolar) passam a rolar normalmente, comportamento
+        // consistente com os demais cards. O prop `sticky` fica inerte (decisão do operador).
+        position: "relative",
         borderColor: slot.corBorda,
         boxShadow: `0 4px 18px rgba(0,0,0,0.35), 0 0 0 1px ${slot.corDim}`,
       }}
     >
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <GutoAvatar custom={`vitrine-slot-${slot.id}`} size={isMobile ? 28 : 32} animate={false} />
+          {/* MC48 P3 — ícone do plano = emoji do tier (sem foto do GUTO). */}
+          <div aria-hidden="true" style={{
+            width: isMobile ? 28 : 32, height: isMobile ? 28 : 32, flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            borderRadius: "50%", background: slot.corDim, border: `1px solid ${slot.corBorda}`,
+            fontSize: isMobile ? "0.95rem" : "1.05rem", lineHeight: 1,
+          }}>{slot.emoji}</div>
           <div>
             <h3 style={{
               margin: 0,
@@ -308,7 +315,13 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
                   R$ {(p.preco / 100).toFixed(2)}
                 </div>
               </div>
-              <GutoAvatar custom={`vitrine-slot-${slot.id}`} size={24} animate={false} />
+              {/* MC48 P3 — emoji do tier no lugar do recorte do GUTO. */}
+              <div aria-hidden="true" style={{
+                width: 24, height: 24, flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                borderRadius: "50%", background: slot.corDim, border: `1px solid ${slot.corBorda}`,
+                fontSize: "0.85rem", lineHeight: 1,
+              }}>{slot.emoji}</div>
             </Link>
           ))}
           {produtos.length > 3 && (

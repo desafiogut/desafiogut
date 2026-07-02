@@ -125,10 +125,12 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: cardPad, flex: 1 }}>
-      {/* ── Saudação ── (MC43: entrada dada pelo wrapper padrão no Layout) */}
+      {/* ── Saudação ── (MC43: entrada pelo wrapper do Layout · MC48 P1: em Glass) */}
       <motion.header
+        className="gut-glass-standard"
         style={{
           marginBottom: sectionGap,
+          padding: isMobile ? "1.25rem 1rem" : "1.5rem",
         }}
       >
         <div style={{ textAlign: "center", marginBottom: isMobile ? "0.75rem" : "1rem" }}>
