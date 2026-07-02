@@ -17,7 +17,7 @@ import {
 import { debitarSaldoRs } from "./_lib/saldoRs.mjs";
 import { verificarLanceAuth } from "./_lib/jwt.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
-import { getRole, requireRole } from "./_lib/rbac.mjs";
+import { getRole } from "./_lib/rbac.mjs";
 import { requireMfa } from "./_lib/require-mfa.mjs";
 import { lerEstadoSistema, sistemaPausado } from "./_lib/system-state.mjs";
 import { registrarEventosDeLance } from "./_lib/notificacoes-usuario.mjs";
@@ -108,13 +108,16 @@ export default async (req) => {
     return jsonError(403, "endereco_nao_corresponde", "token não pertence ao endereço informado");
   }
 
-  // ── 4.5. RBAC: lance requer cliente+ (cota ativa, adesão ativa OU admin) ──
+  // ── 4.5. MC49.3.1 — Lance relâmpago liberado para QUALQUER carteira autenticada
+  //   com saldo R$ suficiente (≥ 1 centavo), independentemente de cota/adesão.
+  //   Simetria com MC49.3 (comprar-senhas): o utilizador só gasta o PRÓPRIO saldo
+  //   R$ (que depositou via PIX). A posse da carteira já é provada pelo JWT
+  //   lance-auth (passo 1); o MFA gate (passo 1.5), o anti-IDOR (passo 4) e a
+  //   checagem atómica de saldo/CAS (passo 6) permanecem intactos.
+  //   Removido o gate `requireRole(role, "cliente")` que retornava 403
+  //   "papel_insuficiente" para o papel 'user'. O papel continua a ser resolvido e
+  //   registado apenas para AUDITORIA (SUPERPERS), não bloqueia mais o fluxo.
   const { role } = await getRole(endereco);
-  if (!requireRole(role, "cliente")) {
-    return jsonError(403, "papel_insuficiente",
-      "lance requer cota ativa ou adesão ativa — papel atual: " + role,
-      { role });
-  }
 
   const edicaoId       = String(body.edicaoId || EDICAO_PADRAO);
   const idempotencyKey = typeof body.idempotencyKey === "string" && body.idempotencyKey.length > 0
@@ -124,7 +127,10 @@ export default async (req) => {
     ? body.nomeExibicao.slice(0, 80).trim() || null
     : null;
 
-  console.info("[lance-relampago] início", { endereco, valorCentavos, edicaoId, idem: !!idempotencyKey });
+  console.info("[lance-relampago] início", {
+    endereco, valorCentavos, edicaoId, idem: !!idempotencyKey,
+    role, // MC49.3.1 — auditoria: papel do autor do lance (não bloqueia; ver passo 4.5)
+  });
 
   // ── 5. Idempotência server-side ────────────────────────────────────────────
   if (idempotencyKey) {
