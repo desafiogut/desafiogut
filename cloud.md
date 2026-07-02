@@ -1573,3 +1573,27 @@ Validado ao vivo 390/1440 (getComputedStyle + DOM): saudação com bg 0.25/blur;
 GUTO nos cards da Vitrine + emojis presentes; 0 slot-cards sticky (o único sticky é a
 sidebar desktop, pré-existente). P2 medido por código (auth-gated). Relatório:
 `Desktop\MC48-final.md`; shots em `Desktop\MC48-shots\`.
+
+## Compra de Senhas — MC49.3 (2026-07-02)
+> Branch `feat/mc49.3`. Ficheiro: `netlify/functions/comprar-senhas.mjs`.
+
+**O quê:** a conversão R$ → senha (`POST /comprar-senhas`) deixou de exigir papel
+`cliente` (cota ativa ou adesão ativa). Qualquer carteira autenticada com saldo R$
+suficiente (≥ R$ 2,00/senha) pode agora converter o próprio saldo em senhas on-chain.
+
+**Antes:** `getRole(endereco)` + `if (!requireRole(role, "cliente")) → 403
+"compra de fichas requer cota ativa ou adesão ativa — papel atual: <role>"`. Papéis
+'user' (qualquer autenticado sem cota/adesão) eram bloqueados.
+
+**Depois:** o gate foi removido. Mantêm-se intactos: JWT lance-auth (posse da carteira),
+MFA gate, anti-IDOR (`endereco` do JWT == body), rate-limit, kill-switch e o débito
+atómico de saldo (CAS). `getRole()` continua a rodar só para registar o papel no log de
+início (auditoria) — não bloqueia.
+
+**Modelo de saldo (recap):** PIX → +R$ (centavos); Lance Relâmpago → −R$; **Trocar R$
+por Senhas (comprar-senhas) → −R$ 2,00/senha, +1 senha on-chain**; Lance Programado →
+−1 senha on-chain. O mínimo de conversão (R$ 2,00 = 1 senha) não mudou.
+
+**Nota:** o mesmo gate ainda existe em `lance-relampago.mjs` (fora do escopo desta MC).
+Suite 132/132, build verde. Deploy/merge pendentes de validação viva + go do operador.
+Relatório: `Desktop\MC49.3-final.md`.
