@@ -1597,3 +1597,51 @@ por Senhas (comprar-senhas) → −R$ 2,00/senha, +1 senha on-chain**; Lance Pro
 **Nota:** o mesmo gate ainda existe em `lance-relampago.mjs` (fora do escopo desta MC).
 Suite 132/132, build verde. Deploy/merge pendentes de validação viva + go do operador.
 Relatório: `Desktop\MC49.3-final.md`.
+
+## Configuração — COORDENACAO_PRIVATE_KEY MC49.4.1 (2026-07-02)
+> Branch `feat/mc49.4.1`. **Correção de configuração — ZERO alteração de código (R1).**
+> ⏳ **RASCUNHO** — conteúdo final pendente de configuração da chave + validação visual.
+> Runbook completo: `desafio-gut/docs/MC49.4.1-operador.md`. Diagnóstico:
+> `desafio-gut/docs/MC49.4.1-diagnostico.md`.
+
+**Erro:** ao trocar R$ 2,00 → 1 senha, a UI mostra `⚠️ COORDENACAO_PRIVATE_KEY não
+configurado` e a compra falha (HTTP 502 `credito_onchain_falhou`; o R$ é reembolsado
+automaticamente — sem perda de saldo).
+
+**Causa raiz (lacuna de config, não bug):** o backend de assinatura resolve para
+`local-key` em Sepolia (`_lib/signer.mjs:41-45`, pois `NETWORK_STAGE ≠ mainnet`) e esse
+backend **exige** a env `COORDENACAO_PRIVATE_KEY` (`signer.mjs:120-121`,
+`contract.mjs:60-61`). A variável está **ausente** no ambiente de produção do Netlify.
+Prova sem expor segredos: `GET /.netlify/functions/health` → `SIGNER_BACKEND:"local-key"`,
+`SIGNER_READY:"MISSING"`.
+
+**Raio de impacto:** o mesmo sink `creditarSenhas()` (`contract.mjs:116`) é usado pelo
+fluxo PIX (`credito.mjs → creditarPedidoIdempotente`). Enquanto a chave faltar, o crédito
+de senhas on-chain está quebrado **também** por esse caminho.
+
+**Solução (operador):** definir `COORDENACAO_PRIVATE_KEY` no Netlify (contexto
+`production`) com a chave privada da carteira que é a `coordenacao()` do contrato **live**
+`0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5`. Essa carteira foi confirmada on-chain (read-only):
+
+```
+coordenacao(0x59A73Acc…F6D5) = 0xdEbe637d7f74C4bfe71263920F68589f0c672D92
+```
+
+`NETWORK_STAGE` permanece Sepolia — **não** flipar para mainnet (R3). A chave **nunca**
+passa pelo agente (R9/R10); é o operador quem a configura. Resumo dos comandos (detalhe no
+runbook):
+
+```bash
+netlify env:set COORDENACAO_PRIVATE_KEY "0x<chave-da-0xdEbe637d>" --context production
+netlify deploy --build --prod --message "chore(mc49.4.1): configurar COORDENACAO_PRIVATE_KEY"
+```
+
+**Critérios de sucesso (a validar após config + deploy):**
+- `GET /health` → `SIGNER_BACKEND:"local-key"` **e** `SIGNER_READY:"set"` (era `MISSING`).
+- Compra R$ 2,00 → 1 senha: sem erro de chave; saldo R$ debitado em R$ 2,00; senhas +1
+  on-chain; resposta com `txHash` + `etherscanUrl` (Sepolia).
+- Sem regressão de código (não há código alterado); CLS sem regressão na UI.
+
+**Nota:** a validação final (visual 375/768/1440 + fluxo real logado) depende da
+configuração da chave pelo operador e será registada aqui e em `security_audit.md` após
+concluída.
