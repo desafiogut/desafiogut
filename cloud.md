@@ -1547,3 +1547,29 @@ Relatório: `Desktop\MC46-final.md`; shots em `Desktop\MC46-shots\`.
 Regra: banner de edição = ver a imagem num modal (nunca navegar). A rota `/edicao/:id`
 continua acessível por URL direta, mas deixa de ser destino do clique no banner.
 Relatório: `Desktop\MC47-final.md`; shots em `Desktop\MC47-shots\`.
+
+---
+
+## Padronização visual — MC48 (2026-07-02)
+> Branch `feat/mc48`. 4 correções de consistência visual (decisões do operador em P2/P4).
+
+- **P1 — Dashboard (topo em Glass):** a saudação (`<motion.header>`, GUTO + "Bem-vindo")
+  passou a usar `.gut-glass-standard` (+ padding) — antes assentava no fundo animado.
+  `pages/Dashboard.jsx`.
+- **P2 — Carteira (cores dos botões):** "Depositar PIX" → azul suave (#00d4ff), "Lance
+  Relâmpago" e "Usar no Mercado" → laranja suave (#f5a623) no idioma glass (translúcido
+  + borda, sem glow). "Trocar por senhas" e "Atualizar saldo" **mantêm o roxo** (#a78bfa)
+  — cor semântica de senhas em todo o app (decisão do operador). `pages/MinhaCarteira.jsx`.
+  ⚠️ Validação visual exige LOGIN (Privy) — página auth-gated.
+- **P3 — Vitrine (ícones de plano):** os recortes do GUTO (`GutoAvatar custom
+  vitrine-slot-*`) foram substituídos por um badge com o `slot.emoji` (💎🥇🥈🥉) na cor
+  do tier. O avatar do CABEÇALHO da página (`vitrine-header-confiante`) mantém-se.
+  `pages/Vitrine.jsx`.
+- **P4 — Vitrine (scroll Diamante/Ouro):** removido o `position:sticky` do SlotCard
+  (Diamante e Ouro eram ambos sticky `top:0.5rem` → sobrepunham-se ao rolar). Agora
+  `position:relative` sempre → rolam normalmente. `pages/Vitrine.jsx`.
+
+Validado ao vivo 390/1440 (getComputedStyle + DOM): saudação com bg 0.25/blur; 0 imagens
+GUTO nos cards da Vitrine + emojis presentes; 0 slot-cards sticky (o único sticky é a
+sidebar desktop, pré-existente). P2 medido por código (auth-gated). Relatório:
+`Desktop\MC48-final.md`; shots em `Desktop\MC48-shots\`.

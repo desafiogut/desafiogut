@@ -1173,3 +1173,22 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   igual (zero navegação); X/ESC fecham; zero novos erros de consola; CLS neutro
   (overlay fixed via portal). Build verde.
 - **VEREDICTO:** APROVADO (com a nota de CSP/URL da imagem, herdada do MC45/MC46).
+
+---
+
+## MC48 — Padronização visual (4 áreas) (2026-07-02) — GATE SUPERPERS
+> Branch `feat/mc48`. Só CSS/UI. Ficheiros: `pages/Dashboard.jsx`,
+> `pages/MinhaCarteira.jsx`, `pages/Vitrine.jsx`.
+
+- [✅] **Sem segredos / rede / RBAC:** apenas classes/estilos e um emoji no lugar de uma
+  imagem. Nenhuma env/token/endpoint/permissão tocada. Fluxo de lance/compra/RBAC intacto
+  (Agente de Transação): os `onClick` dos botões da Carteira (comprar/trocar/mercado) e a
+  navegação da Vitrine mantidos; só cores/ícone/posição mudaram.
+- [✅] **Sem novas dependências.** P3 usa emoji (sem asset novo); menos 2 usos de GutoAvatar.
+- [✅] **Sem regressão (R1) — validado 390/1440:** Dashboard saudação em .gut-glass-standard;
+  Vitrine sem imagens GUTO nos cards (emoji do tier) e sem slot-cards sticky (scroll
+  consistente); zero novos erros de consola (só ruído CSP/404 pré-existente); CLS neutro.
+- [⚠️] **P2 (Carteira) auth-gated:** os botões de ação só aparecem logado (Privy). A troca
+  de cor (azul/laranja suave; roxo mantido nas senhas) foi aplicada por código + build
+  verde; a validação VISUAL tem de ser feita LOGADO (operador). Sem impacto de segurança.
+- **VEREDICTO:** APROVADO (P2 a confirmar visualmente logado; sem risco de segurança).
