@@ -1527,3 +1527,23 @@ Relatório: `Desktop\MC45-final.md`; shots em `Desktop\MC45-shots\`.
 
 Regra: ampliar imagem = `ImageModal` (portal + a11y); banner com `onClick` = ação, não rota.
 Relatório: `Desktop\MC46-final.md`; shots em `Desktop\MC46-shots\`.
+
+---
+
+## Banner/ícone — MC47 (2026-07-01)
+> Branch `feat/mc47`. Comportamento UNIFICADO: clicar em QUALQUER banner de edição
+> abre o `ImageModal` (lightbox) SOBRE a página — nunca navega para outra rota/aba.
+
+- **`components/EdicaoBanner.jsx`** — agora AUTO-CONTIDO: removido o `<Link>` (navegação)
+  e o prop `onClick`. O banner clicável é sempre um `<button>` que abre o seu próprio
+  `ImageModal` (imagem da edição ou placeholder), sem mudar de rota. `clicavel={false}`
+  mantém o quadrado estático. Unifica os 3 contextos: Dashboard "Edição Ativa",
+  `EdicaoCard` ("Outras Edições") e a página `/edicao/:id`.
+- **`pages/EdicaoDetalhe.jsx`** — removida a fiação redundante do MC46 (state +
+  ImageModal + onClick); o `EdicaoBanner` gere o modal internamente.
+- **`Dashboard.jsx` / `EdicaoCard.jsx`** — sem alteração: herdam o novo comportamento
+  (deixam de navegar para `/edicao/:id`, passam a abrir o modal).
+
+Regra: banner de edição = ver a imagem num modal (nunca navegar). A rota `/edicao/:id`
+continua acessível por URL direta, mas deixa de ser destino do clique no banner.
+Relatório: `Desktop\MC47-final.md`; shots em `Desktop\MC47-shots\`.

@@ -1154,3 +1154,22 @@ deployado e o flip NÃO foi feito** — o agente parou no limite irreversível, 
   banner ao fechar; scroll bloqueado; overlay cobre o viewport (portal). Zero novos
   erros de consola; CLS neutro (overlay fixed). Build verde.
 - **VEREDICTO:** APROVADO (com a nota de CSP/URL da imagem, herdada do MC45).
+
+---
+
+## MC47 — Unificação do banner (modal em vez de navegação) (2026-07-01) — GATE SUPERPERS
+> Branch `feat/mc47`. Refatoração de UI client-side. Ficheiros:
+> `components/EdicaoBanner.jsx`, `pages/EdicaoDetalhe.jsx`.
+
+- [✅] **Sem segredos / rede / RBAC:** só mudança de comportamento de UI (o banner
+  deixa de navegar e passa a abrir um modal client-side). Nenhuma env/token/endpoint/
+  permissão tocada. Fluxo de lance/compra/RBAC intacto (Agente de Transação).
+- [✅] **Sem novas dependências.** Reusa o `ImageModal` (MC46) e `createPortal`.
+- [⚠️] **NOTA (imagem futura):** herdada do MC45/MC46 — quando `imagem_url` real entrar,
+  garantir origem no CSP `img-src` + validar/allowlist a URL (conteúdo cross-user).
+  O modal só renderiza `<img>`+texto (sem injeção de HTML/SVG) → sem XSS.
+- [✅] **Sem regressão (R1) — validado ao vivo 390/768/1440:** banner do Dashboard e da
+  página de detalhe = `<button>` (não `<a>`); clique abre o modal e a URL PERMANECE
+  igual (zero navegação); X/ESC fecham; zero novos erros de consola; CLS neutro
+  (overlay fixed via portal). Build verde.
+- **VEREDICTO:** APROVADO (com a nota de CSP/URL da imagem, herdada do MC45/MC46).
