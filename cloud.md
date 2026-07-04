@@ -1597,3 +1597,38 @@ por Senhas (comprar-senhas) → −R$ 2,00/senha, +1 senha on-chain**; Lance Pro
 **Nota:** o mesmo gate ainda existe em `lance-relampago.mjs` (fora do escopo desta MC).
 Suite 132/132, build verde. Deploy/merge pendentes de validação viva + go do operador.
 Relatório: `Desktop\MC49.3-final.md`.
+
+## MC54.1 — Resolução final (Opção D: redeploy com EOA) (2026-07-04)
+> Relatório completo: `Desktop\MC56-RELATORIO-FINAL.md`. Verificado on-chain no bloco 11204184.
+
+**Contexto.** O caminho de coordenação dependia de uma Smart Account ERC-4337 (Biconomy,
+EP v0.6) como `coordenacao()`. O bundler partilhado `bundler.biconomy.io` foi **desativado**
+(MC52.1: `-32003 not supported` para todas as chains), bloqueando compra de senhas e todo o
+fluxo da coordenação. As rotas de reparação (trocar URL, Pimlico, script local KMS — MC53/54/55)
+falharam por acoplamento ao SDK Biconomy v2 e por a autoridade estar presa no próprio SA.
+
+**Solução (Opção D).** Redeploy limpo do contrato com uma **EOA como coordenação**
+(o construtor faz `coordenacao = msg.sender`, e o deployer é a EOA → nasce coordenador,
+sem two-step). Backend migrado para `SIGNER_BACKEND=local-key` (a EOA assina tudo direto,
+sem bundler/paymaster/KMS no caminho de coordenação).
+
+| Item | Valor |
+|---|---|
+| Contrato NOVO (ativo) | `0x825bBd3F064979a5F750DBB6aED421b37AA3eF06` |
+| Coordenador (EOA) | `0xDa3a83A24b25aa71e1a9b5A74503fFA93487e84E` (`coordenacao()` ✅) |
+| Contrato ANTIGO A (abandonado) | `0x59A73Acc…F6D5` (coord = SA `0xdEbe63…2D92`) |
+| Backend | `local-key`; health `SIGNER_READY=set`, `CHAVE_BRUTA_EM_MAINNET=ok` |
+| Script de deploy | `desafio-gut/scripts/deploy-direct.cjs` (untracked) |
+
+**Compra de senhas.** É 100% backend (`useTrocarPorSenhas` → `POST /comprar-senhas` →
+signer local-key EOA → contrato novo via `CONTRATO_SEPOLIA`). **Funcional.**
+
+**⚠️ Pendências abertas (NÃO fechadas no MC56 — só documentadas):**
+1. **Frontend aponta para o contrato ANTIGO** — `VITE_CONTRATO_SEPOLIA` (`.env.production`/`.env.local`),
+   `web3.js:26` (fallback) e `Seguranca.jsx:11` (hardcoded) ainda usam `0x59A7…`. O bundle
+   deployado não contém `0x825b…`. Leituras diretas (`saldoSenhas`/`darLance`) podem estar a
+   ler o contrato antigo → **regressão de UI latente**. Requer atualizar refs + rebuild + redeploy
+   + validação visual R4.
+2. **Redeploy por versionar** — `deploy-direct.cjs`, `ignition/`, `hardhat.config.cjs`, artifacts
+   estão untracked em `feat/mc54.1`; `main` não tem nada. A registar em PR próprio.
+3. **Segurança** — rotacionar API key Pimlico (vazou); `transferir.mjs` inseguro removido no MC56.
