@@ -358,3 +358,45 @@ no servidor. **O CSP não foi alterado.**
 **Testes:** `img-proxy` (4/4) cobre `isBlockedIp`/`isBlockedHostname` (ranges privados bloqueados,
 públicos permitidos). Suíte total **61/61**. Limitação honesta: imagens servidas atrás de
 redirect não carregam (`redirect: "error"`) — o lojista usa URL direta ou upload (base64).
+
+---
+
+# §MC54.1 / MC56 — Veredicto: coordenação devolvida a EOA (Opção D) (2026-07-04)
+> Relatório completo: `Desktop\MC56-RELATORIO-FINAL.md`.
+
+## 1. O que mudou (postura de segurança)
+
+O caminho de coordenação deixou de depender de **infraestrutura ERC-4337 externa**
+(bundler Biconomy v2/v3, paymaster, Smart Account, owner AWS KMS). Após o redeploy do
+contrato com uma **EOA como `coordenacao()`** e o flip `SIGNER_BACKEND=local-key`, a
+autoridade assina transações diretamente com uma chave privada local (via env, nunca
+hardcoded — R9). **Resultado: menos superfície e menos dependências externas** — remove
+exatamente a classe de falha (serviço de terceiros descontinuado) que causou o incidente.
+
+**Trade-off honesto:** `local-key` significa uma chave privada "quente" nas env do Netlify
+(EOA `0xDa3a83…e84E`). É Sepolia (testnet) e o health reporta `CHAVE_BRUTA_EM_MAINNET=ok`
+(guard MC30.2.1 ativo). Para mainnet, reavaliar (Gnosis Safe multisig — ver §MC31 SEG 9).
+
+## 2. Verificação (read-only, esta sessão)
+
+- On-chain (bloco 11204184): contrato novo `0x825b…eF06`, `coordenacao()` = EOA ✅,
+  `coordenacaoPendente()` = 0x0. Contrato antigo A abandonado.
+- Health: `SIGNER_BACKEND=local-key`, `SIGNER_READY=set`, `CHAVE_BRUTA_EM_MAINNET=ok`.
+- Compra de senhas (backend) funcional. Build local verde.
+
+## 3. AÇÕES DE SEGURANÇA ABERTAS (operador)
+
+| # | Ação | Estado |
+|---|------|--------|
+| S-1 | **Rotacionar a API key Pimlico** (vazou no chat de planeamento MC54/55) | ⏳ pendente |
+| S-2 | **Rotacionar** a password da conta de teste (também exposta) | ⏳ pendente |
+| S-3 | Remover `netlify/functions/transferir.mjs` (segredo hardcoded, viola R9) | ✅ removido no MC56 |
+| S-4 | **Não commitar** `rollback-mc54.txt` (contém API key Pimlico em claro); purgar do disco | ⏳ pendente |
+| S-5 | Frontend ainda aponta para o contrato antigo — reconciliar + rebuild (não é falha de segurança, mas de integridade de estado) | ⏳ pendente (próxima MC) |
+
+## 4. Limitações honestas
+
+- Env do Netlify não inspecionada por CLI (política "operador manuseia segredos"); a prova
+  de `local-key` vem do health endpoint público, não de leitura direta das variáveis.
+- O redeploy (Opção D) não passou por PR/ciclo SUPERPERS formal antes de ir a produção —
+  foi ação operacional de desbloqueio. Este documento é a auditoria retroativa.
