@@ -1751,10 +1751,12 @@ Branch `feat/mc58.1-execucao-carrossel` · deploy prod live (`silly-stardust-ca7
 - **`CarrosselGUTO.jsx`** (novo): `<video>` simples (lição MC39.9 — sem canvas/blend/filter),
   `useReducedMotion` congela 1º frame, fallback poster, dimensões reservadas (zero CLS). MVP 1 vídeo,
   prop `slides` pronta p/ carrossel 2–8 (MC58.2).
-- **`Dashboard.jsx`** L128-168: saudação de **vertical → horizontal** `[vídeo | divisor ouro |
-  saudação | logo]`; divisor oculto no mobile; tipografia reduzida a pedido do operador
-  (h1 1.15rem / 0.88rem mobile; p 0.78 / 0.68). Preserva `isMobile`/`COR`/`motion.header`/texto
-  condicional. Não toca web3/AppContext → **compra de senhas e leitura de saldo inalteradas**.
+- **`Dashboard.jsx`** L128-*: layout final segue a `REFERENCIA DE PROPORÇOES GUTO E LOGO`
+  (aprovado pelo operador): **linha de cima = GUTO (esq) + logo (dir)** com larguras semelhantes
+  (GUTO 176/116, logo h116/76, logo centrado na vertical); **saudação horizontal ABAIXO de ambos**
+  (não entre eles), largura total, centrada (h1 1.3/1.0rem, p 0.85/0.75). Sem divisor. Preserva
+  `isMobile`/`COR`/`motion.header`/texto condicional. Não toca web3/AppContext → **compra de
+  senhas e leitura de saldo inalteradas**.
 - **Validação:** build verde; MCP 1440 + 375 (público local + logado prod) sem overflow/corte;
   assets 200 em prod (webm `video/webm` immutable, logo `image/png`); console sem erros novos;
   saldo R$2.00/3 senhas renderizam em prod (sem regressão). Screenshots em
