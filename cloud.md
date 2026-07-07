@@ -1632,3 +1632,133 @@ signer local-key EOA → contrato novo via `CONTRATO_SEPOLIA`). **Funcional.**
 2. **Redeploy por versionar** — `deploy-direct.cjs`, `ignition/`, `hardhat.config.cjs`, artifacts
    estão untracked em `feat/mc54.1`; `main` não tem nada. A registar em PR próprio.
 3. **Segurança** — rotacionar API key Pimlico (vazou); `transferir.mjs` inseguro removido no MC56.
+
+---
+
+## MC57.5 — GUTO animado (idle) — piloto de estilo
+
+**Objetivo.** Definir o estilo de micro-animação "idle" (respiração + piscar + aceno,
+simultâneos) da 1ª imagem do GUTO, como piloto para as 8 imagens. Design MC, **sem
+alteração de código do app** (R1).
+
+**Pasta (fora do repo).** `Desktop\GUTO-ANIMADO GLASS DASHBOARD\` — contém o padrão
+`GUTO_ANIMADO_PADRAO.mp4`, `variacao_B_*` (mp4/loop/webm), `1.png`/`guto_mc575_1_rgb.png`
+(fonte), `notas_mc57.5_corrigido.txt`, `escolha.txt`. Relatório em `Desktop\MC57.5-RELATORIO.md`.
+
+**Workflow rastreável (PILAR 2).**
+- Interface: MCP `comfyui-cloud` (produção v0.28.1). Fallback chrome-devtools ficou **indisponível** na sessão.
+- Motor: **WAN 2.6 i2v** (`api_wan2_6_i2v`). O OSS **WAN 2.2 14B** (`03_video_wan2_2_14B_i2v_subgraphed`)
+  **não executa via `run_template`** (erro opaco 4×) — evitar; usar WAN 2.6 API.
+- Input: imagem **achatada para RGB** (WAN API **rejeita PNG RGBA/transparente**). Nó imagem=`LoadImage 42`, prompt=nó `41` (`WanImageToVideoApi`), `generate_audio=false`, `prompt_extend=false`, 720P, 5s.
+- Pós: loop **boomerang** (ffmpeg `reverse+concat`, 10s) + webm VP9.
+
+**Resultado.** 3 variações A/B/C, GUTO 100% fiel; **B (Equilibrada, seed 102)** escolhida
+pelo operador como oficial (A/C removidas). Prompt trava o fundo (TV/texto/púlpito) —
+funciona bem, mas o **martelo pode vazar leve movimento**; reforçar negativo nas próximas.
+Fundo do vídeo é branco (fonte transparente achatada) → compositing sobre o glass fica
+para o MC de integração (frontend).
+
+### MC57.6 — imagem 2 (padrão B, pose adaptada)
+2ª imagem do carrossel animada com o **mesmo pipeline** (WAN 2.6 i2v, RGB flatten, 720P→960²,
+5s, seed 102, boomerang loop). **Pose diferente:** GUTO à direita, mão esquerda apresenta a
+**geladeira inox**, mão direita segura o **martelo** (parte do personagem) → prompt adaptado
+(gesto de apresentação + leve balanço do martelo em vez do aceno). **Aprovado na 1ª geração:**
+GUTO 100% fiel; **geladeira inox totalmente estática** (sem warping/reflexos — risco evitado),
+melhor trava de fundo que a img1. Ficheiros `imagem2_*` na pasta. prompt_id `bfcba269…4b7a`.
+
+### MC57.7 — imagem 3 (padrão B, pose adaptada)
+3ª imagem: GUTO à esquerda segura placa **"LANCE ÚNICO"** e aponta; fundo = **máquina de
+lavar inox** (porta de vidro + painel). Prompt adaptado (ênfase de apontar em vez de aceno)
+com trava forte de texto+máquina. **Aprovado na 1ª geração:** GUTO fiel; **texto da placa
+nítido e estático** (warping evitado — o maior risco); placa imóvel. ⚠️ leve *shimmer* no
+vidro do tambor (menor, não gira). Ficheiros `imagem3_*`. prompt_id `8e3d8a9f…55fe`, seed 102.
+**Carrossel: 3/8 imagens prontas** (1=oficial B, 2, 3). Falta: imagens 4–8.
+
+### MC57.8 — imagem 4 (padrão B, pose adaptada) + fix sem custo
+4ª imagem: GUTO à esquerda apresenta um **ar-condicionado split** (display "22°C" + unidade
+externa com **ventilador**) e faz "joinha"; placa "PREMIUM AC UNIT". Prompt adaptado com trava
+de ventilador+2 textos. Resultado: GUTO fiel, **"22°C" e placa nítidos/estáticos**, mas o
+**ventilador girou uns graus**. Orçamento WAN esgotado (6/6) → corrigido **sem custo por ffmpeg**
+(sobreposição da região estática do ventilador do frame 0; diff pós-fix = 100% preto, sem costura).
+prompt_id `024efbf3…6db6`, seed 102. ⚠️ Nota: `reverse` do ffmpeg falhou por memória → boomerang
+feito via re-sequência de frames + `-threads 1`. **Carrossel: 4/8 prontas.** Imagens 5–8 exigem
+**recarga de créditos WAN**.
+
+### MC57.9 — imagem 5 (padrão B, pose adaptada)
+5ª imagem: GUTO segura um **laptop com o logo DESAFIOGUT**; fundo = martelo + 2 holofotes +
+**2 painéis "BIDDING" cheios de números** (maior risco de warping). 1 geração **extra
+autorizada** pelo operador (total 7). **Aprovado na 1ª geração:** GUTO fiel; **painéis BIDDING
+100% estáticos** (diff preto); **logo DESAFIOGUT legível** (só leve tilt natural do laptop, sem
+scramble); martelo/holofotes estáticos. Sem freeze necessário. prompt_id `a77da026…d60d`, seed 102.
+**Carrossel: 5/8 prontas** (1 oficial B, 2, 3, 4, 5). Faltam 6–8.
+
+### MC57.10 — imagem 6 (padrão B, pose adaptada)
+6ª imagem: GUTO à esquerda segura um **smartphone "MENOR LANCE ÚNICO"** e apresenta com a
+outra mão; fundo = **martelo em pedestal** (prop fixo). Crédito recarregado. **Aprovado na 1ª
+geração:** GUTO fiel; **texto do telefone nítido/legível** (mesmo no frame extremo, sem warp);
+**martelo+pedestal 100% estáticos** (diff preto); phone com tilt natural (é segurado). Sem freeze.
+prompt_id `6ef20078…a856`, seed 102. **Carrossel: 6/8 prontas** (1 oficial B, 2, 3, 4, 5, 6). Faltam 7–8.
+
+### MC57.11 — imagem 7 (padrão B, pose adaptada)
+7ª imagem: GUTO à esquerda com **martelo** numa mão, outra apresenta um **fogão inox**
+(2 displays "350"/"258", botões) + **microfone em pé**. **Aprovado na 1ª geração:** GUTO fiel;
+**fogão inox 100% estático** (diff preto — risco de reflexo evitado); microfone estático; displays
+estáveis no clip (levemente mais suaves que a fonte, legíveis). Sem freeze. prompt_id `7183984e…7ebb`,
+seed 102. **Carrossel: 7/8 prontas** (1 oficial B, 2, 3, 4, 5, 6, 7). Falta só a **imagem 8**.
+
+### MC57.12 — imagem 8 (finale celebração) + FECHO DO CONJUNTO
+8ª imagem: GUTO ao centro **celebrando** (braços erguidos); fundo = título dourado
+**"Arremate Já!"** + confete + **Smart TV (grade de apps)** + geladeira + lavadora + micro-ondas
+(cena mais texto-pesada). Versão conservadora. **Aprovado pelo operador:** GUTO fiel; **título
+nítido**; eletrodomésticos e logos da TV **estáticos** (prioridade de proteção de texto cumprida);
+⚠️ confete derivou (WAN não congela; aceite como natural na celebração). prompt_id `6d15fa85…c55e`, seed 102.
+
+> ✅ **CONJUNTO COMPLETO — 8/8 imagens GUTO animadas** (padrão B, WAN 2.6 i2v, seed 102, loop boomerang 10s + webm).
+> Ficheiros `imagem{1..8}_*` + `GUTO_ANIMADO_PADRAO.mp4` em `Desktop\GUTO-ANIMADO GLASS DASHBOARD\`.
+> Freeze ffmpeg aplicado onde prop fixo vazou (img4 ventilador). **Próximo: integração no app (MC58)** —
+> copiar loops/webm para `public/`, trocar o carrossel estático (design brief MC57.4) por vídeos, `prefers-reduced-motion`, validação R4 375/1440.
+
+### MC58 — PLANO de integração (imagem 1) no Glass do Dashboard (planeamento, R10)
+Plano completo: `Desktop\MC58-PLANO-EXECUCAO.md`; levantamento: `GUTO-ANIMADO GLASS DASHBOARD\notas_mc58.txt`.
+**Ponto de integração:** `Dashboard.jsx` L129-168 (`<motion.header className="gut-glass-standard">`,
+bloco Saudação) — trocar o `<img guto-bemvindo.png>` (L137) por `<CarrosselGUTO/>` + divisor +
+texto + logo (flex row horizontal, referência C3). **Reuso:** padrão `<video>` do
+`GutoSpritePlayer.jsx` (lição MC39.9: sem canvas/blend-mode/filter). **⚠️ Risco central:** os
+vídeos MC57.5-57.12 têm **fundo branco opaco**. **Decisão D1 (operador): Opção B — GUTO
+transparente a flutuar.** ⚠️ Exige **pré-processar os vídeos para ALFA** (§1B do plano): rembg
+per-frame → VP9-alfa (0 créditos, método MC57.4; cuidado geladeira/inox) OU green-screen regen
+(+8 gerações WAN). **Operador: "usar o mesmo padrão do GUTO animado que o app já tem"** →
+formato-alvo = o `idle.webm` do app (ffprobe: **VP9 512², yuv420p + ALPHA_MODE=1**, ~600KB); logo
+os novos assets = `-c:v libvpx-vp9 -pix_fmt yuva420p`, **512²**, em `public/assets/guto/animations/`,
+e **reusar o primitivo `GutoVideo`** do `GutoSpritePlayer.jsx` (sem blend/filter, lição MC39.9).
+Escopo MC58.1 = **só imagem 1** (MVP), extensível às 8 (MC58.2). Nada codado neste MC (R10).
+
+### MC58.1 — EXECUTADO ✅ (Glass animado GUTO img1 + logo, em produção)
+Branch `feat/mc58.1-execucao-carrossel` · deploy prod live (`silly-stardust-ca71bc.netlify.app`).
+- **Gate §1B (alfa) — RESOLVIDO sem rembg.** O vídeo `1.mp4` (`GUTO animado oficial\`, 960² h264
+  30fps 300 frames) é uma **cena completa** (GUTO + TV "Menor Lance Único" + gavel + pódio, fundo
+  BRANCO). Decisão do operador: **cena inteira, consertada** (não só o personagem). rembg (u2net)
+  **descartava o pódio/base de vidro** (recorte por saliência) → trocado por método **determinístico
+  cv2/scipy** (0 ML, ~50ms/frame): (1) flood-fill de bordas remove só o branco **conectado à moldura**
+  (preserva brancos internos = camisa/olhos do GUTO); (2) remoção do **vidro fosco branco** só na
+  região direita (protege os brancos do GUTO à esquerda) → vidro fica transparente (navy); (3)
+  **downscale premultiplicado 960²→512²** + decontaminação (RGB dos px transparentes→preto) + erode
+  2px → **elimina o halo branco** da borda. Feedback do operador atendido: sem fundo/halo branco,
+  **brancos da roupa e dos olhos preservados**.
+- **Asset:** `public/assets/guto/carrossel/guto-1.webm` (VP9 `yuva420p`/**ALPHA_MODE=1**, 512², 30fps,
+  **1.16MB**, paridade `idle.webm`) + poster `guto-1.png` (1º frame alfa, Safari fallback).
+  `logo-uniao-trabalho.png` otimizado **2.15MB→57KB** (480×320, transparente).
+- **`CarrosselGUTO.jsx`** (novo): `<video>` simples (lição MC39.9 — sem canvas/blend/filter),
+  `useReducedMotion` congela 1º frame, fallback poster, dimensões reservadas (zero CLS). MVP 1 vídeo,
+  prop `slides` pronta p/ carrossel 2–8 (MC58.2).
+- **`Dashboard.jsx`** L128-168: saudação de **vertical → horizontal** `[vídeo | divisor ouro |
+  saudação | logo]`; divisor oculto no mobile; tipografia reduzida a pedido do operador
+  (h1 1.15rem / 0.88rem mobile; p 0.78 / 0.68). Preserva `isMobile`/`COR`/`motion.header`/texto
+  condicional. Não toca web3/AppContext → **compra de senhas e leitura de saldo inalteradas**.
+- **Validação:** build verde; MCP 1440 + 375 (público local + logado prod) sem overflow/corte;
+  assets 200 em prod (webm `video/webm` immutable, logo `image/png`); console sem erros novos;
+  saldo R$2.00/3 senhas renderizam em prod (sem regressão). Screenshots em
+  `GUTO-ANIMADO GLASS DASHBOARD\` (`val-`/`prod-mc58-{375,1440}.png`). Relatório:
+  `Desktop\MC58.1-RELATORIO.md`.
+- **Próximo (MC58.2):** estender às imagens 2–8 (crossfade, 1 ativo + preload, `frontend-slides`).
+

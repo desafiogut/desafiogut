@@ -138,11 +138,12 @@ export default function Dashboard() {
             Texto ao LADO do vídeo (não sobreposto) — legibilidade histórica. */}
         <div style={{
           display: "flex",
-          alignItems: "center",
-          gap: isMobile ? "0.75rem" : "1.25rem",
+          flexWrap: "nowrap",
+          alignItems: "flex-start",
+          gap: isMobile ? "0.5rem" : "1.25rem",
         }}>
           {/* GUTO animado (imagem 1) a flutuar na glass */}
-          <CarrosselGUTO size={isMobile ? 118 : 196} />
+          <CarrosselGUTO size={isMobile ? 96 : 196} />
 
           {/* Divisor dourado — oculto no mobile (§2.1) */}
           {!isMobile && (
@@ -155,8 +156,14 @@ export default function Dashboard() {
             }} />
           )}
 
-          {/* Saudação — coluna central legível, ao lado do vídeo */}
-          <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
+          {/* Saudação — coluna central legível, ao lado do vídeo.
+              Empurrada para baixo (GUTO/logo em cima) → preenchimento harmonioso do glass. */}
+          <div style={{
+            flex: 1,
+            minWidth: 0,
+            textAlign: "center",
+            marginTop: isMobile ? "0.6rem" : "1.75rem",
+          }}>
             <h1 style={{
               margin: "0 0 0.35rem",
               fontSize: isMobile ? "0.88rem" : "1.15rem",
@@ -185,7 +192,7 @@ export default function Dashboard() {
             src="/assets/guto/logo-uniao-trabalho.png"
             alt="Grupo União e Trabalho"
             style={{
-              height: isMobile ? 68 : 150,
+              height: isMobile ? 50 : 150,
               width: "auto",
               objectFit: "contain",
               flexShrink: 0,
