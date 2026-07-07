@@ -134,71 +134,58 @@ export default function Dashboard() {
           padding: isMobile ? "1.25rem 1rem" : "1.5rem",
         }}
       >
-        {/* MC58.1 — layout HORIZONTAL: [ vídeo GUTO | divisor | saudação | logo ].
-            Texto ao LADO do vídeo (não sobreposto) — legibilidade histórica. */}
+        {/* MC58.1 — proporção da REFERÊNCIA (REFERENCIA DE PROPORÇOES GUTO E LOGO):
+            linha de cima = GUTO (esq) + logo (dir), larguras semelhantes, logo
+            centrado na vertical; a saudação fica ABAIXO de ambos, horizontal
+            (NÃO entre o GUTO e o logo). */}
         <div style={{
           display: "flex",
           flexWrap: "nowrap",
-          alignItems: "flex-start",
-          gap: isMobile ? "0.5rem" : "1.25rem",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: isMobile ? "1.25rem" : "2.5rem",
+          marginBottom: isMobile ? "0.75rem" : "1rem",
         }}>
           {/* GUTO animado (imagem 1) a flutuar na glass */}
-          <CarrosselGUTO size={isMobile ? 96 : 196} />
+          <CarrosselGUTO size={isMobile ? 116 : 176} />
 
-          {/* Divisor dourado — oculto no mobile (§2.1) */}
-          {!isMobile && (
-            <div aria-hidden="true" style={{
-              width: 1,
-              height: 150,
-              flexShrink: 0,
-              background: `linear-gradient(to bottom, transparent, ${COR.gold}, transparent)`,
-              opacity: 0.5,
-            }} />
-          )}
-
-          {/* Saudação — coluna central legível, ao lado do vídeo.
-              Empurrada para baixo (GUTO/logo em cima) → preenchimento harmonioso do glass. */}
-          <div style={{
-            flex: 1,
-            minWidth: 0,
-            textAlign: "center",
-            marginTop: isMobile ? "0.6rem" : "1.75rem",
-          }}>
-            <h1 style={{
-              margin: "0 0 0.35rem",
-              fontSize: isMobile ? "0.88rem" : "1.15rem",
-              fontWeight: "900", color: COR.text,
-              lineHeight: 1.2,
-              wordBreak: "break-word",
-            }}>
-              {isConnected
-                ? `Olá, ${userLabel || (address ? address.slice(0, 8) + "..." : "Participante")}!`
-                : "Bem-vindo ao DesafioGUT!"}
-            </h1>
-            <p style={{
-              margin: 0,
-              color: COR.muted,
-              fontSize: isMobile ? "0.68rem" : "0.78rem",
-              lineHeight: 1.4,
-            }}>
-              {isConnected
-                ? "Acompanhe seus dados e acesse o mercado de lances."
-                : "Faça login para participar e dar seu lance agora."}
-            </p>
-          </div>
-
-          {/* Logo Grupo União e Trabalho — à direita */}
+          {/* Logo Grupo União e Trabalho — largura ~igual à do GUTO (referência) */}
           <img
             src="/assets/guto/logo-uniao-trabalho.png"
             alt="Grupo União e Trabalho"
             style={{
-              height: isMobile ? 50 : 150,
+              height: isMobile ? 76 : 116,
               width: "auto",
               objectFit: "contain",
               flexShrink: 0,
               display: "block",
             }}
           />
+        </div>
+
+        {/* Saudação — horizontal, ABAIXO do GUTO e do logo, largura total */}
+        <div style={{ textAlign: "center" }}>
+          <h1 style={{
+            margin: "0 0 0.35rem",
+            fontSize: isMobile ? "1rem" : "1.3rem",
+            fontWeight: "900", color: COR.text,
+            lineHeight: 1.2,
+            wordBreak: "break-word",
+          }}>
+            {isConnected
+              ? `Olá, ${userLabel || (address ? address.slice(0, 8) + "..." : "Participante")}!`
+              : "Bem-vindo ao DesafioGUT!"}
+          </h1>
+          <p style={{
+            margin: 0,
+            color: COR.muted,
+            fontSize: isMobile ? "0.75rem" : "0.85rem",
+            lineHeight: 1.4,
+          }}>
+            {isConnected
+              ? "Acompanhe seus dados e acesse o mercado de lances."
+              : "Faça login para participar e dar seu lance agora."}
+          </p>
         </div>
       </motion.header>
 
