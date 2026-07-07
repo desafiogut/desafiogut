@@ -1764,3 +1764,21 @@ Branch `feat/mc58.1-execucao-carrossel` · deploy prod live (`silly-stardust-ca7
   `Desktop\MC58.1-RELATORIO.md`.
 - **Próximo (MC58.2):** estender às imagens 2–8 (crossfade, 1 ativo + preload, `frontend-slides`).
 
+### MC58.3 — EXECUTADO ✅ (carrossel completo 1–8 com crossfade, em produção)
+Branch `feat/mc58.3-execucao-migracao-carrossel` (de `e81169c`) · deploy prod live. Plano: `Desktop\
+MC58.2-PLANO-MIGRACAO.md`. Validação pré-migração aprovada: `GUTO-ANIMADO GLASS DASHBOARD\
+validacao-pre-migracao\`.
+- **Alfa das 7 imagens (2–8)** pelo **método universal**: flood-fill de bordas + downscale
+  premultiplicado (`finalize_universal.py` usa `whitecut` v1), **SEM** o passo do vidro fosco da
+  img1 (esse apagaria os eletrodomésticos). Independente da posição do GUTO (esq/dir/centro).
+  Inox (2,3,4,7) intacto; **imagem 5 incluída**; **confete da img 8 aceite** (decisão do operador).
+  `guto-2..8.webm` VP9-alfa 512² (ALPHA_MODE=1, 442KB–1.7MB) + posters. Total ~8.3MB.
+- **`CarrosselGUTO.jsx`** evolui para carrossel: **crossfade lê a duração real** de cada vídeo
+  (5s ou 10s) e cruza no **ponto médio**; o próximo arranca do 1º frame (pose neutra do boomerang).
+  **Máx 2 `<video>` vivos** (ativo + próximo), `React.memo`, reduced-motion estático, poster fallback.
+  `<video>` simples (MC39.9). **Dashboard inalterado** (o slot já existia do MC58.1; default = 8 slides).
+- **Validação:** build verde; MCP 375/1440 (carrossel cicla, crossfade confirmado no DOM — sempre 2
+  vídeos, próximo em t=0; alfa limpo; sem overflow); prod assets 200; console sem erros novos; saldo
+  R$2.00/3 senhas em prod → **sem regressão** (header não toca web3/AppContext). Relatório:
+  `Desktop\MC58.3-RELATORIO.md`.
+
