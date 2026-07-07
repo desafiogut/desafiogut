@@ -6,6 +6,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import FimLeilaoOverlay from "../components/FimLeilaoOverlay.jsx";
 import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
+import CarrosselGUTO from "../components/CarrosselGUTO.jsx";
 import StatTile from "../components/StatTile.jsx";
 import EdicaoCard from "../components/EdicaoCard.jsx";
 import EdicaoBanner from "../components/EdicaoBanner.jsx";
@@ -133,37 +134,64 @@ export default function Dashboard() {
           padding: isMobile ? "1.25rem 1rem" : "1.5rem",
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: isMobile ? "0.75rem" : "1rem" }}>
+        {/* MC58.1 — layout HORIZONTAL: [ vídeo GUTO | divisor | saudação | logo ].
+            Texto ao LADO do vídeo (não sobreposto) — legibilidade histórica. */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: isMobile ? "0.75rem" : "1.25rem",
+        }}>
+          {/* GUTO animado (imagem 1) a flutuar na glass */}
+          <CarrosselGUTO size={isMobile ? 118 : 196} />
+
+          {/* Divisor dourado — oculto no mobile (§2.1) */}
+          {!isMobile && (
+            <div aria-hidden="true" style={{
+              width: 1,
+              height: 150,
+              flexShrink: 0,
+              background: `linear-gradient(to bottom, transparent, ${COR.gold}, transparent)`,
+              opacity: 0.5,
+            }} />
+          )}
+
+          {/* Saudação — coluna central legível, ao lado do vídeo */}
+          <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
+            <h1 style={{
+              margin: "0 0 0.35rem",
+              fontSize: isMobile ? "0.88rem" : "1.15rem",
+              fontWeight: "900", color: COR.text,
+              lineHeight: 1.2,
+              wordBreak: "break-word",
+            }}>
+              {isConnected
+                ? `Olá, ${userLabel || (address ? address.slice(0, 8) + "..." : "Participante")}!`
+                : "Bem-vindo ao DesafioGUT!"}
+            </h1>
+            <p style={{
+              margin: 0,
+              color: COR.muted,
+              fontSize: isMobile ? "0.68rem" : "0.78rem",
+              lineHeight: 1.4,
+            }}>
+              {isConnected
+                ? "Acompanhe seus dados e acesse o mercado de lances."
+                : "Faça login para participar e dar seu lance agora."}
+            </p>
+          </div>
+
+          {/* Logo Grupo União e Trabalho — à direita */}
           <img
-            src="/assets/guto/custom/guto-bemvindo.png"
-            alt="GUTO feliz — corpo inteiro"
-            width={isMobile ? 80 : 120}
-            height={isMobile ? 80 : 120}
-            style={{ imageRendering: "auto", marginBottom: "0.75rem" }}
+            src="/assets/guto/logo-uniao-trabalho.png"
+            alt="Grupo União e Trabalho"
+            style={{
+              height: isMobile ? 68 : 150,
+              width: "auto",
+              objectFit: "contain",
+              flexShrink: 0,
+              display: "block",
+            }}
           />
-        </div>
-        <div>
-          <h1 style={{
-            margin: "0 0 0.35rem",
-            fontSize: isMobile ? "1.3rem" : "1.6rem",
-            fontWeight: "900", color: COR.text,
-            lineHeight: 1.2,
-            wordBreak: "break-word",
-          }}>
-            {isConnected
-              ? `Olá, ${userLabel || (address ? address.slice(0, 8) + "..." : "Participante")}!`
-              : "Bem-vindo ao DesafioGUT!"}
-          </h1>
-          <p style={{
-            margin: 0,
-            color: COR.muted,
-            fontSize: isMobile ? "0.82rem" : "0.92rem",
-            lineHeight: 1.4,
-          }}>
-            {isConnected
-              ? "Acompanhe seus dados e acesse o mercado de lances."
-              : "Faça login para participar e dar seu lance agora."}
-          </p>
         </div>
       </motion.header>
 
