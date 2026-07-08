@@ -113,6 +113,24 @@ export async function verificarCoordenacao() {
  *
  * @returns {{ txHash: string, blockNumber: number, gasUsed: bigint }}
  */
+/**
+ * MC59.3 — lê o receipt de uma tx com retry curto. Um throw transitório do
+ * provider (RPC intermitente) NÃO deve concluir "estado desconhecido" na 1ª
+ * tentativa; poll breve dá chance de recuperar. Retorna o receipt ou null.
+ */
+async function lerReceiptComRetry(provider, txHash, tentativas = 3, delayMs = 300) {
+  for (let i = 0; i < tentativas; i++) {
+    try {
+      const r = await provider.getTransactionReceipt(txHash);
+      if (r) return r; // status 0 ou 1 → decisão definitiva
+    } catch (rcErr) {
+      console.warn(`[contract] getTransactionReceipt falhou (tentativa ${i + 1}/${tentativas}):`, rcErr?.message);
+    }
+    if (i < tentativas - 1) await new Promise((res) => setTimeout(res, delayMs));
+  }
+  return null; // ainda sem receipt → estado desconhecido (caller trata como pendente)
+}
+
 export async function creditarSenhas(endereco, qtd) {
   const { contract, provider, address } = await getInstance();
   if (!(await verificarCoordenacao())) {
@@ -131,9 +149,7 @@ export async function creditarSenhas(endereco, qtd) {
     // (atribuição por tx-hash, não por saldo agregado) para não induzir reembolso
     // falso nem double-benefit sob concorrência no mesmo endereço.
     if (!txHash) throw waitErr; // sem hash confiável → nada a verificar
-    let receipt = null;
-    try { receipt = await provider.getTransactionReceipt(txHash); }
-    catch (rcErr) { console.warn("[contract] getTransactionReceipt falhou:", rcErr?.message); }
+    const receipt = await lerReceiptComRetry(provider, txHash);
 
     if (receipt && Number(receipt.status) === 1) {
       // A tx confirmou apesar do erro no wait → sucesso REAL.

@@ -11,9 +11,16 @@ const TX_HASH = "0xdeadbeefcafebabe000000000000000000000000000000000000000000000
 
 let waitBehavior = "ok";  // "ok" | "throw"
 let receiptResult = null; // retorno de getTransactionReceipt
+let receiptThrowsN = 0;   // nº de vezes que getTransactionReceipt lança antes de devolver (RPC transitório)
 
 class FakeWallet { constructor(_pk, provider) { this.address = COORD_ADDR; this.provider = provider; } async signTypedData() { return "0xsig"; } }
-class FakeProvider { constructor(url) { this.url = url; } async getTransactionReceipt() { return receiptResult; } }
+class FakeProvider {
+  constructor(url) { this.url = url; }
+  async getTransactionReceipt() {
+    if (receiptThrowsN > 0) { receiptThrowsN--; throw new Error("RPC blip transitório"); }
+    return receiptResult;
+  }
+}
 class FakeContract {
   constructor(addr, abi, runner) { this.address = addr; this.runner = runner; }
   async coordenacao() { return COORD_ADDR; }
@@ -38,7 +45,7 @@ process.env.COORDENACAO_PRIVATE_KEY = "0xchave-de-teste";
 const ADDR = "0xABCdef0000000000000000000000000000000001";
 let contract;
 before(async () => { contract = await import("../_lib/contract.mjs"); });
-beforeEach(() => { waitBehavior = "ok"; receiptResult = null; });
+beforeEach(() => { waitBehavior = "ok"; receiptResult = null; receiptThrowsN = 0; });
 
 test("B-2(reg): wait OK → sucesso normal (txHash do receipt)", async () => {
   const r = await contract.creditarSenhas(ADDR, 3);
@@ -64,4 +71,13 @@ test("B-2: wait falha e receipt AUSENTE (null) → lança TX_PENDENTE (não reem
   waitBehavior = "throw";
   receiptResult = null;
   await assert.rejects(() => contract.creditarSenhas(ADDR, 3), (e) => e.code === "TX_PENDENTE" && e.txHash === TX_HASH);
+});
+
+test("B-2: getTransactionReceipt lança 1x (RPC transitório) e depois CONFIRMA → sucesso via retry", async () => {
+  waitBehavior = "throw";
+  receiptThrowsN = 1; // 1ª leitura do receipt lança; o retry recupera
+  receiptResult = { status: 1, hash: TX_HASH, blockNumber: 102, gasUsed: 21000n };
+  const r = await contract.creditarSenhas(ADDR, 3);
+  assert.equal(r.txHash, TX_HASH);
+  assert.equal(r.blockNumber, 102);
 });

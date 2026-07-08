@@ -234,7 +234,8 @@ export default async (req) => {
       console.error("[comprar-senhas] tx pendente/desconhecida — NÃO reembolsa (reconciliação):", {
         endereco, qtd, valorCentavos, txHash: err.txHash,
       });
-      captureSecurityAlert("comprar_senhas_tx_pendente", { endereco, qtd, txHash: err.txHash }).catch(() => {});
+      // level "error": é dinheiro do usuário preso até reconciliação.
+      captureSecurityAlert("comprar_senhas_tx_pendente", { endereco, qtd, txHash: err.txHash }, "error").catch(() => {});
       return jsonError(502, "credito_pendente",
         "Crédito on-chain pendente de confirmação — não reembolsado. Reconciliação em andamento.",
         { txHash: err.txHash, reembolsado: false, voucher_preservado: !!voucherValido });
