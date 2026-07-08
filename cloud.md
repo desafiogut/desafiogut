@@ -1782,3 +1782,30 @@ validacao-pre-migracao\`.
   R$2.00/3 senhas em prod → **sem regressão** (header não toca web3/AppContext). Relatório:
   `Desktop\MC58.3-RELATORIO.md`.
 
+### MC59 — Revisão técnica profunda pré-mainnet (DIAGNÓSTICO, R1: zero código)
+Branch `feat/mc59-revisao-tecnica` (docs-only). Metodologia: **Opus 4.8 + ECC**
+(skills `ai-first-engineering` + `verification-loop`; revisão manual profunda no
+papel de `/code-review`+`/security-scan`; `/quality-gate` = aferição R1-R7).
+Deliverables: `Desktop\MC59-RELATORIO.txt`, `Desktop\MC59-RELATORIO-BRUTO.txt`,
+`desafio-gut/docs/MC59-relatorio.txt`.
+- **Escopo profundo:** `contracts/Leilao.sol` (100%), 8 libs críticas
+  (signer/contract/credito/saldoRs/jwt/rate-limiter/mp-signature), `webhook-mercadopago`
+  + `comprar-senhas`, e o caminho de lance do frontend (`web3.js`). ~30 functions e
+  a maioria do frontend ficam para uma **onda 2** automatizada.
+- **20 achados** (proposta, pendente validação humana — Pilar 3): **1 CRÍTICO,
+  4 ALTOS, 6 MÉDIOS, 8 BAIXOS, 1 INFO**. Veredito: 🔴 **NÃO liberar mainnet**
+  até fechar o crítico + 4 altos.
+- **🔴 CRÍTICO (B-1):** `signer.mjs:41-45` força backend `biconomy` em
+  `NETWORK_STAGE=mainnet`, mas o bundler Biconomy está morto (MC52.1) e
+  `assertChaveBrutaAusenteEmMainnet` (`signer.mjs:64-95`) proíbe a chave bruta —
+  que a arquitetura viva (MC56 local-key/EOA) exige. Setar mainnet hoje quebra
+  crédito de senhas e PIX. Decisão de arquitetura é pré-requisito do flip.
+- **🟡 ALTOS:** `tx.wait(1)` síncrono no handler (timeout mainnet, `contract.mjs:122`);
+  chainId/contrato Sepolia hardcoded no frontend + fallback p/ contrato antigo
+  (`web3.js:26,32`, drift MC56); crédito/reembolso de saldo R$ **não atómicos**
+  vs. débito atómico (`saldoRs.mjs:50-106,178-192` — lost update); HMAC de webhook
+  ainda **fail-open** (`MP_WEBHOOK_SECRET` não setado, MC39.17).
+- **Positivos confirmados:** contrato sem custódia de fundos (sem reentrância),
+  débito de saldo atómico (CAS), assinatura centralizada, MFA/IDOR/kill-switch.
+- Sem alterações de código. Plano de ação priorizado (P0/P1/P2) no relatório final.
+
