@@ -1809,3 +1809,26 @@ Deliverables: `Desktop\MC59-RELATORIO.txt`, `Desktop\MC59-RELATORIO-BRUTO.txt`,
   débito de saldo atómico (CAS), assinatura centralizada, MFA/IDOR/kill-switch.
 - Sem alterações de código. Plano de ação priorizado (P0/P1/P2) no relatório final.
 
+### MC59.1 — Correção do B-1 (signer.mjs) com loop de validação ✅ (B-1 resolvido)
+Branch `feat/mc59.1-correcao-signer` (de `feat/mc59-revisao-tecnica`). Stack:
+Opus 4.8 + ECC (ai-first-engineering, tdd-workflow, verification-loop,
+santa-method). **Escopo R1: produção só em `_lib/signer.mjs`.** Deliverables:
+`Desktop\MC59.1-RELATORIO.txt`, `Desktop\MC59.1-notas.txt`, teste
+`_tests/mc591-signer-localkey-mainnet.test.mjs`, `security_audit.md` (secção MC59.1).
+- **Correção (Opção B, minimal):** `assertChaveBrutaAusenteEmMainnet()` permite
+  `COORDENACAO_PRIVATE_KEY` em mainnet **só** com `SIGNER_BACKEND=local-key`
+  explícito (opt-in EOA/MC56; `console.warn` de hot key, não `throw`). Default
+  mainnet segue `biconomy`; chave bruta **acidental** continua rejeitada. A
+  "Alteração 1" do rascunho (trocar o default) foi DESCARTADA por ser redundante
+  e um downgrade de segurança (hot-key silenciosa).
+- **TDD:** 2 testes RED→GREEN (novo comportamento) + 3 regressões de segurança
+  GREEN. **Validação:** node --check limpo; signer 27/27; integração+dinheiro
+  18/18; build verde; secret-scan limpo. **Mainnet-simulado:** signer assina
+  EIP-191+EIP-712 com recuperação de EOA correta (prova sem tx real).
+- **Revisão adversarial (santa-method):** ECC security-reviewer → **NICE**, sem
+  findings CRIT/HIGH/MED (fail-closed, guards biconomy intactos, sem vazamento).
+- **Veredito honesto (diverge do R8):** B-1 ✅ desbloqueado, mas **NÃO** "liberado
+  para mainnet" — B-2 (tx.wait síncrono), B-4 (chainId hardcoded/drift), C-1
+  (crédito não-atómico), D-1 (webhook fail-open) **permanecem abertos**. Tx
+  on-chain real e flip = operador (segredos + envs). Próximo: MC59.2+ p/ os 4 altos.
+

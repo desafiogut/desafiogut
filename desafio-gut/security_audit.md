@@ -3,6 +3,37 @@
 > PILAR 1 (SUPERPERS): nenhum código entra em produção sem passar por este ficheiro.
 > Branch `feat/mc28.1` · Abordagem A2 (Compromisso Cego + Key-Per-Bid) · só `NETWORK_STAGE === 'mainnet'`.
 
+---
+
+## MC59.1 — Correção do B-1 (signer.mjs): local-key legítimo em mainnet (Opção B)
+
+> Branch `feat/mc59.1-correcao-signer` · alteração de produção APENAS em
+> `_lib/signer.mjs` · revisão adversarial (santa-method) = **NICE (aprovado)**.
+
+**Mudança.** `assertChaveBrutaAusenteEmMainnet()` deixa de fazer `throw`
+incondicional quando há `COORDENACAO_PRIVATE_KEY` em mainnet: passa a **permitir**
+a chave bruta em mainnet **somente** quando `SIGNER_BACKEND=local-key` foi
+escolhido **explicitamente** (opt-in; arquitetura viva MC56/EOA, após o bundler
+Biconomy morrer — MC52.1). Emite `console.warn` (hot key). Em qualquer outro
+backend (default/biconomy) o bloqueio permanece.
+
+**Modelo de ameaça / decisão.**
+| Item | Avaliação |
+|------|-----------|
+| Hot-key acidental em mainnet | MITIGADO — default mainnet continua `biconomy`; local-key exige `SIGNER_BACKEND` literal. Valores malformados caem em biconomy (**fail-closed**). |
+| Vazamento da chave em log | NÃO — `console.warn` é texto estático; não interpola a chave nem o endereço. |
+| Guards biconomy (KMS/BUNDLER) | PRESERVADOS — nenhum check tocado. |
+| Superfície de ataque | Inalterada — quem controla `SIGNER_BACKEND` já teria de controlar `COORDENACAO_PRIVATE_KEY` (já era verdade). |
+| Impacto de compromisso da chave | Cunhar senhas / definir vencedor (o contrato NÃO custodia ETH/tokens de terceiros). Mitigação operacional: EOA só-gás, rotação, monitor on-chain. |
+
+**Validação.** node --check limpo; suíte signer 27/27; integração+dinheiro 18/18;
+build verde; secret-scan do diff limpo; mainnet-simulado prova assinatura
+EIP-191+EIP-712 com recuperação de EOA correta. Tx on-chain real fica para o
+OPERADOR (segredos). **B-1 resolvido**; B-2/B-4/C-1/D-1 do MC59 permanecem abertos
+(não liberam mainnet sozinhos). Relatório: `Desktop\MC59.1-RELATORIO.txt`.
+
+---
+
 ## 1. Modelo de ameaça resolvido
 
 | ID | Risco (MC28.txt) | Mitigação MC28.1 |
