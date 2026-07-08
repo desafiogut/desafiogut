@@ -12,6 +12,8 @@ mock.module("../_lib/saldoRs-store.mjs", {
   namedExports: {
     getSaldo:   async (id) => saldoMem.get(String(id)) ?? null,
     setSaldo:   async (id, payload) => { saldoMem.set(String(id), payload); },
+    // MC59.3 — INSERT..DO NOTHING (só grava se ausente).
+    inserirSaldoSeAusente: async (id, payload) => { if (!saldoMem.has(String(id))) saldoMem.set(String(id), payload); },
     // CAS atômico simulado (MC39.17.2 B-P1-3): só troca se o saldo atual ainda
     // for o valor esperado — espelha o UPDATE … WHERE payload->>centavos=$ do Postgres.
     casSaldo:   async (id, expected, payload) => {

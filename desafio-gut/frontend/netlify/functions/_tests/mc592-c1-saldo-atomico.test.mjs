@@ -29,6 +29,8 @@ mock.module("../_lib/saldoRs-store.mjs", {
       return snap;
     },
     setSaldo: async (id, payload) => { mem.set(String(id), payload); },
+    // MC59.3 — INSERT..DO NOTHING (só grava se ausente).
+    inserirSaldoSeAusente: async (id, payload) => { if (!mem.has(String(id))) mem.set(String(id), payload); },
     casSaldo: async (id, expected, payload) => {
       const k = String(id);
       const curC = Math.floor(Number(mem.get(k)?.centavos ?? 0));

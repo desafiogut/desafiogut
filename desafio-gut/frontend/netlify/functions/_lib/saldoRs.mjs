@@ -14,7 +14,7 @@
 
 // MC36.1 — saldo R$ em Supabase (saldoRs-store). Escrita só Supabase (R11);
 // leitura com fallback para o Blob legado durante a transição (financeiro-fallback).
-import { getSaldo, setSaldo, casSaldo, getCredito, setCredito } from "./saldoRs-store.mjs";
+import { getSaldo, setSaldo, casSaldo, getCredito, setCredito, inserirSaldoSeAusente } from "./saldoRs-store.mjs";
 import { lerSaldoLegado, lerCreditoLegado } from "./financeiro-fallback.mjs";
 
 function chave(endereco) {
@@ -58,9 +58,10 @@ async function ajustarSaldoRsAtomico(ender, deltaCentavos, motivo = "ajuste") {
     // Garante que a linha existe no Supabase para o CAS ter alvo de UPDATE
     // (durante a transição MC36.1 o saldo pode existir só no Blob legado).
     try {
-      const existe = await getSaldo(ender);
-      if (existe == null) {
-        await setSaldo(ender, { centavos: saldoAntes, atualizadoEm: new Date().toISOString() });
+      // MC59.3 (follow-up C-1) — bootstrap ATÓMICO: INSERT..DO NOTHING não
+      // sobrescreve uma linha criada concorrentemente entre a leitura e a escrita.
+      if ((await getSaldo(ender)) == null) {
+        await inserirSaldoSeAusente(ender, { centavos: saldoAntes, atualizadoEm: new Date().toISOString() });
       }
     } catch (err) {
       return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
@@ -178,9 +179,10 @@ export async function debitarSaldoRs({ endereco, valorCentavos, motivo = "descon
     // Garante que a linha existe no Supabase para o CAS ter alvo de UPDATE
     // (durante a transição MC36.1 o saldo pode existir só no Blob legado).
     try {
-      const existe = await getSaldo(ender);
-      if (existe == null) {
-        await setSaldo(ender, { centavos: saldoAntes, atualizadoEm: new Date().toISOString() });
+      // MC59.3 (follow-up C-1) — bootstrap ATÓMICO: INSERT..DO NOTHING não
+      // sobrescreve uma linha criada concorrentemente entre a leitura e a escrita.
+      if ((await getSaldo(ender)) == null) {
+        await inserirSaldoSeAusente(ender, { centavos: saldoAntes, atualizadoEm: new Date().toISOString() });
       }
     } catch (err) {
       return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
