@@ -1,0 +1,118 @@
+================================================================================
+MC59.7 — APLICAÇÃO DA MIGRAÇÃO DA FILA (MC39.20) — RELATÓRIO + RUNBOOK DO OPERADOR
+DesafioGUT
+================================================================================
+Data...........: 2026-07-08
+Branch.........: feat/mc59.7-migracao-fila (APENAS documentação)
+Natureza.......: OPERACIONAL. O AGENTE NÃO aplicou a migração (ver §1).
+
+--------------------------------------------------------------------------------
+0. VEREDITO
+--------------------------------------------------------------------------------
+🟡 MIGRAÇÃO NÃO APLICADA PELO AGENTE — é ação do OPERADOR.
+✅ Corrigido um erro grave do plano (tabela `fila_credito` NÃO existe neste
+   codebase) e localizada a migração REAL, já versionada no repo. Runbook exato
+   abaixo para o operador aplicar e validar.
+
+--------------------------------------------------------------------------------
+1. POR QUE O AGENTE NÃO APLICOU
+--------------------------------------------------------------------------------
+• É DDL na base de PRODUÇÃO (Supabase) — ação outward-facing e difícil de reverter.
+• Aplicar exige credenciais de produção (access token/DATABASE_URL). Por regra do
+  projeto, o OPERADOR manuseia segredos; o agente não os puxa/usa.
+• O cabeçalho da própria migração diz: "Execução pelo OPERADOR (R12). NÃO aplicada
+  por código."
+• O Supabase CLI existe na máquina (v2.107.0), mas `supabase link`/`db push` exige
+  o token/senha do projeto — que é do operador.
+(Sem acesso ao banco, o agente também não pode fazer a verificação pré/pós — as
+ queries de validação estão no runbook para o operador executar.)
+
+--------------------------------------------------------------------------------
+2. CORREÇÃO DO PLANO — a tabela é `fila_tarefas`, NÃO `fila_credito`
+--------------------------------------------------------------------------------
+O plano propôs criar `public.fila_credito` (job_id/quantidade/tx_hash/...). ISSO
+ESTÁ ERRADO para este codebase:
+  • grep por "fila_credito" em todo o repo → NADA (a tabela não é referenciada).
+  • O worker (worker-credito.mjs) e a fila (_lib/fila.mjs) usam a tabela GENÉRICA
+    `fila_tarefas` (colunas tipo/payload jsonb/status/tentativas/…) + a RPC
+    `reservar_tarefas` (claim atômico FOR UPDATE SKIP LOCKED).
+  • Criar `fila_credito` produziria uma tabela ÓRFÃ (nada a usa) e NÃO criaria o
+    que o worker precisa → o async continuaria quebrado.
+
+A MIGRAÇÃO CORRETA JÁ EXISTE NO REPO (não precisa reconstruir):
+  desafio-gut/frontend/supabase/migrations/20260629_fila_tarefas.sql
+Ela cria: tabela `fila_tarefas`, índice parcial `idx_fila_elegiveis`, RLS
+(service_role), e a função `reservar_tarefas(p_limite INT)`.
+
+--------------------------------------------------------------------------------
+3. RUNBOOK DO OPERADOR — aplicar e validar
+--------------------------------------------------------------------------------
+PRÉ (verificar se já foi aplicada):
+  SELECT to_regclass('public.fila_tarefas') IS NOT NULL AS tabela_existe,
+         to_regprocedure('public.reservar_tarefas(int)') IS NOT NULL AS rpc_existe;
+  -- Se ambos true → já aplicada (pular). Se false → aplicar (abaixo).
+
+APLICAR (escolher UM método):
+  A) CLI (projeto linkado):
+     cd desafio-gut/frontend
+     supabase db push          # aplica as migrações versionadas ainda não aplicadas
+  B) SQL Editor (painel app.supabase.com → projeto DesafioGUT → SQL Editor):
+     Colar e executar o conteúdo de
+     desafio-gut/frontend/supabase/migrations/20260629_fila_tarefas.sql
+  (O script é idempotente: CREATE TABLE IF NOT EXISTS / CREATE OR REPLACE FUNCTION.)
+
+PÓS (validação — critérios de aceitação):
+  1) Tabela + colunas:
+     SELECT column_name, data_type FROM information_schema.columns
+     WHERE table_schema='public' AND table_name='fila_tarefas' ORDER BY ordinal_position;
+     -- esperado: id, tipo, payload, status, tentativas, max_tentativas,
+     --           agendado_para, ultimo_erro, criado_em, atualizado_em
+  2) Índice:
+     SELECT indexname FROM pg_indexes
+     WHERE schemaname='public' AND tablename='fila_tarefas';
+     -- esperado: idx_fila_elegiveis
+  3) RLS + policy:
+     SELECT relrowsecurity FROM pg_class WHERE relname='fila_tarefas';  -- true
+     SELECT polname FROM pg_policy WHERE polrelid='fila_tarefas'::regclass; -- "service_role total fila"
+  4) RPC:
+     SELECT to_regprocedure('public.reservar_tarefas(int)') IS NOT NULL; -- true
+  5) Smoke (opcional, seguro):
+     SELECT * FROM reservar_tarefas(1);  -- deve retornar 0 linhas (fila vazia), sem erro
+
+ATENÇÃO — validação do produto (não confundir com o plano):
+  ⚠️ O plano listava colunas job_id/quantidade/tx_hash e trigger
+  trg_fila_credito_updated_at — NADA disso se aplica. A tabela real é genérica
+  (payload JSONB carrega {endereco,qtd,valorCentavos,txHash,pedidoId}); a coluna de
+  timestamp é `atualizado_em` (sem trigger — atualizada em código).
+
+--------------------------------------------------------------------------------
+4. SEGURANÇA / IMPACTO DE APLICAR (com a flag OFF)
+--------------------------------------------------------------------------------
+Aplicar `fila_tarefas` SOZINHA é SEGURO e não altera o comportamento hoje:
+  • Enquanto CREDITO_ASSINCRONO=OFF (default), comprar-senhas NÃO enfileira nada.
+  • O cron fila-processor-scheduled passará a rodar reservar_tarefas a cada 5 min e
+    encontrará a fila VAZIA (no-op). Sem risco.
+Habilitar o async é um passo SEPARADO (não faz parte desta migração):
+  → CREDITO_ASSINCRONO=true em STAGING (Sepolia) → validar o 202 + polling vivo
+    (MC59.5/MC59.6) → só então produção.
+
+--------------------------------------------------------------------------------
+5. OBSERVAÇÃO — outras migrações no diretório
+--------------------------------------------------------------------------------
+Há 8 migrações versionadas em supabase/migrations/ (schema, cotas, saldo/troco/
+wallet, realtime, índices, materialized views, fila). O operador deve confirmar
+QUAIS já estão aplicadas em produção (histórico do Supabase / `supabase migration
+list`). Este MC trata só da `20260629_fila_tarefas` (pré-requisito do ADR).
+
+--------------------------------------------------------------------------------
+6. STATUS PARA O ADR
+--------------------------------------------------------------------------------
+Aplicada + validada a `fila_tarefas` → a fila deixa de ser INERTE e o worker
+(worker-credito.mjs, MC59.5) fica operante. Aí o par assíncrono
+(MC59.5 backend + MC59.6 frontend) pode ser LIGADO em staging.
+Gates de mainnet do MC60 NO-GO permanecem à parte (contrato na mainnet, chave
+rotacionada, segredos reais, gás na EOA).
+
+================================================================================
+FIM — MC59.7 (migração é ação do operador; runbook acima)
+================================================================================

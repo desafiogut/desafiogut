@@ -1964,3 +1964,20 @@ Branch `feat/mc59.6-frontend-polling`. Stack real: React/JSX (NÃO TS). Delivera
   CREDITO_ASSINCRONO=ON + migração da fila + validação viva do operador (Sepolia),
   além dos gates do MC60 NO-GO.
 
+### MC59.7 — migração da fila (MC39.20): 🟡 ação do OPERADOR (agente não aplicou)
+Branch `feat/mc59.7-migracao-fila` (doc-only). Deliverables:
+`Desktop\MC59.7-RELATORIO.txt`, `docs/MC59.7-migracao-fila.txt`.
+- **Correção grave do plano:** a tabela **NÃO é `fila_credito`** (não existe no
+  código). O worker/`_lib/fila.mjs` usam a tabela genérica **`fila_tarefas`** + RPC
+  **`reservar_tarefas`** (FOR UPDATE SKIP LOCKED). A migração **REAL já está no
+  repo**: `supabase/migrations/20260629_fila_tarefas.sql` (idempotente).
+- **Por que o agente não aplicou:** DDL em produção (Supabase) é outward-facing/
+  difícil de reverter e exige credenciais do operador; a própria migração diz
+  "Execução pelo OPERADOR (R12)". CLI existe (v2.107.0) mas `db push`/`link` precisa
+  do token do operador. Sem acesso ao banco, o agente também não faz a verificação.
+- **Runbook** (no relatório): pré-check (`to_regclass`/`to_regprocedure`), aplicar
+  (`supabase db push` OU colar a migração no SQL Editor), pós-validação (colunas,
+  `idx_fila_elegiveis`, RLS, RPC, smoke `reservar_tarefas(1)`=0 linhas).
+- **Impacto de aplicar com flag OFF:** SEGURO — comprar-senhas não enfileira; o cron
+  encontra a fila vazia (no-op). Habilitar o async é passo separado (staging).
+
