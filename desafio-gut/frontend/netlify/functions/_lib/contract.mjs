@@ -114,17 +114,40 @@ export async function verificarCoordenacao() {
  * @returns {{ txHash: string, blockNumber: number, gasUsed: bigint }}
  */
 export async function creditarSenhas(endereco, qtd) {
-  const { contract, address } = await getInstance();
+  const { contract, provider, address } = await getInstance();
   if (!(await verificarCoordenacao())) {
     throw new Error(`wallet ${address} não é coordenacao do contrato ${CONTRATO_ADDRESS}`);
   }
+  // A submissão (adicionarSenhas) pode lançar ANTES de ir à rede (nonce, saldo de
+  // gás, RPC): nesse caso não há txHash e o caller reembolsa com segurança.
   const tx = await contract.adicionarSenhas(endereco, qtd);
-  const receipt = await tx.wait(1);
-  return {
-    txHash: receipt.hash,
-    blockNumber: receipt.blockNumber,
-    gasUsed: receipt.gasUsed,
-  };
+  const txHash = tx?.hash; // hash disponível já na submissão (antes do wait)
+  try {
+    const receipt = await tx.wait(1);
+    return { txHash: receipt.hash, blockNumber: receipt.blockNumber, gasUsed: receipt.gasUsed };
+  } catch (waitErr) {
+    // MC59.3 (B-2): a tx FOI submetida (temos txHash) mas o wait falhou (timeout/
+    // RPC). NÃO propagar cegamente — re-verifica o receipt DESTA tx específica
+    // (atribuição por tx-hash, não por saldo agregado) para não induzir reembolso
+    // falso nem double-benefit sob concorrência no mesmo endereço.
+    if (!txHash) throw waitErr; // sem hash confiável → nada a verificar
+    let receipt = null;
+    try { receipt = await provider.getTransactionReceipt(txHash); }
+    catch (rcErr) { console.warn("[contract] getTransactionReceipt falhou:", rcErr?.message); }
+
+    if (receipt && Number(receipt.status) === 1) {
+      // A tx confirmou apesar do erro no wait → sucesso REAL.
+      return { txHash, blockNumber: receipt.blockNumber, gasUsed: receipt.gasUsed ?? 0n };
+    }
+    if (receipt && Number(receipt.status) === 0) {
+      const e = new Error(`tx ${txHash} revertida on-chain`);
+      e.code = "TX_REVERTED"; e.txHash = txHash; throw e;
+    }
+    // receipt ausente → estado DESCONHECIDO (a tx pode minerar depois). Sinaliza
+    // para o caller NÃO reembolsar cegamente (evita double-benefit) e reconciliar.
+    const e = new Error(`tx ${txHash} pendente/desconhecida após falha no wait`);
+    e.code = "TX_PENDENTE"; e.txHash = txHash; throw e;
+  }
 }
 
 /**

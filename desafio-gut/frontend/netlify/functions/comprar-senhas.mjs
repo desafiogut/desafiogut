@@ -219,18 +219,29 @@ export default async (req) => {
     resultadoOnChain = await creditarSenhas(endereco, qtd);
     senhasDepois = await lerSaldoSenhas(endereco);
   } catch (err) {
-    // MC59.2 — crédito on-chain falhou → REEMBOLSA (comportamento seguro para o
-    // usuário: nunca fica sem R$ e sem senhas).
+    // MC59.3 (B-2) — reembolso ATRIBUÍDO POR TX-HASH. creditarSenhas já
+    // re-verifica o receipt da tx específica: se confirmou, retorna sucesso (não
+    // cai aqui). Se caiu, o motivo determina a ação:
     //
-    // NOTA (revisão de segurança MC59.2): um guard "re-verificar saldoSenhas
-    // on-chain antes de reembolsar" foi TENTADO e REVERTIDO — ele comparava o
-    // saldo AGREGADO do endereço, então sob concorrência no MESMO endereço
-    // (duplo-clique/retry) podia atribuir o crédito de OUTRA requisição a esta e
-    // NÃO reembolsar → perda financeira ao usuário. O fix correto exige
-    // atribuição por tx-hash específico (capturar tx.hash antes do wait e checar
-    // o receipt dessa tx) ou serialização por endereço → fica para MC59.3.
+    //   • err.code === "TX_PENDENTE": a tx FOI submetida mas o estado on-chain é
+    //     desconhecido (pode minerar depois). NÃO reembolsar cegamente — seria
+    //     arriscar double-benefit (reembolso + crédito quando a tx minerar).
+    //     Sinaliza reconciliação (com o txHash) e responde pendente.
+    //   • demais casos (submissão falhou / TX_REVERTED): a tx NÃO creditou →
+    //     reembolsa com segurança. NUNCA usamos saldo agregado (evita a
+    //     atribuição cruzada entre requisições reprovada no MC59.2).
+    if (err?.code === "TX_PENDENTE") {
+      console.error("[comprar-senhas] tx pendente/desconhecida — NÃO reembolsa (reconciliação):", {
+        endereco, qtd, valorCentavos, txHash: err.txHash,
+      });
+      captureSecurityAlert("comprar_senhas_tx_pendente", { endereco, qtd, txHash: err.txHash }).catch(() => {});
+      return jsonError(502, "credito_pendente",
+        "Crédito on-chain pendente de confirmação — não reembolsado. Reconciliação em andamento.",
+        { txHash: err.txHash, reembolsado: false, voucher_preservado: !!voucherValido });
+    }
+
     console.error("[comprar-senhas] credito on-chain falhou — reembolsando R$:", {
-      endereco, qtd, valorCentavos, message: err?.message, code: err?.code,
+      endereco, qtd, valorCentavos, message: err?.message, code: err?.code, txHash: err?.txHash,
     });
     let reembolso = { ok: true };
     if (valorCentavos > 0) {
