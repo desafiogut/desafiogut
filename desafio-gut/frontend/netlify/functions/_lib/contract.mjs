@@ -131,14 +131,58 @@ async function lerReceiptComRetry(provider, txHash, tentativas = 3, delayMs = 30
   return null; // ainda sem receipt → estado desconhecido (caller trata como pendente)
 }
 
+/**
+ * MC59.4 — classifica um erro de SUBMISSÃO como colisão de nonce. A EOA da
+ * coordenação é única; sob concorrência (instâncias Lambda distintas) duas txs
+ * podem pegar o mesmo nonce pending → o perdedor recebe um destes no SEND.
+ */
+function ehErroDeNonce(err) {
+  const code = String(err?.code || "").toUpperCase();
+  const msg  = String(err?.shortMessage || err?.message || "").toLowerCase();
+  return (
+    code === "NONCE_EXPIRED" ||
+    code === "REPLACEMENT_UNDERPRICED" ||
+    /nonce too low|nonce has already been used|replacement transaction underpriced|already known/.test(msg)
+  );
+}
+
+/**
+ * MC59.4 — envia adicionarSenhas com retry APENAS em colisão de nonce. Um novo
+ * send busca um nonce pending fresco (ethers) → o perdedor da corrida reenvia com
+ * o próximo nonce em vez de falhar (o que forçaria reembolso + nova tentativa do
+ * usuário). Jitter de-correlaciona instâncias concorrentes. Erros NÃO-nonce
+ * (gás, RPC, revert de validação) propagam de imediato → o caller reembolsa com
+ * segurança (o send falhou antes do txHash). NÃO cobre serialização entre
+ * instâncias no caso geral — ver docs/runbook-credito-pendente.md (fix definitivo
+ * = confirmação assíncrona via fila MC39.20).
+ */
+async function enviarAdicionarSenhasComRetry(contract, endereco, qtd, tentativas = 3) {
+  let ultimoErro;
+  for (let i = 0; i < tentativas; i++) {
+    try {
+      return await contract.adicionarSenhas(endereco, qtd);
+    } catch (err) {
+      if (!ehErroDeNonce(err)) throw err; // erro não relacionado a nonce → propaga
+      ultimoErro = err;
+      console.warn(`[contract] colisão de nonce no send (tentativa ${i + 1}/${tentativas}) — reenviando:`, err?.shortMessage || err?.message);
+      if (i < tentativas - 1) {
+        const espera = 120 * (i + 1) + Math.floor(Math.random() * 120); // jitter
+        await new Promise((res) => setTimeout(res, espera));
+      }
+    }
+  }
+  throw ultimoErro; // esgotou: propaga o erro de nonce (sem txHash → reembolso seguro)
+}
+
 export async function creditarSenhas(endereco, qtd) {
   const { contract, provider, address } = await getInstance();
   if (!(await verificarCoordenacao())) {
     throw new Error(`wallet ${address} não é coordenacao do contrato ${CONTRATO_ADDRESS}`);
   }
   // A submissão (adicionarSenhas) pode lançar ANTES de ir à rede (nonce, saldo de
-  // gás, RPC): nesse caso não há txHash e o caller reembolsa com segurança.
-  const tx = await contract.adicionarSenhas(endereco, qtd);
+  // gás, RPC): nesse caso não há txHash e o caller reembolsa com segurança. MC59.4:
+  // colisões de nonce reenviam (novo nonce) em vez de falhar direto.
+  const tx = await enviarAdicionarSenhasComRetry(contract, endereco, qtd);
   const txHash = tx?.hash; // hash disponível já na submissão (antes do wait)
   try {
     const receipt = await tx.wait(1);
