@@ -1944,3 +1944,23 @@ tdd-workflow, verification-loop, security-review). Deliverables:
 - **Veredito:** ADR implementado e validado; mainnet mais próxima, mas a feature
   fica dormant até os pré-requisitos do operador (migração/frontend) + gates do MC60.
 
+### MC59.6 — frontend polling do 202 (crédito assíncrono) ✅ (dormant)
+Branch `feat/mc59.6-frontend-polling`. Stack real: React/JSX (NÃO TS). Deliverables:
+`Desktop\MC59.6-RELATORIO.txt`, `docs/MC59.6-frontend-polling.txt`, teste
+`src/lib/creditoPolling.test.mjs`.
+- **Completa o par do MC59.5:** o frontend passa a lidar com a resposta **202**.
+  `src/lib/creditoPolling.js` (lógica PURA, testada node:test 6/6) + hook
+  `useCreditoStatus` (polling on-chain do receipt via txHash, **cancela no unmount**)
+  + `CreditoStatus.jsx` (feedback processing/confirmed/reverted/timeout, usa
+  `explorerTx` da config) + `web3.verificarCreditoOnchain` + `useTrocarPorSenhas`
+  detecta 202. Wirado em `MinhaCarteira` (inerte com flag OFF → renderiza null).
+- **Desvios do plano (justificados):** JS/JSX (projeto não usa TS); **poll on-chain
+  por txHash** em vez de jobId+endpoint (o backend não devolve jobId nem há store de
+  status); timeout é estado próprio (≠ "failed"). Sem runner React → lógica pura
+  testada com node:test; hook/componente validados por build + esbuild.
+- **Segurança:** superfície read-only (txHash público), sem secrets; checklist sem
+  findings. Build verde; backend intacto (MC59.5 72/72).
+- **Veredito:** frontend polling implementado; feature dormant até
+  CREDITO_ASSINCRONO=ON + migração da fila + validação viva do operador (Sepolia),
+  além dos gates do MC60 NO-GO.
+

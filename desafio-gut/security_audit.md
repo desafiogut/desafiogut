@@ -5,6 +5,25 @@
 
 ---
 
+## MC59.6 — frontend polling do 202 (crédito assíncrono)
+
+> Branch `feat/mc59.6-frontend-polling`. Mudança de FRONTEND read-only (polling de
+> um txHash público, sem segredos/auth) → superfície baixa; revisão manual pelo
+> checklist (agente independente reservado ao caminho do dinheiro).
+
+- **Lógica pura** `src/lib/creditoPolling.js` (testada node:test 6/6) + hook
+  `useCreditoStatus` (cancela no unmount) + `CreditoStatus.jsx` (usa `explorerTx`,
+  sem host hardcoded) + `web3.verificarCreditoOnchain` (read-only) + `useTrocarPorSenhas`
+  detecta 202. Wirado em `MinhaCarteira` (inerte com flag OFF → null).
+- **Design real:** poll on-chain por txHash (o backend não devolve jobId nem há
+  endpoint de status) — fica no frontend, sem novo endpoint. JS/JSX (não TS).
+- **Checklist:** sem secrets novos; txHash é público; timeout≠failed (estado
+  distinto); erro de rede→re-tenta; cleanup no unmount. Sem findings.
+- **Validação:** build verde (inclui o componente), esbuild transform OK, polling
+  6/6; backend intacto. Relatório: `Desktop\MC59.6-RELATORIO.txt`.
+
+---
+
 ## MC59.5 — confirmação assíncrona do crédito (ADR)
 
 > Branch `feat/mc59.5-adr-assincrono`. Flag `CREDITO_ASSINCRONO` (OFF por default,
