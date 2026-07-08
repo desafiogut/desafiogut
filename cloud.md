@@ -1883,3 +1883,19 @@ testes mc593-*.
 - **Veredito:** ✅ B-2 e follow-up C-1 resolvidos — mainnet mais próxima; restam
   gates de operador (envs/segredos/migrações) e MC59.4 (nonce) antes do flip.
 
+### MC60 — Flip para mainnet: 🔴 NO-GO (mainnet NÃO ativada)
+Branch `feat/mc60-flip-mainnet` (doc-only). Nenhuma env setada, nenhum deploy,
+nenhuma chave tocada. Deliverables: `Desktop\MC60-NOGO-RELATORIO.txt`,
+`docs/MC60-NOGO-relatorio.txt`.
+- **Bloqueadores (com prova):** (B1) **contrato NÃO existe na mainnet** — `eth_getCode`
+  de `0x825bBd3F…eF06` na mainnet = `0x` (vazio) vs. 9.648 chars de bytecode na
+  Sepolia → flip bricaria o fluxo on-chain; (B2) **chave privada real colada no
+  prompt** → comprometida, precisa rotação, operador seta manualmente; (B3) nonce
+  não serializado; (B4) `MP_WEBHOOK_SECRET` placeholder + `SENTRY_DSN` não
+  confirmado; (B5) regra do projeto: não flipar antes do deploy do contrato na
+  mainnet. O critério "0x = contrato existe" do plano estava INVERTIDO.
+- **Pré-requisitos documentados** (deploy mainnet do contrato, rotação de chave,
+  MC59.4, segredos reais, gás na EOA, validação viva do operador).
+- Próximo: **MC59.4** (retry de nonce + runbook + ADR do fix assíncrono) + script
+  de flip parametrizado sem segredos.
+

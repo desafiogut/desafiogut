@@ -1,0 +1,90 @@
+================================================================================
+MC60 — FLIP PARA MAINNET · VEREDITO: 🔴 NO-GO (MAINNET NÃO ATIVADA)
+DesafioGUT
+================================================================================
+Data...........: 2026-07-08
+Branch.........: feat/mc60-flip-mainnet (APENAS documentação — R1: zero código/deploy)
+Natureza.......: OPERACIONAL. Nenhuma variável setada, nenhum deploy, nenhuma
+                 chave manuseada pelo agente. Decisão: NÃO EXECUTAR o flip.
+
+--------------------------------------------------------------------------------
+1. VEREDITO
+--------------------------------------------------------------------------------
+🔴 MAINNET NÃO ATIVADA. O flip foi BLOQUEADO por evidências concretas de que
+executá-lo agora quebraria a plataforma em produção e exporia um segredo real.
+Nenhum comando de configuração/deploy foi executado (nem rollback foi necessário,
+pois nada foi alterado).
+
+--------------------------------------------------------------------------------
+2. BLOQUEADORES IDENTIFICADOS (com evidência)
+--------------------------------------------------------------------------------
+
+B1 [CRÍTICO] O contrato NÃO existe na Ethereum mainnet.
+  Prova (read-only, sem segredos): eth_getCode do endereço
+  0x825bBd3F064979a5F750DBB6aED421b37AA3eF06
+    • Ethereum mainnet → "0x"  (NENHUM contrato nesse endereço)
+    • Sepolia          → 9.648 chars de bytecode (o contrato EXISTE aqui)
+  Consequência: com NETWORK_STAGE=mainnet + chainId 1, todas as chamadas on-chain
+  (adicionarSenhas, darLance, saldoSenhas) iriam a um endereço vazio → o núcleo do
+  leilão e o crédito de senhas QUEBRAM; usuários pagando R$/PIX reais não recebem
+  nada. (Nota: a Validação 2 do plano tinha o critério invertido — "0x = contrato
+  existe" é falso; 0x = contrato INEXISTENTE.)
+
+B2 [CRÍTICO] Chave privada real exposta no prompt.
+  COORDENACAO_PRIVATE_KEY foi colada em texto puro no plano (Segmento 1.6). Essa
+  chave controla o contrato (cunhar senhas / definir vencedor). Deve ser tratada
+  como COMPROMETIDA e ROTACIONADA antes de qualquer uso em mainnet. O agente NÃO a
+  setou via CLI (exporia em shell history/logs/transcript) — por regra do projeto,
+  o OPERADOR manuseia segredos manualmente.
+
+B3 [ALTO] Nonce da coordenação não serializado (risco de concorrência).
+  O backend local-key/EOA não serializa o nonce do signer da coordenação. Em
+  produção real, requisições concorrentes podem colidir nonce. (Ver MC59.4 —
+  mitigação por retry ciente de nonce + o fix definitivo assíncrono.)
+
+B4 [ALTO] Segredos são placeholders / não confirmados.
+  • MP_WEBHOOK_SECRET = "sk_live_XXXXXXXX" (placeholder, não é um segredo real).
+  • SENTRY_DSN não confirmado em prod → alertas de credito_pendente virariam log
+    silencioso (perde a observabilidade que o MC59.3 adicionou).
+
+B5 [REGRA] Instrução permanente do projeto.
+  "Produção propositadamente em Sepolia; NÃO definir NETWORK_STAGE=mainnet antes do
+  deploy do contrato na mainnet (MC40)." O deploy do contrato na mainnet nunca
+  aconteceu (ver B1).
+
+Observação de nomenclatura: a infra usa VITE_CONTRATO_SEPOLIA e o "contrato ativo"
+é um artefato Sepolia — o próprio naming evidencia que o ambiente foi construído
+para testnet.
+
+--------------------------------------------------------------------------------
+3. CHECKLIST DE PRÉ-REQUISITOS PARA O FLIP REAL
+--------------------------------------------------------------------------------
+  [ ] 1. Deploy do contrato LeilaoGUT na Ethereum mainnet (coordenação = EOA NOVA),
+         e usar esse endereço real (não o Sepolia). Verificar via eth_getCode que
+         retorna bytecode (não "0x").
+  [ ] 2. Rotacionar COORDENACAO_PRIVATE_KEY (a chave colada aqui está comprometida).
+         O operador injeta a NOVA chave manualmente no Netlify (nunca via agente).
+  [ ] 3. MC59.4 — retry de nonce (mitigação) + runbook de reconciliação; e planejar
+         o fix definitivo (confirmação assíncrona via fila MC39.20) para a mainnet.
+  [ ] 4. MP_WEBHOOK_SECRET real (do painel Mercado Pago) + SENTRY_DSN confirmado.
+  [ ] 5. Custear a EOA coordenadora com ETH de mainnet para gás.
+  [ ] 6. Só então: setar envs (operador) → rebuild/deploy → verification-loop
+         pós-deploy → validação viva com transação real (operador).
+
+--------------------------------------------------------------------------------
+4. ARTEFATOS DE APOIO PRODUZIDOS
+--------------------------------------------------------------------------------
+  • MC59.4 (branch feat/mc59.4-nonce-runbook): retry de nonce no broadcast (TDD) +
+    docs/runbook-credito-pendente.md + ADR do fix definitivo.
+  • scripts/flip-mainnet.sh: script de flip PARAMETRIZADO, SEM segredos — o operador
+    injeta os valores e roda manualmente quando os pré-requisitos 1–6 estiverem OK.
+
+--------------------------------------------------------------------------------
+5. AÇÃO DO AGENTE
+--------------------------------------------------------------------------------
+Nada foi setado, deployado, ou assinado. Nenhuma chave foi tocada. O flip fica
+integralmente a cargo do OPERADOR, após os pré-requisitos.
+
+================================================================================
+FIM — MC60 (NO-GO)
+================================================================================
