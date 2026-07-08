@@ -1923,3 +1923,24 @@ verification-loop, search-first, security-review). Deliverables:
 - **Veredito:** mitigação entregue e testada; a mainnet ainda depende do ADR
   (assíncrono) + gates do operador do MC60 NO-GO.
 
+### MC59.5 — confirmação assíncrona do crédito (ADR implementado, DORMANT) ✅
+Branch `feat/mc59.5-adr-assincrono`. Stack: Opus 4.8 + ECC (search-first,
+tdd-workflow, verification-loop, security-review). Deliverables:
+`Desktop\MC59.5-RELATORIO.txt`, `docs/MC59.5-adr-assincrono.txt`, testes mc595-*.
+- **Implementa o ADR do MC59.4:** `submeterCredito` (submete adicionarSenhas sem
+  aguardar o wait → remove o timeout do handler) + `confirmarReceiptOnchain`
+  (read-only) em `contract.mjs`; `_lib/worker-credito.mjs` (novo) confirma em
+  background e reembolsa se revertido (claim-before-refund, idempotente);
+  `fila-processor` registra o handler; `comprar-senhas` ganha ramo **flag-gated**
+  (`CREDITO_ASSINCRONO`, OFF por default) que responde **202** (sem voucher).
+  `creditarSenhas`/PIX e o path síncrono **intactos**.
+- **DORMANT por design:** flag OFF + fila MC39.20 inerte. Habilitar exige migração
+  da fila + polling no frontend + follow-ups (reaper, idempotência client-side).
+- **Revisão adversarial (money-path): NAUGHTY → resolvido.** Sem double-submit/
+  double-credit. Corrigidos: double-refund cross-path (fallback não reembolsa),
+  confirm frio (removido), claim-before-refund no worker.
+- **Validação:** TDD 10/10; suíte afetada **72/72**; build verde; sem secrets;
+  flag não setada no repo.
+- **Veredito:** ADR implementado e validado; mainnet mais próxima, mas a feature
+  fica dormant até os pré-requisitos do operador (migração/frontend) + gates do MC60.
+

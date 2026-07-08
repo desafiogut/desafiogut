@@ -1,0 +1,109 @@
+================================================================================
+MC59.5 — IMPLEMENTAÇÃO DO ADR (CONFIRMAÇÃO ASSÍNCRONA) — RELATÓRIO FINAL
+DesafioGUT · Pré-Mainnet
+================================================================================
+Data...........: 2026-07-08
+Branch.........: feat/mc59.5-adr-assincrono (de feat/mc59.4-nonce-runbook)
+Modelo.........: Opus 4.8 + ECC (search-first, tdd-workflow, verification-loop, security-review)
+
+--------------------------------------------------------------------------------
+0. VEREDITO
+--------------------------------------------------------------------------------
+✅ ADR IMPLEMENTADO (código + testes + revisão) — mainnet mais próxima.
+⚠️ DORMANT por design: flag CREDITO_ASSINCRONO=OFF por default + fila (MC39.20)
+   INERTE. NÃO habilitado. Habilitar exige: migração da fila aplicada + polling no
+   frontend + os follow-ups abaixo — decisão do OPERADOR. O path SÍNCRONO (produção
+   hoje) e o PIX ficaram INTACTOS (zero regressão).
+
+--------------------------------------------------------------------------------
+1. O QUE FOI IMPLEMENTADO (R1: só o caminho do ADR)
+--------------------------------------------------------------------------------
+contract.mjs (aditivo — creditarSenhas NÃO foi alterado):
+  • submeterCredito(endereco, qtd): submete adicionarSenhas (com o retry de nonce
+    do MC59.4) e devolve { txHash } SEM aguardar o wait → remove o timeout do
+    handler. Falha de submissão (sem txHash) propaga → reembolso seguro.
+  • confirmarReceiptOnchain(txHash): read-only; classifica confirmado/revertido/
+    pendente.
+_lib/worker-credito.mjs (NOVO):
+  • confirmarCreditoSenhas(payload): confirma o receipt em background;
+    confirmado→nada (senhas já on-chain); revertido→reembolsa (CLAIM antes do
+    reembolso = idempotência forte por pedidoId, sem double-refund); pendente→lança
+    (re-enfileira via backoff da fila; DLQ→runbook). NUNCA re-credita (sem double-credit).
+fila-processor-scheduled.mjs:
+  • Registra o handler "confirmar-credito-senhas" (dormant enquanto a fila inerte).
+comprar-senhas.mjs (bloco 6.5, flag-gated):
+  • CREDITO_ASSINCRONO=="true" && sem voucher: debita (CAS) → submeterCredito →
+    enfileira → responde 202. Voucher e flag-OFF → path síncrono (intacto).
+  • Fallback (fila indisponível = misconfig): NÃO confirma nem reembolsa (evita
+    double-credit/double-refund); responde credito_pendente + alerta (runbook).
+
+--------------------------------------------------------------------------------
+2. TDD (RED → GREEN)
+--------------------------------------------------------------------------------
+mc595-async-blocks (4/4): submeterCredito NÃO aguarda o wait; confirmarReceiptOnchain
+  classifica status 1/0/ausente.
+mc595-worker-credito (6/6): confirmado→sem reembolso; revertido→reembolsa 1×;
+  idempotente por pedidoId (não reembolsa 2×); voucher(0)→sem reembolso; reembolso
+  falho→alerta level=error; pendente→lança (re-enfileira).
+Regressão: suíte afetada 72/72 (inclui b2/nonce/c1/d1/saldo/signer/fila/integração).
+
+--------------------------------------------------------------------------------
+3. VERIFICATION-LOOP
+--------------------------------------------------------------------------------
+Build.........: PASS (vite build ✓ ~6s)
+node --check..: PASS (contract.mjs, worker-credito.mjs, comprar-senhas.mjs, fila-processor)
+Tests.........: PASS — 72/72 (novos mc595: 10/10)
+Security scan.: sem secrets nos diffs; a flag NÃO está setada em lugar nenhum do repo.
+Diff review...: aditivo; sync path e PIX inalterados.
+
+--------------------------------------------------------------------------------
+4. REVISÃO ADVERSARIAL (security-review) — NAUGHTY → RESOLVIDO
+--------------------------------------------------------------------------------
+Confirmado NÃO haver: double-submit (submeterCredito 1×; fallback/worker só
+  read-only), double-credit (worker não credita), risco novo de concorrência.
+Achados corrigidos (fix-cycle):
+  • [MEDIUM-HIGH] double-refund cross-path (fallback reembolsava sem o marcador do
+    worker; ack-loss de enfileirar → 2 reembolsos) → CORRIGIDO: o fallback NÃO
+    reembolsa mais (só credito_pendente+alerta).
+  • [MEDIUM] confirm "frio" (~900ms) no fallback quase sempre "pendente" → CORRIGIDO:
+    fallback não confirma (removido).
+  • [LOW-MEDIUM] marcador setado após o reembolso → CORRIGIDO: CLAIM antes do
+    reembolso (idempotência forte).
+Follow-ups aceitos (fora do escopo de código deste MC; pré-requisitos de habilitar):
+  • Reaper para tarefas presas em status 'processing' (migração/fila).
+  • Trade-off consciente: em falha de reembolso o worker ALERTA (level=error) e vai
+    para reconciliação manual, em vez de auto-retentar (evita double-refund de um
+    reembolso não-idempotente).
+  • Migração da fila (MC39.20) + polling no frontend + key de idempotência
+    client-side (pré-existente, não introduzido aqui).
+
+--------------------------------------------------------------------------------
+5. TESTE "SEPOLIA / MAINNET SIMULADO" (Segmento 5) — HONESTIDADE
+--------------------------------------------------------------------------------
+Coberto offline (determinístico): submeter (não aguarda), confirmar (3 estados),
+  worker (6 caminhos incl. idempotência). O roteamento flag-gated do handler é
+  validado por node --check + build (não há harness de handler completo; o path
+  síncrono nunca teve um — os BLOCOS reutilizáveis estão testados em unidade).
+NÃO executado: fluxo 202 end-to-end VIVO — exige a migração da fila aplicada + o
+  worker rodando (cron) + segredos, tudo do OPERADOR. E o frontend ainda espera o
+  200 síncrono → a flag NÃO pode ser ligada até o polling existir.
+
+--------------------------------------------------------------------------------
+6. PRÓXIMOS PASSOS PARA HABILITAR (operador / próximo MC)
+--------------------------------------------------------------------------------
+  [ ] Aplicar a migração 20260629_fila_tarefas (fila deixa de ser inerte).
+  [ ] Frontend: polling do estado da compra (contrato de resposta 202 + txHash).
+  [ ] Reaper de tarefas 'processing' presas; key de idempotência client-side.
+  [ ] Então: CREDITO_ASSINCRONO=true em STAGING → validação viva → produção.
+  [ ] Gates de mainnet do MC60 NO-GO permanecem (contrato na mainnet, chave
+      rotacionada, segredos reais, gás na EOA).
+
+Commits (branch feat/mc59.5-adr-assincrono):
+  feat(mc59.5): blocos do ADR — submeterCredito/confirmarReceiptOnchain + worker
+  feat(mc59.5): comprar-senhas caminho assíncrono flag-gated (202) + registra worker
+  fix(mc59.5): fix-cycle da revisão (NAUGHTY→resolvido) — double-refund + confirm frio
+  docs(mc59.5): relatório final + cloud.md + security_audit.md (este)
+
+================================================================================
+FIM — MC59.5
+================================================================================

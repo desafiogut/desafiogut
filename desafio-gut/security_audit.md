@@ -5,6 +5,28 @@
 
 ---
 
+## MC59.5 — confirmação assíncrona do crédito (ADR)
+
+> Branch `feat/mc59.5-adr-assincrono`. Flag `CREDITO_ASSINCRONO` (OFF por default,
+> não setada no repo) + fila MC39.20 inerte → **DORMANT**. Revisão adversarial:
+> NAUGHTY → **resolvido** (fix-cycle). Sync path e PIX intactos.
+
+- **Blocos** (`contract.mjs`): `submeterCredito` (submete sem aguardar o wait) +
+  `confirmarReceiptOnchain` (read-only). `creditarSenhas` NÃO alterado.
+- **Worker** (`_lib/worker-credito.mjs`): confirma em background; revertido→reembolsa
+  com **claim-before-refund** (idempotência forte por pedidoId); pendente→re-enfileira;
+  NUNCA re-credita.
+- **`comprar-senhas.mjs`** (flag-gated, sem voucher): submete → enfileira → **202**.
+  Fallback (fila indisponível): só `credito_pendente`+alerta (NÃO reembolsa → sem
+  double-refund; NÃO re-submete → sem double-credit).
+- **Revisão (money-path):** double-submit/double-credit NÃO existem (confirmado);
+  achados corrigidos → double-refund cross-path (fallback não reembolsa mais),
+  confirm frio (removido), marcador (claim antes). Follow-ups p/ habilitar: reaper
+  de 'processing', migração da fila, polling frontend, idempotência client-side.
+- **Validação:** 72/72; build verde; sem secrets. Relatório: `Desktop\MC59.5-RELATORIO.txt`.
+
+---
+
 ## MC59.4 — retry de nonce + runbook de reconciliação
 
 > Branch `feat/mc59.4-nonce-runbook`. Re-diagnóstico honesto: o "lock de nonce"
