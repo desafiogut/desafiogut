@@ -16,6 +16,11 @@
 //   - caso contrário: NETWORK_STAGE === 'mainnet'  → 'biconomy' (Smart Account + KMS)
 //                     restante (sepolia/localhost) → 'local-key' (chave de testnet, R3)
 //
+// MC59.1 (Opção B): 'local-key' é um backend LEGÍTIMO em mainnet (coord = EOA,
+// MC56) quando escolhido EXPLICITAMENTE via SIGNER_BACKEND=local-key. Nesse caso
+// a chave bruta é PERMITIDA em mainnet (hot key, com salvaguardas). O default de
+// mainnet permanece 'biconomy' → uma chave bruta acidental continua rejeitada.
+//
 // SEGURANÇA: a chave privada NUNCA é logada nem exportada por este módulo.
 
 import { JsonRpcProvider, Wallet } from "ethers";
