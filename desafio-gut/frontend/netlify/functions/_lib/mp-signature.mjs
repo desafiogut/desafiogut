@@ -34,6 +34,14 @@ function montarManifest({ dataId, requestId, ts }) {
   return m;
 }
 
+// MC59.2 (D-1) — opt-in de enforcement estrito. Com o segredo ausente, o default
+// é fail-open (histórico, R1). Se MP_WEBHOOK_ENFORCE estiver ativo, um segredo
+// ausente passa a FAIL-CLOSED (rejeita) — a válvula para o operador fechar 100%.
+function enforceObrigatorio() {
+  const v = String(process.env.MP_WEBHOOK_ENFORCE || "").toLowerCase();
+  return v === "1" || v === "true" || v === "yes" || v === "on";
+}
+
 function compararHexConstante(aHex, bHex) {
   if (typeof aHex !== "string" || typeof bHex !== "string") return false;
   let a, b;
@@ -55,7 +63,13 @@ function compararHexConstante(aHex, bHex) {
  */
 export function validarAssinaturaMp(req, dataId) {
   const secret = process.env.MP_WEBHOOK_SECRET;
-  if (!secret) return { ok: true, enforced: false, motivo: "secret_ausente" };
+  if (!secret) {
+    // MC59.2 (D-1): sem segredo, respeita o opt-in estrito antes do fail-open.
+    if (enforceObrigatorio()) {
+      return { ok: false, enforced: true, motivo: "secret_ausente_enforce" };
+    }
+    return { ok: true, enforced: false, motivo: "secret_ausente" };
+  }
 
   const header    = req.headers.get("x-signature");
   const requestId = req.headers.get("x-request-id");

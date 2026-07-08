@@ -28,6 +28,8 @@ import { creditarSaldoRsIdempotente } from "./_lib/saldoRs.mjs";
 import { ativarCotaPaga } from "./_lib/cota-ativacao.mjs";
 // MC39.17.2 (B-P1-1) — validação HMAC da assinatura do webhook.
 import { validarAssinaturaMp } from "./_lib/mp-signature.mjs";
+// MC59.2 (D-1) — torna o fail-open OBSERVÁVEL (alerta em vez de log silencioso).
+import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
 
 const BLOB_STORE_MP = "mp-aprovados";
 
@@ -82,7 +84,10 @@ export default async (req) => {
     return jsonError(401, "assinatura_invalida", "x-signature ausente ou inválida");
   }
   if (!sig.enforced) {
-    console.info("[webhook-mp] HMAC não aplicado (MP_WEBHOOK_SECRET ausente)");
+    // MC59.2 (D-1): fail-open não é mais silencioso — vira sinal de segurança para
+    // o operador setar MP_WEBHOOK_SECRET (e, se quiser, MP_WEBHOOK_ENFORCE=true).
+    console.warn("[webhook-mp] HMAC NÃO aplicado (MP_WEBHOOK_SECRET ausente) — fail-open");
+    captureSecurityAlert("webhook_mp_fail_open", { motivo: sig.motivo }).catch(() => {});
   }
 
   let paymentId, topic;
