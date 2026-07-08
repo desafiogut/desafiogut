@@ -2040,3 +2040,15 @@ Branch `feat/mc59.12-leitura-nogo` (doc-only, read-only). Deliverables:
 - **Veredito:** NÃO revogar o NO-GO. Ordem: auditoria → reconciliar doc → MC59.11 Seg.1–5
   → segredos/Flashbots/Privy → reavaliar flip. ETH real sempre com o OPERADOR.
 
+### MC59.13 — reescrita do mainnet-prerequisites.md p/ Opção B: ✅ doc atualizado
+Branch `feat/mc59.13-reescrita-prerequisitos` (doc-only). Deliverables:
+`docs/mainnet-prerequisites.md` (reescrito, 98+/65−), `Desktop\MC59.13-RELATORIO.txt`,
+`docs/MC59.13-relatorio.txt`.
+- Removeu Smart Account/Biconomy/bundler como passos operacionais (mantidos só como nota
+  histórica/contexto). Corrigiu o gate: `COORDENACAO_PRIVATE_KEY` PRESENTE/NECESSÁRIA +
+  `SIGNER_BACKEND=local-key` explícito; pós-deploy espera `chaveBrutaEmMainnet=true`.
+- Corrigiu envs de frontend (via src/lib/network.js MC59.2): além de `VITE_CONTRATO_SEPOLIA`
+  = endereço mainnet, exige `VITE_CHAIN_ID=1`, `VITE_EXPLORER_URL=https://etherscan.io`,
+  `VITE_NETWORK_STAGE=mainnet`. KMS/Safe rebaixados a hardening futuro; +seção nonce hot-key.
+- Não altera o veredito de prontidão: NO-GO do MC60 permanece (auditoria P0 + EOA nova).
+
