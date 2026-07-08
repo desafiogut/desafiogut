@@ -16,8 +16,10 @@ import {
   hashLance,
   CONTRATO_SEPOLIA,
 } from "../utils/web3.js";
+// MC59.2 (B-4) — chainId e link do explorer vêm da config central de rede.
+import { CHAIN_ID_DEC, explorerTx } from "@/lib/network.js";
 
-const SEPOLIA_CHAIN_ID = 11155111;
+const SEPOLIA_CHAIN_ID = CHAIN_ID_DEC;
 
 // MC28.1 R9 — blindagem ativa só em mainnet. No Sepolia/localhost (MAINNET=false)
 // todo o fluxo abaixo é byte-idêntico ao legado (zero regressão).
@@ -406,7 +408,7 @@ export default function CardLance({
               <p style={estilos.txText}>
                 TX:{" "}
                 <a
-                  href={`https://sepolia.etherscan.io/tx/${ultimaTx}`}
+                  href={explorerTx(ultimaTx)}
                   target="_blank" rel="noopener noreferrer"
                   style={{ color: "#fbbf24" }}
                 >

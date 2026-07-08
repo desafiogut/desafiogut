@@ -22,14 +22,15 @@ export const ABI = [
   "event ResultadoConsolidado(string idEdicao, address indexed vencedor, uint256 menorUnico, uint256 nonce)",
 ];
 
-export const CONTRATO_SEPOLIA =
-  import.meta.env.VITE_CONTRATO_SEPOLIA ?? "0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5";
+// MC59.2 (B-4) — contrato e chainId vêm da config central (sem fallback antigo).
+import { CONTRATO as CONTRATO_SEPOLIA, CHAIN_ID_HEX } from "@/lib/network.js";
+export { CONTRATO_SEPOLIA };
 
 /**
  * Retorna um ethers BrowserProvider + Signer a partir de qualquer
  * provider EIP-1193 (Privy embedded wallet, MetaMask, etc.).
  */
-const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111
+const SEPOLIA_CHAIN_ID = CHAIN_ID_HEX; // MC59.2 (B-4): da config (default 0xaa36a7)
 
 async function ensureSepolia() {
   const chainId = await window.ethereum.request({ method: "eth_chainId" });

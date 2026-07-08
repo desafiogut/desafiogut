@@ -17,6 +17,7 @@ import { useRef, useState, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { getSignerFromProvider } from "../utils/web3.js";
 import { apiPost } from "../lib/api.js";
+import { CHAIN_ID_DEC } from "../lib/network.js"; // MC59.2 (B-4)
 
 const SUCESSO_LIMPAR_MS = 5000;
 
@@ -37,7 +38,7 @@ export function useTrocarPorSenhas() {
     if (!privyWallet) throw new Error("Carteira não conectada. Faça login novamente.");
     const ts      = Date.now();
     const message = `DESAFIOGUT-AUTH:${ts}:${address}`;
-    await privyWallet.switchChain(11155111);
+    await privyWallet.switchChain(CHAIN_ID_DEC); // MC59.2 (B-4): da config de rede
     const provider = await privyWallet.getEthereumProvider();
     const { signer } = await getSignerFromProvider(provider);
     const signature = await signer.signMessage(message);
