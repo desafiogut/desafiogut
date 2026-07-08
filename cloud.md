@@ -1859,3 +1859,27 @@ prod; B-4 só centralizar config.
   ainda NÃO liberada. Validação: 54/54 na superfície afetada, build verde,
   secret-scan limpo. Pendências de operador em `Desktop\MC59.2-RELATORIO.txt`.
 
+### MC59.3 — B-2 (tx-hash) + follow-up C-1 (bootstrap atómico) ✅✅
+Branch `feat/mc59.3-correcao-b2-c1`. Stack: Opus 4.8 + ECC (search-first,
+tdd-workflow, verification-loop, security-review). Deliverables:
+`Desktop\MC59.3-RELATORIO.txt`, `docs/MC59.3-relatorio.txt`, `security_audit.md`,
+testes mc593-*.
+- **B-2 ✅** (`contract.mjs::creditarSenhas` + `comprar-senhas.mjs`): abordagem
+  CORRETA por **tx-hash específico** (substitui o guard delta-based reprovado no
+  MC59.2). Se `tx.wait` falha, re-verifica o receipt DAQUELA tx: status 1→sucesso;
+  status 0→TX_REVERTED (reembolsa); ausente→TX_PENDENTE (NÃO reembolsa cegamente,
+  evita double-benefit, alerta level=error + 502 credito_pendente). Retry curto no
+  getTransactionReceipt (blip RPC). Elimina a atribuição cruzada entre requisições.
+- **C-1 follow-up ✅** (`saldoRs-store.mjs` + `saldoRs.mjs`): `inserirSaldoSeAusente`
+  = INSERT ON CONFLICT DO NOTHING (ignoreDuplicates); bootstrap de crédito/reembolso/
+  débito deixa de sobrescrever linha criada concorrentemente. Garantia pelo PRIMARY
+  KEY, sem janela residual.
+- **Revisão adversarial (security-reviewer): VEREDITO NICE** — HIGH do MC59.2
+  eliminado; recs aplicadas (retry + alerta error). Follow-ups: SENTRY_DSN em prod,
+  runbook de reconciliação `credito_pendente`, e **serialização de nonce por
+  endereço** no backend local-key (causa das colisões → candidato a MC59.4).
+- **Validação:** TDD RED→GREEN em cada fix; superfície afetada **58/58**; build
+  verde; secret-scan limpo. Tx on-chain real = operador (segredos).
+- **Veredito:** ✅ B-2 e follow-up C-1 resolvidos — mainnet mais próxima; restam
+  gates de operador (envs/segredos/migrações) e MC59.4 (nonce) antes do flip.
+

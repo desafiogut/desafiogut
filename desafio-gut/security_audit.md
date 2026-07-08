@@ -5,6 +5,24 @@
 
 ---
 
+## MC59.3 — B-2 (tx-hash) + follow-up C-1 (bootstrap atómico)
+
+> Branch `feat/mc59.3-correcao-b2-c1` · revisão adversarial (security-reviewer):
+> **NICE** (o HIGH do MC59.2 foi genuinamente eliminado).
+
+| Fix | Estado | Segurança |
+|-----|--------|-----------|
+| **B-2** atribuição por tx-hash (`contract.mjs::creditarSenhas` + `comprar-senhas.mjs`) | ✅ resolvido | Re-verifica o receipt da tx ESPECÍFICA (não saldo agregado) → elimina a atribuição cruzada entre requisições. TX_PENDENTE não reembolsa (evita double-benefit) + alerta level=error; TX_REVERTED/submissão-falha reembolsam. Retry curto no getTransactionReceipt (blip RPC). |
+| **C-1 follow-up** bootstrap atómico (`saldoRs-store.mjs::inserirSaldoSeAusente` + `saldoRs.mjs`) | ✅ resolvido | INSERT ON CONFLICT DO NOTHING (ignoreDuplicates) — garantia pelo PRIMARY KEY, sem janela residual. Aplicado a crédito, reembolso e débito. |
+
+**Recomendações da revisão** — aplicadas: retry no receipt + alerta level=error.
+**Follow-ups (operador/MC59.4):** SENTRY_DSN em prod; runbook de reconciliação de
+`credito_pendente`; **serialização de nonce por endereço** no backend local-key
+(causa das colisões que disparam TX_PENDENTE). **Validação:** 58/58; build verde;
+secret-scan limpo. Relatório: `Desktop\MC59.3-RELATORIO.txt`.
+
+---
+
 ## MC59.2 — Correção dos altos (B-2, B-4, C-1, D-1)
 
 > Branch `feat/mc59.2-correcao-altos` · revisão adversarial (security-reviewer):
