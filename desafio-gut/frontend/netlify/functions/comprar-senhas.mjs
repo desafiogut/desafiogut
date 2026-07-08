@@ -31,8 +31,28 @@ import {
 import { creditarSenhas, lerSaldoSenhas, CONTRATO_ADDRESS } from "./_lib/contract.mjs";
 import { buscarVinculoPorIndicado, registrarConversao } from "./_lib/referral.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
+// MC59.2 (B-2/C-4) — alertas observáveis para casos de reconciliação financeira.
+import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
 
 const VALOR_POR_SENHA_CENTAVOS = 200; // R$ 2,00
+
+/**
+ * MC59.2 (B-2) — Decisão de reembolso quando a chamada on-chain lançou.
+ * Retorna true se há EVIDÊNCIA on-chain de que as senhas foram creditadas apesar
+ * do erro (ex.: falha transitória de RPC no wait/leitura enquanto a tx minerou):
+ * nesse caso NÃO se deve reembolsar (seria devolver R$ de uma compra confirmada).
+ * Sem baseline confiável (valores não-finitos), retorna false → default SEGURO
+ * (reembolsa). Pura e testável — a lógica de fila assíncrona (resposta 202) fica
+ * para MC59.3 (depende da migração da fila MC39.20, ainda não aplicada).
+ */
+export function creditoConfirmadoApesarDoErro({ senhasAntes, senhasAgora, qtd }) {
+  return (
+    Number.isFinite(senhasAntes) &&
+    Number.isFinite(senhasAgora) &&
+    Number.isFinite(qtd) &&
+    senhasAgora >= senhasAntes + qtd
+  );
+}
 
 // LGPD — versão do termo de consentimento atualmente exigido (sincronizar com TermosConsentimento.jsx).
 const TERMO_VERSAO = "v2026-05";
@@ -217,18 +237,45 @@ export default async (req) => {
     resultadoOnChain = await creditarSenhas(endereco, qtd);
     senhasDepois = await lerSaldoSenhas(endereco);
   } catch (err) {
-    console.error("[comprar-senhas] credito on-chain falhou — reembolsando R$:", {
-      endereco, qtd, valorCentavos, message: err?.message, code: err?.code,
-    });
-    let reembolso = { ok: true };
-    if (valorCentavos > 0) {
-      reembolso = await reembolsarSaldoRs({ endereco, valorCentavos, motivo: "comprar-senhas-falha" });
+    // MC59.2 (B-2) — antes de reembolsar, RE-VERIFICA on-chain: se as senhas
+    // FORAM creditadas apesar do erro (falha transitória de RPC no wait/leitura
+    // enquanto a tx minerou), NÃO reembolsar — seria devolver R$ de uma compra
+    // que confirmou. Só reembolsa quando não há evidência de crédito.
+    let senhasAgora;
+    try { senhasAgora = await lerSaldoSenhas(endereco); }
+    catch (reErr) { console.warn("[comprar-senhas] re-verificação on-chain falhou:", reErr?.message); }
+
+    if (creditoConfirmadoApesarDoErro({ senhasAntes, senhasAgora, qtd })) {
+      // A compra confirmou apesar do erro na chamada → NÃO reembolsa. Segue como
+      // sucesso, mas sem txHash confiável (o erro veio do wait/leitura). Alerta
+      // para auditoria/reconciliação.
+      senhasDepois = senhasAgora;
+      resultadoOnChain = resultadoOnChain || { txHash: null, blockNumber: null };
+      console.warn("[comprar-senhas] crédito confirmou on-chain apesar do erro — SEM reembolso", {
+        endereco, qtd, senhasAntes, senhasDepois, message: err?.message,
+      });
+      captureSecurityAlert("comprar_senhas_credito_confirmado_sem_txhash", { endereco, qtd }).catch(() => {});
+      // fall-through: continua o fluxo de sucesso (voucher/referral/resposta).
+    } else {
+      console.error("[comprar-senhas] credito on-chain falhou — reembolsando R$:", {
+        endereco, qtd, valorCentavos, message: err?.message, code: err?.code,
+      });
+      let reembolso = { ok: true };
+      if (valorCentavos > 0) {
+        reembolso = await reembolsarSaldoRs({ endereco, valorCentavos, motivo: "comprar-senhas-falha" });
+        // MC59.2 (C-4) — reembolso falho não pode ser silencioso.
+        if (!reembolso.ok) {
+          captureSecurityAlert("comprar_senhas_reembolso_falhou", {
+            endereco, valorCentavos, code: reembolso.code,
+          }).catch(() => {});
+        }
+      }
+      // Voucher NÃO foi marcado como resgatado ainda — segue ativo para o usuário tentar de novo.
+      return jsonError(502, "credito_onchain_falhou", err?.shortMessage || err?.message || "falha on-chain", {
+        reembolsado: reembolso.ok,
+        voucher_preservado: !!voucherValido,
+      });
     }
-    // Voucher NÃO foi marcado como resgatado ainda — segue ativo para o usuário tentar de novo.
-    return jsonError(502, "credito_onchain_falhou", err?.shortMessage || err?.message || "falha on-chain", {
-      reembolsado: reembolso.ok,
-      voucher_preservado: !!voucherValido,
-    });
   }
 
   // 8. Consumir voucher (best-effort) — apenas após sucesso on-chain.
