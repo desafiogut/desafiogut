@@ -11,9 +11,14 @@
 
 import { schedule } from "@netlify/functions";
 import { processarLote } from "./_lib/fila.mjs";
+// MC59.5 (ADR) — worker de confirmação assíncrona do crédito de senhas.
+import { confirmarCreditoSenhas } from "./_lib/worker-credito.mjs";
 
 const handlers = {
-  // (vazio — produtores adotam a fila sob demanda; ver _lib/fila.mjs)
+  // MC59.5: confirma em background a tx de adicionarSenhas submetida por
+  // comprar-senhas (flag CREDITO_ASSINCRONO). Dormant enquanto a fila estiver
+  // inerte (migração 20260629_fila_tarefas não aplicada).
+  "confirmar-credito-senhas": confirmarCreditoSenhas,
 };
 
 export const handler = schedule("*/5 * * * *", async () => {

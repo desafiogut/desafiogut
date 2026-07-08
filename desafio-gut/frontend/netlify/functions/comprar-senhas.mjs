@@ -28,7 +28,7 @@ import { requireMfa } from "./_lib/require-mfa.mjs";
 import {
   debitarSaldoRs, reembolsarSaldoRs, lerSaldoRsCentavos,
 } from "./_lib/saldoRs.mjs";
-import { creditarSenhas, lerSaldoSenhas, CONTRATO_ADDRESS } from "./_lib/contract.mjs";
+import { creditarSenhas, submeterCredito, confirmarReceiptOnchain, lerSaldoSenhas, CONTRATO_ADDRESS } from "./_lib/contract.mjs";
 import { buscarVinculoPorIndicado, registrarConversao } from "./_lib/referral.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 // MC59.2 (B-2/C-4) — alertas observáveis para casos de reconciliação financeira.
@@ -211,7 +211,70 @@ export default async (req) => {
     debito = { ok: true, resultado: { saldoAntesCentavos: saldoAtual, saldoDepoisCentavos: saldoAtual } };
   }
 
-  // 7. Crédito on-chain. Em falha → reembolsa (se houve débito).
+  // ── 6.5. MC59.5 (ADR) — caminho ASSÍNCRONO opcional (flag CREDITO_ASSINCRONO).
+  // Submete a tx e responde 202; o worker (worker-credito.mjs) confirma em
+  // background → resolve o timeout do wait síncrono na mainnet. v1: só compras SEM
+  // voucher (consumo de voucher exige confirmação on-chain). ⚠️ Habilitar apenas
+  // após aplicar a migração da fila (MC39.20) E o polling no frontend. Se a fila
+  // estiver indisponível, faz confirmação SÍNCRONA da MESMA tx (sem re-submeter).
+  if (process.env.CREDITO_ASSINCRONO === "true" && !voucherValido) {
+    let txHash;
+    try {
+      ({ txHash } = await submeterCredito(endereco, qtd));
+    } catch (err) {
+      // Submissão falhou ANTES do txHash (nonce/gás/RPC) → reembolsa (idêntico ao síncrono).
+      console.error("[comprar-senhas:async] submissão falhou — reembolsando:", { endereco, qtd, message: err?.message });
+      let reembolso = { ok: true };
+      if (valorCentavos > 0) {
+        reembolso = await reembolsarSaldoRs({ endereco, valorCentavos, motivo: "comprar-senhas-async-submit-falha" });
+        if (!reembolso.ok) captureSecurityAlert("comprar_senhas_reembolso_falhou", { endereco, valorCentavos, code: reembolso.code }, "error").catch(() => {});
+      }
+      return jsonError(502, "credito_onchain_falhou", err?.shortMessage || err?.message || "falha ao submeter", { reembolsado: reembolso.ok, voucher_preservado: false });
+    }
+
+    // Enfileira a confirmação em background.
+    let enfileirado = false;
+    try {
+      const { enfileirar } = await import("./_lib/fila.mjs");
+      await enfileirar("confirmar-credito-senhas", { pedidoId: `compra:${txHash}`, endereco, qtd, valorCentavos, txHash });
+      enfileirado = true;
+    } catch (err) {
+      console.warn("[comprar-senhas:async] enfileirar falhou — confirmação síncrona de fallback:", err?.message);
+    }
+
+    if (enfileirado) {
+      await gravarConsentLog(req, endereco);
+      console.info("[comprar-senhas:async] 202 aceito", { endereco, qtd, txHash });
+      return jsonResponse({
+        ok: true, status: "processando", assincrono: true,
+        endereco, qtd, valorBrutoCentavos: valorBruto, valorCentavos,
+        txHash, contrato: CONTRATO_ADDRESS,
+        mensagem: "Crédito submetido on-chain; confirmação em processamento.",
+        processadoEm: new Date().toISOString(),
+      }, 202);
+    }
+
+    // Fallback (fila indisponível — misconfig): confirma a MESMA tx sincronamente,
+    // SEM re-submeter (evita double-credit). Reusa a classificação do MC59.3.
+    const { estado } = await confirmarReceiptOnchain(txHash);
+    if (estado === "revertido") {
+      let reembolso = { ok: true };
+      if (valorCentavos > 0) {
+        reembolso = await reembolsarSaldoRs({ endereco, valorCentavos, motivo: "comprar-senhas-async-revertido" });
+        if (!reembolso.ok) captureSecurityAlert("comprar_senhas_reembolso_falhou", { endereco, valorCentavos, code: reembolso.code }, "error").catch(() => {});
+      }
+      return jsonError(502, "credito_onchain_falhou", `tx ${txHash} revertida`, { reembolsado: reembolso.ok, txHash });
+    }
+    if (estado === "pendente") {
+      captureSecurityAlert("comprar_senhas_tx_pendente", { endereco, qtd, txHash }, "error").catch(() => {});
+      return jsonError(502, "credito_pendente", "Crédito on-chain pendente de confirmação — não reembolsado. Reconciliação em andamento.", { txHash, reembolsado: false });
+    }
+    // confirmado
+    await gravarConsentLog(req, endereco);
+    return jsonResponse({ ok: true, status: "confirmado", assincrono: true, endereco, qtd, valorCentavos, txHash, contrato: CONTRATO_ADDRESS, processadoEm: new Date().toISOString() });
+  }
+
+  // 7. Crédito on-chain (SÍNCRONO). Em falha → reembolsa (se houve débito).
   let resultadoOnChain;
   let senhasAntes, senhasDepois;
   try {
