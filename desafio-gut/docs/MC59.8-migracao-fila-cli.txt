@@ -1,0 +1,93 @@
+================================================================================
+MC59.8 — MIGRAÇÃO VIA SUPABASE CLI (db push) — 🔴 ABORTADO (RISCO DE PERDA DE DADOS)
+DesafioGUT
+================================================================================
+Data...........: 2026-07-08
+Branch.........: feat/mc59.8-migracao-fila-cli (APENAS documentação)
+Projeto linkado: vjslwowwrpcawijdiksm (ref cacheado do operador; não é segredo)
+
+--------------------------------------------------------------------------------
+0. VEREDITO
+--------------------------------------------------------------------------------
+🔴 NÃO EXECUTEI `supabase db push`. Fazê-lo agora provavelmente DESTRUIRIA dados
+   de PRODUÇÃO. Único comando rodado: `supabase migration list` (READ-ONLY), que
+   foi justamente o que revelou o perigo.
+
+--------------------------------------------------------------------------------
+1. PROVA DO PERIGO (por que db push é destrutivo AQUI)
+--------------------------------------------------------------------------------
+(a) `supabase migration list` → o histórico do REMOTO está VAZIO (coluna "Remote"
+    em branco para as 8 migrações locais):
+      Local    | Remote
+      20260620 |         (schema_definitivo, amend_jsonb)
+      20260621 |         (cotas_schema, saldo_troco_wallet, realtime)
+      20260629 |         (fila_tarefas, indices_escalabilidade, materialized_views)
+    MAS as tabelas JÁ EXISTEM em produção (o sistema roda há meses: saldo_rs,
+    cotas, wallets, lances…). O histórico está apenas fora de sincronia.
+
+(b) `supabase db push` aplica TODAS as migrações que não constam no histórico do
+    remoto → tentaria re-aplicar as 8.
+
+(c) A migração 20260621_cotas_schema.sql contém DDL DESTRUTIVO:
+      DROP TABLE IF EXISTS cotas CASCADE;
+      DROP TABLE IF EXISTS cotas_pagas CASCADE;
+      DROP TABLE IF EXISTS cota_fingerprints CASCADE;
+    (e 20260629_materialized_views.sql faz DROP MATERIALIZED VIEW.)
+
+CONCLUSÃO: db push, com o histórico vazio, executaria esses DROP TABLE CASCADE em
+PRODUÇÃO → perda permanente das tabelas de COTAS (dados corporativos reais,
+migrados no MC37/MC36.1) + objetos dependentes. Memória do projeto (MC37):
+"nunca re-rodar migrações com DROP TABLE".
+
+--------------------------------------------------------------------------------
+2. POR QUE O AGENTE PAROU (além do dado acima)
+--------------------------------------------------------------------------------
+• Ação outward-facing e IRREVERSÍVEL em base de produção.
+• Usaria credenciais de produção cacheadas do operador (login CLI) — a regra do
+  projeto é o operador rodar scripts sensíveis manualmente.
+• db push NÃO é escopado à migração da fila — aplica-as TODAS (blast radius amplo).
+
+--------------------------------------------------------------------------------
+3. CAMINHO SEGURO (para o operador desbloquear a fila SEM db push)
+--------------------------------------------------------------------------------
+OBJETIVO: aplicar SOMENTE a fila (20260629_fila_tarefas.sql) — que é idempotente e
+não tem DROP — sem tocar nas outras 7.
+
+OPÇÃO SEGURA 1 (recomendada) — SQL Editor, escopo cirúrgico:
+  app.supabase.com → projeto vjslwowwrpcawijdiksm → SQL Editor → colar e executar
+  APENAS o conteúdo de supabase/migrations/20260629_fila_tarefas.sql.
+  (CREATE TABLE IF NOT EXISTS + CREATE OR REPLACE FUNCTION → seguro; não dropa nada.)
+  Validação: as queries do MC59.7-RELATORIO (§3 PÓS).
+
+OPÇÃO SEGURA 2 — reparar o histórico ANTES de qualquer db push futuro:
+  As tabelas já existem, então o histórico precisa ser marcado como aplicado (sem
+  re-rodar o SQL), com:
+    supabase migration repair --status applied 20260620 20260620 20260621 \
+       20260621 20260621 20260629 20260629 20260629
+  ⚠️ SÓ fazer isto após CONFIRMAR (inspecionando o schema em produção) que cada
+  objeto dessas migrações já existe. `migration repair` NÃO roda o SQL — apenas
+  ajusta a tabela supabase_migrations.schema_migrations. Depois disso, um db push
+  futuro só aplicaria migrações NOVAS.
+  → NÃO rode `db push` enquanto o histórico estiver vazio.
+
+NÃO FAZER (perigoso):
+  ✗ supabase db push            (re-aplica tudo, incl. DROP TABLE cotas CASCADE)
+  ✗ supabase db reset           (recria o schema do zero — apaga dados)
+
+--------------------------------------------------------------------------------
+4. STATUS DA FILA / ADR
+--------------------------------------------------------------------------------
+A fila (fila_tarefas) continua NÃO aplicada → o async segue dormant (flag OFF,
+sem regressão). Aplicar SÓ a fila (Opção Segura 1) desbloqueia o worker sem risco.
+Gates de mainnet do MC60 NO-GO permanecem à parte.
+
+--------------------------------------------------------------------------------
+5. AÇÃO DO AGENTE
+--------------------------------------------------------------------------------
+Nenhuma migração aplicada. Nenhum comando mutante executado. Apenas o probe
+read-only `supabase migration list` (não altera nada) — usado para avaliar a
+segurança, e que evitou o incidente. Sem alteração de código.
+
+================================================================================
+FIM — MC59.8 (ABORTADO por segurança; caminho seguro documentado)
+================================================================================

@@ -1981,3 +1981,20 @@ Branch `feat/mc59.7-migracao-fila` (doc-only). Deliverables:
 - **Impacto de aplicar com flag OFF:** SEGURO — comprar-senhas não enfileira; o cron
   encontra a fila vazia (no-op). Habilitar o async é passo separado (staging).
 
+### MC59.8 — `supabase db push`: 🔴 ABORTADO (risco de perda de dados em produção)
+Branch `feat/mc59.8-migracao-fila-cli` (doc-only). Deliverables:
+`Desktop\MC59.8-RELATORIO.txt`, `docs/MC59.8-migracao-fila-cli.txt`.
+- **Probe read-only `supabase migration list`** (projeto linkado `vjslwowwrpcawijdiksm`)
+  revelou o **histórico do remoto VAZIO** (as 8 migrações locais sem registro no
+  remoto), embora as tabelas já existam em produção há meses.
+- **`db push` aplicaria TODAS as 8** → incluindo `20260621_cotas_schema.sql` que faz
+  **`DROP TABLE ... CASCADE`** em cotas/cotas_pagas/cota_fingerprints (dados
+  corporativos reais). Memória do projeto: *"nunca re-rodar migrações com DROP TABLE"*.
+  → Rodar db push aqui = **perda permanente de dados de produção**. ABORTADO.
+- **Caminho seguro (operador):** aplicar SÓ `20260629_fila_tarefas.sql` (idempotente,
+  sem DROP) via SQL Editor; e, antes de qualquer `db push` futuro, `supabase migration
+  repair --status applied <versões já aplicadas>` para sincronizar o histórico SEM
+  re-rodar o SQL. **Nunca** `db push`/`db reset` com o histórico vazio.
+- Nenhum comando mutante rodado; nenhum código alterado. Fila segue não aplicada
+  (async dormant, sem regressão).
+
