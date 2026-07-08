@@ -1,0 +1,124 @@
+================================================================================
+MC59.12 — AVALIAÇÃO DO MC60-NOGO E DOS PRÉ-REQUISITOS DE MAINNET
+Agente de Planejamento: Opus 4.8 | Data: 2026-07-08 | Natureza: DIAGNÓSTICO (read-only)
+================================================================================
+
+VEREDITO: 🔴 NÃO PRONTO PARA MAINNET (NO-GO permanece). Há bloqueadores 🔴 reais
+não resolvidos + a checklist oficial está DESATUALIZADA e precisa ser reconciliada
+com a arquitetura escolhida (Opção B / local-key EOA).
+
+--------------------------------------------------------------------------------
+1. BLOQUEADORES DO MC60 NO-GO — STATUS ATUAL
+--------------------------------------------------------------------------------
+B1 [🔴 CRÍTICO] Contrato não existe na mainnet.
+  - VERIFICADO AGORA (read-only, publicnode mainnet): eth_getCode(0x825bBd3F…eF06)
+    = "0x" → nenhum contrato. B1 CONTINUA ABERTO.
+  - Resolve só quando o operador rodar o deploy (script MC59.11 pronto e revisado).
+
+B2 [🔴 CRÍTICO] Chave privada da coordenação exposta.
+  - DECISÃO tomada (MC59.10/11 = Opção B, EOA nova), mas NÃO EXECUTADA: a EOA nova
+    ainda não foi gerada nem injetada no Netlify. Agrava: a chave foi RE-exposta
+    várias vezes na sessão de chat recente. B2 CONTINUA ABERTO até rotação real.
+
+B3 [🟡 ALTO] Nonce da coordenação não serializado.
+  - Mitigado em MC59.4 (retry ciente de nonce + runbook-credito-pendente.md).
+  - Fix definitivo (confirmação assíncrona via fila, MC39.20/MC59.5–59.8): o CÓDIGO
+    existe, mas a fila (fila_tarefas) NÃO está aplicada em prod (MC59.7 pendente do
+    operador; MC59.8 abortou db push por risco de DROP TABLE). Async DORMANT.
+  - Aceitável lançar com a mitigação; o fix definitivo fica como dívida ativa.
+
+B4 [🟡 ALTO] Segredos placeholder.
+  - MP_WEBHOOK_SECRET ("sk_live_XXXX") e SENTRY_DSN: sem evidência de terem sido
+    setados. Ação do operador. PENDENTE.
+
+B5 [🔴 REGRA] Não flipar NETWORK_STAGE=mainnet antes do contrato existir na mainnet.
+  - Atrelado a B1. Continua valendo até B1 resolver.
+
+--------------------------------------------------------------------------------
+2. mainnet-prerequisites.md — STATUS + ⚠️ DESATUALIZAÇÃO GRAVE
+--------------------------------------------------------------------------------
+⚠️ ACHADO PRINCIPAL: o documento descreve a arquitetura Smart Account (Biconomy
+ERC-4337) — passos 3, 4, 5 (financiar SA, transferir coordenação p/ SA, bundler
+Biconomy). Essa arquitetura foi ABANDONADA na Opção D (MC52.1: bundler Biconomy
+morto; MC56: coordenação = EOA local-key). O código já reflete Opção B
+(signer.mjs, MC59.1: local-key é backend legítimo em mainnet com
+SIGNER_BACKEND=local-key). Logo, a checklist precisa ser reescrita para Opção B.
+
+1. Auditoria externa (P0 bloqueante) → 🔴 ABERTO. Não há evidência de auditoria
+   externa independente. Existe auditoria interna estática + fuzzing Foundry/Echidna
+   (MC40-CI, PR #124), mas NÃO substitui revisão externa (o próprio doc diz isso).
+   É decisão de negócio, mas o doc marca como P0.
+
+2. Deploy na mainnet + verificar Etherscan + coordenacao()=deployer → 🔴 ABERTO
+   (=B1). Script pronto (MC59.11).
+
+3. Financiar Smart Account Biconomy → ⚠️ OBSOLETO na Opção B. Não há Smart Account.
+   Substituir por: financiar a EOA NOVA (só gás), MC59.11 Seg.2.
+
+4. Transferir coordenação p/ Smart Account (two-step) → ⚠️ N/A na Opção B. Sob
+   Opção B, coordenacao = deployer (constructor). Sem transferência para SA.
+
+5. Bundler Biconomy + fallback → ⚠️ N/A na Opção B (local-key não usa bundler;
+   bundler Biconomy está desativado desde MC52.1).
+
+6. CONSOLIDATION_RPC_URL (Flashbots) + fallback (P1) → 🟡 PENDENTE. Anti-MEV da
+   consolidação continua válido independente do backend de assinatura. Código
+   preparado (MC39.2); env não setada.
+
+7. Painel Privy (Allowed Origins, HttpOnly, MFA, sessão, OAuth) → 🟡/🔴 PENDENTE.
+   Externo/operador. Sem evidência de conclusão. Allowed Origins + HttpOnly são
+   relevantes de segurança.
+
+8. Setar envs reais + ATIVAR (P0, último passo) → ABERTO e ⚠️ CONTRADITÓRIO:
+   - O doc diz "Confirmar COORDENACAO_PRIVATE_KEY AUSENTE" — isso vale para BICONOMY.
+     Na Opção B (local-key) a chave é NECESSÁRIA e PERMITIDA (signer.mjs MC59.1).
+   - Para Opção B é OBRIGATÓRIO setar SIGNER_BACKEND=local-key EXPLÍCITO; senão o
+     default mainnet é 'biconomy' e o backend RECUSA arrancar com a chave bruta.
+   - CONTRATO_MAINNET = endereço do deploy novo (não o Sepolia).
+
+9. Validação pós-flip → ⚠️ critério "chaveBrutaEmMainnet=false" pressupõe biconomy.
+   Na Opção B a chave está presente (hot key) → o /health e o critério precisam ser
+   reinterpretados para local-key. Reconciliar antes de validar.
+
+10. Rollback → OK (unset NETWORK_STAGE; dados Supabase independem da rede).
+
+Dívida conhecida (não bloqueante): ~39 advisories transitivos (1 critical
+protobufjs), Safe multisig 2/3 (MC42), débito atómico saldo_rs.
+
+--------------------------------------------------------------------------------
+3. CHECKLIST FINAL DE PENDÊNCIAS REAIS (Opção B)
+--------------------------------------------------------------------------------
+🔴 CRÍTICAS (bloqueiam mainnet):
+  [ ] Auditoria externa do contrato (P0) — ou decisão formal de risco do operador.
+  [ ] Gerar EOA nova offline + rotacionar/injetar no Netlify (B2).
+  [ ] Deploy do LeilaoGUT na mainnet a partir da EOA nova + verificar Etherscan +
+      eth_getCode ≠ 0x + coordenacao()==EOA nova (B1/B5).
+  [ ] Setar SIGNER_BACKEND=local-key EXPLÍCITO + CONTRATO_MAINNET real (senão o
+      backend rejeita a chave / aponta p/ contrato errado).
+
+🟡 ALTAS (ideal antes):
+  [ ] MP_WEBHOOK_SECRET real + SENTRY_DSN confirmado (B4).
+  [ ] CONSOLIDATION_RPC_URL (Flashbots) + fallback (P1, anti-MEV).
+  [ ] Hardening painel Privy (Allowed Origins, HttpOnly, MFA).
+  [ ] Financiar EOA nova só com gás; monitor on-chain + plano de rotação (hot key).
+
+🟢 BAIXAS (depois):
+  [ ] Aplicar migração fila_tarefas + ativar async (fix definitivo do nonce).
+  [ ] Advisories transitivos; Safe multisig 2/3; débito atómico saldo_rs.
+
+📄 RECONCILIAÇÃO DE DOCUMENTAÇÃO (não é código, mas bloqueia operação segura):
+  [ ] Reescrever mainnet-prerequisites.md para Opção B: remover/aposentar passos
+      3–5 (Smart Account/Biconomy); corrigir passos 8–9 (SIGNER_BACKEND=local-key,
+      chave PRESENTE, chaveBrutaEmMainnet=true esperado).
+
+--------------------------------------------------------------------------------
+4. RECOMENDAÇÃO
+--------------------------------------------------------------------------------
+NÃO revogar o NO-GO ainda. Progresso real desde o MC60 (código Opção B em
+signer.mjs, mitigação de nonce, script de deploy seguro), mas persistem 🔴:
+contrato ausente na mainnet, EOA nova não gerada, e auditoria externa P0 em aberto.
+Recomendo, nesta ordem: (1) decisão sobre auditoria externa; (2) reconciliar o
+mainnet-prerequisites.md para Opção B; (3) executar MC59.11 Seg.1–5 (EOA nova →
+financiar → deploy → validar → revogar); (4) segredos + Flashbots + Privy; só então
+reavaliar o flip (MC60). Toda ação com ETH real permanece com o OPERADOR.
+================================================================================
