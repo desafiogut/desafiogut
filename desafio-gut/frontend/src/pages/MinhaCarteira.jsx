@@ -5,6 +5,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
+import CreditoStatus from "../components/CreditoStatus.jsx"; // MC59.6 — feedback do 202 assíncrono
 import PainelIndicacao from "../components/PainelIndicacao.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 
@@ -52,6 +53,9 @@ export default function MinhaCarteira() {
   } = useTrocarPorSenhas();
 
   const [comprarAberto, setComprarAberto] = useState(false);
+  // MC59.6 — txHash de uma compra assíncrona (202); alimenta <CreditoStatus>.
+  // Inerte enquanto CREDITO_ASSINCRONO=OFF (o caminho síncrono não retorna txHash).
+  const [creditoTxHash, setCreditoTxHash] = useState(null);
 
   // Saldo on-chain — sufixo de status alinhado ao Sidebar/Dashboard.
   const saldoStatusSuffix =
@@ -194,7 +198,11 @@ export default function MinhaCarteira() {
                   💰 Depositar PIX
                 </button>
                 <button
-                  onClick={() => trocarPorSenhas(1)}
+                  onClick={async () => {
+                    const r = await trocarPorSenhas(1);
+                    // MC59.6 — se a resposta foi 202 (assíncrono), acompanha via polling.
+                    if (r?.assincrono && r.txHash) setCreditoTxHash(r.txHash);
+                  }}
                   disabled={trocandoSenhas || (saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL}
                   style={{
                     ...botaoPrimario,
@@ -234,6 +242,8 @@ export default function MinhaCarteira() {
                   {trocaInfo}
                 </p>
               )}
+              {/* MC59.6 — feedback do crédito assíncrono (202); null com flag OFF. */}
+              <CreditoStatus txHash={creditoTxHash} qtd={1} />
               {trocaErro && (
                 <p style={{ margin: "0.6rem 0 0", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
                   ⚠️ {trocaErro}

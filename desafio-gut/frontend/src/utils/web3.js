@@ -121,6 +121,19 @@ const ALCHEMY_RPC =
   import.meta.env.VITE_ALCHEMY_URL ||
   "https://eth-sepolia.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B";
 
+/**
+ * MC59.6 — lê o receipt de uma tx e classifica para o polling de crédito
+ * assíncrono (resposta 202). Read-only via Alchemy; não exige carteira.
+ * @returns {Promise<"confirmado"|"revertido"|"pendente">}
+ */
+export async function verificarCreditoOnchain(txHash) {
+  if (!txHash) return "pendente";
+  const provider = new JsonRpcProvider(ALCHEMY_RPC);
+  const receipt = await provider.getTransactionReceipt(txHash);
+  if (!receipt) return "pendente";               // ainda não minerou
+  return Number(receipt.status) === 1 ? "confirmado" : "revertido";
+}
+
 export async function getEdicaoPrazo(idEdicao) {
   try {
     // Privy embedded wallet não injeta window.ethereum; usa Alchemy como fallback

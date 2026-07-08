@@ -63,6 +63,13 @@ export function useTrocarPorSenhas() {
         setErro(msg);
         return { ok: false, code: data?.error?.code, message: msg };
       }
+      // MC59.6 — resposta 202 (crédito ASSÍNCRONO): ainda NÃO confirmado. Não
+      // afirmar "creditada" nem refetch de saldo; devolve o txHash para o caller
+      // acompanhar via <CreditoStatus>/useCreditoStatus (polling on-chain).
+      if (status === 202 || data?.assincrono) {
+        setSucesso(`🔄 Compra submetida — confirmação de ${qtd} ${qtd === 1 ? "senha" : "senhas"} em processamento…`);
+        return { ok: true, assincrono: true, txHash: data?.txHash || null, qtd, data };
+      }
       setSucesso(`✓ ${qtd} ${qtd === 1 ? "senha creditada" : "senhas creditadas"} on-chain`);
       try { refetchSaldoRs?.(); } catch {}
       try { refetchSaldo?.(); } catch {}
