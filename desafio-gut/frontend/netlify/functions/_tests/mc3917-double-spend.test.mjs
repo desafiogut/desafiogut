@@ -15,6 +15,8 @@ mock.module("../_lib/saldoRs-store.mjs", {
   namedExports: {
     getSaldo: async (id) => saldoMem.get(String(id)) ?? null,
     setSaldo: async (id, payload) => { saldoMem.set(String(id), payload); },
+    // MC59.3 — INSERT..DO NOTHING (só grava se ausente).
+    inserirSaldoSeAusente: async (id, payload) => { if (!saldoMem.has(String(id))) saldoMem.set(String(id), payload); },
     casSaldo: async (id, expected, payload) => {
       if (injetarAntesDoCas) { const f = injetarAntesDoCas; injetarAntesDoCas = null; await f(); }
       if (casSempreFalha) return false;
