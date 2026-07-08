@@ -2052,3 +2052,20 @@ Branch `feat/mc59.13-reescrita-prerequisitos` (doc-only). Deliverables:
   `VITE_NETWORK_STAGE=mainnet`. KMS/Safe rebaixados a hardening futuro; +seção nonce hot-key.
 - Não altera o veredito de prontidão: NO-GO do MC60 permanece (auditoria P0 + EOA nova).
 
+### MC59.14 — revogação da chave + decisão de auditoria + prep MC60: 🟡 PARCIALMENTE PRONTO
+Branch `feat/mc59.14-revogacao-preparacao`. Deliverables: `Desktop\MC59.14-RELATORIO.txt`,
+`docs/MC59.14-relatorio.txt`, `docs/mainnet-prerequisites.md` (§3 marcado como executado).
+- **Deploy mainnet CONFIRMADO on-chain:** contrato **0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd**
+  (getCode≠0x; MAX_LANCES_UNICOS=10000), `coordenacao()` = EOA nova
+  **0xFea436f74059F885ea50D48aBbE21ef6665d1E67** (nonce=1, deploy a partir dela; chave antiga
+  NÃO usada; saldo ~0,00475 ETH).
+- **Chave antiga (0x1394492e…):** completa NÃO está em arquivo tracked nem no histórico git
+  (só prefixo truncado em docs). Está apenas em 2 `.env` locais gitignored
+  (`desafio-gut/.env`, `frontend/.env.local`). → NÃO precisa reescrever histórico git.
+  STATUS: 🔴 ainda não revogada (operador remove dos 2 .env + Netlify + SIGNER_BACKEND=local-key).
+- **Auditoria externa (P0):** decisão NÃO fornecida → PENDENTE (não fabricada). Fato verificado
+  que apoia accept-risk informado: contrato NÃO custodia/transfere fundos (sem payable/transfer/
+  receive/fallback). Nuance: controla integridade do leilão + dinheiro real é off-chain (PIX/MP).
+- **Veredito:** 🟡 MC60 NÃO liberado. Faltam: revogar chave (2 .env+Netlify), decidir auditoria,
+  setar envs 🟡 (CONTRATO_MAINNET, VITE_* mainnet, MP_WEBHOOK_SECRET, SENTRY, Flashbots, Privy).
+

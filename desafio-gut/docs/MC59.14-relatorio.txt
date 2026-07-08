@@ -1,0 +1,85 @@
+================================================================================
+MC59.14 — REVOGAÇÃO DA CHAVE ANTIGA + DECISÃO DE AUDITORIA + PREP MC60
+Agente: Opus 4.8 | Data: 2026-07-08 | Natureza: DOC/CONFIG + verificação read-only
+================================================================================
+
+VEREDITO: 🟡 PARCIALMENTE PRONTO PARA O MC60.
+Deploy mainnet CONFIRMADO. Faltam 2 ações do operador (revogar chave; decidir
+auditoria) + envs 🟡 antes do flip. NÃO estampar "PRONTO" ainda.
+
+--------------------------------------------------------------------------------
+1. DEPLOY MAINNET — VERIFICADO ON-CHAIN (read-only, publicnode)
+--------------------------------------------------------------------------------
+Contrato: 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+  • eth_getCode ............ bytecode presente (existe) ✅
+  • coordenacao() [0xe06f9dbf] = 0xFea436f74059F885ea50D48aBbE21ef6665d1E67 ✅
+  • MAX_LANCES_UNICOS() ..... 0x2710 (10000) → é o LeilaoGUT ✅
+EOA nova 0xFea436…1E67: nonce=1 (só o deploy), saldo ~0,00475 ETH ✅
+  → Deploy feito A PARTIR da EOA nova; a chave antiga NÃO foi usada. ✅
+
+--------------------------------------------------------------------------------
+2. SEG.0/1 — LOCALIZAÇÃO DA CHAVE ANTIGA (0x1394492e…) — VERIFICADO
+--------------------------------------------------------------------------------
+Onde ESTÁ (working tree, arquivos gitignored):
+  ⚠️ desafio-gut/.env
+  ⚠️ desafio-gut/frontend/.env.local
+Onde NÃO está:
+  • scripts/, frontend/src/, frontend/netlify/ → limpo
+  • Arquivos TRACKED → a chave COMPLETA (64 hex) NÃO está em nenhum arquivo
+    versionado (só o prefixo truncado "0x1394492e..." em docs — não é segredo).
+  • Histórico git → a chave completa NUNCA foi commitada.
+
+CONSEQUÊNCIA IMPORTANTE: NÃO é necessário reescrever o histórico git
+(BFG/git filter-repo). O passo de "history rewrite" do comando é DESNECESSÁRIO e
+seria risco desproporcional. A revogação real resume-se a 2 arquivos + Netlify.
+
+REVOGAÇÃO (OPERADOR — manual; agente não toca segredos):
+  [ ] Remover/substituir COORDENACAO_PRIVATE_KEY em desafio-gut/.env
+  [ ] Remover/substituir COORDENACAO_PRIVATE_KEY em frontend/.env.local
+  [ ] Netlify (production): setar COORDENACAO_PRIVATE_KEY = CHAVE NOVA (cofre) e
+      remover qualquer valor antigo; setar SIGNER_BACKEND=local-key
+  [ ] Verificar: grep -rn "1394492e" desafio-gut/.env* frontend/.env* → vazio
+  STATUS ATUAL: 🔴 NÃO REVOGADA (chave ainda presente nos 2 .env locais)
+
+--------------------------------------------------------------------------------
+3. SEG.2 — DECISÃO DE AUDITORIA EXTERNA (P0) — PENDENTE DE DECISÃO
+--------------------------------------------------------------------------------
+Fato técnico verificado (favorece um accept-risk informado, se escolhido):
+  • O contrato LeilaoGUT NÃO custodia nem transfere ETH/tokens (sem payable,
+    transfer, send, call{value}, receive, fallback, selfdestruct). Não há
+    superfície de "dreno de fundos" no smart contract.
+Nuance honesta (para a decisão ser informada, não falsamente tranquilizadora):
+  • "Sem custódia" elimina o risco de dreno on-chain, MAS o contrato controla a
+    INTEGRIDADE do leilão (seleção de vencedor, crédito de senhas) e o dinheiro
+    REAL circula OFF-chain (PIX/Mercado Pago → saldoSenhas). Bug/abuso de
+    coordenação ou lógica ainda tem impacto financeiro indireto.
+  • Coordenação é HOT KEY (EOA local-key) — risco operacional de chave, mitigado
+    por EOA só-gás + rotação + monitor (ver mainnet-prerequisites §1/§9/§11).
+
+DECISÃO DO OPERADOR (não fornecida neste comando — NÃO fabricada aqui):
+  [ ] AUDITORIA_DECISAO = OPCAO_A (auditar) | OPCAO_B (aceitar risco, justificar)
+  STATUS ATUAL: ⬜ PENDENTE — aguarda o operador registrar A ou B + justificativa.
+
+--------------------------------------------------------------------------------
+4. CHECKLIST FINAL PARA LIBERAR O MC60 (flip)
+--------------------------------------------------------------------------------
+✅ FEITO: contrato mainnet deployado e verificado; coordenacao = EOA nova.
+🔴 BLOQUEIA: revogar chave antiga (2 .env + Netlify); decisão de auditoria (A/B).
+🟡 ANTES DO FLIP:
+   [ ] Backend Netlify: SIGNER_BACKEND=local-key, COORDENACAO_PRIVATE_KEY=nova,
+       CONTRATO_MAINNET=0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd, NETWORK_STAGE=mainnet (ÚLTIMO)
+   [ ] Frontend Netlify: VITE_CONTRATO_SEPOLIA=0x0052…16cd, VITE_CHAIN_ID=1,
+       VITE_EXPLORER_URL=https://etherscan.io, VITE_NETWORK_STAGE=mainnet
+   [ ] MP_WEBHOOK_SECRET real, SENTRY_DSN, CONSOLIDATION_RPC_URL (Flashbots)
+   [ ] Hardening painel Privy (Allowed Origins/HttpOnly/MFA)
+   [ ] (recomendado) Verificar o source no Etherscan do contrato mainnet
+🟢 DEPOIS: fila async (nonce), advisories, Safe/KMS (hardening custódia).
+
+--------------------------------------------------------------------------------
+5. RECOMENDAÇÃO
+--------------------------------------------------------------------------------
+Progresso real e verificado (deploy correto na mainnet a partir da EOA nova).
+MC60 NÃO está liberado: revogar a chave antiga e registrar a decisão de auditoria
+são pré-condições; os envs 🟡 devem estar setados antes do flip. Todas as ações
+sensíveis (segredos, flip, tx real) permanecem com o OPERADOR.
+================================================================================

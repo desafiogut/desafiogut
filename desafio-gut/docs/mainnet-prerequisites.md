@@ -30,15 +30,16 @@
 - [ ] **Rotacionar/abandonar a chave atual** (`0x1394492e…`) — está COMPROMETIDA (foi
       exposta em texto puro). Não reutilizá-la na mainnet.
 
-## 3. Deploy do contrato na mainnet
-- [ ] `npx hardhat compile` (gera `artifacts/contracts/Leilao.sol/LeilaoGUT.json`).
-- [ ] Script: **`scripts/deploy-direct-mainnet.cjs`** (revisado no MC59.11: guarda de
-      chainId, preflight de saldo/gás, confirmação, verificação pós-deploy).
-- [ ] Env de execução: `MAINNET_RPC_URL`, `PRIVATE_KEY` = **chave da EOA nova**.
-- [ ] Anotar o **endereço do contrato** implantado.
-- [ ] Verificar o contrato no **Etherscan** (código-fonte público).
-- [ ] `eth_getCode(<endereço>)` na mainnet ≠ `"0x"` (confirma que existe).
-- [ ] `coordenacao()` (selector `0xe06f9dbf`) == endereço da EOA nova (o deployer).
+## 3. Deploy do contrato na mainnet — ✅ EXECUTADO (MC59.14, verificado on-chain)
+> Contrato mainnet: **0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd**
+> EOA coordenadora: **0xFea436f74059F885ea50D48aBbE21ef6665d1E67**
+- [x] `npx hardhat compile` (artifact gerado).
+- [x] Script `scripts/deploy-direct-mainnet.cjs` (revisado no MC59.11).
+- [x] Deploy a partir da EOA nova (`PRIVATE_KEY`); EOA nonce=1.
+- [x] Endereço do contrato anotado (acima).
+- [ ] Verificar o contrato no **Etherscan** (código-fonte público) — pendente.
+- [x] `eth_getCode` na mainnet ≠ `"0x"` (verificado).
+- [x] `coordenacao()` (`0xe06f9dbf`) == EOA nova (verificado).
 
 ## 4. Backend (Netlify env, context production)
 > Só definir depois de §2 e §3 verdes. O caminho mainnet faz gate **apenas** por
