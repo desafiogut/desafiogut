@@ -5,6 +5,24 @@
 
 ---
 
+## MC59.2 — Correção dos altos (B-2, B-4, C-1, D-1)
+
+> Branch `feat/mc59.2-correcao-altos` · revisão adversarial (security-reviewer):
+> C-1 **NICE**; B-2 **NAUGHTY (HIGH)** → guard revertido.
+
+| Fix | Estado | Segurança |
+|-----|--------|-----------|
+| **C-1** crédito/reembolso atómicos (CAS, `saldoRs.mjs`) | ✅ resolvido | Núcleo CAS aprovado. FOLLOW-UP MEDIUM: bootstrap de endereço novo usa upsert incondicional (mesma janela pré-existente do débito) → INSERT..DO NOTHING no MC59.3. |
+| **D-1** HMAC webhook (`mp-signature.mjs`, `webhook-mercadopago.mjs`) | ✅ postura segura | Opt-in `MP_WEBHOOK_ENFORCE` (fail-closed sem segredo) + fail-open observável (alerta). SEM janela de replay (MP reenvia com ts antigo; idempotência por pedidoId cobre). Gate: operador setar `MP_WEBHOOK_SECRET`. |
+| **B-4** config de rede centralizada (`src/lib/network.js` + call-sites) | ✅ só config | Remove fallback p/ contrato ANTIGO (falha alto se env faltar); sem virar o endereço implantado. Validado por build (sem runner frontend). |
+| **B-2** auto-reembolso (`comprar-senhas.mjs`) | ⚠️ revertido | Guard delta-based reprovado (HIGH): sob concorrência no mesmo endereço atribuía crédito de outra requisição → perda ao usuário. Voltou ao reembolso-seguro + alerta C-4. Fix real (tx-hash/fila) → MC59.3. |
+
+**Validação:** node --check limpo; 54/54 na superfície afetada (25/25 no núcleo
+financeiro pós-revert); build verde; secret-scan limpo. **B-2 permanece aberto** —
+mainnet NÃO liberada. Relatório: `Desktop\MC59.2-RELATORIO.txt`.
+
+---
+
 ## MC59.1 — Correção do B-1 (signer.mjs): local-key legítimo em mainnet (Opção B)
 
 > Branch `feat/mc59.1-correcao-signer` · alteração de produção APENAS em

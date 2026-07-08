@@ -1832,3 +1832,30 @@ santa-method). **Escopo R1: produção só em `_lib/signer.mjs`.** Deliverables:
   (crédito não-atómico), D-1 (webhook fail-open) **permanecem abertos**. Tx
   on-chain real e flip = operador (segredos + envs). Próximo: MC59.2+ p/ os 4 altos.
 
+### MC59.2 — Correção dos altos (C-1/D-1/B-4 ✅ · B-2 ⚠️ revertido)
+Branch `feat/mc59.2-correcao-altos`. Stack: Opus 4.8 + ECC (tdd-workflow,
+verification-loop, security-scan). Deliverables: `Desktop\MC59.2-RELATORIO.txt`,
+`docs/MC59.2-relatorio.txt`, `security_audit.md` (secção MC59.2), testes mc592-*.
+Escopo decidido **com o operador** (perguntas respondidas): D-1 seguro sem quebrar
+prod; B-4 só centralizar config.
+- **C-1 ✅** (`saldoRs.mjs`): crédito e reembolso agora ATÓMICOS via CAS
+  (`ajustarSaldoRsAtomico`), fechando o lost-update vs. débito concorrente. TDD com
+  testes de lost-update determinísticos. Revisão: núcleo NICE. Follow-up MEDIUM
+  (MC59.3): bootstrap de endereço novo → INSERT..DO NOTHING.
+- **D-1 ✅** (`mp-signature.mjs`/`webhook`): flag opt-in `MP_WEBHOOK_ENFORCE`
+  (fail-closed sem segredo) + fail-open observável (alerta). SEM janela de replay
+  (MP reenvia com ts antigo; idempotência por pedidoId cobre). Gate: operador setar
+  `MP_WEBHOOK_SECRET`.
+- **B-4 ✅** (`src/lib/network.js` novo + call-sites): fonte única derivada de env;
+  remove fallback p/ contrato ANTIGO e literais Sepolia; chainId/explorer
+  sobrescrevíveis por env. **Não vira o endereço implantado** (fica no env do
+  operador). Sem runner frontend → validado por build verde.
+- **B-2 ⚠️ revertido:** a tentativa de "re-verificar on-chain antes de reembolsar"
+  foi reprovada por **revisão de segurança (HIGH)** — comparava saldo agregado, e
+  sob concorrência no mesmo endereço podia NÃO reembolsar (perda ao usuário).
+  Voltou ao reembolso-seguro + alerta C-4 de reembolso falho. Fix real (atribuição
+  por tx-hash ou fila assíncrona) → **MC59.3**.
+- **Veredito honesto (diverge do R8):** 3 de 4 endereçados; **B-2 aberto**; mainnet
+  ainda NÃO liberada. Validação: 54/54 na superfície afetada, build verde,
+  secret-scan limpo. Pendências de operador em `Desktop\MC59.2-RELATORIO.txt`.
+
