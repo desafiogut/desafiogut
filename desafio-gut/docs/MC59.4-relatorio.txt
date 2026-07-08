@@ -1,0 +1,98 @@
+================================================================================
+MC59.4 — RETRY DE NONCE + RUNBOOK DE RECONCILIAÇÃO (+ ADR + SCRIPT DE FLIP)
+DesafioGUT · Pré-Mainnet · RELATÓRIO FINAL
+================================================================================
+Data...........: 2026-07-08
+Branch.........: feat/mc59.4-nonce-runbook (de feat/mc60-flip-mainnet ← feat/mc59.3)
+Modelo.........: Opus 4.8 + ECC (tdd-workflow, verification-loop, search-first, security-review)
+
+--------------------------------------------------------------------------------
+0. VEREDITO
+--------------------------------------------------------------------------------
+✅ Mitigação de colisão de nonce implementada e testada (retry no broadcast).
+✅ Runbook de reconciliação de `credito_pendente` documentado.
+✅ ADR do fix DEFINITIVO (confirmação assíncrona) registrado.
+✅ Script de flip parametrizado (sem segredos) com preflight getCode.
+⚠️ NÃO torna a mainnet pronta sozinho — a causa estrutural do "dinheiro preso"
+   (wait síncrono vs. timeout) só é eliminada pela confirmação assíncrona (ADR).
+
+--------------------------------------------------------------------------------
+1. RE-DIAGNÓSTICO HONESTO (por que não foi um "lock de nonce")
+--------------------------------------------------------------------------------
+O plano pedia "serialização de nonce por endereço". A análise do modelo real
+mostrou:
+  • O nonce colide na EOA da COORDENAÇÃO (signer único), não por endereço-alvo.
+  • Mutex em memória é INÚTIL no Lambda/Netlify (1 req por instância; concorrência
+    real cai em instâncias distintas que não compartilham memória).
+  • Colisão de nonce em geral falha no BROADCAST (antes do txHash) → o fluxo do
+    MC59.3 já REEMBOLSA com segurança. Não é "dinheiro preso".
+  • O "dinheiro preso" (TX_PENDENTE) vem majoritariamente do WAIT SÍNCRONO estourar
+    o timeout da função na mainnet — problema ARQUITETURAL, não de nonce.
+Logo, um lock trataria um sintoma menor e/ou traria fragilidade (lock longo sobre
+wait de ~12s). Ver docs/adr-2026-07-08-confirmacao-assincrona.md.
+
+--------------------------------------------------------------------------------
+2. IMPLEMENTAÇÃO (código) — R1: só o caminho de broadcast
+--------------------------------------------------------------------------------
+Arquivo: _lib/contract.mjs
+  • ehErroDeNonce(err): classifica NONCE_EXPIRED / REPLACEMENT_UNDERPRICED /
+    "nonce too low" / "already known" / "replacement transaction underpriced".
+  • enviarAdicionarSenhasComRetry(contract, endereco, qtd, tentativas=3): em
+    colisão de nonce, REENVIA (um novo send busca nonce pending fresco), com jitter
+    (de-correlaciona instâncias). Erros NÃO-nonce propagam de imediato → reembolso
+    seguro (send falhou antes do txHash). Mantém a abordagem tx-hash do MC59.3.
+Efeito: o perdedor da corrida de nonce reenvia em vez de falhar → menos reembolsos
+  + retries do usuário. Colisões que ainda falham no send NÃO viram TX_PENDENTE
+  (propagam sem txHash → reembolso).
+
+--------------------------------------------------------------------------------
+3. TDD (RED → GREEN)
+--------------------------------------------------------------------------------
+Arquivo: _tests/mc594-nonce-retry.test.mjs (mock ethers offline)
+  RED (2 falhas iniciais no código sem retry):
+    • colisão 1x → retry reenvia e confirma (sendCalls==2)
+    • colisão 2x → retry persiste (sendCalls==3)
+  Regressão (verde antes e depois):
+    • erro NÃO-nonce (gás) propaga imediatamente (sendCalls==1, sem retry)
+    • nonce colide além do limite → propaga erro de nonce (sem txHash, não TX_PENDENTE)
+  GREEN após implementação: 4/4.
+
+--------------------------------------------------------------------------------
+4. VERIFICATION-LOOP
+--------------------------------------------------------------------------------
+Build.........: PASS (vite build ✓ ~5.6s)
+node --check..: PASS (contract.mjs)
+Tests.........: PASS — superfície afetada 57/57 (novos mc594: 4/4).
+Script........: bash -n flip-mainnet.sh → sintaxe OK.
+Security scan.: sem chave/segredo real nos diffs; a chave vazada do prompt NÃO foi
+                persistida em NENHUM arquivo (grep confirmou vazio).
+
+--------------------------------------------------------------------------------
+5. RUNBOOK + ADR + SCRIPT (entregáveis)
+--------------------------------------------------------------------------------
+  • docs/runbook-credito-pendente.md — investigação por txHash (status 1/0/dropped),
+    tabela de decisão (reembolsar/aguardar/nada), reembolso manual via CAS,
+    dependência de SENTRY_DSN.
+  • docs/adr-2026-07-08-confirmacao-assincrona.md — o fix DEFINITIVO: mover o
+    crédito para a fila durável (MC39.20) + resposta 202 + worker confirma/reembolsa.
+    Recomendado como pré-requisito de mainnet, acima de qualquer lock.
+  • scripts/flip-mainnet.sh — flip parametrizado SEM segredos, com PREFLIGHT
+    eth_getCode que ABORTA se o contrato não existir na rede alvo (a checagem que
+    faltou no MC60). NÃO seta a chave privada (operador injeta manualmente).
+
+--------------------------------------------------------------------------------
+6. LIMITES E PRÓXIMOS PASSOS
+--------------------------------------------------------------------------------
+  • MC59.4 REDUZ a frequência de falhas por nonce; NÃO elimina o TX_PENDENTE do
+    wait síncrono. → Próximo MC: implementar o ADR (confirmação assíncrona).
+  • Gates de mainnet (do MC60 NO-GO) permanecem: deploy do contrato na mainnet,
+    rotação da chave, segredos reais, SENTRY_DSN, gás na EOA, validação viva.
+
+Commits (branch feat/mc59.4-nonce-runbook):
+  feat(mc59.4): retry ciente de nonce no broadcast de creditarSenhas
+  docs(mc59.4): runbook credito-pendente + ADR confirmação assíncrona + flip script
+  docs(mc59.4): relatório final + cloud.md + security_audit.md (este)
+
+================================================================================
+FIM — MC59.4
+================================================================================

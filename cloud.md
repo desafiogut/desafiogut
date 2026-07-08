@@ -1899,3 +1899,27 @@ nenhuma chave tocada. Deliverables: `Desktop\MC60-NOGO-RELATORIO.txt`,
 - Próximo: **MC59.4** (retry de nonce + runbook + ADR do fix assíncrono) + script
   de flip parametrizado sem segredos.
 
+### MC59.4 — retry de nonce + runbook + ADR (rumo ao fix definitivo)
+Branch `feat/mc59.4-nonce-runbook`. Stack: Opus 4.8 + ECC (tdd-workflow,
+verification-loop, search-first, security-review). Deliverables:
+`Desktop\MC59.4-RELATORIO.txt`, `docs/MC59.4-relatorio.txt`,
+`docs/runbook-credito-pendente.md`, `docs/adr-2026-07-08-confirmacao-assincrona.md`,
+`scripts/flip-mainnet.sh`.
+- **Re-diagnóstico honesto:** o "lock de nonce por endereço" é impróprio no
+  serverless (mutex em memória inútil entre instâncias Lambda; nonce colide na EOA
+  única). Colisão de nonce falha no broadcast → **já reembolsa** (não fica preso).
+  O `TX_PENDENTE` "dinheiro preso" vem do **wait síncrono vs timeout**, não do nonce.
+- **Código** (`_lib/contract.mjs`, R1): `enviarAdicionarSenhasComRetry` reenvia com
+  nonce fresco em colisão (jitter); erros não-nonce propagam (reembolso seguro).
+  Mantém tx-hash do MC59.3. TDD 4/4; suíte afetada 57/57; build verde.
+- **Runbook** (`docs/runbook-credito-pendente.md`): reconciliação por txHash.
+- **ADR** (`docs/adr-2026-07-08-confirmacao-assincrona.md`): o fix DEFINITIVO é a
+  **confirmação assíncrona** (fila MC39.20 + resposta 202 + worker confirma/
+  reembolsa) — recomendado como pré-requisito de mainnet, acima de qualquer lock.
+- **`scripts/flip-mainnet.sh`**: flip parametrizado SEM segredos, com preflight
+  `eth_getCode` (aborta se o contrato não existir na rede — a checagem que faltou
+  no MC60). Não seta a chave privada (operador injeta manualmente).
+- **Segurança:** a chave vazada no prompt do MC60 NÃO foi persistida (grep confirmou).
+- **Veredito:** mitigação entregue e testada; a mainnet ainda depende do ADR
+  (assíncrono) + gates do operador do MC60 NO-GO.
+

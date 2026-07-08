@@ -5,6 +5,30 @@
 
 ---
 
+## MC59.4 — retry de nonce + runbook de reconciliação
+
+> Branch `feat/mc59.4-nonce-runbook`. Re-diagnóstico honesto: o "lock de nonce"
+> pedido é impróprio no serverless (mutex em memória inútil entre instâncias
+> Lambda); colisões de nonce falham no broadcast → já reembolsam. O "dinheiro
+> preso" (TX_PENDENTE) vem do **wait síncrono vs timeout**, não do nonce.
+
+- **Código** (`_lib/contract.mjs`): `enviarAdicionarSenhasComRetry` — em colisão de
+  nonce (NONCE_EXPIRED/replacement/"nonce too low"), REENVIA com nonce pending
+  fresco; erros não-nonce propagam de imediato (reembolso seguro). Mantém tx-hash
+  do MC59.3. TDD 4/4.
+- **`docs/runbook-credito-pendente.md`**: reconciliação manual guiada por txHash
+  (status 1/0/dropped → nada/reembolsar/aguardar), reembolso via CAS; depende de
+  `SENTRY_DSN` em prod.
+- **`docs/adr-2026-07-08-confirmacao-assincrona.md`**: fix DEFINITIVO = confirmação
+  assíncrona (fila MC39.20 + 202 + worker), recomendado como pré-requisito de
+  mainnet acima de qualquer lock.
+- **`scripts/flip-mainnet.sh`**: flip parametrizado SEM segredos + preflight
+  `eth_getCode` que aborta se o contrato não existir na rede alvo. Não seta a chave.
+- **Segurança:** a chave privada vazada no prompt do MC60 NÃO foi persistida em
+  nenhum arquivo (grep confirmou). Validação: 57/57; build verde.
+
+---
+
 ## MC59.3 — B-2 (tx-hash) + follow-up C-1 (bootstrap atómico)
 
 > Branch `feat/mc59.3-correcao-b2-c1` · revisão adversarial (security-reviewer):
