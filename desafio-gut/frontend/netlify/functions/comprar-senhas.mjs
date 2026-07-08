@@ -28,7 +28,7 @@ import { requireMfa } from "./_lib/require-mfa.mjs";
 import {
   debitarSaldoRs, reembolsarSaldoRs, lerSaldoRsCentavos,
 } from "./_lib/saldoRs.mjs";
-import { creditarSenhas, submeterCredito, confirmarReceiptOnchain, lerSaldoSenhas, CONTRATO_ADDRESS } from "./_lib/contract.mjs";
+import { creditarSenhas, submeterCredito, lerSaldoSenhas, CONTRATO_ADDRESS } from "./_lib/contract.mjs";
 import { buscarVinculoPorIndicado, registrarConversao } from "./_lib/referral.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 // MC59.2 (B-2/C-4) — alertas observáveis para casos de reconciliação financeira.
@@ -254,24 +254,16 @@ export default async (req) => {
       }, 202);
     }
 
-    // Fallback (fila indisponível — misconfig): confirma a MESMA tx sincronamente,
-    // SEM re-submeter (evita double-credit). Reusa a classificação do MC59.3.
-    const { estado } = await confirmarReceiptOnchain(txHash);
-    if (estado === "revertido") {
-      let reembolso = { ok: true };
-      if (valorCentavos > 0) {
-        reembolso = await reembolsarSaldoRs({ endereco, valorCentavos, motivo: "comprar-senhas-async-revertido" });
-        if (!reembolso.ok) captureSecurityAlert("comprar_senhas_reembolso_falhou", { endereco, valorCentavos, code: reembolso.code }, "error").catch(() => {});
-      }
-      return jsonError(502, "credito_onchain_falhou", `tx ${txHash} revertida`, { reembolsado: reembolso.ok, txHash });
-    }
-    if (estado === "pendente") {
-      captureSecurityAlert("comprar_senhas_tx_pendente", { endereco, qtd, txHash }, "error").catch(() => {});
-      return jsonError(502, "credito_pendente", "Crédito on-chain pendente de confirmação — não reembolsado. Reconciliação em andamento.", { txHash, reembolsado: false });
-    }
-    // confirmado
-    await gravarConsentLog(req, endereco);
-    return jsonResponse({ ok: true, status: "confirmado", assincrono: true, endereco, qtd, valorCentavos, txHash, contrato: CONTRATO_ADDRESS, processadoEm: new Date().toISOString() });
+    // Fallback (fila indisponível — MISCONFIG: flag ligada sem a migração da fila).
+    // A tx JÁ foi submetida (txHash), mas não há worker para confirmá-la e
+    // confirmá-la sincronamente aqui não faz sentido (bloco ~12s vs. timeout curto,
+    // e re-submeter causaria double-credit). NÃO reembolsamos (a tx pode minerar):
+    // respondemos pendente e sinalizamos reconciliação (runbook). É um estado de
+    // MISCONFIG — o operador não deve ligar CREDITO_ASSINCRONO sem a fila pronta.
+    captureSecurityAlert("comprar_senhas_tx_pendente", { endereco, qtd, txHash, motivo: "fila_indisponivel" }, "error").catch(() => {});
+    return jsonError(502, "credito_pendente",
+      "Crédito on-chain submetido; fila de confirmação indisponível — não reembolsado. Reconciliação em andamento.",
+      { txHash, reembolsado: false });
   }
 
   // 7. Crédito on-chain (SÍNCRONO). Em falha → reembolsa (se houve débito).

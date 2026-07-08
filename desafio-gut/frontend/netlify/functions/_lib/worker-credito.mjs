@@ -37,6 +37,12 @@ export async function confirmarCreditoSenhas(payload) {
 
   if (estado === "revertido") {
     // A tx reverteu → as senhas NÃO foram creditadas → devolve o R$ debitado.
+    // CLAIM ANTES do reembolso (idempotência forte): grava o marcador primeiro, de
+    // modo que um reprocesso NUNCA reembolse duas vezes (mesmo que o processo morra
+    // após o reembolso). Se o reembolso falhar, o alerta (level=error) encaminha
+    // para reconciliação manual (runbook-credito-pendente.md) — não auto-retenta
+    // (evita double-refund por retry de um reembolso não-idempotente).
+    if (marcador) await setDebito(marcador, { txHash, estado, reembolsado: null, em: new Date().toISOString() });
     let reembolso = { ok: true };
     if (Number(valorCentavos) > 0) {
       reembolso = await reembolsarSaldoRs({ endereco, valorCentavos, motivo: "credito-assincrono-revertido" });
@@ -45,8 +51,7 @@ export async function confirmarCreditoSenhas(payload) {
           { pedidoId, endereco, valorCentavos, txHash, code: reembolso.code }, "error").catch(() => {});
       }
     }
-    if (marcador) await setDebito(marcador, { txHash, estado, reembolsado: reembolso.ok, em: new Date().toISOString() });
-    console.warn("[worker-credito] revertido → reembolsado", { pedidoId, endereco, txHash, reembolsado: reembolso.ok });
+    console.warn("[worker-credito] revertido → reembolso", { pedidoId, endereco, txHash, reembolsado: reembolso.ok });
     return;
   }
 
