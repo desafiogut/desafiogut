@@ -1,0 +1,100 @@
+================================================================================
+MC59.11 — EXECUÇÃO: NOVA EOA E DEPLOY NA MAINNET
+Agente de Planejamento: Opus 4.8
+Data: 2026-07-08
+Status: SEGMENTO 0 CONCLUÍDO (diagnóstico). Segmentos 1–5 = OPERADOR (manual).
+================================================================================
+
+--------------------------------------------------------------------------------
+SEGMENTO 0 — VARIÁVEL DE AUTORIZAÇÃO (CONCLUÍDO — read-only)
+--------------------------------------------------------------------------------
+Fonte lida: C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\contracts\Leilao.sol
+Contrato: LeilaoGUT.
+
+VARIÁVEL DE AUTORIZAÇÃO IDENTIFICADA:
+- `address public coordenacao;`  (linha 5)
+- modifier `apenasCoordenacao`: require(msg.sender == coordenacao)  (linhas 63–66)
+- constructor: `coordenacao = msg.sender;`  (linha 60)
+  => Quem DEPLOYA vira coordenador automaticamente. NÃO há passo manual de "setar".
+- Transferência two-step disponível (caso deploy venha de outro endereço):
+    iniciarTransferenciaCoordenacao(novo)  [apenasCoordenacao]
+    aceitarTransferenciaCoordenacao()      [msg.sender == coordenacaoPendente]
+
+*** CORREÇÃO CRÍTICA A TODOS OS MCs ANTERIORES ***
+O selector 0x0956e76e, usado nos comandos como se fosse coordenacao(), é na
+verdade coordenacaoPendente(). O selector CORRETO de coordenacao() é 0xe06f9dbf.
+
+VERIFICAÇÃO ON-CHAIN (Sepolia, 0x825bBd3F064979a5F750DBB6aED421b37AA3eF06):
+- coordenacao()        [0xe06f9dbf] -> 0xDa3a83A24b25aa71e1a9b5A74503fFA93487e84E  ✅
+- coordenacaoPendente()[0x0956e76e] -> 0x0 (NORMAL: sem transfer em curso)
+- MAX_LANCES_UNICOS()  [0x325251f0] -> 10000 (confirma identidade LeilaoGUT)
+
+=> O contrato Sepolia está SAUDÁVEL e o coordenador SEMPRE esteve setado.
+   Não houve two-step incompleto nem coordenador zerado. O "0x0" era artefato
+   de selector errado. Isto NÃO altera a decisão de segurança (ver abaixo).
+
+--------------------------------------------------------------------------------
+DECISÃO DE SEGURANÇA (inalterada): OPÇÃO B — NOVA EOA
+--------------------------------------------------------------------------------
+Motivo permanece válido independentemente do estado do contrato:
+- A chave 0x1394492e... foi colada em texto puro neste chat => COMPROMETIDA.
+- Financiar na mainnet qualquer endereço controlado por ela = perda quase certa
+  por sweeper bots. Rotação tem de vir ANTES do ETH real, não depois.
+
+RESSALVA HONESTA: NÃO foi confirmado (por escolha, para não re-expor a chave) que
+0x1394492e... deriva de fato para 0xDa3a83... Dois casos, mesmo plano:
+  (i) se deriva  -> Da3a83 está queimada; gerar EOA nova (Opção B).
+  (ii) se NÃO deriva -> a chave vazada nem controla o coordenador, mas continua
+       sendo material secreto exposto; ainda assim usa-se EOA nova na mainnet.
+Em ambos: NÃO reutilizar chave que passou por chat. Opção B.
+
+--------------------------------------------------------------------------------
+SEGMENTOS 1–5 — RUNBOOK DO OPERADOR (MANUAL; agente NÃO executa)
+--------------------------------------------------------------------------------
+SEG.1 GERAR NOVA EOA (máquina segura, offline):
+  - `cast wallet new`  (Foundry)  OU hardware wallet.
+  - NUNCA colar a chave privada em chat/log/issue/git.
+  - Guardar em cofre (1Password / Bitwarden / AWS Secrets Manager).
+  - Registrar SÓ o endereço público:  NOVA_EOA = 0x__________________________
+
+SEG.2 FINANCIAR (mainnet):
+  - Enviar SÓ gás de deploy + folga (~0,01–0,02 ETH) para NOVA_EOA.
+  - Não usar como tesouraria.
+  - Registrar: tx de financiamento = 0x______ ; conferir saldo no Etherscan.
+
+SEG.3 DEPLOY (mainnet):
+  - CORREÇÃO ao passo 3.1 do comando: NÃO é preciso "setar a variável de
+    autorização" no script. O constructor faz coordenacao = msg.sender.
+    Basta DEPLOYAR A PARTIR DA NOVA_EOA => coordenacao = NOVA_EOA automaticamente.
+    (Se deployar de um endereço diferente, usar depois a transferência two-step.)
+  - Script: deploy-direct-mainnet.cjs lendo a NOVA chave via env (nunca hardcode).
+  - Pós-deploy, LER on-chain com o selector CORRETO:
+      coordenacao() [0xe06f9dbf] deve retornar NOVA_EOA (≠ 0x0).
+  - Registrar: contrato mainnet = 0x______ ; tx de deploy = 0x______.
+
+SEG.4 VALIDAÇÃO PÓS-DEPLOY:
+  - Backend apontando para NOVA_EOA; smoke de crédito/lance mínimo; confirmar
+    assinatura OK nos logs. Falhou 3x => parar e reportar (Boulder Loop).
+
+SEG.5 DESATIVAR CHAVE ANTIGA (0x1394492e...):
+  - Remover de .env (desafio-gut/.env, frontend/.env.local), segredos Netlify,
+    scripts, histórico git (BFG/filter-repo se preciso).
+  - `grep -r "0x1394492e" .` (no repo) deve retornar vazio.
+  - Marcar como revogada no cloud.md.
+
+--------------------------------------------------------------------------------
+RECOMENDAÇÃO DE CUSTÓDIA (produção)
+--------------------------------------------------------------------------------
+Para dinheiro real: migrar a coordenação para AWS KMS (caminho do MC30.2, signer
+0xAEFe11...EdFF) ou Safe multisig. EOA local-key raw em serverless é o modo de
+falha deste incidente. EOA nova serve de ponte se KMS não couber no prazo do MC60.
+
+--------------------------------------------------------------------------------
+PENDÊNCIAS DE RASTREABILIDADE (não executadas pelo agente)
+--------------------------------------------------------------------------------
+- Commits git e atualização de cloud.md: pendentes. O repo existe em
+  C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut, mas commits/branch são ação
+  sensível — executo mediante confirmação. Cópia para docs/ idem.
+- Estado ✅ de "nova EOA gerada/financiada/deploy/validação/revogação": em aberto,
+  dependem da execução manual do operador (Segmentos 1–5).
+================================================================================
