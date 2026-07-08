@@ -2023,3 +2023,20 @@ Branches `feat/mc59.11-execucao-nova-eoa`. Deliverables:
   a partir da EOA nova → smoke de crédito/lance → revogar chave antiga (.env, segredos
   Netlify, scripts, histórico git). Agente NÃO executa transação com ETH real (Pilar 1).
 
+### MC59.12 — avaliação MC60-NOGO + pré-requisitos mainnet: 🔴 NO-GO PERMANECE
+Branch `feat/mc59.12-leitura-nogo` (doc-only, read-only). Deliverables:
+`Desktop\MC59.12-RELATORIO.txt`, `docs/MC59.12-relatorio.txt`.
+- **Verificado agora:** mainnet `eth_getCode(0x825b…)` = **"0x"** (contrato NÃO existe
+  na mainnet — B1 aberto). signer.mjs (MC59.1) já aceita `local-key` em mainnet SE
+  `SIGNER_BACKEND=local-key` explícito (default mainnet = biconomy, rejeita chave bruta).
+- **⚠️ Desatualização grave:** `mainnet-prerequisites.md` descreve Smart Account/Biconomy
+  (passos 3–5) — arquitetura ABANDONADA na Opção D. Passos 8–9 contradizem a Opção B
+  (pedem "COORDENACAO_PRIVATE_KEY ausente"/`chaveBrutaEmMainnet=false`, mas em local-key
+  a chave é NECESSÁRIA/presente). Doc precisa ser reescrito p/ Opção B.
+- **Bloqueadores 🔴 restantes:** (1) auditoria externa P0 sem evidência; (2) EOA nova não
+  gerada/rotacionada (B2); (3) contrato ausente na mainnet (B1/B5); (4) setar
+  SIGNER_BACKEND=local-key + CONTRATO_MAINNET real. 🟡: MP_WEBHOOK_SECRET/SENTRY,
+  Flashbots CONSOLIDATION_RPC_URL, hardening Privy. 🟢: fila async (nonce fix definitivo).
+- **Veredito:** NÃO revogar o NO-GO. Ordem: auditoria → reconciliar doc → MC59.11 Seg.1–5
+  → segredos/Flashbots/Privy → reavaliar flip. ETH real sempre com o OPERADOR.
+
