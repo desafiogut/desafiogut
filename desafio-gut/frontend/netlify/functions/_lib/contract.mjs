@@ -211,6 +211,40 @@ export async function creditarSenhas(endereco, qtd) {
 }
 
 /**
+ * MC59.5 (ADR — confirmação assíncrona) — SUBMETE adicionarSenhas e devolve o
+ * txHash SEM aguardar o wait. O wait (que estoura o timeout da função na mainnet)
+ * é feito depois, em background, pelo worker (worker-credito.mjs) via
+ * confirmarReceiptOnchain. Reusa o retry de nonce do MC59.4. Se a submissão falhar
+ * (nonce esgotado, gás, RPC), lança ANTES do txHash → o caller reembolsa com
+ * segurança (comportamento idêntico ao síncrono).
+ * @returns {{ txHash: string }}
+ */
+export async function submeterCredito(endereco, qtd) {
+  const { contract, address } = await getInstance();
+  if (!(await verificarCoordenacao())) {
+    throw new Error(`wallet ${address} não é coordenacao do contrato ${CONTRATO_ADDRESS}`);
+  }
+  const tx = await enviarAdicionarSenhasComRetry(contract, endereco, qtd);
+  const txHash = tx?.hash;
+  if (!txHash) { const e = new Error("submissão sem txHash"); e.code = "SUBMIT_SEM_HASH"; throw e; }
+  return { txHash };
+}
+
+/**
+ * MC59.5 — confirma o estado on-chain de uma tx já submetida (usado pelo worker).
+ * Read-only (não exige signer). Retorna { estado, blockNumber? }:
+ *   - "confirmado" (receipt.status 1) · "revertido" (status 0) · "pendente" (sem receipt)
+ */
+export async function confirmarReceiptOnchain(txHash) {
+  ensureEnv();
+  const provider = new JsonRpcProvider(process.env.RPC_URL);
+  const receipt = await lerReceiptComRetry(provider, txHash);
+  if (receipt && Number(receipt.status) === 1) return { estado: "confirmado", blockNumber: receipt.blockNumber };
+  if (receipt && Number(receipt.status) === 0) return { estado: "revertido" };
+  return { estado: "pendente" };
+}
+
+/**
  * Endereço da coordenacao (apenas leitura, não retorna a privkey). Síncrono:
  * devolve o endereço em cache resolvido na última assinatura (ou null se ainda
  * não houve nenhuma). Em _lib/credito.mjs é chamado após `creditarSenhas`, que
