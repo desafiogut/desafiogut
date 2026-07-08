@@ -33,12 +33,50 @@ export async function lerSaldoRsCentavos(endereco) {
   }
 }
 
-async function gravarSaldoRsCentavos(endereco, centavos) {
-  // MC36.1 — escrita só Supabase (R11).
-  await setSaldo(chave(endereco), {
-    centavos: Math.max(0, Math.floor(centavos)),
-    atualizadoEm: new Date().toISOString(),
-  });
+/**
+ * MC59.2 (C-1) — Ajuste ATÓMICO do saldo por um delta (crédito/reembolso).
+ * Espelha o CAS do débito (debitarSaldoRs): lê o saldo, garante a linha e só
+ * grava se o saldo no banco ainda for o valor lido (casSaldo). Fecha a janela
+ * TOCTOU do read-modify-write → um crédito/reembolso concorrente com um débito
+ * (ou entre si) já não pode "clobberar" o resultado do outro (lost update).
+ * O saldo nunca fica < 0.
+ *
+ * @returns { ok:true, saldoAntes, saldoDepois } | { ok:false, code, message }
+ */
+async function ajustarSaldoRsAtomico(ender, deltaCentavos, motivo = "ajuste") {
+  const delta = Math.floor(Number(deltaCentavos));
+  for (let tentativa = 1; tentativa <= MAX_TENTATIVAS_DEBITO; tentativa++) {
+    let saldoAntes;
+    try {
+      saldoAntes = await lerSaldoRsCentavos(ender);
+    } catch (err) {
+      return { ok: false, code: "leitura_saldo_falhou", message: err?.message };
+    }
+    const saldoDepois = Math.max(0, saldoAntes + delta);
+    const novoPayload = { centavos: saldoDepois, atualizadoEm: new Date().toISOString() };
+
+    // Garante que a linha existe no Supabase para o CAS ter alvo de UPDATE
+    // (durante a transição MC36.1 o saldo pode existir só no Blob legado).
+    try {
+      const existe = await getSaldo(ender);
+      if (existe == null) {
+        await setSaldo(ender, { centavos: saldoAntes, atualizadoEm: new Date().toISOString() });
+      }
+    } catch (err) {
+      return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
+    }
+
+    let trocou;
+    try {
+      trocou = await casSaldo(ender, saldoAntes, novoPayload);
+    } catch (err) {
+      return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
+    }
+    if (trocou) return { ok: true, saldoAntes, saldoDepois };
+    // CAS perdeu: outro ajuste alterou o saldo entre a leitura e a escrita → relê.
+    console.warn(`[saldoRs:${motivo}] CAS perdeu (tentativa ${tentativa}/${MAX_TENTATIVAS_DEBITO}) — relendo saldo`, { endereco: ender });
+  }
+  return { ok: false, code: "conflito_concorrencia", message: "ajuste não aplicado após múltiplas tentativas (concorrência alta)" };
 }
 
 /**
@@ -70,20 +108,15 @@ export async function creditarSaldoRsIdempotente({ pedidoId, endereco, valorCent
     console.warn(`[saldoRs:${fonte}] leitura saldo-rs-creditos falhou:`, err?.message);
   }
 
-  // Lê saldo atual e credita.
-  let saldoAntes;
-  try {
-    saldoAntes = await lerSaldoRsCentavos(ender);
-  } catch (err) {
-    return { ok: false, code: "leitura_saldo_falhou", message: err?.message };
+  // MC59.2 (C-1) — crédito ATÓMICO via CAS (não read-modify-write). Fecha o
+  // lost-update quando um débito concorrente altera o saldo no mesmo endereço.
+  const ajuste = await ajustarSaldoRsAtomico(ender, valor, `credito:${fonte}`);
+  if (!ajuste.ok) {
+    console.error(`[saldoRs:${fonte}] crédito atómico falhou:`, ajuste.code);
+    return { ok: false, code: ajuste.code, message: ajuste.message };
   }
-  const saldoDepois = saldoAntes + valor;
-  try {
-    await gravarSaldoRsCentavos(ender, saldoDepois);
-  } catch (err) {
-    console.error(`[saldoRs:${fonte}] gravar saldo falhou:`, err?.message);
-    return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
-  }
+  const saldoAntes  = ajuste.saldoAntes;
+  const saldoDepois = ajuste.saldoDepois;
 
   const resultado = {
     pedidoId,
@@ -179,14 +212,12 @@ export async function reembolsarSaldoRs({ endereco, valorCentavos, motivo = "ree
   const ender = chave(endereco);
   const valor = Math.floor(Number(valorCentavos));
   if (!(valor > 0)) return { ok: false, code: "valor_invalido" };
-  const saldoAntes  = await lerSaldoRsCentavos(ender);
-  const saldoDepois = saldoAntes + valor;
-  try {
-    await gravarSaldoRsCentavos(ender, saldoDepois);
-    console.info(`[saldoRs:reembolso:${motivo}]`, { endereco: ender, saldoAntes, saldoDepois });
-    return { ok: true, resultado: { saldoAntesCentavos: saldoAntes, saldoDepoisCentavos: saldoDepois } };
-  } catch (err) {
-    console.error(`[saldoRs:reembolso:${motivo}] gravar falhou:`, err?.message);
-    return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
+  // MC59.2 (C-1) — reembolso ATÓMICO via CAS (não read-modify-write).
+  const ajuste = await ajustarSaldoRsAtomico(ender, valor, `reembolso:${motivo}`);
+  if (!ajuste.ok) {
+    console.error(`[saldoRs:reembolso:${motivo}] ajuste atómico falhou:`, ajuste.code);
+    return { ok: false, code: ajuste.code, message: ajuste.message };
   }
+  console.info(`[saldoRs:reembolso:${motivo}]`, { endereco: ender, saldoAntes: ajuste.saldoAntes, saldoDepois: ajuste.saldoDepois });
+  return { ok: true, resultado: { saldoAntesCentavos: ajuste.saldoAntes, saldoDepoisCentavos: ajuste.saldoDepois } };
 }
