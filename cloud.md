@@ -1998,3 +1998,28 @@ Branch `feat/mc59.8-migracao-fila-cli` (doc-only). Deliverables:
 - Nenhum comando mutante rodado; nenhum código alterado. Fila segue não aplicada
   (async dormant, sem regressão).
 
+### MC59.10 / MC59.11 — decisão da EOA coordenadora p/ mainnet: 🟢 diagnóstico (agente) + 🟡 execução (OPERADOR)
+Branches `feat/mc59.11-execucao-nova-eoa`. Deliverables:
+`Desktop\MC59.10-RELATORIO.txt`, `Desktop\MC59.11-RELATORIO.txt`,
+`docs/MC59.10-relatorio.txt`, `docs/MC59.11-relatorio.txt`.
+- **Correção crítica de selector:** `coordenacao()` = **0xe06f9dbf**;
+  `coordenacaoPendente()` = **0x0956e76e**. Comandos anteriores usaram 0x0956e76e como
+  se fosse coordenacao() → liam 0x0 e geravam falso alarme de "coordenador zerado".
+  Zero em coordenacaoPendente() é o estado **NORMAL** (sem transfer two-step em curso).
+- **Contrato saudável:** leitura correta em `0x825bBd3F…eF06` (Sepolia):
+  `coordenacao()` = **0xDa3a83A24b25aa71e1a9b5A74503fFA93487e84E** (sempre esteve setado);
+  `MAX_LANCES_UNICOS()` = 10000 confirma identidade LeilaoGUT. Não houve two-step
+  incompleto nem deploy zerado.
+- **Autorização (contracts/Leilao.sol):** `address public coordenacao`; modifier
+  `apenasCoordenacao` = `require(msg.sender==coordenacao)`; constructor faz
+  `coordenacao = msg.sender` → **quem deploya vira coordenador automaticamente** (sem
+  passo manual de "setar"). Corrige o passo 3.1 do comando MC59.11.
+- **Decisão: Opção B (nova EOA).** A chave privada do coordenador foi exposta em texto
+  puro numa sessão de chat → COMPROMETIDA. Financiar na mainnet endereço controlado por
+  ela = perda quase certa por sweeper bots; rotação vem **antes** do ETH real, não depois.
+  Para mainnet: gerar EOA nova offline, deployar a partir dela (coordenacao=nova auto),
+  depois migrar custódia para KMS (MC30.2, 0xAEFe11…EdFF) ou Safe.
+- **Plano operador (Segmentos 1–5, manual):** gerar EOA → financiar só o gás → deploy
+  a partir da EOA nova → smoke de crédito/lance → revogar chave antiga (.env, segredos
+  Netlify, scripts, histórico git). Agente NÃO executa transação com ETH real (Pilar 1).
+
