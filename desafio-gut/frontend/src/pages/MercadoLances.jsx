@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from "react";
-import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
+import { useAppContext } from "../context/AppContext.jsx";
 import Confetti from "../components/Confetti.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useLanceFeedback } from "../hooks/useLanceFeedback.js";
@@ -8,7 +8,8 @@ import LanceStatusBadge from "../components/LanceStatusBadge.jsx";
 import TabelaLances from "../components/TabelaLances.jsx";
 import BannerCard from "../components/BannerCard.jsx";
 import { GlassCard } from "@/components/ui";
-import { LABEL_LOGIN } from "../components/BotaoLoginPrincipal.jsx";
+import GlassHeader from "../components/glass/GlassHeader.jsx";
+import { COR } from "../components/glass/glassTokens.js";
 import { useRecursosApp } from "../hooks/useRecursosApp.js";
 import { apiGet } from "../lib/api.js";
 
@@ -33,14 +34,8 @@ async function buscarClienteDoLeilaoAtivo(tipo) {
   return null;
 }
 
-// MC64 — paleta oficial (globals.css @theme): navy #050818 + laranja #ff6b35.
-// Substitui o gold #f5a623 desatualizado que destoava do resto do app.
-const COR = {
-  primary: "#ff6b35", primaryDim: "rgba(255,107,53,0.18)",
-  gold: "#ff9500", bg: "#050818", surface: "rgba(8,30,64,0.82)",
-  text: "#ffffff", muted: "#6b7db8",
-  success: "#00e5a0", danger: "#ff3d71", warning: "#ffb830", blue300: "#ffb830",
-};
+// MC66 — COR migrado para components/glass/glassTokens.js (fonte única, compartilhada
+// com os subcomponentes do Glass). Importado no topo.
 
 function CountdownOverlay() {
   const [texto, setTexto] = useState("3");
@@ -181,50 +176,24 @@ const SEGURANCA_ITENS = [
 export default function MercadoLances() {
   const isMobile = useIsMobile();
   const {
-    EDICAO_ATIVA, DURACAO,
+    EDICAO_ATIVA,
     tipoLeilao, setTipoLeilao,
     lances,
-    prazoTimestamp, encerrado, showOverlay, lightningActive,
+    prazoTimestamp, encerrado, showOverlay,
     address, isConnected, userLabel, ready,
     vencedor,
     showCountdown,
     abrirModal, desconectar,
     handleLanceSucesso, handleNovaRodada,
-    edicoes,
   } = useAppContext();
-  // MC44 P0 — campos de timer via contexto isolado (não re-renderiza esta página
-  // por outras mudanças do AppContext; e o tick não re-renderiza o resto do app).
-  const { tempoRestante, edicoesTick, timeLeftEdicaoSegundos } = useAppTimer();
+  // MC66 (Direção C) — o cronômetro vivo foi removido da aba Lances ("EM BREVE"
+  // permanente). useAppTimer/derivações de timer saíram junto. O Dashboard mantém
+  // o seu próprio cronômetro (implementação separada), intocado.
 
   // MC29.1 — modelo de entrega híbrido transparente. No app das lojas
   // (isLeilaoAtivo=false) os componentes de leilão NÃO são montados; em seu
   // lugar uma vista de conformidade declara que o leilão está na versão Web.
   const { isLeilaoAtivo, isLoading: recursosCarregando } = useRecursosApp();
-
-  // MC15.4 ITEM 9 — o dial usa termino_em da edição correspondente ao tipo
-  // selecionado (relâmpago: 1ª edição "relampago" aberta; programado: 1ª
-  // "programado" aberta). DERIVADO de termino_em → imune a F5/login. Sem
-  // edição correspondente (fallback R-1 sob vite puro) cai em tempoRestante.
-  void edicoesTick; // lido só para re-render a cada segundo
-  const tipoEdicaoSelecionado = tipoLeilao === "flash" ? "relampago" : "programado";
-  const edicaoAtivaSel = Object.values(edicoes || {}).find(
-    (e) => e && e.status === "aberto" && e.tipo === tipoEdicaoSelecionado
-  ) || null;
-  const tempoRestanteEdicao = edicaoAtivaSel
-    ? timeLeftEdicaoSegundos(edicaoAtivaSel)
-    : tempoRestante;
-
-  const timerDisplay = (() => {
-    const t = Math.max(0, tempoRestanteEdicao);
-    const d = Math.floor(t / 86400);
-    const h = Math.floor((t % 86400) / 3600);
-    const m = Math.floor((t % 3600) / 60);
-    const s = t % 60;
-    const pad = (n) => String(n).padStart(2, "0");
-    if (d > 0) return `${d}d ${pad(h)}:${pad(m)}:${pad(s)}`;
-    if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
-    return `${pad(m)}:${pad(s)}`;
-  })();
 
   // ── Feedback de lance em tempo real ──
   const [meuUltimoLance, setMeuUltimoLance] = useState(null); // { valor, edicao }
@@ -246,23 +215,6 @@ export default function MercadoLances() {
     return () => { cancelado = true; };
   }, [tipoLeilao]);
 
-  const duracao     = DURACAO[tipoLeilao];
-  // Onda 5 FASE 0: cores proporcionais à duração (escala para flash 30min e
-  // programado 24h). Urgência só dispara quando < 1% restante (mantém efeito
-  // visual no fim de cada modalidade sem disparar em programado o dia inteiro).
-  const ratio = duracao > 0 ? tempoRestanteEdicao / duracao : 0;
-  const timerCor = encerrado
-    ? COR.danger
-    : ratio < 0.10 ? COR.danger
-    : ratio < 0.30 ? COR.warning
-    : tipoLeilao === "flash" ? COR.gold : COR.primary;
-  const timerPctDeg = encerrado ? 0 : Math.min(360, (tempoRestanteEdicao / duracao) * 360);
-  const timerUrgente = !encerrado && ratio < 0.01 && tempoRestanteEdicao > 0;
-  const timerSize   = isMobile ? 110 : 90;
-
-  const pad      = isMobile ? "1rem" : "2rem";
-  const padTight = isMobile ? "0.75rem 1rem" : "0.6rem 2rem";
-
   // MC29.1 — gate de plataforma. Skeleton enquanto a config carrega (CLS=0);
   // vista de conformidade quando o leilão não está ativo nesta plataforma.
   // Os componentes de leilão (CardLance, TabelaLances, timers) ficam DESMONTADOS.
@@ -271,10 +223,6 @@ export default function MercadoLances() {
 
   return (
     <>
-      <style>{`
-        @keyframes gut-timer-pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
-      `}</style>
-
       {showCountdown && <CountdownOverlay />}
 
       {showOverlay && (
@@ -289,167 +237,22 @@ export default function MercadoLances() {
 
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
 
-        {/* ── Cabeçalho (MC42: card ÚNICO arredondado .gut-glass-standard com
-             divisores internos finos entre as 3 secções — logo/timer, modo,
-             disclaimer. Envolvido em padding para os cantos redondos aparecerem
-             e alinhar com o card "Dar Lance" abaixo). ── */}
-        <div style={{ padding: isMobile ? "1rem 1rem 0" : "1.5rem 2rem 0" }}>
-        <GlassCard as="header" className="overflow-hidden">
-
-          {/* Secção 1 — logo + auth + timer */}
-          <div className={`flex border-b border-white/10 ${isMobile ? 'flex-col gap-3 p-4' : 'flex-row justify-between items-center gap-4 px-8 py-5'}`}>
-          {/* Linha superior em mobile: logo + auth lado a lado */}
-          <div style={{
-            display: "flex", alignItems: "center",
-            justifyContent: isMobile ? "space-between" : "flex-start",
-            width: isMobile ? "100%" : "auto",
-            gap: "0.6rem",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
-              <span style={{ fontSize: isMobile ? "1.4rem" : "2rem" }}>🏆</span>
-              <div style={{ minWidth: 0 }}>
-                <h1 style={{
-                  margin: 0,
-                  fontSize: isMobile ? "1.05rem" : "1.5rem",
-                  fontWeight: "800", color: COR.primary,
-                  fontFamily: "'Orbitron', sans-serif",
-                  letterSpacing: "0.04em",
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>DesafioGUT</h1>
-                {!isMobile && (
-                  <p style={{ margin: 0, fontSize: "0.75rem", color: COR.gold, letterSpacing: "0.04em", fontWeight: "600" }}>
-                    E-commerce através de Dropshipping
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {isMobile && (
-              <AuthArea
-                isConnected={isConnected} ready={ready} address={address} userLabel={userLabel}
-                onLogin={abrirModal} compact
-              />
-            )}
-          </div>
-
-          {/* Timer — sempre central */}
-          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
-            <p style={{ margin: 0, fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              {encerrado ? "encerrado" : tipoLeilao === "flash" ? "⚡ relâmpago" : "🎫 programado"}
-            </p>
-            <div
-              className={lightningActive ? "gut-lightning-active" : ""}
-              style={{
-                position: "relative", width: `${timerSize}px`, height: `${timerSize}px`, borderRadius: "50%",
-                background: `conic-gradient(${timerCor} ${timerPctDeg}deg, rgba(255,255,255,0.04) ${timerPctDeg}deg)`,
-                padding: "4px",
-                boxShadow: `0 0 ${timerUrgente ? "28px" : "12px"} ${timerCor}${timerUrgente ? "aa" : "44"}`,
-                transition: "box-shadow 0.6s",
-              }}>
-              <div style={{
-                width: "100%", height: "100%", borderRadius: "50%", background: COR.bg,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1px",
-              }}>
-                <span style={{
-                  fontSize: isMobile ? "1.55rem" : "1.25rem", fontWeight: "900", fontFamily: "'JetBrains Mono', monospace",
-                  color: timerCor, lineHeight: 1,
-                  animation: timerUrgente ? "gut-timer-pulse 0.65s ease-in-out infinite" : "none",
-                  transition: "color 0.4s",
-                }}>{timerDisplay}</span>
-                <span style={{ fontSize: "0.5rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                  {encerrado ? "fim" : "DD:HH:MM:SS"}
-                </span>
-              </div>
-              {/* MC64 — tarja "EM BREVE" sobre o miolo do cronômetro (apenas visual;
-                  o número permanece no DOM atrás da tarja → reversível). */}
-              <div
-                aria-label="Leilão em breve"
-                style={{
-                  position: "absolute", inset: "4px", borderRadius: "50%",
-                  background: "rgba(5,8,24,0.62)",
-                  backdropFilter: "blur(1px)", WebkitBackdropFilter: "blur(1px)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  textAlign: "center", pointerEvents: "none", zIndex: 5,
-                }}>
-                <span style={{
-                  fontSize: isMobile ? "0.72rem" : "0.62rem", fontWeight: 700,
-                  letterSpacing: "0.12em", textTransform: "uppercase",
-                  color: COR.primary,
-                  textShadow: "0 0 8px rgba(255,107,53,0.2)",
-                }}>EM BREVE</span>
-              </div>
-            </div>
-            <div style={{ width: `${timerSize}px`, height: "3px", borderRadius: "2px", background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
-              <div style={{
-                height: "100%", borderRadius: "2px",
-                width: `${encerrado ? 0 : Math.min(100, (tempoRestanteEdicao / duracao) * 100)}%`,
-                background: `linear-gradient(90deg, ${timerCor}88, ${timerCor})`,
-                transition: "width 1s linear, background 0.4s",
-                boxShadow: `0 0 5px ${timerCor}`,
-              }} />
-            </div>
-          </div>
-
-          {/* Auth desktop */}
-          {!isMobile && (
-            <AuthArea
-              isConnected={isConnected} ready={ready} address={address} userLabel={userLabel}
-              onLogin={abrirModal}
-            />
-          )}
-          </div>
-
-          {/* Secção 2 — saldos + seletor de modo */}
-          <div className={`flex border-b border-white/10 ${isMobile ? 'flex-col items-stretch gap-2.5 px-3 py-3' : 'flex-row justify-between items-center gap-3 px-8 py-3'}`}>
-          {/* Em produção o saldo aparece no Sidebar/Dashboard.
-              Placeholder vazio mantém o flex space-between alinhando o
-              seletor de modo à direita. */}
-          <div />
-
-          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "0.68rem", color: COR.muted, marginRight: "0.2rem" }}>Modo:</span>
-            {[{ id: "flash", label: "⚡ Relâmpago" }, { id: "programado", label: "🎫 Programado" }].map(({ id, label }) => {
-              const ativo = tipoLeilao === id;
-              const cor   = id === "flash" ? COR.gold : "#a78bfa";
-              return (
-                <button key={id} onClick={() => setTipoLeilao(id)}
-                  style={{
-                    padding: "0.32rem 0.7rem", borderRadius: "16px",
-                    border: `1px solid ${ativo ? cor : "rgba(255,255,255,0.1)"}`,
-                    fontSize: "0.72rem", fontWeight: "700", cursor: "pointer",
-                    color: ativo ? cor : COR.muted,
-                    background: ativo ? `${cor}20` : "transparent",
-                    transition: "all 0.18s",
-                  }}>{label}</button>
-              );
-            })}
-          </div>
-          </div>
-
-          {/* Secção 3 — disclaimer */}
-          <div className={`text-[#94a3b8] leading-relaxed ${isMobile ? 'text-xs px-3 py-3' : 'text-sm px-8 py-3'}`}>
-          <strong>DesafioGUT</strong>{" — "}Grupo União e Trabalho · CNPJ 23.040.066/0001-00
-          {!isMobile && " · www.grupouniaoetrabalho.com.br"}
-          {isConnected && (
-            <span style={{
-              display: isMobile ? "block" : "inline",
-              marginLeft: isMobile ? 0 : "1rem",
-              marginTop: isMobile ? "0.25rem" : 0,
-              color: "#86efac",
-            }}>✅ {address?.slice(0, 6)}...{address?.slice(-4)}</span>
-          )}
-          {encerrado && (
-            <span style={{
-              display: isMobile ? "block" : "inline",
-              marginLeft: isMobile ? 0 : "1rem",
-              marginTop: isMobile ? "0.25rem" : 0,
-              color: COR.danger, fontWeight: "700",
-            }}>🔴 Leilão encerrado — novos lances bloqueados</span>
-          )}
-          </div>
-
-        </GlassCard>
-        </div>
+        {/* ── Cabeçalho (MC66 Direção C): GlassHeader compõe identidade+auth,
+             HERO "EM BREVE" (foco) + seletor de modo, e o rodapé legal fino.
+             Subcomponentes isolados em components/glass/. O cronômetro vivo foi
+             removido (EM BREVE permanente). ── */}
+        <GlassHeader
+          isMobile={isMobile}
+          isConnected={isConnected}
+          ready={ready}
+          address={address}
+          userLabel={userLabel}
+          onLogin={abrirModal}
+          tipoLeilao={tipoLeilao}
+          setTipoLeilao={setTipoLeilao}
+          encerrado={encerrado}
+          edicao={EDICAO_ATIVA}
+        />
 
         {/* ── Banner do cliente do leilão ativo (REQ-01) ── */}
         {clienteAtivo?.cliente_id && (
@@ -565,98 +368,8 @@ export default function MercadoLances() {
   );
 }
 
-const saldoItemStyle = {
-  display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "1px",
-};
-const saldoLabelStyle = {
-  fontSize: "0.66rem", color: COR.muted,
-  textTransform: "uppercase", letterSpacing: "0.07em",
-};
-const saldoValueStyle = {
-  fontSize: "0.95rem", fontWeight: "800",
-};
-function chipBtnStyle(variant) {
-  const palette = variant === "purple"
-    ? { color: "#a78bfa", bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.38)" }
-    : { color: COR.gold, bg: COR.primaryDim, border: "rgba(245,166,35,0.38)" };
-  return {
-    padding: "0.32rem 0.85rem",
-    background: palette.bg,
-    border: `1px solid ${palette.border}`,
-    borderRadius: "20px",
-    color: palette.color,
-    fontSize: "0.72rem", fontWeight: "800",
-    cursor: "pointer",
-  };
-}
-
-function AuthArea({ isConnected, ready, address, userLabel, onLogin, compact }) {
-  if (!isConnected) {
-    return (
-      <button
-        onClick={onLogin}
-        disabled={!ready}
-        style={{
-          padding: compact ? "0.45rem 0.9rem" : "0.6rem 1.4rem",
-          background: "linear-gradient(135deg,#ff6b35,#1d40af)",
-          color: "#fff", border: "none", borderRadius: "28px",
-          fontWeight: "800", fontSize: compact ? "0.78rem" : "0.88rem",
-          letterSpacing: "0.03em",
-          cursor: ready ? "pointer" : "wait",
-          opacity: ready ? 1 : 0.7,
-          boxShadow: "0 4px 14px rgba(255,107,53,0.4)",
-          flexShrink: 0,
-        }}
-        aria-label={LABEL_LOGIN}
-      >{ready ? LABEL_LOGIN : "⏳"}</button>
-    );
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: compact ? "flex-end" : "flex-end", gap: compact ? 0 : "0.5rem" }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: "0.45rem",
-        background: COR.primaryDim, padding: compact ? "0.35rem 0.7rem" : "0.45rem 1rem",
-        borderRadius: "28px",
-        border: "1px solid rgba(255,107,53,0.30)",
-      }}>
-        <span style={{
-          width: "8px", height: "8px", borderRadius: "50%",
-          background: COR.success, flexShrink: 0,
-          boxShadow: `0 0 6px ${COR.success}`,
-        }} />
-        <div style={{ display: "flex", flexDirection: "column", gap: "1px", minWidth: 0 }}>
-          {userLabel && !compact && (
-            <span style={{
-              fontSize: "0.72rem", color: COR.gold, fontWeight: "700",
-              maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>{userLabel}</span>
-          )}
-          {address && (
-            <span style={{ fontFamily: "monospace", fontSize: compact ? "0.74rem" : "0.82rem" }}>
-              {address.slice(0, 6)}...{address.slice(-4)}
-            </span>
-          )}
-        </div>
-      </div>
-      {!compact && (
-        <div style={{ display: "flex", gap: "0.35rem" }}>
-          <span style={badgeStyle}>🔒 LGPD</span>
-          <span style={badgeStyle}>🧪 Beta</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-const badgeStyle = {
-  padding: "0.18rem 0.6rem",
-  background: COR.primaryDim,
-  borderRadius: "20px",
-  fontSize: "0.68rem",
-  border: "1px solid rgba(255,107,53,0.28)",
-  color: COR.gold,
-};
+// MC66 — AuthArea + badgeStyle movidos para components/glass/AuthArea.jsx.
+// saldo*Style/chipBtnStyle removidos (código morto, sem uso).
 
 // ── MC29.1 — Vista de conformidade (modo loja iOS/Android) ───────────────────
 // Transparente: declara que o leilão está na versão Web, sem o esconder e sem
