@@ -33,11 +33,13 @@ async function buscarClienteDoLeilaoAtivo(tipo) {
   return null;
 }
 
+// MC64 — paleta oficial (globals.css @theme): navy #050818 + laranja #ff6b35.
+// Substitui o gold #f5a623 desatualizado que destoava do resto do app.
 const COR = {
-  primary: "#f5a623", primaryDim: "rgba(245,166,35,0.18)",
-  gold: "#f5a623", bg: "#0a0f1a", surface: "rgba(8,30,64,0.82)",
-  text: "#e8f0fe", muted: "#6b7db8",
-  success: "#10b981", danger: "#ef4444", warning: "#f97316", blue300: "#fbbf24",
+  primary: "#ff6b35", primaryDim: "rgba(255,107,53,0.18)",
+  gold: "#ff9500", bg: "#050818", surface: "rgba(8,30,64,0.82)",
+  text: "#ffffff", muted: "#6b7db8",
+  success: "#00e5a0", danger: "#ff3d71", warning: "#ffb830", blue300: "#ffb830",
 };
 
 function CountdownOverlay() {
@@ -309,10 +311,9 @@ export default function MercadoLances() {
                 <h1 style={{
                   margin: 0,
                   fontSize: isMobile ? "1.05rem" : "1.5rem",
-                  fontWeight: "900", color: "#f5a623",
+                  fontWeight: "800", color: COR.primary,
                   fontFamily: "'Orbitron', sans-serif",
-                  letterSpacing: "0.06em",
-                  textShadow: "0 0 20px rgba(245,166,35,0.4)",
+                  letterSpacing: "0.04em",
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}>DesafioGUT</h1>
                 {!isMobile && (
@@ -359,6 +360,24 @@ export default function MercadoLances() {
                   {encerrado ? "fim" : "DD:HH:MM:SS"}
                 </span>
               </div>
+              {/* MC64 — tarja "EM BREVE" sobre o miolo do cronômetro (apenas visual;
+                  o número permanece no DOM atrás da tarja → reversível). */}
+              <div
+                aria-label="Leilão em breve"
+                style={{
+                  position: "absolute", inset: "4px", borderRadius: "50%",
+                  background: "rgba(5,8,24,0.62)",
+                  backdropFilter: "blur(1px)", WebkitBackdropFilter: "blur(1px)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  textAlign: "center", pointerEvents: "none", zIndex: 5,
+                }}>
+                <span style={{
+                  fontSize: isMobile ? "0.72rem" : "0.62rem", fontWeight: 700,
+                  letterSpacing: "0.12em", textTransform: "uppercase",
+                  color: COR.primary,
+                  textShadow: "0 0 8px rgba(255,107,53,0.2)",
+                }}>EM BREVE</span>
+              </div>
             </div>
             <div style={{ width: `${timerSize}px`, height: "3px", borderRadius: "2px", background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
               <div style={{
@@ -381,7 +400,7 @@ export default function MercadoLances() {
           </div>
 
           {/* Secção 2 — saldos + seletor de modo */}
-          <div className={`flex border-b border-white/10 ${isMobile ? 'flex-col items-stretch gap-2.5 px-3 py-3' : 'flex-row justify-between items-center gap-3 px-8 py-2.5'}`}>
+          <div className={`flex border-b border-white/10 ${isMobile ? 'flex-col items-stretch gap-2.5 px-3 py-3' : 'flex-row justify-between items-center gap-3 px-8 py-3'}`}>
           {/* Em produção o saldo aparece no Sidebar/Dashboard.
               Placeholder vazio mantém o flex space-between alinhando o
               seletor de modo à direita. */}
@@ -579,13 +598,13 @@ function AuthArea({ isConnected, ready, address, userLabel, onLogin, compact }) 
         disabled={!ready}
         style={{
           padding: compact ? "0.45rem 0.9rem" : "0.6rem 1.4rem",
-          background: "linear-gradient(135deg,#f5a623,#1d40af)",
+          background: "linear-gradient(135deg,#ff6b35,#1d40af)",
           color: "#fff", border: "none", borderRadius: "28px",
           fontWeight: "800", fontSize: compact ? "0.78rem" : "0.88rem",
           letterSpacing: "0.03em",
           cursor: ready ? "pointer" : "wait",
           opacity: ready ? 1 : 0.7,
-          boxShadow: "0 4px 14px rgba(245,166,35,0.4)",
+          boxShadow: "0 4px 14px rgba(255,107,53,0.4)",
           flexShrink: 0,
         }}
         aria-label={LABEL_LOGIN}
@@ -599,7 +618,7 @@ function AuthArea({ isConnected, ready, address, userLabel, onLogin, compact }) 
         display: "flex", alignItems: "center", gap: "0.45rem",
         background: COR.primaryDim, padding: compact ? "0.35rem 0.7rem" : "0.45rem 1rem",
         borderRadius: "28px",
-        border: "1px solid rgba(245,166,35,0.30)",
+        border: "1px solid rgba(255,107,53,0.30)",
       }}>
         <span style={{
           width: "8px", height: "8px", borderRadius: "50%",
@@ -635,7 +654,7 @@ const badgeStyle = {
   background: COR.primaryDim,
   borderRadius: "20px",
   fontSize: "0.68rem",
-  border: "1px solid rgba(245,166,35,0.28)",
+  border: "1px solid rgba(255,107,53,0.28)",
   color: COR.gold,
 };
 

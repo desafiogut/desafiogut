@@ -715,7 +715,9 @@ export function AppProvider({ children }) {
           if (timeoutAnimRef.current) clearTimeout(timeoutAnimRef.current);
           timeoutAnimRef.current = setTimeout(() => {
             setLightningActive(false);
-            setShowOverlay(true);
+            // MC63/64: animação de vencedor desabilitada no front-end (não dispara
+            // automaticamente ao encerrar). Encerrado/lightning permanecem ativos.
+            // setShowOverlay(true);
             timeoutAnimRef.current = null;
           }, 1200);
         }
