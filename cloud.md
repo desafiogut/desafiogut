@@ -2241,3 +2241,20 @@ Branch `feat/mc66-execucao-redesign-glass`. Deliverables `Desktop\MC66-RELATORIO
   Concluir quando o MCP voltar / manualmente antes do deploy.
 - **⏸️ Deploy = operador** (MAINNET), após a validação visual.
 - **Veredito:** ✅ Hero EM BREVE implementado e verificado por build+runtime; ⏳ falta o MCP visual.
+
+### MC67 — EXECUÇÃO: refinamentos frontend (11 itens): ✅ código+build; ⏳ MCP visual; ⏸️ deploy operador
+Branch `feat/mc67-execucao-refinamentos`. Commit **a6db336**. Deliverables `Desktop\MC67-RELATORIO.txt`
++ `docs/MC67-refinamentos.txt`. 20 arquivos + novo `src/lib/leilaoLock.js`.
+- [1] MinhaCarteira cabeçalho→GlassCard. [2/3] remove GutoAvatar (Vitrine/Parceiro). [4] "Beta" removido
+  (7 telas, sweep=0). [5] jargão técnico (Stack/Sepolia em Configuracoes, cripto em CardLance/TabelaLances,
+  §spec na Vitrine, (MC3) em PainelIndicacao). [6] Vitrine topo em Glass + on-palette. [7] ScheduleView
+  Junho/2026 SUBSTITUÍDA por "EM BREVE" (grade removida; dados programacao-junho-2026.js preservados p/ Vitrine).
+  [8] card "Segurança e Transparência" movido MercadoLances→Configuracoes (jargão cripto→copy de confiança).
+  [9] cronômetros travados via `lib/leilaoLock.js` (EM_BREVE_MODE flag) em Dashboard/EdicaoCard/EdicaoDetalhe/
+  Vitrine (Lances já Hero; ScheduleView substituída) — trava de apresentação, não mexe contagem.
+  [10] nome→"DesafioGUT" (ChatbotWidget/GutoAvatar alt/SejaNossoParceiro); ⛔ DESAFIOGUT-AUTH/ADMIN (3) e URLs
+  INTACTOS. [11] Privy logo same-origin (/assets/logos/v2/gut-logo-icon-v2.png) + favicon index.html +
+  accentColor #00d4aa→#ff6b35.
+- **Build vite verde** (55s, 3590 módulos); 12 módulos transformam 200 no dev. Sweep: Beta=0, auth const=3 intactas.
+- **⏳ Validação visual MCP 375/1440 PENDENTE** (chrome-devtools+claude-eyes desconectados). **⏸️ Deploy=operador (MAINNET).**
+- **Veredito:** ✅ 11 refinamentos executados e verificados por build+runtime; falta o MCP visual.
