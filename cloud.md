@@ -2191,3 +2191,25 @@ Branch `feat/mc64-execucao-reforma-glass`. Commit **36b46c7**. Deliverables:
 - **Deploy em produção NÃO executado pelo agente (⏸️):** prod vivo na MAINNET; deploy é ação externa/
   irreversível → operador executa com env mainnet. Comando/validação no relatório (seção Deploy).
 - **Veredito:** ✅ GLASS REFORMADO — minimalista e profissional (validado local); deploy pendente.
+
+### MC65 — PLANO: redesign completo do Glass superior (aba Lances): ✅ diagnóstico+plano
+Deliverables `Desktop\MC65-PLANO-REDESIGN-GLASS.txt` + `desafio-gut/docs/MC65-redesign-glass.txt`.
+Vai ALÉM do MC64 (que foi cirúrgico/pontual): reestrutura layout+componentes+estado.
+- **Achados críticos** (MercadoLances.jsx pós-MC64, header 297-451): [A] `<div/>` vazio
+  (:407) como espaçador de uma secção inteira só p/ o seletor; [B] seletor "Programado"
+  usa `#a78bfa` ROXO (:413) fora da paleta (drift que escapou do MC64); [C] logo/timer/auth
+  no mesmo nível de flex → hierarquia plana; [D] **paradoxo do cronômetro**: a tarja
+  "EM BREVE" permanente MASCARA todo o timer vivo por baixo (conic-gradient, cor por
+  urgência, pulso, barra) = código morto visual; [E] disclaimer legal com peso de conteúdo
+  primário; [G] JSX monólito inline + cronômetro DUPLICADO no Dashboard (264-285).
+- **Decisão de produto que trava a direção:** "EM BREVE" é permanente ou o timer volta a
+  contar? (estados i pré-lançamento / ii ao vivo / iii encerrado).
+- **3 direções:** A Editorial (grid 2col, minimalista), B Dashboard (barra + timer
+  segmentado, à prova de estado), C Hero "EM BREVE" (assume coming-soon, remove timer).
+- **Recomendação:** HÍBRIDO A+B (visual editorial + timer estado-aware) — resolve [A][C][D][E]
+  sem apostar contra o futuro (risco da C). C só se "EM BREVE" for definitivo.
+- **Arquitetura:** extrair components/glass/{GlassHeader,AuctionTimer,ModeSelector,
+  AuctionStatusBar,AuthArea}.jsx; MercadoLances vira compositor fino. Execução em 2 fases
+  (extração pura → redesign) p/ risco controlado. Esforço ALTO, risco MÉDIO (sem lógica nova).
+- **Dashboard NÃO usa o mesmo cronômetro** (implementação própria) → refactor da aba Lances
+  não o afeta. Deploy = operador (MAINNET). Execução = **MC66** após aprovação + direção travada.
