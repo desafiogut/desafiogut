@@ -2220,3 +2220,24 @@ código morto sob a tarja: anel/barra/derivação timerCor/timerDisplay em Merca
 e entregar um HERO "EM BREVE" (selo R-1, modo, "menor lance único vence", pulsação com
 prefers-reduced-motion). Corrige [A] div vazio, [B] roxo #a78bfa→token, [E] legal→rodapé.
 Dashboard intocado (timer próprio). Deploy = operador (MAINNET).
+
+### MC66 — EXECUÇÃO: redesign do Glass (Direção C — Hero EM BREVE): ✅ código+build; ⏳ MCP visual; ⏸️ deploy operador
+Branch `feat/mc66-execucao-redesign-glass`. Deliverables `Desktop\MC66-RELATORIO.txt` +
+`desafio-gut/docs/MC66-redesign-glass.txt`. MercadoLances.jsx: −315/+28 linhas (monólito→compositor).
+- **Removido:** cronômetro vivo (anel/barra/tarja MC64 + derivações timerCor/timerDisplay/
+  tempoRestanteEdicao/duracao/ratio/timerUrgente) = código morto sob EM BREVE permanente;
+  imports órfãos (useAppTimer/DURACAO/edicoes/lightningActive/LABEL_LOGIN) e helpers mortos
+  (saldo*Style/chipBtnStyle).
+- **Criado** `frontend/src/components/glass/`: GlassHeader (compositor), ComingSoonHero
+  (hero EM BREVE, pulsação c/ prefers-reduced-motion, role=status), ModeSelector (corrige
+  roxo #a78bfa→tokens flash=gold/programado=primary, aria-pressed), AuctionStatusBar
+  (rodapé legal), AuthArea (movido), glassTokens.js (COR compartilhado). Removido <div/>
+  vazio [A]. MercadoLances renderiza só <GlassHeader/>.
+- **Intocado:** overlays dormentes (anim. vencedor segue OFF do MC64), CardLance/TabelaLances,
+  Dashboard (timer próprio), AppContext.
+- **Build vite verde** (7.38s); 6 módulos glass transformam HTTP 200 no dev (sem erro import/JSX).
+- **⏳ Validação visual MCP 375/1440 PENDENTE:** MCP de browser (chrome-devtools+claude-eyes)
+  DESCONECTOU na sessão → screenshots não capturados. NÃO validado visualmente (honesto).
+  Concluir quando o MCP voltar / manualmente antes do deploy.
+- **⏸️ Deploy = operador** (MAINNET), após a validação visual.
+- **Veredito:** ✅ Hero EM BREVE implementado e verificado por build+runtime; ⏳ falta o MCP visual.
