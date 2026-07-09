@@ -1,0 +1,93 @@
+================================================================================
+MC64 — RELATÓRIO: EXECUÇÃO DA REFORMA VISUAL DO GLASS SUPERIOR (ABA "LANCES")
+================================================================================
+Data......: 2026-07-09
+Branch....: feat/mc64-execucao-reforma-glass
+Commit....: 36b46c7  (feat(mc64): reforma visual do Glass superior da aba Lances)
+Plano.....: Desktop\MC63.txt
+Escopo....: 2 arquivos — frontend/src/context/AppContext.jsx + frontend/src/pages/MercadoLances.jsx
+Status....: ✅ código + validação visual OK · ⏸️ deploy em produção pendente (operador)
+
+--------------------------------------------------------------------------------
+RESUMO DAS 3 ALTERAÇÕES EXECUTADAS
+--------------------------------------------------------------------------------
+1) DESABILITAR ANIMAÇÃO DE VENCEDOR
+   Arquivo: frontend/src/context/AppContext.jsx (linha 718)
+   Ação: comentado o ÚNICO `setShowOverlay(true)` (choke-point da máquina de fim
+         de leilão, useEffect 704-742). Substituído por comentário MC63/64.
+   Efeito: showOverlay nunca vira true → OverlayVencedor (aba Lances,
+           MercadoLances.jsx:278) E FimLeilaoOverlay (Dashboard.jsx:395) NÃO
+           montam; Confetti (que vive dentro deles) não dispara.
+   Preservado: setEncerrado(true), setLightningActive, showCountdown/CountdownOverlay,
+               handleNovaRodada — toda a lógica de negócio intacta.
+   Verificação: grep "setShowOverlay(true)" → só a linha comentada (720).
+
+2) TARJA "EM BREVE" SOBRE O CRONÔMETRO
+   Arquivo: frontend/src/pages/MercadoLances.jsx (dentro do anel do timer, ~360-379)
+   Ação: <div> absoluto (inset:4px, borderRadius:50%, bg rgba(5,8,24,0.62),
+         backdropFilter blur(1px), pointerEvents:none, zIndex:5) com <span> "EM BREVE"
+         (uppercase, 700, ls 0.12em, cor var laranja #ff6b35, aria-label="Leilão em breve").
+   Característica: cobre SÓ o miolo do cronômetro; o número permanece no DOM atrás
+                  da tarja translúcida → 100% reversível, sem tocar a contagem.
+
+3) REFORMA VISUAL DO GLASS (paleta · glow · respiro)
+   Arquivo: frontend/src/pages/MercadoLances.jsx
+   3a. Paleta (objeto COR, linhas 36-43): valores desatualizados → tokens oficiais
+       primary #f5a623→#ff6b35 · gold #f5a623→#ff9500 · bg #0a0f1a→#050818 ·
+       text #e8f0fe→#ffffff · danger #ef4444→#ff3d71 · warning #f97316→#ffb830 ·
+       primaryDim/blue300 realinhados. (Confirma memória "paleta navy+laranja".)
+   3b. Glow neon do título "DesafioGUT" (h1): removido text-shadow "0 0 20px …";
+       fontWeight 900→800; letterSpacing 0.06→0.04em; color hardcoded → COR.primary.
+   3c. Respiro: Secção 2 (seletor de modo) py-2.5→py-3 no desktop.
+   3d. AuthArea (parte do Glass): gradiente do botão login #f5a623→#ff6b35;
+       boxShadow/borders rgba(245,166,35,*)→rgba(255,107,53,*).
+   Mantido: primitivo GlassCard/.gut-glass-standard, estrutura de 3 secções,
+            blur(24px) saturate(1.35). Literais fora do Glass superior (painel de
+            segurança, footer, vista de conformidade) NÃO tocados (disciplina de escopo).
+
+--------------------------------------------------------------------------------
+VERIFICATION-LOOP
+--------------------------------------------------------------------------------
+• node --check: N/A para .jsx (Node 24 trata .jsx como ESM sem transform JSX);
+  a checagem de sintaxe autoritativa é o build Vite/esbuild.
+• npm run build: ✅ VERDE — "✓ built in 19.13s".
+  (1ª tentativa deu OOM no heap default do Node → resolvido com
+   NODE_OPTIONS=--max-old-space-size=8192. Avisos [INVALID_ANNOTATION] são
+   pré-existentes de node_modules (Privy/ox), não do código do MC64.)
+• Diff review: git diff confirma SÓ os 2 arquivos-alvo, sem alterações órfãs.
+• Console (dev, local): apenas ruído pré-existente (CSP walletconnect/sentry/favicon,
+  functions 404, ERR_INSUFFICIENT_RESOURCES). Nenhum erro React/ReferenceError novo.
+
+--------------------------------------------------------------------------------
+VALIDAÇÃO VISUAL MCP (localhost:3001/mercado · gate 4-checkboxes → Glass)
+--------------------------------------------------------------------------------
+• 1440px (desktop) — Desktop\GUTO-ANIMADO GLASS DASHBOARD\validação-mc64\mc64-desktop-1440.png
+    ✔ título laranja #ff6b35 sem glow neon; ✔ tarja "EM BREVE" centrada no anel
+      (número translúcido atrás); ✔ paleta unificada (laranja+navy) coerente com
+      o sidebar; ✔ respiro adequado; ✔ nenhum overlay de vencedor.
+• 375px (mobile) — Desktop\GUTO-ANIMADO GLASS DASHBOARD\validação-mc64\mc64-mobile-375.png
+    ✔ "EM BREVE" legível no anel maior (0.72rem); ✔ Glass adapta sem quebra;
+      ✔ BottomNav "Lances" ativo; ✔ nenhum overlay de vencedor.
+
+--------------------------------------------------------------------------------
+DEPLOY EM PRODUÇÃO — ⏸️ NÃO EXECUTADO PELO AGENTE (mesma política do MC62)
+--------------------------------------------------------------------------------
+Produção está VIVA na MAINNET (dinheiro real). Deploy é ação externa e irreversível
+em prod → decisão e execução do OPERADOR, garantindo build com env mainnet correto.
+Comando de referência (Segmento 6 do plano):
+    cd frontend && npm run build
+    netlify deploy --build --prod --message "feat(mc64): reforma visual do Glass (aba Lances)"
+Pós-deploy: abrir https://<prod>/mercado, conferir tarja "EM BREVE", ausência de
+overlay de vencedor ao encerrar, e console sem erros novos.
+
+--------------------------------------------------------------------------------
+VEREDITO
+--------------------------------------------------------------------------------
+✅ GLASS REFORMADO — visual minimalista e profissional.
+   Animação de vencedor desabilitada, tarja "EM BREVE" no cronômetro, paleta oficial
+   sem glow neon, respiro. Sem regressões (build verde, validação MCP 375/1440).
+   Falta apenas o operador aprovar e executar o deploy em produção.
+
+Rollback: `git checkout desafio-gut/frontend/src/{context/AppContext.jsx,pages/MercadoLances.jsx}`
+          (ou reverter o commit 36b46c7). Alterações são puramente visuais/render.
+================================================================================

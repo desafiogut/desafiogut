@@ -2166,3 +2166,28 @@ Branch `feat/mc62-execucao-login-google`. Commit de código: **1517686**. Delive
   build com env mainnet correto. Comando e validação pós-deploy no relatório (seção 6).
 - **Veredito:** ✅ modal público só Google, corporativo preservado (validado local); deploy pendente.
 
+
+### MC63 — PLANO: reforma visual do Glass superior (aba Lances): ✅ diagnóstico+plano
+Deliverable `Desktop\MC63.txt`. Alvo = **/mercado (MercadoLances.jsx)** — NÃO o Dashboard
+(o briefing citou CarrosselGUTO+logo União, que vivem no Glass do Dashboard). 3 alterações
+mapeadas: (1) desabilitar overlay de vencedor no choke-point `AppContext.jsx:718`; (2) tarja
+"EM BREVE" no cronômetro; (3) reforma visual (paleta oficial #ff6b35/#050818 vs COR local
+#f5a623 desatualizado, sem glow neon, respiro). Achado forte = drift de paleta.
+
+### MC64 — EXECUÇÃO: reforma visual do Glass (aba Lances): ✅ código+validação; ⏸️ deploy operador
+Branch `feat/mc64-execucao-reforma-glass`. Commit **36b46c7**. Deliverables:
+`Desktop\MC64-RELATORIO.txt`, `Desktop\GUTO-ANIMADO GLASS DASHBOARD\validação-mc64\mc64-{desktop-1440,mobile-375}.png`,
+`desafio-gut/docs/MC64-reforma-glass.txt`. 2 arquivos:
+- **AppContext.jsx:718** — comentado o único `setShowOverlay(true)` (choke-point): OverlayVencedor
+  (Lances) + FimLeilaoOverlay (Dashboard) + Confetti não disparam mais; encerrado/lightning intactos.
+- **MercadoLances.jsx** — (2) tarja "EM BREVE" (div absoluto navy 0.62, pointerEvents:none, número
+  atrás → reversível) no anel do cronômetro; (3) COR local → tokens oficiais (#ff6b35/#ff9500/#050818),
+  título sem glow neon (900→800, ls 0.06→0.04), py-2.5→py-3, AuthArea realinhada. Literais fora do
+  Glass superior não tocados.
+- **Build vite verde** (19.13s; OOM no heap default → NODE_OPTIONS=--max-old-space-size=8192; avisos
+  PURE são de node_modules). **Validação MCP local** (localhost:3001/mercado, gate 4-checkboxes→Glass):
+  tarja "EM BREVE" centrada no anel, título laranja sem glow, paleta coerente, sem overlay de vencedor,
+  em 1440px e 375px. Console = só ruído CSP/404 pré-existente.
+- **Deploy em produção NÃO executado pelo agente (⏸️):** prod vivo na MAINNET; deploy é ação externa/
+  irreversível → operador executa com env mainnet. Comando/validação no relatório (seção Deploy).
+- **Veredito:** ✅ GLASS REFORMADO — minimalista e profissional (validado local); deploy pendente.
