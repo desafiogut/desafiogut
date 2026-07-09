@@ -763,9 +763,15 @@ export function AppProvider({ children }) {
     try {
       // MC15.5 — repassa opções ao login() (ex.: prefill de email do cadastro
       // corporativo) só quando vier um objeto de configuração válido. Os vários
-      // onClick={abrirModal} passam um MouseEvent → login() sem args.
-      const loginOpts = opts && (opts.prefill || opts.loginMethods) ? opts : undefined;
-      const result = loginOpts ? login(loginOpts) : login();
+      // onClick={abrirModal} passam um MouseEvent → sem opções de config.
+      // MC62 — modal PÚBLICO restrito a Google: quando o chamador não define
+      // loginMethods, aplica ["google"] (login({loginMethods}) sobrescreve o
+      // config global — Privy v3, verificado). Overrides explícitos (ex.: prefill
+      // ou loginMethods do corporativo) são preservados. NÃO afeta o email-OTP
+      // headless (SejaNossoParceiro usa sendCode direto, sem abrirModal).
+      const base = opts && (opts.prefill || opts.loginMethods) ? { ...opts } : {};
+      if (!base.loginMethods) base.loginMethods = ["google"];
+      const result = login(base);
       if (result && typeof result.then === "function") {
         result
           .then(() => console.info("[GUT-DEBUG] login() resolveu"))

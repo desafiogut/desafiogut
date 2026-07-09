@@ -254,8 +254,12 @@ createRoot(document.getElementById("root")).render(
     <PrivyProvider
       appId={PRIVY_APP_ID}
       config={{
-        // ── Métodos de login: Google, E-mail, Apple ──────────────────────────
-        loginMethods: ["google", "email", "apple"],
+        // ── Métodos de login: Google (modal público) + E-mail (OTP corporativo) ──
+        // MC62: "apple" removido (config morta — desabilitado no painel Privy).
+        // "email" permanece habilitado para o login corporativo headless
+        // (useLoginWithEmail em SejaNossoParceiro.jsx). O MODAL PÚBLICO é restrito
+        // a Google por chamada em AppContext.abrirModal (login({loginMethods:["google"]})).
+        loginMethods: ["google", "email"],
 
         // ── Embedded Wallet: criação EXPLÍCITA (não automática) ──────────────
         // MC17.3.1.2.1 — createOnLogin:"off". A auto-criação no login era o
