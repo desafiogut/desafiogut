@@ -305,6 +305,50 @@ RASTREABILIDADE — arquivos que o MC66 vai TOCAR/CRIAR
   REFERÊNCIA (não obrigatório): frontend/src/pages/Dashboard.jsx:264-285 (timer irmão)
 
 ================================================================================
-FIM — MC65 (plano de redesign). Nenhum código foi alterado. Aguarda aprovação +
-escolha da direção (recomendada: A+B híbrida) e a decisão de produto 0.5 antes do MC66.
+SEGMENTO 7 — DECISÃO TRAVADA PELO OPERADOR (2026-07-09)
+================================================================================
+✅ DIREÇÃO ESCOLHIDA: **C — HERO IMERSIVO "EM BREVE"**
+✅ DECISÃO DE PRODUTO (0.5): **"EM BREVE" É PERMANENTE** (o cronômetro NÃO volta a
+   contar por ora). As duas respostas são coerentes: C é a opção mais enxuta e é
+   viável justamente porque o coming-soon é definitivo.
+
+CONSEQUÊNCIAS PARA O MC66 (roteiro ajustado à Direção C)
+  ETAPA 1 — Extração:
+    • CRIAR components/glass/{GlassHeader, ComingSoonHero, ModeSelector,
+      AuctionStatusBar, AuthArea}.jsx.  (AuctionTimer da versão híbrida é substituído
+      por ComingSoonHero — SEM contagem.)
+  ETAPA 2 — REMOVER o cronômetro vivo (agora código morto sob "EM BREVE"):
+    • Apagar da aba Lances o anel conic-gradient, a barra de progresso e a tarja
+      overlay (MercadoLances.jsx:335-390) e a derivação que só os alimenta:
+      timerDisplay (215-225), timerCor/timerPctDeg/timerUrgente (252-258),
+      tempoRestanteEdicao (211-213). Rever se `useAppTimer`/`tempoRestante` ficam
+      sem uso NESTA página e limpar os imports (build acusa se sobrar referência).
+      ⚠️ NÃO tocar em encerrado/lances/CardLance/TabelaLances (continuam em uso).
+      ⚠️ Escopo = SÓ a aba Lances. Dashboard (264-285) tem timer próprio → intocado.
+  ETAPA 3 — HERO "EM BREVE":
+    • Centralizado, tipografia forte (branco/laranja), selo "Edição R-1", linha
+      "⚡ Relâmpago / 🎫 Programado", subtítulo "O menor lance único vence · Art. 8".
+    • Glass mais profundo (borda laranja sutil, sombra maior) mantendo .gut-glass-standard.
+    • Micro-animação de brilho/pulsação SUAVE com @media (prefers-reduced-motion:reduce)
+      → sem animação (a11y).
+  ETAPA 4 — Corrigir de passagem: [A] remover <div/> vazio; [B] roxo #a78bfa →
+    token oficial no ModeSelector; [E] disclaimer → rodapé fino (AuctionStatusBar).
+  ETAPA 5 — a11y: contraste AA de "EM BREVE" (preferir #fff se #ff6b35 não passar),
+    aria-pressed no modo, landmark/aria-label no header, foco visível.
+  ETAPA 6 — Build verde (NODE_OPTIONS=--max-old-space-size=8192) + validação MCP
+    375px/1440px (Boulder Loop máx 3). Deploy = OPERADOR (MAINNET).
+
+  NOTA: como o timer sai de cena, a animação de vencedor (já desabilitada no MC64)
+  permanece desabilitada — coerente com "EM BREVE permanente".
+
+  RASTREABILIDADE REVISTA (MC66, Direção C)
+    ALTERAR : frontend/src/pages/MercadoLances.jsx (compositor fino; REMOVE timer)
+    CRIAR   : frontend/src/components/glass/{GlassHeader, ComingSoonHero,
+              ModeSelector, AuctionStatusBar, AuthArea}.jsx
+    LIMPAR  : imports/derivações de timer órfãos em MercadoLances.jsx
+    INTOCADO: Dashboard.jsx (timer próprio), AppContext (lógica de negócio)
+
+================================================================================
+FIM — MC65 (plano de redesign). Nenhum código foi alterado.
+DECISÃO TRAVADA: Direção C (Hero "EM BREVE") + EM BREVE permanente → executar no MC66.
 ================================================================================

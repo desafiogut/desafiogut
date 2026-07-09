@@ -2213,3 +2213,10 @@ Vai ALÉM do MC64 (que foi cirúrgico/pontual): reestrutura layout+componentes+e
   (extração pura → redesign) p/ risco controlado. Esforço ALTO, risco MÉDIO (sem lógica nova).
 - **Dashboard NÃO usa o mesmo cronômetro** (implementação própria) → refactor da aba Lances
   não o afeta. Deploy = operador (MAINNET). Execução = **MC66** após aprovação + direção travada.
+
+**MC65 — DECISÃO TRAVADA (operador, 2026-07-09):** Direção **C (Hero "EM BREVE")** +
+**"EM BREVE" é PERMANENTE**. MC66 vai REMOVER o cronômetro vivo da aba Lances (agora
+código morto sob a tarja: anel/barra/derivação timerCor/timerDisplay em MercadoLances.jsx)
+e entregar um HERO "EM BREVE" (selo R-1, modo, "menor lance único vence", pulsação com
+prefers-reduced-motion). Corrige [A] div vazio, [B] roxo #a78bfa→token, [E] legal→rodapé.
+Dashboard intocado (timer próprio). Deploy = operador (MAINNET).
