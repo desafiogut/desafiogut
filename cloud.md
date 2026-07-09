@@ -2147,3 +2147,22 @@ Branch `feat/mc61-remocao-login-apple-email` (doc-only; R1: ZERO código). Deliv
   custom só-Google ou global só se corporativo migrar). + V2 e2e corporativo OTP.
 - **Próximo:** MC62 executa a mudança após aprovação.
 
+### MC62 — EXECUÇÃO: login público apenas Google (Opção A): ✅ código+validação; ⏸️ deploy operador
+Branch `feat/mc62-execucao-login-google`. Commit de código: **1517686**. Deliverables:
+`Desktop\MC62-RELATORIO.txt`, `Desktop\MC62-modal-{1440,375}.png`, `desafio-gut/docs/MC62-relatorio.txt`.
+- **V1 (obrigatória) PASSOU** por typedef do Privy instalado (`react-auth/dist/dts/index.d.ts:8307`):
+  `login(options.loginMethods)` "overwrite the value provided to the client config" → o
+  `login({loginMethods:["google"]})` por chamada restringe o modal. Sem Plano B.
+- **2 arquivos (MC61):** `main.jsx:258` `["google","email","apple"]`→`["google","email"]` (apple
+  morto); `AppContext.jsx` abrirModal → `base.loginMethods=["google"]` quando o caller não define
+  (overrides preservados). Corporativo `useLoginWithEmail` (SejaNossoParceiro) NÃO tocado.
+- **Build vite verde** (8.88s; avisos PURE são de node_modules). **Validação MCP local**
+  (localhost:3000, gate 4-checkboxes→dashboard→abrirModal): modal Privy exibe **SÓ "Google"**
+  em 1440px e 375px (V3/V4); `/seja-nosso-parceiro` monta o hook de email-OTP sem erro (V2;
+  envio real de OTP = operador). Console: só ruído CSP/404 pré-existente de dev.
+- **Deploy em produção NÃO executado pelo agente (⏸️):** prod vivo na MAINNET + drift conhecido
+  do frontend (`main.jsx:281 defaultChain: sepoliaChain`; cutover visual pendente MC56/MC59.15).
+  Deploy é ação externa em prod com dinheiro real → decisão/execução do OPERADOR, garantindo
+  build com env mainnet correto. Comando e validação pós-deploy no relatório (seção 6).
+- **Veredito:** ✅ modal público só Google, corporativo preservado (validado local); deploy pendente.
+
