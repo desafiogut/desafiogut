@@ -2076,3 +2076,52 @@ Branch `feat/mc59.14-revogacao-preparacao`. Deliverables: `Desktop\MC59.14-RELAT
   Netlify; envs CONTRATO_MAINNET + VITE_* mainnet + MP_WEBHOOK_SECRET + SENTRY + Flashbots +
   hardening Privy; flip (NETWORK_STAGE) por último.
 
+### MC59.15 — correção da config mainnet (RPCs): 🟡 diagnóstico OK, aguardando operador
+Branch `feat/mc59.15-correcao-config-mainnet`. Deliverables: `frontend/notas_mc59.15.txt`,
+`Desktop\MC59.15-RELATORIO.txt`, `docs/MC59.15-relatorio.txt`. ZERO alteração de código.
+- **Premissa original REFUTADA:** as variáveis de ENDEREÇO do contrato já estavam corretas
+  (`VITE_CONTRATO_SEPOLIA`=`CONTRATO_MAINNET`=**0x0052477A…16cd**, `VITE_CHAIN_ID`=1,
+  `*_NETWORK_STAGE`=mainnet, `SIGNER_BACKEND`=local-key). On-chain: contrato saudável
+  (9648 bytes), `coordenacao()`=nova EOA **0xFea436…1E67** ✅.
+- **Causa raiz real** dos erros `saldoSenhas` (0x/BAD_DATA) e `comprar-senhas` (502) =
+  RPCs ainda em SEPOLIA: `RPC_URL` e `VITE_ALCHEMY_URL`=`eth-sepolia…` (frontend lê
+  contrato mainnet via RPC Sepolia → 0x); e `CONTRATO_SEPOLIA`=**0x825b…eF06** (contrato
+  ANTIGO), que `_lib/contract.mjs:44` resolve ANTES de `VITE_CONTRATO_SEPOLIA` → todo o
+  backend usava o contrato velho. Vars mortas confirmadas (sem leitores): `VITE_RPC_URL_SEPOLIA`,
+  `VITE_CONTRACT_ADDRESS`(=0x000…0).
+- **Correção = 3 env:set (operador):** `RPC_URL` e `VITE_ALCHEMY_URL` → `eth-mainnet…`
+  (mesma API key funciona trocando subdomínio — VERIFICADO por probe read-only: chainId 0x1,
+  getCode 9648, coordenacao()=nova EOA); `CONTRATO_SEPOLIA` → 0x0052477A…16cd.
+- **Pré-condição:** confirmar `COORDENACAO_PRIVATE_KEY` de prod = nova EOA 0xFea436…1E67
+  (é a ressalva "reconfirmar Netlify" do MC59.14). Enquanto RPC_URL for mainnet, comprar-senhas
+  submete ETH real → validação da compra (R$1) é MANUAL/operador.
+- **Veredito:** correção pronta e validada no lado de leitura; comunicação on-chain restaurada
+  quando o operador aplicar os 3 env:set + rebuild/deploy + validar V1–V3.
+
+### MC60 — MARCO DEFINITIVO: MAINNET ATIVA (encerramento e consolidação): ✅ EM PRODUÇÃO
+Data do marco: **2026-07-09**. Branch `feat/mc60-marco-mainnet` (doc-only; R1: zero código,
+zero transação, zero manuseio de segredos). Deliverables: `Desktop\MC60-RELATORIO.txt`,
+`desafio-gut/docs/MC60-marco-mainnet.txt`, esta seção.
+- **VEREDITO: ✅ MAINNET ATIVA — SISTEMA EM PRODUÇÃO NA ETHEREUM MAINNET.** Sustentado por
+  evidência coletada AO VIVO (read-only) em 2026-07-09, não apenas pelos relatórios.
+- **Evidência on-chain** (RPC público ethereum-rpc.publicnode.com, contrato 0x0052477A…16cd):
+  `eth_chainId`=**0x1** (mainnet); `eth_getCode`=**9648 chars** de bytecode (contrato EXISTE);
+  `coordenacao()` (selector 0xe06f9dbf)=**0xFea436…1E67** (nova EOA). Etherscan:
+  https://etherscan.io/address/0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+- **Evidência de config** (health ao vivo `…/functions/health`): `ok:true`,
+  `SIGNER_BACKEND=local-key`, `SIGNER_READY=set`, `RPC_URL=set`, `MP_ACCESS_TOKEN=set`,
+  `PIX_PROVIDER=mercadopago`, e **`CHAVE_BRUTA_EM_MAINNET=ALERT`** — alerta que só dispara com
+  local-key em MAINNET → confirma que o sistema opera em modo mainnet.
+- **NO-GO superado (não ignorado):** o MC60-NOGO (2026-07-08) era correto no ESTADO ANTERIOR
+  (contrato antigo 0x825b… sem código na mainnet). B1/B5 resolvidos pelo deploy do novo contrato
+  (MC59.11/59.14); B2 pela nova EOA + revogação da chave antiga; B3 mitigado (MC59.4, retry de
+  nonce; fix definitivo async dormente); B4 parcial (MP token set; MP_WEBHOOK_SECRET/SENTRY = operador).
+- **Linha do tempo:** MC52.1→MC56 crise do bundler → Opção D (EOA+local-key); MC59.1→59.6
+  bloqueadores + ADR async; MC59.10→59.14 EOA nova + deploy + revogação + auditoria=B; MC59.15
+  RPCs corrigidos; MC60 consolidação.
+- **Pendências (não bloqueantes):** 🔴 nenhuma. 🟡 validação manual da compra de R$1 (OPERADOR,
+  ETH real, fora do alcance do agente por R1); reconfirmar `COORDENACAO_PRIVATE_KEY` de prod =
+  nova EOA no Netlify; MP_WEBHOOK_SECRET/SENTRY_DSN; ativar `CREDITO_ASSINCRONO=ON` após migração
+  da fila. 🟢 migrar custódia local-key→KMS/Safe (encerra o alerta), Flashbots, hardening Privy.
+- **Status final:** o DESAFIOGUT está oficialmente registrado como **EM PRODUÇÃO NA MAINNET**.
+
