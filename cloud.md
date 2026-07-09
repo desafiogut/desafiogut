@@ -2060,12 +2060,17 @@ Branch `feat/mc59.14-revogacao-preparacao`. Deliverables: `Desktop\MC59.14-RELAT
   **0xFea436f74059F885ea50D48aBbE21ef6665d1E67** (nonce=1, deploy a partir dela; chave antiga
   NÃO usada; saldo ~0,00475 ETH).
 - **Chave antiga (0x1394492e…):** completa NÃO está em arquivo tracked nem no histórico git
-  (só prefixo truncado em docs). Está apenas em 2 `.env` locais gitignored
-  (`desafio-gut/.env`, `frontend/.env.local`). → NÃO precisa reescrever histórico git.
-  STATUS: 🔴 ainda não revogada (operador remove dos 2 .env + Netlify + SIGNER_BACKEND=local-key).
-- **Auditoria externa (P0):** decisão NÃO fornecida → PENDENTE (não fabricada). Fato verificado
-  que apoia accept-risk informado: contrato NÃO custodia/transfere fundos (sem payable/transfer/
-  receive/fallback). Nuance: controla integridade do leilão + dinheiro real é off-chain (PIX/MP).
-- **Veredito:** 🟡 MC60 NÃO liberado. Faltam: revogar chave (2 .env+Netlify), decidir auditoria,
-  setar envs 🟡 (CONTRATO_MAINNET, VITE_* mainnet, MP_WEBHOOK_SECRET, SENTRY, Flashbots, Privy).
+  (só prefixo truncado em docs). → NÃO precisa reescrever histórico git.
+  STATUS: 🔴 **revogação REPROVADA na verificação** — operador reportou remoção, mas o grep
+  (2ª checagem) confirmou que a chave PERSISTE em `desafio-gut/.env:3` (var `PRIVATE_KEY`) e
+  `frontend/.env.local:17` (`COORDENACAO_PRIVATE_KEY`, ainda a antiga). Netlify não verificável
+  pelo agente → reconferir. Falta editar as 2 linhas e reconfirmar.
+- **Auditoria externa (P0):** ✅ DECIDIDA = **OPÇÃO B (aceitação formal de risco)**. Justificativa
+  do operador: contrato não custodia fundos (verificado: sem payable/transfer/receive/fallback);
+  dinheiro real off-chain (PIX/MP); revisão técnica INTERNA (MC59.1–59.6); risco aceito com
+  monitoramento. (Nota: interna ≠ auditoria externa independente — risco assumido conscientemente.)
+- **Script de deploy:** salvaguardas commitadas (714dff9).
+- **Veredito:** 🟡 MC60 AINDA NÃO liberado — bloqueio remanescente = revogação real da chave
+  (2 .env + Netlify). Depois: envs 🟡 (CONTRATO_MAINNET, VITE_* mainnet, MP_WEBHOOK_SECRET,
+  SENTRY, Flashbots, Privy) fazem parte do próprio flip MC60.
 

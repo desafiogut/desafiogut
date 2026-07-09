@@ -3,9 +3,11 @@ MC59.14 — REVOGAÇÃO DA CHAVE ANTIGA + DECISÃO DE AUDITORIA + PREP MC60
 Agente: Opus 4.8 | Data: 2026-07-08 | Natureza: DOC/CONFIG + verificação read-only
 ================================================================================
 
-VEREDITO: 🟡 PARCIALMENTE PRONTO PARA O MC60.
-Deploy mainnet CONFIRMADO. Faltam 2 ações do operador (revogar chave; decidir
-auditoria) + envs 🟡 antes do flip. NÃO estampar "PRONTO" ainda.
+VEREDITO: 🟡 PARCIALMENTE PRONTO PARA O MC60 (atualizado).
+Deploy mainnet CONFIRMADO. Auditoria: decidida (OPÇÃO B, ver §3). Salvaguardas do
+script: commitadas (714dff9). Script de deploy autorizado e versionado.
+🔴 BLOQUEIA AINDA: a revogação da chave antiga foi REPROVADA na verificação —
+a chave continua presente em 2 .env locais (ver §2). NÃO estampar "PRONTO".
 
 --------------------------------------------------------------------------------
 1. DEPLOY MAINNET — VERIFICADO ON-CHAIN (read-only, publicnode)
@@ -39,7 +41,15 @@ REVOGAÇÃO (OPERADOR — manual; agente não toca segredos):
   [ ] Netlify (production): setar COORDENACAO_PRIVATE_KEY = CHAVE NOVA (cofre) e
       remover qualquer valor antigo; setar SIGNER_BACKEND=local-key
   [ ] Verificar: grep -rn "1394492e" desafio-gut/.env* frontend/.env* → vazio
-  STATUS ATUAL: 🔴 NÃO REVOGADA (chave ainda presente nos 2 .env locais)
+  STATUS ATUAL: 🔴 NÃO REVOGADA — REPROVADA NA VERIFICAÇÃO (2ª checagem MC59.14).
+    O operador reportou remoção, mas o grep confirmou que a chave PERSISTE:
+      • desafio-gut/.env       linha 3  → PRIVATE_KEY=0x1394492e…  (var não citada
+        nas instruções; é a que o deploy script lê)
+      • frontend/.env.local    linha 17 → COORDENACAO_PRIVATE_KEY=0x1394492e…
+        (ainda a chave ANTIGA; não foi substituída pela nova)
+    ⚠️ Como os 2 arquivos locais não mudaram, o atestado de que o Netlify foi
+    atualizado também precisa ser reconferido pelo operador (não verificável aqui).
+    AÇÃO: editar as 2 linhas (remover / trocar pela chave nova do cofre) e reconfirmar.
 
 --------------------------------------------------------------------------------
 3. SEG.2 — DECISÃO DE AUDITORIA EXTERNA (P0) — PENDENTE DE DECISÃO
@@ -56,15 +66,23 @@ Nuance honesta (para a decisão ser informada, não falsamente tranquilizadora):
   • Coordenação é HOT KEY (EOA local-key) — risco operacional de chave, mitigado
     por EOA só-gás + rotação + monitor (ver mainnet-prerequisites §1/§9/§11).
 
-DECISÃO DO OPERADOR (não fornecida neste comando — NÃO fabricada aqui):
-  [ ] AUDITORIA_DECISAO = OPCAO_A (auditar) | OPCAO_B (aceitar risco, justificar)
-  STATUS ATUAL: ⬜ PENDENTE — aguarda o operador registrar A ou B + justificativa.
+DECISÃO DO OPERADOR (fornecida no comando de finalização do MC59.14):
+  [x] AUDITORIA_DECISAO = OPCAO_B (aceitação formal de risco).
+  Justificativa (operador): contrato não custodia fundos; dinheiro real off-chain
+  (PIX/MP); código passou por revisão técnica interna extensa (MC59.1–59.6); risco
+  aceito com monitoramento contínuo.
+  NOTA DO AGENTE: a revisão citada é INTERNA (não substitui auditoria externa
+  independente); a Opção B assume esse risco conscientemente. Registrado como
+  aceitação formal de risco, conforme decisão do operador.
+  STATUS: ✅ DECIDIDA (OPÇÃO B).
 
 --------------------------------------------------------------------------------
 4. CHECKLIST FINAL PARA LIBERAR O MC60 (flip)
 --------------------------------------------------------------------------------
-✅ FEITO: contrato mainnet deployado e verificado; coordenacao = EOA nova.
-🔴 BLOQUEIA: revogar chave antiga (2 .env + Netlify); decisão de auditoria (A/B).
+✅ FEITO: contrato mainnet deployado e verificado; coordenacao = EOA nova;
+   decisão de auditoria (OPÇÃO B) registrada; salvaguardas do script commitadas (714dff9).
+🔴 BLOQUEIA AINDA: revogar chave antiga — REPROVADO na verificação (2 .env locais
+   ainda contêm a chave; ver §2). Reconferir também o Netlify.
 🟡 ANTES DO FLIP:
    [ ] Backend Netlify: SIGNER_BACKEND=local-key, COORDENACAO_PRIVATE_KEY=nova,
        CONTRATO_MAINNET=0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd, NETWORK_STAGE=mainnet (ÚLTIMO)
