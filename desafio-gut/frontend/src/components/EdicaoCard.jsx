@@ -14,6 +14,7 @@ import { useAppTimer } from "../context/AppContext.jsx";
 import GutoSpritePlayer from "./GutoSpritePlayer.jsx";
 import EdicaoBanner from "./EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
+import { EM_BREVE_MODE, EM_BREVE_LABEL } from "../lib/leilaoLock.js";
 
 const COR = {
   gold: "#f5a623", text: "#e8f0fe", muted: "#6b7db8",
@@ -99,13 +100,14 @@ export default function EdicaoCard({ edicao, isMobile, cardCls = "p-4", cardTitu
         <GutoSpritePlayer variant="inline" size={isMobile ? 52 : 60} mood={encerrada ? "celebrating" : undefined} />
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem" }}>
           <div style={{
-            fontSize: isMobile ? "2.1rem" : "1.95rem", fontWeight: "900",
-            fontFamily: "'JetBrains Mono', monospace",
-            color: encerrada ? COR.danger : timerColor(restante, total),
-            letterSpacing: "0.02em", lineHeight: 1, transition: "color 0.6s ease",
-          }}>{formatarTempoEdicao(restante, edicao.tipo)}</div>
+            fontSize: EM_BREVE_MODE ? (isMobile ? "1.35rem" : "1.25rem") : (isMobile ? "2.1rem" : "1.95rem"),
+            fontWeight: "900",
+            fontFamily: EM_BREVE_MODE ? "'Orbitron', sans-serif" : "'JetBrains Mono', monospace",
+            color: EM_BREVE_MODE ? "#ff6b35" : (encerrada ? COR.danger : timerColor(restante, total)),
+            letterSpacing: EM_BREVE_MODE ? "0.1em" : "0.02em", lineHeight: 1, transition: "color 0.6s ease",
+          }}>{EM_BREVE_MODE ? EM_BREVE_LABEL : formatarTempoEdicao(restante, edicao.tipo)}</div>
           <div style={{ fontSize: "0.66rem", color: encerrada ? "#fca5a5" : COR.text, marginTop: "0.3rem", textAlign: "center" }}>
-            {encerrada ? "Encerrada" : "Em andamento — lance já!"}
+            {EM_BREVE_MODE ? "Aguardando abertura" : (encerrada ? "Encerrada" : "Em andamento — lance já!")}
           </div>
         </div>
       </div>

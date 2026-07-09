@@ -163,16 +163,6 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, isM
   );
 }
 
-const SEGURANCA_ITENS = [
-  ["Argon2id",   "Hash off-chain de cada lance (hash-wasm WASM)"],
-  ["EIP-191",    "Assinatura via Privy embedded wallet"],
-  ["Rate Limit", "5 lances/min · cooldown 3s por carteira"],
-  ["DOMPurify",  "Sanitização contra XSS em todos os campos"],
-  ["Art. 20",    "Senha: R$ 2,00 por edição"],
-  ["Art. 27",    "Lance mínimo: R$ 0,01 · máx. 2 casas decimais"],
-  ["Art. 26",    "Apuração automática pelo Painel interno"],
-];
-
 export default function MercadoLances() {
   const isMobile = useIsMobile();
   const {
@@ -303,33 +293,7 @@ export default function MercadoLances() {
               status={lanceStatus}
               mudou={lanceMudou}
             />
-
-            <div style={{
-              background: "rgba(13,18,53,0.25)",
-              backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-              borderRadius: "16px",
-              padding: isMobile ? "1rem" : "1.25rem",
-              display: "flex", flexDirection: "column", gap: "0.5rem",
-              border: "1px solid rgba(245,166,35,0.15)",
-            }}>
-              <h4 style={{ margin: "0 0 0.5rem", color: COR.gold, fontSize: "0.85rem", fontWeight: "700" }}>
-                🛡️ Segurança e Transparência
-              </h4>
-              {SEGURANCA_ITENS.map(([nome, desc]) => (
-                <div key={nome} style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
-                  <span style={{
-                    minWidth: isMobile ? "70px" : "78px",
-                    fontSize: "0.7rem", fontWeight: "700",
-                    color: COR.gold, background: COR.primaryDim,
-                    padding: "0.2rem 0.5rem", borderRadius: "6px",
-                    flexShrink: 0,
-                    border: "1px solid rgba(245,166,35,0.25)",
-                    textAlign: "center",
-                  }}>{nome}</span>
-                  <span style={{ fontSize: "0.74rem", color: COR.muted, lineHeight: 1.5 }}>{desc}</span>
-                </div>
-              ))}
-            </div>
+            {/* MC67 (item 8) — card "Segurança e Transparência" movido para Configurações. */}
           </section>
           <section>
             <TabelaLances lances={lances} idEdicao={EDICAO_ATIVA} prazoTimestamp={prazoTimestamp} encerrado={encerrado} />
@@ -359,7 +323,6 @@ export default function MercadoLances() {
           {!isMobile && (
             <p style={{ margin: "0.4rem 0 0", fontSize: "0.72rem", color: "#6b7db8" }}>
               Implantação: <strong style={{ color: COR.muted }}>1º de junho de 2026</strong>
-              {" · "}Beta v0.9 · React 18 · Vite 8
             </p>
           )}
         </footer>

@@ -162,9 +162,7 @@ export default function Configuracoes() {
           display: "flex", flexDirection: "column", gap: "0.5rem",
           fontSize: isMobile ? "0.8rem" : "0.84rem", color: COR.muted, lineHeight: 1.5,
         }}>
-          <SobreItem label="Versão" value="Beta v0.9" valueColor={COR.blue300} />
-          <SobreItem label="Stack" value="React 18 · Vite 8 · Tailwind v4 · Privy · Ethers v6" />
-          <SobreItem label="Rede" value="Ethereum Sepolia Testnet" />
+          <SobreItem label="Versão" value="1.0" valueColor={COR.gold} />
           <SobreItem label="CNPJ" value="23.040.066/0001-00 — Grupo União e Trabalho" />
           <SobreItem label="Implantação" value="1º de junho de 2026" valueColor={COR.gold} />
           <div style={{ marginTop: "0.4rem" }}>
@@ -174,6 +172,35 @@ export default function Configuracoes() {
               style={{ color: COR.blue300, fontSize: "0.8rem", wordBreak: "break-all" }}
             >www.grupouniaoetrabalho.com.br ↗</a>
           </div>
+        </div>
+      </GlassCard>
+
+      {/* MC67 (item 8) — card "Segurança e Transparência" movido da aba Lances.
+          Jargão cripto (Argon2id/EIP-191/DOMPurify/WASM/XSS) removido (item 5);
+          mantidas as menções de Artigos do regulamento. */}
+      <GlassCard className={cardCls}>
+        <h3 style={cardTituloStyle}>🛡️ Segurança e Transparência</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.25rem" }}>
+          {[
+            ["Proteção",    "Cada lance é assinado e protegido no seu dispositivo."],
+            ["Anti-abuso",  "Limite de velocidade por conta contra automações."],
+            ["Privacidade", "Todos os campos são higienizados contra ataques."],
+            ["Art. 20",     "Senha: R$ 2,00 por edição."],
+            ["Art. 27",     "Lance mínimo: R$ 0,01 · máx. 2 casas decimais."],
+            ["Art. 26",     "Apuração automática pelo Painel interno."],
+          ].map(([nome, desc]) => (
+            <div key={nome} style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
+              <span style={{
+                minWidth: isMobile ? "74px" : "84px",
+                fontSize: "0.7rem", fontWeight: "700",
+                color: COR.gold, background: "rgba(255,107,53,0.15)",
+                padding: "0.2rem 0.5rem", borderRadius: "6px",
+                flexShrink: 0, border: "1px solid rgba(255,107,53,0.25)",
+                textAlign: "center",
+              }}>{nome}</span>
+              <span style={{ fontSize: "0.78rem", color: COR.muted, lineHeight: 1.5 }}>{desc}</span>
+            </div>
+          ))}
         </div>
       </GlassCard>
 

@@ -1,5 +1,5 @@
 // MC66 — AuthArea extraída de MercadoLances.jsx (sem mudança de comportamento).
-// Login (Privy via abrirModal) ou chip de status conectado + badges LGPD/Beta.
+// Login (Privy via abrirModal) ou chip de status conectado + badge LGPD.
 import { COR } from "./glassTokens.js";
 import { LABEL_LOGIN } from "../BotaoLoginPrincipal.jsx";
 
@@ -64,7 +64,6 @@ export default function AuthArea({ isConnected, ready, address, userLabel, onLog
       {!compact && (
         <div style={{ display: "flex", gap: "0.35rem" }}>
           <span style={badgeStyle}>🔒 LGPD</span>
-          <span style={badgeStyle}>🧪 Beta</span>
         </div>
       )}
     </div>

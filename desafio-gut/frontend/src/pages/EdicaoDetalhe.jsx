@@ -11,6 +11,7 @@ import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import EdicaoBanner from "../components/EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
+import { EM_BREVE_MODE, EM_BREVE_LABEL } from "../lib/leilaoLock.js";
 
 const COR = {
   gold: "#f5a623", text: "#e8f0fe", muted: "#94a3b8",
@@ -125,11 +126,12 @@ export default function EdicaoDetalhe() {
         {/* Cronómetro */}
         <div style={{ textAlign: "center", margin: "1.25rem 0 0.5rem" }}>
           <div style={{
-            fontSize: isMobile ? "2.4rem" : "2.75rem", fontWeight: 900,
-            fontFamily: "'JetBrains Mono', monospace", color: corTimer, lineHeight: 1,
-          }}>{formatarTempoEdicao(restante, edicao.tipo)}</div>
+            fontSize: EM_BREVE_MODE ? (isMobile ? "1.7rem" : "1.9rem") : (isMobile ? "2.4rem" : "2.75rem"), fontWeight: 900,
+            fontFamily: EM_BREVE_MODE ? "'Orbitron', sans-serif" : "'JetBrains Mono', monospace",
+            color: EM_BREVE_MODE ? "#ff6b35" : corTimer, letterSpacing: EM_BREVE_MODE ? "0.12em" : undefined, lineHeight: 1,
+          }}>{EM_BREVE_MODE ? EM_BREVE_LABEL : formatarTempoEdicao(restante, edicao.tipo)}</div>
           <div style={{ fontSize: "0.72rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginTop: "0.4rem" }}>
-            {encerrada ? "Leilão encerrado" : "Tempo restante"}
+            {EM_BREVE_MODE ? "Aguardando abertura" : (encerrada ? "Leilão encerrado" : "Tempo restante")}
           </div>
         </div>
 

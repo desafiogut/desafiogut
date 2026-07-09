@@ -110,7 +110,7 @@ function CardIndicacao({ indicacao }) {
   const copiar = useCallback(async () => {
     if (!link) return;
     try {
-      if (navigator?.share) { await navigator.share({ title: "DESAFIOGUT — Indique e Ganhe", url: link }); }
+      if (navigator?.share) { await navigator.share({ title: "DesafioGUT — Indique e Ganhe", url: link }); }
       else { await navigator.clipboard.writeText(link); }
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2000);
@@ -372,7 +372,7 @@ export default function ChatbotWidget() {
 
       {/* Botão flutuante */}
       <motion.button
-        aria-label={aberto ? "Fechar assistente" : "Abrir assistente DESAFIOGUT"}
+        aria-label={aberto ? "Fechar assistente" : "Abrir assistente DesafioGUT"}
         onClick={() => setAberto((v) => !v)}
         animate={aberto ? { scale: 1 } : { scale: [1, 1.06, 1] }}
         transition={aberto ? { duration: 0.15 } : { duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
@@ -431,7 +431,7 @@ export default function ChatbotWidget() {
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.18 }}
             role="dialog"
-            aria-label="Assistente DESAFIOGUT"
+            aria-label="Assistente DesafioGUT"
             /* MC25.3 — .gut-glass-standard (vidro unificado, navy + blur sempre
                ligado). MC25.7 — + .gut-glass--solid: sobe a opacidade para navy
                0.92 SÓ neste painel de leitura, restaurando a legibilidade que o
@@ -463,7 +463,7 @@ export default function ChatbotWidget() {
                 />
                 <div>
                   <div style={{ fontSize: "0.95rem", fontWeight: 800, color: COR.primary }}>
-                    GUTO — Assistente DESAFIOGUT
+                    GUTO — Assistente DesafioGUT
                     {perfilBadge && (
                       <span style={{
                         marginLeft: "0.45rem",

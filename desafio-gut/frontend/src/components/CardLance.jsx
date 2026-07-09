@@ -489,7 +489,7 @@ export default function CardLance({
       )}
 
       <p style={estilos.rodape}>
-        🔒 Argon2id · EIP-191 · Rate Limit · DOMPurify · Beta Interno
+        🔒 Lance protegido e sanitizado
       </p>
     </Card>
   );

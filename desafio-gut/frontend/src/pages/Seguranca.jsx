@@ -18,7 +18,7 @@ const CHECKS = [
   { label: "Compliance LGPD / GDPR",          desc: "Gate de consentimento obrigatório. Dados sigilosos. Direitos de acesso, retificação e exclusão garantidos.", status: "ok" },
   { label: "Dados em trânsito",               desc: "HTTPS em produção (Netlify). Todos os endpoints usam TLS 1.3.", status: "ok" },
   { label: "Autenticação 2FA",                desc: "Multi-Factor via Privy (OTP por e-mail). Em breve: passkey + TOTP.", status: "em_breve" },
-  { label: "Auditoria on-chain",              desc: "Contrato LeilaoGUT verificado no Sepolia Etherscan. Beta: registro local. Produção: on-chain.", status: "em_breve" },
+  { label: "Auditoria on-chain",              desc: "Contrato LeilaoGUT verificado on-chain no Etherscan.", status: "em_breve" },
 ];
 
 const LGPD_LINKS = [

@@ -151,7 +151,7 @@ export default function MeusAtivos() {
         borderTop: "1px solid rgba(245,166,35,0.08)",
         fontSize: "0.7rem", color: "#6b7db8", textAlign: "center", lineHeight: 1.5,
       }}>
-        Art. 26: Apuração automática · Art. 8: Menor lance único ganha · Beta Interno
+        Art. 26: Apuração automática · Art. 8: Menor lance único ganha
       </p>
     </div>
   );

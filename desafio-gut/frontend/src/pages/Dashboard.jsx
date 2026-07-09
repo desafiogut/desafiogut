@@ -11,6 +11,7 @@ import StatTile from "../components/StatTile.jsx";
 import EdicaoCard from "../components/EdicaoCard.jsx";
 import EdicaoBanner from "../components/EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
+import { EM_BREVE_MODE, EM_BREVE_LABEL } from "../lib/leilaoLock.js";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -262,14 +263,14 @@ export default function Dashboard() {
             <GutoSpritePlayer variant="inline" size={isMobile ? 88 : 104} mood={encerrado ? "celebrating" : undefined} />
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem" }}>
               <div style={{
-                fontSize: isMobile ? "2.5rem" : "2.25rem",
+                fontSize: EM_BREVE_MODE ? (isMobile ? "1.6rem" : "1.5rem") : (isMobile ? "2.5rem" : "2.25rem"),
                 fontWeight: "900",
-                fontFamily: "'JetBrains Mono', monospace",
-                color: encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[tipoLeilao]),
-                letterSpacing: "0.02em",
+                fontFamily: EM_BREVE_MODE ? "'Orbitron', sans-serif" : "'JetBrains Mono', monospace",
+                color: EM_BREVE_MODE ? "#ff6b35" : (encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[tipoLeilao])),
+                letterSpacing: EM_BREVE_MODE ? "0.12em" : "0.02em",
                 lineHeight: 1,
                 transition: "color 0.6s ease",
-              }}>{timerDisplay}</div>
+              }}>{EM_BREVE_MODE ? EM_BREVE_LABEL : timerDisplay}</div>
               <div style={{
                 fontSize: "0.68rem", color: COR.muted,
                 textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: "700",
@@ -280,7 +281,7 @@ export default function Dashboard() {
                 fontSize: "0.78rem", color: encerrado ? "#fca5a5" : COR.text,
                 marginTop: "0.4rem", textAlign: "center",
               }}>
-                {encerrado ? "Aguardando nova rodada" : "Em andamento — lance já!"}
+                {EM_BREVE_MODE ? "Aguardando abertura" : (encerrado ? "Aguardando nova rodada" : "Em andamento — lance já!")}
               </div>
             </div>
           </div>

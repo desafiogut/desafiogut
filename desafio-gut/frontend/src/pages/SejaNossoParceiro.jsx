@@ -13,7 +13,6 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { getVisitorId } from "../lib/fingerprint.js";
 import { apiGet, apiPost } from "../lib/api.js";
-import GutoAvatar from "../components/GutoAvatar.jsx";
 import { Button, Input } from "@/components/ui";
 
 const COR = {
@@ -351,12 +350,7 @@ export default function SejaNossoParceiro() {
           padding: isMobile ? "1.5rem 0.5rem" : "3rem 1rem",
         }}
       >
-        <div style={{
-          textAlign: "center",
-          marginBottom: isMobile ? "0.75rem" : "1rem",
-        }}>
-          <GutoAvatar custom="parceiro-hero-orgulhoso" size={isMobile ? 70 : 100} animate />
-        </div>
+        {/* MC67 — avatar GUTO removido do hero de parceiros. */}
         <div
           style={{
             display: "inline-flex", alignItems: "center", gap: "0.5rem",
@@ -368,7 +362,7 @@ export default function SejaNossoParceiro() {
             marginBottom: "1rem",
           }}
         >
-          🤝 PARCEIROS DO DESAFIOGUT
+          🤝 Parceiros do DesafioGUT
         </div>
         <h1
           style={{
@@ -383,7 +377,7 @@ export default function SejaNossoParceiro() {
           margin: "0 auto", maxWidth: "680px",
           color: COR.muted, fontSize: isMobile ? "0.92rem" : "1.05rem", lineHeight: 1.55,
         }}>
-          Faça parte do DESAFIOGUT como lojista. Crie a sua conta ou entre para
+          Faça parte do DesafioGUT como lojista. Crie a sua conta ou entre para
           aceder ao Painel Lojista, onde gere as suas cotas e campanhas.
         </p>
 

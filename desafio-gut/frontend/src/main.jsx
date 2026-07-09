@@ -288,8 +288,11 @@ createRoot(document.getElementById("root")).render(
         // ── Aparência: alinhada ao design DESAFIOGUT ─────────────────────────
         appearance: {
           theme: "dark",
-          accentColor: "#00d4aa",
-          logo: "https://silly-stardust-ca71bc.netlify.app/favicon.ico",
+          accentColor: "#ff6b35",
+          // MC67: logo same-origin (o favicon.ico cross-origin era bloqueado pela CSP
+          // img-src → ícone quebrado no topo do modal de login). accentColor alinhado
+          // à paleta oficial (#ff6b35) — antes era o teal antigo #00d4aa.
+          logo: "/assets/logos/v2/gut-logo-icon-v2.png",
           showWalletLoginFirst: false,
           // walletList removido: causava WalletConnect bloqueado pelo CSP
           // → TypeError: Failed to fetch → ready: false permanente

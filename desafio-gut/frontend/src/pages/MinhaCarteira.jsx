@@ -113,7 +113,8 @@ export default function MinhaCarteira() {
 
   return (
     <div style={{ padding: pad, flex: 1 }}>
-      <header style={{ marginBottom: sectionGap }}>
+      {/* MC67 (item 1) — cabeçalho da carteira DENTRO de um Glass (.gut-glass-standard). */}
+      <GlassCard as="header" className={cardCls} style={{ marginBottom: sectionGap }}>
         <h1 style={{
           margin: "0 0 0.35rem",
           fontSize: isMobile ? "1.3rem" : "1.5rem",
@@ -122,7 +123,7 @@ export default function MinhaCarteira() {
         <p style={{ margin: 0, color: COR.muted, fontSize: isMobile ? "0.82rem" : "0.88rem", lineHeight: 1.4 }}>
           Acompanhe seu saldo de senhas e seus lances no DesafioGUT.
         </p>
-      </header>
+      </GlassCard>
 
       {!isConnected ? (
         <GlassCard className={cardCls}>
