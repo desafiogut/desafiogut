@@ -3,11 +3,16 @@ MC59.14 — REVOGAÇÃO DA CHAVE ANTIGA + DECISÃO DE AUDITORIA + PREP MC60
 Agente: Opus 4.8 | Data: 2026-07-08 | Natureza: DOC/CONFIG + verificação read-only
 ================================================================================
 
-VEREDITO: 🟡 PARCIALMENTE PRONTO PARA O MC60 (atualizado).
-Deploy mainnet CONFIRMADO. Auditoria: decidida (OPÇÃO B, ver §3). Salvaguardas do
-script: commitadas (714dff9). Script de deploy autorizado e versionado.
-🔴 BLOQUEIA AINDA: a revogação da chave antiga foi REPROVADA na verificação —
-a chave continua presente em 2 .env locais (ver §2). NÃO estampar "PRONTO".
+VEREDITO: 🟢 PRÉ-CONDIÇÕES CRÍTICAS DO MC60 RESOLVIDAS — liberado para INICIAR o MC60.
+  ✅ Deploy mainnet confirmado on-chain (§1).
+  ✅ Auditoria decidida: OPÇÃO B, aceitação formal de risco (§3).
+  ✅ Revogação da chave antiga nos 2 .env locais: VERIFICADA (3ª checagem, §2).
+  ✅ Salvaguardas do deploy script commitadas (714dff9).
+RESSALVAS (não bloqueiam iniciar, mas fazem parte do MC60):
+  • Netlify: operador precisa RECONFIRMAR que a chave antiga saiu e a NOVA entrou
+    (não verificável pelo agente; o local já esteve divergente do reportado).
+  • Envs/secrets do flip: CONTRATO_MAINNET, VITE_* mainnet, MP_WEBHOOK_SECRET,
+    SENTRY_DSN, Flashbots CONSOLIDATION_RPC_URL, hardening Privy.
 
 --------------------------------------------------------------------------------
 1. DEPLOY MAINNET — VERIFICADO ON-CHAIN (read-only, publicnode)
@@ -41,15 +46,16 @@ REVOGAÇÃO (OPERADOR — manual; agente não toca segredos):
   [ ] Netlify (production): setar COORDENACAO_PRIVATE_KEY = CHAVE NOVA (cofre) e
       remover qualquer valor antigo; setar SIGNER_BACKEND=local-key
   [ ] Verificar: grep -rn "1394492e" desafio-gut/.env* frontend/.env* → vazio
-  STATUS ATUAL: 🔴 NÃO REVOGADA — REPROVADA NA VERIFICAÇÃO (2ª checagem MC59.14).
-    O operador reportou remoção, mas o grep confirmou que a chave PERSISTE:
-      • desafio-gut/.env       linha 3  → PRIVATE_KEY=0x1394492e…  (var não citada
-        nas instruções; é a que o deploy script lê)
-      • frontend/.env.local    linha 17 → COORDENACAO_PRIVATE_KEY=0x1394492e…
-        (ainda a chave ANTIGA; não foi substituída pela nova)
-    ⚠️ Como os 2 arquivos locais não mudaram, o atestado de que o Netlify foi
-    atualizado também precisa ser reconferido pelo operador (não verificável aqui).
-    AÇÃO: editar as 2 linhas (remover / trocar pela chave nova do cofre) e reconfirmar.
+  STATUS ATUAL: ✅ REVOGADA NOS .ENV LOCAIS — VERIFICADO (3ª checagem MC59.14).
+    Histórico: 1ª/2ª checagem reprovaram (chave presente apesar de reportada removida).
+    O agente (autorizado pelo operador) removeu os valores comprometidos:
+      • desafio-gut/.env:3       PRIVATE_KEY= (valor removido; placeholder + nota)
+      • frontend/.env.local:17   COORDENACAO_PRIVATE_KEY= (valor removido; placeholder + nota)
+    grep "1394492e" em .env/scripts/src/netlify → VAZIO. (Arquivos gitignored: NÃO
+    commitados — contêm outros segredos.)
+    ⚠️ PENDÊNCIA OPERADOR: reconfirmar no painel Netlify que a chave antiga saiu e a
+    NOVA (do cofre) entrou — não verificável pelo agente; o local já esteve divergente
+    do reportado, então vale a reconferência explícita.
 
 --------------------------------------------------------------------------------
 3. SEG.2 — DECISÃO DE AUDITORIA EXTERNA (P0) — PENDENTE DE DECISÃO
@@ -80,9 +86,10 @@ DECISÃO DO OPERADOR (fornecida no comando de finalização do MC59.14):
 4. CHECKLIST FINAL PARA LIBERAR O MC60 (flip)
 --------------------------------------------------------------------------------
 ✅ FEITO: contrato mainnet deployado e verificado; coordenacao = EOA nova;
-   decisão de auditoria (OPÇÃO B) registrada; salvaguardas do script commitadas (714dff9).
-🔴 BLOQUEIA AINDA: revogar chave antiga — REPROVADO na verificação (2 .env locais
-   ainda contêm a chave; ver §2). Reconferir também o Netlify.
+   decisão de auditoria (OPÇÃO B) registrada; salvaguardas do script commitadas (714dff9);
+   revogação da chave antiga nos 2 .env locais VERIFICADA.
+🟡 DENTRO DO MC60: reconfirmar Netlify (chave nova); setar CONTRATO_MAINNET + VITE_*
+   mainnet + MP_WEBHOOK_SECRET + SENTRY + Flashbots; hardening Privy; flip por último.
 🟡 ANTES DO FLIP:
    [ ] Backend Netlify: SIGNER_BACKEND=local-key, COORDENACAO_PRIVATE_KEY=nova,
        CONTRATO_MAINNET=0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd, NETWORK_STAGE=mainnet (ÚLTIMO)

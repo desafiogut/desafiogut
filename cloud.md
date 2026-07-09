@@ -2061,16 +2061,18 @@ Branch `feat/mc59.14-revogacao-preparacao`. Deliverables: `Desktop\MC59.14-RELAT
   NÃO usada; saldo ~0,00475 ETH).
 - **Chave antiga (0x1394492e…):** completa NÃO está em arquivo tracked nem no histórico git
   (só prefixo truncado em docs). → NÃO precisa reescrever histórico git.
-  STATUS: 🔴 **revogação REPROVADA na verificação** — operador reportou remoção, mas o grep
-  (2ª checagem) confirmou que a chave PERSISTE em `desafio-gut/.env:3` (var `PRIVATE_KEY`) e
-  `frontend/.env.local:17` (`COORDENACAO_PRIVATE_KEY`, ainda a antiga). Netlify não verificável
-  pelo agente → reconferir. Falta editar as 2 linhas e reconfirmar.
+  STATUS: ✅ **revogada nos .env locais (VERIFICADO na 3ª checagem)** — 1ª/2ª reprovaram
+  (chave presente apesar de reportada removida); o agente (autorizado) removeu os valores de
+  `desafio-gut/.env:3` (`PRIVATE_KEY`) e `frontend/.env.local:17` (`COORDENACAO_PRIVATE_KEY`),
+  grep "1394492e" → vazio. .env são gitignored (não commitados). ⚠️ Netlify não verificável
+  pelo agente → operador precisa RECONFIRMAR (chave antiga fora, nova dentro).
 - **Auditoria externa (P0):** ✅ DECIDIDA = **OPÇÃO B (aceitação formal de risco)**. Justificativa
   do operador: contrato não custodia fundos (verificado: sem payable/transfer/receive/fallback);
   dinheiro real off-chain (PIX/MP); revisão técnica INTERNA (MC59.1–59.6); risco aceito com
   monitoramento. (Nota: interna ≠ auditoria externa independente — risco assumido conscientemente.)
 - **Script de deploy:** salvaguardas commitadas (714dff9).
-- **Veredito:** 🟡 MC60 AINDA NÃO liberado — bloqueio remanescente = revogação real da chave
-  (2 .env + Netlify). Depois: envs 🟡 (CONTRATO_MAINNET, VITE_* mainnet, MP_WEBHOOK_SECRET,
-  SENTRY, Flashbots, Privy) fazem parte do próprio flip MC60.
+- **Veredito:** 🟢 pré-condições críticas do MC60 resolvidas (deploy ✅, auditoria=B ✅,
+  revogação local ✅) — liberado para INICIAR o MC60. Ressalvas (dentro do MC60): reconfirmar
+  Netlify; envs CONTRATO_MAINNET + VITE_* mainnet + MP_WEBHOOK_SECRET + SENTRY + Flashbots +
+  hardening Privy; flip (NETWORK_STAGE) por último.
 
