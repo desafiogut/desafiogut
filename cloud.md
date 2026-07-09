@@ -2125,3 +2125,25 @@ zero transação, zero manuseio de segredos). Deliverables: `Desktop\MC60-RELATO
   da fila. 🟢 migrar custódia local-key→KMS/Safe (encerra o alerta), Flashbots, hardening Privy.
 - **Status final:** o DESAFIOGUT está oficialmente registrado como **EM PRODUÇÃO NA MAINNET**.
 
+### MC61 — PLANEJAMENTO: remover login Apple/Email (só Google): 📋 PLANO PRONTO (Opção A)
+Branch `feat/mc61-remocao-login-apple-email` (doc-only; R1: ZERO código). Deliverables:
+`Desktop\MC61.txt`, `desafio-gut/docs/MC61-plan-login.txt`, esta seção.
+- **Achado-chave:** "email" tem DOIS consumidores independentes. (1) modal público
+  (`main.jsx:258 loginMethods:["google","email","apple"]`); (2) **login CORPORATIVO** de
+  lojistas em `SejaNossoParceiro.jsx:73` via `useLoginWithEmail` (OTP headless — sendCode/
+  loginWithCode). Remover "email" GLOBALMENTE (`loginMethods:["google"]`) muito provavelmente
+  QUEBRA o cadastro/login corporativo → risco ALTO que o comando original não previu.
+- **"apple":** config MORTA — desabilitado no painel Privy (CLAUDE.md); remover é cosmético.
+- **Decisão do validador (humano, 2026-07-09) = OPÇÃO A** (preservar corporativo):
+  ① `main.jsx:258` → `loginMethods:["google","email"]` (remove só "apple");
+  ② `AppContext.jsx:746-768` (abrirModal, funil único do login público) → default
+     `login({loginMethods:["google"]})` quando o caller não passa loginMethods → modal
+     público só Google; corporativo (sendCode direto, sem abrirModal) intacto;
+  ③ painel Privy: confirmar Google/Email ativos, Apple off (sem código);
+  ④ testes: nenhum referencia loginMethods → sem ajuste.
+- **Esforço BAIXO** (2 arquivos, ~4 linhas), **risco BAIXO-MODERADO** (reversível).
+- **Verificação obrigatória no MC62 (V1):** confirmar que no Privy **v3.22** o
+  `login({loginMethods})` por chamada realmente restringe o modal; senão, plano B (UI
+  custom só-Google ou global só se corporativo migrar). + V2 e2e corporativo OTP.
+- **Próximo:** MC62 executa a mudança após aprovação.
+
