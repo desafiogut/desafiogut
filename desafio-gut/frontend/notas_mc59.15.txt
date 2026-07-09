@@ -1,0 +1,64 @@
+MC59.15 — NOTAS DE DIAGNÓSTICO (Segmento 0)
+Data: 2026-07-08
+Branch: feat/mc59.15-correcao-config-mainnet (a partir de feat/mc59.14-revogacao-preparacao)
+Netlify: silly-stardust-ca71bc (desafiogut) | Project Id be1cc8bb-682b-4667-a341-c8db1f4ab2b5
+
+================================================================================
+RESULTADO: A PREMISSA DO MC59.15 ESTÁ INCORRETA.
+As variáveis de ENDEREÇO do contrato JÁ ESTÃO CORRETAS.
+O bug real são as variáveis de RPC (ainda apontam para Sepolia) + CONTRATO_SEPOLIA
+do backend (ainda aponta para o contrato ANTIGO).
+================================================================================
+
+--- VARIÁVEIS JÁ CORRETAS (produção) ---
+VITE_CONTRATO_SEPOLIA = 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd   ✓ (mainnet)
+VITE_CHAIN_ID         = 1                                            ✓
+VITE_NETWORK_STAGE    = mainnet                                      ✓
+VITE_EXPLORER_URL     = https://etherscan.io                         ✓
+CONTRATO_MAINNET      = 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd   ✓
+MAINNET_CHAIN_ID      = 1                                            ✓
+SIGNER_BACKEND        = local-key                                    ✓
+NETWORK_STAGE         = mainnet                                      ✓
+VITE_MOCK_MODE        = false                                        ✓
+DATA_STORE_BACKEND    = supabase                                     ✓
+
+--- VALIDAÇÃO ON-CHAIN (RPCs públicos) ---
+Mainnet (chainId 0x1): getCode(0x0052...16cd) = 9648 bytes  -> CONTRATO EXISTE ✓
+   coordenacao() = 0xFea436f74059F885ea50D48aBbE21ef6665d1E67  -> nova EOA ✓
+Sepolia (chainId 0xaa36a7): getCode(0x0052...16cd) = 0x (sem código)
+   -> por isso saldoSenhas via RPC Sepolia retorna 0x / BAD_DATA
+
+--- VARIÁVEIS ERRADAS (a causa raiz do bug) ---
+1) RPC_URL              = https://eth-SEPOLIA.g.alchemy.com/...  (backend)
+   -> deve ser eth-MAINNET
+2) VITE_ALCHEMY_URL     = https://eth-SEPOLIA.g.alchemy.com/...  (RPC do frontend)
+   -> deve ser eth-MAINNET  [CAUSA DIRETA do saldoSenhas BAD_DATA no frontend:
+      web3.js/network.js lê o contrato mainnet 0x0052...16cd mas consulta via RPC Sepolia]
+3) VITE_RPC_URL_SEPOLIA = https://eth-SEPOLIA.g.alchemy.com/...  -> revisar
+4) CONTRATO_SEPOLIA     = 0x...eF06 (contrato ANTIGO 0x825bBd3F...eF06)
+   -> _lib/contract.mjs resolve CONTRATO_ADDRESS = CONTRATO_SEPOLIA || VITE_CONTRATO_SEPOLIA.
+      Como CONTRATO_SEPOLIA está setado no contrato ANTIGO, TODO o backend
+      (comprar-senhas, saldoSenhas) usa 0x...eF06, NÃO o mainnet 0x0052...16cd.
+      Para mainnet: setar CONTRATO_SEPOLIA=0x0052...16cd OU removê-la (fallback = VITE_CONTRATO_SEPOLIA mainnet).
+5) VITE_CONTRACT_ADDRESS = 0x0000...0000 (endereço zero) -> não lido pelos fluxos atuais
+   (network.js usa VITE_CONTRATO_SEPOLIA), mas revisar se algo o consome.
+
+--- LÓGICA DE RESOLUÇÃO (código, read-only, sem alteração) ---
+Frontend  src/lib/network.js:19  CONTRATO = VITE_CONTRATO_SEPOLIA  (= mainnet ✓)
+Frontend  src/utils/web3.js:121  ALCHEMY_RPC = VITE_ALCHEMY_URL || <fallback sepolia>  (= sepolia ✗)
+Backend   _lib/contract.mjs:44-49 CONTRATO_ADDRESS = CONTRATO_SEPOLIA || VITE_CONTRATO_SEPOLIA  (= antigo ✗)
+Backend   _lib/contract.mjs:57,90 provider = JsonRpcProvider(RPC_URL)  (= sepolia ✗)
+
+================================================================================
+BLOQUEADORES (exigem o Operador — NÃO executáveis pelo agente):
+A) URL de RPC MAINNET com API key. Não possuo e não posso fabricar. A key atual é
+   de app Sepolia da Alchemy; não é possível confirmar se a mesma key funciona em
+   eth-mainnet apenas trocando o subdomínio.
+B) Autorização de escrita real (ETH real): mudar RPC_URL para mainnet habilita
+   comprar-senhas a submeter tx com ETH real usando COORDENACAO_PRIVATE_KEY.
+   Dado o incidente de exposição da chave do coordenador (MC59.11 / branch revogacao),
+   o Operador deve confirmar que a COORDENACAO_PRIVATE_KEY de produção corresponde à
+   NOVA EOA 0xFea436f74059F885ea50D48aBbE21ef6665d1E67 (não à chave antiga comprometida).
+   Não puxei a chave via CLI (política: operador manuseia segredos).
+
+STATUS: BLOQUEADO — aguardando inputs do Operador (A e B) antes de qualquer env:set/deploy.
