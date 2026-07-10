@@ -2258,3 +2258,14 @@ Branch `feat/mc67-execucao-refinamentos`. Commit **a6db336**. Deliverables `Desk
 - **Build vite verde** (55s, 3590 módulos); 12 módulos transformam 200 no dev. Sweep: Beta=0, auth const=3 intactas.
 - **⏳ Validação visual MCP 375/1440 PENDENTE** (chrome-devtools+claude-eyes desconectados). **⏸️ Deploy=operador (MAINNET).**
 - **Veredito:** ✅ 11 refinamentos executados e verificados por build+runtime; falta o MCP visual.
+
+## MC69 — Artes promocionais oficiais (3 variações com GUTO) — 2026-07-10
+- MC de ATIVOS (zero código). Método: Opção B (Cloud Comfy puro), Nano Banana Pro (gemini-3-pro-image-preview), 9:16 2K.
+- 3 variações 1080×1920 em `Desktop\ARTES-PROMOCIONAIS\variação-{1,2,3}-final.png`:
+  - V1 comprador (troféu+moedas), V2 lojista (placa "ANUNCIE AQUI"+vitrine), V3 ambos (balões COMPRAR/ANUNCIAR).
+- Identidade do GUTO ancorada pela MESMA referência (base/guto-ref.png ← 02-guto-geladeira) nas 3 → mesmo personagem ✅.
+- Correção: enunciado dizia "porco"; GUTO é mascote HUMANO 3D — prompts corrigidos.
+- Termos obrigatórios ("leilão de menor lance único" + "e-commerce por dropshipping") e martelo presentes nas 3; sem jargão técnico.
+- Texto PT-BR com acentos correto nas finais (v2 regenerada 1x no boulder loop; v2-tentativa-2 descartada).
+- Relatório: `Desktop\MC69-RELATORIO.txt` e `desafio-gut/docs/MC69-artes-promocionais.txt`.
+- ⚠️ Artes aguardam APROVAÇÃO do operador antes de qualquer uso em produção (SUPERPERS/RUFLO).
