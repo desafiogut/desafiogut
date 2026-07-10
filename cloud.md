@@ -2269,3 +2269,13 @@ Branch `feat/mc67-execucao-refinamentos`. Commit **a6db336**. Deliverables `Desk
 - Texto PT-BR com acentos correto nas finais (v2 regenerada 1x no boulder loop; v2-tentativa-2 descartada).
 - Relatório: `Desktop\MC69-RELATORIO.txt` e `desafio-gut/docs/MC69-artes-promocionais.txt`.
 - ⚠️ Artes aguardam APROVAÇÃO do operador antes de qualquer uso em produção (SUPERPERS/RUFLO).
+
+## MC69.1 — Correção/elevação das artes promocionais (V2) — 2026-07-10
+- MC de ATIVOS (zero código). Reversão do MC69 com 3 melhorias: cenário REAL do app + vibrante + consistência via dupla ref.
+- Método: Cloud Comfy + Nano Banana Pro (gemini-3-pro-image-preview), DUPLA referência via ImageBatch (GUTO `ce8b646c` + cenário real `6ca8d340` = background-mobile.webp), 9:16 2K.
+- 3 finais 1080×1920 em `Desktop\ARTES-PROMOCIONAIS-V2\variação-{1,2,3}-final.png` (palco navy real + holofotes/confete/eletrodomésticos; V1 troféu, V2 ANUNCIE AQUI+storefront, V3 balões COMPRAR/ANUNCIAR).
+- Skills ECC do enunciado: só `fal-ai-media` existe; demais (nano-banana/space-GPT-image2-design/token-aware-image/claude-art-skill/@aeriox-co) NÃO instaladas — capacidade entregue pelo pipeline validado, sem invocar skills inexistentes.
+- "Porco" do enunciado = alucinação confirmada pelo operador; GUTO é humano.
+- Termos obrigatórios + martelo nas 3; acentos corretos; sem jargão; boulder loop 0.
+- Relatório `Desktop\MC69.1-RELATORIO.txt` + `desafio-gut/docs/MC69.1-artes-promocionais-v2.txt`.
+- ⚠️ Aguardam APROVAÇÃO do operador antes do uso (SUPERPERS/RUFLO). Segmento 3 (animação) não executado.
