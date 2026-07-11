@@ -92,7 +92,7 @@ beforeEach(() => {
     lojistas: [{ endereco: ALVO, cota: "ouro" }],
     cotas: [{ cliente_id: ALVO, endereco: ALVO }, { cliente_id: "cnpj:123", endereco: ALVO }, { cliente_id: OUTRO, endereco: OUTRO }],
     saldo_rs_creditos: [
-      { pedido_id: "pix1", payload: { pedidoId: "pix1", endereco: ALVO, valorCentavos: 5000 } },
+      { pedido_id: "pix1", payload: { pedidoId: "pix1", endereco: ALVO, valorCentavos: 5000, email: "alvo@ex.com", cpf: "12345678900" } },
       { pedido_id: "pix2", payload: { pedidoId: "pix2", endereco: OUTRO, valorCentavos: 100 } },
     ],
     saldo_rs_debitos: [{ operacao_id: "op1", payload: { operacao_id: "op1", endereco: ALVO, valorCentavos: 300 } }],
@@ -165,6 +165,9 @@ test("execução real ANONIMIZA e RETÉM registros fiscais (não apaga)", async 
   assert.equal(cred.payload.endereco, ENDERECO_ANONIMO);
   assert.equal(cred.payload.valorCentavos, 5000, "valor contábil preservado");
   assert.ok(cred.payload.anonimizadoEm, "carimbo de anonimização presente");
+  // Defesa em profundidade: PII extra (email/cpf) é REMOVIDA do registro retido.
+  assert.equal("email" in cred.payload, false, "email removido");
+  assert.equal("cpf" in cred.payload, false, "cpf removido");
   // Crédito de OUTRO não foi tocado.
   const credOutro = tabelas.saldo_rs_creditos.find((r) => r.pedido_id === "pix2");
   assert.equal(credOutro.payload.endereco, OUTRO);
