@@ -1597,3 +1597,37 @@ por Senhas (comprar-senhas) → −R$ 2,00/senha, +1 senha on-chain**; Lance Pro
 **Nota:** o mesmo gate ainda existe em `lance-relampago.mjs` (fora do escopo desta MC).
 Suite 132/132, build verde. Deploy/merge pendentes de validação viva + go do operador.
 Relatório: `Desktop\MC49.3-final.md`.
+
+## Exclusão de Conta (Play Store) — MC72 (2026-07-11)
+> Branch `feat/mc72-delete-account` (de `main`). Novos: `netlify/functions/delete-account.mjs`,
+> `netlify/functions/_lib/conta-delete.mjs`, `src/components/ExcluirContaModal.jsx`,
+> `src/pages/ExcluirConta.jsx`. Modificados: `src/pages/Configuracoes.jsx`, `src/App.jsx`,
+> `src/widgets/layout/Layout.jsx`.
+
+**O quê:** funcionalidade de exclusão de conta exigida pela política "Exclusão de conta e
+dados" da Google Play Store. In-app (Configurações → "Excluir conta" → modal com checkbox
+irreversível) e web pública (`/excluir-conta`, link no rodapé) para solicitar fora do app.
+
+**Arquitetura real (corrige premissa do plano):** auth é Privy + JWT próprio do app
+(user-session), identidade = endereço da carteira; NÃO há Supabase `auth.users`. Dados
+espalhados em Netlify Blobs + Supabase.
+
+**Estratégia de dados:** (1) HARD-DELETE dos pessoais — Supabase (saldo_rs, troco_senhas,
+wallet, lances, lojistas, cotas) + Blobs (saldo-rs, wallet, cotas, renovacao-adesao,
+voucher, consent-log, lance-idem). (2) ANONIMIZAR + RETER os fiscais (saldo_rs_creditos/
+debitos + Blobs pedidos/pedidos-pagos/pedidos-meta) por obrigação fiscal BR — endereço→
+token, chaves PII removidas, valor/data preservados. (3) ON-CHAIN declarado como retido
+(imutável). Sem PRIVY_APP_SECRET, exclusão da identidade Privy fica p/ follow-up MC72.1.
+
+**Segurança:** guard owner-ou-admin (anti-IDOR, espelha exportar-dados), rate-limit 3/janela,
+endereço validado (0x+40hex → filtro PostgREST `.or()` não injetável), service-role só
+backend, modo `dryRun` para o operador simular antes da execução real.
+
+**Validação:** 14 testes novos (6 lib + 8 auth); suíte functions 146/146 (baseline 132),
+0 regressão (flag `--experimental-test-module-mocks`); `npm run build` verde; smoke visual
+de `/excluir-conta` OK (render standalone fora do gate LGPD; ruído de CSP pré-existente).
+
+**Pendente do operador (Segmento 5):** merge do PR, dry-run em prod, deploy, teste ao vivo
+e marcar o formulário "Segurança dos dados" da Play Store com a URL
+`https://silly-stardust-ca71bc.netlify.app/excluir-conta`. Relatório: `Desktop\MC72-RELATORIO.txt`
+e `desafio-gut/docs/MC72-delete-account.txt`.
