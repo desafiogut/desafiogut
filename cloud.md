@@ -2279,3 +2279,13 @@ Branch `feat/mc67-execucao-refinamentos`. Commit **a6db336**. Deliverables `Desk
 - Termos obrigatórios + martelo nas 3; acentos corretos; sem jargão; boulder loop 0.
 - Relatório `Desktop\MC69.1-RELATORIO.txt` + `desafio-gut/docs/MC69.1-artes-promocionais-v2.txt`.
 - ⚠️ Aguardam APROVAÇÃO do operador antes do uso (SUPERPERS/RUFLO). Segmento 3 (animação) não executado.
+
+## MC69.5 — Correção pontual de texto na arte oficial (V2) — 2026-07-10
+- MC de ATIVOS (zero código). Edição LOCALIZADA de UMA linha via Cloud Comfy image-to-image (NÃO text2img).
+- Troca na tarja laranja inferior: "BAIXE o app DesafioGUT - cadastre-se, compre senhas e participe." → "Em breve na Playstore e Applestore."
+- Método: LoadImage → GeminiImage2Node (Nano Banana Pro, gemini-3-pro-image-preview, auto/2K/IMAGE, seed 695) → SaveImage; prompt_id 4c6a422e; boulder loop 0.
+- Fonte real na pasta é `versao2-final.png` (enunciado dizia "imagem versao2-final.png"); backup em `versao2-final-backup.png`.
+- Saída: `Desktop\ARTES-PROMOCIONAIS-V2\versao 1 2 e 3\Nova pasta\imagem versao2-final-corrigida.png`.
+- Certificação APROVADA (agente): GUTO/fundo/cores/composição/telefone/ANUNCIE AQUI/demais textos preservados; só a tarja alvo mudou. Ressalva: image-to-image re-renderiza o raster (visualmente fiel, não pixel-idêntico).
+- Relatório `Desktop\MC69.5-RELATORIO.txt` + `desafio-gut/docs/MC69.5-correcao-texto.txt`.
+- ⚠️ Aprovação FINAL de produção é do OPERADOR (RUFLO Pilar 3).

@@ -1,0 +1,70 @@
+================================================================================
+MC69.5 — CORREÇÃO PONTUAL DE TEXTO NA IMAGEM OFICIAL DO DESAFIOGUT
+Data: 2026-07-10
+Tipo: MC de ATIVOS (zero código) — SUPERPERS + EVERYTHING CLOUD CODE + RUFLO
+================================================================================
+
+RESUMO DA CORREÇÃO
+------------------
+Substituição de UMA linha de texto na tarja laranja inferior da arte oficial
+(versão 2), mantendo 100% do restante da composição.
+
+  Texto ANTIGO : "BAIXE o app DesafioGUT - cadastre-se, compre senhas e participe."
+  Texto NOVO   : "Em breve na Playstore e Applestore."
+
+Nenhum outro elemento foi alterado: GUTO, fundo, cores, composição, confete,
+blocos "PESSOA JURÍDICA / PESSOA FÍSICA", telefone (92) 98428-5774, placa
+"ANUNCIE AQUI", toldo, caixas — todos preservados.
+
+CAMINHOS
+--------
+  Imagem original  : C:\Users\Moltbot\Desktop\ARTES-PROMOCIONAIS-V2\versao 1 2 e 3\Nova pasta\versao2-final.png
+  Backup original  : C:\Users\Moltbot\Desktop\ARTES-PROMOCIONAIS-V2\versao 1 2 e 3\Nova pasta\versao2-final-backup.png
+  Imagem editada   : C:\Users\Moltbot\Desktop\ARTES-PROMOCIONAIS-V2\versao 1 2 e 3\Nova pasta\imagem versao2-final-corrigida.png
+
+DIVERGÊNCIA DE NOME (rastreabilidade)
+-------------------------------------
+O enunciado referenciava a origem como "imagem versao2-final.png", mas o nome
+real do arquivo na pasta é "versao2-final.png" (sem o prefixo "imagem "). É
+inequivocamente o mesmo ativo (mesmo diretório, mesma composição). A imagem
+editada foi salva com o nome pedido pelo enunciado: "imagem versao2-final-corrigida.png".
+
+MÉTODO (PILAR 2 — EVERYTHING CLOUD CODE)
+----------------------------------------
+Fluxo image-to-image validado (MC68/MC69), Cloud Comfy (MCP):
+  1. Upload da imagem de referência para o Comfy Cloud
+     (input name: 23fd24842ff7fb8a139cacb0bf845cbaa30df515281b156f6fef3e0e13a90510.png)
+  2. Grafo: LoadImage -> GeminiImage2Node -> SaveImage
+     - Nó: GeminiImage2Node "Nano Banana Pro (Google Gemini Image)"
+     - Modelo: gemini-3-pro-image-preview
+     - aspect_ratio: auto | resolution: 2K | response_modalities: IMAGE | seed: 695
+     - Imagem de referência ligada em `images` (image-to-image; NÃO text2img)
+  3. prompt_id: 4c6a422e-cfa5-4468-8d78-9a2848d6e36e (succeeded)
+  4. Download do output para o destino final.
+
+Prompt de edição (localizado, "apenas o texto"): instrução explícita para trocar
+somente a linha da tarja laranja inferior e preservar todos os demais elementos.
+Boulder loop: 0 reprocessamentos — aprovado na 1ª iteração.
+
+CERTIFICAÇÃO (SEGMENTO 2 — verification-loop)
+---------------------------------------------
+  [OK] Critério 1 — imagem igual à referência exceto o texto:
+       GUTO, fundo, cores, composição, confete e todos os outros textos preservados.
+  [OK] Critério 2 — texto substituído:
+       "BAIXE o app DesafioGUT..." -> "Em breve na Playstore e Applestore." (com ponto final).
+  [OK] Critério 3 — nenhuma alteração não autorizada:
+       nenhum elemento adicionado/removido; nenhuma palavra alterada fora da tarja alvo.
+
+  RESSALVA HONESTA: o método image-to-image do Gemini re-renderiza o raster
+  inteiro; portanto o resultado NÃO é literalmente pixel-idêntico, e sim
+  VISUALMENTE FIEL. Todos os elementos foram preservados na inspeção visual.
+
+STATUS DA CERTIFICAÇÃO: APROVADO (nível agente)
+
+VEREDITO FINAL
+--------------
+  ✅ IMAGEM CORRIGIDA E CERTIFICADA.
+
+  PILAR 3 — RUFLO: a aprovação FINAL para uso em produção é do OPERADOR (validador
+  humano). Nenhuma arte vai para produção sem essa aprovação (SUPERPERS).
+================================================================================
