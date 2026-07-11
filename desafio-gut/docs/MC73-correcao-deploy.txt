@@ -1,0 +1,116 @@
+================================================================================
+MC73 — DIAGNÓSTICO E CORREÇÃO DE DEPLOY (PRODUÇÃO DESATUALIZADA)
+Relatório final
+Branch de release: feat/mc73-correcao-deploy
+Data: 2026-07-11
+================================================================================
+
+RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+O diagnóstico REFUTOU a premissa do plano. A produção NÃO está rodando uma "main
+antiga": ela está À FRENTE da main, na linhagem MAINNET (MC60). O problema real é
+que as melhorias de frontend (MC67, MC69) e o MC72 (exclusão de conta) foram
+desenvolvidas em branches que nunca foram publicadas — e o MC72 ainda estava numa
+BASE ERRADA (main mc56, sem a mainnet).
+
+Correção executada (autorizada pelo operador): consolidação de tudo SOBRE a
+linhagem mainnet numa única branch de release, com build e testes verdes. O
+DEPLOY em si permanece com o operador (deploy é manual; produção = mainnet real).
+
+
+SEGMENTO 0 — DIAGNÓSTICO (o que está em produção)
+--------------------------------------------------------------------------------
+Evidência do estado vivo (health de produção):
+  GET https://silly-stardust-ca71bc.netlify.app/.netlify/functions/health
+  → { SIGNER_BACKEND: "local-key", CHAVE_BRUTA_EM_MAINNET: "ALERT",
+      PIX_PROVIDER: "mercadopago", ... }
+  Interpretação: build da MAINNET (MC60) — bate com a linhagem feat/mc60-marco-mainnet.
+
+Estado do git:
+  - origin/main = d42b4ae (#137 docs/mc56). Última feature mesclada ~MC49/55/56.
+  - main NÃO contém MC57–MC60 (Biconomy→EOA, contrato mainnet, RPC MC59.15, MC60).
+    → A PRODUÇÃO DIVERGE DA MAIN: produção está À FRENTE (mainnet), main está atrás.
+  - Linhagem mainnet viva: branch feat/mc60-marco-mainnet (01f6889), nunca mesclada.
+
+Base real de cada melhoria (git merge-base / --contains):
+  | Branch                         | Base real        | Contém mainnet? | Deploy direto? |
+  | MC67 (feat/mc67-…refinamentos) | 01f6889 (mc60)   | SIM             | seguro         |
+  | MC69 (feat/mc69-…artes)        | 01f6889 (mc60)   | SIM             | seguro         |
+  | MC72 (feat/mc72-delete-account)| de3d8d5 (mc56!)  | NÃO             | REGREDIA       |
+  | main                           | —                | NÃO             | REGREDIA       |
+  - feat/mc69.5-dominio-status (327968c) é a branch de frontend MAIS NOVA e contém
+    MC67 + MC69 + MC69.1 + MC69.5, todos sobre a mainnet.
+  - MC68: NÃO EXISTE nenhuma branch (nem local nem remoto).
+
+PERIGO IDENTIFICADO (por que o plano original quebraria a produção):
+  - Opção B (merge das features na main + deploy main): main não tem MC57–60 →
+    deployar main DERRUBA a produção da mainnet (contrato/RPC/coordenação errados).
+  - Opção A (deploy feat/mc72): mc72 nasceu da main mc56 → MESMO problema.
+
+
+SEGMENTO 1 — DECISÃO (confirmada com o operador)
+--------------------------------------------------------------------------------
+  - Fonte do deploy de produção: MANUAL (netlify deploy --prod). Logo, mexer em
+    `main` NÃO dispara produção — o risco de auto-deploy não existe aqui.
+  - Estratégia escolhida: CONSOLIDAR tudo SOBRE a linhagem mainnet (não sobre main).
+    Base = feat/mc69.5-dominio-status (mainnet + MC67 + MC69); reaplicar o MC72 por
+    cima via cherry-pick (o MC72 estava na base errada).
+
+
+SEGMENTO 2 — CORREÇÃO (consolidação da release)
+--------------------------------------------------------------------------------
+  git checkout -b feat/mc73-correcao-deploy feat/mc69.5-dominio-status
+  git cherry-pick -x 1d1f108 9bac22b 80aeb4c 6a923f7 8e6272c   (os 5 commits do MC72)
+
+  Conflitos: apenas cloud.md (append de MC72 sobre base mc56 vs. entradas MC54-69
+  da linhagem mainnet). Resolvido mantendo TODO o conteúdo mainnet + o bloco MC72
+  no final. Demais arquivos (backend, ExcluirContaModal, ExcluirConta, Configuracoes,
+  App, Layout) aplicaram por auto-merge, sem conflito.
+
+  Resultado: feat/mc73-correcao-deploy = MAINNET(MC60) + MC67 + MC69 + MC69.x + MC72.
+
+
+SEGMENTO 3 — VALIDAÇÃO PÓS-CONSOLIDAÇÃO
+--------------------------------------------------------------------------------
+  - Linhagem mainnet presente: mc59.15 (8d8cecf) SIM + mc60 marco (01f6889) SIM.
+  - Arquivos MC72 presentes: delete-account.mjs, conta-delete.mjs, ExcluirConta.jsx,
+    ExcluirContaModal.jsx. Rota /excluir-conta em App.jsx + link no rodapé Layout.
+  - npm run build (frontend): VERDE (✓ built in ~6.7s). Avisos INVALID_ANNOTATION
+    são de node_modules (Privy/ox), pré-existentes.
+  - Suíte functions: 182/182 (inclui os 14 testes do MC72), 0 falhas.
+
+  Validação AO VIVO em produção = operador (deploy manual + mainnet real — Pilar 3).
+
+
+AÇÕES PENDENTES DO OPERADOR (deploy — Segmento 3 do plano)
+--------------------------------------------------------------------------------
+  1. Revisar a branch feat/mc73-correcao-deploy (contém tudo).
+  2. Deploy manual a partir dela:
+       cd C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend
+       git checkout feat/mc73-correcao-deploy
+       npm run build
+       netlify deploy --build --prod --message "MC73: mainnet + MC67 + MC69 + MC72"
+  3. Validar ao vivo em https://silly-stardust-ca71bc.netlify.app :
+       - Refinamentos MC67 (Carteira/Vitrine/cronômetros "EM BREVE").
+       - Configurações → botão "Excluir conta"; rodapé → "Excluir conta".
+       - /excluir-conta abre a página pública standalone.
+       - health continua reportando mainnet (CHAVE_BRUTA_EM_MAINNET=ALERT/ok).
+  4. (Higiene, opcional) Reconciliar `main` com a produção: hoje `main` (mc56) não
+     reflete a produção (mainnet). Recomendado, num MC próprio, fast-forward/merge
+     controlado da linhagem mainnet para `main` para acabar com o drift — causa-raiz
+     deste incidente. NÃO feito aqui (fora do escopo e exige cuidado com mainnet).
+
+OBSERVAÇÃO (root cause): o incidente vem de a produção ser publicada manualmente de
+branches feature (MC57–60) que nunca voltaram para `main`. Enquanto `main` não for
+reconciliada com a produção, cada novo MC herda a mesma confusão de base. Um
+pipeline CI/CD (ou ao menos uma política de "sempre mergear em main antes de
+deployar") elimina a recorrência.
+
+
+VEREDITO FINAL
+--------------------------------------------------------------------------------
+✅ DEPLOY DIAGNOSTICADO E BRANCH DE RELEASE CONSOLIDADA — mainnet + MC67 + MC69 +
+   MC72, build verde, 182/182 testes. Deploy ao vivo a cargo do operador (deploy
+   manual + mainnet real, Pilar 3). Premissa original do plano (produção em main
+   antiga) foi refutada e corrigida; o perigo de regressão da mainnet foi evitado.
+================================================================================

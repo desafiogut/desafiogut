@@ -2331,3 +2331,32 @@ de `/excluir-conta` OK (render standalone fora do gate LGPD; ruído de CSP pré-
 e marcar o formulário "Segurança dos dados" da Play Store com a URL
 `https://silly-stardust-ca71bc.netlify.app/excluir-conta`. Relatório: `Desktop\MC72-RELATORIO.txt`
 e `desafio-gut/docs/MC72-delete-account.txt`.
+
+## Correção de Deploy — MC73 (2026-07-11)
+> Branch de release `feat/mc73-correcao-deploy` (de `feat/mc69.5-dominio-status`).
+> DIAGNÓSTICO + CONSOLIDAÇÃO (deploy vivo = operador; deploy é manual).
+
+**Diagnóstico (refuta a premissa):** a produção NÃO roda uma `main` antiga — roda a
+linhagem MAINNET (MC60). Evidência: health de prod com `SIGNER_BACKEND=local-key` +
+`CHAVE_BRUTA_EM_MAINNET=ALERT` (mainnet). `origin/main` está em d42b4ae (mc56) e NÃO
+contém MC57–MC60; a produção está À FRENTE da main (linhagem `feat/mc60-marco-mainnet`,
+01f6889, nunca mesclada). MC67 e MC69 nascem sobre a mainnet (base 01f6889); a branch
+mais nova `feat/mc69.5-dominio-status` já os contém. **MC72 estava na base ERRADA**
+(main mc56, sem mainnet) → deploy direto REGREDIRIA a produção. **MC68 não existe.**
+
+**Perigo evitado:** as duas opções do plano original (merge na main + deploy main; ou
+deploy de feat/mc72) derrubariam a produção da mainnet (contrato/RPC/coordenação de
+mc56). Não executadas.
+
+**Correção:** `feat/mc73-correcao-deploy` criada de `feat/mc69.5-dominio-status`
+(=mainnet+MC67+MC69) + cherry-pick dos 5 commits do MC72. Conflito só em cloud.md
+(resolvido mantendo mainnet + bloco MC72). Resultado = MAINNET(MC60)+MC67+MC69+MC72.
+
+**Validação:** contém mc59.15 + mc60 marco; arquivos MC72 presentes; `npm run build`
+verde; suíte functions 182/182 (inclui 14 do MC72), 0 falhas. Deploy ao vivo = operador
+(`netlify deploy --prod` a partir da branch).
+
+**Root cause:** produção publicada manualmente de branches feature (MC57–60) que nunca
+voltaram para `main` → `main` drifta da produção e cada MC herda base errada. Recomendado
+reconciliar `main` com a produção (MC próprio) e/ou adotar CI/CD. Relatório:
+`Desktop\MC73-RELATORIO.txt` + `desafio-gut/docs/MC73-correcao-deploy.txt`.
