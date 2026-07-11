@@ -33,6 +33,8 @@ function FooterGlobal({ isMobile }) {
       <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Privacidade</a>
       <a href="https://www.iubenda.com/terms-and-conditions/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Termos</a>
       <a href="mailto:desafiogut01@gmail.com" style={{ color: "inherit", textDecoration: "none" }}>Suporte</a>
+      {/* MC72 — link público de exclusão de conta (exigência da Google Play Store). */}
+      <a href="/excluir-conta" style={{ color: "inherit", textDecoration: "none" }}>Excluir conta</a>
       <span style={{ width: isMobile ? "100%" : "auto" }}>© 2026 DesafioGUT. Grupo União e Trabalho.</span>
     </footer>
   );
