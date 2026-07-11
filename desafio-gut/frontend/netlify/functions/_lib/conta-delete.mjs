@@ -59,6 +59,23 @@ function normalizar(endereco) {
   return String(endereco || "").toLowerCase();
 }
 
+// Chaves de PII a REMOVER dos registros retidos (defesa em profundidade): hoje os
+// registros fiscais só carregam `endereco`, mas se um campo pessoal for adicionado
+// no futuro ele é limpo automaticamente ao anonimizar. `endereco`/`address` são
+// substituídos pelo token; os demais são removidos por completo.
+const PII_KEYS_REMOVER = ["email", "cpf", "cnpj", "nome", "name", "telefone", "phone", "payerEmail", "payer_email"];
+
+/** Anonimiza um payload in-place: endereço→token, remove demais PII, carimba. */
+function anonimizarPayload(payload) {
+  const obj = { ...(payload || {}) };
+  if ("endereco" in obj) obj.endereco = ENDERECO_ANONIMO;
+  if ("address" in obj) obj.address = ENDERECO_ANONIMO;
+  for (const k of PII_KEYS_REMOVER) if (k in obj) delete obj[k];
+  obj.anonimizadoEm = new Date().toISOString();
+  obj.anonimizadoPor = "mc72-exclusao-conta";
+  return obj;
+}
+
 // ── Supabase ─────────────────────────────────────────────────────────────────
 
 /** Conta/deleta linhas de `tabela` onde `coluna = endereco`. dryRun só conta. */
@@ -112,10 +129,7 @@ async function anonimizarFiscalSupabase(supabase, tabela, pk, endereco, dryRun) 
 
   let anonimizadas = 0;
   for (const linha of linhas) {
-    const payload = { ...(linha.payload || {}) };
-    payload.endereco = ENDERECO_ANONIMO;
-    payload.anonimizadoEm = new Date().toISOString();
-    payload.anonimizadoPor = "mc72-exclusao-conta";
+    const payload = anonimizarPayload(linha.payload);
     const { error: errUpd } = await supabase
       .from(tabela)
       .update({ payload })
@@ -228,11 +242,7 @@ async function anonimizarBlob(getStore, nome, endereco, dryRun) {
     try {
       const obj = await store.get(key, { type: "json" });
       if (!obj) continue;
-      obj.endereco = ENDERECO_ANONIMO;
-      if ("address" in obj) obj.address = ENDERECO_ANONIMO;
-      obj.anonimizadoEm = new Date().toISOString();
-      obj.anonimizadoPor = "mc72-exclusao-conta";
-      await store.setJSON(key, obj);
+      await store.setJSON(key, anonimizarPayload(obj));
       n += 1;
     } catch (err) {
       console.warn(`[conta-delete] anonimizar ${nome}:${key} falhou:`, err?.message);
