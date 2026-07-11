@@ -1,6 +1,6 @@
 // force deploy 2026-05-11 — reset versionado + MOCK_MODE removido
 import { useState, useEffect, lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AppProvider, useAppContext } from "./context/AppContext.jsx";
 import TermosConsentimento from "./components/TermosConsentimento.jsx";
 import AppLayout from "./widgets/layout/AppLayout.jsx";
@@ -33,6 +33,9 @@ const CorporativoCarteira  = lazy(() => import("./pages/CorporativoCarteira.jsx"
 const SejaNossoParceiro    = lazy(() => import("./pages/SejaNossoParceiro.jsx"));
 const DetalheProduto       = lazy(() => import("./pages/DetalheProduto.jsx"));
 const EdicaoDetalhe        = lazy(() => import("./pages/EdicaoDetalhe.jsx"));
+// MC72 — página pública de exclusão de conta (Play Store). Standalone (fora do
+// AppLayout) e fora do gate LGPD, mas dentro dos providers (Privy/AppContext).
+const ExcluirConta         = lazy(() => import("./pages/ExcluirConta.jsx"));
 
 // Fallback discreto enquanto um chunk de rota carrega (sem layout shift agressivo).
 function RouteFallback() {
@@ -88,6 +91,11 @@ function DashboardOuCorporativo() {
 export default function App() {
   const [consentimentoAceito, setConsentimentoAceito] = useState(false);
   const { toasts, add, remove } = useToast();
+  const location = useLocation();
+  // MC72 — a página pública de exclusão de conta (exigência Play Store) precisa ser
+  // acessível sem passar pelo gate de consentimento LGPD (o usuário pode chegar por
+  // um link externo só para excluir a conta). Ela continua dentro dos providers.
+  const rotaPublicaExclusao = location.pathname === "/excluir-conta";
 
   // Recupera consentimento da sessão (recarregamento de página)
   useEffect(() => {
@@ -100,7 +108,7 @@ export default function App() {
   }, []);
 
   // ── Gate LGPD ─────────────────────────────────────────────────────────────
-  if (!consentimentoAceito) {
+  if (!consentimentoAceito && !rotaPublicaExclusao) {
     return (
       <>
         {/* MC20.2 — Arena oficial (-z-50) GLOBAL: visível também no gate LGPD,
@@ -131,6 +139,9 @@ export default function App() {
       <LazyBoundary>
       <Suspense fallback={<RouteFallback />}>
       <Routes>
+        {/* MC72 — rota pública STANDALONE (fora do AppLayout e do gate LGPD): página
+            de exclusão de conta exigida pela Google Play Store. */}
+        <Route path="/excluir-conta" element={<ExcluirConta />} />
         {/* MC20.2 FASE 1 · ITEM 2 — AppLayout (3 camadas) substitui Layout como
             rota-mãe; renderiza o Layout existente intacto na superfície (zero
             regressão de rotas/navegação — R1). */}
