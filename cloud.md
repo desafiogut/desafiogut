@@ -2289,3 +2289,11 @@ Branch `feat/mc67-execucao-refinamentos`. Commit **a6db336**. Deliverables `Desk
 - Certificação APROVADA (agente): GUTO/fundo/cores/composição/telefone/ANUNCIE AQUI/demais textos preservados; só a tarja alvo mudou. Ressalva: image-to-image re-renderiza o raster (visualmente fiel, não pixel-idêntico).
 - Relatório `Desktop\MC69.5-RELATORIO.txt` + `desafio-gut/docs/MC69.5-correcao-texto.txt`.
 - ⚠️ Aprovação FINAL de produção é do OPERADOR (RUFLO Pilar 3).
+
+## MC69.5 (bis) — Levantamento do domínio e status para e-mail (Resend) — 2026-07-10
+- MC de DIAGNÓSTICO (zero código/DNS). Levantamento nos arquivos + verificação ao vivo read-only na Netlify.
+- Domínio pretendido: `desafiogut.com.br` (citado em regulamento/incident-response/disaster-recovery/ia-cognitiva como suporte@ e em cloudflare-waf-setup.md como zona-alvo). REGISTRAR **não documentado** (só exemplos genéricos); COMPRA **não comprovada** nos arquivos → confirmar com operador.
+- Status ao vivo: site Netlify `silly-stardust-ca71bc` com custom_domain=None, domain_aliases=[], getDnsZones=[], getDNSForSite=[] → domínio NÃO vinculado, sem DNS gerenciado. Cloudflare WAF (MC4/MC6) é só PLANO (checklist 100% desmarcado).
+- Resend: **zero integração** (nenhuma API key/remetente/código). SPF/DKIM/DMARC/MX: nenhum. E-mail atual = Privy SMTP (login/OTP).
+- Conclusão: config de e-mail por domínio próprio = 0% iniciada; bloqueante nº1 = operador confirmar compra+registrar e liberar painel DNS. Plano Resend (6 passos) e próximos passos no relatório.
+- Relatório `Desktop\MC69.5-DOMINIO-STATUS.txt` + `desafio-gut/docs/MC69.5-dominio-status.txt`. Execução = MC69.6.

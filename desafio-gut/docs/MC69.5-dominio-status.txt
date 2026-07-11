@@ -1,0 +1,159 @@
+================================================================================
+MC69.5 — LEVANTAMENTO DO DOMÍNIO E STATUS DE CONFIGURAÇÃO PARA E-MAIL
+Data: 2026-07-10
+Tipo: DIAGNÓSTICO E MAPEAMENTO (zero código, zero DNS) — SUPERPERS + ECC + RUFLO
+================================================================================
+
+⚠️ RESSALVA DE HONESTIDADE (ler primeiro)
+------------------------------------------
+O enunciado afirma que "o domínio foi comprado (já documentado em arquivos do
+projeto)". A busca nos arquivos NÃO encontrou:
+  - nenhum comprovante/registro de COMPRA do domínio;
+  - nenhuma confirmação de QUAL REGISTRAR (Registro.br, GoDaddy, etc.);
+  - nenhuma configuração de DNS/e-mail ativa.
+O que existe é o NOME do domínio pretendido (`desafiogut.com.br`), citado em
+vários documentos como endereço de suporte e como zona-alvo do Cloudflare WAF.
+=> A compra em si e o registrar precisam ser CONFIRMADOS pelo operador (RUFLO).
+
+================================================================================
+1. RESUMO DAS INFORMAÇÕES LEVANTADAS
+================================================================================
+
+DOMÍNIO (nome pretendido): desafiogut.com.br
+  Fontes:
+   - docs/chatbot/regulamento.md:147,188,218  → "suporte@desafiogut.com.br"
+   - docs/incident-response.md:89,102,121-122 → suporte@ + Twitter @desafiogut
+   - docs/disaster-recovery.md:74-75,154      → suporte@desafiogut.com.br
+   - docs/ia-cognitiva.md:118                 → suporte@desafiogut.com.br
+   - docs/cloudflare-waf-setup.md:22          → "Add a site → digitar desafiogut.com.br"
+
+REGISTRAR (onde foi registrado): NÃO DOCUMENTADO.
+   - docs/cloudflare-waf-setup.md:28 cita "Registro.br, GoDaddy etc." apenas como
+     EXEMPLOS genéricos, não como o registrar real.
+   - Inferência técnica: por ser ccTLD ".com.br", a autoridade de registro é o
+     Registro.br (registro.br) — mas revendas existem; NÃO confirmado nos arquivos.
+
+HOSPEDAGEM DO SITE: Netlify.
+   - Projeto: silly-stardust-ca71bc  (site_id be1cc8bb-682b-4667-a341-c8db1f4ab2b5)
+   - Conta Netlify autenticada: desafiogut@gmail.com / team "desafiogut"
+   - URL viva: https://silly-stardust-ca71bc.netlify.app
+
+PROVEDOR DE E-MAIL PRETENDIDO: Resend (conforme enunciado).
+   - Status no projeto: NÃO INTEGRADO. Zero ocorrências de "resend"/API key/remetente
+     no código, .env, netlify.toml ou docs de configuração.
+   - (Único arquivo "resend" achado é `.claude/skills/web-design/references/
+     design-systems/resend.md` = referência de design system, NÃO config do projeto.)
+
+E-MAIL EM USO HOJE: via Privy (SMTP integrado).
+   - docs/incident-response.md:89 → "E-mail via Privy (notifica usuários via SMTP integrado)"
+   - Login corporativo usa e-mail-OTP do Privy (flag MC12.3 em frontend/.env*).
+   - Ou seja: hoje NÃO há envio de e-mail por domínio próprio; tudo passa pelo Privy.
+
+================================================================================
+2. DIAGNÓSTICO DA CONFIGURAÇÃO ATUAL (verificação ao vivo, read-only)
+================================================================================
+
+PERGUNTA                                             | RESPOSTA
+-----------------------------------------------------|------------------------------------------
+O domínio está apontado para a Netlify?              | NÃO. custom_domain=None, domain_aliases=[]
+                                                     | (netlify api getSite). netlify.toml sem domínio.
+O domínio já tem registros DNS configurados?         | NÃO na Netlify. getDnsZones=[] e
+                                                     | getDNSForSite=[] (nenhuma zona/registro).
+                                                     | Cloudflare: apenas PLANO (checklist 100% desmarcado).
+O domínio já está verificado no Resend?              | NÃO. Resend não está integrado ao projeto.
+Há SPF / DKIM / DMARC configurados?                  | NÃO. Nenhum registro TXT documentado/ativo.
+O domínio está configurado para RECEBER e-mail (MX)? | NÃO. Nenhum MX documentado/ativo.
+                                                     | suporte@desafiogut.com.br é endereço citado,
+                                                     | mas sem evidência de mailbox/MX real.
+
+FONTES DA VERIFICAÇÃO AO VIVO:
+   - netlify api getSite      → custom_domain: None ; domain_aliases: [] ;
+                                default_domain: silly-stardust-ca71bc.netlify.app
+   - netlify api getDnsZones  → []   (conta não gerencia nenhuma zona DNS)
+   - netlify api getDNSForSite → []  (site sem registros DNS)
+   - docs/cloudflare-waf-setup.md:2.3 (linhas 30-40): registros PRETENDIDOS na zona
+     Cloudflare eram CNAME `app` e `@` → silly-stardust-ca71bc.netlify.app (proxied).
+   - docs/cloudflare-waf-setup.md:237-245: checklist final TODO desmarcado
+     ("[ ] Domínio adicionado, nameservers apontados", "[ ] Netlify aceita o domínio
+     customizado", etc.) => a etapa de domínio nunca foi concluída/registrada.
+
+CONCLUSÃO DO DIAGNÓSTICO:
+   O domínio desafiogut.com.br existe apenas como NOME pretendido nos documentos.
+   NÃO está: (a) vinculado à Netlify, (b) com DNS gerenciado, (c) no Resend,
+   (d) com SPF/DKIM/DMARC, (e) com MX para recepção. Ponto de partida = ZERO
+   configuração de envio de e-mail. E-mail transacional atual = Privy.
+
+================================================================================
+3. PLANO DE CONFIGURAÇÃO PARA E-MAIL COM RESEND (proposta — NÃO executado)
+================================================================================
+
+PRÉ-REQUISITO 0 — Confirmar a base (operador):
+   - Confirmar que desafiogut.com.br está de fato comprado e ATIVO.
+   - Descobrir o REGISTRAR e ter acesso ao painel de DNS dele.
+   Esforço: 10 min (login no painel do registrar). Bloqueante para todo o resto.
+
+DECISÃO DE ARQUITETURA DE DNS (escolher UMA):
+   Opção A — DNS no registrar (ex.: Registro.br): mais simples, sem mexer em NS.
+   Opção B — DNS no Cloudflare (reaproveita o WAF planejado MC4/MC6): move os
+             nameservers para o Cloudflare e adiciona lá todos os registros.
+   Recomendação: se o WAF Cloudflare for prioridade, ir de Opção B (unifica DNS+WAF).
+                 Caso contrário, Opção A é o caminho de menor atrito para só e-mail.
+
+PASSO 1 — Adicionar/verificar o domínio no Resend
+   - Criar conta/projeto Resend; "Add Domain" → desafiogut.com.br.
+   - Resend gera os registros a publicar (ver Passo 2).
+   Esforço: 10 min.
+
+PASSO 2 — Publicar os registros DNS que o Resend exige (no DNS escolhido)
+   Registros típicos do Resend (os valores exatos vêm do painel Resend):
+     - TXT  (SPF)   → em geral incluir "include:amazonses.com" no SPF (Resend usa SES).
+                      Ex.: `v=spf1 include:amazonses.com ~all`
+     - CNAME (DKIM) → 3 CNAMEs `resend._domainkey` / `*_domainkey` apontando p/ Resend.
+     - TXT  (DMARC) → `_dmarc` → ex.: `v=DMARC1; p=none; rua=mailto:dmarc@desafiogut.com.br`
+                      (começar com p=none para monitorar; endurecer depois).
+     - (Opcional) MX de retorno/return-path conforme instruções do Resend.
+   ⚠️ SPF: manter UM único registro SPF combinando todos os remetentes.
+   Esforço: 20-30 min de publicação + até 48h de propagação.
+
+PASSO 3 — Aguardar propagação e confirmar verificação no Resend
+   - Resend marca o domínio como "Verified" quando lê os registros.
+   - Validar com `dig TXT desafiogut.com.br` / `dig CNAME resend._domainkey....`.
+   Esforço: passivo (minutos a 48h).
+
+PASSO 4 — Integrar o envio no backend (Netlify Functions)
+   - Criar var de ambiente RESEND_API_KEY no Netlify (segredo — operador insere).
+   - Definir remetente, ex.: "DesafioGUT <no-reply@desafiogut.com.br>".
+   - Nova função (ex.: netlify/functions/enviar-email.mjs) usando o SDK do Resend.
+   ⚠️ Isto é CÓDIGO — fica para o MC69.6 (fora do escopo deste MC de diagnóstico).
+   Esforço: 1-2h de implementação + testes.
+
+PASSO 5 — (Opcional) Recepção de e-mail (suporte@desafiogut.com.br)
+   - Resend é foco em ENVIO; para RECEBER, usar redirecionamento/mailbox:
+     • Cloudflare Email Routing (grátis) → encaminha suporte@ p/ Gmail do operador; OU
+     • serviço de mailbox (Zoho Mail grátis, Google Workspace pago).
+   - Requer MX próprios (conflita com "return-path" do Resend? não — MX é para
+     recepção; Resend usa subdomínio/return-path para envio). Planejar com cuidado.
+   Esforço: 20-30 min (Cloudflare Email Routing) + propagação.
+
+PASSO 6 — (Opcional) Domínio customizado no site
+   - Se quiser servir o site em https://desafiogut.com.br (hoje é só o *.netlify.app):
+     apontar CNAME/A conforme Netlify (ou proxied Cloudflare) + custom domain no Netlify.
+   - Independente do e-mail, mas costuma ser feito junto. Ver checklist Cloudflare WAF.
+
+================================================================================
+4. PRÓXIMOS PASSOS RECOMENDADOS
+================================================================================
+1. [OPERADOR] Confirmar compra + registrar do domínio e liberar acesso ao painel DNS.
+2. [OPERADOR] Decidir arquitetura DNS: registrar direto (A) ou Cloudflare (B).
+3. [OPERADOR] Criar conta Resend e "Add Domain".
+4. [MC69.6]   Publicar SPF/DKIM/DMARC gerados pelo Resend no DNS escolhido.
+5. [MC69.6]   Confirmar verificação no Resend + integrar RESEND_API_KEY + função de envio.
+6. [OPCIONAL] Configurar recepção (Cloudflare Email Routing) e domínio customizado no site.
+
+STATUS GERAL: Configuração de e-mail por domínio próprio = 0% iniciada.
+              Base do domínio (compra/registrar) = NÃO comprovada nos arquivos.
+              Bloqueante nº 1 = confirmação do operador sobre a compra e o registrar.
+
+VEREDITO: ✅ LEVANTAMENTO CONCLUÍDO. Aguarda validação humana (RUFLO Pilar 3) antes
+          de qualquer execução (MC69.6).
+================================================================================
