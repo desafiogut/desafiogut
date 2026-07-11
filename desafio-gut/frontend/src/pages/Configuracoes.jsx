@@ -1,10 +1,12 @@
 ﻿import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIdioma } from "../context/IdiomaContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 import { Button } from "@/components/ui";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
+import ExcluirContaModal from "../components/ExcluirContaModal.jsx";
 // MC25.3 — SliderOpacidade removido. Vidro fixo (.gut-glass-standard).
 
 const COR = {
@@ -15,13 +17,15 @@ const COR = {
 
 export default function Configuracoes() {
   const isMobile = useIsMobile();
-  const { isConnected, address, userLabel, desconectar, abrirModal } = useAppContext();
+  const { isConnected, address, userLabel, authToken, desconectar, abrirModal } = useAppContext();
   const { lang, setLang, t } = useIdioma();
+  const navigate = useNavigate();
 
   const [notifLances,    setNotifLances]    = useState(true);
   const [notifVencedor,  setNotifVencedor]  = useState(true);
   const [notifPix,       setNotifPix]       = useState(false);
   const [salvo,          setSalvo]          = useState(false);
+  const [modalExcluir,   setModalExcluir]   = useState(false);
 
   function handleSalvar() {
     setSalvo(true);
@@ -62,12 +66,20 @@ export default function Configuracoes() {
             <InfoRow label="Tipo de Auth" value="Privy Embedded Wallet" isMobile={isMobile} />
             <InfoRow label="Status" value="✅ Conectado" valueColor={COR.success} isMobile={isMobile} />
 
-            <div style={{ marginTop: "0.75rem" }}>
+            <div style={{ marginTop: "0.75rem", display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
               <Button variant="ghost" size="md" onClick={desconectar}
                 className={`${isMobile ? "w-full" : ""} !border-[#ef4444]/30 !bg-[#ef4444]/[0.1] !text-[#ef4444]`}>
                 {t("config.desconectar")}
               </Button>
+              <Button variant="ghost" size="md" onClick={() => setModalExcluir(true)}
+                className={`${isMobile ? "w-full" : ""} !border-[#ef4444]/40 !text-[#ef4444]`}>
+                🗑️ Excluir conta
+              </Button>
             </div>
+            <p style={{ marginTop: "0.6rem", fontSize: "0.72rem", color: COR.muted, lineHeight: 1.4 }}>
+              A exclusão remove permanentemente seus dados pessoais.{" "}
+              <a href="/excluir-conta" style={{ color: COR.blue300 }}>Saiba mais</a>.
+            </p>
           </div>
         ) : (
           <div>
@@ -214,6 +226,14 @@ export default function Configuracoes() {
           {salvo ? t("config.salvo") : t("config.salvar")}
         </Button>
       </div>
+
+      <ExcluirContaModal
+        aberto={modalExcluir}
+        onFechar={() => setModalExcluir(false)}
+        address={address}
+        authToken={authToken}
+        onExcluido={() => { setModalExcluir(false); desconectar(); navigate("/"); }}
+      />
     </div>
   );
 }
