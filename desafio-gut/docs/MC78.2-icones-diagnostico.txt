@@ -1,0 +1,157 @@
+================================================================================
+MC78.2 — DIAGNÓSTICO + PLANO: ícone de compartilhamento (OG) e favicon → GUTO
+Data: 2026-07-18   |   ESCOPO: SÓ diagnóstico e plano (R1/R5 — zero alteração de código)
+================================================================================
+
+RESUMO EXECUTIVO
+----------------
+- FAVICON (aba/barra do navegador): é o ícone ANTIGO da marca
+  `/assets/logos/v2/gut-logo-icon-v2.png` (quadrado navy + ícone laranja, 512×512).
+  Definido em desafio-gut/frontend/index.html, linhas 14 e 15.
+- OG (card de compartilhamento WhatsApp/Telegram/Facebook): NÃO EXISTE `og:image`.
+  (A premissa do MC de "ícone antigo no OG" está imprecisa: não há imagem OG nenhuma
+  — só og:title/og:description/og:type. Ao compartilhar, o WhatsApp cai num fallback
+  — normalmente raspa o favicon antigo — ou mostra card sem imagem.)
+- Fonte para os novos ícones: `/assets/guto/guto-login.png` (512×512, alfa) — já em
+  produção e servido (HTTP 200). É a mesma imagem do MC78.
+
+================================================================================
+SEGMENTO 0 — DIAGNÓSTICO DO OG (compartilhamento)
+================================================================================
+Local das tags: desafio-gut/frontend/index.html (estático; NÃO há react-helmet,
+NÃO há meta dinâmico em React — grep confirmou 0 ocorrências de og:image/Helmet).
+
+Tags OG servidas HOJE em produção (curl https://silly-stardust-ca71bc.netlify.app/):
+  <meta property="og:title"       content="DesafioGUT — O Menor Lance Único Ganha" />
+  <meta property="og:description" content="Dê seu lance no DesafioGUT. Menor valor único ganha o produto. ..." />
+  <meta property="og:type"        content="website" />
+  → FALTAM: og:image, og:image:width, og:image:height, og:image:alt, og:url,
+            e TODAS as tags twitter:* (twitter:card/image/title/description).
+
+Consequência: sem og:image absoluto, o preview de link não tem imagem controlada.
+WhatsApp/Facebook exigem URL ABSOLUTA em og:image (não relativa).
+
+================================================================================
+SEGMENTO 1 — DIAGNÓSTICO DO FAVICON
+================================================================================
+Local: desafio-gut/frontend/index.html
+  linha 14: <link rel="icon" type="image/png" href="/assets/logos/v2/gut-logo-icon-v2.png" />
+  linha 15: <link rel="apple-touch-icon"       href="/assets/logos/v2/gut-logo-icon-v2.png" />
+
+Estado dos arquivos:
+  - NÃO existe public/favicon.ico (nem manifest PWA / .webmanifest / manifest.json).
+    public/ na raiz só contém `_redirects`.
+  - Como há SPA redirect (/* → /index.html 200), um request default a /favicon.ico
+    devolve HTML — inofensivo porque o <link rel=icon> aponta explicitamente para o
+    PNG, mas o ideal é adicionar um favicon.ico real na raiz de public/.
+  - Asset atual: gut-logo-icon-v2.png = 512×512 PNG, sem alfa, HTTP 200 (101 KB).
+  Evidência visual: Desktop/MC78.2-favicon-atual.png (o ícone antigo).
+
+R6 — MAPA COMPLETO de onde o ícone antigo aparece (varredura do repo):
+  `gut-logo-icon-v2.png` é referenciado em EXATAMENTE 2 lugares:
+    • index.html:14 (rel=icon / favicon)
+    • index.html:15 (apple-touch-icon)
+  Nenhum uso em componentes React, nenhum manifest, nenhuma outra rota. (O modal de
+  login Privy já NÃO usa este ícone desde o MC78 — usa guto-login.png.)
+
+================================================================================
+SEGMENTO 2 — PLANO DE AÇÃO (para um MC de execução futuro — NÃO executado aqui)
+================================================================================
+
+--- A) OG IMAGE ------------------------------------------------------------------
+A1. Criar asset OG opaco 1200×630 (proporção 1.91:1) a partir do rosto do GUTO.
+    guto-login.png é 512×512 TRANSPARENTE — impróprio direto para OG (fundo
+    transparente vira preto/branco imprevisível nos scrapers). Compor sobre fundo
+    navy da paleta oficial (#050818). Comando sugerido (sharp, Node):
+
+      node -e "const s=require('sharp');(async()=>{
+        const face=await s('public/assets/guto/guto-login.png').resize(560,560,{fit:'contain',background:{r:0,g:0,b:0,alpha:0}}).toBuffer();
+        await s({create:{width:1200,height:630,channels:4,background:{r:5,g:8,b:24,alpha:1}}})
+          .composite([{input:face,left:70,top:35}])
+          .png().toFile('public/assets/guto/og-image.png');
+      })()"
+
+    (Opcional: adicionar logo/tagline à direita — mas fora do escopo mínimo. Se
+     quiser texto embutido, gerar com @napi-rs/canvas ou compor um PNG de título.)
+    Alvo de peso: < 300 KB. Formato PNG (ou JPG para menor peso).
+
+A2. Adicionar ao <head> do index.html (URL ABSOLUTA obrigatória):
+      <meta property="og:url"          content="https://silly-stardust-ca71bc.netlify.app/" />
+      <meta property="og:image"        content="https://silly-stardust-ca71bc.netlify.app/assets/guto/og-image.png" />
+      <meta property="og:image:width"  content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta property="og:image:alt"    content="GUTO — DesafioGUT" />
+      <meta name="twitter:card"        content="summary_large_image" />
+      <meta name="twitter:title"       content="DesafioGUT — O Menor Lance Único Ganha" />
+      <meta name="twitter:description" content="Dê seu lance no DesafioGUT. Menor valor único ganha o produto." />
+      <meta name="twitter:image"       content="https://silly-stardust-ca71bc.netlify.app/assets/guto/og-image.png" />
+
+    CSP: scrapers (WhatsApp/Facebook) NÃO aplicam a CSP da página → nenhuma mudança
+    de CSP necessária para o OG. (O domínio já está em img-src de qualquer forma.)
+
+--- B) FAVICON -------------------------------------------------------------------
+B1. Gerar ícones a partir do rosto do GUTO. Para o quadrado minúsculo, um recorte
+    um pouco mais fechado que guto-login.png fica mais legível. Comandos sugeridos:
+
+      # PNGs de favicon (transparente) + apple-touch (fundo navy p/ contraste no iOS)
+      node -e "const s=require('sharp');(async()=>{
+        await s('public/assets/guto/guto-login.png').resize(32,32).png().toFile('public/assets/guto/guto-favicon-32.png');
+        await s('public/assets/guto/guto-login.png').resize(180,180)
+          .flatten({background:{r:5,g:8,b:24}}).png().toFile('public/assets/guto/guto-apple-touch-180.png');
+      })()"
+
+      # favicon.ico real na raiz de public (16+32+48). Requer 'png-to-ico' OU ImageMagick:
+      #   npx png-to-ico public/assets/guto/guto-favicon-32.png > public/favicon.ico
+      #   (ou) magick guto-login.png -resize 48x48 -define icon:auto-resize=16,32,48 public/favicon.ico
+
+B2. Atualizar index.html (substituir as 2 linhas existentes + adicionar .ico):
+      <link rel="icon" type="image/png" sizes="32x32" href="/assets/guto/guto-favicon-32.png" />
+      <link rel="apple-touch-icon" href="/assets/guto/guto-apple-touch-180.png" />
+      <link rel="icon" href="/favicon.ico" sizes="any" />   <!-- favicon.ico na raiz -->
+
+--- C) ARQUIVOS IMPACTADOS --------------------------------------------------------
+  MODIFICAR (1): desafio-gut/frontend/index.html  (tags OG/twitter + 2 links favicon)
+  CRIAR (assets em desafio-gut/frontend/public/):
+     - assets/guto/og-image.png            (1200×630, opaco)
+     - assets/guto/guto-favicon-32.png     (32×32)
+     - assets/guto/guto-apple-touch-180.png(180×180)
+     - favicon.ico                          (raiz de public/, 16/32/48)
+  NÃO tocar: main.jsx, CSP/netlify.toml (não requer alteração), lógica de negócio.
+
+================================================================================
+SEGMENTO 3 — VALIDAÇÃO PÓS-DEPLOY (para o MC de execução)
+================================================================================
+1. Build + deploy PREVIEW (netlify deploy, sem --prod) — validar antes da mainnet
+   (ver [[desafiogut-netlify-deploy-estrutura]]).
+2. Favicon:
+   - curl -I <url>/assets/guto/guto-favicon-32.png  → 200 image/png
+   - curl -I <url>/favicon.ico                       → 200 image/x-icon
+   - Abrir no navegador com hard-reload (Ctrl+Shift+R) e confirmar a aba.
+3. OG:
+   - curl <url>/ | grep og:image  → confirmar URL absoluta servida.
+   - Facebook Sharing Debugger (developers.facebook.com/tools/debug) → "Scrape Again"
+     (força re-scrape; mostra a imagem 1200×630).
+   - WhatsApp: colar o link num chat de teste. ATENÇÃO: o WhatsApp CACHEIA agressivo
+     o preview por URL; se já foi compartilhado antes, o card antigo pode persistir —
+     usar o Facebook Debugger para invalidar o cache, ou testar com um parâmetro
+     ?v=2 na URL.
+4. Depois do OK no preview → deploy de produção (netlify deploy --prod --build).
+
+================================================================================
+COMPLEXIDADE / ESFORÇO
+================================================================================
+Baixa. ~30–45 min de execução:
+  - Gerar 4 assets (sharp/png-to-ico): ~10 min.
+  - Editar index.html (10 tags OG/twitter + 3 links): ~5 min.
+  - Deploy preview + validação (Facebook Debugger + navegador): ~15–20 min.
+  - Deploy prod + revalidação: ~10 min (build ~6 min no pipeline).
+Risco: baixo (puramente visual/metadata). Único ponto de atenção = cache do WhatsApp
+para links já compartilhados.
+
+================================================================================
+EVIDÊNCIAS DESTE DIAGNÓSTICO
+================================================================================
+  - Desktop/MC78.2-favicon-atual.png  (o favicon antigo, gut-logo-icon-v2.png)
+  - Tags <head> servidas em produção (curl) — transcritas no Segmento 0/1 acima.
+  - HTTP: favicon antigo 200 (101 KB); guto-login.png 200 (fonte disponível).
+================================================================================
