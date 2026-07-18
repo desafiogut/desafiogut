@@ -292,7 +292,10 @@ createRoot(document.getElementById("root")).render(
           // MC67: logo same-origin (o favicon.ico cross-origin era bloqueado pela CSP
           // img-src → ícone quebrado no topo do modal de login). accentColor alinhado
           // à paleta oficial (#ff6b35) — antes era o teal antigo #00d4aa.
-          logo: "/assets/logos/v2/gut-logo-icon-v2.png",
+          // MC78: ícone do topo do modal ("Log in or sign up") passa a ser o rosto do
+          // GUTO (recorte apertado, fundo transparente) em vez do ícone da marca.
+          // Same-origin (mantém compatibilidade com a CSP img-src do MC67).
+          logo: "/assets/guto/guto-login.png",
           showWalletLoginFirst: false,
           // walletList removido: causava WalletConnect bloqueado pelo CSP
           // → TypeError: Failed to fetch → ready: false permanente
