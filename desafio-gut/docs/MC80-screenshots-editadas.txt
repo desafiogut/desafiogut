@@ -1,0 +1,81 @@
+================================================================================
+MC80 — Screenshots editadas para a Play Store (1080×1920)
+Data: 2026-07-18 · Fonte: capturas MC79 · Só edição de imagem (R1) · Mock (R4)
+================================================================================
+
+RESUMO
+------
+6 artes 1080×1920 geradas a partir das capturas do MC79, com dados mock (app "em
+uso"), moldura de device, legenda e branding GUTO. Prontas para a Play Store.
+
+--------------------------------------------------------------------------------
+0. ATUALIZAÇÃO IMPORTANTE — DRIFT DO MC79 FOI RESOLVIDO
+--------------------------------------------------------------------------------
+No MC79 a produção estava revertida (linhagem antiga, login com logo quebrado).
+Ao iniciar o MC80, reverifiquei e a produção JÁ ESTÁ CORRETA de novo:
+  - bundle live = /assets/index-BWmReVcc.js (guto-login.png, accentColor #ff6b35)
+  - favicon.ico = 3797 bytes (ICO GUTO), og-image.png = 455785 bytes (rosto quadrado)
+  - modal de login em produção renderiza o ROSTO DO GUTO + Google (limpo)
+Ou seja: alguém (operador, provavelmente após o relatório MC79) re-deployou a
+linhagem feat/mc73. O frontend GUTO voltou a estar live. Por isso a captura de
+login do MC80 é REAL e limpa (não precisou de mock/correção do logo).
+
+--------------------------------------------------------------------------------
+1. DADOS MOCK (R4 — genéricos; via edição de runtime no DOM, sem tocar código)
+--------------------------------------------------------------------------------
+Dashboard: Saldo R$ 250,00 · 12 Senhas · 3 Lances Únicos · 8 Total de Lances.
+(Injetados no DOM ao vivo e recapturados — pixel-perfeito, sem cálculo de coord.)
+Demais telas: sem mock (estado público). Detalhe em Desktop/mock-data.txt.
+
+--------------------------------------------------------------------------------
+2. PIPELINE DE EDIÇÃO
+--------------------------------------------------------------------------------
+Seg.1/2 — capturas editadas em Desktop/screenshots-edited/:
+  - dashboard-editado (mock via DOM), login-editado (login GUTO limpo, produção
+    já corrigida), e onboarding/mercado/carteira/acesso-rapido (sem mock).
+Seg.3 — Desktop/montar_playstore.py (PIL) gerou Desktop/screenshots-final/:
+  - Canvas 1080×1920, fundo navy gradiente.
+  - Screenshot redimensionado (904×1151) em moldura arredondada (raio 44) com
+    sombra gaussiana + borda laranja #ff6b35.
+  - Legenda no topo (Segoe UI Bold 50px, laranja), quebrada em linhas.
+  - Branding: rosto do GUTO 104px + "DesafioGUT" no rodapé.
+Fonte: Segoe UI Bold (Inter/Orbitron não instaladas no host — substituto próximo).
+
+--------------------------------------------------------------------------------
+3. ENTREGAS (todas 1080×1920, validadas)
+--------------------------------------------------------------------------------
+Desktop/screenshots-edited/    (6 imagens com/sem mock)
+Desktop/screenshots-final/     (6 artes 1080×1920)
+Desktop/playstore-screenshots/ (cópia final para upload)
+Desktop/legendas.txt · Desktop/mock-data.txt · Desktop/imagens-finais.txt
+Desktop/montar_playstore.py (script reprodutível)
+
+Legendas (ver legendas.txt):
+  onboarding → "Entre no DesafioGUT com segurança e transparência."
+  dashboard  → "Acompanhe senhas, saldo e lances em tempo real."
+  mercado    → "Participe de leilões com lances únicos e estratégicos."
+  carteira   → "Gerencie seu saldo e prêmios com facilidade."
+  login      → "Acesse sua conta com o rosto do GUTO."
+  acesso-rapido → "Descubra todas as funcionalidades do app."
+
+--------------------------------------------------------------------------------
+4. RESSALVAS / PRÓXIMOS PASSOS
+--------------------------------------------------------------------------------
+- As capturas base vêm de viewport 500×637 (o MCP downscala) → dentro da moldura
+  há leve letterbox navy; a barra de rolagem do browser aparece sutil na borda
+  direita de algumas telas. Se quiser pixel-perfeito phone-tall, recapturar num
+  emulador Android real (device 1080×1920) num MC futuro.
+- Prêmio da edição ainda é "Em breve/Aguardando catálogo" (estado real). Quando
+  houver catálogo, recapturar o dashboard/mercado para mostrar prêmio real.
+- Play Store: mín. 2 imagens, ideal 4–8 (retrato). Feature graphic 1024×500
+  (opcional) pode reaproveitar a OG banner do MC78.3 (existe no histórico git).
+- Próximo passo: upload na Play Store após verificação da conta.
+
+--------------------------------------------------------------------------------
+5. LIÇÕES
+--------------------------------------------------------------------------------
+- Dados mock: injetar no DOM ao vivo + recapturar é mais robusto que overlay por
+  coordenadas (evita erro de escala não-uniforme do downscale do screenshot).
+- Sempre reverificar o estado de produção no início de cada MC — o drift do MC79
+  já tinha sido revertido, o que mudou a estratégia da tela de login.
+================================================================================
