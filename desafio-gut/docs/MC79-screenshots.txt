@@ -1,0 +1,85 @@
+================================================================================
+MC79 — Screenshots mobile para a Play Store (captura + documentação + plano)
+Data: 2026-07-18 · Mobile 390×844 · Produção silly-stardust-ca71bc.netlify.app
+================================================================================
+
+⚠️⚠️  ACHADO CRÍTICO — DRIFT DE DEPLOY (ler primeiro)  ⚠️⚠️
+--------------------------------------------------------------------------------
+Durante a captura, descobri que a PRODUÇÃO FOI REVERTIDA. Todo o trabalho visual
+dos MCs 78 / 78.1 / 78.3 / 78.4 / 78.5 NÃO está mais live.
+
+Linha do tempo dos deploys de produção (Netlify API):
+  20:50  6a5be64f  MC78.4 (meu)          ready/production
+  21:04  6a5be9b6  MC78.5 (meu)          ready/production   ← minha última entrega
+  21:25  6a5bee4c  (sem título)          ready/production   ← deploy de terceiro
+  21:29  6a5befc5  commit d42b4aeb...     ready/production   ← LIVE AGORA
+Os deploys das 21:25 e 21:29 (linhagem MAINNET / MC60, commit d42b4aeb)
+SOBRESCREVERAM as minhas entregas.
+
+Prova objetiva (produção AGORA):
+  - Bundle JS live = /assets/index-BEAaUp6E.js com config ANTIGA:
+      logo: '.../favicon.ico'  (não guto-login.png)
+      accentColor: '#00d4aa'   (teal, pré-MC67; o correto é #ff6b35)
+      loginMethods: ['google','email','apple']  (apple foi removido no MC62)
+  - /assets/guto/og-image.png = 1716 bytes  (NÃO a minha OG de 455 KB do MC78.5)
+  - /favicon.ico              = 1716 bytes  (NÃO o meu ICO GUTO de 3.8 KB do MC78.3)
+  (Meu build correto é o bundle index-BWmReVcc.js, com guto-login.png/#ff6b35 —
+   confirmado no meu dist local e no working tree/HEAD de feat/mc73.)
+
+CONSEQUÊNCIAS na produção atual:
+  1. O ícone de LOGIN do GUTO (MC78) NÃO está live → o modal mostra o LOGO QUEBRADO
+     (o bundle antigo aponta o logo do Privy para /favicon.ico, que não decodifica
+     como <img> → naturalWidth 0). Evidência: Desktop/screenshots-raw/screenshot-login.png
+  2. O FAVICON do GUTO (MC78.3) NÃO está live (favicon antigo).
+  3. A imagem OG do GUTO (MC78.3/78.5) NÃO está live (OG antiga de 1716 bytes).
+  4. accentColor voltou ao teal; login voltou a exibir Apple.
+
+NÃO RE-DEPLOYEI (proposital): o deploy 21:29 (d42b4aeb) foi feito deliberadamente
+por terceiro (operador) DEPOIS da minha entrega; re-subir feat/mc73 por cima seria
+brigar com essa decisão e viola a regra durável (produção = linhagem MAINNET do
+operador; deploy manual). É uma DECISÃO do operador: qual linhagem deve ficar live?
+  - Se a intenção é ter o frontend GUTO (MC78) em produção → precisa deployar a
+    linhagem feat/mc73 (que consolida mainnet + MC67 + MC78) e PARAR de sobrepor
+    com d42b4aeb.
+  - Se d42b4aeb é a produção correta → o frontend GUTO (MC78) precisa ser
+    portado/cherry-pickado para a linhagem d42b4aeb antes de valer.
+
+================================================================================
+1. ENTREGAS DO MC79 (o que foi feito)
+================================================================================
+Capturadas 6 telas mobile (390×844) em Desktop/screenshots-raw/:
+  screenshot-onboarding.png     (gate LGPD + mascote GUTO)
+  screenshot-dashboard.png      (painel: tiles + edição ativa + cronômetro)
+  screenshot-mercado.png        (cronômetro RELÂMPAGO + Dar Lance)
+  screenshot-carteira.png       (CTA login + vitrine de prêmios ao fundo)
+  screenshot-acesso-rapido.png  (grid de atalhos/funções)
+  screenshot-login.png          (modal Privy — COM O LOGO QUEBRADO; ver §DRIFT)
+
+Documentação e planejamento (no Desktop):
+  screenshots-planejamento.txt   (Seg. 0 — telas, mensagem, legenda PS)
+  screenshots-documentacao.txt   (Seg. 2 — descrição/fluxo/elementos por imagem)
+  screenshots-plano-edicao.txt   (Seg. 3 — plano ComfyUI p/ o MC80, 1080×1920)
+
+Telas auth-gated (compra PIX, carteira logada, vencedor, perfil) NÃO foram
+capturadas — OAuth Privy não é automatizável via MCP; preparar com dados MOCK
+num MC futuro em ambiente controlado (R4).
+
+================================================================================
+2. RECOMENDAÇÃO
+================================================================================
+- ANTES do MC80 (edição ComfyUI) e antes de submeter à Play Store: resolver o DRIFT
+  e deixar a produção na linhagem com o frontend GUTO (MC78). Recapturar então as
+  telas — principalmente o LOGIN (que hoje sai quebrado).
+- As 5 telas não-login (onboarding/dashboard/mercado/carteira/acesso-rápido) são
+  aproveitáveis como base agora; substituir "0/—" por dados MOCK plausíveis na arte.
+
+================================================================================
+3. LIÇÕES
+================================================================================
+- "Card/logo errado em produção" pode ser DRIFT de deploy, não cache: confirmar
+  lendo o BUNDLE JS live (grep do logo/accentColor/loginMethods) e comparando o
+  hash do bundle e o byte-size dos assets com o build local.
+- Deploy Netlify é atômico: se um asset é antigo, TODO o deploy é de outra linhagem.
+- Produção deste projeto é reescrita por deploys manuais do operador (linhagem
+  MAINNET). Validar "está live?" relendo produção, não confiando no último deploy meu.
+================================================================================
