@@ -1,0 +1,66 @@
+================================================================================
+MC80.2 — Refinamento das 4 screenshots (naturalidade / integração)
+Data: 2026-07-19 · Só edição de imagem (R1) · Dados fictícios (R4)
+================================================================================
+
+RESULTADO
+---------
+As 4 imagens do MC80.1 foram REFINADAS e salvas em
+Desktop/playstore-screenshots/Nova pasta/refinadas/imagem_{1..4}_refinada.png
++ validacao-visual.txt (detalhe por imagem).
+
+FERRAMENTA: PIL/Pillow LOCAL. O caminho DALL-E/OpenAI NÃO foi executado — ver §OpenAI.
+
+--------------------------------------------------------------------------------
+REFINAMENTOS (vs. MC80.1)
+--------------------------------------------------------------------------------
+imagem_1: devices (iPhone/TV) com sombra projetada + glow laranja + reflexo de vidro;
+          painéis viraram cards glass; cronômetros com glow. (Menos "colado".)
+imagem_2: produto integrado com cantos/sombra/borda/vinheta; marca APA Móveis
+          removida sem rastro.
+imagem_3: valores + tabela com tipografia consistente, cabeçalho, linhas zebradas e
+          STATUS em pílulas coloridas.
+imagem_4: TV com sombra/glow/reflexo; 00:45 com glow + "AO VIVO"; vencedor em faixa
+          dourada com estrela; lista de nomes alinhada.
+
+--------------------------------------------------------------------------------
+§OpenAI / DALL-E — POR QUE NÃO FOI USADO (transparência)
+--------------------------------------------------------------------------------
+1) A OPENAI_API_KEY NÃO está no ambiente do shell do agente (verificado sem expor
+   valor). Pela R5 o agente não procura/manuseia chaves. Sem a chave acessível ao
+   shell, não há como chamar a API OpenAI diretamente.
+2) O único MCP de geração é o comfyui-cloud → fatura créditos do COMFY CLOUD, que é
+   um orçamento SEPARADO do crédito OpenAI (US$5) autorizado. Usá-lo poderia gerar
+   custo não-autorizado (R2).
+3) Limitação técnica decisiva: DALL-E (gpt-image) é generativo e ruim com texto —
+   "refinar" a screenshot com ele REGENERARIA a UI e embaralharia os números/tabela/
+   nomes. Para fidelidade de UI e dados corretos, o refino LOCAL (PIL) é superior.
+
+ONDE A OpenAI AGREGARIA (opção p/ o operador, se desejar):
+   - Gerar ASSETS de device fotorrealistas (iPhone/TV isolados) e compô-los via PIL
+     nas imagens 1 e 4 — sem regenerar a UI/dados. Para isso eu precisaria da chave
+     acessível ao meu shell (ex.: operador define OPENAI_API_KEY na sessão do agente)
+     OU autorização explícita p/ o custo do Comfy Cloud. Custo estimado ínfimo (~US$0,05–0,16).
+
+--------------------------------------------------------------------------------
+CUSTO
+--------------------------------------------------------------------------------
+Esta rodada: US$ 0,00 (100% local, PIL). Nenhum crédito OpenAI/Comfy consumido.
+
+--------------------------------------------------------------------------------
+SEGURANÇA — ROTAÇÃO DA CHAVE (AÇÃO DO OPERADOR)
+--------------------------------------------------------------------------------
+⚠️ Um fragmento de chave OpenAI (sk-proj-gqGi8mr...) foi colado no enunciado do MC.
+Colar chave em texto é risco de vazamento. ROTACIONE agora, independente de uso:
+   1. https://platform.openai.com/api-keys
+   2. Revogar a chave exposta.
+   3. Criar nova chave e guardar em local seguro (ex.: variável de ambiente).
+O agente NÃO usou nem armazenou a chave.
+
+--------------------------------------------------------------------------------
+PRÓXIMOS PASSOS
+--------------------------------------------------------------------------------
+- Para submissão à Play Store: emoldurar as refinadas em 1080×1920 (como no MC80).
+- Se quiser device fotorrealista via OpenAI: disponibilizar a chave ao shell do
+  agente OU autorizar Comfy Cloud, e eu gero os assets e componho via PIL.
+================================================================================
