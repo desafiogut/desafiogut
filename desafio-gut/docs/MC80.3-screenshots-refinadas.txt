@@ -1,0 +1,63 @@
+================================================================================
+MC80.3 — Refino das screenshots com Comfy Cloud (Trilha B)
+Data: 2026-07-19 · Orçamento autorizado: US$5 créditos Comfy Cloud
+================================================================================
+
+RESULTADO EM UMA LINHA
+----------------------
+A geração OSS no Comfy Cloud FALHOU (workspace sem execução de modelos OSS); LaMa
+foi pulado (marca já removida, decisão do operador). Entreguei as 4 imagens no
+padrão REFINADO (PIL local, alta qualidade) em finais/ e refinadas/. Custo ≈ US$0.
+
+--------------------------------------------------------------------------------
+1. DECISÕES DO OPERADOR (respondidas no início)
+--------------------------------------------------------------------------------
+- Imagens-alvo: as raw 1.png–4.png (não as 2 capturas novas Carteira/PIX).
+- Marca "APA Móveis": JÁ removida (usar (2)_limpo.jpeg) → LaMa PULADO (economia).
+
+--------------------------------------------------------------------------------
+2. TENTATIVA COMFY CLOUD (o que foi tentado e por que falhou)
+--------------------------------------------------------------------------------
+- Descoberta (grátis) OK: get_server_info = autenticado, produção, v0.31.0.
+  Nós reais confirmados: INPAINT_InpaintWithModel (LaMa), ICLightApply, KJNodes,
+  templates OSS (Flux.2 Klein, Z-Image-Turbo).
+- Geração (run_template) FALHOU — 4 tentativas (Boulder Loop, R2):
+    image_flux2_klein_text_to_image  → erro "validation.reference" (x3 variações)
+    gsc_starter_1 (Z-Image-Turbo)     → job "error"/"unknown" (prompt_id 5476e9a1…)
+  Diagnóstico: o workspace responde à descoberta mas NÃO executa gerações OSS —
+  provável falta de subscription/GPU ativa (a doc do MCP: "gerar consome créditos e
+  precisa de subscription"). A auth por API key cobre descoberta, não a execução OSS.
+- Custo efetivo: ~US$0 (nenhuma geração concluída). Muito abaixo do teto US$5.
+- IC-Light (integração de device) dependia de ter um device fotorrealista gerado —
+  como a geração falhou, não houve o que reiluminar.
+
+--------------------------------------------------------------------------------
+3. ENTREGA (PIL local — padrão refinado do MC80.2)
+--------------------------------------------------------------------------------
+finais/imagem_{1..4}_final.png  (+ cópias em refinadas/imagem_{1..4}_refinada.png)
+  1: iPhone + TV (sombra/glow/reflexo/glass) + cronômetros 02:30 / 01:15.
+  2: ar-condicionado integrado (card com sombra/borda); marca APA removida.
+  3: Meus Ativos 12/8/4/R$5,00 + tabela de 4 lances (pílulas de status). Texto = PIL.
+  4: TV "EDIÇÃO ATIVA · AO VIVO" + 00:45 + vencedor ★ João Silva + participantes.
+Máscara criada (não usada, LaMa pulado): trabalho/mask_apa.png (documentada em mascaras.txt).
+Validação: finais/validacao-visual.txt.
+
+--------------------------------------------------------------------------------
+4. PRÓXIMOS PASSOS / OPÇÕES
+--------------------------------------------------------------------------------
+Para DEVICES FOTORREALISTAS via Comfy Cloud é preciso destravar a execução OSS:
+  a) Ativar subscription/creditos de GPU do Comfy Cloud na conta autenticada, então
+     eu rodo Flux/Z-Image (gerar device) + IC-Light (integrar) dentro do teto US$5.
+  b) Alternativa: nós PARTNER de imagem (ex.: GPT-Image-2/Grok via api_* templates)
+     funcionam por serem API paga — mas R6 pediu evitar nós pagos (Topaz/Magnific);
+     confirmar se aceita partner de imagem.
+Para Play Store: emoldurar as finais em 1080×1920 (como no MC80).
+
+--------------------------------------------------------------------------------
+5. LIÇÕES
+--------------------------------------------------------------------------------
+- Comfy Cloud ≠ ComfyUI local; descoberta é grátis, execução OSS precisa de
+  subscription — validar a execução ANTES de planejar a rodada em cima dela.
+- Boulder Loop respeitado: parei após falhas repetidas em vez de queimar orçamento.
+- Texto/dados de UI: sempre PIL (nítido, correto); IA generativa só em pixels sem texto.
+================================================================================
