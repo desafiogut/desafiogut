@@ -2360,3 +2360,30 @@ verde; suíte functions 182/182 (inclui 14 do MC72), 0 falhas. Deploy ao vivo = 
 voltaram para `main` → `main` drifta da produção e cada MC herda base errada. Recomendado
 reconciliar `main` com a produção (MC próprio) e/ou adotar CI/CD. Relatório:
 `Desktop\MC73-RELATORIO.txt` + `desafio-gut/docs/MC73-correcao-deploy.txt`.
+
+## Screenshots Play Store — Devices fotorrealistas via OpenAI — MC80.4.1 (2026-07-19)
+> Continuação do MC80.3 (que NÃO conseguiu devices fotorrealistas: geração OSS no
+> Comfy Cloud falhou por falta de subscription). Aqui o caminho que FUNCIONOU: OpenAI
+> `gpt-image-1`. Custo autorizado ~US$0,08 (2 imagens medium). Assets/finais ficam em
+> `Desktop/playstore-screenshots/Nova pasta/` — FORA do repo, nunca commitados.
+
+**Geração:** `gerar_assets.py` → `gpt-image-1` (1024², medium, `background=transparent`)
+produziu `assets/tv_generated.png` + `assets/iphone17_generated.png` com **canal alfa
+real** (cantos alfa=0; recorte quase binário). Chave só no ambiente (o agente nunca a
+manuseia). DALL·E 3 não tem transparência — por isso `gpt-image-1`.
+
+**Composição:** `compor_finais.py` reusa as finais existentes (cronômetros/dados já em
+PIL nítido) e troca **só a região do ícone**: pedestal navy OPACO + gradiente + borda
+laranja (mascara o vetorial antigo) → device fotorrealista + glow + sombra + reflexo.
+Fonte limpa em `_orig_vectorial/` → recomposição idempotente. Posições: imagem_1 topo =
+iPhone (02:30), imagem_1 baixo = TV (01:15), imagem_4 = TV (AO VIVO 00:45).
+
+**Boulder Loop (2 it.):** it.1 pedestal a 93% deixava o ícone antigo vazar ("R-1",
+"DESAFIOGUT"); it.2 pedestal opaco + TV inferior alargada → limpo. APROVADO.
+
+**Entrega:** `finais/imagem_{1,4}_final.png` (com devices fotorrealistas); imagens 2 e 3
+intactas do MC80.3. Próximo passo: emoldurar em 1080×1920 e subir à Play Store (operador).
+Relatório: `Desktop\MC80.4.1-RELATORIO.txt` + `desafio-gut/docs/MC80.4.1-openai-assets.txt`.
+
+**Lição:** device fotorrealista com fundo transparente = `gpt-image-1` (barato, alfa
+real); texto/dados de UI = sempre PIL. Comfy Cloud OSS precisava de subscription (MC80.3).
