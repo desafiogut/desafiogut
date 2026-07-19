@@ -2411,3 +2411,26 @@ o "R$0,15" citado no plano, p/ não contradizer a própria imagem (R4 — dados 
 
 **Próximo passo:** operador sobe as 4 artes na Play Store (ordem sugerida 1→4→3→2).
 Relatório: `Desktop\MC80.4.1.1-RELATORIO.txt` + `desafio-gut/docs/MC80.4.1.1-artes-final.txt`.
+
+## Ícone oficial Play Store + adaptável Android — MC80.5 (2026-07-19)
+> Cabeça do GUTO (`Desktop/GUTO/EXPRESSÕES/1.png`, 2059×1321 RGBA transparente) sobre
+> navy. **100% PIL, custo US$0.** Ícones ficam em `Desktop/playstore-screenshots/icone/`
+> — FORA do repo, nunca commitados.
+
+**Método — PIL, não ComfyUI generativo (decisão consciente):** o plano pedia ComfyUI,
+mas (1) `comfyui-cloud` é cloud PAGO → gerar consome créditos e VIOLA R2 (custo zero);
+o MC80.3 já documentou que a execução no Comfy Cloud FALHA nesta conta (sem subscription);
+(2) ícone é composição DETERMINÍSTICA — generativo REGENERARIA outro rosto (quebra a
+identidade do GUTO). PIL preserva identidade, é pixel-preciso e grátis. Refazível via
+nós de composição (não-generativos) do ComfyUI se o operador autorizar créditos.
+
+**Entrega (`icone.py`):** `icone_playstore.png` 512 (navy gradiente + glow laranja sutil
++ cabeça 282×360 centralizada + sombra) · `icone_adaptavel_background.png` 512 (navy,
+bleed) · `icone_adaptavel_foreground.png` 512 RGBA (cabeça transparente) · `icone_round.png`
+192 (círculo). Cabeça ~70% do canvas, dentro da safe-zone (~66%) → sem clipping em
+círculo E squircle (validado em 512/96/48 sobre fundo claro e cinza). Boulder Loop 2 it.
+(cabeça 330→360 + glow mais presente p/ legibilidade a 48px). Paleta navy `#050818` +
+laranja `#ff6b35`. Sem texto/bordas. `especificacoes.txt` no diretório.
+
+**Próximo passo:** operador sobe o ícone 512 na Play Store e empacota o adaptável
+(mipmap-anydpi-v26). Relatório: `Desktop\MC80.5-RELATORIO.txt` + `desafio-gut/docs/MC80.5-icone.txt`.
