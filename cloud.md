@@ -2387,3 +2387,27 @@ Relatório: `Desktop\MC80.4.1-RELATORIO.txt` + `desafio-gut/docs/MC80.4.1-openai
 
 **Lição:** device fotorrealista com fundo transparente = `gpt-image-1` (barato, alfa
 real); texto/dados de UI = sempre PIL. Comfy Cloud OSS precisava de subscription (MC80.3).
+
+## Screenshots Play Store — Emolduramento 1080×1920 — MC80.4.1.1 (2026-07-19)
+> Fecha o ciclo MC80.4.x: pega as finais suaves (MC80.4.1) e entrega as ARTES finais
+> prontas p/ a ficha da Play Store. **100% PIL local, custo US$0** (sem APIs). Artes
+> ficam em `Desktop/playstore-screenshots/` — FORA do repo, nunca commitadas.
+
+**editadas/** = cópia das finais já validadas (MC80.4.1) — são as versões "suaves"
+(sombra/glow/reflexo, cards integrados, texto PIL nítido). Nenhuma reedição destrutiva.
+
+**Emolduramento (`emoldurar.py` → artes/arte_{1..4}.png, 1080×1920):** canvas navy
+gradiente + glow laranja radial; device frame (corpo arredondado + notch + sombra
+GaussianBlur, tela com cantos arredondados); faixa inferior de legenda (navy 90% +
+borda laranja, Segoe UI Bold 46px laranja `#ff6b35`); rosto do GUTO (`guto-login.png`)
+150² a 85% no canto inf.-dir.; wordmark "DesafioGUT" no topo. Boulder Loop 2 it.
+(ajuste de telefone maior + legenda reposicionada p/ equilíbrio vertical). APROVADO.
+
+**Legendas:** 1="Participe de leilões com lances únicos" · 2="Ganhe prêmios incríveis
+com o menor lance" · 3="Acompanhe seus lances e ativos em tempo real" · 4="Edições ao
+vivo com cronômetro e vencedor". Cópia p/ upload em `playstore-screenshots/artes-prontas/`
++ `legendas.txt`. Nota: imagem 3 mantém Menor Lance **R$5,00** (bate com a tabela) e não
+o "R$0,15" citado no plano, p/ não contradizer a própria imagem (R4 — dados fictícios).
+
+**Próximo passo:** operador sobe as 4 artes na Play Store (ordem sugerida 1→4→3→2).
+Relatório: `Desktop\MC80.4.1.1-RELATORIO.txt` + `desafio-gut/docs/MC80.4.1.1-artes-final.txt`.
