@@ -2522,3 +2522,61 @@ mascarado e só-em-erro → `A5` remover webm órfãos → `A6` custo do glass (
 
 **Próximo passo:** operador liga o telemóvel (Depuração USB) e gera `assembleDebug`;
 MC83 executa A1–A6 uma de cada vez, medindo antes/depois no aparelho.
+
+---
+
+## MC83 — Relatório dos disparos (e-mail + WhatsApp)
+
+**Data:** 2026-07-20 · **Natureza:** LEITURA E CONSOLIDAÇÃO. Zero alteração de código.
+**Custo:** US$ 0,00 (R2 — só leitura via MCP PythonAnywhere).
+
+**Status geral:** automação ESTÁVEL. Cron 1465157 (diário 15:00 UTC = 11:00 Manaus,
+`enabled:true`, sem expiração) com **5/5 execuções `return code 0`** entre 17 e 20/07 —
+zero falhas de execução.
+
+**Progresso:**
+- **E-mail:** checkpoint **400 / 1623 (24,6%)**, 100/dia, 0 erros nos dias auditáveis
+  (19 e 20/07). Previsão de conclusão **~02/08/2026** (1223 restantes).
+- **WhatsApp:** **198 / 198 = 100% CONCLUÍDO** (terminou em/antes de 18/07). Desde então
+  o script roda e envia 0 ("Enviando 0 mensagens (do 199 ao 198)") — inócuo, sem custo.
+
+**Anomalias do MC76 — atualização:**
+- **A4.1** logs sem contagem → ✅ **RESOLVIDA** (orquestrador novo captura STDOUT completo
+  desde 18/07). Resíduo: dias 16-17/07 sem contagem, buraco de auditoria irrecuperável.
+- **A4.2** checkpoint por tentados → ❌ **PERSISTE (CRÍTICA)**. Confirmado no código dos
+  DOIS scripts: `f.write(str(inicio + len(lote)))` usa TENTADOS, não `enviados`. Falhas
+  são perdidas silenciosamente e nunca retentadas. Agravante: `ultimo_enviado.txt` conta
+  tentativas e `enviados_hoje.txt` conta sucessos — divergem se houver erro.
+- **A4.3** histórico não durável → ⚠️ PARCIAL (logs persistem; só 1 resumo, e com
+  denominador errado "198/200").
+- **A4.4** segredos em texto plano → ❌ PERSISTE (configs JSON + cópias `.bak`; conteúdo
+  NÃO aberto pelo agente, R5).
+- **A4.5** WhatsApp sandbox → ❓ NÃO VERIFICADO (exigiria ler credenciais Twilio, R5).
+- **A4.6** arquivos legados → ❌ PERSISTE e **agravado**: `checkpoint_twilio_corrigido.txt`
+  contém **360**, maior que a lista inteira (198) — checkpoint órfão divergente.
+- **A4.7** WhatsApp no-op → ✅ CONFIRMADO, a lista está 100% enviada.
+
+**Anomalias NOVAS:**
+- **N1 (ALTO, maior risco do relatório)** — qualidade da lista de e-mail: o lote 301-400 é
+  dominado por endereços com forte aparência de inválidos/sintéticos. Hard bounces em massa
+  degradam a reputação do remetente e podem **suspender a conta SendGrid**, matando os 1223
+  registos ainda por enviar.
+- **N2 (MÉDIO)** — `202 aceite` é tratado como "entregue". Sem Event Webhook, a **taxa de
+  entrega real é desconhecida**: "400 enviados" é na verdade "400 aceites pela API".
+- **N3 (BAIXO)** — rótulo "Total acumulado" mostra o total do DIA, não o acumulado (logs de
+  19-20/07 dizem "100" quando o real era 300 e 400).
+- **N4 (BAIXO)** — scripts usam caminhos relativos; execução manual de outro diretório pode
+  criar checkpoint 0 e **reenviar tudo**.
+
+**Ação imediata do operador:** verificar no painel SendGrid a taxa de bounce dos 400 já
+enviados — é o dado que decide se a campanha continua ou pausa (N1). Cron: não mexer.
+
+**Relatórios:** `Desktop\MC83-RELATORIO.txt` + `desafio-gut/docs/MC83-disparos.txt`.
+
+**Pendências → MC84:** corrigir avanço de checkpoint por sucessos + fila de retentativa
+(A4.2); sanear os 1223 e-mails restantes (N1); Event Webhook SendGrid (N2); resumo
+estruturado por execução (A4.3/N3); limpeza de legados (A4.6); segredos para env vars (A4.4).
+
+⚠️ **Numeração:** o MC82 designou "MC83" para executar as otimizações do app Android
+(A1-A6). Este MC83 tratou dos disparos. **A execução das otimizações do app segue PENDENTE**
+e precisa de número próprio (sugestão: MC85).
