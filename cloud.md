@@ -2465,3 +2465,60 @@ source release: 21"); (3) máquina com pouca RAM (commit do Windows ~96%, ~240MB
 
 **Próximo passo:** operador testa o AAB e sobe na Play Console após verificação de
 identidade; buildar via CI/máquina com mais RAM no futuro.
+
+---
+
+## MC82 — Diagnóstico de performance do app Android (WebView)
+
+**Data:** 2026-07-20 · **Natureza:** DIAGNÓSTICO + PLANO. Zero alteração de código.
+**Custo:** US$ 0,00 (R2 — só ferramentas locais).
+
+**⚠️ CORREÇÃO DE ROTA:** o MC82 foi reexecutado como diagnóstico+plano, sem
+alterações de código. As otimizações A1, A2 e A5 chegaram a ser aplicadas numa
+primeira passagem, foram REVERTIDAS (`git checkout HEAD`), e serão aplicadas no
+MC83 com validação em dispositivo real. Estado restaurado e conferido: dist/ e
+assets do APK em 35 MB / 21 webm; working tree dos ficheiros de código limpo.
+
+**Três premissas do plano refutadas por evidência:** (1) `android:hardwareAccelerated`
+está ausente do Manifest mas o seu **default é TRUE** desde a API 14 para targetSdk>=14
+(android-34) → aceleração JÁ ATIVA, a ação "PRIORIDADE ALTA nº1" era no-op;
+(2) `capacitor.plugins.json` = `[]` e zero imports de `@capacitor` em `src/` → não há
+plugins para lazy-load nem bridge calls para agrupar; (3) não há canvas no render e o
+único listener de scroll (`AppContext.jsx:228`) já é `{passive:true}`. **O app é um
+WebView puro a servir um SPA React local — todo o gargalo é web, nenhum é nativo.**
+
+**Gargalos reais (medidos):**
+- **G1** `BackgroundCanvas` monta os DOIS `<video>` e esconde um com `opacity:0`, que
+  não impede decode. Em viewport mobile o vídeo **1920×1288 invisível decodificou 335
+  frames** contra 341 do visível — um decoder Full-HD gasto em todas as rotas.
+- **G2** `PrivyProvider` (import estático, main.jsx:5) envolve o gate LGPD →
+  **4.003 KB de JS** para desenhar 4 checkboxes que não usam Privy. LCP 3.091 ms @CPU 4×
+  com TTFB de 6 ms ⇒ ~100% CPU de JS, não rede. Caminho crítico 1.139 KB gz vs alvo 500 KB.
+- **G3** Dashboard monta `2 (fundo) + 2 (carrossel) + 1 (sprite) + N (1 por EdicaoCard)`
+  `<video>`. ffprobe confirma **`alpha_mode=1`** ⇒ dois streams VP9 por vídeo, e o plano
+  alfa **não tem caminho de hardware no Android** → software (libvpx) na CPU. Com 3
+  edições: ~14 streams VP9, ~6 por software. Candidato nº1 ao jank de scroll.
+- **G4** Sentry Session Replay ATIVO em produção (DSN no bundle + rrweb): MutationObserver
+  a serializar o DOM na main thread. ⚠️ **R4**: `maskAllText:false` gravava texto do ecrã
+  sem máscara num app com saldos e valores de lance.
+- **G5** `backdrop-filter blur(24px)` sobre fundo em vídeo → re-blur 24×/s por painel
+  mesmo com a página parada (INFERIDO, não medido).
+- **G6** 35 MB no APK, incluindo **8 loops de fundo órfãos** (v1/v2/v4/v5, ~2,9 MB) que
+  nenhum código referencia — resíduo do MC26.1.
+
+**Limitação declarada:** `adb devices` vazio + build release sem
+`webContentsDebuggingEnabled` ⇒ chrome://inspect impossível, **nenhuma métrica de FPS/TTI
+no aparelho foi coletada**. Medições feitas por proxy (mesmo dist/ em localhost + CDP),
+que mede main thread com fidelidade mas é **cego ao decode de vídeo e ao compositor**.
+
+**Plano para o MC83** (detalhe em `Desktop\MC82-PLANO-ACAO.txt`), ordem por impacto:
+`A0` build debug inspecionável + telemóvel ligado (PRÉ-REQUISITO) → `A3` lazy do Privy
+(alvo LCP < 1.500 ms) → `A4` IntersectionObserver a pausar vídeos fora do viewport
+(alvo ≤3 vídeos a tocar) → `A1` montar só o vídeo da largura atual → `A2` Replay
+mascarado e só-em-erro → `A5` remover webm órfãos → `A6` custo do glass (só após medir).
+
+**Relatórios:** `Desktop\MC82-RELATORIO.txt` + `desafio-gut/docs/MC82-performance.txt`
+(+ apoio: `MC82-DIAGNOSTICO.txt`, `MC82-GARGALOS.txt`, `MC82-PLANO-ACAO.txt`).
+
+**Próximo passo:** operador liga o telemóvel (Depuração USB) e gera `assembleDebug`;
+MC83 executa A1–A6 uma de cada vez, medindo antes/depois no aparelho.
