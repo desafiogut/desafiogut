@@ -2434,3 +2434,34 @@ laranja `#ff6b35`. Sem texto/bordas. `especificacoes.txt` no diretório.
 
 **Próximo passo:** operador sobe o ícone 512 na Play Store e empacota o adaptável
 (mipmap-anydpi-v26). Relatório: `Desktop\MC80.5-RELATORIO.txt` + `desafio-gut/docs/MC80.5-icone.txt`.
+
+## Build do AAB assinado (Capacitor) — MC81 (2026-07-19)
+> App Bundle Android assinado, pronto p/ Play Store. **Custo US$0** (local). Keystore,
+> AAB e scaffolding do Capacitor ficam FORA do git (protegidos no `.gitignore`).
+
+**Setup:** Capacitor 8.4.2 (`@capacitor/core|cli|android`) em `desafio-gut/frontend`;
+`cap init "DesafioGUT" "com.desafiogut.app" --web-dir dist`; `cap add android` + `sync`
+→ pasta `android/` (WebView wrapper do build Vite `dist/`). versionCode 1, versionName 1.0.0.
+
+**Assinatura:** keystore RSA-2048 (`keystore/desafiogut.keystore`, alias `desafiogut`,
+validade 10000d) gerada via keytool não-interativo; senha em `keystore/credenciais.txt`
+(⚠️ NÃO commitado). `android/app/build.gradle` lê `keystore.properties` (sem hardcode)
+e assina o `release`. **Guardar keystore+senha em backup** (perda = não atualiza o app).
+
+**Build (armadilhas resolvidas — Boulder Loop):** (1) `local.properties` precisa de
+barras normais (barra invertida = escape inválido em .properties); (2) **Capacitor 8
+exige Java 21** → usar o JBR do Android Studio como JAVA_HOME (o JDK 17 dá "invalid
+source release: 21"); (3) máquina com pouca RAM (commit do Windows ~96%, ~240MB livres)
+→ JVM crashava por OOM nativo; solução = `gradle.properties` de baixo footprint
+(`-Xmx512m -XX:+UseSerialGC`, sem daemon/paralelismo) + pular lint
+(`-x lintVitalRelease -x lintVitalAnalyzeRelease`, não afeta o AAB). `gradlew bundleRelease`
+→ BUILD SUCCESSFUL.
+
+**Entrega/validação:** `builds/DesafioGUT-v1.0.0.aab` (34.344.316 bytes; jarsigner
+"jar verified"; SHA-256 dd167d02…dc405) + `builds/build-info.txt`. SDK usado:
+`%LOCALAPPDATA%/Android/Sdk` (android-34, build-tools 34.0.0). Só docs commitados
+(scaffolding android/ + package.json ficam locais — R1). Relatório:
+`Desktop\MC81-RELATORIO.txt` + `desafio-gut/docs/MC81-build.txt`.
+
+**Próximo passo:** operador testa o AAB e sobe na Play Console após verificação de
+identidade; buildar via CI/máquina com mais RAM no futuro.

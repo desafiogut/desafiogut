@@ -1,0 +1,108 @@
+================================================================================
+MC81 — Build do Android App Bundle (.aab) assinado do DesafioGUT
+Data: 2026-07-19 · Custo: US$0,00 (R2 — ferramentas locais, sem APIs)
+================================================================================
+
+RESULTADO EM UMA LINHA
+----------------------
+SUCESSO. AAB assinado gerado e validado: builds/DesafioGUT-v1.0.0.aab (34.344.316
+bytes, ~32,7 MB, "jar verified"). Capacitor + projeto Android + keystore + assinatura
+Gradle configurados. Build concluído apesar de RAM limitada (ajuste de memória +
+lint desativado). Pronto para upload na Play Store após verificação de identidade.
+
+--------------------------------------------------------------------------------
+0. AMBIENTE (Segmento 0)
+--------------------------------------------------------------------------------
+node v24.14.1 · npm 11.11.0 — OK
+JDK: Microsoft OpenJDK 17 (C:\Program Files\Microsoft\jdk-17.0.19...) E Android Studio
+     JBR Java 21 (C:\Program Files\Android\Android Studio\jbr). keytool OK.
+Android SDK: C:\Users\Moltbot\AppData\Local\Android\Sdk (platform android-34,
+     build-tools 34.0.0, cmdline-tools, platform-tools). ANDROID_HOME não estava no
+     PATH da sessão — configurado nas execuções.
+dist/ (Vite) e node_modules — presentes.
+⚠️ Diagnóstico inicial deu "ausente" porque o shell não tinha o PATH/vars; reverificado
+   e tudo estava instalado (operador confirmou).
+
+--------------------------------------------------------------------------------
+1-2. CAPACITOR + PROJETO ANDROID (Segmentos 1-2)
+--------------------------------------------------------------------------------
+npm i @capacitor/core @capacitor/cli @capacitor/android (Capacitor 8.4.2).
+npx cap init "DesafioGUT" "com.desafiogut.app" --web-dir dist → capacitor.config.ts.
+npx cap add android + npx cap sync android → pasta android/ criada (app/, gradle/,
+build.gradle). local.properties criado com sdk.dir (barras normais — a 1ª tentativa
+com barras invertidas quebrou o build por escape inválido em .properties).
+
+--------------------------------------------------------------------------------
+3. KEYSTORE (Segmento 3) — R4/R5
+--------------------------------------------------------------------------------
+keytool -genkeypair RSA 2048, validade 10000 dias, alias "desafiogut", não-interativo
+(senha forte de 24 chars gerada pelo agente). Saída: keystore/desafiogut.keystore
+(2768 bytes). Credenciais em keystore/credenciais.txt (⚠️ NÃO commitado). Também
+android/keystore.properties (NÃO commitado) para o Gradle ler sem hardcode de senha.
+
+--------------------------------------------------------------------------------
+4. ASSINATURA NO GRADLE (Segmento 4)
+--------------------------------------------------------------------------------
+android/app/build.gradle: carrega keystore.properties, define signingConfigs.release
+a partir dele, e buildTypes.release usa essa assinatura (fallback debug se o arquivo
+não existir). versionCode 1, versionName "1.0.0".
+
+--------------------------------------------------------------------------------
+5. BUILD DO AAB (Segmento 5) — Boulder Loop (diagnóstico progressivo)
+--------------------------------------------------------------------------------
+it.1: erro "sintaxe do nome do arquivo" → local.properties com barras invertidas
+      (escape inválido) → corrigido p/ barras normais.
+it.2: "invalid source release: 21" → Capacitor 8 exige Java 21; usei o JBR do
+      Android Studio (Java 21) como JAVA_HOME.
+it.3-4: JVM crash (Out of Memory nativo). CAUSA REAL: commit charge do Windows em
+      ~96% (23,5/24,3 GB) e ~240 MB de RAM livre (máquina de 5,7 GB). Reservar heap
+      grande estourava o limite de commit.
+it.5 (SUCESSO): footprint mínimo (Xmx512m, -Xms128m, SerialGC, code cache 96m,
+      sem daemon/paralelismo) FEZ o build avançar até o lint; lint é o maior
+      consumidor e NÃO é necessário p/ o AAB → build com -x lintVitalRelease
+      -x lintVitalAnalyzeRelease. BUILD SUCCESSFUL em 38s.
+
+--------------------------------------------------------------------------------
+6. VALIDAÇÃO E ARTEFATOS (Segmento 6) — R6
+--------------------------------------------------------------------------------
+Saída Gradle: app/build/outputs/bundle/release/app-release.aab.
+Tarefas de assinatura executadas: validateSigningRelease, signReleaseBundle.
+Validação: tamanho 34.344.316 bytes (>0) ✓ ; jarsigner -verify → "jar verified" ✓.
+Cópia de entrega: builds/DesafioGUT-v1.0.0.aab.
+SHA-256: dd167d0241562cfb5f0913b9bbcf41cf1bc3270c489ddeaf4cf5260b87edc405
+build-info.txt gerado (data, versão, hash, caminhos, próximos passos).
+
+--------------------------------------------------------------------------------
+7. ENTREGA / RASTREABILIDADE (Segmento 7) — R3
+--------------------------------------------------------------------------------
+builds/DesafioGUT-v1.0.0.aab · builds/build-info.txt
+keystore/desafiogut.keystore · keystore/credenciais.txt (NÃO commitado)
+Docs: desafio-gut/docs/MC81-build.txt + seção em cloud.md.
+NÃO commitado (fica local): keystore/, builds/, credenciais, package.json/lock,
+capacitor.config.ts e a pasta android/ (scaffolding de empacotamento — R1: nenhuma
+alteração de código-fonte do app; só build/empacotamento, mantido local).
+
+--------------------------------------------------------------------------------
+8. PRÓXIMOS PASSOS (operador)
+--------------------------------------------------------------------------------
+- Testar o AAB (bundletool → APKs universais, ou instalar via Android Studio/emulador).
+- Play Console: criar o app, subir o .aab, preencher a ficha (descrição, classificação
+  etária, política de privacidade) após verificação de identidade aprovada.
+- BACKUP da keystore + credenciais.txt (sem elas, impossível publicar atualizações).
+- (Futuro) Adicionar o ícone/adaptável (MC80.5) e as screenshots (MC80.4.1.1) à ficha.
+
+--------------------------------------------------------------------------------
+9. PENDÊNCIAS / NOTAS
+--------------------------------------------------------------------------------
+- Máquina com pouca RAM: builds futuros devem usar o mesmo gradle.properties de baixo
+  footprint (ou fechar apps/reiniciar). Ideal: buildar via CI ou máquina com mais RAM.
+- Lint de release foi pulado por memória (não afeta o artefato); rodar lint à parte se
+  desejado, com mais RAM.
+
+--------------------------------------------------------------------------------
+10. REGRAS RESPEITADAS
+--------------------------------------------------------------------------------
+R1 sem alteração de código-fonte do app (só empacotamento) · R2 custo US$0 · R3
+rastreável (logs/relatório/hash/build-info) · R4 keystore/credenciais NÃO commitados ·
+R5 agente só gerou e salvou a keystore · R6 AAB validado (tamanho>0 + assinatura).
+================================================================================
