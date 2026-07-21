@@ -2639,3 +2639,63 @@ A2 (Sentry Replay, confirmado ativo no aparelho pelo `processMutation` no perfil
 **REGRA DE OURO:** `backdrop-filter` cobra por CAMADA, não por raio. Orçamento medido
 neste aparelho: 1 camada ≈ 1-7 fps · 11 camadas ≈ 40 fps. NÃO reintroduzir
 `backdrop-filter` no `.gut-glass-standard` sem medir no aparelho.
+
+---
+
+## MC82.2 — Privy fora do caminho crítico + correção do chunking do React
+
+**Data:** 2026-07-21 · **Custo:** US$ 0,00 · Validado no dispositivo real.
+
+**Ambos os alvos atingidos com folga** (gate LGPD, Redmi 21091116UG, Android 13):
+
+| | baseline (MC82) | MC82.2 | alvo |
+|---|---|---|---|
+| **JS no arranque** | 4.002 KB | **617 KB** (−85%) | < 1.300 ✅ |
+| **LCP** | 2.220 ms | **980 ms** (−56%) | < 1.500 ✅ |
+| FCP | 1.292 ms | 556 ms (−57%) | — |
+| TTI (aprox) | 1.727 ms | 556 ms | — |
+| domInteractive | 557 ms | 180 ms | — |
+| Heap JS | 16 MB | 9,5 MB | — |
+
+**⚠️ O lazy-load do Privy SOZINHO não daria ganho nenhum.** Duas descobertas por medição:
+
+1. **`AppContext.jsx` importa `@privy-io` estaticamente** e `App.jsx` importa o `AppProvider` —
+   o chunk vinha na mesma por esse caminho. Por isso o `PrivyRoot` carrega o `<App/>` **inteiro**,
+   e o gate LGPD saiu do `App.jsx` para um `Boot.jsx` leve.
+
+2. **★ BUG DE CHUNKING PRÉ-EXISTENTE:** o `react-*.js` tinha **0,2 KB** — era só um shim
+   (`import{cn}from"./privy-*.js"`). O **React inteiro estava dentro do chunk `privy`**, logo
+   qualquer ecrã tinha de baixar 2.745 KB só para ter React. Causa: o `manualChunks` era
+   **silenciosamente ignorado pelo Rolldown** (bundler do Vite 8) — a função devolvia "react"
+   para react/react-dom (verificado por log) e o Rolldown não obedecia. Corrigido migrando para
+   **`advancedChunks`** (API nativa do Rolldown).
+
+**⚠️ A ordem dos grupos importa:** com `privy` antes de `motion`, o framer-motion (usado pelo gate)
+importava utilitários partilhados do chunk do Privy e **arrastava os 2.618 KB de volta ao arranque**.
+`motion` tem de vir ANTES. Um grupo `vendor` catch-all foi testado e **piorou** (arranque 5.117 KB) — revertido.
+
+**Ficheiros (commit c03f6cd):** novos `src/Boot.jsx` e `src/PrivyRoot.jsx`; `main.jsx` (−187 linhas,
+já não importa privy/viem/App); `App.jsx` (gate removido); `vite.config.js` (`advancedChunks`).
+⚠️ O `vite.config.js` **não constava do escopo aprovado**, mas sem ele o objetivo era inatingível.
+
+**Também removido:** um prefetch em `requestIdleCallback` que eu próprio pusera — `import()` não
+só descarrega, **avalia**: os 2,6 MB voltavam a ser parseados logo após o gate (17 chunks, medido).
+
+**Validação:** gate renderiza sem Privy (617 KB, 6 chunks); 4 checkboxes → aceitar → chunk carrega,
+app monta (5 vídeos, Dashboard), consentimento persiste. **FPS do MC82.1 sem regressão: 59,3** (era 59,6).
+Erros de consola no preview (WalletConnect/CSP, 404 das functions) são pré-existentes do ambiente local.
+
+**Composição dos 617 KB restantes:** sentry 257,8 · react 136,6 · motion 125,7 · index 55,0 · router 41,0.
+O **Sentry é agora o maior item do arranque** — candidato natural ao próximo lazy-load.
+
+**Relatórios:** `Desktop\MC82.2-RELATORIO.txt` + `desafio-gut/docs/MC82.2-arranque.txt`.
+
+**Pendências:** A1 (vídeo invisível ainda decodifica ~460 frames/6s), A4 (vídeos fora do viewport),
+A2 (Sentry Replay + lazy do chunk sentry), A6 (glass restante). ⚠️ APK é DEBUG — Play Store exige
+`assembleRelease`. ⚠️ **O login real (OAuth Google) não foi exercitado ponta-a-ponta** — validou-se
+que o chunk carrega e o provider monta; recomenda-se um login manual antes de publicar.
+
+**Lições:** (1) em Vite 8/Rolldown, `manualChunks` pode ser ignorado — um chunk `react` de 0,2 KB é
+o sintoma; usar `advancedChunks`. (2) A ordem dos grupos é significativa. (3) `import()` para prefetch
+também avalia; para só baixar, `<link rel="prefetch">`. (4) Lazy-load só funciona se TODO o caminho
+estático for cortado — um único import (AppContext → @privy-io) anula o esforço.
