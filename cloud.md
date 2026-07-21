@@ -2580,3 +2580,62 @@ estruturado por execução (A4.3/N3); limpeza de legados (A4.6); segredos para e
 ⚠️ **Numeração:** o MC82 designou "MC83" para executar as otimizações do app Android
 (A1-A6). Este MC83 tratou dos disparos. **A execução das otimizações do app segue PENDENTE**
 e precisa de número próprio (sugestão: MC85).
+
+---
+
+## MC82.1 — Correção do gargalo de glass (backdrop-filter)
+
+**Data:** 2026-07-21 · **Custo:** US$ 0,00 · Validado no dispositivo real.
+
+**Resultado: 17,5 → 59,6 fps (+42,1 fps, +241%)** no Dashboard em repouso, mesmo
+aparelho e cenário do baseline MC82 (Redmi 21091116UG, Android 13, WebView Chrome 150).
+Alvo do MC (≥45 fps) atingido com folga. Frames acima de 32 ms: 97,7% → 0,3%.
+
+**⚠️ A correção prevista no plano FALHOU.** A Opção B (blur 24px → 8px) foi aplicada,
+buildada, instalada e medida: **20,7 fps** — apenas +3,2 sobre o baseline. Em vez de
+tentar blur(4px) às cegas, levantei a curva completa em runtime no aparelho (CSS
+injetado via CDP, sem rebuild):
+
+| camadas · filtro | fps |
+|---|---|
+| 11 · blur 24px | 17,5 (baseline) |
+| 11 · blur 8px | 19,8 |
+| 11 · blur 4px | 23,1 |
+| **11 · blur 0px (filtro ainda declarado)** | **31,2** ← raio ZERO |
+| 1 · blur 8px (gate LGPD) | 59,8 |
+| 0 · fundo sólido 0.88 | 60,2 |
+
+**★ Lição:** o custo do `backdrop-filter` vem do **NÚMERO DE CAMADAS**, não do raio —
+cada elemento com a propriedade força um read-back do backdrop na GPU. Baixar 24→8px
+rendeu +2 fps; remover as camadas rendeu +40. Isso também explica por que o gate LGPD
+já rodava a 59,8 fps *com* blur: tem 1 camada, não 11. A Opção C do plano (congelar o
+fundo) também foi medida e também falha: **29,5 fps**. Nenhuma saída prevista no plano
+atingiria o alvo.
+
+**Solução (commit 936b724):** `.gut-glass-standard` sem `backdrop-filter`, com navy
+0.25 → **0.88** assumindo a separação; sheet do BottomNav no mesmo padrão;
+`AtmosphereFilter` emite `none` em vez de `blur(0px)` em repouso (é `fixed inset-0`,
+100% do ecrã — com raio zero ainda mantinha uma camada de backdrop de tela cheia).
+Uma versão híbrida (vidro real só no painel hero) deu 56,2 fps e funcionava, mas o
+operador preferiu o **tom navy uniforme** em todo o app — que ainda melhora o número.
+
+**Não alterados** (fora do cenário medido, ficam para um MC de coerência visual):
+TabelaLances (20px), SejaNossoParceiro (16px), LanceStatusBadge, Toast.
+
+**Método:** medição por CDP direto no WebView via `adb forward` (o MCP chrome-devtools
+não anexa a alvo remoto). Uma primeira leitura deu 46,9 fps com uma amostra em 35,1;
+repetida com 8 amostras estabilizou em ~56-60 — as primeiras apanhavam o arranque do
+app. O número reportado é o de regime estacionário. Evidência visual em
+`Desktop\MC82.1-shots\` (5 variantes capturadas no aparelho).
+
+**Relatórios:** `Desktop\MC82.1-RELATORIO.txt` + `desafio-gut/docs/MC82.1-performance.txt`.
+
+**Pendências (MC seguinte):** o gargalo de ARRANQUE continua intacto — A3 (Privy fora do
+caminho crítico: 4.002 KB de JS antes do gate, LCP 2.220 ms) é a maior; A1 (vídeo
+invisível 1920×1288 ainda decodifica ~460 frames/6s), A4 (vídeos fora do viewport),
+A2 (Sentry Replay, confirmado ativo no aparelho pelo `processMutation` no perfil de CPU).
+⚠️ O APK atual é DEBUG — a Play Store exige `assembleRelease` assinado.
+
+**REGRA DE OURO:** `backdrop-filter` cobra por CAMADA, não por raio. Orçamento medido
+neste aparelho: 1 camada ≈ 1-7 fps · 11 camadas ≈ 40 fps. NÃO reintroduzir
+`backdrop-filter` no `.gut-glass-standard` sem medir no aparelho.
