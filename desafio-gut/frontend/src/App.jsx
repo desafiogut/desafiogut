@@ -1,8 +1,7 @@
 // force deploy 2026-05-11 — reset versionado + MOCK_MODE removido
-import { useState, useEffect, lazy, Suspense } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext } from "./context/AppContext.jsx";
-import TermosConsentimento from "./components/TermosConsentimento.jsx";
 import AppLayout from "./widgets/layout/AppLayout.jsx";
 import BackgroundCanvas from "./widgets/layout/BackgroundCanvas.jsx";
 import { AppEnvironmentProvider } from "./context/useAppContextEnvironment.jsx";
@@ -81,43 +80,22 @@ function DashboardOuCorporativo() {
  * App — Raiz da aplicação DesafioGUT.
  *
  * Responsabilidades:
- *  1. Gate de consentimento LGPD (TermosConsentimento)
- *  2. Provedor global de estado (AppProvider)
- *  3. Roteamento com react-router-dom v7
+ *  1. Provedor global de estado (AppProvider)
+ *  2. Roteamento com react-router-dom v7
  *
- * O gate de consentimento renderiza ANTES do router:
- * o usuário precisa aceitar antes de ver qualquer conteúdo.
+ * MC82.2 — o gate de consentimento LGPD deixou de viver aqui: passou para o
+ * Boot.jsx, que é quem decide carregar este chunk. Continua a valer que o
+ * utilizador tem de aceitar antes de ver qualquer conteúdo — só que agora a
+ * aplicação (e o Privy) nem sequer são descarregados até lá.
  */
 export default function App() {
-  const [consentimentoAceito, setConsentimentoAceito] = useState(false);
   const { toasts, add, remove } = useToast();
-  const location = useLocation();
-  // MC72 — a página pública de exclusão de conta (exigência Play Store) precisa ser
-  // acessível sem passar pelo gate de consentimento LGPD (o usuário pode chegar por
-  // um link externo só para excluir a conta). Ela continua dentro dos providers.
-  const rotaPublicaExclusao = location.pathname === "/excluir-conta";
 
-  // Recupera consentimento da sessão (recarregamento de página)
-  useEffect(() => {
-    try {
-      const salvo = sessionStorage.getItem("gut_consentimento");
-      if (salvo && JSON.parse(salvo).aceito) setConsentimentoAceito(true);
-    } catch {
-      sessionStorage.removeItem("gut_consentimento");
-    }
-  }, []);
-
-  // ── Gate LGPD ─────────────────────────────────────────────────────────────
-  if (!consentimentoAceito && !rotaPublicaExclusao) {
-    return (
-      <>
-        {/* MC20.2 — Arena oficial (-z-50) GLOBAL: visível também no gate LGPD,
-            paridade exata com o fundo body-level do MC19.1 (R1/R5). */}
-        <BackgroundCanvas />
-        <TermosConsentimento onAceitar={() => setConsentimentoAceito(true)} />
-      </>
-    );
-  }
+  // MC82.2 — o gate LGPD saiu daqui para o Boot.jsx. Este componente só é montado
+  // depois de o consentimento estar aceite (ou na rota pública /excluir-conta),
+  // porque é o próprio Boot que decide carregar o chunk que contém este ficheiro.
+  // Motivo: o gate vivia dentro do <PrivyProvider> e por isso o arranque pagava
+  // 4.002 KB de JS para desenhar quatro checkboxes (ver MC82.2 / MC82-BASELINE).
 
   // ── Aplicação principal ────────────────────────────────────────────────────
   return (
