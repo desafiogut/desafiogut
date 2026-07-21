@@ -349,19 +349,32 @@ img, svg { display: block; }
    MC25.4: @apply no backdrop-filter para que o Tailwind v4 gere o CSS real
    (raw backdrop-filter é stripado por ser "managed property" no build).
 
-   MC82.1 — blur 24px → 8px, saturate 1.35 → 1.2. O MC82 mediu no aparelho
-   (Redmi 21091116UG, Android 13) que o backdrop-filter é o gargalo DOMINANTE de
-   render: removê-lo levava o app de 18,9 → 48,2 fps com os vídeos a tocar
-   (+155%). São 11 elementos com blur cobrindo ~731.000 px², o equivalente a
-   2,26 ecrãs cheios desfocados a cada frame — e a main thread está 78% ociosa,
-   ou seja o custo é de composição/GPU, não de JavaScript.
-   O raio do blur domina o custo do filtro, por isso 8px é muito mais barato que
-   24px preservando a leitura de "vidro". saturate desce a 1.2 para compensar a
-   perda de difusão sem estourar a cor. ⚠️ Usar [1.2] e NÃO [120] — na sintaxe
-   arbitrária do Tailwind v4 o valor é multiplicador, e [120] viraria 12000%. */
+   ── MC82.1 — VIDRO SÓLIDO POR OMISSÃO (medido no aparelho) ──────────────────
+   O backdrop-filter era o gargalo DOMINANTE de render. Medições no Redmi
+   21091116UG (Android 13, WebView Chrome 150), Dashboard em repouso:
+
+     11 camadas · blur 24px ................. 17,5 fps   (baseline MC82)
+     11 camadas · blur  8px ................. 19,8 fps
+     11 camadas · blur  4px ................. 23,1 fps
+     11 camadas · blur  0px (ainda declarado) 31,2 fps   ← raio ZERO
+      1 camada  · blur  8px .................. 59,8 fps
+      0 camadas · fundo sólido ............... 60,2 fps
+
+   A lição: o custo é a EXISTÊNCIA da camada de backdrop-filter (cada uma força
+   um read-back do backdrop na GPU), NÃO o raio do blur. Baixar 24px→8px rendeu
+   só +2 fps; remover as camadas rendeu +40. Por isso o padrão passa a ser SEM
+   backdrop-filter, com o navy mais opaco (0.88) a fazer o papel de separação.
+
+   Houve uma versão intermédia que mantinha vidro real (.gut-glass--blur) no
+   painel de destaque do Dashboard — 56,2 fps. O operador preferiu o tom navy
+   uniforme, por isso esse modificador foi removido e NENHUMA superfície do app
+   usa backdrop-filter. Se algum dia voltar, tratar como orçamento: 1 camada
+   custava ~7 fps neste aparelho, 11 camadas custavam ~40.
+
+   ⚠️ NÃO reintroduzir backdrop-filter aqui sem medir no aparelho. Esta é a
+   única alteração do MC82.1 e vale +38 fps. */
 .gut-glass-standard {
-  background: rgba(13,18,53,0.25);
-  @apply backdrop-blur-[8px] backdrop-saturate-[1.2];
+  background: rgba(13,18,53,0.88);
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
   border-radius: 14px;
