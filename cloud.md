@@ -2757,3 +2757,58 @@ intacta de propósito. Correção de uma linha quando aprovar:
 **Pendências (baixa prioridade):** A1 (vídeo invisível ~460 frames/6s), A4 (vídeos fora do viewport),
 A6 (glass restante), R4 (mascarar o Replay). ⚠️ APK é DEBUG — Play Store exige `assembleRelease`.
 ⚠️ Login OAuth real ainda sem teste ponta-a-ponta.
+
+---
+
+## MC82.4 — Correção da violação R4: mascaramento do Sentry Session Replay
+
+**Data:** 2026-07-21 · **Custo:** US$ 0,00 · Verificado em runtime no dispositivo.
+
+**Violação R4 corrigida.** O Session Replay passa a mascarar todo o texto, todos os inputs e
+bloquear toda a mídia, e deixa de gravar sessões normais (só as que contêm erro).
+
+| | antes | depois |
+|---|---|---|
+| `maskAllText` | **false** | **true** |
+| `blockAllMedia` | **false** | **true** |
+| `maskAllInputs` | implícito | **true** (explícito) |
+| `replaysSessionSampleRate` | 0.1 | **0** |
+| `replaysOnErrorSampleRate` | 1.0 | 1.0 (mantido) |
+
+**★ Agravante descoberto neste MC:** aqueles valores não eram "o default" — eram uma **desativação
+explícita** de proteções que o SDK traz ligadas. Verificado em `node_modules/@sentry-internal/replay`
+(SDK 10.51.0): `maskAllText`, `maskAllInputs` e `blockAllMedia` têm **default `true`**. Alguém teve de
+escrever a negação. Por isso os três flags ficam agora **explícitos**, para que uma futura alteração
+tenha de os negar de propósito.
+
+**Histórico:** levantado no MC82 (G4); o operador escolheu "manter mascarado"; a alteração foi
+**revertida junto com o resto na correção de rota do MC82 e nunca reaplicada**; movida intacta no MC82.3
+e re-levantada no relatório. Este MC fecha.
+
+**Verificado em RUNTIME no aparelho** (não só no código), lendo as opções do cliente já inicializado via
+CDP — `window.__SENTRY__[version].defaultCurrentScope.getClient()`:
+`MASK_ALL_TEXT true` · `MASK_ALL_INPUTS true` · `BLOCK_ALL_MEDIA true` · `sessionSampleRate 0` ·
+`onErrorSampleRate 1` · Replay ativo. R5 respeitado: só verificada a **existência** do DSN (booleano).
+
+**⚠️ ISTO NÃO REDUZ O CUSTO DE CPU.** Com `onErrorSampleRate > 0` o SDK entra em **buffer mode**: o rrweb
+continua gravando mutações do DOM em memória para poder enviar os segundos antes do erro. Medido no
+perfil de CPU **depois** da alteração: `ET.processMutation` = **229 ms em 6 s (3,6%)**. Este MC resolve
+**privacidade**, não performance — eliminar o custo exigiria remover a integração. Nota deixada no
+próprio `sentryLazy.js`.
+
+**Performance sem regressão:** arranque 360,5 KB (idêntico), FPS 59,8, UI inalterada. LCP mediana 780 ms
+vs 748 do MC82.3 — não é regressão causal (o Sentry nem carrega no gate), é ruído; 4/5 runs abaixo de 900.
+
+**SÉRIE MC82 CONCLUÍDA:** FPS 17,5 → **59,6** (+241%) · JS do gate 4.002 → **360,5 KB** (−91%) ·
+LCP 2.220 → **~780 ms** (−65%) · FCP 1.292 → **~372 ms** (−71%) · violação R4 fechada.
+
+**Relatórios:** `Desktop\MC82.4-RELATORIO.txt` + `desafio-gut/docs/MC82.4-replay.txt`.
+
+**Pendências (baixa prioridade):** A1 (vídeo invisível ~460 frames/6s), A4 (vídeos fora do viewport),
+A6 (glass restante em TabelaLances/SejaNossoParceiro). ⚠️ **Bloqueios para publicar:** APK é DEBUG
+(Play Store exige `assembleRelease`); produção roda a linhagem MAINNET, não esta branch; **login OAuth
+real ainda sem teste ponta-a-ponta**.
+
+**Lição:** quando um SDK traz defaults seguros, uma config que os **nega** é sinal de alarme, não
+preferência — verificar o default no pacote instalado antes de assumir que apenas "não foi configurado".
+E taxa de amostragem 0 ≠ custo 0: conferir no perfil de CPU o que continua a correr.
