@@ -2699,3 +2699,61 @@ que o chunk carrega e o provider monta; recomenda-se um login manual antes de pu
 o sintoma; usar `advancedChunks`. (2) A ordem dos grupos é significativa. (3) `import()` para prefetch
 também avalia; para só baixar, `<link rel="prefetch">`. (4) Lazy-load só funciona se TODO o caminho
 estático for cortado — um único import (AppContext → @privy-io) anula o esforço.
+
+---
+
+## MC82.3 — Sentry fora do caminho crítico de arranque
+
+**Data:** 2026-07-21 · **Custo:** US$ 0,00 · Validado no dispositivo real.
+
+**Ambos os alvos atingidos** (gate LGPD, Redmi 21091116UG, 5 execuções com consentimento limpo):
+
+| | MC82.2 | MC82.3 | alvo |
+|---|---|---|---|
+| **JS no arranque** | 617,0 KB | **360,5 KB** (−42%) | < 400 ✅ |
+| **LCP (mediana)** | 980 ms | **748 ms** (−24%) | < 900 ✅ |
+| FCP (mediana) | 556 ms | 308 ms (−45%) | — |
+| TTI (aprox) | 556 ms | 364 ms | — |
+| Long tasks | 2 (193 ms) | 0 | — |
+| Chunks | 6 | 5 | — |
+
+**Como:** novo `src/lib/sentryLazy.js` importa `@sentry/react` dinamicamente e faz o init (config
+movida do `main.jsx` **intacta**). Até o SDK subir, `captureException`/`captureMessage`/`addBreadcrumb`
+**enfileiram em memória** (limite 50) e a fila é drenada no init. O `<Sentry.ErrorBoundary>` deu lugar a
+um `RaizErrorBoundary` local com a mesma UI. Os listeners globais só enfileiram enquanto `!sentryPronto()`
+— depois o SDK instala os seus e capturar aqui duplicaria. O `Boot.jsx` sobe o Sentry em
+`requestIdleCallback` quando a app vai montar, nunca no gate.
+
+**⚠️ Separar SUBSCRIÇÃO de ENVIO:** o `webVitals.js` continua a subscrever os Core Web Vitals **no
+arranque** (é preciso subscrever cedo ou perdem-se LCP/TTFB, e a lib é pequena); só o envio espera pelo SDK.
+
+**Fila validada por EXPERIMENTO, não por inspeção:** erro disparado no gate (Sentry ausente) → aceitar →
+no log, por ordem: `[GUT-DEBUG] window.error` → `Connecting to '…ingest.us.sentry.io/…/envelope/'` →
+`[GUT-DEBUG] boot`. Enfileirou, o SDK subiu e drenou. O envio foi bloqueado pela CSP do **preview local**;
+verificado que o `netlify.toml` de **produção já permite** `*.ingest.us.sentry.io`.
+
+**⚠️ Trade-off assumido:** se o utilizador abandonar no gate sem aceitar, os eventos em fila não chegam ao
+Sentry (antes chegariam). Trocou-se cobertura de uma janela curta por −256,5 KB. Os listeners `[GUT-DEBUG]`
+continuam a registar tudo no console.
+
+**⚠️ Nota de método:** a 1ª leitura deu LCP 904 ms (4 ms acima do alvo) — era o primeiro load pós-instalação,
+cache frio. Com 5 execuções a mediana assentou em 748 ms e **5/5 ficaram abaixo de 900**.
+
+**Validação:** gate sem sentry/privy (5 chunks); ao aceitar, app monta, Sentry carrega **e inicializa**,
+5 vídeos. **FPS sem regressão: 59,5** (MC82.1: 59,6 · MC82.2: 59,3).
+
+**⚠️ PENDÊNCIA DE PRIVACIDADE QUE RESSURGIU (R4):** o `replayIntegration` continua com
+`maskAllText: false` e `replaysSessionSampleRate: 0.1` — 10% das sessões gravam texto do ecrã **sem máscara**
+num app com saldos e valores de lance. Foi levantado no MC82, o operador escolheu "manter mascarado", a
+alteração foi **revertida junto com o resto na correção de rota do MC82 e nunca reaplicada**. Movi a config
+intacta de propósito. Correção de uma linha quando aprovar:
+`replayIntegration({ maskAllText: true, blockAllMedia: true })` + `replaysSessionSampleRate: 0`.
+
+**PROGRAMA DE PERFORMANCE — CONSOLIDADO:** fluidez 17,5 → 59,6 fps · JS de arranque 4.002 → 360,5 KB
+(−91%) · LCP 2.220 → 748 ms (−66%) · FCP 1.292 → 308 ms (−76%).
+
+**Relatórios:** `Desktop\MC82.3-RELATORIO.txt` + `desafio-gut/docs/MC82.3-sentry.txt`.
+
+**Pendências (baixa prioridade):** A1 (vídeo invisível ~460 frames/6s), A4 (vídeos fora do viewport),
+A6 (glass restante), R4 (mascarar o Replay). ⚠️ APK é DEBUG — Play Store exige `assembleRelease`.
+⚠️ Login OAuth real ainda sem teste ponta-a-ponta.
