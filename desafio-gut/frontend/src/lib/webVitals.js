@@ -8,20 +8,25 @@
 // Robusto a versões: usa captureMessage/addBreadcrumb (API estável). No-op se o
 // Sentry estiver desabilitado (sem VITE_SENTRY_DSN) — as chamadas Sentry no-opam.
 
+// MC82.3 — passa a usar o wrapper sentryLazy em vez de `import * as Sentry`.
+// A subscrição aos vitals CONTINUA a acontecer no arranque (é preciso subscrever
+// cedo para não perder LCP/TTFB, e a lib `web-vitals` é pequena), mas os
+// eventos ficam em fila até o SDK do Sentry (257,8 KB) ser carregado — assim a
+// telemetria não obriga o gate LGPD a descarregar o SDK.
 import { onCLS, onINP, onLCP, onTTFB } from "web-vitals";
-import * as Sentry from "@sentry/react";
+import { addBreadcrumb, captureMessage } from "./sentryLazy.js";
 
 function reportar(metric) {
   const poor = metric.rating === "poor";
   try {
-    Sentry.addBreadcrumb({
+    addBreadcrumb({
       category: "web-vitals",
       level: poor ? "warning" : "info",
       message: metric.name,
       data: { value: Math.round(metric.value * 1000) / 1000, rating: metric.rating, id: metric.id },
     });
     if (poor) {
-      Sentry.captureMessage(`web-vital poor: ${metric.name}`, {
+      captureMessage(`web-vital poor: ${metric.name}`, {
         level: "warning",
         tags: { web_vital: metric.name, rating: metric.rating },
         extra: { value: metric.value, id: metric.id, navigationType: metric.navigationType },

@@ -7,10 +7,11 @@
 //
 // Este componente só importa o que o gate precisa. Tudo o resto (PrivyProvider,
 // AppContext, rotas, ethers/viem) vive atrás do import dinâmico de PrivyRoot.jsx.
-import { useState, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useLocation } from "react-router-dom";
 import TermosConsentimento from "./components/TermosConsentimento.jsx";
 import BackgroundCanvas from "./widgets/layout/BackgroundCanvas.jsx";
+import { carregarSentry } from "./lib/sentryLazy.js";
 
 const PrivyRoot = lazy(() => import("./PrivyRoot.jsx"));
 
@@ -47,6 +48,21 @@ export default function Boot() {
   // o fallback do Suspense visível — e no APK os assets são locais, sem rede.
   // Se um dia se quiser adiantar o download SEM avaliar, o caminho é
   // <link rel="prefetch">, não import().
+
+  // MC82.3 — sobe o Sentry (257,8 KB) assim que a aplicação vai montar, nunca no
+  // gate. É deliberadamente DEPOIS do chunk da app entrar em carregamento, para
+  // não competir com ele pelo mesmo instante de CPU. Até aqui, tudo o que a app
+  // quisesse reportar ficou em fila no sentryLazy e é drenado no init.
+  useEffect(() => {
+    if (!carregarApp) return;
+    const subir = () => { carregarSentry(); };
+    if (typeof requestIdleCallback === "function") {
+      const id = requestIdleCallback(subir, { timeout: 5000 });
+      return () => cancelIdleCallback?.(id);
+    }
+    const t = setTimeout(subir, 2000);
+    return () => clearTimeout(t);
+  }, [carregarApp]);
 
   if (!carregarApp) {
     return (

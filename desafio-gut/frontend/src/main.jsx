@@ -1,8 +1,8 @@
 import "./globals.css";
-import { StrictMode } from "react";
+import { Component, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import * as Sentry from "@sentry/react";
+import { captureException, sentryPronto } from "./lib/sentryLazy.js";
 import Boot from "./Boot.jsx";
 import ReferralTracker from "./components/ReferralTracker.jsx";
 
@@ -16,74 +16,12 @@ import { reportWebVitals } from "./lib/webVitals.js";
 // MC25.3 — SliderOpacidade removido. O vidro agora é fixo (.gut-glass-standard),
 // padrão navy-based imutável. Nenhuma opacidade dinâmica para restaurar.
 
-// Sentry init — no-op em ambientes sem VITE_SENTRY_DSN (dev local sem env).
-// beforeSend strippa qualquer payload contendo "argon2id_" como defesa em
-// profundidade contra vazar hash de prova de intenção do lance.
-const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
-const ARGON2ID_RE = /argon2id_/i;
-const scrubArgon2id = (obj) => {
-  if (!obj || typeof obj !== "object") return;
-  for (const k of Object.keys(obj)) {
-    const v = obj[k];
-    if (typeof v === "string" && ARGON2ID_RE.test(v)) obj[k] = "[REDACTED:argon2id]";
-    else if (v && typeof v === "object") scrubArgon2id(v);
-  }
-};
-Sentry.init({
-  dsn: SENTRY_DSN,
-  enabled: Boolean(SENTRY_DSN),
-  environment: import.meta.env.MODE,
-  integrations: [
-    Sentry.browserTracingIntegration(),
-    Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false }),
-  ],
-  tracesSampleRate: 0.1,
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1.0,
-  beforeSend(event) {
-    if (event.extra) scrubArgon2id(event.extra);
-    if (event.contexts) scrubArgon2id(event.contexts);
-    if (event.breadcrumbs) {
-      event.breadcrumbs.forEach((b) => {
-        if (b.data) scrubArgon2id(b.data);
-        if (typeof b.message === "string" && ARGON2ID_RE.test(b.message)) {
-          b.message = "[REDACTED:argon2id]";
-        }
-      });
-    }
-    return event;
-  },
-});
-
-// MC17.3.1.1 — enriquece os erros com a URL e o contexto de referral, para
-// correlacionar crashes de cold-start (ex.: createWallet) com o link de entrada.
-// Corre ANTES do beforeSend (que mantém o scrub argon2id intacto — sem PII nova
-// além da href e do código IND). privy_token_exists é uma heurística leve.
-function privyTokenExists() {
-  try {
-    if (typeof document !== "undefined" && /privy-token=/.test(document.cookie || "")) return true;
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith("privy:")) return true;
-    }
-  } catch { /* sem storage: ignora */ }
-  return false;
-}
-Sentry.addEventProcessor((event) => {
-  try {
-    const url = typeof window !== "undefined" ? window.location.href : null;
-    if (url) event.request = { ...(event.request || {}), url };
-    event.contexts = {
-      ...(event.contexts || {}),
-      "Referral Context": {
-        current_url: url,
-        stored_ref_code: (() => { try { return sessionStorage.getItem("desafiogut_ref"); } catch { return null; } })(),
-        privy_token_exists: privyTokenExists(),
-      },
-    };
-  } catch { /* nunca quebrar o pipeline do Sentry */ }
-  return event;
-});
+// MC82.3 — o Sentry.init() saiu daqui para src/lib/sentryLazy.js, que importa o
+// SDK dinamicamente. Motivo: depois do MC82.2 o chunk `sentry` (257,8 KB) era o
+// MAIOR item do arranque (617 KB), e o gate LGPD não precisa de telemetria.
+// A configuração (scrub argon2id, addEventProcessor de referral) foi movida
+// INTACTA. Este ficheiro não pode voltar a importar "@sentry/react" de forma
+// estática, ou o chunk regressa ao caminho crítico.
 
 // MC39.20 (Onda 8) — começa a coletar Core Web Vitals (LCP/INP/CLS/TTFB) da
 // sessão real e reporta ao Sentry. No-op se o Sentry estiver desabilitado.
@@ -106,6 +44,10 @@ if (typeof window !== "undefined") {
       error:    ev.error,
       errorStr: ev.error?.stack || String(ev.error),
     });
+    // MC82.3 — só enfileira ENQUANTO o Sentry não subiu. Depois de inicializado
+    // o SDK instala os seus próprios handlers globais; capturar aqui também
+    // duplicaria cada evento.
+    if (!sentryPronto() && ev.error) captureException(ev.error);
   });
 
   window.addEventListener("unhandledrejection", (ev) => {
@@ -115,6 +57,7 @@ if (typeof window !== "undefined") {
       message:   ev.reason?.message,
       name:      ev.reason?.name,
     });
+    if (!sentryPronto() && ev.reason) captureException(ev.reason);
   });
 
   // Captura QUALQUER violação CSP (frame-ancestors, frame-src, script-src…)
@@ -141,9 +84,27 @@ const SentryFallback = () => (
   </div>
 );
 
+// MC82.3 — substitui o <Sentry.ErrorBoundary>, que obrigava o SDK a estar no
+// arranque. Mesma UI de fallback; o erro vai por sentryLazy.captureException,
+// que o envia já (se o Sentry estiver pronto) ou o guarda em fila até estar.
+class RaizErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { err: null }; }
+  static getDerivedStateFromError(err) { return { err }; }
+  componentDidCatch(err, info) {
+    try {
+      captureException(err, { extra: { componentStack: info?.componentStack } });
+    } catch { /* telemetria nunca pode agravar um crash */ }
+    console.error("[GUT-DEBUG] erro capturado na raiz", err);
+  }
+  render() {
+    if (this.state.err) return <SentryFallback />;
+    return this.props.children;
+  }
+}
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <Sentry.ErrorBoundary fallback={<SentryFallback />}>
+    <RaizErrorBoundary>
     <BrowserRouter>
     {/* MC17.3.1.1 — captura ?ref=IND-... para sessionStorage antes do Privy. */}
     <ReferralTracker />
@@ -153,6 +114,6 @@ createRoot(document.getElementById("root")).render(
         abaixo, portanto a rede de segurança do createWallet permanece intacta. */}
     <Boot />
     </BrowserRouter>
-    </Sentry.ErrorBoundary>
+    </RaizErrorBoundary>
   </StrictMode>
 );
