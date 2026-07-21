@@ -78,10 +78,34 @@ export function carregarSentry() {
         environment: import.meta.env.MODE,
         integrations: [
           Sentry.browserTracingIntegration(),
-          Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false }),
+          // MC82.4 (R4) — Session Replay MASCARADO e só-em-erro.
+          //
+          // A configuração anterior era `maskAllText: false, blockAllMedia: false`,
+          // ou seja DESATIVAVA proteções que o SDK traz LIGADAS por omissão
+          // (verificado em @sentry-internal/replay: maskAllText, maskAllInputs e
+          // blockAllMedia têm default `true`). Com replaysSessionSampleRate 0.1,
+          // 10% das sessões gravavam o texto do ecrã em claro — num app com
+          // saldos, valores de lance, códigos de indicação e dados de carteira.
+          //
+          // Os três flags ficam EXPLÍCITOS (e não apenas herdados do default)
+          // para que uma futura alteração tenha de os negar de propósito.
+          Sentry.replayIntegration({
+            maskAllText: true,
+            maskAllInputs: true,
+            blockAllMedia: true,
+          }),
         ],
         tracesSampleRate: 0.1,
-        replaysSessionSampleRate: 0.1,
+        // Nenhuma sessão normal é ENVIADA; só as que contêm erro (abaixo).
+        //
+        // ⚠️ NÃO confundir com desligar o Replay: com onErrorSampleRate > 0 o
+        // SDK entra em "buffer mode" e o rrweb CONTINUA a gravar mutações do DOM
+        // em memória, para poder enviar os segundos que antecederam o erro. O
+        // custo de main thread (o `processMutation` que aparecia no perfil de
+        // CPU do MC82) MANTÉM-SE. Este MC resolve PRIVACIDADE (R4), não
+        // performance. Quem quiser eliminar o custo tem de remover a integração.
+        replaysSessionSampleRate: 0,
+        // 100% dos erros geram replay — é para isto que o Replay fica cá.
         replaysOnErrorSampleRate: 1.0,
         beforeSend(event) {
           if (event.extra) scrubArgon2id(event.extra);
