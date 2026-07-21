@@ -347,10 +347,21 @@ img, svg { display: block; }
    Este é o padrão-ouro — todas as superfícies de vidro do app usam esta classe.
 
    MC25.4: @apply no backdrop-filter para que o Tailwind v4 gere o CSS real
-   (raw backdrop-filter é stripado por ser "managed property" no build). */
+   (raw backdrop-filter é stripado por ser "managed property" no build).
+
+   MC82.1 — blur 24px → 8px, saturate 1.35 → 1.2. O MC82 mediu no aparelho
+   (Redmi 21091116UG, Android 13) que o backdrop-filter é o gargalo DOMINANTE de
+   render: removê-lo levava o app de 18,9 → 48,2 fps com os vídeos a tocar
+   (+155%). São 11 elementos com blur cobrindo ~731.000 px², o equivalente a
+   2,26 ecrãs cheios desfocados a cada frame — e a main thread está 78% ociosa,
+   ou seja o custo é de composição/GPU, não de JavaScript.
+   O raio do blur domina o custo do filtro, por isso 8px é muito mais barato que
+   24px preservando a leitura de "vidro". saturate desce a 1.2 para compensar a
+   perda de difusão sem estourar a cor. ⚠️ Usar [1.2] e NÃO [120] — na sintaxe
+   arbitrária do Tailwind v4 o valor é multiplicador, e [120] viraria 12000%. */
 .gut-glass-standard {
   background: rgba(13,18,53,0.25);
-  @apply backdrop-blur-[24px] backdrop-saturate-[1.35];
+  @apply backdrop-blur-[8px] backdrop-saturate-[1.2];
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
   border-radius: 14px;
