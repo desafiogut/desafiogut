@@ -28,7 +28,13 @@ try {
 const healthUrl = pathToFileURL(resolve(repoFrontend, "netlify/functions/health.mjs")).href;
 const { default: health } = await import(healthUrl);
 
-const req = new Request("http://localhost/.netlify/functions/health");
+// MC87 (P0-2) — o mapa `env` do /health passou a exigir credencial admin. O smoke
+// envia x-admin-token quando ADMIN_TOKEN está no ambiente; sem ele, valida apenas
+// o nível público (o que ainda prova que a função responde e o runtime está vivo).
+const adminToken = process.env.ADMIN_TOKEN || null;
+const req = new Request("http://localhost/.netlify/functions/health", {
+  headers: adminToken ? { "x-admin-token": adminToken } : {},
+});
 const res = await health(req, {});
 const body = await res.json();
 
@@ -38,13 +44,18 @@ let failed = false;
 if (res.status !== 200) { console.error("FAIL: status != 200"); failed = true; }
 if (body.ok !== true)   { console.error("FAIL: ok != true");   failed = true; }
 if (!body.timestamp)    { console.error("FAIL: timestamp ausente"); failed = true; }
-if (!body.node)         { console.error("FAIL: node ausente"); failed = true; }
 
-// Em prod (Netlify Dashboard) todas devem estar "set". Localmente, JWT_SECRET
-// e RPC_URL ficam em .env.local; COORDENACAO_PRIVATE_KEY é opcional até B.3.
-const obrigatorias = ["JWT_SECRET", "RPC_URL"];
-for (const k of obrigatorias) {
-  if (body.env?.[k] !== "set") { console.error(`FAIL: env.${k} = ${body.env?.[k]}`); failed = true; }
+if (!adminToken) {
+  console.warn("aviso: ADMIN_TOKEN ausente — só o nível público do /health foi validado.");
+  console.warn("       defina ADMIN_TOKEN no ambiente para validar o mapa de env vars.");
+} else {
+  if (!body.node) { console.error("FAIL: node ausente (detalhe admin não veio)"); failed = true; }
+  // Em prod (Netlify Dashboard) todas devem estar "set". Localmente, JWT_SECRET
+  // e RPC_URL ficam em .env.local; COORDENACAO_PRIVATE_KEY é opcional até B.3.
+  const obrigatorias = ["JWT_SECRET", "RPC_URL"];
+  for (const k of obrigatorias) {
+    if (body.env?.[k] !== "set") { console.error(`FAIL: env.${k} = ${body.env?.[k]}`); failed = true; }
+  }
 }
 
 if (failed) process.exit(1);

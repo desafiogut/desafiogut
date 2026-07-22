@@ -63,7 +63,7 @@ export default function CorporativoCarteira() {
   const carregar = useCallback(async () => {
     if (!address) return;
     try {
-      const rc = await apiGet(`cotas?cliente_id=${address}`);
+      const rc = await apiGet(`cotas?cliente_id=${address}`, { token: authToken });
       setCota(rc.status === 404 ? null : (rc.ok ? rc.data : null));
     } catch { /* não-fatal */ }
     if (!authToken) return;

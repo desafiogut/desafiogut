@@ -24,9 +24,13 @@
 
 import {
   jsonResponse, jsonError, validarEndereco, parseJsonBody, ValidationError,
+  validarOwnerOuAdmin, mascararDoc,
 } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
-import { guardAdmin } from "./_lib/admin-auth.mjs";
+import { guardAdmin, autenticarAdmin } from "./_lib/admin-auth.mjs";
+// MC87 (P0-1) — o GET deixou de ser público. Ver `resolverChamador` e as projeções.
+import { verificarUserSession } from "./_lib/jwt.mjs";
+import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 // MC17.1 — o excedente da cota comercial gera SENHAS DE TROCO (off-chain, 30d).
 import { creditarTroco, senhasDoExcedente, TROCO_VALIDADE_DIAS } from "./_lib/troco-senhas.mjs";
 // MC17.1 — mínimos por categoria centralizados (fonte única; usados no troco).
@@ -127,6 +131,54 @@ function normalizarEmpresa(v) {
     .toLowerCase().trim().replace(/\s+/g, " ");
 }
 
+// ── MC87 (P0-1) — controlo de acesso do GET ──────────────────────────────────
+//
+// O GET era INTEIRAMENTE anónimo enquanto POST/DELETE exigiam admin. Quatro ramos
+// devolviam o cadastro completo do lojista (cnpj + email + carteira) a qualquer
+// pessoa. Como produção ainda lê Blobs, o dano estava latente — mas o Supabase já
+// tem 7 cotas reais e o flip DATA_STORE_BACKEND ligaria a torneira.
+//
+// A correção NÃO é um 401 cego: dois ramos (?cnpj= no cadastro, ?acao=verificar-login)
+// são legitimamente PRÉ-autenticação. O modelo aplicado é minimização de dados:
+//   anon  → projeção pública (sem cnpj/email); ?cnpj= exige também `empresa`
+//   user  → o próprio registo (owner-check por carteira)
+//   admin → registo completo
+const CAMPOS_PUBLICOS_COTA = [
+  "cliente_id", "categoria", "cliente_nome", "vendida", "disponivel",
+  "produto_nome", "produto_url", "produto_valor", "valor",
+  "empresa", "segmento", "site", "logoUrl", "tipo",
+];
+
+/** Projeção pública de uma cota: vitrine/mercado, sem PII (cnpj, email, payload). */
+function projetarCotaPublica(cota) {
+  if (!cota || typeof cota !== "object") return cota;
+  const out = {};
+  for (const k of CAMPOS_PUBLICOS_COTA) if (cota[k] !== undefined) out[k] = cota[k];
+  return out;
+}
+
+/**
+ * Resolve o papel do chamador do GET, sem nunca lançar.
+ * @returns {Promise<{ papel: "admin"|"user"|"anon", endereco: string|null }>}
+ */
+async function resolverChamador(req) {
+  // Admin: mesmo guard do POST/DELETE (x-admin-token legado OU Bearer admin-access).
+  try {
+    const auth = await autenticarAdmin(req);
+    if (auth?.ok) return { papel: "admin", endereco: auth.endereco || null };
+  } catch { /* segue para user-session */ }
+
+  const header = req.headers.get("authorization") || "";
+  const token  = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (token) {
+    try {
+      const payload = await verificarUserSession(token);
+      return { papel: "user", endereco: String(payload?.endereco || "").toLowerCase() };
+    } catch { /* token inválido/expirado → anon */ }
+  }
+  return { papel: "anon", endereco: null };
+}
+
 async function handleGet(req) {
   const url       = new URL(req.url);
   const clienteId = url.searchParams.get("cliente_id");
@@ -167,14 +219,42 @@ async function handleGet(req) {
   }
 
   // MC12.3 — verifica se CNPJ já está cadastrado. Retorna 200 com índice ou 404.
+  //
+  // MC87 (P0-1): este ramo devolvia { endereco, email, empresa } a QUALQUER pessoa
+  // que soubesse um CNPJ — e CNPJ é dado público no Brasil, o que tornava a colheita
+  // de e-mails de parceiros trivial. Agora:
+  //   · sem `empresa`  → só o facto de estar ocupado (o que o cadastro precisa de saber)
+  //   · com `empresa`  → dados de contacto, se o nome bater (mesma barreira do
+  //                      ramo `verificar-login`, que já era o gate pré-auth desenhado)
+  //   · admin          → sempre completo
+  // Rate-limit aplicado (antes este ramo não tinha nenhum).
   if (cnpjParam) {
+    const rlCnpj = await aplicarRateLimit(req, "cotas-cnpj", 10);
+    if (rlCnpj) return rlCnpj;
+
     const nums = String(cnpjParam).replace(/\D/g, "");
     if (!validarCNPJ(nums)) {
       return jsonError(400, "cnpj_invalido", "CNPJ inválido");
     }
     const reg = await getCotaByCnpj(nums);
     if (!reg) return jsonError(404, "cnpj_nao_encontrado", "CNPJ livre");
-    return jsonResponse({ status: "cnpj_ja_registado", endereco: reg.endereco, email: reg.email || null, empresa: reg.empresa || null });
+
+    const chamador   = await resolverChamador(req);
+    const empresaQry = url.searchParams.get("empresa");
+    const nomeConfere = Boolean(empresaQry)
+      && normalizarEmpresa(reg.empresa) === normalizarEmpresa(empresaQry);
+
+    if (chamador.papel === "admin" || nomeConfere) {
+      return jsonResponse({
+        status: "cnpj_ja_registado",
+        endereco: reg.endereco,
+        email: reg.email || null,
+        empresa: reg.empresa || null,
+      });
+    }
+    // Resposta mínima: confirma a duplicidade sem revelar de quem.
+    console.info("[cotas] cnpj ocupado (resposta mínima)", { cnpj: mascararDoc(nums) });
+    return jsonResponse({ status: "cnpj_ja_registado", detalhesOcultos: true });
   }
 
   // MC14.10.1 ITEM 2 — lookup por email para cadastros directos (cnpj:XXXXX).
@@ -186,6 +266,18 @@ async function handleGet(req) {
     if (!emailRegex.test(emailParam)) {
       return jsonError(400, "email_invalido", "Formato de email inválido");
     }
+    // MC87 (P0-1) — exige sessão autenticada. Não é possível fazer owner-check por
+    // e-mail (o JWT prova a CARTEIRA, e o propósito deste ramo é justamente cobrir
+    // o caso em que o cadastro tem outra carteira — MC15.2/15.3). O que se fecha
+    // aqui é a colheita ANÓNIMA em massa: agora o chamador tem de ter carteira,
+    // sessão válida e passa por rate-limit, ficando atribuível.
+    const chamadorEmail = await resolverChamador(req);
+    if (chamadorEmail.papel === "anon") {
+      return jsonError(401, "token_ausente",
+        "Authorization: Bearer <user-session> obrigatório para consulta por email");
+    }
+    const rlEmail = await aplicarRateLimit(req, "cotas-email", 10);
+    if (rlEmail) return rlEmail;
     // MC37 — lookup direto por email no Supabase (coluna email); devolve o registo
     // COMPLETO com tipo "corporativo" (necessário p/ AppContext definir o perfil).
     try {
@@ -205,6 +297,20 @@ async function handleGet(req) {
       if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
       throw err;
     }
+    // MC87 (P0-1) — IDOR fechado: o registo completo (cnpj/email) só sai para o
+    // DONO da carteira ou para admin. Os quatro call-sites do frontend consultam
+    // sempre o próprio endereço, logo passam no owner-check.
+    const chamadorId = await resolverChamador(req);
+    if (chamadorId.papel === "anon") {
+      return jsonError(401, "token_ausente",
+        "Authorization: Bearer <user-session> obrigatório para consulta por cliente_id");
+    }
+    const admins = await getAdminAddresses();
+    const guard  = validarOwnerOuAdmin({ endereco: chamadorId.endereco }, endereco, admins);
+    if (!guard.ok && chamadorId.papel !== "admin") {
+      return jsonError(403, "acesso_negado", "token não pertence ao endereço solicitado e não é admin");
+    }
+
     const reg = await getCota(endereco);
     if (!reg) return jsonError(404, "cota_nao_encontrada", "cliente não tem cota atribuída");
     return jsonResponse(reg);
@@ -217,11 +323,26 @@ async function handleGet(req) {
       throw err;
     }
     const cotas = await listarCategoria(cat);
-    return jsonResponse({ categoria: cat, total: cotas.length, cotas });
+    // MC87 (P0-1) — este ramo listava TODAS as cotas da categoria com cnpj e email,
+    // sem autenticação: divulgação em massa sem sequer precisar de um identificador.
+    // A vitrine e o /mercado precisam apenas de cliente_id/nome/produto, então o
+    // não-admin recebe a projeção pública e o admin continua a ver tudo.
+    const chamadorCat = await resolverChamador(req);
+    const lista = chamadorCat.papel === "admin" ? cotas : cotas.map(projetarCotaPublica);
+    return jsonResponse({ categoria: cat, total: lista.length, cotas: lista });
   }
-  // Sem params: resumo agregado
+  // Sem params: resumo agregado.
+  // MC87 (P0-1) — o resumo carregava `cliente_ids` (carteiras) por categoria; a
+  // Vitrine pública só usa `total_atribuidas`. Enumeração removida para não-admin.
   const resumo = await resumoAgregado();
-  return jsonResponse({ resumo });
+  const chamadorResumo = await resolverChamador(req);
+  if (chamadorResumo.papel === "admin") return jsonResponse({ resumo });
+  const resumoPublico = {};
+  for (const [cat, v] of Object.entries(resumo || {})) {
+    const { cliente_ids, ...resto } = v || {};
+    resumoPublico[cat] = resto;
+  }
+  return jsonResponse({ resumo: resumoPublico });
 }
 
 async function handlePost(req) {

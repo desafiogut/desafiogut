@@ -154,7 +154,15 @@ export default function SejaNossoParceiro() {
     try {
       const cnpjNums = cnpj.replace(/\D/g, "");
       // FASE B — verificar duplicidade no servidor
-      const checkRes = await apiGet(`cotas?cnpj=${cnpjNums}`);
+      // MC87 (P0-1) — o backend só devolve endereco/email deste CNPJ se o nome da
+      // empresa também bater (mesma barreira do ramo `verificar-login`). O campo
+      // `empresa` já é obrigatório neste formulário e foi validado acima, portanto
+      // o fluxo legítimo não muda. Se o nome não bater, a resposta vem sem
+      // detalhes e o OTP segue para o e-mail que o próprio utilizador digitou —
+      // que é, aliás, o comportamento correto.
+      const checkRes = await apiGet(
+        `cotas?cnpj=${cnpjNums}&empresa=${encodeURIComponent(empresa.trim())}`
+      );
       if (checkRes.ok) {
         const { endereco, email: emailCadastrado, empresa: empresaCadastrada } = checkRes.data;
         setCnpjJaExiste(true);

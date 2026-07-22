@@ -1,12 +1,41 @@
 // GET /.netlify/functions/health
-// Smoke-test das functions: confirma que o runtime está OK e reporta quais
-// env vars estão configuradas (sem vazar valores). Usado pelo script
-// scripts/check-functions-health.sh e pelo monitoramento manual pós-deploy.
+// Smoke-test das functions.
+//
+// MC87 (P0-2 / P3-3) — a resposta passou a ter DOIS níveis:
+//
+//   · PÚBLICO  → { ok, service, timestamp }. É tudo o que um monitor de uptime
+//                precisa, e nada do que um atacante precisa.
+//   · ADMIN    → acrescenta `node` e o mapa `env` (QUAIS variáveis estão
+//                configuradas — nunca os valores) e o alarme CHAVE_BRUTA_EM_MAINNET.
+//
+// NOTA sobre CHAVE_BRUTA_EM_MAINNET: este campo NÃO expõe a chave — é um booleano
+// que denuncia que a chave BRUTA existe no ambiente de mainnet (violação da R9).
+// Apagá-lo do corpo silenciaria o alarme sem corrigir nada; por isso é PRESERVADO,
+// apenas movido para trás da autenticação admin. A correção real da condição que
+// ele denuncia é migrar a assinatura para KMS e remover COORDENACAO_PRIVATE_KEY
+// do ambiente — trabalho do operador (R5).
+//
+// Continua a responder 200 sem credencial: um health-check que exige segredo
+// deixa de servir para monitorização de disponibilidade.
 
 import { jsonResponse } from "./_lib/validate.mjs";
 import { backendAssinatura, resolverChaveCoordenacao } from "./_lib/signer.mjs";
+import { autenticarAdmin } from "./_lib/admin-auth.mjs";
 
-export default async () => {
+export default async (req) => {
+  const base = {
+    ok: true,
+    service: "desafiogut-functions",
+    timestamp: new Date().toISOString(),
+  };
+
+  let ehAdmin = false;
+  try {
+    const auth = req ? await autenticarAdmin(req) : { ok: false };
+    ehAdmin = Boolean(auth?.ok);
+  } catch { ehAdmin = false; }
+  if (!ehAdmin) return jsonResponse(base);
+
   const provider = (process.env.PIX_PROVIDER || "mock").toLowerCase();
 
   // MC30.1 — reporta o MODO de assinatura (backend), não a presença da chave.
@@ -27,13 +56,9 @@ export default async () => {
     // MP_ACCESS_TOKEN só é exigido quando PIX_PROVIDER=mercadopago.
     // Reportamos sempre para facilitar diagnóstico do gating.
     MP_ACCESS_TOKEN:         process.env.MP_ACCESS_TOKEN         ? "set" : "MISSING",
+    // MC87 (P1-2) — torna auditável se o webhook do MP está mesmo fechado.
+    MP_WEBHOOK_SECRET:       process.env.MP_WEBHOOK_SECRET       ? "set" : "MISSING",
   };
 
-  return jsonResponse({
-    ok: true,
-    service: "desafiogut-functions",
-    timestamp: new Date().toISOString(),
-    node: process.version,
-    env,
-  });
+  return jsonResponse({ ...base, detalhe: "admin", node: process.version, env });
 };

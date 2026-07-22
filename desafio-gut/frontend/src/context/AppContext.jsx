@@ -268,7 +268,11 @@ export function AppProvider({ children }) {
     let cancel = false;
     const buscarCota = async () => {
       try {
-        const respAddr = await apiGet(`cotas?cliente_id=${encodeURIComponent(address)}`);
+        // MC87 (P0-1) — /cotas GET deixou de ser anónimo nos ramos que devolvem
+        // PII. Passamos o user-session JWT; enquanto ele não existe as consultas
+        // respondem 401, o perfil fica nulo e este efeito RE-CORRE assim que
+        // `authToken` chega (está nas deps) — transitório, nunca um bloqueio.
+        const respAddr = await apiGet(`cotas?cliente_id=${encodeURIComponent(address)}`, { token: authToken });
         let data = respAddr.ok ? respAddr.data : null;
         // MC15.2 — fallback por email cobre QUALQUER método de login.
         // O email do utilizador pode vir de email-OTP, Google ou Apple; antes
@@ -277,7 +281,7 @@ export function AppProvider({ children }) {
         const emailLogin =
           user?.email?.address || user?.google?.email || user?.apple?.email || null;
         if (!data && emailLogin) {
-          const respEmail = await apiGet(`cotas?email=${encodeURIComponent(emailLogin)}`);
+          const respEmail = await apiGet(`cotas?email=${encodeURIComponent(emailLogin)}`, { token: authToken });
           if (respEmail.ok) data = respEmail.data;
         }
         // MC15.3 — fallback final: email do cadastro recém-feito em
@@ -287,7 +291,7 @@ export function AppProvider({ children }) {
           let emailCadastro = null;
           try { emailCadastro = sessionStorage.getItem("gut_corp_recem_cadastrado"); } catch {}
           if (emailCadastro && emailCadastro !== emailLogin) {
-            const respCad = await apiGet(`cotas?email=${encodeURIComponent(emailCadastro)}`);
+            const respCad = await apiGet(`cotas?email=${encodeURIComponent(emailCadastro)}`, { token: authToken });
             if (respCad.ok) data = respCad.data;
           }
         }
@@ -305,7 +309,7 @@ export function AppProvider({ children }) {
     };
     buscarCota();
     return () => { cancel = true; };
-  }, [address, user?.email?.address, user?.google?.email, user?.apple?.email]);
+  }, [address, authToken, user?.email?.address, user?.google?.email, user?.apple?.email]);
 
   // MC12.2 — tipoUsuario derivado do blob cotas (não de customMetadata).
   const tipoUsuario = cotaCorporativa?.tipo === "corporativo" ? "corporativo" : "comum";

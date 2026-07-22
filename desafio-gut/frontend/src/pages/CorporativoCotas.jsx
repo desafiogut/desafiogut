@@ -25,7 +25,7 @@ const ORDEM_UPGRADE = ["bronze", "prata", "ouro", "diamante"];
 export default function CorporativoCotas() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { address, cotaCorporativa, detectarTipoCorporativo } = useAppContext();
+  const { address, authToken, cotaCorporativa, detectarTipoCorporativo } = useAppContext();
   const [cota,    setCota]    = useState(cotaCorporativa);
   const [loading, setLoading] = useState(!cotaCorporativa);
 
@@ -34,7 +34,7 @@ export default function CorporativoCotas() {
     let cancel = false;
     (async () => {
       try {
-        const { ok, status, data } = await apiGet(`cotas?cliente_id=${address}`);
+        const { ok, status, data } = await apiGet(`cotas?cliente_id=${address}`, { token: authToken });
         if (cancel) return;
         if (status === 404) { setCota(null); setLoading(false); return; }
         if (!ok) throw new Error(`HTTP ${status}`);
@@ -45,7 +45,7 @@ export default function CorporativoCotas() {
       }
     })();
     return () => { cancel = true; };
-  }, [address]);
+  }, [address, authToken]);   // MC87: re-corre quando o user-session JWT chega
 
   const handleRenovar = () => navigate("/corporativo/carteira");
   const handleUpgrade = () => {

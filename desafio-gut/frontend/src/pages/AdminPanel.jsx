@@ -220,17 +220,25 @@ function TabCotas({ chamarAdmin, isMobile, onLoginNeeded }) {
   const [salvando, setSalvando] = useState(false);
   const [msgForm, setMsgForm] = useState("");
 
+  // MC87 (P0-1) — /cotas GET passou a projetar os dados por papel: sem credencial
+  // admin, `cotas` vem sem cnpj/email e o resumo vem sem cliente_ids. O painel
+  // precisa da visão completa, por isso migra de apiGet anónimo para chamarAdmin
+  // (que já faz Bearer + refresh transparente em 401).
   async function carregarResumo() {
+    if (!chamarAdmin) { onLoginNeeded(); return; }
     try {
-      const { data } = await apiGet("cotas");
+      const resp = await chamarAdmin("/.netlify/functions/cotas");
+      const data = await resp.json().catch(() => null);
       setResumo(data?.resumo || {});
     } catch {}
   }
   async function carregarCategoria() {
+    if (!chamarAdmin) { onLoginNeeded(); return; }
     setCarregando(true); setErro("");
     try {
-      const { ok, status, data } = await apiGet(`cotas?categoria=${catSel}`);
-      if (!ok) throw new Error(data?.error?.message || `HTTP ${status}`);
+      const resp = await chamarAdmin(`/.netlify/functions/cotas?categoria=${catSel}`);
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) throw new Error(data?.error?.message || `HTTP ${resp.status}`);
       setCotas(data.cotas || []);
     } catch (err) {
       setErro(err?.message || "falha");

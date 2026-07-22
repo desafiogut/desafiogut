@@ -50,10 +50,50 @@ mock.module("../_lib/troco-senhas-store.mjs", {
 });
 mock.module("../_lib/financeiro-fallback.mjs", { namedExports: { lerTrocoLegado: async () => null } });
 mock.module("../_lib/rate-limiter.mjs", { namedExports: { aplicarRateLimit: async () => null } });
-mock.module("../_lib/admin-auth.mjs", { namedExports: { guardAdmin: async () => null } });
+
+// MC87 (P0-1) — o GET deixou de ser anónimo. `autenticarAdmin` passa a ser usado
+// por `resolverChamador`; só reconhece admin quando o header de teste vem certo,
+// para que os casos GET anónimos exercitem mesmo o caminho não-autenticado.
+// `guardAdmin` continua permissivo para não alterar os casos POST/DELETE (e).
+const ADMIN_TOKEN_TESTE = "token-admin-teste";
+mock.module("../_lib/admin-auth.mjs", {
+  namedExports: {
+    guardAdmin: async () => null,
+    autenticarAdmin: async (req) =>
+      req.headers.get("x-admin-token") === ADMIN_TOKEN_TESTE
+        ? { ok: true, papel: "admin-legado", endereco: null }
+        : { ok: false, papel: null, code: "admin_token_ausente" },
+  },
+});
+mock.module("../_lib/admin-helpers.mjs", {
+  namedExports: { getAdminAddresses: async () => [] },
+});
+
+// JWT real (não mockado): prova o caminho de verificação de ponta a ponta.
+// O segredo tem de existir ANTES do primeiro import de _lib/jwt.mjs, por isso o
+// import é dinâmico dentro do before().
+process.env.JWT_SECRET = process.env.JWT_SECRET || "segredo-de-teste-mc87";
 
 let handler;
-before(async () => { handler = (await import("../cotas.mjs")).default; });
+let assinarUserSession;
+before(async () => {
+  ({ assinarUserSession } = await import("../_lib/jwt.mjs"));
+  handler = (await import("../cotas.mjs")).default;
+});
+
+/** GET autenticado como o dono da carteira `endereco`. */
+async function getComoUsuario(path, endereco) {
+  const token = await assinarUserSession(String(endereco).toLowerCase());
+  return handler(new Request(`http://x/${path}`, {
+    method: "GET", headers: { authorization: `Bearer ${token}` },
+  }));
+}
+/** GET autenticado como admin (x-admin-token legado). */
+function getComoAdmin(path) {
+  return handler(new Request(`http://x/${path}`, {
+    method: "GET", headers: { "x-admin-token": ADMIN_TOKEN_TESTE },
+  }));
+}
 beforeEach(() => { cotasMem.clear(); fpMem.clear(); stores.clear(); trocoMem.clear(); });
 
 function gerarCnpj(base12) {
@@ -94,19 +134,112 @@ test("(b) anti-Sybil: mesmo fingerprint + CNPJ diferente em 24h → 429", async 
   assert.equal(r2.body.error.code, "sybil_detectado");
 });
 
-test("(c) login lookup por cliente_id → devolve a cota", async () => {
+test("(c) login lookup por cliente_id → devolve a cota AO DONO", async () => {
   await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-dddddddd-4" }));
-  const r = await json(await handler(new Request(`http://x/?cliente_id=${ADDR1}`, { method: "GET" })));
+  const r = await json(await getComoUsuario(`?cliente_id=${ADDR1}`, ADDR1));
   assert.equal(r.status, 200);
   assert.equal(r.body.tipo, "corporativo");
   assert.equal(r.body.cnpj, CNPJ_A);
 });
 
-test("(d) lookup por email → devolve o registo", async () => {
+test("(d) lookup por email → devolve o registo a utilizador autenticado", async () => {
   await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "lojista@x.com", visitorId: "visitor-eeeeeeee-5" }));
-  const r = await json(await handler(new Request("http://x/?email=lojista@x.com", { method: "GET" })));
+  const r = await json(await getComoUsuario("?email=lojista@x.com", ADDR1));
   assert.equal(r.status, 200);
   assert.equal(r.body.tipo, "corporativo");
+});
+
+// ── MC87 (P0-1) — regressões de IDOR/divulgação no GET ──────────────────────
+
+test("MC87: ?cliente_id= anónimo → 401 (era 200 com cnpj+email)", async () => {
+  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000001" }));
+  const r = await json(await handler(new Request(`http://x/?cliente_id=${ADDR1}`, { method: "GET" })));
+  assert.equal(r.status, 401);
+  assert.equal(r.body.error.code, "token_ausente");
+});
+
+test("MC87: ?cliente_id= de OUTRA carteira → 403 (IDOR fechado)", async () => {
+  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000002" }));
+  const r = await json(await getComoUsuario(`?cliente_id=${ADDR1}`, ADDR2));
+  assert.equal(r.status, 403);
+  assert.equal(r.body.error.code, "acesso_negado");
+});
+
+test("MC87: ?email= anónimo → 401", async () => {
+  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "lojista@x.com", visitorId: "visitor-mc87-0000003" }));
+  const r = await json(await handler(new Request("http://x/?email=lojista@x.com", { method: "GET" })));
+  assert.equal(r.status, 401);
+});
+
+test("MC87: ?cnpj= sem empresa → confirma duplicidade SEM revelar email/endereco", async () => {
+  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000004" }));
+  const r = await json(await handler(new Request(`http://x/?cnpj=${CNPJ_A}`, { method: "GET" })));
+  assert.equal(r.status, 200);
+  assert.equal(r.body.status, "cnpj_ja_registado");
+  assert.equal(r.body.detalhesOcultos, true);
+  assert.equal(r.body.email, undefined);
+  assert.equal(r.body.endereco, undefined);
+});
+
+test("MC87: ?cnpj= com empresa CERTA → devolve contacto (fluxo de cadastro intacto)", async () => {
+  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000005" }));
+  const r = await json(await handler(new Request(`http://x/?cnpj=${CNPJ_A}&empresa=${encodeURIComponent("empresa a")}`, { method: "GET" })));
+  assert.equal(r.status, 200);
+  assert.equal(r.body.email, "a@a.com");
+  assert.equal(String(r.body.endereco).toLowerCase(), ADDR1);
+});
+
+test("MC87: ?cnpj= com empresa ERRADA → sem detalhes", async () => {
+  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000006" }));
+  const r = await json(await handler(new Request(`http://x/?cnpj=${CNPJ_A}&empresa=Outra`, { method: "GET" })));
+  assert.equal(r.status, 200);
+  assert.equal(r.body.detalhesOcultos, true);
+  assert.equal(r.body.email, undefined);
+});
+
+test("MC87: ?categoria= anónimo → projeção pública, sem cnpj/email", async () => {
+  await handler(new Request("http://x/", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ cliente_id: ADDR1, categoria: "bronze", vendida: true, valor: 1000, cliente_nome: "Loja A" }),
+  }));
+  const r = await json(await handler(new Request("http://x/?categoria=bronze", { method: "GET" })));
+  assert.equal(r.status, 200);
+  assert.equal(r.body.total, 1);
+  const c = r.body.cotas[0];
+  assert.equal(c.cliente_id, ADDR1);      // o mercado precisa disto
+  assert.equal(c.cliente_nome, "Loja A"); // e disto
+  assert.equal(c.cnpj, undefined);        // mas não disto
+  assert.equal(c.email, undefined);
+});
+
+test("MC87: ?categoria= como admin → registo completo preservado", async () => {
+  await handler(new Request("http://x/", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ cliente_id: ADDR1, categoria: "ouro", vendida: true, valor: 1000 }),
+  }));
+  const r = await json(await getComoAdmin("?categoria=ouro"));
+  assert.equal(r.status, 200);
+  assert.equal(r.body.total, 1);
+  // `atualizadoEm` está FORA da allow-list pública: é a prova de que o admin
+  // recebe o registo cru e o anónimo recebe a projeção.
+  assert.ok("atualizadoEm" in r.body.cotas[0], "admin vê o registo cru");
+
+  const anon = await json(await handler(new Request("http://x/?categoria=ouro", { method: "GET" })));
+  assert.equal(anon.body.cotas[0].atualizadoEm, undefined, "anónimo recebe projeção");
+});
+
+test("MC87: resumo anónimo não enumera cliente_ids", async () => {
+  await handler(new Request("http://x/", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ cliente_id: ADDR1, categoria: "prata", vendida: true, valor: 1000 }),
+  }));
+  const anon = await json(await handler(new Request("http://x/", { method: "GET" })));
+  assert.equal(anon.status, 200);
+  assert.equal(anon.body.resumo.prata.total_atribuidas, 1); // a Vitrine só usa isto
+  assert.equal(anon.body.resumo.prata.cliente_ids, undefined);
+
+  const adm = await json(await getComoAdmin(""));
+  assert.deepEqual(adm.body.resumo.prata.cliente_ids, [ADDR1]);
 });
 
 test("(e) CRUD admin: upsert + delete", async () => {
