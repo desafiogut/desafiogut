@@ -24,6 +24,8 @@ import {
   getCoordenacaoAddress,
   CONTRATO_ADDRESS,
 } from "./contract.mjs";
+// MC87 (P3-1) — carteira mascarada nos logs.
+import { mascararEndereco } from "./validate.mjs";
 
 const BLOB_PEDIDOS_PAGOS = "pedidos-pagos";
 const BLOB_PEDIDOS_META  = "pedidos-meta";
@@ -61,7 +63,7 @@ export async function gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paym
       produtoNome,
       criadoEm: new Date().toISOString(),
     });
-    console.info("[credito] meta gravada", { pedidoId, endereco, qtd, paymentId: paymentId ? String(paymentId) : null });
+    console.info("[credito] meta gravada", { pedidoId, endereco: mascararEndereco(endereco), qtd, paymentId: paymentId ? String(paymentId) : null });
     return true;
   } catch (err) {
     console.error("[credito] gravarMetaPedido falhou:", { pedidoId, name: err?.name, message: err?.message });
@@ -108,7 +110,7 @@ export async function lerCreditoPedido(pedidoId) {
  *   Não lança — sempre devolve um objeto. O caller decide HTTP status.
  */
 export async function creditarPedidoIdempotente({ pedidoId, endereco, qtd, fonte = "desconhecido" }) {
-  console.info(`[credito:${fonte}] início`, { pedidoId, endereco, qtd });
+  console.info(`[credito:${fonte}] início`, { pedidoId, endereco: mascararEndereco(endereco), qtd });
   const store = abrirStore(BLOB_PEDIDOS_PAGOS);
 
   // ── Idempotência: já creditado? ─────────────────────────────────────────

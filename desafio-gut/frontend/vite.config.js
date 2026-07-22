@@ -20,6 +20,17 @@ export default defineConfig({
   // Com React em chunk separado (react-chunk), o grafo fica acíclico:
   //   react-chunk (sem deps customizadas) ← privy-chunk ← index-chunk
   // Também amplia cobertura Privy para incluir @coinbase/* e deps afins.
+  // MC87 (P3-2) — os ~65 console.* de src/ chegavam ao bundle de produção: o
+  // index-*.js publicado tinha 14 ocorrências de "console." e 2 de "GUT-DEBUG".
+  // Os dados expostos são do próprio utilizador (o seu endereço, o seu saldo), o
+  // que limita o impacto — mas os logs [GUT-DEBUG] documentavam gratuitamente a
+  // superfície de API e os fluxos de autenticação para quem quisesse atacá-los.
+  //
+  // `console.error` e `console.warn` FICAM: alimentam o Sentry e os relatos de
+  // suporte. Só saem os informativos (log/info/debug/trace), que são ruído em prod.
+  esbuild: {
+    pure: ["console.log", "console.info", "console.debug", "console.trace"],
+  },
   build: {
     rollupOptions: {
       output: {

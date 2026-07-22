@@ -15,6 +15,8 @@ import { confirmarReceiptOnchain } from "./contract.mjs";
 import { reembolsarSaldoRs } from "./saldoRs.mjs";
 import { getDebito, setDebito } from "./saldoRs-store.mjs";
 import { captureSecurityAlert } from "./sentry-server.mjs";
+// MC87 (P3-1) — carteira mascarada nos logs.
+import { mascararEndereco } from "./validate.mjs";
 
 export async function confirmarCreditoSenhas(payload) {
   const { pedidoId, endereco, qtd, valorCentavos, txHash } = payload || {};
@@ -31,7 +33,7 @@ export async function confirmarCreditoSenhas(payload) {
   const { estado } = await confirmarReceiptOnchain(txHash);
 
   if (estado === "confirmado") {
-    console.info("[worker-credito] confirmado (senhas on-chain)", { pedidoId, endereco, qtd, txHash });
+    console.info("[worker-credito] confirmado (senhas on-chain)", { pedidoId, endereco: mascararEndereco(endereco), qtd, txHash });
     return;
   }
 
@@ -51,7 +53,7 @@ export async function confirmarCreditoSenhas(payload) {
           { pedidoId, endereco, valorCentavos, txHash, code: reembolso.code }, "error").catch(() => {});
       }
     }
-    console.warn("[worker-credito] revertido → reembolso", { pedidoId, endereco, txHash, reembolsado: reembolso.ok });
+    console.warn("[worker-credito] revertido → reembolso", { pedidoId, endereco: mascararEndereco(endereco), txHash, reembolsado: reembolso.ok });
     return;
   }
 

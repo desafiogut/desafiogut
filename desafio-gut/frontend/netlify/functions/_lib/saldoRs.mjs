@@ -16,6 +16,10 @@
 // leitura com fallback para o Blob legado durante a transição (financeiro-fallback).
 import { getSaldo, setSaldo, casSaldo, getCredito, setCredito, inserirSaldoSeAusente } from "./saldoRs-store.mjs";
 import { lerSaldoLegado, lerCreditoLegado } from "./financeiro-fallback.mjs";
+// MC87 (P3-1) — um log com carteira + saldo é, na prática, um extrato. A máscara
+// preserva a correlação entre linhas (prefixo+sufixo) sem deixar um identificador
+// reutilizável no log.
+import { mascararEndereco } from "./validate.mjs";
 
 function chave(endereco) {
   return endereco.toLowerCase();
@@ -75,7 +79,7 @@ async function ajustarSaldoRsAtomico(ender, deltaCentavos, motivo = "ajuste") {
     }
     if (trocou) return { ok: true, saldoAntes, saldoDepois };
     // CAS perdeu: outro ajuste alterou o saldo entre a leitura e a escrita → relê.
-    console.warn(`[saldoRs:${motivo}] CAS perdeu (tentativa ${tentativa}/${MAX_TENTATIVAS_DEBITO}) — relendo saldo`, { endereco: ender });
+    console.warn(`[saldoRs:${motivo}] CAS perdeu (tentativa ${tentativa}/${MAX_TENTATIVAS_DEBITO}) — relendo saldo`, { endereco: mascararEndereco(ender) });
   }
   return { ok: false, code: "conflito_concorrencia", message: "ajuste não aplicado após múltiplas tentativas (concorrência alta)" };
 }
@@ -95,7 +99,7 @@ export async function creditarSaldoRsIdempotente({ pedidoId, endereco, valorCent
   if (!(valor > 0)) {
     return { ok: false, code: "valor_invalido", message: "valorCentavos deve ser > 0" };
   }
-  console.info(`[saldoRs:${fonte}] credito início`, { pedidoId, endereco: ender, valorCentavos: valor });
+  console.info(`[saldoRs:${fonte}] credito início`, { pedidoId, endereco: mascararEndereco(ender), valorCentavos: valor });
 
   // Idempotência: se este pedidoId já foi creditado, retorna o registro.
   // MC36.1 — Supabase (saldo_rs_creditos) + fallback de leitura Blob legado.
@@ -133,7 +137,7 @@ export async function creditarSaldoRsIdempotente({ pedidoId, endereco, valorCent
   try { await setCredito(pedidoId, resultado); } // MC36.1 — escrita só Supabase (R11)
   catch (err) { console.warn(`[saldoRs:${fonte}] persistir saldo-rs-creditos falhou:`, err?.message); }
   console.info(`[saldoRs:${fonte}] credito concluído`, {
-    pedidoId, endereco: ender, valorCentavos: valor,
+    pedidoId, endereco: mascararEndereco(ender), valorCentavos: valor,
     saldoAntes, saldoDepois,
   });
   return { ok: true, idempotent: false, resultado };
@@ -160,7 +164,7 @@ export async function debitarSaldoRs({ endereco, valorCentavos, motivo = "descon
   if (!(valor > 0)) {
     return { ok: false, code: "valor_invalido", message: "valorCentavos deve ser > 0" };
   }
-  console.info(`[saldoRs:debito:${motivo}] início`, { endereco: ender, valorCentavos: valor });
+  console.info(`[saldoRs:debito:${motivo}] início`, { endereco: mascararEndereco(ender), valorCentavos: valor });
 
   for (let tentativa = 1; tentativa <= MAX_TENTATIVAS_DEBITO; tentativa++) {
     let saldoAntes;
@@ -170,7 +174,7 @@ export async function debitarSaldoRs({ endereco, valorCentavos, motivo = "descon
       return { ok: false, code: "leitura_saldo_falhou", message: err?.message };
     }
     if (saldoAntes < valor) {
-      console.warn(`[saldoRs:debito:${motivo}] saldo insuficiente`, { endereco: ender, saldoAntes, valor });
+      console.warn(`[saldoRs:debito:${motivo}] saldo insuficiente`, { endereco: mascararEndereco(ender), saldoAntes, valor });
       return { ok: false, code: "saldo_insuficiente", message: `saldo R$ ${(saldoAntes/100).toFixed(2)} < valor R$ ${(valor/100).toFixed(2)}` };
     }
     const saldoDepois = saldoAntes - valor;
@@ -197,15 +201,15 @@ export async function debitarSaldoRs({ endereco, valorCentavos, motivo = "descon
 
     if (trocou) {
       console.info(`[saldoRs:debito:${motivo}] concluído`, {
-        endereco: ender, saldoAntes, saldoDepois, valorCentavos: valor, tentativa,
+        endereco: mascararEndereco(ender), saldoAntes, saldoDepois, valorCentavos: valor, tentativa,
       });
       return { ok: true, resultado: { saldoAntesCentavos: saldoAntes, saldoDepoisCentavos: saldoDepois, valorCentavos: valor } };
     }
     // CAS perdeu: outro débito alterou o saldo entre a leitura e a escrita.
-    console.warn(`[saldoRs:debito:${motivo}] CAS perdeu (tentativa ${tentativa}/${MAX_TENTATIVAS_DEBITO}) — relendo saldo`, { endereco: ender });
+    console.warn(`[saldoRs:debito:${motivo}] CAS perdeu (tentativa ${tentativa}/${MAX_TENTATIVAS_DEBITO}) — relendo saldo`, { endereco: mascararEndereco(ender) });
   }
 
-  console.error(`[saldoRs:debito:${motivo}] conflito de concorrência após ${MAX_TENTATIVAS_DEBITO} tentativas`, { endereco: ender, valor });
+  console.error(`[saldoRs:debito:${motivo}] conflito de concorrência após ${MAX_TENTATIVAS_DEBITO} tentativas`, { endereco: mascararEndereco(ender), valor });
   return { ok: false, code: "conflito_concorrencia", message: "débito não aplicado após múltiplas tentativas (concorrência alta)" };
 }
 
@@ -220,6 +224,6 @@ export async function reembolsarSaldoRs({ endereco, valorCentavos, motivo = "ree
     console.error(`[saldoRs:reembolso:${motivo}] ajuste atómico falhou:`, ajuste.code);
     return { ok: false, code: ajuste.code, message: ajuste.message };
   }
-  console.info(`[saldoRs:reembolso:${motivo}]`, { endereco: ender, saldoAntes: ajuste.saldoAntes, saldoDepois: ajuste.saldoDepois });
+  console.info(`[saldoRs:reembolso:${motivo}]`, { endereco: mascararEndereco(ender), saldoAntes: ajuste.saldoAntes, saldoDepois: ajuste.saldoDepois });
   return { ok: true, resultado: { saldoAntesCentavos: ajuste.saldoAntes, saldoDepoisCentavos: ajuste.saldoDepois } };
 }

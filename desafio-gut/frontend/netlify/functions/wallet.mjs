@@ -27,7 +27,7 @@ import {
 import { lerWalletLegado, lerWalletIdemLegado } from "./_lib/financeiro-fallback.mjs";
 import {
   jsonResponse, jsonError, validarEndereco,
-  parseJsonBody, ValidationError, validarOwnerOuAdmin,
+  parseJsonBody, ValidationError, validarOwnerOuAdmin, mascararEndereco,
 } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
@@ -180,7 +180,11 @@ async function handlePost(req) {
     }
   }
 
-  console.info("[wallet] op concluída", { endereco, operacao, valorCentavos, saldoAntes, saldoDepois });
+  // MC87 (P3-1) — carteira mascarada: a linha continua diagnosticável, mas deixa
+  // de ser um extrato associado a um identificador reutilizável.
+  console.info("[wallet] op concluída", {
+    endereco: mascararEndereco(endereco), operacao, valorCentavos, saldoAntes, saldoDepois,
+  });
   return jsonResponse({
     transacaoId, endereco, operacao, valorCentavos, motivo,
     saldoAntesCentavos:  saldoAntes,
