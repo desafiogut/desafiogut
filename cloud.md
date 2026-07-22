@@ -2812,3 +2812,75 @@ real ainda sem teste ponta-a-ponta**.
 **Lição:** quando um SDK traz defaults seguros, uma config que os **nega** é sinal de alarme, não
 preferência — verificar o default no pacote instalado antes de assumir que apenas "não foi configurado".
 E taxa de amostragem 0 ≠ custo 0: conferir no perfil de CPU o que continua a correr.
+
+---
+
+## MC86 — Auditoria de Segurança (RLS · validação · IDOR · logs · webhooks)
+
+**Natureza:** MC de diagnóstico. **Zero alteração de código-fonte (R1)** — o entregável é documento;
+a execução das correções fica para o MC seguinte.
+
+**Escopo auditado:** 14/14 tabelas Supabase · 2/2 funções SQL · 47/47 Netlify Functions ·
+31 endpoints sondados ao vivo em produção (read-only) · 6 superfícies de log · 3 webhooks previstos.
+
+**Veredito:** postura acima da média. **RLS ativo em 100% das tabelas com default-deny**, provado ao
+vivo com a chave anon real: `cotas` (7 linhas) e `saldo_rs` (5 linhas) devolvem `[]` a um chamador
+anónimo. O helper anti-IDOR `validarOwnerOuAdmin` é aplicado de forma consistente nos endpoints
+financeiros — `/saldo-rs`, `/wallet`, `/notificacoes`, `/backup-blobs`, `/purge-logs` devolvem 401 sem
+token. `img-proxy` tem defesa SSRF de qualidade (DNS + IP literal + `redirect:"error"` + content-type).
+
+**15 achados: 2 P0 · 4 P1 · 5 P2 · 4 P3.** Os dois problemas reais concentram-se em (a) um endpoint
+legado que nunca recebeu o guard que os outros receberam, e (b) endpoints de diagnóstico que ficaram
+no ar depois de o seu MC terminar.
+
+**P0-1 — `/cotas` GET não tem autenticação nenhuma.** Enquanto POST/DELETE exigem `ADMIN_TOKEN`, o GET
+é anónimo em quatro ramos: `?cliente_id=`, `?email=`, `?cnpj=` e `?categoria=` (este último lista
+**todas** as cotas da categoria). Hoje devolve vazio porque produção ainda lê Blobs — mas o Supabase
+**já tem 7 cotas com CNPJ e e-mail reais**. No dia do flip `DATA_STORE_BACKEND=supabase`, isto passa a
+divulgar CNPJ + e-mail + carteira de todos os lojistas sem autenticação. É uma violação de LGPD à
+espera de um deploy de configuração, não de um ataque. **Gate: não flipar antes de corrigir.**
+
+**P0-2 — chave privada bruta em mainnet.** `GET /health` responde `"CHAVE_BRUTA_EM_MAINNET":"ALERT"`,
+`"SIGNER_BACKEND":"local-key"` — o próprio código classifica isto como violação da R9.
+
+**P1:** HMAC do Mercado Pago em **fail-open** (sem `MP_WEBHOOK_SECRET` a validação é pulada; o
+interruptor `MP_WEBHOOK_ENFORCE` existe mas é opt-in) · `reservar_tarefas` é `SECURITY DEFINER` com
+`EXECUTE` para PUBLIC → **ignora o RLS de `fila_tarefas`** e responde 200 a um chamador anónimo (fila
+vazia hoje) · `/debug-pedido` **fail-open por desenho** e aberto em produção (o próprio corpo confirma:
+`"DEBUG_TOKEN_set": false`) · a **EOA queimada** do MC59.11 continua listada como admin e coordenação
+(`GET /admin-list` → 200, público), embora `auth-admin` ainda exija `ADMIN_TOKEN` **e** assinatura
+EIP-191.
+
+**P2:** webhook MP sem anti-replay (o `ts` entra no manifest mas o frescor nunca é verificado) · a
+assinatura MP cobre o `data.id` da **query** enquanto `extrairPaymentId` dá precedência ao **body** —
+falha de cobertura, não de criptografia · `/admin-list` GET público · `pagador.cpf` aceito sem qualquer
+validação (`iniciar-pagamento.mjs:68` só verifica "é string" e trunca em 32) · endpoints `mc302-*`
+vivos após o fim do MC30.2.1 (`mc302-aceitar` envia transação **irreversível**; hoje fail-closed 503).
+
+**P3:** ~25 pontos logam carteira e, em `saldoRs.mjs`/`wallet.mjs`, carteira **junto com o saldo** —
+na prática, um extrato · `vite.config.js` não tem `drop_console` e o bundle vivo carrega 14 `console.` ·
+`/health` expõe versão do Node e mapa de configuração · `search_path` mutável em 2 funções SQL.
+
+**O que já estava certo e merece registo:** nenhum segredo é logado (só booleanos `set`/`MISSING`);
+CNPJ mascarado em `cotas.mjs`; e-mail deliberadamente omitido dos logs; CPF nunca persistido em
+`pedidos-meta`; `delete-account.mjs` é exemplar (JWT + owner-check + rate-limit 3 + `dryRun`);
+o valor em R$ é **calculado no servidor** a partir da quantidade, nunca aceito do cliente.
+
+**Correção do enquadramento do briefing:** o MC pressupunha 3 webhooks (MP, Twilio, SendGrid). Só
+existe **1** — Twilio e SendGrid são apenas **saída**, pelo ORQUESTRADOR. E as políticas RLS não usam
+`auth.uid()` **por estarem certas**: o projeto não usa Supabase Auth (é Privy + JWT HS256 próprio nas
+Functions), logo o modelo correto é negar tudo a `anon`/`authenticated` e autorizar no backend.
+
+**⚠️ Não auditado:** o ORQUESTRADOR (PythonAnywhere) — `www.pythonanywhere.com` deu `ConnectTimeout`
+em 3 tentativas. É onde há maior probabilidade de PII em claro (e-mails e números de WhatsApp de
+destinatários). Fica como MC87-A, primeiro alvo da continuação.
+
+**Relatórios:** `Desktop\MC86-RELATORIO.txt` · `Desktop\MC86-MAPEAMENTO.txt` ·
+`desafio-gut/docs/MC86-seguranca.txt`.
+
+**Lição:** guards de segurança propagam-se por imitação, e por isso deixam buracos onde ninguém copiou.
+`/cotas` GET não é um erro de conceção — é o endpoint que já existia quando o padrão `validarOwnerOuAdmin`
+foi criado, e que ninguém voltou para atualizar. Ao introduzir um guard novo, auditar quem **não** o
+adotou vale mais do que verificar quem adotou. O mesmo vale para endpoints de diagnóstico: `debug-pedido`
+foi escrito fail-open "modo dev" e nunca foi reavaliado, enquanto `mc302-diagnostico`, escrito depois,
+já nasceu fail-closed.

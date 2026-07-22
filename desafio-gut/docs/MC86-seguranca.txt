@@ -1,0 +1,498 @@
+================================================================================
+MC86 — RELATÓRIO DE AUDITORIA DE SEGURANÇA · DesafioGUT
+Data: 2026-07-22 · Auditoria read-only (R1: zero alteração de código-fonte)
+Escopo: RLS · Validação de dados · IDOR · Logs · Webhooks
+Alvo vivo: https://silly-stardust-ca71bc.netlify.app (produção MAINNET)
+Supabase: vjslwowwrpcawijdiksm · Branch de código: feat/mc73-correcao-deploy (2a0e7c7)
+Mapeamento de apoio: Desktop/MC86-MAPEAMENTO.txt
+================================================================================
+
+################################################################################
+1. RESUMO EXECUTIVO
+################################################################################
+
+VEREDITO: a postura de segurança é ACIMA DA MÉDIA para um projeto deste porte.
+RLS está ativo em 100% das tabelas com default-deny (verificado ao vivo com a
+chave anon real: cotas/saldo_rs/fila_tarefas devolvem [] mesmo tendo linhas).
+Existe um helper anti-IDOR (validarOwnerOuAdmin) aplicado de forma consistente nos
+endpoints financeiros, e o img-proxy tem defesa SSRF de qualidade.
+
+Os problemas concentram-se em DOIS pontos: (a) um endpoint legado de leitura
+(/cotas GET) que nunca recebeu o guard anti-IDOR que os demais receberam, e
+(b) endpoints de diagnóstico/operação que ficaram no ar depois de o seu MC
+terminar.
+
+CONTAGEM POR SEVERIDADE
+  P0 (crítica) ....... 2
+  P1 (alta) .......... 4
+  P2 (média) ......... 5
+  P3 (baixa) ......... 4
+  TOTAL .............. 15 achados
+
+ITENS AUDITADOS
+  Tabelas Supabase ................ 14/14   (RLS + políticas)
+  Funções SQL ..................... 2/2
+  Netlify Functions ............... 47/47   (matriz auth/validação)
+  Endpoints sondados ao vivo ...... 31      (read-only, produção)
+  Webhooks ........................ 3 previstos → 1 existente (MP)
+  Pontos de log ................... 6 superfícies (5 auditadas, 1 inacessível)
+
+TABELA DE ACHADOS
+ ID    SEV  ÁREA        ACHADO                                        ESTADO
+ ----  ---  ----------  --------------------------------------------  ----------
+ A-01  P0   IDOR        /cotas GET expõe cadastro completo sem auth   CONFIRMADO
+ A-02  P0   Segredos    Chave privada bruta no ambiente MAINNET       CONFIRMADO
+ A-03  P1   Webhook     HMAC do Mercado Pago em fail-open             CONFIRMADO
+ A-04  P1   RLS         reservar_tarefas: SECURITY DEFINER p/ anon    CONFIRMADO
+ A-05  P1   Exposição   /debug-pedido aberto em produção              CONFIRMADO
+ A-06  P1   Identidade  EOA comprometida ainda é admin/coordenação    CONFIRMADO
+ A-07  P2   Webhook     Sem anti-replay (ts não verificado)           CONFIRMADO
+ A-08  P2   Webhook     Assinatura cobre query, processa body         CONFIRMADO
+ A-09  P2   Exposição   /admin-list GET revela endereços admin        CONFIRMADO
+ A-10  P2   Validação   pagador.cpf aceito sem validação              CONFIRMADO
+ A-11  P2   Exposição   Endpoints mc302-* vivos após fim do MC30.2.1  CONFIRMADO
+ A-12  P3   Logs        Wallets/valores em log de texto claro         CONFIRMADO
+ A-13  P3   Logs        console.* do frontend vai para produção       CONFIRMADO
+ A-14  P3   Exposição   /health revela versão e mapa de config        CONFIRMADO
+ A-15  P3   RLS         search_path mutável em 2 funções              CONFIRMADO
+
+RISCO NÃO AVALIADO: o ORQUESTRADOR no PythonAnywhere (logs de e-mail/WhatsApp,
+onde PII circula em maior volume) ficou fora por indisponibilidade da API.
+
+
+################################################################################
+2. RLS (ROW LEVEL SECURITY)
+################################################################################
+
+2.1 ESTADO — TODAS AS TABELAS PROTEGIDAS ✅
+Consulta a pg_class (relrowsecurity) sobre as 14 tabelas do schema public:
+rowsecurity = true em 14/14. Nenhuma tabela sem RLS. Nenhuma view materializada
+exposta (a migração que as cria não foi aplicada — o que, do ponto de vista de
+segurança, é bom: MVs não respeitam RLS).
+
+2.2 POLÍTICAS — 16 políticas, todas analisadas
+  · 14 políticas "service_role total <tabela>" — FOR ALL TO service_role
+    USING(true) WITH CHECK(true).
+    VEREDITO: CORRETO. `USING (true)` só é perigoso quando concedido a
+    public/anon/authenticated. Aqui o alvo é service_role, que já ignora RLS por
+    natureza. O efeito real é DEFAULT-DENY para anon e authenticated.
+  · "Leitura pública de produtos" — FOR SELECT TO public USING(true).
+    VEREDITO: aceitável — catálogo é público por desenho, sem colunas sensíveis.
+  · "Leitura pública de configurações" (config_remota) — FOR SELECT TO public
+    USING(true). VEREDITO: aceitável — só feature flags.
+  · fila_tarefas tem DUAS políticas idênticas ("service_role total fila" e
+    "service_role_all") — redundância, não vulnerabilidade. Limpeza cosmética.
+
+Nenhuma política usa auth.uid(). Isso NÃO é um defeito nesta arquitetura: o
+projeto não usa Supabase Auth (a autenticação é Privy + JWT HS256 próprio nas
+Netlify Functions). Como nenhum utilizador final chega ao Postgres autenticado,
+o modelo correto é exatamente o adotado — negar tudo a anon/authenticated e
+concentrar a autorização no backend. Recomendar auth.uid() aqui seria importar
+um modelo que o projeto não usa.
+
+2.3 PROVA VIVA (com a chave anon real, extraída do bundle público de produção)
+  POST /rest/v1/rpc/reservar_tarefas   → HTTP 200  ← ** PROBLEMA (A-04) **
+  GET  /rest/v1/fila_tarefas           → HTTP 200  []   (RLS bloqueia)
+  GET  /rest/v1/cotas                  → HTTP 200  []   (RLS bloqueia — 7 linhas ocultas) ✅
+  GET  /rest/v1/saldo_rs               → HTTP 200  []   (RLS bloqueia — 5 linhas ocultas) ✅
+  GET  /rest/v1/config_remota          → HTTP 200  [flags]  (público por desenho) ✅
+
+2.4 ACHADO A-04 (P1) — reservar_tarefas é SECURITY DEFINER executável por anon
+  Evidência: pg_proc.proacl = "=X/postgres" (EXECUTE para PUBLIC) + prosecdef=true;
+  advisor 0028/0029 do Supabase; chamada anónima devolveu 200.
+  Impacto: SECURITY DEFINER roda como owner e IGNORA o RLS de fila_tarefas.
+  Qualquer pessoa na internet, com a chave anon (que é pública por desenho e está
+  no bundle), lê o conteúdo da fila. Hoje a fila está vazia e inerte; quando for
+  adotada, o payload conterá pedidoId, endereço de carteira e valores de crédito.
+  Agravante: p_limit é controlado pelo chamador e não tem teto.
+  Correção: REVOKE EXECUTE ON FUNCTION public.reservar_tarefas(integer) FROM
+  PUBLIC, anon, authenticated; GRANT ... TO service_role. Fixar search_path.
+
+2.5 ACHADO A-15 (P3) — search_path mutável
+  update_fila_tarefas_updated_at e reservar_tarefas sem `SET search_path = ''`.
+  Vetor de escalonamento clássico em funções SECURITY DEFINER.
+
+2.6 RECOMENDAÇÕES RLS
+  R1. Revogar EXECUTE público de reservar_tarefas (P1).
+  R2. Adicionar SET search_path = '' às 2 funções (P3).
+  R3. Remover a política duplicada em fila_tarefas (cosmético).
+  R4. ANTES do flip DATA_STORE_BACKEND=supabase, repetir a prova 2.3 — as tabelas
+      passarão a ter volume real e o teste deixa de ser teórico.
+  R5. Considerar ALTER TABLE ... FORCE ROW LEVEL SECURITY nas tabelas financeiras
+      (hoje relforcerowsecurity=false em 14/14): protege caso alguma conexão
+      futura use o owner da tabela em vez de service_role.
+
+
+################################################################################
+3. VALIDAÇÃO DE DADOS (BACKEND)
+################################################################################
+
+3.1 PANORAMA
+Não existe biblioteca de validação declarativa (zod/joi) — a validação é manual,
+centralizada em _lib/validate.mjs. Apesar disso, a cobertura dos campos
+CRÍTICOS é boa:
+  · validarEndereco — regex /^0x[a-fA-F0-9]{40}$/ + normalização lowercase. ✅
+  · validarQuantidadeFichas — Number.isInteger + faixa 1..100. ✅
+  · calcularValorBRL — o valor é CALCULADO no servidor a partir da quantidade,
+    nunca aceito do cliente. Este é o ponto mais importante de todo o fluxo
+    financeiro e está correto. ✅
+  · parseJsonBody — rejeita JSON inválido com erro tipado. ✅
+  · sanitizeText(input, max) — trunca campos livres (nome/email/observação) em
+    admin-aprovacao.mjs e cotas.mjs. ✅
+  · validarCNPJ — algoritmo completo de dígitos verificadores. ✅
+  · Allow-lists: analytics.mjs (eventos), cotas (categorias), edicoes (tipos),
+    status de fila via CHECK constraint no Postgres. ✅
+  · scrubSvg (banners) contra XSS em SVG. ✅
+
+3.2 ACHADO A-10 (P2) — pagador.cpf aceito sem validação
+  netlify/functions/iniciar-pagamento.mjs:68
+    cpf: typeof p.cpf === "string" ? p.cpf.slice(0, 32) : undefined
+  O CPF só é verificado como "é string" e truncado em 32 caracteres. Não há
+  validação de comprimento (11), de dígitos verificadores, nem de formato. O
+  campo segue para _lib/pix-provider/mercadopago.mjs, que faz normalizarDoc
+  (só dígitos) e infere CPF/CNPJ pelo tamanho.
+  Impacto: baixo-médio. Não há injeção (o valor vira JSON para a API do MP), mas
+  um CPF malformado produz falha de pagamento tardia e opaca para o utilizador,
+  e o e-mail (254 chars) também não é validado por regex antes de ser enviado.
+  Nota positiva: o CPF NÃO é persistido em pedidos-meta — verificado em
+  _lib/credito.mjs gravarMetaPedido (grava só endereco/qtd/valorBRL/paymentId).
+
+3.3 ACHADO — ausência de teto de tamanho de corpo
+  parseJsonBody faz req.text() sem limite. O limite efetivo é o do runtime da
+  Netlify (~6 MB). Não é explorável para injeção, mas permite consumo de CPU
+  gratuito em endpoints não autenticados (analytics é o mais exposto, mitigado
+  por rate-limit de 30/min/IP).
+
+3.4 FUNÇÕES COM VALIDAÇÃO ROBUSTA (referência de bom padrão)
+  comprar-senhas.mjs · confirmar-pagamento.mjs · delete-account.mjs ·
+  iniciar-pagamento.mjs (exceto 3.2) · edicoes.mjs · cotas.mjs (POST/DELETE).
+
+3.5 RECOMENDAÇÕES
+  R6. Adicionar validarCPF (dígitos verificadores) e validarEmail (regex) a
+      _lib/validate.mjs e aplicar em iniciar-pagamento (P2).
+  R7. Introduzir zod progressivamente, começando pelos endpoints que movem
+      dinheiro. Não reescrever o que já funciona — o padrão manual atual é
+      consistente e testado (182/182 na suíte).
+  R8. Adicionar teto explícito de bytes em parseJsonBody (P3).
+
+
+################################################################################
+4. IDOR (INSECURE DIRECT OBJECT REFERENCE)
+################################################################################
+
+4.1 PROVA VIVA — OS ENDPOINTS FINANCEIROS ESTÃO PROTEGIDOS ✅
+Sondagem sem qualquer token contra produção:
+  GET /saldo-rs?endereco=0x...01        → 401  ✅
+  GET /wallet?endereco=0x...01          → 401  ✅
+  POST /exportar-dados                  → 405/401  ✅
+  POST /notificacoes                    → 401  ✅
+  GET /admin-aprovacao                  → 401  ✅
+  GET /backup-blobs · /purge-logs · /monitor-onchain → 401  ✅
+  GET /mc302-diagnostico                → 503 (fail-closed)  ✅
+O padrão é sólido: extrair Bearer → verificarUserSession → getAdminAddresses →
+validarOwnerOuAdmin(jwt, recurso, admins) → 403 se não for dono nem admin.
+O ID do utilizador vem SEMPRE do JWT, nunca do parâmetro, exatamente como
+recomendado na secção 3.4 do briefing.
+
+4.2 ACHADO A-01 (P0) — /cotas GET não recebeu o guard anti-IDOR
+  Arquivo: netlify/functions/cotas.mjs, função handleGet.
+  Enquanto POST e DELETE de cotas.mjs exigem ADMIN_TOKEN, o GET é INTEIRAMENTE
+  ANÓNIMO. Quatro ramos vazam o cadastro de lojistas:
+
+  (a) GET /cotas?cliente_id=0x<qualquer>
+      → devolve o registo COMPLETO da cota daquele endereço (getCota).
+      IDOR clássico: nenhuma verificação de propriedade.
+  (b) GET /cotas?email=<qualquer e-mail>
+      → devolve o registo COMPLETO (getCotaByEmail), incluindo tipo corporativo.
+      Sem rate-limit neste ramo.
+  (c) GET /cotas?cnpj=<qualquer CNPJ válido>
+      → devolve { endereco, email, empresa }. Sem rate-limit neste ramo.
+      CNPJs brasileiros são dado público → enumeração dirigida é trivial.
+  (d) GET /cotas?categoria=ouro|prata|bronze|diamante
+      → LISTA TODAS as cotas da categoria, com os registos completos.
+      Divulgação em massa, sem sequer precisar de um identificador.
+
+  Evidência viva (2026-07-22 03:3x UTC):
+    GET /cotas?categoria=ouro   → 200 {"categoria":"ouro","total":0,"cotas":[]}
+    GET /cotas?cliente_id=0x..1 → 404 cota_nao_encontrada
+    GET /cotas?email=teste@...  → 404 email_nao_encontrado
+    GET /cotas?cnpj=1122...     → 404 cnpj_nao_encontrado
+  Os 200/404 provam que os ramos EXECUTAM sem autenticação. Vêm vazios apenas
+  porque produção ainda lê Netlify Blobs. O Supabase JÁ TEM 7 cotas com cnpj e
+  email reais: no dia do flip DATA_STORE_BACKEND=supabase, o ramo (d) passa a
+  devolver, sem autenticação nenhuma, CNPJ + e-mail + carteira de todos os
+  lojistas parceiros.
+  Classificação P0 por isso: é uma violação de LGPD à espera de um deploy de
+  configuração, não de um ataque sofisticado.
+
+  Ramo adjacente, por desenho: ?acao=verificar-login&cnpj=&empresa= devolve o
+  e-mail mediante CNPJ + nome da empresa (ambos dados públicos). Tem rate-limit
+  de 10/min e mensagem genérica anti-enumeração — é o pré-passo do OTP, e o OTP
+  é o gate real. Aceitável, mas deve ser o ÚNICO ramo público de cotas.
+
+4.3 ACHADO A-05 (P1) — /debug-pedido aberto em produção
+  Arquivo: netlify/functions/debug-pedido.mjs. O guard é opcional por desenho:
+  "Sem DEBUG_TOKEN no env, o endpoint responde sem auth (modo dev)".
+  Fail-open num endpoint de diagnóstico, em produção.
+  Evidência viva: GET /debug-pedido?id=teste-auditoria-mc86 → HTTP 200, corpo
+  incluindo "DEBUG_TOKEN_set": false — o próprio endpoint confirma que está
+  desprotegido. Devolve também o mapa de configuração (PIX_PROVIDER,
+  MP_ACCESS_TOKEN_set, signer_backend, biconomy_kms_set) e o endereço do
+  contrato ativo.
+  Impacto: com um pedidoId (UUIDv4, não adivinhável) obtém-se endereço de
+  carteira, quantidade e valor do pedido de terceiro. O UUID limita a
+  explorabilidade em massa, mas ele viaja em URLs, prints e suporte.
+
+4.4 ACHADO A-09 (P2) — /admin-list GET público
+  Evidência: GET /admin-list → 200
+  {"admins":["0xda3a83…e84e"],"coordenacao":"0xda3a83…e84e"}
+  Revela, sem autenticação, exatamente qual carteira controla a plataforma.
+  Isso transforma um alvo difuso num alvo nomeado (phishing dirigido,
+  engenharia social, vigilância on-chain da carteira).
+
+4.5 ACHADO A-06 (P1) — a EOA comprometida continua a ser admin
+  O endereço devolvido por /admin-list (0xDa3a83…e84E) é a EOA cuja chave
+  privada foi exposta em conversa (registo MC59.11), e continua listada como
+  admin E como coordenação na produção mainnet — enquanto o contrato mainnet
+  ativo (0x0052…16cd) já usa outra coordenação (0xFea436…1E67).
+  Mitigação existente (importante): auth-admin exige ADMIN_TOKEN **E** assinatura
+  EIP-191 de um endereço da lista, com anti-replay de 5 min. Só a chave privada
+  não basta. Mas a defesa passa a depender de um único segredo partilhado.
+  Correção: remover a EOA queimada do Blob admin-list:admins e da variável de
+  coordenação; rotacionar ADMIN_TOKEN.
+
+4.6 ACHADO A-02 (P0) — chave privada bruta no ambiente mainnet
+  Evidência viva: GET /health → "CHAVE_BRUTA_EM_MAINNET":"ALERT",
+  "SIGNER_BACKEND":"local-key".
+  O próprio código classifica esta condição como violação da regra R9 do projeto
+  ("chave bruta NÃO pode existir em mainnet"). A plataforma opera na mainnet com
+  COORDENACAO_PRIVATE_KEY em texto no ambiente, em vez do backend KMS.
+  Toda a custódia da coordenação depende de uma variável de ambiente.
+  Nota correlata: existe um ficheiro local desafio-gut/frontend/.env.local com
+  JWT_SECRET e COORDENACAO_PRIVATE_KEY. Está corretamente coberto pelo .gitignore
+  e NÃO está versionado (git ls-files confirmou) — mas é uma cópia da chave em
+  disco de estação de trabalho. (R5: nenhum valor foi lido.)
+
+4.7 ROTAS SENSÍVEIS DO BRIEFING — VEREDITO
+  /excluir-conta (delete-account)  → PROTEGIDO. JWT + validarOwnerOuAdmin +
+                                     rate-limit 3/janela + dryRun. Exemplar. ✅
+  /atualizar-saldo (wallet)        → PROTEGIDO. 401 sem token. ✅
+  /lances (lances-flash)           → público por desenho; em mainnet os valores
+                                     são blindados (oculto:true). Ainda expõe
+                                     endereço + nome de exibição. Ver A-12. ⚠️
+  /senhas (comprar-senhas)         → PROTEGIDO. lance-auth + RBAC + rate-limit. ✅
+
+4.8 RECOMENDAÇÕES IDOR
+  R9.  (P0) Aplicar em cotas.mjs handleGet o mesmo guard já usado em wallet.mjs:
+       verificarUserSession + validarOwnerOuAdmin. Manter público apenas
+       ?acao=verificar-login. Restringir ?categoria= a admin.
+  R10. (P1) Tornar debug-pedido fail-CLOSED: sem DEBUG_TOKEN → 503, o padrão que
+       mc302-diagnostico.mjs já implementa corretamente. Melhor ainda: remover.
+  R11. (P2) Exigir admin em /admin-list GET (o frontend não precisa da lista).
+  R12. (P1) Remover a EOA comprometida da lista de admins; rotacionar ADMIN_TOKEN.
+  R13. (P0) Migrar a assinatura para KMS em mainnet (SIGNER_BACKEND=biconomy ou
+       equivalente) e apagar COORDENACAO_PRIVATE_KEY do ambiente.
+  R14. (P2) Aplicar rate-limit aos ramos ?cnpj= e ?email= de cotas.
+
+
+################################################################################
+5. LOGS SEGUROS (MASCARAMENTO)
+################################################################################
+
+5.1 O QUE JÁ ESTÁ CERTO ✅
+  · Nenhum segredo é logado. Zero ocorrências de log de JWT_SECRET,
+    ADMIN_TOKEN, MP_ACCESS_TOKEN ou chave privada. Os endpoints de diagnóstico
+    reportam apenas booleanos ("set"/"MISSING"), nunca valores.
+  · CNPJ é mascarado: cotas.mjs:160,165 → cnpj.slice(0,4) + "…".
+  · E-mail é deliberadamente omitido: comentário explícito em cotas.mjs
+    ("email NUNCA em log") e o código cumpre.
+  · CPF nunca é logado nem persistido em pedidos-meta.
+  · auth-user.mjs:102 loga visitorId como "presente"/"ausente", não o valor.
+  · Sentry server tem beforeSend que redige hashes argon2id; Sentry Replay foi
+    mascarado no MC82.4.
+  · conta-delete.mjs mantém PII_KEYS_REMOVER = [email, cpf, cnpj, nome,
+    telefone, ...] para limpar PII dos registos fiscais retidos.
+  · log-decisoes (Blob) guarda só trigger/action/user_id, com FIFO de 500.
+
+5.2 ACHADO A-12 (P3) — endereços de carteira e valores em texto claro
+  ~25 pontos logam `endereco` sem máscara, incluindo o par endereço+saldo:
+    _lib/saldoRs.mjs:98,163,173,208,223 — endereço + valorCentavos + saldoAntes/Depois
+    wallet.mjs:183                       — endereço + operação + saldo antes/depois
+    _lib/credito.mjs:64,111              — endereço + pedidoId + quantidade
+    comprar-senhas.mjs:226,247,299       — endereço + quantidade
+    _lib/worker-credito.mjs:34,54        — endereço + pedidoId + txHash
+    referral.mjs:154                     — indicador + indicado (grafo social!)
+    _lib/require-mfa.mjs:45              — endereço em template string
+  Um endereço de carteira é pseudónimo, não anónimo: correlacionado com a cadeia
+  e com o cadastro de cotas, identifica a pessoa. Um log que diz "esta carteira
+  tem saldo X" é, na prática, um extrato. Severidade P3 porque os logs da Netlify
+  são de acesso restrito — mas é o achado que mais escala se algum dia forem
+  encaminhados para um agregador de terceiros.
+  Correção: mascarar (0xDa3a…e84e) numa função central, e nunca logar saldo
+  junto com identificador.
+
+5.3 ACHADO A-13 (P3) — logs do frontend chegam a produção
+  65 chamadas console.* em 21 arquivos de src/. vite.config.js não configura
+  drop_console/pure_funcs. Evidência: o bundle vivo
+  /assets/index-BWmReVcc.js contém 14 ocorrências de "console." e 2 de
+  "GUT-DEBUG".
+  Os dados expostos são do próprio utilizador (o seu endereço, o seu saldo), o
+  que limita o impacto, mas os logs [GUT-DEBUG] documentam gratuitamente a
+  superfície de API e os fluxos de autenticação para quem quiser atacá-la.
+
+5.4 ACHADO A-14 (P3) — /health revela versão e mapa de configuração
+  GET /health → node v24.18.0, PIX_PROVIDER=mercadopago, SIGNER_BACKEND=local-key,
+  e quais segredos estão configurados. Ajuda o defensor, mas também o atacante.
+  Correção: exigir token, ou reduzir a resposta pública a {ok:true}.
+
+5.5 NÃO AUDITADO
+  Logs do ORQUESTRADOR (PythonAnywhere, ~/ORQUESTRADOR/logs/) — inacessíveis
+  nesta sessão. É onde há maior probabilidade de PII em claro (e-mails e números
+  de WhatsApp de destinatários, por natureza dos scripts de envio). Deve ser o
+  PRIMEIRO alvo do MC de continuação.
+
+5.6 RECOMENDAÇÕES
+  R15. Criar _lib/mask.mjs (mascararEndereco / mascararEmail / mascararTelefone)
+       e aplicar nos ~25 pontos identificados (P3).
+  R16. Nunca logar identificador + saldo na mesma linha (P3).
+  R17. Adicionar esbuild.drop:["console","debugger"] ao vite.config.js de
+       produção, preservando console.error se desejado (P3).
+  R18. Auditar e purgar ~/ORQUESTRADOR/logs/ (bloqueado — próximo MC).
+  R19. Rever a retenção de logs da Netlify e do Sentry face à LGPD.
+
+
+################################################################################
+6. WEBHOOKS
+################################################################################
+
+6.1 INVENTÁRIO REAL vs PREVISTO
+  Mercado Pago (PIX) → EXISTE. webhook-mercadopago.mjs.
+  Twilio (WhatsApp)  → NÃO EXISTE receptor. Grep dedicado em netlify/functions/:
+                       zero ocorrências. O WhatsApp é apenas SAÍDA, pelo
+                       ORQUESTRADOR. Sem entrada, não há assinatura a validar.
+  SendGrid (e-mail)  → NÃO EXISTE receptor. Idem.
+  Conclusão: o briefing pressupunha 3 webhooks; a realidade é 1. Isso reduz a
+  superfície, mas cria uma pendência (6.5).
+
+6.2 ACHADO A-03 (P1) — HMAC do Mercado Pago em fail-open
+  _lib/mp-signature.mjs está bem escrito: parse do header ts/v1, manifest no
+  formato oficial, HMAC-SHA256, comparação em tempo constante sobre buffers hex.
+  O problema é a porta de entrada:
+    if (!secret) { ... return { ok: true, enforced: false } }
+  Sem MP_WEBHOOK_SECRET, a validação é PULADA e o webhook aceita qualquer
+  requisição. O interruptor MP_WEBHOOK_ENFORCE existe (MC59.2) mas é opt-in.
+  Indício de que continua em fail-open: o código dispara captureSecurityAlert
+  ("webhook_mp_fail_open") precisamente para sinalizar ao operador que o segredo
+  falta — e a memória do projeto regista essa pendência desde o MC39.17.
+  Mitigações que reduzem (mas não anulam) o risco: o status e o valor são
+  RE-CONSULTADOS na API do MP com o paymentId, e o crédito é idempotente por
+  pedidoId. Um atacante não inventa um pagamento; consegue, isso sim, forçar
+  processamento arbitrário e enumerar paymentIds válidos.
+  Correção: definir MP_WEBHOOK_SECRET (painel do MP) e MP_WEBHOOK_ENFORCE=true.
+  Ação do OPERADOR — o agente não manuseia segredos (R5).
+
+6.3 ACHADO A-07 (P2) — sem proteção anti-replay
+  O `ts` do header entra no manifest assinado, mas o seu FRESCOR nunca é
+  verificado. Não há a janela de 5 minutos que o briefing pede (secção 5.4), nem
+  registo de x-request-id já visto. Mesmo com o segredo configurado, uma
+  notificação legítima capturada pode ser reenviada indefinidamente.
+  Impacto real limitado pela idempotência por pedidoId, mas é gasto de quota da
+  API do MP e ruído de auditoria.
+  Correção: rejeitar se |agora − ts| > 300 s; opcionalmente memorizar
+  x-request-id por 24 h em Blob/Redis.
+
+6.4 ACHADO A-08 (P2) — a assinatura cobre a query, o processamento usa o body
+  A assinatura é calculada sobre o `data.id` da QUERY STRING:
+    validarAssinaturaMp(req, new URL(req.url).searchParams.get("data.id") || ...)
+  Mas extrairPaymentId dá PRECEDÊNCIA ao body:
+    let paymentId = bodyId || qpId;   (bodyId = body.data.id || body.resource || body.id)
+  Consequência: uma requisição assinada para o pagamento X, com o corpo alterado
+  para o pagamento Y, passa na verificação e processa Y. A assinatura não cobre
+  o valor efetivamente usado — falha de cobertura, não de criptografia.
+  Impacto contido (o crédito segue o external_reference devolvido pelo MP, logo
+  vai para o dono legítimo), mas invalida a garantia de integridade que a
+  assinatura deveria dar.
+  Correção: assinar/verificar o identificador que será REALMENTE processado, ou
+  exigir que query e body coincidam.
+
+6.5 PENDÊNCIA — SendGrid Event Webhook
+  Se algum dia forem ativados webhooks de bounce/entrega no painel SendGrid
+  (risco N1 já registado no projeto), não existe hoje endpoint que valide a
+  assinatura ECDSA X-Twilio-Email-Event-Webhook-Signature. Não criar o receptor
+  sem a validação.
+
+6.6 RECOMENDAÇÕES
+  R20. (P1, OPERADOR) Definir MP_WEBHOOK_SECRET e MP_WEBHOOK_ENFORCE=true.
+  R21. (P2) Verificar frescor do ts (janela de 5 min).
+  R22. (P2) Alinhar o escopo da assinatura com o payload processado.
+  R23. (P3) Registar x-request-id processados para anti-replay forte.
+  R24. (P3) Restringir por IP de origem do MP, se a lista for estável.
+
+
+################################################################################
+7. PLANO DE CORREÇÃO
+################################################################################
+
+────────────────────────── P0 — ANTES DE QUALQUER COISA ──────────────────────
+P0-1  Fechar /cotas GET com verificarUserSession + validarOwnerOuAdmin.       A-01
+      Manter público só ?acao=verificar-login. ?categoria= vira admin-only.
+      Arquivo: netlify/functions/cotas.mjs (handleGet).
+      Esforço: ~2 h (o padrão já existe em wallet.mjs — é replicar).
+      Bloqueante para: flip DATA_STORE_BACKEND=supabase.
+P0-2  Sair de local-key em mainnet: KMS/Biconomy + apagar a chave bruta.      A-02
+      Esforço: 1 dia + janela de operação on-chain. Requer o OPERADOR.
+
+────────────────────────── P1 — ESTA SEMANA ──────────────────────────────────
+P1-1  MP_WEBHOOK_SECRET + MP_WEBHOOK_ENFORCE=true.  OPERADOR.  ~30 min.       A-03
+P1-2  REVOKE EXECUTE de reservar_tarefas para PUBLIC/anon/authenticated.      A-04
+      Uma migração de 3 linhas. ~30 min. Fazer ANTES de adotar a fila.
+P1-3  debug-pedido fail-closed (ou remover).  ~30 min.                        A-05
+P1-4  Remover a EOA comprometida de admin-list; rotacionar ADMIN_TOKEN. ~1 h. A-06
+
+────────────────────────── P2 — ESTE MÊS ─────────────────────────────────────
+P2-1  Anti-replay no webhook MP (janela de 5 min).           ~2 h.            A-07
+P2-2  Alinhar escopo da assinatura MP com o payload usado.   ~2 h.            A-08
+P2-3  /admin-list GET admin-only.                            ~30 min.         A-09
+P2-4  validarCPF + validarEmail em _lib/validate.mjs.        ~3 h.            A-10
+P2-5  Remover mc302-aceitar / mc302-diagnostico (MC concluído).  ~30 min.     A-11
+      Justificativa: mc302-aceitar envia transação IRREVERSÍVEL. Está
+      fail-closed hoje (503), mas basta uma variável reaparecer para o reabrir.
+P2-6  Rate-limit nos ramos ?cnpj= e ?email= de cotas.        ~1 h.
+
+────────────────────────── P3 — BACKLOG ──────────────────────────────────────
+P3-1  _lib/mask.mjs + aplicar nos ~25 pontos de log.         ~4 h.            A-12
+P3-2  drop_console no build de produção.                     ~30 min.         A-13
+P3-3  /health com token, ou resposta pública mínima.         ~1 h.            A-14
+P3-4  SET search_path = '' nas 2 funções SQL.                ~15 min.         A-15
+P3-5  Teto de bytes em parseJsonBody.                        ~1 h.
+P3-6  FORCE ROW LEVEL SECURITY nas tabelas financeiras.      ~1 h.
+P3-7  Remover a política duplicada de fila_tarefas.          ~15 min.
+
+────────────────────────── MC DE CONTINUAÇÃO ─────────────────────────────────
+MC87-A  Auditar o ORQUESTRADOR (PythonAnywhere): logs, PII em claro, retenção,
+        credenciais nos scripts de envio. NÃO COBERTO por este MC (API fora do ar
+        em 3 tentativas).
+MC87-B  Reexecutar as provas da secção 2.3 e 4.2 IMEDIATAMENTE ANTES do flip
+        DATA_STORE_BACKEND=supabase. É o momento em que os achados A-01 e A-04
+        deixam de ser teóricos.
+
+RECURSOS
+  Agente/desenvolvedor: P0-1, P1-2, P1-3, P2-*, P3-* — ~5 dias úteis de trabalho.
+  Operador (exclusivo, R5): P0-2, P1-1, P1-4 — segredos, KMS, painéis.
+  Sem custo de infraestrutura adicional.
+
+PRAZO SUGERIDO
+  Semana 1: P0-1, P1-1, P1-2, P1-3, P1-4
+  Semana 2: P0-2 (janela on-chain) + P2-1..P2-6
+  Semana 3: P3-* + MC87-A
+  Gate: nenhum flip para DATA_STORE_BACKEND=supabase antes de P0-1 e P1-2.
+
+================================================================================
+NOTA METODOLÓGICA (R3/R6)
+Todo achado tem evidência: consulta SQL ao catálogo do Postgres, caminho
+arquivo:linha, ou resposta HTTP de produção capturada em 2026-07-22. As sondagens
+foram exclusivamente de leitura, contra a infraestrutura do próprio operador, sem
+escritas e sem custo. Nenhum segredo foi lido, transcrito ou armazenado; nenhum
+dado pessoal real aparece neste relatório (R4/R5). Nenhuma linha de código-fonte
+do DesafioGUT foi alterada (R1).
+================================================================================
