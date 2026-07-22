@@ -1,0 +1,304 @@
+================================================================================
+MC87 — CORREÇÃO DE SEGURANÇA · DesafioGUT
+Data: 2026-07-22 · MC de EXECUÇÃO (fecha os achados do MC86)
+Branch: feat/mc87-seguranca  (base: feat/mc73-correcao-deploy)
+Commits: c6ee96a (P0) · 8f341f7 (P1) · 0ec7d13 (P2/P3)
+Volume: 29 ficheiros, +1008 / −329 linhas
+Evidências detalhadas: Desktop/MC87-VALIDACAO.txt
+Baseline pré-correção: Desktop/MC87-BASELINE.txt
+================================================================================
+
+################################################################################
+1. RESUMO EXECUTIVO
+################################################################################
+
+Dos 15 achados do MC86, **13 estão fechados em código** e 2 dependem de ação
+exclusiva do operador (segredos e KMS — R5 proíbe o agente de os manusear).
+
+  P0 ....... 1 de 2 fechado    (o outro é migração para KMS: operador)
+  P1 ....... 3 de 4 fechados   (o outro é definir MP_WEBHOOK_SECRET: operador)
+              — mas o código já está fail-closed, ou seja, o default deixou de
+                ser inseguro mesmo antes de o operador agir
+  P2 ....... 5 de 5 fechados
+  P3 ....... 4 de 4 fechados
+
+Suíte: **209/209 verde** (baseline 191). Build de produção verde. A única
+correção JÁ ATIVA em produção é a migração SQL — o resto é código e entra com o
+deploy, que é manual e do operador.
+
+A prova mais forte deste MC é a da RPC do Supabase, porque foi feita ao vivo,
+contra produção, com a mesma chave anon que a explorava:
+
+  ANTES   POST /rest/v1/rpc/reservar_tarefas → HTTP 200
+  DEPOIS  POST /rest/v1/rpc/reservar_tarefas → HTTP 401 permission denied
+  Advisors de segurança do Supabase: 4 → 0
+
+Quatro itens do briefing foram entregues de forma diferente da literal, sempre
+para não partir funcionalidade ou não desfazer uma decisão informada anterior.
+Estão todos justificados na secção 4 e detalhados em MC87-VALIDACAO.txt (E7).
+
+################################################################################
+2. O QUE FOI CORRIGIDO
+################################################################################
+
+── P0-1 · /cotas GET sem autenticação (A-01) ─────────────────────────── FECHADO
+Quatro ramos devolviam o cadastro do lojista — CNPJ, e-mail e carteira — a
+qualquer pessoa, enquanto POST e DELETE já exigiam admin. O ramo ?categoria=
+listava TODAS as cotas sem sequer precisar de um identificador.
+
+Não foi corrigido com um 401 global: ?cnpj= (duplicidade no cadastro) e
+?acao=verificar-login são legitimamente pré-autenticação, e bloqueá-los partiria
+cadastro e login. O modelo aplicado é minimização de dados por ramo:
+
+  ?cliente_id=      user-session JWT + owner-or-admin      401 / 403
+  ?email=           exige sessão autenticada + rate-limit  401
+  ?cnpj=            só confirma duplicidade; contacto exige `empresa` a bater
+  ?categoria=       projeção pública sem cnpj/email
+  (sem parâmetro)   resumo sem cliente_ids
+  admin             continua a ver tudo, inalterado
+
+Matriz completa antes/depois em MC87-VALIDACAO.txt (E8), com 9 testes novos.
+
+── P0-2 · Mapa de configuração público no /health (A-14 + parte de A-02) ─ FECHADO
+O /health anónimo devolve agora apenas {ok, service, timestamp}. A versão do Node
+e o mapa de variáveis passaram para trás de autenticação admin.
+
+O campo CHAVE_BRUTA_EM_MAINNET foi PRESERVADO, não apagado — ver secção 4.1.
+
+── P1-3 · /debug-pedido aberto (A-05) ────────────────────────────────── FECHADO
+Era fail-open por desenho ("sem DEBUG_TOKEN responde sem auth, modo dev") e a
+variável nunca foi definida em produção — o próprio corpo denunciava, devolvendo
+"DEBUG_TOKEN_set": false. Agora é fail-CLOSED (503), com comparação de token em
+tempo constante — o padrão que o mc302-diagnostico já usava desde que nasceu.
+
+── P1-2 · Webhook do Mercado Pago em fail-open (A-03) ──────── CÓDIGO FECHADO
+O default foi invertido: sem MP_WEBHOOK_SECRET o webhook passa a REJEITAR em vez
+de aceitar tudo. A válvula de rollback mudou de lado — MP_WEBHOOK_ALLOW_UNSIGNED
+reabre explicitamente e continua a emitir alerta de segurança a cada requisição.
+
+Isto significa que o achado deixa de depender do operador para ficar seguro: o
+código já está fechado. O que o operador ainda tem de fazer é definir o segredo
+para que o webhook volte a FUNCIONAR — ver secção 3 e o aviso operacional.
+
+── P2-2 (A-08) · Assinatura cobria a query, processava o corpo ───────── FECHADO
+A assinatura é calculada sobre o data.id da QUERY, mas extrairPaymentId dava
+precedência ao BODY: uma requisição assinada para o pagamento X, com o corpo
+trocado para Y, passava e processava Y. Corpo divergente do assinado é agora
+rejeitado com alerta.
+
+── P1-3 · RPC reservar_tarefas (A-04 + A-15) ─────────────── FECHADO E ATIVO
+Era SECURITY DEFINER com EXECUTE para PUBLIC, portanto ignorava o RLS de
+fila_tarefas. Agora: SECURITY INVOKER, search_path fixo, EXECUTE só para
+service_role. A política duplicada da fila também foi removida. Prova viva na
+secção 1 e em MC87-VALIDACAO.txt (E4).
+
+  ⚠️ DRIFT DESCOBERTO AO CORRIGIR — a função em produção NÃO é a do repositório:
+
+                     repo (20260629)             produção (real)
+    assinatura       reservar_tarefas(p_limite)  reservar_tarefas(p_limit)
+    corpo            UPDATE → 'processing'       SELECT ... FOR UPDATE
+    status           pending/processing/done     pendente/processando/…
+    colunas extra    agendado_para, max_tentativas, ultimo_erro  (não existem)
+
+  A migração versionada nunca foi aplicada; foi aplicado à mão um schema
+  diferente. Consequência: `_lib/fila.mjs` chama a RPC com `p_limite`, que não
+  existe em produção; o erro cai no ramo `pareceTabelaAusente` e é reportado como
+  `inerte: true`. **A fila não está dormente — está silenciosamente partida.**
+  É pendência FUNCIONAL, não de segurança, e ficou deliberadamente fora do MC87.
+  Por isso a migração de correção é cirúrgica: preserva o corpo e a assinatura que
+  estão de facto em produção (aplicar a do repo falharia, as colunas não existem)
+  e muda apenas a postura de segurança.
+
+── P1-4 · EOA comprometida ainda admin (A-06) ─────────── MECANISMO ENTREGUE
+A coordenação deixou de ser constante de código e passou a ser env-configurável
+(COORDENACAO_ADDRESS), com alerta de segurança recorrente enquanto a EOA legada
+estiver em uso. A remoção direta não era possível sem trancar o operador fora —
+ver secção 4.2. Descoberta colateral: verificado on-chain, o contrato ativo da
+mainnet devolve 0xFea436…1E67 em coordenacao(); a constante hardcoded estava
+DESATUALIZADA além de comprometida.
+
+── P2-4 · /admin-list público (A-09) ─────────────────────────────────── FECHADO
+Revelava sem autenticação quais carteiras controlam a plataforma. Bloquear tudo
+seria circular — o hook useAdmin consulta este endpoint justamente para saber se
+o utilizador é admin. O contrato foi separado: ?endereco= responde apenas sobre
+aquele endereço (oráculo de um de cada vez, sob rate-limit); a lista completa
+exige admin.
+
+── P2-2 · pagador.cpf sem validação (A-10) ───────────────────────────── FECHADO
+Era aceite como "qualquer string até 32 caracteres". Agora validarCPF (com
+dígitos verificadores, rejeitando sequências repetidas) e validarEmail. Ambos
+continuam OPCIONAIS — ausentes caem no fallback de env, como antes; só o que vem
+tem de ser válido.
+
+── P2-5 · Endpoints mc302-* vivos (A-11) ─────────────────────────────── FECHADO
+Respondem 410 Gone. O mc302-aceitar enviava transação ON-CHAIN IRREVERSÍVEL por
+uma via superada três vezes (MC52.1 matou o bundler Biconomy, MC56 redeployou com
+coordenação em EOA, MC60 pôs a mainnet em produção). A guarda tripla nunca falhou,
+mas dependia inteiramente de uma variável de ambiente continuar ausente — e
+variáveis de ambiente voltam. Ficheiros mantidos para 410 explícito em vez de 404
+ambíguo; histórico no git.
+
+── P3-1 · Carteira e saldo em texto claro nos logs (A-12) ────────────── FECHADO
+mascararEndereco / mascararEmail / mascararDoc aplicados nos pontos que
+emparelhavam carteira com saldo (saldoRs, wallet), com pedido e quantidade
+(credito, worker-credito) e no log de conversão do referral, que desenhava o
+grafo social (indicador → indicado). A máscara preserva a correlação entre linhas
+sem deixar um identificador reutilizável. O payload de DADOS ficou intacto — só
+os logs mudaram.
+
+── P3-2 · console.* no bundle de produção (A-13) ─────────────────────── FECHADO
+esbuild.pure remove console.log/info/debug/trace. warn e error FICAM: alimentam o
+Sentry e os relatos de suporte. Residual conhecido em MC87-VALIDACAO.txt (L4).
+
+── P3-4 · search_path mutável (A-15) ─────────────────── FECHADO E ATIVO
+As duas funções passaram a ter SET search_path = ''. Advisors: 4 → 0.
+
+################################################################################
+3. O QUE FICA COM O OPERADOR (R5 — o agente não manuseia segredos)
+################################################################################
+
+São TRÊS variáveis de ambiente no painel da Netlify. Nenhuma exige deploy.
+
+  1) MP_WEBHOOK_SECRET = <segredo do painel do Mercado Pago>          [P1-1]
+
+     ⚠️ AVISO OPERACIONAL — LER ANTES DO DEPLOY
+     O código agora é fail-closed. Depois de fazer deploy desta branch e ANTES de
+     definir este segredo, o webhook do MP responderá 401 e o crédito REATIVO
+     deixa de acontecer. O caminho de fallback (confirmar-pagamento por polling)
+     continua a funcionar, e o histórico do projeto regista que todos os créditos
+     em R$ vieram sempre desse caminho — mas a ordem certa é: definir o segredo
+     PRIMEIRO, fazer deploy DEPOIS. Se algo correr mal,
+     MP_WEBHOOK_ALLOW_UNSIGNED=true reabre sem redeploy.
+
+  2) COORDENACAO_ADDRESS = 0xFea436F74059f885Ea50d48ABBE21ef6665D1E67 [P1-4]
+     Verificado on-chain como a coordenação do contrato ativo. Isto retira o poder
+     de admin à EOA comprometida. Confirmar antes que consegue assinar EIP-191 com
+     essa carteira no painel admin — é ela que passa a ser a única admin.
+
+  3) Migrar a assinatura para KMS e apagar COORDENACAO_PRIVATE_KEY       [P0-2]
+     O único achado do MC86 que continua totalmente em aberto. Enquanto
+     SIGNER_BACKEND=local-key em mainnet, toda a custódia da coordenação depende
+     de uma variável de ambiente. O alarme continua disponível em
+     GET /health autenticado como admin → env.CHAVE_BRUTA_EM_MAINNET.
+
+  Opcional, depois de confirmar o comportamento de retentativa do MP:
+     MP_WEBHOOK_TS_JANELA_SEG=300   (anti-replay; ver secção 4.3)
+
+################################################################################
+4. ONDE ME AFASTEI DO BRIEFING — E PORQUÊ
+################################################################################
+
+4.1 · "Remover CHAVE_BRUTA_EM_MAINNET do corpo do /health" (item 1.2)
+      Não removi. O campo NÃO expõe a chave: é um booleano ("ALERT"/"ok") que
+      denuncia que a chave bruta existe no ambiente de mainnet. Apagá-lo silenciaria
+      o alarme e deixaria a condição exatamente onde estava — trocaríamos um
+      problema real por um problema invisível. O efeito que o item procura
+      (nenhum mapa de configuração exposto publicamente) foi entregue na mesma:
+      o /health anónimo devolve agora só {ok, service, timestamp}. O alarme
+      continua a existir, para quem tem credencial de admin.
+
+4.2 · "Remover a EOA queimada da lista de admin" (item 2.4)
+      Entregue como rotação por variável de ambiente. Em produção o Blob
+      admin-list está vazio (evidência do MC86: GET /admin-list devolvia apenas a
+      coordenação), portanto a constante hardcoded é a ÚNICA admin. Removê-la ou
+      trocá-la às cegas trancaria o operador fora do painel, sem recuperação a não
+      ser um novo deploy — e o painel é onde se gerem admins. Entreguei o
+      mecanismo com alerta; a rotação é uma variável, sem deploy.
+      Nota: o endereço citado no briefing (0x1394492e…) não corresponde a nada no
+      sistema. A EOA em causa é 0xDa3a83…e84E.
+
+4.3 · "Anti-replay com limite de 5 minutos" (itens 2.2 e 3.1)
+      Implementado, testado nos dois estados, mas DESLIGADO por omissão.
+      Existe decisão anterior registada do operador contra esta janela
+      (cabeçalho do MC59.2, em _tests/mc592-d1-webhook-enforce.test.mjs), com
+      motivo concreto: «o MP reenvia com o ts ORIGINAL por horas; a idempotência
+      por pedidoId já cobre o replay». Se isso se confirmar, uma janela fixa
+      rejeitaria RETENTATIVAS LEGÍTIMAS do Mercado Pago e partiria o crédito
+      automático. Ligar às cegas contradiria uma decisão informada e arriscaria
+      receita, por um ganho que a idempotência já cobre em boa medida.
+
+4.4 · "/cotas GET → 401 se o pedido for público" (item 1.1)
+      Entregue como minimização de dados por ramo. Um 401 global partiria o
+      cadastro (?cnpj= é consultado por quem ainda não tem carteira) e o login
+      corporativo. Ver a matriz em MC87-VALIDACAO.txt (E8).
+
+################################################################################
+5. GATE DO MC86 — ESTADO
+################################################################################
+
+O MC86 estabeleceu: «não flipar DATA_STORE_BACKEND=supabase antes de fechar
+P0-1 (/cotas GET) e P1-2 (reservar_tarefas)».
+
+  P1-2 reservar_tarefas ....... FECHADO E ATIVO em produção (prova viva)
+  P0-1 /cotas GET ............. FECHADO EM CÓDIGO, aguarda deploy
+
+  → O gate LEVANTA quando esta branch estiver em produção e a reverificação da
+    secção 7 passar. Antes disso, mantém-se: o Supabase já tem 7 cotas com CNPJ e
+    e-mail reais, e o flip com o código antigo publicaria esses dados.
+
+################################################################################
+6. PENDÊNCIAS ABERTAS
+################################################################################
+
+  1. [P0, operador]  Migração para KMS + apagar COORDENACAO_PRIVATE_KEY.
+  2. [operador]      Definir MP_WEBHOOK_SECRET (ordem importa — secção 3).
+  3. [operador]      Definir COORDENACAO_ADDRESS.
+  4. [funcional]     Fila de tarefas silenciosamente partida (drift de schema
+                     descrito na secção 2). Reconciliar repo e produção antes de
+                     adotar a fila. NÃO é problema de segurança.
+  5. [MC87-A]        Auditar o ORQUESTRADOR no PythonAnywhere — nunca avaliado
+                     (API inacessível no MC86). É onde há maior probabilidade de
+                     PII em claro: e-mails e números de WhatsApp de destinatários.
+  6. [P3, residual]  1 console.log sobrevive no bundle (ReferralTracker) por
+                     estar numa expressão de sequência.
+  7. [deploy]        Esta branch parte de feat/mc73-correcao-deploy, que NÃO é a
+                     linhagem em produção (drift conhecido: produção corre a
+                     linhagem MAINNET). O operador tem de decidir a estratégia de
+                     integração antes do deploy — o mesmo cuidado do MC73.
+
+################################################################################
+7. REVERIFICAÇÃO PÓS-DEPLOY (copiar e colar)
+################################################################################
+
+B="https://silly-stardust-ca71bc.netlify.app/.netlify/functions"
+
+# P0-2 — o /health público não pode ter "env" nem "node"
+curl -s "$B/health"
+
+# P1-3 — debug-pedido tem de responder 503
+curl -s -o /dev/null -w "%{http_code}\n" "$B/debug-pedido?id=x"
+
+# P0-1 — todos estes têm de ser 401 (eram 200/404 com dados)
+curl -s -o /dev/null -w "%{http_code}\n" "$B/cotas?cliente_id=0x0000000000000000000000000000000000000001"
+curl -s -o /dev/null -w "%{http_code}\n" "$B/cotas?email=teste@exemplo.com"
+
+# P0-1 — sem cnpj/email no corpo, e sem cliente_ids no resumo
+curl -s "$B/cotas?categoria=ouro"
+curl -s "$B/cotas"
+
+# P2-4 — lista completa exige admin (401); auto-verificação continua pública
+curl -s -o /dev/null -w "%{http_code}\n" "$B/admin-list"
+curl -s "$B/admin-list?endereco=0x0000000000000000000000000000000000000001"
+
+# P2-5 — 410 nos dois
+curl -s -o /dev/null -w "%{http_code}\n" "$B/mc302-diagnostico"
+
+# Regressão de fluxo: estes têm de continuar a responder normalmente
+curl -s -o /dev/null -w "%{http_code}\n" "$B/recursos-app"        # 200
+curl -s -o /dev/null -w "%{http_code}\n" "$B/edicoes"             # 200
+curl -s -o /dev/null -w "%{http_code}\n" "$B/lances-flash?edicaoId=R-1"  # 200
+
+Depois de definir COORDENACAO_ADDRESS, confirmar que o painel admin ainda deixa
+entrar com a carteira nova — é a verificação que evita o lockout.
+
+================================================================================
+NOTA METODOLÓGICA (R3/R6)
+Cada correção tem evidência: teste de regressão nomeado, resposta HTTP capturada,
+consulta ao catálogo do Postgres ou eth_call. As alterações estão em três commits
+separados por prioridade. Nenhum segredo foi lido, transcrito ou armazenado; a
+única credencial usada nas provas foi a chave anon do Supabase, que é pública por
+desenho e não aparece neste relatório (R4/R5). Nenhum dado pessoal real consta
+aqui. A suíte passou de 191 para 209 casos, sem nenhuma falha e sem nenhum teste
+silenciado — os dois casos alterados foram reescritos com a inversão de contrato
+documentada.
+================================================================================

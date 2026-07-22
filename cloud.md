@@ -2884,3 +2884,72 @@ foi criado, e que ninguém voltou para atualizar. Ao introduzir um guard novo, a
 adotou vale mais do que verificar quem adotou. O mesmo vale para endpoints de diagnóstico: `debug-pedido`
 foi escrito fail-open "modo dev" e nunca foi reavaliado, enquanto `mc302-diagnostico`, escrito depois,
 já nasceu fail-closed.
+
+---
+
+## MC87 — Correção de Segurança (execução dos achados do MC86)
+
+**Natureza:** MC de execução. Três commits separados por prioridade:
+`c6ee96a` (P0) · `8f341f7` (P1) · `0ec7d13` (P2/P3) — 29 ficheiros, +1008/−329.
+
+**Resultado:** dos 15 achados do MC86, **13 fechados em código**; 2 dependem de ação exclusiva do
+operador (segredos/KMS — R5). Suíte **209/209** (baseline 191), build verde.
+
+**A prova mais forte é ao vivo, contra produção, com a mesma chave anon que explorava o problema:**
+`POST /rest/v1/rpc/reservar_tarefas` passou de **HTTP 200 → HTTP 401 permission denied**. A RPC era
+`SECURITY DEFINER` com `EXECUTE` para PUBLIC e ignorava o RLS de `fila_tarefas`; agora é
+`SECURITY INVOKER` + `search_path` fixo + `EXECUTE` só para `service_role`. **Advisors do Supabase: 4 → 0.**
+É a única correção já ativa — o resto é código e entra com o deploy, que é manual e do operador.
+
+**P0-1 `/cotas` GET** — fechado sem 401 cego, que partiria cadastro e login (`?cnpj=` é consultado por
+quem ainda não tem carteira). Minimização por ramo: `?cliente_id=` exige JWT + owner-check (401/403) ·
+`?email=` exige sessão + rate-limit · `?cnpj=` só confirma duplicidade, e o contacto exige que `empresa`
+bata (mesma barreira do `verificar-login` que já existia) · `?categoria=` devolve projeção pública sem
+cnpj/email · o resumo perde os `cliente_ids`. Admin continua a ver tudo. 9 testes novos cobrem a matriz.
+
+**P1** — `debug-pedido` passou a fail-closed (503); o webhook do MP teve o **default invertido** para
+fail-closed, com `MP_WEBHOOK_ALLOW_UNSIGNED` como válvula de rollback explícita; a assinatura do MP
+deixou de cobrir a query enquanto se processava o body (corpo divergente → 401).
+
+**P2/P3** — `validarCPF`/`validarEmail` com dígitos verificadores · `mc302-*` respondem **410 Gone**
+(o `mc302-aceitar` enviava transação **irreversível** por uma via superada três vezes) · `/admin-list`
+separou o contrato (`?endereco=` público, lista completa admin-only) · logs mascarados onde
+emparelhavam carteira com saldo, pedido ou grafo social do referral · `console.log/info/debug` fora do
+bundle (`warn`/`error` ficam, alimentam o Sentry).
+
+**⚠️ Drift descoberto ao corrigir a fila:** a função em produção **não é a de**
+`20260629_fila_tarefas.sql` — assinatura `p_limit` vs `p_limite`, corpo `SELECT` vs `UPDATE`, e o schema
+não tem `agendado_para`/`max_tentativas`. A migração versionada nunca foi aplicada; aplicaram outra à
+mão. `_lib/fila.mjs` chama com `p_limite`, o erro cai no ramo `pareceTabelaAusente` e é reportado como
+`inerte: true` — **a fila não está dormente, está silenciosamente partida.** Pendência funcional, fora
+do âmbito deste MC; por isso a migração de correção é cirúrgica e preserva o que está de facto em produção.
+
+**Quatro desvios deliberados do briefing**, todos para não partir funcionalidade nem desfazer decisão
+informada anterior: (1) `CHAVE_BRUTA_EM_MAINNET` **não** foi removido do `/health` — é um booleano de
+alarme, não a chave; apagá-lo silenciaria o alarme sem corrigir nada, então foi movido para trás de auth
+admin (o `/health` público agora é só `{ok, service, timestamp}`); (2) a EOA comprometida **não** foi
+removida à força — em produção o Blob `admin-list` está vazio, logo a constante é a **única** admin e
+trocá-la às cegas trancaria o operador fora sem recuperação; virou `COORDENACAO_ADDRESS` com alerta
+recorrente; (3) o anti-replay foi implementado mas **desligado por omissão**, porque o MC59.2 regista
+decisão do operador contra ele com motivo concreto (o MP reenvia com o `ts` original por horas → uma
+janela fixa rejeitaria retentativas legítimas); (4) o endereço citado no briefing para a EOA
+(`0x1394492e…`) não corresponde a nada no sistema — a EOA em causa é `0xDa3a83…e84E`.
+
+**Descoberta colateral:** verificado on-chain, `coordenacao()` do contrato ativo devolve
+`0xFea436…1E67`. A constante hardcoded no backend estava **desatualizada além de comprometida**.
+
+**Gate do MC86:** `P1-2` fechado e ativo; `P0-1` fechado em código. O gate sobre
+`DATA_STORE_BACKEND=supabase` **levanta quando esta branch estiver em produção** e a reverificação passar.
+
+**Operador (3 env vars, sem deploy):** `MP_WEBHOOK_SECRET` (⚠️ **definir ANTES do deploy** — o código
+já é fail-closed, e deployar sem o segredo faz o webhook responder 401) · `COORDENACAO_ADDRESS` ·
+migração para KMS + apagar `COORDENACAO_PRIVATE_KEY` (único achado ainda totalmente aberto).
+
+**Relatórios:** `Desktop\MC87-RELATORIO.txt` · `Desktop\MC87-VALIDACAO.txt` · `Desktop\MC87-BASELINE.txt` ·
+`desafio-gut/docs/MC87-seguranca-correcao.txt`.
+
+**Lição:** endurecer um endpoint é a parte fácil; a parte difícil é descobrir quem depende dele **sem
+credencial**. `/cotas` e `/admin-list` eram ambos consumidos em fluxos pré-autenticação — cadastro,
+login e o próprio gate que decide se o utilizador é admin — e nos dois casos a resposta certa não era
+bloquear, era **devolver menos**. Um 401 cego teria passado nos testes de segurança e partido o produto.
+Antes de fechar uma porta, vale mais listar quem entra por ela do que confirmar que ela fecha.
