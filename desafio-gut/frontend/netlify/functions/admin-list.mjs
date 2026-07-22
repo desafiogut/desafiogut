@@ -1,10 +1,11 @@
 // Admin List — lista de endereços com privilégio de admin (REQ-20).
 //
-// GET /.netlify/functions/admin-list
-//   → retorna { admins: [endereco, ...], coordenacao: "0x..." }
-//   Endpoint público (a lista de admins não é segredo — operações
-//   de admin continuam gated por checagem de assinatura via Privy +
-//   match com a lista).
+// GET /.netlify/functions/admin-list                          [ADMIN — MC87]
+//   → { admins: [endereco, ...], coordenacao: "0x..." }
+//
+// GET /.netlify/functions/admin-list?endereco=0x...           [público]
+//   → { endereco, isAdmin, role, fonte }  — só sobre o endereço perguntado.
+//   Serve o gate de UI (hooks/useAdmin.js) sem enumerar a lista.
 //
 // POST /.netlify/functions/admin-list
 //   Body: { acao: "adicionar"|"remover", endereco }
@@ -20,9 +21,10 @@ import {
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";
 import { getRole } from "./_lib/rbac.mjs";
+// MC87 (P1-4) — fonte única da coordenação (env-configurável em _lib/admin-helpers).
+import { resolverCoordenacao } from "./_lib/admin-helpers.mjs";
 
 const BLOB_ADMINS = "admin-list";
-const COORDENACAO = "0xDa3a83A24b25aa71e1a9b5A74503fFA93487e84E".toLowerCase();
 
 function abrirStore(name) {
   try { return getStore({ name, consistency: "strong" }); }
@@ -49,13 +51,20 @@ async function salvarLista(admins) {
   await store.setJSON("admins", { admins, atualizadoEm: new Date().toISOString() });
 }
 
+// MC87 (P2-4) — o GET devolvia, sem autenticação, quais carteiras controlam a
+// plataforma. Isso transforma um alvo difuso num alvo NOMEADO (phishing dirigido,
+// engenharia social, vigilância on-chain) — e o endereço exposto é justamente a
+// EOA cuja chave foi comprometida.
+//
+// Bloquear o GET inteiro não serve: `useAdmin` consulta ?endereco= para decidir se
+// mostra a entrada do painel, e exigir credencial de admin para descobrir que se é
+// admin é circular. Por isso o contrato foi SEPARADO:
+//   ?endereco=0x…  → público, mas responde só sobre AQUELE endereço (sem a lista)
+//   sem parâmetro  → lista completa, admin-only
 async function handleGet(req) {
-  const admins = await carregarLista();
-  // Coordenação sempre incluída
-  const todos = Array.from(new Set([COORDENACAO, ...admins]));
-  // Opcional: ?endereco=0x... → também devolve o papel RBAC daquele endereço.
   const url = new URL(req.url);
   const enderecoQuery = url.searchParams.get("endereco");
+
   if (enderecoQuery) {
     let enderecoLower;
     try { enderecoLower = validarEndereco(enderecoQuery); }
@@ -63,10 +72,25 @@ async function handleGet(req) {
       if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
       throw err;
     }
+    const admins = await carregarLista();
+    const todos  = Array.from(new Set([resolverCoordenacao(), ...admins]));
     const { role, fonte } = await getRole(enderecoLower);
-    return jsonResponse({ admins: todos, coordenacao: COORDENACAO, role, fonte, endereco: enderecoLower });
+    // Oráculo de UM endereço de cada vez, em vez de enumeração — e sob rate-limit.
+    return jsonResponse({
+      endereco: enderecoLower,
+      isAdmin:  todos.includes(enderecoLower),
+      role,
+      fonte,
+    });
   }
-  return jsonResponse({ admins: todos, coordenacao: COORDENACAO });
+
+  const negado = await guardAdmin(req);
+  if (negado) return negado;
+
+  const admins = await carregarLista();
+  const coordenacao = resolverCoordenacao();
+  const todos = Array.from(new Set([coordenacao, ...admins]));
+  return jsonResponse({ admins: todos, coordenacao });
 }
 
 async function handlePost(req) {
@@ -90,7 +114,7 @@ async function handlePost(req) {
   if (body.acao !== "adicionar" && body.acao !== "remover") {
     return jsonError(400, "acao_invalida", 'acao deve ser "adicionar" ou "remover"');
   }
-  if (endereco === COORDENACAO && body.acao === "remover") {
+  if (endereco === resolverCoordenacao() && body.acao === "remover") {
     return jsonError(400, "coordenacao_nao_removivel", "a coordenação é admin permanente e não pode ser removida");
   }
 
@@ -102,7 +126,7 @@ async function handlePost(req) {
     nova = atual.filter((e) => e !== endereco);
   }
   await salvarLista(nova);
-  return jsonResponse({ ok: true, acao: body.acao, endereco, admins: nova, coordenacao: COORDENACAO });
+  return jsonResponse({ ok: true, acao: body.acao, endereco, admins: nova, coordenacao: resolverCoordenacao() });
 }
 
 export default async (req) => {

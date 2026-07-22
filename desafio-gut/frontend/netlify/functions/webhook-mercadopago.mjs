@@ -74,19 +74,20 @@ export default async (req) => {
     return jsonResponse({ ok: true, hint: "use POST (MP envia notifications via POST)" });
   }
 
-  // B-P1-1 — valida HMAC x-signature. O manifest usa `data.id` da query.
-  // Fail-open enquanto MP_WEBHOOK_SECRET não estiver configurado.
+  // B-P1-1 — valida HMAC x-signature. O manifest do MP usa `data.id` da QUERY.
+  // MC87 (P1-2): fail-CLOSED por omissão (ver _lib/mp-signature.mjs).
   const dataIdQuery = new URL(req.url).searchParams.get("data.id")
     || new URL(req.url).searchParams.get("id");
   const sig = validarAssinaturaMp(req, dataIdQuery);
   if (!sig.ok) {
     console.warn("[webhook-mp] assinatura rejeitada", { motivo: sig.motivo });
+    captureSecurityAlert("webhook_mp_rejeitado", { motivo: sig.motivo }).catch(() => {});
     return jsonError(401, "assinatura_invalida", "x-signature ausente ou inválida");
   }
   if (!sig.enforced) {
-    // MC59.2 (D-1): fail-open não é mais silencioso — vira sinal de segurança para
-    // o operador setar MP_WEBHOOK_SECRET (e, se quiser, MP_WEBHOOK_ENFORCE=true).
-    console.warn("[webhook-mp] HMAC NÃO aplicado (MP_WEBHOOK_SECRET ausente) — fail-open");
+    // Só se chega aqui com MP_WEBHOOK_ALLOW_UNSIGNED=true — válvula explícita de
+    // rollback. Continua ruidosa de propósito.
+    console.warn("[webhook-mp] HMAC NÃO aplicado (MP_WEBHOOK_ALLOW_UNSIGNED) — fail-open explícito");
     captureSecurityAlert("webhook_mp_fail_open", { motivo: sig.motivo }).catch(() => {});
   }
 
@@ -97,6 +98,22 @@ export default async (req) => {
   } catch (err) {
     console.warn("[webhook-mp] parse falhou:", err?.message);
     return jsonResponse({ ok: true, ignored: "parse_falhou" });
+  }
+
+  // MC87 (P2-2) — cobertura da assinatura. A assinatura é calculada sobre o
+  // `data.id` da QUERY, mas `extrairPaymentId` dá precedência ao BODY. Uma
+  // requisição assinada para o pagamento X, com o corpo trocado para Y, passava
+  // na verificação e processava Y — a assinatura não cobria o valor efetivamente
+  // usado. Agora, quando ambos existem e divergem, rejeitamos.
+  if (sig.enforced && dataIdQuery && paymentId
+      && String(paymentId).toLowerCase() !== String(dataIdQuery).toLowerCase()) {
+    console.warn("[webhook-mp] divergência body/query no paymentId — rejeitado", {
+      queryId: dataIdQuery, bodyId: paymentId,
+    });
+    captureSecurityAlert("webhook_mp_id_divergente", {
+      queryId: String(dataIdQuery), bodyId: String(paymentId),
+    }).catch(() => {});
+    return jsonError(401, "assinatura_invalida", "identificador do corpo não corresponde ao assinado");
   }
 
   // MP envia outros tipos de notification (merchant_order, chargebacks, etc.).

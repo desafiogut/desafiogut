@@ -383,9 +383,12 @@ function TabAdmins({ chamarAdmin, onLoginNeeded }) {
   const [novo, setNovo]     = useState("");
   const [msg, setMsg]       = useState("");
 
+  // MC87 (P2-4) — a lista completa passou a ser admin-only.
   async function carregar() {
+    if (!chamarAdmin) { onLoginNeeded(); return; }
     try {
-      const { data } = await apiGet("admin-list");
+      const resp = await chamarAdmin("/.netlify/functions/admin-list");
+      const data = await resp.json().catch(() => null);
       setAdmins(data?.admins || []);
       setCoord(data?.coordenacao || null);
     } catch {}

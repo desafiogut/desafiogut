@@ -60,9 +60,15 @@ export function useAdmin(endereco) {
     try {
       const { ok, status, data } = await apiGet(`admin-list?endereco=${encodeURIComponent(enderecoLower)}`);
       if (!ok) throw new Error(`HTTP ${status}`);
+      // MC87 (P2-4) — o ramo ?endereco= deixou de devolver a lista de admins (era
+      // reconhecimento gratuito para um atacante). Passa a devolver o booleano
+      // `isAdmin` sobre o endereço perguntado. O fallback para `data.admins`
+      // mantém compatibilidade caso o frontend rode contra um backend antigo.
       const admins  = Array.isArray(data?.admins) ? data.admins.map((a) => String(a).toLowerCase()) : [];
       const coord   = (data?.coordenacao || "").toLowerCase() || null;
-      const isAdmin = admins.includes(enderecoLower);
+      const isAdmin = typeof data?.isAdmin === "boolean"
+        ? data.isAdmin
+        : admins.includes(enderecoLower);
       const role    = data?.role || (isAdmin ? "admin" : "user");
       gravarCache({ endereco: enderecoLower, isAdmin, role, admins, coordenacao: coord });
       setEstado({ isAdmin, role, loading: false, error: null, admins, coordenacao: coord });

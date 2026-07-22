@@ -9,10 +9,19 @@
 // Read-only — não credita nem altera nada. Não expõe a PRIVATE_KEY (só lê
 // blobs já existentes; metadata.endereco é público no contrato).
 //
-// Token de acesso: para evitar varredura externa, exige header
-// `x-debug-token: <DEBUG_TOKEN>` se a env var DEBUG_TOKEN estiver configurada.
-// Sem DEBUG_TOKEN no env, o endpoint responde sem auth (modo dev).
+// Token de acesso: exige header `x-debug-token: <DEBUG_TOKEN>`.
+//
+// MC87 (P1-3) — este endpoint era FAIL-OPEN: "sem DEBUG_TOKEN no env responde sem
+// auth (modo dev)". Em produção a variável nunca foi definida, portanto o
+// diagnóstico esteve aberto à internet — o próprio corpo denunciava, devolvendo
+// "DEBUG_TOKEN_set": false junto com o mapa de configuração e, dado um pedidoId,
+// o endereço/quantidade/valor do pedido de terceiros.
+//
+// Agora é FAIL-CLOSED, o padrão que mc302-diagnostico.mjs já usava: sem
+// DEBUG_TOKEN configurado o endpoint responde 503 e não lê blob nenhum. A
+// comparação do token é em tempo constante.
 
+import { createHash, timingSafeEqual } from "node:crypto";
 import { getStore } from "@netlify/blobs";
 import { jsonResponse, jsonError } from "./_lib/validate.mjs";
 import { backendAssinatura } from "./_lib/signer.mjs";
@@ -27,15 +36,24 @@ function abrirStore(name) {
   }
 }
 
-export default async (req) => {
-  // Auth opcional via DEBUG_TOKEN
-  const tokenEsperado = process.env.DEBUG_TOKEN;
-  if (tokenEsperado) {
-    const tokenRecebido = req.headers.get("x-debug-token");
-    if (tokenRecebido !== tokenEsperado) {
-      return jsonError(401, "auth_invalido", "envie x-debug-token");
-    }
+// MC87 (P1-3) — comparação em tempo constante (SHA-256 de ambos → buffers de
+// igual comprimento, sem fuga por timing nem por tamanho).
+function verificarDebugToken(fornecido) {
+  const esperado = process.env.DEBUG_TOKEN;
+  if (!esperado) {
+    return jsonError(503, "config_ausente", "DEBUG_TOKEN não configurado — endpoint desativado");
   }
+  if (!fornecido) return jsonError(401, "token_ausente", "header x-debug-token em falta");
+  const a = createHash("sha256").update(String(fornecido)).digest();
+  const b = createHash("sha256").update(String(esperado)).digest();
+  if (!timingSafeEqual(a, b)) return jsonError(401, "token_invalido", "token inválido");
+  return null;
+}
+
+export default async (req) => {
+  // Fail-CLOSED: sem DEBUG_TOKEN o endpoint não existe, e nada é lido.
+  const negado = verificarDebugToken(req.headers.get("x-debug-token"));
+  if (negado) return negado;
 
   const url = new URL(req.url);
   const id  = url.searchParams.get("id");

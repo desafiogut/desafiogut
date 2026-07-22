@@ -26,6 +26,7 @@ const SAVED_ENFORCE = process.env.MP_WEBHOOK_ENFORCE;
 afterEach(() => {
   if (SAVED_SECRET === undefined) delete process.env.MP_WEBHOOK_SECRET; else process.env.MP_WEBHOOK_SECRET = SAVED_SECRET;
   if (SAVED_ENFORCE === undefined) delete process.env.MP_WEBHOOK_ENFORCE; else process.env.MP_WEBHOOK_ENFORCE = SAVED_ENFORCE;
+  delete process.env.MP_WEBHOOK_ALLOW_UNSIGNED; // MC87 — não vazar a válvula entre casos
 });
 
 // ── NOVO (RED → GREEN) ───────────────────────────────────────────────────────
@@ -47,9 +48,13 @@ test("D-1: MP_WEBHOOK_ENFORCE aceita variantes (1/on/yes)", () => {
 });
 
 // ── REGRESSÃO (deve permanecer GREEN) ────────────────────────────────────────
-test("D-1(reg): segredo ausente SEM enforce → fail-open (ok=true, enforced=false)", () => {
+// MC87 (P1-2) — a premissa deste caso caiu: o fail-open deixou de ser o default.
+// A capacidade que o MC59.2 queria preservar (poder reabrir sem redeploy) mudou
+// de interruptor: agora é MP_WEBHOOK_ALLOW_UNSIGNED, e é opt-in em vez de opt-out.
+test("MC87(ex-D-1): segredo ausente + ALLOW_UNSIGNED → fail-open explícito", () => {
   delete process.env.MP_WEBHOOK_SECRET;
   delete process.env.MP_WEBHOOK_ENFORCE;
+  process.env.MP_WEBHOOK_ALLOW_UNSIGNED = "true";
   const r = validarAssinaturaMp(reqCom({}), DATA_ID);
   assert.equal(r.ok, true);
   assert.equal(r.enforced, false);
