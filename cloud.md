@@ -2953,3 +2953,42 @@ credencial**. `/cotas` e `/admin-list` eram ambos consumidos em fluxos pré-aute
 login e o próprio gate que decide se o utilizador é admin — e nos dois casos a resposta certa não era
 bloquear, era **devolver menos**. Um 401 cego teria passado nos testes de segurança e partido o produto.
 Antes de fechar uma porta, vale mais listar quem entra por ela do que confirmar que ela fecha.
+
+---
+
+## MC89 — Relatório Final da Jornada (consolidação MC15 → MC88)
+
+**Data:** 2026-07-23 · **Tipo:** documentação e consolidação · **R1:** zero alteração de código-fonte.
+
+Síntese de **193 documentos** de Mega Comando: os 103 relatórios da raiz do Desktop mais **90
+documentos recuperados da Lixeira** — que guardava a única cópia de toda a fase inicial do projeto
+(MC15 → MC45), incluindo a unificação do vidro, a blindagem anti-bot dos lances, o isolamento da
+chave mestra e a migração completa para Supabase.
+
+**Estado consolidado.** Sistema em produção na Ethereum mainnet (MC60) com coordenação por EOA e
+assinatura `local-key`; Supabase ativo desde o MC33; performance do WebView em 59,6 fps com LCP de
+748 ms e 360,5 KB de JS no gate; AAB assinado pronto; automação de divulgação com WhatsApp concluído
+(198/198) e e-mail em curso (400/1623); 13 dos 15 achados de segurança fechados, suíte 209/209.
+
+**Pendências que sobrevivem a este MC.** Allowlist do Privy para `https://localhost` (bloqueia o
+login OAuth no WebView — MC88), `MP_WEBHOOK_SECRET`, a fila do Supabase (partida, não dormente),
+a migração para KMS, o upload na Play Store e o drift de deploy entre a linhagem MAINNET e as
+branches de trabalho.
+
+**Achado de segurança novo.** Um ficheiro na Lixeira contém uma chave de API DeepSeek em texto
+claro, hardcoded num script que a grava em `~/.claude/settings.json`. Valor não transcrito (R4).
+Exige revogação no fornecedor **antes** de qualquer eliminação — apagar o ficheiro não invalida a
+chave.
+
+**Limpeza.** O plano previa apagar os relatórios; durante a execução o operador informou que a
+Lixeira tinha sido esvaziada por engano, o que confirmou o risco. A limpeza foi convertida de
+destrutiva em arquivística: 90 documentos recuperados da Lixeira e 102 do Desktop movidos para
+`Desktop\MC-HISTORICO\`. **Nada foi apagado.**
+
+**Relatórios:** `Desktop\MC89-RELATORIO-FINAL.txt` · `desafio-gut/docs/MC89-relatorio-final.txt` ·
+arquivo histórico em `Desktop\MC-HISTORICO\`.
+
+**Lição:** a história técnica de um projeto não pode viver na raiz do Desktop nem na Lixeira. Setenta
+relatórios — toda a fase MC15→MC45, incluindo as decisões que explicam por que o sistema é como é —
+estiveram a um clique de desaparecerem para sempre. Documentos que justificam decisões arquiteturais
+pertencem ao repositório versionado, não ao ambiente de trabalho de uma máquina.
