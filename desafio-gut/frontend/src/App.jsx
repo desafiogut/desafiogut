@@ -1,6 +1,10 @@
 // force deploy 2026-05-11 — reset versionado + MOCK_MODE removido
-import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+// MC88.4 — plugin nativo do Capacitor para interceptar o deep link do OAuth
+// (Privy/Google) no Android. Aliased para CapApp: o export chama-se App e
+// colidiria com o componente App() abaixo.
+import { App as CapApp } from "@capacitor/app";
 import { AppProvider, useAppContext } from "./context/AppContext.jsx";
 import AppLayout from "./widgets/layout/AppLayout.jsx";
 import BackgroundCanvas from "./widgets/layout/BackgroundCanvas.jsx";
@@ -90,6 +94,35 @@ function DashboardOuCorporativo() {
  */
 export default function App() {
   const { toasts, add, remove } = useToast();
+  const navigate = useNavigate();
+
+  // MC88.4 — Deep link do OAuth (Capacitor/Android). Ao terminar o login Google,
+  // o Privy redireciona para https://localhost/carteira. Em WebView nativo esse
+  // redirect chega como evento appUrlOpen; interceptamos e re-navegamos por dentro
+  // do React Router para que a rota (e o Privy) completem o fluxo e gerem o JWT.
+  // No-op fora do Capacitor (web puro): window.Capacitor é undefined.
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.Capacitor) return;
+
+    let listenerHandle;
+    const handleDeepLink = ({ url }) => {
+      try {
+        console.log("🔗 Deep link interceptado:", url);
+        const { pathname, search, hash } = new URL(url);
+        navigate(`${pathname || "/carteira"}${search}${hash}`);
+      } catch (err) {
+        console.warn("[MC88.4] falha ao processar deep link:", err);
+      }
+    };
+
+    // addListener é assíncrono (retorna Promise<PluginListenerHandle>).
+    const registo = CapApp.addListener("appUrlOpen", handleDeepLink);
+    registo.then((handle) => { listenerHandle = handle; });
+
+    return () => {
+      registo.then((handle) => (listenerHandle || handle)?.remove());
+    };
+  }, [navigate]);
 
   // MC82.2 — o gate LGPD saiu daqui para o Boot.jsx. Este componente só é montado
   // depois de o consentimento estar aceite (ou na rota pública /excluir-conta),
