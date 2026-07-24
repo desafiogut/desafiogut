@@ -139,12 +139,13 @@ export default function PrivyRoot() {
       <PrivyProvider
         appId={PRIVY_APP_ID}
         config={{
-          // ── Métodos de login: apenas Google ─────────────────────────────────
+          // ── Métodos de login: Google (modal público) + E-mail (OTP corporativo) ──
           // MC62: "apple" removido (config morta — desabilitado no painel Privy).
-          // MC88.5.1: "email" removido de loginMethods (fluxo do app mobile é
-          // exclusivamente Google via OAuth App Link). O MODAL PÚBLICO já era
-          // restrito a Google (login({loginMethods:["google"]}) em AppContext.abrirModal).
-          loginMethods: ["google"],
+          // MC88.5.2: "email" RESTAURADO — é necessário para o login corporativo
+          // headless (useLoginWithEmail em SejaNossoParceiro.jsx). O MODAL PÚBLICO
+          // continua restrito a Google via login({loginMethods:["google"]}) em
+          // AppContext.abrirModal (o OAuth App Link mobile só usa Google).
+          loginMethods: ["google", "email"],
 
           // ── MC88.5 — OAuth em WebView nativo (Capacitor/Android) ─────────────
           // Google bloqueia OAuth dentro de WebView embutido, então o consent
