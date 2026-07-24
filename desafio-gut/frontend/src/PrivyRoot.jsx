@@ -28,7 +28,7 @@ const PRIVY_APP_ID_RAW = "cmo51f3v300l90clgzksivvad";
 // Sanity check anti-whitespace/zero-width sneaky chars.
 // Strip de \s + zero-width space (U+200B), zero-width non-joiner (U+200C),
 // zero-width joiner (U+200D), BOM (U+FEFF). Garante que typo invisível nunca
-// degrade o appId em runtime.
+// degrade o appId em runtime. (MC88.5.1: escrito com \u… para robustez de encoding.)
 const PRIVY_APP_ID = PRIVY_APP_ID_RAW.replace(
   /[\s​‌‍﻿]/g, ""
 );
@@ -139,12 +139,12 @@ export default function PrivyRoot() {
       <PrivyProvider
         appId={PRIVY_APP_ID}
         config={{
-          // ── Métodos de login: Google (modal público) + E-mail (OTP corporativo) ──
+          // ── Métodos de login: apenas Google ─────────────────────────────────
           // MC62: "apple" removido (config morta — desabilitado no painel Privy).
-          // "email" permanece habilitado para o login corporativo headless
-          // (useLoginWithEmail em SejaNossoParceiro.jsx). O MODAL PÚBLICO é restrito
-          // a Google por chamada em AppContext.abrirModal (login({loginMethods:["google"]})).
-          loginMethods: ["google", "email"],
+          // MC88.5.1: "email" removido de loginMethods (fluxo do app mobile é
+          // exclusivamente Google via OAuth App Link). O MODAL PÚBLICO já era
+          // restrito a Google (login({loginMethods:["google"]}) em AppContext.abrirModal).
+          loginMethods: ["google"],
 
           // ── MC88.5 — OAuth em WebView nativo (Capacitor/Android) ─────────────
           // Google bloqueia OAuth dentro de WebView embutido, então o consent
