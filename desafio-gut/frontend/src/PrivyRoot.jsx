@@ -146,6 +146,18 @@ export default function PrivyRoot() {
           // a Google por chamada em AppContext.abrirModal (login({loginMethods:["google"]})).
           loginMethods: ["google", "email"],
 
+          // ── MC88.5 — OAuth em WebView nativo (Capacitor/Android) ─────────────
+          // Google bloqueia OAuth dentro de WebView embutido, então o consent
+          // abre no browser externo e o Privy precisa redirecionar de volta para
+          // a app. Privy EXIGE um HTTPS App Link (não esquema custom): configuramos
+          // customOAuthRedirectUrl para o domínio de produção, que serve o
+          // /.well-known/assetlinks.json (autoVerify no AndroidManifest). O Android
+          // intercepta o retorno https://…/redirect → dispara appUrlOpen → o
+          // listener em App.jsx reinjeta os params privy_oauth_* na origem local.
+          // No browser web puro este campo é inócuo (o fluxo popup/redirect normal
+          // continua a valer). Ver MC88.4 (listener) + docs.privy.io/recipes/capacitor-oauth.
+          customOAuthRedirectUrl: "https://silly-stardust-ca71bc.netlify.app/redirect",
+
           // ── Embedded Wallet: criação EXPLÍCITA (não automática) ──────────────
           // MC17.3.1.2.1 — createOnLogin:"off". A auto-criação no login era o
           // gatilho do crash "Cannot destructure ... createWallet" (despacho do

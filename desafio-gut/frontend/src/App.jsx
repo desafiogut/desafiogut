@@ -96,10 +96,18 @@ export default function App() {
   const { toasts, add, remove } = useToast();
   const navigate = useNavigate();
 
-  // MC88.4 — Deep link do OAuth (Capacitor/Android). Ao terminar o login Google,
-  // o Privy redireciona para https://localhost/carteira. Em WebView nativo esse
-  // redirect chega como evento appUrlOpen; interceptamos e re-navegamos por dentro
-  // do React Router para que a rota (e o Privy) completem o fluxo e gerem o JWT.
+  // MC88.4/88.5 — Deep link do OAuth (Capacitor/Android). Google bloqueia OAuth
+  // em WebView embutido, então o consent abre no browser externo e o Privy volta
+  // via App Link HTTPS (customOAuthRedirectUrl → https://…/redirect?privy_oauth_code=…).
+  // O Android (autoVerify + assetlinks.json) intercepta esse retorno e reabre a
+  // app com o evento appUrlOpen.
+  //
+  // MC88.5 — quando o deep link traz os params privy_oauth_*, NÃO basta um navigate
+  // client-side: o SDK do Privy lê esses params de window.location durante a
+  // inicialização da página. Fazemos window.location.assign() para a origem LOCAL
+  // (https://localhost) com os params, forçando um reload em que o SDK completa o
+  // OAuth e gera o JWT (padrão documentado: docs.privy.io/recipes/capacitor-oauth).
+  // Deep links sem params OAuth caem no navigate normal do React Router.
   // No-op fora do Capacitor (web puro): window.Capacitor é undefined.
   useEffect(() => {
     if (typeof window === "undefined" || !window.Capacitor) return;
@@ -109,9 +117,14 @@ export default function App() {
       try {
         console.log("🔗 Deep link interceptado:", url);
         const { pathname, search, hash } = new URL(url);
+        if (/[?&]privy_oauth_/.test(search)) {
+          // Reinjeta os params na origem local → reload → Privy completa o login.
+          window.location.assign(`/${search}`);
+          return;
+        }
         navigate(`${pathname || "/carteira"}${search}${hash}`);
       } catch (err) {
-        console.warn("[MC88.4] falha ao processar deep link:", err);
+        console.warn("[MC88.5] falha ao processar deep link:", err);
       }
     };
 
