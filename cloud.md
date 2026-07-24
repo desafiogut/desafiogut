@@ -2992,3 +2992,44 @@ arquivo histórico em `Desktop\MC-HISTORICO\`.
 relatórios — toda a fase MC15→MC45, incluindo as decisões que explicam por que o sistema é como é —
 estiveram a um clique de desaparecerem para sempre. Documentos que justificam decisões arquiteturais
 pertencem ao repositório versionado, não ao ambiente de trabalho de uma máquina.
+
+---
+
+## MC88.2 — Depuração no WebView: premissa refutada (2026-07-23)
+
+**Tipo:** diagnóstico · **R1:** zero alteração de código do app · **Custo:** US$ 0,00.
+
+O MC pedia para ativar `setWebContentsDebuggingEnabled(true)` no `MainActivity`, recompilar o APK
+debug e reinstalar, partindo do princípio de que o DevTools estava indisponível. **A medição
+refutou a premissa: a depuração já estava ativa.**
+
+**Causa real do sintoma.** O comando de diagnóstico apontava para o socket errado:
+`localabstract:chrome_devtools_remote` é o socket do **navegador Chrome**. Um WebView de aplicação
+expõe-se em `webview_devtools_remote_<PID>`. O `adb forward` não valida o destino, por isso o túnel
+monta-se na mesma e o `/json/list` falha — sintoma indistinguível de "depuração desativada".
+
+**Teste A/B, mesma máquina e mesmo instante:** `chrome_devtools_remote` → conexão fechada;
+`webview_devtools_remote_13349` → HTTP 200 com a página `https://localhost/` listada. O pacote está
+marcado `flags=[ DEBUGGABLE ... ]` e o socket existe em `/proc/net/unix`.
+
+**Porque já funciona sem a linha.** `MainActivity.java` é o `BridgeActivity` de fábrica do Capacitor,
+sem corpo. O próprio Capacitor chama `setWebContentsDebuggingEnabled(true)` quando a app tem
+`FLAG_DEBUGGABLE`. A prova mais forte, porém, é histórica: o **MC88.1 conversou com este WebView por
+CDP durante toda a sessão** — leu `location.origin`, capturou 185 mensagens de console e os
+cabeçalhos do `auth.privy.io`. Isso é impossível num WebView não-depurável.
+
+**Armadilha no script proposto.** O `-replace "(onCreate.*?){"` não encontraria nada (o ficheiro não
+tem `onCreate`), mas o script imprimia `✅ Flag adicionada` de forma incondicional — só verificava se
+o ficheiro *existia*, nunca se a troca *acontecera*. Teria reportado sucesso sem alterar uma linha.
+
+**Entregue em vez da alteração:** `desafio-gut/scripts/webview-devtools.ps1` — descobre o PID, monta
+o nome do socket, valida que existe (e, se não existir, lê as flags do pacote e diz que aí sim é caso
+para `assembleDebug`), abre o túnel e confirma com `/json/list`. Validado ponta a ponta.
+
+**Relatório:** `Desktop\MC88.2-RELATORIO.txt`.
+
+**Lição:** o PID entra no nome do socket, portanto o alvo muda a cada arranque do app — descobri-lo
+em tempo de execução é correção, não conveniência. E, mais geral: um passo de automação tem de
+validar o **efeito**, não a existência do alvo; um sucesso falso é pior que uma falha, porque encerra
+a investigação. Vale reler o MC anterior antes de aceitar o diagnóstico do seguinte — aqui, o
+relatório do MC88.1 era, por si só, o certificado de que a premissa do MC88.2 não se sustentava.

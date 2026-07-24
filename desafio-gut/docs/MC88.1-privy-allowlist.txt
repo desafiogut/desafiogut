@@ -1,0 +1,242 @@
+================================================================================
+MC88.1 — SEGMENTO 0 · DIAGNÓSTICO DA ORIGEM DO WEBVIEW E DO BLOQUEIO DE CSP
+================================================================================
+Data.........: 2026-07-23 (captura no dispositivo às 2026-07-24T00:11Z UTC)
+Dispositivo..: fiem7xlvcufe855h · Xiaomi 21091116UG (pissarropro_global) · Android 13
+Pacote.......: com.desafiogut.app · PID 27312 · WebView Chrome/150.0.7871.124
+Método.......: CDP direto por túnel ADB (`adb forward tcp:9333
+               localabstract:webview_devtools_remote_27312`) + WebSocket nativo do Node.
+               O MCP chrome-devtools NÃO anexa a alvo remoto — limitação já registada
+               no MC82-BASELINE.
+Regras.......: R1 ZERO alteração de código-fonte · R2 custo US$ 0,00 · R3 rastreável
+               R4 nenhum dado sensível · R5 nenhuma credencial manuseada
+Bruto........: mc881-bruto-antes.json (185 mensagens de console, 3 respostas Privy)
+
+
+################################################################################
+VEREDITO
+################################################################################
+
+A origem do WebView é **`https://localhost`** — esquema https, host localhost,
+SEM porta. **Não** é `capacitor://localhost`, e **não** tem porta 8080.
+
+Essa origem NÃO consta da allowlist da aplicação Privy `cmo51f3v300l90clgzksivvad`,
+pelo que o navegador bloqueia o iframe da carteira embutida ANTES de ele inicializar.
+Sem esse iframe não há fluxo Google, não há carteira e não há JWT.
+
+CORREÇÃO: acrescentar `https://localhost` às Allowed Origins no painel do Privy.
+NÃO é alteração de código. Ver §5 para a ressalva importante sobre QUEM emite a CSP.
+
+
+################################################################################
+1. ORIGEM EXATA DO WEBVIEW (0.2) — MEDIDA, NÃO SUPOSTA
+################################################################################
+
+Avaliado via `Runtime.evaluate` no contexto da própria página:
+
+    location.origin ......... https://localhost
+    location.href ........... https://localhost/
+    location.protocol ....... https:
+    location.host ........... localhost
+    location.port ........... (sem porta)
+    document.baseURI ........ https://localhost/
+    window.isSecureContext .. true
+    document.readyState ..... complete
+    document.title .......... DesafioGUT — O Menor Lance Único Ganha
+
+Confirmação independente pelo endpoint de descoberta do CDP (`/json/list`):
+
+    "url":        "https://localhost/"
+    "faviconUrl": "https://localhost/assets/guto/guto-favicon-32.png"
+
+User-Agent do WebView:
+    Mozilla/5.0 (Linux; Android 13; 21091116UG Build/TP1A.220624.014; wv)
+    AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0
+    Chrome/150.0.7871.124 Mobile Safari/537.36
+
+  ► As três variantes que o comando levantou como hipótese ficam RESOLVIDAS:
+      https://localhost .......... ✅ É ESTA (confirmada por 3 fontes independentes)
+      capacitor://localhost ...... ❌ não é o esquema em uso neste build
+      https://localhost:8080 ..... ❌ não há porta na origem
+
+  Motivo: o Capacitor 8 no Android serve os assets locais por um handler
+  `https://localhost` por omissão (não há bloco `android` nem `server` em
+  `capacitor.config.ts` — confirmado no MC82-DIAGNOSTICO). Uma origem `https`
+  sem porta é uma origem DISTINTA de `http://localhost:3000` e de
+  `http://localhost:5173`; a comparação de origens é exata (esquema + host + porta).
+
+
+################################################################################
+2. ALLOWLIST ATUAL DO PRIVY (0.4) — LIDA AO VIVO, NÃO POR CAPTURA DE TELA
+################################################################################
+
+A lista de origens permitidas NÃO precisou do painel: o próprio `auth.privy.io`
+publica-a no cabeçalho `Content-Security-Policy` da resposta do iframe. Essa é a
+allowlist EFETIVA — o que o servidor realmente aplica, e não o que o painel
+aparenta ter.
+
+Resposta capturada:
+    GET https://auth.privy.io/apps/cmo51f3v300l90clgzksivvad/embedded-wallets → 200
+
+Cabeçalho `Content-Security-Policy` (diretiva relevante, na íntegra):
+
+    frame-ancestors 'self'
+                    http://localhost:3000
+                    http://localhost:5173
+                    https://69f359a08aed8b0008f4c8bf--silly-stardust-ca71bc.netlify.app
+                    https://silly-stardust-ca71bc.netlify.app
+                    https://www.69f359a08aed8b0008f4c8bf--silly-stardust-ca71bc.netlify.app
+                    https://auth.privy.io
+
+  VIA DESCARTADA (registada por rastreabilidade — R3): tentei primeiro consultar
+  a API do Privy a partir do PC (`GET auth.privy.io/api/v1/apps/<app>` e
+  `.../config`, com o cabeçalho `privy-app-id`). O pedido ficou pendurado e foi
+  terminado por timeout SEM devolver nada — presumivelmente exige credencial de
+  servidor, que o agente não tem nem deve ter (R5). A leitura pelo dispositivo é,
+  de qualquer modo, evidência superior: mostra a política que o servidor
+  REALMENTE aplica àquela origem, e não a que um endpoint de configuração declara.
+
+  ► 7 origens autorizadas: as duas de desenvolvimento com Vite, três da Netlify
+    (produção + um deploy-preview + a variante www) e a própria Privy.
+  ► **`https://localhost` NÃO está na lista.** É exatamente a origem do app Android.
+  ► Nenhuma entrada cobre o Capacitor. O build móvel nunca foi contemplado na
+    configuração da app Privy.
+
+
+################################################################################
+3. O ERRO DE CSP CAPTURADO (0.3)
+################################################################################
+
+3.1 — BLOQUEIO DE REDE
+    [NET-FAIL] https://auth.privy.io/apps/cmo51f3v300l90clgzksivvad/embedded-wallets
+               :: net::ERR_BLOCKED_BY_RESPONSE (blockedReason=other)
+
+3.2 — ERRO EXPLÍCITO NO CONSOLE (nível error)
+    Framing 'https://auth.privy.io/' violates the following Content Security
+    Policy directive: "frame-ancestors 'self' http://localhost:3000
+    http://localhost:5173 https://69f359a08aed8b0008f4c8bf--silly-stardust-ca71bc
+    .netlify.app https://silly-stardust-ca71bc.netlify.app https://www.69f359a08
+    aed8b0008f4c8bf--silly-stardust-ca71bc.netlify.app https://auth.privy.io".
+    The request has been blocked.
+
+3.3 — DESISTÊNCIA DO SDK (consequência)
+    Privy iframe failed to load: Error: Exceeded max attempts before resolving
+    function
+        at https://localhost/assets/privy-C6QEr4zh.js:54:18421
+
+3.4 — TEMPESTADE DE RETENTATIVAS (sintoma secundário, não documentado antes)
+    Failed to execute 'postMessage' on 'DOMWindow': The target origin provided
+    ('https://auth.privy.io') does not match the recipient window's origin
+    ('null').
+      ► **178 destas mensagens em ~60 segundos**, de um total de 185 mensagens de
+        console. O iframe bloqueado fica com origem `null`, e o SDK continua a
+        tentar falar com ele em ciclo. Além de não funcionar, isto queima CPU e
+        bateria continuamente enquanto o app estiver aberto.
+      ► Este custo desaparece com a correção da allowlist; não exige código.
+
+3.5 — ESTADO RESULTANTE
+    sessionStorage.gut_auth_user ...... null (nenhum JWT)
+    window.__PRIVY__ .................. undefined
+    iframe no DOM ..................... presente, mas com origem `null` (bloqueado)
+
+
+################################################################################
+4. O QUE FUNCIONA (controlo negativo — o problema é só a allowlist)
+################################################################################
+
+Para provar que o bloqueio não vem de rede, build ou lazy-load:
+
+    Gate LGPD .................. ✅ 4 checkboxes, botão "⚡ Aceito o DesafioGUT"
+                                    ativo; aceitação grava
+                                    gut_consentimento {"aceito":true,...,"versao":"2.0"}
+    Lazy-load do Privy (MC82.2)  ✅ no gate só carregam index, rolldown-runtime,
+                                    react, router, motion — SEM o chunk privy.
+                                    Após o consentimento entram
+                                    `PrivyRoot-DjTphPBg.js` e `privy-C6QEr4zh.js`.
+    Rede até à Privy ........... ✅ GET /api/v1/apps/<app> → 200 (a app existe e
+                                    responde; a configuração é lida com sucesso)
+    Assets locais .............. ✅ index-CTcVX5iP.js servido de https://localhost
+    Contexto seguro ............ ✅ isSecureContext = true
+
+  ► Tudo o que precede a moldura do iframe está verde. O único ponto de falha é a
+    comparação de origem feita pelo servidor da Privy.
+
+
+################################################################################
+5. ⚠️ RESSALVA CRÍTICA — QUEM EMITE A CSP QUE BLOQUEIA
+################################################################################
+
+A CSP que bloqueia é servida **pelo `auth.privy.io`**, não pela nossa aplicação.
+
+  · `frame-ancestors` é uma diretiva que só faz sentido na resposta do recurso que
+    vai ser emoldurado — aqui, o iframe da Privy. Ela declara quem TEM PERMISSÃO
+    PARA EMOLDURAR a Privy.
+  · A Privy GERA essa lista a partir das Allowed Origins configuradas no painel
+    da aplicação. Alterar o painel altera o cabeçalho.
+  · O documento do DesafioGUT no WebView **não tem nenhuma meta tag de CSP**
+    (verificado: `document.querySelectorAll('meta[http-equiv]')` filtrado por
+    content-security-policy devolve lista vazia).
+
+  ► CONSEQUÊNCIA PRÁTICA: mexer no `netlify.toml` — o instinto natural de quem lê
+    "erro de CSP" — **não resolveria nada** e violaria a R1. A nossa CSP governa o
+    que a NOSSA página pode carregar; não governa quem pode emoldurar a Privy.
+    Esta distinção é o ponto central deste MC.
+
+
+################################################################################
+6. LIMITAÇÃO HONESTA DESTA SESSÃO
+################################################################################
+
+Não consegui acionar o botão de login por CDP para reproduzir também o
+`POST /api/v1/oauth/init → 403 "Origin not allowed"`. Motivos:
+
+  a) No estado de convidado, o Dashboard não expõe um controlo com texto
+     "Entrar"/"Login" que os meus seletores apanhassem — a lista completa de
+     botões visíveis não continha nenhum.
+  b) Ao tentar navegar por `history.pushState` para /carteira, a aplicação
+     regrediu para o gate de consentimento (a navegação sintética não passa pelo
+     router do React), e o meu seletor — que procurava a palavra "conta" —
+     acabou por clicar em **"Excluir conta"**.
+
+  ⚠️ REGISTO DE TRANSPARÊNCIA sobre esse clique acidental: nenhum dado foi
+     afetado. A sessão era de convidado (`gut_auth_user = null`), o endpoint de
+     exclusão exige autenticação e confirmação em modal, e a captura de rede do
+     período mostra apenas `GET /api/v1/apps/<app> → 200` — nenhuma chamada de
+     exclusão foi emitida. O app foi parado à força no fim, repondo o estado.
+     Foi um seletor mal desenhado da minha parte, e fica registado em vez de
+     omitido.
+
+  ► Isto NÃO enfraquece o diagnóstico: o `403 Origin not allowed` já foi
+    capturado no MC88 (2026-07-22, com o operador a clicar em Google) e tem a
+    MESMA causa raiz. A evidência de `frame-ancestors` obtida agora é, aliás,
+    mais forte, porque ENUMERA a allowlist inteira em vez de apenas indicar que a
+    origem foi recusada.
+
+  ► Boulder Loop: 2 iterações gastas nesta sub-etapa; parei em vez de uma terceira,
+    porque a evidência já era suficiente e conclusiva.
+
+
+################################################################################
+7. RECOMENDAÇÃO (próximo passo — Segmento 1)
+################################################################################
+
+Acrescentar ao painel do Privy (app `cmo51f3v300l90clgzksivvad`), em Allowed
+Origins / Allowed Domains:
+
+    https://localhost          ← OBRIGATÓRIA (é a origem medida do WebView)
+
+E, como seguro barato para futuros builds e para outras plataformas:
+
+    capacitor://localhost      ← usada pelo Capacitor em iOS e em configurações
+                                 Android alternativas (`androidScheme`)
+    http://localhost           ← caso algum build use androidScheme http
+
+Não acrescentar `https://localhost:8080`: não corresponde a nada observado e só
+aumenta a superfície da allowlist sem benefício.
+
+Nenhuma destas entradas é um segredo — são identificadores de origem (R5 satisfeita).
+
+================================================================================
+FIM — MC88.1 SEGMENTO 0. Origem medida, allowlist enumerada, erro capturado.
+Nenhuma linha de código alterada; nenhum custo; nenhuma credencial manuseada.
+================================================================================
