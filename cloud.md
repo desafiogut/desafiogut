@@ -3033,3 +3033,41 @@ em tempo de execução é correção, não conveniência. E, mais geral: um pass
 validar o **efeito**, não a existência do alvo; um sucesso falso é pior que uma falha, porque encerra
 a investigação. Vale reler o MC anterior antes de aceitar o diagnóstico do seguinte — aqui, o
 relatório do MC88.1 era, por si só, o certificado de que a premissa do MC88.2 não se sustentava.
+
+---
+
+## MC88.1 validado + MC88.3 refutado — allowlist do Privy resolvida (2026-07-24)
+
+**Tipo:** validação e diagnóstico · **R1:** zero alteração de código · **Custo:** US$ 0,00.
+
+**A correção do MC88.1 funcionou.** O operador acrescentou `https://localhost`, `http://localhost` e
+`capacitor://localhost` às Allowed Origins da app Privy `cmo51f3v300l90clgzksivvad` (de 7 para 10
+origens, lidas ao vivo do `frame-ancestors` do `auth.privy.io`). Resultado medido no aparelho: o
+iframe `embedded-wallets` deixou de dar `ERR_BLOCKED_BY_RESPONSE` e passou a descarregar a sua própria
+aplicação (CSS + 12 chunks do Next.js, todos 200). Desapareceram o erro "Framing … violates
+frame-ancestors", a tempestade de 178 avisos de `postMessage` em 60 s e o "Privy iframe failed:
+Exceeded max attempts". Falta só o critério 6 — o JWT —, que exige um login Google humano.
+
+**Nota:** o painel do Privy **aceitou** `capacitor://localhost`. A suposição de que só aceita
+http/https não se confirma.
+
+**MC88.3 não executado — premissas refutadas.** Propunha trocar `androidScheme` para `desafiogut://`
+e acrescentar `redirectUri` à config do Privy. Medição: (a) `https://localhost/carteira` resolve com
+HTTP 200 e renderiza — o WebView resolve a rota; (b) `capacitor://` É aceite pela Privy; (c)
+`capacitor.config.json` não existe (o projeto usa `capacitor.config.ts`, e criar o JSON ao lado
+produziria uma config fantasma que a CLI ignora); (d) `redirectUri` não é chave do `PrivyProvider` —
+seria ignorada em silêncio. Pior: mudar a origem para `desafiogut://localhost` **desfaria** a correção
+recém-aplicada, já que essa origem não está na allowlist, e quebraria os pressupostos same-origin do
+logo do modal (MC67/MC78).
+
+**A origem da cadeia.** Um `MC88.1-VALIDACAO.txt` pré-existente, das 00:48Z, registava
+`❌ Erro: socket hang up`. Esse era o sintoma do socket errado (MC88.2), não de um login falhado — a
+validação nunca chegou a ligar-se ao WebView. Duas rondas de diagnóstico (MC88.2 e MC88.3) foram
+construídas sobre uma ligação falhada interpretada como sintoma da aplicação.
+
+**Relatórios:** `Desktop\MC88.1-VALIDACAO.txt` · `Desktop\MC88.3-RELATORIO.txt`.
+
+**Lição:** uma falha de FERRAMENTA disfarça-se de falha de PRODUTO. Antes de acreditar num sintoma,
+confirmar que o instrumento estava ligado. E antes de perseguir a falha seguinte, confirmar que a
+correção anterior chegou a ser validada — correr o Segmento 2 pendente do MC88.1 respondeu ao MC88.3
+inteiro em minutos.
