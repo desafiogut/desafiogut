@@ -3071,3 +3071,38 @@ construídas sobre uma ligação falhada interpretada como sintoma da aplicaçã
 confirmar que o instrumento estava ligado. E antes de perseguir a falha seguinte, confirmar que a
 correção anterior chegou a ser validada — correr o Segmento 2 pendente do MC88.1 respondeu ao MC88.3
 inteiro em minutos.
+
+**MC88.7 — o esquema custom é recusado pelo Privy, não pelo Android.** O objetivo era tornar o
+retorno do OAuth independente do browser padrão, trocando o App Link HTTPS por um esquema custom.
+Duas tentativas (`desafiogut://oauth` e `capacitor://localhost/oauth`), ambas mortas pelo mesmo
+erro do backend — `Redirect URL scheme is not allowed` — disparado no clique em "Google", antes
+sequer de abrir o browser. Em ambas o intent-filter estava presente e o roteamento Android
+verificado (`am start -d "desafiogut://oauth"` → `com.desafiogut.app/.MainActivity`), pelo que a
+recusa é 100% do lado do Privy. Confirma o recipe oficial (Capacitor exige App Link HTTPS) e
+**refuta o docstring do próprio SDK 3.22.1**, que recomenda esquema custom.
+
+**A confusão que sustentava o plano.** "Allowed Origins" (`capacitor://localhost`,
+`http://localhost`) autorizam o SDK a CORRER a partir dessas origens; não são destinos de redirect.
+Ver `capacitor://localhost` na allowlist não o torna um `customOAuthRedirectUrl` válido. Pelo mesmo
+motivo, `http://localhost/oauth` era impossível por construção: o browser externo carregaria o
+localhost DELE, não o da app — não foi executado.
+
+**Duas causas raiz no MC88.6, ambas corrigidas.** (a) O `customOAuthRedirectUrl` já apontava para
+`desafiogut://oauth`, mas faltava o intent-filter no AndroidManifest — e `android/` é untracked, por
+isso o commit nem podia incluí-lo. (b) O commit `0f7b392` corrompeu dois ficheiros via
+`Set-Content -Encoding utf8` do PS 5.1: 39 linhas de mojibake no `PrivyRoot.jsx` e, no
+`capacitor.config.ts`, a string `` `n `` LITERAL mais um `androidScheme: "desafiogut"` — alteração
+explicitamente vetada, que quebraria origens/secure-context/storage. Os Segmentos 1/4/5 do plano
+repetiam esses mesmos comandos; foram substituídos por edição UTF-8 e restauro de `516b8a1`.
+
+**O que fica.** App Link HTTPS + `allowOAuthInEmbeddedBrowsers: true`, revalidado end-to-end às
+19:05. Limite conhecido: só fecha em browsers que cedem a navegação (Chrome sim, Opera não), porque
+o Android só resolve App Links para intents vindos de FORA do browser e o redirect final do OAuth é
+navegação interna. Desbloqueio = uma ação do operador no dashboard Privy (registar o esquema em
+"allowed URL schemes"); o intent-filter já está no manifest à espera, e depois é trocar uma linha.
+
+**Relatório:** `Desktop\MC88.7-RELATORIO.txt`.
+
+**Lição:** quando um redirect falha, separar QUEM recusou — o Android (roteamento) ou o provedor
+(allowlist). Um `am start` com o esquema responde a isso em segundos e teria poupado o MC88.6
+inteiro. E allowlist de ORIGEM nunca é allowlist de DESTINO.

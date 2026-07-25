@@ -1,17 +1,17 @@
-﻿// MC82.2 â€” Raiz do Privy, carregada SOB DEMANDA (lazy) a partir de Boot.jsx.
+// MC82.2 — Raiz do Privy, carregada SOB DEMANDA (lazy) a partir de Boot.jsx.
 //
-// PORQUÃŠ: o gate LGPD Ã© a primeira tela e nÃ£o usa Privy para nada, mas vivia
+// PORQUÊ: o gate LGPD é a primeira tela e não usa Privy para nada, mas vivia
 // dentro do <PrivyProvider>. Medido no aparelho (MC82-BASELINE): 4.002 KB de JS
-// para desenhar quatro checkboxes, sendo 2.745 KB sÃ³ do chunk `privy`. Ao mover
-// o provider (e a Ã¡rvore da app inteira) para este ficheiro lazy, o gate deixa
+// para desenhar quatro checkboxes, sendo 2.745 KB só do chunk `privy`. Ao mover
+// o provider (e a árvore da app inteira) para este ficheiro lazy, o gate deixa
 // de pagar esse custo.
 //
-// âš ï¸ NÃ£o bastava adiar o <PrivyProvider>: `AppContext.jsx` importa
-// `@privy-io/react-auth` de forma estÃ¡tica e o `App.jsx` importa o AppProvider,
-// portanto o chunk vinha na mesma por esse caminho. Ã‰ por isso que este ficheiro
-// carrega o <App/> INTEIRO, e nÃ£o sÃ³ o provider.
+// ⚠️ Não bastava adiar o <PrivyProvider>: `AppContext.jsx` importa
+// `@privy-io/react-auth` de forma estática e o `App.jsx` importa o AppProvider,
+// portanto o chunk vinha na mesma por esse caminho. É por isso que este ficheiro
+// carrega o <App/> INTEIRO, e não só o provider.
 //
-// Todo o conteÃºdo abaixo veio do main.jsx SEM alteraÃ§Ã£o de lÃ³gica â€” o histÃ³rico
+// Todo o conteúdo abaixo veio do main.jsx SEM alteração de lógica — o histórico
 // de crashes do arranque do Privy (MC17.3.1.x, race do createWallet) tornaria
 // arriscado "melhorar" qualquer coisa aqui de passagem.
 import { Component } from "react";
@@ -20,30 +20,30 @@ import { sepolia as sepoliaChain, mainnet as mainnetChain } from "viem/chains"; 
 import App from "./App.jsx";
 
 // App ID validado via Privy Management API em 2026-04-28.
-// NÃƒO usar import.meta.env â€” o dashboard Netlify tem o valor ERRADO (cmo5113v)
-// que sobrescreve qualquer fallback em tempo de build. Hardcode obrigatÃ³rio atÃ©
+// NÃO usar import.meta.env — o dashboard Netlify tem o valor ERRADO (cmo5113v)
+// que sobrescreve qualquer fallback em tempo de build. Hardcode obrigatório até
 // o env var VITE_PRIVY_APP_ID ser corrigido no painel Netlify para cmo51f3v.
 const PRIVY_APP_ID_RAW = "cmo51f3v300l90clgzksivvad";
 
 // Sanity check anti-whitespace/zero-width sneaky chars.
 // Strip de \s + zero-width space (U+200B), zero-width non-joiner (U+200C),
-// zero-width joiner (U+200D), BOM (U+FEFF). Garante que typo invisÃ­vel nunca
-// degrade o appId em runtime. (MC88.5.1: escrito com \uâ€¦ para robustez de encoding.)
+// zero-width joiner (U+200D), BOM (U+FEFF). Garante que typo invisível nunca
+// degrade o appId em runtime. (MC88.5.1: escrito com \u… para robustez de encoding.)
 const PRIVY_APP_ID = PRIVY_APP_ID_RAW.replace(
-  /[\sâ€‹â€Œâ€ï»¿]/g, ""
+  /[\s​‌‍﻿]/g, ""
 );
 if (PRIVY_APP_ID !== PRIVY_APP_ID_RAW) {
-  console.error("[GUT-DEBUG] PRIVY_APP_ID continha caracteres invisÃ­veis", {
+  console.error("[GUT-DEBUG] PRIVY_APP_ID continha caracteres invisíveis", {
     raw: JSON.stringify(PRIVY_APP_ID_RAW),
     cleaned: JSON.stringify(PRIVY_APP_ID),
   });
 }
 if (!/^[a-z0-9]{20,30}$/.test(PRIVY_APP_ID)) {
-  console.error("[GUT-DEBUG] PRIVY_APP_ID nÃ£o bate com [a-z0-9]{20,30}", PRIVY_APP_ID);
+  console.error("[GUT-DEBUG] PRIVY_APP_ID não bate com [a-z0-9]{20,30}", PRIVY_APP_ID);
 }
 
-// Contexto de debug que depende das chains do viem (por isso vive aqui, e nÃ£o no
-// main.jsx: importar viem lÃ¡ voltaria a puxar o chunk do Privy para o arranque).
+// Contexto de debug que depende das chains do viem (por isso vive aqui, e não no
+// main.jsx: importar viem lá voltaria a puxar o chunk do Privy para o arranque).
 // Os listeners globais de error/unhandledrejection/CSP continuam no main.jsx,
 // para capturarem falhas desde o primeiro instante.
 if (typeof window !== "undefined") {
@@ -59,26 +59,26 @@ if (typeof window !== "undefined") {
   console.info("[GUT-DEBUG] boot", window.__GUT_DEBUG__);
 }
 
-// MC17.3.1.2.1 â€” rede de seguranÃ§a: se (residualmente) o crash da race do
+// MC17.3.1.2.1 — rede de segurança: se (residualmente) o crash da race do
 // createWallet ainda escapar, auto-recupera com UM reload (guardado por 30s para
-// nunca entrar em loop). Erros NÃƒO relacionados sÃ£o RE-LANÃ‡ADOS intactos para o
-// Sentry.ErrorBoundary acima â€” zero regressÃ£o no reporting/UX existente.
+// nunca entrar em loop). Erros NÃO relacionados são RE-LANÇADOS intactos para o
+// Sentry.ErrorBoundary acima — zero regressão no reporting/UX existente.
 class PrivyCrashBoundary extends Component {
   constructor(props) { super(props); this.state = { err: null, reloading: false }; }
   static getDerivedStateFromError(err) { return { err }; }
   componentDidCatch(err) {
     const msg = String(err?.message || err || "");
     const race = /createWallet/i.test(msg) && /(onSuccess|undefined)/i.test(msg);
-    if (!race) return; // nÃ£o relacionado â†’ render() re-lanÃ§a para o Sentry boundary
+    if (!race) return; // não relacionado → render() re-lança para o Sentry boundary
     let last = 0;
     try { last = Number(sessionStorage.getItem("gut_privy_autoreload") || 0); } catch { /* sem storage */ }
     if (Date.now() - last > 30000) {
       try { sessionStorage.setItem("gut_privy_autoreload", String(Date.now())); } catch { /* sem storage */ }
-      console.warn("[GUT] crash createWallet detetado â€” auto-reload Ãºnico (MC17.3.1.2.1)");
+      console.warn("[GUT] crash createWallet detetado — auto-reload único (MC17.3.1.2.1)");
       this.setState({ reloading: true });
       window.location.reload();
     }
-    // else: loop-guard (jÃ¡ recarregou < 30s) â†’ render() re-lanÃ§a â†’ Sentry fallback (sem loop)
+    // else: loop-guard (já recarregou < 30s) → render() re-lança → Sentry fallback (sem loop)
   }
   render() {
     if (this.state.reloading) return null;
@@ -87,19 +87,19 @@ class PrivyCrashBoundary extends Component {
   }
 }
 
-// MC17.3.1.1 â†’ MC17.3.1.2.1 â€” PrivyEventsBridge.
+// MC17.3.1.1 → MC17.3.1.2.1 — PrivyEventsBridge.
 // O crash "Cannot destructure property 'onSuccess' of 'i.createWallet' as it is
-// undefined" vinha do despacho AUTOMÃTICO de createWallet (createOnLogin:"all-users"):
-// no 1.Âº login de utilizador NOVO o SDK auto-criava a wallet e lia
+// undefined" vinha do despacho AUTOMÁTICO de createWallet (createOnLogin:"all-users"):
+// no 1.º login de utilizador NOVO o SDK auto-criava a wallet e lia
 // events.createWallet ANTES de o handler do useCreateWallet estar registado (race),
 // rebentando o destructure. MC17.3.1.1 registou o handler (mitigou o caso comum) mas
 // a race persistia no cold start (confirmado no MC17.5.1).
 //
-// MC17.3.1.2.1 â€” elimina a race na ORIGEM: createOnLogin passa a "off" (sem
-// auto-criaÃ§Ã£o), e a embedded wallet Ã© criada EXPLICITAMENTE no onComplete do login,
-// momento em que o useCreateWallet (e o seu onSuccess) jÃ¡ estÃ¡ montado. Como a
-// chamada parte do prÃ³prio hook, NÃƒO hÃ¡ leitura de events.createWallet por um
-// caminho sem handler. onComplete corre tanto no login novo como no jÃ¡-autenticado
+// MC17.3.1.2.1 — elimina a race na ORIGEM: createOnLogin passa a "off" (sem
+// auto-criação), e a embedded wallet é criada EXPLICITAMENTE no onComplete do login,
+// momento em que o useCreateWallet (e o seu onSuccess) já está montado. Como a
+// chamada parte do próprio hook, NÃO há leitura de events.createWallet por um
+// caminho sem handler. onComplete corre tanto no login novo como no já-autenticado
 // (cobre um eventual utilizador autenticado sem wallet). Sem UI.
 function temEmbeddedWallet(user) {
   if (!user) return false;
@@ -118,13 +118,13 @@ function PrivyEventsBridge() {
   useLogin({
     onComplete: async ({ user, isNewUser, wasAlreadyAuthenticated }) => {
       console.info("[GUT] login completo", { isNewUser, wasAlreadyAuthenticated });
-      // CriaÃ§Ã£o EXPLÃCITA quando ainda nÃ£o hÃ¡ embedded wallet. createWallet() lanÃ§a
-      // se o user jÃ¡ tiver wallet â†’ guard + try/catch (idempotente e anti-corrida).
+      // Criação EXPLÍCITA quando ainda não há embedded wallet. createWallet() lança
+      // se o user já tiver wallet → guard + try/catch (idempotente e anti-corrida).
       if (!temEmbeddedWallet(user)) {
         try {
           await createWallet();
         } catch (err) {
-          console.warn("[GUT] createWallet() no onComplete falhou (pode jÃ¡ existir)", err?.message);
+          console.warn("[GUT] createWallet() no onComplete falhou (pode já existir)", err?.message);
         }
       }
     },
@@ -139,80 +139,95 @@ export default function PrivyRoot() {
       <PrivyProvider
         appId={PRIVY_APP_ID}
         config={{
-          // â”€â”€ MÃ©todos de login: Google (modal pÃºblico) + E-mail (OTP corporativo) â”€â”€
-          // MC62: "apple" removido (config morta â€” desabilitado no painel Privy).
-          // MC88.5.2: "email" RESTAURADO â€” Ã© necessÃ¡rio para o login corporativo
-          // headless (useLoginWithEmail em SejaNossoParceiro.jsx). O MODAL PÃšBLICO
+          // ── Métodos de login: Google (modal público) + E-mail (OTP corporativo) ──
+          // MC62: "apple" removido (config morta — desabilitado no painel Privy).
+          // MC88.5.2: "email" RESTAURADO — é necessário para o login corporativo
+          // headless (useLoginWithEmail em SejaNossoParceiro.jsx). O MODAL PÚBLICO
           // continua restrito a Google via login({loginMethods:["google"]}) em
-          // AppContext.abrirModal (o OAuth App Link mobile sÃ³ usa Google).
+          // AppContext.abrirModal (o OAuth App Link mobile só usa Google).
           loginMethods: ["google", "email"],
 
-          // â”€â”€ MC88.5 â€” OAuth em WebView nativo (Capacitor/Android) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-          // Google bloqueia OAuth dentro de WebView embutido, entÃ£o o consent
-          // abre no browser externo e o Privy precisa redirecionar de volta para
-          // a app. Privy EXIGE um HTTPS App Link (nÃ£o esquema custom): configuramos
-          // customOAuthRedirectUrl para o domÃ­nio de produÃ§Ã£o, que serve o
-          // /.well-known/assetlinks.json (autoVerify no AndroidManifest). O Android
-          // intercepta o retorno https://â€¦/redirect â†’ dispara appUrlOpen â†’ o
-          // listener em App.jsx reinjeta os params privy_oauth_* na origem local.
-          // No browser web puro este campo Ã© inÃ³cuo (o fluxo popup/redirect normal
-          // continua a valer). Ver MC88.4 (listener) + docs.privy.io/recipes/capacitor-oauth.
-          customOAuthRedirectUrl: "desafiogut://oauth",
-          // MC88.5.3 â€” o customOAuthRedirectUrl sozinho nÃ£o chegava: o SDK trata o
+          // ── MC88.5 → MC88.7 — OAuth em WebView nativo (Capacitor/Android) ────
+          // Google bloqueia OAuth dentro de WebView embutido, então o consent abre
+          // no browser externo e o Privy precisa de redirecionar de volta para a app.
+          //
+          // MC88.5 usava App Link HTTPS (…netlify.app/redirect). Funciona — validado
+          // end-to-end no MC88.5.3 — mas SÓ com browsers que cedem a navegação: o
+          // Android só resolve App Links para intents vindos de FORA do browser, e o
+          // redirect final do OAuth é navegação INTERNA. O Chrome cede; o Opera não
+          // (carrega o /redirect ele próprio e o utilizador nunca volta à app).
+          //
+          // MC88.7 — TESTADO E REJEITADO: esquema custom. Seria independente do
+          // browser (nenhum browser trata "desafiogut://", logo o Android recebe
+          // sempre o retorno), e é o que o docstring do SDK 3.22.1 recomenda para
+          // Capacitor. Mas o BACKEND do Privy recusa, com
+          //     Error: Redirect URL scheme is not allowed
+          // tanto para "desafiogut://oauth" como para "capacitor://localhost/oauth"
+          // — e falha ANTES de abrir o browser, no clique em Google. Atenção: as
+          // "Allowed Origins" do dashboard (capacitor://localhost, http://localhost)
+          // autorizam o SDK a CORRER a partir dessas origens; não são destinos de
+          // redirect. Os intent-filters desses esquemas ficam no AndroidManifest,
+          // prontos, mas inertes até o esquema ser permitido do lado do Privy.
+          // → Confirma o recipe docs.privy.io/recipes/capacitor-oauth (App Link HTTPS)
+          //   e contraria o docstring do SDK.
+          //
+          // Portanto: App Link HTTPS, validado end-to-end no MC88.5.3. Custo conhecido
+          // — só fecha o ciclo em browsers que cedem a navegação (Chrome sim, Opera não).
+          customOAuthRedirectUrl: "https://silly-stardust-ca71bc.netlify.app/redirect",
+          // MC88.5.3 — o customOAuthRedirectUrl sozinho não chegava: o SDK trata o
           // WebView do Capacitor como "embedded browser" e ABORTA o OAuth antes de
           // sequer montar o URL de consent (default false). Este flag destrava esse
           // guard, deixando o fluxo App Link acima acontecer. Marcado @experimental
-          // pelo Privy â€” reconfirmar ao subir de major do @privy-io/react-auth.
-          // (NÃ£o confundir com `oauth: { redirect: true }`: essa chave NÃƒO existe em
-          // PrivyClientConfig 3.22.1 e era descartada em silÃªncio.)
+          // pelo Privy — reconfirmar ao subir de major do @privy-io/react-auth.
+          // (Não confundir com `oauth: { redirect: true }`: essa chave NÃO existe em
+          // PrivyClientConfig 3.22.1 e era descartada em silêncio.)
           allowOAuthInEmbeddedBrowsers: true,
 
-          // â”€â”€ Embedded Wallet: criaÃ§Ã£o EXPLÃCITA (nÃ£o automÃ¡tica) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-          // MC17.3.1.2.1 â€” createOnLogin:"off". A auto-criaÃ§Ã£o no login era o
+          // ── Embedded Wallet: criação EXPLÍCITA (não automática) ──────────────
+          // MC17.3.1.2.1 — createOnLogin:"off". A auto-criação no login era o
           // gatilho do crash "Cannot destructure ... createWallet" (despacho do
           // evento antes do handler registar, no cold start de utilizador novo).
-          // Com "off", o SDK NÃƒO auto-cria; a wallet Ã© criada explicitamente no
-          // onComplete do PrivyEventsBridge (quando o handler jÃ¡ estÃ¡ montado),
+          // Com "off", o SDK NÃO auto-cria; a wallet é criada explicitamente no
+          // onComplete do PrivyEventsBridge (quando o handler já está montado),
           // eliminando a race sem necessidade de reload. A forma continua aninhada
-          // por chain (exigida pelo Privy v3). Callbacks vÃªm de useLogin/useCreateWallet.
-          // MC39.3.1 (#6) â€” showWalletUIs:false suprime o modal de confirmaÃ§Ã£o de
-          // assinatura da embedded wallet em aÃ§Ãµes INICIADAS PELA APP (login direto
+          // por chain (exigida pelo Privy v3). Callbacks vêm de useLogin/useCreateWallet.
+          // MC39.3.1 (#6) — showWalletUIs:false suprime o modal de confirmação de
+          // assinatura da embedded wallet em ações INICIADAS PELA APP (login direto
           // sem prompt + assinatura EIP-191 do lance sem modal). Trade-off de UX
-          // aceite pelo operador: reduz fricÃ§Ã£o; a posse Ã© garantida via Privy + JWT,
-          // e o valor do lance Ã© validado no backend (anti-sniping MC28).
+          // aceite pelo operador: reduz fricção; a posse é garantida via Privy + JWT,
+          // e o valor do lance é validado no backend (anti-sniping MC28).
           embeddedWallets: {
             showWalletUIs: false,
             ethereum: { createOnLogin: "off" },
           },
 
-          // â”€â”€ Rede: Sepolia (default atual) + Mainnet disponÃ­vel (MC39.1, prep MC40) â”€â”€
-          // defaultChain permanece Sepolia atÃ© o cutover (MC40). Mainnet listada como
-          // suportada para permitir switchChain(1) sem regressÃ£o (login segue Sepolia).
+          // ── Rede: Sepolia (default atual) + Mainnet disponível (MC39.1, prep MC40) ──
+          // defaultChain permanece Sepolia até o cutover (MC40). Mainnet listada como
+          // suportada para permitir switchChain(1) sem regressão (login segue Sepolia).
           defaultChain: sepoliaChain,
           supportedChains: [sepoliaChain, mainnetChain],
 
-          // â”€â”€ AparÃªncia: alinhada ao design DESAFIOGUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          // ── Aparência: alinhada ao design DESAFIOGUT ─────────────────────────
           appearance: {
             theme: "dark",
             accentColor: "#ff6b35",
             // MC67: logo same-origin (o favicon.ico cross-origin era bloqueado pela CSP
-            // img-src â†’ Ã­cone quebrado no topo do modal de login). accentColor alinhado
-            // Ã  paleta oficial (#ff6b35) â€” antes era o teal antigo #00d4aa.
-            // MC78: Ã­cone do topo do modal ("Log in or sign up") passa a ser o rosto do
-            // GUTO (recorte apertado, fundo transparente) em vez do Ã­cone da marca.
-            // Same-origin (mantÃ©m compatibilidade com a CSP img-src do MC67).
+            // img-src → ícone quebrado no topo do modal de login). accentColor alinhado
+            // à paleta oficial (#ff6b35) — antes era o teal antigo #00d4aa.
+            // MC78: ícone do topo do modal ("Log in or sign up") passa a ser o rosto do
+            // GUTO (recorte apertado, fundo transparente) em vez do ícone da marca.
+            // Same-origin (mantém compatibilidade com a CSP img-src do MC67).
             logo: "/assets/guto/guto-login.png",
             showWalletLoginFirst: false,
             // walletList removido: causava WalletConnect bloqueado pelo CSP
-            // â†’ TypeError: Failed to fetch â†’ ready: false permanente
+            // → TypeError: Failed to fetch → ready: false permanente
           },
         }}
       >
-        {/* MC17.3.1.1 â€” regista os callbacks de evento (fix do crash createWallet). */}
+        {/* MC17.3.1.1 — regista os callbacks de evento (fix do crash createWallet). */}
         <PrivyEventsBridge />
         <App />
       </PrivyProvider>
     </PrivyCrashBoundary>
   );
 }
-
