@@ -158,6 +158,14 @@ export default function PrivyRoot() {
           // No browser web puro este campo é inócuo (o fluxo popup/redirect normal
           // continua a valer). Ver MC88.4 (listener) + docs.privy.io/recipes/capacitor-oauth.
           customOAuthRedirectUrl: "https://silly-stardust-ca71bc.netlify.app/redirect",
+          // MC88.5.3 — o customOAuthRedirectUrl sozinho não chegava: o SDK trata o
+          // WebView do Capacitor como "embedded browser" e ABORTA o OAuth antes de
+          // sequer montar o URL de consent (default false). Este flag destrava esse
+          // guard, deixando o fluxo App Link acima acontecer. Marcado @experimental
+          // pelo Privy — reconfirmar ao subir de major do @privy-io/react-auth.
+          // (Não confundir com `oauth: { redirect: true }`: essa chave NÃO existe em
+          // PrivyClientConfig 3.22.1 e era descartada em silêncio.)
+          allowOAuthInEmbeddedBrowsers: true,
 
           // ── Embedded Wallet: criação EXPLÍCITA (não automática) ──────────────
           // MC17.3.1.2.1 — createOnLogin:"off". A auto-criação no login era o
