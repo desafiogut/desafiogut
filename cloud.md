@@ -3106,3 +3106,36 @@ navegação interna. Desbloqueio = uma ação do operador no dashboard Privy (re
 **Lição:** quando um redirect falha, separar QUEM recusou — o Android (roteamento) ou o provedor
 (allowlist). Um `am start` com o esquema responde a isso em segundos e teria poupado o MC88.6
 inteiro. E allowlist de ORIGEM nunca é allowlist de DESTINO.
+
+**MC88.8 — o critério 6 nunca podia passar: media a chave errada.** O `capturar-token.mjs` lia
+`sessionStorage.getItem("gut_auth_user")` — chave que a app NUNCA escreve. Enumerado ao vivo:
+sessionStorage tem `gut_admin_check`, `gut_consentimento`, `sentryReplaySession`; o Privy guarda a
+sessão em `privy:token`/`privy:refresh_token`, no localStorage. O script reportava "token não
+encontrado" mesmo com o login concluído, e arrastou essa pendência por vários MCs. Segundo defeito
+no mesmo ficheiro: `chrome-remote-interface` resolve localhost para ::1 enquanto o `adb forward`
+escuta em 127.0.0.1 → o mesmo `socket hang up` já registado no MC88.2. E o `fetch()`/undici também
+não serve: o DevTools remoto do Android fecha a ligação por causa dos headers que ele acrescenta,
+embora o curl passe — é preciso `node:http` com headers mínimos.
+
+**Reescrito, e o critério 6 fechou:** `✅ Token JWT gerado e válido`, emissor `privy.io`, audiência
+`cmo51f3v300l90clgzksivvad`, refresh presente. Armadilha a lembrar: o socket do CDP inclui o PID
+(`webview_devtools_remote_<PID>`), portanto matar a app derruba o túnel — e a captura tem de correr
+na MESMA instância do login.
+
+**Terceira corrupção do PrivyRoot.jsx pelo mesmo comando.** O working tree voltara a
+`desafiogut://oauth` com 43 linhas de mojibake, de novo via
+`Get-Content -Raw | -replace | Set-Content -Encoding utf8`. Reposto com `git checkout HEAD --`, que
+corrige valor e encoding de uma vez. Em PS 5.1 esse `-Encoding utf8` grava BOM e a releitura do
+conteúdo mal-interpretado perpetua o dano — o padrão está proibido neste ficheiro.
+
+**Pista que pode acabar com a dependência do Chrome.** `PrivyProviderProps` tem `clientId?: string`
+("Your Privy App Client ID"), e nunca foi passado. Criar o app client no dashboard com o URL scheme
+não basta: sem o `clientId`, o SDK continua a autenticar-se como o cliente web por omissão, cujo
+allowlist não tem o esquema — o que explica a recusa persistir mesmo depois de o operador criar o
+cliente. MC88.9 = 1 linha (`clientId=`) + voltar a `desafiogut://oauth`; o intent-filter já está no
+manifest e o roteamento Android já foi verificado.
+
+**Relatório:** `Desktop\MC88.8-RELATORIO.txt`.
+
+**Lição:** antes de dar um critério por falhado, verificar que ele mede o que diz medir. Uma
+enumeração de `Object.keys(sessionStorage)` responderia em segundos ao que custou vários MCs.
