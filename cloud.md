@@ -3139,3 +3139,32 @@ manifest e o roteamento Android já foi verificado.
 
 **Lição:** antes de dar um critério por falhado, verificar que ele mede o que diz medir. Uma
 enumeração de `Object.keys(sessionStorage)` responderia em segundos ao que custou vários MCs.
+
+**MC88.9 — a hipótese do `clientId` era minha, e estava errada.** Levantei-a no MC88.8 a partir do
+docstring ("Your Privy App Client ID"); testada, falsificou-se. Passar
+`clientId="client-WY6YV…"` faz o SDK NUNCA ficar `ready`: o modal fica preso em "⏳ Carregando…"
+para sempre, sem um único erro no console. Isolamento em 3 builds: (1) clientId + `desafiogut://oauth`
+→ preso; (2) clientId + App Link HTTPS → preso, logo o culpado é o clientId e não o esquema;
+(3) sem clientId → ready imediato, sessão restaurada e JWT válido.
+
+**O campo que realmente comanda o bloqueio.** Interrogando
+`GET https://auth.privy.io/api/v1/apps/<appId>` de dentro da WebView, a config tem DOIS campos de
+nomes parecidos e papéis diferentes — e era aí que a confusão vivia desde o MC88.6:
+`allowed_domains` (tem `capacitor://localhost`, `https://localhost`, os netlify) e
+**`allowed_native_app_url_schemes: []` — vazio**. É o segundo que autoriza redirects nativos, e é
+essa a única razão do `Redirect URL scheme is not allowed`. Dois factos medidos, não deduzidos:
+criar o App Client no dashboard com o scheme NÃO preencheu esse campo, e a resposta da API é
+IDÊNTICA com e sem o header `privy-client-id` — o clientId nunca poderia ter desbloqueado o esquema,
+mesmo que não partisse o arranque.
+
+**Ação do operador, agora precisa:** acrescentar `desafiogut://` ao campo que alimenta
+`allowed_native_app_url_schemes` — não é onde estão as Allowed Origins, e não é criar um App Client
+(já feito, não bastou). Confirma-se relendo a API: o campo deixa de ser `[]`. Só então voltar a
+`customOAuthRedirectUrl: "desafiogut://oauth"` — uma linha; intent-filter, listener e roteamento já
+estão prontos e testados. E sem o clientId junto.
+
+**Relatório:** `Desktop\MC88.9-RELATORIO.txt`.
+
+**Lição:** perguntar à API do provedor o que ele acha da própria config vale mais do que ler o
+dashboard — dois campos de nome parecido custaram quatro MCs. E falha silenciosa é a pior de todas:
+o "Carregando…" eterno não gerou um erro sequer; só o isolamento de variável a apanhou.

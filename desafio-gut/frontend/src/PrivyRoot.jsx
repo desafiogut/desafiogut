@@ -138,6 +138,16 @@ export default function PrivyRoot() {
     <PrivyCrashBoundary>
       <PrivyProvider
         appId={PRIVY_APP_ID}
+        // MC88.9 — NÃO adicionar `clientId` aqui sem antes reproduzir o teste.
+        // Passar clientId="client-WY6YV4f8xhKTGnCG79Po1DgiEMQwWhcHfnCkHxoZQCjBG"
+        // (o App Client criado no dashboard) faz o SDK NUNCA ficar `ready`: o
+        // modal fica preso em "Carregando…" para sempre, sem erro no console.
+        // Confirmado por isolamento — acontece na mesma com o App Link HTTPS,
+        // portanto o culpado é o clientId e não o esquema do redirect.
+        // E não traria benefício: GET /api/v1/apps/<appId> devolve EXATAMENTE a
+        // mesma config com e sem o header privy-client-id, incluindo
+        // `allowed_native_app_url_schemes: []` — vazio, que é a verdadeira razão
+        // de "Redirect URL scheme is not allowed" (ver comentário do redirect).
         config={{
           // ── Métodos de login: Google (modal público) + E-mail (OTP corporativo) ──
           // MC62: "apple" removido (config morta — desabilitado no painel Privy).
@@ -157,22 +167,30 @@ export default function PrivyRoot() {
           // redirect final do OAuth é navegação INTERNA. O Chrome cede; o Opera não
           // (carrega o /redirect ele próprio e o utilizador nunca volta à app).
           //
-          // MC88.7 — TESTADO E REJEITADO: esquema custom. Seria independente do
-          // browser (nenhum browser trata "desafiogut://", logo o Android recebe
-          // sempre o retorno), e é o que o docstring do SDK 3.22.1 recomenda para
-          // Capacitor. Mas o BACKEND do Privy recusa, com
+          // MC88.7 tentou o esquema custom ("desafiogut://oauth" e
+          // "capacitor://localhost/oauth") e o backend recusou os dois com
           //     Error: Redirect URL scheme is not allowed
-          // tanto para "desafiogut://oauth" como para "capacitor://localhost/oauth"
-          // — e falha ANTES de abrir o browser, no clique em Google. Atenção: as
-          // "Allowed Origins" do dashboard (capacitor://localhost, http://localhost)
-          // autorizam o SDK a CORRER a partir dessas origens; não são destinos de
-          // redirect. Os intent-filters desses esquemas ficam no AndroidManifest,
-          // prontos, mas inertes até o esquema ser permitido do lado do Privy.
-          // → Confirma o recipe docs.privy.io/recipes/capacitor-oauth (App Link HTTPS)
-          //   e contraria o docstring do SDK.
           //
-          // Portanto: App Link HTTPS, validado end-to-end no MC88.5.3. Custo conhecido
-          // — só fecha o ciclo em browsers que cedem a navegação (Chrome sim, Opera não).
+          // MC88.9 encontrou o campo exato que comanda isso. A config do app
+          // (GET https://auth.privy.io/api/v1/apps/<appId>) tem DOIS campos:
+          //     allowed_domains: [http://localhost, https://localhost,
+          //                       capacitor://localhost, …netlify.app, …]
+          //     allowed_native_app_url_schemes: []      ← VAZIO
+          // É o segundo que autoriza redirects para esquemas nativos, e está
+          // vazio — daí a recusa. Criar o App Client no dashboard com o URL
+          // scheme NÃO preencheu este campo, e passar o `clientId` do cliente
+          // também não muda nada: a resposta da API é idêntica com e sem o
+          // header privy-client-id (medido). Pior, o clientId parte o arranque
+          // do SDK — ver comentário na prop acima.
+          //
+          // → Enquanto `allowed_native_app_url_schemes` estiver vazio, NENHUM
+          //   esquema custom funciona, por mais correto que esteja o lado
+          //   Android (o intent-filter scheme="desafiogut" está no manifest e o
+          //   roteamento foi verificado com `am start`).
+          //
+          // Portanto: App Link HTTPS, validado end-to-end (MC88.5.3, MC88.8).
+          // Custo conhecido — só fecha o ciclo em browsers que cedem a
+          // navegação: Chrome sim, Opera não.
           customOAuthRedirectUrl: "https://silly-stardust-ca71bc.netlify.app/redirect",
           // MC88.5.3 — o customOAuthRedirectUrl sozinho não chegava: o SDK trata o
           // WebView do Capacitor como "embedded browser" e ABORTA o OAuth antes de
