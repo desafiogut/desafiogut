@@ -1,0 +1,102 @@
+================================================================================
+MC88.29 — CORREÇÃO DA FILA_TAREFAS (religação da flag DELIBERADAMENTE ADIADA)
+================================================================================
+Data    : 2026-07-26
+Método  : diagnóstico via MCP Supabase + ensaio em transação revertida + migração
+Migração: desafio-gut/frontend/supabase/migrations/20260726_mc8829_fila_tarefas_corrigida.sql
+          registada em supabase_migrations.schema_migrations como
+          "mc8829_fila_tarefas_corrigida"
+
+--------------------------------------------------------------------------------
+ESTADO: fila CORRIGIDA e validada ✅ | CREDITO_ASSINCRONO mantido em FALSE ⏸
+        A validação do 202 (Segmento 4) NÃO foi feita — ver secção 5.
+--------------------------------------------------------------------------------
+
+1. SEGMENTO 0 — DIAGNÓSTICO
+--------------------------------------------------------------------------------
+A `fila_tarefas` em produção era um esquema hand-made, não o do repo:
+  id BIGSERIAL · status DEFAULT 'pendente' · created_at/updated_at
+  sem max_tentativas, agendado_para, ultimo_erro · 0 linhas
+RPC `reservar_tarefas(p_limit)`: o corpo era um SELECT ... FOR UPDATE SKIP LOCKED
+— ou seja, **não fazia UPDATE nenhum e portanto nem sequer reservava**. Dois
+processadores concorrentes podiam pegar a mesma tarefa.
+A migração 20260722_mc87_hardening já documentava esta deriva em detalhe.
+
+2. ⚠️ O SQL DO SEGMENTO 1 DO PLANO NÃO FOI USADO — reproduziria o bug
+--------------------------------------------------------------------------------
+Quatro defeitos, todos verificados contra o código e o catálogo do Postgres:
+
+ a) O plano cria `updated_at`. Mas `_lib/fila.mjs:65,76` escreve **`atualizado_em`**.
+    → o consumidor rebentaria exatamente como o produtor rebentava antes.
+ b) O plano usa `status DEFAULT 'pendente'` e a RPC filtra `status='pendente'`.
+    Mas o worker marca 'done'/'failed' (fila.mjs:36,65,73) e a RPC do repo filtra
+    `IN ('pending','failed')`. → tarefas falhadas NUNCA seriam re-tentadas.
+ c) A RPC do plano não incrementa `tentativas` nem verifica `< max_tentativas`.
+    → sem DLQ e sem backoff; o propósito da fila perde-se.
+ d) A RPC do plano não tem `SECURITY INVOKER` + `SET search_path=''` nem
+    `REVOKE ... FROM PUBLIC`. → reabriria o achado A-04/A-15 que o MC87 fechou
+    (o PostgreSQL concede EXECUTE a PUBLIC por omissão em funções novas).
+
+3. ⚠️ A MIGRAÇÃO DO REPO TAMBÉM NÃO PODE SER APLICADA COMO ESTÁ
+--------------------------------------------------------------------------------
+ e) `CREATE OR REPLACE FUNCTION reservar_tarefas(p_limite INT)` → **ERRO 42P13**.
+    A função em produção era `reservar_tarefas(p_limit integer)`: nome de parâmetro
+    diferente, mas ASSINATURA idêntica `(integer)` — e o PostgreSQL não permite
+    renomear parâmetros num REPLACE. Exige DROP + CREATE.
+ f) Índices e constraints vivem no SCHEMA, não na tabela. Renomear a tabela NÃO
+    liberta `fila_tarefas_pkey` → o `CREATE TABLE` novo falharia com "relation
+    fila_tarefas_pkey already exists"; e `CREATE INDEX IF NOT EXISTS
+    idx_fila_elegiveis` seria silenciosamente ignorado, deixando a tabela nova
+    SEM índice.
+ g) Falta o `REVOKE ... FROM PUBLIC` (ver 2d).
+
+A migração escrita neste MC resolve (a)–(g).
+
+4. SEGMENTOS 1 e 2 — APLICAÇÃO E VALIDAÇÃO
+--------------------------------------------------------------------------------
+Ensaio prévio: a migração inteira + testes correram numa transação terminada em
+ROLLBACK; confirmou-se depois que produção ficara intacta (id ainda bigint, RPC
+ainda p_limit). Só então foi aplicada a sério.
+
+Esquema resultante (verificado em information_schema):
+  id UUID gen_random_uuid() · tipo · payload jsonb · status 'pending'
+  tentativas · max_tentativas 5 · agendado_para · ultimo_erro
+  criado_em · atualizado_em                                            ✅
+  índice idx_fila_elegiveis (agendado_para) WHERE status IN (pending,failed) ✅
+  RLS ativo + 1 policy service_role                                    ✅
+  RPC reservar_tarefas(p_limite integer) · SECURITY INVOKER ·
+      search_path="" · ACL só postgres+service_role (PUBLIC revogado)  ✅
+  fila_tarefas_legado arquivada (0 linhas — nada se perdeu)            ✅
+  migração registada em schema_migrations                              ✅
+
+Semântica da reserva — 6 casos, todos corretos (transação revertida):
+  pending(0)        → RESERVADA, tentativas→1
+  failed(2)         → RESERVADA, tentativas→3      (retry funciona)
+  failed(5)=max     → ignorada                     (DLQ)
+  processing        → ignorada                     (sem duplo processamento)
+  done              → ignorada
+  agendada +1h      → ignorada                     (backoff respeitado)
+Produtor: o INSERT com o shape exato de fila.mjs (tipo/payload/max_tentativas)
+passou — era este que rebentava e causava o 502 do MC88.28.
+
+5. SEGMENTOS 3 e 4 — NÃO EXECUTADOS (decisão consciente)
+--------------------------------------------------------------------------------
+CREDITO_ASSINCRONO permanece **false** (verificado).
+
+Motivo: o saldo do operador ficou em R$ 0,00 após a compra do MC88.28, logo
+validar o 202 exigiria um depósito — custo financeiro, proibido pela R2 (o plano
+pressupunha "saldo existente", que não existe). Religar a flag sem poder validar
+a compra arriscaria repetir o 502 em cima de utilizadores reais, que foi
+precisamente o que o MC88.28 apanhou. Decisão do operador: parar antes de religar.
+
+⚠️ O que falta para fechar o assunto (MC seguinte):
+  1. Depositar saldo (≥ R$ 2,00).
+  2. netlify env:set CREDITO_ASSINCRONO true --context production
+  3. netlify deploy --prod --build   (NUNCA disparar build pelo git — ver MC88.28
+     secção 6: origin/main está em d42b4ae, de 4 de julho)
+  4. Compra real com o monitor CDP; esperado 202 em < 1 s, <CreditoStatus> a
+     mostrar "em processamento", saldo a subir em ~12–20 s, e 1 linha em
+     fila_tarefas que o cron de 5 min leva a 'done'.
+
+A infraestrutura está pronta; falta só a prova viva.
+================================================================================

@@ -4137,3 +4137,53 @@ vai para segundo plano, deixando o `adb forward` a apontar para um PID morto (si
 hang up", que parece erro de cliente).
 
 **Relatório:** `Desktop\MC88.28-RELATORIO.txt`
+
+## MC88.29 — A fila corrigida: nem o SQL do plano nem a migração do repo serviam como estavam
+
+**Resultado:** `fila_tarefas` em produção passou a ter o esquema que `_lib/fila.mjs` espera,
+com a reserva atómica a funcionar de facto. **`CREDITO_ASSINCRONO` ficou deliberadamente em
+`false`** — a validação do 202 exigia depósito (saldo em R$ 0,00 após o MC88.28) e religar sem
+prova viva arriscava repetir o 502 nos utilizadores. Migração registada em `schema_migrations`
+como `mc8829_fila_tarefas_corrigida` — a ausência desse registo foi o que escondeu o problema
+durante semanas.
+
+**O que estava lá:** tabela hand-made (`id` BIGSERIAL, `status DEFAULT 'pendente'`,
+`created_at`/`updated_at`, sem `max_tentativas`/`agendado_para`/`ultimo_erro`) e uma
+`reservar_tarefas(p_limit)` cujo corpo era **só um SELECT** — não fazia UPDATE, portanto **nem
+reservava**: dois processadores podiam pegar a mesma tarefa.
+
+⚠️ **O SQL do Segmento 1 do plano não foi usado — teria recriado o bug.** Quatro defeitos,
+todos verificados contra o código: criava `updated_at` quando `fila.mjs:65,76` escreve
+**`atualizado_em`** (mesmo bug, outro sítio); usava `'pendente'` quando o worker marca
+`'done'`/`'failed'` e a RPC filtra `IN ('pending','failed')` → tarefas falhadas nunca seriam
+re-tentadas; não incrementava `tentativas` nem verificava `max_tentativas` → sem DLQ nem
+backoff; e não tinha `SECURITY INVOKER` + `search_path=''` + `REVOKE ... FROM PUBLIC` →
+reabriria o A-04/A-15 que o MC87 fechou, porque **o PostgreSQL concede EXECUTE a PUBLIC por
+omissão em funções novas**.
+
+⚠️ **A migração do repo (`20260629`) também não podia ser aplicada como está** — e isto é o que
+teria feito falhar qualquer tentativa anterior:
+
+- `CREATE OR REPLACE FUNCTION reservar_tarefas(p_limite INT)` dá **ERRO 42P13**. A função em
+  produção era `(p_limit integer)`: nome de parâmetro diferente, **assinatura idêntica**
+  `(integer)`, e o PostgreSQL não deixa renomear parâmetros num REPLACE. Exige DROP + CREATE.
+- **Índices e constraints vivem no schema, não na tabela.** Renomear a tabela não liberta
+  `fila_tarefas_pkey` → o `CREATE TABLE` novo falha com "relation already exists"; e o
+  `CREATE INDEX IF NOT EXISTS idx_fila_elegiveis` seria calado, deixando a tabela nova **sem
+  índice**. A migração deste MC renomeia também a constraint e o índice.
+
+**Método que vale reter:** o MCP do Supabase honra transações — `BEGIN; …; ROLLBACK;` provou-se
+com uma tabela-sonda antes de confiar nele. A migração inteira e os testes correram primeiro num
+ensaio revertido, e confirmou-se que produção ficara intacta (`id` ainda bigint) antes de aplicar
+a sério. Todos os testes de produtor/consumidor foram feitos em transações revertidas, para não
+deixar tarefas órfãs que o cron de 5 min fosse apanhar.
+
+**Semântica validada (6 casos):** `pending(0)`→reservada com `tentativas→1`; `failed(2)`→reservada
+(retry); `failed(5)=max`→ignorada (DLQ); `processing`→ignorada (sem duplo processamento);
+`done`→ignorada; agendada para +1h→ignorada (backoff). Nenhuma destas propriedades existia antes.
+
+**Falta para fechar:** depositar ≥ R$ 2,00, `CREDITO_ASSINCRONO=true`, `netlify deploy --prod
+--build` (**nunca** disparar build pelo git — `origin/main` está em `d42b4ae`, de 4 de julho) e
+uma compra real com o monitor CDP. A infraestrutura está pronta; falta a prova viva.
+
+**Relatório:** `Desktop\MC88.29-RELATORIO.txt`
