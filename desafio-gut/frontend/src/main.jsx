@@ -1,4 +1,9 @@
 import "./globals.css";
+// MC88.11 — PRIMEIRO import a seguir ao CSS, e tem de continuar a sê-lo: instala-se
+// como side-effect e no APK redireciona "/.netlify/functions/*" para o domínio de
+// produção, antes de qualquer fetch da app. No browser é no-op. Ver
+// src/lib/apiOrigin.js para o porquê (o Capacitor devolvia o index.html com 200).
+import "./lib/apiOrigin.js";
 import { Component, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";

@@ -3202,3 +3202,31 @@ altera código; e a Parte B exige deploy, que é do operador, com o drift da pro
 **Lição:** um 200 pode ser a pior resposta possível. Vale a pena `lerResposta()` recusar corpos que
 não sejam `application/json` — teria transformado quatro sintomas mudos num erro explícito no
 primeiro segundo.
+
+**MC88.11 — Parte A: as chamadas passaram a sair do telemóvel.** Um único ponto de reescrita
+(`src/lib/apiOrigin.js` + 1 import no `main.jsx`) em vez de editar os 24 call-sites com o literal
+`/.netlify/functions/…` — só 13 dos 27 passam pelo `api.js`, e qualquer call-site novo voltaria a
+partir em silêncio. O shim substitui o `fetch` global e reescreve apenas strings que começam
+exatamente por esse prefixo; Privy, Sentry, Alchemy e assets passam intocados, e na web é no-op
+absoluto (o fetch nem chega a ser substituído).
+
+**Detalhe de ESM que quase escapava:** os `import` são hoisted e avaliados antes de qualquer
+statement do módulo importador, portanto chamar a instalação a partir do `main.jsx` correria DEPOIS
+de toda a árvore de imports. O módulo auto-instala como side-effect e o `main.jsx` faz só
+`import "./lib/apiOrigin.js"` — que tem de continuar a ser o primeiro import a seguir ao CSS.
+
+**Antes → depois, medido via CDP:** `GET /.netlify/functions/edicoes` passou de
+`200 · ok:true · text/html` (o index.html a fingir sucesso) para `TypeError: Failed to fetch`, e os
+logs `Handling local request: …/netlify/…` desapareceram por completo. A chamada agora SAI e é
+recusada por CORS na resposta. Ganho real mesmo antes da Parte B: a falha deixou de ser silenciosa.
+Zero regressão — UI renderiza igual, sem crash, login Privy intacto.
+
+⚠️ O Segmento 2 do plano teria destruído 15 ficheiros: o `-replace` para
+`'getBaseUrl() + "..."'` escreve `"..."` LITERALMENTE, trocando o nome de cada endpoint por três
+pontos. Não foi usado.
+
+**Falta a Parte B** (CORS nas functions, com `Authorization` nos allow-headers por causa do JWT do
+Privy, allowlist explícita e nunca `*`) — exige deploy, que é do operador, e a produção tem o drift
+da linhagem MAINNET. Só então o QR Code do PIX pode aparecer.
+
+**Relatório:** `Desktop\MC88.11-RELATORIO.txt`.
