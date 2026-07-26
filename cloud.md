@@ -3509,3 +3509,67 @@ primeiro porque sem ele qualquer ajuste de polling é medido às cegas.
 `allow-origin` teria apanhado isto sem precisar de um pagamento real.
 
 **Relatório:** `Desktop\MC88.15-RELATORIO.txt` · evidência `Desktop\MC88.15-LATENCIA.txt`
+
+## MC88.16 — Otimização da latência do PIX: o que funcionou, e a estimativa que eu errei
+
+Cinco frentes do MC88.15 implementadas em 4 commits isolados, 224/224 testes (209 + 15 novos),
+validadas num **deploy preview** contra infraestrutura real. Duas correcções ao plano e uma correcção
+a mim mesmo.
+
+**⚠️ P1 — eu errei a estimativa, e a atribuição do MC88.15 estava mal feita.** Prometi −1,5 a −2,0 s
+tirando o `ethers` do cold start; entreguei **~−100 ms** (2062 → 1960 ms). O ethers saiu de facto do
+grafo (garantido por teste: só restam `@netlify/blobs` 145K, `@sentry/node` 2,1M, `jose` 1,2M), mas o
+experimento de controlo matou a hipótese: primeira invocação de functions que **não** importam ethers
+nem sentry deu `troco` 2,93 s, `voucher` 2,55 s, `notificacoes` 2,77 s — enquanto
+`iniciar-pagamento` está agora a ~1,96 s. **~2,5–2,9 s é o piso da plataforma Netlify**, quase
+independente do grafo de imports; o PIX está entre as functions mais RÁPIDAS a frio, não as mais
+lentas. O P1 continua a valer (desfaz acoplamento morto, protegido por teste, −16 MB no bundle) mas
+**não é a alavanca do cold start** — essa é a plataforma, e é decisão de custo do operador.
+*(Nota metodológica: o meu 1.º controlo usou `health` e deu 0,81 s — mas eu já tinha chamado `health`
+antes, logo estava quente. Controlo inválido, repetido com functions virgens.)*
+
+**Arqueologia que mudou o P1 para melhor:** `creditarPedidoIdempotente` e `lerCreditoPedido` **não são
+importados por ninguém** — o crédito passou a ir por `creditarSaldoRsIdempotente` (saldoRs.mjs). Todo o
+custo de acoplamento ao ethers vinha de **código morto legado**. Não removido (fora do âmbito).
+
+**🐞 P0 — encontrei um segundo caminho sem CORS, fora do plano.** Ao procurar outros `new Response`
+crus: `GET /produtos?categoria=bronze` devolvia **200 + ETag sem `allow-origin`** (é `jsonCacheavel`,
+em `_lib/http-cache.mjs`). Mesma classe do MC88.13, a partir a vitrine por categoria no APK. Confirmado
+em produção antes de afirmar, corrigido no mesmo commit.
+
+**Peça que o plano não previa:** pôr `allow-origin` no 429 faz o fetch deixar de estourar, mas **não
+torna o `Retry-After` legível** — cross-origin o JS só lê cabeçalhos safelisted. Sem
+`access-control-expose-headers`, o "backoff informado" do P0b nasceria cego. O cliente lê o
+`retry_after` do **corpo**, que não depende dessa lista.
+
+**Residual do 304, investigado e fechado:** o 304 chega sem `allow-origin`, mas não é a nossa função a
+responder — `Cache-Status: "Netlify Edge"; hit`. O CDN serve e retira o cabeçalho. Em vez de assumir,
+medi de dentro do APK com `fetch(u,{cache:"no-cache"})` (força pedido condicional): 3/3 devolveram
+200/ok:true sem erro, porque o browser funde o 304 com a resposta em cache, cuja verificação já passou.
+**Benigno.**
+
+**⚠️ P0b — não segui o plano literalmente, de propósito.** Ele indicava `aplicarRateLimit(req, 25)`,
+que omite o slug do endpoint. A assinatura é `(req, endpoint, limite)`: com 25 no lugar do endpoint,
+`limite` fica `undefined`, o guard devolve `null` e o **rate-limit desliga-se em silêncio** — regressão
+de segurança que nenhum teste funcional apanha, porque tudo continua a responder 200. Ficou um teste
+que falha se a assinatura voltar a perder um argumento. Validado no preview: 25 passam, o 26.º dá 429.
+
+**P4 validado com A/B no aparelho:** preview (com `Timing-Allow-Origin`) → `ttfb=214 ms`,
+`transferSize=377`; produção (sem) → `ttfb=0`, `transferSize=0`. A cegueira que obrigou o MC88.15 a
+correlacionar curl + logs está fechada.
+
+⚠️ **Um teste meu passou quando não devia, e só a mutação o revelou.** A 1.ª versão do guarda de
+"o PIX não alcança o ethers" **passava com o ethers de volta no grafo**: o grupo `[\s\S]*?` atravessava
+linhas e ia buscar o ` from ` do import *seguinte*, engolindo imports de side-effect
+(`import "./x.mjs"`), e não cobria `export ... from` — que é exactamente a forma que `credito.mjs` usa.
+Corrigido para `[^;'"]*?` + `import|export`. **Lição: validar teste novo por mutação, não por leitura.**
+
+⛔ **NÃO deployei para produção, e a razão é séria.** Os `.env` locais que o Vite lê no build têm
+`VITE_CONTRATO_SEPOLIA = 0x59A73A…F6D5` (contrato **abandonado**) e `VITE_ALCHEMY_URL` em **Sepolia** —
+o contrato activo na mainnet é `0x0052…16cd`. Um `--prod --build` daqui assava Sepolia no bundle e
+**regredia a produção para fora da mainnet**: o incidente do MC79 e a causa do BAD_DATA do MC59.15.
+Deployei preview (`6a661f73b8282ff629619a30--`) e validei lá — as functions não dependem de nenhum
+`VITE_*`, logo a validação do backend é integralmente válida. Promoção a produção = **operador**, depois
+de corrigir os `.env` ou garantir que o build usa as vars do dashboard.
+
+**Relatório:** `Desktop\MC88.16-RELATORIO.txt` (placar, evidências, passos para o operador)
