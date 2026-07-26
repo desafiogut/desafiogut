@@ -187,6 +187,7 @@ export default function ChatbotWidget() {
   const {
     authToken, tipoUsuario, address, systemPausado,
     notificacoes, notificacoesNaoLidas, marcarNotificacoesLidas,
+    tipoCarregando,   // MC88.23 — perfil ainda a resolver (lookup da cota)
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
   // MC20.2 ITEM 11/13 — sincroniza o GutoSpritePlayer global: thinking ao perguntar,
@@ -199,16 +200,46 @@ export default function ChatbotWidget() {
     : tipoUsuario === "corporativo" ? { txt: "◈ Lojista", cor: "#00d4aa" }
     : (authToken || address) ? { txt: "●", cor: "#00c853" }
     : null;
+  // MC88.23 — o perfil de um autenticado é ASSÍNCRONO: `tipoUsuario` vale "comum"
+  // até o lookup da cota responder, e só então passa a "corporativo". Enquanto
+  // isso, a chave era construída com o valor provisório e nascia uma chave órfã
+  // `comum:<carteira>` (observada vazia na validação do MC88.22). Numa rede lenta,
+  // uma mensagem escrita nessa janela cairia na chave errada e ficaria invisível
+  // depois da resolução.
+  //
+  // ⚠️ `tipoCarregando` do AppContext NÃO resolve isto sozinho: começa `false`
+  // (AppContext L181) e só passa a `true` DENTRO de um efeito (L267) — ou seja,
+  // depois do primeiro render, que é exatamente aquele que criava a chave órfã.
+  // Por isso esperamos pelo CICLO completo (viu true → voltou a false).
+  const cicloVistoRef = useRef(false);
+  const [perfilResolvido, setPerfilResolvido] = useState(false);
+
+  // Troca de identidade: recomeça a espera. Visitante resolve de imediato — não
+  // depende de lookup nenhum.
+  useEffect(() => {
+    cicloVistoRef.current = false;
+    setPerfilResolvido(!address);
+  }, [address]);
+
+  useEffect(() => {
+    if (!address) return;
+    if (tipoCarregando) { cicloVistoRef.current = true; setPerfilResolvido(false); return; }
+    if (cicloVistoRef.current) setPerfilResolvido(true);
+  }, [address, tipoCarregando]);
+
   // MC88.22 — identidade a que este histórico pertence. `tipoUsuario` é
   // "corporativo" | "comum" (AppContext); admin vem do useAdmin. Sem carteira →
   // visitante, identificado pelo gut_visitor_id já existente.
+  // null enquanto o perfil não estiver resolvido: os efeitos abaixo não tocam no
+  // localStorage nesse estado.
   const chaveHist = useMemo(() => {
+    if (!perfilResolvido) return null;
     const perfil = !address ? "visitante" : (isAdmin ? "admin" : (tipoUsuario || "comum"));
     const identidade = address
       ? String(address).toLowerCase()
       : (getCachedVisitorId() || "anonimo");
     return chaveHistorico(perfil, identidade);
-  }, [address, isAdmin, tipoUsuario]);
+  }, [address, isAdmin, tipoUsuario, perfilResolvido]);
 
   const [aberto, setAberto] = useState(false);
   const [mensagens, setMensagens] = useState([]);
@@ -233,6 +264,7 @@ export default function ChatbotWidget() {
   // MC88.22 — CARGA: ao mudar de identidade, troca o histórico exibido pelo dessa
   // identidade. Não apaga o da anterior: voltar à conta antiga recupera o dela.
   useEffect(() => {
+    if (!chaveHist) return;   // MC88.23 — perfil por resolver: não toca no storage
     trocandoIdentidadeRef.current = true;
     setMensagens(carregarHistorico(chaveHist));
     limparLegado();   // o blob global misturado morre no primeiro arranque
@@ -240,6 +272,7 @@ export default function ChatbotWidget() {
 
   // GRAVAÇÃO: salta a primeira passagem após uma troca (ver trocandoIdentidadeRef).
   useEffect(() => {
+    if (!chaveHist) return;   // MC88.23 — sem chave definitiva, nada é persistido
     if (trocandoIdentidadeRef.current) { trocandoIdentidadeRef.current = false; return; }
     salvarHistorico(chaveHist, mensagens);
   }, [mensagens, chaveHist]);
@@ -396,6 +429,9 @@ export default function ChatbotWidget() {
   const limparHistorico = useCallback(() => {
     setMensagens([]);
     // MC88.22 — apaga só o histórico DESTA identidade, não o das outras contas.
+    // MC88.23 — com a chave por resolver seria `removeItem(null)`, que o browser
+    // coage para a string "null" e apagaria uma chave chamada "null".
+    if (!chaveHist) return;
     try { localStorage.removeItem(chaveHist); } catch {}
   }, [chaveHist]);
 

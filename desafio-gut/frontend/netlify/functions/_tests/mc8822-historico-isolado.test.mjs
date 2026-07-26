@@ -89,3 +89,44 @@ test("limpar o histórico afeta só a identidade atual", () => {
   assert.match(codigo, /removeItem\(\s*chaveHist\s*\)/,
     "limparHistorico tem de remover a chave da identidade atual, não uma global");
 });
+
+// ── MC88.23 — a chave não pode ser construída com o perfil ainda provisório ──
+// O perfil de um autenticado é ASSÍNCRONO: `tipoUsuario` vale "comum" até o
+// lookup da cota responder. A validação do MC88.22 apanhou a chave órfã
+// `comum:0x6ac980…` (0 mensagens) criada nessa janela.
+//
+// ⚠️ `tipoCarregando` NÃO chega sozinho: começa `false` (AppContext L181) e só
+// passa a `true` DENTRO de um efeito (L267) — depois do primeiro render, que é
+// precisamente o que criava a chave órfã. Por isso espera-se o CICLO completo.
+
+test("o widget consome tipoCarregando do contexto", () => {
+  assert.match(codigo, /tipoCarregando/,
+    "sem tipoCarregando não há como saber que o perfil ainda está a resolver");
+});
+
+test("espera o CICLO de carregamento, não só a flag", () => {
+  assert.match(codigo, /cicloVistoRef/,
+    "a flag sozinha é insuficiente (começa false): é preciso ver true→false");
+  assert.match(codigo, /cicloVistoRef\.current\s*=\s*true/,
+    "falta marcar que o carregamento começou");
+  assert.match(codigo, /if\s*\(\s*cicloVistoRef\.current\s*\)\s*setPerfilResolvido\(\s*true\s*\)/,
+    "só se deve dar o perfil por resolvido depois de o ciclo fechar");
+});
+
+test("a chave é null enquanto o perfil não está resolvido", () => {
+  assert.match(codigo, /if\s*\(\s*!perfilResolvido\s*\)\s*return\s+null/,
+    "a useMemo tem de devolver null com o perfil por resolver");
+  assert.match(codigo, /\}, \[address, isAdmin, tipoUsuario, perfilResolvido\]\)/,
+    "perfilResolvido tem de estar nas deps da useMemo");
+});
+
+test("a espera recomeça ao trocar de identidade", () => {
+  assert.match(codigo, /cicloVistoRef\.current\s*=\s*false;\s*\n\s*setPerfilResolvido\(!address\)/,
+    "ao mudar de carteira é preciso reiniciar a espera (senão usa-se o perfil da conta anterior)");
+});
+
+test("nenhum efeito toca no localStorage com a chave nula", () => {
+  const guardas = codigo.match(/if\s*\(\s*!chaveHist\s*\)\s*return/g) || [];
+  assert.ok(guardas.length >= 3,
+    `esperava guardas em carga, gravação e limpeza; encontrei ${guardas.length}`);
+});
