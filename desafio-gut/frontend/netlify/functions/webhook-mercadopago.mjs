@@ -22,7 +22,7 @@
 import { getStore } from "@netlify/blobs";
 import { consultarPagamento, MercadoPagoApiError } from "./_lib/mp-client.mjs";
 import { jsonResponse, jsonError, parseJsonBody } from "./_lib/validate.mjs";
-import { lerMetaPedido } from "./_lib/credito.mjs";
+import { lerMetaPedido } from "./_lib/meta.mjs";
 import { creditarSaldoRsIdempotente } from "./_lib/saldoRs.mjs";
 // MC17.1 — pedidos de cota ativam a cota automaticamente (sem aprovação manual).
 import { ativarCotaPaga } from "./_lib/cota-ativacao.mjs";

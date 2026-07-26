@@ -14,7 +14,7 @@ import {
   validarEndereco, jsonResponse, jsonError, parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
 import { getPixProvider, PIX_PROVIDER_NAME } from "./_lib/pix-provider/index.mjs";
-import { gravarMetaPedido } from "./_lib/credito.mjs";
+import { gravarMetaPedido } from "./_lib/meta.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { COTA_PRECO_CONTRATO_BRL, CATEGORIAS } from "./_lib/cota-ativacao.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
