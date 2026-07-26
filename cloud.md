@@ -3314,3 +3314,54 @@ regulamento é afirmação legal do operador, gerar PIX cria cobrança real em p
 `privy:token` seria manusear credencial (R5).
 
 **Relatório:** `Desktop\MC88.12.1-RELATORIO.txt`
+
+---
+
+## MC88.13 — Diagnóstico do "Failed to fetch" no PIX: a allow-list do CORS está incompleta
+
+**Causa raiz:** faltam `sentry-trace` e `baggage` no `access-control-allow-headers`. A app envia-os
+sem que ninguém tenha escrito código para isso — é o `browserTracingIntegration` do Sentry.
+
+```
+Access to fetch at '…/iniciar-pagamento' from origin 'https://localhost' has been blocked by
+CORS policy: Request header field sentry-trace is not allowed by Access-Control-Allow-Headers
+in preflight response.
+```
+
+**O mecanismo é a composição de duas coisas certas.** O `main.jsx` importa `apiOrigin.js` primeiro,
+logo o shim embrulha o `fetch` nativo. O Sentry carrega depois (lazy, MC82.3) e embrulha o SHIM.
+A ordem fica `app → Sentry → shim → fetch`. A app chama com URL **relativa**; o Sentry vê relativa,
+conclui same-origin e anexa os cabeçalhos de tracing; só **depois** o shim reescreve para absoluta e
+a chamada vira cross-origin — já a levar dois cabeçalhos não autorizados. Nenhum dos dois está
+errado sozinho. Por isso não existe na web (same-origin, sem preflight) e só aparece no APK.
+
+⚠️ **Porque é que o MC88.12.1 deu verde** — lição que vale mais do que o bug: testei o preflight com
+os cabeçalhos que **assumi** (`authorization, content-type`), não com os que a app **envia**. O
+servidor devolve 204 nos dois casos; quem rejeita é o browser, ao comparar a lista pedida com a
+autorizada. **Um teste de CORS que não reproduza o `Access-Control-Request-Headers` real dá falso
+verde.** E a minha sonda passou porque a app tinha acabado de reiniciar e o Sentry, sendo lazy,
+ainda não carregara.
+
+Reprodução determinística:
+
+| `Access-Control-Request-Headers` | resultado |
+|---|---|
+| `content-type` | 204 ✅ (o falso verde) |
+| `content-type, sentry-trace, baggage` | 204 mas allow-headers **não** os contém → browser aborta |
+
+**Alcance maior do que o PIX:** no APK está partido todo o tráfego para as functions —
+`iniciar-pagamento`, `auth-user`, `edicoes`, `lances-flash`, `cotas`, `admin-list`, `analytics`.
+Daí `obterAuthToken falhou` e `useEdicoes fallback R-1`: a app corre em dados de fallback.
+
+**Correção (MC88.14), 1 linha em `_lib/cors.mjs:39`** — acrescentar `sentry-trace, baggage` ao
+allow-headers. Server-side, portanto **não exige recompilar o APK**, preserva o tracing e não toca
+no shim nem no Sentry. Descartada a alternativa de mexer em `tracePropagationTargets` (obrigaria a
+reinstalar o APK e perderia o tracing). Verificado que a app não envia mais nenhum cabeçalho custom
+além de Content-Type/Authorization/X-Visitor-ID/X-Device-Tracked (todos já autorizados) — logo estas
+duas adições fecham o conjunto, não haverá 3.ª ronda.
+
+Nota: o teste do plano (`window.__gutApiOrigin`) daria falso negativo — o marcador vive em
+`window.fetch.__gutApiOrigin`. Ruído não relacionado: `auth.privy.io/analytics_events` bloqueado por
+falta de allow-origin é telemetria de terceiros, não perseguir.
+
+**Relatório:** `Desktop\MC88.13-RELATORIO.txt` · evidências `MC88.13-LOGCAT.txt`, `MC88.13-CDP-CONSOLE.txt`
