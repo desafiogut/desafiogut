@@ -3825,3 +3825,49 @@ recarregar na troca de identidade e limpar no logout; teste de regressão valida
 isolamento deixa de ser cosmético para ser requisito de segurança.
 
 **Relatório:** `Desktop\MC88.21.1-RELATORIO.txt` · evidência `Desktop\MC88.21.1-APP.txt`
+
+## MC88.22 — Histórico do GUTO isolado por perfil e identidade
+
+Corrigido o defeito do MC88.21.1: a chave global `gut_chat_history` passou a ser
+`gut_chat_history:<perfil>:<identidade>` — carteira em minúsculas para autenticados, `gut_visitor_id`
+(FingerprintJS, já existente) para visitantes. **Não usei o IP**, que o plano admitia em alternativa: o
+cliente nem lhe acede e ele mudaria a cada rede, dando isolamento falso.
+
+⚠️ **Não segui o plano no Segmento 1, e isso foi decisivo.** Ele propunha um `getChatHistoryKey()` a ler
+`window.__gut_address`, `localStorage.gut_address` e `localStorage.gut_perfil` — **nenhum dos três
+existe**, confirmado por grep no código e lendo o localStorage real do aparelho. A função cairia
+**sempre** no fallback `visitante` + `gut_visitor_id`, ou seja **uma chave única para todas as contas
+outra vez**: o bug pareceria corrigido, a chave até mudaria de nome, e o defeito ficaria intacto. A
+fonte correcta é o `useAppContext()`, que o componente já usa. Também não usei o `-replace 'LS_KEY'`
+global — substituição cega num ficheiro de ~900 linhas; editei os 5 pontos um a um.
+
+⚠️ **A armadilha que quase recriava o bug:** com um efeito que CARREGA ao mudar a chave e outro que
+GRAVA ao mudar as mensagens, quando a identidade muda **ambos correm no mesmo commit** — e o de gravação
+corre ainda com as mensagens da conta anterior, escrevendo o histórico de A na chave de B. Seria o mesmo
+vazamento, agora persistente. Resolvido com `trocandoIdentidadeRef`, que salta a primeira gravação após
+cada troca. É a parte menos óbvia do MC.
+
+O blob global legado é **apagado, não migrado**: o seu conteúdo é precisamente a mistura de várias
+contas, e atribuí-lo a quem entrasse primeiro recriaria o vazamento. Trocar de conta não destrói o
+histórico da anterior — voltar a ela recupera-o.
+
+**Estado:** suite 244/244 (236 + 8 novos), build verde, os 8 asserts validados por **mutação** (repor a
+chave global, remover a guarda e migrar o legado fazem falhar o guarda certo). APK debug recompilado
+(JDK 21 do Android Studio, BUILD SUCCESSFUL em 48s) e instalado; o código novo **está** nos assets
+empacotados (`PrivyRoot-DQFsJwj1.js`).
+
+⚠️ **Erro de método que registo:** a minha 1.ª verificação em runtime disse "o prefixo não está no
+bundle". Era **inconclusiva** — varri só o chunk de ENTRADA enquanto a app estava no gate de
+consentimento, e o ChatbotWidget vive num chunk **lazy** que ainda não carregara. Tomada à letra, teria
+feito concluir que o build falhou. Refiz contra os assets no disco.
+
+**⏳ Falta a validação em runtime**, que exige o operador: o aparelho está parado no gate de
+consentimento, logo o widget ainda não montou — é por isso que o blob legado ainda existe e nenhuma
+chave composta foi criada. Roteiro no relatório: conta A → 2 mensagens → conta B (chat deve vir vazio)
+→ voltar a A (as 2 mensagens devem reaparecer).
+
+**Dívida assumida:** o guarda é estrutural, sobre o ficheiro-fonte. Apanha a regressão da chave global e
+da guarda de efeitos, mas **não prova o comportamento em runtime** — não há infra de testes no frontend
+e introduzi-la só para isto seria tudo menos alteração mínima.
+
+**Relatório:** `Desktop\MC88.22-RELATORIO.txt`
