@@ -4037,3 +4037,53 @@ deixar como está já não é perigoso: a falha passa a ser apanhada no build, n
 esperado 3 senhas, R$ 4,00 e **nenhuma** faixa de aviso.
 
 **Relatório:** `Desktop\MC88.25-RELATORIO.txt`
+
+## MC88.26 — Latência da compra de senhas: 95% é espera on-chain, e a solução já está no repo desligada
+
+Medição da compra real de 20:34 (`0x5baf46…32b8`, 1 senha), por timestamps do log:
+
+| etapa | tempo | % |
+|---|---|---|
+| validação + débito R$ (Supabase) | 472 ms | 2,2 % |
+| **on-chain: submeter + aguardar confirmação** | **20 822 ms** | **95,3 %** |
+| Duration total da função | 21 851 ms | |
+
+Segunda amostra (18:30): 17,7 s total, ~16,8 s on-chain. São 1–2 blocos de Ethereum — **não é lentidão
+do nosso código, é o tempo da rede**.
+
+**Causa raiz: uma flag nunca ligada.** `comprar-senhas.mjs:~227` tem
+`if (process.env.CREDITO_ASSINCRONO === "true" && !voucherValido)` → submete a tx, enfileira a
+confirmação e responde **202** com o txHash. E `netlify env:get CREDITO_ASSINCRONO --context production`
+→ **"No value set"**. Sem a flag corre o caminho síncrono, que espera o `tx.wait()`.
+
+**A solução está toda construída desde o MC59.5/59.6.** Verifiquei os 5 elos em vez de assumir:
+backend (caminho 202) ✅ · tabela `fila_tarefas` ✅ · RPC `reservar_tarefas(p_limit)` — **testei**,
+`select count(*) from reservar_tarefas(1)` → 0 linhas, zero efeitos ✅ · worker com handler
+`"confirmar-credito-senhas"` registado ✅ · frontend a tratar o 202 (`useTrocarPorSenhas.js:69`),
+polling on-chain (`useCreditoStatus`, 2s×30) e `<CreditoStatus>` renderizado em
+`MinhaCarteira.jsx:247` ✅. O próprio código já o dizia, em `MinhaCarteira.jsx:57`:
+*"Inerte enquanto CREDITO_ASSINCRONO=OFF"*. **Não há nada a construir; há uma variável a definir.**
+
+⚠️ **Isto corrige a memória do MC87** ("fila do Supabase está partida"): está aplicada e funcional.
+
+**O que muda, sem exagerar:** hoje é clique → 21 s **bloqueado**. Com a flag: clique → ~0,5 s (202) →
+"processando" → saldo aparece quando o bloco mina (~12–20 s). **O tempo on-chain não desaparece** — o
+que desaparece é o bloqueio, que é a queixa real. Benefício extra: a função deixa de ocupar 21 s por
+compra, hoje perto do timeout (qualquer lentidão da rede vira 502).
+⚠️ A cadência do worker (*/5 min) **não** atrasa o saldo do utilizador — este vem do polling on-chain,
+não da fila. Confundir as duas levaria a "otimizar" o cron sem efeito visível.
+
+**Plano (MC88.27):** P0 ★ definir `CREDITO_ASSINCRONO=true` em production **+ redeploy** (as functions
+recebem o env do deploy); P0b observar `fila_tarefas` na primeira compra (o fallback deixa tx pendente e
+pede reconciliação — o código chama-lhe MISCONFIG); P1 worker de 5 min → 1 min; P2 texto de espera.
+
+**Três itens do plano que NÃO recomendo, com razão medida:** baixar o polling de saldo para 1 s (o saldo
+vem do receipt on-chain, não do polling de saldo — dobrava chamadas ao RPC por ≤1 s em ~15 s); manter a
+função quente (cold start ~2,3 s, e o MC88.16 já estabeleceu que ~2,5–2,9 s é o piso da plataforma);
+otimizar a query do Supabase (472 ms = 2 % do total).
+
+⛔ **Não chamei `/comprar-senhas` por curl**, como o Segmento 1 pedia: esse endpoint **debita R$ 2,00** e
+cunha uma senha on-chain — ação com custo, proibida pela R2. Os logs da compra real dão dados melhores
+(tempo **por etapa**, que o curl não daria).
+
+**Relatório:** `Desktop\MC88.26-RELATORIO.txt`
