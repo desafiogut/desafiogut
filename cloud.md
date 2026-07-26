@@ -3894,3 +3894,50 @@ vazia — mas numa janela de rede lenta uma mensagem escrita nesse intervalo cai
 ficaria invisível após a troca. **Correcção disponível e pequena:** o AppContext já expõe
 `tipoCarregando` (L876); basta não construir/persistir a chave enquanto for true. Não executada — fora
 do âmbito deste MC.
+
+## MC88.23 — A chave do histórico só se constrói com o perfil resolvido
+
+Corrigida a irregularidade que a validação do MC88.22 revelou (chave órfã `comum:<carteira>` criada
+antes de o perfil resolver). **Mas a correcção prescrita no plano não funcionaria, e esse é o ponto
+central do MC.**
+
+⚠️ **`if (tipoCarregando) return null` é um no-op para o caso que se queria corrigir.**
+`tipoCarregando` começa **`false`** (AppContext L181) e só passa a `true` **dentro de um `useEffect`**
+(L267) — ou seja, depois do primeiro render. A sequência real ao entrar numa conta é: *render 1*
+(`address` disponível, `tipoCarregando=false`, `tipoUsuario="comum"`) → **a chave órfã nasce aqui**;
+*render 2* (o efeito correu, flag a true) → o guarda do plano só entra em vigor **agora**, com o estrago
+feito. Confirmado por mutação: aplicar exactamente a versão do plano faz falhar o teste.
+
+Também verifiquei se havia sinal melhor já exposto: `cotaCorporativa` começa `null` **e** é `null`
+quando não há cota — ambíguo, não distingue "ainda não procurei" de "procurei e não há".
+
+**O que funciona:** esperar o **ciclo completo** (viu `tipoCarregando` a true e voltar a false) antes de
+dar o perfil por resolvido. Visitantes resolvem de imediato; a espera **reinicia** ao trocar de carteira,
+senão usaria o perfil da conta anterior. `chaveHist` devolve `null` até lá, e os **três** efeitos que
+tocam no localStorage a ignoram — incluindo a limpeza, porque `removeItem(null)` é coagido pelo browser
+para a string `"null"`.
+
+**Decisão registada:** mantive o `perfil` na chave. Removê-lo resolveria isto de forma mais simples e
+definitiva (a identidade sozinha já isola; o perfil é volátil e é a raiz do problema), mas invalidaria
+as 4 chaves acabadas de validar no MC88.22 — mudar o formato duas vezes seguidas custaria o histórico
+dos utilizadores outra vez. Fica como alternativa para o operador.
+
+⚠️ **Ressalva de método, na própria mutação:** a 1.ª tentativa de mutar a reposição da espera **não se
+aplicou** — usei `\n` no padrão e o ficheiro tem **CRLF**. O teste "passou" sem nunca ter sido
+exercitado: exactamente o falso-verde que a mutação existe para apanhar, desta vez *na mutação*.
+Repetida com `\r?\n`, falha como deve. **Verificar sempre se a mutação chegou a alterar o ficheiro.**
+
+⚠️ **Outra armadilha de verificação:** procurar `cicloVistoRef`/`perfilResolvido` nos assets do APK não
+serve — são nomes de variáveis locais e a minificação renomeia-os; a ausência não é prova de falha. Usei
+o **hash do chunk** (`PrivyRoot-DQFsJwj1` → `PrivyRoot-CRaYdzgO`) e a string `"gut_chat_history:"`.
+
+**Estado:** suite 249/249 (244 + 5), build verde, APK 16:47:30 instalado. Removi do aparelho a chave
+órfã do MC88.22 (tinha **0 mensagens**, nada se perdeu) para que a validação seja **conclusiva** — de
+outro modo não se distinguiria "recriada pelo bug" de "deixada para trás". As três chaves com conteúdo
+ficaram intactas.
+
+**⏳ Falta o operador:** aceitar o consentimento, entrar com a conta corporativa e abrir o GUTO. Se
+`gut_chat_history:comum:0x6ac980…674d` **não** reaparecer, está fechado; se reaparecer, o passo seguinte
+é remover o `perfil` da chave.
+
+**Relatório:** `Desktop\MC88.23-RELATORIO.txt`
