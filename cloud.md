@@ -3365,3 +3365,43 @@ Nota: o teste do plano (`window.__gutApiOrigin`) daria falso negativo — o marc
 falta de allow-origin é telemetria de terceiros, não perseguir.
 
 **Relatório:** `Desktop\MC88.13-RELATORIO.txt` · evidências `MC88.13-LOGCAT.txt`, `MC88.13-CDP-CONSOLE.txt`
+
+---
+
+## MC88.14 — Correção da allow-list de CORS: `sentry-trace` + `baggage`
+
+**Deploy de produção:** `6a6569231eee4c0f4426e95d` (draft `6a6567af…` validado antes)
+
+Uma linha em `_lib/cors.mjs`: `, sentry-trace, baggage` no fim do `access-control-allow-headers`.
+Server-side, portanto **sem recompilar o APK**. `node --check` OK, **209/209 testes** (baseline do
+MC88.12, zero regressão). Ficou também um comentário a explicar o mecanismo, para que o próximo a
+ler a lista não "limpe" dois cabeçalhos que não estão em call-site nenhum.
+
+**Produção**, preflight com os cabeçalhos reais → allow-headers com os dois. Verificado nos 8
+endpoints que o MC88.13 mostrou partidos (`iniciar-pagamento`, `auth-user`, `edicoes`,
+`lances-flash`, `cotas`, `analytics`, `confirmar-pagamento`, `comprar-senhas`) — todos OK.
+Anti-regressão mainnet: contrato `0x0052…16cd` 1 ocorrência, Sepolia 0.
+
+**No aparelho**, após reload (essencial — o Sentry é lazy; sem ele carregado o teste não reproduz a
+condição): 8 functions com resposta HTTP e **0 erros de CORS** nas nossas. O `auth-user 200` é o
+sinal decisivo — era o que estava bloqueado por `baggage` e causava `obterAuthToken falhou`; o
+`useEdicoes fallback R-1` desapareceu.
+
+⚠️ **Erro de método que apanhei a meio, e que quase me fazia concluir mal:** a 1.ª medição acusou 75
+erros de CORS *depois* do fix, ao mesmo tempo que as mesmas functions respondiam 200 — impossível
+para o mesmo pedido. Causa: **`Log.enable` do CDP despeja o histórico de logs acumulado**, eu estava
+a contar os erros de antes do fix. Repetido com `Log.enable` → **`Log.clear`** → só então
+`Page.reload`. Resultado limpo: 0. **No CDP, `Log.enable` sem `Log.clear` mede o passado.**
+
+**⏳ Falta** o QR Code na UI — gerar PIX cria cobrança real (R2) e o plano atribui o passo ao
+operador. O bloqueio técnico está removido e provado.
+
+**Recomendação não executada (decisão do operador):** não existe nenhum teste que cubra o CORS — os
+209 passam sem tocar em `_lib/cors.mjs`. Um teste a afirmar que o allow-headers contém o que a app
+envia teria apanhado isto no MC88.12 e poupado dois MCs de diagnóstico.
+
+Ruído não relacionado: 2 erros de CORS em `auth.privy.io/analytics_events` (telemetria de
+terceiros). Observação separada: `cotas` responde **404** — o CORS passou, logo não é este defeito;
+pode ser o item que o MC86 deixou em aberto.
+
+**Relatório:** `Desktop\MC88.14-RELATORIO.txt` · evidência `MC88.14-VALIDACAO.txt`

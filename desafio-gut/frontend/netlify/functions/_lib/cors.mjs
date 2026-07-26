@@ -33,10 +33,18 @@ export const ORIGEM_APK = "https://localhost";
  * `authorization` em allow-headers é indispensável — as functions autenticam por
  * JWT do Privy (Bearer), e é esse cabeçalho que torna o preflight obrigatório.
  * Os `x-*` acompanham os sinais anti-fraude que o src/lib/api.js já envia.
+ *
+ * MC88.14 — `sentry-trace` e `baggage` NÃO estão em call-site nenhum: são injetados
+ * pelo `browserTracingIntegration` do Sentry. O `main.jsx` importa o shim do MC88.11
+ * primeiro, logo o Sentry (lazy, MC82.3) embrulha o SHIM — vê a URL ainda relativa,
+ * conclui same-origin e propaga o tracing; só depois o shim a torna cross-origin, já
+ * com dois cabeçalhos que este allow-headers não autorizava. Resultado: TODAS as
+ * functions davam `TypeError: Failed to fetch` no APK, não só o PIX (MC88.13).
+ * São cabeçalhos de tracing, sem valor de autenticação — não alargam a superfície.
  */
 export const CABECALHOS_CORS = Object.freeze({
   "access-control-allow-origin": ORIGEM_APK,
-  "access-control-allow-headers": "content-type, authorization, x-visitor-id, x-device-tracked, x-admin-token",
+  "access-control-allow-headers": "content-type, authorization, x-visitor-id, x-device-tracked, x-admin-token, sentry-trace, baggage",
   "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
   "access-control-max-age": "86400",
   // A resposta varia com a origem do pedido; sem isto o CDN pode servir a um
