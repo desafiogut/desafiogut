@@ -3871,3 +3871,26 @@ da guarda de efeitos, mas **não prova o comportamento em runtime** — não há
 e introduzi-la só para isto seria tudo menos alteração mínima.
 
 **Relatório:** `Desktop\MC88.22-RELATORIO.txt`
+
+### MC88.22 (cont.) — validado no aparelho, e fecha a pergunta do MC88.21.1
+
+O operador correu o roteiro. O verificador confirma **isolamento real**: o blob global
+`gut_chat_history` **desapareceu**, e existem 4 chaves compostas — `corporativo:0x6ac980…674d` (2 msgs),
+`comum:0x5baf46…32b8` (2), `visitante:68a6f33e…` (2) e `comum:0x6ac980…674d` (0). Três identidades
+distintas, cada uma com o seu histórico, no APK real.
+
+**Bónus que fecha o MC88.21.1:** os logs do backend no mesmo período mostram **`perfil: 'corporativo'`
+× 2**. A personalidade corporativa activa **ponta a ponta**, com conta real — o P0 do MC88.20 deixa de
+estar coberto só por teste unitário. E explica o `perfil: comum` que ficara por esclarecer: a sessão
+desse momento era a carteira **`0x5baf46…32b8`**, que **não está** entre as 5 com cota — é a carteira
+dos testes de PIX do MC88.15. O log "sem cota corporativa" das 19:26:46 corresponde a ela. **Nunca foi
+defeito: era a conta errada.** Encerrado.
+
+⚠️ **Irregularidade que a própria validação revelou:** a carteira `0x6ac980…674d` gerou **duas** chaves
+— `corporativo` (2 msgs) e `comum` (**0** msgs). Causa: `tipoUsuario` (AppContext L315) deriva de um
+lookup **assíncrono** da cota; no primeiro render vale "comum" e só depois passa a "corporativo", e a
+chave é construída antes de a resolução terminar. Hoje não perde dados nem vaza — é uma chave órfã
+vazia — mas numa janela de rede lenta uma mensagem escrita nesse intervalo cairia na chave "comum" e
+ficaria invisível após a troca. **Correcção disponível e pequena:** o AppContext já expõe
+`tipoCarregando` (L876); basta não construir/persistir a chave enquanto for true. Não executada — fora
+do âmbito deste MC.
