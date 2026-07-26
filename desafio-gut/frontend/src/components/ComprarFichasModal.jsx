@@ -40,6 +40,13 @@ async function postJson(url, body) {
     const code = data?.error?.code || `http_${resp.status}`;
     const err = new Error(msg);
     err.code = code;
+    err.status = resp.status;
+    // MC88.16 (P0b) — o 429 diz exactamente quantos segundos faltam para a janela
+    // reabrir. Lemos do CORPO e não do cabeçalho `Retry-After`: cross-origin (APK) o
+    // JS só lê cabeçalhos safelisted, e embora o MC88.16 já os exponha, o corpo
+    // funciona mesmo que essa lista mude. Sem isto o polling continuava a bater
+    // cegamente a cada 3 s contra uma janela fechada.
+    if (typeof data?.error?.retry_after === "number") err.retryAfter = data.error.retry_after;
     throw err;
   }
   return data;
@@ -51,6 +58,11 @@ async function postJson(url, body) {
 // "Já paguei". Cobre falha do webhook MP.
 const POLL_INTERVALO_MS = 3000;
 const POLL_TIMEOUT_MS   = 15 * 60 * 1000; // 15 min (igual TTL do JWT)
+
+// MC88.16 (P0b) — tecto do backoff. O `retry_after` do servidor nunca passa de 60 s
+// (janela fixa de 1 min), mas um tecto explícito evita que uma resposta anómala
+// deixe o utilizador a olhar para o QR sem ninguém a verificar o pagamento.
+const POLL_BACKOFF_MAX_MS = 30_000;
 
 export default function ComprarFichasModal({ aberto, onFechar, address, email, onSucesso }) {
   const isMobile = useIsMobile();
@@ -88,6 +100,12 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
     let cancelado = false;
     setAguardandoPix(true);
     const inicio = Date.now();
+    // MC88.16 (P0b) — atraso do PRÓXIMO tick. Só sai dos 3 s quando o servidor
+    // pede (429) ou quando há falha transitória repetida; volta a 3 s assim que
+    // uma verificação real acontece (incluindo o 402 "ainda pendente", que é o
+    // caminho feliz do polling e não deve penalizar a cadência).
+    let atrasoMs = POLL_INTERVALO_MS;
+    let falhasSeguidas = 0;
 
     const tick = async () => {
       if (cancelado) return;
@@ -106,14 +124,30 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
         // 402 pagamento_nao_confirmado é o caminho feliz do polling: ainda não
         // aprovado. Outros erros podem ser transitórios (mp_indisponivel, rede).
         const code = err?.code || "";
-        if (code !== "pagamento_nao_confirmado" && code !== "http_402") {
-          // Erros transitórios (mp_indisponivel, rede): loga mas continua polling.
-          console.warn("[comprar-fichas] poll falhou", { code, message: err?.message });
+        const pendente = code === "pagamento_nao_confirmado" || code === "http_402";
+        if (pendente) {
+          // Verificação REAL aconteceu: retoma a cadência normal.
+          falhasSeguidas = 0;
+          atrasoMs = POLL_INTERVALO_MS;
+        } else if (code === "rate_limit_excedido" || err?.status === 429) {
+          // Estrangulado: esperar o que o servidor mandou é estritamente melhor que
+          // insistir a cada 3 s — cada tentativa cega só empurra a janela para
+          // diante e mantém o utilizador à espera (causa raiz medida no MC88.15).
+          // NÃO chamar isto `pedido`: colidiria com o estado `pedido` do componente.
+          const atrasoPedidoMs = (err?.retryAfter ?? 0) * 1000;
+          atrasoMs = Math.min(Math.max(atrasoPedidoMs, POLL_INTERVALO_MS), POLL_BACKOFF_MAX_MS);
+          console.warn("[comprar-fichas] poll estrangulado — a aguardar", { atrasoMs, code });
+        } else {
+          // Transitório (mp_indisponivel, rede): backoff exponencial com tecto, para
+          // não martelar um backend já em dificuldade.
+          falhasSeguidas += 1;
+          atrasoMs = Math.min(POLL_INTERVALO_MS * 2 ** falhasSeguidas, POLL_BACKOFF_MAX_MS);
+          console.warn("[comprar-fichas] poll falhou", { code, message: err?.message, atrasoMs });
         }
       }
-      if (!cancelado) setTimeout(tick, POLL_INTERVALO_MS);
+      if (!cancelado) t0 = setTimeout(tick, atrasoMs);
     };
-    const t0 = setTimeout(tick, POLL_INTERVALO_MS);
+    let t0 = setTimeout(tick, atrasoMs);
     return () => {
       cancelado = true;
       clearTimeout(t0);

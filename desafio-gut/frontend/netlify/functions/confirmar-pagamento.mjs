@@ -95,7 +95,16 @@ export default async (req) => {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }
 
-  const rl = await aplicarRateLimit(req, "confirmar-pagamento", 5);
+  // MC88.16 (P0b) — 5/min colidia com o polling do cliente, que sonda a cada 3 s
+  // (= 20 req/min). Como a janela é FIXA de 60 s, as ~5 primeiras chamadas de cada
+  // minuto verificavam o MP e as outras ~15 levavam 429: havia até ~45 s de cada
+  // minuto SEM qualquer verificação real, e o pagamento só era descoberto quando a
+  // janela seguinte abria (medido no MC88.15: até ~21 s de atraso evitável).
+  // 25/min dá folga sobre os 20/min do polling sem abrir a torneira: este endpoint
+  // exige um JWT de pedido válido (assinado por nós, TTL 15 min), portanto não é
+  // superfície anónima — o limite existe contra repetição do MESMO pedido, e o
+  // crédito continua protegido por idempotência em `pedidos-pagos`.
+  const rl = await aplicarRateLimit(req, "confirmar-pagamento", 25);
   if (rl) return rl;
 
   // ── Parse + valida body ────────────────────────────────────────────────────
