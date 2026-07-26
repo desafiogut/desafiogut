@@ -3573,3 +3573,53 @@ Deployei preview (`6a661f73b8282ff629619a30--`) e validei lá — as functions n
 de corrigir os `.env` ou garantir que o build usa as vars do dashboard.
 
 **Relatório:** `Desktop\MC88.16-RELATORIO.txt` (placar, evidências, passos para o operador)
+
+## MC88.17 — Deploy em produção, e o drift que eu inventei
+
+**⚠️ Começo pelo meu erro, porque foi ele que bloqueou o MC88.16.** Recusei-me a deployar alegando que
+os `.env` locais assariam Sepolia e um contrato abandonado no bundle. **Estava errado**, por duas
+falhas de método: (a) não verifiquei que `netlify deploy --build` corre `netlify build`, que injecta as
+variáveis do **contexto** do Netlify e essas **ganham precedência** sobre os `.env` do disco; (b) corri
+`netlify env:list` **sem `--context production`**, o que devolveu uma visão parcial de 34 variáveis onde
+`VITE_CHAIN_ID`, `VITE_EXPLORER_URL` e `VITE_NETWORK_STAGE` pareciam ausentes. O contexto `production`
+tem **50** e está tudo lá, correcto para mainnet: contrato `0x0052477A…16cd`, `VITE_CHAIN_ID=1`,
+`VITE_EXPLORER_URL=https://etherscan.io`, `VITE_ALCHEMY_URL`/`RPC_URL` em `eth-mainnet`.
+
+A prova estava disponível antes de eu bloquear: o `dist` que o próprio `netlify build` gerou já continha
+o contrato mainnet e **zero** ocorrências do abandonado — e o chunk `AppContext-CEItR8qv.js` do meu build
+já respondia 200 na produção, mesmo hash, logo mesmo conteúdo. Bastava ter olhado para o artefacto em vez
+de raciocinar a partir dos `.env`. **Lição: quando o risco é "o build vai levar a config errada", a
+verificação é abrir o bundle — não ler ficheiros de env.**
+
+**Não apaguei os `.env` (Segmento 1), de propósito.** Não corrigem nada em produção e o
+desenvolvimento local depende deles (`VITE_PRIVY_APP_ID`, `VITE_SENTRY_DSN`, `VITE_CORPORATIVO_ATIVO`).
+Apagá-los era dano sem benefício. Ficam a apontar para Sepolia — o que só afecta `npm run build` local,
+e é higiene, não bloqueio.
+
+**Deploy feito** (`6a6626d7`, 5m13s). Validado em produção: 429 com CORS + `Retry-After` ✅ ·
+`produtos?categoria=bronze` com `allow-origin` ✅ · limite 25/min (o 26.º dá 429) ✅ ·
+`Timing-Allow-Origin` ✅ · contrato mainnet no bundle servido ✅.
+
+**Validado no aparelho, sem custo** (payload inválido → 400 antes do MP, zero cobranças):
+o **429 passou a ser legível no APK** — `status 429`, `retry-after: 49` no cabeçalho *e* no corpo,
+**0 × TypeError**, onde antes era `TypeError: Failed to fetch`. E o timing deixou de ser cego:
+`ttfb` 198–208 ms, `transferSize` ~377, contra `0`/`0` antes.
+
+**⚠️ P2 não está no APK, e não pode estar sem um APK novo.** O plano assume que o deploy leva o
+skeleton ao telefone. Não leva: o Capacitor serve o frontend de assets **empacotados dentro do .apk** —
+é a própria razão de ser do `apiOrigin.js` (MC88.11). Medido: o APK carrega
+`index-tlPxNrq0.js` (hash diferente do de produção) e `GET /assets/MinhaCarteira-DmO6Gf-t.js` dá **404**
+lá dentro.
+
+A separação que importa: **já vale no APK instalado** o P0 (429 legível), o P4 (timing) e — o essencial —
+o **limite 25/min**, porque o cliente antigo sonda a 3 s (20/min) e 20 < 25, logo **a zona cega de ~45 s
+por minuto que causava os ~21 s de atraso do MC88.15 está eliminada no servidor**, sem rebuild. **Só com
+APK novo**: o skeleton e o backoff por `retry_after` (este último é refinamento — com 25 > 20 o cliente
+antigo já não leva 429).
+
+**⏳ Falta** o pagamento real de R$ 2,00 pós-correcções. O plano deixa-o como "se o operador desejar" e a
+R2 proíbe-me de gerar custo, logo não o fiz: o ganho está demonstrado por construção, mas o número
+ponta-a-ponta "pagamento → saldo no ecrã" continua não medido ao vivo. O `latencia-monitor.mjs` do
+MC88.15 está pronto.
+
+**Relatório:** `Desktop\MC88.17-RELATORIO.txt`
