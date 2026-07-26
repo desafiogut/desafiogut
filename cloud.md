@@ -3730,3 +3730,49 @@ ponta-a-ponta é do operador — entrar como lojista e perguntar algo ao GUTO: a
 emojis** e a remeter para o Painel Lojista.
 
 **Relatório:** `Desktop\MC88.20-RELATORIO.txt`
+
+## MC88.21 — Validação do LLM_MODEL: funciona, mas a intermitência não desapareceu
+
+Validação da variável que o operador definiu. **Confirmado o essencial, e desmentida uma conclusão
+minha a meio do próprio MC.**
+
+**Confirmado:** `LLM_MODEL = deepseek-v4-flash` está no contexto `production`, e — o que realmente
+importa — houve **deploy às 17:26:29Z, depois de a definir** (as Netlify Functions recebem o ambiente
+do deploy; definir a variável sem redeployar não bastaria). O GUTO responde pelo LLM: **15 de 16**
+pedidos no caminho RAG deram `modoResposta: llm`, com respostas de 137–410 chars — dentro da regra
+"máximo 2-3 frases", sem "dar texto".
+
+⚠️ **Escrevi "0 quedas para template" e estava errado.** Uma sonda lançada em segundo plano, cujo
+resultado só chegou depois de eu já ter redigido a conclusão, devolveu `modo: template` **em produção,
+já com o v4-flash**. Tirei a conclusão antes de todas as evidências terem chegado. A leitura correcta:
+definir `LLM_MODEL` **reduziu** a intermitência, não a eliminou — e a hipótese do MC88.19 ("é só o nome
+do modelo descontinuado") explica o 400 das 04:01Z, mas **não** explica esta queda.
+
+**O acidente valeu a pena, porque foi a primeira observação em produção do fallback corrigido no
+MC88.20** — e ele comportou-se como desenhado: texto por perfil, **um** excerto limitado (485 chars
+contra ~1800), **sem** pitch comercial, **sem** a frase que expunha `LLM_API_KEY`, e **um** único CTA.
+No estado anterior, esta mesma queda teria dado ao utilizador um muro de regulamento com cabeçalhos de
+relevância e um pedido para configurar uma variável de ambiente.
+
+⚠️ **Os logs do Netlify não servem para medir isto.** Em janelas de 20/45/60 min devolveram
+`template = 0` e **zero** ocorrências de `llm_http_*` — apesar de eu ter observado a queda nesse mesmo
+período. O stream amostra ou atrasa. **Não é evidência de ausência de erros**; é evidência de que este
+canal não mede o que eu queria medir. O MC88.19 fez a mesma leitura optimista deste log, e fica o
+registo para não se repetir.
+
+⚠️ **O que esta validação NÃO prova:** qual modelo respondeu. A DeepSeek devolve `data.model`, mas o
+`chatbot.mjs` **descarta-o** — só usa `choices[0].message.content`. E as sondas não discriminam: antes
+da variável existir eu já tinha obtido 7/7 em `llm`, porque o `deepseek-chat` ainda era aceite de forma
+intermitente. O que sustenta a conclusão é indirecto (variável no contexto certo + deploy posterior +
+ausência de 400 desde então), não uma prova directa.
+
+**Correcção ao plano:** ele mandava verificar `DEEPSEEK_API_KEY`. Essa variável não existe neste
+projecto — a chave chama-se `LLM_API_KEY` (`chatbot.mjs`). Procurar pelo nome errado devolveria um
+"não definida" enganador.
+
+**Recomendação (não executada, R1):** duas linhas resolvem os dois pontos cegos — registar
+`modelo: data?.model` no `console.info` já existente, e elevar o log da queda para o Sentry (que o
+projecto já usa), porque hoje a queda acontece e **não fica registada em lado nenhum consultável**. Sem
+isso não é possível saber se a intermitência é 429 da DeepSeek, 5xx, timeout ou recusa de modelo.
+
+**Relatório:** `Desktop\MC88.21-RELATORIO.txt`
