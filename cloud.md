@@ -3679,3 +3679,54 @@ via data-store → P1 dar tom de perfil ao fallback e cortar o despejo → P4 te
 (validados por mutação) → P2 CTA duplicado → P3 apagar o `PROMPT_SYSTEM` duplicado de `chatbot.mjs:46`.
 
 **Relatório:** `Desktop\MC88.19-RELATORIO.txt`
+
+## MC88.20 — Personalidades do GUTO: reactivar o corporativo e dar tom ao fallback
+
+Executadas as 5 correcções do MC88.19. Suite **236/236** (224 + 12 novos), deploy em produção
+(`6a6640d4`), e **os quatro guardas validados por mutação** — não por leitura.
+
+**P0 — a personalidade corporativa volta a existir.** `detectarPerfil` lia a cota do Blob "cotas"
+enquanto as cotas vivem em Supabase desde o MC36/MC37. Passa a usar `getCota` de
+`_lib/cotas-store.mjs`, a **mesma função que `cotas.mjs`** usa. E o log passa a distinguir "sem cota"
+de "lookup falhou": eram indistinguíveis, e foi essa ambiguidade que manteve o defeito invisível
+durante toda a migração. Removi a constante `STORE_COTAS` para não convidar a regressão.
+
+**Os dados mudaram a expectativa da correcção.** Consultei o Supabase antes de corrigir: **7 cotas,
+todas com `tipo="corporativo"`** (logo mantive a verificação estrita, sem tolerar campo ausente), mas
+só **5 têm `cliente_id` = endereço de wallet**. As outras **2 estão registadas por `cnpj:` sem wallet
+ligada** e continuam indetectáveis por endereço — **com qualquer store**. Isso é dado, não código:
+enquanto a cota não tiver wallet, nenhuma correcção de lookup a encontra.
+
+**P1 — o fallback sem LLM passa a ter perfil.** O texto estava hardcoded e era o mesmo para os 4
+perfis: emoji + pitch comercial chegavam ao admin, ou ~1800 chars de regulamento cru mais *"peça pro
+administrador configurar LLM_API_KEY"*. Como **sem LLM não há system prompt, era esse texto — e só ele
+— que definia a personalidade**. Passou para `respostasPorPerfil.fallback_sem_llm`, por perfil, com um
+excerto limitado a 400 chars.
+
+**P2 validado ao vivo, com os dois ramos.** Em produção: "como funciona o leilão" e "o que é uma
+senha" → o LLM já convidou, **não** houve duplicação; "capital da França" → o LLM não convidou, o
+convite **foi** acrescentado. Uma menção a "conta" nas três (o baseline do MC88.19 dava duas).
+
+**P3 — `systemPrompt` obrigatório**, com `code="systemprompt_ausente"` **re-lançado** pelo caller: o
+`catch` existe para indisponibilidade do LLM, e engolir um bug de call-site produziria "o GUTO perdeu a
+personalidade" sem nada a apontar para a causa.
+
+⚠️ **Divergi do plano em quatro pontos, e um deles teria partido produção:** ele mandava importar
+`getCota` de `_lib/data-store.mjs`, que **não exporta essa função** — daria erro de import em runtime.
+Também mandava **remover emojis do perfil "comum"** por regex sobre a saída do LLM: isso contraria a
+regra de tom documentada (MC15.5 §D3 — visitante/comum = amigável **com** emojis) e trataria o sintoma
+no sítio errado, porque o defeito estava no texto do template, não na saída do LLM. O campo é `tipo`,
+não `nivel`. E `substring(0,600)` sobre a resposta final cortaria a meio da frase e truncaria também
+respostas legítimas — limitei na origem.
+
+**⏳ Falta a acção do operador (P0b):** definir `LLM_MODEL = deepseek-v4-flash` (ou `-pro`, comparando
+custo por token) no contexto Production. O `deepseek-chat` está hardcoded e a DeepSeek já o rejeita —
+hoje de forma intermitente. As correcções deste MC tornam a queda muito menos má (o fallback já
+respeita o perfil), mas continua sem LLM.
+
+**Não validado ao vivo:** o P0 com um lojista real e os perfis comum/admin exigem JWT de sessão, e eu
+não manuseio credenciais (R5). Estão cobertos por teste validado por mutação; a confirmação
+ponta-a-ponta é do operador — entrar como lojista e perguntar algo ao GUTO: a resposta deve vir **sem
+emojis** e a remeter para o Painel Lojista.
+
+**Relatório:** `Desktop\MC88.20-RELATORIO.txt`
