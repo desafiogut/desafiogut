@@ -3405,3 +3405,53 @@ terceiros). Observação separada: `cotas` responde **404** — o CORS passou, l
 pode ser o item que o MC86 deixou em aberto.
 
 **Relatório:** `Desktop\MC88.14-RELATORIO.txt` · evidência `MC88.14-VALIDACAO.txt`
+
+## MC88.15 — Diagnóstico de latência do PIX (APK)
+
+O PIX funciona desde o MC88.14, mas demora "vários segundos" entre "Continuar para pagamento" e o QR
+Code. Medi cada segmento do hot path e o "vários segundos" são **duas coisas diferentes**, com a pior
+a ser a menos óbvia.
+
+**Caso quente: ~1,06 s.** Decomposto correlacionando `curl` (cliente) com `netlify logs` (servidor):
+rede ~210 ms · rate-limiter+validação ~70 ms · **API do Mercado Pago ~780 ms** · resposta 3,7 KB
+~10 ms. O MP é ~73% do tempo de servidor e é externo — não se optimiza, contorna-se.
+
+**Caso frio: ~2,9 s.** `Duration: 2062 ms` só de cold start. E a causa é corrigível e evitável:
+`iniciar-pagamento` importa `gravarMetaPedido` de `_lib/credito.mjs`, que importa estaticamente
+`_lib/contract.mjs`, que importa **`ethers` (16 MB)**. Gerar um QR Code PIX nunca toca na blockchain
+— o cold start carrega o ethers por absolutamente nada. Imports ESM são hoisted e avaliados de forma
+eager, logo não há sorte possível aqui: paga-se sempre.
+
+**Três hipóteses que matei com medição, e que valia a pena matar antes de optimizar:**
+a **rede móvel** (233 ms p50 no aparelho vs 266 ms no PC — o 4G não é o problema); o **preflight
+CORS** (`max-age=86400` já está certo, paga-se 1x e não por chamada); e o **tamanho do payload**
+(3,7 KB, dos quais 3 KB de QR em base64 — a 9,1 Mbps é ruído). Cortar o `qrCodeImage` pouparia ~10 ms
+ao custo de uma dependência nova no cliente: rejeitado.
+
+⚠️ **Erro de método que apanhei a meio:** o plano mandava medir com `ping`. O Netlify responde por
+anycast e **descarta ICMP** — 100% de perda para `2600:1f1e:7c1:c300::258`. Um `ping` a falhar aqui
+não diz nada sobre latência; se eu tivesse relatado "rede com 100% de perda" era uma conclusão
+inventada. Substituí pelo handshake TCP+TLS do `curl`, que mede o que se queria medir.
+
+⚠️ **Segunda armadilha, esta de execução:** o payload sugerido no plano (`{quantidade, valor}`) não é
+o que o endpoint aceita (`{endereco, qtd}`) — daria 400. Em vez de o corrigir e seguir, usei o 400
+**de propósito** como sonda: o rate-limiter corre antes da validação, logo o caminho 400 mede a
+função inteira **sem chamar o Mercado Pago** e sem criar cobrança. Foi o que permitiu isolar os
+780 ms do MP por subtracção, gastando só 3 cobranças reais (não pagas, expiram em 15 min).
+
+**Nota de coordenação:** as minhas sondas `POST` partilham o bucket de rate-limit (5/min por IP) com
+o PIX real do operador. Tirei-as da medição no aparelho para não lhe dar um 429 a meio do teste.
+
+**⏳ Falta** a latência **pós-pagamento** (pagamento → saldo no ecrã). O monitor CDP está construído e
+provado a capturar (`latencia-monitor.mjs` → `Desktop\MC88.15-LATENCIA.txt`), mas o pagamento real é
+do operador e não chegou nesta sessão. Hipótese pré-registada: o polling é `setInterval` de 3 s e o
+operador **sai da app** para pagar no banco — o Chrome estrangula timers em background, logo o saldo
+pode só aparecer quando ele VOLTA. Se for isso, a latência não é do backend nem do webhook, é do
+timer congelado, e a correcção é acordar em `visibilitychange`. O monitor registra `visibilityState`
+precisamente para decidir isto com dados.
+
+**Lacuna de observabilidade encontrada:** sem `Timing-Allow-Origin`, o `PerformanceResourceTiming`
+devolve `ttfb=0` e `transferSize=0` dentro do APK. Hoje é impossível medir TTFB no aparelho — foi por
+isso que esta medição precisou de correlacionar duas fontes. Uma linha em `_lib/cors.mjs` fecha isto.
+
+**Relatório:** `Desktop\MC88.15-RELATORIO.txt` (plano P1–P6 com skills por ponto, execução = MC88.16)
