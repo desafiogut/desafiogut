@@ -249,9 +249,43 @@ export const respostasPorPerfil = {
     admin: (p) => `Relatório de senhas — troco ativo: ${g(p.senhasAtivas, "0")} senha(s) em ${g(p.lojistas, "0")} lojista(s). Expiradas (acumulado): ${g(p.senhasExpiradas, "0")}.`,
   },
 
+  // MC88.20 (P1) — resposta quando o LLM está INDISPONÍVEL. Antes este texto vivia
+  // hardcoded no chatbot.mjs e era o MESMO para os 4 perfis: emojis e um pitch
+  // comercial dos planos (Bronze/Prata/Ouro/Diamante) chegavam ao admin e ao
+  // corporativo, que por regra são "ZERO emojis, tom operacional"; e o caminho com
+  // chunks despejava ~1.800 chars de regulamento cru MAIS a frase "peça pro
+  // administrador configurar LLM_API_KEY no Netlify", que expunha configuração
+  // interna ao utilizador final. Sem LLM não há system prompt, logo era ESTE texto
+  // — e só ele — que definia a personalidade. Agora é por perfil, como tudo o resto.
+  //
+  // `trecho`: excerto JÁ limitado pelo chamador (chatbot.mjs), ou "" se não houve
+  // correspondência. Aqui não se corta texto: quem sabe o orçamento é quem o monta.
+  fallback_sem_llm: {
+    visitante: (p) => (p.trecho
+      ? `Olha o que encontrei no regulamento: ${p.trecho}`
+      : "Poxa, essa não achei no regulamento! 😅 Pergunta-me como funcionam os leilões."),
+    comum: (p) => (p.trecho
+      ? `Olha o que encontrei no regulamento: ${p.trecho}`
+      : "Poxa, essa não achei no regulamento! 😅 Tenta de outra forma — ou pergunta sobre lances, senhas e regras."),
+    corporativo: (p) => (p.trecho
+      ? `Do regulamento: ${p.trecho} Mais detalhe no Painel Lojista.`
+      : "Não encontrei isso no regulamento. Reformula a pergunta ou consulta o Painel Lojista."),
+    admin: (p) => (p.trecho
+      ? `Regulamento: ${p.trecho}`
+      : "Sem correspondência no regulamento para essa consulta."),
+  },
+
   // Wrapper do RAG: respostaRAG é a resposta gerada; cada perfil acrescenta o seu enquadramento.
   fallback_rag: {
-    visitante: (p) => `${g(p.respostaRAG, "")} Cria uma conta para participar dos leilões! 😊`.trim(),
+    // MC88.20 (P2) — o convite era acrescentado SEMPRE, mesmo quando o LLM já tinha
+    // convidado, e saía "…que tal criar uma conta e dar um lance? Cria uma conta
+    // para participar dos leilões! 😊" — dois CTAs seguidos, observado em 2 de 3
+    // sondas ao vivo. Agora só se acrescenta quando ainda não há convite.
+    visitante: (p) => {
+      const base = `${g(p.respostaRAG, "")}`.trim();
+      const jaConvida = /\bcri(?:a|ar|e|es)\b[^.!?]{0,40}\bconta\b|\bregist(?:a|ar|e|o|re)\w*\b|\bparticipar?\b/i.test(base);
+      return jaConvida ? base : `${base} Cria uma conta para participar dos leilões! 😊`.trim();
+    },
     comum: (p) => `${g(p.respostaRAG, "")}`.trim(),
     corporativo: (p) => `${g(p.respostaRAG, "")}`.trim(),
     admin: (p) => `${g(p.respostaRAG, "")}`.trim(),

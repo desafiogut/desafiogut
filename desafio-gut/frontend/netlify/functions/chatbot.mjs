@@ -43,24 +43,16 @@ const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
 const PERGUNTA_MAX    = 500;
 const TOP_K           = 3;
-const PROMPT_SYSTEM   = `Você é o GUTO, o mascote do DESAFIOGUT. Fala como um amigo — frases curtas,
-tom leve e animado. Nada de textos longos ou técnicos.
 
-Regras:
-- Máximo 2-3 frases por resposta.
-- Usa palavras simples. Nada de "adicionalmente", "consequentemente", "no entanto".
-- Lê o que a pessoa disse antes e segue o assunto. Não recomeças do zero.
-- Se não souberes algo: "Poxa, essa não sei! Mas posso ajudar com..." e puxa para o DESAFIOGUT.
-- Quando a pessoa falar de outro assunto, responde na boa e volta com leveza.
-- Usa interjeições naturais: "Olha!", "Boa!", "Hum...", "Ah!" — como gente.
-- Emojis só de vez em quando, não em toda a frase.
-- Se a pessoa perguntar "como estás?" ou "tudo bem?", responde como pessoa, não como robô.
-- Exemplos do teu tom:
-  "Ah, ótima pergunta! Funciona assim: vence o menor lance que ninguém repetir."
-  "Temos 4 planos: Bronze, Prata, Ouro e Diamante. Quer saber os preços?"
-  "Poxa, essa não sei! Mas posso te contar como funciona o leilão, que tal?"
+// MC88.20 (P1) — orçamento do excerto no fallback SEM LLM. Um chunk, não três:
+// o formato antigo (3 × 600 chars + cabeçalhos de relevância) era o "dar texto".
+const LIMITE_TRECHO_TEMPLATE = 400;
 
-Responde APENAS com base no regulamento do DESAFIOGUT.`;
+// MC88.20 (P3) — o `PROMPT_SYSTEM` genérico que vivia aqui foi REMOVIDO. Duplicava
+// o SYS_BASE de _lib/guto-perfis.mjs (segunda fonte de verdade para o tom do GUTO)
+// e servia de fallback silencioso em chamarLLM: qualquer call-site que esquecesse
+// `systemPrompt` perdia a personalidade sem erro visível. Agora `systemPrompt` é
+// OBRIGATÓRIO e a falta dele falha alto.
 
 const DEFAULT_LLM_URL    = "https://api.deepseek.com/v1";
 const DEFAULT_LLM_MODEL  = "deepseek-chat";
@@ -228,8 +220,10 @@ async function confirmarAdminChat(req) {
   return { ok: false };
 }
 
-// MC15.5 — store das cotas corporativas (cliente_id = endereço para "autenticado").
-const STORE_COTAS = "cotas";
+// MC88.20 (P0) — o STORE_COTAS ("cotas" em Netlify Blobs) foi REMOVIDO daqui:
+// as cotas vivem em Supabase desde o MC36/MC37 e o acesso passa por
+// _lib/cotas-store.mjs (getCota). Deixar a constante seria um convite a
+// reintroduzir a leitura no store errado.
 
 /**
  * MC15.5 — Determina o perfil do utilizador a partir do pedido.
@@ -246,7 +240,7 @@ const STORE_COTAS = "cotas";
  *
  * @returns {Promise<{ perfil: "visitante"|"comum"|"corporativo"|"admin", endereco: string|null }>}
  */
-async function detectarPerfil(req) {
+export async function detectarPerfil(req) {  // export: testado em _tests/mc8820-guto-personalidades
   // 1) admin — admin-access JWT / x-admin-token / user-session ∈ admin-list.
   const adm = await confirmarAdminChat(req);
   if (adm.ok) return { perfil: "admin", endereco: adm.endereco || null };
@@ -266,15 +260,27 @@ async function detectarPerfil(req) {
   }
   if (!endereco) return { perfil: "visitante", endereco: null };
 
-  // 4) corporativo? lookup TOLERANTE no Blob "cotas" (falha/ausente → comum).
+  // 4) corporativo? lookup TOLERANTE (falha/ausente → comum).
+  //
+  // MC88.20 (P0) — ANTES isto lia o Blob "cotas" diretamente. Com o
+  // DATA_STORE_BACKEND já em "supabase", as cotas passaram a viver no Postgres
+  // (MC36/MC37) e este lookup deixou de encontrar QUALQUER lojista: a cascata
+  // caía no default e devolvia "comum". Resultado: a personalidade corporativa
+  // nunca ativava — sem erro, sem log, sem sintoma além do tom errado.
+  // Agora usa `getCota` de _lib/cotas-store.mjs, a MESMA função que cotas.mjs
+  // (fonte de verdade) usa. Import dinâmico para não puxar o cliente Supabase
+  // para o arranque de quem só faz uma pergunta ao GUTO.
   try {
-    const store = getStore({ name: STORE_COTAS, consistency: "strong" });
-    const cota = await store.get(endereco, { type: "json" });
+    const { getCota } = await import("./_lib/cotas-store.mjs");
+    const cota = await getCota(endereco);
     if (cota && cota.tipo === "corporativo") {
       return { perfil: "corporativo", endereco };
     }
+    // Distinguir "não tem cota" de "não consegui ler" — indistinguíveis antes,
+    // e foi essa ambiguidade que escondeu o defeito acima durante toda a migração.
+    console.info("[chatbot] sem cota corporativa para o endereço — perfil comum");
   } catch (err) {
-    console.warn("[chatbot] lookup cotas falhou (trata como comum):", err?.message);
+    console.warn("[chatbot] lookup de cota FALHOU (trata como comum):", err?.message);
   }
 
   // 5) default: comum (autenticado, sem cota corporativa, ∉ admin-list).
@@ -821,7 +827,7 @@ function abrirStore() {
   }
 }
 
-async function chamarLLM(pergunta, contexto, opts = {}) {
+export async function chamarLLM(pergunta, contexto, opts = {}) {  // export: testado em _tests/mc8820-guto-personalidades
   const apiKey  = opts.apiKey  || process.env.LLM_API_KEY;
   const baseUrl = (opts.baseUrl || process.env.LLM_BASE_URL || DEFAULT_LLM_URL).replace(/\/$/, "");
   const model   = opts.model   || process.env.LLM_MODEL || DEFAULT_LLM_MODEL;
@@ -832,7 +838,14 @@ async function chamarLLM(pergunta, contexto, opts = {}) {
     ? `Contexto extraído do regulamento DESAFIOGUT:\n\n${contexto}\n\nPergunta do usuário: ${pergunta}`
     : `Pergunta do usuário (sem contexto encontrado): ${pergunta}`;
 
-  const systemPrompt = opts.systemPrompt || PROMPT_SYSTEM;
+  // MC88.20 (P3) — sem fallback: um systemPrompt em falta é bug de call-site, e
+  // degradar em silêncio custaria a personalidade do perfil sem ninguém dar por isso.
+  const systemPrompt = opts.systemPrompt;
+  if (typeof systemPrompt !== "string" || !systemPrompt.trim()) {
+    const e = new Error("systemPrompt obrigatório em chamarLLM (use obterPromptSystem(perfil))");
+    e.code = "systemprompt_ausente";  // marcado para o caller NÃO o confundir com indisponibilidade
+    throw e;
+  }
   const body = JSON.stringify({
     model,
     messages: [
@@ -980,16 +993,20 @@ export default async (req) => {
   try {
     resposta = await chamarLLM(pergunta, contexto, { systemPrompt: obterPromptSystem(perfil, { conformidade: modoConformidade }) });
   } catch (err) {
+    // MC88.20 (P3) — o catch existe para INDISPONIBILIDADE do LLM. Um systemPrompt
+    // em falta é bug de programação: se fosse engolido aqui, o sintoma seria "o GUTO
+    // perdeu a personalidade" sem nada a apontar para a causa. Falha alto.
+    if (err?.code === "systemprompt_ausente") throw err;
     console.warn("[chatbot] LLM indisponível, usando resposta template:", err?.message);
     modoResposta = "template";
-    if (chunks.length === 0) {
-      resposta = "Poxa, não achei isso no regulamento! 😅 Mas olha, já que você tá aqui, que tal conhecer os planos do DESAFIOGUT? Temos Bronze (R$ 2.640), Prata (R$ 5.600), Ouro (R$ 11.000) e Diamante (R$ 18.000 com voucher de networking). Qual combina mais com você?";
-    } else {
-      const trechos = chunks
-        .map((c, i) => `**Trecho ${i + 1}** (relevância ${(c.score * 100).toFixed(0)}%):\n${c.texto.slice(0, 600)}${c.texto.length > 600 ? "…" : ""}`)
-        .join("\n\n---\n\n");
-      resposta = `📖 Olha só o que encontrei sobre o DesafioGUT:\n\n${trechos}\n\n*Para eu responder ainda melhor com IA, peça pro administrador configurar LLM_API_KEY no Netlify.*`;
-    }
+    // MC88.20 (P1) — o texto passou para _lib/guto-perfis.mjs, por PERFIL. Aqui fica
+    // só o orçamento: UM excerto (o de maior score), limitado. Antes eram os 3 chunks
+    // a 600 chars cada (~1.800) com cabeçalhos de relevância — o "dar texto" relatado.
+    const melhor = chunks[0]?.texto ? String(chunks[0].texto).replace(/\s+/g, " ").trim() : "";
+    const trecho = melhor.length > LIMITE_TRECHO_TEMPLATE
+      ? `${melhor.slice(0, LIMITE_TRECHO_TEMPLATE)}…`
+      : melhor;
+    resposta = obterResposta("fallback_sem_llm", perfil, { trecho });
   }
 
   // MC15.5 — enquadra a resposta RAG conforme o perfil (visitante recebe convite;
