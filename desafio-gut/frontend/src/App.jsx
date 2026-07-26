@@ -19,6 +19,8 @@ import ReferralRegistrar from "./components/ReferralRegistrar.jsx";
 import Dashboard       from "./pages/Dashboard.jsx";
 import Vitrine         from "./pages/Vitrine.jsx";
 import ChatbotWidget   from "./components/ChatbotWidget.jsx";
+// MC88.25 (P3) — avisa se a app nao estiver na rede de producao. Silencioso em mainnet.
+import AvisoRede       from "./components/AvisoRede.jsx";
 import LazyBoundary    from "./components/LazyBoundary.jsx";
 
 const MinhaCarteira        = lazy(() => import("./pages/MinhaCarteira.jsx"));
@@ -204,6 +206,7 @@ export default function App() {
       </LazyBoundary>
       {/* MC9 — IA Cognitiva: chatbot RAG 24/7 (botão flutuante em todas as rotas). */}
       <ChatbotWidget />
+      <AvisoRede />
       </AppEnvironmentProvider>
     </AppProvider>
     </IdiomaProvider>

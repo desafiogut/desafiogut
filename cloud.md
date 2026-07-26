@@ -3990,3 +3990,50 @@ P1 arrumar os `.env` locais; P3 mostrar a rede na UI (`VITE_NETWORK_STAGE` já e
 era o sinal); P2 renomear a variável enganadora.
 
 **Relatório:** `Desktop\MC88.24-RELATORIO.txt`
+
+## MC88.25 — APK de volta à mainnet, e um guarda para não repetir
+
+Corrigida a regressão do MC88.24 (APK a apontar para Sepolia por eu ter usado `npm run build`).
+
+**P0 — APK recompilado** com a sequência correcta: `netlify build --context production` → guarda →
+`cap sync` → `gradlew`. Os assets embarcados passaram de `0x59A73Acc…F6D5`/`eth-sepolia`/
+`VITE_CHAIN_ID` **ausente** para `0x0052477A…16cd`/`eth-mainnet`/`VITE_CHAIN_ID=1`/`stage=mainnet`.
+Chunk de entrada mudou (`index-BdNZJlC0` → `index-ZVHZop_-`), APK 17:28 instalado.
+
+⚠️ **O `netlify build` corre da RAIZ do repo.** O `netlify.toml` tem `base="desafio-gut/frontend"`;
+invocá-lo de dentro do frontend duplica o caminho — o mesmo defeito que já quebra o `netlify dev` aqui.
+O script `build:apk` trata disso.
+
+**P0b — o guarda** (`scripts/validar-dist-rede.mjs`) rejeita um bundle cuja rede não seja coerente.
+Valida **coerência + lista negra**, não um endereço "certo" hardcoded — assim sobrevive à próxima
+migração de contrato em vez de virar uma mentira que se contorna. Rejeita em particular
+**`VITE_CHAIN_ID` ausente**, que é a armadilha silenciosa: `network.js` faz
+`Number(env.VITE_CHAIN_ID ?? 11155111)` — o default é **Sepolia**.
+
+**Validado com dados reais, não com mutação sintética:** apontado ao `dist` mau que ainda existia (o que
+causou o MC88.24) → **rejeitou**, nomeando os 3 sinais; ao `dist` novo → ✓; aos **assets do APK**
+(109 ficheiros) → ✓. Aceita um caminho, para se poder apontar ao que realmente embarca.
+
+⚠️ **Não cablei o guarda no `"build"`.** O `netlify.toml` invoca `npm run build`, e pô-lo aí protegeria
+também o deploy web — mas passaria a poder **bloquear deploys de produção** se algum contexto divergir.
+É risco de disponibilidade e a decisão é do operador. O deploy web já é correcto por construção.
+
+**P3 — aviso de rede** (`AvisoRede.jsx`): **divergi do plano de propósito.** Ele pedia um badge
+permanente com "mainnet"/"sepolia"; fiz o inverso — em produção **não aparece nada**, e a faixa
+"⚠️ Ambiente de teste" só surge fora de mainnet. Uma etiqueta fixa numa app que movimenta dinheiro é
+ruído que o utilizador aprende a ignorar, e é assim que os avisos deixam de funcionar. No incidente do
+MC88.24 esta faixa teria dito "Sepolia · contrato abandonado" na primeira tela.
+
+⚠️ **Repeti um erro que já tinha registado:** a primeira leitura em runtime disse "contrato ausente" —
+mas eu varri só o **chunk de entrada**, que não transporta o `import.meta.env` (ele vive num chunk lazy,
+e a app está no gate de consentimento). Mesma medição inconclusiva do MC88.22. O que vale é a verificação
+dos **assets no disco**.
+
+**P1 não executado:** os `.env` locais continuam em Sepolia. Não os mexi porque afectam o dev local e a
+escolha tem consequências do operador (apagar / separar `.env.development` / deixar). Com o P0b em vigor,
+deixar como está já não é perigoso: a falha passa a ser apanhada no build, não na carteira de alguém.
+
+**⏳ Falta runtime:** aceitar o consentimento e entrar com a conta que comprou (`0x5baf46…32b8`) —
+esperado 3 senhas, R$ 4,00 e **nenhuma** faixa de aviso.
+
+**Relatório:** `Desktop\MC88.25-RELATORIO.txt`

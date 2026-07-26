@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build:rag": "node ../../scripts/build-rag-index.mjs"
+    "build:rag": "node ../../scripts/build-rag-index.mjs",
+    "validar:dist": "node scripts/validar-dist-rede.mjs",
+    "build:apk": "cd ../.. && netlify build --context production && cd desafio-gut/frontend && npm run validar:dist && npx cap sync android"
   },
   "dependencies": {
     "@aws-sdk/client-kms": "^3.1072.0",
