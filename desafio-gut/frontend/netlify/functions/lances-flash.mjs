@@ -5,6 +5,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { jsonResponse, jsonError } from "./_lib/validate.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const BLOB_LANCES   = "lances-relampago";
 const EDICAO_PADRAO = "R-1";
@@ -18,6 +19,12 @@ function abrirStore(name) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== "GET") {
     return jsonError(405, "metodo_invalido", "use GET");
   }

@@ -25,6 +25,7 @@ import { getStore } from "@netlify/blobs";
 import { jsonResponse, jsonError } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const BLOB_RESULTADO        = "resultado-programado";
 const BLOB_ULTIMO_RESET     = "ultimo-reset-programado";
@@ -152,6 +153,11 @@ async function executar({ edicaoId, timezone, dryRun }) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
   const rl = await aplicarRateLimit(req, "cron-reset", 10);
   if (rl) return rl;
   // Auth: admin (Bearer admin-JWT preferido OR x-admin-token legado).

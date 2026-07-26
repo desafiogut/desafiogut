@@ -19,10 +19,16 @@ import {
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { registrarFalhaJwt } from "./_lib/jwt-fail-counter.mjs";
 import { registerAndCheck } from "./_lib/sybil-check.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const TTL_USER_SESSION = 24 * 60 * 60; // 24h
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
   if (req.method !== "POST") {
     return jsonError(405, "metodo_invalido", "use POST");
   }

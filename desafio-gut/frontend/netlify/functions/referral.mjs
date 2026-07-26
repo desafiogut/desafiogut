@@ -24,6 +24,7 @@ import {
   registrarConversao, estatisticasIndicador, referralAtivo,
   registrarTentativaConversaoIp, appendReferralLog,
 } from "./_lib/referral.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const RATE_LIMIT_RPM = 5;
 const VISITOR_RE     = /^[a-zA-Z0-9_-]{4,128}$/;
@@ -201,6 +202,12 @@ async function handleUsarCodigo(req) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   // Feature flag — desligado → 503 imediato (não tenta nada).
   if (!referralAtivo()) {
     return jsonError(503, "feature_desligada", "sistema de indicação temporariamente desligado (REFERRAL_ATIVO=off)");

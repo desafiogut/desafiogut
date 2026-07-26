@@ -25,6 +25,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { getStore } from "@netlify/blobs";
 import { jsonResponse, jsonError } from "./_lib/validate.mjs";
 import { backendAssinatura } from "./_lib/signer.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const STORES = ["pedidos-meta", "mp-aprovados", "pedidos-pagos"];
 
@@ -51,6 +52,12 @@ function verificarDebugToken(fornecido) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   // Fail-CLOSED: sem DEBUG_TOKEN o endpoint não existe, e nada é lido.
   const negado = verificarDebugToken(req.headers.get("x-debug-token"));
   if (negado) return negado;

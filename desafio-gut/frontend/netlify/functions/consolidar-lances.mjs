@@ -17,6 +17,7 @@ import { marcarConsolidado, estaConsolidado } from "./_lib/bids-store.mjs";
 import { getLances } from "./_lib/data-store.mjs";
 import { obterSignerCoordenacao, backendAssinatura } from "./_lib/signer.mjs";
 import { escolherRpc } from "./_lib/rpc-fallback.mjs"; // MC39.2 — fallback RPC/Flashbots (opt-in)
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const ABI = [
   "function consolidarResultado(string idEdicao, address vencedor, uint256 menorUnico) public",
@@ -39,6 +40,12 @@ export function apurarMenorUnico(lances) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") return jsonError(405, "metodo_invalido", "use POST");
   if (process.env.NETWORK_STAGE !== "mainnet")
     return jsonError(409, "fora_de_mainnet", "consolidação só corre em mainnet");

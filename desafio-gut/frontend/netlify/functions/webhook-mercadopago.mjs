@@ -30,6 +30,7 @@ import { ativarCotaPaga } from "./_lib/cota-ativacao.mjs";
 import { validarAssinaturaMp } from "./_lib/mp-signature.mjs";
 // MC59.2 (D-1) — torna o fail-open OBSERVÁVEL (alerta em vez de log silencioso).
 import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const BLOB_STORE_MP = "mp-aprovados";
 
@@ -66,6 +67,12 @@ async function extrairPaymentId(req) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   const t0 = Date.now();
   console.info("[webhook-mp] recebido", { method: req.method, url: req.url });
 

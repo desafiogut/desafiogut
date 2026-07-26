@@ -13,10 +13,17 @@
 import { jsonResponse, jsonError } from "./_lib/validate.mjs";
 import { getConfig } from "./_lib/data-store.mjs";
 import { resolverRecursos, normalizarPlataforma } from "./_lib/recursos-app-config.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 export const CHAVE_RECURSOS = "recursos_app";
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== "GET") {
     return jsonError(405, "metodo_invalido", "use GET", { allowed: ["GET"] });
   }

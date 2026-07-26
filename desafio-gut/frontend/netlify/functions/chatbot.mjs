@@ -37,6 +37,7 @@ import { escreverEstadoSistema, lerEstadoSistema } from "./_lib/system-state.mjs
 import { registrarDecisao, buscarDecisaoSemelhante } from "./_lib/log-operacional.mjs";
 // MC17.1 — saldo de senhas de troco do lojista + resumo para o admin.
 import { lerTroco, resumoTrocoAdmin } from "./_lib/troco-senhas.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
@@ -872,6 +873,12 @@ async function chamarLLM(pergunta, contexto, opts = {}) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   if (!chatbotAtivo()) {
     return jsonError(503, "feature_desligada", "chatbot temporariamente desligado (CHATBOT_ATIVO=off)");
   }

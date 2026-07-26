@@ -18,6 +18,7 @@ import { verificarUserSession, verificarLanceAuth } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { lerTroco, consumirTrocoFIFO, creditarTroco } from "./_lib/troco-senhas.mjs";
 import { creditarSenhas, lerSaldoSenhas } from "./_lib/contract.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 async function handleGet(req) {
   const url = new URL(req.url);
@@ -113,6 +114,12 @@ async function handleConverter(req) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   if (req.method === "GET") {
     const rl = await aplicarRateLimit(req, "troco-get", 30);
     if (rl) return rl;

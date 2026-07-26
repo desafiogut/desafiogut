@@ -25,6 +25,7 @@ import { registrarEventosDeLance } from "./_lib/notificacoes-usuario.mjs";
 import { addLance } from "./_lib/data-store.mjs";
 import { comprometerLanceOnchain } from "./_lib/contract.mjs";
 import { keccak256, AbiCoder } from "ethers";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const LANCE_MIN_CENTAVOS = 1;
 const LANCE_MAX_CENTAVOS = 999999;
@@ -50,6 +51,12 @@ function validarValorCentavos(input) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }

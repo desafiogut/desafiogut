@@ -1,6 +1,10 @@
 // Validação de input + helpers de Response/erro para as functions.
 // Não importa nada de jose/ethers — usável em qualquer função.
 
+// MC88.12 — cabeçalhos CORS do APK, injetados por jsonResponse(). Sem
+// dependências (só constantes), mantendo a promessa da linha acima.
+import { CABECALHOS_CORS } from "./cors.mjs";
+
 const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
 const EMAIL_RE   = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const CUSTO_FICHA_BRL = 2.00;   // mantém em sincronia com saldoInterno.js (Art. 20)
@@ -104,6 +108,11 @@ export function jsonResponse(body, status = 200, extraHeaders = {}) {
     headers: {
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
+      // MC88.12 — CORS para o APK. Aplicado aqui porque as 41 functions que
+      // devolvem JSON passam todas por este helper; assim nenhuma fica de fora
+      // e nenhuma precisa de ser editada. No site web (same-origin) é inócuo.
+      // O preflight OPTIONS NÃO passa por aqui — ver respostaPreflight().
+      ...CABECALHOS_CORS,
       ...extraHeaders,
     },
   });

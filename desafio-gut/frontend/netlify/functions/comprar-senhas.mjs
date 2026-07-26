@@ -33,6 +33,7 @@ import { buscarVinculoPorIndicado, registrarConversao } from "./_lib/referral.mj
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
 // MC59.2 (B-2/C-4) — alertas observáveis para casos de reconciliação financeira.
 import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const VALOR_POR_SENHA_CENTAVOS = 200; // R$ 2,00
 
@@ -103,6 +104,12 @@ async function validarVoucher(codigo, endereco) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }

@@ -31,6 +31,7 @@ import { autenticarAdmin } from "./_lib/admin-auth.mjs";
 import { requireMfa } from "./_lib/require-mfa.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const BLOB_APROVACAO = "admin-aprovacao";
 const STATUS_VALIDOS = new Set(["pendente", "aprovado", "rejeitado"]);
@@ -220,6 +221,12 @@ async function handlePost(req) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   const rl = await aplicarRateLimit(req, "admin-aprovacao", 10);
   if (rl) return rl;
   if (req.method === "GET")  return handleGet(req);

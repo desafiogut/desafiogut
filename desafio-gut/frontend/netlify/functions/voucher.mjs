@@ -43,6 +43,7 @@ import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { autenticarAdmin } from "./_lib/admin-auth.mjs";
 import { requireMfa } from "./_lib/require-mfa.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const BLOB_VOUCHER  = "voucher";
 const BLOB_INDICE   = "vouchers-emissor";
@@ -248,6 +249,12 @@ async function handleGet(req) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   if (req.method === "GET") {
     const rl = await aplicarRateLimit(req, "voucher-get", 30);
     if (rl) return rl;

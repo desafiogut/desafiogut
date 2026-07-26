@@ -15,6 +15,7 @@ import { getStore } from "@netlify/blobs";
 import { jsonResponse, jsonError } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 // Stores cobertos pelo backup. Exclui:
 //   - "backups" (recursão evidente)
@@ -141,6 +142,12 @@ export async function executar() {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   const rl = await aplicarRateLimit(req, "backup-blobs", 3);
   if (rl) return rl;
   const denied = await guardAdmin(req);

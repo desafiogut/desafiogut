@@ -21,8 +21,14 @@
 import { jsonResponse } from "./_lib/validate.mjs";
 import { backendAssinatura, resolverChaveCoordenacao } from "./_lib/signer.mjs";
 import { autenticarAdmin } from "./_lib/admin-auth.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
   const base = {
     ok: true,
     service: "desafiogut-functions",

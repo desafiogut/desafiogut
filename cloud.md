@@ -3230,3 +3230,41 @@ Privy, allowlist explícita e nunca `*`) — exige deploy, que é do operador, e
 da linhagem MAINNET. Só então o QR Code do PIX pode aparecer.
 
 **Relatório:** `Desktop\MC88.11-RELATORIO.txt`.
+
+**MC88.12 — Parte B: CORS implementado e provado sem deploy.** Duas premissas do plano caíram no
+Segmento 0. (a) O MCP do Netlify não existe nesta sessão — procurado com três queries diferentes,
+nenhuma ferramenta `mcp__netlify__*`, e o `.mcp.json` do projeto está vazio; foi instalado a meio,
+mas servidores MCP carregam no ARRANQUE, logo só depois de reiniciar. (b) O middleware proposto é
+**Netlify Functions v1** (`event.httpMethod`, `{statusCode, headers, body}`) e o projeto é 100% **v2**
+(`export default async (req) => Response`) — medido: zero das 47 usam v1. Em v2 `event.httpMethod`
+seria `undefined`, `handlePreflight` devolveria sempre null e o retorno seria inválido: não teria
+funcionado em function nenhuma, e teria falhado em silêncio — o mesmo modo de falha que o MC88.10
+acabara de desenterrar.
+
+**Implementado em dois mecanismos, porque o preflight não passa pelo caminho da resposta.** As
+RESPOSTAS: `jsonResponse()` em `_lib/validate.mjs` injeta os cabeçalhos — uma edição cobre as 41
+functions que devolvem JSON. O PREFLIGHT: guard de 2 linhas na primeira linha de 40 handlers (o
+OPTIONS não leva corpo nem Authorization, logo auth/parse/rate-limit responderiam 4xx e o browser
+abortaria a chamada real). Os 7 ficheiros ignorados são legítimos: 5 `*-scheduled` (crons, sem
+browser) e 2 `mc302-*` (diagnóstico).
+
+**Origem única em vez de reflexão**, por decisão: `jsonResponse(body, status, extraHeaders)` não
+recebe a `Request`, e mudar a assinatura obrigaria a tocar nos 41 call-sites. Só existe uma origem
+cross-origin legítima — `https://localhost`, a do APK. Nunca `*`: são funções que movimentam
+dinheiro. Com `Vary: Origin` e `authorization` em allow-headers (é o Bearer do Privy que torna o
+preflight obrigatório).
+
+**Provado sem deploy**, invocando os handlers com Requests reais: `OPTIONS iniciar-pagamento` → 204
+com allow-origin/headers/methods; `GET` → 405 **com** allow-origin (via jsonResponse); `OPTIONS
+edicoes` → 204. São as duas condições que o browser exige. 209/209 testes verdes, 47/47 passam
+`node --check`.
+
+⚠️ Percalço registado: a 1.ª passagem do script partiu `cotas.mjs` e `referral.mjs` — nesses o
+último import é multi-linha e a deteção apanhou a linha `import {`, inserindo no meio da declaração.
+Apanhado pelo `node --check` e corrigido. Lição: validar sintaxe SEMPRE depois de edição por script.
+
+**Falta o deploy** — e é aí que mora o risco: a produção roda a linhagem MAINNET, não esta branch.
+Deployar a errada regride a mainnet. Preferir `netlify deploy --build` (preview) antes do `--prod`.
+Até lá o APK continua com `Failed to fetch` e sem QR Code, o que é esperado.
+
+**Relatório:** `Desktop\MC88.12-RELATORIO.txt`.

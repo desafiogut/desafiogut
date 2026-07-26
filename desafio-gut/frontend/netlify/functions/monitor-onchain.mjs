@@ -28,6 +28,7 @@ import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";
 import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
 import { getLanceDadoEvents, getBlocoAtual } from "./_lib/contract.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const EDICAO_PADRAO       = "R-1";
 const BLOB_ULTIMO         = "ultimo-bloco-processado";
@@ -196,6 +197,12 @@ export async function executar({ edicaoId, dryRun }) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   const rl = await aplicarRateLimit(req, "monitor-onchain", 6);
   if (rl) return rl;
   const denied = await guardAdmin(req);
