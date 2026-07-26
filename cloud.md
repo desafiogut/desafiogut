@@ -3623,3 +3623,59 @@ ponta-a-ponta "pagamento → saldo no ecrã" continua não medido ao vivo. O `la
 MC88.15 está pronto.
 
 **Relatório:** `Desktop\MC88.17-RELATORIO.txt`
+
+## MC88.19 — Diagnóstico do GUTO: a arquitetura está certa, a ligação aos dados é que partiu
+
+Diagnóstico das 4 personalidades do RAG. **As duas hipóteses centrais do plano são falsas** — e vale a
+pena dizê-lo, porque o plano de correcção que elas sugeriam teria reescrito código que já está bom.
+
+**O que está certo, e não deve ser mexido:** existem **4 system prompts distintos**
+(`_lib/guto-perfis.mjs:29-53`), com "NÃO uses emojis / tom profissional" já explícito para
+corporativo e admin. As regras de objectividade **já existem** no prompt base ("Máximo 2-3 frases",
+"Nada de textos longos"). A detecção de perfil é **server-side, derivada do JWT** — o cliente não
+escolhe o seu perfil — e degrada sempre para MENOS privilégio. E o RBAC é uma **tabela declarativa por
+intent** com `gate` uniforme. Ou seja: as acções 3 e 4 do plano ("adicionar validação de permissão",
+"instruir o modelo a ser objectivo") já estavam feitas.
+
+Verificado ao vivo (visitante): "capital da França" → recusa e redirecciona (152 chars); "liste as
+pendências de aprovação" → recusa sem vazar (219); "qual é o meu saldo" → `modo=recusa-perfil` com tom
+de visitante (78). **Não observei cruzamento nem vazamento.**
+
+**🔴 O defeito real, e é silencioso:** `DATA_STORE_BACKEND` em produção é **`supabase`**, mas
+`chatbot.mjs:271` lê a cota corporativa **directamente dos Netlify Blobs**, contornando a abstracção
+`_lib/data-store.mjs` que existe precisamente para o backend ser trocável. `cotas.mjs`, a fonte de
+verdade, usa `getCota()` → Supabase. **São dois armazenamentos diferentes**: o chatbot procura onde a
+cota já não vive, não encontra, e a cascata devolve `perfil: "comum"`. Resultado: **a personalidade
+corporativa nunca activa** — o lojista recebe o tom amigável com emojis e leva recusa nos intents
+`ehCorpOuAdmin`. E o `catch` está comentado como "lookup TOLERANTE (falha/ausente → comum)": a
+tolerância era robustez, com a migração virou **falha invisível**.
+
+**🟠 Bomba-relógio:** log de produção às 04:01Z — `llm_http_400: "The supported API model names are
+deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat"`. A DeepSeek descontinuou o modelo
+que está hardcoded. **Como o system prompt por perfil só é aplicado na chamada ao LLM, sem LLM não há
+personalidade nenhuma.** A correcção é **uma env var** (`LLM_MODEL`, hoje sem valor em production) —
+zero código.
+
+⚠️ **Corrigi-me a meio:** conclui, a partir do log, que o LLM estava permanentemente em baixo. A sonda
+ao vivo desmentiu-me — **7/7 com `modoResposta='llm'`**. O quadro correcto é *falha intermitente com
+deprecação anunciada*, não avaria. Se eu tivesse escrito a primeira versão, o relatório culpava um
+sistema que estava a funcionar.
+
+**🟠 O mecanismo do "dar texto":** quando o LLM falha, `fallback_rag` é **pass-through** para
+comum/corporativo/admin — não aplica tom nenhum. O utilizador recebe texto fixo com emoji e **pitch
+comercial dos planos** (também o admin, que por regra é "zero emojis"), ou um despejo de
+**3 × 600 chars de regulamento cru** mais a frase *"peça pro administrador configurar LLM_API_KEY"* —
+que expõe configuração interna ao utilizador final. P1+P2 juntos explicam três dos sintomas relatados
+de uma só vez.
+
+**Limite honesto:** só testei ao vivo o perfil **visitante**. Comum/corporativo/admin exigem um JWT de
+sessão e eu não manuseio credenciais (R5) — as conclusões sobre esses perfis vêm de leitura de código,
+não de observação. Também não li o Blob "cotas" para saber se há resíduo legado, e isso decide se o
+defeito do corporativo atinge **todos** os lojistas ou só os novos — o sintoma "às vezes funciona" é o
+pior modo de falha para diagnosticar.
+
+**Plano (execução = MC88.20):** P0b `LLM_MODEL` no dashboard (operador, 5 min) → P0 `detectarPerfil`
+via data-store → P1 dar tom de perfil ao fallback e cortar o despejo → P4 testes de personalidade
+(validados por mutação) → P2 CTA duplicado → P3 apagar o `PROMPT_SYSTEM` duplicado de `chatbot.mjs:46`.
+
+**Relatório:** `Desktop\MC88.19-RELATORIO.txt`
