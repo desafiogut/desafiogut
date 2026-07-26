@@ -47,6 +47,17 @@ export const CABECALHOS_CORS = Object.freeze({
   "access-control-allow-headers": "content-type, authorization, x-visitor-id, x-device-tracked, x-admin-token, sentry-trace, baggage",
   "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
   "access-control-max-age": "86400",
+  // MC88.16 (P0) — cross-origin, o JS só LÊ os cabeçalhos safelisted
+  // (cache-control, content-language, content-type, expires, last-modified,
+  // pragma). Sem expor estes, `resp.headers.get("retry-after")` devolve null no
+  // APK mesmo com o 429 já a passar o CORS — o backoff informado ficaria cego.
+  // `etag` entra porque o jsonCacheavel faz validação condicional (If-None-Match).
+  "access-control-expose-headers": "retry-after, x-ratelimit-limit, x-ratelimit-remaining, x-ratelimit-reset, etag",
+  // MC88.16 (P4) — sem isto o PerformanceResourceTiming devolve ttfb=0 e
+  // transferSize=0 para as functions dentro do APK, e qualquer regressão futura
+  // de latência volta a ser invisível (foi o que obrigou o MC88.15 a
+  // correlacionar curl + logs do servidor). Só expõe TIMINGS, não dados.
+  "timing-allow-origin": ORIGEM_APK,
   // A resposta varia com a origem do pedido; sem isto o CDN pode servir a um
   // cliente os cabeçalhos calculados para outro.
   vary: "Origin",

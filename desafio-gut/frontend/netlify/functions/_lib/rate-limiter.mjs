@@ -12,6 +12,12 @@
 
 import { getStore } from "@netlify/blobs";
 import { captureSecurityAlert } from "./sentry-server.mjs";
+// MC88.16 (P0) — o 429 é construído com `new Response` cru, logo NÃO passava por
+// jsonResponse/jsonError e ficou de fora do CORS do MC88.12/88.14. No APK
+// (origem https://localhost) o browser DESCARTAVA a resposta e o fetch estourava
+// com `TypeError: Failed to fetch`: a app nunca via o 429 nem o `Retry-After`,
+// portanto não podia fazer backoff — o estrangulamento parecia falha de rede.
+import { CABECALHOS_CORS } from "./cors.mjs";
 // MC39.19 (Onda 3, item 19) — contador de rate-limit em Redis (Upstash) quando
 // configurado; fallback transparente ao Netlify Blobs (zero regressão).
 import { cacheConfigurado, cacheIncr } from "./cache.mjs";
@@ -76,6 +82,9 @@ export async function aplicarRateLimit(req, endpoint, limite) {
       {
         status: 429,
         headers: {
+          // MC88.16 (P0) — CORS primeiro; as chaves abaixo não colidem com as do
+          // CORS, e sem isto o APK não consegue LER o 429 nem o retry-after.
+          ...CABECALHOS_CORS,
           "content-type":         "application/json; charset=utf-8",
           "cache-control":        "no-store",
           "retry-after":          String(retryAfterSeg),
