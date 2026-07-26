@@ -172,6 +172,13 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
     if (!address) { setErro("Endereço da carteira não disponível."); return; }
     setLoading(true);
     setErro("");
+    // MC88.16 (P2) — avança o passo IMEDIATAMENTE. A cobrança no Mercado Pago leva
+    // ~780 ms quentes e até ~2,9 s em cold start (MC88.15); até aqui o utilizador
+    // ficava a olhar para um botão com "Gerando PIX…" sem saber se algo acontecia.
+    // O passo 2 já sabe o valor e a quantidade (são dados locais), logo o skeleton
+    // mostra conteúdo REAL e reserva só o espaço do código PIX — o que também evita
+    // salto de layout quando a resposta chega.
+    setEtapa("carregando");
     try {
       // CPF não é coletado do usuário (MC39.15.1): o documento do payer vem do
       // backend (env MP_PAYER_ID_NUMBER). Enviamos só o `email` do usuário (Privy)
@@ -184,6 +191,9 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
       setEtapa("pagamento");
     } catch (err) {
       setErro(err?.message || "Falha ao gerar pedido PIX.");
+      // MC88.16 (P2) — volta ao passo 1: o erro é mostrado lá, junto do botão que
+      // permite tentar de novo. Sem isto, uma falha deixava o skeleton para sempre.
+      setEtapa("quantia");
     } finally {
       setLoading(false);
     }
@@ -302,7 +312,8 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
 
         <div style={passos}>
           <div style={dotPasso(etapa === "quantia",   etapa !== "quantia")} />
-          <div style={dotPasso(etapa === "pagamento", etapa === "sucesso")} />
+          {/* MC88.16 (P2) — "carregando" é o passo 2 a nascer: acende o mesmo ponto. */}
+          <div style={dotPasso(etapa === "pagamento" || etapa === "carregando", etapa === "sucesso")} />
           <div style={dotPasso(etapa === "sucesso",   false)} />
         </div>
 
@@ -356,6 +367,54 @@ export default function ComprarFichasModal({ aberto, onFechar, address, email, o
                 Faça login para comprar fichas.
               </p>
             )}
+          </>
+        )}
+
+        {/* MC88.16 (P2) — skeleton do passo 2 enquanto o Mercado Pago responde.
+            Mostra o valor e a quantidade REAIS (dados locais) e reserva o espaço do
+            código PIX com a mesma altura do bloco final, para não haver salto de
+            layout. Feedback em <100 ms em vez de ~780 ms a olhar para o botão. */}
+        {etapa === "carregando" && (
+          <>
+            <div style={{ ...valorBox, margin: "0 0 1rem" }}>
+              <div style={{ fontSize: "0.7rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem", fontWeight: 700 }}>
+                Valor PIX
+              </div>
+              <div style={{ fontSize: "1.6rem", fontWeight: 900, color: COR.gold }}>
+                R$ {valorBRL.toFixed(2)}
+              </div>
+              <div style={{ fontSize: "0.72rem", color: COR.muted, marginTop: "0.3rem" }}>
+                {qtd} {qtd === 1 ? "senha" : "senhas"}
+              </div>
+            </div>
+
+            <label style={labelInput}>Código PIX (copia e cola)</label>
+            <div
+              aria-busy="true"
+              aria-live="polite"
+              aria-label="A gerar o código PIX"
+              style={{
+                padding: "0.7rem 0.85rem",
+                background: "rgba(3,15,36,0.7)",
+                border: "1px solid rgba(245,166,35,0.25)",
+                borderRadius: "10px",
+                marginBottom: "0.6rem",
+                display: "flex", flexDirection: "column", gap: "0.45rem",
+                animation: "var(--animate-glow-pulse)",
+              }}
+            >
+              {/* 3 barras a imitar as ~3 linhas que o código PIX ocupa */}
+              {["100%", "100%", "62%"].map((w, i) => (
+                <div key={i} style={{
+                  height: "0.62rem", width: w, borderRadius: "4px",
+                  background: "rgba(245,166,35,0.16)",
+                }} />
+              ))}
+            </div>
+
+            <p style={{ fontSize: "0.74rem", color: COR.blue300, textAlign: "center", fontWeight: 600, marginBottom: "0.85rem" }}>
+              A gerar a cobrança no Mercado Pago…
+            </p>
           </>
         )}
 
