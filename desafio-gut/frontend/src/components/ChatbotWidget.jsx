@@ -25,9 +25,39 @@ import { useAppEnvironment } from "../context/useAppContextEnvironment.jsx";
 import { useAdmin } from "../hooks/useAdmin.js";
 import { detectarPlataforma } from "../hooks/useRecursosApp.js";
 import { apiPost } from "../lib/api.js";
+// MC88.22 — identidade do visitante para a chave do histórico (já existente,
+// gravado pelo FingerprintJS). Leitura síncrona, sem await.
+import { getCachedVisitorId } from "../lib/fingerprint.js";
 
-const LS_KEY      = "gut_chat_history";
+// MC88.22 — o histórico vivia numa chave ÚNICA e GLOBAL ("gut_chat_history"),
+// sem carteira e sem perfil, e nada a limpava ao trocar de conta. Quem abrisse o
+// chat a seguir via as mensagens de quem esteve antes NAQUELE aparelho. Não havia
+// (nem há) histórico no servidor — o backend envia só [system, user] ao LLM —
+// portanto isto nunca foi fuga entre utilizadores; era exposição local e confusão
+// de UX. A chave passa a ser composta por perfil + identidade.
+const LS_KEY_LEGADO = "gut_chat_history";   // blob contaminado; apagado uma vez (ver limparLegado)
+const LS_PREFIXO    = "gut_chat_history:";
 const LS_MAX_MSGS = 40;            // histórico bounded — evita estourar localStorage
+
+/**
+ * Chave de histórico para (perfil, identidade).
+ * Identidade: carteira dos autenticados; `gut_visitor_id` (FingerprintJS, já
+ * existente) para visitantes. NÃO se usa o IP: o cliente não lhe acede e ele
+ * mudaria a cada rede, dando isolamento falso.
+ */
+function chaveHistorico(perfil, identidade) {
+  return `${LS_PREFIXO}${perfil || "visitante"}:${identidade || "anonimo"}`;
+}
+
+/**
+ * Remove o blob global legado. É APAGADO, não migrado: o seu conteúdo é
+ * precisamente a mistura de várias contas — atribuí-lo a quem entrar primeiro
+ * recriaria o vazamento que este MC corrige.
+ */
+function limparLegado() {
+  if (typeof window === "undefined") return;
+  try { localStorage.removeItem(LS_KEY_LEGADO); } catch { /* ignora */ }
+}
 const PERGUNTA_MAX = 500;
 
 const COR = {
@@ -84,19 +114,21 @@ const GUTO_STATE_MAP = {
   celebrating: "orgulhoso",
 };
 
-function carregarHistorico() {
-  if (typeof window === "undefined") return [];
+// MC88.22 — a chave passou a ser argumento: estes helpers vivem fora do
+// componente e não têm acesso a hooks, logo quem sabe a identidade é o chamador.
+function carregarHistorico(chave) {
+  if (typeof window === "undefined" || !chave) return [];
   try {
-    const raw = localStorage.getItem(LS_KEY);
+    const raw = localStorage.getItem(chave);
     if (!raw) return [];
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? arr.slice(-LS_MAX_MSGS) : [];
   } catch { return []; }
 }
 
-function salvarHistorico(hist) {
-  if (typeof window === "undefined") return;
-  try { localStorage.setItem(LS_KEY, JSON.stringify(hist.slice(-LS_MAX_MSGS))); }
+function salvarHistorico(chave, hist) {
+  if (typeof window === "undefined" || !chave) return;
+  try { localStorage.setItem(chave, JSON.stringify(hist.slice(-LS_MAX_MSGS))); }
   catch (err) { console.warn("[ChatbotWidget] salvar localStorage falhou:", err?.message); }
 }
 
@@ -167,8 +199,25 @@ export default function ChatbotWidget() {
     : tipoUsuario === "corporativo" ? { txt: "◈ Lojista", cor: "#00d4aa" }
     : (authToken || address) ? { txt: "●", cor: "#00c853" }
     : null;
+  // MC88.22 — identidade a que este histórico pertence. `tipoUsuario` é
+  // "corporativo" | "comum" (AppContext); admin vem do useAdmin. Sem carteira →
+  // visitante, identificado pelo gut_visitor_id já existente.
+  const chaveHist = useMemo(() => {
+    const perfil = !address ? "visitante" : (isAdmin ? "admin" : (tipoUsuario || "comum"));
+    const identidade = address
+      ? String(address).toLowerCase()
+      : (getCachedVisitorId() || "anonimo");
+    return chaveHistorico(perfil, identidade);
+  }, [address, isAdmin, tipoUsuario]);
+
   const [aberto, setAberto] = useState(false);
-  const [mensagens, setMensagens] = useState(() => carregarHistorico());
+  const [mensagens, setMensagens] = useState([]);
+  // Guarda contra a ordem dos efeitos: quando `chaveHist` muda, o efeito de
+  // GRAVAÇÃO corre no mesmo commit que o de CARGA, ainda com as mensagens da
+  // identidade anterior — e escreveria o histórico antigo na chave nova,
+  // recriando exatamente o vazamento que este MC corrige. Este ref faz a
+  // primeira gravação após cada troca ser saltada.
+  const trocandoIdentidadeRef = useRef(true);
   const [pergunta, setPergunta] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
@@ -181,7 +230,19 @@ export default function ChatbotWidget() {
   const notifInjetadasRef = useRef(new Set());
   const notifSeedRef = useRef(false);
 
-  useEffect(() => { salvarHistorico(mensagens); }, [mensagens]);
+  // MC88.22 — CARGA: ao mudar de identidade, troca o histórico exibido pelo dessa
+  // identidade. Não apaga o da anterior: voltar à conta antiga recupera o dela.
+  useEffect(() => {
+    trocandoIdentidadeRef.current = true;
+    setMensagens(carregarHistorico(chaveHist));
+    limparLegado();   // o blob global misturado morre no primeiro arranque
+  }, [chaveHist]);
+
+  // GRAVAÇÃO: salta a primeira passagem após uma troca (ver trocandoIdentidadeRef).
+  useEffect(() => {
+    if (trocandoIdentidadeRef.current) { trocandoIdentidadeRef.current = false; return; }
+    salvarHistorico(chaveHist, mensagens);
+  }, [mensagens, chaveHist]);
 
   // MC15.6 ITEM 11 / MC15.7 ITEM 5 — injeta notificações como cards no chat, sem
   // mexer no campo de texto (não interrompe a digitação — `pergunta` fica intacto).
@@ -334,8 +395,9 @@ export default function ChatbotWidget() {
 
   const limparHistorico = useCallback(() => {
     setMensagens([]);
-    try { localStorage.removeItem(LS_KEY); } catch {}
-  }, []);
+    // MC88.22 — apaga só o histórico DESTA identidade, não o das outras contas.
+    try { localStorage.removeItem(chaveHist); } catch {}
+  }, [chaveHist]);
 
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
