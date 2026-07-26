@@ -3776,3 +3776,52 @@ projecto já usa), porque hoje a queda acontece e **não fica registada em lado 
 isso não é possível saber se a intermitência é 429 da DeepSeek, 5xx, timeout ou recusa de modelo.
 
 **Relatório:** `Desktop\MC88.21-RELATORIO.txt`
+
+## MC88.21.1 — "Histórico partilhado entre perfis": existe, mas não onde se pensava
+
+O operador reportou vazamento de histórico entre perfis, com o enquadramento de que seria grave. É um
+defeito real — mas de **outra natureza**, e a distinção muda por completo a correcção.
+
+**O servidor não tem histórico nenhum.** O `chatbot.mjs` envia ao LLM apenas `[system, user]` — zero
+mensagens anteriores — e não existe store de conversa (o único módulo de sessão em `_lib/` é o
+`wizard-session.mjs`, do wizard de edições, admin-only). **É impossível o histórico cruzar perfis no
+servidor: ele não existe lá.** E como o LLM nunca vê mensagens anteriores, o histórico **não pode**
+influenciar respostas nem contaminar personalidades.
+
+**O defeito real está no cliente:** `ChatbotWidget.jsx:29` usa `LS_KEY = "gut_chat_history"` — chave
+**única e global** no localStorage, sem carteira, sem perfil, sem sessão. Grava a cada mensagem (L184),
+carrega no arranque (L171), e **nada limpa ao entrar, sair ou trocar de conta** — só um botão manual
+(L335). Confirmado no aparelho: 4 mensagens guardadas nessa chave.
+
+**Alcance real, que é o que calibra a gravidade:** não há vazamento entre utilizadores diferentes, nem
+para o servidor, nem influência nas respostas. **Há** exposição a quem use o **mesmo aparelho** depois.
+Higiene de privacidade e confusão de UX — sério, mas não fuga de dados entre contas. Ironia útil: o
+componente já recebe `address` e `tipoUsuario` do `useAppContext()` (L156); tem tudo para se corrigir e
+não usa.
+
+**Achado que provavelmente explica a percepção:** o `SYS_BASE` manda o modelo *"Lê o que a pessoa disse
+antes e segue o assunto"* — mas o backend **nunca lhe envia isso**. O utilizador vê um histórico na UI
+que o modelo desconhece: o pior dos dois mundos, e a origem provável da queixa de "as personalidades
+misturam-se". Ou se passa a enviar as últimas N mensagens, ou se retira a regra.
+
+⚠️ **Duas correcções factuais ao pedido:** os ficheiros `MC88.21.1-COMUM/CORPORATIVO/ADMIN.txt` **nunca
+existiram** — não corri os scripts do plano, porque dependiam de `[data-testid=chat-resposta]`, um
+selector inexistente que teria devolvido "não encontrado" em todos os perfis (falha do instrumento a
+parecer falha do GUTO). E o meu monitor, em 20 minutos, capturou **1 troca, `perfil: comum`** — a
+sequência comum→corporativo não passou por ele.
+
+**Perfil corporativo:** o log que criei no MC88.20 disparou —
+`sem cota corporativa para o endereço — perfil comum` — provando que o código novo **está em produção**,
+que o `getCota` **executou sem erro**, e que não achou cota para o endereço da sessão. Eliminei com
+dados duas hipóteses minhas: **caixa do endereço** (os 5 `cliente_id` estão todos em minúsculas) e
+**RLS** (usa `SERVICE_ROLE_KEY`, que lançaria se faltasse). Fica por fechar uma contradição: a UI mostra
+`0x6ac980…674d` e o `privy:connections` tem essa e `0xe1a0f0…2a4d` — **ambas com cota** — mas a que o
+JWT transporta não tem. Ler o claim `endereco` do token exige autorização do operador (R5).
+
+**Plano MC88.22:** chave composta `gut_chat_history:<perfil>:<identidade>`, usando o `gut_visitor_id`
+que **já existe** no app para visitantes (não IP — o cliente nem lhe acede, e mudaria a cada rede);
+recarregar na troca de identidade e limpar no logout; teste de regressão validado por mutação.
+⚠️ **P0 antes de P1**: se se decidir enviar histórico ao LLM, ele passa a chegar ao servidor e o
+isolamento deixa de ser cosmético para ser requisito de segurança.
+
+**Relatório:** `Desktop\MC88.21.1-RELATORIO.txt` · evidência `Desktop\MC88.21.1-APP.txt`
