@@ -4087,3 +4087,53 @@ cunha uma senha on-chain — ação com custo, proibida pela R2. Os logs da comp
 (tempo **por etapa**, que o curl não daria).
 
 **Relatório:** `Desktop\MC88.26-RELATORIO.txt`
+
+## MC88.28 — O 202 não aconteceu: a flag foi ligada sem a fila, e toda compra devolve 502
+
+**Validação com compra real no APK** (túnel CDP, dispositivo fiem7xlvcufe855h). Resultado do
+critério central: **REPROVADO**. `RES 502 em 3869 ms`, `code:"credito_pendente"`,
+`reembolsado:false`, tx `0x4141bc40…ef1dde`. `<CreditoStatus>` nunca renderizou e a
+`fila_tarefas` ficou com **0 linhas**. Log: `Desktop\MC88.28-FLUXO.txt`.
+
+⚠️ **Isto reverte a conclusão do MC88.26/27** ("a fila está aplicada e funcional; corrige a
+memória do MC87"). A memória do MC87 estava certa: **a fila está partida**. O teste que deu o
+verde — `select count(*) from reservar_tarefas(1)` → 0 linhas — foi um **falso-verde**:
+exercitou o *consumidor* contra uma fila vazia e **nunca tocou no produtor**, que é o que falha.
+Um `select` numa tabela vazia devolve 0 tanto se estiver saudável como se estiver partida; o
+resultado era o mesmo nas duas hipóteses, logo não era prova de nada.
+
+**Causa real:** a `fila_tarefas` em produção **não é a do repo**. A migração
+`20260629_fila_tarefas` não consta em `supabase_migrations.schema_migrations`; existe uma tabela
+homónima com outro formato — `id` BIGINT (não UUID), sem `max_tentativas` / `agendado_para` /
+`ultimo_erro`, `created_at` em vez de `criado_em`, e RPC `p_limit` em vez de `p_limite`. O
+`enfileirar()` (`_lib/fila.mjs:27-29`) insere `max_tentativas` e `agendado_para` → o INSERT
+rebenta → `comprar-senhas.mjs` cai no ramo que o próprio comentário chama de **MISCONFIG**.
+
+**Porque parecia saudável:** o consumidor engole o erro. `pareceTabelaAusente()` apanha
+"schema cache"/"could not find the function" e devolve `{ inerte: true }` — sem log, sem erro.
+Fila vazia **nunca** é prova de saúde neste sistema.
+
+**O dinheiro está certo, a experiência não.** A tx minerou (receipt `status 0x1`, bloco
+25619867, contrato `0x0052…16cd`, from `0xFea436…1E67`) e o saldo subiu 6 → 7 senhas aos 40 s.
+Não reembolsar está **correto** (reembolsar arriscava duplo benefício). Mas o utilizador vê
+"falhou" ao fim de 3,9 s e a senha aparece calada 40 s depois — **pior** que o síncrono
+anterior. Cada compra dispara ainda `captureSecurityAlert(level "error")`.
+
+**Ação tomada:** `CREDITO_ASSINCRONO=false` em production + redeploy (rollback). O caminho
+assíncrono só deve voltar depois de resolver o conflito de nome da tabela — a migração usa
+`CREATE TABLE IF NOT EXISTS`, portanto com a tabela errada presente **não corrige nada e falha
+outra vez em silêncio**.
+
+⚠️ **Armadilha de deploy descoberta a fazer o rollback:** `origin/main` está em `d42b4ae`, de
+**4 de julho**. Todos os deploys de 26 de julho (MC88.12.1 → MC88.27) têm `commit_ref` **vazio**
+— saíram de `netlify deploy --prod --build` da árvore local, não do git. A etiqueta "branch:
+main" no painel é enganadora. Disparar um build pelo git ("Trigger deploy", `createSiteBuild`,
+religar auto-deploy) reconstrói `d42b4ae` e **apaga de produção tudo entre MC88.12 e MC88.27**.
+
+**Notas de ferramenta:** `chrome-remote-interface` **não** fala com o devtools do WebView Android
+(`ECONNRESET`); o `fetch` do Node também não; só o `Invoke-WebRequest` do PowerShell responde —
+obter aí o `webSocketDebuggerUrl` e falar CDP em WebSocket cru. E o MIUI mata o app assim que ele
+vai para segundo plano, deixando o `adb forward` a apontar para um PID morto (sintoma: "socket
+hang up", que parece erro de cliente).
+
+**Relatório:** `Desktop\MC88.28-RELATORIO.txt`
