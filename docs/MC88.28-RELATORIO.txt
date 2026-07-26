@@ -126,3 +126,19 @@ porque escreve colunas que não existem.
   CORS bloqueado em auth.privy.io/api/v1/analytics_events a partir de
   https://localhost — telemetria do Privy, sem efeito no fluxo de compra.
 ================================================================================
+
+================================================================================
+8. ROLLBACK EXECUTADO (autorizado pelo operador)
+================================================================================
+  netlify env:set CREDITO_ASSINCRONO false --context production   → OK
+  netlify deploy --prod --build                                   → OK
+  Deploy 6a6688c7f78654b83ed59cd3 | publicado 2026-07-26T22:26:51Z
+  47 functions reconstruídas · "CDN requesting 0 files" (assets do frontend
+  idênticos aos que já estavam em produção → nenhuma alteração não intencional)
+  Confirmação: netlify env:get CREDITO_ASSINCRONO --context production → false
+
+  ⚠️ VERIFICAÇÃO COMPORTAMENTAL PENDENTE: confirmar que o caminho síncrono voltou
+  exige uma nova compra real (R$ 2,00). O saldo do operador ficou em R$ 0,00 e
+  não solicitei nova compra. O que está provado é a configuração (flag=false) e
+  o deploy das functions — não o comportamento do próximo 200.
+================================================================================
