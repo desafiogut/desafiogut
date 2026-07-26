@@ -3455,3 +3455,57 @@ devolve `ttfb=0` e `transferSize=0` dentro do APK. Hoje é impossível medir TTF
 isso que esta medição precisou de correlacionar duas fontes. Uma linha em `_lib/cors.mjs` fecha isto.
 
 **Relatório:** `Desktop\MC88.15-RELATORIO.txt` (plano P1–P6 com skills por ponto, execução = MC88.16)
+
+### MC88.15 (cont.) — pós-pagamento medido com pagamento real: o gargalo é o nosso próprio rate-limiter
+
+O operador pagou R$ 2,00 e o monitor CDP capturou o fluxo inteiro. O resultado inverteu a minha
+hipótese e encontrou um defeito novo.
+
+**O backend é rápido; a espera é artificial.** Crédito → resposta ao cliente: **374 ms**. Resposta →
+UI actualizada: **≤1,7 s**. Crédito → saldo no ecrã: **~2,1 s**. Nada disto é um problema.
+
+**O gargalo é uma colisão entre duas constantes nossas.** O cliente sonda `confirmar-pagamento` a cada
+3 s (`POLL_INTERVALO_MS`, ComprarFichasModal.jsx:52) = **20 req/min**. O endpoint limita a **5/min**
+(confirmar-pagamento.mjs:98), em **janela fixa**. Logo, em cada minuto as ~5 primeiras chamadas
+verificam o MP e as outras ~15 são rejeitadas: **até ~45 s de cada minuto sem qualquer verificação
+real**. Vê-se nos `Duration` do servidor a cair de 159–440 ms (chamada real ao MP) para **38–40 ms**
+(429 imediato) às 14:25:46. O pagamento só foi descoberto às 14:26:02 — assim que a janela do minuto
+seguinte abriu. Atraso evitável: **até ~21 s**.
+
+**Agravante:** o `webhook-mercadopago` teve **0 invocações em 20 min** durante um pagamento real. Não
+é rejeição fail-closed (isso registaria uma invocação) — o MP não chama. Confirma
+[[desafiogut-webhook-mp-nunca-disparou]]. Portanto este polling estrangulado é o **único** caminho
+para creditar: não há rede de segurança.
+
+**🐞 Defeito novo, severidade alta — o 429 não leva CORS.** `montar429()` em
+`_lib/rate-limiter.mjs:68-87` constrói a resposta com `new Response(...)` e só os cabeçalhos de
+rate-limit. Verificado em produção: a 6.ª chamada devolve `429` com `Retry-After: 37` e
+`X-Ratelimit-Limit: 5` e **nenhum `access-control-allow-origin`**. No APK a origem é
+`https://localhost`, logo o browser descarta a resposta e o `fetch` estoura com `TypeError: Failed to
+fetch` — o app **não vê o 429 nem o `Retry-After`**, e não pode fazer backoff. É a mesma classe de bug
+do MC88.13, no único caminho que o MC88.12/88.14 não cobriram: eles trataram `jsonResponse`/
+`jsonError`, não o 429. No log CDP o sintoma é inconfundível: `REQ →` sem `RESP ←`.
+
+⚠️ **A minha hipótese principal estava errada, e os dados mataram-na.** Eu previ que o Chrome
+estrangularia os timers com a app em background (o operador sai para o app do banco) e que o saldo só
+apareceria ao voltar. **Falso:** o log mostra polling a correr normalmente durante todo o período
+oculto (pedidos às :22, :27, :32, :37, :42, :47 com `visibilityState=hidden`, e `hidden → visible` só
+às 14:25:48.995). A WebView do Capacitor não congelou nada. Se eu tivesse implementado o "acordar em
+`visibilitychange`" que planeei, teria optimizado um problema inexistente — fica **cancelado** e
+registado para não ser reproposto.
+
+⚠️ **A marca manual do pagamento é inútil como referência:** o "paguei agora" chegou às 14:26:22.904Z,
+**20 s depois** do crédito (14:26:02.963Z). E os polls que cobririam a janela da aprovação estavam
+estrangulados. Sei que a aprovação caiu entre 14:25:38 e 14:26:02, e não mais que isso — os ~21 s são
+um **limite superior** do atraso evitável, não o valor exacto. Fechar isso exigia o `date_approved` da
+API do MP, que precisa de `MP_ACCESS_TOKEN` (R5: não manuseio).
+
+**Ordem de execução no MC88.16:** P0 (CORS no 429) → P0c (webhook, operador, em paralelo) → P0b
+(reconciliar polling×limite) → P1 (ethers fora do cold start) → P2 (esconder os 780 ms do MP). O P0 vai
+primeiro porque sem ele qualquer ajuste de polling é medido às cegas.
+
+**Recomendação não executada:** continua a não existir teste de CORS — o MC88.14 já o registou, e este
+429 é a prova do custo. Um teste a afirmar que **toda** resposta de function (200/4xx/**429**) traz
+`allow-origin` teria apanhado isto sem precisar de um pagamento real.
+
+**Relatório:** `Desktop\MC88.15-RELATORIO.txt` · evidência `Desktop\MC88.15-LATENCIA.txt`
