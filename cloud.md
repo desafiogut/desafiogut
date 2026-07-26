@@ -4187,3 +4187,42 @@ deixar tarefas órfãs que o cron de 5 min fosse apanhar.
 uma compra real com o monitor CDP. A infraestrutura está pronta; falta a prova viva.
 
 **Relatório:** `Desktop\MC88.29-RELATORIO.txt`
+
+### MC88.29 (continuação) — flag religada e 202 validado com compra real
+
+Depois de o operador depositar R$ 10, os Segmentos 3 e 4 correram. Deploy `6a66907d`
+(22:59:47), `CREDITO_ASSINCRONO=true`. Baseline após reload: 7 senhas, R$ 10,00.
+
+**O 502 desapareceu.** Duas compras (o operador tocou duas vezes), ambas **202**:
+`3683 ms` (com cold start) e **`1390 ms`** (função quente). Saldos 7→8→9, R$ 10→6,
+receipts mainnet nos blocos 25620129 e 25620135, ambos `status 0x1`.
+
+**A fila fechou o ciclo pela primeira vez:** 2 linhas `id` UUID / `pending` /
+`tentativas 0` do produtor, e o cron de 5 min levou ambas a **`status='done'`,
+`tentativas=1`, `ultimo_erro` NULL**. Produtor, consumidor e worker validados em
+produção, não em teste.
+
+⚠️ **O alvo "< 1 s" do plano era irrealista, não um defeito.** O 202 só sai depois de
+`submeterCredito` pôr a tx na rede — nonce, estimativa de gás, envio, várias idas ao
+RPC. `1390 ms` é o custo real. Contra os ~21 s do síncrono, é ~15× melhor, que era o
+objetivo verdadeiro (não bloquear a UI).
+
+⚠️ **Critério 3 (feedback "processando") fica POR CONFIRMAR — e a suspeita é do meu
+método, não do produto.** Há duas fontes de texto no caminho 202:
+`useTrocarPorSenhas.js:70` põe `sucesso` = "🔄 Compra submetida — confirmação de 1
+senha em processamento…" (que **não** é auto-limpa no ramo assíncrono), e o
+`<CreditoStatus>`. O monitor não detetou nenhuma, apesar de no mesmo instante e na
+mesma página ler o saldo on-chain com sucesso — o que é contraditório e aponta para
+falha da leitura por `document.body.innerText`. Não fechei sem nova compra (custo).
+
+**Pista já confirmada para quem fechar isto:** `verificarCreditoOnchain` (`web3.js:129`)
+lê o receipt por `VITE_ALCHEMY_URL || <fallback SEPOLIA hardcoded>`. Testado do próprio
+APK com o txHash real: **sepolia → `null` → "pendente" para sempre → timeout aos 60 s**;
+**mainnet → receipt, "confirmado"**. Se o APK tiver sido compilado sem
+`VITE_ALCHEMY_URL`, o `<CreditoStatus>` acabaria em "Confirmação ainda pendente" mesmo
+com o crédito bem-sucedido — exatamente o padrão do MC88.24/MC59.15. Primeiro passo do
+MC seguinte.
+
+**Nota de medição:** o estado React da compra anterior sobrevive na página (a mensagem
+de erro do MC88.28 ainda lá estava). Recarregar a WebView antes de medir, ou a baseline
+vem suja.
