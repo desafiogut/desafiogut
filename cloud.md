@@ -3168,3 +3168,37 @@ estão prontos e testados. E sem o clientId junto.
 **Lição:** perguntar à API do provedor o que ele acha da própria config vale mais do que ler o
 dashboard — dois campos de nome parecido custaram quatro MCs. E falha silenciosa é a pior de todas:
 o "Carregando…" eterno não gerou um erro sequer; só o isolamento de variável a apanhou.
+
+**MC88.10 — o PIX não está partido; o backend inteiro é inalcançável a partir do APK.** Mercado
+Pago, webhook, Supabase e variáveis de ambiente estão todos inocentes: a requisição nunca sai do
+telemóvel. `src/lib/api.js:24` usa `const BASE = "/.netlify/functions/"` — caminho RELATIVO. No APK
+a origem é `https://localhost`, servida do sistema de ficheiros pelo Capacitor, que aplica o
+fallback de SPA. Medido com um POST real de dentro da WebView:
+
+    POST /.netlify/functions/iniciar-pagamento
+    → status 200 · ok: true · content-type: text/html · corpo: o index.html
+
+**O status 200 é o que torna a falha silenciosa:** `resp.ok` é true, todo o tratamento de erro
+baseado em ok/status passa, o `lerResposta()` faz JSON.parse do HTML, apanha a exceção e devolve o
+fallback — como foi desenhado. Daí os quatro sintomas mudos: `R$ —`, `IND-??????`,
+`useEdicoes fallback R-1: payload_invalido` e o modal PIX a avançar para um passo 2 vazio sem erro.
+
+**Apontar para o domínio absoluto também não basta — falta CORS.** `fetch` ao netlify.app dá
+`Failed to fetch`; distinguido de CSP por experiência: não há meta CSP no APK (a do netlify.toml é
+header HTTP, que o Capacitor não serve) e o MESMO pedido com `mode:'no-cors'` PASSA (`type: opaque`)
+— a rede sai e chega ao servidor. Se fosse CSP, ambos falhariam. E não existe configuração de CORS
+em lado nenhum: nunca foi precisa, porque na web frontend e functions são same-origin.
+
+**Bug exclusivo do empacotamento Capacitor** — nasceu quando a app virou APK, não com nenhuma
+alteração do fluxo de pagamento. Correção exige DUAS partes (uma sozinha não resolve): base absoluta
+quando `Capacitor.isNativePlatform()`, varrendo os call-sites que montam URL à mão fora do api.js
+(ComprarFichasModal.jsx:22 é um deles); e CORS nas functions com `Authorization` nos allow-headers
+(preflight obrigatório por causa do JWT do Privy), com allowlist explícita — nunca `*`, são funções
+que movimentam dinheiro.
+
+**Relatório:** `Desktop\MC88.10-RELATORIO.txt`. Execução fica para o MC88.11 (R1: diagnóstico não
+altera código; e a Parte B exige deploy, que é do operador, com o drift da produção a pesar).
+
+**Lição:** um 200 pode ser a pior resposta possível. Vale a pena `lerResposta()` recusar corpos que
+não sejam `application/json` — teria transformado quatro sintomas mudos num erro explícito no
+primeiro segundo.
