@@ -3941,3 +3941,52 @@ ficaram intactas.
 é remover o `perfil` da chave.
 
 **Relatório:** `Desktop\MC88.23-RELATORIO.txt`
+
+## MC88.24 — "PIX debitou, senha não creditou": a senha foi creditada; o APK lê a rede errada (erro meu)
+
+**A senha está creditada. Nada se perdeu.** Log do `comprar-senhas` às 18:30:17 —
+`saldoRsAntes: 600 → 400` (débito correcto) e **`senhasAntes: 2 → senhasDepois: 3`**. Leitura on-chain
+independente por RPC público de `saldoSenhas(0x5baf46…32b8)`:
+
+  • **MAINNET**, contrato `0x0052477A…16cd` (o que o **backend** usa) → **3** ✅
+  • **SEPOLIA**, contrato `0x59A73Acc…F6D5` (o que o **APK** usa) → **0** ← o que o utilizador vê
+
+⚠️ **A causa fui eu.** Nos Segmentos 3 do MC88.22 e do MC88.23 corri `npm run build` antes do
+`cap sync`. O `npm run build` é Vite puro e lê os **`.env` do disco** — que apontam para Sepolia e para
+o contrato abandonado. O `import.meta.env` embutido no APK instalado tem
+`VITE_CONTRATO_SEPOLIA=0x59A73Acc…F6D5`, `VITE_ALCHEMY_URL=…eth-sepolia…`, e `VITE_CHAIN_ID`/
+`VITE_NETWORK_STAGE` **ausentes** (logo chainId cai no default 11155111).
+
+O que me escapou: no MC88.17 estabeleci que os `.env` locais **não** contaminam o deploy, porque o
+`netlify deploy --build` injecta o env do contexto por cima. Está certo — **mas vale para
+`netlify build`, não para `npm run build`.** Apliquei a lição à ferramenta errada e enviei um APK
+apontado à rede de testes. O APK anterior mostrava as senhas bem (o `senhasAntes: 2` prova que já havia
+saldo visível em mainnet): **é regressão minha, não defeito histórico.**
+
+**Descartados com evidência:** webhook (irrelevante — o R$ já tinha sido creditado pelo polling às
+14:26 e 16:44, ambos em `saldo_rs_creditos`); polling (funcionou); fila (`fila_tarefas` **vazia**, sem
+pendente nem falhada); idempotência (`idempotent: false`); gás/contrato (a tx foi minada, 2→3);
+`COORDENACAO_PRIVATE_KEY` (presente, assinou).
+
+⚠️ **O `netlify logs` mentiu outra vez:** disse "No logs found" para `confirmar-pagamento` e
+`iniciar-pagamento` nas últimas 3 h, quando os créditos das 14:26 e 16:44 estão no Supabase. Amostra e
+atrasa (já registado no MC88.21). Não tirei conclusões da ausência — usei Supabase e blockchain.
+⚠️ Também **não** consegui localizar a tx por hash (`eth_getTransactionByHash` deu "não existe" em
+mainnet e Sepolia nos RPCs públicos). Não sei explicar e **não uso isso como evidência**: o que prova o
+crédito é o `eth_call`, que devolve 3.
+
+**Armadilha de nomenclatura que agrava tudo:** a variável que guarda o endereço de **mainnet** chama-se
+`CONTRATO_SEPOLIA` / `VITE_CONTRATO_SEPOLIA` (o próprio log diz `fonteContrato: 'CONTRATO_SEPOLIA'` para
+o contrato `0x0052…16cd`). Quem edita um `.env` com esse nome não tem como suspeitar que está a trocar a
+rede de produção.
+
+**Ação imediata:** não repetir o pagamento — 3 senhas em mainnet e R$ 4,00 de saldo. Errado é só o que o
+**APK** mostra; a **versão web está correcta** (deployada com `netlify deploy --build`).
+
+**Plano (MC88.25):** P0 recompilar o APK com `netlify build` → `cap sync` → gradle, **verificando o
+`import.meta.env` do dist antes do sync**; P0b ★ guarda que **falhe o build** se o contrato inlined não
+for o de produção (hoje nada impede repetir isto — a única defesa foi um utilizador a pagar e estranhar);
+P1 arrumar os `.env` locais; P3 mostrar a rede na UI (`VITE_NETWORK_STAGE` já existe e estava ausente —
+era o sinal); P2 renomear a variável enganadora.
+
+**Relatório:** `Desktop\MC88.24-RELATORIO.txt`
