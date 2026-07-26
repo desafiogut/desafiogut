@@ -3268,3 +3268,49 @@ Deployar a errada regride a mainnet. Preferir `netlify deploy --build` (preview)
 Até lá o APK continua com `Failed to fetch` e sem QR Code, o que é esperado.
 
 **Relatório:** `Desktop\MC88.12-RELATORIO.txt`.
+
+---
+
+## MC88.12.1 — Deploy do CORS e validação da cadeia do APK
+
+**Deploy de produção:** `6a655e3d762856623f4b6401` · branch `docs/mc89-relatorio-final` @ `7b560f9`
+
+O MCP do Netlify **não existe** — nunca foi escrito em nenhuma config (`~/.mcp.json` só tem
+aidesigner e supabase; o `.mcp.json` do projeto está vazio). Feito pelo CLI 26.1.0, já autenticado.
+
+⚠️ **O comando do plano teria regredido a mainnet.** `netlify deploy --prod --dir=dist` assa no
+bundle o `.env.production` LOCAL, que ainda aponta para o contrato Sepolia abandonado
+`0x59A73Acc…F6D5`; produção precisa do mainnet `0x0052477A…16cd`, que só existe no dashboard.
+Trocado por `--build`. Verificado no bundle servido por produção: mainnet 1 ocorrência, Sepolia 0.
+A regra "não deployar branch baseada em main" já estava desatualizada — mc60/mc73/mc78/mc87 são
+todos ancestrais do HEAD. Validado primeiro em draft (`6a655cae…`), promovido depois; assets
+idênticos, portanto foi o artefacto validado que subiu.
+
+**CORS aprovado nos 4 critérios**, e nos dois mecanismos (que são caminhos independentes):
+preflight `OPTIONS → 204` e `jsonResponse` a levar os cabeçalhos no `GET → 405`. Baseline antes
+era 405 com zero cabeçalhos. Estendido a confirmar-pagamento, webhook-mercadopago, comprar-senhas,
+saldo-rs e wallet — todos 204 com `allow-origin: https://localhost`.
+
+**Cadeia do APK provada sem login e sem custo**, por fetch real disparado de dentro do WebView
+(sonda com payload inválido de propósito). O sintoma do MC88.10 está extinto:
+
+| | MC88.10 | agora |
+|---|---|---|
+| status | `200` | `400` |
+| `ok` | `true` (mentira) | `false` |
+| content-type | `text/html` | `application/json` |
+| corpo | `<!DOCTYPE html>…` | `{"error":{"code":"endereco_invalido"…}}` |
+
+O 400 é o handler real a rejeitar a sonda; sob a falha de CORS anterior teria sido
+`TypeError: Failed to fetch` sem corpo nenhum. `shimInstalado: true` e o log do aparelho mostra
+`[GUT] MC88.11 — functions apontadas para https://silly-stardust-ca71bc.netlify.app`.
+
+Nota para quem vier a seguir: os timestamps sugerem que o APK não teria o MC88.11 (instalado
+21:14:26, commit 21:17:30). Sugerem mal — o APK foi construído 21:14:19 de assets de 21:13:39 e o
+commit só registou depois. Provar por **conteúdo** (`__gutApiOrigin` no bundle), não por hora.
+
+**⏳ Falta** ver o QR Code na UI. A app está autenticada mas no gate LGPD. Não avancei: aceitar o
+regulamento é afirmação legal do operador, gerar PIX cria cobrança real em produção (R2), e ler o
+`privy:token` seria manusear credencial (R5).
+
+**Relatório:** `Desktop\MC88.12.1-RELATORIO.txt`
