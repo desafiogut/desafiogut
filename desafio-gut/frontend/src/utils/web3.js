@@ -127,6 +127,25 @@ const ALCHEMY_RPC =
 // PARADO. Agora: uma instância, rede estática (sem eth_chainId a cada provider)
 // e sondagem de 15s.
 // ATENÇÃO: por ser partilhado, NENHUM consumidor pode chamar provider.destroy().
+// MC88.34 (P2) — contrato de LEITURA partilhado.
+// O MC88.33 mediu 15 pedidos RPC/min em repouso. A causa não é a cadência (já
+// são 15 s desde o MC88.31) mas o NÚMERO DE FILTROS: cada `new Contract` tem o
+// seu próprio ciclo de sondagem, e havia dois a ouvir `LanceDado`
+// (subscribeLanceDado e subscribeSaldoSenhas) mais um `SenhasCreditadas` = 3
+// ciclos. Partilhando UMA instância, vários listeners do MESMO evento passam a
+// custar UM só filtro → 3 ciclos passam a 2.
+//
+// Preferiu-se isto a subir o pollingInterval para 30 s: o listener é o que
+// avisa o utilizador de que as senhas foram creditadas depois de um PIX, e
+// dobrar a latência aí agravaria uma queixa já conhecida (MC88.15).
+let _contratoLeitura = null;
+function getContratoLeitura() {
+  if (!_contratoLeitura) {
+    _contratoLeitura = new Contract(CONTRATO_SEPOLIA, ABI, getProvider());
+  }
+  return _contratoLeitura;
+}
+
 let _provider = null;
 export function getProvider() {
   if (!_provider) {
@@ -194,8 +213,7 @@ export async function enviarLance(signer, contratoEndereco, idEdicao, valorEmCen
  * Retorna função de unsubscribe — chamar no cleanup do useEffect.
  */
 export function subscribeLanceDado(idEdicao, onLance) {
-  const provider = getProvider();
-  const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
+  const contrato = getContratoLeitura();   // MC88.34 (P2) — filtro partilhado
 
   const handler = (eventoIdEdicao, lancador, valorEmCentavos, repetido, timestamp, ev) => {
     if (eventoIdEdicao !== idEdicao) return; // filtra outras edições
@@ -228,8 +246,7 @@ export function subscribeLanceDado(idEdicao, onLance) {
  */
 export async function getSaldoSenhasOnChain(address) {
   if (!address) throw new Error("address obrigatório para ler saldoSenhas");
-  const provider = getProvider();
-  const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
+  const contrato = getContratoLeitura();   // MC88.34 (P2) — leitura, sem filtro novo
   const raw = await contrato.saldoSenhas(address);
   return Number(raw);
 }
@@ -252,8 +269,7 @@ export async function getSaldoSenhasOnChain(address) {
  */
 export function subscribeSaldoSenhas(address, onUpdate) {
   if (!address) throw new Error("address obrigatório para subscribe");
-  const provider = getProvider();
-  const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
+  const contrato = getContratoLeitura();   // MC88.34 (P2) — filtro partilhado
   const target   = String(address).toLowerCase();
 
   const onCreditadas = (usuario, quantidade, ev) => {

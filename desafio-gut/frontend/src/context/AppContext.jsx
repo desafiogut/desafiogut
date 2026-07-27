@@ -69,6 +69,58 @@ const LS_KEYS_LEGADO_MOCK = [
   "fichasProgramadas",
 ];
 
+// MC88.34 (P0) — cache do último saldo conhecido, para pintar o Dashboard sem
+// esperar pela cadeia serial de autenticação (ver bloco "SALDO OTIMISTA").
+// Guarda SEMPRE o endereço a que os valores pertencem, para que a guarda de
+// coerência possa descartá-los se a sessão for outra.
+const LS_SALDO_CACHE     = "gut_saldo_cache";
+const SALDO_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 h — além disso, mostrar é pior que não mostrar
+
+// Endereço da sessão Privy lido de forma SÍNCRONA, para validar o cache ANTES
+// do primeiro paint. `privy:connections` não é credencial — é o endereço
+// público da carteira — portanto lê-lo não infringe a regra de não manusear
+// segredos (os tokens ficam noutras chaves e não são tocados aqui).
+function enderecoSessaoSincrono() {
+  try {
+    const raw = localStorage.getItem("privy:connections");
+    if (!raw) return null;
+    const m = raw.match(/0x[a-fA-F0-9]{40}/);
+    return m ? m[0].toLowerCase() : null;
+  } catch { return null; }
+}
+
+function lerSaldoCache() {
+  try {
+    const raw = localStorage.getItem(LS_SALDO_CACHE);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if (!c?.endereco) return null;
+    if (!Number.isFinite(c?.em) || Date.now() - c.em > SALDO_CACHE_TTL_MS) return null;
+    // MC88.34 — a guarda de coerência por si só NÃO bastava: um teste por
+    // mutação mostrou que um cache de outro endereço chegava a ser PINTADO aos
+    // 704 ms e só desaparecia quando o `address` resolvia (~3,4 s) — uma
+    // janela de ~2,7 s a mostrar o saldo alheio. Validar aqui, de forma
+    // síncrona, elimina a janela: se a sessão em disco não for do mesmo
+    // endereço, o cache nem chega a entrar no estado inicial.
+    const sessao = enderecoSessaoSincrono();
+    if (!sessao || String(c.endereco).toLowerCase() !== sessao) return null;
+    return c;
+  } catch { return null; }
+}
+
+function gravarSaldoCache(endereco, patch) {
+  if (!endereco) return;
+  try {
+    const atual = lerSaldoCache();
+    const base  = atual && atual.endereco === endereco ? atual : { endereco };
+    localStorage.setItem(LS_SALDO_CACHE, JSON.stringify({ ...base, ...patch, endereco, em: Date.now() }));
+  } catch { /* storage cheio ou indisponível — o cache é best-effort */ }
+}
+
+function limparSaldoCache() {
+  try { localStorage.removeItem(LS_SALDO_CACHE); } catch { /* idem */ }
+}
+
 // ─── Context ─────────────────────────────────────────────────────────────────
 const AppContext = createContext(null);
 
@@ -156,15 +208,36 @@ export function AppProvider({ children }) {
     }
   }, [tipoLeilao]);
 
+  // MC88.34 (P0) — SALDO OTIMISTA.
+  // O MC88.33 mediu: o ecrã pinta aos 536 ms mas o saldo real só aparece aos
+  // 5375 ms, porque a cadeia é serial (Privy → /wallets → auth-user →
+  // saldo-rs). São ~4 s a olhar para um saldo vazio. Aqui pintamos o último
+  // valor conhecido de imediato e reconciliamos quando a cadeia responder.
+  //
+  // O status entra como "stale" (e NÃO "ok"): a máquina de estados já previa
+  // esse valor, portanto a UI que distingue fresco de obsoleto continua a
+  // funcionar sem alterações.
+  //
+  // SEGURANÇA (R4): o valor em cache é de um endereço concreto, mas no arranque
+  // o `address` só existe aos ~3,4 s. Para nunca mostrar o saldo de A a B:
+  //   1. gravamos sempre o endereço junto do valor;
+  //   2. assim que o `address` real chega, um efeito compara e descarta se
+  //      diferir (ver "guarda de coerência" mais abaixo);
+  //   3. o cache é apagado no logout, portanto um cache existente implica que
+  //      a sessão Privy nunca foi trocada neste aparelho.
+  const [saldoCacheInicial] = useState(lerSaldoCache);
+
   // Saldo on-chain — saldoSenhas[address] no contrato.
   // null = "ainda não consultado" (distinto de 0, que é estado on-chain válido).
-  const [saldoSenhas,       setSaldoSenhas]       = useState(null);
-  const [saldoSenhasStatus, setSaldoSenhasStatus] = useState("idle"); // idle | loading | ok | stale | error
+  const [saldoSenhas,       setSaldoSenhas]       = useState(saldoCacheInicial?.senhas ?? null);
+  const [saldoSenhasStatus, setSaldoSenhasStatus] = useState(
+    saldoCacheInicial?.senhas != null ? "stale" : "idle"); // idle | loading | ok | stale | error
 
   // Saldo R$ off-chain — blob `saldo-rs:${address}` (Frente B.9).
   // PIX aprovado = +R$. /comprar-senhas = -R$ +senhas. /lance-relampago = -R$.
-  const [saldoRsCentavos, setSaldoRsCentavos] = useState(null);
-  const [saldoRsStatus,   setSaldoRsStatus]   = useState("idle");
+  const [saldoRsCentavos, setSaldoRsCentavos] = useState(saldoCacheInicial?.centavos ?? null);
+  const [saldoRsStatus,   setSaldoRsStatus]   = useState(
+    saldoCacheInicial?.centavos != null ? "stale" : "idle");
 
   // MC15.6 ITEM 2 — Notificações proativas do GUTO (polling adaptativo).
   // notificacoes: array de eventos vindos de GET /notificacoes (admin-only).
@@ -264,6 +337,16 @@ export function AppProvider({ children }) {
   // fica em Netlify Blobs via cotas.mjs (POST action=register-corporativo).
   useEffect(() => {
     if (!address) { setCotaCorporativa(null); setTipoCarregando(false); return; }
+    // MC88.34 (P1) — espera pelo authToken antes de perguntar.
+    // O MC88.33 mediu 6 chamadas a /cotas no arranque, quase todas 401/404: o
+    // efeito corria uma vez SEM token (as 3 tentativas respondiam 401 por
+    // desenho, ver MC87 P0-1) e voltava a correr quando o token chegava. A
+    // primeira ronda nunca podia ter sucesso, portanto era trabalho garantido
+    // a perder — 3 pedidos no pior momento do arranque.
+    // NÃO colapsamos as 3 tentativas numa só: cobrem identidades diferentes
+    // (MC15.2 Google/Apple, MC15.3 cadastro recente) e uni-las perderia a
+    // deteção de perfil corporativo nesses casos.
+    if (!authToken) return;   // `tipoCarregando` fica true; re-corre com o token
     setTipoCarregando(true);
     let cancel = false;
     const buscarCota = async () => {
@@ -453,11 +536,38 @@ export function AppProvider({ children }) {
     return unsubscribe;
   }, []);
 
+  // MC88.34 (P0) — GUARDA DE COERÊNCIA do saldo otimista.
+  // O valor em cache foi pintado antes de sabermos quem é o utilizador (o
+  // `address` só chega aos ~3,4 s). Aqui, no instante em que ele chega:
+  //   • se pertence a outra conta → descarta já o que está no ecrã;
+  //   • no logout (address volta a null DEPOIS de ter existido) → apaga o
+  //     cache, para que a próxima sessão nunca herde o saldo desta.
+  // O ref distingue "ainda não carregou" de "fez logout" — sem ele, o null do
+  // arranque apagaria o cache em todos os arranques, anulando a otimização.
+  const jaTeveEnderecoRef = useRef(false);
+  useEffect(() => {
+    if (address) {
+      jaTeveEnderecoRef.current = true;
+      if (saldoCacheInicial && saldoCacheInicial.endereco !== address) {
+        limparSaldoCache();
+        setSaldoSenhas(null);    setSaldoSenhasStatus("idle");
+        setSaldoRsCentavos(null); setSaldoRsStatus("idle");
+      }
+      return;
+    }
+    if (jaTeveEnderecoRef.current) limparSaldoCache();
+  }, [address, saldoCacheInicial]);
+
   // ── Saldo on-chain: refetch + listener + polling guardião ───────────────
   const refetchSaldo = useCallback(async () => {
     if (!address) {
-      setSaldoSenhas(null);
-      setSaldoSenhasStatus("idle");
+      // MC88.34 (P0) — no ARRANQUE o address ainda não existe. Limpar aqui
+      // apagaria o saldo otimista no primeiro render e anularia a otimização.
+      // Só se limpa quando já houve endereço, isto é, num logout real.
+      if (jaTeveEnderecoRef.current) {
+        setSaldoSenhas(null);
+        setSaldoSenhasStatus("idle");
+      }
       return;
     }
     setSaldoSenhasStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
@@ -465,6 +575,7 @@ export function AppProvider({ children }) {
       const valor = await getSaldoSenhasOnChain(address);
       setSaldoSenhas(valor);
       setSaldoSenhasStatus("ok");
+      gravarSaldoCache(address, { senhas: valor });   // MC88.34 (P0)
     } catch (err) {
       console.warn("[GUT-DEBUG] refetchSaldo falhou", {
         address, message: err?.message, name: err?.name,
@@ -538,8 +649,12 @@ export function AppProvider({ children }) {
   // ── Saldo R$ off-chain: polling 5s (gated em authToken para anti-IDOR) ──
   const refetchSaldoRs = useCallback(async () => {
     if (!address || !authToken) {
-      setSaldoRsCentavos(null);
-      setSaldoRsStatus("idle");
+      // MC88.34 (P0) — mesma razão do refetchSaldo: no arranque o authToken
+      // demora ~4 s a existir; apagar aqui destruiria o saldo otimista.
+      if (jaTeveEnderecoRef.current) {
+        setSaldoRsCentavos(null);
+        setSaldoRsStatus("idle");
+      }
       return;
     }
     setSaldoRsStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
@@ -563,8 +678,10 @@ export function AppProvider({ children }) {
       }
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = resp.data;
-      setSaldoRsCentavos(Number(data?.saldoCentavos ?? 0));
+      const centavos = Number(data?.saldoCentavos ?? 0);
+      setSaldoRsCentavos(centavos);
       setSaldoRsStatus("ok");
+      gravarSaldoCache(address, { centavos });   // MC88.34 (P0)
     } catch (err) {
       console.warn("[GUT-DEBUG] refetchSaldoRs falhou", { address, message: err?.message });
       setSaldoRsStatus((prev) => (prev === "ok" ? "stale" : "error"));

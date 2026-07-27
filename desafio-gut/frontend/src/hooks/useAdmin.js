@@ -2,7 +2,15 @@
 //
 // Consulta GET /admin-list e compara com o endereço atual.
 // A coordenação é admin automaticamente (já vem na lista do backend).
-// Cache em sessionStorage por 5 min para evitar polling excessivo.
+// Cache por 5 min para evitar polling excessivo.
+//
+// MC88.34 (P1) — o cache vivia em sessionStorage, que morre com o processo da
+// WebView: no APK, TODO arranque a frio era cache-miss e chamava admin-list
+// (612–933 ms medidos no MC88.33), inclusive para quem nunca será admin.
+// Passa a localStorage mantendo o MESMO TTL de 5 min — a resposta continua a
+// ser reavaliada com a mesma frequência, só deixa de ser refeita apenas porque
+// a app foi reaberta. O TTL curto é deliberado (promover/remover um admin tem
+// de propagar depressa), por isso NÃO foi alongado.
 
 import { useEffect, useState } from "react";
 import { apiGet } from "../lib/api.js";
@@ -13,7 +21,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 function lerCache() {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(CACHE_KEY);
+    const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.em !== "number") return null;
@@ -25,12 +33,14 @@ function lerCache() {
 function gravarCache(payload) {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ...payload, em: Date.now() }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ...payload, em: Date.now() }));
   } catch {}
 }
 
 function limparCache() {
   if (typeof window === "undefined") return;
+  // Limpa nos dois: o sessionStorage pode ter um resto da versão anterior.
+  try { localStorage.removeItem(CACHE_KEY); } catch {}
   try { sessionStorage.removeItem(CACHE_KEY); } catch {}
 }
 
