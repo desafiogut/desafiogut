@@ -4364,3 +4364,53 @@ inerte até existirem `BLOBS_SITE_ID`/`BLOBS_TOKEN`, e a chave Alchemy continua
 por rodar (está inclusive hardcoded em `web3.js:122`, logo no histórico do git).
 
 Relatório: `Desktop\MC88.31-RELATORIO.txt`. Commit `4dab059`.
+
+---
+
+## MC88.33 — As otimizações funcionaram; a lentidão era outra coisa
+
+Validei o deploy em produção **por assinatura observável**, não por confiança: o
+frontend serve `index-COKCRl-8.js` (o chunk do meu build) e os logs do
+monitor-onchain mostram os campos `toBlock:` e `atrasado:`, que só existem
+porque os acrescentei. O deploy tinha vindo da CLI sem commit ref — sem esta
+verificação eu estaria a medir sem saber o quê.
+
+Confirmado contra a baseline: RPC 61 → 15/min, pedidos 118 → 65/min, vídeos de
+fundo 2 → 1, long tasks 8 → **0**, fps 54 → **60**, gate 2542 → 314 ms. E o
+Achado 2 fechou em produção: `[cron:monitor-onchain] ok`, zero 400 onde eram
+12/12 a falhar.
+
+**Mas o operador continuava a dizer "muito lento" — e tinha razão.** Em repouso
+o app está bom; a lentidão está no arranque. Medindo pelo relógio da página:
+FCP aos 536 ms, Dashboard aos 1435 ms, e o **saldo real só aos 5375 ms**. Com o
+arranque nativo (843 ms), ~6,2 s. O ecrã pinta depressa e o utilizador fica
+**4 segundos a olhar para um saldo vazio**.
+
+A causa é uma cadeia estritamente serial: `Privy /authenticate` → `/wallets/{id}`
+→ `fn auth-user` (597 ms) → `fn saldo-rs` (547 ms) → saldo. Cada elo espera o
+anterior, e no arranque cada função paga ainda um preflight CORS de ~200 ms
+(confirmei que em regime estacionário não há preflights — ficam em cache, por
+isso só custam na janela que interessa).
+
+**Lição: otimizar o que se mediu não é o mesmo que otimizar o que se sente.**
+Os números de repouso do MC88.30/31 melhoraram todos, e mesmo assim a
+experiência não mudou — porque ninguém tinha medido o tempo até ao **dado
+aparecer**, só até a página pintar. A métrica certa aqui não era fps nem
+pedidos/min: era "quantos segundos até o utilizador ver o saldo".
+
+Dois desperdícios no caminho crítico, ambos verificados no código: `admin-list`
+é consultado para **todos** os utilizadores só para descobrir se são admin
+(612–933 ms no arranque), e `cotas` é chamado até 3× em série e o efeito
+re-corre quando o `authToken` chega — 6 chamadas, quase todas 401/404.
+
+Descoberta lateral, pelo perfil de CPU: ~657 ms vêm de chunks `webpack-*.js` /
+`803-*` / `8050-*`. O nosso build é Vite/Rolldown e nunca gera esses nomes — é
+o iframe do Privy (Next.js). Com o chunk `privy` e o `sentry`, ~41% do CPU de
+arranque é auth/telemetria, não produto.
+
+A recomendação de maior retorno é a mais barata: pintar o último saldo conhecido
+do localStorage e reconciliar depois — mata os 4 s percebidos sem mexer na
+cadeia. E falta ao operador **uma única variável**, `BLOBS_TOKEN`: sem ela o
+monitor-onchain deixou de falhar mas ainda só varre 10 dos ~150 blocos por ciclo.
+
+Relatório: `Desktop\MC88.33-RELATORIO.txt`. Zero alteração de código (R1).
