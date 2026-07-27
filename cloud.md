@@ -4414,3 +4414,52 @@ cadeia. E falta ao operador **uma única variável**, `BLOBS_TOKEN`: sem ela o
 monitor-onchain deixou de falhar mas ainda só varre 10 dos ~150 blocos por ciclo.
 
 Relatório: `Desktop\MC88.33-RELATORIO.txt`. Zero alteração de código (R1).
+
+---
+
+## MC88.34 — O saldo aparece em 1,4 s; e uma falha de segurança que eu próprio criei
+
+O saldo passou de **5375 ms para ~1400 ms** (3 corridas: 1238/1428/1526), e nas
+três o `saldoVisivel` coincide com o `dashboard` — o número aparece no mesmo
+instante em que o ecrã desenha, em vez de 4 s depois. Com o arranque nativo,
+~6,2 s → ~2,2 s. `admin-list` no arranque: 4 → **0** pedidos.
+
+**A parte que interessa: a minha primeira versão vazava o saldo alheio.** Validei
+o cache comparando com o `address` — mas o `address` só resolve aos ~3,4 s. O
+primeiro teste por mutação PASSOU, porque eu amostrei uma única vez, no fim.
+Ao medir a janela inteira a cada 60 ms: o saldo de outra conta era pintado aos
+**704 ms** e ficava visível ~2,7 s. A correção foi validar também de forma
+**síncrona**, no inicializador do estado, contra o endereço em
+`privy:connections` (endereço público, não credencial). Re-teste: nunca pintado,
+e o ganho manteve-se.
+
+**Lição: um teste por mutação que amostra só no fim mede o estado final, não a
+janela.** Para exposição de dados a pergunta certa não é "está lá agora?" mas
+"alguma vez esteve?". Isto generaliza o aprendizado de validar teste novo por
+mutação — não basta mutar, é preciso mutar E amostrar onde o defeito viveria.
+
+**Três coisas do plano que NÃO fiz, e porquê.** (1) Colapsar as 3 chamadas de
+`cotas` numa só quebraria a deteção de perfil corporativo — cobrem identidades
+diferentes (MC15.2 Google/Apple, MC15.3 cadastro recente). Eliminei antes a
+ronda de 401 garantida, esperando pelo `authToken`. (2) A proposta para o
+`admin-list` (`return false` sem consultar) impediria **qualquer** utilizador de
+alguma vez ser reconhecido como admin. O defeito real era outro: o cache existia
+mas em `sessionStorage`, morrendo com o processo — mesma classe de bug do
+consentimento. (3) O Sentry já era lazy desde o MC82.3; os 313 ms que vi no
+MC88.33 eram o chunk a correr DENTRO da janela ociosa, não a bloquear. Interpretei
+mal na altura.
+
+**Um resultado negativo, dito como negativo:** recusei subir o polling RPC para
+30 s (atrasaria o aviso de senhas creditadas após PIX, queixa do MC88.15) e
+tentei em alternativa partilhar uma instância de `Contract`, na hipótese de que
+vários listeners do mesmo evento custassem um só filtro. **Não houve redução
+nenhuma: 15/min antes e depois.** A hipótese estava errada; fica registada como
+errada em vez de vendida como ganho.
+
+Também corrijo uma afirmação minha do MC88.33: eu disse que tirar o `admin-list`
+poupava "até 933 ms". Não poupa — relendo a cascata, ele corre em **paralelo**
+com o `auth-user`, nunca bloqueou o saldo. O ganho é 4 pedidos a menos a
+competir por ligações.
+
+Nada foi deployado: as alterações são de frontend, logo só chegam via APK.
+Relatório: `Desktop\MC88.34-RELATORIO.txt`. Commit `349e0e0`.
