@@ -4316,3 +4316,51 @@ nos logs da Netlify. Rotação é do operador.
 
 Relatório e evidências: `Desktop\MC88.30-RELATORIO.txt` (+ `-PERF-FRONTEND`,
 `-PERF-TELAS`, `-CONSOLA-SALDOS`). Nenhum código foi alterado (R1); execução no MC88.31.
+
+---
+
+## MC88.31 — Executar o plano do MC88.30 e descobrir onde ele estava errado
+
+Implementei as 8 otimizações. Com o app **parado** no Dashboard: 118 → 59
+pedidos/min, RPC 61 → 15/min, `lances-flash` 20 → 5/min, vídeo de fundo montado
+2 → 1, long task máxima 1151 → 705 ms, gate após reinício 2542 → ≤313 ms, import
+do `health.mjs` 2146 → 5 ms. Suíte 249/249 verde, bundle validado como mainnet.
+
+**Corrijo dois enganos meus do MC88.30.** (a) Eu disse que o consentimento "não
+é persistido". É — em `sessionStorage`. A minha varredura só olhou o
+localStorage. O sintoma relatado estava certo (re-pergunta a cada arranque,
+porque o sessionStorage morre com o processo da WebView), o mecanismo estava
+errado. (b) Atribuí os 2089 ms do `health` ao ethers. Tirei o ethers, medi de
+novo: ainda 2146 ms. Medindo dependência a dependência, o dominante era o
+`admin-auth` (1260 ms, arrasta `@netlify/blobs`+jwt); o ethers eram ~500 ms.
+**Lição: um diagnóstico só está fechado quando a correção é medida.** Remover a
+causa que se acusou e voltar a medir é o teste — não a leitura do código.
+
+**O plano teria partido três ficheiros.** Os blocos PowerShell de `-replace`:
+em `web3.js` o padrão também reescrevia a linha do próprio singleton; em
+`health.mjs` apagava um import cujos símbolos são usados 6 linhas abaixo; e o
+troço do polling referia `edicaoAtiva`/`emBreve`, variáveis com **0 ocorrências**
+no AppContext. Verificar cada achado no código antes de mexer — o Segmento 0 do
+próprio plano — foi o que apanhou isto.
+
+**Duas correções que o plano não previa, e sem as quais a "correção" era pior
+que o defeito.** (1) Os dois subscribers chamavam `provider.destroy()` no
+cleanup; com um provider partilhado, o primeiro unsubscribe derrubaria o RPC de
+todos os outros. (2) Baixar `JANELA_BLOCOS` de 150 para 10 trocava uma falha
+dura por um **atraso permanente**: o cron corre de 30 em 30 min e a mainnet
+produz ~150 blocos nesse intervalo. Fiz paginação (20 lotes de 10 = 200 blocos),
+e o checkpoint passou a gravar o último bloco *realmente varrido* — gravar
+`blocoAtual` teria saltado blocos em silêncio, que é o pior modo de falhar.
+
+**A causa dos vídeos não era o React.** O crossfade @768px esconde o outro vídeo
+com `opacity: 0`, e um `<video>` com opacity:0 **continua a descodificar cada
+frame**. O CSS parecia resolver e não impedia nada. Junta-se à lição do MC82.1:
+o custo está na camada que existe, não na que se vê.
+
+Não deployei: a branch é `feat/mc88.29-fila-tarefas`, a produção é mainnet, e o
+MC79 já registou drift por deploy cruzado. As correções de backend ([2],[3],[6])
+só produzem efeito depois de publicadas — decisão do operador. O Achado 3 fica
+inerte até existirem `BLOBS_SITE_ID`/`BLOBS_TOKEN`, e a chave Alchemy continua
+por rodar (está inclusive hardcoded em `web3.js:122`, logo no histórico do git).
+
+Relatório: `Desktop\MC88.31-RELATORIO.txt`. Commit `4dab059`.
