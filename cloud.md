@@ -4266,3 +4266,53 @@ polling de ~200 ms mais um contador de montagens do componente.
 **Lição de método:** quando uma medição não bate certo, testar o próprio instrumento
 antes de culpar o produto — mas também não parar aí. Injectar o texto esperado no DOM
 custa zero e resolve a dúvida nos dois sentidos.
+
+---
+
+## MC88.30 — Diagnóstico de performance: o app não tem avaria, tem desperdício
+
+Medi as três camadas (WebView Android via CDP, functions da Netlify via logs reais,
+RPC on-chain) à procura da "lentidão geral". A conclusão foi contraintuitiva: **a
+consola está limpa, não há falhas de rede e as functions são rápidas** (20–275 ms de
+Duration real do lado do servidor). O que mata é o que o app faz quando ninguém lhe
+toca: com o ecrã **parado** no Dashboard, 118 pedidos/minuto — **61 deles para o RPC
+Alchemy** — e 4 vídeos a descodificar em simultâneo.
+
+**Causa raiz do RPC:** `utils/web3.js` cria um `new JsonRpcProvider` em cada função
+(5 sítios) e nenhum configura `pollingInterval` nem `staticNetwork`. Cada
+`contrato.on(...)` faz o ethers sondar de 4 em 4 s, e cada provider novo repete a
+deteção de rede. Não é um bug pontual — é o padrão de instanciação.
+
+**Dois achados que só apareceram nos logs do servidor**, invisíveis pelo cliente:
+`monitor-onchain` falha **12 em 12** execuções com 400 do Alchemy ("Free tier ...
+up to a 10 block range") porque `JANELA_BLOCOS = 150`; e as *scheduled functions*
+não têm Netlify Blobs configurado, portanto o checkpoint nunca grava e o erro **nunca
+se autocorrige**. As duas falhas alimentam-se uma à outra. O cron devolve `ok`.
+
+**Lição de método 1 — o instrumento mede o que está no ecrã, não o que julgamos.**
+A primeira captura deu 0 pedidos/min e 6 chunks: eu estava a medir o *consent gate*,
+porque a flag `-Reiniciar` do túnel relançou a app. Só depois de atravessar o gate é
+que os 118 pedidos/min apareceram. Verificar sempre em que tela está o alvo antes de
+acreditar no número.
+
+**Lição de método 2 — declarar o piso do próprio detetor.** O meu "estabilizou em"
+exigia 3 leituras iguais de 300 ms, logo tem ~900 ms de piso artificial. A ordenação
+entre telas é fiável; os valores absolutos não. Registei isto no relatório em vez de
+publicar 2558 ms como se fosse verdade medida.
+
+**Lição de método 3 — um controlo que partilha a dependência não é controlo.**
+Tentei isolar o custo do rate-limiter comparando `produtos` (com) contra
+`lances-flash` (sem). Inconclusivo: `lances-flash` também toca em Blobs. Marquei como
+não medido em vez de inventar um número.
+
+**Corrige o registo do MC88.15:** o estrangulamento de rate-limit já não se reproduz
+— `saldo-rs` permite 30/min e recebe 12, tudo 200, zero 429. O problema mudou de
+*bloqueio* para *volume*.
+
+**Segurança:** a chave Alchemy está em `VITE_ALCHEMY_URL` (logo, embutida no APK e
+extraível) **e** em texto claro nos logs de function. Com o plano Free, basta um
+terceiro extraí-la para esgotar a quota. Redigi-a dos ficheiros de saída; continua
+nos logs da Netlify. Rotação é do operador.
+
+Relatório e evidências: `Desktop\MC88.30-RELATORIO.txt` (+ `-PERF-FRONTEND`,
+`-PERF-TELAS`, `-CONSOLA-SALDOS`). Nenhum código foi alterado (R1); execução no MC88.31.
