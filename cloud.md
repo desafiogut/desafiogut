@@ -4226,3 +4226,43 @@ MC seguinte.
 **Nota de medição:** o estado React da compra anterior sobrevive na página (a mensagem
 de erro do MC88.28 ainda lá estava). Recarregar a WebView antes de medir, ou a baseline
 vem suja.
+
+### MC88.29 (adenda) — o APK ESTÁ na mainnet; a hipótese do RPC cai, e o defeito é real
+
+Pergunta directa, resposta directa: **sim, o APK tem `VITE_ALCHEMY_URL` da mainnet.**
+Extraído do bundle dentro do APK, o próprio `verificarCreditoOnchain` minificado:
+
+```js
+var Jd = `https://eth-mainnet.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B`;
+async function Yd(e){ if(!e) return `pendente`;
+  let t = await new Qu(Jd).getTransactionReceipt(e); ... }
+```
+
+O fallback Sepolia foi **eliminado pelo minificador** — nem consta do bundle. O
+`import.meta.env` embutido confirma tudo: `VITE_CHAIN_ID:1`, `VITE_EXPLORER_URL:
+https://etherscan.io`, `VITE_NETWORK_STAGE:mainnet`, `VITE_CONTRATO_SEPOLIA:0x0052…16cd`.
+(`VITE_CONTRACT_ADDRESS:0x000…000` e `VITE_RPC_URL_SEPOLIA` são as vars mortas já
+conhecidas; as ocorrências no chunk do Privy são a tabela de redes da biblioteca.)
+
+⚠️ **Corrijo o que escrevi na entrada anterior.** Tinha atribuído a falha do critério 3
+ao meu método de leitura. Ambos os lados dessa desculpa caíram:
+
+1. **O RPC é mainnet** → o `<CreditoStatus>` teria obtido o receipt e mostrado
+   "em processamento" e depois "Crédito confirmado!".
+2. **O método de leitura funciona.** Teste de custo zero: injetei no DOM o texto exato
+   do componente e corri a expressão *idêntica* à do monitor → `detectou: "processing"`.
+
+Logo **o defeito é real e a causa não está estabelecida.** O wiring está correcto
+(`MinhaCarteira.jsx:52` `sucesso: trocaInfo`; render em 241-243; `<CreditoStatus>` em
+247; `creditoTxHash` em 58 + onClick) e mesmo assim **nenhuma** das duas fontes de texto
+apareceu em 90 s de polling a 2 s.
+
+**Hipótese a testar primeiro (não confirmada):** o log mostra `[GUT-DEBUG] saldoSenhas
+event` 2,7 s depois do 202 — o listener on-chain do AppContext. Se essa actualização
+**remontar** MinhaCarteira em vez de só re-renderizar, o estado local `creditoTxHash` e
+o `sucesso` do hook são apagados e o feedback evapora-se. Testar com uma compra a
+polling de ~200 ms mais um contador de montagens do componente.
+
+**Lição de método:** quando uma medição não bate certo, testar o próprio instrumento
+antes de culpar o produto — mas também não parar aí. Injectar o texto esperado no DOM
+custa zero e resolve a dúvida nos dois sentidos.

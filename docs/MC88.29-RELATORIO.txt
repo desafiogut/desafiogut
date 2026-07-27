@@ -180,3 +180,49 @@ o 202 responde ~15× mais depressa que o síncrono, o crédito chega, e a fila
 completa o ciclo pending→done pela primeira vez.
 Fica em aberto apenas a confirmação visual do feedback ao utilizador (critério 3).
 ================================================================================
+
+================================================================================
+9. ADENDO — O APK ESTÁ NA MAINNET. A HIPÓTESE DO RPC ESTÁ REFUTADA.
+================================================================================
+Pergunta: o APK tem VITE_ALCHEMY_URL da mainnet? → **SIM.**
+
+Extraído do bundle DENTRO do APK (97 chunks varridos), o próprio
+verificarCreditoOnchain minificado:
+
+  var Jd = `https://eth-mainnet.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B`;
+  async function Yd(e){ if(!e) return `pendente`;
+    let t = await new Qu(Jd).getTransactionReceipt(e);
+    return t ? Number(t.status)=== ... }
+
+O fallback hardcoded de Sepolia foi eliminado pelo minificador — não existe no
+bundle. Dump do import.meta.env embutido:
+  VITE_ALCHEMY_URL     https://eth-mainnet.g.alchemy.com/v2/qU_kw3…   ✅ mainnet
+  VITE_CHAIN_ID        1                                              ✅
+  VITE_EXPLORER_URL    https://etherscan.io                           ✅
+  VITE_NETWORK_STAGE   mainnet                                        ✅
+  VITE_CONTRATO_SEPOLIA 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd    ✅ mainnet
+  (VITE_CONTRACT_ADDRESS 0x000…000 e VITE_RPC_URL_SEPOLIA são vars MORTAS)
+As ocorrências de sepolia/mainnet no chunk do Privy são a tabela de redes da
+própria biblioteca, não configuração da app.
+
+⚠️ CORREÇÃO À SECÇÃO 7. Escrevi lá que a falha do critério 3 apontava para o meu
+método de leitura. **Isso está agora REFUTADO nos dois lados:**
+
+ 1. O RPC é mainnet → verificarCreditoOnchain teria obtido o receipt e o
+    <CreditoStatus> mostraria "em processamento" e depois "Crédito confirmado!".
+ 2. O método de leitura FUNCIONA. Teste de custo zero: injetei no DOM o texto
+    exato do componente e corri a expressão IDÊNTICA à do monitor →
+    detectou: "processing", innerText 669 chars. O método está são.
+
+Logo, **o defeito é real e a causa NÃO está estabelecida.** O wiring em
+MinhaCarteira.jsx está correto (linha 52 `sucesso: trocaInfo`; 241-243 render;
+247 <CreditoStatus>; 58 + onClick preenchem creditoTxHash), e ainda assim nenhuma
+das DUAS fontes de texto apareceu durante 90 s de polling a 2 s.
+
+Pista por explorar (não confirmada): o log mostra `[GUT-DEBUG] saldoSenhas event`
+2,7 s após o 202 — o listener on-chain do AppContext. Se essa atualização
+REMONTAR MinhaCarteira (em vez de só re-renderizar), o estado local
+`creditoTxHash` e o `sucesso` do hook são apagados e o feedback desaparece. É a
+hipótese a testar primeiro, mas exige uma compra com polling de alta frequência
+(~200 ms) e captura do DOM, mais um contador de montagens do componente.
+================================================================================
