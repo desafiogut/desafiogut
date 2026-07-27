@@ -8,6 +8,11 @@ import { Modal } from "@/components/ui";
  * Artigos numerados em arábico conforme regulamento RTD Manaus/AM (1º mai/2026).
  * MC23.3 — overlay migrado para <Modal> (spring entry + backdrop bg-black/60).
  */
+// MC88.31 — partilhados com Boot.jsx, que decide se o gate é mostrado.
+// Subir VERSAO_CONSENTIMENTO invalida os aceites anteriores de propósito.
+export const CHAVE_CONSENTIMENTO  = "gut_consentimento";
+export const VERSAO_CONSENTIMENTO = "2.0";
+
 export default function TermosConsentimento({ onAceitar }) {
   const [lido,       setLido]       = useState(false);
   const [maiores,    setMaiores]    = useState(false);
@@ -21,9 +26,14 @@ export default function TermosConsentimento({ onAceitar }) {
     const consentimento = {
       aceito: true,
       timestamp: new Date().toISOString(),
-      versao: "2.0",
+      versao: VERSAO_CONSENTIMENTO,
     };
-    sessionStorage.setItem("gut_consentimento", JSON.stringify(consentimento));
+    // MC88.31 (Achado 7 do MC88.30) — era sessionStorage, que morre com o
+    // processo da WebView: no APK o gate reaparecia a CADA arranque (~2,5 s até
+    // o Dashboard ficar útil). Passa a localStorage, mas continua ligado à
+    // VERSAO_CONSENTIMENTO: se o regulamento mudar de versão, o utilizador é
+    // novamente questionado em vez de herdar um aceite de termos antigos.
+    localStorage.setItem(CHAVE_CONSENTIMENTO, JSON.stringify(consentimento));
     onAceitar();
   }
 

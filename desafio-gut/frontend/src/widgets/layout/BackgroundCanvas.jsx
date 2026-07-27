@@ -50,6 +50,24 @@ export default function BackgroundCanvas() {
     return () => mql.removeEventListener("change", handler);
   }, []);
 
+  // MC88.31 (Achado 4 do MC88.30) — monta APENAS o vídeo da largura atual.
+  // O crossfade @768px em globals.css usa `opacity: 0` para esconder o outro
+  // vídeo, e um <video> com opacity:0 continua a descodificar cada frame: no
+  // telemóvel mediram-se os dois (1080x1935 + 1920x1288) a tocar ao mesmo
+  // tempo. O CSS fica como está (defesa em profundidade); o JS é que deixa de
+  // criar o elemento que não se vê.
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia("(min-width: 768px)").matches;
+  });
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(min-width: 768px)");
+    const handler = (e) => setIsDesktop(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
   // Dupla defesa: useReducedMotion() do framer-motion + matchMedia explícito.
   const showVideo = videoEnabled && !videoError && !reduce;
 
@@ -71,26 +89,27 @@ export default function BackgroundCanvas() {
           Renderizado DEPOIS dos <div>s no DOM → mesma z-index (-50), pinta por cima
           (DOM paint order). Quando falha (onError) ou prefers-reduced-motion, o
           vídeo é removido e os <div>s .gut-bg-layer voltam a ser visíveis. */}
-      {showVideo && (
-        <>
-          <video
-            className="gut-bg-video gut-bg-video--mobile"
-            src="/assets/backgrounds/loops/fundo-loop-v3-mobile.webm"
-            poster="/assets/backgrounds/background-mobile.webp"
-            autoPlay muted loop playsInline disableRemotePlayback
-            onError={() => setVideoError(true)}
-            aria-hidden="true"
-          />
-          <video
-            className="gut-bg-video gut-bg-video--desktop"
-            src="/assets/backgrounds/loops/fundo-loop-v3-desktop.webm"
-            poster="/assets/backgrounds/background-desktop.webp"
-            autoPlay muted loop playsInline disableRemotePlayback
-            onError={() => setVideoError(true)}
-            aria-hidden="true"
-          />
-        </>
-      )}
+      {showVideo && (isDesktop ? (
+        <video
+          key="desktop"
+          className="gut-bg-video gut-bg-video--desktop"
+          src="/assets/backgrounds/loops/fundo-loop-v3-desktop.webm"
+          poster="/assets/backgrounds/background-desktop.webp"
+          autoPlay muted loop playsInline disableRemotePlayback
+          onError={() => setVideoError(true)}
+          aria-hidden="true"
+        />
+      ) : (
+        <video
+          key="mobile"
+          className="gut-bg-video gut-bg-video--mobile"
+          src="/assets/backgrounds/loops/fundo-loop-v3-mobile.webm"
+          poster="/assets/backgrounds/background-mobile.webp"
+          autoPlay muted loop playsInline disableRemotePlayback
+          onError={() => setVideoError(true)}
+          aria-hidden="true"
+        />
+      ))}
     </motion.div>
   );
 }

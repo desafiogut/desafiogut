@@ -22,7 +22,7 @@
 // Env exigido: RPC_URL (já usado por _lib/contract.mjs). SENTRY_DSN opcional —
 // sem ele, captureSecurityAlert vira console.warn estruturado.
 
-import { getStore } from "@netlify/blobs";
+import { abrirStoreResiliente } from "./_lib/blobs-manual.mjs";
 import { jsonResponse, jsonError } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";
@@ -33,17 +33,21 @@ import { respostaPreflight } from "./_lib/cors.mjs";
 const EDICAO_PADRAO       = "R-1";
 const BLOB_ULTIMO         = "ultimo-bloco-processado";
 const BLOB_STATS          = "onchain-stats";
-const JANELA_BLOCOS       = 150;   // ~30 min em Sepolia (~12s/bloco)
+// MC88.31 (Achado 2 do MC88.30) — o plano Free do Alchemy limita eth_getLogs a
+// 10 blocos. O valor antigo (150, comentado como "~30 min em Sepolia") ficou
+// desatualizado na migração para mainnet e devolvia 400 em 12 de 12 execuções.
+const MAX_BLOCOS_POR_QUERY = 10;   // limite duro do plano Free do Alchemy
+const MAX_PAGINAS          = 20;   // 20 x 10 = 200 blocos/execução (> 150 que a
+                                   // mainnet produz entre crons de 30 min)
+const JANELA_BLOCOS       = 10;    // ~2 min em mainnet (~12s/bloco)
 const LIMIAR_BURST        = 5;     // lances/lancador na janela
 const SIGMA_OUTLIER       = 3;     // valores fora de 3σ disparam alerta
 const MIN_AMOSTRAS_STATS  = 20;    // só dispara outlier após N históricos
 
+// MC88.31 (Achado 3 do MC88.30) — nas scheduled functions o contexto automático
+// dos Blobs não existe; o helper repete com siteID+token explícitos.
 function abrirStore(name) {
-  try { return getStore({ name, consistency: "strong" }); }
-  catch (err) {
-    console.warn(`[monitor-onchain] Blobs ${name} indisponível:`, err?.message);
-    return null;
-  }
+  return abrirStoreResiliente(name, { consistency: "strong", etiqueta: "monitor-onchain" });
 }
 
 function calcularBurstPorAddr(eventos) {
@@ -118,13 +122,31 @@ export async function executar({ edicaoId, dryRun }) {
     };
   }
 
-  // 1) Busca eventos LanceDado.
+  // MC88.31 — pagina a busca em blocos de MAX_BLOCOS_POR_QUERY.
+  // Apenas baixar JANELA_BLOCOS não bastava: o cron corre de 30 em 30 min e a
+  // mainnet produz ~150 blocos nesse intervalo, portanto uma única janela de 10
+  // blocos por execução ficaria permanentemente para trás. Paginando até
+  // MAX_PAGINAS (=200 blocos) cada execução recupera mais do que a cadeia
+  // produz, e o checkpoint grava o último bloco REALMENTE varrido — nunca
+  // blocoAtual — senão os blocos não varridos eram saltados em silêncio.
   let eventos = [];
+  let toBlock = fromBlock - 1;
   try {
-    eventos = await getLanceDadoEvents(fromBlock, blocoAtual);
+    for (let pagina = 0; pagina < MAX_PAGINAS && toBlock < blocoAtual; pagina++) {
+      const ini = toBlock + 1;
+      const fim = Math.min(blocoAtual, ini + MAX_BLOCOS_POR_QUERY - 1);
+      const lote = await getLanceDadoEvents(ini, fim);
+      eventos.push(...lote);
+      toBlock = fim;
+    }
   } catch (err) {
     console.error("[monitor-onchain] getLanceDadoEvents falhou:", err?.message);
-    return { ok: false, error: "rpc_falhou", message: err?.message };
+    // Mantém o que já foi varrido: se toBlock avançou, o checkpoint adiante
+    // grava esse progresso em vez de repetir as mesmas páginas no próximo run.
+    if (toBlock < fromBlock) {
+      return { ok: false, error: "rpc_falhou", message: err?.message };
+    }
+    console.warn("[monitor-onchain] varredura parcial até bloco", toBlock);
   }
   // Filtra somente a edição configurada (o contrato é único e cobre múltiplas edicoes).
   eventos = eventos.filter((ev) => ev.idEdicao === edicaoId);
@@ -167,7 +189,7 @@ export async function executar({ edicaoId, dryRun }) {
     if (storeUltimo) {
       try {
         await storeUltimo.setJSON(edicaoId, {
-          bloco: blocoAtual,
+          bloco: toBlock,
           processadoEm: new Date().toISOString(),
           eventosNoBatch: eventos.length,
         });
@@ -184,7 +206,8 @@ export async function executar({ edicaoId, dryRun }) {
   }
 
   const sumario = {
-    ok: true, edicaoId, fromBlock, blocoAtual,
+    ok: true, edicaoId, fromBlock, toBlock, blocoAtual,
+    atrasado: toBlock < blocoAtual,   // MC88.31 — sinaliza que falta recuperar
     eventosProcessados: eventos.length,
     bursts: bursts.length,
     outliers: outliers.length,

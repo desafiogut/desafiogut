@@ -400,10 +400,26 @@ export function AppProvider({ children }) {
     setLightningActive(false);
   }, [tipoLeilao]);
 
-  // Polling 3s de lances flash do blob (cross-user em tempo real).
+  // Polling de lances flash do blob (cross-user em tempo real).
+  //
+  // MC88.31 (Achado 5 do MC88.30) — era 3s fixos, ou seja 20 pedidos/min mesmo
+  // com a edição fechada ("EM BREVE / Aguardando abertura"), que foi o estado
+  // medido. Agora a cadência é derivada do prazo: 3s enquanto a edição corre
+  // (comportamento inalterado no momento que importa) e 15s quando não há
+  // nada a acontecer → 20/min cai para 4/min em repouso.
+  //
+  // Usa setTimeout recursivo em vez de setInterval de propósito: o atraso é
+  // recalculado a cada ciclo, portanto a cadência acelera sozinha quando a
+  // edição abre e abranda quando o prazo passa, sem pôr `prazoFlash` nas
+  // dependências (o que reiniciaria o polling a cada actualização do prazo).
   useEffect(() => {
     if (tipoLeilao !== "flash") return;
     let cancelado = false;
+    let id = null;
+    // Reaproveita prazoNotifRef (já mantém o prazo do tipo CORRENTE, atualizado
+    // sem re-criar timers) — a mesma razão pela qual foi criado no MC15.6.
+    const emCurso = () =>
+      Number(prazoNotifRef.current) > Math.floor(Date.now() / 1000);
     const poll = async () => {
       if (cancelado) return;
       try {
@@ -411,10 +427,10 @@ export function AppProvider({ children }) {
         if (!ok || cancelado) return;
         if (!cancelado) setLancesFlash(data.lances || []);
       } catch {}
+      if (!cancelado) id = setTimeout(poll, emCurso() ? 3000 : 15000);
     };
     poll();
-    const id = setInterval(poll, 3000);
-    return () => { cancelado = true; clearInterval(id); };
+    return () => { cancelado = true; if (id) clearTimeout(id); };
   }, [tipoLeilao]);
 
   // Listener on-chain do evento LanceDado — atualiza tabela em tempo real.

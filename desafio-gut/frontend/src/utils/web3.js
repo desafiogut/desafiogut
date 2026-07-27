@@ -121,6 +121,24 @@ const ALCHEMY_RPC =
   import.meta.env.VITE_ALCHEMY_URL ||
   "https://eth-sepolia.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B";
 
+// MC88.31 (Achado 1 do MC88.30) — provider único e partilhado.
+// Antes: cada função criava `new JsonRpcProvider`, cada um com deteção de rede
+// própria e sondagem de 4s por omissão do ethers → 61 pedidos RPC/min com o app
+// PARADO. Agora: uma instância, rede estática (sem eth_chainId a cada provider)
+// e sondagem de 15s.
+// ATENÇÃO: por ser partilhado, NENHUM consumidor pode chamar provider.destroy().
+let _provider = null;
+export function getProvider() {
+  if (!_provider) {
+    _provider = new JsonRpcProvider(ALCHEMY_RPC, undefined, {
+      staticNetwork: true,
+      pollingInterval: 15_000,
+    });
+    _provider.pollingInterval = 15_000; // reforço: propriedade de AbstractProvider
+  }
+  return _provider;
+}
+
 /**
  * MC59.6 — lê o receipt de uma tx e classifica para o polling de crédito
  * assíncrono (resposta 202). Read-only via Alchemy; não exige carteira.
@@ -128,7 +146,7 @@ const ALCHEMY_RPC =
  */
 export async function verificarCreditoOnchain(txHash) {
   if (!txHash) return "pendente";
-  const provider = new JsonRpcProvider(ALCHEMY_RPC);
+  const provider = getProvider();
   const receipt = await provider.getTransactionReceipt(txHash);
   if (!receipt) return "pendente";               // ainda não minerou
   return Number(receipt.status) === 1 ? "confirmado" : "revertido";
@@ -139,7 +157,7 @@ export async function getEdicaoPrazo(idEdicao) {
     // Privy embedded wallet não injeta window.ethereum; usa Alchemy como fallback
     const provider = window.ethereum
       ? new BrowserProvider(window.ethereum)
-      : new JsonRpcProvider(ALCHEMY_RPC);
+      : getProvider();
     const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
     const result = await contrato.edicoes(idEdicao);
     const prazo = Number(result[2]); // index 2 = uint256 prazo
@@ -176,7 +194,7 @@ export async function enviarLance(signer, contratoEndereco, idEdicao, valorEmCen
  * Retorna função de unsubscribe — chamar no cleanup do useEffect.
  */
 export function subscribeLanceDado(idEdicao, onLance) {
-  const provider = new JsonRpcProvider(ALCHEMY_RPC);
+  const provider = getProvider();
   const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
 
   const handler = (eventoIdEdicao, lancador, valorEmCentavos, repetido, timestamp, ev) => {
@@ -195,7 +213,8 @@ export function subscribeLanceDado(idEdicao, onLance) {
 
   return () => {
     try { contrato.off("LanceDado", handler); } catch {}
-    try { provider.destroy?.(); } catch {}
+    // MC88.31 — NÃO destruir: o provider é partilhado (getProvider). Remover os
+    // listeners basta; destruí-lo derrubava todos os outros consumidores.
   };
 }
 
@@ -209,7 +228,7 @@ export function subscribeLanceDado(idEdicao, onLance) {
  */
 export async function getSaldoSenhasOnChain(address) {
   if (!address) throw new Error("address obrigatório para ler saldoSenhas");
-  const provider = new JsonRpcProvider(ALCHEMY_RPC);
+  const provider = getProvider();
   const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
   const raw = await contrato.saldoSenhas(address);
   return Number(raw);
@@ -233,7 +252,7 @@ export async function getSaldoSenhasOnChain(address) {
  */
 export function subscribeSaldoSenhas(address, onUpdate) {
   if (!address) throw new Error("address obrigatório para subscribe");
-  const provider = new JsonRpcProvider(ALCHEMY_RPC);
+  const provider = getProvider();
   const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
   const target   = String(address).toLowerCase();
 
@@ -261,6 +280,6 @@ export function subscribeSaldoSenhas(address, onUpdate) {
   return () => {
     try { contrato.off("SenhasCreditadas", onCreditadas); } catch {}
     try { contrato.off("LanceDado", onLance); } catch {}
-    try { provider.destroy?.(); } catch {}
+    // MC88.31 — NÃO destruir: provider partilhado (ver subscribeLanceDado).
   };
 }

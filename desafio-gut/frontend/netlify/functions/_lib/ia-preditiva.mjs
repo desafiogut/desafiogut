@@ -17,7 +17,7 @@
 // Cron wrapper: ia-preditiva-scheduled.mjs invoca analisarEngajamento() a cada
 // 5 min. Toda execução grava `ia-execucao:{ts}` para auditoria (com ou sem ação).
 
-import { getStore } from "@netlify/blobs";
+import { abrirStoreResiliente } from "./blobs-manual.mjs";
 import { Contract } from "ethers";
 import { captureSecurityAlert } from "./sentry-server.mjs";
 import { CONTRATO_ADDRESS } from "./contract.mjs";
@@ -40,12 +40,10 @@ const ABRIR_EDICAO_ABI = [
   "function coordenacao() public view returns (address)",
 ];
 
+// MC88.31 (Achado 3 do MC88.30) — mesma falha de contexto do monitor-onchain:
+// como scheduled function, esta corria sempre com métricas a zero.
 function abrirStore(name) {
-  try { return getStore({ name, consistency: "eventual" }); }
-  catch (err) {
-    console.warn(`[ia-preditiva] Blobs ${name} indisponível:`, err?.message);
-    return null;
-  }
+  return abrirStoreResiliente(name, { consistency: "eventual", etiqueta: "ia-preditiva" });
 }
 
 function lerFlag() {

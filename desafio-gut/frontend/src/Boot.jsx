@@ -9,7 +9,10 @@
 // AppContext, rotas, ethers/viem) vive atrás do import dinâmico de PrivyRoot.jsx.
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useLocation } from "react-router-dom";
-import TermosConsentimento from "./components/TermosConsentimento.jsx";
+import TermosConsentimento, {
+  CHAVE_CONSENTIMENTO,
+  VERSAO_CONSENTIMENTO,
+} from "./components/TermosConsentimento.jsx";
 import BackgroundCanvas from "./widgets/layout/BackgroundCanvas.jsx";
 import { carregarSentry } from "./lib/sentryLazy.js";
 
@@ -18,12 +21,21 @@ const PrivyRoot = lazy(() => import("./PrivyRoot.jsx"));
 // Lê o consentimento de forma SÍNCRONA no primeiro render. Antes isto era um
 // useEffect no App.jsx, o que fazia o gate piscar por um frame em quem já tinha
 // aceite nesta sessão.
+//
+// MC88.31 (Achado 7 do MC88.30) — lê primeiro o localStorage (novo) e só depois
+// o sessionStorage (antigo), para quem já aceitou na sessão em curso não ser
+// questionado outra vez durante a transição. O aceite só vale para a versão
+// corrente do regulamento.
 function consentimentoJaAceito() {
   try {
-    const salvo = sessionStorage.getItem("gut_consentimento");
-    return !!(salvo && JSON.parse(salvo).aceito);
+    const salvo = localStorage.getItem(CHAVE_CONSENTIMENTO)
+               ?? sessionStorage.getItem(CHAVE_CONSENTIMENTO);
+    if (!salvo) return false;
+    const c = JSON.parse(salvo);
+    return !!(c?.aceito && c?.versao === VERSAO_CONSENTIMENTO);
   } catch {
-    try { sessionStorage.removeItem("gut_consentimento"); } catch { /* sem storage */ }
+    try { localStorage.removeItem(CHAVE_CONSENTIMENTO); } catch { /* sem storage */ }
+    try { sessionStorage.removeItem(CHAVE_CONSENTIMENTO); } catch { /* sem storage */ }
     return false;
   }
 }
@@ -70,9 +82,9 @@ export default function Boot() {
         {/* MC20.2 — Arena oficial (-z-50), visível também no gate (paridade R1/R5). */}
         <BackgroundCanvas />
         {/* O próprio TermosConsentimento já grava `gut_consentimento` no
-            sessionStorage antes de chamar onAceitar (TermosConsentimento.jsx:26),
-            por isso aqui só se comuta o estado — duplicar a escrita arriscava
-            sobrepor o objeto que ele monta. */}
+            localStorage (MC88.31; era sessionStorage) antes de chamar
+            onAceitar, por isso aqui só se comuta o estado — duplicar a escrita
+            arriscava sobrepor o objeto que ele monta. */}
         <TermosConsentimento onAceitar={() => setAceito(true)} />
       </>
     );

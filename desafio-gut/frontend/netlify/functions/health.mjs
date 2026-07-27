@@ -19,8 +19,11 @@
 // deixa de servir para monitorização de disponibilidade.
 
 import { jsonResponse } from "./_lib/validate.mjs";
-import { backendAssinatura, resolverChaveCoordenacao } from "./_lib/signer.mjs";
-import { autenticarAdmin } from "./_lib/admin-auth.mjs";
+// MC88.31 (Achado 6 do MC88.30) — _lib/signer.mjs arrasta o ethers (~2 s de
+// cold start). O bloco que o usa fica DEPOIS do gate de admin, portanto o
+// caminho público (o medido em 2089 ms) não precisa dele. Import dinâmico.
+// MC88.31 — _lib/admin-auth.mjs também é caro (~1,3 s: arrasta @netlify/blobs
+// e jwt). Importado dinamicamente mais abaixo, só quando há credencial.
 import { respostaPreflight } from "./_lib/cors.mjs";
 
 export default async (req) => {
@@ -35,14 +38,30 @@ export default async (req) => {
     timestamp: new Date().toISOString(),
   };
 
+  // MC88.31 (Achado 6 do MC88.30) — autenticarAdmin só reconhece duas fontes de
+  // credencial: `Authorization: Bearer` e `x-admin-token`. Sem nenhuma delas o
+  // resultado seria obrigatoriamente { ok:false }, portanto nem vale a pena
+  // carregar o módulo. O health público (o medido em 2089 ms) passa a não pagar
+  // nem o ethers nem o @netlify/blobs/jwt.
   let ehAdmin = false;
-  try {
-    const auth = req ? await autenticarAdmin(req) : { ok: false };
-    ehAdmin = Boolean(auth?.ok);
-  } catch { ehAdmin = false; }
+  const temCredencialAdmin = !!req && (
+    (req.headers.get("authorization") || "").startsWith("Bearer ") ||
+    !!req.headers.get("x-admin-token")
+  );
+  if (temCredencialAdmin) {
+    try {
+      const { autenticarAdmin } = await import("./_lib/admin-auth.mjs");
+      const auth = await autenticarAdmin(req);
+      ehAdmin = Boolean(auth?.ok);
+    } catch { ehAdmin = false; }
+  }
   if (!ehAdmin) return jsonResponse(base);
 
   const provider = (process.env.PIX_PROVIDER || "mock").toLowerCase();
+
+  // MC88.31 — carregado só aqui (pós-gate de admin), para o health público não
+  // pagar o custo de arranque do ethers.
+  const { backendAssinatura, resolverChaveCoordenacao } = await import("./_lib/signer.mjs");
 
   // MC30.1 — reporta o MODO de assinatura (backend), não a presença da chave.
   const backend = backendAssinatura();
