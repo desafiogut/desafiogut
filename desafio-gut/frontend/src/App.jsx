@@ -75,10 +75,32 @@ function CorporativoRoute({ children }) {
 // MC12.3 Item 4 — wrapper da rota raiz: lojistas autenticados NUNCA veem
 // o Dashboard de leilão. Vão direto para /corporativo. Comuns/visitantes
 // continuam vendo o Dashboard normal (zero regressão R1).
+// MC88.37 — ANTES existia aqui `if (isConnected && tipoCarregando) return null;`.
+//
+// O QUE ISSO PROVOCAVA (medido, ver docs/MC88.37-CLS-DIAGNOSTICO.txt): quando o
+// Privy conclui o restauro da sessão (~4,3 s no APK) `isConnected` passa a true
+// e, no mesmo instante, o `authToken` passa a existir e liga
+// `setTipoCarregando(true)` (AppContext.jsx:350) para ir buscar as cotas. As
+// duas condições ficavam verdadeiras ao mesmo tempo, o Outlet esvaziava-se e o
+// Dashboard — já pintado desde os ~1,7 s — DESAPARECIA durante ~1,2 s.
+// Sintoma medido: CLS 0,373, em duas deslocações do rodapé de altura 0 ↔ 154.
+//
+// PORQUE É QUE DEVOLVER null NÃO PROTEGIA NADA: o Dashboard comum já é mostrado
+// durante os ~4,3 s anteriores, enquanto `isConnected` ainda é false. Apagá-lo
+// só DEPOIS disso não impede que um utilizador corporativo veja o ecrã comum —
+// apenas acrescenta um ecrã em branco a meio.
+//
+// A intenção declarada em AppContext.jsx:252 é "evita redirect prematuro" —
+// evitar um REDIRECT, não apagar a página. É isso que se preserva: durante a
+// deteção mostra-se o Dashboard, e o `<Navigate>` continua a esperar que
+// `tipoCarregando` termine. O caso corporativo tem ainda a segunda camada de
+// AppContext.jsx:409-424, que também espera por `tipoCarregando` antes de
+// navegar.
 function DashboardOuCorporativo() {
-  const { tipoUsuario, tipoCarregando, isConnected } = useAppContext();
-  if (isConnected && tipoCarregando) return null;
-  if (tipoUsuario === "corporativo") return <Navigate to="/corporativo" replace />;
+  const { tipoUsuario, tipoCarregando } = useAppContext();
+  if (tipoUsuario === "corporativo" && !tipoCarregando) {
+    return <Navigate to="/corporativo" replace />;
+  }
   return <Dashboard />;
 }
 
