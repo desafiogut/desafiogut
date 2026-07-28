@@ -50,7 +50,12 @@ export default function Dashboard() {
     lances, vencedor,
     saldoSenhas, saldoSenhasStatus,
     saldoRsCentavos, saldoRsStatus,
-    encerrado, tipoLeilao, isConnected, DURACAO,
+    encerrado, tipoLeilao, DURACAO,
+    // MC88.38 — `pareceAutenticado` substitui `isConnected` APENAS no texto do
+    // cabeçalho. `isConnected` deixou de ser usado neste ficheiro; continua a
+    // ser a fonte única para HABILITAR ações nos componentes que o fazem
+    // (CardLance, AuthArea, MercadoLances, …), que não foram tocados.
+    pareceAutenticado,
     address, userLabel, EDICAO_ATIVA,
     showOverlay, showCountdown, handleNovaRodada, setPrazoTimestamp,
     edicoes,
@@ -173,7 +178,11 @@ export default function Dashboard() {
             lineHeight: 1.2,
             wordBreak: "break-word",
           }}>
-            {isConnected
+            {/* MC88.37 — `pareceAutenticado` inclui o estado "Privy ainda a
+                restaurar, mas há sessão validada em disco". Sem isto, um
+                utilizador já autenticado via "Faça login" durante ~1,6 s, com
+                o saldo dele pintado ao lado. NÃO usar para habilitar ações. */}
+            {pareceAutenticado
               ? `Olá, ${userLabel || (address ? address.slice(0, 8) + "..." : "Participante")}!`
               : "Bem-vindo ao DesafioGUT!"}
           </h1>
@@ -183,7 +192,11 @@ export default function Dashboard() {
             fontSize: isMobile ? "0.75rem" : "0.85rem",
             lineHeight: 1.4,
           }}>
-            {isConnected
+            {/* MC88.38 — tem de acompanhar o <h1> acima. Se só o título usasse
+                `pareceAutenticado`, o ecrã passaria a dizer "Olá, Fulano!" com
+                "Faça login para participar" logo por baixo — trocando uma
+                contradição por outra. */}
+            {pareceAutenticado
               ? "Acompanhe seus dados e acesse o mercado de lances."
               : "Faça login para participar e dar seu lance agora."}
           </p>

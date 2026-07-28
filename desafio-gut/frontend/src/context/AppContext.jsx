@@ -431,7 +431,37 @@ export function AppProvider({ children }) {
   const addressCorporativo = corporativoWallet?.address ?? null;
 
   const isConnected = authenticated && Boolean(address);
-  const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || (tipoUsuario === "corporativo" ? cotaCorporativa?.empresa : null) || null;
+  const userLabelReal = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || (tipoUsuario === "corporativo" ? cotaCorporativa?.empresa : null) || null;
+
+  // MC88.37 — SESSÃO OTIMISTA (abrir direto no ecrã autenticado).
+  //
+  // PROBLEMA MEDIDO: durante o restauro do Privy (~1,6 s no APK) `ready` e
+  // `authenticated` são ambos false, logo `isConnected` é false e o Dashboard
+  // cai no ramo "Faça login para participar" — a um utilizador JÁ autenticado,
+  // e com o saldo dele próprio pintado ao lado pelo saldo otimista do MC88.34.
+  // O ecrã contradizia-se a si mesmo durante 1,6 s.
+  //
+  // `isConnected` significa "confirmado". Falta o terceiro estado: "ainda a
+  // restaurar, mas há sessão em disco". É o que `pareceAutenticado` exprime.
+  //
+  // ⚠️ NÃO substitui `isConnected` em lado nenhum. `isConnected` continua a ser
+  // a única fonte para HABILITAR ações (lance, compra, assinatura).
+  // `pareceAutenticado` serve APENAS para escolher o texto que se mostra.
+  //
+  // SEGURANÇA (R4): o rótulo é dado pessoal. Vem do MESMO cache que o saldo
+  // otimista, que `lerSaldoCache()` valida de forma SÍNCRONA contra o endereço
+  // em `privy:connections` antes do primeiro paint — a guarda que o MC88.34
+  // teve de acrescentar depois de um teste por mutação mostrar um saldo alheio
+  // pintado durante 2,7 s. Se a sessão em disco for de outra conta, o cache não
+  // entra no estado inicial e não há rótulo nem sessão otimista.
+  const sessaoOtimista = !ready && Boolean(saldoCacheInicial?.endereco);
+  const pareceAutenticado = isConnected || sessaoOtimista;
+  const userLabel = userLabelReal || (sessaoOtimista ? (saldoCacheInicial?.label ?? null) : null);
+
+  // Persiste o rótulo no mesmo registo do saldo (mesma chave, mesma guarda).
+  useEffect(() => {
+    if (address && userLabelReal) gravarSaldoCache(address, { label: userLabelReal });
+  }, [address, userLabelReal]);
 
   const lancesExibidos = tipoLeilao === "flash" ? lancesFlash : lances;
 
@@ -1014,6 +1044,9 @@ export function AppProvider({ children }) {
     authToken,
     obterAuthToken,
     address, privyWallet, isConnected, userLabel, ready, authenticated, user,
+    // MC88.37 — só para escolher o TEXTO mostrado durante o restauro do Privy.
+    // Nunca usar para habilitar ações: para isso continua a valer isConnected.
+    pareceAutenticado,
     vencedor,
     abrirModal,
     desconectar,
