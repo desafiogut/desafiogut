@@ -28,9 +28,13 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/guto/guto-favicon-32.png" />
     <link rel="apple-touch-icon" href="/assets/guto/guto-apple-touch-180.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- MC88.36 — as fontes deixaram de vir do Google. Este <link> era
+         BLOQUEANTE e apontava para um host EXTERNO: no arranque a frio do APK
+         obrigava a DNS + TLS + duas idas ao servidor antes de o texto poder ser
+         desenhado (o MC88.35 mediu fonts.gstatic.com aos 2092 ms, colado à
+         pintura aos 2114 ms). Passaram a ser servidas do próprio APK via
+         src/fontes.css, com font-display:swap. Os preconnect saíram com elas —
+         sem pedidos para esses hosts, só custavam duas ligações inúteis. -->
   </head>
   <body>
     <div id="root"></div>
