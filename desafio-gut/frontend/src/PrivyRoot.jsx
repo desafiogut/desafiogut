@@ -38,6 +38,29 @@ if (PRIVY_APP_ID !== PRIVY_APP_ID_RAW) {
     cleaned: JSON.stringify(PRIVY_APP_ID),
   });
 }
+
+// MC88.36 — `appearance.logo` só serve o modal "Log in or sign up" (MC78), mas
+// o Privy pré-carrega-o na configuração: o MC88.35 mediu `guto-login.png`
+// (456 KB) pedido aos 1885 ms, ANTES da pintura, numa sessão já autenticada que
+// nunca chegaria a ver o modal.
+//
+// A deteção é por EXISTÊNCIA de chaves de sessão, nunca pela leitura do seu
+// conteúdo (R5): não abrimos, não copiamos e não usamos qualquer valor. Exige-se
+// que AMBAS existam, porque o Privy limpa o seu armazenamento no logout — assim
+// um utilizador que se desautenticou volta a ver o logo.
+//
+// Se a deteção falhar, falha para o lado SEGURO: na dúvida mostra-se o logo, o
+// que apenas repõe o comportamento anterior ao MC88.36.
+function temSessaoPrivy() {
+  try {
+    return (
+      localStorage.getItem("privy:connections") !== null &&
+      localStorage.getItem("privy:token") !== null
+    );
+  } catch {
+    return false;
+  }
+}
 if (!/^[a-z0-9]{20,30}$/.test(PRIVY_APP_ID)) {
   console.error("[GUT-DEBUG] PRIVY_APP_ID não bate com [a-z0-9]{20,30}", PRIVY_APP_ID);
 }
@@ -235,7 +258,11 @@ export default function PrivyRoot() {
             // MC78: ícone do topo do modal ("Log in or sign up") passa a ser o rosto do
             // GUTO (recorte apertado, fundo transparente) em vez do ícone da marca.
             // Same-origin (mantém compatibilidade com a CSP img-src do MC67).
-            logo: "/assets/guto/guto-login.png",
+            // MC88.36: numa sessão já autenticada o modal nunca abre, logo o
+            // logo é 456 KB pedidos para nada no arranque. `undefined` faz o
+            // Privy usar o seu próprio ícone — que só seria visto se o modal
+            // aparecesse, o que nesse estado não acontece.
+            logo: temSessaoPrivy() ? undefined : "/assets/guto/guto-login.png",
             showWalletLoginFirst: false,
             // walletList removido: causava WalletConnect bloqueado pelo CSP
             // → TypeError: Failed to fetch → ready: false permanente
