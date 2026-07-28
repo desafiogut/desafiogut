@@ -4463,3 +4463,147 @@ competir por ligações.
 
 Nada foi deployado: as alterações são de frontend, logo só chegam via APK.
 Relatório: `Desktop\MC88.34-RELATORIO.txt`. Commit `349e0e0`.
+
+---
+
+## MC88.35 — Certeza do que temos (consolidação e diagnóstico)
+
+**Data:** 2026-07-28 · **Natureza:** LEVANTAMENTO. Zero alteração de código (R1).
+**Custo:** US$ 0,00 — só leituras; nenhuma transação on-chain (R2).
+**Relatório:** `Desktop\MC88.35-RELATORIO.txt` + `desafio-gut/docs/MC88.35-estado-consolidado.txt`
+
+**Veredito:** o sistema está vivo e correto na mainnet. Quatro problemas exigem
+decisão, dois com prazo.
+
+**Confirmado bom:** contrato mainnet (`coordenacao()` = `0xFea436…1E67`, bytecode
+4 823 B); backend (health 200, zero erros em 6 h de logs); RLS do Supabase (15/15
+tabelas, 0 alertas); saldo otimista do MC88.34 reprodutível (2114/2121/2163 ms);
+validação cruzada ponta a ponta (APK mostra 12 senhas = `saldoSenhas` on-chain);
+nenhuma fuga de segredos no bundle; segredos fora do Git.
+
+**⚠️ Mudança de estado não registada antes:** `CREDITO_ASSINCRONO=true` — a fila
+JÁ está ligada. `fila_tarefas`: 5/5 `done`, 0 falhas, 1 retentativa OK. A
+correção do MC88.29 está validada em produção. Latência pagar→creditar: 2–7 min.
+
+**Achados novos:**
+- **EOA coordenadora com ~19 créditos de autonomia** (0,004391 ETH a 2,27 gwei,
+  nonce 13). Esgotada, as compras deixam de creditar. Único achado com contagem
+  decrescente.
+- **`BLOBS_TOKEN` paralisa DUAS funções, não uma:** além do monitor-onchain,
+  a `ia-preditiva` também não lê analytics nem grava decisões.
+- **O monitor-onchain reporta `atrasado: false` enquanto ignora ~93 % da cadeia.**
+  Provado com logs de hoje: 11:04 varre 25630893–903, 11:32 varre 25631030–040
+  → 127 blocos saltados em silêncio; 12:09 → mais 177. Cobertura ≈ 6,6 %.
+  A paginação do MC88.31 está correta e é inocente — sem checkpoint nunca chega
+  a ser exercitada. A métrica `atrasado` compara com `blocoAtual` em vez de com
+  o checkpoint anterior: é um verde falso por construção.
+- **Deploy web atrás do APK:** produção serve `index-COKCRl-8.js`, o APK tem
+  `index-CCeSXmAs.js`. A web não tem nada do MC88.34. Mas a web ESTÁ na mainnet
+  (verificado lendo `AppContext-BQWwW_ys.js` servido: contrato `0x0052…16cd`
+  presente, `0x59A7…F6D5` ausente).
+- **4 segredos em texto plano no Netlify** (sem flag `secret`):
+  `SUPABASE_SERVICE_ROLE_KEY`, `SENDGRID_API_KEY`, `MP_WEBHOOK_SECRET`,
+  `ADMIN_TOKEN`. Não é fuga (nenhum aparece no bundle) — é postura.
+- **`.env.local`/`.env.production` locais continuam em Sepolia + contrato
+  abandonado `0x59A7…F6D5`**, e o `.env.local` tem uma chave privada em claro no
+  disco. Reforça a regra: `netlify build`, nunca `npm run build`.
+- **Webhook do Mercado Pago continua sem uma única prova de vida:** 18/18
+  créditos de R$ vieram de `confirmar-pagamento`; zero de `webhook`. Agora com
+  `MP_WEBHOOK_SECRET` definido, é fail-closed — falha silenciosa se a assinatura
+  não bater.
+
+**Pergunta aberta do MC88.34 (RPC 15/min) — meio resolvida.** Capturados os
+corpos JSON-RPC: a cada 15 s há 2× `eth_blockNumber` em pedidos HTTP SEPARADOS
+e 2× `eth_getFilterChanges` AGRUPADOS num só. Os filtros já partilhavam provider
+— por isso partilhar a instância de `Contract` no MC88.34 não podia reduzir nada,
+e a medição "sem redução" estava certa. Os dois `eth_blockNumber` indicam dois
+pollers; o nosso código só cria um (`web3.js:150-154`, memoizado). Hipótese
+principal: o cliente de cadeia do Privy. NÃO PROVADO — as pilhas do CDP colapsam
+no invólucro de `fetch`. Teste decisivo para o próximo MC: pôr o nosso provider
+a 17 s e ver qual série muda.
+
+**Arranque diagnosticado (~2,1 s até pintar):** 1077 ms de Android nativo
+(`am start -W`, COLD) + chunks + ~6,3 MB de média do APK. Desperdício medido:
+`celebration.webm` (2,26 MB) pedido **3×** aos 2907 ms sem celebração nenhuma;
+`background-desktop.webp` num telemóvel; `guto-login.png` numa sessão já
+autenticada; `fonts.gstatic.com` no caminho crítico aos 2092 ms. Depois do paint,
+o Privy gasta mais ~2,1 s a restaurar sessão (44 pedidos, rajada de 19 aos
+3442 ms) — é isso que mantém o saldo em "(antigo)".
+
+**❓ NÃO VERIFICADO (não tratar como facto):** automação PythonAnywhere (o MCP não
+liga; sem cópia local dos scripts) e Play Store (sem sessão autenticada; R5). O
+plano do MC88.35 diz cron às 01:00 UTC, mas o MC83 regista 15:00 UTC — divergência
+por resolver.
+
+**Erro meu, registado:** a primeira medição do saldo deu 4184 ms e quase virou
+alarme de regressão. A regex procurava `12` colado a `Senhas`, mas com saldo
+otimista o texto é `12 (antigo)` — eu media o instante FRESCO, não o VISÍVEL.
+Corrigido, o MC88.34 confirma-se. Lição: ao medir uma otimização, validar
+primeiro que o marcador apanha o estado que a otimização produz.
+
+---
+
+## MC88.36 — Otimização do arranque (assets condicionais)
+
+**Data:** 2026-07-28 · **Commits:** `c462534` → `92e3097` (7)
+**Relatório:** `Desktop\MC88.36-RELATORIO.txt` + `desafio-gut/docs/MC88.36-RELATORIO.txt`
+**Suite:** 249/249 antes e depois · bundle mainnet validado em todas as compilações
+
+**❌ VEREDITO: meta NÃO atingida.** R8 pedia ≥200 ms (para ≤1900 ms); medido
+**−129,5 ms de mediana** em A/B intercalado. Todos os cortes de assets
+funcionaram; a premissa de que isso compraria 200 ms de pintura é que não se
+confirmou.
+
+**⚠️ Quase reportei −221 ms que não existem.** Comparar com a baseline do
+MC88.35 (2121 ms) dava a meta cumprida. Mas ao RECOMPILAR o APK anterior
+(c462534) e medi-lo no mesmo dia, o mesmo código deu 1955–2066 ms — ~125 ms da
+"melhoria" eram estado do aparelho, não código. Passei a A/B intercalado (dois
+APKs guardados, instalados alternadamente, ordem trocada por ciclo, corrida de
+aquecimento descartada após cada instalação):
+```
+BASE    n=6  mediana 2048  média 2069   (min 1981, máx 2190)
+MC8836  n=6  mediana 1918  média 1969   (min 1875, máx 2109)
+```
+As gamas SOBREPÕEM-SE; o MC88.36 ganha em 5 dos 6 pares. O efeito existe mas é
+da ordem dos 130 ms. **Lição: recompilar a baseline no mesmo dia, e intercalar.**
+
+**Cortes verificados um a um (0 pedidos antes do paint):** celebration.webm
+(3×2,26 MB), idle.webm, guto-1/2.webm, poster do slide seguinte,
+guto-login.png (0 pedidos), background-desktop.webp (0 pedidos),
+fonts.gstatic.com (0 pedidos). **~5,0 MB fora da janela de arranque.**
+Ganho secundário maior: saldo confirmado on-chain 4025 → 3808 ms (−217 ms).
+
+**⚠️ Erro meu, apanhado por medição (S3b→S3c):** ao não montar NADA no carrossel
+antes da janela ociosa, o LCP ficou sem substituto — o observador mostrou que
+**o elemento LCP desta app É o vídeo do carrossel**. Repus o poster do slide
+actual. As medições SEM poster eram melhores (1888–1934) do que COM (1875–2109);
+escolhi a versão mais lenta por ser a correcta.
+
+**LCP e CLS medidos nos DOIS APKs (o MC88.35 nunca os mediu):**
+- LCP: BASE 5720/5872 ms · MC88.36 2496/5656 ms → **não piorou**; já era ~5,7 s.
+- CLS: **0.37258347978910367 IDÊNTICO AO DÍGITO** nos dois → **pré-existente**.
+  Duas deslocações de 0,186 no `FOOTER.gut-glass-standard` (~4,5 s e ~5,7 s).
+  0,373 é MAU (limiar de bom = 0,1). Não lhe toquei (R1), mas é o defeito de UX
+  mais concreto que este MC destapou.
+
+**Achados do mapeamento (S0):** `celebration.webm` não era preload perdido —
+`EdicaoCard.jsx:100` passa `mood="celebrating"` para CADA edição encerrada e há
+várias RELAMP-* encerradas; `background-desktop.webp` vinha de `globals.css:261`
+(div com `opacity:0` continua a descarregar o background-image), não do `<video>`;
+as fontes vinham de DOIS sítios com listas diferentes; **Montserrat era peso
+morto** (`--font-display`/`.font-display` sem um único consumidor).
+
+**Fontes:** 15 woff2 / 499 KB no APK, `font-display:swap`. Só o subset `latin`
+— verificado que todo o português cabe em U+0000-00FF (latin-ext seriam +590 KB
+de glifos nunca desenhados). APK: 36,13 → 36,50 MB (+1 %).
+
+**Zero regressão, verificado:** `git diff --name-only a208efe..HEAD` não toca em
+`netlify/functions/**`, `build-rag-index.mjs` nem `utils/web3.js`. PIX, senhas,
+webhook, fila e RAG intactos.
+
+**Porque os 200 ms não vieram:** 1077 ms do arranque são Android nativo, onde
+nenhum asset mexe. A janela accionável é de ~970 ms, e os assets vêm do
+sistema de ficheiros do APK em paralelo — competem por I/O, raramente estão no
+caminho crítico. O que gate a pintura é execução de JS, e o maior item continua
+intocado: **`privy-*.js` = 2,68 MB, 46 % de todo o JS**, pedido aos 1321 ms.
+Próximo passo de maior retorno: perfilar quanto do arranque é PARSE desse chunk.
