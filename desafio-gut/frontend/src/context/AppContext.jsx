@@ -454,7 +454,17 @@ export function AppProvider({ children }) {
   // teve de acrescentar depois de um teste por mutação mostrar um saldo alheio
   // pintado durante 2,7 s. Se a sessão em disco for de outra conta, o cache não
   // entra no estado inicial e não há rótulo nem sessão otimista.
-  const sessaoOtimista = !ready && Boolean(saldoCacheInicial?.endereco);
+  // ⚠️ A condição NÃO pode ser `!ready`. Medido no aparelho: `ready` fica true
+  // ANTES de `address` resolver, e nessa fresta (4718 → 5601 ms) `sessaoOtimista`
+  // desligava-se sem que `isConnected` já tivesse ligado — o cabeçalho VOLTAVA
+  // ATRÁS para "Bem-vindo ao DesafioGUT!" depois de já ter dito "Olá". Trocava
+  // uma contradição por um piscar, que é pior.
+  //
+  // O otimismo só deve cair quando a resposta for DEFINITIVA e negativa, isto é,
+  // quando o Privy já respondeu (`ready`) E disse que não há sessão
+  // (`!authenticated`). Enquanto isso não acontecer, o cache manda.
+  const sessaoOtimista =
+    Boolean(saldoCacheInicial?.endereco) && !(ready && !authenticated);
   const pareceAutenticado = isConnected || sessaoOtimista;
   const userLabel = userLabelReal || (sessaoOtimista ? (saldoCacheInicial?.label ?? null) : null);
 
