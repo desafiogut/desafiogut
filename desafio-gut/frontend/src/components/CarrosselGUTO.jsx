@@ -110,10 +110,25 @@ function CarrosselGUTO({ size = 176, slides = SLIDES }) {
     transition: `opacity ${CROSSFADE_MS}ms linear`,
   });
 
-  // MC88.36 — antes da primeira janela ociosa não se monta NADA (nem <video> nem
-  // <img>): é assim que os ~2,2 MB deixam de ser pedidos no arranque. A caixa
-  // mantém `size`, logo o espaço já está reservado e nada salta quando aparece.
-  if (!pronto) return <div aria-hidden="true" style={boxStyle} />;
+  // MC88.36 — antes da primeira janela ociosa mostra-se APENAS o poster do slide
+  // atual; os <video> só montam depois.
+  //
+  // ⚠️ A primeira versão deste MC não montava nada aqui, e isso foi um ERRO
+  // MEDIDO: o observador de LCP mostrou que o elemento LCP desta app É o vídeo
+  // do carrossel (`guto-1.webm`). Sem nada no lugar, o LCP saltou para 2300–5716 ms
+  // — ou seja, a otimização melhorava a pintura e piorava o LCP, que é
+  // precisamente o que o MC proíbe.
+  //
+  // Com o poster (228 KB) a entrar de imediato, existe um candidato a LCP cedo,
+  // e continuam a sair do arranque os dois .webm (1,16 MB + 614 KB) e o poster
+  // do slide seguinte.
+  if (!pronto) {
+    return (
+      <div aria-hidden="true" style={boxStyle}>
+        <img src={slides[cur].poster} alt="" style={{ ...layerStyle(1), transition: "none" }} />
+      </div>
+    );
+  }
 
   // Fallback total (Safari sem VP9-alfa / erro) → poster estático da imagem atual.
   if (failed) {
