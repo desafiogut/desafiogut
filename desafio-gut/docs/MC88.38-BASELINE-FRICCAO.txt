@@ -1,0 +1,152 @@
+MC88.38 — SEGMENTO 0: BASELINE DA FRICÇÃO DE AUTENTICAÇÃO
+================================================================================
+Data: 2026-07-28 · Aparelho: fiem7xlvcufe855h (Xiaomi pissarropro, Android 36)
+APK medido: MC88.37 (commit d2e4552), SEM a correção esboçada
+Método: túnel adb + CDP, amostragem a 60 ms de <h1>, saldos e sessão em disco
+
+
+LINHA TEMPORAL MEDIDA
+================================================================================
+  t(ms)  | H1                          | Senhas       | R$
+  -------|-----------------------------|--------------|-----------------
+    1210 | —                           | —            | —
+    2477 | Bem-vindo ao DesafioGUT!    | 12 (antigo)  | R$ 0.00 (antigo)
+    4319 | Olá, Novo Pernambucano!     | 12 (antigo)  | R$ —
+    4481 | Olá, Novo Pernambucano!     | 12           | R$ —
+    9048 | Olá, Novo Pernambucano!     | 12           | R$ 0.00
+
+  JANELA DE FRICÇÃO: 2477 → 4319 ms = 1842 ms
+
+Durante 1,84 s o cabeçalho diz "Bem-vindo ao DesafioGUT! / Faça login para
+participar" a um utilizador já autenticado — e, na MESMA linha de ecrã, o saldo
+dele já está lá: "12 (antigo)" e "R$ 0.00 (antigo)". O ecrã contradiz-se.
+
+
+⚠️ VERIFICAÇÃO DE SEGURANÇA: NÃO HÁ DADOS DE OUTRA CONTA
+================================================================================
+O operador descreveu o sintoma como "o app vai para uma OUTRA CONTA rapidamente,
+e depois vai para a conta que está de facto logada". Isso admite duas leituras
+muito diferentes, e a diferença importa:
+
+  (a) literal — dados de outra conta a serem pintados (falha da guarda de
+      coerência do MC88.34, que já uma vez pintou um saldo alheio 2,7 s);
+  (b) percetual — o ecrã de DESLOGADO é lido como "outra conta", porque não é
+      a conta do utilizador.
+
+Medido: em 12 s de amostragem a 60 ms apareceram exatamente DOIS <h1> distintos:
+
+    ["Bem-vindo ao DesafioGUT!", "Olá, Novo Pernambucano!"]
+
+Nenhum outro nome. E os endereços coincidem:
+
+    sessão em disco (privy:connections) : 0x5baf...32b8
+    cache do saldo (gut_saldo_cache)    : 0x5baf...32b8
+
+É o caso (b). NÃO há exposição de dados de outra conta. Este era o motivo da
+reserva levantada no fim do MC88.37 sobre pôr o NOME em cache; fica levantada,
+e a correção pode avançar.
+
+
+⚠️ ACHADO QUE ALTERA O CRITÉRIO R8
+================================================================================
+O cache atual tem:
+
+    {"end":"0x5baf...32b8", "senhas":12, "label": null}
+
+O campo `label` está NULL, porque o `useEffect` que o persiste faz parte da
+correção esboçada e ainda não corre em nenhum APK instalado.
+
+CONSEQUÊNCIA: no PRIMEIRO arranque depois de instalar a correção, ainda não há
+nome em cache. Durante o restauro do Privy o `address` também ainda não existe,
+portanto a cadeia de fallback do Dashboard.jsx:177 dá "Olá, Participante!".
+Só a partir do SEGUNDO arranque é que aparece "Olá, Novo Pernambucano!".
+
+O R8 pede "Olá, {nome} desde o primeiro paint". Isso é atingível em regime,
+mas NÃO na primeira abertura após a atualização. Não há como contorná-lo sem
+ler o conteúdo dos tokens do Privy — que é precisamente o que a R5 proíbe.
+
+Documentado aqui para que o veredito do S2 seja lido com esta ressalva, e não
+como falha da correção.
+
+
+PENDÊNCIA VIZINHA, FORA DE ESCOPO (R1)
+================================================================================
+Aos 4319 ms o saldo em R$ passa de "R$ 0.00 (antigo)" para "R$ —", e só volta a
+"R$ 0.00" aos 9048 ms — 4,7 s a mostrar um traço. O caminho das SENHAS não faz
+isto: mantém "12 (antigo)" e reconcilia para "12" aos 4481 ms.
+
+Ou seja, o saldo otimista em R$ é DESCARTADO quando o endereço resolve, em vez
+de ser reconciliado como o das senhas. É a mesma família de fricção, noutro
+ponto. Já registado como pendência 3 do MC88.37. NÃO tratado aqui.
+
+
+================================================================================
+ANÁLISE PRÁTICA — PORQUE EXISTE A JANELA (pedido do operador)
+================================================================================
+
+O QUE O UTILIZADOR VÊ (captura CDP aos 2704 ms, w-2700ms.png)
+--------------------------------------------------------------------------------
+Um cartão com o GUTO e o logo, e por baixo:
+
+    "Bem-vindo ao DesafioGUT!"
+    "Faça login para participar e dar seu lance agora."
+
+E imediatamente a seguir, no mesmo ecrã, os tiles com O SALDO DELE:
+
+    R$ 0.00 (antigo)   |   12 (antigo)
+    Saldo (R$)         |   Senhas
+
+A contradição não é subtil: manda fazer login e mostra a conta ao mesmo tempo.
+
+
+PORQUE DEMORA — CADEIA MEDIDA (cruzando rede com o instante da virada)
+--------------------------------------------------------------------------------
+   1994 → 2485 ms   OPTIONS /api/v1/apps/<id>     491 ms   204   ← preflight CORS
+   1998 → 2485 ms   GET     /api/v1/apps/<id>     487 ms   200
+   2498 → 2856 ms   POST    /api/v1/sessions      358 ms   200
+   2501 → 2501 ms   OPTIONS /api/v1/sessions        0 ms   204
+           3619 ms   <h1> vira para "Olá, ..."
+   3643 → 4089 ms   POST    /api/v1/wallets/authenticate  446 ms
+   4163 → 4497 ms   POST    /api/v1/wallets/<id>/rpc      334 ms
+  (+ 30 recursos estáticos de auth.privy.io entre 1171 e 3639 ms)
+
+TRÊS FACTOS QUE DECIDEM A ABORDAGEM:
+
+ 1. NADA COMEÇA ANTES DOS 1994 ms. O chunk `privy-*.js` (2,68 MB, 46 % de todo
+    o JS) tem de ser descarregado e analisado antes do primeiro pedido sair.
+
+ 2. O PRIVY VALIDA A SESSÃO PELA REDE EM CADA ARRANQUE A FRIO. Não confia no
+    que está em disco: só admite `authenticated` depois de `GET /apps` e
+    `POST /sessions` responderem. É desenho do fornecedor — não é algo que se
+    corrija do nosso lado.
+
+ 3. ~510 ms da cadeia são PREFLIGHTS CORS (`OPTIONS`), que não transportam
+    dados. São overhead puro imposto pela origem cruzada.
+
+CONCLUSÃO: a janela de ~1,6–1,8 s é IRREDUTÍVEL a partir do nosso código. Não
+se pode acelerar o Privy. O que se pode — e é o objeto do MC88.38 — é deixar de
+afirmar "faça login" durante uma espera cuja resposta já conhecemos, porque a
+sessão está em disco e o saldo já foi pintado a partir dela.
+
+Isto valida a abordagem do MC88.38 e delimita-lhe honestamente o alcance: a
+correção remove a CONTRADIÇÃO, não a espera.
+
+
+LIMITE QUE A CORREÇÃO NÃO REMOVE
+--------------------------------------------------------------------------------
+`isConnected` continua a ser a fonte única para HABILITAR ações (CardLance,
+AuthArea, MercadoLances, PainelIndicacao, …), e esses ficheiros NÃO foram
+tocados. Durante a janela o cabeçalho passa a dizer "Olá, {nome}" mas uma ação
+que exija confirmação de sessão continua indisponível até aos ~3,6 s.
+
+Isso é deliberado e não negociável: mostrar um nome é cosmético, habilitar um
+lance é autorização. Trocar `isConnected` por um palpite otimista nos pontos de
+ação seria trocar uma fricção visual por um risco real.
+
+
+DEFEITO VIZINHO VISÍVEL NA CAPTURA, FORA DE ESCOPO (R1)
+--------------------------------------------------------------------------------
+Os tiles mostram literalmente "R$ 0.00 (antigo)" e "12 (antigo)" ao utilizador.
+O sufixo "(antigo)" é jargão interno introduzido pelo MC88.34 (`statusSuffix`,
+Dashboard.jsx:73-79) para distinguir o valor em cache do confirmado. Está a
+vazar para a interface. NÃO tratado neste MC.
