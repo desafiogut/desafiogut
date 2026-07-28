@@ -14,8 +14,15 @@
 // mix-blend-mode, SEM filter CSS no próprio vídeo (interagem mal com o backdrop-filter
 // :blur do glass). O drop-shadow fica no WRAPPER, nunca no <video>. useReducedMotion()
 // → sem crossfade, 1 frame estático. Fallback poster PNG (alfa) se o vídeo falhar (Safari).
+//
+// MC88.36 — nada é montado antes da primeira pintura. O carrossel renderiza dois
+// slides (ativo + próximo) com `preload="auto"`, o que o MC88.35 mediu como
+// guto-1.webm (1,16 MB) + guto-2.webm (614 KB) + os dois posters PNG (421 KB)
+// pedidos entre 1912 e 1916 ms — tudo ANTES do ecrã pintar aos 2114 ms.
+// A caixa tem `size` fixo, portanto o adiamento não desloca layout (anti-CLS).
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
+import useAposPrimeiraPintura from "../hooks/useAposPrimeiraPintura.js";
 
 const V = "mc58"; // cache-bust dos assets imutáveis (?v=)
 const N = 8;
@@ -29,6 +36,9 @@ const CROSSFADE_AT = 0.5; // fração da duração onde o crossfade dispara (pon
 
 function CarrosselGUTO({ size = 176, slides = SLIDES }) {
   const reduce = useReducedMotion();
+  // MC88.36 — chamado aqui, antes de qualquer return antecipado, para que a
+  // ordem dos hooks seja sempre a mesma (regra dos hooks).
+  const pronto = useAposPrimeiraPintura();
   const n = slides.length;
   const [cur, setCur] = useState(0);
   const [nxt, setNxt] = useState(n > 1 ? 1 : 0);
@@ -99,6 +109,11 @@ function CarrosselGUTO({ size = 176, slides = SLIDES }) {
     opacity,
     transition: `opacity ${CROSSFADE_MS}ms linear`,
   });
+
+  // MC88.36 — antes da primeira janela ociosa não se monta NADA (nem <video> nem
+  // <img>): é assim que os ~2,2 MB deixam de ser pedidos no arranque. A caixa
+  // mantém `size`, logo o espaço já está reservado e nada salta quando aparece.
+  if (!pronto) return <div aria-hidden="true" style={boxStyle} />;
 
   // Fallback total (Safari sem VP9-alfa / erro) → poster estático da imagem atual.
   if (failed) {
