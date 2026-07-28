@@ -1,0 +1,110 @@
+MC88.37 — SEGMENTO 0: DIAGNÓSTICO DO CLS
+================================================================================
+Data: 2026-07-28 · Aparelho: fiem7xlvcufe855h (Xiaomi pissarropro, Android 36)
+APK medido: MC88.36 (commit 92e3097) · CLS reproduzido: 0.3726
+
+RESULTADO: A PREMISSA DO PLANO ESTAVA ERRADA
+================================================================================
+O plano do MC88.37 parte de que "o rodapé é empurrado por elementos que carregam
+depois", e propõe reservar espaço (min-height, dimensões fixas, placeholder).
+
+Nada disso resolveria, porque o rodapé NÃO está a ser empurrado.
+
+Os retângulos das duas deslocações dizem-no sem margem para dúvida:
+
+  0.1863  @ 4280 ms   FOOTER.gut-glass-standard   y/h [0,0]     -> [641,154]
+  0.1863  @ 5456 ms   FOOTER.gut-glass-standard   y/h [641,154] -> [0,0]
+
+`[0,0]` é altura ZERO. O rodapé não desliza para baixo: ele DESAPARECE e volta.
+
+A amostragem de alturas confirma que não é só o rodapé — é a página inteira:
+
+  t=1321 ms   footerY=1185   scrollH=1332   5 blocos no Dashboard
+  t=2003 ms   footerY=1993   scrollH=2139   6 blocos
+  t=4509 ms   footerY= 681   scrollH= 828   NENHUM bloco  ← página em branco
+  t=5556 ms   footerY=1993   scrollH=2139   6 blocos      ← volta
+
+E a amostragem de texto mostra o que o utilizador vê:
+
+  t=1724 ms  "Bem-vindo ao DesafioGUT! | Faça login…"  + saldo otimista
+  t=3308 ms  "Olá, Novo Pernambucano! …"               + saldo "12 (antigo)"
+  t=5016 ms  "Privacidade | Termos | Suporte | … | Início | Lances | Carteira"
+             ↑ SÓ o rodapé e a barra de navegação. O Dashboard não existe.
+  t=6262 ms  "Olá, Novo Pernambucano! …"               + saldo "12" (fresco)
+
+Ou seja: o Dashboard é pintado, DESAPARECE durante ~1,2 s, e volta.
+O CLS de 0,373 é o sintoma. O defeito é um ECRÃ EM BRANCO de 1,2 segundos.
+
+
+CAUSA RAIZ — App.jsx:78-83
+================================================================================
+    function DashboardOuCorporativo() {
+      const { tipoUsuario, tipoCarregando, isConnected } = useAppContext();
+      if (isConnected && tipoCarregando) return null;      // ← AQUI
+      if (tipoUsuario === "corporativo") return <Navigate to="/corporativo" replace />;
+      return <Dashboard />;
+    }
+
+Cronologia que o produz:
+  1. Arranque: o Privy ainda não restaurou a sessão → `isConnected` é FALSE.
+     A guarda não dispara e o `<Dashboard />` é pintado normalmente (1724 ms).
+  2. ~4,3 s: o Privy conclui o restauro → `isConnected` passa a TRUE. Nesse
+     instante o `authToken` existe e `AppContext.jsx:350` liga
+     `setTipoCarregando(true)` para ir buscar as cotas.
+  3. As duas condições ficam verdadeiras ao mesmo tempo → `return null` →
+     o `<Outlet />` fica vazio. O `<Layout>` (e portanto o rodapé) mantém-se,
+     e é por isso que o rodapé colapsa para altura 0 em vez de desaparecer.
+  4. ~5,5 s: as cotas respondem, `tipoCarregando` volta a false, o Dashboard
+     remonta. Segunda deslocação.
+
+NÃO é o `<Suspense>`: o seu fallback é o `RouteFallback` ("⏳ Carregando…"), e
+esse texto NUNCA aparece nas amostras. O rodapé também continua montado, o que
+exclui a fronteira de Suspense (ela substituiria o Layout inteiro).
+
+
+A GUARDA NÃO CUMPRE O QUE PRETENDIA
+================================================================================
+O comentário em `AppContext.jsx:252` declara a intenção:
+
+    "tipoCarregando evita redirect prematuro"
+
+Evitar um REDIRECT prematuro. Não apagar a página. O `return null` é um efeito
+colateral da forma como foi escrito, não o objetivo.
+
+E a proteção que aparenta dar já não existe na prática: o Dashboard comum JÁ é
+mostrado durante os primeiros ~4,3 s (antes de `isConnected` virar). Apagá-lo
+depois disso não impede nada — só acrescenta um ecrã em branco.
+
+Há ainda uma segunda camada que trata o redirect: `AppContext.jsx:409-424` já
+faz `if (tipoCarregando) return; if (tipoUsuario !== "corporativo") return;`
+antes de navegar. O caso corporativo continua coberto.
+
+
+HIPÓTESE ADICIONAL — O LCP DE ~5,7 s PODE SER O MESMO DEFEITO
+================================================================================
+O MC88.36 mediu LCP de 5720/5872 ms na baseline, com o alvo a ser o vídeo do
+carrossel, e classificou-o como pendência de produto.
+
+Os tempos coincidem com o fim deste blank. Se o Dashboard desmonta aos 4,3 s e
+remonta aos 5,5 s, o carrossel é REMONTADO — e o LCP passa a ser contado a
+partir da segunda pintura, não da primeira.
+
+A verificar depois da correção. Não é afirmação, é hipótese.
+
+
+CORREÇÃO PROPOSTA (S1)
+================================================================================
+Nenhum dos casos A–D do plano se aplica (não há espaço a reservar). A correção
+é deixar de devolver `null` e passar a adiar apenas o REDIRECT, que era a
+intenção declarada:
+
+    if (tipoUsuario === "corporativo" && !tipoCarregando)
+      return <Navigate to="/corporativo" replace />;
+    return <Dashboard />;
+
+Durante a deteção mostra-se o Dashboard — exatamente o que já acontecia nos
+4,3 s anteriores — e o redirect continua a esperar por `tipoCarregando`.
+
+MÉTODO: os números acima vêm de `cls-diag.mjs` (retângulos das entradas
+LayoutShift + alturas dos blocos a cada 250 ms) e `cls-quem.mjs` (estrutura do
+DOM e texto visível a cada 100 ms), ambos via túnel adb + CDP no aparelho.
