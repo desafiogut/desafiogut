@@ -689,9 +689,28 @@ export function AppProvider({ children }) {
   // ── Saldo R$ off-chain: polling 5s (gated em authToken para anti-IDOR) ──
   const refetchSaldoRs = useCallback(async () => {
     if (!address || !authToken) {
-      // MC88.34 (P0) — mesma razão do refetchSaldo: no arranque o authToken
-      // demora ~4 s a existir; apagar aqui destruiria o saldo otimista.
-      if (jaTeveEnderecoRef.current) {
+      // MC88.39 — o `jaTeveEnderecoRef` sozinho NÃO chega aqui, e é por isso
+      // que o saldo em R$ piscava enquanto o das senhas não.
+      //
+      // O ref (MC88.34) distingue duas situações — "ainda não carregou" e "fez
+      // logout" — mas neste ramo existem TRÊS:
+      //   (a) arranque, sem endereço            → não limpar
+      //   (b) arranque, com endereço sem token  → NÃO limpar   ← faltava
+      //   (c) logout real, endereço desapareceu → limpar
+      //
+      // O ref é ligado no instante em que o `address` chega, e no arranque o
+      // `address` chega ANTES do `authToken` (obtido num pedido próprio, umas
+      // centenas de ms depois). Nessa janela a condição acima era verdadeira
+      // POR CAUSA DO TOKEN, mas o ref já estava true POR CAUSA DO ENDEREÇO —
+      // e o caso (b) era lido como (c). Medido: o valor correto era pintado
+      // aos ~2,0 s, apagado aos ~3,3–4,4 s, e repintado igual aos ~5,2–6,6 s.
+      //
+      // `refetchSaldo` (senhas) nunca sofreu disto porque só depende do
+      // `address`: assim que ele existe, o seu ramo de limpeza é inalcançável.
+      //
+      // Passa a limpar-se APENAS quando o ENDEREÇO desaparece depois de ter
+      // existido, que é a definição de logout.
+      if (!address && jaTeveEnderecoRef.current) {
         setSaldoRsCentavos(null);
         setSaldoRsStatus("idle");
       }
