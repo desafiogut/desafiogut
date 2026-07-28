@@ -4607,3 +4607,92 @@ sistema de ficheiros do APK em paralelo — competem por I/O, raramente estão n
 caminho crítico. O que gate a pintura é execução de JS, e o maior item continua
 intocado: **`privy-*.js` = 2,68 MB, 46 % de todo o JS**, pedido aos 1321 ms.
 Próximo passo de maior retorno: perfilar quanto do arranque é PARSE desse chunk.
+
+---
+
+## MC88.37 → MC88.39 — Arranque: CLS, fricção de autenticação e saldo em R$
+
+Três MCs encadeados, todos validados por medição no aparelho (adb + CDP).
+Relatórios: `Desktop\MC88.37-RELATORIO.txt`, `Desktop\MC88.39-RELATORIO.txt`.
+Suite 249/249 em todos. Bundle mainnet validado em todas as compilações.
+
+### MC88.37 — CLS do rodapé (commits `e67e76e`, `d2e4552`)
+**A premissa do plano estava errada e isso era o essencial.** O rodapé NÃO
+estava a ser empurrado: os retângulos diziam `[0,0] → [641,154] → [0,0]`, ou
+seja altura ZERO. E o `scrollHeight` caía de 2139 para 828. **O CLS de 0,373
+era o sintoma de um ECRÃ EM BRANCO de ~1,2 s.** Reservar espaço (o que o plano
+pedia) teria estabilizado a geometria e deixado o branco onde estava.
+
+Causa: `App.jsx:80` → `if (isConnected && tipoCarregando) return null;`.
+Aos ~4,3 s o Privy conclui o restauro, `isConnected` passa a true e no MESMO
+instante o authToken liga `setTipoCarregando(true)` — as duas condições ficam
+verdadeiras e o Outlet esvazia. A guarda não protegia nada: o Dashboard comum
+JÁ era mostrado nos 4,3 s anteriores.
+
+Resultado: **CLS 0,373 → 0** · **LCP 5720/5872 → 2376/2912 ms** ·
+paint **−354,5 ms** (A/B intercalado).
+⚠️ **O LCP de ~5,7 s era o MESMO defeito** — o carrossel era remontado depois
+do branco e o LCP contava a partir da segunda pintura. Não era peso do vídeo.
+
+### MC88.38 — fricção "Faça login" (commits `e59f671`, `14008e9`, `c279a56`)
+Durante ~1,84 s um utilizador JÁ autenticado via "Bem-vindo ao DesafioGUT! /
+Faça login para participar" com **o saldo dele pintado ao lado**.
+
+**Verificação de segurança:** o operador descreveu como "vai para uma OUTRA
+CONTA". Medido a 60 ms durante 12 s: só DOIS h1 distintos, e o endereço do
+cache coincide com o da sessão em disco. **Não há dados de outra conta** — era
+o ecrã de deslogado lido como "outra conta".
+
+**Porque a janela é IRREDUTÍVEL** (cadeia medida): nada começa antes dos
+1994 ms (o chunk privy de 2,68 MB tem de ser lido); o Privy valida a sessão
+PELA REDE em cada arranque a frio (`GET /apps` 487 ms + `POST /sessions`
+358 ms); ~510 ms são preflights CORS. Não se acelera o Privy — o que se faz é
+parar de afirmar "faça login" durante uma espera cuja resposta já conhecemos.
+
+Correção: `pareceAutenticado = isConnected || sessaoOtimista`, com
+`sessaoOtimista = cache validado && !(ready && !authenticated)`.
+⚠️ **NÃO pode ser `!ready`** — medido: `ready` fica true ANTES de `address`
+resolver e o cabeçalho VOLTAVA ATRÁS para "Bem-vindo" (piscar, pior que a
+contradição). ⚠️ `pareceAutenticado` escolhe **TEXTO, nunca autorização**:
+CardLance/AuthArea/MercadoLances continuam a gatear por `isConnected`.
+
+Resultado: **"Faça login" nunca aparece** (3 corridas, 1 único h1), nome no
+mesmo instante do DOM. Ressalva: na 1ª abertura após instalar não há `label`
+em cache e diz "Olá, Participante!"; a partir da 2ª diz o nome.
+
+### MC88.39 — saldo em R$ (commits `fc822fc`, `cb2151c`)
+Jornada `R$ 0.00 (antigo)` → `R$ —` → `⏳` → `R$ 0.00`, com 1,9–2,2 s de traço.
+
+**A premissa do plano também estava parcialmente errada:** pedia para
+"estender o cache para o R$", mas `centavos` JÁ era persistido (`:724`) e JÁ
+era usado no estado inicial (`:238-239`) desde o MC88.34. O defeito era o cache
+ser **DESTRUÍDO** 1,3–2,2 s depois de correctamente pintado.
+
+Causa: `refetchSaldoRs` guarda `if (!address || !authToken)` e limpava se
+`jaTeveEnderecoRef.current`. O ref distingue 2 situações mas ali existem 3 —
+arranque sem endereço, **arranque com endereço mas ainda sem token**, e logout
+real. O ref liga quando o `address` chega, e no arranque o address chega ANTES
+do token: falso positivo de logout. As SENHAS nunca sofreram porque
+`refetchSaldo` só depende do `address`.
+O `⏳` era consequência: com o status a "idle", a linha seguinte promovia a
+"loading" em vez de preservar "stale".
+
+Correção: `if (!address && jaTeveEnderecoRef.current)`. Uma condição.
+**O S2 do plano ficou deliberadamente VAZIO** — o Dashboard já desenhava
+"stale" como "(antigo)" e já lidava com null; mexer na exibição mascararia o
+defeito em vez de o corrigir.
+
+Resultado: **`R$ 0.00 (antigo)` → `R$ 0.00`**, sem `—` e sem `⏳`, 3/3 corridas.
+CLS 0 · LCP 2340/2336 · FCP 516/580 — sem regressão.
+
+### Pendências que estes três MCs deixam
+1. ⚠️ **O sufixo "(antigo)" está exposto ao utilizador final** — jargão interno
+   do MC88.34 (`statusSuffix`, Dashboard.jsx:73-79) a vazar para a UI. É agora
+   a fricção visual mais evidente que resta.
+2. O R$ só confirma aos ~5,8–6,3 s: o piscar acabou, a espera não. Depende do
+   authToken, que depende do Privy validar pela rede.
+3. Não foi auditado se o mesmo falso positivo de logout existe noutros pontos
+   que dependam de `authToken` (cotas, notificações).
+4. `CorporativoRoute` (App.jsx:59) também devolve `null` em dois pontos. Ali é
+   legítimo (protege rotas gated), mas não foi medido se produz branco
+   equivalente em /corporativo.

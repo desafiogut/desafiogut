@@ -1,0 +1,149 @@
+================================================================================
+MC88.39 — SALDO EM R$: RECONCILIAÇÃO EM VEZ DE DESCARTE
+================================================================================
+Data......: 2026-07-28
+Branch....: feat/mc88.29-fila-tarefas · fc822fc (S0) · cb2151c (S1)
+Aparelho..: fiem7xlvcufe855h · Xiaomi pissarropro (21091116UG) · Android 36
+Build.....: `npm run build:apk` (R10 cumprida) + gradlew assembleDebug (JBR 21)
+Bundle....: "✓ bundle coerente com PRODUÇÃO (mainnet)"
+Suite.....: 249/249 antes e depois
+Baseline..: APK do MC88.38 (commit c279a56)
+
+================================================================================
+VEREDITO: OBJETIVO CUMPRIDO — UMA LINHA DE CÓDIGO
+================================================================================
+  ANTES (4 estados)                     DEPOIS (2 estados)
+  ─────────────────────────────────     ──────────────────────────────
+  R$ 0.00 (antigo)   @1926–2200 ms      R$ 0.00 (antigo)  @1999–2714 ms
+  R$ —               @3282–4415 ms      R$ 0.00           @5841–6299 ms
+  R$ — ⏳            @4667–6028 ms
+  R$ 0.00            @5216–6631 ms
+
+  O "—" e o "⏳" DESAPARECERAM por completo, nas 3 corridas a frio.
+  O valor é pintado uma vez e só perde o sufixo "(antigo)" quando confirma.
+
+  A alteração foi UMA condição: `if (jaTeveEnderecoRef.current)` passou a
+  `if (!address && jaTeveEnderecoRef.current)`.
+
+================================================================================
+⚠️ A PREMISSA DO PLANO ESTAVA PARCIALMENTE ERRADA
+================================================================================
+O plano pedia (S1.1) para "estender o objeto saldoCacheInicial" e "garantir
+que `centavos` é persistido no gravarSaldoCache junto com `senhas`".
+
+ISSO JÁ ESTAVA FEITO desde o MC88.34:
+
+    AppContext.jsx:238   useState(saldoCacheInicial?.centavos ?? null)
+    AppContext.jsx:239   useState(...centavos != null ? "stale" : "idle")
+    AppContext.jsx:724   gravarSaldoCache(address, { centavos });
+
+E a medição confirmava-o antes de eu tocar em nada: "R$ 0.00 (antigo)" já
+aparecia aos 1926–2200 ms, no MESMO instante do saldo de senhas.
+
+O defeito nunca foi falta de cache. Era o cache ser DESTRUÍDO 1,3–2,2 s depois
+de ter sido corretamente pintado. Se eu tivesse executado o plano à letra,
+teria acrescentado persistência a algo que já persistia e o sintoma continuaria
+exatamente igual.
+
+================================================================================
+CAUSA RAIZ — AppContext.jsx:694-697
+================================================================================
+O `jaTeveEnderecoRef` foi introduzido pelo MC88.34 para distinguir duas
+situações: "ainda não carregou" e "fez logout". É ligado a `true` no instante
+em que o `address` chega (linha 590).
+
+Mas no ramo de limpeza do saldo em R$ existem TRÊS situações, não duas:
+
+    (a) arranque, sem endereço              → não limpar     ✅ tratado
+    (b) arranque, com endereço sem token    → NÃO deve limpar ❌ NÃO tratado
+    (c) logout real, endereço desapareceu   → limpar          ✅ tratado
+
+    if (!address || !authToken) {
+      if (jaTeveEnderecoRef.current) { …limpa… }   ← lê (b) como (c)
+    }
+
+No arranque o `address` chega ANTES do `authToken` (o token é obtido num pedido
+próprio, umas centenas de ms depois). Nessa janela a condição era verdadeira
+POR CAUSA DO TOKEN, mas o ref já estava `true` POR CAUSA DO ENDEREÇO. Falso
+positivo de logout — e o saldo otimista era apagado.
+
+PORQUE É QUE AS SENHAS NUNCA SOFRERAM DISTO: `refetchSaldo` guarda apenas
+`if (!address)`. Assim que o endereço existe, o seu ramo de limpeza fica
+inalcançável. O saldo em R$ tem uma pré-condição extra — o token — que a guarda
+não cobria.
+
+O "⏳" era CONSEQUÊNCIA, não uma fase independente: com o status posto a
+"idle", a linha 700 (`prev === "ok" || prev === "stale" ? prev : "loading"`)
+deixava de encontrar "stale" e promovia a "loading", que o Dashboard desenha
+como relógio.
+
+PORQUE O MC88.34 NÃO APANHOU: aplicou a mesma guarda aos DOIS refetch, com o
+mesmo raciocínio, e validou o resultado pelo saldo de SENHAS — que era o alvo
+declarado daquele MC. O relatório do MC88.34 diz "os dois refetch deixaram de
+limpar o saldo quando address/authToken ainda não existem"; para o R$ isso só
+ficou verdadeiro quanto ao `address`, não quanto ao `authToken`.
+
+================================================================================
+O SEGMENTO 2 FICOU DELIBERADAMENTE VAZIO
+================================================================================
+O plano previa ajustes no Dashboard (S2): tratar "loading"/"stale", proteger o
+`formatarMoeda` contra nulos.
+
+NÃO FOI FEITO NADA, de propósito. O Dashboard já desenhava "stale" como
+"(antigo)" (Dashboard.jsx:73-79) e já lidava com null (`saldoRsCentavos == null
+? "R$ —"`). A exibição estava correta; o que estava errado era o estado que lhe
+chegava. Mexer na camada de exibição teria MASCARADO o defeito — o "—" deixaria
+de aparecer mas o saldo continuaria a ser apagado por baixo, e o próximo MC
+encontraria o mesmo problema noutra forma.
+
+================================================================================
+VALIDAÇÃO
+================================================================================
+3 corridas a frio (mais uma de aquecimento, descartada), APK recompilado:
+
+  corrida   1º valor              transição            estados intermédios
+  ──────────────────────────────────────────────────────────────────────
+     1      R$ 0.00 (antigo)      → R$ 0.00 @6299      NENHUM
+     2      R$ 0.00 (antigo)      → R$ 0.00 @5841      NENHUM
+     3      R$ 0.00 (antigo)      → R$ 0.00 @5896      NENHUM
+
+  Cabeçalho: H1 DISTINTOS VISTOS (1) — "Olá, Novo Pernambucano!" nas três.
+  Senhas: "12 (antigo)" → "12", inalterado (não regrediu).
+
+SEM REGRESSÃO:
+  CLS ....... 0        (era 0)
+  LCP ....... 2340 / 2336 ms   (era 2296 / 2812 ms)
+  FCP ....... 516 / 580 ms     (era 496 / 504 ms)
+  Suite ..... 249/249
+  Ficheiro .. 1 (src/context/AppContext.jsx), 1 condição alterada
+  Backend ... intocado
+
+================================================================================
+PENDÊNCIAS
+================================================================================
+ 1. O saldo em R$ ainda só CONFIRMA aos ~5,8–6,3 s. Este MC eliminou o piscar,
+    não a espera: o valor fresco depende do `authToken` e do pedido
+    `/saldo-rs`, que só correm depois de o Privy validar a sessão pela rede
+    (cadeia documentada no MC88.38-BASELINE-FRICCAO.txt). Enquanto isso, o
+    utilizador vê o valor em cache com "(antigo)" — que é honesto, mas não é
+    instantâneo.
+
+ 2. ⚠️ O sufixo "(antigo)" está exposto ao utilizador final. É jargão interno
+    introduzido pelo MC88.34 (`statusSuffix`, Dashboard.jsx:73-79) para
+    distinguir cache de confirmado. Visível na captura do MC88.38 como
+    "R$ 0.00 (antigo)" e "12 (antigo)". Não é linguagem de produto. Fora de
+    escopo deste MC (R1), mas é agora a fricção visual mais evidente que resta.
+
+ 3. Não foi auditado se o mesmo falso positivo de logout existe noutros pontos
+    que dependam de `authToken` além do saldo (cotas, notificações). Só o
+    caminho do R$ foi corrigido.
+
+================================================================================
+EVIDÊNCIAS
+================================================================================
+  Diagnóstico: desafio-gut/docs/MC88.39-CENTAVOS-DIAGNOSTICO.txt
+  Commits: fc822fc (S0) · cb2151c (S1)
+  Instrumentação (scratchpad): friccao.mjs (cabeçalho + saldos a 60 ms) ·
+    lcp.mjs (LCP/CLS/FCP) · ab.mjs (A/B intercalado)
+  APKs: MC8838.apk · MC8839.apk
+================================================================================

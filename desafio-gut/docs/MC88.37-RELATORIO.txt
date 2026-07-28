@@ -1,0 +1,210 @@
+================================================================================
+MC88.37 — CORREÇÃO DO CLS DO RODAPÉ
+================================================================================
+Data......: 2026-07-28, 16:20–17:40 UTC
+Branch....: feat/mc88.29-fila-tarefas · e67e76e → (3 commits)
+Aparelho..: fiem7xlvcufe855h · Xiaomi pissarropro (21091116UG) · Android 36
+Build.....: `npm run build:apk` (R10 cumprida) + gradlew assembleDebug (JBR 21)
+Bundle....: "✓ bundle coerente com PRODUÇÃO (mainnet)"
+Suite.....: 249/249 antes e depois
+Baseline..: APK do MC88.36 (commit 92e3097), guardado e medido em A/B
+
+================================================================================
+VEREDITO: OBJETIVO CUMPRIDO, E COM DOIS GANHOS QUE NÃO ESTAVAM PREVISTOS
+================================================================================
+  MÉTRICA        ALVO        ANTES              DEPOIS            ESTADO
+  ────────────────────────────────────────────────────────────────────────
+  CLS            ≤ 0,1       0,3726             0,0000            ✅ zero
+  LCP            não piorar  5720 / 5872 ms     2376 / 2912 ms    ✅ −3,0 s
+  domMs (paint)  não piorar  mediana 2306,5 ms  mediana 1952 ms   ✅ −354,5 ms
+  FCP            não piorar  548 / 632 ms       560 / 624 ms      ✅ igual
+
+  Uma linha alterada de facto (uma condição de render). O CLS foi a zero, não
+  apenas abaixo do limiar.
+
+================================================================================
+⚠️ A PREMISSA DO PLANO ESTAVA ERRADA — E ISSO ERA O ESSENCIAL
+================================================================================
+O plano dizia: "o rodapé é empurrado por elementos que carregam depois", e
+propunha os casos A–D (min-height, dimensões fixas, placeholder, visibility).
+
+NENHUM se aplicava. O rodapé nunca foi empurrado.
+
+Os retângulos das duas deslocações:
+
+    0.1863  @ 4280 ms   FOOTER   y/h [0,0]     -> [641,154]
+    0.1863  @ 5456 ms   FOOTER   y/h [641,154] -> [0,0]
+
+`[0,0]` é altura ZERO. O rodapé colapsa e volta. E não era só ele:
+
+    t=2003 ms   scrollH=2139   6 blocos no Dashboard
+    t=4509 ms   scrollH= 828   NENHUM bloco     ← página em branco
+    t=5556 ms   scrollH=2139   6 blocos         ← volta
+
+E o que o utilizador via aos 5016 ms:
+
+    "Privacidade | Termos | Suporte | Excluir conta | © 2026 … |
+     Início | Lances | Carteira | Mais"
+
+Só o rodapé e a barra de navegação. **O CLS de 0,373 era o sintoma de um ecrã
+em branco de ~1,2 segundos a meio do arranque.** Se eu tivesse seguido o plano
+à letra e reservado espaço, teria estabilizado a geometria do rodapé e deixado
+o ecrã em branco exatamente onde estava.
+
+================================================================================
+CAUSA RAIZ — App.jsx:80
+================================================================================
+    function DashboardOuCorporativo() {
+      const { tipoUsuario, tipoCarregando, isConnected } = useAppContext();
+      if (isConnected && tipoCarregando) return null;        // ← aqui
+      ...
+    }
+
+Cronologia:
+  1. Arranque: o Privy ainda não restaurou → `isConnected` é FALSE. A guarda
+     não dispara e o Dashboard pinta normalmente (~1,7 s).
+  2. ~4,3 s: o Privy conclui → `isConnected` passa a TRUE. No MESMO instante o
+     `authToken` passa a existir e `AppContext.jsx:350` liga
+     `setTipoCarregando(true)` para ir buscar as cotas.
+  3. As duas condições ficam verdadeiras ao mesmo tempo → `return null` → o
+     `<Outlet />` esvazia-se. O `<Layout>` fica, e é por isso que o rodapé
+     colapsa para altura 0 em vez de desaparecer do DOM.
+  4. ~5,5 s: as cotas respondem, o Dashboard remonta. Segunda deslocação.
+
+NÃO era o `<Suspense>`: o seu fallback é o `RouteFallback` ("⏳ Carregando…") e
+esse texto nunca aparece em nenhuma amostra; além disso a fronteira teria
+substituído o Layout inteiro, e o rodapé manteve-se montado.
+
+A GUARDA NÃO PROTEGIA NADA. O comentário em `AppContext.jsx:252` declara a
+intenção — *"tipoCarregando evita redirect prematuro"*. Evitar um REDIRECT, não
+apagar a página. E o Dashboard comum JÁ é mostrado durante os ~4,3 s anteriores,
+enquanto `isConnected` é false: apagá-lo só depois disso não impede que um
+utilizador corporativo veja o ecrã comum. Só acrescenta o branco.
+
+================================================================================
+CORREÇÃO (S1) — commit d2e4552
+================================================================================
+    function DashboardOuCorporativo() {
+      const { tipoUsuario, tipoCarregando } = useAppContext();
+      if (tipoUsuario === "corporativo" && !tipoCarregando) {
+        return <Navigate to="/corporativo" replace />;
+      }
+      return <Dashboard />;
+    }
+
+Deixa de devolver `null` e adia apenas o REDIRECT — que era a intenção
+declarada. Durante a deteção mostra-se o Dashboard, exatamente como já
+acontecia nos 4,3 s anteriores.
+
+O caso corporativo mantém DUAS camadas: o `<Navigate>` local (agora com
+`!tipoCarregando` explícito) e `AppContext.jsx:409-424`, que já esperava por
+`tipoCarregando` antes de navegar.
+
+⚠️ NÃO TOQUEI em `CorporativoRoute` (App.jsx:59), que também devolve `null` em
+dois pontos. Ali é uma situação DIFERENTE: protege rotas gated, e impedir que
+conteúdo corporativo apareça a quem não é lojista É o objetivo, não um efeito
+colateral. Fora de escopo (R1).
+
+================================================================================
+O LCP DE 5,7 s ERA O MESMO DEFEITO — HIPÓTESE LEVANTADA NO S0, CONFIRMADA NO S2
+================================================================================
+O MC88.36 mediu LCP de 5720/5872 ms e arquivou-o como "pendência de produto: o
+elemento LCP é o vídeo do carrossel". Estava incompleto.
+
+No S0 notei que os tempos coincidiam com o fim do branco e registei a hipótese:
+se o Dashboard desmonta aos 4,3 s e remonta aos 5,5 s, o carrossel é REMONTADO
+e o LCP passa a contar a partir da SEGUNDA pintura.
+
+Medido depois da correção: **LCP 2376 / 2912 ms**. Confirmado.
+
+Não era um problema de peso do vídeo. Era o vídeo a ser pintado duas vezes.
+
+================================================================================
+VALIDAÇÃO — A/B INTERCALADO (método fixado no MC88.36)
+================================================================================
+Os dois APKs guardados em ficheiro, instalados alternadamente, ordem trocada a
+cada ciclo, primeira corrida após cada instalação sempre descartada.
+
+  ciclo 1  MC8836  2017 , 2273        ciclo 1  MC8837  1919 , 1932
+  ciclo 2  MC8837  1947 , 1957        ciclo 2  MC8836  2373 , 2340
+  ciclo 3  MC8836  2075 , 2614        ciclo 3  MC8837  2334 , 1976
+
+  MC8836  n=6  min 2017  mediana 2306,5  máx 2614  média 2282
+  MC8837  n=6  min 1919  mediana 1952,0  máx 2334  média 2011
+  ────────────────────────────────────────────────────────────
+  DELTA DA MEDIANA: −354,5 ms
+
+  O MC88.37 ganha em 5 dos 6 pares (a exceção é a 1ª corrida do ciclo 3).
+
+  Saldo confirmado on-chain: MC8836 4198–4847 ms → MC8837 3696–4467 ms.
+
+  ⚠️ Nota de honestidade sobre os números absolutos: nesta sessão o MC8836 deu
+  mediana 2306 ms, contra 1918 ms medidos no MC88.36. O aparelho estava mais
+  lento (deriva térmica/cache). É exatamente por isso que o A/B é intercalado —
+  o que vale é o delta dentro da mesma sessão, não o valor absoluto.
+
+================================================================================
+ZERO REGRESSÃO — VERIFICADO
+================================================================================
+  Suite ............... 249/249 antes · 249/249 depois
+  Ficheiro alterado ... 1 (desafio-gut/frontend/src/App.jsx)
+  Backend ............. intocado — nada em netlify/functions, RAG ou web3
+  Bundle .............. "✓ coerente com PRODUÇÃO (mainnet)" (0x0052…16cd)
+  FCP ................. 560/624 ms contra 548/632 antes — igual
+
+================================================================================
+⚠️ BUG NOVO, REPORTADO PELO OPERADOR DURANTE ESTE MC — DIAGNOSTICADO, NÃO CORRIGIDO
+================================================================================
+O operador notou que "ele entra numa página antes". Está nos meus próprios
+dados do S0 e eu tinha passado ao lado. Medido no APK JÁ corrigido:
+
+    t=1244 ms   "Bem-vindo ao DesafioGUT! | Faça login para participar…"
+                              …e ao lado:  "R$ 0.00 (antigo) | 12 (antigo)"
+    t=2842 ms   "Olá, Novo Pernambucano! | Acompanhe seus dados…"
+
+Durante **1,6 segundos** um utilizador JÁ AUTENTICADO vê um ecrã a mandá-lo
+fazer login — com o saldo dele próprio pintado ao lado. É autocontraditório.
+
+CAUSA (mesma família da que este MC corrigiu, mas ponto diferente do código):
+  `AppContext.jsx:433` → `const isConnected = authenticated && Boolean(address);`
+  `Dashboard.jsx:176/186` usa `isConnected` como BINÁRIO: ou está ligado, ou
+  manda fazer login. Não existe o terceiro estado "ainda a restaurar".
+  Durante o restauro do Privy, `ready` é false e `authenticated` é false, logo
+  cai-se no ramo "faça login".
+
+O `ready` do Privy JÁ está exposto pelo AppContext (linha 1016), portanto o
+terceiro estado é distinguível sem infraestrutura nova.
+
+CORREÇÃO SUGERIDA (coerente com o que a app já faz): o MC88.34 já pinta o saldo
+otimista a partir do cache validado contra a sessão em disco. O cabeçalho devia
+seguir a MESMA política — enquanto `!ready`, não afirmar "faça login". O helper
+de deteção de sessão por existência de chaves já existe desde o MC88.36 S4
+(`PrivyRoot.jsx`, sem ler conteúdo — R5).
+
+NÃO O APLIQUEI: está fora do escopo declarado do MC88.37 (R1), que é o CLS.
+Fica como MC88.38 sugerido, ou digo-me que o faça já.
+
+================================================================================
+PENDÊNCIAS
+================================================================================
+ 1. O bug do "Faça login" acima — decisão do operador.
+ 2. `CorporativoRoute` (App.jsx:59) tem dois `return null`. Ali são legítimos
+    (protegem rotas gated), mas vale confirmar que não produzem o mesmo branco
+    em /corporativo. Não medido — só a rota raiz foi instrumentada.
+ 3. Segunda incoerência menor, vista nas amostras: aos 2842 ms o saldo em R$
+    passa de "R$ 0.00 (antigo)" para "R$ —", ou seja, o valor otimista é
+    descartado quando o endereço resolve, em vez de reconciliado. Não afeta o
+    CLS. Não investigado.
+ 4. Deploy/distribuição: o APK está no aparelho; distribuir é decisão sua.
+
+================================================================================
+EVIDÊNCIAS
+================================================================================
+  Diagnóstico completo: desafio-gut/docs/MC88.37-CLS-DIAGNOSTICO.txt
+  Commits: e67e76e (S0) · d2e4552 (S1) · este relatório
+  Instrumentação (scratchpad): cls-diag.mjs (retângulos LayoutShift + alturas
+    dos blocos a 250 ms) · cls-quem.mjs (estrutura do DOM e texto a 100 ms) ·
+    lcp.mjs (LCP/CLS com PerformanceObserver buffered) · ab.mjs (A/B) ·
+    medir36.mjs (paint e assets)
+  APKs do A/B: MC8836.apk · MC8837.apk
+================================================================================
