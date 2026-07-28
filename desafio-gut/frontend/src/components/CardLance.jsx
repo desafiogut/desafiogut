@@ -260,18 +260,22 @@ export default function CardLance({
 
   const valorReais = valor ? `R$ ${(parseInt(valor || "0", 10) / 100).toFixed(2)}` : "";
 
+  // MC88.40 — o estado "stale" deixou de ter sufixo textual. " (antigo)" era
+  // jargão interno do MC88.34 exposto ao utilizador; passa a ser sinalizado por
+  // opacidade (.gut-valor-pendente). "loading" e "error" mantêm os ícones.
   let saldoLabel;
+  let saldoPendente;
   if (!isProgramado) {
     const r  = saldoRsCentavos;
     const sx = saldoRsStatus === "loading" ? " ⏳"
-             : saldoRsStatus === "stale"   ? " (antigo)"
              : saldoRsStatus === "error"   ? " ✗" : "";
+    saldoPendente = saldoRsStatus === "stale";
     saldoLabel = r != null ? `💰 R$ ${(r / 100).toFixed(2)}${sx}` : `💰 R$ —${sx}`;
   } else {
     const n  = saldoSenhas;
     const sx = saldoSenhasStatus === "loading" ? " ⏳"
-             : saldoSenhasStatus === "stale"   ? " (antigo)"
              : saldoSenhasStatus === "error"   ? " ✗" : "";
+    saldoPendente = saldoSenhasStatus === "stale";
     saldoLabel = `🔗 ${n ?? "—"} senha${n === 1 ? "" : "s"}${sx}`;
   }
   const saldoTitle = !isProgramado
@@ -356,7 +360,11 @@ export default function CardLance({
               <span style={estilos.enderecoTexto}>
                 {address?.slice(0, 6)}...{address?.slice(-4)}
               </span>
-              <span style={estilos.saldoBadge} title={saldoTitle}>{saldoLabel}</span>
+              <span
+                style={estilos.saldoBadge}
+                title={saldoTitle}
+                className={saldoPendente ? "gut-valor-pendente" : undefined}
+              >{saldoLabel}</span>
             </div>
             <button style={estilos.botaoSair} onClick={onDisconnect}>Sair</button>
           </div>

@@ -75,13 +75,17 @@ export default function Dashboard() {
     tipo: tipoLeilao === "flash" ? "relampago" : "programado",
   };
 
+  // MC88.40 — o estado "stale" deixou de ter sufixo textual. " (antigo)" era
+  // jargão interno do MC88.34 exposto ao utilizador, e as alternativas textuais
+  // não cabiam no tile (medido: 145 px contra 121 px disponíveis → seriam
+  // cortadas). Passa a ser sinalizado por opacidade — ver `.gut-valor-pendente`
+  // em globals.css. "loading" e "error" mantêm os seus ícones: são estados
+  // diferentes e ocupam um caractere.
   const statusSuffix =
     saldoSenhasStatus === "loading" ? " ⏳" :
-    saldoSenhasStatus === "stale"   ? " (antigo)" :
     saldoSenhasStatus === "error"   ? " ✗" : "";
   const statusRsSuffix =
     saldoRsStatus === "loading" ? " ⏳" :
-    saldoRsStatus === "stale"   ? " (antigo)" :
     saldoRsStatus === "error"   ? " ✗" : "";
 
   const totalLances  = lances.length;
@@ -106,10 +110,11 @@ export default function Dashboard() {
     ? `R$ —${statusRsSuffix}`
     : `R$ ${saldoReais.toFixed(2)}${statusRsSuffix}`;
 
-  const senhasStat = { label: "Senhas", value: `${saldoSenhas ?? "—"}${statusSuffix}`, color: "#a78bfa", icon: "🔗", to: "/carteira" };
+  // MC88.40 — `pendente` marca o valor que ainda vem do cache (estado "stale").
+  const senhasStat = { label: "Senhas", value: `${saldoSenhas ?? "—"}${statusSuffix}`, color: "#a78bfa", icon: "🔗", to: "/carteira", pendente: saldoSenhasStatus === "stale" };
 
   const stats = [
-    { label: "Saldo (R$)",      value: saldoReaisStr,                    color: COR.gold,    icon: "💰", to: "/carteira" },
+    { label: "Saldo (R$)",      value: saldoReaisStr,                    color: COR.gold,    icon: "💰", to: "/carteira", pendente: saldoRsStatus === "stale" },
     senhasStat,
     { label: "Lances Únicos",   value: lancesUnicos,                     color: COR.success, icon: "✅", to: "/mercado"  },
     { label: "Total de Lances", value: totalLances,                      color: COR.amber,   icon: "📊", to: "/ativos"   },
@@ -212,8 +217,8 @@ export default function Dashboard() {
         gap: innerGap,
         marginBottom: sectionGap,
       }}>
-        {stats.map(({ label, value, color, icon, to }) => (
-          <StatTile key={label} label={label} value={value} color={color} icon={icon} to={to} />
+        {stats.map(({ label, value, color, icon, to, pendente }) => (
+          <StatTile key={label} label={label} value={value} color={color} icon={icon} to={to} pendente={pendente} />
         ))}
       </section>
 

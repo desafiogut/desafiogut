@@ -189,6 +189,26 @@
 
 .gut-lightning-active { animation: gut-lightning 1.2s ease-out forwards; }
 
+/* MC88.40 — valor ainda por confirmar (estado "stale" do saldo).
+   Substitui o sufixo textual " (antigo)" introduzido pelo MC88.34, que era
+   jargão interno exposto ao utilizador. Medido no aparelho: as alternativas
+   textuais do plano ("(atualizando...)", "(a atualizar)") não cabiam no tile
+   — 145 px e 123 px contra 121 px disponíveis — e seriam cortadas com
+   reticências, ficando pior que o original.
+   Esbater custa ZERO de largura e mantém a distinção perceptível. */
+@keyframes gut-valor-pendente {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.72; }
+}
+.gut-valor-pendente {
+  animation: gut-valor-pendente 1.8s ease-in-out infinite;
+}
+/* Sem animação para quem pede menos movimento — mas mantém-se esbatido, senão
+   perdia-se a informação em vez de se perder só o movimento (R3 do MC20.2). */
+@media (prefers-reduced-motion: reduce) {
+  .gut-valor-pendente { animation: none; opacity: 0.55; }
+}
+
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 

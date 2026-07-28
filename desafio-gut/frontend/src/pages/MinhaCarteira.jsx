@@ -58,17 +58,20 @@ export default function MinhaCarteira() {
   const [creditoTxHash, setCreditoTxHash] = useState(null);
 
   // Saldo on-chain — sufixo de status alinhado ao Sidebar/Dashboard.
+  // MC88.40 — o "◇" do estado "stale" foi removido. Era o mesmo problema que o
+  // " (antigo)" do Dashboard noutra roupagem: um símbolo solto ao lado de um
+  // saldo, que nada diz ao utilizador. Passa a ser esbatido (.gut-valor-pendente).
   const saldoStatusSuffix =
     saldoSenhasStatus === "loading" ? " ⏳" :
-    saldoSenhasStatus === "stale"   ? " ◇" :
     saldoSenhasStatus === "error"   ? " ✗" : "";
+  const saldoPendente   = saldoSenhasStatus === "stale";
   const saldoNumero     = (saldoSenhas == null) ? null : Number(saldoSenhas);
   const valorFinanceiro = saldoNumero == null ? null : saldoNumero * VALOR_POR_SENHA_BRL;
 
   const statusRsSuffix =
     saldoRsStatus === "loading" ? " ⏳" :
-    saldoRsStatus === "stale"   ? " ◇" :
     saldoRsStatus === "error"   ? " ✗" : "";
+  const saldoRsPendente = saldoRsStatus === "stale";
 
   // Modelo dual (Frente B.9): Saldo Disponível = saldo-rs (off-chain).
   // PIX aprovado credita aqui; "Trocar por Senhas" debita aqui e credita
@@ -159,11 +162,14 @@ export default function MinhaCarteira() {
                 </span>
               </div>
 
-              <div style={{
-                fontSize: isMobile ? "2.4rem" : "3rem",
-                fontWeight: 900, color: COR.gold, lineHeight: 1.05,
-                marginBottom: "0.35rem",
-              }}>
+              <div
+                className={saldoRsPendente ? "gut-valor-pendente" : undefined}
+                style={{
+                  fontSize: isMobile ? "2.4rem" : "3rem",
+                  fontWeight: 900, color: COR.gold, lineHeight: 1.05,
+                  marginBottom: "0.35rem",
+                }}
+              >
                 {saldoReais == null
                   ? (saldoRsStatus === "loading" ? "R$ …" : "R$ —")
                   : `R$ ${saldoReais.toFixed(2)}`}
@@ -287,10 +293,13 @@ export default function MinhaCarteira() {
                 </span>
               </div>
 
-              <div style={{
-                display: "flex", alignItems: "baseline", gap: "0.5rem",
-                marginBottom: "0.35rem", flexWrap: "wrap",
-              }}>
+              <div
+                className={saldoPendente ? "gut-valor-pendente" : undefined}
+                style={{
+                  display: "flex", alignItems: "baseline", gap: "0.5rem",
+                  marginBottom: "0.35rem", flexWrap: "wrap",
+                }}
+              >
                 <span style={{
                   fontSize: isMobile ? "2.6rem" : "3.2rem",
                   fontWeight: 900, color: COR.success, lineHeight: 1,

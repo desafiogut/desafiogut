@@ -18,7 +18,11 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 
 const MUTED = "#6b7db8";
 
-export default function StatTile({ label, value, color, icon, to, onClick, className = "" }) {
+// MC88.40 — `pendente`: o valor ainda vem do cache e não foi confirmado. Antes
+// isso era dito com o sufixo " (antigo)"; passou a ser esbatido, porque as
+// alternativas textuais não cabiam neste tile (medido: 145 px contra 121 px
+// disponíveis) e seriam cortadas pelo ellipsis abaixo.
+export default function StatTile({ label, value, color, icon, to, onClick, className = "", pendente = false }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const handle = onClick || (to ? () => navigate(to) : undefined);
@@ -29,11 +33,14 @@ export default function StatTile({ label, value, color, icon, to, onClick, class
       className={`${className} !flex !flex-col !items-start !gap-1 !text-left !h-auto`}
     >
       <span style={{ fontSize: isMobile ? "1.1rem" : "1.4rem", lineHeight: 1 }}>{icon}</span>
-      <span style={{
-        fontSize: isMobile ? "1.15rem" : "1.5rem", fontWeight: 900, color,
-        lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        maxWidth: "100%",
-      }}>{value}</span>
+      <span
+        className={pendente ? "gut-valor-pendente" : undefined}
+        style={{
+          fontSize: isMobile ? "1.15rem" : "1.5rem", fontWeight: 900, color,
+          lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          maxWidth: "100%",
+        }}
+      >{value}</span>
       <span style={{
         fontSize: isMobile ? "0.7rem" : "0.75rem", color: MUTED, fontWeight: 600, letterSpacing: "0.02em",
       }}>{label}</span>

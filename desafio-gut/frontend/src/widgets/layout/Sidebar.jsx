@@ -90,10 +90,13 @@ export default function Sidebar() {
   }
 
   // Sufixo curto refletindo status de leitura on-chain (idle/ok = vazio).
+  // MC88.40 — o "◇" do estado "stale" saiu: era o mesmo problema que o
+  // " (antigo)" do Dashboard noutra forma, um símbolo solto que nada diz.
+  // Passa a ser esbatido (.gut-valor-pendente).
   const statusSuffix =
     saldoSenhasStatus === "loading" ? " ⏳" :
-    saldoSenhasStatus === "stale"   ? " ◇" :
     saldoSenhasStatus === "error"   ? " ✗" : "";
+  const saldoPendente = saldoSenhasStatus === "stale";
 
   const W = collapsed ? "72px" : "240px";
 
@@ -162,6 +165,7 @@ export default function Sidebar() {
           )}
           <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.35rem", flexWrap: "wrap" }}>
             <span
+              className={saldoPendente ? "gut-valor-pendente" : undefined}
               style={{
                 fontSize: "0.63rem",
                 color: saldoSenhasStatus === "error" ? "#ef4444" : "#10b981",

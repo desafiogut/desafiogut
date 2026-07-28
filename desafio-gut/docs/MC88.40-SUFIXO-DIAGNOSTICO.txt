@@ -3,18 +3,26 @@ MC88.40 — SEGMENTO 0: DIAGNÓSTICO DO SUFIXO "(ANTIGO)"
 Data: 2026-07-28 · Aparelho: fiem7xlvcufe855h · APK medido: MC88.39 (b5108f6)
 
 
-ALCANCE REAL — 7 OCORRÊNCIAS EM 4 FICHEIROS
+ALCANCE REAL — 4 FICHEIROS, MAS COM DOIS SÍMBOLOS DIFERENTES
 ================================================================================
-O plano indica apenas `Dashboard.jsx` (linhas ~73-79). O varrimento mostra que
-o sufixo vive em quatro sítios:
+⚠️ CORREÇÃO DE UM ERRO MEU. Ao levar a decisão ao operador afirmei "7 ocorrências
+de (antigo) em 4 ficheiros". Estava errado: eu tinha cruzado os resultados de
+dois varrimentos diferentes (um por "antigo", outro por "Suffix") e li-os como
+se fossem o mesmo. O estado real, verificado ficheiro a ficheiro:
 
-    Dashboard.jsx:80,84        " (antigo)" ×2   (Saldo R$ e Senhas)
-    MinhaCarteira.jsx:61,68    " (antigo)" ×2
-    Sidebar.jsx:93             " (antigo)" ×1
-    CardLance.jsx:267,273      " (antigo)" ×2
+    " (antigo)"  →  Dashboard.jsx:80,84      ×2
+                    CardLance.jsx:267,273    ×2      = 4 ocorrências, 2 ficheiros
 
-Corrigir só o Dashboard deixaria o jargão à vista na Carteira, na barra lateral
-e no cartão de lance. Decisão do operador: aplicar nos quatro.
+    " ◇"         →  MinhaCarteira.jsx:62,69  ×2
+                    Sidebar.jsx:95           ×1      = 3 ocorrências, 2 ficheiros
+
+A `MinhaCarteira` e a `Sidebar` nunca mostraram "(antigo)" — mostram um losango
+solto, "12 senhas ◇".
+
+A decisão do operador (aplicar nos quatro ficheiros) MANTÉM-SE, e por uma razão
+que a correção não altera: o "◇" é exatamente o mesmo problema noutra roupagem.
+Um símbolo sem legenda ao lado de um saldo não diz nada a ninguém — é jargão
+gráfico em vez de jargão textual. Ambos são substituídos pelo mesmo esbatido.
 
 
 ⚠️ A PROPOSTA DO PLANO NÃO CABE — MEDIDO, NÃO ESTIMADO
