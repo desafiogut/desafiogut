@@ -118,6 +118,22 @@ SEM REGRESSÃO:
   Ficheiro .. 1 (src/context/AppContext.jsx), 1 condição alterada
   Backend ... intocado
 
+  domMs em A/B INTERCALADO (2 ciclos, ordem trocada, aquecimento descartado):
+    ciclo 1  MC8838  2046 , 2243        ciclo 1  MC8839  2277 , 1903
+    ciclo 2  MC8839  2322 , 2120        ciclo 2  MC8838  (ver nota)
+
+    MC8838  n=4  mediana 2227,0  média 2186
+    MC8839  n=4  mediana 2198,5  média 2156
+    DELTA DA MEDIANA: −28,5 ms
+
+  −28,5 ms está DENTRO DO RUÍDO — as gamas sobrepõem-se largamente e este MC
+  não devia mesmo alterar o tempo de pintura (a condição corrigida vive num
+  ramo que só corre DEPOIS do primeiro paint). O que importa aqui é que não
+  há regressão, e não há.
+
+  APK final reinstalado e confirmado no aparelho: 36 646 502 bytes = MC8839.apk
+  (o A/B tinha terminado com o do MC88.38 instalado).
+
 ================================================================================
 PENDÊNCIAS
 ================================================================================
