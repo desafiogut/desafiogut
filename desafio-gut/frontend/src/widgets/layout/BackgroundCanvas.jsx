@@ -83,8 +83,16 @@ export default function BackgroundCanvas() {
           para que os <video> (renderizados depois) pintem por cima no mesmo z-index
           (-50). Quando o vídeo falha (onError) ou prefers-reduced-motion, o vídeo
           é removido e estas layers voltam a ser visíveis (comportamento MC26.1). */}
-      <div className="gut-bg-layer gut-bg-layer--mobile" />
-      <div className="gut-bg-layer gut-bg-layer--desktop" />
+      {/* MC88.36 — monta APENAS a camada da largura corrente, pela mesma razão
+          que o MC88.31 já fez aos <video>. O CSS esconde a outra com
+          `opacity: 0`, mas um elemento com opacity:0 continua a DESCARREGAR o
+          seu background-image: o MC88.35 mediu `background-desktop.webp`
+          (109 KB) a ser pedido aos 1332 ms num telemóvel, onde nunca se vê.
+          O CSS fica como está (defesa em profundidade); é o JS que deixa de
+          criar o elemento invisível. */}
+      {isDesktop
+        ? <div className="gut-bg-layer gut-bg-layer--desktop" />
+        : <div className="gut-bg-layer gut-bg-layer--mobile" />}
       {/* MC27 — Vídeo em looping (melhoria progressiva).
           Renderizado DEPOIS dos <div>s no DOM → mesma z-index (-50), pinta por cima
           (DOM paint order). Quando falha (onError) ou prefers-reduced-motion, o
