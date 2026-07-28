@@ -4696,3 +4696,67 @@ CLS 0 · LCP 2340/2336 · FCP 516/580 — sem regressão.
 4. `CorporativoRoute` (App.jsx:59) também devolve `null` em dois pontos. Ali é
    legítimo (protege rotas gated), mas não foi medido se produz branco
    equivalente em /corporativo.
+
+---
+
+## MC88.40 — remoção do jargão "(antigo)" da interface
+
+**Data:** 2026-07-28 · **Commits:** `61e7e0e` (S0), `21f50b8` (S1)
+**Relatório:** `Desktop\MC88.40-RELATORIO.txt` + `desafio-gut/docs/`
+Suite 249/249 · bundle mainnet validado.
+
+**⚠️ A proposta do plano não cabia — medido antes de escrever código.** O S1.2
+mandava trocar `" (antigo)"` por `" (atualizando...)"`. O valor do tile usa
+`nowrap` + `ellipsis` (StatTile:32-36). Medindo a largura real com um `<span>`
+oculto na mesma fonte/peso:
+
+```
+TILE "Saldo (R$)" — 121 px         TILE "Senhas" — 79 px
+  98 px cabe  "R$ 0.00 (antigo)"     64 px cabe  "12 (antigo)"
+ 145 px CORTA "(atualizando...)"    110 px CORTA "(atualizando...)"
+ 123 px CORTA "(a atualizar)"        88 px CORTA "(a atualizar)"
+  48 px cabe  "R$ 0.00"              13 px cabe  "12"
+```
+Executar à letra mostraria **"R$ 0.00 (atualiz…"** — jargão cortado a meio,
+pior que o original. Decisão levada ao operador com as larguras em mão.
+
+**Decisão: valor ESBATIDO, sem texto** (`.gut-valor-pendente`, pulsação
+0.45↔0.72). Em `prefers-reduced-motion` perde-se o movimento mas **não a
+informação** (opacidade fixa 0.55).
+
+**⚠️ Erro meu, corrigido a meio:** afirmei "7 ocorrências de (antigo) em 4
+ficheiros" — tinha cruzado dois varrimentos. O real:
+`" (antigo)"` em Dashboard:80,84 + CardLance:267,273 (**2 ficheiros**);
+`" ◇"` em MinhaCarteira:62,69 + Sidebar:95 (**2 ficheiros**). A Carteira e a
+Sidebar nunca mostraram "(antigo)" — mostravam **"12 senhas ◇"**. A decisão
+(os quatro) manteve-se: o `◇` é o mesmo defeito em jargão gráfico.
+
+**⚠️ A validação quase deu falso verde.** O meu instrumento lê TEXTO, e depois
+da alteração o texto é idêntico em cache e confirmado — as 3 corridas
+imprimiram só `"12"` e `"R$ 0.00"`, sem transição. **Esse output seria
+IDÊNTICO se eu tivesse removido o sufixo sem aplicar o esbatido**, entregando a
+opção que o operador rejeitou. Medi então a **opacidade computada**:
+```
+2407 ms  Senhas op=0.450 PENDENTE  |  Saldo R$ op=0.450 PENDENTE
+4583 ms  Senhas op=1.000 sólido    |  Saldo R$ op=0.533 PENDENTE
+9385 ms  Senhas op=1.000 sólido    |  Saldo R$ op=1.000 sólido
+```
+52 amostras com a classe, opacidade 0.450–0.720 = o keyframe exacto.
+
+**Sem regressão:** CLS 0 (7 medições) · FCP 544–636 ms · domMs 1972/1988/2131.
+**LCP:** as primeiras 5 amostras deste APK deram mediana 2740 ms contra
+2336/2340 do MC88.39 — parecia **+400 ms**. Mas a baseline tinha só DUAS
+amostras. A/B intercalado (3 ciclos, ordem trocada): MC8839 mediana 2636 ·
+MC8840 mediana 2492 → **−144 ms**. Não há regressão; os +400 ms eram artefacto
+de comparar 5 amostras com 2 num aparelho cujo LCP oscila ~600 ms entre
+corridas. (Os dois `.apk` tinham EXACTAMENTE o mesmo tamanho, 36 646 502 bytes
+— verifiquei os MD5 antes de confiar no A/B: são distintos, foi coincidência.)
+
+**Não alterado de propósito:** `⏳` (loading) e `✗` (error) ficam — são estados
+diferentes e não são o jargão que este MC veio remover. A máquina de estados
+não foi tocada; muda só como "stale" é APRESENTADO.
+
+**Pendência nova:** ⚠️ **o esbatido não é anunciado por leitor de ecrã.**
+Opacidade não chega a tecnologias de apoio — para quem usa leitor, cache e
+confirmado ficaram indistinguíveis. O sufixo textual, apesar de mau, era lido.
+Se acessibilidade for requisito, falta `aria-busy`/`aria-label`.
