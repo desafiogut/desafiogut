@@ -4886,3 +4886,85 @@ padrão, outro sítio.
 **A não-regressão do utilizador comum NÃO foi medida no aparelho** (está com a
 sessão corporativa). Por construção não muda — sem `tipoConfirmado` em cache,
 `tipoProvavel === tipoUsuario` — mas é argumento, não medição.
+
+---
+
+## MC88.43 — Uma só verdade para o estado da edição (B3 + B4)
+
+**Data:** 2026-07-29 · **Branch:** `feat/mc88.29-fila-tarefas` · **APK:** md5 `7c20bb49…`
+**Suite:** 263/263 · **Relatório:** `desafio-gut/docs/MC88.43-RELATORIO.txt`
+**Diagnóstico:** `desafio-gut/docs/MC88.43-EDICAO-DIAGNOSTICO.txt`
+
+### A hipótese do MC88.41 estava errada
+Ele supôs "uma função de derivação usada em dois sítios com entradas
+diferentes". **Não existia função nenhuma.** Existiam três fontes independentes
+e uma trava aplicada a metade dos ecrãs:
+
+| | fonte | serve | problema |
+|---|---|---|---|
+| A | `encerrado` do AppContext (prazoTimestamp) | só a R-1 | — |
+| B | `timeLeftEdicaoSegundos(termino_em)` | as outras | devolvia 0 sem `termino_em`, e 0 lia-se "encerrada" |
+| C | `edicao.status` do backend | ninguém | **campo morto** — copiado pelo `useEdicoes`, lido por zero componentes |
+| — | `EM_BREVE_MODE` | 4 ecrãs de 9 | a assimetria **é** o B4 |
+
+Confirmado no endpoint de produção: RELAMP-1/2/3 têm mesmo `status:"encerrado"`
+e prazo de maio. **O "Encerrada" do cartão estava certo** — errado era tudo à
+volta: o título "em Andamento" (string fixa, sem call-site de estado), o
+"EM BREVE" por cima, e o GUTO a celebrar um fim que a UI negava.
+
+### Decisão do operador
+> «tudo precisa estar como em breve»
+
+Fechou a única ambiguidade do diagnóstico. Enquanto `EM_BREVE_MODE === true`, a
+fonte única devolve "em breve" para tudo — incluindo os pontos que escapavam à
+trava. Some do ecrã: `🟢 Ativo`, `Prazo: <data>`, `Encerrada`, `Em andamento`,
+`em Andamento` e `● Ao vivo agora`.
+
+### A correção
+`src/utils/edicao.js` · `getEstadoEdicao(edicao, opts)` — pura, `agora`
+injetável. Ordem de autoridade: **trava > FONTE A (`opts.encerrado === true`) >
+FONTE C (`status`) > FONTE B (`termino_em`) > "indisponível"**. Sem prazo e sem
+status é INDISPONÍVEL, nunca "encerrada" — tapa o buraco da FONTE B.
+Sete ecrãs + 3 chaves i18n passam a perguntar.
+
+### O que NÃO foi tocado, de propósito
+Apresentação não manda em autorização. Ficaram no `encerrado` on-chain: o
+`disabled` do botão de lance e a **regra de divulgação** da TabelaLances
+(valores só depois do fim). Trocá-la punha "valores ocultos" ao lado de valores
+já revelados — há um comentário no sítio a dizer porquê.
+
+### Desvio face ao plano
+A regra «prazo >24h no futuro → em breve» **não** foi implementada: o Programado
+dura exatamente 24h, logo classificaria como "em breve" uma edição acabada de
+abrir. Aqui "em breve" é trava editorial, não janela temporal.
+
+### ⚠️ A frase sobrevivia no bundle
+"Outras Edições em Andamento" continuava lá depois do S2 — numa chave i18n
+**adormecida** (`dash.outrasEdicoes`, sem call-site), em pt/es/en. Ligá-la um dia
+ressuscitava o B3. Corrigidas as três, com guarda estrutural.
+
+### Perf: A/B no mesmo aparelho e sessão (baseline recompilada hoje)
+| | FCP (mediana) | dom (mediana) | CLS |
+|---|---|---|---|
+| MC88.42 | 588 ms | 458 ms | 0 |
+| MC88.43 | 576 ms | 436 ms | 0 |
+
+**Indistinguível** — 12 ms de diferença contra 104 ms de dispersão. Não se
+reclama ganho. CLS=0 nas 6 corridas era o que importava: as alterações são de
+texto, e texto que muda de comprimento desloca layout. **LCP não foi medido**
+(`getEntriesByType` não o devolve sem observer `buffered`) — limitação simétrica.
+
+### Dois erros meus, apanhados antes de fechar
+1. A 1ª versão devolvia "indisponível" (cronómetro "—") para a **R-1**: o prazo
+   dela vive no `prazoTimestamp`, não no `termino_em`. Invisível com a trava
+   ligada; partia a contagem viva no dia em que fosse desligada.
+2. A 1ª guarda da Vitrine tinha um lookahead que dava falso negativo. O literal
+   "● Ao vivo agora" **continua** no código de propósito; a guarda passou a
+   exigir que a consulta à fonte única venha **antes** dele.
+
+Todas as guardas validadas por **mutação** — um teste que passa não prova nada.
+
+### Registado, fora de âmbito
+Uma sessão **corporativa** não alcança `/vitrine` nem `/mercado` (é encaminhada
+para `/corporativo`). Pré-existente do MC88.42, não investigado. Foi por isto
+que a validação do Dashboard comum exigiu o operador trocar de conta.
