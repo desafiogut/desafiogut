@@ -100,6 +100,203 @@ function StatusBadge({ status }) {
   );
 }
 
+// ── MC89.1 — Visão Geral (Fase 1 do plano do MC89) ──────────────────────────
+//
+// Os três separadores que já existiam são de OPERAÇÃO (aprovar, listar, gerir).
+// Faltava OBSERVAÇÃO: um sítio que responda "como está o sistema agora". É este.
+//
+// Duas regras que este separador não pode quebrar:
+//  1. Número indisponível mostra-se como "—", NUNCA como 0. Um zero é uma
+//     afirmação sobre o mundo, e o painel serve para decidir. O backend já
+//     distingue os dois casos (campo `parciais`); aqui é só não estragar.
+//  2. O bloco on-chain carrega SEPARADO. Depende de RPC e pode demorar ou
+//     falhar — e isso não pode segurar o resto do ecrã.
+
+/** Formata um valor que pode legitimamente não existir. */
+function ouTraco(valor, formatar = (v) => String(v)) {
+  return valor === null || valor === undefined ? "—" : formatar(valor);
+}
+
+const brl = (centavos) => `R$ ${(centavos / 100).toFixed(2)}`;
+
+function Metrica({ rotulo, valor, nota, cor }) {
+  return (
+    <div style={{
+      padding: "0.85rem 1rem",
+      background: "rgba(255,255,255,0.02)",
+      border: `1px solid ${COR.border}`,
+      borderRadius: "10px",
+      minWidth: 0,
+    }}>
+      <div style={{
+        fontSize: "0.6rem", color: COR.muted, textTransform: "uppercase",
+        letterSpacing: "0.07em", fontWeight: 700, marginBottom: "0.3rem",
+      }}>{rotulo}</div>
+      <div style={{
+        fontSize: "1.35rem", fontWeight: 900, lineHeight: 1.1,
+        color: cor || COR.text, overflowWrap: "anywhere",
+      }}>{valor}</div>
+      {nota && (
+        <div style={{ fontSize: "0.66rem", color: COR.muted, marginTop: "0.25rem", lineHeight: 1.3 }}>
+          {nota}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Grelha({ isMobile, children }) {
+  return (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit, minmax(180px, 1fr))",
+      gap: "0.65rem",
+    }}>{children}</div>
+  );
+}
+
+function TabVisaoGeral({ chamarAdmin, isMobile, onLoginNeeded }) {
+  const [stats, setStats]     = useState(null);
+  const [onchain, setOnchain] = useState(null);
+  const [erro, setErro]       = useState("");
+  const [erroChain, setErroChain] = useState("");
+  const [carregando, setCarregando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    if (!chamarAdmin) { onLoginNeeded(); return; }
+    setCarregando(true);
+    setErro("");
+    try {
+      const resp = await chamarAdmin("/.netlify/functions/admin-stats");
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data?.error?.message || `HTTP ${resp.status}`);
+      setStats(data);
+    } catch (err) {
+      setErro(err?.message || "falha ao ler as métricas");
+    } finally {
+      setCarregando(false);
+    }
+  }, [chamarAdmin, onLoginNeeded]);
+
+  // Pedido SEPARADO e sem `await` no caminho do anterior: o saldo on-chain
+  // depende de RPC e a sua lentidão (ou falha) não pode segurar as métricas.
+  const carregarOnchain = useCallback(async () => {
+    if (!chamarAdmin) return;
+    setErroChain("");
+    try {
+      const resp = await chamarAdmin("/.netlify/functions/admin-onchain");
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data?.error?.message || `HTTP ${resp.status}`);
+      setOnchain(data);
+    } catch (err) {
+      setErroChain(err?.message || "falha ao ler a cadeia");
+    }
+  }, [chamarAdmin]);
+
+  useEffect(() => {
+    if (!chamarAdmin) return;
+    carregar();
+    carregarOnchain();
+  }, [chamarAdmin, carregar, carregarOnchain]);
+
+  if (!chamarAdmin) {
+    return <p style={{ color: COR.muted, fontSize: "0.85rem" }}>Autentique-se para ver as métricas.</p>;
+  }
+
+  const u = stats?.utilizadores;
+  const f = stats?.financeiro;
+  const c = stats?.cotas;
+  const fila = stats?.operacao?.fila;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "0.72rem", color: COR.muted }}>
+          {stats?.geradoEm ? `Lido às ${new Date(stats.geradoEm).toLocaleTimeString("pt-BR")}` : ""}
+          {stats?.cache === "hit" ? " · em cache" : ""}
+        </span>
+        <Button variant="ghost" size="sm" onClick={() => { carregar(); carregarOnchain(); }} disabled={carregando}>
+          {carregando ? "A ler…" : "↻ Atualizar"}
+        </Button>
+      </div>
+
+      {erro && (
+        <div style={{ padding: "0.7rem 0.9rem", borderRadius: "8px", background: "rgba(239,68,68,0.08)", border: `1px solid ${COR.danger}55`, color: COR.danger, fontSize: "0.82rem" }}>
+          ⚠️ {erro}
+        </div>
+      )}
+
+      {/* O backend diz PELO NOME o que não conseguiu ler. Mostrar isso é o que
+          impede alguém de tomar um "—" por um zero. */}
+      {stats?.parciais?.length > 0 && (
+        <div style={{ padding: "0.7rem 0.9rem", borderRadius: "8px", background: "rgba(251,191,36,0.08)", border: `1px solid ${COR.warn}55`, color: COR.warn, fontSize: "0.8rem" }}>
+          Fontes indisponíveis neste momento: <strong>{stats.parciais.join(", ")}</strong>.
+          Os números dessas áreas aparecem como “—”, não como zero.
+        </div>
+      )}
+
+      <section>
+        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>UTILIZADORES</h3>
+        <Grelha isMobile={isMobile}>
+          <Metrica
+            rotulo="Com atividade"
+            valor={ouTraco(u?.comAtividade)}
+            cor={COR.diamond}
+            nota="Endereços vistos nos nossos dados. NÃO é o total de registados — a identidade vive no Privy."
+          />
+          <Metrica rotulo="Com cota" valor={ouTraco(c?.comCarteira)} nota={c ? `${c.total} cota(s) no total` : null} />
+        </Grelha>
+      </section>
+
+      <section>
+        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>FINANCEIRO</h3>
+        <Grelha isMobile={isMobile}>
+          <Metrica rotulo="Saldo em circulação" valor={ouTraco(f?.saldoTotalCentavos, brl)} cor={COR.success} />
+          <Metrica rotulo="Já creditado" valor={ouTraco(f?.creditadoCentavos, brl)} nota={f ? `${f.creditos} crédito(s)` : null} />
+          <Metrica
+            rotulo={`Créditos (${stats?.janelaDias ?? 30} d)`}
+            valor={ouTraco(f?.creditosJanela)}
+          />
+        </Grelha>
+      </section>
+
+      <section>
+        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>OPERAÇÃO</h3>
+        <Grelha isMobile={isMobile}>
+          <Metrica
+            rotulo="Fila — pendentes"
+            valor={ouTraco(fila?.pendentes)}
+            cor={fila?.pendentes > 0 ? COR.warn : COR.success}
+            nota={fila?.atualizadaEm ? `última: ${new Date(fila.atualizadaEm).toLocaleString("pt-BR")}` : null}
+          />
+          <Metrica rotulo="Fila — falhadas" valor={ouTraco(fila?.falhadas)} cor={fila?.falhadas > 0 ? COR.danger : undefined} />
+          <Metrica rotulo="Fila — total" valor={ouTraco(fila?.total)} />
+        </Grelha>
+      </section>
+
+      <section>
+        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>
+          CADEIA <span style={{ color: COR.muted, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>· carrega à parte</span>
+        </h3>
+        {erroChain && (
+          <div style={{ padding: "0.6rem 0.8rem", borderRadius: "8px", background: "rgba(251,191,36,0.08)", border: `1px solid ${COR.warn}55`, color: COR.warn, fontSize: "0.78rem", marginBottom: "0.5rem" }}>
+            Cadeia indisponível: {erroChain}
+          </div>
+        )}
+        <Grelha isMobile={isMobile}>
+          <Metrica
+            rotulo="Saldo da coordenadora"
+            valor={ouTraco(onchain?.saldoEth, (v) => `${v} ETH`)}
+            cor={COR.primary}
+            nota="É esta carteira que credita as senhas on-chain. Sem gás, a compra deixa de ser creditada."
+          />
+          <Metrica rotulo="Bloco atual" valor={ouTraco(onchain?.bloco, (v) => v.toLocaleString("pt-BR"))} />
+        </Grelha>
+      </section>
+    </div>
+  );
+}
+
 function TabAprovacoes({ chamarAdmin, isMobile, onLoginNeeded }) {
   const [lista, setLista] = useState([]);
   const [filtro, setFiltro] = useState("pendente");
@@ -454,7 +651,7 @@ export default function AdminPanel() {
   const isMobile = useIsMobile();
   const { address, privyWallet, abrirModal, isConnected } = useAppContext();
   const { isAdmin, loading } = useAdmin(address);
-  const [aba, setAba] = useState("aprovacoes");
+  const [aba, setAba] = useState("visao"); // MC89.1 — abre na observação
 
   // ── JWT admin state ────────────────────────────────────────────────────────
   // accessToken vive APENAS em memória (useRef). refreshToken + endereco em
@@ -648,6 +845,9 @@ export default function AdminPanel() {
   }
 
   const ABAS = [
+    // MC89.1 — primeiro de propósito: o ADM abre o painel para SABER o estado,
+    // e só depois para agir. Os três seguintes ficam intocados.
+    { id: "visao",      label: "📈 Visão Geral" },
     { id: "aprovacoes", label: "🟡 Aprovações" },
     { id: "cotas",      label: "📊 Cotas" },
     { id: "admins",     label: "👥 Admins" },
@@ -731,6 +931,7 @@ export default function AdminPanel() {
 
       {/* Conteúdo */}
       <section>
+        {aba === "visao"      && <TabVisaoGeral  chamarAdmin={authedChamar} isMobile={isMobile} onLoginNeeded={onLoginNeeded} />}
         {aba === "aprovacoes" && <TabAprovacoes chamarAdmin={authedChamar} isMobile={isMobile} onLoginNeeded={onLoginNeeded} />}
         {aba === "cotas"      && <TabCotas      chamarAdmin={authedChamar} isMobile={isMobile} onLoginNeeded={onLoginNeeded} />}
         {aba === "admins"     && <TabAdmins     chamarAdmin={authedChamar}                     onLoginNeeded={onLoginNeeded} />}
