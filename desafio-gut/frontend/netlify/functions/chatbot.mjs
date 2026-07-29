@@ -132,7 +132,7 @@ const INTENT_PATTERNS = {
 export function detectarIntent(texto) {
   const t = String(texto || "")
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // remove acentos combinantes (NFD)
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos combinantes (NFD)
     .toLowerCase();
   // ordem importa: específicos (auditoria/dados) antes; encerrar/listar antes de criar.
   if (INTENT_PATTERNS.relatorio_compras.test(t)) return "relatorio_compras";
@@ -336,7 +336,7 @@ function parseDinheiroCentavos(texto) {
 }
 
 function normalizarTexto(texto) {
-  return String(texto || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  return String(texto || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 function ehCancelar(texto) { return /\b(cancela|cancelar|abortar|sair|desistir)\b/.test(normalizarTexto(texto)); }
 function ehConfirmar(texto) { return /\b(publicar|publica|confirmar|confirma|criar|cria|sim|ok)\b/.test(normalizarTexto(texto)); }
