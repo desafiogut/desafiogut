@@ -189,6 +189,11 @@ test("os textos contraditórios do B3/B4 saíram do código", () => {
     ["components/EdicaoCard.jsx",           /\?\s*["']Encerrada["']\s*:\s*["']Em andamento["']/, 'ternário "Encerrada" : "Em andamento"'],
     ["components/TabelaLances.jsx",         /["']🟢 Ativo["']/,                                  '"🟢 Ativo" cru (B4)'],
     ["pages/Dashboard.jsx",                 /Outras Edições em Andamento/,                       'título "em Andamento" fixo (B3)'],
+    // O dicionário i18n tinha a MESMA frase numa chave adormecida
+    // (dash.outrasEdicoes, sem call-site). Ligá-la ressuscitaria o B3.
+    ["i18n/pt.js",                          /Outras Edições em Andamento/,                       'a chave i18n com "em Andamento"'],
+    ["i18n/es.js",                          /Ediciones en Curso/,                                'a chave i18n espanhola "en Curso"'],
+    ["i18n/en.js",                          /Other Editions Running/,                            'a chave i18n inglesa "Running"'],
     ["components/glass/AuctionStatusBar.jsx", /🔴 Leilão encerrado/,                             '"Leilão encerrado" cru'],
     ["components/CardLance.jsx",            /🔴 Edição encerrada/,                               '"Edição encerrada" cru'],
   ];

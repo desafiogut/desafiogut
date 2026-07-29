@@ -26,7 +26,8 @@ export default {
   "dash.lancesUnicos": "Unique Bids",
   "dash.totalLances": "Total Bids",
   "dash.edicaoAtiva": "🎯 Active Edition",
-  "dash.outrasEdicoes": "🗓️ Other Editions Running",
+  // MC88.43 — see pt.js: the heading no longer asserts a state.
+  "dash.outrasEdicoes": "🗓️ Other Editions",
   "dash.menorLanceUnico": "🏆 Lowest Unique Bid",
   "dash.nenhumLanceUnico": "No unique bid yet.",
 

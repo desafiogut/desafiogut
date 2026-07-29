@@ -26,7 +26,8 @@ export default {
   "dash.lancesUnicos": "Pujas Únicas",
   "dash.totalLances": "Total de Pujas",
   "dash.edicaoAtiva": "🎯 Edición Activa",
-  "dash.outrasEdicoes": "🗓️ Otras Ediciones en Curso",
+  // MC88.43 — ver pt.js: o título deixa de afirmar estado.
+  "dash.outrasEdicoes": "🗓️ Otras Ediciones",
   "dash.menorLanceUnico": "🏆 Puja Única Más Baja",
   "dash.nenhumLanceUnico": "Aún no hay puja única.",
 
