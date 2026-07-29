@@ -1,0 +1,128 @@
+================================================================================
+MC89 — SEGMENTO 1 · REQUISITOS DO SISTEMA ADM
+================================================================================
+Data....: 2026-07-29
+Base....: MC89-MAPA-CODIGO.txt (o que existe) + briefing do operador
+Código..: ZERO alterações (R1)
+
+================================================================================
+DECISÕES DO OPERADOR (tomadas neste MC, antes da arquitetura)
+================================================================================
+D1 — MÉTRICA DE UTILIZADORES: começar pelos DADOS PRÓPRIOS.
+     Contam-se endereços distintos vistos em cotas, saldo_rs, saldo_rs_creditos,
+     lances e indicações. O rótulo no ecrã é "utilizadores com atividade" — NÃO
+     "registados". Sem dependências externas, sem segredos novos, entrega na
+     Fase 1.
+     Limite assumido e a escrever no próprio painel: quem se registou e nunca
+     fez nada não aparece. A API do Privy fica como evolução, não pré-requisito.
+
+D2 — GUTO ADM: manter o roteador DETERMINÍSTICO e alargá-lo.
+     Sem function calling do LLM. O modelo nunca decide agir; quem executa é o
+     roteador, com gate declarativo por intent e rate-limit. É o padrão que já
+     existe (11 comandos) e que o MC88.44 voltou a usar.
+     Consequência aceite: perguntas em linguagem livre fora dos padrões caem no
+     RAG e respondem com texto, não com dados.
+
+================================================================================
+RF — REQUISITOS FUNCIONAIS
+================================================================================
+RF-01  RECONHECIMENTO DO ADM
+       Entrar com `ADMdesafiogut@gmail.com` dá acesso ao painel de admin.
+       Implementação: o e-mail é COMO SE ENTRA (Privy/Google); o endereço da
+       carteira embutida é O QUE AUTORIZA, acrescentado à lista com o POST que
+       já existe. NÃO se introduz e-mail na cadeia de autorização.
+       → não requer código novo. É configuração. Ver MC89-MAPA-CODIGO §7.
+
+RF-02  PAINEL DE MÉTRICAS (o que realmente falta)
+       Uma vista de observação, separada dos 3 separadores de operação que já
+       existem. Blocos:
+         a) Utilizadores — com atividade (total) e ativos em 30 dias (D1)
+         b) Financeiro — saldo R$ em circulação, créditos do período, PIX
+            confirmados vs pendentes
+         c) Senhas — em circulação, troco ativo, expiradas
+         d) Operação — profundidade e estado da fila_tarefas, último ciclo do
+            monitor on-chain, estado do kill switch, saldo da EOA coordenadora
+         e) Edição corrente — as 4 métricas de pulso que já se calculam
+
+RF-03  GUTO ADM DE LEITURA
+       Perguntar ao GUTO pelos mesmos números do painel, por intent. Reutiliza
+       a mesma função de agregação do RF-02 — um número, uma fonte.
+
+RF-04  COMANDOS RÁPIDOS
+       Botões no painel para comandos que JÁ existem no backend: forçar
+       processamento da fila, invalidar caches, pausar/retomar o sistema
+       (kill switch). Cada botão pede confirmação explícita.
+
+RF-05  PRESENÇA ONLINE
+       Quantos utilizadores estão na app agora. Nada existe: exige heartbeat do
+       cliente e armazenamento com expiração.
+       ⚠️ É o requisito com pior relação valor/custo do conjunto. Ver S2.
+
+RF-06  AUDITORIA CONSULTÁVEL
+       Quem fez o quê e quando, com filtro e paginação. Hoje há `log-decisoes`
+       (Blob, FIFO 500, sem consulta). Falta persistência com consulta e
+       cobertura de TODAS as ações admin — não só as do GUTO.
+
+RF-07  NOTIFICAÇÕES PUSH
+       Fora do alcance sem FCM (chave, setup, plugin Capacitor). Fica em Fase 3
+       e depende do operador.
+
+================================================================================
+RNF — REQUISITOS NÃO FUNCIONAIS
+================================================================================
+RNF-01 SEGURANÇA
+       Nenhum endpoint novo sem `guardAdmin`. Nenhum comando destrutivo sem
+       confirmação explícita no cliente E validação no servidor. O papel nunca
+       vem do cliente — é sempre resolvido no backend (regra já em vigor).
+       Comandos mutantes com rate-limit, como os do GUTO admin (5/min).
+
+RNF-02 AUDITORIA
+       Toda a ação admin escreve { quem (endereço), quando, o quê, resultado }.
+       Aplica-se também aos botões do RF-04, não só ao GUTO.
+
+RNF-03 DESEMPENHO
+       Painel abaixo de 2 s. Restrição real medida: as funções pagam cold start
+       e o `_lib/signer` (ethers) custa ~2 s, o `admin-auth` ~1,3 s (MC88.31).
+       Logo a agregação NÃO pode arrastar ethers no caminho comum, e as
+       consultas pesadas precisam de cache curto.
+
+RNF-04 RESPONSIVIDADE
+       Tem de servir no APK (WebView Android) e na web. O padrão de tabelas do
+       AdminPanel já resolve mobile por lista; reutilizar.
+
+RNF-05 NÃO REGREDIR O QUE EXISTE
+       Nada nesta série pode alterar o comportamento do AdminPanel atual, dos
+       11 intents admin, nem dos gates das 18 funções. Suíte 272/272 é o piso.
+
+RNF-06 HONESTIDADE DOS NÚMEROS
+       Métrica sem fonte fiável não vai para o ecrã com um rótulo que promete
+       mais do que mede (D1). Valor indisponível mostra-se como indisponível —
+       nunca como zero.
+
+================================================================================
+LACUNAS — O QUE FALTA, POR ESFORÇO
+================================================================================
+  #  falta                              | existe para apoiar            | peso
+  ───────────────────────────────────────┼───────────────────────────────┼──────
+  1  agregação de métricas (função)      | supabase-client, cotas-store, | ALTO
+                                         | saldoRs-store, fila, pulso    |
+  2  página de métricas                  | AdminPanel (padrão, gate, UI) | MÉDIO
+  3  definição de "utilizador"           | resolvida por D1              | —
+  4  botões de comando                   | os comandos já existem        | BAIXO
+  5  auditoria consultável               | log-decisoes (Blob)           | MÉDIO
+  6  presença online                     | nada                          | ALTO
+  7  push                                | nada                          | ALTO
+                                         |                               | (externo)
+
+================================================================================
+FORA DE ÂMBITO, DECLARADO
+================================================================================
+• Function calling do LLM (D2).
+• Introduzir e-mail na cadeia de autorização (RF-01).
+• API do Privy para contagem de registados (D1) — evolução, não pré-requisito.
+• Reescrever o AdminPanel existente. Acrescenta-se um separador; não se mexe
+  nos três que funcionam.
+
+================================================================================
+FIM DO SEGMENTO 1
+================================================================================
