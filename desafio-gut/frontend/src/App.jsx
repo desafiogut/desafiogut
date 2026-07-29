@@ -58,17 +58,55 @@ function RouteFallback() {
 // MC17 — query param ?rc=1: acesso direto sem Privy após cadastro.
 // Usa window.location (full page reload garante search params corretos).
 function CorporativoRoute({ children }) {
-  const { tipoUsuario, tipoCarregando, isConnected, ready } = useAppContext();
+  const { tipoUsuario, tipoProvavel, tipoCarregando, cotaCorporativa, isConnected, pareceAutenticado, ready } = useAppContext();
   // MC39.4.1 — esperar o Privy inicializar antes de decidir o redirect. Sem isto, um
   // hard-reload de uma rota gated (ex.: /seguranca) bouncava o lojista para "/" porque
   // isConnected ainda era false durante a inicialização do Privy.
+  //
+  // MC88.42 — com o palpite otimista, o lojista chega aqui ANTES de as cotas
+  // responderem. Se esta guarda continuasse a devolver `null` nesse intervalo,
+  // ele trocava o Dashboard errado por um ECRÃ EM BRANCO — que é exatamente o
+  // defeito que o MC88.37 corrigiu. Medido antes desta alteração: /corporativo
+  // ficava vazio ~74 ms antes de o painel aparecer.
+  //
+  // Por isso o `tipoProvavel` também é aceite AQUI: o encaminhamento e a guarda
+  // passam a usar a MESMA fonte. Sem isto, o redirect otimista mandava o
+  // utilizador para uma porta que o mandava de volta.
   if (!ready) return null;
+  // ⚠️ MC88.42 — `!isConnected` NÃO significa "não autenticado" durante o
+  // restauro do Privy; é a mesma armadilha do MC88.38. Com o encaminhamento
+  // otimista isto criou um CICLO que eu próprio medi: `/` mandava para
+  // `/corporativo`, esta guarda via `isConnected` false e mandava de volta para
+  // `/`, que mandava outra vez — SETE voltas entre os 1974 e os 5064 ms, com o
+  // ecrã em branco. Enquanto a sessão está a ser restaurada (`pareceAutenticado`)
+  // espera-se, em vez de expulsar.
   if (!isConnected) {
+    if (pareceAutenticado) return children;
     if (!window.location.search.includes("rc=1")) return <Navigate to="/" replace />;
     return children;
   }
-  if (tipoCarregando) return null;
-  if (tipoUsuario !== "corporativo") return <Navigate to="/" replace />;
+  if (tipoCarregando) return tipoProvavel === "corporativo" ? children : null;
+
+  // ⚠️ A EXPULSÃO EXIGE UMA RESPOSTA POSITIVA, não a ausência de resposta.
+  //
+  // O efeito que busca as cotas (AppContext:338) tem `user.google.email` e
+  // `user.apple.email` nas dependências, e esses campos só resolvem A MEIO do
+  // restauro do Privy — portanto o efeito CORRE VÁRIAS VEZES. Entre corridas,
+  // `tipoCarregando` volta a false com `cotaCorporativa` ainda a null, o que
+  // fazia `tipoUsuario` cair para "comum" e esta linha expulsar o lojista.
+  //
+  // Medido: a rota saltava /corporativo ↔ / sete vezes entre os 3,4 s e os
+  // 5,4 s. O operador viu-o como "o ícone do painel está a piscar".
+  //
+  // `cotaCorporativa == null` é ambíguo — significa "ainda não encontrei" E
+  // "não é lojista". Enquanto o palpite disser corporativo (última sessão
+  // CONFIRMADA neste endereço), essa ambiguidade não pode expulsar ninguém.
+  // Só uma cota devolvida que NÃO seja corporativa o faz.
+  const confirmadoNaoCorporativo = cotaCorporativa != null && tipoUsuario !== "corporativo";
+  if (confirmadoNaoCorporativo) return <Navigate to="/" replace />;
+  if (tipoUsuario !== "corporativo" && tipoProvavel !== "corporativo") {
+    return <Navigate to="/" replace />;
+  }
   return children;
 }
 
@@ -96,9 +134,18 @@ function CorporativoRoute({ children }) {
 // `tipoCarregando` termine. O caso corporativo tem ainda a segunda camada de
 // AppContext.jsx:409-424, que também espera por `tipoCarregando` antes de
 // navegar.
+//
+// MC88.42 — passa a encaminhar pelo `tipoProvavel`. Medido no aparelho com a
+// sessão corporativa real: o lojista via o Dashboard COMUM durante 9012/3994/
+// 3873 ms antes do redirect. `tipoProvavel` já vale "corporativo" no primeiro
+// render quando a última sessão CONFIRMADA neste mesmo endereço foi corporativa
+// (ver AppContext), portanto o redirect acontece de imediato em vez de esperar
+// pelas cotas.
 function DashboardOuCorporativo() {
-  const { tipoUsuario, tipoCarregando } = useAppContext();
-  if (tipoUsuario === "corporativo" && !tipoCarregando) {
+  const { tipoProvavel, tipoUsuario, tipoCarregando } = useAppContext();
+  // O palpite basta para ENCAMINHAR cedo; para o caso confirmado mantém-se a
+  // condição original (confirmado + já não está a carregar).
+  if (tipoProvavel === "corporativo" && (tipoUsuario === "corporativo" ? !tipoCarregando : true)) {
     return <Navigate to="/corporativo" replace />;
   }
   return <Dashboard />;

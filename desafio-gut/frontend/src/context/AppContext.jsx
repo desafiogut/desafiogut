@@ -397,6 +397,43 @@ export function AppProvider({ children }) {
   // MC12.2 — tipoUsuario derivado do blob cotas (não de customMetadata).
   const tipoUsuario = cotaCorporativa?.tipo === "corporativo" ? "corporativo" : "comum";
 
+  // MC88.42 — TIPO PROVÁVEL (abrir o lojista direto no painel dele).
+  //
+  // PROBLEMA MEDIDO no aparelho, com a sessão corporativa real: o lojista via o
+  // Dashboard COMUM durante 9012 / 3994 / 3873 ms (mediana 3994) antes de ser
+  // redirecionado para /corporativo. Não é um piscar de estilo — o corporativo
+  // é um lojista anunciante que pagou entre R$ 2.640 e R$ 18.000 por uma cota,
+  // e o que lhe aparecia era o dashboard de leilão: KPIs de lances, saldo de
+  // senhas, "Ir para o Mercado". Outro produto.
+  //
+  // CAUSA: a linha acima colapsa TRÊS situações em DUAS — "sei que é
+  // corporativo", "sei que é comum" e "AINDA NÃO SEI" (cotaCorporativa é null
+  // no arranque). A terceira devolvia "comum", que é uma afirmação falsa.
+  //
+  // ⚠️ PORQUE É QUE ISTO NÃO É COMO O `pareceAutenticado` DO MC88.38.
+  // Ali o palpite escolhia TEXTO; aqui influencia uma GUARDA DE ROTA, que é
+  // autorização. Por decisão do operador seguiu-se a variante mais conservadora
+  // das três em cima da mesa: o palpite SÓ é usado se a última sessão
+  // CONFIRMADA neste MESMO endereço tiver sido corporativa. Um utilizador comum
+  // nunca terá `tipoConfirmado` no cache, portanto NUNCA vê o painel do
+  // lojista, nem por um instante — nem sequer com o cache manipulado, porque
+  // `lerSaldoCache()` valida o endereço contra `privy:connections` de forma
+  // síncrona antes do primeiro paint (guarda do MC88.34).
+  //
+  // O primeiro login de sempre de um lojista continua a passar pelo comum: aí
+  // não há nada em cache e adivinhar seria inventar.
+  const tipoOtimista = cotaCorporativa == null && saldoCacheInicial?.tipoConfirmado === "corporativo"
+    ? "corporativo"
+    : null;
+  const tipoProvavel = tipoUsuario === "corporativo" ? "corporativo" : (tipoOtimista ?? tipoUsuario);
+
+  // Grava o tipo assim que ele é CONFIRMADO (e apaga o palpite quando deixa de
+  // ser corporativo, para um ex-lojista não ficar preso ao painel antigo).
+  useEffect(() => {
+    if (!address || cotaCorporativa == null) return;
+    gravarSaldoCache(address, { tipoConfirmado: tipoUsuario === "corporativo" ? "corporativo" : null });
+  }, [address, cotaCorporativa, tipoUsuario]);
+
   // Atualiza cotaCorporativa em memória após auto-cadastro (SejaNossoParceiro)
   // sem aguardar novo fetch do servidor.
   const atualizarTipoCorporativo = (data) => { setCotaCorporativa(data); setTipoCarregando(false); };
@@ -1076,6 +1113,10 @@ export function AppProvider({ children }) {
     // MC88.37 — só para escolher o TEXTO mostrado durante o restauro do Privy.
     // Nunca usar para habilitar ações: para isso continua a valer isConnected.
     pareceAutenticado,
+    // MC88.42 — tipo com palpite otimista, só para lojista já confirmado antes
+    // neste endereço. Serve para ENCAMINHAR cedo; `tipoUsuario` continua a ser
+    // a verdade confirmada e é ele que decide expulsar de uma rota.
+    tipoProvavel,
     vencedor,
     abrirModal,
     desconectar,
