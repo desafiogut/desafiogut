@@ -1,0 +1,195 @@
+================================================================================
+MC88.44 — SUPORTE QUE RESPONDE (CORREÇÃO DO E-MAIL DO GUTO)
+================================================================================
+Data......: 2026-07-29
+Alvo......: G1 do MC88.41 — o GUTO mandava utilizadores para um domínio morto
+Método....: varrimento do repositório + handler exercitado em processo +
+            sondas reais ao /chatbot de produção
+Suite.....: 272/272 verde (263 + 9 novas)
+Deploy....: FEITO — netlify deploy --prod --build (2 deploys, ver §6)
+Branch....: feat/mc88.29-fila-tarefas · 5 commits (S0…S4)
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+Quem perguntava ao GUTO com quem falar recebia `suporte@desafiogut.com.br` — um
+domínio que devolve NXDOMAIN. Hoje recebe `desafiogut01@gmail.com`, que é o
+endereço que a app já usava e que recebe mesmo.
+
+Mas o resultado tem uma fronteira que é preciso dizer com todas as letras:
+
+  ✅ FECHADO   quem pergunta DIRETAMENTE pelo suporte. Resposta determinística,
+               não passa pelo LLM nem pelo índice. Validado em produção.
+
+  ⏳ ABERTO    quem descreve o PROBLEMA ("paguei o PIX e não recebi as senhas")
+               continua a receber o endereço morto. É o caso mais sensível do
+               G1 — e só a reindexação o fecha. É seu, e falta.
+
+O G1 está MITIGADO, não fechado.
+
+================================================================================
+1. O ACHADO QUE MUDOU O PLANO
+================================================================================
+Corrigir o `regulamento.md` não corrige o GUTO.
+
+O regulamento não é lido em runtime por função nenhuma. O que o GUTO consulta é
+um índice de embeddings que vive num Netlify Blob store (`rag`), FORA do
+repositório, construído por `scripts/build-rag-index.mjs`. Enquanto o índice não
+for reconstruído, o assistente cita o endereço antigo — com o ficheiro
+corrigido, com deploy feito, com tudo verde.
+
+Evidência recolhida ANTES de mexer:
+
+  POST /.netlify/functions/chatbot  {"pergunta":"Como entro em contato com o suporte?"}
+  → "…manda e-mail pra `suporte@desafiogut.com.br`…"
+    fontes: rag:4 (0.4689) · rag:2 · rag:0 · modoBusca: semantica
+
+Não era alucinação nem constante no código: eram os chunks do índice.
+
+================================================================================
+2. DECISÕES DO OPERADOR
+================================================================================
+ENDEREÇO....: desafiogut01@gmail.com
+  É o que o rodapé, a página de exclusão de conta, o contacto do DPO e os Termos
+  já usam. Alinhar o regulamento com ele fecha também a queixa das "três vozes"
+  do MC88.41 — o produto passa a ter UM canal de suporte.
+  Registar `desafiogut.com.br` fica como pendência de NEGÓCIO: é compra + DNS +
+  caixa de correio, tem custo (R2), e enquanto não RECEBESSE deixava o
+  utilizador exatamente onde já estava.
+
+ENTREGA.....: as duas rotas, em conjunto.
+
+================================================================================
+3. O QUE FOI FEITO
+================================================================================
+ROTA B — determinística (agente, já em produção)
+  _lib/guto-perfis.mjs   constante exportada EMAIL_SUPORTE — um sítio só — e
+                         entrada `suporte` na tabela declarativa, com tom por
+                         perfil (admin sem emojis, regra do MC15.5).
+  chatbot.mjs            INTENT_PATTERNS.suporte + handler, gate qualquerPerfil,
+                         sem rate-limit (é informação, não é ação).
+
+  Testado POR ÚLTIMO em detectarIntent, de propósito: quem pergunta por um
+  ASSUNTO ("quanto custam as cotas", "meu saldo", "como indico um amigo", "quem
+  ganha agora") continua a cair no intent do assunto e a receber dados reais.
+  Aqui fica só quem quer saber com quem falar — e esse não pode receber um
+  endereço inexistente.
+
+  A resposta não passa pelo LLM nem pelo índice. É exatamente por isso que
+  existe: quem tem dinheiro preso não pode depender do que o modelo escolher
+  citar.
+
+FONTE DO RAG e DOCUMENTAÇÃO (para a reindexação já sair certa)
+  docs/chatbot/regulamento.md    3 ocorrências   ← alimenta o índice
+  docs/incident-response.md      2
+  docs/disaster-recovery.md      2
+  docs/ia-cognitiva.md           1
+
+NÃO MEXIDO, com teste a proteger
+  `pagador@desafiogut.com.br` em _lib/pix-provider/mercadopago.mjs — mesmo
+  domínio, uso completamente diferente: é o e-mail do PAGADOR enviado à API do
+  Mercado Pago. Trocá-lo mexia no fluxo de pagamento sem necessidade nenhuma.
+  Há um teste que falha se alguém lhe tocar num MC futuro distraído.
+  Os hosts `app.desafiogut.com.br` dos documentos de infraestrutura também
+  ficam: são o host pretendido do site, não um canal de contacto.
+  Relatórios históricos intactos — reescrevê-los apagaria a história.
+
+================================================================================
+4. EVIDÊNCIAS DE PRODUÇÃO (depois do deploy)
+================================================================================
+  "Como entro em contato com o suporte?"   intent=suporte  fontes=[]  ✅
+  "quero falar com voces"                  intent=suporte  fontes=[]  ✅
+  "como faço uma reclamação?" (acentuado)   intent=suporte  fontes=[]  ✅
+    → "Para falar com a coordenação: desafiogut01@gmail.com 📧 …"
+
+  "Meu PIX foi pago, mas não recebi as senhas. O que fazer?"
+    → (RAG) modoBusca=semantica
+    → "…chama o `suporte@desafiogut.com.br` que o time resolve rapidinho."   ❌
+
+  A última é a prova do §5: o índice ainda tem o endereço antigo.
+
+================================================================================
+5. O QUE FALTA — E É SEU
+================================================================================
+    node scripts/build-rag-index.mjs --yes
+
+    com OPENAI_API_KEY, NETLIFY_AUTH_TOKEN e NETLIFY_SITE_ID no ambiente.
+    Custo declarado no cabeçalho do script: ~US$ 0,001 por execução.
+    O script é idempotente e pergunta antes de sobrescrever (o --yes salta).
+
+Só isto cobre TODAS as formulações — reembolso, LGPD, "não recebi as senhas" —
+porque corrige a própria fonte que o modelo cita. Sem este passo, o achado mais
+grave do G1 continua vivo.
+
+Depois de correr, a sonda de aceitação é a pergunta do PIX acima: deve deixar de
+citar `suporte@desafiogut.com.br`.
+
+================================================================================
+6. UM ERRO MEU, REGISTADO POR INTEIRO
+================================================================================
+A meio da validação julguei ter descoberto um defeito maior que o do MC:
+perguntas ACENTUADAS ("lista as edições") caíam no RAG em produção, e sem
+acentos funcionavam. Parecia a normalização NFD do MC15.4.3 partida no
+empacotamento — o que atingiria TODOS os intents, não só o meu. Cheguei a mapear
+5 ficheiros com o mesmo construto e a fazer um SEGUNDO deploy a corrigir um
+deles.
+
+ERA FALSO. A causa era o MEU `curl` a corromper o UTF-8 no fio a partir do Git
+Bash — a mesma família de erro que já estava registada para o PowerShell, e na
+qual caí na mesma. Construindo o corpo com `json.dumps(..., ensure_ascii=True)`,
+que põe `ç` em ASCII no fio, "lista as edições" devolve `listar_edicoes`
+normalmente. O servidor sempre esteve correto. Os outros 4 ficheiros NÃO foram
+tocados.
+
+Fica deste engano uma alteração em chatbot.mjs:135,339 — a classe de caracteres
+combinantes passou a ser escrita como `[̀-ͯ]` em vez dos caracteres
+CRUS. É equivalente, está validada (272/272 e produção acentuada verde) e
+protege de um risco real de re-codificação do ficheiro, MAS não foi motivada por
+defeito observado. Digo-o para poder ser revertida, se preferir o mínimo estrito
+(R1). Custou um deploy a mais.
+
+Lição para os próximos MCs: testar API com acentos exige corpo JSON escapado em
+ASCII. Um "achado" que só aparece pela minha ferramenta não é um achado.
+
+================================================================================
+7. TESTES
+================================================================================
+Novo: netlify/functions/_tests/mc8844-email-suporte.test.mjs — 9 casos.
+Suite total: 272/272 (flag --experimental-test-module-mocks obrigatória).
+
+  • EMAIL_SUPORTE bate com o rodapé (se um mudar sem o outro, voltam as "três
+    vozes" do MC88.41)
+  • nenhum dos 4 perfis recebe o domínio morto
+  • tom por perfil (admin sem emojis, regra MC15.5)
+  • 8 formulações de pedido de contacto caem no intent
+  • 6 intents específicos NÃO são roubados pelo novo padrão
+  • acentos e maiúsculas
+  • o regulamento — fonte do índice — não cita o domínio morto
+  • os 3 documentos internos também não
+  • o placeholder de pagador do Mercado Pago fica intocado
+
+Guarda do regulamento validada por MUTAÇÃO: repor o endereço morto numa das 3
+linhas derruba exatamente esse teste, e só esse.
+
+================================================================================
+8. PENDÊNCIAS
+================================================================================
+• REINDEXAÇÃO DO RAG — §5. É o que falta para fechar o G1. Operador.
+• `desafiogut.com.br` — registar o domínio continua a ser a solução certa a
+  prazo. Decisão de negócio, não de código.
+• `grupouniaoetrabalhoam@gmail.com` (TermosConsentimento.jsx:78) é o controlador
+  LGPD e `desafiogut@gmail.com` é a conta Mercado Pago. Não são suporte e não
+  foram tocados — mas continuam a ser endereços distintos à vista do
+  utilizador, se um dia quiser consolidar.
+• A alteração do §6 pode ser revertida a pedido.
+
+================================================================================
+PRÓXIMO PASSO
+================================================================================
+MC89 — sistema ADM, como estava previsto.
+Ou MC88.45 (B5+B6 do MC88.41: botões inativos que não dizem porquê, e o "Sair"
+a 190 px do campo de lance), se preferir continuar a limpar a experiência.
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================

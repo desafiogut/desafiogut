@@ -4968,3 +4968,58 @@ Todas as guardas validadas por **mutação** — um teste que passa não prova n
 Uma sessão **corporativa** não alcança `/vitrine` nem `/mercado` (é encaminhada
 para `/corporativo`). Pré-existente do MC88.42, não investigado. Foi por isto
 que a validação do Dashboard comum exigiu o operador trocar de conta.
+
+---
+
+## MC88.44 — Suporte que responde (G1)
+
+**Data:** 2026-07-29 · **Branch:** `feat/mc88.29-fila-tarefas` · **Suite:** 272/272
+**Deploy:** feito (`netlify deploy --prod --build`) · **Relatório:** `desafio-gut/docs/MC88.44-RELATORIO.txt`
+
+### O achado que mudou o plano
+**Corrigir o `regulamento.md` não corrige o GUTO.** O regulamento não é lido em
+runtime por função nenhuma: o GUTO consulta um índice de embeddings que vive num
+Netlify Blob store (`rag`), **fora do repositório**, construído por
+`scripts/build-rag-index.mjs`. Com o ficheiro corrigido, deploy feito e tudo
+verde, o assistente continua a citar o endereço antigo até o índice ser
+reconstruído — e isso exige `OPENAI_API_KEY` + `NETLIFY_AUTH_TOKEN` (R5) e tem
+custo (R2). É do operador.
+
+### Decisões
+`desafiogut01@gmail.com` (o que o rodapé, ExcluirConta, DPO e Termos já usam) e
+**as duas rotas de entrega**: intent determinístico agora + reindexação depois.
+
+### O que ficou fechado e o que não
+| | estado |
+|---|---|
+| pergunta DIRETA pelo suporte | ✅ determinístico, `fontes=[]`, validado em produção |
+| descrição do PROBLEMA ("paguei o PIX e não recebi as senhas") | ❌ vai ao RAG e **ainda cita o domínio morto** |
+
+**O G1 está MITIGADO, não fechado.** Falta `node scripts/build-rag-index.mjs --yes`.
+
+### Como
+`EMAIL_SUPORTE` em `_lib/guto-perfis.mjs` (um sítio só) + entrada `suporte` na
+tabela declarativa + `INTENT_PATTERNS.suporte` testado **por último** em
+`detectarIntent`, para não roubar intents de assunto (cotas, saldo, indicações,
+simulação continuam a responder com dados reais).
+
+### Não mexido, com teste a proteger
+`pagador@desafiogut.com.br` (Mercado Pago) — mesmo domínio, é o e-mail do
+**pagador** enviado à API. Há um teste que falha se um MC futuro lhe tocar.
+
+### ⚠️ Um erro meu, por inteiro
+Julguei ter descoberto que a normalização NFD do MC15.4.3 estava partida em
+produção **para todos os intents** — acentuado caía no RAG, sem acento
+funcionava. Mapeei 5 ficheiros e fiz um segundo deploy.
+
+**Era falso.** Era o meu `curl` a corromper UTF-8 no fio a partir do Git Bash —
+a mesma família de erro já registada para o PowerShell, e caí nela na mesma. Com
+`json.dumps(..., ensure_ascii=True)` o servidor responde corretamente. Os outros
+4 ficheiros não foram tocados.
+
+Ficou uma alteração em `chatbot.mjs:135,339` (classe de combinantes escrita com
+escapes em vez de caracteres crus): equivalente, validada, útil — mas **não
+motivada por defeito observado**. Reversível a pedido.
+
+**Regra para os próximos MCs:** testar API com acentos exige corpo JSON escapado
+em ASCII. Um "achado" que só aparece pela minha ferramenta não é um achado.
