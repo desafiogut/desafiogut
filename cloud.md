@@ -5023,3 +5023,59 @@ motivada por defeito observado**. Reversível a pedido.
 
 **Regra para os próximos MCs:** testar API com acentos exige corpo JSON escapado
 em ASCII. Um "achado" que só aparece pela minha ferramenta não é um achado.
+
+---
+
+## MC89 — Diagnóstico e plano do sistema ADM
+
+**Data:** 2026-07-29 · **Branch:** `feat/mc89-adm-system` · **Código:** ZERO alterações
+**Docs:** `desafio-gut/docs/MC89-{MAPA-CODIGO,REQUISITOS,VIABILIDADE,ARQUITETURA,PLANO,RELATORIO}.txt`
+
+### O ADM já está construído em ~70%
+Não é para fazer de raiz. Já existe: autorização de admin (JWT 15 min + refresh
+rotacionado 7 dias + revogação imediata), `AdminPanel.jsx` com 740 linhas e 3
+separadores, **11 intents admin no GUTO** com gate e rate-limit, auditoria
+(`log-decisoes`), kill switch e métricas de pulso.
+
+**Falta OBSERVAÇÃO.** Os 3 separadores são de operação, não de leitura.
+
+### Seis premissas do briefing não se confirmaram
+"lista hardcoded", "não existe dashboard", "não existe GUTO ADM com
+ferramentas", "não existe auditoria" — todas falsas. Confirmadas só duas: não há
+tabela de admins nem presença online.
+
+### ⚠️ O e-mail não pode autorizar
+Toda a cadeia é por **endereço provado por assinatura EIP-191**; o JWT leva
+`{ endereco, tipo }` e não há e-mail no backend. Saída sem código: **o e-mail é
+como se entra, o endereço é o que autoriza** — entrar uma vez com
+`ADMdesafiogut@gmail.com`, ler o endereço da carteira Privy, `POST admin-list`.
+Efeito colateral que vale por si: hoje a lista persistida está **vazia** e a
+coordenação é a única admin — perder essa carteira tranca toda a gente fora.
+
+### Decisões do operador
+- **Utilizadores** = dados próprios, rotulados "com atividade" e não
+  "registados" (**não existe tabela de utilizadores**; a identidade vive no Privy).
+- **GUTO ADM** continua **determinístico** — sem function calling; o modelo
+  nunca decide agir.
+
+### Recomendação contra o briefing: NÃO criar a tabela `admins`
+A lista em Blobs já tem tudo, e a coordenação é admin por env **sem estar na
+lista** — migrar obriga a reproduzir essa regra num segundo sítio. Duas fontes
+de verdade para "quem é admin" é o defeito que o MC88.43 gastou um MC a eliminar.
+
+### Fases
+`Fase 0` (operador, hoje, sem código) → `MC90 VER` → `MC91 AGIR` → `MC92 LEMBRAR`.
+Fora do caminho crítico, com razão escrita: **heartbeat de presença** (custo
+permanente de bateria/dados para um número que será 0 ou 1) e **push** (FCM).
+
+### Achados colaterais
+- `ADMIN_WALLETS` está no ambiente e **ninguém a lê** — quem a definiu pode
+  julgar que concede acesso.
+- ✅ `COORDENACAO_ADDRESS` está definida: a EOA comprometida do MC59.11 **já não
+  é admin** (verificado em produção). O alarme do MC87 P1-4 está resolvido.
+- `_lib/rbac.mjs` ainda lê o Blob `cotas` para o papel "cliente" — mesmo defeito
+  que o MC88.20 corrigiu no GUTO, num sítio que ficou para trás. Inofensivo hoje
+  (os gates que dependiam disso foram removidos no MC49.3), perigoso se alguém
+  voltar a usar `requireRole("cliente")`.
+- `OPENAI_API_KEY` não está em produção — é o que falta para a reindexação do
+  RAG pendente do MC88.44.

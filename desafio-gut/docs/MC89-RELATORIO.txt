@@ -1,0 +1,181 @@
+================================================================================
+MC89 — DIAGNÓSTICO E PLANO PARA O SISTEMA ADMINISTRADOR (ADM)
+================================================================================
+Data......: 2026-07-29
+Branch....: feat/mc89-adm-system (criada de ec2fb94, o estado deployado)
+Método....: leitura do código + consulta ao Supabase + sondas ao backend de
+            produção + inventário do ambiente (só nomes, nunca valores)
+Código....: ZERO alterações (R1 cumprida)
+Commits...: 4 (S0 · S1+S2 · S3+S4 · este)
+Documentos: MC89-MAPA-CODIGO · MC89-REQUISITOS · MC89-VIABILIDADE ·
+            MC89-ARQUITETURA · MC89-PLANO (todos em desafio-gut/docs/)
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+O sistema ADM não está por construir. Está construído em cerca de 70% — e o que
+falta não é o que o briefing pensa que falta.
+
+Já existe: identidade e autorização de admin (JWT de 15 min + refresh
+rotacionado de 7 dias + revogação imediata), uma página `/admin` de 740 linhas
+com três separadores, onze comandos de administração no GUTO com gate e
+rate-limit, auditoria dessas ações, kill switch, e métricas de pulso calculadas.
+
+Falta uma coisa, sobretudo: **OBSERVAÇÃO**. Não há nenhuma vista que responda
+"como está o sistema agora". Os três separadores existentes são de operação
+— aprovar, listar cotas, gerir admins — não de leitura.
+
+E há um obstáculo que o briefing não previu: **o e-mail `ADMdesafiogut@gmail.com`
+não pode autorizar nada.** Toda a cadeia de autorização é por endereço de
+carteira, provado por assinatura. Há uma saída que não custa código nenhum, e
+que aliás resolve um risco que já existe hoje.
+
+================================================================================
+SEIS PREMISSAS DO BRIEFING QUE NÃO SE CONFIRMAM
+================================================================================
+  briefing                              | código
+  ──────────────────────────────────────┼─────────────────────────────────────
+  "admin-list retorna lista hardcoded"  | Blob + coordenação, com POST de
+                                        | gestão e GET separado em dois
+                                        | contratos por segurança (MC87 P2-4)
+  "não existe dashboard administrativo" | AdminPanel.jsx, 740 linhas, rota
+                                        | /admin, 3 separadores, login JWT
+  "não existe GUTO ADM com ferramentas" | 11 intents admin com gate declarativo
+                                        | e rate-limit já em produção
+  "não existe tabela de logs"           | verdade no Supabase; existe o Blob
+                                        | `log-decisoes` desde o MC15.6
+  "não existe sistema de presença"      | CONFIRMADO
+  "não existe tabela de admins"         | CONFIRMADO (e propomos não a criar)
+
+================================================================================
+O OBSTÁCULO DO E-MAIL — E A SAÍDA
+================================================================================
+`auth-user.mjs` prova a posse da carteira por assinatura EIP-191 e emite um JWT
+com as claims `{ endereco, tipo }`. Não há e-mail em lado nenhum do backend.
+Fazer o e-mail autorizar exigiria verificar o token do Privy no servidor
+(PRIVY_APP_SECRET, que NÃO está no ambiente) e confiar num identificador que o
+utilizador não prova possuir a cada pedido — mais frágil do que o que já existe.
+
+A saída, sem uma linha de código:
+   o e-mail é COMO SE ENTRA; o endereço continua a ser O QUE AUTORIZA.
+   Entrar uma vez com `ADMdesafiogut@gmail.com`, ler o endereço da carteira que
+   o Privy cria, e acrescentá-lo com o POST que já existe.
+
+Isto é a Fase 0 do plano. E tem um efeito colateral que vale por si: hoje a
+lista persistida de admins está VAZIA e a coordenação é a única administradora.
+Se essa carteira se perder, ninguém entra no painel e a recuperação passa por um
+redeploy. Acrescentar o segundo admin fecha esse risco.
+
+================================================================================
+DUAS DECISÕES QUE O SENHOR TOMOU NESTE MC
+================================================================================
+D1 — "Total de utilizadores" vem dos DADOS PRÓPRIOS.
+     Contam-se endereços distintos vistos em cotas, saldo_rs, créditos, lances e
+     indicações, com o rótulo honesto "utilizadores com atividade" — não
+     "registados". Sem dependências externas, entrega na Fase 1.
+     Isto importa porque **não existe tabela de utilizadores**: a identidade vive
+     no Privy e o backend só conhece quem já fez alguma coisa. Pôr "total de
+     utilizadores" no ecrã sem essa distinção seria um número errado à frente de
+     quem decide.
+
+D2 — O GUTO ADM continua DETERMINÍSTICO.
+     Sem function calling do LLM. O roteador de intents já executa 11 comandos
+     com gate e rate-limit, e o modelo nunca decide agir. Alargar é acrescentar
+     padrões e handlers — o mesmo caminho do MC88.44.
+
+================================================================================
+O PLANO, EM UMA PÁGINA
+================================================================================
+FASE 0 — O ADMIN EXISTIR ........................ operador · hoje · sem código
+  Entrar com o e-mail, ler o endereço, POST admin-list, confirmar com
+  `admin-list?endereco=`. Destranca a validação de tudo o resto.
+
+MC90 — VER ..................................................... ~2 sessões
+  `_lib/admin-metricas.mjs` (a agregação, reutilizada pelo GUTO) ·
+  `admin-stats.mjs` (guardAdmin, cache 45 s, SEM ethers) ·
+  `admin-onchain.mjs` (isolado — é o único que pode pagar os ~2 s do ethers) ·
+  separador "Visão Geral" no AdminPanel · 2 intents de leitura no GUTO.
+  Critério: painel em < 2 s, cada número com rótulo que diz o que é, e o GUTO a
+  devolver os MESMOS números.
+
+MC91 — AGIR .................................................... ~1,5 sessões
+  `admin-comandos.mjs` expondo apenas comandos que JÁ existem (fila, caches,
+  kill switch), com `confirmar:true` obrigatório, rate-limit e auditoria.
+  Botões com confirmação no painel.
+  "Ativos nos últimos 5 min" derivado dos dados já registados — sem heartbeat.
+
+MC92 — LEMBRAR E AVISAR ........................................ ~2 sessões
+  Tabela `admin_logs` no Supabase (com a retenção LGPD como PRÉ-REQUISITO, não
+  como passo final) + leitura paginada. Push só depois de o operador ter FCM.
+
+================================================================================
+DUAS COISAS QUE TIREI DO CAMINHO CRÍTICO, E PORQUÊ
+================================================================================
+PRESENÇA ONLINE (heartbeat) — adiada.
+  Custa uma chamada de rede por utilizador ativo, para sempre; no APK isso é
+  bateria e dados móveis, logo depois de três MCs gastos a cortar milissegundos
+  de arranque. E o que devolve, à escala atual (7 cotas, 5 saldos), é um número
+  que será quase sempre 0 ou 1.
+  Alternativa proposta: "ativos nos últimos 5 minutos", derivada dos pedidos que
+  JÁ acontecem. 80% da resposta, 0% do custo. Se se provar insuficiente,
+  reavalia-se com dados na mão.
+
+NOTIFICAÇÕES PUSH — dependência externa.
+  Exige projeto FCM, chave, plugin Capacitor e rebuild do APK. Não bloqueia nada
+  do resto e não entra em MC nenhum enquanto não existir.
+
+================================================================================
+E UMA QUE RECOMENDO NÃO FAZER, APESAR DE PEDIDA
+================================================================================
+CRIAR A TABELA `admins` NO SUPABASE.
+  A lista em Blobs já tem leitura, escrita, cache, gate e interface de gestão. E
+  a coordenação é admin por variável de ambiente, NÃO estando na lista — migrar
+  para Postgres obriga a reproduzir essa regra num segundo sítio.
+  Duas fontes de verdade para "quem é admin" é exatamente o defeito que o
+  MC88.43 gastou um MC inteiro a eliminar noutro domínio. Se um dia a lista
+  crescer ao ponto de precisar de consulta, migra-se — com a regra da
+  coordenação junto. Hoje tem zero entradas persistidas.
+
+================================================================================
+ACHADOS COLATERAIS (não pedidos, encontrados no varrimento)
+================================================================================
+1. `ADMIN_WALLETS` existe no ambiente de produção e **não é lida por ficheiro
+   nenhum** (varrimento a src/, netlify/functions/ e scripts/). Quem a definiu
+   pode julgar que está a conceder acesso de administrador. Não está.
+
+2. BOA NOTÍCIA: `COORDENACAO_ADDRESS` está definida e a EOA comprometida do
+   MC59.11 **já não é admin** — verificado em produção
+   (`0xDa3a83…e84E` → isAdmin:false; `0xFea436…1E67` → isAdmin:true).
+   O alarme do MC87 (P1-4) está resolvido; registos anteriores davam-no como
+   pendente.
+
+3. `_lib/rbac.mjs` ainda lê o Blob `cotas` diretamente para decidir o papel
+   "cliente", quando as cotas vivem em Supabase desde o MC36/37. É o mesmo
+   defeito que o MC88.20 corrigiu no `detectarPerfil` do GUTO, num sítio que
+   ficou para trás. Hoje não causa dano visível — os dois gates que dependiam
+   disso foram removidos (MC49.3 / MC49.3.1) e sobra o campo informativo `role`
+   do `admin-list`. Fica registado antes que alguém volte a usar
+   `requireRole("cliente")` e ele falhe em silêncio.
+
+4. `OPENAI_API_KEY` não está no ambiente de produção — é o que falta para a
+   reindexação do RAG pendente do MC88.44. Ou se acrescenta, ou o script corre
+   localmente com a chave no ambiente da sessão.
+
+================================================================================
+PENDÊNCIAS QUE ATRAVESSAM ESTA SÉRIE
+================================================================================
+• FASE 0 (operador) — sem ela, o MC90 valida-se com a coordenação, não com o ADM.
+• Reindexação do RAG (MC88.44) — continua por fazer.
+• Retenção LGPD para `admin_logs` — pré-requisito do MC92, não passo final.
+• FCM — sem isto não há push.
+
+================================================================================
+PRÓXIMO PASSO
+================================================================================
+O plano precisa da sua aprovação antes de qualquer código (Pilar 1).
+Se aprovar, o MC90 arranca pela Fase 1 — e a Fase 0 pode ser feita já, em
+paralelo, porque não depende de mim.
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================
