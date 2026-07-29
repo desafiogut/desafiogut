@@ -1,0 +1,75 @@
+================================================================================
+MC88.44 — SEGMENTO 1 · DEFINIÇÃO DO ENDEREÇO DE SUPORTE
+================================================================================
+Data....: 2026-07-29
+Decisor.: operador
+Base....: MC88.44-EMAIL-DIAGNOSTICO.txt §5
+
+================================================================================
+DECISÃO 1 — O ENDEREÇO
+================================================================================
+    desafiogut01@gmail.com
+
+Escolhida a Opção A. Razão registada: é o endereço que a app INTEIRA já usa e
+que já recebe hoje —
+
+    Layout.jsx:35              rodapé "Suporte"
+    ExcluirConta.jsx:106-107   pedido de exclusão de conta
+    Seguranca.jsx:28           "Contato DPO"
+    TermosConsentimento.jsx    :127 (PIX) e :176 ("Dúvidas")
+
+Alinhar o regulamento com ele não é só corrigir o G1: fecha também a queixa das
+"três vozes" do MC88.41, porque o produto passa a ter UM canal de suporte.
+
+REJEITADA (por agora) — registar `desafiogut.com.br` e usar `suporte@`:
+    é a opção certa a prazo, mas é compra de domínio + DNS + caixa de correio.
+    Não é trabalho de código, tem custo (R2) e, enquanto não estivesse a
+    RECEBER, deixaria o utilizador exatamente onde está hoje: a escrever para o
+    vazio. Fica como pendência de negócio, não deste MC.
+
+================================================================================
+DECISÃO 2 — COMO A CORREÇÃO CHEGA AO GUTO
+================================================================================
+    As duas rotas, em conjunto.
+
+ROTA B (agente, agora) — intent determinístico `suporte` no roteador do
+    chatbot.mjs. Corre ANTES do pipeline RAG e devolve o endereço correto sem
+    passar pelo modelo. Fica correto no deploy seguinte: sem chaves, sem custo,
+    sem depender da reindexação.
+    Limite honesto: só apanha as perguntas que casam o padrão.
+
+ROTA A (operador, quando puder) — reconstruir o índice de embeddings:
+
+    node scripts/build-rag-index.mjs --yes
+
+    com OPENAI_API_KEY, NETLIFY_AUTH_TOKEN e NETLIFY_SITE_ID no ambiente.
+    Custo declarado no cabeçalho do script: ~US$ 0,001 por execução.
+    É isto que cobre TODAS as formulações — reembolso, LGPD, "paguei o PIX e não
+    recebi as senhas" — porque corrige a própria fonte que o modelo cita.
+
+    ⚠️ Sem este passo, o G1 fica só MITIGADO, não fechado.
+
+================================================================================
+ÂMBITO DA SUBSTITUIÇÃO (S2)
+================================================================================
+MUDA:
+    docs/chatbot/regulamento.md:147,188,218    ← fonte do RAG
+    docs/incident-response.md:102,121          ← doc interno de incidente
+    docs/disaster-recovery.md:75,154           ← doc interno de recuperação
+    docs/ia-cognitiva.md:118                   ← descreve a frase do assistente
+
+NÃO MUDA (verificado no S0 §3C):
+    _lib/pix-provider/mercadopago.mjs:38   `pagador@desafiogut.com.br` — e-mail
+        do PAGADOR enviado ao Mercado Pago. Placeholder aceite pela API; mexer
+        altera fluxo de pagamento sem necessidade nenhuma (R1/R2).
+    scripts/test-mp-token.ps1:37,53        o mesmo placeholder, em teste.
+    docs/cloudflare-waf-setup.md · cloudflare-waf-execucao.md · mfa-setup.md ·
+    backup-blobs.md · configuracao-admin-token.md · disaster-recovery.md:22,95
+        `app.desafiogut.com.br` é o HOST pretendido do site num plano de
+        infraestrutura. Não é canal de contacto e não engana ninguém.
+    Relatórios históricos (MC69.5, MC88.41, MC88.43): são registo do que foi
+        observado na altura. Reescrevê-los apagaria a história.
+
+================================================================================
+FIM DO SEGMENTO 1
+================================================================================
