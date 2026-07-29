@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useRecursosApp } from "../hooks/useRecursosApp.js";
 import { sanitizeLance, sanitizeEdicaoId } from "../utils/sanitize.js";
+// MC88.43 — SÓ para o TEXTO do aviso. Quem bloqueia o lance continua a ser o
+// `encerrado` (prazo on-chain) e o contrato — ver `disabled` e `{!encerrado &&`
+// mais abaixo, intocados. A fonte única não manda em autorização, só em palavras.
+import { getEstadoEdicao } from "../utils/edicao.js";
 import { verificarRateLimit, registrarLance } from "../utils/rateLimiter.js";
 import {
   getSignerFromProvider,
@@ -435,13 +439,21 @@ export default function CardLance({
         <div style={estilos.boxErro}>⚠️ {erro}</div>
       )}
 
+      {/* O bloqueio continua a ser do `encerrado`; o que muda é a PALAVRA. Dizer
+          "Edição encerrada" enquanto o resto do app diz "EM BREVE" era o B3 a
+          repetir-se dentro do formulário de lance. */}
       {encerrado && (
         <div style={{
           background: "#1f0a0a", border: "1px solid #ef4444",
           borderRadius: "8px", padding: "0.85rem", textAlign: "center",
           color: "#ef4444", fontWeight: "700", fontSize: "0.9rem",
         }}>
-          🔴 Edição encerrada — novos lances bloqueados
+          {(() => {
+            const est = getEstadoEdicao({ id: idEdicao }, { encerrado });
+            return est.encerrada
+              ? `${est.icone} Edição encerrada — novos lances bloqueados`
+              : `${est.icone} ${est.rotuloLongo} — lances ainda não abertos`;
+          })()}
         </div>
       )}
 

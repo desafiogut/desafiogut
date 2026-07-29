@@ -114,14 +114,31 @@ function derivar(edicao, opts) {
 
   // 4. FONTE B — derivação local do termino_em.
   const fim = edicao?.termino_em ? Date.parse(edicao.termino_em) : NaN;
-  if (Number.isNaN(fim)) {
-    // Sem prazo utilizável. Se o backend disse "aberto", acreditamos nele;
-    // caso contrário assumimos ignorância — nunca "encerrada".
-    return status === "aberto" ? ESTADO_EDICAO.ATIVA : ESTADO_EDICAO.INDISPONIVEL;
+  if (!Number.isNaN(fim)) {
+    const agora = Number.isFinite(opts.agora) ? opts.agora : Date.now();
+    return fim <= agora ? ESTADO_EDICAO.ENCERRADA : ESTADO_EDICAO.ATIVA;
   }
 
-  const agora = Number.isFinite(opts.agora) ? opts.agora : Date.now();
-  return fim <= agora ? ESTADO_EDICAO.ENCERRADA : ESTADO_EDICAO.ATIVA;
+  // Sem prazo utilizável. Antes de assumir ignorância, ouvimos quem já se
+  // pronunciou: a FONTE A com um `false` explícito é o cronómetro do AppContext
+  // a dizer "ainda a correr" — é o caso da R-1, cujo prazo vive no
+  // prazoTimestamp e NÃO no termino_em. Sem isso, o Dashboard e a TabelaLances
+  // cairiam em "indisponível" no dia em que a trava for desligada.
+  if (opts.encerrado === false)  return ESTADO_EDICAO.ATIVA;
+  if (status === "aberto")       return ESTADO_EDICAO.ATIVA;
+
+  // Ninguém sabe. "Não sei" NUNCA se disfarça de "acabou" — era o buraco da
+  // FONTE B, que devolvia 0 (= encerrada) para uma edição sem termino_em.
+  return ESTADO_EDICAO.INDISPONIVEL;
+}
+
+/**
+ * Rótulo travado do cronómetro, ou null quando há contagem viva a mostrar.
+ * Para ecrãs que desenham cronómetros SEM ter um objeto de edição à mão
+ * (ex.: os slots da Vitrine, ligados a tiers e não a edições).
+ */
+export function timerTravado() {
+  return EM_BREVE_MODE ? EM_BREVE_LABEL : null;
 }
 
 function montar(estado) {

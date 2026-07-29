@@ -14,7 +14,10 @@ import { useAppTimer } from "../context/AppContext.jsx";
 import GutoSpritePlayer from "./GutoSpritePlayer.jsx";
 import EdicaoBanner from "./EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
-import { EM_BREVE_MODE, EM_BREVE_LABEL } from "../lib/leilaoLock.js";
+// MC88.43 — o estado vem TODO daqui. Antes este cartão misturava três leituras
+// (o `encerrada` do termino_em, a trava EM_BREVE_MODE e um título fixo), o que
+// produzia "Encerrada" + "EM BREVE" + "Aguardando abertura" no mesmo cartão (B3).
+import { getEstadoEdicao } from "../utils/edicao.js";
 
 const COR = {
   gold: "#f5a623", text: "#e8f0fe", muted: "#6b7db8",
@@ -53,7 +56,10 @@ export default function EdicaoCard({ edicao, isMobile, cardCls = "p-4", cardTitu
   const { edicoesTick, timeLeftEdicaoSegundos } = useAppTimer();
 
   const restante = timeLeftEdicaoSegundos(edicao); // recalculado a cada edicoesTick
-  const encerrada = restante <= 0;
+  // MC88.43 — UMA pergunta, UMA resposta. `encerrada` deixou de ser derivado
+  // aqui: quem decide é a fonte única, que também escolhe cronómetro e textos.
+  const est = getEstadoEdicao(edicao);
+  const encerrada = est.encerrada;
   const total = TOTAL_POR_TIPO[edicao.tipo] || 1800;
   void edicoesTick; // consumido só para forçar o re-render por tick (timer).
 
@@ -88,7 +94,7 @@ export default function EdicaoCard({ edicao, isMobile, cardCls = "p-4", cardTitu
             {edicao.produto ? edicao.produto : "Prêmio a anunciar"}
           </div>
           <div style={{ fontSize: "0.68rem", color: encerrada ? "#fca5a5" : COR.muted, lineHeight: 1.2 }}>
-            {encerrada ? "Encerrada" : "Em andamento"}
+            {est.rotulo}
           </div>
         </div>
       </div>
@@ -99,15 +105,17 @@ export default function EdicaoCard({ edicao, isMobile, cardCls = "p-4", cardTitu
       }}>
         <GutoSpritePlayer variant="inline" size={isMobile ? 52 : 60} mood={encerrada ? "celebrating" : undefined} />
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem" }}>
+          {/* est.timer === null significa "desenha a contagem viva"; qualquer
+              outro valor é o rótulo travado que a fonte única mandou exibir. */}
           <div style={{
-            fontSize: EM_BREVE_MODE ? (isMobile ? "1.35rem" : "1.25rem") : (isMobile ? "2.1rem" : "1.95rem"),
+            fontSize: est.timer ? (isMobile ? "1.35rem" : "1.25rem") : (isMobile ? "2.1rem" : "1.95rem"),
             fontWeight: "900",
-            fontFamily: EM_BREVE_MODE ? "'Orbitron', sans-serif" : "'JetBrains Mono', monospace",
-            color: EM_BREVE_MODE ? "#ff6b35" : (encerrada ? COR.danger : timerColor(restante, total)),
-            letterSpacing: EM_BREVE_MODE ? "0.1em" : "0.02em", lineHeight: 1, transition: "color 0.6s ease",
-          }}>{EM_BREVE_MODE ? EM_BREVE_LABEL : formatarTempoEdicao(restante, edicao.tipo)}</div>
+            fontFamily: est.timer ? "'Orbitron', sans-serif" : "'JetBrains Mono', monospace",
+            color: est.timer ? est.cor : (encerrada ? COR.danger : timerColor(restante, total)),
+            letterSpacing: est.timer ? "0.1em" : "0.02em", lineHeight: 1, transition: "color 0.6s ease",
+          }}>{est.timer ?? formatarTempoEdicao(restante, edicao.tipo)}</div>
           <div style={{ fontSize: "0.66rem", color: encerrada ? "#fca5a5" : COR.text, marginTop: "0.3rem", textAlign: "center" }}>
-            {EM_BREVE_MODE ? "Aguardando abertura" : (encerrada ? "Encerrada" : "Em andamento — lance já!")}
+            {est.rotuloLongo}
           </div>
         </div>
       </div>

@@ -16,7 +16,9 @@ import DOMPurify from "dompurify";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import { GlassCard } from "@/components/ui";
-import { EM_BREVE_MODE, EM_BREVE_LABEL } from "../lib/leilaoLock.js";
+// MC88.43 — achado do S0 (não estava no MC88.41): esta página anunciava
+// "● Ao vivo agora" no mesmo cartão em que o cronómetro dizia "EM BREVE".
+import { getEstadoEdicao, timerTravado } from "../utils/edicao.js";
 import { imagemProdutoSrc } from "../lib/imagem.js";
 import { tiersAgoraVisiveis, tierAtivoAgora } from "../data/programacao-junho-2026.js";
 import { apiGet } from "../lib/api.js";
@@ -147,8 +149,10 @@ const SLOTS = [
 ];
 
 function formatarTimer(segundosRestantes) {
-  // MC67 (item 9) — cronômetros travados globalmente enquanto EM_BREVE_MODE.
-  if (EM_BREVE_MODE) return EM_BREVE_LABEL;
+  // MC67 (item 9) → MC88.43: a trava deixou de ser lida aqui; quem a aplica é a
+  // fonte única. `timer` não-nulo = rótulo travado; nulo = contagem viva.
+  const travado = timerTravado();
+  if (travado) return travado;
   if (!Number.isFinite(segundosRestantes) || segundosRestantes <= 0) return null;
   const d = Math.floor(segundosRestantes / 86400);
   const h = Math.floor((segundosRestantes % 86400) / 3600);
@@ -223,8 +227,8 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
           )}
           {timer?.display && (
             <span
-              aria-label={timer.display === EM_BREVE_LABEL ? "Em breve" : `Tempo restante: ${timer.display}`}
-              title={timer.display === EM_BREVE_LABEL ? "Leilão em breve" : "Tempo restante do leilão"}
+              aria-label={timer.display === timerTravado() ? "Em breve" : `Tempo restante: ${timer.display}`}
+              title={timer.display === timerTravado() ? "Leilão em breve" : "Tempo restante do leilão"}
               style={{
                 fontSize: "0.74rem", fontWeight: 900,
                 fontFamily: "'JetBrains Mono', monospace",
@@ -444,6 +448,13 @@ function VitrineDetalhe({ slot, isMobile, corporativo }) {
 function statusDoSlot(slotId, visibilidade, tz) {
   if (!visibilidade.tiers.includes(slotId)) {
     return { texto: "Oculto · regra §8", cor: "#6b7280", ariaLabel: "Tier oculto pela regra de domingo" };
+  }
+  // MC88.43 — a grade horária diz que o slot "está ativo agora", mas quem manda
+  // sobre o que o utilizador LÊ é a fonte única. Anunciar "● Ao vivo agora" ao
+  // lado de um cronómetro travado em "EM BREVE" é a contradição do B3 noutro ecrã.
+  const est = getEstadoEdicao(null);
+  if (!est.ativa && !est.encerrada) {
+    return { texto: est.rotulo, cor: est.cor, ariaLabel: est.rotuloLongo };
   }
   const ativo = tierAtivoAgora(slotId, tz);
   if (ativo) {

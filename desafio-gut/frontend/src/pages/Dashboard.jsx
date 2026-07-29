@@ -11,7 +11,10 @@ import StatTile from "../components/StatTile.jsx";
 import EdicaoCard from "../components/EdicaoCard.jsx";
 import EdicaoBanner from "../components/EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
-import { EM_BREVE_MODE, EM_BREVE_LABEL } from "../lib/leilaoLock.js";
+// MC88.43 — fonte única do estado da edição. Antes o cronómetro obedecia à trava
+// EM_BREVE_MODE e o resto do card obedecia ao `encerrado`, e o título da secção
+// dizia "em Andamento" à mão — três vozes no mesmo ecrã (B3/B4).
+import { getEstadoEdicao } from "../utils/edicao.js";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -74,6 +77,11 @@ export default function Dashboard() {
     id: EDICAO_ATIVA,
     tipo: tipoLeilao === "flash" ? "relampago" : "programado",
   };
+
+  // MC88.43 — estado da R-1. `encerrado` (FONTE A: prazoTimestamp on-chain) é
+  // passado como veredito e a fonte única decide o que se mostra. O /mercado faz
+  // exatamente esta chamada com o mesmo `encerrado` — é isso que fecha o B4.
+  const estAtiva = getEstadoEdicao(edicaoAtiva, { encerrado });
 
   // MC88.40 — o estado "stale" deixou de ter sufixo textual. " (antigo)" era
   // jargão interno do MC88.34 exposto ao utilizador, e as alternativas textuais
@@ -278,28 +286,31 @@ export default function Dashboard() {
           }}>
             {/* MC22.1 SECÇÃO D — GUTO companion da Edição Ativa (celebra ao encerrar). */}
             {/* MC39.4.1 (#guto) — GUTO do "início" maior (era 64/76) p/ legibilidade. */}
-            <GutoSpritePlayer variant="inline" size={isMobile ? 88 : 104} mood={encerrado ? "celebrating" : undefined} />
+            {/* MC88.43 — o GUTO não celebra um encerramento que o ecrã não anuncia. */}
+            <GutoSpritePlayer variant="inline" size={isMobile ? 88 : 104} mood={estAtiva.encerrada ? "celebrating" : undefined} />
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem" }}>
               <div style={{
-                fontSize: EM_BREVE_MODE ? (isMobile ? "1.6rem" : "1.5rem") : (isMobile ? "2.5rem" : "2.25rem"),
+                fontSize: estAtiva.timer ? (isMobile ? "1.6rem" : "1.5rem") : (isMobile ? "2.5rem" : "2.25rem"),
                 fontWeight: "900",
-                fontFamily: EM_BREVE_MODE ? "'Orbitron', sans-serif" : "'JetBrains Mono', monospace",
-                color: EM_BREVE_MODE ? "#ff6b35" : (encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[tipoLeilao])),
-                letterSpacing: EM_BREVE_MODE ? "0.12em" : "0.02em",
+                fontFamily: estAtiva.timer ? "'Orbitron', sans-serif" : "'JetBrains Mono', monospace",
+                color: estAtiva.timer ? estAtiva.cor : (encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[tipoLeilao])),
+                letterSpacing: estAtiva.timer ? "0.12em" : "0.02em",
                 lineHeight: 1,
                 transition: "color 0.6s ease",
-              }}>{EM_BREVE_MODE ? EM_BREVE_LABEL : timerDisplay}</div>
+              }}>{estAtiva.timer ?? timerDisplay}</div>
               <div style={{
                 fontSize: "0.68rem", color: COR.muted,
                 textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: "700",
               }}>
-                {encerrado ? "ENCERRADO" : tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
+                {/* Encerrado deixa de aparecer aqui quando a fonte única diz outra
+                    coisa; o tipo de leilão (Relâmpago/Programado) é factual e fica. */}
+                {estAtiva.encerrada ? "ENCERRADO" : tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
               </div>
               <div style={{
-                fontSize: "0.78rem", color: encerrado ? "#fca5a5" : COR.text,
+                fontSize: "0.78rem", color: estAtiva.encerrada ? "#fca5a5" : COR.text,
                 marginTop: "0.4rem", textAlign: "center",
               }}>
-                {EM_BREVE_MODE ? "Aguardando abertura" : (encerrado ? "Aguardando nova rodada" : "Em andamento — lance já!")}
+                {estAtiva.encerrada ? "Aguardando nova rodada" : estAtiva.rotuloLongo}
               </div>
             </div>
           </div>
@@ -308,16 +319,16 @@ export default function Dashboard() {
             onClick={() => navigate("/mercado")}
             style={{
               padding: "0.7rem 1rem",
-              background: encerrado
+              background: estAtiva.encerrada
                 ? "rgba(245,166,35,0.18)"
                 : "linear-gradient(135deg,#f5a623,#e89400)",
               border: "none", borderRadius: "10px",
-              color: encerrado ? COR.gold : "#0a0f1a",
+              color: estAtiva.encerrada ? COR.gold : "#0a0f1a",
               fontWeight: "800", cursor: "pointer",
               fontSize: "0.88rem", width: "100%",
               fontFamily: "'Orbitron', sans-serif",
               letterSpacing: "0.04em",
-              boxShadow: encerrado ? "none" : "0 4px 18px rgba(245,166,35,0.40)",
+              boxShadow: estAtiva.encerrada ? "none" : "0 4px 18px rgba(245,166,35,0.40)",
             }}
           >
             ⚡ Ir para o Mercado de Lances
@@ -339,7 +350,8 @@ export default function Dashboard() {
                 R$ {(vencedor.valor / 100).toFixed(2)}
               </div>
               <div style={{ fontSize: "0.72rem", color: COR.muted }}>
-                {encerrado ? "🏆 Vencedor final" : "🔄 Liderando — pode ser superado"}
+                {/* MC88.43 — "Vencedor final" é um encerramento; segue a fonte única. */}
+                {estAtiva.encerrada ? "🏆 Vencedor final" : "🔄 Liderando — pode ser superado"}
               </div>
             </div>
           ) : (
@@ -358,7 +370,11 @@ export default function Dashboard() {
       {/* ── MC15.4 ITEM 7 — Outras edições com cronómetros independentes ── */}
       {edicoesExtra.length > 0 && (
         <section style={{ marginBottom: sectionGap }}>
-          <h3 style={{ ...cardTitulo, marginBottom: innerGap }}>🗓️ Outras Edições em Andamento</h3>
+          {/* MC88.43 — "em Andamento" era uma afirmação FIXA, escrita à mão, que
+              não perguntava a fonte nenhuma. Sobrepunha-se a três cartões que
+              diziam "Encerrada" (B3). O título passa a ser neutro: quem declara
+              o estado é cada cartão, e só a fonte única lho dita. */}
+          <h3 style={{ ...cardTitulo, marginBottom: innerGap }}>🗓️ Outras Edições</h3>
           <div style={{
             display: "grid",
             gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(240px, 1fr))",
