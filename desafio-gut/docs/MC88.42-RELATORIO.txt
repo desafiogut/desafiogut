@@ -1,0 +1,157 @@
+================================================================================
+MC88.42 — O LOJISTA ENTRA DIRETO NO PAINEL DELE
+================================================================================
+Data......: 2026-07-28
+Branch....: feat/mc88.29-fila-tarefas · fee0a7a (S0) · 1031643 (S1+S2)
+Aparelho..: fiem7xlvcufe855h · Xiaomi pissarropro (21091116UG) · Android 36
+Sessão....: CORPORATIVA real — 0x6ac980…674d, empresa "DesafioGUT"
+            (o operador iniciou sessão a pedido; sem isso não havia medição)
+Build.....: `npm run build:apk` (R10) + gradlew assembleDebug (JBR 21)
+Suite.....: 249/249 antes e depois
+
+================================================================================
+RESULTADO
+================================================================================
+  MÉTRICA                          ANTES                    DEPOIS
+  ──────────────────────────────────────────────────────────────────────
+  Ecrã COMUM visível ao lojista    9012 / 3994 / 3873 ms    NUNCA  (3/3)
+                                   (mediana 3994)
+  Painel do lojista aparece aos    12226 / 6015 / 6124 ms   3125 / 3197 / 3209
+                                   (mediana 6124)           (mediana 3197)
+
+  O ecrã errado foi ELIMINADO, e o painel chega ~2,9 s mais cedo.
+
+================================================================================
+CAUSA RAIZ — O MESMO DEFEITO PELA QUARTA VEZ
+================================================================================
+    AppContext.jsx:398
+    const tipoUsuario = cotaCorporativa?.tipo === "corporativo" ? "corporativo" : "comum";
+
+Três situações espremidas em duas: "sei que é corporativo", "sei que é comum" e
+"AINDA NÃO SEI" — esta última devolvia "comum", que é uma afirmação falsa. No
+arranque `cotaCorporativa` é null, portanto o lojista era tratado como comum até
+as cotas responderem.
+
+    MC88.37  "a carregar"      confundido com "não há nada"  → ecrã em branco
+    MC88.38  "a restaurar"     confundido com "deslogado"    → "Faça login"
+    MC88.39  "sem token ainda" confundido com "logout"       → saldo apagado
+    MC88.42  "ainda não sei"   confundido com "é comum"      → página errada
+
+PORQUE IMPORTA MAIS DO QUE PARECE: lido no regulamento §3/§4.1, o corporativo é
+um LOJISTA ANUNCIANTE que pagou entre R$ 2.640 e R$ 18.000 por uma cota. O que
+lhe aparecia durante ~4 s era o dashboard de LEILÃO — KPIs de lances, saldo de
+senhas, "Ir para o Mercado". Outro produto. As rotas comuns já constam da lista
+`rotasProibidas` do próprio redirect (AppContext:418); o código só chegava tarde
+a essa conclusão.
+
+================================================================================
+A CORREÇÃO — OPÇÃO C, ESCOLHIDA PELO OPERADOR
+================================================================================
+Das três opções que apresentei, o operador escolheu a mais conservadora:
+
+    o palpite só vale se a última sessão CONFIRMADA neste MESMO endereço tiver
+    sido corporativa.
+
+`tipoConfirmado` é gravado no cache do MC88.34 — o mesmo que `lerSaldoCache()`
+valida de forma SÍNCRONA contra `privy:connections` antes do primeiro paint. Um
+utilizador comum nunca tem esse campo, portanto NUNCA vê o painel do lojista,
+nem por um instante, nem com o cache manipulado.
+
+E a separação que estabeleci no MC88.38 mantém-se: `tipoProvavel` ENCAMINHA;
+`tipoUsuario` (confirmado) é que EXPULSA.
+
+Custo assumido: o primeiro login de sempre de um lojista continua a passar pelo
+Dashboard comum. Aí não há nada em cache, e adivinhar seria inventar.
+
+================================================================================
+⚠️ DOIS DEFEITOS QUE EU PRÓPRIO INTRODUZI — E COMO FORAM APANHADOS
+================================================================================
+
+1. CICLO DE REDIRECT (apanhado pela minha própria medição)
+   Ao encaminhar cedo, o lojista chegava ao `CorporativoRoute`, que fazia
+   `if (!isConnected) return <Navigate to="/" />`. Mas durante o restauro do
+   Privy `isConnected` É FALSE. Resultado medido:
+
+        1974 ms  /corporativo   vazio
+        3241 ms  /              vazio
+        3644 ms  /corporativo   vazio
+        3932 ms  /              vazio
+        …sete voltas até aos 5064 ms, sempre em branco
+
+   É EXATAMENTE a armadilha que eu documentei no MC88.38 — `!isConnected` não
+   significa "não autenticado" — e caí nela na mesma. Corrigido com
+   `if (pareceAutenticado) return children`.
+
+2. PISCAR (apanhado pelo OPERADOR, não por mim)
+   Depois da primeira correção o operador disse: "o ícone do painel está a
+   piscar". A minha medição confirmou: a rota ainda saltava /corporativo ↔ /
+   entre os 3,4 s e os 5,4 s.
+
+   Causa: o efeito que busca as cotas (AppContext:338) tem `user.google.email`
+   e `user.apple.email` nas dependências, e esses campos só resolvem A MEIO do
+   restauro. O efeito CORRE VÁRIAS VEZES, e entre corridas `tipoCarregando`
+   volta a false com `cotaCorporativa` ainda null → `tipoUsuario` cai para
+   "comum" → a guarda expulsava.
+
+   `cotaCorporativa == null` é ambíguo: significa "ainda não encontrei" E "não é
+   lojista". Corrigido exigindo uma RESPOSTA POSITIVA para expulsar — só uma
+   cota devolvida que não seja corporativa manda alguém embora.
+
+   É a MESMA doença da causa raiz, um nível abaixo. Encontrei-a a corrigir-se a
+   si própria.
+
+================================================================================
+UMA TENTATIVA QUE NÃO RESULTOU E FOI REVERTIDA
+================================================================================
+Sobra ~1 s entre chegar a /corporativo (~2,1 s) e o painel aparecer (~3,2 s).
+Supus que fosse o download do chunk lazy e pré-carreguei-o.
+
+MEDIDO: 3247 / 3128 ms com o pré-carregamento, contra 3157 / 3515 sem ele.
+Dentro do ruído. E o chunk tem 17,5 KB — nunca foi o gargalo.
+
+Revertido. Não deixo no código complexidade que não faz nada, e digo-o em vez de
+a apresentar como parte da correção.
+
+O que sobra desse ~1 s é o painel a esperar pelos seus próprios dados: entre os
+2,1 s e os 3,2 s o ecrã tem 111 caracteres (só a navegação e o rodapé). É o
+mesmo padrão de "não renderizar nada enquanto carrega" que este MC combateu,
+agora dentro do `CorporativoDashboard`. Fica como candidato a MC próprio.
+
+================================================================================
+O QUE NÃO FOI VERIFICADO
+================================================================================
+⚠️ A NÃO-REGRESSÃO DO UTILIZADOR COMUM NÃO FOI MEDIDA NO APARELHO. O aparelho
+está com a sessão corporativa, e voltar a testar o comum exigiria novo login do
+operador.
+
+Por construção o caminho comum não muda:
+  • `tipoOtimista` é null sem `tipoConfirmado` em cache → `tipoProvavel` é
+    igual a `tipoUsuario` → `DashboardOuCorporativo` devolve `<Dashboard />`
+    exatamente como antes;
+  • o cache é validado por endereço, portanto a entrada corporativa que existe
+    hoje no aparelho é rejeitada assim que a sessão for outra;
+  • as alterações ao `CorporativoRoute` só afetam rotas /corporativo*, e para
+    quem não tem palpite corporativo o comportamento é o de antes.
+
+É um argumento sólido, mas é um argumento — não uma medição. Se quiser fechar
+isto, basta voltar a entrar com a conta comum e eu meço três arranques.
+
+================================================================================
+PENDÊNCIAS
+================================================================================
+ 1. Medir a não-regressão do utilizador comum (acima).
+ 2. O `CorporativoDashboard` não renderiza nada enquanto espera os dados
+    (~1,1 s de casca vazia). Mesmo padrão, outro sítio.
+ 3. O efeito das cotas correr várias vezes por causa das dependências de e-mail
+    continua a ser desperdício — este MC tornou-o inofensivo, não o eliminou.
+ 4. Duplicação de registo: a mesma empresa tem duas cotas, uma por endereço e
+    outra por `cnpj:2304006`, com o mesmo e-mail.
+
+================================================================================
+EVIDÊNCIAS
+================================================================================
+  docs/MC88.42-DIAGNOSTICO.txt   diagnóstico, cronologia e as 3 opções
+  Commits: fee0a7a (S0) · 1031643 (S1+S2)
+  Instrumentação (scratchpad): corp.mjs — amostra rota, h1 e marcadores
+    exclusivos de cada ecrã a cada 60 ms desde o `am start`
+================================================================================

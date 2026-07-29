@@ -4828,3 +4828,61 @@ operador confirmou e o regulamento §172 descreve-o assim. É expectativa, não 
 MC88.42 reproduzir/corrigir B1 · MC88.43 uma só verdade para o estado da edição ·
 MC88.44 suporte que responde (G1) · MC88.45 dizer porquê (B5+B6) ·
 MC88.46 limpeza de jargão.
+
+---
+
+## MC88.42 — o lojista entra direto no painel dele
+
+**Data:** 2026-07-28 · **Commits:** `fee0a7a` (S0) · `1031643` (S1+S2)
+**Relatório:** `Desktop\MC88.42-RELATORIO.txt` + `desafio-gut/docs/`
+Medido com a **sessão corporativa real** (0x6ac980…674d), que o operador iniciou
+a pedido. Suite 249/249.
+
+```
+                              ANTES                    DEPOIS
+ecrã COMUM visível ao lojista 9012/3994/3873 ms        NUNCA (3/3)
+painel do lojista aparece aos 12226/6015/6124 ms       3125/3197/3209 ms
+```
+
+### O mesmo defeito pela QUARTA vez
+`AppContext:398` — `cotaCorporativa?.tipo === "corporativo" ? … : "comum"`
+espreme três situações em duas: **"ainda não sei" devolvia "comum"**, que é
+falso. No arranque `cotaCorporativa` é null, logo o lojista era tratado como
+comum até as cotas responderem.
+```
+MC88.37  "a carregar"      -> "não há nada"   = ecrã em branco
+MC88.38  "a restaurar"     -> "deslogado"     = "Faça login"
+MC88.39  "sem token ainda" -> "logout"        = saldo apagado
+MC88.42  "ainda não sei"   -> "é comum"       = página errada
+```
+**Porque importa:** o corporativo é um **lojista anunciante** (regulamento §3)
+que pagou R$ 2.640–18.000 por uma cota, e via ~4 s do dashboard de *leilão*.
+
+### Correção — opção C, escolhida pelo operador
+O palpite só vale se a **última sessão CONFIRMADA neste mesmo endereço** tiver
+sido corporativa (`tipoConfirmado` no cache do MC88.34, validado por endereço
+contra `privy:connections`). Um comum nunca tem esse campo → nunca vê o painel.
+Mantém-se a regra do MC88.38: **`tipoProvavel` encaminha, `tipoUsuario` expulsa.**
+
+### ⚠️ Dois defeitos que eu próprio introduzi
+1. **Ciclo de redirect** — `if (!isConnected) return <Navigate to="/">`, mas
+   `isConnected` é false durante o restauro. Medi **sete voltas** `/` ↔
+   `/corporativo` entre 1974 e 5064 ms, em branco. É a armadilha que eu
+   documentei no MC88.38 e na qual caí na mesma.
+2. **Piscar** — apanhado pelo OPERADOR ("o ícone do painel está a piscar"). O
+   efeito das cotas tem `user.google.email` nas dependências e **corre várias
+   vezes**; entre corridas `cotaCorporativa` volta a null e a guarda expulsava.
+   `cotaCorporativa == null` é ambíguo ("ainda não encontrei" vs "não é
+   lojista"). Passou a exigir **resposta positiva** para expulsar.
+
+### Uma tentativa revertida
+Pré-carreguei o chunk do painel supondo que o ~1 s residual fosse o download.
+Medido 3247/3128 contra 3157/3515 — ruído. O chunk tem **17,5 KB**; nunca foi o
+gargalo. **Revertido.** O que sobra é o `CorporativoDashboard` a não renderizar
+nada enquanto espera dados (111 caracteres de casca durante ~1,1 s) — mesmo
+padrão, outro sítio.
+
+### ⚠️ Por verificar
+**A não-regressão do utilizador comum NÃO foi medida no aparelho** (está com a
+sessão corporativa). Por construção não muda — sem `tipoConfirmado` em cache,
+`tipoProvavel === tipoUsuario` — mas é argumento, não medição.
