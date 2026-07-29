@@ -4760,3 +4760,71 @@ não foi tocada; muda só como "stale" é APRESENTADO.
 Opacidade não chega a tecnologias de apoio — para quem usa leitor, cache e
 confirmado ficaram indistinguíveis. O sufixo textual, apesar de mau, era lido.
 Se acessibilidade for requisito, falta `aria-busy`/`aria-label`.
+
+---
+
+## MC88.41 — QA completo da experiência do utilizador comum
+
+**Data:** 2026-07-28 · **Zero código alterado.** APK MC88.40 (md5 48479522…).
+**Relatório:** `Desktop\MC88.41-RELATORIO.txt` + `desafio-gut/docs/`
+(FLUXOS · BUGS · GUTO-ESFORCO)
+
+**Método:** navegação REAL no aparelho via túnel adb + CDP — leitura do DOM, da
+consola e de capturas a cada passo. 20 perguntas ao GUTO + 2 cenários de rutura.
+
+**Veredito:** o essencial está sólido (saldos coerentes entre os 4 ecrãs e com o
+contrato; arranque limpo após os MC88.37–40). O que fragiliza é o produto falar
+em vozes diferentes sobre a mesma coisa.
+
+### 🔴 Dois achados críticos
+**B1 — a navegação CONGELA após sessão prolongada.** Observado ao vivo: clicar
+"Início" muda a URL para `/` e o ecrã continua na Carteira; idem para
+`/mercado`; 4 s depois, igual. `am force-stop` + relançar resolve na hora.
+Correlação: 5 `unhandledrejection` na sessão morta, **0** numa sessão nova.
+⚠️ **Gatilho NÃO identificado** — é isso que o torna perigoso.
+
+**G1 — `suporte@desafiogut.com.br` NÃO EXISTE** (NXDOMAIN, verificado por DNS,
+sem NS nem MX). O GUTO dá-o em 4 respostas, incluindo "não recebi as senhas" e
+uma acusação de roubo. **Não é alucinação:** está em `regulamento.md:147,188,218`,
+que alimenta o RAG. A app usa `desafiogut01@gmail.com` no rodapé e
+`desafiogut@gmail.com` nos pagamentos — **três endereços, e o único que o
+assistente oferece é o que devolve tudo.** O MC69.5 já registara isto em 10/07.
+
+### ✅ O GUTO não partiu
+20 perguntas hostis: injeção de prompt, XSS, SQL, 5880 chars, unicode/RTL,
+emoji, vazio, inglês, pedido de dados de terceiros, de segredos, de garantia de
+prémio, CPF+cartão colados. **Zero erros de consola, zero fugas, app sempre viva.**
+Recusou tudo o que devia. Corrigiu-me numa pergunta capciosa citando o Artigo
+VIII. As regras que deu (R$ 0,01 / R$ 9.999,99 / 5 por min / 3 s) batem À LETRA
+com o regulamento. Spam de 6 envios → **1** resposta (botão desativa no primeiro).
+
+### 🟡 Incoerências de estado
+- **B3:** o mesmo cartão diz `Encerrada` + `EM BREVE` + `Aguardando abertura`,
+  sob o título "Outras Edições **em Andamento**". Três cartões iguais.
+- **B4:** a edição R-1 é `🟢 Ativo` no /mercado e `Aguardando abertura` no
+  Dashboard, no mesmo instante.
+- **B5:** três botões inativos sem dizer porquê; e o /mercado abre no modo
+  **Relâmpago** (exige R$), quando as 12 senhas só servem em **Programado** —
+  o utilizador chega a um ecrã que não pode usar.
+- **B6:** `Sair` (terminar sessão) dentro do cartão de lance, a ~190 px do campo.
+
+### 🟢 Jargão que sobreviveu ao MC88.40
+`MC10 · GROWTH` (Carteira) · `fontes: rag:2, rag:4, rag:0` (chat) ·
+`provider: mercadopago` (modal PIX). E `Converter Ficha` vs `Trocar R$ → Senha`
+para a mesma ação ("ficha" é terminologia anterior a "senha").
+
+### ⚠️ Dois erros meus, corrigidos antes de entrarem no relatório
+1. Anotei que o prazo da edição tinha expirado — comparei com um carimbo **UTC**
+   da consola em vez da hora local. `adb shell date` = 20:44 -03, prazo 21:10.
+2. Concluí que o chatbot só tinha rate-limit para admin e que um comum podia
+   esgotar o LLM. Varrimento truncado — `chatbot.mjs:902` limita o caminho comum
+   antes da chamada ao modelo.
+
+### Nota sobre o PIX
+O modal pergunta "QUANTAS SENHAS?" e credita R$. **Não é defeito funcional** — o
+operador confirmou e o regulamento §172 descreve-o assim. É expectativa, não bug.
+
+### Próximos MCs sugeridos
+MC88.42 reproduzir/corrigir B1 · MC88.43 uma só verdade para o estado da edição ·
+MC88.44 suporte que responde (G1) · MC88.45 dizer porquê (B5+B6) ·
+MC88.46 limpeza de jargão.

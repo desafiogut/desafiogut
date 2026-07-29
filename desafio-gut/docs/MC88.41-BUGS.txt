@@ -1,0 +1,161 @@
+MC88.41 — BUGS, INCOERÊNCIAS E FRICÇÕES OBSERVADAS
+================================================================================
+Data: 2026-07-28 · APK MC88.40 (md5 4847952213518fc852e4374ea09dde6a)
+Aparelho: fiem7xlvcufe855h · Perfil: utilizador COMUM autenticado
+("Novo Pernambucano", 12 senhas, R$ 0,00, 0 lances)
+
+Tudo abaixo foi OBSERVADO na app a correr, salvo onde indicado.
+
+
+🔴 B1 — NAVEGAÇÃO CONGELA APÓS SESSÃO PROLONGADA
+--------------------------------------------------------------------------------
+Ao ligar-me à app (que estava aberta em `/carteira` desde antes deste MC), a
+navegação estava MORTA: a rota mudava, a vista não.
+
+    clicado "Início"   → URL passou a "/"          · ecrã continuou na Carteira
+    esperado 4 s       → URL "/"                   · ecrã continuou na Carteira
+    clicado "Lances"   → URL passou a "/mercado"   · ecrã continuou na Carteira
+
+O `<h1>` manteve-se "💰 Minha Carteira" nas três leituras. Não era lentidão:
+quatro segundos depois continuava igual.
+
+Após `am force-stop` + relançamento, a navegação passou a funcionar
+imediatamente e continuou a funcionar durante todo o resto do teste.
+
+INDÍCIO: a sessão congelada tinha 5 `[GUT-DEBUG] unhandledrejection` na consola.
+Uma sessão acabada de abrir tem ZERO (medido: 0 em 18 s de arranque limpo).
+
+⚠️ O GATILHO NÃO ESTÁ ESTABELECIDO. Sei que aconteceu, sei que reiniciar
+resolve, e sei que há correlação com rejeições acumuladas. Não sei o que a
+provoca — pode ser tempo em segundo plano, número de navegações, ou a rejeição
+não tratada de B2. Reproduzir isto de forma fiável é o primeiro passo do MC
+seguinte.
+
+IMPACTO: quem deixa a app aberta e volta mais tarde encontra os botões a não
+fazer nada. Sem mensagem de erro. A única saída é fechar e reabrir — e o
+utilizador comum não sabe disso.
+
+
+🟡 B2 — PEDIDO DO CHAT NÃO É CANCELADO AO SAIR DO ECRÃ
+--------------------------------------------------------------------------------
+Enviada uma pergunta ao GUTO e, 500 ms depois, navegado para /mercado:
+
+    [GUT-DEBUG] unhandledrejection Object
+    EXCEPCAO: Uncaught (in promise)
+
+A app RECUPERA (o /mercado renderizou inteiro; o chat reabriu com o histórico),
+por isso não é rutura. Mas o pedido em curso não é abortado nem apanhado, e é
+a origem mais plausível das rejeições que se acumulam em B1.
+
+
+🟡 B3 — QUATRO ESTADOS CONTRADITÓRIOS NO MESMO CARTÃO
+--------------------------------------------------------------------------------
+No Dashboard, sob o título "🗓️ Outras Edições em Andamento", cada um dos três
+cartões (RELAMP-1, RELAMP-2, RELAMP-3) mostra SIMULTANEAMENTE:
+
+    "Encerrada"            (terminou)
+    "EM BREVE"             (ainda não começou)
+    "Aguardando abertura"  (ainda não começou)
+    "⚡ Ir para o Mercado"  (convite a agir)
+
+E o título da secção diz "em Andamento" (a decorrer). São quatro leituras
+mutuamente exclusivas do mesmo objeto, repetidas em três cartões.
+
+
+🟡 B4 — A EDIÇÃO ATIVA DIZ COISAS DIFERENTES EM ECRÃS DIFERENTES
+--------------------------------------------------------------------------------
+Mesma edição R-1, no mesmo instante:
+
+    Dashboard  "🎯 Edição Ativa" · "EM BREVE" · "Aguardando abertura"
+    /mercado   "🟢 Ativo" · "Prazo: 28/07/2026, 21:10:30"
+
+O prazo é real e está no futuro (hora do aparelho no teste: 20:44 -03), logo a
+edição ESTÁ a decorrer. O Dashboard diz que ainda não abriu.
+
+⚠️ CORRIJO UMA LEITURA MINHA: cheguei a anotar que o prazo já tinha expirado.
+Estava errado — comparei com um carimbo UTC da consola em vez da hora local do
+aparelho. Verifiquei com `adb shell date` antes de escrever isto.
+
+
+🟡 B5 — BOTÕES INATIVOS SEM DIZER PORQUÊ
+--------------------------------------------------------------------------------
+Com R$ 0,00 e 12 senhas, o utilizador encontra:
+
+    /carteira   "🎫 Trocar R$ 2.00 → 1 Senha"   INATIVO
+                "⚡ Lance Relâmpago"             INATIVO
+    /mercado    "⚡ Lance Relâmpago"             INATIVO
+
+Nenhum deles explica que está inativo por falta de saldo em R$. O utilizador
+tem 12 senhas à vista e três botões mortos.
+
+AGRAVANTE: o /mercado abre no modo "⚡ Relâmpago", que exige R$ — quando as 12
+senhas do utilizador só servem para "🎫 Programado". O ecrã abre por omissão no
+modo que ele NÃO pode usar.
+
+
+🟡 B6 — "Sair" DENTRO DO CARTÃO DE LANCE
+--------------------------------------------------------------------------------
+Em /mercado, o botão "Sair" (terminar sessão) está dentro do mesmo cartão do
+formulário de lance, a ~190 px do campo de valor. Um toque impreciso durante um
+leilão de 30 minutos desliga a sessão.
+
+
+🟢 B7 — JARGÃO INTERNO EXPOSTO AO UTILIZADOR
+--------------------------------------------------------------------------------
+    /carteira   "MC10 · GROWTH"        ← etiqueta de Mega Comando interno
+    chat GUTO   "fontes: rag:2, rag:4, rag:0"
+    modal PIX   "provider: mercadopago"   (ComprarFichasModal.jsx:431)
+
+Mesma família do "(antigo)" que o MC88.40 removeu. O MC88.40 tratou os saldos;
+estes três ficaram.
+
+
+🟢 B8 — MODAL DE PIX PERGUNTA EM SENHAS E ENTREGA REAIS
+--------------------------------------------------------------------------------
+⚠️ NÃO É UM DEFEITO FUNCIONAL — o operador confirmou que o fluxo credita
+corretamente, e o regulamento (§172) descreve-o assim de propósito:
+"Depositar PIX → após confirmação use 'Trocar R$ → Senha'".
+
+É um problema de EXPECTATIVA. O modal chama-se "Depositar PIX", o subtítulo diz
+que dá "Saldo R$", mas o formulário pergunta "QUANTAS SENHAS?" e mostra
+"1 senha × R$ 2.00". `confirmar-pagamento.mjs:134` é explícito:
+"Modelo dual: PIX credita R$ (não senhas)".
+
+Quem escolhe "1 senha" e paga R$ 2,00 recebe R$ 2,00 e tem de fazer uma segunda
+ação para ter a senha. O passo existe, está documentado e funciona — só não
+está anunciado no sítio onde a expectativa é criada.
+
+
+🟢 B9 — ENDEREÇO DA CARTEIRA REPETIDO E POR EXTENSO
+--------------------------------------------------------------------------------
+/mercado mostra `0x5BAF...32B8` quatro vezes no mesmo ecrã.
+/carteira mostra o endereço COMPLETO, 42 caracteres, sem truncar.
+
+
+🟢 B10 — DOIS CONJUNTOS DE ATALHOS QUE NÃO COINCIDEM
+--------------------------------------------------------------------------------
+    Dashboard "🚀 Acesso Rápido"  Depositar PIX · Converter Ficha · Dar Lance ·
+                                  Vitrine 4 Slots · Meus Ativos ·
+                                  Seja Nosso Parceiro · Configurações
+    Sheet "Mais"                  Vitrine (4 Slots) · Programação · Meus Ativos ·
+                                  Seja nosso parceiro! · Configurações · Sair
+
+"Programação" só existe num; "Depositar PIX", "Converter Ficha" e "Dar Lance" só
+no outro. Quatro itens estão nos dois. E a mesma ação tem dois nomes:
+"Converter Ficha" (Dashboard) vs "Trocar R$ 2.00 → 1 Senha" (Carteira) —
+"ficha" é terminologia anterior a "senha".
+
+
+🟢 B11 — AVISO PERMANENTE DO SUPABASE NA CONSOLA
+--------------------------------------------------------------------------------
+    "Multiple GoTrueClient instances detected in the same browser context"
+Presente em todas as sessões. Não afeta o que se vê, mas indica mais do que um
+cliente Supabase inicializado.
+
+
+HIPÓTESE MINHA QUE FOI REFUTADA — NÃO REPETIR
+--------------------------------------------------------------------------------
+Suspeitei que os sete atalhos do "Acesso Rápido" não fossem elementos
+interativos (não apareciam na minha lista de clicáveis). VERIFIQUEI: são todos
+`<button>` reais, com 32 elementos focáveis por teclado na página. Não
+apareciam por causa do MEU recorte de viewport, não por defeito da app.
