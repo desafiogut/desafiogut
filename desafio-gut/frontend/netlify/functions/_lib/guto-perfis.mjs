@@ -11,6 +11,22 @@
 // traziam emojis ("Show!…🚀"); o critério acordado é "zero emojis em
 // corporativo/admin". Seguimos o critério (gate de validação), não o exemplo.
 
+// MC88.44 — ENDEREÇO DE SUPORTE, num sítio só.
+//
+// O G1 do MC88.41 nasceu de o endereço estar ESCRITO À MÃO em vários sítios: o
+// regulamento (que alimenta o índice RAG) dizia `suporte@desafiogut.com.br`, um
+// domínio que devolve NXDOMAIN, enquanto a app inteira já usava este. Quem tinha
+// dinheiro preso escrevia para o vazio.
+//
+// Decisão do operador no MC88.44: desafiogut01@gmail.com — o endereço que o
+// rodapé, a página de exclusão de conta, o contacto do DPO e os Termos já usam.
+//
+// ⚠️ Isto governa a resposta DETERMINÍSTICA do intent `suporte`. O que o LLM
+// cita quando cai no RAG vem do índice de embeddings (Blob store `rag`), que só
+// muda quando `scripts/build-rag-index.mjs` for corrido sobre o regulamento
+// corrigido. Ver desafio-gut/docs/MC88.44-EMAIL-DIAGNOSTICO.txt §1.
+export const EMAIL_SUPORTE = "desafiogut01@gmail.com";
+
 // ── System prompts por perfil (usados como `system` na chamada ao LLM) ───────
 
 const SYS_BASE = `Você é o GUTO, o mascote do DESAFIOGUT. Fala como um amigo — frases curtas,
@@ -289,6 +305,19 @@ export const respostasPorPerfil = {
     comum: (p) => `${g(p.respostaRAG, "")}`.trim(),
     corporativo: (p) => `${g(p.respostaRAG, "")}`.trim(),
     admin: (p) => `${g(p.respostaRAG, "")}`.trim(),
+  },
+
+  // MC88.44 — SUPORTE. Determinístico de propósito: o G1 do MC88.41 apanhou o
+  // GUTO a mandar utilizadores para `suporte@desafiogut.com.br`, um domínio que
+  // devolve NXDOMAIN — incluindo em "paguei o PIX e não recebi as senhas" e numa
+  // acusação de roubo. Quem tem dinheiro preso não pode depender do que o
+  // modelo escolher citar do índice: esta resposta não passa pelo LLM.
+  // O endereço vem de EMAIL_SUPORTE (uma constante, um sítio).
+  suporte: {
+    visitante: () => `Para falar com a coordenação: ${EMAIL_SUPORTE} 📧 Se for sobre pagamento ou senhas, diz o teu e-mail de registo e a data — ajuda a encontrar mais depressa.`,
+    comum: () => `Para falar com a coordenação: ${EMAIL_SUPORTE} 📧 Se for sobre pagamento ou senhas, junta o comprovativo do PIX e o endereço da tua carteira — resolve-se mais depressa assim. 🙂`,
+    corporativo: () => `Contacto da coordenação: ${EMAIL_SUPORTE} 📧 Para assuntos de cota, banner ou faturação, indica a empresa e a categoria da cota.`,
+    admin: () => `Canal de suporte ao utilizador: ${EMAIL_SUPORTE}. Emergência de segurança: canal #incidentes interno. LGPD/eliminação: por e-mail com prova de identidade.`,
   },
 
   saudacao: {

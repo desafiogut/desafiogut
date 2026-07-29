@@ -99,7 +99,7 @@ Volume estimado: <N> usuários.
 Medidas tomadas: <Lista>.
 Recomendação para você: <Reset senha | reativar MFA | etc>.
 Estamos comunicando esta situação à ANPD conforme LGPD Art. 48.
-Para dúvidas: suporte@desafiogut.com.br
+Para dúvidas: desafiogut01@gmail.com
 ```
 
 Não minimizar nem omitir. Transparência reduz dano reputacional.
@@ -118,7 +118,7 @@ Se o incident envolve infraestrutura terceira:
 | Canal | Uso | Quem |
 |---|---|---|
 | **Slack/Discord `#incidentes`** (criar se ausente) | Timeline operacional do incident | Time interno |
-| **E-mail `suporte@desafiogut.com.br`** | Comunicação com usuários (passiva) | Time interno → usuários |
+| **E-mail `desafiogut01@gmail.com`** | Comunicação com usuários (passiva) | Time interno → usuários |
 | **Twitter `@desafiogut`** | Banner público de incident em andamento | Marketing/CTO |
 | **Privy Dashboard** | Forçar logout de todos os usuários | CTO |
 | **Cloudflare Dashboard** | Under Attack Mode, WAF custom rules emergenciais | Oncall |

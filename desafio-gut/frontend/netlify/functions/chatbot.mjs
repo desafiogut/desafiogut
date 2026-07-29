@@ -112,6 +112,11 @@ const INTENT_PATTERNS = {
   comprar_cotas: /comprar (uma )?cota|contratar (uma )?cota|quero (uma )?cota|adquirir cota|contratar (bronze|prata|ouro|diamante)/,
   // MC17.1 — saldo de senhas de troco (perfis autenticados).
   meu_saldo: /\bmeu saldo\b|minhas senhas|quantas senhas (eu )?tenho|saldo de (senhas|troco)|senhas de troco/,
+  // MC88.44 — pedido de contacto humano. Testado POR ÚLTIMO em detectarIntent,
+  // de propósito: nunca rouba um intent mais específico ("meu saldo", "quero
+  // uma cota"). Só apanha quem está mesmo a pedir para falar com alguém.
+  // Padrão sobre texto JÁ desacentuado e em minúsculas (ver detectarIntent).
+  suporte: /\bsuporte\b|\bconta[ct]to\b|falar com (alguem|voces|humano|atendente|a coordenacao)|\batendimento\b|reclama(r|cao)|\bouvidoria\b|e-?mail (de |para )?(contato|suporte|voces)|como (falo|entro em contato|reclamo)/,
 };
 
 /**
@@ -147,6 +152,11 @@ export function detectarIntent(texto) {
   if (INTENT_PATTERNS.listar_edicoes.test(t))  return "listar_edicoes";
   if (INTENT_PATTERNS.criar_edicao_wizard.test(t)) return "criar_edicao_wizard";
   if (INTENT_PATTERNS.criar_edicao.test(t))    return "criar_edicao";
+  // MC88.44 — ÚLTIMO de propósito. Um pedido de suporte que também mencione um
+  // assunto concreto ("quero falar com voces sobre o meu saldo") deve cair no
+  // intent do assunto, que responde com dados reais. Aqui fica quem só quer
+  // saber com quem falar — e esse não pode receber um endereço inexistente.
+  if (INTENT_PATTERNS.suporte.test(t))         return "suporte";
   return null;
 }
 
@@ -616,6 +626,16 @@ const INTENT_HANDLERS = {
     gate: qualquerPerfil,
     run: ({ perfil }) => intentResp(perfil, "pacotes_cotas", {
       resposta: obterResposta("pacotes_cotas", perfil, {}), modoResposta: "perfil",
+    }),
+  },
+
+  // MC88.44 — suporte. Sem gate (qualquer perfil, incluindo visitante) e sem
+  // rate-limit de admin: é informação de contacto, não é ação. Não passa pelo
+  // LLM nem pelo índice RAG — é por isso que existe. Ver EMAIL_SUPORTE.
+  suporte: {
+    gate: qualquerPerfil,
+    run: ({ perfil }) => intentResp(perfil, "suporte", {
+      resposta: obterResposta("suporte", perfil, {}), modoResposta: "perfil",
     }),
   },
 

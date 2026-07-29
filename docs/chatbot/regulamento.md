@@ -144,7 +144,7 @@ Todo usuário recebe automaticamente um código pessoal no formato `IND-XXXXXX` 
 
 - Gate de consentimento obrigatório (`TermosConsentimento.jsx`) antes de qualquer interação.
 - Versão atual do termo: `v2026-05`.
-- Direitos do titular (Art. 18 LGPD): acesso via `/exportar-dados`, eliminação via `suporte@desafiogut.com.br`, portabilidade via JSON estruturado.
+- Direitos do titular (Art. 18 LGPD): acesso via `/exportar-dados`, eliminação via `desafiogut01@gmail.com`, portabilidade via JSON estruturado.
 - Política de retenção em `docs/lgpd-politica-retencao.md` (audit logs 13 meses, pedidos PIX 10 anos, consent log 5 anos, fingerprint 24h).
 
 ### 7.3 Auditoria do Contrato
@@ -185,7 +185,7 @@ Você recebe um código `IND-XXXXXX` automaticamente. Compartilhe. Cada amigo qu
 On-chain via `saldoSenhas(seu_endereco)` no contrato. No app, painel "Minha Carteira" mostra automaticamente (status: on-chain).
 
 ### 8.10 Posso recuperar o dinheiro depositado se desistir?
-O saldo R$ off-chain pode ser usado para Lance Relâmpago ou trocado por senhas. Para reembolso, contate `suporte@desafiogut.com.br` (processo manual conforme política).
+O saldo R$ off-chain pode ser usado para Lance Relâmpago ou trocado por senhas. Para reembolso, contate `desafiogut01@gmail.com` (processo manual conforme política).
 
 ### 8.11 Lances repetidos contam?
 Não vencem. Se dois ou mais participantes mandam exatamente o mesmo valor, esses lances são marcados como `repetido: true` e excluídos do cálculo do vencedor.
@@ -215,7 +215,7 @@ A infraestrutura passou por 7 Mega Comandos de blindagem cobrindo APIs, supply c
 Endereço da carteira Privy, IP, user-agent, fingerprint do dispositivo (anti-Sybil, 24h), histórico de operações (auditoria, 13 meses) e consentimento LGPD (5 anos). Política completa em `docs/lgpd-politica-retencao.md`. Você pode exportar tudo via `/exportar-dados`.
 
 ### 8.20 Como contato o suporte?
-Para questões gerais: `suporte@desafiogut.com.br`. Para emergências de segurança: canal `#incidentes` no Slack/Discord interno. Para LGPD/eliminação de dados: solicitar por e-mail com prova de identidade.
+Para questões gerais: `desafiogut01@gmail.com`. Para emergências de segurança: canal `#incidentes` no Slack/Discord interno. Para LGPD/eliminação de dados: solicitar por e-mail com prova de identidade.
 
 ### 8.21 Posso participar de mais de um leilão ao mesmo tempo?
 Sim. Relâmpago e Programado rodam em paralelo e usam saldos distintos (R$ off-chain vs senhas on-chain). Você pode ter lances ativos nos dois ao mesmo tempo.
