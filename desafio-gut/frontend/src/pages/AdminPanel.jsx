@@ -12,6 +12,8 @@
 // O backend permanece dual-mode (cron externo via curl ainda usa x-admin-token).
 
 import { useEffect, useRef, useState, useCallback } from "react";
+// MC89.4 — para o "Sair do painel" (a barra inferior de consumo sai desta rota).
+import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useAdmin } from "../hooks/useAdmin.js";
@@ -85,9 +87,9 @@ function limparTokenLegado() {
 
 function StatusBadge({ status }) {
   const mapa = {
-    pendente:   { texto: "🟡 Pendente",  cor: COR.warn },
-    aprovado:   { texto: "🟢 Aprovado",  cor: COR.success },
-    rejeitado:  { texto: "🔴 Rejeitado", cor: COR.danger },
+    pendente:   { texto: "Pendente",  cor: COR.warn },
+    aprovado:   { texto: "Aprovado",  cor: COR.success },
+    rejeitado:  { texto: "Rejeitado", cor: COR.danger },
   };
   const m = mapa[status] || { texto: status, cor: COR.muted };
   return (
@@ -222,7 +224,7 @@ function TabVisaoGeral({ chamarAdmin, isMobile, onLoginNeeded }) {
 
       {erro && (
         <div style={{ padding: "0.7rem 0.9rem", borderRadius: "8px", background: "rgba(239,68,68,0.08)", border: `1px solid ${COR.danger}55`, color: COR.danger, fontSize: "0.82rem" }}>
-          ⚠️ {erro}
+          {erro}
         </div>
       )}
 
@@ -357,7 +359,7 @@ function TabAprovacoes({ chamarAdmin, isMobile, onLoginNeeded }) {
         ))}
         <Button variant="ghost" size="sm" onClick={carregar} disabled={carregando} aria-label="Recarregar"
           className="ml-auto rounded-full !border-[#f5a623]/30 !text-[#f5a623]">
-          {carregando ? "⏳" : "↻"}
+          {carregando ? "…" : "Atualizar"}
         </Button>
       </div>
       {erro && <p role="alert" style={{ color: COR.danger, fontSize: "0.78rem" }}>{erro}</p>}
@@ -389,7 +391,7 @@ function TabAprovacoes({ chamarAdmin, isMobile, onLoginNeeded }) {
               <div style={{ display: "flex", gap: "0.4rem", alignSelf: "center" }}>
                 <Button variant="primary" size="sm" onClick={() => decidir(p.cliente_id, "aprovado")}
                   className="!bg-[#10b981] hover:!bg-[#059669] !shadow-none">
-                  ✓ Aprovar
+                  Aprovar
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => decidir(p.cliente_id, "rejeitado")}
                   className="!border-[#ef4444]/55 !text-[#ef4444] !bg-[#ef4444]/[0.13] hover:!bg-[#ef4444]/[0.20]">
@@ -534,7 +536,7 @@ function TabCotas({ chamarAdmin, isMobile, onLoginNeeded }) {
               background: c.vendida ? `${COR.warn}1f` : `${COR.success}1f`,
               border: `1px solid ${c.vendida ? COR.warn : COR.success}55`,
               textTransform: "uppercase",
-            }}>{c.vendida ? "🟡 Vendida" : "🟢 Disponível"}</span>
+            }}>{c.vendida ? "Vendida" : "Disponível"}</span>
             {c.valor && <span style={{ alignSelf: "center", color: COR.primary, fontWeight: 700 }}>R$ {Number(c.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>}
           </li>
         ))}
@@ -566,7 +568,7 @@ function TabCotas({ chamarAdmin, isMobile, onLoginNeeded }) {
         </label>
         <Button type="submit" variant="primary" size="md" disabled={salvando || !form.cliente_id}
           className="w-full">
-          {salvando ? "⏳ Salvando…" : "💾 Salvar cota"}
+          {salvando ? "Salvando…" : "Salvar cota"}
         </Button>
         {msgForm && <p style={{ margin: 0, fontSize: "0.74rem", color: msgForm.startsWith("✓") ? COR.success : COR.danger }}>{msgForm}</p>}
       </form>
@@ -649,6 +651,7 @@ function TabAdmins({ chamarAdmin, onLoginNeeded }) {
 
 export default function AdminPanel() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const { address, privyWallet, abrirModal, isConnected } = useAppContext();
   const { isAdmin, loading } = useAdmin(address);
   const [aba, setAba] = useState("visao"); // MC89.1 — abre na observação
@@ -822,21 +825,21 @@ export default function AdminPanel() {
   if (!isConnected) {
     return (
       <div style={{ padding: "2rem", color: COR.text, textAlign: "center" }}>
-        <h1 style={{ fontSize: "1.4rem", color: COR.primary }}>⚙️ Painel Admin</h1>
+        <h1 style={{ fontSize: "1.4rem", color: COR.text, fontWeight: 700 }}>Painel Admin</h1>
         <p style={{ color: COR.muted, marginBottom: "1rem" }}>Faça login para verificar privilégios.</p>
-        <Button variant="primary" size="lg" onClick={abrirModal}>
-          ⚡ Entrar
+        <Button variant="secondary" size="lg" onClick={abrirModal}>
+          Entrar
         </Button>
       </div>
     );
   }
   if (loading) {
-    return <div style={{ padding: "2rem", color: COR.muted }}>⏳ Verificando privilégios…</div>;
+    return <div style={{ padding: "2rem", color: COR.muted }}>Verificando privilégios…</div>;
   }
   if (!isAdmin) {
     return (
       <div style={{ padding: "2rem", color: COR.text, textAlign: "center" }}>
-        <h1 style={{ fontSize: "1.4rem", color: COR.primary }}>⚙️ Painel Admin</h1>
+        <h1 style={{ fontSize: "1.4rem", color: COR.text, fontWeight: 700 }}>Painel Admin</h1>
         <p style={{ color: COR.muted, marginTop: "0.5rem" }}>
           Acesso restrito. Seu endereço <code style={{ color: COR.muted }}>{address}</code> não está na lista de admins.
         </p>
@@ -844,13 +847,16 @@ export default function AdminPanel() {
     );
   }
 
+  // MC89.4 — sem emojis. O 🟡 de "Aprovações" era pior do que decoração: parecia
+  // um indicador de estado quando era só um ícone. Rótulos curtos para caberem
+  // numa linha só no telemóvel (antes "Admins" caía para a segunda).
   const ABAS = [
     // MC89.1 — primeiro de propósito: o ADM abre o painel para SABER o estado,
-    // e só depois para agir. Os três seguintes ficam intocados.
-    { id: "visao",      label: "📈 Visão Geral" },
-    { id: "aprovacoes", label: "🟡 Aprovações" },
-    { id: "cotas",      label: "📊 Cotas" },
-    { id: "admins",     label: "👥 Admins" },
+    // e só depois para agir. Os três seguintes ficam intocados no que FAZEM.
+    { id: "visao",      label: "Visão Geral" },
+    { id: "aprovacoes", label: "Aprovações" },
+    { id: "cotas",      label: "Cotas" },
+    { id: "admins",     label: "Admins" },
   ];
 
   const authedChamar = authState === "authenticated" || authState === "refreshing" ? chamarAdmin : null;
@@ -858,25 +864,44 @@ export default function AdminPanel() {
   const statusBg     = statusOk ? "rgba(16,185,129,0.06)" : (authState === "error" ? "rgba(239,68,68,0.06)" : "rgba(251,191,36,0.06)");
   const statusBd     = statusOk ? "rgba(16,185,129,0.3)"  : (authState === "error" ? "rgba(239,68,68,0.3)"  : "rgba(251,191,36,0.3)");
   const statusTexto  =
-      authState === "authenticated" ? "✓ Sessão admin ativa (Bearer JWT)"
+      authState === "authenticated" ? "Sessão admin ativa (Bearer JWT)"
     : authState === "refreshing"    ? "⟳ Renovando token…"
-    : authState === "logging-in"    ? "⏳ Autenticando…"
+    : authState === "logging-in"    ? "Autenticando…"
     : authState === "error"         ? `✗ ${authError || "Falha na autenticação"}`
-    :                                 "⚠ Login admin necessário para mutações";
+    :                                 "Login admin necessário para mutações";
 
   return (
-    <div style={{ padding: isMobile ? "1rem" : "1.5rem 2rem", color: COR.text, display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <header>
-        <h1 style={{
-          margin: 0,
-          fontSize: isMobile ? "1.35rem" : "1.65rem",
-          fontWeight: 900, color: COR.primary,
-          fontFamily: "'Orbitron', sans-serif",
-          letterSpacing: "0.05em",
-        }}>⚙️ Painel Admin</h1>
-        <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: COR.muted }}>
-          Logado como admin: <code style={{ color: COR.text }}>{address?.slice(0,10)}…{address?.slice(-6)}</code>
-        </p>
+    // MC89.4 — `.admin-panel` dá a superfície OPACA que faltava (o MC89.3 mediu
+    // rgba(0,0,0,0) aqui) e a tipografia de corpo. `margin` em vez de `padding`
+    // no exterior para o cartão respirar contra o fundo.
+    <div
+      className="admin-panel"
+      style={{
+        margin: isMobile ? "0.75rem" : "1rem 1.5rem",
+        padding: isMobile ? "1rem" : "1.5rem 2rem",
+        color: COR.text, display: "flex", flexDirection: "column", gap: "1rem",
+      }}
+    >
+      <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem" }}>
+        <div style={{ minWidth: 0 }}>
+          {/* Sem emoji, sem Orbitron, sem laranja: peso em vez de cor. */}
+          <h1 style={{
+            margin: 0,
+            fontSize: isMobile ? "1.2rem" : "1.45rem",
+            fontWeight: 700, color: COR.text,
+            letterSpacing: 0,
+          }}>Painel Admin</h1>
+          <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: COR.muted }}>
+            Logado como admin: <code style={{ color: COR.text }}>{address?.slice(0,10)}…{address?.slice(-6)}</code>
+          </p>
+        </div>
+        {/* MC89.4 (decisão D-B) — a barra inferior de consumo sai desta rota, por
+            isso a saída passa a ser explícita. Sem ela o ADM ficava dependente do
+            botão físico de voltar. */}
+        <Button variant="ghost" size="sm" onClick={() => navigate("/")}
+          className="!border-white/15 !text-[#94a3b8] !rounded-md shrink-0">
+          ← Sair do painel
+        </Button>
       </header>
 
       {/* Status da sessão admin (JWT) */}
@@ -889,14 +914,17 @@ export default function AdminPanel() {
         display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center", justifyContent: "space-between",
       }}>
         <span>{statusTexto}</span>
+        {/* MC89.4 — "Login Admin" passou a botão NEUTRO. O amarelo saturado estava
+            reservado a nada; a cor de destaque deve marcar acção irreversível (os
+            comandos do MC91), não um login. */}
         {statusOk ? (
           <Button variant="ghost" size="sm" onClick={logoutAdmin}
             className="!border-white/15 !text-[#94a3b8] !rounded-md">
             Logout admin
           </Button>
         ) : (
-          <Button variant="primary" size="sm" onClick={() => setPedindoLogin(true)} disabled={authState === "logging-in"}
-            className="!bg-[#fbbf24] hover:!bg-[#f59e0b] !shadow-none !rounded-md">
+          <Button variant="ghost" size="sm" onClick={() => setPedindoLogin(true)} disabled={authState === "logging-in"}
+            className="!border-white/20 !text-[#e8f0fe] !shadow-none !rounded-md">
             Login Admin
           </Button>
         )}
@@ -910,7 +938,7 @@ export default function AdminPanel() {
           <Input type="password" placeholder="ADMIN_TOKEN legado" value={adminTokenInput}
                  onChange={(e) => setAdminTokenInput(e.target.value)} className="flex-1 min-w-[200px]" autoFocus />
           <Button type="submit" variant="primary" size="sm" disabled={!adminTokenInput || authState === "logging-in"}>
-            {authState === "logging-in" ? "⏳ Assinando…" : "Login"}
+            {authState === "logging-in" ? "Assinando…" : "Login"}
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => { setPedindoLogin(false); setAdminTokenInput(""); }}
             className="!border-white/15 !text-[#94a3b8]">

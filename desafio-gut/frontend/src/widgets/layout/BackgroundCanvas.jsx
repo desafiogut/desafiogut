@@ -15,9 +15,14 @@
 // Melhoria progressiva: <video> com fallback estático (WebP) via onError.
 // prefers-reduced-motion → apenas imagem estática (R3).
 // Anti-CLS: poster = imagem estática oficial, mesmas dimensões do vídeo (R4).
+// MC89.4 — nas rotas de TRABALHO (/admin, /corporativo) o fundo fica ESTÁTICO:
+// mantém-se a imagem, sai o vídeo e sai o parallax. Decisão do operador — "tire a
+// animação do fundo, deixe ele estático". Não é só estética: o MC89.3 mediu o
+// vídeo a descodificar (`paused=false`) num ecrã de leitura de números.
 import { motion, useReducedMotion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { ehRotaDeTrabalho } from "../../lib/rotasTrabalho.js";
 
 function offsetFor(pathname) {
   const p = (pathname || "/").toLowerCase();
@@ -31,7 +36,9 @@ function offsetFor(pathname) {
 export default function BackgroundCanvas() {
   const { pathname } = useLocation();
   const reduce = useReducedMotion();
-  const x = reduce ? 0 : offsetFor(pathname);
+  // MC89.4 — rota de trabalho: sem parallax. A imagem de fundo fica quieta.
+  const trabalho = ehRotaDeTrabalho(pathname);
+  const x = (reduce || trabalho) ? 0 : offsetFor(pathname);
 
   // MC27 — Estado do vídeo: tenta reproduzir por padrão; fallback estático se
   // o browser não suportar WebM/VP9 ou se o utilizador preferir redução de movimento.
@@ -69,7 +76,11 @@ export default function BackgroundCanvas() {
   }, []);
 
   // Dupla defesa: useReducedMotion() do framer-motion + matchMedia explícito.
-  const showVideo = videoEnabled && !videoError && !reduce;
+  // MC89.4 — `!trabalho` é a terceira condição: nas rotas de trabalho o vídeo NÃO
+  // é montado. As camadas .gut-bg-layer (imagem estática) já estão sempre no DOM e
+  // são renderizadas ANTES do vídeo, portanto ficam visíveis sozinhas — é o mesmo
+  // caminho que o MC26.1 já usava para o fallback de `onError`/reduced-motion.
+  const showVideo = videoEnabled && !videoError && !reduce && !trabalho;
 
   return (
     <motion.div

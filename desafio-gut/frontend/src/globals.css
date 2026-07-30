@@ -428,6 +428,36 @@ img, svg { display: block; }
 .gut-glass-standard.gut-glass--solid {
   background: rgba(13,18,53,0.92);
 }
+/* ── MC89.4 — Painel de administração: superfície de LEITURA ─────────────────
+   O MC89.3 mediu o /admin com `backgroundColor: rgba(0,0,0,0)` no h1, no pai do
+   h1 e no container raiz: o texto assentava DIRECTAMENTE na ilustração de fundo
+   e havia frases que não se liam ("Logado como admin: …", "Autentique-se para
+   ver as métricas.").
+
+   Reutiliza o MESMO valor do `.gut-glass--solid` (MC25.7), criado pela mesma
+   razão no painel de chat do GUTO. Não se inventa fundo novo nem se acrescenta
+   cor à paleta: um ecrã de trabalho neutro faz-se com o navy que já existe —
+   NÃO com branco, que nesta app seria um corpo estranho.
+
+   Tipografia de corpo (Inter) em vez de Orbitron: uma fonte de display num
+   painel grita sem informar. */
+.admin-panel {
+  background: rgba(13, 18, 53, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  font-family: var(--font-body);
+  color: #e8f0fe;
+}
+/* Títulos do painel: peso em vez de cor. O laranja de marca (#f5a623) fica
+   RESERVADO para acção irreversível — se tudo é destaque, nada avisa. */
+.admin-panel h1,
+.admin-panel h2,
+.admin-panel h3 {
+  font-family: var(--font-body);
+  color: #e8f0fe;
+  letter-spacing: 0;
+}
+
 /* MC45 — banner quadrado clicável da edição: hover sutil + foco visível (a11y). */
 .gut-edicao-banner {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
