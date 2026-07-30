@@ -5454,3 +5454,41 @@ nenhuma). Os 3 e-mails do Supabase não foram puxados, porque passariam pela
 conversa — fica a consulta no LEIA-ME. E os Blobs responderam "empty", registado
 como **inconclusivo** e não como vazio: o CLI lê noutro contexto e a leitura de
 Blobs já foi vista a falhar em silêncio.
+
+---
+
+## MC89.7 — Fase 1: Visão Geral expandida (gráficos e alertas)
+
+Suítes: 40/40 frontend, 314/314 backend. APK recompilado e validado.
+
+### Dois endpoints novos
+`admin-series.mjs`: séries diárias do Supabase — receita PIX e utilizadores com
+atividade, agrupadas por dia. 18 créditos em 6 dias na base real, e o gráfico
+mostra isso sem preencher zeros. `admin-alerts.mjs`: 6 alertas computáveis, lógica
+extraída para `_lib/admin-alertas.mjs` (pura, 11 testes). Três acendem de imediato
+no ambiente atual: webhook nunca disparou, Blobs sem token, Redis por configurar.
+Os alertas que dependem de RPC (EOA baixa, monitor atrasado) são computados pelo
+frontend com os dados que já tem do `admin-onchain` — a regra R7 do MC89.5 diz
+para não agrupar Postgres com RPC no mesmo pedido.
+
+### Gráficos em SVG puro
+`GraficoLinha.jsx` (~110 linhas), zero dependências externas. A decisão do MC89.5
+foi não adotar Recharts: o parse de JS já é o gargalo do arranque (MC88.36) e
+três linhas simples não justificam ~100 kB gzip de biblioteca. O gráfico trata
+`null` como ausência — não preenche com zero, porque "não tenho dados" não é o
+mesmo que "o valor é zero".
+
+### Realidade dos dados
+O Supabase tem 18 créditos em 6 dias e 7 cotas criadas no mesmo dia. Com 6 pontos
+em 90 dias, os gráficos mostram exatamente o que há — sem interpolar, sem
+preencher, sem alisar. O rótulo "Utilizadores com atividade (diário)" diz
+exatamente o que é, e a nota "não é novos registos" impede a leitura errada.
+
+### Auditoria de dados pessoais
+Varredura nos 11 ficheiros do painel: nenhum card mostra saldo, senhas ou lances
+do utilizador logado. Todas as métricas vêm de `admin-stats` (agregado do sistema)
+ou `admin-onchain` (EOA coordenadora). Confirmado visualmente no APK.
+
+**Próximo:** MC90.2 (Fase 2) — `admin_logs` em Postgres com escrita fail-CLOSED +
+níveis de permissão. É a fase que o MC89.5 antecipou de propósito: construir
+comandos irreversíveis antes de existir rasto e hierarquia é a ordem errada.

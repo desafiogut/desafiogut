@@ -273,6 +273,11 @@ export default function VisaoGeral() {
             nota="Endereços vistos nos nossos dados. NÃO é o total de registados — a identidade vive no Privy."
           />
           <Metrica rotulo="Com cota" valor={ouTraco(c?.comCarteira)} nota={c ? `${c.total} cota(s) no total` : null} />
+          <Metrica
+            rotulo="Ativos em 24 h"
+            valor={ouTraco(series?.usuarios?.length ? series.usuarios[series.usuarios.length - 1] : null)}
+            nota="Endereços distintos com atividade no dia mais recente com dados."
+          />
         </Grelha>
       </section>
 
@@ -317,6 +322,11 @@ export default function VisaoGeral() {
             valor={ouTraco(onchain?.saldoEth, (v) => `${v} ETH`)}
             cor={COR.primary}
             nota="É esta carteira que credita as senhas on-chain. Sem gás, a compra deixa de ser creditada."
+          />
+          <Metrica
+            rotulo="Senhas em trânsito"
+            valor="—"
+            nota="Hoje não há rastreabilidade entre o crédito R$ e o crédito on-chain de senhas. Este campo ficará ativo quando existir um registo temporal da operação on-chain."
           />
           <Metrica rotulo="Bloco atual" valor={ouTraco(onchain?.bloco, (v) => v.toLocaleString("pt-BR"))} />
         </Grelha>
