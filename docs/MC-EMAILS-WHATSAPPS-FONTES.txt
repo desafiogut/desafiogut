@@ -1,0 +1,158 @@
+================================================================================
+MC-EMAILS-WHATSAPPS — SEGMENTO 0: FONTES DE DADOS DE CONTATO
+================================================================================
+Data: 2026-07-30
+Branch: feat/mc89-adm-system
+ZERO alteração de código (R1). Levantamento apenas.
+
+⚠️ ESTE FICHEIRO É VERSIONADO EM GIT. Por isso contém apenas CONTAGENS, CAMINHOS
+   e ESTRUTURA — nenhum e-mail e nenhum número. Os dados vivem só em
+   C:\Users\Moltbot\Desktop\BASE-CONTATOS\ (R4).
+
+--------------------------------------------------------------------------------
+A. AS DUAS BASES QUE O MC83 REFERE (as que estão a ser disparadas)
+--------------------------------------------------------------------------------
+E-MAIL   Desktop\EMAILS\lista-validada-9306-lotes.csv
+         1625 linhas de dados · UTF-8, sem BOM, CRLF · 80,1 KB
+         Colunas: email, valid, catch_all, spam_trap, role, mailbox_exists, risk
+         TODAS as 1625 linhas têm valid=True e risk=low.
+         ⚠️ O MC83 diz 1623. Ver DIVERGÊNCIA D-1.
+
+WHATSAPP Desktop\MC-HISTORICO\WHATSAPP\whatsapp-validados-corrigido.csv
+         200 linhas de dados · UTF-8, sem BOM, CRLF · 14,6 KB
+         Colunas: numero_original, numero_formatado, valid, whatsapp_candidate,
+                  tipo_linha, operadora, pais, erro
+         200 com valid=sim; destas, 198 com whatsapp_candidate=sim e 2 com "não".
+         → Os 198 do MC83 são exatamente este filtro. Ver DIVERGÊNCIA D-2.
+
+--------------------------------------------------------------------------------
+B. INVENTÁRIO COMPLETO — E-MAILS  (Desktop\EMAILS\)
+--------------------------------------------------------------------------------
+  ficheiro                             linhas   papel
+  -----------------------------------  -------  ------------------------------
+  lista-validada-9306-lotes.csv           1625  VALIDADA — base em disparo
+  lista-validada.csv                       673  VALIDADA — lote anterior
+  parceiros-subset.csv                     694  subconjunto de parceiros
+  parceiros-descartados.csv                 20  descartados, com motivo
+  invalidos-9306-lotes.csv                7681  REJEITADOS pela validação
+  catchall-9306.csv                          0  vazio (só cabeçalho)
+  role-9306.csv                              0  vazio (só cabeçalho)
+  spamtrap-9306.csv                          0  vazio (só cabeçalho)
+  master-alta-confianca.csv              73127  reservatório pré-validação
+  lista-master-alta-confianca.csv        72301  reservatório pré-validação
+  lista-para-validar.csv                249908  fila de validação
+  8 e-mails linkidin I.csv                3605  origem em bruto (LinkedIn)
+  22 e-mails linkidin.csv                 3616  origem em bruto (LinkedIn)
+  23 e-mails linkidin II.csv             11376  origem em bruto (LinkedIn)
+  Celulares III maio 26  OK.csv           5143  telefones (não é e-mail)
+
+  Originais não estruturados: 43 ficheiros .doc/.docx/.xls/.xlsx, 116 MB.
+  São a matéria-prima de onde as listas acima foram extraídas.
+
+--------------------------------------------------------------------------------
+C. INVENTÁRIO COMPLETO — WHATSAPP  (Desktop\MC-HISTORICO\WHATSAPP\)
+--------------------------------------------------------------------------------
+  ficheiro                             linhas   papel
+  -----------------------------------  -------  ------------------------------
+  whatsapp-validados-corrigido.csv         200  VALIDADA — base em disparo
+  whatsapp-validados-twilio.csv             40  lote REJEITADO (ver D-2)
+  whatsapp-base.csv                      28103  base agregada pré-validação
+  telefones-padronizados.csv             63306  todos os números padronizados
+  numeros-brutos.json                        —  extração em bruto, 6,9 MB
+
+  Acompanham a pasta: scripts .py da validação/envio, checkpoints
+  (checkpoint_twilio.txt, checkpoint_twilio_corrigido.txt), config_whatsapp.json
+  e o MC70.1-RELATORIO.txt. NÃO são dados de contato e não entram na exportação.
+
+--------------------------------------------------------------------------------
+D. OUTRAS FONTES — verificadas, com resultado
+--------------------------------------------------------------------------------
+SUPABASE (consulta direta, 2026-07-30)
+  cotas.email .......................... 3 preenchidos em 7 linhas
+  cotas.payload->>'email' .............. 3 (os mesmos)
+  saldo_rs_creditos.payload->>'email' .. 0
+  fila_tarefas.payload->>'email' ....... 0
+  lojistas ............................. tabela vazia (0 linhas)
+  → A produção conhece 3 e-mails. Não há tabela de utilizadores; a identidade
+    vive no Privy (achado A-1 do MC89.5).
+
+NETLIFY BLOBS (netlify blobs:list, CLI autenticado)
+  admin-aprovacao ...... respondeu "store is empty"
+  notificacoes ......... respondeu "store is empty"
+  ⚠️ NÃO tomar isto como prova de que a produção está vazia. O CLI lê no contexto
+    do site configurado localmente, e o registo [[desafiogut-blobs-token-dois-cegos]]
+    mostra que a leitura de Blobs falha em silêncio quando falta o token.
+    Resultado honesto: INCONCLUSIVO, não "vazio".
+
+PYTHONANYWHERE (cron 1465157)
+  ⛔ NÃO ACESSÍVEL a partir daqui. O servidor MCP `pythonanywhere-mcp-server`
+    está ligado mas não expõe ferramenta nenhuma, e já estava registado que não
+    executa consola. Os ficheiros remotos que o MC83 nomeia —
+    /home/DesafioGUT/EMAILS/ultimo_enviado.txt, checkpoint_whatsapp.txt,
+    enviados_whatsapp_hoje.txt — só o operador os pode obter.
+    O que ESTÁ acessível são as cópias locais que lá foram carregadas (secções
+    A/B/C), e é dessas que a exportação é feita.
+
+--------------------------------------------------------------------------------
+DIVERGÊNCIAS ENCONTRADAS (nenhuma foi corrigida — R1)
+--------------------------------------------------------------------------------
+D-1  E-MAIL: o ficheiro local tem 1625 linhas; o MC83 diz 1623.
+     Diferença de 2. As 1625 têm todas valid=True e risk=low, portanto não há
+     filtro local que explique o corte. Duas leituras possíveis, e não dá para
+     decidir daqui: ou a cópia em PythonAnywhere tem 1623 (e a local está 2 à
+     frente), ou o MC83 contou mal. Resolve-se comparando com o ficheiro remoto
+     — ação do operador.
+     ⚠️ Consequência prática: o checkpoint de envio é um ÍNDICE de linha. Se as
+       duas cópias tiverem ordens ou tamanhos diferentes, o "400 enviados" não
+       aponta para os mesmos 400 endereços nas duas.
+
+D-2  WHATSAPP: o MC83 nomeia `whatsapp-validados-twilio.csv` como a lista dos
+     198. O ficheiro local com esse nome tem 40 linhas, TODAS com valid=não,
+     whatsapp_candidate=não e `numero_formatado` VAZIO — é um lote rejeitado.
+     A lista real é `whatsapp-validados-corrigido.csv`: 200 linhas, 198 com
+     whatsapp_candidate=sim — exatamente o número do MC83.
+     Os dois ficheiros não partilham UM único número (sobreposição = 0).
+     ⇒ O nome no MC83 está errado, não o número. A exportação leva os DOIS, com
+       o papel de cada um escrito, para o engano não se repetir.
+
+D-4  ⚠️ SEGURANÇA — CREDENCIAIS VIVAS EM TEXTO SIMPLES NO DESKTOP.
+     Encontradas ao varrer a pasta COMPLETA (não só os .csv):
+       Desktop\EMAILS\sendgrid.key .......................... chave SendGrid
+       Desktop\EMAILS\config_envio.json ..................... SEGUNDA chave
+                                                             SendGrid, distinta
+       Desktop\MC-HISTORICO\WHATSAPP\config_whatsapp.json ... Twilio SID +
+                                                             auth_token
+     NÃO foram copiadas para a exportação e não lhes toquei (R5). Ação do
+     operador: revogar e rodar as três. Quem tiver a do SendGrid envia e-mail em
+     nome do DESAFIOGUT; quem tiver a do Twilio gasta saldo.
+     Verificado DEPOIS da cópia: nenhum ficheiro exportado contém segredo. Dois
+     relatórios acusaram no scan, mas mencionam apenas NOMES de variáveis de
+     ambiente (SENDGRID_API_KEY, TWILIO_AUTH_TOKEN), nunca valores.
+
+D-5  CHECKPOINT LOCAL DESATUALIZADO.
+     Desktop\EMAILS\ultimo_enviado.txt = 50, com data de 2026-07-14.
+     Desktop\EMAILS\enviados_hoje.txt  = "2026-07-14 50".
+     O MC83 (2026-07-20) diz que o checkpoint verdadeiro, no PythonAnywhere,
+     estava em 400. O local é uma fotografia velha e não serve para saber por
+     onde vai a campanha.
+     ⚠️ Agrava D-1: o checkpoint é um índice de LINHA. Se as duas cópias da lista
+       divergirem em 2 linhas, o mesmo índice não aponta para o mesmo endereço.
+
+D-6  A PASTA EMAILS TEM MAIS DO QUE CSV — inventário adicional:
+       validados-bulk-9306-lotes.json / validados-checkpoint.json (7 MB cada)
+         resultado COMPLETO da validação, mais rico do que o CSV derivado dele
+       parceiros-validated.json (694 itens) / parceiros-validated-bulk.json
+       extracao-summary.json · MC69.9-RELATORIO-BULK*.txt · MC69.10-CONTEXTO.txt
+       ultimo_enviado.txt · enviados_hoje.txt (ver D-5)
+       scripts: campanha.py, enviar.py, enviar_agora.py, preparar_envio.py,
+                processo_completo.py, reenviar_24.py, imgur_upload.py,
+                enviar-email-sendgrid.ps1, template-email.html, preview-email.png
+     Os JSON de validação e os relatórios FORAM exportados; os scripts e os
+     templates não — não são dados de contato.
+
+D-3  Nota de método: numa primeira leitura os acentos apareceram corrompidos
+     ("n?o"), o que sugeria ficheiros em cp1252. Verificado byte a byte: os 13
+     ficheiros são UTF-8 válido, sem BOM, com CRLF. A corrupção era da consola.
+     Se isto tivesse ficado no manifesto, mandaria o operador reconverter
+     ficheiros que estão bem — e uma reconversão desnecessária estraga-os.
+================================================================================
