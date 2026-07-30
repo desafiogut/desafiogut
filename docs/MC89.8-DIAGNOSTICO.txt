@@ -1,0 +1,142 @@
+# MC89.8 — DIAGNÓSTICO VISUAL DO ADMINPANEL
+Data: 2026-07-30 | Branch: feat/mc89-adm-system | ZERO alterações de código (R1)
+
+## 0. MÉTODO E LIMITAÇÃO
+A inspeção foi feita por CDP (adb forward + WebSocket) com `Log.clear()` antes de
+medir. O APK MC89.7 está instalado no aparelho (fiem7xlvcufe855h), compilado com
+`npm run build:apk` e validado como mainnet-coherent pelo script validar-dist.
+
+⚠️ **LIMITAÇÃO CRÍTICA**: a sessão admin expirou. O `sessionStorage` foi limpo
+quando forcei o stop da app no início deste MC, e o refresh token não sobreviveu.
+Sem o ADMIN_TOKEN do operador — em que não toco (R5) — não posso autenticar. A
+inspeção visual que se segue cobre o estado NÃO-autenticado do painel e o que o
+CÓDIGO renderizaria quando autenticado.
+
+**Para confirmar ou refutar cada achado abaixo, o operador precisa de:**
+1. Entrar com "Login Admin" no APK (ADMIN_TOKEN + assinar com Privy)
+2. Navegar para /admin e capturar screenshot
+3. Partilhar a captura OU deixar a sessão ativa enquanto eu inspeciono por CDP
+
+## 1. ESTADO NÃO-AUTENTICADO (verificado no aparelho, 2026-07-30)
+### Visão Geral (/admin)
+- Header: "Painel Admin"
+- Endereço do admin no header: "Logado como admin: 0x1E1bAe7F…d198cB"
+  → Isto é IDENTIFICAÇÃO, não dado de utilizador inspecionado. Mostra QUEM está
+    logado como admin, não dado de outro utilizador.
+- Status: "Login admin necessário para mutações" + botão "Login Admin"
+- Secção SECÇÕES com 8 cartões-atalho (todos apontam para telas administrativas)
+- Mensagem: "Autentique-se para ver as métricas."
+- **Nenhum card de métricas visível** (estão atrás do gate `chamarAdmin`)
+- **Nenhum dado pessoal** (saldo, senhas, lances) visível
+
+### Gestão de Usuários (/admin/usuarios)
+- Título: "Usuários" com "← Painel"
+- Placeholder EmConstrucao com texto explicativo da Fase 4
+  ⚠️ **ACHADO 1**: o texto menciona "Saldo de senhas", "lances", "e-mail" e
+  "D-SALDO: não há botão resetar saldo". São textos EXPLICATIVOS — dizem o que a
+  tela VAI fazer, não mostram dados reais. Mas a palavras "saldo" e "lances"
+  aparecem no ecrã e podem ser lidas como "o painel ainda mostra dados pessoais"
+  numa verificação rápida.
+
+### Aprovações (/admin/aprovacoes)
+- Título: "Aprovações" com "← Painel"
+- Filtros: pendente/aprovado/rejeitado
+- Estado atual: "Nenhum pedido com status 'pendente'."
+  → Sem dados carregados porque a sessão não está autenticada (o endpoint
+    admin-aprovacao exige JWT admin)
+
+### Cotas (/admin/cotas)
+- Título: "Cotas" com "← Painel"
+- Cards de tier: todos com 0 atribuídas
+- Seletor: Diamante/Ouro/Prata/Bronze
+- Estado atual: "Nenhuma cota nesta categoria."
+- Formulário "Nova/atualizar cota" visível (campos: cliente_id, nome, produto, valor)
+  → Sem dados carregados (endpoint cotas exige JWT admin para a projeção completa)
+
+### Outras telas
+- Financeiro, Operações, Logs, Notificações: placeholders EmConstrucao (esqueletos)
+
+## 2. O QUE O CÓDIGO RENDERIZA QUANDO AUTENTICADO (auditoria de source)
+### VisaoGeral.jsx (linhas 156-240)
+TODOS os cards vêm de `admin-stats` (agregados do sistema):
+- "Com atividade" → `stats.utilizadores.comAtividade` — contagem de endereços ÚNICOS
+- "Com cota" → `stats.cotas.comCarteira` — contagem de cotas com carteira
+- "Saldo em circulação" → `stats.financeiro.saldoTotalCentavos` — soma de TODOS
+- "Já creditado" → soma de todos os créditos
+- "Créditos (30d)" → contagem na janela
+- "Fila — pendentes/falhadas/total" → agregados da fila_tarefas
+- "Saldo da coordenadora" → `admin-onchain.saldoEth` — EOA do sistema
+- "Bloco atual" → `admin-onchain.bloco` — número da rede
+- "Ativos em 24h" → último valor da série de utilizadores
+- "Senhas em trânsito" → "—" com nota explicativa (não há rastreabilidade)
+
+⚠️ **ACHADO 2**: o texto da nota de "Senhas em trânsito" é extenso e contém as
+palavras "crédito R$", "crédito on-chain de senhas" e "rastreabilidade". Pode ser
+confundido com dados pessoais numa leitura rápida.
+
+**NENHUM** destes valores é pessoal. Todos são agregados do sistema ou da cadeia.
+
+### Aprovacoes.jsx (linhas 87-119) — ⚠️ ACHADO PRINCIPAL
+Quando há pedidos pendentes e o admin está autenticado, este componente renderiza:
+- `p.nome` → nome do cliente (PII)
+- `p.cliente_id` → endereço Ethereum do cliente (PII)
+- `p.email` → e-mail do cliente (PII)
+- `p.observacao` → texto livre do cliente (PII)
+- `p.motivo` → motivo de rejeição (PII contextual)
+
+**Isto É "informação do usuário comum" no AdminPanel.** Mas é também a função
+desta tela: o admin aprova ou rejeita pedidos de clientes, e para isso precisa de
+ver quem é o cliente. A tela foi construída para este propósito (REQ-20) e o
+endpoint foi protegido com JWT admin (MC39.17.2) precisamente porque expõe PII.
+
+### Cotas.jsx (linhas 517-543) — ⚠️ SEGUNDO ACHADO
+Quando há cotas e o admin está autenticado:
+- `c.cliente_nome` → nome do cliente
+- `c.cliente_id` → endereço Ethereum do cliente
+- `c.produto_nome` → produto associado
+- `c.valor` → valor em Reais
+
+**Também é PII de clientes, e também é a função da tela.**
+
+### AdminLayout.jsx (linhas 97-118)
+- Mostra o endereço do ADMIN no header: "Logado como admin: 0x…"
+  → Isto NÃO é dado de utilizador comum — é a identidade de quem está a operar.
+
+## 3. PADRÕES DE TEXTO QUE ACIONAM FALSOS POSITIVOS
+A varredura por padrões encontrou `temSenhas: true` e `temLances: true` no texto
+do painel, mas estas palavras aparecem EXCLUSIVAMENTE em:
+- Placeholder EmConstrucao da GestaoUsuarios: explicações do que a tela VAI fazer
+- Nota do card "Senhas em trânsito": explicação de que não há rastreabilidade
+
+**Nenhuma destas ocorrências mostra DADOS REAIS de utilizadores.**
+
+## 4. ELEMENTOS DE LAYOUT HERDADOS
+- Fundo: estático (`.admin-panel` com `rgba(13,18,53,0.92)`), NÃO é o fundo animado
+- Cores: neutras, sem gradientes do Dashboard original
+- Emojis: zero em todos os 11 ficheiros (guarda de teste mc894 confirma)
+- Navegação inferior: removida em `/admin` (guarda de teste mc894 confirma)
+- Fonte: system-ui, sem Orbitron (MC89.4)
+- **Nenhum vestígio do layout do Dashboard comum**
+
+## 5. CONCLUSÃO DO DIAGNÓSTICO
+
+### O que NÃO é problema:
+- VisaoGeral autenticada: apenas métricas agregadas do sistema ✓
+- AdminLayout: apenas identificação do admin + navegação ✓
+- Fundo/cores/emojis/navegação: já limpos desde o MC89.4 ✓
+- Placeholders EmConstrucao: texto explicativo, não dados ✓
+
+### O que PODE ser o que o operador vê:
+1. **Aprovacoes com dados** — se houver pedidos pendentes, esta tela mostra nome,
+   e-mail e endereço de clientes reais. É a função da tela, mas visualmente são
+   "dados de usuário comum" no painel admin.
+2. **Cotas com dados** — mostra nome, endereço e valor de cada cota.
+3. **Texto "saldo de senhas" / "lances" nos placeholders** — falso positivo visual.
+
+### O que NÃO CONSEGUI VER:
+- O estado AUTENTICADO com dados reais carregados dos endpoints
+- O que o operador vê quando está logado como admin E há pedidos/cotas
+
+**AÇÃO DO OPERADOR**: autenticar-se no APK, capturar screenshot de /admin,
+/admin/aprovacoes e /admin/cotas, e partilhar para que eu possa confirmar quais
+elementos específicos precisam de intervenção.
