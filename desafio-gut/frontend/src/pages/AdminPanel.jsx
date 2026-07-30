@@ -880,6 +880,12 @@ export default function AdminPanel() {
         margin: isMobile ? "0.75rem" : "1rem 1.5rem",
         padding: isMobile ? "1rem" : "1.5rem 2rem",
         color: COR.text, display: "flex", flexDirection: "column", gap: "1rem",
+        // MC89.4 (iteração 2) — a primeira versão deixou o painel como um cartão
+        // curto no topo, com a ilustração de fundo a ocupar ~60% do ecrã por
+        // baixo. Legível, mas não é uma mesa de trabalho. A superfície passa a
+        // PREENCHER a altura disponível: o fundo estático (que o operador quis
+        // manter) fica a moldura, não o protagonista.
+        minHeight: isMobile ? "calc(100vh - 1.5rem)" : "calc(100vh - 2rem)",
       }}
     >
       <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem" }}>
@@ -947,11 +953,26 @@ export default function AdminPanel() {
         </form>
       )}
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+      {/* Tabs — MC89.4 (iteração 2): `flexWrap: wrap` punha "Admins" sozinho numa
+          segunda linha no telemóvel, e quatro separadores em duas linhas leem-se
+          como dois grupos distintos. Passa a uma linha com scroll horizontal.
+          `scrollbarWidth: none` porque no telemóvel a barra não é usada — o
+          gesto é arrastar. */}
+      {/* Iteração 3 — com `size="md"` o quarto separador ficava cortado na borda
+          ("Ad…"). O scroll horizontal continua como rede de segurança em ecrãs
+          estreitos, mas os quatro têm de CABER na largura de um telemóvel comum:
+          um rótulo truncado por omissão lê-se como descuido, não como afordância. */}
+      <div style={{
+        display: "flex", gap: "0.3rem", flexWrap: "nowrap",
+        overflowX: "auto", scrollbarWidth: "none", paddingBottom: "0.15rem",
+      }}>
         {ABAS.map((a) => (
-          <Button key={a.id} variant="ghost" size="md" onClick={() => setAba(a.id)} aria-pressed={aba === a.id}
-            className={aba === a.id ? "!border-[#f5a623]/55 !bg-[#f5a623]/[0.16] !text-[#f5a623]" : "!text-[#94a3b8]"}>
+          <Button key={a.id} variant="ghost" size="sm" onClick={() => setAba(a.id)} aria-pressed={aba === a.id}
+            /* A aba ativa marca-se por CONTRASTE e não pela cor de marca: o
+               laranja #f5a623 fica reservado a acção irreversível (MC91). */
+            className={`shrink-0 ${aba === a.id
+              ? "!border-white/25 !bg-white/[0.10] !text-[#e8f0fe]"
+              : "!text-[#94a3b8]"}`}>
             {a.label}
           </Button>
         ))}
