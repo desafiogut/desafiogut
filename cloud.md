@@ -5492,3 +5492,48 @@ ou `admin-onchain` (EOA coordenadora). Confirmado visualmente no APK.
 **Próximo:** MC90.2 (Fase 2) — `admin_logs` em Postgres com escrita fail-CLOSED +
 níveis de permissão. É a fase que o MC89.5 antecipou de propósito: construir
 comandos irreversíveis antes de existir rasto e hierarquia é a ordem errada.
+
+---
+
+## MC89.8 — Diagnóstico + plano: remoção de dados pessoais do AdminPanel
+
+Zero alterações de código. Inspeção visual por CDP + reauditoria do caminho
+autenticado no source. Entregáveis: `docs/MC89.8-DIAGNOSTICO.txt`,
+`docs/MC89.8-PLANO.txt`, `docs/MC89.8-RELATORIO.txt`.
+
+### O que a primeira auditoria (MC89.7) não viu
+Varri o código à procura de `useAppContext`, `StatTile`, `saldoSenhas`,
+`saldoRs`, `Minha Carteira` — e não encontrei nada. Mas **não procurei** `p.nome`,
+`p.email`, `c.cliente_nome`, `c.cliente_id` — que são os campos que Aprovacoes e
+Cotas renderizam quando há dados. Estes são PII de clientes, não do admin logado,
+e por isso escaparam ao grep focado em "dados do utilizador comum".
+
+### Aprovacoes mostra PII de clientes — e é a sua função
+Quando há pedidos pendentes e o admin está autenticado, a tela mostra nome, e-mail
+e endereço COMPLETO de cada cliente. É o fluxo de aprovação (REQ-20), e o
+endpoint foi protegido com JWT admin (MC39.17.2) precisamente por esta razão. Mas
+visualmente, são "dados de usuário comum" no ecrã do admin.
+
+### Cotas também
+Mostra nome do cliente, endereço e valor de cada cota. Mesma situação: é a função
+da tela, mas expõe PII.
+
+### Placeholders disparam falsos positivos
+Os EmConstrucao contêm as palavras "saldo", "senhas" e "lances" em texto
+explicativo sobre o que a tela VAI fazer. A varredura de CDP confirma:
+`temSenhas: true, temLances: true` no texto do painel mesmo sem autenticação.
+Qualquer scan rápido conclui "o painel ainda mostra dados pessoais" — mas são
+textos de planejamento, não dados reais.
+
+### O que não consegui ver
+A sessão admin expirou (force-stop matou o sessionStorage) e sem o ADMIN_TOKEN
+não posso autenticar. O estado autenticado que descrevo vem da leitura do código,
+não da observação no ecrã.
+
+### Plano (execução no MC89.9)
+- P0: toggle PII em Aprovacoes, truncar endereços em Cotas
+- P1: prefixar placeholders com "[EM BREVE]", encurtar nota longa
+- P2: "0" → "—" onde aplicável
+
+Mas ANTES: o operador autentica-se no APK enquanto estou ligado por CDP, ou envia
+screenshots. Se houver algo que não detetei (Cenário B), o plano é revisto.
