@@ -2,7 +2,11 @@
 //
 // MC89.6 (Fase 0). É o que sobra de `pages/AdminPanel.jsx` depois de as abas
 // saírem para `pages/admin/*.jsx`: o gate de acesso, a barra de estado da sessão,
-// a navegação e o <Outlet /> onde cada tela entra.
+// o caminho de volta e o <Outlet /> onde cada tela entra.
+//
+// A NAVEGAÇÃO não está aqui: vive em cartões no índice (AtalhosAdmin), porque
+// nenhuma barra com nove destinos cabe num telemóvel — ver o comentário desse
+// ficheiro para o que foi medido no aparelho.
 //
 // A autenticação já não vive aqui — vive em `AdminAuthContext`, porque as sete
 // telas partilham a mesma sessão. Este ficheiro só a LÊ.
@@ -16,19 +20,20 @@
 //   · saída explícita, porque a barra inferior de consumo não existe nesta rota.
 
 import { useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button, Input } from "../ui";
 import { ESTADOS } from "../../lib/adminAuth.js";
-import NavAdmin from "./NavAdmin.jsx";
+import { telaAtiva } from "../../lib/adminNav.js";
 
 const COR = { text: "#e8f0fe", muted: "#94a3b8" };
 
 export default function AdminLayout() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { abrirModal } = useAppContext();
   const {
     authState, authError, autenticado, login, logout,
@@ -72,6 +77,7 @@ export default function AdminLayout() {
     );
   }
 
+  const tela = telaAtiva(pathname);
   const statusOk    = authState === ESTADOS.AUTENTICADO;
   const statusBg    = statusOk ? "rgba(16,185,129,0.06)" : (authState === ESTADOS.ERRO ? "rgba(239,68,68,0.06)" : "rgba(251,191,36,0.06)");
   const statusBd    = statusOk ? "rgba(16,185,129,0.3)"  : (authState === ESTADOS.ERRO ? "rgba(239,68,68,0.3)"  : "rgba(251,191,36,0.3)");
@@ -94,8 +100,17 @@ export default function AdminLayout() {
     >
       <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem" }}>
         <div style={{ minWidth: 0 }}>
+          {/* Fora do índice, o título passa a ser o da SECÇÃO e o caminho de volta
+              fica por cima dele. Repetir "Painel Admin" em todas as telas gastava
+              a única linha que diz onde se está. */}
+          {tela && !tela.index && (
+            <Link to="/admin" style={{
+              display: "inline-block", marginBottom: "0.2rem",
+              fontSize: "0.74rem", color: COR.muted, textDecoration: "none",
+            }}>← Painel</Link>
+          )}
           <h1 style={{ margin: 0, fontSize: isMobile ? "1.2rem" : "1.45rem", fontWeight: 700, color: COR.text, letterSpacing: 0 }}>
-            Painel Admin
+            {tela && !tela.index ? tela.label : "Painel Admin"}
           </h1>
           <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: COR.muted }}>
             Logado como admin: <code style={{ color: COR.text }}>{endereco?.slice(0, 10)}…{endereco?.slice(-6)}</code>
@@ -146,8 +161,6 @@ export default function AdminLayout() {
           </Button>
         </form>
       )}
-
-      <NavAdmin />
 
       <section>
         {/* Cada tela entra aqui. O <Suspense> das rotas preguiçosas vive em

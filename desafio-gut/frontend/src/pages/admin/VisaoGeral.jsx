@@ -7,13 +7,15 @@
 //   2. O bloco on-chain carrega SEPARADO: depende de RPC e a sua lentidão não
 //      pode segurar o resto do ecrã.
 //
-// Fase 1 (MC89.7) acrescenta aqui gráficos, alertas e os cartões-atalho que
-// fazem desta tela o índice de D-NAV. Fase 0 apenas a move.
+// MC89.6 acrescentou os cartões-atalho (AtalhosAdmin) que fazem desta tela o
+// ÍNDICE de D-NAV: é daqui que se chega a todas as outras. Fase 1 (MC89.7)
+// acrescenta gráficos e alertas.
 
 import { useEffect, useState, useCallback } from "react";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button } from "../../components/ui";
+import AtalhosAdmin from "../../components/admin/AtalhosAdmin.jsx";
 import { COR, Metrica, Grelha, ouTraco, brl } from "./_ui.jsx";
 
 export default function VisaoGeral() {
@@ -63,8 +65,17 @@ export default function VisaoGeral() {
     carregarOnchain();
   }, [chamarAdmin, carregar, carregarOnchain]);
 
+  // Os atalhos NÃO dependem da sessão admin: são a navegação do painel, e um ADM
+  // sem JWT ainda tem de conseguir circular. Só as métricas ficam por trás do gate.
   if (!chamarAdmin) {
-    return <p style={{ color: COR.muted, fontSize: "0.85rem" }}>Autentique-se para ver as métricas.</p>;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+        <AtalhosAdmin />
+        <p style={{ color: COR.muted, fontSize: "0.85rem", margin: 0 }}>
+          Autentique-se para ver as métricas.
+        </p>
+      </div>
+    );
   }
 
   const u = stats?.utilizadores;
@@ -74,6 +85,8 @@ export default function VisaoGeral() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+      <AtalhosAdmin />
+
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
         <span style={{ fontSize: "0.72rem", color: COR.muted }}>
           {stats?.geradoEm ? `Lido às ${new Date(stats.geradoEm).toLocaleTimeString("pt-BR")}` : ""}

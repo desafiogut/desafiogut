@@ -112,7 +112,7 @@ test("zero emojis em NENHUM ecrã do painel, fora dos comentários", () => {
   // cumprida uma regra que nem se está a medir onde ela pode ser quebrada.
   const alvos = [
     "components/admin/AdminLayout.jsx",
-    "components/admin/NavAdmin.jsx",
+    "components/admin/AtalhosAdmin.jsx",
     ...readdirSync(resolve(SRC, "pages/admin")).map((f) => `pages/admin/${f}`),
   ];
   assert.ok(alvos.length >= 11, `esperava ≥11 ficheiros de painel, vi ${alvos.length}`);
