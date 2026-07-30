@@ -105,6 +105,36 @@ test("utilizadores são endereços DISTINTOS entre as fontes", async () => {
   mock.reset();
 });
 
+test("⚠️ o endereço da cota vem de cliente_id — a coluna `endereco` está sempre nula", async () => {
+  // DEFEITO REAL, apanhado no MC89.2 ao comparar a resposta do GUTO com a base:
+  // o agregador lia `cotas.endereco`, que existe e está SEMPRE NULA (0 de 7
+  // linhas preenchidas em produção). Resultado: "0 cotas com carteira" e as
+  // cotas fora da contagem de utilizadores — o painel dizia 5 quando eram 7.
+  //
+  // Pior do que o defeito: eu tinha validado o código contra uma consulta SQL
+  // que lia a MESMA coluna errada, logo os dois concordaram. Esta forma de dados
+  // é a REAL, e é ela que impede a repetição.
+  const a = "0x" + "a".repeat(40);
+  const b = "0x" + "b".repeat(40);
+  const obterMetricas = await comSupabase(fakeSb({
+    cotas: [
+      { cliente_id: a,            endereco: null, vendida: false }, // com carteira
+      { cliente_id: b,            endereco: null, vendida: true  }, // com carteira
+      { cliente_id: "cnpj:123456", endereco: null, vendida: false }, // só CNPJ
+    ],
+    saldo_rs: [], saldo_rs_creditos: [], lances: [], fila_tarefas: [],
+  }));
+  const m = await obterMetricas();
+
+  assert.equal(m.cotas.total, 3);
+  assert.equal(m.cotas.comCarteira, 2, "cliente_id tem de ser lido; a cota por CNPJ não conta");
+  assert.equal(m.cotas.vendidas, 1);
+  assert.equal(m.utilizadores.comAtividade, 2,
+    "as cotas TÊM de entrar na contagem de utilizadores — era isto que faltava");
+  assert.equal(m.utilizadores.fontes.cotas, 2);
+  mock.reset();
+});
+
 test("valores não numéricos no payload não contaminam as somas", async () => {
   const obterMetricas = await comSupabase(fakeSb({
     cotas: [],

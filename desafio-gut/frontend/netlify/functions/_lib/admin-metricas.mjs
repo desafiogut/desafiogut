@@ -41,6 +41,16 @@ function normalizarEndereco(valor) {
   return /^0x[0-9a-f]{40}$/.test(s) ? s : null;
 }
 
+/**
+ * Endereço de uma cota. `cliente_id` primeiro porque é a chave real e é onde o
+ * endereço está; `endereco` fica como segunda tentativa para o dia em que a
+ * coluna passe a ser preenchida. Devolve o `cnpj:…` como não-endereço, e é assim
+ * que as 2 cotas sem carteira ficam de fora sem desaparecerem da contagem total.
+ */
+function enderecoDaCota(cota) {
+  return normalizarEndereco(cota?.cliente_id) || normalizarEndereco(cota?.endereco);
+}
+
 // ── Saldo da EOA coordenadora ───────────────────────────────────────────────
 //
 // MC89.2 — vive AQUI, e não dentro de `admin-onchain.mjs`, porque agora tem dois
@@ -141,7 +151,13 @@ export async function obterMetricas() {
   // Uma leitura por tabela, em paralelo. `allSettled` porque o objetivo é
   // degradar por bloco — não falhar o painel inteiro por causa de uma tabela.
   const [rCotas, rSaldo, rCreditos, rLances, rFila] = await Promise.allSettled([
-    sb.from("cotas").select("endereco, vendida"),
+    // ⚠️ MC89.2 — `cliente_id` é a CHAVE e é onde o endereço vive. A coluna
+    // `endereco` existe e está SEMPRE NULA (verificado: 0 de 7 preenchidas).
+    // Ler `endereco` dava "0 cotas com carteira" e deixava as cotas fora da
+    // contagem de utilizadores — o painel dizia 5 quando são 7.
+    // `cliente_id` guarda `0x…` para quem tem carteira e `cnpj:…` para quem foi
+    // registado só por CNPJ (2 dos 7); `normalizarEndereco` separa os dois.
+    sb.from("cotas").select("cliente_id, endereco, vendida"),
     sb.from("saldo_rs").select("cliente_id, payload"),
     sb.from("saldo_rs_creditos").select("payload, criado_em"),
     sb.from("lances").select("endereco"),
@@ -182,7 +198,7 @@ export async function obterMetricas() {
       return n;
     };
     const fontes = {
-      cotas:    cotas    ? conta(cotas,    (c) => c.endereco)             : null,
+      cotas:    cotas    ? conta(cotas,    (c) => enderecoDaCota(c))      : null,
       saldo:    saldo    ? conta(saldo,    (s) => s.cliente_id)           : null,
       creditos: creditos ? conta(creditos, (c) => c.payload?.endereco)    : null,
       lances:   lances   ? conta(lances,   (l) => l.endereco)             : null,
@@ -212,7 +228,7 @@ export async function obterMetricas() {
     cotasBloco = {
       total:       cotas.length,
       vendidas:    cotas.filter((c) => c.vendida === true).length,
-      comCarteira: cotas.filter((c) => normalizarEndereco(c.endereco)).length,
+      comCarteira: cotas.filter((c) => enderecoDaCota(c)).length,
     };
   }
 
