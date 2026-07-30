@@ -1,0 +1,206 @@
+================================================================================
+MC89.3 — DIAGNÓSTICO E PLANO DE LIMPEZA VISUAL DO PAINEL ADMIN
+================================================================================
+Data......: 2026-07-29
+Branch....: feat/mc89-adm-system
+Código....: ZERO alterações (R1 cumprida — diff de código vazio)
+Commits...: 5 (S0 · S1 · S2 · S3 · este)
+Evidência.: captura de ecrã real + medição de estilos computados por CDP
+Aparelho..: Xiaomi 21091116UG · sessão ADM Ramon (0x1E1b…d198cB) · rota /admin
+Documentos: MC89.3-DIAGNOSTICO · MC89.3-ELEMENTOS · MC89.3-ARQUITETURA ·
+            MC89.3-PLANO (em desafio-gut/docs/) + a captura
+            MC89.3-evidencia-admin.png
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+O painel de administração não tem "emojis a mais". Tem um problema maior, e a
+captura de ecrã não deixa lugar a dúvida:
+
+  **O /admin está desenhado por cima de uma ilustração de showroom de prémios —
+  frigorífico, PlayStation 5, Smart TV, forno, máquina de lavar — com holofotes
+  de palco e CONFETES DOURADOS EM QUEDA a passar por cima do texto. E o painel
+  não tem superfície nenhuma por baixo do seu conteúdo.**
+
+Resultado medido, não impressão: "Logado como admin: 0x1E1b…" e "Autentique-se
+para ver as métricas." **não se leem**. Não é uma questão de gosto — é texto
+ilegível num ecrã de trabalho.
+
+Se este MC executasse o que o briefing pede — remover emojis, trocar badges,
+neutralizar textos — o painel ficaria exactamente igual de ilegível, só sem
+emojis. Por isso o plano começa noutro sítio.
+
+================================================================================
+1. A MEDIÇÃO QUE MUDA O DIAGNÓSTICO
+================================================================================
+Estilos computados, lidos no aparelho, na rota /admin:
+
+  h1 ("Painel Admin")          backgroundColor   rgba(0, 0, 0, 0)
+  pai do h1                    backgroundColor   rgba(0, 0, 0, 0)
+  container raiz do painel     backgroundColor   rgba(0, 0, 0, 0)
+  h1 fontFamily                Orbitron, sans-serif
+  h1 color                     rgb(245, 166, 35)
+  <video> no DOM               1 · paused=FALSE · fundo-loop-v3-mobile.webm
+  camadas [class*=gut-bg]      3
+
+O container raiz é um `<div style={{padding, color, display:flex}}>`. **Sem
+fundo, sem classe de vidro.** O texto assenta directamente na ilustração animada.
+
+E o scrim que devia proteger a leitura é fraco exactamente onde o conteúdo vive
+(globals.css:249-256): 0,62 no topo → **0,30 aos 34%** → 0,34 aos 66% → 0,70 no
+fim. Trinta por cento de navy sobre eletrodomésticos iluminados não dá contraste
+para ler cinzento.
+
+================================================================================
+2. DE ONDE VEM CADA COISA
+================================================================================
+  ilustração + confetes + holofotes   BackgroundCanvas, montado em App.jsx:221,
+                                      FORA das rotas (aparece até no gate LGPD)
+  vinheta / brilho                    AtmosphereFilter, via AppLayout
+  rodapé legal + navegação inferior    Layout.jsx / BottomNav.jsx, via AppLayout
+  avatar do GUTO                      ChatbotWidget, App.jsx:277
+  emojis, laranja, Orbitron           AdminPanel.jsx (estilos inline)
+
+`/admin` está DENTRO do grupo `<Route element={<AppLayout/>}>` (App.jsx:243-272),
+logo herda tudo. Os confetes NÃO são o `components/Confetti.jsx` — esse só existe
+no MercadoLances e no FimLeilaoOverlay. Estão dentro do vídeo.
+
+================================================================================
+3. ISTO JÁ FOI RESOLVIDO ANTES, NOUTRO ECRÃ
+================================================================================
+O projeto tem a solução escrita no próprio CSS, desde o MC25.7:
+
+  .gut-glass-standard.gut-glass--solid { background: rgba(13,18,53,0.92); }
+
+  /* modificador de LEITURA: vidro standard mas OPACO, para superfícies que rolam
+     texto longo (painel de chat do GUTO). Restaura a legibilidade que a
+     unificação do MC25.3 perdeu ao baixar a opacidade (texto atravessava). */
+
+O chat do GUTO teve o mesmo defeito e foi corrigido assim. O AdminPanel nunca
+recebeu superfície — nem a standard. Não há nada a inventar: há uma classe a
+aplicar.
+
+================================================================================
+4. TRÊS PONTOS EM QUE DISCORDO DO BRIEFING
+================================================================================
+NO PESO — o briefing trata isto como limpeza de emojis. É o item menos
+  importante dos cinco. Removidos todos, o painel continua ilegível.
+
+NUMA PRESCRIÇÃO — o briefing pede "fundo sólido (branco ou cinza claro)" e "azul
+  escuro para títulos". A app é navy profundo (#050818). Um painel branco não
+  seria neutro: seria um corpo estranho, com um flash branco a cada abertura e o
+  contraste invertido em relação a tudo o resto. O neutro AQUI é navy opaco — que
+  já existe, já está testado, e é a classe do §3.
+
+NUMA SUPOSIÇÃO — "Olá, ADM Ramon!" e "Parabéns!" não existem no /admin. A
+  saudação é do Dashboard comum. Não há troféus nem estrelas neste ecrã. O que há
+  é ⚙️ 📈 🟡 📊 👥, um botão amarelo e um título em Orbitron laranja.
+
+================================================================================
+5. ACHADO QUE NÃO É ESTÉTICA
+================================================================================
+O vídeo de fundo está A REPRODUZIR (`paused=false`) no ecrã de administração.
+É decodificação contínua de vídeo para mostrar confetes a quem está a ler
+números — bateria e GPU sem nada em troca. Depois de três MCs gastos a cortar
+milissegundos de arranque (MC88.36-40), é o oposto do que se andou a fazer.
+
+Desligá-lo na rota não é só limpar: é deixar de gastar. E isso **uma classe CSS
+nunca conseguiria** — o vídeo continuaria a correr, apenas escondido. É a razão
+pela qual a arquitetura proposta não é a que o briefing lista.
+
+================================================================================
+6. ARQUITETURA — E PORQUE NENHUMA DAS TRÊS OPÇÕES DO BRIEFING BASTA
+================================================================================
+As três opções (classe global · prop nos componentes · CSS module) são todas
+sobre como estilizar o AdminPanel. Mas o vídeo e a vinheta estão em elementos
+IRMÃOS, com z-index negativo, fora do painel. Nenhuma classe aplicada ao painel
+apaga o que corre atrás dele. **O problema é de layout, não de folha de estilos.**
+
+PROPOSTA, em duas camadas:
+  1. `ehRotaDeTrabalho(pathname)` num ficheiro só, consumida pelo
+     BackgroundCanvas (fundo sólido, sem vídeo), pelo AppLayout (sem vinheta) e
+     pelo Layout (sem rodapé legal).
+  2. `.admin-panel` no globals.css para superfície e tipografia, mais a edição
+     dos estilos inline dentro do AdminPanel.jsx — que é onde eles estão, e
+     inline vence classe.
+
+REJEITADAS, com razão escrita:
+  · prop `admin` nos componentes partilhados (Button/GlassCard/StatTile): fá-los
+    conhecer o conceito "admin" e ganhar um ramo que o Dashboard comum nunca
+    exercita. É a maneira mais fácil de introduzir uma regressão num ecrã em
+    produção que este MC não devia tocar.
+  · CSS modules: verificado que o projeto não usa nenhum `*.module.css`.
+    Introduzir um segundo modelo de estilos por causa de um ecrã cria duas
+    convenções para o próximo escolher ao acaso.
+
+================================================================================
+7. O PLANO, EM UMA PÁGINA (executa no MC89.4)
+================================================================================
+PASSO 1 · LEGIBILIDADE E ATMOSFERA .................. ~0,5 sessão · risco médio
+  lib/rotasTrabalho.js (novo) · BackgroundCanvas · AppLayout · AdminPanel
+  (classe de superfície) · globals.css (.admin-panel)
+  Critérios medidos: zero `<video>` em /admin · container com fundo opaco ·
+  texto legível na captura · e captura ANTES/DEPOIS de `/` e `/mercado` a provar
+  que a atmosfera continua lá (um `<video>` em `/` tem de continuar a existir).
+
+PASSO 2 · MOBÍLIA ................................... ~0,3 sessão · risco baixo
+  rodapé legal fora do /admin (mas mantido em `/` e `/carteira`, onde é
+  obrigação legal) · navegação e GUTO conforme as decisões abaixo.
+
+PASSO 3 · CHROME DO PAINEL .......................... ~0,5 sessão · risco baixo
+  um ficheiro só: emojis, Orbitron, laranja, botão amarelo, badges, e os
+  separadores que hoje quebram para duas linhas no telemóvel.
+  Critério: os três separadores existentes continuam a fazer o que faziam,
+  provado exercitando um de cada.
+
+A ordem é deliberada: se o MC89.4 tiver de parar a meio, para com o painel
+legível — que é o que hoje não está.
+
+================================================================================
+8. DUAS DECISÕES QUE SÃO SUAS
+================================================================================
+D-A · O GUTO fica no painel?
+      A favor: desde o MC89.2 ele responde às métricas — é ferramenta de
+        trabalho, e perguntar é mais rápido do que navegar.
+      Contra: é um mascote a ocupar um canto de um ecrã de administração.
+      Recomendo: FICA, mas sem o avatar ilustrado — um botão discreto.
+
+D-B · A navegação inferior ("Início · Lances · Carteira · Mais") sai?
+      Se sair, o administrador precisa de outra saída do painel no telemóvel.
+      Recomendo: SUBSTITUIR por um único "← Sair do painel" no cabeçalho, e
+        remover a barra de consumo.
+
+O Passo 2 não arranca sem estas duas. Não é bloqueio artificial: remover a
+navegação sem alternativa deixa o ADM sem forma de sair do painel.
+
+================================================================================
+9. O QUE NÃO SE TOCA — DECLARADO
+================================================================================
+• Nenhuma funcionalidade. Zero botões, zero campos, zero endpoints removidos.
+• Dashboard comum, Corporativo e Mercado ficam iguais, e isso é provado com
+  captura, não afirmado.
+• A paleta global e o scrim global não mudam. Subir o scrim resolveria o /admin e
+  escureceria o produto todo.
+• `components/Confetti.jsx` não se toca: não é ele que aparece aqui.
+• O AdminPanel não sai de dentro do AppLayout — era tentador, mas é alteração de
+  roteamento em produção por um objetivo estético.
+
+================================================================================
+10. PENDÊNCIAS QUE ATRAVESSAM A SÉRIE
+================================================================================
+• D-A e D-B (§8) — antes do Passo 2 do MC89.4.
+• EOA coordenadora com 0,004391 ETH (MC89.2) — é ela que credita as senhas.
+• Valores do painel por ver com credencial — precisa do login admin com o
+  ADMIN_TOKEN na app.
+• Reindexação do RAG (MC88.44).
+• MC89.4 (esta limpeza) e depois a Fase 2 do plano do MC89 (comandos).
+
+================================================================================
+PRÓXIMO PASSO
+================================================================================
+O plano precisa da sua aprovação, e das decisões D-A/D-B, antes de qualquer
+código. Com isso, o MC89.4 executa os três passos na ordem acima.
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================

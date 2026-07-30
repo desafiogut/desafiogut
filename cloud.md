@@ -5132,3 +5132,67 @@ segundo plano** — a captura do ecrã mostrou o Android. O React não faz commi
 visibilidade. Regra: antes de dizer que a UI congelou, tirar captura e confirmar
 que a app está à frente. Segunda vez nesta sessão que o ambiente de medição
 enganou (a primeira foi o `curl` com acentos, no MC88.44).
+
+---
+
+## MC89.3 — Diagnóstico e plano de limpeza visual do Painel Admin
+
+**Data:** 2026-07-29 · **Branch:** `feat/mc89-adm-system` · **Código:** ZERO alterações
+**Docs:** `desafio-gut/docs/MC89.3-{DIAGNOSTICO,ELEMENTOS,ARQUITETURA,PLANO,RELATORIO}.txt`
+**Evidência:** `desafio-gut/docs/MC89.3-evidencia-admin.png` (captura real do aparelho)
+
+### O problema não é emojis
+O `/admin` está desenhado **por cima de uma ilustração de showroom de prémios**
+(frigorífico, PS5, Smart TV, forno, máquina de lavar), com holofotes de palco e
+**confetes dourados em queda** a passar por cima do texto. E o painel **não tem
+superfície nenhuma**.
+
+Medido na rota, no aparelho:
+| | |
+|---|---|
+| h1, pai do h1, container raiz | `backgroundColor: rgba(0,0,0,0)` |
+| `<video>` no DOM | 1 · **paused=false** · `fundo-loop-v3-mobile.webm` |
+| scrim na banda do conteúdo | **0,30–0,34** de navy (globals.css:249) |
+| h1 | Orbitron, `#f5a623` |
+
+Consequência: "Logado como admin: 0x1E1b…" e "Autentique-se para ver as métricas."
+**não se leem**. Removidos todos os emojis, continuariam ilegíveis.
+
+### Já foi resolvido antes, noutro ecrã
+`globals.css:423` — `.gut-glass--solid { rgba(13,18,53,0.92) }`, criado no **MC25.7**
+porque o painel de chat do GUTO teve o MESMO defeito. O AdminPanel nunca recebeu
+superfície, nem a standard. Não há nada a inventar: há uma classe a aplicar.
+
+### Três discordâncias do briefing
+- **peso**: emojis são o menos importante dos cinco problemas;
+- **prescrição**: pedia fundo "branco ou cinza claro" — a app é navy `#050818`;
+  branco seria corpo estranho e flash a cada abertura. O neutro aqui é navy opaco;
+- **suposição**: "Olá, ADM Ramon!" e "Parabéns!" não existem no `/admin` (é o
+  Dashboard comum); não há troféus nem estrelas neste ecrã.
+
+### Não é estética: é custo
+O vídeo de fundo está **a reproduzir** num ecrã de leitura de números — GPU e
+bateria sem retorno, depois de três MCs (MC88.36-40) gastos a cortar
+milissegundos. **Uma classe CSS não resolve isto**: o vídeo continuaria a correr,
+escondido. É por isso que a arquitetura proposta não é nenhuma das três do briefing.
+
+### Arquitetura proposta
+`ehRotaDeTrabalho(pathname)` num ficheiro só → consumida pelo **BackgroundCanvas**
+(fundo sólido, sem vídeo), pelo **AppLayout** (sem vinheta) e pelo **Layout** (sem
+rodapé legal); mais `.admin-panel` no globals.css e a edição dos inline no
+AdminPanel.jsx. **O problema é de layout, não de folha de estilos** — o vídeo e a
+vinheta são elementos irmãos com z-index negativo.
+
+Rejeitadas: prop `admin` nos componentes partilhados (faria Button/GlassCard/
+StatTile ganharem um ramo que o Dashboard comum nunca exercita — regressão fácil
+num ecrã em produção) e CSS modules (o projeto não usa nenhum `*.module.css`).
+
+### Plano (MC89.4): P0 legibilidade → P1 mobília → P2 chrome
+Ordem deliberada: se parar a meio, para com o painel **legível**. Não-regressão por
+**prova visual** — captura antes/depois de `/` e `/mercado`, e `<video>` tem de
+continuar a existir em `/`.
+
+### ⚠️ Duas decisões do operador antes do Passo 2
+**D-A** o GUTO fica no painel? (recomendo que fique, sem avatar ilustrado)
+**D-B** a navegação inferior sai? (recomendo substituir por "← Sair do painel" —
+senão o ADM fica sem saída no telemóvel)
