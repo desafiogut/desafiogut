@@ -1,0 +1,281 @@
+================================================================================
+MC89.5 — SEGMENTO 2: ARQUITETURA DE BACKEND (ENDPOINTS)
+================================================================================
+
+--------------------------------------------------------------------------------
+REGRAS QUE TODO O ENDPOINT ADMIN NOVO TEM DE CUMPRIR
+--------------------------------------------------------------------------------
+Não são preferências: cada uma vem de um defeito que já custou um MC.
+
+D4 — PROIBIDO IMPORTAR `ethers`, direta ou transitivamente.
+  Medido no MC88.31: ethers ≈ 2 s de cold start; `_lib/signer.mjs` arrasta-o.
+  `_lib/admin-auth.mjs` custa ≈ 1,3 s e é inevitável (é o gate). Somar ethers a
+  isso dá um painel de 3+ s, que deixa de ser aberto.
+  Como cumprir: JSON-RPC cru por fetch, como admin-metricas.mjs:64-81 já faz.
+  Se um endpoint PRECISAR mesmo de ethers (assinar), fica isolado no seu próprio
+  ficheiro e a UI carrega-o num pedido separado — o padrão do admin-onchain.
+
+R2 — `respostaPreflight(req)` é a PRIMEIRA linha do handler.
+  O OPTIONS não leva corpo nem Authorization; qualquer validação antes dele
+  responde 4xx e o browser aborta a chamada real. Foi o defeito MC88.12/88.13,
+  que partiu TODAS as functions no APK e não só o PIX.
+
+R3 — `aplicarRateLimit` antes do gate; `guardAdmin` a seguir.
+  E o 429 tem de expor `retry-after` (já está em access-control-expose-headers,
+  cors.mjs) — sem isso o APK fica cego ao backoff (MC88.16 P0).
+
+R4 — Indisponível ≠ zero. O padrão `parciais[]` de admin-metricas.mjs é a
+  referência: fonte que falhou entra pelo NOME e o campo fica `null`.
+
+R5 — Paginação por cursor (keyset), não por OFFSET. Todas as listas ordenam por
+  `criado_em DESC, chave` e recebem `?antes=<iso>&limite=N`. OFFSET degrada e,
+  pior, salta linhas quando chegam registos novos entre páginas.
+
+R6 — Endpoint que MUTA escreve em `admin_logs` ANTES de agir, e o registo é
+  fail-CLOSED (se o log falhar, a ação não acontece). Ver D5 nas Tabelas.
+  Endpoints de leitura não escrevem log.
+
+R7 — Um endpoint = uma responsabilidade de dependência. Não agrupar uma leitura
+  de Postgres com uma de RPC no mesmo pedido: a lentidão de uma passa a ser a
+  lentidão das duas (a razão de admin-onchain existir à parte).
+
+--------------------------------------------------------------------------------
+ENDPOINTS EXISTENTES (não mexer, salvo onde indicado)
+--------------------------------------------------------------------------------
+GET  admin-stats        [admin]  métricas agregadas · cache 45 s (no-op sem Redis)
+GET  admin-onchain      [admin]  saldoEth + bloco · cache 60 s · sem ethers
+GET  admin-list         [admin]  lista completa
+GET  admin-list?endereco=  [público]  oráculo de UM endereço (gate de UI)
+POST admin-list         [admin]  adicionar/remover      → EXPANDIR com `nivel` (D7)
+GET  admin-aprovacao    [admin/owner]  pedidos
+POST admin-aprovacao    [admin]  aprovar/rejeitar
+POST auth-admin         login | refresh | logout        → EXPANDIR com claim `nivel`
+GET  notificacoes       [admin]  eventos derivados + pessoais (não duplicar)
+
+--------------------------------------------------------------------------------
+TELA 2 — GESTÃO DE USUÁRIOS
+--------------------------------------------------------------------------------
+GET /admin-users                                          [admin]  NOVO
+  Query : ?q=<endereço|email> &tipo= &ativoDesde=<iso> &antes=<iso> &limite=<1..100>
+  Fonte : VIEW `vw_utilizadores` (ver Tabelas D2) — UNION dos endereços
+          conhecidos, com agregados. NÃO faz RPC (D4/D2 da Tela 2).
+  Saída : { utilizadores: [{ endereco, email|null, saldoCentavos|null,
+            creditos, cotas, primeiraAtividade, ultimaAtividade,
+            bloqueado, fontes: [...] }],
+            proximoCursor|null, total|null, parciais: [] }
+  Gate  : guardAdmin, nível ≥ operador
+  RL    : 20/min      Cache: 30 s (chave inclui os filtros)
+  ⚠ `email` vem de cotas e está preenchido em 3 de 7 registos (achado A-2).
+    O campo é `null`, nunca "" — e a UI mostra "—".
+
+GET /admin-user?endereco=0x…                              [admin]  NOVO
+  Saída : identificação, saldo R$, cotas, créditos, débitos, lances RELÂMPAGO
+          (via data-store, cobre Blobs e Supabase), bloqueio.
+  ⚠ NÃO inclui saldo de senhas (é on-chain) nem lances programados (on-chain).
+    Ambos declarados na resposta como `{ onchain: "nao_incluido", motivo }` —
+    ausência explicada não é ausência silenciosa (achado A-3).
+  Gate  : nível ≥ operador     RL: 30/min
+
+GET /admin-user-onchain?endereco=0x…                      [admin]  NOVO
+  Só saldoSenhas(address) via JSON-RPC cru (eth_call). Endpoint SEPARADO por R7 —
+  é a única parte do perfil que depende da rede.
+  Gate  : nível ≥ operador     RL: 20/min     Cache: 30 s
+
+POST /admin-user-bloqueio                                 [admin]  NOVO
+  Body  : { endereco, acao: "bloquear"|"desbloquear", justificativa }
+  Gate  : nível ≥ admin   ·   justificativa OBRIGATÓRIA (mín. 10 caracteres)
+  Log   : fail-closed (R6)
+  ⚠ DEPENDÊNCIA: só tem efeito depois de os gates de emissão de sessão e de
+    dinheiro lerem a flag (D-BLOQUEIO da Tela 2). Enviar o endpoint sem o gate
+    entrega um botão que não bloqueia nada.
+
+POST /admin-user-ajuste                                   [admin]  NOVO
+  (substitui o "admin-user-reset" do enunciado — ver D-SALDO)
+  Body  : { endereco, tipo: "credito"|"debito", valorCentavos, justificativa }
+  Efeito: escreve em saldo_rs_creditos / saldo_rs_debitos com fonte="ajuste-admin"
+          e atualiza saldo_rs na MESMA transação (RPC Postgres, não duas escritas
+          do lado do Node — é dinheiro).
+  Gate  : nível ≥ super-admin   ·   justificativa obrigatória   ·   log fail-closed
+  ⚠ Idempotência por `operacao_id` fornecido pelo cliente, como o resto do
+    sistema financeiro já faz (pedido_id / operacao_id são chaves primárias).
+
+--------------------------------------------------------------------------------
+TELA 3 — GESTÃO FINANCEIRA
+--------------------------------------------------------------------------------
+GET /admin-transactions                                   [admin]  NOVO
+  Query : ?desde= &ate= &tipo=credito|debito &fonte= &endereco= &antes= &limite=
+  Fonte : saldo_rs_creditos ∪ saldo_rs_debitos (D-FIN — sem tabela nova)
+  Saída : { transacoes: [{ id, quando, endereco, tipo, fonte, valorCentavos,
+            saldoDepoisCentavos }], proximoCursor, resumo: { entradas, saidas,
+            liquido }, parciais }
+  Gate  : nível ≥ operador     RL: 20/min
+
+GET /admin-financeiro-resumo                              [admin]  NOVO
+  Séries diárias de créditos/valor + totais do período. Alimenta os gráficos da
+  Tela 1 e o topo da Tela 3 — UM endpoint para os dois, para não haver dois
+  cálculos da mesma receita (a regra "uma fonte por número" do MC89).
+  Cache : 60 s     Gate: nível ≥ operador
+  ⚠ NÃO inclui "gás gasto": não há fonte agregada (Tela 3). Devolve, em vez
+    disso, `variacaoEoa7d` quando o admin-onchain histórico existir; até lá o
+    campo não é devolvido de todo — melhor ausente do que inventado.
+
+GET /admin-report?formato=csv&…                           [admin]  NOVO
+  Mesmo filtro do admin-transactions, saída text/csv em streaming.
+  ⚠ GET e não POST (o enunciado propõe POST): é uma leitura, e assim o browser
+    descarrega direto. Contém PII → gate ≥ admin e registo em admin_logs
+    (exportar dados pessoais é ação auditável mesmo sendo leitura — é a única
+    exceção a "leitura não escreve log").
+
+POST /admin-refund                                        [admin]  NOVO
+  Só o ajuste INTERNO (Tela 3). O estorno no Mercado Pago fica fora.
+  Na prática: alias semântico de /admin-ajuste com tipo="debito" e
+  fonte="reembolso-admin". Endpoint próprio para o log ficar legível.
+  Gate  : nível ≥ super-admin   ·   justificativa obrigatória
+
+POST /admin-fund-eoa                                      ⛔ NÃO ESPECIFICADO
+  Recomendação contrária em D11 (Tela 3). Se o operador reafirmar, precisa de MC
+  próprio com modelo de ameaça, chave dedicada e aprovação em dois passos.
+
+--------------------------------------------------------------------------------
+TELA 4 — OPERAÇÕES E INFRAESTRUTURA
+--------------------------------------------------------------------------------
+GET /admin-status                                         [admin]  NOVO
+  Sondas independentes, cada uma com o seu timeout, em Promise.allSettled —
+  o padrão de degradação por bloco de obterMetricas().
+  Saída : { supabase: {ok, ms}, rpc: {ok, ms, bloco}, blobs: {ok, ms},
+            monitor: {ultimoBloco, blocoAtual, atrasoBlocos},
+            webhookMp: {ultimoEm|null, diasSem}, redis: {configurado},
+            cronsEfeito: {...}, geradoEm }
+  ⚠ `blobs` é sonda NOVA e é a mais importante: hoje nada verifica os Blobs e
+    metade do substrato admin vive lá (Mapa 0.5).
+  ⚠ `monitor` compara blocos, não lê o booleano `atrasado` (D-MONITOR).
+  Gate  : nível ≥ operador     RL: 20/min     Cache: 15 s
+  D4    : nenhuma destas sondas usa ethers.
+
+GET /admin-queue                                          [admin]  NOVO
+  fila_tarefas: contagem por estado, falhadas com ultimo_erro, agendadas.
+  Gate  : nível ≥ operador     RL: 20/min
+
+POST /admin-commands                                      [admin]  NOVO
+  Body  : { comando, justificativa, confirmacao: "<texto exato>" }
+  Comandos ACEITES (os que existem de facto — ver Tela 4):
+    "panic" | "unpanic"        → system-state (já implementado no chatbot)
+    "processar_fila"           → processarLote()
+    "executar_monitor"         → handler HTTP do monitor-onchain
+    "limpar_cache"             → só aceite se Redis estiver configurado;
+                                 caso contrário 409 "cache_nao_configurado"
+  Comandos REJEITADOS por desenho (respondem 501 com explicação, não silêncio):
+    "reindexar_rag"            → o índice é construído fora do repo pelo operador
+    "reiniciar_monitor"        → não existe processo para reiniciar
+  Gate  : nível ≥ admin (super-admin para panic/unpanic)
+  Log   : fail-closed, ANTES de executar (R6)
+  RL    : 5/min — o mesmo do GUTO admin (chatbot.mjs:67), pela mesma razão
+
+--------------------------------------------------------------------------------
+TELA 5 — LOGS E AUDITORIA
+--------------------------------------------------------------------------------
+GET /admin-logs                                           [admin]  NOVO
+  Query : ?admin= &tipo= &desde= &ate= &q= &antes= &limite=
+  Fonte : tabela admin_logs. Inclui, na mesma lista, o histórico importado do
+          Blob "log-decisoes" (achado A-5) marcado com origem="log-decisoes",
+          para a auditoria não começar com um buraco de história.
+  Gate  : nível ≥ admin (um operador não audita quem o supervisiona)
+  RL    : 20/min
+
+GET /admin-logs-export?formato=csv&…                      [admin]  NOVO
+  Gate ≥ admin. A própria exportação fica registada.
+
+POST /admin-logs-retention                                [admin]  NOVO
+  Body  : { dias }  → grava a política em admin_config.
+  ⚠ NÃO apaga nada de imediato: quem apaga é purge-logs-scheduled (Tela 5), e a
+    execução da purga é ela própria registada.
+  Gate  : nível ≥ super-admin
+
+--------------------------------------------------------------------------------
+TELA 6 — COMUNICAÇÃO E NOTIFICAÇÕES
+--------------------------------------------------------------------------------
+POST /admin-notify                                        [admin]  NOVO
+  Body  : { destino: "todos"|"admins"|"especifico"|"segmento", destinoIds?,
+            segmento?, canal: "inapp"|"email"|"push", titulo, mensagem, link?,
+            agendadoPara?: iso }
+  Efeito: 1) grava em `notifications`
+          2) ENFILEIRA em fila_tarefas (tipo notif_<canal>, agendado_para)
+          3) responde { id, total, estado: "em_fila" }
+  ⚠ Responde "em_fila", nunca "enviado": a fila tem latência medida de 2–7 min
+    (D8). Dizer "enviado" no instante do clique seria falso.
+  ⚠ canal="push" responde 501 enquanto o FCM não existir — e diz porquê
+    (exige APK novo, Tela 6). Um 501 explicado é honesto; um sucesso falso não.
+  Gate  : nível ≥ admin   ·   RL: 5/min   ·   log fail-closed
+
+GET /admin-notifications                                  [admin]  NOVO
+  Histórico com estado agregado por envio (total / entregues / falhas), lido de
+  notifications + notification_logs.
+  Gate  : nível ≥ operador
+
+GET|POST /admin-notification-templates                    [admin]  NOVO
+  Gate  : GET ≥ operador · POST ≥ admin
+
+HANDLERS DA FILA (não são endpoints — registam-se em fila-processor-scheduled):
+  notif_inapp  → _lib/notificacoes-usuario.mjs (já existe; reutilizar)
+  notif_email  → SendGrid
+  notif_push   → FCM (fase futura)
+  Cada handler escreve uma linha em notification_logs. Retentativa e
+  `max_tentativas` são da fila, não dos handlers — não reimplementar backoff.
+
+--------------------------------------------------------------------------------
+TELA 7 — CONFIGURAÇÕES E ADMINS
+--------------------------------------------------------------------------------
+POST /admin-list   (EXPANDIR o existente)                 [admin]
+  Body ganha `nivel: "super-admin"|"admin"|"operador"`.
+  ⚠ COMPATIBILIDADE: o formato guardado passa de ["0x…"] para
+    [{ endereco, nivel, … }]. A leitura tem de aceitar OS DOIS e tratar a forma
+    antiga como super-admin (D7). Sem isso, o primeiro deploy tranca o operador
+    fora do painel — exatamente o cenário que admin-helpers.mjs:20-24 evita.
+  Gate  : nível ≥ super-admin
+
+POST /auth-admin   (EXPANDIR o existente)
+  O access JWT ganha a claim `nivel`, resolvida no login E no refresh
+  (o refresh já re-verifica a lista de admins, auth-admin.mjs:136-139 — é ali
+  que se resolve o nível, para que uma despromoção propague em ≤ 15 min).
+
+GET /admin-sessions                                       [admin]  NOVO
+  Lista as sessões (jti, criadaEm, expiraEm, ultimoAcesso, ip, userAgent) do
+  próprio (≥ operador) ou de todos (≥ super-admin). Lê o Blob admin-refresh
+  existente, com os campos novos (A-7).
+
+POST /admin-sessions-revoke                               [admin]  NOVO
+  Body : { endereco, justificativa }  → reutiliza revogarAdmin() (já escrito).
+  Gate : próprio (≥ operador) · outro admin (≥ super-admin) · log fail-closed
+
+GET|POST /admin-config                                    [admin]  NOVO
+  Limiares de alerta, retenção LGPD, atualização automática.
+  Gate : GET ≥ operador · POST ≥ super-admin
+
+--------------------------------------------------------------------------------
+MATRIZ DE PERMISSÕES (a fonte da verdade é o servidor, nunca a UI)
+--------------------------------------------------------------------------------
+                                    operador  admin  super-admin
+  ler métricas / status / fila          ✓       ✓        ✓
+  listar utilizadores / transações      ✓       ✓        ✓
+  aprovar / rejeitar cliente            ✓       ✓        ✓
+  exportar CSV (PII)                    ✗       ✓        ✓
+  bloquear utilizador                   ✗       ✓        ✓
+  comandos operacionais                 ✗       ✓        ✓
+  panic / unpanic                       ✗       ✗        ✓
+  ajuste financeiro / reembolso         ✗       ✗        ✓
+  enviar notificação                    ✗       ✓        ✓
+  ler logs de auditoria                 ✗       ✓        ✓
+  gerir admins e níveis                 ✗       ✗        ✓
+  revogar sessão de outro admin         ✗       ✗        ✓
+  retenção LGPD / config                ✗       ✗        ✓
+
+--------------------------------------------------------------------------------
+CONTAGEM
+--------------------------------------------------------------------------------
+  Novos:      17 endpoints
+  Expandidos:  2 (admin-list, auth-admin)
+  Rejeitados:  1 (admin-fund-eoa — D11) + 2 comandos impossíveis
+  Enunciado propunha 19 novos; a diferença é: -1 (fund-eoa), -1 (user-reset
+  virou user-ajuste), +2 (admin-user-onchain e admin-financeiro-resumo, exigidos
+  por R7 e pela regra de uma fonte por número).
+================================================================================

@@ -1,0 +1,287 @@
+================================================================================
+MC89.5 — SEGMENTO 0: MAPA DO QUE JÁ EXISTE
+================================================================================
+Data: 2026-07-30
+Branch: feat/mc89-adm-system (ZERO alteração de código — R1 cumprida)
+Método: leitura de código + consulta read-only ao Supabase + execução da suíte.
+
+Cada linha abaixo tem uma origem verificável. Onde o levantamento CONTRADIZ o
+enunciado do MC, isso está marcado com ⚠️ e a evidência ao lado — corrigir o mapa
+antes de planear é mais barato do que descobrir a meio da Fase 2.
+
+--------------------------------------------------------------------------------
+0.1 — FRONTEND: AdminPanel.jsx
+--------------------------------------------------------------------------------
+Ficheiro: desafio-gut/frontend/src/pages/AdminPanel.jsx
+Tamanho REAL: 990 linhas   ⚠️ (o enunciado diz 740 — cresceu nos MC89.1–89.4)
+Rota: src/App.jsx:259 → <Route path="/admin" element={<AdminPanel />} />
+
+Separadores (AdminPanel.jsx:853-860), por esta ordem:
+  visao       "Visão Geral"   TabVisaoGeral   (AdminPanel.jsx:160-300)  — MC89.1
+  aprovacoes  "Aprovações"    TabAprovacoes   (AdminPanel.jsx:302-410)
+  cotas       "Cotas"         TabCotas        (AdminPanel.jsx:412-577)
+  admins      "Admins"        TabAdmins       (AdminPanel.jsx:579-649)
+
+Infra-estrutura já construída dentro do ficheiro e REUTILIZÁVEL pelas 7 telas:
+  · chamarAdmin(url, init)      AdminPanel.jsx:791  — Bearer + retry automático
+                               num único 401 (refresh transparente). TODA a tela
+                               nova deve passar por aqui; ninguém chama fetch cru.
+  · refreshAdminToken()         AdminPanel.jsx:674  — rotação do refresh
+  · loginAdmin(tokenLegado)     AdminPanel.jsx:730  — EIP-191 via Privy + ADMIN_TOKEN
+  · logoutAdmin()               AdminPanel.jsx:773  — revoga no backend
+  · accessTokenRef              AdminPanel.jsx:662  — access SÓ em memória (nunca
+                               em storage). Padrão a preservar.
+  · sessionStorage "gut_admin_refresh"  — refresh + endereco + expiresAt
+  · setInterval 12 min          AdminPanel.jsx:723  — auto-refresh (TTL access 15 min)
+  · Metrica / Grelha / ouTraco  AdminPanel.jsx:117-158 — primitivas de exibição
+  · StatusBadge                 AdminPanel.jsx:88
+
+Regras de UI já fixadas (MC89.1 + MC89.4) que as 7 telas herdam:
+  R-UI-1  Número indisponível = "—", NUNCA 0. Implementado em ouTraco() (:118).
+  R-UI-2  `parciais[]` do backend é MOSTRADO pelo nome (:233-238). Sem isso, um
+          "—" é indistinguível de um zero.
+  R-UI-3  Bloco on-chain carrega em pedido SEPARADO (:185), sem await no caminho
+          das métricas. Rede lenta não segura o ecrã.
+  R-UI-4  Sem emojis nos rótulos (:850). Aba ativa marca-se por CONTRASTE.
+  R-UI-5  O laranja #f5a623 está RESERVADO a ação irreversível (:972). Login e
+          navegação usam neutro.
+  R-UI-6  Separadores em UMA linha, scroll horizontal, sem wrap (:965-968).
+          ⚠️ CONSEQUÊNCIA DIRETA PARA O MC90: 7 separadores NÃO cabem na largura
+          de um telemóvel com esta regra. Ver decisão D-NAV em MC89.5-TELAS.txt.
+
+--------------------------------------------------------------------------------
+0.2 — BACKEND: endpoints admin existentes
+--------------------------------------------------------------------------------
+Diretório: desafio-gut/frontend/netlify/functions/
+
+  admin-stats.mjs      61 linhas  GET   [admin] métricas agregadas, cache 45 s
+  admin-onchain.mjs    64 linhas  GET   [admin] saldo EOA + bloco, cache 60 s
+  admin-list.mjs      145 linhas  GET/POST  lista de admins (GET c/ ?endereco= é público)
+  admin-aprovacao.mjs 235 linhas  GET/POST  workflow de aprovação de cliente
+  auth-admin.mjs      172 linhas  POST  login / refresh / logout
+
+_lib de suporte:
+  _lib/admin-metricas.mjs  266 linhas  obterMetricas() + obterSaldoEoa()  ← FONTE ÚNICA
+  _lib/admin-auth.mjs                  emitirParAdmin / rotacionarRefresh /
+                                       revogarAdmin / guardAdmin / autenticarAdmin
+  _lib/admin-helpers.mjs               getAdminAddresses() + resolverCoordenacao()
+  _lib/rbac.mjs                        getRole() → admin|cliente|user
+  _lib/cors.mjs                        CABECALHOS_CORS (origem única: https://localhost)
+  _lib/cache.mjs                       cache Redis — NO-OP sem REDIS_URL/REDIS_TOKEN
+  _lib/rate-limiter.mjs                aplicarRateLimit(req, chave, rpm)
+  _lib/validate.mjs                    jsonResponse / jsonError / validarEndereco
+  _lib/log-operacional.mjs             registrarDecisao() → Blob "log-decisoes"
+  _lib/notificacoes-usuario.mjs        notificações PESSOAIS → Blob "notificacoes"
+  _lib/fila.mjs                        enfileirar() / processarLote() → Postgres
+
+RESTRIÇÃO DE ARQUITETURA JÁ ESCRITA NO CÓDIGO (admin-stats.mjs:6-9,
+admin-onchain.mjs:12-14, health.mjs:22-26, admin-metricas.mjs:8-10):
+  · `ethers` custa ~2 s de cold start (medido no MC88.31)
+  · `_lib/admin-auth.mjs` custa ~1,3 s (arrasta @netlify/blobs + jose)
+  O admin-auth é inevitável (é o gate). O ethers NÃO é — e por isso o único
+  endpoint que fala com a cadeia (admin-onchain) foi ISOLADO, e ainda assim
+  evita o ethers usando JSON-RPC cru (admin-metricas.mjs:64-81).
+  Isto é um REQUISITO, não uma otimização. Ver D4 em MC89.5-ENDPOINTS.txt.
+
+--------------------------------------------------------------------------------
+0.3 — GUTO ADM (chatbot.mjs, 1165 linhas)
+--------------------------------------------------------------------------------
+5 intents de métricas (MC89.2), padrões em chatbot.mjs:126-132:
+  metricas_usuarios / metricas_financeiro / metricas_fila / metricas_eoa /
+  metricas_geral
+Construídos por tabela (chatbot.mjs:546-616, MAPA_METRICAS + construirIntentsMetricas)
+sobre a MESMA obterMetricas() do admin-stats. Uma fonte por número — cumprido.
+
+Gate: confirmarAdminChat() (chatbot.mjs:~240) aceita DOIS caminhos:
+  1) admin-access JWT ou x-admin-token legado (autenticarAdmin)
+  2) user-session JWT cujo endereço ∈ getAdminAddresses()
+Rate-limit admin: RL_GUTO_ADMIN_RPM = 5/min (chatbot.mjs:67).
+Não-admin recebe resposta educada da tabela e NENHUMA leitura de métricas é feita
+(chatbot.mjs:~570) — o gate está antes do I/O, que é o sítio certo.
+
+Outros intents admin já existentes (11 no total com os 5 acima):
+  criar_edicao_wizard, criar_edicao, listar_edicoes, encerrar_edicao, auditoria,
+  simular_vencedor, pulso_edicao, panic, unpanic, memoria,
+  relatorio_indicacoes, relatorio_compras
+(≥12 — o número "11" do enunciado subestima; a contagem exata depende de se
+contar `criar_edicao` legado e `criar_edicao_wizard` como um ou dois.)
+
+--------------------------------------------------------------------------------
+0.4 — SUPABASE: tabelas que EXISTEM (verificado por list_tables, 2026-07-30)
+--------------------------------------------------------------------------------
+  tabela                  RLS   linhas
+  ----------------------  ----  ------
+  produtos                on    0
+  lojistas                on    0
+  lances                  on    0     ⚠️ VAZIA — ver ACHADO A-3
+  config_remota           on    1
+  cotas                   on    7
+  cotas_pagas             on    0
+  cota_fingerprints       on    0
+  saldo_rs                on    5
+  saldo_rs_creditos       on    18
+  saldo_rs_debitos        on    0
+  troco_senhas            on    0
+  wallet                  on    0
+  wallet_idem             on    0
+  fila_tarefas_legado     on    0
+  fila_tarefas            on    5
+
+⚠️ NÃO EXISTE `pedidos` (o enunciado lista-a como existente). O registo de
+   pagamento é `saldo_rs_creditos`, com `pedido_id` como chave primária.
+⚠️ NÃO EXISTE nenhuma tabela de utilizadores (`usuarios`, `users`, `profiles`).
+   Ver ACHADO A-1 — é a lacuna estruturante do programa inteiro.
+✓  Não existem `admin_logs`, `notifications`, `notification_logs`, `sessions`
+   (o enunciado está correto nestes quatro).
+
+Colunas relevantes (information_schema, verificado):
+  cotas(cliente_id, endereco, cnpj, email, categoria, vendida, pedido_id,
+        payload jsonb, criado_em, atualizado_em)
+  saldo_rs(cliente_id, payload jsonb, atualizado_em)
+  saldo_rs_creditos(pedido_id PK, payload jsonb, criado_em)
+  saldo_rs_debitos(operacao_id PK, payload jsonb, criado_em)
+  lances(id uuid, edicao_id, endereco, hash_lance, valor_centavos, created_at,
+         payload jsonb)
+  fila_tarefas(id uuid, tipo, payload jsonb, status, tentativas, max_tentativas,
+               agendado_para, ultimo_erro, criado_em, atualizado_em)
+
+Chaves de saldo_rs_creditos.payload (verificado por jsonb_object_keys):
+  endereco, fonte, pedidoId, processado, processadoEm,
+  saldoAntesCentavos, saldoDepoisCentavos, valorCentavos
+→ Este payload É o livro-razão financeiro. Tem antes/depois, origem e valor.
+  É suficiente para a Tela 3 sem criar tabela nenhuma. Ver D-FIN.
+
+--------------------------------------------------------------------------------
+0.5 — O QUE VIVE EM NETLIFY BLOBS (e não em Postgres)
+--------------------------------------------------------------------------------
+Levantamento importante porque metade do substrato ADM NÃO está no Supabase:
+
+  admin-list:admins            lista de admins            (admin-list.mjs:28)
+  admin-refresh:{endereco}     sessões/refresh tokens     (admin-auth.mjs:26)
+  admin-aprovacao:{cliente_id} pedidos de aprovação + PII (admin-aprovacao.mjs:36)
+  log-decisoes                 log de ações do admin, FIFO 500 (log-operacional.mjs:14-15)
+  notificacoes:{endereco}      notificações do utilizador, FIFO 50 (notificacoes-usuario.mjs:19-21)
+  bids:bid:{edicao}:{end}:{r}  LANCES (Key-Per-Bid, MC28.1) (bids-store.mjs:13)
+  schedule                     grade de programação       (schedule.mjs:26)
+  edicoes-metadata             metadados das edições      (notificacoes.mjs:~33)
+  system-state                 kill switch panic/unpanic  (_lib/system-state.mjs)
+  cotas / renovacao-adesao     lidos por rbac.mjs:48,63
+
+⚠️ RISCO TRANSVERSAL: o registo [[desafiogut-blobs-token-dois-cegos]] diz que a
+ausência de BLOBS_TOKEN cega funções em produção sem erro visível. Todos os
+acessos acima são fail-soft e SILENCIOSOS (`catch { return [] }`,
+`console.warn`). Para métricas isso é aceitável. Para um log de auditoria de
+compliance NÃO é. Ver D5 em MC89.5-TABELAS.txt.
+
+--------------------------------------------------------------------------------
+0.6 — FUNÇÕES AGENDADAS (para a Tela 4)
+--------------------------------------------------------------------------------
+  monitor-onchain-scheduled.mjs   cada 30 min; o handler HTTP de
+                                  monitor-onchain.mjs continua invocável à mão,
+                                  admin-gated (comentário :4-6)
+  fila-processor-scheduled.mjs    consome fila_tarefas (SKIP LOCKED)
+  ia-preditiva-scheduled.mjs
+  backup-blobs-scheduled.mjs
+  purge-logs-scheduled.mjs
+
+--------------------------------------------------------------------------------
+0.7 — BASELINE DE TESTES (verificado, não assumido)
+--------------------------------------------------------------------------------
+Comando: node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+Resultado: tests 303 · pass 303 · fail 0 · duration 8,3 s
+⚠️ A flag --experimental-test-module-mocks é OBRIGATÓRIA
+   ([[desafiogut-mc4931-lance-relampago]]). E passar o DIRETÓRIO em vez do glob
+   falha com 1 teste falso — tem de ser "_tests/*.test.mjs".
+50 ficheiros em _tests/. NENHUM cobre admin-stats / admin-onchain / os intents
+de métricas: a cobertura do domínio ADM é hoje ZERO. Ver critérios de sucesso.
+
+================================================================================
+ACHADOS — o que o levantamento mudou face ao enunciado
+================================================================================
+
+A-1 (ESTRUTURANTE) — Não há tabela de utilizadores, e a identidade não é nossa.
+  Evidência: list_tables (0.4) não devolve nenhuma tabela de utilizadores; o
+  login é Privy (CLAUDE.md, main.jsx); admin-metricas.mjs:186-188 di-lo por
+  escrito — "a identidade vive no Privy e o backend só conhece quem já apareceu
+  nos dados".
+  Consequência: a Tela 2 ("Gestão de Usuários") não tem de onde LER uma lista de
+  utilizadores. Ou se constrói uma projeção derivada, ou se importa do Privy.
+  É a decisão mais cara do programa. Ver D1.
+
+A-2 — O e-mail existe para uma minoria, e só em `cotas`.
+  Evidência (consulta direta): cotas → 7 linhas, email preenchido em 3.
+  `cotas.endereco` está preenchido em 0 de 7 (a carteira vive em `cliente_id`,
+  como admin-metricas.mjs:154-159 já documenta). `saldo_rs`, `saldo_rs_creditos`
+  e `lances` não têm coluna de e-mail nenhuma.
+  Consequência: "busca por e-mail" na Tela 2 encontra, hoje, no máximo 3
+  registos. A UI tem de dizer isso; caso contrário lê-se como base partida.
+  Isto foi verificado perguntando à BASE se a coluna está preenchida, e não
+  inferido do schema ([[verificacao-que-partilha-o-defeito]]).
+
+A-3 — Os lances estão em DOIS sítios, e nenhum deles é a tabela `lances`.
+  Evidência: Supabase `lances` = 0 linhas. `bids-store.mjs` (Blobs, Key-Per-Bid)
+  é usado por consolidar-lances.mjs e data-store-blobs.mjs. `lance-relampago.mjs`
+  usa addLance() → data-store → backend configurado. O lance PROGRAMADO nem
+  passa pelo backend: vai direto ao contrato (darLance) e só é visto por eventos.
+  Consequência: "histórico de lances do utilizador" (Tela 2) não é uma consulta —
+  são três fontes. Ver D3.
+
+A-4 — O webhook do Mercado Pago continua sem nunca ter disparado.
+  Evidência (consulta direta, agrupando por payload->>'fonte'):
+    confirmar-pagamento → 18 créditos, último 2026-07-26 22:54:55Z
+    webhook             → 0
+  Confirma [[desafiogut-webhook-mp-nunca-disparou]] à data de hoje.
+  Consequência: é um alerta CONCRETO e computável para a Tela 1, não uma
+  suposição — "nenhum crédito com fonte=webhook nos últimos N dias".
+
+A-5 — Já existe um log de ações do admin, e não serve para auditoria.
+  Evidência: _lib/log-operacional.mjs → Blob "log-decisoes", MAX_ENTRADAS 500
+  com poda FIFO (:15,:56-60), 100% fail-soft (":47-50" devolve null em erro).
+  Campos: id, timestamp, trigger, action, user_id. Sem IP, sem user-agent, sem
+  justificativa, sem sucesso/falha, sem payload.
+  Consequência: a Tela 5 não parte do zero conceptual, mas o armazenamento atual
+  é inadequado para compliance (perde os registos mais antigos por desenho e
+  perde escritas em silêncio). Ver D5.
+
+A-6 — Já existe um sistema de notificações — só que de LEITURA.
+  Evidência: notificacoes.mjs (GET, admin-gated, eventos derivados on-read) +
+  _lib/notificacoes-usuario.mjs (Blob por endereço, FIFO 50).
+  Não existe: emissão pelo admin, difusão, push, e-mail, agendamento, templates.
+  Consequência: a Tela 6 acrescenta a metade que falta e NÃO deve construir um
+  segundo canal de leitura. Ver D8.
+
+A-7 — Já existe gestão de sessões admin. Falta metadado e alcance.
+  Evidência: admin-auth.mjs — Blob admin-refresh:{endereco} com
+  [{hash, expiresAt, createdAt, jti}], MAX_REFRESH_POR_ADMIN = 5 (:30),
+  revogarAdmin() já implementado, auth-admin.mjs expõe acao:"logout".
+  Falta: IP, user-agent, último acesso, e revogar as sessões de OUTRO admin.
+  Consequência: a tabela `sessions` proposta no enunciado é, em boa parte,
+  reconstrução do que existe. Ver D6.
+
+A-8 — Não existem níveis de permissão de admin, e o rbac.mjs não é isso.
+  Evidência: admin-list é um array plano de endereços (admin-list.mjs:43).
+  O JWT admin transporta `{ endereco, tipo:"admin-access" }` — sem papel nem
+  âmbito (admin-auth.mjs:5-6). rbac.mjs tem 3 papéis mas noutro eixo:
+  admin|cliente|user descreve o TIPO DE CLIENTE, não o grau de poder do admin.
+  Consequência: "Super-Admin / Admin / Operador" (Tela 7) é funcionalidade nova
+  no gate, no token e no armazenamento. Ver D7.
+
+A-9 — O cache de 45 s do painel é, hoje, um no-op.
+  Evidência: _lib/cache.mjs:7-13 — sem REDIS_URL/REDIS_TOKEN todas as operações
+  são no-op. O comentário do admin-stats.mjs:11-13 assume-o explicitamente.
+  Consequência: o botão "limpar cache" da Tela 4 não teria o que limpar, e cada
+  abertura de tela vai à fonte. Com 7 telas a fazerem polling isso deixa de ser
+  irrelevante. Ver D10 e a Onda 0 de infra.
+
+A-10 — A coordenação continua a ser a EOA comprometida, salvo env do operador.
+  Evidência: admin-helpers.mjs:28 — COORDENACAO_LEGADA = 0xDa3a83…e84E, a chave
+  exposta no MC59.11, e é ela o admin permanente enquanto COORDENACAO_ADDRESS
+  não estiver definida (:34-37). O código emite alerta de segurança de propósito
+  (:66-73). O contrato ativo devolve, em coordenacao(), 0xFea436…1E67.
+  Consequência: qualquer tela que conceda poder por "ser a coordenação" herda
+  este problema. A Tela 1 deve mostrar este alerta; a Tela 7 não deve permitir
+  remover a coordenação (já não permite: admin-list.mjs:118).
+
+================================================================================
+FIM DO SEGMENTO 0
+================================================================================

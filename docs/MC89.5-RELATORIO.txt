@@ -1,0 +1,236 @@
+================================================================================
+MC89.5 — RELATÓRIO CONSOLIDADO
+Plano de arquitetura do Dashboard ADM (7 telas)
+================================================================================
+Data      : 2026-07-30
+Branch    : feat/mc89-adm-system
+Alterações de código: NENHUMA (R1 cumprida)
+Suíte     : 303/303 verde — VERIFICADO, não assumido
+Entregável: diagnóstico + plano faseado, revisável antes de qualquer execução
+
+================================================================================
+1. RESUMO EXECUTIVO
+================================================================================
+O ecossistema ADM tem mais construído do que o enunciado assume nalgumas áreas e
+menos noutras. As três conclusões que mudam o plano:
+
+1. **Não existe tabela de utilizadores, e a identidade não é nossa.** A Tela 2
+   ("Gestão de Usuários") é a única das sete que não tem de onde ler a sua lista.
+   A identidade vive no Privy; o backend só conhece quem já transacionou.
+   É a decisão mais cara do programa (D1).
+
+2. **Metade do substrato ADM vive em Netlify Blobs, não no Supabase** — lista de
+   admins, sessões, log de decisões, aprovações com PII, e os próprios lances.
+   Todos com leitura fail-soft SILENCIOSA. Para métricas é aceitável. Para um log
+   de auditoria de compliance não é, e é por isso que `admin_logs` vai para
+   Postgres com escrita fail-CLOSED (D5).
+
+3. **Três das funcionalidades pedidas não são executáveis como descritas.**
+   Reindexar o RAG não se faz a partir do backend; "reiniciar o monitor" não
+   corresponde a nada (não há processo, há execução); e o push (FCM) não existe
+   de todo — exige projeto Firebase e um APK novo. Dizê-lo agora custa um
+   parágrafo; descobri-lo na Fase 6 custa uma fase.
+
+O plano resultante tem **8 fases** (0 a 7), 11–16 sessões, e reordena o
+enunciado num ponto de fundo: **auditoria e níveis de permissão sobem para a
+Fase 2**, antes dos comandos operacionais. Construir ações irreversíveis antes de
+existir rasto e hierarquia é a ordem errada.
+
+================================================================================
+2. DIAGNÓSTICO — o que já existe
+================================================================================
+(detalhe completo em docs/MC89.5-MAPA.txt)
+
+FRONTEND  AdminPanel.jsx, 990 linhas (o enunciado diz 740 — cresceu nos MC89.1-4).
+          4 separadores. Já traz a infraestrutura de autenticação que as 7 telas
+          vão partilhar: chamarAdmin com refresh transparente, access token só em
+          memória, timer de 12 min, primitivas Metrica/Grelha/ouTraco.
+          6 regras de UI fixadas nos MC89.1/89.4 que as telas novas herdam.
+
+BACKEND   5 endpoints admin (admin-stats, admin-onchain, admin-list,
+          admin-aprovacao, auth-admin) + _lib/admin-metricas.mjs como fonte única
+          de cada número. Restrição de arquitetura escrita no código: `ethers`
+          custa ~2 s de cold start e está BANIDO dos endpoints do painel.
+
+GUTO ADM  ≥12 intents admin, dos quais 5 de métricas (MC89.2), construídos por
+          tabela sobre as mesmas funções do painel. Gate duplo, rate-limit 5/min,
+          e o gate ANTES do I/O — quem não é admin não provoca leitura nenhuma.
+
+SUPABASE  15 tabelas, todas com RLS ativo e política única para service_role.
+          NÃO existem: usuarios/profiles, pedidos, admin_logs, notifications,
+          notification_logs, sessions.
+
+BLOBS     admin-list, admin-refresh (sessões), admin-aprovacao (PII),
+          log-decisoes, notificacoes, bids (lances), schedule, system-state.
+
+TESTES    303/303 verde. Cobertura do domínio ADM: ZERO.
+
+================================================================================
+3. ACHADOS QUE CONTRADIZEM O ENUNCIADO
+================================================================================
+A-1  Não existe tabela de utilizadores.  [list_tables]
+     ⇒ a Tela 2 precisa de uma projeção derivada ou de importar do Privy (D1).
+
+A-2  O e-mail existe para 3 de 7 cotas; `cotas.endereco` está preenchida em 0
+     de 7 (a carteira vive em `cliente_id`).  [consulta direta à base]
+     ⇒ "busca por e-mail" alcança 3 registos hoje, e a UI tem de o dizer.
+     Verificado perguntando à base se a coluna está preenchida, não inferido do
+     schema.
+
+A-3  Os lances estão em dois sítios, e nenhum é a tabela `lances` (0 linhas):
+     relâmpago em Blobs/Supabase conforme a flag, programado direto no contrato.
+     ⇒ "histórico de lances" não é uma consulta; são três fontes (D3).
+
+A-4  O webhook do Mercado Pago continua sem nunca ter disparado: 18 de 18
+     créditos têm fonte='confirmar-pagamento', 0 têm 'webhook'; último em
+     2026-07-26.  [consulta direta]
+     ⇒ vira um alerta computável da Tela 1, com evidência.
+
+A-5  Já existe um log de ações admin (Blob log-decisoes) — FIFO 500 e fail-soft
+     silencioso. Adequado ao que faz; inadequado para compliance.
+
+A-6  Já existe sistema de notificações, mas só de LEITURA. Falta a emissão.
+
+A-7  Já existem sessões admin com jti e revogação escrita. Faltam três campos de
+     metadado e o alcance a outro admin — não uma tabela nova.
+
+A-8  Não existem níveis de permissão. O rbac.mjs tem 3 papéis, mas noutro eixo
+     (tipo de cliente, não grau de poder do admin).
+
+A-9  O cache de 45 s do painel é um no-op: sem REDIS_URL o _lib/cache.mjs não
+     guarda nada.  ⇒ o botão "limpar cache" não teria o que limpar.
+
+A-10 A coordenação continua a ser a EOA comprometida do MC59.11 enquanto
+     COORDENACAO_ADDRESS não estiver definida. O código já emite o alerta.
+
+Correções factuais menores: AdminPanel tem 990 e não 740 linhas; a tabela
+`pedidos` não existe; os intents admin são ≥12 e não 11.
+
+================================================================================
+4. ARQUITETURA PROPOSTA — sumário
+================================================================================
+ENDPOINTS (detalhe em MC89.5-ENDPOINTS.txt)
+  17 novos · 2 expandidos (admin-list, auth-admin) · 1 recusado (admin-fund-eoa)
+  7 regras obrigatórias, cada uma vinda de um defeito já pago: sem ethers;
+  preflight na primeira linha; rate-limit antes do gate; indisponível ≠ zero;
+  paginação por cursor; log fail-closed antes de mutar; uma dependência por
+  endpoint.
+  Matriz de permissões em 3 níveis, aplicada NO SERVIDOR.
+
+DADOS (detalhe em MC89.5-TABELAS.txt)
+  NOVO:      admin_logs · usuarios_bloqueio · notifications · notification_logs ·
+             notification_templates · admin_config · view vw_utilizadores
+  NÃO CRIAR: usuarios/profiles (D1) · sessions (D6) · transacoes (D-FIN)
+  3 migrações aditivas, nenhuma com DROP, nenhuma re-executável.
+
+FLUXOS (detalhe em MC89.5-FLUXOS.txt)
+  Contexto de auth partilhado; rotas lazy por tela; sem WebSocket; polling
+  opt-in e suspenso quando a tela não está visível; o GUTO chama as funções de
+  _lib e nunca os endpoints; a fila `fila_tarefas` é o transporte das
+  notificações (não se constrói um segundo agendador).
+
+================================================================================
+5. AS 7 TELAS — estado e maior obstáculo de cada uma
+================================================================================
+ T1 Visão Geral    existe    expandir com gráficos e 6 alertas. "Online agora"
+                             não é computável → "Ativos em 24 h".
+ T2 Usuários       nova      SEM FONTE DE LISTA (A-1). A mais cara.
+ T3 Financeiro     nova      fonte pronta (saldo_rs_creditos/debitos). Sem
+                             "abastecer EOA" (D11) e sem "gás gasto" (sem fonte).
+ T4 Operações      nova      2 dos 5 comandos não são executáveis; 1 é no-op.
+ T5 Logs           nova      precisa de admin_logs em Postgres e fail-closed.
+ T6 Notificações   nova      push exige APK novo; e-mail alcança 3 registos.
+ T7 Config         parcial   níveis de permissão são o risco de trancar o
+                             operador fora do painel.
+
+================================================================================
+6. PLANO DE IMPLEMENTAÇÃO
+================================================================================
+(detalhe, critérios de sucesso e mitigações em MC89.5-PLANO.txt)
+
+  Fase 0  MC90.0  Decisões + esqueleto partilhado + primeiros testes ADM   1
+  Fase 1  MC90.1  Visão Geral expandida                                  1–2
+  Fase 2  MC90.2  Auditoria (admin_logs) + níveis + sessões  ⚠ ANTECIPADA   2
+  Fase 3  MC90.3  Operações e infraestrutura                            1–2
+  Fase 4  MC90.4  Gestão de usuários                        ⚠ A MAIS CARA 2–3
+  Fase 5  MC90.5  Gestão financeira                                     1–2
+  Fase 6  MC90.6  Comunicação e notificações (push à parte)             2–3
+  Fase 7  MC90.7  Configurações                                           1
+                                                            TOTAL: 11–16
+
+  Duas diferenças face ao enunciado, ambas deliberadas:
+   · existe uma Fase 0, porque seis decisões precisam do operador e o esqueleto
+     partilhado ainda não existe;
+   · auditoria e níveis sobem da Fase 5/7 para a Fase 2.
+
+================================================================================
+7. DECISÕES QUE PRECISAM DO OPERADOR
+================================================================================
+  D-NAV   Navegação: Visão Geral como índice + uma rota por tela.
+          (7 separadores não cabem numa linha de telemóvel, e a regra de não
+          truncar rótulos foi fixada no MC89.4.)
+  D1      A Tela 2 lista "utilizadores COM ATIVIDADE", não "todos". Importar do
+          Privy fica como enriquecimento futuro.
+  D11     "Abastecer EOA" fica FORA do painel. É movimento de ETH na mainnet
+          atrás de um gate desenhado para aprovar cotas. Recomendação, não
+          recusa: se for reafirmada, especifica-se num MC próprio com modelo de
+          ameaça e chave dedicada.
+  D-SALDO "Resetar saldo" passa a "Ajuste manual" com débito auditável. Um
+          "resetar" que apaga história é um apagão de compliance com botão.
+  T6      Ordem dos canais invertida: in-app → e-mail → push.
+  T7      Tema claro/escuro sai do âmbito (a app tem paleta única).
+
+================================================================================
+8. BLOQUEIOS DO OPERADOR
+================================================================================
+  B1 Aplicar as 3 migrações                            Fases 2, 4, 6
+  B2 Definir COORDENACAO_ADDRESS (A-10)                antes da Fase 2
+  B3 REDIS_URL / REDIS_TOKEN (A-9)                     antes do polling da Fase 3
+  B4 Firebase + google-services.json + APK             Fase 6.5 (push)
+  B5 Verificar BLOBS_TOKEN em produção                 antes da Fase 2
+  B6 Build do APK por fase que toque no frontend       `netlify build`, nunca
+                                                       `npm run build`
+
+================================================================================
+9. RISCOS PRINCIPAIS
+================================================================================
+ R-1 ALTO   Introduzir níveis pode trancar o operador fora do painel: em produção
+            o Blob de admins está vazio e a coordenação é a única admin.
+            Mitigação: leitura retrocompatível + 3 testes (formato antigo, novo,
+            vazio) validados por mutação + deploy-preview antes da mainnet.
+ R-2 ALTO   O bloqueio de utilizador altera o caminho crítico de utilizadores
+            reais em mainnet. Não deployar na véspera de um evento.
+ R-3 MÉDIO  Cegueira dos Blobs: metade do substrato admin vive lá e falha em
+            silêncio. Mitigação: sonda explícita no /admin-status (Fase 3) e
+            admin_logs em Postgres (Fase 2).
+ R-4 MÉDIO  Custo de bundle das 7 telas. Mitigação: rota lazy por tela; gráficos
+            em SVG próprio antes de adotar biblioteca.
+ R-5 MÉDIO  rbac.mjs lê cotas dos Blobs enquanto os dados estão no Supabase: a
+            coluna "Tipo" mostraria "user" para toda a gente e pareceria bug da
+            tela nova. Corrigir toca num gate de toda a aplicação — decisão
+            explícita na Fase 4, não remendo.
+ R-6 BAIXO  Colisão de padrões ao acrescentar intents ao GUTO. Mitigação: o
+            método do MC89.2 (verificar colisão a uma a uma, com teste).
+
+================================================================================
+10. PRÓXIMO PASSO
+================================================================================
+MC90.0 — Fase 0: confirmar as seis decisões da secção 7, extrair o
+AdminAuthContext, introduzir as rotas /admin/* e escrever os primeiros testes do
+domínio ADM (que hoje têm cobertura zero).
+
+Não há trabalho de execução pendente deste MC: o entregável do MC89.5 é este
+conjunto de documentos.
+
+================================================================================
+ENTREGÁVEIS
+================================================================================
+  docs/MC89.5-MAPA.txt        Segmento 0 — mapa e 10 achados
+  docs/MC89.5-TELAS.txt       Segmento 1 — as 7 telas, campo a campo, com fonte
+  docs/MC89.5-ENDPOINTS.txt   Segmento 2 — 17 endpoints + matriz de permissões
+  docs/MC89.5-TABELAS.txt     Segmento 3 — tabelas, RLS, índices, migrações
+  docs/MC89.5-FLUXOS.txt      Segmento 4 — fluxos, GUTO, notificações, APK
+  docs/MC89.5-PLANO.txt       Segmento 5 — 8 fases, riscos, critérios
+  docs/MC89.5-RELATORIO.txt   este documento
+  Desktop\MC89.5-RELATORIO.txt  cópia
+================================================================================

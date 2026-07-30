@@ -1,0 +1,175 @@
+================================================================================
+MC89.5 — SEGMENTO 4: FLUXOS DE DADOS E INTEGRAÇÃO
+================================================================================
+
+--------------------------------------------------------------------------------
+4.0 — O ESQUELETO PARTILHADO (Fase 1; tudo o resto depende dele)
+--------------------------------------------------------------------------------
+Hoje a autenticação admin vive DENTRO do AdminPanel.jsx (accessTokenRef :662,
+chamarAdmin :791, refreshAdminToken :674, timer de 12 min :723). Com D-NAV(c)
+cada tela passa a ser uma rota própria e precisa das mesmas credenciais.
+
+  AdminAuthProvider  (novo, src/context/AdminAuthContext.jsx)
+    ├── accessTokenRef        useRef — SÓ memória (padrão a preservar)
+    ├── sessionStorage        gut_admin_refresh (inalterado)
+    ├── timer 12 min          um só para todo o painel, não um por tela
+    ├── chamarAdmin(url,init) Bearer + refresh transparente num único 401
+    └── nivel                 lido da claim do JWT — para ESCONDER, não para autorizar
+
+  ⚠ O `nivel` no contexto serve para não mostrar botões que vão dar 403. A
+    autorização é do servidor, sempre (matriz em MC89.5-ENDPOINTS.txt). Se
+    alguma tela decidir permissão só pelo contexto, a permissão não existe.
+
+  Rotas (lazy, uma por tela — mantém o custo de parse de arranque onde está,
+  que foi o gargalo medido em [[desafiogut-mc8836-arranque-assets]]):
+    /admin  /admin/usuarios  /admin/usuarios/:endereco  /admin/financeiro
+    /admin/operacoes  /admin/logs  /admin/notificacoes  /admin/config
+
+--------------------------------------------------------------------------------
+4.1 — ATUALIZAÇÃO DOS DADOS: manual, com polling só onde se justifica
+--------------------------------------------------------------------------------
+Decisão: **nenhum WebSocket.** Não há infraestrutura para isso, e o custo
+(ligação persistente numa WebView Android) não se paga por um painel que uma
+pessoa abre umas vezes por dia.
+
+  Tela 1 (Visão Geral)   carrega ao montar + botão "↻ Atualizar" (já existe)
+                         + polling opcional de 60 s, DESLIGADO por omissão e
+                         configurável em admin_config
+  Tela 4 (Operações)     polling de 30 s enquanto a tela está visível
+  Telas 2,3,5,6,7        SEM polling. Listas paginadas recarregam a pedido.
+
+  ⚠ O polling tem de parar quando a tela não está visível
+    (document.visibilityState). Os temporizadores da WebView NÃO congelam em
+    segundo plano ([[desafiogut-mc8815-latencia-pix]]) — um painel esquecido
+    aberto continuaria a bater no backend indefinidamente.
+  ⚠ Com o Redis por configurar (A-9), o cache de 45 s do admin-stats é no-op:
+    cada sondagem vai à fonte. Com 7 telas isto deixa de ser irrelevante, e é a
+    razão de o polling ser opt-in e não o padrão.
+
+--------------------------------------------------------------------------------
+4.2 — FLUXO DE UMA AÇÃO QUE MUTA (idêntico em todas as telas)
+--------------------------------------------------------------------------------
+  1. UI  · o botão só aparece se `nivel` for suficiente (conveniência)
+  2. UI  · diálogo de confirmação com o ALVO escrito por extenso
+           (endereço completo, valor, comando — nunca "tem a certeza?" sozinho)
+  3. UI  · campo de justificativa OBRIGATÓRIO (mín. 10 caracteres) para
+           bloqueio, ajuste, reembolso, comandos e revogação de sessão
+  4. API · respostaPreflight → rate-limit → guardAdmin(nivelMinimo)
+  5. API · INSERT em admin_logs com sucesso=NULL  ← fail-CLOSED (D5b);
+           se falhar, 503 e a ação NÃO acontece
+  6. API · executa
+  7. API · UPDATE admin_logs SET sucesso, erro
+  8. UI  · mostra o resultado e recarrega a lista
+
+  Passos 5 e 7 abraçam o 6 de propósito: uma linha que fique com sucesso=NULL é
+  o rasto de uma ação que rebentou a meio — que um log escrito só no fim perderia.
+
+--------------------------------------------------------------------------------
+4.3 — FLUXO POR TELA (resumo de chamadas)
+--------------------------------------------------------------------------------
+T1 Visão Geral      GET admin-stats · GET admin-onchain (separado, R7) ·
+                    GET admin-financeiro-resumo (gráficos) ·
+                    GET admin-status (só os alertas)
+                    → 4 pedidos paralelos, cada um degrada sozinho
+
+T2 Usuários         GET admin-users (paginado)
+   Perfil           GET admin-user  +  GET admin-user-onchain (separado)
+                    POST admin-user-bloqueio | admin-user-ajuste
+
+T3 Financeiro       GET admin-financeiro-resumo (topo — MESMO endpoint da T1,
+                    para não haver duas contas da mesma receita) ·
+                    GET admin-transactions (lista) · GET admin-report (CSV) ·
+                    POST admin-refund
+
+T4 Operações        GET admin-status (30 s) · GET admin-queue · POST admin-commands
+
+T5 Logs             GET admin-logs · GET admin-logs-export ·
+                    POST admin-logs-retention
+
+T6 Notificações     POST admin-notify → responde "em_fila" ·
+                    GET admin-notifications (progresso) ·
+                    GET/POST admin-notification-templates
+
+T7 Config           GET/POST admin-list · GET admin-sessions ·
+                    POST admin-sessions-revoke · GET/POST admin-config
+
+--------------------------------------------------------------------------------
+4.4 — INTEGRAÇÃO COM O GUTO ADM
+--------------------------------------------------------------------------------
+O que já funciona (MC89.2): os 5 intents de métricas chamam `obterMetricas()` /
+`obterSaldoEoa()` — as MESMAS funções do admin-stats e do admin-onchain. Uma
+fonte por número, cumprida.
+
+REGRA PARA OS INTENTS NOVOS: o GUTO chama a mesma **função de _lib**, nunca o
+endpoint HTTP. Chamar o próprio endpoint acrescentaria uma volta de rede, um
+segundo gate e um segundo cold start dentro de um pedido que já é um cold start.
+  ⇒ Cada tela nova que tenha lógica de leitura extrai-a para `_lib/admin-*.mjs`
+    e o endpoint fica fino. É o que admin-metricas.mjs já fez e por isso o
+    intent `metricas_eoa` do MC89.2 saiu quase de graça.
+
+Intents de LEITURA propostos (Fases 2-5, um por fase, não todos de uma vez):
+  admin_top_utilizadores   "quem são os 5 com mais lances"    → vw_utilizadores
+  admin_transacoes_hoje    "quanto entrou hoje"               → admin-financeiro-resumo
+  admin_status_sistema     "está tudo de pé?"                 → _lib/admin-status
+  admin_ultimas_acoes      "o que foi feito no painel hoje"   → admin_logs
+
+⛔ NÃO expor os comandos de MUTAÇÃO por linguagem natural. O GUTO já tem
+   panic/unpanic (chatbot.mjs:506) porque isso é anterior a este programa. Não
+   ampliar: um bloqueio de utilizador ou um ajuste financeiro disparado por um
+   regex sobre texto livre é uma superfície de erro sem contrapartida. O painel
+   tem confirmação explícita e justificativa; uma frase não tem.
+
+⚠ COLISÃO DE PADRÕES: cada intent novo tem de ser testado contra os existentes,
+  como o MC89.2 fez à mão (chatbot.mjs:117-125 lista as colisões verificadas —
+  pulso_edicao apanha "metricas", auditoria apanha "estatisticas", meu_saldo
+  apanha "meu saldo"). É a parte cara de acrescentar um intent, e é obrigatória.
+
+--------------------------------------------------------------------------------
+4.5 — INTEGRAÇÃO DO ENVIO DE NOTIFICAÇÕES
+--------------------------------------------------------------------------------
+  admin-notify
+      ├── INSERT notifications (estado='em_fila')
+      └── enfileirar('notif_<canal>', {...}, { agendadoPara })   → fila_tarefas
+
+  fila-processor-scheduled  (já existe; SKIP LOCKED, retentativas, max_tentativas)
+      ├── notif_inapp → _lib/notificacoes-usuario.mjs   (JÁ EXISTE — reutilizar)
+      ├── notif_email → SendGrid
+      └── notif_push  → FCM (fase futura)
+                        └── INSERT notification_logs por destinatário
+                            + UPDATE notifications.entregues/falhas/estado
+
+  Porquê a fila e não um envio síncrono: ela já tem reserva atómica, retentativa
+  com limite e `agendado_para` (_lib/fila.mjs:5,25). Construir um segundo
+  agendador seria ter dois relógios que discordam. E o histórico diz que a fila
+  está estável (5/5 concluídas, 2–7 min de latência,
+  [[desafiogut-mc8835-estado-consolidado]]).
+
+  ⚠ Essa latência é a razão de a UI dizer "em fila" e mostrar progresso. E é a
+    razão de o agendamento ser aproximado: "às 14:00" significa "na primeira
+    passagem da fila depois das 14:00". A tela tem de o dizer.
+
+  ⚠ FCM não existe (Tela 6): exige projeto Firebase, google-services.json,
+    plugin Capacitor, tabela de tokens de dispositivo e **um APK novo** — o
+    frontend vive dentro do .apk e um deploy web não o adiciona
+    ([[apk-frontend-empacotado]]). Até lá, canal="push" responde 501 com a razão.
+
+--------------------------------------------------------------------------------
+4.6 — O QUE O APK IMPLICA PARA ESTE PROGRAMA
+--------------------------------------------------------------------------------
+  · Backend  → um deploy web basta e vale de imediato.
+  · Frontend → NÃO chega ao APK sem `cap sync` + rebuild + release
+    ([[apk-frontend-empacotado]]).
+  ⇒ O operador vai ver as sete telas no APK apenas depois de um build novo. Cada
+    fase tem de dizer se entrega valor pelo web, pelo APK, ou por ambos.
+
+  ⚠ E o build tem de ser `netlify build`, NUNCA `npm run build`: o Vite lê os
+    .env do disco, que ainda apontam para Sepolia e para o contrato abandonado
+    ([[apk-nunca-npm-run-build]]). Verificar `import.meta.env` no dist antes do
+    `cap sync`.
+  ⚠ Toda a chamada nova a partir do APK é cross-origin. Herda automaticamente os
+    CABECALHOS_CORS se — e só se — usar `jsonResponse`/`jsonError` e chamar
+    `respostaPreflight` na primeira linha (R2). Testar o preflight com os
+    cabeçalhos REAIS, incluindo os que o Sentry injeta
+    ([[cors-testar-com-headers-reais]]) — um preflight testado com cabeçalhos
+    supostos dá verde falso.
+================================================================================

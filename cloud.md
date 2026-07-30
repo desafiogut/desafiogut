@@ -5248,3 +5248,74 @@ e aba activa ainda laranja. Se eu tivesse confiado no diff, teria entregado isso
 `/` com **7 vídeos a tocar**, rodapé, navegação, mascote, emojis, CTA laranja —
 intocado. `/mercado` igual. Guarda de teste: 13 rotas de consumo afirmadas como
 NÃO-trabalho, validada por mutação (acrescentar `/mercado` derruba o teste).
+
+---
+
+## MC89.5 — Plano de arquitetura do Dashboard ADM (7 telas)
+
+Diagnóstico e planeamento. **Zero alteração de código.** Suíte verificada em
+303/303 (com `--experimental-test-module-mocks` e o glob `_tests/*.test.mjs` —
+passar o diretório dá um falso vermelho).
+
+Entregáveis: `docs/MC89.5-{MAPA,TELAS,ENDPOINTS,TABELAS,FLUXOS,PLANO,RELATORIO}.txt`.
+
+### O levantamento contradisse o enunciado em dez pontos
+O mais caro é o primeiro: **não existe tabela de utilizadores**. A Tela 2
+("Gestão de Usuários") é a única das sete que não tem de onde ler a sua lista —
+a identidade vive no Privy e o backend só conhece quem já transacionou. É o que
+`admin-metricas.mjs:186-188` já dizia por escrito sobre o cartão da Visão Geral,
+agora com a consequência à vista.
+
+Os outros: `pedidos` não existe (é `saldo_rs_creditos`); `cotas.email` está
+preenchida em 3 de 7 e `cotas.endereco` em 0 de 7; a tabela `lances` tem 0 linhas
+porque os lances vivem em Blobs ou no contrato; o AdminPanel tem 990 linhas e não
+740; e o webhook do Mercado Pago **continua sem nunca ter disparado** — 18 de 18
+créditos com `fonte='confirmar-pagamento'`, último a 2026-07-26.
+
+Nenhum destes foi inferido do schema. Foram perguntas à base sobre se a coluna
+está preenchida — a lição de [[verificacao-que-partilha-o-defeito]].
+
+### Metade do substrato ADM não está no Supabase
+Lista de admins, sessões, log de decisões, aprovações com PII e os próprios
+lances vivem em Netlify Blobs, todos com leitura fail-soft **silenciosa**. Para
+métricas é aceitável. Para auditoria de compliance não é: o `log-decisoes` poda a
+500 entradas por desenho e perde escritas sem avisar. Daí `admin_logs` ir para
+Postgres com escrita **fail-CLOSED** — se o registo falhar, a ação é recusada.
+É a inversão deliberada da regra fail-soft do resto do sistema, e tem de ficar
+comentada no código para o próximo MC não a "corrigir".
+
+### Três funcionalidades pedidas não são executáveis como descritas
+Reindexar o RAG não se faz do backend (o índice vive fora do repo,
+[[desafiogut-rag-indice-fora-do-repo]]); "reiniciar o monitor" não corresponde a
+nada — não há processo, há execução; e o push FCM não existe de todo, exige
+projeto Firebase e **um APK novo** ([[apk-frontend-empacotado]]). Escrever isto
+agora custou um parágrafo; descobri-lo na Fase 6 custava uma fase.
+
+Também recomendei deixar **"abastecer EOA" fora do painel**: é mover ETH na
+mainnet atrás de um gate desenhado para aprovar cotas, com o histórico de chave
+exposta do MC59.11 e a coordenação legada ainda ativa. E "resetar saldo" passa a
+"ajuste manual" com débito auditável — o modelo já é de livro-razão
+(`saldoAntes`/`saldoDepois` no payload), sobrescrever seria apagar história.
+
+### Reordenei o plano num ponto de fundo
+O enunciado põe os logs na Fase 5 e os níveis de permissão na 7, com os comandos
+operacionais na 4. Isso deixa uma fase inteira de ações irreversíveis sem rasto e
+sem hierarquia. **Auditoria e níveis sobem para a Fase 2.**
+
+O risco mais alto de todo o programa está aí: mudar o formato do Blob
+`admin-list` pode trancar o operador fora do painel — em produção o Blob está
+vazio e a coordenação é a única admin (`admin-helpers.mjs:20-24`), sem via de
+recuperação a não ser um deploy. Leitura retrocompatível e três testes (formato
+antigo, novo, vazio), validados por mutação.
+
+### O que já existe e não deve ser reconstruído
+Kill switch (já no GUTO), sessões admin com `jti` e `revogarAdmin()` já escrito,
+notificações in-app já lidas pelo frontend, e — o melhor achado — `fila_tarefas`
+tem `agendado_para`, retentativas e reserva por SKIP LOCKED. É um agendador. As
+notificações da Tela 6 usam-no em vez de criar um segundo relógio que discorda.
+Consequência de UX: a fila tem 2–7 min de latência, logo o botão diz "em fila" e
+mostra progresso — nunca "enviado" no instante do clique.
+
+**Próximo passo:** MC90.0 (Fase 0) — confirmar seis decisões com o operador,
+extrair o `AdminAuthContext` e escrever os primeiros testes do domínio ADM, que
+hoje tem cobertura zero.
