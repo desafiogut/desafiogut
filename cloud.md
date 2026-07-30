@@ -5079,3 +5079,56 @@ permanente de bateria/dados para um número que será 0 ou 1) e **push** (FCM).
   voltar a usar `requireRole("cliente")`.
 - `OPENAI_API_KEY` não está em produção — é o que falta para a reindexação do
   RAG pendente do MC88.44.
+
+---
+
+## MC89.1 + MC89.2 — Métricas do ADM (Fase 1 do plano do MC89)
+
+**Data:** 2026-07-29 · **Branch:** `feat/mc89-adm-system` · **Suite:** 293/293 · **Deploy:** feito
+**Relatórios:** `desafio-gut/docs/MC89.1-RELATORIO.txt` · `MC89.2-RELATORIO.txt`
+
+### Entregue
+`_lib/admin-metricas.mjs` (fonte ÚNICA de cada número) · `admin-stats` (cache 45 s,
+sem ethers) · `admin-onchain` (JSON-RPC puro — o isolamento planeado para conter os
+~2 s do ethers acabou por não precisar dele) · separador **Visão Geral** no
+AdminPanel · **5 intents de leitura** no GUTO ADM, a ler da mesma função.
+
+Fase 0 confirmada: `ADMdesafiogut@gmail.com` → `0x1E1bAe7F…d198cB`, `isAdmin:true`.
+São agora **dois admins** — o risco R-5 do MC89 está fechado.
+
+### 🔴 O painel do MC89.1 mostrava números errados, e a culpa é da minha verificação
+Ao comparar a resposta do GUTO com a base, "Cotas: 7 (**0** com carteira)" não
+batia. **`cotas.endereco` está SEMPRE NULA** (0 de 7); o endereço vive em
+`cliente_id` (`0x…` ou `cnpj:…`).
+
+| | dizia | é |
+|---|---|---|
+| utilizadores com atividade | 5 | **7** |
+| cotas com carteira | 0 | **5** |
+
+**Porque não o apanhei antes:** a consulta SQL com que "validei" o código lia a
+MESMA coluna errada. Código e verificação partilhavam a suposição, concordaram, e
+eu publiquei "5 utilizadores" no relatório do MC89.1 como verdade medida.
+**O que o desfez:** olhar para a FORMA dos dados (`count(endereco)` = 0), não para
+outra consulta minha. Corrigido, deployado, com teste na forma real + mutação.
+
+### Validado em produção, 5 de 5 intents
+`modoBusca: intent` em todos (não passam pelo LLM nem pelo RAG). Números conferidos
+contra SQL: 7 utilizadores · R$ 9,75 em circulação · R$ 44,00 em 18 créditos ·
+7 cotas (5 com carteira) · fila 0/5. Perfis não-admin: recusa sem um único número.
+
+### ⚠️ Alerta operacional revelado pelo painel
+**EOA coordenadora com 0,004391 ETH.** É ela que credita as senhas on-chain;
+quando secar, a compra deixa de ser creditada e o sintoma aparece longe da causa.
+
+### Não-regressão
+5 padrões novos num roteador de 12 = 5 riscos de roubo. Colisões verificadas uma a
+uma (`pulso_edicao` já casava "metricas"; `auditoria` casava "estatisticas";
+`meu_saldo` e `pacotes_cotas` testados antes). Teste com 16 frases + mutação.
+
+### ⚠️ Falso alarme meu: o B1 não foi reproduzido
+Julguei ter apanhado o B1 (URL muda, ecrã não) com um clique real. Era **a app em
+segundo plano** — a captura do ecrã mostrou o Android. O React não faz commit sem
+visibilidade. Regra: antes de dizer que a UI congelou, tirar captura e confirmar
+que a app está à frente. Segunda vez nesta sessão que o ambiente de medição
+enganou (a primeira foi o `curl` com acentos, no MC88.44).

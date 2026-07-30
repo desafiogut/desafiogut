@@ -1,0 +1,202 @@
+================================================================================
+MC89.2 — INTENTS DE LEITURA DO GUTO ADM E VALIDAÇÃO DO PAINEL
+================================================================================
+Data......: 2026-07-29
+Branch....: feat/mc89-adm-system
+Suite.....: 293/293 verde (281 → 293)
+Deploy....: FEITO (2 deploys — o segundo para a correção do §3)
+Aparelho..: Xiaomi 21091116UG · sessão ADM Ramon (0x1E1b…d198cB)
+APK.......: NÃO recompilado, e de propósito — ver §6
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+O GUTO ADM responde a perguntas de métricas em produção, com os mesmos números
+que o painel, a partir da mesma função. Cinco intents novos, validados um a um
+na conta real do ADM.
+
+Mas o resultado que importa deste MC não é isso. É isto:
+
+  🔴 A COMPARAÇÃO ENTRE O GUTO E A BASE DE DADOS REVELOU QUE O PAINEL DO MC89.1
+     ESTAVA A MOSTRAR NÚMEROS ERRADOS. "Utilizadores com atividade" dizia 5 e
+     são 7. "Cotas com carteira" dizia 0 e são 5.
+
+E a razão de eu não o ter apanhado no MC89.1 é pior do que o próprio defeito:
+**a consulta SQL com que "validei" o código lia a mesma coluna errada.** As duas
+coisas concordaram porque partilhavam a suposição. Escrevi "5 utilizadores" no
+relatório do MC89.1 como verdade medida, e não era.
+
+O defeito está corrigido, em produção, com teste que trava a repetição.
+
+================================================================================
+1. FASE 0 — CONFIRMADA
+================================================================================
+O briefing dava-a como concluída. Verifiquei em vez de aceitar:
+
+  GET admin-list?endereco=0x1E1bAe7F0f6E87E15F430B620Eca42B146d198cB
+  → { "isAdmin": true, "role": "admin", "fonte": "admin-list" }
+
+`ADMdesafiogut@gmail.com` (ADM Ramon) é administrador. Há agora DOIS admins — o
+risco R-5 do MC89 (uma única carteira a controlar a plataforma) está fechado.
+
+================================================================================
+2. PAINEL ADM — VALIDADO NO APARELHO, COM RESSALVA
+================================================================================
+Com a sessão do ADM, em `/admin`:
+
+  ⚙️ Painel Admin
+  Logado como admin: 0x1E1bAe7F…d198cB     ← o gate reconheceu a conta nova
+  ⚠ Login admin necessário para mutações
+  📈 Visão Geral   🟡 Aprovações   📊 Cotas   👥 Admins
+  Autentique-se para ver as métricas.
+
+  ✔ o separador novo é o primeiro e o ativo
+  ✔ o gate do separador funciona: mostra o aviso, não números falsos
+  ⏳ os VALORES no painel continuam por ver — exigem o login admin com o
+     ADMIN_TOKEN colado na app, que é seu (R5). O caminho dos números foi
+     validado por outra via, mais forte: o GUTO (§4), que usa a mesma função.
+
+================================================================================
+3. O DEFEITO QUE ESTE MC ENCONTROU
+================================================================================
+COMO APARECEU: perguntei ao GUTO "resumo do sistema" em produção e comparei cada
+número com a base. Todos batiam menos um — "Cotas: 7 (0 com carteira)".
+
+A CAUSA: o agregador lia `cotas.endereco`. Essa coluna existe e está SEMPRE
+NULA — 0 de 7 linhas preenchidas. O endereço vive em `cliente_id`, que guarda
+`0x…` para quem tem carteira e `cnpj:…` para quem foi registado só por CNPJ
+(2 dos 7 casos).
+
+O ERRO MEDIDO:
+                              dizia    é
+  utilizadores com atividade     5      7
+  cotas com carteira             0      5
+  As cotas ficavam INTEIRAMENTE fora da contagem de utilizadores.
+
+PORQUE NÃO O APANHEI NO MC89.1: a consulta SQL que usei para obter a "verdade de
+hoje" fazia `select ... from cotas where endereco is not null` — a MESMA coluna
+errada. Código e verificação partilhavam o defeito, logo concordaram, e eu
+publiquei o número no relatório como medido.
+
+O QUE O DESFEZ: parar de comparar consultas minhas umas com as outras e olhar
+para a FORMA dos dados — quais colunas estão de facto preenchidas:
+
+  select count(*), count(endereco), count(*) filter (where cliente_id ~ '^0x')
+  from cotas;   →   7 | 0 | 5
+
+CORREÇÃO: `enderecoDaCota()` lê `cliente_id` primeiro e mantém `endereco` como
+segunda tentativa, para o dia em que a coluna passe a ser preenchida.
+Teste novo com a forma REAL dos dados (cliente_id preenchido, endereco nulo, uma
+linha `cnpj:`). Validado por mutação: voltar a ler `endereco` derruba 4 testes.
+
+================================================================================
+4. GUTO ADM — VALIDADO EM PRODUÇÃO, 5 DE 5
+================================================================================
+Perguntas feitas pela sessão real do ADM no aparelho (o mesmo token que o widget
+do chat usa; nenhum segredo passou por mim). `modoBusca: intent` em todas — não
+passam pelo LLM nem pelo índice RAG.
+
+  "resumo do sistema"                → metricas_geral
+    Utilizadores com atividade: 7. Saldo em circulacao R$ 9.75, ja creditado
+    R$ 44.00. Cotas: 7 (5 com carteira, 0 vendida(s)). Fila: 0 pendente(s),
+    0 falhada(s).
+
+  "quantos utilizadores com atividade" → metricas_usuarios
+    Utilizadores com atividade: 7. São endereços distintos vistos nos nossos
+    dados (cotas 5, saldo 5, creditos 18, lances 0). NAO e o total de
+    registados: a identidade vive no Privy e quem nunca fez nada nao aparece.
+
+  "qual o saldo em circulacao"        → metricas_financeiro
+    Saldo em circulacao: R$ 9.75. Ja creditado: R$ 44.00 em 18 credito(s),
+    8 nos ultimos 30 dias.
+
+  "tamanho da fila"                   → metricas_fila
+    Fila de tarefas: 0 pendente(s), 0 falhada(s), 5 no total (done=5).
+    Ultima alteracao: 2026-07-27T00:21:52.046+00:00.
+
+  "saldo da coordenadora"             → metricas_eoa
+    EOA coordenadora 0xfea436…1e67: 0.004391 ETH. Bloco 25642091. E esta
+    carteira que credita as senhas on-chain: sem gas, a compra deixa de ser
+    creditada.
+
+CONFERÊNCIA CONTRA A BASE (SQL, depois da correção): 7 utilizadores · R$ 9,75 ·
+R$ 44,00 em 18 créditos · 8 nos 30 dias · 7 cotas (5 com carteira, 0 vendidas) ·
+fila 0 pendentes / 5 concluídas / 27-07. **Tudo bate.**
+
+PERFIL NÃO-ADMIN, em produção sem credencial:
+  "resumo do sistema"                 → recusa educada, zero números
+  "quantos utilizadores com atividade" → recusa educada, zero números
+
+⚠️ ALERTA OPERACIONAL QUE ISTO REVELOU: a EOA coordenadora tem **0,004391 ETH**.
+   É ela que credita as senhas on-chain. Quando secar, a compra de senhas deixa
+   de ser creditada e o sintoma aparecerá longe da causa. É precisamente por isto
+   que este número ficou no painel — mas ter o aviso não substitui abastecer.
+
+================================================================================
+5. NÃO-REGRESSÃO
+================================================================================
+Cinco padrões novos num roteador sequencial de 12 são cinco oportunidades de
+partir o que funcionava. As colisões foram verificadas UMA A UMA antes de
+escrever os padrões:
+
+  `pulso_edicao`   já casava a palavra solta "metricas" → os padrões novos NÃO a
+                   casam; exigem "sistema"/"plataforma". Pulso é da EDIÇÃO.
+  `auditoria`      já casava "estatisticas" → não se tocou nessa palavra.
+  `meu_saldo`      casa "meu saldo" e é testado ANTES de "saldo em circulacao".
+  `pacotes_cotas`  casa "quanto custam as cotas", testado ANTES.
+
+Teste com 16 frases a afirmar que os intents antigos continuam a receber as
+suas. Validado por mutação: alargar `metricas_geral` para casar "metricas"
+derruba exactamente esse teste.
+
+Suite: 293/293. Nenhum endpoint existente foi alterado.
+
+================================================================================
+6. O APK NÃO FOI RECOMPILADO — PORQUÊ
+================================================================================
+O MC pedia a recompilação no S2. Não era necessária e seria ruído: **todas as
+alterações deste MC são de backend** (chatbot.mjs, _lib/guto-perfis.mjs,
+_lib/admin-metricas.mjs, admin-onchain.mjs). Alterações de backend valem
+imediatamente para a web E para o APK já instalado; só as de frontend exigem
+`cap sync` + rebuild. O separador "Visão Geral" foi frontend e veio no APK do
+MC89.1, que está no aparelho.
+
+================================================================================
+7. UM SEGUNDO ENGANO MEU, REGISTADO
+================================================================================
+A meio do S0 julguei ter reproduzido o B1 do MC88.41 — o bug crítico em que "a
+URL muda e o ecrã não". Um clique real num `<a href="/carteira">` mudou o
+`location.pathname` e a vista continuou a ser o Painel Admin. Cheguei a escrever
+que era a assinatura do B1.
+
+ERA A APP EM SEGUNDO PLANO. A captura do ecrã mostrou a página inicial do
+Android: a WebView estava viva (o CDP lia o DOM) mas o React não faz commit
+quando não está visível. Trazendo a app para a frente, a vista acompanhou
+imediatamente. **O B1 NÃO foi reproduzido.**
+
+É a segunda vez nesta sessão que o meu ambiente de medição me engana (a primeira
+foi o `curl` a corromper acentos, no MC88.44). A regra que fica: antes de
+declarar que a interface congelou, tirar uma captura do ecrã e confirmar que a
+app está à frente.
+
+================================================================================
+8. PENDÊNCIAS
+================================================================================
+• VALORES DO PAINEL por ver com credencial — precisa do login admin na app com o
+  ADMIN_TOKEN (seu). O caminho dos números já está validado pelo GUTO, que usa a
+  mesma função, portanto isto é confirmação visual, não risco.
+• ABASTECER A EOA COORDENADORA — 0,004391 ETH (§4).
+• Reindexação do RAG (MC88.44) — continua por fazer.
+• MC89.3 (Fase 2 do plano do MC89): comandos executáveis — fila, caches, kill
+  switch — com `confirmar:true` obrigatório, rate-limit e auditoria.
+
+================================================================================
+PRÓXIMO PASSO
+================================================================================
+A seu comando. O plano tem o MC89.3 (comandos) como passo seguinte; em
+alternativa, os achados do MC88.41 que ficaram (MC88.45: botões inativos sem
+explicação, e o "Sair" a 190 px do campo de lance).
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================

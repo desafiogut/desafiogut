@@ -1,0 +1,182 @@
+================================================================================
+MC89.1 — FASE 0 E PRIMEIRAS MÉTRICAS DE LEITURA (ADM)
+================================================================================
+Data......: 2026-07-29
+Branch....: feat/mc89-adm-system
+Suite.....: 281/281 verde (272 + 9 novas)
+Deploy....: FEITO — netlify deploy --prod --build
+APK.......: recompilado (md5 16ae34eaa2895f736eaa2c68ca1c7d5f) e instalado
+Aparelho..: Xiaomi 21091116UG · fiem7xlvcufe855h
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+A estrutura de observação do painel ADM está em produção e funciona: dois
+endpoints novos, gated e verificados ao vivo, e um separador "Visão Geral" no
+AdminPanel que abre por omissão.
+
+Duas coisas saíram diferentes do plano, e ambas para melhor:
+
+  · O MC dizia "mock ou real" para as métricas. Ficaram REAIS. Implementar as
+    contagens custou menos do que fabricar números falsos — e números falsos num
+    painel de administração são exatamente o risco R-2 que o MC89 registou.
+
+  · O `admin-onchain` foi isolado no plano do MC89 para conter os ~2 s de cold
+    start do `ethers`. Acabou por NÃO PRECISAR de ethers: `eth_getBalance` e
+    `eth_blockNumber` são dois POST de JSON-RPC. O isolamento manteve-se pela
+    outra razão (a rede pode estar em baixo e não pode segurar as métricas), mas
+    sem o custo de arranque.
+
+⏳ A FASE 0 NÃO FICOU FEITA. A sessão do aparelho continua a ser a da conta
+   comum. Sem o endereço da carteira do ADM não há o que acrescentar à lista.
+   Ver §5 — o que falta é seu e são dois passos.
+
+================================================================================
+1. A VERDADE DE HOJE, MEDIDA ANTES DE ESCREVER CÓDIGO
+================================================================================
+Consulta SQL direta ao Supabase, para ter um valor esperado contra o qual
+comparar a implementação:
+
+  utilizadores com atividade ....  5
+  saldo em circulação ..........  975 centavos  (R$ 9,75)
+  créditos .....................  18 registos, R$ 44,00 no total, 8 nos 30 d
+  cotas ........................  7 (0 vendidas)
+  fila_tarefas .................  0 pendentes, 5 concluídas, última 27/07
+
+Escrever o agregador contra números conhecidos é o que distingue "o código
+corre" de "o código está certo".
+
+================================================================================
+2. O QUE FOI CONSTRUÍDO
+================================================================================
+netlify/functions/_lib/admin-metricas.mjs
+  A FONTE ÚNICA de cada número. O `admin-stats` chama-a hoje; os intents de
+  leitura do GUTO chamarão a mesma no MC90. Dois sítios a contar a mesma coisa
+  de maneiras diferentes foi o defeito que o MC88.43 gastou um MC a eliminar.
+
+  · lê por `getSupabaseReadOnly()` — usa a réplica de leitura quando existir;
+  · `Promise.allSettled`: uma tabela em baixo degrada o SEU bloco para `null` e
+    entra em `parciais[]` PELO NOME. Nunca um zero. Zero é uma afirmação sobre o
+    mundo; "não consegui ler" não é zero;
+  · não importa ethers, nem por transitividade.
+
+  Limite escrito no próprio ficheiro: a contagem de endereços distintos é feita
+  em memória (hoje ~30 linhas). Deixa de servir na ordem dos milhares — nessa
+  altura passa a view ou RPC. Está lá para a decisão ser tomada com o número à
+  frente, e não por surpresa.
+
+netlify/functions/admin-stats.mjs
+  preflight → rate-limit → guardAdmin → cache 45 s. Devolve `cache: hit|miss`,
+  para o painel poder explicar um número que não muda depois de um comando (é o
+  TTL, não um defeito).
+
+netlify/functions/admin-onchain.mjs
+  Saldo da EOA coordenadora + bloco atual, isolado. JSON-RPC puro, sem ethers.
+  Conversão de wei por BigInt — `Number` não representa 10^18 com exatidão.
+  `RPC_URL` ausente devolve 503, NÃO "0.000000": um saldo zero num painel de ADM
+  significa "a EOA secou" e mandaria alguém abastecer uma carteira cheia.
+
+src/pages/AdminPanel.jsx
+  Separador "Visão Geral", primeiro e por omissão. Os três existentes não foram
+  tocados. Quatro secções: Utilizadores, Financeiro, Operação, Cadeia.
+  · `ouTraco()` — indisponível mostra "—", nunca 0;
+  · quando o backend reporta `parciais`, o ecrã mostra os nomes e explica que
+    aqueles números são "—" e não zero;
+  · o bloco da Cadeia carrega num pedido SEPARADO, com o seu próprio erro;
+  · o rótulo diz o que o número é: "Com atividade — endereços vistos nos nossos
+    dados. NÃO é o total de registados". A decisão D1 do MC89 tornada visível a
+    quem lê, e não só escrita na documentação.
+
+================================================================================
+3. VALIDAÇÃO
+================================================================================
+EM PRODUÇÃO, depois do deploy:
+  admin-stats     sem credencial → 401 admin_token_ausente
+  admin-onchain   sem credencial → 401 admin_token_ausente
+  preflight OPTIONS (o APK depende dele) → 204 nos dois
+
+LOCALMENTE, com os handlers exercitados em processo:
+  Bearer inválido → 401 admin_token_invalido
+  POST            → 405
+  preflight       → 204
+
+LATÊNCIA, com a distinção que importa:
+  a frio    3,10 s / 2,74 s   ← cold start do `_lib/admin-auth` (~1,3 s, MC88.31)
+  a quente  0,27–0,31 s       ← 5 corridas
+
+⚠️ O QUE ISTO NÃO MEDE: o caminho AUTENTICADO. Estes números são do gate a
+   recusar; a agregação do Supabase acontece depois dele e não foi exercitada em
+   produção porque exige o token de admin (R5). O critério "< 500 ms" está
+   cumprido para o gate a quente e POR PROVAR para o caminho completo. Fica assim
+   dito, em vez de arredondado para "cumprido".
+
+TESTES: 9 novos, suite 281/281.
+  · uma tabela em baixo vira `parciais`, nunca um zero
+  · tudo em baixo devolve tudo null
+  · endereços distintos entre fontes (maiúsculas não criam um terceiro)
+  · payload não numérico não contamina somas
+  · janela de 30 dias
+  · fila contada por estado
+  · nenhum dos três ficheiros importa ethers (nem via signer/contract/kms)
+  · os dois endpoints têm guardAdmin, preflight e rate-limit, com o preflight
+    ANTES do gate
+  · conversão de wei por BigInt
+
+  UM ERRO MEU: a guarda de ordem comparava a posição dos IMPORTS e não a das
+  CHAMADAS, e falhou contra código correto. Corrigida e validada por mutação —
+  pôr o guardAdmin antes do preflight derruba-a.
+
+================================================================================
+4. O QUE NÃO FOI TOCADO
+================================================================================
+Os 3 separadores existentes do AdminPanel · os 11 intents admin do GUTO · os
+gates das 18 funções · qualquer fluxo de utilizador comum ou corporativo.
+Nenhum endpoint existente foi alterado; os dois novos são adição pura.
+
+================================================================================
+5. A FASE 0 — O QUE FALTA, E É SEU
+================================================================================
+A sessão do aparelho continua a ser a da conta COMUM ("Novo Pernambucano",
+`0x5baf46…32b8`). A conta `ADMdesafiogut@gmail.com` ainda não entrou na app,
+logo o endereço da carteira dela ainda não existe para ser acrescentado.
+
+  PASSO 1 — na app, terminar a sessão e entrar com `ADMdesafiogut@gmail.com`.
+            (é OAuth do Google — não é automatizável e eu não toco em
+            credenciais, R5)
+
+  PASSO 2 — acrescentar o endereço à lista:
+      POST https://silly-stardust-ca71bc.netlify.app/.netlify/functions/admin-list
+      Header: x-admin-token: <ADMIN_TOKEN>
+      Body:   { "acao": "adicionar", "endereco": "0x…" }
+
+  PASSO 3 — confirmar:
+      GET .../admin-list?endereco=0x…
+      → tem de devolver { "isAdmin": true, "role": "admin" }
+
+Se ligar o aparelho com a sessão do ADM aberta, eu leio o endereço por CDP e
+digo-lho — o POST continua a ser seu, porque exige o ADMIN_TOKEN.
+
+PORQUE ISTO IMPORTA MAIS DO QUE PARECE: hoje a lista persistida está VAZIA e a
+coordenação é a ÚNICA administradora. Se essa carteira se perder, ninguém entra
+no painel e a recuperação passa por um redeploy. O segundo admin é a rede de
+segurança, não só uma conveniência.
+
+================================================================================
+6. PENDÊNCIAS
+================================================================================
+• FASE 0 — §5. É o único item do MC89.1 que não fechou.
+• Validação do painel COM credencial — depende da Fase 0 ou da carteira da
+  coordenação. Até lá, o separador foi validado só no caminho de recusa.
+• Reindexação do RAG (MC88.44) — continua por fazer.
+• MC90: agregação já está feita; falta ligar os intents de leitura do GUTO à
+  mesma função e validar o painel autenticado ao vivo.
+
+================================================================================
+PRÓXIMO PASSO
+================================================================================
+MC90 — Fase 1 completa: intents de leitura do GUTO sobre `_lib/admin-metricas`,
+e validação do painel autenticado no aparelho com a conta do ADM.
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================
