@@ -5196,3 +5196,55 @@ continuar a existir em `/`.
 **D-A** o GUTO fica no painel? (recomendo que fique, sem avatar ilustrado)
 **D-B** a navegação inferior sai? (recomendo substituir por "← Sair do painel" —
 senão o ADM fica sem saída no telemóvel)
+
+---
+
+## MC89.4 — Limpeza visual do Painel Admin (execução)
+
+**Data:** 2026-07-29 · **Branch:** `feat/mc89-adm-system` · **Suite:** 303/303
+**APK:** md5 `17843c5d…` instalado · **Deploy web:** NÃO feito (aguarda ordem)
+**Evidência:** `docs/MC89.4-{antes-admin,depois-admin,depois-dashboard}.png`
+
+### Antes → depois, medido no aparelho
+| | antes | depois |
+|---|---|---|
+| superfície do painel | `rgba(0,0,0,0)` | **`rgba(13,18,53,0.92)`** |
+| `<video>` na rota | 1 (`paused=false`) | **0** |
+| fonte / cor do título | Orbitron `#f5a623` | Inter `#e8f0fe` |
+| rodapé legal · navegação | presentes | ausentes (+ "← Sair do painel") |
+| emojis | ⚙️ 📈 🟡 📊 👥 ⚡ | **nenhum** |
+| separadores | 2 linhas | **1 linha, 38,4 px, sem corte** |
+
+### A correção do operador a meio do MC
+> «deixe o GUTO com o rosto dele no RAG mas tire a animação do fundo, deixe ele estático»
+
+Contraria o briefing em dois pontos, e ambos foram seguidos: **o GUTO manteve o
+avatar** (o briefing pedia para o remover) e o **fundo ficou estático em vez de
+ausente** (o briefing pedia `return null`). A estrutura do `BackgroundCanvas` já
+servia isto de graça — a imagem estática está sempre no DOM e o vídeo pintava por
+cima; bastou uma condição para o vídeo não ser montado.
+
+### ⚠️ Desvio deliberado: a navegação NÃO sai de /corporativo
+O briefing mandava removê-la em todas as rotas de trabalho. Fui ver o código: em
+`/corporativo` a barra inferior é a **única** navegação do lojista
+(`BottomNav.jsx:63-67` — Painel · Cotas · Banners) e o botão de saída só estava
+previsto no AdminPanel. Cumprir a letra deixava o lojista sem circular no
+telemóvel. Há teste a fixar a assimetria: `ehRotaDeTrabalho` cobre as duas rotas
+(atmosfera), `escondeNavegacaoConsumo` cobre só `/admin`.
+
+### Três iterações — as duas últimas nasceram de olhar para a captura
+A iteração 1 **cumpriu os critérios escritos e ficou mal**: painel como cartão
+curto no topo, ilustração a ocupar ~60% do ecrã, separadores ainda em duas linhas
+e aba activa ainda laranja. Se eu tivesse confiado no diff, teria entregado isso.
+
+### Dois erros meus
+- comentário JSX como segundo filho de um ramo de ternário → build caiu;
+- **medi o elemento errado**: o primeiro seletor das abas apanhou o painel (803 px)
+  e devolveu "cabem sem scroll" — verdade sobre o elemento errado. Refeito com
+  seletor preciso: 38,4 px, uma linha. Mesma armadilha de
+  [[verificacao-que-partilha-o-defeito]], noutra forma.
+
+### Não-regressão medida E vista
+`/` com **7 vídeos a tocar**, rodapé, navegação, mascote, emojis, CTA laranja —
+intocado. `/mercado` igual. Guarda de teste: 13 rotas de consumo afirmadas como
+NÃO-trabalho, validada por mutação (acrescentar `/mercado` derruba o teste).

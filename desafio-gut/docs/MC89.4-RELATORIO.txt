@@ -1,0 +1,181 @@
+================================================================================
+MC89.4 — EXECUÇÃO DA LIMPEZA VISUAL DO PAINEL ADMIN
+================================================================================
+Data......: 2026-07-29
+Branch....: feat/mc89-adm-system
+Suite.....: 303/303 verde (293 → 303)
+Build.....: `vite build` verde · APK recompilado com `build:apk` (R10)
+APK.......: md5 17843c5d69f6cab6d43862a7a04a1f88 · instalado
+Aparelho..: Xiaomi 21091116UG · sessão ADM Ramon (0x1E1b…d198cB)
+Evidência.: desafio-gut/docs/MC89.4-{antes-admin, depois-admin, depois-dashboard}.png
+Deploy....: NÃO FEITO — a aguardar a sua ordem (§8)
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+O painel de administração deixou de ser texto solto sobre uma ilustração de
+showroom com confetes a cair. Passou a ser uma superfície de trabalho: navy
+opaco, tipografia de corpo, sem emojis, sem vídeo a correr, sem a mobília do
+produto de consumo — e com o fundo estático que pediu, agora como moldura e não
+como protagonista.
+
+O que mudou, medido no aparelho, antes → depois:
+
+  superfície do painel   rgba(0,0,0,0)      → rgba(13,18,53,0.92)
+  <video> na rota        1 (paused=false)   → 0
+  fonte do título        Orbitron           → Inter
+  cor do título          #f5a623 (laranja)  → #e8f0fe
+  rodapé legal           presente           → ausente
+  navegação de consumo   presente           → ausente (+ "← Sair do painel")
+  emojis no ecrã         ⚙️ 📈 🟡 📊 👥 ⚡…    → nenhum
+  separadores            2 linhas           → 1 linha, 38,4 px, sem corte
+
+E o produto de consumo ficou intocado: `/` continua com 7 vídeos a tocar,
+rodapé, navegação, mascote, emojis e CTA laranja. A atmosfera é a identidade do
+leilão — saiu do ecrã de trabalho, não do produto.
+
+================================================================================
+1. A SUA CORREÇÃO A MEIO DO MC, E O QUE MUDOU POR CAUSA DELA
+================================================================================
+  «deixe o GUTO com o rosto dele no RAG mas tire a animação do fundo, deixe ele
+   estático»
+
+Duas consequências, e as duas contrariam o briefing escrito:
+
+  · O GUTO MANTÉM O ROSTO. O briefing pedia para remover o avatar ilustrado
+    (item 2.3). Não foi tocado — `guto-chat.png` continua no botão do assistente.
+    Faz sentido: desde o MC89.2 ele responde às métricas, é ferramenta de trabalho.
+
+  · O FUNDO FICA, ESTÁTICO. O briefing pedia `return null` no BackgroundCanvas.
+    Em vez disso, suprimi só o `<video>` e o parallax — as camadas de imagem
+    (`.gut-bg-layer`) continuam montadas. A estrutura do ficheiro já servia isto
+    de graça: a imagem estática está sempre no DOM e o vídeo pintava por cima
+    (era o caminho de fallback do MC26.1). Uma condição, e o vídeo deixa de ser
+    montado.
+
+================================================================================
+2. PASSO 1 — LEGIBILIDADE E ATMOSFERA
+================================================================================
+  src/lib/rotasTrabalho.js (NOVO)
+    A decisão num sítio só, `false` por omissão. DUAS funções, e a diferença
+    entre elas é funcional, não estética (ver §5).
+
+  BackgroundCanvas.jsx   fundo estático nas rotas de trabalho (sem vídeo, sem
+                         parallax). Não é `return null`.
+  AppLayout.jsx          sem AtmosphereFilter nas rotas de trabalho.
+  globals.css            `.admin-panel` com rgba(13,18,53,0.92) — o MESMO valor
+                         do `.gut-glass--solid` (MC25.7), criado pela mesma razão
+                         no painel de chat do GUTO. Zero cor nova na paleta.
+  AdminPanel.jsx         a classe no container raiz.
+
+  ⚠️ NÃO usei branco nem cinzento claro, apesar de o briefing os pedir. Nesta app
+     navy (#050818) um painel branco não seria neutro: seria um corpo estranho,
+     com flash a cada abertura e contraste invertido face a todo o resto.
+
+================================================================================
+3. PASSO 2 — MOBÍLIA
+================================================================================
+  Rodapé legal fora das rotas de trabalho — e MANTIDO em `/` e `/carteira`, onde
+  é obrigação (Privacidade, Termos, Excluir conta).
+  Navegação inferior fora só do `/admin`, que ganhou "← Sair do painel" no
+  cabeçalho. O `paddingBottom` deixa de reservar a altura da barra quando ela não
+  existe — senão ficava uma faixa vazia no fim do painel.
+
+  ⚠️ DESVIO DELIBERADO, com razão verificada no código: o briefing mandava
+     remover a navegação em TODAS as rotas de trabalho, incluindo `/corporativo`.
+     Fui ver — em `/corporativo` a barra inferior é a ÚNICA navegação do lojista
+     (BottomNav.jsx:63-67: Painel · Cotas · Banners), e o briefing só previa o
+     botão de saída no AdminPanel. Cumprir a letra deixaria o lojista sem forma
+     de circular no telemóvel. Fica em `/corporativo`, sai no `/admin`. Há teste
+     a fixar esta assimetria para ninguém a "corrigir" por distração.
+
+================================================================================
+4. PASSO 3 — CHROME DO PAINEL
+================================================================================
+  Zero emojis: 13 substituições, mais um "⚡ Entrar" que escapou e que o teste
+  apanhou (por isso o teste existe).
+  Título sem Orbitron e sem laranja — peso em vez de cor.
+  "Login Admin" e "Entrar" passam a neutros: o #f5a623 fica RESERVADO para acção
+  irreversível (os comandos do MC91). Se tudo é destaque, nada avisa.
+  Badges de estado (Pendente/Aprovado/Rejeitado, Vendida/Disponível) sem
+  pictograma — a cor que já tinham faz o trabalho.
+  Separadores numa linha, com scroll horizontal como rede de segurança.
+
+================================================================================
+5. TRÊS ITERAÇÕES — E AS DUAS ÚLTIMAS SÃO DE OLHAR PARA A CAPTURA
+================================================================================
+ITERAÇÃO 1  Cumpriu os critérios escritos e ficou mal. O painel virou um cartão
+  CURTO no topo, com a ilustração a ocupar ~60% do ecrã por baixo. Legível, sim
+  — mesa de trabalho, não. E duas coisas do Passo 3 não tinham sido feitas: os
+  separadores continuavam a quebrar em duas linhas (critério 3.4 FALHADO — eu
+  encurtei os rótulos e não mudei o layout) e a aba activa continuava laranja.
+
+ITERAÇÃO 2  `minHeight` a preencher a altura → o fundo estático passa a moldura.
+  Separadores em `nowrap` com scroll. Aba activa marcada por contraste.
+
+ITERAÇÃO 3  Com `size="md"` o quarto separador ficava cortado na borda ("Ad…").
+  Um rótulo truncado por omissão lê-se como descuido, não como afordância.
+  `size="sm"` + gap menor: os quatro cabem. Medido — scrollWidth == clientWidth.
+
+Se eu tivesse confiado no diff e nos critérios, tinha entregado a iteração 1.
+
+================================================================================
+6. DOIS ERROS MEUS, REGISTADOS
+================================================================================
+1. COMENTÁRIO JSX NUM RAMO DE TERNÁRIO. Pus `{/* … */}` antes de um `<Button>`
+   dentro de `) : (` — um ramo aceita UMA expressão, e o build caiu com
+   "Expected `,` or `)`". Movido para fora do ternário.
+
+2. MEDIÇÃO DO ELEMENTO ERRADO. O primeiro seletor das abas apanhou o PAINEL
+   (altura 803 px) e devolveu "cabem sem scroll" — uma verdade sobre o elemento
+   errado, que eu quase aceitei como prova. Refeito com seletor preciso (div com
+   4 filhos, todos BUTTON, o primeiro "Visão Geral"): 38,4 px, uma linha, quarto
+   rótulo visível. É a mesma armadilha que registei na memória hoje, noutra
+   forma: uma verificação que não verifica o que diz.
+
+================================================================================
+7. NÃO-REGRESSÃO — MEDIDA E VISTA
+================================================================================
+  /          7 <video> a tocar · rodapé · navegação · zero `.admin-panel`
+  /mercado   1 <video> a tocar · rodapé · navegação · zero `.admin-panel`
+
+  A captura do Dashboard (docs/MC89.4-depois-dashboard.png) mostra a atmosfera
+  intacta: ilustração, confetes, holofotes, mascote, emojis, "EM BREVE" laranja,
+  CTA dourado, barra inferior. Nada disto mudou, e é assim que deve ser.
+
+  Suite 303/303, com 10 guardas novas. A que importa mais afirma que `/`,
+  `/mercado`, `/carteira`, `/vitrine`, `/edicao/:id` e mais oito rotas NÃO são
+  rotas de trabalho. Validada por mutação: acrescentar "/mercado" à lista derruba
+  exactamente esse teste. Outra guarda impede `/administracao` de casar por
+  prefixo solto.
+
+================================================================================
+8. PENDÊNCIAS
+================================================================================
+• DEPLOY WEB — não fiz. São alterações de FRONTEND: o APK já está no aparelho com
+  elas, mas a web continua na versão anterior. Diga e eu corro
+  `netlify deploy --prod --build`.
+
+• O PAINEL AUTENTICADO por ver. Continua a faltar o login admin com o
+  ADMIN_TOKEN na app para ver as métricas dentro do painel. Toda esta validação
+  foi no estado "Autentique-se para ver as métricas" — que é precisamente o texto
+  que antes não se lia.
+
+• A ILUSTRAÇÃO AINDA SE ADIVINHA através do painel (0,92 de opacidade), como se
+  vê na captura. É consequência da sua escolha de manter o fundo. Se preferir a
+  mesa completamente limpa, o ajuste é um número — a opacidade da MESMA classe,
+  para 1. Diga e faço.
+
+• EOA coordenadora com 0,004391 ETH (MC89.2) — é ela que credita as senhas.
+
+• Reindexação do RAG (MC88.44).
+
+================================================================================
+PRÓXIMO PASSO
+================================================================================
+A seu comando: deploy web desta limpeza, ou o MC89.5 / Fase 2 do plano do MC89
+(comandos executáveis: fila, caches, kill switch, com confirmação e auditoria).
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================
