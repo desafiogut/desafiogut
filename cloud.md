@@ -5399,3 +5399,58 @@ Pertencem a "Usuários" e a "Financeiro", ou o painel assume-se com nove?
 
 **Próximo passo:** MC89.7 (Fase 1) — Visão Geral expandida. Dois dos seis alertas
 vão acender à primeira abertura, porque hoje são verdade.
+
+---
+
+## MC-EMAILS-WHATSAPPS — exportação da base bruta de contatos
+
+Tarefa administrativa, zero alteração de código. `Desktop\BASE-CONTATOS\` com 37
+ficheiros, 40,3 MB, cópia byte-a-byte — nada limpo, deduplicado ou convertido.
+Cada ficheiro tem origem, contagem, data e SHA-256 no `MANIFESTO.txt`, e o hash
+do destino foi comparado com o da origem depois de copiar.
+
+Entregáveis: `docs/MC-EMAILS-WHATSAPPS-FONTES.txt`,
+`docs/MC-EMAILS-WHATSAPPS-RELATORIO.txt`. Ambos só com contagens e caminhos —
+nenhum e-mail e nenhum número, porque `docs/` é versionado.
+
+### As duas bases
+E-mail: `lista-validada-9306-lotes.csv`, 1625 linhas, todas valid=True/risk=low.
+WhatsApp: `whatsapp-validados-corrigido.csv`, 200 linhas, 198 com
+`whatsapp_candidate=sim`.
+
+### Três credenciais vivas em texto simples no Desktop
+Ao varrer a pasta completa — e não só os `.csv` — apareceram duas chaves SendGrid
+**diferentes** (`sendgrid.key` e `config_envio.json`) e as credenciais Twilio
+(`config_whatsapp.json`). Não foram copiadas e não lhes toquei, mas continuam
+onde estavam. Quem tiver a do SendGrid envia e-mail em nome do DESAFIOGUT; quem
+tiver a do Twilio gasta saldo. Depois da cópia verifiquei a pasta de destino: dois
+relatórios acusaram no scan, mas mencionam apenas *nomes* de variáveis de
+ambiente, nunca valores.
+
+### O MC83 aponta para o ficheiro de WhatsApp errado
+O relatório diz que os 198 vêm de `whatsapp-validados-twilio.csv`. Esse ficheiro
+tem 40 linhas, todas com `valid=não` e `numero_formatado` **vazio** — é um lote
+que falhou. A lista boa é a `corrigido`, e os dois não partilham um único número.
+O número do MC83 estava certo; o nome do ficheiro é que não. Exportei os dois,
+com o papel de cada um escrito, para o engano não se repetir.
+
+### O checkpoint e a contagem não fecham
+`ultimo_enviado.txt` local diz **50**, de 14/07; o remoto ia em **400** (MC83,
+20/07). E a lista local tem **1625** linhas contra as **1623** do relatório, sem
+que nenhum filtro explique o corte. Isto importa porque o checkpoint é um *índice
+de linha*: se as duas cópias divergirem, "400 enviados" não aponta para os mesmos
+400 endereços. Vale comparar o ficheiro remoto com o local antes do próximo
+disparo.
+
+### Um erro meu, apanhado a tempo
+Na primeira leitura os acentos vieram corrompidos e concluí cp1252. Verifiquei
+byte a byte: os 13 ficheiros são UTF-8 válido, sem BOM. A corrupção era da
+consola. Se tivesse ficado no manifesto, mandaria o operador reconverter ficheiros
+sãos — e a reconversão é que os estragava.
+
+### O que não foi exportado
+PythonAnywhere continua inacessível (o MCP está ligado mas não expõe ferramenta
+nenhuma). Os 3 e-mails do Supabase não foram puxados, porque passariam pela
+conversa — fica a consulta no LEIA-ME. E os Blobs responderam "empty", registado
+como **inconclusivo** e não como vazio: o CLI lê noutro contexto e a leitura de
+Blobs já foi vista a falhar em silêncio.
