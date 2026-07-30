@@ -98,6 +98,13 @@ export function obterPromptSystem(perfil, { conformidade = false } = {}) {
 /** Guard: devolve fallback se o valor for null/undefined/"". */
 const g = (v, fb = "—") => (v === null || v === undefined || v === "" ? fb : v);
 
+// MC89.2 — centavos → "R$ x,xx". null/undefined dá "—", NUNCA "R$ 0,00": num
+// relatório de administração, um zero é uma afirmação e "não medi" não é zero.
+const brl = (centavos) =>
+  centavos === null || centavos === undefined || !Number.isFinite(Number(centavos))
+    ? "—"
+    : `R$ ${(Number(centavos) / 100).toFixed(2)}`;
+
 // MC15.6 ITEM 5 — texto da simulação (admin/corporativo, sem emoji).
 function formatarSimulacao(p) {
   if (p?.erro) return `Não foi possível ler os lances da edição ${g(p.edicaoId)} agora.`;
@@ -305,6 +312,96 @@ export const respostasPorPerfil = {
     comum: (p) => `${g(p.respostaRAG, "")}`.trim(),
     corporativo: (p) => `${g(p.respostaRAG, "")}`.trim(),
     admin: (p) => `${g(p.respostaRAG, "")}`.trim(),
+  },
+
+  // ── MC89.2 — MÉTRICAS DO SISTEMA (admin) ──────────────────────────────────
+  //
+  // Todas saem de `_lib/admin-metricas.obterMetricas()`, a MESMA função que o
+  // endpoint `admin-stats` usa e que o separador "Visão Geral" mostra. Se o GUTO
+  // e o painel dissessem números diferentes sobre a mesma coisa, seria o B4 do
+  // MC88.41 outra vez — noutro domínio.
+  //
+  // Tom: admin é relatório. Sem emojis (regra MC15.5 §D3).
+  //
+  // ⚠️ `—` NUNCA é 0. Quando uma fonte falha, o agregador põe o nome dela em
+  // `parciais` e o campo fica null; aqui isso vira "—" e a frase diz que a fonte
+  // está indisponível. Um zero inventado num painel de administração faz alguém
+  // agir sobre um número que ninguém mediu.
+  metricas_usuarios: {
+    visitante: () => "Esses dados são internos da coordenação. Cria uma conta para participar dos leilões! 😊",
+    comum: () => "Esses números são da coordenação. Posso ajudar-te com os teus lances e senhas! 🙂",
+    corporativo: () => "Os totais da plataforma são da coordenação. No teu Painel tens os dados da tua cota.",
+    admin: (p) => {
+      if (p.utilizadores == null) return `Utilizadores: indisponível (fonte em baixo: ${g(p.parciais, "?")}).`;
+      const f = p.fontes || {};
+      return `Utilizadores com atividade: ${p.utilizadores}. `
+        + `São endereços distintos vistos nos nossos dados (cotas ${g(f.cotas, "—")}, saldo ${g(f.saldo, "—")}, `
+        + `creditos ${g(f.creditos, "—")}, lances ${g(f.lances, "—")}). `
+        + `NAO e o total de registados: a identidade vive no Privy e quem nunca fez nada nao aparece aqui.`;
+    },
+  },
+
+  metricas_financeiro: {
+    visitante: () => "Esses dados são internos da coordenação. Cria uma conta para participar! 😊",
+    comum: () => "Os totais da plataforma são da coordenação. Vês o teu saldo na Carteira! 🙂",
+    corporativo: () => "Os totais consolidados são da coordenação. No teu Painel tens os teus próprios dados.",
+    admin: (p) => {
+      if (p.financeiro == null) return `Financeiro: indisponível (fonte em baixo: ${g(p.parciais, "?")}).`;
+      const f = p.financeiro;
+      return `Saldo em circulacao: ${brl(f.saldoTotalCentavos)}. `
+        + `Ja creditado: ${brl(f.creditadoCentavos)} em ${g(f.creditos, "—")} credito(s), `
+        + `${g(f.creditosJanela, "—")} nos ultimos ${g(p.janelaDias, 30)} dias.`;
+    },
+  },
+
+  metricas_fila: {
+    visitante: () => "Isso é do sistema interno. Cria uma conta para participar dos leilões! 😊",
+    comum: () => "A fila de processamento é interna. Se estás à espera de senhas, elas chegam sozinhas! 🙂",
+    corporativo: () => "A fila de processamento é interna da coordenação.",
+    admin: (p) => {
+      if (p.fila == null) return `Fila: indisponível (fonte em baixo: ${g(p.parciais, "?")}).`;
+      const f = p.fila;
+      const estados = Object.entries(f.porEstado || {}).map(([k, v]) => `${k}=${v}`).join(", ") || "vazia";
+      return `Fila de tarefas: ${g(f.pendentes, "—")} pendente(s), ${g(f.falhadas, "—")} falhada(s), `
+        + `${g(f.total, "—")} no total (${estados}).`
+        + (f.atualizadaEm ? ` Ultima alteracao: ${f.atualizadaEm}.` : "");
+    },
+  },
+
+  metricas_eoa: {
+    visitante: () => "Isso é da operação interna. Cria uma conta para participar! 😊",
+    comum: () => "Essa é a carteira da coordenação. As tuas senhas aparecem na Carteira! 🙂",
+    corporativo: () => "A carteira da coordenação é interna.",
+    admin: (p) => {
+      if (p.erro) return `Saldo da coordenadora: indisponível (${p.erro}).`;
+      const s = p.saldoEth == null ? "indisponivel (nao lido — NAO e zero)" : `${p.saldoEth} ETH`;
+      return `EOA coordenadora ${g(p.eoa, "?")}: ${s}.`
+        + (p.bloco != null ? ` Bloco ${p.bloco}.` : "")
+        + ` E esta carteira que credita as senhas on-chain: sem gas, a compra deixa de ser creditada.`;
+    },
+  },
+
+  metricas_geral: {
+    visitante: () => "O estado do sistema é interno. Cria uma conta para participar dos leilões! 😊",
+    comum: () => "O estado interno é da coordenação. Posso ajudar-te com os leilões! 🙂",
+    corporativo: () => "O estado consolidado do sistema é da coordenação.",
+    admin: (p) => {
+      const linhas = [];
+      linhas.push(p.utilizadores == null
+        ? "Utilizadores: indisponivel."
+        : `Utilizadores com atividade: ${p.utilizadores}.`);
+      linhas.push(p.financeiro == null
+        ? "Financeiro: indisponivel."
+        : `Saldo em circulacao ${brl(p.financeiro.saldoTotalCentavos)}, ja creditado ${brl(p.financeiro.creditadoCentavos)}.`);
+      linhas.push(p.cotas == null
+        ? "Cotas: indisponivel."
+        : `Cotas: ${p.cotas.total} (${p.cotas.comCarteira} com carteira, ${p.cotas.vendidas} vendida(s)).`);
+      linhas.push(p.fila == null
+        ? "Fila: indisponivel."
+        : `Fila: ${g(p.fila.pendentes, "—")} pendente(s), ${g(p.fila.falhadas, "—")} falhada(s).`);
+      if (p.parciais?.length) linhas.push(`Fontes em baixo: ${p.parciais}.`);
+      return linhas.join(" ");
+    },
   },
 
   // MC88.44 — SUPORTE. Determinístico de propósito: o G1 do MC88.41 apanhou o

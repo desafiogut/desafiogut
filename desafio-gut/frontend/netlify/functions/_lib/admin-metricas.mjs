@@ -20,8 +20,10 @@
 // frente, e não por surpresa.
 
 import { getSupabaseReadOnly } from "./supabase-client.mjs";
+import { resolverCoordenacao } from "./admin-helpers.mjs";
 
 const DIAS_JANELA = 30;
+const RPC_TIMEOUT_MS = 6000;
 
 /** Soma um campo numérico guardado dentro do payload jsonb, ignorando lixo. */
 function somar(linhas, extrair) {
@@ -37,6 +39,83 @@ function somar(linhas, extrair) {
 function normalizarEndereco(valor) {
   const s = String(valor || "").trim().toLowerCase();
   return /^0x[0-9a-f]{40}$/.test(s) ? s : null;
+}
+
+// ── Saldo da EOA coordenadora ───────────────────────────────────────────────
+//
+// MC89.2 — vive AQUI, e não dentro de `admin-onchain.mjs`, porque agora tem dois
+// consumidores: o endpoint e o intent do GUTO. Uma fonte por número (a regra do
+// MC89) só vale se for cumprida quando aparece o segundo consumidor.
+//
+// ⚠️ `obterMetricas()` NÃO a chama. É por isso que o `admin-stats` continua sem
+// tocar na rede: importar este módulo não executa RPC nenhum.
+
+/** Uma chamada JSON-RPC crua, com timeout. Sem ethers — é só um POST. */
+async function rpc(url, method, params = []) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), RPC_TIMEOUT_MS);
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      signal: ctrl.signal,
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const json = await resp.json();
+    if (json?.error) throw new Error(json.error?.message || "erro rpc");
+    return json?.result ?? null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Wei (hex) → ETH em string, por BigInt: `Number` não representa 10^18 exato. */
+export function weiParaEth(hex) {
+  const wei = BigInt(hex);
+  const inteiro = wei / 10n ** 18n;
+  const resto   = wei % 10n ** 18n;
+  return `${inteiro}.${resto.toString().padStart(18, "0").slice(0, 6)}`;
+}
+
+/**
+ * Saldo em ETH da EOA coordenadora + bloco atual.
+ *
+ * Devolve `{ eoa, saldoEth, bloco, parciais }`. `saldoEth: null` significa
+ * "não consegui ler" e NUNCA deve ser mostrado como 0: um zero aqui quer dizer
+ * "a carteira que credita as senhas secou" e mandaria alguém abastecer uma
+ * carteira cheia.
+ *
+ * @throws se RPC_URL não estiver no ambiente — o caller decide o que dizer.
+ */
+export async function obterSaldoEoa() {
+  const url = process.env.RPC_URL;
+  if (!url) {
+    const err = new Error("RPC_URL ausente no ambiente");
+    err.code = "rpc_nao_configurado";
+    throw err;
+  }
+  const eoa = resolverCoordenacao();
+  const parciais = [];
+  let saldoEth = null;
+  let bloco = null;
+
+  try {
+    const hex = await rpc(url, "eth_getBalance", [eoa, "latest"]);
+    saldoEth = hex ? weiParaEth(hex) : null;
+  } catch (err) {
+    console.warn("[admin-metricas] eth_getBalance falhou:", err?.message);
+    parciais.push("saldo");
+  }
+  try {
+    const hex = await rpc(url, "eth_blockNumber");
+    bloco = hex ? Number(BigInt(hex)) : null;
+  } catch (err) {
+    console.warn("[admin-metricas] eth_blockNumber falhou:", err?.message);
+    parciais.push("bloco");
+  }
+
+  return { eoa, saldoEth, bloco, parciais };
 }
 
 /**

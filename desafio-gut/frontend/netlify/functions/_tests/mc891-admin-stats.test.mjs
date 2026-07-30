@@ -187,7 +187,17 @@ test("os dois endpoints são gated e respondem a preflight", () => {
 
 test("o saldo on-chain converte wei sem perder precisão", async () => {
   // Number não representa 10^18 com exatidão; a conversão tem de ser BigInt.
-  const codigo = semComentarios(ler("admin-onchain.mjs"));
-  assert.match(codigo, /BigInt\(/, "conversão de wei sem BigInt perde precisão");
-  assert.doesNotMatch(codigo, /parseInt\(\s*hex/, "parseInt sobre wei é perda de precisão");
+  //
+  // MC89.2 — a conversão MUDOU DE SÍTIO: passou para `_lib/admin-metricas.mjs`
+  // quando ganhou um segundo consumidor (o intent `metricas_eoa` do GUTO). A
+  // guarda seguiu-a, e passou a afirmar também o invariante novo: o endpoint NÃO
+  // pode voltar a ter a sua própria conversão, senão são duas contas do mesmo
+  // saldo — o defeito que o MC88.43 gastou um MC a eliminar noutro domínio.
+  const lib = semComentarios(ler("_lib/admin-metricas.mjs"));
+  assert.match(lib, /BigInt\(/, "conversão de wei sem BigInt perde precisão");
+  assert.doesNotMatch(lib, /parseInt\(\s*hex/, "parseInt sobre wei é perda de precisão");
+
+  const endpoint = semComentarios(ler("admin-onchain.mjs"));
+  assert.match(endpoint, /obterSaldoEoa/, "o endpoint tem de usar a leitura partilhada");
+  assert.doesNotMatch(endpoint, /10n \*\* 18n/, "o endpoint voltou a converter wei por conta própria");
 });

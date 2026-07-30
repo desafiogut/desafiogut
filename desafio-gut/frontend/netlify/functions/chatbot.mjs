@@ -112,6 +112,25 @@ const INTENT_PATTERNS = {
   comprar_cotas: /comprar (uma )?cota|contratar (uma )?cota|quero (uma )?cota|adquirir cota|contratar (bronze|prata|ouro|diamante)/,
   // MC17.1 — saldo de senhas de troco (perfis autenticados).
   meu_saldo: /\bmeu saldo\b|minhas senhas|quantas senhas (eu )?tenho|saldo de (senhas|troco)|senhas de troco/,
+  // ── MC89.2 — MÉTRICAS DO SISTEMA (admin) ──────────────────────────────────
+  //
+  // ⚠️ COLISÕES QUE ESTES PADRÕES TÊM DE EVITAR (verificadas uma a uma):
+  //   `pulso_edicao`  já casa a palavra solta "metricas" → estes padrões NÃO a
+  //                   casam sozinha. "Pulso" é sobre a EDIÇÃO; isto é sobre o
+  //                   SISTEMA, e por isso exige "sistema"/"plataforma".
+  //   `auditoria`     já casa "estatisticas" → não tocamos nessa palavra.
+  //   `meu_saldo`     casa "meu saldo" e é testado ANTES → "saldo em circulacao"
+  //                   não colide porque não tem "meu".
+  //   `pacotes_cotas` casa "quanto custam as cotas" e é testado ANTES.
+  // Há teste a afirmar que os 6 casos acima continuam a ir para o intent antigo.
+  metricas_usuarios:  /quantos? (utilizadores|usuarios)|(utilizadores|usuarios) (ativos|com atividade|registados|cadastrados)|quantas pessoas/,
+  metricas_financeiro: /saldo em circulacao|quanto (ja )?(foi )?(arrecadado|creditado|recebido)|total (de |em )?creditos|financeiro (do|da) (sistema|plataforma)/,
+  // "como esta a FILA" não colide com o "como esta a EDICAO" do pulso_edicao:
+  // este exige a palavra "fila", que o outro não tem.
+  metricas_fila:      /tamanho da fila|fila (pendente|de tarefas)|quantos? (itens|pedidos|tarefas) na fila|estado da fila|fila esta|como esta a fila/,
+  metricas_eoa:       /saldo da (coordenadora|coordenacao|eoa)|carteira coordenadora|(tem|ha) gas|quanto (de )?eth/,
+  metricas_geral:     /(status|estado|resumo|panorama|visao geral) (geral )?(do |da )?(sistema|plataforma)|painel de controle|como esta o sistema/,
+
   // MC88.44 — pedido de contacto humano. Testado POR ÚLTIMO em detectarIntent,
   // de propósito: nunca rouba um intent mais específico ("meu saldo", "quero
   // uma cota"). Só apanha quem está mesmo a pedir para falar com alguém.
@@ -141,6 +160,14 @@ export function detectarIntent(texto) {
   if (INTENT_PATTERNS.pacotes_cotas.test(t))   return "pacotes_cotas";
   if (INTENT_PATTERNS.comprar_cotas.test(t))   return "comprar_cotas";
   if (INTENT_PATTERNS.meu_saldo.test(t))       return "meu_saldo";
+  // MC89.2 — métricas do SISTEMA antes de `auditoria` e `pulso_edicao`, que são
+  // sobre outra coisa (registo de ações e desempenho da EDIÇÃO). Os padrões
+  // acima são estreitos de propósito para não roubar frases que já eram delas.
+  if (INTENT_PATTERNS.metricas_geral.test(t))     return "metricas_geral";
+  if (INTENT_PATTERNS.metricas_usuarios.test(t))  return "metricas_usuarios";
+  if (INTENT_PATTERNS.metricas_financeiro.test(t)) return "metricas_financeiro";
+  if (INTENT_PATTERNS.metricas_fila.test(t))      return "metricas_fila";
+  if (INTENT_PATTERNS.metricas_eoa.test(t))       return "metricas_eoa";
   if (INTENT_PATTERNS.auditoria.test(t))       return "auditoria";
   if (INTENT_PATTERNS.dados_mercado.test(t))   return "dados_mercado";
   if (INTENT_PATTERNS.simular_vencedor.test(t)) return "simular_vencedor";
@@ -503,6 +530,87 @@ async function killSwitch(intent, perfil, endereco) {
 // rate-limit são aplicados de forma UNIFORME em tratarIntentEdicoes — a ordem de
 // teste é irrelevante porque detectarIntent devolve exatamente UM intent (D7).
 // Gates/segurança e shapes de resposta preservados 1:1 face ao MC17.1 (R0/SUPERPERS).
+// ── MC89.2 — os 5 intents de métricas, construídos a partir de uma tabela ────
+//
+// São cinco handlers com a MESMA forma; escrevê-los cinco vezes à mão era pedir
+// que divergissem. Cada um diz só de que parte das métricas precisa.
+//
+// `obterMetricas()` é chamada UMA vez por pedido e só quando o perfil é admin —
+// nenhum número é lido para quem não o pode ver. É a mesma função que alimenta
+// o endpoint `admin-stats` e o separador "Visão Geral": se aqui e lá dissessem
+// números diferentes, era o B4 do MC88.41 outra vez, noutro domínio.
+// `export` para o teste poder correr os extratores REAIS contra as respostas
+// reais — é ali que vive o defeito que ninguém vê: o handler extrair um objeto
+// onde a tabela espera um número, e a resposta sair com "[object Object]".
+export const MAPA_METRICAS = {
+  // intent            → o que a resposta recebe a partir das métricas agregadas
+  metricas_usuarios:   (m) => ({ utilizadores: m.utilizadores?.comAtividade ?? null,
+                                 fontes: m.utilizadores?.fontes, parciais: m.parciais.join(", ") }),
+  metricas_financeiro: (m) => ({ financeiro: m.financeiro, janelaDias: m.janelaDias,
+                                 parciais: m.parciais.join(", ") }),
+  metricas_fila:       (m) => ({ fila: m.operacao?.fila ?? null, parciais: m.parciais.join(", ") }),
+  metricas_geral:      (m) => ({ utilizadores: m.utilizadores?.comAtividade ?? null,
+                                 financeiro: m.financeiro, cotas: m.cotas,
+                                 fila: m.operacao?.fila ?? null,
+                                 parciais: m.parciais.length ? m.parciais.join(", ") : null }),
+};
+
+function construirIntentsMetricas() {
+  const out = {};
+
+  for (const [intent, extrair] of Object.entries(MAPA_METRICAS)) {
+    out[intent] = {
+      gate: qualquerPerfil, // a diferenciação está na tabela de respostas, não aqui
+      run: async ({ perfil }) => {
+        if (!ehAdminPerfil(perfil)) {
+          // Não-admin: resposta educada da tabela, e NENHUMA leitura de métricas.
+          return intentResp(perfil, intent, {
+            resposta: obterResposta(intent, perfil, {}), modoResposta: "perfil",
+          });
+        }
+        let dados;
+        try {
+          const { obterMetricas } = await import("./_lib/admin-metricas.mjs");
+          dados = extrair(await obterMetricas());
+        } catch (err) {
+          console.warn(`[chatbot] ${intent} falhou:`, err?.message);
+          // Fail-soft com a verdade: "não consegui" e não um zero.
+          dados = { parciais: "agregacao indisponivel" };
+        }
+        return intentResp(perfil, intent, {
+          resposta: obterResposta(intent, perfil, dados), modoResposta: "perfil",
+        });
+      },
+    };
+  }
+
+  // O saldo da EOA é o único que vai à rede — leitura própria, para a lentidão
+  // ou a falha do RPC não contaminar as outras quatro respostas.
+  out.metricas_eoa = {
+    gate: qualquerPerfil,
+    run: async ({ perfil }) => {
+      if (!ehAdminPerfil(perfil)) {
+        return intentResp(perfil, "metricas_eoa", {
+          resposta: obterResposta("metricas_eoa", perfil, {}), modoResposta: "perfil",
+        });
+      }
+      let dados;
+      try {
+        const { obterSaldoEoa } = await import("./_lib/admin-metricas.mjs");
+        dados = await obterSaldoEoa();
+      } catch (err) {
+        console.warn("[chatbot] metricas_eoa falhou:", err?.message);
+        dados = { erro: err?.code === "rpc_nao_configurado" ? "RPC nao configurado" : "cadeia indisponivel" };
+      }
+      return intentResp(perfil, "metricas_eoa", {
+        resposta: obterResposta("metricas_eoa", perfil, dados), modoResposta: "perfil",
+      });
+    },
+  };
+
+  return out;
+}
+
 const INTENT_HANDLERS = {
   // MC15.6 ITEM 3 — início do wizard (gatilho explícito; admin-only).
   criar_edicao_wizard: {
@@ -628,6 +736,17 @@ const INTENT_HANDLERS = {
       resposta: obterResposta("pacotes_cotas", perfil, {}), modoResposta: "perfil",
     }),
   },
+
+  // ── MC89.2 — métricas do sistema. Gate de ADMIN, leitura pura ─────────────
+  //
+  // `gate: qualquerPerfil` de propósito, com a diferenciação NA RESPOSTA e não
+  // no gate: os perfis não-admin recebem uma recusa educada da tabela
+  // declarativa (e nunca um número), em vez do "recusa-perfil" seco. Nenhum
+  // número atravessa: `obterMetricas()` só é chamada quando o perfil é admin.
+  //
+  // Sem `rl` de comando: é leitura, não é ação. O rate-limit geral do chatbot
+  // (aplicado antes, em chatbot.mjs) já protege o custo.
+  ...construirIntentsMetricas(),
 
   // MC88.44 — suporte. Sem gate (qualquer perfil, incluindo visitante) e sem
   // rate-limit de admin: é informação de contacto, não é ação. Não passa pelo
