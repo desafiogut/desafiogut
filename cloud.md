@@ -5319,3 +5319,83 @@ mostra progresso — nunca "enviado" no instante do clique.
 **Próximo passo:** MC90.0 (Fase 0) — confirmar seis decisões com o operador,
 extrair o `AdminAuthContext` e escrever os primeiros testes do domínio ADM, que
 hoje tem cobertura zero.
+
+---
+
+## MC89.6 — Fase 0 do plano do MC89.5: esqueleto partilhado e rotas por tela
+
+O painel ADM deixou de ser um componente de 990 linhas com separadores. Passou a
+ter sessão partilhada, uma rota (e um chunk) por tela com a Visão Geral como
+índice, e 19 testes novos num domínio que tinha cobertura zero.
+
+Entregáveis: `docs/MC89.6-DECISOES.txt`, `docs/MC89.6-RELATORIO.txt`.
+Suítes: 303/303 backend, 40/40 frontend (eram 21), build verde, APK validado.
+
+### Não instalei runner de React — o projeto já tinha resolvido isto
+O enunciado pedia `AdminAuthContext.test.jsx` e "cobertura > 80%". Não há vitest,
+jest, jsdom nem testing-library no frontend. O único teste que existia diz no
+cabeçalho como o projeto resolveu o problema (MC59.6): *"lógica PURA (sem React,
+sem import.meta) → testável com node:test"*.
+
+Segui esse precedente. A máquina de estados da sessão saiu para
+`lib/adminAuth.js` com `fetch`, `storage` e relógio injetáveis; o contexto ficou
+uma casca. Testa-se rotação de refresh, retry em 401 e revogação sem browser, sem
+rede e sem esperar 12 minutos — e o que sobra é pequeno o suficiente para ser
+lido de uma vez. Abrir um segundo padrão de testes custava ~40 MB de
+devDependencies e testava a árvore de JSX, que não é o que parte aqui.
+
+### A navegação que tive de refazer — e só se viu no aparelho
+Implementei uma barra persistente com os nove destinos. Suíte verde, build verde,
+diff com bom aspeto. No telemóvel partiu-se em **três linhas irregulares**, com o
+"em breve" a quase duplicar a largura de cinco itens: reproduzi, agravado, o
+defeito que o MC89.4 tinha corrigido. E não era sequer o que eu próprio
+especificara no MC89.5 — o D-NAV(c) dizia *índice com cartões-atalho e "← Painel"
+no topo de cada tela*.
+
+Refeito para isso. O cartão dá o que a barra não podia: uma linha a dizer o que a
+tela faz e um estado visível para as que ainda não existem. Fora do índice, o
+título passa a ser o da secção — repetir "Painel Admin" gastava a única linha que
+diz onde se está. Custa um toque a mais entre telas.
+
+### Um risco de bundle evitado a tempo
+`AdminAuthContext` precisa de assinar EIP-191, que vem de `utils/web3.js` — e
+esse arrasta `ethers` e `hash-wasm`. Import estático punha-os no chunk de quem
+apenas ABRE o painel e, como o contexto é importado por `App.jsx`, o custo cairia
+no arranque da app inteira. Passou a `await import()` dentro do callback.
+Verificado no dist: o chunk de entrada tem **0** ocorrências de `BrowserProvider`
+e o contexto chega ao web3 por `import()`. Há teste a fixar a regra.
+
+### Sete guardas validadas por mutação
+Nenhuma guarda foi dada por boa só porque a suíte passava. Partir o refresh, o
+retry, a persistência do token, a rota "logs", o import do web3 e o casamento de
+prefixo — todas ficaram vermelhas. A primeira tentativa de M1 não chegou a
+alterar o ficheiro e a suíte continuou verde; sem confirmar que a mutação tinha
+sido aplicada, teria concluído que a guarda não servia.
+
+### Dois defeitos apanhados pelos próprios testes
+`telaAtiva("/")` marcava a Visão Geral como ativa na raiz da app (`"/"` normaliza
+para `""`, que eu aceitara como equivalente a `/admin`). E o meu duplo de `fetch`
+guardava `init` por referência — como `chamarAdmin` muta os cabeçalhos ao repetir
+depois de um 401, todas as chamadas mostravam o valor final, apagando a diferença
+que o teste do retry existe para ver. Nesse caso o instrumento é que estava
+errado, não o código.
+
+### Armadilha de medição, registada
+A primeira captura mostrava o índice quando a sonda de texto dizia "Operações".
+Não acreditei em nenhuma das duas: o script de captura chamava `Page.enable`
+antes de navegar, e era isso que repunha a rota. Se tivesse acreditado na imagem,
+teria "corrigido" uma navegação que estava boa.
+
+### O que NÃO foi validado
+O fluxo autenticado — colar o ADMIN_TOKEN e assinar com a Privy — não foi
+exercido: exige o token do operador (R5) e um modal que não se automatiza. Está
+provado tudo até ao gate. Falta o operador entrar no APK e confirmar que as
+métricas, as Aprovações e as Cotas carregam como antes.
+
+### Duas coisas ficam por decidir
+"Aprovações" e "Cotas" não têm lugar na estrutura aprovada de 7 telas e são
+funcionalidades vivas — ficaram como rotas autónomas para não haver regressão.
+Pertencem a "Usuários" e a "Financeiro", ou o painel assume-se com nove?
+
+**Próximo passo:** MC89.7 (Fase 1) — Visão Geral expandida. Dois dos seis alertas
+vão acender à primeira abertura, porque hoje são verdade.
