@@ -1,0 +1,159 @@
+// AdminLayout — casca do painel de administração.
+//
+// MC89.6 (Fase 0). É o que sobra de `pages/AdminPanel.jsx` depois de as abas
+// saírem para `pages/admin/*.jsx`: o gate de acesso, a barra de estado da sessão,
+// a navegação e o <Outlet /> onde cada tela entra.
+//
+// A autenticação já não vive aqui — vive em `AdminAuthContext`, porque as sete
+// telas partilham a mesma sessão. Este ficheiro só a LÊ.
+//
+// Regras visuais preservadas do MC89.4:
+//   · superfície opaca `.admin-panel` a preencher a altura (o fundo estático é
+//     moldura, não protagonista);
+//   · sem emojis; sem Orbitron; peso em vez de cor no título;
+//   · "Login Admin" é um botão NEUTRO — o laranja fica reservado a ação
+//     irreversível (os comandos da Fase 3);
+//   · saída explícita, porque a barra inferior de consumo não existe nesta rota.
+
+import { useState } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
+import { useAppContext } from "../../context/AppContext.jsx";
+import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
+import { useIsMobile } from "../../hooks/useIsMobile.js";
+import { Button, Input } from "../ui";
+import { ESTADOS } from "../../lib/adminAuth.js";
+import NavAdmin from "./NavAdmin.jsx";
+
+const COR = { text: "#e8f0fe", muted: "#94a3b8" };
+
+export default function AdminLayout() {
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const { abrirModal } = useAppContext();
+  const {
+    authState, authError, autenticado, login, logout,
+    endereco, isAdmin, aVerificarAdmin, isConnected,
+  } = useAdminAuth();
+
+  const [pedindoLogin, setPedindoLogin] = useState(false);
+  const [adminTokenInput, setAdminTokenInput] = useState("");
+
+  async function submitLogin(e) {
+    e.preventDefault();
+    if (!adminTokenInput) return;
+    const tokenLegado = adminTokenInput;
+    setAdminTokenInput("");            // descarta da UI imediatamente
+    setPedindoLogin(false);
+    const ok = await login(tokenLegado);
+    if (!ok) setPedindoLogin(true);    // re-abre se falhou
+  }
+
+  // ── Gate de UI ────────────────────────────────────────────────────────────
+  if (!isConnected) {
+    return (
+      <div style={{ padding: "2rem", color: COR.text, textAlign: "center" }}>
+        <h1 style={{ fontSize: "1.4rem", color: COR.text, fontWeight: 700 }}>Painel Admin</h1>
+        <p style={{ color: COR.muted, marginBottom: "1rem" }}>Faça login para verificar privilégios.</p>
+        <Button variant="secondary" size="lg" onClick={abrirModal}>Entrar</Button>
+      </div>
+    );
+  }
+  if (aVerificarAdmin) {
+    return <div style={{ padding: "2rem", color: COR.muted }}>Verificando privilégios…</div>;
+  }
+  if (!isAdmin) {
+    return (
+      <div style={{ padding: "2rem", color: COR.text, textAlign: "center" }}>
+        <h1 style={{ fontSize: "1.4rem", color: COR.text, fontWeight: 700 }}>Painel Admin</h1>
+        <p style={{ color: COR.muted, marginTop: "0.5rem" }}>
+          Acesso restrito. Seu endereço <code style={{ color: COR.muted }}>{endereco}</code> não está na lista de admins.
+        </p>
+      </div>
+    );
+  }
+
+  const statusOk    = authState === ESTADOS.AUTENTICADO;
+  const statusBg    = statusOk ? "rgba(16,185,129,0.06)" : (authState === ESTADOS.ERRO ? "rgba(239,68,68,0.06)" : "rgba(251,191,36,0.06)");
+  const statusBd    = statusOk ? "rgba(16,185,129,0.3)"  : (authState === ESTADOS.ERRO ? "rgba(239,68,68,0.3)"  : "rgba(251,191,36,0.3)");
+  const statusTexto =
+      authState === ESTADOS.AUTENTICADO ? "Sessão admin ativa (Bearer JWT)"
+    : authState === ESTADOS.A_RENOVAR   ? "⟳ Renovando token…"
+    : authState === ESTADOS.A_ENTRAR    ? "Autenticando…"
+    : authState === ESTADOS.ERRO        ? `✗ ${authError || "Falha na autenticação"}`
+    :                                     "Login admin necessário para mutações";
+
+  return (
+    <div
+      className="admin-panel"
+      style={{
+        margin: isMobile ? "0.75rem" : "1rem 1.5rem",
+        padding: isMobile ? "1rem" : "1.5rem 2rem",
+        color: COR.text, display: "flex", flexDirection: "column", gap: "1rem",
+        minHeight: isMobile ? "calc(100vh - 1.5rem)" : "calc(100vh - 2rem)",
+      }}
+    >
+      <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem" }}>
+        <div style={{ minWidth: 0 }}>
+          <h1 style={{ margin: 0, fontSize: isMobile ? "1.2rem" : "1.45rem", fontWeight: 700, color: COR.text, letterSpacing: 0 }}>
+            Painel Admin
+          </h1>
+          <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: COR.muted }}>
+            Logado como admin: <code style={{ color: COR.text }}>{endereco?.slice(0, 10)}…{endereco?.slice(-6)}</code>
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => navigate("/")}
+          className="!border-white/15 !text-[#94a3b8] !rounded-md shrink-0">
+          ← Sair do painel
+        </Button>
+      </header>
+
+      {/* Estado da sessão admin (JWT) */}
+      <div style={{
+        padding: "0.6rem 0.85rem",
+        background: statusBg,
+        border: `1px solid ${statusBd}`,
+        borderRadius: "10px",
+        fontSize: "0.78rem", color: COR.text,
+        display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <span>{statusTexto}</span>
+        {statusOk ? (
+          <Button variant="ghost" size="sm" onClick={logout}
+            className="!border-white/15 !text-[#94a3b8] !rounded-md">
+            Logout admin
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" onClick={() => setPedindoLogin(true)} disabled={authState === ESTADOS.A_ENTRAR}
+            className="!border-white/20 !text-[#e8f0fe] !shadow-none !rounded-md">
+            Login Admin
+          </Button>
+        )}
+      </div>
+
+      {pedindoLogin && !statusOk && (
+        <form onSubmit={submitLogin} style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ fontSize: "0.72rem", color: COR.muted, width: "100%" }}>
+            Cole o <strong>ADMIN_TOKEN</strong> legado (último uso). Depois sua wallet Privy vai assinar a mensagem para emitir o JWT.
+          </span>
+          <Input type="password" placeholder="ADMIN_TOKEN legado" value={adminTokenInput}
+                 onChange={(e) => setAdminTokenInput(e.target.value)} className="flex-1 min-w-[200px]" autoFocus />
+          <Button type="submit" variant="primary" size="sm" disabled={!adminTokenInput || authState === ESTADOS.A_ENTRAR}>
+            {authState === ESTADOS.A_ENTRAR ? "Assinando…" : "Login"}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => { setPedindoLogin(false); setAdminTokenInput(""); }}
+            className="!border-white/15 !text-[#94a3b8]">
+            Cancelar
+          </Button>
+        </form>
+      )}
+
+      <NavAdmin />
+
+      <section>
+        {/* Cada tela entra aqui. O <Suspense> das rotas preguiçosas vive em
+            App.jsx, junto das próprias rotas. */}
+        <Outlet />
+      </section>
+    </div>
+  );
+}

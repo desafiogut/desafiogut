@@ -22,6 +22,10 @@ import ChatbotWidget   from "./components/ChatbotWidget.jsx";
 // MC88.25 (P3) — avisa se a app nao estiver na rede de producao. Silencioso em mainnet.
 import AvisoRede       from "./components/AvisoRede.jsx";
 import LazyBoundary    from "./components/LazyBoundary.jsx";
+// MC89.6 — sessão admin. Import ESTÁTICO é seguro: o contexto não importa
+// `utils/web3.js` no topo (faz import dinâmico ao assinar), por isso não arrasta
+// ethers nem hash-wasm para o chunk inicial. Há um teste a fixar isso.
+import { AdminAuthProvider } from "./context/AdminAuthContext.jsx";
 
 const MinhaCarteira        = lazy(() => import("./pages/MinhaCarteira.jsx"));
 const MercadoLances        = lazy(() => import("./pages/MercadoLances.jsx"));
@@ -29,7 +33,20 @@ const ScheduleView         = lazy(() => import("./components/ScheduleView.jsx"))
 const MeusAtivos           = lazy(() => import("./pages/MeusAtivos.jsx"));
 const Seguranca            = lazy(() => import("./pages/Seguranca.jsx"));
 const Configuracoes        = lazy(() => import("./pages/Configuracoes.jsx"));
-const AdminPanel           = lazy(() => import("./pages/AdminPanel.jsx"));
+// MC89.6 (Fase 0 / D-NAV) — o AdminPanel monolítico deu lugar a uma casca
+// (AdminLayout) com uma rota por tela. Cada tela é um chunk seu: quem abre
+// /admin não paga o custo de parse das outras oito, e o arranque da app não
+// muda (nenhuma delas entra no chunk inicial).
+const AdminLayout          = lazy(() => import("./components/admin/AdminLayout.jsx"));
+const AdminVisaoGeral      = lazy(() => import("./pages/admin/VisaoGeral.jsx"));
+const AdminUsuarios        = lazy(() => import("./pages/admin/GestaoUsuarios.jsx"));
+const AdminFinanceiro      = lazy(() => import("./pages/admin/GestaoFinanceira.jsx"));
+const AdminOperacoes       = lazy(() => import("./pages/admin/Operacoes.jsx"));
+const AdminLogs            = lazy(() => import("./pages/admin/LogsAuditoria.jsx"));
+const AdminNotificacoes    = lazy(() => import("./pages/admin/Comunicacao.jsx"));
+const AdminConfiguracoes   = lazy(() => import("./pages/admin/ConfiguracoesAdmins.jsx"));
+const AdminAprovacoes      = lazy(() => import("./pages/admin/Aprovacoes.jsx"));
+const AdminCotas           = lazy(() => import("./pages/admin/Cotas.jsx"));
 const CorporativoDashboard = lazy(() => import("./pages/CorporativoDashboard.jsx"));
 const CorporativoCotas     = lazy(() => import("./pages/CorporativoCotas.jsx"));
 const CorporativoBanners   = lazy(() => import("./pages/CorporativoBanners.jsx"));
@@ -256,7 +273,24 @@ export default function App() {
               Comum/visitante → CorporativoRoute redireciona para "/". */}
           <Route path="/seguranca"  element={<CorporativoRoute><Seguranca /></CorporativoRoute>} />
           <Route path="/configuracoes" element={<Configuracoes />} />
-          <Route path="/admin"      element={<AdminPanel />} />
+          {/* MC89.6 (D-NAV) — a Visão Geral é o ÍNDICE de /admin, não um separador
+              entre outros. A lista canónica das telas vive em lib/adminNav.js e é a
+              mesma que gera a navegação, por isso um link nunca pode apontar para
+              uma rota que não exista. O AdminAuthProvider envolve SÓ estas rotas:
+              a sessão admin não tem nada que existir no resto da aplicação. */}
+          <Route path="/admin" element={<AdminAuthProvider><AdminLayout /></AdminAuthProvider>}>
+            <Route index                   element={<AdminVisaoGeral />} />
+            <Route path="usuarios"         element={<AdminUsuarios />} />
+            <Route path="financeiro"       element={<AdminFinanceiro />} />
+            <Route path="operacoes"        element={<AdminOperacoes />} />
+            <Route path="logs"             element={<AdminLogs />} />
+            <Route path="notificacoes"     element={<AdminNotificacoes />} />
+            <Route path="configuracoes"    element={<AdminConfiguracoes />} />
+            {/* T-2 — funcionalidades vivas sem lugar na estrutura de 7 telas.
+                Autónomas até o operador decidir onde pertencem. */}
+            <Route path="aprovacoes"       element={<AdminAprovacoes />} />
+            <Route path="cotas"            element={<AdminCotas />} />
+          </Route>
           {/* MC11.1 — rota pública: Seja Nosso Parceiro. Sem proteção. */}
           <Route path="/seja-nosso-parceiro" element={<SejaNossoParceiro />} />
           {/* MC17 — rota direta pós-cadastro (sem gate). */}

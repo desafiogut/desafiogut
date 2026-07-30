@@ -10,7 +10,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -67,8 +67,11 @@ test("o /admin tem uma saída explícita — senão a remoção da barra tranca 
   // Esta guarda existe porque as duas alterações são separáveis: alguém pode
   // remover o botão e deixar a barra escondida, e aí não há como sair no
   // telemóvel a não ser pelo botão físico.
-  const painel = ler("pages/AdminPanel.jsx");
-  assert.match(painel, /Sair do painel/, "o AdminPanel perdeu o botão de saída");
+  // MC89.6 — a casca do painel mudou de `pages/AdminPanel.jsx` para
+  // `components/admin/AdminLayout.jsx` (rotas aninhadas, D-NAV). A guarda é a
+  // mesma e continua a valer: quem herdar o layout não pode deixar cair a saída.
+  const painel = ler("components/admin/AdminLayout.jsx");
+  assert.match(painel, /Sair do painel/, "o painel perdeu o botão de saída");
   assert.match(painel, /useNavigate/, "o botão de saída precisa de navigate");
 });
 
@@ -99,15 +102,27 @@ test("o painel tem superfície opaca declarada no CSS", () => {
   const css = ler("globals.css");
   assert.match(css, /\.admin-panel\s*\{[^}]*background:\s*rgba\(13,\s*18,\s*53,\s*0\.92\)/,
     ".admin-panel tem de ter o navy opaco (o mesmo valor do .gut-glass--solid)");
-  assert.match(ler("pages/AdminPanel.jsx"), /className="admin-panel"/,
+  assert.match(ler("components/admin/AdminLayout.jsx"), /className="admin-panel"/,
     "o container raiz do painel tem de usar a classe");
 });
 
-test("zero emojis no AdminPanel, fora dos comentários", () => {
-  const codigo = ler("pages/AdminPanel.jsx")
-    .split("\n")
-    .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
-    .join("\n");
-  const emojis = codigo.match(/\p{Extended_Pictographic}/gu) || [];
-  assert.equal(emojis.length, 0, `restaram emojis: ${[...new Set(emojis)].join(" ")}`);
+test("zero emojis em NENHUM ecrã do painel, fora dos comentários", () => {
+  // MC89.6 — antes o painel era um ficheiro; agora são onze. A guarda passa a
+  // varrer a pasta inteira: com nove telas, verificar só uma delas seria dar por
+  // cumprida uma regra que nem se está a medir onde ela pode ser quebrada.
+  const alvos = [
+    "components/admin/AdminLayout.jsx",
+    "components/admin/NavAdmin.jsx",
+    ...readdirSync(resolve(SRC, "pages/admin")).map((f) => `pages/admin/${f}`),
+  ];
+  assert.ok(alvos.length >= 11, `esperava ≥11 ficheiros de painel, vi ${alvos.length}`);
+
+  for (const rel of alvos) {
+    const codigo = ler(rel)
+      .split("\n")
+      .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
+      .join("\n");
+    const emojis = codigo.match(/\p{Extended_Pictographic}/gu) || [];
+    assert.equal(emojis.length, 0, `${rel} tem emojis: ${[...new Set(emojis)].join(" ")}`);
+  }
 });

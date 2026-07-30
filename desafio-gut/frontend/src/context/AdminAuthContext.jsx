@@ -13,7 +13,12 @@
 import { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useAppContext } from "./AppContext.jsx";
 import { useAdmin } from "../hooks/useAdmin.js";
-import { getSignerFromProvider } from "../utils/web3.js";
+// ⚠️ `utils/web3.js` NÃO é importado no topo de propósito: arrasta `ethers` e
+// `hash-wasm`. Estaticamente, entrariam no chunk de quem apenas ABRE o painel —
+// e o painel foi construído a fugir exatamente desse custo (o backend chega ao
+// ponto de falar JSON-RPC cru para não tocar em ethers, MC88.31/MC89.1).
+// Aqui só é preciso para ASSINAR, o que acontece uma vez por login: import
+// dinâmico dentro do callback.
 import {
   criarSessaoAdmin, sessaoValidaPara, limparTokenLegado,
   INTERVALO_REFRESH_MS, ESTADOS,
@@ -89,6 +94,7 @@ export function AdminAuthProvider({ children }) {
       endereco: address,
       adminToken: adminTokenLegado,
       assinar: async (mensagem) => {
+        const { getSignerFromProvider } = await import("../utils/web3.js");
         const provider = await privyWallet.getEthereumProvider();
         const { signer } = await getSignerFromProvider(provider);
         return signer.signMessage(mensagem);
