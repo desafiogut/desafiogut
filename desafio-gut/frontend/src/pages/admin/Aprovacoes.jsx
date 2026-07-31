@@ -12,6 +12,7 @@ import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button } from "../../components/ui";
 import { COR, StatusBadge } from "./_ui.jsx";
+import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 
 /** "0x1E1bAe7F0f6E87E15F430B620Eca42B146d198cB" → "0x1E1b…d198cB" */
 function truncarEndereco(addr) {
@@ -90,7 +91,10 @@ export default function Aprovacoes() {
       </div>
       {erro && <p role="alert" style={{ color: COR.danger, fontSize: "0.78rem" }}>{erro}</p>}
       {lista.length === 0 && !carregando && (
-        <p style={{ color: COR.muted, fontSize: "0.82rem", fontStyle: "italic" }}>Nenhum pedido com status "{filtro}".</p>
+        <EstadoVazio
+          titulo={`Nenhum pedido ${filtro}`}
+          descricao="Troque o filtro acima para ver pedidos com outro estado."
+        />
       )}
       <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
         {lista.map((p) => (

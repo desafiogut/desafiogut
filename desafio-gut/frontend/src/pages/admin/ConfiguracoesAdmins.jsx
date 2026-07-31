@@ -7,6 +7,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { Button, Input } from "../../components/ui";
 import { COR, ouTraco } from "./_ui.jsx";
+import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 
 const NIVEL_COR = { "super-admin": "#ef4444", admin: "#f5a623", operador: "#10b981" };
 const NIVEL_LABEL = { "super-admin": "Super-Admin", admin: "Admin", operador: "Operador" };
@@ -147,7 +148,12 @@ export default function ConfiguracoesAdmins() {
           <h3 style={{ ...sh, margin: 0 }}>SESSÕES ATIVAS ({sessoes.length})</h3>
           <Button variant="ghost" size="sm" onClick={carregarSessoes} className="!border-white/15 !text-[#94a3b8]">↻</Button>
         </div>
-        {sessoes.length === 0 ? <p style={{ color: COR.muted, fontStyle: "italic", fontSize: "0.78rem" }}>Nenhuma sessão ativa.</p> : (
+        {sessoes.length === 0 ? (
+          <EstadoVazio
+            titulo="Nenhuma sessão ativa"
+            descricao="Nenhum administrador tem sessão aberta neste momento — incluindo esta, se ainda não foi registada."
+          />
+        ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.68rem" }}>
             <thead><tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
               <th style={th}>Endereço</th><th style={th}>Criada</th><th style={th}>Expira</th><th style={th}></th>

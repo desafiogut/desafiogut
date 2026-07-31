@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { Button, Input } from "../../components/ui";
 import { COR, ouTraco } from "./_ui.jsx";
+import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 
 function truncar(a) { return a && a.length > 12 ? `${a.slice(0,6)}…${a.slice(-4)}` : a || "—"; }
 function quando(iso) { return iso ? new Date(iso).toLocaleString("pt-BR") : "—"; }
@@ -121,7 +122,10 @@ export default function LogsAuditoria() {
 
       {/* Tabela */}
       {linhas.length === 0 && !carregando ? (
-        <p style={{ color: COR.muted, fontStyle: "italic", fontSize: "0.78rem" }}>Nenhum registo de auditoria encontrado.</p>
+        <EstadoVazio
+          titulo="Nenhum registo"
+          descricao="Nenhuma ação de auditoria corresponde aos filtros. As ações do painel são registadas assim que acontecem."
+        />
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.66rem" }}>

@@ -11,6 +11,7 @@ import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button, Input } from "../../components/ui";
 import { COR, TIERS, TIER_ACTIVE_CLASS } from "./_ui.jsx";
+import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 
 function truncarEndereco(addr) {
   if (!addr || typeof addr !== "string" || addr.length < 12) return addr || "—";
@@ -120,7 +121,10 @@ export default function Cotas() {
       {/* Lista */}
       {erro && <p role="alert" style={{ color: COR.danger, fontSize: "0.78rem" }}>{erro}</p>}
       {cotas.length === 0 && !carregando && (
-        <p style={{ color: COR.muted, fontSize: "0.82rem", fontStyle: "italic" }}>Nenhuma cota nesta categoria.</p>
+        <EstadoVazio
+          titulo="Nenhuma cota"
+          descricao="Não há cotas nesta categoria. Escolha outra acima."
+        />
       )}
       <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
         {cotas.map((c) => (

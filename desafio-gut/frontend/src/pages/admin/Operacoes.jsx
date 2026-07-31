@@ -11,6 +11,7 @@ import { Button, Input } from "../../components/ui";
 import StatusCard from "../../components/admin/StatusCard.jsx";
 import ComandoButton from "../../components/admin/ComandoButton.jsx";
 import { COR, ouTraco } from "./_ui.jsx";
+import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 
 // ── Formatação ──────────────────────────────────────────────────────────────
 
@@ -233,7 +234,10 @@ export default function Operacoes() {
               </table>
             )}
             {!fila?.linhas?.length && (
-              <p style={{ color: COR.muted, fontSize: "0.78rem", fontStyle: "italic" }}>Fila vazia.</p>
+              <EstadoVazio
+                titulo="Fila vazia"
+                descricao="Não há tarefas em espera. As compras de senhas entram aqui até serem processadas."
+              />
             )}
           </>
         )}

@@ -8,6 +8,7 @@ import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button } from "../../components/ui";
 import GraficoLinha from "../../components/admin/GraficoLinha.jsx";
 import { COR, ouTraco, brl } from "./_ui.jsx";
+import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 
 function truncar(a) { return a && a.length > 12 ? `${a.slice(0,6)}…${a.slice(-4)}` : a || "—"; }
 function quando(iso) { return iso ? new Date(iso).toLocaleString("pt-BR") : "—"; }
@@ -119,7 +120,12 @@ export default function GestaoFinanceira() {
             className="!border-white/20 !text-[#e8f0fe] !rounded-md ml-auto">Exportar CSV</Button>
         </div>
         {csvMsg && <p style={{ fontSize: "0.68rem", color: csvMsg.startsWith("Erro") ? COR.danger : COR.success, margin: "0 0 0.4rem" }}>{csvMsg}</p>}
-        {trans.length === 0 ? <p style={{ color: COR.muted, fontStyle: "italic", fontSize: "0.78rem" }}>Nenhuma transação.</p> : (
+        {trans.length === 0 ? (
+          <EstadoVazio
+            titulo="Nenhuma transação"
+            descricao="Não há movimentação financeira no período e tipo selecionados."
+          />
+        ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
             <thead><tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
               <th style={th}>Data</th><th style={th}>Endereço</th><th style={th}>Tipo</th><th style={th}>Valor</th><th style={th}>Fonte</th>

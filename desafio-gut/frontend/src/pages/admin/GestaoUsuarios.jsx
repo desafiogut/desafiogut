@@ -13,6 +13,7 @@ import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button, Input } from "../../components/ui";
 import { COR, ouTraco } from "./_ui.jsx";
+import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 
 function truncarEndereco(addr) {
   if (!addr || addr.length < 12) return addr || "—";
@@ -106,7 +107,18 @@ export default function GestaoUsuarios() {
 
       {/* Tabela */}
       {usuarios.length === 0 && !carregando ? (
-        <p style={{ color: COR.muted, fontSize: "0.82rem", fontStyle: "italic" }}>Nenhum utilizador encontrado.</p>
+        q.trim() ? (
+          <EstadoVazio
+            titulo="Nenhum resultado"
+            descricao={`Nada corresponde a "${q.trim()}". A busca cobre endereço, e-mail e nome.`}
+            acao={{ texto: "Limpar busca", onClick: () => { setQ(""); setCursor(null); carregar(true); } }}
+          />
+        ) : (
+          <EstadoVazio
+            titulo="Nenhum utilizador"
+            descricao="Ainda não há atividade registada. A ressalva sobre o Privy está acima."
+          />
+        )
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
