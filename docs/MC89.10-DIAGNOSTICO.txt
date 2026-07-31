@@ -1,0 +1,107 @@
+# MC89.10 — DIAGNÓSTICO DA AUTORIZAÇÃO E AUDITORIA ATUAL
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | ZERO alterações de código
+
+## 1. AUTORIZAÇÃO: O QUE EXISTE HOJE
+
+### 1.1 O JWT admin
+Arquivo: _lib/jwt.mjs:92-101
+Payload: `{ endereco, tipo: "admin-access" }`
+TTL: 15 minutos
+NÃO transporta `nivel`. Todos os admins são iguais perante o token.
+
+### 1.2 A lista de admins
+Arquivo: _lib/admin-helpers.mjs + Blob admin-list
+Formato: array plano de endereços (`["0x...", "0x..."]`)
+Fontes: Blob admin-list:admins + EOA coordenadora (admin permanente)
+NÃO tem níveis. NÃO tem metadado (quem adicionou, quando).
+
+### 1.3 O gate
+Arquivo: _lib/admin-auth.mjs:191-198
+`guardAdmin(req)` → autenticarAdmin → verifica Bearer JWT ou x-admin-token.
+Se válido → null (continua). Se inválido → Response de erro.
+É BINÁRIO: admin ou não-admin. Nenhuma verificação de nível.
+
+### 1.4 Endpoints protegidos (13 ficheiros usam guardAdmin)
+LEITURA (só precisam ver, não tocar):
+  admin-stats.mjs · admin-onchain.mjs · admin-alerts.mjs · admin-series.mjs
+  admin-list.mjs (GET) · monitor-onchain.mjs (GET manual)
+
+ESCRITA OPERACIONAL (muda estado do sistema):
+  admin-aprovacao.mjs (POST) · cotas.mjs (POST) · edicoes.mjs (POST)
+  consolidar-lances.mjs · purge-lances.mjs · cron-reset-programado.mjs
+  backup-blobs.mjs
+
+GOVERNANÇA (gere quem tem poder):
+  admin-list.mjs (POST adicionar/remover)
+
+### 1.5 O GUTO (chatbot.mjs)
+Gate separado: `ehAdminPerfil(perfil)` + `confirmarAdminChat(req)`.
+O perfil "admin" é resolvido por `detectarPerfil` que chama `getRole()` no rbac.mjs.
+Também é BINÁRIO: é admin ou não é.
+Rate-limit separado: `RL_GUTO_ADMIN_RPM = 5/min`.
+
+### 1.6 O rbac.mjs
+Arquivo: _lib/rbac.mjs
+Três papéis: `admin`, `cliente`, `user`.
+Estes descrevem o TIPO DE CLIENTE, não o grau de poder do admin.
+`getRole()` → admin se endereço ∈ admin-list OU é a coordenação.
+Este é o achado A-8 do MC89.5, confirmado.
+
+## 2. AUDITORIA: O QUE EXISTE HOJE
+
+### 2.1 log-operacional.mjs
+Arquivo: _lib/log-operacional.mjs (135 linhas)
+Armazena em Blob "log-decisoes", 1 entrada por chave.
+Entrada: `{ id, timestamp, trigger, action, user_id }`
+FIFO com MAX_ENTRADAS = 500 (poda as mais antigas automaticamente).
+100% FAIL-SOFT: erro de Blob retorna null, nunca propaga.
+
+### 2.2 Chamadas existentes
+chatbot.mjs:
+- wizard criar_edicao → registrarDecisao({ trigger: "criar_edicao", action, userId })
+- wizard encerrar → registrarDecisao({ trigger: "encerrar_edicao", action, userId })
+- panic/unpanic → registrarDecisao({ trigger, action, userId })
+- ALFA:panic → registrarDecisao({ trigger: "alfa:panic", action: "sistema paused", userId })
+- ALFA:unpause → registrarDecisao({ trigger: "alfa:unpause", action: "sistema active", userId })
+
+NENHUM endpoint HTTP chama registrarDecisao. Só o GUTO.
+
+### 2.3 Lacunas (cada uma é um problema para compliance)
+1. PERDE HISTÓRICO: 500 entradas e a 501ª apaga a 1ª. Um auditor pergunta
+   "quem aprovou esta cota em março" e o log já a perdeu.
+2. PERDE ESCRITAS EM SILÊNCIO: se os Blobs estiverem cegos ([[desafiogut-blobs-token-dois-cegos]]),
+   a ação acontece e o log não regista — e ninguém sabe.
+3. SEM IP: não há como provar de onde veio a ação.
+4. SEM USER-AGENT: não há como saber que dispositivo foi usado.
+5. SEM JUSTIFICATIVA: comandos manuais (forçar fila, limpar cache) não exigem
+   justificativa — e o campo nem existe no log.
+6. SEM SUCESSO/FRACASSO: o log só tem o que foi PEDIDO, não o que aconteceu.
+7. NENHUM ENDPOINT HTTP escreve no log: aprovar cliente, gerir cotas, adicionar
+   admin — tudo acontece sem registo.
+8. BLOB, NÃO POSTGRES: os Blobs não têm garantias de durabilidade comparáveis
+   às de uma base de dados. Para auditoria, isso importa.
+
+### 2.4 admin-aprovacao (Blob separado)
+O endpoint admin-aprovacao.mjs mantém um campo `historico: [{em, de, para, por, motivo}]`
+dentro de cada entrada do Blob admin-aprovacao:{cliente_id}. Isto é um
+mini-log de aprovação específico — mas não é um log de auditoria transversal.
+
+## 3. O QUE NÃO EXISTE (confirmado, não assumido)
+
+- Tabela `admin_logs` no Supabase: ✗ não existe (list_tables confirma)
+- Campo `nivel` no JWT admin: ✗ não existe (jwt.mjs:94 mostra `{ endereco, tipo }`)
+- Campo `nivel` no Blob admin-list: ✗ não existe (formato é array de strings)
+- guardAdmin com parâmetro de nível: ✗ não existe (assinatura é `guardAdmin(req)`)
+- `ip` e `user_agent` no log: ✗ não existem (só id/timestamp/trigger/action/user_id)
+- `sucesso` no log: ✗ não existe
+- `justificativa` no log: ✗ não existe
+- Qualquer registo de ações HTTP (aprovar, rejeitar, gerir cotas): ✗ não existe
+
+## 4. MATRIZ ATUAL: quem pode o quê
+Todos os admins podem TUDO. Não há diferença entre um operador que só precisa
+de ver métricas e um super-admin que gere a lista de admins.
+
+              stats  onchain  alerts  series  aprovacoes  cotas  admin-list  edicoes  backup
+admin (hoje)   ✓       ✓       ✓        ✓         ✓         ✓        ✓          ✓       ✓
+
+É uma linha só.
