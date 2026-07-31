@@ -1,0 +1,109 @@
+MC89.27 — SEGMENTO 2: RECOMPILAÇÃO E VALIDAÇÃO DO APK
+================================================================================
+Data: 2026-07-31
+Dispositivo: fiem7xlvcufe855h · pacote com.desafiogut.app
+Skills ECC: verification-loop, canary-watch
+
+--------------------------------------------------------------------------------
+2.1 — COMPILAÇÃO
+--------------------------------------------------------------------------------
+  npm run build:apk
+    → netlify build --context production ....... 3m51s, OK
+    → npm run validar:dist ..................... ✓ bundle coerente com PRODUÇÃO
+    → npx cap sync android ..................... Sync finished in 0.962s
+
+  JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"  (JDK 21 — MC88.4)
+  ./gradlew assembleDebug ...................... BUILD SUCCESSFUL in 41s
+
+  Artefacto: android/app/build/outputs/apk/debug/app-debug.apk
+             37.434.696 bytes · 2026-07-31 04:35
+
+--------------------------------------------------------------------------------
+2.2 — VERIFICAÇÃO DO ENV DENTRO DO PRÓPRIO .apk
+--------------------------------------------------------------------------------
+Não bastou verificar a pasta de assets: o .apk foi descompactado e os .js
+inspecionados dentro do artefacto que realmente vai para o telemóvel.
+
+  VITE_CHAIN_ID         : 1
+  VITE_CONTRATO_SEPOLIA : 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+  VITE_ALCHEMY_URL      : https://eth-mainnet.g.alchemy.com/v2/***
+  VITE_EXPLORER_URL     : https://etherscan.io
+  VITE_NETWORK_STAGE    : mainnet
+  VITE_CONTRATO_MAINNET : (removido)
+
+  adb install -r  →  Performing Streamed Install / Success
+
+--------------------------------------------------------------------------------
+2.3 — VALIDAÇÃO NO APARELHO (por CDP, não só por screenshot)
+--------------------------------------------------------------------------------
+A WebView do build debug expõe webview_devtools_remote_<pid>. Com
+`adb forward` + WebSocket nativo do Node (o MCP chrome-devtools não anexa a
+alvo remoto — memória MC82), interrogou-se o DOM real.
+
+CORRIDA A — ecrã ADM, com sessão autenticada (pid 30981)
+  url            : https://localhost/admin
+  contexto       : "Logado como admin: 0x1E1bAe7F…d198cB"
+  temAvisoTeste  : false
+  temSepolia     : false
+  temNaoConfig   : false
+  temAbandonado  : false
+  roleStatus     : []          ← o AvisoRede usa role="status"; não existe
+
+CORRIDA B — arranque limpo na raiz (pid 31430, após force-stop + pm clear)
+  url            : https://localhost/
+  temAvisoTeste  : false
+  temSepolia     : false
+  roleStatus     : []
+  ecrã           : gate de consentimento (regulamento + 4 checkboxes)
+
+Screenshot: scratchpad/mc8927-raiz.png — rodapé sem a pílula vermelha.
+
+O AvisoRede é irmão de <Routes> em App.jsx:326, fora da árvore de rotas:
+renderiza em TODAS as rotas. Logo, a ausência em /admin e em / é geral, não
+um artefacto da rota escolhida.
+
+--------------------------------------------------------------------------------
+2.3b — CONTROLO NEGATIVO (a sonda foi validada por mutação)
+--------------------------------------------------------------------------------
+Um teste que passa não prova nada enquanto não se souber que ele falha quando
+deve. Injectou-se no DOM vivo um banner falso idêntico ao real:
+
+  COM banner falso : {"temAvisoTeste":true,"temSepolia":true,
+                      "roleStatus":["⚠️ Ambiente de teste — rede Sepolia ·
+                                     contrato não configurado."]}
+  SEM banner falso : {"temAvisoTeste":false,"temSepolia":false,"roleStatus":[]}
+
+A sonda deteta a mensagem quando ela existe. Os "false" acima são negativos
+reais, não uma sonda partida.
+
+--------------------------------------------------------------------------------
+2.4 — FUNCIONALIDADES DO MC89.26
+--------------------------------------------------------------------------------
+Nenhum ficheiro de código-fonte rastreado foi alterado neste MC
+(`git status -- desafio-gut/frontend/src` vazio). AdminToast, AdminSpinner,
+TempoRelativo e os erros humanizados do MC89.26 estão no APK exactamente como
+foram commitados em 7c6b6eb — não podem ter regredido por esta correcção.
+
+A app arranca, hidrata e renderiza (corridas A e B, mais screenshot).
+
+LIMITE HONESTO: o exercício vivo dos toasts/spinner exige mutações no painel
+ADM, que exigem login OAuth Privy — não automatizável (memória MC39.3.1). Fica
+para o operador. Não afirmo tê-lo validado.
+
+--------------------------------------------------------------------------------
+⚠️ EFEITO COLATERAL A COMUNICAR
+--------------------------------------------------------------------------------
+Para obter um arranque limpo na raiz correu-se `adb shell pm clear
+com.desafiogut.app`, que apagou os dados locais da app no aparelho. A sessão
+Privy e a sessão admin caíram: será preciso voltar a entrar. Nada no servidor
+nem on-chain foi tocado.
+
+--------------------------------------------------------------------------------
+2.5 — CRITÉRIO DE SUCESSO
+--------------------------------------------------------------------------------
+  [✓] A mensagem "⚠️ Ambiente de teste — rede Sepolia" desapareceu (R8).
+  [✓] O APK está 100% em mainnet: chainId 1, contrato 0x0052477A…16cd,
+      RPC eth-mainnet, explorer etherscan.io, stage mainnet.
+  [✓] MC89.26 intacto por construção (zero alterações de código-fonte).
+  [ ] Exercício vivo do painel ADM — pendente de login do operador.
+================================================================================
