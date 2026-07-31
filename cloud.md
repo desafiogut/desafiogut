@@ -5691,3 +5691,26 @@ View `vw_utilizadores` (UNION, VIEW simples, ~30 linhas). Quatro endpoints
 (documentado no ecrã para o admin não achar que bloqueou quando não bloqueou).
 
 **Próximo:** MC89.14 — execução. A fase mais cara das restantes.
+
+---
+
+## MC89.14 — Fase 4: Gestão de Usuários (Tela 2)
+
+Suítes: 342 backend, 40 frontend. APK recompilado.
+
+### View e tabela
+`vw_utilizadores` (UNION cotas+saldo_rs+creditos, VIEW simples, 7 linhas).
+`usuarios_bloqueio` com índice parcial UNIQUE WHERE desbloqueado_em IS NULL.
+
+### Quatro endpoints
+Listagem paginada por cursor com busca textual. Perfil com saldo, créditos,
+débitos e estado de bloqueio. Bloqueio com justificativa (regista mas ainda não
+impede — gates são MC próprio). Ajuste de saldo auditável com fonte=ajuste-admin,
+idempotente por operacao_id, gate super-admin.
+
+### Tela 2
+Tabela com endereço truncado → perfil, badges de fonte, busca. Perfil em rota
+aninhada (/admin/usuarios/:endereco) com identificação, saldo, créditos e ações
+de bloqueio/ajuste com confirmação e justificativa. Usuários marcado pronto.
+
+**Próximo:** MC89.15 — Fase 5: Gestão Financeira (Tela 3).
