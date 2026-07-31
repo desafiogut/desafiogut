@@ -12,6 +12,11 @@ import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button, Input } from "../../components/ui";
 import { COR, TIERS, TIER_ACTIVE_CLASS } from "./_ui.jsx";
 
+function truncarEndereco(addr) {
+  if (!addr || typeof addr !== "string" || addr.length < 12) return addr || "—";
+  return `${addr.slice(0, 6)}…${addr.slice(-6)}`;
+}
+
 export default function Cotas() {
   const { chamarAdmin } = useAdminAuth();
   const isMobile = useIsMobile();
@@ -130,9 +135,12 @@ export default function Cotas() {
             gap: "0.4rem",
           }}>
             <div>
-              <strong>{c.cliente_nome || "(sem nome)"}</strong>{" — "}
+              {/* MC89.9 — endereço truncado por omissão. O nome real do cliente
+                  só aparece no formulário de edição, que está atrás de uma ação
+                  deliberada do admin. */}
+              <strong>{c.cliente_nome || `Cliente ${catSel}`}</strong>{" — "}
               <span style={{ color: COR.muted }}>{c.produto_nome || "(sem produto)"}</span>
-              <div><code style={{ fontSize: "0.7rem", color: COR.muted }}>{c.cliente_id}</code></div>
+              <div><code style={{ fontSize: "0.7rem", color: COR.muted, fontFamily: "'JetBrains Mono', monospace" }}>{truncarEndereco(c.cliente_id)}</code></div>
             </div>
             <span style={{
               alignSelf: "center", padding: "0.16rem 0.5rem", borderRadius: "999px",

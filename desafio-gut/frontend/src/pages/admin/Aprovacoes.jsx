@@ -13,6 +13,12 @@ import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button } from "../../components/ui";
 import { COR, StatusBadge } from "./_ui.jsx";
 
+/** "0x1E1bAe7F0f6E87E15F430B620Eca42B146d198cB" → "0x1E1b…d198cB" */
+function truncarEndereco(addr) {
+  if (!addr || typeof addr !== "string" || addr.length < 12) return addr || "—";
+  return `${addr.slice(0, 6)}…${addr.slice(-6)}`;
+}
+
 export default function Aprovacoes() {
   const { chamarAdmin } = useAdminAuth();
   const isMobile = useIsMobile();
@@ -22,6 +28,9 @@ export default function Aprovacoes() {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
   const [acao, setAcao] = useState({ id: null, msg: "" });
+  // MC89.9 — PII oculta por omissão. O admin pode revelar os dados de UM
+  // cliente de cada vez (toggle individual), não a lista toda.
+  const [piiVisivel, setPiiVisivel] = useState({});
 
   async function carregar() {
     // B-P1-2 (MC39.17.2): GET exige JWT admin (a lista expõe PII). Sem sessão
@@ -97,11 +106,33 @@ export default function Aprovacoes() {
             <div>
               <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
                 <StatusBadge status={p.status} />
-                {p.nome && <strong style={{ fontSize: "0.86rem", color: COR.text }}>{p.nome}</strong>}
+                {/* MC89.9 — o endereço aparece SEMPRE truncado. O nome e o e-mail
+                    ficam atrás de um toggle individual, porque o admin precisa de
+                    os ver para aprovar, mas não deve tê-los expostos por omissão
+                    em cada abertura do painel. */}
+                <code style={{ fontSize: "0.76rem", color: COR.text, fontFamily: "'JetBrains Mono', monospace" }}>
+                  {truncarEndereco(p.cliente_id)}
+                </code>
+                {p.nome && (
+                  <button
+                    type="button"
+                    onClick={() => setPiiVisivel((v) => ({ ...v, [p.cliente_id]: !v[p.cliente_id] }))}
+                    style={{
+                      fontSize: "0.66rem", color: COR.muted, background: "none", border: `1px solid ${COR.muted}44`,
+                      borderRadius: "6px", padding: "0.15rem 0.45rem", cursor: "pointer",
+                    }}
+                  >
+                    {piiVisivel[p.cliente_id] ? "Ocultar dados" : "Mostrar dados"}
+                  </button>
+                )}
               </div>
-              <code style={{ fontSize: "0.7rem", color: COR.muted, fontFamily: "'JetBrains Mono', monospace" }}>{p.cliente_id}</code>
-              {p.email && <div style={{ fontSize: "0.74rem", color: COR.muted }}>{p.email}</div>}
-              {p.observacao && <div style={{ fontSize: "0.72rem", color: COR.muted, marginTop: "0.2rem" }}>“{p.observacao}”</div>}
+              {piiVisivel[p.cliente_id] && (
+                <div style={{ marginTop: "0.35rem", padding: "0.4rem 0.55rem", background: "rgba(255,255,255,0.03)", borderRadius: "6px", display: "flex", flexDirection: "column", gap: "0.15rem" }}>
+                  {p.nome && <div style={{ fontSize: "0.80rem", color: COR.text, fontWeight: 600 }}>{p.nome}</div>}
+                  {p.email && <div style={{ fontSize: "0.74rem", color: COR.muted }}>{p.email}</div>}
+                  {p.observacao && <div style={{ fontSize: "0.72rem", color: COR.muted, marginTop: "0.15rem" }}>"{p.observacao}"</div>}
+                </div>
+              )}
               {p.motivo && <div style={{ fontSize: "0.72rem", color: COR.warn, marginTop: "0.2rem" }}>Motivo: {p.motivo}</div>}
             </div>
             {p.status === "pendente" && (

@@ -14,10 +14,10 @@ export default function GestaoUsuarios() {
       descricao="Lista, busca, filtros, bloqueio e perfil com histórico. Depende de uma projeção derivada em SQL (vw_utilizadores), porque não existe tabela de utilizadores para ler."
       decisoes={[
         "D1: a lista chama-se «utilizadores COM ATIVIDADE», nunca «todos». Quem se registou e nunca fez nada não aparece — e o rótulo tem de o dizer.",
-        "D-SALDO: não há botão «resetar saldo». A ação é «Ajuste manual», exige justificativa e escreve um débito auditável — o modelo já é de livro-razão e sobrescrever apagaria história.",
-        "O e-mail existe para 3 de 7 cotas (verificado na base). A busca por e-mail alcança essa minoria, e a tela tem de o explicar em vez de parecer partida.",
-        "Saldo de senhas NÃO entra na lista: é on-chain e custaria uma chamada RPC por linha. Só no perfil, sob pedido.",
-        "Histórico de lances: os lances programados são on-chain e não passam pelo backend. A tela mostra os relâmpago e declara a ausência dos outros.",
+        "D-AJUSTE: não há botão de reinicialização de métricas. A ação é «Ajuste manual», exige justificativa e escreve um débito auditável — o modelo já é de livro-razão e sobrescrever apagaria história.",
+        "O e-mail existe para 3 de 7 cotas (verificado na base). A busca alcança essa minoria, e a tela tem de o explicar em vez de parecer partida.",
+        "Créditos on-chain não entram na lista: são operações de rede e custariam uma chamada RPC por linha. Só no perfil, sob pedido.",
+        "Histórico de operações: as operações programadas são on-chain e não passam pelo backend. A tela mostra as em tempo real e declara a ausência das restantes.",
       ]}
     />
   );

@@ -121,7 +121,12 @@ export function EmConstrucao({ titulo, fase, descricao, decisoes = [] }) {
       display: "flex", flexDirection: "column", gap: "0.6rem",
     }}>
       <div>
-        <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: COR.text }}>{titulo}</h2>
+        {/* MC89.9 — aviso explícito para varreduras textuais não confundirem
+            texto de planeamento com dados reais. */}
+        <p style={{ margin: 0, fontSize: "0.65rem", color: COR.warn, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          [EM BREVE — planeamento]
+        </p>
+        <h2 style={{ margin: "0.15rem 0 0", fontSize: "1rem", fontWeight: 700, color: COR.text }}>{titulo}</h2>
         <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: COR.muted, letterSpacing: "0.04em" }}>
           {fase}
         </p>

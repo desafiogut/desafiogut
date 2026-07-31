@@ -324,9 +324,9 @@ export default function VisaoGeral() {
             nota="É esta carteira que credita as senhas on-chain. Sem gás, a compra deixa de ser creditada."
           />
           <Metrica
-            rotulo="Senhas em trânsito"
+            rotulo="Em trânsito"
             valor="—"
-            nota="Hoje não há rastreabilidade entre o crédito R$ e o crédito on-chain de senhas. Este campo ficará ativo quando existir um registo temporal da operação on-chain."
+            nota="Rastreabilidade on-chain ainda não disponível."
           />
           <Metrica rotulo="Bloco atual" valor={ouTraco(onchain?.bloco, (v) => v.toLocaleString("pt-BR"))} />
         </Grelha>
