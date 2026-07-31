@@ -5805,3 +5805,27 @@ ALFA:admins, ALFA:sessoes, ALFA:revogar.
 O dashboard ADM do DESAFIOGUT está 100% funcional — 7 telas completas, sistema
 de auditoria fail-CLOSED, 3 níveis de permissão, 18 endpoints admin, ALFA com
 24 comandos. Próximo: pendências do operador.
+
+---
+
+## MC89.21 — Validação completa do dashboard ADM no aparelho
+
+Zero alterações de código. Validação por CDP (adb forward + WebSocket nativo)
+com Log.clear() antes de cada medição. APK MC89.20 em fiem7xlvcufe855h.
+
+### Resultado: 6/7 telas operacionais
+Todas as 7 telas renderizam, 6 com conteúdo funcional. Zero erros de consola.
+Redirecionamento cold boot → /admin confirmado. Endereço truncado em todas as
+telas (0x1E1bAe7F…d198cB). Gates de autenticação corretos em todas as rotas.
+
+### Achado: Tela 5 (Logs) ainda é placeholder
+O endpoint `admin-logs.mjs` existe desde o MC89.11, mas `LogsAuditoria.jsx`
+nunca foi atualizado — continua com EmConstrucao. `adminNav` confirma:
+`pronta: false`. O sistema sabe que não está pronto.
+
+### O que NÃO foi validado
+Estado autenticado (exige ADMIN_TOKEN + Privy — R5). ALFA, ações de mutação,
+dados reais carregados. As suítes (342 backend, 40 frontend) atestam a lógica;
+falta a experiência real com sessão admin.
+
+**Próximo:** MC89.22 — implementar Tela 5 funcional.
