@@ -5663,3 +5663,9 @@ para as telas seguintes. Operações marcada como pronta no adminNav.
 panic/unpause → super-admin apenas (o kill switch é o poder mais perigoso).
 
 **Próximo:** MC89.13 — Fase 4: Gestão de Usuários (Tela 2), a mais cara.
+
+### Redirecionamento automático do admin
+`DashboardOuCorporativo` agora verifica `useAdmin(address)` ANTES de renderizar o
+Dashboard de consumo. Se o endereço for admin → `<Navigate to="/admin" replace>`.
+O admin nunca vê o ecrã de consumo com os seus dados pessoais. Confirmado no APK:
+cold boot vai direto para `/admin`. [[desafiogut-mc8912-fase3]]
