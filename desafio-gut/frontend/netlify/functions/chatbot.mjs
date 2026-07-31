@@ -135,6 +135,11 @@ const INTENT_PATTERNS = {
   // de propósito: nunca rouba um intent mais específico ("meu saldo", "quero
   // uma cota"). Só apanha quem está mesmo a pedir para falar com alguém.
   // Padrão sobre texto JÁ desacentuado e em minúsculas (ver detectarIntent).
+  // MC89.9 — Comando ALFA (admin). Prefixo fixo + ação. Testado DENTRO de
+  // detectarIntent e não por ordem de definição: o padrão só captura se a frase
+  // começar com "ALFA:" (case-insensitive). Captura ação e parâmetros opcionais.
+  comando_alfa: /^ALFA:\s*(\w+)(?:\s+(.*))?$/i,
+
   suporte: /\bsuporte\b|\bconta[ct]to\b|falar com (alguem|voces|humano|atendente|a coordenacao)|\batendimento\b|reclama(r|cao)|\bouvidoria\b|e-?mail (de |para )?(contato|suporte|voces)|como (falo|entro em contato|reclamo)/,
 };
 
@@ -172,6 +177,10 @@ export function detectarIntent(texto) {
   if (INTENT_PATTERNS.dados_mercado.test(t))   return "dados_mercado";
   if (INTENT_PATTERNS.simular_vencedor.test(t)) return "simular_vencedor";
   if (INTENT_PATTERNS.pulso_edicao.test(t))    return "pulso_edicao";
+  // MC89.9 — ALFA é prefixo FIXO e ancorado (^ALFA:). Nenhum outro padrão
+  // casa "ALFA:<acao>", mas panic/unpanic têm `panic\b` e `unpanic\b` que
+  // casam SUBSTRING em "alfa:panic". Por isso ALFA é testado ANTES de panic.
+  if (INTENT_PATTERNS.comando_alfa.test(t))   return "comando_alfa";
   if (INTENT_PATTERNS.unpanic.test(t))         return "unpanic";
   if (INTENT_PATTERNS.panic.test(t))           return "panic";
   if (INTENT_PATTERNS.memoria.test(t))         return "memoria";
@@ -502,6 +511,111 @@ const ehCorpOuAdmin  = (perfil) => perfil === "admin" || perfil === "corporativo
 const ehAutenticado  = (perfil, endereco) => perfil !== "visitante" && !!endereco;
 const qualquerPerfil = () => true;
 
+// ── MC89.9 — Comando ALFA ──────────────────────────────────────────────────
+// Tabela de comandos conhecidos. Cada entrada: o que faz, se é possível hoje, e
+// como responder. Comandos impossíveis respondem com honestidade — nunca com
+// "executado" quando não foi.
+
+const COMANDOS_ALFA = {
+  status:   "Métricas agregadas do sistema (admin-stats + on-chain).",
+  fila:     "Estado atual da fila de tarefas.",
+  panic:    "Pausar o sistema (kill switch).",
+  unpause:  "Reativar o sistema após pausa.",
+  ajuda:    "Listar comandos ALFA disponíveis.",
+  reindexar_rag: "O índice RAG é construído fora do repositório pelo operador. "
+    + "Execute `build-rag-index.mjs` localmente.",
+  limpar_cache: "O cache Redis não está configurado (REDIS_URL ausente). "
+    + "As consultas vão sempre à fonte.",
+};
+
+/**
+ * Executa um comando ALFA. Todas as dependências são importadas sob demanda
+ * para não pesar o cold start de quem não usa ALFA.
+ */
+async function executarAlfa(acao, params, { perfil, endereco }) {
+  // ── Comandos que funcionam hoje ──────────────────────────────────────────
+  if (acao === "status") {
+    const [{ obterMetricas }, { obterSaldoEoa }] = await Promise.all([
+      import("./_lib/admin-metricas.mjs"),
+      import("./_lib/admin-metricas.mjs"),
+    ]);
+    const [metrica, eoa] = await Promise.allSettled([
+      obterMetricas(),
+      obterSaldoEoa().catch(() => ({ erro: "cadeia indisponível" })),
+    ]);
+    const m = metrica.status === "fulfilled" ? metrica.value : null;
+    const e = eoa.status === "fulfilled" ? eoa.value : { erro: "cadeia indisponível" };
+    const u = m?.utilizadores?.comAtividade ?? "—";
+    const f = m?.financeiro;
+    const fila = m?.operacao?.fila;
+    return [
+      `📊 STATUS DO SISTEMA`,
+      ``,
+      `Utilizadores com atividade ..... ${u}`,
+      `Saldo em circulação ........... ${f ? `R$ ${((f.saldoTotalCentavos || 0) / 100).toFixed(2)}` : "—"}`,
+      `Créditos (30 d) ............... ${f?.creditosJanela ?? "—"}`,
+      `Fila — pendentes / falhadas ... ${fila?.pendentes ?? "—"} / ${fila?.falhadas ?? "—"}`,
+      `Saldo EOA ..................... ${e?.saldoEth ? `${e.saldoEth} ETH` : e?.erro || "—"}`,
+      `Bloco atual ................... ${e?.bloco ?? "—"}`,
+      ``,
+      `Gerado às ${new Date().toLocaleTimeString("pt-BR")}. Use ALFA:ajuda para ver outros comandos.`,
+    ].join("\n");
+  }
+
+  if (acao === "fila") {
+    const { getSupabaseReadOnly } = await import("./_lib/supabase-client.mjs");
+    const sb = getSupabaseReadOnly();
+    const { data, error } = await sb.from("fila_tarefas")
+      .select("tipo,status,atualizado_em")
+      .order("atualizado_em", { ascending: false })
+      .limit(10);
+    if (error) return `Não foi possível ler a fila: ${error.message}`;
+    if (!data?.length) return "A fila de tarefas está vazia.";
+    const linhas = data.map((t) =>
+      `  ${t.tipo || "?"} · ${t.status} · ${new Date(t.atualizado_em).toLocaleString("pt-BR")}`).join("\n");
+    return `📋 FILA DE TAREFAS (últimas 10)\n\n${linhas}`;
+  }
+
+  if (acao === "panic") {
+    try {
+      const { escreverEstadoSistema } = await import("./_lib/system-state.mjs");
+      const { registrarDecisao } = await import("./_lib/log-operacional.mjs");
+      const estado = await escreverEstadoSistema("paused", "acionado via ALFA:" + acao);
+      await registrarDecisao({ trigger: "alfa:panic", action: "sistema paused", userId: endereco });
+      return `⏸️ Sistema PAUSADO às ${new Date(estado.timestamp).toLocaleTimeString("pt-BR")}. Use ALFA:unpause para reativar.`;
+    } catch (err) {
+      return `Não foi possível pausar o sistema: ${err?.message || "erro"}.`;
+    }
+  }
+  if (acao === "unpause") {
+    try {
+      const { escreverEstadoSistema } = await import("./_lib/system-state.mjs");
+      const { registrarDecisao } = await import("./_lib/log-operacional.mjs");
+      const estado = await escreverEstadoSistema("active", null);
+      await registrarDecisao({ trigger: "alfa:unpause", action: "sistema active", userId: endereco });
+      return `▶️ Sistema REATIVADO às ${new Date(estado.timestamp).toLocaleTimeString("pt-BR")}.`;
+    } catch (err) {
+      return `Não foi possível reativar o sistema: ${err?.message || "erro"}.`;
+    }
+  }
+
+  if (acao === "ajuda") {
+    const cmds = Object.entries(COMANDOS_ALFA)
+      .map(([nome, desc]) => `  ALFA:${nome.padEnd(18)} ${desc.split(".")[0]}.`)
+      .join("\n");
+    return `🤖 COMANDOS ALFA DISPONÍVEIS\n\n${cmds}\n\nDigite ALFA:<comando> para executar. Comandos que afetam o sistema (panic, unpause) são executados de imediato.`;
+  }
+
+  // ── Comandos IMPOSSÍVEIS (respondem com honestidade) ────────────────────
+  if (COMANDOS_ALFA[acao]) {
+    return `⛔ ALFA:${acao} — não executável. ${COMANDOS_ALFA[acao]}`;
+  }
+
+  // ── Comando desconhecido ─────────────────────────────────────────────────
+  const nomes = Object.keys(COMANDOS_ALFA).map((c) => `ALFA:${c}`).join(", ");
+  return `❓ Comando ALFA desconhecido: "${acao}". Comandos disponíveis: ${nomes}. Use ALFA:ajuda para descrições.`;
+}
+
 // kill switch (panic/unpanic) — ADMIN-ONLY. Handler único (MC15.6 ITEM 7).
 async function killSwitch(intent, perfil, endereco) {
   const novoStatus = intent === "panic" ? "paused" : "active";
@@ -802,6 +916,21 @@ const INTENT_HANDLERS = {
   // MC15.6 ITEM 7 — kill switch (ADMIN-ONLY): /panic e /unpanic.
   panic:   { gate: ehAdminPerfil, rl: true, run: ({ perfil, endereco }) => killSwitch("panic", perfil, endereco) },
   unpanic: { gate: ehAdminPerfil, rl: true, run: ({ perfil, endereco }) => killSwitch("unpanic", perfil, endereco) },
+
+  // MC89.9 — Comando ALFA (admin). Prefixo fixo: "ALFA: <ação> [params]".
+  // Dispara ações administrativas via chat. Cada ação é testada contra uma
+  // lista de comandos conhecidos — o que não existe responde com honestidade
+  // (nunca com "comando executado" quando não foi).
+  comando_alfa: {
+    gate: ehAdminPerfil, rl: true,
+    run: async ({ perfil, endereco, pergunta }) => {
+      const m = pergunta.match(INTENT_PATTERNS.comando_alfa);
+      const acao = (m?.[1] || "").toLowerCase();
+      const params = (m?.[2] || "").trim();
+      const resposta = await executarAlfa(acao, params, { perfil, endereco });
+      return intentResp(perfil, "comando_alfa", { resposta, modoResposta: "acao" });
+    },
+  },
 
   // MC15.6 ITEM 6 — pulso_edicao (admin + corporativo). 4 métricas vitais.
   pulso_edicao: {
