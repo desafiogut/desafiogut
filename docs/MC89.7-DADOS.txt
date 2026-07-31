@@ -1,0 +1,79 @@
+# MC89.7 — S0: Diagnóstico de dados para gráficos
+## Verificado em 2026-07-30 (consulta direta ao Supabase)
+
+### Realidade dos dados
+- saldo_rs_creditos: 18 registos em 6 dias distintos (2026-06-21 a 2026-07-26)
+  · fonte='confirmar-pagamento': 18 (100%)  · fonte='webhook': 0
+  · Receita total: os valores somam e preenchem os dias corretamente
+- cotas: 7 registos, TODOS criados em 2026-06-21 (UM dia)
+  · Um gráfico de "novos utilizadores por dia" mostra 7 no dia 1 e zero no resto
+- saldo_rs: 5 registos, 2 dias distintos
+- fila_tarefas: 5 registos, todos status='done', 2 dias
+- Endereços únicos: 7 total, 6 dias com atividade, só 1 utilizador ativo nos dias recentes
+
+### Decisões sobre o que plotar
+
+RECEITA PIX (viável)
+  Fonte: saldo_rs_creditos.criado_em + payload.valorCentavos
+  Agrupado por dia, soma de centavos. 6 dias com dados, de 2026-06-21 a 2026-07-26.
+  RÓTULO: "Receita PIX (por dia)"
+  NOTA: "18 créditos registados desde 21/06"
+
+UTILIZADORES COM ATIVIDADE DIÁRIA (viável, honesto)
+  Fonte: UNION de endereços de cotas, saldo_rs, saldo_rs_creditos, fila_tarefas
+  Agrupado por dia, contagem de endereços DISTINTOS.
+  Mostra 7 no primeiro dia, ~1 nos restantes.
+  RÓTULO: "Utilizadores com atividade (diário)"
+  NOTA: "Quem apareceu nos dados nesse dia — não é «novos registos»"
+
+SENHAS (não viável como série distinta)
+  Não há registo temporal de crédito on-chain de senhas. O que existe são os
+  créditos em R$ (já cobertos pela Receita) e o saldo on-chain da EOA
+  coordenadora, que é um ponto, não uma série.
+  DECISÃO: não plotar "senhas" como gráfico separado — é redundante com a Receita.
+  Em vez disso: uma MÉTRICA no topo "Senhas em trânsito" = créditos R$ cujo
+  processamento on-chain ainda não foi confirmado (se alguma vez houver essa
+  rastreabilidade; hoje não há, e o campo mostra "—" com nota explicativa).
+
+### Alertas — verificados um a um
+
+A1 EOA baixo
+    Fonte: admin-onchain (saldoEth, já existe)
+    Limiar: < 0.005 ETH (configurável)
+    Estado atual: VERIFICÁVEL, mas depende do saldo real da EOA
+
+A2 Fila travada
+    Fonte: fila_tarefas (qualquer row com status != 'done' e atualizado_em velho)
+    Estado atual: NÃO HÁ pendentes (todas as 5 estão 'done') — o alerta não acende,
+    e isso é o correto
+
+A3 Webhook MP inativo
+    Fonte: saldo_rs_creditos com fonte='webhook' nos últimos 7 dias
+    Estado atual: VAI ACENDER. São 0 em toda a história. É um alerta real.
+
+A4 Monitor on-chain atrasado
+    Fonte: comparação entre o último bloco processado (monitor-onchain) e o bloco
+    atual da cadeia (admin-onchain)
+    Estado atual: depende do estado do monitor; se não houver leitura fiável do
+    último bloco processado (Blobs podem estar cegos), o alerta diz isso
+
+A5 RAG desatualizado
+    Fonte: timestamp do índice RAG (construído fora do repo)
+    Estado atual: NÃO COMPUTÁVEL a partir do backend. O índice é construído por
+    build-rag-index.mjs, executado pelo operador. A data do índice não está exposta
+    em endpoint nenhum. O alerta existe no código mas mostra "configuração pendente"
+    enquanto não houver endpoint de metadado do RAG
+
+A6 Blobs cego
+    Fonte: BLOBS_TOKEN definido? O _lib/cache.mjs e as leituras de Blob são no-op
+    sem o token (falham em silêncio, sem erro).
+    Estado atual: VAI ACENDER. O alerta lê se BLOBS_TOKEN está no ambiente e, se
+    não estiver, mostra "Blobs parcialmente cego — monitor e RAG podem não
+    atualizar". É o alerta que prova o achado do MC89.5.
+
+### O que NÃO cabe neste MC (registado para não ser redescoberto)
+- Não há dados para "Evolução semanal" — o período completo tem 6 dias com dados
+- "Senhas creditadas" como série: não há registo temporal on-chain
+- "Gás gasto": não há fonte agregada sem indexador on-chain (já decidido no MC89.5)
+- Gráfico de cotas: 7 criadas no mesmo dia — um gráfico com um pico e mais nada
+  não acrescenta ao cartão "Cotas: 7" que já existe

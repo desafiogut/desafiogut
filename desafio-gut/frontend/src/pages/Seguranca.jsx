@@ -1,14 +1,14 @@
 ﻿import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
+// MC59.2 (B-4) — endereço do contrato vem da config central (sem literal antigo).
+import { CONTRATO as CONTRATO_ENDERECO, explorerAddress } from "@/lib/network.js";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
   text: "#e8f0fe", muted: "#6b7db8",
   success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", gold: "#f5a623",
 };
-
-const CONTRATO_ENDERECO = "0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5";
 
 const CHECKS = [
   { label: "Argon2id (hash-wasm WASM)",       desc: "Gera prova de intenção off-chain imutável para cada lance. Impossível forjar retroativamente.", status: "ok" },
@@ -18,7 +18,7 @@ const CHECKS = [
   { label: "Compliance LGPD / GDPR",          desc: "Gate de consentimento obrigatório. Dados sigilosos. Direitos de acesso, retificação e exclusão garantidos.", status: "ok" },
   { label: "Dados em trânsito",               desc: "HTTPS em produção (Netlify). Todos os endpoints usam TLS 1.3.", status: "ok" },
   { label: "Autenticação 2FA",                desc: "Multi-Factor via Privy (OTP por e-mail). Em breve: passkey + TOTP.", status: "em_breve" },
-  { label: "Auditoria on-chain",              desc: "Contrato LeilaoGUT verificado no Sepolia Etherscan. Beta: registro local. Produção: on-chain.", status: "em_breve" },
+  { label: "Auditoria on-chain",              desc: "Contrato LeilaoGUT verificado on-chain no Etherscan.", status: "em_breve" },
 ];
 
 const LGPD_LINKS = [
@@ -188,7 +188,7 @@ export default function Seguranca() {
             }}>SEPOLIA TESTNET</span>
           </div>
           <a
-            href={`https://sepolia.etherscan.io/address/${CONTRATO_ENDERECO}`}
+            href={explorerAddress(CONTRATO_ENDERECO)}
             target="_blank" rel="noopener noreferrer"
             style={{
               display: "block",

@@ -1,0 +1,72 @@
+# MC89.8 — RELATÓRIO: Diagnóstico e Plano de Remoção de Dados Pessoais do AdminPanel
+Data: 2026-07-30 | Branch: feat/mc89-adm-system | ZERO alterações de código (R1)
+
+## 1. RESUMO EXECUTIVO
+
+A auditoria de código do MC89.7 estava correta sobre o que examinou — mas
+incompleta. Inspecionei o painel por CDP no aparelho e refiz a auditoria de
+source olhando para o caminho AUTENTICADO. O resultado:
+
+- **VisaoGeral**: confirmado — zero dados pessoais. Todos os cards vêm de
+  admin-stats (agregados do sistema) ou admin-onchain (EOA).
+- **Aprovacoes**: mostra nome, e-mail e endereço COMPLETO de clientes. É a função
+  da tela (aprovar pedidos), mas são "dados de usuário comum" visíveis no painel.
+- **Cotas**: mostra nome e endereço de cada cliente com cota.
+- **Placeholders EmConstrucao**: contêm texto explicativo com as palavras "saldo
+  de senhas" e "lances" — não são dados reais, mas ativam uma varredura textual
+  e parecem "dados pessoais" numa leitura rápida.
+
+O limite da inspeção: a sessão admin expirou (force-stop matou o
+sessionStorage) e sem o ADMIN_TOKEN não consigo autenticar. O que descrevo do
+estado autenticado vem da leitura do código, não da observação no ecrã.
+
+## 2. O QUE FOI INSPECIONADO
+
+### Por CDP no aparelho (estado NÃO-autenticado)
+- `/admin`, `/admin/usuarios`, `/admin/aprovacoes`, `/admin/cotas`
+- Screenshot capturado, texto completo do DOM lido, varredura de padrões
+- Resultado: painel limpo. Zero dados pessoais visíveis (porque sem sessão, nada
+  carrega dos endpoints admin-gated)
+
+### Por auditoria de código (caminho AUTENTICADO)
+- VisaoGeral.jsx — cada card rastreado até à fonte de dados
+- Aprovacoes.jsx — campos `nome`, `email`, `cliente_id`, `observacao` expostos
+- Cotas.jsx — campos `cliente_nome`, `cliente_id`, `produto_nome`, `valor`
+- AdminLayout.jsx — endereço truncado (identificação, não dado de terceiro)
+
+## 3. O QUE A AUDITORIA DE CÓDIGO NÃO CAPTUROU
+
+A minha auditoria do MC89.7 varreu o código procurando `useAppContext`,
+`StatTile`, `saldoSenhas`, `saldoRs` e `Minha Carteira`. Não encontrou nada
+porque o painel NÃO USA esses padrões.
+
+Mas não procurei `p.nome`, `p.email`, `c.cliente_nome`, `c.cliente_id` — que são
+os campos que Aprovacoes e Cotas renderizam. Estes são PII de clientes, não do
+admin, e por isso escaparam ao grep focado em "dados do utilizador logado".
+
+E os placeholders EmConstrucao contêm as palavras "saldo", "senhas" e "lances"
+em texto explicativo — qualquer scan de texto do ecrã as encontra. A varredura
+de CDP confirmou: `temSenhas: true, temLances: true` no texto do painel,
+mesmo sem sessão.
+
+## 4. PLANO DE AÇÃO (detalhe completo em docs/MC89.8-PLANO.txt)
+
+**Cenário A** (se o problema for Aprovacoes/Cotas):
+- P0: truncar endereços (0x1E1b…d198cB), esconder nome/e-mail por omissão com
+  toggle "Mostrar PII"
+- P1: nos placeholders, prefixar com "[EM BREVE]" e encurtar a nota de "Senhas
+  em trânsito"
+- P2: cartões com 0 que deviam mostrar "—"
+
+**Cenário B** (se houver algo que não detetei):
+- O operador autentica-se ou envia screenshots, e eu refaço o diagnóstico
+
+## 5. PRÓXIMO PASSO
+
+MC89.9 — execução do plano. Mas ANTES: o operador precisa de confirmar qual dos
+dois cenários se aplica. Basta autenticar-se no APK enquanto eu estou ligado por
+CDP, ou enviar screenshots de /admin, /admin/aprovacoes e /admin/cotas com a
+sessão ativa.
+
+Se for o Cenário A, o MC89.9 executa as ações P0/P1/P2 descritas no plano. Se
+for o Cenário B, o MC89.9 parte de um diagnóstico revisto.

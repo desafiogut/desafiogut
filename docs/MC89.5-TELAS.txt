@@ -1,0 +1,415 @@
+================================================================================
+MC89.5 — SEGMENTO 1: DEFINIÇÃO DAS 7 TELAS
+================================================================================
+Base: MC89.5-MAPA.txt (achados A-1 a A-10). Fluxo visual aprovado pelo operador.
+
+Regra que atravessa as sete: **cada campo de cada tela tem de ter uma fonte
+identificada no Segmento 0.** Onde a fonte não existe, está escrito NÃO TEM FONTE
+e há uma decisão associada. Um painel que mostra um campo bonito alimentado por
+nada é pior do que um painel que não mostra o campo.
+
+--------------------------------------------------------------------------------
+D-NAV — DECISÃO DE NAVEGAÇÃO (bloqueia as 7 telas, resolver antes da Fase 1)
+--------------------------------------------------------------------------------
+Problema medido: a regra R-UI-6 (AdminPanel.jsx:965-968, iteração 3 do MC89.4)
+fixa os separadores numa ÚNICA linha sem wrap, precisamente porque quatro
+separadores em duas linhas "leem-se como dois grupos distintos". Com 7 itens,
+numa largura de telemóvel comum (~360 dp), ou os rótulos truncam ou metade fica
+fora do ecrã atrás de um gesto de arrastar que não tem afordância nenhuma.
+
+Opções:
+  (a) 7 separadores com scroll horizontal → contraria a lição do MC89.4
+      (rótulo truncado lê-se como descuido). REJEITADA.
+  (b) Menu lateral / gaveta → padrão de desktop, mal adaptado ao APK, e
+      introduz um componente de navegação que a app não tem em mais lado nenhum.
+      REJEITADA.
+  (c) **Índice + rota por tela.** A "Visão Geral" passa a ser o índice do painel
+      (cartões-atalho, que o fluxo aprovado já prevê em 1.1) e cada tela ganha a
+      sua rota (/admin, /admin/usuarios, /admin/financeiro, …) com um "← Painel"
+      no topo. RECOMENDADA.
+      Porquê: reaproveita os atalhos que o operador já aprovou em vez de
+      duplicar navegação; cada tela passa a ser um ficheiro seu (o AdminPanel
+      não vai de 990 para ~4000 linhas); e o code-splitting por rota mantém o
+      arranque do painel no tamanho de hoje — relevante depois do MC88.36, onde
+      o custo de parse de JS foi o gargalo medido.
+      Custo: obriga a extrair o estado de autenticação (accessTokenRef,
+      chamarAdmin, authState) do componente para um contexto partilhado
+      (AdminAuthContext) — trabalho da Fase 1, não de cada tela.
+
+DECISÃO PROPOSTA: (c). Confirmar com o operador antes da Fase 1, porque muda a
+forma de navegar que ele viu no fluxo visual aprovado.
+
+================================================================================
+TELA 1 — VISÃO GERAL  (existe; expandir)
+================================================================================
+Rota: /admin          Componente: TabVisaoGeral → pages/admin/VisaoGeral.jsx
+Papel: responder "como está o sistema agora" em menos de um ecrã. É o índice.
+
+CARTÕES (fonte de cada um)
+  Utilizadores com atividade   admin-stats → utilizadores.comAtividade      [existe]
+  Com cota                     admin-stats → cotas.comCarteira / cotas.total [existe]
+  Online agora                 NÃO TEM FONTE — ver D-PRESENCA abaixo
+  PIX hoje                     saldo_rs_creditos filtrado por criado_em      [novo cálculo]
+  Senhas vendidas hoje         ver D-SENHAS abaixo
+  Saldo EOA                    admin-onchain → saldoEth                      [existe]
+  Fila pendente                admin-stats → operacao.fila.pendentes         [existe]
+
+D-PRESENCA — "Online agora" não é computável hoje.
+  Não existe sessão de utilizador registada no servidor: o JWT de user-session é
+  sem estado e nada anota "vi este endereço há 30 s". Implementar presença real
+  significa escrever em cada pedido autenticado — custo em toda a app, para um
+  número decorativo.
+  PROPOSTA: substituir por "Ativos nas últimas 24 h" = endereços distintos com
+  crédito, lance ou cota alterada na janela. Computável, honesto, e responde à
+  pergunta que o operador realmente tem ("está alguém a usar isto?").
+  Se o operador quiser presença literal, é um MC próprio.
+
+D-SENHAS — "Senhas vendidas hoje" precisa de definição antes de código.
+  Existem dois eventos distintos: o débito de R$ (compra) e o crédito on-chain
+  das senhas (que a EOA coordenadora executa, e que a fila processa em 2–7 min,
+  [[desafiogut-mc8835-estado-consolidado]]). São números diferentes durante essa
+  janela e a divergência é NORMAL.
+  PROPOSTA: mostrar os dois, lado a lado — "compradas" e "creditadas on-chain" —
+  e a diferença como "em trânsito". Um número só esconderia exatamente o estado
+  que interessa vigiar.
+
+GRÁFICOS
+  Receita (série diária)        saldo_rs_creditos.criado_em + payload.valorCentavos  ✓ computável
+  Créditos/dia                  idem                                                  ✓ computável
+  Cotas/dia                     cotas.criado_em                                       ✓ computável
+  Evolução de UTILIZADORES      ✗ NÃO COMPUTÁVEL. Não há data de registo em lado
+                                nenhum (A-1): a identidade é do Privy e a primeira
+                                data que conhecemos é a da primeira transação.
+  PROPOSTA: rotular o terceiro gráfico como "Primeira atividade por dia" e não
+  "Novos utilizadores". Não é a mesma coisa e o rótulo tem de o dizer.
+  Biblioteca: ver D-GRAFICO em MC89.5-PLANO.txt (o bundle é um custo medido).
+
+ALERTAS (todos computáveis, todos com evidência no Segmento 0)
+  A1 EOA abaixo do limiar     admin-onchain.saldoEth < limiar configurável
+  A2 Fila travada             pendentes > 0 E fila.atualizadaEm mais velho que N min
+  A3 Fontes indisponíveis     admin-stats.parciais[] não vazio        [já existe, :233]
+  A4 Webhook MP inativo       0 créditos com payload.fonte='webhook' em N dias
+                              — hoje: 18 de 18 são 'confirmar-pagamento' (A-4)
+  A5 Coordenação comprometida COORDENACAO_ADDRESS por definir (A-10). O backend
+                              já emite o alerta; falta mostrá-lo.
+  A6 Monitor on-chain atrasado ver D-MONITOR na Tela 4 — o campo `atrasado` do
+                              monitor é um verde falso quando os Blobs estão
+                              cegos ([[desafiogut-blobs-token-dois-cegos]]).
+                              O alerta deve olhar para o BLOCO processado, não
+                              para o booleano.
+
+ATALHOS: Usuários · Financeiro · Operações · Notificações (D-NAV(c) usa-os
+como navegação primária, não como decoração).
+
+================================================================================
+TELA 2 — GESTÃO DE USUÁRIOS  (nova — a mais cara das sete)
+================================================================================
+Rota: /admin/usuarios
+
+D1 — DE ONDE VEM A LISTA DE UTILIZADORES (decisão estruturante, achado A-1)
+  Não existe tabela de utilizadores. Três caminhos:
+
+  (i) Projeção derivada (VIEW/matview em Postgres) que faz UNION dos endereços
+      presentes em cotas.cliente_id, saldo_rs.cliente_id,
+      saldo_rs_creditos.payload->>'endereco' e lances.endereco, com agregados
+      (saldo, nº de créditos, primeira/última atividade).
+      + Não inventa fonte de verdade nova; é exatamente o que obterMetricas()
+        já faz em memória (admin-metricas.mjs:190-207), promovido a SQL.
+      + Zero escrita: nada pode dessincronizar.
+      − Só conhece quem já transacionou. Quem entrou e nunca fez nada não aparece.
+      − Não traz e-mail nem nome, exceto os 3 de `cotas` (A-2).
+
+  (ii) Importar do Privy (Management API) para uma tabela `usuarios`.
+      + Traz TODOS os registados, com e-mail.
+      − Dependência externa nova no caminho de um ecrã de admin, com as suas
+        próprias quotas e a sua própria superfície de PII.
+      − Cria uma segunda fonte de identidade que passa a poder divergir da real.
+
+  (iii) Híbrido: (i) agora, (ii) mais tarde como enriquecimento opcional.
+
+  RECOMENDAÇÃO: (iii), começando por (i) na Fase 2. Razão: entrega a tela com o
+  que temos, sem acoplar o painel a um serviço externo, e deixa a porta aberta.
+  O rótulo da tela tem de dizer "utilizadores com atividade" — a mesma honestidade
+  que o MC89.1 já impôs ao cartão da Visão Geral (admin-metricas.mjs:186-188).
+  Prometer "todos os utilizadores" e entregar os que transacionaram seria o mesmo
+  defeito com outra roupa.
+
+LISTA — colunas e fonte
+  Endereço          projeção (cliente_id / endereco)              ✓
+  E-mail            cotas.email — presente em 3 de 7 (A-2)        ⚠ parcial, mostrar "—"
+  Saldo R$          saldo_rs.payload.centavos                     ✓
+  Saldo senhas      NÃO está em Postgres: é on-chain, saldoSenhas(address).
+                    Ler por endereço custa uma chamada RPC POR LINHA. Ver D2.
+  Última atividade  max(criado_em) das fontes                     ✓
+  Estado            NÃO TEM FONTE — não existe flag de bloqueio (ver D-BLOQUEIO)
+  Tipo              rbac.getRole() → admin|cliente|user           ⚠ ver D-RBAC
+
+D2 — Saldo de senhas na lista: NÃO. Uma lista de 50 linhas seriam 50 chamadas
+  RPC, com o custo de latência que o MC89.1 combateu ao isolar o admin-onchain.
+  PROPOSTA: a coluna não aparece na lista; aparece no PERFIL (uma leitura, sob
+  pedido), com estado de carregamento próprio.
+
+D-RBAC: getRole() lê as cotas dos BLOBS (rbac.mjs:48), enquanto os dados vivem
+  no Supabase. É o mesmo defeito já registado para as personalidades do GUTO
+  ([[desafiogut-guto-personalidades]]): com DATA_STORE_BACKEND=supabase, o papel
+  "cliente" nunca é atribuído. Se a Tela 2 mostrar "Tipo" a partir de getRole(),
+  vai mostrar "user" para toda a gente e parecerá um bug da tela nova.
+  PROPOSTA: a Fase 2 corrige rbac.mjs para ler pelo data-store, OU a coluna "Tipo"
+  é derivada da projeção (tem cota ⇒ cliente). Corrigir o rbac é o certo, mas
+  toca num gate usado por toda a aplicação — decidir explicitamente, não a meio.
+
+BUSCA E FILTROS
+  Busca por endereço  ✓ (prefixo, case-insensitive)
+  Busca por e-mail    ⚠ alcança 3 registos hoje; a UI diz "e-mail só está
+                        registado para clientes com cota"
+  Filtro por tipo     depende de D-RBAC
+  Filtro por atividade (7/30 dias)  ✓ pela projeção
+  Filtro por estado   depende de D-BLOQUEIO
+
+AÇÕES
+  Ver perfil          ✓ leitura
+  Notificar           depende da Tela 6
+  Bloquear/desbloquear  ver D-BLOQUEIO
+  "Resetar saldo"     ⛔ NÃO como proposto. Ver D-SALDO.
+
+D-BLOQUEIO — não existe flag de bloqueio em lado nenhum, nem ponto onde seja
+  verificada. Bloquear alguém só significa alguma coisa se algum gate o ler.
+  PROPOSTA: tabela `usuarios_bloqueio(endereco PK, motivo, bloqueado_por,
+  criado_em)` + verificação em _lib/jwt.mjs (emissão de user-session) e nos
+  endpoints de dinheiro (comprar-senhas, lance-relampago, iniciar-pagamento).
+  ⚠ Isto é uma alteração no caminho crítico de utilizadores reais, não uma tela.
+  Merece o seu próprio lote de testes e não deve entrar de véspera de nada.
+
+D-SALDO — "Resetar saldo de um usuário" é destruir um registo financeiro.
+  O sistema já tem a primitiva certa: `saldo_rs_debitos` (existe, 0 linhas) e o
+  payload de créditos guarda saldoAntes/saldoDepois — ou seja, o modelo é de
+  livro-razão, não de valor mutável.
+  PROPOSTA: a ação chama-se "Ajuste manual", exige justificativa, e ESCREVE um
+  débito ou crédito com fonte="ajuste-admin". Nunca sobrescreve. Assim o ajuste é
+  auditável, reversível e aparece na Tela 3 como qualquer outro movimento.
+  Um "resetar" que apaga história é um apagão de compliance com botão.
+
+SUBTELA — PERFIL DO UTILIZADOR (/admin/usuarios/:endereco)
+  Identificação, saldo R$, saldo de senhas (on-chain, leitura sob pedido, D2)
+  Histórico de créditos     saldo_rs_creditos por endereço          ✓
+  Histórico de débitos      saldo_rs_debitos                        ✓ (vazia hoje)
+  Cotas                     cotas por cliente_id                    ✓
+  Histórico de lances       ⚠ TRÊS FONTES (achado A-3):
+                            · relâmpago → Supabase `lances` (0 linhas hoje)
+                            · relâmpago → Blobs `bids` (conforme DATA_STORE_BACKEND)
+                            · programado → on-chain (nunca passou pelo backend)
+  D3 — PROPOSTA: a Fase 2 mostra os lances RELÂMPAGO (via data-store, que já
+  abstrai os dois backends) e escreve no ecrã, à vista, que os lances programados
+  são on-chain e não estão aqui. Ler o on-chain exige indexação de eventos —
+  é um MC próprio, não uma linha da Fase 2.
+
+================================================================================
+TELA 3 — GESTÃO FINANCEIRA  (nova)
+================================================================================
+Rota: /admin/financeiro
+
+D-FIN — Não é preciso criar tabela nenhuma. `saldo_rs_creditos` já é o
+  livro-razão: pedido_id, criado_em e um payload com endereco, fonte, valor,
+  saldoAntes e saldoDepois (verificado, ver Segmento 0.4). `saldo_rs_debitos`
+  tem a forma simétrica. A tela é uma leitura destas duas.
+
+RESUMO
+  Total PIX recebido        soma de valorCentavos                    ✓
+  Em créditos (circulação)  admin-stats.financeiro.saldoTotalCentavos ✓
+  Senhas vendidas           ver D-SENHAS (Tela 1)
+  Saldo EOA                 admin-onchain                            ✓
+  Gás gasto                 ⚠ NÃO TEM FONTE agregada. Seria a soma de
+                            gasUsed×gasPrice das transações da coordenadora —
+                            exige indexação on-chain. PROPOSTA: substituir por
+                            "variação do saldo da EOA nos últimos 7 dias", que
+                            responde à mesma pergunta operacional ("quanto está
+                            a custar-me") sem indexador.
+
+LISTA DE TRANSAÇÕES: data, endereço, tipo (crédito/débito), fonte, valor,
+  saldo depois. Paginada por criado_em. Filtros: período, tipo, fonte.
+  A coluna `fonte` é a que prova o achado A-4 e não deve ser escondida.
+
+AÇÕES
+  Gerar relatório CSV       ✓ direto das duas tabelas
+  Emitir reembolso          ⚠ "reembolso" tem dois significados: devolver
+                            dinheiro no Mercado Pago (chamada à API do MP,
+                            irreversível, com dinheiro real) ou anular o crédito
+                            interno (um débito). São coisas diferentes com riscos
+                            diferentes. PROPOSTA: a Fase 3 implementa apenas o
+                            SEGUNDO (ajuste interno com justificativa, mesma
+                            primitiva de D-SALDO). O estorno no MP fica de fora
+                            e é dito na tela.
+  Abastecer EOA             ⛔ RECOMENDAÇÃO CONTRÁRIA. Ver D11.
+
+D11 — "Abastecer EOA" a partir do painel: não recomendado.
+  Abastecer a carteira coordenadora é mover ETH na MAINNET (MC60 ativo). Um botão
+  no painel exige uma chave com fundos alcançável pelo backend web. O gate atual
+  do painel é: um ADMIN_TOKEN colado num campo de formulário + uma assinatura
+  EIP-191 (auth-admin.mjs:68-100). Isso é adequado para aprovar uma cota; não é
+  adequado para autorizar movimento de fundos — sobretudo com o histórico de
+  exposição de chave do MC59.11 e com a coordenação legada ainda ativa (A-10).
+  PROPOSTA: a Tela 3 mostra o saldo, o limiar e o alerta, e diz "abastecimento é
+  operação manual do operador". Se o operador quiser o botão, tem de ser um MC
+  próprio, com modelo de ameaça, aprovação em dois passos e chave dedicada.
+  Isto é uma recomendação, não uma recusa: se for reafirmado, especifica-se.
+
+================================================================================
+TELA 4 — OPERAÇÕES E INFRAESTRUTURA  (nova — maior risco de execução)
+================================================================================
+Rota: /admin/operacoes
+
+STATUS DO SISTEMA — cada verificação e o que ela realmente prova
+  Backend       health.mjs público                                  ✓ existe
+  Supabase      um SELECT trivial com timeout                       ✓ trivial
+  RPC Alchemy   eth_blockNumber (já em obterSaldoEoa)               ✓ existe
+  Netlify Blobs ⚠ ACRESCENTAR. Não é verificado em lado nenhum hoje,
+                e é a dependência mais silenciosamente frágil do sistema
+                ([[desafiogut-blobs-token-dois-cegos]]): a lista de admins, as
+                sessões, o log e os lances vivem lá. Uma leitura de sonda
+                explícita transforma uma cegueira silenciosa num sinal vermelho.
+  Monitor on-chain  ver D-MONITOR
+  Cron          Netlify não expõe API de estado das scheduled functions.
+                O que se pode mostrar é o EFEITO (quando correu pela última vez,
+                lido do que cada job escreve), não o estado do agendador.
+  Webhook MP    achado A-4, computável
+
+D-MONITOR — o campo `atrasado: false` do monitor é um verde falso quando os
+  Blobs estão cegos (registo [[desafiogut-blobs-token-dois-cegos]]: 11 de ~330
+  blocos por ciclo). O indicador desta tela tem de ser o ÚLTIMO BLOCO PROCESSADO
+  comparado com o bloco atual da cadeia — dois números que já temos —, e não o
+  booleano que a função publica sobre si própria.
+
+FILA DE TAREFAS: contagem por estado, tarefas falhadas com ultimo_erro,
+  agendadas para o futuro (agendado_para). Tudo em fila_tarefas.        ✓
+
+COMANDOS — os cinco propostos, verificados um a um
+  1. Kill switch (panic/unpanic)  ✓ JÁ EXISTE (chatbot.mjs:506-523 +
+     _lib/system-state.mjs). A tela expõe o que o GUTO já faz. Trabalho: um botão.
+  2. Forçar processamento da fila  ✓ POSSÍVEL — invocar processarLote()
+     (fila-processor-scheduled já o faz). Novo endpoint fino.
+  3. Invocar monitor-onchain       ✓ POSSÍVEL — monitor-onchain.mjs mantém o
+     handler HTTP admin-gated de propósito (comentário :4-6). "Reiniciar o
+     monitor" não existe como conceito: não há processo para reiniciar; há uma
+     execução para disparar. O rótulo tem de ser "Executar agora".
+  4. Limpar cache                  ⚠ NO-OP HOJE (achado A-9): sem REDIS_URL o
+     _lib/cache.mjs não guarda nada. Um botão que diz "cache limpo" quando não
+     havia cache é uma mentira de interface. PROPOSTA: só aparece se o backend
+     reportar Redis configurado; caso contrário mostra "cache não configurado".
+  5. Reindexar RAG                 ⛔ IMPOSSÍVEL a partir do backend. O índice é
+     construído fora do repositório por build-rag-index.mjs, executado pelo
+     operador ([[desafiogut-rag-indice-fora-do-repo]]). PROPOSTA: a tela mostra a
+     DATA do índice em uso e a instrução; não finge ter um botão.
+
+  Todos os comandos: confirmação explícita + justificativa obrigatória +
+  registo em admin_logs ANTES de executar (ver D5 nas Tabelas).
+
+================================================================================
+TELA 5 — LOGS E AUDITORIA  (nova)
+================================================================================
+Rota: /admin/logs
+Fonte: nova tabela `admin_logs` (Supabase) — ver D5 em MC89.5-TABELAS.txt para
+a justificação de porquê Postgres e não o Blob "log-decisoes" que já existe (A-5).
+
+Lista: quando, quem (endereço + e-mail se conhecido), tipo de ação, alvo,
+justificativa, sucesso/falha, IP, dispositivo.
+Filtros: administrador, tipo, período. Busca em texto livre sobre alvo/justificativa.
+Exportação CSV.
+
+RETENÇÃO LGPD: um período configurável e uma purga. ⚠ Nota importante: a purga
+tem de ser AGENDADA (purge-logs-scheduled.mjs já existe e é o sítio certo), não
+um botão que apaga por decisão do momento. Um botão "esquecer dados antigos"
+operado à mão é, ele próprio, uma ação auditável — e apagar o log com o log a
+registar que o log foi apagado precisa de ser pensado, não improvisado.
+PROPOSTA: política declarada em `admin_config`, executada pelo cron, com a
+execução registada. O botão manual, se existir, dispara a mesma rotina.
+
+================================================================================
+TELA 6 — COMUNICAÇÃO E NOTIFICAÇÕES  (nova)
+================================================================================
+Rota: /admin/notificacoes
+
+D8 — O TRANSPORTE JÁ EXISTE: `fila_tarefas` tem `agendado_para`, `tentativas`,
+  `max_tentativas`, `ultimo_erro` e reserva atómica por SKIP LOCKED
+  (_lib/fila.mjs:5). É exatamente um agendador com repetição. Construir um
+  segundo seria criar dois relógios que discordam.
+  PROPOSTA: `admin-notify` grava o registo em `notifications` e ENFILEIRA;
+  o fila-processor ganha handlers `notif_email` e `notif_push`; cada entrega
+  individual escreve em `notification_logs`.
+  ⚠ CONSEQUÊNCIA DE UX: a fila tem latência medida de 2–7 minutos
+  ([[desafiogut-mc8835-estado-consolidado]]). O botão diz "Colocar em fila" e a
+  tela mostra o progresso de entrega. Dizer "Enviado" no instante do clique seria
+  falso durante minutos.
+
+CANAIS — estado real
+  E-mail (SendGrid)  ✓ o canal existe e foi usado (MC69.10). Falta o caminho
+                     admin→destinatário. ⚠ só temos e-mail de 3 registos (A-2);
+                     "enviar a todos por e-mail" alcança quase ninguém hoje.
+  Push (FCM)         ⛔ NÃO EXISTE NADA. Exige: projeto Firebase,
+                     google-services.json, plugin Capacitor, tabela de tokens de
+                     dispositivo, e **um novo APK** — o frontend vive dentro do
+                     .apk e um deploy web não o adiciona
+                     ([[apk-frontend-empacotado]]). É trabalho de operador +
+                     release, não uma função.
+  In-app             ✓ MEIO CAMINHO FEITO: _lib/notificacoes-usuario.mjs já
+                     escreve notificações por utilizador e o frontend já as lê.
+                     É o canal mais barato e o único que funciona hoje sem
+                     dependências novas.
+
+  RECOMENDAÇÃO DE ORDEM: in-app primeiro (existe), e-mail segundo (existe o
+  fornecedor), push por último (exige APK e infra externa). O enunciado assume a
+  ordem inversa; inverter poupa uma fase inteira de bloqueio.
+
+Restante: destino (todos / admins / específico / segmento), histórico de envios
+com contagem de entregues, templates. Tudo direto das tabelas novas.
+
+================================================================================
+TELA 7 — CONFIGURAÇÕES E ADMINS  (parcial; expandir)
+================================================================================
+Rota: /admin/config
+
+LISTA DE ADMINS: já existe (TabAdmins + admin-list). O que falta é o NÍVEL.
+
+D7 — NÍVEIS DE PERMISSÃO (achado A-8). Hoje admin-list é um array plano e o JWT
+  não transporta papel. Proposta:
+    · admin-list passa de ["0x…"] para [{ endereco, nivel, adicionadoPor, em }]
+    · o access JWT ganha a claim `nivel`
+    · **o gate é servidor**: guardAdmin(req, { nivelMinimo }). Esconder um botão
+      no React não é uma permissão; é uma sugestão.
+    · Níveis: super-admin (tudo, inclui gerir admins e comandos destrutivos),
+      admin (operação e leitura, sem gerir admins), operador (leitura + aprovações).
+    · MIGRAÇÃO SEM TRANCAR NINGUÉM: endereços já existentes sobem a super-admin
+      por omissão. É o mesmo raciocínio de admin-helpers.mjs:20-24 — mudar às
+      cegas o conjunto de quem tem poder pode trancar o operador fora sem via de
+      recuperação a não ser um deploy.
+    · A coordenação é super-admin permanente e não removível (já garantido em
+      admin-list.mjs:118).
+
+SESSÕES ATIVAS (achado A-7): já existem em Blob admin-refresh:{endereco}, com jti,
+  createdAt, expiresAt e limite de 5. Falta IP, user-agent, último acesso, e
+  revogar as de OUTRO admin.
+  PROPOSTA: acrescentar os três campos ao registo existente e um endpoint
+  `admin-sessions` (listar) + `admin-sessions-revoke` (revogar por endereço,
+  reutilizando revogarAdmin() que já está escrito).
+  NÃO criar tabela `sessions`. Justificação em D6 (Tabelas): este registo está no
+  caminho crítico de TODOS os pedidos admin; reescrevê-lo para Postgres a meio de
+  um programa de 7 telas é risco sem retorno proporcional.
+
+CONFIGURAÇÕES DO PAINEL: limiares dos alertas (EOA, fila, webhook), período de
+  retenção LGPD, atualização automática. Tabela `admin_config` (chave/valor).
+  ⚠ "Tema claro/escuro": a app tem uma paleta única (navy + laranja,
+  [[desafiogut-palette-navy-orange]]) e um tema claro não existe. Ou é um MC de
+  design próprio, ou sai do âmbito. PROPOSTA: sai.
+
+================================================================================
+RESUMO DAS DECISÕES QUE PRECISAM DO OPERADOR ANTES DA FASE 1
+================================================================================
+  D-NAV   Navegação por rotas com a Visão Geral como índice (muda o fluxo visto)
+  D1      Tela 2 lista "utilizadores com atividade" (projeção), não "todos"
+  D11     "Abastecer EOA" fica FORA do painel (recomendação; reversível se
+          reafirmada, com MC próprio)
+  D-SALDO "Resetar saldo" passa a "Ajuste manual" com débito auditável
+  Tela 6  Ordem dos canais invertida: in-app → e-mail → push
+  Tela 7  Tema claro/escuro sai do âmbito
+
+Tudo o resto é executável sem decisão adicional.
+================================================================================

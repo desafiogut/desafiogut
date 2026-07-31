@@ -7,6 +7,16 @@ artifacts/
 cache/
 typechain-types/
 
+# ── MC81: assinatura Android / artefatos de build — NUNCA commitar ──
+keystore/
+builds/
+*.aab
+*.keystore
+*.jks
+credenciais.txt
+keystore.properties
+desafio-gut/frontend/android/local.properties
+
 # ── Variáveis de ambiente — NUNCA commitar ─────────────────────
 .env
 .env.local

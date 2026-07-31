@@ -1,0 +1,251 @@
+================================================================================
+MC88.2 — DEPURAÇÃO NO WEBVIEW (CAPACITOR)
+RELATÓRIO FINAL · ⚠️ PREMISSA REFUTADA — NENHUM CÓDIGO ALTERADO, NENHUM REBUILD
+================================================================================
+Data.........: 2026-07-23
+Dispositivo..: fiem7xlvcufe855h · Xiaomi 21091116UG · Android 13
+Pacote.......: com.desafiogut.app · versionName 1.0.0 · WebView Chrome/150.0.7871.124
+Regras.......: R1 alteração mínima (resultou em ZERO alteração de código do app) ·
+               R2 custo US$ 0,00 · R3 rastreável · R4 sem dados sensíveis ·
+               R5 nenhuma credencial manuseada
+
+
+################################################################################
+0. VEREDITO HONESTO — LEIA ISTO PRIMEIRO
+################################################################################
+
+**A depuração do WebView JÁ ESTAVA ATIVA.** Não havia nada para corrigir.
+
+O objetivo do MC88.2 — "resolver a indisponibilidade do DevTools" — parte de uma
+premissa que a medição refuta. O DevTools nunca esteve indisponível: o comando
+usado para lhe chamar é que aponta para o socket errado.
+
+  Causa real do sintoma:
+      O MC (Segmento 3.1) manda fazer
+          adb forward tcp:9333 localabstract:chrome_devtools_remote
+      mas `chrome_devtools_remote` é o socket do **navegador Chrome**.
+      Um WebView de aplicação expõe-se noutro socket:
+          webview_devtools_remote_<PID_DO_APP>
+
+  Consequência: o túnel monta-se (o `adb forward` não valida o destino), mas não
+  há ninguém do outro lado. O `/json/list` falha, e a leitura natural é
+  "a depuração está desativada" — quando na verdade se bateu à porta errada.
+
+Alterar o `MainActivity`, recompilar e reinstalar não teria corrigido nada,
+porque nada estava partido. Teria consumido um build Gradle numa máquina com RAM
+apertada (problema já documentado no MC81) para obter exatamente o mesmo estado.
+
+  ► AÇÃO TOMADA: nenhuma alteração ao código do app. Entregue um script auxiliar
+    que descobre o socket sozinho, para que o erro não se repita.
+
+
+################################################################################
+1. EVIDÊNCIA DE QUE A DEPURAÇÃO ESTAVA ATIVA
+################################################################################
+
+1.1 — PROVA HISTÓRICA (a mais forte)
+    O MC88.1, executado imediatamente antes deste, **conversou com este WebView
+    por CDP durante toda a sessão**:
+      · leu `location.origin` → `https://localhost`
+      · capturou 185 mensagens de console
+      · registou as respostas de rede do `auth.privy.io`, cabeçalhos incluídos
+      · passou o gate LGPD por `Runtime.evaluate`
+    Nada disto é possível num WebView não-depurável. O relatório
+    `Desktop\MC88.1-DIAGNOSTICO.txt` é, na prática, o certificado de que a
+    depuração funciona.
+
+1.2 — SOCKET PRESENTE NO DISPOSITIVO
+        adb shell cat /proc/net/unix | grep devtools
+        → @webview_devtools_remote_13349        ← o nosso app (PID 13349)
+          @stetho_com.google.android.apps.messaging_devtools_remote
+          @stetho_com.google.android.apps.messaging:rcs_devtools_remote
+
+1.3 — PACOTE MARCADO COMO DEPURÁVEL
+        adb shell dumpsys package com.desafiogut.app
+        → flags=[ DEBUGGABLE HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]
+          versionName=1.0.0
+
+1.4 — TESTE A/B DOS DOIS NOMES DE SOCKET (a prova decisiva)
+
+    A) Comando proposto pelo MC88.2:
+         adb forward tcp:9333 localabstract:chrome_devtools_remote
+         GET http://localhost:9333/json/list
+         → FALHA: "A conexão subjacente estava fechada"
+
+    B) Comando com o socket real:
+         adb forward tcp:9333 localabstract:webview_devtools_remote_13349
+         GET http://localhost:9333/json/list
+         → HTTP 200
+           titulo: DesafioGUT — O Menor Lance Único Ganha
+           url...: https://localhost/
+           ws....: ws://localhost:9333/devtools/page/4B7BFC160FC6932DD04C0CFAB09EE7ED
+
+    Mesma máquina, mesmo dispositivo, mesmo app, mesmo instante. A única variável
+    é o nome do socket. Isso isola a causa sem margem para dúvida.
+
+
+################################################################################
+2. PORQUE JÁ FUNCIONA SEM A FLAG NO CÓDIGO
+################################################################################
+
+Conteúdo integral de
+`android/app/src/main/java/com/desafiogut/app/MainActivity.java`:
+
+    package com.desafiogut.app;
+
+    import com.getcapacitor.BridgeActivity;
+
+    public class MainActivity extends BridgeActivity {}
+
+É o `BridgeActivity` de fábrica do Capacitor, sem corpo. A depuração vem do
+próprio Capacitor: o `Bridge` chama `WebView.setWebContentsDebuggingEnabled(true)`
+quando a aplicação tem a flag `FLAG_DEBUGGABLE` — que é exatamente o que o
+`dumpsys` mostra em §1.3. Num build debug isto é automático; não é preciso
+escrever a linha.
+
+  ► Acrescentar a chamada à mão seria redundante: ligar-se-ia uma coisa já ligada.
+
+2.1 — ⚠️ ARMADILHA NO SCRIPT PROPOSTO (importa registar)
+    O script do Segmento 1 procura inserir a flag com:
+        $conteudo -replace "(onCreate.*?){", ...
+    **Não existe `onCreate` neste ficheiro.** A substituição não encontraria nada
+    e seria um no-op — mas o script imprime `✅ Flag adicionada` de forma
+    incondicional, porque só verifica se o ficheiro foi *encontrado*, nunca se a
+    troca *aconteceu*. Teria reportado sucesso sem ter mudado uma única linha, e o
+    `Set-Content` ainda reescreveria o ficheiro (podendo alterar codificação e
+    fins de linha) sem qualquer ganho.
+
+    Lição de método: um passo de automação tem de validar o EFEITO, não a
+    existência do alvo.
+
+2.2 — buildTypes em `app/build.gradle`
+    Só existe bloco `release` (com o `signingConfig` do keystore, MC81). O
+    `debug` é o implícito do Android Gradle Plugin, que já traz
+    `debuggable true` — coerente com o `DEBUGGABLE` observado no dispositivo.
+
+
+################################################################################
+3. O QUE FOI ENTREGUE EM VEZ DA ALTERAÇÃO
+################################################################################
+
+`desafio-gut/scripts/webview-devtools.ps1` — script auxiliar de desenvolvimento
+(ferramenta, não código da aplicação; o app não o carrega nem o empacota).
+
+  O que faz, por ordem:
+    1. confirma que há dispositivo autorizado;
+    2. arranca o app se não estiver a correr (`-Reiniciar` força restart limpo);
+    3. **descobre o PID** e monta o nome do socket — a peça que faltava;
+    4. verifica que `webview_devtools_remote_<PID>` existe e, se não existir,
+       lê as flags do pacote e diz explicitamente que o build não é depurável
+       (aí sim seria caso para `assembleDebug`);
+    5. monta o `adb forward`;
+    6. confirma com `/json/list` e imprime título, url e `webSocketDebuggerUrl`.
+
+  Uso:
+      .\webview-devtools.ps1
+      .\webview-devtools.ps1 -Reiniciar -Porta 9444
+
+  Execução real de validação (2026-07-23):
+      Dispositivo: fiem7xlvcufe855h
+      PID: 13349
+      DevTools ativo em http://localhost:9333
+        titulo : DesafioGUT — O Menor Lance Único Ganha
+        url    : https://localhost/
+        ws     : ws://localhost:9333/devtools/page/4B7BFC160FC6932DD04C0CFAB09EE7ED
+
+  Porque isto resolve de vez: o PID muda a cada arranque do app, logo o nome do
+  socket muda também. Qualquer comando com PID escrito à mão fica obsoleto no
+  próximo restart — e a falha volta a parecer "depuração desativada". O script
+  elimina a classe inteira de erro.
+
+
+################################################################################
+4. SOBRE O chrome://inspect
+################################################################################
+
+O `chrome://inspect` usa o seu próprio mecanismo de descoberta e continua a ser
+uma via válida — mas é a menos fiável das duas, e não é a que os MCs usam.
+
+  Se não listar o app, verificar por esta ordem:
+    1. em `chrome://inspect/#devices`, a caixa **"Discover USB devices"** tem de
+       estar marcada;
+    2. o dispositivo tem de estar autorizado (`adb devices` a mostrar `device`,
+       não `unauthorized`);
+    3. o app tem de estar em **primeiro plano** — um WebView em segundo plano
+       pode ser descartado pelo sistema;
+    4. conflito de versões de `adb`: o Chrome traz o seu próprio cliente e, se
+       houver outro servidor adb de versão diferente a correr, a descoberta
+       falha em silêncio. `adb kill-server` seguido de `adb devices` resolve.
+
+  ► Para os MCs, a via canónica continua a ser o túnel + CDP por WebSocket nativo
+    do Node, registada desde o MC82-BASELINE: o MCP chrome-devtools **não anexa a
+    alvo remoto**, pelo que o `chrome://inspect` não substitui o túnel de qualquer
+    forma.
+
+
+################################################################################
+5. SEGMENTOS NÃO EXECUTADOS, E PORQUÊ
+################################################################################
+
+  SEGMENTO 1 (adicionar a flag) ......... NÃO EXECUTADO
+      A flag já está efetivamente ativa via Capacitor + build debug (§2). Escrevê-la
+      à mão seria redundante, e o script proposto seria um no-op que reportava
+      sucesso falso (§2.1). Executar violaria a R1 sem qualquer ganho.
+
+  SEGMENTO 2 (cap sync + assembleDebug + install) ... NÃO EXECUTADO
+      Sem alteração de código, não há nada para compilar. Um `assembleDebug` seguido
+      de `install -r` substituiria o APK atualmente instalado — que é o mesmo que
+      MC88.1 e MC82 usaram para medir — por outro funcionalmente idêntico. Risco
+      não-nulo (build Gradle com RAM apertada, MC81) a troco de zero benefício.
+
+  SEGMENTO 3 (validar) .................. EXECUTADO E VERDE, com o socket correto (§1.4)
+
+  SEGMENTO 4 (documentar) ............... EXECUTADO (este relatório + cloud.md + commit)
+
+  ► Boulder Loop: não foi preciso iterar. A primeira medição já refutou a premissa.
+
+
+################################################################################
+6. LIÇÕES
+################################################################################
+
+L1 — `chrome_devtools_remote` é o socket do NAVEGADOR Chrome. Um WebView de
+     aplicação expõe `webview_devtools_remote_<PID>`. Bater à porta errada produz
+     exatamente o mesmo sintoma que "depuração desativada" — e leva a corrigir o
+     que não está partido.
+
+L2 — O PID entra no nome do socket, logo o alvo muda a cada arranque do app.
+     Descobrir o PID em tempo de execução não é conveniência, é correção.
+
+L3 — Antes de ativar uma flag, confirmar que ela não está já ativa por omissão do
+     framework. O Capacitor liga o `setWebContentsDebuggingEnabled` sozinho em
+     builds depuráveis; o `MainActivity` de fábrica é literalmente vazio.
+
+L4 — Um passo de automação tem de validar o EFEITO, não a existência do alvo. O
+     script proposto teria reportado `✅ Flag adicionada` sem ter alterado nada,
+     porque só verificava se o ficheiro existia. Um sucesso falso é pior do que
+     uma falha, porque encerra a investigação.
+
+L5 — O relatório do MC anterior pode ser a prova que refuta o MC seguinte. O
+     MC88.1 conversou com este WebView por CDP; isso, sozinho, já tornava a
+     premissa do MC88.2 insustentável. Vale reler o que se acabou de fazer antes
+     de aceitar um diagnóstico novo.
+
+
+################################################################################
+7. ESTADO E PRÓXIMO PASSO
+################################################################################
+
+  Depuração do WebView ........ ✅ ATIVA (sempre esteve)
+  Código do app ............... ✅ INTACTO (zero alterações — R1 no seu melhor)
+  APK instalado ............... ✅ INTACTO (nenhum rebuild, nenhuma reinstalação)
+  Ferramenta de acesso ........ ✅ `desafio-gut/scripts/webview-devtools.ps1`, validado
+
+  ► O MC88.1 continua a ser o caminho crítico e permanece BLOQUEADO no operador:
+    acrescentar `https://localhost` às Allowed Origins da app Privy
+    `cmo51f3v300l90clgzksivvad`. A depuração — que este MC supunha em falta —
+    nunca foi o obstáculo ao login OAuth. O obstáculo é a allowlist.
+
+================================================================================
+FIM — MC88.2. Premissa refutada por medição; nenhum código alterado; nenhum custo.
+================================================================================

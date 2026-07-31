@@ -1,0 +1,87 @@
+================================================================================
+MC78.4 — Diagnóstico: OG "ainda mostra imagem antiga" no compartilhamento
+Data: 2026-07-18   |   Branch: feat/mc73-correcao-deploy
+================================================================================
+
+VEREDITO
+--------
+NÃO há bug no servidor. O Open Graph já está 100% correto em produção desde o
+MC78.3. O card antigo que aparece ao compartilhar é CACHE do WhatsApp/Facebook
+(o link foi compartilhado ANTES do MC78.3, quando não existia og:image e o scraper
+caía no favicon/logo antigo). Cache de preview é por-URL e persiste por dias.
+
+--------------------------------------------------------------------------------
+1. DIAGNÓSTICO (evidências)
+--------------------------------------------------------------------------------
+Premissa do MC corrigida: o enunciado citava og:image = /assets/guto/og-guto.png.
+Esse arquivo NUNCA existiu. O caminho real (MC78.3) é /assets/guto/og-image.png.
+(O "og-guto.png" responde 200 text/html só porque o SPA redirect devolve o
+index.html para caminhos inexistentes — NÃO é imagem.)
+
+Estado real em produção (https://silly-stardust-ca71bc.netlify.app):
+  - Tag única servida: <meta property="og:image"
+      content="https://silly-stardust-ca71bc.netlify.app/assets/guto/og-image.png" />
+    (absoluta, no <head>, sem duplicatas conflitantes).
+  - Imagem: HTTP 200, Content-Type image/png, 1200×630, 580 KB (< 5 MB),
+    Cache-Control immutable, X-Content-Type-Options nosniff.
+  - CRAWLER: com User-Agent "facebookexternalhit/1.1" e "WhatsApp/2.23" o HTML
+    servido JÁ contém o og:image correto; a imagem responde 200 ao UA do WhatsApp.
+  → Ou seja, o que o scraper VÊ hoje está certo. O problema é só o cache já gravado.
+
+--------------------------------------------------------------------------------
+2. CORREÇÃO APLICADA (robustez — R1/R5, só metadata)
+--------------------------------------------------------------------------------
+Adicionadas 2 tags de robustez em index.html (algumas versões de scraper as usam):
+  <meta property="og:image:secure_url" content="https://.../assets/guto/og-image.png" />
+  <meta property="og:image:type"       content="image/png" />
+Commit: fix(mc78.4) em feat/mc73-correcao-deploy.
+Deploy: netlify deploy --prod --build (ver seção 4).
+
+IMPORTANTE (honestidade): estas tags NÃO invalidam o cache já existente do WhatsApp
+para a URL raiz. Elas só aumentam a compatibilidade em futuros re-scrapes. A imagem
+e as tags já estavam corretas — não havia o que "consertar" no caminho/formato.
+
+--------------------------------------------------------------------------------
+3. COMO VER O CARD NOVO AGORA (invalidar o cache — passos do usuário/operador)
+--------------------------------------------------------------------------------
+O cache é keyed pela URL exata compartilhada. Duas formas comprovadas:
+
+(A) URL FRESCA (imediato, sem login) — RECOMENDADO para testar no WhatsApp:
+    Compartilhar uma URL com query nova, ex.:
+       https://silly-stardust-ca71bc.netlify.app/?v=guto
+    O WhatsApp trata como link novo → faz scrape do zero → mostra o card do GUTO.
+    VALIDADO: com UA de crawler, ?v=guto entrega o og:image correto (SPA serve o
+    mesmo index.html com as tags certas para qualquer query).
+
+(B) Facebook Sharing Debugger (para a URL canônica, sem query):
+    https://developers.facebook.com/tools/debug/  → colar a URL → "Scrape Again".
+    Invalida o cache do Facebook e força re-leitura do og:image novo. (Requer login
+    Facebook — passo do operador.) Muitos clientes WhatsApp passam a refletir depois.
+
+Observação: o cache próprio do WhatsApp para uma URL já compartilhada pode levar
+dias para expirar sozinho — por isso a opção (A) é a mais prática para demonstrar.
+
+--------------------------------------------------------------------------------
+4. PRODUÇÃO / VALIDAÇÃO
+--------------------------------------------------------------------------------
+Deploy MC78.4: netlify deploy --prod --build.
+  [preenchido após conclusão: deploy id/state; confirmação das tags secure_url/type
+   servidas em produção ao crawler.]
+
+Já validado (produção atual, pré/pós indiferente pois o conteúdo é o mesmo):
+  - og:image 200 image/png, 1200×630, 580 KB.
+  - Crawler (facebookexternalhit / WhatsApp UA) recebe og:image correto.
+  - URL fresca ?v=guto entrega og:image correto ao crawler.
+  - Render do og-image em produção: card do GUTO 1200×630 (Desktop/MC78.3-og-prod.png).
+
+--------------------------------------------------------------------------------
+5. LIÇÕES
+--------------------------------------------------------------------------------
+- "Card antigo após trocar o og:image" quase sempre = cache do scraper, não bug.
+  Diagnosticar com curl + User-Agent de bot ANTES de mexer em caminho/arquivo.
+- Cache-buster no og:image (?v=) é inútil quando o arquivo é NOVO (og-image.png
+  nunca existiu antes) — não há cache da imagem a furar. O cache que importa é o do
+  PREVIEW por-URL do WhatsApp/FB → fura-se com URL de página nova ou FB Debugger.
+- SPA redirect faz caminhos inexistentes responderem 200 text/html (index.html) —
+  cuidado ao "testar 404" de assets: confira o Content-Type, não só o status.
+================================================================================

@@ -1,0 +1,170 @@
+================================================================================
+MC89 — SEGMENTO 3 · ARQUITETURA PROPOSTA
+================================================================================
+Data....: 2026-07-29
+Base....: MC89-MAPA-CODIGO.txt · MC89-REQUISITOS.txt · MC89-VIABILIDADE.txt
+Código..: ZERO alterações (R1)
+
+================================================================================
+PRINCÍPIO ORIENTADOR
+================================================================================
+Não se constrói um sistema ADM. **Acrescenta-se OBSERVAÇÃO a um sistema ADM que
+já existe.** Identidade, autorização, painel, comandos e auditoria já estão lá
+(MC89-MAPA-CODIGO §8). Toda a arquitetura abaixo obedece a isso: reutilizar as
+fundações e não duplicar nada.
+
+Três regras que atravessam as três fases:
+  1. UMA fonte por número. O painel e o GUTO chamam a MESMA agregação.
+  2. O que é lento carrega separado. Nada de ethers no caminho comum (MC88.31).
+  3. Nenhum comando novo. A Fase 2 só expõe o que o backend já faz hoje.
+
+================================================================================
+1. DESENHO GERAL
+================================================================================
+
+  ┌── FRONTEND ────────────────────────────────────────────────────────────┐
+  │  /admin  (AdminPanel.jsx — JÁ EXISTE, gate por useAdmin)               │
+  │    ├── Aprovações   ─┐                                                 │
+  │    ├── Cotas         ├── 3 separadores atuais — NÃO SE TOCA            │
+  │    ├── Admins       ─┘                                                 │
+  │    └── Visão Geral  ← NOVO (Fase 1) · métricas + (Fase 2) comandos     │
+  └────────────────────────────────────────────────────────────────────────┘
+                                   │ Bearer admin-JWT (já existe)
+  ┌── BACKEND (Netlify Functions) ─▼───────────────────────────────────────┐
+  │  admin-stats.mjs      NOVO · guardAdmin · agregação, cache 45 s        │
+  │  admin-onchain.mjs    NOVO · guardAdmin · saldo da EOA (isolado: RPC)  │
+  │  admin-comandos.mjs   NOVO (Fase 2) · guardAdmin · reexpõe comandos    │
+  │  admin-auditoria.mjs  NOVO (Fase 3) · guardAdmin · leitura paginada    │
+  │                                                                        │
+  │  REUTILIZA sem alterar: _lib/admin-auth · _lib/admin-helpers ·         │
+  │  _lib/rbac · _lib/supabase-client · _lib/cotas-store ·                 │
+  │  _lib/saldoRs-store · _lib/fila · _lib/pulso · _lib/system-state ·     │
+  │  _lib/log-operacional · _lib/rate-limiter                              │
+  └────────────────────────────────────────────────────────────────────────┘
+                                   │
+  ┌── DADOS ───────────────────────▼───────────────────────────────────────┐
+  │  Supabase (existente): cotas · saldo_rs · saldo_rs_creditos ·          │
+  │            saldo_rs_debitos · troco_senhas · lances · fila_tarefas     │
+  │  Blobs (existente):    lances-relampago · edicoes-metadata ·           │
+  │            system-state · log-decisoes · admin-list · admin-refresh    │
+  │  NOVO (Fase 3):        tabela `admin_logs` no Supabase                 │
+  │  NÃO SE CRIA:          tabela `admins` (a lista em Blobs funciona e     │
+  │                        tem gestão pelo painel) · tabela de sessões      │
+  └────────────────────────────────────────────────────────────────────────┘
+
+  GUTO ADM: continua no roteador de intents de chatbot.mjs. Os intents novos de
+  leitura chamam a MESMA agregação de admin-stats (regra 1).
+
+================================================================================
+2. PORQUE NÃO SE CRIA A TABELA `admins`
+================================================================================
+O briefing pede-a. A evidência desaconselha:
+  · a lista em Blobs já tem leitura, escrita, cache, gate e UI de gestão;
+  · a coordenação é admin por variável de ambiente e NÃO está na lista —
+    migrar para Postgres obriga a reproduzir essa regra num segundo sítio;
+  · duas fontes de verdade para "quem é admin" é exatamente o defeito que o
+    MC88.43 passou um MC inteiro a eliminar noutro domínio.
+Se um dia a lista crescer ao ponto de precisar de consulta, migra-se — com a
+regra da coordenação junto. Hoje tem zero entradas persistidas.
+
+================================================================================
+3. AS FASES
+================================================================================
+
+🟢 FASE 0 — O ADMIN EXISTIR (imediata, sem código)
+   Executa-se antes de tudo o resto e destranca o resto.
+   1. operador entra na app com ADMdesafiogut@gmail.com;
+   2. lê o endereço da carteira embutida (visível na Carteira);
+   3. POST admin-list { acao:"adicionar", endereco } com x-admin-token;
+   4. confirma com GET admin-list?endereco=… → isAdmin:true.
+   Resolve RF-01 e o risco R-5 (hoje há UM único admin).
+
+🟢 FASE 1 — VER (MC90)
+   Objetivo: o ADM abre /admin e SABE o estado do sistema.
+
+   BACKEND
+     admin-stats.mjs (novo) — GET, guardAdmin, rate-limit, cache 45 s.
+       Resposta (todos os campos com `fonte` declarada):
+       {
+         utilizadores: { comAtividade, ativos30d, fonte:"dados-proprios" },
+         financeiro:   { saldoRsTotalCentavos, creditos30d, pedidosPendentes },
+         senhas:       { trocoAtivo, trocoExpirado },
+         operacao:     { fila:{ pendentes, aFazer, falhadas, ultimoOk },
+                         sistema:{ status, desde }, edicaoAtiva },
+         pulso:        { volumePorMin, licitantesUnicos, valorizacaoPct,
+                         abandonoCheckoutPct },
+         geradoEm, parciais:[…]     ← o que falhou, por nome. Nunca zero mudo.
+       }
+       ⚠️ NÃO importa ethers. Nada de RPC aqui.
+
+     admin-onchain.mjs (novo) — GET, guardAdmin. Só o saldo da EOA
+       coordenadora e o último bloco visto. Separado porque paga ~2 s de ethers
+       (MC88.31) e não pode arrastar o painel todo.
+
+   FRONTEND
+     Novo separador "Visão Geral" no AdminPanel. Blocos do RF-02. O bloco
+     on-chain carrega DEPOIS, com o seu próprio estado.
+
+   GUTO
+     Intents de leitura novos: `status_sistema`, `metricas_gerais`. Gate
+     ehAdminPerfil. Chamam a mesma agregação.
+
+   CRITÉRIO: entrar com o e-mail do ADM → /admin → "Visão Geral" com números
+   corretos em menos de 2 s (sem o bloco on-chain), e o GUTO devolve os mesmos
+   números.
+
+🟡 FASE 2 — AGIR (MC91)
+   Objetivo: os comandos que hoje só existem por chat ficam a um toque — com
+   travões.
+
+   admin-comandos.mjs (novo) — POST, guardAdmin, rate-limit 5/min, auditoria
+     obrigatória por comando. Apenas comandos JÁ existentes:
+       forcar_fila · invalidar_cache_admins · invalidar_cache_rbac ·
+       pausar_sistema · retomar_sistema
+     Confirmação em DOIS passos: o cliente envia `confirmar:true` e o servidor
+     recusa sem ele. Um toque acidental não chega.
+
+   FRONTEND: botões no separador Visão Geral, com diálogo de confirmação e
+     resultado visível (o que aconteceu, não só "ok").
+
+   "ONLINE" SEM HEARTBEAT (alternativa ao RF-05, ver S2): derivar "ativos nos
+     últimos 5 min" do que JÁ é registado pelos pedidos existentes. Zero
+     tráfego novo, zero bateria. Se depois se provar insuficiente, aí sim
+     avalia-se heartbeat — com dados na mão, não por suposição.
+
+   CRITÉRIO: cada botão faz o que diz, aparece na auditoria com quem/quando, e
+   nenhum dispara sem confirmação.
+
+🔴 FASE 3 — LEMBRAR E AVISAR (MC92)
+   admin_logs (tabela nova, Supabase, RLS) — { id, ts, endereco, acao, alvo,
+     resultado, origem }. Escrita a partir de TODOS os pontos de comando (não
+     só do GUTO). `log-decisoes` (Blob) fica como está durante a transição.
+     ⚠️ Retenção definida ANTES de existir (LGPD — guarda endereços).
+   admin-auditoria.mjs (novo) — GET paginado com filtros.
+   Push (FCM) — só depois de o operador criar o projeto e a chave.
+
+================================================================================
+4. CONTRATOS DE API (resumo)
+================================================================================
+  GET  /admin-stats                → 200 objeto do §3 · 401 sem credencial
+  GET  /admin-onchain              → 200 { eoa, saldoWei, bloco } · 401
+  POST /admin-comandos             → { comando, confirmar:true }
+                                     200 { ok, comando, resultado, auditoriaId }
+                                     400 sem `confirmar` · 401 · 429
+  GET  /admin-auditoria?p=&limite= → 200 { entradas[], total, pagina } · 401
+
+Todos: `respostaPreflight` primeiro (CORS do APK — MC88.12), `guardAdmin` a
+seguir, rate-limit, e nunca devolvem valores de variáveis de ambiente.
+
+================================================================================
+5. O QUE ESTA ARQUITETURA DELIBERADAMENTE NÃO FAZ
+================================================================================
+• Não toca nos 3 separadores atuais do AdminPanel nem nos 11 intents admin.
+• Não cria tabela `admins` (§2) nem tabela de sessões (S2/RF-05).
+• Não põe o LLM a executar (D2).
+• Não introduz e-mail na autorização (RF-01).
+• Não muda o gate da rota /admin — a fronteira que conta é o backend.
+
+================================================================================
+FIM DO SEGMENTO 3
+================================================================================

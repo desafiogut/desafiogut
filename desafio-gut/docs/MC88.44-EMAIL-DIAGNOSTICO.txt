@@ -1,0 +1,133 @@
+================================================================================
+MC88.44 — SEGMENTO 0 · DIAGNÓSTICO DO E-MAIL DE SUPORTE
+================================================================================
+Data....: 2026-07-29
+Alvo....: G1 do MC88.41 — o GUTO manda utilizadores para um domínio que não existe
+Método..: varrimento do repositório + 1 pergunta ao GUTO de produção (evidência viva)
+Código..: ZERO alterações neste segmento
+
+================================================================================
+1. O ACHADO QUE MUDA O PLANO
+================================================================================
+Corrigir o `regulamento.md` NÃO corrige o GUTO.
+
+O regulamento não é lido em tempo de execução por função nenhuma. O que o GUTO
+consulta é um ÍNDICE DE EMBEDDINGS já construído, que vive num Netlify Blob
+store (`rag`), fora do repositório:
+
+  scripts/build-rag-index.mjs   lê docs/chatbot/regulamento.md, parte em chunks
+                                de ~500 palavras, gera embeddings OpenAI
+                                (text-embedding-3-small) e grava `rag:{n}` +
+                                `rag:meta` no store.
+  _lib/rag.mjs                  em runtime, lê SÓ o store. Nunca o ficheiro.
+  chatbot.mjs                   monta o contexto a partir desses chunks.
+
+Ou seja: enquanto o índice não for reconstruído, o GUTO continua a citar o
+endereço antigo — mesmo com o `.md` corrigido e mesmo depois de um deploy.
+
+E reconstruir o índice exige o que eu não faço (R5) e o que a R2 proíbe sem
+autorização:
+  • OPENAI_API_KEY     (embeddings — custo declarado no cabeçalho do script:
+                        ~100 chunks ≈ US$ 0,001 por execução)
+  • NETLIFY_AUTH_TOKEN + NETLIFY_SITE_ID  (escrita no Blob store)
+
+Isto é decisão e execução do OPERADOR.
+
+================================================================================
+2. EVIDÊNCIA VIVA (antes de qualquer alteração)
+================================================================================
+POST https://silly-stardust-ca71bc.netlify.app/.netlify/functions/chatbot
+     {"pergunta":"Como entro em contato com o suporte?"}
+
+  "Pra questões gerais, manda e-mail pra `suporte@desafiogut.com.br`. Se for
+   emergência de segurança, o canal é o `#incidentes` no Slack/Discord interno.
+   E pra LGPD/eliminar dados, pede por e-mail com prova de identidade 😊"
+
+  fontes: rag:4 (0.4689) · rag:2 (0.4371) · rag:0 (0.4112)
+  modoBusca: semantica · modoResposta: llm · perfil: visitante
+
+Confirma-se o G1 e confirma-se a origem: os chunks do índice, não uma
+alucinação e não uma constante no código.
+
+================================================================================
+3. ONDE ESTÁ O ENDEREÇO ERRADO
+================================================================================
+A) FONTE DO RAG — é isto que o GUTO repete. TEM de mudar.
+   docs/chatbot/regulamento.md:147   LGPD Art. 18, eliminação de dados
+   docs/chatbot/regulamento.md:188   reembolso do saldo R$
+   docs/chatbot/regulamento.md:218   "Para questões gerais"
+
+   Uma só cópia do ficheiro no repositório (confirmado por `find`).
+
+B) DOCUMENTAÇÃO INTERNA — não alimenta o GUTO, mas é o que a coordenação lê
+   quando há incidente. Se ficar, o endereço morto volta a entrar por aqui.
+   docs/incident-response.md:102,121
+   docs/disaster-recovery.md:75,154
+   docs/ia-cognitiva.md:118          (descreve a frase-padrão do assistente)
+
+C) NÃO MEXER — mesmo domínio, uso diferente e legítimo:
+   _lib/pix-provider/mercadopago.mjs:38   `pagador@desafiogut.com.br` é o
+       e-mail do PAGADOR enviado ao Mercado Pago. É um placeholder aceite pela
+       API; trocá-lo mexe no fluxo de pagamento sem necessidade (R1/R2).
+   scripts/test-mp-token.ps1:37,53       o mesmo placeholder, em script de teste.
+   docs/cloudflare-waf-setup.md, cloudflare-waf-execucao.md, mfa-setup.md,
+   backup-blobs.md, configuracao-admin-token.md, disaster-recovery.md:22,95
+       usam `app.desafiogut.com.br` como HOST pretendido do site. É um plano de
+       infraestrutura para o dia em que o domínio for registado — não é um
+       endereço de contacto e não engana utilizador nenhum.
+
+================================================================================
+4. QUANTOS ENDEREÇOS EXISTEM NO PRODUTO (o "três vozes" do MC88.41)
+================================================================================
+  desafiogut01@gmail.com        Layout.jsx:35 (rodapé "Suporte")
+                                ExcluirConta.jsx:106-107
+                                Seguranca.jsx:28 ("Contato DPO")
+                                TermosConsentimento.jsx:127,176
+                                → é, de facto, o endereço de suporte DA APP.
+
+  grupouniaoetrabalhoam@gmail.com   TermosConsentimento.jsx:78 (controlador LGPD)
+                                → entidade jurídica, não canal de suporte.
+
+  desafiogut@gmail.com          MinhaCarteira.jsx:21,25 · _lib/pix-config.mjs:21
+                                → conta Mercado Pago, não suporte.
+
+  familiaquildo@gmail.com       _lib/pix-config.mjs:13 · renovacao-adesao.mjs:5
+                                → destino PIX de renovação, não suporte.
+
+  suporte@desafiogut.com.br     SÓ no regulamento e nos docs internos.
+                                NXDOMAIN. É o único que não existe — e é o
+                                único que o assistente oferece.
+
+O GUTO é o único sítio do produto que aponta para o endereço morto. Tudo o que
+o utilizador vê na interface já aponta para `desafiogut01@gmail.com`.
+
+================================================================================
+5. AS DUAS COISAS QUE PRECISAM DE DECISÃO DO OPERADOR
+================================================================================
+DECISÃO 1 — QUAL ENDEREÇO
+  A app inteira já usa `desafiogut01@gmail.com`. Alinhar o regulamento com ele
+  resolve o G1 e fecha a incoerência das "três vozes" de uma vez.
+  A alternativa (registar `desafiogut.com.br`) é a certa a prazo, mas é compra,
+  DNS e caixa de correio — não é um MC de código.
+
+DECISÃO 2 — COMO CHEGA AO GUTO (é aqui que está o trabalho real)
+  Corrigir o `.md` é condição necessária e não suficiente. Ver §1.
+
+  Rota A — REINDEXAR: o operador corre `node scripts/build-rag-index.mjs --yes`
+      com OPENAI_API_KEY + NETLIFY_AUTH_TOKEN + NETLIFY_SITE_ID.
+      ✔ cobre TODAS as formulações (reembolso, LGPD, "não recebi as senhas"…)
+      ✘ depende do operador; custo ~US$ 0,001
+
+  Rota B — INTENT DETERMINÍSTICO: acrescentar um intent `suporte` ao roteador
+      do chatbot.mjs (que já corre ANTES do RAG e já tem tabela declarativa por
+      perfil), devolvendo o endereço correto sem passar pelo modelo.
+      ✔ funciona no deploy seguinte, sem chaves, sem custo, sem reindexar
+      ✘ só apanha as perguntas que casam o padrão. Uma pergunta como "paguei o
+        PIX e não recebi as senhas" continua a ir ao RAG e a citar o chunk velho
+
+  As duas NÃO competem: a B é a rede que segura o utilizador enquanto a A não é
+  executada; a A é a que fecha o buraco todo. A recomendação é fazer as duas.
+
+================================================================================
+FIM DO SEGMENTO 0
+================================================================================

@@ -1,0 +1,146 @@
+================================================================================
+MC88.1 — SEGMENTO 2 · VALIDAÇÃO DA CORREÇÃO DA ALLOWLIST
+================================================================================
+Data.........: 2026-07-24
+Dispositivo..: fiem7xlvcufe855h · Xiaomi 21091116UG · Android 13
+Pacote.......: com.desafiogut.app · WebView Chrome/150.0.7871.124
+Método.......: túnel CDP via `desafio-gut/scripts/webview-devtools.ps1` (MC88.2)
+Regras.......: R1 zero alteração de código · R2 custo US$ 0,00 · R3 rastreável
+               R4 sem dados sensíveis · R5 nenhuma credencial manuseada
+
+STATUS: ✅ CRITÉRIOS 1–5 APROVADOS · ⏳ CRITÉRIO 6 PENDENTE (exige login do operador)
+
+
+################################################################################
+0. NOTA — TENTATIVA ANTERIOR DE VALIDAÇÃO (preservada)
+################################################################################
+
+Este ficheiro já existia quando o agente o reescreveu. O conteúdo anterior,
+gerado às 2026-07-24T00:48:39Z por uma execução do operador, era:
+
+    === MC88.1 VALIDAÇÃO ===
+    Início: 2026-07-24T00:48:39.400Z
+    ❌ Erro: socket hang up
+    💡 Tente: chrome://inspect no navegador.
+
+  ► Esse `socket hang up` **não** indicava depuração desativada. É o sintoma
+    exato de se ligar ao socket errado (`chrome_devtools_remote`, do navegador
+    Chrome, em vez de `webview_devtools_remote_<PID>`, do WebView da app) — a
+    causa que o MC88.2 isolou depois com um teste A/B.
+
+  ► CONSEQUÊNCIA IMPORTANTE: como essa validação nunca chegou a ligar-se ao
+    WebView, **o login nunca foi testado depois da correção da allowlist**. Todo
+    o diagnóstico que se seguiu partiu de uma ligação falhada, não de um login
+    falhado. É a origem da cadeia de premissas dos MC88.2 e MC88.3.
+
+
+################################################################################
+1. A CORREÇÃO FOI APLICADA
+################################################################################
+
+O operador acrescentou as origens ao painel do Privy. Confirmado por leitura do
+cabeçalho `Content-Security-Policy` devolvido pelo próprio `auth.privy.io`
+(a allowlist EFETIVA, não a declarada):
+
+    frame-ancestors 'self'
+                    http://localhost              ← NOVA
+                    http://localhost:3000
+                    http://localhost:5173
+                    https://69f359a08aed8b0008f4c8bf--silly-stardust-ca71bc.netlify.app
+                    https://localhost             ← NOVA · a que resolve o problema
+                    https://silly-stardust-ca71bc.netlify.app
+                    https://www.69f359a08aed8b0008f4c8bf--silly-stardust-ca71bc.netlify.app
+                    capacitor://localhost         ← NOVA
+                    https://auth.privy.io
+
+  ► Passou de 7 para 10 origens. As três acrescentadas são exatamente as que o
+    runbook do Segmento 1 recomendava.
+
+  ► NOTA: o painel do Privy **aceitou** `capacitor://localhost`. O runbook admitia
+    a hipótese de o esquema não-http ser recusado; não foi. Fica registado porque
+    contraria a suposição de que a Privy só aceita http/https.
+
+
+################################################################################
+2. CRITÉRIOS DE SUCESSO — RESULTADO MEDIDO
+################################################################################
+
+  #  CRITÉRIO                                        ANTES        DEPOIS      ✔
+  ─  ──────────────────────────────────────────────  ───────────  ──────────  ──
+  1  `https://localhost` em frame-ancestors          ausente      PRESENTE    ✅
+  2  iframe embedded-wallets sem ERR_BLOCKED         bloqueado    carrega     ✅
+  3  erro "Framing ... violates ... frame-ancestors" presente     ausente     ✅
+  4  tempestade de avisos `postMessage`              178 em 60s   ausente     ✅
+  5  "Privy iframe failed: Exceeded max attempts"    presente     ausente     ✅
+  6  JWT gerado (`gut_auth_user` em sessionStorage)  null         null        ⏳
+
+2.1 — EVIDÊNCIA DO CRITÉRIO 2 (a mais importante)
+    O iframe deixou de ser recusado e passou a **descarregar a sua aplicação**.
+    Capturados em sequência, todos com HTTP 200:
+
+        GET /apps/<app>/embedded-wallets?caid=9bb897f1-… → 200
+        GET /_next/static/css/b2563d67c8bb4d81.css        → 200
+        GET /_next/static/chunks/webpack-812ffb46…js      → 200
+        GET /_next/static/chunks/framework-12130cb3…js    → 200
+        GET /_next/static/chunks/main-94389610…js         → 200
+        … (mais 8 chunks do Next.js)
+
+    Antes da correção, o primeiro pedido morria em
+    `net::ERR_BLOCKED_BY_RESPONSE (blockedReason=other)` e nada mais era pedido.
+
+2.2 — ESTADO DO DOM
+        iframe presente ......... sim
+        origem do iframe ........ "cross-origin (normal)"
+                                  (antes era `null` — sinal do bloqueio)
+        chunks locais do Privy .. PrivyRoot-DjTphPBg.js · privy-C6QEr4zh.js
+        erros de console ........ 2 × HTTP 404 (não relacionados; pré-existentes)
+
+2.3 — CRITÉRIO 6 — PORQUE CONTINUA PENDENTE
+    `gut_auth_user` continua `null` porque **ninguém iniciou sessão**. O fluxo
+    Google exige interação humana real (escolher conta, consentir) e não é
+    automatizável — limitação já registada em MCs anteriores. Não é um sintoma de
+    falha: é a ausência do teste.
+
+
+################################################################################
+3. TESTE ADICIONAL — A ROTA /carteira RESOLVE
+################################################################################
+
+Executado por navegação REAL (`Page.navigate`, não `history.pushState`):
+
+    ANTES  → https://localhost/
+    GET https://localhost/carteira → 200 (text/html)   [×3 pedidos, todos 200]
+    DEPOIS → https://localhost/carteira
+    location.pathname → /carteira
+    conteúdo renderizado → "💰 Minha Carteira — Acompanhe seu saldo de senhas e
+                            seus lances no DesafioGUT. Faça login para visualizar
+                            e gerenciar su…"
+    falhas de rede em localhost → 0
+
+  ► O WebView resolve `https://localhost/carteira` sem qualquer problema, serve
+    HTML e a aplicação monta a página. Registado aqui porque o MC88.3 partia do
+    princípio contrário.
+
+
+################################################################################
+4. VEREDITO
+################################################################################
+
+A correção da allowlist **funcionou**. O bloqueio de CSP que impedia o iframe da
+carteira embutida de inicializar desapareceu, e com ele a tempestade de
+retentativas que queimava CPU e bateria.
+
+  ► FALTA UM ÚNICO PASSO, e é do operador: iniciar sessão com Google no aparelho.
+    Só isso pode produzir o JWT e fechar o critério 6.
+
+    Como fazer, com captura de evidência:
+      1. no PC:  .\desafio-gut\scripts\webview-devtools.ps1 -Reiniciar
+      2. no aparelho: aceitar os termos → iniciar sessão com Google
+      3. avisar o agente, que relê `gut_auth_user`, a rota e os erros de console
+
+    Se falhar, o erro será capturado com o mesmo método e diagnosticado a partir
+    da evidência — não por suposição.
+
+================================================================================
+FIM — MC88.1 SEGMENTO 2. Critérios 1-5 verdes; 6 aguarda login humano.
+================================================================================

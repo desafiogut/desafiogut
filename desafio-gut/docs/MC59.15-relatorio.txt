@@ -1,0 +1,110 @@
+================================================================================
+MC59.15 — CORREÇÃO DA CONFIGURAÇÃO DO CONTRATO NA MAINNET (RPCs)
+RELATÓRIO DE DIAGNÓSTICO + RUNBOOK DO OPERADOR
+================================================================================
+Data: 2026-07-08
+Branch: feat/mc59.15-correcao-config-mainnet (a partir de feat/mc59.14-revogacao-preparacao)
+Netlify: silly-stardust-ca71bc (team desafiogut) | Project Id be1cc8bb-682b-4667-a341-c8db1f4ab2b5
+Autor (planejamento/diagnóstico): Agente Opus | Execução env:set + validação: OPERADOR
+STATUS: 🟡 DIAGNÓSTICO COMPLETO — aguardando execução do operador (env:set + deploy + validação)
+
+--------------------------------------------------------------------------------
+1. RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+A premissa original do MC59.15 (variáveis de ENDEREÇO do contrato erradas) NÃO
+se confirmou: os endereços já estavam corretos. A causa raiz real dos erros
+`saldoSenhas` (0x / BAD_DATA) e `comprar-senhas` (502) é que os RPCs continuam
+apontando para SEPOLIA enquanto o contrato/rede estão em MAINNET, e a variável
+CONTRATO_SEPOLIA do backend ainda aponta para o contrato ANTIGO.
+
+Correção = 3 variáveis (RPC_URL, VITE_ALCHEMY_URL, CONTRATO_SEPOLIA).
+ZERO alteração de código-fonte.
+
+--------------------------------------------------------------------------------
+2. VARIÁVEIS JÁ CORRETAS (produção) — NÃO MEXER
+--------------------------------------------------------------------------------
+VITE_CONTRATO_SEPOLIA = 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd  ✅ (mainnet)
+CONTRATO_MAINNET      = 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd  ✅
+VITE_CHAIN_ID         = 1            ✅
+MAINNET_CHAIN_ID      = 1            ✅
+VITE_NETWORK_STAGE    = mainnet      ✅
+NETWORK_STAGE         = mainnet      ✅
+VITE_EXPLORER_URL     = https://etherscan.io  ✅
+SIGNER_BACKEND        = local-key    ✅
+VITE_MOCK_MODE        = false        ✅
+DATA_STORE_BACKEND    = supabase     ✅
+
+--------------------------------------------------------------------------------
+3. VALIDAÇÃO ON-CHAIN (leitura, RPCs públicos + key mainnet fornecida)
+--------------------------------------------------------------------------------
+Mainnet (chainId 0x1):
+  getCode(0x0052...16cd)   = 9648 bytes            → CONTRATO EXISTE ✅
+  coordenacao()            = 0xFea436f74059F885ea50D48aBbE21ef6665d1E67 (nova EOA) ✅
+Sepolia (chainId 0xaa36a7):
+  getCode(0x0052...16cd)   = 0x (sem código)       → causa do BAD_DATA via RPC Sepolia
+Probe da URL Alchemy MAINNET fornecida pelo operador:
+  chainId=0x1, getCode=9648, coordenacao()=nova EOA → KEY MAINNET FUNCIONA ✅
+  (a mesma API key funciona trocando o subdomínio eth-sepolia → eth-mainnet)
+
+--------------------------------------------------------------------------------
+4. CAUSA RAIZ — VARIÁVEIS ERRADAS
+--------------------------------------------------------------------------------
+1) RPC_URL          = https://eth-SEPOLIA.g.alchemy.com/...   (backend provider)
+                      → deve ser eth-MAINNET
+2) VITE_ALCHEMY_URL = https://eth-SEPOLIA.g.alchemy.com/...   (RPC do frontend)
+                      → deve ser eth-MAINNET
+                      CAUSA DIRETA do saldoSenhas BAD_DATA: network.js lê o contrato
+                      mainnet 0x0052...16cd, mas web3.js consulta via RPC Sepolia,
+                      onde esse endereço não tem código → retorna 0x.
+3) CONTRATO_SEPOLIA = 0x825bBd3F...eF06 (contrato ANTIGO)
+                      → deve ser 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd (ou deletar).
+                      _lib/contract.mjs resolve CONTRATO_ADDRESS =
+                        CONTRATO_SEPOLIA || VITE_CONTRATO_SEPOLIA || fallback.
+                      Como CONTRATO_SEPOLIA está setado, TODO o backend usa o contrato
+                      antigo, não o mainnet.
+
+VARIÁVEIS MORTAS (confirmado sem leitores em src/ nem functions/) — ignorar:
+  VITE_RPC_URL_SEPOLIA, VITE_CONTRACT_ADDRESS (=0x000...0)
+
+Mapa de leitura (código, read-only):
+  frontend src/lib/network.js:19  CONTRATO = VITE_CONTRATO_SEPOLIA           (mainnet ✅)
+  frontend src/utils/web3.js:121  ALCHEMY_RPC = VITE_ALCHEMY_URL || <sepolia> (sepolia ✗)
+  backend  _lib/contract.mjs:44   CONTRATO_ADDRESS = CONTRATO_SEPOLIA || ...  (antigo ✗)
+  backend  _lib/contract.mjs:57   provider = JsonRpcProvider(RPC_URL)         (sepolia ✗)
+
+--------------------------------------------------------------------------------
+5. RUNBOOK DO OPERADOR
+--------------------------------------------------------------------------------
+PRÉ-CONDIÇÃO (bloqueia a compra real): confirmar que a COORDENACAO_PRIVATE_KEY em
+produção corresponde à NOVA EOA 0xFea436f74059F885ea50D48aBbE21ef6665d1E67
+(= coordenacao() do contrato). Se ainda for a chave antiga 0x1394492e… (exposta,
+revogada localmente no MC59.14), substituir ANTES — senão comprar-senhas falha na
+autorização on-chain. Esta é a ressalva "reconfirmar Netlify" do MC59.14.
+
+PASSO 1 — env:set (PowerShell, no diretório frontend):
+  cd C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend
+  netlify env:set RPC_URL https://eth-mainnet.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B --context production --force
+  netlify env:set VITE_ALCHEMY_URL https://eth-mainnet.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B --context production --force
+  netlify env:set CONTRATO_SEPOLIA 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd --context production --force
+
+PASSO 2 — rebuild + deploy (pode ser executado pelo agente após o PASSO 1):
+  npm run build
+  netlify deploy --build --prod --message "fix(mc59.15): RPCs apontando para mainnet e CONTRATO_SEPOLIA corrigido"
+
+--------------------------------------------------------------------------------
+6. VALIDAÇÃO (Segmento 3)
+--------------------------------------------------------------------------------
+V1 — Health (agente pode rodar, read-only):
+  curl -s https://silly-stardust-ca71bc.netlify.app/.netlify/functions/health
+  ✅ NETWORK_STAGE=mainnet, SIGNER_READY=set
+V2 — Saldo de senhas (frontend), carteira na mainnet (chainId 1):
+  ✅ saldo aparece sem BAD_DATA
+V3 — Compra de R$ 1,00 (MANUAL — operador, ETH real):
+  ✅ crédito confirmado, senhas recebidas, tx visível no Etherscan
+
+--------------------------------------------------------------------------------
+7. VEREDITO
+--------------------------------------------------------------------------------
+Diagnóstico: ✅ concluído — causa raiz = RPCs em Sepolia + CONTRATO_SEPOLIA antigo.
+Correção: 🟡 pronta (runbook validado read-side; key mainnet confirmada funcional).
+Comunicação restaurada: ⏳ depende do operador executar PASSO 1 + validação V1–V3.

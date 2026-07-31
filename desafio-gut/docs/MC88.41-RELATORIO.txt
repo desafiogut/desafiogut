@@ -1,0 +1,166 @@
+================================================================================
+MC88.41 — DIAGNÓSTICO DA EXPERIÊNCIA DO UTILIZADOR COMUM (QA COMPLETO)
+================================================================================
+Data......: 2026-07-28
+Aparelho..: fiem7xlvcufe855h · Xiaomi pissarropro (21091116UG) · Android 36
+APK.......: MC88.40, confirmado por md5 4847952213518fc852e4374ea09dde6a
+Perfil....: comum autenticado — "Novo Pernambucano", 12 senhas, R$ 0,00, 0 lances
+Método....: navegação real via túnel adb + CDP; leitura do DOM, da consola e de
+            capturas a cada passo. 20 perguntas ao GUTO + 2 cenários de rutura.
+Código....: ZERO alterações (R1 cumprida). `git status` limpo.
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+A app está sólida no essencial: os saldos batem certo entre ecrãs, a navegação
+inferior é consistente, o arranque está limpo depois dos MC88.37–40, e o GUTO
+resistiu a tudo o que lhe atirei sem partir uma única vez.
+
+O que a fragiliza é OUTRA coisa: o produto fala consigo próprio em três vozes
+diferentes. A mesma edição está "Ativa" num ecrã e "Aguardando abertura" no
+outro. O mesmo cartão diz "Encerrada" e "EM BREVE" ao mesmo tempo. A mesma ação
+chama-se "Converter Ficha" aqui e "Trocar R$ → Senha" ali. E há três endereços
+de suporte no produto — sendo que o único que o assistente oferece pertence a um
+domínio que NÃO EXISTE.
+
+Dois achados justificam ação imediata:
+
+  🔴 B1  A navegação congela depois de uma sessão prolongada. Observado ao vivo:
+         a URL muda, o ecrã não. Reiniciar resolve. O gatilho não está
+         identificado — e é isso que o torna perigoso.
+
+  🔴 G1  O GUTO manda os utilizadores para `suporte@desafiogut.com.br`. O
+         domínio devolve NXDOMAIN. Quem tem dinheiro preso escreve para o vazio.
+
+================================================================================
+O QUE ESTÁ BEM — E CONVÉM NÃO PERDER
+================================================================================
+• COERÊNCIA DOS SALDOS: 12 senhas e R$ 0,00 idênticos no Dashboard, na Carteira,
+  no Mercado e na Sidebar. E as 12 senhas conferem com o `saldoSenhas` lido do
+  contrato na mainnet (verificado no MC88.35).
+• ARRANQUE LIMPO: sem "Faça login" indevido, sem jargão nos saldos, sem ecrã em
+  branco, CLS zero. É o resultado acumulado dos MC88.37–40.
+• GUTO NÃO PARTIU: 20 perguntas hostis, zero erros de consola, zero fugas.
+  Recusou injeção de prompt, dados de terceiros, segredos, link falso e garantia
+  de prémio. Mandou apagar CPF/cartão colados no chat. Corrigiu uma premissa
+  falsa minha citando o Artigo VIII. As regras que deu (R$ 0,01 / R$ 9.999,99 /
+  5 por minuto / 3 s) batem À LETRA com o regulamento.
+• ANTI-DUPLO-ENVIO: seis envios em rajada produziram UMA resposta. O botão
+  desativa-se no primeiro. Impecável.
+• PROTEÇÃO DE ROTAS: /corporativo* guardado; /admin guardado por dentro.
+
+================================================================================
+ACHADOS, POR PRIORIDADE
+================================================================================
+
+🔴 CRÍTICOS
+--------------------------------------------------------------------------------
+B1  Navegação congela após sessão prolongada (URL muda, vista não).
+    Observado em 3 tentativas, com 4 s de espera. Reiniciar resolve.
+    Correlação: 5 `unhandledrejection` na sessão morta, 0 numa sessão nova.
+    ⚠️ Gatilho NÃO identificado. Reproduzir é o primeiro passo.
+    → docs/MC88.41-BUGS.txt §B1
+
+G1  `suporte@desafiogut.com.br` não existe (NXDOMAIN, verificado por DNS).
+    O GUTO dá-o em 4 respostas, incluindo "não recebi as senhas" e uma
+    acusação de roubo. NÃO é alucinação: está no regulamento.md:147,188,218,
+    que alimenta o RAG. A app usa `desafiogut01@gmail.com` no rodapé.
+    O MC69.5 já registara a ausência de registo do domínio em 2026-07-10.
+    → docs/MC88.41-GUTO-ESFORCO.txt §G1
+
+🟡 IMPORTANTES
+--------------------------------------------------------------------------------
+B3  Quatro estados contraditórios no mesmo cartão de edição: "Encerrada" +
+    "EM BREVE" + "Aguardando abertura", sob o título "em Andamento". ×3 cartões.
+B4  A mesma edição R-1 é "Ativa" no /mercado e "Aguardando abertura" no
+    Dashboard, no mesmo instante.
+B5  Três botões inativos sem explicar porquê; e o /mercado abre no modo
+    "Relâmpago" (exige R$), quando as 12 senhas do utilizador só servem no
+    modo "Programado". Ele chega a um ecrã que não pode usar.
+B6  "Sair" (terminar sessão) dentro do cartão de lance, a ~190 px do campo.
+B2  Pedido do chat não é cancelado ao mudar de rota → `unhandledrejection`.
+    A app recupera, mas é a origem provável das rejeições que alimentam B1.
+G2  Chat com latência de 3,6 s a >32 s. Uma pergunta trivial devolveu
+    "Desculpe, não foi possível responder agora" à primeira tentativa.
+G4  Classificador de intenções responde fora de contexto (uma pergunta sobre
+    o system prompt recebeu "Só a coordenação pode criar edições").
+
+🟢 MENORES
+--------------------------------------------------------------------------------
+B7  Jargão interno no ecrã: "MC10 · GROWTH" (Carteira), "fontes: rag:2,rag:4"
+    (chat), "provider: mercadopago" (modal). Mesma família do "(antigo)" que o
+    MC88.40 removeu — ficaram estes três.
+B8  Modal "Depositar PIX" pergunta "QUANTAS SENHAS?" e credita R$. O fluxo
+    FUNCIONA e está no regulamento §172; o que falha é a expectativa criada.
+B10 Dois conjuntos de atalhos que não coincidem, e a mesma ação com dois nomes
+    ("Converter Ficha" vs "Trocar R$ → Senha").
+B9  Endereço da carteira repetido 4× num ecrã; completo (42 chars) na Carteira.
+B11 "Multiple GoTrueClient instances" em todas as sessões.
+G5  "Máximo 500" sem dizer 500 do quê.
+G6  GUTO diz "essa não sei" e responde na mesma frase.
+G7  Pergunta em inglês → resposta em português.
+G8  Gralha "Sacredinho" numa resposta.
+
+================================================================================
+DUAS COISAS QUE EU PRÓPRIO ERREI E CORRIGI ANTES DE ENTRAR AQUI
+================================================================================
+1. Anotei que o prazo da edição R-1 já tinha expirado. ERRADO — comparei com um
+   carimbo UTC da consola em vez da hora local. `adb shell date` deu 20:44 -03
+   contra um prazo de 21:10. A edição está mesmo a decorrer.
+
+2. Concluí que o chatbot só tinha limite de frequência para comandos de
+   administração, e que um utilizador comum podia esgotar o orçamento do LLM.
+   ERRADO — o meu varrimento estava truncado. `chatbot.mjs:902` aplica
+   `aplicarRateLimit(req, "chatbot", …)` antes da chamada ao modelo.
+
+Registo ambos porque qualquer deles teria entrado no relatório como achado.
+
+================================================================================
+O QUE NÃO FOI TESTADO — E PORQUÊ
+================================================================================
+• Um lance real e um pagamento real: consumiriam senha on-chain / criariam
+  cobrança no Mercado Pago (R2).
+• Estado "não autenticado" e "sem saldo nenhum": exigiriam terminar a sessão do
+  operador ou uma conta limpa.
+• Botão "voltar" do Android por ecrã.
+• Perfil corporativo e a rota `/corp` sem guarda (App.jsx:215, documentada como
+  deliberada). Precisa de decisão sua antes de eu lá tocar.
+
+================================================================================
+PLANO SUGERIDO PARA OS PRÓXIMOS MCs
+================================================================================
+MC88.42 — REPRODUZIR E CORRIGIR B1 (a navegação congelada).
+          É o único achado que deixa a app inutilizável. Começar por instrumentar
+          o `unhandledrejection` para capturar o motivo (hoje só regista
+          "Object"), e tentar reproduzir com navegações repetidas e abandono de
+          pedidos do chat (B2). Corrigir B2 pode ser a correção de B1 — ou não;
+          é hipótese, não plano.
+
+MC88.43 — UMA SÓ VERDADE PARA O ESTADO DA EDIÇÃO (B3 + B4).
+          Um cartão não pode dizer "Encerrada" e "EM BREVE". Provavelmente é uma
+          função de derivação de estado usada em dois sítios com entradas
+          diferentes. Alto impacto, baixo risco.
+
+MC88.44 — SUPORTE QUE RESPONDE (G1).
+          Decisão do operador: registar `desafiogut.com.br` ou corrigir o
+          regulamento.md para o endereço que funciona. A segunda hipótese é
+          imediata e não custa nada; a primeira é a certa a prazo. Enquanto não
+          for feito, o assistente manda gente para o vazio.
+
+MC88.45 — DIZER PORQUÊ (B5 + B6).
+          Explicar botões inativos, abrir o /mercado no modo que o utilizador
+          consegue usar, e tirar o "Sair" de dentro do cartão de lance.
+
+MC88.46 — LIMPEZA DE JARGÃO (B7 + G3 + G5 + B10).
+          Continuação directa do MC88.40, agora fora dos saldos.
+
+================================================================================
+EVIDÊNCIAS
+================================================================================
+  docs/MC88.41-FLUXOS.txt        mapa de fluxos e navegação
+  docs/MC88.41-BUGS.txt          bugs e incoerências, com o observado
+  docs/MC88.41-GUTO-ESFORCO.txt  teste de esforço completo ao assistente
+  Instrumentação (scratchpad): qa.mjs (controlador de navegação) ·
+    bateria.mjs + lote1/lote2.json · stress.mjs · semantica.mjs · erros.mjs
+  Capturas: w-2700ms.png, guto.png
+================================================================================

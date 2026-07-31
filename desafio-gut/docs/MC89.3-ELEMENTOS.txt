@@ -1,0 +1,141 @@
+================================================================================
+MC89.3 — SEGMENTO 1 · ELEMENTOS A REMOVER OU SUBSTITUIR
+================================================================================
+Data....: 2026-07-29
+Base....: MC89.3-DIAGNOSTICO.txt
+Código..: ZERO alterações (R1)
+
+Ordenado por IMPACTO, não pela ordem em que aparece no ecrã. Cada linha diz o que
+sai, o que entra e porquê — e o que NÃO se toca.
+
+================================================================================
+🔴 P0 — LEGIBILIDADE (hoje há texto que não se lê)
+================================================================================
+E-01  O painel não tem superfície
+      hoje    container raiz = <div style={{padding, color, display:flex}}>,
+              backgroundColor rgba(0,0,0,0) — medido
+      passa a superfície opaca navy: a classe que JÁ existe para isto,
+              `.gut-glass-standard .gut-glass--solid` (rgba(13,18,53,0.92)),
+              criada no MC25.7 pelo mesmo motivo no chat do GUTO
+      porquê  é a causa raiz da ilegibilidade. Reutilizar a classe existente em
+              vez de inventar um fundo novo mantém uma só linguagem de superfície
+              no produto e herda blur/border/shadow já afinados
+      ⚠️      NÃO usar branco nem cinzento claro (o briefing sugeria): a app é
+              navy #050818. Branco seria um corpo estranho e um flash a cada
+              abertura
+
+E-02  Ilustração de showroom + confetes + holofotes por baixo do conteúdo
+      hoje    BackgroundCanvas global (App.jsx:221) com
+              `fundo-loop-v3-mobile.webm` a REPRODUZIR
+      passa a fundo sólido navy nas rotas de administração
+      porquê  é o que torna o texto ilegível E é decodificação de vídeo contínua
+              num ecrã de leitura de números. Sai custo e sai ruído de uma vez
+
+E-03  Vinheta/brilho de atmosfera
+      hoje    AtmosphereFilter (-z-40) via AppLayout
+      passa a ausente em /admin
+      porquê  existe para dar "ambiente" ao leilão; num painel de trabalho só
+              baixa contraste nos cantos
+
+================================================================================
+🟡 P1 — MOBÍLIA QUE NÃO SERVE QUEM ADMINISTRA
+================================================================================
+E-04  Avatar/widget do GUTO flutuante
+      hoje    ChatbotWidget global (App.jsx:277), canto inferior direito
+      passa a ⚠️ DECISÃO DO OPERADOR — ver a nota no fim desta secção
+      porquê  o GUTO ADM agora responde a métricas (MC89.2), portanto o widget
+              tem utilidade real aqui. Mas ocupa o canto e é um mascote
+
+E-05  Rodapé legal "Privacidade · Termos · Suporte · Excluir conta · ©"
+      hoje    Layout.jsx:35, em todas as rotas do AppLayout
+      passa a ausente em /admin
+      porquê  é rodapé de consumidor (LGPD, exclusão de conta). Um administrador
+              não vai excluir a conta a partir do painel de administração
+
+E-06  Navegação inferior "Início · Lances · Carteira · Mais"
+      hoje    BottomNav.jsx, via AppLayout
+      passa a ⚠️ DECISÃO DO OPERADOR — ou fica (é a única saída do painel no
+              telemóvel), ou é substituída por um único "← Sair do painel"
+      porquê  são atalhos de consumo; mas remover sem alternativa deixa o ADM
+              sem forma de sair sem o botão físico de voltar
+
+================================================================================
+🟢 P2 — CHROME DO PRÓPRIO PAINEL (é aqui que o briefing começava)
+================================================================================
+E-07  Emojis no título e nos separadores
+      hoje    "⚙️ Painel Admin" · "📈 Visão Geral" · "🟡 Aprovações" ·
+              "📊 Cotas" · "👥 Admins"
+      passa a texto puro: "Painel Admin" · "Visão Geral" · "Aprovações" ·
+              "Cotas" · "Admins"
+      porquê  são decoração; e o 🟡 de "Aprovações" é pior do que decoração —
+              parece um indicador de estado quando é só um ícone
+      ⚠️      NÃO substituir por SVG. Trocar 5 emojis por 5 ícones vetoriais é
+              acrescentar assets e código para resolver nada: o texto sozinho
+              identifica os separadores
+
+E-08  Título em laranja de marca + fonte display
+      hoje    color #f5a623, fontFamily Orbitron (medido)
+      passa a cinzento-claro de texto (#e8f0fe) e a fonte do sistema
+      porquê  Orbitron é a fonte de identidade do leilão. Num painel, um título
+              em fonte de display grita sem informar
+
+E-09  Botão "Login Admin" em amarelo vivo
+      hoje    amarelo saturado, alto contraste
+      passa a botão neutro (a variante `secondary` do sistema já existente)
+      porquê  a cor de destaque deve ficar reservada para o que é destrutivo ou
+              irreversível — nos comandos do MC91, não num login
+
+E-10  Badges de estado com cor forte
+      hoje    StatusBadge (AdminPanel.jsx:86) e as pastilhas "🟢 Disponível" /
+              "🟡 Vendida" no separador Cotas
+      passa a texto com peso, e cor SÓ onde significa (vermelho = falha)
+      porquê  se tudo é colorido, a cor deixa de avisar. Vale para os avisos que
+              o MC91 vai acrescentar
+
+E-11  Separadores quebram para duas linhas no telemóvel
+      hoje    "Admins" cai sozinho para a segunda linha (visto na captura)
+      passa a uma linha com scroll horizontal, ou rótulos mais curtos
+      porquê  quatro separadores em duas linhas parecem dois grupos distintos
+
+================================================================================
+ESTILOS PROPOSTOS (todos já existentes no projeto — nada de paleta nova)
+================================================================================
+  superfície     rgba(13,18,53,0.92)  (.gut-glass--solid, MC25.7)
+  texto          #e8f0fe              (--color-gut-text)
+  rótulos        #94a3b8              (o cinzento já usado no painel)
+  títulos        #e8f0fe + peso, sem Orbitron
+  destaque       #f5a623 RESERVADO — só ação irreversível
+  erro           #ef4444              (já em uso)
+  fonte          a de sistema; Orbitron fica para as rotas de leilão
+  espaçamento    o que já existe; sem redesenho de grelha
+
+================================================================================
+O QUE NÃO SE TOCA — E É IMPORTANTE DIZÊ-LO
+================================================================================
+• Nenhuma funcionalidade. Zero botões removidos, zero campos, zero endpoints.
+  Isto é uma alteração de APRESENTAÇÃO (Pilar 3 · Agente de Segurança).
+• Os três separadores existentes (Aprovações, Cotas, Admins) mantêm o que fazem.
+• O Dashboard comum, o Corporativo e o Mercado ficam EXACTAMENTE como estão. A
+  atmosfera é a identidade do produto de consumo — sai do painel de trabalho, não
+  do produto.
+• `components/Confetti.jsx` não se toca: não é ele que aparece no /admin (só
+  MercadoLances e FimLeilaoOverlay).
+• A paleta global não muda. Não se acrescenta cor nenhuma ao design system.
+
+================================================================================
+⚠️ DUAS DECISÕES QUE SÃO DO OPERADOR, NÃO MINHAS
+================================================================================
+D-A  O GUTO fica no painel? (E-04)
+     A favor: desde o MC89.2 ele responde às métricas — é uma ferramenta de
+       trabalho, e perguntar é mais rápido do que navegar.
+     Contra: é um mascote a ocupar um canto de um ecrã de administração.
+     Recomendação: FICA, mas sem o avatar ilustrado — um botão discreto.
+
+D-B  A navegação inferior fica? (E-06)
+     Se sair, o ADM precisa de outra saída do painel no telemóvel.
+     Recomendação: SUBSTITUIR por um único "← Sair do painel" no cabeçalho, e
+       remover a barra de consumo.
+
+================================================================================
+FIM DO SEGMENTO 1
+================================================================================

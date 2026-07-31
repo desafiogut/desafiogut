@@ -1,0 +1,31 @@
+# MC89.14 — RELATÓRIO: Gestão de Usuários (Tela 2) — Fase 4 do MC89.5
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | Suítes: 342 backend, 40 frontend
+
+## 1. MIGRAÇÕES
+- `usuarios_bloqueio`: tabela com índice parcial UNIQUE WHERE desbloqueado_em IS NULL
+- `vw_utilizadores`: UNION de cotas + saldo_rs + creditos, 7 utilizadores únicos
+  Filtra apenas endereços Ethereum (0x…), exclui cnpj:…
+
+## 2. ENDPOINTS (4 novos)
+- GET /admin-users: listagem paginada por cursor, busca textual (endereço, e-mail, nome)
+  Gate: operador+. Cache: 30s.
+- GET /admin-user: perfil com saldo R$, créditos, débitos, bloqueio
+  (!) Saldo on-chain em separado (D2). Gate: operador+.
+- POST /admin-user-bloqueio: bloqueia/desbloqueia com justificativa
+  (!) O bloqueio regista mas não impede sessões/pagamentos — MC próprio.
+  Gate: admin+. Log: fail-CLOSED.
+- POST /admin-user-ajuste: ajuste de saldo (crédito/débito com fonte='ajuste-admin')
+  UPSERT em saldo_rs. Idempotente por operacao_id (UUID).
+  Gate: super-admin. Log: fail-CLOSED.
+
+## 3. FRONTEND
+- GestaoUsuarios.jsx: tabela com endereço truncado → link para perfil,
+  badges de fonte (cota/saldo_rs/credito), busca textual, paginação
+  Rótulo honesto: "utilizadores COM ATIVIDADE" (D1)
+- PerfilUsuario.jsx: /admin/usuarios/:endereco — identificação, saldo,
+  créditos, ações (bloqueio com justificativa, ajuste de saldo)
+- Usuários marcado como pronto no adminNav
+
+## 4. PRÓXIMO PASSO
+MC89.15 — Fase 5: Gestão Financeira (Tela 3). A fonte já está pronta
+(saldo_rs_creditos + saldo_rs_debitos) — é maioritariamente leitura.

@@ -72,7 +72,7 @@ Este playbook cobre os 4 cenários de falha mais prováveis do DesafioGUT em pro
 
 - **Interno**: Slack `#incidentes` (criar se ainda não existe) — registrar timeline em thread.
 - **Externo**: Twitter/X `@desafiogut` + banner no site (`/index.html` → adicionar `<div>` no topo via deploy emergencial).
-- **Suporte usuário**: e-mail de coordenação respondendo `suporte@desafiogut.com.br`.
+- **Suporte usuário**: e-mail de coordenação respondendo `desafiogut01@gmail.com`.
 
 ### 3.3 Steps iniciais (primeiros 10 min)
 
@@ -151,7 +151,7 @@ Este playbook cobre os 4 cenários de falha mais prováveis do DesafioGUT em pro
 | Papel | Como acionar |
 |---|---|
 | CTO/Coordenação | (preencher quando time crescer) |
-| Suporte usuário | `suporte@desafiogut.com.br` |
+| Suporte usuário | `desafiogut01@gmail.com` |
 | Oncall do dia | Slack `#incidentes` (ping `@oncall`) |
 
 > ⚠️ **Manter atualizado**: revisar contatos a cada onboarding/offboarding de membro do time.

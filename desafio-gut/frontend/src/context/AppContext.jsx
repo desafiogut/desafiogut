@@ -69,6 +69,58 @@ const LS_KEYS_LEGADO_MOCK = [
   "fichasProgramadas",
 ];
 
+// MC88.34 (P0) — cache do último saldo conhecido, para pintar o Dashboard sem
+// esperar pela cadeia serial de autenticação (ver bloco "SALDO OTIMISTA").
+// Guarda SEMPRE o endereço a que os valores pertencem, para que a guarda de
+// coerência possa descartá-los se a sessão for outra.
+const LS_SALDO_CACHE     = "gut_saldo_cache";
+const SALDO_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 h — além disso, mostrar é pior que não mostrar
+
+// Endereço da sessão Privy lido de forma SÍNCRONA, para validar o cache ANTES
+// do primeiro paint. `privy:connections` não é credencial — é o endereço
+// público da carteira — portanto lê-lo não infringe a regra de não manusear
+// segredos (os tokens ficam noutras chaves e não são tocados aqui).
+function enderecoSessaoSincrono() {
+  try {
+    const raw = localStorage.getItem("privy:connections");
+    if (!raw) return null;
+    const m = raw.match(/0x[a-fA-F0-9]{40}/);
+    return m ? m[0].toLowerCase() : null;
+  } catch { return null; }
+}
+
+function lerSaldoCache() {
+  try {
+    const raw = localStorage.getItem(LS_SALDO_CACHE);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if (!c?.endereco) return null;
+    if (!Number.isFinite(c?.em) || Date.now() - c.em > SALDO_CACHE_TTL_MS) return null;
+    // MC88.34 — a guarda de coerência por si só NÃO bastava: um teste por
+    // mutação mostrou que um cache de outro endereço chegava a ser PINTADO aos
+    // 704 ms e só desaparecia quando o `address` resolvia (~3,4 s) — uma
+    // janela de ~2,7 s a mostrar o saldo alheio. Validar aqui, de forma
+    // síncrona, elimina a janela: se a sessão em disco não for do mesmo
+    // endereço, o cache nem chega a entrar no estado inicial.
+    const sessao = enderecoSessaoSincrono();
+    if (!sessao || String(c.endereco).toLowerCase() !== sessao) return null;
+    return c;
+  } catch { return null; }
+}
+
+function gravarSaldoCache(endereco, patch) {
+  if (!endereco) return;
+  try {
+    const atual = lerSaldoCache();
+    const base  = atual && atual.endereco === endereco ? atual : { endereco };
+    localStorage.setItem(LS_SALDO_CACHE, JSON.stringify({ ...base, ...patch, endereco, em: Date.now() }));
+  } catch { /* storage cheio ou indisponível — o cache é best-effort */ }
+}
+
+function limparSaldoCache() {
+  try { localStorage.removeItem(LS_SALDO_CACHE); } catch { /* idem */ }
+}
+
 // ─── Context ─────────────────────────────────────────────────────────────────
 const AppContext = createContext(null);
 
@@ -156,15 +208,36 @@ export function AppProvider({ children }) {
     }
   }, [tipoLeilao]);
 
+  // MC88.34 (P0) — SALDO OTIMISTA.
+  // O MC88.33 mediu: o ecrã pinta aos 536 ms mas o saldo real só aparece aos
+  // 5375 ms, porque a cadeia é serial (Privy → /wallets → auth-user →
+  // saldo-rs). São ~4 s a olhar para um saldo vazio. Aqui pintamos o último
+  // valor conhecido de imediato e reconciliamos quando a cadeia responder.
+  //
+  // O status entra como "stale" (e NÃO "ok"): a máquina de estados já previa
+  // esse valor, portanto a UI que distingue fresco de obsoleto continua a
+  // funcionar sem alterações.
+  //
+  // SEGURANÇA (R4): o valor em cache é de um endereço concreto, mas no arranque
+  // o `address` só existe aos ~3,4 s. Para nunca mostrar o saldo de A a B:
+  //   1. gravamos sempre o endereço junto do valor;
+  //   2. assim que o `address` real chega, um efeito compara e descarta se
+  //      diferir (ver "guarda de coerência" mais abaixo);
+  //   3. o cache é apagado no logout, portanto um cache existente implica que
+  //      a sessão Privy nunca foi trocada neste aparelho.
+  const [saldoCacheInicial] = useState(lerSaldoCache);
+
   // Saldo on-chain — saldoSenhas[address] no contrato.
   // null = "ainda não consultado" (distinto de 0, que é estado on-chain válido).
-  const [saldoSenhas,       setSaldoSenhas]       = useState(null);
-  const [saldoSenhasStatus, setSaldoSenhasStatus] = useState("idle"); // idle | loading | ok | stale | error
+  const [saldoSenhas,       setSaldoSenhas]       = useState(saldoCacheInicial?.senhas ?? null);
+  const [saldoSenhasStatus, setSaldoSenhasStatus] = useState(
+    saldoCacheInicial?.senhas != null ? "stale" : "idle"); // idle | loading | ok | stale | error
 
   // Saldo R$ off-chain — blob `saldo-rs:${address}` (Frente B.9).
   // PIX aprovado = +R$. /comprar-senhas = -R$ +senhas. /lance-relampago = -R$.
-  const [saldoRsCentavos, setSaldoRsCentavos] = useState(null);
-  const [saldoRsStatus,   setSaldoRsStatus]   = useState("idle");
+  const [saldoRsCentavos, setSaldoRsCentavos] = useState(saldoCacheInicial?.centavos ?? null);
+  const [saldoRsStatus,   setSaldoRsStatus]   = useState(
+    saldoCacheInicial?.centavos != null ? "stale" : "idle");
 
   // MC15.6 ITEM 2 — Notificações proativas do GUTO (polling adaptativo).
   // notificacoes: array de eventos vindos de GET /notificacoes (admin-only).
@@ -264,11 +337,25 @@ export function AppProvider({ children }) {
   // fica em Netlify Blobs via cotas.mjs (POST action=register-corporativo).
   useEffect(() => {
     if (!address) { setCotaCorporativa(null); setTipoCarregando(false); return; }
+    // MC88.34 (P1) — espera pelo authToken antes de perguntar.
+    // O MC88.33 mediu 6 chamadas a /cotas no arranque, quase todas 401/404: o
+    // efeito corria uma vez SEM token (as 3 tentativas respondiam 401 por
+    // desenho, ver MC87 P0-1) e voltava a correr quando o token chegava. A
+    // primeira ronda nunca podia ter sucesso, portanto era trabalho garantido
+    // a perder — 3 pedidos no pior momento do arranque.
+    // NÃO colapsamos as 3 tentativas numa só: cobrem identidades diferentes
+    // (MC15.2 Google/Apple, MC15.3 cadastro recente) e uni-las perderia a
+    // deteção de perfil corporativo nesses casos.
+    if (!authToken) return;   // `tipoCarregando` fica true; re-corre com o token
     setTipoCarregando(true);
     let cancel = false;
     const buscarCota = async () => {
       try {
-        const respAddr = await apiGet(`cotas?cliente_id=${encodeURIComponent(address)}`);
+        // MC87 (P0-1) — /cotas GET deixou de ser anónimo nos ramos que devolvem
+        // PII. Passamos o user-session JWT; enquanto ele não existe as consultas
+        // respondem 401, o perfil fica nulo e este efeito RE-CORRE assim que
+        // `authToken` chega (está nas deps) — transitório, nunca um bloqueio.
+        const respAddr = await apiGet(`cotas?cliente_id=${encodeURIComponent(address)}`, { token: authToken });
         let data = respAddr.ok ? respAddr.data : null;
         // MC15.2 — fallback por email cobre QUALQUER método de login.
         // O email do utilizador pode vir de email-OTP, Google ou Apple; antes
@@ -277,7 +364,7 @@ export function AppProvider({ children }) {
         const emailLogin =
           user?.email?.address || user?.google?.email || user?.apple?.email || null;
         if (!data && emailLogin) {
-          const respEmail = await apiGet(`cotas?email=${encodeURIComponent(emailLogin)}`);
+          const respEmail = await apiGet(`cotas?email=${encodeURIComponent(emailLogin)}`, { token: authToken });
           if (respEmail.ok) data = respEmail.data;
         }
         // MC15.3 — fallback final: email do cadastro recém-feito em
@@ -287,7 +374,7 @@ export function AppProvider({ children }) {
           let emailCadastro = null;
           try { emailCadastro = sessionStorage.getItem("gut_corp_recem_cadastrado"); } catch {}
           if (emailCadastro && emailCadastro !== emailLogin) {
-            const respCad = await apiGet(`cotas?email=${encodeURIComponent(emailCadastro)}`);
+            const respCad = await apiGet(`cotas?email=${encodeURIComponent(emailCadastro)}`, { token: authToken });
             if (respCad.ok) data = respCad.data;
           }
         }
@@ -305,10 +392,47 @@ export function AppProvider({ children }) {
     };
     buscarCota();
     return () => { cancel = true; };
-  }, [address, user?.email?.address, user?.google?.email, user?.apple?.email]);
+  }, [address, authToken, user?.email?.address, user?.google?.email, user?.apple?.email]);
 
   // MC12.2 — tipoUsuario derivado do blob cotas (não de customMetadata).
   const tipoUsuario = cotaCorporativa?.tipo === "corporativo" ? "corporativo" : "comum";
+
+  // MC88.42 — TIPO PROVÁVEL (abrir o lojista direto no painel dele).
+  //
+  // PROBLEMA MEDIDO no aparelho, com a sessão corporativa real: o lojista via o
+  // Dashboard COMUM durante 9012 / 3994 / 3873 ms (mediana 3994) antes de ser
+  // redirecionado para /corporativo. Não é um piscar de estilo — o corporativo
+  // é um lojista anunciante que pagou entre R$ 2.640 e R$ 18.000 por uma cota,
+  // e o que lhe aparecia era o dashboard de leilão: KPIs de lances, saldo de
+  // senhas, "Ir para o Mercado". Outro produto.
+  //
+  // CAUSA: a linha acima colapsa TRÊS situações em DUAS — "sei que é
+  // corporativo", "sei que é comum" e "AINDA NÃO SEI" (cotaCorporativa é null
+  // no arranque). A terceira devolvia "comum", que é uma afirmação falsa.
+  //
+  // ⚠️ PORQUE É QUE ISTO NÃO É COMO O `pareceAutenticado` DO MC88.38.
+  // Ali o palpite escolhia TEXTO; aqui influencia uma GUARDA DE ROTA, que é
+  // autorização. Por decisão do operador seguiu-se a variante mais conservadora
+  // das três em cima da mesa: o palpite SÓ é usado se a última sessão
+  // CONFIRMADA neste MESMO endereço tiver sido corporativa. Um utilizador comum
+  // nunca terá `tipoConfirmado` no cache, portanto NUNCA vê o painel do
+  // lojista, nem por um instante — nem sequer com o cache manipulado, porque
+  // `lerSaldoCache()` valida o endereço contra `privy:connections` de forma
+  // síncrona antes do primeiro paint (guarda do MC88.34).
+  //
+  // O primeiro login de sempre de um lojista continua a passar pelo comum: aí
+  // não há nada em cache e adivinhar seria inventar.
+  const tipoOtimista = cotaCorporativa == null && saldoCacheInicial?.tipoConfirmado === "corporativo"
+    ? "corporativo"
+    : null;
+  const tipoProvavel = tipoUsuario === "corporativo" ? "corporativo" : (tipoOtimista ?? tipoUsuario);
+
+  // Grava o tipo assim que ele é CONFIRMADO (e apaga o palpite quando deixa de
+  // ser corporativo, para um ex-lojista não ficar preso ao painel antigo).
+  useEffect(() => {
+    if (!address || cotaCorporativa == null) return;
+    gravarSaldoCache(address, { tipoConfirmado: tipoUsuario === "corporativo" ? "corporativo" : null });
+  }, [address, cotaCorporativa, tipoUsuario]);
 
   // Atualiza cotaCorporativa em memória após auto-cadastro (SejaNossoParceiro)
   // sem aguardar novo fetch do servidor.
@@ -344,7 +468,47 @@ export function AppProvider({ children }) {
   const addressCorporativo = corporativoWallet?.address ?? null;
 
   const isConnected = authenticated && Boolean(address);
-  const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || (tipoUsuario === "corporativo" ? cotaCorporativa?.empresa : null) || null;
+  const userLabelReal = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || (tipoUsuario === "corporativo" ? cotaCorporativa?.empresa : null) || null;
+
+  // MC88.37 — SESSÃO OTIMISTA (abrir direto no ecrã autenticado).
+  //
+  // PROBLEMA MEDIDO: durante o restauro do Privy (~1,6 s no APK) `ready` e
+  // `authenticated` são ambos false, logo `isConnected` é false e o Dashboard
+  // cai no ramo "Faça login para participar" — a um utilizador JÁ autenticado,
+  // e com o saldo dele próprio pintado ao lado pelo saldo otimista do MC88.34.
+  // O ecrã contradizia-se a si mesmo durante 1,6 s.
+  //
+  // `isConnected` significa "confirmado". Falta o terceiro estado: "ainda a
+  // restaurar, mas há sessão em disco". É o que `pareceAutenticado` exprime.
+  //
+  // ⚠️ NÃO substitui `isConnected` em lado nenhum. `isConnected` continua a ser
+  // a única fonte para HABILITAR ações (lance, compra, assinatura).
+  // `pareceAutenticado` serve APENAS para escolher o texto que se mostra.
+  //
+  // SEGURANÇA (R4): o rótulo é dado pessoal. Vem do MESMO cache que o saldo
+  // otimista, que `lerSaldoCache()` valida de forma SÍNCRONA contra o endereço
+  // em `privy:connections` antes do primeiro paint — a guarda que o MC88.34
+  // teve de acrescentar depois de um teste por mutação mostrar um saldo alheio
+  // pintado durante 2,7 s. Se a sessão em disco for de outra conta, o cache não
+  // entra no estado inicial e não há rótulo nem sessão otimista.
+  // ⚠️ A condição NÃO pode ser `!ready`. Medido no aparelho: `ready` fica true
+  // ANTES de `address` resolver, e nessa fresta (4718 → 5601 ms) `sessaoOtimista`
+  // desligava-se sem que `isConnected` já tivesse ligado — o cabeçalho VOLTAVA
+  // ATRÁS para "Bem-vindo ao DesafioGUT!" depois de já ter dito "Olá". Trocava
+  // uma contradição por um piscar, que é pior.
+  //
+  // O otimismo só deve cair quando a resposta for DEFINITIVA e negativa, isto é,
+  // quando o Privy já respondeu (`ready`) E disse que não há sessão
+  // (`!authenticated`). Enquanto isso não acontecer, o cache manda.
+  const sessaoOtimista =
+    Boolean(saldoCacheInicial?.endereco) && !(ready && !authenticated);
+  const pareceAutenticado = isConnected || sessaoOtimista;
+  const userLabel = userLabelReal || (sessaoOtimista ? (saldoCacheInicial?.label ?? null) : null);
+
+  // Persiste o rótulo no mesmo registo do saldo (mesma chave, mesma guarda).
+  useEffect(() => {
+    if (address && userLabelReal) gravarSaldoCache(address, { label: userLabelReal });
+  }, [address, userLabelReal]);
 
   const lancesExibidos = tipoLeilao === "flash" ? lancesFlash : lances;
 
@@ -396,10 +560,26 @@ export function AppProvider({ children }) {
     setLightningActive(false);
   }, [tipoLeilao]);
 
-  // Polling 3s de lances flash do blob (cross-user em tempo real).
+  // Polling de lances flash do blob (cross-user em tempo real).
+  //
+  // MC88.31 (Achado 5 do MC88.30) — era 3s fixos, ou seja 20 pedidos/min mesmo
+  // com a edição fechada ("EM BREVE / Aguardando abertura"), que foi o estado
+  // medido. Agora a cadência é derivada do prazo: 3s enquanto a edição corre
+  // (comportamento inalterado no momento que importa) e 15s quando não há
+  // nada a acontecer → 20/min cai para 4/min em repouso.
+  //
+  // Usa setTimeout recursivo em vez de setInterval de propósito: o atraso é
+  // recalculado a cada ciclo, portanto a cadência acelera sozinha quando a
+  // edição abre e abranda quando o prazo passa, sem pôr `prazoFlash` nas
+  // dependências (o que reiniciaria o polling a cada actualização do prazo).
   useEffect(() => {
     if (tipoLeilao !== "flash") return;
     let cancelado = false;
+    let id = null;
+    // Reaproveita prazoNotifRef (já mantém o prazo do tipo CORRENTE, atualizado
+    // sem re-criar timers) — a mesma razão pela qual foi criado no MC15.6.
+    const emCurso = () =>
+      Number(prazoNotifRef.current) > Math.floor(Date.now() / 1000);
     const poll = async () => {
       if (cancelado) return;
       try {
@@ -407,10 +587,10 @@ export function AppProvider({ children }) {
         if (!ok || cancelado) return;
         if (!cancelado) setLancesFlash(data.lances || []);
       } catch {}
+      if (!cancelado) id = setTimeout(poll, emCurso() ? 3000 : 15000);
     };
     poll();
-    const id = setInterval(poll, 3000);
-    return () => { cancelado = true; clearInterval(id); };
+    return () => { cancelado = true; if (id) clearTimeout(id); };
   }, [tipoLeilao]);
 
   // Listener on-chain do evento LanceDado — atualiza tabela em tempo real.
@@ -433,11 +613,38 @@ export function AppProvider({ children }) {
     return unsubscribe;
   }, []);
 
+  // MC88.34 (P0) — GUARDA DE COERÊNCIA do saldo otimista.
+  // O valor em cache foi pintado antes de sabermos quem é o utilizador (o
+  // `address` só chega aos ~3,4 s). Aqui, no instante em que ele chega:
+  //   • se pertence a outra conta → descarta já o que está no ecrã;
+  //   • no logout (address volta a null DEPOIS de ter existido) → apaga o
+  //     cache, para que a próxima sessão nunca herde o saldo desta.
+  // O ref distingue "ainda não carregou" de "fez logout" — sem ele, o null do
+  // arranque apagaria o cache em todos os arranques, anulando a otimização.
+  const jaTeveEnderecoRef = useRef(false);
+  useEffect(() => {
+    if (address) {
+      jaTeveEnderecoRef.current = true;
+      if (saldoCacheInicial && saldoCacheInicial.endereco !== address) {
+        limparSaldoCache();
+        setSaldoSenhas(null);    setSaldoSenhasStatus("idle");
+        setSaldoRsCentavos(null); setSaldoRsStatus("idle");
+      }
+      return;
+    }
+    if (jaTeveEnderecoRef.current) limparSaldoCache();
+  }, [address, saldoCacheInicial]);
+
   // ── Saldo on-chain: refetch + listener + polling guardião ───────────────
   const refetchSaldo = useCallback(async () => {
     if (!address) {
-      setSaldoSenhas(null);
-      setSaldoSenhasStatus("idle");
+      // MC88.34 (P0) — no ARRANQUE o address ainda não existe. Limpar aqui
+      // apagaria o saldo otimista no primeiro render e anularia a otimização.
+      // Só se limpa quando já houve endereço, isto é, num logout real.
+      if (jaTeveEnderecoRef.current) {
+        setSaldoSenhas(null);
+        setSaldoSenhasStatus("idle");
+      }
       return;
     }
     setSaldoSenhasStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
@@ -445,6 +652,7 @@ export function AppProvider({ children }) {
       const valor = await getSaldoSenhasOnChain(address);
       setSaldoSenhas(valor);
       setSaldoSenhasStatus("ok");
+      gravarSaldoCache(address, { senhas: valor });   // MC88.34 (P0)
     } catch (err) {
       console.warn("[GUT-DEBUG] refetchSaldo falhou", {
         address, message: err?.message, name: err?.name,
@@ -518,8 +726,31 @@ export function AppProvider({ children }) {
   // ── Saldo R$ off-chain: polling 5s (gated em authToken para anti-IDOR) ──
   const refetchSaldoRs = useCallback(async () => {
     if (!address || !authToken) {
-      setSaldoRsCentavos(null);
-      setSaldoRsStatus("idle");
+      // MC88.39 — o `jaTeveEnderecoRef` sozinho NÃO chega aqui, e é por isso
+      // que o saldo em R$ piscava enquanto o das senhas não.
+      //
+      // O ref (MC88.34) distingue duas situações — "ainda não carregou" e "fez
+      // logout" — mas neste ramo existem TRÊS:
+      //   (a) arranque, sem endereço            → não limpar
+      //   (b) arranque, com endereço sem token  → NÃO limpar   ← faltava
+      //   (c) logout real, endereço desapareceu → limpar
+      //
+      // O ref é ligado no instante em que o `address` chega, e no arranque o
+      // `address` chega ANTES do `authToken` (obtido num pedido próprio, umas
+      // centenas de ms depois). Nessa janela a condição acima era verdadeira
+      // POR CAUSA DO TOKEN, mas o ref já estava true POR CAUSA DO ENDEREÇO —
+      // e o caso (b) era lido como (c). Medido: o valor correto era pintado
+      // aos ~2,0 s, apagado aos ~3,3–4,4 s, e repintado igual aos ~5,2–6,6 s.
+      //
+      // `refetchSaldo` (senhas) nunca sofreu disto porque só depende do
+      // `address`: assim que ele existe, o seu ramo de limpeza é inalcançável.
+      //
+      // Passa a limpar-se APENAS quando o ENDEREÇO desaparece depois de ter
+      // existido, que é a definição de logout.
+      if (!address && jaTeveEnderecoRef.current) {
+        setSaldoRsCentavos(null);
+        setSaldoRsStatus("idle");
+      }
       return;
     }
     setSaldoRsStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
@@ -543,8 +774,10 @@ export function AppProvider({ children }) {
       }
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = resp.data;
-      setSaldoRsCentavos(Number(data?.saldoCentavos ?? 0));
+      const centavos = Number(data?.saldoCentavos ?? 0);
+      setSaldoRsCentavos(centavos);
       setSaldoRsStatus("ok");
+      gravarSaldoCache(address, { centavos });   // MC88.34 (P0)
     } catch (err) {
       console.warn("[GUT-DEBUG] refetchSaldoRs falhou", { address, message: err?.message });
       setSaldoRsStatus((prev) => (prev === "ok" ? "stale" : "error"));
@@ -715,7 +948,9 @@ export function AppProvider({ children }) {
           if (timeoutAnimRef.current) clearTimeout(timeoutAnimRef.current);
           timeoutAnimRef.current = setTimeout(() => {
             setLightningActive(false);
-            setShowOverlay(true);
+            // MC63/64: animação de vencedor desabilitada no front-end (não dispara
+            // automaticamente ao encerrar). Encerrado/lightning permanecem ativos.
+            // setShowOverlay(true);
             timeoutAnimRef.current = null;
           }, 1200);
         }
@@ -763,9 +998,15 @@ export function AppProvider({ children }) {
     try {
       // MC15.5 — repassa opções ao login() (ex.: prefill de email do cadastro
       // corporativo) só quando vier um objeto de configuração válido. Os vários
-      // onClick={abrirModal} passam um MouseEvent → login() sem args.
-      const loginOpts = opts && (opts.prefill || opts.loginMethods) ? opts : undefined;
-      const result = loginOpts ? login(loginOpts) : login();
+      // onClick={abrirModal} passam um MouseEvent → sem opções de config.
+      // MC62 — modal PÚBLICO restrito a Google: quando o chamador não define
+      // loginMethods, aplica ["google"] (login({loginMethods}) sobrescreve o
+      // config global — Privy v3, verificado). Overrides explícitos (ex.: prefill
+      // ou loginMethods do corporativo) são preservados. NÃO afeta o email-OTP
+      // headless (SejaNossoParceiro usa sendCode direto, sem abrirModal).
+      const base = opts && (opts.prefill || opts.loginMethods) ? { ...opts } : {};
+      if (!base.loginMethods) base.loginMethods = ["google"];
+      const result = login(base);
       if (result && typeof result.then === "function") {
         result
           .then(() => console.info("[GUT-DEBUG] login() resolveu"))
@@ -869,6 +1110,13 @@ export function AppProvider({ children }) {
     authToken,
     obterAuthToken,
     address, privyWallet, isConnected, userLabel, ready, authenticated, user,
+    // MC88.37 — só para escolher o TEXTO mostrado durante o restauro do Privy.
+    // Nunca usar para habilitar ações: para isso continua a valer isConnected.
+    pareceAutenticado,
+    // MC88.42 — tipo com palpite otimista, só para lojista já confirmado antes
+    // neste endereço. Serve para ENCAMINHAR cedo; `tipoUsuario` continua a ser
+    // a verdade confirmada e é ele que decide expulsar de uma rota.
+    tipoProvavel,
     vencedor,
     abrirModal,
     desconectar,

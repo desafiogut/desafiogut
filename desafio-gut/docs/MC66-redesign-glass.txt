@@ -1,0 +1,102 @@
+================================================================================
+MC66 — RELATÓRIO: REDESIGN COMPLETO DO GLASS (DIREÇÃO C — HERO "EM BREVE")
+================================================================================
+Data......: 2026-07-09
+Branch....: feat/mc66-execucao-redesign-glass  (a partir de feat/mc65-redesign-glass)
+Commit....: (código) redesign do Glass — Hero EM BREVE (Direção C)
+Plano.....: Desktop\MC65-PLANO-REDESIGN-GLASS.txt (Direção C travada pelo operador)
+Status....: ✅ código + build + runtime OK · ⏳ validação visual MCP PENDENTE (MCP de
+            browser desconectado nesta sessão) · ⏸️ deploy em produção pendente (operador)
+
+--------------------------------------------------------------------------------
+O QUE FOI FEITO
+--------------------------------------------------------------------------------
+1) CRONÔMETRO VIVO REMOVIDO (código morto sob o "EM BREVE" permanente)
+   MercadoLances.jsx: removidos o anel conic-gradient, a barra de progresso, a
+   tarja overlay (MC64) e TODA a derivação que só os alimentava — timerDisplay,
+   timerCor, timerPctDeg, timerUrgente, timerSize, tempoRestanteEdicao, duracao,
+   ratio, edicaoAtivaSel, tipoEdicaoSelecionado, o <style> gut-timer-pulse — além
+   dos imports/h’ooks órfãos: useAppTimer, DURACAO, edicoes, lightningActive,
+   LABEL_LOGIN. Também apagados helpers mortos (saldoItemStyle/saldoLabelStyle/
+   saldoValueStyle/chipBtnStyle) que já não eram usados.
+   Resultado: MercadoLances.jsx passou de monólito a compositor fino
+   (−315 / +28 linhas).
+
+2) HERO "EM BREVE" (Direção C) — components/glass/ComingSoonHero.jsx
+   Selo "Edição {EDICAO_ATIVA}" + título "EM BREVE" (Orbitron 800, laranja, tracking)
+   + linha "Menor lance único vence · Art. 8". Pulsação suave (gut-hero-pulse 3.2s)
+   DESATIVADA sob @media (prefers-reduced-motion: reduce). role="status" + aria-label.
+
+3) EXTRAÇÃO DE SUBCOMPONENTES — frontend/src/components/glass/
+   • GlassHeader.jsx       — compositor do vidro; hierarquia (1) identidade+auth,
+                             (2) HERO + seletor de modo, (3) rodapé legal fino.
+   • ComingSoonHero.jsx    — o herói "EM BREVE" (item 2).
+   • ModeSelector.jsx      — toggle Relâmpago/Programado; CORRIGE o roxo #a78bfa →
+                             tokens oficiais (flash=gold #ff9500, programado=primary
+                             #ff6b35); aria-pressed.
+   • AuctionStatusBar.jsx  — disclaimer CNPJ + status conectado/encerrado (rodapé).
+   • AuthArea.jsx          — movido de MercadoLances (sem mudança de comportamento).
+   • glassTokens.js        — objeto COR (fonte única compartilhada; dedup).
+   MercadoLances.jsx agora renderiza só <GlassHeader ... />.
+
+4) PENDÊNCIAS VISUAIS CORRIGIDAS (do MC65)
+   [A] <div/> espaçador vazio da Secção 2 → removido (layout do GlassHeader).
+   [B] roxo #a78bfa do "Programado" → token oficial (ModeSelector).
+   [E] disclaimer legal → rebaixado a rodapé fino (AuctionStatusBar).
+
+INTOCADO (disciplina de escopo)
+   • Overlays dormentes OverlayVencedor + CountdownOverlay (animação de vencedor
+     segue DESABILITADA desde o MC64 — coerente com EM BREVE permanente).
+   • CardLance, TabelaLances, LanceStatusBadge, painel de segurança, footer, banner.
+   • Dashboard.jsx (tem cronômetro PRÓPRIO, implementação separada) — não afetado.
+   • AppContext / lógica de negócio — não tocada.
+
+--------------------------------------------------------------------------------
+VERIFICATION-LOOP
+--------------------------------------------------------------------------------
+• node --check: N/A para .jsx (Node trata como ESM sem transform JSX) — checagem
+  autoritativa é o build/transform Vite.
+• npm run build: ✅ VERDE — "✓ built in 7.38s" (NODE_OPTIONS=--max-old-space-size=8192;
+  avisos INVALID_ANNOTATION/PURE são de node_modules, não do código MC66).
+  → o build do Rollup resolve TODOS os imports do novo grafo de componentes.
+• Runtime (dev server Vite): os 6 módulos glass + MercadoLances transformam com
+  HTTP 200 e JS válido (sem erro de import/JSX):
+    GlassHeader, ComingSoonHero, ModeSelector, AuctionStatusBar, AuthArea, glassTokens.
+• Diff: apenas MercadoLances.jsx (−315/+28) + 5 novos arquivos em components/glass/.
+
+--------------------------------------------------------------------------------
+⏳ VALIDAÇÃO VISUAL MCP (375px + 1440px) — PENDENTE (bloqueada nesta sessão)
+--------------------------------------------------------------------------------
+Os servidores MCP de browser (chrome-devtools E claude-eyes) DESCONECTARAM durante
+esta sessão; ToolSearch não os encontra mais. Sem eles NÃO é possível capturar os
+screenshots 375/1440 exigidos por R4. Isto NÃO foi validado visualmente e NÃO deve
+ser reportado como aprovado.
+COMO CONCLUIR (quando o MCP de browser voltar OU manualmente pelo operador):
+  cd desafio-gut/frontend && npm run dev   → abrir http://localhost:PORT/mercado
+  (passar o gate de 4 checkboxes) e conferir em 1440px e 375px:
+    ✔ Hero "EM BREVE" centralizado e legível; selo "Edição R-1" visível.
+    ✔ Seletor de modo Relâmpago/Programado (sem roxo; laranja/gold on-palette).
+    ✔ NENHUM cronômetro/anel; NENHUM overlay de vencedor.
+    ✔ Pulsação suave (ou ausente sob prefers-reduced-motion).
+    ✔ Rodapé legal fino; sem regressão de login/auth.
+  Salvar screenshots em: Desktop\GUTO-ANIMADO GLASS DASHBOARD\validacao-mc66\
+
+--------------------------------------------------------------------------------
+⏸️ DEPLOY EM PRODUÇÃO — NÃO EXECUTADO PELO AGENTE (política MC62/64/65)
+--------------------------------------------------------------------------------
+Prod vivo na MAINNET. Deploy é ação externa/irreversível → operador executa, com env
+mainnet correto, APÓS a validação visual acima:
+  cd desafio-gut/frontend && npm run build
+  netlify deploy --build --prod --message "feat(mc66): redesign do Glass (aba Lances) - Hero EM BREVE"
+
+--------------------------------------------------------------------------------
+VEREDITO
+--------------------------------------------------------------------------------
+✅ GLASS REDESIGNADO — Hero "EM BREVE" implementado (Direção C); cronômetro morto
+   removido; arquitetura modularizada em components/glass/; pendências [A][B][E]
+   corrigidas. Código verificado por build + runtime.
+⏳ RESSALVA HONESTA: a validação visual MCP 375/1440 (R4) NÃO foi executada porque o
+   MCP de browser caiu na sessão. Concluir antes do deploy.
+
+Rollback: `git revert <commit>` (ou checkout do MercadoLances.jsx + rm -r components/glass/).
+================================================================================

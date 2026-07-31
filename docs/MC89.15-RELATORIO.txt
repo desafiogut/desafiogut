@@ -1,0 +1,25 @@
+# MC89.15 — RELATÓRIO: Gestão Financeira (Fase 5 do MC89.5) — Diagnóstico + Plano
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | ZERO alterações de código
+
+## 1. DIAGNÓSTICO
+
+O livro-razão financeiro já existe e está completo:
+- 18 créditos (R$44,00 em 5 dias, 5 endereços)
+- 0 débitos (ninguém gastou créditos ainda)
+- 0 cotas vendidas
+- Cada entrada tem saldoAntes/saldoDepois — o registo é auditável por construção
+
+## 2. PLANO (execução no MC89.16, 1-2 sessões)
+
+Três endpoints: resumo financeiro (agregação + admin-series), transações
+(UNION créditos+débitos com cursor), relatório CSV (admin+, registado em log).
+
+Frontend: 4 cards de resumo + tabela paginada de transações + gráfico
+(reutiliza GraficoLinha do MC89.7) + exportação CSV. Tudo leitura — sem botões
+de mutação. Financeiro marcado como pronto.
+
+ALFA:financeiro, ALFA:transacoes, ALFA:relatorio.
+
+## 3. PRÓXIMO PASSO
+MC89.16 — execução. É a fase mais rápida: os dados já existem, os componentes
+já existem (GraficoLinha, StatusCard), o padrão de endpoints está estabelecido.

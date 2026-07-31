@@ -1,0 +1,123 @@
+MC88.39 — SEGMENTO 0: DIAGNÓSTICO DA JORNADA DO SALDO EM R$
+================================================================================
+Data: 2026-07-28 · Aparelho: fiem7xlvcufe855h (Xiaomi pissarropro, Android 36)
+APK medido: MC88.38 (commit c279a56) · Método: adb + CDP, amostragem a 60 ms
+
+
+JORNADA MEDIDA — 3 CORRIDAS A FRIO
+================================================================================
+  corrida   R$ 0.00 (antigo)   R$ —      R$ — ⏳    R$ 0.00 (fresco)
+  ---------------------------------------------------------------------
+     1           2200 ms       4415 ms   6028 ms      6631 ms
+     2           2186 ms       3812 ms   5376 ms      5915 ms
+     3           1926 ms       3282 ms   4667 ms      5216 ms
+
+  Janela a mostrar "—" ou "⏳": 2216 / 2103 / 1934 ms
+  O R$ só assenta 3,3–4,4 s DEPOIS de já ter sido pintado corretamente.
+
+Comparação com as SENHAS, no mesmo ecrã e nas mesmas corridas:
+
+     "12 (antigo)" @1926–2200 ms  →  "12" @3500–4576 ms
+     NUNCA passa por "—" nem por "⏳".
+
+Ou seja, os dois saldos partem do MESMO cache e do MESMO instante, mas só um
+sobrevive. O valor correto é pintado, apagado, e volta a ser pintado igual.
+
+
+⚠️ A PREMISSA DO PLANO ESTÁ PARCIALMENTE ERRADA
+================================================================================
+O plano do MC88.39 assume que "o MC88.34 não otimizou o saldo em R$" e pede
+para "estender o cache para o R$", garantindo que `centavos` seja persistido.
+
+Isso JÁ ESTÁ FEITO. Verificado no código:
+
+    AppContext.jsx:238  const [saldoRsCentavos, setSaldoRsCentavos] =
+                          useState(saldoCacheInicial?.centavos ?? null);
+    AppContext.jsx:239  const [saldoRsStatus, setSaldoRsStatus] =
+                          useState(saldoCacheInicial?.centavos != null ? "stale" : "idle");
+    AppContext.jsx:724  gravarSaldoCache(address, { centavos });   // MC88.34 (P0)
+
+E a medição confirma-o: "R$ 0.00 (antigo)" aparece aos 1926–2200 ms, no mesmo
+instante das senhas. O cache existe, é persistido, e é pintado.
+
+O defeito não é falta de cache. É o cache ser DESTRUÍDO 1,3–2,2 s depois.
+
+
+CAUSA RAIZ — AppContext.jsx:694-697
+================================================================================
+    const refetchSaldoRs = useCallback(async () => {
+      if (!address || !authToken) {
+        if (jaTeveEnderecoRef.current) {
+          setSaldoRsCentavos(null);      // ← aqui
+          setSaldoRsStatus("idle");      // ← e aqui
+        }
+        return;
+      }
+      setSaldoRsStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
+      ...
+
+O `jaTeveEnderecoRef` foi introduzido pelo MC88.34 com um significado preciso
+(AppContext.jsx:585): distinguir "ainda não carregou" de "fez logout". Ele é
+ligado a `true` no INSTANTE em que o `address` chega (linha 590).
+
+E é aqui que os dois caminhos divergem:
+
+  SENHAS  — `refetchSaldo` (linha 602) guarda apenas `if (!address)`.
+            Assim que o endereço existe, o ramo de limpeza fica inalcançável.
+            O saldo otimista sobrevive. ✅
+
+  R$      — `refetchSaldoRs` guarda `if (!address || !authToken)`.
+            No arranque o `address` chega ANTES do `authToken` (o token é
+            obtido num pedido próprio, ~200-400 ms depois). Nessa janela a
+            condição é verdadeira POR CAUSA DO TOKEN, mas o `jaTeveEnderecoRef`
+            já está `true` por causa do endereço — e o saldo é apagado. ❌
+
+O ref só distingue duas situações, e aqui existem TRÊS:
+    (a) arranque, sem endereço            → não limpar   (tratado)
+    (b) arranque, com endereço sem token  → NÃO DEVE limpar   ← não tratado
+    (c) logout real, endereço desapareceu → limpar       (tratado)
+
+O caso (b) é lido como (c). É um falso positivo de logout.
+
+EFEITO EM CADEIA DO "⏳": depois de o status ser posto a "idle", a linha 700
+(`prev === "ok" || prev === "stale" ? prev : "loading"`) deixa de encontrar
+"stale" e promove a "loading" — que o Dashboard desenha como "⏳". O relógio
+é consequência do apagamento, não uma fase independente.
+
+
+PORQUE É QUE O MC88.34 NÃO APANHOU ISTO
+================================================================================
+O MC88.34 acrescentou a guarda `jaTeveEnderecoRef` aos DOIS refetch de uma vez,
+com o mesmo raciocínio, e mediu o resultado pelo SALDO DE SENHAS — que era o
+alvo declarado do MC. Nas senhas a guarda é suficiente, porque `refetchSaldo`
+não depende do token. O R$ ficou com uma guarda que não cobre a sua própria
+pré-condição extra.
+
+O relatório do MC88.34 chega a dizer "os dois refetch deixaram de limpar o
+saldo quando address/authToken ainda não existem". Para o R$, isso só ficou
+verdadeiro para o `address` — não para o `authToken`.
+
+
+CORREÇÃO PROPOSTA (S1)
+================================================================================
+Não é preciso cache novo nem persistência nova. É preciso que o ramo de limpeza
+distinga o caso (b) do caso (c):
+
+    if (!address || !authToken) {
+      if (!address && jaTeveEnderecoRef.current) {
+        setSaldoRsCentavos(null);
+        setSaldoRsStatus("idle");
+      }
+      return;
+    }
+
+Só se limpa quando o ENDEREÇO desapareceu depois de ter existido — que é a
+definição de logout. Ter endereço e ainda não ter token é arranque normal.
+
+Com o status a manter-se "stale", a linha 700 preserva-o e o "⏳" desaparece
+por consequência, sem alteração própria.
+
+O S2 do plano (ajustes no Dashboard) deve ficar VAZIO: o Dashboard já desenha
+"stale" como "(antigo)" (Dashboard.jsx:73-79) e já lida com null. Se a correção
+do S1 estiver certa, não há nada a mudar na exibição — e mudá-la seria mascarar
+o defeito em vez de o corrigir.

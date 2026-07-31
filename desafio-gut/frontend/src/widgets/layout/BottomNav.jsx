@@ -158,10 +158,14 @@ export default function BottomNav() {
             aria-label="Mais opções"
             style={{
               position: "fixed", left: 0, right: 0, bottom: 0,
-              /* MC25.3 — .gut-glass-standard inline: navy/0.25 fixo, blur(24px)
-                 saturate(135%), border white/10, shadow + ring-inset white/5. */
-              background: "rgba(13,18,53,0.25)",
-              backdropFilter: "blur(24px) saturate(135%)", WebkitBackdropFilter: "blur(24px) saturate(135%)",
+              /* MC25.3 — .gut-glass-standard inline: border white/10, shadow +
+                 ring-inset white/5.
+                 MC82.1 — passa a SÓLIDO (navy 0.88, sem backdrop-filter), em
+                 paridade com o novo .gut-glass-standard de globals.css. Como
+                 este sheet replica o padrão inline, tem de acompanhá-lo — e
+                 sendo um painel grande sobreposto ao conteúdo, seria mais uma
+                 camada de backdrop concorrendo com o vidro do painel hero. */
+              background: "rgba(13,18,53,0.88)",
               borderTop: "1px solid rgba(255,255,255,0.10)",
               boxShadow: "0 -8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05)",
               maxHeight: "82vh", overflowY: "auto",

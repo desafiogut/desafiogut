@@ -1,0 +1,41 @@
+=== MC88.28 — VALIDAÇÃO DO FLUXO ASSÍNCRONO ===
+Início: 2026-07-26T23:01:29.347Z
+
+[2026-07-26T23:01:29.596Z] ✅ Monitor ativo, ligado ao WebView do APK.
+[2026-07-26T23:01:29.597Z] 
+[2026-07-26T23:01:29.598Z] 👉 OPERADOR: no app, vá a «Minha Carteira» e compre 1 senha (R$ 2,00).
+[2026-07-26T23:01:29.599Z] 
+[2026-07-26T23:01:29.608Z] 📍 UI antes — url=https://localhost/carteira senhas=7 reais=R$ 10.00
+[2026-07-26T23:01:29.610Z] ⏳ À espera da compra (até 8 min)...
+[2026-07-26T23:02:17.274Z] ❌ [console.error] Access to fetch at 'https://auth.privy.io/api/v1/analytics_events' from origin 'https://localhost' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+[2026-07-26T23:02:17.277Z] ❌ [console.error] Failed to load resource: net::ERR_FAILED
+[2026-07-26T23:02:20.385Z] 🌐 REQ POST https://silly-stardust-ca71bc.netlify.app/.netlify/functions/comprar-senhas
+[2026-07-26T23:02:20.387Z]    corpo: {"endereco":"0x5BAF46609dd9188E081cc78f70e61a6ea07f32B8","qtd":1}
+[2026-07-26T23:02:24.068Z] 📥 RES 202 em 3683ms
+[2026-07-26T23:02:24.071Z]    ✅ 202 — CAMINHO ASSÍNCRONO ATIVO
+[2026-07-26T23:02:24.091Z]    payload: {"ok":true,"status":"processando","assincrono":true,"endereco":"0x5baf46609dd9188e081cc78f70e61a6ea07f32b8","qtd":1,"valorBrutoCentavos":200,"valorCentavos":200,"txHash":"0x30eb0ab537e4b90a6df78dc0879f63a0684273182918fdc15500d59c13babcbb","contrato":"0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd","mensagem":"Crédito submetido on-chain; confirmação em processamento.","processadoEm":"2026-07-26T23:02:23.126Z"}
+[2026-07-26T23:02:24.400Z] 
+[2026-07-26T23:02:24.402Z] ⏳ A observar a confirmação durante 90s...
+[2026-07-26T23:02:26.746Z] 📝 [info] [GUT-DEBUG] saldoSenhas event Object
+[2026-07-26T23:03:20.958Z] 💰 SALDO CREDITADO aos 56555ms — 7 → 8 senhas
+[2026-07-26T23:03:24.642Z] ❌ [console.error] Access to fetch at 'https://auth.privy.io/api/v1/analytics_events' from origin 'https://localhost' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+[2026-07-26T23:03:24.645Z] ❌ [console.error] Failed to load resource: net::ERR_FAILED
+[2026-07-26T23:03:25.823Z] 🌐 REQ POST https://silly-stardust-ca71bc.netlify.app/.netlify/functions/comprar-senhas
+[2026-07-26T23:03:25.825Z]    corpo: {"endereco":"0x5BAF46609dd9188E081cc78f70e61a6ea07f32B8","qtd":1}
+[2026-07-26T23:03:27.213Z] 📥 RES 202 em 1390ms
+[2026-07-26T23:03:27.215Z]    ✅ 202 — CAMINHO ASSÍNCRONO ATIVO
+[2026-07-26T23:03:27.240Z]    payload: {"ok":true,"status":"processando","assincrono":true,"endereco":"0x5baf46609dd9188e081cc78f70e61a6ea07f32b8","qtd":1,"valorBrutoCentavos":200,"valorCentavos":200,"txHash":"0x2a84402c38a839f7c7c89c2ce4700f0e6ac3cb6f18f0f5e959c45dc22d598a96","contrato":"0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd","mensagem":"Crédito submetido on-chain; confirmação em processamento.","processadoEm":"2026-07-26T23:03:26.269Z"}
+[2026-07-26T23:03:43.861Z] 📝 [info] [GUT-DEBUG] saldoSenhas event Object
+[2026-07-26T23:03:55.232Z] 
+[2026-07-26T23:03:55.233Z] === RESUMO ===
+[2026-07-26T23:03:55.234Z] Status da resposta : 202
+[2026-07-26T23:03:55.235Z] Latência           : 1390ms  (alvo < 1000ms)
+[2026-07-26T23:03:55.236Z] txHash             : 0x2a84402c38a839f7c7c89c2ce4700f0e6ac3cb6f18f0f5e959c45dc22d598a96
+[2026-07-26T23:03:55.237Z] <CreditoStatus>    : ❌ nenhum estado observado
+[2026-07-26T23:03:55.239Z] Senhas antes/depois: 7 → null
+[2026-07-26T23:03:55.240Z] R$ antes/depois    : 10.00 → null
+[2026-07-26T23:03:55.242Z] Crédito visível em : 56555ms
+[2026-07-26T23:03:55.243Z] Caminho assíncrono : ✅ SIM
+[2026-07-26T23:03:55.244Z] Latência < 1s      : ❌ NÃO
+[2026-07-26T23:03:55.245Z] 
+📄 Log: C:/Users/Moltbot/Desktop/MC88.28-FLUXO.txt

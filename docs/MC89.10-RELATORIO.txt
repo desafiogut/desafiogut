@@ -1,0 +1,52 @@
+# MC89.10 — RELATÓRIO: Auditoria e Níveis de Permissão (Fase 2 do MC89.5)
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | ZERO alterações de código
+
+## 1. DIAGNÓSTICO
+
+O sistema tem autorização binária: um endereço ou é admin (pode tudo) ou não é
+(não pode nada). Treze endpoints usam `guardAdmin(req)` — todos com o mesmo
+gate, sem diferença de nível. O JWT admin transporta `{ endereco, tipo:
+"admin-access" }` e não tem claim de nível. A lista de admins no Blob é um array
+plano de strings.
+
+A auditoria existe num Blob com poda a 500 entradas (FIFO), escrita fail-soft
+silenciosa, sem IP, sem user-agent, sem justificativa, sem sucesso/falha. E
+nenhum endpoint HTTP escreve nele — só o GUTO. Um auditor que pergunte "quem
+aprovou esta cota em março" não encontra resposta.
+
+## 2. PLANO (execução no MC89.11)
+
+### admin_logs em Postgres (fail-CLOSED)
+A regra mais importante do MC89.5, e a que mais diverge do resto do sistema: a
+escrita é fail-CLOSED. O registo é escrito ANTES da ação; se falhar, a ação é
+recusada com 503. Uma linha com `sucesso=NULL` é o rasto de uma ação que
+rebentou a meio — informação que um log escrito só no fim perderia.
+
+O histórico do Blob "log-decisoes" é importado com `origem='log-decisoes'` para
+a auditoria não começar sem passado.
+
+### Níveis de permissão
+Três níveis: super-admin (tudo), admin (operação + leitura), operador (só
+leitura). A decisão de arquitetura mais importante: `getAdminNivel(endereco)` é
+função NOVA, separada de `getAdminAddresses()` — que é usada em 14 sítios e
+mexer-lhe no tipo de retorno partiria metade do sistema.
+
+O Blob admin-list passa de `["0x..."]` para `[{ endereco, nivel }]` com leitura
+retrocompatível. Em produção o Blob está vazio e a coordenação é a única admin —
+um erro aqui tranca o operador fora do painel sem recuperação a não ser deploy.
+Três testes obrigatórios: formato antigo, formato novo, Blob vazio.
+
+### Interface
+A Tela 5 (LogsAuditoria) sai de placeholder para funcional. A Tela 7
+(ConfiguracoesAdmins) ganha badges de nível. O ALFA ganha `ALFA:logs`.
+
+## 3. MATRIZ DE ENDPOINTS × NÍVEIS
+13 endpoints reclassificados. Destaques:
+- admin-stats/onchain/alerts/series: qualquer admin (inclui operador)
+- admin-aprovacao/cotas/edicoes: admin ou superior
+- admin-list POST: só super-admin
+- ALFA:panic: só super-admin (o kill switch é poder demais para um admin)
+
+## 4. PRÓXIMO PASSO
+MC89.11 — execução. Três segmentos: tabela admin_logs, níveis de permissão,
+adaptação de endpoints e frontend. 3-5 sessões.

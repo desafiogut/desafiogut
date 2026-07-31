@@ -1,0 +1,39 @@
+# MC89.13 — RELATÓRIO: Gestão de Usuários (Fase 4 do MC89.5) — Diagnóstico + Plano
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | ZERO alterações de código
+
+## 1. DIAGNÓSTICO
+
+A base de "utilizadores conhecidos" tem ~5-6 endereços únicos, distribuídos por
+3 tabelas: cotas (5 endereços ETH + 2 cnpj), saldo_rs (5), créditos (18). A
+tabela `lances` do Supabase está vazia — os lances vivem em Blobs ou no contrato.
+
+O e-mail existe para 3 das 7 cotas. O nome do cliente está em
+`cotas.payload->>'empresa'` (não é coluna própria). `cotas.endereco` está vazio
+em 7/7 — a carteira vive em `cliente_id`.
+
+Não existe sistema de presença, não existe `usuarios_bloqueio`, e os lances não
+são consolidáveis em SQL.
+
+## 2. PLANO (execução no MC89.14)
+
+### View vw_utilizadores
+UNION das 3 fontes, agrupada por `cliente_id`, filtrando apenas endereços
+Ethereum. VIEW simples (não materializada — 30 linhas não justificam).
+
+### Endpoints
+- GET /admin-users: listagem paginada com busca textual e filtro de data
+- GET /admin-user: perfil completo com saldo, créditos e débitos
+- POST /admin-user-bloqueio: bloqueio com tabela `usuarios_bloqueio`
+  ⚠️ sem gates a lerem-na, o bloqueio é só o registo (documentado no ecrã)
+- POST /admin-user-ajuste: ajuste de saldo com débito/crédito auditável
+
+### Interface
+Tabela com endereço truncado, nome (se disponível), atividade, fontes (badges)
+e menu de ações. Perfil em rota aninhada com saldo, histórico de créditos e
+botão para carregar saldo on-chain (endpoint separado — padrão D2 do MC89.5).
+
+### ALFA
+ALFA:usuarios, ALFA:usuario, ALFA:bloquear, ALFA:ajustar.
+
+## 3. PRÓXIMO PASSO
+MC89.14 — execução. 2-3 sessões. A mais cara das fases restantes.

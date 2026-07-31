@@ -1,0 +1,195 @@
+MC88.42 — SEGMENTO 0: DIAGNÓSTICO DA TRANSIÇÃO DO UTILIZADOR CORPORATIVO
+================================================================================
+Data: 2026-07-28 · APK MC88.40 (md5 4847952213518fc852e4374ea09dde6a)
+
+⚠️ ESTADO DESTE DIAGNÓSTICO: o mecanismo abaixo é DERIVADO do código e
+confirmado por consulta ao Supabase. NÃO foi observado no aparelho, porque
+observar exige a sessão CORPORATIVA e o OAuth do Privy não é automatizável por
+mim (registado desde o MC39.3.1). A confirmação ao vivo depende do operador —
+ver "O QUE FALTA" no fim.
+
+
+A CONTA CORPORATIVA EXISTE E É ENCONTRÁVEL — VERIFICADO
+================================================================================
+Consulta ao Supabase (produção), tabela `cotas`:
+
+    cliente_id 0x6ac980dc94…  ·  empresa "DesafioGUT"  ·  tipo "corporativo"
+                                 email des***@gmail.com
+
+O `cliente_id` É o endereço da carteira. O endpoint aceita
+`?cliente_id=0x…` e devolve essa cota (cotas.mjs, cabeçalho do ficheiro).
+Portanto a deteção do perfil corporativo FUNCIONA. O problema não é "não
+reconhece" — é QUANDO reconhece.
+
+Observações laterais da mesma consulta (não são o alvo deste MC):
+  • as 7 cotas têm a coluna `endereco` a NULL; a chave `endereco` existe no
+    payload de 2 delas mas com valor NULL. A correspondência que funciona é a
+    do `cliente_id`.
+  • a mesma empresa tem DUAS cotas: uma com `cliente_id` = endereço, outra com
+    `cliente_id` = `cnpj:2304006`. Mesmo e-mail, mesma empresa. Duplicação de
+    registo — não afeta este MC, mas fica anotado.
+
+
+CAUSA RAIZ — AppContext.jsx:398
+================================================================================
+    const tipoUsuario = cotaCorporativa?.tipo === "corporativo"
+                        ? "corporativo" : "comum";
+
+Esta linha colapsa TRÊS situações em DUAS:
+
+    (a) já sei que é corporativo        → "corporativo"   ✅
+    (b) já sei que é comum              → "comum"         ✅
+    (c) AINDA NÃO SEI (cotas por vir)   → "comum"         ❌ mentira
+
+No arranque, `cotaCorporativa` é `null` (estado inicial) e `tipoCarregando` é
+`false` (estado inicial, linha 254). O caso (c) fica indistinguível do (b).
+
+
+CRONOLOGIA DERIVADA
+================================================================================
+   t≈0        cotaCorporativa=null · tipoCarregando=false → tipoUsuario="comum"
+
+   t≈2000ms   `DashboardOuCorporativo` avalia:
+                  if (tipoUsuario === "corporativo" && !tipoCarregando) …
+              É "comum" → renderiza <Dashboard />  ← O DASHBOARD COMUM
+              O efeito de redirect (AppContext:409) também sai pela porta
+              `if (tipoUsuario !== "corporativo") return;` → não redireciona.
+
+   t≈4300ms   Privy resolve → address → authToken → arranca o fetch de cotas
+              AppContext:350 liga setTipoCarregando(true)
+
+   t≈5000ms+  cotas respondem → setCotaCorporativa(data)
+              → tipoUsuario passa a "corporativo", tipoCarregando volta a false
+              → DashboardOuCorporativo devolve <Navigate to="/corporativo">
+              → e o efeito :409 também navega
+
+   RESULTADO: o lojista vê o DASHBOARD COMUM durante ~3 a 5 segundos, com os
+   KPIs de leilão, os tiles de senhas e o "Acesso Rápido" do utilizador comum,
+   antes de ser atirado para o painel dele.
+
+É exatamente o que o operador descreve: "vai para uma página errada, e depois
+para a certa".
+
+
+É O MESMO DEFEITO DE FAMÍLIA DOS TRÊS MCs ANTERIORES
+================================================================================
+   MC88.37  `if (isConnected && tipoCarregando) return null`
+            → "a carregar" confundido com "não há nada"     (ecrã em branco)
+   MC88.38  `isConnected = authenticated && address`
+            → "a restaurar" confundido com "deslogado"      ("Faça login")
+   MC88.39  `jaTeveEnderecoRef` sem exigir `!address`
+            → "sem token ainda" confundido com "logout"     (saldo apagado)
+   MC88.42  `cotaCorporativa?.tipo === "corporativo" ? … : "comum"`
+            → "ainda não sei" confundido com "é comum"      (página errada)
+
+Quatro vezes o mesmo erro: um estado TERNÁRIO espremido num BINÁRIO, e o valor
+por omissão a afirmar algo falso em vez de admitir que ainda não se sabe.
+
+
+A CORREÇÃO ÓBVIA TEM UM PROBLEMA — E É PRECISO DECIDIR ANTES
+================================================================================
+O plano (S1.1) propõe estender a sessão otimista: guardar o tipo em cache e,
+durante o restauro, redirecionar já para /corporativo.
+
+Isso funciona para o REDIRECT. Mas há uma segunda guarda no caminho:
+
+    CorporativoRoute (App.jsx:59)
+        if (!ready) return null;
+        if (!isConnected) { … return <Navigate to="/" /> }
+        if (tipoCarregando) return null;
+        if (tipoUsuario !== "corporativo") return <Navigate to="/" replace />;
+
+Se eu redirecionar otimisticamente para /corporativo enquanto o tipo ainda não
+foi confirmado, o utilizador aterra numa rota que:
+   • devolve `null` enquanto `tipoCarregando` for true  → ECRÃ EM BRANCO,
+     exatamente o defeito que o MC88.37 corrigiu;
+   • e, se o palpite estiver errado, devolve <Navigate to="/"> → o utilizador
+     é atirado de volta. Ida e volta em vez de uma ida errada.
+
+Ou seja: corrigir só o `DashboardOuCorporativo` troca um problema por outro.
+A correção tem de tratar os DOIS pontos com a MESMA fonte de verdade.
+
+⚠️ E há uma diferença de natureza que eu não quero decidir sozinho.
+No MC88.38 escrevi, e mantenho: "`pareceAutenticado` escolhe TEXTO, nunca
+autorização". Aqui a otimização incide sobre uma GUARDA DE ROTA — que é
+autorização. Renderizar o painel corporativo com base num palpite de cache é
+diferente de escrever "Olá, Fulano" com base num palpite.
+
+Mitigação real: o cache seria validado contra o endereço da sessão (a mesma
+guarda síncrona do MC88.34), e os DADOS do painel vêm de chamadas autenticadas
+que devolveriam 401/403 a quem não for lojista — o risco é mostrar a CASCA do
+painel, não conteúdo alheio. Mas é uma decisão sua, não minha.
+
+
+OPÇÕES
+================================================================================
+A) OTIMISTA NOS DOIS PONTOS (o que o plano pede)
+   Guardar `tipoUsuario` no cache validado por endereço; usá-lo em
+   `DashboardOuCorporativo` E em `CorporativoRoute` enquanto o real não chega.
+   → lojista entra direto no painel, sem passar pelo comum.
+   → risco: casca do painel visível a partir de um palpite; ida-e-volta se o
+     palpite falhar (mitigável exigindo que a rota só bounce depois de
+     `tipoCarregando` terminar).
+
+B) NÃO ADIVINHAR, MAS TAMBÉM NÃO MENTIR
+   Introduzir o terceiro estado a sério (`tipoUsuario` passa a poder ser
+   `null` = desconhecido) e, enquanto for desconhecido, mostrar um ecrã neutro
+   de transição em vez do Dashboard comum.
+   → o lojista nunca vê o ecrã errado.
+   → custo: TODOS os utilizadores (comuns incluídos) veem ~3-5 s de ecrã de
+     transição no arranque — perde-se parte do que os MC88.37-40 ganharam.
+
+C) OTIMISTA SÓ PARA QUEM JÁ ENTROU COMO LOJISTA
+   Igual a (A), mas o palpite só é usado se a última sessão CONFIRMADA nesse
+   mesmo endereço tiver sido corporativa. Um utilizador comum nunca vê o painel
+   corporativo, nem por um instante, porque nunca terá esse cache.
+   → mais conservador que (A), mesmo ganho para o lojista recorrente.
+   → primeiro login corporativo de sempre continua a passar pelo comum.
+
+
+O QUE FALTA — PRECISO DE SI
+================================================================================
+1. CONFIRMAÇÃO AO VIVO. Não consigo fazer o login corporativo: o OAuth do Privy
+   não é automatizável (MC39.3.1) e a sessão atual é a do "Novo Pernambucano"
+   (comum). Se iniciar sessão com desafiogut@gmail.com no aparelho, eu capturo
+   três arranques a frio e meço a janela exata em que o ecrã errado fica
+   visível — que é o número que falta a este diagnóstico.
+
+2. ESCOLHA ENTRE A, B e C. A alínea (A) é a que o plano pede; a (C) é a que eu
+   recomendaria, por dar o mesmo resultado ao lojista sem alargar a superfície
+   de autorização a um palpite.
+
+Não implemento nada antes destas duas coisas — o PILAR 1 deste MC pede
+observação real e aprovação sua, e neste momento não tenho nenhuma das duas.
+
+
+CONTEXTO DE NEGÓCIO — PORQUE ISTO É PIOR DO QUE UM PISCAR
+================================================================================
+Lido em `docs/chatbot/regulamento.md` §3 e §4.1 e em
+`docs/explanation/regras-de-negocio.md`:
+
+O utilizador corporativo é um LOJISTA ANUNCIANTE, não um participante do leilão.
+Compra uma cota de publicidade (Bronze R$ 2.640 → Diamante R$ 18.000), paga uma
+Taxa de Adesão por PIX aprovada manualmente pelo Admin, e o que lhe interessa é:
+banners na Vitrine e na app, cotas, analytics e a Wallet de vale-crédito.
+
+As suas rotas são `/corporativo`, `/corporativo/cotas`, `/corporativo/banners`,
+`/corporativo/analytics`, `/corporativo/carteira`.
+
+O que ele vê durante os ~3-5 s de transição é o Dashboard COMUM: KPIs de leilão,
+saldo de senhas, "Lances Únicos", "Total de Lances", "Edição Ativa", "Ir para o
+Mercado de Lances", "Acesso Rápido" com Depositar PIX e Dar Lance.
+
+Nada disso é o produto dele. Não é um flash de estilo — é a montra errada, e
+para quem pagou entre R$ 2.640 e R$ 18.000 é a primeira coisa que vê ao abrir a
+app. As rotas comuns estão inclusive na lista de `rotasProibidas` do próprio
+efeito de redirect (AppContext:418) — o código já as considera impróprias para
+ele; só chega tarde a essa conclusão.
+
+DIVERGÊNCIA LATERAL (não é deste MC, mas fica registada): o §4.2 do regulamento
+descreve o fluxo de senhas como "webhook do Mercado Pago confirma → coordenação
+chama adicionarSenhas on-chain". O MC88.35 provou que o webhook NUNCA disparou
+(18/18 créditos vieram de `confirmar-pagamento`) e que o modelo é dual (o PIX
+credita R$, não senhas). É a mesma classe de problema do e-mail de suporte
+inexistente do MC88.41: o regulamento — que alimenta o RAG do GUTO — está
+desalinhado da app.

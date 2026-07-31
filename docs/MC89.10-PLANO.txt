@@ -1,0 +1,272 @@
+# MC89.10 — PLANO DE IMPLEMENTAÇÃO: admin_logs + níveis de permissão
+Data: 2026-07-31 | Base: MC89.10-DIAGNOSTICO.txt | ZERO alterações de código (R1)
+
+## ESTRUTURA DO MC89.11 (execução)
+Este plano é executado em 3 segmentos, por esta ordem:
+  S1 — admin_logs (a tabela e o módulo de escrita)
+  S2 — níveis de permissão (JWT, guardAdmin, migração)
+  S3 — adaptação dos endpoints e interface
+
+A ordem importa: o log tem de existir antes de os comandos ganharem níveis,
+porque a primeira coisa que um comando com nível faz é escrever no log.
+
+---
+
+## SEGMENTO 1 — admin_logs EM POSTGRES (FAIL-CLOSED)
+
+### 1.1 Tabela (migração M2 do MC89.5)
+```sql
+CREATE TABLE IF NOT EXISTS admin_logs (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  criado_em       timestamptz NOT NULL DEFAULT now(),
+  admin_endereco  text NOT NULL,
+  admin_email     text,
+  admin_nivel     text,              -- nível NO MOMENTO da ação (congelado)
+  tipo_acao       text NOT NULL,     -- "aprovar_cliente", "panic", "adicionar_admin"
+  alvo            text,              -- endereço do utilizador afetado, id do comando
+  justificativa   text,
+  sucesso         bool,              -- NULL = registado, ainda por executar
+  erro            text,              -- mensagem de erro se sucesso=false
+  ip              text,
+  user_agent      text,
+  payload         jsonb NOT NULL DEFAULT '{}'::jsonb,
+  origem          text NOT NULL DEFAULT 'admin_logs'  -- 'log-decisoes' no importado
+);
+
+-- RLS: só service_role (padrão do projeto)
+ALTER TABLE admin_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "service_role total admin_logs" ON admin_logs FOR ALL TO service_role;
+
+-- Índices
+CREATE INDEX idx_admin_logs_criado_em ON admin_logs (criado_em DESC);
+CREATE INDEX idx_admin_logs_endereco ON admin_logs (admin_endereco, criado_em DESC);
+CREATE INDEX idx_admin_logs_acao ON admin_logs (tipo_acao, criado_em DESC);
+CREATE INDEX idx_admin_logs_sucesso ON admin_logs (sucesso) WHERE sucesso IS NULL;
+  -- ⚠️ índice parcial: serve para encontrar ações que rebentaram a meio
+  -- (sucesso=NULL = registado mas nunca atualizado)
+```
+
+### 1.2 Módulo de escrita (_lib/admin-log.mjs)
+Interface:
+```
+export async function registrarAcao({ admin_endereco, admin_email, admin_nivel,
+  tipo_acao, alvo, justificativa, ip, user_agent, payload })
+  → { id } // o UUID gerado
+
+export async function confirmarAcao(id, { sucesso, erro })
+  → void
+
+export async function lerLogs({ admin, tipo_acao, desde, ate, q, antes, limite })
+  → { linhas, proximoCursor }
+```
+
+REGRA FAIL-CLOSED (D5b do MC89.5, a mais importante):
+1. O endpoint chama registrarAcao ANTES de executar a ação.
+2. Se registrarAcao falhar → 503 e a ação NÃO acontece.
+3. Se registrarAcao OK → executa a ação → chama confirmarAcao(id, { sucesso, erro }).
+4. Uma linha com sucesso=NULL que nunca é atualizada = ação que rebentou a meio.
+   O índice parcial `WHERE sucesso IS NULL` serve para as encontrar.
+
+PORQUÊ INVERTE A REGRA FAIL-SOFT: todo o resto do sistema é fail-soft com razão —
+um log não pode quebrar um pagamento. Mas para comandos de admin, "aconteceu e
+não há registo" é pior do que "não aconteceu". A diferença tem de ficar
+COMENTADA no código, senão o próximo MC "corrige" a inconsistência e apaga a
+garantia (MC89.5, D5b).
+
+### 1.3 Importação do log antigo
+O Blob "log-decisoes" contém o histórico do GUTO desde o MC15.6. As entradas
+são importadas como parte da migração com `origem = 'log-decisoes'` e
+`sucesso = true` (não sabemos se falharam, mas sabemos que foram registadas).
+O Blob NÃO é apagado — fica como fonte primária para o período anterior à
+migração.
+
+### 1.4 Endpoint /admin-logs (GET)
+Criado na Fase 2 (este MC). O frontend (Tela 5) só na Fase 5, mas o endpoint
+fica disponível para o GUTO e para testes.
+- Paginação por cursor (criado_em DESC, id DESC)
+- Filtros: admin_endereco, tipo_acao, desde, ate, q (texto livre em alvo+justificativa)
+- Gate: nível ≥ admin (operador não vê logs de ninguém)
+- RL: 20/min
+
+### 1.5 Integração com ALFA
+`ALFA:logs` → últimos 10 registos (já disponível assim que o endpoint existir).
+`ALFA:logs admin:0x...` → filtrado por admin.
+
+---
+
+## SEGMENTO 2 — NÍVEIS DE PERMISSÃO (RBAC ADMIN)
+
+### 2.1 Os três níveis
+super-admin: tudo. Inclui gerir admins, ver logs completos, comandos destrutivos.
+admin:       operação + leitura. Aprovar, gerir cotas, comandos operacionais.
+             NÃO pode gerir admins, NÃO pode ver logs de super-admins.
+operador:    só leitura. Métricas, gráficos, alertas. NENHUMA mutação.
+
+### 2.2 Onde cada nível se aplica
+A fonte da verdade é o BLOB admin-list:admins. O JWT transporta o nível como
+claim, resolvida no login E no refresh (para despromoções propagarem em ≤ 15 min).
+
+ADMIN-LIST (Blob) — formato novo:
+```json
+{
+  "admins": [
+    { "endereco": "0x...", "nivel": "super-admin", "adicionadoPor": "0x...", "adicionadoEm": "..." },
+    { "endereco": "0x...", "nivel": "admin" },
+    { "endereco": "0x...", "nivel": "operador" }
+  ]
+}
+```
+
+⚠️ LEITURA RETROCOMPATÍVEL (risco mais alto do programa, MC89.5 R-1):
+O código que lê a lista TEM DE aceitar os dois formatos:
+  - String solta → "admin" (default seguro para quem já estava na lista)
+  - Objeto com .nivel → usa o nível declarado
+
+Se um deploy quebrar esta leitura, o Blob vazio em produção faz da coordenação
+a única admin — e se a leitura do formato novo falhar, NINGUÉM é admin.
+Sem via de recuperação a não ser novo deploy.
+
+EOA COORDENADORA: é super-admin permanente. O nível é resolvido em
+`getAdminAddresses()` como parte da agregação, e é sempre "super-admin"
+independentemente do que estiver no Blob.
+
+### 2.3 JWT admin — claim `nivel`
+Arquivo: _lib/jwt.mjs, função assinarAdminAccess
+Payload atual: `{ endereco, tipo: "admin-access" }`
+Payload novo:  `{ endereco, tipo: "admin-access", nivel: "super-admin"|"admin"|"operador" }`
+
+O nível é resolvido no login (auth-admin.mjs) e no refresh (rotacionarRefresh).
+É lido da lista agregada de getAdminAddresses() — SE esta função passar a
+devolver objetos em vez de strings.
+
+ALTERNATIVA MAIS SEGURA (recomendada): NÃO alterar getAdminAddresses() — que é
+usado em 14 sítios e qualquer mudança de tipo parte metade do sistema. Em vez
+disso, criar `getAdminNivel(endereco)` que lê o Blob e devolve o nível, e
+chamá-la APENAS no login e no refresh. O getAdminAddresses() continua a
+devolver array de strings para todo o resto.
+
+### 2.4 guardAdmin com nível
+Assinatura atual: `guardAdmin(req)` → null | Response
+Assinatura nova: `guardAdmin(req, { nivelMinimo? })` → null | Response
+
+Comportamento:
+- Sem `nivelMinimo` → qualquer admin passa (compatível com chamadas existentes)
+- Com `nivelMinimo: "admin"` → só admin e super-admin passam; operador é 403
+- Com `nivelMinimo: "super-admin"` → só super-admin passa
+
+O nível do token é lido do JWT payload (claim `nivel`). Se ausente (token
+emitido antes da migração) → "admin" por omissão (não quebra tokens existentes).
+
+### 2.5 Matriz de endpoints × níveis
+
+                                   operador   admin   super-admin
+admin-stats          (GET)            ✓         ✓         ✓
+admin-onchain        (GET)            ✓         ✓         ✓
+admin-alerts         (GET)            ✓         ✓         ✓
+admin-series         (GET)            ✓         ✓         ✓
+admin-list           (GET full)       ✗         ✓         ✓
+admin-list           (POST)           ✗         ✗         ✓
+admin-aprovacao      (GET)            ✗         ✓         ✓
+admin-aprovacao      (POST)           ✗         ✓         ✓
+cotas                (POST)           ✗         ✓         ✓
+edicoes              (POST)           ✗         ✓         ✓
+consolidar-lances    (POST)           ✗         ✓         ✓
+purge-lances         (POST)           ✗         ✓         ✓
+cron-reset-programado(POST)           ✗         ✓         ✓
+backup-blobs         (POST)           ✗         ✓         ✓
+monitor-onchain      (GET manual)     ✗         ✓         ✓
+admin-logs           (GET)            ✗         ✓ (próprios) ✓ (todos)
+admin-logs-export    (GET)            ✗         ✗         ✓
+admin-commands       (POST)           ✗         ✓         ✓
+admin-sessions-revoke(POST)           ✗         ✗         ✓
+admin-config         (POST)           ✗         ✗         ✓
+admin-config         (GET)            ✓         ✓         ✓
+
+GUTO ALFA:
+  ALFA:status, ALFA:fila             ✗         ✓         ✓
+  ALFA:panic, ALFA:unpause           ✗         ✗         ✓
+  ALFA:logs                          ✗         ✗         ✓
+
+### 2.6 Migração
+1. Deploy do código novo (leitura retrocompatível do Blob).
+2. Todos os admins existentes são "admin" por omissão.
+3. O operador define-se como super-admin via POST /admin-list:
+   { "acao": "adicionar", "endereco": "0xFea436...", "nivel": "super-admin" }
+   (ou o endereço da coordenação, que já é super-admin permanente)
+4. Tokens existentes (sem `nivel`) expiram em ≤ 15 min.
+5. Novo login emite token com `nivel`.
+
+---
+
+## SEGMENTO 3 — INTERFACE E INTEGRAÇÃO
+
+### 3.1 Tela 5 (Logs e Auditoria) — esqueleto → funcional
+Arquivo: src/pages/admin/LogsAuditoria.jsx (já existe como placeholder)
+Estado atual: EmConstrucao com descrição da Fase 2.
+Estado novo: busca, lista paginada, filtros e exportação.
+
+Dados: GET /admin-logs (criado no Segmento 1).
+Componentes reutilizados: COR, Button do _ui.jsx.
+Navegação: o cartão em AtalhosAdmin.jsx já aponta para /admin/logs.
+
+### 3.2 Tela 7 (Configurações) — níveis na lista de admins
+Arquivo: src/pages/admin/ConfiguracoesAdmins.jsx (já funcional)
+Alteração: a lista de admins já funciona. Acrescentar:
+- Badge com o nível ao lado de cada endereço
+- Dropdown de nível no formulário "Adicionar admin"
+- O botão "Remover" só aparece para super-admin (os outros veem desabilitado)
+
+### 3.3 ALFA — comandos de auditoria
+Adicionar em chatbot.mjs, função executarAlfa:
+- `ALFA:logs` → chama lerLogs({ limite: 10 })
+- `ALFA:logs <texto>` → chama lerLogs({ q: texto, limite: 5 })
+
+Gate: nível ≥ admin (super-admin para ALFA:logs, porque expõe ações de outros).
+
+### 3.4 AdminLayout — indicador de nível
+Arquivo: src/components/admin/AdminLayout.jsx
+Alteração: na barra de estado, mostrar o nível do admin:
+"Logado como admin (super-admin): 0x…"
+O nível já está disponível via AdminAuthContext (que lê o JWT).
+
+---
+
+## RISCOS E MITIGAÇÕES
+
+R-1 (ALTO): Leitura do Blob admin-list quebrar com o formato novo.
+  Em produção o Blob está vazio → admin é só a coordenação.
+  Se a leitura falhar, ninguém é admin — sem recuperação sem deploy.
+  Mitigação:
+    a) getAdminNivel() é função NOVA, separada de getAdminAddresses()
+    b) Se o Blob estiver vazio ou ilegível → nível default "admin"
+    c) Três testes: formato antigo (string), formato novo (objeto), Blob vazio
+    d) Validado por mutação (partir código, ver teste falhar)
+    e) Deploy em deploy-preview antes da mainnet
+
+R-2 (MÉDIO): Token sem `nivel` durante a janela de migração (15 min).
+  Mitigação: tokens sem `nivel` → "admin" (não quebra nada, só não restringe).
+
+R-3 (MÉDIO): admin-log.mjs importa @supabase/supabase-js no caminho do guard.
+  O cold start do supabase-js é menor que o do ethers, mas existe.
+  Mitigação: import dinâmico dentro de registrarAcao().
+
+R-4 (BAIXO): ALFA:logs expõe ações de outros admins.
+  Mitigação: gate super-admin. Operadores e admins não veem logs via ALFA.
+
+---
+
+## ORDEM DE EXECUÇÃO (MC89.11)
+
+S1 — Migração + _lib/admin-log.mjs + endpoint /admin-logs (1 sessão)
+S2 — getAdminNivel + guardAdmin(nivelMinimo) + JWT com nivel (1-2 sessões)
+S3 — Adaptação dos endpoints + frontend (LogsAuditoria + Configuracoes) + testes (1-2 sessões)
+TOTAL: 3-5 sessões
+
+CRITÉRIOS DE SUCESSO:
+- Tabela admin_logs criada com RLS e índices
+- registrarAcao fail-closed confirmado por teste
+- Três níveis funcionais: operador vê métricas, admin aprova, super-admin gere
+- Tokens antigos (sem nivel) funcionam durante a migração
+- Leitura retrocompatível do Blob confirmada por 3 testes
+- Suite ≥ 334 backend (era 324), ≥ 40 frontend
+- ALFA:panic exige super-admin; ALFA:status aceita admin

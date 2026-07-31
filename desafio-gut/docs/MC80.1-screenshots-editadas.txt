@@ -1,0 +1,57 @@
+================================================================================
+MC80.1 — Segunda rodada de edição das screenshots (4 imagens detalhadas)
+Data: 2026-07-18 · Só edição de imagem (R1) · Dados 100% fictícios (R4)
+================================================================================
+
+ENTRADAS (Desktop/playstore-screenshots/Nova pasta/):
+  1.png (Outras Edições), 2.png (card do prêmio), 3.png (Meus Ativos),
+  4.png (Edição Ativa), (2).jpeg (arte do Ar-Condicionado VG p/ integrar).
+
+SAÍDAS (mesma pasta):
+  imagem_1.png, imagem_2.png, imagem_3.png, imagem_4.png
+  + edicoes-realizadas.txt (resumo por imagem)
+  + (2)_limpo.jpeg (arte do produto com a marca APA Móveis removida)
+
+--------------------------------------------------------------------------------
+RESUMO DAS EDIÇÕES
+--------------------------------------------------------------------------------
+imagem_1: card sup. → iPhone (tela ligada) + "ABRE EM 02:30"; card inf. → TV
+          (tela ligada) + "ABRE EM 01:15". Placeholders "Em breve" substituídos.
+imagem_2: arte (2).jpeg integrada no card; MARCA "APA MÓVEIS" REMOVIDA (preenchimento
+          por interpolação do fundo, sem rastro).
+imagem_3: stats 12 / 8 / 4 / R$ 5,00; estado vazio → tabela fictícia de 4 lances
+          (Ativo/Superado/Vencedor).
+imagem_4: TV (tela ligada "EDIÇÃO ATIVA · AO VIVO") + "00:45"; aba "Menor Lance
+          Único" mantida; lista de 5 nomes fictícios + vencedor "★ João Silva".
+
+DISPOSITIVOS: iPhone e TV são mockups vetoriais desenhados via PIL (Pillow) —
+limpos e controláveis, porém estilizados (não fotorrealistas). Para molduras de
+device fotorrealistas, usar ComfyUI num MC futuro (R6 permite).
+
+DADOS MOCK (fictícios):
+  - Meus Ativos: 12/8/4 lances, Menor Lance R$ 5,00; tabela: Edição Relâmpago
+    R$10 Ativo / Mega GUTO R$7,50 Superado / Promoção PIX R$5 Vencedor / Edição
+    Noturna R$15 Superado.
+  - Edição Ativa: participantes João Silva (vencedor), Maria Oliveira, Carlos
+    Santos, Ana Souza, Pedro Lima (sem valores).
+  - Cronômetros: 02:30, 01:15 (imagem 1), 00:45 (imagem 4).
+
+--------------------------------------------------------------------------------
+VALIDAÇÃO (R6 — loop visual, cada imagem revista)
+--------------------------------------------------------------------------------
+- APA Móveis: removida sem deixar rastro (verificado em crop ampliado).
+- imagem_1/4: refeitas p/ eliminar "tofu" de emoji (⚡/★ trocados por texto/estrela
+  desenhada) e vazamento do "EM BREVE" atrás dos painéis.
+- Todas as 4 revisadas visualmente: dispositivos, cronômetros, tabela, nomes e
+  vencedor legíveis e bem posicionados.
+
+--------------------------------------------------------------------------------
+RESSALVAS / PRÓXIMOS PASSOS
+--------------------------------------------------------------------------------
+- Imagens em resolução nativa (~380×575). Para submissão à Play Store, emoldurar
+  em 1080×1920 (device frame + legenda + branding), como no MC80.
+- Mockups de device são vetoriais; se quiser fotorrealismo, MC futuro com ComfyUI.
+- Dados são ilustrativos ("app em uso"); substituir por dados reais de campanha se
+  desejado antes da publicação.
+- Próximo passo: upload na Play Store após verificação da conta.
+================================================================================

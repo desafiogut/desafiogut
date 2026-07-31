@@ -25,9 +25,39 @@ import { useAppEnvironment } from "../context/useAppContextEnvironment.jsx";
 import { useAdmin } from "../hooks/useAdmin.js";
 import { detectarPlataforma } from "../hooks/useRecursosApp.js";
 import { apiPost } from "../lib/api.js";
+// MC88.22 — identidade do visitante para a chave do histórico (já existente,
+// gravado pelo FingerprintJS). Leitura síncrona, sem await.
+import { getCachedVisitorId } from "../lib/fingerprint.js";
 
-const LS_KEY      = "gut_chat_history";
+// MC88.22 — o histórico vivia numa chave ÚNICA e GLOBAL ("gut_chat_history"),
+// sem carteira e sem perfil, e nada a limpava ao trocar de conta. Quem abrisse o
+// chat a seguir via as mensagens de quem esteve antes NAQUELE aparelho. Não havia
+// (nem há) histórico no servidor — o backend envia só [system, user] ao LLM —
+// portanto isto nunca foi fuga entre utilizadores; era exposição local e confusão
+// de UX. A chave passa a ser composta por perfil + identidade.
+const LS_KEY_LEGADO = "gut_chat_history";   // blob contaminado; apagado uma vez (ver limparLegado)
+const LS_PREFIXO    = "gut_chat_history:";
 const LS_MAX_MSGS = 40;            // histórico bounded — evita estourar localStorage
+
+/**
+ * Chave de histórico para (perfil, identidade).
+ * Identidade: carteira dos autenticados; `gut_visitor_id` (FingerprintJS, já
+ * existente) para visitantes. NÃO se usa o IP: o cliente não lhe acede e ele
+ * mudaria a cada rede, dando isolamento falso.
+ */
+function chaveHistorico(perfil, identidade) {
+  return `${LS_PREFIXO}${perfil || "visitante"}:${identidade || "anonimo"}`;
+}
+
+/**
+ * Remove o blob global legado. É APAGADO, não migrado: o seu conteúdo é
+ * precisamente a mistura de várias contas — atribuí-lo a quem entrar primeiro
+ * recriaria o vazamento que este MC corrige.
+ */
+function limparLegado() {
+  if (typeof window === "undefined") return;
+  try { localStorage.removeItem(LS_KEY_LEGADO); } catch { /* ignora */ }
+}
 const PERGUNTA_MAX = 500;
 
 const COR = {
@@ -84,19 +114,21 @@ const GUTO_STATE_MAP = {
   celebrating: "orgulhoso",
 };
 
-function carregarHistorico() {
-  if (typeof window === "undefined") return [];
+// MC88.22 — a chave passou a ser argumento: estes helpers vivem fora do
+// componente e não têm acesso a hooks, logo quem sabe a identidade é o chamador.
+function carregarHistorico(chave) {
+  if (typeof window === "undefined" || !chave) return [];
   try {
-    const raw = localStorage.getItem(LS_KEY);
+    const raw = localStorage.getItem(chave);
     if (!raw) return [];
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? arr.slice(-LS_MAX_MSGS) : [];
   } catch { return []; }
 }
 
-function salvarHistorico(hist) {
-  if (typeof window === "undefined") return;
-  try { localStorage.setItem(LS_KEY, JSON.stringify(hist.slice(-LS_MAX_MSGS))); }
+function salvarHistorico(chave, hist) {
+  if (typeof window === "undefined" || !chave) return;
+  try { localStorage.setItem(chave, JSON.stringify(hist.slice(-LS_MAX_MSGS))); }
   catch (err) { console.warn("[ChatbotWidget] salvar localStorage falhou:", err?.message); }
 }
 
@@ -110,7 +142,7 @@ function CardIndicacao({ indicacao }) {
   const copiar = useCallback(async () => {
     if (!link) return;
     try {
-      if (navigator?.share) { await navigator.share({ title: "DESAFIOGUT — Indique e Ganhe", url: link }); }
+      if (navigator?.share) { await navigator.share({ title: "DesafioGUT — Indique e Ganhe", url: link }); }
       else { await navigator.clipboard.writeText(link); }
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2000);
@@ -155,6 +187,7 @@ export default function ChatbotWidget() {
   const {
     authToken, tipoUsuario, address, systemPausado,
     notificacoes, notificacoesNaoLidas, marcarNotificacoesLidas,
+    tipoCarregando,   // MC88.23 — perfil ainda a resolver (lookup da cota)
   } = useAppContext();
   const { isAdmin } = useAdmin(address);
   // MC20.2 ITEM 11/13 — sincroniza o GutoSpritePlayer global: thinking ao perguntar,
@@ -167,8 +200,55 @@ export default function ChatbotWidget() {
     : tipoUsuario === "corporativo" ? { txt: "◈ Lojista", cor: "#00d4aa" }
     : (authToken || address) ? { txt: "●", cor: "#00c853" }
     : null;
+  // MC88.23 — o perfil de um autenticado é ASSÍNCRONO: `tipoUsuario` vale "comum"
+  // até o lookup da cota responder, e só então passa a "corporativo". Enquanto
+  // isso, a chave era construída com o valor provisório e nascia uma chave órfã
+  // `comum:<carteira>` (observada vazia na validação do MC88.22). Numa rede lenta,
+  // uma mensagem escrita nessa janela cairia na chave errada e ficaria invisível
+  // depois da resolução.
+  //
+  // ⚠️ `tipoCarregando` do AppContext NÃO resolve isto sozinho: começa `false`
+  // (AppContext L181) e só passa a `true` DENTRO de um efeito (L267) — ou seja,
+  // depois do primeiro render, que é exatamente aquele que criava a chave órfã.
+  // Por isso esperamos pelo CICLO completo (viu true → voltou a false).
+  const cicloVistoRef = useRef(false);
+  const [perfilResolvido, setPerfilResolvido] = useState(false);
+
+  // Troca de identidade: recomeça a espera. Visitante resolve de imediato — não
+  // depende de lookup nenhum.
+  useEffect(() => {
+    cicloVistoRef.current = false;
+    setPerfilResolvido(!address);
+  }, [address]);
+
+  useEffect(() => {
+    if (!address) return;
+    if (tipoCarregando) { cicloVistoRef.current = true; setPerfilResolvido(false); return; }
+    if (cicloVistoRef.current) setPerfilResolvido(true);
+  }, [address, tipoCarregando]);
+
+  // MC88.22 — identidade a que este histórico pertence. `tipoUsuario` é
+  // "corporativo" | "comum" (AppContext); admin vem do useAdmin. Sem carteira →
+  // visitante, identificado pelo gut_visitor_id já existente.
+  // null enquanto o perfil não estiver resolvido: os efeitos abaixo não tocam no
+  // localStorage nesse estado.
+  const chaveHist = useMemo(() => {
+    if (!perfilResolvido) return null;
+    const perfil = !address ? "visitante" : (isAdmin ? "admin" : (tipoUsuario || "comum"));
+    const identidade = address
+      ? String(address).toLowerCase()
+      : (getCachedVisitorId() || "anonimo");
+    return chaveHistorico(perfil, identidade);
+  }, [address, isAdmin, tipoUsuario, perfilResolvido]);
+
   const [aberto, setAberto] = useState(false);
-  const [mensagens, setMensagens] = useState(() => carregarHistorico());
+  const [mensagens, setMensagens] = useState([]);
+  // Guarda contra a ordem dos efeitos: quando `chaveHist` muda, o efeito de
+  // GRAVAÇÃO corre no mesmo commit que o de CARGA, ainda com as mensagens da
+  // identidade anterior — e escreveria o histórico antigo na chave nova,
+  // recriando exatamente o vazamento que este MC corrige. Este ref faz a
+  // primeira gravação após cada troca ser saltada.
+  const trocandoIdentidadeRef = useRef(true);
   const [pergunta, setPergunta] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
@@ -181,7 +261,21 @@ export default function ChatbotWidget() {
   const notifInjetadasRef = useRef(new Set());
   const notifSeedRef = useRef(false);
 
-  useEffect(() => { salvarHistorico(mensagens); }, [mensagens]);
+  // MC88.22 — CARGA: ao mudar de identidade, troca o histórico exibido pelo dessa
+  // identidade. Não apaga o da anterior: voltar à conta antiga recupera o dela.
+  useEffect(() => {
+    if (!chaveHist) return;   // MC88.23 — perfil por resolver: não toca no storage
+    trocandoIdentidadeRef.current = true;
+    setMensagens(carregarHistorico(chaveHist));
+    limparLegado();   // o blob global misturado morre no primeiro arranque
+  }, [chaveHist]);
+
+  // GRAVAÇÃO: salta a primeira passagem após uma troca (ver trocandoIdentidadeRef).
+  useEffect(() => {
+    if (!chaveHist) return;   // MC88.23 — sem chave definitiva, nada é persistido
+    if (trocandoIdentidadeRef.current) { trocandoIdentidadeRef.current = false; return; }
+    salvarHistorico(chaveHist, mensagens);
+  }, [mensagens, chaveHist]);
 
   // MC15.6 ITEM 11 / MC15.7 ITEM 5 — injeta notificações como cards no chat, sem
   // mexer no campo de texto (não interrompe a digitação — `pergunta` fica intacto).
@@ -334,8 +428,12 @@ export default function ChatbotWidget() {
 
   const limparHistorico = useCallback(() => {
     setMensagens([]);
-    try { localStorage.removeItem(LS_KEY); } catch {}
-  }, []);
+    // MC88.22 — apaga só o histórico DESTA identidade, não o das outras contas.
+    // MC88.23 — com a chave por resolver seria `removeItem(null)`, que o browser
+    // coage para a string "null" e apagaria uma chave chamada "null".
+    if (!chaveHist) return;
+    try { localStorage.removeItem(chaveHist); } catch {}
+  }, [chaveHist]);
 
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -372,7 +470,7 @@ export default function ChatbotWidget() {
 
       {/* Botão flutuante */}
       <motion.button
-        aria-label={aberto ? "Fechar assistente" : "Abrir assistente DESAFIOGUT"}
+        aria-label={aberto ? "Fechar assistente" : "Abrir assistente DesafioGUT"}
         onClick={() => setAberto((v) => !v)}
         animate={aberto ? { scale: 1 } : { scale: [1, 1.06, 1] }}
         transition={aberto ? { duration: 0.15 } : { duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
@@ -431,7 +529,7 @@ export default function ChatbotWidget() {
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.18 }}
             role="dialog"
-            aria-label="Assistente DESAFIOGUT"
+            aria-label="Assistente DesafioGUT"
             /* MC25.3 — .gut-glass-standard (vidro unificado, navy + blur sempre
                ligado). MC25.7 — + .gut-glass--solid: sobe a opacidade para navy
                0.92 SÓ neste painel de leitura, restaurando a legibilidade que o
@@ -463,7 +561,7 @@ export default function ChatbotWidget() {
                 />
                 <div>
                   <div style={{ fontSize: "0.95rem", fontWeight: 800, color: COR.primary }}>
-                    GUTO — Assistente DESAFIOGUT
+                    GUTO — Assistente DesafioGUT
                     {perfilBadge && (
                       <span style={{
                         marginLeft: "0.45rem",

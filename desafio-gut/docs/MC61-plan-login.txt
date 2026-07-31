@@ -1,0 +1,220 @@
+================================================================================
+MC61 — PLANEJAMENTO: REMOÇÃO DAS OPÇÕES DE LOGIN APPLE E EMAIL (APENAS GOOGLE)
+DIAGNÓSTICO + PLANO DE MUDANÇA (SEM EXECUÇÃO)
+DesafioGUT
+================================================================================
+Data...........: 2026-07-09
+Branch.........: feat/mc61-remocao-login-apple-email (doc-only; R1: ZERO código)
+Frontend.......: React + Vite | @privy-io/react-auth ^3.22.1 | deploy Netlify
+Escopo aprovado: OPÇÃO A — modal público só Google; PRESERVAR login corporativo
+                 (email-OTP headless). Remover apenas "apple" do config global.
+                 (Decisão do validador humano registrada em 2026-07-09.)
+
+--------------------------------------------------------------------------------
+0. RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+O objetivo (tela de login pública só com Google) é atingível com alterações
+PONTUAIS em 2 arquivos. O diagnóstico, porém, revelou um ponto crítico que o
+plano original não previa: a palavra "email" tem DOIS consumidores independentes
+no frontend, e um deles (o login CORPORATIVO de lojistas) NÃO é o modal público.
+
+  • "apple" → configurado em loginMethods, mas DESABILITADO no painel Privy
+    (CLAUDE.md). É config MORTA — remover é seguro e puramente cosmético.
+  • "email" (modal público) → aparece no modal geral de login. ALVO da remoção.
+  • "email" (corporativo) → SejaNossoParceiro.jsx usa useLoginWithEmail (OTP
+    headless, sendCode/loginWithCode). Remover "email" GLOBALMENTE muito
+    provavelmente QUEBRA o cadastro/login de lojistas.
+
+Por isso o escopo aprovado é a OPÇÃO A: manter "email" habilitado no config
+global (para o OTP corporativo continuar funcionando) e restringir o MODAL
+PÚBLICO a Google via login({ loginMethods: ["google"] }).
+
+--------------------------------------------------------------------------------
+1. LEVANTAMENTO (SEGMENTO 0) — MAPA DA AUTENTICAÇÃO
+--------------------------------------------------------------------------------
+Fonte única da configuração do Privy:
+  frontend/src/main.jsx:254   <PrivyProvider appId={PRIVY_APP_ID} config={{ … }}>
+  frontend/src/main.jsx:258     loginMethods: ["google", "email", "apple"]   ← AQUI
+  frontend/src/main.jsx:273     embeddedWallets: { showWalletUIs:false, ethereum:{createOnLogin:"off"} }
+  frontend/src/main.jsx:281-282 defaultChain: sepolia; supportedChains: [sepolia, mainnet]
+  frontend/src/main.jsx:285     appearance: { theme:"dark", accentColor:"#00d4aa", … }
+  frontend/src/main.jsx:227     useLogin({ onComplete, onError })   ← só callbacks (cria wallet)
+
+Ponto de entrada do login PÚBLICO (funil único):
+  frontend/src/context/AppContext.jsx:746  function abrirModal(opts) { … }
+  frontend/src/context/AppContext.jsx:767    loginOpts = opts&&(opts.prefill||opts.loginMethods)?opts:undefined
+  frontend/src/context/AppContext.jsx:768    login(loginOpts) ou login()   ← usa loginMethods global
+  → abrirModal é chamado por TODAS as telas via onClick (Sidebar, BottomNav,
+    MinhaCarteira, MeusAtivos, Configuracoes, MercadoLances, CorporativoCarteira,
+    AdminPanel). Todos convergem para o mesmo login() sem args → 1 só lugar decide.
+
+Login CORPORATIVO (fluxo SEPARADO, headless — NÃO é o modal público):
+  frontend/src/pages/SejaNossoParceiro.jsx:11  import { useLoginWithEmail } …
+  frontend/src/pages/SejaNossoParceiro.jsx:73    const { sendCode, loginWithCode, state } = useLoginWithEmail()
+  frontend/src/pages/SejaNossoParceiro.jsx:127   enviarOtp(email) → sendCode({ email })
+  frontend/src/pages/SejaNossoParceiro.jsx:132   await sendCode({ email: emailDestino })
+  → cadastro/login de lojista por One-Time Code enviado ao email do CNPJ.
+    Depende de "email" estar habilitado (config + painel Privy).
+
+Leituras de identidade Apple/Email (defensivas, NÃO são login — manter):
+  AppContext.jsx:278,308,347  user?.email?.address || user?.google?.email || user?.apple?.email
+  MinhaCarteira.jsx:44         idem (label do usuário / email do pagador)
+  → optional chaining; inofensivas se apple/email não vierem. NÃO alterar.
+
+Testes: nenhum teste em src/ ou frontend/scripts/ referencia loginMethods,
+"apple" ou o método de login → NENHUM ajuste de teste necessário.
+
+--------------------------------------------------------------------------------
+2. DIAGNÓSTICO DETALHADO (SEGMENTO 1) — arquivo:linha · descrição · impacto
+--------------------------------------------------------------------------------
+[D1] main.jsx:258  loginMethods: ["google","email","apple"]
+     Descrição: define os métodos do modal de login público.
+     Impacto da remoção de "apple": NENHUM funcional (apple já desabilitado no
+       painel Privy → botão não aparece hoje). Limpeza de config.
+     Impacto da remoção de "email" AQUI (global): removeria o email do modal
+       público E, potencialmente, desabilitaria useLoginWithEmail (corporativo).
+       → por isso NÃO removemos "email" do global na Opção A.
+
+[D2] SejaNossoParceiro.jsx:73  useLoginWithEmail()
+     Descrição: login/cadastro corporativo por OTP de email (headless, sem modal).
+     Impacto: se "email" sair do config global, sendCode/loginWithCode podem
+       falhar ("email login not enabled") → cadastro e login de LOJISTAS quebram.
+     Severidade: ALTA. É a dependência indireta central do MC61.
+     Mitigação (Opção A): manter "email" no config global; corporativo intacto.
+
+[D3] AppContext.jsx:746-768  abrirModal → login()
+     Descrição: único ponto que abre o modal público. Hoje sem loginMethods →
+       herda o global (mostra google+email+apple).
+     Impacto: é o lugar CERTO para restringir o modal público a Google sem
+       tocar no corporativo.
+
+[D4] Painel Privy (Dashboard) — fora do código
+     Estado: Google ATIVO, Email ATIVO, Apple DESATIVADO (CLAUDE.md).
+     Observação: loginMethods do SDK é um SUBCONJUNTO do que o painel habilita;
+       não é possível "ativar" pelo array algo desligado no painel. Logo "apple"
+       no array é inerte. Email deve PERMANECER ativo no painel (corporativo).
+
+Avaliação de impacto em usuários existentes:
+     O Privy unifica identidades por conta. Restringir o modal a Google NÃO
+     apaga identidades email/apple já vinculadas. Usuários que hoje entram por
+     email no modal público passariam a ver só Google — se a conta deles não tem
+     Google vinculado, precisariam usar Google. (Ponto a confirmar com o operador
+     se houver base relevante de usuários público-email; corporativo é preservado.)
+
+--------------------------------------------------------------------------------
+3. PLANO DE MUDANÇA (SEGMENTO 2) — OPÇÃO A (APROVADA) · para o MC62
+--------------------------------------------------------------------------------
+🔧 ALTERAÇÃO 1 — main.jsx (config do Privy): remover só "apple"
+   Arquivo: frontend/src/main.jsx
+   Linha 257 (comentário) e 258 (array).
+   DE:   // ── Métodos de login: Google, E-mail, Apple ─────────
+         loginMethods: ["google", "email", "apple"],
+   PARA: // ── Métodos de login: Google (modal público) + E-mail (OTP corporativo) ──
+         loginMethods: ["google", "email"],
+   Motivo: "apple" é config morta (painel desligado); "email" fica para o OTP
+           corporativo (useLoginWithEmail). ZERO impacto funcional.
+
+🔧 ALTERAÇÃO 2 — AppContext.jsx (restringir o modal PÚBLICO a Google)
+   Arquivo: frontend/src/context/AppContext.jsx  (função abrirModal, ~746-768)
+   Ideia: quando o chamador NÃO passa loginMethods, abrir o modal só com Google.
+          Preservar overrides explícitos (prefill/loginMethods) para não quebrar
+          nenhum caller futuro nem o corporativo.
+   DE (linha 767-768):
+         const loginOpts = opts && (opts.prefill || opts.loginMethods) ? opts : undefined;
+         const result = loginOpts ? login(loginOpts) : login();
+   PARA (equivalente, com default Google-only):
+         const base = opts && (opts.prefill || opts.loginMethods) ? { ...opts } : {};
+         if (!base.loginMethods) base.loginMethods = ["google"]; // modal público só Google
+         const result = login(base);
+   Motivo: todo o login público passa por aqui; 1 mudança cobre todas as telas.
+           Não toca no fluxo corporativo (que usa sendCode direto, sem abrirModal).
+
+🔧 ALTERAÇÃO 3 — Painel Privy (Dashboard) — SEM código
+   Ação: confirmar Google=ATIVO, Email=ATIVO (necessário p/ OTP corporativo),
+         Apple=DESATIVADO (já está). Nenhuma mudança esperada; só verificação.
+   Responsável: operador (o agente não acessa o painel).
+
+🔧 ALTERAÇÃO 4 — Testes
+   Nenhuma alteração necessária (nenhum teste referencia loginMethods).
+
+Arquivos afetados (resumo):
+   • frontend/src/main.jsx ............... 1 linha (+comentário)
+   • frontend/src/context/AppContext.jsx . ~3 linhas
+   • Painel Privy ........................ verificação (sem código)
+
+--------------------------------------------------------------------------------
+4. VALIDAÇÃO SIMULADA (SEGMENTO 3) — regressões e verificações
+--------------------------------------------------------------------------------
+Simulação mental do resultado (Opção A):
+  • Modal público (abrirModal em qualquer tela) → exibe SOMENTE Google.       ✅
+  • Corporativo /seja-nosso-parceiro → sendCode/loginWithCode inalterados     ✅
+    (email segue habilitado no config + painel).
+  • Logout / sessão / gestão de wallet → inalterados.                         ✅
+  • Integração backend (JWT, address) → inalterada.                           ✅
+  • Leituras user?.apple?.* / user?.email?.* → seguem válidas (optional).     ✅
+
+⚠️ VERIFICAÇÕES OBRIGATÓRIAS NO MC62 (antes de considerar pronto):
+  V1 [CRÍTICA] Confirmar que, no Privy v3.22, login({ loginMethods: ["google"] })
+     realmente RESTRINGE o modal a Google. Se a API não filtrar por chamada nesta
+     versão, plano B: (a) usar a config global loginMethods:["google"] SÓ se o
+     corporativo migrar para outro método, OU (b) UI de login custom só-Google.
+     → Testar em ambiente real (login público) antes do deploy.
+  V2 [ALTA] E2E do corporativo: cadastrar/logar um lojista por email-OTP e
+     confirmar sendCode → código → loginWithCode → /corporativo. Deve continuar OK.
+  V3 [MÉDIA] Remoção de "apple" não gera erro em runtime (não gera — leituras são
+     optional chaining; nenhum botão apple no código).
+  V4 [BAIXA] Verificar visualmente (claude-eyes/MCP): modal público mostra só o
+     botão Google; sem "Continue with Email"/"Apple".
+
+Observação de segurança (security-review): reduzir métodos de login diminui a
+superfície de ataque de phishing por OTP no fluxo público; o OTP permanece só no
+fluxo corporativo, que é gated por CNPJ/cadastro. Sem novos segredos ou permissões.
+
+--------------------------------------------------------------------------------
+5. CRITÉRIOS DE ACEITAÇÃO
+--------------------------------------------------------------------------------
+  [ ] A tela/modal de login PÚBLICO exibe apenas "Entrar com Google".
+  [ ] Nenhum botão de Apple ou Email no modal público.
+  [ ] Cadastro e login CORPORATIVO (lojista) por email-OTP continuam funcionando
+      fim-a-fim (/seja-nosso-parceiro → OTP → /corporativo).
+  [ ] Logout, sessão e criação de embedded wallet inalterados.
+  [ ] npm run build verde; sem regressão visual nas telas que chamam abrirModal.
+
+--------------------------------------------------------------------------------
+6. ESTIMATIVA DE ESFORÇO E RISCO
+--------------------------------------------------------------------------------
+  Esforço: BAIXO — 2 arquivos, ~4 linhas de código + verificação no painel.
+  Risco...: BAIXO-MODERADO.
+    - Baixo para "apple" (config morta).
+    - Moderado para o modal público: depende de V1 (comportamento do
+      login({loginMethods}) por chamada no Privy v3.22). Corporativo é
+      PRESERVADO por desenho (não tocamos no config global de email).
+  Reversível: SIM — reverter as 2 alterações restaura o estado atual.
+
+--------------------------------------------------------------------------------
+7. ARQUIVOS / COMPONENTES ENVOLVIDOS (RASTREABILIDADE — Pilar 2)
+--------------------------------------------------------------------------------
+  ALTERAR (MC62):
+    frontend/src/main.jsx:257-258 .................... remover "apple"
+    frontend/src/context/AppContext.jsx:746-768 ...... modal público só Google
+  VERIFICAR (MC62, sem código):
+    Painel Privy (Dashboard) ......................... Google/Email ativos, Apple off
+  NÃO ALTERAR (dependências a preservar):
+    frontend/src/pages/SejaNossoParceiro.jsx:11,73,127,132 . email-OTP corporativo
+    frontend/src/context/AppContext.jsx:278,308,347 ....... leituras de identidade
+    frontend/src/pages/MinhaCarteira.jsx:44 ............... label/email pagador
+    frontend/src/main.jsx:227 (useLogin callbacks) ....... criação de wallet
+
+--------------------------------------------------------------------------------
+8. VEREDITO
+--------------------------------------------------------------------------------
+✅ PLANO PRONTO PARA APROVAÇÃO (Opção A). Diagnóstico completo; escopo decidido
+   pelo validador humano (preservar corporativo). Execução no MC62, condicionada
+   à verificação V1 (comportamento do login por chamada no Privy v3.22).
+
+   Achado-chave: a remoção ingênua de "email" (loginMethods:["google"]) QUEBRARIA
+   o login corporativo por email-OTP — evitado pela Opção A.
+
+================================================================================
+FIM — MC61 (PLANEJAMENTO)  ·  PRÓXIMO: MC62 (execução, após aprovação)
+================================================================================

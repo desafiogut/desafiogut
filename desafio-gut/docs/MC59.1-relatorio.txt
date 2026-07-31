@@ -1,0 +1,140 @@
+================================================================================
+MC59.1 — CORREÇÃO DO B-1 (signer.mjs) COM LOOP DE VALIDAÇÃO — RELATÓRIO FINAL
+DesafioGUT · Pré-Mainnet
+================================================================================
+Data...........: 2026-07-08
+Branch.........: feat/mc59.1-correcao-signer (de feat/mc59-revisao-tecnica)
+Modelo.........: Opus 4.8 + ECC (ai-first-engineering · tdd-workflow · verification-loop
+                 · santa-method · continuous-agent-loop)
+Escopo (R1)....: código de produção alterado APENAS em
+                 desafio-gut/frontend/netlify/functions/_lib/signer.mjs
+Deliverables...: MC59.1-RELATORIO.txt · MC59.1-notas.txt · testes mc591 · cloud.md · security_audit.md
+
+--------------------------------------------------------------------------------
+1. RESUMO DA CORREÇÃO (o quê e por quê)
+--------------------------------------------------------------------------------
+PROBLEMA (B-1, crítico do MC59): signer.mjs impedia o flip para mainnet porque
+`assertChaveBrutaAusenteEmMainnet()` fazia `throw` INCONDICIONAL quando
+COORDENACAO_PRIVATE_KEY existia em NETWORK_STAGE=mainnet — mas a arquitetura VIVA
+(MC56/Opção D, coordenação = EOA) EXIGE essa chave, e o backend alternativo
+(Biconomy/KMS) está morto (bundler desativado, MC52.1).
+
+SOLUÇÃO (Opção B, minimal e mais segura que o rascunho do plano):
+Permitir a chave bruta em mainnet SOMENTE quando o backend for 'local-key'
+escolhido EXPLICITAMENTE via SIGNER_BACKEND=local-key (opt-in deliberado). Nesse
+caso a função emite `console.warn` (hot key — salvaguardas operacionais) em vez de
+`throw`. Em qualquer outro cenário (default/biconomy) o bloqueio permanece.
+
+DESVIO DELIBERADO DO RASCUNHO (documentado com honestidade):
+  • O rascunho propunha "Alteração 1" em backendAssinatura() (mainnet →
+    SIGNER_BACKEND||"local-key"). NÃO foi aplicada: é REDUNDANTE (o ramo
+    `explicito` já devolve local-key quando SIGNER_BACKEND=local-key) e trocar o
+    DEFAULT de mainnet para local-key seria um DOWNGRADE de segurança (hot-key
+    silenciosa por esquecimento de env) — além de quebrar 2 testes legados.
+  • O rascunho propunha trocar o guard por um `console.warn` puro. NÃO foi feito
+    assim: isso removeria a proteção contra chave ACIDENTAL e os checks do
+    backend biconomy. A versão implementada preserva ambos.
+Resultado: correção mais cirúrgica (só o guard #1), sem quebrar nada, sem abrir
+superfície de hot-key acidental.
+
+DIFF (produção): 1 ficheiro, signer.mjs (+guard local-key opt-in, +comentário).
+Nenhuma alteração em frontend/src, em outras functions ou em libs.
+
+--------------------------------------------------------------------------------
+2. LOOP DE VALIDAÇÃO (verification-loop) — EVIDÊNCIAS
+--------------------------------------------------------------------------------
+FASE 1 — Build...........: PASS  (frontend `npm run build` → ✓ built in ~5.9s)
+FASE 2 — node --check....: PASS  (signer.mjs + testes limpos)
+FASE 3 — Lint............: N/A   (projeto não define script `lint` — não é regressão)
+FASE 4 — Testes..........: PASS
+   · Suíte signer (mc591 + mc30-signer + mc302-guarda + biconomy + kms): 27/27
+   · Integração + dinheiro (mc30-integracao, mc302-integracao,
+     mc3917-double-spend, mc361-saldo-rs): 18/18
+   · TDD: 2 testes de novo comportamento passaram de RED→GREEN; 3 de regressão
+     de segurança permaneceram GREEN.
+FASE 5 — Security scan...: PASS  (nenhum secret/credencial introduzido no diff;
+   console.warn NÃO interpola a chave — só sinaliza presença)
+FASE 6 — Diff review.....: PASS  (produção = só signer.mjs, +27/-5; src intacto)
+
+--------------------------------------------------------------------------------
+3. REVISÃO ADVERSARIAL (santa-method) — VEREDITO: NICE ✅
+--------------------------------------------------------------------------------
+Revisor de segurança independente (ECC security-reviewer) executou os testes e
+inspecionou a função inteira. VEREDITO: NICE (aprovado). Sem findings
+CRITICAL/HIGH/MEDIUM. Confirmou:
+  1. Sem via de hot-key acidental — default mainnet continua biconomy; local-key
+     exige SIGNER_BACKEND literal 'local-key'. Valores malformados caem em
+     biconomy (fail-CLOSED).
+  2. console.warn não vaza chave/segredo (texto estático).
+  3. Guards do backend biconomy (KMS_PROVIDER/KMS_KEY_ID/BUNDLER_URL) preservados.
+  4. Sem regressão para cenários não-local-key (throw byte-a-byte equivalente).
+  5. Nome legado COORDENACAO_PRIVATE coberto (resolverChaveCoordenacao).
+Fix-cycle aplicado: atualizado o comentário de cabeçalho do signer.mjs para
+refletir o opt-in (sugestão INFO do revisor). Sugestão INFO de `.trim()` em
+SIGNER_BACKEND NÃO aplicada (fora do R1 — está em backendAssinatura; e o
+comportamento atual já é fail-closed/seguro).
+
+--------------------------------------------------------------------------------
+4. TESTE EM "MAINNET SIMULADO" (Segmento 6) — HONESTIDADE DE ESCOPO
+--------------------------------------------------------------------------------
+EXECUTADO (sem segredos, sem cadeia viva) — harness de simulação:
+  NETWORK_STAGE=mainnet + SIGNER_BACKEND=local-key + chave de TESTE (conta #0
+  Hardhat, descartável). Resultado:
+    [1] guarda mainnet PERMITE local-key (B-1 resolvido)
+    [2] signer criado: backend=local-key, EOA=0xf39Fd6…92266 (correto)
+    [3] EIP-191 signMessage → assina e recupera o EOA correto
+    [4] EIP-712 signTypedData → assina e recupera o EOA correto
+  Ou seja: sob mainnet, a coordenação VOLTA a conseguir assinar — que é
+  exatamente o que creditarSenhas (adicionarSenhas) e consolidarResultado
+  precisam. O bloqueador B-1 está removido no caminho de assinatura.
+
+NÃO EXECUTADO (e por quê, sem fingir):
+  • Transação ON-CHAIN real de comprar-senhas/PIX em Sepolia sob mainnet: exige
+    COORDENACAO_PRIVATE_KEY e RPC financiado. Por regra do projeto o OPERADOR
+    manuseia segredos (o agente não puxa chaves); o health de produção reporta
+    SIGNER_READY=MISSING. Esta validação viva fica para o operador.
+  • O restante do fluxo comprar-senhas (débito CAS, crédito idempotente,
+    reembolso) NÃO é tocado por este diff e já está coberto pelos testes de
+    dinheiro (18/18 acima).
+
+--------------------------------------------------------------------------------
+5. VEREDITO FINAL — LEITURA HONESTA (diverge do R8)
+--------------------------------------------------------------------------------
+B-1: ✅ RESOLVIDO E VALIDADO (unit + mainnet-sim + revisão adversarial NICE).
+     O contrato de assinatura da coordenação já NÃO bloqueia o flip.
+
+⚠️ MAS: "✅ LIBERADO para mainnet" (R8) NÃO pode ser declarado com honestidade
+   por este MC. O B-1 é 1 de 5 bloqueadores identificados no MC59. Permanecem
+   ABERTOS (não tocados aqui, por R1):
+     • B-2 (ALTO)  tx.wait(1) síncrono no handler → timeout em mainnet.
+     • B-4 (ALTO)  chainId/contrato Sepolia hardcoded no frontend + drift MC56.
+     • C-1 (ALTO)  crédito/reembolso de saldo R$ não-atómicos (lost update).
+     • D-1 (ALTO)  webhook MP com HMAC fail-open (MP_WEBHOOK_SECRET não setado).
+   Além disso, o operador deve, no ambiente de produção:
+     • setar SIGNER_BACKEND=local-key EXPLICITAMENTE (senão o default biconomy
+       morto falha), e COORDENACAO_PRIVATE_KEY (hot key: EOA só-gás + rotação +
+       monitor on-chain), e resolver o drift do frontend (contrato ativo
+       0x825bBd3F…eF06).
+
+   VEREDITO DE READINESS GLOBAL: 🟡 B-1 desbloqueado; 4 ALTOS ainda gate mainnet.
+   Recomendação: MC59.2+ para B-2/B-4/C-1/D-1 antes de qualquer flip real.
+
+--------------------------------------------------------------------------------
+6. VALIDAÇÃO HUMANA / OPERADOR (SUPERPERS — pendente)
+--------------------------------------------------------------------------------
+Nenhuma alteração vai a produção sem aprovação do operador (Pilar 1). Ações do
+operador antes de considerar o flip:
+  [ ] Revisar e aprovar este diff (feat/mc59.1-correcao-signer).
+  [ ] Definir SIGNER_BACKEND=local-key + COORDENACAO_PRIVATE_KEY no ambiente.
+  [ ] Executar comprar-senhas + PIX reais em staging/mainnet com valor mínimo.
+  [ ] Endereçar B-2/B-4/C-1/D-1 (MCs seguintes).
+
+Commits (branch feat/mc59.1-correcao-signer):
+  test(mc59.1): testes do B-1 (RED)
+  fix(mc59.1): resolve B-1 — local-key legítimo em mainnet (GREEN)
+  docs(mc59.1): revisão adversarial (santa-method NICE) — cabeçalho signer
+  docs(mc59.1): relatório final + cloud.md + security_audit.md  (este)
+
+================================================================================
+FIM — MC59.1
+================================================================================

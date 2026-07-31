@@ -16,6 +16,11 @@
 //   - caso contrário: NETWORK_STAGE === 'mainnet'  → 'biconomy' (Smart Account + KMS)
 //                     restante (sepolia/localhost) → 'local-key' (chave de testnet, R3)
 //
+// MC59.1 (Opção B): 'local-key' é um backend LEGÍTIMO em mainnet (coord = EOA,
+// MC56) quando escolhido EXPLICITAMENTE via SIGNER_BACKEND=local-key. Nesse caso
+// a chave bruta é PERMITIDA em mainnet (hot key, com salvaguardas). O default de
+// mainnet permanece 'biconomy' → uma chave bruta acidental continua rejeitada.
+//
 // SEGURANÇA: a chave privada NUNCA é logada nem exportada por este módulo.
 
 import { JsonRpcProvider, Wallet } from "ethers";
@@ -63,13 +68,35 @@ export function getCoordenacaoAddressCache() {
  */
 export function assertChaveBrutaAusenteEmMainnet() {
   const temChaveBruta = !!resolverChaveCoordenacao();
+  const backend = backendAssinatura();
 
-  // Regra MC30.1: em mainnet a chave bruta nunca pode existir (HSM/KMS assina).
+  // MC59.1 (Opção B) — resolve o bloqueador B-1 do MC59:
+  // O backend 'local-key' com coordenação EOA é a arquitetura VIVA de produção
+  // (MC56/Opção D), depois de o bundler Biconomy ter sido desativado (MC52.1).
+  // Nesse cenário a COORDENACAO_PRIVATE_KEY é NECESSÁRIA — portanto é PERMITIDA
+  // em mainnet, mas SOMENTE quando 'local-key' foi escolhido EXPLICITAMENTE
+  // (SIGNER_BACKEND=local-key). Continua a ser uma HOT KEY: o EOA deve conter
+  // apenas ETH de gás, com rotação de chave e monitor on-chain. O contrato não
+  // custodia fundos de terceiros — o impacto de um compromisso limita-se a
+  // cunhar senhas / definir vencedor (mitigável pela coordenação).
+  //
+  // Regra MC30.1 (preservada): fora do opt-in explícito de local-key, a chave
+  // bruta NUNCA pode existir em mainnet — uma reintrodução acidental com o
+  // default (biconomy) continua a ser REJEITADA (aqui e no guard biconomy abaixo).
   if (process.env.NETWORK_STAGE === "mainnet" && temChaveBruta) {
-    throw new Error(
-      "MC30.1: COORDENACAO_PRIVATE_KEY presente em mainnet — a chave bruta deve " +
-      "ser removida do ambiente (R9/ITEM 3.5). Use o backend Biconomy (Smart Account + KMS).",
-    );
+    if (backend === "local-key") {
+      console.warn(
+        "[MC59.1] COORDENACAO_PRIVATE_KEY presente em mainnet com " +
+        "SIGNER_BACKEND=local-key (Opção B/MC56). HOT KEY: garantir EOA só-gás, " +
+        "rotação de chave e monitor on-chain.",
+      );
+    } else {
+      throw new Error(
+        "MC30.1: COORDENACAO_PRIVATE_KEY presente em mainnet — a chave bruta deve " +
+        "ser removida do ambiente (R9/ITEM 3.5), ou escolha SIGNER_BACKEND=local-key " +
+        "explicitamente (Opção B/MC56). Backend atual: " + backend + ".",
+      );
+    }
   }
 
   // Regra MC30.2.1: o backend Biconomy exige owner KMS e proíbe a chave bruta.

@@ -1,0 +1,112 @@
+================================================================================
+MC67 — RELATÓRIO: EXECUÇÃO DOS REFINAMENTOS DE FRONTEND (11 ITENS)
+================================================================================
+Data......: 2026-07-09
+Branch....: feat/mc67-execucao-refinamentos (base: feat/mc66-execucao-redesign-glass)
+Commit....: a6db336  (feat(mc67): refinamentos de frontend (11 itens))
+Plano.....: Desktop\MC66-PLANO-REFINAMENTOS-FRONTEND.txt
+Status....: ✅ código + build + runtime OK · ⏳ validação visual MCP PENDENTE
+            (MCP de browser desconectado na sessão) · ⏸️ deploy pendente (operador)
+
+--------------------------------------------------------------------------------
+ITENS EXECUTADOS (arquivo · alteração)
+--------------------------------------------------------------------------------
+[1] Carteira: cabeçalho DENTRO de Glass.
+    pages/MinhaCarteira.jsx — <header> solto → <GlassCard as="header" className={cardCls}>.
+
+[2] Vitrine: avatar GUTO removido.
+    pages/Vitrine.jsx — <GutoAvatar vitrine-header-confiante> removido + import limpo.
+
+[3] Seja Nosso Parceiro: avatar GUTO removido.
+    pages/SejaNossoParceiro.jsx — <GutoAvatar parceiro-hero-orgulhoso> removido + import limpo.
+
+[4] "Beta" removido (7 pontos):
+    CardLance.jsx (rodapé), Configuracoes.jsx (Versão "Beta v0.9"→"1.0"),
+    MercadoLances.jsx (footer), MeusAtivos.jsx, glass/AuthArea.jsx (badge 🧪),
+    Seguranca.jsx (desc), TabelaLances.jsx. Sweep final: zero "Beta" visível.
+
+[5] Jargão técnico removido/simplificado:
+    Configuracoes.jsx — SobreItem "Stack: React 18…" e "Rede: Sepolia Testnet" REMOVIDOS.
+    CardLance.jsx — "Argon2id · EIP-191 · Rate Limit · DOMPurify · Beta Interno" →
+      "🔒 Lance protegido e sanitizado".
+    TabelaLances.jsx — tirou "XSS-safe · Beta Interno" (mantém Art. 26).
+    Vitrine.jsx — tirou "Especificação Refatorada §2 e §3.2" e "§8 da spec".
+    PainelIndicacao.jsx — "(MC3)" + "FingerprintJS + Sybil check" → "verificação de dispositivo".
+    (Obs.: não havia strings "MCxx" renderizadas — todas eram comentários/console.log.)
+
+[6] Programação: view Junho/2026 SUBSTITUÍDA por estado "em breve".
+    components/ScheduleView.jsx — reescrito: Glass central "📅 Programação · Em breve"
+    (pílula "EM BREVE"); removida toda a grade/semanas/dias/horários/timers e o
+    jargão REQ-*/§spec. Dados estáticos (programacao-junho-2026.js) preservados no
+    repo pois a Vitrine ainda os consome.
+
+[7=item 8 do plano] Card "Segurança e Transparência" movido Lances → Configurações.
+    MercadoLances.jsx — painel + const SEGURANCA_ITENS REMOVIDOS.
+    Configuracoes.jsx — novo GlassCard "🛡️ Segurança e Transparência"; jargão cripto
+    (Argon2id/EIP-191/DOMPurify/WASM/XSS) trocado por copy de confiança
+    (Proteção/Anti-abuso/Privacidade) + mantidos Art. 20/26/27.
+
+[8=item 9] Cronômetros travados "EM BREVE" (sistema unificado).
+    NOVO src/lib/leilaoLock.js — EM_BREVE_MODE=true + EM_BREVE_LABEL (fonte única).
+    Aplicado em: Dashboard.jsx (Edição Ativa), components/EdicaoCard.jsx,
+    pages/EdicaoDetalhe.jsx, pages/Vitrine.jsx (formatarTimer → "EM BREVE" nos slots).
+    Aba Lances já era Hero "EM BREVE" (MC66); ScheduleView perdeu timers na substituição.
+    É trava de APRESENTAÇÃO — não altera contagem/estado. Reativar tudo = mudar 1 flag.
+
+[9=item 10] Nome padronizado → "DesafioGUT" (texto visível):
+    components/ChatbotWidget.jsx (assistente/share/aria), components/GutoAvatar.jsx (alt),
+    pages/SejaNossoParceiro.jsx (badge "Parceiros do DesafioGUT" + "Faça parte do DesafioGUT").
+    ⛔ INTOCADO (identificadores): DESAFIOGUT-AUTH / DESAFIOGUT-ADMIN (assinatura EIP-191,
+    3 usos em AppContext/CardLance/AdminPanel — verificados intactos), URLs iubenda,
+    e-mails, storage keys, PWA_URL.
+
+[10=item 11] Ícone quebrado do login Google corrigido:
+    src/main.jsx — appearance.logo: ".../favicon.ico" (cross-origin, bloqueado por CSP
+    img-src) → "/assets/logos/v2/gut-logo-icon-v2.png" (same-origin, coberto por 'self').
+    index.html — adicionado <link rel="icon"> + apple-touch-icon (antes: nenhum → 404).
+
+[11] accentColor do Privy: #00d4aa (teal antigo) → #ff6b35 (paleta oficial). src/main.jsx.
+
+--------------------------------------------------------------------------------
+VERIFICATION-LOOP
+--------------------------------------------------------------------------------
+• npm run build: ✅ VERDE — "✓ built in 55.30s", 3590 módulos (NODE_OPTIONS=8192;
+  avisos INVALID_ANNOTATION/PURE são de node_modules Privy, não do código MC67).
+• Runtime (dev Vite): 12 módulos alterados transformam HTTP 200, sem erro import/JSX
+  (main, leilaoLock, MinhaCarteira, Vitrine, SejaNossoParceiro, Configuracoes,
+   Dashboard, EdicaoDetalhe, MercadoLances, ScheduleView, EdicaoCard, AuthArea).
+• Sweep de segurança/consistência:
+  - "Beta" visível: 0 ✓
+  - constantes DESAFIOGUT-AUTH/ADMIN: 3 intactas ✓ (landmine do item 10 evitado)
+  - logo cross-origin: removido (agora same-origin) ✓ · accentColor #ff6b35 ✓
+  - leilaoLock consumido por 4 arquivos ✓
+• Diff: 20 arquivos + 1 novo (leilaoLock.js). Sem package-lock/arquivos alheios.
+
+--------------------------------------------------------------------------------
+⏳ VALIDAÇÃO VISUAL MCP (375 + 1440) — PENDENTE (bloqueada nesta sessão)
+--------------------------------------------------------------------------------
+Os MCP de browser (chrome-devtools e claude-eyes) seguem DESCONECTADOS → não foi
+possível capturar os screenshots exigidos por R4. NÃO validado visualmente.
+COMO CONCLUIR (quando o MCP voltar / manualmente): npm run dev → em 1440px e 375px:
+  Carteira (cabeçalho em Glass) · Vitrine (sem avatar, topo em Glass) · Parceiro
+  (sem avatar) · Configurações (Versão 1.0, sem Stack/Rede, card Segurança presente) ·
+  Programação (só "EM BREVE") · Dashboard/EdiçãoDetalhe/EdiçãoCard/Vitrine (timers = "EM BREVE") ·
+  Lances (footer sem Beta, sem card Segurança) · Login Google (logo OK, accent laranja).
+  Salvar em: Desktop\GUTO-ANIMADO GLASS DASHBOARD\validacao-mc67\
+
+--------------------------------------------------------------------------------
+⏸️ DEPLOY EM PRODUÇÃO — NÃO EXECUTADO PELO AGENTE (política MC62/64/66)
+--------------------------------------------------------------------------------
+Prod na MAINNET. Deploy = operador, com env mainnet, após a validação visual:
+  cd desafio-gut/frontend && npm run build
+  netlify deploy --build --prod --message "feat(mc67): refinamentos frontend (11 itens)"
+
+--------------------------------------------------------------------------------
+VEREDITO
+--------------------------------------------------------------------------------
+✅ REFINAMENTOS EXECUTADOS — frontend limpo e consistente (11 itens), verificado por
+   build + runtime. ⏳ RESSALVA: validação visual MCP 375/1440 (R4) não executada
+   (MCP de browser caiu). Concluir antes do deploy.
+
+Rollback: git revert a6db336 (ou reverter os arquivos + rm src/lib/leilaoLock.js).
+================================================================================

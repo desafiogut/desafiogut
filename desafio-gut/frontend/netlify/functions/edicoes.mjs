@@ -26,11 +26,18 @@ import { jsonResponse, jsonError, parseJsonBody, ValidationError } from "./_lib/
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { autenticarAdmin, guardAdmin } from "./_lib/admin-auth.mjs";
 import { listarEdicoes, criarEdicao, encerrarEdicao } from "./_lib/edicoes-core.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const RL_GET_RPM    = 30;  // leitura pública
 const RL_CRIAR_RPM  = 10;  // criação admin (anti-rajada; ver nota acima)
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   const url = new URL(req.url);
 
   // ── GET: listagem pública ──────────────────────────────────────────────────

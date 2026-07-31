@@ -14,13 +14,20 @@ import {
   validarEndereco, jsonResponse, jsonError, parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
 import { getPixProvider, PIX_PROVIDER_NAME } from "./_lib/pix-provider/index.mjs";
-import { gravarMetaPedido } from "./_lib/credito.mjs";
+import { gravarMetaPedido } from "./_lib/meta.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { COTA_PRECO_CONTRATO_BRL, CATEGORIAS } from "./_lib/cota-ativacao.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const TTL_SEC = 15 * 60;
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }

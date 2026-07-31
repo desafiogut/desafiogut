@@ -1,0 +1,108 @@
+================================================================================
+MC59.6 — FRONTEND POLLING PARA 202 (CONFIRMAÇÃO ASSÍNCRONA) — RELATÓRIO FINAL
+DesafioGUT · Pré-Mainnet
+================================================================================
+Data...........: 2026-07-08
+Branch.........: feat/mc59.6-frontend-polling (de feat/mc59.5-adr-assincrono)
+Modelo.........: Opus 4.8 + ECC (search-first, tdd-workflow, verification-loop, security-review)
+
+--------------------------------------------------------------------------------
+0. VEREDITO
+--------------------------------------------------------------------------------
+✅ FRONTEND POLLING IMPLEMENTADO — mainnet mais próxima.
+⚠️ DORMANT: só atua quando o backend responde 202 (flag CREDITO_ASSINCRONO=ON, hoje
+   OFF). Com a flag OFF o caminho síncrono é IDÊNTICO (CreditoStatus renderiza null).
+
+--------------------------------------------------------------------------------
+1. DESVIOS DELIBERADOS DO PLANO (com justificativa)
+--------------------------------------------------------------------------------
+• TypeScript → JavaScript: o projeto NÃO usa TS (sem tsc; arquivos .jsx; vite).
+  Implementado em .js/.jsx.
+• jobId + endpoint /status-credito → POLLING ON-CHAIN por txHash: o backend do
+  MC59.5 devolve `txHash` (NÃO um jobId) e não há store de status por job. O sinal
+  de verdade é on-chain (o frontend já lê a cadeia). Poll do receipt por txHash =
+  puro frontend (fica no R1), sem criar endpoint backend. Mais simples e robusto.
+• Timeout ≠ "failed": o pseudo-código do plano marcava status='failed' no timeout
+  (errado — a tx pode confirmar depois). Uso um estado `timeout` distinto, com
+  mensagem "pendente, acompanhe/contate suporte".
+• Testes: NÃO há runner de teste React no projeto. Extraí a LÓGICA de polling para
+  um módulo PURO (creditoPolling.js) testado com node:test (satisfaz R4 na parte
+  de risco). Hook/componente/wiring são validados por build + esbuild transform.
+
+--------------------------------------------------------------------------------
+2. O QUE FOI IMPLEMENTADO (R1: só frontend)
+--------------------------------------------------------------------------------
+• src/lib/creditoPolling.js (PURO): aguardarConfirmacaoCredito({verificar, sleep,
+  cancelado, maxTentativas, intervaloMs}) → repete verificar() até confirmado/
+  revertido ou timeout; erro em verificar = pendente (re-tenta); cancelado() para.
+• src/utils/web3.js: verificarCreditoOnchain(txHash) — read-only via Alchemy;
+  receipt.status 1→"confirmado", 0→"revertido", ausente→"pendente".
+• src/hooks/useCreditoStatus.js: hook que roda o polling a partir do txHash;
+  estados idle/processing/confirmed/reverted/timeout; CANCELA no unmount
+  (canceladoRef → sem setState após desmontar, sem timer órfão).
+• src/components/CreditoStatus.jsx: feedback dos 4 estados; usa explorerTx() da
+  config de rede (MC59.2) — sem host de explorer hardcoded.
+• src/hooks/useTrocarPorSenhas.js: detecta 202 (status===202 || data.assincrono) →
+  não afirma "creditada", devolve { assincrono:true, txHash }. Sync path INTACTO.
+• src/pages/MinhaCarteira.jsx: captura o txHash do 202 e renderiza <CreditoStatus>
+  (inerte com flag OFF → null). Faz o componente ser validado pelo build.
+
+--------------------------------------------------------------------------------
+3. TDD (RED → GREEN) — lógica de polling
+--------------------------------------------------------------------------------
+src/lib/creditoPolling.test.mjs (6/6, node:test):
+  • confirma na 2ª verificação (dorme 1×) · revertido · sempre pendente→timeout
+    (verifica exatamente maxTentativas) · erro de rede→pendente→recupera ·
+    cancelado()→para sem verificar · verificar ausente→erro claro.
+Cobre os 5 cenários do plano (processing/confirmed/failed/timeout/cancel) na
+camada de lógica (a única testável sem runner React).
+
+--------------------------------------------------------------------------------
+4. VERIFICATION-LOOP
+--------------------------------------------------------------------------------
+Build.........: PASS (vite build ✓ ~5s; inclui CreditoStatus via MinhaCarteira)
+node --check..: PASS (creditoPolling.js, useCreditoStatus.js, web3.js, useTrocarPorSenhas.js)
+esbuild.......: PASS (CreditoStatus.jsx + hook + lib compilam — JSX válido)
+Types.........: N/A (JS/JSX)
+Lint..........: N/A (sem script lint)
+Tests.........: PASS — polling 6/6. Backend NÃO tocado (suíte MC59.5 72/72 intacta).
+Security......: sem secrets novos; sem explorer hardcoded (usa explorerTx).
+
+--------------------------------------------------------------------------------
+5. REVISÃO DE SEGURANÇA (checklist) — sem findings
+--------------------------------------------------------------------------------
+• Segredos: nenhum novo (ALCHEMY_RPC é pré-existente, client-side).
+• jobId previsível: N/A — poll por txHash (público on-chain); nada sensível exposto.
+• Rede/timeout: erro→pendente (re-tenta); maxTentativas→estado timeout. Coberto.
+• Feedback: 4 estados claros; timeout≠failed (não induz "falha" numa tx que pode confirmar).
+• Cleanup: canceladoRef cancela o polling e bloqueia setState pós-unmount.
+• Logs: sem log de dado sensível.
+(Superfície read-only de UI → revisão manual proporcional; agente independente
+ reservado para mudanças do caminho do dinheiro, como no MC59.5.)
+
+--------------------------------------------------------------------------------
+6. TESTE "SEPOLIA / MAINNET SIMULADO" (Segmento 5) — HONESTIDADE
+--------------------------------------------------------------------------------
+Coberto offline: a máquina de estados do polling (node:test, sleep injetado →
+  instantâneo). A leitura on-chain (verificarCreditoOnchain) e a UI compilam.
+NÃO executado: fluxo 202 VIVO ponta a ponta (comprar → 202 → polling → confirmado)
+  — exige CREDITO_ASSINCRONO=ON + a migração da fila aplicada + o worker rodando
+  (cron) + segredos, tudo do OPERADOR. E não há runner de teste React para snapshot
+  do componente. Validação viva fica para o operador ao habilitar a feature.
+
+--------------------------------------------------------------------------------
+7. PRÓXIMOS PASSOS PARA HABILITAR (operador / próximo passo)
+--------------------------------------------------------------------------------
+  [ ] Aplicar a migração 20260629_fila_tarefas (fila deixa de ser inerte).
+  [ ] CREDITO_ASSINCRONO=true em STAGING (Sepolia) → validar o 202 + polling vivo.
+  [ ] Reaper de tarefas 'processing' presas (follow-up do MC59.5).
+  [ ] Gates de mainnet do MC60 NO-GO (contrato na mainnet, chave rotacionada,
+      segredos reais, gás na EOA).
+
+Commits (branch feat/mc59.6-frontend-polling):
+  feat(mc59.6): frontend polling do 202 (crédito assíncrono)
+  docs(mc59.6): relatório final + cloud.md + security_audit.md (este)
+
+================================================================================
+FIM — MC59.6
+================================================================================

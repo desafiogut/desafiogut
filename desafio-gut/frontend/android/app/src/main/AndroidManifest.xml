@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- MC88.5 — App Link HTTPS para o redirect OAuth do Privy.
+                 MANTIDO como fallback: validado end-to-end no MC88.5.3, mas só fecha
+                 o ciclo em browsers que cedem a navegação (Chrome sim, Opera não).
+                 autoVerify usa o assetlinks.json servido em
+                 https://silly-stardust-ca71bc.netlify.app/.well-known/ -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                      android:host="silly-stardust-ca71bc.netlify.app" />
+            </intent-filter>
+
+            <!-- MC88.7 — esquema custom para o redirect OAuth, INDEPENDENTE do browser
+                 padrão. Nenhum browser sabe tratar "desafiogut://", por isso o retorno
+                 é sempre entregue ao Android → MainActivity (singleTask) → onNewIntent
+                 → appUrlOpen → listener do MC88.4 reinjeta os privy_oauth_* na origem
+                 local. Era ESTA a peça em falta no MC88.6: o customOAuthRedirectUrl já
+                 apontava para desafiogut://oauth, mas sem este intent-filter o Android
+                 não tinha como saber que o esquema pertence a esta app.
+                 Sem host/path: casa qualquer desafiogut://* (o SDK usa //oauth). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="desafiogut" />
+            </intent-filter>
+
+            <!-- MC88.7 — mesmo mecanismo para "capacitor://localhost", que JÁ consta
+                 nas Allowed Origins do dashboard Privy (ao contrário de desafiogut://,
+                 rejeitado com "Redirect URL scheme is not allowed"). NÃO mexe no
+                 server.androidScheme: a origem da WebView continua https://localhost;
+                 isto é só uma porta de entrada para o retorno do OAuth. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="capacitor" android:host="localhost" />
+            </intent-filter>
+
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+    </application>
+
+    <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

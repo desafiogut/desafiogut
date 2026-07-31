@@ -1,0 +1,97 @@
+MC88.40 — SEGMENTO 0: DIAGNÓSTICO DO SUFIXO "(ANTIGO)"
+================================================================================
+Data: 2026-07-28 · Aparelho: fiem7xlvcufe855h · APK medido: MC88.39 (b5108f6)
+
+
+ALCANCE REAL — 4 FICHEIROS, MAS COM DOIS SÍMBOLOS DIFERENTES
+================================================================================
+⚠️ CORREÇÃO DE UM ERRO MEU. Ao levar a decisão ao operador afirmei "7 ocorrências
+de (antigo) em 4 ficheiros". Estava errado: eu tinha cruzado os resultados de
+dois varrimentos diferentes (um por "antigo", outro por "Suffix") e li-os como
+se fossem o mesmo. O estado real, verificado ficheiro a ficheiro:
+
+    " (antigo)"  →  Dashboard.jsx:80,84      ×2
+                    CardLance.jsx:267,273    ×2      = 4 ocorrências, 2 ficheiros
+
+    " ◇"         →  MinhaCarteira.jsx:62,69  ×2
+                    Sidebar.jsx:95           ×1      = 3 ocorrências, 2 ficheiros
+
+A `MinhaCarteira` e a `Sidebar` nunca mostraram "(antigo)" — mostram um losango
+solto, "12 senhas ◇".
+
+A decisão do operador (aplicar nos quatro ficheiros) MANTÉM-SE, e por uma razão
+que a correção não altera: o "◇" é exatamente o mesmo problema noutra roupagem.
+Um símbolo sem legenda ao lado de um saldo não diz nada a ninguém — é jargão
+gráfico em vez de jargão textual. Ambos são substituídos pelo mesmo esbatido.
+
+
+⚠️ A PROPOSTA DO PLANO NÃO CABE — MEDIDO, NÃO ESTIMADO
+================================================================================
+O S1.2 do plano manda trocar " (antigo)" por " (atualizando...)".
+
+O valor do tile é renderizado com `whiteSpace: nowrap`, `overflow: hidden` e
+`textOverflow: ellipsis` (StatTile.jsx:32-36), a 1,15 rem / peso 900 em mobile.
+O próprio comentário do componente (StatTile.jsx:13) já avisa do risco de
+"estourar em telas estreitas, ex.: 'R$ — (antigo)'".
+
+Medição no aparelho (janela de 392 px), comparando a largura de cada
+alternativa com o espaço realmente disponível no tile:
+
+  TILE "Saldo (R$)" — disponível 121 px      TILE "Senhas" — disponível 79 px
+  ──────────────────────────────────────     ────────────────────────────────
+    48 px   cabe   "R$ 0.00"                   13 px   cabe   "12"
+    98 px   cabe   "R$ 0.00 (antigo)"          64 px   cabe   "12 (antigo)"
+   145 px   CORTA  "R$ 0.00 (atualizando...)" 110 px   CORTA  "12 (atualizando...)"
+   123 px   CORTA  "R$ 0.00 (a atualizar)"     88 px   CORTA  "12 (a atualizar)"
+    55 px   cabe   "R$ 0.00 ·"                 20 px   cabe   "12 ·"
+    64 px   cabe   "R$ 0.00 …"                 29 px   cabe   "12 …"
+
+"(atualizando...)" seria truncado com reticências nos DOIS tiles — o utilizador
+veria "R$ 0.00 (atualiz…" e "12 (atualiz…". Isso é PIOR do que o estado atual:
+troca jargão compreensível por jargão cortado a meio.
+
+Executar o plano à letra teria degradado a interface. Por isso a decisão foi
+levada ao operador com as larguras medidas em mão.
+
+
+DECISÃO DO OPERADOR
+================================================================================
+Opção escolhida: VALOR ESBATIDO, SEM TEXTO.
+
+Enquanto o valor for de cache, o número fica com opacidade reduzida e uma
+pulsação muito suave. Quando confirma, fica sólido.
+
+    ENQUANTO É CACHE            DEPOIS DE CONFIRMAR
+      R$ 0.00  ← esbatido         R$ 0.00  ← sólido
+      12       ← esbatido         12       ← sólido
+
+Porquê esta e não as outras:
+  • custo de largura ZERO (48 px e 13 px, contra 121 e 79 disponíveis) — é a
+    única família de soluções que não corre risco de corte em ecrã estreito;
+  • não expõe jargão nenhum;
+  • a distinção cache/fresco continua perceptível, que era o requisito do
+    MC88.34 ao introduzir o sufixo;
+  • "…" foi descartado por poder ler-se como truncagem — exatamente o que se
+    quer evitar;
+  • "remover e não distinguir nada" foi descartado por deixar o utilizador sem
+    qualquer pista de que o número pode não ser o mais recente.
+
+Âmbito: os quatro ficheiros.
+
+
+O QUE NÃO MUDA
+================================================================================
+Os sufixos " ⏳" (loading) e " ✗" (error) FICAM. São estados diferentes de
+"stale", ocupam um caractere, e não são o jargão que este MC veio remover.
+Redesenhar estados de erro está fora do escopo (R1).
+
+A lógica de status (idle | loading | ok | stale | error) NÃO é tocada. Este MC
+altera apenas como o estado "stale" é APRESENTADO.
+
+
+NOTA DE MÉTODO
+================================================================================
+As larguras foram medidas injetando um <span> oculto com a mesma fonte, peso e
+espaçamento do elemento real e lendo o seu bounding box — não por estimativa de
+caracteres. Experiência apenas de leitura no DOM, sem alterar a página.
+Script: `largura.mjs` (scratchpad).

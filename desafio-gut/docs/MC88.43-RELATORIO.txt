@@ -1,0 +1,203 @@
+================================================================================
+MC88.43 — UNIFICAÇÃO DO ESTADO DA EDIÇÃO (UMA SÓ VERDADE)
+================================================================================
+Data......: 2026-07-29
+Aparelho..: Xiaomi 21091116UG (pissarropro) · Android · fiem7xlvcufe855h
+APK.......: MC88.43, md5 7c20bb49deb0022a95b792b3cdf9bb2a
+Perfil....: comum autenticado — "Novo Pernambucano", 12 senhas, R$ 0,00
+Método....: leitura do código + GET ao endpoint de produção + navegação real no
+            aparelho via adb + CDP (DOM, consola, métricas)
+Suite.....: 263/263 verde (249 pré-existentes + 14 novas)
+Branch....: feat/mc88.29-fila-tarefas · 5 commits (S0…S4)
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+O produto deixou de falar em três vozes sobre o estado de uma edição.
+
+O MC88.41 tinha suposto que a causa era "uma função de derivação usada em dois
+sítios com entradas diferentes". Não era. Não existia função nenhuma: existiam
+TRÊS fontes independentes e uma trava de apresentação aplicada a metade dos
+ecrãs. Cada ecrã re-derivava o que precisava da fonte que tinha à mão.
+
+Agora existe UM sítio — `getEstadoEdicao()` — e sete ecrãs perguntam-lhe em vez
+de inventar. As duas contradições fecharam, verificadas ao vivo no aparelho:
+
+  B3  Os três cartões do Dashboard diziam "Encerrada" + "EM BREVE" +
+      "Aguardando abertura" sob o título "em Andamento". Agora dizem "Em breve"
+      + "EM BREVE" + "Aguardando abertura", sob "Outras Edições". Uma voz.
+
+  B4  A edição R-1 era "🟢 Ativo" com prazo "28/07/2026, 21:10:30" no /mercado e
+      "Aguardando abertura" no Dashboard, no mesmo instante. Agora é "EM BREVE"
+      nos dois, e a data — que era a prova viva da contradição — não aparece.
+
+Sem regressão: CLS 0 nas seis corridas do A/B, zero erros de consola, e o
+arranque é indistinguível do MC88.42.
+
+================================================================================
+DIAGNÓSTICO — O QUE ESTAVA MESMO LÁ (S0)
+================================================================================
+Documento completo: desafio-gut/docs/MC88.43-EDICAO-DIAGNOSTICO.txt
+
+  FONTE A  `encerrado` do AppContext, derivado do prazoTimestamp (on-chain +
+           localStorage). Serve SÓ a R-1. Consumida por Dashboard, TabelaLances,
+           CardLance, AuctionStatusBar.
+
+  FONTE B  `timeLeftEdicaoSegundos(edicao.termino_em)`. Serve as outras edições.
+           ⚠️ Devolvia 0 quando `termino_em` faltava — e 0 era lido como
+           "encerrada". "Não sei" disfarçado de "acabou".
+
+  FONTE C  `edicao.status` do backend. EXISTIA, era copiado pelo `useEdicoes`, e
+           NENHUM componente o lia. Campo morto.
+
+  TRAVA    `EM_BREVE_MODE` (lib/leilaoLock.js). Aplicada em 4 ecrãs, ausente
+           noutros 5. É esta assimetria que produzia o B4.
+
+Verificação no endpoint de produção (2026-07-29 13:23 UTC):
+  RELAMP-1/2/3  status "encerrado", termino_em de 30-31 de maio
+  R-1           status "aberto",    termino_em no futuro
+
+Ou seja: o "Encerrada" dos cartões estava CORRETO. O que estava errado era tudo
+o que o rodeava — o título "em Andamento", o "EM BREVE" e o "Aguardando
+abertura" por cima, e o GUTO a celebrar um encerramento que a UI negava.
+
+ACHADO NOVO, fora do MC88.41: a Vitrine anunciava "● Ao vivo agora" no mesmo
+cartão em que o cronómetro dizia "EM BREVE". Mesma família, entrou no âmbito.
+
+================================================================================
+CORREÇÃO APLICADA
+================================================================================
+S1 — src/utils/edicao.js · getEstadoEdicao(edicao, opts)
+     Função pura (o `agora` é injetável para ser testável). Devolve UM estado e
+     TODOS os textos: rotulo, rotuloLongo, badge, timer, cor, ícone.
+
+     Ordem de autoridade:
+       0. EM_BREVE_MODE vence tudo (decisão do operador: "tudo em breve")
+       1. opts.encerrado — FONTE A, o prazo on-chain. Só `true` decide.
+       2. edicao.status  — FONTE C, o backend. Deixou de ser campo morto.
+       3. edicao.termino_em — FONTE B, último recurso.
+       4. sem nada disso → "indisponível". NUNCA "encerrada".
+
+     Também exporta `timerTravado()` para ecrãs que desenham cronómetro sem ter
+     um objeto de edição à mão (os slots da Vitrine são tiers, não edições).
+
+S2 — sete ecrãs passam a perguntar:
+     Dashboard · EdicaoCard · TabelaLances · EdicaoDetalhe · Vitrine ·
+     CardLance · AuctionStatusBar. Mais as três entradas i18n.
+
+O QUE NÃO FOI TOCADO, DE PROPÓSITO — apresentação não manda em autorização:
+  • o `disabled` e o gate `{!encerrado && …}` do botão de lance;
+  • a regra de DIVULGAÇÃO da TabelaLances (valores só aparecem depois do fim),
+    que continua amarrada ao `encerrado` on-chain. Trocá-la punha o aviso
+    "valores ocultos" ao lado de valores já revelados. Fica um comentário no
+    sítio a explicar porque é que essa linha diverge de propósito.
+
+DESVIO ASSUMIDO face ao plano do MC: a regra «prazo a mais de 24h no futuro →
+em breve» NÃO foi implementada. O leilão Programado dura exatamente 24h
+(DURACAO.programado = 86400), logo essa regra classificaria como "em breve" uma
+edição acabada de abrir — criando o tipo de contradição que este MC vem
+eliminar. Neste produto "em breve" não é uma janela temporal: é a trava
+editorial decidida em MC65/MC67 e reafirmada agora.
+
+================================================================================
+EVIDÊNCIAS — ANTES / DEPOIS (lidas do DOM, no aparelho)
+================================================================================
+DASHBOARD · cartão RELAMP-1 (×3 cartões)
+  antes   Encerrada · EM BREVE · Aguardando abertura   [sob "em Andamento"]
+  depois  Em breve  · EM BREVE · Aguardando abertura   [sob "Outras Edições"]
+
+DASHBOARD · Edição Ativa (R-1)      depois  EM BREVE / Aguardando abertura
+/MERCADO  · hero + tabela (R-1)     depois  EM BREVE / 🕒 Em breve
+  antes   🟢 Ativo · Prazo: 28/07/2026, 21:10:30
+
+/VITRINE · os 4 slots               depois  EM BREVE / ⏱ EM BREVE
+  antes   ● Ao vivo agora · ● Programado 24h · Agendado
+
+/EDICAO/RELAMP-1 e /EDICAO/R-1      depois  Em breve / EM BREVE / AGUARDANDO ABERTURA
+  antes   Encerrada (RELAMP-1) · Ativa (R-1)
+
+================================================================================
+PERFORMANCE — A/B INTERCALADO, MESMO APARELHO, MESMA SESSÃO
+================================================================================
+Protocolo: 3 corridas de arranque a frio por versão, descartando a primeira
+depois de cada instalação. Baseline recompilada HOJE — comparar com números de
+outro dia já enganou uma medição anterior (MC88.36).
+
+                 FCP (ms)            domContentLoaded (ms)      CLS
+  MC88.42     624 / 588 / 548  (588)    494 / 458 / 427  (458)    0
+  MC88.43     576 / 564 / 652  (576)    436 / 449 / 433  (436)    0
+
+Leitura honesta: INDISTINGUÍVEL. A diferença das medianas (12 ms no FCP) é menor
+que a dispersão dentro de cada bloco (104 ms). Não se reclama ganho nenhum.
+
+CLS = 0 nas seis corridas. Era a métrica em risco — as alterações são de texto,
+e texto que muda de comprimento desloca layout. Não deslocou.
+
+Zero erros de consola em toda a navegação.
+
+⚠️ LCP NÃO FOI MEDIDO. `getEntriesByType("largest-contentful-paint")` devolve
+vazio sem um PerformanceObserver com `buffered: true`; leu 0 nas duas versões. A
+limitação é simétrica, portanto não esconde uma regressão de um dos lados — mas
+não é o mesmo que ter medido.
+
+================================================================================
+TESTES
+================================================================================
+Novo: netlify/functions/_tests/mc8843-estado-edicao.test.mjs — 14 casos.
+Suite total: 263/263 (flag --experimental-test-module-mocks obrigatória).
+
+  • comportamento com a trava LIGADA (o estado real do produto)
+  • comportamento com a trava DESLIGADA, via mock.module — sem isto o corpo de
+    derivação nunca seria exercido, e as três fontes ficariam por testar
+  • 4 guardas ESTRUTURAIS: nenhum ecrã volta a importar EM_BREVE_MODE, nenhum
+    volta a escrever os textos do B3/B4, e a Vitrine tem de consultar a fonte
+    única ANTES de anunciar "Ao vivo agora"
+
+Todas validadas por MUTAÇÃO. Um teste que passa não prova nada: partir o ramo
+"indisponível", ou remover o guard da Vitrine, derruba exatamente — e só — o
+teste que os cobre.
+
+================================================================================
+DOIS ERROS MEUS, CORRIGIDOS ANTES DE FECHAREM O SEGMENTO
+================================================================================
+1. A primeira versão de getEstadoEdicao devolvia "indisponível" (cronómetro
+   "—") para a R-1, porque o prazo dela vive no prazoTimestamp e NÃO no
+   termino_em. Com a trava ligada não se via; no dia em que fosse desligada, o
+   Dashboard e a TabelaLances trocavam a contagem viva por um traço. Apanhado ao
+   ligar a Vitrine. Corrigido e coberto por teste.
+
+2. A primeira guarda da Vitrine usava uma regex com lookahead que dava falso
+   negativo — o literal "● Ao vivo agora" CONTINUA no código de propósito (é o
+   caminho legítimo com a trava desligada). Reescrita para exigir que a consulta
+   à fonte única apareça ANTES dele, dentro da mesma função.
+
+================================================================================
+PENDÊNCIAS
+================================================================================
+• NADA DE ESTADO DA EDIÇÃO. Os 19 pontos do inventário do S0 estão cobertos.
+
+• DEPLOY WEB é do operador. O APK está compilado e instalado no aparelho; o
+  frontend web continua na versão anterior (o APK empacota o seu próprio
+  frontend — deploy web e APK são coisas separadas).
+
+• LCP por medir (ver acima). Se quiser, mede-se com um observer `buffered` num
+  MC seguinte — mas o valor de o fazer só para este MC é baixo: a alteração não
+  toca em imagens, vídeo nem rede.
+
+• /vitrine e /mercado não são alcançáveis por uma sessão CORPORATIVA (o lojista
+  é encaminhado para /corporativo). Observado durante a validação; é
+  comportamento pré-existente do MC88.42, não foi introduzido aqui, e não foi
+  investigado — não é o âmbito deste MC. Fica registado porque foi visto.
+
+================================================================================
+PRÓXIMO PASSO
+================================================================================
+MC88.44 — SUPORTE QUE RESPONDE (G1 do MC88.41). O GUTO manda os utilizadores
+para suporte@desafiogut.com.br, que devolve NXDOMAIN. Decisão do operador:
+registar o domínio, ou corrigir o regulamento.md para o endereço que funciona.
+
+Em alternativa, MC89 (sistema ADM), se preferir.
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================

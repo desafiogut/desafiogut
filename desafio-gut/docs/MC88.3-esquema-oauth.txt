@@ -1,0 +1,220 @@
+================================================================================
+MC88.3 — ESQUEMA CUSTOMIZADO PARA OAUTH
+RELATÓRIO FINAL · ⚠️ NÃO EXECUTADO — PREMISSAS REFUTADAS POR MEDIÇÃO
+================================================================================
+Data.........: 2026-07-24
+Dispositivo..: fiem7xlvcufe855h · Xiaomi 21091116UG · Android 13
+Regras.......: R1 alteração mínima (resultou em ZERO alteração) · R2 custo US$ 0,00
+               R3 rastreável · R4 sem dados sensíveis · R5 sem credenciais
+
+
+################################################################################
+0. VEREDITO
+################################################################################
+
+O MC88.3 propõe trocar o esquema do WebView para `desafiogut://` a fim de
+resolver uma falha de redirecionamento OAuth. **Não executei**, porque a medição
+refutou as suas premissas e porque a alteração proposta **desfaria a correção que
+o operador acabou de aplicar**.
+
+Estado real, medido hoje:
+  · A correção do MC88.1 está aplicada e **funcionou** — o iframe da Privy
+    deixou de ser bloqueado e passou a carregar.
+  · `https://localhost/carteira` resolve com HTTP 200 e renderiza a página.
+  · Nenhum login foi tentado desde a correção. A falha que o MC88.3 descreve
+    **nunca foi observada**.
+
+  ► O que falta é UM passo humano: iniciar sessão com Google no aparelho.
+
+
+################################################################################
+1. AS QUATRO PREMISSAS, UMA A UMA
+################################################################################
+
+P1. "A allowlist do Privy inclui https://localhost e https://localhost/carteira"
+    ── PARCIALMENTE VERDADEIRA, com um equívoco conceptual.
+
+    `https://localhost` ✅ está lá (o operador acrescentou-a — obrigado).
+    `https://localhost/carteira` ❌ não está, e **não faz sentido que esteja**:
+    uma allowlist de origens compara esquema+host+porta. Caminhos (`/carteira`)
+    não fazem parte de uma origem e são ignorados. Lido ao vivo do
+    `frame-ancestors` do auth.privy.io, a lista tem 10 entradas, todas origens.
+
+P2. "O login Google falha na etapa de redirecionamento: o WebView não resolve
+     localhost"
+    ── REFUTADA. Teste por navegação real (`Page.navigate`, não `pushState`):
+
+        GET https://localhost/carteira → 200 (text/html)  [3 pedidos, todos 200]
+        location.pathname → /carteira
+        conteúdo → "💰 Minha Carteira — Acompanhe seu saldo de senhas e seus
+                    lances no DesafioGUT. Faça login para visualizar…"
+        falhas de rede em localhost → 0
+
+    O WebView resolve a rota perfeitamente. O handler local do Capacitor serve o
+    `index.html` e o React Router monta a página.
+
+P3. "O esquema capacitor:// não é aceito pelo Privy"
+    ── REFUTADA pela própria configuração atual. A allowlist contém, agora:
+
+        capacitor://localhost
+
+    O painel aceitou-o sem objeção. (O runbook do MC88.1 tinha admitido a
+    hipótese de recusa; não se confirmou.) Isto remove o argumento que motivava
+    inventar um esquema novo.
+
+P4. "Adicionar `androidScheme` ao capacitor.config.json"
+    ── O FICHEIRO NÃO EXISTE. O projeto usa `capacitor.config.ts`:
+
+        import type { CapacitorConfig } from '@capacitor/cli';
+        const config: CapacitorConfig = {
+          appId: 'com.desafiogut.app',
+          appName: 'DesafioGUT',
+          webDir: 'dist'
+        };
+        export default config;
+
+    Os comandos do Segmento 1 fariam `Get-Content capacitor.config.json`, que
+    falha, e o `Set-Content` **criaria** um `capacitor.config.json` novo a
+    competir com o `.ts`. Ter os dois é uma armadilha conhecida do Capacitor: a
+    CLI escolhe um e a edição do outro passa a não ter efeito — um erro
+    silencioso e difícil de diagnosticar depois.
+
+
+################################################################################
+2. PORQUE A ALTERAÇÃO PROPOSTA SERIA ATIVAMENTE PREJUDICIAL
+################################################################################
+
+2.1 — DESFARIA A CORREÇÃO DO MC88.1
+    `androidScheme: "desafiogut"` muda a origem do WebView de
+    `https://localhost` para `desafiogut://localhost`.
+
+    A allowlist tem `https://localhost` e `capacitor://localhost` — **não** tem
+    `desafiogut://localhost`. O iframe voltaria a ser bloqueado exatamente pelo
+    mesmo `frame-ancestors` que acabámos de resolver, e o MC88.1 teria de ser
+    refeito para a origem nova.
+
+2.2 — `redirectUri` NÃO É UMA CHAVE DO PrivyProvider
+    A config real (`src/PrivyRoot.jsx:139-188`) usa as chaves suportadas:
+    `loginMethods`, `embeddedWallets`, `defaultChain`, `supportedChains`,
+    `appearance`. Não há `redirectUri` no contrato do SDK React. Acrescentá-la
+    seria uma chave desconhecida — ignorada em silêncio, dando a ilusão de
+    configuração sem efeito nenhum.
+
+2.3 — QUEBRARIA PRESSUPOSTOS DE MESMA-ORIGEM JÁ DOCUMENTADOS
+    · MC67: a CSP `img-src` exige o logo do modal same-origin. O MC78 registou
+      que um logo cross-origin **quebra o ícone** do login. Mudar o esquema muda
+      a origem de todos os assets locais.
+    · O `appearance.logo` aponta para `/assets/guto/guto-login.png`, resolvido
+      relativamente à origem.
+    Cada um destes teria de ser revalidado — trabalho novo criado por uma
+    alteração que não era necessária.
+
+2.4 — CUSTO OPERACIONAL SEM CONTRAPARTIDA
+    Exigiria `cap sync` + `assembleDebug` + reinstalação, e mais tarde um novo
+    AAB assinado para a Play Store (o atual, MC81, está pronto e validado). Um
+    build Gradle nesta máquina já foi documentado como problemático por falta de
+    RAM (MC81). Tudo isto para resolver um problema que a medição não encontra.
+
+
+################################################################################
+3. A ORIGEM DA CADEIA DE PREMISSAS (o achado mais útil deste MC)
+################################################################################
+
+Ao escrever a validação, encontrei no Desktop um `MC88.1-VALIDACAO.txt`
+pré-existente, gerado às **2026-07-24T00:48:39Z** por uma execução do operador:
+
+    === MC88.1 VALIDAÇÃO ===
+    Início: 2026-07-24T00:48:39.400Z
+    ❌ Erro: socket hang up
+    💡 Tente: chrome://inspect no navegador.
+
+Este é o ponto de partida de tudo o que veio depois. O `socket hang up` é o
+sintoma exato de se ligar ao socket errado — `chrome_devtools_remote` (do
+navegador Chrome) em vez de `webview_devtools_remote_<PID>` (do WebView da app),
+a causa que o MC88.2 isolou com um teste A/B.
+
+    Cadeia reconstruída:
+      1. operador aplica a correção da allowlist ......................... ✅ certo
+      2. valida com um script que usa o socket errado → "socket hang up"
+      3. conclusão: "o DevTools não funciona"  ..................... → MC88.2
+      4. MC88.2 refutado: a depuração sempre esteve ativa
+      5. conclusão seguinte: "então o login falha no redirect" ..... → MC88.3
+      6. MC88.3 refutado: o redirect nunca foi testado
+
+  ► O passo 2 falhou ao LIGAR, não ao FAZER LOGIN. Nunca houve um login falhado
+    para diagnosticar. Duas rondas de diagnóstico foram construídas sobre uma
+    ligação falhada interpretada como um sintoma da aplicação.
+
+
+################################################################################
+4. O QUE FOI FEITO EM VEZ DA ALTERAÇÃO
+################################################################################
+
+Executada a validação do MC88.1 que estava pendente (relatório completo em
+`Desktop\MC88.1-VALIDACAO.txt`). Resultado:
+
+    CRITÉRIO                                          ANTES        DEPOIS
+    ────────────────────────────────────────────────  ───────────  ──────────
+    `https://localhost` em frame-ancestors            ausente      PRESENTE ✅
+    iframe embedded-wallets                           bloqueado    carrega  ✅
+    erro "Framing ... violates frame-ancestors"       presente     ausente  ✅
+    tempestade de `postMessage`                       178 em 60s   ausente  ✅
+    "Privy iframe failed: Exceeded max attempts"      presente     ausente  ✅
+    JWT (`gut_auth_user`)                             null         null     ⏳
+
+O iframe passou a descarregar a sua própria aplicação (CSS + 12 chunks do
+Next.js, todos HTTP 200). Antes, o primeiro pedido morria em
+`ERR_BLOCKED_BY_RESPONSE` e nada mais era pedido.
+
+
+################################################################################
+5. PRÓXIMO PASSO — ÚNICO, E É HUMANO
+################################################################################
+
+Iniciar sessão com Google no aparelho, com captura de evidência:
+
+    1. no PC:        .\desafio-gut\scripts\webview-devtools.ps1 -Reiniciar
+    2. no aparelho:  aceitar os 4 termos → iniciar sessão com Google
+    3. avisar o agente
+
+O agente relê `gut_auth_user`, a rota final e os erros de console.
+
+  · Se o JWT for gerado → o MC88.1 fecha e o MC88.3 é arquivado como
+    desnecessário.
+  · Se falhar → o erro REAL é capturado e diagnosticado a partir da evidência.
+    Só então faz sentido discutir esquemas customizados, e apenas se a evidência
+    apontar para lá.
+
+  ⚠️ Não alterar o `androidScheme` antes disso. Enquanto não houver um login
+     falhado observado, mudar a origem do WebView é trocar um sistema que
+     acabámos de desbloquear por um que ninguém testou.
+
+
+################################################################################
+6. LIÇÕES
+################################################################################
+
+L1 — Uma falha de FERRAMENTA disfarça-se de falha de PRODUTO. Um `socket hang up`
+     no arnês de teste gerou duas rondas de diagnóstico sobre a aplicação. Antes
+     de acreditar num sintoma, confirmar que o instrumento estava ligado.
+
+L2 — Allowlists comparam ORIGENS, não URLs. `https://localhost/carteira` não é
+     uma entrada válida; o caminho é ignorado. Acrescentá-la dá a sensação de
+     cobertura sem cobrir nada.
+
+L3 — Verificar que o ficheiro que se vai editar existe. `capacitor.config.json`
+     não existe neste projeto, e criá-lo ao lado do `.ts` produziria uma
+     configuração fantasma que a CLI ignora.
+
+L4 — Mudar a origem é uma alteração de FUNDAÇÃO, não mínima. Invalida allowlists,
+     CSP same-origin, caminhos de assets e o artefacto de release. A R1 ("alteração
+     mínima") é, por si só, argumento contra ela.
+
+L5 — Antes de perseguir a falha seguinte, confirmar que a correção anterior foi
+     validada. O MC88.1 tinha o Segmento 2 por executar; corrê-lo respondeu ao
+     MC88.3 inteiro em minutos.
+
+================================================================================
+FIM — MC88.3. Nenhum código alterado, nenhum rebuild, nenhum custo.
+A correção do MC88.1 está aplicada e a funcionar; falta apenas o login humano.
+================================================================================

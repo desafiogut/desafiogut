@@ -1,0 +1,154 @@
+================================================================================
+MC89 — SEGMENTO 4 · PLANO DE IMPLEMENTAÇÃO
+================================================================================
+Data....: 2026-07-29
+Base....: MC89-ARQUITETURA.txt
+Código..: ZERO alterações (R1). Este documento é o que se aprova antes do MC90.
+
+Nota sobre as estimativas: são em SESSÕES de trabalho (um MC ≈ uma sessão),
+não em dias de calendário. A referência é a cadência real desta série — o
+MC88.43 (7 ficheiros, 14 testes, APK, A/B de perf) foi uma sessão.
+
+================================================================================
+FASE 0 — O ADMIN EXISTIR                          [OPERADOR · sem código · hoje]
+================================================================================
+Não é um MC. São quatro passos, e destrancam tudo o resto.
+
+  1. Entrar na app com `ADMdesafiogut@gmail.com` (Google, via Privy).
+  2. Ler o endereço da carteira embutida (aparece na Carteira e na Sidebar).
+  3. Acrescentar à lista, com o `x-admin-token` (R5 — segredo é seu):
+         POST https://<site>/.netlify/functions/admin-list
+         Header: x-admin-token: <ADMIN_TOKEN>
+         Body:   { "acao": "adicionar", "endereco": "0x…" }
+  4. Confirmar:
+         GET  /.netlify/functions/admin-list?endereco=0x…
+         → deve devolver { "isAdmin": true, "role": "admin" }
+
+  CRITÉRIO: entrar com esse e-mail e ver a entrada de admin na navegação.
+  RISCO: endereço errado = admin a um terceiro. Por isso o passo 4 existe.
+  BÓNUS: passa a haver DOIS admins. Hoje há um só, e isso é o risco R-5.
+
+  ⚠️ Enquanto a Fase 0 não for feita, o MC90 não pode ser validado ao vivo com
+     a conta do ADM — só com a da coordenação.
+
+================================================================================
+FASE 1 — VER                                                    [MC90 · ~2 sessões]
+================================================================================
+FICHEIROS NOVOS
+  netlify/functions/admin-stats.mjs            agregação + cache 45 s
+  netlify/functions/admin-onchain.mjs          saldo da EOA (isolado do resto)
+  netlify/functions/_lib/admin-metricas.mjs    a agregação em si, reutilizável
+                                               pelo GUTO (uma fonte por número)
+  netlify/functions/_tests/mc90-admin-stats.test.mjs
+  src/components/admin/VisaoGeral.jsx          o separador novo
+
+FICHEIROS ALTERADOS (cirurgicamente)
+  src/pages/AdminPanel.jsx    +1 separador. Os 3 atuais não se tocam.
+  netlify/functions/chatbot.mjs
+                              +2 padrões e +2 handlers (status_sistema,
+                              metricas_gerais), no mesmo molde do MC88.44
+  netlify/functions/_lib/guto-perfis.mjs
+                              +2 entradas na tabela declarativa
+
+SUPABASE: nenhuma alteração. Só leitura das tabelas existentes.
+
+TRABALHO, por ordem
+  1. `_lib/admin-metricas.mjs` com as consultas + `parciais[]` (o que falhou,
+     por nome — nunca um zero mudo). Testes primeiro: cada métrica com fonte
+     ausente devolve indisponível, não 0.
+  2. `admin-stats.mjs` a embrulhar: preflight → guardAdmin → rate-limit →
+     cache 45 s. Teste de gate: 401 sem credencial.
+  3. `admin-onchain.mjs` separado. É o único que pode importar ethers.
+  4. `VisaoGeral.jsx` com os 5 blocos. Bloco on-chain com estado próprio.
+  5. Intents do GUTO a chamar `_lib/admin-metricas`.
+  6. Validação ao vivo no APK + web.
+
+CRITÉRIOS DE SUCESSO
+  · entrar com o e-mail do ADM leva ao painel e o separador Visão Geral abre
+    em < 2 s (sem o bloco on-chain);
+  · cada número tem rótulo que diz o que é (RNF-06) — "utilizadores com
+    atividade", não "registados";
+  · uma fonte em baixo aparece em `parciais[]` e o ecrã diz "indisponível";
+  · o GUTO devolve os MESMOS números que o painel;
+  · sem credencial, os dois endpoints devolvem 401;
+  · suíte ≥ 272 + os novos, zero regressão.
+
+DEPENDE DE: Fase 0 (para validar com a conta do ADM).
+
+================================================================================
+FASE 2 — AGIR                                                   [MC91 · ~1,5 sessões]
+================================================================================
+FICHEIROS NOVOS
+  netlify/functions/admin-comandos.mjs
+  netlify/functions/_tests/mc91-admin-comandos.test.mjs
+
+ALTERADOS
+  src/components/admin/VisaoGeral.jsx    + botões e diálogo de confirmação
+  _lib/admin-metricas.mjs                + "ativos nos últimos 5 min"
+
+COMANDOS EXPOSTOS (todos já existem no backend — nenhum é novo)
+  forcar_fila · invalidar_cache_admins · invalidar_cache_rbac ·
+  pausar_sistema · retomar_sistema
+
+TRAVÕES, todos obrigatórios
+  · `confirmar: true` no corpo — o servidor recusa 400 sem ele;
+  · rate-limit 5/min (o mesmo dos comandos admin do GUTO);
+  · auditoria por comando: quem, quando, o quê, resultado;
+  · a resposta diz o que ACONTECEU, não só "ok".
+
+CRITÉRIOS DE SUCESSO
+  · cada botão faz o que diz e a resposta prova-o;
+  · nenhum dispara sem confirmação (teste a afirmar o 400);
+  · toda a execução aparece na auditoria;
+  · "ativos 5 min" sai dos dados já registados — zero tráfego novo.
+
+DEPENDE DE: Fase 1 (o separador e a agregação).
+
+================================================================================
+FASE 3 — LEMBRAR E AVISAR                                       [MC92 · ~2 sessões]
+================================================================================
+SUPABASE (migração — o operador aplica, como sempre)
+  tabela `admin_logs` { id, ts, endereco, acao, alvo, resultado, origem }
+  índice por (ts desc) e por (endereco, ts desc); RLS ativo.
+  ⚠️ PRÉ-REQUISITO NÃO TÉCNICO: a política de retenção
+     (docs/lgpd-politica-retencao.md) tem de cobrir esta tabela ANTES de ela
+     existir. Guarda endereços, que são dado pessoal indireto.
+
+FICHEIROS NOVOS
+  netlify/functions/admin-auditoria.mjs        leitura paginada + filtros
+  netlify/functions/_lib/auditoria-store.mjs   escrita, usada por TODOS os
+                                               pontos de comando
+  _tests/mc92-auditoria.test.mjs
+
+PUSH (FCM) — só arranca depois de o operador ter: projeto FCM, chave do
+  servidor, plugin Capacitor instalado e APK recompilado. Enquanto isso não
+  existir, este item não entra em nenhum MC.
+
+CRITÉRIOS DE SUCESSO
+  · toda a ação admin (painel, GUTO, comandos) escreve uma linha;
+  · a consulta pagina e filtra por endereço e por intervalo;
+  · a retenção está escrita e implementada, não prometida.
+
+DEPENDE DE: Fase 2 (os comandos a auditar) + operador (migração, FCM).
+
+================================================================================
+DEPENDÊNCIAS, EM UMA LINHA
+================================================================================
+  Fase 0 (operador, hoje) → MC90 → MC91 → MC92
+                                            └── push só com FCM do operador
+
+================================================================================
+O QUE PODE CORRER MAL NESTE PLANO
+================================================================================
+1. A Fase 1 descobrir que uma métrica não tem fonte utilizável (ex.: "pedidos
+   pendentes" depender de um store que não guarda estado). Mitigação: o campo
+   `parciais[]` existe precisamente para isso — a métrica sai do ecrã com um
+   nome, não com um zero.
+2. O cache de 45 s confundir quem carrega num comando e não vê o número mudar.
+   Mitigação: os comandos invalidam o cache; o painel mostra `geradoEm`.
+3. A Fase 3 esbarrar na retenção LGPD e ficar meio feita. Mitigação: a política
+   é pré-requisito declarado, não um passo do fim.
+
+================================================================================
+FIM DO SEGMENTO 4
+================================================================================

@@ -1,0 +1,93 @@
+# MC89.8 — PLANO DE AÇÃO: Remoção de informações do usuário comum do AdminPanel
+Data: 2026-07-30 | Base: MC89.8-DIAGNOSTICO.txt | ZERO alterações de código (R1)
+
+## PREMISSA
+Este plano cobre DOIS cenários e não assume qual deles é o real sem confirmação
+visual do operador. Ambos são acionáveis.
+
+Cenário A: o operador vê dados de clientes em Aprovacoes/Cotas e quer removê-los.
+Cenário B: o operador vê algo que eu não detetei no código e preciso de captura.
+
+## CENÁRIO A — DADOS DE CLIENTES EM APROVACOES E COTAS
+
+### A-1: Aprovacoes — anonimizar a lista de pedidos
+Arquivo: `src/pages/admin/Aprovacoes.jsx`, linhas 87-119
+Estado atual: mostra nome, e-mail, endereço completo e observações de clientes
+
+Ação P0: adicionar um toggle "Mostrar/ocultar PII" (default: oculto).
+- Oculto: mostra `cliente_id` truncado (0x1E1b…d198cB) + status + timestamp
+- Visível (após clique): mostra os campos completos atuais
+- Justificativa: o admin PRECISA ver quem está a aprovar, mas não precisa de ter
+  PII visível por omissão em cada abertura do painel
+
+Ação P1: o endpoint admin-aprovacao CONTINUA a devolver os campos completos —
+  a máscara é só na UI. Esconder no frontend sem esconder no backend é inócuo
+  (qualquer um com o token vê a resposta da rede), e ocultar no backend
+  quebraria o fluxo de aprovação.
+
+### A-2: Cotas — anonimizar a lista
+Arquivo: `src/pages/admin/Cotas.jsx`, linhas 517-543
+Estado atual: mostra nome do cliente, endereço completo, produto e valor
+
+Ação P0: truncar `cliente_id` na lista (0x1E1b…d198cB, como o header já faz).
+Ação P1: substituir `cliente_nome` por "Cliente Diamond" (categoria) na lista.
+  O nome completo só aparece no formulário de edição (que já é uma ação explícita).
+Ação P2: o formulário "Nova/atualizar cota" mantém os campos completos — está
+  atrás de uma ação deliberada do admin.
+
+### A-3: AdminLayout — o endereço do admin no header
+Arquivo: `src/components/admin/AdminLayout.jsx`, linha 112
+Estado atual: "Logado como admin: 0x1E1bAe7F…d198cB"
+
+O endereço JÁ ESTÁ truncado (10+6 caracteres). É a identificação do operador,
+não de um utilizador inspecionado.
+Ação: NENHUMA. Remove-se se o operador quiser, mas perde-se a única confirmação
+visual de "com que carteira estou a operar".
+
+## CENÁRIO B — HÁ ALGO QUE NÃO DETETEI
+
+### B-1: O operador autentica-se enquanto estou ligado por CDP
+Passos:
+1. Operador abre o APK, navega para /admin
+2. Operador clica "Login Admin", cola o ADMIN_TOKEN, assina com Privy
+3. Eu leio o DOM completo por CDP e capturo screenshot de CADA tela
+4. Comparo cada elemento com o diagnóstico acima
+5. O que não bater, entra no plano de ação do MC89.9
+
+### B-2: O operador envia screenshots
+Passos:
+1. Operador tira screenshot de /admin (Visão Geral autenticada)
+2. Operador tira screenshot de /admin/aprovacoes (com dados, se houver)
+3. Operador tira screenshot de /admin/cotas (com dados, se houver)
+4. Eu identifico cada elemento e mapeio ao código-fonte
+5. Produzo plano de ação revisto
+
+## PRIORIDADES (para o MC89.9 — execução)
+Independentemente do cenário, a ordem é:
+
+P0 — CRÍTICO: elementos que mostram dados pessoais identificáveis
+  · Nomes completos de clientes (Aprovacoes.nome, Cotas.cliente_nome)
+  · E-mails de clientes (Aprovacoes.email)
+  · Endereços completos de clientes (Aprovacoes.cliente_id, Cotas.cliente_id)
+
+P1 — IMPORTANTE: elementos que parecem pessoais mas não são
+  · Texto "saldo de senhas" nos placeholders → adicionar prefixo "[EM BREVE]"
+    para clarificar que é texto de planejamento, não dado real
+  · Nota longa de "Senhas em trânsito" → encurtar para "Indisponível — sem
+    rastreabilidade on-chain"
+  · Cartões com valor 0 → mostrar "—" em vez de "0" quando não há dados
+    (consistente com a regra R-UI-1 do MC89.1)
+
+P2 — ESTÉTICO: ajustes de apresentação
+  · Placeholders EmConstrucao: adicionar aviso "Este texto descreve a tela
+    planejada — não são dados reais" no topo de cada um
+
+## CRITÉRIOS DE SUCESSO (para o MC89.9)
+- Nenhum nome completo de cliente visível por omissão no AdminPanel
+- Nenhum e-mail de cliente visível por omissão
+- Nenhum endereço Ethereum completo (42 caracteres) de cliente visível
+- Placeholders claramente identificados como "planejamento", não como dados
+- Cartões que mostram 0 quando deviam mostrar "—" corrigidos
+- Suítes verdes (≥314 backend, ≥40 frontend)
+- APK recompilado e validado no aparelho
+- Navegação e funcionalidade das telas existentes preservadas

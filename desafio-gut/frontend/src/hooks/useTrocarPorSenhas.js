@@ -17,6 +17,7 @@ import { useRef, useState, useCallback } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { getSignerFromProvider } from "../utils/web3.js";
 import { apiPost } from "../lib/api.js";
+import { CHAIN_ID_DEC } from "../lib/network.js"; // MC59.2 (B-4)
 
 const SUCESSO_LIMPAR_MS = 5000;
 
@@ -37,7 +38,7 @@ export function useTrocarPorSenhas() {
     if (!privyWallet) throw new Error("Carteira não conectada. Faça login novamente.");
     const ts      = Date.now();
     const message = `DESAFIOGUT-AUTH:${ts}:${address}`;
-    await privyWallet.switchChain(11155111);
+    await privyWallet.switchChain(CHAIN_ID_DEC); // MC59.2 (B-4): da config de rede
     const provider = await privyWallet.getEthereumProvider();
     const { signer } = await getSignerFromProvider(provider);
     const signature = await signer.signMessage(message);
@@ -61,6 +62,13 @@ export function useTrocarPorSenhas() {
         const msg = data?.error?.message || `HTTP ${status}`;
         setErro(msg);
         return { ok: false, code: data?.error?.code, message: msg };
+      }
+      // MC59.6 — resposta 202 (crédito ASSÍNCRONO): ainda NÃO confirmado. Não
+      // afirmar "creditada" nem refetch de saldo; devolve o txHash para o caller
+      // acompanhar via <CreditoStatus>/useCreditoStatus (polling on-chain).
+      if (status === 202 || data?.assincrono) {
+        setSucesso(`🔄 Compra submetida — confirmação de ${qtd} ${qtd === 1 ? "senha" : "senhas"} em processamento…`);
+        return { ok: true, assincrono: true, txHash: data?.txHash || null, qtd, data };
       }
       setSucesso(`✓ ${qtd} ${qtd === 1 ? "senha creditada" : "senhas creditadas"} on-chain`);
       try { refetchSaldoRs?.(); } catch {}

@@ -1,0 +1,167 @@
+================================================================================
+MC89.3 — SEGMENTO 0 · DIAGNÓSTICO VISUAL DO ADMINPANEL
+================================================================================
+Data....: 2026-07-29
+Método..: observação REAL no aparelho (captura de ecrã) + medição de estilos
+          computados por CDP + leitura do código
+Aparelho: Xiaomi 21091116UG · sessão ADM Ramon (0x1E1b…d198cB) · rota /admin
+Código..: ZERO alterações (R1)
+
+================================================================================
+1. O QUE O ADMINISTRADOR VÊ (captura de ecrã, 22:00)
+================================================================================
+Não é um painel com emojis a mais. É um painel **desenhado por cima de uma
+ilustração de showroom de prémios, com confetes dourados a cair**.
+
+Inventário do que está no ecrã, de trás para a frente:
+
+  FUNDO (ocupa o ecrã inteiro, por baixo de tudo)
+    · ilustração de arena/showroom: frigorífico, máquina de lavar, PlayStation 5
+      com comando, Smart TV, forno, tablet, telemóvel, ar condicionado, aspirador
+      robô, coluna inteligente
+    · holofotes de palco no topo
+    · CONFETES DOURADOS EM QUEDA, animados, por cima de tudo — incluindo o texto
+    · partículas/brilhos
+
+  CONTEÚDO DO PAINEL (sem superfície própria — ver §3)
+    · "⚙️ Painel Admin" — laranja #f5a623, fonte Orbitron (display)
+    · "Logado como admin: 0x1E1bAe7F…d198cB" — cinzento, ILEGÍVEL sobre a
+      ilustração
+    · barra "⚠ Login admin necessário para mutações" + botão "Login Admin"
+      amarelo vivo
+    · separadores "📈 Visão Geral · 🟡 Aprovações · 📊 Cotas · 👥 Admins" —
+      quebram para DUAS linhas, com "Admins" sozinho na segunda
+    · "Autentique-se para ver as métricas." — ILEGÍVEL sobre os
+      eletrodomésticos
+
+  MOBÍLIA DA APP DE CONSUMO, herdada
+    · avatar do GUTO (mascote) flutuante, canto inferior direito
+    · rodapé "Privacidade · Termos · Suporte · Excluir conta · © 2026 DesafioGUT"
+    · navegação inferior "Início · Lances · Carteira · Mais"
+
+================================================================================
+2. DE ONDE VEM CADA COISA (mapa de responsabilidade)
+================================================================================
+  o que se vê              | quem o põe lá                        | âmbito
+  ─────────────────────────┼──────────────────────────────────────┼──────────
+  ilustração + confetes    │ widgets/layout/BackgroundCanvas.jsx  │ GLOBAL
+    + holofotes            │ montado em App.jsx:221, FORA das     │ (todas as
+                           │ rotas. Vídeo `fundo-loop-v3-mobile   │  rotas)
+                           │ .webm` (MC26.1/MC27) + poster        │
+                           │ `background-mobile.webp`             │
+  vinheta / brilho         │ widgets/layout/AtmosphereFilter.jsx  │ AppLayout
+                           │ (-z-40), dentro do AppLayout         │
+  superfície .gut-surface  │ AppLayout.jsx                        │ AppLayout
+  rodapé legal             │ widgets/layout/Layout.jsx:35          │ AppLayout
+  navegação inferior       │ widgets/layout/BottomNav.jsx         │ AppLayout
+  avatar do GUTO           │ components/ChatbotWidget.jsx,        │ GLOBAL
+                           │ montado em App.jsx:277               │
+  emojis, laranja, Orbitron│ pages/AdminPanel.jsx (estilos inline)│ só /admin
+
+  ⚠️ CONFIRMADO: `/admin` está DENTRO do grupo `<Route element={<AppLayout/>}>`
+     (App.jsx:243–272, a rota /admin na linha 259). Herda tudo o que o AppLayout
+     traz. E o BackgroundCanvas está ainda mais acima — em App.jsx, fora das
+     rotas — por isso aparece mesmo no gate LGPD.
+
+  NOTA: os confetes NÃO vêm do componente `components/Confetti.jsx`. Esse só é
+  usado em MercadoLances.jsx:94 e FimLeilaoOverlay.jsx:20. Os confetes do ecrã
+  do ADM estão DENTRO do vídeo de fundo — não há como os desligar sem desligar
+  o vídeo.
+
+================================================================================
+3. A MEDIÇÃO QUE MUDA O DIAGNÓSTICO
+================================================================================
+Estilos computados, lidos no aparelho na rota /admin:
+
+  h1 ("Painel Admin")        backgroundColor  rgba(0, 0, 0, 0)
+  pai do h1                  backgroundColor  rgba(0, 0, 0, 0)
+  container raiz do painel   backgroundColor  rgba(0, 0, 0, 0)
+  h1 fontFamily              Orbitron, sans-serif
+  h1 color                   rgb(245, 166, 35)
+  <video> no DOM             1 · paused=false · fundo-loop-v3-mobile.webm
+  camadas [class*=gut-bg]    3
+
+  → **O ADMINPANEL NÃO TEM SUPERFÍCIE NENHUMA.** A raiz é um
+    `<div style={{ padding, color, display:flex }}>` (AdminPanel.jsx:868) sem
+    fundo e sem classe de vidro. O texto assenta DIRETAMENTE na ilustração
+    animada.
+
+  E o scrim que devia proteger a leitura é fraco exatamente no meio do ecrã,
+  onde está o conteúdo (globals.css:249-256):
+
+      0%   rgba(5,8,24,0.62)
+      34%  rgba(5,8,24,0.30)   ← aqui vive o painel
+      66%  rgba(5,8,24,0.34)   ← e aqui
+      100% rgba(5,8,24,0.70)
+
+  0,30 de navy sobre uma fotografia de eletrodomésticos iluminados não dá
+  contraste para ler cinzento #94a3b8.
+
+================================================================================
+4. ISTO JÁ FOI RESOLVIDO ANTES, NOUTRO SÍTIO
+================================================================================
+O projeto já enfrentou este defeito e tem a solução escrita no próprio CSS
+(globals.css:423-430, MC25.7):
+
+  /* modificador de LEITURA: vidro standard mas OPACO (navy 0.92), para
+     superfícies que rolam texto longo (painel de chat do GUTO). Restaura a
+     legibilidade que a unificação do MC25.3 perdeu ao baixar a opacidade
+     para 0.25 (texto da página atravessava). */
+  .gut-glass-standard.gut-glass--solid { background: rgba(13,18,53,0.92); }
+
+  `.gut-glass-standard` = rgba(13,18,53,0.88)
+  `.gut-glass--solid`   = rgba(13,18,53,0.92)
+
+O painel de chat do GUTO teve exatamente o mesmo problema e foi corrigido com
+uma superfície opaca. O AdminPanel nunca recebeu superfície nenhuma — nem a
+standard.
+
+================================================================================
+5. ONDE O BRIEFING DESTE MC ACERTA E ONDE ERRA
+================================================================================
+ACERTA: há emojis nos separadores e no título; há um amarelo vivo no botão; há
+  uma fonte display (Orbitron) num sítio onde uma fonte de sistema serviria
+  melhor; e há mobília de consumo (rodapé, navegação, mascote) sem utilidade
+  para quem administra.
+
+ERRA NO PESO: tratar isto como "limpeza de emojis" resolveria o menos importante.
+  **Removidos todos os emojis, o painel continuaria ilegível**, porque o problema
+  dominante é a ilustração animada por baixo de texto sem superfície.
+
+ERRA NUMA PRESCRIÇÃO: o briefing propõe "fundo sólido (branco ou cinza claro)" e
+  "azul escuro para títulos". A app é um tema NAVY PROFUNDO (--color-gut-bg
+  #050818). Um painel branco dentro desta app não seria "neutro" — seria um
+  corpo estranho, com um flash branco a cada abertura e um contraste invertido
+  em relação a todo o resto. O caminho neutro AQUI é **navy opaco**, que já
+  existe e já está testado (§4).
+
+ERRA NUMA SUPOSIÇÃO: "Olá, ADM Ramon!" e "Parabéns!" não estão no AdminPanel.
+  A saudação é do Dashboard comum. No /admin o cabeçalho é "⚙️ Painel Admin" +
+  o endereço. Não há troféus nem estrelas neste ecrã.
+
+================================================================================
+6. ACHADO ADICIONAL — NÃO É ESTÉTICA, É CUSTO
+================================================================================
+O vídeo de fundo está a REPRODUZIR (`paused=false`) no ecrã de administração.
+É decodificação de vídeo contínua para mostrar confetes a um administrador que
+está a ler números. O MC88.36 mediu que o gargalo de arranque é o parse de JS e
+que os assets pesam; um vídeo em loop numa rota de trabalho é consumo puro —
+bateria e GPU — sem nada em troca.
+
+Desligá-lo em /admin não é só limpar: é deixar de gastar.
+
+================================================================================
+7. RESUMO — O QUE REALMENTE PRECISA DE MUDAR, POR IMPACTO
+================================================================================
+  1. 🔴 LEGIBILIDADE — dar superfície opaca ao painel. Sem isto, nada mais conta.
+  2. 🔴 ATMOSFERA — não desenhar a ilustração/vídeo/vinheta na rota de trabalho.
+  3. 🟡 MOBÍLIA — rodapé legal, navegação de consumo e mascote não servem aqui.
+  4. 🟢 CHROME DO PAINEL — emojis, laranja de marca, Orbitron, botão amarelo.
+  5. 🟢 LAYOUT — os separadores quebram para duas linhas em ecrã de telemóvel.
+
+  Os dois primeiros são funcionais: hoje há texto que NÃO SE LÊ. Os três últimos
+  são de tom. O briefing começava pelo 4.
+
+================================================================================
+FIM DO SEGMENTO 0
+================================================================================

@@ -17,85 +17,26 @@
 // O risco residual é aceitável dado o volume esperado e fica documentado em
 // CLAUDE_DEBUG.md (frente B.7).
 
-import { getStore } from "@netlify/blobs";
-import {
-  creditarSenhas,
-  lerSaldoSenhas,
-  getCoordenacaoAddress,
-  CONTRATO_ADDRESS,
-} from "./contract.mjs";
+// MC88.16 (P1) — `contract.mjs` (e portanto o ethers) passou a ser carregado
+// SOB DEMANDA, dentro de creditarPedidoIdempotente. Em import estático, o ethers
+// era avaliado no cold start de tudo o que tocasse este módulo — incluindo
+// `iniciar-pagamento`, que só gravava metadados e nunca vai à blockchain
+// (2062 ms de arranque, medidos no MC88.15).
+//
+// Os helpers de metadados mudaram para `_lib/meta.mjs`, que não conhece o ethers, e
+// são re-exportados aqui para não partir nenhum import existente. Há uma única
+// implementação — isto é re-export, não cópia.
+export {
+  gravarMetaPedido,
+  lerMetaPedido,
+  lerCreditoPedido,
+  BLOB_PEDIDOS_PAGOS,
+  BLOB_PEDIDOS_META,
+} from "./meta.mjs";
 
-const BLOB_PEDIDOS_PAGOS = "pedidos-pagos";
-const BLOB_PEDIDOS_META  = "pedidos-meta";
-
-function abrirStore(name) {
-  try {
-    return getStore({ name, consistency: "strong" });
-  } catch (err) {
-    console.warn(`[credito] Blobs ${name} indisponível:`, err?.message);
-    return null;
-  }
-}
-
-/**
- * Persiste metadados do pedido no momento da criação. O webhook usa esses
- * metadados para descobrir endereco/qtd a creditar — o MP só nos devolve o
- * `external_reference` (= pedidoId), não o destino on-chain.
- */
-export async function gravarMetaPedido({ pedidoId, endereco, qtd, valorBRL, paymentId, tipo = null, categoria = null, produtoValor = null, produtoNome = null }) {
-  const store = abrirStore(BLOB_PEDIDOS_META);
-  if (!store) {
-    console.warn("[credito] gravarMetaPedido: store indisponível", { pedidoId });
-    return false;
-  }
-  try {
-    await store.setJSON(pedidoId, {
-      endereco,
-      qtd,
-      valorBRL,
-      paymentId: paymentId ? String(paymentId) : null,
-      // MC17.1 — pedidos de cota carregam tipo/categoria/produto para ativação automática.
-      tipo,
-      categoria,
-      produtoValor,
-      produtoNome,
-      criadoEm: new Date().toISOString(),
-    });
-    console.info("[credito] meta gravada", { pedidoId, endereco, qtd, paymentId: paymentId ? String(paymentId) : null });
-    return true;
-  } catch (err) {
-    console.error("[credito] gravarMetaPedido falhou:", { pedidoId, name: err?.name, message: err?.message });
-    return false;
-  }
-}
-
-export async function lerMetaPedido(pedidoId) {
-  const store = abrirStore(BLOB_PEDIDOS_META);
-  if (!store) {
-    console.warn("[credito] lerMetaPedido: store indisponível", { pedidoId });
-    return null;
-  }
-  try {
-    const meta = await store.get(pedidoId, { type: "json" });
-    console.info("[credito] lerMetaPedido", { pedidoId, encontrado: !!meta, hasEndereco: !!meta?.endereco, hasQtd: !!meta?.qtd });
-    return meta;
-  } catch (err) {
-    console.error("[credito] lerMetaPedido falhou:", { pedidoId, name: err?.name, message: err?.message });
-    return null;
-  }
-}
-
-/** Lê o registro de crédito (pedidos-pagos) — usado por endpoints de debug. */
-export async function lerCreditoPedido(pedidoId) {
-  const store = abrirStore(BLOB_PEDIDOS_PAGOS);
-  if (!store) return null;
-  try {
-    return await store.get(pedidoId, { type: "json" });
-  } catch (err) {
-    console.warn("[credito] lerCreditoPedido falhou:", err?.message);
-    return null;
-  }
-}
+import { abrirStore, BLOB_PEDIDOS_PAGOS as STORE_PAGOS } from "./meta.mjs";
+// MC87 (P3-1) — carteira mascarada nos logs.
+import { mascararEndereco } from "./validate.mjs";
 
 /**
  * Credita senhas on-chain de forma idempotente.
@@ -108,8 +49,8 @@ export async function lerCreditoPedido(pedidoId) {
  *   Não lança — sempre devolve um objeto. O caller decide HTTP status.
  */
 export async function creditarPedidoIdempotente({ pedidoId, endereco, qtd, fonte = "desconhecido" }) {
-  console.info(`[credito:${fonte}] início`, { pedidoId, endereco, qtd });
-  const store = abrirStore(BLOB_PEDIDOS_PAGOS);
+  console.info(`[credito:${fonte}] início`, { pedidoId, endereco: mascararEndereco(endereco), qtd });
+  const store = abrirStore(STORE_PAGOS);
 
   // ── Idempotência: já creditado? ─────────────────────────────────────────
   if (store) {
@@ -129,6 +70,16 @@ export async function creditarPedidoIdempotente({ pedidoId, endereco, qtd, fonte
   // ── Crédito on-chain ────────────────────────────────────────────────────
   let resultado;
   try {
+    // MC88.16 (P1) — import DINÂMICO: é aqui, e só aqui, que o ethers é preciso.
+    // Em import estático no topo, todo o cold start que tocasse este módulo pagava
+    // a avaliação do ethers, mesmo sem nunca chegar a esta linha.
+    const {
+      creditarSenhas,
+      lerSaldoSenhas,
+      getCoordenacaoAddress,
+      CONTRATO_ADDRESS,
+    } = await import("./contract.mjs");
+
     const saldoAntes = await lerSaldoSenhas(endereco);
     const { txHash, blockNumber, gasUsed } = await creditarSenhas(endereco, qtd);
     const saldoDepois = await lerSaldoSenhas(endereco);

@@ -3,6 +3,138 @@
 > PILAR 1 (SUPERPERS): nenhum código entra em produção sem passar por este ficheiro.
 > Branch `feat/mc28.1` · Abordagem A2 (Compromisso Cego + Key-Per-Bid) · só `NETWORK_STAGE === 'mainnet'`.
 
+---
+
+## MC59.6 — frontend polling do 202 (crédito assíncrono)
+
+> Branch `feat/mc59.6-frontend-polling`. Mudança de FRONTEND read-only (polling de
+> um txHash público, sem segredos/auth) → superfície baixa; revisão manual pelo
+> checklist (agente independente reservado ao caminho do dinheiro).
+
+- **Lógica pura** `src/lib/creditoPolling.js` (testada node:test 6/6) + hook
+  `useCreditoStatus` (cancela no unmount) + `CreditoStatus.jsx` (usa `explorerTx`,
+  sem host hardcoded) + `web3.verificarCreditoOnchain` (read-only) + `useTrocarPorSenhas`
+  detecta 202. Wirado em `MinhaCarteira` (inerte com flag OFF → null).
+- **Design real:** poll on-chain por txHash (o backend não devolve jobId nem há
+  endpoint de status) — fica no frontend, sem novo endpoint. JS/JSX (não TS).
+- **Checklist:** sem secrets novos; txHash é público; timeout≠failed (estado
+  distinto); erro de rede→re-tenta; cleanup no unmount. Sem findings.
+- **Validação:** build verde (inclui o componente), esbuild transform OK, polling
+  6/6; backend intacto. Relatório: `Desktop\MC59.6-RELATORIO.txt`.
+
+---
+
+## MC59.5 — confirmação assíncrona do crédito (ADR)
+
+> Branch `feat/mc59.5-adr-assincrono`. Flag `CREDITO_ASSINCRONO` (OFF por default,
+> não setada no repo) + fila MC39.20 inerte → **DORMANT**. Revisão adversarial:
+> NAUGHTY → **resolvido** (fix-cycle). Sync path e PIX intactos.
+
+- **Blocos** (`contract.mjs`): `submeterCredito` (submete sem aguardar o wait) +
+  `confirmarReceiptOnchain` (read-only). `creditarSenhas` NÃO alterado.
+- **Worker** (`_lib/worker-credito.mjs`): confirma em background; revertido→reembolsa
+  com **claim-before-refund** (idempotência forte por pedidoId); pendente→re-enfileira;
+  NUNCA re-credita.
+- **`comprar-senhas.mjs`** (flag-gated, sem voucher): submete → enfileira → **202**.
+  Fallback (fila indisponível): só `credito_pendente`+alerta (NÃO reembolsa → sem
+  double-refund; NÃO re-submete → sem double-credit).
+- **Revisão (money-path):** double-submit/double-credit NÃO existem (confirmado);
+  achados corrigidos → double-refund cross-path (fallback não reembolsa mais),
+  confirm frio (removido), marcador (claim antes). Follow-ups p/ habilitar: reaper
+  de 'processing', migração da fila, polling frontend, idempotência client-side.
+- **Validação:** 72/72; build verde; sem secrets. Relatório: `Desktop\MC59.5-RELATORIO.txt`.
+
+---
+
+## MC59.4 — retry de nonce + runbook de reconciliação
+
+> Branch `feat/mc59.4-nonce-runbook`. Re-diagnóstico honesto: o "lock de nonce"
+> pedido é impróprio no serverless (mutex em memória inútil entre instâncias
+> Lambda); colisões de nonce falham no broadcast → já reembolsam. O "dinheiro
+> preso" (TX_PENDENTE) vem do **wait síncrono vs timeout**, não do nonce.
+
+- **Código** (`_lib/contract.mjs`): `enviarAdicionarSenhasComRetry` — em colisão de
+  nonce (NONCE_EXPIRED/replacement/"nonce too low"), REENVIA com nonce pending
+  fresco; erros não-nonce propagam de imediato (reembolso seguro). Mantém tx-hash
+  do MC59.3. TDD 4/4.
+- **`docs/runbook-credito-pendente.md`**: reconciliação manual guiada por txHash
+  (status 1/0/dropped → nada/reembolsar/aguardar), reembolso via CAS; depende de
+  `SENTRY_DSN` em prod.
+- **`docs/adr-2026-07-08-confirmacao-assincrona.md`**: fix DEFINITIVO = confirmação
+  assíncrona (fila MC39.20 + 202 + worker), recomendado como pré-requisito de
+  mainnet acima de qualquer lock.
+- **`scripts/flip-mainnet.sh`**: flip parametrizado SEM segredos + preflight
+  `eth_getCode` que aborta se o contrato não existir na rede alvo. Não seta a chave.
+- **Segurança:** a chave privada vazada no prompt do MC60 NÃO foi persistida em
+  nenhum arquivo (grep confirmou). Validação: 57/57; build verde.
+
+---
+
+## MC59.3 — B-2 (tx-hash) + follow-up C-1 (bootstrap atómico)
+
+> Branch `feat/mc59.3-correcao-b2-c1` · revisão adversarial (security-reviewer):
+> **NICE** (o HIGH do MC59.2 foi genuinamente eliminado).
+
+| Fix | Estado | Segurança |
+|-----|--------|-----------|
+| **B-2** atribuição por tx-hash (`contract.mjs::creditarSenhas` + `comprar-senhas.mjs`) | ✅ resolvido | Re-verifica o receipt da tx ESPECÍFICA (não saldo agregado) → elimina a atribuição cruzada entre requisições. TX_PENDENTE não reembolsa (evita double-benefit) + alerta level=error; TX_REVERTED/submissão-falha reembolsam. Retry curto no getTransactionReceipt (blip RPC). |
+| **C-1 follow-up** bootstrap atómico (`saldoRs-store.mjs::inserirSaldoSeAusente` + `saldoRs.mjs`) | ✅ resolvido | INSERT ON CONFLICT DO NOTHING (ignoreDuplicates) — garantia pelo PRIMARY KEY, sem janela residual. Aplicado a crédito, reembolso e débito. |
+
+**Recomendações da revisão** — aplicadas: retry no receipt + alerta level=error.
+**Follow-ups (operador/MC59.4):** SENTRY_DSN em prod; runbook de reconciliação de
+`credito_pendente`; **serialização de nonce por endereço** no backend local-key
+(causa das colisões que disparam TX_PENDENTE). **Validação:** 58/58; build verde;
+secret-scan limpo. Relatório: `Desktop\MC59.3-RELATORIO.txt`.
+
+---
+
+## MC59.2 — Correção dos altos (B-2, B-4, C-1, D-1)
+
+> Branch `feat/mc59.2-correcao-altos` · revisão adversarial (security-reviewer):
+> C-1 **NICE**; B-2 **NAUGHTY (HIGH)** → guard revertido.
+
+| Fix | Estado | Segurança |
+|-----|--------|-----------|
+| **C-1** crédito/reembolso atómicos (CAS, `saldoRs.mjs`) | ✅ resolvido | Núcleo CAS aprovado. FOLLOW-UP MEDIUM: bootstrap de endereço novo usa upsert incondicional (mesma janela pré-existente do débito) → INSERT..DO NOTHING no MC59.3. |
+| **D-1** HMAC webhook (`mp-signature.mjs`, `webhook-mercadopago.mjs`) | ✅ postura segura | Opt-in `MP_WEBHOOK_ENFORCE` (fail-closed sem segredo) + fail-open observável (alerta). SEM janela de replay (MP reenvia com ts antigo; idempotência por pedidoId cobre). Gate: operador setar `MP_WEBHOOK_SECRET`. |
+| **B-4** config de rede centralizada (`src/lib/network.js` + call-sites) | ✅ só config | Remove fallback p/ contrato ANTIGO (falha alto se env faltar); sem virar o endereço implantado. Validado por build (sem runner frontend). |
+| **B-2** auto-reembolso (`comprar-senhas.mjs`) | ⚠️ revertido | Guard delta-based reprovado (HIGH): sob concorrência no mesmo endereço atribuía crédito de outra requisição → perda ao usuário. Voltou ao reembolso-seguro + alerta C-4. Fix real (tx-hash/fila) → MC59.3. |
+
+**Validação:** node --check limpo; 54/54 na superfície afetada (25/25 no núcleo
+financeiro pós-revert); build verde; secret-scan limpo. **B-2 permanece aberto** —
+mainnet NÃO liberada. Relatório: `Desktop\MC59.2-RELATORIO.txt`.
+
+---
+
+## MC59.1 — Correção do B-1 (signer.mjs): local-key legítimo em mainnet (Opção B)
+
+> Branch `feat/mc59.1-correcao-signer` · alteração de produção APENAS em
+> `_lib/signer.mjs` · revisão adversarial (santa-method) = **NICE (aprovado)**.
+
+**Mudança.** `assertChaveBrutaAusenteEmMainnet()` deixa de fazer `throw`
+incondicional quando há `COORDENACAO_PRIVATE_KEY` em mainnet: passa a **permitir**
+a chave bruta em mainnet **somente** quando `SIGNER_BACKEND=local-key` foi
+escolhido **explicitamente** (opt-in; arquitetura viva MC56/EOA, após o bundler
+Biconomy morrer — MC52.1). Emite `console.warn` (hot key). Em qualquer outro
+backend (default/biconomy) o bloqueio permanece.
+
+**Modelo de ameaça / decisão.**
+| Item | Avaliação |
+|------|-----------|
+| Hot-key acidental em mainnet | MITIGADO — default mainnet continua `biconomy`; local-key exige `SIGNER_BACKEND` literal. Valores malformados caem em biconomy (**fail-closed**). |
+| Vazamento da chave em log | NÃO — `console.warn` é texto estático; não interpola a chave nem o endereço. |
+| Guards biconomy (KMS/BUNDLER) | PRESERVADOS — nenhum check tocado. |
+| Superfície de ataque | Inalterada — quem controla `SIGNER_BACKEND` já teria de controlar `COORDENACAO_PRIVATE_KEY` (já era verdade). |
+| Impacto de compromisso da chave | Cunhar senhas / definir vencedor (o contrato NÃO custodia ETH/tokens de terceiros). Mitigação operacional: EOA só-gás, rotação, monitor on-chain. |
+
+**Validação.** node --check limpo; suíte signer 27/27; integração+dinheiro 18/18;
+build verde; secret-scan do diff limpo; mainnet-simulado prova assinatura
+EIP-191+EIP-712 com recuperação de EOA correta. Tx on-chain real fica para o
+OPERADOR (segredos). **B-1 resolvido**; B-2/B-4/C-1/D-1 do MC59 permanecem abertos
+(não liberam mainnet sozinhos). Relatório: `Desktop\MC59.1-RELATORIO.txt`.
+
+---
+
 ## 1. Modelo de ameaça resolvido
 
 | ID | Risco (MC28.txt) | Mitigação MC28.1 |

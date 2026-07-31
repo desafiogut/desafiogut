@@ -1,0 +1,45 @@
+# MC89.7 — RELATÓRIO: Visão Geral Expandida (Fase 1 do plano MC89.5)
+Data: 2026-07-30 | Branch: feat/mc89-adm-system | Suítes: 40/40 frontend, 314/314 backend
+
+## 1. O que foi construído
+
+### Backend: 2 endpoints novos
+- `admin-series.mjs` — séries diárias (receita PIX + utilizadores), do Supabase, cache 45s, sem ethers
+- `admin-alerts.mjs` — 6 alertas (fila travada, webhook inativo, Blobs cego, cache sem Redis, RAG sem metadado, cadeia indisponível)
+  - Lógica extraída para `_lib/admin-alertas.mjs` (pura, injetável, 11 testes)
+  - Alertas A1 (EOA baixa) e A4 (monitor) computados NO FRONTEND com dados do admin-onchain (R7)
+
+### Frontend: Visão Geral renovada
+- `GraficoLinha.jsx` — SVG puro (~110 linhas), zero dependências, trata dados esparsos sem preencher zeros
+- `VisaoGeral.jsx` — gráficos de receita + utilizadores, secção de alertas com bolas coloridas por nível, métricas "Ativos em 24h" e "Senhas em trânsito"
+- As 4 secções de métricas existentes preservadas tal e qual
+
+### Auditoria de dados pessoais
+- Varredura completa: zero dados de utilizador comum no painel
+- Confirmado visualmente no APK: apenas métricas agregadas do sistema
+
+## 2. Realidade dos dados (verificada no Supabase)
+- 18 créditos em 6 dias (2026-06-21 a 2026-07-26), todos `confirmar-pagamento`
+- 7 cotas criadas no mesmo dia (2026-06-21)
+- 5 tarefas na fila, todas `done`
+- Os gráficos mostram 6 pontos em 90 dias — e é assim que tem de ser
+
+## 3. Alertas que acendem no ambiente atual
+- **webhook_inativo** (warning) — 0 webhooks em toda a história
+- **blobs_cego** (warning) — BLOBS_TOKEN ausente; leituras de Blob falham em silêncio
+- **cache_sem_redis** (info) — REDIS_URL ausente; cache é no-op
+- **rag_sem_metadado** (info) — sempre presente; índice construído fora do repo
+
+## 4. O que NÃO foi implementado (e porquê)
+- "Senhas creditadas" como série: não há registo temporal on-chain; seria redundante com Receita
+- "Evolução semanal" com 6 pontos: o gráfico é honesto com o que tem
+- Gráfico de cotas: 7 criadas no mesmo dia; não acrescenta ao cartão "Cotas: 7"
+- EOA/monitor no backend: ficam no frontend (R7 do MC89.5)
+
+## 5. APK validado
+- build:apk → bundle coerente com mainnet (validar-dist confirma)
+- Instalado em fiem7xlvcufe855h
+- Painel navega, atalhos presentes, zero erros de consola do novo código
+
+## 6. Próximo passo
+MC90.2 (Fase 2): auditoria (admin_logs) + níveis de permissão (super-admin/admin/operador) — ANTECIPADA no plano do MC89.5 para antes dos comandos operacionais.

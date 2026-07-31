@@ -6,10 +6,15 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import FimLeilaoOverlay from "../components/FimLeilaoOverlay.jsx";
 import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
+import CarrosselGUTO from "../components/CarrosselGUTO.jsx";
 import StatTile from "../components/StatTile.jsx";
 import EdicaoCard from "../components/EdicaoCard.jsx";
 import EdicaoBanner from "../components/EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
+// MC88.43 — fonte única do estado da edição. Antes o cronómetro obedecia à trava
+// EM_BREVE_MODE e o resto do card obedecia ao `encerrado`, e o título da secção
+// dizia "em Andamento" à mão — três vozes no mesmo ecrã (B3/B4).
+import { getEstadoEdicao } from "../utils/edicao.js";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -48,7 +53,12 @@ export default function Dashboard() {
     lances, vencedor,
     saldoSenhas, saldoSenhasStatus,
     saldoRsCentavos, saldoRsStatus,
-    encerrado, tipoLeilao, isConnected, DURACAO,
+    encerrado, tipoLeilao, DURACAO,
+    // MC88.38 — `pareceAutenticado` substitui `isConnected` APENAS no texto do
+    // cabeçalho. `isConnected` deixou de ser usado neste ficheiro; continua a
+    // ser a fonte única para HABILITAR ações nos componentes que o fazem
+    // (CardLance, AuthArea, MercadoLances, …), que não foram tocados.
+    pareceAutenticado,
     address, userLabel, EDICAO_ATIVA,
     showOverlay, showCountdown, handleNovaRodada, setPrazoTimestamp,
     edicoes,
@@ -68,13 +78,22 @@ export default function Dashboard() {
     tipo: tipoLeilao === "flash" ? "relampago" : "programado",
   };
 
+  // MC88.43 — estado da R-1. `encerrado` (FONTE A: prazoTimestamp on-chain) é
+  // passado como veredito e a fonte única decide o que se mostra. O /mercado faz
+  // exatamente esta chamada com o mesmo `encerrado` — é isso que fecha o B4.
+  const estAtiva = getEstadoEdicao(edicaoAtiva, { encerrado });
+
+  // MC88.40 — o estado "stale" deixou de ter sufixo textual. " (antigo)" era
+  // jargão interno do MC88.34 exposto ao utilizador, e as alternativas textuais
+  // não cabiam no tile (medido: 145 px contra 121 px disponíveis → seriam
+  // cortadas). Passa a ser sinalizado por opacidade — ver `.gut-valor-pendente`
+  // em globals.css. "loading" e "error" mantêm os seus ícones: são estados
+  // diferentes e ocupam um caractere.
   const statusSuffix =
     saldoSenhasStatus === "loading" ? " ⏳" :
-    saldoSenhasStatus === "stale"   ? " (antigo)" :
     saldoSenhasStatus === "error"   ? " ✗" : "";
   const statusRsSuffix =
     saldoRsStatus === "loading" ? " ⏳" :
-    saldoRsStatus === "stale"   ? " (antigo)" :
     saldoRsStatus === "error"   ? " ✗" : "";
 
   const totalLances  = lances.length;
@@ -99,10 +118,11 @@ export default function Dashboard() {
     ? `R$ —${statusRsSuffix}`
     : `R$ ${saldoReais.toFixed(2)}${statusRsSuffix}`;
 
-  const senhasStat = { label: "Senhas", value: `${saldoSenhas ?? "—"}${statusSuffix}`, color: "#a78bfa", icon: "🔗", to: "/carteira" };
+  // MC88.40 — `pendente` marca o valor que ainda vem do cache (estado "stale").
+  const senhasStat = { label: "Senhas", value: `${saldoSenhas ?? "—"}${statusSuffix}`, color: "#a78bfa", icon: "🔗", to: "/carteira", pendente: saldoSenhasStatus === "stale" };
 
   const stats = [
-    { label: "Saldo (R$)",      value: saldoReaisStr,                    color: COR.gold,    icon: "💰", to: "/carteira" },
+    { label: "Saldo (R$)",      value: saldoReaisStr,                    color: COR.gold,    icon: "💰", to: "/carteira", pendente: saldoRsStatus === "stale" },
     senhasStat,
     { label: "Lances Únicos",   value: lancesUnicos,                     color: COR.success, icon: "✅", to: "/mercado"  },
     { label: "Total de Lances", value: totalLances,                      color: COR.amber,   icon: "📊", to: "/ativos"   },
@@ -133,34 +153,63 @@ export default function Dashboard() {
           padding: isMobile ? "1.25rem 1rem" : "1.5rem",
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: isMobile ? "0.75rem" : "1rem" }}>
+        {/* MC58.1 — proporção da REFERÊNCIA (REFERENCIA DE PROPORÇOES GUTO E LOGO):
+            linha de cima = GUTO (esq) + logo (dir), larguras semelhantes, logo
+            centrado na vertical; a saudação fica ABAIXO de ambos, horizontal
+            (NÃO entre o GUTO e o logo). */}
+        <div style={{
+          display: "flex",
+          flexWrap: "nowrap",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: isMobile ? "1.25rem" : "2.5rem",
+          marginBottom: isMobile ? "0.75rem" : "1rem",
+        }}>
+          {/* GUTO animado (imagem 1) a flutuar na glass */}
+          <CarrosselGUTO size={isMobile ? 116 : 176} />
+
+          {/* Logo Grupo União e Trabalho — largura ~igual à do GUTO (referência) */}
           <img
-            src="/assets/guto/custom/guto-bemvindo.png"
-            alt="GUTO feliz — corpo inteiro"
-            width={isMobile ? 80 : 120}
-            height={isMobile ? 80 : 120}
-            style={{ imageRendering: "auto", marginBottom: "0.75rem" }}
+            src="/assets/guto/logo-uniao-trabalho.png"
+            alt="Grupo União e Trabalho"
+            style={{
+              height: isMobile ? 76 : 116,
+              width: "auto",
+              objectFit: "contain",
+              flexShrink: 0,
+              display: "block",
+            }}
           />
         </div>
-        <div>
+
+        {/* Saudação — horizontal, ABAIXO do GUTO e do logo, largura total */}
+        <div style={{ textAlign: "center" }}>
           <h1 style={{
             margin: "0 0 0.35rem",
-            fontSize: isMobile ? "1.3rem" : "1.6rem",
+            fontSize: isMobile ? "1rem" : "1.3rem",
             fontWeight: "900", color: COR.text,
             lineHeight: 1.2,
             wordBreak: "break-word",
           }}>
-            {isConnected
+            {/* MC88.37 — `pareceAutenticado` inclui o estado "Privy ainda a
+                restaurar, mas há sessão validada em disco". Sem isto, um
+                utilizador já autenticado via "Faça login" durante ~1,6 s, com
+                o saldo dele pintado ao lado. NÃO usar para habilitar ações. */}
+            {pareceAutenticado
               ? `Olá, ${userLabel || (address ? address.slice(0, 8) + "..." : "Participante")}!`
               : "Bem-vindo ao DesafioGUT!"}
           </h1>
           <p style={{
             margin: 0,
             color: COR.muted,
-            fontSize: isMobile ? "0.82rem" : "0.92rem",
+            fontSize: isMobile ? "0.75rem" : "0.85rem",
             lineHeight: 1.4,
           }}>
-            {isConnected
+            {/* MC88.38 — tem de acompanhar o <h1> acima. Se só o título usasse
+                `pareceAutenticado`, o ecrã passaria a dizer "Olá, Fulano!" com
+                "Faça login para participar" logo por baixo — trocando uma
+                contradição por outra. */}
+            {pareceAutenticado
               ? "Acompanhe seus dados e acesse o mercado de lances."
               : "Faça login para participar e dar seu lance agora."}
           </p>
@@ -176,8 +225,8 @@ export default function Dashboard() {
         gap: innerGap,
         marginBottom: sectionGap,
       }}>
-        {stats.map(({ label, value, color, icon, to }) => (
-          <StatTile key={label} label={label} value={value} color={color} icon={icon} to={to} />
+        {stats.map(({ label, value, color, icon, to, pendente }) => (
+          <StatTile key={label} label={label} value={value} color={color} icon={icon} to={to} pendente={pendente} />
         ))}
       </section>
 
@@ -237,28 +286,31 @@ export default function Dashboard() {
           }}>
             {/* MC22.1 SECÇÃO D — GUTO companion da Edição Ativa (celebra ao encerrar). */}
             {/* MC39.4.1 (#guto) — GUTO do "início" maior (era 64/76) p/ legibilidade. */}
-            <GutoSpritePlayer variant="inline" size={isMobile ? 88 : 104} mood={encerrado ? "celebrating" : undefined} />
+            {/* MC88.43 — o GUTO não celebra um encerramento que o ecrã não anuncia. */}
+            <GutoSpritePlayer variant="inline" size={isMobile ? 88 : 104} mood={estAtiva.encerrada ? "celebrating" : undefined} />
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem" }}>
               <div style={{
-                fontSize: isMobile ? "2.5rem" : "2.25rem",
+                fontSize: estAtiva.timer ? (isMobile ? "1.6rem" : "1.5rem") : (isMobile ? "2.5rem" : "2.25rem"),
                 fontWeight: "900",
-                fontFamily: "'JetBrains Mono', monospace",
-                color: encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[tipoLeilao]),
-                letterSpacing: "0.02em",
+                fontFamily: estAtiva.timer ? "'Orbitron', sans-serif" : "'JetBrains Mono', monospace",
+                color: estAtiva.timer ? estAtiva.cor : (encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[tipoLeilao])),
+                letterSpacing: estAtiva.timer ? "0.12em" : "0.02em",
                 lineHeight: 1,
                 transition: "color 0.6s ease",
-              }}>{timerDisplay}</div>
+              }}>{estAtiva.timer ?? timerDisplay}</div>
               <div style={{
                 fontSize: "0.68rem", color: COR.muted,
                 textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: "700",
               }}>
-                {encerrado ? "ENCERRADO" : tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
+                {/* Encerrado deixa de aparecer aqui quando a fonte única diz outra
+                    coisa; o tipo de leilão (Relâmpago/Programado) é factual e fica. */}
+                {estAtiva.encerrada ? "ENCERRADO" : tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
               </div>
               <div style={{
-                fontSize: "0.78rem", color: encerrado ? "#fca5a5" : COR.text,
+                fontSize: "0.78rem", color: estAtiva.encerrada ? "#fca5a5" : COR.text,
                 marginTop: "0.4rem", textAlign: "center",
               }}>
-                {encerrado ? "Aguardando nova rodada" : "Em andamento — lance já!"}
+                {estAtiva.encerrada ? "Aguardando nova rodada" : estAtiva.rotuloLongo}
               </div>
             </div>
           </div>
@@ -267,16 +319,16 @@ export default function Dashboard() {
             onClick={() => navigate("/mercado")}
             style={{
               padding: "0.7rem 1rem",
-              background: encerrado
+              background: estAtiva.encerrada
                 ? "rgba(245,166,35,0.18)"
                 : "linear-gradient(135deg,#f5a623,#e89400)",
               border: "none", borderRadius: "10px",
-              color: encerrado ? COR.gold : "#0a0f1a",
+              color: estAtiva.encerrada ? COR.gold : "#0a0f1a",
               fontWeight: "800", cursor: "pointer",
               fontSize: "0.88rem", width: "100%",
               fontFamily: "'Orbitron', sans-serif",
               letterSpacing: "0.04em",
-              boxShadow: encerrado ? "none" : "0 4px 18px rgba(245,166,35,0.40)",
+              boxShadow: estAtiva.encerrada ? "none" : "0 4px 18px rgba(245,166,35,0.40)",
             }}
           >
             ⚡ Ir para o Mercado de Lances
@@ -298,7 +350,8 @@ export default function Dashboard() {
                 R$ {(vencedor.valor / 100).toFixed(2)}
               </div>
               <div style={{ fontSize: "0.72rem", color: COR.muted }}>
-                {encerrado ? "🏆 Vencedor final" : "🔄 Liderando — pode ser superado"}
+                {/* MC88.43 — "Vencedor final" é um encerramento; segue a fonte única. */}
+                {estAtiva.encerrada ? "🏆 Vencedor final" : "🔄 Liderando — pode ser superado"}
               </div>
             </div>
           ) : (
@@ -317,7 +370,11 @@ export default function Dashboard() {
       {/* ── MC15.4 ITEM 7 — Outras edições com cronómetros independentes ── */}
       {edicoesExtra.length > 0 && (
         <section style={{ marginBottom: sectionGap }}>
-          <h3 style={{ ...cardTitulo, marginBottom: innerGap }}>🗓️ Outras Edições em Andamento</h3>
+          {/* MC88.43 — "em Andamento" era uma afirmação FIXA, escrita à mão, que
+              não perguntava a fonte nenhuma. Sobrepunha-se a três cartões que
+              diziam "Encerrada" (B3). O título passa a ser neutro: quem declara
+              o estado é cada cartão, e só a fonte única lho dita. */}
+          <h3 style={{ ...cardTitulo, marginBottom: innerGap }}>🗓️ Outras Edições</h3>
           <div style={{
             display: "grid",
             gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(240px, 1fr))",

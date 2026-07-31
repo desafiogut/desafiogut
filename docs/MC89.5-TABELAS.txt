@@ -1,0 +1,260 @@
+================================================================================
+MC89.5 — SEGMENTO 3: ARQUITETURA DE DADOS (SUPABASE)
+================================================================================
+
+--------------------------------------------------------------------------------
+PADRÃO DE RLS VIGENTE — verificado em pg_policies, 2026-07-30
+--------------------------------------------------------------------------------
+Todas as 15 tabelas têm RLS ATIVO e exatamente UMA política: `ALL` para
+`service_role`. As únicas exceções são leituras públicas deliberadas
+(`produtos` e `config_remota`, ambas SELECT para `public`).
+
+O backend fala com o Postgres pela service_role (supabase-client.mjs), e nenhum
+cliente do browser fala com o Postgres. O registo [[desafiogut-mc86-auditoria-seguranca]]
+diz que a RLS está correta e não deve ser re-auditada — este segmento CONFORMA-SE
+ao padrão em vez de o rever.
+
+⇒ REGRA PARA AS TABELAS NOVAS: RLS ativo + uma política `ALL TO service_role`.
+   NENHUMA política para `anon` ou `authenticated`. Nenhuma tabela nova é lida
+   pelo browser: tudo passa pelas functions, que já têm o gate de admin.
+
+⚠ Lição do MC88.29 a repetir aqui: quando se cria uma FUNÇÃO em Postgres, o
+  EXECUTE é concedido a PUBLIC por omissão. Toda a função nova deste programa
+  tem de terminar com `REVOKE EXECUTE ... FROM PUBLIC; GRANT ... TO service_role;`.
+  Os índices são parte do schema e vão na mesma migração — não "depois".
+
+--------------------------------------------------------------------------------
+O QUE **NÃO** SE CRIA (e porquê)
+--------------------------------------------------------------------------------
+✗ `usuarios` / `profiles`  — D1 (Tela 2). A identidade é do Privy. Uma tabela
+  espelho exigiria um caminho de escrita no login que não existe, e passaria a
+  divergir em silêncio. Em vez disso: uma VIEW derivada (abaixo).
+
+✗ `sessions`  — D6. Já existem sessões admin em Blob `admin-refresh:{endereco}`
+  com jti/createdAt/expiresAt e limite de 5 (admin-auth.mjs:26-30), e
+  `revogarAdmin()` já está escrito. O que falta são três campos de metadado.
+  Migrar isto para Postgres significa reescrever `admin-auth.mjs`, que está no
+  caminho crítico de TODOS os pedidos admin — risco alto, ganho baixo, e a meio
+  de um programa de sete telas.
+  DECISÃO: acrescentar `ip`, `userAgent`, `ultimoAcesso` ao registo em Blob.
+  ⚠ Contrapartida assumida e escrita: se os Blobs ficarem cegos, a lista de
+    sessões fica vazia — e isso lê-se como "nenhuma sessão ativa", que é um
+    verde falso. Mitigação: a sonda de Blobs do /admin-status (Tela 4) é o que
+    distingue os dois casos, e a tela de sessões mostra o estado dessa sonda.
+
+✗ `transacoes`  — D-FIN. `saldo_rs_creditos` + `saldo_rs_debitos` já são o
+  livro-razão, com saldoAntes/saldoDepois e `fonte` no payload (verificado).
+
+✗ `pedidos`  — o enunciado assume que existe; não existe. `pedido_id` é a chave
+  primária de `saldo_rs_creditos` e é isso que faz o papel.
+
+================================================================================
+1. VIEW `vw_utilizadores`  (Fase 2 — Tela 2)
+================================================================================
+Não é tabela: é a projeção que hoje obterMetricas() faz em memória
+(admin-metricas.mjs:190-207), promovida a SQL. Assim há UMA definição de
+"utilizador conhecido", partilhada pelo painel, pelo GUTO e pelas métricas.
+
+  endereco              text  PK lógica (lower)
+  email                 text  de cotas.email — NULL em 4 de 7 hoje (A-2)
+  tem_cota              bool
+  saldo_centavos        int   de saldo_rs.payload->>'centavos'
+  creditos_n            int
+  creditos_centavos     bigint
+  debitos_n             int
+  lances_n              int   ⚠ conta SÓ os lances relâmpago em Postgres
+  primeira_atividade    timestamptz  min(criado_em) das fontes
+  ultima_atividade      timestamptz  max(criado_em) das fontes
+  fontes                text[]  em que tabelas este endereço apareceu
+
+Construção: UNION ALL dos endereços de
+  cotas.cliente_id (só os que casam ^0x[0-9a-f]{40}$ — 2 de 7 são `cnpj:…`),
+  saldo_rs.cliente_id,
+  saldo_rs_creditos.payload->>'endereco'  (18/18 preenchidos, verificado),
+  lances.endereco
+seguido de agregação por endereço.
+
+⚠ `cotas.endereco` NÃO entra: está preenchida em 0 de 7 (verificado; já
+  documentado em admin-metricas.mjs:154-159). A carteira vive em `cliente_id`.
+
+DECISÃO VIEW vs MATERIALIZED VIEW: começar com VIEW simples. Com 7+5+18+0 = 30
+linhas de origem, uma matview é otimização de um problema que não existe, e uma
+matview desatualizada mente. Reavaliar quando a origem passar de ~50 mil linhas
+— o mesmo limiar que admin-metricas.mjs:16-20 já declara para a contagem em
+memória. Escrito aqui para a decisão ser tomada com o número à frente.
+
+Índices de suporte (nas tabelas de origem, não na view):
+  idx_saldo_rs_creditos_endereco   btree ((payload->>'endereco'))
+  idx_saldo_rs_creditos_criado_em  btree (criado_em desc)
+  idx_saldo_rs_debitos_criado_em   btree (criado_em desc)
+  idx_lances_endereco              btree (endereco)
+  idx_cotas_cliente_id             btree (cliente_id)
+
+================================================================================
+2. TABELA `admin_logs`  (Fase 4 — Tela 5)
+================================================================================
+D5 — PORQUÊ POSTGRES E NÃO O BLOB QUE JÁ EXISTE
+  `_lib/log-operacional.mjs` escreve em Blob "log-decisoes" com poda FIFO a 500
+  entradas (:15,:56-60) e é 100% fail-soft: em erro devolve `null` e a ação
+  segue (:47-50). Para o que foi feito — registar decisões do GUTO sem nunca
+  quebrar um lance — está certo.
+  Para auditoria de compliance está errado por duas razões independentes:
+    1. Perde os registos mais antigos POR DESENHO. Um log que se apaga sozinho
+       ao fim de 500 entradas não serve para responder "quem fez isto em março".
+    2. Perde escritas em SILÊNCIO. Se os Blobs estiverem cegos
+       ([[desafiogut-blobs-token-dois-cegos]]), a ação acontece e o registo não —
+       e ninguém fica a saber.
+
+D5b — E É FAIL-**CLOSED**, ao contrário de tudo o resto no sistema.
+  Toda a restante escrita de log deste projeto é fail-soft, e com razão: um log
+  não pode quebrar um pagamento. Aqui a regra inverte-se para os endpoints que
+  MUTAM: primeiro grava-se o registo, e só depois se executa. Se a gravação
+  falhar, a ação é recusada com 503.
+  Justificação: para um comando de admin, "aconteceu e não há registo" é um pior
+  desfecho do que "não aconteceu". Para as LEITURAS a regra mantém-se fail-soft.
+  Esta inversão é deliberada e tem de estar comentada no código, senão o próximo
+  MC "corrige" a inconsistência e apaga a garantia.
+
+  id              uuid        PK default gen_random_uuid()
+  criado_em       timestamptz not null default now()
+  admin_endereco  text        not null
+  admin_email     text
+  admin_nivel     text                        -- nível NO MOMENTO da ação
+  tipo_acao       text        not null        -- "bloquear_utilizador", "panic", …
+  alvo            text                        -- endereço, id, comando
+  justificativa   text
+  sucesso         bool                        -- NULL = registado, ainda a executar
+  erro            text
+  ip              text
+  user_agent      text
+  payload         jsonb       not null default '{}'::jsonb
+  origem          text        not null default 'admin_logs'  -- 'log-decisoes' no importado
+
+⚠ `sucesso` é NULLABLE de propósito: a linha nasce ANTES da execução (D5b) e é
+  atualizada depois. Uma linha que fica para sempre com sucesso=NULL é, ela
+  própria, o sinal de uma ação que rebentou a meio — informação que um log
+  escrito só no fim perderia.
+
+⚠ PII e o próprio log: `payload` NÃO guarda o corpo cru do pedido. Guarda campos
+  escolhidos. Copiar o pedido inteiro para o log é como se cria um segundo sítio
+  onde vivem dados pessoais que ninguém sabe que lá estão.
+
+Índices: (criado_em desc) · (admin_endereco, criado_em desc) ·
+         (tipo_acao, criado_em desc) · GIN em to_tsvector(alvo||' '||justificativa)
+RLS: ALL TO service_role.
+Retenção: política em `admin_config` (por omissão 365 dias, que é maior do que
+  qualquer janela de disputa financeira razoável), executada por
+  purge-logs-scheduled — nunca por um botão que apaga na hora (Tela 5).
+
+================================================================================
+3. TABELA `usuarios_bloqueio`  (Fase 2 — Tela 2)
+================================================================================
+  endereco        text        PK (lower)
+  bloqueado       bool        not null default true
+  motivo          text        not null
+  bloqueado_por   text        not null
+  criado_em       timestamptz not null default now()
+  atualizado_em   timestamptz not null default now()
+
+⚠ A tabela é a parte FÁCIL. O que dá trabalho é os gates a lerem-na: emissão de
+  user-session (_lib/jwt.mjs) e os endpoints de dinheiro (comprar-senhas,
+  lance-relampago, iniciar-pagamento). Sem isso, "bloquear" é decorativo.
+  Este acoplamento com o caminho crítico de utilizadores reais é a razão de a
+  Fase 2 ser a mais arriscada do programa.
+RLS: ALL TO service_role.
+
+================================================================================
+4. TABELAS `notifications` + `notification_logs`  (Fase 6 — Tela 6)
+================================================================================
+`notifications` — o REGISTO do envio (a fila é o transporte, D8):
+  id              uuid        PK
+  destino         text        not null   -- todos|admins|especifico|segmento
+  destino_ids     jsonb       not null default '[]'
+  segmento        text
+  canal           text        not null   -- inapp|email|push
+  titulo          text        not null
+  mensagem        text        not null
+  link            text
+  agendado_para   timestamptz            -- NULL = assim que a fila apanhar
+  criado_por      text        not null
+  criado_em       timestamptz not null default now()
+  estado          text        not null default 'em_fila'  -- em_fila|a_enviar|concluido|falha
+  total           int         not null default 0
+  entregues       int         not null default 0
+  falhas          int         not null default 0
+
+⚠ `estado` NÃO tem o valor "enviado". Tem "concluído", e a tela mostra
+  entregues/total. "Enviado" é uma afirmação sobre o mundo que nós não podemos
+  fazer — sabemos que entregámos ao SendGrid/FCM, não que chegou.
+
+`notification_logs` — uma linha por destinatário:
+  id               uuid        PK
+  notification_id  uuid        not null references notifications(id) on delete cascade
+  destinatario     text        not null
+  canal            text        not null
+  estado           text        not null   -- entregue|falha|ignorado
+  erro             text
+  criado_em        timestamptz not null default now()
+
+⚠ CRESCIMENTO: é a única tabela deste programa com crescimento proporcional a
+  (envios × utilizadores). Com poucas dezenas de utilizadores é irrelevante;
+  a retenção fica declarada desde o primeiro dia (90 dias) para não ser um
+  problema descoberto tarde.
+Índices: notification_logs(notification_id) · (criado_em desc)
+         notifications(criado_em desc) · (estado, agendado_para)
+RLS: ALL TO service_role nas duas.
+
+`notification_templates`:
+  id, nome (unique), titulo, mensagem, canal, criado_por, criado_em, atualizado_em
+
+================================================================================
+5. TABELA `admin_config`  (Fase 7 — Tela 7)
+================================================================================
+  chave           text        PK
+  valor           jsonb       not null
+  atualizado_por  text
+  atualizado_em   timestamptz not null default now()
+
+Chaves previstas: alerta_eoa_eth_min · alerta_fila_min_parada ·
+  alerta_webhook_dias · retencao_logs_dias · retencao_notif_dias ·
+  auto_refresh_seg
+
+⚠ Já existe `config_remota` (1 linha, com SELECT público). NÃO reutilizar:
+  `config_remota` é lida publicamente por desenho, e os limiares de alerta e a
+  política de retenção não são para ser públicos. Duas tabelas com dois níveis
+  de exposição é o certo aqui, e não duplicação.
+
+================================================================================
+6. O QUE MUDA EM ARMAZENAMENTO **NÃO**-POSTGRES
+================================================================================
+Blob `admin-list:admins` (Fase 7): formato passa de
+    { admins: ["0x…"] }
+  para
+    { admins: [{ endereco, nivel, adicionadoPor, adicionadoEm }] }
+  ⚠ A LEITURA TEM DE ACEITAR OS DOIS FORMATOS, tratando a string solta como
+    super-admin. Sem isso, o deploy que introduz níveis tranca o operador fora do
+    painel — e em produção o Blob está vazio, o que faz da coordenação a única
+    admin (admin-helpers.mjs:20-24). Não há via de recuperação sem novo deploy.
+    Esta é a alteração com maior potencial de estrago de todo o programa.
+
+Blob `admin-refresh:{endereco}` (Fase 7): cada entrada ganha
+  `ip`, `userAgent`, `ultimoAcesso`. Campos ausentes nas entradas antigas são
+  lidos como null — não invalidar sessões existentes por causa de um metadado.
+
+Blob `log-decisoes`: deixa de RECEBER escritas quando `admin_logs` entrar (um só
+  escritor). Continua a ser LIDO pelo /admin-logs, marcado com origem, para a
+  auditoria não começar sem história.
+
+================================================================================
+ORDEM DAS MIGRAÇÕES  (aplicadas pelo OPERADOR — R5)
+================================================================================
+  M1  Fase 2  índices de suporte + vw_utilizadores + usuarios_bloqueio
+  M2  Fase 4  admin_logs (+ índices) + admin_config
+  M3  Fase 6  notifications + notification_logs + notification_templates
+
+⚠ REGRA ABSOLUTA, já aprendida: nenhuma migração deste programa contém
+  DROP TABLE, e nenhuma é re-executada ([[desafiogut-mc37-cotas-migradas]]).
+  Todas são aditivas. Nenhuma toca em cotas, saldo_rs, saldo_rs_creditos,
+  saldo_rs_debitos, lances ou fila_tarefas — exceto para ACRESCENTAR índices.
+⚠ Toda a função criada termina com REVOKE EXECUTE FROM PUBLIC (lição MC88.29).
+================================================================================

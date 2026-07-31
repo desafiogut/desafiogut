@@ -1,0 +1,128 @@
+# MC89.15 — Fase 5: Gestão Financeira (Tela 3) — Diagnóstico + Plano
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | ZERO alterações de código
+
+## 1. DIAGNÓSTICO (consulta direta ao Supabase)
+
+| Fonte               | Linhas | Total     | Período                    |
+|---------------------|--------|-----------|----------------------------|
+| saldo_rs_creditos   | 18     | R$ 44,00  | 2026-06-21 a 2026-07-26   |
+| saldo_rs_debitos    | 0      | R$ 0      | —                          |
+| saldo_rs (agregado) | 5      | R$ 9,75   | 5 endereços distintos      |
+| cotas vendidas      | 0      | R$ 0      | —                          |
+
+- 18 créditos em 5 dias, 5 endereços distintos
+- 0 débitos — ninguém gastou créditos ainda
+- 0 cotas vendidas
+- O livro-razão já existe: `saldo_rs_creditos` tem `saldoAntesCentavos` e
+  `saldoDepoisCentavos` em cada entrada. `saldo_rs_debitos` tem a forma
+  simétrica.
+- `admin-series` (MC89.7) já entrega séries diárias de receita — reutilizar.
+- `admin-onchain` (MC89.1) já entrega saldo da EOA — reutilizar.
+
+### Decisões já tomadas que afetam esta tela
+- D11: "Abastecer EOA" fica FORA do painel. A tela mostra o saldo com alerta.
+- D-SALDO: "Resetar saldo" não existe. O ajuste manual é via Tela 2 (MC89.14).
+- "Gás gasto" não tem fonte. Não será incluído.
+- "Reembolso" = ajuste interno (débito com justificativa). Estorno no MP é fora.
+
+## 2. PLANO DE EXECUÇÃO (MC89.16, 1–2 sessões)
+
+### S1 — Endpoint de resumo (GET /admin-financeiro-resumo, operador+)
+
+Já existe parcialmente. O `admin-series` devolve séries diárias de receita. O
+que falta é um endpoint de RESUMO que agregue tudo num único pedido:
+
+Entrada: `?periodo=30d`
+Saída:
+```
+{
+  totalRecebidoCentavos: 4400,
+  totalEmCirculacaoCentavos: 975,   // soma de saldo_rs
+  totalCreditos: 18,
+  totalDebitos: 0,
+  cotasVendidas: 0,
+  receitaCotasCentavos: 0,
+  saldoEoa: { eth, bloco },          // delegado ao admin-onchain (R7)
+  creditosPorDia: [...],             // delegado ao admin-series (já existe)
+  periodoDias: 30,
+  geradoEm
+}
+```
+
+Gate: operador+. Cache: 45s.
+
+IMPLEMENTAÇÃO: juntar admin-series + uma query de agregação ao Supabase. O
+saldo da EOA NÃO entra neste endpoint (R7: não agrupar Postgres com RPC).
+O frontend chama admin-onchain em paralelo.
+
+### S2 — Endpoint de transações (GET /admin-financeiro-transacoes, operador+)
+
+UNION de saldo_rs_creditos + saldo_rs_debitos, ordenado por criado_em DESC,
+paginação por cursor.
+
+Entrada: `?tipo=credito|debito|todos&desde=&ate=&antes=&limite=`
+Saída:
+```
+{
+  transacoes: [{
+    id, quando, endereco, tipo, valorCentavos,
+    fonte,            // "confirmar-pagamento" | "webhook" | "ajuste-admin"
+    saldoDepoisCentavos
+  }],
+  resumo: { entradas, saidas, liquido },
+  proximoCursor
+}
+```
+
+Gate: operador+. Sem cache (transações podem chegar a qualquer momento).
+
+### S3 — Endpoint de relatório (GET /admin-financeiro-relatorio, admin+)
+
+Exporta CSV com as transações do período. GET porque é leitura e o browser
+descarrega diretamente. A exportação é registada em admin_logs (exportar dados
+financeiros é auditável mesmo sendo leitura).
+
+Gate: admin+. RL: 5/min.
+
+### S4 — Frontend (GestaoFinanceira.jsx)
+
+Três secções:
+
+**Resumo** (4 cards no topo):
+- Total recebido (PIX): R$ 44,00 (calculado)
+- Em circulação: R$ 9,75 (calculado)
+- Saldo EOA: 0.xxx ETH (admin-onchain, carrega em paralelo)
+- Cotas vendidas: 0 (placeholder para quando houver)
+
+**Transações** (tabela paginada):
+- Colunas: Data, Endereço (truncado), Tipo (Crédito/Débito), Valor, Fonte, Saldo após
+- Filtros: período, tipo
+- Botão "Exportar CSV"
+
+**Gráfico**: reutilizar `GraficoLinha` (MC89.7) com os dados de `admin-series`
+
+### S5 — ALFA
+- `ALFA:financeiro` → resumo (total recebido, em circulação, EOA)
+- `ALFA:transacoes` → últimas 10 transações
+- `ALFA:relatorio` → gera CSV (admin+, com registo em admin_logs)
+
+### AtalhosAdmin
+Marcar "Financeiro" como pronta.
+
+## 3. RISCOS
+- R-1 (BAIXO): 0 débitos e 0 cotas vendidas → a tabela de transações mostra
+  só créditos. A UI está preparada para quando houver débitos.
+- R-2 (BAIXO): admin-series e admin-financeiro-resumo podem divergir se forem
+  implementados com SQL diferente. Usar a MESMA query nos dois.
+- R-3 (BAIXO): saldo_rs (975) ≠ créditos (4400) porque os utilizadores têm
+  saldos diferentes. O "em circulação" é a soma de saldo_rs, não créditos -
+  débitos. Documentar a diferença no ecrã.
+
+## 4. CRITÉRIOS DE SUCESSO (MC89.16)
+- Resumo financeiro mostra totais corretos
+- Tabela de transações com paginação e filtros
+- Exportação CSV funcional
+- Gráfico de receita reutiliza admin-series
+- ALFA:financeiro e ALFA:transacoes funcionais
+- Suite ≥ 346 backend, ≥ 40 frontend
+- APK recompilado e validado

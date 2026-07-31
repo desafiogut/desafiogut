@@ -1,0 +1,175 @@
+================================================================================
+MC82.4 — CORREÇÃO DA VIOLAÇÃO R4: MASCARAMENTO DO SENTRY SESSION REPLAY
+Data: 2026-07-21 · Custo: US$ 0,00 (R2 — build e medição locais)
+================================================================================
+
+RESULTADO EM UMA LINHA
+--------------------------------------------------------------------------------
+VIOLAÇÃO R4 CORRIGIDA E VERIFICADA EM RUNTIME NO APARELHO: o Session Replay
+passa a mascarar todo o texto, todos os inputs e a bloquear toda a mídia, e
+deixa de gravar sessões normais (só as que contêm erro). Performance sem
+regressão. ⚠️ A correção NÃO reduz o custo de CPU do rrweb — ver secção 5.
+
+--------------------------------------------------------------------------------
+1 · A VIOLAÇÃO (estado antes)
+--------------------------------------------------------------------------------
+  src/lib/sentryLazy.js:
+      Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false })
+      replaysSessionSampleRate: 0.1
+      replaysOnErrorSampleRate: 1.0
+
+  ★ AGRAVANTE DESCOBERTO NESTE MC: estes valores não eram "o default" — eram uma
+    DESATIVAÇÃO EXPLÍCITA de proteções que o SDK traz ligadas. Verificado no
+    pacote instalado (node_modules/@sentry-internal/replay, SDK 10.51.0):
+        maskAllText   → default true
+        maskAllInputs → default true
+        blockAllMedia → default true
+    O código passava `false` de propósito nos dois primeiros. Ou seja, alguém
+    teve de escrever a negação; não foi omissão.
+
+  IMPACTO: 10% das sessões (replaysSessionSampleRate 0.1) gravavam o ecrã com o
+  texto em claro — num app que exibe saldo em reais, valores de lance, número
+  de senhas, códigos de indicação e endereço de carteira.
+
+  HISTÓRICO: levantado como alerta R4 no MC82 (secção G4). O operador escolheu
+  "manter, mas mascarado"; a alteração chegou a ser aplicada e foi REVERTIDA
+  junto com o resto na correção de rota do MC82, e nunca foi reaplicada. No
+  MC82.3 a configuração foi movida INTACTA para o sentryLazy.js (de propósito:
+  alterá-la de passagem seria mudança de comportamento fora daquele escopo) e
+  a pendência foi re-levantada no relatório. Este MC fecha-a.
+
+--------------------------------------------------------------------------------
+2 · CORREÇÃO APLICADA (commit 749764f)
+--------------------------------------------------------------------------------
+  Ficheiro único alterado: src/lib/sentryLazy.js
+
+      ANTES                              DEPOIS
+      maskAllText: false          →      maskAllText: true
+      blockAllMedia: false        →      blockAllMedia: true
+      (maskAllInputs implícito)   →      maskAllInputs: true   (explícito)
+      replaysSessionSampleRate: 0.1  →   replaysSessionSampleRate: 0
+      replaysOnErrorSampleRate: 1.0  →   replaysOnErrorSampleRate: 1.0 (mantido)
+
+  Os três flags de mascaramento ficam EXPLÍCITOS, e não apenas herdados do
+  default, para que uma futura alteração tenha de os negar de propósito — foi
+  exatamente assim que a violação original entrou.
+
+  Verificado que não há outras referências a replay/mask no `src/`: a
+  configuração vive num único sítio.
+
+--------------------------------------------------------------------------------
+3 · VERIFICAÇÃO EM RUNTIME NO APARELHO (R6)
+--------------------------------------------------------------------------------
+Não me bastei pelo código nem pelo bundle: li as opções REAIS do cliente Sentry
+já inicializado dentro do WebView, via CDP.
+
+  Caminho usado (a estrutura mudou no SDK 10):
+      window.__SENTRY__[version].defaultCurrentScope.getClient().getOptions()
+      client.getIntegrationByName('Replay')._replay.getOptions()
+
+  RESULTADO LIDO NO APARELHO:
+      MASK_ALL_TEXT ................. true   ✅
+      MASK_ALL_INPUTS ............... true   ✅
+      BLOCK_ALL_MEDIA ............... true   ✅
+      replaysSessionSampleRate ...... 0      ✅
+      replaysOnErrorSampleRate ...... 1      ✅
+      Replay na lista de integrações  sim
+      enabled ....................... true
+      environment ................... production
+      DSN configurado ............... sim   (valor NÃO lido nem registado — R5)
+
+  Também confirmado no bundle compilado antes de instalar:
+      maskAllText:!0 · maskAllInputs:!0 · blockAllMedia:!0
+      replaysSessionSampleRate:0 · replaysOnErrorSampleRate:1
+      (`!0` é `true` minificado)
+
+--------------------------------------------------------------------------------
+4 · PERFORMANCE — SEM REGRESSÃO
+--------------------------------------------------------------------------------
+                              MC82.3          MC82.4
+  JS no arranque ........   360,5 KB        360,5 KB     (idêntico)
+  Chunks no gate ........          5               5
+  LCP (mediana, 5 runs) .     748 ms          780 ms
+  FCP (mediana, 5 runs) .     308 ms          372 ms
+  FPS (3 amostras) ......      59,5            59,8
+
+  ⚠️ HONESTIDADE SOBRE O LCP: a mediana subiu 32 ms. NÃO é regressão causal — o
+     Sentry nem sequer é carregado no gate LGPD, portanto a configuração do
+     Replay não pode influenciar o LCP dessa tela. É ruído entre execuções
+     (min–max desta série: 736–1032 ms; a leitura de 1032 ms foi o primeiro
+     carregamento após instalar o APK, com cache frio, como já sucedera no
+     MC82.3). 4/5 execuções abaixo do alvo de 900 ms.
+
+  UI: inalterada. O mascaramento aplica-se ao replay gravado, não à interface
+  — confirmado por screenshot no aparelho (shot-MC824.jpg).
+
+--------------------------------------------------------------------------------
+5 · ⚠️ O QUE ESTA CORREÇÃO NÃO FAZ (medido, não presumido)
+--------------------------------------------------------------------------------
+  `replaysSessionSampleRate: 0` NÃO desliga o Replay nem elimina o seu custo de
+  CPU. Com `replaysOnErrorSampleRate > 0` o SDK entra em BUFFER MODE: o rrweb
+  continua a gravar mutações do DOM em memória, permanentemente, para poder
+  enviar os segundos que antecederam um eventual erro.
+
+  MEDIDO NO APARELHO DEPOIS DA ALTERAÇÃO (perfil de CPU, 6 s, app montada):
+      ET.processMutation (chunk sentry) ..... 229 ms   3,6 %
+      (anónima, chunk sentry) ................ 44 ms   0,7 %
+      main thread ociosa ..................... 58,4 %
+
+  Ou seja: este MC resolve PRIVACIDADE (R4). Quem quiser eliminar também o
+  custo de main thread tem de REMOVER a integração de Replay — o que custaria
+  a capacidade de depurar crashes com vídeo do que o utilizador fez. Deixei
+  esta nota no próprio sentryLazy.js para que ninguém assuma o contrário.
+
+--------------------------------------------------------------------------------
+6 · ESTADO DO BUILD
+--------------------------------------------------------------------------------
+  npm run build ✅ · npx cap sync ✅ · assembleDebug ✅ (1 min) · install -r ✅
+  Dados do app preservados (mesma debug keystore).
+  R5 respeitado: nenhuma chave, DSN ou credencial foi lida, exposta ou registada
+  — apenas verificada a EXISTÊNCIA do DSN (booleano).
+
+--------------------------------------------------------------------------------
+7 · PRÓXIMOS PASSOS
+--------------------------------------------------------------------------------
+  A SÉRIE MC82 ESTÁ CONCLUÍDA. Consolidado:
+
+      MC82    diagnóstico (medição no aparelho, 3 premissas do plano refutadas)
+      MC82.1  fluidez ......... 17,5 → 59,6 fps        (backdrop-filter)
+      MC82.2  arranque ........ 4.002 → 617 KB         (Privy lazy + chunking)
+      MC82.3  arranque ........ 617 → 360,5 KB         (Sentry lazy)
+      MC82.4  privacidade ..... violação R4 corrigida
+
+      Números finais vs. baseline:
+        FPS ....... 17,5 → 59,6      (+241%)
+        JS gate ... 4.002 → 360,5 KB  (−91%)
+        LCP ....... 2.220 → ~780 ms   (−65%)
+        FCP ....... 1.292 → ~372 ms   (−71%)
+
+  PENDÊNCIAS RESTANTES (todas de baixa prioridade):
+    A1 · Vídeo de fundo invisível (fundo-loop-v3-desktop.webm, 1920×1288,
+         opacity:0) continua a decodificar ~460 frames por 6 s. Já não afeta
+         fps, mas é desperdício de decoder e de bateria. Correção trivial.
+    A4 · Vídeos fora do viewport (IntersectionObserver).
+    A6 · Coerência visual do glass restante (TabelaLances 20px,
+         SejaNossoParceiro 16px ainda usam backdrop-filter e destoam do padrão
+         sólido adotado no MC82.1).
+
+  ⚠️ BLOQUEIOS PARA PUBLICAR, que continuam de pé:
+    · O APK é DEBUG. A Play Store exige assembleRelease assinado — o MC81
+      registou que esse build é frágil nesta máquina (5 iterações, OOM).
+    · Deploy web: produção roda a linhagem MAINNET, NÃO esta branch
+      (feat/mc73-correcao-deploy).
+    · O login OAuth real (Google via Privy) continua SEM teste ponta-a-ponta.
+      No preview o iframe do Privy é bloqueado por frame-ancestors; no aparelho
+      não iniciei sessão para não mexer na conta do operador. Recomenda-se um
+      login manual antes de qualquer publicação.
+
+================================================================================
+LIÇÃO QUE ESTE MC DEIXA
+  Quando um SDK traz defaults seguros, uma configuração que os NEGA é um sinal
+  de alarme — não uma preferência. Vale sempre verificar o default no pacote
+  instalado antes de assumir que o código apenas "não configurou".
+  E: taxa de amostragem 0 não significa custo 0. Verificar no perfil de CPU o
+  que continua a correr, em vez de deduzir do nome da opção.
+================================================================================

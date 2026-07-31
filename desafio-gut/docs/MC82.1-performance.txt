@@ -1,0 +1,175 @@
+================================================================================
+MC82.1 — CORREÇÃO DO GARGALO DE GLASS + VALIDAÇÃO NO DISPOSITIVO REAL
+Data: 2026-07-21 · Custo: US$ 0,00 (R2 — build e medição locais)
+================================================================================
+
+RESULTADO EM UMA LINHA
+--------------------------------------------------------------------------------
+ALVO ATINGIDO COM FOLGA: 17,5 → 59,6 fps (+42,1 fps, +241%) no mesmo aparelho e
+cenário do baseline. Mas NÃO pela via prevista: a Opção B do plano (blur 24px →
+8px) FALHOU (20,7 fps), e a medição revelou que o custo do backdrop-filter vem
+do NÚMERO DE CAMADAS, não do raio do blur.
+
+--------------------------------------------------------------------------------
+1 · A CORREÇÃO PREVISTA FALHOU — E O QUE ISSO ENSINOU
+--------------------------------------------------------------------------------
+O plano assumia que o raio do blur dominava o custo. Apliquei blur(8px),
+rebuildei, instalei e medi no Dashboard:
+
+    Opção B (blur 8px, 11 camadas) ......... 20,7 fps   (alvo: ≥ 45)  ❌
+
+Ganho de apenas +3,2 fps sobre o baseline. Em vez de partir para blur(4px) às
+cegas (mais um ciclo de build), levantei a curva completa em RUNTIME no próprio
+aparelho, injetando CSS via CDP — sem custo e sem rebuild:
+
+    CAMADAS · FILTRO                          FPS      OBSERVAÇÃO
+    ─────────────────────────────────────────────────────────────────────────
+    11 · blur 24px .......................... 17,5     baseline MC82
+    11 · blur  8px .......................... 19,8     build da Opção B
+    11 · blur  4px .......................... 23,1     ← descartada sem build
+    11 · blur  0px (filtro AINDA declarado) . 31,2     ← RAIO ZERO!
+    11 · só saturate, sem blur ............... 32,0
+    10 · Atmosphere OFF, resto 8px ........... 24,8
+     1 · blur 8px (gate LGPD) ................ 59,8
+     0 · fundo sólido 0.88 ................... 60,2
+     0 · nenhum backdrop-filter .............. 60,0
+
+  ★ A LIÇÃO: com raio ZERO e o filtro ainda declarado, 11 camadas custam ~29 fps.
+    O custo é a EXISTÊNCIA da camada — cada backdrop-filter força o compositor a
+    fazer um read-back do backdrop na GPU. O raio contribui pouco (8px→0px vale
+    ~11 fps; 24px→8px valeu ~2 fps).
+
+  Isto também explica um número que parecia contraditório no MC82: o gate LGPD
+  já rodava a 59,8 fps COM blur — porque tem 1 camada, não 11.
+
+  A Opção C do plano (congelar o fundo) também foi medida e também falha:
+    Opção C — blur 8px + fundo congelado ..... 29,5 fps  ❌
+
+  Ou seja: NENHUMA das saídas previstas no plano atingiria o alvo. Só remover as
+  camadas atinge.
+
+--------------------------------------------------------------------------------
+2 · SOLUÇÃO APLICADA
+--------------------------------------------------------------------------------
+Foi testada uma versão HÍBRIDA (vidro real só no painel de destaque do Dashboard,
+resto sólido): 56,2 fps de média em 8 amostras, 8/8 acima do alvo. Funcionava.
+
+O operador avaliou as screenshots e preferiu o TOM NAVY UNIFORME em todo o app,
+sem o painel destacado. Decisão adotada — e que ainda melhora o número.
+
+  ALTERAÇÕES FINAIS (commit 936b724):
+
+  a) globals.css · .gut-glass-standard
+       background rgba(13,18,53,0.25) → rgba(13,18,53,0.88)
+       backdrop-filter blur(24px) saturate(1.35) → REMOVIDO
+     O navy mais opaco assume o papel de separação que o blur fazia.
+
+  b) BottomNav.jsx · sheet "Mais opções"
+       mesmo padrão sólido (0.88, sem backdrop-filter). Replica o
+       .gut-glass-standard inline, então tinha de acompanhar.
+
+  c) AtmosphereFilter.jsx
+       em repouso emite "none" em vez de "blur(0px)". É um elemento
+       fixed inset-0 (100% do ecrã): mesmo com raio zero, declarar o filtro
+       mantinha uma camada de backdrop de ecrã inteiro. Vale ~+3 fps sozinho,
+       e "idle" é onde o app passa quase todo o tempo. Os estados com blur
+       real (processing 6px, thinking 14px) não mudaram.
+
+  NÃO alterados (fora do cenário medido, ficam para um MC de coerência visual):
+       TabelaLances (blur 20px) · SejaNossoParceiro (blur 16px) ·
+       LanceStatusBadge (backdrop-blur-sm) · Toast (backdrop-blur-md)
+
+--------------------------------------------------------------------------------
+3 · RESULTADO MEDIDO (antes / depois)
+--------------------------------------------------------------------------------
+Aparelho: Redmi 21091116UG · Android 13 · WebView Chrome 150 · 392×827 @ DPR 2,75
+Cenário: Dashboard em repouso, IDÊNTICO ao do baseline MC82 —
+         175 elementos DOM, 5 vídeos (4-5 ativos), sem interação.
+
+                                    BASELINE      DEPOIS       DELTA
+    FPS (média) ................     17,5         59,6      +42,1  (+241%)
+    Frame médio ................   57,1 ms      16,8 ms     −40,3 ms
+    p95 do frame ...............   82,1 ms      20,5 ms     −61,6 ms
+    Frames acima de 32 ms ......    97,7 %        0,3 %     −97,4 pp
+    Camadas de backdrop-filter .       11            0          −11
+    Área com blur ..............  731.182 px²       0 px²
+
+    Alvo do MC82.1 (≥ 45 fps) ..................................  ATINGIDO ✅
+
+  Robustez: a versão híbrida foi medida com 8 amostras de 5 s — 56,2 fps de
+  média, mediana 56,0, mínimo 54,2, e 8/8 amostras acima de 45. A versão final
+  (uniforme) deu 60,1 / 59,0 / 59,7.
+
+  ⚠️ NOTA DE MÉTODO: uma primeira leitura da versão final deu 46,9 fps com uma
+     amostra em 35,1. Repeti com 8 amostras e o número estabilizou em ~56-60:
+     as primeiras amostras apanhavam o arranque do app (montagem do carrossel,
+     decode inicial dos vídeos). Não tratei as 3 amostras iniciais como
+     resultado — o número reportado é o de regime estacionário.
+
+--------------------------------------------------------------------------------
+4 · VERIFICAÇÃO VISUAL (R6)
+--------------------------------------------------------------------------------
+Screenshots capturados no próprio aparelho, via CDP, em cada variante:
+    shot-B-blur8px.jpg ....... Opção B (blur 8px)
+    shot-D-sem-backdrop.jpg .. sem blur, fundo 0.72 → fundo NÍTIDO demais,
+                               "Nenhum lance único ainda" quase ilegível
+    shot-D-0.88.jpg .......... sem blur, fundo 0.88 → escolhido
+    shot-HIBRIDO.jpg ......... hero com vidro real + resto sólido
+    shot-FINAL.jpg ........... versão entregue (uniforme)
+
+  Avaliação: o vidro continua legível como "painel translúcido sobre a arena".
+  O fundo já não é desfocado — as formas atrás ficam visíveis, porém bem
+  escurecidas pelo navy 0.88. A 0.72 a legibilidade caía; a 0.88 ficou próxima
+  da aparência original. Nenhuma regressão de layout, contraste de texto ou CLS.
+  (O texto esmaecido "Nenhum lance único ainda" no rodapé JÁ existia no baseline
+  — é pré-existente, não regressão do MC82.1.)
+
+--------------------------------------------------------------------------------
+5 · ESTADO DO CÓDIGO E DO BUILD
+--------------------------------------------------------------------------------
+  Commits:
+    e1d1afa  feat(performance): blur 24px → 8px          (tentativa, falhou)
+    936b724  perf(glass): remover backdrop-filter         (solução final)
+  Mantive os dois: o primeiro documenta a hipótese refutada e a medição que a
+  refutou. Reverter e reescrever apagaria a evidência (R3).
+
+  Build .............. npm run build ✅ · npx cap sync ✅
+  APK ................ assembleDebug ✅ (35-39 s) · adb install -r ✅ Sucesso
+  Dados do app ....... PRESERVADOS (mesma debug keystore, sem desinstalar)
+  CSS verificado ..... .gut-glass-standard sem backdrop-filter, background
+                       #0d1235e0 (=0.88) confirmado no bundle compilado
+
+--------------------------------------------------------------------------------
+6 · PRÓXIMOS PASSOS
+--------------------------------------------------------------------------------
+O gargalo de FLUIDEZ está resolvido (59,6 fps ≈ teto do ecrã). O que resta do
+MC82 é o gargalo de ARRANQUE, que é problema separado e continua intacto:
+
+  A3 · Tirar o Privy do caminho crítico ....... 4.002 KB de JS antes do gate
+       LGPD; LCP 2.220 ms, FCP 1.292 ms no aparelho. É a maior pendência.
+  A1 · Vídeo de fundo invisível ............... fundo-loop-v3-desktop.webm
+       (1920×1288, opacity:0) continua a decodificar ~460 frames por 6 s. Com
+       o glass resolvido vale menos em fps, mas é desperdício puro de decoder
+       e de bateria. Correção trivial.
+  A4 · Vídeos fora do viewport ................ IntersectionObserver.
+  A2 · Sentry Replay .......................... confirmado ativo no aparelho
+       (processMutation no perfil de CPU).
+  A6 · Coerência visual do glass restante ..... TabelaLances (20px),
+       SejaNossoParceiro (16px) ainda usam backdrop-filter e agora destoam do
+       padrão sólido. Vale alinhar — por design, não por performance.
+
+  ⚠️ Este APK é DEBUG. Para a Play Store é preciso um assembleRelease assinado
+     (o MC81 registou que esse build é frágil nesta máquina: 5 iterações, OOM,
+     RAM no limite). O debug atual serve para validação, não para publicação.
+
+  ⚠️ Deploy web: produção roda a linhagem MAINNET, NÃO esta branch. Estas
+     alterações estão em feat/mc73-correcao-deploy.
+
+================================================================================
+REGRA DE OURO QUE ESTE MC DEIXA
+  backdrop-filter cobra por CAMADA, não por raio. Num WebView Android, cada
+  elemento com a propriedade força um read-back do backdrop na GPU. Reduzir o
+  blur é quase inútil; reduzir a QUANTIDADE de elementos é o que paga.
+  Orçamento medido neste aparelho: 1 camada ≈ 1-7 fps · 11 camadas ≈ 40 fps.
+  NÃO reintroduzir backdrop-filter no .gut-glass-standard sem medir no aparelho.
+================================================================================

@@ -1,0 +1,121 @@
+================================================================================
+MC62 — EXECUÇÃO: LOGIN PÚBLICO APENAS GOOGLE (OPÇÃO A DO MC61)
+RELATÓRIO DE EXECUÇÃO + VALIDAÇÃO
+DesafioGUT
+================================================================================
+Data...........: 2026-07-09
+Branch.........: feat/mc62-execucao-login-google (a partir de feat/mc61-remocao-login-apple-email)
+Stack..........: React + Vite v8 | @privy-io/react-auth 3.22.1
+Escopo.........: 2 arquivos de código (conforme MC61 aprovado). Corporativo NÃO tocado.
+STATUS.........: ✅ CÓDIGO APLICADO E VALIDADO LOCALMENTE · ⏸️ DEPLOY EM PROD AGUARDA GO/NO-GO
+
+--------------------------------------------------------------------------------
+1. RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+Aplicada a Opção A do MC61: o modal de login PÚBLICO passa a exibir apenas Google;
+"apple" (config morta) removido; o login CORPORATIVO por email-OTP headless
+(useLoginWithEmail) foi PRESERVADO. Build verde. Validação visual local (MCP
+chrome-devtools) confirma o modal só com Google em 1440px e 375px, sem regressões.
+O deploy em produção (Segmento 5) NÃO foi executado pelo agente — ver seção 6
+(risco de drift do frontend com a mainnet) — aguarda decisão do operador.
+
+--------------------------------------------------------------------------------
+2. VERIFICAÇÃO V1 (OBRIGATÓRIA) — comportamento do Privy v3.22
+--------------------------------------------------------------------------------
+Fonte autoritativa: typedefs do pacote instalado
+  node_modules/@privy-io/react-auth/dist/dts/index.d.ts:8307
+  login: (options?: LoginModalOptions | MouseEvent) => void
+  @param options.loginMethods {LoginMethod[]} custom login methods to display in
+         the login modal. "This will overwrite the value provided to the client config."
+  @param options.prefill {PrefillLoginOptions} …
+Conclusão V1: ✅ login({ loginMethods: ["google"] }) RESTRINGE o modal a Google,
+  sobrescrevendo o config global. NENHUM Plano B necessário. A assinatura aceita
+  também MouseEvent (compatível com os onClick={abrirModal}).
+
+--------------------------------------------------------------------------------
+3. ALTERAÇÕES APLICADAS (2 arquivos — R1/MC61)
+--------------------------------------------------------------------------------
+[A1] frontend/src/main.jsx:257-258  (commit 1517686)
+     DE:   loginMethods: ["google", "email", "apple"]
+     PARA: loginMethods: ["google", "email"]   // -apple (config morta no painel)
+     + comentário explicando que "email" permanece p/ o OTP corporativo.
+
+[A2] frontend/src/context/AppContext.jsx:763-773  (commit 1517686)
+     DE:   const loginOpts = opts && (opts.prefill || opts.loginMethods) ? opts : undefined;
+           const result = loginOpts ? login(loginOpts) : login();
+     PARA: const base = opts && (opts.prefill || opts.loginMethods) ? { ...opts } : {};
+           if (!base.loginMethods) base.loginMethods = ["google"]; // modal público só Google
+           const result = login(base);
+     Efeito: todo login público (funil único abrirModal) abre o modal só com Google;
+             overrides explícitos (prefill / loginMethods) preservados; MouseEvent →
+             base={} → loginMethods=["google"]. Corporativo (sendCode direto) intacto.
+
+NÃO ALTERADOS (preservados): SejaNossoParceiro.jsx (useLoginWithEmail/OTP),
+  leituras user?.apple?.* / user?.email?.* (AppContext/MinhaCarteira), main.jsx useLogin.
+
+--------------------------------------------------------------------------------
+4. BUILD (R2)
+--------------------------------------------------------------------------------
+  npm run build (vite v8) → ✅ "built in 8.88s".
+  Avisos [INVALID_ANNOTATION] "/*#__PURE__*/" vêm de node_modules (Privy/ox) —
+  pré-existentes, não são erros e não vêm do código alterado.
+
+--------------------------------------------------------------------------------
+5. VALIDAÇÃO VISUAL / REGRESSÃO (V2–V4) — MCP chrome-devtools, localhost:3000
+--------------------------------------------------------------------------------
+Fluxo: gate de consentimento (4 checkboxes) → aceitar → Dashboard (deslogado) →
+       abrirModal (login sidebar) → modal Privy.
+
+V3 [1440px] ✅ Modal "Log in or sign up" exibe SOMENTE o botão "Google".
+   Snapshot a11y: dialog > [close] [logo] [heading] [button "Google"] [link privy.io].
+   SEM campo de Email, SEM botão Apple. Evidência: Desktop\MC62-modal-1440.png.
+V4 [375px]  ✅ Mesmo modal, responsivo, SOMENTE "Google". Evidência: Desktop\MC62-modal-375.png.
+V2 [corporativo] ✅ /seja-nosso-parceiro carrega e monta useLoginWithEmail SEM erro
+   de "email login not enabled" (email segue habilitado no config global). O envio
+   REAL de OTP (sendCode → código no email → loginWithCode) fica para o operador,
+   pois dispara um email real; estruturalmente preservado por desenho.
+Console: os 32 erros observados são TODOS ruído pré-existente de dev local
+   (CSP bloqueando WalletConnect explorer-api, Sentry ingest e favicon do netlify;
+   404 de functions — dev não sobe functions). NENHUM relacionado a login/apple/email
+   nem a abrirModal. Sem novas regressões.
+
+--------------------------------------------------------------------------------
+6. DEPLOY EM PRODUÇÃO (Segmento 5) — NÃO EXECUTADO PELO AGENTE
+--------------------------------------------------------------------------------
+Motivo (levantado durante a execução, fora do previsto no plano):
+  • Produção está VIVA na MAINNET (MC60). Um deploy do frontend a partir desta
+    branch publica o ESTADO ATUAL do frontend + a mudança de login.
+  • Há DRIFT conhecido do frontend com a mainnet (memória MC56/MC59.15):
+    main.jsx:281 ainda tem defaultChain: sepoliaChain; o cutover visual do
+    frontend para a mainnet pode não estar consolidado nesta árvore.
+  • Deploy é ação externa/irreversível-ish em produção com dinheiro real.
+RECOMENDAÇÃO: o operador decide o deploy, garantindo que o build de produção
+  reflita a config mainnet correta (env de produção no Netlify) e não reintroduza
+  regressão de rede. Comando previsto (operador):
+    cd frontend
+    npm run build
+    netlify deploy --build --prod --message "feat(mc62): login público apenas Google (Opção A)"
+  Validação pós-deploy: abrir prod → login → modal só Google; /seja-nosso-parceiro
+  → OTP corporativo real (operador).
+
+--------------------------------------------------------------------------------
+7. CRITÉRIOS DE ACEITAÇÃO
+--------------------------------------------------------------------------------
+  [x] Modal público exibe apenas "Google" (1440px e 375px).      ✅ validado local
+  [x] Sem botão Apple / campo Email no modal público.            ✅
+  [x] Corporativo (useLoginWithEmail) preservado, sem erro.      ✅ (envio real = operador)
+  [x] Logout/sessão/wallet inalterados; build verde.             ✅
+  [ ] Deploy em produção + validação viva.                       ⏸️ operador (seção 6)
+
+--------------------------------------------------------------------------------
+8. VEREDITO
+--------------------------------------------------------------------------------
+✅ MODAL PÚBLICO APENAS GOOGLE — corporativo preservado. Código aplicado, build
+   verde e validação visual local aprovada (V1–V4). Deploy em produção pendente de
+   decisão do operador (risco de drift frontend↔mainnet documentado na seção 6).
+
+   Commits: 1517686 (código). Docs/relatório: commit docs(mc62) subsequente.
+
+================================================================================
+FIM — MC62 (EXECUÇÃO)
+================================================================================

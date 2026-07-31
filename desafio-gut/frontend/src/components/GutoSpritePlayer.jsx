@@ -25,9 +25,17 @@
 // produzindo o artefacto visual E lavando as cores do GUTO (perda de contraste).
 // Fix real: voltar a um <video> simples, sem canvas, sem blend-mode, sem filtro —
 // exactamente o mesmo princípio "zero filtro CSS" já usado pelo GutoAvatar estático.
+//
+// MC88.36 — o <video> só é montado DEPOIS da primeira pintura. O MC88.35 mediu
+// `idle.webm` (611 KB) pedido aos 1951 ms, ou seja, dentro da janela em que o
+// utilizador ainda espera pelo ecrã, e `celebration.webm` (2,26 MB) pedido TRÊS
+// vezes aos 2907 ms — uma por edição encerrada (ver EdicaoCard.jsx:100).
+// O contentor tem dimensão fixa (`size`), portanto adiar não desloca nada: o
+// espaço já está reservado e não há CLS.
 import { useEffect, useRef } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAppEnvironment } from "../context/useAppContextEnvironment.jsx";
+import useAposPrimeiraPintura from "../hooks/useAposPrimeiraPintura.js";
 
 function GutoVideo({ src, reduce, loop }) {
   const videoRef = useRef(null);
@@ -94,6 +102,11 @@ export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }
   // encerrada — a "animação de vencedor a repetir" reportada pelo operador.
   const isCelebrating = effectiveMood === "celebrating";
 
+  // MC88.36 — adia a montagem do <video> para a primeira janela ociosa depois
+  // da pintura. Enquanto `pronto` for false não existe elemento <video>, logo
+  // o ficheiro nem chega a ser pedido. O contentor mantém as dimensões (anti-CLS).
+  const pronto = useAposPrimeiraPintura();
+
   return (
     <div
       className={isInline ? undefined : "gut-sprite"}
@@ -104,16 +117,18 @@ export default function GutoSpritePlayer({ variant = "global", mood, size = 64 }
           personagem. Com o asset agora sólido e recortado (preenche a caixa), o backing
           é desnecessário; o GUTO destaca-se sozinho. */}
       <AnimatePresence initial={false}>
-        <motion.div
-          key={src}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: reduce ? 0 : 0.15 }}
-          style={{ position: "absolute", inset: 0 }}
-        >
-          <GutoVideo src={src} reduce={reduce} loop={!reduce && !isCelebrating} />
-        </motion.div>
+        {pronto && (
+          <motion.div
+            key={src}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reduce ? 0 : 0.15 }}
+            style={{ position: "absolute", inset: 0 }}
+          >
+            <GutoVideo src={src} reduce={reduce} loop={!reduce && !isCelebrating} />
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

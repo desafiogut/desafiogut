@@ -1,0 +1,20 @@
+# MC89.16 — RELATÓRIO: Gestão Financeira (Tela 3) — Fase 5 do MC89.5
+Data: 2026-07-31 | Suítes: 342 backend, 40 frontend | APK recompilado e instalado
+
+## 1. BACKEND (3 endpoints)
+- GET /admin-financeiro-resumo: créditos, débitos, circulação (30d). Cache 45s.
+- GET /admin-financeiro-transacoes: UNION créditos+débitos, paginação cursor.
+- GET /admin-financeiro-relatorio: CSV. Admin+. Registo em admin_logs.
+
+Todos sem ethers. Gate: operador+ (resumo/transacoes), admin+ (relatorio).
+
+## 2. FRONTEND
+Tela 3 com 4 cards de resumo, gráfico reutilizando GraficoLinha (MC89.7),
+tabela paginada com filtros de período e tipo, botão de exportação CSV.
+D11 e D-SALDO preservados. Financeiro marcado como pronto.
+
+## 3. ALFA
+ALFA:financeiro (resumo), ALFA:transacoes (últimas 10), ALFA:relatorio (instrução).
+
+## 4. PRÓXIMO PASSO
+MC89.17 — Fase 6: Comunicação e Notificações (Tela 6) — diagnóstico + plano.

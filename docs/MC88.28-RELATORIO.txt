@@ -1,0 +1,144 @@
+================================================================================
+MC88.28 — VALIDAÇÃO DO FLUXO ASSÍNCRONO DE COMPRA DE SENHAS (APK + TÚNEL CDP)
+================================================================================
+Data          : 2026-07-26 22:08–22:11 UTC
+Dispositivo   : fiem7xlvcufe855h (Xiaomi/MIUI), APK debug com.desafiogut.app
+Método        : túnel CDP (adb forward) + monitor sobre WebSocket nativo do Node
+Log bruto     : Desktop\MC88.28-FLUXO.txt
+Alteração de código: NENHUMA (R1 respeitado — validação apenas)
+
+--------------------------------------------------------------------------------
+VEREDICTO: ❌ REPROVADO — o caminho assíncrono NÃO está operacional.
+           A flag foi ligada sem a infraestrutura que ela exige.
+           O próprio código classifica este estado como "MISCONFIG".
+--------------------------------------------------------------------------------
+
+1. CRITÉRIOS DO MC — RESULTADO MEDIDO
+--------------------------------------------------------------------------------
+| # | Critério                          | Esperado      | Medido            | OK |
+|---|-----------------------------------|---------------|-------------------|----|
+| 1 | Status da resposta                | 202           | 502               | ❌ |
+| 2 | Latência                          | < 1000 ms     | 3869 ms           | ❌ |
+| 3 | UI mostra "processando"           | <CreditoStatus>| nenhum estado    | ❌ |
+| 4 | Saldo creditado (~12–20s)         | +1 senha      | +1 aos 40,4 s     | ⚠️ |
+| 5 | fila_tarefas regista e processa   | 1 linha       | 0 linhas          | ❌ |
+| 6 | Experiência do utilizador melhor  | melhor        | PIOR (erro 502)   | ❌ |
+
+Evidência da compra (log, 22:09:21 → 22:10:06):
+  REQ  POST .../comprar-senhas  {"endereco":"0x5BAF…32B8","qtd":1}
+  RES  502 em 3869 ms
+  {"error":{"code":"credito_pendente",
+            "message":"Crédito on-chain submetido; fila de confirmação
+                       indisponível — não reembolsado. Reconciliação em andamento.",
+            "txHash":"0x4141bc40e2b3ec6e5b6c1ff890e19d1789ceb91f8143673c960c18f7b0ef1dde",
+            "reembolsado":false}}
+  Saldos: 6 → 7 senhas (aos 40 388 ms) | R$ 2,00 → R$ 0,00
+
+Confirmação independente on-chain (eth_getTransactionReceipt, mainnet):
+  status 0x1 (sucesso) | bloco 25619867 | 1 evento emitido
+  to   0x0052477a8ca81bcaf4a60e21e635f9e00a5d16cd  (contrato mainnet ativo)
+  from 0xfea436f74059f885ea50d48abbe21ef6665d1e67  (EOA da coordenação)
+  → A senha FOI creditada. O 502 é falso-negativo para o utilizador.
+
+2. CAUSA-RAIZ — DERIVA DE ESQUEMA NA FILA (não é bug de código)
+--------------------------------------------------------------------------------
+A migração oficial 20260629_fila_tarefas.sql NUNCA foi aplicada: não consta em
+supabase_migrations.schema_migrations. O que existe na base é uma tabela
+DIFERENTE com o mesmo nome, criada por outra via. O enfileirar() falha no INSERT
+porque escreve colunas que não existem.
+
+  Objeto             | A migração define        | O que está na base      | Estado
+  -------------------|--------------------------|-------------------------|--------
+  fila_tarefas.id    | UUID                     | BIGINT                  | ❌
+  max_tentativas     | INT NOT NULL DEFAULT 5   | (ausente)               | ❌
+  agendado_para      | TIMESTAMPTZ              | (ausente)               | ❌
+  ultimo_erro        | TEXT                     | (ausente)               | ❌
+  criado_em          | TIMESTAMPTZ              | created_at              | ❌
+  atualizado_em      | TIMESTAMPTZ              | updated_at              | ❌
+  RPC reservar_tarefas| p_limite INT            | p_limit INT             | ❌
+
+  Produtor  (fila.mjs:27-29) insere max_tentativas / agendado_para → INSERT falha.
+  Consumidor(fila.mjs:48)    chama rpc(p_limite) → assinatura não existe.
+
+  ⚠️ O consumidor falha em SILÊNCIO: pareceTabelaAusente() apanha o erro de
+  "schema cache"/"could not find the function" e devolve { inerte: true }, sem
+  log e sem erro. Por isso a fila parecia "vazia e saudável" na baseline.
+
+3. IMPACTO REAL
+--------------------------------------------------------------------------------
+  • Dinheiro: SEGURO neste caso. A tx minerou e a senha foi creditada (6→7).
+    O não-reembolso está CORRETO — reembolsar arriscaria duplo benefício.
+  • Utilizador: PIOR do que antes. Recebe erro 502 após 3,9 s e a senha aparece
+    silenciosamente ~40 s depois, sem qualquer feedback de "em processamento".
+  • Observabilidade: cada compra dispara captureSecurityAlert(
+    "comprar_senhas_tx_pendente", level "error") → ruído de alerta contínuo.
+  • Regressão face ao estado anterior ao MC88.27 (caminho síncrono).
+
+4. AÇÃO RECOMENDADA (decisão do operador — não executada por mim)
+--------------------------------------------------------------------------------
+  IMEDIATA (rollback, ~1 min, restaura o comportamento anterior):
+      netlify env:set CREDITO_ASSINCRONO false --context production
+      + redeploy
+    Enquanto a flag estiver ligada, TODA a compra devolve 502.
+
+  DEFINITIVA (para o MC seguinte, antes de voltar a ligar a flag):
+    a) Resolver o conflito de nome: a fila_tarefas existente NÃO é a do projeto.
+       Decidir se se renomeia/remove a atual antes de aplicar a migração
+       (a migração usa CREATE TABLE IF NOT EXISTS → com a tabela errada presente
+       ela NÃO corrige nada e o problema persiste silenciosamente).
+    b) Aplicar 20260629_fila_tarefas.sql (execução pelo operador, R12).
+    c) Validar o produtor E o consumidor antes de religar a flag.
+    d) Considerar remover o silêncio do pareceTabelaAusente() no consumidor.
+
+5. CORREÇÕES ÀS PREMISSAS DO PLANO MC88.28
+--------------------------------------------------------------------------------
+  • chrome-remote-interface NÃO fala com o devtools do WebView Android
+    (ECONNRESET); o fetch do Node também não. O /json/list só responde ao
+    Invoke-WebRequest do PowerShell. Solução usada: obter o webSocketDebuggerUrl
+    em PowerShell e passá-lo ao Node via env, falando CDP em WebSocket cru.
+  • O MIUI mata o app assim que vai para segundo plano (ProcessMemoryCleaner);
+    derrubou o túnel 3×. O app tem de ficar em 1º plano com o keyguard dispensado.
+  • O forward do adb aponta para webview_devtools_remote_<PID>: se o app reinicia,
+    o túnel fica a apontar para um PID morto e dá "socket hang up".
+  • O consumidor da fila é um cron de 5 min, não contínuo — mas isso NÃO atrasa o
+    saldo: o useCreditoStatus faz polling ON-CHAIN (2 s × 30). A janela de 40 s do
+    plano estava adequada para a UI.
+  • O APK instalado JÁ CONTÉM o frontend MC59.6 (varridos 96 chunks: "assincrono"
+    em MinhaCarteira + useTrocarPorSenhas; "comprar-senhas" em useTrocarPorSenhas).
+    O frontend não é a causa da falha.
+
+6. ⚠️ ARMADILHA DE DEPLOY DESCOBERTA AO EXECUTAR O ROLLBACK
+--------------------------------------------------------------------------------
+  `origin/main` está em d42b4ae, de 2026-07-04. Todos os deploys de produção de
+  2026-07-26 (MC88.12.1 → MC88.27) têm `commit_ref` VAZIO: foram feitos por
+  `netlify deploy --prod --build` a partir da árvore local, não pelo git.
+  A etiqueta "branch: main" no painel é enganadora.
+
+  → Consequência: disparar um build a partir do git (netlify api createSiteBuild,
+    "Trigger deploy" no painel, ou reconectar auto-deploy) RECONSTRÓI d42b4ae e
+    APAGA de produção tudo entre MC88.12 e MC88.27. Nunca usar essa via.
+  → O rollback foi feito pela via correta: env:set + `deploy --prod --build`
+    a partir da árvore local (branch feat/mc8816-latencia-pix), que é a linhagem
+    real de produção.
+
+7. RUÍDO PRÉ-EXISTENTE (não relacionado, não investigado)
+--------------------------------------------------------------------------------
+  CORS bloqueado em auth.privy.io/api/v1/analytics_events a partir de
+  https://localhost — telemetria do Privy, sem efeito no fluxo de compra.
+================================================================================
+
+================================================================================
+8. ROLLBACK EXECUTADO (autorizado pelo operador)
+================================================================================
+  netlify env:set CREDITO_ASSINCRONO false --context production   → OK
+  netlify deploy --prod --build                                   → OK
+  Deploy 6a6688c7f78654b83ed59cd3 | publicado 2026-07-26T22:26:51Z
+  47 functions reconstruídas · "CDN requesting 0 files" (assets do frontend
+  idênticos aos que já estavam em produção → nenhuma alteração não intencional)
+  Confirmação: netlify env:get CREDITO_ASSINCRONO --context production → false
+
+  ⚠️ VERIFICAÇÃO COMPORTAMENTAL PENDENTE: confirmar que o caminho síncrono voltou
+  exige uma nova compra real (R$ 2,00). O saldo do operador ficou em R$ 0,00 e
+  não solicitei nova compra. O que está provado é a configuração (flag=false) e
+  o deploy das functions — não o comportamento do próximo 200.
+================================================================================

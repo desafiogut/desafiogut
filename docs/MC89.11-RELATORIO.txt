@@ -1,0 +1,51 @@
+# MC89.11 — RELATÓRIO: admin_logs e níveis de permissão (Fase 2 do MC89.5)
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | Suítes: 342/342 backend, 40/40 frontend
+
+## 1. TABELA admin_logs (Segmento 0)
+Migração aplicada ao Supabase. Tabela criada com RLS (service_role), 4 índices
+(inclui índice parcial WHERE sucesso IS NULL para encontrar ações que rebentaram
+a meio).
+
+Módulo `_lib/admin-log.mjs`:
+- `registrarAcao()` — fail-CLOSED. Insere ANTES da ação; se o INSERT falhar,
+  LANÇA. O caller devolve 503 e a ação NÃO acontece.
+- `confirmarAcao()` — fail-soft. Atualiza sucesso/erro DEPOIS da ação. Se falhar,
+  a ação já foi executada — o registo fica com sucesso=NULL como rasto.
+- `lerLogs()` — paginação por cursor, filtros (admin, tipo_acao, data, texto).
+  Supabase injetável (_sb) para testes.
+
+Endpoint `admin-logs.mjs`: GET com gate admin. Filtro aplicacional por nível
+(super-admin vê tudo, admin vê os seus e de operadores, operador = 403).
+Sem cache.
+
+## 2. NÍVEIS DE PERMISSÃO (Segmento 1)
+`_lib/admin-niveis.mjs`:
+- `getAdminNivel(endereco)` — leitura RETROCOMPATÍVEL do Blob admin-list.
+  Aceita formato antigo (array de strings → "admin"), formato novo
+  (array de objetos com .nivel) e Blob vazio (default "admin").
+  Coordenação = super-admin permanente. Cache 60s.
+- `adminPode(nivel, minimo)` — comparação de níveis.
+- SEPARADO de `getAdminAddresses()` para não partir os 14 call-sites.
+
+JWT admin: claim `nivel` adicionada em `assinarAdminAccess`. `emitirParAdmin`
+resolve o nível uma vez no login/refresh. Tokens sem a claim → "admin".
+
+`guardAdminNivel(req, nivelMinimo)` — wrapper que autentica E verifica nível.
+
+## 3. ADAPTAÇÕES (Segmento 2)
+ALFA: panic/unpause → super-admin apenas. Verificação no INTENT_HANDLER.
+ALFA:logs → últimos 10 registos. Super-admin vê tudo; admin vê os seus.
+ALFA:logs <texto> → filtro textual.
+
+## 4. TESTES
+18 novos (10 admin-log + 8 niveis). Validados por mutação os 4 guardas:
+- registrarAcao fail-closed (INSERT falha → lança)
+- confirmarAcao fail-soft (erro não lança)
+- adminPode hierarquia (super-admin > admin > operador)
+- getAdminNivel retrocompatibilidade (string → "admin")
+
+## 5. APK
+Recompilado com build:apk, bundle mainnet-coherent, instalado.
+
+## 6. PRÓXIMO PASSO
+MC89.12 — Fase 3: Operações e infraestrutura (Tela 4).

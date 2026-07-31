@@ -1,0 +1,241 @@
+================================================================================
+MC89 — SEGMENTO 0 · MAPA DO CÓDIGO EXISTENTE (ESCOPO ADM)
+================================================================================
+Data....: 2026-07-29
+Branch..: feat/mc89-adm-system (criada de ec2fb94, o estado deployado)
+Método..: leitura do código + consulta ao Supabase + sondas ao backend de produção
+Código..: ZERO alterações (R1)
+
+================================================================================
+AVISO — SEIS PREMISSAS DO BRIEFING NÃO SE CONFIRMAM
+================================================================================
+O briefing descreve o ADM como algo a construir de raiz. Não é. O que falta é
+MUITO menos do que o plano supõe, e o que falta é outra coisa.
+
+  briefing diz                          | o que o código diz
+  ──────────────────────────────────────┼────────────────────────────────────────
+  "admin-list retorna lista hardcoded"  | lê Blob `admin-list:admins` + agrega a
+                                        | coordenação; tem POST para adicionar/
+                                        | remover; GET separado em dois contratos
+                                        | por segurança (MC87 P2-4)
+  "não existe dashboard administrativo" | src/pages/AdminPanel.jsx, 740 linhas,
+                                        | rota /admin, 3 separadores (Aprovações,
+                                        | Cotas, Admins), login JWT + refresh
+  "não existe GUTO ADM com ferramentas" | o roteador de intents JÁ tem 11 comandos
+                                        | admin, com gate e rate-limit (ver §4)
+  "não existe tabela de logs"           | verdade no Supabase; existe o Blob
+                                        | `log-decisoes` (FIFO 500) a registar as
+                                        | ações admin do GUTO desde o MC15.6
+  "não existe sistema de presença"      | CONFIRMADO — não existe
+  "não existe tabela de admins"         | CONFIRMADO no Supabase; a lista vive em
+                                        | Netlify Blobs
+
+E há uma premissa que é impossível como está escrita: **o e-mail
+`ADMdesafiogut@gmail.com` não pode autorizar nada** no sistema atual. Ver §7.
+
+================================================================================
+1. IDENTIDADE E AUTORIZAÇÃO — COMO O SISTEMA RECONHECE UM ADMIN HOJE
+================================================================================
+Tudo é por ENDEREÇO DE CARTEIRA. Não há e-mail em lado nenhum da cadeia.
+
+  auth-user.mjs        prova de posse da carteira por assinatura EIP-191 sobre
+                       `DESAFIOGUT-AUTH:<ts>:<endereco>` → JWT `user-session`
+                       com as claims { endereco, tipo }. TTL 24h.
+                       ⚠️ NÃO há e-mail no token. Nenhum.
+
+  _lib/admin-helpers   getAdminAddresses() = Blob `admin-list:admins`
+                       ∪ resolverCoordenacao(). Cache 60s.
+                       resolverCoordenacao() lê env COORDENACAO_ADDRESS.
+
+  _lib/admin-auth      autenticarAdmin(req): Bearer admin-JWT (15 min) OU
+                       x-admin-token legado. Refresh rotacionado de 7 dias,
+                       hash SHA-256 em Blob `admin-refresh:{endereco}`, máx. 5
+                       sessões, revogação imediata (logout-all).
+                       Revalida a lista a CADA pedido → remover um admin corta
+                       o acesso mesmo com JWT dentro do TTL.
+
+  _lib/rbac.mjs        getRole() → "admin" | "cliente" | "user", hierarquia e
+                       requireRole(). Cache 5 min.
+
+  auth-admin.mjs       login (EIP-191 + ADMIN_TOKEN legado) / refresh / logout.
+
+  _lib/require-mfa     existe; o payload do JWT expõe `mfa_verified`.
+
+VERIFICADO EM PRODUÇÃO (sonda a admin-list?endereco=, 2026-07-29):
+    0xFea436…1E67  isAdmin=true   role=admin  fonte=admin-list
+    0xDa3a83…e84E  isAdmin=false  role=user   fonte=default
+
+  → `COORDENACAO_ADDRESS` está definida e a EOA comprometida do MC59.11 JÁ NÃO
+    é admin. O alarme do MC87 (P1-4) está resolvido em produção. Um MC anterior
+    registou-o como pendente; deixou de ser.
+
+⚠️ ACHADO — VARIÁVEL MORTA: `ADMIN_WALLETS` existe no ambiente de produção e
+   NÃO é lida por ficheiro nenhum (varrimento a src/, netlify/functions/ e
+   scripts/). Quem a definiu pode julgar que está a conceder acesso. Não está.
+
+================================================================================
+2. A SUPERFÍCIE ADMIN QUE JÁ EXISTE NO BACKEND
+================================================================================
+18 das 47 funções já têm gate de admin (`guardAdmin`/`autenticarAdmin`):
+
+  admin-aprovacao · admin-list · auth-admin(login) · backup-blobs · banners ·
+  chatbot · consolidar-lances · cotas · cron-reset-programado · edicoes ·
+  health · monitor-onchain · notificacoes · purge-lances · purge-logs ·
+  renovacao-adesao · schedule · voucher · wallet
+
+Bibliotecas de apoio já construídas e por reutilizar:
+  _lib/pulso.mjs           4 métricas vivas: volume/min, licitantes únicos,
+                           valorização %, abandono de checkout (null, honesto)
+  _lib/system-state.mjs    kill switch global { active | paused } — o /panic
+  _lib/log-operacional.mjs auditoria das ações admin, Blob `log-decisoes`,
+                           FIFO 500, entradas { id, timestamp, trigger, action,
+                           user_id }. É a base de auditoria que o briefing
+                           julga inexistente.
+  _lib/simulador.mjs       simulação de vencedor por menor lance único
+  _lib/ia-preditiva.mjs    previsão
+  _lib/fila.mjs            fila de tarefas (Postgres SKIP LOCKED)
+  health.mjs               já responde em dois níveis: público mínimo e, com
+                           credencial admin, o mapa de QUAIS variáveis estão
+                           configuradas (nunca os valores) + alarmes
+
+================================================================================
+3. FRONTEND — O QUE JÁ EXISTE
+================================================================================
+  src/pages/AdminPanel.jsx     740 linhas. Rota `/admin` (lazy). Gate por
+                               useAdmin(address). Login admin com ADMIN_TOKEN
+                               colado uma vez → troca por par access+refresh,
+                               refresh em sessionStorage, token legado
+                               descartado da memória.
+                               Separadores: Aprovações · Cotas · Admins.
+  src/hooks/useAdmin.js        consulta admin-list?endereco=, cache localStorage
+                               5 min (MC88.34: era sessionStorage e custava
+                               612–933 ms a cada arranque do APK).
+  BottomNav.jsx / Sidebar.jsx  já têm entrada de admin, gated por isAdmin.
+
+  ⚠️ A rota `/admin` NÃO está atrás de um componente de guarda de rota (ao
+     contrário de `/corporativo`, que tem CorporativoRoute). A guarda é POR
+     DENTRO da página. O MC88.41 registou isto como "protegida por dentro" e
+     não como defeito — quem não é admin vê a casca e uma recusa, não os dados.
+
+  O QUE NÃO EXISTE: nenhuma vista de MÉTRICAS. Os 3 separadores são operação
+  (aprovar, listar cotas, gerir admins), não observação.
+
+================================================================================
+4. O GUTO ADMIN — JÁ É UM EXECUTOR
+================================================================================
+chatbot.mjs tem um ROTEADOR DE INTENTS que corre ANTES do RAG, com tabela
+declarativa de gates. Os intents de perfil admin, hoje:
+
+  criar_edicao_wizard · criar_edicao · listar_edicoes · encerrar_edicao ·
+  auditoria · memoria · panic · unpanic · relatorio_indicacoes ·
+  relatorio_compras · simular_vencedor · pulso_edicao · dados_mercado
+
+  gate:  ehAdminPerfil / ehCorpOuAdmin      (declarativo, por intent)
+  rl:    intents mutantes passam por aplicarRateLimit("guto-admin", 5/min)
+  log:   as ações escrevem em `log-decisoes`
+
+  detectarPerfil(req) → "visitante" | "comum" | "corporativo" | "admin".
+  O ramo admin usa confirmarAdminChat: admin-JWT, x-admin-token, OU
+  user-session cujo endereço esteja em admin-list. Fonte de verdade sempre no
+  backend — o cliente nunca envia o seu papel.
+
+  ⚠️ NÃO há function calling do LLM. chamarLLM() é uma chat completion simples
+     (DeepSeek, OpenAI-compatível): sem `tools`, sem `tool_calls`. O modelo
+     nunca executa nada — quem executa é o roteador determinístico.
+     Isto é uma FORÇA, não uma lacuna. Ver a recomendação no S3.
+
+================================================================================
+5. DADOS — O QUE HÁ E O QUE FALTA PARA MÉTRICAS
+================================================================================
+Supabase (15 tabelas, todas com RLS ativo; contagens de 2026-07-29):
+
+  cotas 7 · cotas_pagas 0 · cota_fingerprints 0 · lojistas 0 · produtos 0 ·
+  lances 0 · saldo_rs 5 · saldo_rs_creditos 18 · saldo_rs_debitos 0 ·
+  troco_senhas 0 · wallet 0 · wallet_idem 0 · fila_tarefas 5 ·
+  fila_tarefas_legado 0 · config_remota 1
+
+  NÃO EXISTE: admins · users/profiles · sessoes/presenca · admin_logs
+
+⚠️ O BURACO QUE MANDA NO PLANO: **não há tabela de utilizadores.**
+   A identidade vive no Privy; o backend só conhece endereços que APARECEM em
+   cotas / saldo_rs / lances. Logo:
+
+     "total de utilizadores"  → sem fonte. Ou se integra a API do Privy
+                                (exige PRIVY_APP_SECRET, que NÃO está no
+                                ambiente), ou se conta endereços distintos
+                                vistos nos dados próprios — que é outra coisa:
+                                "quem já fez alguma coisa", não "quem se
+                                registou".
+     "utilizadores ativos"    → derivável dos dados próprios, com definição
+                                explícita de janela (ex.: com evento em 30d).
+     "utilizadores online"    → sem fonte nenhuma. Exige heartbeat + tabela.
+
+   Chamar a primeira métrica de "total de utilizadores" sem a fonte certa seria
+   pôr um número errado no ecrã de quem decide. É preciso escolher a definição
+   ANTES de construir o painel.
+
+================================================================================
+6. AMBIENTE DE PRODUÇÃO (só NOMES — R4/R5, nunca valores)
+================================================================================
+RELEVANTES E PRESENTES: ADMIN_TOKEN · COORDENACAO_ADDRESS · JWT_SECRET ·
+  DATA_STORE_BACKEND · LLM_API_KEY · LLM_BASE_URL · LLM_MODEL · CHATBOT_ATIVO ·
+  SUPABASE_URL · SUPABASE_SERVICE_ROLE_KEY · SENTRY_DNS · SENDGRID_API_KEY ·
+  IA_PREDICTIVA · REFERRAL_ATIVO
+
+PRESENTE E MORTA:  ADMIN_WALLETS (ninguém a lê — §1)
+
+AUSENTES, e cada ausência bloqueia uma funcionalidade pedida:
+  PRIVY_APP_SECRET   → sem contagem de utilizadores registados
+  OPENAI_API_KEY     → sem reindexação do RAG (pendência do MC88.44)
+  (nada de FCM)      → sem notificações push; notificacoes.mjs é in-app por
+                       polling, não push
+
+================================================================================
+7. O E-MAIL ADMdesafiogut@gmail.com — O PROBLEMA E A SAÍDA
+================================================================================
+O PROBLEMA: nada no backend conhece e-mails. A autorização é sobre um endereço
+provado por assinatura EIP-191. Um e-mail não assina nada.
+
+Fazer o e-mail autorizar exigiria verificar o ID token do Privy no servidor
+(PRIVY_APP_SECRET, ausente) e confiar num identificador que o utilizador não
+prova possuir criptograficamente a cada pedido — mais frágil do que o que já
+existe, e código novo em toda a cadeia.
+
+A SAÍDA, que não custa código nenhum:
+  1. o operador entra UMA vez na app com ADMdesafiogut@gmail.com (Google);
+  2. o Privy cria/recupera a carteira embutida dessa conta e a app mostra o
+     endereço;
+  3. esse endereço é acrescentado à lista com o POST que JÁ existe:
+        POST /.netlify/functions/admin-list
+        { "acao": "adicionar", "endereco": "0x…" }
+     (gated por x-admin-token — operador, R5)
+
+  A partir daí, entrar com aquele e-mail dá o painel de admin, porque o e-mail
+  é COMO SE ENTRA e o endereço é O QUE AUTORIZA. É exatamente o modelo que o
+  sistema já tem, e é mais seguro do que o pedido.
+
+  Efeito colateral bom: passa a haver um segundo admin além da coordenação —
+  hoje a lista persistida está vazia e a coordenação é a única. Um segundo
+  admin é também a rede de segurança contra ficar trancado de fora.
+
+================================================================================
+8. RESUMO — REUTILIZAR vs CONSTRUIR
+================================================================================
+JÁ EXISTE E REUTILIZA-SE TAL COMO ESTÁ (≈70% do pedido):
+  identidade e autorização de admin · JWT + refresh rotacionado + revogação ·
+  gate de UI (useAdmin) · página /admin com 3 separadores · 11 comandos admin
+  no GUTO com gate e rate-limit · auditoria das ações (log-decisoes) ·
+  kill switch · métricas de pulso · health com mapa de configuração
+
+FALTA CONSTRUIR:
+  1. vista de MÉTRICAS (agregação + página) ......... o grosso do trabalho
+  2. definição e fonte de "utilizadores" ........... decisão antes de código
+  3. presença online (heartbeat + armazenamento) .... nada existe
+  4. auditoria em Postgres com consulta ............. hoje é Blob FIFO 500
+  5. botões de comando rápido no painel ............. os comandos existem, os
+                                                      botões não
+  6. notificações push .............................. exige FCM + chave
+
+================================================================================
+FIM DO SEGMENTO 0
+================================================================================

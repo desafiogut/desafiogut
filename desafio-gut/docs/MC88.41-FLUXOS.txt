@@ -1,0 +1,131 @@
+MC88.41 — MAPA DE FLUXOS E NAVEGAÇÃO DO UTILIZADOR COMUM
+================================================================================
+Data: 2026-07-28 · APK MC88.40 · Perfil: comum autenticado, 12 senhas, R$ 0,00
+Método: navegação real via túnel adb + CDP, com leitura do DOM a cada passo.
+
+
+1. ARRANQUE E AUTENTICAÇÃO
+================================================================================
+Não há ecrã de login para quem já tem sessão. O ícone abre direto no Dashboard.
+Cronologia medida (MC88.38/39/40, mesmo APK):
+
+    0 →  1077 ms   Android nativo (processo + WebView)
+   ~2000 ms        Dashboard pintado, já com "Olá, Novo Pernambucano!"
+                   e os saldos em cache (esbatidos)
+   ~4500 ms        saldo de senhas confirmado (deixa de estar esbatido)
+   ~6000 ms        saldo em R$ confirmado
+
+Não existe onboarding, tutorial nem primeira-execução. O utilizador cai no
+Dashboard completo.
+
+
+2. DASHBOARD  (rota /)
+================================================================================
+Ordem do que aparece, de cima para baixo:
+   1. Cartão de boas-vindas: GUTO + logo + "Olá, {nome}"
+   2. Quatro tiles: Saldo (R$) · Senhas · Lances Únicos · Total de Lances
+   3. "🎯 Edição Ativa" (R-1) com prémio, estado e CTA para o Mercado
+   4. "🏆 Menor Lance Único" (vazio: "Nenhum lance único ainda")
+   5. "🗓️ Outras Edições em Andamento" (3 cartões RELAMP-*)
+   6. "🚀 Acesso Rápido" (7 atalhos)
+   7. Rodapé legal + navegação inferior
+
+DESTINO DOS CLIQUES (verificado):
+   tile "Saldo (R$)"      → /carteira
+   tile "Senhas"          → /carteira
+   tile "Lances Únicos"   → /mercado
+   tile "Total de Lances" → /mercado
+   "⚡ Ir para o Mercado de Lances" → /mercado
+   atalhos do Acesso Rápido → /carteira, /mercado, /vitrine, /ativos,
+                              /seja-nosso-parceiro, /configuracoes
+
+Os quatro tiles levam a apenas dois destinos. Nenhum abre um detalhe do próprio
+número (ex.: histórico do saldo).
+
+
+3. MERCADO DE LANCES  (rota /mercado)
+================================================================================
+   1. Cabeçalho com endereço da carteira
+   2. "EDIÇÃO R-1 / EM BREVE" + "Menor lance único vence · Art. 8"
+   3. Selector de modo: "⚡ Relâmpago" | "🎫 Programado"   ← abre em Relâmpago
+   4. Cartão de lance: endereço, saldo R$, botão "Sair", campo de valor em
+      centavos, "Art. 27: Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s"
+   5. "⚡ Lance Relâmpago" (INATIVO com R$ 0,00)
+   6. "📋 Lances — Edição R-1" com prazo e estado "🟢 Ativo"
+
+O utilizador com 12 senhas e R$ 0,00 chega a um ecrã onde o botão de lance está
+morto, porque o modo por omissão é o que ele não pode usar (ver B5).
+
+NÃO FOI EXECUTADO um lance real — exigiria consumir senha on-chain (R2).
+
+
+4. CARTEIRA  (rota /carteira)
+================================================================================
+   1. "💰 Saldo Disponível / R$ OFF-CHAIN / R$ 0.00"
+   2. Três ações: "💰 Depositar PIX" (ativo) · "🎫 Trocar R$ 2.00 → 1 Senha"
+      (inativo) · "⚡ Lance Relâmpago" (inativo)
+   3. "🎁 Indique e Ganhe" com código IND-…, métricas e botões de partilha
+   4. "🔗 Saldo de Senhas / ON-CHAIN / 12 senhas / 12 × R$ 2.00 = R$ 24.00"
+   5. "🏦 Dados para Pagamento (Art. 21)"
+   6. "📋 Meus Lances (0)"
+   7. "CARTEIRA CONECTADA" com o endereço COMPLETO
+
+MODAL "DEPOSITAR PIX" (aberto, NÃO submetido — R2):
+   título     "💰 Depositar PIX"
+   subtítulo  "Saldo R$ disponível para Lance Relâmpago ou troca por senhas"
+   campo      "QUANTAS SENHAS?"  → 1 | 5 | 10
+   total      "TOTAL A PAGAR: R$ 2.00 — 1 senha × R$ 2.00"
+   ação       "Continuar para pagamento →"
+   pendente   "Aguardando confirmação do PIX… o crédito acontece automaticamente"
+
+   O fluxo funciona (confirmado pelo operador). A fricção é de rótulo — ver B8.
+
+
+5. MENU "MAIS"  (sheet)
+================================================================================
+   Cabeçalho: DesafioGUT / Grupo União e Trabalho / Novo Pernambucano /
+              0x5BAF46...7f32B8
+   Itens: Vitrine (4 Slots) · Programação · Meus Ativos ·
+          🤝 Seja nosso parceiro! · Configurações · Sair
+
+É aqui que "Sair" pertence — e é também por isso que o "Sair" dentro do cartão
+de lance (B6) surpreende.
+
+
+6. GUTO  (widget flutuante, presente em todas as rotas)
+================================================================================
+   Abertura   botão "Abrir assistente DesafioGUT", canto inferior
+   Cabeçalho  "GUTO — Assistente DesafioGUT ●" ·
+              "Responde com base no regulamento oficial." · "Limpar" · "✕"
+   Entrada    <textarea> "Sua pergunta… (Enter envia, Shift+Enter quebra linha)"
+   Histórico  PERSISTE entre sessões (localStorage, por perfil e endereço)
+
+Resultados do teste de esforço: ficheiro MC88.41-GUTO-ESFORCO.txt.
+
+
+7. NAVEGAÇÃO — ESTRUTURA
+================================================================================
+BARRA INFERIOR (sempre visível):  Início · Lances · Carteira · Mais
+
+ROTAS ALCANÇÁVEIS PELA INTERFACE:
+   /  ·  /mercado  ·  /carteira  ·  /vitrine  ·  /programacao  ·  /ativos
+   /seja-nosso-parceiro  ·  /configuracoes  ·  /excluir-conta (rodapé)
+
+ROTAS QUE EXISTEM MAS NÃO TÊM ENTRADA NA NAVEGAÇÃO:
+   /produto/:id  ·  /edicao/:id  ·  /vitrine/:slot
+
+ROTAS DE OUTROS PERFIS:
+   /admin        → guardado DENTRO do componente (useAdmin + isConnected)
+   /corporativo* → guardado pela rota (CorporativoRoute)
+   /corp         → SEM guarda. O comentário em App.jsx:215 diz que é
+                   deliberado ("MC17 — rota direta pós-cadastro, sem gate").
+                   Aponta para o mesmo CorporativoDashboard que /corporativo
+                   protege. NÃO foi testado com a conta comum — fica como
+                   pergunta para o operador, não como acusação.
+
+O QUE NÃO CONSEGUI VERIFICAR:
+   • comportamento do botão "voltar" do Android em cada ecrã;
+   • estado "sem saldo E sem senhas" (a conta de teste tem 12 senhas);
+   • estado "não autenticado" (implicaria terminar a sessão do operador);
+   • um lance real (R2);
+   • um pagamento real (R2).

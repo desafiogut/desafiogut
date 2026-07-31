@@ -1,0 +1,354 @@
+================================================================================
+MC65 — PLANO: REESTRUTURAÇÃO COMPLETA DO GLASS SUPERIOR (ABA "LANCES")
+================================================================================
+Data........: 2026-07-09
+Tipo........: SÓ DIAGNÓSTICO/ANÁLISE/PLANO — ZERO alteração de código (R1)
+Branch doc..: feat/mc65-redesign-glass (documentação; nasce pós-MC64)
+Execução....: MC66 (após aprovação + escolha da direção pelo operador)
+Alvo........: frontend/src/pages/MercadoLances.jsx — Glass header, linhas 297-451 (pós-MC64)
+Skills ECC..: frontend-design, design-system, a11y-architect, frontend-patterns,
+              coding-standards, verification-loop
+Pilares.....: SUPERPERS (só plano) · EVERYTHING CLOUD CODE (skills+doc) · RUFLO (design/interface/validação)
+
+--------------------------------------------------------------------------------
+APRENDIZADOS COM O MC64 (por que este MC existe)
+--------------------------------------------------------------------------------
+O MC64 foi CIRÚRGICO e PONTUAL (ajuste de estilo, não de estrutura):
+  ✔ unificou a paleta (COR local #f5a623 → tokens #ff6b35/#050818/#ff9500)
+  ✔ removeu o glow neon do título
+  ✔ deu respiro (py-2.5→3)
+  ✔ colou a tarja "EM BREVE" como OVERLAY absoluto sobre o cronômetro
+Resultado: mais limpo, MAS a ESTRUTURA continua a mesma — 3 secções densas, um só
+componente monolítico (JSX inline), hierarquia plana e um problema novo (abaixo).
+MC65/66 muda o PATAMAR: reestrutura layout + componentes + estado, não só cor.
+
+================================================================================
+SEGMENTO 0 — DIAGNÓSTICO ESTRUTURAL E VISUAL (ANÁLISE CRÍTICA)
+================================================================================
+Skills: frontend-patterns, design-system, a11y-architect
+
+0.1  ESTRUTURA ATUAL (MercadoLances.jsx:297-451)
+  <GlassCard as="header">                              (297)
+    ├─ Secção 1 (300-400)  logo+subtítulo | CRONÔMETRO(anel) | AuthArea   [flex 3 vias]
+    ├─ Secção 2 (402-427)  <div/> vazio  | "Modo:" Relâmpago/Programado   [flex 2 vias]
+    └─ Secção 3 (429-449)  disclaimer CNPJ + status conectado/encerrado
+  Subcomponentes hoje: só AuthArea (função in-file, 574+). Timer, ModeSelector,
+  StatusBar, tarja: TODOS inline dentro de MercadoLances (monólito ~160 linhas de JSX).
+
+0.2  PONTOS DE ATRITO (achados críticos — arquivo:linha · impacto)
+  [A] MercadoLances.jsx:407 — <div /> VAZIO como espaçador. A Secção 2 existe só
+      para hospedar o seletor de modo, empurrado à direita por um placeholder vazio.
+      Impacto: uma secção inteira (com divisor) para 1 controlo → desperdício de
+      espaço e de hierarquia. ALTO.
+  [B] MercadoLances.jsx:413 — seletor "Programado" usa `#a78bfa` (ROXO) hardcoded,
+      FORA da paleta oficial. O MC64 unificou o COR, mas este literal escapou.
+      Impacto: drift de paleta remanescente (roxo não pertence a navy+laranja). MÉDIO.
+  [C] Secção 1 (300-400) — LOGO, CRONÔMETRO e AUTH no MESMO nível de flex, todos
+      com peso visual parecido. Não há foco: o olho não sabe onde pousar.
+      Impacto: hierarquia plana; o cronômetro (informação nº1) não domina. ALTO.
+  [D] PARADOXO DO CRONÔMETRO (o achado mais forte): a tarja "EM BREVE" (363-380) é
+      PERMANENTE e cobre o miolo. Por baixo dela roda toda a maquinaria de timer
+      AO VIVO — conic-gradient de progresso (344), cor por urgência timerCor (252-256),
+      pulso timerUrgente (356), barra de progresso (382-389), label "DD:HH:MM:SS".
+      TUDO ISSO FICA ESCONDIDO sob a tarja. Ou seja: computa-se e renderiza-se um
+      cronômetro sofisticado que o usuário NÃO vê. Impacto: código morto visual +
+      mensagem ambígua (anel de "progresso" sob "EM BREVE"). ALTO — decisão de
+      produto necessária (ver 0.5).
+  [E] Secção 3 (429-449) — texto legal (CNPJ) ocupa uma secção inteira com o mesmo
+      peso das demais. Informação de rodapé disfarçada de conteúdo primário. MÉDIO.
+  [F] Emojis como identidade (🏆 309, ⚡/🎫 338/411) competem com a tipografia e
+      variam de estilo entre plataformas. BAIXO-MÉDIO.
+  [G] Manutenibilidade: JSX 100% inline com estilos objeto; zero isolamento →
+      difícil testar/reusar/evoluir (ex.: o mesmo cronômetro existe DUPLICADO no
+      Dashboard, 264-285, com outra implementação). MÉDIO (dívida técnica).
+
+0.3  HIERARQUIA ATUAL (o que o design "diz")
+  Hoje: [logo = cronômetro = auth] > [vazio + modo] > [legal]. Plano e sem foco.
+  Desejado: CRONÔMETRO/ESTADO (nº1) > MODO+AÇÃO (nº2) > identidade/legal (nº3).
+
+0.4  ACESSIBILIDADE (a11y-architect)
+  • Número do timer atrás da tarja: contraste real do NÚMERO cai (translúcido) —
+    hoje é decorativo; se voltar a ser informativo, precisa de contraste AA.
+  • "EM BREVE" #ff6b35 sobre navy 0.62: validar ≥4.5:1 (limítrofe; considerar #fff).
+  • Seletores de modo = <button> (bom); garantir foco visível e aria-pressed.
+  • Sem landmark/aria além de aria-label na tarja; header carece de rótulo semântico.
+
+0.5  DECISÃO DE PRODUTO QUE O MC66 PRECISA (bloqueia a direção visual)
+  O leilão está "EM BREVE" de forma PERMANENTE, ou vai FICAR AO VIVO e o cronômetro
+  volta a contar? Três estados possíveis do cronômetro:
+     (i)  PRÉ-LANÇAMENTO → "EM BREVE" (sem contagem)   ← estado atual visível
+     (ii) AO VIVO        → contagem real DD:HH:MM:SS
+     (iii)ENCERRADO      → "FIM" / bloqueado
+  O redesign deve tratar os 3 estados de forma coerente (state machine visual),
+  em vez de sobrepor uma tarja fixa a um timer vivo. Isto orienta a escolha A/B/C.
+
+================================================================================
+SEGMENTO 1 — DIREÇÕES VISUAIS (3 alternativas)
+================================================================================
+Skills: frontend-design, design-system
+Base: tokens globals.css — navy #050818 / surface rgba(13,18,53,*) / laranja #ff6b35 /
+gold #ff9500 / texto #fff / muted #6b7db8 / .gut-glass-standard (blur24 sat1.35).
+
+──────────────────────────────────────────────────────────────────────────────
+DIREÇÃO A — "MINIMALISTA EDITORIAL"  (grid 2 colunas, respiro máximo)
+──────────────────────────────────────────────────────────────────────────────
+Ideia: o Glass vira uma "capa" editorial. Cronômetro como herói à esquerda,
+informação/ação à direita. A tarja vira um BADGE integrado ("EM BREVE"), não overlay.
+Estado-aware: pré-lançamento mostra badge; ao vivo mostra a contagem no mesmo lugar.
+
+  Desktop (1440) ┌──────────────────────────────────────────────────────────┐
+                 │                                        DesafioGUT   [Login]│
+                 │   ┌───────────┐                        E-commerce…         │
+                 │   │  ⓘ EM     │   Próxima edição                           │
+                 │   │   BREVE   │   ⚡ Relâmpago  ·  🎫 Programado            │
+                 │   │  R-1      │   Menor lance único vence (Art. 8)         │
+                 │   └───────────┘                                            │
+                 │  ── Grupo União e Trabalho · CNPJ … (linha fina) ───────── │
+                 └──────────────────────────────────────────────────────────┘
+  Paleta: navy profundo, 1 acento laranja (badge + modo ativo). Texto branco/muted.
+  Tipografia: título 800 Orbitron discreto; "EM BREVE" grande, peso 800, tracking.
+  Justificativa: resolve [C] (hierarquia: timer domina à esquerda), [A] (elimina a
+  secção vazia — modo passa a coluna direita), [E] (legal vira rodapé fino). Elegante,
+  "profissional/minimalista" pedido no MC63. Melhor quando o estado é EM BREVE.
+  Custo: layout novo (grid), mas sem lógica nova. Esforço médio.
+
+──────────────────────────────────────────────────────────────────────────────
+DIREÇÃO B — "DASHBOARD CORPORATIVO"  (barra horizontal, timer segmentado)
+──────────────────────────────────────────────────────────────────────────────
+Ideia: barra de status limpa. Cronômetro em BLOCOS segmentados (DD·HH·MM·SS),
+legível e "produto financeiro". Modo + ação numa sub-barra. Preserva o timer AO VIVO.
+
+  Desktop (1440) ┌──────────────────────────────────────────────────────────┐
+                 │ 🏆 DesafioGUT        [ 00 : 28 : 44 ]  EM BREVE   [Login]  │
+                 │                        DD  HH  MM  SS                       │
+                 │ ──────────────────────────────────────────────────────────│
+                 │ Modo: (⚡Relâmpago) (🎫Programado)      🔴 aguardando início│
+                 └──────────────────────────────────────────────────────────┘
+  Blocos do timer: caixas navy com borda fina; "EM BREVE" como PILL ao lado (não
+  cobre os números). Ao vivo, os blocos contam; pré-lançamento, ficam a "--" + pill.
+  Justificativa: resolve [D] (a tarja deixa de MASCARAR o timer — vira etiqueta ao
+  lado), preserva a contagem quando o leilão abrir (melhor p/ estado AO VIVO),
+  hierarquia clara em 2 níveis. Muito legível e à prova de estado.
+  Custo: refatorar o anel→blocos (troca de UI do timer). Esforço médio-alto.
+
+──────────────────────────────────────────────────────────────────────────────
+DIREÇÃO C — "HERO IMERSIVO 'EM BREVE'"  (assume o coming-soon)
+──────────────────────────────────────────────────────────────────────────────
+Ideia: abraça o estado atual. REMOVE o anel/contagem (código morto sob a tarja) e
+entrega um herói "EM BREVE" com micro-animação sutil de brilho + selo da edição.
+
+  Desktop (1440) ┌──────────────────────────────────────────────────────────┐
+                 │ 🏆 DesafioGUT                                     [Login]  │
+                 │                                                            │
+                 │                 ✦  E M   B R E V E  ✦                      │
+                 │              Edição R-1 · ⚡ Relâmpago / 🎫 Programado      │
+                 │              O menor lance único vence · Art. 8            │
+                 │  ── Grupo União e Trabalho · CNPJ … ───────────────────────│
+                 └──────────────────────────────────────────────────────────┘
+  Glass: blur mais profundo, borda iluminada laranja sutil, sombra maior. "EM BREVE"
+  centralizado, pulsação leve (respeitar prefers-reduced-motion).
+  Justificativa: resolve [D] pela raiz (elimina o timer morto), máximo impacto de
+  "coming soon", menos código. PORÉM: se o leilão for FICAR AO VIVO, joga fora a
+  contagem e exige refazer no futuro. Melhor SÓ se "EM BREVE" for definitivo agora.
+  Custo: remove código; layout simples. Esforço baixo-médio. Risco de produto: alto
+  se a decisão 0.5 mudar.
+
+──────────────────────────────────────────────────────────────────────────────
+Mobile (375) — todas as direções colapsam para 1 coluna: título+login no topo,
+herói/timer central, modo em pills full-width, legal em rodapé fino. Validar MCP.
+
+================================================================================
+SEGMENTO 2 — ANÁLISE COMPARATIVA E RECOMENDAÇÃO
+================================================================================
+Skills: frontend-design, a11y-architect, design-system
+
+  Critério (peso)          │ A Editorial │ B Dashboard │ C Hero EM BREVE
+  ─────────────────────────┼─────────────┼─────────────┼────────────────
+  Hierarquia/foco (alto)   │    ★★★★☆    │   ★★★★★    │   ★★★★☆
+  Legibilidade/contraste   │    ★★★★☆    │   ★★★★★    │   ★★★★☆
+  À prova de estado (i-iii)│    ★★★★☆    │   ★★★★★    │   ★★☆☆☆  (só pré-lançamento)
+  Fidelidade à identidade  │    ★★★★★    │   ★★★★☆    │   ★★★★☆
+  Minimalismo (pedido MC63)│    ★★★★★    │   ★★★☆☆    │   ★★★★★
+  Esforço (menor=melhor)   │    médio     │  médio-alto │   baixo-médio
+  Risco de produto         │    baixo     │   baixo     │   ALTO (se 0.5 mudar)
+
+  RECOMENDAÇÃO DO AGENTE: **DIREÇÃO A (Editorial) com o motor de estado da B**
+  = um HÍBRIDO A+B. Racional:
+    • A entrega o visual minimalista/editorial pedido e resolve [A][C][E].
+    • Adotar da B o TIMER ESTADO-AWARE (badge "EM BREVE" quando pré-lançamento;
+      contagem legível quando AO VIVO) resolve [D] sem apostar contra o futuro (o
+      risco de produto da C). É a opção que não precisa ser refeita se o leilão abrir.
+    • Mantém .gut-glass-standard e a paleta oficial (design-system) e permite corrigir
+      [B] (roxo → token) e [F] (emojis opcionais) de passagem.
+  Se o operador confirmar que "EM BREVE" é DEFINITIVO e o timer nunca voltará →
+  então C é a mais enxuta. Esta é a escolha a travar antes do MC66 (ver decisão 0.5).
+
+================================================================================
+SEGMENTO 3 — ARQUITETURA DE COMPONENTES (refatoração)
+================================================================================
+Skills: frontend-patterns, coding-standards
+
+3.1  NOVOS SUBCOMPONENTES (extrair do monólito MercadoLances.jsx)
+  Diretório sugerido: frontend/src/components/glass/
+    • GlassHeader.jsx        — container do vidro + layout (grid A / barra B); orquestra
+                               os filhos; recebe props do contexto (fino, sem lógica).
+    • AuctionTimer.jsx       — cronômetro estado-aware. ENCAPSULA a derivação hoje
+                               espalhada (timerDisplay 215-225, timerCor 252-256,
+                               timerPctDeg/urgente 257-258) + os 3 estados (i/ii/iii)
+                               + a apresentação (badge "EM BREVE" | contagem | "FIM").
+    • ModeSelector.jsx       — toggle Relâmpago/Programado; CORRIGE [B] (#a78bfa → token,
+                               ex.: gold p/ flash, primary p/ programado, ou 1 acento só);
+                               aria-pressed + foco visível.
+    • AuctionStatusBar.jsx   — disclaimer CNPJ + status conectado/encerrado (Secção 3),
+                               rebaixado a rodapé fino (resolve [E]).
+    • AuthArea.jsx           — MOVER a função in-file (hoje ~574) para arquivo próprio
+                               (já está isolada logicamente; só falta o arquivo).
+  Tokens: extrair o objeto COR para um módulo compartilhado (ex.: lib/glassTokens.js)
+  OU consumir var(--color-gut-*) direto, eliminando o COR duplicado (Dashboard também
+  tem o seu). coding-standards: nada de literais de cor novos.
+
+3.2  ESTADO / DADOS (sem tocar na lógica de negócio)
+  Fonte permanece o contexto: useAppContext() (EDICAO_ATIVA, tipoLeilao/setTipoLeilao,
+  encerrado, isConnected, address, userLabel, ready, DURACAO) + useAppTimer()
+  (tempoRestante, timeLeftEdicaoSegundos, edicoesTick).
+  • AuctionTimer recebe { estado, tempoRestante, duracao, tipoLeilao, encerrado } e
+    DECIDE a apresentação — a derivação sai de MercadoLances e vira responsabilidade
+    do componente (menos re-render acoplado; alinhado ao MC44 timer isolado).
+  • ModeSelector recebe { tipoLeilao, onChange } — puro.
+  • Nenhuma prop nova de negócio; só reorganização. Contextos permanecem intactos.
+
+3.3  OPORTUNIDADE (opcional, fora do caminho crítico)
+  Extrair um hook useAuctionTimerDisplay(tempoRestante,duracao,encerrado) e REUSAR
+  no Dashboard (264-285), matando a DUPLICAÇÃO do cronômetro [G]. Fica como item
+  "nice-to-have" do MC66/PÓS — não bloqueia o redesign da aba Lances.
+
+3.4  ESFORÇO E RISCO
+  Esforço: ALTO (criar 4-5 arquivos + novo layout + reescrever o timer).
+  Risco: MÉDIO — é estrutural, mas SEM lógica de negócio nova. Mitigação:
+    Fase 1 = EXTRAIR sem mudar aparência (mover JSX → componentes, build verde,
+             validação MCP idêntica ao atual) → commit "refactor puro".
+    Fase 2 = APLICAR o novo layout/estados sobre os componentes já extraídos.
+    (Dois passos evitam misturar refactor com redesign — reversível e revisável.)
+
+================================================================================
+SEGMENTO 4 — ROTEIRO DE IMPLEMENTAÇÃO (MC66)
+================================================================================
+Skills: frontend-patterns, verification-loop
+
+  PRÉ: operador aprova o plano E trava a direção (A+B híbrido recomendado) + decisão 0.5.
+
+  ETAPA 1 — Extração pura (refactor sem mudar pixel)
+    • Criar components/glass/{GlassHeader,AuctionTimer,ModeSelector,AuctionStatusBar,AuthArea}.jsx
+    • Mover JSX/estilos atuais 1:1; MercadoLances passa a compor os filhos.
+    • Build verde + MCP: tela IDÊNTICA à atual (diff visual zero). Commit.
+  ETAPA 2 — Novo layout (direção travada)
+    • GlassHeader implementa o grid/barra; hierarquia timer>modo>legal.
+    • Corrige [A] (remove <div/> vazio), [B] (#a78bfa→token), [E] (legal→rodapé fino).
+  ETAPA 3 — Timer estado-aware (AuctionTimer)
+    • Implementar estados (i EM BREVE / ii contagem / iii FIM) sem sobrepor tarja a
+      timer vivo; badge/pill "EM BREVE" integrado; respeitar prefers-reduced-motion.
+  ETAPA 4 — Polimento a11y (a11y-architect)
+    • Contraste AA de "EM BREVE" e números; aria-pressed no modo; landmark/aria-label
+      no header; foco visível.
+  ETAPA 5 — Validação MCP 375px + 1440px (Boulder Loop máx 3) → ajustar.
+  ETAPA 6 — Deploy = OPERADOR (prod na MAINNET; ação externa/irreversível). NÃO o agente.
+
+  CRITÉRIOS DE ACEITAÇÃO (MC66)
+    [ ] Layout com hierarquia clara (timer/estado domina), sem secção-placeholder vazia.
+    [ ] Timer coerente nos 3 estados; "EM BREVE" integrado (não mascarando timer vivo).
+    [ ] Zero cor fora da paleta oficial (roxo removido).
+    [ ] 4-5 subcomponentes isolados e reutilizáveis; MercadoLances fino (compõe).
+    [ ] Sem regressão: seletor de modo, login/auth, disclaimer, tabela de lances OK.
+    [ ] Dashboard NÃO afetado (cronômetro dele é implementação separada — confirmado).
+    [ ] npm run build verde (usar NODE_OPTIONS=--max-old-space-size=8192, ver MC64).
+    [ ] Validação MCP 375px e 1440px aprovada (R4).
+
+================================================================================
+SEGMENTO 5 — VALIDAÇÃO DO PLANO (SIMULADA)
+================================================================================
+Skills: verification-loop, a11y-architect
+
+  • Hierarquia/legibilidade: o híbrido A+B coloca o estado do leilão como foco →
+    melhora o "onde olhar" (resolve [C]). ✔
+  • Isolamento: extração em 2 fases (pura → redesign) mantém build verde e diff
+    auditável; risco controlado. ✔
+  • Responsividade: grid/barra colapsa p/ 1 coluna em 375; validar MCP. ✔
+  • Tarja integrada: badge/pill em vez de overlay elimina o paradoxo [D]. ✔
+  REGRESSÕES POSSÍVEIS (e mitigação)
+  • Dashboard usa o MESMO cronômetro? NÃO — Dashboard.jsx:264-285 tem implementação
+    própria (timerColor local). Extrair componentes na aba Lances NÃO o afeta. Se
+    optar pelo hook compartilhado (3.3), aí sim testar o Dashboard também.
+  • Props/contexto: a extração não muda contratos de contexto; risco de quebra baixo
+    se a Fase 1 for 1:1. Testar login/modo/encerrado após cada fase.
+  • Animação/motion: pulsação da direção C/A precisa de prefers-reduced-motion (a11y).
+
+================================================================================
+SEGMENTO 6 — ENTREGA
+================================================================================
+  Deliverables:
+    • C:\Users\Moltbot\Desktop\MC65-PLANO-REDESIGN-GLASS.txt   (este arquivo)
+    • desafio-gut/docs/MC65-redesign-glass.txt                 (cópia versionada)
+    • cloud.md atualizado com o registro do MC65
+  Próximo: MC66 — execução do redesign (após aprovação + direção travada).
+
+--------------------------------------------------------------------------------
+RASTREABILIDADE — arquivos que o MC66 vai TOCAR/CRIAR
+--------------------------------------------------------------------------------
+  ALTERAR : frontend/src/pages/MercadoLances.jsx  (vira "compositor" fino)
+  CRIAR   : frontend/src/components/glass/GlassHeader.jsx
+            frontend/src/components/glass/AuctionTimer.jsx
+            frontend/src/components/glass/ModeSelector.jsx
+            frontend/src/components/glass/AuctionStatusBar.jsx
+            frontend/src/components/glass/AuthArea.jsx        (mover do in-file)
+  OPCIONAL: frontend/src/lib/glassTokens.js  (ou consumir var(--color-gut-*) direto)
+            frontend/src/hooks/useAuctionTimerDisplay.js  (dedup c/ Dashboard — 3.3)
+  REFERÊNCIA (não obrigatório): frontend/src/pages/Dashboard.jsx:264-285 (timer irmão)
+
+================================================================================
+SEGMENTO 7 — DECISÃO TRAVADA PELO OPERADOR (2026-07-09)
+================================================================================
+✅ DIREÇÃO ESCOLHIDA: **C — HERO IMERSIVO "EM BREVE"**
+✅ DECISÃO DE PRODUTO (0.5): **"EM BREVE" É PERMANENTE** (o cronômetro NÃO volta a
+   contar por ora). As duas respostas são coerentes: C é a opção mais enxuta e é
+   viável justamente porque o coming-soon é definitivo.
+
+CONSEQUÊNCIAS PARA O MC66 (roteiro ajustado à Direção C)
+  ETAPA 1 — Extração:
+    • CRIAR components/glass/{GlassHeader, ComingSoonHero, ModeSelector,
+      AuctionStatusBar, AuthArea}.jsx.  (AuctionTimer da versão híbrida é substituído
+      por ComingSoonHero — SEM contagem.)
+  ETAPA 2 — REMOVER o cronômetro vivo (agora código morto sob "EM BREVE"):
+    • Apagar da aba Lances o anel conic-gradient, a barra de progresso e a tarja
+      overlay (MercadoLances.jsx:335-390) e a derivação que só os alimenta:
+      timerDisplay (215-225), timerCor/timerPctDeg/timerUrgente (252-258),
+      tempoRestanteEdicao (211-213). Rever se `useAppTimer`/`tempoRestante` ficam
+      sem uso NESTA página e limpar os imports (build acusa se sobrar referência).
+      ⚠️ NÃO tocar em encerrado/lances/CardLance/TabelaLances (continuam em uso).
+      ⚠️ Escopo = SÓ a aba Lances. Dashboard (264-285) tem timer próprio → intocado.
+  ETAPA 3 — HERO "EM BREVE":
+    • Centralizado, tipografia forte (branco/laranja), selo "Edição R-1", linha
+      "⚡ Relâmpago / 🎫 Programado", subtítulo "O menor lance único vence · Art. 8".
+    • Glass mais profundo (borda laranja sutil, sombra maior) mantendo .gut-glass-standard.
+    • Micro-animação de brilho/pulsação SUAVE com @media (prefers-reduced-motion:reduce)
+      → sem animação (a11y).
+  ETAPA 4 — Corrigir de passagem: [A] remover <div/> vazio; [B] roxo #a78bfa →
+    token oficial no ModeSelector; [E] disclaimer → rodapé fino (AuctionStatusBar).
+  ETAPA 5 — a11y: contraste AA de "EM BREVE" (preferir #fff se #ff6b35 não passar),
+    aria-pressed no modo, landmark/aria-label no header, foco visível.
+  ETAPA 6 — Build verde (NODE_OPTIONS=--max-old-space-size=8192) + validação MCP
+    375px/1440px (Boulder Loop máx 3). Deploy = OPERADOR (MAINNET).
+
+  NOTA: como o timer sai de cena, a animação de vencedor (já desabilitada no MC64)
+  permanece desabilitada — coerente com "EM BREVE permanente".
+
+  RASTREABILIDADE REVISTA (MC66, Direção C)
+    ALTERAR : frontend/src/pages/MercadoLances.jsx (compositor fino; REMOVE timer)
+    CRIAR   : frontend/src/components/glass/{GlassHeader, ComingSoonHero,
+              ModeSelector, AuctionStatusBar, AuthArea}.jsx
+    LIMPAR  : imports/derivações de timer órfãos em MercadoLances.jsx
+    INTOCADO: Dashboard.jsx (timer próprio), AppContext (lógica de negócio)
+
+================================================================================
+FIM — MC65 (plano de redesign). Nenhum código foi alterado.
+DECISÃO TRAVADA: Direção C (Hero "EM BREVE") + EM BREVE permanente → executar no MC66.
+================================================================================

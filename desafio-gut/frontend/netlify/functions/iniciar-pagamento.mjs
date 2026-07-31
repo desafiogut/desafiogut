@@ -18,14 +18,23 @@ import {
   jsonError,
   parseJsonBody,
   ValidationError,
+  validarCPF,      // MC87 (P2-2)
+  validarEmail,    // MC87 (P2-2)
 } from "./_lib/validate.mjs";
 import { getPixProvider, PIX_PROVIDER_NAME } from "./_lib/pix-provider/index.mjs";
-import { gravarMetaPedido } from "./_lib/credito.mjs";
+import { gravarMetaPedido } from "./_lib/meta.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const TTL_SEC = 15 * 60; // 15 minutos para o usuário pagar
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }
@@ -60,15 +69,28 @@ export default async (req) => {
   // Contas de produção do MP podem exigir payer.identification; sem isso o
   // provider cai para o fallback de env (MP_PAYER_*). Campos só lidos se forem
   // strings; documento é normalizado para dígitos no provider.
+  // MC87 (P2-2) — o CPF era aceite como "qualquer string até 32 chars" e o e-mail
+  // sem validação de formato. Não havia risco de injeção (o valor vira JSON para a
+  // API do MP), mas um documento malformado só falhava lá à frente, com um erro
+  // opaco para quem estava a pagar. Agora validamos aqui, com dígitos
+  // verificadores, e devolvemos 400 com a causa.
+  //
+  // Ambos continuam OPCIONAIS: ausentes → o provider cai no fallback de env
+  // (MP_PAYER_*), exatamente como antes. Só o que VEM tem de ser válido.
   let pagador;
   if (body.pagador && typeof body.pagador === "object") {
     const p = body.pagador;
-    pagador = {
-      email:   typeof p.email   === "string" ? p.email.slice(0, 254) : undefined,
-      cpf:     typeof p.cpf     === "string" ? p.cpf.slice(0, 32)     : undefined,
-      tipoDoc: typeof p.tipoDoc === "string" ? p.tipoDoc.slice(0, 8)  : undefined,
-      nome:    typeof p.nome    === "string" ? p.nome.slice(0, 140)   : undefined,
-    };
+    try {
+      pagador = {
+        email:   p.email != null && p.email !== "" ? validarEmail(p.email)     : undefined,
+        cpf:     p.cpf   != null && p.cpf   !== "" ? validarCPF(p.cpf)         : undefined,
+        tipoDoc: typeof p.tipoDoc === "string" ? p.tipoDoc.slice(0, 8)         : undefined,
+        nome:    typeof p.nome    === "string" ? p.nome.slice(0, 140)          : undefined,
+      };
+    } catch (err) {
+      if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
+      throw err;
+    }
   }
 
   let pix;

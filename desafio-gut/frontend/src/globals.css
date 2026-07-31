@@ -1,5 +1,11 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap');
+/* MC88.36 — fontes auto-hospedadas. Substitui o @import para
+   fonts.googleapis.com, que era pior do que um <link>: só era descoberto depois
+   de este CSS ser descarregado e analisado, acrescentando mais um salto em série
+   a um host externo, no caminho crítico do arranque.
+   Montserrat foi REMOVIDA: `--font-display` e `.font-display` existiam mas
+   nenhum componente as usava (verificado por varrimento de todos os .jsx). */
+@import "./fontes.css";
 
 /* ── Design Tokens — DesafioGUT v3 · Navy × Orange Fire ──────────────────── */
 @theme {
@@ -66,7 +72,11 @@
   --radius-card:                0.75rem;
 
   /* Typography */
-  --font-display: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  /* MC88.36 — era 'Montserrat', que deixou de ser carregada por não ter um
+     único consumidor. Apontar para Orbitron (a fonte de títulos realmente usada
+     em toda a app) mantém o token honesto: quem vier a usá-lo recebe a fonte de
+     display do produto, e não o fallback Arial de uma família ausente. */
+  --font-display: 'Orbitron', 'Helvetica Neue', Arial, sans-serif;
   --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
 
@@ -178,6 +188,26 @@
 }
 
 .gut-lightning-active { animation: gut-lightning 1.2s ease-out forwards; }
+
+/* MC88.40 — valor ainda por confirmar (estado "stale" do saldo).
+   Substitui o sufixo textual " (antigo)" introduzido pelo MC88.34, que era
+   jargão interno exposto ao utilizador. Medido no aparelho: as alternativas
+   textuais do plano ("(atualizando...)", "(a atualizar)") não cabiam no tile
+   — 145 px e 123 px contra 121 px disponíveis — e seriam cortadas com
+   reticências, ficando pior que o original.
+   Esbater custa ZERO de largura e mantém a distinção perceptível. */
+@keyframes gut-valor-pendente {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.72; }
+}
+.gut-valor-pendente {
+  animation: gut-valor-pendente 1.8s ease-in-out infinite;
+}
+/* Sem animação para quem pede menos movimento — mas mantém-se esbatido, senão
+   perdia-se a informação em vez de se perder só o movimento (R3 do MC20.2). */
+@media (prefers-reduced-motion: reduce) {
+  .gut-valor-pendente { animation: none; opacity: 0.55; }
+}
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
@@ -347,10 +377,34 @@ img, svg { display: block; }
    Este é o padrão-ouro — todas as superfícies de vidro do app usam esta classe.
 
    MC25.4: @apply no backdrop-filter para que o Tailwind v4 gere o CSS real
-   (raw backdrop-filter é stripado por ser "managed property" no build). */
+   (raw backdrop-filter é stripado por ser "managed property" no build).
+
+   ── MC82.1 — VIDRO SÓLIDO POR OMISSÃO (medido no aparelho) ──────────────────
+   O backdrop-filter era o gargalo DOMINANTE de render. Medições no Redmi
+   21091116UG (Android 13, WebView Chrome 150), Dashboard em repouso:
+
+     11 camadas · blur 24px ................. 17,5 fps   (baseline MC82)
+     11 camadas · blur  8px ................. 19,8 fps
+     11 camadas · blur  4px ................. 23,1 fps
+     11 camadas · blur  0px (ainda declarado) 31,2 fps   ← raio ZERO
+      1 camada  · blur  8px .................. 59,8 fps
+      0 camadas · fundo sólido ............... 60,2 fps
+
+   A lição: o custo é a EXISTÊNCIA da camada de backdrop-filter (cada uma força
+   um read-back do backdrop na GPU), NÃO o raio do blur. Baixar 24px→8px rendeu
+   só +2 fps; remover as camadas rendeu +40. Por isso o padrão passa a ser SEM
+   backdrop-filter, com o navy mais opaco (0.88) a fazer o papel de separação.
+
+   Houve uma versão intermédia que mantinha vidro real (.gut-glass--blur) no
+   painel de destaque do Dashboard — 56,2 fps. O operador preferiu o tom navy
+   uniforme, por isso esse modificador foi removido e NENHUMA superfície do app
+   usa backdrop-filter. Se algum dia voltar, tratar como orçamento: 1 camada
+   custava ~7 fps neste aparelho, 11 camadas custavam ~40.
+
+   ⚠️ NÃO reintroduzir backdrop-filter aqui sem medir no aparelho. Esta é a
+   única alteração do MC82.1 e vale +38 fps. */
 .gut-glass-standard {
-  background: rgba(13,18,53,0.25);
-  @apply backdrop-blur-[24px] backdrop-saturate-[1.35];
+  background: rgba(13,18,53,0.88);
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05);
   border-radius: 14px;
@@ -374,6 +428,36 @@ img, svg { display: block; }
 .gut-glass-standard.gut-glass--solid {
   background: rgba(13,18,53,0.92);
 }
+/* ── MC89.4 — Painel de administração: superfície de LEITURA ─────────────────
+   O MC89.3 mediu o /admin com `backgroundColor: rgba(0,0,0,0)` no h1, no pai do
+   h1 e no container raiz: o texto assentava DIRECTAMENTE na ilustração de fundo
+   e havia frases que não se liam ("Logado como admin: …", "Autentique-se para
+   ver as métricas.").
+
+   Reutiliza o MESMO valor do `.gut-glass--solid` (MC25.7), criado pela mesma
+   razão no painel de chat do GUTO. Não se inventa fundo novo nem se acrescenta
+   cor à paleta: um ecrã de trabalho neutro faz-se com o navy que já existe —
+   NÃO com branco, que nesta app seria um corpo estranho.
+
+   Tipografia de corpo (Inter) em vez de Orbitron: uma fonte de display num
+   painel grita sem informar. */
+.admin-panel {
+  background: rgba(13, 18, 53, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  font-family: var(--font-body);
+  color: #e8f0fe;
+}
+/* Títulos do painel: peso em vez de cor. O laranja de marca (#f5a623) fica
+   RESERVADO para acção irreversível — se tudo é destaque, nada avisa. */
+.admin-panel h1,
+.admin-panel h2,
+.admin-panel h3 {
+  font-family: var(--font-body);
+  color: #e8f0fe;
+  letter-spacing: 0;
+}
+
 /* MC45 — banner quadrado clicável da edição: hover sutil + foco visível (a11y). */
 .gut-edicao-banner {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -422,7 +506,7 @@ img, svg { display: block; }
 }
 
 /* ── Font utilities ───────────────────────────────────────────────────────── */
-.font-display  { font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif; }
+.font-display  { font-family: 'Orbitron', 'Helvetica Neue', Arial, sans-serif; } /* MC88.36 — ver --font-display */
 .font-mono-gut { font-family: 'JetBrains Mono', monospace; }
 
 /* ── Motion Accessibility ─────────────────────────────────────────────────── */

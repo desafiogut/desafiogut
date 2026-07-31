@@ -27,11 +27,16 @@ afterEach(() => {
   else process.env.MP_WEBHOOK_SECRET = SAVED;
 });
 
-test("sem MP_WEBHOOK_SECRET → fail-open (enforced=false, ok=true)", () => {
+// MC87 (P1-2) — CONTRATO INVERTIDO. Este teste afirmava o fail-open histórico:
+// sem segredo, a validação era pulada e o webhook aceitava qualquer requisição.
+// O default passou a ser fail-CLOSED; o fail-open só existe agora sob a válvula
+// explícita MP_WEBHOOK_ALLOW_UNSIGNED (coberta em _tests/mc87-seguranca.test.mjs).
+test("MC87: sem MP_WEBHOOK_SECRET → fail-closed (ok=false, enforced=true)", () => {
   delete process.env.MP_WEBHOOK_SECRET;
+  delete process.env.MP_WEBHOOK_ALLOW_UNSIGNED;
   const r = validarAssinaturaMp(reqCom({}), DATA_ID);
-  assert.equal(r.ok, true);
-  assert.equal(r.enforced, false);
+  assert.equal(r.ok, false);
+  assert.equal(r.enforced, true);
 });
 
 test("com secret + assinatura válida → ok=true", () => {

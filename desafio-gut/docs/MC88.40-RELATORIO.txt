@@ -1,0 +1,194 @@
+================================================================================
+MC88.40 — REMOÇÃO DO JARGÃO "(ANTIGO)" DA INTERFACE
+================================================================================
+Data......: 2026-07-28
+Branch....: feat/mc88.29-fila-tarefas · 61e7e0e (S0) · 21f50b8 (S1)
+Aparelho..: fiem7xlvcufe855h · Xiaomi pissarropro (21091116UG) · Android 36
+Build.....: `npm run build:apk` (R10 cumprida) + gradlew assembleDebug (JBR 21)
+Bundle....: "✓ bundle coerente com PRODUÇÃO (mainnet)"
+Suite.....: 249/249 antes e depois
+Baseline..: APK do MC88.39 (commit b5108f6)
+
+================================================================================
+VEREDITO: OBJETIVO CUMPRIDO — MAS NÃO COMO O PLANO PEDIA
+================================================================================
+  ANTES                              DEPOIS
+  ─────────────────────────────      ──────────────────────────────
+  R$ 0.00 (antigo)                   R$ 0.00   ← esbatido, a pulsar
+  12 (antigo)                        12        ← esbatido, a pulsar
+  (e "12 senhas ◇" na Carteira)      (quando confirma, fica sólido)
+
+  Nenhum sufixo textual em ecrã nenhum. A distinção cache/fresco mantém-se,
+  agora por opacidade — e está PROVADA por medição, não assumida.
+
+================================================================================
+⚠️ A PROPOSTA DO PLANO NÃO CABIA — MEDIDO ANTES DE ESCREVER CÓDIGO
+================================================================================
+O S1.2 mandava trocar " (antigo)" por " (atualizando...)".
+
+O valor do tile usa `whiteSpace: nowrap` + `textOverflow: ellipsis`
+(StatTile.jsx:32-36), e o próprio componente já avisava do risco de "estourar
+em telas estreitas". Medi a largura real de cada alternativa, injetando um
+<span> oculto com a mesma fonte, peso e espaçamento — não por estimativa:
+
+  TILE "Saldo (R$)" — 121 px          TILE "Senhas" — 79 px
+  ──────────────────────────          ─────────────────────
+    98 px  cabe  "R$ 0.00 (antigo)"     64 px  cabe  "12 (antigo)"
+   145 px  CORTA "…(atualizando...)"   110 px  CORTA "12 (atualizando...)"
+   123 px  CORTA "…(a atualizar)"       88 px  CORTA "12 (a atualizar)"
+    48 px  cabe  "R$ 0.00"              13 px  cabe  "12"
+
+Executar o plano à letra teria mostrado "R$ 0.00 (atualiz…" e "12 (atualiz…" —
+jargão CORTADO A MEIO, estritamente pior que o original. Por isso levei a
+decisão ao operador com as larguras em mão, em vez de a tomar sozinho.
+
+DECISÃO DO OPERADOR: valor esbatido, sem texto, nos quatro ficheiros.
+
+================================================================================
+⚠️ UM ERRO MEU, CORRIGIDO A MEIO DA EXECUÇÃO
+================================================================================
+Ao apresentar a decisão afirmei "7 ocorrências de (antigo) em 4 ficheiros".
+Estava errado — tinha cruzado dois varrimentos diferentes (um por "antigo",
+outro por "Suffix") e li-os como se fossem o mesmo conjunto.
+
+O estado real, verificado ficheiro a ficheiro:
+
+    " (antigo)"   Dashboard.jsx:80,84 · CardLance.jsx:267,273   (4 em 2 ficheiros)
+    " ◇"          MinhaCarteira.jsx:62,69 · Sidebar.jsx:95      (3 em 2 ficheiros)
+
+A Carteira e a Sidebar NUNCA mostraram "(antigo)" — mostravam um losango solto:
+"12 senhas ◇".
+
+A decisão (quatro ficheiros) manteve-se, e por uma razão que a correção não
+altera: o "◇" é o mesmo defeito noutra roupagem. Um símbolo sem legenda ao lado
+de um saldo não diz nada a ninguém — é jargão gráfico em vez de textual. Os dois
+foram substituídos pelo mesmo esbatido.
+
+Registo o erro porque ele chegou a influenciar a pergunta que fiz ao operador.
+
+================================================================================
+IMPLEMENTAÇÃO
+================================================================================
+Uma classe partilhada, em globals.css:
+
+    @keyframes gut-valor-pendente { 0%,100% { opacity: .45 } 50% { opacity: .72 } }
+    .gut-valor-pendente { animation: gut-valor-pendente 1.8s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) {
+      .gut-valor-pendente { animation: none; opacity: .55; }
+    }
+
+Em reduced-motion perde-se o MOVIMENTO, não a informação — o valor continua
+esbatido. Se se removesse a opacidade junto com a animação, quem pede menos
+movimento deixaria de conseguir distinguir cache de confirmado.
+
+Aplicada em: StatTile (via prop `pendente`), Dashboard, MinhaCarteira (dois
+blocos), Sidebar e CardLance.
+
+NÃO ALTERADO, de propósito:
+  • os sufixos " ⏳" (loading) e " ✗" (error) ficam — são estados diferentes de
+    "stale", ocupam um caractere e não são o jargão que este MC veio remover;
+  • a máquina de estados (idle|loading|ok|stale|error) não foi tocada. Este MC
+    muda apenas como o estado "stale" é APRESENTADO.
+
+================================================================================
+VALIDAÇÃO — A PARTE QUE QUASE ME ENGANOU
+================================================================================
+O meu instrumento de medição lê TEXTO. Depois desta alteração o texto é
+idêntico em cache e em confirmado, portanto ele deixou de ver qualquer
+transição:
+
+    corrida 1   2131 ms   "12"   "R$ 0.00"     (e mais nada até ao fim)
+    corrida 2   1988 ms   "12"   "R$ 0.00"
+    corrida 3   1972 ms   "12"   "R$ 0.00"
+
+Isto é exatamente o aspeto que teria um FALSO VERDE: se eu tivesse removido o
+sufixo sem aplicar o esbatido, o resultado impresso seria IDÊNTICO — e eu teria
+entregado a Opção "não distinguir nada", que o operador rejeitou.
+
+Por isso medi a OPACIDADE COMPUTADA, não a classe:
+
+  t(ms) | TILE "Senhas"              | TILE "Saldo (R$)"
+  ------|----------------------------|---------------------------
+   2407 | 12  op=0.450 PENDENTE      | R$ 0.00  op=0.450 PENDENTE
+   4583 | 12  op=1.000 sólido        | R$ 0.00  op=0.533 PENDENTE
+   6091 | 12  op=1.000 sólido        | R$ 0.00  op=0.453 PENDENTE
+   9385 | 12  op=1.000 sólido        | R$ 0.00  op=1.000 sólido
+
+  52 amostras com a classe aplicada · opacidade entre 0.450 e 0.720
+  → a pulsação corresponde exatamente ao keyframe (0.45 ↔ 0.72)
+
+A distinção existe, é medível, e desaparece quando cada saldo confirma —
+primeiro as senhas (4583 ms), depois o R$ (9385 ms), cada um por sua conta.
+
+================================================================================
+SEM REGRESSÃO
+================================================================================
+  CLS ....... 0 em todas as 7 medições
+  FCP ....... 544–636 ms   (era 496–580 ms)
+  domMs ..... 1972 / 1988 / 2131 ms   (era 1999 / 2024 / 2714 ms)
+  Suite ..... 249/249
+  Backend ... intocado
+
+  LCP — VER A NOTA ABAIXO.
+
+================================================================================
+NOTA HONESTA SOBRE O LCP
+================================================================================
+As primeiras 5 amostras deste APK deram 2376–2936 ms (mediana 2740), contra
+2336/2340 medidas no MC88.39. Isso parecia uma regressão de ~400 ms.
+
+Mas a baseline do MC88.39 tinha apenas DUAS amostras, e ao longo de toda esta
+sessão o LCP oscilou entre 2296 e 2936 ms no mesmo aparelho. Comparar 5
+amostras com 2 não permite concluir nada.
+
+Não há mecanismo plausível: a animação é de opacidade (composta pelo GPU, fora
+do layout) e incide num <span> pequeno, enquanto o elemento LCP desta app é o
+VÍDEO do carrossel. Mas "não há mecanismo plausível" não é uma medição.
+
+Por isso corri um A/B INTERCALADO do LCP (3 ciclos, ordem trocada, aquecimento
+descartado após cada instalação):
+
+  ciclo 1  MC8839  2852 ms      ciclo 1  MC8840  2492 ms
+  ciclo 2  MC8840  2364 ms      ciclo 2  MC8839  2632 ms
+  ciclo 3  MC8839  2636 ms      ciclo 3  MC8840  3300 ms
+
+  MC8839  n=3  min 2632  mediana 2636  máx 2852
+  MC8840  n=3  min 2364  mediana 2492  máx 3300
+  ─────────────────────────────────────────────
+  DELTA DA MEDIANA: −144 ms
+
+NÃO HÁ REGRESSÃO. A "regressão de ~400 ms" era um artefacto de comparar 5
+amostras contra 2, num aparelho cujo LCP oscila naturalmente ~600 ms entre
+corridas. Medido lado a lado, o MC88.40 fica igual ou ligeiramente melhor — e
+os −144 ms estão dentro do ruído, tal como os +400 estavam.
+
+Antes de confiar neste A/B verifiquei ainda que os dois ficheiros .apk eram
+mesmo diferentes: tinham EXATAMENTE o mesmo tamanho (36 646 502 bytes), o que
+levantou a suspeita de eu estar a comparar o mesmo build consigo próprio. Os
+MD5 são distintos (f66d139d… e 48479522…) — foi coincidência de tamanho.
+
+================================================================================
+PENDÊNCIAS
+================================================================================
+ 1. Os estados " ⏳" e " ✗" continuam a ser símbolos sem legenda. São menos
+    frequentes que o "stale" (o MC88.39 removeu o "⏳" do caminho normal do R$),
+    mas se um dia aparecerem ao utilizador terão o mesmo problema.
+ 2. O saldo em R$ continua a demorar ~6–9 s a confirmar. Este MC mudou a
+    APARÊNCIA da espera, não a espera — que depende do Privy validar a sessão
+    pela rede (ver MC88.38-BASELINE-FRICCAO.txt).
+ 3. O esbatido não foi testado com leitor de ecrã. Opacidade não é anunciada
+    por tecnologias de apoio: para quem usa leitor, cache e confirmado são hoje
+    indistinguíveis. O sufixo textual, apesar de mau, era lido. Se a
+    acessibilidade for um requisito, isto precisa de um `aria-label` ou
+    `aria-busy` — não estava no escopo e não foi feito.
+
+================================================================================
+EVIDÊNCIAS
+================================================================================
+  Diagnóstico: desafio-gut/docs/MC88.40-SUFIXO-DIAGNOSTICO.txt
+  Commits: 61e7e0e (S0) · 21f50b8 (S1)
+  Instrumentação (scratchpad): largura.mjs (larguras por span oculto) ·
+    esbatido.mjs (opacidade computada ao longo do arranque) · friccao.mjs ·
+    lcp.mjs · ablcp.mjs · shots2.mjs (capturas CDP)
+  Capturas: w-2700ms.png (antes e depois, mesmo instante do arranque)
+================================================================================

@@ -1,0 +1,136 @@
+================================================================================
+MC89 — SEGMENTO 2 · VIABILIDADE E RISCOS
+================================================================================
+Data....: 2026-07-29
+Base....: MC89-MAPA-CODIGO.txt + MC89-REQUISITOS.txt
+Código..: ZERO alterações (R1)
+
+================================================================================
+1. VIABILIDADE, REQUISITO A REQUISITO
+================================================================================
+
+RF-01 · RECONHECIMENTO DO ADM ......................... TRIVIAL (sem código)
+  Entrar uma vez com o e-mail, ler o endereço, fazer o POST que já existe.
+  Risco: nenhum técnico. Um risco de PROCESSO: se o endereço for anotado errado,
+  concede-se admin a uma carteira que não é a do operador. Mitigação: confirmar
+  o endereço lendo-o na própria app com a sessão aberta, e verificar a seguir
+  com `admin-list?endereco=` que devolve isAdmin=true.
+
+RF-02 · PAINEL DE MÉTRICAS ............................ VIÁVEL, é o grosso
+  Todas as fontes existem e já têm cliente escrito: Supabase (cotas, saldo_rs,
+  saldo_rs_creditos, fila_tarefas), Blobs (lances-relâmpago, edições) e as
+  métricas de pulso já calculadas.
+  O trabalho real é: uma função de agregação, uma página, e decidir o que cada
+  número significa.
+  ⚠️ Restrição de desempenho MEDIDA (MC88.31): `_lib/signer` arrasta ethers
+     (~2 s de cold start) e `_lib/admin-auth` ~1,3 s. A agregação não pode
+     importar ethers no caminho comum — o saldo da EOA (que precisa de RPC) tem
+     de ser um pedido SEPARADO e opcional, senão o painel inteiro paga 2 s.
+
+RF-03 · GUTO ADM DE LEITURA ........................... VIÁVEL, barato
+  É acrescentar padrão + handler ao roteador, exatamente como o MC88.44 fez, e
+  chamar a MESMA agregação do RF-02. Um número, uma fonte.
+
+RF-04 · COMANDOS RÁPIDOS .............................. VIÁVEL, barato
+  Os comandos já existem no backend (fila, kill switch, caches). O que falta são
+  botões e confirmação. Nenhum endpoint novo perigoso — reusam-se os que já
+  estão gated.
+
+RF-05 · PRESENÇA ONLINE ............................... VIÁVEL, MAU NEGÓCIO
+  Exige heartbeat periódico do cliente + armazenamento com expiração.
+  Custos concretos, não teóricos:
+    · uma chamada de rede a cada N segundos POR utilizador ativo, para sempre;
+    · no APK isso é bateria e dados móveis (o MC88.36–39 gastou-se a cortar
+      milissegundos de arranque; isto acrescenta tráfego permanente);
+    · escrita constante numa tabela → é a única parte do sistema que escreve
+      sem o utilizador ter feito nada.
+  E o que se ganha: um número que, com a base de utilizadores atual (7 cotas,
+  5 saldos, 18 créditos), será quase sempre 0 ou 1.
+  RECOMENDAÇÃO: adiar. Se o objetivo é "há alguém a usar agora?", "última
+  atividade nos últimos 5 minutos" derivada dos pedidos que JÁ acontecem dá 80%
+  da resposta com 0% do custo. Ver a alternativa no S3.
+
+RF-06 · AUDITORIA CONSULTÁVEL ......................... VIÁVEL, médio
+  Já se escreve auditoria; falta persistir onde se possa consultar e cobrir as
+  ações que não passam pelo GUTO. Tabela nova no Supabase + escrita nos pontos
+  de comando + leitura paginada.
+  ⚠️ Nota de conformidade: o log guarda endereços (dado pessoal indireto). A
+     política de retenção do projeto (docs/lgpd-politica-retencao.md) tem de
+     abranger esta tabela ANTES de ela existir, não depois.
+
+RF-07 · NOTIFICAÇÕES PUSH ............................. BLOQUEADO por externo
+  Exige projeto FCM, chave, plugin Capacitor e rebuild do APK. Nada disto
+  existe. Não é difícil; é dependência de terceiros e do operador.
+
+================================================================================
+2. RISCOS
+================================================================================
+
+R-1 · UM COMANDO ADMIN DESTRUTIVO DISPARADO POR ENGANO ............ ALTO
+  Botões que forçam filas, pausam o sistema ou invalidam caches ficam a um
+  toque de distância, num telemóvel, com o dedo.
+  MITIGAÇÃO: confirmação explícita por comando (escrever/confirmar, não só um
+  "ok"); rate-limit nos mutantes; auditoria de todos; e — o mais importante —
+  NENHUM comando novo que ainda não exista e esteja testado no backend. A Fase 2
+  só expõe o que já é usado hoje pelo GUTO.
+
+R-2 · O PAINEL MOSTRAR NÚMEROS ERRADOS ............................ ALTO
+  Pior do que não ter painel: decidir com base num número mal definido. O caso
+  concreto é o "total de utilizadores" (D1) — contar endereços vistos nos dados
+  próprios NÃO é contar registados.
+  MITIGAÇÃO: RNF-06. O rótulo diz o que o número é; indisponível mostra-se como
+  indisponível e nunca como zero. Cada métrica leva, no código, um comentário a
+  dizer de onde vem.
+
+R-3 · O PAINEL FICAR LENTO E O ADM DEIXAR DE O ABRIR .............. MÉDIO
+  Agregar 5 fontes num pedido, com cold start, dá facilmente >3 s.
+  MITIGAÇÃO: separar o que é rápido (Supabase) do que é lento (RPC on-chain);
+  o lento carrega depois, por pedido próprio. Cache curto (30–60 s) do lado do
+  servidor — a métrica não precisa de ser ao segundo. Nunca importar ethers no
+  caminho comum (MC88.31).
+
+R-4 · EXPOSIÇÃO DE DADOS AGREGADOS ................................ MÉDIO
+  Um painel de métricas é, por definição, um resumo de tudo. Se o gate falhar,
+  vaza-se mais num pedido do que em qualquer endpoint atual.
+  MITIGAÇÃO: `guardAdmin` em todos os endpoints novos; a rota `/admin` continua
+  a decidir por dentro (padrão atual), mas o BACKEND é a única fronteira que
+  conta. Um teste por endpoint a afirmar 401 sem credencial.
+
+R-5 · A LISTA DE ADMINS SÓ TER UM ENDEREÇO ........................ MÉDIO
+  Hoje o Blob persistido está vazio: a coordenação é a única admin. Se essa
+  carteira se perder, ninguém entra no painel — e a recuperação passa por
+  redeploy com outra variável de ambiente.
+  MITIGAÇÃO: o RF-01 resolve isto ao acrescentar o segundo admin. É, por si só,
+  razão para o fazer cedo.
+
+R-6 · CRESCER A SUPERFÍCIE ADMIN E NÃO A TESTAR ................... MÉDIO
+  18 funções já têm gate; acrescentar mais sem teste é como o resto cresceu.
+  MITIGAÇÃO: cada endpoint novo entra com teste de gate no mesmo commit. Piso
+  atual 272/272.
+
+R-7 · A PRESENÇA ONLINE CUSTAR BATERIA NO APK ..................... MÉDIO
+  Ver RF-05. MITIGAÇÃO: não a construir agora.
+
+R-8 · O ADM NÃO SER O OPERADOR ................................... BAIXO/GRAVE
+  Baixa probabilidade, consequência grave: acrescentar à lista um endereço
+  errado é dar controlo da plataforma a terceiro.
+  MITIGAÇÃO: procedimento do RF-01, com verificação a seguir.
+
+================================================================================
+3. VEREDICTO DE VIABILIDADE
+================================================================================
+O sistema ADM é VIÁVEL e está muito mais perto do que o briefing supõe: a
+identidade, a autorização, o painel, os comandos e a auditoria já existem em
+alguma forma. O que falta é sobretudo OBSERVAÇÃO — agregar e mostrar.
+
+Duas coisas devem sair do caminho crítico:
+  · presença online (RF-05) — custo permanente, valor quase nulo à escala atual;
+  · push (RF-07) — dependência externa que não bloqueia nada do resto.
+
+E uma coisa deve entrar imediatamente, antes de qualquer código:
+  · RF-01 — porque não custa nada, porque é o que o operador pediu, e porque
+    hoje existe UM único admin e isso é um risco por si (R-5).
+
+================================================================================
+FIM DO SEGMENTO 2
+================================================================================

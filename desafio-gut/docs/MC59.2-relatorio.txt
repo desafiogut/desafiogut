@@ -1,0 +1,154 @@
+================================================================================
+MC59.2 — CORREÇÃO DOS PROBLEMAS DE ALTA PRIORIDADE (B-2, B-4, C-1, D-1)
+DesafioGUT · Pré-Mainnet · RELATÓRIO FINAL
+================================================================================
+Data...........: 2026-07-08
+Branch.........: feat/mc59.2-correcao-altos (de feat/mc59.1-correcao-signer)
+Modelo.........: Opus 4.8 + ECC (tdd-workflow, verification-loop, security-scan)
+Deliverables...: MC59.2-RELATORIO.txt · docs/MC59.2-relatorio.txt · cloud.md · security_audit.md
+
+--------------------------------------------------------------------------------
+0. VEREDITO HONESTO (diverge do R8)
+--------------------------------------------------------------------------------
+R8 pedia: "✅ ALTOS RESOLVIDOS — mainnet liberada". NÃO posso declarar isso.
+Resultado real:
+  • C-1  ✅ RESOLVIDO (crédito/reembolso atómicos via CAS).            [+1 follow-up MEDIUM]
+  • D-1  ✅ ENDEREÇADO (postura segura: fail-open observável + opt-in). [gate: operador setar segredo]
+  • B-4  ✅ ENDEREÇADO (config centralizada; SEM virar contrato).       [decisão do operador]
+  • B-2  ⚠️ NÃO RESOLVIDO — tentativa cirúrgica REVERTIDA após achado HIGH de segurança.
+         Mantido só o ganho seguro (alerta de reembolso falho). Fix real → MC59.3.
+
+READINESS GLOBAL: 🟡 3 de 4 endereçados; B-2 permanece aberto. Mainnet ainda NÃO
+liberada. Decisão de escopo tomada COM o operador (perguntas respondidas): D-1
+seguro (sem quebrar prod), sem janela de replay; B-4 só centralizar config.
+
+--------------------------------------------------------------------------------
+1. C-1 — CRÉDITO/REEMBOLSO DE SALDO R$ ATÓMICOS ✅
+--------------------------------------------------------------------------------
+Arquivo: _lib/saldoRs.mjs
+Problema: débito já usava CAS; crédito e reembolso usavam read-modify-write
+  (overwrite via setSaldo) → lost update sob concorrência crédito+débito.
+Correção: novo helper `ajustarSaldoRsAtomico(ender, delta, motivo)` — loop CAS
+  (lê → garante linha → casSaldo, até MAX_TENTATIVAS_DEBITO=5), espelhando o
+  débito. Crédito e reembolso passam a usá-lo. Removida função órfã
+  `gravarSaldoRsCentavos`.
+TDD: 2 testes de lost-update DETERMINÍSTICOS (mock injeta débito concorrente
+  entre read e write) RED→GREEN + 3 regressões. Suíte: mc592-c1 5/5, mc361 7/7,
+  double-spend 3/3.
+Revisão de segurança: núcleo CAS APROVADO (fecha o lost-update principal).
+  FOLLOW-UP (MEDIUM, MC59.3): o "garante linha" no bootstrap de endereço NOVO usa
+  upsert incondicional (setSaldo) — mesma janela estreita pré-existente do
+  debitarSaldoRs (primeira escrita do endereço). Corrigir com INSERT ... ON
+  CONFLICT DO NOTHING no store, junto ao mesmo ponto do débito.
+
+--------------------------------------------------------------------------------
+2. D-1 — HMAC DO WEBHOOK MP (POSTURA SEGURA) ✅
+--------------------------------------------------------------------------------
+Arquivos: _lib/mp-signature.mjs, webhook-mercadopago.mjs
+Decisão (operador): manter enforce-quando-presente; NÃO adicionar janela temporal
+  de replay (o MP reenvia com ts ORIGINAL por horas → janela estrita rejeitaria
+  retries legítimos; a idempotência por pedidoId já cobre replay→double-credit).
+Correção:
+  • Flag opt-in `MP_WEBHOOK_ENFORCE` (1/true/on/yes): com o segredo AUSENTE,
+    fail-CLOSED (rejeita) em vez do fail-open — a válvula para o operador fechar
+    100% quando quiser, sem quebrar prod hoje.
+  • Fail-open deixou de ser silencioso: emite `captureSecurityAlert
+    ("webhook_mp_fail_open")` → visível para o operador setar MP_WEBHOOK_SECRET.
+TDD: mc592-d1 5/5 (fail-closed com enforce; variantes; regressões) + mc3917-mp
+  5/5 intactos.
+GATE OPERADOR: setar MP_WEBHOOK_SECRET (ativa a validação real) e, opcionalmente,
+  MP_WEBHOOK_ENFORCE=true (proíbe o fail-open).
+
+--------------------------------------------------------------------------------
+3. B-4 — CONFIG DE REDE/CONTRATO CENTRALIZADA (SÓ CONFIG) ✅
+--------------------------------------------------------------------------------
+Arquivos: NOVO src/lib/network.js; web3.js, CardLance.jsx, useTrocarPorSenhas.js,
+  Seguranca.jsx.
+Decisão (operador): só centralizar config — NÃO virar o contrato ativo.
+Correção:
+  • Fonte ÚNICA derivada de env: CONTRATO (sem fallback), CHAIN_ID_DEC/HEX,
+    EXPLORER_URL, explorerTx/explorerAddress.
+  • REMOVIDO o fallback hardcoded para o contrato ANTIGO (0x59A73Acc…F6D5) em
+    web3.js e o literal em Seguranca.jsx → agora falha ALTO se a env faltar, em
+    vez de apontar em silêncio para contrato abandonado.
+  • Eliminados literais Sepolia: chainId (web3.js/CardLance), switchChain
+    (useTrocarPorSenhas), links sepolia.etherscan (CardLance/Seguranca).
+  • chainId/explorer têm DEFAULT Sepolia, sobrescrevíveis por env
+    (VITE_CHAIN_ID/VITE_EXPLORER_URL) → o flip de mainnet vira mudança de ENV.
+  • O endereço IMPLANTADO NÃO foi alterado (fica no env do operador).
+Validação: NÃO há runner de teste no frontend (só vite build) → validado por
+  BUILD VERDE (6.34s) + grep confirmando zero literais de rede/contrato antigo
+  remanescentes (só o default único em network.js).
+PENDENTE (operador): resolver o drift MC56 = garantir VITE_CONTRATO_SEPOLIA =
+  0x825bBd3F…eF06 no build de produção (rebuild). Esta correção prepara o terreno;
+  não decide o endereço.
+
+--------------------------------------------------------------------------------
+4. B-2 — TX.WAIT SÍNCRONO / AUTO-REEMBOLSO ⚠️ NÃO RESOLVIDO (revertido)
+--------------------------------------------------------------------------------
+Arquivo: comprar-senhas.mjs
+Contexto: a migração para fila assíncrona (resposta 202) depende da fila MC39.20,
+  que está INERTE (migração não aplicada) + mudaria o contrato de resposta do
+  frontend → fora de escopo seguro agora (→ MC59.3).
+Tentativa cirúrgica: re-verificar saldoSenhas on-chain antes de auto-reembolsar
+  (não reembolsar uma compra que confirmou).
+ACHADO DE SEGURANÇA (HIGH) → REVERTIDO: o guard comparava o saldo AGREGADO do
+  endereço; sob concorrência no MESMO endereço (duplo-clique/retry — o próprio
+  gatilho deste catch), a requisição A podia atribuir o crédito da requisição B a
+  si e NÃO reembolsar → PERDA FINANCEIRA AO USUÁRIO (debitado 2×, senhas de B só).
+  O comportamento original (reembolsar sempre) nunca causa perda ao usuário.
+Estado final: revertido ao reembolso-sempre (seguro ao usuário) + MANTIDO o ganho
+  seguro C-4 (reembolso falho emite captureSecurityAlert — deixa de ser silencioso).
+Fix correto (MC59.3): atribuição por tx-hash específico (capturar tx.hash antes do
+  wait em contract.mjs e checar o receipt dessa tx) OU serialização por endereço,
+  OU a migração para fila assíncrona.
+
+--------------------------------------------------------------------------------
+5. VERIFICATION REPORT
+--------------------------------------------------------------------------------
+Build.........: PASS (vite build ✓ ~5–6s, verde após cada segmento)
+node --check..: PASS (todos os .mjs alterados)
+Types.........: N/A (projeto JS/JSX, sem tsc)
+Lint..........: N/A (sem script lint no projeto)
+Tests.........: PASS — superfície afetada 54/54 na verificação consolidada;
+   após revert 25/25 no núcleo financeiro. Novos: mc592-c1 (5), mc592-d1 (5).
+Security scan.: secret-scan dos diffs limpo (único match = segredo de TESTE).
+   Revisão adversarial (security-reviewer): C-1 NICE, B-2 NAUGHTY(HIGH)→REVERTIDO.
+Diff produção.: saldoRs.mjs, mp-signature.mjs, webhook-mercadopago.mjs,
+   comprar-senhas.mjs (backend) + network.js(novo)/web3.js/CardLance/
+   useTrocarPorSenhas/Seguranca (frontend). + 2 arquivos de teste.
+Overall.......: READY para C-1/D-1/B-4; B-2 NOT READY (deferido MC59.3).
+
+--------------------------------------------------------------------------------
+6. TESTE "MAINNET SIMULADO" (Segmento 6) — HONESTIDADE DE ESCOPO
+--------------------------------------------------------------------------------
+- C-1 (concorrência de saldo): coberto por testes determinísticos de lost-update.
+- D-1 (webhook): coberto por testes unitários (fail-closed/fail-open/válido).
+- B-4 (config de rede): validado por build; sem tx real (não há runner frontend).
+- B-2: N/A (revertido).
+NÃO executado: fluxo comprar-senhas/PIX ON-CHAIN real — exige
+  COORDENACAO_PRIVATE_KEY/MP_WEBHOOK_SECRET (operador manuseia segredos;
+  SIGNER_READY=MISSING em prod). Validação viva fica para o operador.
+
+--------------------------------------------------------------------------------
+7. PENDÊNCIAS PARA MAINNET (após MC59.2)
+--------------------------------------------------------------------------------
+  [ ] B-2 real (MC59.3): tx-hash attribution ou fila assíncrona.
+  [ ] C-1 follow-up (MC59.3): bootstrap INSERT..DO NOTHING (credito+debito).
+  [ ] Operador: setar MP_WEBHOOK_SECRET (+ MP_WEBHOOK_ENFORCE=true).
+  [ ] Operador: SIGNER_BACKEND=local-key + COORDENACAO_PRIVATE_KEY (MC59.1).
+  [ ] Operador: VITE_CONTRATO_SEPOLIA = 0x825bBd3F…eF06 + rebuild (drift MC56).
+  [ ] Operador: aplicar migrações pendentes (fila MC39.20, etc.).
+  [ ] Validação viva em staging antes do flip.
+
+Commits (branch feat/mc59.2-correcao-altos):
+  fix(mc59.2): C-1 — crédito e reembolso de saldo R$ atómicos (CAS)
+  fix(mc59.2): D-1 — HMAC webhook observável + opt-in MP_WEBHOOK_ENFORCE
+  fix(mc59.2): B-2 (parte segura) — não reembolsar compra confirmada on-chain
+  fix(mc59.2): B-4 (config-only) — centraliza rede/contrato/explorer
+  fix(mc59.2): reverte guard B-2 delta-based (revisão de segurança HIGH)
+  docs(mc59.2): relatório final + cloud.md + security_audit.md (este)
+
+================================================================================
+FIM — MC59.2
+================================================================================

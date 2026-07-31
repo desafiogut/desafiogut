@@ -1,0 +1,235 @@
+================================================================================
+MC88.36 — OTIMIZAÇÃO DO ARRANQUE (ASSETS CONDICIONAIS)
+================================================================================
+Data......: 2026-07-28, 14:10–16:05 UTC
+Branch....: feat/mc88.29-fila-tarefas · a208efe → 92e3097 (7 commits)
+Aparelho..: fiem7xlvcufe855h · Xiaomi pissarropro (21091116UG) · Android 36
+Build.....: `npm run build:apk` (R10 cumprida) + gradlew assembleDebug (JBR 21)
+Bundle....: "✓ bundle coerente com PRODUÇÃO (mainnet)" em todas as compilações
+Suite.....: 249/249 antes, 249/249 depois — sem uma única regressão
+
+================================================================================
+VEREDITO: OBJETIVO NÃO ATINGIDO
+================================================================================
+  R8 pedia ≥ 200 ms de redução, para ≤ 1900 ms.
+  MEDIDO, em A/B intercalado no mesmo aparelho: −129,5 ms de mediana.
+
+  Todos os cortes de assets funcionaram — e são verificáveis um a um. O que
+  não se confirmou foi a premissa de que retirar assets do arranque compraria
+  200 ms de pintura. Não comprou. Digo-o em vez de escolher a comparação que
+  daria o número bonito, e explico abaixo exactamente qual seria essa escolha.
+
+  Ganho secundário, esse maior: o saldo confirmado on-chain passou de 4025 ms
+  para 3808 ms de mediana (−217 ms).
+
+================================================================================
+⚠️ COMO QUASE REPORTEI UM GANHO DE 221 ms QUE NÃO EXISTE
+================================================================================
+A primeira comparação óbvia era contra a baseline documentada no MC88.35
+(2114 / 2121 / 2163 ms, mediana 2121). As minhas primeiras medições do MC88.36
+deram 1888–1934 ms. Isso dava −221 ms e cumpria a meta.
+
+Estava errado. Ao recompilar o APK ANTERIOR a partir do commit c462534 e medi-lo
+no mesmo dia, o mesmo código deu 1955–2066 ms — não 2121. Ou seja, ~125 ms da
+"melhoria" eram estado do aparelho (cache da WebView, temperatura, hora do dia),
+não código.
+
+Por isso passei a um A/B INTERCALADO: os dois APKs guardados em ficheiro,
+instalados alternadamente, com a ordem trocada a cada ciclo e uma corrida de
+aquecimento descartada após cada instalação.
+
+  ciclo 1  BASE    2026 , 2153        ciclo 1  MC8836  2109 , 1905
+  ciclo 2  MC8836  2090 , 1931        ciclo 2  BASE    2190 , 2070
+  ciclo 3  BASE    1996 , 1981        ciclo 3  MC8836  1906 , 1875
+
+  BASE    n=6  min 1981  mediana 2048  máx 2190  média 2069
+  MC8836  n=6  min 1875  mediana 1918  máx 2109  média 1969
+  ─────────────────────────────────────────────────────────
+  DELTA DA MEDIANA: −129,5 ms          DELTA DA MÉDIA: −100 ms
+
+  Honestidade sobre a força do sinal: as gamas SOBREPÕEM-SE (a melhor corrida
+  da BASE, 1981 ms, bate a pior do MC88.36, 2109 ms). O MC88.36 ganha em 5 dos
+  6 pares e mediana e média movem-se no mesmo sentido, portanto o efeito existe
+  — mas é da ordem dos 130 ms, não dos 200.
+
+================================================================================
+CRITÉRIOS DE ACEITAÇÃO DOS ASSETS — TODOS CUMPRIDOS
+================================================================================
+Medido no APK final, contado até ao instante da pintura:
+
+  ASSET                      ANTES (MC88.35)        DEPOIS
+  ────────────────────────────────────────────────────────────────────────
+  celebration.webm           3 pedidos @2907 ms     0 antes do paint  ✅
+                             (2,26 MB cada)         1º só aos 7180 ms
+  idle.webm                  1 @1951 ms (611 KB)    0 antes do paint  ✅
+                                                    1º só aos 5070 ms
+  guto-1.webm                1 @1915 ms (1,16 MB)   0 antes do paint  ✅
+  guto-2.webm                1 @1916 ms (614 KB)    0 antes do paint  ✅
+  guto-2.png (slide seguinte)1 @1912 ms (193 KB)    0 antes do paint  ✅
+  guto-login.png             1 @1885 ms (456 KB)    0 PEDIDOS         ✅
+  background-desktop.webp    1 @1332 ms (109 KB)    0 PEDIDOS         ✅
+  fonts.gstatic.com          2 @2092 ms (externo)   0 PEDIDOS         ✅
+  ────────────────────────────────────────────────────────────────────────
+  guto-1.png (slide actual)  1 @1912 ms (228 KB)    mantido de propósito
+  background-mobile.webp     1 @1326 ms             mantido — é o que se vê
+  fontes locais /fonts/      —                      7 pedidos, do próprio APK
+
+  Total retirado da janela de arranque: ~5,0 MB de média + 2 idas a um host
+  externo. O que sobra antes do paint são os assets efectivamente visíveis.
+
+================================================================================
+⚠️ UM ERRO MEU, APANHADO POR MEDIÇÃO E CORRIGIDO (S3b → S3c)
+================================================================================
+A primeira versão do S3 não montava NADA no carrossel antes da janela ociosa.
+Ao medir o LCP, apareceu isto:
+
+    lcpAlvo: "https://localhost/assets/guto/carrossel/guto-1.webm"
+
+O elemento LCP desta app É o vídeo do carrossel. Ao adiá-lo sem substituto,
+estava a melhorar a pintura à custa do LCP — exactamente o que o PILAR 1 proíbe.
+
+Corrigido no commit 92e3097 (S3c): o poster do slide actual (228 KB) volta a
+entrar de imediato, dando um candidato a LCP cedo; continuam fora do arranque
+os dois .webm e o poster do slide seguinte.
+
+CUSTO DA CORREÇÃO, dito com clareza: as medições sem poster eram melhores
+(1888–1934 ms) do que com poster (1875–2109 ms). Escolhi a versão mais lenta
+por ser a correcta. Uma pintura 30 ms mais cedo não vale um LCP pior.
+
+================================================================================
+LCP E CLS — MEDIDOS NOS DOIS APKs, NÃO ASSUMIDOS
+================================================================================
+O MC88.35 nunca mediu LCP nem CLS, portanto não havia baseline. Recompilei o
+APK anterior só para a obter.
+
+  MÉTRICA   BASE (c462534)              MC88.36 (92e3097)
+  ─────────────────────────────────────────────────────────────────
+  LCP       5720 / 5872 ms  (VIDEO)     2496 / 5656 ms  (VIDEO)
+  CLS       0.37258347978910367         0.37258347978910367
+  FCP       548 / 632 ms                592 / 616 ms
+
+  LCP: NÃO piorou. Numa fase inicial cheguei a ler uma amostra isolada como
+  regressão; a baseline mostra que o LCP já era ~5,7 s antes deste MC. Fica
+  como pendência do produto, não deste MC.
+
+  CLS: o valor é IDÊNTICO AO DÍGITO nos dois APKs — 0.37258347978910367.
+  É pré-existente e NÃO foi introduzido pelo MC88.36. As fontes são duas, e
+  são sempre as mesmas:
+      0.186 @ ~4,5 s   FOOTER.gut-glass-standard
+      0.186 @ ~5,7 s   FOOTER.gut-glass-standard
+  ⚠️ 0,373 é MAU (o limiar de "bom" é 0,1). O rodapé glass desloca-se duas
+  vezes. Não lhe toquei — está fora do escopo deste MC (R1) — mas é o defeito
+  de UX mais concreto que este MC destapou.
+
+================================================================================
+SEGMENTOS
+================================================================================
+[S0] MAPEAMENTO ................................................ ✅  c462534
+  13 assets antes do paint, com origem exacta no código. Cinco achados que
+  alteraram o plano (ver `docs/MC88.36-mapa-assets.txt`).
+
+[S1] celebration.webm .......................................... ✅  c60baed
+  ⚠️ DESVIO DELIBERADO AO PLANO. O plano mandava ligar uma flag "quando uma
+  celebração for ativada". Não se aplicava: `EdicaoCard.jsx:100` passa
+  `mood="celebrating"` para CADA edição encerrada, e /edicoes devolve várias
+  RELAMP-* encerradas. Para o código a celebração JÁ estava ativada — três
+  vezes. O problema era o MOMENTO, não a condição. Por isso adiei em vez de
+  condicionar, o que preserva o comportamento visual.
+  ⚠️ Este segmento NÃO PODIA contribuir para a meta: o ficheiro era pedido aos
+  2907 ms, ou seja, ~800 ms DEPOIS do paint. Poupa 6,8 MB de I/O e memória.
+
+[S2] background-desktop.webp ................................... ✅  22aee88
+  A origem não era o <video> (o MC88.31 já só monta o da largura corrente) mas
+  `globals.css:261`: a div existia sempre e o CSS escondia-a com `opacity: 0`
+  — e um elemento com opacity:0 continua a descarregar o background-image.
+
+[S3] animações GUTO ....................................... ✅  0f07456+92e3097
+  Sprite e carrossel adiados. Ver o erro e a correcção acima.
+
+[S4] guto-login.png ............................................ ✅  15f986e
+  Deteção por EXISTÊNCIA de `privy:connections` + `privy:token`, nunca pela
+  leitura do conteúdo (R5). Exige as duas porque o Privy limpa o armazenamento
+  no logout — quem se desautentica volta a ver o logo. Em caso de excepção,
+  mostra o logo: falha para o lado seguro.
+
+[S5] fontes auto-hospedadas .................................... ✅  b032fe1
+  15 woff2, 499 KB, servidos do APK, `font-display: swap`.
+  Duas reduções que o plano não pedia e que verifiquei antes de aplicar:
+   • MONTSERRAT REMOVIDA — `--font-display` e `.font-display` existiam mas
+     nenhum .jsx as usava. Os dois tokens passam a apontar para Orbitron, a
+     fonte de títulos realmente usada, para não ficarem pendurados numa
+     família ausente.
+   • SÓ O SUBSET latin — verifiquei que todo o português cabe em U+0000-00FF.
+     O latin-ext seriam mais 590 KB de glifos que esta app nunca desenha.
+  Licenças: Inter, Orbitron e JetBrains Mono são todas SIL OFL 1.1.
+
+[S6] APK e medição ............................................. ✅
+[S7] Relatório ................................................. ✅
+
+================================================================================
+ZERO REGRESSÃO — VERIFICADO, NÃO AFIRMADO
+================================================================================
+Pedido explícito do operador a meio do MC: nada de regressões em RAG, PIX e
+senhas.
+
+  Suite de testes ..... 249/249 ANTES · 249/249 DEPOIS
+  Ficheiros tocados ... `git diff --name-only a208efe..HEAD | grep -E
+                        "netlify/functions|build-rag-index|utils/web3"`
+                        → VAZIO. Nenhum ficheiro de backend, RAG ou web3.
+  Bundle .............. "✓ bundle coerente com PRODUÇÃO (mainnet)" em todas
+                        as compilações (mainnet, contrato 0x0052…16cd)
+  APK instalado ....... 36 503 271 B = MC8836.apk (confirmado por tamanho)
+
+  As 24 alterações são todas de apresentação: 15 woff2 novos, 1 hook novo,
+  1 CSS de fontes gerado, e 6 ficheiros de UI.
+
+================================================================================
+DECISÃO QUE PERTENCE AO OPERADOR
+================================================================================
+A regra S6.5 do plano diz: ganho < 100 ms → documentar e decidir consigo.
+O ganho de mediana é 129,5 ms, portanto acima desse limiar mas abaixo da meta.
+
+RECOMENDAÇÃO: MANTER. Não pelos 130 ms, mas porque:
+  • saiu ~5,0 MB de I/O e descodificação da janela de arranque, o que conta
+    em aparelhos mais fracos do que este;
+  • o saldo confirmado chega 217 ms mais cedo (mediana 4025 → 3808 ms);
+  • deixou de haver QUALQUER dependência de rede externa para desenhar texto,
+    o que também remove um modo de falha (Google Fonts inacessível);
+  • o APK cresce 369 KB (36,13 → 36,50 MB), 1 %, em troca disso.
+
+Se preferir reverter, é um `git revert` limpo de 6 commits — nada disto está
+entrelaçado com lógica de negócio.
+
+================================================================================
+PORQUE É QUE OS 200 ms NÃO VIERAM — E ONDE ESTÃO
+================================================================================
+A conta do MC88.35 já o dizia e eu devia ter-lhe dado mais peso à partida:
+
+    0 → 1077 ms   Android nativo (LaunchState COLD). Nenhum asset toca nisto.
+ 1077 → ~2050 ms  janela de JS + assets. É a ÚNICA em que este MC podia agir.
+
+Ou seja, a meta de −200 ms exigia cortar ~20 % de uma janela de ~970 ms só
+com assets. Os assets, no entanto, são descarregados EM PARALELO e vêm do
+sistema de ficheiros do próprio APK, não da rede — competem por I/O e memória,
+mas raramente estão no caminho crítico. O que gate a pintura é execução de JS.
+
+O maior item continua por tocar: `privy-C6QEr4zh.js` = 2,68 MB, 46 % de todo o
+JS, pedido aos 1321 ms. Enquanto esse ficheiro tiver de ser analisado antes de
+o Dashboard renderizar, o arranque não desce muito abaixo dos ~1,9 s.
+
+PRÓXIMO PASSO COM MAIOR RETORNO (para o MC88.37 ou seguinte):
+ 1. Medir quanto do arranque é PARSE do chunk `privy` (perfil de CPU, como no
+    MC88.33). Sem esse número, qualquer trabalho a seguir é adivinhação.
+ 2. CLS 0,373 do rodapé glass — o defeito de UX mais concreto aqui destapado,
+    e provavelmente barato de corrigir.
+ 3. LCP de ~5,7 s (pré-existente): o elemento LCP é o vídeo do carrossel.
+
+================================================================================
+EVIDÊNCIAS
+================================================================================
+  Commits: c462534 · c60baed · 22aee88 · 0f07456 · 15f986e · b032fe1 · 92e3097
+  Mapa dos assets:  desafio-gut/docs/MC88.36-mapa-assets.txt
+  Instrumentação (scratchpad): medir36.mjs · lcp.mjs · ab.mjs · fontes.mjs
+  APKs do A/B: BASE.apk (36 134 320 B) · MC8836.apk (36 503 271 B)
+  Suite: node --test --experimental-test-module-mocks "_tests/**/*.test.mjs"
+================================================================================

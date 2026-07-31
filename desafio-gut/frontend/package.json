@@ -7,11 +7,17 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build:rag": "node ../../scripts/build-rag-index.mjs"
+    "build:rag": "node ../../scripts/build-rag-index.mjs",
+    "validar:dist": "node scripts/validar-dist-rede.mjs",
+    "build:apk": "cd ../.. && netlify build --context production && cd desafio-gut/frontend && npm run validar:dist && npx cap sync android"
   },
   "dependencies": {
     "@aws-sdk/client-kms": "^3.1072.0",
     "@biconomy/account": "^4.5.7",
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
     "@fingerprintjs/fingerprintjs": "^4.6.0",
     "@privy-io/react-auth": "^3.22.1",
     "@sentry/react": "^10.51.0",

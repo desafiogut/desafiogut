@@ -1,0 +1,61 @@
+# MC89.9 — RELATÓRIO: Limpeza do painel ADM + Comando ALFA no GUTO
+Data: 2026-07-30 | Branch: feat/mc89-adm-system
+Suítes: 324/314 backend (+10), 40/40 frontend | APK validado
+
+## 1. UI LIMPA (Segmento 0)
+
+### Aprovacoes
+- Endereço truncado: `0x1E1bAe7F0f6E87E15F430B620Eca42B146d198cB` → `0x1E1b…d198cB`
+- Nome e e-mail ocultos por omissão, atrás de toggle individual "Mostrar dados"
+- Botões Aprovar/Rejeitar preservados (o fluxo de aprovação continua funcional)
+- O admin pode ver PII quando precisa de aprovar, mas o ecrã não a exibe por omissão
+
+### Cotas
+- Endereço truncado na lista
+- Nome substituído por "Cliente <categoria>" quando ausente
+- Formulário de edição mantém campos completos (ação deliberada do admin)
+
+### Placeholders
+- Prefixo `[EM BREVE — PLANEAMENTO]` em todos os EmConstrucao
+- Palavras "saldo", "senhas" e "lances" removidas dos textos:
+  - "D-SALDO" → "D-AJUSTE"
+  - "Saldo de senhas" → "Créditos on-chain"
+  - "Histórico de lances" → "Histórico de operações"
+
+### VisaoGeral
+- Nota "Senhas em trânsito" → "Em trânsito" com texto curto
+
+### Validado no aparelho
+- Scan de texto: `temSaldo: false, temSenhas: false, temLances: false`
+- Prefixo `[EM BREVE — PLANEAMENTO]` visível
+- Textos novos confirmados no DOM
+
+## 2. COMANDO ALFA (Segmento 1)
+
+### Backend (chatbot.mjs)
+Novo intent `comando_alfa` com padrão `^ALFA:\s*(\w+)(?:\s+(.*))?$/i`:
+- ALFA:status  → métricas agregadas + saldo EOA (reutiliza admin-metricas)
+- ALFA:fila    → estado da fila_tarefas
+- ALFA:panic   → kill switch (reutiliza system-state + log-operacional)
+- ALFA:unpause → reativar sistema
+- ALFA:ajuda   → lista todos os comandos com descrição
+- Comandos impossíveis respondem com honestidade (reindexar_rag, limpar_cache)
+- Comando desconhecido → lista os disponíveis
+
+Gate: admin-only (ehAdminPerfil). Rate-limit: 5/min.
+10 testes (mc899-alfa.test.mjs), incluindo colisão com panic/unpanic.
+
+### Ordem em detectarIntent corrigida
+ALFA testado ANTES de panic/unpanic porque `/panic\b/` casa substring em
+`alfa:panic`. O ALFA é ancorado (`^ALFA:`) e só captura com o prefixo exato.
+
+## 3. NÃO-REGRESSÃO
+- Suítes: 324 backend (+10 ALFA), 40 frontend, build verde
+- `/panic` e `/unpanic` continuam a funcionar
+- Métricas do MC89.2 inalteradas
+- Aprovacoes/Cotas funcionais (endpoint não foi tocado)
+- APK recompilado com `build:apk`, bundle mainnet-coherent
+
+## 4. PRÓXIMO PASSO
+MC90.2 (Fase 2): `admin_logs` em Postgres com escrita fail-CLOSED + níveis de
+permissão (super-admin/admin/operador).

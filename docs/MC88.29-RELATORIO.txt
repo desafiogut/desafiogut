@@ -1,0 +1,228 @@
+================================================================================
+MC88.29 — CORREÇÃO DA FILA_TAREFAS E RELIGAÇÃO DO CREDITO_ASSINCRONO
+================================================================================
+Data    : 2026-07-26
+Método  : diagnóstico via MCP Supabase + ensaio em transação revertida + migração
+Migração: desafio-gut/frontend/supabase/migrations/20260726_mc8829_fila_tarefas_corrigida.sql
+          registada em supabase_migrations.schema_migrations como
+          "mc8829_fila_tarefas_corrigida"
+
+--------------------------------------------------------------------------------
+ESTADO FINAL: fila CORRIGIDA ✅ | CREDITO_ASSINCRONO = TRUE em produção ✅
+              202 validado com compra real ✅ | ciclo da fila pending→done ✅
+              Aberto: confirmação visual do feedback ao utilizador (secções 7-8).
+
+NOTA DE LEITURA: as secções 1–5 foram escritas ANTES do depósito do operador,
+quando a decisão era parar sem religar a flag. A secção 5 ficou superada pelos
+factos — o depósito chegou e os Segmentos 3 e 4 correram. Ver secção 6 em diante.
+--------------------------------------------------------------------------------
+
+1. SEGMENTO 0 — DIAGNÓSTICO
+--------------------------------------------------------------------------------
+A `fila_tarefas` em produção era um esquema hand-made, não o do repo:
+  id BIGSERIAL · status DEFAULT 'pendente' · created_at/updated_at
+  sem max_tentativas, agendado_para, ultimo_erro · 0 linhas
+RPC `reservar_tarefas(p_limit)`: o corpo era um SELECT ... FOR UPDATE SKIP LOCKED
+— ou seja, **não fazia UPDATE nenhum e portanto nem sequer reservava**. Dois
+processadores concorrentes podiam pegar a mesma tarefa.
+A migração 20260722_mc87_hardening já documentava esta deriva em detalhe.
+
+2. ⚠️ O SQL DO SEGMENTO 1 DO PLANO NÃO FOI USADO — reproduziria o bug
+--------------------------------------------------------------------------------
+Quatro defeitos, todos verificados contra o código e o catálogo do Postgres:
+
+ a) O plano cria `updated_at`. Mas `_lib/fila.mjs:65,76` escreve **`atualizado_em`**.
+    → o consumidor rebentaria exatamente como o produtor rebentava antes.
+ b) O plano usa `status DEFAULT 'pendente'` e a RPC filtra `status='pendente'`.
+    Mas o worker marca 'done'/'failed' (fila.mjs:36,65,73) e a RPC do repo filtra
+    `IN ('pending','failed')`. → tarefas falhadas NUNCA seriam re-tentadas.
+ c) A RPC do plano não incrementa `tentativas` nem verifica `< max_tentativas`.
+    → sem DLQ e sem backoff; o propósito da fila perde-se.
+ d) A RPC do plano não tem `SECURITY INVOKER` + `SET search_path=''` nem
+    `REVOKE ... FROM PUBLIC`. → reabriria o achado A-04/A-15 que o MC87 fechou
+    (o PostgreSQL concede EXECUTE a PUBLIC por omissão em funções novas).
+
+3. ⚠️ A MIGRAÇÃO DO REPO TAMBÉM NÃO PODE SER APLICADA COMO ESTÁ
+--------------------------------------------------------------------------------
+ e) `CREATE OR REPLACE FUNCTION reservar_tarefas(p_limite INT)` → **ERRO 42P13**.
+    A função em produção era `reservar_tarefas(p_limit integer)`: nome de parâmetro
+    diferente, mas ASSINATURA idêntica `(integer)` — e o PostgreSQL não permite
+    renomear parâmetros num REPLACE. Exige DROP + CREATE.
+ f) Índices e constraints vivem no SCHEMA, não na tabela. Renomear a tabela NÃO
+    liberta `fila_tarefas_pkey` → o `CREATE TABLE` novo falharia com "relation
+    fila_tarefas_pkey already exists"; e `CREATE INDEX IF NOT EXISTS
+    idx_fila_elegiveis` seria silenciosamente ignorado, deixando a tabela nova
+    SEM índice.
+ g) Falta o `REVOKE ... FROM PUBLIC` (ver 2d).
+
+A migração escrita neste MC resolve (a)–(g).
+
+4. SEGMENTOS 1 e 2 — APLICAÇÃO E VALIDAÇÃO
+--------------------------------------------------------------------------------
+Ensaio prévio: a migração inteira + testes correram numa transação terminada em
+ROLLBACK; confirmou-se depois que produção ficara intacta (id ainda bigint, RPC
+ainda p_limit). Só então foi aplicada a sério.
+
+Esquema resultante (verificado em information_schema):
+  id UUID gen_random_uuid() · tipo · payload jsonb · status 'pending'
+  tentativas · max_tentativas 5 · agendado_para · ultimo_erro
+  criado_em · atualizado_em                                            ✅
+  índice idx_fila_elegiveis (agendado_para) WHERE status IN (pending,failed) ✅
+  RLS ativo + 1 policy service_role                                    ✅
+  RPC reservar_tarefas(p_limite integer) · SECURITY INVOKER ·
+      search_path="" · ACL só postgres+service_role (PUBLIC revogado)  ✅
+  fila_tarefas_legado arquivada (0 linhas — nada se perdeu)            ✅
+  migração registada em schema_migrations                              ✅
+
+Semântica da reserva — 6 casos, todos corretos (transação revertida):
+  pending(0)        → RESERVADA, tentativas→1
+  failed(2)         → RESERVADA, tentativas→3      (retry funciona)
+  failed(5)=max     → ignorada                     (DLQ)
+  processing        → ignorada                     (sem duplo processamento)
+  done              → ignorada
+  agendada +1h      → ignorada                     (backoff respeitado)
+Produtor: o INSERT com o shape exato de fila.mjs (tipo/payload/max_tentativas)
+passou — era este que rebentava e causava o 502 do MC88.28.
+
+5. [SUPERADA PELA SECÇÃO 6] Segmentos 3 e 4 — plano de paragem, antes do depósito
+--------------------------------------------------------------------------------
+CREDITO_ASSINCRONO permanece **false** (verificado).
+
+Motivo: o saldo do operador ficou em R$ 0,00 após a compra do MC88.28, logo
+validar o 202 exigiria um depósito — custo financeiro, proibido pela R2 (o plano
+pressupunha "saldo existente", que não existe). Religar a flag sem poder validar
+a compra arriscaria repetir o 502 em cima de utilizadores reais, que foi
+precisamente o que o MC88.28 apanhou. Decisão do operador: parar antes de religar.
+
+⚠️ O que falta para fechar o assunto (MC seguinte):
+  1. Depositar saldo (≥ R$ 2,00).
+  2. netlify env:set CREDITO_ASSINCRONO true --context production
+  3. netlify deploy --prod --build   (NUNCA disparar build pelo git — ver MC88.28
+     secção 6: origin/main está em d42b4ae, de 4 de julho)
+  4. Compra real com o monitor CDP; esperado 202 em < 1 s, <CreditoStatus> a
+     mostrar "em processamento", saldo a subir em ~12–20 s, e 1 linha em
+     fila_tarefas que o cron de 5 min leva a 'done'.
+
+A infraestrutura está pronta; falta só a prova viva.
+================================================================================
+
+================================================================================
+6. SEGMENTOS 3 e 4 — EXECUTADOS APÓS DEPÓSITO DO OPERADOR (R$ 10,00)
+================================================================================
+  netlify env:set CREDITO_ASSINCRONO true --context production   → OK
+  Deploy 6a66907d13e477c384228090 | publicado 2026-07-26T22:59:47Z | 47 functions
+
+Baseline (após reload para limpar estado React obsoleto): 7 senhas · R$ 10,00.
+O operador comprou DUAS vezes (confirmado por ele). Ambas devolveram 202.
+
+  compra 1  23:02:20 → 202 em 3683 ms · tx 0x30eb0ab5…babcbb
+  compra 2  23:03:25 → 202 em 1390 ms · tx 0x2a84402c…598a96
+
+  Diferença explicada: a 1ª incluiu cold start da function; a 2ª, com a função
+  quente, mede o custo real do caminho.
+
+Saldos: 7 → 8 (aos 56,5 s da 1ª) → 9. R$ 10,00 → R$ 6,00. Coerente com 2 compras.
+Receipts on-chain (mainnet): bloco 25620129 e 25620135, ambos status 0x1.
+
+FILA — ciclo completo, o que NUNCA tinha acontecido:
+  produtor  → 2 linhas id UUID, tipo 'confirmar-credito-senhas', status 'pending',
+              tentativas 0/5, txHash a bater com o do 202                    ✅
+  consumidor→ o cron de 5 min reservou e o worker confirmou:
+              status 'done', tentativas 1, ultimo_erro NULL (ambas)          ✅
+
+--------------------------------------------------------------------------------
+7. RESULTADO POR CRITÉRIO
+--------------------------------------------------------------------------------
+| # | Critério                        | Esperado   | Medido        | Veredicto |
+|---|---------------------------------|------------|---------------|-----------|
+| 1 | Status da resposta              | 202        | 202           | ✅        |
+| 2 | Latência                        | < 1000 ms  | 1390 / 3683ms | ❌        |
+| 3 | UI mostra "processando"         | visível    | não observado | ⚠️ aberto |
+| 4 | Saldo creditado                 | ~12–20 s   | ~56 s         | ⚠️        |
+| 5 | fila regista E processa         | done       | done, tent.1  | ✅        |
+| 6 | UI não fica travada             | melhor     | MUITO melhor  | ✅        |
+
+Critério 2 — o alvo "< 1 s" do plano era irrealista, não um defeito. O 202 só sai
+DEPOIS de `submeterCredito` pôr a tx na rede, o que exige várias idas ao RPC
+(nonce, estimativa de gás, envio). 1390 ms é o custo real com a função quente.
+Face aos ~21 s do caminho síncrono, é uma melhoria de ~15×.
+
+Critério 4 — 56 s até o saldo aparecer, não 12–20 s. Os dois blocos (25620129 e
+25620135) distam 6 blocos para 63 s de intervalo entre as compras, ou seja a rede
+estava a ~10,5 s/bloco: normal. O tempo extra é da deteção no cliente, não da
+mineração. Fica como pendência de medição, não como falha.
+
+⚠️ Critério 3 — POR CONFIRMAR, e a suspeita é do MÉTODO, não do produto.
+   Há DUAS fontes de feedback no ecrã no caminho 202:
+     a) useTrocarPorSenhas.js:70 → sucesso = "🔄 Compra submetida — confirmação
+        de 1 senha em processamento…" (NÃO é auto-limpa no ramo assíncrono)
+     b) <CreditoStatus> → "Crédito de 1 senha em processamento…"
+   O monitor não detetou nenhuma das duas, apesar de, no mesmo instante e na
+   mesma página, ter lido o saldo on-chain com sucesso (logo o Runtime.evaluate
+   estava a funcionar e a página era a /carteira). Isso é contraditório e aponta
+   para falha da minha leitura via document.body.innerText, não para ausência de
+   feedback. NÃO foi possível fechar sem nova compra (custo — R2).
+
+   Mecanismo relevante já confirmado, para quem fechar isto: verificarCreditoOnchain
+   (web3.js:129) lê o receipt por `VITE_ALCHEMY_URL || <fallback SEPOLIA hardcoded>`.
+   Testado a partir do próprio APK com o txHash real:
+     sepolia → null   → "pendente" para sempre → 60 s → TIMEOUT
+     mainnet → receipt bloco 25620129 status 0x1 → "confirmado"
+   Se o APK tiver sido compilado sem VITE_ALCHEMY_URL, o <CreditoStatus> acabaria
+   em "Confirmação ainda pendente" MESMO com o crédito bem-sucedido. Verificar
+   isto é o primeiro passo do MC seguinte.
+
+--------------------------------------------------------------------------------
+8. VEREDICTO
+--------------------------------------------------------------------------------
+O caminho assíncrono está OPERACIONAL em produção. O 502 do MC88.28 desapareceu,
+o 202 responde ~15× mais depressa que o síncrono, o crédito chega, e a fila
+completa o ciclo pending→done pela primeira vez.
+Fica em aberto apenas a confirmação visual do feedback ao utilizador (critério 3).
+================================================================================
+
+================================================================================
+9. ADENDO — O APK ESTÁ NA MAINNET. A HIPÓTESE DO RPC ESTÁ REFUTADA.
+================================================================================
+Pergunta: o APK tem VITE_ALCHEMY_URL da mainnet? → **SIM.**
+
+Extraído do bundle DENTRO do APK (97 chunks varridos), o próprio
+verificarCreditoOnchain minificado:
+
+  var Jd = `https://eth-mainnet.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B`;
+  async function Yd(e){ if(!e) return `pendente`;
+    let t = await new Qu(Jd).getTransactionReceipt(e);
+    return t ? Number(t.status)=== ... }
+
+O fallback hardcoded de Sepolia foi eliminado pelo minificador — não existe no
+bundle. Dump do import.meta.env embutido:
+  VITE_ALCHEMY_URL     https://eth-mainnet.g.alchemy.com/v2/qU_kw3…   ✅ mainnet
+  VITE_CHAIN_ID        1                                              ✅
+  VITE_EXPLORER_URL    https://etherscan.io                           ✅
+  VITE_NETWORK_STAGE   mainnet                                        ✅
+  VITE_CONTRATO_SEPOLIA 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd    ✅ mainnet
+  (VITE_CONTRACT_ADDRESS 0x000…000 e VITE_RPC_URL_SEPOLIA são vars MORTAS)
+As ocorrências de sepolia/mainnet no chunk do Privy são a tabela de redes da
+própria biblioteca, não configuração da app.
+
+⚠️ CORREÇÃO À SECÇÃO 7. Escrevi lá que a falha do critério 3 apontava para o meu
+método de leitura. **Isso está agora REFUTADO nos dois lados:**
+
+ 1. O RPC é mainnet → verificarCreditoOnchain teria obtido o receipt e o
+    <CreditoStatus> mostraria "em processamento" e depois "Crédito confirmado!".
+ 2. O método de leitura FUNCIONA. Teste de custo zero: injetei no DOM o texto
+    exato do componente e corri a expressão IDÊNTICA à do monitor →
+    detectou: "processing", innerText 669 chars. O método está são.
+
+Logo, **o defeito é real e a causa NÃO está estabelecida.** O wiring em
+MinhaCarteira.jsx está correto (linha 52 `sucesso: trocaInfo`; 241-243 render;
+247 <CreditoStatus>; 58 + onClick preenchem creditoTxHash), e ainda assim nenhuma
+das DUAS fontes de texto apareceu durante 90 s de polling a 2 s.
+
+Pista por explorar (não confirmada): o log mostra `[GUT-DEBUG] saldoSenhas event`
+2,7 s após o 202 — o listener on-chain do AppContext. Se essa atualização
+REMONTAR MinhaCarteira (em vez de só re-renderizar), o estado local
+`creditoTxHash` e o `sucesso` do hook são apagados e o feedback desaparece. É a
+hipótese a testar primeiro, mas exige uma compra com polling de alta frequência
+(~200 ms) e captura do DOM, mais um contador de montagens do componente.
+================================================================================

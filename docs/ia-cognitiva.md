@@ -115,7 +115,7 @@ Store `rag` (consistency strong):
 
 ## Limitações
 
-- **Só responde com base no regulamento.** Para perguntas fora do escopo, o assistente diz "Não tenho essa informação no regulamento. Para detalhes específicos, contate suporte@desafiogut.com.br."
+- **Só responde com base no regulamento.** Para perguntas fora do escopo, o assistente diz "Não tenho essa informação no regulamento. Para detalhes específicos, contate desafiogut01@gmail.com."
 - **Não tem memória conversacional persistente no backend.** O histórico fica em `localStorage.gut_chat_history` (apenas exibição) — cada pergunta é enviada isolada para o `/chatbot`. Para conversas multi-turn reais, será necessário enviar histórico no body (futuro).
 - **Latência:** ~1–3 s por resposta (embedding + busca + LLM). Indicador de digitação no widget mostra que está processando.
 - **Idioma:** o regulamento é em pt-br; respostas devem ser em pt-br. O LLM é multilíngue mas o prompt system instrui resposta em português.

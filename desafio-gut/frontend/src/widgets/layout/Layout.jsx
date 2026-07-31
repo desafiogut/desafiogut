@@ -4,6 +4,7 @@ import Sidebar from "./Sidebar.jsx";
 import BottomNav, { BOTTOM_NAV_HEIGHT } from "./BottomNav.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { gutEntrance } from "../../lib/motion.js";
+import { ehRotaDeTrabalho, escondeNavegacaoConsumo } from "../../lib/rotasTrabalho.js";
 
 /**
  * Layout — Shell da aplicação.
@@ -33,6 +34,8 @@ function FooterGlobal({ isMobile }) {
       <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Privacidade</a>
       <a href="https://www.iubenda.com/terms-and-conditions/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>Termos</a>
       <a href="mailto:desafiogut01@gmail.com" style={{ color: "inherit", textDecoration: "none" }}>Suporte</a>
+      {/* MC72 — link público de exclusão de conta (exigência da Google Play Store). */}
+      <a href="/excluir-conta" style={{ color: "inherit", textDecoration: "none" }}>Excluir conta</a>
       <span style={{ width: isMobile ? "100%" : "auto" }}>© 2026 DesafioGUT. Grupo União e Trabalho.</span>
     </footer>
   );
@@ -46,6 +49,20 @@ export default function Layout() {
   // padrão; navegação com parâmetro dentro da mesma aba (ex.: /vitrine/:slot,
   // /produto/:id) NÃO re-monta → sem flash nem perda de estado (R1).
   const segmentoRota = "/" + (location.pathname.split("/")[1] || "");
+
+  // MC89.4 — mobília de consumo fora dos ecrãs de trabalho.
+  //
+  // O rodapé legal (Privacidade/Termos/Suporte/Excluir conta) é do CONSUMIDOR e
+  // continua em todas as rotas de consumo, onde é obrigação. Num painel de
+  // administração não serve a ninguém.
+  //
+  // ⚠️ A navegação inferior sai por uma condição DIFERENTE, e a diferença é
+  // funcional: em /corporativo a barra é a ÚNICA navegação do lojista
+  // (Painel · Cotas · Banners). O /admin recebe "Sair do painel" no cabeçalho,
+  // logo pode dispensá-la. Ver lib/rotasTrabalho.js.
+  const trabalho = ehRotaDeTrabalho(location.pathname);
+  const semNavConsumo = escondeNavegacaoConsumo(location.pathname);
+  const mostrarNav = isMobile && !semNavConsumo;
 
   return (
     <div
@@ -71,7 +88,9 @@ export default function Layout() {
             overflowY: "auto",
             display: "flex",
             flexDirection: "column",
-            paddingBottom: isMobile
+            // MC89.4 — sem barra inferior não há altura a reservar. Manter o
+            // padding deixaria uma faixa vazia no fim do painel.
+            paddingBottom: mostrarNav
               ? `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`
               : 0,
           }}
@@ -83,14 +102,14 @@ export default function Layout() {
           </motion.div>
           {/* Em mobile o footer vai DENTRO do main para rolar com o conteúdo
               e ficar acima do BottomNav fixo. */}
-          {isMobile && <FooterGlobal isMobile />}
+          {isMobile && !trabalho && <FooterGlobal isMobile />}
         </main>
       </div>
 
       {/* Desktop: footer fora do main (sticky no final do viewport). */}
-      {!isMobile && <FooterGlobal isMobile={false} />}
+      {!isMobile && !trabalho && <FooterGlobal isMobile={false} />}
 
-      {isMobile && <BottomNav />}
+      {mostrarNav && <BottomNav />}
     </div>
   );
 }

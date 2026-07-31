@@ -25,6 +25,7 @@ import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const BLOB_RENOVACAO = "renovacao-adesao";
 // Duração padrão da adesão. 30 dias para MVP/dev; produção pode ler de env.
@@ -190,6 +191,11 @@ async function handlePost(req) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
   if (req.method === "GET") {
     const rl = await aplicarRateLimit(req, "renovacao-get", 30);
     if (rl) return rl;

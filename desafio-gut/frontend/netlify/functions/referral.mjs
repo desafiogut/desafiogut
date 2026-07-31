@@ -14,6 +14,7 @@
 import {
   jsonResponse, jsonError, validarEndereco,
   parseJsonBody, ValidationError, validarOwnerOuAdmin,
+  mascararEndereco, // MC87 (P3-1) — o log de conversão desenhava o grafo social
 } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
@@ -23,6 +24,7 @@ import {
   registrarConversao, estatisticasIndicador, referralAtivo,
   registrarTentativaConversaoIp, appendReferralLog,
 } from "./_lib/referral.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const RATE_LIMIT_RPM = 5;
 const VISITOR_RE     = /^[a-zA-Z0-9_-]{4,128}$/;
@@ -104,7 +106,7 @@ async function handleUsarCodigo(req) {
   const auth = await autenticarUser(req);
   if (!auth.ok) return jsonError(401, auth.code, auth.message);
   if (auth.payload?.endereco !== endereco) {
-    console.error("[MC17.4.2] endereco_nao_corresponde", { tokenEndereco: auth.payload?.endereco ?? null, bodyEndereco: endereco });
+    console.error("[MC17.4.2] endereco_nao_corresponde", { tokenEndereco: mascararEndereco(auth.payload?.endereco), bodyEndereco: mascararEndereco(endereco) });
     return jsonError(403, "endereco_nao_corresponde", "token não pertence ao endereço informado");
   }
 
@@ -151,10 +153,10 @@ async function handleUsarCodigo(req) {
     conversao = { ok: false, code: "suspeita_sybil_ip" };
   } else {
     // MC17.5.1 [LOG TEMPORÁRIO] T5 — conversão imediata acionada no registo.
-    console.log("[MC17.5.1] T5 registrarConversao acionado", { codigo, indicador: r.indicador, indicado: endereco });
+    console.log("[MC17.5.1] T5 registrarConversao acionado", { codigo, indicador: mascararEndereco(r.indicador), indicado: mascararEndereco(endereco) });
     try {
       conversao = await registrarConversao(
-        { codigo, indicador: r.indicador, indicado: endereco },
+        { codigo, indicador: mascararEndereco(r.indicador), indicado: mascararEndereco(endereco) },
         { contexto: "registo" },
       );
     } catch (err) {
@@ -200,6 +202,12 @@ async function handleUsarCodigo(req) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   // Feature flag — desligado → 503 imediato (não tenta nada).
   if (!referralAtivo()) {
     return jsonError(503, "feature_desligada", "sistema de indicação temporariamente desligado (REFERRAL_ATIVO=off)");

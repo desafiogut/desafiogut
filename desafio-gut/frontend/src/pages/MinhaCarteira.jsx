@@ -5,6 +5,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
+import CreditoStatus from "../components/CreditoStatus.jsx"; // MC59.6 — feedback do 202 assíncrono
 import PainelIndicacao from "../components/PainelIndicacao.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 
@@ -52,19 +53,25 @@ export default function MinhaCarteira() {
   } = useTrocarPorSenhas();
 
   const [comprarAberto, setComprarAberto] = useState(false);
+  // MC59.6 — txHash de uma compra assíncrona (202); alimenta <CreditoStatus>.
+  // Inerte enquanto CREDITO_ASSINCRONO=OFF (o caminho síncrono não retorna txHash).
+  const [creditoTxHash, setCreditoTxHash] = useState(null);
 
   // Saldo on-chain — sufixo de status alinhado ao Sidebar/Dashboard.
+  // MC88.40 — o "◇" do estado "stale" foi removido. Era o mesmo problema que o
+  // " (antigo)" do Dashboard noutra roupagem: um símbolo solto ao lado de um
+  // saldo, que nada diz ao utilizador. Passa a ser esbatido (.gut-valor-pendente).
   const saldoStatusSuffix =
     saldoSenhasStatus === "loading" ? " ⏳" :
-    saldoSenhasStatus === "stale"   ? " ◇" :
     saldoSenhasStatus === "error"   ? " ✗" : "";
+  const saldoPendente   = saldoSenhasStatus === "stale";
   const saldoNumero     = (saldoSenhas == null) ? null : Number(saldoSenhas);
   const valorFinanceiro = saldoNumero == null ? null : saldoNumero * VALOR_POR_SENHA_BRL;
 
   const statusRsSuffix =
     saldoRsStatus === "loading" ? " ⏳" :
-    saldoRsStatus === "stale"   ? " ◇" :
     saldoRsStatus === "error"   ? " ✗" : "";
+  const saldoRsPendente = saldoRsStatus === "stale";
 
   // Modelo dual (Frente B.9): Saldo Disponível = saldo-rs (off-chain).
   // PIX aprovado credita aqui; "Trocar por Senhas" debita aqui e credita
@@ -109,7 +116,8 @@ export default function MinhaCarteira() {
 
   return (
     <div style={{ padding: pad, flex: 1 }}>
-      <header style={{ marginBottom: sectionGap }}>
+      {/* MC67 (item 1) — cabeçalho da carteira DENTRO de um Glass (.gut-glass-standard). */}
+      <GlassCard as="header" className={cardCls} style={{ marginBottom: sectionGap }}>
         <h1 style={{
           margin: "0 0 0.35rem",
           fontSize: isMobile ? "1.3rem" : "1.5rem",
@@ -118,7 +126,7 @@ export default function MinhaCarteira() {
         <p style={{ margin: 0, color: COR.muted, fontSize: isMobile ? "0.82rem" : "0.88rem", lineHeight: 1.4 }}>
           Acompanhe seu saldo de senhas e seus lances no DesafioGUT.
         </p>
-      </header>
+      </GlassCard>
 
       {!isConnected ? (
         <GlassCard className={cardCls}>
@@ -154,11 +162,14 @@ export default function MinhaCarteira() {
                 </span>
               </div>
 
-              <div style={{
-                fontSize: isMobile ? "2.4rem" : "3rem",
-                fontWeight: 900, color: COR.gold, lineHeight: 1.05,
-                marginBottom: "0.35rem",
-              }}>
+              <div
+                className={saldoRsPendente ? "gut-valor-pendente" : undefined}
+                style={{
+                  fontSize: isMobile ? "2.4rem" : "3rem",
+                  fontWeight: 900, color: COR.gold, lineHeight: 1.05,
+                  marginBottom: "0.35rem",
+                }}
+              >
                 {saldoReais == null
                   ? (saldoRsStatus === "loading" ? "R$ …" : "R$ —")
                   : `R$ ${saldoReais.toFixed(2)}`}
@@ -194,7 +205,11 @@ export default function MinhaCarteira() {
                   💰 Depositar PIX
                 </button>
                 <button
-                  onClick={() => trocarPorSenhas(1)}
+                  onClick={async () => {
+                    const r = await trocarPorSenhas(1);
+                    // MC59.6 — se a resposta foi 202 (assíncrono), acompanha via polling.
+                    if (r?.assincrono && r.txHash) setCreditoTxHash(r.txHash);
+                  }}
                   disabled={trocandoSenhas || (saldoReais == null) || saldoReais < VALOR_POR_SENHA_BRL}
                   style={{
                     ...botaoPrimario,
@@ -234,6 +249,8 @@ export default function MinhaCarteira() {
                   {trocaInfo}
                 </p>
               )}
+              {/* MC59.6 — feedback do crédito assíncrono (202); null com flag OFF. */}
+              <CreditoStatus txHash={creditoTxHash} qtd={1} />
               {trocaErro && (
                 <p style={{ margin: "0.6rem 0 0", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
                   ⚠️ {trocaErro}
@@ -276,10 +293,13 @@ export default function MinhaCarteira() {
                 </span>
               </div>
 
-              <div style={{
-                display: "flex", alignItems: "baseline", gap: "0.5rem",
-                marginBottom: "0.35rem", flexWrap: "wrap",
-              }}>
+              <div
+                className={saldoPendente ? "gut-valor-pendente" : undefined}
+                style={{
+                  display: "flex", alignItems: "baseline", gap: "0.5rem",
+                  marginBottom: "0.35rem", flexWrap: "wrap",
+                }}
+              >
                 <span style={{
                   fontSize: isMobile ? "2.6rem" : "3.2rem",
                   fontWeight: 900, color: COR.success, lineHeight: 1,

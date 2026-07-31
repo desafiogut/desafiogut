@@ -1,0 +1,95 @@
+================================================================================
+MC80.4.1 — Devices FOTORREALISTAS via OpenAI (gpt-image-1) + composição finais 1 e 4
+Data: 2026-07-19 · Custo autorizado (R2): ~US$0,08 (2 imagens medium)
+================================================================================
+
+RESULTADO EM UMA LINHA
+----------------------
+SUCESSO. As 2 imagens de device foram geradas via OpenAI gpt-image-1 (medium,
+fundo transparente), validadas visualmente (recorte alfa limpo) e compostas nas
+finais 1 e 4 substituindo os antigos ícones vetoriais — cronômetros e dados
+100% preservados e nítidos. Convergiu em 2 iterações (Boulder Loop, teto 3).
+
+--------------------------------------------------------------------------------
+1. GERAÇÃO (Segmento 1) — gerar_assets.py
+--------------------------------------------------------------------------------
+Modelo: gpt-image-1, size 1024x1024, quality=medium, background=transparent, n=1.
+Chave: lida do ambiente (R5 — agente nunca a manuseia; validado "OK" antes).
+Saída:
+  assets/tv_generated.png        1024x1024 RGBA  (~1,5 MB)
+  assets/iphone17_generated.png  1024x1024 RGBA  (~1,4 MB)
+Ambos com canal alfa REAL (não backdrop achatado):
+  TV     — 39,2% totalmente transparente / 59,5% opaco / cantos alfa=0
+  iPhone — 56,2% totalmente transparente / 43,2% opaco / cantos alfa=0
+Recorte praticamente binário (antialiasing só nas bordas) → composição limpa.
+
+--------------------------------------------------------------------------------
+2. VALIDAÇÃO VISUAL DOS ASSETS (Segmento 2)
+--------------------------------------------------------------------------------
+Preview sobre xadrez confirmou:
+  - TV fotorrealista, três-quartos, tela navy com anel/timer e acento laranja,
+    em pedestal/stand; recorte limpo. APROVADA.
+  - iPhone flagship frontal, bezel-less, tela navy com acento laranja; recorte
+    limpo. APROVADO.
+Fundos transparentes OK → nenhuma regeneração necessária (Boulder Loop não usado
+na geração). Paleta bateu com navy+laranja do produto.
+
+--------------------------------------------------------------------------------
+3. COMPOSIÇÃO (Segmento 3) — compor_finais.py
+--------------------------------------------------------------------------------
+Estratégia: reusar as finais existentes (cronômetros/dados já nítidos em PIL) e
+trocar SÓ a região do ícone. Fonte limpa versionada em _orig_vectorial/ (recompor
+é idempotente). Para cada device: pedestal navy OPACO com leve gradiente + borda
+laranja (mascara o ícone vetorial antigo) → device fotorrealista escalado (LANCZOS)
++ glow laranja + sombra suave + reflexo espelhado com a forma do device.
+
+Posições (retângulos, coords absolutas na final):
+  imagem_1 topo  → iPhone  (46,124,134,201)   + "ABRE EM 02:30"
+  imagem_1 baixo → TV      (52,356,184,425)   + "ABRE EM 01:15"
+  imagem_4       → TV      (46,213,178,287)   + "AO VIVO 00:45"
+
+Boulder Loop (2 iterações):
+  it.1 — pedestal a 93% de opacidade deixava o ícone antigo VAZAR ("R-1",
+         "DESAFIOGUT/OGUT", anel laranja). Reprovado.
+  it.2 — pedestal OPACO + gradiente + alargamento da TV inferior (x1 174→184).
+         Resquícios eliminados. APROVADO.
+
+--------------------------------------------------------------------------------
+4. VALIDAÇÃO FINAL (Segmento 4) — as 4 imagens
+--------------------------------------------------------------------------------
+finais/imagem_1_final.png  377x576  — iPhone + TV fotorrealistas, timers 02:30/01:15. OK
+finais/imagem_2_final.png  388x581  — ar-condicionado R-10 Prata (inalterada MC80.3). OK
+finais/imagem_3_final.png  397x569  — Meus Ativos 12/8/4/R$5,00 + tabela (inalterada). OK
+finais/imagem_4_final.png  395x578  — TV fotorrealista, AO VIVO 00:45 + ★ João Silva. OK
+(Imagens 2 e 3 conferidas por bytes idênticos + inspeção visual — intactas.)
+
+--------------------------------------------------------------------------------
+5. CUSTO REAL
+--------------------------------------------------------------------------------
+2 × gpt-image-1 (medium, 1024²) ≈ US$0,08 estimado (conforme R2). Valor exato no
+painel de billing da OpenAI; nenhuma regeneração de asset foi necessária, então o
+custo não excedeu a estimativa.
+
+--------------------------------------------------------------------------------
+6. ENTREGA / RASTREABILIDADE (R3)
+--------------------------------------------------------------------------------
+Desktop/playstore-screenshots/Nova pasta/
+  assets/tv_generated.png, assets/iphone17_generated.png   (assets fotorrealistas)
+  finais/imagem_{1,4}_final.png                            (compostas)
+  _orig_vectorial/imagem_{1,4}_final.png                   (backup fonte vetorial)
+  gerar_assets.py (geração) · compor_finais.py (composição)
+Docs: desafio-gut/docs/MC80.4.1-openai-assets.txt + seção em cloud.md.
+Nota: assets/finais ficam FORA do repositório git (Desktop) → nunca commitados (R4).
+
+--------------------------------------------------------------------------------
+7. PRÓXIMO PASSO
+--------------------------------------------------------------------------------
+Emoldurar as 4 finais em 1080×1920 (padrão MC80) e fazer upload para a Play Store.
+
+--------------------------------------------------------------------------------
+8. REGRAS RESPEITADAS
+--------------------------------------------------------------------------------
+R1 zero alteração de código-fonte do app (só scripts de imagem locais) · R2 custo
+~US$0,08 · R3 rastreável · R4 nenhuma chave/imagem commitada · R5 chave só no
+ambiente · R6 cada asset validado antes de compor.
+================================================================================

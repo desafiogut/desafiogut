@@ -1,0 +1,227 @@
+================================================================================
+MC89.5 — SEGMENTO 5: PLANO DE IMPLEMENTAÇÃO (FASES)
+================================================================================
+
+--------------------------------------------------------------------------------
+PRINCÍPIOS DO SEQUENCIAMENTO
+--------------------------------------------------------------------------------
+P1. Auditoria antes de poder. A tabela `admin_logs` entra ANTES do primeiro
+    comando destrutivo. O enunciado põe os logs na Fase 5 e os comandos na 4 —
+    isso deixa uma fase inteira de ações irreversíveis sem rasto. Invertido.
+P2. Níveis de permissão antes das ações perigosas, pela mesma razão: sem `nivel`
+    todo o admin é super-admin, e a matriz de permissões não existe.
+P3. O que já existe entra primeiro. Reutilizar (kill switch, fila, sessões,
+    notificações in-app) é mais barato e mais seguro do que construir.
+P4. Cada fase deixa a suíte verde e a produção funcional. Nenhuma fase depende
+    de a seguinte estar feita para não regredir.
+
+⚠ Estimativas em SESSÕES (um MC de execução ≈ uma sessão). São ordens de
+  grandeza, não compromissos. As duas fases mais caras (2 e 6) têm dependências
+  fora do meu controlo — ver "Bloqueios do operador".
+
+--------------------------------------------------------------------------------
+FASE 0 — DECISÕES E FUNDAÇÃO  (MC90.0)  · 1 sessão
+--------------------------------------------------------------------------------
+Não escreve tela nenhuma. Existe porque seis decisões precisam do operador e
+porque as sete telas partilham um esqueleto que ainda não existe.
+
+  0.1 Confirmar com o operador as 6 decisões listadas no fim de MC89.5-TELAS.txt
+      (D-NAV, D1, D11, D-SALDO, ordem dos canais, tema claro/escuro).
+  0.2 Extrair AdminAuthContext do AdminPanel.jsx (Fluxos 4.0). SEM mudança de
+      comportamento — as 4 abas atuais continuam idênticas.
+  0.3 Introduzir as rotas /admin/* com lazy loading, ainda com as 4 telas atuais.
+  0.4 Primeiros testes do domínio ADM: hoje a cobertura de admin-stats,
+      admin-onchain e dos intents de métricas é ZERO (Mapa 0.7).
+
+  Sucesso: suíte ≥ 303 verde; painel atual funciona igual; 4 abas navegáveis por
+  rota; nenhuma alteração visível ao operador.
+  Risco: baixo. É refatoração com rede de segurança.
+
+--------------------------------------------------------------------------------
+FASE 1 — VISÃO GERAL EXPANDIDA  (MC90.1)  · 1–2 sessões
+--------------------------------------------------------------------------------
+  1.1 GET /admin-financeiro-resumo (séries diárias) — serve T1 e T3
+  1.2 GET /admin-status, versão reduzida: só o que alimenta os alertas
+  1.3 Alertas A1–A6 (Telas 1.1). A4 (webhook) e A5 (coordenação) são os dois que
+      já hoje têm resposta afirmativa — vão acender na primeira abertura.
+  1.4 Gráficos + atalhos (que D-NAV(c) usa como navegação primária)
+  1.5 "Online agora" → "Ativos em 24 h" (D-PRESENCA); "Senhas vendidas" desdobra
+      em compradas / creditadas / em trânsito (D-SENHAS)
+
+D-GRAFICO — biblioteca de gráficos. O bundle é um custo medido: o parse de JS foi
+  o gargalo do arranque ([[desafiogut-mc8836-arranque-assets]]) e o privy já pesa
+  2,68 MB. Recharts ronda ~100 kB gzip.
+  PROPOSTA: SVG à mão para as 3 séries (são linhas e barras simples, ~150 linhas
+  de código, zero dependência), e só adotar biblioteca se a Fase 3 pedir gráficos
+  de facto complexos. Carregada por lazy route, o custo só afeta quem abre /admin.
+
+  Depende de: Fase 0.
+  Sucesso: cada alerta demonstrado a acender com dado real; nenhum número novo
+  mostra 0 quando devia mostrar "—"; nenhum endpoint novo importa ethers.
+  Risco: baixo — tudo leitura.
+
+--------------------------------------------------------------------------------
+FASE 2 — AUDITORIA E NÍVEIS  (MC90.2)  · 2 sessões        ⚠ ANTECIPADA
+--------------------------------------------------------------------------------
+Era a Fase 5 e a 7 no enunciado. Sobe por P1 e P2: nada de irreversível deve ser
+construído antes de existir rasto e antes de existir hierarquia.
+
+  2.1 Migração M2: admin_logs + admin_config (operador aplica)
+  2.2 _lib/admin-log.mjs — escrita fail-CLOSED (D5b), com o comentário a explicar
+      porque inverte a regra fail-soft do resto do sistema
+  2.3 Níveis (D7): formato novo do Blob admin-list COM leitura retrocompatível,
+      claim `nivel` no JWT (login e refresh), guardAdmin(req,{nivelMinimo})
+  2.4 Tela 5 (Logs) e a parte de admins/sessões da Tela 7
+  2.5 Metadado de sessão (ip, userAgent, ultimoAcesso) + /admin-sessions +
+      /admin-sessions-revoke
+
+  ⚠ RISCO MAIS ALTO DE TODO O PROGRAMA (2.3): um erro na leitura do Blob de
+    admins tranca o operador fora do painel sem via de recuperação a não ser um
+    deploy — em produção o Blob está vazio e a coordenação é a única admin
+    (admin-helpers.mjs:20-24).
+    MITIGAÇÕES OBRIGATÓRIAS:
+      · teste que carrega o formato ANTIGO e afirma nivel="super-admin"
+      · teste que carrega o formato NOVO
+      · teste que carrega um Blob vazio e afirma que a coordenação continua admin
+      · validar em deploy-preview ANTES da mainnet
+        ([[desafiogut-netlify-deploy-estrutura]])
+      · e validar por MUTAÇÃO: um teste que passa não prova nada até se ver
+        falhar com o código partido ([[testar-teste-novo-por-mutacao]])
+
+  Sucesso: as 4 mitigações acima verdes; um comando existente (panic pelo GUTO)
+  aparece no log; um operador rebaixado perde o botão em ≤ 15 min (TTL do access).
+
+--------------------------------------------------------------------------------
+FASE 3 — OPERAÇÕES E INFRAESTRUTURA  (MC90.3)  · 1–2 sessões
+--------------------------------------------------------------------------------
+  3.1 /admin-status completo, incluindo a SONDA DE BLOBS (nova, e a mais
+      valiosa: hoje nada verifica a dependência mais silenciosamente frágil)
+  3.2 /admin-queue
+  3.3 /admin-commands com os 4 comandos que existem de facto; 501 explicado para
+      reindexar_rag e reiniciar_monitor; 409 para limpar_cache sem Redis
+  3.4 Tela 4
+
+  Depende de: Fase 2 (todo comando escreve log fail-closed e exige nível).
+  Sucesso: cada comando demonstrado com efeito observável; os dois comandos
+  impossíveis respondem com a razão, não com silêncio nem com sucesso falso;
+  o indicador do monitor compara BLOCOS e não lê o booleano (D-MONITOR).
+  Risco: médio. É a primeira fase que muta estado do sistema.
+
+--------------------------------------------------------------------------------
+FASE 4 — GESTÃO DE USUÁRIOS  (MC90.4)  · 2–3 sessões      ⚠ A MAIS CARA
+--------------------------------------------------------------------------------
+  4.1 Migração M1: índices + vw_utilizadores + usuarios_bloqueio
+  4.2 Resolver D-RBAC: rbac.mjs lê cotas dos BLOBS enquanto os dados estão no
+      Supabase — com DATA_STORE_BACKEND=supabase o papel "cliente" nunca é
+      atribuído ([[desafiogut-guto-personalidades]]). Ou se corrige aqui, ou a
+      coluna "Tipo" mostra "user" para toda a gente e parece bug da tela nova.
+      ⚠ Corrigir toca num gate usado por toda a aplicação — decisão explícita,
+        com testes, não um remendo a meio da tela.
+  4.3 /admin-users, /admin-user, /admin-user-onchain (separado, R7)
+  4.4 Tela 2 + subtela de perfil
+  4.5 /admin-user-ajuste (D-SALDO: débito/crédito auditável, nunca sobrescrita)
+  4.6 /admin-user-bloqueio **e os gates que o leem** (jwt.mjs + endpoints de
+      dinheiro). Sem 4.6-gates, 4.6-endpoint é decorativo.
+
+  Depende de: Fases 2 e 3.
+  ⚠ 4.6 altera o caminho crítico de utilizadores reais em produção mainnet.
+    Não deve ser deployado na véspera de um evento.
+  Sucesso: lista rotulada "utilizadores com atividade" (D1); e-mail ausente
+  mostra "—" e a tela explica porquê (A-2); lances programados declarados como
+  on-chain e não silenciosamente ausentes (A-3); um bloqueio impede de facto
+  uma compra em ambiente de teste.
+
+--------------------------------------------------------------------------------
+FASE 5 — GESTÃO FINANCEIRA  (MC90.5)  · 1–2 sessões
+--------------------------------------------------------------------------------
+  5.1 /admin-transactions (união créditos+débitos, cursor)
+  5.2 /admin-report CSV (GET, com registo em admin_logs — exportar PII é
+      auditável mesmo sendo leitura)
+  5.3 /admin-refund (ajuste interno; estorno no MP fora do âmbito, e dito na tela)
+  5.4 Tela 3. Saldo da EOA com limiar e alerta; SEM botão de abastecer (D11).
+
+  Depende de: Fases 2 e 4 (reutiliza a primitiva de ajuste).
+  Sucesso: a coluna `fonte` visível prova o achado A-4; CSV bate com a soma
+  mostrada no topo; nenhum campo inventado no lugar de "gás gasto".
+
+--------------------------------------------------------------------------------
+FASE 6 — COMUNICAÇÃO E NOTIFICAÇÕES  (MC90.6)  · 2–3 sessões
+--------------------------------------------------------------------------------
+Ordem dos canais INVERTIDA face ao enunciado (Tela 6): in-app → e-mail → push.
+
+  6.1 Migração M3
+  6.2 /admin-notify + handler notif_inapp (reutiliza notificacoes-usuario.mjs,
+      que já existe e já é lido pelo frontend) — canal completo, ponta a ponta
+  6.3 Handler notif_email (SendGrid). ⚠ alcança 3 registos hoje (A-2)
+  6.4 Tela 6: envio, agendamento, histórico com progresso, templates
+  6.5 Push (FCM) — **fase própria, não este MC**: exige projeto Firebase,
+      google-services.json, plugin Capacitor, tabela de tokens e APK novo.
+      Bloqueio de operador + release.
+
+  Sucesso: uma notificação in-app chega a um utilizador de teste pela FILA;
+  a UI diz "em fila" e mostra progresso, nunca "enviado" no instante do clique;
+  canal=push responde 501 com a razão.
+
+--------------------------------------------------------------------------------
+FASE 7 — CONFIGURAÇÕES  (MC90.7)  · 1 sessão
+--------------------------------------------------------------------------------
+  7.1 /admin-config (limiares dos alertas da Fase 1, retenção, auto-refresh)
+  7.2 /admin-logs-retention + purga agendada em purge-logs-scheduled
+  7.3 Fecho da Tela 7 (a parte de admins/sessões já saiu na Fase 2)
+  Fora do âmbito: tema claro/escuro (a app tem paleta única).
+
+--------------------------------------------------------------------------------
+DEPENDÊNCIAS
+--------------------------------------------------------------------------------
+  0 ─┬─ 1
+     └─ 2 ─┬─ 3 ─── 4 ─── 5
+           ├─ 6
+           └─ 7
+  Fase 1 é independente de 2 e pode correr em paralelo.
+  Fase 6 depende de 2 (log + níveis), não de 3/4/5.
+
+--------------------------------------------------------------------------------
+BLOQUEIOS DO OPERADOR (nenhum deles é executável por mim — R5)
+--------------------------------------------------------------------------------
+  B1 Aplicar M1, M2, M3                                    Fases 2, 4, 6
+  B2 Definir COORDENACAO_ADDRESS (achado A-10)             recomendado ANTES da Fase 2
+  B3 REDIS_URL/REDIS_TOKEN — sem isto o cache é no-op (A-9)  antes do polling da Fase 3
+  B4 Projeto Firebase + google-services.json + APK novo     Fase 6.5
+  B5 Verificar BLOBS_TOKEN em produção — metade do substrato
+     admin vive em Blobs e a cegueira é silenciosa           antes da Fase 2
+  B6 Build do APK (`netlify build`, nunca `npm run build`)   por fase que toque no frontend
+
+--------------------------------------------------------------------------------
+CRITÉRIOS TRANSVERSAIS (todas as fases)
+--------------------------------------------------------------------------------
+  C1 Suíte verde e a CRESCER. Baseline hoje: 303/303. Cobertura ADM = 0.
+     Flag obrigatória: --experimental-test-module-mocks; glob "_tests/*.test.mjs".
+  C2 Nenhum endpoint novo importa ethers (D4) — verificável por grep no bundle.
+  C3 respostaPreflight na primeira linha de todo o handler (R2), e preflight
+     testado com os cabeçalhos REAIS, incluindo os do Sentry.
+  C4 Nenhum número novo mostra 0 quando quer dizer "não consegui ler" (R4).
+  C5 Toda a mutação passa pelo fluxo 4.2 (confirmação + justificativa + log
+     fail-closed).
+  C6 Teste novo validado por MUTAÇÃO — partir o código e ver o teste falhar.
+     Dois de três guardas do MC88.16 eram verde falso
+     ([[testar-teste-novo-por-mutacao]]).
+  C7 Validar em deploy-preview antes da mainnet.
+  C8 Permissão é do servidor. O `nivel` no frontend esconde botões; não autoriza.
+
+--------------------------------------------------------------------------------
+ESFORÇO TOTAL
+--------------------------------------------------------------------------------
+  Fase 0  1        Fase 4  2–3
+  Fase 1  1–2      Fase 5  1–2
+  Fase 2  2        Fase 6  2–3 (+ push à parte)
+  Fase 3  1–2      Fase 7  1
+  ─────────────────────────────
+  11 a 16 sessões, mais o push como trabalho separado.
+
+  ⚠ O enunciado prevê 7 fases (MC90.1–90.7). Este plano tem 8 (0 a 7) e
+    reordena-as. As duas diferenças que valem discussão:
+      · a Fase 0 existe porque 6 decisões precisam do operador e o esqueleto
+        partilhado não existe;
+      · auditoria e níveis SOBEM para a Fase 2, porque construir comandos
+        irreversíveis antes de existir rasto e hierarquia é a ordem errada.
+================================================================================

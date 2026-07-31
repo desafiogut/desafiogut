@@ -1,0 +1,235 @@
+================================================================================
+MC89.6 — RELATÓRIO
+Fase 0 do plano do MC89.5: esqueleto partilhado e navegação por tela
+================================================================================
+Data   : 2026-07-30
+Branch : feat/mc89-adm-system
+Commits: 89a6062 (S0) · c8283e0 (S1) · 375180f (S2/S3) · S4 · S5
+Suítes : 303/303 backend · 40/40 frontend (eram 303 e 21) · build verde
+APK    : recompilado com `npm run build:apk` e validado no aparelho
+
+================================================================================
+1. RESUMO EXECUTIVO
+================================================================================
+A Fase 0 está feita. O painel ADM deixou de ser um componente de 990 linhas com
+separadores e passou a ter:
+
+  · uma sessão admin PARTILHADA, extraída para lógica pura e testada;
+  · uma rota (e um chunk) por tela, com a Visão Geral como índice;
+  · 19 testes novos no domínio ADM, que tinha cobertura zero.
+
+Três coisas correram diferente do enunciado, e as três estão justificadas:
+
+  1. Não instalei runner de testes de React. O projeto já tinha resolvido este
+     problema (MC59.6): extrair lógica pura e testar com `node:test`. Segui esse
+     precedente em vez de abrir um segundo padrão e ~40 MB de devDependencies.
+
+  2. A minha primeira navegação estava errada, e só se viu no aparelho. Uma
+     barra com 9 destinos parte-se em três linhas irregulares num telemóvel —
+     pior do que os quatro separadores em duas linhas que o MC89.4 já tinha
+     rejeitado. Refiz para o que o plano aprovado dizia: cartões no índice.
+
+  3. "Aprovações" e "Cotas" não têm lugar na estrutura de 7 telas. Ficaram como
+     rotas autónomas para não haver regressão, e a decisão fica com o operador.
+
+================================================================================
+2. O QUE FOI CONSTRUÍDO
+================================================================================
+
+2.1 — SESSÃO ADMIN (Segmento 1)
+  src/lib/adminAuth.js          NOVO   máquina de estados pura, sem React
+  src/context/AdminAuthContext.jsx NOVO casca de React (ciclo de vida + timer)
+
+  A lógica que vivia em `AdminPanel.jsx:51-86,659-811` saiu para um módulo com
+  `fetch`, `storage` e relógio INJETÁVEIS. É o que permite testar rotação de
+  refresh, retry em 401 e revogação sem browser, sem rede e sem esperar 12 min.
+
+  ⚠️ MODELO DE SEGURANÇA PRESERVADO, NÃO REINVENTADO:
+     · o access token vive só na closure — nenhum método o devolve, não vai para
+       storage, não entra em log. `temToken()` diz que existe, não diz qual é;
+     · o refresh continua em sessionStorage (morre com a aba);
+     · o ADMIN_TOKEN legado não é persistido.
+     Há dois testes dedicados a isto, e ambos ficam vermelhos se alguém
+     persistir o token (mutação M3, verificada).
+
+2.2 — NAVEGAÇÃO (Segmento 2)
+  src/lib/adminNav.js                    NOVO  modelo de rotas como DADOS
+  src/components/admin/AdminLayout.jsx   NOVO  gate + estado da sessão + Outlet
+  src/components/admin/AtalhosAdmin.jsx  NOVO  cartões-atalho do índice
+  src/pages/admin/*.jsx                  NOVO  10 ficheiros (4 reais, 5 esqueletos, 1 de primitivas)
+  src/pages/AdminPanel.jsx               REMOVIDO (990 linhas redistribuídas)
+
+  A navegação e as rotas de `App.jsx` saem da MESMA lista, logo é impossível
+  apontar para uma rota que não existe — e há um teste que lê o App.jsx e
+  afirma que as duas coincidem.
+
+  Rotas: /admin (índice) · usuarios · financeiro · operacoes · logs ·
+         notificacoes · configuracoes · aprovacoes · cotas
+
+2.3 — TESTES (Segmento 3)
+  src/lib/adminAuth.test.mjs   21 testes
+  src/lib/adminNav.test.mjs    13 testes
+  Total do frontend: 40 (eram 6, no único teste que existia)
+
+================================================================================
+3. DEFEITOS ENCONTRADOS PELO PRÓPRIO TRABALHO
+================================================================================
+
+D-1  `telaAtiva("/")` marcava a Visão Geral como ativa na raiz da aplicação.
+     Causa: `"/"` normaliza para `""`, e eu tinha aceitado a string vazia como
+     equivalente a "/admin". Apanhado por um teste que escrevi antes de olhar
+     para o resultado. Corrigido no código, não no teste.
+
+D-2  O meu duplo de `fetch` guardava `init` por REFERÊNCIA. Como `chamarAdmin`
+     reutiliza e muta o objeto de cabeçalhos ao repetir depois de um 401, todas
+     as chamadas registadas mostravam o valor final — apagando exatamente a
+     diferença que o teste do retry existe para observar. O instrumento é que
+     estava errado, não o código. Passou a copiar no momento da chamada.
+
+D-3  RISCO DE BUNDLE, evitado a tempo. `AdminAuthContext` precisa de assinar
+     EIP-191, o que vem de `utils/web3.js` — que arrasta `ethers` e `hash-wasm`.
+     Um import estático punha-os no chunk de quem apenas ABRE o painel, e como o
+     contexto é importado por `App.jsx`, o custo cairia no arranque da app
+     inteira. Passou a `await import()` dentro do callback de assinatura.
+     VERIFICADO NO DIST: o chunk de entrada tem 0 ocorrências de
+     `BrowserProvider`, e o chunk do contexto chega ao web3 por
+     `import("./web3-*.js")`. Há um teste a fixar a regra.
+
+D-4  A navegação em barra estava errada e o diff não o mostrava. Ver secção 5.
+
+================================================================================
+4. VALIDAÇÃO POR MUTAÇÃO (não "os testes passam")
+================================================================================
+Um teste que passa não prova nada até se ter visto falhar. Sete guardas foram
+partidas de propósito e todas ficaram vermelhas:
+
+  M1  refresh 401 deixa de apagar a sessão guardada        → 1 falha ✓
+  M2  o retry pós-401 usa o token antigo                   → 1 falha ✓
+  M3  o access token passa a ser persistido                → 2 falhas ✓
+  M4  falha de rede passa a apagar a sessão                → 1 falha ✓
+  M5  a rota "logs" é removida do App.jsx                  → 1 falha ✓
+  M6  web3 passa a ser importado no topo do contexto       → 1 falha ✓
+  M7  telaAtiva volta a casar por prefixo                  → 2 falhas ✓
+
+M1 exigiu duas tentativas: a primeira substituição por regex não chegou a alterar
+o ficheiro e a suíte continuou verde — o que, sem confirmar que a mutação tinha
+sido aplicada, teria sido lido como "a guarda não serve". Foi aplicada de forma
+verificada (com asserção sobre o número de ocorrências) e então ficou vermelha.
+
+================================================================================
+5. A NAVEGAÇÃO QUE TIVE DE REFAZER
+================================================================================
+Implementei primeiro uma barra persistente com os nove destinos. A suíte passava,
+o build estava verde e o diff parecia bom.
+
+No aparelho, a barra partiu-se em TRÊS linhas irregulares, com "em breve" a
+quase duplicar a largura de cinco itens. Ou seja: reproduzi, agravado, o defeito
+que o MC89.4 tinha corrigido ("quatro separadores em duas linhas leem-se como
+dois grupos distintos"). E não era sequer o que eu próprio tinha especificado no
+MC89.5 — o D-NAV(c) dizia "índice com cartões-atalho e um «← Painel» no topo de
+cada tela".
+
+Refeito para isso:
+  · a Visão Geral é o índice e mostra os 8 cartões, cada um com uma linha a
+    dizer o que a tela faz e um estado visível para as que ainda não existem;
+  · fora do índice, o título passa a ser o da SECÇÃO e ganha "← Painel" por cima
+    (repetir "Painel Admin" em todas as telas gastava a linha que diz onde se está);
+  · os atalhos NÃO dependem da sessão admin — são navegação; só as métricas
+    ficam atrás do gate.
+
+Custa um toque a mais entre telas e poupa a dúvida sobre o que cada rótulo de
+uma palavra significava. É a troca que o D-NAV(c) já tinha aceitado.
+
+Isto só apareceu porque olhei para a captura. É a mesma lição do MC89.4
+(a iteração 1 cumpriu os critérios escritos e ficou mal).
+
+================================================================================
+6. VALIDAÇÃO NO APARELHO
+================================================================================
+APK: `npm run build:apk` (NUNCA `npm run build` para APK — R10). O validador do
+próprio script confirmou o bundle:
+     VITE_CONTRATO_SEPOLIA : 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+     VITE_NETWORK_STAGE    : mainnet
+     ✓ bundle coerente com PRODUÇÃO (mainnet)
+Compilado com o JBR (JDK 21) e instalado no aparelho fiem7xlvcufe855h.
+
+Medido por CDP (adb forward + WebSocket nativo; `Log.clear` antes de medir, para
+não contar o histórico):
+
+  · as 9 rotas navegam e renderizam a tela CERTA;
+  · o "← Painel" e o título por secção aparecem em todas as filhas;
+  · o índice mostra os 8 cartões;
+  · a rota mantém-se estável (verificada aos 100 ms, 400, 900, 2000 e 3500 ms) e
+    sobrevive a um CLIQUE REAL no cartão, não só a `pushState`;
+  · voltar a "/" não deixa navegação de admin no ecrã;
+  · zero erros de consola vindos do painel.
+
+Os 3 erros de rede observados são PRÉ-EXISTENTES e foram rastreados até à origem
+antes de os descartar:
+  · 404 /cotas?cliente_id= e /cotas?email=  → AppContext.jsx:358,367 (deteção de
+    perfil corporativo no arranque; a conta ADM não tem cota, logo 404 é a
+    resposta certa);
+  · ERR_FAILED em auth.privy.io/analytics_events → CORS do analytics do Privy
+    (terceiros).
+
+⚠️ ARMADILHA DE MEDIÇÃO, registada: a minha primeira captura de ecrã mostrava o
+índice quando a sonda de texto dizia "Operações". Não acreditei em nenhuma das
+duas e fui ver: o script de captura chamava `Page.enable` antes de navegar, e era
+isso que repunha a rota inicial. Sem `Page.enable`, a captura corresponde ao
+estado lido no instante anterior. Se eu tivesse acreditado na imagem, teria
+"corrigido" uma navegação que estava boa.
+
+⛔ O QUE NÃO FOI VALIDADO, e porquê:
+   O fluxo AUTENTICADO (colar o ADMIN_TOKEN legado + assinar com a Privy →
+   métricas reais, listas reais, mutações) NÃO foi exercido. Exige o ADMIN_TOKEN
+   do operador, em que eu não toco (R5), e a assinatura passa por um modal da
+   Privy que não é automatizável.
+   O que está provado é tudo até ao gate: rotas, layout, estado da sessão,
+   e a máquina de autenticação em teste unitário com duplos.
+   ⇒ AÇÃO DO OPERADOR: entrar com "Login Admin" no APK e confirmar que as
+     métricas da Visão Geral, as Aprovações e as Cotas carregam como antes.
+     É o único passo que fecha a não-regressão de ponta a ponta.
+
+================================================================================
+7. NÃO-REGRESSÃO
+================================================================================
+· As 4 telas que já existiam foram MOVIDAS praticamente verbatim, para a
+  não-regressão ser verificável por leitura do diff.
+· As 3 guardas visuais do MC89.4 que liam `pages/AdminPanel.jsx` ficaram
+  vermelhas quando o ficheiro saiu. Foram REAPONTADAS para `AdminLayout.jsx`, não
+  removidas — continuam a garantir a saída explícita e a superfície opaca. A de
+  emojis foi REFORÇADA: varre os 11 ficheiros do painel em vez de um só, porque
+  verificar uma tela de nove seria dar por cumprida uma regra que não se está a
+  medir onde ela pode ser quebrada.
+· Backend: 303/303, sem uma linha tocada em `netlify/functions` fora dos testes.
+· Nenhum endpoint, migração ou comportamento de backend foi alterado.
+
+================================================================================
+8. DECISÕES PENDENTES DO OPERADOR
+================================================================================
+P-1  Onde pertencem "Aprovações" e "Cotas"?
+     Não têm lugar na estrutura aprovada de 7 telas e são funcionalidades vivas.
+     Hipóteses: Aprovações dentro de "Usuários"; Cotas dentro de "Financeiro";
+     ou o painel assume-se com nove telas. Enquanto não houver resposta ficam
+     autónomas — o estado que não perde nada.
+
+P-2  Confirmar a navegação por cartões no aparelho.
+     É a segunda versão; a primeira foi rejeitada por mim ao vê-la. Vale a sua
+     opinião antes de as Fases 1-7 assentarem em cima dela.
+
+P-3  Validar o fluxo autenticado (secção 6).
+
+================================================================================
+9. PRÓXIMO PASSO
+================================================================================
+MC89.7 — Fase 1 do plano do MC89.5: Visão Geral expandida.
+  · GET /admin-financeiro-resumo (séries diárias; serve o índice e a Tela 3)
+  · GET /admin-status reduzido, para os alertas
+  · os 6 alertas — dos quais A4 (webhook nunca disparou) e A5 (coordenação por
+    rotacionar) vão acender à primeira abertura, porque hoje são verdade
+  · gráficos em SVG próprio, sem biblioteca nova (o parse de JS é um custo medido)
+  · "Online agora" → "Ativos em 24 h"; "Senhas vendidas" → compradas / creditadas
+    / em trânsito
+
+Fase 1 é independente da Fase 2 e pode correr já.
+================================================================================

@@ -11,6 +11,9 @@ import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import EdicaoBanner from "../components/EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
+// MC88.43 — o badge desta página tinha um terceiro rótulo ("Ativa") que mais
+// nenhum ecrã usava, ao lado de um cronómetro travado. Agora vem tudo daqui.
+import { getEstadoEdicao } from "../utils/edicao.js";
 
 const COR = {
   gold: "#f5a623", text: "#e8f0fe", muted: "#94a3b8",
@@ -78,7 +81,8 @@ export default function EdicaoDetalhe() {
   }
 
   const restante = timeLeftEdicaoSegundos(edicao);
-  const encerrada = restante <= 0;
+  const est = getEstadoEdicao(edicao);
+  const encerrada = est.encerrada;
   const tipoLabel = edicao.tipo === "programado" ? "🎫 Programado" : "⚡ Relâmpago";
   const ativa = edicao.id === EDICAO_ATIVA;
   const corTimer = encerrada ? COR.danger : ativa ? COR.success : COR.gold;
@@ -93,10 +97,10 @@ export default function EdicaoDetalhe() {
           </h1>
           <span style={{
             fontSize: "0.7rem", fontWeight: 800,
-            color: encerrada ? COR.danger : ativa ? COR.success : COR.gold,
+            color: est.cor,
             background: "rgba(245,166,35,0.12)", border: `1px solid ${encerrada ? "rgba(239,68,68,0.4)" : "rgba(245,166,35,0.35)"}`,
             borderRadius: "999px", padding: "0.2rem 0.6rem", letterSpacing: "0.04em",
-          }}>{encerrada ? "Encerrada" : ativa ? "Ativa" : "Em andamento"}</span>
+          }}>{est.rotulo}</span>
         </div>
 
         {/* Banner grande — CLICÁVEL: abre a imagem num modal (MC46/MC47), sem navegar.
@@ -125,11 +129,12 @@ export default function EdicaoDetalhe() {
         {/* Cronómetro */}
         <div style={{ textAlign: "center", margin: "1.25rem 0 0.5rem" }}>
           <div style={{
-            fontSize: isMobile ? "2.4rem" : "2.75rem", fontWeight: 900,
-            fontFamily: "'JetBrains Mono', monospace", color: corTimer, lineHeight: 1,
-          }}>{formatarTempoEdicao(restante, edicao.tipo)}</div>
+            fontSize: est.timer ? (isMobile ? "1.7rem" : "1.9rem") : (isMobile ? "2.4rem" : "2.75rem"), fontWeight: 900,
+            fontFamily: est.timer ? "'Orbitron', sans-serif" : "'JetBrains Mono', monospace",
+            color: est.timer ? est.cor : corTimer, letterSpacing: est.timer ? "0.12em" : undefined, lineHeight: 1,
+          }}>{est.timer ?? formatarTempoEdicao(restante, edicao.tipo)}</div>
           <div style={{ fontSize: "0.72rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginTop: "0.4rem" }}>
-            {encerrada ? "Leilão encerrado" : "Tempo restante"}
+            {est.ativa ? "Tempo restante" : est.rotuloLongo}
           </div>
         </div>
 

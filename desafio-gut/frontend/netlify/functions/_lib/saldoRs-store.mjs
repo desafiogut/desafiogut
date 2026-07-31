@@ -29,6 +29,20 @@ export async function setSaldo(clienteId, payload) {
 }
 
 /**
+ * MC59.3 (follow-up C-1) — Insere a linha do saldo APENAS se ainda não existir,
+ * de forma ATÓMICA: INSERT ... ON CONFLICT (cliente_id) DO NOTHING. Diferente de
+ * setSaldo (upsert = DO UPDATE, sobrescreve), esta NUNCA clobbera uma linha que
+ * passou a existir concorrentemente entre a leitura e a escrita de bootstrap.
+ * `ignoreDuplicates: true` faz o cliente Supabase emitir o DO NOTHING.
+ */
+export async function inserirSaldoSeAusente(clienteId, payload) {
+  const { error } = await getSupabase().from(T_SALDO).upsert(
+    { cliente_id: String(clienteId), payload, atualizado_em: new Date().toISOString() },
+    { onConflict: "cliente_id", ignoreDuplicates: true });
+  if (error) throw new Error(`[saldoRs-store] inserirSaldoSeAusente falhou: ${error.message}`);
+}
+
+/**
  * MC39.17.2 (B-P1-3) — Compare-And-Swap atômico do saldo.
  * Faz UPDATE … WHERE cliente_id=$ AND payload->>'centavos' = <esperado>, devolvendo
  * as linhas afetadas. A condição é avaliada atomicamente pelo Postgres → fecha a

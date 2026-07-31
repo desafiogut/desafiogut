@@ -1,0 +1,139 @@
+================================================================================
+MC59.10 — RELATÓRIO: DECISÃO SOBRE A EOA COORDENADORA (SEPOLIA → MAINNET)
+Agente de Planejamento: Opus 4.8
+Data: 2026-07-08
+Status: RECOMENDAÇÃO — AGUARDANDO APROVAÇÃO DO OPERADOR (RUFLO Pilar 3)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. ENTENDIMENTO DO CAMINHO REAL DO PROJETO
+--------------------------------------------------------------------------------
+- Arquitetura em produção (Sepolia): EOA comum + assinatura local-key. Funciona.
+  Origem: Opção D (MC52.1–MC56), após a morte do bundler Biconomy, abandonou-se
+  a Smart Account ERC-4337 e redeployou-se com uma EOA coordenadora.
+- Contrato ativo (Sepolia): 0x825bBd3F064979a5F750DBB6aED421b37AA3eF06.
+- EOA operacional: 0xDa3a83A24b25aa71e1a9b5A74503fFA93487e84E.
+- Autorização no contrato é por `msg.sender == coordenacao` (modifier apenasCoordenacao).
+
+*** CORREÇÃO (MC59.11): a evidência abaixo foi revista. O selector 0x0956e76e
+    usado nos comandos NÃO é coordenacao() — é coordenacaoPendente(). O selector
+    correto de coordenacao() é 0xe06f9dbf. Ver bloco corrigido. ***
+
+EVIDÊNCIA ON-CHAIN COLETADA (leitura pública, Sepolia) — CORRIGIDA:
+- coordenacao() [selector CORRETO 0xe06f9dbf] -> 0xDa3a83A24b25aa71e1a9b5A74503fFA93487e84E
+  * Coordenador ESTÁ setado. Contrato saudável.
+- coordenacaoPendente() [0x0956e76e, o que os comandos chamaram de "coordenacao()"]
+  -> 0x000...000. Zero aqui é o estado NORMAL (nenhuma transferência two-step em curso).
+- MAX_LANCES_UNICOS() [0x325251f0] -> 0x2710 (10000). Confirma que 0x825b... é um
+  LeilaoGUT genuíno (bate com contracts/Leilao.sol).
+- eth_getCode(0x825b...) -> bytecode presente.
+- 0xDa3a83... nonce = 0x25 (37 txs enviadas), saldo ~0,047 ETH de teste.
+  * Consistente com ser a EOA coordenadora que assinou as operações dos MC56–59.
+
+CONCLUSÃO DO ENTENDIMENTO (CORRIGIDA):
+- Fonte (contracts/Leilao.sol): `address public coordenacao;` é a variável de
+  autorização; o modifier apenasCoordenacao exige `msg.sender == coordenacao`;
+  o constructor faz `coordenacao = msg.sender` (deployer vira coordenador).
+- Não existe "outra variável" nem contrato zerado: o alarme anterior foi apenas
+  leitura do selector errado (coordenacaoPendente em vez de coordenacao).
+- Para um deploy NOVO desta mesma source, coordenacao é setada AUTOMATICAMENTE
+  para o endereço que deployar (msg.sender no constructor). Basta deployar a
+  partir da EOA nova → ela vira coordenadora, sem passo extra.
+
+--------------------------------------------------------------------------------
+2. FATO CONSUMADO — SEGURANÇA DA CHAVE
+--------------------------------------------------------------------------------
+- A chave privada 0x1394492e... foi colada em texto puro neste chat, múltiplas
+  vezes. Deve ser considerada COMPROMETIDA / QUEIMADA de forma irreversível.
+- Em Sepolia (ETH de teste) isso é inofensivo. Em mainnet é crítico: existem
+  "sweeper bots" que monitoram chaves conhecidas/expostas e drenam qualquer
+  saldo real recebido em segundos (frequentemente via bundle Flashbots).
+- Consequência técnica: NÃO existe "financiar agora e rotacionar depois" seguro.
+  A janela entre financiar e deployar é exatamente onde o ETH é drenado.
+  A rotação tem de vir ANTES do primeiro ETH real, não depois.
+
+--------------------------------------------------------------------------------
+3. ANÁLISE DAS OPÇÕES
+--------------------------------------------------------------------------------
+OPÇÃO A — reutilizar a EOA atual (0xDa3a83...) na mainnet
+  Prós:
+   - Zero mudança de arquitetura; mesma chave já integrada ao backend.
+  Contras (decisivos):
+   - Chave exposta => financiar na mainnet = perda quase certa por sweeper bots.
+   - "Rotação pós-deploy" não mitiga: o dreno ocorre antes do deploy concluir.
+   - Nenhum plano de contingência recupera ETH drenado (transferência
+     on-chain é irreversível).
+  Veredito: INACEITÁVEL para mainnet.
+
+OPÇÃO B — gerar uma nova EOA para a mainnet  [RECOMENDADA]
+  Prós:
+   - Preserva EXATAMENTE a arquitetura local-key/EOA que já funciona.
+   - Elimina a exposição: a nova chave nunca passou por chat/log.
+   - Custo ~2 minutos; sem reescrita de backend (só troca de segredo).
+  Contras:
+   - É preciso gerar/guardar a nova chave com cuidado (idealmente KMS/HW wallet).
+  Veredito: RECOMENDADA.
+
+RECOMENDAÇÃO FINAL DO AGENTE DE PLANEJAMENTO: OPÇÃO B.
+A "mesma arquitetura" que vocês querem preservar é local-key/EOA — e a Opção B
+preserva 100% dessa arquitetura. O que NÃO se pode preservar é a chave específica,
+porque ela foi exposta. Trocar a chave não muda a arquitetura.
+
+RECOMENDAÇÃO ADICIONAL (custódia): para dinheiro real, migrar a assinatura da
+coordenação para AWS KMS (caminho já construído no MC30.2, signer
+0xAEFe11...EdFF) ou um Safe multisig. local-key raw em ambiente serverless é
+exatamente o modo de falha deste incidente. Se a migração KMS não couber no
+prazo do MC60, usar uma EOA nova como ponte, com KMS como próximo passo imediato.
+
+--------------------------------------------------------------------------------
+4. PLANO DE AÇÃO (OPÇÃO B) — a executar APÓS aprovação do operador
+--------------------------------------------------------------------------------
+PRÉ-REQUISITO (bloqueante):
+ [ ] Ler o source verificado (Etherscan) OU o artefato de deploy
+     (Leilao.sol / LeilaoGUT.json + ABI) e identificar a variável de estado que
+     autoriza via msg.sender. Confirmar como ela é setada no constructor/deploy.
+
+GERAÇÃO DA NOVA EOA (máquina segura, offline):
+ [ ] Gerar chave nova. Preferir: `cast wallet new` (Foundry) ou hardware wallet.
+ [ ] NUNCA colar a nova chave em chat/log/issue. Guardar em cofre de segredos.
+ [ ] Registrar apenas o ENDEREÇO PÚBLICO da nova EOA no runbook.
+
+FINANCIAMENTO (mainnet):
+ [ ] Transferir para a nova EOA APENAS o gás de deploy + folga (não uma
+     tesouraria). O operador copia o endereço da própria carteira/cofre.
+
+DEPLOY (mainnet):
+ [ ] Deployar o contrato com a variável de autorização apontando para a nova EOA
+     (ou para o signer KMS), setada no constructor.
+ [ ] Verificar o source no Etherscan.
+ [ ] Ler on-chain a variável de autorização e confirmar que NÃO está zerada.
+
+VALIDAÇÃO PÓS-DEPLOY:
+ [ ] Rodar um crédito/lance de smoke com a nova EOA e confirmar sucesso.
+ [ ] Conferir que o backend (env/segredos) aponta para a nova chave/endereço.
+
+DESATIVAÇÃO DA CHAVE ANTIGA (0x1394492e...):
+ [ ] Remover de todo .env, segredos Netlify, scripts e histórico de git.
+ [ ] Se houver qualquer valor real associado em qualquer rede, varrer para
+     carteira nova imediatamente.
+ [ ] Marcar como revogada na documentação.
+
+--------------------------------------------------------------------------------
+5. DECISÃO FINAL
+--------------------------------------------------------------------------------
+[ ] APROVADA pelo operador: Opção ____  (A / B)
+[ ] Observações do operador:
+
+
+
+--------------------------------------------------------------------------------
+6. NOTA SOBRE ESCOPO / RASTREABILIDADE
+--------------------------------------------------------------------------------
+- Este MC é diagnóstico/alinhamento: ZERO alteração de código (R1 respeitado).
+- Commits git e atualização de cloud.md previstos nos Segmentos 0–3 NÃO foram
+  executados porque este relatório foi gerado fora do repositório
+  (cwd = C:\Users\Moltbot, sem git). Apontar o caminho do repo para efetivar:
+    - branch feat/mc59.10-entendimento-eoa
+    - registro em cloud.md
+    - commits chore/feat/docs(mc59.10)
+================================================================================

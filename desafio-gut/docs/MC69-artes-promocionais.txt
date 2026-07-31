@@ -1,0 +1,126 @@
+================================================================================
+MC69 — GERAÇÃO DE ARTES PROMOCIONAIS OFICIAIS DO APP (3 VARIAÇÕES COM GUTO)
+================================================================================
+Data: 2026-07-10
+Agente de Design: Claude (Opus) — operou o Cloud Comfy
+Agente de Validação: Operador (aprovação humana pendente antes do uso)
+Natureza: MC de CRIAÇÃO DE ATIVOS — ZERO alteração de código do app (Pilar SUPERPERS)
+Branch de documentação: feat/mc69-artes-promocionais
+Método escolhido pelo operador: OPÇÃO B — Cloud Comfy puro (MC69 literal)
+
+--------------------------------------------------------------------------------
+1. RESUMO
+--------------------------------------------------------------------------------
+Foram geradas 3 variações de arte promocional vertical (9:16, 1080×1920) para
+disparos de e-mail e WhatsApp, com o mascote GUTO como elemento central, o martelo
+oficial em todas, paleta navy #050818 + laranja #ff6b35, e mensagem tecnicamente
+neutra (sem jargão) contendo os termos obrigatórios "leilão de menor lance único"
+e "e-commerce por dropshipping", com gancho de conversão por público.
+
+Motor: Cloud Comfy (MCP comfyui-cloud, produção v0.30.1) — nó Nano Banana Pro
+(GeminiImage2Node, modelo gemini-3-pro-image-preview), 9:16, resolução 2K.
+Ancoragem de identidade: a MESMA imagem de referência do GUTO foi fornecida às
+3 gerações (LoadImage → images) para garantir o mesmo personagem — atendendo o
+requisito ⚠️CRÍTICO de consistência. Referência: base/guto-ref.png (derivada de
+GUTO-Eletrodomesticos/02-guto-geladeira.png, achatada RGB/1024px), enviada ao
+Cloud como ce8b646c…766ac5e.png.
+
+--------------------------------------------------------------------------------
+2. CORREÇÃO IMPORTANTE APLICADA
+--------------------------------------------------------------------------------
+O enunciado do MC69 descrevia o GUTO como "a friendly pig in a business suit"
+(um PORCO). Isso está INCORRETO: o GUTO é um MASCOTE HUMANO 3D estilo Pixar
+(senhor simpático, cabelo/barba castanhos, terno navy, colete laranja, medalhão
+dourado). Rodar o prompt literal produziria um porco e quebraria a identidade.
+A descrição foi corrigida em todos os prompts ("a human character, NOT an animal,
+NOT a pig"). Confirmado por inspeção visual das pastas EXPRESSÕES, GUTO 360 e
+GUTO-Eletrodomesticos.
+
+Observação de estilo: o estilo canônico é o 3D Pixar (EXPRESSÕES + Eletrodomesticos).
+As imagens GUTO 360 são um estilo 2D achatado diferente — NÃO foram usadas para
+evitar inconsistência.
+
+--------------------------------------------------------------------------------
+3. AS TRÊS VARIAÇÕES (público, mensagem, elementos)
+--------------------------------------------------------------------------------
+VARIAÇÃO 1 — "Leilão de Menor Lance Único" (público: usuário comum / comprador)
+  Mensagem/CTA: "Participe do leilão de menor lance único. Ganhe prêmios
+                 exclusivos. Baixe agora e comece a ganhar."
+  Elementos: GUTO com martelo apontando para troféu dourado + moedas "GUT";
+             headline "LEILÃO DE MENOR LANCE ÚNICO" + "E-commerce por dropshipping";
+             branding "DesafioGUT" no topo.
+  Final: variação-1/variação-1-final.png (base: v1-tentativa-2.png, seed 777)
+
+VARIAÇÃO 2 — "E-commerce por Dropshipping" (público: lojista / anunciante)
+  Mensagem/CTA: "Anuncie seus produtos no maior leilão de menor lance único.
+                 Venda mais com dropshipping. Baixe agora e comece a vender."
+  Elementos: GUTO com martelo segurando placa "ANUNCIE AQUI" + vitrine/caixas;
+             headline "LEILÃO DE MENOR LANCE ÚNICO" + "E-commerce por dropshipping";
+             termo obrigatório em destaque (negrito) no CTA.
+  Final: variação-2/variação-2-final.png (base: v2-tentativa-3.png, seed 305)
+
+VARIAÇÃO 3 — "Comunique-se com Ambos" (público: comprador E lojista)
+  Mensagem/CTA: "Seja comprador ou anunciante. Baixe agora e escolha seu caminho."
+  Elementos: GUTO com martelo ao centro, dois balões "COMPRAR" e "ANUNCIAR";
+             headline "LEILÃO DE MENOR LANCE ÚNICO" + "E-commerce por dropshipping".
+  Final: variação-3/variação-3-final.png (base: v3-tentativa-1.png, seed 401)
+
+Termos obrigatórios ("leilão de menor lance único" + "e-commerce por dropshipping"):
+presentes nas 3 variações. Jargão técnico (blockchain/web3/cripto/smart contract):
+AUSENTE nas 3 (mensagem tecnicamente neutra, conforme exigido).
+
+--------------------------------------------------------------------------------
+4. ARQUIVOS GERADOS
+--------------------------------------------------------------------------------
+Pasta raiz: C:\Users\Moltbot\Desktop\ARTES-PROMOCIONAIS\
+
+  base\
+    guto-ref.png                      (referência de identidade, 1024px RGB)
+    base-02-geladeira-gavel.png       (fonte da referência)
+    base-06-smartphone-gavel.png
+    base-07-fogao-gavel.png
+    base-expr-confiante.png / -amigavel.png / -neutro.png
+  variação-1\
+    v1-tentativa-1.png (seed 201)
+    v1-tentativa-2.png (seed 777)   <- selecionada
+    variação-1-final.png            (1080×1920) *** ENTREGA ***
+  variação-2\
+    v2-tentativa-1.png (seed 301)
+    v2-tentativa-2.png (seed 302)   [REJEITADA: headline embaralhado]
+    v2-tentativa-3.png (seed 305)   <- selecionada (acentos corretos)
+    variação-2-final.png            (1080×1920) *** ENTREGA ***
+  variação-3\
+    v3-tentativa-1.png (seed 401)   <- selecionada
+    v3-tentativa-2.png (seed 402)
+    variação-3-final.png            (1080×1920) *** ENTREGA ***
+
+--------------------------------------------------------------------------------
+5. RESULTADO DA VALIDAÇÃO VISUAL (MCP / inspeção)
+--------------------------------------------------------------------------------
+[✅] GUTO é o MESMO personagem nas 3 (rosto, barba, corpo, terno navy, colete
+     laranja, medalhão, gravata-borboleta) — ancoragem por referência funcionou.
+[✅] Martelo (gavel) presente nas 3 variações.
+[✅] Mensagem clara, sem jargão técnico, com gancho por público.
+[✅] Termos "leilão de menor lance único" e "e-commerce por dropshipping" nas 3.
+[✅] Comunica com ambos os públicos (V1 comprador, V2 lojista, V3 ambos).
+[✅] Paleta navy #050818 + laranja #ff6b35 consistente.
+[✅] Proporção 9:16 (1080×1920), adequada a e-mail e WhatsApp.
+[i] Texto PT-BR renderizado corretamente COM acentos nas 3 finais (o risco de
+    texto embaralhado da opção B não se materializou nas selecionadas; a única
+    tentativa com falha de texto — v2-tentativa-2 — foi descartada e regenerada).
+
+Boulder loop: 1 iteração usada (regeneração da V2 para corrigir acentos do termo
+obrigatório). Dentro do limite (máx 3).
+
+--------------------------------------------------------------------------------
+6. VEREDITO FINAL
+--------------------------------------------------------------------------------
+✅ ARTES GERADAS E VALIDADAS (validação técnica/visual do agente) — prontas para
+   revisão do operador. Conforme Pilar SUPERPERS/RUFLO, nenhuma arte vai a produção
+   sem aprovação humana. Após aprovação, usar em campanhas de e-mail e WhatsApp.
+
+Pendências para o operador:
+  - Aprovar (ou solicitar ajustes) das 3 finais.
+  - Opcional: se desejar acento perfeito também na V1/V3 (já corretos) ou variações
+    de copy, solicitar nova rodada.
+================================================================================

@@ -1,0 +1,69 @@
+================================================================================
+MC78.5 — OG = só o rosto do GUTO, quadrado 512×512 transparente (igual ao login)
+Data: 2026-07-18   |   Branch: feat/mc73-correcao-deploy
+================================================================================
+
+OBJETIVO
+--------
+Trocar a imagem de compartilhamento (OG) do banner 1200×630 (com texto) do MC78.3
+por APENAS o rosto do GUTO, centralizado, quadrado 512×512, fundo transparente,
+sem texto — idêntico ao ícone da tela de login (guto-login.png).
+
+--------------------------------------------------------------------------------
+1. DIAGNÓSTICO
+--------------------------------------------------------------------------------
+- Base guto-login.png: 512×512 PNG, alpha=true, rosto centralizado (já é o padrão).
+- og-image.png ANTERIOR (MC78.3): 1200×630 PNG (banner: rosto + "DesafioGUT" +
+  tagline sobre fundo navy).
+- index.html: og:image → /assets/guto/og-image.png; og:image:width/height = 1200/630.
+- NOTA: o enunciado do MC citava "og-guto.png", mas o arquivo realmente referenciado
+  pelo index.html é og-image.png. Regenerei og-image.png (senão a troca não teria
+  efeito). Nenhum og-guto.png existe/é usado.
+
+--------------------------------------------------------------------------------
+2. CORREÇÃO APLICADA
+--------------------------------------------------------------------------------
+- Regenerado public/assets/guto/og-image.png a partir de guto-login.png:
+    sharp(...).resize(512,512,{fit:'cover',background:{alpha:0}})
+  → 512×512 PNG transparente, só o rosto centralizado (445 KB). Como a base já é
+    512² quadrada, fit=cover preserva o rosto inteiro sem distorção nem corte.
+- index.html: og:image:width/height ajustados 1200/630 → 512/512 (metadado do próprio
+  asset; necessário p/ o scraper não reservar proporção de banner).
+- Commit: fix(mc78.5) em feat/mc73-correcao-deploy.
+
+--------------------------------------------------------------------------------
+3. RESSALVAS HONESTAS (o usuário optou por este formato, ciente)
+--------------------------------------------------------------------------------
+- FUNDO TRANSPARENTE em OG: WhatsApp/Facebook compõem a imagem sobre o fundo DELES
+  (normalmente branco; às vezes preto). O rosto vai aparecer sobre esse fundo da
+  plataforma, não sobre transparência real. (Por isso o MC78.3 usava navy opaco.)
+- QUADRADO 512×512: o WhatsApp renderiza imagem quadrada como THUMBNAIL PEQUENO
+  (layout de card compacto), não o banner grande 1200×630. É o comportamento
+  esperado deste formato — não é defeito.
+- Alternativa disponível a qualquer momento: reverter ao banner navy opaco 1200×630
+  (git tem o histórico) se o resultado nos apps não agradar.
+
+--------------------------------------------------------------------------------
+4. DEPLOY / VALIDAÇÃO
+--------------------------------------------------------------------------------
+Deploy: netlify deploy --prod --build.
+  - Deploy id: 6a5be9b6d0b18d9b5207f5fa | state: ready | context: production.
+  - Nova og-image em prod: HTTP 200, image/png, 455785 bytes (== byte-size do
+    guto-login.png → é o mesmo rosto quadrado). Servida em 512×512.
+  - og:image:width/height servidos = 512/512 (crawler facebookexternalhit).
+  - Render da produção (URL fresca ?v=mc785): "og-image.png (512×512)" — só o rosto,
+    transparente (renderizado sobre fundo claro do viewer, ilustrando a ressalva §3).
+    Evidência: Desktop/MC78.5-og-novo.png
+  Resultado: SUCESSO (loop R6 = 1 iteração).
+
+Cache dos apps (igual ao MC78.4): o WhatsApp/FB cacheiam o preview por URL. Para ver
+o card novo:
+  - URL fresca (imediato): compartilhar https://silly-stardust-ca71bc.netlify.app/?v=2
+  - Facebook Sharing Debugger → "Scrape Again" (requer login FB — operador).
+
+--------------------------------------------------------------------------------
+5. EVIDÊNCIAS
+--------------------------------------------------------------------------------
+  - Desktop/MC78.5-og-novo.png (a nova OG: rosto quadrado transparente)
+  - Antes (banner): descrito no MC78.3 (Desktop/MC78.3-og-prod.png)
+================================================================================

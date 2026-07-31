@@ -14,8 +14,12 @@
 
 // MC36.1 — saldo R$ em Supabase (saldoRs-store). Escrita só Supabase (R11);
 // leitura com fallback para o Blob legado durante a transição (financeiro-fallback).
-import { getSaldo, setSaldo, casSaldo, getCredito, setCredito } from "./saldoRs-store.mjs";
+import { getSaldo, setSaldo, casSaldo, getCredito, setCredito, inserirSaldoSeAusente } from "./saldoRs-store.mjs";
 import { lerSaldoLegado, lerCreditoLegado } from "./financeiro-fallback.mjs";
+// MC87 (P3-1) — um log com carteira + saldo é, na prática, um extrato. A máscara
+// preserva a correlação entre linhas (prefixo+sufixo) sem deixar um identificador
+// reutilizável no log.
+import { mascararEndereco } from "./validate.mjs";
 
 function chave(endereco) {
   return endereco.toLowerCase();
@@ -33,12 +37,51 @@ export async function lerSaldoRsCentavos(endereco) {
   }
 }
 
-async function gravarSaldoRsCentavos(endereco, centavos) {
-  // MC36.1 — escrita só Supabase (R11).
-  await setSaldo(chave(endereco), {
-    centavos: Math.max(0, Math.floor(centavos)),
-    atualizadoEm: new Date().toISOString(),
-  });
+/**
+ * MC59.2 (C-1) — Ajuste ATÓMICO do saldo por um delta (crédito/reembolso).
+ * Espelha o CAS do débito (debitarSaldoRs): lê o saldo, garante a linha e só
+ * grava se o saldo no banco ainda for o valor lido (casSaldo). Fecha a janela
+ * TOCTOU do read-modify-write → um crédito/reembolso concorrente com um débito
+ * (ou entre si) já não pode "clobberar" o resultado do outro (lost update).
+ * O saldo nunca fica < 0.
+ *
+ * @returns { ok:true, saldoAntes, saldoDepois } | { ok:false, code, message }
+ */
+async function ajustarSaldoRsAtomico(ender, deltaCentavos, motivo = "ajuste") {
+  const delta = Math.floor(Number(deltaCentavos));
+  for (let tentativa = 1; tentativa <= MAX_TENTATIVAS_DEBITO; tentativa++) {
+    let saldoAntes;
+    try {
+      saldoAntes = await lerSaldoRsCentavos(ender);
+    } catch (err) {
+      return { ok: false, code: "leitura_saldo_falhou", message: err?.message };
+    }
+    const saldoDepois = Math.max(0, saldoAntes + delta);
+    const novoPayload = { centavos: saldoDepois, atualizadoEm: new Date().toISOString() };
+
+    // Garante que a linha existe no Supabase para o CAS ter alvo de UPDATE
+    // (durante a transição MC36.1 o saldo pode existir só no Blob legado).
+    try {
+      // MC59.3 (follow-up C-1) — bootstrap ATÓMICO: INSERT..DO NOTHING não
+      // sobrescreve uma linha criada concorrentemente entre a leitura e a escrita.
+      if ((await getSaldo(ender)) == null) {
+        await inserirSaldoSeAusente(ender, { centavos: saldoAntes, atualizadoEm: new Date().toISOString() });
+      }
+    } catch (err) {
+      return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
+    }
+
+    let trocou;
+    try {
+      trocou = await casSaldo(ender, saldoAntes, novoPayload);
+    } catch (err) {
+      return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
+    }
+    if (trocou) return { ok: true, saldoAntes, saldoDepois };
+    // CAS perdeu: outro ajuste alterou o saldo entre a leitura e a escrita → relê.
+    console.warn(`[saldoRs:${motivo}] CAS perdeu (tentativa ${tentativa}/${MAX_TENTATIVAS_DEBITO}) — relendo saldo`, { endereco: mascararEndereco(ender) });
+  }
+  return { ok: false, code: "conflito_concorrencia", message: "ajuste não aplicado após múltiplas tentativas (concorrência alta)" };
 }
 
 /**
@@ -56,7 +99,7 @@ export async function creditarSaldoRsIdempotente({ pedidoId, endereco, valorCent
   if (!(valor > 0)) {
     return { ok: false, code: "valor_invalido", message: "valorCentavos deve ser > 0" };
   }
-  console.info(`[saldoRs:${fonte}] credito início`, { pedidoId, endereco: ender, valorCentavos: valor });
+  console.info(`[saldoRs:${fonte}] credito início`, { pedidoId, endereco: mascararEndereco(ender), valorCentavos: valor });
 
   // Idempotência: se este pedidoId já foi creditado, retorna o registro.
   // MC36.1 — Supabase (saldo_rs_creditos) + fallback de leitura Blob legado.
@@ -70,20 +113,15 @@ export async function creditarSaldoRsIdempotente({ pedidoId, endereco, valorCent
     console.warn(`[saldoRs:${fonte}] leitura saldo-rs-creditos falhou:`, err?.message);
   }
 
-  // Lê saldo atual e credita.
-  let saldoAntes;
-  try {
-    saldoAntes = await lerSaldoRsCentavos(ender);
-  } catch (err) {
-    return { ok: false, code: "leitura_saldo_falhou", message: err?.message };
+  // MC59.2 (C-1) — crédito ATÓMICO via CAS (não read-modify-write). Fecha o
+  // lost-update quando um débito concorrente altera o saldo no mesmo endereço.
+  const ajuste = await ajustarSaldoRsAtomico(ender, valor, `credito:${fonte}`);
+  if (!ajuste.ok) {
+    console.error(`[saldoRs:${fonte}] crédito atómico falhou:`, ajuste.code);
+    return { ok: false, code: ajuste.code, message: ajuste.message };
   }
-  const saldoDepois = saldoAntes + valor;
-  try {
-    await gravarSaldoRsCentavos(ender, saldoDepois);
-  } catch (err) {
-    console.error(`[saldoRs:${fonte}] gravar saldo falhou:`, err?.message);
-    return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
-  }
+  const saldoAntes  = ajuste.saldoAntes;
+  const saldoDepois = ajuste.saldoDepois;
 
   const resultado = {
     pedidoId,
@@ -99,7 +137,7 @@ export async function creditarSaldoRsIdempotente({ pedidoId, endereco, valorCent
   try { await setCredito(pedidoId, resultado); } // MC36.1 — escrita só Supabase (R11)
   catch (err) { console.warn(`[saldoRs:${fonte}] persistir saldo-rs-creditos falhou:`, err?.message); }
   console.info(`[saldoRs:${fonte}] credito concluído`, {
-    pedidoId, endereco: ender, valorCentavos: valor,
+    pedidoId, endereco: mascararEndereco(ender), valorCentavos: valor,
     saldoAntes, saldoDepois,
   });
   return { ok: true, idempotent: false, resultado };
@@ -126,7 +164,7 @@ export async function debitarSaldoRs({ endereco, valorCentavos, motivo = "descon
   if (!(valor > 0)) {
     return { ok: false, code: "valor_invalido", message: "valorCentavos deve ser > 0" };
   }
-  console.info(`[saldoRs:debito:${motivo}] início`, { endereco: ender, valorCentavos: valor });
+  console.info(`[saldoRs:debito:${motivo}] início`, { endereco: mascararEndereco(ender), valorCentavos: valor });
 
   for (let tentativa = 1; tentativa <= MAX_TENTATIVAS_DEBITO; tentativa++) {
     let saldoAntes;
@@ -136,7 +174,7 @@ export async function debitarSaldoRs({ endereco, valorCentavos, motivo = "descon
       return { ok: false, code: "leitura_saldo_falhou", message: err?.message };
     }
     if (saldoAntes < valor) {
-      console.warn(`[saldoRs:debito:${motivo}] saldo insuficiente`, { endereco: ender, saldoAntes, valor });
+      console.warn(`[saldoRs:debito:${motivo}] saldo insuficiente`, { endereco: mascararEndereco(ender), saldoAntes, valor });
       return { ok: false, code: "saldo_insuficiente", message: `saldo R$ ${(saldoAntes/100).toFixed(2)} < valor R$ ${(valor/100).toFixed(2)}` };
     }
     const saldoDepois = saldoAntes - valor;
@@ -145,9 +183,10 @@ export async function debitarSaldoRs({ endereco, valorCentavos, motivo = "descon
     // Garante que a linha existe no Supabase para o CAS ter alvo de UPDATE
     // (durante a transição MC36.1 o saldo pode existir só no Blob legado).
     try {
-      const existe = await getSaldo(ender);
-      if (existe == null) {
-        await setSaldo(ender, { centavos: saldoAntes, atualizadoEm: new Date().toISOString() });
+      // MC59.3 (follow-up C-1) — bootstrap ATÓMICO: INSERT..DO NOTHING não
+      // sobrescreve uma linha criada concorrentemente entre a leitura e a escrita.
+      if ((await getSaldo(ender)) == null) {
+        await inserirSaldoSeAusente(ender, { centavos: saldoAntes, atualizadoEm: new Date().toISOString() });
       }
     } catch (err) {
       return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
@@ -162,15 +201,15 @@ export async function debitarSaldoRs({ endereco, valorCentavos, motivo = "descon
 
     if (trocou) {
       console.info(`[saldoRs:debito:${motivo}] concluído`, {
-        endereco: ender, saldoAntes, saldoDepois, valorCentavos: valor, tentativa,
+        endereco: mascararEndereco(ender), saldoAntes, saldoDepois, valorCentavos: valor, tentativa,
       });
       return { ok: true, resultado: { saldoAntesCentavos: saldoAntes, saldoDepoisCentavos: saldoDepois, valorCentavos: valor } };
     }
     // CAS perdeu: outro débito alterou o saldo entre a leitura e a escrita.
-    console.warn(`[saldoRs:debito:${motivo}] CAS perdeu (tentativa ${tentativa}/${MAX_TENTATIVAS_DEBITO}) — relendo saldo`, { endereco: ender });
+    console.warn(`[saldoRs:debito:${motivo}] CAS perdeu (tentativa ${tentativa}/${MAX_TENTATIVAS_DEBITO}) — relendo saldo`, { endereco: mascararEndereco(ender) });
   }
 
-  console.error(`[saldoRs:debito:${motivo}] conflito de concorrência após ${MAX_TENTATIVAS_DEBITO} tentativas`, { endereco: ender, valor });
+  console.error(`[saldoRs:debito:${motivo}] conflito de concorrência após ${MAX_TENTATIVAS_DEBITO} tentativas`, { endereco: mascararEndereco(ender), valor });
   return { ok: false, code: "conflito_concorrencia", message: "débito não aplicado após múltiplas tentativas (concorrência alta)" };
 }
 
@@ -179,14 +218,12 @@ export async function reembolsarSaldoRs({ endereco, valorCentavos, motivo = "ree
   const ender = chave(endereco);
   const valor = Math.floor(Number(valorCentavos));
   if (!(valor > 0)) return { ok: false, code: "valor_invalido" };
-  const saldoAntes  = await lerSaldoRsCentavos(ender);
-  const saldoDepois = saldoAntes + valor;
-  try {
-    await gravarSaldoRsCentavos(ender, saldoDepois);
-    console.info(`[saldoRs:reembolso:${motivo}]`, { endereco: ender, saldoAntes, saldoDepois });
-    return { ok: true, resultado: { saldoAntesCentavos: saldoAntes, saldoDepoisCentavos: saldoDepois } };
-  } catch (err) {
-    console.error(`[saldoRs:reembolso:${motivo}] gravar falhou:`, err?.message);
-    return { ok: false, code: "gravar_saldo_falhou", message: err?.message };
+  // MC59.2 (C-1) — reembolso ATÓMICO via CAS (não read-modify-write).
+  const ajuste = await ajustarSaldoRsAtomico(ender, valor, `reembolso:${motivo}`);
+  if (!ajuste.ok) {
+    console.error(`[saldoRs:reembolso:${motivo}] ajuste atómico falhou:`, ajuste.code);
+    return { ok: false, code: ajuste.code, message: ajuste.message };
   }
+  console.info(`[saldoRs:reembolso:${motivo}]`, { endereco: mascararEndereco(ender), saldoAntes: ajuste.saldoAntes, saldoDepois: ajuste.saldoDepois });
+  return { ok: true, resultado: { saldoAntesCentavos: ajuste.saldoAntes, saldoDepoisCentavos: ajuste.saldoDepois } };
 }

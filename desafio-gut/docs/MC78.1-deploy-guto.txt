@@ -1,0 +1,108 @@
+================================================================================
+MC78.1 — Correção do deploy Netlify (netlify.toml) + ícone GUTO no login
+Data: 2026-07-18   |   Branch de deploy: feat/mc73-correcao-deploy
+================================================================================
+
+OBJETIVO
+--------
+Corrigir o deploy do frontend no Netlify (falhando com "Missing script: build")
+e garantir que o ícone do GUTO apareça no modal de login em produção.
+
+--------------------------------------------------------------------------------
+1. DIAGNÓSTICO (causa-raiz)
+--------------------------------------------------------------------------------
+- O repositório git tem raiz em DESAFIOGUT (pasta externa); o frontend fica
+  ANINHADO em desafio-gut/frontend (build script está aí).
+- O netlify.toml COMMITADO (raiz do repo) estava CORROMPIDO: o commit
+    8d8cecf "fix(csp): adicionar mainnet RPC ao connect-src"
+  fez 1 inserção / 82 DELEÇÕES — apagou todo o [build]/[functions]/redirects/
+  headers e deixou apenas uma linha malformada de Content-Security-Policy (com um
+  "https://eth-mainnet.g.alchemy.com" pendurado no fim, fora de qualquer diretiva).
+- Sem [build].base/command, o Netlify rodava `npm run build` na RAIZ (DESAFIOGUT),
+  cujo package.json tem scripts:{} -> ERRO "Missing script: build".
+- EVIDÊNCIA: os 2 últimos deploys de PRODUÇÃO estavam em estado `error`
+  (2026-07-18T19:06 e 2026-07-14T18:55). Produção não estava recebendo updates.
+- Config válida de referência: netlify.toml.backup-20260708-230133.
+
+--------------------------------------------------------------------------------
+2. CORREÇÃO (escopo R1/R5 — apenas config)
+--------------------------------------------------------------------------------
+Reconstruído o netlify.toml na raiz a partir do backup válido, restaurando:
+  [build] base="desafio-gut/frontend"
+          command="npm install --legacy-peer-deps && npm install --prefix
+                   netlify/functions --legacy-peer-deps && npm run build"
+          publish="dist"            (-> desafio-gut/frontend/dist)
+  [build.environment] SECRETS_SCAN_OMIT_KEYS (chaves públicas) + smart detection
+  [functions] directory="netlify/functions" (relativo ao base), esbuild
+  [[redirects]] SPA /* -> /index.html 200
+  [[headers]]  cache-control (index no-store, /assets immutable) + CSP + segurança
++ CORRIGIDA a intenção do commit que quebrou o arquivo: adicionado
+  "https://eth-mainnet.g.alchemy.com" DENTRO do connect-src (mainnet/MC60).
+
+TOML validado (tomllib): base/command/publish/functions OK, 1 redirect, 4 headers,
+eth-mainnet presente no CSP.
+
+NOTA: as configs de build de produção também existem na UI do Netlify
+(commandOrigin/publishOrigin="ui" no cache .netlify). O netlify.toml committado
+tem precedência sobre a UI para as chaves que define — logo, esta correção passa
+a controlar command/publish/functions via repo (fonte de verdade versionada).
+
+--------------------------------------------------------------------------------
+3. VALIDAÇÃO (loop R6 — 1 iteração, SUCESSO)
+--------------------------------------------------------------------------------
+a) Build local (feat/mc73), a partir do base: `npm run build` -> VERDE (7.39s);
+   dist/assets/guto/guto-login.png presente; index.html gerado.
+b) Deploy de RASCUNHO (deploy-preview, NÃO-prod) via Netlify CLI (autenticado
+   como desafiogut@gmail.com, site silly-stardust-ca71bc):
+     Preview: https://6a5bd1f63ab28b4f0c522551--silly-stardust-ca71bc.netlify.app
+     Estado: ready | context: deploy-preview (produção intacta)
+c) HTTP do asset no preview:
+     /assets/guto/guto-login.png -> HTTP 200, image/png, 455785 bytes
+     /                            -> HTTP 200, text/html
+d) Validação visual (MCP chrome-devtools): fluxo consentimento -> login ->
+   modal REAL do Privy exibe o ROSTO DO GUTO acima de "Log in or sign up".
+   Screenshot: Desktop/MC78.1-preview-login.png
+
+--------------------------------------------------------------------------------
+4. ESTADO GIT
+--------------------------------------------------------------------------------
+Branch feat/mc73-correcao-deploy (HEAD 5d08823) já contém, committado:
+  - 48085d6 feat(mc78): ícone do login = rosto do GUTO (main.jsx + guto-login.png)
+  - 5d08823 fix(mc78.1): netlify.toml (estrutura restaurada + RPC mainnet)
+Working tree limpo para esses arquivos. (Commits realizados na sessão/pelo
+operador em paralelo; conteúdo confere por hash com a correção validada.)
+
+--------------------------------------------------------------------------------
+5. DEPLOY DE PRODUÇÃO — EXECUTADO E VALIDADO ✅
+--------------------------------------------------------------------------------
+Método escolhido pelo usuário (que passou o bastão): `netlify deploy --prod --build`
+(build no pipeline do Netlify, aplicando ENV VARS de produção + secrets-scanning).
+  - Netlify Build completo em 6m 4.2s; 214 files + 47 functions.
+  - Deploy id: 6a5bd51d4138473279d95830 | state: ready | context: production
+  - "Deploy is live!" -> https://silly-stardust-ca71bc.netlify.app
+  - (Antes desta correção, os 2 últimos deploys de produção estavam em `error`.)
+
+Validação em PRODUÇÃO:
+  - /assets/guto/guto-login.png -> HTTP 200, image/png, 455785 bytes.
+  - Fluxo consentimento -> login -> modal REAL do Privy exibe o ROSTO DO GUTO
+    acima de "Log in or sign up". Screenshot: Desktop/MC78.1-PROD-login.png
+
+--------------------------------------------------------------------------------
+6. ARQUIVOS / EVIDÊNCIAS
+--------------------------------------------------------------------------------
+  ~ netlify.toml (raiz DESAFIOGUT) — corrigido/committado (5d08823)
+  Evidências: Desktop/MC78.1-preview-login.png
+              Desktop/MC78-antes.png, Desktop/MC78-depois.png (MC78)
+  Docs: desafio-gut/docs/MC78.1-deploy-guto.txt
+
+--------------------------------------------------------------------------------
+7. LIÇÕES
+--------------------------------------------------------------------------------
+- Editar CSP inline (linha única gigante) no netlify.toml é frágil: o commit
+  8d8cecf destruiu 82 linhas ao tentar acrescentar 1 URL. Preferir editar SÓ a
+  string do connect-src, com o restante da estrutura intacto (ou validar com
+  tomllib no pré-commit).
+- Repo com raiz != pasta do frontend exige base="desafio-gut/frontend"; sem base,
+  o Netlify roda na raiz e falha "Missing script: build".
+- Sempre validar deploy em deploy-preview (sem --prod) antes de tocar a mainnet.
+================================================================================

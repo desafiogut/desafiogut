@@ -1,0 +1,92 @@
+================================================================================
+MC89.6 — SEGMENTO 0: DECISÕES CONFIRMADAS PARA A FASE 0
+================================================================================
+Data: 2026-07-30      Branch: feat/mc89-adm-system
+
+--------------------------------------------------------------------------------
+DECISÕES DO OPERADOR (aprovadas com o plano do MC89.5)
+--------------------------------------------------------------------------------
+D-NAV    Navegação por rota, uma por tela, com a Visão Geral como índice de
+         /admin. Substitui os separadores num componente único.
+         → Executado neste MC (Segmento 2).
+
+D1       A Tela 2 lista "utilizadores COM ATIVIDADE", não "todos". Não se cria
+         tabela espelho do Privy.
+         → Não executado neste MC (Fase 4). Fica escrito no esqueleto da tela
+           para que o rótulo não se perca no caminho.
+
+D11      "Abastecer EOA" fica FORA do painel.
+         → Consequência para a Fase 0: NÃO se cria rota, botão ou esqueleto para
+           essa ação. Uma tela vazia com o nome certo é um convite a preenchê-la.
+
+D-SALDO  "Resetar saldo" passa a "Ajuste manual" com débito auditável.
+         → Não executado neste MC (Fase 4). Registado no esqueleto da Tela 2.
+
+T6       Ordem dos canais de notificação: in-app → e-mail → push.
+         → Registado no esqueleto da Tela 6.
+
+T7       Tema claro/escuro fora do âmbito.
+         → Consequência para a Fase 0: a Tela 7 não recebe secção de tema.
+
+--------------------------------------------------------------------------------
+DECISÕES TÉCNICAS TOMADAS NESTE MC (e porquê divergem do enunciado)
+--------------------------------------------------------------------------------
+
+T-1 — TESTES: node:test sobre lógica PURA, sem runner de React.
+  O enunciado pede `src/__tests__/AdminAuthContext.test.jsx` e "cobertura > 80%".
+  Levantamento: o frontend NÃO tem runner de testes. Não há vitest, jest, jsdom
+  nem testing-library em package.json. O único teste do frontend é
+  `src/lib/creditoPolling.test.mjs`, e o seu cabeçalho diz exatamente como o
+  projeto resolveu este problema:
+      "MC59.6 — lógica PURA de polling (sem React, sem import.meta) →
+       testável com node:test."
+
+  Adotar essa via em vez de instalar vitest + jsdom + @testing-library/react:
+    · segue o precedente do próprio projeto em vez de abrir um segundo padrão;
+    · evita ~40 MB de devDependencies e uma superfície de auditoria nova, com o
+      `npm audit --audit-level=high` do CI a correr sobre ela;
+    · e, sobretudo, testa a coisa certa. O que pode partir aqui é a MÁQUINA DE
+      ESTADOS da sessão (refresh, 401, rotação, revogação), não a árvore de JSX.
+
+  ⇒ A lógica sai para `src/lib/adminAuth.js` (puro, com fetch/storage/relógio
+    injetáveis) e o `AdminAuthContext.jsx` fica a ser uma casca fina de React.
+    O que é testável fica testado; o que não é fica pequeno o suficiente para
+    ser lido de uma vez.
+
+  ⚠ "Cobertura > 80% do contexto" não é mensurável sem instrumentação, que
+    também não existe no projeto. Substituído por um critério verificável:
+    todo o caminho de decisão do módulo puro tem um teste, e cada teste é
+    validado por MUTAÇÃO ([[testar-teste-novo-por-mutacao]]).
+
+T-2 — "Aprovações" e "Cotas" não têm lugar na estrutura de 7 telas.
+  As duas são funcionalidades VIVAS do painel de hoje. A estrutura aprovada de
+  7 telas (Visão Geral, Usuários, Financeiro, Operações, Logs, Comunicação,
+  Configurações) não tem casa para nenhuma delas.
+  Deixá-las cair seria uma regressão funcional silenciosa.
+  ⇒ NESTE MC ficam como duas rotas próprias (/admin/aprovacoes, /admin/cotas),
+    com o mesmo comportamento de hoje.
+  ⚠ DECISÃO PENDENTE DO OPERADOR: onde é que elas pertencem na estrutura final?
+    Hipóteses: Aprovações dentro de Usuários; Cotas dentro de Financeiro; ou
+    ambas permanecem como telas autónomas (o painel passa a ter 9).
+    Enquanto não houver resposta, ficam autónomas — que é o estado que não perde
+    nada.
+
+T-3 — AdminPanel.jsx é substituído, não reduzido.
+  O enunciado prevê "AdminPanel.jsx reduzido em ~200 linhas". Com rotas
+  aninhadas, o que sobra do ficheiro É o layout: gate de acesso, barra de estado
+  da sessão, navegação e <Outlet />. Mantê-lo com o nome antigo em
+  `pages/AdminPanel.jsx` ao lado de `pages/admin/*.jsx` seria uma ambiguidade
+  permanente sobre onde vive o quê.
+  ⇒ O conteúdo passa a `components/admin/AdminLayout.jsx` + `NavAdmin.jsx`, e as
+    quatro abas passam a `pages/admin/*.jsx`. `pages/AdminPanel.jsx` é removido.
+    É um MOVIMENTO de código, não reescrita: as quatro abas vão praticamente
+    verbatim, para que a não-regressão seja verificável por leitura do diff.
+
+T-4 — O que NÃO muda nesta fase.
+  · Nenhum endpoint de backend é tocado.
+  · Nenhuma migração de base de dados.
+  · Nenhuma alteração de comportamento visível ao ADM, além da navegação.
+  · O access token continua a viver SÓ em memória; o refresh continua em
+    sessionStorage. O modelo de segurança do MC1 é preservado tal e qual, e há
+    um teste a afirmá-lo.
+================================================================================

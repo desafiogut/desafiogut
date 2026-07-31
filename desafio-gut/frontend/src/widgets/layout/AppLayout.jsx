@@ -15,13 +15,22 @@
 // (AppEnvironmentProvider) é montado em App.jsx (envolve Routes + ChatbotWidget),
 // por isso aqui apenas CONSUMIMOS o estado nas camadas. As camadas fixas de z-index
 // negativo empilham por viewport, independentemente do aninhamento DOM.
+//
+// MC89.4 — nas rotas de TRABALHO (/admin, /corporativo) a vinheta NÃO é montada.
+// Ela existe para dar ambiente ao leilão; num ecrã de administração só baixa o
+// contraste nos cantos, e o MC89.3 mediu texto ilegível por causa disso.
+import { useLocation } from "react-router-dom";
 import AtmosphereFilter from "./AtmosphereFilter.jsx";
 import Layout from "./Layout.jsx";
+import { ehRotaDeTrabalho } from "../../lib/rotasTrabalho.js";
 
 export default function AppLayout() {
+  const { pathname } = useLocation();
+  const trabalho = ehRotaDeTrabalho(pathname);
+
   return (
     <>
-      <AtmosphereFilter />
+      {!trabalho && <AtmosphereFilter />}
       <div className="gut-surface">
         <Layout />
         {/* MC22.1/MC22.2 — GUTO apenas INLINE junto dos cronómetros (Dashboard:

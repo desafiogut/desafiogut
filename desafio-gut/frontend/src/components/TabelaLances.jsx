@@ -4,6 +4,9 @@ import { sanitizeAddress, sanitizeString, sanitizeLance } from "../utils/sanitiz
 import { Badge } from "@/components/ui/badge";
 import { THead, TH, TD } from "@/components/ui";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+// MC88.43 — este cabeçalho era o lado que VAZAVA no B4: anunciava "🟢 Ativo" e
+// a data real do prazo enquanto o Dashboard, no mesmo instante, dizia "EM BREVE".
+import { getEstadoEdicao } from "../utils/edicao.js";
 
 function ordenarLances(lances) {
   // MC28.1: cmp null-safe — lances blindados (valor null em mainnet) mantêm ordem
@@ -32,6 +35,12 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
     ? encerradoProp
     : !!(prazoTimestamp && agora > prazoTimestamp);
 
+  // MC88.43 — mesma pergunta que o Dashboard faz, com o mesmo `encerrado`.
+  const est = getEstadoEdicao({ id: idEdicao }, { encerrado });
+
+  // A data do prazo é informação REAL, e por isso mesmo contradizia o "EM BREVE"
+  // do Dashboard: provava que o leilão estava a decorrer. Só se mostra quando a
+  // fonte única admite uma contagem viva (est.timer === null).
   const prazoFormatado = prazoTimestamp
     ? new Date(prazoTimestamp * 1000).toLocaleString("pt-BR")
     : "—";
@@ -87,12 +96,19 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
           justifyContent: isMobile ? "space-between" : "flex-end",
           flexWrap: "wrap",
         }}>
-          <span style={{ fontSize: isMobile ? "0.7rem" : "0.78rem", color: "#6b7db8" }}>
-            Prazo: {prazoFormatado}
+          {est.timer == null && (
+            <span style={{ fontSize: isMobile ? "0.7rem" : "0.78rem", color: "#6b7db8" }}>
+              Prazo: {prazoFormatado}
+            </span>
+          )}
+          <span style={{ ...estilos.statusBadge, background: est.cor }}>
+            {est.badge}
           </span>
-          <span style={{ ...estilos.statusBadge, background: encerrado ? "#dc2626" : "#16a34a" }}>
-            {encerrado ? "🔴 Encerrado" : "🟢 Ativo"}
-          </span>
+          {/* Este aviso NÃO segue a fonte única de propósito: ele espelha a regra
+              de DIVULGAÇÃO (valores só aparecem depois do fim), que continua
+              amarrada ao `encerrado` on-chain — ver MobileList/DesktopTable
+              abaixo. Trocá-lo por est.encerrada punha o aviso "valores ocultos"
+              ao lado de valores já revelados. Presentação não manda em divulgação. */}
           {!encerrado && lances.length > 0 && (
             <span style={{ fontSize: isMobile ? "0.68rem" : "0.74rem", color: "#6b7db8", fontStyle: "italic" }}>
               🔒 valores ocultos até o fim
@@ -123,7 +139,7 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
         borderTop: "1px solid rgba(245,166,35,0.12)", paddingTop: "0.75rem",
         textAlign: isMobile ? "center" : "left",
       }}>
-        🔒 Dados sanitizados · XSS-safe · Art. 26: apuração automática · Beta Interno
+        🔒 Dados sanitizados · Art. 26: apuração automática
       </p>
     </div>
   );

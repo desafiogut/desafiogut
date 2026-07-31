@@ -1,0 +1,10 @@
+﻿import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.desafiogut.app',
+  appName: 'DesafioGUT',
+  webDir: 'dist'
+};
+
+export default config;
+

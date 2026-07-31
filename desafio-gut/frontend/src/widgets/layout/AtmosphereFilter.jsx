@@ -41,8 +41,15 @@ export default function AtmosphereFilter() {
         reduce
           ? { backgroundColor: cfg.tint }
           : {
-              backdropFilter: `blur(${cfg.blur}px)`,
-              WebkitBackdropFilter: `blur(${cfg.blur}px)`,
+              // MC82.1 — em repouso (blur 0) emite "none" em vez de "blur(0px)".
+              // Este elemento é fixed inset-0, ou seja cobre 100% do ecrã: mesmo
+              // com raio ZERO, declarar backdrop-filter obriga o compositor a
+              // manter uma camada de backdrop de ecrã inteiro. Medido no Redmi
+              // 21091116UG: desligá-lo em idle vale ~+3 fps sozinho, e o estado
+              // "idle" é onde o app passa quase todo o tempo. Os estados com
+              // blur real (processing 6px, thinking 14px) não mudam.
+              backdropFilter: cfg.blur ? `blur(${cfg.blur}px)` : "none",
+              WebkitBackdropFilter: cfg.blur ? `blur(${cfg.blur}px)` : "none",
               backgroundColor: cfg.tint,
             }
       }

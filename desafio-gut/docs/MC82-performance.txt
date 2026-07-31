@@ -1,0 +1,310 @@
+================================================================================
+MC82 — DIAGNÓSTICO DE PERFORMANCE DO APP ANDROID (WebView) + PLANO DE AÇÃO
+DesafioGUT · 2026-07-20 · Custo: US$ 0,00 (R2 — só ferramentas locais)
+NATUREZA DESTE MC: DIAGNÓSTICO E PLANEJAMENTO. Nenhuma alteração de código.
+Execução das otimizações → MC83, com validação em dispositivo real.
+================================================================================
+
+⚠️ CORREÇÃO DE ROTA
+--------------------------------------------------------------------------------
+Numa primeira passagem, as ações A1, A2 e A5 chegaram a ser aplicadas ao código.
+O operador identificou que isso extrapolava o escopo do MC82, que é diagnóstico
+e planejamento. As três alterações foram REVERTIDAS e o estado anterior foi
+restaurado e conferido:
+    src/main.jsx ............................. restaurado (git checkout HEAD)
+    src/widgets/layout/BackgroundCanvas.jsx .. restaurado
+    public/assets/backgrounds/loops/ ......... 10 webm restaurados
+    npm run build + npx cap sync android ..... refeitos
+    dist/ e assets do APK .................... 35 MB / 21 webm (baseline)
+    git status dos ficheiros de código ....... limpo
+O MC82 fica portanto como documento de diagnóstico e plano. R1 preservado:
+ZERO alteração de código-fonte permanece deste MC.
+
+================================================================================
+RESULTADO EM UMA LINHA
+================================================================================
+A lentidão NÃO vem de onde o plano supunha. A aceleração de hardware já está
+ligada e o app não tem plugins Capacitor nem chamadas à bridge — as três ações
+de "PRIORIDADE ALTA" do plano original são no-ops. As causas reais, provadas por
+medição, são: 4 MB de JavaScript antes da primeira tela, um vídeo Full-HD que
+decodifica permanentemente sem ser visto, e até 14 streams VP9 simultâneos (com
+canal alfa decodificado em software) no Dashboard.
+
+================================================================================
+1 · AMBIENTE (Segmento 0)
+================================================================================
+Repo real .......... C:\Users\Moltbot\Desktop\DESAFIOGUT
+                     (~\DESAFIOGUT existe mas está VAZIA — armadilha de caminho)
+Branch ............. feat/mc73-correcao-deploy  ·  HEAD 425cedb (MC81)
+Projeto Capacitor .. desafio-gut/frontend/
+Capacitor .......... 8.4.2 (core/android/cli)  ·  Node v24.14.1  ·  Vite 8.1.0
+Android SDK ........ android-34, build-tools 34.0.0
+
+capacitor.config.ts: appId, appName, webDir — e mais nada. Sem bloco `android`,
+sem `server`, sem qualquer tuning de WebView.
+
+================================================================================
+2 · TRÊS PREMISSAS DO PLANO REFUTADAS POR EVIDÊNCIA
+================================================================================
+✗ "Ativar android:hardwareAccelerated"
+  O atributo está ausente do Manifest, mas o seu default é TRUE desde a API 14
+  para targetSdk>=14 (aqui android-34). A ACELERAÇÃO JÁ ESTÁ ATIVA. Era a ação
+  nº1 de PRIORIDADE ALTA do plano; executá-la custaria um ciclo de build por
+  ganho exatamente zero.
+
+✗ "Lazy loading de plugins / reduzir bridge calls"
+  android/app/src/main/assets/capacitor.plugins.json  →  []   (VAZIO)
+  grep "@capacitor" em src/                            →  0 ocorrências
+  Não há plugins para adiar nem chamadas à bridge para agrupar. O Android
+  Profiler não encontraria tráfego de bridge para monitorizar.
+
+✗ "willReadFrequently em Canvas" e "{passive:true} em listeners de scroll/touch"
+  Não há canvas no caminho de render (o GUTO é <video>; CarrosselGUTO.jsx:13
+  documenta a decisão explícita de não usar canvas). E o único listener de
+  scroll do projeto — AppContext.jsx:228 — JÁ usa { passive: true }.
+
+  CONCLUSÃO: o app é um WebView puro a servir um SPA React local. Todo o
+  gargalo é WEB; nenhum é nativo.
+
+================================================================================
+3 · MÉTRICAS COLETADAS
+================================================================================
+MÉTODO E LIMITAÇÃO (declarados antes dos números)
+  `adb devices -l` → LISTA VAZIA (nenhum aparelho conectado) e o build release
+  não tem webContentsDebuggingEnabled ⇒ chrome://inspect é impossível hoje.
+  Substituto: o MESMO dist/ que vai dentro do APK, servido em localhost:4173 e
+  medido via Chrome DevTools Protocol com viewport mobile e CPU throttling.
+  Isto mede com fidelidade o custo de MAIN THREAD (parse/compile/execute de JS,
+  layout, style) — que o WebView também paga. NÃO mede decode de vídeo.
+
+BUNDLE (dist/ de 2026-07-18)
+    dist/ TOTAL .................. 35 MB  (empacotado inteiro no APK)
+      JavaScript (93 fich.) ...... 5.443 KB
+      Vídeo WebM (21 fich.) ..... 16.267 KB   ← maior bloco
+      Imagens (98 fich.) ........ 12.646 KB
+      CSS ........................    49 KB
+
+    Caminho crítico de JS (raw → gzip):
+      privy-Biryzfki.js .... 2.745,1 KB → 818,4 KB gz
+      index-BWmReVcc.js ....   811,5 KB → 277,4 KB gz
+      motion-BJ2wPd14.js ...   132,6 KB →  43,5 KB gz
+      TOTAL CRÍTICO ...................  1.139,5 KB gz
+      Alvo do MC: < 500 KB gz     →     2,3× ACIMA DO ALVO.
+
+ARRANQUE (gate LGPD — a primeira tela, antes de qualquer login)
+      JS descomprimido carregado ....... 4.003 KB
+      LCP @CPU 4× ...................... 3.091 ms   (alvo do MC: < 1.000 ms)
+         TTFB 6 ms · load delay 1.922 ms · render delay 1.159 ms
+      FCP @CPU 6× ...................... 2.012 ms
+      CLS ..............................    0,00   (bom, sem regressão)
+      Heap JS .......................... 16 MB · DOM 126 elementos
+
+      Com TTFB de 6 ms, o LCP é ~100% CPU de JavaScript. Num APK os ficheiros
+      são locais, portanto o WebView paga este mesmo perfil: o arranque lento
+      NÃO é rede, é CPU de JS.
+
+PERFIL DOS VÍDEOS (ffprobe)
+      guto/carrossel/guto-1.webm ... VP9 512×512  30fps   931 kbps  alpha_mode=1
+      guto/animations/idle.webm .... VP9 512×512  24fps 1.222 kbps  alpha_mode=1
+      fundo-loop-v3-mobile ......... VP9 1080×1935 24fps  657 kbps  (sem alfa)
+      fundo-loop-v3-desktop ........ VP9 1920×1288 24fps  566 kbps  (sem alfa)
+
+================================================================================
+4 · GARGALOS IDENTIFICADOS (Segmento 1)
+================================================================================
+G1 · VÍDEO FULL-HD INVISÍVEL A DECODIFICAR SEMPRE               [PROVADO]
+     BackgroundCanvas.jsx:74-93 monta os DOIS <video> (mobile e desktop) e o CSS
+     esconde um com `opacity: 0` (globals.css:290) — que NÃO impede o decode.
+     Medido em viewport mobile 412×915:
+         fundo-v3-mobile   1080×1935  opacity 1  paused:false  341 frames
+         fundo-v3-desktop  1920×1288  opacity 0  paused:false  335 frames  ←
+     Um decoder Full-HD inteiro gasto para descartar 100% do resultado, em todas
+     as rotas (o componente é global — App.jsx:116/126).
+     ESFORÇO DE CORREÇÃO: trivial.
+
+G2 · 4 MB DE JAVASCRIPT ANTES DA PRIMEIRA TELA                  [PROVADO]
+     main.jsx:5 importa o Privy ESTATICAMENTE e <PrivyProvider> (main.jsx:254)
+     envolve <App/>. O gate LGPD (App.jsx:111) renderiza DENTRO dele. Para
+     desenhar 4 checkboxes que não usam Privy para nada, o utilizador espera
+     4.003 KB de JS: privy 2.745 + index 812 + Sentry 312 + motion 133.
+     É O GARGALO DOMINANTE DO TEMPO DE ABERTURA.
+     ESFORÇO DE CORREÇÃO: médio, com risco (ver A3).
+
+G3 · MULTIPLICAÇÃO DE <video> VP9 COM CANAL ALFA          [estrutura PROVADA]
+     Elementos <video> simultâneos no Dashboard:
+         BackgroundCanvas ....... 2  (1 invisível — G1)
+         CarrosselGUTO .......... 2  (ativo + próximo, ambos a tocar no crossfade)
+         GutoSpritePlayer ....... 1  (idle.webm em loop permanente)
+         EdicaoCard × N ......... N  (Dashboard.jsx:349 → 1 sprite por card)
+     ffprobe confirma alpha_mode=1: alfa em BlockAdditional ⇒ DOIS streams VP9
+     por vídeo. Os decoders VP9 de hardware do Android não tratam o plano alfa
+     auxiliar, logo esse stream cai em SOFTWARE (libvpx), competindo com a main
+     thread do WebView.
+         Com 3 edições extras: 8 elementos <video>, ~14 streams VP9, ~6 por
+         software. O WebView tem limite prático de decoders concorrentes
+         (~8-16 por processo, menos em aparelhos modestos).
+     É O CANDIDATO Nº1 PARA O JANK DE SCROLL.
+     ESFORÇO DE CORREÇÃO: médio.
+
+G4 · SENTRY SESSION REPLAY EM PRODUÇÃO                          [PROVADO]
+     main.jsx:33-39 — replayIntegration com maskAllText:false, blockAllMedia:false
+     e replaysSessionSampleRate:0.1. Confirmado ATIVO: VITE_SENTRY_DSN presente e
+     o DSN embutido no bundle (ingest.us.sentry.io em index-BWmReVcc.js), com
+     rrweb no mesmo chunk.
+     O rrweb instala um MutationObserver sobre TODO o documento e serializa
+     mutações na MAIN THREAD — exatamente o trabalho que compete com o scroll.
+     ⚠️ ALERTA R4 (independente de performance): maskAllText:false grava o texto
+        do ecrã SEM MÁSCARA num app com saldos, valores de lance e dados de
+        carteira. Merece decisão do operador por si só.
+     ESFORÇO DE CORREÇÃO: trivial.
+
+G5 · backdrop-filter SOBRE FUNDO EM VÍDEO                       [INFERIDO]
+     globals.css:349-353 — .gut-glass-standard usa blur(24px) saturate(1.35).
+     Com um vídeo em loop por trás, o backdrop muda 24×/s ⇒ o blur é recalculado
+     24×/s por painel, mesmo com a página parada e sem toque do utilizador.
+     Rotulado INFERIDO: a interação blur×vídeo é bem estabelecida, mas NÃO foi
+     medida. Só se confirma no aparelho.
+
+G6 · 35 MB DE ASSETS DENTRO DO APK                              [PROVADO]
+     Inclui 8 loops de fundo ÓRFÃOS (v1/v2/v4/v5, ~2,9 MB) que nenhum código
+     referencia — `grep -rn "fundo-loop" src/` devolve só v3. São resíduo do
+     MC26.1, onde o v3 foi o escolhido.
+     ESFORÇO DE CORREÇÃO: trivial.
+
+NÃO ENCONTRADO: indícios de vazamento de memória. Heap 16 MB no gate; os timers
+do carrossel têm cleanup (CarrosselGUTO.jsx:57) e o listener de matchMedia é
+removido (BackgroundCanvas.jsx:51). Verificação de crescimento ao longo do tempo
+exige sessão longa no aparelho.
+
+================================================================================
+5 · PLANO DE AÇÃO PRIORIZADO (Segmento 2) — PARA EXECUÇÃO NO MC83
+================================================================================
+Ordem recomendada: A0 → A3 → A4 → A1 → A2 → A5 → A6
+A0 é PRÉ-REQUISITO ABSOLUTO: sem ele nenhuma ação pode ser validada com métricas.
+Detalhe completo com snippets e critérios em Desktop/MC82-PLANO-ACAO.txt.
+
+A0 · TORNAR O APP MENSURÁVEL NO APARELHO                    [PRÉ-REQUISITO]
+     Gerar build inspecionável:  cd android && ./gradlew assembleDebug
+     (o Capacitor liga webContentsDebuggingEnabled no buildType debug)
+     Operador: ligar o telemóvel por USB, "Depuração USB" ativa, autorizar o PC.
+     VALIDAÇÃO: `adb devices -l` lista o aparelho; chrome://inspect mostra
+     com.desafiogut.app. Só então existe BASELINE REAL de FPS/First Paint/TTI.
+
+A1 · NÃO MONTAR O VÍDEO DE FUNDO INVISÍVEL          [ALTA · trivial]  → G1
+     BackgroundCanvas.jsx: montar apenas o <video> da largura atual via
+     matchMedia(768px), em vez de montar os dois e esconder um com opacity.
+     globals.css não precisa mudar (o @media já dá opacity:1 ao vídeo certo).
+     VALIDAÇÃO: em viewport mobile deve existir UM só <video> de fundo e nenhum
+     *-desktop.webm com frames > 0.  Baseline: mobile 341 / desktop 335 frames.
+
+A2 · REDUZIR O CUSTO DO SENTRY REPLAY               [ALTA · trivial]  → G4
+     Decisão do operador (registada): manter o Replay, mas MASCARADO e só-em-erro
+         maskAllText:true, blockAllMedia:true, replaysSessionSampleRate:0,
+         replaysOnErrorSampleRate:1.0 (mantido)
+     ⚠️ Nota honesta: mascarar é configuração — NÃO remove o rrweb do bundle. O
+        chunk index não encolhe. O ganho é de MAIN THREAD, não de bytes. Só a
+        remoção da integração recuperaria os ~312 KB.
+     VALIDAÇÃO: nenhum envio de replay em uso normal; envio presente após erro.
+
+A3 · TIRAR O PRIVY DO CAMINHO CRÍTICO               [ALTA · médio]    → G2
+     Lazy do PrivyProvider, montado só quando há sessão (a heurística
+     privyTokenExists() JÁ EXISTE em main.jsx:59-68) ou no clique de login.
+     ⚠️ RISCO: mexer no arranque do Privy já causou crashes (MC17.3.1.x — race do
+        createWallet). PrivyCrashBoundary e PrivyEventsBridge têm de ser movidos
+        INTACTOS e o login testado ponta-a-ponta antes de qualquer deploy.
+     ⚠️ O gate guarda consentimento em sessionStorage (App.jsx:101), logo o
+        gatilho deve ser o LOGIN e não o consentimento, ou o ganho não persiste.
+     ALVO: JS no gate < 1.300 KB (de 4.003) e LCP < 1.500 ms (de 3.091).
+     É A AÇÃO DE MAIOR IMPACTO NO TEMPO DE ABERTURA.
+
+A4 · PARAR OS VÍDEOS FORA DO VIEWPORT               [ALTA · médio]    → G3
+     A4.1 IntersectionObserver partilhado por GutoSpritePlayer e CarrosselGUTO:
+          play() ao entrar no viewport, pause() ao sair. Elimina o termo que
+          cresce com N (os EdicaoCards abaixo da dobra). Maior ganho isolado.
+     A4.2 EdicaoCard com poster PNG estático em vez de vídeo (os posters já
+          existem). ⚠️ é decisão de DESIGN — precisa do aval do operador.
+     A4.3 CarrosselGUTO: preload="auto" (linha 138) força buffer dos DOIS vídeos;
+          usar "metadata" no "próximo" e promover só perto do crossfade.
+     ALVO: ≤3 vídeos a tocar em qualquer momento, independentemente de N;
+           FPS de scroll ≥ 50 no Dashboard.
+     É A AÇÃO DE MAIOR IMPACTO NA FLUIDEZ.
+
+A5 · REMOVER OS WEBM ÓRFÃOS                         [MÉDIA · trivial] → G6
+     Remover v1/v2/v4/v5 de public/assets/backgrounds/loops/ (8 ficheiros,
+     ~2,9 MB), preservando v3 e o cloud.md que documenta o MC26.1.
+     GANHO MEDIDO na tentativa revertida: dist/ 35 MB → 32 MB;
+     webm 16.267 KB (21) → 13.303 KB (13).
+
+A6 · REVER O CUSTO DO GLASS SOBRE VÍDEO             [BAIXA · só após medir] → G5
+     Hipóteses a testar UMA DE CADA VEZ no aparelho: (a) blur 24px → 12px;
+     (b) congelar o fundo (poster estático) em telas com muito vidro.
+     ⚠️ NÃO executar antes de medir: G5 é inferência, e o padrão glass é
+        identidade visual já firmada em MC25.7 / MC42 / MC63.
+
+AÇÕES DO PLANO ORIGINAL QUE NÃO DEVEM SER EXECUTADAS:
+     ✗ hardwareAccelerated no Manifest ..... já ativo por default (no-op)
+     ✗ lazy loading de plugins ............. não há plugins
+     ✗ agrupar chamadas Storage da bridge .. não há chamadas à bridge
+     ✗ willReadFrequently em Canvas ........ não há canvas no render
+     ✗ {passive:true} em listeners ......... o único listener já é passivo
+
+================================================================================
+6 · PENDÊNCIAS
+================================================================================
+DO OPERADOR (bloqueiam qualquer medição real):
+  P1 · Ligar o telemóvel por USB com "Depuração USB" ativa e autorizar o PC.
+       Verificar com `adb devices -l` (hoje: lista vazia).
+  P2 · Gerar o build de diagnóstico (A0) e confirmar o WebView em chrome://inspect.
+  P3 · Decidir sobre A4.2 (GUTO estático nos EdicaoCard) — decisão de DESIGN.
+  P4 · Decidir se o Sentry Replay fica mascarado (A2, já escolhido) ou é removido
+       de vez — a remoção recuperaria ~312 KB do bundle.
+
+DE ENGENHARIA → TODO O SEGMENTO DE EXECUÇÃO PASSA PARA O MC83:
+  A1 a A6, na ordem da secção 5, UMA DE CADA VEZ, medindo antes/depois de cada
+  ação no aparelho — que é o que o Segmento 3 do MC82 pedia e que foi impossível
+  cumprir sem dispositivo.
+
+NÃO EXECUTADO NESTE MC (por decisão de escopo):
+  · Qualquer alteração de código (revertida — ver CORREÇÃO DE ROTA no topo).
+  · assembleRelease / assembleDebug.
+  · Deploy — ⚠️ produção roda a linhagem MAINNET, NÃO esta branch. Nada daqui
+    deve ir a produção sem o procedimento de deploy manual correto.
+
+================================================================================
+7 · RECOMENDAÇÕES PARA FUTURAS OTIMIZAÇÕES
+================================================================================
+R1 · Ordem de ataque por impacto: A3 (arranque) → A4 (fluidez) → A1/A2/A5
+     (baratas) → A6 (só se A4 não bastar).
+R2 · Reavaliar o formato do GUTO animado. VP9 com alfa custa o dobro de decode e
+     o canal alfa NUNCA é acelerado por hardware no Android. Alternativas a
+     testar com aparelho: sprite sheet WebP animado, ou vídeo sem alfa sobre
+     fundo sólido recortado por CSS mask.
+R3 · Adotar orçamento de performance no CI: falhar o build se o JS do caminho
+     crítico passar de X KB gzip. Hoje está em 1.139 KB contra o alvo de 500 KB
+     do próprio MC — sem gate automático, volta a crescer.
+R4 · O privy chunk (2.745 KB) é o maior item isolado do projeto. Investigar se o
+     Privy v3 permite build modular (só Google + embedded wallet), já que
+     walletList e WalletConnect estão desativados (main.jsx:300).
+R5 · Medir SEMPRE no aparelho. Este MC mostrou que o proxy desktop mede main
+     thread com fidelidade mas é CEGO ao decode de vídeo e ao compositor — que é
+     precisamente onde este app dói. No proxy, ligar/desligar os vídeos deu
+     60 fps em todas as condições, porque o CPU throttling do DevTools trava só
+     a main thread JS e o PC tem VP9 por hardware de sobra.
+
+================================================================================
+8 · PRÓXIMO PASSO — MC83
+================================================================================
+  1. Operador executa P1 e P2 (telemóvel ligado + build debug inspecionável).
+  2. Coletar o BASELINE REAL no Dashboard: FPS de scroll, First Paint, TTI.
+  3. Executar A1 → A6 na ordem da secção 5, UMA DE CADA VEZ, medindo antes/depois.
+     Boulder Loop: máx. 3 iterações por ação.
+  4. Só então reconstruir o AAB assinado para a Play Store.
+
+================================================================================
+ESTADO DO CÓDIGO AO FECHAR O MC82
+  Nenhuma alteração de código-fonte. Working tree dos ficheiros de código limpo.
+  dist/ e assets do APK no baseline: 35 MB, 21 webm.
+
+RELATÓRIOS DE APOIO (Desktop)
+  MC82-DIAGNOSTICO.txt · MC82-GARGALOS.txt · MC82-PLANO-ACAO.txt
+================================================================================

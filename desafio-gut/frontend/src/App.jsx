@@ -1,14 +1,18 @@
 // force deploy 2026-05-11 — reset versionado + MOCK_MODE removido
-import { useState, useEffect, lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+// MC88.4 — plugin nativo do Capacitor para interceptar o deep link do OAuth
+// (Privy/Google) no Android. Aliased para CapApp: o export chama-se App e
+// colidiria com o componente App() abaixo.
+import { App as CapApp } from "@capacitor/app";
 import { AppProvider, useAppContext } from "./context/AppContext.jsx";
-import TermosConsentimento from "./components/TermosConsentimento.jsx";
 import AppLayout from "./widgets/layout/AppLayout.jsx";
 import BackgroundCanvas from "./widgets/layout/BackgroundCanvas.jsx";
 import { AppEnvironmentProvider } from "./context/useAppContextEnvironment.jsx";
 import { IdiomaProvider } from "./context/IdiomaContext.jsx";
 import { ToastContainer, useToast } from "./widgets/toast/Toast.jsx";
 import ReferralRegistrar from "./components/ReferralRegistrar.jsx";
+import { useAdmin } from "./hooks/useAdmin.js";
 // MC39.19 (Onda 2, item 3) — code-splitting por rota. Páginas CRÍTICAS de entrada
 // (Dashboard/Vitrine) ficam EAGER (evita flash de Suspense no first paint); as demais
 // via React.lazy → saem do chunk inicial e carregam sob demanda. LazyBoundary trata
@@ -16,7 +20,13 @@ import ReferralRegistrar from "./components/ReferralRegistrar.jsx";
 import Dashboard       from "./pages/Dashboard.jsx";
 import Vitrine         from "./pages/Vitrine.jsx";
 import ChatbotWidget   from "./components/ChatbotWidget.jsx";
+// MC88.25 (P3) — avisa se a app nao estiver na rede de producao. Silencioso em mainnet.
+import AvisoRede       from "./components/AvisoRede.jsx";
 import LazyBoundary    from "./components/LazyBoundary.jsx";
+// MC89.6 — sessão admin. Import ESTÁTICO é seguro: o contexto não importa
+// `utils/web3.js` no topo (faz import dinâmico ao assinar), por isso não arrasta
+// ethers nem hash-wasm para o chunk inicial. Há um teste a fixar isso.
+import { AdminAuthProvider } from "./context/AdminAuthContext.jsx";
 
 const MinhaCarteira        = lazy(() => import("./pages/MinhaCarteira.jsx"));
 const MercadoLances        = lazy(() => import("./pages/MercadoLances.jsx"));
@@ -24,7 +34,21 @@ const ScheduleView         = lazy(() => import("./components/ScheduleView.jsx"))
 const MeusAtivos           = lazy(() => import("./pages/MeusAtivos.jsx"));
 const Seguranca            = lazy(() => import("./pages/Seguranca.jsx"));
 const Configuracoes        = lazy(() => import("./pages/Configuracoes.jsx"));
-const AdminPanel           = lazy(() => import("./pages/AdminPanel.jsx"));
+// MC89.6 (Fase 0 / D-NAV) — o AdminPanel monolítico deu lugar a uma casca
+// (AdminLayout) com uma rota por tela. Cada tela é um chunk seu: quem abre
+// /admin não paga o custo de parse das outras oito, e o arranque da app não
+// muda (nenhuma delas entra no chunk inicial).
+const AdminLayout          = lazy(() => import("./components/admin/AdminLayout.jsx"));
+const AdminVisaoGeral      = lazy(() => import("./pages/admin/VisaoGeral.jsx"));
+const AdminUsuarios        = lazy(() => import("./pages/admin/GestaoUsuarios.jsx"));
+const AdminPerfilUsuario   = lazy(() => import("./pages/admin/PerfilUsuario.jsx"));
+const AdminFinanceiro      = lazy(() => import("./pages/admin/GestaoFinanceira.jsx"));
+const AdminOperacoes       = lazy(() => import("./pages/admin/Operacoes.jsx"));
+const AdminLogs            = lazy(() => import("./pages/admin/LogsAuditoria.jsx"));
+const AdminNotificacoes    = lazy(() => import("./pages/admin/Comunicacao.jsx"));
+const AdminConfiguracoes   = lazy(() => import("./pages/admin/ConfiguracoesAdmins.jsx"));
+const AdminAprovacoes      = lazy(() => import("./pages/admin/Aprovacoes.jsx"));
+const AdminCotas           = lazy(() => import("./pages/admin/Cotas.jsx"));
 const CorporativoDashboard = lazy(() => import("./pages/CorporativoDashboard.jsx"));
 const CorporativoCotas     = lazy(() => import("./pages/CorporativoCotas.jsx"));
 const CorporativoBanners   = lazy(() => import("./pages/CorporativoBanners.jsx"));
@@ -33,6 +57,9 @@ const CorporativoCarteira  = lazy(() => import("./pages/CorporativoCarteira.jsx"
 const SejaNossoParceiro    = lazy(() => import("./pages/SejaNossoParceiro.jsx"));
 const DetalheProduto       = lazy(() => import("./pages/DetalheProduto.jsx"));
 const EdicaoDetalhe        = lazy(() => import("./pages/EdicaoDetalhe.jsx"));
+// MC72 — página pública de exclusão de conta (Play Store). Standalone (fora do
+// AppLayout) e fora do gate LGPD, mas dentro dos providers (Privy/AppContext).
+const ExcluirConta         = lazy(() => import("./pages/ExcluirConta.jsx"));
 
 // Fallback discreto enquanto um chunk de rota carrega (sem layout shift agressivo).
 function RouteFallback() {
@@ -50,27 +77,107 @@ function RouteFallback() {
 // MC17 — query param ?rc=1: acesso direto sem Privy após cadastro.
 // Usa window.location (full page reload garante search params corretos).
 function CorporativoRoute({ children }) {
-  const { tipoUsuario, tipoCarregando, isConnected, ready } = useAppContext();
+  const { tipoUsuario, tipoProvavel, tipoCarregando, cotaCorporativa, isConnected, pareceAutenticado, ready } = useAppContext();
   // MC39.4.1 — esperar o Privy inicializar antes de decidir o redirect. Sem isto, um
   // hard-reload de uma rota gated (ex.: /seguranca) bouncava o lojista para "/" porque
   // isConnected ainda era false durante a inicialização do Privy.
+  //
+  // MC88.42 — com o palpite otimista, o lojista chega aqui ANTES de as cotas
+  // responderem. Se esta guarda continuasse a devolver `null` nesse intervalo,
+  // ele trocava o Dashboard errado por um ECRÃ EM BRANCO — que é exatamente o
+  // defeito que o MC88.37 corrigiu. Medido antes desta alteração: /corporativo
+  // ficava vazio ~74 ms antes de o painel aparecer.
+  //
+  // Por isso o `tipoProvavel` também é aceite AQUI: o encaminhamento e a guarda
+  // passam a usar a MESMA fonte. Sem isto, o redirect otimista mandava o
+  // utilizador para uma porta que o mandava de volta.
   if (!ready) return null;
+  // ⚠️ MC88.42 — `!isConnected` NÃO significa "não autenticado" durante o
+  // restauro do Privy; é a mesma armadilha do MC88.38. Com o encaminhamento
+  // otimista isto criou um CICLO que eu próprio medi: `/` mandava para
+  // `/corporativo`, esta guarda via `isConnected` false e mandava de volta para
+  // `/`, que mandava outra vez — SETE voltas entre os 1974 e os 5064 ms, com o
+  // ecrã em branco. Enquanto a sessão está a ser restaurada (`pareceAutenticado`)
+  // espera-se, em vez de expulsar.
   if (!isConnected) {
+    if (pareceAutenticado) return children;
     if (!window.location.search.includes("rc=1")) return <Navigate to="/" replace />;
     return children;
   }
-  if (tipoCarregando) return null;
-  if (tipoUsuario !== "corporativo") return <Navigate to="/" replace />;
+  if (tipoCarregando) return tipoProvavel === "corporativo" ? children : null;
+
+  // ⚠️ A EXPULSÃO EXIGE UMA RESPOSTA POSITIVA, não a ausência de resposta.
+  //
+  // O efeito que busca as cotas (AppContext:338) tem `user.google.email` e
+  // `user.apple.email` nas dependências, e esses campos só resolvem A MEIO do
+  // restauro do Privy — portanto o efeito CORRE VÁRIAS VEZES. Entre corridas,
+  // `tipoCarregando` volta a false com `cotaCorporativa` ainda a null, o que
+  // fazia `tipoUsuario` cair para "comum" e esta linha expulsar o lojista.
+  //
+  // Medido: a rota saltava /corporativo ↔ / sete vezes entre os 3,4 s e os
+  // 5,4 s. O operador viu-o como "o ícone do painel está a piscar".
+  //
+  // `cotaCorporativa == null` é ambíguo — significa "ainda não encontrei" E
+  // "não é lojista". Enquanto o palpite disser corporativo (última sessão
+  // CONFIRMADA neste endereço), essa ambiguidade não pode expulsar ninguém.
+  // Só uma cota devolvida que NÃO seja corporativa o faz.
+  const confirmadoNaoCorporativo = cotaCorporativa != null && tipoUsuario !== "corporativo";
+  if (confirmadoNaoCorporativo) return <Navigate to="/" replace />;
+  if (tipoUsuario !== "corporativo" && tipoProvavel !== "corporativo") {
+    return <Navigate to="/" replace />;
+  }
   return children;
 }
 
 // MC12.3 Item 4 — wrapper da rota raiz: lojistas autenticados NUNCA veem
 // o Dashboard de leilão. Vão direto para /corporativo. Comuns/visitantes
 // continuam vendo o Dashboard normal (zero regressão R1).
+// MC88.37 — ANTES existia aqui `if (isConnected && tipoCarregando) return null;`.
+//
+// O QUE ISSO PROVOCAVA (medido, ver docs/MC88.37-CLS-DIAGNOSTICO.txt): quando o
+// Privy conclui o restauro da sessão (~4,3 s no APK) `isConnected` passa a true
+// e, no mesmo instante, o `authToken` passa a existir e liga
+// `setTipoCarregando(true)` (AppContext.jsx:350) para ir buscar as cotas. As
+// duas condições ficavam verdadeiras ao mesmo tempo, o Outlet esvaziava-se e o
+// Dashboard — já pintado desde os ~1,7 s — DESAPARECIA durante ~1,2 s.
+// Sintoma medido: CLS 0,373, em duas deslocações do rodapé de altura 0 ↔ 154.
+//
+// PORQUE É QUE DEVOLVER null NÃO PROTEGIA NADA: o Dashboard comum já é mostrado
+// durante os ~4,3 s anteriores, enquanto `isConnected` ainda é false. Apagá-lo
+// só DEPOIS disso não impede que um utilizador corporativo veja o ecrã comum —
+// apenas acrescenta um ecrã em branco a meio.
+//
+// A intenção declarada em AppContext.jsx:252 é "evita redirect prematuro" —
+// evitar um REDIRECT, não apagar a página. É isso que se preserva: durante a
+// deteção mostra-se o Dashboard, e o `<Navigate>` continua a esperar que
+// `tipoCarregando` termine. O caso corporativo tem ainda a segunda camada de
+// AppContext.jsx:409-424, que também espera por `tipoCarregando` antes de
+// navegar.
+//
+// MC88.42 — passa a encaminhar pelo `tipoProvavel`. Medido no aparelho com a
+// sessão corporativa real: o lojista via o Dashboard COMUM durante 9012/3994/
+// 3873 ms antes do redirect. `tipoProvavel` já vale "corporativo" no primeiro
+// render quando a última sessão CONFIRMADA neste mesmo endereço foi corporativa
+// (ver AppContext), portanto o redirect acontece de imediato em vez de esperar
+// pelas cotas.
 function DashboardOuCorporativo() {
-  const { tipoUsuario, tipoCarregando, isConnected } = useAppContext();
-  if (isConnected && tipoCarregando) return null;
-  if (tipoUsuario === "corporativo") return <Navigate to="/corporativo" replace />;
+  const { tipoProvavel, tipoUsuario, tipoCarregando, address } = useAppContext();
+  const { isAdmin, loading: adminLoading } = useAdmin(address);
+
+  // MC89.12 — admin vai DIRETO para o painel, sem passar pelo Dashboard de
+  // consumo. É testado DEPOIS do corporate para não colidir com lojistas que
+  // também são admin — mas um lojista-admin vai para /corporativo primeiro
+  // (o corporate é mais específico). Se o operador quiser inverter, é trocar
+  // a ordem dos dois blocos.
+  if (isAdmin && !adminLoading && address) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  // O palpite basta para ENCAMINHAR cedo; para o caso confirmado mantém-se a
+  // condição original (confirmado + já não está a carregar).
+  if (tipoProvavel === "corporativo" && (tipoUsuario === "corporativo" ? !tipoCarregando : true)) {
+    return <Navigate to="/corporativo" replace />;
+  }
   return <Dashboard />;
 }
 
@@ -78,38 +185,64 @@ function DashboardOuCorporativo() {
  * App — Raiz da aplicação DesafioGUT.
  *
  * Responsabilidades:
- *  1. Gate de consentimento LGPD (TermosConsentimento)
- *  2. Provedor global de estado (AppProvider)
- *  3. Roteamento com react-router-dom v7
+ *  1. Provedor global de estado (AppProvider)
+ *  2. Roteamento com react-router-dom v7
  *
- * O gate de consentimento renderiza ANTES do router:
- * o usuário precisa aceitar antes de ver qualquer conteúdo.
+ * MC82.2 — o gate de consentimento LGPD deixou de viver aqui: passou para o
+ * Boot.jsx, que é quem decide carregar este chunk. Continua a valer que o
+ * utilizador tem de aceitar antes de ver qualquer conteúdo — só que agora a
+ * aplicação (e o Privy) nem sequer são descarregados até lá.
  */
 export default function App() {
-  const [consentimentoAceito, setConsentimentoAceito] = useState(false);
   const { toasts, add, remove } = useToast();
+  const navigate = useNavigate();
 
-  // Recupera consentimento da sessão (recarregamento de página)
+  // MC88.4/88.5 — Deep link do OAuth (Capacitor/Android). Google bloqueia OAuth
+  // em WebView embutido, então o consent abre no browser externo e o Privy volta
+  // via App Link HTTPS (customOAuthRedirectUrl → https://…/redirect?privy_oauth_code=…).
+  // O Android (autoVerify + assetlinks.json) intercepta esse retorno e reabre a
+  // app com o evento appUrlOpen.
+  //
+  // MC88.5 — quando o deep link traz os params privy_oauth_*, NÃO basta um navigate
+  // client-side: o SDK do Privy lê esses params de window.location durante a
+  // inicialização da página. Fazemos window.location.assign() para a origem LOCAL
+  // (https://localhost) com os params, forçando um reload em que o SDK completa o
+  // OAuth e gera o JWT (padrão documentado: docs.privy.io/recipes/capacitor-oauth).
+  // Deep links sem params OAuth caem no navigate normal do React Router.
+  // No-op fora do Capacitor (web puro): window.Capacitor é undefined.
   useEffect(() => {
-    try {
-      const salvo = sessionStorage.getItem("gut_consentimento");
-      if (salvo && JSON.parse(salvo).aceito) setConsentimentoAceito(true);
-    } catch {
-      sessionStorage.removeItem("gut_consentimento");
-    }
-  }, []);
+    if (typeof window === "undefined" || !window.Capacitor) return;
 
-  // ── Gate LGPD ─────────────────────────────────────────────────────────────
-  if (!consentimentoAceito) {
-    return (
-      <>
-        {/* MC20.2 — Arena oficial (-z-50) GLOBAL: visível também no gate LGPD,
-            paridade exata com o fundo body-level do MC19.1 (R1/R5). */}
-        <BackgroundCanvas />
-        <TermosConsentimento onAceitar={() => setConsentimentoAceito(true)} />
-      </>
-    );
-  }
+    let listenerHandle;
+    const handleDeepLink = ({ url }) => {
+      try {
+        console.log("🔗 Deep link interceptado:", url);
+        const { pathname, search, hash } = new URL(url);
+        if (/[?&]privy_oauth_/.test(search)) {
+          // Reinjeta os params na origem local → reload → Privy completa o login.
+          window.location.assign(`/${search}`);
+          return;
+        }
+        navigate(`${pathname || "/carteira"}${search}${hash}`);
+      } catch (err) {
+        console.warn("[MC88.5] falha ao processar deep link:", err);
+      }
+    };
+
+    // addListener é assíncrono (retorna Promise<PluginListenerHandle>).
+    const registo = CapApp.addListener("appUrlOpen", handleDeepLink);
+    registo.then((handle) => { listenerHandle = handle; });
+
+    return () => {
+      registo.then((handle) => (listenerHandle || handle)?.remove());
+    };
+  }, [navigate]);
+
+  // MC82.2 — o gate LGPD saiu daqui para o Boot.jsx. Este componente só é montado
+  // depois de o consentimento estar aceite (ou na rota pública /excluir-conta),
+  // porque é o próprio Boot que decide carregar o chunk que contém este ficheiro.
+  // Motivo: o gate vivia dentro do <PrivyProvider> e por isso o arranque pagava
+  // 4.002 KB de JS para desenhar quatro checkboxes (ver MC82.2 / MC82-BASELINE).
 
   // ── Aplicação principal ────────────────────────────────────────────────────
   return (
@@ -131,6 +264,9 @@ export default function App() {
       <LazyBoundary>
       <Suspense fallback={<RouteFallback />}>
       <Routes>
+        {/* MC72 — rota pública STANDALONE (fora do AppLayout e do gate LGPD): página
+            de exclusão de conta exigida pela Google Play Store. */}
+        <Route path="/excluir-conta" element={<ExcluirConta />} />
         {/* MC20.2 FASE 1 · ITEM 2 — AppLayout (3 camadas) substitui Layout como
             rota-mãe; renderiza o Layout existente intacto na superfície (zero
             regressão de rotas/navegação — R1). */}
@@ -150,7 +286,25 @@ export default function App() {
               Comum/visitante → CorporativoRoute redireciona para "/". */}
           <Route path="/seguranca"  element={<CorporativoRoute><Seguranca /></CorporativoRoute>} />
           <Route path="/configuracoes" element={<Configuracoes />} />
-          <Route path="/admin"      element={<AdminPanel />} />
+          {/* MC89.6 (D-NAV) — a Visão Geral é o ÍNDICE de /admin, não um separador
+              entre outros. A lista canónica das telas vive em lib/adminNav.js e é a
+              mesma que gera a navegação, por isso um link nunca pode apontar para
+              uma rota que não exista. O AdminAuthProvider envolve SÓ estas rotas:
+              a sessão admin não tem nada que existir no resto da aplicação. */}
+          <Route path="/admin" element={<AdminAuthProvider><AdminLayout /></AdminAuthProvider>}>
+            <Route index                   element={<AdminVisaoGeral />} />
+            <Route path="usuarios"         element={<AdminUsuarios />} />
+            <Route path="usuarios/:endereco" element={<AdminPerfilUsuario />} />
+            <Route path="financeiro"       element={<AdminFinanceiro />} />
+            <Route path="operacoes"        element={<AdminOperacoes />} />
+            <Route path="logs"             element={<AdminLogs />} />
+            <Route path="notificacoes"     element={<AdminNotificacoes />} />
+            <Route path="configuracoes"    element={<AdminConfiguracoes />} />
+            {/* T-2 — funcionalidades vivas sem lugar na estrutura de 7 telas.
+                Autónomas até o operador decidir onde pertencem. */}
+            <Route path="aprovacoes"       element={<AdminAprovacoes />} />
+            <Route path="cotas"            element={<AdminCotas />} />
+          </Route>
           {/* MC11.1 — rota pública: Seja Nosso Parceiro. Sem proteção. */}
           <Route path="/seja-nosso-parceiro" element={<SejaNossoParceiro />} />
           {/* MC17 — rota direta pós-cadastro (sem gate). */}
@@ -169,6 +323,7 @@ export default function App() {
       </LazyBoundary>
       {/* MC9 — IA Cognitiva: chatbot RAG 24/7 (botão flutuante em todas as rotas). */}
       <ChatbotWidget />
+      <AvisoRede />
       </AppEnvironmentProvider>
     </AppProvider>
     </IdiomaProvider>

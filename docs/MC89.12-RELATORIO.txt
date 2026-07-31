@@ -1,0 +1,44 @@
+# MC89.12 — RELATÓRIO: Tela 4 (Operações e Infraestrutura) — Fase 3 do MC89.5
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | Suítes: 342/342 backend, 40/40 frontend
+
+## 1. BACKEND (3 novos endpoints)
+
+### admin-status.mjs (GET, operador+)
+6 sondas independentes, cada uma com o seu timeout e falha isolada:
+- Backend (esta função respondeu)
+- Supabase (SELECT 1 com ms)
+- RPC Alchemy (eth_blockNumber, sem ethers — JSON-RPC cru)
+- Webhook MP (último crédito com fonte='webhook' — acende ⚠️ porque são 0)
+- Netlify Blobs (BLOBS_TOKEN definido? — acende ⚠️ porque não está)
+- Cache Redis (REDIS_URL definido? — acende ⚠️ porque não está)
+Cache 30s. Gate: operador ou superior.
+
+### admin-queue.mjs (GET, operador+)
+Estado da fila_tarefas: total, pendentes, processando, concluídas, falhas,
+e lista das últimas tarefas. Sem cache. Gate: operador+.
+
+### admin-commands.mjs (POST, admin+)
+5 comandos: forcar_fila, executar_monitor, limpar_cache, panic, unpause.
+Gate: admin ou superior. panic/unpause → super-admin apenas.
+Cada comando regista em admin_logs ANTES de executar (fail-CLOSED do MC89.11).
+Rate-limit: 5/min.
+
+Lógica extraída para `_lib/admin-comandos.mjs` (pura, injetável).
+
+## 2. FRONTEND (Tela 4)
+
+Operacoes.jsx: três secções:
+1. ESTADO DO SISTEMA — 6 StatusCards com indicadores ok/⚠/✗/?
+2. FILA DE TAREFAS — 4 contadores + tabela das últimas tarefas
+3. COMANDOS — 3 botões admin + 2 botões super-admin, cada um com modal de
+   confirmação e justificativa obrigatória (mín. 6 caracteres)
+
+Componentes reutilizáveis: StatusCard.jsx, ComandoButton.jsx.
+Operações marcada como pronta no adminNav.
+
+## 3. VALIDAÇÃO
+CDP confirma: título "Operações", back link "← Painel", gate de autenticação
+funcional. Sem sessão admin → "Autentique-se para ver as operações."
+
+## 4. PRÓXIMO PASSO
+MC89.13 — Fase 4: Gestão de Usuários (Tela 2) — a mais cara do programa.

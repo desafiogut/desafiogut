@@ -11,6 +11,22 @@
 // traziam emojis ("Show!…🚀"); o critério acordado é "zero emojis em
 // corporativo/admin". Seguimos o critério (gate de validação), não o exemplo.
 
+// MC88.44 — ENDEREÇO DE SUPORTE, num sítio só.
+//
+// O G1 do MC88.41 nasceu de o endereço estar ESCRITO À MÃO em vários sítios: o
+// regulamento (que alimenta o índice RAG) dizia `suporte@desafiogut.com.br`, um
+// domínio que devolve NXDOMAIN, enquanto a app inteira já usava este. Quem tinha
+// dinheiro preso escrevia para o vazio.
+//
+// Decisão do operador no MC88.44: desafiogut01@gmail.com — o endereço que o
+// rodapé, a página de exclusão de conta, o contacto do DPO e os Termos já usam.
+//
+// ⚠️ Isto governa a resposta DETERMINÍSTICA do intent `suporte`. O que o LLM
+// cita quando cai no RAG vem do índice de embeddings (Blob store `rag`), que só
+// muda quando `scripts/build-rag-index.mjs` for corrido sobre o regulamento
+// corrigido. Ver desafio-gut/docs/MC88.44-EMAIL-DIAGNOSTICO.txt §1.
+export const EMAIL_SUPORTE = "desafiogut01@gmail.com";
+
 // ── System prompts por perfil (usados como `system` na chamada ao LLM) ───────
 
 const SYS_BASE = `Você é o GUTO, o mascote do DESAFIOGUT. Fala como um amigo — frases curtas,
@@ -81,6 +97,13 @@ export function obterPromptSystem(perfil, { conformidade = false } = {}) {
 
 /** Guard: devolve fallback se o valor for null/undefined/"". */
 const g = (v, fb = "—") => (v === null || v === undefined || v === "" ? fb : v);
+
+// MC89.2 — centavos → "R$ x,xx". null/undefined dá "—", NUNCA "R$ 0,00": num
+// relatório de administração, um zero é uma afirmação e "não medi" não é zero.
+const brl = (centavos) =>
+  centavos === null || centavos === undefined || !Number.isFinite(Number(centavos))
+    ? "—"
+    : `R$ ${(Number(centavos) / 100).toFixed(2)}`;
 
 // MC15.6 ITEM 5 — texto da simulação (admin/corporativo, sem emoji).
 function formatarSimulacao(p) {
@@ -249,12 +272,149 @@ export const respostasPorPerfil = {
     admin: (p) => `Relatório de senhas — troco ativo: ${g(p.senhasAtivas, "0")} senha(s) em ${g(p.lojistas, "0")} lojista(s). Expiradas (acumulado): ${g(p.senhasExpiradas, "0")}.`,
   },
 
+  // MC88.20 (P1) — resposta quando o LLM está INDISPONÍVEL. Antes este texto vivia
+  // hardcoded no chatbot.mjs e era o MESMO para os 4 perfis: emojis e um pitch
+  // comercial dos planos (Bronze/Prata/Ouro/Diamante) chegavam ao admin e ao
+  // corporativo, que por regra são "ZERO emojis, tom operacional"; e o caminho com
+  // chunks despejava ~1.800 chars de regulamento cru MAIS a frase "peça pro
+  // administrador configurar LLM_API_KEY no Netlify", que expunha configuração
+  // interna ao utilizador final. Sem LLM não há system prompt, logo era ESTE texto
+  // — e só ele — que definia a personalidade. Agora é por perfil, como tudo o resto.
+  //
+  // `trecho`: excerto JÁ limitado pelo chamador (chatbot.mjs), ou "" se não houve
+  // correspondência. Aqui não se corta texto: quem sabe o orçamento é quem o monta.
+  fallback_sem_llm: {
+    visitante: (p) => (p.trecho
+      ? `Olha o que encontrei no regulamento: ${p.trecho}`
+      : "Poxa, essa não achei no regulamento! 😅 Pergunta-me como funcionam os leilões."),
+    comum: (p) => (p.trecho
+      ? `Olha o que encontrei no regulamento: ${p.trecho}`
+      : "Poxa, essa não achei no regulamento! 😅 Tenta de outra forma — ou pergunta sobre lances, senhas e regras."),
+    corporativo: (p) => (p.trecho
+      ? `Do regulamento: ${p.trecho} Mais detalhe no Painel Lojista.`
+      : "Não encontrei isso no regulamento. Reformula a pergunta ou consulta o Painel Lojista."),
+    admin: (p) => (p.trecho
+      ? `Regulamento: ${p.trecho}`
+      : "Sem correspondência no regulamento para essa consulta."),
+  },
+
   // Wrapper do RAG: respostaRAG é a resposta gerada; cada perfil acrescenta o seu enquadramento.
   fallback_rag: {
-    visitante: (p) => `${g(p.respostaRAG, "")} Cria uma conta para participar dos leilões! 😊`.trim(),
+    // MC88.20 (P2) — o convite era acrescentado SEMPRE, mesmo quando o LLM já tinha
+    // convidado, e saía "…que tal criar uma conta e dar um lance? Cria uma conta
+    // para participar dos leilões! 😊" — dois CTAs seguidos, observado em 2 de 3
+    // sondas ao vivo. Agora só se acrescenta quando ainda não há convite.
+    visitante: (p) => {
+      const base = `${g(p.respostaRAG, "")}`.trim();
+      const jaConvida = /\bcri(?:a|ar|e|es)\b[^.!?]{0,40}\bconta\b|\bregist(?:a|ar|e|o|re)\w*\b|\bparticipar?\b/i.test(base);
+      return jaConvida ? base : `${base} Cria uma conta para participar dos leilões! 😊`.trim();
+    },
     comum: (p) => `${g(p.respostaRAG, "")}`.trim(),
     corporativo: (p) => `${g(p.respostaRAG, "")}`.trim(),
     admin: (p) => `${g(p.respostaRAG, "")}`.trim(),
+  },
+
+  // ── MC89.2 — MÉTRICAS DO SISTEMA (admin) ──────────────────────────────────
+  //
+  // Todas saem de `_lib/admin-metricas.obterMetricas()`, a MESMA função que o
+  // endpoint `admin-stats` usa e que o separador "Visão Geral" mostra. Se o GUTO
+  // e o painel dissessem números diferentes sobre a mesma coisa, seria o B4 do
+  // MC88.41 outra vez — noutro domínio.
+  //
+  // Tom: admin é relatório. Sem emojis (regra MC15.5 §D3).
+  //
+  // ⚠️ `—` NUNCA é 0. Quando uma fonte falha, o agregador põe o nome dela em
+  // `parciais` e o campo fica null; aqui isso vira "—" e a frase diz que a fonte
+  // está indisponível. Um zero inventado num painel de administração faz alguém
+  // agir sobre um número que ninguém mediu.
+  metricas_usuarios: {
+    visitante: () => "Esses dados são internos da coordenação. Cria uma conta para participar dos leilões! 😊",
+    comum: () => "Esses números são da coordenação. Posso ajudar-te com os teus lances e senhas! 🙂",
+    corporativo: () => "Os totais da plataforma são da coordenação. No teu Painel tens os dados da tua cota.",
+    admin: (p) => {
+      if (p.utilizadores == null) return `Utilizadores: indisponível (fonte em baixo: ${g(p.parciais, "?")}).`;
+      const f = p.fontes || {};
+      return `Utilizadores com atividade: ${p.utilizadores}. `
+        + `São endereços distintos vistos nos nossos dados (cotas ${g(f.cotas, "—")}, saldo ${g(f.saldo, "—")}, `
+        + `creditos ${g(f.creditos, "—")}, lances ${g(f.lances, "—")}). `
+        + `NAO e o total de registados: a identidade vive no Privy e quem nunca fez nada nao aparece aqui.`;
+    },
+  },
+
+  metricas_financeiro: {
+    visitante: () => "Esses dados são internos da coordenação. Cria uma conta para participar! 😊",
+    comum: () => "Os totais da plataforma são da coordenação. Vês o teu saldo na Carteira! 🙂",
+    corporativo: () => "Os totais consolidados são da coordenação. No teu Painel tens os teus próprios dados.",
+    admin: (p) => {
+      if (p.financeiro == null) return `Financeiro: indisponível (fonte em baixo: ${g(p.parciais, "?")}).`;
+      const f = p.financeiro;
+      return `Saldo em circulacao: ${brl(f.saldoTotalCentavos)}. `
+        + `Ja creditado: ${brl(f.creditadoCentavos)} em ${g(f.creditos, "—")} credito(s), `
+        + `${g(f.creditosJanela, "—")} nos ultimos ${g(p.janelaDias, 30)} dias.`;
+    },
+  },
+
+  metricas_fila: {
+    visitante: () => "Isso é do sistema interno. Cria uma conta para participar dos leilões! 😊",
+    comum: () => "A fila de processamento é interna. Se estás à espera de senhas, elas chegam sozinhas! 🙂",
+    corporativo: () => "A fila de processamento é interna da coordenação.",
+    admin: (p) => {
+      if (p.fila == null) return `Fila: indisponível (fonte em baixo: ${g(p.parciais, "?")}).`;
+      const f = p.fila;
+      const estados = Object.entries(f.porEstado || {}).map(([k, v]) => `${k}=${v}`).join(", ") || "vazia";
+      return `Fila de tarefas: ${g(f.pendentes, "—")} pendente(s), ${g(f.falhadas, "—")} falhada(s), `
+        + `${g(f.total, "—")} no total (${estados}).`
+        + (f.atualizadaEm ? ` Ultima alteracao: ${f.atualizadaEm}.` : "");
+    },
+  },
+
+  metricas_eoa: {
+    visitante: () => "Isso é da operação interna. Cria uma conta para participar! 😊",
+    comum: () => "Essa é a carteira da coordenação. As tuas senhas aparecem na Carteira! 🙂",
+    corporativo: () => "A carteira da coordenação é interna.",
+    admin: (p) => {
+      if (p.erro) return `Saldo da coordenadora: indisponível (${p.erro}).`;
+      const s = p.saldoEth == null ? "indisponivel (nao lido — NAO e zero)" : `${p.saldoEth} ETH`;
+      return `EOA coordenadora ${g(p.eoa, "?")}: ${s}.`
+        + (p.bloco != null ? ` Bloco ${p.bloco}.` : "")
+        + ` E esta carteira que credita as senhas on-chain: sem gas, a compra deixa de ser creditada.`;
+    },
+  },
+
+  metricas_geral: {
+    visitante: () => "O estado do sistema é interno. Cria uma conta para participar dos leilões! 😊",
+    comum: () => "O estado interno é da coordenação. Posso ajudar-te com os leilões! 🙂",
+    corporativo: () => "O estado consolidado do sistema é da coordenação.",
+    admin: (p) => {
+      const linhas = [];
+      linhas.push(p.utilizadores == null
+        ? "Utilizadores: indisponivel."
+        : `Utilizadores com atividade: ${p.utilizadores}.`);
+      linhas.push(p.financeiro == null
+        ? "Financeiro: indisponivel."
+        : `Saldo em circulacao ${brl(p.financeiro.saldoTotalCentavos)}, ja creditado ${brl(p.financeiro.creditadoCentavos)}.`);
+      linhas.push(p.cotas == null
+        ? "Cotas: indisponivel."
+        : `Cotas: ${p.cotas.total} (${p.cotas.comCarteira} com carteira, ${p.cotas.vendidas} vendida(s)).`);
+      linhas.push(p.fila == null
+        ? "Fila: indisponivel."
+        : `Fila: ${g(p.fila.pendentes, "—")} pendente(s), ${g(p.fila.falhadas, "—")} falhada(s).`);
+      if (p.parciais?.length) linhas.push(`Fontes em baixo: ${p.parciais}.`);
+      return linhas.join(" ");
+    },
+  },
+
+  // MC88.44 — SUPORTE. Determinístico de propósito: o G1 do MC88.41 apanhou o
+  // GUTO a mandar utilizadores para `suporte@desafiogut.com.br`, um domínio que
+  // devolve NXDOMAIN — incluindo em "paguei o PIX e não recebi as senhas" e numa
+  // acusação de roubo. Quem tem dinheiro preso não pode depender do que o
+  // modelo escolher citar do índice: esta resposta não passa pelo LLM.
+  // O endereço vem de EMAIL_SUPORTE (uma constante, um sítio).
+  suporte: {
+    visitante: () => `Para falar com a coordenação: ${EMAIL_SUPORTE} 📧 Se for sobre pagamento ou senhas, diz o teu e-mail de registo e a data — ajuda a encontrar mais depressa.`,
+    comum: () => `Para falar com a coordenação: ${EMAIL_SUPORTE} 📧 Se for sobre pagamento ou senhas, junta o comprovativo do PIX e o endereço da tua carteira — resolve-se mais depressa assim. 🙂`,
+    corporativo: () => `Contacto da coordenação: ${EMAIL_SUPORTE} 📧 Para assuntos de cota, banner ou faturação, indica a empresa e a categoria da cota.`,
+    admin: () => `Canal de suporte ao utilizador: ${EMAIL_SUPORTE}. Emergência de segurança: canal #incidentes interno. LGPD/eliminação: por e-mail com prova de identidade.`,
   },
 
   saudacao: {

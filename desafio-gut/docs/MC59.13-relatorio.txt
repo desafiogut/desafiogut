@@ -1,0 +1,71 @@
+================================================================================
+MC59.13 — REESCRITA DO mainnet-prerequisites.md PARA A OPÇÃO B (EOA + local-key)
+Agente de Planejamento: Opus 4.8 | Data: 2026-07-08 | Natureza: DOC-ONLY
+================================================================================
+
+VEREDITO: ✅ DOCUMENTO ATUALIZADO — alinhado com a Opção B (EOA + local-key).
+Arquivo: docs/mainnet-prerequisites.md (98 inserções / 65 remoções).
+
+--------------------------------------------------------------------------------
+1. O QUE MUDOU E POR QUÊ
+--------------------------------------------------------------------------------
+- REMOVIDO (como passo operacional): Smart Account ERC-4337, Biconomy, bundler,
+  paymaster, transferência two-step da coordenação p/ Smart Account, financiar SA.
+  Motivo: arquitetura abandonada na Opção D (bundler Biconomy morto, MC52.1;
+  coordenação = EOA local-key, MC56). Mantido apenas como NOTA histórica que
+  explica a mudança e como contexto do default `biconomy` (que rejeita chave bruta).
+- CORRIGIDO o gate contraditório: antes pedia "COORDENACAO_PRIVATE_KEY AUSENTE" e
+  validava `chaveBrutaEmMainnet=false` (isso é do backend biconomy). Agora: a chave
+  é PRESENTE e NECESSÁRIA, e exige `SIGNER_BACKEND=local-key` EXPLÍCITO; pós-deploy
+  espera-se `chaveBrutaEmMainnet=true`.
+- KMS: rebaixado de arquitetura operacional para DÍVIDA/HARDENING FUTURO (§11:
+  Safe multisig 2/3 e/ou KMS). Decisão consciente: não apagar a intenção de
+  custódia mais forte, só deixar de tratá-la como pré-requisito de lançamento.
+
+--------------------------------------------------------------------------------
+2. DIFF CONCEITUAL (antigo → novo)
+--------------------------------------------------------------------------------
+Antigo (10 seções)                     Novo (11 seções, Opção B)
+-----------------------------------    -----------------------------------------
+1 Auditoria externa (P0)          →    2 Segurança (P0): auditoria + EOA nova + rotação
+2 Deploy contrato                 →    3 Deploy (script MC59.11, verif. Etherscan/getCode/coordenacao)
+3 Financiar Smart Account         →    (removido) — substituído por "financiar EOA nova só-gás" (§1/§2)
+4 Transferir coord → Smart Account→    (removido) — coordenacao=deployer no constructor (§1)
+5 Bundler Biconomy + fallback     →    (removido) — local-key não usa bundler
+6 Consolidation RPC + Flashbots   →    6 Flashbots CONSOLIDATION_RPC_URL (mantido, P1)
+7 Painel Privy                    →    6 Painel Privy (mantido)
+8 Setar envs + ATIVAR             →    4 Backend + 5 Frontend + flip por último
+9 Validação pós-flip              →    7 Validação pós-deploy (critério de chave corrigido)
+10 Rollback                       →    10 Rollback (mantido)
+(dívida conhecida)                →    11 Dívida/hardening (KMS/Safe rebaixados p/ cá)
+                                       + NOVO: §9 concorrência de nonce (hot key)
+
+--------------------------------------------------------------------------------
+3. CORREÇÕES DE PRECISÃO ALÉM DO ESQUELETO PEDIDO
+--------------------------------------------------------------------------------
+- Seção Frontend do esqueleto dizia só "VITE_CONTRATO_SEPOLIA = endereço mainnet".
+  Verifiquei src/lib/network.js (MC59.2): o frontend também precisa de VITE_CHAIN_ID=1
+  e VITE_EXPLORER_URL=https://etherscan.io, e a rede de UI usa VITE_NETWORK_STAGE
+  (CardLance.jsx) — TRÊS variáveis que o esqueleto omitia. Incluídas na §5.
+  Também sinalizado o footgun do nome legado "VITE_CONTRATO_SEPOLIA" apontando p/ mainnet.
+- Preservados itens ainda válidos que o esqueleto não listava: verificação no
+  Etherscan, hardening do painel Privy, rollback, aviso do gate de flip
+  (só NETWORK_STAGE, não valida contrato real), e o risco de concorrência de nonce
+  da hot key (§9, mitigação MC59.4 + fix async pendente).
+
+--------------------------------------------------------------------------------
+4. VALIDAÇÃO (Segmento 2)
+--------------------------------------------------------------------------------
+- grep confirmou: nenhum passo OPERACIONAL de Smart Account/Biconomy/bundler restante
+  (só notas explicativas). KMS só em §11 (futuro). Gate "chave presente/necessária"
+  e `chaveBrutaEmMainnet=true` presentes. Sem contradição interna.
+- Nada importante do doc antigo foi perdido (auditoria P0, Etherscan, Privy, Flashbots,
+  rollback, dívidas — todos mantidos ou reposicionados).
+
+--------------------------------------------------------------------------------
+5. PRÓXIMO PASSO
+--------------------------------------------------------------------------------
+Doc pronto para orientar MC59.11 Seg.1–5 (operador). Lembrar: o NO-GO do MC60
+permanece (MC59.12) — auditoria externa P0 e EOA nova ainda são bloqueadores 🔴.
+Este MC só alinhou a documentação; não altera o veredito de prontidão.
+================================================================================

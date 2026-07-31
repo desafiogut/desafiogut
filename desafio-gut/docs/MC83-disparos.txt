@@ -1,0 +1,304 @@
+================================================================================
+MC83 — RELATÓRIO DOS DISPAROS (E-MAIL + WHATSAPP)
+Data: 2026-07-20 · Custo: US$ 0,00 (R2 — apenas leitura via MCP)
+R1 respeitado: ZERO alteração de código. R4: sem dados pessoais neste relatório.
+================================================================================
+
+RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+STATUS GERAL: automação ESTÁVEL e a funcionar. O cron executa diariamente sem
+falhas (5/5 execuções com return code 0). Não há nenhuma falha de execução.
+
+  E-MAIL ....... 400 / 1623  (24,6 %)  ·  em curso, 100/dia  ·  ~13 dias restantes
+  WHATSAPP ..... 198 / 198   (100 %)   ·  CONCLUÍDO em 18/07
+
+PENDÊNCIAS E BLOQUEIOS:
+  · Nenhum bloqueio operacional. Os disparos avançam sozinhos.
+  · 1 anomalia CRÍTICA de integridade (A4.2 — checkpoint avança por tentativas,
+    não por sucessos): e-mails que falharem são perdidos SILENCIOSAMENTE e nunca
+    retentados. Hoje sem impacto observado (0 erros nos dias auditáveis), mas é
+    uma perda de dados latente.
+  · 1 RISCO NOVO (N1 — qualidade da lista): a lista contém grande volume de
+    endereços aparentemente inválidos/sintéticos. Risco de reputação no SendGrid.
+  · Buraco de auditoria: os primeiros ~200 e-mails (16-17/07) foram enviados sob
+    o formato de log antigo, SEM contagem — não há como provar quantos entraram.
+
+--------------------------------------------------------------------------------
+MÉTRICAS DE E-MAIL
+--------------------------------------------------------------------------------
+Lista .................. lista-validada-9306-lotes.csv  →  1623 registros
+Checkpoint atual ....... /home/DesafioGUT/EMAILS/ultimo_enviado.txt  =  400
+Controle diário ........ enviados_hoje.txt = "2026-07-20 100"  (atualizado ✅)
+Limite diário .......... 100 (hard-coded em enviar_agora.py)
+Provedor ............... SendGrid (aceite = HTTP 202)
+
+PROGRESSO DIÁRIO (dos logs do orquestrador):
+    16/07 01:35 ....... executado — SEM contagem no log (formato antigo)
+    17/07 01:01 ....... executado — SEM contagem no log (formato antigo)
+    18/07 01:01 ....... "Limite diário atingido (100)" → 0 enviados
+    18/07 02:42 ....... "Limite diário atingido (100)" → 0 enviados (exec. manual)
+    18/07 15:01 ....... "Limite diário atingido (100)" → 0 enviados
+    19/07 15:01 ....... 100 enviados (do 201 ao 300) — 0 erros ✅
+    20/07 15:01 ....... 100 enviados (do 301 ao 400) — 0 erros ✅
+
+    Evolução do checkpoint: 200 (18/07) → 300 (19/07) → 400 (20/07)
+    → avanço de exatamente 100/dia, consistente com os logs. Checkpoint NÃO
+      está travado e NÃO está a saltar registros.
+
+ERROS IDENTIFICADOS: nenhum nos dias auditáveis (19 e 20/07 reportam "0 erros").
+    ⚠️ Os dias 16 e 17/07 NÃO são auditáveis — o log antigo só registava
+       "✅ E-MAIL concluído." sem números. Cerca de 200 e-cadastros passaram por
+       aí sem evidência de sucesso. Esse buraco é irrecuperável.
+
+PREVISÃO DE CONCLUSÃO:
+    Restantes: 1623 − 400 = 1223 registros
+    A 100/dia .......... ~13 dias úteis de execução
+    Data estimada ...... ~02/08/2026 (se nenhuma execução falhar)
+
+--------------------------------------------------------------------------------
+MÉTRICAS DE WHATSAPP
+--------------------------------------------------------------------------------
+Lista .................. whatsapp-validados-twilio.csv  →  198 candidatos
+                         (filtro: whatsapp_candidate == "sim")
+Checkpoint atual ....... checkpoint_whatsapp.txt  =  198
+Progresso .............. 198 / 198  =  100 %  →  CONCLUÍDO
+
+PROGRESSO DIÁRIO:
+    16/07 ....... executado (formato antigo, sem contagem)
+    17/07 ....... executado (formato antigo, sem contagem)
+    18/07 ....... "Enviando 0 mensagens (do 199 ao 198) — Todos processados."
+    19/07 ....... "Enviando 0 mensagens" — no-op
+    20/07 ....... "Enviando 0 mensagens" — no-op
+
+    → A lista terminou em/antes de 18/07. Desde então o script corre todos os
+      dias, lê o CSV, conclui que não há nada a enviar e sai. É INÓCUO (não
+      chama a Twilio, portanto R2 preservado — custo zero), mas é trabalho
+      inútil e polui os logs. Confirma A4.7.
+
+ERROS IDENTIFICADOS: nenhum. Todas as execuções com returncode=0.
+
+CONTROLE DIÁRIO — ANOMALIA:
+    enviados_whatsapp_hoje.txt = "2026-07-18 0"   ← PARADO em 18/07
+    Causa exata (lida no código): quando o lote fica vazio, o script executa
+    `sys.exit(0)` ANTES de reescrever o arquivo de controle. Logo o ficheiro
+    congela na última data em que houve lote. Sem impacto prático agora (a lista
+    acabou), mas o ficheiro é enganoso como fonte de estado.
+
+STATUS SANDBOX / PRODUÇÃO:
+    ⚠️ NÃO VERIFICADO. Determinar isto exige ler config_whatsapp.json, que
+       contém account_sid e auth_token da Twilio. R5 proíbe o agente de manusear
+       chaves de terceiros, portanto o ficheiro NÃO foi aberto.
+    → Pendente do operador: confirmar se `from_number` ainda é o número do
+      sandbox Twilio (+1 415 523 8886) ou já é um número de produção aprovado.
+      Como a lista está 100 % processada, isto só importa para campanhas futuras.
+
+--------------------------------------------------------------------------------
+ANÁLISE DO CRON
+--------------------------------------------------------------------------------
+Tarefa ......... ID 1465157  ·  enabled: true  ·  expiry: null (não expira)
+Comando ........ python3 /home/DesafioGUT/ORQUESTRADOR/disparo_diario.py
+Agendamento .... diário, 15:00 UTC  =  11:00 Manaus  ✅ conforme esperado
+
+EXECUÇÕES REGISTADAS em /var/log/schedule-log-1465157.log:
+    17/07 01:00:31 → 01:06:35 ....  363,74 s  ·  return code 0  ✅
+    18/07 01:00:31 → 01:06:04 ....  332,40 s  ·  return code 0  ✅
+    18/07 15:00:39 → 15:01:18 ....   38,86 s  ·  return code 0  ✅
+    19/07 15:00:33 → 15:02:00 ....   87,41 s  ·  return code 0  ✅
+    20/07 15:00:40 → 15:02:46 ....  126,19 s  ·  return code 0  ✅
+
+ESTABILIDADE: 5/5 execuções bem-sucedidas, zero erros. Nenhum "command not
+found", nenhum timeout, nenhuma exceção não tratada. O cron é o componente mais
+saudável de todo o pipeline.
+
+OBSERVAÇÕES:
+  · Em 18/07 houve DUAS execuções agendadas (01:00 e 15:00) — é o dia da
+    migração do horário. A execução das 15:00 não duplicou envios porque o
+    controle `enviados_hoje.txt` barrou ("Limite diário atingido"). O guard-rail
+    de limite diário FUNCIONOU corretamente.
+  · A duração caiu de ~350 s (16-18/07) para ~90-126 s (19-20/07). A queda
+    corresponde ao WhatsApp deixar de enviar (a lista acabou): sem o
+    `time.sleep(2)` por mensagem, o passo do WhatsApp passou a ser instantâneo.
+  · O log do cron começa em 17/07; a execução de 16/07 aparece no log do
+    orquestrador mas não no do cron (rotação do ficheiro ou execução manual).
+
+--------------------------------------------------------------------------------
+ANOMALIAS — ATUALIZAÇÃO DO MC76 (A4.1 a A4.7)
+--------------------------------------------------------------------------------
+A4.1 · Logs sem contagem de envios ................ ✅ RESOLVIDA
+     O orquestrador novo captura o STDOUT completo dos scripts-filhos. Desde
+     18/07 os logs mostram cada envio, o total e a contagem de erros. Evidência
+     da troca: disparo_diario.py.bak-20260718 no diretório.
+     RESÍDUO: os dias 16-17/07 continuam sem contagem — buraco irrecuperável.
+
+A4.2 · Checkpoint avança por TENTADOS, não por sucessos ... ❌ PERSISTE (CRÍTICA)
+     Confirmado no código de AMBOS os scripts:
+         enviar_agora.py:            f.write(str(inicio + len(lote)))
+         enviar_agora_whatsapp.py:   f.write(str(inicio + len(lote)))
+     `len(lote)` é o número TENTADO. A variável `enviados` (sucessos) existe e é
+     usada no relatório impresso, mas NÃO no checkpoint.
+     IMPACTO: se 30 de 100 falharem, o checkpoint avança 100 na mesma. Esses 30
+     nunca serão retentados — perda SILENCIOSA e definitiva.
+     AGRAVANTE: os dois contadores divergem de propósito diferente —
+         ultimo_enviado.txt  ← tentativas
+         enviados_hoje.txt   ← sucessos (enviados_hoje + enviados)
+     Numa jornada com erros, o limite diário deixaria enviar MAIS de 100.
+     HOJE SEM IMPACTO OBSERVADO (0 erros em 19 e 20/07), mas é risco latente.
+
+A4.3 · Histórico diário não durável ............... ⚠️ PARCIAL
+     Os logs diários existem e persistem (disparo_YYYY-MM-DD.log, 5 dias).
+     MAS: existe apenas UM resumo (resumo_2026-07-18.txt) — o monitora_envios.py
+     não corre diariamente, logo não há série histórica consolidada. Além disso,
+     esse resumo tem um denominador ERRADO: diz "WHATSAPP: 198 / 200 (99,0 %)"
+     quando a lista tem 198 (deveria ser 198/198 = 100 %).
+
+A4.4 · Segredos em texto plano .................... ❌ PERSISTE
+     config_envio.json e config_whatsapp.json existem no filesystem e são lidos
+     em claro pelos scripts (`api_key = config['api_key']`, `auth_token =
+     config['auth_token']`). O conteúdo NÃO foi aberto por este agente (R5).
+     Há ainda cópias .bak-mc751-20260715 dos dois configs — mais superfície de
+     exposição das mesmas credenciais.
+
+A4.5 · WhatsApp no sandbox ........................ ❓ NÃO VERIFICADO
+     Exigiria ler config_whatsapp.json (contém credenciais Twilio) → bloqueado
+     por R5. Pendente de confirmação do operador. Baixa urgência: a lista está
+     100 % processada.
+
+A4.6 · Arquivos legados ........................... ❌ PERSISTE (agravado)
+     Ficheiros redundantes/órfãos encontrados:
+         WHATSAPP/checkpoint_twilio_corrigido.txt = 360   ← ver abaixo
+         WHATSAPP/whatsapp-base.csv
+         WHATSAPP/whatsapp-validados-corrigido.csv
+         WHATSAPP/*.bak-mc753, *.bak-mc77
+         WHATSAPP/validar_whatsapp.py.bak-mc77-20260718
+         EMAILS/config_envio.json.bak-mc751-20260715
+         ORQUESTRADOR/disparo_diario.py.bak-20260718, .bak-mc75-20260715
+     ⚠️ AGRAVANTE NOVO: checkpoint_twilio_corrigido.txt contém 360, um valor
+        MAIOR que a lista inteira (198). É um checkpoint órfão de uma base
+        anterior. O script ativo lê checkpoint_whatsapp.txt (198) e ignora este,
+        mas a coexistência de dois checkpoints divergentes é uma armadilha real
+        para quem for mexer no pipeline.
+
+A4.7 · WhatsApp no-op ............................. ✅ CONFIRMADO (lista 100 %)
+     A lista ESTÁ 100 % enviada (198/198). O script corre diariamente e sai sem
+     fazer nada. Não é um defeito — é a consequência correta de a campanha ter
+     terminado. Não consome API nem gera custo (R2 preservado).
+
+NOVAS ANOMALIAS
+--------------------------------------------------------------------------------
+N1 · QUALIDADE DA LISTA DE E-MAIL — RISCO DE REPUTAÇÃO ........... ⚠️ ALTO
+     O lote de 20/07 (registos 301-400) é dominado por endereços com forte
+     aparência de inválidos/sintéticos: dezenas de contas num mesmo domínio
+     institucional em sequência alfabética, além de domínios que não são de
+     e-mail corporativo real (padrões tipo "@rock.com", "@hellokitty.com",
+     "@mymelody.com", "@hacker.ps").
+     RISCO: envio em massa para endereços inexistentes gera hard bounces. Taxas
+     de bounce elevadas degradam a reputação do remetente e podem levar o
+     SendGrid a suspender a conta — o que mataria a campanha inteira, incluindo
+     os 1223 registos ainda por enviar.
+     ⚠️ Este é o risco mais alto do relatório, acima até do A4.2.
+
+N2 · "202 aceite" É TRATADO COMO "ENTREGUE" ...................... ⚠️ MÉDIO
+     O script marca ✅ quando o SendGrid devolve 200/202. Mas 202 significa
+     apenas "aceite para processamento" — NÃO entrega. Bounces, spam-blocks e
+     rejeições posteriores acontecem de forma assíncrona e não são capturados
+     em lado nenhum (não há webhook de eventos configurado).
+     CONSEQUÊNCIA: o número "400 enviados" é na verdade "400 aceites pela API".
+     A taxa de entrega real é DESCONHECIDA. Combinado com N1, pode haver uma
+     diferença grande entre o reportado e o que chegou a alguém.
+
+N3 · Rótulo "Total acumulado" está errado ........................ ⚠️ BAIXO
+     enviar_agora.py imprime `📊 Total acumulado: {novo_total}`, mas novo_total é
+     `enviados_hoje + enviados`, ou seja o total DO DIA (reinicia a cada data).
+     Nos logs de 19 e 20/07 lê-se "Total acumulado: 100" quando o acumulado real
+     era 300 e 400. Rótulo enganoso para quem audita pelo log.
+
+N4 · Scripts dependem do diretório de trabalho ................... ⚠️ BAIXO
+     Ambos os scripts usam caminhos RELATIVOS ('config_envio.json',
+     'ultimo_enviado.txt', 'enviados_hoje.txt'). Só funcionam se o processo for
+     lançado com o cwd correto. Hoje o orquestrador trata disso, mas qualquer
+     execução manual a partir de outro diretório falha ou — pior — cria um
+     checkpoint novo em 0 e reenvia tudo desde o início.
+
+--------------------------------------------------------------------------------
+RECOMENDAÇÕES
+--------------------------------------------------------------------------------
+PARA A QUALIDADE DA LISTA (N1 — fazer PRIMEIRO, é o de maior risco):
+  R1 · Antes de continuar os disparos, passar os 1223 registos restantes por uma
+       validação de existência (verificação MX + SMTP, ou o serviço de validação
+       já disponível no stack). Remover os inválidos ANTES de enviar.
+  R2 · Ativar Event Webhook do SendGrid para capturar bounces/spam reports e ter
+       a taxa de entrega REAL (resolve N2).
+  R3 · Se a taxa de bounce dos 400 já enviados for alta, considerar PAUSAR a
+       campanha até sanear a lista — a conta SendGrid é o ativo em risco.
+
+PARA CORRIGIR O AVANÇO DE CHECKPOINT (A4.2):
+  R4 · Trocar `f.write(str(inicio + len(lote)))` por uma lógica que só avance
+       sobre sucessos, OU registar os falhados numa fila de retentativa
+       (falhados.txt) para reprocessamento. Aplicar nos DOIS scripts.
+  R5 · Unificar a semântica: hoje o checkpoint conta tentativas e o controle
+       diário conta sucessos. Escolher uma e usar nas duas.
+
+PARA MELHORAR A RASTREABILIDADE (A4.1/A4.3/N3):
+  R6 · Agendar monitora_envios.py como tarefa diária para gerar série histórica
+       de resumos, e corrigir o denominador do WhatsApp (200 → 198).
+  R7 · Corrigir o rótulo "Total acumulado" para mostrar o checkpoint real.
+  R8 · Emitir um resumo estruturado (JSON/CSV) por execução — data, tentados,
+       sucessos, erros, checkpoint antes/depois — para auditoria sem depender de
+       parsing de log em texto livre.
+
+PARA O WHATSAPP (A4.5/A4.7):
+  R9  · Como a lista está 100 % concluída, considerar DESATIVAR o passo do
+        WhatsApp no orquestrador até haver nova campanha — remove ruído do log.
+  R10 · Antes de qualquer campanha nova: confirmar se o número saiu do sandbox
+        Twilio e aprovar os templates de mensagem (obrigatório fora do sandbox).
+
+PARA SEGURANÇA (A4.4/A4.6):
+  R11 · Mover api_key/account_sid/auth_token para variáveis de ambiente do
+        PythonAnywhere, retirando-os dos JSON em claro. ⚠️ Operação do OPERADOR —
+        o agente não manuseia chaves (R5).
+  R12 · Limpar os ficheiros legados, em especial checkpoint_twilio_corrigido.txt
+        (=360, incoerente com a lista de 198) e os .bak de configs que duplicam
+        credenciais.
+
+PARA O CRON:
+  R13 · Nenhum ajuste necessário. O cron está correto (15:00 UTC), estável e com
+        5/5 execuções bem-sucedidas. NÃO mexer.
+
+--------------------------------------------------------------------------------
+PRÓXIMOS PASSOS
+--------------------------------------------------------------------------------
+AÇÕES IMEDIATAS (operador):
+  1. Verificar no painel SendGrid a taxa de BOUNCE dos 400 e-mails já enviados.
+     É a informação que decide se a campanha continua como está ou pausa (N1).
+  2. Confirmar se o WhatsApp está em sandbox ou produção (A4.5) — exige abrir o
+     config, que o agente não pode ler (R5).
+  3. Nenhuma ação sobre o cron. Está saudável.
+
+PENDÊNCIAS PARA O MC84:
+  · Correção do avanço de checkpoint por sucessos + fila de retentativa (A4.2).
+  · Validação/saneamento dos 1223 e-mails restantes (N1).
+  · Event Webhook do SendGrid para medir entrega real (N2).
+  · Resumo estruturado por execução + monitora_envios.py agendado (A4.3/N3/R8).
+  · Limpeza de ficheiros legados e checkpoints órfãos (A4.6).
+  · Migração de segredos para variáveis de ambiente (A4.4) — pelo operador.
+
+⚠️ NOTA DE NUMERAÇÃO: o MC82 (performance do app Android) deixou a execução das
+   otimizações A1-A6 designada para "MC83". Este MC83 tratou de outro assunto
+   (disparos). A execução das otimizações do app continua PENDENTE e precisa de
+   um número próprio — sugere-se MC85, para não colidir com o MC84 acima.
+
+================================================================================
+EVIDÊNCIAS (R3) — origem de cada dado deste relatório
+  Cron/tarefa ........ API PythonAnywhere, tarefa 1465157
+  Cron log ........... /var/log/schedule-log-1465157.log
+  Logs diários ....... /home/DesafioGUT/ORQUESTRADOR/logs/disparo_2026-07-{16..20}.log
+  Resumo ............. /home/DesafioGUT/ORQUESTRADOR/logs/resumo_2026-07-18.txt
+  Checkpoints ........ EMAILS/ultimo_enviado.txt (400)
+                       WHATSAPP/checkpoint_whatsapp.txt (198)
+                       WHATSAPP/checkpoint_twilio_corrigido.txt (360, órfão)
+  Controles diários .. EMAILS/enviados_hoje.txt ("2026-07-20 100")
+                       WHATSAPP/enviados_whatsapp_hoje.txt ("2026-07-18 0")
+  Código lido ........ EMAILS/enviar_agora.py · WHATSAPP/enviar_agora_whatsapp.py
+  NÃO lido (R5) ...... config_envio.json · config_whatsapp.json (credenciais)
+  R4 ................. nenhum e-mail, telefone ou chave consta deste relatório.
+================================================================================

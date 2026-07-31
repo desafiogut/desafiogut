@@ -1,0 +1,123 @@
+================================================================================
+MC89.3 — SEGMENTO 2 · ARQUITETURA DE ESTILOS
+================================================================================
+Data....: 2026-07-29
+Base....: MC89.3-DIAGNOSTICO.txt · MC89.3-ELEMENTOS.txt
+Código..: ZERO alterações (R1)
+
+================================================================================
+1. O PROBLEMA DE ARQUITETURA, DITO COM PRECISÃO
+================================================================================
+As três opções do briefing (classe global, prop nos componentes, CSS module) são
+todas sobre **como estilizar o AdminPanel**. Mas os dois defeitos P0 do
+diagnóstico não estão no AdminPanel:
+
+  · a ilustração/vídeo vem do `BackgroundCanvas`, montado em App.jsx:221, FORA
+    das rotas;
+  · a vinheta, o rodapé e a navegação vêm do `AppLayout`, que /admin herda.
+
+Nenhuma classe aplicada ao AdminPanel apaga um vídeo que está atrás dele, num
+elemento irmão, com z-index negativo. **O problema é de LAYOUT, não de folha de
+estilos.** Por isso a proposta tem duas camadas, e a primeira não está na lista
+do briefing.
+
+================================================================================
+2. CAMADA 1 — MODO DE TRABALHO NO LAYOUT (o que resolve os P0)
+================================================================================
+PROPOSTA: `AppLayout` passa a saber se a rota é de trabalho, e nesse caso não
+monta a atmosfera. O `BackgroundCanvas`, por estar acima das rotas, decide pelo
+`pathname` — coisa que JÁ FAZ (tem `offsetFor(pathname)` para o parallax, com a
+lista de rotas escrita lá dentro).
+
+  onde                       o que muda
+  ───────────────────────────────────────────────────────────────────────────
+  BackgroundCanvas.jsx       se a rota é de trabalho → devolve o fundo SÓLIDO
+                             (sem <video>, sem WebP). Não é um `return null`: o
+                             fundo tem de existir, senão fica o body a nu
+  AppLayout.jsx              se a rota é de trabalho → não monta o
+                             AtmosphereFilter
+  Layout.jsx                 se a rota é de trabalho → sem rodapé legal
+                             (e a navegação conforme a decisão D-B)
+  um sítio só                `lib/rotasTrabalho.js` com `ehRotaDeTrabalho(path)`
+
+PORQUE ASSIM:
+  ✔ ataca a causa onde ela vive, em vez de a tapar com um painel opaco por cima;
+  ✔ mata o custo: sem `<video>` na rota, deixa de haver decodificação (§6 do
+    diagnóstico). Uma classe CSS nunca conseguiria isso — o vídeo continuaria a
+    correr, escondido;
+  ✔ `ehRotaDeTrabalho` num ficheiro só evita a lista de rotas repetida em três
+    componentes — é a lição do MC88.43 (uma fonte de verdade por decisão);
+  ✔ serve o /corporativo no futuro, se o operador quiser o mesmo tratamento.
+
+RISCO E MITIGAÇÃO:
+  ⚠️ mexe em três ficheiros que TODAS as rotas atravessam. Um erro aqui afeta o
+     Dashboard comum, que está em produção.
+  → mitigação: a função devolve `false` por omissão (só é `true` para a lista
+    explícita de rotas de trabalho), e a validação inclui obrigatoriamente uma
+    captura ANTES/DEPOIS do Dashboard comum e do /mercado. É não-regressão por
+    prova visual, não por argumento.
+
+================================================================================
+3. CAMADA 2 — O CHROME DO PAINEL (os P2)
+================================================================================
+Aqui sim as opções do briefing aplicam-se. Avaliação honesta:
+
+  OPÇÃO A · classe `.admin-panel` no globals.css
+    ✔ um sítio, aplica-se ao container, herda para dentro
+    ✔ coerente com o projeto: globals.css já é onde vivem `.gut-glass-*`,
+      `.gut-bg-*`, `.gut-surface`
+    ✘ o AdminPanel usa ESTILOS INLINE (`style={{...}}`) em quase tudo, e inline
+      vence classe. Muita coisa não seria alcançada por CSS
+    → serve para a superfície e a tipografia; não serve para o resto
+
+  OPÇÃO B · prop `admin` nos componentes reutilizados
+    ✘ REJEITADA. Faria os componentes partilhados (Button, GlassCard, StatTile)
+      passarem a conhecer o conceito "admin". Cada um ganharia um segundo
+      caminho, e o Dashboard comum passaria a depender de componentes com um
+      ramo que ninguém exercita ali. É a maneira mais fácil de introduzir uma
+      regressão num ecrã que está em produção e que este MC não devia tocar
+    → não
+
+  OPÇÃO C · `AdminPanel.module.css`
+    ✘ o projeto NÃO usa CSS modules em sítio nenhum (verificado: zero
+      `*.module.css`). Introduzir um segundo modelo de estilos por um ecrã é
+      criar duas convenções para o próximo a mexer aqui escolher ao acaso
+    → não
+
+  RECOMENDAÇÃO: **A + edição dos inline no próprio AdminPanel.**
+    A classe `.admin-panel` fixa superfície, tipografia e cor de texto; os
+    estilos inline que a contrariam (o laranja do título, o amarelo do botão, os
+    emojis) são editados no ficheiro, que é onde estão. Sem componentes novos,
+    sem convenção nova, sem prop nova nos partilhados.
+
+================================================================================
+4. O QUE NÃO SE FAZ, E PORQUÊ
+================================================================================
+✗ Não se cria uma paleta "admin". A paleta existente basta: navy opaco para
+  superfície, #e8f0fe para texto, #94a3b8 para rótulos, #ef4444 para falha.
+  Acrescentar cor a um design system para "neutralizar" um ecrã é contraditório.
+
+✗ Não se tira o AdminPanel de dentro do AppLayout. Era tentador (resolvia a
+  herança de um golpe), mas partiria a navegação e o gate, e é uma alteração de
+  roteamento numa app em produção para um objetivo estético.
+
+✗ Não se toca no `components/Confetti.jsx`. Não é ele que aparece no /admin.
+
+✗ Não se mexe na paleta nem no scrim GLOBAIS. Subir o scrim resolveria a
+  legibilidade do /admin e escureceria o produto todo — corrigir uma rota
+  estragando as outras.
+
+================================================================================
+5. FORMA FINAL, EM UMA FRASE
+================================================================================
+  `ehRotaDeTrabalho(pathname)` num ficheiro só → consumida pelo BackgroundCanvas
+  (fundo sólido), pelo AppLayout (sem vinheta) e pelo Layout (sem rodapé);
+  mais `.admin-panel` no globals.css para superfície e tipografia; mais a edição
+  dos estilos inline dentro do AdminPanel.jsx.
+
+  Quatro ficheiros tocados fora do AdminPanel, nenhum componente partilhado
+  alterado, nenhuma funcionalidade removida.
+
+================================================================================
+FIM DO SEGMENTO 2
+================================================================================

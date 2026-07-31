@@ -263,7 +263,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
       <div style={{
         marginTop: "0.85rem", fontSize: "0.7rem", color: COR.muted, lineHeight: 1.4,
       }}>
-        Limite: até <strong>10 indicações convertidas por mês</strong>. Anti-fraude: FingerprintJS + Sybil check (MC3) rejeita indicações do mesmo dispositivo.
+        Limite: até <strong>10 indicações convertidas por mês</strong>. Anti-fraude: verificação de dispositivo rejeita indicações do mesmo aparelho.
       </div>
     </GlassCard>
   );

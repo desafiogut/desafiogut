@@ -1,0 +1,78 @@
+================================================================================
+MC80.5 — Ícone oficial DesafioGUT (Play Store + adaptável Android)
+Data: 2026-07-19 · Custo: US$0,00 (R2 — composição determinística em PIL)
+================================================================================
+
+RESULTADO EM UMA LINHA
+----------------------
+SUCESSO. Ícone oficial gerado a partir da cabeça do GUTO sobre fundo navy com acento
+laranja, em 4 arquivos (principal 512, background+foreground adaptáveis 512, round 192),
+validado em múltiplos tamanhos e máscaras (círculo/squircle) sem clipping. Boulder Loop
+convergiu em 2 iterações (teto 3).
+
+--------------------------------------------------------------------------------
+0. NOTA DE MÉTODO — por que PIL e não ComfyUI generativo
+--------------------------------------------------------------------------------
+O plano pedia ComfyUI como padrão, mas isso colidia com regras ABSOLUTAS deste MC:
+  • R2 (custo zero): o `comfyui-cloud` é serviço CLOUD PAGO — toda geração consome
+    créditos; não há caminho de composição gratuito. (MC80.3 já documentou que a
+    execução no Comfy Cloud FALHA nesta conta por falta de subscription.)
+  • R6 + identidade: um ícone é COMPOSIÇÃO DETERMINÍSTICA (cabeça sobre navy). Um
+    modelo generativo REGENERARIA outro rosto, quebrando a identidade do GUTO.
+O próprio plano oferece PIL como alternativa em vários pontos. Optou-se por PIL:
+custo US$0, identidade 100% preservada, pixel-preciso. Se o operador autorizar gasto
+de créditos, dá para refazer via nós de composição (não-generativos) do ComfyUI.
+
+--------------------------------------------------------------------------------
+1. ATIVO E PREPARAÇÃO (Segmento 0)
+--------------------------------------------------------------------------------
+Fonte: C:\Users\Moltbot\Desktop\GUTO\EXPRESSÕES\1.png — 2059x1321 RGBA, fundo
+transparente, cabeça centralizada (bbox do alfa 872x1113). Recortada ao alfa e
+redimensionada por altura (LANCZOS). Pasta de saída: playstore-screenshots/icone/.
+
+--------------------------------------------------------------------------------
+2. GERAÇÃO (Segmentos 1-2) — icone.py
+--------------------------------------------------------------------------------
+(a) icone_playstore.png 512x512 — fundo navy (gradiente radial #0c122a→#050818) +
+    glow laranja radial sutil (acento de marca) + cabeça do GUTO 282x360 centralizada
+    + sombra suave (GaussianBlur 14). Sem texto, sem bordas externas.
+(b) icone_adaptavel_background.png 512x512 — só o navy+glow (bleed total; a máscara
+    do Android recorta as bordas).
+(b) icone_adaptavel_foreground.png 512x512 RGBA — transparente + cabeça centralizada
+    (mesmo centro do background; dentro da safe-zone ~66%).
+(c) icone_round.png 192x192 — círculo recortado do ícone principal.
+
+--------------------------------------------------------------------------------
+3. VALIDAÇÃO VISUAL (Segmento 3) — R6
+--------------------------------------------------------------------------------
+Contact-sheet sobre fundo branco E cinza-claro, nos tamanhos 512/300/96/48, em três
+formas (quadrado, círculo, squircle) e o round. Verificado:
+  • GUTO reconhecível e bem centralizado em TODAS as formas e tamanhos (inclusive 48).
+  • Fundo navy consistente com a identidade; glow laranja perceptível como halo sutil.
+  • SEM clipping da cabeça nas máscaras de círculo e squircle (safe-zone respeitada).
+Boulder Loop (2 it.): it.1 cabeça 330 (~64%) — ok, mas pequena a 48px e glow quase
+invisível; it.2 cabeça 360 (~70%) + glow mais presente → melhor legibilidade. APROVADO.
+
+--------------------------------------------------------------------------------
+4. ENTREGA / RASTREABILIDADE (Segmento 4) — R3
+--------------------------------------------------------------------------------
+Desktop/playstore-screenshots/icone/
+  icone_playstore.png (512) · icone_adaptavel_background.png (512) ·
+  icone_adaptavel_foreground.png (512, RGBA) · icone_round.png (192) ·
+  especificacoes.txt · icone.py
+Docs: desafio-gut/docs/MC80.5-icone.txt + seção em cloud.md.
+Nota: os PNGs ficam FORA do repo git (Desktop) → nunca commitados (R4).
+
+--------------------------------------------------------------------------------
+5. PRÓXIMO PASSO
+--------------------------------------------------------------------------------
+Upload do ícone na Play Store (ícone de alta-res 512) e empacotar o adaptável
+(background+foreground em mipmap-anydpi-v26) quando a conta/publicação for liberada.
+
+--------------------------------------------------------------------------------
+6. REGRAS RESPEITADAS
+--------------------------------------------------------------------------------
+R1 zero alteração de código do app · R2 custo US$0 (PIL, sem APIs) · R3 rastreável
+(script+specs+relatório+docs) · R4 ativo público, nada sensível, nenhuma imagem
+commitada · R5 nenhuma chave manuseada · R6 validado em vários tamanhos/fundos/máscaras.
+================================================================================

@@ -22,12 +22,15 @@
 import { getStore } from "@netlify/blobs";
 import { consultarPagamento, MercadoPagoApiError } from "./_lib/mp-client.mjs";
 import { jsonResponse, jsonError, parseJsonBody } from "./_lib/validate.mjs";
-import { lerMetaPedido } from "./_lib/credito.mjs";
+import { lerMetaPedido } from "./_lib/meta.mjs";
 import { creditarSaldoRsIdempotente } from "./_lib/saldoRs.mjs";
 // MC17.1 — pedidos de cota ativam a cota automaticamente (sem aprovação manual).
 import { ativarCotaPaga } from "./_lib/cota-ativacao.mjs";
 // MC39.17.2 (B-P1-1) — validação HMAC da assinatura do webhook.
 import { validarAssinaturaMp } from "./_lib/mp-signature.mjs";
+// MC59.2 (D-1) — torna o fail-open OBSERVÁVEL (alerta em vez de log silencioso).
+import { captureSecurityAlert } from "./_lib/sentry-server.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const BLOB_STORE_MP = "mp-aprovados";
 
@@ -64,6 +67,12 @@ async function extrairPaymentId(req) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   const t0 = Date.now();
   console.info("[webhook-mp] recebido", { method: req.method, url: req.url });
 
@@ -72,17 +81,21 @@ export default async (req) => {
     return jsonResponse({ ok: true, hint: "use POST (MP envia notifications via POST)" });
   }
 
-  // B-P1-1 — valida HMAC x-signature. O manifest usa `data.id` da query.
-  // Fail-open enquanto MP_WEBHOOK_SECRET não estiver configurado.
+  // B-P1-1 — valida HMAC x-signature. O manifest do MP usa `data.id` da QUERY.
+  // MC87 (P1-2): fail-CLOSED por omissão (ver _lib/mp-signature.mjs).
   const dataIdQuery = new URL(req.url).searchParams.get("data.id")
     || new URL(req.url).searchParams.get("id");
   const sig = validarAssinaturaMp(req, dataIdQuery);
   if (!sig.ok) {
     console.warn("[webhook-mp] assinatura rejeitada", { motivo: sig.motivo });
+    captureSecurityAlert("webhook_mp_rejeitado", { motivo: sig.motivo }).catch(() => {});
     return jsonError(401, "assinatura_invalida", "x-signature ausente ou inválida");
   }
   if (!sig.enforced) {
-    console.info("[webhook-mp] HMAC não aplicado (MP_WEBHOOK_SECRET ausente)");
+    // Só se chega aqui com MP_WEBHOOK_ALLOW_UNSIGNED=true — válvula explícita de
+    // rollback. Continua ruidosa de propósito.
+    console.warn("[webhook-mp] HMAC NÃO aplicado (MP_WEBHOOK_ALLOW_UNSIGNED) — fail-open explícito");
+    captureSecurityAlert("webhook_mp_fail_open", { motivo: sig.motivo }).catch(() => {});
   }
 
   let paymentId, topic;
@@ -92,6 +105,22 @@ export default async (req) => {
   } catch (err) {
     console.warn("[webhook-mp] parse falhou:", err?.message);
     return jsonResponse({ ok: true, ignored: "parse_falhou" });
+  }
+
+  // MC87 (P2-2) — cobertura da assinatura. A assinatura é calculada sobre o
+  // `data.id` da QUERY, mas `extrairPaymentId` dá precedência ao BODY. Uma
+  // requisição assinada para o pagamento X, com o corpo trocado para Y, passava
+  // na verificação e processava Y — a assinatura não cobria o valor efetivamente
+  // usado. Agora, quando ambos existem e divergem, rejeitamos.
+  if (sig.enforced && dataIdQuery && paymentId
+      && String(paymentId).toLowerCase() !== String(dataIdQuery).toLowerCase()) {
+    console.warn("[webhook-mp] divergência body/query no paymentId — rejeitado", {
+      queryId: dataIdQuery, bodyId: paymentId,
+    });
+    captureSecurityAlert("webhook_mp_id_divergente", {
+      queryId: String(dataIdQuery), bodyId: String(paymentId),
+    }).catch(() => {});
+    return jsonError(401, "assinatura_invalida", "identificador do corpo não corresponde ao assinado");
   }
 
   // MP envia outros tipos de notification (merchant_order, chargebacks, etc.).

@@ -12,9 +12,9 @@ const VARIANT_MAP = {
 };
 
 const ALT_DEFAULT = {
-  avatar: "Mascote GUTO do DESAFIOGUT",
+  avatar: "Mascote GUTO do DesafioGUT",
   icon: "Ícone do GUTO",
-  logo: "GUTO — Logótipo do DESAFIOGUT",
+  logo: "GUTO — Logótipo do DesafioGUT",
   celebrando: "GUTO celebrando",
   expressao: "GUTO — Expressão do mascote",
   custom: "GUTO — peça personalizada para este local",

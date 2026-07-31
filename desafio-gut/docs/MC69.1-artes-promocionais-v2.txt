@@ -1,0 +1,106 @@
+================================================================================
+MC69.1 — CORREÇÃO E ELEVAÇÃO DAS ARTES PROMOCIONAIS (GUTO + VIBRANTE + CENÁRIO REAL)
+================================================================================
+Data: 2026-07-10
+Agente de Design: Claude (Opus) — Cloud Comfy (MCP) + Nano Banana Pro
+Agente de Validação: Operador (aprovação humana pendente antes do uso)
+Natureza: MC de ATIVOS — ZERO alteração de código (Pilar SUPERPERS)
+Branch de documentação: feat/mc69.1-artes-promocionais-v2
+Saída: C:\Users\Moltbot\Desktop\ARTES-PROMOCIONAIS-V2\
+
+--------------------------------------------------------------------------------
+1. RESUMO E MELHORIAS SOBRE O MC69
+--------------------------------------------------------------------------------
+Reversão das 3 artes promocionais elevando qualidade em 3 eixos pedidos:
+  (a) CENÁRIO REAL DO APP — usado o fundo REAL `frontend/public/assets/backgrounds/
+      background-mobile.webp` (palco navy com holofotes, confete dourado e os
+      eletrodomésticos-prêmio) como 2ª referência image-to-image. No MC69 o fundo
+      era genérico; agora é o cenário oficial do app.
+  (b) MAIS VIBRANTE/ANIMADO — composição de alto impacto (holofotes dramáticos,
+      confete dourado, brilho laranja, headlines dourados com glow).
+  (c) CONSISTÊNCIA ABSOLUTA DO GUTO — dupla referência (GUTO + cenário) via
+      image-to-image; o MESMO personagem humano nas 3 variações.
+
+--------------------------------------------------------------------------------
+2. NOTA SOBRE AS SKILLS ECC (R6/R7) E O MÉTODO REAL
+--------------------------------------------------------------------------------
+Das skills exigidas, apenas `fal-ai-media` está instalada neste ambiente;
+`nano-banana`, `space-GPT-image2-design`, `token-aware-image`, `claude-art-skill`
+e `@aeriox-co/bring-to-life` NÃO estão disponíveis. A CAPACIDADE que elas descrevem
+— "nano-banana image-to-image com referência para consistência do subject" — foi
+entregue pelo pipeline já validado: Cloud Comfy (MCP comfyui-cloud, produção) + nó
+Nano Banana Pro (GeminiImage2Node / gemini-3-pro-image-preview) com DUPLA imagem de
+referência (ImageBatch: GUTO + cenário real) → SaveImage. Não foram invocadas skills
+inexistentes. Controle de paleta (equivalente a token-aware-image) foi feito por
+prompt travando navy #050818 + laranja #ff6b35 + dourado.
+
+--------------------------------------------------------------------------------
+3. CORREÇÃO DO "PORCO"
+--------------------------------------------------------------------------------
+O enunciado do MC69.1 voltou a descrever o GUTO como "friendly pig". CONFIRMADO
+pelo operador: é alucinação/erro de template — GUTO é um MASCOTE HUMANO 3D. Todos os
+prompts usaram a descrição humana correta.
+
+--------------------------------------------------------------------------------
+4. AS TRÊS VARIAÇÕES
+--------------------------------------------------------------------------------
+VARIAÇÃO 1 — Comprador
+  CTA: "Participe do leilão de menor lance único. Ganhe prêmios exclusivos.
+        Baixe agora e comece a ganhar."
+  Elementos: GUTO+martelo apontando p/ troféu dourado gigante + moedas "GUT",
+             no palco real com eletrodomésticos, holofotes e confete.
+  Final: variação-1/variação-1-final.png (base v1-tentativa-1, seed 611)
+
+VARIAÇÃO 2 — Lojista
+  CTA: "Anuncie seus produtos no maior leilão de menor lance único. Venda mais
+        com dropshipping. Baixe agora e comece a vender."
+  Elementos: GUTO+martelo com placa "ANUNCIE AQUI" + storefront + seta de vendas
+             + caixas, no palco real.
+  Final: variação-2/variação-2-final.png (base v2-tentativa-1, seed 621)
+
+VARIAÇÃO 3 — Ambos
+  CTA: "Seja comprador ou anunciante. Baixe agora e escolha seu caminho."
+  Elementos: GUTO+martelo ao centro, balões "COMPRAR" e "ANUNCIAR", palco real.
+  Final: variação-3/variação-3-final.png (base v3-tentativa-1, seed 631)
+
+Termos obrigatórios ("leilão de menor lance único" + "e-commerce por dropshipping")
+presentes e com acentos corretos nas 3. Sem jargão técnico.
+
+--------------------------------------------------------------------------------
+5. ARQUIVOS GERADOS
+--------------------------------------------------------------------------------
+Raiz: C:\Users\Moltbot\Desktop\ARTES-PROMOCIONAIS-V2\
+  referencia-guto\
+    guto-referencia.png / ref-guto-1024.png        (identidade GUTO)
+    cenario-real-app-mobile.png / ref-cenario-1024.png (cenário real do app)
+  variação-1\  v1-tentativa-1.png (611) <- final | v1-tentativa-2.png (612)
+               variação-1-final.png (1080×1920) *** ENTREGA ***
+  variação-2\  v2-tentativa-1.png (621) <- final | v2-tentativa-2.png (622)
+               variação-2-final.png (1080×1920) *** ENTREGA ***
+  variação-3\  v3-tentativa-1.png (631) <- final | v3-tentativa-2.png (632)
+               variação-3-final.png (1080×1920) *** ENTREGA ***
+
+--------------------------------------------------------------------------------
+6. VALIDAÇÃO VISUAL (MCP / inspeção)
+--------------------------------------------------------------------------------
+[✅] Mesmo GUTO (humano) nas 3 — dupla referência.
+[✅] Martelo presente nas 3.
+[✅] Cenário REAL do app utilizado (background-mobile.webp).
+[✅] Vibrante/animado (holofotes, confete, glow) — não genérico.
+[✅] Mensagem clara, sem jargão, gancho por público.
+[✅] Termos obrigatórios com acentos corretos nas 3.
+[✅] Paleta navy #050818 + laranja #ff6b35 + dourado.
+[✅] 9:16 (1080×1920), adequado a e-mail e WhatsApp.
+Boulder loop: 0 iterações necessárias (todas as finais corretas de primeira).
+
+Segmento 3 (animação, OPCIONAL): não executado. A skill @aeriox-co/bring-to-life
+não existe aqui; se desejado, versões animadas podem ser feitas via WAN 2.6 i2v
+(pipeline MC57.5) num MC à parte.
+
+--------------------------------------------------------------------------------
+7. VEREDITO FINAL
+--------------------------------------------------------------------------------
+✅ ARTES CORRIGIDAS E ELEVADAS (validação técnica/visual do agente) — cenário real,
+   vibrantes, GUTO consistente. Aguardando APROVAÇÃO do operador (SUPERPERS/RUFLO)
+   antes de uso em e-mail/WhatsApp.
+================================================================================

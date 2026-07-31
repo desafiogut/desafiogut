@@ -1,0 +1,192 @@
+================================================================================
+MC82.2 — PRIVY FORA DO CAMINHO CRÍTICO + CORREÇÃO DO CHUNKING DO REACT
+Data: 2026-07-21 · Custo: US$ 0,00 (R2 — build e medição locais)
+================================================================================
+
+RESULTADO EM UMA LINHA
+--------------------------------------------------------------------------------
+AMBOS OS ALVOS ATINGIDOS COM FOLGA: o JS do gate LGPD caiu de 4.002 KB para
+617 KB (-85%, alvo < 1.300) e o LCP de 2.220 ms para 980 ms (-56%, alvo < 1.500).
+Mas o lazy-load do Privy SOZINHO não teria produzido ganho nenhum: a medição
+revelou um bug de chunking pré-existente que mantinha o React inteiro dentro do
+chunk `privy`.
+
+--------------------------------------------------------------------------------
+1 · O QUE O PLANO PREVIA E POR QUE NÃO BASTAVA
+--------------------------------------------------------------------------------
+O plano dizia: mover o <PrivyProvider> para um PrivyRoot.jsx lazy e envolver com
+Suspense. Duas descobertas obrigaram a ir mais fundo:
+
+DESCOBERTA 1 — o chunk vinha por outro caminho
+  `AppContext.jsx` importa `@privy-io/react-auth` estaticamente, e `App.jsx`
+  importa o `AppProvider`. Portanto, mesmo adiando o provider, bastava o App
+  entrar no arranque para o chunk `privy` vir junto.
+  → Solução: o PrivyRoot passou a carregar o <App/> INTEIRO, e o gate LGPD saiu
+    do App.jsx para um Boot.jsx leve, que só importa TermosConsentimento e
+    BackgroundCanvas.
+
+DESCOBERTA 2 — bug de chunking pré-existente (o achado principal)
+  O `react-*.js` tinha 0,2 KB. Inspecionado, era apenas um shim:
+      import{cn as t}from"./privy-*.js"; e.createRoot=...
+  Ou seja: o React e o React-DOM estavam DENTRO do chunk `privy`. Qualquer ecrã
+  da app — inclusive o gate — tinha de descarregar 2.745 KB só para ter React.
+
+  Diagnóstico: o `manualChunks` do vite.config.js estava a ser SILENCIOSAMENTE
+  IGNORADO pelo Rolldown (bundler do Vite 8). Confirmado por log: a função
+  recebia os ids do React (`node_modules/react-dom/cjs/...`) e devolvia "react",
+  mas o Rolldown mantinha-os no chunk `privy`. Uma tentativa de corrigir a
+  normalização dos ids (prefixo "\0" do plugin CommonJS) produziu hashes de
+  build IDÊNTICOS — prova de que o problema não era o matcher, era o
+  `manualChunks` não ser honrado.
+  → Solução: migrar para `advancedChunks`, a API nativa do Rolldown.
+
+  ⚠️ A ORDEM DOS GRUPOS IMPORTA. Com `privy` antes de `motion`, o chunk do
+     framer-motion (usado pelo gate via Modal e BackgroundCanvas) ficava com
+     `import{cn,sn}from"./privy-*.js"` e arrastava os 2.618 KB de volta para o
+     arranque. Pondo `motion` ANTES de `privy`, a corrente quebra.
+
+  ⚠️ Uma tentativa de grupo `vendor` catch-all PIOROU (arranque subiu para
+     5.117 KB, porque o vendor de 1.919 KB passou a ser carregado no boot).
+     Foi revertida.
+
+--------------------------------------------------------------------------------
+2 · ALTERAÇÕES (commit c03f6cd)
+--------------------------------------------------------------------------------
+  NOVO  src/Boot.jsx
+        Arranque leve. Lê o consentimento de forma SÍNCRONA (antes era um
+        useEffect no App.jsx, que fazia o gate piscar um frame em quem já tinha
+        aceite). Renderiza o gate sem Privy; ao aceitar, monta o PrivyRoot lazy
+        com <Suspense>. A rota pública /excluir-conta (Play Store) continua a
+        entrar direto, sem passar pelo gate.
+
+  NOVO  src/PrivyRoot.jsx
+        PrivyProvider + PrivyCrashBoundary + PrivyEventsBridge + <App/>.
+        Tudo movido do main.jsx SEM alteração de lógica — o histórico de crashes
+        do arranque do Privy (MC17.3.1.x, race do createWallet) desaconselhava
+        "melhorar" seja o que for de passagem.
+
+  EDIT  src/main.jsx  (187 linhas removidas)
+        Deixou de importar @privy-io, viem e App.jsx. Ficam cá o Sentry, o
+        BrowserRouter, o ReferralTracker e os listeners globais de
+        error/unhandledrejection/CSP — de propósito, para apanharem falhas
+        desde o primeiro instante, antes de o chunk do Privy ser sequer pedido.
+
+  EDIT  src/App.jsx
+        Gate LGPD removido (agora vive no Boot). Imports órfãos limpos
+        (useState, useEffect, useLocation, TermosConsentimento).
+
+  EDIT  vite.config.js
+        `advancedChunks` com grupos: react → router → sentry → motion → privy.
+        ⚠️ Este ficheiro NÃO constava do escopo aprovado no MC82.2, que listava
+        main.jsx, App.jsx e PrivyRoot.jsx. Foi alterado porque sem isso o
+        objetivo era inatingível (ver Descoberta 2). Fica aqui registado para
+        revisão do operador.
+
+  REMOVIDO durante o trabalho: um prefetch em requestIdleCallback que eu próprio
+  tinha acrescentado. Medido no preview: `import()` não descarrega apenas,
+  também AVALIA o módulo — os 2,6 MB voltavam a ser parseados poucos instantes
+  após o gate aparecer (17 chunks carregados). Num aparelho lento isso devolve o
+  jank logo a seguir ao primeiro paint. Para adiantar o download sem avaliar, o
+  caminho seria <link rel="prefetch">, não import().
+
+--------------------------------------------------------------------------------
+3 · RESULTADO MEDIDO (aparelho, gate LGPD)
+--------------------------------------------------------------------------------
+Redmi 21091116UG · Android 13 · WebView Chrome 150 · consentimento limpo para
+reproduzir exatamente o cenário do baseline MC82.
+
+                          BASELINE (MC82)     MC82.2        DELTA
+  JS no arranque .......    4.002,0 KB       617,0 KB    -3.385 KB  (-85%)
+  Chunks ...............            6              6     (privy fora)
+  LCP ..................      2.220 ms        980 ms    -1.240 ms  (-56%)
+  FCP ..................      1.292 ms        556 ms      -736 ms  (-57%)
+  TTI (aproximado) .....      1.727 ms        556 ms    -1.171 ms
+  domInteractive .......        557 ms        180 ms      -377 ms
+  TTFB .................         67 ms          3 ms
+  Heap JS ..............         16 MB        9,5 MB
+  Long tasks ...........          n/d      2 (193 ms)
+
+  ALVOS DO MC82.2:  JS < 1.300 KB ✅ (617)   ·   LCP < 1.500 ms ✅ (980)
+
+  Composição dos 617 KB que restam no arranque:
+      sentry ....... 257,8 KB   ← maior item; candidato a lazy num MC futuro
+      react ........ 136,6 KB
+      motion ....... 125,7 KB
+      index ........  55,0 KB
+      router .......  41,0 KB
+      runtime ......   0,9 KB
+
+--------------------------------------------------------------------------------
+4 · VALIDAÇÃO FUNCIONAL E VISUAL (R6)
+--------------------------------------------------------------------------------
+  Smoke local (vite preview + CDP):
+    · Gate renderiza, 6 chunks, 617 KB, privy NÃO carregado.
+    · Marcados os 4 checkboxes → botão ativa → clicado.
+    · App monta, privy carrega (18 chunks), sessionStorage persistido.
+    · Erros de consola verificados: WalletConnect/CSP, frame-ancestors sem a
+      porta do preview e 404 das Netlify Functions. TODOS pré-existentes do
+      ambiente local (documentados no MC82 e na memória do projeto), nenhum é
+      regressão desta alteração.
+    · Investiguei um botão "Aceito o DesafioGUT" que parecia resíduo do modal:
+      é o botão de LOGIN da sidebar (Sidebar.jsx:287), comportamento normal
+      para utilizador não autenticado. Alarme falso.
+
+  No aparelho:
+    · Gate LGPD renderiza sem Privy (617 KB, 6 chunks) ✅
+    · 4 checkboxes → aceitar → privy carrega, app monta (5 vídeos, Dashboard),
+      consentimento persistido ✅
+    · Screenshot: shot-MC822.jpg — visual idêntico ao MC82.1.
+    · FPS SEM REGRESSÃO: 59,3 fps de média em 4 amostras (MC82.1: 59,6).
+
+--------------------------------------------------------------------------------
+5 · ESTADO DO BUILD
+--------------------------------------------------------------------------------
+  npm run build ........ ✅   ·   npx cap sync android ....... ✅
+  assembleDebug ........ ✅ (53 s)   ·   adb install -r ...... ✅ Sucesso
+  Dados do app ......... preservados (mesma debug keystore)
+
+  Nota: durante o trabalho o build falhou duas vezes com
+  `EPERM: prepare-out-dir` ao limpar dist/ — lock transitório do Windows,
+  resolvido repetindo o comando. Não tem relação com o código.
+
+--------------------------------------------------------------------------------
+6 · PRÓXIMOS PASSOS
+--------------------------------------------------------------------------------
+  Os dois gargalos do MC82 (fluidez e arranque) estão resolvidos:
+      fluidez ..... 17,5 → 59,6 fps   (MC82.1)
+      arranque .... 4.002 KB → 617 KB · LCP 2.220 → 980 ms   (MC82.2)
+
+  Pendências menores do plano original do MC82:
+    A1 · Vídeo de fundo invisível — fundo-loop-v3-desktop.webm (1920×1288,
+         opacity:0) continua a decodificar ~460 frames por 6 s. Já não é
+         gargalo de fps, mas é desperdício de decoder e de bateria. Trivial.
+    A4 · Vídeos fora do viewport (IntersectionObserver).
+    A2 · Sentry Replay — confirmado ativo no aparelho. Além do custo de main
+         thread, o chunk `sentry` (257,8 KB) é agora o MAIOR item do arranque:
+         é o candidato natural ao próximo lazy-load.
+    A6 · Coerência visual do glass restante (TabelaLances 20px,
+         SejaNossoParceiro 16px ainda usam backdrop-filter).
+
+  ⚠️ O APK é DEBUG. Play Store exige assembleRelease assinado (o MC81 registou
+     que esse build é frágil nesta máquina).
+  ⚠️ Deploy web: produção roda a linhagem MAINNET, NÃO esta branch
+     (feat/mc73-correcao-deploy).
+  ⚠️ O login real (OAuth Google via Privy) NÃO foi exercitado ponta-a-ponta —
+     no preview local o iframe do Privy é bloqueado por frame-ancestors, e no
+     aparelho não iniciei sessão para não mexer na conta do operador. O que foi
+     validado é que o chunk do Privy carrega e o provider monta sem erro.
+     Recomenda-se um login real manual antes de qualquer publicação.
+
+================================================================================
+LIÇÕES QUE ESTE MC DEIXA
+  1. Em Vite 8 / Rolldown, `manualChunks` pode ser silenciosamente ignorado.
+     Verificar SEMPRE o tamanho real dos chunks: um chunk de 0,2 KB para o React
+     é sinal de que o agrupamento não aconteceu. Usar `advancedChunks`.
+  2. A ordem dos grupos de chunking é significativa: um pacote do caminho
+     crítico (framer-motion) pode ficar acorrentado a um chunk pesado e
+     arrastá-lo de volta ao arranque.
+  3. `import()` para prefetch também AVALIA o módulo. Para só descarregar,
+     usar <link rel="prefetch">.
+  4. Lazy-load só funciona se TODO o caminho estático até ao módulo for cortado.
+     Um único import estático (AppContext → @privy-io) anula o esforço.
+================================================================================

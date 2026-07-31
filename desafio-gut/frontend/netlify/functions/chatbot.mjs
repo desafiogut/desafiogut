@@ -37,29 +37,22 @@ import { escreverEstadoSistema, lerEstadoSistema } from "./_lib/system-state.mjs
 import { registrarDecisao, buscarDecisaoSemelhante } from "./_lib/log-operacional.mjs";
 // MC17.1 — saldo de senhas de troco do lojista + resumo para o admin.
 import { lerTroco, resumoTrocoAdmin } from "./_lib/troco-senhas.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const STORE_NAME      = "rag";
 const RATE_LIMIT_RPM  = 10;
 const PERGUNTA_MAX    = 500;
 const TOP_K           = 3;
-const PROMPT_SYSTEM   = `Você é o GUTO, o mascote do DESAFIOGUT. Fala como um amigo — frases curtas,
-tom leve e animado. Nada de textos longos ou técnicos.
 
-Regras:
-- Máximo 2-3 frases por resposta.
-- Usa palavras simples. Nada de "adicionalmente", "consequentemente", "no entanto".
-- Lê o que a pessoa disse antes e segue o assunto. Não recomeças do zero.
-- Se não souberes algo: "Poxa, essa não sei! Mas posso ajudar com..." e puxa para o DESAFIOGUT.
-- Quando a pessoa falar de outro assunto, responde na boa e volta com leveza.
-- Usa interjeições naturais: "Olha!", "Boa!", "Hum...", "Ah!" — como gente.
-- Emojis só de vez em quando, não em toda a frase.
-- Se a pessoa perguntar "como estás?" ou "tudo bem?", responde como pessoa, não como robô.
-- Exemplos do teu tom:
-  "Ah, ótima pergunta! Funciona assim: vence o menor lance que ninguém repetir."
-  "Temos 4 planos: Bronze, Prata, Ouro e Diamante. Quer saber os preços?"
-  "Poxa, essa não sei! Mas posso te contar como funciona o leilão, que tal?"
+// MC88.20 (P1) — orçamento do excerto no fallback SEM LLM. Um chunk, não três:
+// o formato antigo (3 × 600 chars + cabeçalhos de relevância) era o "dar texto".
+const LIMITE_TRECHO_TEMPLATE = 400;
 
-Responde APENAS com base no regulamento do DESAFIOGUT.`;
+// MC88.20 (P3) — o `PROMPT_SYSTEM` genérico que vivia aqui foi REMOVIDO. Duplicava
+// o SYS_BASE de _lib/guto-perfis.mjs (segunda fonte de verdade para o tom do GUTO)
+// e servia de fallback silencioso em chamarLLM: qualquer call-site que esquecesse
+// `systemPrompt` perdia a personalidade sem erro visível. Agora `systemPrompt` é
+// OBRIGATÓRIO e a falta dele falha alto.
 
 const DEFAULT_LLM_URL    = "https://api.deepseek.com/v1";
 const DEFAULT_LLM_MODEL  = "deepseek-chat";
@@ -119,6 +112,35 @@ const INTENT_PATTERNS = {
   comprar_cotas: /comprar (uma )?cota|contratar (uma )?cota|quero (uma )?cota|adquirir cota|contratar (bronze|prata|ouro|diamante)/,
   // MC17.1 — saldo de senhas de troco (perfis autenticados).
   meu_saldo: /\bmeu saldo\b|minhas senhas|quantas senhas (eu )?tenho|saldo de (senhas|troco)|senhas de troco/,
+  // ── MC89.2 — MÉTRICAS DO SISTEMA (admin) ──────────────────────────────────
+  //
+  // ⚠️ COLISÕES QUE ESTES PADRÕES TÊM DE EVITAR (verificadas uma a uma):
+  //   `pulso_edicao`  já casa a palavra solta "metricas" → estes padrões NÃO a
+  //                   casam sozinha. "Pulso" é sobre a EDIÇÃO; isto é sobre o
+  //                   SISTEMA, e por isso exige "sistema"/"plataforma".
+  //   `auditoria`     já casa "estatisticas" → não tocamos nessa palavra.
+  //   `meu_saldo`     casa "meu saldo" e é testado ANTES → "saldo em circulacao"
+  //                   não colide porque não tem "meu".
+  //   `pacotes_cotas` casa "quanto custam as cotas" e é testado ANTES.
+  // Há teste a afirmar que os 6 casos acima continuam a ir para o intent antigo.
+  metricas_usuarios:  /quantos? (utilizadores|usuarios)|(utilizadores|usuarios) (ativos|com atividade|registados|cadastrados)|quantas pessoas/,
+  metricas_financeiro: /saldo em circulacao|quanto (ja )?(foi )?(arrecadado|creditado|recebido)|total (de |em )?creditos|financeiro (do|da) (sistema|plataforma)/,
+  // "como esta a FILA" não colide com o "como esta a EDICAO" do pulso_edicao:
+  // este exige a palavra "fila", que o outro não tem.
+  metricas_fila:      /tamanho da fila|fila (pendente|de tarefas)|quantos? (itens|pedidos|tarefas) na fila|estado da fila|fila esta|como esta a fila/,
+  metricas_eoa:       /saldo da (coordenadora|coordenacao|eoa)|carteira coordenadora|(tem|ha) gas|quanto (de )?eth/,
+  metricas_geral:     /(status|estado|resumo|panorama|visao geral) (geral )?(do |da )?(sistema|plataforma)|painel de controle|como esta o sistema/,
+
+  // MC88.44 — pedido de contacto humano. Testado POR ÚLTIMO em detectarIntent,
+  // de propósito: nunca rouba um intent mais específico ("meu saldo", "quero
+  // uma cota"). Só apanha quem está mesmo a pedir para falar com alguém.
+  // Padrão sobre texto JÁ desacentuado e em minúsculas (ver detectarIntent).
+  // MC89.9 — Comando ALFA (admin). Prefixo fixo + ação. Testado DENTRO de
+  // detectarIntent e não por ordem de definição: o padrão só captura se a frase
+  // começar com "ALFA:" (case-insensitive). Captura ação e parâmetros opcionais.
+  comando_alfa: /^ALFA:\s*(\w+)(?:\s+(.*))?$/i,
+
+  suporte: /\bsuporte\b|\bconta[ct]to\b|falar com (alguem|voces|humano|atendente|a coordenacao)|\batendimento\b|reclama(r|cao)|\bouvidoria\b|e-?mail (de |para )?(contato|suporte|voces)|como (falo|entro em contato|reclamo)/,
 };
 
 /**
@@ -134,7 +156,7 @@ const INTENT_PATTERNS = {
 export function detectarIntent(texto) {
   const t = String(texto || "")
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // remove acentos combinantes (NFD)
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos combinantes (NFD)
     .toLowerCase();
   // ordem importa: específicos (auditoria/dados) antes; encerrar/listar antes de criar.
   if (INTENT_PATTERNS.relatorio_compras.test(t)) return "relatorio_compras";
@@ -143,10 +165,22 @@ export function detectarIntent(texto) {
   if (INTENT_PATTERNS.pacotes_cotas.test(t))   return "pacotes_cotas";
   if (INTENT_PATTERNS.comprar_cotas.test(t))   return "comprar_cotas";
   if (INTENT_PATTERNS.meu_saldo.test(t))       return "meu_saldo";
+  // MC89.2 — métricas do SISTEMA antes de `auditoria` e `pulso_edicao`, que são
+  // sobre outra coisa (registo de ações e desempenho da EDIÇÃO). Os padrões
+  // acima são estreitos de propósito para não roubar frases que já eram delas.
+  if (INTENT_PATTERNS.metricas_geral.test(t))     return "metricas_geral";
+  if (INTENT_PATTERNS.metricas_usuarios.test(t))  return "metricas_usuarios";
+  if (INTENT_PATTERNS.metricas_financeiro.test(t)) return "metricas_financeiro";
+  if (INTENT_PATTERNS.metricas_fila.test(t))      return "metricas_fila";
+  if (INTENT_PATTERNS.metricas_eoa.test(t))       return "metricas_eoa";
   if (INTENT_PATTERNS.auditoria.test(t))       return "auditoria";
   if (INTENT_PATTERNS.dados_mercado.test(t))   return "dados_mercado";
   if (INTENT_PATTERNS.simular_vencedor.test(t)) return "simular_vencedor";
   if (INTENT_PATTERNS.pulso_edicao.test(t))    return "pulso_edicao";
+  // MC89.9 — ALFA é prefixo FIXO e ancorado (^ALFA:). Nenhum outro padrão
+  // casa "ALFA:<acao>", mas panic/unpanic têm `panic\b` e `unpanic\b` que
+  // casam SUBSTRING em "alfa:panic". Por isso ALFA é testado ANTES de panic.
+  if (INTENT_PATTERNS.comando_alfa.test(t))   return "comando_alfa";
   if (INTENT_PATTERNS.unpanic.test(t))         return "unpanic";
   if (INTENT_PATTERNS.panic.test(t))           return "panic";
   if (INTENT_PATTERNS.memoria.test(t))         return "memoria";
@@ -154,6 +188,11 @@ export function detectarIntent(texto) {
   if (INTENT_PATTERNS.listar_edicoes.test(t))  return "listar_edicoes";
   if (INTENT_PATTERNS.criar_edicao_wizard.test(t)) return "criar_edicao_wizard";
   if (INTENT_PATTERNS.criar_edicao.test(t))    return "criar_edicao";
+  // MC88.44 — ÚLTIMO de propósito. Um pedido de suporte que também mencione um
+  // assunto concreto ("quero falar com voces sobre o meu saldo") deve cair no
+  // intent do assunto, que responde com dados reais. Aqui fica quem só quer
+  // saber com quem falar — e esse não pode receber um endereço inexistente.
+  if (INTENT_PATTERNS.suporte.test(t))         return "suporte";
   return null;
 }
 
@@ -227,8 +266,10 @@ async function confirmarAdminChat(req) {
   return { ok: false };
 }
 
-// MC15.5 — store das cotas corporativas (cliente_id = endereço para "autenticado").
-const STORE_COTAS = "cotas";
+// MC88.20 (P0) — o STORE_COTAS ("cotas" em Netlify Blobs) foi REMOVIDO daqui:
+// as cotas vivem em Supabase desde o MC36/MC37 e o acesso passa por
+// _lib/cotas-store.mjs (getCota). Deixar a constante seria um convite a
+// reintroduzir a leitura no store errado.
 
 /**
  * MC15.5 — Determina o perfil do utilizador a partir do pedido.
@@ -245,7 +286,7 @@ const STORE_COTAS = "cotas";
  *
  * @returns {Promise<{ perfil: "visitante"|"comum"|"corporativo"|"admin", endereco: string|null }>}
  */
-async function detectarPerfil(req) {
+export async function detectarPerfil(req) {  // export: testado em _tests/mc8820-guto-personalidades
   // 1) admin — admin-access JWT / x-admin-token / user-session ∈ admin-list.
   const adm = await confirmarAdminChat(req);
   if (adm.ok) return { perfil: "admin", endereco: adm.endereco || null };
@@ -265,15 +306,27 @@ async function detectarPerfil(req) {
   }
   if (!endereco) return { perfil: "visitante", endereco: null };
 
-  // 4) corporativo? lookup TOLERANTE no Blob "cotas" (falha/ausente → comum).
+  // 4) corporativo? lookup TOLERANTE (falha/ausente → comum).
+  //
+  // MC88.20 (P0) — ANTES isto lia o Blob "cotas" diretamente. Com o
+  // DATA_STORE_BACKEND já em "supabase", as cotas passaram a viver no Postgres
+  // (MC36/MC37) e este lookup deixou de encontrar QUALQUER lojista: a cascata
+  // caía no default e devolvia "comum". Resultado: a personalidade corporativa
+  // nunca ativava — sem erro, sem log, sem sintoma além do tom errado.
+  // Agora usa `getCota` de _lib/cotas-store.mjs, a MESMA função que cotas.mjs
+  // (fonte de verdade) usa. Import dinâmico para não puxar o cliente Supabase
+  // para o arranque de quem só faz uma pergunta ao GUTO.
   try {
-    const store = getStore({ name: STORE_COTAS, consistency: "strong" });
-    const cota = await store.get(endereco, { type: "json" });
+    const { getCota } = await import("./_lib/cotas-store.mjs");
+    const cota = await getCota(endereco);
     if (cota && cota.tipo === "corporativo") {
       return { perfil: "corporativo", endereco };
     }
+    // Distinguir "não tem cota" de "não consegui ler" — indistinguíveis antes,
+    // e foi essa ambiguidade que escondeu o defeito acima durante toda a migração.
+    console.info("[chatbot] sem cota corporativa para o endereço — perfil comum");
   } catch (err) {
-    console.warn("[chatbot] lookup cotas falhou (trata como comum):", err?.message);
+    console.warn("[chatbot] lookup de cota FALHOU (trata como comum):", err?.message);
   }
 
   // 5) default: comum (autenticado, sem cota corporativa, ∉ admin-list).
@@ -319,7 +372,7 @@ function parseDinheiroCentavos(texto) {
 }
 
 function normalizarTexto(texto) {
-  return String(texto || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  return String(texto || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 function ehCancelar(texto) { return /\b(cancela|cancelar|abortar|sair|desistir)\b/.test(normalizarTexto(texto)); }
 function ehConfirmar(texto) { return /\b(publicar|publica|confirmar|confirma|criar|cria|sim|ok)\b/.test(normalizarTexto(texto)); }
@@ -458,6 +511,269 @@ const ehCorpOuAdmin  = (perfil) => perfil === "admin" || perfil === "corporativo
 const ehAutenticado  = (perfil, endereco) => perfil !== "visitante" && !!endereco;
 const qualquerPerfil = () => true;
 
+// ── MC89.9 — Comando ALFA ──────────────────────────────────────────────────
+// Tabela de comandos conhecidos. Cada entrada: o que faz, se é possível hoje, e
+// como responder. Comandos impossíveis respondem com honestidade — nunca com
+// "executado" quando não foi.
+
+const COMANDOS_ALFA = {
+  status:   "Métricas agregadas do sistema (admin-stats + on-chain).",
+  fila:     "Estado atual da fila de tarefas.",
+  panic:    "Pausar o sistema (super-admin apenas).",
+  unpause:  "Reativar o sistema após pausa (super-admin apenas).",
+  logs:       "Últimas 10 ações de auditoria (super-admin vê tudo; admin vê as suas).",
+  financeiro: "Resumo financeiro (total recebido, em circulação, EOA).",
+  transacoes: "Últimas transações financeiras.",
+  relatorio:     "Exportar CSV financeiro do período (admin+).",
+  notificar:     "Enviar notificação in-app. Uso: ALFA:notificar todos|admin|<endereco> <mensagem>",
+  notificacoes:  "Últimas notificações enviadas (histórico).",
+  admins:        "Lista de administradores com níveis.",
+  sessoes:       "Sessões admin ativas.",
+  revogar:       "Revoga uma sessão por jti. Uso: ALFA:revogar <jti>",
+  ajuda:         "Listar comandos ALFA disponíveis.",
+  reindexar_rag: "O índice RAG é construído fora do repositório pelo operador. "
+    + "Execute `build-rag-index.mjs` localmente.",
+  limpar_cache: "O cache Redis não está configurado (REDIS_URL ausente). "
+    + "As consultas vão sempre à fonte.",
+};
+
+/**
+ * Executa um comando ALFA. Todas as dependências são importadas sob demanda
+ * para não pesar o cold start de quem não usa ALFA.
+ */
+async function executarAlfa(acao, params, { perfil, endereco }) {
+  // ── Comandos que funcionam hoje ──────────────────────────────────────────
+  if (acao === "status") {
+    const [{ obterMetricas }, { obterSaldoEoa }] = await Promise.all([
+      import("./_lib/admin-metricas.mjs"),
+      import("./_lib/admin-metricas.mjs"),
+    ]);
+    const [metrica, eoa] = await Promise.allSettled([
+      obterMetricas(),
+      obterSaldoEoa().catch(() => ({ erro: "cadeia indisponível" })),
+    ]);
+    const m = metrica.status === "fulfilled" ? metrica.value : null;
+    const e = eoa.status === "fulfilled" ? eoa.value : { erro: "cadeia indisponível" };
+    const u = m?.utilizadores?.comAtividade ?? "—";
+    const f = m?.financeiro;
+    const fila = m?.operacao?.fila;
+    return [
+      `📊 STATUS DO SISTEMA`,
+      ``,
+      `Utilizadores com atividade ..... ${u}`,
+      `Saldo em circulação ........... ${f ? `R$ ${((f.saldoTotalCentavos || 0) / 100).toFixed(2)}` : "—"}`,
+      `Créditos (30 d) ............... ${f?.creditosJanela ?? "—"}`,
+      `Fila — pendentes / falhadas ... ${fila?.pendentes ?? "—"} / ${fila?.falhadas ?? "—"}`,
+      `Saldo EOA ..................... ${e?.saldoEth ? `${e.saldoEth} ETH` : e?.erro || "—"}`,
+      `Bloco atual ................... ${e?.bloco ?? "—"}`,
+      ``,
+      `Gerado às ${new Date().toLocaleTimeString("pt-BR")}. Use ALFA:ajuda para ver outros comandos.`,
+    ].join("\n");
+  }
+
+  if (acao === "fila") {
+    const { getSupabaseReadOnly } = await import("./_lib/supabase-client.mjs");
+    const sb = getSupabaseReadOnly();
+    const { data, error } = await sb.from("fila_tarefas")
+      .select("tipo,status,atualizado_em")
+      .order("atualizado_em", { ascending: false })
+      .limit(10);
+    if (error) return `Não foi possível ler a fila: ${error.message}`;
+    if (!data?.length) return "A fila de tarefas está vazia.";
+    const linhas = data.map((t) =>
+      `  ${t.tipo || "?"} · ${t.status} · ${new Date(t.atualizado_em).toLocaleString("pt-BR")}`).join("\n");
+    return `📋 FILA DE TAREFAS (últimas 10)\n\n${linhas}`;
+  }
+
+  if (acao === "logs") {
+    const { lerLogs, getAdminNivel } = await Promise.all([
+      import("./_lib/admin-log.mjs"),
+      import("./_lib/admin-niveis.mjs"),
+    ]);
+    const nivel = await getAdminNivel(endereco);
+    // Super-admin vê tudo; admin vê os seus (filtro aplicacional)
+    const opts = { limite: 10 };
+    if (nivel !== "super-admin" && endereco) opts.admin = endereco;
+    if (params) opts.q = params;
+    const { linhas, total } = await lerLogs(opts);
+    if (!linhas.length) return "Nenhum registo de auditoria encontrado.";
+    const out = linhas.map((l) => {
+      const quando = new Date(l.criado_em).toLocaleString("pt-BR");
+      const quem = l.admin_endereco?.slice(0, 6) + "…" + l.admin_endereco?.slice(-4);
+      const status = l.sucesso === true ? "✓" : l.sucesso === false ? "✗" : "…";
+      return `  ${status} ${quando} | ${quem} | ${l.tipo_acao}${l.alvo ? " → " + l.alvo.slice(0, 12) : ""}`;
+    }).join("\n");
+    return `📋 AUDITORIA (${linhas.length} de ${total})\n\n${out}\n\nUse ALFA:logs <texto> para filtrar.`;
+  }
+
+  if (acao === "financeiro") {
+    const [{ obterMetricas }, { obterSaldoEoa }] = await Promise.all([
+      import("./_lib/admin-metricas.mjs"), import("./_lib/admin-metricas.mjs"),
+    ]);
+    const [metrica, eoa] = await Promise.allSettled([
+      obterMetricas(), obterSaldoEoa().catch(() => ({ erro: "cadeia indisponível" })),
+    ]);
+    const m = metrica.status === "fulfilled" ? metrica.value : null;
+    const f = m?.financeiro;
+    const e = eoa.status === "fulfilled" ? eoa.value : { erro: "cadeia indisponível" };
+    return [
+      `💰 FINANCEIRO`,
+      `Total creditado ... R$ ${f ? ((f.creditadoCentavos || 0) / 100).toFixed(2) : "—"}`,
+      `Saldo circulação .. R$ ${f ? ((f.saldoTotalCentavos || 0) / 100).toFixed(2) : "—"}`,
+      `Créditos (30d) .... ${f?.creditosJanela ?? "—"}`,
+      `Saldo EOA ......... ${e?.saldoEth ? `${e.saldoEth} ETH` : e?.erro || "—"}`,
+      `Use ALFA:transacoes para ver as últimas transações.`,
+    ].join("\n");
+  }
+
+  if (acao === "transacoes") {
+    const { getSupabaseReadOnly } = await import("./_lib/supabase-client.mjs");
+    const sb = getSupabaseReadOnly();
+    const { data, error } = await sb.from("saldo_rs_creditos")
+      .select("pedido_id,payload,criado_em").order("criado_em", { ascending: false }).limit(10);
+    if (error) return `Erro: ${error.message}`;
+    if (!data?.length) return "Nenhuma transação registada.";
+    const out = data.map((t) => {
+      const v = Number(t.payload?.valorCentavos || 0);
+      const sinal = v >= 0 ? "+" : "";
+      return `  ${new Date(t.criado_em).toLocaleDateString("pt-BR")} | ${(v / 100).toFixed(2)} BRL | ${t.payload?.fonte || "?"} | ${(t.payload?.endereco || "").slice(0, 8)}…`;
+    }).join("\n");
+    return `💳 TRANSAÇÕES (últimas ${data.length})\n\n${out}\n\nUse ALFA:relatorio para exportar CSV.`;
+  }
+
+  if (acao === "relatorio") {
+    return "Use o painel ADM (Tela 3 — Financeiro) e clique «Exportar CSV». A exportação pela Web gera o ficheiro diretamente no navegador. O ALFA não consegue descarregar ficheiros.";
+  }
+
+  if (acao === "admins") {
+    const [{ getAdminAddresses }, { getAdminNivel }] = await Promise.all([
+      import("./_lib/admin-helpers.mjs"), import("./_lib/admin-niveis.mjs"),
+    ]);
+    const admins = await getAdminAddresses();
+    const comNiveis = await Promise.all(admins.map(async (a) => {
+      const n = await getAdminNivel(a) || "admin";
+      return `  ${a.slice(0, 8)}… | ${n}`;
+    }));
+    return `👥 ADMINISTRADORES (${admins.length})\n\n${comNiveis.join("\n")}`;
+  }
+
+  if (acao === "sessoes") {
+    const { getStore } = await import("@netlify/blobs");
+    const sessoes = [];
+    try {
+      const store = getStore({ name: "admin-refresh", consistency: "strong" });
+      if (endereco) {
+        const data = await store.get(endereco, { type: "json" });
+        const tokens = Array.isArray(data?.tokens) ? data.tokens : [];
+        for (const t of tokens) sessoes.push({ jti: t.jti, exp: t.expiresAt ? new Date(t.expiresAt).toLocaleDateString("pt-BR") : "?" });
+      }
+      if (!sessoes.length) return "Nenhuma sessão ativa encontrada para o teu endereço.";
+      const out = sessoes.map((s) => `  jti: ${(s.jti || "").slice(0, 12)}… | expira: ${s.exp}`).join("\n");
+      return `🔐 SESSÕES (${sessoes.length})\n\n${out}\n\nUse ALFA:revogar <jti> para revogar uma sessão.`;
+    } catch (err) { return `Erro ao ler sessões: ${err.message}`; }
+  }
+
+  if (acao === "revogar") {
+    if (!params) return "Uso: ALFA:revogar <jti>";
+    const jti = params.trim();
+    if (!jti) return "Uso: ALFA:revogar <jti>";
+    try {
+      const { getStore } = await import("@netlify/blobs");
+      const store = getStore({ name: "admin-refresh", consistency: "strong" });
+      const data = await store.get(endereco, { type: "json" });
+      const tokens = Array.isArray(data?.tokens) ? data.tokens : [];
+      const antes = tokens.length;
+      const novas = tokens.filter((t) => t.jti !== jti);
+      if (novas.length === antes) return `Sessão ${jti.slice(0, 12)}… não encontrada.`;
+      await store.setJSON(endereco, { tokens: novas, atualizadoEm: new Date().toISOString() });
+      return `Sessão ${jti.slice(0, 12)}… revogada. A sessão expira em ≤ 15 min (TTL do access token).`;
+    } catch (err) { return `Erro ao revogar: ${err.message}`; }
+  }
+
+  if (acao === "notificar") {
+    // ALFA:notificar <destino> <mensagem>
+    const partes = (params || "").split(/\s+/);
+    let d = "todos", msg = params || "";
+    if (partes.length >= 2) {
+      const primeiro = partes[0].toLowerCase();
+      if (primeiro === "admin" || primeiro === "admins") { d = "admins"; msg = partes.slice(1).join(" "); }
+      else if (/^0x[0-9a-f]{40}$/i.test(primeiro)) { d = "especifico"; msg = partes.slice(1).join(" "); }
+      // senão: assume "todos"
+    }
+    if (!msg.trim()) return "Uso: ALFA:notificar todos|admin|<endereco> <mensagem>";
+    // Nota: o ALFA não pode chamar o endpoint HTTP admin-notify diretamente
+    // sem o JWT admin. Em vez disso, usa o Blob diretamente.
+    const { adicionarNotificacao } = await import("./_lib/notificacoes-usuario.mjs");
+    let enderecos = [];
+    if (d === "admins") {
+      const { getAdminAddresses } = await import("./_lib/admin-helpers.mjs");
+      enderecos = await getAdminAddresses();
+    } else if (d === "especifico") {
+      enderecos = [partes[0].toLowerCase()];
+    } else {
+      const { getSupabaseReadOnly } = await import("./_lib/supabase-client.mjs");
+      const sb = getSupabaseReadOnly();
+      const { data } = await sb.from("vw_utilizadores").select("cliente_id");
+      enderecos = (data || []).map((u) => u.cliente_id).filter((s) => /^0x[0-9a-f]{40}$/.test(s));
+    }
+    let n = 0;
+    for (const addr of enderecos) {
+      try { await adicionarNotificacao(addr, { tipo: "admin", titulo: "ALFA", mensagem: msg, timestamp: new Date().toISOString(), lida: false }); n++; }
+      catch {}
+    }
+    return `Notificação enviada: ${n}/${enderecos.length} entregues (in-app).`;
+  }
+
+  if (acao === "notificacoes") {
+    const { getSupabaseReadOnly } = await import("./_lib/supabase-client.mjs");
+    const sb = getSupabaseReadOnly();
+    const { data, error } = await sb.from("notifications").select("canal,destino,mensagem,criado_em,entregues,total").order("criado_em", { ascending: false }).limit(10);
+    if (error) return `Erro: ${error.message}`;
+    if (!data?.length) return "Nenhuma notificação enviada.";
+    const out = data.map((n) => `  ${new Date(n.criado_em).toLocaleDateString("pt-BR")} | ${n.canal} | ${n.destino} | ${n.entregues}/${n.total} | ${n.mensagem?.slice(0, 40)}`).join("\n");
+    return `📬 NOTIFICAÇÕES (últimas ${data.length})\n\n${out}`;
+  }
+
+  if (acao === "panic") {
+    try {
+      const { escreverEstadoSistema } = await import("./_lib/system-state.mjs");
+      const { registrarDecisao } = await import("./_lib/log-operacional.mjs");
+      const estado = await escreverEstadoSistema("paused", "acionado via ALFA:" + acao);
+      await registrarDecisao({ trigger: "alfa:panic", action: "sistema paused", userId: endereco });
+      return `⏸️ Sistema PAUSADO às ${new Date(estado.timestamp).toLocaleTimeString("pt-BR")}. Use ALFA:unpause para reativar.`;
+    } catch (err) {
+      return `Não foi possível pausar o sistema: ${err?.message || "erro"}.`;
+    }
+  }
+  if (acao === "unpause") {
+    try {
+      const { escreverEstadoSistema } = await import("./_lib/system-state.mjs");
+      const { registrarDecisao } = await import("./_lib/log-operacional.mjs");
+      const estado = await escreverEstadoSistema("active", null);
+      await registrarDecisao({ trigger: "alfa:unpause", action: "sistema active", userId: endereco });
+      return `▶️ Sistema REATIVADO às ${new Date(estado.timestamp).toLocaleTimeString("pt-BR")}.`;
+    } catch (err) {
+      return `Não foi possível reativar o sistema: ${err?.message || "erro"}.`;
+    }
+  }
+
+  if (acao === "ajuda") {
+    const cmds = Object.entries(COMANDOS_ALFA)
+      .map(([nome, desc]) => `  ALFA:${nome.padEnd(18)} ${desc.split(".")[0]}.`)
+      .join("\n");
+    return `🤖 COMANDOS ALFA DISPONÍVEIS\n\n${cmds}\n\nDigite ALFA:<comando> para executar. Comandos que afetam o sistema (panic, unpause) são executados de imediato.`;
+  }
+
+  // ── Comandos IMPOSSÍVEIS (respondem com honestidade) ────────────────────
+  if (COMANDOS_ALFA[acao]) {
+    return `⛔ ALFA:${acao} — não executável. ${COMANDOS_ALFA[acao]}`;
+  }
+
+  // ── Comando desconhecido ─────────────────────────────────────────────────
+  const nomes = Object.keys(COMANDOS_ALFA).map((c) => `ALFA:${c}`).join(", ");
+  return `❓ Comando ALFA desconhecido: "${acao}". Comandos disponíveis: ${nomes}. Use ALFA:ajuda para descrições.`;
+}
+
 // kill switch (panic/unpanic) — ADMIN-ONLY. Handler único (MC15.6 ITEM 7).
 async function killSwitch(intent, perfil, endereco) {
   const novoStatus = intent === "panic" ? "paused" : "active";
@@ -486,6 +802,87 @@ async function killSwitch(intent, perfil, endereco) {
 // rate-limit são aplicados de forma UNIFORME em tratarIntentEdicoes — a ordem de
 // teste é irrelevante porque detectarIntent devolve exatamente UM intent (D7).
 // Gates/segurança e shapes de resposta preservados 1:1 face ao MC17.1 (R0/SUPERPERS).
+// ── MC89.2 — os 5 intents de métricas, construídos a partir de uma tabela ────
+//
+// São cinco handlers com a MESMA forma; escrevê-los cinco vezes à mão era pedir
+// que divergissem. Cada um diz só de que parte das métricas precisa.
+//
+// `obterMetricas()` é chamada UMA vez por pedido e só quando o perfil é admin —
+// nenhum número é lido para quem não o pode ver. É a mesma função que alimenta
+// o endpoint `admin-stats` e o separador "Visão Geral": se aqui e lá dissessem
+// números diferentes, era o B4 do MC88.41 outra vez, noutro domínio.
+// `export` para o teste poder correr os extratores REAIS contra as respostas
+// reais — é ali que vive o defeito que ninguém vê: o handler extrair um objeto
+// onde a tabela espera um número, e a resposta sair com "[object Object]".
+export const MAPA_METRICAS = {
+  // intent            → o que a resposta recebe a partir das métricas agregadas
+  metricas_usuarios:   (m) => ({ utilizadores: m.utilizadores?.comAtividade ?? null,
+                                 fontes: m.utilizadores?.fontes, parciais: m.parciais.join(", ") }),
+  metricas_financeiro: (m) => ({ financeiro: m.financeiro, janelaDias: m.janelaDias,
+                                 parciais: m.parciais.join(", ") }),
+  metricas_fila:       (m) => ({ fila: m.operacao?.fila ?? null, parciais: m.parciais.join(", ") }),
+  metricas_geral:      (m) => ({ utilizadores: m.utilizadores?.comAtividade ?? null,
+                                 financeiro: m.financeiro, cotas: m.cotas,
+                                 fila: m.operacao?.fila ?? null,
+                                 parciais: m.parciais.length ? m.parciais.join(", ") : null }),
+};
+
+function construirIntentsMetricas() {
+  const out = {};
+
+  for (const [intent, extrair] of Object.entries(MAPA_METRICAS)) {
+    out[intent] = {
+      gate: qualquerPerfil, // a diferenciação está na tabela de respostas, não aqui
+      run: async ({ perfil }) => {
+        if (!ehAdminPerfil(perfil)) {
+          // Não-admin: resposta educada da tabela, e NENHUMA leitura de métricas.
+          return intentResp(perfil, intent, {
+            resposta: obterResposta(intent, perfil, {}), modoResposta: "perfil",
+          });
+        }
+        let dados;
+        try {
+          const { obterMetricas } = await import("./_lib/admin-metricas.mjs");
+          dados = extrair(await obterMetricas());
+        } catch (err) {
+          console.warn(`[chatbot] ${intent} falhou:`, err?.message);
+          // Fail-soft com a verdade: "não consegui" e não um zero.
+          dados = { parciais: "agregacao indisponivel" };
+        }
+        return intentResp(perfil, intent, {
+          resposta: obterResposta(intent, perfil, dados), modoResposta: "perfil",
+        });
+      },
+    };
+  }
+
+  // O saldo da EOA é o único que vai à rede — leitura própria, para a lentidão
+  // ou a falha do RPC não contaminar as outras quatro respostas.
+  out.metricas_eoa = {
+    gate: qualquerPerfil,
+    run: async ({ perfil }) => {
+      if (!ehAdminPerfil(perfil)) {
+        return intentResp(perfil, "metricas_eoa", {
+          resposta: obterResposta("metricas_eoa", perfil, {}), modoResposta: "perfil",
+        });
+      }
+      let dados;
+      try {
+        const { obterSaldoEoa } = await import("./_lib/admin-metricas.mjs");
+        dados = await obterSaldoEoa();
+      } catch (err) {
+        console.warn("[chatbot] metricas_eoa falhou:", err?.message);
+        dados = { erro: err?.code === "rpc_nao_configurado" ? "RPC nao configurado" : "cadeia indisponivel" };
+      }
+      return intentResp(perfil, "metricas_eoa", {
+        resposta: obterResposta("metricas_eoa", perfil, dados), modoResposta: "perfil",
+      });
+    },
+  };
+
+  return out;
+}
+
 const INTENT_HANDLERS = {
   // MC15.6 ITEM 3 — início do wizard (gatilho explícito; admin-only).
   criar_edicao_wizard: {
@@ -612,6 +1009,27 @@ const INTENT_HANDLERS = {
     }),
   },
 
+  // ── MC89.2 — métricas do sistema. Gate de ADMIN, leitura pura ─────────────
+  //
+  // `gate: qualquerPerfil` de propósito, com a diferenciação NA RESPOSTA e não
+  // no gate: os perfis não-admin recebem uma recusa educada da tabela
+  // declarativa (e nunca um número), em vez do "recusa-perfil" seco. Nenhum
+  // número atravessa: `obterMetricas()` só é chamada quando o perfil é admin.
+  //
+  // Sem `rl` de comando: é leitura, não é ação. O rate-limit geral do chatbot
+  // (aplicado antes, em chatbot.mjs) já protege o custo.
+  ...construirIntentsMetricas(),
+
+  // MC88.44 — suporte. Sem gate (qualquer perfil, incluindo visitante) e sem
+  // rate-limit de admin: é informação de contacto, não é ação. Não passa pelo
+  // LLM nem pelo índice RAG — é por isso que existe. Ver EMAIL_SUPORTE.
+  suporte: {
+    gate: qualquerPerfil,
+    run: ({ perfil }) => intentResp(perfil, "suporte", {
+      resposta: obterResposta("suporte", perfil, {}), modoResposta: "perfil",
+    }),
+  },
+
   // MC15.6 ITEM 5 — simular_vencedor (admin + corporativo). Menor lance único.
   simular_vencedor: {
     gate: ehCorpOuAdmin,
@@ -656,6 +1074,35 @@ const INTENT_HANDLERS = {
   // MC15.6 ITEM 7 — kill switch (ADMIN-ONLY): /panic e /unpanic.
   panic:   { gate: ehAdminPerfil, rl: true, run: ({ perfil, endereco }) => killSwitch("panic", perfil, endereco) },
   unpanic: { gate: ehAdminPerfil, rl: true, run: ({ perfil, endereco }) => killSwitch("unpanic", perfil, endereco) },
+
+  // MC89.9 — Comando ALFA (admin). Prefixo fixo: "ALFA: <ação> [params]".
+  // Dispara ações administrativas via chat. Cada ação é testada contra uma
+  // lista de comandos conhecidos — o que não existe responde com honestidade
+  // (nunca com "comando executado" quando não foi).
+  comando_alfa: {
+    gate: ehAdminPerfil, rl: true,
+    run: async ({ perfil, endereco, pergunta }) => {
+      const m = pergunta.match(INTENT_PATTERNS.comando_alfa);
+      const acao = (m?.[1] || "").toLowerCase();
+      const params = (m?.[2] || "").trim();
+      // MC89.11 — panic/unpause exigem super-admin. A verificação é feita
+      // AQUI (não no executarAlfa) porque o nível vem do Blob admin-list e
+      // não está disponível no perfil do GUTO (que é binário: admin/não-admin).
+      const precisaSuperAdmin = acao === "panic" || acao === "unpause";
+      if (precisaSuperAdmin && endereco) {
+        const { getAdminNivel, adminPode } = await import("./_lib/admin-niveis.mjs");
+        const nivel = await getAdminNivel(endereco) || "admin";
+        if (!adminPode(nivel, "super-admin")) {
+          return intentResp(perfil, "comando_alfa", {
+            resposta: `⛔ ALFA:${acao} exige nível super-admin. O teu nível é "${nivel}". Contacta um super-admin para executar este comando.`,
+            modoResposta: "acao",
+          });
+        }
+      }
+      const resposta = await executarAlfa(acao, params, { perfil, endereco });
+      return intentResp(perfil, "comando_alfa", { resposta, modoResposta: "acao" });
+    },
+  },
 
   // MC15.6 ITEM 6 — pulso_edicao (admin + corporativo). 4 métricas vitais.
   pulso_edicao: {
@@ -820,7 +1267,7 @@ function abrirStore() {
   }
 }
 
-async function chamarLLM(pergunta, contexto, opts = {}) {
+export async function chamarLLM(pergunta, contexto, opts = {}) {  // export: testado em _tests/mc8820-guto-personalidades
   const apiKey  = opts.apiKey  || process.env.LLM_API_KEY;
   const baseUrl = (opts.baseUrl || process.env.LLM_BASE_URL || DEFAULT_LLM_URL).replace(/\/$/, "");
   const model   = opts.model   || process.env.LLM_MODEL || DEFAULT_LLM_MODEL;
@@ -831,7 +1278,14 @@ async function chamarLLM(pergunta, contexto, opts = {}) {
     ? `Contexto extraído do regulamento DESAFIOGUT:\n\n${contexto}\n\nPergunta do usuário: ${pergunta}`
     : `Pergunta do usuário (sem contexto encontrado): ${pergunta}`;
 
-  const systemPrompt = opts.systemPrompt || PROMPT_SYSTEM;
+  // MC88.20 (P3) — sem fallback: um systemPrompt em falta é bug de call-site, e
+  // degradar em silêncio custaria a personalidade do perfil sem ninguém dar por isso.
+  const systemPrompt = opts.systemPrompt;
+  if (typeof systemPrompt !== "string" || !systemPrompt.trim()) {
+    const e = new Error("systemPrompt obrigatório em chamarLLM (use obterPromptSystem(perfil))");
+    e.code = "systemprompt_ausente";  // marcado para o caller NÃO o confundir com indisponibilidade
+    throw e;
+  }
   const body = JSON.stringify({
     model,
     messages: [
@@ -872,6 +1326,12 @@ async function chamarLLM(pergunta, contexto, opts = {}) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   if (!chatbotAtivo()) {
     return jsonError(503, "feature_desligada", "chatbot temporariamente desligado (CHATBOT_ATIVO=off)");
   }
@@ -973,16 +1433,20 @@ export default async (req) => {
   try {
     resposta = await chamarLLM(pergunta, contexto, { systemPrompt: obterPromptSystem(perfil, { conformidade: modoConformidade }) });
   } catch (err) {
+    // MC88.20 (P3) — o catch existe para INDISPONIBILIDADE do LLM. Um systemPrompt
+    // em falta é bug de programação: se fosse engolido aqui, o sintoma seria "o GUTO
+    // perdeu a personalidade" sem nada a apontar para a causa. Falha alto.
+    if (err?.code === "systemprompt_ausente") throw err;
     console.warn("[chatbot] LLM indisponível, usando resposta template:", err?.message);
     modoResposta = "template";
-    if (chunks.length === 0) {
-      resposta = "Poxa, não achei isso no regulamento! 😅 Mas olha, já que você tá aqui, que tal conhecer os planos do DESAFIOGUT? Temos Bronze (R$ 2.640), Prata (R$ 5.600), Ouro (R$ 11.000) e Diamante (R$ 18.000 com voucher de networking). Qual combina mais com você?";
-    } else {
-      const trechos = chunks
-        .map((c, i) => `**Trecho ${i + 1}** (relevância ${(c.score * 100).toFixed(0)}%):\n${c.texto.slice(0, 600)}${c.texto.length > 600 ? "…" : ""}`)
-        .join("\n\n---\n\n");
-      resposta = `📖 Olha só o que encontrei sobre o DesafioGUT:\n\n${trechos}\n\n*Para eu responder ainda melhor com IA, peça pro administrador configurar LLM_API_KEY no Netlify.*`;
-    }
+    // MC88.20 (P1) — o texto passou para _lib/guto-perfis.mjs, por PERFIL. Aqui fica
+    // só o orçamento: UM excerto (o de maior score), limitado. Antes eram os 3 chunks
+    // a 600 chars cada (~1.800) com cabeçalhos de relevância — o "dar texto" relatado.
+    const melhor = chunks[0]?.texto ? String(chunks[0].texto).replace(/\s+/g, " ").trim() : "";
+    const trecho = melhor.length > LIMITE_TRECHO_TEMPLATE
+      ? `${melhor.slice(0, LIMITE_TRECHO_TEMPLATE)}…`
+      : melhor;
+    resposta = obterResposta("fallback_sem_llm", perfil, { trecho });
   }
 
   // MC15.5 — enquadra a resposta RAG conforme o perfil (visitante recebe convite;

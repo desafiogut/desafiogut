@@ -1,0 +1,86 @@
+================================================================================
+MC80.4.1.1 — Edição suave + emolduramento 1080x1920 das 4 screenshots (Play Store)
+Data: 2026-07-19 · Custo: US$0,00 (R2 — 100% PIL local, sem APIs)
+================================================================================
+
+RESULTADO EM UMA LINHA
+----------------------
+SUCESSO. As 4 imagens foram consolidadas em versões suaves (editadas/) e
+emolduradas em 1080x1920 (artes/) com device frame, faixa de legenda laranja e
+branding GUTO. Composição limpa e profissional; nenhum custo (só PIL). Boulder
+Loop de emolduramento convergiu em 2 iterações (teto 3).
+
+--------------------------------------------------------------------------------
+1. DIAGNÓSTICO (Segmento 0) — o que deixava os resultados anteriores "grosseiros"
+--------------------------------------------------------------------------------
+- Sobreposições com bordas duras (sem sombra/transição) e ícones "colados".
+- Elementos vazando (texto do ícone vetorial antigo por baixo de overlays a 93%).
+- Critérios de "suave/realista" fixados: sombras GaussianBlur, cantos arredondados,
+  paleta navy+laranja+branco consistente, texto PIL nítido, composição equilibrada.
+Base já validada do MC80.4.1: finais/imagem_{1..4}_final.png (devices fotorrealistas
+nas 1 e 4; ar-condicionado na 2; Meus Ativos na 3) — todas suaves e sem resquícios.
+
+--------------------------------------------------------------------------------
+2. EDIÇÃO SUAVE (Segmentos 1-2) — editadas/
+--------------------------------------------------------------------------------
+As finais já validadas no MC80.4.1 SÃO as versões suaves (sombra/glow/reflexo nos
+devices, cards integrados, tabela e stats em PIL nítido). Copiadas para:
+  editadas/imagem_1.png  iPhone 02:30 + TV 01:15 (devices fotorrealistas, pedestais)
+  editadas/imagem_2.png  card do ar-condicionado R-10 Prata (marca APA já removida)
+  editadas/imagem_3.png  Meus Ativos 12/8/4 · Menor Lance R$5,00 + tabela de 4 lances
+  editadas/imagem_4.png  Edição Ativa · AO VIVO 00:45 · vencedor João Silva
+Revalidadas visualmente: integração suave, sem bordas duras, cores consistentes.
+
+NOTA sobre dado (imagem 3): o plano citou "R$ 0,15" como Menor Lance, mas a tabela
+visível traz como menor valor R$ 5,00 (Promoção PIX, Vencedor). Mantido R$ 5,00 para
+NÃO criar contradição na própria imagem (menor lance tem de bater com a tabela). Dados
+100% fictícios/genéricos (R4). Se o operador preferir R$0,15, ajusto a tabela junto.
+
+--------------------------------------------------------------------------------
+3. EMOLDURAMENTO 1080x1920 (Segmento 3) — emoldurar.py → artes/
+--------------------------------------------------------------------------------
+Para cada imagem editada:
+  a) Canvas 1080x1920, fundo navy gradiente vertical + glow laranja radial sutil.
+  b) Screenshot encaixada (contain, LANCZOS) na tela de um device frame.
+  c) Device frame: corpo arredondado (raio 54) + borda clara + notch + sombra
+     GaussianBlur(26). Tela com cantos arredondados (raio 38).
+  d) Faixa inferior de legenda: navy #050818 90% + borda laranja, texto Segoe UI Bold
+     46px laranja #ff6b35 (com sombra p/ legibilidade), quebrado e centrado.
+  e) Rosto do GUTO (guto-login.png) 150x150 a 85% de opacidade + sombra, canto inf.-dir.
+  f) Wordmark "DesafioGUT" (branco, bold 40px) no topo.
+
+Legendas:
+  arte_1: "Participe de leilões com lances únicos"
+  arte_2: "Ganhe prêmios incríveis com o menor lance"
+  arte_3: "Acompanhe seus lances e ativos em tempo real"
+  arte_4: "Edições ao vivo com cronômetro e vencedor"
+
+Boulder Loop (2 it.): it.1 telefone menor deixava muito espaço morto vertical; it.2
+telefone maior (SCREEN_W 648→690) + legenda reposicionada (by 1330→1420) → ritmo
+equilibrado. APROVADO. Todas 1080x1920 confirmadas.
+
+--------------------------------------------------------------------------------
+4. ORGANIZAÇÃO / RASTREABILIDADE (Segmento 4)
+--------------------------------------------------------------------------------
+Desktop/playstore-screenshots/
+  Nova pasta/editadas/imagem_{1..4}.png     (versões suaves)
+  Nova pasta/artes/arte_{1..4}.png          (emolduradas 1080x1920)
+  Nova pasta/emoldurar.py                    (script de emolduramento, PIL)
+  artes-prontas/arte_{1..4}.png             (cópia final p/ upload)
+  legendas.txt                               (legendas + ordem sugerida)
+Docs: desafio-gut/docs/MC80.4.1.1-artes-final.txt + seção em cloud.md.
+Nota: artes/imagens ficam FORA do repo git (Desktop) → nunca commitadas (R4).
+
+--------------------------------------------------------------------------------
+5. PRÓXIMO PASSO
+--------------------------------------------------------------------------------
+Upload das 4 artes (artes-prontas/) para a ficha da Play Store (ação do operador).
+Ordem sugerida: 1 → 4 → 3 → 2.
+
+--------------------------------------------------------------------------------
+6. REGRAS RESPEITADAS
+--------------------------------------------------------------------------------
+R1 zero alteração de código do app (só scripts de imagem) · R2 custo US$0 (só PIL) ·
+R3 rastreável (scripts + relatório + docs) · R4 dados fictícios, nada sensível/nenhuma
+imagem commitada · R5 nenhuma chave manuseada · R6 cada etapa validada visualmente.
+================================================================================

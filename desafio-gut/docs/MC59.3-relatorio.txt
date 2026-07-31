@@ -1,0 +1,129 @@
+================================================================================
+MC59.3 — CORREÇÃO DO B-2 (TX-HASH) + FOLLOW-UP DO C-1 (INSERT ATÓMICO)
+DesafioGUT · Pré-Mainnet · RELATÓRIO FINAL
+================================================================================
+Data...........: 2026-07-08
+Branch.........: feat/mc59.3-correcao-b2-c1 (de feat/mc59.2-correcao-altos)
+Modelo.........: Opus 4.8 + ECC (search-first, tdd-workflow, verification-loop, security-review)
+Deliverables...: MC59.3-RELATORIO.txt · docs/MC59.3-relatorio.txt · cloud.md · security_audit.md
+
+--------------------------------------------------------------------------------
+0. VEREDITO
+--------------------------------------------------------------------------------
+✅ B-2 RESOLVIDO (atribuição por tx-hash; revisão adversarial NICE).
+✅ Follow-up C-1 RESOLVIDO (bootstrap atómico INSERT..DO NOTHING; sem janela residual).
+Mainnet MAIS PRÓXIMA. Restam gates de OPERADOR e follow-ups (abaixo) — não são
+bloqueadores de código destas correções, mas condicionam o flip real.
+
+--------------------------------------------------------------------------------
+1. B-2 — TX.WAIT SÍNCRONO / AUTO-REEMBOLSO FALSO ✅
+--------------------------------------------------------------------------------
+Arquivos: _lib/contract.mjs (creditarSenhas), comprar-senhas.mjs (catch do passo 7)
+
+Problema (MC59): o auto-reembolso podia devolver R$ de uma compra que confirmou.
+A tentativa do MC59.2 (comparar saldoSenhas AGREGADO) foi REPROVADA (HIGH) por
+atribuição cruzada entre requisições concorrentes do mesmo endereço.
+
+Correção (abordagem correta — por TX-HASH específico):
+  • creditarSenhas captura `tx.hash` na submissão. Se `tx.wait(1)` lança, NÃO
+    propaga cegamente: re-verifica o receipt DAQUELA tx (não um saldo agregado):
+      - receipt.status === 1 → sucesso REAL (retorna txHash); NÃO reembolsa.
+      - receipt.status === 0 → lança err.code="TX_REVERTED" (a tx falhou).
+      - receipt ausente     → lança err.code="TX_PENDENTE" (estado desconhecido).
+  • lerReceiptComRetry: retry curto (3×, 300ms) no getTransactionReceipt — um blip
+    transitório de RPC não conclui "pendente" na 1ª tentativa (rec. da revisão).
+  • comprar-senhas trata o motivo:
+      - TX_PENDENTE → NÃO reembolsa (evita double-benefit se a tx minerar) +
+        captureSecurityAlert(level="error") + resposta 502 "credito_pendente"
+        (reembolsado:false, txHash) para reconciliação.
+      - submissão falhou / TX_REVERTED → reembolsa com segurança (+ alerta C-4 se
+        o reembolso falhar). NUNCA usa saldo agregado.
+
+Por que resolve o HIGH: o txHash é único por nonce+payload+assinatura desta
+requisição; nenhuma requisição verifica o receipt de outra. Confirmado pela
+revisão adversarial (NICE) e por teste determinístico dos 5 ramos.
+
+TDD: mc593-b2-txhash 5/5 (wait ok; confirmou-apesar-do-erro; TX_REVERTED;
+TX_PENDENTE; recuperação por retry). Integração mc30/mc302 intactas.
+
+--------------------------------------------------------------------------------
+2. FOLLOW-UP C-1 — BOOTSTRAP DE SALDO ATÓMICO ✅
+--------------------------------------------------------------------------------
+Arquivos: _lib/saldoRs-store.mjs (novo inserirSaldoSeAusente), _lib/saldoRs.mjs
+  (bootstrap de ajustarSaldoRsAtomico e debitarSaldoRs)
+
+Problema (revisão MC59.2): o "garante linha" usava setSaldo (upsert incondicional)
+  → dois bootstraps concorrentes na PRIMEIRA escrita de um endereço podiam
+  clobberar-se (lost update), reintroduzindo pela via lateral o defeito que o CAS
+  fecha.
+search-first: nenhum helper insert-if-absent no codebase; o padrão era upsert com
+  onConflict (= DO UPDATE). Decisão: BUILD mínimo no estilo do store.
+Correção: inserirSaldoSeAusente = upsert com ignoreDuplicates:true (o cliente
+  Supabase emite INSERT ... ON CONFLICT (cliente_id) DO NOTHING — atómico no
+  Postgres, cliente_id é PRIMARY KEY). Os dois bootstraps passam a usá-lo.
+Revisão adversarial: CONFIRMADO — a garantia vem do constraint do banco, não da
+  checagem de aplicação; sem janela residual.
+TDD: mc593-c1-bootstrap 2/2 (concorrência determinística RED→GREEN + regressão).
+  Mocks de mc361/mc592-c1/mc3917-double-spend atualizados p/ a nova interface.
+
+--------------------------------------------------------------------------------
+3. VERIFICATION-LOOP (Segmento 3)
+--------------------------------------------------------------------------------
+Build.........: PASS (vite build ✓ ~5s, verde após cada segmento)
+node --check..: PASS (contract.mjs, saldoRs.mjs, saldoRs-store.mjs, comprar-senhas.mjs)
+Types.........: N/A (JS/JSX)
+Lint..........: N/A (sem script lint)
+Tests.........: PASS — superfície afetada 58/58 (novos: mc593-b2 5, mc593-c1 2).
+Security scan.: secret-scan dos diffs limpo (0 secrets).
+Diff review...: coeso — B-2 (contract+comprar-senhas), C-1 (saldoRs+store), testes.
+
+--------------------------------------------------------------------------------
+4. REVISÃO ADVERSARIAL (Segmento 4 · security-review) — VEREDITO: NICE ✅
+--------------------------------------------------------------------------------
+Revisor de segurança independente (ECC security-reviewer):
+  • B-2: atribuição cruzada ELIMINADA (confirmado); 4 ramos cobertos por teste.
+  • C-1: lost-update do bootstrap FECHADO pelo constraint do banco; sem resíduo.
+  • Sem secrets/PII novos (txHash é público on-chain).
+Recomendações — status:
+  ✅ APLICADA: retry curto no getTransactionReceipt (blip transitório).
+  ✅ APLICADA: alerta tx_pendente em level="error".
+  ⏭ FOLLOW-UP (operador/próximo MC):
+     - Garantir SENTRY_DSN ativo em prod (senão captureSecurityAlert vira log).
+     - Runbook de reconciliação para "credito_pendente" (hoje há alerta, não job).
+     - Serializar creditarSenhas por endereço no backend local-key/EOA (nonce):
+       é a CAUSA (colisão de nonce) do sintoma que o B-2 trata; reduz a frequência
+       do caminho TX_PENDENTE. Candidato a MC59.4.
+
+--------------------------------------------------------------------------------
+5. TESTE "MAINNET SIMULADO" (Segmento 5) — HONESTIDADE DE ESCOPO
+--------------------------------------------------------------------------------
+Coberto (offline, determinístico): todos os cenários do B-2 (wait ok / confirmou-
+  apesar-do-erro / revertida / pendente / retry) via mock ethers; e a concorrência
+  de bootstrap C-1 via injeção determinística.
+NÃO executado: tx ON-CHAIN real em Sepolia sob mainnet — exige
+  COORDENACAO_PRIVATE_KEY (operador manuseia segredos; SIGNER_READY=MISSING em
+  prod). Validação viva fica para o operador.
+
+--------------------------------------------------------------------------------
+6. PENDÊNCIAS PARA MAINNET (após MC59.3)
+--------------------------------------------------------------------------------
+  [ ] Operador: SENTRY_DSN em prod + runbook de reconciliação "credito_pendente".
+  [ ] MC59.4 (recomendado): serialização de nonce por endereço (backend local-key).
+  [ ] Operador (dos MCs anteriores): MP_WEBHOOK_SECRET (+ENFORCE), SIGNER_BACKEND=
+      local-key + COORDENACAO_PRIVATE_KEY, VITE_CONTRATO_SEPOLIA=0x825bBd3F…eF06 +
+      rebuild (drift MC56), aplicar migrações pendentes.
+  [ ] Validação viva em staging antes do flip.
+
+Commits (branch feat/mc59.3-correcao-b2-c1):
+  fix(mc59.3): B-2 — atribuição por tx-hash (re-verifica receipt específico)
+  fix(mc59.3): follow-up C-1 — bootstrap de saldo atómico (INSERT..DO NOTHING)
+  test(mc59.3): mock inserirSaldoSeAusente em mc3917-double-spend
+  fix(mc59.3): fix-cycle da revisão adversarial (NICE) — retry receipt + alerta error
+  docs(mc59.3): relatório final + cloud.md + security_audit.md (este)
+
+Skills ECC usadas: search-first (decisão BUILD do helper), tdd-workflow (RED→GREEN
+  em cada fix), verification-loop (Segmento 3), security-review (Segmento 4).
+
+================================================================================
+FIM — MC59.3
+================================================================================

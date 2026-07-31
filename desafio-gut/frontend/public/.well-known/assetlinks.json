@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.desafiogut.app",
+      "sha256_cert_fingerprints": [
+        "70:6F:9E:83:D7:CF:4D:F9:32:7C:36:53:D3:09:85:B3:BD:97:44:3C:A4:87:56:2D:07:1B:53:29:83:90:9F:08"
+      ]
+    }
+  }
+]

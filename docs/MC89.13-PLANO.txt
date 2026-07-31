@@ -1,0 +1,264 @@
+# MC89.13 — PLANO: View, Endpoints e Interface (Tela 2)
+Data: 2026-07-31 | Base: MC89.13-DIAGNOSTICO.txt | ZERO alterações de código
+
+## ESTRUTURA DO MC89.14 (execução)
+  S1 — View vw_utilizadores + índices + endpoint admin-users
+  S2 — Endpoints admin-user, admin-user-bloqueio, admin-user-ajuste
+  S3 — Tela 2 (GestaoUsuarios) + subtela de perfil
+  TOTAL: 2–3 sessões
+
+---
+
+## SEGMENTO 1 — VIEW E ENDPOINT DE LISTAGEM
+
+### 1.1 View `vw_utilizadores` (migração aditiva)
+
+```sql
+CREATE OR REPLACE VIEW vw_utilizadores AS
+WITH fontes AS (
+  SELECT
+    cliente_id,
+    NULL::text AS endereco_limpo,
+    email,
+    payload->>'empresa' AS nome,
+    categoria,
+    vendida,
+    criado_em,
+    atualizado_em AS ultima_atividade,
+    'cota' AS fonte
+  FROM cotas
+  WHERE cliente_id ~ '^0x[0-9a-f]{40}$'  -- exclui "cnpj:…"
+
+  UNION ALL
+
+  SELECT
+    cliente_id,
+    cliente_id AS endereco_limpo,
+    NULL::text AS email,
+    NULL::text AS nome,
+    NULL::text AS categoria,
+    NULL::boolean AS vendida,
+    NULL::timestamptz AS criado_em,
+    atualizado_em AS ultima_atividade,
+    'saldo_rs' AS fonte
+  FROM saldo_rs
+  WHERE cliente_id ~ '^0x[0-9a-f]{40}$'
+
+  UNION ALL
+
+  SELECT
+    payload->>'endereco' AS cliente_id,
+    payload->>'endereco' AS endereco_limpo,
+    NULL::text AS email,
+    NULL::text AS nome,
+    NULL::text AS categoria,
+    NULL::boolean AS vendida,
+    criado_em,
+    criado_em AS ultima_atividade,
+    'credito' AS fonte
+  FROM saldo_rs_creditos
+  WHERE payload->>'endereco' ~ '^0x[0-9a-f]{40}$'
+)
+SELECT
+  cliente_id,
+  MAX(email) AS email,
+  MAX(nome) AS nome,
+  MAX(categoria) AS categoria,
+  bool_or(vendida) FILTER (WHERE vendida IS NOT NULL) AS tem_cota,
+  MIN(criado_em) AS primeira_atividade,
+  MAX(ultima_atividade) AS ultima_atividade,
+  array_agg(DISTINCT fonte ORDER BY fonte) AS fontes
+FROM fontes
+GROUP BY cliente_id;
+
+-- RLS: padrão do projeto — só service_role
+ALTER VIEW vw_utilizadores OWNER TO authenticated;
+-- (a view herda as permissões das tabelas subjacentes; service_role lê tudo)
+
+-- Índices de suporte nas tabelas de origem (já existem ou são criados):
+-- CREATE INDEX IF NOT EXISTS idx_cotas_cliente_id ON cotas (cliente_id);
+-- CREATE INDEX IF NOT EXISTS idx_saldo_rs_cliente_id ON saldo_rs (cliente_id);
+```
+
+NOTAS:
+- `cliente_id` é a chave natural (endereço Ethereum em minúsculas)
+- A view NÃO materializada é suficiente para ~30 linhas
+- O `mc89.5` definiu o limiar de reavaliação em ~50 mil linhas
+- `categoria` e `vendida` vêm apenas de cotas (lojistas)
+- `email` vem apenas de cotas (3/7 preenchidos)
+- `nome` = payload->>'empresa' (apenas para cotas corporativas)
+
+### 1.2 Endpoint GET /admin-users
+
+Entrada (query params):
+  q:      texto livre (match parcial em cliente_id, email, nome)
+  desde:  ISO date (filtrar por ultima_atividade ≥ desde)
+  ate:    ISO date
+  antes:  cursor (ultima_atividade ISO para página seguinte)
+  limite: 1–50 (default 20)
+
+Saída:
+  { usuarios: [...], total, proximoCursor, parciais: [] }
+
+Gate: operador ou superior (`guardAdminNivel(req, "operador")`)
+Cache: 30s (chave inclui os filtros)
+RL: 20/min
+
+Implementação: SELECT na view com os filtros aplicados. A paginação é por
+cursor (ultima_atividade + cliente_id) — NUNCA por offset (R5 do MC89.5).
+
+---
+
+## SEGMENTO 2 — ENDPOINTS DE AÇÃO
+
+### 2.1 GET /admin-user?endereco=0x…
+
+Entrada: endereco (obrigatório)
+Saída:
+  { endereco, email, nome, categoria, tem_cota,
+    primeira_atividade, ultima_atividade, fontes,
+    saldo_rs: { centavos, atualizado_em } | null,
+    creditos: [{ pedido_id, valorCentavos, fonte, criado_em }],
+    debitos:  [{ operacao_id, valorCentavos, fonte, criado_em }],
+    bloqueado: boolean
+  }
+
+Gate: operador ou superior
+Cache: nenhum (dados em tempo real)
+RL: 30/min
+
+NOTA SOBRE SENHAS ON-CHAIN: NÃO incluído. O `saldoSenhas(address)` é on-chain
+e custa uma chamada RPC. Segue o padrão do MC89.5 (D2): saldo de senhas só no
+perfil, sob pedido, em endpoint separado (`admin-user-onchain`).
+
+### 2.2 POST /admin-user-bloqueio
+
+Entrada: { endereco, bloquear: boolean, justificativa }
+Efeito: insere/remove da tabela `usuarios_bloqueio`
+Gate: admin ou superior
+Log: fail-CLOSED (registarAcao ANTES)
+RL: 5/min
+
+⚠️ DEPENDÊNCIA: o bloqueio só tem efeito quando os gates o lerem:
+  - _lib/jwt.mjs (emissão de user-session)
+  - comprar-senhas.mjs, lance-relampago.mjs, iniciar-pagamento.mjs
+Sem isto, "bloquear" é um botão decorativo. Esta dependência está DOCUMENTADA
+no ecrã para o admin não achar que bloqueou quando não bloqueou.
+
+A tabela `usuarios_bloqueio`:
+  endereco       text PK
+  bloqueado_por  text NOT NULL
+  justificativa  text NOT NULL
+  criado_em      timestamptz DEFAULT now()
+
+### 2.3 POST /admin-user-ajuste
+
+Entrada: { endereco, valorCentavos, justificativa }
+  valorCentavos > 0 = crédito, < 0 = débito
+Efeito: cria registo em saldo_rs_creditos (se >0) ou saldo_rs_debitos (se <0)
+  com fonte='ajuste-admin', e atualiza saldo_rs
+Gate: super-admin (não admin — mexe em dinheiro)
+Log: fail-CLOSED
+RL: 5/min
+
+⚠️ IDEMPOTÊNCIA: o frontend gera um `operacao_id` (UUID) e envia-o. O endpoint
+  rejeita operacao_id duplicado (a chave primária de saldo_rs_debitos é
+  operacao_id; a de saldo_rs_creditos é pedido_id). O padrão já existe.
+
+---
+
+## SEGMENTO 3 — INTERFACE (TELA 2)
+
+### 3.1 GestaoUsuarios.jsx (lista)
+
+Estado atual: placeholder EmConstrucao.
+Estado novo: tabela paginada com busca, filtros e ações.
+
+LAYOUT:
+  ┌─────────────────────────────────────────┐
+  │ [Buscar: _______________] [Filtrar: ▾]   │
+  ├─────────────────────────────────────────┤
+  │ Endereço       │ Nome    │ Ativo │ Ações │
+  │ 0x1E1b…d198cB  │ —       │ 26/07 │ ⋮    │
+  │ 0xAbcd…1234ef  │ Loja X  │ 21/06 │ ⋮    │
+  ├─────────────────────────────────────────┤
+  │          ← 1 de 1 →                     │
+  └─────────────────────────────────────────┘
+
+COLUNAS:
+  Endereço:    truncado (0x1E1b…d198cB), clicável → perfil
+  Nome:        payload->>'empresa' se disponível; senão "—"
+  E-mail:      só se disponível (3/7); senão "—"
+  Atividade:   data da última (dd/mm/aa)
+  Fontes:      badges (cota, saldo, crédito)
+  Status:      "Ativo" / "Bloqueado" (se existir na tabela usuarios_bloqueio)
+
+AÇÕES POR LINHA (menu ⋮):
+  Ver perfil     → /admin/usuarios/:endereco
+  Bloquear       → modal com justificativa → POST /admin-user-bloqueio
+  Ajuste manual  → modal com valor + justificativa → POST /admin-user-ajuste
+  Notificar      → disabled (depende da Tela 6 — Fase 6)
+
+### 3.2 Perfil do Usuário (subtela)
+
+Rota: /admin/usuarios/:endereco
+Acessível pelo clique no endereço na lista.
+
+SEÇÕES:
+  Identificação:  endereço completo, nome, e-mail, categoria (se cota)
+  Atividade:      primeira e última data, fontes (badges)
+  Saldo:          R$ (saldo_rs), senhas on-chain (botão "Carregar saldo on-chain"
+                  → chama admin-user-onchain, padrão D2 do MC89.5)
+  Histórico:      créditos (tabela: data, valor, fonte), débitos (idem)
+  ⚠️ Lances:      "Indisponível — os lances relâmpago estão em Netlify Blobs e
+                  os programados são on-chain. Esta consolidação ainda não existe."
+
+AÇÕES NO PERFIL:
+  Bloquear/Desbloquear  (com justificativa)
+  Ajuste manual         (com valor + justificativa)
+  Notificar             (disabled — Fase 6)
+
+### 3.3 Integração com ALFA
+
+ALFA:usuarios → últimos 10 da view (admin-users sem filtros)
+ALFA:usuario <endereco> → resumo do perfil (admin-user)
+ALFA:bloquear <endereco> → bloqueia (exige admin, com confirmação)
+ALFA:ajustar <endereco> <valor> → ajuste (exige super-admin)
+
+### 3.4 AtalhosAdmin
+
+Marcar "Usuários" como pronta (adminNav.js: pronta: true).
+
+---
+
+## RISCOS E MITIGAÇÕES
+
+R-1 (MÉDIO): Bloqueio sem efeito real
+  A tabela usuarios_bloqueio é criada mas os gates não a leem.
+  → DOCUMENTADO no ecrã: "O bloqueio impede novas sessões e transações apenas
+    depois de os gates de autenticação serem atualizados (MC89.14.1)."
+  → O MC89.14 implementa o bloqueio NA TABELA. Os gates são MC próprio.
+
+R-2 (BAIXO): View com 30 linhas é trivial; materialized view seria overengineering
+  → VIEW simples. Reavaliar se passar de 50 mil linhas (MC89.5).
+
+R-3 (BAIXO): E-mail só existe para cotas
+  → A UI mostra "—" e a nota "E-mail disponível apenas para clientes com cota
+    corporativa." (honestidade, padrão do MC89.5).
+
+R-4 (BAIXO): Nome só existe para cotas
+  → Mesmo tratamento: "—" com nota.
+
+---
+
+## CRITÉRIOS DE SUCESSO (MC89.14)
+- View vw_utilizadores criada e acessível
+- GET /admin-users funcional com busca, filtro de data e paginação por cursor
+- GET /admin-user/:endereco funcional com saldo e histórico
+- POST /admin-user-bloqueio funcional (tabela criada)
+- POST /admin-user-ajuste funcional (idempotente)
+- Tela 2 substitui placeholder com tabela real
+- Subtela de perfil acessível por clique
+- ALFA:usuarios e ALFA:usuario funcionais
+- Suite ≥ 352 backend (era 342), ≥ 40 frontend
+- APK recompilado e validado

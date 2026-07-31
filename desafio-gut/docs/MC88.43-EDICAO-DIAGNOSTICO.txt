@@ -1,0 +1,196 @@
+================================================================================
+MC88.43 — SEGMENTO 0 · DIAGNÓSTICO DO ESTADO DA EDIÇÃO
+================================================================================
+Data....: 2026-07-29
+Alvo....: B3 e B4 do MC88.41 (estados contraditórios da edição)
+Método..: leitura do código + GET real ao endpoint `edicoes` de produção
+Código..: ZERO alterações neste segmento
+
+================================================================================
+1. A PERGUNTA CENTRAL
+================================================================================
+Porque é que o mesmo objeto — uma edição — diz coisas diferentes conforme o
+ecrã? A resposta não é "uma função com entradas diferentes", como o MC88.41
+supôs. É pior e mais simples:
+
+  NÃO EXISTE função de estado da edição. Existem TRÊS fontes independentes,
+  e uma trava de apresentação que só está aplicada em METADE dos sítios.
+
+================================================================================
+2. AS TRÊS FONTES DE VERDADE (hoje)
+================================================================================
+
+FONTE A — `encerrado` do AppContext  (só a edição R-1)
+--------------------------------------------------------------------------------
+  src/context/AppContext.jsx:937-977
+    restante = prazoTimestamp - now   → restante === 0 → setEncerrado(true)
+    prazoTimestamp = tipoLeilao === "flash" ? prazoFlash : prazoProgramado
+    prazoFlash/prazoProgramado vêm do localStorage e do on-chain (getEdicaoPrazo)
+
+  Consumidores: Dashboard (card "🎯 Edição Ativa"), MercadoLances →
+  TabelaLances, CardLance, AuctionStatusBar.
+
+FONTE B — `timeLeftEdicaoSegundos(edicao)`  (todas as outras edições)
+--------------------------------------------------------------------------------
+  src/context/AppContext.jsx:151-156
+    fim = Date.parse(edicao.termino_em); restante = max(0, (fim - now)/1000)
+    → `encerrada = restante <= 0`
+
+  Consumidores: EdicaoCard (Dashboard, "Outras Edições"), EdicaoDetalhe,
+  Vitrine (cronómetro por slot).
+
+  ⚠️ Devolve 0 quando `termino_em` falta ou não faz parse — ou seja, "não sei"
+     é indistinguível de "encerrada".
+
+FONTE C — `edicao.status` do backend  (existe e é IGNORADA)
+--------------------------------------------------------------------------------
+  O endpoint devolve o campo. `useEdicoes.normalizarEdicoes` até o copia
+  (src/hooks/useEdicoes.js:78) — e NENHUM componente o lê. Nem um.
+
+  GET https://silly-stardust-ca71bc.netlify.app/.netlify/functions/edicoes
+  (lido em 2026-07-29 13:23 UTC):
+
+    RELAMP-1  status "encerrado"  termino_em 2026-05-30T23:02:11Z   (2 meses atrás)
+    RELAMP-2  status "encerrado"  termino_em 2026-05-30T23:10:34Z
+    RELAMP-3  status "encerrado"  termino_em 2026-05-31T03:52:13Z
+    R-1       status "aberto"     termino_em 2026-07-30T13:23:39Z   (futuro)
+
+  Confirma-se: as três RELAMP estão MESMO encerradas. O "Encerrada" do cartão
+  está correto. O que está errado é tudo o resto à volta dele.
+
+A TRAVA — `EM_BREVE_MODE`  (src/lib/leilaoLock.js:10)
+--------------------------------------------------------------------------------
+  `export const EM_BREVE_MODE = true` — trava global de APRESENTAÇÃO (MC67
+  item 9). O próprio comentário do ficheiro diz: "NÃO altera a lógica de
+  negócio, a contagem, nem o estado `encerrado`."
+
+  Está aplicada em 4 sítios: Dashboard:284-302, EdicaoCard:103-110,
+  EdicaoDetalhe:129-134, Vitrine:151.
+  NÃO está aplicada em: TabelaLances:91-94, AuctionStatusBar:24,
+  CardLance:444, Vitrine:444-456 (badge de slot),
+  Dashboard:361 (título de secção).
+
+  É esta assimetria que produz B4.
+
+================================================================================
+3. B3 — DISSECAÇÃO DO CARTÃO CONTRADITÓRIO
+================================================================================
+Um cartão RELAMP-1 no Dashboard, linha a linha:
+
+  linha         ficheiro:linha            fonte           texto
+  ─────────────────────────────────────────────────────────────────────────────
+  título secção Dashboard.jsx:361         string fixa     "Outras Edições em Andamento"
+  caixa âmbar   EdicaoCard.jsx:91         FONTE B         "Encerrada"
+  cronómetro    EdicaoCard.jsx:108        TRAVA           "EM BREVE"
+  legenda       EdicaoCard.jsx:110        TRAVA           "Aguardando abertura"
+  GUTO          EdicaoCard.jsx:100        FONTE B         mood="celebrating"
+  CTA           EdicaoCard.jsx:115-125    FONTE B (cor)   "⚡ Ir para o Mercado"
+
+Quatro leituras mutuamente exclusivas no mesmo cartão porque cada linha
+pergunta a uma fonte diferente. O título da secção não pergunta a ninguém:
+está escrito à mão como "em Andamento" desde sempre.
+
+O GUTO a "celebrar" ×3 é o mesmo defeito: `encerrada` da FONTE B a acionar a
+animação de vencedor em edições que a UI diz não terem começado.
+
+================================================================================
+4. B4 — DISSECAÇÃO DA EDIÇÃO R-1
+================================================================================
+Mesma edição, mesmo instante, mesma FONTE A (`encerrado` = false):
+
+  ecrã        ficheiro:linha           trava?   texto
+  ─────────────────────────────────────────────────────────────────────────────
+  Dashboard   Dashboard.jsx:291        SIM      "EM BREVE"
+  Dashboard   Dashboard.jsx:302        SIM      "Aguardando abertura"
+  /mercado    TabelaLances.jsx:94      NÃO      "🟢 Ativo"
+  /mercado    TabelaLances.jsx:91      NÃO      "Prazo: 28/07/2026, 21:10:30"
+
+O estado de negócio é o MESMO nos dois ecrãs. A contradição é 100% de
+apresentação: um ecrã aplica a trava "EM BREVE", o outro não — e ainda expõe
+o prazo real, que é a prova viva de que o leilão está a decorrer.
+
+Nota: B4 NÃO é um erro de cálculo. Nada aqui está mal contado.
+
+================================================================================
+5. INVENTÁRIO COMPLETO DOS PONTOS QUE FALAM DO ESTADO
+================================================================================
+  #   ficheiro:linha                    fonte    diz hoje
+  ───────────────────────────────────────────────────────────────────────────
+  1   Dashboard.jsx:291                 TRAVA    "EM BREVE"
+  2   Dashboard.jsx:296                 FONTE A  "ENCERRADO" | tipo de leilão
+  3   Dashboard.jsx:302                 TRAVA    "Aguardando abertura"
+  4   Dashboard.jsx:311-320 (CTA)       FONTE A  cor/sombra do botão
+  5   Dashboard.jsx:361                 —        "🗓️ Outras Edições em Andamento"
+  6   EdicaoCard.jsx:91                 FONTE B  "Encerrada" | "Em andamento"
+  7   EdicaoCard.jsx:100 (GUTO)         FONTE B  mood "celebrating"
+  8   EdicaoCard.jsx:106-108            TRAVA    "EM BREVE"
+  9   EdicaoCard.jsx:110                TRAVA    "Aguardando abertura"
+  10  EdicaoCard.jsx:119-121 (CTA)      FONTE B  cor do botão
+  11  EdicaoDetalhe.jsx:100             FONTE B  "Encerrada"|"Ativa"|"Em andamento"
+  12  EdicaoDetalhe.jsx:132             TRAVA    "EM BREVE"
+  13  EdicaoDetalhe.jsx:134             TRAVA    "Aguardando abertura"
+  14  TabelaLances.jsx:91               FONTE A  "Prazo: <data real>"      ← B4
+  15  TabelaLances.jsx:94               FONTE A  "🟢 Ativo" | "🔴 Encerrado" ← B4
+  16  AuctionStatusBar.jsx:24           FONTE A  "🔴 Leilão encerrado…"
+  17  CardLance.jsx:444                 FONTE A  "🔴 Edição encerrada…"
+  18  Vitrine.jsx:151                   TRAVA    "EM BREVE" (cronómetro)
+  19  Vitrine.jsx:449-455               grade    "● Ao vivo agora" | "Agendado"
+
+  O #19 é o mesmo defeito noutro ecrã: a vitrine pública anuncia "● Ao vivo
+  agora" ao lado de um cronómetro que diz "EM BREVE". Não veio no MC88.41
+  (a vitrine não foi percorrida), mas é a mesma família e entra no âmbito.
+
+  FORA DO ÂMBITO (verificado, não é estado de edição):
+  - ChatbotWidget.jsx:87 — título de notificação "🏁 Edição encerrada", vem do
+    backend por evento; não é derivação local.
+  - AdminPanel/Corporativo — estado de COTA, não de edição.
+
+================================================================================
+6. CAUSA-RAIZ, EM UMA FRASE
+================================================================================
+O estado da edição nunca foi modelado: cada ecrã re-deriva o que precisa a
+partir da fonte que tem à mão, e a trava "EM BREVE" foi acrescentada por cima
+de alguns desses ecrãs — mas não de todos.
+
+================================================================================
+7. DECISÃO DO OPERADOR (recebida em 2026-07-29, durante o S0)
+================================================================================
+  «tudo precisa estar como em breve»
+
+Isto fecha a única ambiguidade que restava do diagnóstico. Enquanto
+`EM_BREVE_MODE === true`, a fonte única deve devolver "em breve" para TODAS as
+edições em TODOS os pontos da lista acima — incluindo os que hoje escapam à
+trava (#5, #14, #15, #16, #17, #19).
+
+Consequência direta: desaparecem "🟢 Ativo", "Prazo: <data>", "Encerrada",
+"Em andamento", "em Andamento" e "● Ao vivo agora" da interface enquanto a
+trava estiver ligada.
+
+================================================================================
+8. DESVIO ASSUMIDO FACE AO PLANO DO MC88.43
+================================================================================
+O plano propunha a regra «prazo a mais de 24h no futuro → em_breve». NÃO vai
+ser implementada, e a razão é concreta: o leilão Programado do produto TEM
+24h de duração (DURACAO.programado = 86400). Essa regra classificaria como
+"em breve" uma edição programada acabada de abrir — criando exatamente o tipo
+de contradição que este MC vem eliminar.
+
+Neste produto "em breve" não é uma janela temporal: é a trava editorial
+`EM_BREVE_MODE`, decidida em MC65/MC67 e reafirmada agora pelo operador.
+
+================================================================================
+9. O QUE O S1 TEM DE ENTREGAR
+================================================================================
+Uma função pura `getEstadoEdicao(edicao, opts)` que:
+  a) devolva "em_breve" para tudo enquanto EM_BREVE_MODE === true;
+  b) fora da trava, aceite as três fontes por ordem de autoridade —
+     `opts.encerrado` (FONTE A, on-chain/prazo) > `edicao.status` (FONTE C,
+     backend) > `termino_em` (FONTE B, derivado);
+  c) distinga "indisponível" (sem termino_em, sem status) de "encerrada" —
+     o buraco da FONTE B;
+  d) devolva rótulo, rótulo longo, texto do cronómetro, cor e ícone, para que
+     nenhum ecrã volte a escolher texto por conta própria.
+
+================================================================================
+FIM DO SEGMENTO 0
+================================================================================

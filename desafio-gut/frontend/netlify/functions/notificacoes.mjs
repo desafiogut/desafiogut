@@ -24,6 +24,7 @@ import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
 import { lerEstadoSistema } from "./_lib/system-state.mjs";
 import { lerNotificacoes, marcarLidas } from "./_lib/notificacoes-usuario.mjs";
 import { lerInducoesPendentes, marcarInducoesLidas, gerarRelatorioIndicacoes } from "./_lib/referral.mjs";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const RL_NOTIFICACOES_RPM = 60;
 const JANELA_FIM_SEG = 300;                  // 5 min — tempo_limite_5min
@@ -171,6 +172,12 @@ async function montarEventosAdmin() {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   const rl = await aplicarRateLimit(req, "notificacoes", RL_NOTIFICACOES_RPM);
   if (rl) return rl;
 

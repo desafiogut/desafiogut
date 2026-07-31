@@ -20,6 +20,7 @@ import { getStore } from "@netlify/blobs";
 import { createHash, randomBytes } from "node:crypto";
 import { assinarAdminAccess, verificarAdminAccess } from "./jwt.mjs";
 import { getAdminAddresses } from "./admin-helpers.mjs";
+import { getAdminNivel } from "./admin-niveis.mjs";
 import { jsonError } from "./validate.mjs";
 
 const BLOB_REFRESH    = "admin-refresh";
@@ -71,7 +72,10 @@ async function salvarRefreshList(endereco, tokens) {
  */
 export async function emitirParAdmin(endereco) {
   const enderecoLower = endereco.toLowerCase();
-  const accessToken   = await assinarAdminAccess(enderecoLower, TTL_ACCESS_SEC);
+  // MC89.11 — resolve o nível UMA vez no login/refresh. O nível fica
+  // congelado no JWT durante os 15 min de validade do access token.
+  const nivel = await getAdminNivel(enderecoLower) || "admin";
+  const accessToken   = await assinarAdminAccess(enderecoLower, TTL_ACCESS_SEC, { nivel });
   const refreshRaw    = novoRefreshRaw();
   const refreshHash   = hashRefresh(refreshRaw);
   const jti           = novoJti();
@@ -195,4 +199,35 @@ export async function guardAdmin(req) {
   if (r.code === "admin_token_nao_configurado")  status = 503;
   else if (r.code === "admin_removido")          status = 403;
   return jsonError(status, r.code, r.message);
+}
+
+/**
+ * MC89.11 — guardAdmin COM verificação de nível.
+ *
+ * Diferente de `guardAdmin(req)` que é binário (admin/não-admin), este wrapper
+ * também valida que o admin tem pelo menos `nivelMinimo`. Usa a claim `nivel`
+ * do JWT (se ausente → "admin" por retrocompatibilidade).
+ *
+ * @param {Request} req
+ * @param {"super-admin"|"admin"|"operador"} [nivelMinimo="operador"]
+ * @returns {Promise<null|Response>} null = autenticado E com nível suficiente
+ */
+export async function guardAdminNivel(req, nivelMinimo = "operador") {
+  const r = await autenticarAdmin(req);
+  if (!r.ok) {
+    let status = 401;
+    if (r.code === "admin_token_nao_configurado") status = 503;
+    else if (r.code === "admin_removido")         status = 403;
+    return jsonError(status, r.code, r.message);
+  }
+
+  // Legado (x-admin-token): sem payload → trata como "admin"
+  const nivel = r.payload?.nivel || "admin";
+  const ORDEM = { "super-admin": 3, admin: 2, operador: 1 };
+  if ((ORDEM[nivel] || 0) < (ORDEM[nivelMinimo] || 0)) {
+    return jsonError(403, "nivel_insuficiente",
+      `Este endpoint exige nível "${nivelMinimo}" ou superior. O teu nível é "${nivel}".`);
+  }
+
+  return null;
 }

@@ -13,6 +13,7 @@
 // content-type image/*; limites de tempo e tamanho.
 
 import { lookup } from "node:dns/promises";
+import { respostaPreflight } from "./_lib/cors.mjs";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const TIMEOUT_MS = 6000;
@@ -61,6 +62,12 @@ function texto(status, msg) {
 }
 
 export default async (req) => {
+  // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
+  // leva corpo nem Authorization, logo qualquer validação a montante responderia
+  // 4xx e o browser abortaria a chamada real.
+  const preflight = respostaPreflight(req);
+  if (preflight) return preflight;
+
   let target;
   try { target = new URL(req.url).searchParams.get("url"); } catch { return texto(400, "bad request"); }
   if (!target) return texto(400, "missing url");

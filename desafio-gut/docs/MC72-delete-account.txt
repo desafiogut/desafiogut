@@ -1,0 +1,171 @@
+================================================================================
+MC72 — EXCLUSÃO DE CONTA (CONFORMIDADE GOOGLE PLAY STORE)
+Relatório final de implementação
+Branch: feat/mc72-delete-account (a partir de main)
+Data: 2026-07-11
+================================================================================
+
+RESUMO
+--------------------------------------------------------------------------------
+Implementada a funcionalidade de exclusão de conta exigida pela política
+"Exclusão de conta e dados" da Google Play Store (em vigor desde 2023). O usuário
+pode agora excluir a própria conta:
+  (a) DENTRO do app: Configurações → "Excluir conta" → modal de confirmação.
+  (b) FORA do app: página web pública /excluir-conta (link no rodapé).
+
+A exclusão remove permanentemente os dados PESSOAIS (off-chain), anonimiza e
+retém os registros FISCAIS por obrigação legal brasileira, e declara com
+transparência os dados ON-CHAIN que são tecnicamente imutáveis.
+
+Status: CÓDIGO PRONTO E VALIDADO. Deploy em produção e atualização do formulário
+da Play Store ficam para o OPERADOR (Pilar 1 — nada entra em produção sem
+validação do operador). Passos exatos ao final deste relatório.
+
+
+DIVERGÊNCIAS DO PLANO ORIGINAL (corrigidas com o operador)
+--------------------------------------------------------------------------------
+O plano assumia Supabase Auth (auth.users) + RLS + cascade. A arquitetura REAL:
+  - Autenticação é PRIVY (Google/e-mail); a identidade é o ENDEREÇO da carteira.
+    A sessão é um JWT próprio do app (user-session, HS256). NÃO existe auth.users.
+  - Dados do usuário estão espalhados em Netlify Blobs + Supabase (não só Supabase).
+  - Não há segredo da Privy Management API configurado → decisão: exclusão faz
+    "data-wipe + disclosure" (exclusão da identidade Privy fica como follow-up
+    MC72.1 quando o operador fornecer PRIVY_APP_SECRET).
+  - Registros fiscais (PIX): decisão de ANONIMIZAR e RETER por obrigação fiscal BR
+    (não hard-delete). A Play Store permite retenção legal desde que declarada.
+
+
+ESTRUTURA DE DADOS MAPEADA (Segmento 0)
+--------------------------------------------------------------------------------
+Identidade = endereço da carteira (0x…, minúsculo) = cliente_id (usuário individual).
+
+HARD-DELETE (dados pessoais):
+  Supabase:  saldo_rs, troco_senhas, wallet (por cliente_id);
+             lances, lojistas (por endereco);
+             cotas (por cliente_id OU endereco).
+  Blobs:     saldo-rs, wallet, cotas, renovacao-adesao, voucher (chave=endereço);
+             consent-log (chaves <ts>:endereço);
+             lance-idem (payload referencia endereço).
+
+ANONIMIZAR + RETER (obrigação fiscal):
+  Supabase:  saldo_rs_creditos, saldo_rs_debitos (linhas com payload->>endereco).
+  Blobs:     pedidos, pedidos-pagos, pedidos-meta.
+  Regra: endereço → token 0x…dead; chaves PII (email/cpf/cnpj/nome/telefone)
+         removidas; valor/data/pedido preservados; carimbo anonimizadoEm/Por.
+
+RETIDO (declarado — imutável/legal):
+  On-chain: saldoSenhas + lances no smart contract (blockchain, pseudônimo).
+  Fiscal:   registros contábeis anonimizados acima.
+
+
+ENDPOINT NETLIFY FUNCTION (Segmento 1)
+--------------------------------------------------------------------------------
+POST /.netlify/functions/delete-account
+  Headers: Authorization: Bearer <user-session>
+  Body:    { "endereco": "0x…", "dryRun"?: boolean }
+
+  - Autorização owner-ou-admin (anti-IDOR) — idêntica ao exportar-dados.mjs.
+  - Rate-limit baixo (3/janela) por ser operação destrutiva.
+  - Validação de endereço (0x + 40 hex).
+  - dryRun=true: SIMULA e devolve o manifesto do que SERIA afetado, sem mutar
+    (para o operador validar antes da execução real).
+  - Best-effort com manifesto auditável: cada sub-operação é fail-soft; erros
+    coletados em `manifesto.erros`; status 200 (ok) ou 500 (exclusão parcial).
+
+  Lógica pura e testável em _lib/conta-delete.mjs (deps injetadas: supabase +
+  getStore) → 100% mockável.
+
+
+COMPONENTE FRONTEND (Segmento 2)
+--------------------------------------------------------------------------------
+  src/components/ExcluirContaModal.jsx — modal de confirmação:
+    - Aviso de irreversibilidade + disclosure dos dados retidos.
+    - Checkbox obrigatório "Entendo que esta ação é irreversível".
+    - Botão "Confirmar exclusão" chama POST /delete-account com o user-session JWT.
+    - Estados loading/sucesso/erro. Em sucesso: logout + redirect.
+  src/pages/Configuracoes.jsx — botão "Excluir conta" no card Conta + link
+    "Saiba mais" para a página pública; onExcluido → desconectar() + navigate("/").
+
+
+LINK WEB PÚBLICO (Segmento 3)
+--------------------------------------------------------------------------------
+  src/pages/ExcluirConta.jsx — rota PÚBLICA /excluir-conta:
+    - Standalone (fora do AppLayout e do gate de consentimento LGPD), mas dentro
+      dos providers Privy/AppContext → reutiliza login e user-session JWT.
+    - Disclosure completo (apagado vs retido) + login Privy para verificar
+      identidade + canal de suporte por e-mail como alternativa.
+  src/App.jsx — rota registrada + bypass do gate LGPD para /excluir-conta.
+  src/widgets/layout/Layout.jsx — link "Excluir conta" no rodapé global.
+
+
+TESTES E VALIDAÇÃO (Segmento 4)
+--------------------------------------------------------------------------------
+  _tests/mc72-conta-delete.test.mjs (6 testes): dry-run não-mutante, hard-delete
+    com isolamento de outro endereço, anonimização fiscal preservando valor +
+    removendo PII, coleta fail-soft de erros, disclosure, normalização de caixa.
+  _tests/mc72-delete-account-auth.test.mjs (8 testes): 405/401/403/400/200,
+    dry-run, admin — exclusão só ocorre quando autorizado.
+
+  RESULTADO:
+    - node --check: limpo em todos os .mjs.
+    - Suíte completa de functions: 146/146 (baseline 132 + 14 novos), 0 regressão.
+      Requer flag: node --test --experimental-test-module-mocks _tests/*.test.mjs
+    - npm run build (frontend): VERDE (✓). Avisos INVALID_ANNOTATION são de
+      node_modules (Privy/ox), pré-existentes.
+    - Smoke visual /excluir-conta (chrome-devtools): render correto, standalone,
+      Privy inicializa; erros de console = ruído de CSP pré-existente (favicon/
+      WalletConnect/Sentry em dev local), nenhum do MC72.
+
+  Revisão de segurança:
+    - Anti-IDOR (owner-ou-admin), rate-limit, input validado.
+    - Filtro PostgREST .or() não é injetável (endereço é 0x+40hex validado).
+    - Service-role key só no backend/env.
+    - Anonimização com remoção de PII (defesa em profundidade).
+
+
+ARQUIVOS ALTERADOS (rastreabilidade — Pilar 2)
+--------------------------------------------------------------------------------
+  NOVOS:
+    desafio-gut/frontend/netlify/functions/delete-account.mjs
+    desafio-gut/frontend/netlify/functions/_lib/conta-delete.mjs
+    desafio-gut/frontend/netlify/functions/_tests/mc72-conta-delete.test.mjs
+    desafio-gut/frontend/netlify/functions/_tests/mc72-delete-account-auth.test.mjs
+    desafio-gut/frontend/src/components/ExcluirContaModal.jsx
+    desafio-gut/frontend/src/pages/ExcluirConta.jsx
+  MODIFICADOS:
+    desafio-gut/frontend/src/pages/Configuracoes.jsx
+    desafio-gut/frontend/src/App.jsx
+    desafio-gut/frontend/src/widgets/layout/Layout.jsx
+
+  COMMITS (branch feat/mc72-delete-account):
+    1d1f108 feat(mc72): backend de exclusão de conta (Netlify Function)
+    9bac22b feat(mc72): frontend de exclusão de conta (Configurações)
+    80aeb4c feat(mc72): link web para solicitação de exclusão de conta
+    6a923f7 feat(mc72): validação e hardening da anonimização
+
+
+AÇÕES PENDENTES DO OPERADOR (Segmento 5 — produção + Play Store)
+--------------------------------------------------------------------------------
+  1. Revisar o PR da branch feat/mc72-delete-account e mergear em main.
+  2. (Recomendado) Rodar um dry-run em produção com um endereço de teste:
+       POST /.netlify/functions/delete-account
+       Authorization: Bearer <user-session desse endereço>
+       Body: { "endereco": "0x…", "dryRun": true }
+     Conferir o manifesto (o que SERIA apagado/anonimizado) antes de qualquer
+     exclusão real.
+  3. Deploy: netlify deploy --build --prod --message "feat(mc72): exclusão de conta".
+  4. Testar em produção: https://silly-stardust-ca71bc.netlify.app/excluir-conta
+     e o fluxo Configurações → Excluir conta (login → modal → confirmar).
+  5. Play Store → Segurança dos dados: marcar "o app oferece exclusão de conta
+     dentro do app" e informar a URL web:
+       https://silly-stardust-ca71bc.netlify.app/excluir-conta
+  6. (Follow-up MC72.1, opcional) Fornecer PRIVY_APP_SECRET para também excluir a
+     identidade de login via Privy Management API.
+
+
+VEREDITO FINAL
+--------------------------------------------------------------------------------
+✅ EXCLUSÃO DE CONTA IMPLEMENTADA — app em conformidade com a Play Store.
+   (Código pronto e validado; deploy e formulário da Play Store a cargo do
+   operador, conforme Pilar 1.)
+================================================================================

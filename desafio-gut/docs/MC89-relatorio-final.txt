@@ -1,0 +1,903 @@
+================================================================================
+MC89 — RELATÓRIO FINAL DA JORNADA DO DESAFIOGUT
+Síntese consolidada dos relatórios de Mega Comando (MC15 → MC88)
+================================================================================
+Data...........: 2026-07-23
+Natureza.......: DOCUMENTAÇÃO E CONSOLIDAÇÃO — R1: ZERO alteração de código-fonte,
+                 R2: ZERO ação com custo, R5: ZERO manuseio de chaves ou segredos.
+Fontes.........: 103 arquivos de relatório na raiz de C:\Users\Moltbot\Desktop\
+                 + 90 documentos recuperados da LIXEIRA (leitura read-only, sem
+                 restaurar), num total de 193 documentos analisados.
+Repositório....: C:\Users\Moltbot\Desktop\DESAFIOGUT
+                 branch corrente feat/mc87-seguranca @ 8f30b8f
+Documentação...: cloud.md (raiz do repo, 211.895 bytes, última seção = MC87)
+
+NOTA SOBRE A LIXEIRA: a análise foi estendida à Lixeira do Windows a pedido do
+operador. Ela guarda a HISTÓRIA INICIAL do projeto (MC15 → MC45) que já não existe
+no Desktop — sem ela, esta consolidação teria começado a meio da jornada. Os
+ficheiros foram lidos no local, sem restauração e sem eliminação. ⚠️ A Lixeira NÃO
+DEVE ser esvaziada: contém a única cópia de ~70 relatórios e um segredo exposto que
+precisa de tratamento antes (ver §6).
+
+
+################################################################################
+1. RESUMO EXECUTIVO
+################################################################################
+
+O DesafioGUT é uma plataforma de leilão "menor lance único" com liquidação
+on-chain, frontend React/Vite empacotado como app Android (Capacitor), backend em
+Netlify Functions, persistência em Supabase e pagamentos via Mercado Pago/PIX.
+
+ESTADO GERAL: **em produção na Ethereum mainnet**, com o app móvel empacotado e
+assinado, campanhas de divulgação em execução automática, e a postura de segurança
+recém-auditada e corrigida. Restam pendências operacionais — nenhuma delas de
+arquitetura — concentradas em quatro frentes: allowlist do Privy para o WebView,
+fila do Supabase, migração da assinatura para KMS, e o upload na Play Store.
+
+PRINCIPAIS ENTREGÁVEIS DA JORNADA
+  • Contrato LeilaoGUT vivo na Ethereum mainnet (marco MC60, 2026-07-09), com
+    coordenação por EOA e assinatura local-key — sem ERC-4337, sem bundler.
+  • Migração completa de Netlify Blobs para Supabase PostgreSQL, com RLS
+    default-deny em 100% das tabelas (MC32 → MC38).
+  • Blindagem anti-bot dos lances por Compromisso Cego + Key-Per-Bid (MC28.1).
+  • Frontend unificado sob um único sistema de vidro (.gut-glass-standard) na
+    paleta oficial navy #050818 + laranja #ff6b35.
+  • App Android empacotado: AAB assinado de 34.344.316 bytes (~32,7 MB).
+  • Performance do WebView reconstruída: 17,5 → 59,6 fps; JS do gate de
+    consentimento de 4.002 KB → 360,5 KB; LCP de 2.220 ms → 748 ms (mediana).
+  • Automação diária de divulgação em PythonAnywhere: WhatsApp concluído
+    (198/198), e-mail em curso (400/1623 na última auditoria).
+  • Auditoria de segurança completa (15 achados) com 13 fechados em código.
+  • Suíte de testes que cresceu de 27 (MC28.1) para 209 casos, verde, sem nenhum
+    teste silenciado.
+
+
+################################################################################
+2. LINHA DO TEMPO DOS MEGA COMANDOS
+################################################################################
+
+--------------------------------------------------------------------------------
+FASE 0 — FUNDAÇÃO (MC15 → MC27 · jun/2026) · [fonte: Lixeira]
+--------------------------------------------------------------------------------
+MC15 → MC30        até 06-20  Panorama consolidado em MC-FINAL.md: produto
+                              funcional no ar (Netlify), fluxo de lance 100%
+                              on-chain em Sepolia com carteira embutida Privy +
+                              Argon2id (prova off-chain) + EIP-191. Contrato
+                              LeilaoGUT original 0x59A73Acc…F6D5.
+
+MC25.1             2026-06-14 Ajuste de transparência do vidro (--glass-opacity
+                              0.03 → 0.06), preservando WCAG AA.
+MC25.2 / MC25.3    2026-06-14 ★ Unificação do vidro. Cinco sistemas de glass
+                              conflitantes substituídos por UMA classe canónica
+                              `.gut-glass-standard`, padrão navy extraído dos 4
+                              cards KPI do Dashboard. Opção C — padrão único e
+                              imutável.
+MC25.4 / MC25.6    2026-06-14 Correção do vidro mobile e diagnóstico pós-deploy.
+                              ★ BUG ENCONTRADO: Tailwind v4 emite
+                              `backdrop-saturate-[135]` como saturate(135) =
+                              13500%, não 135%. Correto é `[1.35]`. (PR #60)
+MC25.7             2026-06-14 Diagnóstico do chatbot GUTO após as migrações
+                              MC23–MC25: a env var do LLM tinha-se perdido;
+                              correção cirúrgica sem tocar no backend.
+MC26 / MC26.1      2026-06-14 Fundo animado em looping. A regra "apenas
+                              ComfyUI/Nanobanana" revelou-se inexequível
+                              (Nanobanana só gera imagem estática) → pipeline
+                              procedural local em canvas 2D. 10 loops WebM VP9;
+                              par v3 "Profundidade Cinemática" escolhido. (PR #62)
+                              ⚠️ Gotcha: SVG→sharp/librsvg estourava memória no
+                              Windows → migrado para canvas 2D.
+MC27 / MC27.1      2026-06-14 Integração do fundo animado v3 no app. (PR #63)
+
+--------------------------------------------------------------------------------
+FASE I — BLINDAGEM E ISOLAMENTO DE CHAVE (MC28 → MC31 · jun/2026) · [Lixeira]
+--------------------------------------------------------------------------------
+MC28 / MC28.1      2026-06-16 ★ Blindagem de privacidade dos lances (anti-bot)
+                              para a mainnet. Abordagem A2: Compromisso Cego
+                              (blind commitment) + Key-Per-Bid stateless +
+                              EIP-712 + Flashbots + tratamento de dropped tx.
+                              13 ficheiros, +707/−41, 27/27 testes. (PR #65)
+MC29 / MC29.1      2026-06-20 Modelo de entrega híbrido e TRANSPARENTE para as
+                              lojas. ★ Rejeitado explicitamente o modelo de
+                              camuflagem (Apple Guideline 2.3.1): PWA mantém o
+                              leilão Web3 completo; o app da loja recebe a
+                              experiência adequada, declarada. (PR #77)
+MC30 / MC30.1      2026-06-16 Isolamento da chave mestra COORDENACAO_PRIVATE_KEY:
+                              assinatura centralizada num módulo único, com
+                              preparação para OpenZeppelin Defender Relay (HSM).
+                              ⚠️ O pacote do enunciado estava DEPRECATED
+                              (defender-relay-client, Ethers v5) → usado o
+                              defender-sdk mantido. (PR #66)
+MC30.2 / MC30.2.1  2026-06-18 ★ Migração forçada: o Defender entra em sunset a
+                              2026-07-01. Destino escolhido: Biconomy ERC-4337
+                              (Smart Account 0xdEbe63…2D92, EntryPoint v0.6) com
+                              owner numa chave AWS KMS (0xAEFe11…EdFF). Runbook
+                              de transferência two-step da coordenação. (PR #68)
+MC31               2026-06-20 Defender removido do código; runbook Gnosis Safe;
+                              primitivos Glass UI adotados. (PRs #75/#76)
+
+--------------------------------------------------------------------------------
+FASE II — MIGRAÇÃO PARA SUPABASE (MC32 → MC38 · jun/2026) · [Lixeira]
+--------------------------------------------------------------------------------
+MC32 / MC32.1      2026-06-20 Adapter Supabase criado atrás da fachada
+                              `_lib/data-store.mjs`. Entrega ADITIVA e
+                              byte-idêntica: nada muda até o flip. (PR #79)
+MC33.1             2026-06-21 Validação de carga (Fase A) e de RLS (Fase B) em
+                              staging. ⚠️ ACHADO: os rótulos das chaves estavam
+                              TROCADOS — a "SERVICE_ROLE_KEY" tinha role:anon e
+                              vice-versa. Detetado por decode do JWT; sem isso a
+                              Fase A teria falhado. (PR #81)
+MC33 (flip)        2026-06-21 ★ `DATA_STORE_BACKEND=supabase` ATIVO EM PRODUÇÃO.
+                              Flip concluído sem rollback, deploy ready.
+MC34               2026-06-21 Realtime de `config_remota` ativo e confirmado E2E.
+                              ★ O plano original (realtime de lances) era
+                              INEXECUTÁVEL: abrir SELECT anon em `lances`
+                              quebraria o anti-sniping do MC28; `edicoes` e
+                              `notificacoes` nem existiam como tabelas. (PRs #84/#85)
+MC35               2026-06-21 Auditoria topográfica (AUDITORIA-TOPOGRAFICA.md):
+                              inventário completo, mapa de dependências manual.
+                              ⚠️ O cache do Graphify estava desatualizado e foi
+                              deliberadamente NÃO citado, para evitar alucinação.
+MC37 / MC38        2026-06-21 Migração de cotas: 7/7 registos migrados e validados
+                              byte-fiel em produção e staging; depois o fallback
+                              de leitura foi removido → cotas 100% Supabase.
+                              (PRs #87/#88/#89)
+MC36.1             2026-06-21 Migração financeira (saldo-rs / troco-senhas /
+                              wallet), a fase mais sensível (toca o fluxo de
+                              lance). Escrita só-Supabase + fallback de leitura.
+                              Suíte 83/83. (PR #90)
+                              ⚠️ REGRA PERMANENTE: nunca re-executar as migrações
+                              com DROP TABLE; nunca apagar os Blobs legados (R13).
+
+--------------------------------------------------------------------------------
+FASE III — PREPARAÇÃO PRÉ-MAINNET (MC39.x · jun/2026)
+--------------------------------------------------------------------------------
+MC39               2026-06-21 Mainnet readiness SEM ativação. ★ Descoberta
+                              crítica: `NETWORK_STAGE=mainnet` ativaria de
+                              IMEDIATO no site live. O flip foi adiado para o MC40.
+MC39.1 / MC39.2    2026-06-21 Hardening (DOMPurify, dependências) + fallbacks
+                              opt-in de RPC/Flashbots e de bundler.
+MC39.3 → MC39.8    2026-06-22 Série de correções de frontend/UX. ★ AUTO-CRÍTICA
+                              REGISTRADA: o MC39.4 documenta que o problema #1 era
+                              uma REGRESSÃO introduzida pelo próprio MC39.3.1 (#7)
+                              — um gate de rota aplicado sem atualizar os links.
+                              (PRs #97–#102)
+MC39.9             2026-06-22 GUTO animado: correção definitiva de opacidade.
+                              O diagnóstico anterior (MC39.8) estava errado.
+                              LIÇÃO: `ffprobe -show_streams` não basta para
+                              descartar alfa em VP9/WebM — é preciso
+                              `-show_entries stream_tags` (alpha_mode). (PR #103)
+MC39.11 → MC39.15  2026-06-22 Integração Mercado Pago/PIX: análise, migração
+    /26                       TEST- → APP_USR-, correção do 502
+                              `pix_provider_indisponivel` (faltava o bloco
+                              `identification` + idempotency), e o episódio do
+                              CPF — adicionado ao frontend no MC39.15 e REMOVIDO
+                              no MC39.15.1 ao descobrir-se que o sistema não
+                              armazena CPF em lugar nenhum. (PR #106)
+MC39.17            2026-06-27 ★ Auditoria pré-Mainnet: 2 P0 + 7 P1 + 4 pendências.
+    → 17.3         2026-06-29 Todos corrigidos, mesclados e validados em produção.
+                              npm audit sem critical. (PRs #108/#111/#112/#114)
+MC39.18            2026-06-29 ★ Plano de escalabilidade para 10.000 usuários
+                              simultâneos: 42 itens em 8 ondas.
+MC39.19 / MC39.20  2026-06-29 Ondas 1-8 EXECUTADAS: bundle −28%, MVs, fila
+                              Postgres com SKIP LOCKED, RUM de web-vitals.
+                              Programa completo. (PRs #116/#117)
+MC39.21            2026-06-29 Instalação de ferramental do agente (279 skills
+                              auditadas por SkillSpector antes da adoção).
+MC39.22 → 22.3     2026-06-30 Enxugamento "Ponytail". O plano estimava −679 LOC;
+                              a execução produziu +78 LOC. ★ VEREDITO HONESTO: o
+                              código já estava enxuto; extrair duplicação troca
+                              repetição por indireção — o ganho é DRY, não LOC.
+                              EX-4 (financeiro-fallback) auditado, mantido
+                              BLOQUEADO e instrumentado (Fase A) para medir HIT.
+MC39.23            2026-06-30 Três planos autocontidos em `plans/`: mainnet
+                              deploy, submissão Play Store, campanha de lançamento.
+MC40               2026-06-30 ★ PARADO NO LIMITE IRREVERSÍVEL POR DESIGN. O
+                              contrato NÃO foi deployado e o flip NÃO foi feito:
+                              gastam ETH real, são irreversíveis, exigem segredos
+                              que o agente não pode manusear. Entregue o runbook
+                              exato para o operador. "Reportado sem maquiagem."
+
+--------------------------------------------------------------------------------
+FASE IV — PRODUTO E INTERFACE (MC41 → MC49 · jul/2026)
+--------------------------------------------------------------------------------
+MC41               2026-06-30 Visibilidade do GUTO animado. Causa medida (não
+                              suposta): o alfa era um matte de LUMINÂNCIA, não de
+                              transparência. Corrigido por re-export dos .webm.
+MC43               2026-07-01 Padronização de transições de entrada (motion.js).
+MC45               2026-07-01 Banner da edição quadrado e clicável; criada a rota
+                              /edicao/:id e o componente EdicaoCard/Banner.
+MC49.3 / 49.3.1    2026-07-02 Removido o gate `requireRole 'cliente'`: qualquer
+                              carteira autenticada com saldo ≥ R$ 2,00 compra
+                              senhas. (PRs #135/#136)
+
+--------------------------------------------------------------------------------
+FASE V — A ODISSEIA DO BUNDLER (MC52 → MC56 · jul/2026)
+--------------------------------------------------------------------------------
+MC52 / MC52.1      2026-07-03 Linha do tempo MC30→MC51 e diagnóstico. ★ O bundler
+                              partilhado bundler.biconomy.io (v2/v3) foi
+                              DESATIVADO — falhava para todas as chains, inclusive
+                              as públicas de staging.
+MC53               2026-07-03 Diagnóstico do `callGasLimit`: o crash ocorria DENTRO
+                              do SDK Biconomy, não no código do projeto.
+MC54.1             2026-07-04 Runbook da rota A2 (Smart Account age uma última vez
+                              via Pimlico para transferir a coordenação a uma EOA).
+                              Rota depois ABANDONADA em favor da Opção D.
+MC56               2026-07-04 ★★ DECISÃO ESTRUTURAL — OPÇÃO D. Em vez de
+                              ressuscitar o ERC-4337, redeploy de um contrato novo
+                              cuja `coordenacao()` é uma EOA simples. Backend passa
+                              a SIGNER_BACKEND=local-key: a EOA assina tudo
+                              diretamente, sem bundler, sem paymaster, sem KMS no
+                              caminho crítico. Abandono definitivo do Biconomy.
+
+--------------------------------------------------------------------------------
+FASE VI — ENDURECIMENTO E MAINNET (MC57 → MC60 · jul/2026)
+--------------------------------------------------------------------------------
+MC57.4 / MC57.5    2026-07-05 Design do carrossel GUTO e piloto de animação idle.
+MC58 → MC58.3      2026-07-07 Carrossel GUTO completo (8 imagens com crossfade) no
+                              Glass do Dashboard, em produção. ⚠️ O alfa NÃO saiu
+                              do rembg (descartava pódio/vidro) mas de flood-fill
+                              de bordas + downscale premultiplicado.
+MC59               2026-07-07 ★ Revisão técnica profunda: ~168 LOC de contrato +
+                              ~16.373 LOC de functions + ~14k LOC de frontend.
+                              Diagnóstico; nenhuma correção aplicada.
+MC59.1             2026-07-08 B-1: `signer.mjs` — local-key legítimo em mainnet.
+MC59.2             2026-07-08 B-2 (parcial), B-4, C-1, D-1. ★ VEREDITO HONESTO: o
+                              comando pedia declarar "mainnet liberada"; o agente
+                              RECUSOU. Um guard delta-based foi revertido por
+                              revisão de segurança HIGH.
+MC59.3             2026-07-08 B-2 resolvido por atribuição via tx-hash; C-1 por
+                              bootstrap atómico INSERT..DO NOTHING.
+MC59.4             2026-07-08 Retry ciente de nonce no broadcast + runbook de
+                              reconciliação de `credito_pendente` + ADR.
+MC59.5 / MC59.6    2026-07-08 Confirmação assíncrona implementada (backend 202 +
+                              polling no frontend), DORMANT por design:
+                              CREDITO_ASSINCRONO=OFF, fila inerte.
+MC59.7             2026-07-08 Migração da fila: o agente NÃO aplicou (ação do
+                              operador) e corrigiu um erro grave do plano — a
+                              tabela `fila_credito` não existe neste codebase.
+MC59.8             2026-07-08 ★ `supabase db push` ABORTADO. Executá-lo teria
+                              provavelmente DESTRUÍDO dados de produção. O
+                              incidente foi evitado por um `migration list`
+                              read-only antes de agir.
+MC59.10 → 59.12    2026-07-08 Decisão sobre a EOA coordenadora; avaliação do NO-GO;
+                              reconciliação da checklist com a Opção B/local-key.
+MC59.14            2026-07-08 Revogação da chave antiga (verificada 3×) + decisão
+                              formal de auditoria (Opção B, aceitação de risco).
+MC59.15            2026-07-08 ★ A premissa do MC estava ERRADA: o endereço do
+                              contrato não era o problema. Causa raiz = RPC_URL /
+                              VITE_ALCHEMY_URL ainda apontando para Sepolia.
+
+MC60 (NO-GO)       2026-07-08 🔴 Flip BLOQUEADO. Nenhuma variável setada, nenhum
+                              deploy, nenhuma chave tocada. Executar naquele
+                              momento quebraria a produção e exporia um segredo.
+MC60 (MARCO)       2026-07-09 ✅✅ **MAINNET ATIVA**. Sistema em produção na
+                              Ethereum mainnet, com evidência on-chain read-only e
+                              health check ao vivo. Marco definitivo da jornada.
+
+--------------------------------------------------------------------------------
+FASE VII — REFINAMENTO DE PRODUTO (MC61 → MC73 · 2026-07-09/11)
+--------------------------------------------------------------------------------
+MC61 / MC62        2026-07-09 Login público apenas Google (Opção A). ★ Achado-chave:
+                              remover ingenuamente "email" QUEBRARIA o login
+                              corporativo por OTP headless — evitado.
+MC63 / MC64        2026-07-09 Reforma visual do Glass da aba "Lances". Correção de
+                              premissa: o carrossel GUTO não está nessa aba.
+MC65 / MC66        2026-07-09 Redesign completo — Direção C, Hero "EM BREVE".
+                              Cronômetro vivo removido como código morto.
+MC66 (plano) /     2026-07-09 ⚠️ COLISÃO DE NUMERAÇÃO documentada: existem dois
+MC67                          "MC66". O segundo é o plano de 11 refinamentos de
+                              frontend, executado no MC67 (commit a6db336).
+MC69 → 69.6        2026-07-10 Artes promocionais com o GUTO. ★ Correção crítica de
+                              brief: **GUTO é HUMANO, não um porco** — todos os
+                              prompts de porco foram descartados.
+MC69.5 (domínio)   2026-07-10 ★ RESSALVA DE HONESTIDADE: o enunciado afirmava que
+                              o domínio "foi comprado e está documentado". A busca
+                              NÃO encontrou comprovante nem registrar. Reportado
+                              como não-comprovado em vez de assumido.
+MC69.9 / 69.10     2026-07-13 Validação de e-mails (ValidKit) e encerramento da
+                              série 69, distinguindo explicitamente evidência do
+                              agente vs. atestado do operador.
+MC72               2026-07-11 Exclusão de conta (política obrigatória da Play
+                              Store): dentro do app e via /excluir-conta pública.
+MC73               2026-07-11 ★ Premissa do plano REFUTADA. A produção não estava
+                              numa "main antiga" — estava À FRENTE da main, na
+                              linhagem MAINNET. MC67, MC69 e MC72 viviam em
+                              branches nunca publicadas, e o MC72 nascera de uma
+                              BASE ERRADA. Release consolidada; 182/182 testes;
+                              regressão da mainnet evitada.
+
+--------------------------------------------------------------------------------
+FASE VIII — AUTOMAÇÃO DE DIVULGAÇÃO (MC75 → MC77, MC83 · jul/2026)
+--------------------------------------------------------------------------------
+MC75 (+diagnóstico) 2026-07-15 Automação diária unificada (SendGrid + Twilio) no
+                              PythonAnywhere, com limite diário, checkpoint, logs
+                              e agendamento. Bug P0: orquestrador sem `cwd=`.
+MC75.1             2026-07-15 Credenciais reais nos configs remotos via MCP; lista
+                              de e-mail correta (1625 registros).
+MC75.3             2026-07-15 Corrigido o parâmetro errado da Twilio Lookup v2;
+                              base WhatsApp revalidada; cron diário ativado.
+MC76               2026-07-18 Monitoramento: automação SAUDÁVEL, cron 1465157 com
+                              return code 0. WhatsApp 198/198; e-mail 200/1623.
+MC77               2026-07-18 Expansão da base WhatsApp (validação de 700 números,
+                              ≈US$5,60, executada pelo OPERADOR) e reagendamento
+                              do cron para 15:00 UTC (11h de Manaus).
+MC83               2026-07-20 Auditoria dos disparos: 5/5 execuções rc=0.
+                              E-mail 400/1623 (24,6%); WhatsApp 198/198 (100%).
+                              ⚠️ Anomalia CRÍTICA A4.2 — o checkpoint avança por
+                              TENTATIVAS, não por sucessos: falhas seriam perdidas
+                              silenciosamente. ⚠️ Risco N1 — qualidade da lista.
+
+--------------------------------------------------------------------------------
+FASE IX — IDENTIDADE VISUAL E EMPACOTAMENTO (MC78 → MC81 · 2026-07-18/19)
+--------------------------------------------------------------------------------
+MC78               2026-07-18 Rosto do GUTO no modal de login (appearance.logo do
+                              PrivyProvider — ponto único de mudança).
+MC78.1             2026-07-18 Correção do deploy Netlify. O netlify.toml commitado
+                              estava corrompido (um commit anterior destruíra 82
+                              linhas ao acrescentar 1 URL ao CSP). Causa do
+                              "Missing script: build": faltava
+                              base="desafio-gut/frontend".
+MC78.2 → 78.5      2026-07-18 Favicon.ico e og:image derivados de guto-login.png.
+                              Correção de premissa: não havia og:image nenhuma.
+                              MC78.4: o "card antigo" NÃO era bug — era cache
+                              por-URL do scraper do WhatsApp/Facebook.
+MC79               2026-07-18 Screenshots mobile 390×844 + ★ ACHADO CRÍTICO: DRIFT
+                              DE DEPLOY. A produção fora revertida às 21:29 por um
+                              deploy de terceiro da linhagem MAINNET, apagando os
+                              MC78.x. (Já resolvido à data do MC80.)
+MC80 → 80.5        2026-07-18 Artes 1080×1920 para a Play Store. MC80.3: a geração
+    /19                       OSS no Comfy Cloud FALHOU (sem subscription) e o
+                              Boulder Loop foi respeitado — parou em vez de queimar
+                              orçamento. MC80.4.1: devices fotorrealistas via
+                              OpenAI gpt-image-1 por ~US$0,08. MC80.5: ícone
+                              oficial por composição determinística em PIL — um
+                              modelo generativo REGENERARIA outro rosto e quebraria
+                              a identidade do GUTO.
+MC81               2026-07-19 AAB assinado: builds/DesafioGUT-v1.0.0.aab,
+                              34.344.316 bytes, "jar verified". Build concluído
+                              apesar de RAM limitada.
+
+--------------------------------------------------------------------------------
+FASE X — PERFORMANCE NO DISPOSITIVO REAL (MC82 → MC82.4 · 2026-07-20/21)
+--------------------------------------------------------------------------------
+MC82               2026-07-20 Diagnóstico + plano. ★ CORREÇÃO DE ROTA: numa
+                              primeira passagem três ações chegaram a ser
+                              aplicadas ao código; o operador identificou que isso
+                              extrapolava o escopo (diagnóstico), e tudo foi
+                              REVERTIDO e conferido. 6 gargalos provados,
+                              2 hipóteses do plano refutadas.
+MC82-BASELINE      2026-07-21 Medição no aparelho real (Xiaomi 21091116UG,
+                              Android 13, WebView Chrome 150). O MCP chrome-devtools
+                              não anexa a alvo remoto → CDP falado diretamente por
+                              `adb forward` + WebSocket nativo do Node.
+MC82.1             2026-07-21 ★ 17,5 → 59,6 fps (+241%). A correção prevista pelo
+                              plano FALHOU: blur 24px→8px deu apenas 20,7 fps. A
+                              medição revelou que o custo do backdrop-filter vem
+                              do NÚMERO DE CAMADAS, não do raio.
+MC82.2             2026-07-21 JS do gate: 4.002 KB → 617 KB (−85%); LCP 2.220 →
+                              980 ms. O lazy-load do Privy sozinho não teria dado
+                              ganho: havia um bug de chunking pré-existente que
+                              mantinha o React inteiro dentro do chunk `privy`.
+MC82.3             2026-07-21 Sentry fora do arranque: 617 → 360,5 KB (−42%);
+                              LCP 980 → 748 ms. Fila em memória preserva os eventos
+                              ocorridos antes do init.
+MC82.4             2026-07-21 ★ Violação R4 corrigida: o Session Replay estava com
+                              `maskAllText:false` e `blockAllMedia:false` — não era
+                              o default, era uma DESATIVAÇÃO EXPLÍCITA de proteções
+                              que o SDK traz ligadas.
+
+--------------------------------------------------------------------------------
+FASE XI — SEGURANÇA E LOGIN (MC86 → MC88 · 2026-07-22)
+--------------------------------------------------------------------------------
+MC86               2026-07-22 Auditoria de segurança read-only (RLS, validação,
+                              IDOR, logs, webhooks). VEREDITO: postura ACIMA DA
+                              MÉDIA — RLS ativo em 100% das tabelas com
+                              default-deny, verificado ao vivo com a chave anon.
+                              15 achados, concentrados em (a) /cotas GET, endpoint
+                              legado sem o guard anti-IDOR, e (b) endpoints de
+                              diagnóstico esquecidos no ar.
+MC87               2026-07-22 Correção: **13 dos 15 achados fechados em código**
+                              (29 ficheiros, +1008/−329). Suíte 191 → 209, verde.
+                              O webhook do MP e o /debug-pedido passaram a
+                              fail-closed — o default deixou de ser inseguro mesmo
+                              antes de o operador agir.
+MC88 (em curso)    2026-07-22 Login OAuth no WebView Android. Diagnóstico fechado
+                              por dois caminhos independentes (iframe bloqueado +
+                              `POST auth.privy.io/api/v1/oauth/init → 403 Origin
+                              not allowed`). CAUSA RAIZ: a origem do WebView é
+                              `https://localhost` (Capacitor) e não consta da
+                              allowlist da app Privy, que só tem
+                              `http://localhost:3000`, `:5173` e os domínios
+                              Netlify. NÃO é alteração de código — é configuração
+                              de painel. Correção pendente do operador.
+
+
+################################################################################
+3. DECISÕES TÉCNICAS CRÍTICAS
+################################################################################
+
+3.1 — ABANDONO DO BICONOMY / ERC-4337 (MC30.2 → MC56)
+     Trajetória completa: chave bruta → Defender Relay (MC30.1) → Defender entra em
+     sunset → Biconomy ERC-4337 + KMS (MC30.2.1) → o bundler partilhado da Biconomy
+     é desativado (MC52.1) → tentativas de recuperação (trocar URL, migrar para
+     Pimlico, script local com KMS) → REDEPLOY do contrato com uma EOA simples como
+     `coordenacao()` e backend em `local-key` (MC56). Consequência arquitetural
+     permanente: menos superfície, menos dependências externas — exatamente a causa
+     da falha original. O preço é que a chave volta a viver numa env var, o que
+     mantém a migração para KMS como pendência aberta.
+
+3.2 — MIGRAÇÃO PROGRESSIVA BLOBS → SUPABASE (MC32 → MC38)
+     Padrão aplicado três vezes, sempre igual: adapter atrás de fachada → escrita
+     só-Supabase (nunca dual-write) → fallback de LEITURA transitório → migração de
+     dados validada byte-fiel → remoção do fallback só depois de janela de
+     observação. Nenhum DROP, nenhum Blob apagado (R13, cold backup).
+
+3.3 — REFUTAÇÃO DE PREMISSAS (padrão recorrente, não incidente isolado)
+     Vários MCs entregaram o seu valor ao provar que o enunciado estava errado:
+       · MC26    — "apenas ComfyUI/Nanobanana" é inexequível para vídeo.
+       · MC34    — realtime de lances quebraria o anti-sniping; tabelas inexistentes.
+       · MC59.7  — a tabela `fila_credito` do plano não existia no codebase.
+       · MC59.15 — não era o endereço do contrato; eram os RPCs em Sepolia.
+       · MC69.5  — a compra do domínio não estava comprovada em lado nenhum.
+       · MC73    — a produção não estava atrasada; estava À FRENTE da main.
+       · MC78.2  — não havia og:image "antiga"; não havia og:image nenhuma.
+       · MC78.4  — não era bug de servidor; era cache do scraper.
+       · MC82.1  — o custo do glass não era o raio do blur; era a contagem de camadas.
+       · MC82.2  — o peso do arranque não era o Privy; era o chunking do React.
+       · MC69.2  — o brief descrevia o GUTO como um porco; ele é humano.
+
+3.4 — CORREÇÃO DO CHUNKING NO VITE 8 / ROLLDOWN (MC82.2)
+     `manualChunks` é silenciosamente ignorado; o React vivia dentro do chunk
+     `privy` enquanto `react-*.js` pesava 0,2 KB. Solução: `advancedChunks`, com
+     atenção à ORDEM dos grupos — um pacote do caminho crítico (framer-motion)
+     pode ficar acorrentado a um chunk pesado e arrastá-lo de volta ao arranque.
+
+3.5 — CORREÇÕES DE SEGURANÇA (MC86 → MC87)
+     Fail-closed por padrão no webhook do Mercado Pago e no /debug-pedido;
+     autenticação no /cotas GET; detalhe do /health atrás de admin; mascaramento
+     do Session Replay; endpoints de diagnóstico desativados; logs mascarados.
+     LIÇÃO REGISTRADA no cloud.md: endurecer um endpoint é a parte fácil — a
+     difícil é descobrir quem depende dele SEM credencial. `/cotas` e `/admin-list`
+     eram consumidos em fluxos pré-autenticação; a resposta certa não era bloquear,
+     era devolver MENOS. Um 401 cego passaria nos testes e partiria o produto.
+
+3.6 — MÉTODO DETERMINÍSTICO PARA ATIVOS DE IDENTIDADE (MC57.4, MC58.1, MC80.5)
+     Ícone e composições do GUTO são feitos por composição determinística (PIL /
+     canvas / flood-fill), não por modelo generativo: um modelo REGENERA outro
+     personagem e quebra a identidade da marca. Geração por IA fica restrita a
+     pixels sem texto e sem rosto; texto e dados de UI são sempre renderizados
+     por PIL.
+
+3.7 — PARAR NO LIMITE IRREVERSÍVEL (MC40, MC59.8, MC60-NOGO)
+     Três vezes o agente parou deliberadamente antes de uma ação irreversível:
+     o deploy do contrato (gasta ETH real), o `supabase db push` (destruiria
+     dados) e o flip para mainnet (exporia um segredo). Em nenhum dos casos a
+     paragem foi uma falha — foi a entrega correta.
+
+
+################################################################################
+4. LIÇÕES APRENDIDAS
+################################################################################
+
+L1 — MEDIR SEMPRE NO APARELHO. Emulação e DevTools do desktop não reproduzem o
+     WebView Android. O caminho que funciona: `adb forward tcp:9333
+     localabstract:webview_devtools_remote_<pid>` + CDP por WebSocket nativo do
+     Node. E manter a tela acesa (`adb shell svc power stayon usb`): com a tela
+     apagada o requestAnimationFrame suspende e a medição sai corrompida.
+
+L2 — O CUSTO DO backdrop-filter VEM DO NÚMERO DE CAMADAS, NÃO DO RAIO. Cada
+     elemento com a propriedade força um read-back do backdrop na GPU. Neste
+     aparelho: 1 camada ≈ 1-7 fps; 11 camadas ≈ 40 fps. Onze camadas com blur de
+     0px ainda custavam 29 fps. Reduzir o blur é quase inútil; reduzir a
+     QUANTIDADE de elementos é o que paga.
+
+L3 — VITE 8 (ROLLDOWN) IGNORA manualChunks. Um chunk de 0,2 KB para o React é o
+     sinal de que o agrupamento não aconteceu. Usar `advancedChunks`.
+
+L4 — A ORDEM DOS GRUPOS EM advancedChunks IMPORTA. Um pacote do caminho crítico
+     pode ser acorrentado a um chunk pesado e arrastá-lo de volta ao arranque.
+
+L5 — LAZY-LOAD SÓ FUNCIONA SE TODO O CAMINHO ESTÁTICO FOR CORTADO. Um único
+     import estático (AppContext → @privy-io) anula o esforço inteiro. E `import()`
+     para prefetch também AVALIA o módulo; para só descarregar, `<link rel="prefetch">`.
+
+L6 — AO TORNAR TELEMETRIA LAZY, SEPARAR SUBSCRIÇÃO DE ENVIO. Os Core Web Vitals
+     têm de ser subscritos cedo ou perdem-se; o SDK que os recebe pode chegar
+     depois. Uma fila em memória preserva a observabilidade sem pagar o arranque.
+
+L7 — UMA CONFIGURAÇÃO QUE NEGA OS DEFAULTS SEGUROS DE UM SDK É UM ALARME, NÃO UMA
+     PREFERÊNCIA. E taxa de amostragem 0 não significa custo 0 — verificar no
+     perfil de CPU o que continua a correr.
+
+L8 — VALIDAR "ESTÁ LIVE?" RELENDO A PRODUÇÃO, não confiando no último deploy
+     próprio. Deploy Netlify é atómico: se um asset é antigo, TODO o deploy é de
+     outra linhagem. Confirmar lendo o BUNDLE JS live.
+
+L9 — REPRODUCTION-FIRST. Vários MCs entregaram o seu valor ao refutar a própria
+     premissa. Medir antes de opinar; declarar o veredito honesto mesmo quando o
+     comando pede o contrário (MC59.2 recusou declarar "mainnet liberada";
+     MC39.22.1 reportou +78 LOC onde o plano prometia −679).
+
+L10 — BOULDER LOOP FUNCIONA. Máximo 3 iterações por segmento; parar e reportar.
+     O MC80.3 parou após falhas repetidas no Comfy Cloud em vez de queimar o
+     orçamento autorizado — custo final ≈ US$0.
+
+L11 — MC DE DIAGNÓSTICO NÃO EXECUTA CÓDIGO. O MC82 teve de reverter três ações
+     aplicadas fora de escopo. O entregável de um MC de diagnóstico é o documento.
+
+L12 — VERIFICAR A CREDENCIAL PELO CONTEÚDO, NÃO PELO RÓTULO. No MC33.1 as chaves
+     Supabase estavam trocadas: a rotulada "service_role" tinha `role:anon`. Um
+     decode do JWT antes de usar evitou uma falha inteira de fase.
+
+L13 — FERRAMENTA DE DIAGNÓSTICO PODE MENTIR POR OMISSÃO. `ffprobe -show_streams`
+     não revela alfa em VP9/WebM; é preciso `-show_entries stream_tags`. E o cache
+     do Graphify pode estar velho — o MC35 recusou-se a citá-lo por isso.
+
+L14 — UM GATE DE ROTA SEM ATUALIZAR OS LINKS É UMA REGRESSÃO. O MC39.4 documentou,
+     por auto-crítica, que o bug que estava a corrigir tinha sido introduzido pelo
+     próprio MC39.3.1.
+
+
+################################################################################
+5. ESTADO FINAL DO SISTEMA
+################################################################################
+
+FRENTE          MÉTRICA / ESTADO                              FONTE
+--------------  --------------------------------------------  ------------------
+Performance     59,6 fps no Dashboard (baseline 17,5)          MC82.1
+                LCP 748 ms de mediana (baseline 2.220 ms)      MC82.3
+                JS do gate LGPD: 360,5 KB (baseline 4.002 KB)  MC82.3
+Blockchain      ✅ EM PRODUÇÃO na Ethereum mainnet             MC60
+                Coordenação por EOA · SIGNER_BACKEND=local-key MC56/MC59.15
+Dados           Supabase ativo em produção desde 2026-06-21    MC33
+                RLS default-deny em 100% das tabelas           MC86
+Automação       E-mail  400 / 1623  (24,6%) — em curso         MC83
+                WhatsApp 198 / 198  (100%) — CONCLUÍDO         MC83
+                Cron 1465157 · diário 15:00 UTC · 5/5 rc=0     MC77/MC83
+Segurança       13 de 15 achados fechados em código            MC87
+                Suíte 209/209 verde                            MC87
+Build           AAB assinado 34.344.316 bytes · jar verified   MC81
+Play Store      ⏳ Aguardando verificação de identidade da
+                conta; artes e ícone prontos                   MC80.4.1.1/80.5
+Login OAuth     ❌ Bloqueado no WebView — em correção (MC88)   INSPECAO-LOGIN
+Fila Supabase   ❌ Quebrada / migração não aplicada            MC59.7 / MC87
+KMS             ⏳ Migração pendente (P0 restante do MC86)     MC87
+
+
+################################################################################
+6. CREDENCIAIS E SEGREDOS (MAPEADOS — VALORES NÃO EXPOSTOS · R4/R5)
+################################################################################
+
+Este inventário registra APENAS a existência e a localização de cada segredo.
+Nenhum valor foi lido, transcrito, ecoado ou armazenado por este MC.
+
+SEGREDO                      LOCALIZAÇÃO                          ESTADO
+---------------------------  -----------------------------------  ---------------
+SendGrid API Key             PythonAnywhere · EMAILS/              instalada
+                             config_envio.json                     (MC75.1)
+Twilio (SID + auth token)    PythonAnywhere · WHATSAPP/            instalada
+                             config_whatsapp.json                  (MC75.1)
+MP_ACCESS_TOKEN              Netlify env (context production)      produção
+                                                                   (APP_USR-)
+MP_WEBHOOK_SECRET            Netlify env                           ⚠ PENDENTE —
+                                                                   operador
+MP_PAYER_ID_NUMBER           Netlify env                           fallback CPF
+OpenAI API Key               Variável de ambiente da máquina       ⚠ chave foi
+                                                                   exposta em chat
+                                                                   (MC80.2) →
+                                                                   revogar
+Keystore de assinatura       repo keystore/ + Desktop\             presente
+                             BACKUP_KEYSTORE\                      (MC81)
+COORDENACAO_PRIVATE_KEY      Netlify env                           ativa (EOA
+(EOA coordenadora)           endereço público, não segredo:        mainnet nova)
+                             0xFea436…1E67
+Anotação local de chaves     Desktop\chaves importantes. EOA.txt   ⚠ NÃO LIDO por
+                                                                   este MC (R5).
+                                                                   PRESERVADO na
+                                                                   limpeza.
+Supabase                     Netlify env + anon key no bundle      anon key é
+                             (projeto vjslwowwrpcawijdiksm)        pública por
+                                                                   desenho
+Supabase staging             ~\.mc33-staging.env (fora do repo)    legado MC33.1
+APP_AWS_* (KMS)              Netlify env (prefixo AWS_ é           legado do
+                             reservado pelo Netlify)               caminho Biconomy
+Pimlico API key              —                                     ⚠ vazou em chat
+                                                                   (MC54.1) →
+                                                                   rotacionar
+DEBUG_TOKEN                  Netlify env                           não setado →
+                                                                   endpoint
+                                                                   fail-closed
+MC302_DIAG_TOKEN             Netlify env                           não setado →
+                                                                   endpoint 503
+Privy App ID                 cmo51f3v300l90clgzksivvad             identificador
+                                                                   público
+
+⚠️⚠️ ACHADO NOVO E URGENTE — CHAVE EM TEXTO CLARO NA LIXEIRA ⚠️⚠️
+     O ficheiro `comando para ativar o deepseek v4 pro no terminal.txt`, atualmente
+     na Lixeira do Windows (origem: Desktop), contém uma **chave de API DeepSeek em
+     texto claro**, hardcoded num script que a escreve em `~/.claude/settings.json`.
+     O valor NÃO é reproduzido aqui (R4). Implicações:
+       · A chave é recuperável por qualquer pessoa com acesso à máquina.
+       · Provavelmente também está gravada em `~/.claude/settings.json` se o script
+         alguma vez foi executado e não foi revertido pelo script companheiro
+         (`comando para ativar o opus 4.8 no terminal.txt`).
+     AÇÃO RECOMENDADA (operador): (1) revogar a chave no painel da DeepSeek;
+     (2) conferir e limpar `~/.claude/settings.json`; (3) só então eliminar o
+     ficheiro em definitivo. Esvaziar a Lixeira sem revogar NÃO resolve — a chave
+     continua válida no lado do fornecedor.
+
+
+################################################################################
+7. PENDÊNCIAS ABERTAS
+################################################################################
+
+P0 [URGENTE]  Revogar a chave DeepSeek exposta na Lixeira (§6) e limpar
+              ~/.claude/settings.json.
+
+P1 [ALTA]     Allowlist do Privy — acrescentar `https://localhost` às Allowed
+              Origins da app cmo51f3v300l90clgzksivvad. Sem isso o login OAuth é
+              impossível no app Android. Não é código; é painel. (MC88)
+
+P2 [ALTA]     MP_WEBHOOK_SECRET — definir no Netlify ANTES do próximo deploy. O
+              webhook agora é fail-closed: sem o segredo, ele rejeita tudo. (MC87)
+
+P3 [ALTA]     Fila do Supabase — a migração da fila nunca foi aplicada; a fila
+              está PARTIDA, não dormente. Note-se que o MC59.8 ABORTOU o
+              `db push` por risco de perda de dados: o caminho seguro está
+              documentado e deve ser seguido. (MC59.7 / MC59.8 / MC87)
+
+P4 [ALTA]     Migração para KMS — é o P0 restante do MC86, exclusivo do operador
+              (R5 proíbe o agente de manusear as chaves). (MC87)
+
+P5 [MÉDIA]    Upload do AAB e das 4 artes na Play Store — bloqueado pela
+              verificação de identidade da conta. (MC81 / MC80.4.1.1)
+
+P6 [MÉDIA]    Anomalia A4.2 do orquestrador — o checkpoint avança por TENTATIVAS,
+              não por sucessos. Perda silenciosa latente de envios. (MC83)
+
+P7 [MÉDIA]    Risco N1 — qualidade da lista de e-mail (endereços aparentemente
+              sintéticos) ameaça a reputação de envio no SendGrid. (MC83)
+
+P8 [MÉDIA]    Revalidação/expansão da base WhatsApp — validação paga dos números
+              restantes e montagem da lista "só novos". (MC77)
+
+P9 [MÉDIA]    Deploy da linhagem correta — a produção roda a linhagem MAINNET,
+              NÃO a main. As correções dos MC82.x, MC86 e MC87 vivem em
+              feat/mc73-correcao-deploy e feat/mc87-seguranca e ainda não estão
+              live. NUNCA deployar main (regride a mainnet). (MC73 / MC79)
+
+P10 [MÉDIA]   Rotacionar a chave Pimlico e a password da conta de teste, que
+              vazaram no chat de planeamento do MC54.1.
+
+P11 [BAIXA]   EX-4 (financeiro-fallback) — a instrumentação da Fase A está a
+              coletar HIT desde 2026-06-30. Se HIT=0 sustentado por ≥30 dias e o
+              backfill estiver concluído, avançar para a Fase D (remoção). Nunca
+              DROP dos Blobs legados. (MC39.22.3)
+
+P12 [BAIXA]   ORQUESTRADOR no PythonAnywhere não foi auditado no MC86 (API deu
+              ConnectTimeout). Segmento de auditoria permanece parcial.
+
+P13 [BAIXA]   Domínio próprio — a compra e o registrar nunca foram comprovados
+              nos arquivos do projeto. (MC69.5)
+
+P14 [BAIXA]   Revogar a chave OpenAI exposta em chat no MC80.2.
+
+
+################################################################################
+8. RECOMENDAÇÕES
+################################################################################
+
+R1  ANTES DE TUDO: revogar a chave DeepSeek (§6). É o único item deste relatório
+    que representa uma exposição ativa e recuperável por terceiros.
+
+R2  Documentar o passo de allowlist do Privy como PARTE DO PROCEDIMENTO DE BUILD
+    ANDROID. `https://localhost` é a origem do Capacitor e não é óbvia — custou um
+    ciclo inteiro de diagnóstico (MC88) que se resolve com uma linha de checklist.
+
+R3  Reconciliar a fila do Supabase seguindo o caminho seguro do MC59.8 (nunca
+    `db push` cego). A confirmação assíncrona (MC59.5/59.6) está pronta mas
+    DORMANT à espera exatamente disso.
+
+R4  Migrar a assinatura para KMS. É o último P0 aberto e a única peça da postura
+    de segurança que continua a depender de uma chave em variável de ambiente —
+    uma regressão consciente aceite no MC56 para escapar ao bundler morto.
+
+R5  Testar o login OAuth no aparelho real logo após a correção da allowlist, com
+    o mesmo método CDP do MC88 — o teste já está instrumentado e reproduzível.
+
+R6  Corrigir a anomalia A4.2 do orquestrador antes que ocorra a primeira falha de
+    envio real. Hoje o impacto é zero porque não houve erros; a perda seria
+    silenciosa e irrecuperável quando houver.
+
+R7  Higienizar a lista de e-mail antes de retomar o ritmo de 100/dia, para
+    proteger a reputação do domínio no SendGrid.
+
+R8  Estabelecer um único procedimento de deploy documentado. O drift entre a
+    linhagem MAINNET e as branches de trabalho já causou dois incidentes (MC73,
+    MC79) e continua ativo com MC82.x/MC86/MC87 fora do ar.
+
+R9  Manter a regra de ouro do glass: NÃO reintroduzir backdrop-filter no
+    `.gut-glass-standard` sem medir no aparelho. O orçamento medido é de
+    aproximadamente 1-7 fps por camada.
+
+R10 Arquivar os relatórios históricos num diretório versionado do repo em vez de
+    os deixar no Desktop/Lixeira. A Lixeira guardava a única cópia de ~70
+    documentos — incluindo toda a fase MC15→MC45. Um `docs/mc-historico/` teria
+    evitado esse risco.
+
+
+################################################################################
+9. PRÓXIMOS PASSOS
+################################################################################
+
+  1.  Revogar a chave DeepSeek exposta e limpar ~/.claude/settings.json.
+  2.  Concluir o MC88 — acrescentar `https://localhost` à allowlist do Privy e
+      revalidar o fluxo OAuth no dispositivo real.
+  3.  Definir MP_WEBHOOK_SECRET no Netlify.
+  4.  Deployar a linhagem consolidada (mainnet + MC82.x + MC86 + MC87) para levar
+      as correções de performance e segurança a produção.
+  5.  Fazer o upload do AAB e das artes na Play Store assim que a conta for
+      verificada.
+  6.  Reconciliar a fila do Supabase (caminho seguro do MC59.8) e migrar a
+      assinatura para KMS.
+  7.  Monitorar a automação até o e-mail atingir 1623/1623 (previsão original
+      ~2026-08-02 no ritmo de 100/dia).
+
+
+################################################################################
+10. INVENTÁRIO DOS ARQUIVOS CONSOLIDADOS
+################################################################################
+
+10.1 — DESKTOP (103 arquivos · 1.105.043 bytes)
+--------------------------------------------------------------------------------
+RELATÓRIOS DE MEGA COMANDO (90)
+  MC25.2.txt · MC25.3-final.md · MC39.9-final.md · MC39.11.txt · MC39.12-final.md
+  MC39.13-final.md · MC39.15-final.md · MC39.15.1-final.md · MC39.22.1-final.md
+  MC39.22.2-final.md · MC39.22.3-final.md · MC39.23-planejamento.md
+  MC41-COMMAND.txt · MC41-final.md · MC45-final.md · MC53-PLANO.md
+  MC54.1-RUNBOOK.md · MC56-RELATORIO-FINAL.md · MC57.4-DESIGN-BRIEF.md
+  MC57.5-RELATORIO.md · MC59.1-RELATORIO.txt · MC59.2-RELATORIO.txt
+  MC59.3-RELATORIO.txt · MC59.4-RELATORIO.txt · MC59.5-RELATORIO.txt
+  MC59.6-RELATORIO.txt · MC59.7-RELATORIO.txt · MC59.10-RELATORIO.txt
+  MC59.11-RELATORIO.txt · MC59.12-RELATORIO.txt · MC59.14-RELATORIO.txt
+  MC59.15-RELATORIO.txt · MC60-NOGO-RELATORIO.txt · MC60-RELATORIO.txt
+  MC61.txt · MC62-RELATORIO.txt · MC63.txt · MC64-RELATORIO.txt
+  MC65-PLANO-REDESIGN-GLASS.txt · MC66-RELATORIO.txt · MC69-RELATORIO.txt
+  MC69.1-RELATORIO.txt · MC69.2-RELATORIO.txt · MC69.3-RELATORIO.txt
+  MC69.4-RELATORIO.txt · MC69.5-RELATORIO.txt · MC69.6-RELATORIO.txt
+  MC69.9-RELATORIO.txt · MC72-RELATORIO.txt · MC73-RELATORIO.txt
+  MC75-DIAGNOSTICO.txt · MC75-RELATORIO.txt · MC75.1-RELATORIO.txt
+  MC75.3-RELATORIO.txt · MC76-RELATORIO.txt · MC77-RELATORIO.txt
+  MC78-RELATORIO.txt · MC78.1-RELATORIO.txt · MC78.2-RELATORIO.txt
+  MC78.3-RELATORIO.txt · MC78.4-RELATORIO.txt · MC78.5-RELATORIO.txt
+  MC79-RELATORIO.txt · MC79-FINAL.txt · MC80-RELATORIO.txt · MC80.1-RELATORIO.txt
+  MC80.2-RELATORIO.txt · MC80.3-RELATORIO.txt · MC80.4.1-RELATORIO.txt
+  MC80.4.1.1-RELATORIO.txt · MC80.5-RELATORIO.txt · MC81-RELATORIO.txt
+  MC82-BASELINE.txt · MC82-DIAGNOSTICO.txt · MC82-GARGALOS.txt
+  MC82-PLANO-ACAO.txt · MC82-RELATORIO.txt · MC82.1-RELATORIO.txt
+  MC82.2-RELATORIO.txt · MC82.3-RELATORIO.txt · MC82.4-RELATORIO.txt
+  MC83-RELATORIO.txt · MC86-MAPEAMENTO.txt · MC86-RELATORIO.txt
+  MC87-BASELINE.txt · MC87-RELATORIO.txt · MC87-VALIDACAO.txt
+
+RELATÓRIOS DE LOGIN / INSPEÇÃO (3)
+  INSPECAO-LOGIN.txt · LOGIN-OAUTH-TEST.txt · LOGIN-OAUTH-TEST-logs.ndjson
+
+RELATÓRIOS AUXILIARES E NOTAS DE TRABALHO (9)
+  agent-shield-report.txt · EX-4-auditoria.md · INVESTIGACAO-COMFYUI.txt
+  imagens-finais.txt · legendas.txt · mock-data.txt
+  screenshots-documentacao.txt · screenshots-planejamento.txt
+  screenshots-plano-edicao.txt
+
+NOTAS DE FERRAMENTAL (2)
+  ponytail-install.md · skill-audit-baseline.md
+
+LISTA DE ESCALABILIDADE (1)
+  📋 LISTAGEM DE  ESCALABILIDADE COMPLETA..txt — 42 ações em 6 camadas, meta de
+  10.000 usuários simultâneos (base do programa MC39.18/19/20).
+
+10.2 — LIXEIRA (90 documentos .txt/.md · lidos read-only, NÃO restaurados)
+--------------------------------------------------------------------------------
+Contém a HISTÓRIA INICIAL do projeto, ausente do Desktop:
+
+  CONSOLIDAÇÕES     MC-FINAL.md (panorama MC15→MC30) · resumo.txt (MC30→MC37) ·
+                    MC52.txt (linha do tempo MC30→MC51)
+  AUDITORIAS        AUDITORIA-TOPOGRAFICA.md (MC35) ·
+                    SEGURANCA-MAINNET-READINESS.md · MC39.17-auditoria.md
+  VIDRO / VISUAL    MC25.1-final.md · MC25.4 · mc25.4_snapshot · MC25.6 ·
+                    MC25.6-final.md · MC25.7 · MC26 · MC26.1-final.md · MC27 ·
+                    MC27.1-final.md · MC43-final.md · MC45 ·
+                    MC58-PLANO-EXECUCAO.md · MC58.1-RELATORIO.md ·
+                    MC58.2-PLANO-MIGRACAO.md · MC58.3-RELATORIO.md ·
+                    MC66-PLANO-REFINAMENTOS-FRONTEND · MC67-RELATORIO
+  BLINDAGEM/CHAVE   MC28 · MC28.1-final.md · MC28.1-plano · MC28.1-plano definitivo ·
+                    MC30.plano · MC30.1-final.md · MC30.2 · MC30.2.1-final.md ·
+                    MC30.2.1-PASSO6-runbook.md · MC30.2.1-runbook-final.md ·
+                    MC31-final.md
+  LOJAS             MC29 · MC29.1-final.md
+  SUPABASE          MC32 · MC32.1-final.md · MC33 · MC33.1-final.md ·
+                    MC33-flip-final.md · MC34-final.md · MC34-automacao-final.md ·
+                    MC36.1-plano.md · MC36.1-final.md · MC37-plano.md ·
+                    MC37-final.md · MC37-FECHAMENTO-final.md · MC38-plano.md ·
+                    MC38-final.md
+  PRÉ-MAINNET       MC39-final.md · MC39.1-final.md · MC39.2-final.md ·
+                    MC39.3 · MC39.3-ajustes · MC39.3.1-final.md · MC39.4 ·
+                    MC39.4.1-final.md · MC39.4.2-final.md · MC39.6-final.md ·
+                    MC39.7 · MC39.7.1-final.md · MC39.8-final.md ·
+                    MC39.13-manual-steps · MC39.14-final.md ·
+                    MC39.17.1/17.2/17.3-final.md · MC39.18-escalabilidade ·
+                    MC39.19-final.md · MC39.20-final.md ·
+                    MC39.21-install-report.md · MC39.22-plano-enxugamento ·
+                    MC39.22.1-final-v2.md · MC40-checklist.md · MC40-final.md
+  MAINNET/BUNDLER   MC49.3-final.md · MC54.1-RUNBOOK - Copia.md ·
+                    MC56-RELATORIO-FINAL - Copia.md · MC59-RELATORIO ·
+                    MC59-RELATORIO-BRUTO · MC59.1-notas · MC59.8-RELATORIO
+  CAMPANHA          MC69-RELATORIO - Copia · MC69.5-DOMINIO-STATUS ·
+                    MC69.10-RELATORIO
+  AMBIENTE          ECC-instalacao · comando para ativar o opus 4.8 no terminal ·
+                    ⚠️ comando para ativar o deepseek v4 pro no terminal
+                       (CONTÉM CHAVE EM TEXTO CLARO — ver §6)
+
+A Lixeira contém ainda 57 itens não-documentais (pastas de screenshots MC25.6-shots,
+MC29.1-shots, MC36.1/37/38/39.x-shots, MC42/43/45/47/48-shots, MC49.x-shots;
+artes ARTES-PROMOCIONAIS e V2; vídeos do GUTO; backups mc36/mc36.1-blobs).
+
+10.3 — NÃO CONSOLIDADO E PRESERVADO
+--------------------------------------------------------------------------------
+  chaves importantes. EOA.txt — arquivo de segredos no Desktop. NÃO foi lido (R5)
+  e NÃO foi removido na limpeza. Recomenda-se movê-lo para um cofre fora do Desktop.
+
+
+################################################################################
+11. LIMPEZA EXECUTADA (SEGMENTO 4)
+################################################################################
+
+DECISÃO DO OPERADOR: arquivar em vez de apagar. O plano original do MC89 previa
+eliminar os relatórios; durante a execução o operador informou que a Lixeira tinha
+sido esvaziada POR ENGANO, o que confirmou na prática o risco de tratar estes
+documentos como descartáveis. A limpeza foi portanto convertida de DESTRUTIVA em
+ARQUIVÍSTICA: nada foi apagado.
+
+11.1 — RECUPERAÇÃO DA LIXEIRA
+  90 de 90 documentos (.txt/.md) COPIADOS da Lixeira para
+  `Desktop\MC-HISTORICO\recuperados-lixeira\` — 980.782 bytes.
+  Os itens originais permanecem na Lixeira como rede de segurança adicional;
+  nada foi restaurado ao local original nem eliminado.
+  ⚠️ Antes de esvaziar a Lixeira, tratar a chave DeepSeek exposta (§6, P0).
+
+11.2 — ARQUIVAMENTO DO DESKTOP
+  102 relatórios MOVIDOS da raiz do Desktop para `Desktop\MC-HISTORICO\`.
+  Índice completo em `MC-HISTORICO\_INDICE-arquivados-do-desktop.txt`.
+  Corresponde aos 103 documentos do inventário §10.1 menos o arquivo de segredos.
+
+11.3 — PRESERVADO NA RAIZ DO DESKTOP (deliberadamente)
+  MC89-RELATORIO-FINAL.txt ....... este relatório (entregável do MC89)
+  chaves importantes. EOA.txt .... arquivo de segredos, nunca lido (R5)
+
+11.4 — INTOCADO
+  Diretórios essenciais: DESAFIOGUT · GUTO · GUTO-ANIMADO GLASS DASHBOARD ·
+  WHATSAPP · EMAILS · BACKUP_KEYSTORE · playstore-screenshots · MC26-loops ·
+  MC39.7.1-shots · MC82.1-shots.
+  Binários e scripts (APK/AAB/bundletool.jar/*.py/*.lnk/*.png/Projeto_AE.zip)
+  ficaram na raiz: não são relatórios e apagá-los não estava no escopo do
+  Segmento 0. O AAB e os artefactos de build continuam disponíveis para a
+  submissão à Play Store.
+
+11.5 — NADA FOI APAGADO
+  Zero eliminações. Zero esvaziamento da Lixeira. Todas as operações foram
+  cópias ou movimentações reversíveis, com o inventário registado acima.
+
+
+================================================================================
+NOTA METODOLÓGICA (R3/R6)
+Cada afirmação deste relatório tem origem num arquivo nomeado do Desktop ou da
+Lixeira, no histórico git do repositório ou no cloud.md. Onde o enunciado do MC89
+divergia da evidência, prevaleceu a evidência e a divergência está anotada: o LCP
+final medido é de 748 ms de mediana (MC82.3), e não ~780 ms; as credenciais
+SendGrid e Twilio vivem nos configs do PythonAnywhere (MC75.1), não no Netlify.
+Nenhum segredo foi lido, transcrito ou armazenado — a chave encontrada na Lixeira
+é reportada pela sua existência e localização, nunca pelo seu valor. Nenhuma linha
+de código-fonte do DesafioGUT foi alterada. Nenhuma ação com custo foi executada.
+Nenhum item da Lixeira foi restaurado ou eliminado.
+================================================================================
+FIM — MC89 · RELATÓRIO FINAL DA JORNADA DO DESAFIOGUT
+================================================================================

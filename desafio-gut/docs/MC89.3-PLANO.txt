@@ -1,0 +1,132 @@
+================================================================================
+MC89.3 — SEGMENTO 3 · PLANO DE IMPLEMENTAÇÃO (executa no MC89.4)
+================================================================================
+Data....: 2026-07-29
+Base....: MC89.3-DIAGNOSTICO · MC89.3-ELEMENTOS · MC89.3-ARQUITETURA
+Código..: ZERO alterações (R1). Este documento é o que se aprova antes do MC89.4.
+
+Ordem deliberada: os P0 primeiro. Se o MC89.4 tiver de parar a meio, para com o
+painel LEGÍVEL — que é o que hoje não está.
+
+================================================================================
+PASSO 1 — LEGIBILIDADE E FIM DA ATMOSFERA  (os dois P0)
+================================================================================
+FICHEIROS
+  NOVO  src/lib/rotasTrabalho.js
+        `export function ehRotaDeTrabalho(pathname)` → true para /admin.
+        `false` por omissão, sempre. Uma lista explícita, num sítio só.
+
+  ALTERA src/widgets/layout/BackgroundCanvas.jsx
+        se rota de trabalho → fundo SÓLIDO navy: sem `<video>`, sem WebP.
+        Não é `return null` — o fundo tem de existir, senão fica o body a nu.
+
+  ALTERA src/widgets/layout/AppLayout.jsx
+        se rota de trabalho → não monta `<AtmosphereFilter/>`.
+
+  ALTERA src/pages/AdminPanel.jsx
+        container raiz ganha `className="gut-glass-standard gut-glass--solid admin-panel"`
+        (a classe de leitura que o MC25.7 criou para este mesmo defeito).
+
+  ALTERA src/globals.css
+        `.admin-panel` — superfície, tipografia de sistema, cor de texto e
+        rótulos. Sem cor nova: só tokens já existentes.
+
+CRITÉRIOS DE ACEITAÇÃO — medidos, não olhados
+  ✔ na rota /admin, `document.querySelectorAll('video').length === 0`
+  ✔ o container raiz do painel tem `backgroundColor` ≠ `rgba(0,0,0,0)`
+    (hoje é transparente — medido no S0)
+  ✔ "Logado como admin: …" e "Autentique-se para ver as métricas." legíveis na
+    captura de ecrã
+  ✔ NÃO-REGRESSÃO POR PROVA VISUAL: captura ANTES/DEPOIS de `/` (Dashboard
+    comum) e `/mercado` — a ilustração, o vídeo e a vinheta continuam lá
+  ✔ na rota `/`, `document.querySelectorAll('video').length === 1` (o vídeo
+    continua a existir fora das rotas de trabalho)
+
+ESFORÇO: ~0,5 sessão. RISCO: médio — toca em ficheiros que todas as rotas
+atravessam. É por isso que os critérios exigem captura das outras rotas.
+
+================================================================================
+PASSO 2 — MOBÍLIA  (os P1)
+================================================================================
+Depende das decisões D-A e D-B do MC89.3-ELEMENTOS. Sem elas, este passo não
+arranca — e não é bloqueio artificial: remover a navegação sem alternativa deixa
+o administrador sem forma de sair do painel no telemóvel.
+
+FICHEIROS
+  ALTERA src/widgets/layout/Layout.jsx   rodapé legal ausente em rota de trabalho
+  ALTERA src/widgets/layout/BottomNav.jsx  conforme D-B
+  (E-04/GUTO)  conforme D-A
+
+CRITÉRIOS
+  ✔ o rodapé "Privacidade · Termos · Suporte · Excluir conta" não aparece no /admin
+  ✔ o rodapé CONTINUA a aparecer em `/` e `/carteira` (é obrigação legal ali)
+  ✔ há sempre uma saída do painel visível no telemóvel
+
+ESFORÇO: ~0,3 sessão. RISCO: baixo, com a ressalva da saída.
+
+================================================================================
+PASSO 3 — CHROME DO PAINEL  (os P2)
+================================================================================
+FICHEIRO ÚNICO: src/pages/AdminPanel.jsx
+
+  · retirar os emojis do título e dos 4 separadores (E-07)
+  · título: cinzento-claro + fonte de sistema, sem Orbitron nem laranja (E-08)
+  · "Login Admin" passa a botão neutro (E-09)
+  · StatusBadge e as pastilhas de cota: texto com peso; cor só para falha (E-10)
+  · separadores numa linha só, com scroll horizontal se não couberem (E-11)
+
+CRITÉRIOS
+  ✔ zero emojis no ecrã /admin (verificável por regex no innerText lido por CDP)
+  ✔ nenhum #f5a623 no painel, exceto onde marque ação irreversível
+  ✔ os 4 separadores numa linha, no telemóvel
+  ✔ os três separadores existentes continuam a fazer o que faziam — aprovar,
+    listar cotas, gerir admins. Prova: exercitar um de cada com a sessão do ADM
+
+ESFORÇO: ~0,5 sessão. RISCO: baixo (um ficheiro, apresentação).
+
+================================================================================
+VALIDAÇÃO — COMO SE PROVA QUE FICOU BEM
+================================================================================
+NO APARELHO, com a sessão do ADM (0x1E1b…d198cB):
+  1. captura de `/admin` ANTES (já feita: docs/MC89.3-evidencia-admin.png)
+  2. captura de `/admin` DEPOIS
+  3. captura de `/` e `/mercado` DEPOIS → têm de estar iguais ao que são hoje
+  4. medições por CDP: nº de `<video>`, backgroundColor do container, innerText
+     sem emojis
+  ⚠️ trazer a app para PRIMEIRO PLANO antes de medir. Uma app em background lê
+     o DOM mas não pinta, e isso já me fez concluir uma coisa errada no MC89.2.
+
+NA SUÍTE: 293/293 tem de continuar verde. Não se esperam testes novos — isto é
+apresentação — exceto uma guarda estrutural: `ehRotaDeTrabalho` devolve `false`
+para `/`, `/mercado`, `/carteira` e `true` para `/admin`. Vale a pena porque um
+`true` a mais aqui apaga a identidade visual do produto de consumo.
+
+APK: será necessário recompilar (`npm run build:apk`, R10) — são alterações de
+FRONTEND, e o APK empacota o seu próprio frontend.
+
+================================================================================
+O QUE SE ENTREGA NO FIM DO MC89.4
+================================================================================
+• painel legível, sem ilustração, sem confetes, sem vídeo a correr
+• sem mobília de consumo (conforme D-A/D-B)
+• sem emojis, sem fonte de display, sem laranja decorativo
+• Dashboard comum, Corporativo e Mercado visualmente INTOCADOS, com prova
+• zero funcionalidades removidas
+• APK recompilado e relatório com as capturas antes/depois
+
+================================================================================
+O QUE PODE CORRER MAL
+================================================================================
+1. Apagar a atmosfera numa rota a mais e descaracterizar o produto de consumo.
+   → `false` por omissão + guarda de teste + captura das outras rotas.
+2. A superfície opaca "achatar" o painel e ficar um retângulo morto.
+   → é o efeito pretendido (o operador pediu "lisa"), mas se ficar excessivo o
+   ajuste é a opacidade da MESMA classe, não uma cor nova.
+3. O `.admin-panel` não pegar por causa dos estilos inline (inline vence classe).
+   → previsto no S2: os inline são editados no ficheiro, não combatidos por CSS.
+4. Remover a navegação e deixar o ADM sem saída no telemóvel.
+   → D-B tem de ser decidida ANTES do Passo 2.
+
+================================================================================
+FIM DO SEGMENTO 3
+================================================================================

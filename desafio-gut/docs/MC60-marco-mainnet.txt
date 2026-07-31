@@ -1,0 +1,241 @@
+================================================================================
+MC60 — MARCO DEFINITIVO: MAINNET ATIVA
+RELATÓRIO FINAL DE CONSOLIDAÇÃO E ENCERRAMENTO DA JORNADA
+DesafioGUT
+================================================================================
+Data do marco..: 2026-07-09
+Branch.........: feat/mc60-marco-mainnet (a partir de feat/mc59.15-correcao-config-mainnet)
+Natureza.......: DOCUMENTAÇÃO E CONSOLIDAÇÃO — R1: ZERO alteração de código,
+                 ZERO transação on-chain, ZERO manuseio de segredos pelo agente.
+Evidências.....: on-chain (RPC público, read-only) + health check ao vivo (produção).
+
+--------------------------------------------------------------------------------
+0. VEREDITO FINAL
+--------------------------------------------------------------------------------
+✅ MAINNET ATIVA — SISTEMA EM PRODUÇÃO NA ETHEREUM MAINNET.
+
+Base de evidências (coletadas ao vivo em 2026-07-09, read-only):
+  • Contrato LeilaoGUT publicado e saudável na mainnet (bytecode presente).
+  • Coordenação on-chain = NOVA EOA (chave rotacionada, a antiga foi revogada).
+  • Backend em produção em modo mainnet (health: SIGNER_READY=set, RPC_URL=set,
+    alerta CHAVE_BRUTA_EM_MAINNET ativo — que só dispara com local-key em mainnet).
+
+Ressalva honesta (única pendência não bloqueante, gate do OPERADOR):
+  🟡 A validação da compra real de R$ 1,00 (transação com ETH real) é o último
+     passo de aceite e NÃO pode ser executada pelo agente (R1). Todo o caminho
+     de LEITURA está verde; falta a prova de ESCRITA fim-a-fim pelo operador.
+
+--------------------------------------------------------------------------------
+1. RESUMO EXECUTIVO DA JORNADA TÉCNICA (MC52.1 → MC60)
+--------------------------------------------------------------------------------
+A jornada até a mainnet foi uma sequência de: (A) uma crise de infraestrutura de
+terceiro que derrubou a arquitetura original, (B) a resolução metódica dos
+bloqueadores de segurança e atomicidade, (C) a preparação de uma base limpa para
+a mainnet (chave nova + contrato novo), e (D) a correção final de configuração que
+restaurou a comunicação on-chain. O MC60 consolida e sela esse percurso.
+
+A. CRISE DO BUNDLER (MC52.1 → MC56)
+   • O bundler Biconomy (ERC-4337) foi desativado — "chainId not supported" para
+     TODAS as chains, inclusive staging pública. A Smart Account da coordenação
+     ficou sem como submeter UserOperations.
+   • Tentativas de migração (Pimlico/Alchemy como bundler externo; custódia via
+     AWS KMS/Safe) esbarraram em complexidade e acoplamento.
+   • SOLUÇÃO — Opção D: abandonar a Smart Account e redeployar o contrato com uma
+     EOA comum como coordenação. Backend passou a assinar com SIGNER_BACKEND=local-key.
+   • Resultado: a compra de senhas voltou a funcionar pelo backend, mas o frontend
+     ficou em drift (apontando para contrato antigo) — dívida carregada até MC59.15.
+
+B. RESOLUÇÃO DOS BLOQUEADORES (MC59.1 → MC59.6)
+   • B-1 (signer/mainnet): permitir local-key em mainnet com opt-in EXPLÍCITO
+     (default mainnet = biconomy, que rejeita chave bruta). Alerta chaveBrutaEmMainnet.
+   • B-2 (tx.wait): confirmação por tx-hash específico (fim do wait ambíguo).
+   • B-4 (frontend hardcoded): configuração centralizada em src/lib/network.js
+     (VITE_CONTRATO_SEPOLIA / VITE_CHAIN_ID / VITE_NETWORK_STAGE / VITE_EXPLORER_URL).
+   • C-1 (crédito não-atômico): CAS + INSERT atômico (sem dupla-credição).
+   • D-1 (webhook HMAC): verificação opt-in + alerta.
+   • ADR (confirmação assíncrona): fila + worker + resposta 202 — projetado e
+     DORMENTE (não ativado em produção; feature-flag CREDITO_ASSINCRONO=OFF).
+   • Frontend: polling preparado para o fluxo 202.
+
+C. PREPARAÇÃO PARA MAINNET (MC59.10 → MC59.14)
+   • Decisão da EOA (Opção B): a chave do coordenador havia sido exposta em texto
+     puro num chat → tratada como COMPROMETIDA. Rotação ANTES do ETH real (sweeper
+     bots tornam quase certa a perda se financiar um endereço comprometido).
+   • Correção de selector: coordenacao() = 0xe06f9dbf; coordenacaoPendente() =
+     0x0956e76e (comandos antigos confundiram os dois → falso alarme de "coord zerado").
+   • Deploy na mainnet: contrato 0x0052477A…16cd, coordenação = nova EOA
+     0xFea436…1E67 (deployada a partir dela; o constructor faz coordenacao=msg.sender).
+   • Revogação da chave antiga (0x1394492e…): removida dos .env locais (verificado na
+     3ª checagem); não estava em arquivo tracked nem no histórico git.
+   • Auditoria externa (P0): decidida Opção B (aceitação formal de risco) — o contrato
+     não custodia fundos (sem payable/transfer/receive/fallback); dinheiro real é
+     off-chain (PIX/MP); revisão técnica interna MC59.1–59.6 + monitoramento.
+   • Reescrita de mainnet-prerequisites.md para a Opção B (removeu Smart Account/
+     Biconomy dos passos operacionais).
+   • MC60-NOGO: veredito NO-GO EMITIDO E DEPOIS SUPERADO — ver seção 3.
+
+D. CORREÇÃO FINAL (MC59.15)
+   • Premissa original (endereços errados) REFUTADA: os endereços já estavam certos.
+   • Causa raiz real dos erros saldoSenhas (0x/BAD_DATA) e comprar-senhas (502):
+       - RPC_URL e VITE_ALCHEMY_URL ainda em eth-SEPOLIA (frontend lia o contrato
+         mainnet via RPC Sepolia → onde o endereço não tem código → 0x);
+       - CONTRATO_SEPOLIA = 0x825b…eF06 (contrato ANTIGO), resolvido por
+         _lib/contract.mjs ANTES de VITE_CONTRATO_SEPOLIA → backend no contrato velho.
+   • Correção = 3 variáveis de ambiente (RPC_URL, VITE_ALCHEMY_URL, CONTRATO_SEPOLIA)
+     — a mesma API key Alchemy funciona trocando o subdomínio sepolia→mainnet.
+     ZERO alteração de código-fonte.
+
+--------------------------------------------------------------------------------
+2. MARCOS TÉCNICOS ALCANÇADOS
+--------------------------------------------------------------------------------
+  Contrato na mainnet.............: ✅ 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+  Nova EOA coordenadora...........: ✅ 0xFea436f74059F885ea50D48aBbE21ef6665d1E67
+  Chave antiga (comprometida).....: ✅ revogada nos .env locais (0x1394492e…)
+  Backend signer..................: ✅ local-key (opt-in explícito, MC59.1)
+  Variáveis de ambiente (Netlify).: ✅ endereços/chain/stage corretos; RPCs corrigidos
+  Health check (produção).........: ✅ modo mainnet, signer pronto
+  Auditoria de segurança..........: ✅ Opção B (aceitação formal de risco) — MC59.14
+  Compra real de R$ 1,00..........: 🟡 aguardando validação manual (OPERADOR)
+
+--------------------------------------------------------------------------------
+3. REGISTRO DE EVIDÊNCIAS (coletadas ao vivo em 2026-07-09)
+--------------------------------------------------------------------------------
+
+3.1 — EVIDÊNCIA ON-CHAIN (RPC público ethereum-rpc.publicnode.com, read-only)
+  Contrato: 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+  • eth_chainId ................ 0x1  (Ethereum mainnet)                       ✅
+  • eth_getCode ................ 9648 chars de bytecode (contrato EXISTE)      ✅
+  • coordenacao() (0xe06f9dbf) . 0x…fea436f74059f885ea50d48abbe21ef6665d1e67
+                                 = 0xFea436f74059F885ea50D48aBbE21ef6665d1E67
+                                 = NOVA EOA coordenadora                        ✅
+  Etherscan: https://etherscan.io/address/0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+
+  → Isto DERRUBA os bloqueadores B1/B5 do MC60-NOGO (que constatavam, no contrato
+    ANTIGO 0x825b…, getCode="0x" na mainnet). Com o novo contrato, o núcleo do
+    leilão (adicionarSenhas/darLance/saldoSenhas) tem código real para chamar.
+
+3.2 — EVIDÊNCIA DE CONFIGURAÇÃO (health check ao vivo, produção)
+  GET https://silly-stardust-ca71bc.netlify.app/.netlify/functions/health
+  Resposta (2026-07-09T02:22:33Z):
+    { ok: true, service: "desafiogut-functions", node: "v22.23.1",
+      env: { JWT_SECRET: set, SIGNER_BACKEND: "local-key", SIGNER_READY: set,
+             CHAVE_BRUTA_EM_MAINNET: "ALERT", RPC_URL: set,
+             PIX_PROVIDER: "mercadopago", MP_ACCESS_TOKEN: set } }
+  Leitura:
+    • SIGNER_READY=set + RPC_URL=set → assinatura on-chain habilitada.               ✅
+    • CHAVE_BRUTA_EM_MAINNET=ALERT → confirma que o sistema está em MODO MAINNET
+      (esse alerta só dispara com local-key operando em mainnet — o opt-in do MC59.1).✅
+    • PIX_PROVIDER=mercadopago + MP_ACCESS_TOKEN=set → trilho de pagamento pronto.    ✅
+
+3.3 — EVIDÊNCIA DE VARIÁVEIS (documentada em MC59.15, produção Netlify)
+  Corretas (não mexer): VITE_CONTRATO_SEPOLIA=CONTRATO_MAINNET=0x0052…16cd;
+  VITE_CHAIN_ID=1; MAINNET_CHAIN_ID=1; VITE_NETWORK_STAGE=NETWORK_STAGE=mainnet;
+  VITE_EXPLORER_URL=https://etherscan.io; SIGNER_BACKEND=local-key;
+  VITE_MOCK_MODE=false; DATA_STORE_BACKEND=supabase.
+  Corrigidas (runbook MC59.15): RPC_URL e VITE_ALCHEMY_URL → eth-mainnet;
+  CONTRATO_SEPOLIA → 0x0052…16cd. Vars mortas (sem leitores): VITE_RPC_URL_SEPOLIA,
+  VITE_CONTRACT_ADDRESS.
+
+3.4 — VALIDAÇÃO MANUAL (a registrar pelo operador após o teste)
+  [ ] Compra de R$ 1,00 concluída com sucesso.
+  [ ] Transação visível no Etherscan (endereço do contrato acima).
+  [ ] Crédito de senhas confirmado na conta do comprador.
+
+--------------------------------------------------------------------------------
+4. RECONCILIAÇÃO DO MC60-NOGO (por que o NO-GO foi SUPERADO)
+--------------------------------------------------------------------------------
+O relatório MC60-NOGO (2026-07-08) emitiu 🔴 NO-GO com base no estado ANTERIOR ao
+deploy. Cada bloqueador foi resolvido nos MCs seguintes:
+
+  B1/B5 [CRÍTICO] Contrato não existia na mainnet (0x825b…) ....... RESOLVIDO
+        → MC59.11/59.14: novo contrato 0x0052…16cd deployado (evidência 3.1).
+  B2    [CRÍTICO] Chave privada exposta/comprometida .............. RESOLVIDO
+        → MC59.10/59.14: nova EOA gerada; chave antiga revogada nos .env.
+  B3    [ALTO] Nonce da coordenação não serializado ............... MITIGADO
+        → MC59.4: retry ciente de nonce + runbook; fix definitivo (fila async) dormente.
+  B4    [ALTO] Segredos placeholder (MP_WEBHOOK_SECRET/SENTRY) ..... PARCIAL/OPERADOR
+        → health confirma MP_ACCESS_TOKEN=set; MP_WEBHOOK_SECRET/SENTRY_DSN ficam
+          como confirmação do operador (ver Pendências 🟡).
+
+Conclusão: o NO-GO era CORRETO no momento em que foi escrito, e foi CORRETAMENTE
+superado por trabalho de engenharia rastreável — não ignorado.
+
+--------------------------------------------------------------------------------
+5. PENDÊNCIAS E DÍVIDAS TÉCNICAS
+--------------------------------------------------------------------------------
+🔴 CRÍTICAS (bloqueiam o sistema) ........................ NENHUMA.
+
+🟡 ALTAS (recomendado resolver em breve)
+  • Validação manual da compra de R$ 1,00 (OPERADOR) — último aceite fim-a-fim.
+  • Confirmar no painel Netlify: COORDENACAO_PRIVATE_KEY de produção = nova EOA
+    0xFea436…1E67 (ressalva "reconfirmar Netlify" herdada do MC59.14).
+  • MP_WEBHOOK_SECRET real (painel Mercado Pago) + SENTRY_DSN confirmado — para não
+    perder a observabilidade de credito_pendente adicionada no MC59.3.
+  • Ativar CREDITO_ASSINCRONO=ON (fila + worker) só após aplicar a migração da fila
+    e validar em produção — corrige de forma definitiva o nonce hot-key (B3).
+
+🟢 BAIXAS (melhoria futura / hardening)
+  • Migrar a custódia do coordenador de local-key para AWS KMS (0xAEFe11…EdFF) ou
+    Gnosis Safe — encerra o alerta CHAVE_BRUTA_EM_MAINNET.
+  • Flashbots/CONSOLIDATION_RPC_URL (mempool privado) e hardening Privy.
+  • Monitoramento contínuo (health checks, logs de Functions, Sentry).
+
+--------------------------------------------------------------------------------
+6. LINHA DO TEMPO DA JORNADA
+--------------------------------------------------------------------------------
+  MC52.1 → MC56 .... Crise do bundler Biconomy → Opção D (EOA + local-key, redeploy).
+  MC59.1 → MC59.6 .. Resolução dos bloqueadores (signer, tx.wait, config, atomicidade,
+                     HMAC) + ADR de confirmação assíncrona (dormente) + polling.
+  MC59.7 → MC59.9 .. Runbook/tentativas de migração da fila (abortadas com segurança —
+                     histórico remoto vazio + risco de DROP TABLE CASCADE).
+  MC59.10 → MC59.14  Preparação mainnet: decisão da EOA nova, deploy do contrato
+                     0x0052…16cd, revogação da chave antiga, auditoria=Opção B,
+                     reescrita de mainnet-prerequisites.md.
+  MC60-NOGO ........ Veredito NO-GO (pré-deploy) — depois superado (ver seção 4).
+  MC59.15 .......... Correção final: RPCs para mainnet + CONTRATO_SEPOLIA corrigido.
+  MC60 (este) ...... Marco definitivo: consolidação + evidências ao vivo + veredito.
+
+--------------------------------------------------------------------------------
+7. DOCUMENTOS E RELATÓRIOS ENTREGUES
+--------------------------------------------------------------------------------
+Relatórios da série MC59 (em desafio-gut/docs/ e Desktop\):
+  MC59, MC59.1, MC59.2, MC59.3, MC59.4 (nonce+runbook),
+  MC59.5 (ADR confirmação assíncrona), MC59.6 (frontend polling),
+  MC59.7 (runbook migração fila), MC59.8 (migração via CLI — abortada),
+  MC59.10 (decisão EOA), MC59.11 (nova EOA + deploy),
+  MC59.12 (avaliação NO-GO), MC59.13 (reescrita mainnet-prerequisites),
+  MC59.14 (revogação da chave + auditoria=B), MC59.15 (correção dos RPCs).
+  (MC59.9 — ADR em staging — abortado; sem relatório dedicado.)
+
+Documentos de referência:
+  cloud.md ........................... histórico completo do projeto (fonte de verdade).
+  docs/mainnet-prerequisites.md ...... checklist reescrito para a Opção B.
+  docs/runbook-credito-pendente.md ... reconciliação de crédito pendente.
+  docs/runbook-incidentes.md ......... resposta a incidentes.
+  docs/adr-2026-07-08-confirmacao-assincrona.md ... ADR do fix definitivo (dormente).
+  docs/MC60-NOGO-relatorio.txt ....... veredito NO-GO (contexto histórico).
+  security_audit.md .................. revisões de segurança.
+
+Entregas do MC60:
+  Desktop\MC60-RELATORIO.txt ......... este relatório.
+  desafio-gut\docs\MC60-marco-mainnet.txt ... cópia versionada no repositório.
+  cloud.md ........................... registro do marco definitivo (seção MC60).
+
+--------------------------------------------------------------------------------
+8. VEREDITO FINAL
+--------------------------------------------------------------------------------
+✅ MAINNET ATIVA — SISTEMA EM PRODUÇÃO NA ETHEREUM MAINNET.
+
+  Sustentado por evidência concreta e ao vivo: contrato saudável na mainnet
+  (chainId 0x1, bytecode presente), coordenação = nova EOA rotacionada, e backend
+  de produção em modo mainnet com o signer pronto.
+
+  Única pendência não bloqueante: a validação manual da compra de R$ 1,00 (ETH
+  real), que por regra do projeto (R1) cabe ao OPERADOR — o agente não assina
+  transações reais. Todo o lado de leitura está verde.
+
+  O DESAFIOGUT está oficialmente registrado como EM PRODUÇÃO NA MAINNET.
+
+================================================================================
+FIM — MC60 (MARCO DEFINITIVO: MAINNET ATIVA)
+================================================================================

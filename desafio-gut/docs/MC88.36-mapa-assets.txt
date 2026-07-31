@@ -1,0 +1,65 @@
+MC88.36 — SEGMENTO 0: MAPA DOS PONTOS DE CARREGAMENTO DE ARRANQUE
+================================================================================
+Base: MC88.35 §0.3 (cascata medida no aparelho, 2026-07-28).
+Paint de referência: 2114 / 2121 / 2163 ms.
+
+ASSET                       ms     TAMANHO   ORIGEM NO CÓDIGO
+--------------------------------------------------------------------------------
+background-mobile.webp     1326    200 068   globals.css:257 (.gut-bg-layer--mobile)
+                                             + BackgroundCanvas.jsx:107 (poster)
+background-desktop.webp    1332    109 322   globals.css:261 (.gut-bg-layer--desktop)
+fundo-loop-v3-mobile.webm  1360    410 874   BackgroundCanvas.jsx:106
+guto-favicon-32.png        1382     (2×)     index.html (favicon)
+guto-login.png             1885    455 785   PrivyRoot.jsx:238 (appearance.logo)
+guto-1.png ?v=mc58         1912    228 318   CarrosselGUTO.jsx:24 (poster)
+guto-2.png ?v=mc58         1912    192 821   CarrosselGUTO.jsx:24
+guto-1.webm ?v=mc58        1915  1 164 223   CarrosselGUTO.jsx:23
+guto-2.webm ?v=mc58        1916    613 731   CarrosselGUTO.jsx:23
+logo-uniao-trabalho.png    1924     57 127   (layout)
+idle.webm ?v=mc41c         1951    611 063   GutoSpritePlayer.jsx:76 (SRC.breathing)
+guto-chat.png              1999      2 718   (chatbot)
+fonts.gstatic.com          2092      —       index.html:31-33 + globals.css:2
+--------------------------------------------------------------------------------
+>>> PAINT AOS 2114 ms <<<
+--------------------------------------------------------------------------------
+celebration.webm ?v=mc41c  2907  2 264 857   GutoSpritePlayer.jsx:78 (SRC.celebrating)
+   pedido 3×                                 via EdicaoCard.jsx:100 e Dashboard.jsx:263
+
+
+ACHADOS QUE MUDAM O PLANO
+================================================================================
+
+A1 — `celebration.webm` é pedido DEPOIS do paint (2907 ms vs 2114 ms).
+     Removê-lo do arranque poupa 2,26 MB de I/O e memória, mas NÃO PODE reduzir
+     o tempo de paint. O ganho de ≥200 ms tem de vir dos segmentos 2 a 5.
+
+A2 — `celebration.webm` NÃO é um preload perdido: está a ser legitimamente
+     montado. `EdicaoCard.jsx:100` passa `mood="celebrating"` sempre que a
+     edição está `encerrada`, e o endpoint /edicoes devolve várias edições
+     RELAMP-* com `status:"encerrado"`. Três cartões encerrados = três vídeos
+     de 2,26 MB. A premissa do plano ("só carregar quando uma celebração for
+     ativada") não se aplica: para o código, ELA ESTÁ ativada. O que é preciso
+     é adiar a montagem, não condicioná-la a um evento que já ocorreu.
+
+A3 — `background-desktop.webp` NÃO vem do <video>. O `BackgroundCanvas.jsx`
+     já monta apenas o vídeo da largura corrente desde o MC88.31. O pedido vem
+     de `globals.css:261`: a `<div className="gut-bg-layer--desktop">` é sempre
+     renderizada (linha 87) e o CSS esconde-a com `opacity: 0` — mas um elemento
+     com opacity:0 continua a descarregar o seu background-image.
+     Correção coerente com o precedente do MC88.31: não montar a div.
+
+A4 — As fontes são carregadas em DOIS sítios, com listas DIFERENTES:
+       index.html:33   → Orbitron + Inter + JetBrains Mono   (<link>, bloqueante)
+       globals.css:2   → Montserrat + Inter + JetBrains Mono (@import)
+     O `@import` dentro do CSS é pior: só é descoberto depois de o CSS ser
+     descarregado e analisado, portanto serializa mais um salto.
+
+A5 — MONTSERRAT É PESO MORTO. Definida em `--font-display` (globals.css:69) e
+     na classe `.font-display` (globals.css:449), mas NENHUM .jsx usa qualquer
+     das duas. São 6 pesos + 1 itálico carregados para nada, no caminho crítico.
+     (Orbitron, Inter e JetBrains Mono são realmente usadas — verificado.)
+
+--------------------------------------------------------------------------------
+NOTA DE MÉTODO: o plano manda `git add .`. NÃO foi usado: o repositório tem ~100
+ficheiros de skills por rastrear (`.agents/skills/**`) que seriam varridos para
+dentro dos commits. Todos os commits deste MC usam caminhos explícitos.

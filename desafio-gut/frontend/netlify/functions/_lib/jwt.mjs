@@ -88,11 +88,13 @@ export async function verificarUserSession(token) {
 }
 
 // Admin access JWT — emitido por /auth-admin, TTL 15 min por padrão.
-// MC7: aceita mfaVerified opcional — Phase 2 (/auth-admin com Privy MFA) ativa.
-export async function assinarAdminAccess(endereco, ttlSec = 900, mfaVerified = false) {
+// MC89.11 (Fase 2): claim `nivel` adicionada. Tokens sem ela (emitidos antes
+// da migração) são tratados como "admin" nos gates que verificam nível.
+export async function assinarAdminAccess(endereco, ttlSec = 900, { mfaVerified = false, nivel = null } = {}) {
   if (!KEY) throw new Error("JWT_SECRET não configurado");
   const claims = { endereco, tipo: "admin-access" };
   if (mfaVerified) claims.mfa_verified = true;
+  if (nivel) claims.nivel = nivel;
   return await new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()

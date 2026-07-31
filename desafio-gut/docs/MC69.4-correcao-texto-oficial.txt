@@ -1,0 +1,88 @@
+================================================================================
+MC69.4 — CORRECAO DEFINITIVA: TEXTO OFICIAL + MEDALHAO LISO (CERTIFICADO)
+Data: 2026-07-10
+================================================================================
+
+VEREDITO FINAL: [OK] 3 VERSOES CORRIGIDAS E CERTIFICADAS.
+
+--------------------------------------------------------------------------------
+1. RESUMO
+--------------------------------------------------------------------------------
+Fluxo OBRIGATORIO image-to-image (Cloud Comfy, sem text2img): cada arte aprovada
+foi carregada como referencia e editada para (a) aplicar a MENSAGEM OFICIAL do
+cliente (PJ + PF + telefone + CTA), (b) recompor em formato mais quadrado 4:5, e
+(c) aplicar a mudanca solicitada pelo operador em pleno MC: MEDALHAO LISO, SEM A
+LETRA (nem "K" nem "G", medalhao dourado liso). GUTO mantido identico em todo o
+resto (rosto, corpo, terno navy, colete laranja, gravata borboleta, brinco).
+Uma base -> uma versao. 3 imagens distintas (3 md5 distintos).
+
+Ajuste extra de fidelidade: na versao3, a gravata voltou a ser BORBOLETA
+(corrigindo o desvio de gravata reta observado no MC69.3).
+
+--------------------------------------------------------------------------------
+2. FLUXO / PIPELINE (MC68-validado)
+--------------------------------------------------------------------------------
+Comfy Cloud (MCP) — submit_workflow:
+  LoadImage(arte base aprovada) -> GeminiImage2Node -> SaveImage
+  Modelo: gemini-3-pro-image-preview (Nano Banana Pro)
+  images = referencia (image-to-image) | aspect_ratio: 4:5 | resolution: 2K
+  Bases enviadas via upload; prompt com trava de ortografia do telefone e
+  instrucao explicita de medalhao liso sem letra.
+
+--------------------------------------------------------------------------------
+3. CERTIFICACAO OBRIGATORIA (Segmento 2) — leitura direta das imagens (MCP)
+--------------------------------------------------------------------------------
+Criterios por imagem: (1) GUTO identico [+ medalhao liso sem letra, conforme
+override do operador]; (2) formato 4:5; (3) texto oficial presente/correto;
+(4) cores navy #050818 + laranja #ff6b35; (5) distinta das demais.
+
+VERSAO 1 (base versao-2-1 — apontando + martelo erguido)
+  arquivo: versao1/versao1-final.png | 1856x2304 (4:5)
+  medalhao liso sem letra: SIM | telefone (92) 98428-5774: EXATO
+  (1)OK (2)OK (3)OK (4)OK (5)OK -> STATUS: APROVADO
+  prompt_id 5bb045ca-ab5c-4ad3-9dc9-a278218aa380 (seed 6941)
+
+VERSAO 2 (base versao-2-2 — cartaz ANUNCIE AQUI + martelo)
+  arquivo: versao2/versao2-final.png | 1856x2304 (4:5)
+  medalhao liso sem letra: SIM | telefone (92) 98428-5774: EXATO
+  (1)OK (2)OK (3)OK (4)OK (5)OK -> STATUS: APROVADO
+  prompt_id 12720b36-c41b-479e-9278-9f5593e392a3 (seed 6942)
+
+VERSAO 3 (base versao-2-3 — martelo no ombro + caixas)
+  arquivo: versao3/versao3-final.png | 1856x2304 (4:5)
+  medalhao liso sem letra: SIM | gravata borboleta restaurada: SIM
+  telefone (92) 98428-5774: EXATO
+  (1)OK (2)OK (3)OK (4)OK (5)OK -> STATUS: APROVADO
+  prompt_id 9a16f3b1-4726-457a-8b88-9e0e354868e7 (seed 6943)
+
+TEXTO OFICIAL conferido nas 3 (acentos corretos):
+  "PESSOA JURIDICA: nos ajudamos a vender os seus produtos e servicos!"
+  "PERGUNTE COMO: (92) 98428-5774"
+  "PESSOA FISICA: compre por um preco bem baixinho"
+  "AQUI VOCE DIZ QUANTO QUER PAGAR"
+  "GANHA quem ofertar o MENOR LANCE UNICO"
+  "BAIXE o app DesafioGUT - cadastre-se, compre senhas e participe."
+
+Iteracoes (Boulder Loop): 1 rodada de geracao; 0 reprovacoes.
+
+--------------------------------------------------------------------------------
+4. ARQUIVOS ENTREGUES (SOMENTE APOS CERTIFICACAO)
+--------------------------------------------------------------------------------
+C:\Users\Moltbot\Desktop\ARTES-PROMOCIONAIS-V2\
+  versao1\versao1-final.png   (= versao1-mc694.png)
+  versao2\versao2-final.png   (= versao2-mc694.png)
+  versao3\versao3-final.png   (= versao3-mc694.png)
+Nota de formato: 1856x2304 e a MESMA proporcao 4:5 de 1080x1350, em resolucao
+superior. Downscale exato para 1080x1350 disponivel sob pedido do operador.
+
+--------------------------------------------------------------------------------
+5. PILARES
+--------------------------------------------------------------------------------
+SUPERPERS: apenas edicao de ativos, zero codigo; certificado antes da entrega.
+EVERYTHING CLOUD CODE: image-to-image obrigatorio (Cloud Comfy), tokens de cor.
+RUFLO: Agente de Correcao (Opus) gerou e CERTIFICOU; aprovacao final do humano
+       pendente.
+
+PROXIMO PASSO: usar as 3 versoes certificadas em campanhas de e-mail e WhatsApp
+(publico PJ e PF).
+================================================================================
