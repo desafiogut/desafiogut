@@ -5838,3 +5838,22 @@ LogsAuditoria.jsx: tabela paginada com filtros, exportação CSV. adminNav: logs
 marcado pronto. CDP confirma: sem EmConstrucao, gate correto, zero erros.
 
 Dashboard ADM 100% funcional — 7 telas, todas verificadas no aparelho.
+
+---
+
+## MC89.23 — Diagnóstico UX/UI e Plano de Reforma do Dashboard ADM
+
+Zero alterações de código. O dashboard funciona mas não foi "projetado" — foi
+construído incrementalmente ao longo de 15 MCs. O diagnóstico identificou 12
+problemas (3 P0, 4 P1, 5 P2) e propõe 4 fases de reforma (5-6 sessões).
+
+### O que dói mais hoje
+1. Os cartões-atalho ocupam metade do ecrã e empurram os dados para baixo
+2. Alertas críticos estão escondidos no meio da página
+3. Não há componente de loading padronizado (cada tela inventa o seu)
+
+### O que se preserva
+Paleta navy+laranja, endereços truncados, "—" para nulos, badges coloridos,
+backlinks, confirmação obrigatória, auditoria fail-CLOSED, segurança.
+
+**Próximo:** MC90.0 — execução da Fase 1 (navegação persistente + hierarquia).
