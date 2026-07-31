@@ -1,0 +1,16 @@
+# MC89.25 — Fase 2: Feedback Imediato — Diagnóstico + Plano
+Data: 2026-07-31 | ZERO alterações de código
+
+## Diagnóstico: 7 lacunas de feedback
+
+A app de consumo já tem um sistema de Toast completo — mas o painel ADM não o
+usa. O MC89.24 criou o AdminSpinner mas nenhuma tela o importa ainda. O feedback
+pós-ação é texto inline que desaparece. Os erros são mensagens técnicas em
+inglês ("connection refused"). As tabelas não têm hover. As datas são sempre
+absolutas.
+
+## Plano (MC89.26, 1-2 sessões)
+
+AdminToast (3 variantes, CSS puro, sem emojis), integração de AdminSpinner +
+toasts em todas as telas, hover + scroll-indicator nas tabelas, TempoRelativo
+com tooltip, mensagens de erro humanizadas, confirmação de exportação CSV.

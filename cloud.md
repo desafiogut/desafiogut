@@ -5868,3 +5868,18 @@ removidos do índice. Hierarquia corrigida: alertas → EOA/fila → gráficos �
 utilizadores/financeiro. 342/342, 40/40, build verde, APK instalado.
 
 **Próximo:** MC89.25 — Fase 2: toasts + hover + scroll-indicator.
+
+---
+
+## MC89.25 — Fase 2: Feedback Imediato (diagnóstico + plano)
+
+Zero alterações de código. Diagnosticadas 7 lacunas: sem toasts pós-ação,
+mensagens de erro genéricas, AdminSpinner não integrado, tabelas sem hover,
+scroll sem indicador, exportação sem confirmação, tempo absoluto sem contexto.
+
+Plano para MC89.26: AdminToast (CSS puro, sem emojis, reaproveitando o padrão
+do Toast.jsx da app de consumo), integração completa de AdminSpinner + toasts
+em todas as 7 telas, hover + scroll-indicator, TempoRelativo, erros humanizados.
+1-2 sessões.
+
+**Próximo:** MC89.26 — execução.

@@ -1,0 +1,101 @@
+# MC89.25 — Fase 2: Feedback Imediato (Toasts + Hover + Scroll) — Diagnóstico + Plano
+Data: 2026-07-31 | Branch: main | ZERO alterações de código
+
+## 1. DIAGNÓSTICO
+
+### O que já existe
+- A app de consumo tem um sistema de Toast completo (`widgets/toast/Toast.jsx`):
+  5 variantes (loading/info/success/error/warning), Framer Motion, ETA, hook
+  `useToast` com `add`/`remove`. Usado em `App.jsx` com `ToastContainer`.
+- AdminSpinner foi padronizado no MC89.24.
+- Confirmação + justificativa já existe para ações críticas (ComandoButton, PerfilUsuario).
+
+### O que está em falta (7 lacunas)
+
+**L1 — SEM TOASTS PÓS-AÇÃO.** Após aprovar, bloquear, ajustar, enviar notificação ou
+executar um comando, o feedback é texto inline que desaparece no próximo
+carregamento. Não há notificação visual persistente.
+
+**L2 — MENSAGENS DE ERRO GENÉRICAS.** "falha", "HTTP 500", "connection refused"
+aparecem diretamente. O admin não sabe se é um problema dele, do sistema, ou
+transitório.
+
+**L3 — CARREGAMENTO INCONSISTENTE.** Apesar do AdminSpinner existir, nenhuma
+tela o importa ainda. O MC89.24 criou o componente mas não o integrou nas telas
+— cada tela continua com o seu próprio texto inline ("A ler…", "…", nada).
+
+**L4 — TABELAS SEM HOVER.** Nenhuma tabela do painel tem `tr:hover`. Com 6-7
+colunas em ecrãs estreitos, o admin perde a linha facilmente.
+
+**L5 — SCROLL SEM INDICADOR.** Tabelas com `overflow-x: auto` não têm indicador
+visual de que há mais colunas à direita. No mobile, o admin pode não saber.
+
+**L6 — FEEDBACK DE EXPORTAÇÃO.** O botão "Exportar CSV" não confirma que o
+ficheiro foi descarregado — o browser faz o download silenciosamente e o admin
+fica na dúvida se funcionou.
+
+**L7 — TEMPO ABSOLUTO, NUNCA RELATIVO.** Todas as datas são "31/07/2026 14:30".
+Não há "há 3 minutos" ou "hoje às 14:30". Nos logs, saber que uma ação foi "há
+2 min" é mais útil do que a data absoluta.
+
+## 2. PLANO DE EXECUÇÃO (MC89.26, 1-2 sessões)
+
+### S1 — Sistema de Toasts do Admin
+
+Criar `src/components/admin/AdminToast.jsx` e `src/components/admin/AdminToastContainer.jsx`:
+- 3 variantes: success (verde #10b981), error (vermelho #ef4444), info (cinzento #94a3b8)
+- Sem emojis — bolas coloridas como as dos alertas
+- Posição: canto superior direito, empilhados
+- Duração: 4s (success/info), 8s (error)
+- Fechar no clique
+- Animação: fade-in/fade-out CSS puro (sem Framer Motion — o admin não importa
+  framer-motion, o parse de JS é um custo medido)
+- Hook `useAdminToast()`: `{ add, remove }` com API igual à do consumidor
+
+### S2 — Integrar AdminSpinner + Toasts em todas as telas
+
+Cada tela ganha:
+- AdminSpinner durante carregamento (substitui "A ler…", "…", texto inline)
+- Toast de erro quando um fetch falha (substitui `setErro("falha")`)
+- Toast de sucesso quando uma ação conclui (substitui texto inline)
+
+Ordem de integração: VisaoGeral → Usuarios → Operacoes → Financeiro → Logs →
+Notificacoes → Configuracoes.
+
+### S3 — Hover em tabelas + Scroll indicator
+
+Uma regra CSS global em `_ui.jsx` ou `AdminLayout.jsx`:
+- `tr:hover { background: rgba(255,255,255,0.03); }` em todas as tabelas
+- Gradiente de fade na borda direita quando há overflow-x (via `:after`
+  pseudo-elemento ou span posicionado)
+
+### S4 — Tempo relativo com tooltip
+
+Componente `src/components/admin/TempoRelativo.jsx`:
+- Mostra "há 3 min", "hoje 14:30", "ontem", "31/07"
+- Tooltip com a data/hora exata (atributo `title` nativo)
+- Usado em LogsAuditoria, GestaoFinanceira (transações), admin-sessions
+
+### S5 — Mensagens de erro humanizadas
+
+Constante `ERROS` em `_ui.jsx` com mapeamento de erros comuns:
+```
+"connection refused" → "Sem ligação ao servidor. Verifique a sua internet."
+"HTTP 401" → "Sessão expirada. Faça Login Admin novamente."
+"HTTP 403" → "Sem permissão. Contacte um super-admin."
+"HTTP 500" → "Erro interno. Tente novamente ou verifique os logs."
+```
+
+### S6 — Confirmação de exportação CSV
+Após `document.createElement("a").click()`, disparar toast: "Ficheiro CSV
+descarregado (200 registos)."
+
+## 3. CRITÉRIOS DE SUCESSO
+
+- Toda ação de mutação dispara um toast (visível 4-8s)
+- Nenhum "A ler…" ou "…" permanece (substituído por AdminSpinner)
+- Todas as tabelas têm hover + indicador de scroll
+- Datas nos logs mostram tempo relativo com data exata no tooltip
+- Erros de rede têm mensagem em português claro
+- Suite ≥ 342 backend, ≥ 40 frontend
+- APK recompilado e validado
