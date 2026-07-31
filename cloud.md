@@ -5603,3 +5603,37 @@ não ser deploy. Leitura retrocompatível + três testes (formato antigo, novo,
 vazio) validados por mutação + deploy-preview antes da mainnet.
 
 **Próximo:** MC89.11 — execução (migração + módulo de log + níveis + adaptação).
+
+---
+
+## MC89.11 — Fase 2: admin_logs (fail-closed) + níveis de permissão
+
+Execução do plano do MC89.10. Suítes: 342/342 backend (+18), 40/40 frontend.
+APK recompilado e instalado.
+
+### admin_logs em Postgres (fail-CLOSED)
+Tabela criada no Supabase com RLS e 4 índices. O módulo `_lib/admin-log.mjs`
+implementa a regra mais importante do MC89.5: `registrarAcao()` é chamada ANTES
+da ação; se o INSERT falhar, a função LANÇA e o caller devolve 503. Nenhum
+comando de admin pode ser executado sem registo. `confirmarAcao()` atualiza o
+desfecho depois. Uma linha com `sucesso=NULL` é o rasto de uma ação que rebentou
+a meio — e o índice parcial `WHERE sucesso IS NULL` serve para as encontrar.
+
+### Níveis de permissão (super-admin > admin > operador)
+`getAdminNivel()` lê o Blob admin-list com leitura **retrocompatível** — aceita
+formato antigo (strings → "admin"), formato novo (objetos com .nivel) e Blob
+vazio. Separado de `getAdminAddresses()` — que é usada em 14 sítios e mudar-lhe
+o tipo de retorno partiria metade do sistema.
+
+O JWT admin ganhou a claim `nivel`. `guardAdminNivel(req, nivelMinimo)` estende
+`guardAdmin` com verificação de nível. Tokens antigos sem a claim → "admin".
+
+### ALFA adaptado
+panic/unpause → super-admin apenas. `ALFA:logs` → últimos 10 registos de
+auditoria, com filtro textual opcional.
+
+### 18 testes novos, 4 guardas validadas por mutação
+registrarAcao fail-closed, confirmarAcao fail-soft, hierarquia adminPode,
+retrocompatibilidade getAdminNivel (string → "admin").
+
+**Próximo:** MC89.12 — Fase 3: Operações e infraestrutura (Tela 4).
