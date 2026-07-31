@@ -19,7 +19,7 @@
 //     irreversível (os comandos da Fase 3);
 //   · saída explícita, porque a barra inferior de consumo não existe nesta rota.
 
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
@@ -28,8 +28,24 @@ import { Button, Input } from "../ui";
 import { ESTADOS } from "../../lib/adminAuth.js";
 import { telaAtiva } from "../../lib/adminNav.js";
 import NavAdminPersistente from "./NavAdminPersistente.jsx";
+import AdminToastContainer from "./AdminToastContainer.jsx";
+import { useAdminToast } from "../../hooks/useAdminToast.js";
+
+// Contexto mínimo para que as telas filhas disparem toasts
+export const ToastContext = createContext(null);
+export function useToast() { return useContext(ToastContext); }
 
 const COR = { text: "#e8f0fe", muted: "#94a3b8" };
+// Hover + scroll globais para tabelas do painel (MC89.26)
+const ESTILOS_TABELA = `
+  .admin-panel table tr:hover { background: rgba(255,255,255,0.04) !important; }
+  .admin-panel .tabela-scroll { position: relative; }
+  .admin-panel .tabela-scroll::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 24px;
+    background: linear-gradient(to right, transparent, rgba(13,18,53,0.9));
+    pointer-events: none;
+  }
+`;
 
 export default function AdminLayout() {
   const isMobile = useIsMobile();
@@ -41,6 +57,7 @@ export default function AdminLayout() {
     endereco, isAdmin, aVerificarAdmin, isConnected,
   } = useAdminAuth();
 
+  const { toasts, dismiss: dismissToast, success, error, info } = useAdminToast();
   const [pedindoLogin, setPedindoLogin] = useState(false);
   const [adminTokenInput, setAdminTokenInput] = useState("");
 
@@ -167,10 +184,13 @@ export default function AdminLayout() {
           cartões-atalho do índice. */}
       <NavAdminPersistente />
 
+      <AdminToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <style>{ESTILOS_TABELA}</style>
+
       <section>
-        {/* Cada tela entra aqui. O <Suspense> das rotas preguiçosas vive em
-            App.jsx, junto das próprias rotas. */}
-        <Outlet />
+        <ToastContext.Provider value={{ success, error, info }}>
+          <Outlet />
+        </ToastContext.Provider>
       </section>
     </div>
   );
