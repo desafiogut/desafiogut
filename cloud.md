@@ -5537,3 +5537,29 @@ não da observação no ecrã.
 
 Mas ANTES: o operador autentica-se no APK enquanto estou ligado por CDP, ou envia
 screenshots. Se houver algo que não detetei (Cenário B), o plano é revisto.
+
+---
+
+## MC89.9 — Limpeza do painel ADM + Comando ALFA no GUTO
+
+Suítes: 324/314 backend (+10), 40/40 frontend. APK validado no aparelho.
+
+### PII truncada, placeholders neutros
+Aprovacoes: endereço truncado, nome/email atrás de toggle individual. Cotas:
+endereço truncado, nome substituído por "Cliente <categoria>" na lista. Todos os
+placeholders EmConstrucao ganharam prefixo `[EM BREVE — PLANEAMENTO]`. As
+palavras "saldo", "senhas" e "lances" foram removidas dos textos explicativos.
+Confirmado no aparelho: scan textual devolve `temSaldo: false, temSenhas: false,
+temLances: false`.
+
+### Comando ALFA: prefixo fixo, admin-only, honesto
+`ALFA:<comando>` no chat do GUTO. Cinco comandos funcionais (`status`, `fila`,
+`panic`, `unpause`, `ajuda`), gate admin com rate-limit 5/min, e comandos
+impossíveis respondem com honestidade — `ALFA:reindexar_rag` explica que o índice
+é construído fora do repo, `ALFA:limpar_cache` explica que o Redis não está
+configurado. Nenhum comando responde "executado" sem ter executado.
+
+A ordem em `detectarIntent` foi ajustada: ALFA testado ANTES de panic/unpanic
+porque os padrões sem prefixo casam substring em `alfa:panic`.
+
+**Próximo:** MC90.2 (Fase 2) — `admin_logs` em Postgres + níveis de permissão.
