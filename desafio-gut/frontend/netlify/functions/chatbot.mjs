@@ -527,6 +527,9 @@ const COMANDOS_ALFA = {
   relatorio:     "Exportar CSV financeiro do período (admin+).",
   notificar:     "Enviar notificação in-app. Uso: ALFA:notificar todos|admin|<endereco> <mensagem>",
   notificacoes:  "Últimas notificações enviadas (histórico).",
+  admins:        "Lista de administradores com níveis.",
+  sessoes:       "Sessões admin ativas.",
+  revogar:       "Revoga uma sessão por jti. Uso: ALFA:revogar <jti>",
   ajuda:         "Listar comandos ALFA disponíveis.",
   reindexar_rag: "O índice RAG é construído fora do repositório pelo operador. "
     + "Execute `build-rag-index.mjs` localmente.",
@@ -640,6 +643,51 @@ async function executarAlfa(acao, params, { perfil, endereco }) {
 
   if (acao === "relatorio") {
     return "Use o painel ADM (Tela 3 — Financeiro) e clique «Exportar CSV». A exportação pela Web gera o ficheiro diretamente no navegador. O ALFA não consegue descarregar ficheiros.";
+  }
+
+  if (acao === "admins") {
+    const [{ getAdminAddresses }, { getAdminNivel }] = await Promise.all([
+      import("./_lib/admin-helpers.mjs"), import("./_lib/admin-niveis.mjs"),
+    ]);
+    const admins = await getAdminAddresses();
+    const comNiveis = await Promise.all(admins.map(async (a) => {
+      const n = await getAdminNivel(a) || "admin";
+      return `  ${a.slice(0, 8)}… | ${n}`;
+    }));
+    return `👥 ADMINISTRADORES (${admins.length})\n\n${comNiveis.join("\n")}`;
+  }
+
+  if (acao === "sessoes") {
+    const { getStore } = await import("@netlify/blobs");
+    const sessoes = [];
+    try {
+      const store = getStore({ name: "admin-refresh", consistency: "strong" });
+      if (endereco) {
+        const data = await store.get(endereco, { type: "json" });
+        const tokens = Array.isArray(data?.tokens) ? data.tokens : [];
+        for (const t of tokens) sessoes.push({ jti: t.jti, exp: t.expiresAt ? new Date(t.expiresAt).toLocaleDateString("pt-BR") : "?" });
+      }
+      if (!sessoes.length) return "Nenhuma sessão ativa encontrada para o teu endereço.";
+      const out = sessoes.map((s) => `  jti: ${(s.jti || "").slice(0, 12)}… | expira: ${s.exp}`).join("\n");
+      return `🔐 SESSÕES (${sessoes.length})\n\n${out}\n\nUse ALFA:revogar <jti> para revogar uma sessão.`;
+    } catch (err) { return `Erro ao ler sessões: ${err.message}`; }
+  }
+
+  if (acao === "revogar") {
+    if (!params) return "Uso: ALFA:revogar <jti>";
+    const jti = params.trim();
+    if (!jti) return "Uso: ALFA:revogar <jti>";
+    try {
+      const { getStore } = await import("@netlify/blobs");
+      const store = getStore({ name: "admin-refresh", consistency: "strong" });
+      const data = await store.get(endereco, { type: "json" });
+      const tokens = Array.isArray(data?.tokens) ? data.tokens : [];
+      const antes = tokens.length;
+      const novas = tokens.filter((t) => t.jti !== jti);
+      if (novas.length === antes) return `Sessão ${jti.slice(0, 12)}… não encontrada.`;
+      await store.setJSON(endereco, { tokens: novas, atualizadoEm: new Date().toISOString() });
+      return `Sessão ${jti.slice(0, 12)}… revogada. A sessão expira em ≤ 15 min (TTL do access token).`;
+    } catch (err) { return `Erro ao revogar: ${err.message}`; }
   }
 
   if (acao === "notificar") {
