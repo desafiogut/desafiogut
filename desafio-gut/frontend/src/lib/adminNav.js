@@ -49,7 +49,7 @@ export const TELAS_ADMIN = [
   },
   {
     id: "notificacoes", rota: "notificacoes", href: "/admin/notificacoes", label: "Notificações",
-    ficheiro: "Comunicacao.jsx", index: false, pronta: false,
+    ficheiro: "Comunicacao.jsx", index: false, pronta: true,  // MC89.18 (Fase 6)
   },
   {
     id: "configuracoes", rota: "configuracoes", href: "/admin/configuracoes", label: "Config",

@@ -524,8 +524,10 @@ const COMANDOS_ALFA = {
   logs:       "Últimas 10 ações de auditoria (super-admin vê tudo; admin vê as suas).",
   financeiro: "Resumo financeiro (total recebido, em circulação, EOA).",
   transacoes: "Últimas transações financeiras.",
-  relatorio:  "Exportar CSV financeiro do período (admin+).",
-  ajuda:      "Listar comandos ALFA disponíveis.",
+  relatorio:     "Exportar CSV financeiro do período (admin+).",
+  notificar:     "Enviar notificação in-app. Uso: ALFA:notificar todos|admin|<endereco> <mensagem>",
+  notificacoes:  "Últimas notificações enviadas (histórico).",
+  ajuda:         "Listar comandos ALFA disponíveis.",
   reindexar_rag: "O índice RAG é construído fora do repositório pelo operador. "
     + "Execute `build-rag-index.mjs` localmente.",
   limpar_cache: "O cache Redis não está configurado (REDIS_URL ausente). "
@@ -638,6 +640,50 @@ async function executarAlfa(acao, params, { perfil, endereco }) {
 
   if (acao === "relatorio") {
     return "Use o painel ADM (Tela 3 — Financeiro) e clique «Exportar CSV». A exportação pela Web gera o ficheiro diretamente no navegador. O ALFA não consegue descarregar ficheiros.";
+  }
+
+  if (acao === "notificar") {
+    // ALFA:notificar <destino> <mensagem>
+    const partes = (params || "").split(/\s+/);
+    let d = "todos", msg = params || "";
+    if (partes.length >= 2) {
+      const primeiro = partes[0].toLowerCase();
+      if (primeiro === "admin" || primeiro === "admins") { d = "admins"; msg = partes.slice(1).join(" "); }
+      else if (/^0x[0-9a-f]{40}$/i.test(primeiro)) { d = "especifico"; msg = partes.slice(1).join(" "); }
+      // senão: assume "todos"
+    }
+    if (!msg.trim()) return "Uso: ALFA:notificar todos|admin|<endereco> <mensagem>";
+    // Nota: o ALFA não pode chamar o endpoint HTTP admin-notify diretamente
+    // sem o JWT admin. Em vez disso, usa o Blob diretamente.
+    const { adicionarNotificacao } = await import("./_lib/notificacoes-usuario.mjs");
+    let enderecos = [];
+    if (d === "admins") {
+      const { getAdminAddresses } = await import("./_lib/admin-helpers.mjs");
+      enderecos = await getAdminAddresses();
+    } else if (d === "especifico") {
+      enderecos = [partes[0].toLowerCase()];
+    } else {
+      const { getSupabaseReadOnly } = await import("./_lib/supabase-client.mjs");
+      const sb = getSupabaseReadOnly();
+      const { data } = await sb.from("vw_utilizadores").select("cliente_id");
+      enderecos = (data || []).map((u) => u.cliente_id).filter((s) => /^0x[0-9a-f]{40}$/.test(s));
+    }
+    let n = 0;
+    for (const addr of enderecos) {
+      try { await adicionarNotificacao(addr, { tipo: "admin", titulo: "ALFA", mensagem: msg, timestamp: new Date().toISOString(), lida: false }); n++; }
+      catch {}
+    }
+    return `Notificação enviada: ${n}/${enderecos.length} entregues (in-app).`;
+  }
+
+  if (acao === "notificacoes") {
+    const { getSupabaseReadOnly } = await import("./_lib/supabase-client.mjs");
+    const sb = getSupabaseReadOnly();
+    const { data, error } = await sb.from("notifications").select("canal,destino,mensagem,criado_em,entregues,total").order("criado_em", { ascending: false }).limit(10);
+    if (error) return `Erro: ${error.message}`;
+    if (!data?.length) return "Nenhuma notificação enviada.";
+    const out = data.map((n) => `  ${new Date(n.criado_em).toLocaleDateString("pt-BR")} | ${n.canal} | ${n.destino} | ${n.entregues}/${n.total} | ${n.mensagem?.slice(0, 40)}`).join("\n");
+    return `📬 NOTIFICAÇÕES (últimas ${data.length})\n\n${out}`;
   }
 
   if (acao === "panic") {
