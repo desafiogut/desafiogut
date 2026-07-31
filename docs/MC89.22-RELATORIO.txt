@@ -1,0 +1,19 @@
+# MC89.22 — RELATÓRIO: Tela 5 (Logs e Auditoria) — 7 TELAS COMPLETAS
+Data: 2026-07-31 | Suítes: 342 backend, 40 frontend | APK recompilado e validado
+
+## O QUE FOI FEITO
+LogsAuditoria.jsx: tabela paginada com filtros (admin, ação, período, busca
+textual), 6 colunas (data, admin truncado, ação, alvo, ícone de sucesso,
+justificativa), exportação CSV client-side, paginação por cursor "Mais →".
+Consome o endpoint admin-logs.mjs (existente desde MC89.11).
+
+adminNav: Logs marcado como pronto. O cartão no AtalhosAdmin já não mostra
+"em breve".
+
+## VALIDAÇÃO NO APARELHO
+CDP confirma: "← Painel" + "Logs" sem EmConstrucao. Gate de autenticação
+correto. Zero erros de consola.
+
+## 7 TELAS — TODAS FUNCIONAIS
+1. Visão Geral ✅  2. Usuários ✅  3. Financeiro ✅  4. Operações ✅
+5. Logs ✅  6. Notificações ✅  7. Configurações ✅

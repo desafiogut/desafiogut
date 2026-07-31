@@ -5829,3 +5829,12 @@ dados reais carregados. As suítes (342 backend, 40 frontend) atestam a lógica;
 falta a experiência real com sessão admin.
 
 **Próximo:** MC89.22 — implementar Tela 5 funcional.
+
+---
+
+## MC89.22 — Tela 5 (Logs e Auditoria) — 7 TELAS COMPLETAS
+
+LogsAuditoria.jsx: tabela paginada com filtros, exportação CSV. adminNav: logs
+marcado pronto. CDP confirma: sem EmConstrucao, gate correto, zero erros.
+
+Dashboard ADM 100% funcional — 7 telas, todas verificadas no aparelho.
