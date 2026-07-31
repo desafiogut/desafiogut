@@ -1,0 +1,25 @@
+# MC89.17 — RELATÓRIO: Comunicação e Notificações (Fase 6) — Diagnóstico + Plano
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | ZERO alterações de código
+
+## 1. DIAGNÓSTICO
+
+O sistema tem notificações de LEITURA (Blob por utilizador, eventos derivados)
+mas zero de EMISSÃO pelo admin. SendGrid e Twilio só existem no PythonAnywhere —
+nada é chamável do backend Netlify. Push não existe de todo (exige Firebase).
+
+O canal in-app é o único com infraestrutura pronta: `adicionarNotificacao()` já
+escreve no Blob. Só falta expor via endpoint.
+
+## 2. PLANO (execução no MC89.18, 2-3 sessões)
+
+S1 — Canal in-app: tabela `notifications` + POST /admin-notify (usa
+adicionarNotificacao existente) + GET /admin-notifications (histórico).
+S2 — Canal e-mail: _lib/email.mjs com @sendgrid/mail (alcança 3 pessoas).
+S3 — Tela 6: formulário de envio + histórico + canais desabilitados com nota.
+S4 — ALFA:notificar.
+S5 — Marcar como pronto.
+
+Push, WhatsApp, templates e agendamento são MCs próprios.
+
+## 3. PRÓXIMO PASSO
+MC89.18 — execução.

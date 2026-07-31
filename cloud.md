@@ -5745,3 +5745,19 @@ D11 (sem abastecer EOA) e D-SALDO (sem resetar saldo) preservados.
 Financeiro marcado pronto.
 
 **Próximo:** MC89.17 — Fase 6: Comunicação e Notificações.
+
+---
+
+## MC89.17 — Fase 6: Comunicação e Notificações (diagnóstico + plano)
+
+Zero alterações de código. O canal in-app é o único com infraestrutura pronta:
+`adicionarNotificacao()` já escreve no Blob — só falta expor via endpoint.
+SendGrid e Twilio só existem no PythonAnywhere; nada é chamável do backend.
+
+Plano para o MC89.18: canal in-app completo (tabela `notifications` + endpoint
+POST /admin-notify + GET /admin-notifications), _lib/email.mjs com
+@sendgrid/mail (alcança 3 pessoas com e-mail conhecido), Tela 6 com formulário
+de envio + histórico, ALFA:notificar. Push, WhatsApp, templates e agendamento
+são MCs próprios.
+
+**Próximo:** MC89.18 — execução.

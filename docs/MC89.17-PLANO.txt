@@ -1,0 +1,134 @@
+# MC89.17 — Fase 6: Comunicação e Notificações (Tela 6) — Diagnóstico + Plano
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | ZERO alterações de código
+
+## 1. DIAGNÓSTICO
+
+### O que já existe (LEITURA)
+- `_lib/notificacoes-usuario.mjs`: Blob `notificacoes:{endereco}`, FIFO 50, fail-soft.
+  `adicionarNotificacao(endereco, notif)` — escreve. `lerNotificacoes(endereco)` — lê.
+  `marcarLidas(endereco)` — atualiza. Tipos: lance_unico, perdeu_exclusividade,
+  voce_venceu, edicao_encerrada.
+- `notificacoes.mjs` (GET, admin-gated): lê eventos DERIVADOS de várias fontes
+  (edições, lances, sistema) e devolve notificações agregadas. NÃO é emissão —
+  é o consumidor que lê.
+
+### O que NÃO existe
+- Emissão pelo admin via endpoint HTTP
+- Qualquer integração SendGrid no backend (`@sendgrid/mail` não está em package.json)
+- Qualquer integração Twilio no backend
+- Qualquer integração FCM/Firebase
+- Tabela `notifications` no Supabase
+- Tabela `notification_templates`
+- Histórico de envios do admin
+- Agendamento
+
+### O que cada canal precisa para funcionar
+
+| Canal    | Estado atual                          | Para funcionar                     |
+|----------|---------------------------------------|------------------------------------|
+| in-app   | Blob write EXISTE (adicionarNotificacao) | Só expor via endpoint + UI      |
+| e-mail   | SendGrid no PythonAnywhere apenas     | + @sendgrid/mail + _lib/email.mjs |
+| WhatsApp | Twilio no PythonAnywhere apenas       | + twilio + _lib/whatsapp.mjs      |
+| push     | Zero infra                            | Firebase + APK novo = MC próprio |
+
+### Quem tem e-mail hoje?
+3 de 7 cotas (achado A-2, MC89.5). "Enviar a todos por e-mail" alcança 3 pessoas.
+A UI tem de mostrar este número e explicá-lo.
+
+## 2. PLANO (execução no MC89.17, 2-3 sessões)
+
+### S1 — Canal in-app (o que funciona hoje, sem dependências novas)
+
+**Tabela `notifications`** (histórico agregado, Supabase):
+```sql
+CREATE TABLE notifications (
+  id uuid PK DEFAULT gen_random_uuid(),
+  canal text NOT NULL,          -- inapp | email | whatsapp
+  destino text NOT NULL,        -- todos | admins | especifico | segmento
+  destino_ids jsonb,            -- [endereco, ...] quando especifico
+  titulo text,
+  mensagem text NOT NULL,
+  link text,
+  agendado_para timestamptz,    -- NULL = já
+  criado_por text NOT NULL,
+  criado_em timestamptz DEFAULT now(),
+  status text DEFAULT 'enviado', -- enviado | agendado | falha
+  total int DEFAULT 0,
+  entregues int DEFAULT 0
+);
+```
+
+**Endpoint POST /admin-notify**:
+- Canal: "inapp" (único que funciona hoje; email/whatsapp respondem 501)
+- Destino: "todos" resolve via vw_utilizadores; "admins" resolve via admin-list;
+  "especifico" aceita lista de endereços
+- Para cada destinatário, chama `adicionarNotificacao(endereco, notif)`
+- Regista em `notifications` (histórico) + `admin_logs` (auditoria)
+- Gate: admin+. RL: 10/min.
+
+**Endpoint GET /admin-notifications**:
+- Histórico de envios da tabela `notifications`
+- Paginação por cursor. Gate: operador+.
+
+### S2 — Canal e-mail (nova dependência: @sendgrid/mail)
+
+**_lib/email.mjs**: wrapper sobre SendGrid. Lê `SENDGRID_API_KEY` do env.
+Função `enviarEmail({ to, subject, html })`.
+
+**Estende POST /admin-notify** com canal="email":
+- Para cada destinatário com e-mail conhecido (via vw_utilizadores ou cotas.email)
+- ⚠️ Alcança 3 pessoas hoje. O endpoint responde com `{ total: N, comEmail: 3, semEmail: M }`
+
+### S3 — Frontend (Tela 6: Comunicacao.jsx)
+
+Formulário de envio + histórico de envios. Três secções:
+- **Enviar**: destino (dropdown), canal (in-app/e-mail/WhatsApp com push desabilitado),
+  título, mensagem, link, agendamento opcional. Confirmação antes de enviar.
+- **Histórico**: tabela com data, destino, canal, status, entregues/total.
+- **Templates** (fase futura — o placeholder fica visível): "EM BREVE".
+- WhatsApp e Push aparecem desabilitados com nota explicativa.
+
+### S4 — ALFA
+
+- `ALFA:notificar todos <mensagem>` → in-app para todos (com confirmação)
+- `ALFA:notificar admin <mensagem>` → in-app para admins
+- `ALFA:notificar <endereco> <mensagem>` → in-app para um
+- `ALFA:notificacoes` → últimas 10 do histórico
+
+### S5 — Marcar como pronto
+AtalhosAdmin: "Notificações" → pronta.
+
+## 3. O QUE FICA PARA DEPOIS
+
+- **E-mail (canal real):** depende de @sendgrid/mail no backend. MC próprio ou
+  executado junto com o canal in-app se as dependências não forem bloqueantes.
+  A UI já está preparada (o dropdown mostra "E-mail" e o backend responde 501
+  com "não configurado" até o módulo existir).
+
+- **WhatsApp:** depende de credenciais Twilio no backend. MC próprio.
+
+- **Push (FCM):** projeto Firebase + google-services.json + rebuild do APK.
+  A UI mostra "Push — em breve" desabilitado.
+
+- **Templates:** tabela `notification_templates` + UI de gestão. MC próprio.
+
+- **Agendamento real:** a tabela `notifications` já tem `agendado_para`. Um
+  cron `notificacoes-scheduled.mjs` lê os agendados e envia. MC próprio.
+
+## 4. RISCOS
+
+- R-1 (BAIXO): e-mail alcança 3 pessoas. A UI explica-o; não é defeito.
+- R-2 (MÉDIO): `adicionarNotificacao` escreve em Blob (fail-soft). Se os Blobs
+  estiverem cegos, a notificação é "enviada" mas nunca chega. Mitigação:
+  o status `entregues` só é incrementado quando a escrita no Blob confirma,
+  e o endpoint `admin-notify` reporta quantos foram realmente escritos.
+- R-3 (BAIXO): não há fila para envio em massa para "todos". Com 7 utilizadores
+  é irrelevante; com 1000 seria um problema. Solução futura: usar `fila_tarefas`.
+
+## 5. CRITÉRIOS DE SUCESSO (MC89.18)
+- Canal in-app funcional (admin → destinatário via Blob)
+- Histórico de envios visível na Tela 6
+- ALFA:notificar funcional
+- Canal e-mail disponível se @sendgrid/mail for adicionado
+- Suite ≥ 346 backend, ≥ 40 frontend
+- APK recompilado
