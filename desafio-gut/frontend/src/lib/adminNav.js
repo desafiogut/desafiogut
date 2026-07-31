@@ -45,7 +45,7 @@ export const TELAS_ADMIN = [
   },
   {
     id: "logs", rota: "logs", href: "/admin/logs", label: "Logs",
-    ficheiro: "LogsAuditoria.jsx", index: false, pronta: false,
+    ficheiro: "LogsAuditoria.jsx", index: false, pronta: true,  // MC89.22
   },
   {
     id: "notificacoes", rota: "notificacoes", href: "/admin/notificacoes", label: "Notificações",
