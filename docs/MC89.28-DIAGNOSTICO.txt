@@ -1,0 +1,164 @@
+MC89.28 — SEGMENTO 0: DIAGNÓSTICO DE ESTADO VAZIO, CARDS-ZERO E VISUAL
+================================================================================
+Data: 2026-07-31
+Âmbito: desafio-gut/frontend/src/pages/admin/ (10 ficheiros) + components/admin/
+Skills ECC: terminal-ops, ux-waiting-audit, verification-loop
+
+--------------------------------------------------------------------------------
+RESUMO — O QUE O ENUNCIADO ACERTOU E O QUE NÃO
+--------------------------------------------------------------------------------
+  S1 estado vazio ....... REAL, mas menor do que descrito. 9 sítios, todos com a
+                          MESMA forma (<p> itálico muted); divergem só no tamanho
+                          de letra (0.78 vs 0.82rem). Nenhum usa "—" para lista.
+  S2 cards-zero ......... JÁ RESOLVIDO no frontend (ouTraco/R-UI-1, MC89.1).
+                          Mas encontrei UM defeito real e mais fundo, no backend.
+  S3 tooltips ........... REAL e é o maior achado. 8 sítios, 4 comprimentos
+                          diferentes, ZERO tooltips em todo o painel.
+  S4 visual ............. QUASE NÃO-ACHADO. Os valores já são consistentes; o que
+                          existe é duplicação (3 `sh` locais + ~10 literais).
+
+--------------------------------------------------------------------------------
+0.1 — ESTADO VAZIO: INVENTÁRIO REAL (9 sítios)
+--------------------------------------------------------------------------------
+  Aprovacoes.jsx:93 .......... "Nenhum pedido com status {filtro}."      0.82rem
+  Cotas.jsx:123 .............. "Nenhuma cota nesta categoria."           0.82rem
+  GestaoUsuarios.jsx:109 ..... "Nenhum utilizador encontrado."           0.82rem
+  Comunicacao.jsx:105 ........ "Nenhuma notificação enviada."            0.78rem
+  ConfiguracoesAdmins.jsx:150  "Nenhuma sessão ativa."                   0.78rem
+  GestaoFinanceira.jsx:122 ... "Nenhuma transação."                      0.78rem
+  LogsAuditoria.jsx:124 ...... "Nenhum registo de auditoria encontrado." 0.78rem
+  Operacoes.jsx:236 .......... "Fila vazia."                             0.78rem
+  Operacoes.jsx:165 .......... "Nenhum registo" (detalhe de StatusCard — NÃO é
+                                estado vazio de lista; não deve ser convertido)
+
+CORRECÇÃO AO ENUNCIADO: o enunciado diz que "algumas telas mostram '—', outras
+'Nenhum registro', outras texto inline". Não confirma-se: TODAS as 8 listas usam
+`<p>` itálico muted inline. A divergência é de 0.04rem no tamanho de letra e da
+frase. Nenhuma tem descrição secundária nem ação de recuperação — é aí que está
+o ganho real, não na "inconsistência".
+
+VisaoGeral não tem lista vazia (é grelha de métricas); ConfiguracoesAdmins tem
+uma (sessões), ao contrário do que o enunciado assume ("não tem lista vazia").
+
+--------------------------------------------------------------------------------
+0.2 — CARDS-ZERO: A REGRA JÁ EXISTE E JÁ ESTÁ APLICADA
+--------------------------------------------------------------------------------
+`_ui.jsx:48` define, desde o MC89.1:
+
+    // REGRA R-UI-1: número indisponível mostra-se como "—", NUNCA como 0.
+    export function ouTraco(valor, formatar = (v) => String(v)) {
+      return valor === null || valor === undefined ? "—" : formatar(valor);
+    }
+
+É exactamente a convenção que o enunciado propõe em 2.1 (null/undefined → "—";
+0 → "0"). Está aplicada em 20 sítios: VisaoGeral (11), GestaoFinanceira (5),
+Operacoes (1, cobre as 4 métricas da fila), GestaoUsuarios (1), LogsAuditoria (1).
+
+O backend coopera: `admin-series.mjs:191` devolve `totalCreditos: creditos ?
+creditos.length : null` e as séries diárias usam `|| null` — nunca preenche com
+zero. O comentário na linha 79 di-lo por extenso.
+
+⇒ Não existe, no frontend, um card que mostre 0 por falta de dados.
+   O Segmento 2 tal como redigido não tem trabalho a fazer.
+
+>>> MAS: DEFEITO REAL ENCONTRADO (mais fundo que o enunciado imaginava) <<<
+
+`netlify/functions/_lib/admin-comandos.mjs:82` — `estadoFila()`:
+
+    const { data, error, count } = await sb.from("fila_tarefas")
+      .select("*", { count: "exact" })
+      .order("criado_em", { ascending: false })
+      .limit(limite);              // limite = 30 (admin-queue.mjs:28)
+    ...
+    for (const t of linhas) porStatus[t.status] = (porStatus[t.status]||0)+1;
+    return {
+      total:      count ?? linhas.length,   // ← contagem GLOBAL (exact)
+      pendentes:  porStatus.pending || 0,   // ← contada só nas 30 mais RECENTES
+      concluidas: porStatus.done    || 0,
+      falhas:     porStatus.failed  || 0,
+      linhas,
+    };
+
+`total` é global; o desdobramento por status é calculado sobre uma janela de 30
+linhas. Com a fila acima de 30 tarefas, o painel pode mostrar
+"Total 500 · Pendentes 0" enquanto existem pendentes fora da janela.
+
+Um zero falso é pior que um "—": afirma que a fila está limpa. É precisamente a
+classe de defeito que o R-UI-1 existe para evitar — mas está do lado do servidor,
+onde o `ouTraco` não chega.
+
+VERIFICAÇÃO CONTRA A BASE (não contra a minha suposição):
+    select status, count(*) from fila_tarefas group by status;
+    →  done: 5
+
+Hoje a fila tem 5 linhas, logo a janela de 30 cobre tudo e os números estão
+correctos. O defeito é LATENTE, não activo. Não inventei um sintoma: digo que
+não há sintoma hoje e que ele aparece assim que a fila passar de 30.
+
+`estadoFila` tem um único consumidor (admin-queue.mjs:30), logo a correcção é
+contida. O `metricas_fila` do chatbot vem de outro caminho (admin-metricas).
+
+--------------------------------------------------------------------------------
+0.3 — ENDEREÇOS TRUNCADOS: 8 SÍTIOS, 4 COMPRIMENTOS, 0 TOOLTIPS
+--------------------------------------------------------------------------------
+  6+6   Aprovacoes.jsx:19          function truncarEndereco()
+  6+6   Cotas.jsx:17               function truncarEndereco()   ← cópia verbatim
+  6+4   GestaoUsuarios.jsx:19      function truncarEndereco()   ← mesmo nome, outro corte
+  6+4   GestaoFinanceira.jsx:12    function truncar()
+  6+4   LogsAuditoria.jsx:10       function truncar()           ← cópia verbatim
+  6+4   ConfiguracoesAdmins.jsx:117  inline
+  8+0   ConfiguracoesAdmins.jsx:157  inline  ← só prefixo, sem sufixo
+  10+6  AdminLayout.jsx:134          inline  ← o admin logado
+
+Cinco definições de função com três nomes (`truncarEndereco` ×3, `truncar` ×2)
+e três truncagens inline. O MESMO endereço aparece com cortes diferentes
+conforme a tela — e em ConfiguracoesAdmins aparece com DOIS cortes diferentes
+na mesma tela (linha 117 vs 157).
+
+`grep -rn "title=" pages/admin components/admin` → **zero resultados**.
+Nenhum endereço, nenhum botão de ícone tem tooltip. O utilizador não tem forma
+de ler o endereço completo sem ir à base de dados.
+
+Este é o achado com maior retorno do MC.
+
+--------------------------------------------------------------------------------
+0.4 — REFINAMENTOS VISUAIS: O QUE O ENUNCIADO ASSUME NÃO SE CONFIRMA
+--------------------------------------------------------------------------------
+4.1 espaçamento — JÁ consistente. `AdminLayout.jsx:114` aplica
+    `padding: isMobile ? "1rem" : "1.5rem 2rem"` UMA vez, para todas as telas
+    filhas. Nenhuma tela define padding de página própria. Nada a corrigir.
+
+4.2 cores — JÁ consistente. `_ui.jsx:13` é a fonte única (COR.primary reservado
+    a ação irreversível, regra fixada no MC89.4). Não encontrei violação.
+
+4.3 títulos de secção — o VALOR já é o mesmo em todo o lado
+    (`0.78rem` / `COR.primary` / `letterSpacing 0.05em`). O que existe é
+    DUPLICAÇÃO: 3 ficheiros definem um `const sh` local (Comunicacao:126,
+    ConfiguracoesAdmins:208, GestaoFinanceira:154) e Operacoes/PerfilUsuario/
+    VisaoGeral repetem o literal inline ~10 vezes. Única divergência real:
+    o `sh` de ConfiguracoesAdmins acrescenta `fontWeight: 800` +
+    `textTransform: uppercase`, que os outros não têm (escrevem o texto já em
+    maiúsculas). Diferença visível: peso da fonte.
+
+4.4 backlink — JÁ existe em AdminLayout, como o próprio enunciado reconhece.
+
+⇒ O Segmento 4 é sobretudo dívida de DRY, não inconsistência visual. Extrair o
+   título para `_ui.jsx` resolve os dois de uma vez, com uma alteração pequena.
+
+--------------------------------------------------------------------------------
+0.5 — ACHADO SECUNDÁRIO: IMPORTS MORTOS
+--------------------------------------------------------------------------------
+`Comunicacao.jsx:8` e `ConfiguracoesAdmins.jsx:9` importam `ouTraco` e nunca o
+usam. Sugere que a regra R-UI-1 foi pensada para estas telas e não chegou a ser
+aplicada — vale a pena ver se há números nelas que a mereçam (ver S2).
+
+--------------------------------------------------------------------------------
+PLANO DE EXECUÇÃO REVISTO (face ao que se verificou)
+--------------------------------------------------------------------------------
+  S1  EstadoVazio.jsx + 8 substituições ............ como planeado
+  S2  corrigir estadoFila (contagem por status fora
+      da janela) + remover 2 imports mortos ........ REDIRECCIONADO
+      (o "—" vs "0" do frontend já está feito; não se mexe no que está certo)
+  S3  EnderecoTruncado.jsx + 8 substituições ....... como planeado, é o maior ganho
+  S4  extrair o título de secção para _ui.jsx ...... REDUZIDO a de-duplicação
+================================================================================
