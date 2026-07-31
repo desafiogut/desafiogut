@@ -20,6 +20,7 @@ import { getStore } from "@netlify/blobs";
 import { createHash, randomBytes } from "node:crypto";
 import { assinarAdminAccess, verificarAdminAccess } from "./jwt.mjs";
 import { getAdminAddresses } from "./admin-helpers.mjs";
+import { getAdminNivel } from "./admin-niveis.mjs";
 import { jsonError } from "./validate.mjs";
 
 const BLOB_REFRESH    = "admin-refresh";
@@ -71,7 +72,10 @@ async function salvarRefreshList(endereco, tokens) {
  */
 export async function emitirParAdmin(endereco) {
   const enderecoLower = endereco.toLowerCase();
-  const accessToken   = await assinarAdminAccess(enderecoLower, TTL_ACCESS_SEC);
+  // MC89.11 — resolve o nível UMA vez no login/refresh. O nível fica
+  // congelado no JWT durante os 15 min de validade do access token.
+  const nivel = await getAdminNivel(enderecoLower) || "admin";
+  const accessToken   = await assinarAdminAccess(enderecoLower, TTL_ACCESS_SEC, { nivel });
   const refreshRaw    = novoRefreshRaw();
   const refreshHash   = hashRefresh(refreshRaw);
   const jti           = novoJti();
