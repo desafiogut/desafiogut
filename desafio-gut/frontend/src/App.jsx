@@ -12,6 +12,7 @@ import { AppEnvironmentProvider } from "./context/useAppContextEnvironment.jsx";
 import { IdiomaProvider } from "./context/IdiomaContext.jsx";
 import { ToastContainer, useToast } from "./widgets/toast/Toast.jsx";
 import ReferralRegistrar from "./components/ReferralRegistrar.jsx";
+import { useAdmin } from "./hooks/useAdmin.js";
 // MC39.19 (Onda 2, item 3) — code-splitting por rota. Páginas CRÍTICAS de entrada
 // (Dashboard/Vitrine) ficam EAGER (evita flash de Suspense no first paint); as demais
 // via React.lazy → saem do chunk inicial e carregam sob demanda. LazyBoundary trata
@@ -159,7 +160,18 @@ function CorporativoRoute({ children }) {
 // (ver AppContext), portanto o redirect acontece de imediato em vez de esperar
 // pelas cotas.
 function DashboardOuCorporativo() {
-  const { tipoProvavel, tipoUsuario, tipoCarregando } = useAppContext();
+  const { tipoProvavel, tipoUsuario, tipoCarregando, address } = useAppContext();
+  const { isAdmin, loading: adminLoading } = useAdmin(address);
+
+  // MC89.12 — admin vai DIRETO para o painel, sem passar pelo Dashboard de
+  // consumo. É testado DEPOIS do corporate para não colidir com lojistas que
+  // também são admin — mas um lojista-admin vai para /corporativo primeiro
+  // (o corporate é mais específico). Se o operador quiser inverter, é trocar
+  // a ordem dos dois blocos.
+  if (isAdmin && !adminLoading && address) {
+    return <Navigate to="/admin" replace />;
+  }
+
   // O palpite basta para ENCAMINHAR cedo; para o caso confirmado mantém-se a
   // condição original (confirmado + já não está a carregar).
   if (tipoProvavel === "corporativo" && (tipoUsuario === "corporativo" ? !tipoCarregando : true)) {
