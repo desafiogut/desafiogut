@@ -5883,3 +5883,37 @@ em todas as 7 telas, hover + scroll-indicator, TempoRelativo, erros humanizados.
 1-2 sessões.
 
 **Próximo:** MC89.26 — execução.
+
+---
+
+## MC89.27 — Eliminação da mensagem Sepolia (o alarme estava certo)
+
+A mensagem "⚠️ Ambiente de teste — rede Sepolia · contrato não configurado"
+não era um bug: era o AvisoRede (MC88.25) a funcionar. O APK do MC89.26 estava
+mesmo em Sepolia e sem contrato.
+
+Causa-raiz: o APK foi compilado com `npm run build` (Vite lê os .env do disco)
+em vez de `npm run build:apk` (netlify build --context production). O disco só
+tinha `VITE_CONTRATO_MAINNET` — variável que NENHUM código lê; network.js lê
+`VITE_CONTRATO_SEPOLIA` e faz `Number(VITE_CHAIN_ID ?? 11155111)`. Sem essas
+duas: CONTRATO="" e chainId=Sepolia por omissão.
+
+A limpeza manual do dist não podia funcionar — o defeito eram variáveis
+AUSENTES, não um endereço errado presente.
+
+Correção: zero alterações de código-fonte. Só o comando de build, mais a
+remoção da armadilha `VITE_CONTRATO_MAINNET` do .env local. AvisoRede.jsx e
+network.js intactos de propósito: silenciar o alarme recriaria o MC88.24 sem
+nada na tela a denunciá-lo.
+
+Validação: env verificado dentro do próprio .apk (chainId=1, contrato
+0x0052477A…16cd, RPC eth-mainnet); DOM interrogado por CDP no aparelho em
+/admin autenticado e na raiz após arranque limpo — sem a mensagem, sem
+role=status; sonda validada por mutação (banner falso injectado e detectado).
+
+Pendente do operador: exercício vivo dos toasts/spinner do MC89.26 (exige
+login OAuth Privy). `pm clear` durante a validação apagou os dados locais da
+app — é preciso voltar a entrar.
+
+**Próximo:** pendências externas (EOA, BLOBS_TOKEN, RAG, Play Store) ou
+MC89.28 (Fase 3).
