@@ -5,7 +5,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { Button, Input } from "../../components/ui";
-import { COR, ouTraco } from "./_ui.jsx";
+import { COR } from "./_ui.jsx";
 import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 
 function quando(iso) { return iso ? new Date(iso).toLocaleString("pt-BR") : "—"; }

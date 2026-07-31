@@ -78,27 +78,51 @@ export async function sondarStatus({ sb, fetch, rpcUrl, agora = () => new Date()
 
 /**
  * Estado da fila de tarefas.
+ *
+ * ⚠️ MC89.28 — O desdobramento por status é contado no SERVIDOR, sobre a tabela
+ * inteira, e NÃO sobre as `limite` linhas carregadas para a tabela do painel.
+ *
+ * PORQUÊ: até ao MC89.28 os contadores eram derivados de `linhas`, que está
+ * limitada a 30 (admin-queue.mjs). O `total` já era global. Com a fila acima de
+ * 30 tarefas o painel podia mostrar "Total 500 · Pendentes 0" — um zero que
+ * afirma que a fila está limpa quando pode não estar. É o defeito que a regra
+ * R-UI-1 (`ouTraco`, _ui.jsx) existe para evitar, mas do lado do servidor, onde
+ * o `ouTraco` não chega: ele só sabe distinguir null de número, e um 0 mentiroso
+ * chega-lhe como número legítimo.
+ *
+ * Uma contagem que falha vale `null` (o painel mostra "—"), nunca 0.
  */
 export async function estadoFila({ sb, limite = 20 }) {
-  const { data, error, count } = await sb.from("fila_tarefas")
-    .select("*", { count: "exact" })
-    .order("criado_em", { ascending: false })
-    .limit(limite);
+  const contar = (...estados) =>
+    sb.from("fila_tarefas").select("*", { count: "exact", head: true }).in("status", estados);
 
-  if (error) return { erro: error.message };
+  const [rLinhas, rPendentes, rProcessando, rConcluidas, rFalhas] = await Promise.allSettled([
+    sb.from("fila_tarefas").select("*", { count: "exact" })
+      .order("criado_em", { ascending: false })
+      .limit(limite),
+    contar("pending"),
+    contar("processing"),
+    contar("done"),
+    contar("failed", "falha"),
+  ]);
 
-  const linhas = data || [];
-  const porStatus = {};
-  for (const t of linhas) {
-    const s = t.status || "desconhecido";
-    porStatus[s] = (porStatus[s] || 0) + 1;
-  }
+  if (rLinhas.status !== "fulfilled") return { erro: rLinhas.reason?.message || "falha ao ler a fila" };
+  if (rLinhas.value?.error) return { erro: rLinhas.value.error.message };
+
+  const linhas = rLinhas.value.data || [];
+
+  /** Contagem exata, ou null se a consulta não respondeu. Nunca 0 por omissão. */
+  const n = (r) =>
+    r.status === "fulfilled" && !r.value?.error && typeof r.value?.count === "number"
+      ? r.value.count
+      : null;
+
   return {
-    total: count ?? linhas.length,
-    pendentes: porStatus.pending || 0,
-    processando: porStatus.processing || 0,
-    concluidas: porStatus.done || 0,
-    falhas: porStatus.failed || porStatus.falha || 0,
+    total: rLinhas.value.count ?? linhas.length,
+    pendentes:   n(rPendentes),
+    processando: n(rProcessando),
+    concluidas:  n(rConcluidas),
+    falhas:      n(rFalhas),
     linhas,
   };
 }

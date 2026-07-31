@@ -6,7 +6,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { Button, Input } from "../../components/ui";
-import { COR, ouTraco } from "./_ui.jsx";
+import { COR } from "./_ui.jsx";
 import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 
 const NIVEL_COR = { "super-admin": "#ef4444", admin: "#f5a623", operador: "#10b981" };
