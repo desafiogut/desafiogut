@@ -5761,3 +5761,16 @@ de envio + histórico, ALFA:notificar. Push, WhatsApp, templates e agendamento
 são MCs próprios.
 
 **Próximo:** MC89.18 — execução.
+
+---
+
+## MC89.18 — Fase 6: Comunicação e Notificações (Tela 6)
+
+Suítes: 342 backend, 40 frontend. APK recompilado.
+
+Canal in-app: reutiliza `adicionarNotificacao` (Blob existente). Canal e-mail:
+`_lib/email.mjs` com SendGrid (import dinâmico, alcança 3 pessoas com e-mail).
+WhatsApp/Push → 501 explicado. Histórico na tabela `notifications`. Tela 6 com
+formulário + tabela. ALFA:notificar (Blob direto, sem endpoint HTTP).
+
+**Próximo:** MC89.19 — Fase 7: Configurações e Admins (última tela).

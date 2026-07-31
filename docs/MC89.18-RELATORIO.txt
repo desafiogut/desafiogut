@@ -1,0 +1,19 @@
+# MC89.18 — RELATÓRIO: Comunicação e Notificações (Tela 6) — Fase 6 do MC89.5
+Data: 2026-07-31 | Suítes: 342 backend, 40 frontend | APK recompilado e instalado
+
+## 1. BACKEND (2 endpoints + módulo de e-mail)
+- POST /admin-notify: in-app via adicionarNotificacao (Blob existente),
+  e-mail via _lib/email.mjs (SendGrid). Gate: admin+. RL: 10/min.
+  Log: fail-CLOSED. WhatsApp/push → 501 com explicação.
+- GET /admin-notifications: histórico paginado, cache 15s. Gate: operador+.
+- _lib/email.mjs: wrapper SendGrid com import dinâmico (sem ethers).
+
+## 2. FRONTEND
+Tela 6: formulário (canal, destino, título, mensagem, link) + histórico em
+tabela. WhatsApp e Push desabilitados com nota. E-mail com nota "3 de 7".
+
+## 3. ALFA
+ALFA:notificar (in-app via Blob direto), ALFA:notificacoes (histórico).
+
+## 4. PRÓXIMO PASSO
+MC89.19 — Fase 7: Configurações e Admins (Tela 7) — a última tela.
