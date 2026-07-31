@@ -13,7 +13,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button } from "../../components/ui";
-import AtalhosAdmin from "../../components/admin/AtalhosAdmin.jsx";
 import GraficoLinha from "../../components/admin/GraficoLinha.jsx";
 import { COR, Metrica, Grelha, ouTraco, brl } from "./_ui.jsx";
 
@@ -123,12 +122,9 @@ export default function VisaoGeral() {
 
   if (!chamarAdmin) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-        <AtalhosAdmin />
-        <p style={{ color: COR.muted, fontSize: "0.85rem", margin: 0 }}>
-          Autentique-se para ver as métricas.
-        </p>
-      </div>
+      <p style={{ color: COR.muted, fontSize: "0.85rem", margin: 0 }}>
+        Autentique-se para ver as métricas.
+      </p>
     );
   }
 
@@ -155,7 +151,6 @@ export default function VisaoGeral() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-      <AtalhosAdmin />
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
         <span style={{ fontSize: "0.72rem", color: COR.muted }}>
@@ -214,6 +209,47 @@ export default function VisaoGeral() {
         </section>
       )}
 
+      {/* MC89.24 — métricas críticas (EOA + fila) sobem para DEPOIS dos alertas,
+          ANTES dos gráficos. São os números que o admin precisa de ver primeiro. */}
+      <section>
+        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>
+          CADEIA <span style={{ color: COR.muted, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>· carrega à parte</span>
+        </h3>
+        {erroChain && (
+          <div style={{ padding: "0.6rem 0.8rem", borderRadius: "8px", background: "rgba(251,191,36,0.08)", border: `1px solid ${COR.warn}55`, color: COR.warn, fontSize: "0.78rem", marginBottom: "0.5rem" }}>
+            Cadeia indisponível: {erroChain}
+          </div>
+        )}
+        <Grelha isMobile={isMobile}>
+          <Metrica
+            rotulo="Saldo da coordenadora"
+            valor={ouTraco(onchain?.saldoEth, (v) => `${v} ETH`)}
+            cor={COR.primary}
+            nota="É esta carteira que credita as senhas on-chain. Sem gás, a compra deixa de ser creditada."
+          />
+          <Metrica
+            rotulo="Em trânsito"
+            valor="—"
+            nota="Rastreabilidade on-chain ainda não disponível."
+          />
+          <Metrica rotulo="Bloco atual" valor={ouTraco(onchain?.bloco, (v) => v.toLocaleString("pt-BR"))} />
+        </Grelha>
+      </section>
+
+      <section>
+        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>OPERAÇÃO</h3>
+        <Grelha isMobile={isMobile}>
+          <Metrica
+            rotulo="Fila — pendentes"
+            valor={ouTraco(fila?.pendentes)}
+            cor={fila?.pendentes > 0 ? COR.warn : COR.success}
+            nota={fila?.atualizadaEm ? `última: ${new Date(fila.atualizadaEm).toLocaleString("pt-BR")}` : null}
+          />
+          <Metrica rotulo="Fila — falhadas" valor={ouTraco(fila?.falhadas)} cor={fila?.falhadas > 0 ? COR.danger : undefined} />
+          <Metrica rotulo="Fila — total" valor={ouTraco(fila?.total)} />
+        </Grelha>
+      </section>
+
       {/* ── MC89.7: GRÁFICOS ───────────────────────────────────────────────── */}
       {series && series.dias && series.dias.length > 0 && (
         <section>
@@ -261,8 +297,8 @@ export default function VisaoGeral() {
         </section>
       )}
 
-      {/* As 4 secções de métricas que já existiam — preservadas tal e qual. ── */}
-
+      {/* Secções de detalhe — UTILIZADORES e FINANCEIRO. As métricas críticas
+          (CADEIA, OPERAÇÃO) já estão no topo. */}
       <section>
         <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>UTILIZADORES</h3>
         <Grelha isMobile={isMobile}>
@@ -290,45 +326,6 @@ export default function VisaoGeral() {
             rotulo={`Créditos (${stats?.janelaDias ?? 30} d)`}
             valor={ouTraco(f?.creditosJanela)}
           />
-        </Grelha>
-      </section>
-
-      <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>OPERAÇÃO</h3>
-        <Grelha isMobile={isMobile}>
-          <Metrica
-            rotulo="Fila — pendentes"
-            valor={ouTraco(fila?.pendentes)}
-            cor={fila?.pendentes > 0 ? COR.warn : COR.success}
-            nota={fila?.atualizadaEm ? `última: ${new Date(fila.atualizadaEm).toLocaleString("pt-BR")}` : null}
-          />
-          <Metrica rotulo="Fila — falhadas" valor={ouTraco(fila?.falhadas)} cor={fila?.falhadas > 0 ? COR.danger : undefined} />
-          <Metrica rotulo="Fila — total" valor={ouTraco(fila?.total)} />
-        </Grelha>
-      </section>
-
-      <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>
-          CADEIA <span style={{ color: COR.muted, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>· carrega à parte</span>
-        </h3>
-        {erroChain && (
-          <div style={{ padding: "0.6rem 0.8rem", borderRadius: "8px", background: "rgba(251,191,36,0.08)", border: `1px solid ${COR.warn}55`, color: COR.warn, fontSize: "0.78rem", marginBottom: "0.5rem" }}>
-            Cadeia indisponível: {erroChain}
-          </div>
-        )}
-        <Grelha isMobile={isMobile}>
-          <Metrica
-            rotulo="Saldo da coordenadora"
-            valor={ouTraco(onchain?.saldoEth, (v) => `${v} ETH`)}
-            cor={COR.primary}
-            nota="É esta carteira que credita as senhas on-chain. Sem gás, a compra deixa de ser creditada."
-          />
-          <Metrica
-            rotulo="Em trânsito"
-            valor="—"
-            nota="Rastreabilidade on-chain ainda não disponível."
-          />
-          <Metrica rotulo="Bloco atual" valor={ouTraco(onchain?.bloco, (v) => v.toLocaleString("pt-BR"))} />
         </Grelha>
       </section>
     </div>

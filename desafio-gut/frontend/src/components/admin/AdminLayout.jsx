@@ -27,6 +27,7 @@ import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button, Input } from "../ui";
 import { ESTADOS } from "../../lib/adminAuth.js";
 import { telaAtiva } from "../../lib/adminNav.js";
+import NavAdminPersistente from "./NavAdminPersistente.jsx";
 
 const COR = { text: "#e8f0fe", muted: "#94a3b8" };
 
@@ -161,6 +162,10 @@ export default function AdminLayout() {
           </Button>
         </form>
       )}
+
+      {/* MC89.24 — navegação persistente em TODAS as telas. Substitui os
+          cartões-atalho do índice. */}
+      <NavAdminPersistente />
 
       <section>
         {/* Cada tela entra aqui. O <Suspense> das rotas preguiçosas vive em
