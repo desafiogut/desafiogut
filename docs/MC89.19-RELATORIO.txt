@@ -1,0 +1,25 @@
+# MC89.19 — RELATÓRIO: Configurações e Admins (Fase 7) — Diagnóstico + Plano
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | ZERO alterações de código
+
+## 1. DIAGNÓSTICO
+
+A Tela 7 é a que tem mais infraestrutura de backend já pronta (MC89.11):
+getAdminNivel, guardAdminNivel, JWT com nivel, revogarAdmin, Blob admin-refresh
+com jti. O que falta é expor tudo na UI e criar os endpoints de sessões e
+configurações.
+
+ConfiguracoesAdmins.jsx (105 linhas) já lista/adiciona/remove admins com
+formulário funcional. O EmConstrucao na segunda metade precisa ser substituído
+por sessões ativas + configurações.
+
+## 2. PLANO (MC89.20, 1-2 sessões)
+
+Três endpoints novos (admin-sessions GET, admin-sessions-revoke POST,
+admin-config GET/POST). Frontend com 3 secções: administradores com badges
+de nível, sessões ativas com revogação, configurações do painel (polling,
+alertas, limiar EOA). ALFA:admins, ALFA:sessoes, ALFA:revogar.
+
+Após o MC89.20, o dashboard ADM estará 100% funcional — 7 telas completas.
+
+## 3. PRÓXIMO PASSO
+MC89.20 — execução. A última tela.

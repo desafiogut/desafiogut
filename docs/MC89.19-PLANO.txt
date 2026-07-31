@@ -1,0 +1,89 @@
+# MC89.19 — Fase 7: Configurações e Admins (Tela 7) — Diagnóstico + Plano
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | ZERO alterações de código
+
+## 1. DIAGNÓSTICO
+
+### O que já funciona (ConfiguracoesAdmins.jsx, 105 linhas)
+- Lista de admins com endereço e badge "(coordenação)" ✓
+- Adicionar/remover admin via `admin-list` (POST) ✓
+- Coordenação é permanente e não removível ✓
+- Placeholder EmConstrucao sobre níveis e sessões
+
+### O que JÁ EXISTE no backend (MC89.11)
+- `getAdminNivel()` — lê o Blob admin-list (formato antigo E novo)
+- `guardAdminNivel(req, nivelMinimo)` — gate com nível
+- JWT admin com claim `nivel` — emitido no login/refresh
+- `revogarAdmin(endereco)` — revoga TODOS os refresh tokens
+- Blob `admin-refresh:{endereco}` — uma entrada por sessão com `{ hash, expiresAt, createdAt, jti }`
+
+### O que NÃO existe
+- Endpoint `admin-sessions` (GET) para listar sessões
+- Endpoint `admin-sessions-revoke` (POST) para revogar UMA sessão específica
+- Endpoint `admin-config` (GET/POST) para configurações do painel
+- Badge de nível nos admins listados
+- Seção de sessões ativas na UI
+- Tema claro/escuro (fora do escopo — T7)
+
+## 2. PLANO (execução no MC89.20, 1-2 sessões)
+
+### S1 — admin-sessions (GET, admin+)
+Lê o Blob `admin-refresh:{endereco}` para cada admin e devolve a lista de
+sessões. Super-admin vê todas; admin vê as suas. Gate: admin+. Sem cache.
+
+Entrada: `?admin=` (opcional, super-admin pode filtrar por admin).
+Saída: `{ sessoes: [{ endereco, jti, createdAt, expiresAt, ip, userAgent }], total }`
+
+### S2 — admin-sessions-revoke (POST, admin+)
+Revoga UMA sessão específica por `jti`. Remove o hash do Blob e a sessão expira
+em ≤ 15 min (TTL do access token). Gate: admin+. Super-admin revoga qualquer;
+admin só as suas. Log: fail-CLOSED.
+
+### S3 — admin-config (GET/POST)
+Armazenado em Blob `admin-config` (chave única).
+GET: operador+. POST: super-admin. Log: fail-CLOSED.
+
+Campos:
+- `pollingInterval`: segundos (15/30/60/120/manual). Default: 30.
+- `alertasAtivos`: array de IDs de alertas ativos.
+- `limiarEoaEth`: limiar para alerta de EOA baixa. Default: 0.005.
+
+### S4 — Frontend (ConfiguracoesAdmins.jsx)
+
+Três secções, substituindo o EmConstrucao:
+
+**Administradores** (já existe, expandir):
+- Badge de nível ao lado de cada endereço (Super-Admin/Admin/Operador)
+- Dropdown de nível no formulário "Adicionar admin"
+- Botão "Remover" só para super-admin (admin vê desabilitado)
+
+**Sessões ativas** (NOVA):
+- Tabela com endereço, criada em, expira em, IP, dispositivo
+- Botão "Revogar" por sessão
+- Super-admin vê todas; admin vê as suas
+
+**Configurações** (NOVA):
+- Atualização automática: dropdown (15s/30s/60s/120s/manual)
+- Alertas: toggles por tipo
+- Limiar EOA: campo numérico (ETH)
+
+### S5 — ALFA
+- `ALFA:admins` → lista administradores com níveis
+- `ALFA:sessoes` → sessões ativas do próprio
+- `ALFA:revogar <jti>` → revoga uma sessão
+
+### S6 — Marcar como pronto
+Configurações já está marcada como pronta (linha 49 do adminNav.js).
+
+## 3. O QUE NÃO MUDA
+- Tema claro/escuro: fora do escopo (T7).
+- Níveis de permissão: já implementados (MC89.11). A UI só os EXPÕE.
+- Blob admin-list: mantido como fonte única. Não se cria tabela `admins`.
+
+## 4. CRITÉRIOS DE SUCESSO (MC89.20)
+- Badge de nível visível em cada admin
+- Sessões listadas com dados do Blob admin-refresh
+- Revogação de sessão funcional
+- Configurações gravadas e lidas do Blob admin-config
+- ALFA:admins, ALFA:sessoes, ALFA:revogar funcionais
+- Suite ≥ 346 backend, ≥ 40 frontend
+- APK recompilado

@@ -5774,3 +5774,19 @@ WhatsApp/Push → 501 explicado. Histórico na tabela `notifications`. Tela 6 co
 formulário + tabela. ALFA:notificar (Blob direto, sem endpoint HTTP).
 
 **Próximo:** MC89.19 — Fase 7: Configurações e Admins (última tela).
+
+---
+
+## MC89.19 — Fase 7: Configurações e Admins (diagnóstico + plano)
+
+Zero alterações de código. A Tela 7 é a que tem mais infraestrutura já pronta
+(MC89.11): getAdminNivel, guardAdminNivel, JWT com nivel, Blob admin-refresh com
+jti. ConfiguracoesAdmins.jsx já lista/adiciona/remove admins. Falta expor níveis
+(badges), sessões ativas (lista + revogação) e configurações (polling/alertas).
+
+Plano: 3 endpoints (admin-sessions, admin-sessions-revoke, admin-config),
+frontend com 3 secções, ALFA:admins/sessoes/revogar. 1-2 sessões.
+
+Após o MC89.20, as 7 telas do dashboard ADM estão completas.
+
+**Próximo:** MC89.20 — execução (última tela).
