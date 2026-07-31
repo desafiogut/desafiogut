@@ -1,0 +1,87 @@
+# MC89.13 — DIAGNÓSTICO DE DADOS PARA GESTÃO DE USUÁRIOS
+Data: 2026-07-31 | Branch: feat/mc89-adm-system | ZERO alterações de código
+
+## 1. REALIDADE DOS DADOS (consulta direta ao Supabase)
+
+### Fontes que contribuem para "utilizador conhecido"
+| Fonte         | Total | Endereços ETH | Não-endereço |
+|---------------|-------|---------------|--------------|
+| cotas         | 7     | 5             | 2 (cnpj:…)   |
+| saldo_rs      | 5     | 5             | 0            |
+| creditos      | 18    | 18            | 0            |
+| debitos       | 0     | 0             | 0            |
+
+### Campos disponíveis por tabela
+
+cotas:
+  cliente_id: text (É o endereço Ethereum quando começa com 0x)
+  endereco:   text (VAZIO em 7/7 — confirmado. A carteira vive em cliente_id)
+  cnpj:       text (7/7 preenchido — é o CNPJ do lojista)
+  email:      text (3/7 preenchido)
+  categoria:  text
+  vendida:    boolean
+  payload:    jsonb (contém empresa, tipo, segmento, valor, etc.)
+  criado_em:  timestamptz
+  atualizado_em: timestamptz
+
+  → Nome do cliente = payload->>'empresa' (não é coluna própria)
+  → 2 de 7 cotas têm cliente_id = "cnpj:…" (não são endereços)
+
+saldo_rs:
+  cliente_id:     text (endereço Ethereum)
+  payload:        jsonb (contém centavos)
+  atualizado_em:  timestamptz
+  → Não tem nome, não tem e-mail, não tem criado_em
+
+saldo_rs_creditos:
+  pedido_id:  text PK
+  payload:    jsonb (endereco, fonte, valorCentavos, saldoAntesCentavos,
+               saldoDepoisCentavos, processado, processadoEm)
+  criado_em:  timestamptz
+  → O endereço está em payload->>'endereco'
+  → Não tem nome, não tem e-mail
+
+lances (Supabase):
+  → 0 linhas. Os lances vivem em Blobs (relâmpago) ou no contrato (programado).
+  → Não é fonte para a lista de utilizadores.
+
+### Quantos utilizadores únicos?
+A consulta UNION de endereços distintos devolve ~5-6 endereços únicos no total.
+É uma base MINÚSCULA — 30 linhas no total do MC89.5 está confirmado.
+
+## 2. O QUE É POSSÍVEL COM ESTES DADOS
+
+✅ Listar endereços com atividade (UNION das 3 fontes)
+✅ Mostrar fontes (em que tabelas o endereço aparece)
+✅ Mostrar primeira e última atividade (min/max de criado_em/atualizado_em)
+✅ Buscar por endereço (parcial, case-insensitive)
+✅ Mostrar saldo R$ de cada utilizador (do saldo_rs.payload)
+✅ Mostrar nome do lojista (cotas.payload->>'empresa' — só para cotas)
+⚠️ Mostrar e-mail: 3 de 7 cotas, 0 nas outras fontes
+⚠️ Mostrar número de créditos: possível (count de saldo_rs_creditos)
+❌ Último acesso/login: não existe (identidade vive no Privy)
+❌ Online agora: não existe (sem registo de sessão de utilizador)
+❌ Lances: dispersos em Blobs + contrato — não consolidável em SQL
+❌ Foto/avatar: não existe
+
+## 3. DECISÕES JÁ TOMADAS QUE AFETAM ESTA TELA
+
+D1 (MC89.5): a lista chama-se "utilizadores COM ATIVIDADE", não "todos".
+  → O rótulo no ecrã TEM de refletir isto. "Utilizadores" sem qualificação
+    promete o que não podemos entregar.
+
+D-SALDO (MC89.5): não há botão "resetar saldo". A ação é "Ajuste manual" com
+  débito auditável.
+
+D-BLOQUEIO (MC89.5): não existe flag de bloqueio. É preciso criá-la (tabela
+  `usuarios_bloqueio`) E fazer os gates de emissão de sessão e endpoints de
+  dinheiro LEREM-na. Sem a segunda parte, o botão "Bloquear" é decorativo.
+
+## 4. O QUE NÃO MUDA NESTA FASE
+
+- A identidade continua a viver no Privy. NÃO se cria tabela de utilizadores.
+- O e-mail NÃO é adicionado a tabelas que não o têm (seria inventar dados).
+- Os lances NÃO são consolidados (é um MC próprio — D3 do MC89.5).
+- O sistema de presença NÃO é implementado (é um MC próprio).
+- O `rbac.mjs` NÃO é corrigido aqui (usa Blobs para cotas enquanto os dados
+  estão no Supabase — mas isso é um bug pré-existente, não desta tela).
