@@ -5917,3 +5917,49 @@ app — é preciso voltar a entrar.
 
 **Próximo:** pendências externas (EOA, BLOBS_TOKEN, RAG, Play Store) ou
 MC89.28 (Fase 3).
+
+
+## MC89.29 — A mensagem Sepolia: não era env em falta, era sincronização
+
+O MC89.27 já tinha corrigido isto. O APK voltou a exibir a mensagem porque
+durante o MC89.28 alguém compilou outra vez com `npm run build`. Terceira
+ocorrência do mesmo defeito (MC88.24 → MC89.27 → MC89.29).
+
+Diagnóstico pelos timestamps: `dist/` (05:19) validava como mainnet coerente,
+mas `android/app/src/main/assets/public` (05:11) e o APK (05:12) eram
+ANTERIORES a esse build. O bundle empacotado não tinha `VITE_CONTRATO_SEPOLIA`
+nem `VITE_CHAIN_ID` — assinatura exacta de "rede Sepolia · contrato não
+configurado" (com `VITE_NETWORK_STAGE=mainnet` presente, que é porque o stage
+não aparecia na mensagem).
+
+**Desvio ao enunciado, deliberado.** O MC89.29 pedia criar `.env.local` com a
+rede fixa e compilar com `npm run build`. Não foi feito: (a) `npm run build`
+é Vite puro e ignora o env do Netlify — é a causa do MC88.24 e a própria R10 do
+enunciado o proíbe; (b) declarar a rede no disco cegaria permanentemente o
+guarda `validar-dist-rede.mjs`, que passaria a validar o disco em vez do env
+real; (c) `.env.local` está no .gitignore, e forçar o commit publicaria a chave
+Alchemy. Correcção real: `npm run build:apk` + `gradlew` + `adb install`.
+Zero alterações de código, zero alterações em `.env`.
+
+Validação em três níveis: o gate `validar-dist-rede.mjs` sobre assets/public
+passou de exit 1 a exit 0; o `.apk` foi extraído e o env confirmado lá dentro
+(chainId=1, contrato 0x0052477A…16cd, RPC eth-mainnet); e o DOM foi interrogado
+por CDP no aparelho em /admin, /mercado e /dashboard — sem banner, sem
+role=status. Sonda validada por mutação em cada rota. Um primeiro veredito deu
+falso negativo por um limiar meu de 400 chars no corpo: o painel Admin tem 228
+legítimos. O critério passou a ser "árvore montada + mutação detectada".
+
+**Achado lateral:** `AdminSpinner.jsx` não é importado por ficheiro nenhum. O
+tree-shaking remove-o — "admin-spin" aparece 0 vezes no bundle (AdminToast
+aparece 2). O registo do MC89.26 diz "integração completa de AdminSpinner +
+toasts em todas as 7 telas"; para os toasts é verdade, para o spinner não. Não
+corrigido aqui (fora do âmbito, R1).
+
+**Higiene sugerida, não implementada:** o guarda vive dentro do `build:apk`, ou
+seja, só protege quem já usa o caminho certo. Mover a validação para uma task do
+Gradle faria `gradlew assembleDebug` falhar sobre um bundle incoerente,
+independentemente de como o dist lá chegou. É o que quebra o ciclo.
+
+**Próximo:** pendências externas (EOA, BLOBS_TOKEN, RAG, Play Store) ou Fase 4
+da reforma UX/UI. Pendente do operador: exercício vivo dos toasts/EstadoVazio
+nas telas autenticadas (exige OAuth Privy).

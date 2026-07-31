@@ -1,0 +1,183 @@
+================================================================================
+MC89.29 — ELIMINAÇÃO DEFINITIVA DA MENSAGEM SEPOLIA
+Data: 2026-07-31
+Veredito: ✅ RESOLVIDO — mensagem ausente no APK, verificado no aparelho
+================================================================================
+
+RESUMO EM UMA LINHA
+-------------------
+Não faltava nenhuma variável de ambiente: faltava sincronizar. O `dist/` já
+estava correto em mainnet; o APK instalado continha um bundle de 8 minutos
+antes, construído sem o env do Netlify. `build:apk` + `gradlew` resolveram.
+Zero alterações de código-fonte, zero alterações em ficheiros `.env`.
+
+================================================================================
+1. O QUE FOI ENCONTRADO (SEGMENTO 0)
+================================================================================
+
+Origem da mensagem: src/components/AvisoRede.jsx (MC88.25), alimentado por
+src/lib/network.js. É um detector, não um defeito.
+
+Medição com o guarda já existente (scripts/validar-dist-rede.mjs):
+
+  A) desafio-gut/frontend/dist/            (mtime 05:19:13)
+     VITE_CONTRATO_SEPOLIA : 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+     VITE_ALCHEMY_URL      : mainnet
+     VITE_CHAIN_ID         : 1
+     VITE_NETWORK_STAGE    : mainnet
+     → exit 0  ✓ coerente com produção
+
+  B) android/app/src/main/assets/public/   (mtime 05:11:17)  ← dentro do APK
+     VITE_CONTRATO_SEPOLIA : (AUSENTE)
+     VITE_ALCHEMY_URL      : (AUSENTE)
+     VITE_CHAIN_ID         : (AUSENTE)
+     VITE_NETWORK_STAGE    : mainnet
+     → exit 1  ✖ rejeitado
+
+  APK instalado: mtime 05:12:16
+
+CAUSA-RAIZ (reconstruída pelos timestamps):
+  05:11:17  cap sync a partir de um dist SEM env  → assets/public mau
+  05:12:16  gradlew empacota esse bundle          → APK mau
+  05:19:13  netlify build --context production    → dist BOM
+  ...e o gradlew nunca voltou a correr sobre o dist bom.
+
+Ou seja: uma REGRESSÃO introduzida durante o MC89.28, que desfez a correção
+já feita no MC89.27. É o mesmo mecanismo do MC88.22/88.23/88.24.
+
+================================================================================
+2. DESVIO DELIBERADO AO PLANO ORIGINAL
+================================================================================
+
+O enunciado do MC89.29 mandava criar `.env.local` com contrato/chainId/RPC
+fixos, apagar `.env`, e compilar com `npm run build`. NÃO foi executado assim,
+por três razões objetivas:
+
+  a) `npm run build` é Vite puro: lê os `.env` do disco e IGNORA o env do
+     Netlify. É exatamente o caminho que causou o MC88.24 (utilizador pagou o
+     PIX, saldo não apareceu, porque o bundle olhava para o contrato errado).
+     A própria regra R10 do enunciado o proíbe — o passo 2.1 contradizia-a.
+
+  b) Declarar a config de rede em `.env.local` tornaria o guarda
+     validar-dist-rede.mjs permanentemente cego: passaria a validar o disco
+     local em vez do env real de produção. Se o Netlify driftar outra vez,
+     ninguém repara. O `.env` do disco documenta esta decisão desde o MC89.27.
+
+  c) `.env` e `.env.local` estão em .gitignore (linhas 21-22): o commit pedido
+     no passo 1.5 não podia existir, e forçá-lo publicaria a chave Alchemy no
+     repositório — violação direta de R4/R5.
+
+O `.env` do disco foi mantido intacto (contém apenas VITE_NETWORK_STAGE=mainnet
+e o aviso escrito do MC89.27 contra a reincidência).
+
+================================================================================
+3. CORREÇÃO APLICADA
+================================================================================
+
+Comandos (nenhuma edição de ficheiro):
+
+  npm run build:apk
+      → netlify build --context production   (3m 48s, injeta o env real)
+      → npm run validar:dist                 (gate)
+      → npx cap sync android                 (copia o dist BOM)
+
+  cd android && JAVA_HOME=<Android Studio\jbr> && .\gradlew assembleDebug
+      → BUILD SUCCESSFUL in 37s
+
+  adb install -r app-debug.apk               → Success
+
+APK: 37 434 881 bytes, 31/07/2026 14:53:39
+
+================================================================================
+4. VALIDAÇÃO
+================================================================================
+
+4.1 — GATE INVERTIDO (o mesmo teste que antes reprovava)
+  node scripts/validar-dist-rede.mjs android/app/src/main/assets/public
+  → exit 0 ✓ (antes: exit 1)
+
+4.2 — DENTRO DO BINÁRIO .apk (não só na pasta de origem)
+  .apk extraído e validado:
+     VITE_CONTRATO_SEPOLIA : 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+     VITE_ALCHEMY_URL      : mainnet
+     VITE_CHAIN_ID         : 1
+     VITE_NETWORK_STAGE    : mainnet
+  → exit 0 ✓
+
+4.3 — NO APARELHO (Xiaomi 21091116UG, Android 13), via CDP
+  adb forward → webview_devtools_remote → Runtime.evaluate no DOM real.
+
+  Rota        montada  chars  banner  mutação detectada
+  /admin      true     228    false   true
+  /mercado    true     779    false   true
+  /dashboard  true     0      false   true
+
+  Amostra /mercado: "🏆 DesafioGUT 0x1E1b...98cB EDIÇÃO R-1 EM BREVE
+  Menor lance único vence · Art. 8 Modo: ⚡ R..."
+
+  SONDA VALIDADA POR MUTAÇÃO: em cada rota foi injetado um banner falso com
+  role="status" e o texto exato; a sonda apanhou-o sempre. Sem esse passo,
+  "não encontrei nada" seria indistinguível de uma sonda que nunca encontra
+  nada. (Nota: um primeiro veredito deu INCONCLUSIVO por um limiar meu de 400
+  caracteres — o painel Admin tem 228 legítimos. O limiar foi removido; o
+  critério passou a ser "árvore montada + mutação detetada nesse ecrã".)
+
+4.4 — NÃO-REGRESSÃO DO MC89.26/89.28
+  EnderecoTruncado : ✓ VIVO no aparelho — "0x1E1b…98cB" renderizado em /admin
+  EstadoVazio      : ✓ presente no bundle do APK (ícone SVG da caixa)
+  TituloSeccao     : ✓ em src/pages/admin/_ui.jsx, usado em 7 telas
+  AdminToast       : ✓ presente no bundle (keyframes admin-toast-in, 2 refs)
+  AdminSpinner     : ✖ AUSENTE do bundle — ver secção 5
+
+================================================================================
+5. ACHADO LATERAL — AdminSpinner é código morto
+================================================================================
+
+`src/components/admin/AdminSpinner.jsx` existe e está correto, mas NÃO é
+importado por nenhum ficheiro. O tree-shaking remove-o: a animação
+"admin-spin" aparece 0 vezes no bundle do APK (AdminToast aparece 2 vezes).
+
+O registo do MC89.26 no cloud.md afirma "integração completa de AdminSpinner +
+toasts em todas as 7 telas". Para os toasts é verdade; para o spinner não.
+
+NÃO foi corrigido neste MC: é uma alteração de comportamento de UI fora do
+âmbito do MC89.29 (que é só a mensagem Sepolia), e a regra R1 pede alteração
+mínima. Fica registado para decisão do operador.
+
+================================================================================
+6. HIGIENE — COMO IMPEDIR A PRÓXIMA REINCIDÊNCIA
+================================================================================
+
+Este é o terceiro MC gasto no mesmo defeito (MC88.24 → MC89.27 → MC89.29).
+O padrão é sempre: alguém corre `npm run build` + `cap sync` + `gradlew`.
+
+O guarda `validar:dist` já existe, mas está DENTRO do `build:apk` — só protege
+quem já usa o caminho certo. Não há nada a impedir o caminho errado.
+
+Sugestão (não implementada, decisão do operador): mover a validação para uma
+task do Gradle (preBuild depende de validar o bundle em assets/public), para
+que `gradlew assembleDebug` falhe se o bundle empacotado for incoerente,
+independentemente de como o dist lá chegou.
+
+================================================================================
+7. ENTREGÁVEIS
+================================================================================
+  ✅ docs/MC89.29-DIAGNOSTICO.txt          (commit MC89.29-S0)
+  ✅ APK recompilado e instalado           (14:53:39, mainnet, validado)
+  ✅ Mensagem Sepolia eliminada            (verificada no aparelho, 3 rotas)
+  ✅ Desktop\MC89.29-RELATORIO.txt         (este ficheiro)
+  ✅ docs/MC89.29-RELATORIO.txt            (cópia no repositório)
+  ✅ cloud.md atualizado
+  ⛔ .env.local NÃO criado                 (justificado na secção 2)
+  ⛔ Nenhum ficheiro de código alterado    (R1)
+
+Notas de estado do repositório:
+  - capacitor.build.gradle e capacitor.settings.gradle aparecem como modificados
+    mas o diff é vazio (só fim-de-linha LF↔CRLF). Não foram commitados.
+  - Existe um diretório espúrio na raiz: `UsersMoltbotAppDataLocalTemp/`,
+    criado por um caminho mal formado numa sessão anterior. Não foi tocado.
+
+PENDENTE DO OPERADOR:
+  - Exercício vivo dos toasts do MC89.26 e do EstadoVazio do MC89.28 nas telas
+    autenticadas do painel (exige login OAuth Privy, não automatizável).
+  - Decidir sobre o AdminSpinner (secção 5) e sobre o gate no Gradle (secção 6).
