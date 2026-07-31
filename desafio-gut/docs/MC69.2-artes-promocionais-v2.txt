@@ -1,0 +1,105 @@
+================================================================================
+MC69.2 — 3 VERSOES DISTINTAS DA VARIACAO 2 (LOJISTA) — GUTO RECRIADO
+Data: 2026-07-10
+================================================================================
+
+VEREDITO FINAL: [OK] 3 VERSOES DISTINTAS DA VARIACAO 2 GERADAS E VALIDADAS.
+
+--------------------------------------------------------------------------------
+1. CORRECAO APLICADA (leitura critica do brief)
+--------------------------------------------------------------------------------
+O brief MC69.2 descrevia GUTO como "a friendly pig" (um porco) em TODOS os
+prompts. Isso esta ERRADO: GUTO e um personagem HUMANO (homem robusto, cabelo
+castanho penteado para tras, barba/cavanhaque, brinco de argola dourado, terno
+navy, colete laranja em brocado, medalhao dourado, gravata borboleta navy).
+Confirmado pelos ativos reais em Desktop\GUTO\ e pela memoria do projeto
+("GUTO e HUMANO, nao porco"). Os prompts de porco foram DESCARTADOS. Todas as 3
+versoes usaram image-to-image a partir da referencia real (guto-referencia.png),
+preservando a identidade do personagem.
+
+Segundo ponto: a pasta ARTES-PROMOCIONAIS-V2 ja continha 3 artes distintas
+(variacao-1/2/3), porem como 3 PUBLICOS diferentes (premio / lojista /
+comprador-ou-vendedor), NAO 3 composicoes da mesma mensagem lojista. Nao havia
+duplicacao de imagens 1 e 3 (3 hashes md5 distintos). O objetivo do MC69.2 (3
+composicoes LOJISTAS distintas) foi entregue em novas pastas versao-2-1/2/3,
+sem tocar nas artes anteriores. Escopo confirmado com o operador (RUFLO).
+
+--------------------------------------------------------------------------------
+2. PIPELINE UTILIZADO
+--------------------------------------------------------------------------------
+Comfy Cloud (MCP) — submit_workflow:
+  LoadImage(guto-referencia.png) -> GeminiImage2Node -> SaveImage
+  Modelo: gemini-3-pro-image-preview (Nano Banana Pro)
+  aspect_ratio: 9:16 | resolution: 2K | response_modalities: IMAGE
+Uma unica referencia preserva a identidade; Gemini 3 Pro renderiza texto
+PT-BR com acentuacao correta. Skills ECC verificadas e presentes em
+~/.claude/skills/: nano-banana, space-GPT-image2-design, fal-ai-media,
+token-aware-image.
+
+--------------------------------------------------------------------------------
+3. AS 3 VERSOES (todas com a MESMA mensagem lojista)
+--------------------------------------------------------------------------------
+Cabecalho comum: "LEILAO DE MENOR LANCE UNICO" + "E-commerce por dropshipping"
+Rodape comum: "Anuncie seus produtos no maior leilao de menor lance unico.
+Venda mais com dropshipping. Baixe agora e comece a vender."
+
+VERSAO 2.1 — "GUTO Apontando com Martelo"
+  Composicao: GUTO ao centro, pose dinamica, martelo erguido em uma mao,
+  apontando para o espectador com a outra; showroom de eletrodomesticos,
+  holofotes, confete dourado. Expressao: confiante/energetica.
+  Arquivo: ARTES-PROMOCIONAIS-V2\versao-2-1\versao-2-1-final.png
+  prompt_id: bd88bf24-2ad7-4b28-9fd4-e58ad061c9cf | seed 2101
+
+VERSAO 2.2 — "GUTO com Cartaz 'ANUNCIE AQUI'"
+  Composicao: GUTO segurando cartaz laranja "ANUNCIE AQUI" erguido, martelo na
+  outra mao; vitrine/marketplace com toldo listrado e caixas de entrega;
+  showroom ao fundo. Expressao: acolhedora/amigavel.
+  Arquivo: ARTES-PROMOCIONAIS-V2\versao-2-2\versao-2-2-final.png
+  prompt_id: f2e4fa2c-8da7-4494-a328-5eb61f044d38 | seed 2201
+
+VERSAO 2.3 — "GUTO com Produtos ao Fundo"
+  Composicao: GUTO em pose relaxada, martelo apoiado no ombro, cercado de caixas
+  de envio empilhadas e seta de vendas em ascensao; showroom ao fundo.
+  Expressao: neutra/profissional.
+  Arquivo: ARTES-PROMOCIONAIS-V2\versao-2-3\versao-2-3-final.png
+  prompt_id: 20b755cc-be5e-4f74-ad07-6266f64b8795 | seed 2301
+
+--------------------------------------------------------------------------------
+4. VALIDACAO VISUAL (MCP / leitura direta das imagens)
+--------------------------------------------------------------------------------
+[OK] As 3 versoes sao VISUALMENTE DISTINTAS entre si (3 md5 distintos +
+     composicoes/poses/expressoes diferentes).
+[OK] GUTO e o MESMO personagem HUMANO nas 3 (rosto, barba, brinco, terno navy,
+     colete laranja, medalhao — identidade consistente via referencia).
+[OK] Martelo presente nas 3 versoes.
+[OK] Cenario de showroom de eletrodomesticos (mundo GUTO-Eletrodomesticos),
+     coerente com as artes vencedoras anteriores.
+[OK] Vibrantes e animadas (holofotes, confete, glow laranja), nao genericas.
+[OK] Mensagem clara para o lojista, sem jargao tecnico, com gancho de conversao.
+[OK] Paleta navy #050818 + laranja #ff6b35 respeitada.
+[OK] Proporcao 9:16 (1536x2752), adequada a e-mail e WhatsApp.
+[OK] Texto PT-BR com acentos corretos (LEILAO, UNICO, leilao, unico).
+Iteracoes necessarias: 0 (Boulder Loop nao acionado — 1 tentativa por versao
+aprovada).
+
+--------------------------------------------------------------------------------
+5. ARQUIVOS GERADOS
+--------------------------------------------------------------------------------
+C:\Users\Moltbot\Desktop\ARTES-PROMOCIONAIS-V2\
+  versao-2-1\versao-2-1-final.png      (+ versao-2-1-tentativa-1.png)
+  versao-2-2\versao-2-2-final.png      (+ versao-2-2-tentativa-1.png)
+  versao-2-3\versao-2-3-final.png      (+ versao-2-3-tentativa-1.png)
+  referencia-guto\guto-referencia.png  (referencia de identidade usada)
+
+--------------------------------------------------------------------------------
+6. PILARES
+--------------------------------------------------------------------------------
+SUPERPERS: apenas criacao de ativos, zero alteracao de codigo. Aguarda
+           aprovacao do operador antes de qualquer uso em producao.
+EVERYTHING CLOUD CODE: Comfy Cloud + referencia real + cenario consistente.
+RUFLO: Agente de Design (Opus) gerou; escopo confirmado pelo operador;
+       aprovacao final do humano pendente.
+
+PROXIMO PASSO: usar as 3 versoes em campanhas de e-mail e WhatsApp (publico
+lojista). Opcional: versoes animadas (Kling/WAN) para canais dinamicos.
+================================================================================

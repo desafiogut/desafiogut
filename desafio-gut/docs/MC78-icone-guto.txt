@@ -1,0 +1,91 @@
+================================================================================
+MC78 — Ícone da tela de login (modal Privy) → rosto do GUTO
+Data: 2026-07-18
+================================================================================
+
+OBJETIVO
+--------
+Substituir o ícone exibido acima da frase "Log in or sign up" no modal de login
+do Privy pelo rosto do GUTO (fonte: C:\Users\Moltbot\Desktop\GUTO\EXPRESSÕES\1.png).
+
+--------------------------------------------------------------------------------
+1. DIAGNÓSTICO (Segmento 0)
+--------------------------------------------------------------------------------
+- Repositório frontend: C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend
+  (React + Vite; auth via @privy-io/react-auth).
+- O ícone alvo é o `appearance.logo` do <PrivyProvider>, definido em:
+      src/main.jsx:295
+- CORREÇÃO DA PREMISSA: o ícone atual NÃO é o placeholder genérico do Privy.
+  É o logo oficial da marca (`/assets/logos/v2/gut-logo-icon-v2.png` — quadrado
+  navy com o ícone laranja), colocado ali de propósito no MC67 (o favicon.ico
+  cross-origin era bloqueado pela CSP img-src). Confirmado ao vivo no modal real
+  de produção: quadrado navy + ícone laranja acima de "Log in or sign up".
+- Esclarecimento do usuário durante a execução fixou o alvo exato:
+  "o ícone que aparece acima da frase 'log in or sign up'" = o logo do modal Privy.
+
+- Imagem-fonte do GUTO: 1.png (2059x1321, PNG com canal alfa/transparente).
+  Rosto 3D cartoon sorrindo, já sem fundo (transparente) — sem margem branca.
+
+--------------------------------------------------------------------------------
+2. IMPLEMENTAÇÃO (Segmento 2)
+--------------------------------------------------------------------------------
+Processamento da imagem (sharp), atendendo ao pedido "só o rosto, sem margem branca":
+  1) trim do transparente (threshold 10) -> recorte apertado da cabeça (870x1113)
+  2) extend para quadrado centralizado com fundo TRANSPARENTE (sem branco)
+  3) resize 512x512, PNG com alfa (compressionLevel 9)
+  Saída: public/assets/guto/guto-login.png (512x512, alpha, ~445KB)
+
+Alteração de código (1 linha + comentário) em src/main.jsx:
+  ANTES: logo: "/assets/logos/v2/gut-logo-icon-v2.png"
+  DEPOIS: logo: "/assets/guto/guto-login.png"
+  (same-origin — mantém compatibilidade com a CSP img-src do MC67)
+
+IMPORTANTE: o asset da marca gut-logo-icon-v2.png NÃO foi sobrescrito (continua
+em uso em outros pontos/favicon). Foi criado um asset dedicado para o login.
+
+Nenhuma lógica de negócio ou constante de auth foi tocada (loginMethods,
+embeddedWallets, chains, appId — intactos). Alteração puramente visual (R1).
+
+--------------------------------------------------------------------------------
+3. VALIDAÇÃO
+--------------------------------------------------------------------------------
+- Build de produção: `npm run build` -> VERDE (✓ built in 13.88s).
+  (Warnings INVALID_ANNOTATION são pré-existentes do node_modules Privy/ox.)
+- Asset copiado para o bundle: dist/assets/guto/guto-login.png -> OK
+- Path referenciado no bundle JS (dist/assets/index-*.js) -> OK
+- Evidência visual (MCP chrome-devtools):
+    * MC78-antes.png  — modal com o ícone da marca (estado atual de produção)
+    * MC78-depois.png — modal com o rosto do GUTO acima de "Log in or sign up"
+  Legibilidade confirmada no tamanho real do modal (~72-84px) e thumb (40px).
+
+--------------------------------------------------------------------------------
+4. DEPLOY — PENDENTE (AÇÃO DO OPERADOR)
+--------------------------------------------------------------------------------
+NÃO foi feito deploy nem commit automático. Motivos (regras do projeto/memória):
+  - Produção roda a linhagem MAINNET (MC60), NÃO a `main`. Deploy é MANUAL.
+  - Deployar a branch errada REGRIDE a mainnet. A branch de trabalho atual
+    (feat/mc75-automacao-diaria) não é a linhagem de produção.
+Passos para o operador:
+  1) Portar esta mudança (guto-login.png + 1 linha em main.jsx) para a branch
+     de release correta (linhagem MAINNET / feat/mc73-correcao-deploy).
+  2) `npm run build` -> verde.
+  3) Deploy manual Netlify da linhagem de produção.
+  4) Revalidar o modal em produção (abrir login -> ver o rosto do GUTO).
+
+--------------------------------------------------------------------------------
+5. ARQUIVOS
+--------------------------------------------------------------------------------
+  + frontend/public/assets/guto/guto-login.png        (novo asset)
+  ~ frontend/src/main.jsx                              (logo do PrivyProvider)
+  Docs: desafio-gut/docs/MC78-icone-guto.txt
+  Evidências: Desktop/MC78-antes.png, Desktop/MC78-depois.png
+
+--------------------------------------------------------------------------------
+6. LIÇÕES
+--------------------------------------------------------------------------------
+- A frase "Log in or sign up" é o título padrão do modal Privy; o ícone acima
+  dela é `config.appearance.logo` — ponto único de mudança.
+- O logo do modal deve permanecer same-origin (CSP img-src, MC67) — data-URI ou
+  arquivo em public/ ok; URL cross-origin quebra o ícone.
+- Fonte 1.png já é transparente; sharp.trim() basta para "só o rosto".
+================================================================================

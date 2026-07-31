@@ -41,6 +41,7 @@ const Configuracoes        = lazy(() => import("./pages/Configuracoes.jsx"));
 const AdminLayout          = lazy(() => import("./components/admin/AdminLayout.jsx"));
 const AdminVisaoGeral      = lazy(() => import("./pages/admin/VisaoGeral.jsx"));
 const AdminUsuarios        = lazy(() => import("./pages/admin/GestaoUsuarios.jsx"));
+const AdminPerfilUsuario   = lazy(() => import("./pages/admin/PerfilUsuario.jsx"));
 const AdminFinanceiro      = lazy(() => import("./pages/admin/GestaoFinanceira.jsx"));
 const AdminOperacoes       = lazy(() => import("./pages/admin/Operacoes.jsx"));
 const AdminLogs            = lazy(() => import("./pages/admin/LogsAuditoria.jsx"));
@@ -293,6 +294,7 @@ export default function App() {
           <Route path="/admin" element={<AdminAuthProvider><AdminLayout /></AdminAuthProvider>}>
             <Route index                   element={<AdminVisaoGeral />} />
             <Route path="usuarios"         element={<AdminUsuarios />} />
+            <Route path="usuarios/:endereco" element={<AdminPerfilUsuario />} />
             <Route path="financeiro"       element={<AdminFinanceiro />} />
             <Route path="operacoes"        element={<AdminOperacoes />} />
             <Route path="logs"             element={<AdminLogs />} />

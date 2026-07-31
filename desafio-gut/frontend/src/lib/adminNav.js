@@ -33,7 +33,7 @@ export const TELAS_ADMIN = [
   },
   {
     id: "usuarios", rota: "usuarios", href: "/admin/usuarios", label: "Usuários",
-    ficheiro: "GestaoUsuarios.jsx", index: false, pronta: false,
+    ficheiro: "GestaoUsuarios.jsx", index: false, pronta: true,  // MC89.14 (Fase 4)
   },
   {
     id: "financeiro", rota: "financeiro", href: "/admin/financeiro", label: "Financeiro",

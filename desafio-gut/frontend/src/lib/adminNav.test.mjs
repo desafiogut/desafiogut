@@ -114,7 +114,7 @@ test("App.jsx declara exatamente as rotas deste modelo", () => {
 
   const declaradas = [...bloco.matchAll(/<Route\s+path="([^"]+)"/g)]
     .map((m) => m[1])
-    .filter((p) => p !== "/admin");
+    .filter((p) => p !== "/admin" && !p.includes(":")); // filhas com :param não estão no modelo
 
   const esperadas = TELAS_ADMIN.filter((t) => !t.index).map((t) => t.rota);
   assert.deepEqual([...declaradas].sort(), [...esperadas].sort(),

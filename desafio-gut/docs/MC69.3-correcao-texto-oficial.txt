@@ -1,0 +1,84 @@
+================================================================================
+MC69.3 — CORRECAO DE TEXTO (MENSAGEM OFICIAL DO CLIENTE) + FORMATO QUADRADO
+Data: 2026-07-10
+================================================================================
+
+VEREDITO FINAL: [OK] 3 VERSOES COM TEXTO OFICIAL GERADAS E VALIDADAS.
+
+--------------------------------------------------------------------------------
+1. RESUMO
+--------------------------------------------------------------------------------
+As 3 artes escolhidas pelo operador no MC69.2 (movidas para a subpasta
+"versao 1 2 e 3") foram editadas via image-to-image para: (a) substituir o texto
+antigo pela MENSAGEM OFICIAL do cliente (blocos PJ e PF + telefone + CTA), e
+(b) recompor para formato mais quadrado 4:5. GUTO foi mantido como o MESMO
+personagem HUMANO (nao porco), preservando pose e cenario de cada base.
+Uma base -> uma versao. Resultado: 3 imagens distintas (3 md5 distintos).
+
+--------------------------------------------------------------------------------
+2. PIPELINE
+--------------------------------------------------------------------------------
+Comfy Cloud (MCP) — submit_workflow (edicao com referencia):
+  LoadImage(arte base) -> GeminiImage2Node -> SaveImage
+  Modelo: gemini-3-pro-image-preview (Nano Banana Pro)
+  aspect_ratio: 4:5 | resolution: 2K | response_modalities: IMAGE
+  Referencias de origem enviadas via upload; prompt com trava de ortografia no
+  telefone. Skills ECC (nano-banana, space-GPT-image2-design, fal-ai-media,
+  token-aware-image) verificadas e presentes.
+
+--------------------------------------------------------------------------------
+3. TEXTO OFICIAL APLICADO (identico nas 3 versoes)
+--------------------------------------------------------------------------------
+Bloco PJ (painel navy, tag laranja "PJ"):
+  "PESSOA JURIDICA: nos ajudamos a vender os seus produtos e servicos!"
+  "PERGUNTE COMO: (92) 98428-5774"
+Bloco PF (painel laranja, tag navy "PF"):
+  "PESSOA FISICA: compre por um preco bem baixinho"
+  "AQUI VOCE DIZ QUANTO QUER PAGAR"
+  "GANHA quem ofertar o MENOR LANCE UNICO"
+CTA (barra laranja):
+  "BAIXE o app DesafioGUT - cadastre-se, compre senhas e participe."
+(acentuacao renderizada corretamente nas imagens: JURIDICA/FISICA/UNICO/preco/
+servicos/nos/VOCE.)
+
+--------------------------------------------------------------------------------
+4. ARQUIVOS GERADOS (todos 1856x2304 = 4:5)
+--------------------------------------------------------------------------------
+C:\Users\Moltbot\Desktop\ARTES-PROMOCIONAIS-V2\
+  versao1\versao1-final.png  (base: versao-2-1-final — GUTO apontando + martelo)
+  versao2\versao2-final.png  (base: versao-2-2-final — GUTO com cartaz ANUNCIE AQUI)
+  versao3\versao3-final.png  (base: versao-2-3-final — GUTO martelo no ombro + caixas)
+  (+ versaoN-tentativa-1.png em cada pasta)
+prompt_ids: v1 05e31f1c-e657-43a3-9fa9-674d74abbd06 (seed 6931)
+            v2 d3837cf5-294c-4dbc-b324-9ff18c89ba8f (seed 6932)
+            v3 2427c9c3-5718-4e19-8ae5-02c0dfc023fa (seed 6933)
+
+--------------------------------------------------------------------------------
+5. VALIDACAO VISUAL (MCP / leitura direta)
+--------------------------------------------------------------------------------
+[OK] Texto oficial aplicado integralmente e legivel nas 3 (blocos PJ/PF + CTA).
+[OK] Telefone EXATO nas 3 versoes: (92) 98428-5774 (conferido digito a digito).
+[OK] GUTO e o MESMO personagem HUMANO da base (rosto, terno navy, colete laranja,
+     brinco, medalhao). Consistencia mantida.
+[OK] Formato 4:5 (1856x2304) — mais quadrado, adequado a e-mail e WhatsApp.
+[OK] Paleta navy #050818 + laranja #ff6b35 respeitada; hierarquia PJ(navy)/PF(laranja).
+[OK] 3 imagens visualmente distintas (poses/composicoes das bases preservadas).
+Iteracoes: 0 (Boulder Loop nao acionado — 1 tentativa por versao aprovada).
+
+OBS (drift menor, nao bloqueante): na versao3 o GUTO aparece com gravata reta
+(em vez de gravata borboleta) e o medalhao mostra a letra "G" (em vez de "K").
+Coerente com a marca (G de GUT); nao justifica regeracao, mas registrado para
+decisao do operador caso deseje paridade estrita.
+
+--------------------------------------------------------------------------------
+6. PILARES
+--------------------------------------------------------------------------------
+SUPERPERS: apenas edicao de ativos, zero alteracao de codigo. Aguarda aprovacao
+           do operador antes de uso em producao.
+EVERYTHING CLOUD CODE: Comfy Cloud + edicao com referencia + tokens de cor.
+RUFLO: Agente de Design (Opus) gerou e validou visualmente; aprovacao final do
+       humano pendente.
+
+PROXIMO PASSO: usar as 3 versoes com o texto oficial em campanhas de e-mail e
+WhatsApp (publico PJ e PF).
+================================================================================

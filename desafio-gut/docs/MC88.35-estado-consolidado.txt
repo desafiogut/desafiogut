@@ -1,0 +1,569 @@
+================================================================================
+MC88.35 — CERTEZA DO QUE TEMOS
+Consolidação e diagnóstico completo do estado do DesafioGUT
+================================================================================
+Data.........: 2026-07-28, 16:16–17:35 UTC
+Natureza.....: LEVANTAMENTO. Zero alteração de código (R1 cumprida).
+Custo........: US$ 0,00 — só leituras. Nenhuma transação on-chain (R2 cumprida).
+Repositório..: branch `feat/mc88.29-fila-tarefas`, HEAD a208efe (docs MC88.34)
+Aparelho.....: fiem7xlvcufe855h · Xiaomi pissarropro (21091116UG) · Android 36
+Método.......: adb + CDP na WebView do APK, RPC público read-only, Netlify CLI
+               26.1.0, MCP Supabase, logs de produção. Cada número abaixo tem
+               origem e hora.
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+O sistema está VIVO E CORRETO na mainnet: o contrato responde, a coordenação
+on-chain é a EOA esperada, o backend está de pé, a fila assíncrona foi ligada e
+processou 5 tarefas sem falhas, e o saldo que o APK mostra (12 senhas) confere
+exatamente com o `saldoSenhas` lido do contrato. A otimização de arranque do
+MC88.34 foi confirmada por medição independente e é reprodutível.
+
+Há, porém, QUATRO problemas que exigem decisão do operador, dois deles com
+prazo. (1) A EOA coordenadora tem ~0,0044 ETH, o que dá cerca de 19 créditos de
+senhas ao preço de gás atual — quando acabar, as compras deixam de creditar.
+(2) O `BLOBS_TOKEN` continua por definir e isso está a fazer o monitor-onchain
+varrer 11 de cada ~330 blocos, com os logs a dizerem `atrasado: false` — um
+verde falso, provado com logs de hoje. (3) A produção WEB serve um build
+anterior ao MC88.34, portanto os utilizadores de browser não têm nenhuma das
+otimizações. (4) Os `.env` locais continuam a apontar para Sepolia e para o
+contrato abandonado, pelo que um `npm run build` nesta máquina produziria um
+bundle regredido.
+
+Não consegui verificar duas áreas: a automação no PythonAnywhere (o servidor MCP
+não liga) e o estado da conta na Play Store (sem sessão autenticada). Ambas
+ficam explicitamente como pendências do operador — não as dou por boas.
+
+================================================================================
+QUADRO DE ESTADO
+================================================================================
+  ÁREA                                ESTADO   EVIDÊNCIA
+  ────────────────────────────────────────────────────────────────────────────
+  Contrato mainnet                      ✅     §1.2 — coordenacao() confere
+  Backend / functions                   ✅     §1.1 — health 200, 0 erros/6 h
+  Fila assíncrona (fila_tarefas)        ✅     §1.4 — 5/5 done, 0 falhas
+  Supabase (RLS / advisors)             ✅     §1.5 — 0 alertas de segurança
+  APK instalado = build MC88.34         ✅     §0.1 — bytes idênticos
+  Saldo otimista (MC88.34 P0)           ✅     §0.2 — 2114/2121/2163 ms
+  Arranque a frio (sentido pelo user)   ⚠️     §0.3 — ~2,1 s até pintar
+  RPC em repouso                        ⚠️     §0.5 — 12–15/min, causa isolada
+  Autonomia da EOA coordenadora         ❌     §1.3 — ~19 créditos restantes
+  monitor-onchain (cobertura)           ❌     §2.1 — 11 de ~330 blocos/ciclo
+  ia-preditiva                          ❌     §2.2 — igualmente sem Blobs
+  BLOBS_TOKEN                           ⏳     §2.1 — por definir (operador)
+  Deploy web vs APK                     ❌     §0.6 — web num build anterior
+  .env locais                           ❌     §5.4 — Sepolia + contrato morto
+  Webhook Mercado Pago                  ⚠️     §1.6 — nunca disparou, 0 provas
+  Segredos no bundle                    ✅     §5.1 — nenhuma fuga real
+  Marcação `secret` no Netlify          ⚠️     §5.2 — 4 segredos em texto plano
+  Automação e-mail/WhatsApp             ❓     §3   — NÃO VERIFICÁVEL por mim
+  Play Store                            ❓     §4   — NÃO VERIFICÁVEL por mim
+
+================================================================================
+§0 — FRONTEND E ARRANQUE
+================================================================================
+
+0.1 — O APK INSTALADO É MESMO O DO MC88.34                              ✅
+--------------------------------------------------------------------------------
+  base.apk no aparelho ....... 36 134 320 bytes, 2026-07-27 16:52
+  app-debug.apk local ........ 36 134 320 bytes, 2026-07-27 16:52:34
+  lastUpdateTime (dumpsys) ... 2026-07-27 16:52:56
+  chunk dentro do APK ........ assets/public/assets/index-CCeSXmAs.js (58 648 B)
+  igual ao dist local ........ sim, mesmo nome, mesmo tamanho, mesma data
+
+  Byte a byte iguais. Não há dúvida: o aparelho corre o build do commit 349e0e0.
+
+0.2 — SALDO OTIMISTA: CONFIRMADO E REPRODUTÍVEL                         ✅
+--------------------------------------------------------------------------------
+  corrida   DOM pintado   saldo otimista   saldo fresco (on-chain)
+  ────────────────────────────────────────────────────────────────
+     1        2121 ms       2121 ms          4226 ms
+     2        2163 ms       2163 ms          4184 ms
+     3        2114 ms       2114 ms          4473 ms
+
+  O saldo aparece NO MESMO MILISSEGUNDO em que o ecrã desenha, exatamente como
+  o MC88.34 afirmou. Valor pintado: "12 (antigo)"; passa a "12" ao reconciliar.
+
+  ⚠️ CORREÇÃO DE UM ENGANO MEU, DURANTE ESTE MC: a minha primeira medição deu
+  4184 ms e eu quase a reportei como regressão. Estava errada — a minha regex
+  procurava `12` colado a `Senhas`, e com o saldo otimista o texto é
+  `12 (antigo)`. Eu estava a medir o instante em que o valor fica FRESCO, não
+  o instante em que fica VISÍVEL. Corrigido o marcador, o resultado do MC88.34
+  confirma-se. Registo o erro porque ele quase produziu um alarme falso.
+
+  NOTA sobre a diferença face aos 1238/1428/1526 ms do MC88.34: o meu t0 é a
+  chamada `am start` e inclui ~1,0 s de arranque nativo do Android; o do MC88.34
+  não incluía. Descontando, dá ~1,15 s — coerente. Não há regressão.
+
+0.3 — PORQUE É QUE O APP DEMORA A ABRIR (cascata completa)              ⚠️
+--------------------------------------------------------------------------------
+      0 →  1077 ms   Android nativo. `am start -W` reporta LaunchState: COLD,
+                     TotalTime 1077 ms. Criação de processo e da WebView.
+                     ZERO pedidos de rede neste intervalo.
+   1077 →  1321 ms   index.html + chunk de entrada
+   1321 →  2114 ms   chunks JS + média do APK
+   2114 ms           ECRÃ PINTADO, com saldo otimista            ← o que o user vê
+   2114 →  4200 ms   Privy a restaurar sessão (44 pedidos)
+  ~4200 ms           saldo confirmado on-chain
+
+  As três causas, por peso:
+
+  (a) `privy-C6QEr4zh.js` = 2 676 549 bytes — 46 % dos 5,79 MB de JS do bundle.
+      Pedido aos 1321 ms. É o maior custo isolado de parse no arranque.
+
+  (b) 44 pedidos ao `auth.privy.io` entre 1321 e 5188 ms, com uma RAJADA DE 19
+      pedidos no mesmo instante aos 3442 ms. Inclui 4 de `analytics_events` e
+      7 de chunks estáticos do Next.js do próprio Privy. São estes ~2,1 s que
+      mantêm o saldo em "(antigo)" depois de o ecrã já estar pintado.
+
+  (c) ~6,3 MB de média carregada no arranque, com desperdício verificável:
+        celebration.webm  2 264 857 B  aos 2907 ms — PEDIDO 3 VEZES, e não há
+                                       celebração nenhuma a acontecer
+        guto-1.webm       1 164 223 B  aos 1915 ms
+        guto-2.webm         613 731 B  aos 1916 ms
+        idle.webm           611 063 B  aos 1951 ms
+        guto-login.png      455 785 B  aos 1885 ms — ecrã de login, já autenticado
+        fundo-loop-v3       410 874 B  aos 1360 ms
+        background-mobile   200 068 B  aos 1326 ms
+        background-desktop  109 322 B  aos 1332 ms — DESKTOP, num telemóvel
+      Vêm do APK (não da rede), mas custam I/O, descodificação e memória.
+
+  (d) menor, mas real: `fonts.gstatic.com` (Inter + Orbitron) aos 2092 ms — o
+      arranque depende de rede EXTERNA para desenhar texto.
+
+  Nada disto foi alterado (R1). Ver §6 para a ordem recomendada.
+
+0.4 — POLLING EM REPOUSO (60 s, aparelho parado, sessão autenticada)
+--------------------------------------------------------------------------------
+    lances-flash ....... 18/min      (MC88.34 media: 4/min)
+    RPC alchemy ........ 15/min      (MC88.34: 15/min — sem alteração)
+    saldo-rs ........... 12/min      (MC88.34: 12/min)
+    notificações ....... 5/min
+    edições ............ 2/min
+    outros ............. 18/min
+    TOTAL .............. 70/min      (MC88.34: 59/min)
+
+  ⚠️ `lances-flash` subiu de 4 para 18/min. Não investiguei a fundo, mas a
+  cadência de notificações/lances é deliberadamente acelerada perto do fim de
+  uma edição (MC15.6 ITEM 2). Como a edição ativa muda com o tempo, esta
+  diferença pode ser só a fase do leilão e NÃO uma regressão. Digo-o como
+  incerteza, não como facto.
+
+0.5 — PORQUE É QUE O RPC NÃO DESCEU (pergunta que ficou aberta no MC88.34)
+--------------------------------------------------------------------------------
+  Capturei os corpos JSON-RPC. Em 60 s de repouso, 12 pedidos HTTP:
+
+      6  eth_blockNumber        (2 pedidos SEPARADOS, a cada 15 s)
+      6  eth_getFilterChanges   (2 chamadas AGRUPADAS em 1 pedido, a cada 15 s)
+      3  eth_call               (saldo, ~a cada 30 s)
+
+  Cronologia: 14s, 15s │ 30s, 30s │ 45s, 45s → PARES a cada 15 s.
+
+  Isto explica o fracasso do MC88.34 de forma limpa:
+    • Os DOIS `eth_getFilterChanges` já vinham AGRUPADOS num só pedido HTTP —
+      ou seja, os dois listeners já partilhavam provider. Partilhar a instância
+      de `Contract` não podia reduzir nada. A hipótese do MC88.34 era, de facto,
+      inútil, e a medição de "sem redução" estava certa.
+    • Os DOIS `eth_blockNumber` são pedidos HTTP SEPARADOS e simultâneos. Isso
+      indica DOIS pollers distintos, cada um com o seu intervalo de 15 s.
+
+  E o nosso código só cria UM: `src/utils/web3.js:150-154` memoiza um único
+  `JsonRpcProvider` com `pollingInterval: 15_000`. Logo, o segundo poller não é
+  nosso.
+
+  HIPÓTESE PRINCIPAL (não provada): é o cliente de cadeia do Privy. O chunk
+  `privy-C6QEr4zh.js` contém literais `eth-mainnet.g.alchemy.com`, e o Privy
+  contactou a Alchemy 6 vezes durante o arranque.
+
+  NÃO CONSEGUI PROVAR: as pilhas de chamada do CDP colapsam todas no mesmo
+  invólucro de `fetch` (`index-CCeSXmAs.js:1:1259`, provavelmente instrumentação
+  do Sentry ou do Capacitor), portanto não há atribuição possível por essa via.
+
+  TESTE DECISIVO PARA O PRÓXIMO MC: pôr o NOSSO provider a um intervalo
+  distinto (ex.: 17 s) e ver qual das duas séries muda de ritmo. Custa uma
+  linha, mas é alteração de código e por isso não cabe neste MC (R1).
+
+0.6 — DEPLOY WEB ESTÁ ATRÁS DO APK                                      ❌
+--------------------------------------------------------------------------------
+  produção web serve ..... assets/index-COKCRl-8.js
+  APK / dist local ....... assets/index-CCeSXmAs.js
+
+  São builds diferentes. A produção web NÃO tem nada do MC88.34 — quem entra
+  pelo browser continua a apanhar o arranque antigo, sem saldo otimista.
+
+  ✅ Mas a produção web ESTÁ na mainnet, e isso verifiquei a sério, lendo o
+  bundle servido (`AppContext-BQWwW_ys.js`, 338 437 B):
+      contrato 0x0052…16cd ......... presente (1 ocorrência)
+      contrato abandonado 0x59A7…F6D5  AUSENTE
+      eth-mainnet.g.alchemy.com .... presente
+  Portanto não há regressão de rede em produção. É só um build mais antigo.
+
+================================================================================
+§1 — BACKEND E CONTRATO
+================================================================================
+
+1.1 — BACKEND                                                           ✅
+--------------------------------------------------------------------------------
+  GET /.netlify/functions/health → 200
+  {"ok":true,"service":"desafiogut-functions","timestamp":"2026-07-28T16:31:32Z"}
+
+  47 functions no repositório. Nos logs das últimas 6 h não há um único ERROR,
+  timeout ou exceção — apenas os WARN de Blobs descritos em §2.
+
+  ⚠️ Nota de método: `/health-detalhado` e `/diagnostico` devolvem 200 com o
+  index.html da SPA, não JSON. Não existem; é o rewrite da SPA a responder.
+  Quem testar estes caminhos vê "200 OK" e conclui erradamente que estão vivos.
+
+1.2 — CONTRATO NA MAINNET                                               ✅
+--------------------------------------------------------------------------------
+  chainId .................... 0x1 (mainnet)
+  bloco no momento da leitura  25 632 546
+  contrato ................... 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+  bytecode ................... 4 823 bytes (implantado, não é EOA)
+  coordenacao() .............. 0xfea436f74059f885ea50d48abbe21ef6665d1e67
+  esperado ................... 0xFea436f74059F885ea50D48aBbE21ef6665d1E67  ✅
+  latência RPC ............... 128–303 ms
+
+  VALIDAÇÃO CRUZADA ponta a ponta: `saldoSenhas` do endereço do aparelho lido
+  diretamente do contrato = 12. O APK mostra 12. Frontend e cadeia concordam.
+
+1.3 — ⚠️ AUTONOMIA DA EOA COORDENADORA — RISCO COM PRAZO               ❌
+--------------------------------------------------------------------------------
+  saldo .......................... 0,004391011919390659 ETH
+  nonce .......................... 13 (13 transações já enviadas)
+  gás no momento da leitura ...... 2,27 gwei (maxFee 4,54 gwei)
+  custo estimado por crédito ..... 0,000227 ETH (a 50 000 gas)
+  ────────────────────────────────────────────────────────────
+  CRÉDITOS RESTANTES ESTIMADOS ... ~19
+
+  Quando esta EOA ficar sem ETH, `adicionarSenhas` deixa de passar e as compras
+  param de creditar on-chain — mesmo com o PIX pago e o R$ debitado. É o único
+  achado deste MC com uma contagem decrescente real.
+
+  A estimativa é sensível ao gás: a 2,3 gwei dá ~19 créditos; se o gás subir
+  para 10 gwei, dá ~4. Não sei o consumo exato de `adicionarSenhas` (usei
+  50 000 gas como aproximação) — a ordem de grandeza é o que importa aqui.
+
+1.4 — FILA ASSÍNCRONA: LIGADA E A FUNCIONAR                             ✅
+--------------------------------------------------------------------------------
+  ⚠️ MUDANÇA DE ESTADO face ao que estava registado: `CREDITO_ASSINCRONO=true`.
+  A flag JÁ NÃO está a false. A fila está em produção.
+
+  fila_tarefas: 5 registos, TODOS `done`, nenhum `pending`/`error`.
+
+    criado_em (UTC)        tipo                        tentativas  latência
+    ─────────────────────────────────────────────────────────────────────────
+    2026-07-27 00:15:15    confirmar-credito-senhas        2       6 min 36 s
+    2026-07-26 23:33:08    confirmar-credito-senhas        1       2 min 48 s
+    2026-07-26 23:24:04    confirmar-credito-senhas        1       2 min 13 s
+    2026-07-26 23:03:26    confirmar-credito-senhas        1       2 min 52 s
+    2026-07-26 23:02:23    confirmar-credito-senhas        1       3 min 55 s
+
+  A correção do MC88.29 está validada em produção: 0 falhas, 1 retentativa
+  bem-sucedida. `fila_tarefas_legado` está vazia.
+
+  📌 FACTO DE UX A REGISTAR: a latência entre pagar e ter as senhas creditadas
+  é de 2 a 7 minutos. Isto é por desenho (é uma fila), mas liga-se diretamente
+  à queixa de lentidão pós-PIX do MC88.15. O utilizador precisa de saber que
+  está em fila; caso contrário lê isto como avaria.
+
+  `fila-processor-scheduled` corre de 2 em 2 a 7 em 7 minutos, 232–1014 ms,
+  sem erros nas últimas 3 h. Infraestrutura saudável e ociosa.
+
+1.5 — SUPABASE                                                          ✅
+--------------------------------------------------------------------------------
+  15 tabelas, RLS ATIVA em todas as 15.
+  Advisors de SEGURANÇA: 0 alertas.
+  Advisors de DESEMPENHO: 4 avisos INFO, todos "índice nunca usado"
+  (idx_lances_edicao_id, idx_lances_endereco, idx_lojistas_endereco,
+  idx_cotas_endereco) — as tabelas estão vazias, é o esperado. Sem ação.
+
+  `DATA_STORE_BACKEND=supabase` está ativo em produção.
+
+1.6 — ⚠️ O WEBHOOK DO MERCADO PAGO CONTINUA SEM UMA ÚNICA PROVA DE VIDA
+--------------------------------------------------------------------------------
+  SELECT payload->>'fonte', count(*) FROM saldo_rs_creditos GROUP BY 1
+
+    confirmar-pagamento .... 18 registos, último 2026-07-26 22:54:55 UTC
+    webhook ................ 0 registos
+
+  Os 18 créditos de R$ que existem vieram TODOS do caminho síncrono
+  `confirmar-pagamento`, disparado pelo cliente. Nunca houve um crédito vindo
+  do webhook.
+
+  Agrava-se: `MP_WEBHOOK_SECRET` JÁ ESTÁ DEFINIDO (era pendência do MC87) e o
+  webhook é agora fail-closed. Ou seja, se o Mercado Pago o chamar com
+  assinatura ausente ou inválida, ele rejeita — e continuaremos sem saber.
+  Se o utilizador fechar a app antes de o cliente confirmar, o pagamento pode
+  não ser creditado por nenhuma via.
+
+================================================================================
+§2 — MONITOR-ONCHAIN E BLOBS_TOKEN
+================================================================================
+
+2.1 — ❌ O MONITOR VÊ 3 % DA CADEIA E DIZ QUE ESTÁ EM DIA
+--------------------------------------------------------------------------------
+  `netlify env:get BLOBS_TOKEN --context production` → NÃO DEFINIDA.
+
+  CADEIA CAUSAL, provada com logs de produção de HOJE (2026-07-28):
+
+    WARN [monitor-onchain] Blobs ultimo-bloco-processado indisponível
+    (contexto automático ausente) e sem credenciais manuais — definir BLOBS_TOKEN
+
+  Nas scheduled functions a Netlify não injeta contexto de Blobs
+  (`_lib/blobs-manual.mjs:42`); sem `BLOBS_TOKEN` o fallback manual devolve
+  `null`; sem store não há checkpoint; sem checkpoint
+  `monitor-onchain.mjs:117` cai sempre em `blocoAtual - 10`.
+
+  MEDIÇÃO DIRETA nos logs:
+
+    hora (UTC)   fromBlock    toBlock     varridos   saltados desde a corrida anterior
+    ──────────────────────────────────────────────────────────────────────────────
+    11:04:57     25630893    25630903       11              —
+    11:32:15     25631030    25631040       11             127
+    12:09:56     25631217    25631227       11             177
+
+  Entre as 11:04 e as 12:09 a cadeia produziu ~334 blocos. Foram inspecionados
+  22. COBERTURA ≈ 6,6 % — e ~93 % dos blocos nunca são olhados à procura de
+  bursts ou outliers de lances.
+
+  ⚠️ O PIOR DETALHE: cada corrida devolve `atrasado: false`. A flag compara
+  `toBlock` com `blocoAtual`, e como a janela é sempre "os últimos 10 blocos",
+  ela dá sempre em dia. O monitor reporta-se saudável enquanto ignora 93 % da
+  cadeia. Quem olhar para o log conclui que está tudo bem.
+
+  📌 A paginação do MC88.31 (MAX_PAGINAS=20, até 200 blocos) está correta e não
+  tem culpa nenhuma. Ela nunca chega a ser exercitada, porque sem checkpoint o
+  `fromBlock` já nasce a 10 blocos do fim. Corrigir o `BLOBS_TOKEN` ativa a
+  paginação que já lá está e resolve os dois problemas de uma vez.
+
+2.2 — ❌ A `ia-preditiva` ESTÁ IGUALMENTE PARALISADA
+--------------------------------------------------------------------------------
+  Achado NOVO, que não constava das pendências conhecidas. Os mesmos logs
+  mostram, às 10:52, 10:55, 11:03 e 11:05 de hoje:
+
+    WARN [ia-preditiva] Blobs analytics indisponível — definir BLOBS_TOKEN
+    WARN [ia-preditiva] Blobs ia-decisoes indisponível — definir BLOBS_TOKEN
+
+  Não consegue ler analytics nem gravar decisões. Corre em `modo: 'warn'`.
+  O impacto do `BLOBS_TOKEN` é portanto MAIOR do que estava registado: são
+  duas funções agendadas cegas, não uma.
+
+================================================================================
+§3 — AUTOMAÇÃO (E-MAIL + WHATSAPP)                          ❓ NÃO VERIFICADO
+================================================================================
+  NÃO CONSEGUI VERIFICAR e não vou fingir que sim.
+
+  O servidor `pythonanywhere-mcp-server` está configurado em `.claude.json`
+  (via `uvx`, com `API_TOKEN` e `PYTHONANYWHERE_USERNAME`) e o `uvx` existe na
+  máquina — mas o servidor não expõe uma única ferramenta nesta sessão. Não
+  ligou. Sem ele, e sem tocar no token (R5), não há caminho de leitura.
+  Não existe cópia local dos scripts nem dos logs neste repositório.
+
+  ⚠️ DISCREPÂNCIA NO PRÓPRIO PLANO: o MC88.35 diz "01:00 UTC". O último estado
+  auditado (MC83, 2026-07-20) diz cron 1465157 às 15:00 UTC (11:00 Manaus).
+  Antes de validar horário, é preciso decidir qual dos dois está certo.
+
+  ÚLTIMO ESTADO CONHECIDO (MC83, 2026-07-20 — tem 8 dias, pode estar velho):
+    cron 1465157 .... enabled, 5/5 execuções com return code 0 (17–20/07)
+    e-mail .......... 400 / 1623 (24,6 %), 100/dia, previsão de fim ~02/08
+    WhatsApp ........ 198 / 198 = 100 % concluído
+    A4.2 ............ CRÍTICA e por resolver: o checkpoint grava TENTADOS e não
+                      ENVIADOS, logo as falhas perdem-se em silêncio
+    N1 .............. ALTO: lote 301-400 com muitos endereços aparentemente
+                      inválidos → risco de suspensão da conta SendGrid
+
+  Se o ritmo se manteve, hoje (28/07) o e-mail estaria em ~1200/1623. É
+  aritmética, não observação. NÃO confirmado.
+
+  → PARA O OPERADOR: abrir o dashboard do PythonAnywhere e reportar o último
+    run, o return code e o conteúdo de `ultimo_enviado.txt`.
+
+================================================================================
+§4 — PLAY STORE                                             ❓ NÃO VERIFICADO
+================================================================================
+  Também não consegui, e também não vou inferir.
+
+  O Play Console exige sessão Google autenticada do operador. Não há nenhuma
+  sessão de browser ativa nesta máquina (o MCP chrome-devtools respondeu
+  "Target closed"), e autenticar-me na conta do operador seria tocar em
+  credenciais (R5).
+
+  Estado registado: documento de identidade enviado, à espera de análise.
+  Não tenho como confirmar se mudou, nem se o telefone já pode ser verificado.
+
+  → PARA O OPERADOR: Play Console → Configurações → Detalhes da conta de
+    programador. Reportar (a) estado da verificação de identidade, (b) se a
+    verificação de telefone já está disponível, (c) quaisquer pendências novas.
+
+================================================================================
+§5 — SEGURANÇA E CREDENCIAIS
+================================================================================
+
+5.1 — FUGA DE SEGREDOS NO BUNDLE: NENHUMA                               ✅
+--------------------------------------------------------------------------------
+  Cruzei TODAS as variáveis não mascaradas do contexto `production` contra
+  todos os .js/.css/.html/.json do `dist`. Três alarmes dispararam; verifiquei
+  os três, e todos os três eram falsos:
+
+  ALARME "chave privada hex-64" (5 ficheiros) → FALSO POSITIVO.
+    São constantes de curva elíptica. Identificadas uma a uma:
+      0xffffffff…fffc2f  primo do corpo da secp256k1
+      0x7ae96a2b…9501ee  gerador da secp256k1
+      0x7fffffff…ffffed  primo da ed25519
+      0x52036cee…5978a3  / 0x216936d3…25d51a  parâmetros da ed25519
+      0xffffffff…632551  ordem da P-256
+      0x5ac635d8…d2604b  parâmetro b da P-256
+    Nenhuma chave privada no bundle.
+
+  ALARME "JWT no bundle" (2 ficheiros) → FALSO POSITIVO.
+    Descodifiquei os payloads: `role=anon`, `iss=supabase`, exp 2036-06-20.
+    É a chave anónima do Supabase, pública por desenho e protegida por RLS
+    (que §1.5 confirma estar ativa nas 15 tabelas).
+    O padrão `role=service_role` NÃO aparece em lado nenhum. ✅
+
+  ALARME "RPC_URL / SUPABASE_URL no bundle" → FALSO POSITIVO.
+    Têm valor IDÊNTICO aos gémeos `VITE_ALCHEMY_URL` / `VITE_SUPABASE_URL`.
+    O que está no bundle é a variável VITE_, pública por desenho. A variável de
+    servidor não vazou; a busca por valor não as distingue.
+
+  Sourcemaps publicados: NENHUM `.map` em `dist`. ✅
+
+  CONFIRMADO (já era conhecido): `VITE_ALCHEMY_URL` está no bundle, com a chave
+  de API visível. É inerente a uma app cliente que fala com a Alchemy —
+  qualquer utilizador a consegue extrair. Mitiga-se com allowlist de domínio no
+  painel da Alchemy, não escondendo a string.
+
+5.2 — ⚠️ QUATRO SEGREDOS NÃO ESTÃO MARCADOS COMO `secret` NO NETLIFY
+--------------------------------------------------------------------------------
+  Das 52 variáveis do contexto `production`, estas têm nome de segredo mas
+  são guardadas em texto plano (a CLI devolve o valor inteiro em vez de o
+  mascarar):
+
+      SUPABASE_SERVICE_ROLE_KEY   ← a mais grave: ignora RLS por completo
+      SENDGRID_API_KEY
+      MP_WEBHOOK_SECRET
+      ADMIN_TOKEN
+
+  Estão corretamente marcadas como `secret`: APP_AWS_ACCESS_KEY_ID,
+  APP_AWS_SECRET_ACCESS_KEY, BICONOMY_API_KEY, COORDENACAO_PRIVATE_KEY,
+  HF_API_TOKEN, JWT_SECRET, KMS_KEY_ID, LLM_API_KEY, MP_ACCESS_TOKEN.
+
+  Públicas por desenho, sem problema: VITE_SENTRY_DSN, VITE_SUPABASE_ANON_KEY.
+
+  Isto não é uma fuga — nenhuma delas aparece no bundle (§5.1). É postura: uma
+  variável não marcada é legível no painel e na CLI por qualquer pessoa com
+  acesso à conta, e entra no ambiente de build.
+
+  R5 cumprida: verifiquei EXISTÊNCIA e FORMA. Não li, não copiei e não uso
+  nenhum valor de credencial neste relatório.
+
+5.3 — CHAVE DA COORDENAÇÃO                                              ✅
+--------------------------------------------------------------------------------
+  `COORDENACAO_PRIVATE_KEY` existe no contexto `production` e está marcada como
+  `secret` (a CLI devolve-a mascarada). `SIGNER_BACKEND=local-key`, coerente.
+  Não a li. A prova funcional de que a chave certa lá está é on-chain: o nonce
+  da EOA é 13, ou seja, já assinou 13 transações.
+
+5.4 — ❌ OS `.env` LOCAIS SÃO UMA ARMADILHA ATIVA
+--------------------------------------------------------------------------------
+  No Git: só `desafio-gut/frontend/.env.example` está versionado, e contém
+  apenas placeholders (endereços a zero). O `.gitignore` da raiz cobre `.env`,
+  `.env.local`, `.env.production`. Nenhum segredo real no repositório. ✅
+
+  No DISCO, porém:
+
+    ficheiro           VITE_CONTRATO_SEPOLIA                       RPC
+    ─────────────────────────────────────────────────────────────────────────
+    .env               (ausente)                                   eth-sepolia
+    .env.local         0x59A73Acc…4847F6D5  ← CONTRATO ABANDONADO  eth-sepolia
+    .env.production    0x59A73Acc…4847F6D5  ← CONTRATO ABANDONADO  eth-sepolia
+
+  Ou seja: um `npm run build` nesta máquina gera um bundle apontado à Sepolia e
+  a um contrato morto. O correto continua a ser `netlify build`, que traz o
+  ambiente do contexto de produção.
+
+  ⚠️ `.env.local` contém ainda um `COORDENACAO_PRIVATE_KEY` em texto plano no
+  disco desta estação de trabalho. Não o li nem o abri (R5), mas registo a
+  existência: uma chave privada em claro num portátil de desenvolvimento é
+  exposição, sobretudo dado o histórico de chave queimada do MC59.11.
+
+================================================================================
+§6 — PENDÊNCIAS CONSOLIDADAS E PRÓXIMOS PASSOS
+================================================================================
+
+PARA O OPERADOR (não posso fazer eu — R5 / sem acesso)
+--------------------------------------------------------------------------------
+ P0  Abastecer a EOA coordenadora 0xFea436…1E67. Restam ~19 créditos.
+     Quando esgotar, as compras deixam de creditar senhas. §1.3
+ P0  Definir `BLOBS_TOKEN` (e confirmar `BLOBS_SITE_ID`) no contexto
+     production. Desbloqueia monitor-onchain E ia-preditiva. §2.1 §2.2
+ P1  Play Console: reportar o estado da verificação de identidade. §4
+ P1  PythonAnywhere: reportar o último run do cron e o checkpoint de e-mail. §3
+ P2  Marcar como `secret` no Netlify: SUPABASE_SERVICE_ROLE_KEY, SENDGRID_API_KEY,
+     MP_WEBHOOK_SECRET, ADMIN_TOKEN. §5.2
+ P2  Decidir se distribui o APK do MC88.34 aos utilizadores.
+
+PARA O PRÓXIMO MC (código — proibido neste, R1)
+--------------------------------------------------------------------------------
+ 1. ARRANQUE, pela ordem de retorno por esforço:                         §0.3
+    a) não carregar `celebration.webm` (2,26 MB, pedido 3×) no arranque;
+       carregar só quando houver uma celebração — é o corte mais barato e maior
+    b) não carregar `background-desktop.webp` em telemóvel
+    c) adiar `guto-1.webm` / `guto-2.webm` / `idle.webm` para depois do paint
+    d) não carregar `guto-login.png` numa sessão já autenticada
+    e) auto-hospedar Inter e Orbitron, tirando `fonts.gstatic.com` do caminho
+    f) o item grande e mais difícil: os 2,68 MB do chunk `privy`. Vale medir
+       quanto do arranque é parse deste ficheiro antes de decidir o que fazer.
+ 2. RPC: pôr o nosso provider a 17 s e ver qual das duas séries de
+    `eth_blockNumber` muda. Identifica o segundo poller em uma corrida.  §0.5
+ 3. `atrasado` do monitor-onchain é um verde falso: deve comparar com o
+    checkpoint anterior, não com `blocoAtual`. Corrigir mesmo depois de o
+    BLOBS_TOKEN estar definido, porque a métrica está errada por si.   §2.1
+ 4. Provar (ou desmentir) o webhook do Mercado Pago. Enquanto não houver uma
+    linha com `fonte=webhook`, o caminho assíncrono de pagamento é teórico. §1.6
+ 5. Comunicar ao utilizador que o crédito de senhas entra em fila de 2–7 min.
+    A infraestrutura está certa; o que falta é o utilizador saber. §1.4
+ 6. Deployar o MC88.34 para a web (com `netlify build`, nunca `--dir=dist`),
+    ou assumir explicitamente que as otimizações são só do APK. §0.6
+ 7. Limpar os `.env` locais e retirar a chave privada do disco. §5.4
+
+O QUE NÃO PRECISA DE MEXER (verificado, está bem)
+--------------------------------------------------------------------------------
+    Contrato mainnet e coordenação on-chain .............. §1.2
+    RLS do Supabase (0 alertas de segurança) ............. §1.5
+    Fila assíncrona — a correção do MC88.29 aguenta ...... §1.4
+    Saldo otimista do MC88.34 ........................... §0.2
+    Ausência de segredos no bundle ...................... §5.1
+    Segredos fora do Git ................................ §5.4
+    Paginação do monitor-onchain (correta, só não corre) . §2.1
+
+================================================================================
+LIMITES DESTE RELATÓRIO — o que eu NÃO sei
+================================================================================
+ 1. Automação (§3) e Play Store (§4): zero observação minha. O que consta é o
+    último estado registado, com 8 dias, mais aritmética. Não tratar como facto.
+ 2. O segundo poller de RPC (§0.5) é hipótese fundamentada, não prova.
+ 3. A subida de `lances-flash` de 4 para 18/min (§0.4) tem explicação plausível
+    (fase do leilão) que NÃO confirmei.
+ 4. A autonomia de ~19 créditos (§1.3) usa 50 000 gas estimados; não medi o
+    consumo real de `adicionarSenhas`.
+ 5. As variáveis marcadas `secret` vêm mascaradas, portanto a busca por fuga no
+    bundle (§5.1) cobriu apenas as não mascaradas. A varredura por PADRÃO
+    (chave hex, SG., APP_USR-, AKIA, service_role) cobre a lacuna e deu limpa.
+ 6. Todas as medições de arranque são de UM aparelho, autenticado, com sessão
+    quente. Um utilizador novo, sem cache, terá números piores.
+
+================================================================================
+EVIDÊNCIAS
+================================================================================
+  Instrumentação (scratchpad, descartável, fora do repositório):
+    cdp.mjs · saldo2.mjs · storage.mjs · contrato.mjs · contrato2.mjs
+    env.mjs · fuga.mjs · fuga2.mjs · drift.mjs · envlocal.mjs
+    rpc.mjs · rpc2.mjs · rpc3.mjs · prod.mjs · analisa.mjs
+  Cascata de arranque completa: %TEMP%/mc8835-arranque.json (108 pedidos)
+  Logs de produção: netlify logs --source functions --since 6h (2026-07-28)
+  On-chain: bloco 25 632 546, RPC público ethereum-rpc.publicnode.com
+  Supabase: MCP, projeto de produção
+================================================================================
