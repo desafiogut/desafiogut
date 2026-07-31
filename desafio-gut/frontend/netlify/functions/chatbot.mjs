@@ -521,8 +521,11 @@ const COMANDOS_ALFA = {
   fila:     "Estado atual da fila de tarefas.",
   panic:    "Pausar o sistema (super-admin apenas).",
   unpause:  "Reativar o sistema após pausa (super-admin apenas).",
-  logs:     "Últimas 10 ações de auditoria (super-admin vê tudo; admin vê as suas).",
-  ajuda:    "Listar comandos ALFA disponíveis.",
+  logs:       "Últimas 10 ações de auditoria (super-admin vê tudo; admin vê as suas).",
+  financeiro: "Resumo financeiro (total recebido, em circulação, EOA).",
+  transacoes: "Últimas transações financeiras.",
+  relatorio:  "Exportar CSV financeiro do período (admin+).",
+  ajuda:      "Listar comandos ALFA disponíveis.",
   reindexar_rag: "O índice RAG é construído fora do repositório pelo operador. "
     + "Execute `build-rag-index.mjs` localmente.",
   limpar_cache: "O cache Redis não está configurado (REDIS_URL ausente). "
@@ -596,6 +599,45 @@ async function executarAlfa(acao, params, { perfil, endereco }) {
       return `  ${status} ${quando} | ${quem} | ${l.tipo_acao}${l.alvo ? " → " + l.alvo.slice(0, 12) : ""}`;
     }).join("\n");
     return `📋 AUDITORIA (${linhas.length} de ${total})\n\n${out}\n\nUse ALFA:logs <texto> para filtrar.`;
+  }
+
+  if (acao === "financeiro") {
+    const [{ obterMetricas }, { obterSaldoEoa }] = await Promise.all([
+      import("./_lib/admin-metricas.mjs"), import("./_lib/admin-metricas.mjs"),
+    ]);
+    const [metrica, eoa] = await Promise.allSettled([
+      obterMetricas(), obterSaldoEoa().catch(() => ({ erro: "cadeia indisponível" })),
+    ]);
+    const m = metrica.status === "fulfilled" ? metrica.value : null;
+    const f = m?.financeiro;
+    const e = eoa.status === "fulfilled" ? eoa.value : { erro: "cadeia indisponível" };
+    return [
+      `💰 FINANCEIRO`,
+      `Total creditado ... R$ ${f ? ((f.creditadoCentavos || 0) / 100).toFixed(2) : "—"}`,
+      `Saldo circulação .. R$ ${f ? ((f.saldoTotalCentavos || 0) / 100).toFixed(2) : "—"}`,
+      `Créditos (30d) .... ${f?.creditosJanela ?? "—"}`,
+      `Saldo EOA ......... ${e?.saldoEth ? `${e.saldoEth} ETH` : e?.erro || "—"}`,
+      `Use ALFA:transacoes para ver as últimas transações.`,
+    ].join("\n");
+  }
+
+  if (acao === "transacoes") {
+    const { getSupabaseReadOnly } = await import("./_lib/supabase-client.mjs");
+    const sb = getSupabaseReadOnly();
+    const { data, error } = await sb.from("saldo_rs_creditos")
+      .select("pedido_id,payload,criado_em").order("criado_em", { ascending: false }).limit(10);
+    if (error) return `Erro: ${error.message}`;
+    if (!data?.length) return "Nenhuma transação registada.";
+    const out = data.map((t) => {
+      const v = Number(t.payload?.valorCentavos || 0);
+      const sinal = v >= 0 ? "+" : "";
+      return `  ${new Date(t.criado_em).toLocaleDateString("pt-BR")} | ${(v / 100).toFixed(2)} BRL | ${t.payload?.fonte || "?"} | ${(t.payload?.endereco || "").slice(0, 8)}…`;
+    }).join("\n");
+    return `💳 TRANSAÇÕES (últimas ${data.length})\n\n${out}\n\nUse ALFA:relatorio para exportar CSV.`;
+  }
+
+  if (acao === "relatorio") {
+    return "Use o painel ADM (Tela 3 — Financeiro) e clique «Exportar CSV». A exportação pela Web gera o ficheiro diretamente no navegador. O ALFA não consegue descarregar ficheiros.";
   }
 
   if (acao === "panic") {
