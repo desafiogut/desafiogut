@@ -5563,3 +5563,43 @@ A ordem em `detectarIntent` foi ajustada: ALFA testado ANTES de panic/unpanic
 porque os padrões sem prefixo casam substring em `alfa:panic`.
 
 **Próximo:** MC90.2 (Fase 2) — `admin_logs` em Postgres + níveis de permissão.
+
+---
+
+## MC89.10 — Fase 2: Auditoria e níveis de permissão (diagnóstico + plano)
+
+Zero alterações de código. Diagnóstico completo da autorização e auditoria
+existentes + plano de implementação para o MC89.11.
+
+Entregáveis: `docs/MC89.10-DIAGNOSTICO.txt`, `docs/MC89.10-PLANO.txt`,
+`docs/MC89.10-RELATORIO.txt`.
+
+### Estado atual: autorização binária, auditoria cega
+Treze endpoints partilham o mesmo `guardAdmin(req)` — ou és admin e podes tudo,
+ou não és e não podes nada. O JWT admin não transporta nível. O log de ações
+(`_lib/log-operacional.mjs`) vive num Blob com poda a 500 entradas, escrita
+fail-soft silenciosa, sem IP, sem user-agent, sem justificativa, sem
+sucesso/falha. E nenhum endpoint HTTP escreve nele — só o GUTO. Um auditor que
+pergunte "quem aprovou esta cota em março" não encontra resposta.
+
+### Plano: duas decisões de arquitetura que vale a pena registar
+
+**`getAdminNivel(endereco)` é função NOVA, separada de `getAdminAddresses()`.**
+Esta última é usada em 14 sítios e o seu tipo de retorno (array de strings) é
+parte da assinatura de `guardAdmin`, `autenticarAdmin`, `rbac.mjs`,
+`chatbot.mjs`, e mais onze ficheiros. Mudar o tipo partia metade do sistema.
+Cria-se uma segunda função, chamada apenas no login e no refresh, para resolver
+o nível. É uma linha a mais de indireção que evita um efeito dominó.
+
+**A escrita em `admin_logs` é fail-CLOSED, ao contrário de todo o resto.** O
+registo é escrito ANTES da ação; se falhar, a ação é recusada com 503. Para um
+comando de admin, "aconteceu e não há registo" é pior do que "não aconteceu".
+A diferença tem de ficar comentada no código para o próximo MC não a "corrigir".
+
+### Risco principal
+Mudar o formato do Blob `admin-list` pode trancar o operador fora do painel. Em
+produção o Blob está vazio e a coordenação é a única admin — sem recuperação a
+não ser deploy. Leitura retrocompatível + três testes (formato antigo, novo,
+vazio) validados por mutação + deploy-preview antes da mainnet.
+
+**Próximo:** MC89.11 — execução (migração + módulo de log + níveis + adaptação).
