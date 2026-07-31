@@ -1,0 +1,120 @@
+================================================================================
+MC89.30 — TRANSIÇÃO DO ADM PELO DASHBOARD COMUM (DIAGNÓSTICO + PLANO)
+Data: 2026-07-31 | Aparelho: Xiaomi 21091116UG (Android 13) | APK: MC89.29
+Veredito: DIAGNOSTICADO. Plano proposto, aguarda aprovação. ZERO código alterado.
+================================================================================
+
+RESUMO EM UMA LINHA
+-------------------
+O ADM vê o Dashboard comum durante ~0,9 s (cache quente) ou ~4,8 s (cache
+expirado). A hipótese de partida culpava `adminLoading`; a medição mostra que o
+gargalo é `address`, que não existe até o Privy restaurar. E há uma segunda
+metade que a proposta original não previa: redirecionar cedo, sozinho, leva o
+ADM a um ecrã a pedir-lhe login.
+
+================================================================================
+1. INCIDENTE RESOLVIDO DURANTE O MC (não confundir com o assunto)
+================================================================================
+A meio do diagnóstico o app deixou de chegar a /admin de todo: TODOS os pedidos
+a `auth.privy.io` falhavam com `net::ERR_NAME_NOT_RESOLVED` e o ADM ficava
+permanentemente no Dashboard comum. Confirmado por captura de ecrã.
+
+Excluídos por medição: Private DNS (não configurado), VPN (ausente), WiFi
+(validada), e a hipótese IPv6 — o aparelho tem IPv6 atribuído mas sem rota
+("Network is unreachable"); testado em 5G com o WiFi desligado, a falha manteve-se.
+
+Resolvido por: desligar e voltar a ligar o WiFi, o que reciclou a pilha de rede
+do processo Chromium. Estado transitório do WebView, NÃO defeito da aplicação.
+Fica registado porque contaminou as primeiras seis corridas e porque, se voltar
+ao operador, o sintoma é indistinguível de "a app travou".
+
+================================================================================
+2. MEDIÇÃO (rede sã, sonda instalada antes do primeiro script da app)
+================================================================================
+
+CACHE `gut_admin_check` QUENTE — 3 corridas
+  Dashboard pintado      545 / 590 / 555 ms
+  Sessão Privy responde 1273 / 1269 / 1138 ms
+  Navega para /admin    1483 / 1548 / 1399 ms
+  Painel pintado        1581 / 1619 / 1524 ms
+  >>> Dashboard comum VISÍVEL:  938 / 958 / 844 ms   (média ~913 ms)
+  `admin-list` não foi chamado — o cache serviu.
+
+CACHE EXPIRADO (>5 min) — 1 corrida
+   619 ms Dashboard pintado · 1449 ms sessão Privy · 2035 ms admin-list pedido
+  2044 ms admin-list responde · 5468 ms navega · 5744 ms painel
+  >>> Dashboard comum VISÍVEL: 4 849 ms
+
+================================================================================
+3. CAUSA RAIZ
+================================================================================
+App.jsx:172 exige `isAdmin && !adminLoading && address`.
+
+`useAdmin` (hooks/useAdmin.js:47-54) JÁ lê o cache de forma síncrona no primeiro
+render — mas só o aceita se `cache.endereco === address`. E `address` só existe
+depois do Privy restaurar (~1,2 s). Com cache quente, a resposta certa está em
+disco desde o instante zero e não é usada, porque falta a chave para a validar.
+
+O caminho do lojista (MC88.42) não sofre disto: `tipoProvavel` valida o cache
+contra `privy:connections`, lido do localStorage de forma SÍNCRONA
+(AppContext.jsx:83-90). O caminho do ADM nunca recebeu esse tratamento.
+
+================================================================================
+4. A RESTRIÇÃO QUE A PROPOSTA ORIGINAL NÃO PREVIA
+================================================================================
+AdminLayout.jsx:76 tem `if (!isConnected) → "Faça login para verificar
+privilégios"`, e `isConnected` é estrito (só true depois do Privy).
+
+Logo, a Opção A aplicada sozinha trocaria "vejo o Dashboard errado 0,9 s" por
+"a app manda-me entrar quando eu já entrei" — o mesmo defeito que o MC88.37/88.38
+teve de corrigir no cabeçalho. A correção tem duas metades obrigatórias:
+encaminhar cedo E dar ao AdminLayout um estado "a restaurar" distinto de "não
+autenticado". Detalhe em docs/MC89.30-PLANO.txt secção 3.
+
+================================================================================
+5. PLANO (resumo — íntegra em docs/MC89.30-PLANO.txt)
+================================================================================
+  Opção A recomendada: `adminProvavel` síncrono, simétrico ao MC88.42.
+  Opção B (adiar o paint) REJEITADA — é o `return null` que o MC88.37 removeu
+    com CLS 0,373 medido.
+  Opção C (overlay) REJEITADA — mascara e acrescenta uma camada de blur.
+
+  Ordem: fechar primeiro a lacuna dos 3,4 s → depois o portão do AdminLayout →
+  só então o redirect optimista. Assim, uma reversão parcial nunca deixa a app
+  pior do que está.
+
+  Segurança: o palpite só ENCAMINHA. As três defesas (AdminLayout `!isAdmin`,
+  assinatura EIP-191 do AdminAuthContext, fail-closed do backend MC89.11)
+  continuam intactas. Cache manipulado não ganha nada — a guarda compara com
+  `privy:connections`.
+
+================================================================================
+6. O QUE NÃO SEI (e não vou fingir que sei)
+================================================================================
+  a) Os 3,4 s entre a resposta do `admin-list` e a navegação, na corrida de cache
+     frio. UMA observação, não reproduzida. É o primeiro passo do MC89.31.
+  b) O PRIMEIRO login de sempre (OAuth Privy) não foi medido — não é
+     automatizável e forçá-lo terminaria a sessão do operador. Tudo o que está
+     aqui é o caminho de RESTAURO, que é o que o operador descreveu.
+  c) O caso ADM-que-também-é-lojista não foi exercitado (a conta de teste não é
+     corporativa). Pelo código, o bloco corporativo ganha.
+
+================================================================================
+7. ENTREGÁVEIS E DESVIOS
+================================================================================
+  ✅ docs/MC89.30-DIAGNOSTICO.txt
+  ✅ docs/MC89.30-PLANO.txt
+  ✅ Desktop\MC89.30-RELATORIO.txt + cópia em docs/
+  ✅ cloud.md atualizado
+  ✅ ZERO alteração de código (R1 cumprida)
+
+  ⚠️ DESVIO A R10: o MC pedia a branch `feat/mc89-adm-system`. Essa branch está
+  20 commits ATRÁS de main e não tem nada exclusivo (último: MC89.20) — toda a
+  série 89.2x foi para main. Os documentos foram commitados em main, onde vivem
+  os do MC89.28 e MC89.29. Trabalhar na branch indicada seria documentar sobre
+  um estado do código que já não existe.
+
+  ⚠️ Alteração de ambiente feita e revertida: o WiFi do aparelho foi desligado
+  para testar a hipótese IPv6 e voltou a ser ligado. Ficou ligado.
+
+PRÓXIMO: MC89.31 — execução, se o plano for aprovado.

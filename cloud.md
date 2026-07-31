@@ -5963,3 +5963,54 @@ independentemente de como o dist lá chegou. É o que quebra o ciclo.
 **Próximo:** pendências externas (EOA, BLOBS_TOKEN, RAG, Play Store) ou Fase 4
 da reforma UX/UI. Pendente do operador: exercício vivo dos toasts/EstadoVazio
 nas telas autenticadas (exige OAuth Privy).
+
+
+## MC89.30 — A transição do ADM: o gargalo é `address`, não `adminLoading`
+
+Medido no aparelho com a sonda instalada ANTES do primeiro script da app
+(`Page.addScriptToEvaluateOnNewDocument`) e a rede observada pelo domínio
+Network do CDP, sem instrumentar código da página.
+
+**Números.** Cache `gut_admin_check` quente, 3 corridas: o Dashboard comum fica
+visível 938 / 958 / 844 ms (média ~913 ms). Cache expirado: 4 849 ms.
+
+**Causa.** `App.jsx:172` exige `isAdmin && !adminLoading && address`.
+`useAdmin` já lê o cache de forma síncrona no primeiro render, mas só o aceita se
+`cache.endereco === address` — e `address` só existe depois do Privy restaurar
+(~1,2 s). A resposta certa está em disco desde o instante zero e não é usada
+porque falta a chave para a validar. O lojista não sofre disto: o `tipoProvavel`
+do MC88.42 valida o cache contra `privy:connections` lido sincronamente
+(AppContext.jsx:83-90). O caminho do ADM nunca recebeu esse tratamento.
+
+**A metade que faltava no enunciado.** `AdminLayout.jsx:76` tem
+`if (!isConnected) → "Faça login para verificar privilégios"`, com `isConnected`
+estrito. Redirecionar cedo sozinho trocaria "vejo o Dashboard errado 0,9 s" por
+"a app manda-me entrar quando eu já entrei" — o defeito que o MC88.37/88.38 já
+corrigiu no cabeçalho. A correção tem duas metades, e a do AdminLayout vem
+PRIMEIRO, para que uma reversão parcial nunca deixe a app pior.
+
+**Opções B e C rejeitadas por memória do projecto:** adiar o paint é o
+`return null` que o MC88.37 removeu com CLS 0,373 medido; o overlay mascara e
+acrescenta uma camada de blur (MC88.36: −17,5 fps).
+
+**Incidente à parte, resolvido durante o MC.** Em ~6 corridas o app nunca chegava
+a /admin: todos os pedidos a `auth.privy.io` davam `ERR_NAME_NOT_RESOLVED` e o
+ADM ficava permanentemente no Dashboard. Excluídos Private DNS, VPN e a hipótese
+IPv6 (testada em 5G com o WiFi desligado — manteve-se). Resolveu-se a desligar e
+ligar o WiFi, que reciclou a pilha de rede do Chromium. Estado transitório do
+WebView, não defeito da app — mas o sintoma é indistinguível de "a app travou",
+por isso fica registado.
+
+**Também descartei uma medição minha:** a primeira instrumentação embrulhou
+`window.fetch` e podia ser ela a causar as falhas que reportava. Repetida com o
+domínio Network, que observa de fora.
+
+**Por saber:** os 3,4 s entre a resposta do `admin-list` e a navegação na corrida
+de cache frio — uma observação, não reproduzida. É o primeiro passo do MC89.31.
+E o PRIMEIRO login de sempre não foi medido (OAuth Privy não é automatizável e
+forçá-lo terminaria a sessão do operador); tudo aqui é o caminho de RESTAURO.
+
+**Desvio a R10:** a branch `feat/mc89-adm-system` está 20 commits atrás de main e
+sem nada exclusivo. Os documentos foram para main, onde vivem os do MC89.28/29.
+
+**Próximo:** MC89.31 — execução, se o plano for aprovado.
