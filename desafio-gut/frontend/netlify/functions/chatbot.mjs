@@ -519,8 +519,9 @@ const qualquerPerfil = () => true;
 const COMANDOS_ALFA = {
   status:   "Métricas agregadas do sistema (admin-stats + on-chain).",
   fila:     "Estado atual da fila de tarefas.",
-  panic:    "Pausar o sistema (kill switch).",
-  unpause:  "Reativar o sistema após pausa.",
+  panic:    "Pausar o sistema (super-admin apenas).",
+  unpause:  "Reativar o sistema após pausa (super-admin apenas).",
+  logs:     "Últimas 10 ações de auditoria (super-admin vê tudo; admin vê as suas).",
   ajuda:    "Listar comandos ALFA disponíveis.",
   reindexar_rag: "O índice RAG é construído fora do repositório pelo operador. "
     + "Execute `build-rag-index.mjs` localmente.",
@@ -574,6 +575,27 @@ async function executarAlfa(acao, params, { perfil, endereco }) {
     const linhas = data.map((t) =>
       `  ${t.tipo || "?"} · ${t.status} · ${new Date(t.atualizado_em).toLocaleString("pt-BR")}`).join("\n");
     return `📋 FILA DE TAREFAS (últimas 10)\n\n${linhas}`;
+  }
+
+  if (acao === "logs") {
+    const { lerLogs, getAdminNivel } = await Promise.all([
+      import("./_lib/admin-log.mjs"),
+      import("./_lib/admin-niveis.mjs"),
+    ]);
+    const nivel = await getAdminNivel(endereco);
+    // Super-admin vê tudo; admin vê os seus (filtro aplicacional)
+    const opts = { limite: 10 };
+    if (nivel !== "super-admin" && endereco) opts.admin = endereco;
+    if (params) opts.q = params;
+    const { linhas, total } = await lerLogs(opts);
+    if (!linhas.length) return "Nenhum registo de auditoria encontrado.";
+    const out = linhas.map((l) => {
+      const quando = new Date(l.criado_em).toLocaleString("pt-BR");
+      const quem = l.admin_endereco?.slice(0, 6) + "…" + l.admin_endereco?.slice(-4);
+      const status = l.sucesso === true ? "✓" : l.sucesso === false ? "✗" : "…";
+      return `  ${status} ${quando} | ${quem} | ${l.tipo_acao}${l.alvo ? " → " + l.alvo.slice(0, 12) : ""}`;
+    }).join("\n");
+    return `📋 AUDITORIA (${linhas.length} de ${total})\n\n${out}\n\nUse ALFA:logs <texto> para filtrar.`;
   }
 
   if (acao === "panic") {
@@ -927,6 +949,20 @@ const INTENT_HANDLERS = {
       const m = pergunta.match(INTENT_PATTERNS.comando_alfa);
       const acao = (m?.[1] || "").toLowerCase();
       const params = (m?.[2] || "").trim();
+      // MC89.11 — panic/unpause exigem super-admin. A verificação é feita
+      // AQUI (não no executarAlfa) porque o nível vem do Blob admin-list e
+      // não está disponível no perfil do GUTO (que é binário: admin/não-admin).
+      const precisaSuperAdmin = acao === "panic" || acao === "unpause";
+      if (precisaSuperAdmin && endereco) {
+        const { getAdminNivel, adminPode } = await import("./_lib/admin-niveis.mjs");
+        const nivel = await getAdminNivel(endereco) || "admin";
+        if (!adminPode(nivel, "super-admin")) {
+          return intentResp(perfil, "comando_alfa", {
+            resposta: `⛔ ALFA:${acao} exige nível super-admin. O teu nível é "${nivel}". Contacta um super-admin para executar este comando.`,
+            modoResposta: "acao",
+          });
+        }
+      }
       const resposta = await executarAlfa(acao, params, { perfil, endereco });
       return intentResp(perfil, "comando_alfa", { resposta, modoResposta: "acao" });
     },
