@@ -5729,3 +5729,19 @@ relatório CSV), frontend com 4 cards + tabela paginada + gráfico reutilizado,
 ALFA:financeiro/transacoes/relatorio. 1-2 sessões.
 
 **Próximo:** MC89.16 — execução.
+
+---
+
+## MC89.16 — Fase 5: Gestão Financeira (Tela 3)
+
+Suítes: 342 backend, 40 frontend. APK recompilado.
+
+Três endpoints (resumo com cache 45s, transações UNION créditos+débitos com
+cursor, CSV com registo em admin_logs). Frontend com 4 cards + GraficoLinha
+reutilizado + tabela paginada com filtros + exportação. ALFA:financeiro
+(resumo), ALFA:transacoes (últimas 10), ALFA:relatorio (instrução).
+
+D11 (sem abastecer EOA) e D-SALDO (sem resetar saldo) preservados.
+Financeiro marcado pronto.
+
+**Próximo:** MC89.17 — Fase 6: Comunicação e Notificações.
