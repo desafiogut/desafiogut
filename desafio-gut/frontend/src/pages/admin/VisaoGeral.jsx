@@ -14,7 +14,7 @@ import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button } from "../../components/ui";
 import GraficoLinha from "../../components/admin/GraficoLinha.jsx";
-import { COR, Metrica, Grelha, ouTraco, brl } from "./_ui.jsx";
+import { COR, Metrica, Grelha, ouTraco, brl , TituloSeccao } from "./_ui.jsx";
 
 // ── Alertas do frontend (R7: dependem de RPC, não do Postgres) ─────────────
 // Estes são computados AQUI porque o admin-onchain já tem os dados, e a regra
@@ -178,9 +178,9 @@ export default function VisaoGeral() {
       {/* ── MC89.7: ALERTAS ────────────────────────────────────────────────── */}
       {todosAlertas.length > 0 && (
         <section>
-          <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>
+          <TituloSeccao>
             ALERTAS ({todosAlertas.length})
-          </h3>
+          </TituloSeccao>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             {todosAlertas.map((a) => (
               <div key={a.id} style={{
@@ -212,9 +212,9 @@ export default function VisaoGeral() {
       {/* MC89.24 — métricas críticas (EOA + fila) sobem para DEPOIS dos alertas,
           ANTES dos gráficos. São os números que o admin precisa de ver primeiro. */}
       <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>
+        <TituloSeccao>
           CADEIA <span style={{ color: COR.muted, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>· carrega à parte</span>
-        </h3>
+        </TituloSeccao>
         {erroChain && (
           <div style={{ padding: "0.6rem 0.8rem", borderRadius: "8px", background: "rgba(251,191,36,0.08)", border: `1px solid ${COR.warn}55`, color: COR.warn, fontSize: "0.78rem", marginBottom: "0.5rem" }}>
             Cadeia indisponível: {erroChain}
@@ -237,7 +237,7 @@ export default function VisaoGeral() {
       </section>
 
       <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>OPERAÇÃO</h3>
+        <TituloSeccao>OPERAÇÃO</TituloSeccao>
         <Grelha isMobile={isMobile}>
           <Metrica
             rotulo="Fila — pendentes"
@@ -253,7 +253,7 @@ export default function VisaoGeral() {
       {/* ── MC89.7: GRÁFICOS ───────────────────────────────────────────────── */}
       {series && series.dias && series.dias.length > 0 && (
         <section>
-          <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>EVOLUÇÃO</h3>
+          <TituloSeccao>EVOLUÇÃO</TituloSeccao>
           <div style={{
             display: "grid",
             gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
@@ -300,7 +300,7 @@ export default function VisaoGeral() {
       {/* Secções de detalhe — UTILIZADORES e FINANCEIRO. As métricas críticas
           (CADEIA, OPERAÇÃO) já estão no topo. */}
       <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>UTILIZADORES</h3>
+        <TituloSeccao>UTILIZADORES</TituloSeccao>
         <Grelha isMobile={isMobile}>
           <Metrica
             rotulo="Com atividade"
@@ -318,7 +318,7 @@ export default function VisaoGeral() {
       </section>
 
       <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>FINANCEIRO</h3>
+        <TituloSeccao>FINANCEIRO</TituloSeccao>
         <Grelha isMobile={isMobile}>
           <Metrica rotulo="Saldo em circulação" valor={ouTraco(f?.saldoTotalCentavos, brl)} cor={COR.success} />
           <Metrica rotulo="Já creditado" valor={ouTraco(f?.creditadoCentavos, brl)} nota={f ? `${f.creditos} crédito(s)` : null} />

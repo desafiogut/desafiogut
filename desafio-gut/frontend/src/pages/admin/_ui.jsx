@@ -77,6 +77,33 @@ export function Metrica({ rotulo, valor, nota, cor }) {
   );
 }
 
+/**
+ * Título de secção do painel.
+ *
+ * MC89.28 — o VALOR já era o mesmo em todo o lado (0.78rem / COR.primary /
+ * letterSpacing 0.05em). O que não era igual: três ficheiros definiam um `const
+ * sh` local e outros três repetiam o literal inline, dez vezes. O de
+ * ConfiguracoesAdmins acrescentava `fontWeight: 800` que os outros não tinham —
+ * a única divergência visível, e ninguém a tinha decidido.
+ *
+ * `fontWeight: 800` e `textTransform: uppercase` ficam aqui para todos: as
+ * telas já escreviam os títulos em maiúsculas à mão, o que só funcionava
+ * enquanto ninguém se esquecesse.
+ */
+export function TituloSeccao({ children, semMargem = false, style }) {
+  return (
+    <h3 style={{
+      fontSize: "0.78rem",
+      color: COR.primary,
+      margin: semMargem ? 0 : "0 0 0.5rem",
+      letterSpacing: "0.05em",
+      fontWeight: 800,
+      textTransform: "uppercase",
+      ...style,
+    }}>{children}</h3>
+  );
+}
+
 export function Grelha({ isMobile, children }) {
   return (
     <div style={{

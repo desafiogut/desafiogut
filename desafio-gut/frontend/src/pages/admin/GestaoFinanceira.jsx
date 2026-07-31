@@ -7,10 +7,10 @@ import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button } from "../../components/ui";
 import GraficoLinha from "../../components/admin/GraficoLinha.jsx";
-import { COR, ouTraco, brl } from "./_ui.jsx";
+import { COR, ouTraco, brl , TituloSeccao } from "./_ui.jsx";
 import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
+import EnderecoTruncado from "../../components/admin/EnderecoTruncado.jsx";
 
-function truncar(a) { return a && a.length > 12 ? `${a.slice(0,6)}…${a.slice(-4)}` : a || "—"; }
 function quando(iso) { return iso ? new Date(iso).toLocaleString("pt-BR") : "—"; }
 const SINAL = { credito: COR.success, debito: COR.danger };
 
@@ -85,7 +85,7 @@ export default function GestaoFinanceira() {
 
       {/* RESUMO */}
       <section>
-        <h3 style={sh}>RESUMO ({r.periodoDias || 30}d)</h3>
+        <TituloSeccao>RESUMO ({r.periodoDias || 30}d)</TituloSeccao>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: "0.5rem" }}>
           <Card r="Total recebido" v={ouTraco(r.totalRecebidoCentavos, brl)} c={COR.success} />
           <Card r="Em circulação" v={ouTraco(r.totalEmCirculacaoCentavos, brl)} c={COR.primary}
@@ -100,7 +100,7 @@ export default function GestaoFinanceira() {
       {/* GRÁFICO */}
       {series?.dias?.length > 0 && (
         <section>
-          <h3 style={sh}>RECEITA PIX</h3>
+          <TituloSeccao>RECEITA PIX</TituloSeccao>
           <div style={{ padding: "0.7rem", background: "rgba(13,18,53,0.25)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px" }}>
             <GraficoLinha label="" valores={series.receitaCentavos} rotulos={series.dias.map(rotularDia)}
               cor={COR.success} formato={(v) => brl(v)} />
@@ -111,7 +111,7 @@ export default function GestaoFinanceira() {
       {/* TRANSAÇÕES */}
       <section>
         <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center", marginBottom: "0.5rem" }}>
-          <h3 style={{ ...sh, margin: 0 }}>TRANSAÇÕES</h3>
+          <TituloSeccao semMargem>TRANSAÇÕES</TituloSeccao>
           <select value={periodo} onChange={(e) => setPeriodo(Number(e.target.value))}
             style={sel}>{[7,30,90].map(d=><option key={d} value={d}>{d}d</option>)}</select>
           <select value={tipo} onChange={(e) => setTipo(e.target.value)}
@@ -133,7 +133,7 @@ export default function GestaoFinanceira() {
             <tbody>{trans.map((t,i) => (
               <tr key={t.id || i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                 <td style={td}>{quando(t.quando)}</td>
-                <td style={{...td,fontFamily:"'JetBrains Mono',monospace"}}>{truncar(t.endereco)}</td>
+                <td style={td}><EnderecoTruncado endereco={t.endereco} /></td>
                 <td style={{...td,color:SINAL[t.tipo]||COR.text,fontWeight:700,textTransform:"uppercase",fontSize:"0.64rem"}}>{t.tipo}</td>
                 <td style={{...td,color:SINAL[t.tipo]||COR.text,fontWeight:600}}>{brl(t.valorCentavos)}</td>
                 <td style={{...td,color:COR.muted,fontSize:"0.64rem"}}>{t.fonte||"—"}</td>
@@ -157,7 +157,6 @@ function Card({ r: rotulo, v: valor, c: cor, n: nota }) {
   </div>;
 }
 
-const sh = { fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" };
 const th = { textAlign: "left", padding: "0.3rem 0.4rem", color: COR.muted, fontWeight: 600, whiteSpace: "nowrap" };
 const td = { padding: "0.3rem 0.4rem", verticalAlign: "top", color: COR.text };
 const sel = { background: "rgba(13,18,53,0.5)", color: COR.text, border: "1px solid rgba(255,255,255,0.12)", borderRadius: "6px", padding: "0.2rem 0.4rem", fontSize: "0.68rem" };

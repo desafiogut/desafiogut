@@ -29,6 +29,7 @@ import { ESTADOS } from "../../lib/adminAuth.js";
 import { telaAtiva } from "../../lib/adminNav.js";
 import NavAdminPersistente from "./NavAdminPersistente.jsx";
 import AdminToastContainer from "./AdminToastContainer.jsx";
+import EnderecoTruncado from "./EnderecoTruncado.jsx";
 import { useAdminToast } from "../../hooks/useAdminToast.js";
 
 // Contexto mínimo para que as telas filhas disparem toasts
@@ -131,7 +132,7 @@ export default function AdminLayout() {
             {tela && !tela.index ? tela.label : "Painel Admin"}
           </h1>
           <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: COR.muted }}>
-            Logado como admin: <code style={{ color: COR.text }}>{endereco?.slice(0, 10)}…{endereco?.slice(-6)}</code>
+            Logado como admin: <code style={{ color: COR.text }}><EnderecoTruncado endereco={endereco} /></code>
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => navigate("/")}

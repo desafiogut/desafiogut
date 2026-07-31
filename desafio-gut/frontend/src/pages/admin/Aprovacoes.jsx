@@ -13,12 +13,7 @@ import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button } from "../../components/ui";
 import { COR, StatusBadge } from "./_ui.jsx";
 import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
-
-/** "0x1E1bAe7F0f6E87E15F430B620Eca42B146d198cB" → "0x1E1b…d198cB" */
-function truncarEndereco(addr) {
-  if (!addr || typeof addr !== "string" || addr.length < 12) return addr || "—";
-  return `${addr.slice(0, 6)}…${addr.slice(-6)}`;
-}
+import EnderecoTruncado from "../../components/admin/EnderecoTruncado.jsx";
 
 export default function Aprovacoes() {
   const { chamarAdmin } = useAdminAuth();
@@ -114,8 +109,8 @@ export default function Aprovacoes() {
                     ficam atrás de um toggle individual, porque o admin precisa de
                     os ver para aprovar, mas não deve tê-los expostos por omissão
                     em cada abertura do painel. */}
-                <code style={{ fontSize: "0.76rem", color: COR.text, fontFamily: "'JetBrains Mono', monospace" }}>
-                  {truncarEndereco(p.cliente_id)}
+                <code style={{ fontSize: "0.76rem", color: COR.text }}>
+                  <EnderecoTruncado endereco={p.cliente_id} />
                 </code>
                 {p.nome && (
                   <button

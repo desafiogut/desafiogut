@@ -6,8 +6,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { Button, Input } from "../../components/ui";
-import { COR } from "./_ui.jsx";
+import { COR , TituloSeccao } from "./_ui.jsx";
 import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
+import EnderecoTruncado from "../../components/admin/EnderecoTruncado.jsx";
 
 const NIVEL_COR = { "super-admin": "#ef4444", admin: "#f5a623", operador: "#10b981" };
 const NIVEL_LABEL = { "super-admin": "Super-Admin", admin: "Admin", operador: "Operador" };
@@ -107,7 +108,7 @@ export default function ConfiguracoesAdmins() {
 
       {/* ── ADMINISTRADORES ────────────────────────────────────────── */}
       <section style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        <h3 style={sh}>ADMINISTRADORES ({admins.length})</h3>
+        <TituloSeccao>ADMINISTRADORES ({admins.length})</TituloSeccao>
         <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
           {admins.map((a) => {
             const addr = typeof a === "string" ? a : a.endereco;
@@ -115,7 +116,7 @@ export default function ConfiguracoesAdmins() {
             return (
               <li key={addr} style={liStyle}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
-                  <code style={{ fontSize: "0.74rem", color: COR.text, fontFamily: "'JetBrains Mono', monospace" }}>{addr.slice(0, 6)}…{addr.slice(-4)}</code>
+                  <code style={{ fontSize: "0.74rem", color: COR.text }}><EnderecoTruncado endereco={addr} /></code>
                   {addr === coord && <span style={{ fontSize: "0.6rem", color: COR.warn }}>(coordenação)</span>}
                   <span style={{ fontSize: "0.58rem", padding: "0.1rem 0.4rem", borderRadius: "999px", background: `${NIVEL_COR[nv] || COR.muted}1a`, color: NIVEL_COR[nv] || COR.muted, border: `1px solid ${NIVEL_COR[nv] || COR.muted}44`, textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 700 }}>{NIVEL_LABEL[nv] || nv}</span>
                 </div>
@@ -145,7 +146,7 @@ export default function ConfiguracoesAdmins() {
       {/* ── SESSÕES ATIVAS ─────────────────────────────────────────── */}
       <section style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
-          <h3 style={{ ...sh, margin: 0 }}>SESSÕES ATIVAS ({sessoes.length})</h3>
+          <TituloSeccao semMargem>SESSÕES ATIVAS ({sessoes.length})</TituloSeccao>
           <Button variant="ghost" size="sm" onClick={carregarSessoes} className="!border-white/15 !text-[#94a3b8]">↻</Button>
         </div>
         {sessoes.length === 0 ? (
@@ -160,7 +161,7 @@ export default function ConfiguracoesAdmins() {
             </tr></thead>
             <tbody>{sessoes.map((s) => (
               <tr key={s.jti || s.createdAt} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                <td style={{...td,fontFamily:"'JetBrains Mono',monospace",fontSize:"0.66rem"}}>{s.endereco?.slice(0,8)}…</td>
+                <td style={{...td,fontSize:"0.66rem"}}><EnderecoTruncado endereco={s.endereco} /></td>
                 <td style={td}>{quando(s.createdAt)}</td>
                 <td style={td}>{quando(s.expiresAt)}</td>
                 <td style={td}><Button variant="ghost" size="sm" onClick={() => revogar(s.jti, s.endereco)}
@@ -174,7 +175,7 @@ export default function ConfiguracoesAdmins() {
 
       {/* ── CONFIGURAÇÕES ──────────────────────────────────────────── */}
       <section style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        <h3 style={sh}>CONFIGURAÇÕES DO PAINEL</h3>
+        <TituloSeccao>CONFIGURAÇÕES DO PAINEL</TituloSeccao>
         <div style={cfgRow}>
           <span style={{ fontSize: "0.74rem", color: COR.text }}>Atualização automática</span>
           <select value={cfg.pollingInterval} onChange={(e) => setCfg({ ...cfg, pollingInterval: Number(e.target.value) })} style={sel}>
@@ -211,7 +212,6 @@ export default function ConfiguracoesAdmins() {
   );
 }
 
-const sh = { fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em", fontWeight: 800, textTransform: "uppercase" };
 const th = { textAlign: "left", padding: "0.3rem 0.4rem", color: COR.muted, fontWeight: 600, whiteSpace: "nowrap" };
 const td = { padding: "0.3rem 0.4rem", verticalAlign: "top", color: COR.text };
 const liStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", padding: "0.45rem 0.7rem", background: "rgba(13,18,53,0.25)", border: "1px solid rgba(245,166,35,0.12)", borderRadius: "8px" };

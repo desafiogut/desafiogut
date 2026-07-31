@@ -7,8 +7,8 @@ import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { Button, Input } from "../../components/ui";
 import { COR, ouTraco } from "./_ui.jsx";
 import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
+import EnderecoTruncado from "../../components/admin/EnderecoTruncado.jsx";
 
-function truncar(a) { return a && a.length > 12 ? `${a.slice(0,6)}…${a.slice(-4)}` : a || "—"; }
 function quando(iso) { return iso ? new Date(iso).toLocaleString("pt-BR") : "—"; }
 
 const COR_SUCESSO = { true: COR.success, false: COR.danger, null: "#64748b" };
@@ -135,9 +135,9 @@ export default function LogsAuditoria() {
             <tbody>{linhas.map((l) => (
               <tr key={l.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                 <td style={td}>{quando(l.criado_em)}</td>
-                <td style={{...td,fontFamily:"'JetBrains Mono',monospace"}}>{truncar(l.admin_endereco)}</td>
+                <td style={td}><EnderecoTruncado endereco={l.admin_endereco} /></td>
                 <td style={{...td,color:COR.primary,fontSize:"0.62rem",textTransform:"uppercase",letterSpacing:"0.03em"}}>{l.tipo_acao||"—"}</td>
-                <td style={{...td,fontFamily:"'JetBrains Mono',monospace",fontSize:"0.62rem"}}>{truncar(l.alvo)}</td>
+                <td style={{...td,fontSize:"0.62rem"}}><EnderecoTruncado endereco={l.alvo} /></td>
                 <td style={{...td,color:COR_SUCESSO[l.sucesso]||COR.muted,fontWeight:700,textAlign:"center"}}>{ICONE[l.sucesso]}</td>
                 <td style={{...td,color:COR.muted,maxWidth:"200px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.justificativa||"—"}</td>
               </tr>

@@ -14,11 +14,7 @@ import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button, Input } from "../../components/ui";
 import { COR, ouTraco } from "./_ui.jsx";
 import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
-
-function truncarEndereco(addr) {
-  if (!addr || addr.length < 12) return addr || "—";
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
+import EnderecoTruncado from "../../components/admin/EnderecoTruncado.jsx";
 
 function quando(iso) {
   if (!iso) return "—";
@@ -135,8 +131,8 @@ export default function GestaoUsuarios() {
               {usuarios.map((u) => (
                 <tr key={u.cliente_id} style={{ borderBottom: `1px solid rgba(255,255,255,0.04)` }}>
                   <td style={td}>
-                    <Link to={`/admin/usuarios/${u.cliente_id}`} style={{ color: COR.primary, textDecoration: "none", fontFamily: "'JetBrains Mono', monospace" }}>
-                      {truncarEndereco(u.cliente_id)}
+                    <Link to={`/admin/usuarios/${u.cliente_id}`} style={{ color: COR.primary, textDecoration: "none" }}>
+                      <EnderecoTruncado endereco={u.cliente_id} copiavel={false} />
                     </Link>
                   </td>
                   {!isMobile && (
