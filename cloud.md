@@ -5637,3 +5637,29 @@ registrarAcao fail-closed, confirmarAcao fail-soft, hierarquia adminPode,
 retrocompatibilidade getAdminNivel (string → "admin").
 
 **Próximo:** MC89.12 — Fase 3: Operações e infraestrutura (Tela 4).
+
+---
+
+## MC89.12 — Fase 3: Operações e Infraestrutura (Tela 4)
+
+Suítes: 342/342 backend, 40/40 frontend. APK recompilado e validado.
+
+### Três endpoints novos
+`admin-status.mjs`: 6 sondas com degradação isolada — neste ambiente três
+acendem de imediato (webhook nunca disparou, Blobs sem token, Redis ausente).
+Sem ethers (JSON-RPC cru). Cache 30s. `admin-queue.mjs`: contagens e lista da
+fila_tarefas. `admin-commands.mjs`: 5 comandos com registo fail-CLOSED em
+admin_logs — cada um escreve ANTES de executar (padrão do MC89.11).
+
+### Tela 4: três secções
+Estado do sistema (6 cards coloridos por estado), fila de tarefas (4 contadores
++ tabela), comandos (3 admin + 2 super-admin, cada um com modal de confirmação
+e justificativa obrigatória). Componentes StatusCard e ComandoButton reutilizáveis
+para as telas seguintes. Operações marcada como pronta no adminNav.
+
+### Comandos honestos
+`limpar_cache` sem Redis → "não configurado" (não finge que limpou).
+`executar_monitor` → dispara execução (não "reinicia" porque não há processo).
+panic/unpause → super-admin apenas (o kill switch é o poder mais perigoso).
+
+**Próximo:** MC89.13 — Fase 4: Gestão de Usuários (Tela 2), a mais cara.
