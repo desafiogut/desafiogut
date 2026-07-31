@@ -5669,3 +5669,25 @@ panic/unpause → super-admin apenas (o kill switch é o poder mais perigoso).
 Dashboard de consumo. Se o endereço for admin → `<Navigate to="/admin" replace>`.
 O admin nunca vê o ecrã de consumo com os seus dados pessoais. Confirmado no APK:
 cold boot vai direto para `/admin`. [[desafiogut-mc8912-fase3]]
+
+---
+
+## MC89.13 — Fase 4: Gestão de Usuários (diagnóstico + plano)
+
+Zero alterações de código. Diagnóstico no Supabase + plano para o MC89.14.
+
+Entregáveis: `docs/MC89.13-DIAGNOSTICO.txt`, `docs/MC89.13-PLANO.txt`,
+`docs/MC89.13-RELATORIO.txt`.
+
+### Realidade dos dados
+~5-6 endereços únicos no total, em 3 tabelas. `cotas.endereco` vazio em 7/7
+(a carteira vive em `cliente_id`). Nome em `payload->>'empresa'`. E-mail em 3/7
+cotas. A tabela `lances` do Supabase está vazia. Não há `usuarios_bloqueio`.
+
+### Plano (MC89.14)
+View `vw_utilizadores` (UNION, VIEW simples, ~30 linhas). Quatro endpoints
+(listagem paginada com cursor, perfil, bloqueio, ajuste de saldo). Tabela
+`usuarios_bloqueio` — mas sem os gates a lerem-na, o bloqueio é só o registo
+(documentado no ecrã para o admin não achar que bloqueou quando não bloqueou).
+
+**Próximo:** MC89.14 — execução. A fase mais cara das restantes.
