@@ -1,0 +1,25 @@
+# MC89.24 — Fase 1 da Reforma UX/UI: Navegação Persistente + Hierarquia
+Data: 2026-07-31 | Suítes: 342 backend, 40 frontend | APK recompilado
+
+## 1. ADMINSPINNER (/components/admin/AdminSpinner.jsx)
+SVG circular com três tamanhos (sm/md/lg), cor neutra (#94a3b8), texto opcional.
+Prefers-reduced-motion desativa animação. Padroniza estados de loading em
+todas as telas — substitui "A ler…", "A carregar…", e silêncio.
+
+## 2. NAVEGAÇÃO PERSISTENTE (NavAdminPersistente.jsx)
+Barra horizontal com as 7 telas do plano (sem Aprovacoes/Cotas legacy).
+Mobile: scroll horizontal com gradiente indicador. Desktop: tabs espaçadas.
+Tela ativa destacada com fundo branco 10% + borda 25%. Inserida no AdminLayout
+entre a barra de sessão e o Outlet — visível em TODAS as telas.
+
+Os cartões-atalho (AtalhosAdmin.jsx) foram REMOVIDOS do índice. O conteúdo
+da Visão Geral começa imediatamente após a navegação — zero scroll para chegar
+aos dados.
+
+## 3. HIERARQUIA CORRIGIDA (VisaoGeral.jsx)
+Nova ordem: ALERTAS → CADEIA (EOA) + OPERAÇÃO (fila) → GRÁFICOS → UTILIZADORES
++ FINANCEIRO. As métricas críticas (saldo da EOA, estado da fila) são a segunda
+coisa que o admin vê, logo depois dos alertas.
+
+## 4. PRÓXIMO PASSO
+MC89.25 — Fase 2: toasts + hover em tabelas + scroll-indicator.

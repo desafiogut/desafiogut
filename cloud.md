@@ -5857,3 +5857,14 @@ Paleta navy+laranja, endereços truncados, "—" para nulos, badges coloridos,
 backlinks, confirmação obrigatória, auditoria fail-CLOSED, segurança.
 
 **Próximo:** MC90.0 — execução da Fase 1 (navegação persistente + hierarquia).
+
+---
+
+## MC89.24 — Fase 1: Navegação persistente + AdminSpinner + hierarquia
+
+AdminSpinner padronizado (SVG, 3 tamanhos, prefers-reduced-motion). Navegação
+persistente em barra horizontal (7 telas, scroll mobile). Cartões-atalho
+removidos do índice. Hierarquia corrigida: alertas → EOA/fila → gráficos →
+utilizadores/financeiro. 342/342, 40/40, build verde, APK instalado.
+
+**Próximo:** MC89.25 — Fase 2: toasts + hover + scroll-indicator.
