@@ -1,0 +1,24 @@
+# MC89.20 — RELATÓRIO: Configurações e Admins (Tela 7) — Fase 7 do MC89.5
+Data: 2026-07-31 | Suítes: 342 backend, 40 frontend | APK recompilado
+
+## 7 TELAS COMPLETAS
+
+O dashboard ADM do DESAFIOGUT está 100% funcional:
+
+1. Visão Geral     — métricas, gráficos, alertas       (MC89.1/89.7)
+2. Usuários        — lista, perfil, bloqueio, ajuste   (MC89.14)
+3. Financeiro      — resumo, transações, CSV           (MC89.16)
+4. Operações       — status, fila, comandos            (MC89.12)
+5. Logs            — auditoria com fail-CLOSED          (MC89.11)
+6. Notificações    — in-app, e-mail, histórico         (MC89.18)
+7. Configurações   — admins, sessões, configs          (MC89.20)
+
+## MC89.20 — O QUE FOI CONSTRUÍDO
+
+3 endpoints: admin-sessions (GET, lê Blob admin-refresh), admin-sessions-revoke
+(POST, revoga por jti), admin-config (GET/POST, Blob admin-config).
+Frontend: 3 secções — administradores com badges de nível, sessões ativas com
+revogação, configurações do painel. ALFA: admins, sessoes, revogar.
+
+## PRÓXIMOS PASSOS
+Pendências do operador: EOA, BLOBS_TOKEN, RAG, Play Store, push (FCM).

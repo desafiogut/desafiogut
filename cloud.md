@@ -5790,3 +5790,18 @@ frontend com 3 secções, ALFA:admins/sessoes/revogar. 1-2 sessões.
 Após o MC89.20, as 7 telas do dashboard ADM estão completas.
 
 **Próximo:** MC89.20 — execução (última tela).
+
+---
+
+## MC89.20 — Fase 7: Configurações e Admins (Tela 7) — 7 TELAS COMPLETAS
+
+Suítes: 342 backend, 40 frontend. APK recompilado.
+
+Três endpoints (admin-sessions, admin-sessions-revoke, admin-config). Tela 7
+com 3 secções: administradores com badges de nível coloridos, sessões ativas
+com revogação por jti, configurações do painel (polling, alertas, limiar EOA).
+ALFA:admins, ALFA:sessoes, ALFA:revogar.
+
+O dashboard ADM do DESAFIOGUT está 100% funcional — 7 telas completas, sistema
+de auditoria fail-CLOSED, 3 níveis de permissão, 18 endpoints admin, ALFA com
+24 comandos. Próximo: pendências do operador.
