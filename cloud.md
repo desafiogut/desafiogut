@@ -5714,3 +5714,18 @@ aninhada (/admin/usuarios/:endereco) com identificação, saldo, créditos e aç
 de bloqueio/ajuste com confirmação e justificativa. Usuários marcado pronto.
 
 **Próximo:** MC89.15 — Fase 5: Gestão Financeira (Tela 3).
+
+---
+
+## MC89.15 — Fase 5: Gestão Financeira (diagnóstico + plano)
+
+Zero alterações de código. O livro-razão está pronto: 18 créditos (R$44,00),
+0 débitos, 0 cotas vendidas. `admin-series` (MC89.7) já entrega as séries
+diárias. A Tela 3 é maioritariamente leitura — a fonte existe, os componentes
+existem (GraficoLinha, StatusCard), o padrão de endpoints está estabelecido.
+
+Plano para o MC89.16: três endpoints (resumo, transações com cursor UNION,
+relatório CSV), frontend com 4 cards + tabela paginada + gráfico reutilizado,
+ALFA:financeiro/transacoes/relatorio. 1-2 sessões.
+
+**Próximo:** MC89.16 — execução.
