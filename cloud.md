@@ -6116,3 +6116,27 @@ Não foi possível abrir no Excel — não está instalado nesta máquina.
 
 `contatos_organizados.xlsx` (o de 5 abas) NÃO foi alterado e mantém os valores
 originais.
+
+
+## MC-REMOVER-PRIMEIROS-22 — o corte estava no sítio certo, e confirmei porquê
+
+`whatsapp.xlsx`: 27.759 → **27.737**, IDs renumerados 1..27.737, novo ID 1 = antigo ID 23.
+
+Antes de apagar, olhei para o que eram: **não era uma fatia arbitrária**. Os 22
+primeiros são exactamente os números com **DDD inexistente** — 00, 01, 02, 03 e
+10. Os DDD brasileiros começam em 11, e a primeira linha que fica é DDD 11. A
+ordenação numérica juntou todos os inválidos no início, por isso "as 22
+primeiras" e "as de DDD 00–10" são o mesmo conjunto.
+
+**⚠️ O que fica por limpar:** cortar as 22 primeiras não elimina todos os DDD
+inválidos, porque os DDD válidos não são contíguos (não existe 20, 25, 26, 29,
+30, 39, 40, 50, 52, 56–60, 70, 76, 78, 80, 90) e esses estão espalhados, não no
+início. Sobram **16 números** com DDD inexistente (20, 23, 29, 56, 70, 72, 76,
+80, 90), mais os 5.489 que nunca tiveram DDD. Não removidos — o pedido eram 22 e
+foram 22. Limpar os 16 seria um corte por REGRA (DDD válido), não por posição.
+
+**Validação:** compara com o backup linha a linha, porque contar não chega —
+27.737 linhas erradas contam na mesma 27.737. Testado por MUTAÇÃO: exigi que a
+comparação reprovasse cortar 21, cortar 23, e cortar as ÚLTIMAS 22 em vez das
+primeiras. Reprovou os três e aceitou só o caso real, o que é o que distingue um
+corte certo de um off-by-one.

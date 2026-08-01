@@ -1,0 +1,73 @@
+================================================================================
+MC-REMOVER-PRIMEIROS-22 — REMOÇÃO DAS 22 PRIMEIRAS LINHAS
+Data: 2026-08-01
+Ficheiro: Desktop\CONTATOS-ORGANIZADOS\whatsapp.xlsx
+Veredito: ✅ CONCLUÍDO E VALIDADO
+Nota R4: nenhum número completo aparece aqui — só contagens e prefixos de DDD.
+================================================================================
+
+RESULTADO
+---------
+  antes    27.759 linhas
+  removidas    22 (as primeiras, IDs 1 a 22)
+  depois   27.737 linhas
+  IDs renumerados 1..27.737. O novo ID 1 é o antigo ID 23.
+  Backup: whatsapp.ANTES-DE-REMOVER-22.xlsx
+  Texto atualizado: unicos\whatsapp_somente_digitos.txt (27.737 linhas)
+
+================================================================================
+1. O QUE ERAM ESSAS 22  (verificado antes de apagar)
+================================================================================
+Não eram uma fatia arbitrária: eram exactamente os números com DDD INEXISTENTE.
+
+  DDD encontrados nas 22 removidas : 00, 01, 02, 03, 10
+  DDD da primeira linha que fica   : 11
+
+Os DDD brasileiros começam em 11. A ordenação numérica juntou todos os
+inválidos no início da lista, por isso "as 22 primeiras" e "as de DDD 00–10"
+são o mesmo conjunto. O corte estava no sítio certo — confirmado, não assumido.
+
+================================================================================
+2. ⚠️ O QUE FICA POR LIMPAR
+================================================================================
+Cortar as 22 primeiras NÃO elimina todos os DDD inválidos, porque os DDD válidos
+não são contíguos (não existe 20, 25, 26, 29, 30, 39, 40, 50, 52, 56–60, 70, 76,
+78, 80, 90). Esses ficam espalhados pela lista, não no início.
+
+  Ainda presentes com DDD inexistente : 16 números
+      DDD 20 (1) · 23 (3) · 29 (2) · 56 (1) · 70 (2) · 72 (2) · 76 (1) · 80 (2) · 90 (2)
+
+  Números sem DDD (9 dígitos, nunca tiveram) : 5.489
+
+Não foram removidos — o pedido era 22 e são 22. Fica registado para o operador
+decidir. Limpar os 16 seria um corte por regra (DDD válido), não por posição.
+
+================================================================================
+3. VALIDAÇÃO  (scripts\validar_remocao_22.py → exit 0)
+================================================================================
+Compara o ficheiro novo com o BACKUP linha a linha. Contar linhas não chega:
+27.737 linhas erradas contam na mesma 27.737.
+
+  ✓ backup com 27.759, novo com 27.737, diferença exactamente 22
+  ✓ os valores são exactamente `backup[22:]`, na mesma ordem
+  ✓ o novo ID 1 é o antigo ID 23; a última linha é a mesma do original
+  ✓ nenhum dos 22 removidos reaparece em lado nenhum da lista
+  ✓ IDs renumerados 1..27.737 sem saltos; última linha com ID = 27.737
+  ✓ todos só com dígitos, zero repetidos, nenhuma célula vazia
+
+  ✓ TESTE POR MUTAÇÃO: exigido que a comparação REPROVASSE os cortes errados —
+    21 linhas, 23 linhas, e as ÚLTIMAS 22 em vez das primeiras. Reprovou os três
+    e aceitou só o caso real. Sem isto, "passou" não distinguiria um corte certo
+    de um corte com um off-by-one.
+
+⚠️ NÃO VERIFICADO: abrir o ficheiro no Excel. Não está instalado nesta máquina
+(COM devolve REGDB_E_CLASSNOTREG). A validação é estrutural.
+
+================================================================================
+4. NOTAS
+================================================================================
+  · Backup criado antes da escrita; não é sobrescrito se já existir. Reversão:
+      Copy-Item "…\whatsapp.ANTES-DE-REMOVER-22.xlsx" "…\whatsapp.xlsx" -Force
+  · `contatos_organizados.xlsx` (o de 5 abas) continua sem ser alterado.
+  · Zero alterações no código do DesafioGUT (R1). Nenhuma credencial tocada (R5).
+  · Nenhum contacto commitado no repositório.
