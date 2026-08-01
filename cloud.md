@@ -6081,3 +6081,38 @@ exigiu-se que fosse REPROVADO — foi.
 
 Não foi possível abrir os ficheiros no Excel (não está instalado nesta máquina,
 COM devolve REGDB_E_CLASSNOTREG); a validação é estrutural, não visual.
+
+
+## MC-REMOVER-PREFIXOS — os prefixos estavam nos e-mails, não nos números
+
+O enunciado dizia "números do WhatsApp". Medido antes de tocar em nada:
+`whatsapp.xlsx` **não tem um único "%"** (0 ocorrências), e o "+" não estava nos
+IDs 231-257 mas em **22.270 números, IDs 1 a 22.270 em bloco contíguo** — todos
+os que ficaram em E.164 no MC anterior, que a ordenação alfabética juntou no
+início. Em `emails.xlsx`, pelo contrário, a descrição batia ao caractere:
+IDs 1-230 com "%", IDs 231-257 com "+". O operador confirmou a meio: era e-mails.
+
+**O achado que mudou o trabalho:** 254 dos 257 prefixados eram DUPLICADOS
+CORROMPIDOS de endereços que já existiam limpos na mesma lista
+("%airi…@x.com" e "airi…@x.com" são o mesmo contacto). Tirar o prefixo sem mais
+nada criaria 254 repetidos — o oposto do que estas listas existem para garantir.
+Eliminados: 250.360 → **250.104**, com verificação de que os 250.104 endereços
+distintos do original estão TODOS presentes e que as linhas removidas eram
+exclusivamente duplicados.
+
+Mais 3 casos que o enunciado não previa: começavam por "%20", um espaço
+codificado em URL. Remover só o "%" deixaria "20xxx@…", um endereço que não
+existe. O "%20" passou a sair como unidade.
+
+**No `whatsapp.xlsx`**, executado antes do esclarecimento: removi o "+" de todos
+os 22.270 (não só dos 27), porque limpar 27 e deixar 22.243 daria uma coluna com
+o mesmo dado em dois formatos. Ficaram 27.759 números só com dígitos, contagem
+inalterada. Backup guardado — a reversão é uma cópia de ficheiro.
+
+**Validação:** ambos os verificadores comparam o novo com o BACKUP linha a linha,
+porque olhar só para o resultado não distingue "removeu o prefixo" de "reescreveu
+outra coisa". Ambos testados por MUTAÇÃO (linha adulterada tem de ser reprovada).
+Não foi possível abrir no Excel — não está instalado nesta máquina.
+
+`contatos_organizados.xlsx` (o de 5 abas) NÃO foi alterado e mantém os valores
+originais.
