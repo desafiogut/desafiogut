@@ -6276,3 +6276,60 @@ os 22.232 dos antigos blocos 1 e 3 estão todos lá, e nenhum número foi invent
 era a única informação a distinguir um número que se SABE existir de um que
 apenas tem o formato certo. Continua em `unicos/whatsapp_VERIFICADOS.txt` e em
 `whatsapp_classificado.xlsx`, ambos intactos.
+
+
+## MC89.31 — o ADM já não passa pelo Dashboard, e medir apanhou dois defeitos a mais
+
+O ADM via o Dashboard comum durante ~1,3 s a cada restauro de sessão antes de
+ser encaminhado para /admin. A causa, diagnosticada no MC89.30, era que a
+condição de encaminhamento exigia `address`, que só existe depois de o Privy
+restaurar — embora a resposta certa já estivesse em disco no instante zero.
+
+**A primeira coisa que fiz foi medir, e isso mudou a forma da correção.** O
+plano aprovado ancorava o palpite no `gut_admin_check`, cujo TTL é 5 min, na
+convicção de que o cache frio era o caso caro (4849 ms numa corrida do MC89.30).
+Repeti 3× com o cache apagado: 1504 / 1430 / 1310 ms. Os 3,4 s "por explicar"
+não reproduzem — aquela corrida foi a primeira a seguir à reposição da rede
+descrita no próprio MC89.30, e traz o rasto (sessão Privy a 1449 ms contra
+~700 ms agora). Era rede a recuperar, não código.
+
+Se frio ≈ quente, um palpite preso aos 5 min corrigiria "reabri agora mesmo" e
+deixaria de pé "reabri amanhã" — o caso que o operador descreveu. O risco R-c do
+plano ("o primeiro login de sempre") era, na verdade, todo restauro passados
+5 minutos. Levado ao operador, que aprovou a âncora alternativa: uma dica de
+**encaminhamento** de 24 h, separada da resposta de **autorização**, que mantém
+os 5 min intactos. É a assimetria que o MC88.42 já usa para o lojista.
+
+**Dois defeitos só apareceram no aparelho.** O primeiro: "Acesso restrito" a um
+admin legítimo, aos 1582 ms. Com `endereco` a null, `useAdmin` devolvia
+`{ isAdmin:false, loading:false }` — um não definitivo a uma pergunta que ainda
+não tinha sido feita — e quem corrigia era um `useEffect`, que corre depois da
+renderização. Antes deste MC quase nunca se via, porque o ADM só chegava a
+/admin depois de `isAdmin` já ser true; encaminhar cedo tornou o encontro
+garantido. Eu tinha-o previsto por escrito no diagnóstico e mesmo assim a
+primeira correção não o cobria.
+
+O segundo: um ADM sem `gut_saldo_cache` via "Faça login" durante 737 ms, porque
+o portão usava `pareceAutenticado`, que ancora no cache de saldo. A pergunta
+certa é "há sessão em disco?", que se responde com `privy:connections`.
+
+**A sonda também estava a mentir-me, e o controlo positivo apanhou-a.** A marca
+de "Dashboard pintado" disparava com o rodapé e a barra inferior do AppLayout,
+sem o Dashboard montado — o filtro apanhava o rótulo "Lances" da navegação.
+Passou a exigir texto exclusivo do Dashboard, e o modo *sem-dica* serve de
+controlo: se a marca não disparar lá, a sonda está cega.
+
+Resultado, com o APK final: em 6 corridas (3 quentes, 3 frias) a marca do
+Dashboard **nunca** dispara, nem a de "Faça login", nem a de "Acesso restrito".
+A navegação para /admin passou de 1769-1990 ms para 442-1000 ms. Uma dica
+forjada com o endereço de outra conta não encaminha — validado no aparelho.
+
+Frontend 40 → 70 testes, backend 375/375, e a suite validada por mutação: 9/9.
+A validação por mutação apanhou um falso verde meu — o teste do AdminLayout
+afirmava só a ordem dos textos, e `if (false && …)` mantinha a ordem com o ramo
+morto.
+
+Fica por fazer: o primeiro login de sempre num aparelho continua a passar pelo
+Dashboard (~1,5 s), por desenho — não há nada em disco e adivinhar seria
+inventar. E um utilizador não-admin real não foi exercitado: entrar com outra
+conta terminaria a sessão do operador.
