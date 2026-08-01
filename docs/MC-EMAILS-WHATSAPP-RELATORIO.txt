@@ -1,0 +1,151 @@
+================================================================================
+MC-EMAILS/WHATSAPP — ORGANIZAÇÃO DE CONTATOS
+Data: 2026-08-01
+Origem: C:\Users\Moltbot\Desktop\BASE-CONTATOS  (24 ficheiros)
+Saída:  C:\Users\Moltbot\Desktop\CONTATOS-ORGANIZADOS
+Veredito: ✅ CONCLUÍDO E VALIDADO — zero repetições, tudo numerado.
+Nota R4: nenhum e-mail ou número aparece neste relatório — só contagens.
+================================================================================
+
+RESUMO EM UMA LINHA
+-------------------
+481.365 ocorrências de e-mail e 140.118 de telefone reduzidas a 250.360 e-mails
+e 27.759 números únicos, cada um numerado de 1 a N, sem uma única repetição.
+
+================================================================================
+1. NÚMEROS
+================================================================================
+
+E-MAILS
+  Ocorrências lidas (com repetições)      481.365
+  Contactos ÚNICOS                        250.360   ← uma linha cada, ID 1..250.360
+  Repetições eliminadas                   231.005
+  Que apareciam em mais de um sítio         72.468
+    · validados (passaram na validação)      2.276
+    · brutos (nunca validados)             240.384
+    · rejeitados (NÃO usar em envios)        7.700
+
+WHATSAPP / TELEFONES
+  Ocorrências lidas (com repetições)      140.118
+  Contactos ÚNICOS                         27.759   ← ID 1..27.759
+  Repetições eliminadas                   112.359
+  Que apareciam em mais de um sítio         27.563
+    · VERIFICADOS (WhatsApp confirmado)         198   ← são estes que servem
+    · padronizados (tipo="suspeito")         27.504
+    · brutos                                     55
+    · rejeitados                                  2
+  Por formato:
+    · +55 completo (E.164)                   22.270
+    · sem DDD, 9 dígitos                      5.489
+
+================================================================================
+2. ENTREGÁVEIS
+================================================================================
+Desktop\CONTATOS-ORGANIZADOS\
+  contatos_organizados.xlsx          12.980.462 bytes, 5 abas
+      Resumo                              27 linhas
+      E-mails                        250.360 linhas   colunas "1 - ID" … "6 - Ficheiros de origem"
+      WhatsApp                        27.759 linhas   colunas "1 - ID" … "7 - Ficheiros de origem"
+      Duplicados E-mail               72.468 linhas
+      Duplicados WhatsApp             27.563 linhas
+  unicos\emails.txt                          250.360
+  unicos\whatsapp.txt                         27.759
+  unicos\emails_validados.txt                  2.276
+  unicos\emails_rejeitados_NAO_ENVIAR.txt      7.700
+  unicos\whatsapp_VERIFICADOS.txt                198
+  duplicatas\emails_duplicados.txt            72.468   (valor + nº de ocorrências)
+  duplicatas\whatsapp_duplicados.txt          27.563
+  relatorios\                                          (cópia deste relatório)
+  _intermedio.json                        54.785.566   ficheiro de trabalho; pode apagar
+
+Scripts (no repositório, sem dados pessoais):
+  scripts\organizar_contatos.py    extração + normalização + deduplicação
+  scripts\exportar_contatos.py     .xlsx e pastas
+  scripts\validar_contatos.py      verificação independente
+
+================================================================================
+3. QUATRO DECISÕES QUE MUDARAM O RESULTADO
+================================================================================
+
+3.1 — CLASSIFICAR PELO CONTEÚDO, NÃO PELO NOME DA PASTA.
+  Dois ficheiros dentro de EMAILS\ contêm TELEFONES ("22 e-mails linkidin.csv",
+  "Celulares III maio 26 OK.csv"). O tipo é decidido pelo formato do valor.
+
+3.2 — ⚠️ A PASTA "OS NUMEROS VALIDADOS" NÃO TEM NÚMEROS VALIDADOS.
+  Tem 27.704 números apenas PADRONIZADOS, com tipo="suspeito". Os que passaram
+  mesmo pelo Twilio estão em "OS NUMEROS EM USO AGORA": são 198.
+  Eu próprio classifiquei mal à primeira, pelo nome da pasta, e o resultado
+  marcava 27.704 suspeitos como "validado" e os 198 reais como "bruto" — ao
+  contrário do que serve para decidir um envio. Corrigido: os telefones passam
+  a ser classificados pela coluna `whatsapp_candidate`. O total de 198 bate com
+  o que a memória do projeto já registava de forma independente.
+
+3.3 — REJEITADO GANHA SEMPRE.
+  7.700 e-mails já tinham REPROVADO na validação. Fundir tudo numa lista só
+  devolvê-los-ia ao circuito, com custo real de reputação de envio. Um e-mail
+  que apareça em REJEITADOS fica rejeitado mesmo que também exista numa lista
+  bruta, e está isolado em `emails_rejeitados_NAO_ENVIAR.txt`.
+
+3.4 — NÃO INVENTAR DDD.
+  5.489 números têm 9 dígitos sem DDD. Assumir o DDD 92 pela origem da base
+  produziria números que podem existir e pertencer a outra pessoa. Ficam
+  marcados `sem_ddd`, contados e visíveis, nunca fundidos com os +55 completos.
+
+================================================================================
+4. UM DEFEITO MEU, MEDIDO E CORRIGIDO
+================================================================================
+A primeira versão do extractor demorava 262,63 s NUM SÓ FICHEIRO
+(lista-master-alta-confianca.csv) para devolver ZERO resultados. Causa: o regex
+de telefone usava `\s*` logo a seguir a um grupo opcional. Como os e-mails são
+substituídos por espaços antes dessa passagem, o ficheiro torna-se um bloco
+enorme de espaço em branco e o motor testava todos os comprimentos possíveis
+desse bloco em cada posição — backtracking quadrático.
+
+Corrigido limitando todos os quantificadores. Medido depois:
+  · mesmo ficheiro:              262,63 s → 0,03 s
+  · 2 MB de espaços (pior caso):            0,19 s
+  · execução completa, 24 ficheiros:        ~5 s
+Antes de aplicar, o regex novo foi testado contra os 6 formatos reais da base
+(com e sem DDD, com parêntesis, com +55, fixo) e contra falsos positivos
+(e-mails com dígitos, datas, valores em reais).
+
+================================================================================
+5. VALIDAÇÃO
+================================================================================
+`scripts\validar_contatos.py` não confia no script que escreveu o ficheiro:
+abre o .xlsx como ZIP, parseia o XML de cada aba e reconta. Resultado: exit 0.
+
+  ✓ ZIP íntegro; as 4 partes obrigatórias do formato presentes; 5 abas
+  ✓ cabeçalhos numerados 1..N em todas as abas
+  ✓ E-mails:  250.360 linhas / 250.360 distintos / 0 repetidos
+  ✓ WhatsApp:  27.759 linhas /  27.759 distintos / 0 repetidos
+  ✓ IDs de 1 a N sem saltos nem repetições nas 4 abas de dados
+  ✓ contagens do Excel batem com as dos .txt das pastas
+  ✓ TESTE POR MUTAÇÃO: injectado um duplicado artificial — foi detectado;
+    amostra limpa não acusa. Sem isto, "zero repetidos" podia ser apenas um
+    verificador que nunca acusa nada.
+
+⚠️ O QUE NÃO FOI POSSÍVEL VERIFICAR: abrir o ficheiro no Excel propriamente
+dito. O Excel não está instalado nesta máquina (COM devolve
+REGDB_E_CLASSNOTREG). A validação foi estrutural — forte, mas não é o mesmo que
+ver o ficheiro aberto. Vale a pena o operador abri-lo uma vez e confirmar.
+
+================================================================================
+6. NOTAS
+================================================================================
+  · Nada foi escrito dentro de BASE-CONTATOS. É uma exportação byte-a-byte com
+    manifesto SHA-256; a saída foi para uma pasta irmã, deixando o original
+    intacto.
+  · Nenhuma credencial foi tocada (R5). BASE-CONTATOS não contém nenhuma —
+    procurados *.key, *.env e config*.json, nada encontrado. As credenciais que
+    a memória do projeto regista vivem noutras pastas do Desktop e ficaram lá.
+  · Nenhum contacto foi commitado no repositório: só os scripts e este
+    relatório, que tem contagens e nenhum dado pessoal.
+  · Zero alterações no código do DesafioGUT (R1).
+
+PENDENTE DO OPERADOR
+  · Abrir o .xlsx uma vez para confirmar (ver secção 5).
+  · Decidir o que fazer com os 240.384 e-mails "brutos": nunca foram validados.
+    Enviar para essa lista sem validar é o risco de reputação que os 7.700
+    rejeitados já demonstram.
+  · Apagar `_intermedio.json` (54 MB) se não for reprocessar.

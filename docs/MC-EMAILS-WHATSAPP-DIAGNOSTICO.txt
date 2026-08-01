@@ -50,10 +50,12 @@ e Desktop\MC-HISTORICO\WHATSAPP\, FORA desta pasta. Não foram tocadas — R5.)
 ================================================================================
 
 2.1 — QUATRO FICHEIROS NÃO TÊM CABEÇALHO. A primeira linha já é dado:
-        22 e-mails linkidin.csv        1ª linha = "92 982722274;"
-        Celulares III maio 26  OK.csv  1ª linha = "981000007;"
-        23 e-mails linkidin II.csv     1ª linha = "__allexsalles@rock.com"
-        8 e-mails linkidin I.csv       1ª linha = "_adriano.balboa@hacker.ps"
+        22 e-mails linkidin.csv        1ª linha = telefone (DDD + 9 dígitos)
+        Celulares III maio 26  OK.csv  1ª linha = telefone (9 dígitos, sem DDD)
+        23 e-mails linkidin II.csv     1ª linha = endereço de e-mail
+        8 e-mails linkidin I.csv       1ª linha = endereço de e-mail
+      [valores reais redigidos — R4. Estavam aqui na primeira versão deste
+       documento, por lapso meu, contra o que o próprio cabeçalho declara.]
       Ler por cabeçalho perderia um registo em cada um e, pior, criaria uma
       coluna com o nome de um contacto real. A extração será por REGEX sobre o
       texto bruto, que ignora a questão do cabeçalho por completo.
@@ -85,7 +87,8 @@ e Desktop\MC-HISTORICO\WHATSAPP\, FORA desta pasta. Não foram tocadas — R5.)
 3. AMBIGUIDADE DE NORMALIZAÇÃO A RESOLVER (números sem DDD)
 ================================================================================
 "Celulares III maio 26  OK.csv" tem 5.143 números de 9 dígitos SEM DDD
-(ex.: "981000007"). Não é possível derivar o DDD do próprio número. Opções:
+(formato: 9 seguido de 8 dígitos). Não é possível derivar o DDD do próprio
+número. Opções:
   (a) manter como estão, marcados `sem_ddd`, fora do bloco E.164;
   (b) assumir um DDD (92, pela origem amazonense do resto da base) — seria
       INVENTAR dados e produzir números que podem existir e pertencer a outra

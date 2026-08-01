@@ -6014,3 +6014,48 @@ forçá-lo terminaria a sessão do operador); tudo aqui é o caminho de RESTAURO
 sem nada exclusivo. Os documentos foram para main, onde vivem os do MC89.28/29.
 
 **Próximo:** MC89.31 — execução, se o plano for aprovado.
+
+
+## MC-EMAILS/WHATSAPP — organização da base de contactos
+
+481.365 ocorrências de e-mail e 140.118 de telefone, lidas de 24 ficheiros em
+`Desktop\BASE-CONTATOS`, reduzidas a **250.360 e-mails** e **27.759 números**
+únicos, cada um numerado de 1 a N, sem uma repetição. Saída em
+`Desktop\CONTATOS-ORGANIZADOS` (.xlsx de 5 abas + pastas `unicos/` e
+`duplicatas/`).
+
+**⚠️ A pasta "OS NUMEROS VALIDADOS" não tem números validados.** Tem 27.704
+apenas padronizados, com `tipo="suspeito"`. Os que passaram mesmo pelo Twilio
+estão em "OS NUMEROS EM USO AGORA" e são **198**. Classifiquei mal à primeira,
+pelo nome da pasta, e o resultado marcava os 27.704 suspeitos como "validado" e
+os 198 reais como "bruto" — ao contrário do que serve para decidir um envio.
+Corrigido: os telefones passam a ser classificados pela coluna
+`whatsapp_candidate`, não pelo caminho. O 198 bate com o que a memória do
+projecto já registava.
+
+**Outras três decisões:** o tipo é decidido pelo FORMATO do valor, não pela
+pasta (dois ficheiros dentro de `EMAILS\` contêm telefones); "rejeitado" ganha
+sempre, para que os 7.700 e-mails já reprovados não voltem ao circuito; e os
+5.489 números de 9 dígitos sem DDD ficam num grupo próprio — assumir o DDD 92
+produziria números reais de outras pessoas.
+
+**Defeito meu, medido e corrigido.** O primeiro extractor levava **262,63 s num
+só ficheiro** para devolver ZERO resultados: o regex de telefone tinha `\s*`
+a seguir a um grupo opcional e, como os e-mails são substituídos por espaços
+antes dessa passagem, o motor testava todos os comprimentos do bloco de espaço
+em cada posição — backtracking quadrático. Com todos os quantificadores
+limitados: 0,03 s no mesmo ficheiro, ~5 s na execução completa. O regex novo foi
+testado contra os 6 formatos reais e contra falsos positivos antes de entrar.
+
+**Validação** por script independente que abre o .xlsx como ZIP e reconta:
+0 repetidos nas abas de únicos, IDs 1..N sem saltos, contagens do Excel iguais
+às dos .txt, e o verificador validado por MUTAÇÃO (duplicado artificial
+injectado foi apanhado). Não foi possível abrir o ficheiro no Excel — não está
+instalado nesta máquina; a validação é estrutural, não visual.
+
+Nada foi escrito dentro de `BASE-CONTATOS` (é a exportação byte-a-byte com
+manifesto SHA-256), nenhuma credencial foi tocada e nenhum contacto foi
+commitado — no repositório ficam só os três scripts e o relatório com contagens.
+
+**Pendente do operador:** abrir o .xlsx uma vez; decidir o que fazer com os
+240.384 e-mails "brutos", que nunca foram validados.
