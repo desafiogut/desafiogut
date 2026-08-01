@@ -6140,3 +6140,36 @@ foram 22. Limpar os 16 seria um corte por REGRA (DDD válido), não por posiçã
 comparação reprovasse cortar 21, cortar 23, e cortar as ÚLTIMAS 22 em vez das
 primeiras. Reprovou os três e aceitou só o caso real, o que é o que distingue um
 corte certo de um off-by-one.
+
+
+## MC-ORGANIZAR-WHATSAPP — categorizar tornou visível que 30% são fixos
+
+`whatsapp_organizado.xlsx`, 6 abas, a partir dos 27.737 números limpos:
+
+| categoria | nº | formato |
+|---|---|---|
+| Celular (DDD + 9 dígitos) | 13.993 | `+55 (DD) 9 XXXX-XXXX` |
+| Fixo (DDD + 8 dígitos) | 8.239 | `+55 (DD) XXXX-XXXX` |
+| Celular sem DDD | 5.489 | `9XXXX-XXXX` |
+| Inconsistente (DDD inexistente) | 16 | — |
+
+**Os formatos foram medidos, não assumidos.** O enunciado listava cinco formatos
+possíveis; na lista real existem TRÊS. A categoria "fixo sem DDD" (8 dígitos)
+não tem **nenhum** caso — ficou no código com 0, sem se inventar conteúdo para
+uma aba vazia.
+
+**⚠️ O que a categorização tornou visível:** 8.239 são telefones FIXOS, ou seja
+30% da lista, e fixos em regra não têm WhatsApp. Restam 19.482 móveis, dos quais
+só 13.993 têm DDD e portanto são endereçáveis — e destes só **198** foram
+alguma vez verificados. Não removi nada: o pedido era categorizar, não filtrar.
+Mas com as abas separadas, excluir os fixos passa a ser copiar a aba certa.
+
+**Duas colunas por número, não uma:** só-dígitos (para enviar) e formatado (para
+ler). Um ficheiro só com a versão bonita obrigaria a desfazê-la antes de
+qualquer uso, e a pontuação seria mais um sítio por onde um erro entra sem se ver.
+
+**Validação:** a verificação que interessa é que a formatação seja REVERSÍVEL —
+tirar a pontuação de cada um dos 27.737 formatados devolve exactamente o número
+original (0 divergências). É a única que apanha um erro de formato: olhar e achar
+que "parece bem" não distingue `…9 8765-4321` de `…9 8756-4321`. Testada por
+mutação (dígito a mais tem de ser apanhado).

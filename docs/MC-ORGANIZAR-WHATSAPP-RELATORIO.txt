@@ -1,0 +1,101 @@
+================================================================================
+MC-ORGANIZAR-WHATSAPP — NORMALIZAÇÃO E CATEGORIZAÇÃO
+Data: 2026-08-01
+Origem : Desktop\CONTATOS-ORGANIZADOS\whatsapp.xlsx        (27.737 números)
+Saída  : Desktop\CONTATOS-ORGANIZADOS\whatsapp_organizado.xlsx (1.935.476 bytes)
+Veredito: ✅ CONCLUÍDO E VALIDADO
+Nota R4: nenhum número completo aparece aqui — só contagens e formatos.
+================================================================================
+
+CATEGORIAS  (soma = 27.737, confere)
+------------------------------------
+  Celular (DDD + 9 dígitos)     13.993     +55 (DD) 9 XXXX-XXXX
+  Fixo (DDD + 8 dígitos)         8.239     +55 (DD) XXXX-XXXX
+  Celular sem DDD                5.489     9XXXX-XXXX
+  Inconsistente                     16     DDD inexistente
+  ─────────────────────────────────────
+  TOTAL                         27.737
+
+ABAS DO FICHEIRO
+----------------
+  Resumo                  15 linhas
+  Todos os numeros    27.737 linhas   ID · ID original · só dígitos · formatado · categoria · DDD · observação
+  Celulares completos 13.993 linhas
+  Fixos completos      8.239 linhas
+  Sem DDD              5.489 linhas
+  Inconsistentes          16 linhas
+
+================================================================================
+1. OS FORMATOS FORAM MEDIDOS, NÃO ASSUMIDOS
+================================================================================
+O enunciado listava cinco formatos possíveis. Na lista real existem TRÊS:
+
+  13 dígitos  14.005  todos "55" + DD + assinante a começar por 9   → móvel
+  12 dígitos   8.243  todos "55" + DD + assinante a começar por 2-5 → fixo
+   9 dígitos   5.489  todos a começar por 9, sem DD                 → móvel sem DDD
+   8 dígitos       0  a categoria "fixo sem DDD" do enunciado NÃO TEM NENHUM caso
+
+A regra de classificação segue o que está lá. A categoria `fixo_sem_ddd` foi
+mantida no código (custa uma linha e evita que um caso futuro caia em
+"inconsistente"), mas aparece com 0 no resumo — não se inventou conteúdo para
+uma aba vazia.
+
+================================================================================
+2. ⚠️ O QUE ESTES NÚMEROS SIGNIFICAM PARA UM ENVIO
+================================================================================
+A categorização torna visível uma coisa que a lista corrida escondia:
+
+  Móveis (podem ter WhatsApp)                 19.482   13.993 + 5.489
+  Fixos (em regra NÃO têm WhatsApp)            8.239   30% da lista
+  Prontos a enviar (móvel COM DDD)            13.993   os únicos completos
+  Verificados no Twilio                          198   os únicos CONFIRMADOS
+
+Os 8.239 fixos não foram removidos — o pedido era categorizar, não filtrar. Mas
+ficam numa aba própria, o que torna trivial excluí-los. E os 5.489 sem DDD não
+são endereçáveis sem se inventar o DDD, coisa que não se faz (decisão do
+MC-EMAILS/WHATSAPP: o DDD não é derivável do próprio número).
+
+================================================================================
+3. DECISÃO DE FORMATO: DUAS COLUNAS, NÃO UMA
+================================================================================
+Cada linha tem o número em DUAS formas:
+    "3 - Numero (so digitos)"  → 5511987654321   é esta que serve para enviar
+    "4 - Numero formatado"     → +55 (11) 9 8765-4321   é esta que serve para ler
+
+Um ficheiro que só tivesse a versão formatada obrigaria a desfazê-la antes de
+qualquer uso, e a pontuação seria mais um sítio onde um erro pode entrar sem
+se ver.
+
+================================================================================
+4. VALIDAÇÃO  (scripts\validar_organizacao.py → exit 0)
+================================================================================
+  ✓ ZIP íntegro, 6 abas, colunas numeradas 1..N em todas
+  ✓ 13.993 + 8.239 + 5.489 + 16 = 27.737 = total da aba "Todos os numeros"
+  ✓ a coluna "só dígitos" é idêntica ao ficheiro de origem, na mesma ordem —
+    nenhum número se perdeu nem mudou
+  ✓ FORMATAÇÃO REVERSÍVEL: tirar a pontuação de cada um dos 27.737 formatados
+    devolve exactamente o número original. 0 divergências.
+    É a única verificação que apanha um erro de formatação — conferir que
+    "parece bem" não distingue "…9 8765-4321" de "…9 8756-4321".
+  ✓ cada categoria bate com o seu padrão (regex) e com a sua regra estrutural
+    (comprimento e primeiro dígito do assinante)
+  ✓ nenhum DDD inexistente escapou para as abas de completos; os 16
+    inconsistentes são mesmo todos de DDD inexistente
+
+  ✓ TESTE POR MUTAÇÃO: adulterado um número formatado com um dígito a mais —
+    foi detectado; o mesmo intacto passa.
+
+⚠️ NÃO VERIFICADO: abrir o ficheiro no Excel. Não está instalado nesta máquina
+(COM devolve REGDB_E_CLASSNOTREG). A validação é estrutural.
+
+================================================================================
+5. NOTAS
+================================================================================
+  · `whatsapp.xlsx` NÃO foi alterado — o organizado é um ficheiro NOVO.
+  · Zero alterações no código do DesafioGUT (R1). Nenhuma credencial tocada (R5).
+  · Nenhum contacto commitado no repositório.
+
+PENDENTE DO OPERADOR
+  · Abrir o .xlsx uma vez para confirmar.
+  · Decidir se quer os 8.239 fixos e os 16 de DDD inexistente FORA da lista de
+    envio — com as abas separadas, é copiar a aba certa.
