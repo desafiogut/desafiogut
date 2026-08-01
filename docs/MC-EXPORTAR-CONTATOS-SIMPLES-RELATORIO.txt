@@ -1,0 +1,64 @@
+================================================================================
+MC-EXPORTAR-CONTATOS-SIMPLES — DOIS EXCEL, DUAS COLUNAS
+Data: 2026-08-01
+Veredito: ✅ CONCLUÍDO E VALIDADO
+Nota R4: nenhum e-mail ou número aparece neste relatório — só contagens.
+================================================================================
+
+ENTREGUE
+--------
+Desktop\CONTATOS-ORGANIZADOS\emails.xlsx      250.360 linhas   4.665.598 bytes
+    aba "E-mails"   ·  coluna "1 - ID" (1..250.360)  ·  coluna "2 - E-mail"
+
+Desktop\CONTATOS-ORGANIZADOS\whatsapp.xlsx     27.759 linhas     421.837 bytes
+    aba "WhatsApp"  ·  coluna "1 - ID" (1..27.759)   ·  coluna "2 - Numero"
+
+Um contacto por linha. Sem cabeçalhos extra, sem colunas extra, sem outras abas.
+
+ORIGEM
+------
+Os .txt já deduplicados do MC-EMAILS/WHATSAPP:
+    unicos\emails.txt     250.360 linhas   (confirmado antes de gerar)
+    unicos\whatsapp.txt    27.759 linhas   (confirmado antes de gerar)
+Todos os 27.759 números foram incluídos, conforme pedido — não apenas os 198
+verificados.
+
+SCRIPTS
+-------
+scripts\gerar_excel_simples.py     gera os dois ficheiros
+scripts\validar_excels_simples.py  validação independente
+
+O gerador REAPROVEITA `escrever_xlsx` do MC anterior em vez de duplicar o
+escritor de .xlsx. Um segundo escritor seria um segundo sítio para o mesmo
+defeito viver.
+
+VALIDAÇÃO  (scripts\validar_excels_simples.py → exit 0)
+-------------------------------------------------------
+Não confia no script que escreveu os ficheiros: abre cada .xlsx como ZIP,
+parseia o XML e reconta. Para cada um dos dois:
+
+  ✓ ZIP íntegro e as 5 partes obrigatórias do formato presentes
+  ✓ exatamente 2 colunas, rotuladas "1 - ID" e "2 - E-mail" / "2 - Numero"
+  ✓ contagem exata: 250.360 e 27.759 linhas de dados
+  ✓ IDs de 1 a N sem saltos; a última linha tem mesmo ID = N
+  ✓ nenhuma célula de valor vazia
+  ✓ todos os valores distintos — sem repetidos
+  ✓ conteúdo idêntico ao .txt de origem, na mesma ordem
+
+  ✓ TESTE POR MUTAÇÃO: fabricado um .xlsx defeituoso (ID saltado + valor
+    repetido) e exigido que o validador o REPROVASSE. Reprovou. Sem este passo,
+    "tudo passou" seria indistinguível de um validador que nunca acusa nada.
+
+⚠️ O QUE NÃO FOI VERIFICADO: abrir os ficheiros no Excel propriamente dito. O
+Excel não está instalado nesta máquina (COM devolve REGDB_E_CLASSNOTREG). A
+validação é estrutural — forte, mas não é o mesmo que ver o ficheiro aberto.
+
+NOTAS
+-----
+  · Zero alterações no código do DesafioGUT (R1).
+  · Nenhuma credencial tocada (R5).
+  · Nenhum contacto commitado: no repositório ficam só os scripts e este
+    relatório, que tem contagens e nenhum dado pessoal.
+  · Recordatório do MC anterior, não repetido aqui em detalhe: dos 250.360
+    e-mails só 2.276 foram validados, e dos 27.759 números só 198 têm WhatsApp
+    confirmado. Os dois ficheiros contêm as listas COMPLETAS, como pedido.

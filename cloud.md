@@ -6059,3 +6059,25 @@ commitado — no repositório ficam só os três scripts e o relatório com cont
 
 **Pendente do operador:** abrir o .xlsx uma vez; decidir o que fazer com os
 240.384 e-mails "brutos", que nunca foram validados.
+
+
+## MC-EXPORTAR-CONTATOS-SIMPLES — dois ficheiros, duas colunas
+
+`emails.xlsx` (250.360 linhas) e `whatsapp.xlsx` (27.759 linhas) em
+`Desktop\CONTATOS-ORGANIZADOS`. Cada um com uma aba e duas colunas: "1 - ID"
+numerado 1..N e o valor. Nada mais. Origem: os `.txt` já deduplicados do
+MC-EMAILS/WHATSAPP, com as contagens confirmadas antes de gerar. Incluídos
+TODOS os 27.759 números, não apenas os 198 verificados, conforme pedido.
+
+O gerador reaproveita `escrever_xlsx` do MC anterior em vez de duplicar o
+escritor — um segundo escritor seria um segundo sítio para o mesmo defeito.
+
+**Validação** (`scripts/validar_excels_simples.py`, exit 0): abre cada .xlsx
+como ZIP e reconta, sem confiar no gerador. Contagem exata, IDs 1..N sem saltos,
+última linha com ID = N, zero células vazias, zero repetidos, e conteúdo
+idêntico ao .txt de origem na mesma ordem. O validador foi ele próprio testado
+por MUTAÇÃO: fabricou-se um .xlsx com um ID saltado e um valor repetido e
+exigiu-se que fosse REPROVADO — foi.
+
+Não foi possível abrir os ficheiros no Excel (não está instalado nesta máquina,
+COM devolve REGDB_E_CLASSNOTREG); a validação é estrutural, não visual.
