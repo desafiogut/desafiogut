@@ -6173,3 +6173,32 @@ tirar a pontuação de cada um dos 27.737 formatados devolve exactamente o núme
 original (0 divergências). É a única que apanha um erro de formato: olhar e achar
 que "parece bem" não distingue `…9 8765-4321` de `…9 8756-4321`. Testada por
 mutação (dígito a mais tem de ser apanhado).
+
+
+### MC-ORGANIZAR-WHATSAPP v2 — um bloco intercalado não é um bloco
+
+O operador pediu que os blocos ficassem visualmente coerentes. A v1 categorizava
+mas mantinha a aba geral ordenada por ID, com as categorias intercaladas e uma
+coluna a dizer a qual pertenciam — isso é uma lista com etiqueta, não um bloco.
+
+**v2:** a aba passa a "Todos por bloco", agrupada e contígua, por ordem de
+utilidade decrescente para envio. Cada bloco tem uma linha de TÍTULO com o nome
+e a contagem, e cada linha tem COR DE FUNDO da categoria (verde = celular com
+DDD, azul = celular sem DDD, laranja = fixo, vermelho = inconsistente). Cada
+bloco tem numeração própria 1..N além do ID global. Cabeçalho fixo, larguras,
+filtro automático. 7 abas: Resumo + geral + uma por bloco.
+
+**Escritor novo, não alteração do partilhado.** Os estilos vivem em
+`scripts/xlsx_estilo.py`; `exportar_contatos.escrever_xlsx` ficou intacto porque
+quatro MCs têm validadores que comparam a saída dele com o ficheiro de origem.
+
+**Duas verificações novas, porque os estilos são escritos à mão:**
+(a) todo índice de estilo usado numa célula existe em `<cellXfs>` (maior usado 7
+< 8 declarados), e todo `fillId`/`fontId` referido existe — um índice fora do
+intervalo faz o Excel abrir em modo de reparação, e isso **não** se vê num parse
+que só confirma XML bem formado; (b) cada bloco é contíguo, de uma só categoria,
+numerado 1..N, e a contagem do seu título bate com as linhas seguintes — uma
+contagem global passaria à mesma com os blocos intercalados. Ambas testadas por
+mutação.
+
+Continua por verificar abrir no Excel: não está instalado nesta máquina.

@@ -2,8 +2,10 @@
 MC-ORGANIZAR-WHATSAPP — NORMALIZAÇÃO E CATEGORIZAÇÃO
 Data: 2026-08-01
 Origem : Desktop\CONTATOS-ORGANIZADOS\whatsapp.xlsx        (27.737 números)
-Saída  : Desktop\CONTATOS-ORGANIZADOS\whatsapp_organizado.xlsx (1.935.476 bytes)
+Saída  : Desktop\CONTATOS-ORGANIZADOS\whatsapp_organizado.xlsx (2.207.904 bytes, v2)
 Veredito: ✅ CONCLUÍDO E VALIDADO
+⚠️ As secções 1-5 descrevem a v1. A ESTRUTURA EM VIGOR é a da secção 6 (v2):
+   7 abas, blocos contíguos com título e cor. As contagens não mudaram.
 Nota R4: nenhum número completo aparece aqui — só contagens e formatos.
 ================================================================================
 
@@ -99,3 +101,55 @@ PENDENTE DO OPERADOR
   · Abrir o .xlsx uma vez para confirmar.
   · Decidir se quer os 8.239 fixos e os 16 de DDD inexistente FORA da lista de
     envio — com as abas separadas, é copiar a aba certa.
+
+================================================================================
+6. REVISÃO v2 — OS BLOCOS PASSAM A LER-SE COMO BLOCOS  (pedido do operador)
+================================================================================
+A v1 categorizava mas a aba "Todos os números" continuava ordenada por ID, com
+as categorias intercaladas e uma coluna a dizer a qual pertenciam. Um bloco
+intercalado não é um bloco: é uma lista com uma etiqueta.
+
+O QUE MUDOU
+  · A aba passa a chamar-se "Todos por bloco" e está AGRUPADA: cada bloco
+    contíguo, na ordem de utilidade decrescente para envio.
+  · Cada bloco é precedido de uma LINHA DE TÍTULO com o nome e a contagem,
+    a negrito sobre fundo cinza. A fronteira entre blocos vê-se sem ler nada.
+  · Cada linha tem COR DE FUNDO da sua categoria:
+        verde   celulares com DDD    (prontos a enviar)
+        azul    celulares sem DDD    (móveis, não endereçáveis)
+        laranja fixos com DDD        (em regra não têm WhatsApp)
+        vermelho inconsistentes      (DDD inexistente)
+  · Cada bloco tem NUMERAÇÃO PRÓPRIA (1..N) além do ID global — "o número
+    4.212 dos fixos" é uma pergunta que se faz e que o ID global não responde.
+  · Cabeçalho fixo ao rolar, larguras por coluna, filtro automático.
+  · Uma aba por bloco, agora nomeadas "Bloco 1 …" a "Bloco 5 …", com dados
+    puros (sem linha de título, para copiar sem limpar nada).
+
+ESTRUTURA FINAL           linhas
+  Resumo                      13   uma linha por bloco, com a cor do bloco
+  Todos por bloco         27.742   27.737 dados + 5 títulos de bloco
+  Bloco 1 CELULARES COM DDD  13.993
+  Bloco 2 CELULARES SEM DDD   5.489
+  Bloco 3 FIXOS COM DDD       8.239
+  Bloco 4 FIXOS SEM DDD           0   (sem casos nesta base)
+  Bloco 5 INCONSISTENTES         16
+
+VALIDAÇÃO ADICIONAL  (scripts\validar_blocos.py -> exit 0)
+  Os estilos são escritos à mão, por isso há duas coisas novas a provar:
+
+  ✓ O FICHEIRO ABRE. Todo o índice de estilo usado numa célula existe em
+    <cellXfs> (maior usado 7 < 8 declarados); todo fillId e fontId referido
+    existe. Um índice fora do intervalo faz o Excel abrir em modo de reparação
+    — e isso NÃO se vê num parse que só confirma XML bem formado.
+  ✓ OS BLOCOS SÃO BLOCOS. Cada um é contíguo, de uma só categoria, numerado
+    1..N, e a contagem do seu título bate com as linhas que se lhe seguem.
+    Uma contagem global passaria à mesma com os blocos intercalados.
+  ✓ Cada categoria usa um único estilo de fundo, e as 4 usam estilos distintos.
+  ✓ A soma das abas por bloco = 27.737 = linhas de dados da aba geral.
+  ✓ O conjunto de números continua idêntico ao de whatsapp.xlsx.
+  ✓ Formatação reversível: 0 divergências em 27.737.
+  ✓ Testes por mutação: bloco intercalado, estilo fora do intervalo e dígito a
+    mais seriam todos detectados.
+
+⚠️ Continua por verificar abrir no Excel — não está instalado nesta máquina.
+   As verificações de estilo acima são o mais perto que dá para chegar sem ele.
