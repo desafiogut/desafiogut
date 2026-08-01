@@ -1,0 +1,190 @@
+MC89.31 — SEGMENTO 0: DIAGNÓSTICO DO CÓDIGO ATUAL
+Data: 2026-08-01 | Aparelho: Xiaomi 21091116UG (Android 13) | APK instalado: MC89.29/89.30
+Método: mesma sonda do MC89.30 — Page.addScriptToEvaluateOnNewDocument + domínio
+        Network do CDP sobre adb. ZERO alteração de código nesta fase.
+
+================================================================================
+0. PORQUE ESTE SEGMENTO MEDIU, E NÃO SÓ LEU CÓDIGO
+================================================================================
+O enunciado do MC89.31 define o Segmento 0 como "diagnóstico do código atual".
+O plano aprovado (docs/MC89.30-PLANO.txt §5) define o S0 como outra coisa:
+fechar a lacuna 5(a) — os 3,4 s por explicar — ANTES de mexer em código, porque
+"se a causa for outra que não a latência, o plano muda".
+
+Fiz os dois. A medição era possível sem recompilar (o APK instalado já é o que
+o MC89.30 mediu), portanto custou minutos, não um ciclo de build.
+
+================================================================================
+1. LACUNA 5(a) FECHADA — OS 3,4 s NÃO EXISTEM
+================================================================================
+O MC89.30 registou UMA corrida de cache frio com 4 849 ms de Dashboard comum
+visível, e um intervalo de 3,4 s entre a resposta do `admin-list` e a navegação,
+declarado "por explicar".
+
+Repetido 3× com o cache `gut_admin_check` apagado imediatamente antes do reload:
+
+  corrida   Dashboard    navegou      painel     | Dashboard comum
+            pintado      p/ /admin    pintado    | VISÍVEL
+  -------   ---------    ---------    -------    | ---------------
+  frio 1      474 ms      1978 ms     2041 ms    |    1 504 ms
+  frio 2      427 ms      1857 ms     1956 ms    |    1 430 ms
+  frio 3      459 ms      1769 ms     1937 ms    |    1 310 ms
+                                                 | mediana 1 430 ms
+
+  3 pedidos `admin-list`, todos 200, nas três corridas.
+
+VEREDITO: o intervalo de 3,4 s NÃO reproduz. Em nenhuma das três corridas houve
+atraso entre a resposta e a navegação.
+
+EXPLICAÇÃO da observação original: aquela corrida foi a PRIMEIRA logo a seguir à
+reposição da rede descrita no MC89.30 §0.2 (o WebView com DNS partido, resolvido
+a desligar/ligar o WiFi). A própria corrida mostra o rasto: a sessão Privy
+demorou 1 449 ms, contra ~700 ms agora. Era rede a recuperar, não código.
+
+CONSEQUÊNCIA PARA O PLANO: nenhuma mudança de rumo. A Opção A mantém-se.
+Mas muda uma PREMISSA, e essa muda a forma da correção — secção 3.
+
+================================================================================
+2. BASELINE COM CACHE QUENTE (para comparar depois da correção)
+================================================================================
+  quente 1    676 ms Dashboard · 1 990 ms navegou · 2 133 ms painel
+              >>> Dashboard comum VISÍVEL: 1 314 ms
+              `admin-list` NÃO chamado (0 pedidos) — o cache serviu.
+
+  Estado do disco lido a t=0 pela sonda, ANTES do primeiro script da app:
+      gut_admin_check.isAdmin   = true
+      gut_admin_check.endereco  = 0x1e1b…98cb
+      gut_admin_check idade     = 77 s  (dentro do TTL de 5 min)
+      privy:connections         = 0x1e1b…98cb      ← IGUAL
+
+  Isto é a prova direta da causa raiz do MC89.30: a resposta certa está em disco
+  no instante zero, com a chave para a validar ao lado, e não é usada.
+
+================================================================================
+3. A PREMISSA QUE MUDOU — E PORQUE ISSO IMPORTA
+================================================================================
+O MC89.30 assumiu que o cache frio era o caso raro e caro (4,8 s), e o quente o
+caso comum e barato (0,9 s). A medição diz que são praticamente IGUAIS:
+1 430 ms (frio) contra 1 314 ms (quente). A ida ao `admin-list` custa ~100 ms,
+não 3,4 s.
+
+O que isso implica para a correção proposta:
+
+  · `gut_admin_check` tem TTL de 5 minutos — deliberadamente curto, porque é a
+    resposta de AUTORIZAÇÃO e promover/despromover um admin tem de propagar
+    depressa (useAdmin.js:10-13).
+  · Um palpite ancorado NESSE cache só vale nos 5 min seguintes ao último uso.
+  · Ou seja: corrigiria o caso "fechei e reabri agora mesmo" e NÃO corrigiria o
+    caso "reabri a app amanhã de manhã" — que é o que o operador descreve.
+
+O risco R-c do plano ("o primeiro login de sempre continua a passar pelo
+Dashboard") é, na verdade, muito maior do que "o primeiro login": é TODO
+restauro passados 5 minutos de inatividade. Com o cache frio a custar o mesmo
+que o quente, uma correção só-quente arrumaria a métrica e deixaria o defeito
+de pé no uso real.
+
+CORREÇÃO DE RUMO (dentro da Opção A, não é uma opção nova):
+  O palpite passa a ser ancorado numa DICA DE ENCAMINHAMENTO de vida longa,
+  separada da resposta de autorização — exatamente como o MC88.42 faz para o
+  lojista, onde `tipoConfirmado` vive 24 h no `gut_saldo_cache` e serve SÓ para
+  encaminhar, enquanto a cota real continua a ser buscada ao servidor.
+
+  Simetria completa com o padrão já em produção:
+      lojista : tipoConfirmado  (24 h, routing)  +  cotaCorporativa (servidor, autorização)
+      admin   : adminConfirmado (24 h, routing)  +  gut_admin_check (5 min, autorização)
+
+  O TTL de 5 min do `gut_admin_check` NÃO é tocado. Nenhuma decisão de acesso
+  passa a usar a dica.
+
+================================================================================
+4. O CÓDIGO — ESTADO ATUAL, LIDO FICHEIRO A FICHEIRO
+================================================================================
+
+4.1 — src/App.jsx:163-182, DashboardOuCorporativo()
+      const { tipoProvavel, tipoUsuario, tipoCarregando, address } = useAppContext();
+      const { isAdmin, loading: adminLoading } = useAdmin(address);
+      if (isAdmin && !adminLoading && address) return <Navigate to="/admin" replace />;
+  `address` é a condição que só chega ~1,3 s depois. Confirmado por medição.
+
+4.2 — src/hooks/useAdmin.js:47-54
+  O cache JÁ é lido de forma síncrona no primeiro render (o item 1.1 do enunciado
+  do MC89.31 pergunta se é; a resposta é SIM). O problema não é a leitura ser
+  assíncrona — é a linha 50 exigir `c.endereco === (endereco||"").toLowerCase()`,
+  e `endereco` ser null nesse instante. Com `endereco` null, o ramo devolve
+  `{ isAdmin:false, loading:false }` — um FALSO NEGATIVO silencioso.
+
+4.3 — src/context/AppContext.jsx:83-90, `enderecoSessaoSincrono()`
+  Lê `privy:connections` do localStorage e extrai o endereço por regex, de forma
+  síncrona. É a chave que falta ao 4.2. Já está escrito, já está em produção,
+  já foi auditado (MC88.34). Nota do próprio ficheiro (linhas 80-82): não é
+  credencial, é o endereço público; nenhum token é lido.
+
+4.4 — Item 0.3 do enunciado: NÃO existe nenhum mecanismo de "admin otimista".
+  Grep por `adminProvavel` em src/: zero ocorrências. Confirmado.
+
+4.5 — src/components/admin/AdminLayout.jsx:76-97 — os três portões, por ordem:
+      if (!isConnected)    → "Faça login para verificar privilégios." + [Entrar]
+      if (aVerificarAdmin) → "Verificando privilégios…"
+      if (!isAdmin)        → "Acesso restrito."
+  `isConnected` é estrito. Um redirect a t≈0 aterra no primeiro portão.
+  ⚠️ E aterraria TAMBÉM no terceiro: com `address` null, `useAdmin(null)` devolve
+  `{ isAdmin:false, loading:false }`, portanto `aVerificarAdmin` é false e o
+  portão 3 dispara "Acesso restrito" — a um admin legítimo. O plano só previu o
+  portão 1. Como o portão 1 é testado primeiro, resolver o portão 1 com um
+  terceiro estado tapa os dois; mas isto tem de ficar escrito, porque se alguém
+  reordenar os portões o defeito volta.
+
+4.6 — src/context/AdminAuthContext.jsx:41-42, 118-130
+  Consome `isConnected` do AppContext e reexpõe-o no valor do contexto. NÃO
+  expõe `pareceAutenticado` — é o que falta para a metade 3.2 do plano.
+  A criação/renovação de sessão admin (linha 66) exige `isConnected && isAdmin`
+  ESTRITOS e assim se mantêm: o otimismo é só de UI.
+
+================================================================================
+5. CORREÇÃO A UM FACTO DO MC89.30
+================================================================================
+O MC89.30 §2.3 lista sete consumidores de `useAdmin`: "DashboardOuCorporativo,
+AdminAuthContext, Sidebar, BottomNav, ChatbotWidget, Dashboard e AppContext".
+
+Grep exaustivo por `useAdmin(` em src/ devolve CINCO, e nem Dashboard nem
+AppContext estão entre eles:
+    src/App.jsx:165                     DashboardOuCorporativo
+    src/context/AdminAuthContext.jsx:42 AdminAuthProvider
+    src/widgets/layout/Sidebar.jsx:70
+    src/widgets/layout/BottomNav.jsx:59
+    src/components/ChatbotWidget.jsx:192
+
+Os 3 pedidos `admin-list` medidos batem certo com as instâncias efetivamente
+montadas no arranque (Sidebar e BottomNav são mutuamente exclusivos por
+viewport). Cada instância tem estado próprio e faz o seu fetch; o cache só as
+une depois de a primeira terminar. Não há deduplicação de pedidos em voo.
+
+NÃO vou corrigir isto no MC89.31: são ~100 ms, está fora do enunciado, e mexer
+em `useAdmin` para partilhar pedidos alarga o raio de impacto de uma correção
+que tem de ser cirúrgica. Fica registado como dívida conhecida.
+
+================================================================================
+6. FACTO VERIFICADO PARA A METADE 3.2
+================================================================================
+A metade 3.2 depende de `pareceAutenticado`, que exige `saldoCacheInicial`, que
+exige `gut_saldo_cache` presente e do MESMO endereço da sessão. Se não existisse,
+o ADM cairia no ecrã de login — o defeito que a metade 3.2 existe para evitar.
+
+Lido no aparelho, na conta ADM real:
+    gut_saldo_cache.endereco = 0x1E1bAe7F0f6E87E15F430B620Eca42B146d198cB
+    privy:connections        = 0x1e1bae7f0f6e87e15f430b620eca42b146d198cb
+    (diferem só em maiúsculas; `lerSaldoCache` compara em minúsculas — coerente)
+    chaves presentes: endereco, label, em, centavos, senhas
+
+Logo `pareceAutenticado` é true a t=0 para este utilizador. A metade 3.2 assenta
+em terreno firme. (Valores monetários não foram impressos — R4.)
+
+================================================================================
+7. O QUE CONTINUA POR SABER
+================================================================================
+  a) O PRIMEIRO login de sempre (OAuth Privy) continua por medir, pela mesma
+     razão do MC89.30: não é automatizável e forçá-lo terminaria a sessão do
+     operador. Nesse caso não há dica nenhuma em disco e o ADM passará pelo
+     Dashboard — por desenho, e documentado.
+  b) O caso ADM-que-também-é-lojista continua por exercitar: a conta de teste
+     não é corporativa. Pelo código, o bloco corporativo ganha (App.jsx:178).
