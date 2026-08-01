@@ -6383,3 +6383,47 @@ Também descartei uma cascata inteira: deu zero pedidos, e não era a app — er
 defeito transitório de DNS do WebView outra vez (14× alchemy, 8× netlify, 8×
 privy, com o aparelho a resolver por ping em 6,6 ms). Reciclado o WiFi, repetido
 tudo. Nenhum número contaminado entrou no relatório.
+
+
+## MC89.34 — construí a saída certa, e o operador quis a porta fechada
+
+O MC89.33 tinha provado que eu próprio, no MC89.31, tinha fechado o administrador
+dentro do painel: a guarda de encaminhamento ficou na ROTA "/", por isso o botão
+"← Sair do painel", o "Início" da barra inferior e o endereço à mão ressaltavam
+todos de volta para /admin.
+
+Implementei o plano aprovado: uma pausa explícita em `sessionStorage`, para que
+sair do painel levasse ao Dashboard comum e lá ficasse, sem desfazer o ganho do
+MC89.31 (a pausa morre com o processo da WebView, portanto reabrir a app volta a
+ir direto ao painel). Ficou testado — 11 testes, 7/7 mutações apanhadas — e
+validado no aparelho: sair funcionava, voltar limpava a pausa, e reabrir voltava
+a encaminhar.
+
+**Depois o operador viu aquilo a funcionar e disse que não era isso que queria:**
+as telas de utilizador comum não devem existir para o ADM, de todo. Revertido
+tudo. O botão foi removido — sem destino, seria uma porta para uma parede — e
+"Sair da conta" passou a ser a única saída do painel.
+
+Não escondo o trabalho deitado fora, porque foi ele que produziu a informação em
+que a decisão assentou: sabe-se agora que a alternativa funciona e o que custaria
+repô-la. Ficaram comentários nos dois sítios e dois testes a garantir que a
+ausência de exceções é uma DECISÃO e não volta por distração.
+
+**Um detalhe que não é arbitrário:** o "Sair da conta" revoga a sessão admin
+ANTES de derrubar o Privy. Essa revogação é um pedido ao backend e precisa da
+sessão Privy viva para sair; pela ordem inversa, o refresh admin ficaria válido
+no servidor até expirar sozinho. Há teste a fixar a ordem, e uma mutação que a
+inverte e é apanhada.
+
+**A suite mentiu-me duas vezes e a mutação apanhou-a.** O teste "não há botão que
+leve o ADM às telas comuns" passava por casar com o meu próprio COMENTÁRIO que
+explica a remoção; passou a afirmar o JSX. E o regex da guarda assumia `\n` num
+ficheiro em CRLF. Um teste que nunca viu vermelho continua a não provar nada.
+
+**Resíduo reportado, não silenciado:** a guarda vive na rota "/", por isso
+/carteira, /mercado, /vitrine e /ativos ainda renderizam para quem lá chegue.
+No APK é inalcançável — não há barra de endereço, e medi que dentro de /admin há
+7 links e todos são /admin*. Na build web, um admin com teclado chega lá.
+Fecha-se estendendo a guarda como já se faz para o lojista; não o fiz por
+iniciativa própria porque alarga o raio de uma correção que tinha de ser
+cirúrgica.
