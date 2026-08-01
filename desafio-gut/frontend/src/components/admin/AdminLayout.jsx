@@ -55,7 +55,7 @@ export default function AdminLayout() {
   const { abrirModal } = useAppContext();
   const {
     authState, authError, autenticado, login, logout,
-    endereco, isAdmin, aVerificarAdmin, isConnected,
+    endereco, isAdmin, aVerificarAdmin, isConnected, pareceAutenticado,
   } = useAdminAuth();
 
   const { toasts, dismiss: dismissToast, success, error, info } = useAdminToast();
@@ -73,7 +73,31 @@ export default function AdminLayout() {
   }
 
   // ── Gate de UI ────────────────────────────────────────────────────────────
+  //
+  // MC89.31 — este portão passou a distinguir TRÊS estados em vez de dois.
+  //
+  // `isConnected` significa "o Privy já confirmou". Não significa "não está
+  // autenticado": durante o restauro da sessão (~1,3 s medidos no aparelho) é
+  // false para quem TEM sessão válida em disco. Com o encaminhamento otimista
+  // do MC89.31, o ADM chega aqui DENTRO dessa janela — e o ecrã que o recebia
+  // pedia-lhe para entrar. É a mesma armadilha que o MC88.38 corrigiu no
+  // cabeçalho e o MC88.42 na guarda do lojista, agora no painel admin.
+  //
+  // ⚠️ E não era só este portão. Com `address` ainda a null, `useAdmin(null)`
+  // devolve `{ isAdmin:false, loading:false }` — logo `aVerificarAdmin` é false
+  // e o TERCEIRO portão dispararia "Acesso restrito" a um admin legítimo. Como
+  // este portão é testado primeiro, tratá-lo aqui tapa os dois. Quem reordenar
+  // estes ifs reabre esse defeito.
+  //
+  // SEGURANÇA: isto escolhe um TEXTO, não concede nada. Os portões `!isAdmin`
+  // (backend) e a sessão admin por assinatura EIP-191 continuam intactos.
   if (!isConnected) {
+    if (pareceAutenticado) {
+      // Mesma forma visual do portão "Verificando privilégios…" abaixo — os
+      // dois são estados de espera consecutivos e trocar de um para o outro
+      // não deve deslocar nada.
+      return <div style={{ padding: "2rem", color: COR.muted }}>Restaurando sessão…</div>;
+    }
     return (
       <div style={{ padding: "2rem", color: COR.text, textAlign: "center" }}>
         <h1 style={{ fontSize: "1.4rem", color: COR.text, fontWeight: 700 }}>Painel Admin</h1>

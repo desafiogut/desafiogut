@@ -38,7 +38,12 @@ function obterStorage() {
 }
 
 export function AdminAuthProvider({ children }) {
-  const { address, privyWallet, isConnected } = useAppContext();
+  // MC89.31 — `pareceAutenticado` é REEXPOSTO, não usado aqui. Serve só para o
+  // AdminLayout distinguir "a restaurar a sessão" de "não autenticado". Nada
+  // NESTE ficheiro o consome: a criação e a renovação da sessão admin continuam
+  // a exigir `isConnected` ESTRITO (ver o efeito de arranque). O otimismo é de
+  // UI e pára na casca.
+  const { address, privyWallet, isConnected, pareceAutenticado } = useAppContext();
   const { isAdmin, loading: aVerificarAdmin } = useAdmin(address);
 
   const [authState, setAuthState] = useState(ESTADOS.SEM_LOGIN);
@@ -127,7 +132,8 @@ export function AdminAuthProvider({ children }) {
     isAdmin,
     aVerificarAdmin,
     isConnected,
-  }), [authState, authError, autenticado, chamarAdmin, login, logout, address, isAdmin, aVerificarAdmin, isConnected]);
+    pareceAutenticado,
+  }), [authState, authError, autenticado, chamarAdmin, login, logout, address, isAdmin, aVerificarAdmin, isConnected, pareceAutenticado]);
 
   return <AdminAuthContext.Provider value={valor}>{children}</AdminAuthContext.Provider>;
 }

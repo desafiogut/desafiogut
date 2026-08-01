@@ -14,6 +14,10 @@
 
 import { useEffect, useState } from "react";
 import { apiGet } from "../lib/api.js";
+// MC89.31 — a dica de ENCAMINHAMENTO (24 h) é escrita aqui, onde a resposta do
+// backend chega. Não substitui o cache abaixo nem lhe mexe no TTL: são coisas
+// diferentes com prazos diferentes de propósito. Ver o cabeçalho de dicaSessao.js.
+import { gravarDicaAdmin } from "../lib/dicaSessao.js";
 
 const CACHE_KEY    = "gut_admin_check";
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -81,8 +85,14 @@ export function useAdmin(endereco) {
         : admins.includes(enderecoLower);
       const role    = data?.role || (isAdmin ? "admin" : "user");
       gravarCache({ endereco: enderecoLower, isAdmin, role, admins, coordenacao: coord });
+      // Só aqui — depois de uma resposta REAL do backend. Um `isAdmin` false
+      // apaga a dica, corrigindo um ex-admin no primeiro restauro (não em 24 h).
+      gravarDicaAdmin(enderecoLower, isAdmin);
       setEstado({ isAdmin, role, loading: false, error: null, admins, coordenacao: coord });
     } catch (err) {
+      // ⚠️ A dica NÃO é apagada aqui. Uma falha de rede não é uma resposta: se
+      // apagasse, um admin offline perdia o encaminhamento por causa do WiFi.
+      // Só uma negativa VINDA DO BACKEND a remove.
       setEstado({ isAdmin: false, role: "user", loading: false, error: err?.message || "falha", admins: [], coordenacao: null });
     }
   };

@@ -29,6 +29,7 @@ import {
   gravarPrazoStorage,
 } from "../lib/leilaoTimer.js";
 import { apiGet, apiPost } from "../lib/api.js";
+import { enderecoSessaoSincrono, adminProvavel as lerAdminProvavel } from "../lib/dicaSessao.js";
 
 // Persistência do prazoTimestamp (Onda 5 FASE 0): o timer é IMUNE a refresh
 // porque cada tipo de leilão guarda seu próprio prazo no localStorage. Cálculo
@@ -76,18 +77,13 @@ const LS_KEYS_LEGADO_MOCK = [
 const LS_SALDO_CACHE     = "gut_saldo_cache";
 const SALDO_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 h — além disso, mostrar é pior que não mostrar
 
-// Endereço da sessão Privy lido de forma SÍNCRONA, para validar o cache ANTES
-// do primeiro paint. `privy:connections` não é credencial — é o endereço
-// público da carteira — portanto lê-lo não infringe a regra de não manusear
-// segredos (os tokens ficam noutras chaves e não são tocados aqui).
-function enderecoSessaoSincrono() {
-  try {
-    const raw = localStorage.getItem("privy:connections");
-    if (!raw) return null;
-    const m = raw.match(/0x[a-fA-F0-9]{40}/);
-    return m ? m[0].toLowerCase() : null;
-  } catch { return null; }
-}
+// MC89.31 — `enderecoSessaoSincrono` mudou-se para `lib/dicaSessao.js`, onde
+// passa a ser partilhada com o palpite do admin. Continua a ser exatamente a
+// mesma função e a mesma guarda; o que se evita é uma SEGUNDA cópia da regra
+// que valida um cache contra a sessão em disco — duas cópias divergem, e é
+// precisamente essa guarda que o MC88.34 teve de acrescentar depois de um teste
+// por mutação. O comentário que justifica ler `privy:connections` vive agora
+// no cabeçalho desse módulo.
 
 function lerSaldoCache() {
   try {
@@ -226,6 +222,23 @@ export function AppProvider({ children }) {
   //   3. o cache é apagado no logout, portanto um cache existente implica que
   //      a sessão Privy nunca foi trocada neste aparelho.
   const [saldoCacheInicial] = useState(lerSaldoCache);
+
+  // MC89.31 — ADMIN PROVÁVEL (abrir o ADM direto no painel dele).
+  //
+  // Irmão do `tipoProvavel` do MC88.42, e pela mesma razão: durante o restauro
+  // da sessão Privy o ADM via o Dashboard COMUM durante ~1,3 s (medido no
+  // aparelho, MC89.31-S0) antes de ser encaminhado para /admin. A informação
+  // para decidir já estava em disco no instante zero — faltava a chave para a
+  // validar, porque `address` só chega depois do Privy.
+  //
+  // Lido UMA vez, no primeiro render, com `useState`: é uma fotografia do
+  // arranque, não um valor que deva mudar a meio. Assim que `address` existir,
+  // quem manda é a resposta CONFIRMADA (ver App.jsx:DashboardOuCorporativo) e
+  // este palpite deixa de ser consultado.
+  //
+  // ⚠️ Só ENCAMINHA. Não concede nada — ver o cabeçalho de lib/dicaSessao.js
+  // para as três defesas que continuam de pé.
+  const [adminProvavel] = useState(lerAdminProvavel);
 
   // Saldo on-chain — saldoSenhas[address] no contrato.
   // null = "ainda não consultado" (distinto de 0, que é estado on-chain válido).
@@ -1117,6 +1130,9 @@ export function AppProvider({ children }) {
     // neste endereço. Serve para ENCAMINHAR cedo; `tipoUsuario` continua a ser
     // a verdade confirmada e é ele que decide expulsar de uma rota.
     tipoProvavel,
+    // MC89.31 — mesma natureza do `tipoProvavel`, para o ADM. Fotografia do
+    // arranque; só ENCAMINHA. Quem autoriza é o backend (AdminLayout/`isAdmin`).
+    adminProvavel,
     vencedor,
     abrirModal,
     desconectar,

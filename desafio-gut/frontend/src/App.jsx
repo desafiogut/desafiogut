@@ -161,7 +161,7 @@ function CorporativoRoute({ children }) {
 // (ver AppContext), portanto o redirect acontece de imediato em vez de esperar
 // pelas cotas.
 function DashboardOuCorporativo() {
-  const { tipoProvavel, tipoUsuario, tipoCarregando, address } = useAppContext();
+  const { tipoProvavel, tipoUsuario, tipoCarregando, address, adminProvavel } = useAppContext();
   const { isAdmin, loading: adminLoading } = useAdmin(address);
 
   // MC89.12 — admin vai DIRETO para o painel, sem passar pelo Dashboard de
@@ -169,7 +169,18 @@ function DashboardOuCorporativo() {
   // também são admin — mas um lojista-admin vai para /corporativo primeiro
   // (o corporate é mais específico). Se o operador quiser inverter, é trocar
   // a ordem dos dois blocos.
-  if (isAdmin && !adminLoading && address) {
+  //
+  // MC89.31 — a condição original exigia `address`, que só existe depois de o
+  // Privy restaurar a sessão. Medido no aparelho: o ADM via o Dashboard COMUM
+  // durante 1314 ms (cache quente) / 1430 ms (cache frio) antes do redirect.
+  // Não é um piscar de estilo — é o ecrã de outro produto, com KPIs de lances e
+  // saldo de senhas, a quem abriu a app para administrar.
+  //
+  // A leitura é: enquanto NÃO há `address`, vale o palpite; a partir do momento
+  // em que há, vale só a resposta confirmada. Escrito nesta ordem para que o
+  // palpite não possa sobreviver à verdade — se `address` existe e o backend
+  // disse que não é admin, isto é false e o Dashboard renderiza, como antes.
+  if (address ? (isAdmin && !adminLoading) : adminProvavel) {
     return <Navigate to="/admin" replace />;
   }
 
