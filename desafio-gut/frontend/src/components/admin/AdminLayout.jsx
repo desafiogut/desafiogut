@@ -55,7 +55,7 @@ export default function AdminLayout() {
   const { abrirModal } = useAppContext();
   const {
     authState, authError, autenticado, login, logout,
-    endereco, isAdmin, aVerificarAdmin, isConnected, pareceAutenticado,
+    endereco, isAdmin, aVerificarAdmin, isConnected, restaurandoSessao,
   } = useAdminAuth();
 
   const { toasts, dismiss: dismissToast, success, error, info } = useAdminToast();
@@ -83,6 +83,11 @@ export default function AdminLayout() {
   // pedia-lhe para entrar. É a mesma armadilha que o MC88.38 corrigiu no
   // cabeçalho e o MC88.42 na guarda do lojista, agora no painel admin.
   //
+  // O sinal é `restaurandoSessao` e NÃO `pareceAutenticado`: este último ancora
+  // no `gut_saldo_cache`, e medi no aparelho um ADM sem esse cache a ver "Faça
+  // login" durante 737 ms, já com o encaminhamento a funcionar. A pergunta aqui
+  // é "existe sessão em disco?", e quem a responde é `privy:connections`.
+  //
   // ⚠️ E não era só este portão. Com `address` ainda a null, `useAdmin(null)`
   // devolve `{ isAdmin:false, loading:false }` — logo `aVerificarAdmin` é false
   // e o TERCEIRO portão dispararia "Acesso restrito" a um admin legítimo. Como
@@ -92,7 +97,7 @@ export default function AdminLayout() {
   // SEGURANÇA: isto escolhe um TEXTO, não concede nada. Os portões `!isAdmin`
   // (backend) e a sessão admin por assinatura EIP-191 continuam intactos.
   if (!isConnected) {
-    if (pareceAutenticado) {
+    if (restaurandoSessao) {
       // Mesma forma visual do portão "Verificando privilégios…" abaixo — os
       // dois são estados de espera consecutivos e trocar de um para o outro
       // não deve deslocar nada.

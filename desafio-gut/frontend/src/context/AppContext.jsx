@@ -240,6 +240,20 @@ export function AppProvider({ children }) {
   // para as três defesas que continuam de pé.
   const [adminProvavel] = useState(lerAdminProvavel);
 
+  // MC89.31 — "há uma sessão Privy em disco", lido a t=0.
+  //
+  // Distinto do `sessaoOtimista` do MC88.38, que ancora no `gut_saldo_cache`:
+  // ali o cache é a fonte do RÓTULO ("Olá, Fulano"), logo sem cache não há nada
+  // para mostrar e o otimismo não faz sentido. Aqui a pergunta é outra — "vale
+  // a pena esperar antes de pedir login?" — e para essa, quem manda é a
+  // presença da sessão, não a de um saldo em cache.
+  //
+  // MEDIDO no aparelho: um ADM com sessão válida mas SEM `gut_saldo_cache` via
+  // "Faça login para verificar privilégios" durante 737 ms dentro do painel.
+  // Raro, mas é exatamente o defeito que este MC existe para eliminar, e ficar
+  // dependente de um cache de saldo para o evitar era um acoplamento errado.
+  const [sessaoEmDisco] = useState(() => enderecoSessaoSincrono() !== null);
+
   // Saldo on-chain — saldoSenhas[address] no contrato.
   // null = "ainda não consultado" (distinto de 0, que é estado on-chain válido).
   const [saldoSenhas,       setSaldoSenhas]       = useState(saldoCacheInicial?.senhas ?? null);
@@ -516,6 +530,13 @@ export function AppProvider({ children }) {
   const sessaoOtimista =
     Boolean(saldoCacheInicial?.endereco) && !(ready && !authenticated);
   const pareceAutenticado = isConnected || sessaoOtimista;
+
+  // MC89.31 — "o Privy ainda está a restaurar uma sessão que existe em disco".
+  // Mesma regra de queda do `sessaoOtimista`: o otimismo só cai quando a
+  // resposta for DEFINITIVA e negativa (`ready && !authenticated`), nunca com
+  // `!ready` — ver o comentário acima, medido no MC88.37. Assim, um logout
+  // dentro do painel faz isto passar a false e o ecrã de login volta, como deve.
+  const restaurandoSessao = sessaoEmDisco && !(ready && !authenticated);
   const userLabel = userLabelReal || (sessaoOtimista ? (saldoCacheInicial?.label ?? null) : null);
 
   // Persiste o rótulo no mesmo registo do saldo (mesma chave, mesma guarda).
@@ -1133,6 +1154,9 @@ export function AppProvider({ children }) {
     // MC89.31 — mesma natureza do `tipoProvavel`, para o ADM. Fotografia do
     // arranque; só ENCAMINHA. Quem autoriza é o backend (AdminLayout/`isAdmin`).
     adminProvavel,
+    // MC89.31 — "há sessão em disco e o Privy ainda não respondeu". Só para
+    // escolher entre esperar e pedir login. Nunca para habilitar ações.
+    restaurandoSessao,
     vencedor,
     abrirModal,
     desconectar,

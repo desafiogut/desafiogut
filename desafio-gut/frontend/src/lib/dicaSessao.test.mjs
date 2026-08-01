@@ -14,6 +14,9 @@ import { readFileSync } from "node:fs";
 import {
   enderecoSessaoSincrono, gravarDicaAdmin, limparDicaAdmin, adminProvavel,
 } from "./dicaSessao.js";
+// `useAdmin.js` importa React, mas não tem JSX e a parte reconciliada é pura,
+// portanto importa-se em node sem runner de DOM.
+import { reconciliar } from "../hooks/useAdmin.js";
 
 const ADMIN  = "0x1e1bae7f0f6e87e15f430b620eca42b146d198cb";
 const OUTRO  = "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
@@ -196,19 +199,62 @@ test("AdminLayout: o estado 'a restaurar' é testado ANTES do ecrã de login", (
   assert.ok(iLogin > 0, "falta o ecrã de login no AdminLayout");
   assert.ok(
     iRestauro < iLogin,
-    "o ramo `pareceAutenticado` tem de vir primeiro — senão o ADM com sessão a restaurar " +
+    "o ramo `restaurandoSessao` tem de vir primeiro — senão o ADM com sessão a restaurar " +
     "cai no ecrã a pedir-lhe login, que é o defeito que o MC89.31 corrige.",
   );
   // ⚠️ A ordem sozinha era um FALSO VERDE. Validado por mutação: trocar a
-  // condição por `if (false && pareceAutenticado)` mantém a ordem intacta e o
+  // condição por `if (false && restaurandoSessao)` mantém a ordem intacta e o
   // teste passava, com o ramo morto e o ADM outra vez no ecrã de login. Por
   // isso a CONDIÇÃO também é afirmada, e não só a posição do texto.
   assert.match(
     layout,
-    /if \(!isConnected\) \{\s*if \(pareceAutenticado\) \{/,
+    /if \(!isConnected\) \{\s*if \(restaurandoSessao\) \{/,
     "o ramo de restauro tem de ser a PRIMEIRA coisa dentro de `if (!isConnected)` e " +
-    "a sua condição tem de ser exatamente `pareceAutenticado` — nada que o torne inalcançável.",
+    "a sua condição tem de ser exatamente `restaurandoSessao` — nada que o torne inalcançável.",
   );
+  // O sinal NÃO pode voltar a ser `pareceAutenticado`: esse ancora no
+  // gut_saldo_cache e deixa de fora o ADM que não tem esse cache (737 ms de
+  // "Faça login" medidos no aparelho antes desta correção).
+  assert.doesNotMatch(
+    layout,
+    /if \(pareceAutenticado\)/,
+    "o portão de restauro do painel não pode depender do cache de saldo",
+  );
+});
+
+// ── Reconciliação do useAdmin ───────────────────────────────────────────────
+// O defeito que isto cobre foi visto no APARELHO antes de existir: a marca
+// `portao_acesso_restrito` aos 1582 ms, "Acesso restrito" a um admin legítimo.
+// Sem estes testes a correção só estava protegida por uma medição manual.
+
+test("reconciliar: estado do arranque (sem endereço) não responde por um endereço real", () => {
+  const doArranque = { isAdmin: false, role: "user", loading: false, error: null, admins: [], coordenacao: null, endereco: "" };
+  const r = reconciliar(doArranque, ADMIN);
+  assert.equal(r.loading, true, "tem de ficar 'a carregar', não 'não é admin'");
+  assert.equal(r.isAdmin, false);
+  assert.notEqual(r, doArranque, "não pode devolver o estado do outro endereço");
+});
+
+test("reconciliar: estado do MESMO endereço passa intacto", () => {
+  const meu = { isAdmin: true, role: "admin", loading: false, error: null, admins: [], coordenacao: null, endereco: ADMIN };
+  assert.equal(reconciliar(meu, ADMIN), meu);
+});
+
+test("reconciliar: compara sem distinguir maiúsculas", () => {
+  const meu = { isAdmin: true, role: "admin", loading: false, error: null, admins: [], coordenacao: null, endereco: ADMIN };
+  assert.equal(reconciliar(meu, "0x1E1BAE7F0F6E87E15F430B620ECA42B146D198CB"), meu);
+});
+
+test("reconciliar: um isAdmin true de OUTRA conta nunca transita", () => {
+  const doOutro = { isAdmin: true, role: "admin", loading: false, error: null, admins: [], coordenacao: null, endereco: OUTRO };
+  const r = reconciliar(doOutro, ADMIN);
+  assert.equal(r.isAdmin, false, "o isAdmin de outra conta não pode passar para esta");
+  assert.equal(r.loading, true);
+});
+
+test("reconciliar: sem endereço nenhum não fica 'a carregar' para sempre", () => {
+  const doArranque = { isAdmin: false, role: "user", loading: false, error: null, admins: [], coordenacao: null, endereco: "" };
+  assert.equal(reconciliar(doArranque, null).loading, false);
 });
 
 test("AdminAuthContext: a sessão admin continua a exigir isConnected ESTRITO", () => {
