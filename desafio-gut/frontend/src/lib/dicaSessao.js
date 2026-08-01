@@ -23,17 +23,11 @@
 //     lojista : tipoConfirmado  (24 h, encaminha) + cotaCorporativa (servidor, autoriza)
 //     admin   : dica desta chave (24 h, encaminha) + gut_admin_check (5 min, autoriza)
 
-const CHAVE_DICA  = "gut_admin_hint";
-const CHAVE_PAUSA = "gut_admin_pausa";
-const TTL_MS      = 24 * 60 * 60 * 1000; // 24 h — igual ao cache de saldo (MC88.34)
+const CHAVE_DICA = "gut_admin_hint";
+const TTL_MS     = 24 * 60 * 60 * 1000; // 24 h — igual ao cache de saldo (MC88.34)
 
 function storagePadrao() {
   try { return globalThis.localStorage ?? null; } catch { return null; }
-}
-
-// A pausa vive em sessionStorage, NÃO em localStorage. Ver `pausarPainelAdmin`.
-function storagePausaPadrao() {
-  try { return globalThis.sessionStorage ?? null; } catch { return null; }
 }
 
 /**
@@ -94,36 +88,17 @@ export function limparDicaAdmin(storage = storagePadrao()) {
  * "Acesso restrito" — exatamente o que já veria hoje ao escrever /admin na barra
  * de endereço. Não há ganho de superfície de ataque.
  */
-// ── PAUSA DO ENCAMINHAMENTO (MC89.34) ───────────────────────────────────────
+// ⚠️ NÃO ACRESCENTAR AQUI UMA "PAUSA" DO ENCAMINHAMENTO (decisão do MC89.34).
 //
-// O MC89.31 passou a encaminhar o admin de "/" para "/admin". A guarda ficou na
-// ROTA, portanto TODOS os caminhos até "/" ressaltam — o botão "Sair do painel",
-// o "Início" da barra inferior e o endereço escrito à mão. Medido no MC89.33:
-// `/admin → ["/", "/admin"]`, ou seja, o admin ficou FECHADO dentro do painel,
-// sem sequer conseguir terminar a sessão da conta.
+// Chegou a existir: `pausarPainelAdmin/retomarPainelAdmin/painelAdminPausado`,
+// em sessionStorage, para o botão "Sair do painel" levar o ADM ao Dashboard
+// comum. Foi implementada, testada (7/7 por mutação) e validada no aparelho —
+// e depois REVERTIDA por decisão do operador: as telas de utilizador comum não
+// devem existir para o ADM, de todo. O painel é a app inteira dele.
 //
-// A pausa é a intenção EXPLÍCITA de sair, e só o utilizador a cria. Não é
-// heurística: ninguém adivinha que ele quer sair — ele carrega no botão.
-//
-// ⚠️ sessionStorage, e isto é o ponto todo: a pausa MORRE com o processo da
-// WebView. Fechar e reabrir a app volta a encaminhar direto para /admin, que é o
-// ganho que o MC89.31 mediu (1314 ms de Dashboard errado eliminados). Em
-// localStorage, um único "Sair do painel" desfazia o MC89.31 para sempre.
-
-/** Suspende o encaminhamento automático para /admin até ao fim desta sessão. */
-export function pausarPainelAdmin(storage = storagePausaPadrao()) {
-  try { storage?.setItem(CHAVE_PAUSA, "1"); } catch { /* best-effort */ }
-}
-
-/** Retoma o encaminhamento (chamado ao entrar no painel). */
-export function retomarPainelAdmin(storage = storagePausaPadrao()) {
-  try { storage?.removeItem(CHAVE_PAUSA); } catch { /* idem */ }
-}
-
-/** `true` enquanto o admin pediu para ficar fora do painel. */
-export function painelAdminPausado(storage = storagePausaPadrao()) {
-  try { return storage?.getItem(CHAVE_PAUSA) === "1"; } catch { return false; }
-}
+// Se um dia isto voltar a ser pedido, o que se quer é quase de certeza outra
+// coisa: uma forma de SAIR (ver "Sair da conta" no AdminLayout), e não uma
+// forma de o admin navegar como consumidor.
 
 export function adminProvavel(storage = storagePadrao()) {
   try {

@@ -13,8 +13,6 @@ import { IdiomaProvider } from "./context/IdiomaContext.jsx";
 import { ToastContainer, useToast } from "./widgets/toast/Toast.jsx";
 import ReferralRegistrar from "./components/ReferralRegistrar.jsx";
 import { useAdmin } from "./hooks/useAdmin.js";
-// MC89.34 — a pausa do encaminhamento vive ao lado do palpite que ela suspende.
-import { painelAdminPausado } from "./lib/dicaSessao.js";
 // MC39.19 (Onda 2, item 3) — code-splitting por rota. Páginas CRÍTICAS de entrada
 // (Dashboard/Vitrine) ficam EAGER (evita flash de Suspense no first paint); as demais
 // via React.lazy → saem do chunk inicial e carregam sob demanda. LazyBoundary trata
@@ -183,22 +181,18 @@ function DashboardOuCorporativo() {
   // palpite não possa sobreviver à verdade — se `address` existe e o backend
   // disse que não é admin, isto é false e o Dashboard renderiza, como antes.
   //
-  // MC89.34 — a pausa vem PRIMEIRO, e é o utilizador que a cria.
+  // MC89.34 — ⚠️ ESTE ENCAMINHAMENTO É INCONDICIONAL, E É ASSIM DE PROPÓSITO.
   //
-  // O encaminhamento do MC89.31 tornou esta rota inalcançável para um admin: a
-  // guarda está aqui, na ROTA, portanto anulava o botão "Sair do painel", o
-  // "Início" da barra inferior e o endereço escrito à mão. Medido: o admin
-  // ficava fechado no painel, sem forma de sair nem de terminar a sessão.
+  // Chegou a existir aqui uma "pausa" (sessionStorage) para o botão "Sair do
+  // painel" deixar o ADM ver o Dashboard comum. Foi implementada, testada e
+  // validada no aparelho, e depois removida por decisão do operador: as telas
+  // de utilizador comum NÃO devem existir para o ADM. O painel é a app dele.
   //
-  // Lida do sessionStorage a CADA render, de propósito: um retrato tirado no
-  // arranque (como `adminProvavel`) não veria a pausa gravada um instante antes
-  // do `navigate`. É leitura síncrona sem escrita, como `lerSaldoCache`.
-  //
-  // ⚠️ A pausa morre com o processo da WebView. Reabrir a app volta a encaminhar
-  // direto para /admin — o ganho do MC89.31 fica intacto. Se algum dia isto
-  // passar para localStorage, um único "Sair do painel" desfaz o MC89.31 para
-  // sempre. Há teste no aparelho a cobrir precisamente isso.
-  if (!painelAdminPausado() && (address ? (isAdmin && !adminLoading) : adminProvavel)) {
+  // Consequência aceite: um admin não tem como navegar como consumidor. A saída
+  // é terminar a sessão ("Sair da conta", no AdminLayout). Quem for acrescentar
+  // aqui uma exceção deve primeiro perguntar se o que falta não é, outra vez,
+  // apenas uma forma de SAIR.
+  if (address ? (isAdmin && !adminLoading) : adminProvavel) {
     return <Navigate to="/admin" replace />;
   }
 

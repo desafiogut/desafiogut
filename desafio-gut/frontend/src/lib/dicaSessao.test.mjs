@@ -13,7 +13,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   enderecoSessaoSincrono, gravarDicaAdmin, limparDicaAdmin, adminProvavel,
-  pausarPainelAdmin, retomarPainelAdmin, painelAdminPausado,
 } from "./dicaSessao.js";
 // `useAdmin.js` importa React, mas não tem JSX e a parte reconciliada é pura,
 // portanto importa-se em node sem runner de DOM.
@@ -192,102 +191,36 @@ test("App.jsx: o confirmado ganha sempre que houver address; o palpite só sem e
   );
 });
 
-test("App.jsx: a pausa é testada ANTES do encaminhamento, e nega-o", () => {
+test("⚠️ o encaminhamento do ADM não tem exceções — o painel é a app dele", () => {
+  // Decisão do operador no MC89.34: as telas de utilizador comum NÃO existem
+  // para o ADM. Chegou a haver uma pausa em sessionStorage que o deixava ver o
+  // Dashboard comum; foi implementada, testada e revertida.
+  // Este teste existe para que ela não volte por acidente: qualquer condição
+  // extra nesta guarda abre outra vez o Dashboard comum ao admin.
   const app = readFileSync(new URL("../App.jsx", import.meta.url), "utf8");
+  // \r?\n: o ficheiro está em CRLF no Windows e um `\n` cru não casa.
   assert.match(
     app,
-    /if \(!painelAdminPausado\(\) && \(address \?/,
-    "sem a pausa em primeiro lugar e negada, o botão 'Sair do painel' volta a ser " +
-    "anulado por esta guarda — foi esse o defeito medido no MC89.33.",
+    /\r?\n  if \(address \? \(isAdmin && !adminLoading\) : adminProvavel\) \{\r?\n    return <Navigate to="\/admin" replace \/>;/,
+    "a guarda do ADM tem de ser incondicional; nenhuma pausa, flag ou exceção antes dela.",
   );
+  assert.doesNotMatch(app, /painelAdminPausado|admin_pausa/,
+    "a pausa foi revertida por decisão do operador — não deve voltar sem nova decisão.");
 });
 
-// ── Pausa do encaminhamento (MC89.34) ───────────────────────────────────────
-
-/** sessionStorage falso — a pausa NÃO pode viver no mesmo storage da dica. */
-function sessaoFalsa(inicial = {}) {
-  const m = new Map(Object.entries(inicial));
-  return {
-    getItem: (k) => (m.has(k) ? m.get(k) : null),
-    setItem: (k, v) => m.set(k, String(v)),
-    removeItem: (k) => m.delete(k),
-    _bruto: m,
-  };
-}
-
-test("sem ninguém pedir, não há pausa", () => {
-  assert.equal(painelAdminPausado(sessaoFalsa()), false);
-});
-
-test("pausar → pausado; retomar → deixa de estar", () => {
-  const s = sessaoFalsa();
-  pausarPainelAdmin(s);
-  assert.equal(painelAdminPausado(s), true);
-  retomarPainelAdmin(s);
-  assert.equal(painelAdminPausado(s), false);
-});
-
-test("retomar sem ter pausado não rebenta", () => {
-  const s = sessaoFalsa();
-  assert.doesNotThrow(() => retomarPainelAdmin(s));
-  assert.equal(painelAdminPausado(s), false);
-});
-
-test("⚠️ a pausa NÃO é a dica: são chaves e storages diferentes", () => {
-  // Se algum dia partilharem chave, sair do painel apagaria o palpite e o
-  // MC89.31 deixaria de funcionar no arranque seguinte.
-  const sessao = sessaoFalsa();
-  pausarPainelAdmin(sessao);
-  const local = storageFalso({ "privy:connections": sessaoDe(ADMIN) });
-  gravarDicaAdmin(ADMIN, true, local);
-  assert.equal(adminProvavel(local), true, "a pausa não pode invalidar a dica");
-  assert.equal(local.getItem("gut_admin_pausa"), null, "a pausa não pode ir para o localStorage");
-  assert.equal(sessao.getItem("gut_admin_hint"), null, "a dica não pode ir para o sessionStorage");
-});
-
-test("⚠️ a pausa usa sessionStorage por omissão — e isso NÃO é um detalhe", () => {
-  // Os testes acima injetam o storage, portanto não veem qual é o PADRÃO. Se
-  // alguém trocar o default para localStorage, a pausa sobrevive ao fecho da
-  // app e um único "Sair do painel" desfaz o MC89.31 para sempre — em silêncio,
-  // e só se dá por isso no aparelho, no dia seguinte. Por isso a escolha é
-  // afirmada aqui, na fonte.
-  const src = readFileSync(new URL("./dicaSessao.js", import.meta.url), "utf8");
-  assert.match(
-    src,
-    /function storagePausaPadrao\(\) \{\s*try \{ return globalThis\.sessionStorage/,
-    "a pausa tem de vir do sessionStorage: morrer com o processo da WebView é a propriedade que preserva o MC89.31",
-  );
-});
-
-test("valor estranho na chave da pausa não conta como pausa", () => {
-  const s = sessaoFalsa({ "gut_admin_pausa": "talvez" });
-  assert.equal(painelAdminPausado(s), false);
-});
-
-test("storage que rebenta → sem pausa, sem lançar", () => {
-  const s = { getItem() { throw new Error("SecurityError"); },
-              setItem() { throw new Error("QuotaExceeded"); },
-              removeItem() { throw new Error("x"); } };
-  assert.equal(painelAdminPausado(s), false);
-  assert.doesNotThrow(() => pausarPainelAdmin(s));
-  assert.doesNotThrow(() => retomarPainelAdmin(s));
-});
-
-test("AdminLayout: sair grava a pausa ANTES de navegar", () => {
+test("AdminLayout: não há botão que leve o ADM às telas comuns", () => {
   const layout = readFileSync(new URL("../components/admin/AdminLayout.jsx", import.meta.url), "utf8");
-  assert.match(
+  // Afirma o BOTÃO, não a string: o comentário que explica a remoção contém
+  // "Sair do painel" de propósito, e uma busca ingénua apanhava-o (apanhou).
+  assert.doesNotMatch(
     layout,
-    /pausarPainelAdmin\(\);\s*\n\s*navigate\("\/"\);/,
-    "a ordem importa: navegar primeiro deixa a guarda de '/' correr sem a pausa e devolver o admin ao painel.",
+    /←\s*Sair do painel\s*<\/Button>/,
+    "o botão foi removido: não há para onde ir, a guarda de '/' devolve sempre o admin ao painel.",
   );
-});
-
-test("AdminLayout: entrar no painel retoma o encaminhamento", () => {
-  const layout = readFileSync(new URL("../components/admin/AdminLayout.jsx", import.meta.url), "utf8");
-  assert.match(
-    layout,
-    /useEffect\(\(\) => \{ retomarPainelAdmin\(\); \}, \[\]\)/,
-    "sem isto, quem saísse uma vez ficava com a pausa a valer até fechar a app.",
+  // Um único `navigate("/")` em todo o ficheiro — o do fim da saída de conta.
+  assert.equal(
+    (layout.match(/navigate\("\/"\)/g) || []).length, 1,
+    "só a saída de conta pode navegar para fora do painel.",
   );
 });
 

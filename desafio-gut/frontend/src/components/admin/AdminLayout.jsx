@@ -16,10 +16,14 @@
 //     moldura, não protagonista);
 //   · sem emojis; sem Orbitron; peso em vez de cor no título;
 //   · "Login Admin" é um botão NEUTRO — o laranja fica reservado a ação
-//     irreversível (os comandos da Fase 3);
-//   · saída explícita, porque a barra inferior de consumo não existe nesta rota.
+//     irreversível (os comandos da Fase 3).
+//
+// MC89.34 — A ÚNICA SAÍDA DAQUI É TERMINAR A SESSÃO. Não há botão para o
+// Dashboard comum: por decisão do operador, as telas de utilizador comum não
+// existem para o ADM, e a guarda de "/" (App.jsx) devolve-o sempre para cá.
+// Um botão "Sair do painel" seria uma porta para uma parede.
 
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, createContext, useContext } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
@@ -31,7 +35,6 @@ import NavAdminPersistente from "./NavAdminPersistente.jsx";
 import AdminToastContainer from "./AdminToastContainer.jsx";
 import EnderecoTruncado from "./EnderecoTruncado.jsx";
 import { useAdminToast } from "../../hooks/useAdminToast.js";
-import { pausarPainelAdmin, retomarPainelAdmin } from "../../lib/dicaSessao.js";
 
 // Contexto mínimo para que as telas filhas disparem toasts
 export const ToastContext = createContext(null);
@@ -68,26 +71,18 @@ export default function AdminLayout() {
   const [confirmandoSaida, setConfirmandoSaida] = useState(false);
   const [aSair, setASair] = useState(false);
 
-  // MC89.34 — entrar no painel RETOMA o encaminhamento. Este componente só
-  // monta em rotas /admin, portanto montar é literalmente "voltei ao painel".
-  // Sem isto, quem saísse uma vez ficaria com a pausa a valer até fechar a app.
-  useEffect(() => { retomarPainelAdmin(); }, []);
-
-  // Sair do painel: grava a intenção ANTES de navegar, senão a guarda de "/"
-  // corre primeiro e devolve o admin para cá (era exatamente o defeito).
-  function sairDoPainel() {
-    pausarPainelAdmin();
-    navigate("/");
-  }
-
-  // Sair da conta: a ORDEM importa. O `logout` admin revoga o refresh no
-  // backend e precisa da sessão Privy viva para o pedido sair; `desconectar`
-  // derruba essa sessão. Ao contrário, a revogação podia nunca chegar a sair e
-  // o refresh ficaria válido no servidor até expirar.
+  // MC89.34 — "Sair da conta" é a ÚNICA saída do painel, por decisão do
+  // operador: as telas de utilizador comum não existem para o ADM. Não há
+  // botão "Sair do painel" porque não há para onde ir — seria uma porta para
+  // uma parede (a guarda de "/" em App.jsx devolve sempre o admin para cá).
+  //
+  // A ORDEM importa. O `logout` admin revoga o refresh no backend, e esse
+  // pedido precisa da sessão Privy viva para sair; `desconectar` derruba-a.
+  // Pela ordem inversa, a revogação podia nunca chegar a sair e o refresh
+  // ficaria válido no servidor até expirar sozinho.
   async function sairDaConta() {
     setASair(true);
     try { await logout(); } catch { /* revogação best-effort: a saída não pode ficar presa */ }
-    retomarPainelAdmin();   // não deixar a pausa para a próxima conta neste aparelho
     try { desconectar(); } finally { setASair(false); }
     navigate("/");
   }
@@ -194,10 +189,6 @@ export default function AdminLayout() {
             Logado como admin: <code style={{ color: COR.text }}><EnderecoTruncado endereco={endereco} /></code>
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={sairDoPainel}
-          className="!border-white/15 !text-[#94a3b8] !rounded-md shrink-0">
-          ← Sair do painel
-        </Button>
       </header>
 
       {/* Estado da sessão admin (JWT) */}
