@@ -6202,3 +6202,42 @@ contagem global passaria à mesma com os blocos intercalados. Ambas testadas por
 mutação.
 
 Continua por verificar abrir no Excel: não está instalado nesta máquina.
+
+
+## MC-CLASSIFICAR-WHATSAPP — mesma classificação, ordem original preservada
+
+`whatsapp_classificado.xlsx`: uma aba com os 27.737 números na ORDEM e com os
+IDs ORIGINAIS, e o bloco como atributo de cada linha (cor de fundo mantida, para
+a classificação continuar visível sem os números estarem juntos).
+
+| bloco | nº | % |
+|---|---|---|
+| 1 — celulares com DDD | 13.993 | 50,45% |
+| 2 — celulares sem DDD | 5.489 | 19,79% |
+| 3 — fixos com DDD | 8.239 | 29,70% |
+| 4 — fixos sem DDD | 0 | 0,00% |
+| 5 — inconsistentes | 16 | 0,06% |
+
+**Coexiste com `whatsapp_organizado.xlsx`, não o substitui.** Agrupado serve
+para trabalhar um bloco de cada vez; ordenado serve para cruzar com qualquer
+lista que use o mesmo ID. A ordem original é informação que o agrupamento
+destrói.
+
+**A coluna "Verificado Twilio" exigiu uma conferência prévia.** O ficheiro dos
+198 foi escrito ANTES de se remover o "+" e ANTES do corte dos 22, portanto
+havia duas formas de a coluna sair errada sem dar erro: formato diferente e
+números entretanto removidos. Medido: normalizados para só dígitos, os 198
+casam todos, nenhum estava entre os 22 removidos, e todos caem no bloco 1.
+
+**Validação — duas verificações valem mais que as contagens:** a regra de
+classificação é REAPLICADA de forma independente no validador (0 divergências em
+27.737 — conferir totais não distingue "13.993 certos" de "13.993 com dois
+trocados entre si"), e a coluna Twilio é comparada CONJUNTO A CONJUNTO com o
+ficheiro (diferença simétrica 0 — 198 marcas nos números errados contariam na
+mesma 198).
+
+**Defeito do próprio validador, encontrado e corrigido:** a primeira versão lia o
+ficheiro de origem só como texto inline, e a coluna ID é célula NUMÉRICA (`<v>`),
+por isso vinha vazia e a comparação de IDs nunca podia passar — acusou falha sem
+haver falha nos dados. Registado porque um defeito destes, se tivesse falhado ao
+contrário, daria verde indevido sem se notar.
