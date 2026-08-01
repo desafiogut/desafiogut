@@ -1,0 +1,147 @@
+================================================================================
+MC89.33 — DIAGNÓSTICO E PLANO: UTILIZADOR COMUM E CORPORATIVO
+Data: 2026-08-01 | Aparelho: Xiaomi 21091116UG (Android 13) | APK: MC89.31
+Branch: feat/mc89.32-diagnostico-perf | R1 CUMPRIDA: zero alteração de código.
+================================================================================
+
+RESUMO EM UMA LINHA
+-------------------
+O frontend não é o gargalo — o Dashboard pinta tudo aos 478 ms e navegar custa
+14–32 ms. A lentidão é de rede (cold start, zero cache, pedidos repetidos). E,
+pelo caminho, encontrei uma regressão que eu próprio introduzi no MC89.31: o
+administrador está fechado dentro do painel.
+
+================================================================================
+1. O ACHADO QUE NÃO ERA PERFORMANCE — E É O MAIS URGENTE
+================================================================================
+O botão "← Sair do painel" (AdminLayout.jsx:138) faz `navigate("/")`. O MC89.31
+pôs uma guarda na própria rota "/" que devolve o admin a /admin.
+
+  MEDIDO: partida /admin → trilho ["/", "/admin"] → saiuMesmo: NÃO
+
+Como a guarda está na ROTA, todos os caminhos ressaltam: o botão, o "Início" da
+barra inferior e escrever o endereço à mão. O ADM não consegue sair do painel
+nem terminar a sessão da conta (a única via era o Dashboard comum).
+
+O MC89.31 não apanhou isto porque testou a ENTRADA no painel e nunca a SAÍDA.
+Plano aprovado pelo operador em docs/MC89.33-BOTAO-SAIR-PLANO.txt:
+  · corrigir "Sair do painel" com pausa explícita (sessionStorage, morre com a
+    sessão, portanto o arranque seguinte preserva o ganho do MC89.31);
+  · acrescentar "Sair da conta" (logout Privy) na barra de estado.
+
+================================================================================
+2. UTILIZADOR COMUM — O QUE A MEDIÇÃO MOSTRA
+================================================================================
+2.1 — NÃO é lento a aparecer. Marcos visíveis, gravador antes do 1.º script:
+      478 ms — primeiro texto, card de saldo, VALOR do saldo, conteúdo do
+      Dashboard, saudação com nome e card de senhas. TUDO no mesmo fotograma.
+      O saldo otimista (MC88.34) e o rótulo otimista (MC88.38) funcionam.
+      Navegação entre ecrãs: 14–32 ms.
+
+2.2 — O que É lento: a rede.
+      t=1351 auth-user → responde ~2,9 s depois (cold start)
+      t=4218 cotas#1 → 404
+      t=6855 cotas#2 → 404   (+2637 ms, EM SÉRIE)
+      ⇒ ~7,1 s até a app saber que perfil tem à frente. Para o utilizador comum
+        a resposta é sempre "não é lojista", e custa duas idas em série.
+
+2.3 — Polling em repouso: ~36 pedidos/min
+      lances-flash 18/min · saldo-rs 12/min · notificacoes 6/min
+      · lances-flash a 3 s está CORRETO (verifiquei o prazo: edição a decorrer,
+        faltavam 23 min). É o desenho do MC88.31 para leilão ao vivo.
+      · saldo-rs a 5 s NÃO pausa por visibilidade, ao contrário do irmão
+        notificacoes. É o pior custo/benefício dos três.
+      · lances-flash não tem rate limit no servidor.
+
+2.4 — Pedidos repetidos por navegação (achado novo):
+      Vitrine produtos×8 e cotas×2 · Mercado cotas×4 · Carteira referral×2
+      O `produtos×8` é um pedido por categoria (4 slots) num efeito que corre
+      duas vezes.
+
+2.5 — Cache: NENHUM endpoint do caminho comum tem cache escrito, e a camada está
+      desligada em produção (MC89.32).
+
+================================================================================
+3. UTILIZADOR CORPORATIVO — COM UM LIMITE DECLARADO
+================================================================================
+⚠️ NÃO MEDI O PAINEL CORPORATIVO. A conta do operador é ADM e não é corporativa
+(provado pelos dois 404 de /cotas). Entrar como lojista exigiria credenciais que
+não tenho e terminaria a sessão do operador. O que está no documento é: medido
+para a parte partilhada, lido no código para a parte exclusiva, e marcado como
+inferência onde é inferência.
+
+Em código, o lojista está MELHOR do que o enunciado supõe:
+  · o painel JÁ é paralelo — `Promise.all` nos banners e o analytics num efeito
+    separado (CorporativoDashboard.jsx:126 e 141);
+  · o encaminhamento otimista do MC88.42 já o leva direto a /corporativo.
+
+Custos próprios prováveis (inferência, a confirmar com conta real):
+  · três funções que o comum não toca — banners, corporativo-analytics,
+    produtos — logo três cold starts adicionais na primeira visita;
+  · `lances-flash` continua a pollar a 3 s a partir do AppContext mesmo em
+    /corporativo: o lojista paga 18 pedidos/min de um leilão que não está a ver.
+
+================================================================================
+4. O QUE O ENUNCIADO PROPÔS E A MEDIÇÃO RECUSA
+================================================================================
+  Skeleton screens ............... seria REGRESSÃO: já se pintam valores reais
+                                   aos 478 ms; caixas cinzentas são um retrocesso.
+  Lazy loading de componentes .... otimizaria 14–32 ms.
+  Virtualização de listas ........ não há listas longas (0 lances, 7 cotas).
+  Priorizar saldo e edição ....... já são os primeiros.
+  Paralelizar o painel corporativo  já está paralelo.
+  Polling 3 s → 5 s .............. recusado: 3 s é o desenho correto com leilão
+                                   a decorrer (prazo verificado).
+  Reduzir payload ................ 35 linhas no total.
+
+  CONFIRMADO do enunciado: cotas é chamado para o comum e devolve 404 (e é
+  sequencial); cold start das funções; ausência de cache (pior do que supunha).
+
+================================================================================
+5. PLANO — ORDEM APROVADA (íntegra em docs/MC89.33-PLANO.txt)
+================================================================================
+  P0-0  Corrigir "Sair do painel" + "Sair da conta"      [regressão, vai à frente]
+  P0-1  Ligar REDIS_URL/REDIS_TOKEN no Netlify           [OPERADOR, sem código]
+  P0-2  Paralelizar a cadeia `cotas`                     [poupa ~2,6 s]
+  P0-3  Pausar `saldo-rs` por visibilidade               [copiar o padrão do irmão]
+  P0-4  Não pollar o leilão para quem não o está a ver   [corporativo]
+  P1-1  Cache em edicoes/cotas/banners — NÃO em saldo-rs nem notificacoes
+  P1-2  Eliminar pedidos repetidos (produtos×8, cotas×4)
+  P1-3  Aquecer funções — ⚠️ confrontar custo com o plano Netlify antes (R2)
+  P2    Rate limit em falta no lances-flash
+
+================================================================================
+6. NOTA DE MÉTODO — UMA MEDIÇÃO DESCARTADA
+================================================================================
+A primeira cascata deu ZERO pedidos. Não era a app: era o defeito transitório de
+DNS do WebView (14× alchemy, 8× netlify, 8× privy em ERR_NAME_NOT_RESOLVED,
+com o aparelho a resolver por ping em 6,6 ms). Reciclado com
+`svc wifi disable/enable`; todos os números são posteriores. Nenhuma medição
+contaminada foi usada.
+
+⚠️ Nesse estado a app ficou presa em "Restaurando sessão…" para sempre — ecrã do
+MC89.31, sem saída nem botão quando o Privy nunca responde. Antes era "Faça
+login", igualmente errado mas com botão. Registado no plano.
+
+================================================================================
+7. PENDÊNCIAS
+================================================================================
+  · MC89.32 continua ABERTO (segmentos 1 e 2): faltou a medição do caminho
+    autenticado do ADM, que precisa do login do operador no aparelho.
+  · Medir o painel corporativo com conta de lojista real.
+  · Confirmar o custo do aquecimento de funções (P1-3) antes de o implementar.
+  · Deploy e merge: do operador.
+
+================================================================================
+8. ENTREGÁVEIS
+================================================================================
+  ✅ docs/MC89.33-COMUM-DIAGNOSTICO.txt
+  ✅ docs/MC89.33-CORPORATIVO-DIAGNOSTICO.txt  (com limite declarado)
+  ✅ docs/MC89.33-PLANO.txt
+  ✅ docs/MC89.33-BOTAO-SAIR-PLANO.txt         (pedido do operador, aprovado)
+  ✅ Desktop\MC89.33-RELATORIO.txt + cópia em docs/
+  ✅ cloud.md atualizado
+  ⚠️ DESVIO A R10: o MC pedia a branch feat/mc89-adm-system. Está 20+ commits
+     atrás e não contém o MC89.31, que é o APK medido. Documentar sobre um
+     estado do código que não existe seria pior. Trabalho em
+     feat/mc89.32-diagnostico-perf, encadeada no MC89.31.

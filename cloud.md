@@ -6333,3 +6333,53 @@ Fica por fazer: o primeiro login de sempre num aparelho continua a passar pelo
 Dashboard (~1,5 s), por desenho — não há nada em disco e adivinhar seria
 inventar. E um utilizador não-admin real não foi exercitado: entrar com outra
 conta terminaria a sessão do operador.
+
+
+## MC89.33 — o frontend estava inocente, e eu tinha fechado o admin lá dentro
+
+O operador disse que o app estava lento para o utilizador comum e para o
+lojista. Medi antes de propor, e a medição virou o enunciado do avesso.
+
+**O Dashboard comum pinta TUDO aos 478 ms** — primeiro texto, card de saldo,
+valor do saldo, conteúdo, saudação com nome, card de senhas, no mesmo fotograma.
+Navegar entre ecrãs custa 14–32 ms. O saldo otimista (MC88.34) e o rótulo
+otimista (MC88.38) estão a fazer exatamente o que foram feitos para fazer. Isso
+elimina metade do plano proposto: *skeleton screens* seriam uma **regressão**
+(trocar valores reais por caixas cinzentas), e *lazy loading* otimizaria 14 ms.
+
+O que é lento é a rede. `auth-user` responde ~2,9 s a frio; depois a cadeia
+`cotas` faz duas chamadas **em série** (4218 ms e 6855 ms), ambas 404 para quem
+não é lojista — ~7,1 s até a app saber que perfil tem à frente. Em repouso são
+~36 pedidos/min, e o `saldo-rs` a 5 s é o único dos três que **não** pausa por
+visibilidade, ao contrário do irmão `notificacoes`, que já faz o certo.
+
+**Verifiquei antes de recusar.** O enunciado pedia baixar o polling de lances de
+3 s para 5 s. Fui ver o prazo real: a edição estava a decorrer, faltavam 23
+minutos. Os 3 s são o desenho do MC88.31 para leilão ao vivo — o momento em que
+o produto acontece. Recusado com medição, não com opinião.
+
+**Um achado novo que ninguém supôs:** pedidos repetidos por navegação. A Vitrine
+dispara `produtos×8` (um por categoria, 4 slots, num efeito que corre duas
+vezes) e o Mercado `cotas×4`. O problema não é renderizar demais — é pedir
+demais, e pedir repetido.
+
+**E depois encontrei o que eu próprio tinha partido.** O botão "← Sair do
+painel" faz `navigate("/")`, e o MC89.31 pôs uma guarda na rota "/" que devolve
+o admin a /admin. Medido: `partida /admin → trilho ["/", "/admin"] → saiu: NÃO`.
+Como a guarda está na ROTA, tudo ressalta: o botão, o "Início" da barra
+inferior, o endereço escrito à mão. O ADM ficou **fechado dentro do painel**, sem
+sequer conseguir terminar a sessão da conta. O MC89.31 não apanhou isto porque
+testou a entrada no painel e nunca a saída — a lição é que uma correção de
+encaminhamento tem de testar os dois sentidos.
+
+No perfil corporativo fui obrigado a parar antes: a conta do operador é ADM e não
+é corporativa (provado pelos 404 de /cotas). Documentei o que medi, o que li no
+código e o que é inferência, marcado como tal. Em código o lojista está melhor do
+que o enunciado supõe — o painel já é paralelo (`Promise.all` nos banners,
+analytics em efeito separado). Mas paga três cold starts que o comum não paga, e
+continua a pollar o leilão a 3 s enquanto está em /corporativo, sem o ver.
+
+Também descartei uma cascata inteira: deu zero pedidos, e não era a app — era o
+defeito transitório de DNS do WebView outra vez (14× alchemy, 8× netlify, 8×
+privy, com o aparelho a resolver por ping em 6,6 ms). Reciclado o WiFi, repetido
+tudo. Nenhum número contaminado entrou no relatório.
