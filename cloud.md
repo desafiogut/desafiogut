@@ -6241,3 +6241,38 @@ ficheiro de origem só como texto inline, e a coluna ID é célula NUMÉRICA (`<
 por isso vinha vazia e a comparação de IDs nunca podia passar — acusou falha sem
 haver falha nos dados. Registado porque um defeito destes, se tivesse falhado ao
 contrário, daria verde indevido sem se notar.
+
+
+## MC-REFINAR-WHATSAPP — a hipótese do DDD 92 estava certa, e por isso os números tinham de SAIR
+
+`whatsapp_refinado.xlsx`: **22.232** números (13.993 celulares com DDD + 8.239
+fixos), IDs 1..22.232, cinco colunas. Removidos 5.505 = 16 inconsistentes +
+5.489 duplicados.
+
+**O teste que mudou a conclusão.** O enunciado mandava acrescentar DDD 92 aos
+5.489 sem DDD e promovê-los ao Bloco 1. Antes de alterar 5.489 números, medi
+quantos passariam a coincidir com um número JÁ existente:
+
+| prefixo | coincidem |
+|---|---|
+| **92** | **5.489 de 5.489 — 100,00%** |
+| 11 / 21 / 31 / 85 | 0 de 5.489 — 0,00% |
+
+O DDD 92 domina mesmo a base (70,0% dos que têm DDD, contra 26,7% do 11). Cem
+por cento contra zero não é coincidência: o operador estava certo sobre a
+proveniência. **Mas se todos coincidem com números já presentes, não são órfãos
+a recuperar — são duplicados.** A extração apanhou o mesmo contacto duas vezes,
+completo e truncado. Acrescentar-lhes o 92 criaria 5.489 repetidos no Bloco 1,
+o oposto da regra fixada no início da série. Operador confirmou: "não considerem
+eles então".
+
+**Nenhum contacto se perdeu, e isso foi provado duas vezes.** O script de
+refinamento conta os órfãos (sem-DDD sem equivalente `5592…`) ANTES de remover
+seja o que for e aborta se houver algum — deu 0. O validador reverifica de forma
+independente: os 5.489 removidos têm todos o equivalente presente na lista final,
+os 22.232 dos antigos blocos 1 e 3 estão todos lá, e nenhum número foi inventado.
+
+**⚠️ Sai deste ficheiro a coluna "Verificado Twilio"** (pedido explícito), que
+era a única informação a distinguir um número que se SABE existir de um que
+apenas tem o formato certo. Continua em `unicos/whatsapp_VERIFICADOS.txt` e em
+`whatsapp_classificado.xlsx`, ambos intactos.
