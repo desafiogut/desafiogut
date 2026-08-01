@@ -1,0 +1,225 @@
+MC89.32 — DIAGNÓSTICO DE PERFORMANCE DO PAINEL ADM
+Data: 2026-08-01 | Aparelho: Xiaomi 21091116UG (Android 13) | APK: MC89.31
+Método: CDP sobre adb (medição de dentro do WebView, mesmo caminho de rede do
+        operador) + leitura de código + inspeção do ambiente de produção.
+R1 CUMPRIDA: ZERO alteração de código.
+Skills ECC aplicadas: terminal-ops, latency-critical-systems, redis-patterns,
+        verification-loop. (ux-waiting-audit não é aplicável — ver §7.)
+
+================================================================================
+0. RESUMO — O QUE É, DE FACTO, A LENTIDÃO
+================================================================================
+Três causas, por ordem de impacto sentido. Nenhuma delas é renderização.
+
+  1ª  Não há sessão admin após arrancar o APK. O painel abre com ZERO dados e
+      exige colar o ADMIN_TOKEN e assinar no Privy, TODAS as vezes.
+  2ª  A camada de cache está DESLIGADA em produção (REDIS_URL/REDIS_TOKEN
+      ausentes). Os seis caches do painel já existem em código e são no-op.
+  3ª  Cold start de ~2,7 s POR FUNÇÃO, uniforme nas dez funções admin medidas.
+
+O frontend está inocente: navegar entre telas custa 7–42 ms.
+
+================================================================================
+1. CAUSA 1 — SEM SESSÃO ADMIN DEPOIS DE CADA ARRANQUE  [PROVADO]
+================================================================================
+`AdminAuthContext` guarda o refresh token em **sessionStorage**
+(`obterStorage()` → `window.sessionStorage`). É deliberado e está escrito em
+`lib/adminAuth.js:18-19`: "o REFRESH token vai para sessionStorage (não
+localStorage): morre com a aba".
+
+Num APK Capacitor, a "aba" é o processo da WebView. Fechar a app mata-o.
+
+MEDIDO — após `am force-stop` + relançamento:
+    sessionStorage: ["gut_auth_user", "sentryReplaySession"]
+    gut_admin_refresh ........................ AUSENTE
+    ecrã ..... "Login admin necessário para mutações"
+               "Autentique-se para ver as métricas."
+    mostraDados .............................. false
+
+CONSEQUÊNCIA: `chamarAdmin` é `null` (AdminAuthContext:123), portanto TODAS as
+sete telas devolvem cedo e não fazem pedido nenhum. O painel não está lento —
+está VAZIO, e assim fica até o operador executar, de cor, um ritual de três
+passos: tocar em "Login Admin", colar o ADMIN_TOKEN e assinar EIP-191 no Privy.
+
+Isto acontece a cada arranque a frio da app. É, de longe, o maior custo de
+tempo do administrador, e nenhuma otimização de rede o resolve.
+
+⚠️ NOTA DE SEGURANÇA, para o plano não deitar fora o motivo: a escolha de
+sessionStorage NÃO foi um descuido. Um refresh token de 7 dias em localStorage
+sobrevive à app fechada e fica exposto a qualquer XSS persistente. O plano tem
+de tratar isto como um trade-off explícito do operador, não como um bug a
+corrigir à pressa. Ver MC89.32-PLANO §1.
+
+================================================================================
+2. CAUSA 2 — A CAMADA DE CACHE ESTÁ DESLIGADA EM PRODUÇÃO  [PROVADO]
+================================================================================
+`_lib/cache.mjs:7-10` é explícito: "se REDIS_URL/REDIS_TOKEN não estiverem
+setados, TODAS as operações são no-op". `cacheConfigurado()` devolve false e
+`cacheGet` devolve sempre null.
+
+MEDIDO — `netlify env:list --context production` (52 variáveis, só NOMES lidos,
+nenhum valor — R4/R5):
+    REDIS_URL ....... AUSENTE
+    REDIS_TOKEN ..... AUSENTE
+    (ADMIN_TOKEN, JWT_SECRET, SUPABASE_URL, ADMIN_WALLETS: presentes)
+
+CONSEQUÊNCIA — seis caches já escritos, testados e inertes:
+    admin-stats    45 s      admin-alerts   60 s
+    admin-onchain  60 s      admin-users    30 s
+    admin-series   45 s      admin-status    —
+Cada pedido vai à fonte. O indicador "· em cache" da Visão Geral
+(VisaoGeral.jsx:158) NUNCA pode acender.
+
+E há um segundo efeito, menos óbvio: `_lib/rate-limiter.mjs` usa Redis quando
+existe e cai em **Netlify Blobs com `consistency: "strong"`** quando não existe
+(linha 41). Isso é uma ida à rede, com consistência forte, ANTES do gate de
+auth, em TODOS os pedidos admin. Provisionar o Upstash tira essa ida do caminho
+quente de graça, além de acender os seis caches.
+
+⚠️ Isto reordena o plano do enunciado. "Adicionar cache ao admin-logs" não
+produz efeito nenhum enquanto a camada estiver desligada: escrever-se-ia código
+de cache que continuaria a ser no-op. A ação certa é de INFRAESTRUTURA (uma
+variável de ambiente dupla), não de código.
+
+================================================================================
+3. CAUSA 3 — COLD START DE ~2,7 s POR FUNÇÃO  [MEDIDO]
+================================================================================
+Dez funções admin, pedidas de dentro do WebView do aparelho, sem Authorization
+(rejeitadas pelo `guardAdmin`). Mede o custo de ARRANQUE + gate — o que se paga
+ANTES de qualquer dado.
+
+  função                          ronda 1    ronda 2   ronda 3
+  ------------------------------  --------   -------   -------
+  admin-stats                      2509 ms    675 ms    294 ms
+  admin-onchain                    2706 ms    334 ms    305 ms
+  admin-series                     2721 ms    492 ms    302 ms
+  admin-alerts                     2662 ms    340 ms    285 ms
+  admin-users                      2728 ms    386 ms    298 ms
+  admin-logs                       2804 ms    495 ms    275 ms
+  admin-status                     2866 ms    365 ms    282 ms
+  admin-queue                      2716 ms    458 ms    382 ms
+  admin-financeiro-resumo          2682 ms    350 ms    268 ms
+  admin-financeiro-transacoes      2685 ms    354 ms    295 ms
+
+INTERPRETAÇÃO, e porque não é handshake de rede: se os 2,7 s fossem DNS/TLS, só
+o PRIMEIRO pedido os pagaria — os seguintes reutilizam a ligação. Foram os DEZ,
+todos ~2,7 s, e a mesma sequência caiu para ~300 ms na ronda 3. Logo o custo é
+por FUNÇÃO, e é arranque de função.
+
+CONSEQUÊNCIA REAL: cada tela do painel toca funções DIFERENTES. Visitar as sete
+telas depois de um período de inatividade paga o cold start SETE vezes. A Visão
+Geral dispara quatro funções em paralelo, portanto paga ~2,7 s uma vez (não
+4×) — mas cada tela seguinte volta a pagar.
+
+O enunciado dizia "admin-stats pode levar ~2s". Confirma-se, e é PIOR do que
+supunha: aplica-se a todas as funções admin, não só a essa.
+
+================================================================================
+4. O QUE O ENUNCIADO SUPÔS E A MEDIÇÃO DESMENTE
+================================================================================
+
+4.1 — "Hoje: admin-stats → admin-onchain → admin-series → admin-alerts
+      (sequencial). Proposto: Promise.all."     ❌ JÁ É PARALELO.
+  VisaoGeral.jsx:115-121 dispara as quatro chamadas no mesmo tick, sem `await`
+  entre elas. O comentário do MC89.7 (linha 94) diz exatamente isso. Não há
+  nada a paralelizar; o ganho proposto (~2 s → ~1 s) não existe.
+
+  E não é só ali. Já usam `Promise.all`/`allSettled`:
+      GestaoFinanceira.jsx (2×)   Operacoes.jsx (2×)
+      _lib/admin-metricas.mjs — as 5 consultas Supabase, em `allSettled`
+
+4.2 — "Reduzir payload de admin-stats / dividir em endpoints menores."  ❌ SEM OBJETO.
+  Contagem real das tabelas que alimentam o admin-stats:
+      saldo_rs_creditos ... 18 linhas      cotas ......... 7
+      saldo_rs ............. 5             fila_tarefas .. 5
+      lances ............... 0
+      TOTAL ................ 35 linhas
+  Não há payload para reduzir. O limite conhecido em admin-metricas.mjs:16-20
+  ("deixa de servir na ordem dos milhares") continua LONGE — está lá para ser
+  revisitado com o número à frente, e o número é 35.
+
+4.3 — "Virtualização de listas longas (react-window) em admin-users/admin-logs."
+      ❌ NÃO HÁ LISTAS LONGAS. Ver 4.2. Zero lances, sete cotas.
+
+4.4 — "Lazy loading de gráficos com IntersectionObserver."   ❌ RESOLVE 7–42 ms.
+  MEDIDO — navegação entre telas do painel, tempo até haver conteúdo:
+      Visão Geral 15/15 ms · Usuários 12/14 · Financeiro 7/8 · Operações 24/20
+      Logs 17/10 · Notificações 19/20 · Configurações 42/14
+  No APK os chunks de rota são ficheiros LOCAIS dentro do .apk — não há
+  download. Code-splitting e adiamento de render não têm o que ganhar aqui.
+
+4.5 — "Adicionar cache de 15 s ao admin-logs."   ⚠️ CORRETO NO CÓDIGO, INÓCUO NA PRÁTICA.
+  É verdade que admin-logs, admin-financeiro-*, admin-user, admin-queue,
+  admin-config, admin-sessions e admin-notifications não têm cache. Mas
+  enquanto REDIS_URL estiver ausente, acrescentar cache a qualquer um deles
+  produz exatamente zero. Primeiro liga-se a camada (§2); só depois vale a pena
+  discutir quais chaves faltam.
+
+================================================================================
+5. MAPA DO CAMINHO QUENTE (latency-critical-systems)
+================================================================================
+  arranque do APK
+    └─ WebView monta                                     ~400 ms
+    └─ Privy restaura sessão                             ~700–1300 ms
+    └─ encaminhamento para /admin (MC89.31)              442–1000 ms   ✅ já otimizado
+    └─ ┌─ SEM sessão admin → ecrã de login ──────────────────────────┐
+       │  ritual manual: token + assinatura EIP-191       ??? s      │ ← CAUSA 1
+       └────────────────────────────────────────────────────────────┘
+    └─ montagem da tela (chunk local)                     7–42 ms     ✅ não é problema
+    └─ pedido admin-*
+         ├─ rate-limiter → Netlify Blobs (strong)         ? ms        ← CAUSA 2 (efeito 2)
+         ├─ cold start da função                          ~2400 ms    ← CAUSA 3
+         ├─ guardAdmin (JWT)                              incluído
+         ├─ cacheGet → no-op, sempre miss                 0 ms        ← CAUSA 2
+         └─ Supabase (5 consultas em paralelo, 35 linhas) ??? ms      ← POR MEDIR (§6)
+    └─ render dos números                                 desprezável
+
+  Segmentos medidos: todos menos dois. Os dois em falta precisam de sessão viva.
+
+================================================================================
+6. O QUE FALTA MEDIR — E PORQUÊ NÃO FOI MEDIDO
+================================================================================
+O caminho AUTENTICADO (tempo real até os dados aparecerem em cada uma das sete
+telas) exige uma sessão admin, que exige o ADMIN_TOKEN. R5 proíbe-me de tocar
+em credenciais, e não o fiz.
+
+A sonda `telas-autenticadas.mjs` está escrita e verificada: recusa-se a medir
+sem sessão e diz "SEM SESSAO ADMIN — nada medido" em vez de devolver zeros
+(testado: saiu com código 2). Assim que o operador fizer login no aparelho,
+mede as sete telas a frio e a quente sem que eu veja o token.
+
+>>> ESTA SECÇÃO FICA ABERTA ATÉ ESSA MEDIÇÃO. <<<
+Estimativa NÃO medida, marcada como inferência: warm ≈ 300 ms (arranque+gate) +
+consulta Supabase sobre 35 linhas; a frio, +2,4 s. Não usar este número como
+facto enquanto não for medido.
+
+================================================================================
+7. NOTA SOBRE AS SKILLS ECC EXIGIDAS
+================================================================================
+  terminal-ops ............... aplicada (adb/CDP/netlify CLI).
+  verification-loop .......... aplicada — cada afirmação tem medição ou ficheiro
+                               e linha; a sonda foi validada por recusa (§6).
+  latency-critical-systems ... aplicada — mapa do caminho quente (§5), métricas
+                               separadas, ordem de otimização usada no plano.
+  redis-patterns ............. aplicada — informa §2 e a recomendação de TTL e
+                               de rate-limit do plano.
+  continuous-learning-v2 ..... aplicada na escrita das lições (cloud.md).
+
+  ux-waiting-audit ........... NÃO APLICADA, e não vou fingir que foi. A skill
+      é explicitamente para operações de 30+ segundos e exige as ferramentas
+      Chrome MCP. Aqui as esperas são de 0,3–2,9 s e o Chrome MCP não se liga a
+      um alvo Android remoto (limitação já registada no projeto), pelo que a
+      medição foi feita com CDP cru sobre adb. Usei o RACIOCÍNIO da checklist
+      dela (feedback durante a espera, progresso visível) na secção de UX do
+      plano; não corri a skill.
+
+================================================================================
+8. EVIDÊNCIAS
+================================================================================
+  Sondas (scratchpad da sessão, não commitadas por serem instrumentos):
+    sessao-admin.mjs ......... estado da sessão admin após arranque a frio
+    latencia-admin.mjs ....... 10 funções × 3 rondas, de dentro do WebView
+    telas-admin.mjs .......... navegação entre as 7 telas
+    telas-autenticadas.mjs ... caminho autenticado (à espera do login)
+  Código citado com ficheiro e linha ao longo do documento.
+  Contagem de linhas: consulta SQL read-only via MCP Supabase.
