@@ -19,7 +19,7 @@
 //     irreversível (os comandos da Fase 3);
 //   · saída explícita, porque a barra inferior de consumo não existe nesta rota.
 
-import { useState, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
@@ -31,6 +31,7 @@ import NavAdminPersistente from "./NavAdminPersistente.jsx";
 import AdminToastContainer from "./AdminToastContainer.jsx";
 import EnderecoTruncado from "./EnderecoTruncado.jsx";
 import { useAdminToast } from "../../hooks/useAdminToast.js";
+import { pausarPainelAdmin, retomarPainelAdmin } from "../../lib/dicaSessao.js";
 
 // Contexto mínimo para que as telas filhas disparem toasts
 export const ToastContext = createContext(null);
@@ -52,7 +53,10 @@ export default function AdminLayout() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { abrirModal } = useAppContext();
+  // `desconectar` já existia e já era exposto pelo AppContext (é o `logout()` do
+  // Privy). Não há fiação nova — só passou a haver quem o chame de dentro do
+  // painel, que até aqui não tinha nenhuma forma de terminar a sessão da conta.
+  const { abrirModal, desconectar } = useAppContext();
   const {
     authState, authError, autenticado, login, logout,
     endereco, isAdmin, aVerificarAdmin, isConnected, restaurandoSessao,
@@ -61,6 +65,32 @@ export default function AdminLayout() {
   const { toasts, dismiss: dismissToast, success, error, info } = useAdminToast();
   const [pedindoLogin, setPedindoLogin] = useState(false);
   const [adminTokenInput, setAdminTokenInput] = useState("");
+  const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+  const [aSair, setASair] = useState(false);
+
+  // MC89.34 — entrar no painel RETOMA o encaminhamento. Este componente só
+  // monta em rotas /admin, portanto montar é literalmente "voltei ao painel".
+  // Sem isto, quem saísse uma vez ficaria com a pausa a valer até fechar a app.
+  useEffect(() => { retomarPainelAdmin(); }, []);
+
+  // Sair do painel: grava a intenção ANTES de navegar, senão a guarda de "/"
+  // corre primeiro e devolve o admin para cá (era exatamente o defeito).
+  function sairDoPainel() {
+    pausarPainelAdmin();
+    navigate("/");
+  }
+
+  // Sair da conta: a ORDEM importa. O `logout` admin revoga o refresh no
+  // backend e precisa da sessão Privy viva para o pedido sair; `desconectar`
+  // derruba essa sessão. Ao contrário, a revogação podia nunca chegar a sair e
+  // o refresh ficaria válido no servidor até expirar.
+  async function sairDaConta() {
+    setASair(true);
+    try { await logout(); } catch { /* revogação best-effort: a saída não pode ficar presa */ }
+    retomarPainelAdmin();   // não deixar a pausa para a próxima conta neste aparelho
+    try { desconectar(); } finally { setASair(false); }
+    navigate("/");
+  }
 
   async function submitLogin(e) {
     e.preventDefault();
@@ -164,7 +194,7 @@ export default function AdminLayout() {
             Logado como admin: <code style={{ color: COR.text }}><EnderecoTruncado endereco={endereco} /></code>
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => navigate("/")}
+        <Button variant="ghost" size="sm" onClick={sairDoPainel}
           className="!border-white/15 !text-[#94a3b8] !rounded-md shrink-0">
           ← Sair do painel
         </Button>
@@ -180,18 +210,56 @@ export default function AdminLayout() {
         display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center", justifyContent: "space-between",
       }}>
         <span>{statusTexto}</span>
-        {statusOk ? (
-          <Button variant="ghost" size="sm" onClick={logout}
+        {/* MC89.34 — dois botões, duas coisas DIFERENTES, e a diferença tem de
+            ser legível: "Logout admin" larga o crachá e continua na app;
+            "Sair da conta" fecha a sessão do Privy. Até aqui só existia o
+            primeiro, e o segundo não existia em lado nenhum alcançável a partir
+            do painel. Nenhum é laranja: o laranja está reservado às ações
+            irreversíveis da Fase 3. */}
+        <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+          {statusOk ? (
+            <Button variant="ghost" size="sm" onClick={logout}
+              className="!border-white/15 !text-[#94a3b8] !rounded-md">
+              Logout admin
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setPedindoLogin(true)} disabled={authState === ESTADOS.A_ENTRAR}
+              className="!border-white/20 !text-[#e8f0fe] !shadow-none !rounded-md">
+              Login Admin
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={() => setConfirmandoSaida(true)} disabled={aSair}
             className="!border-white/15 !text-[#94a3b8] !rounded-md">
-            Logout admin
+            Sair da conta
           </Button>
-        ) : (
-          <Button variant="ghost" size="sm" onClick={() => setPedindoLogin(true)} disabled={authState === ESTADOS.A_ENTRAR}
-            className="!border-white/20 !text-[#e8f0fe] !shadow-none !rounded-md">
-            Login Admin
-          </Button>
-        )}
+        </div>
       </div>
+
+      {/* Confirmação INLINE, como o `pedindoLogin` acima e o ComandoButton —
+          o painel não tem sistema de modais e não é aqui que se introduz um. */}
+      {confirmandoSaida && (
+        <div style={{
+          padding: "0.7rem 0.85rem",
+          background: "rgba(0,0,0,0.2)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: "10px",
+          display: "flex", flexDirection: "column", gap: "0.5rem",
+        }}>
+          <p style={{ margin: 0, fontSize: "0.78rem", color: COR.text, lineHeight: 1.45 }}>
+            Sair da conta encerra a sua sessão neste aparelho. Será preciso entrar
+            outra vez com o Google para voltar ao painel.
+          </p>
+          <div style={{ display: "flex", gap: "0.4rem" }}>
+            <Button variant="secondary" size="sm" onClick={sairDaConta} disabled={aSair}>
+              {aSair ? "A sair…" : "Sair da conta"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmandoSaida(false)} disabled={aSair}
+              className="!border-white/15 !text-[#94a3b8]">
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
 
       {pedindoLogin && !statusOk && (
         <form onSubmit={submitLogin} style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>

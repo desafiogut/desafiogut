@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   enderecoSessaoSincrono, gravarDicaAdmin, limparDicaAdmin, adminProvavel,
+  pausarPainelAdmin, retomarPainelAdmin, painelAdminPausado,
 } from "./dicaSessao.js";
 // `useAdmin.js` importa React, mas não tem JSX e a parte reconciliada é pura,
 // portanto importa-se em node sem runner de DOM.
@@ -185,9 +186,120 @@ test("App.jsx: o confirmado ganha sempre que houver address; o palpite só sem e
   const app = readFileSync(new URL("../App.jsx", import.meta.url), "utf8");
   assert.match(
     app,
-    /if \(address \? \(isAdmin && !adminLoading\) : adminProvavel\)/,
+    /\(address \? \(isAdmin && !adminLoading\) : adminProvavel\)/,
     "a decisão do ADM tem de ser ternária em `address` — com address vale o backend, sem ele o palpite. " +
     "Um `||` aqui deixaria o palpite sobreviver a uma negativa confirmada.",
+  );
+});
+
+test("App.jsx: a pausa é testada ANTES do encaminhamento, e nega-o", () => {
+  const app = readFileSync(new URL("../App.jsx", import.meta.url), "utf8");
+  assert.match(
+    app,
+    /if \(!painelAdminPausado\(\) && \(address \?/,
+    "sem a pausa em primeiro lugar e negada, o botão 'Sair do painel' volta a ser " +
+    "anulado por esta guarda — foi esse o defeito medido no MC89.33.",
+  );
+});
+
+// ── Pausa do encaminhamento (MC89.34) ───────────────────────────────────────
+
+/** sessionStorage falso — a pausa NÃO pode viver no mesmo storage da dica. */
+function sessaoFalsa(inicial = {}) {
+  const m = new Map(Object.entries(inicial));
+  return {
+    getItem: (k) => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(k, String(v)),
+    removeItem: (k) => m.delete(k),
+    _bruto: m,
+  };
+}
+
+test("sem ninguém pedir, não há pausa", () => {
+  assert.equal(painelAdminPausado(sessaoFalsa()), false);
+});
+
+test("pausar → pausado; retomar → deixa de estar", () => {
+  const s = sessaoFalsa();
+  pausarPainelAdmin(s);
+  assert.equal(painelAdminPausado(s), true);
+  retomarPainelAdmin(s);
+  assert.equal(painelAdminPausado(s), false);
+});
+
+test("retomar sem ter pausado não rebenta", () => {
+  const s = sessaoFalsa();
+  assert.doesNotThrow(() => retomarPainelAdmin(s));
+  assert.equal(painelAdminPausado(s), false);
+});
+
+test("⚠️ a pausa NÃO é a dica: são chaves e storages diferentes", () => {
+  // Se algum dia partilharem chave, sair do painel apagaria o palpite e o
+  // MC89.31 deixaria de funcionar no arranque seguinte.
+  const sessao = sessaoFalsa();
+  pausarPainelAdmin(sessao);
+  const local = storageFalso({ "privy:connections": sessaoDe(ADMIN) });
+  gravarDicaAdmin(ADMIN, true, local);
+  assert.equal(adminProvavel(local), true, "a pausa não pode invalidar a dica");
+  assert.equal(local.getItem("gut_admin_pausa"), null, "a pausa não pode ir para o localStorage");
+  assert.equal(sessao.getItem("gut_admin_hint"), null, "a dica não pode ir para o sessionStorage");
+});
+
+test("⚠️ a pausa usa sessionStorage por omissão — e isso NÃO é um detalhe", () => {
+  // Os testes acima injetam o storage, portanto não veem qual é o PADRÃO. Se
+  // alguém trocar o default para localStorage, a pausa sobrevive ao fecho da
+  // app e um único "Sair do painel" desfaz o MC89.31 para sempre — em silêncio,
+  // e só se dá por isso no aparelho, no dia seguinte. Por isso a escolha é
+  // afirmada aqui, na fonte.
+  const src = readFileSync(new URL("./dicaSessao.js", import.meta.url), "utf8");
+  assert.match(
+    src,
+    /function storagePausaPadrao\(\) \{\s*try \{ return globalThis\.sessionStorage/,
+    "a pausa tem de vir do sessionStorage: morrer com o processo da WebView é a propriedade que preserva o MC89.31",
+  );
+});
+
+test("valor estranho na chave da pausa não conta como pausa", () => {
+  const s = sessaoFalsa({ "gut_admin_pausa": "talvez" });
+  assert.equal(painelAdminPausado(s), false);
+});
+
+test("storage que rebenta → sem pausa, sem lançar", () => {
+  const s = { getItem() { throw new Error("SecurityError"); },
+              setItem() { throw new Error("QuotaExceeded"); },
+              removeItem() { throw new Error("x"); } };
+  assert.equal(painelAdminPausado(s), false);
+  assert.doesNotThrow(() => pausarPainelAdmin(s));
+  assert.doesNotThrow(() => retomarPainelAdmin(s));
+});
+
+test("AdminLayout: sair grava a pausa ANTES de navegar", () => {
+  const layout = readFileSync(new URL("../components/admin/AdminLayout.jsx", import.meta.url), "utf8");
+  assert.match(
+    layout,
+    /pausarPainelAdmin\(\);\s*\n\s*navigate\("\/"\);/,
+    "a ordem importa: navegar primeiro deixa a guarda de '/' correr sem a pausa e devolver o admin ao painel.",
+  );
+});
+
+test("AdminLayout: entrar no painel retoma o encaminhamento", () => {
+  const layout = readFileSync(new URL("../components/admin/AdminLayout.jsx", import.meta.url), "utf8");
+  assert.match(
+    layout,
+    /useEffect\(\(\) => \{ retomarPainelAdmin\(\); \}, \[\]\)/,
+    "sem isto, quem saísse uma vez ficava com a pausa a valer até fechar a app.",
+  );
+});
+
+test("AdminLayout: sair da conta revoga a sessão admin ANTES do logout do Privy", () => {
+  const layout = readFileSync(new URL("../components/admin/AdminLayout.jsx", import.meta.url), "utf8");
+  const iLogoutAdmin = layout.indexOf("await logout()");
+  const iDesconectar = layout.indexOf("desconectar()");
+  assert.ok(iLogoutAdmin > 0 && iDesconectar > 0, "faltam as duas metades do sair da conta");
+  assert.ok(
+    iLogoutAdmin < iDesconectar,
+    "a revogação do refresh admin precisa da sessão Privy viva para o pedido sair; " +
+    "pela ordem inversa o refresh ficaria válido no servidor até expirar.",
   );
 });
 

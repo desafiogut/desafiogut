@@ -13,6 +13,8 @@ import { IdiomaProvider } from "./context/IdiomaContext.jsx";
 import { ToastContainer, useToast } from "./widgets/toast/Toast.jsx";
 import ReferralRegistrar from "./components/ReferralRegistrar.jsx";
 import { useAdmin } from "./hooks/useAdmin.js";
+// MC89.34 — a pausa do encaminhamento vive ao lado do palpite que ela suspende.
+import { painelAdminPausado } from "./lib/dicaSessao.js";
 // MC39.19 (Onda 2, item 3) — code-splitting por rota. Páginas CRÍTICAS de entrada
 // (Dashboard/Vitrine) ficam EAGER (evita flash de Suspense no first paint); as demais
 // via React.lazy → saem do chunk inicial e carregam sob demanda. LazyBoundary trata
@@ -180,7 +182,23 @@ function DashboardOuCorporativo() {
   // em que há, vale só a resposta confirmada. Escrito nesta ordem para que o
   // palpite não possa sobreviver à verdade — se `address` existe e o backend
   // disse que não é admin, isto é false e o Dashboard renderiza, como antes.
-  if (address ? (isAdmin && !adminLoading) : adminProvavel) {
+  //
+  // MC89.34 — a pausa vem PRIMEIRO, e é o utilizador que a cria.
+  //
+  // O encaminhamento do MC89.31 tornou esta rota inalcançável para um admin: a
+  // guarda está aqui, na ROTA, portanto anulava o botão "Sair do painel", o
+  // "Início" da barra inferior e o endereço escrito à mão. Medido: o admin
+  // ficava fechado no painel, sem forma de sair nem de terminar a sessão.
+  //
+  // Lida do sessionStorage a CADA render, de propósito: um retrato tirado no
+  // arranque (como `adminProvavel`) não veria a pausa gravada um instante antes
+  // do `navigate`. É leitura síncrona sem escrita, como `lerSaldoCache`.
+  //
+  // ⚠️ A pausa morre com o processo da WebView. Reabrir a app volta a encaminhar
+  // direto para /admin — o ganho do MC89.31 fica intacto. Se algum dia isto
+  // passar para localStorage, um único "Sair do painel" desfaz o MC89.31 para
+  // sempre. Há teste no aparelho a cobrir precisamente isso.
+  if (!painelAdminPausado() && (address ? (isAdmin && !adminLoading) : adminProvavel)) {
     return <Navigate to="/admin" replace />;
   }
 
