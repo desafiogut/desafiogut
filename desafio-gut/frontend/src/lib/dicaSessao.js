@@ -19,12 +19,34 @@
 // corrigiria "reabri agora mesmo" e deixaria de pé "reabri amanhã" — que é o
 // caso que o operador descreveu. A dica de encaminhamento vive 24 h.
 //
-// É exatamente a assimetria que o MC88.42 já usa para o lojista:
-//     lojista : tipoConfirmado  (24 h, encaminha) + cotaCorporativa (servidor, autoriza)
-//     admin   : dica desta chave (24 h, encaminha) + gut_admin_check (5 min, autoriza)
+// É exatamente a assimetria que o MC88.42 já usa para o lojista, e que o MC89.36
+// pôs a viver neste mesmo módulo (ver `CHAVE_LOJISTA`):
+//     lojista : gut_corporativo_hint (24 h, encaminha) + cotaCorporativa (servidor, autoriza)
+//     admin   : gut_admin_hint       (24 h, encaminha) + gut_admin_check  (5 min, autoriza)
 
 const CHAVE_DICA = "gut_admin_hint";
 const TTL_MS     = 24 * 60 * 60 * 1000; // 24 h — igual ao cache de saldo (MC88.34)
+
+// MC89.36 — a dica do LOJISTA, agora com chave própria.
+//
+// ANTES vivia dentro do `gut_saldo_cache`, como o campo `tipoConfirmado`. Isso
+// parecia arrumação e era um defeito: o `gut_saldo_cache` pertence à guarda de
+// coerência do SALDO (AppContext, MC88.34), que o apaga inteiro no logout para
+// que o saldo de A nunca apareça a B. Essa guarda está certa para o que foi
+// escrita — só que levava à frente um valor que não é saldo, não é dado pessoal,
+// e cuja regra de invalidação é outra.
+//
+// CONSEQUÊNCIA MEDIDA (MC89.35, tabela de decisão 10/10): o palpite do lojista
+// morria em SEIS cenários — logout, troca de conta, mais de 24 h, primeiro
+// login, reinstalação, sessão ilegível — e dois deles são exatamente o gesto que
+// o operador usa para testar. O ADM não sofria do mesmo porque `gut_admin_hint`
+// tem chave própria e `limparDicaAdmin` não tem um único ponto de chamada no
+// produto. A assimetria nunca foi decidida; era só onde cada um foi guardado.
+//
+// Com chave própria, o palpite do lojista passa a ter o MESMO ciclo de vida do
+// do ADM. As guardas são as mesmas três (ver `lojistaProvavel`), incluindo a que
+// o ancora ao endereço da sessão em disco.
+const CHAVE_LOJISTA = "gut_corporativo_hint";
 
 function storagePadrao() {
   try { return globalThis.localStorage ?? null; } catch { return null; }
@@ -106,6 +128,66 @@ export function adminProvavel(storage = storagePadrao()) {
     if (!raw) return false;
     const d = JSON.parse(raw);
     if (!d || d.isAdmin !== true) return false;
+    if (!Number.isFinite(d.em) || Date.now() - d.em > TTL_MS) return false;
+    const sessao = enderecoSessaoSincrono(storage);
+    if (!sessao) return false;
+    return String(d.endereco).toLowerCase() === sessao;
+  } catch { return false; }
+}
+
+// ─── Dica do LOJISTA (MC89.36) ───────────────────────────────────────────────
+// Gémea da do ADM, de propósito: mesmas três guardas, mesmo TTL, mesma regra de
+// apagar-em-vez-de-gravar-negativa. Onde as duas divergirem, alguém terá de
+// explicar porquê — foi divergirem sem querer que criou o defeito do MC89.35.
+
+/**
+ * Grava a dica do lojista depois de o BACKEND ter respondido.
+ *
+ * Chamada com `eCorporativo === false` APAGA a dica em vez de gravar uma
+ * negativa. É o que solta um ex-lojista do painel antigo logo no primeiro
+ * restauro em que /cotas responde, sem esperar pelas 24 h — exatamente o que a
+ * linha que isto substitui já fazia (`tipoConfirmado: … : null`).
+ */
+export function gravarDicaLojista(endereco, eCorporativo, storage = storagePadrao()) {
+  if (!storage || !endereco) return;
+  try {
+    if (!eCorporativo) { storage.removeItem(CHAVE_LOJISTA); return; }
+    storage.setItem(CHAVE_LOJISTA, JSON.stringify({
+      endereco: String(endereco).toLowerCase(),
+      corporativo: true,
+      em: Date.now(),
+    }));
+  } catch { /* storage cheio ou indisponível — a dica é best-effort */ }
+}
+
+/** Remove a dica do lojista (troca de conta, invalidação manual). */
+export function limparDicaLojista(storage = storagePadrao()) {
+  try { storage?.removeItem(CHAVE_LOJISTA); } catch { /* idem */ }
+}
+
+/**
+ * `true` quando há razão para crer que quem tem a sessão em disco é lojista.
+ *
+ * As MESMAS três condições do `adminProvavel`, todas obrigatórias:
+ *   1. existe dica e não expirou (24 h);
+ *   2. a dica diz corporativo === true;
+ *   3. o endereço da dica é o MESMO de `privy:connections`.
+ *
+ * ⚠️ A condição 3 é a que impede que uma dica escrita à mão sirva de alguma
+ * coisa. Quem puser `corporativo:true` com o SEU endereço vê o redirect e a
+ * seguir é expulso por `CorporativoRoute` assim que /cotas responder que não tem
+ * cota — o mesmo que já veria hoje ao escrever /corporativo na barra de
+ * endereço. Não há ganho de superfície de ataque: isto ENCAMINHA, não autoriza.
+ *
+ * ⚠️ E NÃO é dado pessoal: é a string "corporativo" associada a um endereço
+ * público que já está no disco, em `privy:connections`.
+ */
+export function lojistaProvavel(storage = storagePadrao()) {
+  try {
+    const raw = storage?.getItem(CHAVE_LOJISTA);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (!d || d.corporativo !== true) return false;
     if (!Number.isFinite(d.em) || Date.now() - d.em > TTL_MS) return false;
     const sessao = enderecoSessaoSincrono(storage);
     if (!sessao) return false;

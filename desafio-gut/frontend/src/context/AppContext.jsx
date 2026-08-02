@@ -29,7 +29,14 @@ import {
   gravarPrazoStorage,
 } from "../lib/leilaoTimer.js";
 import { apiGet, apiPost } from "../lib/api.js";
-import { enderecoSessaoSincrono, adminProvavel as lerAdminProvavel } from "../lib/dicaSessao.js";
+import {
+  enderecoSessaoSincrono,
+  adminProvavel as lerAdminProvavel,
+  // MC89.36 — o palpite do lojista mudou-se para aqui, para ficar ao lado do do
+  // ADM e com o mesmo ciclo de vida. Ver o cabeçalho de `CHAVE_LOJISTA`.
+  lojistaProvavel as lerLojistaProvavel,
+  gravarDicaLojista,
+} from "../lib/dicaSessao.js";
 
 // Persistência do prazoTimestamp (Onda 5 FASE 0): o timer é IMUNE a refresh
 // porque cada tipo de leilão guarda seu próprio prazo no localStorage. Cálculo
@@ -239,6 +246,19 @@ export function AppProvider({ children }) {
   // ⚠️ Só ENCAMINHA. Não concede nada — ver o cabeçalho de lib/dicaSessao.js
   // para as três defesas que continuam de pé.
   const [adminProvavel] = useState(lerAdminProvavel);
+
+  // MC89.36 — LOJISTA PROVÁVEL, agora lido da chave própria.
+  //
+  // Mesma natureza do `adminProvavel` logo acima: fotografia do arranque, lida
+  // UMA vez, de forma síncrona, antes do primeiro paint. A partir do momento em
+  // que /cotas responde, quem manda é a resposta CONFIRMADA e este palpite deixa
+  // de ser consultado (ver `tipoOtimista`).
+  //
+  // O que muda face ao MC88.42 não é a lógica — é o RECIPIENTE. Antes lia-se
+  // `saldoCacheInicial?.tipoConfirmado`, e esse registo era apagado no logout
+  // pela guarda de coerência do saldo. Agora tem chave própria e sobrevive,
+  // exatamente como a do ADM.
+  const [lojistaProvavel] = useState(lerLojistaProvavel);
 
   // MC89.31 — "há uma sessão Privy em disco", lido a t=0.
   //
@@ -466,23 +486,37 @@ export function AppProvider({ children }) {
   // autorização. Por decisão do operador seguiu-se a variante mais conservadora
   // das três em cima da mesa: o palpite SÓ é usado se a última sessão
   // CONFIRMADA neste MESMO endereço tiver sido corporativa. Um utilizador comum
-  // nunca terá `tipoConfirmado` no cache, portanto NUNCA vê o painel do
-  // lojista, nem por um instante — nem sequer com o cache manipulado, porque
-  // `lerSaldoCache()` valida o endereço contra `privy:connections` de forma
-  // síncrona antes do primeiro paint (guarda do MC88.34).
+  // nunca terá a dica gravada, portanto NUNCA vê o painel do lojista, nem por um
+  // instante — nem sequer com a dica manipulada, porque `lojistaProvavel()`
+  // valida o endereço contra `privy:connections` de forma síncrona antes do
+  // primeiro paint (a mesma guarda que nasceu no MC88.34).
   //
-  // O primeiro login de sempre de um lojista continua a passar pelo comum: aí
-  // não há nada em cache e adivinhar seria inventar.
-  const tipoOtimista = cotaCorporativa == null && saldoCacheInicial?.tipoConfirmado === "corporativo"
+  // MC89.36 — o primeiro login de sempre de um lojista JÁ NÃO passa pelo
+  // Dashboard comum: passa pelo estado neutro, que não afirma nada. Continua a
+  // não haver palpite nesse caso — adivinhar seria inventar —, mas deixou de ser
+  // preciso adivinhar para não mostrar o produto errado.
+  //
+  // MC89.36 — A FONTE DO PALPITE MUDOU DE SÍTIO, A REGRA NÃO.
+  // Lia-se `saldoCacheInicial?.tipoConfirmado`; passa a ler-se a chave própria
+  // (`lojistaProvavel`), pelas razões do cabeçalho de `CHAVE_LOJISTA` em
+  // lib/dicaSessao.js. As três guardas continuam de pé — incluindo a que valida
+  // o endereço contra `privy:connections` de forma síncrona antes do primeiro
+  // paint, que é a que impede que o palpite de A se aplique a B.
+  const tipoOtimista = cotaCorporativa == null && lojistaProvavel
     ? "corporativo"
     : null;
   const tipoProvavel = tipoUsuario === "corporativo" ? "corporativo" : (tipoOtimista ?? tipoUsuario);
 
   // Grava o tipo assim que ele é CONFIRMADO (e apaga o palpite quando deixa de
   // ser corporativo, para um ex-lojista não ficar preso ao painel antigo).
+  //
+  // MC89.36 — passa a escrever na chave própria em vez de dentro do
+  // `gut_saldo_cache`. Era ali que o palpite morria: a guarda de coerência do
+  // saldo (mais abaixo, AppContext:659-670) apaga esse registo inteiro no
+  // logout, e levava o palpite à frente sem saber que ele lá estava.
   useEffect(() => {
     if (!address || cotaCorporativa == null) return;
-    gravarSaldoCache(address, { tipoConfirmado: tipoUsuario === "corporativo" ? "corporativo" : null });
+    gravarDicaLojista(address, tipoUsuario === "corporativo");
   }, [address, cotaCorporativa, tipoUsuario]);
 
   // Atualiza cotaCorporativa em memória após auto-cadastro (SejaNossoParceiro)
