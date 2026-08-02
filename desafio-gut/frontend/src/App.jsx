@@ -1,6 +1,6 @@
 // force deploy 2026-05-11 — reset versionado + MOCK_MODE removido
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 // MC88.4 — plugin nativo do Capacitor para interceptar o deep link do OAuth
 // (Privy/Google) no Android. Aliased para CapApp: o export chama-se App e
 // colidiria com o componente App() abaixo.
@@ -24,6 +24,9 @@ import Vitrine         from "./pages/Vitrine.jsx";
 // pagava um fallback de Suspense — trocaríamos um ecrã errado por um ecrã
 // vazio, que é exatamente o que o MC88.37 corrigiu. São ~2 KB.
 import EstadoNeutro    from "./components/EstadoNeutro.jsx";
+// MC89.40 (F2) — ecrã de bloqueio do painel do lojista sem cota paga. Eager:
+// substitui conteúdo já em rota, um fallback de Suspense aqui seria um piscar.
+import CotaInativa     from "./components/CotaInativa.jsx";
 import ChatbotWidget   from "./components/ChatbotWidget.jsx";
 // MC88.25 (P3) — avisa se a app nao estiver na rede de producao. Silencioso em mainnet.
 import AvisoRede       from "./components/AvisoRede.jsx";
@@ -85,8 +88,22 @@ function RouteFallback() {
 // tipoCarregando evita redirect prematuro enquanto o fetch do blob está pendente.
 // MC17 — query param ?rc=1: acesso direto sem Privy após cadastro.
 // Usa window.location (full page reload garante search params corretos).
+// MC89.40 (F2) — rotas do mundo lojista que continuam abertas MESMO com a cota
+// inativa. Sem esta lista, o botão "Comprar cota" do ecrã de bloqueio levaria a
+// uma rota que mostra… o ecrã de bloqueio. Seria uma porta para uma parede — o
+// erro que o MC89.34 já ensinou a não repetir.
+//   /corporativo/carteira → é ONDE SE COMPRA
+//   /corporativo/cotas    → é onde se vê o estado ("ATIVA"/"INATIVA")
+const ROTAS_SEM_GATE_DE_COTA = new Set(["/corporativo/carteira", "/corporativo/cotas"]);
+
 function CorporativoRoute({ children }) {
-  const { tipoUsuario, tipoProvavel, tipoCarregando, cotaCorporativa, isConnected, pareceAutenticado, ready } = useAppContext();
+  const {
+    tipoUsuario, tipoProvavel, tipoCarregando, cotaCorporativa, isConnected,
+    pareceAutenticado, ready,
+    // MC89.40 (F2) — true | false | null (ainda não sei).
+    cotaAtiva,
+  } = useAppContext();
+  const { pathname } = useLocation();
   // MC39.4.1 — esperar o Privy inicializar antes de decidir o redirect. Sem isto, um
   // hard-reload de uma rota gated (ex.: /seguranca) bouncava o lojista para "/" porque
   // isConnected ainda era false durante a inicialização do Privy.
@@ -135,6 +152,27 @@ function CorporativoRoute({ children }) {
   if (tipoUsuario !== "corporativo" && tipoProvavel !== "corporativo") {
     return <Navigate to="/" replace />;
   }
+
+  // ── MC89.40 (F2) — A COTA TEM DE ESTAR PAGA PARA USAR O PAINEL ─────────────
+  //
+  // ⚠️ ESTE GATE SUBSTITUI O CONTEÚDO, NÃO REDIRECIONA. E isso não é estilo: se
+  // aqui houvesse um `<Navigate to="/">`, voltaria o CICLO que o MC88.42 mediu —
+  // sete voltas entre `/` e `/corporativo` nos 1974→5064 ms —, porque o MC89.36
+  // encaminha o lojista para cá pelo PALPITE, antes de a cota ter respondido.
+  // Encaminhar e autorizar continuam a ser coisas separadas.
+  //
+  // `cotaAtiva === null` significa "ainda não sei": nesse caso deixa-se passar,
+  // porque as guardas acima já garantiram que é lojista e o SERVIDOR recusa
+  // qualquer escrita que não deva acontecer. Bloquear no "não sei" mostraria
+  // "cota inativa" a um lojista pago durante o arranque — a mesma família de
+  // erro que o MC89.36 veio corrigir: afirmar o que ainda não se sabe.
+  //
+  // ⚠️ Isto é CONFORTO. Quem impede de facto é `_lib/cota-utils.mjs` no
+  // servidor. Um gate só aqui não fecha nada.
+  if (cotaAtiva === false && !ROTAS_SEM_GATE_DE_COTA.has(pathname)) {
+    return <CotaInativa />;
+  }
+
   return children;
 }
 
