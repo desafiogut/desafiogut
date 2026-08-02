@@ -1,0 +1,100 @@
+MC89.39 — S0: LEVANTAMENTO DAS 7 COTAS
+Data: 2026-08-02 | Consulta read-only ao Supabase de produção
+R4: identificadores mascarados; nada de CNPJ ou email completos.
+
+================================================================================
+⚠️ CONCLUSÃO QUE MUDA A PREMISSA DESTE MC — LEIA ANTES DE TUDO
+================================================================================
+O MC89.39 parte de "marcar as cotas LEGÍTIMAS como pagas". Fui buscar a lista
+para saber quais eram e em que nível.
+
+    NÃO HÁ COTAS LEGÍTIMAS. AS 7 SÃO REGISTOS DE TESTE.
+
+Não é uma inferência frágil — está escrito nos próprios dados:
+
+  n  id (mascarado)   empresa             segmento     origem   e-mail
+  1  0x1234…7890      "Teste Corporativo" Tecnologia   —        —
+  2  0x5279…42b6      "zzzzzz"            Varejo       —        —
+  3  0x6ac9…674d      "DesafioGUT"        Tecnologia   —        de…@gmail.com
+  4  0x8e17…95a4      "xxx"               Varejo       —        —
+  5  0xe1a0…2a4d      "ssss"              Varejo       —        —
+  6  cnpj:…0161       "Teste MC12.3.1"    Varejo       direto   te…@corporativo.com
+  7  cnpj:…0100       "DesafioGUT"        Outro        direto   de…@gmail.com
+
+  · Dois chamam-se literalmente "Teste …" (um deles nomeia o próprio MC12.3.1).
+  · Três são teclado ao acaso: "zzzzzz", "xxx", "ssss".
+  · Dois são a conta do PRÓPRIO OPERADOR (desafiogut@gmail.com) — e o nº 3 é
+    exatamente o endereço 0x6ac9…674d com que entrámos no MC89.36.
+  · As 7 foram criadas no MESMO DIA, 2026-06-21.
+  · As 7 têm `valor = 0`, `vendida = false`, `categoria = null`, `endereco = null`.
+  · O nº 1 tem `cliente_id` "0x1234…7890" — um endereço de manual, não uma
+    carteira real.
+
+⇒ NÃO EXECUTEI A MARCAÇÃO. Marcar "zzzzzz" e "xxx" como cotas pagas escreveria
+  em produção que alguém comprou uma cota de R$ 2 640 a R$ 18 000. Seria inventar
+  factos comerciais em dados reais, e é o género de escrita que não tem volta.
+
+================================================================================
+E ISSO É, NA VERDADE, UMA BOA NOTÍCIA
+================================================================================
+O MC89.38-F0 dizia "ligar o gate bloqueia 100% dos lojistas". Com a lista à
+frente, a leitura correta é outra:
+
+    NÃO HÁ NENHUM LOJISTA REAL PARA BLOQUEAR.
+
+⇒ O gate (F1/F2/F3) pode ser ligado com impacto comercial ZERO. O bloqueio que o
+  MC89.38 levantou desaparece — não porque o número mudou, mas porque agora
+  sabemos o que o número significa. Contar não bastava; era preciso olhar.
+
+================================================================================
+UM TERCEIRO ACHADO, DE INTEGRIDADE DE DADOS
+================================================================================
+    linhas ................. 7
+    CNPJs distintos ........ 2
+    CNPJs repetidos ........ 1  (um CNPJ em 6 linhas)
+    índice UNIQUE em cnpj .. 0  ⚠️ NÃO EXISTE
+
+`cotas.mjs:400-401` diz, em comentário: "anti-duplicidade: getCotaByCnpj (coluna
+cnpj UNIQUE no Supabase) + fallback Blob legado".
+
+⇒ ESSA UNIQUE NÃO EXISTE NA BASE DE DADOS. A anti-duplicidade é só de aplicação
+  (uma leitura seguida de escrita), portanto não protege contra corrida nem
+  contra escrita por outro caminho — e os dados provam-no: 6 linhas partilham o
+  mesmo CNPJ.
+
+  É o mesmo padrão do defeito do MC89.37: um comentário a afirmar uma garantia
+  que o código (ou aqui, o esquema) não dá. Registo, não corrijo — acrescentar
+  um índice UNIQUE agora falharia por causa das 6 linhas duplicadas, e apagá-las
+  é decisão do operador.
+
+================================================================================
+RECOMENDAÇÃO
+================================================================================
+NÃO correr o script de marcação em massa. Em vez disso:
+
+A. LIGAR O GATE (F1/F2/F3) JÁ. Impacto comercial zero — não há cliente real.
+   É o caminho que o MC89.37 desenhou e que agora está desimpedido.
+
+B. Para poder TESTAR o caminho "cota ativa", marcar APENAS UMA cota — a do
+   próprio operador (nº 3, 0x6ac9…674d, a que usámos no MC89.36) — com uma
+   categoria à escolha dele.
+   ⇒ É uma escrita de UMA linha, na conta dele, reversível, e com um propósito
+     claro: sem ela não há como validar o cenário positivo no aparelho.
+   ⚠️ Preciso de ordem explícita e da categoria (bronze/prata/ouro/diamante).
+
+C. Limpar os registos de teste (nºs 1, 2, 4, 5, 6) é decisão do operador e um MC
+   próprio. Não proponho fazê-lo aqui: é apagar em produção, e o custo de manter
+   é praticamente nulo depois do gate ligado — passam a ver o ecrã de bloqueio,
+   como qualquer registo sem cota.
+
+D. O índice UNIQUE em `cnpj` fica registado como dívida, dependente de (C).
+
+================================================================================
+O QUE PRECISO DE SI PARA CONTINUAR
+================================================================================
+1. Confirmação de que estas 7 são mesmo todas de teste (é a sua base, não a
+   minha — se alguma for real, diga qual e paro tudo).
+2. Se quer (B): qual a categoria a atribuir à sua conta.
+3. Aval para seguir para F1/F2/F3 sem marcação em massa.
+
+Enquanto não houver resposta a (1), não escrevo nada na tabela `cotas`.
