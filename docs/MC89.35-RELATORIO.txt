@@ -1,0 +1,204 @@
+================================================================================
+MC89.35 — ELIMINAÇÃO DA TRANSIÇÃO DO CORPORATIVO PELO DASHBOARD COMUM
+           (DIAGNÓSTICO + PLANO)
+================================================================================
+Data      : 2026-08-02
+APK       : instalado no aparelho a 2026-08-01 20:32 (MC89.34)
+Branch    : feat/mc89.32-diagnostico-perf   ⚠️ ver PENDÊNCIA P3
+R1        : CUMPRIDA — zero alteração de código do produto
+R2        : CUMPRIDA — nenhuma ação com custo financeiro
+R5        : CUMPRIDA — nenhuma chave ou credencial tocada
+Commits   : a034616 (S0) · 01e59cc (S1) · este relatório (S2)
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+O operador reportou que o lojista AINDA passa pelo Dashboard comum, apesar do
+MC88.42. Confirmei o relato e encontrei a causa — mas ela não é nenhuma das três
+que o enunciado supunha.
+
+  1. O CÓDIGO ESTÁ CERTO E ESTÁ NO APARELHO.
+     Extraí as cinco funções que decidem o encaminhamento do bundle minificado
+     que está DENTRO do APK instalado e comparei-as com o fonte: idênticas. Não
+     é drift de deploy nem APK velho. (Verifiquei isto primeiro porque já
+     aconteceu — MC79.)
+
+  2. O MC88.42 É, POR DESENHO, UMA OTIMIZAÇÃO DE SEGUNDA VISITA.
+     O palpite que manda o lojista direto para /corporativo lê-se de um registo
+     em disco que só é escrito DEPOIS de `/cotas` responder — ou seja, na sessão
+     ANTERIOR. Na primeira visita de cada ciclo não há nada para adivinhar.
+
+  3. E O CICLO REINICIA-SE COM MUITO MAIS FREQUÊNCIA DO QUE PARECE.
+     O palpite do lojista não tem chave própria: vive DENTRO do `gut_saldo_cache`,
+     que é apagado no logout pela guarda de coerência do SALDO (MC88.34) — uma
+     guarda que nem sabe que ele lá está. Resultado: seis cenários em que o
+     lojista vê o Dashboard comum, e dois deles são exatamente o gesto que o
+     operador usa para testar (sair da conta / trocar de conta).
+
+  4. A ASSIMETRIA COM O ADM EXPLICA PORQUE É QUE "NO ADM RESULTOU".
+     `limparDicaAdmin` não tem UM ÚNICO ponto de chamada no produto. O
+     `gut_admin_hint` sobrevive ao logout; o do lojista não. Nunca foi decisão —
+     é consequência de o palpite do lojista ter sido guardado dentro de um
+     recipiente com outro dono.
+
+  5. A JANELA É MAIOR DO QUE O MC88.42 MEDIU.
+     Medi hoje, no aparelho: 5,7 s com as funções Netlify quentes e 12,0 s a
+     frio. O MC88.42 tinha medido 3,9–9,0 s.
+
+  ⇒ CORREÇÃO PROPOSTA: parar de AFIRMAR "é comum" enquanto não se sabe. Estado
+    neutro em vez do Dashboard comum, só para quem parece autenticado, com prazo
+    e falha para o lado aberto. Isto resolve os SEIS cenários sozinho.
+
+  ⚠️ A OPÇÃO A DO ENUNCIADO (a "recomendada") NÃO RESOLVE NADA, e digo-o com
+    prova: `pareceAutenticado` responde "há sessão em disco?", não "de que tipo
+    é?". Nos cenários reportados o palpite NÃO EXISTE — não há o que antecipar.
+
+================================================================================
+COMO CHEGUEI AQUI — E PORQUE É QUE PODE CONFIAR NOS NÚMEROS
+================================================================================
+Três precauções, todas por lições já pagas neste projeto:
+
+  · NÃO CONFIEI NO CÓDIGO-FONTE como prova do que corre no telemóvel. Comparei
+    com o bundle embarcado no APK. (MC79: produção revertida por drift.)
+
+  · NÃO VALIDEI O CÓDIGO CONTRA UMA REESCRITA MINHA. A tabela de decisão corre
+    as funções MINIFICADAS COPIADAS VERBATIM do APK instalado. Se a minha
+    leitura do fonte estivesse errada, o arnês teria divergido.
+
+  · PUS CONTROLO POSITIVO E NEGATIVO no arnês. Um teste que só devolve verde não
+    prova que o instrumento vê alguma coisa. Deu 10/10 com ambos os controlos.
+
+================================================================================
+DIAGNÓSTICO — O ESSENCIAL
+================================================================================
+CENÁRIOS EM QUE O LOJISTA VÊ O DASHBOARD COMUM (lista exaustiva, provada por
+execução):
+
+   A  logout → login .......................... ← o teste do operador
+   B  troca de conta .......................... ← o teste do operador
+   C  reabrir a app passadas mais de 24 h ..... ← o lojista real, na vida dele
+   E  primeiro login de sempre
+   F  reinstalação / limpeza de dados
+   G  sessão Privy em disco sem endereço legível
+
+   (D — reabrir às 23 h 59 — vai direto para /corporativo, como esperado.)
+
+C não é um caso de laboratório: um lojista anunciante não abre a app todos os
+dias. Para quem abre duas vezes por semana, o palpite NUNCA está quente.
+
+ESTADO MEDIDO NO APARELHO (endereços mascarados por R4):
+   sessão viva          : ADM, 0x1E1b…98cB, em /admin
+   gut_saldo_cache      : sem a chave `tipoConfirmado`
+   gut_admin_hint       : presente, isAdmin=true
+   históricos de chat   : admin 0x1e1b…98cb · comum 0x5baf…32b8
+                          · corporativo 0x6ac9…674d
+   ⇒ o aparelho já viu três perfis. O operador testa TROCANDO DE CONTA — que é
+     o cenário B.
+
+JANELA MEDIDA HOJE (dois arranques a frio, Resource Timing por CDP):
+   arranque 1 (funções a frio) : FCP 876 ms · cadeia /cotas termina aos 11 950 ms
+   arranque 2 (funções quentes): FCP 568 ms · cadeia /cotas termina aos  5 707 ms
+   ⚠️ números da conta ADM, que faz DUAS chamadas a /cotas. O lojista encontrado
+     por endereço faz UMA — teria caído aos ~11,2 s e aos ~5,1 s. Mesma ordem de
+     grandeza, e pior do que o MC88.42 mediu.
+
+O QUE FOI ELIMINADO COMO CAUSA (verificado, não assumido):
+   · drift de deploy / APK velho ............... eliminado
+   · leitura assíncrona do cache ............... eliminado (é síncrona, no useState)
+   · redirect atrasado por tipoCarregando ...... eliminado (com palpite é imediato)
+   · `address` em falta a bloquear o palpite ... eliminado (o palpite não o usa)
+   · maiúsculas/minúsculas no endereço ......... testado, não é defeito vivo
+
+================================================================================
+PLANO DE AÇÃO — RESUMO (detalhe em docs/MC89.35-PLANO.txt)
+================================================================================
+P1 — OBRIGATÓRIA. Estado neutro enquanto o perfil é desconhecido.
+     Três restrições que não são negociáveis, cada uma por um erro já pago:
+       R-A  não pode ser `return null` .... o MC88.37 pagou CLS 0,373 por isso
+       R-B  não pode aplicar-se a visitantes ... o Dashboard é a página pública
+       R-C  tem de ter prazo e falhar para o lado aberto ... senão prende o
+            utilizador num esqueleto se o backend falhar
+     Desenho do estado de espera com o checklist ux-waiting-audit: pulsação,
+     uma linha honesta ("A preparar a sua área…"), forma do shell da app.
+     Deliberadamente SEM barra de progresso, sem estimativa e sem cancelar —
+     seria ruído numa espera de 5 s, e digo-o para que a ausência seja decisão.
+     CUSTO: nenhum em carregamento. O `Dashboard` é eager; o chunk já está lá.
+     EFEITO: resolve os seis cenários sozinha.
+
+P2 — RECOMENDADA. Chave própria para o palpite do lojista, ao lado do do ADM.
+     Corrige a assimetria: o palpite passa a sobreviver ao logout, com as três
+     guardas do `adminProvavel()` — incluindo a que o ancora ao endereço da
+     sessão, para que o palpite de A nunca se aplique a B.
+     Só ENCAMINHA; quem autoriza continua a ser `CorporativoRoute` e o backend.
+     Depois da P1 é otimização, não correção — se houver que cortar, corta-se esta.
+
+P3 — FORA DE ÂMBITO. Devolver o perfil já no `auth-user` cortaria a janela quase
+     a metade (o custo é a cadeia serial auth-user → cotas), mas é backend e não
+     o medi no perfil certo. Fica registado, não recomendado às cegas.
+
+CRITÉRIOS DE SUCESSO (todos com método definido):
+   C1 lojista nunca vê o Dashboard comum — por gravação de ecrã, COM CONTROLO
+      POSITIVO obrigatório numa conta comum (senão o instrumento pode estar cego)
+   C2 sem ecrã em branco (o erro do MC88.37 não volta)
+   C3 CLS não regride face a baseline recolhida no próprio aparelho
+   C4 falha para o lado aberto, com /cotas bloqueado à força
+   C5 arranque não fica mais lento — A/B intercalado, 1.ª corrida descartada
+   C6 testes de lógica pura, CADA UM validado por mutação
+   C7 suite baseline verde com --experimental-test-module-mocks
+
+PORTÃO DE BUILD: `npm run build:apk`, nunca `npm run build` — só o primeiro traz
+o `validar:dist`. E o deploy web NÃO actualiza o APK: o frontend viaja dentro
+dele, portanto sem `cap sync` + rebuild nada disto chega ao telemóvel.
+
+================================================================================
+O QUE ESTE PLANO NÃO RESOLVE — DITO À FRENTE
+================================================================================
+· A janela de 5–12 s CONTINUA A EXISTIR. A P1 troca "produto errado" por "estado
+  honesto"; não torna a app mais rápida. Quem a encurta é a P3, que fica de fora.
+· Não observei o painel /corporativo a correr. O que acontece DEPOIS do redirect
+  continua por medir — é a mesma pendência que o MC89.33 deixou em aberto.
+· A guarda de encaminhamento vive na rota "/". /carteira, /mercado, /vitrine e
+  /ativos continuam a renderizar para um lojista que lá chegue por URL. No APK é
+  inalcançável (não há barra de endereço); na build web, não. Fora de âmbito.
+
+================================================================================
+PENDÊNCIAS
+================================================================================
+P1. [PERGUNTA AO OPERADOR — não bloqueia a execução]
+    Em que cenário viu a transição?
+      (a) saí do ADM e entrei como lojista .......... cenário B
+      (b) abri a app ao fim de uns dias ............. cenário C
+      (c) primeira vez com essa conta ............... cenário E
+    Os três são cobertos pela P1. A resposta só decide qual filmar na validação —
+    e, se for (a), a P2 deixa de ser "recomendada" e passa a ser o que ele testa.
+
+P2. [APROVAÇÃO — Pilar 1] O plano precisa de aprovação antes de tocar em código.
+
+P3. ⚠️ [DESVIO AO ENUNCIADO] R10 indica `feat/mc89-adm-system`. A branch ativa é
+    `feat/mc89.32-diagnostico-perf`, onde vivem os MC89.32/33/34. Como este MC
+    não altera código, mantive-me nela para não partir a linha dos documentos
+    irmãos. Passar para a outra é um cherry-pick de dois ficheiros — diga se quer.
+
+P4. [NÃO É DESTE MC, mas apanhei] `limparDicaAdmin` está definida e testada mas
+    NUNCA é chamada no produto. Hoje isso é o que faz o ADM funcionar bem, por
+    isso não proponho "corrigir" — mas é código sem dono e merece uma decisão
+    explícita algum dia.
+
+================================================================================
+ENTREGÁVEIS
+================================================================================
+  docs/MC89.35-DIAGNOSTICO.txt ...... diagnóstico completo (commit a034616)
+  docs/MC89.35-PLANO.txt ............ plano de ação (commit 01e59cc)
+  Desktop/MC89.35-RELATORIO.txt ..... este ficheiro
+  docs/MC89.35-RELATORIO.txt ........ cópia no repositório
+  cloud.md .......................... atualizado
+
+================================================================================
+PRÓXIMO PASSO
+================================================================================
+Com o plano aprovado → MC89.36: executar P1 (+ P2), com os critérios C1–C7.
+Alternativas, se o operador preferir priorizar outra coisa:
+  · pendências externas (EOA, BLOBS_TOKEN, RAG, Play Store)
+  · MC89.32 (medição autenticada do ADM)
+  · medir o painel /corporativo com conta de lojista real — desbloqueia a P3 e
+    fecha a pendência que o MC89.33 deixou aberta

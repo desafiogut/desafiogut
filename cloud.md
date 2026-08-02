@@ -6427,3 +6427,72 @@ No APK é inalcançável — não há barra de endereço, e medi que dentro de /
 Fecha-se estendendo a guarda como já se faz para o lojista; não o fiz por
 iniciativa própria porque alarga o raio de uma correção que tinha de ser
 cirúrgica.
+
+## MC89.35 — o palpite do lojista estava certo, e era apagado por uma guarda que não sabia que ele existia
+
+O operador disse que o lojista ainda passa pelo Dashboard comum, apesar do
+MC88.42. Passa mesmo. Mas nenhuma das três causas que o enunciado supunha era a
+causa — e a opção que ele marcava como "recomendada" não corrigiria nada.
+
+Comecei por não acreditar no código-fonte. Já aconteceu neste projeto o aparelho
+correr uma versão diferente da que está no repositório, por isso extraí do bundle
+minificado que está DENTRO do APK instalado as cinco funções que decidem o
+encaminhamento e comparei-as, expressão a expressão, com o fonte. Idênticas. O
+MC88.42 e o MC89.31 estão no telemóvel e estão intactos. O defeito era outro.
+
+**O MC88.42 é, por desenho, uma otimização de segunda visita.** O palpite que
+manda o lojista direto para /corporativo lê-se de um registo em disco que só é
+escrito depois de `/cotas` responder — ou seja, na sessão anterior. Na primeira
+visita de cada ciclo não há nada para adivinhar, e isso está escrito no
+comentário do código. O que o comentário subestima é quantas vezes é "a primeira
+visita".
+
+**E é aqui que está a causa raiz.** O `tipoConfirmado` do lojista não tem chave
+própria: vive dentro do `gut_saldo_cache`, que é apagado no logout pela guarda de
+coerência do SALDO, do MC88.34. Essa guarda existe por uma boa razão — impedir
+que o saldo de A apareça a B — e está correta para o que foi escrita. Só que ao
+apagar o registo inteiro leva à frente um valor que não é saldo, não é dado
+pessoal, e cuja regra de invalidação é outra.
+
+O contraste com o ADM é o que fecha o argumento: `limparDicaAdmin` está definida,
+está testada, e **não tem um único ponto de chamada no produto**. O
+`gut_admin_hint` sobrevive ao logout; o do lojista não. A assimetria nunca foi
+decidida — é consequência de o palpite do lojista ter sido guardado dentro de um
+recipiente com outro dono. O MC89.31 não resultou por ser melhor desenho;
+resultou por ter chave própria.
+
+**Para não validar o código contra uma reescrita minha,** montei a tabela de
+decisão com as funções minificadas copiadas verbatim do APK e corri-a contra um
+localStorage falso, com controlo positivo e negativo. Se a minha leitura estivesse
+errada, o arnês divergia. Deu 10/10, e produziu a lista exaustiva: seis cenários
+em que o lojista vê o Dashboard comum — logout, troca de conta, mais de 24 h,
+primeiro login, reinstalação, sessão ilegível. Dois deles são exatamente o gesto
+que o operador usa para testar. E o terceiro, as 24 h, é a vida de um anunciante
+que não abre a app todos os dias.
+
+Medi a janela hoje, no aparelho: 5,7 s com as funções Netlify quentes, 12,0 s a
+frio. O MC88.42 tinha medido 3,9–9,0 s. É pior do que se julgava.
+
+**Rejeitei a opção recomendada do enunciado, com prova.** `pareceAutenticado`
+responde "há sessão em disco?", não "de que tipo é?". Nos cenários reportados o
+`tipoConfirmado` nem sequer existe — não há palpite para antecipar, e onde ele
+existe o encaminhamento já é imediato no primeiro render. Implementá-la seria
+trabalho sem efeito observável.
+
+A correção proposta é parar de afirmar o que não se sabe: estado neutro em vez do
+Dashboard comum, só para quem parece autenticado, com prazo e a falhar para o
+lado aberto. Não pode ser `return null` — foi isso que produziu o CLS 0,373 do
+MC88.37 — nem pode apanhar visitantes, para quem o Dashboard é a página pública.
+Resolve os seis cenários sozinha, e não custa carregamento nenhum porque o
+`Dashboard` é eager e o chunk já está em memória.
+
+**Digo à frente o que não resolve:** a janela de 5 a 12 segundos continua lá. Isto
+troca "produto errado" por "estado honesto", não torna a app mais rápida. Quem a
+encurtaria seria devolver o perfil já no `auth-user` — mas isso é backend, tem
+raio maior, e não o medi no perfil certo. Fica registado como candidato, não
+recomendado às cegas.
+
+Nenhuma alteração de código neste MC, como pedido. Fica também uma pergunta ao
+operador que não bloqueia nada: em qual dos seis cenários é que ele viu a
+transição. Os três prováveis estão todos cobertos pela correção; a resposta só
+decide qual deles vale a pena filmar na validação.
