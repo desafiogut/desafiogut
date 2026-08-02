@@ -29,6 +29,8 @@ import {
 import { verificarLanceAuth } from "./_lib/jwt.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { autenticarAdmin } from "./_lib/admin-auth.mjs";
+// MC89.40 (F1) — mesma fonte única de "cota paga" que o produtos.mjs usa.
+import { validarCotaAtiva, MSG_COTA_INATIVA } from "./_lib/cota-utils.mjs";
 import { scrubSvg } from "./_lib/svg-sanitize.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 
@@ -231,6 +233,26 @@ async function handlePost(req) {
   }
   if (!isAdmin && jwtPayload.endereco !== cliente) {
     return jsonError(403, "endereco_nao_corresponde", "JWT não pertence ao cliente_id informado");
+  }
+
+  // ── MC89.40 (F1) — A COTA TEM DE ESTAR PAGA ────────────────────────────────
+  //
+  // Vem DEPOIS da guarda de posse acima (`endereco_nao_corresponde`), pela mesma
+  // razão que em `produtos.mjs`: primeiro estabelece-se de quem é o pedido, só
+  // depois se pergunta se essa pessoa pode publicar.
+  //
+  // O admin fica de fora, como já ficava em tudo o resto deste handler — é ele
+  // que aprova banners, e trancá-lo aqui partiria a moderação.
+  //
+  // ⚠️ NÃO se impõe aqui a regra do NÍVEL (D3). Um banner não tem "slot" como o
+  // produto tem: a dimensão é `app`/`site`, que é formato e não categoria. Impor
+  // um vínculo ao nível seria inventar uma regra que o operador não decidiu.
+  // Fica registado como pergunta em aberto no relatório do MC89.40.
+  if (!isAdmin) {
+    const estadoCota = await validarCotaAtiva(cliente);
+    if (!estadoCota.ativa) {
+      return jsonError(403, "cota_inativa", MSG_COTA_INATIVA, { needsPayment: true });
+    }
   }
 
   const dimensao = body.dimensao === "site" ? "site" : "app";

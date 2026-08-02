@@ -83,7 +83,17 @@ const produtoBase = {
   imagemBase64: IMAGEM, mime: "image/png",
 };
 
-beforeEach(() => { cotasMem.clear(); blobs.clear(); jwtEndereco = DONO; admin = false; getCotaRebenta = false; });
+// MC89.40 — o gate de cota paga (F1) entrou DEPOIS destes testes. Eles são
+// sobre POSSE do cliente_id, não sobre pagamento; para isolarem o que testam,
+// as cotas envolvidas têm de estar pagas. Sem isto, todos os casos de 201
+// passariam a 403 por uma razão que não é a que este ficheiro afirma.
+const cotaPaga = (id) => ({ cliente_id: id, vendida: true, categoria: "bronze" });
+
+beforeEach(() => {
+  cotasMem.clear(); blobs.clear(); jwtEndereco = DONO; admin = false; getCotaRebenta = false;
+  cotasMem.set(DONO, cotaPaga(DONO));
+  cotasMem.set(OUTRO, cotaPaga(OUTRO));
+});
 
 // ── OS TESTES ────────────────────────────────────────────────────────────────
 
@@ -123,7 +133,7 @@ test("cliente_id `cnpj:` COM `endereco` que bate → publica", async () => {
   // É o ramo que salva o cadastro direto assim que a cota for vinculada a uma
   // carteira. Hoje nenhuma cota em produção tem este campo (MC89.38-F0), por
   // isso este teste descreve o comportamento pretendido, não o estado atual.
-  cotasMem.set("cnpj:12345678000199", { cliente_id: "cnpj:12345678000199", endereco: DONO });
+  cotasMem.set("cnpj:12345678000199", { ...cotaPaga("cnpj:12345678000199"), endereco: DONO });
   const r = await handler(pedido({ ...produtoBase, cliente_id: "cnpj:12345678000199" }));
   assert.equal(r.status, 201);
 });
@@ -135,7 +145,7 @@ test("cliente_id `cnpj:` com `endereco` de OUTRA carteira → 403", async () => 
 });
 
 test("o `endereco` da cota é comparado sem distinguir maiúsculas", async () => {
-  cotasMem.set("cnpj:1", { cliente_id: "cnpj:1", endereco: DONO.toUpperCase().replace("0X", "0x") });
+  cotasMem.set("cnpj:1", { ...cotaPaga("cnpj:1"), endereco: DONO.toUpperCase().replace("0X", "0x") });
   const r = await handler(pedido({ ...produtoBase, cliente_id: "cnpj:1" }));
   assert.equal(r.status, 201);
 });

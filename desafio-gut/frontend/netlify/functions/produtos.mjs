@@ -28,6 +28,8 @@ import { verificarUserSession } from "./_lib/jwt.mjs";
 // já usa para a guarda equivalente; nada de novo entra no bundle da função.
 import { autenticarAdmin } from "./_lib/admin-auth.mjs";
 import { getCota } from "./_lib/cotas-store.mjs";
+// MC89.40 (F1) — "esta cota está paga?", em fonte única partilhada com banners.
+import { validarCotaAtiva, MSG_COTA_INATIVA } from "./_lib/cota-utils.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 // MC39.19 (Onda 3) — cache distribuído (itens 20/33), ETag/SWR (16/17). Env-gated:
 // sem REDIS_* o cache no-opa → comportamento atual (zero regressão).
@@ -338,6 +340,36 @@ async function handlePost(req) {
         }
       }
     }
+  }
+
+  // ── MC89.40 (F1) — A COTA TEM DE ESTAR PAGA ────────────────────────────────
+  //
+  // Vem DEPOIS da posse (P0) de propósito: primeiro estabelece-se DE QUEM é o
+  // pedido, só depois se pergunta se essa pessoa pode publicar. Pela ordem
+  // inversa, alguém poderia sondar o estado da cota de terceiros.
+  //
+  // ⚠️ ANTES DESTE MC ESTE ENDPOINT NÃO LIA A COTA DE TODO. Bastava um JWT de
+  // user-session — que é emitido a QUALQUER utilizador autenticado — para
+  // publicar na vitrine. Não era só o nível que era ignorado: era a existência
+  // da cota.
+  //
+  // `needsPayment` vai no corpo para o painel poder distinguir "não podes" de
+  // "ainda não pagaste" e mostrar o caminho da compra em vez de um erro seco.
+  const estadoCota = await validarCotaAtiva(lojista);
+  if (!estadoCota.ativa) {
+    return jsonError(403, "cota_inativa", MSG_COTA_INATIVA, { needsPayment: true });
+  }
+
+  // ⚠️ MC89.40 (D3) — O NÍVEL RESTRINGE O SLOT.
+  //
+  // `categoria` significa DUAS coisas diferentes neste código, e confundi-las é
+  // fácil: na cota é o NÍVEL COMPRADO (bronze…diamante); no produto é o SLOT DA
+  // VITRINE onde ele aparece. A regra decidida pelo operador é que têm de
+  // coincidir, e NÃO é acumulativa — um diamante não publica no slot bronze.
+  if (categoria !== estadoCota.categoria) {
+    return jsonError(403, "categoria_nao_permitida",
+      `A sua cota é ${estadoCota.categoria}; não pode publicar no slot ${categoria}.`,
+      { categoriaPermitida: estadoCota.categoria });
   }
 
   const endereco = payloadEndereco;
