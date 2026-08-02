@@ -24,6 +24,10 @@ import {
   parseJsonBody, ValidationError,
 } from "./_lib/validate.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
+// MC89.38 (P0) — posse do `cliente_id`. Mesmas dependências que o `banners.mjs`
+// já usa para a guarda equivalente; nada de novo entra no bundle da função.
+import { autenticarAdmin } from "./_lib/admin-auth.mjs";
+import { getCota } from "./_lib/cotas-store.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 // MC39.19 (Onda 3) — cache distribuído (itens 20/33), ETag/SWR (16/17). Env-gated:
 // sem REDIS_* o cache no-opa → comportamento atual (zero regressão).
@@ -276,7 +280,66 @@ async function handlePost(req) {
     ? String(body.cliente_id)
     : (payloadEndereco ?? `anon:${randomUUID().slice(0, 8)}`);
 
-  // Anti-IDOR: se tem endereco no JWT, deve bater com payloadEndereco OU ser admin
+  // ── MC89.38 (P0) — POSSE DO `cliente_id` ───────────────────────────────────
+  //
+  // ⚠️ ISTO ESTAVA POR IMPLEMENTAR, E O COMENTÁRIO DIZIA QUE ESTAVA.
+  // A linha que aqui existia era só `const endereco = payloadEndereco;` com um
+  // comentário a anunciar "Anti-IDOR: … deve bater com payloadEndereco OU ser
+  // admin". A verificação não existia: `body.cliente_id` era aceite tal e qual,
+  // portanto qualquer autenticado podia publicar um produto ATRIBUÍDO A OUTRO
+  // LOJISTA, que depois aparece na vitrine e na listagem `?lojista=`.
+  //
+  // Não é suspeita: o ficheiro irmão `banners.mjs:227-233` faz exatamente esta
+  // verificação e devolve 403 `endereco_nao_corresponde`. Dois endpoints do
+  // mesmo painel, o mesmo padrão, um com guarda e outro sem — é omissão.
+  //
+  // ⚠️ PORQUE É QUE NÃO COPIEI O `banners.mjs` TAL E QUAL:
+  // ele exige que `cliente_id` seja um ENDEREÇO (`validarEndereco`). Aqui isso
+  // partiria o cadastro direto do MC12.3.1, cujo `cliente_id` é `cnpj:XXXXX` e
+  // nunca passaria nessa validação. Medido em produção (MC89.38-F0): das 7 cotas,
+  // 2 têm o `cliente_id` nessa forma.
+  //
+  // A regra é: aceita-se `cliente_id` só quando a posse é DEMONSTRÁVEL.
+  //   (a) igual ao endereço do JWT ......................... é o próprio
+  //   (b) uma cota cujo campo `endereco` bate com o do JWT .. está vinculada
+  //   (c) admin ............................................ mesma exceção do banners
+  // Fora disto, 403. A ausência de prova não pode valer como prova.
+  //
+  // ⚠️ CONSEQUÊNCIA MEDIDA, E É PRECISO DIZÊ-LA: hoje NENHUMA das 7 cotas tem o
+  // campo `endereco` preenchido (F0). Logo o ramo (b) não salva ninguém neste
+  // momento, e um lojista de cadastro direto que tente publicar em nome do seu
+  // `cnpj:XXXXX` leva 403. Isso é o comportamento CORRETO — o servidor não tem
+  // como saber que aquela carteira lhe pertence —, mas é uma mudança de
+  // comportamento real e está registada no relatório do MC89.38.
+  const enderecoDaCota = async (clienteId) => {
+    try {
+      const cota = await getCota(clienteId);
+      const e = cota?.endereco;
+      return e ? String(e).toLowerCase() : null;
+    } catch (err) {
+      // Falha de leitura NÃO pode virar autorização. Fail-closed.
+      console.warn("[produtos] leitura de cota para posse falhou:", err?.message);
+      return null;
+    }
+  };
+
+  if (body.cliente_id) {
+    const idPedido = String(body.cliente_id).toLowerCase();
+    const ehProprio = payloadEndereco && idPedido === payloadEndereco;
+    if (!ehProprio) {
+      const adminCheck = await autenticarAdmin(req);
+      const isAdmin = !!adminCheck?.ok;
+      if (!isAdmin) {
+        const vinculado = payloadEndereco
+          && (await enderecoDaCota(String(body.cliente_id))) === payloadEndereco;
+        if (!vinculado) {
+          return jsonError(403, "endereco_nao_corresponde",
+            "JWT não pertence ao cliente_id informado");
+        }
+      }
+    }
+  }
+
   const endereco = payloadEndereco;
 
   const agora = new Date().toISOString();
