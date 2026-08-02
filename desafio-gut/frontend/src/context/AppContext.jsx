@@ -280,6 +280,23 @@ export function AppProvider({ children }) {
   const [cotaCorporativa, setCotaCorporativa] = useState(null);
   const [tipoCarregando,  setTipoCarregando]  = useState(false);
 
+  // MC89.36 — "a pergunta /cotas JÁ FOI RESPONDIDA" (com sucesso ou com erro).
+  //
+  // ⚠️ NÃO É O MESMO QUE `!tipoCarregando`, e a diferença é a razão de ser deste
+  // estado. `tipoCarregando` só passa a true na linha 377, imediatamente ANTES do
+  // fetch — mas o `return` da linha 376 (sem `authToken`) acontece antes disso, e
+  // a linha 366 (sem `address`) põe-no explicitamente a false. Medido no aparelho
+  // (MC89.36-S0): o Dashboard está pintado desde os 568 ms e /cotas só dispara
+  // aos 4 422 ms. Nesses 3,9 s — 76% da janela — `tipoCarregando` é FALSE e
+  // `cotaCorporativa` é null, o que fazia `tipoUsuario` cair para "comum".
+  //
+  // É a ambiguidade que App.jsx:120-123 já descrevia sem ter como a resolver:
+  // "`cotaCorporativa == null` é ambíguo — significa 'ainda não encontrei' E
+  //  'não é lojista'". Este booleano separa as duas.
+  //
+  // Só ENCAMINHA (escolhe entre esperar e mostrar o Dashboard). Não autoriza nada.
+  const [tipoResolvido, setTipoResolvido] = useState(false);
+
   // ── FingerprintJS visitorId (anti-Sybil — Mega Comando 3 / Item 3) ──────
   // Carregado uma vez no mount, cacheado em localStorage. Enviado em
   // X-Visitor-ID nos fetches sensíveis.
@@ -363,7 +380,10 @@ export function AppProvider({ children }) {
   // Privy v3.22.1 removeu setCustomMetadata client-side; a persistência agora
   // fica em Netlify Blobs via cotas.mjs (POST action=register-corporativo).
   useEffect(() => {
-    if (!address) { setCotaCorporativa(null); setTipoCarregando(false); return; }
+    // MC89.36 — sem `address` a pergunta volta a estar POR RESPONDER. Isto é o
+    // que faz uma troca de conta (ou um logout) reabrir o estado neutro em vez
+    // de herdar o "já sei" da sessão anterior.
+    if (!address) { setCotaCorporativa(null); setTipoCarregando(false); setTipoResolvido(false); return; }
     // MC88.34 (P1) — espera pelo authToken antes de perguntar.
     // O MC88.33 mediu 6 chamadas a /cotas no arranque, quase todas 401/404: o
     // efeito corria uma vez SEM token (as 3 tentativas respondiam 401 por
@@ -412,9 +432,13 @@ export function AppProvider({ children }) {
         if (!cancel) {
           setCotaCorporativa(data || null);
           setTipoCarregando(false);
+          setTipoResolvido(true);   // MC89.36 — houve resposta
         }
       } catch {
-        if (!cancel) { setCotaCorporativa(null); setTipoCarregando(false); }
+        // MC89.36 — um erro TAMBÉM é uma resposta, para efeitos de encaminhamento.
+        // Sem isto, uma falha de rede prendia o utilizador no estado neutro até
+        // ao prazo (R-C) em vez de o deixar seguir para o Dashboard de imediato.
+        if (!cancel) { setCotaCorporativa(null); setTipoCarregando(false); setTipoResolvido(true); }
       }
     };
     buscarCota();
@@ -463,7 +487,8 @@ export function AppProvider({ children }) {
 
   // Atualiza cotaCorporativa em memória após auto-cadastro (SejaNossoParceiro)
   // sem aguardar novo fetch do servidor.
-  const atualizarTipoCorporativo = (data) => { setCotaCorporativa(data); setTipoCarregando(false); };
+  // MC89.36 — o auto-cadastro é uma resposta definitiva tal como a do servidor.
+  const atualizarTipoCorporativo = (data) => { setCotaCorporativa(data); setTipoCarregando(false); setTipoResolvido(true); };
 
   // MC12.3 Item 4 — Isolamento do mundo lojista. Se um corporativo cair em
   // rota de usuário comum (Dashboard, carteira, mercado, vitrine, ativos…),
@@ -1154,6 +1179,10 @@ export function AppProvider({ children }) {
     // MC89.31 — mesma natureza do `tipoProvavel`, para o ADM. Fotografia do
     // arranque; só ENCAMINHA. Quem autoriza é o backend (AdminLayout/`isAdmin`).
     adminProvavel,
+    // MC89.36 — "a pergunta /cotas já foi respondida". Distingue "ainda não sei"
+    // de "sei que é comum", que era a ambiguidade que punha o lojista a olhar
+    // para o Dashboard errado. Só ENCAMINHA.
+    tipoResolvido,
     // MC89.31 — "há sessão em disco e o Privy ainda não respondeu". Só para
     // escolher entre esperar e pedir login. Nunca para habilitar ações.
     restaurandoSessao,
