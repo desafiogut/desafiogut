@@ -181,10 +181,17 @@ test("a dica NÃO guarda nada além de endereço, isAdmin e carimbo (R4)", () =>
 // proteger é a FORMA da decisão no código-fonte. Estes testes existem para que
 // uma reescrita distraída não desfaça a ordem que torna o palpite seguro.
 
-test("App.jsx: o confirmado ganha sempre que houver address; o palpite só sem ele", () => {
-  const app = readFileSync(new URL("../App.jsx", import.meta.url), "utf8");
+// ⚠️ MC89.36 — ESTES DOIS TESTES MUDARAM DE ALVO, NÃO DE INTENÇÃO.
+// A decisão de encaminhamento saiu de App.jsx para lib/encaminhamento.js (função
+// pura, para poder ser testada por comportamento e não só por forma). O que eles
+// protegem é exatamente o mesmo; o que mudou foi o ficheiro onde olhar.
+// A cobertura por COMPORTAMENTO destas duas regras vive agora em
+// encaminhamento.test.mjs, e ambas foram provadas por mutação (7 e 8).
+
+test("encaminhamento.js: o confirmado ganha sempre que houver address; o palpite só sem ele", () => {
+  const enc = readFileSync(new URL("./encaminhamento.js", import.meta.url), "utf8");
   assert.match(
-    app,
+    enc,
     /\(address \? \(isAdmin && !adminLoading\) : adminProvavel\)/,
     "a decisão do ADM tem de ser ternária em `address` — com address vale o backend, sem ele o palpite. " +
     "Um `||` aqui deixaria o palpite sobreviver a uma negativa confirmada.",
@@ -197,15 +204,25 @@ test("⚠️ o encaminhamento do ADM não tem exceções — o painel é a app d
   // Dashboard comum; foi implementada, testada e revertida.
   // Este teste existe para que ela não volte por acidente: qualquer condição
   // extra nesta guarda abre outra vez o Dashboard comum ao admin.
+  const enc = readFileSync(new URL("./encaminhamento.js", import.meta.url), "utf8");
   const app = readFileSync(new URL("../App.jsx", import.meta.url), "utf8");
   // \r?\n: o ficheiro está em CRLF no Windows e um `\n` cru não casa.
+  // O degrau do ADM é o PRIMEIRO `if` da função e devolve já — nada antes dele.
   assert.match(
-    app,
-    /\r?\n  if \(address \? \(isAdmin && !adminLoading\) : adminProvavel\) \{\r?\n    return <Navigate to="\/admin" replace \/>;/,
+    enc,
+    /\r?\n  if \(address \? \(isAdmin && !adminLoading\) : adminProvavel\) return DESTINO\.ADMIN;/,
     "a guarda do ADM tem de ser incondicional; nenhuma pausa, flag ou exceção antes dela.",
   );
-  assert.doesNotMatch(app, /painelAdminPausado|admin_pausa/,
-    "a pausa foi revertida por decisão do operador — não deve voltar sem nova decisão.");
+  // MC89.36 — o estado neutro é um degrau NOVO, e não pode ter-se metido à
+  // frente do ADM: quem é admin vai para o painel, não para um esqueleto.
+  assert.ok(
+    enc.indexOf("DESTINO.ADMIN") < enc.indexOf("DESTINO.ESTADO_NEUTRO"),
+    "o degrau do ADM tem de vir ANTES do estado neutro.",
+  );
+  for (const [nome, src] of [["encaminhamento.js", enc], ["App.jsx", app]]) {
+    assert.doesNotMatch(src, /painelAdminPausado|admin_pausa/,
+      `a pausa foi revertida por decisão do operador — não deve voltar sem nova decisão (${nome}).`);
+  }
 });
 
 test("AdminLayout: não há botão que leve o ADM às telas comuns", () => {
