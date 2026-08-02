@@ -23,6 +23,8 @@ const BASE = {
   tipoCarregando: false,
   tipoResolvido: false,
   pareceAutenticado: false,
+  restaurandoSessao: false,
+  loginEmCurso: false,
   prazoEsgotado: false,
 };
 const com = (patch) => decidirDestino({ ...BASE, ...patch });
@@ -60,6 +62,47 @@ for (const cenario of [
     );
   });
 }
+
+// ── MC89.36.1: O LOGIN FRESCO ────────────────────────────────────────────────
+// MEDIDO no aparelho, no primeiro login do lojista após logout: 1 889 ms de
+// DASHBOARD COMUM entre o retorno do OAuth (180 644 ms) e o estado neutro
+// (182 533 ms). `pareceAutenticado` era false porque o `gut_saldo_cache` tinha
+// sido apagado no logout e ainda não fora reescrito.
+
+test("login fresco: OAuth no URL basta para esperar, sem cache nenhum", () => {
+  // Nem gut_saldo_cache, nem privy:connections — o SDK está a trocar o código
+  // pelo token neste instante. O único sinal que existe é o URL.
+  assert.equal(
+    com({ pareceAutenticado: false, restaurandoSessao: false, loginEmCurso: true }),
+    DESTINO.ESTADO_NEUTRO,
+  );
+});
+
+test("reabertura com sessão em disco mas SEM cache de saldo", () => {
+  // O caso que o MC89.31 mediu no ADM (737 ms a dizer "faça login" a quem tinha
+  // sessão válida). `pareceAutenticado` é false, `restaurandoSessao` é true.
+  assert.equal(
+    com({ pareceAutenticado: false, restaurandoSessao: true }),
+    DESTINO.ESTADO_NEUTRO,
+  );
+});
+
+test("⚠️ R-B continua de pé: nenhuma das três chaves é verdadeira num visitante", () => {
+  // Este é o teste que impede que alargar a porta atropele a página pública.
+  assert.equal(
+    com({ pareceAutenticado: false, restaurandoSessao: false, loginEmCurso: false, tipoResolvido: false }),
+    DESTINO.DASHBOARD,
+  );
+});
+
+test("o prazo trava as três chaves por igual", () => {
+  for (const chave of ["pareceAutenticado", "restaurandoSessao", "loginEmCurso"]) {
+    assert.equal(
+      com({ [chave]: true, prazoEsgotado: true }), DESTINO.DASHBOARD,
+      `${chave} escapou ao prazo — R-C tem de valer para todas`,
+    );
+  }
+});
 
 // ── O sinal é `tipoResolvido`, NÃO `tipoCarregando` ──────────────────────────
 // Este é o teste que fixa o achado do MC89.36-S0. Se alguém trocar o sinal de

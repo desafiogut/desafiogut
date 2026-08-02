@@ -260,6 +260,42 @@ export function AppProvider({ children }) {
   // exatamente como a do ADM.
   const [lojistaProvavel] = useState(lerLojistaProvavel);
 
+  // MC89.36.1 — "HÁ UM LOGIN A DECORRER NESTE INSTANTE".
+  //
+  // MEDIDO no aparelho, no primeiro login do lojista após logout: entre o
+  // retorno do OAuth e o painel passaram 9 996 ms, e 1 889 desses foram de
+  // DASHBOARD COMUM — apesar do estado neutro já existir. Sequência medida:
+  //     179 563 ms  (em branco)        ← window.location.assign do retorno OAuth
+  //     180 644 ms  DASHBOARD COMUM    ← 1 889 ms a dizer "Bem-vindo" a quem
+  //                                      acabou de entrar  ⚠️
+  //     182 533 ms  ESTADO NEUTRO      ← só quando o Privy termina
+  //     189 559 ms  CORPORATIVO
+  //
+  // PORQUÊ: a porta do estado neutro é `pareceAutenticado`, que depende de
+  // `sessaoOtimista` → `saldoCacheInicial` → `gut_saldo_cache`. Num login
+  // FRESCO esse registo não existe: foi apagado no logout e só volta a ser
+  // escrito depois de a autenticação terminar. Durante a janela, a app não tem
+  // como saber que alguém está a entrar — e trata-o como visitante.
+  //
+  // É a MESMA armadilha do MC89.31, onde `sessaoEmDisco` teve de nascer porque
+  // `sessaoOtimista` (ancorado no saldo) dizia "visitante" a um ADM com sessão
+  // válida. Aqui nem `privy:connections` serve: no instante do retorno o SDK
+  // ainda não o escreveu — está precisamente a trocar o código pelo token.
+  //
+  // O que EXISTE nesse instante são os parâmetros do OAuth no URL. Não é um
+  // palpite: é o próprio App.jsx que os reinjeta na origem local
+  // (`window.location.assign(\`/${search}\`)`) para o SDK os poder ler. Se eles
+  // lá estão, há um login a meio — não é um visitante.
+  //
+  // Lido UMA vez, no primeiro render: o SDK limpa o URL a seguir, e o que
+  // interessa é a fotografia do arranque.
+  //
+  // ⚠️ Só ENCAMINHA — e nem sequer escolhe destino: escolhe entre ESPERAR e
+  // mostrar o Dashboard. Um visitante nunca tem estes parâmetros no URL.
+  const [loginEmCurso] = useState(() => {
+    try { return /[?&]privy_oauth_/.test(window.location.search); } catch { return false; }
+  });
+
   // MC89.31 — "há uma sessão Privy em disco", lido a t=0.
   //
   // Distinto do `sessaoOtimista` do MC88.38, que ancora no `gut_saldo_cache`:
@@ -1217,6 +1253,10 @@ export function AppProvider({ children }) {
     // de "sei que é comum", que era a ambiguidade que punha o lojista a olhar
     // para o Dashboard errado. Só ENCAMINHA.
     tipoResolvido,
+    // MC89.36.1 — "há um login a decorrer neste instante" (params do OAuth no
+    // URL). Fecha os 1 889 ms de Dashboard comum medidos no login fresco, em que
+    // nem `gut_saldo_cache` nem `privy:connections` existem ainda.
+    loginEmCurso,
     // MC89.31 — "há sessão em disco e o Privy ainda não respondeu". Só para
     // escolher entre esperar e pedir login. Nunca para habilitar ações.
     restaurandoSessao,

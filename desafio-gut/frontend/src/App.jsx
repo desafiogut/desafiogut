@@ -186,9 +186,13 @@ function DashboardOuCorporativo() {
     // só passa a true aos 4 422 ms, quando o Dashboard já está pintado desde os
     // 568 ms — 76% da janela ficaria de fora. Ver docs/MC89.36-DIAGNOSTICO.txt §1.
     tipoResolvido,
-    // MC89.36 (R-B) — a porta de entrada do estado neutro. Um visitante anónimo
+    // MC89.36 (R-B) — as portas de entrada do estado neutro. Um visitante anónimo
     // NUNCA passa por ele: para ele o Dashboard é a página pública de entrada.
+    // São TRÊS porque cada uma cobre um arranque diferente, todos medidos —
+    // ver o comentário do degrau 3 em lib/encaminhamento.js.
     pareceAutenticado,
+    restaurandoSessao,
+    loginEmCurso,
   } = useAppContext();
   const { isAdmin, loading: adminLoading } = useAdmin(address);
 
@@ -231,7 +235,7 @@ function DashboardOuCorporativo() {
   const destino = decidirDestino({
     address, isAdmin, adminLoading, adminProvavel,
     tipoProvavel, tipoUsuario, tipoCarregando, tipoResolvido,
-    pareceAutenticado, prazoEsgotado,
+    pareceAutenticado, restaurandoSessao, loginEmCurso, prazoEsgotado,
   });
 
   if (destino === DESTINO.ADMIN)         return <Navigate to="/admin" replace />;

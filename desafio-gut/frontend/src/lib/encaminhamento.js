@@ -66,7 +66,9 @@ export const PRAZO_ESTADO_NEUTRO_MS = 10_000;
  * @param {string}       e.tipoUsuario       "corporativo" | "comum" (confirmado)
  * @param {boolean}      e.tipoCarregando    /cotas em voo
  * @param {boolean}      e.tipoResolvido     /cotas JÁ RESPONDEU (sucesso ou erro)
- * @param {boolean}      e.pareceAutenticado há sessão (confirmada ou em disco)
+ * @param {boolean}      e.pareceAutenticado há sessão (confirmada ou saldo em cache)
+ * @param {boolean}      e.restaurandoSessao há sessão Privy em disco a ser restaurada
+ * @param {boolean}      e.loginEmCurso      há um login OAuth a decorrer agora
  * @param {boolean}      e.prazoEsgotado     passaram PRAZO_ESTADO_NEUTRO_MS
  * @returns {string} um valor de DESTINO
  */
@@ -80,6 +82,8 @@ export function decidirDestino({
   tipoCarregando,
   tipoResolvido,
   pareceAutenticado,
+  restaurandoSessao,
+  loginEmCurso,
   prazoEsgotado,
 }) {
   // 1. ADM — inalterado face ao MC89.31/89.34. O encaminhamento é incondicional
@@ -107,7 +111,20 @@ export function decidirDestino({
   //
   //    ⚠️ R-C: `prazoEsgotado` é a válvula. Sem ela, um /cotas que nunca resolva
   //    prendia o utilizador aqui para sempre.
-  if (pareceAutenticado && !tipoResolvido && !prazoEsgotado) return DESTINO.ESTADO_NEUTRO;
+  //
+  //    MC89.36.1 — A PORTA TEVE DE ALARGAR, E CADA CHAVE COBRE UM CASO MEDIDO.
+  //    `pareceAutenticado` sozinho não bastava: ele ancora no `gut_saldo_cache`,
+  //    que NÃO existe num login fresco (foi apagado no logout). Medido no
+  //    aparelho: 1 889 ms de Dashboard comum logo após o retorno do OAuth.
+  //      · pareceAutenticado → reabertura com saldo em cache (o caso comum)
+  //      · restaurandoSessao → reabertura com sessão em disco mas SEM cache de
+  //                            saldo (o caso que o MC89.31 mediu no ADM: 737 ms)
+  //      · loginEmCurso      → login FRESCO, em que nenhum dos dois existe ainda
+  //                            e o único sinal é o OAuth no URL
+  //    Nenhuma delas é verdadeira para um visitante anónimo, que é o que R-B
+  //    protege — há testes a fixar isso para as três.
+  const esperaVale = pareceAutenticado || restaurandoSessao || loginEmCurso;
+  if (esperaVale && !tipoResolvido && !prazoEsgotado) return DESTINO.ESTADO_NEUTRO;
 
   // 4. Visitante, comum confirmado, ou desistimos de esperar.
   return DESTINO.DASHBOARD;
