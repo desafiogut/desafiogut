@@ -1,0 +1,151 @@
+MC89.36 — DIAGNÓSTICO PRÉ-EXECUÇÃO
+Data: 2026-08-02 | Base: docs/MC89.35-PLANO.txt (aprovado)
+Objetivo: confirmar o terreno ANTES de tocar em código, e apanhar o que o
+enunciado assume e o código desmente.
+
+================================================================================
+1. ACHADO QUE MUDA A IMPLEMENTAÇÃO — `tipoCarregando` NÃO SERVE DE SINAL
+================================================================================
+O enunciado (1.2) manda: "Se `tipoCarregando` e não houver palpite, mostrar
+EstadoNeutro".
+
+⚠️ ISSO NÃO COBRIRIA A MAIOR PARTE DA JANELA. Enumerei TODAS as escritas de
+`tipoCarregando` (são cinco, mais o valor inicial):
+
+    281  useState(false)                            ← arranca FALSE
+    366  if (!address) { … setTipoCarregando(false) }
+    377  setTipoCarregando(true)                    ← só aqui fica true
+    414  setTipoCarregando(false)                   ← sucesso
+    417  setTipoCarregando(false)                   ← erro
+    466  setTipoCarregando(false)                   ← atualizarTipoCorporativo
+
+E a linha 376, IMEDIATAMENTE ANTES da 377:
+
+    376  if (!authToken) return;   // `tipoCarregando` fica true; re-corre com o token
+
+⚠️ ESSE COMENTÁRIO ESTÁ ERRADO. O `return` da 376 acontece ANTES do
+`setTipoCarregando(true)` da 377. Enquanto não há `authToken`, `tipoCarregando`
+continua FALSE — não "fica true" como o comentário afirma.
+
+CRUZANDO COM A MEDIÇÃO DO MC89.35 (mesmo aparelho, arranque quente):
+
+    FCP ......................  568 ms   ← Dashboard comum já pintado
+    address chega ............ ~3 500 ms
+    auth-user resolve ........  4 413 ms ← só agora existe authToken
+    /cotas dispara ...........  4 422 ms ← só agora tipoCarregando = true
+    cadeia /cotas termina ....  5 707 ms
+
+  ⇒ Entre os 568 ms e os 4 422 ms — 3,9 dos 5,1 segundos de janela, ou 76% —
+    `tipoCarregando` é FALSE e `cotaCorporativa` é null, portanto `tipoUsuario`
+    vale "comum" e o Dashboard comum está pintado.
+
+  ⇒ Uma condição baseada em `tipoCarregando` deixaria o defeito de pé em três
+    quartos da janela. Seria um verde falso: o código mudava, o ecrã não.
+
+CORREÇÃO ADOTADA: introduzir `tipoResolvido` — um booleano que só passa a true
+quando a pergunta "/cotas" foi RESPONDIDA (sucesso ou erro). É a distinção que
+o próprio código já reconhece que lhe falta, em App.jsx:120-123:
+
+    "`cotaCorporativa == null` é ambíguo — significa 'ainda não encontrei' E
+     'não é lojista'."
+
+`tipoResolvido` desfaz exatamente essa ambiguidade, e é o mínimo que a resolve.
+
+================================================================================
+2. ONDE VIVE CADA PEÇA (0.1 / 0.2 do enunciado)
+================================================================================
+App.jsx:163-205   `DashboardOuCorporativo`
+                    1º ADM  : address ? (isAdmin && !adminLoading) : adminProvavel
+                    2º corp : tipoProvavel === "corporativo" && (…)
+                    3º senão: return <Dashboard />          ← o ramo a corrigir
+App.jsx:20        `Dashboard` é importado EAGER (não é lazy).
+                    ⇒ não o pintar não adia download nenhum. O custo é zero.
+AppContext:280-281 `cotaCorporativa` (null) e `tipoCarregando` (false)
+AppContext:365-422 efeito que busca as cotas (os dois pontos de conclusão)
+AppContext:424-455 `tipoUsuario`, `tipoOtimista`, `tipoProvavel`
+AppContext:459-462 escrita do `tipoConfirmado` DENTRO do gut_saldo_cache
+AppContext:530-532 `sessaoOtimista` / `pareceAutenticado`
+AppContext:659-670 guarda de coerência do saldo — é ela que apaga o palpite
+
+================================================================================
+3. ESTADO NEUTRO — NÃO EXISTE NADA REAPROVEITÁVEL (0.3)
+================================================================================
+Procurei por "A preparar", "Estado neutro", "EstadoNeutro", "Carregando perfil":
+nenhum resultado. O que existe é `RouteFallback` (App.jsx:65-73) — mas serve
+outro fim (chunk de rota a carregar), é centrado com `minHeight: 50vh` e não tem
+a forma do Dashboard. Reutilizá-lo traria de volta o CLS que o MC88.37 corrigiu.
+
+⇒ Criar componente novo. Reaproveito só o `@keyframes gut-fade`, que já vive
+  inline no RouteFallback, e o `.gut-glass-standard` do globals.css:406.
+
+================================================================================
+4. A ASSIMETRIA DO ADM CONFIRMADA OUTRA VEZ (0.4)
+================================================================================
+    gravarDicaAdmin  → 1 ponto de chamada  (hooks/useAdmin.js:138)
+    limparDicaAdmin  → 0 pontos de chamada no produto (só em testes)
+    adminProvavel    → lido em AppContext:241, via useState (fotografia t=0)
+
+  ⇒ `gut_admin_hint` sobrevive ao logout. Confirmado o que o MC89.35 provou.
+  ⇒ `gut_corporativo_hint` ainda não existe (procurei; zero resultados).
+
+================================================================================
+5. R-C: O PRAZO É MESMO NECESSÁRIO — E O NÚMERO PEDIDO TEM UM RISCO
+================================================================================
+`apiGet` (lib/api.js) aceita um `signal` mas NÃO impõe timeout próprio. Um fetch
+que nunca resolve deixa `tipoResolvido` false para sempre. O prazo do enunciado
+não é zelo excessivo: é a única coisa entre o utilizador e um esqueleto eterno.
+
+⚠️ MAS O NÚMERO PEDIDO (10 s) FICA ABAIXO DO ARRANQUE FRIO QUE MEDI:
+
+    arranque quente : cadeia /cotas termina aos  5 707 ms  → 10 s nunca dispara ✔
+    arranque frio   : cadeia /cotas termina aos 11 950 ms  → 10 s DISPARA ✘
+                      (lojista por endereço faz 1 chamada: ~11 231 ms — na mesma)
+
+  ⇒ Num arranque a frio o lojista veria o Dashboard comum durante ~1,2 s, o que
+    contraria em parte o R8. Nos cenários que o operador reporta (sair da conta e
+    voltar a entrar) as funções estão QUENTES e o prazo nunca dispara — por isso
+    implemento os 10 s como pedido, deixo a constante isolada e com nome, e
+    registo aqui a recomendação: 15 s fecha também o caso frio, e é a troca de um
+    único número.
+
+  ⚠️ Também corrijo-me a mim próprio: o MC89.35 propôs 3 s. Contradizia a minha
+    própria medição (a janela quente é de 5,7 s) e teria disparado SEMPRE. Os
+    10 s do operador são melhores do que os 3 s que eu tinha escrito.
+
+================================================================================
+6. ARMADILHA A EVITAR NA P2 (ordem de precedência)
+================================================================================
+O enunciado (2.4) manda: "Se `lojistaProvavel` for true, redirecionar para
+/corporativo (assim como o ADM)".
+
+⚠️ Se isso for escrito como uma condição SEPARADA, cria-se uma segunda fonte de
+verdade a competir com o `tipoProvavel`, e com ela volta o risco do ciclo
+/corporativo ↔ / que o MC88.42 mediu (sete voltas entre os 1 974 e os 5 064 ms).
+
+DECISÃO: `lojistaProvavel` entra como a NOVA FONTE do `tipoOtimista`, dentro do
+`tipoProvavel` que já existe — não como um `if` novo em App.jsx. O encaminhamento
+e a guarda `CorporativoRoute` continuam a ler a MESMA variável, que é
+precisamente a lição que o MC88.42 deixou escrita em App.jsx:91-93.
+
+⇒ Efeito idêntico ao pedido, sem uma segunda verdade. O ficheiro App.jsx ganha
+  um ramo (o estado neutro), não dois.
+
+================================================================================
+7. PLANO DE ALTERAÇÃO — RAIO FECHADO (R1)
+================================================================================
+  src/components/EstadoNeutro.jsx ......... NOVO — o estado de espera
+  src/lib/encaminhamento.js ............... NOVO — decisão pura, testável
+  src/lib/dicaSessao.js ................... + lojistaProvavel/gravar/limpar
+  src/App.jsx ............................. usa a decisão pura + EstadoNeutro
+  src/context/AppContext.jsx .............. + tipoResolvido, palpite na chave nova
+  src/lib/*.test.mjs ...................... testes
+
+PORQUÊ `lib/encaminhamento.js` E NÃO A LÓGICA SOLTA EM App.jsx:
+o frontend não tem runner de React — testa-se lógica pura com `node:test`. Sem
+extrair a decisão para uma função pura, os critérios do MC89.35 (C6: cada teste
+validado por mutação) não seriam verificáveis. É a alteração mínima que torna a
+correção testável, e não muda o comportamento por si só.
+
+FORA DE ÂMBITO, outra vez e de propósito: P3 (perfil no `auth-user`), a extensão
+da guarda às rotas /carteira|/mercado|/vitrine|/ativos, e qualquer mexida no
+polling. O MC89.34 mostrou o custo de alargar o raio.
