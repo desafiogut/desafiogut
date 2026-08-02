@@ -1,0 +1,274 @@
+MC89.35 — PLANO DE AÇÃO: ELIMINAR A TRANSIÇÃO DO LOJISTA PELO DASHBOARD COMUM
+Data: 2026-08-02 | Execução prevista: MC89.36 | R1 CUMPRIDA: este MC não altera código.
+Base factual: docs/MC89.35-DIAGNOSTICO.txt  ← ler primeiro; este plano assume-o.
+
+Skills ECC aplicadas: terminal-ops (medição no aparelho), ux-waiting-audit
+(desenho do estado de espera, §3), verification-loop (portão de verificação, §6),
+continuous-learning-v2 (lições, §8).
+
+================================================================================
+1. O QUE TEM DE MUDAR — EM UMA FRASE
+================================================================================
+Hoje, quando a app AINDA NÃO SABE quem é o utilizador, ela responde "é comum" e
+pinta o Dashboard de leilão. O diagnóstico provou que essa afirmação é falsa
+durante 5,7 a 12,0 segundos, em SEIS cenários distintos, e que o palpite do
+MC88.42 só a evita numa segunda visita dentro de 24 h e sem logout pelo meio.
+
+    A correção não é adivinhar melhor. É PARAR DE AFIRMAR o que não se sabe.
+
+================================================================================
+2. O QUE FOI REJEITADO, E PORQUÊ
+================================================================================
+❌ OPÇÃO A DO ENUNCIADO — "pareceAutenticado + cache de tipoConfirmado para
+   redirecionar cedo (recomendado)".
+   REJEITADA COM PROVA. `pareceAutenticado` responde "há sessão em disco?", não
+   "de que tipo é". Nos cenários A/B/C/E/F/G o `tipoConfirmado` NÃO EXISTE — não
+   há palpite para antecipar. E onde ele existe, o encaminhamento JÁ é imediato
+   no primeiro render (§4 do diagnóstico, controlo positivo). Implementar a
+   Opção A produziria zero efeito observável.
+   ⇒ É o principal desvio deste plano face ao enunciado, e está fundamentado.
+
+❌ OPÇÃO C — overlay de carregamento por cima do Dashboard comum.
+   REJEITADA. Mascara em vez de corrigir, e mascara mal: por baixo continuam os
+   KPIs de lances e o saldo de senhas de outro produto. Acrescenta uma camada
+   com `backdrop-filter`, e já medi que o custo é POR CAMADA (17,5 → 59,6 fps ao
+   remover 11 camadas). Pagar fps para esconder um erro é o pior negócio dos três.
+
+✅ OPÇÃO B — adiar o paint do Dashboard comum.
+   ACEITE, com três correções que o enunciado não previu e que a história do
+   repositório já pagou (ver §3).
+
+================================================================================
+3. P1 (OBRIGATÓRIA) — ESTADO NEUTRO ENQUANTO O PERFIL É DESCONHECIDO
+================================================================================
+ONDE: App.jsx, `DashboardOuCorporativo` (o ramo final, hoje `return <Dashboard/>`).
+
+REGRA: se o utilizador PARECE AUTENTICADO e o perfil ainda não está resolvido,
+renderiza-se um estado neutro em vez do Dashboard comum.
+
+  ┌─ TRÊS RESTRIÇÕES QUE NÃO SÃO NEGOCIÁVEIS ────────────────────────────────┐
+  │                                                                          │
+  │ R-A. NÃO PODE SER `return null`.                                         │
+  │      Já foi tentado e está documentado em App.jsx:135-148: produziu       │
+  │      CLS 0,373 e um Dashboard que DESAPARECIA durante 1,2 s. O estado     │
+  │      neutro tem de OCUPAR O MESMO ESPAÇO que o conteúdo que substitui.    │
+  │                                                                          │
+  │ R-B. NÃO PODE APLICAR-SE A VISITANTES.                                    │
+  │      O Dashboard comum é a página pública de entrada. Um visitante        │
+  │      anónimo tem de continuar a vê-lo IMEDIATAMENTE. A condição de        │
+  │      entrada no estado neutro é `pareceAutenticado` — quem não tem        │
+  │      sessão em disco nunca lá entra. (É o único papel de                  │
+  │      `pareceAutenticado` neste plano: decidir A QUEM se espera, nunca     │
+  │      PARA ONDE se vai.)                                                   │
+  │                                                                          │
+  │ R-C. TEM DE FALHAR PARA O LADO ABERTO, COM PRAZO.                        │
+  │      Se `/cotas` nunca responder (medido: 12,0 s a frio; e já vi          │
+  │      `atrasado:false` como falso verde por um token em falta), o          │
+  │      utilizador não pode ficar preso num esqueleto para sempre.           │
+  │      Passado um limite — proponho 3 s, ~2× a mediana quente — renderiza   │
+  │      o Dashboard comum na mesma. Pior fica exatamente como está hoje.     │
+  └──────────────────────────────────────────────────────────────────────────┘
+
+DESENHO DO ESTADO NEUTRO — aplicando o checklist de ux-waiting-audit.
+A espera é de 5–12 s e o "trabalho" é descobrir quem é o utilizador. Das dez
+categorias, quatro aplicam-se e seis seriam sobre-engenharia; digo qual e porquê,
+para que a ausência seja decisão e não esquecimento:
+
+  ✅ 2. Heartbeat        — esqueleto com pulsação suave (o `gut-fade` que já
+                            existe no RouteFallback, App.jsx:65-73). Prova de vida.
+  ✅ 4. Explicação       — uma linha honesta: "A preparar a sua área…".
+                            NÃO dizer "Carregando o painel do lojista": ainda não
+                            se sabe, e prometer o painel a um comum é repetir o
+                            erro ao contrário.
+  ✅ 10. Ansiedade       — o esqueleto tem a forma do shell da app (cabeçalho +
+                            barra inferior já pintados), portanto lê-se como
+                            "a app está a montar", não como "a app avariou".
+  ✅ 1. Valor progressivo — parcialmente: cabeçalho, saudação e saldo otimista
+                            (MC88.34/88.37) JÁ estão pintados e ficam. Só o corpo
+                            do Dashboard é que passa a esqueleto.
+  N/A 3. Estimativa de tempo   — barra de progresso para 5 s é ruído.
+  N/A 5. Custo afundado        — não há trabalho do utilizador a perder.
+  N/A 6. Trabalhar enquanto espera — a barra de navegação continua ativa; nada a fazer.
+  N/A 7. Cancelável            — cancelar o quê? Não há operação do utilizador.
+  N/A 8. Degradação graciosa   — coberto por R-C (falha → Dashboard comum).
+  N/A 9. Celebração final      — o "fim" é a app aparecer. Animar isso seria ruído.
+
+⚠️ UMA CATEGORIA QUE O CHECKLIST NÃO TEM, E QUE É O NOSSO DEFEITO:
+   o checklist pressupõe que a app MOSTRA que está à espera. A nossa não mostra —
+   ela dá uma resposta errada com confiança. Isso é pior do que qualquer uma das
+   dez falhas listadas, porque o utilizador nem sabe que deve esperar. Registo
+   isto como extensão, não como pontuação.
+
+EFEITO ESPERADO POR CENÁRIO (do §5 do diagnóstico):
+   A logout → login .............. deixa de ver o Dashboard comum ✔
+   B troca de conta .............. deixa de ver o Dashboard comum ✔
+   C reabrir após 24 h ........... deixa de ver o Dashboard comum ✔
+   E primeiro login de sempre .... deixa de ver o Dashboard comum ✔
+   F reinstalação ................ deixa de ver o Dashboard comum ✔
+   G sessão sem endereço legível . deixa de ver o Dashboard comum ✔
+   ⇒ P1 sozinha resolve os seis. É por isso que é a peça obrigatória.
+
+CUSTO: nenhum em carregamento. `Dashboard` é importado EAGER (App.jsx:20), o
+chunk já está em memória; não o pintar não adia download nenhum.
+
+================================================================================
+4. P2 (RECOMENDADA) — DAR AO PALPITE DO LOJISTA UM RECIPIENTE PRÓPRIO
+================================================================================
+PROBLEMA (§5 do diagnóstico, provado): `tipoConfirmado` vive dentro do
+`gut_saldo_cache` e é apagado pela guarda de coerência do SALDO no logout — uma
+guarda que nem sabe que ele lá está. O `gut_admin_hint` do ADM não sofre disto
+porque tem chave própria e `limparDicaAdmin` NÃO TEM UM ÚNICO PONTO DE CHAMADA
+no produto. A assimetria nunca foi deliberada.
+
+PROPOSTA: mover o palpite do lojista para `lib/dicaSessao.js`, ao lado do do ADM,
+com chave própria (`gut_tipo_hint`) e EXATAMENTE as três guardas de
+`adminProvavel()`: existe e não expirou (24 h) · diz "corporativo" · o endereço é
+o mesmo de `privy:connections`.
+
+SEGURANÇA (R4) — a pergunta óbvia é "e sobreviver ao logout não é pior?":
+  · O palpite só ENCAMINHA. Quem AUTORIZA continua a ser `CorporativoRoute`
+    (App.jsx:79-130) e o backend. Um palpite errado leva a uma porta que não abre.
+  · A guarda 3 ancora no endereço da sessão em disco: o palpite de A nunca se
+    aplica a B. É a mesma defesa que o MC88.34 teve de acrescentar depois de um
+    teste por mutação mostrar o saldo alheio pintado durante 2,7 s.
+  · É exatamente o contrato já aceite para o ADM desde o MC89.31, que é o perfil
+    de MAIOR privilégio. Aplicá-lo ao lojista não alarga a superfície.
+  · Não é dado pessoal: é a string "corporativo" associada a um endereço público.
+
+DEPOIS DE P1, P2 É UMA OTIMIZAÇÃO, NÃO UMA CORREÇÃO. Sem P2 o lojista que volta
+vê o esqueleto durante 5–12 s; com P2 vai direto ao painel. Vale a pena, mas se
+houver que cortar âmbito, corta-se esta e não a P1.
+
+================================================================================
+5. P3 (NÃO EXECUTAR NO MC89.36) — RESOLVER O PERFIL MAIS CEDO
+================================================================================
+A causa do TAMANHO da janela é a cadeia serial medida:
+    auth-user  3 607 → 4 413 ms  (quente)   |  4 619 → 8 261 ms  (frio)
+    /cotas     4 422 → 5 707 ms  (quente)   |  8 271 → 11 950 ms (frio)
+
+Se `auth-user` devolvesse o perfil, a janela cairia para ~4,4 s (quente) / ~8,3 s
+(frio) — praticamente metade. Mas isso é backend, toca noutro contrato e tem raio
+maior do que uma correção de arranque.
+
+RECOMENDAÇÃO: NÃO fazer no MC89.36. Fica registado como candidato, a medir com
+uma conta de lojista real primeiro (é a mesma pendência que o MC89.33 §6 já
+deixou em aberto). Não recomendo às cegas o que não medi no perfil certo.
+
+================================================================================
+6. CRITÉRIOS DE SUCESSO — VERIFICÁVEIS, COM CONTROLO POSITIVO
+================================================================================
+Nenhum destes critérios é "olhei e pareceu bem". Cada um diz como se mede e como
+se prova que o instrumento não está cego.
+
+C1. O LOJISTA NUNCA VÊ O DASHBOARD COMUM (cache fria).
+    MÉTODO: `adb shell screenrecord` a correr ANTES de abrir a app; limpar dados
+    da app; entrar como lojista; percorrer os fotogramas.
+    Escolhi vídeo e não sonda de DOM porque a WebView não existe antes do
+    arranque — não há onde injetar um observador a tempo. O vídeo vê o que o
+    utilizador vê, que é a pergunta.
+    ⚠️ CONTROLO POSITIVO OBRIGATÓRIO: repetir com uma conta COMUM. Nesse vídeo o
+    Dashboard TEM de aparecer. Se não aparecer, o instrumento está cego e o verde
+    do lojista não vale nada. (Lição do MC89.31/89.33: "o defeito não aparece"
+    pode ser instrumento cego.)
+
+C2. NÃO HÁ ECRÃ EM BRANCO — o erro que o MC88.37 corrigiu não volta.
+    MÉTODO: nos mesmos fotogramas, todo o intervalo entre o FCP e o painel tem
+    conteúdo. Mais `performance.getEntriesByType("paint")` por CDP, comparado com
+    a baseline medida hoje (FCP 568 / 876 ms).
+
+C3. CLS NÃO REGRIDE.
+    MÉTODO: PerformanceObserver de layout-shift por CDP, hard-reload, mesma
+    receita do MC88.37. Baseline a recolher ANTES da alteração, no mesmo aparelho
+    e na mesma sessão. Aceite: ≤ baseline + 0,01.
+    RAZÃO DE SER: esta é a métrica que o `return null` estragou da última vez.
+
+C4. FALHA PARA O LADO ABERTO (R-C).
+    MÉTODO: `Network.setBlockedURLs` por CDP a bloquear `**/cotas*`; abrir a app.
+    ESPERADO: passado o limite, o Dashboard comum aparece. NÃO pode ficar no
+    esqueleto.
+
+C5. O ARRANQUE NÃO FICA MAIS LENTO.
+    MÉTODO: A/B intercalado, recompilando a baseline, alternando a ordem e
+    DESCARTANDO a primeira corrida pós-instalação (é a receita que já uso para
+    perf de APK). 3 pares. Aceite: FCP dentro do ruído medido.
+
+C6. TESTES DE LÓGICA PURA, CADA UM VALIDADO POR MUTAÇÃO.
+    O frontend não tem runner de React; testa-se lógica pura com `node:test`,
+    ao lado de `src/lib/*.test.mjs`.
+    ⚠️ Um teste que nunca viu vermelho não prova nada — já apanhei 2 de 3 guardas
+    em falso verde no MC88.16 e mais duas no MC89.34. Para CADA teste novo:
+    introduzir a mutação que ele deve apanhar, confirmar o VERMELHO, reverter.
+    Registar a lista de mutações no relatório do MC89.36.
+
+C7. SUITE BASELINE VERDE.
+    `node --test --experimental-test-module-mocks` — sem esta flag a baseline não
+    corre. Nenhum teste existente pode passar a vermelho.
+
+================================================================================
+7. PORTÃO DE VERIFICAÇÃO (verification-loop) — ORDEM OBRIGATÓRIA
+================================================================================
+  1. Suite baseline .... node --test --experimental-test-module-mocks   → verde
+  2. Testes novos ...... cada um provado por mutação (C6)                → verde
+  3. Build ............. npm run build:apk
+     ⚠️ NUNCA `npm run build`. `build:apk` traz o portão `validar:dist`, e sem
+       ele já se enviou um APK com env em falta. O aviso vermelho "rede Sepolia"
+       é diagnóstico de env — nunca silenciar.
+  4. Revisão do diff ... o raio tem de ser App.jsx + lib/dicaSessao.js
+                         (+ AppContext.jsx se P2 entrar). Qualquer ficheiro fora
+                         disto é âmbito a mais e volta atrás.
+  5. Aparelho .......... C1 a C5, com o controlo positivo de C1.
+  6. Deploy web ........ é do OPERADOR. E não substitui o APK: o frontend viaja
+                         DENTRO do .apk, portanto sem `cap sync` + rebuild nada
+                         do que se fez chega ao telemóvel.
+
+================================================================================
+8. RISCOS, E O QUE OS TRAVA
+================================================================================
+R1. Regredir o arranque do VISITANTE (a página pública).
+    TRAVÃO: restrição R-B (só entra no estado neutro quem `pareceAutenticado`)
+    + C1 com conta comum + C5.
+
+R2. Repetir o CLS do MC88.37.
+    TRAVÃO: restrição R-A (esqueleto com a mesma pegada) + C3 com baseline
+    recolhida no próprio aparelho.
+
+R3. Prender o utilizador num esqueleto se o backend falhar.
+    TRAVÃO: restrição R-C (prazo, falha para o lado aberto) + C4 com o endpoint
+    bloqueado à força.
+
+R4. Alargar o raio da correção (o erro que o MC89.34 evitou de propósito).
+    TRAVÃO: passo 4 do portão. P3 fica FORA. A guarda continua a viver na rota
+    "/" e este MC não a estende — se isso for para fazer, é MC próprio.
+
+R5. Validar contra uma suposição minha em vez de contra o produto.
+    TRAVÃO: a tabela de decisão do diagnóstico corre as funções VERBATIM do APK,
+    e C1 usa vídeo do ecrã real. Nenhum verde deste plano assenta numa reescrita
+    minha do código.
+
+================================================================================
+9. O QUE ESTE PLANO NÃO RESOLVE — DITO À FRENTE
+================================================================================
+  · A janela de 5–12 s CONTINUA A EXISTIR. P1 troca "produto errado" por "estado
+    honesto"; não torna a app mais rápida. Quem encurta é P3, e P3 fica de fora.
+  · Não observei o painel /corporativo a correr. O que acontece DEPOIS do
+    redirect continua por medir (MC89.33 §6, ainda em aberto).
+  · A guarda de encaminhamento vive na rota "/". /carteira, /mercado, /vitrine e
+    /ativos continuam a renderizar para um lojista que lá chegue por URL. No APK
+    é inalcançável; na build web, não. Fica registado, fora de âmbito.
+
+================================================================================
+10. PERGUNTA AO OPERADOR — NÃO BLOQUEIA A EXECUÇÃO
+================================================================================
+Em que cenário viu a transição?
+   (a) "saí do ADM e entrei como lojista"        → cenário B
+   (b) "abri a app ao fim de uns dias"           → cenário C
+   (c) "primeira vez que entrei com essa conta"  → cenário E
+Os três são cobertos por P1. A resposta só decide qual filmar em C1 — e, se for
+(a), P2 passa de "recomendada" a "é isso que ele está a testar".
+
+================================================================================
+11. RECOMENDAÇÃO
+================================================================================
+Executar no MC89.36: P1 (obrigatória) + P2 (recomendada).
+Deixar P3 registado, a medir primeiro com conta de lojista real.
+Aprovação do operador necessária antes de tocar em código (Pilar 1).
