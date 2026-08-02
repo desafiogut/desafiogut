@@ -1,0 +1,171 @@
+MC89.37 — PLANO DE TESTES E VALIDAÇÃO
+Data: 2026-08-02 | Base: MC89.37-PLANO.txt
+Skills aplicadas: security-review (§1-2), verification-loop (§4), canary-watch (§5),
+                  latency-critical-systems (§3), ux-waiting-audit (§6)
+
+================================================================================
+0. A REGRA QUE VALE PARA TUDO O QUE ESTÁ ABAIXO
+================================================================================
+⚠️ NENHUM TESTE DESTE DOCUMENTO CONTA SEM TER SIDO VISTO A FALHAR.
+Neste projeto já apanhei 2 de 3 guardas em falso verde (MC88.16), mais duas
+(MC89.34), e nesta mesma sessão 4 mutações que "passaram" porque o meu `sed` se
+partia no `||` e a mutação nunca era aplicada. Um teste que nunca viu vermelho
+não prova nada.
+
+Para CADA teste: introduzir a mutação que ele deve apanhar, confirmar o vermelho,
+reverter. A lista de mutações vai no relatório do MC89.38.
+
+================================================================================
+1. TESTES DE AUTORIZAÇÃO NO SERVIDOR  [security-review]
+================================================================================
+São os únicos que provam a correção (RNF1). Chamam o endpoint diretamente, sem
+passar pelo frontend — que é exatamente como um atacante o faria.
+
+T1.1  POST /produtos SEM Authorization                    → 401
+      [já funciona hoje; é controlo negativo, para o teste não ser vacuoso]
+
+T1.2  POST /produtos com JWT de utilizador COMUM (sem registo corporativo)
+                                                          → 403 cota_inativa
+      ⚠️ É O TESTE MAIS IMPORTANTE DE TODO O MC. Hoje devolve 201.
+
+T1.3  POST /produtos com JWT de lojista REGISTADO mas vendida=false
+                                                          → 403 cota_inativa
+      Hoje devolve 201. É o caso que o operador reportou.
+
+T1.4  POST /produtos com lojista vendida=true, categoria="bronze",
+      produto.categoria="diamante"          → 403 categoria_nao_permitida   (D3)
+
+T1.5  POST /produtos com lojista vendida=true e categoria a bater  → 201
+      ⚠️ CONTROLO POSITIVO OBRIGATÓRIO. Sem ele, um gate que rejeite TUDO
+      passaria em T1.2-T1.4 e pareceria perfeito. Já vi um instrumento cego dar
+      verde nesta sessão; não repetir.
+
+T1.6  POST /produtos com cliente_id de OUTRO lojista no corpo
+                                            → 403 endereco_nao_corresponde  (P0)
+
+T1.7  ⚠️ NÃO-REGRESSÃO DO CADASTRO DIRETO: lojista cujo cliente_id é `cnpj:XXXXX`
+      (MC12.3.1) e não um endereço → tem de continuar a publicar.
+      Este é o teste que impede que a guarda do P0, copiada do banners.mjs às
+      cegas, parta um fluxo legítimo.
+
+T1.8  vendida=true mas categoria=null (a cota meio-válida que o formulário do ADM
+      consegue produzir, §4 do plano)       → 403, com código PRÓPRIO
+      Não pode ser `cota_inativa`: o lojista pagou, e mandá-lo comprar outra vez
+      seria pior do que o defeito original.
+
+================================================================================
+2. A ARMADILHA DA CHAVE  [security-review — falso negativo de autorização]
+================================================================================
+⚠️ O MODO DE FALHA MAIS PROVÁVEL DE TODO O MC89.38 não é deixar passar quem não
+devia — é BLOQUEAR quem pagou, por `getCota` ser chamado com a chave errada.
+
+`ativarCotaPaga` grava em `String(endereco).toLowerCase()`; o cadastro direto
+grava em `cnpj:XXXXX`. Se o gate procurar pela chave errada, o resultado é
+"sem cota" — indistinguível de "não pagou".
+
+T2.1  Endereço em MAIÚSCULAS/checksum no JWT → cota encontrada.
+T2.2  Endereço em minúsculas → cota encontrada.
+T2.3  cliente_id `cnpj:XXXXX` → cota encontrada.
+
+⇒ Os três têm de dar 201 com cota ativa. Se algum der 403, o gate está a
+  bloquear um cliente pagante e NÃO se pode enviar.
+
+================================================================================
+3. TESTES DO DESTRANCAR  [latency-critical-systems]
+================================================================================
+ACHADO QUE MUDA O DESENHO DO F3: já existe polling de confirmação de pagamento —
+`CorporativoCarteira.jsx:106` chama `confirmar-pagamento` em ciclo, e
+`lib/creditoPolling.js` tem a lógica pura (testável, já com testes).
+
+⇒ NÃO É PRECISO POLLER NOVO. O caminho quente já existe; falta ligar-lhe a
+  atualização da cota. É "remover round trips", não acrescentar.
+  Sem isto, o MC89.38 arriscava somar mais um poller a um arranque que o MC89.33
+  mediu em ~36 pedidos/min.
+
+T3.1  Ao confirmar o pagamento, `cotaCorporativa` é atualizada em memória
+      (via `atualizarTipoCorporativo`) SEM reabrir a app.
+T3.2  O painel destranca no mesmo gesto — sem F5, sem reabrir.
+T3.3  ⚠️ CONTAGEM DE PEDIDOS: medir pedidos/min em repouso ANTES e DEPOIS.
+      Aceite: sem aumento. Se aumentar, foi acrescentado um poller — e a
+      correção não pode custar o arranque que os MC88.3x passaram meses a limpar.
+T3.4  Métricas a separar (não colapsar em "rápido"): tempo entre a confirmação
+      e o painel destrancado (p50/p95), e a idade do dado mostrado.
+
+================================================================================
+4. PORTÃO DE VERIFICAÇÃO  [verification-loop]
+================================================================================
+Ordem obrigatória no MC89.38:
+
+  1. Suite baseline .... node --test --experimental-test-module-mocks   → verde
+                         (hoje: frontend 116/116, backend 347/347)
+  2. Testes novos ...... cada um provado por mutação (§0)
+  3. Build ............. npm run build:apk
+     ⚠️ NUNCA `npm run build`: só `build:apk` traz o portão `validar:dist`.
+  4. Revisão do diff ... raio esperado:
+                         produtos.mjs · _lib/(cota-ativacao|novo).mjs ·
+                         AppContext.jsx · o wrapper do painel ·
+                         src/pages/admin/Cotas.jsx (campo categoria)
+                         Ficheiro fora disto = âmbito a mais, volta atrás.
+  5. Aparelho .......... §5
+  6. Deploy ............ do OPERADOR. E o deploy web NÃO atualiza o APK: o
+                         frontend viaja dentro dele.
+
+================================================================================
+5. VALIDAÇÃO NO APARELHO E PÓS-DEPLOY  [canary-watch]
+================================================================================
+⚠️ BLOQUEIO CONHECIDO E JÁ MEDIDO NESTA SESSÃO: o OAuth do Privy não é
+automatizável, e a app tem UMA sessão de cada vez. Para cobrir os cenários
+preciso de contas de teste com estados diferentes, ou do operador a trocar de
+conta — cada troca custa ~10 s de arranque e um login manual.
+
+  V1  lojista SEM cota ativa → vê o ecrã de cota inativa, NÃO o painel
+  V2  lojista COM cota ativa → painel completo, como hoje
+  V3  utilizador comum       → nunca chega a /corporativo   [não regredir]
+  V4  ADM                    → continua a ir direto para /admin  [não regredir]
+
+  ⇒ V1 exige uma conta de lojista com `vendida: false`. Se não existir, é preciso
+    criá-la — e isso é escrita em dados de produção. NÃO o faço sem aval.
+
+  MÉTODO: a sonda CDP construída no MC89.36 serve tal e qual (reata o alvo a cada
+  iteração, ~13 ms de resolução). Trocar os marcadores para os do painel.
+  ⚠️ Com controlo positivo, como no MC89.36: injetar o marcador no DOM e
+  confirmar que a sonda o acusa, ANTES de acreditar num "não apareceu".
+
+  PÓS-DEPLOY (canary): confirmar em produção que
+   · um POST /produtos sem cota devolve 403 (e não 500 — 500 seria o gate a
+     rebentar, não a proteger);
+   · a taxa de 403 em /produtos não dispara acima do esperado — se disparar, é
+     provável que seja a armadilha da chave (§2) a bloquear pagantes.
+
+================================================================================
+6. O ECRÃ DE COTA INATIVA  [ux-waiting-audit]
+================================================================================
+Não é um estado de espera, é um estado de BLOQUEIO — e o checklist de espera
+aplica-se ao contrário: aqui não há nada a acontecer em segundo plano, portanto
+NÃO deve haver pulsação nem esqueleto (sugeririam "aguarde" a quem tem de agir).
+
+  U1  Diz o que se passa, sem jargão: a cota está inativa.
+  U2  Diz o que fazer a seguir, com um caminho clicável (comprar/renovar).
+  U3  Distingue "não pagou" de "cota incompleta, contacte o suporte" (T1.8) —
+      mandar comprar quem já pagou é pior do que o defeito original.
+  U4  Deixa SAIR. Lição do MC89.34: ao fechar uma porta, deixar saída visível.
+  U5  Reaproveita a linguagem existente (`ATIVA`/`INATIVA`, verde/vermelho, em
+      CorporativoCotas.jsx:100-105). Não inventar vocabulário novo.
+  U6  Enquanto a cota AINDA NÃO resolveu → `EstadoNeutro` (MC89.36), nunca este
+      ecrã. Dizer "inativa" a quem só ainda não foi verificado é a mesma família
+      de erro que este MC veio corrigir: afirmar o que não se sabe.
+
+================================================================================
+7. CRITÉRIOS DE ACEITAÇÃO
+================================================================================
+A1  T1.1-T1.8 verdes, cada um provado por mutação.
+A2  T2.1-T2.3 verdes — nenhum cliente pagante bloqueado.
+A3  T3.3 sem aumento de pedidos/min em repouso.
+A4  V1-V4 no aparelho, com controlo positivo na sonda.
+A5  Baseline 116/116 + 347/347 sem regressões.
+A6  F0 (contagem de cotas pagas) feita e comunicada ANTES de ligar o gate.
+
+⚠️ A6 NÃO É BUROCRACIA. É o único critério que protege contra a correção estar
+tecnicamente perfeita e comercialmente errada — tirar o painel a lojistas que
+hoje o usam. Essa decisão é do operador, e tem de ser tomada com o número à
+frente.
