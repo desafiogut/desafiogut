@@ -6496,3 +6496,68 @@ Nenhuma alteração de código neste MC, como pedido. Fica também uma pergunta 
 operador que não bloqueia nada: em qual dos seis cenários é que ele viu a
 transição. Os três prováveis estão todos cobertos pela correção; a resposta só
 decide qual deles vale a pena filmar na validação.
+
+## MC89.37 — o painel do lojista abre-se ao cadastro, não ao pagamento
+
+O operador disse que o lojista consegue entrar no painel sem ter pago, ou que o
+nível da cota não é respeitado. As duas coisas são verdade, e a causa é a mesma
+linha.
+
+O `tipo: "corporativo"` é gravado no REGISTO, não no pagamento — o formulário
+"Seja Nosso Parceiro" cria o registo já com esse campo, e com `vendida: false`,
+`categoria: null`, `valor: 0`. E o portão do painel lê apenas esse campo. Não é
+preciso fraude nenhuma para entrar sem pagar: é o caminho normal do produto.
+
+**Mas o pior não está no frontend.** `POST /produtos` não chama `getCota` em
+ponto nenhum. Basta um JWT de user-session, que é emitido a toda a gente —
+portanto um utilizador comum autenticado publica na vitrine, e o nível é
+irrelevante. E o mesmo endpoint aceita o `cliente_id` vindo do corpo do pedido
+sem verificar posse, com um comentário logo por baixo a descrever um check
+anti-IDOR que não está implementado.
+
+Não apresentei isso como suspeita, porque não era preciso: o ficheiro irmão
+`banners.mjs` faz exatamente essa verificação e devolve 403. Dois endpoints do
+mesmo painel, escritos com o mesmo padrão, um com guarda e outro sem. É omissão,
+não desenho — e por isso recomendei que fosse sozinho e à frente do resto, já que
+não depende de decisão de negócio nenhuma.
+
+**A boa notícia é que os dados já estão certos.** `vendida` e `categoria`
+distinguem perfeitamente quem se cadastrou de quem pagou. O defeito não é falta
+de dados — é ninguém os ler. Isto é uma correção de leitura, não de modelo. E o
+painel até já pinta um crachá "INATIVA" a vermelho, calcula essa informação, e a
+seguir deixa usar tudo à mesma.
+
+**Uma ironia que registo porque é minha:** o MC89.36, que acabei há uma hora, fez
+o lojista chegar ao painel mais depressa e sem passar pelo Dashboard comum. Fez
+bem o que lhe foi pedido — e acelerou também o acesso de quem não pagou. Arrumei
+a antecâmara antes de haver fechadura.
+
+As três decisões do operador cortaram metade do trabalho. A que mais pesou foi
+"a cota não expira, por agora": sem expiração não há campo novo, não há backfill,
+não há migração. O objetivo original falava em revogar por validade, e essa era
+a única parte que exigia funcionalidade nova.
+
+O plano evita três coisas de propósito, cada uma por uma lição já paga aqui. O
+gate não vai na rota, senão volta o ciclo /corporativo ↔ / que o MC88.42 mediu.
+Nenhum estado de autorização vai para localStorage, porque é forjável e contraria
+a regra que o próprio `dicaSessao.js` tem escrita no cabeçalho. E não entra
+poller novo: ao aplicar a skill de latência descobri que já existe polling de
+confirmação de pagamento, e o que falta é ligar-lhe a atualização da cota — somar
+mais um poller a um arranque de 36 pedidos/min seria desfazer meses de MC88.3x.
+
+**O risco que mais me preocupa não é deixar passar quem não devia — é bloquear
+quem pagou.** A ativação grava a cota com a chave em minúsculas e o cadastro
+direto grava em `cnpj:XXXXX`; se o gate procurar pela chave errada, o resultado é
+"sem cota", indistinguível de "não pagou". Há três testes dedicados só a isso.
+
+E apanhei um segundo risco ao ir responder a uma pergunta lateral: o formulário
+do ADM define `vendida` mas não tem campo `categoria`. Um administrador de boa-fé
+pode produzir uma cota `vendida: true` com `categoria: null` — que a definição de
+"ativa" trataria como inativa, trancando um lojista pago sem nada no ecrã a
+explicar porquê. Fica como primeira coisa a ler no MC89.38.
+
+Não implementei nada. E deixei um bloqueio explícito: antes de ligar o gate é
+preciso saber quantas das cotas em produção estão realmente pagas. Se a maioria
+não estiver, a correção está tecnicamente certa e comercialmente errada — e essa
+decisão é do operador, com o número à frente. Trancar primeiro e contar depois é
+a ordem errada.
