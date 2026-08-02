@@ -1,0 +1,122 @@
+MC89.37 — REQUISITOS E REGRAS DE NEGÓCIO
+Data: 2026-08-02 | Base: docs/MC89.37-DIAGNOSTICO.txt
+Origem das regras: DECIDIDAS PELO OPERADOR nesta sessão (as três perguntas de §0).
+⚠️ Nada aqui foi deduzido do código. O código não contém regras de permissão (L3).
+
+================================================================================
+0. AS TRÊS DECISÕES DO OPERADOR
+================================================================================
+D1. LOJISTA CADASTRADO MAS NÃO PAGO → PAINEL BLOQUEADO, COM ÁREA DE COMPRA.
+    Entra em /corporativo, mas só vê "a sua cota está inativa" + caminho para
+    comprar. Nada de produtos, banners ou relatórios.
+    · Porquê é a melhor das três: o painel JÁ pinta o crachá "INATIVA"
+      (CorporativoCotas.jsx:100-105). A linguagem existe; falta obedecer-lhe.
+    · E evita a armadilha do §6 do diagnóstico: não há expulsão, logo não há
+      ciclo /corporativo ↔ /.
+
+D2. A COTA NÃO EXPIRA (POR AGORA).
+    Uma vez paga, vale até ser cancelada à mão pelo ADM.
+    ⇒ CONSEQUÊNCIA GRANDE E BOA: o MC89.38 NÃO mexe no modelo de dados, NÃO
+      precisa de campo `expiraEm`, NÃO precisa de backfill e NÃO precisa de
+      migração. Fica só o gate de pagamento e de nível.
+    ⇒ O objetivo original deste MC falava em "revogar quando a cota expira".
+      Isso sai de âmbito por decisão do operador, e é a decisão certa: era a
+      única parte que exigia funcionalidade nova.
+
+D3. O NÍVEL RESTRINGE O SLOT: cada lojista publica APENAS no slot do seu nível.
+    Bronze → slot bronze. Não é acumulativo (diamante NÃO publica em bronze).
+
+================================================================================
+1. REGRA DE ACESSO — A DEFINIÇÃO ÚNICA DE "COTA ATIVA"
+================================================================================
+    cotaAtiva  ⇔  vendida === true
+                  E categoria ∈ {bronze, prata, ouro, diamante}
+
+Os dois termos são precisos e ambos necessários:
+  · `vendida === true` (estrito, não truthy) — só `ativarCotaPaga` o põe, e só
+    depois de o pagamento estar confirmado.
+  · `categoria` válida — protege contra um registo meio-escrito. `CATEGORIAS`
+    já existe em `_lib/cota-ativacao.mjs:17` e é a fonte única; não criar outra.
+
+⚠️ `tipo === "corporativo"` DEIXA DE SER SUFICIENTE PARA AUTORIZAR. Continua a
+  servir para ENCAMINHAR (é o que o MC89.36 usa e não deve mudar): "esta pessoa
+  pertence ao mundo do lojista". Passa a haver duas perguntas distintas e é
+  preciso não voltar a colapsá-las:
+      "é lojista?"       → tipo          → encaminha    (MC88.42 / MC89.36)
+      "tem cota paga?"   → cotaAtiva     → autoriza     (MC89.38)
+  É a mesma separação que o ADM já tem entre a dica de 24 h e o `gut_admin_check`.
+
+================================================================================
+2. REQUISITOS FUNCIONAIS
+================================================================================
+RF1. Um utilizador SEM registo corporativo não acede a /corporativo.
+     [JÁ FUNCIONA HOJE — CorporativoRoute. Não regredir.]
+
+RF2. Um lojista registado SEM cota ativa entra em /corporativo e vê APENAS o
+     ecrã de cota inativa, com o caminho para comprar. (D1)
+
+RF3. Um lojista COM cota ativa usa o painel todo, conforme o nível. (D1)
+
+RF4. `POST /produtos` exige cota ativa. Sem ela → 403.
+     ⇒ Fecha o furo de um utilizador COMUM autenticado publicar (§3 do
+       diagnóstico).
+
+RF5. `POST /produtos` exige `produto.categoria === cota.categoria`. (D3)
+     Caso contrário → 403.
+
+RF6. `POST /produtos` só aceita `cliente_id` que pertença a quem faz o pedido.
+     ⇒ É a guarda que o `banners.mjs:233` já tem e que falta aqui.
+     ⚠️ NÃO DEPENDE DE NENHUMA DAS TRÊS DECISÕES ACIMA. Ver P0 no plano.
+
+RF7. Quando o pagamento é confirmado com a app aberta, o painel destranca sem o
+     lojista ter de reabrir a app.
+     ⇒ Hoje `cotaCorporativa` é buscada UMA vez no arranque (§5 do diagnóstico).
+       Isto não incomoda hoje porque tudo está aberto; passa a incomodar no
+       minuto em que o gate existir. É requisito NOVO criado pela própria
+       correção — e é preciso dizê-lo, senão o MC89.38 entrega um gate que
+       tranca o lojista que acabou de pagar.
+
+RF8. O ADM continua a poder ver e gerir cotas de qualquer estado.
+     [JÁ FUNCIONA — /admin/cotas. Não regredir.]
+
+================================================================================
+3. REQUISITOS NÃO-FUNCIONAIS
+================================================================================
+RNF1. ⚠️ O SERVIDOR É A AUTORIDADE. O gate do frontend é conforto: evita que o
+      lojista tente e leve com um erro. Quem impede de facto é o backend (RF4-6).
+      Um gate só de frontend não corrige nada — o `POST /produtos` continua
+      aberto a quem chamar o endpoint à mão.
+
+RNF2. ⚠️ NENHUM ESTADO DE AUTORIZAÇÃO EM localStorage. A dica
+      `gut_corporativo_hint` (MC89.36) diz "é corporativo" e NÃO pode passar a
+      dizer "pagou" nem o nível: é forjável, e contraria a regra escrita no
+      cabeçalho de lib/dicaSessao.js. O encaminhamento continua otimista; a
+      autorização continua a vir do servidor.
+
+RNF3. Sem regressão de arranque. O MC89.36 pôs o lojista no painel em 132 ms na
+      reabertura. O gate não pode reintroduzir um ecrã em branco nem um ciclo de
+      rotas — usar o `EstadoNeutro` que já existe enquanto a cota não resolve.
+
+RNF4. Fonte única para categorias e preços: `_lib/cota-ativacao.mjs`. Não
+      duplicar a lista nem os valores no frontend.
+
+================================================================================
+4. PERGUNTAS AINDA EM ABERTO (não bloqueiam o MC89.38)
+================================================================================
+Q1. Quantos lojistas em produção têm `vendida: true`? São 7 cotas registadas
+    (MC89.33). Se a maioria estiver por pagar, ligar o gate tira o painel a
+    pessoas que hoje o usam — e isso é uma decisão de negócio, não técnica.
+    ⇒ É uma consulta de segundos ao Supabase. NÃO a corri (dado de negócio).
+    ⇒ RECOMENDO CORRER ANTES DE LIGAR O GATE. Ver o plano, Fase 0.
+
+Q2. Um lojista com cota ativa pode publicar quantos produtos? Não há limite hoje.
+    D3 resolveu o SLOT, não a QUANTIDADE. Fica fora do MC89.38 até haver regra.
+
+Q3. O que acontece aos produtos JÁ publicados por quem não tem cota ativa?
+    Ficam? Escondem-se da vitrine? É decisão de negócio.
+    ⇒ Proposta neutra para o MC89.38: NÃO tocar no que está publicado. O gate
+      passa a valer para NOVAS publicações. Mexer no passado é outro MC, e
+      apagar conteúdo de terceiros por engano não tem volta.
+
+Q4. Quem cancela uma cota à mão (D2) — existe essa ação no /admin/cotas hoje?
+    Não verifiquei. Se não existir, D2 fica sem forma de ser exercida.
