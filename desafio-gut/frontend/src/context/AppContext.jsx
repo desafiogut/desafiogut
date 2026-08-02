@@ -591,7 +591,20 @@ export function AppProvider({ children }) {
   // Atualiza cotaCorporativa em memória após auto-cadastro (SejaNossoParceiro)
   // sem aguardar novo fetch do servidor.
   // MC89.36 — o auto-cadastro é uma resposta definitiva tal como a do servidor.
-  const atualizarTipoCorporativo = (data) => { setCotaCorporativa(data); setTipoCarregando(false); setTipoResolvido(true); };
+  //
+  // ⚠️ MC89.41 — `useCallback` NÃO É DECORATIVO AQUI, E A FALTA DELE DAVA UMA
+  // TEMPESTADE DE PEDIDOS.
+  // Esta função era recriada a cada render. O MC89.41 (F3) passou a chamá-la do
+  // `carregar` da CorporativoCarteira, que é um `useCallback` consumido por
+  // `useEffect(() => { carregar(); }, [carregar])`. Com uma identidade nova em
+  // cada render, `carregar` mudava sempre → o efeito voltava a correr → novo
+  // fetch → novo estado → novo render, em ciclo fechado, a bater no `/cotas`
+  // sem parar. Apanhei-o ao rever as dependências, não em execução.
+  // As três funções de estado do React são estáveis, portanto a lista vazia é
+  // correta e a identidade passa a ser constante.
+  const atualizarTipoCorporativo = useCallback((data) => {
+    setCotaCorporativa(data); setTipoCarregando(false); setTipoResolvido(true);
+  }, []);
 
   // MC12.3 Item 4 — Isolamento do mundo lojista. Se um corporativo cair em
   // rota de usuário comum (Dashboard, carteira, mercado, vitrine, ativos…),

@@ -132,3 +132,32 @@ test("o ecrã de bloqueio tem saída e distingue 'incompleta' de 'não pagou'", 
   assert.doesNotMatch(semComentarios(c), /animation:\s*["'`]gut-fade/,
     "ganhou pulsação: isto é um estado de BLOQUEIO, não de espera — sugeriria 'aguarde' a quem tem de agir");
 });
+
+// ── MC89.41 (F3) — DESTRANCAR SEM REABRIR ───────────────────────────────────
+
+test("⚠️ F3 não pode acrescentar poller: reutiliza o `carregar` que já existe", () => {
+  const c = ler("../pages/CorporativoCarteira.jsx");
+  const src = semComentarios(c);
+  // O polling de confirmação já existia (MC17.1). Se aparecer um segundo
+  // setInterval/setTimeout recorrente para /cotas, é poller novo — e o MC89.33
+  // mediu ~36 pedidos/min em repouso, que os MC88.3x passaram meses a limpar.
+  assert.equal((src.match(/setInterval\(/g) || []).length, 0,
+    "apareceu um setInterval na carteira — o F3 devia reutilizar o polling existente");
+  assert.match(src, /atualizarTipoCorporativo\(rc\.data\)/,
+    "o F3 deixou de propagar a cota para o contexto — o painel só destrancaria ao reabrir a app");
+});
+
+test("⚠️ F3 só propaga com dados: um 404 não pode reabrir o gate", () => {
+  const src = semComentarios(ler("../pages/CorporativoCarteira.jsx"));
+  assert.match(src, /if \(rc\.ok && rc\.data\) atualizarTipoCorporativo/,
+    "passou a propagar sem verificar — um 404 poria cotaCorporativa a null e reabriria o gate");
+});
+
+test("⚠️ atualizarTipoCorporativo TEM de ser estável (senão é um ciclo de fetch)", () => {
+  // Ela entra nas dependências do `carregar`, que alimenta um
+  // useEffect(() => carregar(), [carregar]). Sem useCallback, identidade nova a
+  // cada render → efeito volta a correr → fetch → render → em ciclo fechado.
+  const ctx = semComentarios(ler("../context/AppContext.jsx"));
+  assert.match(ctx, /const atualizarTipoCorporativo = useCallback\(/,
+    "atualizarTipoCorporativo deixou de ser estável — volta a tempestade de pedidos ao /cotas");
+});

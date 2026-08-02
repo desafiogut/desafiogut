@@ -45,6 +45,9 @@ export default function CorporativoCarteira() {
   const {
     isConnected, abrirModal, address, authToken, cotaCorporativa,
     saldoSenhas, saldoSenhasStatus, refetchSaldo,
+    // MC89.41 (F3) — propaga a cota recém-lida para o contexto, para o gate do
+    // MC89.40 destrancar sem o lojista ter de reabrir a app.
+    atualizarTipoCorporativo,
   } = useAppContext();
   const { getAuthToken } = useTrocarPorSenhas(); // lance-auth para converter troco
 
@@ -65,13 +68,31 @@ export default function CorporativoCarteira() {
     try {
       const rc = await apiGet(`cotas?cliente_id=${address}`, { token: authToken });
       setCota(rc.status === 404 ? null : (rc.ok ? rc.data : null));
+      // MC89.41 (F3) — DESTRANCAR SEM REABRIR A APP.
+      //
+      // Esta função já corre quando o polling confirma o pagamento (efeito
+      // abaixo). Até aqui, só actualizava o estado LOCAL desta página: o
+      // `cotaCorporativa` do AppContext continuava com a cota antiga, e o gate
+      // do MC89.40 mantinha o painel bloqueado até o lojista reabrir a app —
+      // logo a seguir a ele ter pago entre R$ 2.640 e R$ 18.000. É o pior
+      // momento possível para uma parede.
+      //
+      // ⚠️ NÃO SE ACRESCENTA POLLER NENHUM. A resposta já está aqui na mão; só
+      // faltava passá-la ao contexto. O MC89.33 mediu ~36 pedidos/min em
+      // repouso, e os MC88.3x passaram meses a limpar o arranque — somar mais um
+      // poller para resolver isto seria desfazer esse trabalho.
+      //
+      // Só propaga quando há dados: um 404 ou um erro de rede NÃO pode pôr
+      // `cotaCorporativa` a null no contexto, porque isso reabriria o gate
+      // ("ainda não sei") e faria piscar a navegação do lojista.
+      if (rc.ok && rc.data) atualizarTipoCorporativo(rc.data);
     } catch { /* não-fatal */ }
     if (!authToken) return;
     try {
       const rt = await apiGet(`troco?cliente_id=${address}`, { token: authToken });
       if (rt.ok) setTroco(rt.data);
     } catch { /* não-fatal */ }
-  }, [address, authToken]);
+  }, [address, authToken, atualizarTipoCorporativo]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
