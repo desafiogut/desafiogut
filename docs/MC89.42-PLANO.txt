@@ -1,0 +1,202 @@
+MC89.42 — PLANO DE AÇÃO: PAINEL ADM PARA GOVERNANÇA
+Data: 2026-08-02 | Base: docs/MC89.42-DIAGNOSTICO.txt
+Skills: impeccable (modo OPERATE), ux-audit, security-review, latency-critical-systems
+
+================================================================================
+0. A TESE DESTE PLANO, EM UMA FRASE
+================================================================================
+O painel não precisa de mais páginas — precisa de VER MAIS e de DEIXAR RASTO.
+
+O diagnóstico contou 11 páginas, 22 endpoints e zero por integrar. Construir
+"gestão de utilizadores" e "gestão de cotas" do zero, como o enunciado propõe,
+seria reescrever o que já funciona. O esforço vai para as três lacunas reais.
+
+⚠️ E há uma consequência de desenho que decide tudo o resto:
+
+    O PAINEL É USADO NO TELEMÓVEL (APK). Não é um back-office de secretária.
+
+  Isto não é um detalhe de responsividade — muda a arquitetura de informação. No
+  modo OPERATE a regra é "a ferramenta desaparece na tarefa"; num ecrã de 6", com
+  9 destinos de navegação, a ferramenta está sempre à frente da tarefa.
+
+================================================================================
+1. PRIORIDADES — E PORQUE DIFEREM DAS DO ENUNCIADO
+================================================================================
+O enunciado propõe P0 = gestão de utilizadores + gestão de cotas. Ambas EXISTEM.
+Proponho esta ordem, e justifico cada troca:
+
+  P0-A  DAR OLHOS AO ADMIN (a vista de utilizadores)
+        O painel só vê quem movimentou dinheiro. Um utilizador que entre e não
+        transacione é invisível — não pode ser apoiado nem bloqueado. Nenhuma
+        funcionalidade de "gestão de utilizadores" tem valor enquanto a lista
+        for uma reconstrução a partir de pegadas financeiras.
+        ⇒ É P0 porque é PRÉ-REQUISITO das outras, não porque é urgente.
+
+  P0-B  FECHAR O RASTO (auditoria)
+        `admin_logs` tem 0 linhas e `admin-aprovacao` não regista nada. Um painel
+        de governança que age sem deixar rasto não é governança — é acesso.
+        ⇒ É P0 por R3, e é barato: o mecanismo já existe e está bem desenhado.
+
+  P0-C  O CAMPO `categoria` NO FORMULÁRIO DE COTAS
+        Três linhas. Hoje o ADM consegue trancar um lojista pago com um clique
+        bem-intencionado. É a correção com melhor razão esforço/dano do plano.
+
+  P1-A  ARQUITETURA DE INFORMAÇÃO PARA TELEMÓVEL (§2)
+  P1-B  MODERAÇÃO DE CONTEÚDO com rasto (produtos/banners)
+  P2-A  Lances — ver §5, tem uma razão estrutural para ficar por último
+  P2-B  Exportação (CSV) de logs e financeiro
+  P2-C  Níveis de admin (super vs limitado)
+
+================================================================================
+2. P0-A — DAR OLHOS AO ADMIN
+================================================================================
+PROBLEMA: `vw_utilizadores` = cotas ∪ saldo_rs ∪ saldo_rs_creditos. Reconstrói
+utilizadores a partir de dinheiro. Quem não transaciona não existe.
+
+⚠️ A CAUSA É LEGÍTIMA E NÃO SE CONTORNA COM SQL: a identidade vive no Privy. Não
+há tabela de utilizadores porque nunca houve onde a escrever.
+
+TRÊS CAMINHOS, e a escolha é do operador:
+
+  (a) TABELA DE ATIVIDADE — `auth-user.mjs` já é chamado por TODOS os que entram
+      (emite o user-session JWT). Um upsert `utilizadores(endereco, primeiro_em,
+      ultimo_em, contagem)` nesse ponto passa a ver toda a gente.
+      · custo: um upsert por sessão (24 h de TTL, portanto raro)
+      · ⚠️ é dado pessoal novo — endereço + carimbo. Exige decisão de LGPD e
+        entrada na política de privacidade. NÃO é uma alteração técnica neutra.
+      · RECOMENDADO: é o único que responde "quem usa a app?".
+
+  (b) ALARGAR A VISTA a mais fontes (lances on-chain, notificações).
+      · custo: zero de escrita, zero de LGPD.
+      · continua a só ver quem AGE. Melhora, não resolve.
+
+  (c) IMPORTAR do Privy por API.
+      · a fonte de verdade da identidade é a deles.
+      · ⚠️ depende de credenciais e de quota; não o avalio sem o operador.
+
+  ⇒ Proposta: (a), com a decisão de LGPD tomada à frente e não por omissão.
+
+================================================================================
+3. P0-B — FECHAR O RASTO
+================================================================================
+3.1 ⚠️ PRIMEIRO MEDIR, DEPOIS CORRIGIR.
+    `admin_logs` = 0 tem duas explicações incompatíveis (nunca exercido / falha
+    silenciosa). O MC89.43 começa por uma SONDA: executar a ação inócua mais
+    barata que passe por `registrarAcao` (ex.: uma leitura de config) e ver se
+    aparece linha.
+    · aparece → nunca foi exercido; segue-se para 3.2.
+    · não aparece → há uma escrita a falhar em silêncio, e isso passa a ser o
+      P0 de tudo, à frente do resto.
+    ⚠️ Escrever mais chamadas de log antes de saber se as que existem funcionam
+      seria construir por cima de um chão por verificar.
+
+3.2 `admin-aprovacao` ganha `registrarAcao` + `confirmarAcao`, no mesmo padrão
+    das outras sete (antes/depois, para uma ação que rebente ficar registada
+    como falhada em vez de desaparecer).
+
+3.3 Passar em revista as ações que escrevem e não registam. Do diagnóstico:
+    o upsert de cotas por `cotas.mjs` (usado pelo formulário do ADM) não regista.
+    Marcar uma cota como paga é uma ação de dinheiro sem rasto.
+
+================================================================================
+4. P1-A — ARQUITETURA DE INFORMAÇÃO (modo OPERATE, ecrã de telemóvel)
+================================================================================
+⚠️ PRINCÍPIO QUE MANDA AQUI: no OPERATE, familiaridade é uma FUNCIONALIDADE. O
+defeito a evitar não é ser sem graça — é ser estranho sem propósito. O painel
+deve desaparecer na tarefa.
+
+4.1 NOVE DESTINOS NÃO CABEM NUM TELEMÓVEL. Agrupar por PERGUNTA do administrador,
+    não por tabela do backend:
+
+        QUEM      → Utilizadores · Cotas · Aprovações · Admins
+        DINHEIRO  → Financeiro (resumo, transações, relatório)
+        SISTEMA   → Operações · Logs · Configurações · Notificações
+
+    Três grupos, não nove itens. É o limite de carga cognitiva de uma barra num
+    ecrã de 6", e mapeia como um administrador pensa ("preciso de ver uma
+    pessoa" / "preciso de ver dinheiro" / "preciso de mexer no sistema").
+    ⚠️ Agrupar por goal do utilizador e NÃO por estrutura de dados — é a
+    diferença entre "Utilizadores/Cotas" e "tabela cotas/tabela saldo_rs".
+
+4.2 A VISÃO GERAL É A CASA, e tem de responder a "está tudo bem?" em 3 segundos.
+    Hoje tem gráficos. Deve ter, por esta ordem: o que está ERRADO (alertas,
+    fila parada, pagamentos por conciliar), depois o que está a acontecer, e só
+    então os números bonitos.
+    ⚠️ Um só CTA primário por ecrã. Se tudo está destacado, nada está.
+
+4.3 DENSIDADE É PERMITIDA E DESEJÁVEL. O OPERATE autoriza tabelas densas quando
+    o utilizador precisa dos dados. Não diluir para "respirar" — o administrador
+    quer ver muitas linhas de uma vez. O que se corta é o CROMO, não os dados.
+
+4.4 A NAVEGAÇÃO COLAPSA POR ESTRUTURA, não por tipografia fluida: a barra vira
+    grupos, a tabela vira lista de cartões. Nada de `clamp()` em títulos.
+
+================================================================================
+5. P2-A — LANCES: PORQUE FICA PARA O FIM
+================================================================================
+A tabela `lances` tem 0 linhas: os lances vivem ON-CHAIN. Uma página de lances
+no painel teria de ler a blockchain — e há uma regra do projeto (MC88.31) de NÃO
+carregar `ethers` no painel, que existe por custo de arranque.
+
+  ⇒ Ler on-chain a partir do painel exigiria um endpoint de servidor que o faça
+    (existe `admin-onchain.mjs`, 64 linhas, já integrado) e um desenho para
+    paginação de eventos. É trabalho real, não uma página.
+  ⇒ E "cancelar um lance" pode nem ser possível: se o lance está no contrato, o
+    painel não o desfaz. Antes de planear a UI é preciso saber o que o contrato
+    permite. NÃO verifiquei, e não vou desenhar por cima de uma suposição.
+
+================================================================================
+6. ROADMAP PROPOSTO
+================================================================================
+  MC89.43  Sonda do log (3.1) → corrigir o que ela revelar → aprovações e cotas
+           a registar (3.2/3.3) → campo `categoria` no formulário (P0-C).
+           ⚠️ Só código de backend e um campo de formulário. Baixo risco.
+
+  MC89.44  Decisão de LGPD + tabela de atividade (P0-A) + a vista a usá-la.
+           ⚠️ NÃO arrancar sem a decisão do operador sobre dado pessoal.
+
+  MC89.45  Arquitetura de informação (P1-A): três grupos, Visão Geral por
+           urgência, tabelas responsivas.
+           ⚠️ Carregar a skill `dataviz` ANTES de tocar em qualquer gráfico ou
+             KPI — é uma exigência da própria skill e este ecrã tem os dois.
+
+  MC89.46  Moderação de conteúdo com rasto (P1-B).
+  MC89.47+ Exportação, níveis de admin, e lances depois de §5 estar respondido.
+
+================================================================================
+7. COMO SE VALIDA UM PAINEL QUE GOVERNA UM SISTEMA VAZIO
+================================================================================
+⚠️ ESTE É O RISCO PRÁTICO MAIOR DE TODO O PLANO, e o enunciado não o menciona.
+
+Em produção há 0 logs, 0 bloqueios, 0 notificações, 0 lances, 0 produtos e 7
+utilizadores que são registos de teste. Não há dados que exerçam os ecrãs.
+
+  · O que se pode validar com dados a sério: cotas (7), saldos (5), créditos (18),
+    fila (5).
+  · O resto valida-se com ESTADOS VAZIOS — e no OPERATE um estado vazio deve
+    ENSINAR a interface, não dizer "nada aqui". Um painel cujo caminho mais
+    percorrido é o vazio tem de tratar o vazio como ecrã de primeira classe.
+  · ⚠️ NÃO propor "criar dados de teste em produção" para validar. Foi por dados
+    de teste em produção que o MC89.39 quase marcou "zzzzzz" como cota paga.
+
+================================================================================
+8. O QUE ESTE PLANO NÃO FAZ — DITO À FRENTE
+================================================================================
+· Não reescreve as 11 páginas. Elas funcionam; o que falta é o que alimenta.
+· Não propõe redesenho visual. A UI neutra está a ser respeitada (zero emoji
+  usado como ícone nas 22 páginas e componentes — verificado). Trocar o mundo
+  visual agora seria gastar o esforço no sítio errado.
+· Não desenha a página de lances — ver §5.
+· Não avalia como o painel SE COMPORTA. O diagnóstico é de repositório e de base
+  de dados; não o abri no aparelho. Qualquer afirmação sobre fluidez, tempos ou
+  fricção real precisa disso primeiro.
+
+================================================================================
+9. O QUE PRECISO DE SI
+================================================================================
+1. P0-A: qual dos três caminhos para ver os utilizadores — e, se for (a), o aval
+   para tratar endereço+carimbo como dado pessoal novo na política.
+2. Confirmação da ordem: o enunciado punha utilizadores/cotas em P0; eu ponho
+   olhos e rasto. Se discordar, digo já que a ordem é discutível — o que não é
+   discutível é que ambas já existem.
+3. §5: o contrato permite cancelar um lance? Sem isso não desenho a página.
