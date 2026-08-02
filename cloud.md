@@ -6615,3 +6615,65 @@ novo visível nos próprios dados da medição.
 **O que não fiz e digo à frente:** um pagamento PIX de verdade (custa dinheiro), e
 publicar um produto real em produção. O gate de publicação está coberto por 17
 testes de servidor com controlo positivo; a transação em si não foi exercida.
+
+## MC89.42 — o painel do administrador já estava construído; o que lhe falta é ver e deixar rasto
+
+O enunciado pedia para transformar um painel "simples" num centro de governança,
+partindo de que só a Visão Geral estava feita e de que várias funções continuavam
+por integrar. Fui contar antes de planear: onze páginas, onze componentes, vinte
+e duas funções de backend — e zero por integrar. Oito das dez áreas de governança
+já estão cobertas de ponta a ponta.
+
+Isso não é um detalhe: o P0 do enunciado era construir gestão de utilizadores e
+de cotas, e ambas existem. Um MC que arrancasse por aí estaria a reescrever o que
+funciona. Por isso o plano mudou de tese — o painel não precisa de mais páginas,
+precisa de ver mais e de deixar rasto.
+
+**A primeira lacuna é que o administrador não vê os utilizadores.** Vê quem
+movimentou dinheiro. A vista que alimenta a listagem é um UNION de cotas, saldos
+e créditos: reconstrói a lista a partir de pegadas financeiras, porque a
+identidade vive no Privy e nunca houve tabela de utilizadores. A solução é
+engenhosa e a consequência não estava escrita em lado nenhum — quem entra na app
+e não transaciona é invisível, não pode ser apoiado nem bloqueado. Medi: a vista
+devolve sete linhas, exactamente o número de cotas.
+
+**A segunda é que a tabela de auditoria está vazia.** Zero linhas, apesar de o
+mecanismo estar bem desenhado e ligado em sete funções críticas. Há duas
+explicações possíveis e são muito diferentes — nunca foi exercido, ou está a
+falhar em silêncio — e não escolhi uma. O plano começa por medir, porque escrever
+mais chamadas de log antes de saber se as que existem funcionam seria construir
+sobre chão por verificar. O que é lacuna certa é o endpoint de aprovações, que
+não regista nada: aprovar ou rejeitar um pedido não deixa rasto.
+
+Aqui corrigi-me a mim próprio antes de entregar. A primeira leitura foi que o log
+só estava ligado numa função — tinha procurado pelo nome errado do helper. Refiz
+a contagem e o alarme era falso; o problema é outro e é mais interessante.
+
+**A terceira é pequena e das que mais custam:** o formulário de cotas do painel
+não tem campo de categoria, mas o backend aceita-o. Um administrador que marque
+"vendida" de boa-fé produz uma cota que o gate do MC89.40 lê como inativa — e
+tranca um cliente pago com um clique. São três linhas.
+
+No desenho, o que decidiu tudo foi lembrar que **o painel é usado no telemóvel**.
+Nove destinos de navegação num ecrã de seis polegadas é a ferramenta
+permanentemente à frente da tarefa, e em modo Operate a regra é o contrário: a
+ferramenta desaparece na tarefa. A proposta é agrupar por pergunta do
+administrador — quem, dinheiro, sistema — em vez de por tabela do backend, e
+ordenar a Visão Geral por urgência: o que está errado primeiro, os números por
+último. Um painel de governança abre-se para responder "está tudo bem?".
+
+Duas coisas que já estavam certas e vale a pena não estragar: não há um único
+emoji usado como ícone ou estado nas vinte e duas páginas e componentes do
+administrador — é isso que o faz ler como ferramenta e não como app de consumo —
+e já existe vocabulário de UI próprio, com estado vazio, toast e botão de comando.
+
+**O risco maior não estava no enunciado:** este painel governa um sistema quase
+vazio. Zero logs, zero lances, zero produtos, e sete utilizadores que são registos
+de teste. Não há dados que exerçam os ecrãs, o que faz do estado vazio o ecrã mais
+visto do painel — e por isso ele tem de ensinar a interface em vez de dizer "nada
+aqui". E não se criam dados de teste em produção para validar: foi por dados de
+teste em produção que o MC89.39 quase marcou "zzzzzz" como cota paga.
+
+Não abri o painel no aparelho. O inventário é de repositório e os números são de
+consultas de leitura — nada aqui diz como ele se comporta, só o que existe. São
+coisas diferentes, e avaliei a primeira.

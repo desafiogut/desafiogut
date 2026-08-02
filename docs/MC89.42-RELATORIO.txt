@@ -1,0 +1,153 @@
+================================================================================
+MC89.42 — ADMIN PANEL PARA GOVERNANÇA (DIAGNÓSTICO + PLANO)
+================================================================================
+Data    : 2026-08-02
+R1      : CUMPRIDA — zero alteração de código
+Commits : 4aeaf02 (S0) · a45be19 (S1) · 6705160 (S2) · este (S3)
+Skills  : impeccable (modo OPERATE) · ux-audit · security-review · supabase ·
+          terminal-ops · verification-loop · latency-critical-systems
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+⚠️ A PREMISSA DO ENUNCIADO ESTÁ DESATUALIZADA, e a diferença muda o plano todo.
+
+O enunciado diz que "apenas a Visão Geral está implementada" e que "algumas
+funções estão isoladas". Contei:
+
+    11 páginas admin ......... 2 264 linhas
+    11 componentes admin ..... 990 linhas
+    22 funções backend ....... 2 002 linhas
+    funções por integrar ..... ZERO  (verifiquei uma a uma)
+
+Oito das dez áreas de governança estão cobertas de ponta a ponta. O painel não é
+"simples" — é uma ferramenta construída, com navegação de nove destinos, gráficos,
+comandos de infraestrutura e vocabulário de UI próprio.
+
+⇒ CONSEQUÊNCIA PRÁTICA: um MC que arrancasse a construir "gestão de utilizadores"
+  e "gestão de cotas" do zero — que é o P0 do enunciado — estaria a reescrever o
+  que já funciona.
+
+A TESE DO PLANO, EM UMA FRASE:
+    o painel não precisa de mais páginas — precisa de VER MAIS e DEIXAR RASTO.
+
+================================================================================
+AS TRÊS LACUNAS REAIS
+================================================================================
+1. ⚠️ O ADMIN NÃO VÊ OS UTILIZADORES — VÊ QUEM MOVIMENTOU DINHEIRO.
+   `admin-users` lê de `vw_utilizadores`, que é um UNION de cotas + saldo_rs +
+   saldo_rs_creditos: reconstrói a lista a partir de pegadas financeiras.
+   ⇒ Quem entra na app e não transaciona é INVISÍVEL. Não pode ser apoiado nem
+     bloqueado.
+   ⇒ Medido: a vista devolve 7 linhas — o mesmo número que `cotas`. Não há um
+     único utilizador comum visível.
+   A causa é legítima: a identidade vive no Privy e nunca houve tabela de
+   utilizadores. Mas nenhuma "gestão de utilizadores" tem valor enquanto a lista
+   for isto.
+
+2. ⚠️ A TABELA DE AUDITORIA ESTÁ VAZIA.
+   `admin_logs` = 0 linhas. O mecanismo existe e é bem desenhado (`registrarAcao`
+   antes + `confirmarAcao` depois, para uma ação que rebente ficar registada como
+   falhada), e está ligado em SETE funções críticas.
+   ⇒ Só há duas explicações, e são muito diferentes: nunca foi exercido, OU está
+     a falhar em silêncio. NÃO SEI QUAL, e não escolho uma por conveniência —
+     o plano começa por medir.
+   ⇒ E `admin-aprovacao` tem ZERO chamadas: aprovar ou rejeitar não deixa rasto.
+     Essa é lacuna certa.
+
+   ⚠️ CORREÇÃO A MIM PRÓPRIO: a minha primeira leitura foi "o log só está ligado
+   numa função". Estava errada — procurei pelo nome errado do helper. Refiz a
+   contagem e corrigi no documento antes de o entregar.
+
+3. ⚠️ O FORMULÁRIO DE COTAS CONSEGUE TRANCAR UM LOJISTA PAGO.
+   Não tem campo `categoria`, mas o backend aceita-o. Um ADM que marque "vendida"
+   produz `vendida:true, categoria:null` — que o gate do MC89.40 trata como
+   INATIVA. Três linhas para corrigir; hoje é um clique bem-intencionado que
+   tranca um cliente.
+
+================================================================================
+O QUE ESTÁ MELHOR DO QUE SE ASSUMIA
+================================================================================
+· UI NEUTRA RESPEITADA: procurei emoji usado como ícone ou estado nas 22 páginas
+  e componentes admin — ZERO. O painel do lojista usa emoji, o do ADM não. É
+  essa separação que faz o painel ler como ferramenta.
+· Confirmação em ações destrutivas já existe em 5 das 11 páginas.
+· `EstadoVazio`, `ComandoButton`, `StatusCard`, `AdminToast` — há vocabulário de
+  UI próprio e reutilizável. Não é preciso inventá-lo.
+
+================================================================================
+O PLANO — PRIORIDADES, E PORQUE DIFEREM DAS SUAS
+================================================================================
+  P0-A  Dar olhos ao admin ....... pré-requisito das outras, não urgência
+  P0-B  Fechar o rasto ........... mas MEDIR primeiro (ver abaixo)
+  P0-C  Campo `categoria` ........ melhor razão esforço/dano de todo o plano
+  P1-A  Arquitetura de informação para telemóvel
+  P1-B  Moderação de conteúdo com rasto
+  P2   Exportação · níveis de admin · lances
+
+⚠️ MEDIR ANTES DE CORRIGIR (P0-B): escrever mais chamadas de log antes de saber
+se as sete que existem funcionam seria construir por cima de chão por verificar.
+O MC89.43 começa por uma sonda: uma ação inócua, e ver se aparece linha.
+
+DESIGN — MODO OPERATE (skill impeccable):
+· A ferramenta deve DESAPARECER na tarefa. Familiaridade é funcionalidade; o
+  defeito a evitar não é ser sem graça, é ser estranho sem propósito.
+· ⚠️ NOVE DESTINOS NÃO CABEM NUM TELEMÓVEL — e o painel é usado no APK. Agrupar
+  por PERGUNTA do administrador (Quem · Dinheiro · Sistema), não por tabela do
+  backend. Isto não é responsividade: é arquitetura de informação.
+· A Visão Geral ordena-se por URGÊNCIA: o que está errado primeiro, os números
+  por último. Abre-se para responder "está tudo bem?", não para admirar gráficos.
+· Densidade é permitida e desejada. Corta-se cromo, nunca dados.
+
+================================================================================
+O RISCO QUE O ENUNCIADO NÃO MENCIONA
+================================================================================
+O painel governa um sistema QUASE VAZIO: 0 logs, 0 bloqueios, 0 notificações,
+0 lances, 0 produtos, e 7 "utilizadores" que são registos de teste.
+
+⇒ Não há dados que exerçam os ecrãs. A validação faz-se por ESTADOS VAZIOS — e
+  num painel assim o vazio é o ecrã MAIS VISTO, portanto tem de ensinar a
+  interface em vez de dizer "nada aqui".
+⇒ ⚠️ E NÃO se criam dados de teste em produção para validar. Foi por dados de
+  teste em produção que o MC89.39 quase marcou "zzzzzz" como cota paga.
+
+================================================================================
+O QUE PRECISO DE SI
+================================================================================
+1. ⚠️ P0-A — como dar olhos ao admin? Três caminhos:
+   (a) tabela de atividade escrita no `auth-user` (vê toda a gente)
+       ⚠️ grava endereço + carimbo: é DADO PESSOAL NOVO e entra na política de
+         privacidade. Não é alteração técnica neutra, e não a faço por omissão.
+   (b) alargar a vista a mais fontes — sem LGPD, mas continua a só ver quem age.
+   (c) importar do Privy por API — depende de credenciais e quota.
+   Recomendo (a), com a decisão tomada à frente.
+
+2. A ordem de prioridades. O enunciado punha utilizadores/cotas em P0; eu ponho
+   olhos e rasto. A ordem é discutível — o que não é discutível é que ambas as
+   áreas já existem.
+
+3. O contrato permite CANCELAR um lance? Sem essa resposta não desenho a página
+   de lances: eles vivem on-chain, e há a regra de não carregar `ethers` no
+   painel (MC88.31).
+
+================================================================================
+ENTREGÁVEIS
+================================================================================
+  docs/MC89.42-DIAGNOSTICO.txt ..... inventário + as três lacunas
+  docs/MC89.42-PLANO.txt ........... prioridades, IA, roadmap MC89.43→47
+  docs/MC89.42-UX-SEGURANCA.txt .... 10 regras de UX + 8 de segurança
+  Desktop/MC89.42-RELATORIO.txt .... este ficheiro (cópia em docs/)
+  cloud.md ......................... atualizado
+
+================================================================================
+LIMITES — DITOS À FRENTE
+================================================================================
+· NÃO abri o painel no aparelho. O inventário é de repositório e os números são
+  de consultas read-only. Nada aqui afirma como ele se COMPORTA.
+· Não testei nenhum endpoint admin em produção.
+· "Existe" e "serve" são coisas diferentes. Avaliei a primeira.
+· A dúvida do §2 (log vazio: nunca exercido ou a falhar) fica por resolver DE
+  PROPÓSITO, em vez de um palpite apresentado como facto.
+
+PENDÊNCIAS HERDADAS: índice UNIQUE em `cnpj` (bloqueado pelos duplicados) · os 6
+registos de teste na base · o deploy web, que é seu e NÃO atualiza o APK.
