@@ -1,0 +1,145 @@
+================================================================================
+MC89.41 — MARCAÇÃO DA COTA + F3 + VALIDAÇÃO NO APARELHO
+================================================================================
+Data    : 2026-08-02
+Commits : cbf50d9 (S0 marcação) · b3d5fb1 (S1 F3) · este (S4)
+Anteriores da série: 2e9c23f (P0) · c6d0730 (F0) · fd79f87 (F1) · ec8e92d (F2)
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+A correção do acesso do lojista está COMPLETA e VALIDADA NO APARELHO. Os quatro
+cenários foram observados por sonda CDP, não por impressão:
+
+  ✅ POSITIVO  — cota paga → "PAINEL DO LOJISTA · 📢 BRONZE · Cota ativa"
+  ✅ NEGATIVO  — cota inativa → ecrã de bloqueio, em /corporativo, sem redirect
+  ✅ F3        — cota reposta com a app ABERTA → painel destrancou SEM reabrir
+  ✅ MC89.36.1 — login fresco: ZERO ms de Dashboard comum (eram 1 889 ms)
+
+================================================================================
+1. MARCAÇÃO DA COTA — E O QUE TERIA FALHADO EM SILÊNCIO
+================================================================================
+Cota `0x6ac9…674d` (DesafioGUT): `vendida=true`, `categoria=bronze`, `endereco`
+preenchido. 1 de 7 cotas paga.
+
+⚠️ O SQL DO ENUNCIADO NÃO TERIA FUNCIONADO.
+Ele propunha `UPDATE cotas SET vendida=true, categoria='bronze', endereco='0x…'`.
+Mas `getCota` (_lib/cotas-store.mjs:40) faz `.select("payload")` e devolve o
+JSONB — as colunas são DERIVADAS, servem para indexar. Um UPDATE só nas colunas
+deixaria a cota "paga" para o SQL e "por pagar" para a app.
+⇒ O sintoma seria o gate a bloquear um lojista marcado como pago — exatamente o
+  modo de falha que o MC89.37 isolou como o mais provável de todo este trabalho.
+  Escrevi nos dois sítios e verifiquei os dois.
+
+⚠️ NÃO ESCREVI EM `cotas_pagas`, apesar de o enunciado o pedir.
+Essa tabela é o registo de PAGAMENTOS REAIS (escrita por `ativarCotaPaga` com o
+`pedidoId` do Mercado Pago). Inserir ali uma linha sintética poria um pagamento
+que nunca existiu dentro do rasto de auditoria financeira. A proveniência ficou
+no payload — `origemAtivacao: "manual-mc89.41"` — visível e sem se confundir com
+dinheiro que entrou. Confirmado: `cotas_pagas` continua com 0 linhas.
+
+O script `scripts/marcar-cota-operador.mjs` traz o SQL aplicado E o de reversão.
+
+================================================================================
+2. F3 — E UM DEFEITO GRAVE QUE EU PRÓPRIO INTRODUZI
+================================================================================
+O polling de confirmação já existia (MC17.1) e ao aprovar chamava `carregar()` —
+mas isso só atualizava o estado LOCAL da página. O `cotaCorporativa` do contexto
+ficava com a cota antiga, e o painel só destrancaria ao reabrir a app: logo a
+seguir a alguém ter pago entre R$ 2 640 e R$ 18 000.
+
+A correção é uma linha: `carregar()` já tinha a resposta do `/cotas` na mão; só
+faltava passá-la ao contexto. Zero pedidos novos, zero pollers novos.
+
+⚠️ MAS AO FAZÊ-LO CRIEI UM CICLO DE PEDIDOS.
+`atualizarTipoCorporativo` era recriada a cada render. Pô-la nas dependências do
+`carregar` — que alimenta um `useEffect(() => carregar(), [carregar])` — fazia o
+efeito voltar a correr a cada render: fetch → estado → render → fetch, em ciclo
+fechado, a bater no `/cotas` sem parar. Apanhei-o a rever as dependências, ANTES
+de correr. Corrigido na raiz com `useCallback`, e há um teste a travar o regresso.
+
+Registo isto porque é o género de defeito que passa despercebido em revisão e
+só aparece como conta de infraestrutura no fim do mês.
+
+================================================================================
+3. VALIDAÇÃO NO APARELHO — O QUE FOI OBSERVADO
+================================================================================
+Método: sonda CDP com reatamento por iteração (~13 ms), a mesma do MC89.36.
+
+3.1 POSITIVO (cota paga)
+    /corporativo → "🏢 PAINEL DO LOJISTA … 📢 BRONZE Cota ativa"
+    bloqueio: false · estadoNeutro: false · dashboardComum: false
+    ⇒ O nível marcado (bronze) aparece no ecrã: o dado atravessou toda a cadeia.
+
+3.2 NEGATIVO (cota revertida temporariamente)
+    /corporativo → "INATIVA · DesafioGUT · A sua cota está inativa · Comprar
+                    cota · Ver o estado da minha cota"
+    bloqueio: true · dashboardComum: false · URL manteve-se em /corporativo
+    ⇒ Confirma o desenho: SUBSTITUI conteúdo, não redireciona. Não houve ciclo.
+
+3.3 F3 (destrancar sem reabrir)
+    Com o ecrã de bloqueio visível, repus `vendida=true` na base COM A APP ABERTA:
+      · /corporativo ............... ainda bloqueado (esperado — nada o notificou)
+      · clicar "Comprar cota" ...... /corporativo/carteira, bloqueio: false
+        (a rota isenta abriu, e o `carregar()` propagou a cota ao contexto)
+      · voltar ao "Painel" ......... /corporativo, bloqueio: FALSE, painel completo
+    ⇒ Destrancou SEM reabrir a app. É o caminho real do F3, sem o pagamento.
+    ⚠️ O que NÃO validei: um pagamento PIX de verdade. Isso custa dinheiro (R2) e
+      não o fiz. O que foi exercido é o mecanismo que o polling aciona.
+
+3.4 MC89.36.1 (pendência herdada, agora FECHADA)
+       108 ms  DASHBOARD COMUM   oauthURL:n   ← visitante sem sessão, correto
+     62 825 ms  (em branco)      oauthURL:S   ← reload do retorno OAuth
+     63 923 ms  ESTADO NEUTRO    oauthURL:S   ← o sinal novo a segurar a janela
+     73 117 ms  CORPORATIVO
+    ⇒ ZERO ms de Dashboard comum após o retorno do OAuth. Eram 1 889 ms.
+      O `loginEmCurso` está visível nos dados, no intervalo exato onde antes
+      falhava. A pendência do MC89.36 está validada no aparelho.
+
+================================================================================
+4. NÚMEROS
+================================================================================
+  backend .......... 375/375
+  frontend ......... 131/131
+  mutações ......... 24/24 apanhadas nesta série
+                     (P0 6 · F1 7 · F2 7 · F3 4)
+  build ............ npm run build:apk, com o portão validar:dist verde (mainnet)
+
+================================================================================
+5. O QUE NÃO FOI FEITO — DITO À FRENTE
+================================================================================
+· Pagamento PIX real (R2 — custo). O mecanismo do F3 foi exercido; a transação não.
+· Publicar um produto no aparelho (cenário 3.3 do enunciado). O gate de publicação
+  está coberto por 17 testes de servidor, incluindo controlo positivo; no aparelho
+  exigiria criar um produto real em produção.
+· Cenário negativo com OUTRA conta: não tenho as credenciais dos outros registos
+  de teste. Usei a reversão temporária da própria cota do operador, que exercita
+  o mesmo caminho de código — e repus no fim (verificado).
+· Regra de nível em `banners.mjs`: não imposta. Um banner não tem "slot";
+  `app`/`site` é formato, não categoria. Fica como pergunta ao operador.
+
+================================================================================
+6. PENDÊNCIAS
+================================================================================
+P1. Índice UNIQUE em `cnpj` NÃO EXISTE, apesar de `cotas.mjs:400` o afirmar em
+    comentário. 6 das 7 linhas partilham o mesmo CNPJ, por isso criá-lo agora
+    falharia. Depende de limpar os registos de teste — decisão do operador.
+P2. Os 6 registos de teste continuam na base. Com o gate ligado passam a ver o
+    ecrã de bloqueio, como qualquer registo sem cota; o custo de os manter é
+    quase nulo. Limpá-los é MC próprio (apagar em produção).
+P3. Quantidade de produtos por nível: sem regra definida (Q2 do MC89.37).
+P4. O que fazer aos produtos já publicados por quem não tem cota: proposta
+    neutra mantida — não tocar; o gate vale para publicações novas.
+
+================================================================================
+7. ESTADO DA SÉRIE
+================================================================================
+  MC89.37  diagnóstico + plano ................. ✅
+  MC89.38  P0 + F0 .............................. ✅
+  MC89.39  levantamento (7 cotas, todas teste) .. ✅
+  MC89.40  F1 + F2 .............................. ✅
+  MC89.41  marcação + F3 + aparelho ............. ✅
+  MC89.36  transição do corporativo ............. ✅ validado aqui (§3.4)
+
+⚠️ FALTA O DEPLOY WEB, que é do operador. E o deploy web NÃO atualiza o APK: o
+frontend viaja dentro dele. O APK no aparelho já tem tudo; o site ainda não.

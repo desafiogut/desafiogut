@@ -6561,3 +6561,57 @@ preciso saber quantas das cotas em produção estão realmente pagas. Se a maior
 não estiver, a correção está tecnicamente certa e comercialmente errada — e essa
 decisão é do operador, com o número à frente. Trancar primeiro e contar depois é
 a ordem errada.
+
+## MC89.40/41 — o painel do lojista passou a exigir cota paga, e duas armadilhas quase o estragaram
+
+O MC89.37 tinha diagnosticado que o `tipo: "corporativo"` era gravado no registo
+e não no pagamento, e que `POST /produtos` não lia a cota de todo. Estes dois MCs
+fecharam isso.
+
+O gate vive no servidor (`_lib/cota-utils.mjs`): ativa é `vendida === true` E
+categoria válida. As duas metades são necessárias — a comparação estrita porque a
+string `"false"` é truthy, e a categoria porque o formulário do ADM define
+`vendida` mas não tem campo `categoria`, e sem essa metade uma cota meio-válida
+passaria o gate para rebentar depois na regra de nível. No painel há o mesmo
+gate, mas esse é conforto: quem impede de facto é o servidor, porque o endpoint
+pode sempre ser chamado à mão.
+
+**Três decisões de desenho que vieram de erros já pagos aqui.** O gate do painel
+substitui conteúdo e não redireciona, senão voltava o ciclo `/corporativo ↔ /`
+que o MC88.42 mediu. O `cotaAtiva` tem três estados e não dois — `null` é "ainda
+não sei", porque com `!cotaAtiva` um lojista pago veria "cota inativa" durante
+todo o arranque. E as rotas onde se COMPRA a cota ficam fora do gate: sem isso, o
+botão "Comprar cota" levaria ao próprio ecrã de bloqueio, que é a porta para uma
+parede que o MC89.34 já me ensinou a não construir.
+
+**A primeira armadilha esteve no SQL da marcação.** O enunciado propunha um
+UPDATE nas colunas `vendida`/`categoria`/`endereco`. Não teria funcionado:
+`getCota` faz `.select("payload")` e devolve o JSONB — as colunas são derivadas,
+para indexar. A cota ficaria paga para o SQL e por pagar para a app, e o sintoma
+seria o gate a bloquear alguém marcado como pago, que é precisamente o modo de
+falha que eu próprio tinha isolado como o mais provável. Escrevi nos dois sítios.
+
+Também não escrevi em `cotas_pagas`, apesar de pedido. Essa tabela é o registo de
+pagamentos reais, com o `pedidoId` do Mercado Pago; pôr lá uma linha sintética
+seria meter um pagamento que nunca existiu dentro do rasto de auditoria
+financeira. A proveniência ficou no payload, onde é visível e não se confunde
+com dinheiro.
+
+**A segunda armadilha fui eu que a criei.** Ao ligar o destranque automático,
+pus `atualizarTipoCorporativo` nas dependências de um `useCallback` que alimenta
+um `useEffect`. Como ela era recriada a cada render, o efeito voltava a correr
+sempre: fetch → estado → render → fetch, em ciclo fechado a bater no `/cotas`.
+Apanhei-o a rever as dependências, antes de correr. Corrigido com `useCallback` e
+com um teste a travar o regresso. Registo-o porque é o género de defeito que
+passa a revisão e só aparece como conta de infraestrutura no fim do mês.
+
+No aparelho ficaram os quatro cenários observados por sonda, não por impressão: a
+cota paga mostra "BRONZE · Cota ativa"; revertida, mostra o ecrã de bloqueio sem
+sair de `/corporativo`; reposta com a app aberta, o painel destrancou sem reabrir.
+E o login fresco fechou de caminho a pendência do MC89.36 — zero milissegundos de
+Dashboard comum depois do retorno do OAuth, onde antes havia 1 889, com o sinal
+novo visível nos próprios dados da medição.
+
+**O que não fiz e digo à frente:** um pagamento PIX de verdade (custa dinheiro), e
+publicar um produto real em produção. O gate de publicação está coberto por 17
+testes de servidor com controlo positivo; a transação em si não foi exercida.
