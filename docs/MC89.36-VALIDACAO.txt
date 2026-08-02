@@ -1,0 +1,110 @@
+MC89.36 — VALIDAÇÃO NO APARELHO (registo das medições)
+Data: 2026-08-02 | Aparelho: 21091116UG (pissarropro) | Conta: desafiogut@gmail.com (lojista)
+
+⚠️ ESTADO: PARCIAL. O APK medido abaixo contém S1+S2 mas NÃO contém a correção
+MC89.36.1 (commit 39be2b4), que foi escrita DEPOIS destas medições, por causa
+delas. Falta recompilar, reinstalar e repetir o teste do login fresco.
+
+================================================================================
+0. INSTRUMENTO — E PORQUE É QUE SE PODE CONFIAR NELE
+================================================================================
+Sonda CDP que reata o alvo a cada iteração (o retorno do OAuth faz
+window.location.assign e destrói a página; um WebSocket preso ao alvo antigo
+ficaria mudo no momento que interessa). Resolução medida: ~13 ms
+(39 060 amostras em 600 s).
+
+Marcadores:
+  DASHBOARD COMUM → texto "Lances Únicos" ou "Total de Lances" no DOM
+  ESTADO NEUTRO   → [data-testid="estado-neutro"]
+  CORPORATIVO     → location.pathname começa por /corporativo
+
+⚠️ CONTROLO POSITIVO CORRIDO ANTES DE CONFIAR NO VERDE: injetei um nó com o
+texto "Lances Únicos" no DOM e confirmei que a sonda passou a acusar
+DASHBOARD COMUM (156 amostras); removi-o e voltou a zero. Sem isto, "não vi o
+Dashboard" podia ser apenas um instrumento cego.
+
+Screenrecord foi tentado primeiro e ABANDONADO: bloqueia neste aparelho. A sonda
+de DOM responde melhor à pergunta, porque dá o instante exato e o marcador.
+
+================================================================================
+1. LOGIN FRESCO (após logout) — O DEFEITO QUE ESTA MEDIÇÃO APANHOU
+================================================================================
+   136 ms  ⚠️ DASHBOARD COMUM   ← visitante, SEM sessão. CORRETO (R-B).
+179 563 ms  (em branco)          ← window.location.assign do retorno do OAuth
+180 644 ms  ⚠️ DASHBOARD COMUM   ← 1 889 ms  ⚠️ DESVIO
+182 533 ms  ESTADO NEUTRO        ← 7 026 ms  ✅ o degrau novo a funcionar
+189 559 ms  CORPORATIVO
+
+LEITURA:
+  ✅ O estado neutro FUNCIONA. Aqueles 7 026 ms eram Dashboard comum antes deste
+     MC — é a maior parte da janela, e está resolvida.
+  ⚠️ Ficaram 1 889 ms de Dashboard comum À FRENTE dele.
+
+CAUSA (inferida do código, consistente com a transição observada):
+  a porta do estado neutro era `pareceAutenticado`, que ancora em
+  `sessaoOtimista` → `saldoCacheInicial` → `gut_saldo_cache`. Num login FRESCO
+  esse registo não existe: foi apagado no logout e só é reescrito depois de a
+  autenticação terminar. Nem `privy:connections` serve — no instante do retorno
+  o SDK ainda está a trocar o código pelo token.
+  O estado neutro entrou exatamente quando o Privy terminou (`isConnected`), o
+  que é o que esta explicação prevê.
+
+  ⚠️ NÃO MEDI `pareceAutenticado` nem o localStorage DENTRO dessa janela: a sonda
+  rica só ficou pronta depois. A explicação é leitura de código mais a transição
+  observada, não medição direta. Escrevo-o porque a diferença importa.
+
+CORREÇÃO: MC89.36.1 (39be2b4) — porta alargada a três chaves
+  pareceAutenticado / restaurandoSessao / loginEmCurso (params do OAuth no URL,
+  que o próprio App.jsx reinjeta na origem local).
+  ⚠️ POR VALIDAR NO APARELHO.
+
+================================================================================
+2. REABERTURA (2.ª visita em diante) — SEM DESVIOS, REPLICADO 3×
+================================================================================
+  corrida 1 (sonda rica)   132 ms → CORPORATIVO   dicaLoja: S
+  corrida 2                320 622 ms → CORPORATIVO
+  corrida 3                351 656 ms → CORPORATIVO
+
+  DASHBOARD COMUM : 0 amostras nas três
+  ESTADO NEUTRO   : 0 amostras nas três
+
+O `outro: /` que aparece entre o paint e o painel dura 49–106 ms e não acusa
+marcador nenhum — é o redirect em voo, não um ecrã errado.
+
+⇒ A chave própria do lojista (`gut_corporativo_hint`, S2) está a funcionar: ela
+  sobrevive ao logout e encaminha ANTES do primeiro paint. Era esta a assimetria
+  com o ADM que o MC89.35 diagnosticou.
+
+================================================================================
+3. NÃO-REGRESSÃO
+================================================================================
+  ✅ ADM continua a ir direto para /admin (verificado após instalar o APK novo).
+  ✅ Visitante continua a ver o Dashboard comum — observado em ambiente real
+     (os ~179 s iniciais da corrida da §1, com a sessão terminada). R-B de pé.
+
+================================================================================
+4. POR VALIDAR — E PORQUÊ
+================================================================================
+P1. Login fresco COM a correção MC89.36.1. Exige recompilar + reinstalar +
+    um novo sair-da-conta/entrar. Não o faço sem aval: mexe na sessão do
+    operador.
+P2. Prazo de 10 s com a rede desligada (R-C / critério 4.6). Idem.
+P3. CLS (critério C3 do plano MC89.35). Não medido.
+
+⚠️ RESSALVA JÁ REGISTADA NO S0, QUE SE MANTÉM: o prazo de 10 s fica ABAIXO do
+   arranque a frio medido no MC89.35 (11 950 ms). Num arranque frio o prazo
+   dispara antes de /cotas responder e o lojista pode ver ~1 s de Dashboard
+   comum. Fecha-se com um único número: PRAZO_ESTADO_NEUTRO_MS = 15_000.
+
+================================================================================
+5. ESTADO DA SUÍTE
+================================================================================
+  frontend  116/116
+  backend   347/347
+  mutações   20/20 apanhadas
+
+⚠️ Nota de método: as 4 mutações do MC89.36.1 deram "apanhadas" à primeira por
+   um erro MEU — o `sed` partia-se no `||` e a mutação nunca chegava a ser
+   aplicada. Refeitas com um script; as 4 apanham mesmo, incluindo a que põe
+   `esperaVale = true` e atropelaria o visitante. Um verde que não se explica
+   deve ser desconfiado antes de ser celebrado.
