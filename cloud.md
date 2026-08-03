@@ -6677,3 +6677,72 @@ teste em produção que o MC89.39 quase marcou "zzzzzz" como cota paga.
 Não abri o painel no aparelho. O inventário é de repositório e os números são de
 consultas de leitura — nada aqui diz como ele se comporta, só o que existe. São
 coisas diferentes, e avaliei a primeira.
+
+---
+
+## MC89.43 — O painel ganha olhos e memória (e duas premissas caem)
+
+Este MC devia ser execução directa de um plano aprovado. Foi — mas duas das três
+premissas não sobreviveram à medição, e vale mais registar isso do que fingir
+que o plano estava certo.
+
+**A dúvida que o MC89.42 deixou aberta de propósito ficou resolvida:** a tabela
+de auditoria estava vazia porque **nunca foi exercida**, não porque falhasse em
+silêncio. Medi-o com uma sonda dentro de uma transacção com rollback, como
+`service_role`, contra a tabela real — e com um controlo negativo, porque um
+verde sem controlo negativo só prova que o instrumento não vê nada. A primeira
+sonda que escrevi foi descartada: usei CTEs, e um UPDATE não vê a linha que um
+CTE irmão acabou de inserir. Era o instrumento que estava cego.
+
+A sonda destapou um defeito que ninguém procurava: a auditoria escrevia através
+do cliente de **leitura**. Hoje não parte nada, porque não há réplica configurada
+e o cliente cai para o primário — é um verde por acidente. No dia em que uma
+réplica for ligada, o INSERT de auditoria bate numa base só-de-leitura e, por a
+auditoria ser fail-closed, **todas** as acções de administrador passariam a
+devolver 503. Aprovar e rejeitar clientes, que não deixava rasto nenhum, passa a
+deixar.
+
+**A premissa do campo `categoria` era simplesmente falsa.** O formulário já
+enviava a categoria e o backend recusa um POST sem ela — a cota `vendida` sem
+tier, que trancaria um lojista pago, não era produzível por ali, e a base
+confirma-o: zero linhas nesse estado. Mas havia um defeito ao lado, mais
+silencioso: a categoria vinha do **separador de navegação**. O mesmo controlo
+filtrava a lista e decidia o tier do cliente novo — e no telemóvel esse separador
+está fora do ecrã quando o formulário está à vista. Dava para gravar um cliente
+em Diamante querendo Bronze, e como o mínimo por categoria decide o troco em
+senhas, o tier errado credita dinheiro errado. O campo passou a existir por essa
+razão, que é melhor do que a que estava escrita.
+
+**O painel passa a ver quem usa a app**, e não apenas quem mexeu em dinheiro. A
+lista era reconstruída a partir de pegadas financeiras; quem entrava e não
+transacionava não existia para o administrador. Guarda-se o mínimo — endereço e
+carimbos, sem email, sem IP, sem user-agent — e a exclusão de conta apaga a
+linha, que é a contrapartida obrigatória de passar a guardar isto.
+
+A parte que mais interessa contar: criei a função de escrita como
+`SECURITY DEFINER` e revoguei a PUBLIC, como manda o hábito. Fui verificar e
+`anon` continuava a poder executá-la — o Supabase dá EXECUTE a `anon` e
+`authenticated` **directamente**, por default privileges, e um revoke a PUBLIC
+não lhes toca. Com DEFINER, que ignora o RLS, isso era um buraco aberto por mim.
+Ficou `SECURITY INVOKER` com revoke aos papéis pelo nome. Só apareceu porque
+verifiquei o resultado em vez de acreditar que o comando tinha feito o que dizia.
+
+Um efeito lateral que não é bug mas muda comportamento: a mesma vista alimenta o
+envio "todos" das notificações, portanto um broadcast passa a alcançar também
+quem só faz login. É o significado correcto de "todos" — até aqui excluía-os em
+silêncio — mas o alcance aumenta e isso deve ser dito antes de alguém carregar
+no botão.
+
+Cada guarda nova foi validada por mutação, porque um teste que passa não prova
+nada até se ver falhar. Uma das mutações foi descartada por ser equivalente — o
+`throw` caía no mesmo `try` e não mudava o comportamento observável — e conto-a
+para não inflacionar a validação. A guarda de zero-emoji do painel apanhou um
+aviso meu num comentário JSX; corrigi a minha linha, não a guarda.
+
+**Nada disto está vivo para o utilizador.** O .apk leva o frontend, mas as
+funções e a base são serviço, e o deploy não é meu. Não validei no aparelho —
+não havia nenhum ligado, e não dou por cumprido um segmento que não cumpri.
+Falta também rotacionar a chave `service_role`: expu-la em claro na sessão, ao
+inspeccionar o ambiente com a flag errada. E a política de privacidade, que vive
+no iubenda, tem de acompanhar a tabela nova — foi a condição com que ela foi
+aprovada.
