@@ -14,6 +14,7 @@ import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button } from "../../components/ui";
 import GraficoLinha from "../../components/admin/GraficoLinha.jsx";
+import { ordenarAlertas } from "../../lib/alertasAdmin.js";
 import { COR, Metrica, Grelha, ouTraco, brl , TituloSeccao } from "./_ui.jsx";
 
 // ── Alertas do frontend (R7: dependem de RPC, não do Postgres) ─────────────
@@ -133,11 +134,16 @@ export default function VisaoGeral() {
   const c = stats?.cotas;
   const fila = stats?.operacao?.fila;
 
-  // Alertas do backend + do frontend (EOA), unidos.
-  const todosAlertas = [
+  // Alertas do backend + do frontend (EOA), unidos E ORDENADOS POR URGÊNCIA.
+  //
+  // ⚠️ MC89.44 — a ordenação faltava, e a consequência era a pior possível: o
+  // único `critical` do painel (EOA sem gás) nasce no FRONTEND e era
+  // concatenado no fim, por baixo de até cinco linhas informativas do backend.
+  // A regra vive em `lib/alertasAdmin.js` para poder ser testada.
+  const todosAlertas = ordenarAlertas([
     ...(alertas || []),
     ...alertasDoFrontend({ onchain }),
-  ];
+  ]);
 
   // Rótulos das datas: "2026-07-24" → "24/07"
   const rotularDia = (iso) => {
