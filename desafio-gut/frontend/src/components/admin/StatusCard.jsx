@@ -8,7 +8,14 @@ const COR = {
   unknown: { dot: "#94a3b8", bg: "rgba(148,163,184,0.06)", border: "rgba(148,163,184,0.22)" },
 };
 
-const ROTULO = { ok: "OK", warning: "⚠", error: "✗", unknown: "?" };
+// MC89.44 — os quatro estados passam a ser PALAVRAS. Eram "OK", "⚠", "✗", "?":
+// metade texto e metade glifo, no mesmo sítio e com o mesmo peso. O ⚠ quebrava
+// a regra de UI neutra do MC89.4 (e escapava à guarda de emoji, que não varria
+// `components/admin`); o ✗ não é emoji, mas é a mesma ideia com outro código.
+// Como já há um ponto colorido ao lado, o rótulo só tem de dizer o que a cor
+// não diz — e "—" para o desconhecido é o mesmo símbolo que a R-UI-1 usa para
+// "número indisponível" em todo o painel.
+const ROTULO = { ok: "OK", warning: "AVISO", error: "FALHA", unknown: "—" };
 
 export default function StatusCard({ rotulo, ok, detalhe, nota }) {
   const estado = ok === true ? "ok" : ok === false ? "error" : (ok === null || ok === undefined) ? "unknown" : "warning";

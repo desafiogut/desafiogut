@@ -72,7 +72,12 @@ export default function ComandoButton({ acao, label, descricao, nivelMinimo, niv
           {!resultado ? (
             <>
               <p style={{ margin: 0, fontSize: "0.7rem", color: "#fbbf24" }}>
-                ⚠️ Confirmar <strong>{label}</strong>. Esta ação será registada no log de auditoria.
+                {/* MC89.44 — saiu o emoji de aviso que abria esta linha. A linha
+                    já é âmbar e já diz que a ação fica no log; o emoji não
+                    acrescentava aviso nenhum e quebrava a regra de UI neutra do
+                    MC89.4. Estava invisível porque a guarda de emoji não varria
+                    `components/admin` — passa a varrer. */}
+                Confirmar <strong>{label}</strong>. Esta ação será registada no log de auditoria.
               </p>
               <Input
                 type="text"
