@@ -6746,3 +6746,87 @@ Falta também rotacionar a chave `service_role`: expu-la em claro na sessão, ao
 inspeccionar o ambiente com a flag errada. E a política de privacidade, que vive
 no iubenda, tem de acompanhar a tabela nova — foi a condição com que ela foi
 aprovada.
+
+## MC89.44 — a navegação foi agrupada, e a arrumação revelou que duas telas tinham desaparecido
+
+O pedido era arquitetura de informação: agrupar os destinos do painel ADM pelas
+perguntas do administrador — Quem, Dinheiro, Sistema — para caber num telemóvel.
+Isso está feito e validado no aparelho. Mas não foi o que mais importou.
+
+Ao levantar a navegação antes de lhe mexer, encontrei que **«Aprovações» e
+«Cotas» não tinham entrada nenhuma no menu, desde o MC89.24**. As duas têm rota,
+componente e backend a funcionar. A barra filtrava-as por um campo `nota` que as
+marcava como "sem lugar na estrutura de sete telas", e o único componente que
+ainda lhes chamava — `AtalhosAdmin.jsx` — era código morto desde essa altura.
+Só se chegava lá escrevendo o URL à mão, e num APK não há barra de endereços.
+Vinte MCs assim. O MC89.43, no dia anterior, corrigiu o campo `categoria` do
+formulário de Cotas: um ecrã a que não se chegava.
+
+Nada disto estava no enunciado. Apareceu porque o primeiro segmento foi ler.
+
+E o enunciado descrevia um painel que não existe — pela segunda vez seguida.
+Listava Produtos, Banners e Lances, que não têm telas, e omitia Operações,
+Notificações e Aprovações, que têm. O total batia, nove e nove, e foi isso que
+escondeu a divergência. Se tivesse aceitado a lista, teria desenhado navegação
+para ecrãs que ninguém escreveu.
+
+Havia mais três defeitos na mesma barra, todos só no telemóvel: os rótulos eram
+cortados a quatro caracteres (`Financeiro` aparecia `Fina`), os alvos de toque
+tinham cerca de 28 px, e os ícones decorativos só se desenhavam no desktop —
+cromo onde sobra largura e corte onde falta, exactamente ao contrário. O
+agrupamento é o que torna os dois primeiros corrigíveis: com quatro destinos por
+linha em vez de sete, o rótulo inteiro cabe a 44 px.
+
+O enunciado pedia cabeçalhos de secção inertes sobre uma lista, o que pressupõe
+uma sidebar. O painel não tem sidebar, tem uma barra horizontal, e com rótulos
+inteiros a 44 px as oito pastilhas mais três cabeçalhos dão três linhas fixas num
+ecrã de 6". Não especulei: o MC89.6 já tinha tentado a barra de nove destinos e
+registado que se partiu em três linhas no aparelho. Por isso os grupos colapsam
+no telemóvel — os cabeçalhos são controlos, com `aria-expanded` — e ficam todos
+abertos e inertes no desktop, onde a largura chega. É um desvio ao que foi pedido
+e está declarado no relatório, no commit e aqui, e não escondido no diff.
+
+**A parte que vale a pena guardar: a validação automática no aparelho deu 45
+asserts verdes, e a captura de ecrã mostrou a barra errada de duas maneiras.** A
+seta de "há mais à direita" desenhava-se sempre, mesmo quando tudo cabia — uma
+afordância falsa, que manda procurar o que não existe; e o grupo aberto tinha o
+mesmo fundo preenchido que a página actual, portanto «Visão Geral» e «Sistema»
+liam-se como dois sítios actuais ao mesmo tempo. Nenhum dos dois é apanhável por
+assert. Ambos são óbvios a olhar. Corrigi os dois e voltei a medir, com controlo
+positivo para a seta: a 392 px não aparece, a 300 e a 240 aparece.
+
+Alargar a verificação trouxe dois achados que não procurava. A guarda de
+zero-emoji do MC89.4 dizia no comentário que varria a pasta do painel inteira, e
+lia `pages/admin` do disco mas tinha dois ficheiros de `components/admin`
+escritos à mão — deixando os outros nove componentes, a barra de navegação
+incluída, fora da regra que ela própria enuncia. Só dei por isso porque apagar o
+ficheiro morto a pôs a rebentar em vez de calar. Com a guarda alargada
+apareceram duas violações vivas: um aviso emoji no `ComandoButton`, numa linha
+que já é âmbar e já avisa, e o `StatusCard`, onde metade dos quatro estados era
+palavra e metade glifo. Passaram a ser palavras, e o desconhecido passou a "—",
+que é o símbolo que o painel já usa em todo o lado para número indisponível.
+
+Na Visão Geral, o segmento pedia para garantir que os alertas estavam ordenados
+por urgência. Não estavam. O backend emite-os por ordem de construção, com um
+`info` a meio, e o frontend concatenava no fim os seus — que é onde nasce o único
+`critical` do painel, a EOA coordenadora sem gás. O alerta que diz que as compras
+deixaram de ser creditadas era o último de seis linhas. A regra saiu para um
+ficheiro próprio para poder ser testada, com nível desconhecido a cair para o fim
+e não para o topo.
+
+Os testes novos foram validados por mutação, dez de dez apanhadas. Três deles
+leem o texto do componente, porque não há runner de React e os defeitos deste MC
+viviam todos na apresentação, onde o modelo estava perfeito e nenhum teste
+olhava. A primeira versão desses três falhou contra a própria prosa do
+componente: o cabeçalho explica que a barra deixou de truncar rótulos, e a busca
+encontrava a frase. Um teste de texto que não distingue código de comentário
+proíbe documentar o defeito que ele guarda.
+
+**O APK no aparelho do operador já tem tudo isto. A web não.** Está numa branch
+e o deploy não é meu. Enquanto não for feito, o painel ADM no browser continua
+com a barra antiga e com as duas telas inalcançáveis.
+
+Fica uma pergunta para antes do MC89.45: o P1-B fala de moderação de produtos e
+banners, e não há telas nenhumas de produtos nem de banners. Ou se constroem, ou
+"moderação" quer dizer a tela de Aprovações que já existe. São dois MCs muito
+diferentes.
