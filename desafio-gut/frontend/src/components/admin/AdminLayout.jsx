@@ -4,9 +4,11 @@
 // saírem para `pages/admin/*.jsx`: o gate de acesso, a barra de estado da sessão,
 // o caminho de volta e o <Outlet /> onde cada tela entra.
 //
-// A NAVEGAÇÃO não está aqui: vive em cartões no índice (AtalhosAdmin), porque
-// nenhuma barra com nove destinos cabe num telemóvel — ver o comentário desse
-// ficheiro para o que foi medido no aparelho.
+// A NAVEGAÇÃO é o <NavAdminPersistente /> mais abaixo. Este comentário dizia
+// até ao MC89.44 que ela vivia «em cartões no índice (AtalhosAdmin)» — o que
+// deixou de ser verdade no MC89.24 e ficou aqui a apontar para um ficheiro que
+// já ninguém importava. Descrever o contrário do que o ficheiro faz custa mais
+// do que não descrever nada.
 //
 // A autenticação já não vive aqui — vive em `AdminAuthContext`, porque as sete
 // telas partilham a mesma sessão. Este ficheiro só a LÊ.
