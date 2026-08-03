@@ -24,7 +24,11 @@ export const ENDERECO_ANONIMO = "0x000000000000000000000000000000000000dead";
 // Hard-delete por cliente_id = endereço (usuário individual).
 const SUPA_DELETE_POR_CLIENTE = ["saldo_rs", "troco_senhas", "wallet"];
 // Hard-delete por coluna `endereco`.
-const SUPA_DELETE_POR_ENDERECO = ["lances", "lojistas"];
+// MC89.43: `atividade_utilizadores` entra aqui. É a contrapartida obrigatória de
+// passar a registar presença (P0-A) — sem isto, apagar a conta deixava para trás
+// o endereço e os carimbos de acesso, e a exclusão deixaria de ser completa
+// (MC72 / requisito da Play Store).
+const SUPA_DELETE_POR_ENDERECO = ["lances", "lojistas", "atividade_utilizadores"];
 // Anonimizar (reter fiscal): keyed por PK própria; filtro por payload->>endereco.
 const SUPA_ANON = [
   { tabela: "saldo_rs_creditos", pk: "pedido_id" },
