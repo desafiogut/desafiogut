@@ -30,7 +30,7 @@
 //   ⇒ No DESKTOP, onde a largura chega, tudo fica visível ao mesmo tempo e os
 //     cabeçalhos são inertes, como o enunciado pede.
 
-import { useState } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { telaAtiva, telaIndice, GRUPOS_ADMIN, telasDoGrupo, grupoAtivo } from "../../lib/adminNav.js";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
@@ -93,6 +93,23 @@ export default function NavAdminPersistente() {
     setManual(null);
   }
   const abertoId = manual || grupoAtivo(pathname)?.id || null;
+
+  // A seta "→" só aparece quando há mesmo coisa cortada à direita.
+  //
+  // ⚠️ Visto no aparelho (392 px): a primeira versão desenhava-a sempre, e os
+  // três grupos cabem todos numa linha — a seta prometia conteúdo que não
+  // existia. Uma afordância falsa é pior do que nenhuma: manda procurar.
+  const linhaRef = useRef(null);
+  const [temCorte, setTemCorte] = useState(false);
+  useLayoutEffect(() => {
+    const el = linhaRef.current;
+    if (!el) { setTemCorte(false); return undefined; }
+    const medir = () => setTemCorte(el.scrollWidth > el.clientWidth + 1);
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [abertoId]);
 
   const estiloBarra = {
     display: "flex",
@@ -164,8 +181,15 @@ export default function NavAdminPersistente() {
                 cursor: "pointer",
                 // Contraste, não cor de marca — o laranja fica para os títulos
                 // e para a ação irreversível.
+                //
+                // ⚠️ E o FUNDO PREENCHIDO fica reservado a "é aqui que estou".
+                // Visto no aparelho: com o grupo aberto também preenchido,
+                // «Visão Geral» e «Sistema» liam-se como dois sítios atuais ao
+                // mesmo tempo. Aberto ≠ atual: o grupo aberto marca-se por peso
+                // e contorno, e quem diz que está aberto é a linha de destinos
+                // que aparece por baixo dele.
                 color: aberto ? COR.texto : COR.mudo,
-                background: aberto ? "rgba(255,255,255,0.10)" : "transparent",
+                background: "transparent",
                 border: `1px solid ${aberto ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.08)"}`,
                 flexShrink: 0,
               }}
@@ -177,18 +201,20 @@ export default function NavAdminPersistente() {
       </div>
 
       {telasAbertas.length > 0 && (
-        <div id="nav-admin-destinos" style={{ ...estiloBarra, paddingLeft: "0.15rem" }}>
+        <div id="nav-admin-destinos" ref={linhaRef} style={{ ...estiloBarra, paddingLeft: "0.15rem" }}>
           {telasAbertas.map((t) => (
             <Destino key={t.id} tela={t} sel={ativa?.id === t.id} isMobile />
           ))}
-          {/* Afordância de scroll — só quando pode haver corte à direita. */}
-          <span aria-hidden="true" style={{
-            position: "sticky", right: 0,
-            background: "linear-gradient(to right, transparent, rgba(13,18,53,1) 60%)",
-            paddingLeft: "1.5rem", paddingRight: "0.2rem",
-            display: "flex", alignItems: "center", pointerEvents: "none",
-            color: "#64748b", fontSize: "0.7rem", flexShrink: 0,
-          }}>→</span>
+          {/* Afordância de scroll — só quando há MESMO corte à direita. */}
+          {temCorte && (
+            <span aria-hidden="true" style={{
+              position: "sticky", right: 0,
+              background: "linear-gradient(to right, transparent, rgba(13,18,53,1) 60%)",
+              paddingLeft: "1.5rem", paddingRight: "0.2rem",
+              display: "flex", alignItems: "center", pointerEvents: "none",
+              color: "#64748b", fontSize: "0.7rem", flexShrink: 0,
+            }}>→</span>
+          )}
         </div>
       )}
     </nav>
