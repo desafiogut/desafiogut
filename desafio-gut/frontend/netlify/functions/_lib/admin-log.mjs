@@ -18,16 +18,31 @@
 // NÃO "CORRIGIR" ISTO. A diferença é deliberada e está escrita aqui para que o
 // próximo MC não a apague (D5b do MC89.5).
 
-import { getSupabaseReadOnly } from "./supabase-client.mjs";
+import { getSupabase, getSupabaseReadOnly } from "./supabase-client.mjs";
 
 const TABELA = "admin_logs";
 const PAGINACAO_PADRAO = 30;
 
 /**
- * Resolve o cliente Supabase. Em produção: service_role. Em teste: o duplo
- * injetado. Segue o padrão de `admin-alertas.mjs` (MC89.7).
+ * Resolve o cliente Supabase de ESCRITA. Em produção: primário (service_role).
+ * Em teste: o duplo injetado.
+ *
+ * ⚠️ MC89.43 — TEM DE SER O PRIMÁRIO, NÃO A RÉPLICA.
+ * Até aqui `registrarAcao`/`confirmarAcao` escreviam via `getSupabaseReadOnly()`.
+ * Hoje isso não parte nada, porque `SUPABASE_READ_REPLICA_URL` não está definida
+ * e o cliente RO cai para o primário. Mas é um verde por acidente: no dia em que
+ * uma réplica for configurada, o INSERT de auditoria bate numa base só-de-leitura,
+ * `registrarAcao` lança e — por ser FAIL-CLOSED — TODAS as ações de admin passam
+ * a devolver 503. O próprio `supabase-client.mjs` já o diz: "ESCRITA NUNCA passa
+ * por aqui (R11 anti-split-brain)".
  */
-function resolverSb(sb) { return sb || getSupabaseReadOnly(); }
+function resolverSbEscrita(sb) { return sb || getSupabase(); }
+
+/**
+ * Resolve o cliente Supabase de LEITURA. A réplica serve aqui: `lerLogs` é um
+ * ecrã de consulta e tolera o atraso de replicação.
+ */
+function resolverSbLeitura(sb) { return sb || getSupabaseReadOnly(); }
 
 /**
  * Regista uma ação ANTES de ela ser executada.
@@ -48,7 +63,7 @@ export async function registrarAcao({
   if (!admin_endereco) throw new Error("admin_endereco obrigatório");
   if (!tipo_acao) throw new Error("tipo_acao obrigatório");
 
-  const sb = resolverSb(_sb);
+  const sb = resolverSbEscrita(_sb);
   const { data, error } = await sb.from(TABELA)
     .insert({
       admin_endereco: String(admin_endereco).toLowerCase(),
@@ -87,7 +102,7 @@ export async function registrarAcao({
  * rebentou a meio.
  */
 export async function confirmarAcao(id, { sucesso, erro = null, _sb = null } = {}) {
-  const sb = resolverSb(_sb);
+  const sb = resolverSbEscrita(_sb);
   const { error: err } = await sb.from(TABELA)
     .update({ sucesso: !!sucesso, erro: erro || null })
     .eq("id", id);
@@ -111,7 +126,7 @@ export async function confirmarAcao(id, { sucesso, erro = null, _sb = null } = {
  * @param {number} [opts.limite]
  */
 export async function lerLogs(opts = {}) {
-  const sb = resolverSb(opts._sb);
+  const sb = resolverSbLeitura(opts._sb);
   const limite = Math.min(opts.limite || PAGINACAO_PADRAO, 100);
 
   let q = sb.from(TABELA)

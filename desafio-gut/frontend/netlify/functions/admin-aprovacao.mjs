@@ -31,6 +31,7 @@ import { autenticarAdmin } from "./_lib/admin-auth.mjs";
 import { requireMfa } from "./_lib/require-mfa.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
+import { registrarAcao, confirmarAcao } from "./_lib/admin-log.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 
 const BLOB_APROVACAO = "admin-aprovacao";
@@ -183,7 +184,33 @@ async function acaoTransicao(req, body, novoStatus) {
   if (!existente) return jsonError(404, "nao_encontrado", "cliente não tem pedido de aprovação");
 
   if (existente.status === novoStatus) {
+    // Não houve transição — nada mudou, logo não há ação para registar.
     return jsonResponse({ ...existente, idempotent: true });
+  }
+
+  // ── Log fail-CLOSED (MC89.43) ───────────────────────────────────────
+  // Aprovar/rejeitar decide quem entra no sistema. Até aqui não deixava
+  // rasto nenhum: era a única lacuna de auditoria CONFIRMADA do MC89.42.
+  // Registado DEPOIS das validações (não se regista lixo) e ANTES do
+  // setJSON (nenhuma transição pode acontecer sem registo).
+  const ipReq = req.headers.get("x-forwarded-for")
+    || req.headers.get("x-nf-client-connection-ip") || null;
+  let logId;
+  try {
+    const { id } = await registrarAcao({
+      admin_endereco: auth.endereco,
+      admin_nivel: auth.payload?.nivel || "admin",
+      tipo_acao: novoStatus === "aprovado" ? "aprovar_cliente" : "rejeitar_cliente",
+      alvo: endereco,
+      justificativa: motivo,
+      ip: ipReq,
+      user_agent: req.headers.get("user-agent") || null,
+      payload: { de: existente.status, para: novoStatus, por },
+    });
+    logId = id;
+  } catch (err) {
+    console.error("[admin-aprovacao] log fail-closed:", err?.message);
+    return jsonError(503, "log_indisponivel", "Registo de auditoria falhou. Ação NÃO executada.");
   }
 
   const agora = new Date().toISOString();
@@ -199,7 +226,13 @@ async function acaoTransicao(req, body, novoStatus) {
       { em: agora, de: existente.status, para: novoStatus, por, motivo },
     ].slice(-20),  // últimas 20 transições
   };
-  await store.setJSON(endereco, registro);
+  try {
+    await store.setJSON(endereco, registro);
+  } catch (err) {
+    await confirmarAcao(logId, { sucesso: false, erro: err?.message });
+    return jsonError(502, "store_indisponivel", `falha ao gravar aprovação: ${err?.message}`);
+  }
+  await confirmarAcao(logId, { sucesso: true });
   return jsonResponse(registro);
 }
 
