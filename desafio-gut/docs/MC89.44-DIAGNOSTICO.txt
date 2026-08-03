@@ -1,0 +1,194 @@
+================================================================================
+MC89.44 — SEGMENTO 0 · DIAGNÓSTICO DA NAVEGAÇÃO ATUAL DO PAINEL ADM
+================================================================================
+Data    : 2026-08-03
+Método  : leitura de repositório (sem execução). O comportamento no aparelho
+          é medido no Segmento 4, não aqui.
+Baseline: node --test src/lib/adminNav.test.mjs → 13/13 verde ANTES de tocar
+          em nada.
+
+================================================================================
+⚠️ ANTES DE TUDO: O ENUNCIADO DESCREVE UM PAINEL QUE NÃO EXISTE
+================================================================================
+O enunciado lista os nove destinos assim:
+
+    Visão Geral · Utilizadores · Cotas · Produtos · Banners · Lances ·
+    Financeiro · Logs · Configurações
+
+O que está no código (`src/lib/adminNav.js`, a lista canónica) é:
+
+    Visão Geral · Usuários · Financeiro · Operações · Logs · Notificações ·
+    Config · Aprovações · Cotas
+
+Divergem em quatro nomes:
+
+    NO ENUNCIADO, INEXISTENTES NO CÓDIGO ...... Produtos · Banners · Lances
+    NO CÓDIGO, AUSENTES DO ENUNCIADO .......... Operações · Notificações ·
+                                                 Aprovações
+
+Não há telas de Produtos, de Banners nem de Lances. Procurei os termos em
+`pages/admin/` e em `components/admin/`: a única ocorrência de "produto" é o
+campo `produto_nome` do formulário de Cotas, e "banner" não aparece de todo.
+
+⚠️ O NÚMERO BATE — nove e nove — E FOI ISSO QUE ESCONDEU A DIVERGÊNCIA. Um MC
+  que agrupasse "Produtos" e "Banners" em SISTEMA estaria a desenhar navegação
+  para ecrãs que ninguém escreveu.
+
+CONSEQUÊNCIA PARA ESTE MC: os três grupos aprovados (Quem · Dinheiro · Sistema)
+mantêm-se, porque a decisão do operador é sobre a ESTRUTURA e essa é boa. O que
+muda é o conteúdo de cada grupo, que passa a ser feito com os ecrãs reais. Está
+no Segmento 1, com a atribuição justificada uma a uma.
+
+É a segunda vez seguida que a premissa do enunciado está desatualizada — o
+MC89.42 abriu com a mesma correção. Não é crítica ao operador: é o sintoma de um
+painel que cresceu mais depressa do que o documento que o descreve.
+
+================================================================================
+0.1 — COMO A NAVEGAÇÃO É RENDERIZADA HOJE
+================================================================================
+A cadeia real, do topo para baixo:
+
+  src/lib/adminNav.js .................. DADOS. `TELAS_ADMIN` (9 entradas),
+                                         `TELAS_DO_PLANO` (as 7 sem `nota`),
+                                         `telaIndice()`, `telaAtiva(caminho)`.
+  src/App.jsx:395-408 .................. as rotas, dentro de <AdminAuthProvider>.
+  components/admin/AdminLayout.jsx:274 . renderiza <NavAdminPersistente />.
+  components/admin/NavAdminPersistente.jsx  o menu propriamente dito.
+
+⚠️ NÃO EXISTE `AdminSidebar.jsx`, e o menu NÃO É LATERAL. O enunciado nomeia
+  os dois (§1.2, §1.6). O que existe é uma BARRA HORIZONTAL com scroll — e a
+  distinção não é de vocabulário: uma barra horizontal não tem onde pôr
+  cabeçalhos de secção empilhados, que é o que o §1.2 pede. É a restrição que
+  molda o Segmento 1.
+
+FORMA ATUAL — lista PLANA, sem agrupamento nenhum. A ordem é
+`visao · usuarios · financeiro · operacoes · logs · notificacoes · configuracoes`,
+que é a ordem por que as telas foram construídas (MC89.1 → MC89.22), ou seja
+CRONOLOGIA DE OBRA, não a pergunta de quem usa.
+
+================================================================================
+0.2 — OS PONTOS DE DOR (medidos no código)
+================================================================================
+
+D-1 ⚠️ DUAS TELAS VIVAS NÃO TÊM ENTRADA NENHUMA NO MENU.
+    `NavAdminPersistente.jsx:21` filtra `TELAS_ADMIN.filter(t => !t.nota)`,
+    o que deixa **Aprovações** e **Cotas** de fora da barra.
+    Ambas têm rota (`App.jsx:406-407`), componente e backend a funcionar.
+    ⇒ Só se lá chega ESCREVENDO O URL À MÃO. Num APK, onde não há barra de
+      endereço, isso quer dizer: INALCANÇÁVEIS.
+    ⇒ E "Cotas" é a tela que o MC89.43 acabou de corrigir (campo `categoria`).
+      Corrigiu-se um ecrã a que não se chega.
+
+D-2 ⚠️ O ÚNICO COMPONENTE QUE LIGAVA A ESSAS DUAS É CÓDIGO MORTO.
+    `components/admin/AtalhosAdmin.jsx` lista as 8 telas não-índice, com uma
+    linha de descrição cada — INCLUINDO Aprovações e Cotas. Não é importado
+    por ninguém (verificado por grep em todo o `src/`). Foi substituído pela
+    barra no MC89.24 e o ficheiro ficou.
+    ⇒ E ficou também a MENTIRA NO COMENTÁRIO: `AdminLayout.jsx:7-9` diz
+      «A NAVEGAÇÃO não está aqui: vive em cartões no índice (AtalhosAdmin)»,
+      63 linhas acima de `AdminLayout.jsx:274` renderizar `NavAdminPersistente`.
+      O ficheiro documenta o contrário do que faz.
+
+D-3 ⚠️ NO TELEMÓVEL OS RÓTULOS SÃO CORTADOS A QUATRO CARACTERES, POR OMISSÃO.
+    `NavAdminPersistente.jsx:57` → `{isMobile ? t.label.slice(0, 4) : t.label}`
+    Renderiza, literalmente:
+
+        Visão Geral ....... "Visã"
+        Usuários .......... "Usuá"
+        Financeiro ........ "Fina"
+        Operações ......... "Oper"
+        Logs .............. "Logs"
+        Notificações ...... "Noti"
+        Config ............ "Conf"
+
+    Seis dos sete destinos ficam sem a última letra e três ficam com um acento
+    solto no fim. É EXATAMENTE a falha que o MC89.4 rejeitou por escrito («um
+    rótulo truncado por omissão lê-se como descuido») e que o MC89.6 invocou
+    para justificar os cartões.
+
+    ⚠️ E O TESTE ACHA QUE ISTO ESTÁ PREVENIDO. `adminNav.test.mjs:61` —
+    «os rótulos são curtos o suficiente para um telemóvel» — afirma
+    `label.length <= 12` sobre o MODELO. O modelo está certo: "Financeiro" tem
+    10. O que é cortado é o RENDER, que nenhum teste vê. Teste verde, ecrã
+    cortado. É o padrão da memória `verificacao-que-partilha-o-defeito`:
+    validar uma camada e declarar a outra.
+
+D-4 ⚠️ ALVOS DE TOQUE MUITO ABAIXO DE 44 px.
+    `NavAdminPersistente.jsx:43,46` no ramo mobile:
+        padding: 0.4rem 0.55rem   →  6,4 px em cima + 6,4 px em baixo
+        fontSize: 0.7rem          →  11,2 px de texto, ~13,4 px de linha
+        border: 1px               →  2 px
+    ALTURA CALCULADA ≈ 28 px.  (É cálculo, não medição — a medição no aparelho
+    fica para o Segmento 4.)
+    ⇒ Passa o mínimo da WCAG 2.2 AA (SC 2.5.8, 24 px) por 4 px e falha o alvo
+      de 44 px que o enunciado pede (§1.4) por 16 px.
+
+D-5 ⚠️ O CROMO ESTÁ ONDE HÁ ESPAÇO E O CORTE ESTÁ ONDE NÃO HÁ.
+    `NavAdminPersistente.jsx:9-13` tem um mapa `ICONES` de seis glifos
+    geométricos (◉ ◒ ◓ ◔ ◑ ◐), e `linha 56` só os desenha `{!isMobile && ...}`.
+    Ou seja: no DESKTOP, onde sobra largura, acrescenta-se decoração; no
+    TELEMÓVEL, onde falta, corta-se informação. Está ao contrário.
+    Os glifos também não informam: ◒ repete-se em QUATRO destinos (usuarios,
+    configuracoes, aprovacoes, cotas). Não são emoji — passam o teste de
+    `\p{Extended_Pictographic}` — mas também não são ícones: são enfeite.
+
+D-6   SEM AGRUPAMENTO E SEM HIERARQUIA.
+    Sete pastilhas visualmente idênticas em fila. Nada diz que "Logs" e
+    "Config" são vizinhos de assunto e que "Financeiro" não é vizinho de
+    nenhum. O ADM lê a fila toda de cada vez que procura alguma coisa.
+
+================================================================================
+0.3 — REGRA DE "ZERO EMOJI" E ALVOS DE TOQUE: ESTADO ATUAL
+================================================================================
+ZERO EMOJI ....... ✅ CUMPRIDA nos rótulos. Confirmei com
+                   `\p{Extended_Pictographic}` sobre `TELAS_ADMIN` (o teste
+                   `adminNav.test.mjs:69` já o faz e está verde) e por leitura
+                   das 11 páginas admin.
+                   ⚠️ RESSALVA: cumprida no ADM, e SÓ no ADM. `Sidebar.jsx:45`
+                   e `CorporativoDashboard.jsx:340` usam 📢 — mas são o painel
+                   do LOJISTA, fora do âmbito deste MC. É essa separação que
+                   faz o ADM ler como ferramenta.
+                   ⚠️ Os glifos ◉◒◓◔◑◐ do D-5 não são emoji, mas violam o
+                   espírito da regra («a UI é neutra», §1.3). Saem.
+
+ALVOS ≥ 44 px .... ❌ NÃO CUMPRIDA no telemóvel (D-4, ≈28 px calculados).
+                   Corrigir passa a fazer parte deste MC, como o enunciado
+                   previu («se não, corrigir será parte do MC»).
+
+================================================================================
+0.4 — O QUE ISTO OBRIGA O SEGMENTO 1 A FAZER (e o que o impede)
+================================================================================
+O que o Segmento 1 TEM de resolver, por ordem de gravidade:
+    1. D-1 — pôr Aprovações e Cotas ao alcance de um dedo;
+    2. D-3 — deixar de cortar rótulos;
+    3. D-4 — 44 px;
+    4. D-6 — agrupar por Quem · Dinheiro · Sistema;
+    5. D-2 e D-5 — remover o morto e o enfeite.
+
+⚠️ A RESTRIÇÃO QUE MUDA O DESENHO — e que já foi medida neste repositório:
+  O enunciado (§1.2) pede cabeçalhos de secção empilhados sobre uma lista.
+  Isso é uma sidebar, e o painel não tem sidebar: tem uma barra horizontal.
+
+  Fazer a lista PLANA com rótulos inteiros a 44 px não cabe. Contas, para um
+  ecrã de 360 px (≈304 px úteis descontando margem 0,75rem e padding 1rem):
+  os oito destinos com rótulo completo somam ≈650 px, mais três cabeçalhos
+  ≈150 px. Dá TRÊS linhas — e três linhas fixas comem um terço da altura útil.
+
+  Isto não é especulação: `AtalhosAdmin.jsx:4-8` regista que a barra com nove
+  destinos JÁ FOI TENTADA no MC89.6 e «partiu-se em TRÊS linhas irregulares»
+  no aparelho. Repetir a tentativa era ignorar prova própria.
+
+  ⇒ POR ISSO O SEGMENTO 1 TORNA OS GRUPOS COLAPSÁVEIS NO TELEMÓVEL, e mantém
+    tudo visível no desktop, onde a largura chega. Os cabeçalhos deixam de ser
+    rótulos inertes e passam a ser controlos — um desvio consciente ao §1.2,
+    declarado aqui e outra vez no relatório final, não escondido no diff.
+
+================================================================================
+LIMITES DESTE DOCUMENTO — DITOS À FRENTE
+================================================================================
+· NÃO abri o painel no aparelho para escrever isto. Tudo acima é leitura de
+  código. Os 28 px do D-4 são CALCULADOS a partir do CSS, não medidos.
+· Não verifiquei se as telas de Aprovações e Cotas FUNCIONAM — verifiquei que
+  não se chega lá pelo menu. São perguntas diferentes.
+· "Não é importado" (D-2) foi apurado por grep em `src/`. Um import construído
+  em tempo de execução escaparia — não encontrei nenhum, mas digo o método.
