@@ -11,10 +11,12 @@
 //   - Revogação: zera o array de refresh de um endereco (efeito imediato
 //     pois access tokens duram apenas 15 min).
 //
-// Compatibilidade legada:
-//   `autenticarAdmin(req)` aceita PRIMEIRO o Bearer JWT (preferido) e CAI
-//   no header `x-admin-token` (legado). Quando `ADMIN_TOKEN` for removido
-//   do env, o legado falha sozinho.
+// MC89.46 — caminho legado REMOVIDO (2026-08-06):
+//   `autenticarAdmin(req)` aceita APENAS `Authorization: Bearer <admin-JWT>`.
+//   O header `x-admin-token` (ADMIN_TOKEN em texto puro) não é mais aceito
+//   em nenhum endpoint que passe por este guard. Quem ainda dependia do
+//   header legado deve usar o fluxo de login (auth-admin.mjs) e enviar o
+//   Bearer JWT nas chamadas seguintes.
 
 import { getStore } from "@netlify/blobs";
 import { createHash, randomBytes } from "node:crypto";
@@ -141,51 +143,42 @@ export async function revogarAdmin(endereco) {
 }
 
 /**
- * Dual guard: aceita Bearer admin-JWT (preferido) ou x-admin-token (legado).
+ * Guard único: aceita SOMENTE `Authorization: Bearer <admin-JWT>`.
  * Retorna:
- *   { ok: true, papel: "admin-jwt",    endereco, fonte: "jwt", payload }
- *   { ok: true, papel: "admin-legado", endereco: null, fonte: "x-admin-token", payload: null }
+ *   { ok: true, papel: "admin-jwt", endereco, fonte: "jwt", payload }
  *   { ok: false, papel: null, code, message }
  *
- * Se papel === "admin-jwt", também valida que o endereco do JWT continua na
+ * Valida também que o endereco do JWT continua na
  * lista de admins (revogações imediatas — o admin removido da lista perde
  * acesso mesmo com JWT ainda dentro do TTL).
+ *
+ * MC89.46 — o caminho legado `x-admin-token` foi REMOVIDO deste guard (a
+ * validação em texto puro contra ADMIN_TOKEN não existe mais). Só o Bearer
+ * admin-JWT emitido por auth-admin.mjs é aceito.
  *
  * MC7: `payload` exposto no sucesso para que middlewares posteriores
  * (ex: require-mfa) possam ler claims como `mfa_verified` sem reverificar.
  */
 export async function autenticarAdmin(req) {
-  // 1) Preferido: Bearer admin-JWT.
+  // Único caminho aceito: Bearer admin-JWT (MC89.46 — x-admin-token removido).
   const authHeader = req.headers.get("authorization") || "";
   const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (bearer) {
-    let payload;
-    try { payload = await verificarAdminAccess(bearer); }
-    catch (err) {
-      const code = err?.code === "ERR_JWT_EXPIRED" ? "admin_token_expirado" : "admin_token_invalido";
-      return { ok: false, papel: null, code, message: "Bearer admin JWT inválido ou expirado" };
-    }
-    const endereco = String(payload?.endereco || "").toLowerCase();
-    const admins = await getAdminAddresses();
-    if (!admins.includes(endereco)) {
-      return { ok: false, papel: null, code: "admin_removido", message: "endereço não é mais admin" };
-    }
-    return { ok: true, papel: "admin-jwt", endereco, fonte: "jwt", payload };
+  if (!bearer) {
+    return { ok: false, papel: null, code: "admin_token_ausente", message: "Authorization: Bearer <admin-JWT> obrigatório" };
   }
 
-  // 2) Legado: x-admin-token. Mantido durante a janela de migração.
-  const legacy   = req.headers.get("x-admin-token") || "";
-  const expected = process.env.ADMIN_TOKEN;
-  if (!expected) {
-    return { ok: false, papel: null, code: "admin_token_nao_configurado", message: "ADMIN_TOKEN ausente — use Authorization: Bearer <admin-jwt>" };
+  let payload;
+  try { payload = await verificarAdminAccess(bearer); }
+  catch (err) {
+    const code = err?.code === "ERR_JWT_EXPIRED" ? "admin_token_expirado" : "admin_token_invalido";
+    return { ok: false, papel: null, code, message: "Bearer admin JWT inválido ou expirado" };
   }
-  if (!legacy) {
-    return { ok: false, papel: null, code: "admin_token_ausente", message: "Authorization: Bearer <admin-jwt> ou x-admin-token obrigatório" };
+  const endereco = String(payload?.endereco || "").toLowerCase();
+  const admins = await getAdminAddresses();
+  if (!admins.includes(endereco)) {
+    return { ok: false, papel: null, code: "admin_removido", message: "endereço não é mais admin" };
   }
-  if (legacy !== expected) {
-    return { ok: false, papel: null, code: "admin_token_invalido", message: "x-admin-token inválido" };
-  }
-  return { ok: true, papel: "admin-legado", endereco: null, fonte: "x-admin-token", payload: null };
+  return { ok: true, papel: "admin-jwt", endereco, fonte: "jwt", payload };
 }
 
 /**
@@ -221,7 +214,7 @@ export async function guardAdminNivel(req, nivelMinimo = "operador") {
     return jsonError(status, r.code, r.message);
   }
 
-  // Legado (x-admin-token): sem payload → trata como "admin"
+  // JWT sem claim `nivel` (retrocompat) → trata como "admin"
   const nivel = r.payload?.nivel || "admin";
   const ORDEM = { "super-admin": 3, admin: 2, operador: 1 };
   if ((ORDEM[nivel] || 0) < (ORDEM[nivelMinimo] || 0)) {
