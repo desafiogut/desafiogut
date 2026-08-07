@@ -1,0 +1,87 @@
+================================================================================
+MC89.47 — DIAGNÓSTICO E PLANO DE REDUÇÃO DO BLOAT DO .git (S7/P8)
+Gerado em: 2026-08-06 · Branch: feat/mc89.32-diagnostico-perf
+================================================================================
+
+⚠️  DIAGNÓSTICO APENAS — NENHUM comando destrutivo foi executado.
+    `git gc`/`git prune` exigem aprovação do operador (regra MC89.47).
+
+────────────────────────────────────────────────────────────────────
+1. TAMANHO ATUAL
+────────────────────────────────────────────────────────────────────
+  du -sh .git ......................... 4,6 GB
+  git count-objects -vH:
+    count (objetos soltos) ............ 4.666
+    size-pack .......................... 4,50 GiB (2 packs)
+  pack-0a0eac8d90a108800bfdb499cc18fbde79646481.pack ... 4.831.809.493 B (4,83 GB)
+  pack-9ef0b6f307c26c6d44ae04f24cce136dcd740ccb.pack ....     183.295 B
+
+────────────────────────────────────────────────────────────────────
+2. MAIORES ARQUIVOS NO HISTÓRICO (git rev-list --objects --all)
+────────────────────────────────────────────────────────────────────
+  (maior versão por path — blobs ALCANÇÁVEIS somam só ~155 MB)
+      2.753.875 B  desafio-gut/frontend/public/assets/telas/guto tradicional.png
+      2.656.081 B  desafio-gut/docs/MC89.3-evidencia-admin.png
+      2.653.696 B  desafio-gut/docs/MC89.4-antes-admin.png
+      2.264.857 B  desafio-gut/frontend/public/assets/guto/animations/celebration.webm
+      2.258.186 B  desafio-gut/docs/MC89.4-depois-dashboard.png
+      1.891.559 B  desafio-gut/frontend/android/visao.png
+      1.856.649 B  desafio-gut/docs/MC89.4-depois-admin.png
+      1.811.274 B  desafio-gut/docs/MC89.44-aparelho-grupo-sistema.png
+      1.811.268 B  desafio-gut/docs/MC89.44-aparelho-indice-quem.png
+      1.701.038 B  desafio-gut/frontend/public/assets/guto/carrossel/guto-6.webm
+
+────────────────────────────────────────────────────────────────────
+3. CAUSA REAL DO TAMANHO — ZIPS ÓRFÃOS NO PACK
+────────────────────────────────────────────────────────────────────
+  O pack de 4,83 GB contém ~30 blobs NÃO ALCANÇÁVEIS (unreachable) gigantes,
+  todos com magic ZIP (PK\x03\x04) — provável snapshot/backup (node_modules?)
+  commitado e reescrito fora do histórico, nunca podado:
+
+      1.261.181.618 B  (zip)
+        871.077.689 B  (zip)
+        344.829.345 B  (zip — 2 versões)
+        172.011.520 B  (zip — 5 versões)
+         86.077.440 B  (zip — 3 versões)
+
+  `git log --all --find-object=<sha>` NÃO encontra nenhum commit alcançável
+  que os referencie → são órfãos de branches deletadas/reescritas.
+  Blobs alcançáveis: 2.996 (155,5 MB). Órfãos: ~4,7 GB em 30 blobs.
+
+────────────────────────────────────────────────────────────────────
+4. PLANO DE AÇÃO (NÃO EXECUTADO — requer aprovação)
+────────────────────────────────────────────────────────────────────
+  Passo 0 — INSPECIONAR (antes de destruir):
+    # conteúdo do maior zip órfão (listagem, não extração)
+    git cat-file blob 7b7b7ec856f91783fe00665ef45390dbb96457d1 | unzip -l - | head
+    # confirmar que NENHUM commit alcançável o usa
+    git log --all --oneline --find-object=7b7b7ec856f91783fe00665ef45390dbb96457d1
+
+  Passo 1 — expirar reflogs (senão o gc preserva objetos referenciados):
+    git reflog expire --expire=now --all
+
+  Passo 2 — podar órfãos e reempacotar:
+    git gc --prune=now
+    (equivalente a: git repack -ad && git prune)
+
+  Passo 3 — verificar:
+    du -sh .git            # esperado: ~200–300 MB (155 MB de blobs + histórico)
+    git fsck --full        # deve passar sem erros
+    git log --oneline -5   # histórico intacto
+    git bundle create sanity-check.bundle --all   # backup antes/depois
+
+  Passo 4 — se o zips tiverem valor (backup antigo), extrair para fora do
+    repositório ANTES do Passo 1 (ex: Desktop/GUTO/BACKUPS).
+
+  NÃO usar git filter-repo / BFG: os blobs são órfãos, não alcançáveis —
+  gc --prune resolve sem reescrever o histórico (nenhum commit é alterado).
+
+────────────────────────────────────────────────────────────────────
+5. RECOMENDAÇÕES ADICIONAIS (prevenção)
+────────────────────────────────────────────────────────────────────
+  - Nunca commitar bundles/zips/builds: .gitignore já cobre
+    backup-mc8945-*/ (S4) e artefatos; estender se necessário.
+  - Screenshots de evidência (docs/MC89*.png) são o 2º maior grupo
+    (33 MB) — considerar mover evidências grandes para fora do repo.
+  - Rodar `git gc` periódico em CI ou após merge de marcos.
+================================================================================
