@@ -1,0 +1,136 @@
+================================================================================
+MC89.48 - SEGMENTO 3 - HISTORICO E EVIDENCIAS ADICIONAIS
+================================================================================
+Data...: 2026-08-07
+
+********************************************************************************
+*** ACHADO PRINCIPAL DESTE SEGMENTO: O REF DO PROJETO DE STAGING FOI ENCONTRADO
+********************************************************************************
+
+    PRODUCAO  = vjslwowwrpcawijdiksm
+    STAGING   = gjuelqjjhuuwnlsjyeai   <-- o "desafigut-staging" do dashboard
+
+Isto elimina a ultima ambiguidade do MC: ja nao e preciso adivinhar qual dos
+dois projetos e qual. Ambos os refs estao documentados no proprio repositorio.
+
+--------------------------------------------------------------------------------
+3.0 - COMO ESTE ACHADO APARECEU (e porque o Segmento 1 falhou nele)
+--------------------------------------------------------------------------------
+O Segmento 1 procurou o padrao "<ref>.supabase.co" (FQDN) e concluiu que so
+existia um ref no repo. Estava errado: o ref do staging esta escrito na forma
+NUA, entre crases, sem dominio. So apareceu quando a procura passou a ser pelo
+identificador nu, no Segmento 3.
+
+Licao: procurar um identificador por UMA so das suas formas de escrita produz
+um "nao existe" que e apenas "nao procurei onde estava". A errata esta
+registada no fim de docs/MC89.48-DIAGNOSTICO-CODIGO.txt.
+
+--------------------------------------------------------------------------------
+3.1 - HISTORICO GIT
+--------------------------------------------------------------------------------
+a) Commits que mencionam SUPABASE_URL:
+      57a0685  feat(mc32.1): frontend le config_remota via Supabase (env-gated)
+      a9bace4  feat(mc32.1): variaveis de ambiente para o Supabase (.env.example)
+
+b) TODAS as refs "*.supabase.co" alguma vez presentes em QUALQUER commit de
+   QUALQUER branch (git log --all -S, pickaxe):
+      7 ocorrencias -- TODAS de vjslwowwrpcawijdiksm
+      0 de qualquer outro ref
+   >> Nunca houve, em nenhum ponto da historia, uma URL de Supabase diferente
+      da atual em codigo. A producao nunca trocou de projeto.
+
+c) Cronologia de aparicao do ref de PRODUCAO (git log --reverse -S):
+      2026-06-20  5f87eeb  feat(mc32.1): versionar schema SQL definitivo
+      2026-06-20  d3259a4  docs(mc32.1): cloud.md 9.7 (Supabase implementado)
+      2026-06-21  7a3f454  docs(mc33): registar flip Supabase executado em producao
+      2026-06-21  ad4ee11  docs(mc34): registar automacao do realtime
+      2026-07-08  3f6cd02  docs(mc59.8): ABORTA db push
+      2026-07-22  4e7d3d4  docs(MC86): auditoria de seguranca
+      2026-07-23  2cb4242  docs(mc89): relatorio final da jornada
+   >> vjslwowwrpcawijdiksm e o projeto de producao de forma continua e
+      ininterrupta desde 2026-06-20 (~7 semanas), atravessando MC32.1, MC33,
+      MC34, MC59.8, MC86 e MC89.
+
+--------------------------------------------------------------------------------
+3.2 - PARA QUE SERVIU O PROJETO DE STAGING (gjuelqjjhuuwnlsjyeai)
+--------------------------------------------------------------------------------
+Todas as 3 mencoes no repositorio, com contexto:
+
+  cloud.md:822  -- "Validacoes ja concluidas (staging `gjuelqjjhuuwnlsjyeai`)"
+      MC33 / MC33.1, PR #81. O staging foi criado para validar o flip Blobs ->
+      Supabase ANTES de mexer em producao:
+        FASE A (carga): 50/100/200/1500/2500 lances -> 0 erros, keys unicas,
+                        confirmou o fix K1 (paginacao) no PostgREST real
+        FASE B (RLS):   anon le [] e escrita bloqueada (401/42501)
+        FASE D (visual): 375/1440, CLS=0
+
+  cloud.md:867  -- MC34, migracao de realtime aplicada "em producao
+      (`vjslwowwrpcawijdiksm`) e staging (`gjuelqjjhuuwnlsjyeai`)" em
+      2026-06-21, via `supabase db query --linked`.
+
+  security_audit.md:236 -- "contra staging `gjuelqjjhuuwnlsjyeai` (ref distinto
+      da producao). Backend de escrita de producao continua `blobs` - nenhum
+      flip de producao feito." (auditoria de 2026-06-21)
+
+  desafio-gut/docs/MC89-relatorio-final.txt:601 -- classifica-o explicitamente:
+      "Supabase staging   ~\.mc33-staging.env (fora do repo)   legado MC33.1"
+
+>> CONCLUSAO: o staging foi um ambiente DESCARTAVEL de validacao pre-flip.
+   Cumpriu o seu proposito em 2026-06-21. A ultima atividade documentada e
+   dessa data - ha 47 dias. O proprio relatorio final do MC89 ja o classifica
+   como "legado".
+
+--------------------------------------------------------------------------------
+3.3 - CREDENCIAIS DO STAGING (existem, fora do repo)
+--------------------------------------------------------------------------------
+      C:\Users\Moltbot\.mc33-staging.env   (617 bytes, criado 2026-06-21)
+
+Ficheiro NAO lido (R4/R5) - apenas confirmada a existencia e a data. Nunca foi
+modificado desde a criacao, coerente com "usado uma vez e abandonado".
+Fica fora do repositorio, logo nunca foi commitado (correto).
+>> Deve ser apagado JUNTO com o projeto (ver plano no Segmento 4), senao ficam
+   credenciais orfas de um projeto inexistente na maquina do operador.
+
+--------------------------------------------------------------------------------
+3.4 - ONDE O REF DE PRODUCAO ESTA VERSIONADO
+--------------------------------------------------------------------------------
+Ficheiros rastreados que contem vjslwowwrpcawijdiksm:
+      cloud.md
+      security_audit.md
+      desafio-gut/docs/MC59.8-migracao-fila-cli.txt
+      desafio-gut/docs/MC86-seguranca.txt
+      desafio-gut/docs/MC89-relatorio-final.txt
+      desafio-gut/frontend/supabase/migrations/20260620_schema_definitivo.sql
+      docs/MC89.48-*.txt (este MC)
+
+Nota lateral (nao e problema de seguranca): estao commitados artefactos de
+build (dist/ e android/.../assets/) que embutem a URL e a ANON_KEY. A anon key
+e publica por design e esta sujeita a RLS - nao e uma fuga. A SERVICE_ROLE_KEY
+nao aparece em nenhum ficheiro versionado.
+
+--------------------------------------------------------------------------------
+3.5 - VERIFICACAO DE QUE NAO HA CONSUMIDOR ESCONDIDO DO STAGING
+--------------------------------------------------------------------------------
+  Variaveis Netlify (4 contextos) com gjuelqjjhuuwnlsjyeai ........ ZERO
+  Codigo executavel (.js/.jsx/.mjs/.ts) com o ref ................. ZERO
+  Ficheiros .env com o ref ........................................ ZERO
+  Bundle vivo de producao (20 chunks, 4,0 MB) ..................... ZERO
+  Assets do APK Android ........................................... ZERO
+  Historia do git (qualquer commit, qualquer branch) em codigo .... ZERO
+  Mencoes existentes .............................................. 3, todas
+      em documentacao historica (.md), nenhuma executavel.
+
+  SUPABASE_READ_REPLICA_URL (unica arquitetura que exigiria 2 projetos):
+      ausente nos 4 contextos -> fallback ao primario -> nao usa staging.
+
+--------------------------------------------------------------------------------
+CONCLUSAO DO SEGMENTO 3
+--------------------------------------------------------------------------------
+1. Os DOIS refs estao identificados e nomeados sem ambiguidade.
+2. Producao nunca trocou de projeto em toda a historia do repositorio.
+3. O staging foi um ambiente de validacao pontual (MC33.1/MC34, junho 2026),
+   ja classificado como "legado" pela propria documentacao do projeto.
+4. Nao existe um unico consumidor executavel do staging em lado nenhum.
+
+Criterio de sucesso do Segmento 3: ATINGIDO.
+================================================================================

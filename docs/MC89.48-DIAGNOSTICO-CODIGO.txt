@@ -108,9 +108,35 @@ CONCLUSAO DO SEGMENTO 1
 --------------------------------------------------------------------------------
 1. Nao existe, em parte alguma do repositorio, referencia a um segundo projeto
    Supabase. Existe UM unico ref: vjslwowwrpcawijdiksm.
+   *** VER ERRATA ABAIXO - ESTE PONTO 1 ESTA ERRADO ***
 2. O ambiente local nao tem Supabase configurado (nao usa nenhum dos dois).
 3. A unica arquitetura que poderia exigir 2 projetos (read replica) esta
    desligada em todos os contextos.
 
 Criterio de sucesso do Segmento 1: ATINGIDO.
+
+================================================================================
+ERRATA (adicionada durante o Segmento 3 - 2026-08-07)
+================================================================================
+O PONTO 1 acima esta INCORRETO e fica aqui corrigido em vez de reescrito, para
+o registo do erro nao se perder.
+
+CAUSA DO ERRO: toda a varredura do Segmento 1 procurou o padrao COMPLETO
+"<ref>.supabase.co" (FQDN). O ref do segundo projeto esta escrito no repo na
+forma NUA, entre crases, sem o dominio - por exemplo em cloud.md:867:
+    ... producao (`vjslwowwrpcawijdiksm`) e staging (`gjuelqjjhuuwnlsjyeai`) ...
+Logo, a procura por FQDN nunca o poderia encontrar. A varredura estava correta
+para aquilo que procurava; o defeito foi eu concluir "nao existe segundo
+projeto" a partir de uma procura que so cobria uma das duas formas de escrita.
+
+CORRECAO: EXISTE um segundo ref referenciado no repositorio -
+    gjuelqjjhuuwnlsjyeai  = o projeto de STAGING (legado MC33.1/MC34)
+Detalhes completos no Segmento 3 (docs/MC89.48-EVIDENCIAS.txt).
+
+O QUE NAO MUDA: os pontos 2 e 3 mantem-se validos, e a conclusao geral do MC
+tambem - o staging aparece APENAS em documentacao historica (.md/.txt), NUNCA
+em codigo executavel, nunca em .env, nunca no bundle, nunca no APK, nunca nas
+variaveis do Netlify. Ou seja, o segundo projeto continua sem qualquer uso
+ativo; apenas deixou de ser verdade dizer que o repo nunca o menciona.
+================================================================================
 ================================================================================
