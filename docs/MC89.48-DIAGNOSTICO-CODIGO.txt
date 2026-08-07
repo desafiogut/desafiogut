@@ -1,0 +1,116 @@
+================================================================================
+MC89.48 - SEGMENTO 1 - DIAGNOSTICO NO CODIGO LOCAL
+================================================================================
+Data...: 2026-08-07
+Regra..: R4/R5 - nenhum valor de chave foi lido nem transcrito. Dos ficheiros
+         .env so foram extraidas as linhas de *_URL; as linhas de KEY/SECRET
+         foram apenas CONTADAS, nunca impressas.
+
+--------------------------------------------------------------------------------
+1.1 - FICHEIROS .env PRESENTES NO DISCO
+--------------------------------------------------------------------------------
+  ./desafio-gut/.env                                  (329 bytes, 2026-07-08)
+  ./desafio-gut/frontend/.env                         (738 bytes, 2026-07-31)
+  ./desafio-gut/frontend/.env.example                 (7207 bytes, 2026-06-29)
+  ./.claude/worktrees/zen-goldberg-ce8759/.../.env.local       (worktree antiga)
+  ./.claude/worktrees/zen-goldberg-ce8759/.../.env.production  (worktree antiga)
+
+RESULTADO - SUPABASE_URL / VITE_SUPABASE_URL em cada um:
+  desafio-gut/.env ................................ SEM SUPABASE_URL (0 chaves supabase)
+  desafio-gut/frontend/.env ....................... SEM SUPABASE_URL (0 chaves supabase)
+  worktree .env.local ............................. SEM SUPABASE_URL
+  worktree .env.production ........................ SEM SUPABASE_URL
+  desafio-gut/frontend/.env.example ............... apenas PLACEHOLDER:
+       linha  81: SUPABASE_URL=https://SEU_REF.supabase.co
+       linha 104: VITE_SUPABASE_URL=https://SEU_REF.supabase.co
+
+>>> ACHADO 1: o AMBIENTE LOCAL NAO TEM SUPABASE CONFIGURADO. Nenhum .env real
+    contem URL nem chave de Supabase. O unico ficheiro com a variavel e o
+    .env.example, com o placeholder literal "SEU_REF" (nao e um projeto real).
+    Consequencia direta para o objetivo do MC: o desenvolvimento local NAO
+    aponta para nenhum dos dois projetos - nem para "DesafioGUT", nem para
+    "desafigut-staging". A pergunta "qual projeto o local usa?" tem por
+    resposta: NENHUM. Localmente supabaseConfigurado() devolve false e o
+    codigo cai no caminho de fallback.
+
+--------------------------------------------------------------------------------
+1.2 - CLAUDE.md
+--------------------------------------------------------------------------------
+  grep -in "supabase" CLAUDE.md  ->  ZERO ocorrencias.
+
+  O CLAUDE.md esta desatualizado (cabecalho: "Atualizado em 2026-06-14", ainda
+  descreve Sepolia como rede oficial e a paleta teal #00d4aa). Nao serve como
+  fonte para este diagnostico. Nao foi alterado (R1).
+
+--------------------------------------------------------------------------------
+1.3 - CODIGO QUE LE AS VARIAVEIS
+--------------------------------------------------------------------------------
+FRONTEND - desafio-gut/frontend/src/lib/supabaseClient.js
+    :18  supabaseConfigurado() = Boolean(import.meta.env.VITE_SUPABASE_URL &&
+                                         import.meta.env.VITE_SUPABASE_ANON_KEY)
+    :30  createClient(import.meta.env.VITE_SUPABASE_URL, ...)
+
+BACKEND - desafio-gut/frontend/netlify/functions/_lib/supabase-client.mjs
+    :22  supabaseConfigurado() = Boolean(process.env.SUPABASE_URL &&
+                                         process.env.SUPABASE_SERVICE_ROLE_KEY)
+    :33  const url = process.env.SUPABASE_URL
+    :41  createClient(url, serviceRoleKey, ...)   <- cliente primario (singleton)
+    :55  getSupabaseReadOnly()  <- ver ACHADO 2
+
+Outros consumidores: delete-account.mjs (guarda de env), _tests/mc33-rls.mjs,
+scripts/migrate-cotas.mjs, scripts/migrate-saldo-troco-wallet.mjs (todos leem
+de env, nenhum hardcode).
+
+>>> ACHADO 2 (a unica hipotese seria de um 2o projeto - ELIMINADA):
+    supabase-client.mjs:55-66 define getSupabaseReadOnly(), que usaria uma
+    SEGUNDA instancia Supabase atraves de SUPABASE_READ_REPLICA_URL (MC39.19,
+    Onda 1). Isto seria a explicacao plausivel para existir um segundo projeto.
+    Verificacao nos 4 contextos do Netlify:
+        production ..... ausente
+        deploy-preview . ausente
+        branch-deploy .. ausente
+        dev ............ ausente
+    SUPABASE_READ_REPLICA_URL NAO esta definida em lado nenhum. A linha 60 faz
+    fallback transparente ao primario. Portanto nao ha read-replica ativa e
+    esta hipotese NAO justifica manter um segundo projeto.
+
+--------------------------------------------------------------------------------
+1.4 / 1.5 - VARREDURA TOTAL DE REFS NO REPO
+--------------------------------------------------------------------------------
+Procura por QUALQUER "<ref>.supabase.co" em todo o repositorio
+(excluindo node_modules, .git e builds):
+
+    10 ocorrencias -- TODAS de vjslwowwrpcawijdiksm.supabase.co
+     0 ocorrencias de qualquer outro ref
+
+Distribuicao das 10:
+  - 4 x docs/MC89.48-DIAGNOSTICO-NETLIFY.txt  (este proprio MC, S0)
+  - 2 x desafio-gut/frontend/dist/assets/      (build web local)
+  - 2 x desafio-gut/frontend/android/app/src/main/assets/public/assets/
+  - 2 x desafio-gut/frontend/android/app/build/intermediates/.../public/assets/
+
+>>> ACHADO 3: o codigo-fonte NAO tem nenhum ref hardcoded (correto - tudo por
+    env, conforme R9 do supabase-client.mjs). Todas as ocorrencias reais estao
+    em artefactos de BUILD, e todas apontam para o mesmo projeto.
+
+>>> ACHADO 4 (relevante apesar da R10): os assets do ANDROID/APK
+    (android/app/src/main/assets/public/) tambem embutem
+    vjslwowwrpcawijdiksm.supabase.co. Como a memoria do projeto regista, o
+    frontend vive DENTRO do .apk. Isto e importante para o plano de exclusao:
+    confirma que o APK ja distribuido tambem fala com o mesmo projeto, logo
+    excluir o outro projeto nao parte a app instalada.
+    (Nota: o hash dos chunks do APK - useRecursosApp-6fi-USAT - difere do de
+    producao web - useRecursosApp-B5qpQQfn - ou seja, sao builds diferentes,
+    mas apontam para o MESMO projeto Supabase.)
+
+--------------------------------------------------------------------------------
+CONCLUSAO DO SEGMENTO 1
+--------------------------------------------------------------------------------
+1. Nao existe, em parte alguma do repositorio, referencia a um segundo projeto
+   Supabase. Existe UM unico ref: vjslwowwrpcawijdiksm.
+2. O ambiente local nao tem Supabase configurado (nao usa nenhum dos dois).
+3. A unica arquitetura que poderia exigir 2 projetos (read replica) esta
+   desligada em todos os contextos.
+
+Criterio de sucesso do Segmento 1: ATINGIDO.
+================================================================================
