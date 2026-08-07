@@ -1,0 +1,121 @@
+================================================================================
+MC89.48 - SEGMENTO 2 - ANALISE DE DADOS DO SUPABASE
+================================================================================
+Data...: 2026-08-07
+Metodo.: MCP do Supabase (leitura). Nenhuma escrita, nenhum DDL, nenhuma
+         migracao aplicada (R1/R2).
+
+--------------------------------------------------------------------------------
+2.0 - LIMITACAO IMPORTANTE DO METODO (declarada antes das conclusoes)
+--------------------------------------------------------------------------------
+O MCP do Supabase deste ambiente esta FIXADO a UM unico projeto
+(project_ref=vjslwowwrpcawijdiksm, confirmado na config global do MCP) e nao
+expoe nenhuma ferramenta de listagem de projetos da conta.
+
+CONSEQUENCIA: NAO foi possivel inspecionar o projeto "desafigut-staging" por
+ferramenta. Tudo o que segue descreve o projeto ATIVO. A afirmacao "o staging
+esta vazio" NAO foi verificada por mim - e uma inferencia, e esta assinalada
+como tal no Segmento 4. Isto e deliberado: nao apresentar como medido aquilo
+que nao foi medido.
+
+  mcp get_project_url -> https://vjslwowwrpcawijdiksm.supabase.co
+  (ou seja: o proprio ferramental do projeto ja aponta para o mesmo ref que
+   producao - 6a evidencia independente)
+
+--------------------------------------------------------------------------------
+2.1 / 2.2 - CONTEUDO DO PROJETO vjslwowwrpcawijdiksm
+--------------------------------------------------------------------------------
+19 tabelas no schema public, TODAS com RLS habilitado.
+
+Contagens EXATAS (SELECT count(*), nao estimativas do pg_class):
+    saldo_rs_creditos ....... 18
+    cotas ....................  7
+    saldo_rs .................  5
+    fila_tarefas .............  5
+    config_remota ............  1
+    admin_logs ...............  0
+    lances ...................  0
+    produtos .................  0
+    lojistas .................  0
+    (restantes 10 tabelas ....  0)
+
+Nota: as contagens exatas coincidiram com as estimativas do pg_class, o que
+valida ambas as leituras.
+
+O valor "7 cotas" bate exatamente com o esperado no enunciado do MC ("ex: 7
+cotas"), o que confirma que este e o banco que o operador conhece como o real.
+
+--------------------------------------------------------------------------------
+2.2b - RECENCIA (prova de uso muito mais forte que a contagem de linhas)
+--------------------------------------------------------------------------------
+Ultima escrita por tabela (referencia: 2026-08-07 15:27 UTC):
+    cotas ................. 2026-08-02 21:45:06Z   (ha  4 dias)
+    fila_tarefas .......... 2026-07-27 00:21:52Z   (ha 11 dias)
+    saldo_rs .............. 2026-07-27 00:15:15Z   (ha 11 dias)
+    saldo_rs_creditos ..... 2026-07-26 22:54:55Z   (ha 11 dias)
+    config_remota ......... 2026-06-21 07:52:51Z   (ha 47 dias)
+
+--------------------------------------------------------------------------------
+2.2c - TRAFEGO VIVO (a evidencia decisiva)
+--------------------------------------------------------------------------------
+Logs da API do proprio Supabase (ultimas 24h):
+
+    POST /rest/v1/rpc/reservar_tarefas | 200 | user-agent: node
+    ... repetido de ~5 em ~5 minutos, ININTERRUPTAMENTE, das 07:35Z as 15:20Z
+
+    Pedido mais recente: 2026-08-07 15:20:13Z  (ha 7 MINUTOS)
+    Todos com status 200. Zero erros no periodo.
+    O user-agent "node" e o backend (Netlify Functions / worker da fila).
+
+>>> ESTE E O PONTO CENTRAL DO MC:
+    Um projeto Supabase PAUSADO nao serve pedidos REST - fica parado e as
+    chamadas falham. Este projeto esta a responder 200 a trafego de producao
+    NESTE MOMENTO. Logo, vjslwowwrpcawijdiksm NAO E, e NAO PODE SER, o projeto
+    que aparece PAUSADO no dashboard.
+    Como "desafigut-staging" e "NANO" estao ambos pausados (conforme a captura
+    de ecra do operador), por eliminacao vjslwowwrpcawijdiksm = "DesafioGUT".
+
+--------------------------------------------------------------------------------
+2.2d - HISTORICO DE MIGRACOES (projeto mantido, nao abandonado)
+--------------------------------------------------------------------------------
+9 migracoes aplicadas, a mais recente de 2026-08-03:
+    20260722040324  mc87_hardening_reservar_tarefas
+    20260726224230  mc8829_fila_tarefas_corrigida
+    20260731012012  20260731_admin_logs
+    20260731021338  20260731_usuarios_bloqueio
+    20260731021350  20260731_vw_utilizadores
+    20260731025648  20260731_notifications
+    20260803011332  mc8943_atividade_utilizadores
+    20260803011413  mc8943_atividade_invoker_e_revoke
+    20260803011715  mc8943_vw_utilizadores_com_acesso
+
+Estas migracoes correspondem uma a uma a MCs recentes (MC87, MC88.29, MC89.x
+painel ADM, MC89.43). E o projeto onde o trabalho recente foi aplicado.
+
+--------------------------------------------------------------------------------
+2.3 - COMPARACAO ENTRE OS DOIS PROJETOS
+--------------------------------------------------------------------------------
+    Criterio                       vjslwowwrpcawijdiksm    desafigut-staging
+    ---------------------------    --------------------    -----------------
+    Configurado no Netlify prod    SIM (4 variaveis)       NAO (0 referencias)
+    Presente no bundle vivo        SIM                     NAO
+    Presente nos assets do APK     SIM                     NAO
+    Citado no repositorio          SIM (10x)               NAO (0x)
+    Dados reais                    SIM (36 linhas)         nao verificavel*
+    Trafego de producao            SIM (ha 7 min)          nao verificavel*
+    Migracoes recentes             SIM (ate 2026-08-03)    nao verificavel*
+    Estado                         ATIVO                   PAUSADO (captura)
+
+    * nao verificavel por ferramenta - ver limitacao em 2.0
+
+--------------------------------------------------------------------------------
+CONCLUSAO DO SEGMENTO 2
+--------------------------------------------------------------------------------
+O projeto vjslwowwrpcawijdiksm contem os dados de producao, recebe trafego
+neste momento e tem o historico de migracoes dos MCs recentes. E, sem margem
+para duvida, o projeto EM USO.
+
+Criterio de sucesso do Segmento 2: ATINGIDO (projeto de producao identificado).
+Fica em aberto apenas a associacao ref -> NOME no dashboard, que exige uma
+confirmacao visual do operador (ver Segmento 4, passo de verificacao final).
+================================================================================
