@@ -47,7 +47,7 @@ async function lerArquivo(rel) { return readFile(resolve(ROOT, rel), "utf8"); }
 async function existe(rel)    { try { await stat(resolve(ROOT, rel)); return true; } catch { return false; } }
 async function lerBundle() {
   const distDir = resolve(ROOT, "dist/assets");
-  let arquivos = [];
+  let arquivos;
   try { arquivos = (await readdir(distDir)).filter((f) => f.endsWith(".js")); }
   catch { return []; }
   const out = [];

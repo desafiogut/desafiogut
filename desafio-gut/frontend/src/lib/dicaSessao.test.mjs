@@ -210,7 +210,7 @@ test("⚠️ o encaminhamento do ADM não tem exceções — o painel é a app d
   // O degrau do ADM é o PRIMEIRO `if` da função e devolve já — nada antes dele.
   assert.match(
     enc,
-    /\r?\n  if \(address \? \(isAdmin && !adminLoading\) : adminProvavel\) return DESTINO\.ADMIN;/,
+    /\r?\n {2}if \(address \? \(isAdmin && !adminLoading\) : adminProvavel\) return DESTINO\.ADMIN;/,
     "a guarda do ADM tem de ser incondicional; nenhuma pausa, flag ou exceção antes dela.",
   );
   // MC89.36 — o estado neutro é um degrau NOVO, e não pode ter-se metido à

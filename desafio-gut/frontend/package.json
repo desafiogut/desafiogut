@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "build:rag": "node ../../scripts/build-rag-index.mjs",
     "validar:dist": "node scripts/validar-dist-rede.mjs",
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives",
     "build:apk": "cd ../.. && netlify build --context production && cd desafio-gut/frontend && npm run validar:dist && npx cap sync android"
   },
   "dependencies": {
@@ -40,7 +41,10 @@
     "web-vitals": "^4.2.4"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.8.0",
+    "globals": "^17.9.0",
     "playwright": "^1.59.1",
     "supabase": "^2.107.0",
     "vite": "^8.1.0"

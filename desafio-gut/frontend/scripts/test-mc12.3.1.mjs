@@ -56,7 +56,7 @@ check(3, "SejaNossoParceiro: sem chamada login() nem useEffect[authenticated]", 
 check(4, "SejaNossoParceiro: POST register-corporativo dentro do handleSubmit", () => {
   const src = fs.readFileSync(path.join(SRC, "pages/SejaNossoParceiro.jsx"), "utf8");
   // captura o bloco do handleSubmit e checa se contém o POST
-  const m = src.match(/const\s+handleSubmit\s*=\s*async[\s\S]*?^  \};/m);
+  const m = src.match(/const\s+handleSubmit\s*=\s*async[\s\S]*?^ {2}\};/m);
   if (!m) return false;
   return /action=register-corporativo/.test(m[0]) && /method:\s*"POST"/.test(m[0]);
 });

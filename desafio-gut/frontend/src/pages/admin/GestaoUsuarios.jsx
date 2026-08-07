@@ -88,7 +88,7 @@ export default function GestaoUsuarios() {
 
   useEffect(() => { carregar(true); }, [chamarAdmin]);
   // Trocar de filtro recarrega do início — o cursor da lista anterior não serve.
-  useEffect(() => { setCursor(null); carregar(true); /* eslint-disable-next-line */ }, [ativosDias]);
+  useEffect(() => { setCursor(null); carregar(true);   }, [ativosDias]);
 
   function buscar(e) {
     e.preventDefault();

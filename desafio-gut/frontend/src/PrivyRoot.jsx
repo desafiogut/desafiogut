@@ -30,7 +30,7 @@ const PRIVY_APP_ID_RAW = "cmo51f3v300l90clgzksivvad";
 // zero-width joiner (U+200D), BOM (U+FEFF). Garante que typo invisível nunca
 // degrade o appId em runtime. (MC88.5.1: escrito com \u… para robustez de encoding.)
 const PRIVY_APP_ID = PRIVY_APP_ID_RAW.replace(
-  /[\s​‌‍﻿]/g, ""
+  /[\s\u200B-\u200D\uFEFF]/g, ""
 );
 if (PRIVY_APP_ID !== PRIVY_APP_ID_RAW) {
   console.error("[GUT-DEBUG] PRIVY_APP_ID continha caracteres invisíveis", {

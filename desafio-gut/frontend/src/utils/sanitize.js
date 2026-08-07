@@ -33,5 +33,5 @@ export function sanitizeAddress(address) {
  */
 export function sanitizeEdicaoId(id) {
   if (typeof id !== "string") return "";
-  return id.replace(/[^a-zA-Z0-9\-]/g, "").slice(0, 20);
+  return id.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 20);
 }

@@ -46,7 +46,7 @@ export default function Aprovacoes() {
       setCarregando(false);
     }
   }
-  useEffect(() => { carregar(); /* eslint-disable-next-line */ }, [filtro, chamarAdmin]);
+  useEffect(() => { carregar();   }, [filtro, chamarAdmin]);
 
   async function decidir(cliente_id, novoStatus) {
     if (!chamarAdmin) return;

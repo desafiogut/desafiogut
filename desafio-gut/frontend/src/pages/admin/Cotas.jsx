@@ -66,8 +66,8 @@ export default function Cotas() {
       setCarregando(false);
     }
   }
-  useEffect(() => { carregarResumo(); /* eslint-disable-next-line */ }, [chamarAdmin]);
-  useEffect(() => { carregarCategoria(); /* eslint-disable-next-line */ }, [catSel, chamarAdmin]);
+  useEffect(() => { carregarResumo();   }, [chamarAdmin]);
+  useEffect(() => { carregarCategoria();   }, [catSel, chamarAdmin]);
 
   // Mudar de separador continua a propor essa categoria no formulário — é o
   // comportamento de sempre, e o que se espera. A diferença é que agora é uma

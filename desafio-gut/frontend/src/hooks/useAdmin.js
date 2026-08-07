@@ -145,7 +145,7 @@ export function useAdmin(endereco) {
     }
   };
 
-  useEffect(() => { carregar(false); /* eslint-disable-next-line */ }, [endereco]);
+  useEffect(() => { carregar(false);   }, [endereco]);
 
   return {
     ...estadoAtual,
