@@ -6880,3 +6880,55 @@ Ficou pendente, para aprovação do operador: podar as branches listadas,
 rodar o gc para recuperar ~4,5 GB, e executar o plano de remoção do
 ADMIN_TOKEN do login. O CI está mais apertado do que nunca — e isso é
 exatamente o ponto.
+
+## MC89.48 — qual dos dois Supabase é o verdadeiro, e o ref que estava escrito aqui o tempo todo
+
+O operador tinha dois projetos no dashboard do Supabase — "DesafioGUT" e
+"desafigut-staging" — e queria apagar o que não usa. Faltava a certeza de qual
+era qual. Diagnóstico puro: nenhuma linha de código alterada, nenhuma exclusão
+executada.
+
+A resposta é **`vjslwowwrpcawijdiksm`** (= "DesafioGUT"), e chegaram nove
+evidências independentes sem uma única a apontar noutra direção: as duas
+variáveis do Netlify, o claim `ref` dentro de cada uma das duas chaves
+(descodificado sem nunca imprimir o token), o bundle JS **vivo** de produção —
+20 chunks, 4,0 MB descarregados e varridos, uma só referência lá dentro —, o
+JWT embutido nesse bundle, os assets do APK, o `project_ref` do próprio MCP, e
+a história completa do git, que nunca conheceu outra URL de Supabase em código.
+
+Mas a prova que fecha a questão não foi nenhuma dessas: foram os **logs da API
+do Supabase**. O projeto está a receber `POST /rest/v1/rpc/reservar_tarefas`
+com 200, de cinco em cinco minutos, ininterruptamente — o último sete minutos
+antes da análise. Um projeto pausado não responde a REST. Como os outros dois
+aparecem pausados no dashboard, a identificação deixou de depender do nome.
+
+O erro do caminho vale mais do que o resultado. O Segmento 1 varreu o repo à
+procura de `<ref>.supabase.co` e concluiu que só existia um projeto
+referenciado. Estava errado — e o ref do staging estava escrito **neste
+ficheiro**, na linha 867, na forma nua entre crases: produção
+(`vjslwowwrpcawijdiksm`) e staging (`gjuelqjjhuuwnlsjyeai`). Procurar um
+identificador por uma só das suas formas de escrita produz um "não existe" que
+é apenas "não procurei onde estava". A errata ficou registada no próprio
+documento do segmento, em vez de reescrita.
+
+Com isso, o staging deixou de ser um mistério: `gjuelqjjhuuwnlsjyeai`, criado no
+MC33.1 para validar o flip Blobs→Supabase (carga 2500 lances, RLS, visual),
+com o realtime do MC34 aplicado em 2026-06-21. Nunca mais tocado — 47 dias. O
+relatório final do MC89 já o tinha classificado como "legado MC33.1". Não tem
+um único consumidor executável: zero no Netlify, zero em código, zero nos
+`.env`, zero no bundle, zero no APK.
+
+Três coisas ficaram a saber-se de caminho. Os contextos deploy-preview,
+branch-deploy e dev **não têm nenhuma** das 18 variáveis exclusivas de produção
+— nem Supabase, nem `MP_WEBHOOK_SECRET`, nem `DATA_STORE_BACKEND` — o que
+explica porque validar em preview dá falsos negativos. O ambiente local também
+não tem Supabase nenhum configurado: não usa nem um projeto nem o outro. E a
+read replica do MC39.19, única arquitetura que justificaria manter dois
+projetos, tem a variável ausente nos quatro contextos e faz fallback ao
+primário.
+
+O plano de exclusão ficou no Desktop, com o passo que não se salta: confirmar
+com os olhos, em Settings → General, que o "Reference ID" de cada projeto
+bate certo — porque a exclusão no Supabase é irreversível e não há lixeira.
+Com um aviso extra: não rodar as chaves de produção "para limpar", porque elas
+estão embutidas no APK já distribuído.

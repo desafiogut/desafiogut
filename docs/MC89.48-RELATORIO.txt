@@ -1,0 +1,245 @@
+================================================================================
+                MC89.48 - RELATORIO FINAL
+     IDENTIFICACAO DO PROJETO SUPABASE ATIVO EM PRODUCAO
+================================================================================
+Data.........: 2026-08-07
+Tipo de MC...: diagnostico + plano (SUPERPERS - zero alteracao de codigo)
+Executado....: agente (leitura); exclusao fica para o operador
+Custo........: zero (nenhuma acao paga)
+
+
+================================================================================
+1. RESUMO EXECUTIVO - A RESPOSTA DIRETA
+================================================================================
+
+O sistema DESAFIOGUT usa em producao o projeto Supabase:
+
+        >>>  vjslwowwrpcawijdiksm  <<<
+             https://vjslwowwrpcawijdiksm.supabase.co
+             = o projeto chamado "DesafioGUT" no dashboard
+
+O projeto que NAO esta em uso e:
+
+        >>>  gjuelqjjhuuwnlsjyeai  <<<
+             = o projeto chamado "desafigut-staging" no dashboard
+             Criado no MC33.1 para validar o flip Blobs->Supabase.
+             Ultima atividade documentada: 2026-06-21 (ha 47 dias).
+             A propria documentacao do projeto ja o classifica como "legado".
+
+E o ambiente LOCAL de desenvolvimento?
+        Nao usa NENHUM dos dois. Nao existe um unico ficheiro .env local com
+        URL ou chave de Supabase (so o .env.example, com o placeholder literal
+        "SEU_REF"). Localmente o codigo cai no caminho de fallback.
+
+Pode excluir o "desafigut-staging"?
+        Do ponto de vista tecnico, SIM - nao ha um unico consumidor executavel
+        dele em lado nenhum. Mas leia a seccao 4 antes: ha um passo de
+        confirmacao de 30 segundos que deve ser feito primeiro, e a exclusao no
+        Supabase e IRREVERSIVEL.
+
+
+================================================================================
+2. EVIDENCIAS - 9 PROVAS INDEPENDENTES, ZERO CONTRADICOES
+================================================================================
+
+ #  Evidencia                                          Resultado
+ -  ------------------------------------------------   ----------------------
+ 1  SUPABASE_URL (Netlify, contexto production)        vjslwowwrpcawijdiksm
+ 2  VITE_SUPABASE_URL (Netlify, contexto production)   vjslwowwrpcawijdiksm
+ 3  claim "ref" dentro da SERVICE_ROLE_KEY             vjslwowwrpcawijdiksm
+ 4  claim "ref" dentro da ANON_KEY                     vjslwowwrpcawijdiksm
+ 5  Bundle JS VIVO servido em producao (20 chunks,     vjslwowwrpcawijdiksm
+    4,0 MB descarregados e varridos)                   (unica ref existente)
+ 6  JWT embutido no bundle vivo                        vjslwowwrpcawijdiksm
+ 7  Assets do APK Android                              vjslwowwrpcawijdiksm
+ 8  project_ref da config do MCP Supabase              vjslwowwrpcawijdiksm
+ 9  Historia completa do git (todas as branches)       vjslwowwrpcawijdiksm
+                                                       (0 outras refs em codigo)
+
+Nao houve UMA unica evidencia a apontar noutra direcao.
+
+--------------------------------------------------------------------------------
+2.1 A PROVA DECISIVA: TRAFEGO VIVO
+--------------------------------------------------------------------------------
+Logs da API do proprio Supabase (ultimas 24h) no projeto vjslwowwrpcawijdiksm:
+
+    POST /rest/v1/rpc/reservar_tarefas | 200 | user-agent: node
+    ... de ~5 em ~5 minutos, sem interrupcao, das 07:35Z as 15:20Z
+    Pedido mais recente: 2026-08-07 15:20:13Z (7 minutos antes desta analise)
+    Todos 200. Zero erros no periodo.
+
+Porque e que isto fecha a questao:
+    Um projeto Supabase PAUSADO nao responde a pedidos REST.
+    Este esta a responder 200 AGORA.
+    Logo este projeto NAO E o que aparece pausado no dashboard.
+    Como "desafigut-staging" e "NANO" estao ambos pausados, sobra "DesafioGUT".
+
+--------------------------------------------------------------------------------
+2.2 DADOS REAIS PRESENTES (contagens exatas, nao estimativas)
+--------------------------------------------------------------------------------
+    saldo_rs_creditos .. 18        cotas ......... 7   <- bate com o esperado
+    saldo_rs ............ 5        fila_tarefas .. 5
+    config_remota ....... 1        (restantes 13 tabelas a 0)
+    19 tabelas, TODAS com RLS habilitado.
+    Escrita mais recente: cotas, 2026-08-02 (ha 4 dias).
+    9 migracoes aplicadas, a mais recente 2026-08-03 (MC89.43).
+
+--------------------------------------------------------------------------------
+2.3 COMO O STAGING FOI IDENTIFICADO PELO NOME
+--------------------------------------------------------------------------------
+O ref do staging esta escrito no proprio repositorio, em 3 sitios:
+    cloud.md:822          "Validacoes ja concluidas (staging `gjuelqjjhuuwnlsjyeai`)"
+    cloud.md:867          MC34: realtime aplicado em prod E staging (2026-06-21)
+    security_audit.md:236 "contra staging `gjuelqjjhuuwnlsjyeai` (ref distinto
+                           da producao)"
+E o MC89-relatorio-final.txt:601 ja o classificava:
+    "Supabase staging   ~\.mc33-staging.env (fora do repo)   legado MC33.1"
+
+
+================================================================================
+3. O QUE NAO FOI POSSIVEL VERIFICAR (limites honestos deste diagnostico)
+================================================================================
+Nao apresento como medido aquilo que nao medi:
+
+ (a) NAO inspecionei o interior do projeto de staging. O MCP do Supabase deste
+     ambiente esta fixado a UM projeto (o de producao) e nao expoe listagem de
+     projetos da conta. Portanto NAO posso afirmar "o staging esta vazio" - so
+     posso afirmar que nada no sistema aponta para ele.
+
+ (b) NAO li nenhuma chave, token ou credencial (R4/R5). Dos JWT extrai apenas o
+     claim "ref"; o ficheiro ~/.mc33-staging.env foi apenas listado, nunca
+     aberto. Dois dumps temporarios de env criados por engano a meio do
+     trabalho foram imediatamente apagados e a remocao confirmada.
+
+ (c) A associacao ref -> NOME no dashboard ("DesafioGUT" / "desafigut-staging")
+     assenta em (i) os refs documentados no repo e (ii) o raciocinio
+     pausado-vs-ativo da seccao 2.1. Ambos sao solidos, mas a confirmacao
+     visual de 30 segundos no passo 4.1 e o que transforma isto em certeza
+     absoluta - e e barata. Faca-a.
+
+
+================================================================================
+4. PLANO DE ACAO PARA EXCLUIR O PROJETO INATIVO
+================================================================================
+
+  !!  A EXCLUSAO DE UM PROJETO SUPABASE E IRREVERSIVEL.  !!
+  !!  Nao ha lixeira, nao ha "desfazer", os backups vao com ele.  !!
+  !!  Executar SEMPRE por esta ordem. Nao saltar o passo 4.1.  !!
+
+--------------------------------------------------------------------------------
+PASSO 4.1 - CONFIRMACAO VISUAL (obrigatorio, ~30 segundos)
+--------------------------------------------------------------------------------
+  1. Abrir https://supabase.com/dashboard
+  2. Entrar no projeto "DesafioGUT" -> Settings -> General
+  3. Ler o campo "Reference ID"
+  4. CONFIRMAR que diz exatamente:  vjslwowwrpcawijdiksm
+  5. Entrar no projeto "desafigut-staging" -> Settings -> General
+  6. CONFIRMAR que diz exatamente:  gjuelqjjhuuwnlsjyeai
+
+  >> SE OS DOIS BATEREM: seguir para o passo 4.2.
+  >> SE ESTIVEREM TROCADOS (ou seja, se "desafigut-staging" mostrar
+     vjslwowwrpcawijdiksm): PARAR IMEDIATAMENTE. Nao excluir nada. Nesse caso o
+     projeto com nome de staging e o que serve producao, e o que ha a fazer e
+     renomea-lo, nunca apaga-lo.
+
+--------------------------------------------------------------------------------
+PASSO 4.2 - ULTIMA VERIFICACAO DE VIDA NO STAGING
+--------------------------------------------------------------------------------
+  No projeto "desafigut-staging" (gjuelqjjhuuwnlsjyeai):
+  1. Reports / Logs -> confirmar que nao ha trafego recente.
+     (Um projeto pausado nao gera trafego; o objetivo aqui e apanhar o caso de
+      alguma automacao externa - por exemplo um cron no PythonAnywhere - ainda
+      apontar para la. Nada no repositorio aponta, mas o repositorio nao cobre
+      sistemas externos.)
+  2. Table Editor -> olhar para as tabelas. Se houver dados que nao existam em
+     producao e que interessem, EXPORTAR ANTES.
+  3. Confirmar que o nome do projeto NAO e o de producao (dupla checagem do 4.1).
+
+--------------------------------------------------------------------------------
+PASSO 4.3 - BACKUP DE SEGURANCA (recomendado, mesmo parecendo vazio)
+--------------------------------------------------------------------------------
+  Custa minutos e cobre o unico cenario que nao pude descartar (3.a).
+  No dashboard: Database -> Backups -> Download,
+  ou por CLI:  supabase db dump --linked -f staging-backup-20260807.sql
+  Guardar fora do repositorio (nao commitar).
+
+--------------------------------------------------------------------------------
+PASSO 4.4 - EXCLUSAO
+--------------------------------------------------------------------------------
+  Projeto "desafigut-staging" -> Settings -> General -> Delete project
+  Escrever o nome do projeto para confirmar.
+  CONFERIR NO ECRA que o nome pedido e "desafigut-staging" e NAO "DesafioGUT".
+
+--------------------------------------------------------------------------------
+PASSO 4.5 - VERIFICACAO POS-EXCLUSAO (nao terminar sem isto)
+--------------------------------------------------------------------------------
+  1. Abrir https://silly-stardust-ca71bc.netlify.app e navegar normalmente.
+  2. Confirmar que continua tudo a funcionar (nao devia mudar NADA - producao
+     nunca falou com o staging).
+  3. Confirmar nos logs do projeto de producao que o worker continua a fazer
+     POST /rest/v1/rpc/reservar_tarefas com 200 de ~5 em ~5 minutos.
+  4. Apagar as credenciais orfas na maquina:
+         C:\Users\Moltbot\.mc33-staging.env
+     (617 bytes, criado 2026-06-21, nunca mais tocado - sao as chaves de um
+      projeto que passa a nao existir)
+
+--------------------------------------------------------------------------------
+PASSO 4.6 - E O PROJETO "NANO"?
+--------------------------------------------------------------------------------
+  Nao foi analisado neste MC - nao aparece uma unica vez no repositorio, nas
+  variaveis do Netlify, no bundle ou no APK. Aparenta nao ter relacao com o
+  DESAFIOGUT. Se for para excluir, aplicar exatamente os mesmos passos 4.1-4.5.
+  Nao excluir "por arrasto" junto com o staging sem a mesma verificacao.
+
+--------------------------------------------------------------------------------
+O QUE *NAO* FAZER
+--------------------------------------------------------------------------------
+  X  Nao apagar o projeto vjslwowwrpcawijdiksm (esta a servir producao AGORA).
+  X  Nao rodar/regenerar as chaves do projeto de producao "para limpar" - as
+     chaves atuais estao embutidas no APK ja distribuido; roda-las parte a app
+     instalada nos telemoveis dos utilizadores ate um novo APK ser publicado.
+  X  Nao excluir enquanto o passo 4.1 nao estiver confirmado com os olhos.
+
+
+================================================================================
+5. ACHADOS LATERAIS (nao bloqueiam, ficam registados)
+================================================================================
+ 1. Os contextos deploy-preview / branch-deploy / dev do Netlify NAO tem
+    NENHUMA variavel de Supabase (nem qualquer das 18 vars so-de-producao:
+    MP_WEBHOOK_SECRET, SIGNER_BACKEND, CONTRATO_MAINNET, DATA_STORE_BACKEND...).
+    Consequencia pratica: um deploy-preview nao consegue exercitar nada que
+    dependa de Supabase, pagamentos ou mainnet. Isto explica porque validar em
+    preview da falsos negativos. Nao e um bug - e uma limitacao a conhecer.
+
+ 2. O ambiente local tambem nao tem Supabase configurado. Quem quiser testar
+    Supabase localmente precisa de criar o .env a partir do .env.example.
+
+ 3. O CLAUDE.md nao menciona Supabase uma unica vez e continua a descrever
+    Sepolia como rede oficial e a paleta teal - esta congelado em 2026-06-14.
+    Nao foi alterado neste MC (R1), mas devia ser atualizado num MC proprio.
+
+ 4. Existe codigo para uma read replica (getSupabaseReadOnly, MC39.19) mas
+    SUPABASE_READ_REPLICA_URL nao esta definida em nenhum contexto - o codigo
+    faz fallback transparente ao primario. Era a unica arquitetura que poderia
+    justificar manter dois projetos; nao esta em uso.
+
+
+================================================================================
+6. ENTREGAVEIS
+================================================================================
+  docs/MC89.48-DIAGNOSTICO-NETLIFY.txt    Segmento 0  commit ebb7899
+  docs/MC89.48-DIAGNOSTICO-CODIGO.txt     Segmento 1  commit 4de1a95 (+errata)
+  docs/MC89.48-DIAGNOSTICO-SUPABASE.txt   Segmento 2  commit f31a3ff
+  docs/MC89.48-EVIDENCIAS.txt             Segmento 3  commit 931f7ae
+  Desktop\MC89.48-RELATORIO.txt           este ficheiro
+  cloud.md                                seccao MC89.48 acrescentada
+
+  Codigo alterado: NENHUM (R1 cumprida - so documentacao).
+  Acoes com custo: NENHUMA (R2 cumprida).
+  Credenciais tocadas: NENHUMA (R5 cumprida).
+
+================================================================================
+VEREDICTO (R8): producao usa "DesafioGUT" = vjslwowwrpcawijdiksm.
+                "desafigut-staging" = gjuelqjjhuuwnlsjyeai, legado do MC33.1,
+                sem um unico consumidor - pode ser excluido apos o passo 4.1.
+================================================================================
