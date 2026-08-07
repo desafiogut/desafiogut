@@ -6830,3 +6830,53 @@ Fica uma pergunta para antes do MC89.45: o P1-B fala de moderação de produtos 
 banners, e não há telas nenhumas de produtos nem de banners. Ou se constroem, ou
 "moderação" quer dizer a tela de Aprovações que já existe. São dois MCs muito
 diferentes.
+
+## MC89.46/47 — a auditoria virou ação: lint de verdade, legado morto, e um .git que pesava 4,6 GB
+
+Dois MCs seguidos de segurança/infraestrutura, sem tocar em lógica de negócio.
+
+O MC89.46 (comandos S1–S5) começou por fechar os buracos mais baratos: o
+.gitignore passou a ignorar o lixo que se acumulava na raiz (UsersMoltbot...,
+__pycache__, cloud.md do android) e o working tree foi limpo; o guard de admin
+deixou de aceitar o header legado x-admin-token — só Authorization: Bearer
+<JWT> passou a autenticar; o comentário do webhook do Mercado Pago foi
+corrigido para o comportamento real (fail-closed por omissão, com a válvula
+MP_WEBHOOK_ALLOW_UNSIGNED documentada como exceção ruidosa); nasceu o
+CODEOWNERS com revisão obrigatória do @desafiogut; e o CI ganhou um job
+test-functions que corre os 391 testes das functions com o comando exato que
+roda na máquina (391/391 verdes).
+
+O MC89.47 (S0–S10) pegou nas pendências do relatório e resolveu o que dava
+para resolver. O lint deixou de ser cosmético: o job que estava mascarado por
+um '|| echo warning' passou a ser bloqueante, e para isso o frontend ganhou
+config ESLint flat (eslint.config.js) com eslint declarado como devDependency
+— antes não havia config nenhuma, e o job tinha estado a falhar em silêncio
+desde sempre. Ajustei o config para o codebase existente (JSX, .mjs, catch
+vazios intencionais) e limpei os erros residuais sem tocar em semântica:
+regex de zero-width do PrivyRoot reescrito com escapes \u (o comentário já
+pedia isso), cause anexado aos erros de troca de rede no web3, e um punhado
+de escapes inofensivos em scripts de teste antigos. O lint passa: 0 erros,
+230 warnings.
+
+As referências ao legado x-admin-token morreram de vez: o health deixou de
+considerar o header como credencial, o CORS tirou-o do allow-headers, o teste
+de anti-fraude passou a mockar Bearer JWT, e quinze functions tiveram
+comentários atualizados. O doc de migração ganhou o estado verdadeiro: a
+etapa 3 (remover o header dos endpoints) está concluída; falta a etapa 4, a
+env ADMIN_TOKEN, que só vive no login do auth-admin — plano de migração
+escrito (docs/MC89.47-P2-PLANO.txt). O código morto do 503
+admin_token_nao_configurado foi removido dos dois guards e de cinco handlers.
+
+A casa ficou arrumada: o backup da migração saiu do repo para
+Desktop/GUTO/BACKUPS; os gradle files do Capacitor, que só tinham mudado de
+line-ending, foram descartados; as 93 branches remotas já mergeadas em main
+foram listadas como candidatas (nada foi deletado — espera aprovação); o
+bloat do .git foi diagnosticado: um pack de 4,83 GB com ~30 zips órfãos de
+históricos reescritos — plano de gc documentado, não executado; e os 15 PRs
+do dependabot foram priorizados, com dois deles (dompurify, react-router-dom)
+já obsoletos porque o package.json passou à frente.
+
+Ficou pendente, para aprovação do operador: podar as branches listadas,
+rodar o gc para recuperar ~4,5 GB, e executar o plano de remoção do
+ADMIN_TOKEN do login. O CI está mais apertado do que nunca — e isso é
+exatamente o ponto.
