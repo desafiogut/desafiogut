@@ -184,13 +184,15 @@ export async function autenticarAdmin(req) {
 /**
  * Wrapper de conveniência: retorna `null` se autenticado (continue),
  * ou um Response pronto com o status code certo se negado.
+ *
+ * MC89.47-S3 — códigos possíveis (o 503 admin_token_nao_configurado foi
+ * removido: autenticarAdmin só aceita Bearer JWT e nunca mais o emite).
  */
 export async function guardAdmin(req) {
   const r = await autenticarAdmin(req);
   if (r.ok) return null;
   let status = 401;
-  if (r.code === "admin_token_nao_configurado")  status = 503;
-  else if (r.code === "admin_removido")          status = 403;
+  if (r.code === "admin_removido") status = 403;
   return jsonError(status, r.code, r.message);
 }
 
@@ -209,8 +211,7 @@ export async function guardAdminNivel(req, nivelMinimo = "operador") {
   const r = await autenticarAdmin(req);
   if (!r.ok) {
     let status = 401;
-    if (r.code === "admin_token_nao_configurado") status = 503;
-    else if (r.code === "admin_removido")         status = 403;
+    if (r.code === "admin_removido") status = 403;
     return jsonError(status, r.code, r.message);
   }
 
