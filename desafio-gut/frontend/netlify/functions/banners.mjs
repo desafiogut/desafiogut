@@ -8,7 +8,7 @@
 //   - Com ?raw=1: retorna o SVG cru com Content-Type: image/svg+xml.
 //
 // POST /.netlify/functions/banners
-//   - Modo Admin (x-admin-token):  status=aprovado, ativo imediatamente.
+//   - Modo Admin (Bearer admin-JWT):  status=aprovado, ativo imediatamente.
 //   - Modo Cliente (Authorization Bearer JWT lance-auth + premium flag):
 //       status=pendente · debita Wallet em valorCentavos (se body.premium=true).
 //   - Body: { cliente_id, dimensao: "app"|"site", imagemBase64, mime, premium?, valorCentavos? }
@@ -197,7 +197,7 @@ async function debitarWallet(cliente, valorCentavos, motivo) {
 
 async function handlePost(req) {
   // Modo de autenticação tri-state:
-  //   1) Admin (Bearer admin-JWT OR x-admin-token legado, via autenticarAdmin).
+  //   1) Admin (Bearer admin-JWT, via autenticarAdmin).
   //   2) Cliente (Authorization: Bearer <lance-auth JWT>).
   const adminCheck = await autenticarAdmin(req);
   const isAdmin    = !!adminCheck?.ok;
@@ -207,7 +207,7 @@ async function handlePost(req) {
     const authHeader = req.headers.get("authorization") || "";
     const authToken  = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!authToken) {
-      return jsonError(401, "auth_obrigatorio", "envie admin (Bearer admin-JWT ou x-admin-token) OU Authorization: Bearer <lance-auth>");
+      return jsonError(401, "auth_obrigatorio", "envie admin (Bearer admin-JWT) OU Authorization: Bearer <lance-auth>");
     }
     try { jwtPayload = await verificarLanceAuth(authToken); }
     catch (err) {

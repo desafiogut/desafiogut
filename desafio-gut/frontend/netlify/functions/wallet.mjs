@@ -5,7 +5,7 @@
 //   Endpoint público (mesma política de saldo-rs).
 //
 // POST /.netlify/functions/wallet
-//   Header: x-admin-token: <ADMIN_TOKEN>  (gated; sem ADMIN_TOKEN no env, recusa)
+//   Header: Authorization: Bearer <admin-JWT>  (gated; sem JWT válido, recusa)
 //   Body:   { endereco, operacao: "credito"|"debito", valorCentavos, motivo, idempotencyKey? }
 //   Retorna 200 { endereco, saldoAntesCentavos, saldoDepoisCentavos, transacaoId }.
 //

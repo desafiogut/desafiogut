@@ -9,7 +9,7 @@
 //
 // POST /.netlify/functions/admin-list
 //   Body: { acao: "adicionar"|"remover", endereco }
-//   Gated por x-admin-token.
+//   Gated por admin (Bearer admin-JWT).
 //
 // Coordenação é admin AUTOMÁTICO — não precisa estar na lista persistida.
 // Endpoint sempre inclui o endereço da coordenação no retorno.

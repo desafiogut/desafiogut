@@ -15,7 +15,7 @@
 //       NÃO sobrescreve um registro já aprovado/rejeitado).
 //
 //   Body { acao: "aprovar"|"rejeitar", cliente_id, motivo? }
-//     → REQUER x-admin-token. Atualiza status e registra audit trail.
+//     → REQUER admin (Bearer admin-JWT). Atualiza status e registra audit trail.
 //
 // Blob: admin-aprovacao:{cliente_id}
 //   { cliente_id, status, nome, email, criadoEm, atualizadoEm,

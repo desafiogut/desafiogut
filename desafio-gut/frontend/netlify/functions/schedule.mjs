@@ -7,7 +7,7 @@
 //
 // POST /.netlify/functions/schedule
 //   Body: { mes: "2026-06", grade: {...} }
-//   Gated por x-admin-token. Sobrescreve a grade do mês.
+//   Gated por admin (Bearer admin-JWT). Sobrescreve a grade do mês.
 //
 // Modelo da grade: alinhado com docs/analise-programacao-junho-2026.md.
 // O backend não impõe schema rígido — apenas valida que `mes` está em

@@ -3,7 +3,7 @@
 // POST /.netlify/functions/voucher  body { acao, ... }
 //
 //   acao="gerar"     (admin)
-//     headers: x-admin-token
+//     headers: Authorization: Bearer <admin-JWT>
 //     body:    { acao:"gerar", endereco_emissor }
 //     ret:     { codigo, emissor, criadoEm }
 //
@@ -23,7 +23,7 @@
 //
 // Decisões (sessão 2026-05-12):
 //   - "Diamante" não tem ainda um gate real (REQ-04..07 AUSENTE).
-//     Por isso geração é admin-only (gated por x-admin-token) — só o operador
+//     Por isso geração é admin-only (gated por Bearer admin-JWT) — só o operador
 //     emite vouchers em nome do cliente Diamante. Quando o sistema de cotas
 //     existir, troca-se para verificar saldoVouchers do cliente.
 //   - Resgate exige JWT lance-auth para garantir que o endereco_resgatador

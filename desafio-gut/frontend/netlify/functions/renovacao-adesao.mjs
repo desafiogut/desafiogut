@@ -3,7 +3,7 @@
 // Fluxo:
 //   1. Cliente solicita renovação (POST sem token, acao="solicitar")
 //      → registro pendente com PIX a ser pago para familiaquildo@gmail.com.
-//   2. Admin confirma pagamento (POST com x-admin-token, acao="confirmar")
+//   2. Admin confirma pagamento (POST com Bearer admin-JWT, acao="confirmar")
 //      → status="ativa", validade = agora + DURACAO_MS.
 //   3. GET ?cliente_id=xxx → retorna status calculado dinamicamente.
 //

@@ -6,7 +6,7 @@
 //
 // Retorna JSON único com TODOS os dados do address. Autorização granular:
 //   - owner (JWT.endereco === body.endereco) OU
-//   - admin (admin-access JWT OU x-admin-token legado).
+//   - admin (admin-access JWT).
 //
 // Stores coletados: saldo-rs, wallet, cotas, renovacao-adesao, voucher,
 // consent-log (entradas do address), lance-idem (idem) e pedidos (idem).
