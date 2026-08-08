@@ -1,0 +1,61 @@
+MC89.47 — DIAGNÓSTICO PRÉ-EXECUÇÃO (Hermes)
+Data: 2026-08-06
+Repositório: C:\Users\Moltbot\Desktop\DESAFIOGUT (github.com/desafiogut/desafiogut)
+Branch atual: feat/mc89.32-diagnostico-perf (47 commits à frente de main)
+Executor: Hermes Agent
+
+────────────────────────────────────────────────────────────────────
+ESTADO CONHECIDO (herdado do MC89.46)
+────────────────────────────────────────────────────────────────────
+Commits MC89.46 já na branch (S1–S5):
+  a947c68 MC89.46-S1: atualizar .gitignore
+  7dee17f MC89.46-S2: remover caminho legado x-admin-token do guard admin
+  a51829d MC89.46-S3: corrigir comentario obsoleto do webhook MP (fail-closed)
+  042de98 MC89.46-S4: adicionar CODEOWNERS com revisao obrigatoria
+  a11c06b MC89.46-S5: CI — job test-functions + ESLint bloqueante
+
+Working tree no início do MC89.47:
+  M desafio-gut/frontend/android/app/capacitor.build.gradle   (pré-existente)
+  M desafio-gut/frontend/android/capacitor.settings.gradle    (pré-existente)
+  ?? desafio-gut/backup-mc8945-20260806-163251/               (untracked)
+
+Pendências herdadas (do relatório MC89.46):
+  P1 [CRÍTICO]  ESLint: repo SEM config ESLint e eslint fora dos
+                 devDependencies → job lint do CI sempre falhou
+                 (mascarado); agora bloqueante.
+  P2             auth-admin.mjs ainda aceita ADMIN_TOKEN no login
+                 (fora do escopo do MC89.46).
+  P3             Referências remanescentes a x-admin-token:
+                 health.mjs (lê header direto), cors.mjs
+                 (allow-headers), _tests/cotas-anti-fraude.test.mjs
+                 (mock legado), comentários/docs em ~15 functions.
+  P4             guardAdmin mantém branch 503
+                 "admin_token_nao_configurado" (inalcançável).
+  P5             backup-mc8945-20260806-163251/ untracked no repo.
+  P6             Modificações pré-existentes em 2 arquivos gradle
+                 (capacitor) — revisar/decidir.
+  P7             Branches: 94 remotas mergeadas em main; 154 locais;
+                 nenhuma > 6 meses (repo nascido 2026-04-24).
+  P8             Bloat: .git = 4,6 GB; pack-0a0eac8d... = 4,83 GB
+                 com ~30 blobs ZIP órfãos (1,26 GB + 871 MB + 344 MB
+                 ×3 + 172 MB ×5 + 86 MB ×3) — unreachable, nunca
+                 podados. Blobs alcançáveis somam só 155 MB.
+  P9             Dependabot: 15 PRs abertos; #6/#7/#8/#9
+                 CONFLICTING; #139 BLOCKED (CODEOWNERS); ordem de
+                 merge priorizada no MC89.46.
+
+────────────────────────────────────────────────────────────────────
+REGRAS DE EXECUÇÃO (MC89.47)
+────────────────────────────────────────────────────────────────────
+- NUNCA alterar lógica de negócio (só segurança/infra/documentação).
+- Ler arquivo antes de editar; validar após cada edição.
+- Validação falhou → PARE e REPORTE (máx. 3 tentativas/segmento).
+- Commit separado por segmento (MC89.47-S{n}).
+- Ações destrutivas (deletar branches, git gc) só com aprovação do
+  operador → S6 e S7 são diagnóstico + pedido de aprovação.
+
+────────────────────────────────────────────────────────────────────
+BACKUP
+────────────────────────────────────────────────────────────────────
+Bundles criados: backup-mc8947-*.bundle (git bundle create --all),
+movidos para fora do repositório após criação (fora do working tree).

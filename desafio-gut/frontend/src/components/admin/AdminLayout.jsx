@@ -4,9 +4,11 @@
 // saírem para `pages/admin/*.jsx`: o gate de acesso, a barra de estado da sessão,
 // o caminho de volta e o <Outlet /> onde cada tela entra.
 //
-// A NAVEGAÇÃO não está aqui: vive em cartões no índice (AtalhosAdmin), porque
-// nenhuma barra com nove destinos cabe num telemóvel — ver o comentário desse
-// ficheiro para o que foi medido no aparelho.
+// A NAVEGAÇÃO é o <NavAdminPersistente /> mais abaixo. Este comentário dizia
+// até ao MC89.44 que ela vivia «em cartões no índice (AtalhosAdmin)» — o que
+// deixou de ser verdade no MC89.24 e ficou aqui a apontar para um ficheiro que
+// já ninguém importava. Descrever o contrário do que o ficheiro faz custa mais
+// do que não descrever nada.
 //
 // A autenticação já não vive aqui — vive em `AdminAuthContext`, porque as sete
 // telas partilham a mesma sessão. Este ficheiro só a LÊ.
@@ -16,10 +18,14 @@
 //     moldura, não protagonista);
 //   · sem emojis; sem Orbitron; peso em vez de cor no título;
 //   · "Login Admin" é um botão NEUTRO — o laranja fica reservado a ação
-//     irreversível (os comandos da Fase 3);
-//   · saída explícita, porque a barra inferior de consumo não existe nesta rota.
+//     irreversível (os comandos da Fase 3).
+//
+// MC89.34 — A ÚNICA SAÍDA DAQUI É TERMINAR A SESSÃO. Não há botão para o
+// Dashboard comum: por decisão do operador, as telas de utilizador comum não
+// existem para o ADM, e a guarda de "/" (App.jsx) devolve-o sempre para cá.
+// Um botão "Sair do painel" seria uma porta para uma parede.
 
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext.jsx";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
@@ -27,21 +33,61 @@ import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button, Input } from "../ui";
 import { ESTADOS } from "../../lib/adminAuth.js";
 import { telaAtiva } from "../../lib/adminNav.js";
+import NavAdminPersistente from "./NavAdminPersistente.jsx";
+import AdminToastContainer from "./AdminToastContainer.jsx";
+import EnderecoTruncado from "./EnderecoTruncado.jsx";
+import { useAdminToast } from "../../hooks/useAdminToast.js";
+
+// Contexto mínimo para que as telas filhas disparem toasts
+export const ToastContext = createContext(null);
+export function useToast() { return useContext(ToastContext); }
 
 const COR = { text: "#e8f0fe", muted: "#94a3b8" };
+// Hover + scroll globais para tabelas do painel (MC89.26)
+const ESTILOS_TABELA = `
+  .admin-panel table tr:hover { background: rgba(255,255,255,0.04) !important; }
+  .admin-panel .tabela-scroll { position: relative; }
+  .admin-panel .tabela-scroll::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 24px;
+    background: linear-gradient(to right, transparent, rgba(13,18,53,0.9));
+    pointer-events: none;
+  }
+`;
 
 export default function AdminLayout() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { abrirModal } = useAppContext();
+  // `desconectar` já existia e já era exposto pelo AppContext (é o `logout()` do
+  // Privy). Não há fiação nova — só passou a haver quem o chame de dentro do
+  // painel, que até aqui não tinha nenhuma forma de terminar a sessão da conta.
+  const { abrirModal, desconectar } = useAppContext();
   const {
     authState, authError, autenticado, login, logout,
-    endereco, isAdmin, aVerificarAdmin, isConnected,
+    endereco, isAdmin, aVerificarAdmin, isConnected, restaurandoSessao,
   } = useAdminAuth();
 
+  const { toasts, dismiss: dismissToast, success, error, info } = useAdminToast();
   const [pedindoLogin, setPedindoLogin] = useState(false);
   const [adminTokenInput, setAdminTokenInput] = useState("");
+  const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+  const [aSair, setASair] = useState(false);
+
+  // MC89.34 — "Sair da conta" é a ÚNICA saída do painel, por decisão do
+  // operador: as telas de utilizador comum não existem para o ADM. Não há
+  // botão "Sair do painel" porque não há para onde ir — seria uma porta para
+  // uma parede (a guarda de "/" em App.jsx devolve sempre o admin para cá).
+  //
+  // A ORDEM importa. O `logout` admin revoga o refresh no backend, e esse
+  // pedido precisa da sessão Privy viva para sair; `desconectar` derruba-a.
+  // Pela ordem inversa, a revogação podia nunca chegar a sair e o refresh
+  // ficaria válido no servidor até expirar sozinho.
+  async function sairDaConta() {
+    setASair(true);
+    try { await logout(); } catch { /* revogação best-effort: a saída não pode ficar presa */ }
+    try { desconectar(); } finally { setASair(false); }
+    navigate("/");
+  }
 
   async function submitLogin(e) {
     e.preventDefault();
@@ -54,7 +100,36 @@ export default function AdminLayout() {
   }
 
   // ── Gate de UI ────────────────────────────────────────────────────────────
+  //
+  // MC89.31 — este portão passou a distinguir TRÊS estados em vez de dois.
+  //
+  // `isConnected` significa "o Privy já confirmou". Não significa "não está
+  // autenticado": durante o restauro da sessão (~1,3 s medidos no aparelho) é
+  // false para quem TEM sessão válida em disco. Com o encaminhamento otimista
+  // do MC89.31, o ADM chega aqui DENTRO dessa janela — e o ecrã que o recebia
+  // pedia-lhe para entrar. É a mesma armadilha que o MC88.38 corrigiu no
+  // cabeçalho e o MC88.42 na guarda do lojista, agora no painel admin.
+  //
+  // O sinal é `restaurandoSessao` e NÃO `pareceAutenticado`: este último ancora
+  // no `gut_saldo_cache`, e medi no aparelho um ADM sem esse cache a ver "Faça
+  // login" durante 737 ms, já com o encaminhamento a funcionar. A pergunta aqui
+  // é "existe sessão em disco?", e quem a responde é `privy:connections`.
+  //
+  // ⚠️ E não era só este portão. Com `address` ainda a null, `useAdmin(null)`
+  // devolve `{ isAdmin:false, loading:false }` — logo `aVerificarAdmin` é false
+  // e o TERCEIRO portão dispararia "Acesso restrito" a um admin legítimo. Como
+  // este portão é testado primeiro, tratá-lo aqui tapa os dois. Quem reordenar
+  // estes ifs reabre esse defeito.
+  //
+  // SEGURANÇA: isto escolhe um TEXTO, não concede nada. Os portões `!isAdmin`
+  // (backend) e a sessão admin por assinatura EIP-191 continuam intactos.
   if (!isConnected) {
+    if (restaurandoSessao) {
+      // Mesma forma visual do portão "Verificando privilégios…" abaixo — os
+      // dois são estados de espera consecutivos e trocar de um para o outro
+      // não deve deslocar nada.
+      return <div style={{ padding: "2rem", color: COR.muted }}>Restaurando sessão…</div>;
+    }
     return (
       <div style={{ padding: "2rem", color: COR.text, textAlign: "center" }}>
         <h1 style={{ fontSize: "1.4rem", color: COR.text, fontWeight: 700 }}>Painel Admin</h1>
@@ -113,13 +188,9 @@ export default function AdminLayout() {
             {tela && !tela.index ? tela.label : "Painel Admin"}
           </h1>
           <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: COR.muted }}>
-            Logado como admin: <code style={{ color: COR.text }}>{endereco?.slice(0, 10)}…{endereco?.slice(-6)}</code>
+            Logado como admin: <code style={{ color: COR.text }}><EnderecoTruncado endereco={endereco} /></code>
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => navigate("/")}
-          className="!border-white/15 !text-[#94a3b8] !rounded-md shrink-0">
-          ← Sair do painel
-        </Button>
       </header>
 
       {/* Estado da sessão admin (JWT) */}
@@ -132,18 +203,56 @@ export default function AdminLayout() {
         display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center", justifyContent: "space-between",
       }}>
         <span>{statusTexto}</span>
-        {statusOk ? (
-          <Button variant="ghost" size="sm" onClick={logout}
+        {/* MC89.34 — dois botões, duas coisas DIFERENTES, e a diferença tem de
+            ser legível: "Logout admin" larga o crachá e continua na app;
+            "Sair da conta" fecha a sessão do Privy. Até aqui só existia o
+            primeiro, e o segundo não existia em lado nenhum alcançável a partir
+            do painel. Nenhum é laranja: o laranja está reservado às ações
+            irreversíveis da Fase 3. */}
+        <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+          {statusOk ? (
+            <Button variant="ghost" size="sm" onClick={logout}
+              className="!border-white/15 !text-[#94a3b8] !rounded-md">
+              Logout admin
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setPedindoLogin(true)} disabled={authState === ESTADOS.A_ENTRAR}
+              className="!border-white/20 !text-[#e8f0fe] !shadow-none !rounded-md">
+              Login Admin
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={() => setConfirmandoSaida(true)} disabled={aSair}
             className="!border-white/15 !text-[#94a3b8] !rounded-md">
-            Logout admin
+            Sair da conta
           </Button>
-        ) : (
-          <Button variant="ghost" size="sm" onClick={() => setPedindoLogin(true)} disabled={authState === ESTADOS.A_ENTRAR}
-            className="!border-white/20 !text-[#e8f0fe] !shadow-none !rounded-md">
-            Login Admin
-          </Button>
-        )}
+        </div>
       </div>
+
+      {/* Confirmação INLINE, como o `pedindoLogin` acima e o ComandoButton —
+          o painel não tem sistema de modais e não é aqui que se introduz um. */}
+      {confirmandoSaida && (
+        <div style={{
+          padding: "0.7rem 0.85rem",
+          background: "rgba(0,0,0,0.2)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: "10px",
+          display: "flex", flexDirection: "column", gap: "0.5rem",
+        }}>
+          <p style={{ margin: 0, fontSize: "0.78rem", color: COR.text, lineHeight: 1.45 }}>
+            Sair da conta encerra a sua sessão neste aparelho. Será preciso entrar
+            outra vez com o Google para voltar ao painel.
+          </p>
+          <div style={{ display: "flex", gap: "0.4rem" }}>
+            <Button variant="secondary" size="sm" onClick={sairDaConta} disabled={aSair}>
+              {aSair ? "A sair…" : "Sair da conta"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmandoSaida(false)} disabled={aSair}
+              className="!border-white/15 !text-[#94a3b8]">
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
 
       {pedindoLogin && !statusOk && (
         <form onSubmit={submitLogin} style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
@@ -162,10 +271,17 @@ export default function AdminLayout() {
         </form>
       )}
 
+      {/* MC89.24 — navegação persistente em TODAS as telas. Substitui os
+          cartões-atalho do índice. */}
+      <NavAdminPersistente />
+
+      <AdminToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <style>{ESTILOS_TABELA}</style>
+
       <section>
-        {/* Cada tela entra aqui. O <Suspense> das rotas preguiçosas vive em
-            App.jsx, junto das próprias rotas. */}
-        <Outlet />
+        <ToastContext.Provider value={{ success, error, info }}>
+          <Outlet />
+        </ToastContext.Provider>
       </section>
     </div>
   );

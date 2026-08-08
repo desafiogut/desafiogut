@@ -1,0 +1,23 @@
+# MC89.21 — RELATÓRIO DE VALIDAÇÃO DO DASHBOARD ADM
+Data: 2026-07-31 | Método: CDP no aparelho | ZERO alterações de código
+
+## RESULTADO: 6/7 TELAS OPERACIONAIS
+
+| Tela | Estado | Nota |
+|------|--------|------|
+| Visão Geral | ✅ | Redirecionamento, atalhos, gate OK |
+| Usuários | ✅ | Backlink, título, gate OK |
+| Financeiro | ✅ | Backlink, título, gate OK |
+| Operações | ✅ | Backlink, título, gate OK |
+| Logs | ⚠️ | Placeholder — backend existe, frontend não |
+| Notificações | ✅ | Backlink, título, gate OK |
+| Configurações | ✅ | Backlink, título, gate OK |
+
+## ACHADO PRINCIPAL
+Tela 5 (Logs e Auditoria) ainda mostra EmConstrucao. O endpoint admin-logs.mjs
+existe desde o MC89.11 mas o frontend nunca foi atualizado. adminNav confirma:
+pronta: false.
+
+## PRÓXIMO PASSO
+MC89.22 — implementar LogsAuditoria.jsx funcional (tabela + filtros + exportação).
+1 sessão. É a última peça que falta.

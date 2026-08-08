@@ -9,10 +9,10 @@
 // POST /.netlify/functions/cotas
 //   Body: { cliente_id, categoria, vendida, disponivel, cliente_nome,
 //           produto_nome, produto_url?, valor }
-//   Gated por x-admin-token. Cria/atualiza a cota e o índice da categoria.
+//   Gated por admin (Bearer admin-JWT). Cria/atualiza a cota e o índice da categoria.
 //
 // DELETE /.netlify/functions/cotas?cliente_id=0x...
-//   Gated por x-admin-token. Remove a cota.
+//   Gated por admin (Bearer admin-JWT). Remove a cota.
 //
 // Persistência (MC37/MC38 — Supabase, ver _lib/cotas-store.mjs):
 //   cotas:{cliente_id}             → tabela `cotas` (payload jsonb + colunas índice)
@@ -163,7 +163,7 @@ function projetarCotaPublica(cota) {
  * @returns {Promise<{ papel: "admin"|"user"|"anon", endereco: string|null }>}
  */
 async function resolverChamador(req) {
-  // Admin: mesmo guard do POST/DELETE (x-admin-token legado OU Bearer admin-access).
+  // Admin: mesmo guard do POST/DELETE (Bearer admin-access).
   try {
     const auth = await autenticarAdmin(req);
     if (auth?.ok) return { papel: "admin", endereco: auth.endereco || null };

@@ -1,0 +1,162 @@
+MC89.33 — PLANO DE OTIMIZAÇÃO (COMUM + CORPORATIVO)
+Base: MC89.33-COMUM-DIAGNOSTICO.txt, MC89.33-CORPORATIVO-DIAGNOSTICO.txt,
+      MC89.32-DIAGNOSTICO.txt
+Estado: PROPOSTO. Nada foi alterado (R1).
+Ordem: latency-critical-systems — tirar idas desnecessárias ANTES de cachear,
+cachear ANTES de otimizar render (que aqui nem é preciso).
+
+================================================================================
+0. PRINCÍPIO QUE ORGANIZA ESTE PLANO
+================================================================================
+A medição diz que o frontend NÃO é o gargalo: o Dashboard pinta tudo aos 478 ms
+e navegar custa 14–32 ms. Logo, TODA a secção de render/skeleton/lazy do
+enunciado sai do plano — não por preguiça, mas porque otimizaria 14 ms.
+
+O gargalo é rede: cold start (~2,7 s/função), ausência total de cache no caminho
+do utilizador, e pedidos repetidos.
+
+⚠️ E há uma correção de REGRESSÃO que vem antes de tudo (P0-0), porque não é
+performance — é o admin fechado dentro do painel.
+
+================================================================================
+P0-0 — CORRIGIR O "SAIR DO PAINEL"  [REGRESSÃO DO MC89.31]
+================================================================================
+Detalhe completo em docs/MC89.33-BOTAO-SAIR-PLANO.txt (aprovado pelo operador:
+S1 corrigir + S3 acrescentar "Sair da conta").
+Não é otimização; é uma porta fechada. Vai à frente de tudo.
+
+================================================================================
+P0-1 — LIGAR A CAMADA DE CACHE (UPSTASH)      [OPERADOR, não é código]
+================================================================================
+Definir `REDIS_URL` e `REDIS_TOKEN` no contexto `production` do Netlify.
+Justificação: MC89.32 §2 — `cacheConfigurado()` é false, portanto SEIS caches
+admin já escritos são no-op e o rate-limiter cai em Netlify Blobs com
+consistência FORTE em todo o pedido, antes do gate de auth.
+
+Efeito, sem escrever uma linha:
+  · acende admin-stats(45s), admin-onchain(60s), admin-series(45s),
+    admin-alerts(60s), admin-users(30s), admin-status;
+  · tira a ida ao Blobs do caminho quente de TODOS os pedidos (comum incluído);
+  · o indicador "· em cache" do painel passa a poder dizer a verdade.
+Custo: um plano gratuito Upstash serve este volume (35 linhas de dados).
+⚠️ Nenhum endpoint do utilizador comum ganha cache com isto — nenhum tem cache
+escrito (P1-1). O ganho imediato do comum é só o rate-limiter.
+
+================================================================================
+P0-2 — PARALELIZAR A CADEIA `cotas`           [AppContext.jsx:385-406]
+================================================================================
+Hoje: até 3 `await` em série. MEDIDO: cotas#1 aos 4218 ms, cotas#2 aos 6855 ms —
+2637 ms de série, e para o utilizador comum as duas respostas são 404.
+Proposto: disparar as duas primeiras juntas e ficar com a primeira que responda
+com cota; a terceira (email de cadastro recente) só se as duas falharem, porque
+depende de uma flag rara em sessionStorage.
+  · comum: poupa uma ida completa (~2,6 s no pior caso, cold).
+  · lojista por endereço: a 2ª sai e é descartada — um pedido a mais, sem
+    atraso, porque foi em paralelo.
+  · lojista por email: passa a saber em ~1 ida em vez de 2.
+⚠️ NÃO colapsar as três numa só: o comentário do MC88.33 (linhas 368-375) tem
+razão — cobrem identidades diferentes. Paralelizar não é colapsar.
+
+================================================================================
+P0-3 — PAUSAR O `saldo-rs` QUANDO A APP NÃO ESTÁ VISÍVEL  [AppContext.jsx:821-826]
+================================================================================
+Hoje: `setInterval(refetchSaldoRs, 5000)` seco, 12 pedidos/min para sempre.
+O irmão `notificacoes` (linhas 828-833) já faz o certo: cadência adaptativa E
+pausa em `visibilitychange`. Copiar esse padrão — não inventar outro.
+Impacto: elimina o polling com a app em segundo plano; o saldo em R$ muda quando
+o utilizador age ou quando um PIX cai, não de 5 em 5 s indefinidamente.
+Nota: manter a atualização imediata ao voltar a ficar visível, senão troca-se
+gasto por saldo velho.
+
+================================================================================
+P0-4 — NÃO POLLAR O LEILÃO PARA QUEM NÃO O ESTÁ A VER   [corporativo]
+================================================================================
+`lances-flash` corre a 3 s a partir do AppContext, INDEPENDENTE da rota. Um
+lojista em /corporativo paga 18 pedidos/min de um leilão que não está a ver.
+Proposto: condicionar o polling à rota/visibilidade do leilão.
+⚠️ NÃO mexer na cadência de 3 s. Verifiquei o prazo real (faltavam 1369 s, edição
+A DECORRER): os 3 s são o desenho correto do MC88.31 para um leilão ao vivo, que
+é o momento em que o produto acontece. O enunciado propunha 3 s → 5 s; isso
+degrada o único momento que importa por 6 pedidos/min. Recusado com medição.
+
+================================================================================
+P1-1 — CACHE NOS ENDPOINTS DO UTILIZADOR      [depois do P0-1]
+================================================================================
+Nenhum endpoint do caminho comum/corporativo tem cache escrito. Por ordem de
+retorno, e só DEPOIS de a camada estar ligada:
+    edicoes .......... 30 s   (muda raramente; hoje é pedido a cada arranque)
+    cotas ............ 60 s   (a cota de um lojista não muda a cada minuto)
+    banners .......... 60 s   (idem)
+    saldo-rs ......... NÃO CACHEAR sem pensar — é dinheiro do utilizador;
+                       um TTL aqui atrasa a confirmação de um PIX. Se for
+                       cacheado, invalidar na escrita (write-through), nunca
+                       só por TTL.
+    notificacoes ..... NÃO CACHEAR — é o canal de aviso; atrasá-lo é o oposto
+                       do objetivo.
+Guardrail (latency-critical-systems): não esconder dado velho atrás de um cache
+rápido. Onde houver TTL, expor a idade, como a Visão Geral já faz com `geradoEm`.
+
+================================================================================
+P1-2 — ELIMINAR PEDIDOS REPETIDOS POR NAVEGAÇÃO
+================================================================================
+MEDIDO numa única navegação:
+    Vitrine .... produtos×8, cotas×2      Mercado .... cotas×4
+    Carteira ... referral×2
+  · `produtos×8`: Vitrine.jsx:527-531 faz um pedido POR CATEGORIA
+    (`SLOTS.map(...)`) — são 4 slots — e o efeito corre DUAS vezes. Duas
+    correções distintas: (a) um único `produtos?categorias=a,b,c,d`;
+    (b) estabilizar as dependências do efeito.
+  · `cotas×4` no Mercado: investigar a origem antes de propor — não a isolei.
+Impacto: menos idas a funções frias; é o que mais rende depois do P0-1.
+
+================================================================================
+P1-3 — MANTER AS FUNÇÕES QUENTES                [avaliar custo primeiro]
+================================================================================
+Cold start ~2,7 s/função, uniforme (MC89.32 §3). Um ping periódico (5 min) às
+funções do caminho crítico eliminaria a espera inicial.
+⚠️ R2 (nenhuma ação com custo financeiro): isto AUMENTA invocações. Com ~10
+funções × 12 pings/hora × 24 h ≈ 2 880 invocações/dia só de aquecimento. Tem de
+ser confrontado com o plano Netlify ANTES de implementar. Se o custo não
+compensar, a alternativa é reduzir o número de funções distintas no caminho
+crítico, não aquecê-las todas.
+
+================================================================================
+P2 — RATE LIMIT EM FALTA NO `lances-flash`     [robustez, não performance]
+================================================================================
+`netlify/functions/lances-flash.mjs` não importa `aplicarRateLimit`. É o
+endpoint MAIS pedido de toda a app (18/min por utilizador) e o único do caminho
+comum sem limite. Não afeta a latência de quem usa bem; protege de quem não usa.
+
+================================================================================
+O QUE SAI DO PLANO, COM A MEDIÇÃO QUE O JUSTIFICA
+================================================================================
+  Skeleton screens .............. o Dashboard já pinta VALORES REAIS aos 478 ms
+                                  (cache otimista MC88.34/88.38). Trocar números
+                                  por caixas cinzentas seria uma REGRESSÃO.
+  Lazy loading de componentes ... navegar custa 14–32 ms.
+  Virtualização de listas ....... não há listas longas (0 lances, 7 cotas).
+  Priorizar saldo e edição ...... já são os primeiros, aos 478 ms.
+  Paralelizar o painel corporativo  já está paralelo (Promise.all + efeito
+                                  separado).
+  Polling 3 s → 5 s ............. recusado com medição (P0-4).
+  Reduzir payload ............... 35 linhas no total (MC89.32 §4.2).
+
+================================================================================
+CRITÉRIOS DE SUCESSO — MENSURÁVEIS COM AS SONDAS QUE JÁ EXISTEM
+================================================================================
+  1. `tipoCarregando` resolve em < 4 s (hoje ~7,1 s)         → waterfall.mjs
+  2. Pedidos em repouso < 20/min com a app visível e parada  → waterfall.mjs 60s
+  3. Zero pedidos com a app em segundo plano                 → waterfall.mjs
+  4. Vitrine dispara ≤ 2 pedidos `produtos`                  → rotas-comuns.mjs
+  5. "Sair do painel" leva ao Dashboard e FICA               → botao-sair.mjs
+  6. Reabrir a app continua a ir direto a /admin             → sonda do MC89.31
+  7. Primeiro paint do Dashboard mantém-se ≤ 600 ms          → marcos-comum.mjs
+  (7 é uma guarda anti-regressão: nenhuma destas mudanças pode piorar o que já
+   está bom.)
+
+================================================================================
+PENDÊNCIAS ANTES DE EXECUTAR
+================================================================================
+  · Medir o painel corporativo com conta real (MC89.33-CORPORATIVO §0 e §6).
+  · Fechar o MC89.32 (segmentos 1 e 2), que ficou à espera do login admin.
+  · Confirmar o custo do P1-3 com o plano Netlify antes de o implementar.

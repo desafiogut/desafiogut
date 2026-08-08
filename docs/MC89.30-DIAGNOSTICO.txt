@@ -1,0 +1,161 @@
+MC89.30 — DIAGNÓSTICO DA TRANSIÇÃO DO ADM PELO DASHBOARD COMUM
+Data: 2026-07-31 | Aparelho: Xiaomi 21091116UG (Android 13) | APK: MC89.29
+Método: CDP sobre adb, gravador instalado com Page.addScriptToEvaluateOnNewDocument
+        (corre ANTES do primeiro script da app) + domínio Network do CDP.
+        NENHUMA alteração de código (R1).
+
+================================================================================
+0. NOTA DE MÉTODO — UMA MEDIÇÃO DESCARTADA E UM FALSO ALARME
+================================================================================
+
+0.1 — Medição descartada. A primeira instrumentação embrulhou `window.fetch` para
+cronometrar pedidos. Esse wrapper pode ele próprio ter provocado falhas (`apply`
+com `this` indefinido → Illegal invocation). Foi descartada e repetida com o
+domínio Network do CDP, que observa de fora sem tocar no código da página. Todos
+os números deste documento vêm da segunda forma.
+
+0.2 — Falso alarme resolvido durante o MC. Em ~6 corridas seguidas o app NUNCA
+chegava a /admin: todos os pedidos a `auth.privy.io` falhavam com
+`net::ERR_NAME_NOT_RESOLVED`, e o ADM ficava permanentemente no Dashboard comum
+(confirmado por captura de ecrã). O `ping` do próprio aparelho resolvia o mesmo
+host sem problema — a falha era só dentro do WebView.
+
+  Verificado e EXCLUÍDO como causa:
+    · Private DNS do Android: não configurado (null).
+    · VPN: ausente (NOT_VPN).
+    · WiFi: validada (VALIDATED), DNS 192.168.18.1 + fe80::1.
+    · Hipótese IPv6: o aparelho tem endereço IPv6 global mas `ping6` diz
+      "Network is unreachable". Testada desligando o WiFi (5G) — a falha
+      MANTEVE-SE, logo a rota IPv6 partida NÃO era a causa.
+
+  O que resolveu: desligar e voltar a ligar o WiFi. Isso reciclou a pilha de rede
+  do processo Chromium e o problema desapareceu por completo. Era um estado
+  transitório de DNS no WebView, NÃO um defeito da aplicação e NÃO o assunto
+  deste MC. Fica registado porque contaminou as primeiras medições e porque, se
+  voltar a acontecer ao operador, o sintoma é indistinguível de "a app travou".
+
+Todos os números da secção 2 são POSTERIORES a essa reposição, com rede sã.
+
+================================================================================
+1. O CÓDIGO — QUEM DECIDE O ENCAMINHAMENTO
+================================================================================
+
+src/App.jsx:163-182 — DashboardOuCorporativo()
+    const { tipoProvavel, tipoUsuario, tipoCarregando, address } = useAppContext();
+    const { isAdmin, loading: adminLoading } = useAdmin(address);
+
+    if (isAdmin && !adminLoading && address) return <Navigate to="/admin" replace />;   // MC89.12
+    if (tipoProvavel === "corporativo" && ...) return <Navigate to="/corporativo" />;   // MC88.42
+    return <Dashboard />;
+
+src/hooks/useAdmin.js:47-54 — o estado INICIAL já lê o cache de forma síncrona:
+    useState(() => { const c = lerCache();
+      if (c && c.endereco === (endereco||"").toLowerCase()) return { isAdmin, loading:false };
+      return { isAdmin:false, loading: !!endereco }; })
+
+    Cache: localStorage `gut_admin_check`, TTL 5 min (MC88.34).
+
+⚠️ O DETALHE QUE MUDA TUDO: o cache só é aceite se `c.endereco === endereco`, e
+`endereco` é o `address` do AppContext — que NÃO EXISTE até o Privy restaurar a
+sessão. Com `address` a null, o ramo inicial devolve `loading:false` e
+`isAdmin:false`, portanto a condição da linha 172 é falsa e o Dashboard comum
+renderiza. O cache está no disco, válido, e não é consultado, porque falta a
+chave para o validar.
+
+Comparação com o MC88.42 (que funciona): `tipoProvavel` deriva de
+`saldoCacheInicial`, lido por `lerSaldoCache()`, que valida o endereço contra
+`privy:connections` LIDO DIRETAMENTE DO localStorage de forma SÍNCRONA
+(AppContext.jsx:83-90, `enderecoSessaoSincrono`). Por isso vale já no PRIMEIRO
+render, sem esperar pelo Privy. O caminho do ADM nunca recebeu esse tratamento.
+
+================================================================================
+2. MEDIÇÃO NO APARELHO
+================================================================================
+
+2.1 — CACHE `gut_admin_check` QUENTE (dentro dos 5 min)   [3 corridas]
+
+  corrida  Dashboard   sessão Privy   navegou     painel  | Dashboard comum
+           pintado     respondeu      p/ /admin   pintado | VISÍVEL
+  -------  ---------   ------------   ---------   ------- | ---------------
+     1       545 ms       1273 ms       1483 ms   1581 ms |     938 ms
+     2       590 ms       1269 ms       1548 ms   1619 ms |     958 ms
+     3       555 ms       1399 ms*      1399 ms   1524 ms |     844 ms
+                                                          | média ~913 ms
+  (*corrida 3: sessões Privy a 1138 ms)
+
+  `admin-list` NÃO foi chamado em nenhuma das três — o cache serviu.
+  Intervalo entre a sessão Privy responder e a navegação: 130–280 ms.
+
+2.2 — CACHE EXPIRADO (>5 min)   [1 corrida, a primeira após a reposição da rede]
+
+       619 ms  Dashboard comum pintado
+       725 ms  auth.privy.io/api/v1/apps        (config do Privy)
+      1449 ms  auth.privy.io/api/v1/sessions    (restauro da sessão)
+      2035 ms  admin-list?endereco=0x1e1b..98cb  PEDIDO   ← `address` já existe
+      2044 ms  admin-list                        RESPOSTA 200
+      5468 ms  navegação para /admin
+      5744 ms  painel pintado
+      -------
+      Dashboard comum VISÍVEL: 4 849 ms
+
+  Observação por explicar: 3,4 s entre a resposta do `admin-list` e a navegação.
+  Não foi isolado nesta medição (só ocorreu uma vez, antes de o cache aquecer).
+  Candidatos: re-render tardio, contenção com os outros consumidores de
+  `useAdmin`, ou o custo do chunk lazy. Ver secção 5 — é o item a fechar antes
+  de dar o problema por inteiramente compreendido.
+
+2.3 — MÚLTIPLOS CONSUMIDORES. Na corrida de cache frio observaram-se TRÊS pedidos
+`admin-list` em paralelo (2035/2038/2039 ms). `useAdmin` é chamado em
+DashboardOuCorporativo, AdminAuthContext, Sidebar, BottomNav, ChatbotWidget,
+Dashboard e AppContext. Cada instância tem o seu estado e faz o seu fetch; o
+cache só os une depois do primeiro terminar.
+
+================================================================================
+3. CAUSA RAIZ
+================================================================================
+
+O gargalo NÃO é `adminLoading`, como a hipótese de partida supunha. É `address`.
+
+  · Com cache quente, `adminLoading` já é false no primeiro render e `isAdmin`
+    já é o valor certo NO DISCO — mas a condição da linha 172 exige `address`,
+    que só chega quando o Privy restaura (~1,2 s). Daí os ~913 ms de Dashboard.
+  · Com cache expirado, soma-se a ida ao `admin-list` (e um atraso adicional
+    ainda não isolado), chegando a ~4,8 s.
+
+Ou seja: existe informação suficiente em disco, no instante zero, para saber que
+este utilizador é ADM. O código não a usa porque a validação do cache depende de
+um valor que só existe 1,2 s mais tarde.
+
+================================================================================
+4. RESTRIÇÃO CRÍTICA QUE O PLANO TEM DE RESPEITAR
+================================================================================
+
+Redirecionar mais cedo NÃO chega — e sozinho piora a experiência.
+
+src/components/admin/AdminLayout.jsx:76-97 tem três portões, por esta ordem:
+    if (!isConnected)     → "Painel Admin / Faça login para verificar privilégios" + [Entrar]
+    if (aVerificarAdmin)  → "Verificando privilégios…"
+    if (!isAdmin)         → "Acesso restrito. Seu endereço … não está na lista"
+
+`isConnected` vem de `useAdminAuth` → `useAppContext`, e é ESTRITO: só fica true
+depois do Privy. Um redirect a t≈0 levaria o ADM a um ecrã a pedir-lhe login —
+a ele, que está com sessão activa. Trocaríamos "vejo o Dashboard errado durante
+0,9 s" por "a app diz-me para entrar quando eu já entrei", que é o defeito que o
+MC88.37/88.38 já teve de corrigir no cabeçalho (`pareceAutenticado`).
+
+Qualquer correcção tem, portanto, DUAS metades: encaminhar cedo E dar ao
+AdminLayout um estado de "a restaurar" distinto de "não autenticado".
+
+================================================================================
+5. O QUE FICA POR SABER (honestamente)
+================================================================================
+
+  a) Os 3,4 s entre a resposta do `admin-list` e a navegação (2.2). Uma única
+     observação; não reproduzida. Antes de executar, medir 3× com o cache
+     forçado a expirar.
+  b) O PRIMEIRO login de sempre (OAuth Privy) não foi medido: não é automatizável
+     e forçá-lo exigiria terminar a sessão do operador. Todas as medições são do
+     caminho de RESTAURO — que é o que o operador descreveu.
+  c) Se o ADM for TAMBÉM lojista, o bloco corporativo ganha (App.jsx:178, testado
+     depois mas o comentário diz que o corporate é mais específico). Não foi
+     exercitado; a conta de teste não é corporativa.

@@ -1,0 +1,142 @@
+PLANO — BOTÃO DE SAIR NO PAINEL ADM
+Data: 2026-08-01 | Pedido do operador durante o MC89.33
+Estado: PROPOSTO. R1 do MC89.33 cumprida — nada foi alterado.
+
+================================================================================
+1. O PROBLEMA REAL: JÁ EXISTE UM BOTÃO, E O MC89.31 PARTIU-O
+================================================================================
+`AdminLayout.jsx:138` já tem "← Sair do painel":
+
+    <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
+      ← Sair do painel
+    </Button>
+
+MEDIDO NO APARELHO (sonda botao-sair.mjs, com a dica de admin presente):
+
+    partida ......... /admin
+    trilho .......... ["/", "/admin"]
+    destino final ... /admin
+    saiu mesmo? ..... NÃO
+
+CAUSA: o MC89.31 pôs em `App.jsx:DashboardOuCorporativo` a regra
+`if (address ? (isAdmin && !adminLoading) : adminProvavel) → <Navigate to="/admin">`.
+A guarda está na PRÓPRIA ROTA "/", portanto qualquer caminho até "/" ressalta:
+o botão, o "Início" da barra inferior e escrever o endereço à mão.
+
+>>> O administrador está FECHADO dentro de /admin. Isto é uma regressão que eu
+introduzi no MC89.31 e que o MC89.31 não detetou porque só testou a ENTRADA no
+painel, nunca a saída. Fica escrito assim, sem rodeios.
+
+================================================================================
+2. O QUE "SAIR" PODE QUERER DIZER — SÃO TRÊS COISAS DIFERENTES
+================================================================================
+Hoje o painel mistura-as e só expõe duas, uma delas partida:
+
+  S1. "Quero ver o app como um utilizador normal."
+      → hoje: botão "← Sair do painel". PARTIDO (secção 1).
+      → a sessão admin continua viva; é só navegação.
+
+  S2. "Quero terminar a minha sessão de ADMIN, mas continuar autenticado."
+      → hoje: botão "Logout admin", na barra de estado, e SÓ aparece quando
+        `statusOk` (sessão JWT ativa). Funciona.
+      → chama `logout()` do AdminAuthContext: revoga o refresh e limpa.
+
+  S3. "Quero sair da CONTA (logout Privy)."
+      → hoje: NÃO EXISTE no painel. Só na área comum (`desconectar` do
+        AppContext), que o admin não consegue alcançar por causa de S1.
+      → ou seja: hoje o ADM não tem como terminar a sessão da conta sem
+        desinstalar ou limpar dados.
+
+================================================================================
+3. OPÇÕES PARA S1 (a que está partida)
+================================================================================
+
+OPÇÃO A — pausa explícita do encaminhamento  ⭐ RECOMENDADA
+  Ao tocar em "Sair do painel", grava-se um sinal de sessão
+  (ex.: `sessionStorage["gut_admin_pausa"] = "1"`) e `DashboardOuCorporativo`
+  passa a respeitá-lo:
+      if (!pausa && (address ? (isAdmin && !adminLoading) : adminProvavel)) → /admin
+  Limpa-se ao voltar a entrar em /admin (e morre com o processo, portanto o
+  arranque seguinte volta ao comportamento do MC89.31).
+  + Preserva integralmente o ganho do MC89.31 no arranque.
+  + É intenção EXPLÍCITA do utilizador, não heurística.
+  + `sessionStorage` é o storage certo aqui: a pausa NÃO deve sobreviver ao
+    fecho da app, senão o ADM volta a cair no Dashboard comum no dia seguinte —
+    exatamente o defeito que o MC89.31 corrigiu.
+  − Um sinal novo para manter.
+
+OPÇÃO B — reverter o encaminhamento automático
+  ✗ REJEITADA. Desfaz o MC89.31 e devolve os 1314 ms de Dashboard errado.
+
+OPÇÃO C — "Sair" passa a significar logout do Privy (S3)
+  ✗ REJEITADA COMO SUBSTITUTO. Resolve outra pergunta. Um admin que só quer
+  ver a vitrine não devia ter de terminar a sessão para isso. Vale como botão
+  ADICIONAL (secção 4), não como o significado de "Sair do painel".
+
+OPÇÃO D — rota espelho (ex.: /inicio) que mostra o Dashboard sem a guarda
+  ✗ REJEITADA. Duplica uma rota para contornar uma guarda; passa a haver dois
+  sítios que renderizam o Dashboard e um deles não é o canónico.
+
+================================================================================
+4. DESENHO PROPOSTO (a confirmar com o operador — ver secção 6)
+================================================================================
+No cabeçalho do painel, onde hoje está o botão único:
+
+    ← Sair do painel          (S1, Opção A — volta ao app como utilizador)
+
+E na barra de estado da sessão, junto ao "Logout admin" que já existe:
+
+    Logout admin              (S2 — termina a sessão ADMIN, já funciona)
+    Sair da conta             (S3 — logout Privy; NOVO)
+
+Regras visuais, coerentes com o MC89.4 e o que já existe no ficheiro:
+  · nenhum destes é laranja — o laranja está reservado a ação irreversível
+    (os comandos da Fase 3). "Sair da conta" é `variant="ghost"` com a borda
+    discreta, igual aos irmãos.
+  · "Sair da conta" pede confirmação; os outros dois não (são reversíveis num
+    toque).
+  · sem emojis, coerente com a regra do AdminLayout.
+
+================================================================================
+5. TESTES QUE ESTE TRABALHO TEM DE TRAZER
+================================================================================
+Sem runner de React, valida-se onde dá — e o resto no aparelho:
+
+  · node:test sobre a lógica pura da pausa (ler/gravar/limpar o sinal), como se
+    fez em `lib/dicaSessao.test.mjs`.
+  · Guarda de forma no código-fonte: a condição de `DashboardOuCorporativo` tem
+    de conter a pausa. É o mesmo tipo de teste que já apanhou uma reescrita no
+    MC89.31 — e VALIDADO POR MUTAÇÃO, senão não conta.
+  · No aparelho, e é aqui que está o valor:
+      1. tocar em "Sair do painel" → o Dashboard comum FICA (não ressalta);
+      2. voltar a /admin → o painel abre e a pausa é limpa;
+      3. fechar e reabrir a app → volta a ir DIRETO a /admin (MC89.31 intacto);
+      4. "Início" da barra inferior também deixa de ressaltar;
+      5. um NÃO-admin continua sem ver /admin.
+  · ⚠️ O teste 3 é o que impede esta correção de desfazer o MC89.31. Sem ele,
+    esta mudança pode reintroduzir a transição que custou um MC inteiro.
+
+================================================================================
+6. DECISÕES DO OPERADOR — TOMADAS EM 2026-08-01
+================================================================================
+  D1. ✅ DECIDIDO: "Sair do painel" leva ao Dashboard comum (S1), corrigido pela
+      Opção A (pausa explícita em sessionStorage).
+  D2. ✅ DECIDIDO: acrescentar "Sair da conta" (S3, logout Privy) na barra de
+      estado, com confirmação. Hoje o ADM não tem nenhuma forma de terminar a
+      sessão da conta a partir do painel.
+  D3. Pausa dura só a sessão (implícito na Opção A aprovada): morre com o
+      processo, portanto o arranque seguinte volta a ir direto a /admin.
+
+  ⇒ ESCOPO APROVADO: S1 (corrigir) + S3 (acrescentar). S2 fica como está.
+  ⇒ EXECUÇÃO: MC seguinte. Este documento não altera código (R1 do MC89.33).
+
+================================================================================
+7. ESFORÇO E RISCO
+================================================================================
+  Esforço: pequeno. Um sinal em sessionStorage, uma condição em App.jsx, um
+  botão novo se D2 for sim, e os testes da secção 5.
+  Risco: MÉDIO, e concentrado num sítio — mexer em `DashboardOuCorporativo` é
+  mexer na guarda que o MC89.31 acabou de acertar. Por isso o teste 3 da secção
+  5 não é opcional.
+  Fora de alcance: nada aqui toca autenticação, autorização ou credenciais. As
+  três defesas do painel continuam intactas.

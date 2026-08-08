@@ -18,6 +18,7 @@ import {
 } from "./_lib/validate.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { registrarFalhaJwt } from "./_lib/jwt-fail-counter.mjs";
+import { registarAtividade } from "./_lib/atividade-utilizadores.mjs";
 import { registerAndCheck } from "./_lib/sybil-check.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 
@@ -104,6 +105,17 @@ export default async (req) => {
       console.warn("[auth-user] sybil-check falhou (não-fatal):", err?.message);
     });
   }
+
+  // MC89.43 (P0-A) — marca presença para o painel admin poder ver quem USA a app.
+  // Este é o único ponto por onde toda a sessão autenticada passa.
+  //
+  // ⚠️ NÃO PODE BLOQUEAR O LOGIN. O token já está assinado a esta altura; uma
+  // estatística de presença nunca vale recusar a entrada a alguém. Por isso o
+  // `.catch` — `registarAtividade` já é fail-soft por dentro, e isto é a
+  // segunda tranca, para o caso de um dia deixar de ser.
+  await registarAtividade(endereco).catch((err) => {
+    console.warn("[auth-user] registo de atividade falhou (não-fatal):", err?.message);
+  });
 
   console.info("[auth-user] sessão emitida", { endereco, visitorId: visitorId ? "presente" : "ausente" });
   return jsonResponse({ token, ttl: TTL_USER_SESSION });

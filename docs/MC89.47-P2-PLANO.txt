@@ -1,0 +1,91 @@
+================================================================================
+MC89.47 — PLANO DE MIGRAÇÃO DO ADMIN_TOKEN EM auth-admin.mjs (S9/P2)
+Gerado em: 2026-08-06 · DIAGNÓSTICO + PLANO — NENHUM código alterado
+================================================================================
+
+────────────────────────────────────────────────────────────────────
+1. FLUXO ATUAL (lido de auth-admin.mjs, 2026-08-06)
+────────────────────────────────────────────────────────────────────
+Endpoint: POST /.netlify/functions/auth-admin — 3 ações:
+
+  login  { endereco, signature, message, adminToken } → par access+refresh
+  refresh{ endereco, refreshToken }                   → par novo (rotação)
+  logout { endereco }                                 → revoga todos os refresh
+
+ONDE o ADMIN_TOKEN é usado (único ponto — acaoLogin, linhas 65–76):
+  1. body.adminToken obrigatório (400 se ausente).
+  2. adminToken === process.env.ADMIN_TOKEN (env estático):
+       - env ausente → 503 admin_token_nao_configurado
+       - valor errado → 401 admin_token_invalido + registrarFalhaJwt
+  Depois disso, o login valida:
+  3. message no formato DESAFIOGUT-ADMIN:<unix-ms>:<endereco> (skew ≤ 5 min,
+     anti-replay por timestamp).
+  4. verifyMessage(message, signature) === endereco  (EIP-191, ethers).
+  5. endereco ∈ getAdminAddresses() (Blob admin-list:admins ∪ coordenação).
+  6. emitirParAdmin(endereco) → access (15 min) + refresh (7 dias, hasheado).
+
+QUEM CHAMA: AdminPanel (frontend admin). Login UMA vez por sessão, colando o
+ADMIN_TOKEN; depois mantém só access (memória) + refresh (sessionStorage) e
+roda refresh a cada ~12 min. ADMIN_TOKEN é descartado após o login.
+
+PAPEL REAL do ADMIN_TOKEN hoje: credencial "raiz" estática (bootstrap) que
+prova que quem está logando é o operador — CAMADA EXTRA sobre a assinatura
+EIP-191 + whitelist. Herança da era pré-admin-list: era a única forma de o
+primeiro admin se auto-registar.
+
+────────────────────────────────────────────────────────────────────
+2. POR QUE REMOVER
+────────────────────────────────────────────────────────────────────
+- Segredo estático, global, sem rotação: vazamento = troca manual de env +
+  restart de todas as functions (OWASP ASVS — o doc de migração já aponta).
+- Redundante hoje: a assinatura EIP-191 prova posse da wallet E o endereço
+  precisa estar em admin-list (controlada por admin-list.mjs, autenticado).
+- Última referência viva ao "legado": todo o resto foi removido no MC89.46/47.
+- Código morto associado (503 admin_token_nao_configurado) já foi limpo nos
+  guards (MC89.47-S3) — sobra exatamente aqui.
+
+────────────────────────────────────────────────────────────────────
+3. ALTERNATIVAS (em ordem de recomendação)
+────────────────────────────────────────────────────────────────────
+A) REMOVER adminToken do login (mais simples, recomendada):
+   - login passa a exigir só { endereco, signature, message }.
+   - Segurança preservada: EIP-191 (posse) + endereco ∈ admins (autorização)
+     + timestamp anti-replay + rate-limit 10/min (aplicarRateLimit) +
+     registrarFalhaJwt em falhas.
+   - Bootstrap do 1º admin: admin-list já tem seed via env/coordenação
+     (endereço da coordenação é admin nato — getAdminAddresses).
+   - Impacto: AdminPanel deixa de pedir o ADMIN_TOKEN no login.
+   - Remoção total: apagar env ADMIN_TOKEN do Netlify após deploy.
+
+B) Segredo INDIVIDUAL por admin (evolução recomendada após A):
+   - Cada admin tem um "admin secret" próprio (hash SHA-256 em Blob, como os
+     refresh tokens) — revogação individual, rotação sem restart global.
+   - Mantém o fator "algo que você sabe" sem o problema do segredo global.
+
+C) 2FA real (TOTP/WebAuthn): mais forte, porém mais infra; avaliar se o
+   painel admin justifica. Privy já provê wallet — não substitui o 2FA.
+
+D) Validar sessão Privy no backend (JWT do Privy como prova): integra com o
+   login existente, mas acopla o endpoint ao provider (mudança de contrato).
+
+────────────────────────────────────────────────────────────────────
+4. RISCOS / MITIGAÇÃO
+────────────────────────────────────────────────────────────────────
+- Risco: remover o fator extra reduz a barreira de "quem pode virar admin".
+  Mitigação: admin-list só é mutável por admin autenticado (JWT); a
+  assinatura EIP-191 impede impersonation; rate-limit + fail counter
+  (registrarFalhaJwt) já existem no caminho de login.
+- Risco: algum cliente legado ainda mande adminToken → passa a receber
+  400 (campo ignorado). Auditoria de logs antes (como o cronograma do
+  doc de migração previa) é recomendada.
+- Rollback: re-adicionar o campo é 1 linha (flag por env se necessário).
+
+────────────────────────────────────────────────────────────────────
+5. PRÓXIMOS PASSOS (fora do escopo do MC89.47 — aguarda aprovação)
+────────────────────────────────────────────────────────────────────
+  1. Alterar acaoLogin: remover validação do adminToken (opção A).
+  2. Atualizar AdminPanel (remover o paste do ADMIN_TOKEN).
+  3. Atualizar docs (migracao-admin-token-jwt.md → etapa 4 concluída).
+  4. Remover env ADMIN_TOKEN do Netlify.
+  5. (Opcional) implementar opção B (secrets individuais) em MC futuro.
+================================================================================

@@ -29,6 +29,14 @@ import {
   gravarPrazoStorage,
 } from "../lib/leilaoTimer.js";
 import { apiGet, apiPost } from "../lib/api.js";
+import {
+  enderecoSessaoSincrono,
+  adminProvavel as lerAdminProvavel,
+  // MC89.36 — o palpite do lojista mudou-se para aqui, para ficar ao lado do do
+  // ADM e com o mesmo ciclo de vida. Ver o cabeçalho de `CHAVE_LOJISTA`.
+  lojistaProvavel as lerLojistaProvavel,
+  gravarDicaLojista,
+} from "../lib/dicaSessao.js";
 
 // Persistência do prazoTimestamp (Onda 5 FASE 0): o timer é IMUNE a refresh
 // porque cada tipo de leilão guarda seu próprio prazo no localStorage. Cálculo
@@ -73,21 +81,22 @@ const LS_KEYS_LEGADO_MOCK = [
 // esperar pela cadeia serial de autenticação (ver bloco "SALDO OTIMISTA").
 // Guarda SEMPRE o endereço a que os valores pertencem, para que a guarda de
 // coerência possa descartá-los se a sessão for outra.
+// MC89.40 (F2) — os quatro níveis de cota. O backend tem a fonte única em
+// `_lib/cota-ativacao.mjs`, que não é importável daqui (vive nas funções
+// Netlify). Duplicar uma lista é sempre um risco de divergência, por isso há um
+// teste a comparar as duas e a rebentar se alguém mexer numa e esquecer a outra.
+const CATEGORIAS_COTA = new Set(["bronze", "prata", "ouro", "diamante"]);
+
 const LS_SALDO_CACHE     = "gut_saldo_cache";
 const SALDO_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 h — além disso, mostrar é pior que não mostrar
 
-// Endereço da sessão Privy lido de forma SÍNCRONA, para validar o cache ANTES
-// do primeiro paint. `privy:connections` não é credencial — é o endereço
-// público da carteira — portanto lê-lo não infringe a regra de não manusear
-// segredos (os tokens ficam noutras chaves e não são tocados aqui).
-function enderecoSessaoSincrono() {
-  try {
-    const raw = localStorage.getItem("privy:connections");
-    if (!raw) return null;
-    const m = raw.match(/0x[a-fA-F0-9]{40}/);
-    return m ? m[0].toLowerCase() : null;
-  } catch { return null; }
-}
+// MC89.31 — `enderecoSessaoSincrono` mudou-se para `lib/dicaSessao.js`, onde
+// passa a ser partilhada com o palpite do admin. Continua a ser exatamente a
+// mesma função e a mesma guarda; o que se evita é uma SEGUNDA cópia da regra
+// que valida um cache contra a sessão em disco — duas cópias divergem, e é
+// precisamente essa guarda que o MC88.34 teve de acrescentar depois de um teste
+// por mutação. O comentário que justifica ler `privy:connections` vive agora
+// no cabeçalho desse módulo.
 
 function lerSaldoCache() {
   try {
@@ -227,6 +236,86 @@ export function AppProvider({ children }) {
   //      a sessão Privy nunca foi trocada neste aparelho.
   const [saldoCacheInicial] = useState(lerSaldoCache);
 
+  // MC89.31 — ADMIN PROVÁVEL (abrir o ADM direto no painel dele).
+  //
+  // Irmão do `tipoProvavel` do MC88.42, e pela mesma razão: durante o restauro
+  // da sessão Privy o ADM via o Dashboard COMUM durante ~1,3 s (medido no
+  // aparelho, MC89.31-S0) antes de ser encaminhado para /admin. A informação
+  // para decidir já estava em disco no instante zero — faltava a chave para a
+  // validar, porque `address` só chega depois do Privy.
+  //
+  // Lido UMA vez, no primeiro render, com `useState`: é uma fotografia do
+  // arranque, não um valor que deva mudar a meio. Assim que `address` existir,
+  // quem manda é a resposta CONFIRMADA (ver App.jsx:DashboardOuCorporativo) e
+  // este palpite deixa de ser consultado.
+  //
+  // ⚠️ Só ENCAMINHA. Não concede nada — ver o cabeçalho de lib/dicaSessao.js
+  // para as três defesas que continuam de pé.
+  const [adminProvavel] = useState(lerAdminProvavel);
+
+  // MC89.36 — LOJISTA PROVÁVEL, agora lido da chave própria.
+  //
+  // Mesma natureza do `adminProvavel` logo acima: fotografia do arranque, lida
+  // UMA vez, de forma síncrona, antes do primeiro paint. A partir do momento em
+  // que /cotas responde, quem manda é a resposta CONFIRMADA e este palpite deixa
+  // de ser consultado (ver `tipoOtimista`).
+  //
+  // O que muda face ao MC88.42 não é a lógica — é o RECIPIENTE. Antes lia-se
+  // `saldoCacheInicial?.tipoConfirmado`, e esse registo era apagado no logout
+  // pela guarda de coerência do saldo. Agora tem chave própria e sobrevive,
+  // exatamente como a do ADM.
+  const [lojistaProvavel] = useState(lerLojistaProvavel);
+
+  // MC89.36.1 — "HÁ UM LOGIN A DECORRER NESTE INSTANTE".
+  //
+  // MEDIDO no aparelho, no primeiro login do lojista após logout: entre o
+  // retorno do OAuth e o painel passaram 9 996 ms, e 1 889 desses foram de
+  // DASHBOARD COMUM — apesar do estado neutro já existir. Sequência medida:
+  //     179 563 ms  (em branco)        ← window.location.assign do retorno OAuth
+  //     180 644 ms  DASHBOARD COMUM    ← 1 889 ms a dizer "Bem-vindo" a quem
+  //                                      acabou de entrar  ⚠️
+  //     182 533 ms  ESTADO NEUTRO      ← só quando o Privy termina
+  //     189 559 ms  CORPORATIVO
+  //
+  // PORQUÊ: a porta do estado neutro é `pareceAutenticado`, que depende de
+  // `sessaoOtimista` → `saldoCacheInicial` → `gut_saldo_cache`. Num login
+  // FRESCO esse registo não existe: foi apagado no logout e só volta a ser
+  // escrito depois de a autenticação terminar. Durante a janela, a app não tem
+  // como saber que alguém está a entrar — e trata-o como visitante.
+  //
+  // É a MESMA armadilha do MC89.31, onde `sessaoEmDisco` teve de nascer porque
+  // `sessaoOtimista` (ancorado no saldo) dizia "visitante" a um ADM com sessão
+  // válida. Aqui nem `privy:connections` serve: no instante do retorno o SDK
+  // ainda não o escreveu — está precisamente a trocar o código pelo token.
+  //
+  // O que EXISTE nesse instante são os parâmetros do OAuth no URL. Não é um
+  // palpite: é o próprio App.jsx que os reinjeta na origem local
+  // (`window.location.assign(\`/${search}\`)`) para o SDK os poder ler. Se eles
+  // lá estão, há um login a meio — não é um visitante.
+  //
+  // Lido UMA vez, no primeiro render: o SDK limpa o URL a seguir, e o que
+  // interessa é a fotografia do arranque.
+  //
+  // ⚠️ Só ENCAMINHA — e nem sequer escolhe destino: escolhe entre ESPERAR e
+  // mostrar o Dashboard. Um visitante nunca tem estes parâmetros no URL.
+  const [loginEmCurso] = useState(() => {
+    try { return /[?&]privy_oauth_/.test(window.location.search); } catch { return false; }
+  });
+
+  // MC89.31 — "há uma sessão Privy em disco", lido a t=0.
+  //
+  // Distinto do `sessaoOtimista` do MC88.38, que ancora no `gut_saldo_cache`:
+  // ali o cache é a fonte do RÓTULO ("Olá, Fulano"), logo sem cache não há nada
+  // para mostrar e o otimismo não faz sentido. Aqui a pergunta é outra — "vale
+  // a pena esperar antes de pedir login?" — e para essa, quem manda é a
+  // presença da sessão, não a de um saldo em cache.
+  //
+  // MEDIDO no aparelho: um ADM com sessão válida mas SEM `gut_saldo_cache` via
+  // "Faça login para verificar privilégios" durante 737 ms dentro do painel.
+  // Raro, mas é exatamente o defeito que este MC existe para eliminar, e ficar
+  // dependente de um cache de saldo para o evitar era um acoplamento errado.
+  const [sessaoEmDisco] = useState(() => enderecoSessaoSincrono() !== null);
+
   // Saldo on-chain — saldoSenhas[address] no contrato.
   // null = "ainda não consultado" (distinto de 0, que é estado on-chain válido).
   const [saldoSenhas,       setSaldoSenhas]       = useState(saldoCacheInicial?.senhas ?? null);
@@ -252,6 +341,23 @@ export function AppProvider({ children }) {
   // que exige Admin API no Privy v3.22.1). tipoCarregando evita redirect prematuro.
   const [cotaCorporativa, setCotaCorporativa] = useState(null);
   const [tipoCarregando,  setTipoCarregando]  = useState(false);
+
+  // MC89.36 — "a pergunta /cotas JÁ FOI RESPONDIDA" (com sucesso ou com erro).
+  //
+  // ⚠️ NÃO É O MESMO QUE `!tipoCarregando`, e a diferença é a razão de ser deste
+  // estado. `tipoCarregando` só passa a true na linha 377, imediatamente ANTES do
+  // fetch — mas o `return` da linha 376 (sem `authToken`) acontece antes disso, e
+  // a linha 366 (sem `address`) põe-no explicitamente a false. Medido no aparelho
+  // (MC89.36-S0): o Dashboard está pintado desde os 568 ms e /cotas só dispara
+  // aos 4 422 ms. Nesses 3,9 s — 76% da janela — `tipoCarregando` é FALSE e
+  // `cotaCorporativa` é null, o que fazia `tipoUsuario` cair para "comum".
+  //
+  // É a ambiguidade que App.jsx:120-123 já descrevia sem ter como a resolver:
+  // "`cotaCorporativa == null` é ambíguo — significa 'ainda não encontrei' E
+  //  'não é lojista'". Este booleano separa as duas.
+  //
+  // Só ENCAMINHA (escolhe entre esperar e mostrar o Dashboard). Não autoriza nada.
+  const [tipoResolvido, setTipoResolvido] = useState(false);
 
   // ── FingerprintJS visitorId (anti-Sybil — Mega Comando 3 / Item 3) ──────
   // Carregado uma vez no mount, cacheado em localStorage. Enviado em
@@ -336,7 +442,10 @@ export function AppProvider({ children }) {
   // Privy v3.22.1 removeu setCustomMetadata client-side; a persistência agora
   // fica em Netlify Blobs via cotas.mjs (POST action=register-corporativo).
   useEffect(() => {
-    if (!address) { setCotaCorporativa(null); setTipoCarregando(false); return; }
+    // MC89.36 — sem `address` a pergunta volta a estar POR RESPONDER. Isto é o
+    // que faz uma troca de conta (ou um logout) reabrir o estado neutro em vez
+    // de herdar o "já sei" da sessão anterior.
+    if (!address) { setCotaCorporativa(null); setTipoCarregando(false); setTipoResolvido(false); return; }
     // MC88.34 (P1) — espera pelo authToken antes de perguntar.
     // O MC88.33 mediu 6 chamadas a /cotas no arranque, quase todas 401/404: o
     // efeito corria uma vez SEM token (as 3 tentativas respondiam 401 por
@@ -385,9 +494,13 @@ export function AppProvider({ children }) {
         if (!cancel) {
           setCotaCorporativa(data || null);
           setTipoCarregando(false);
+          setTipoResolvido(true);   // MC89.36 — houve resposta
         }
       } catch {
-        if (!cancel) { setCotaCorporativa(null); setTipoCarregando(false); }
+        // MC89.36 — um erro TAMBÉM é uma resposta, para efeitos de encaminhamento.
+        // Sem isto, uma falha de rede prendia o utilizador no estado neutro até
+        // ao prazo (R-C) em vez de o deixar seguir para o Dashboard de imediato.
+        if (!cancel) { setCotaCorporativa(null); setTipoCarregando(false); setTipoResolvido(true); }
       }
     };
     buscarCota();
@@ -415,28 +528,83 @@ export function AppProvider({ children }) {
   // autorização. Por decisão do operador seguiu-se a variante mais conservadora
   // das três em cima da mesa: o palpite SÓ é usado se a última sessão
   // CONFIRMADA neste MESMO endereço tiver sido corporativa. Um utilizador comum
-  // nunca terá `tipoConfirmado` no cache, portanto NUNCA vê o painel do
-  // lojista, nem por um instante — nem sequer com o cache manipulado, porque
-  // `lerSaldoCache()` valida o endereço contra `privy:connections` de forma
-  // síncrona antes do primeiro paint (guarda do MC88.34).
+  // nunca terá a dica gravada, portanto NUNCA vê o painel do lojista, nem por um
+  // instante — nem sequer com a dica manipulada, porque `lojistaProvavel()`
+  // valida o endereço contra `privy:connections` de forma síncrona antes do
+  // primeiro paint (a mesma guarda que nasceu no MC88.34).
   //
-  // O primeiro login de sempre de um lojista continua a passar pelo comum: aí
-  // não há nada em cache e adivinhar seria inventar.
-  const tipoOtimista = cotaCorporativa == null && saldoCacheInicial?.tipoConfirmado === "corporativo"
+  // MC89.36 — o primeiro login de sempre de um lojista JÁ NÃO passa pelo
+  // Dashboard comum: passa pelo estado neutro, que não afirma nada. Continua a
+  // não haver palpite nesse caso — adivinhar seria inventar —, mas deixou de ser
+  // preciso adivinhar para não mostrar o produto errado.
+  //
+  // MC89.36 — A FONTE DO PALPITE MUDOU DE SÍTIO, A REGRA NÃO.
+  // Lia-se `saldoCacheInicial?.tipoConfirmado`; passa a ler-se a chave própria
+  // (`lojistaProvavel`), pelas razões do cabeçalho de `CHAVE_LOJISTA` em
+  // lib/dicaSessao.js. As três guardas continuam de pé — incluindo a que valida
+  // o endereço contra `privy:connections` de forma síncrona antes do primeiro
+  // paint, que é a que impede que o palpite de A se aplique a B.
+  const tipoOtimista = cotaCorporativa == null && lojistaProvavel
     ? "corporativo"
     : null;
   const tipoProvavel = tipoUsuario === "corporativo" ? "corporativo" : (tipoOtimista ?? tipoUsuario);
 
+  // MC89.40 (F2) — "a cota está PAGA?", que é uma pergunta DIFERENTE de "é
+  // lojista?".
+  //
+  // `tipoUsuario` responde à primeira e é escrito no REGISTO (cotas.mjs:427, com
+  // `vendida:false` e `categoria:null`). Durante muito tempo foi usado também
+  // como resposta à segunda — e por isso quem preenchia o formulário "Seja Nosso
+  // Parceiro" entrava no painel sem ter pago (MC89.37).
+  //
+  // As duas perguntas passam a ter cada uma o seu sinal, e não devem voltar a
+  // ser colapsadas:
+  //     tipoUsuario / tipoProvavel → ENCAMINHA  (para onde vai)
+  //     cotaAtiva                  → AUTORIZA   (o que pode fazer lá dentro)
+  //
+  // ⚠️ ISTO É CONFORTO, NÃO É A CORREÇÃO. Quem impede de facto é o servidor
+  // (`_lib/cota-utils.mjs`, MC89.40-S0): um gate só de frontend não fecha nada,
+  // porque o endpoint continua a poder ser chamado à mão. Aqui só se evita que
+  // o lojista tente e leve com um erro seco.
+  //
+  // `null` significa AINDA NÃO SEI — e é deliberadamente distinto de `false`.
+  // Quem consome tem de tratar os três estados; dizer "inativa" a quem ainda não
+  // foi verificado é a mesma família de erro que o MC89.36 veio corrigir.
+  const cotaAtiva = cotaCorporativa == null
+    ? null
+    : (cotaCorporativa.vendida === true
+       && typeof cotaCorporativa.categoria === "string"
+       && CATEGORIAS_COTA.has(cotaCorporativa.categoria.toLowerCase()));
+
   // Grava o tipo assim que ele é CONFIRMADO (e apaga o palpite quando deixa de
   // ser corporativo, para um ex-lojista não ficar preso ao painel antigo).
+  //
+  // MC89.36 — passa a escrever na chave própria em vez de dentro do
+  // `gut_saldo_cache`. Era ali que o palpite morria: a guarda de coerência do
+  // saldo (mais abaixo, AppContext:659-670) apaga esse registo inteiro no
+  // logout, e levava o palpite à frente sem saber que ele lá estava.
   useEffect(() => {
     if (!address || cotaCorporativa == null) return;
-    gravarSaldoCache(address, { tipoConfirmado: tipoUsuario === "corporativo" ? "corporativo" : null });
+    gravarDicaLojista(address, tipoUsuario === "corporativo");
   }, [address, cotaCorporativa, tipoUsuario]);
 
   // Atualiza cotaCorporativa em memória após auto-cadastro (SejaNossoParceiro)
   // sem aguardar novo fetch do servidor.
-  const atualizarTipoCorporativo = (data) => { setCotaCorporativa(data); setTipoCarregando(false); };
+  // MC89.36 — o auto-cadastro é uma resposta definitiva tal como a do servidor.
+  //
+  // ⚠️ MC89.41 — `useCallback` NÃO É DECORATIVO AQUI, E A FALTA DELE DAVA UMA
+  // TEMPESTADE DE PEDIDOS.
+  // Esta função era recriada a cada render. O MC89.41 (F3) passou a chamá-la do
+  // `carregar` da CorporativoCarteira, que é um `useCallback` consumido por
+  // `useEffect(() => { carregar(); }, [carregar])`. Com uma identidade nova em
+  // cada render, `carregar` mudava sempre → o efeito voltava a correr → novo
+  // fetch → novo estado → novo render, em ciclo fechado, a bater no `/cotas`
+  // sem parar. Apanhei-o ao rever as dependências, não em execução.
+  // As três funções de estado do React são estáveis, portanto a lista vazia é
+  // correta e a identidade passa a ser constante.
+  const atualizarTipoCorporativo = useCallback((data) => {
+    setCotaCorporativa(data); setTipoCarregando(false); setTipoResolvido(true);
+  }, []);
 
   // MC12.3 Item 4 — Isolamento do mundo lojista. Se um corporativo cair em
   // rota de usuário comum (Dashboard, carteira, mercado, vitrine, ativos…),
@@ -503,6 +671,13 @@ export function AppProvider({ children }) {
   const sessaoOtimista =
     Boolean(saldoCacheInicial?.endereco) && !(ready && !authenticated);
   const pareceAutenticado = isConnected || sessaoOtimista;
+
+  // MC89.31 — "o Privy ainda está a restaurar uma sessão que existe em disco".
+  // Mesma regra de queda do `sessaoOtimista`: o otimismo só cai quando a
+  // resposta for DEFINITIVA e negativa (`ready && !authenticated`), nunca com
+  // `!ready` — ver o comentário acima, medido no MC88.37. Assim, um logout
+  // dentro do painel faz isto passar a false e o ecrã de login volta, como deve.
+  const restaurandoSessao = sessaoEmDisco && !(ready && !authenticated);
   const userLabel = userLabelReal || (sessaoOtimista ? (saldoCacheInicial?.label ?? null) : null);
 
   // Persiste o rótulo no mesmo registo do saldo (mesma chave, mesma guarda).
@@ -1117,6 +1292,24 @@ export function AppProvider({ children }) {
     // neste endereço. Serve para ENCAMINHAR cedo; `tipoUsuario` continua a ser
     // a verdade confirmada e é ele que decide expulsar de uma rota.
     tipoProvavel,
+    // MC89.31 — mesma natureza do `tipoProvavel`, para o ADM. Fotografia do
+    // arranque; só ENCAMINHA. Quem autoriza é o backend (AdminLayout/`isAdmin`).
+    adminProvavel,
+    // MC89.36 — "a pergunta /cotas já foi respondida". Distingue "ainda não sei"
+    // de "sei que é comum", que era a ambiguidade que punha o lojista a olhar
+    // para o Dashboard errado. Só ENCAMINHA.
+    tipoResolvido,
+    // MC89.40 (F2) — `true` | `false` | `null` (ainda não sei). AUTORIZA o que
+    // se pode fazer dentro do painel; não confundir com `tipoUsuario`, que só
+    // ENCAMINHA. Quem impede de facto é o servidor.
+    cotaAtiva,
+    // MC89.36.1 — "há um login a decorrer neste instante" (params do OAuth no
+    // URL). Fecha os 1 889 ms de Dashboard comum medidos no login fresco, em que
+    // nem `gut_saldo_cache` nem `privy:connections` existem ainda.
+    loginEmCurso,
+    // MC89.31 — "há sessão em disco e o Privy ainda não respondeu". Só para
+    // escolher entre esperar e pedir login. Nunca para habilitar ações.
+    restaurandoSessao,
     vencedor,
     abrirModal,
     desconectar,

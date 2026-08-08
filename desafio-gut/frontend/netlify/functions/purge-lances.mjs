@@ -2,7 +2,7 @@
 // Body: { edicaoId: "R-1" }
 // Deleta a chave lances-relampago:{edicaoId} no Netlify Blobs e remove
 // entradas relacionadas em lance-idem (cujo valor referencia o mesmo edicaoId).
-// Auth: somente admin (guardAdmin — Bearer admin-jwt OU x-admin-token legado).
+// Auth: somente admin (guardAdmin — Bearer admin-jwt).
 // Endpoint destrutivo de reset/manutenção. Idempotente: pode ser chamado várias vezes.
 
 import { getStore } from "@netlify/blobs";
@@ -33,7 +33,7 @@ export default async (req) => {
     return jsonError(405, "metodo_invalido", "use POST", { allowed: ["POST"] });
   }
 
-  // AUTORIZAÇÃO — admin (Bearer admin-jwt OU x-admin-token legado). [MC39.17.1 B-P0-1]
+  // AUTORIZAÇÃO — admin (Bearer admin-jwt). [MC39.17.1 B-P0-1]
   // Endpoint destrutivo: sem este guard qualquer um apagaria os lances da edição ativa.
   const denied = await guardAdmin(req);
   if (denied) return denied;

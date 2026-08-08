@@ -1,5 +1,5 @@
 // POST /.netlify/functions/consolidar-lances   — APENAS coordenação/admin.
-// Body: { edicaoId }   Header: Authorization: Bearer <admin-jwt>  OU  x-admin-token
+// Body: { edicaoId }   Header: Authorization: Bearer <admin-jwt>
 //
 // MC28.1 SEGMENTO 4. Consolida o leilão no fecho:
 //   1) lê TODOS os lances (Key-Per-Bid) com paginação + paralelismo (SEGMENTO 5);
@@ -50,7 +50,7 @@ export default async (req) => {
   if (process.env.NETWORK_STAGE !== "mainnet")
     return jsonError(409, "fora_de_mainnet", "consolidação só corre em mainnet");
 
-  // 1. AUTORIZAÇÃO — admin (Bearer admin-jwt OU x-admin-token legado)
+  // 1. AUTORIZAÇÃO — admin (Bearer admin-jwt)
   const denied = await guardAdmin(req);
   if (denied) return denied;
 

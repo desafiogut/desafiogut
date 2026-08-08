@@ -10,7 +10,8 @@ import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button, Input } from "../../components/ui";
 import StatusCard from "../../components/admin/StatusCard.jsx";
 import ComandoButton from "../../components/admin/ComandoButton.jsx";
-import { COR, ouTraco } from "./_ui.jsx";
+import { COR, ouTraco , TituloSeccao } from "./_ui.jsx";
+import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 
 // ── Formatação ──────────────────────────────────────────────────────────────
 
@@ -137,7 +138,7 @@ export default function Operacoes() {
 
       {/* ── STATUS DO SISTEMA ────────────────────────────────────────────── */}
       <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>ESTADO DO SISTEMA</h3>
+        <TituloSeccao>ESTADO DO SISTEMA</TituloSeccao>
         <div style={{
           display: "grid",
           gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fill, minmax(210px, 1fr))",
@@ -182,7 +183,7 @@ export default function Operacoes() {
 
       {/* ── FILA DE TAREFAS ──────────────────────────────────────────────── */}
       <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>FILA DE TAREFAS</h3>
+        <TituloSeccao>FILA DE TAREFAS</TituloSeccao>
         {fila?.erro ? (
           <p style={{ color: COR.danger, fontSize: "0.78rem" }}>{fila.erro}</p>
         ) : (
@@ -233,7 +234,10 @@ export default function Operacoes() {
               </table>
             )}
             {!fila?.linhas?.length && (
-              <p style={{ color: COR.muted, fontSize: "0.78rem", fontStyle: "italic" }}>Fila vazia.</p>
+              <EstadoVazio
+                titulo="Fila vazia"
+                descricao="Não há tarefas em espera. As compras de senhas entram aqui até serem processadas."
+              />
             )}
           </>
         )}
@@ -241,7 +245,7 @@ export default function Operacoes() {
 
       {/* ── COMANDOS ─────────────────────────────────────────────────────── */}
       <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>COMANDOS</h3>
+        <TituloSeccao>COMANDOS</TituloSeccao>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
           {COMANDOS.map((c) => (
             <ComandoButton
@@ -257,12 +261,10 @@ export default function Operacoes() {
       {/* ── COMANDOS CRÍTICOS ────────────────────────────────────────────── */}
       {nivelAdmin === "super-admin" && (
         <section>
-          <h3 style={{
-            fontSize: "0.78rem", color: COR.danger, margin: "0 0 0.5rem",
-            letterSpacing: "0.05em",
-          }}>
+          {/* Vermelho de propósito: é a única secção de ação irreversível. */}
+          <TituloSeccao style={{ color: COR.danger }}>
             COMANDOS CRÍTICOS (super-admin)
-          </h3>
+          </TituloSeccao>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
             {COMANDOS_CRITICOS.map((c) => (
               <ComandoButton

@@ -10,10 +10,11 @@
 // expira o webhook se demorar muito e marca como "Falhou" no painel. A
 // chamada GET /v1/payments/:id é síncrona aqui mas com timeout de 12s.
 //
-// Segurança (MC39.17.2 / B-P1-1): valida HMAC `x-signature` quando
-// MP_WEBHOOK_SECRET está configurado (ver _lib/mp-signature.mjs). Enquanto o
-// segredo não estiver set, mantém o comportamento anterior (fail-open) — o
-// valor/status são re-buscados na API do MP e há idempotência por pedidoId.
+// Segurança (MC39.17.2 / B-P1-1 + MC87 P1-2): valida HMAC `x-signature`
+// quando MP_WEBHOOK_SECRET está configurado (ver _lib/mp-signature.mjs).
+// O default é FAIL-CLOSED: sem segredo configurado, a requisição é rejeitada
+// (401). A exceção é explícita — MP_WEBHOOK_ALLOW_UNSIGNED=true restaura o
+// fail-open (válvula de rollback, ruidosa de propósito).
 //
 // Configurar no painel do Mercado Pago:
 //   Settings → Webhooks → URL = https://silly-stardust-ca71bc.netlify.app/.netlify/functions/webhook-mercadopago

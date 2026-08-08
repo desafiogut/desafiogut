@@ -1,0 +1,172 @@
+MC89.33 — DIAGNÓSTICO DA EXPERIÊNCIA DO UTILIZADOR COMUM
+Data: 2026-08-01 | Aparelho: Xiaomi 21091116UG (Android 13) | APK: MC89.31
+Método: CDP sobre adb, de dentro do WebView. R1 CUMPRIDA: zero alteração de código.
+
+================================================================================
+0. NOTA DE MÉTODO — UMA MEDIÇÃO DESCARTADA
+================================================================================
+A primeira cascata deu ZERO pedidos a functions. Não era a app: era o defeito
+transitório de DNS do WebView já documentado (MC89.30 §0.2). Capturado:
+
+    14× net::ERR_NAME_NOT_RESOLVED  eth-mainnet.g.alchemy.com
+     8× net::ERR_NAME_NOT_RESOLVED  silly-stardust-ca71bc.netlify.app
+     8× net::ERR_NAME_NOT_RESOLVED  auth.privy.io
+    (o próprio aparelho resolvia auth.privy.io por ping em 6,6 ms)
+
+Reciclado com `svc wifi disable/enable`; todos os números abaixo são POSTERIORES
+e com rede sã. Nenhuma medição contaminada foi usada.
+
+⚠️ ACHADO COLATERAL, e é sério: nesse estado a app ficou presa em "Restaurando
+sessão…" indefinidamente. Esse ecrã é do MC89.31 e aparece quando há sessão em
+disco e o Privy ainda não respondeu — se o Privy NUNCA responder, não há saída
+nem botão. Antes do MC89.31 via-se "Faça login para verificar privilégios", que
+era igualmente errado mas tinha um botão. Ver o PLANO, item C-4.
+
+================================================================================
+1. O QUE O UTILIZADOR COMUM VÊ, E QUANDO  [MEDIDO]
+================================================================================
+Marcos visíveis no Dashboard, gravador instalado antes do primeiro script:
+
+    478 ms   primeiro texto
+    478 ms   card "Saldo (R$)" presente
+    478 ms   VALOR do saldo pintado ("R$ 0.00")
+    478 ms   conteúdo do Dashboard ("Edição Ativa" / "Menor Lance")
+    478 ms   saudação COM NOME ("Olá, …")
+    478 ms   card de Senhas
+
+Tudo no MESMO fotograma, aos 478 ms. Não há espera visível, não há ecrã vazio,
+não há spinner. O saldo otimista (MC88.34) e o rótulo otimista (MC88.38) estão a
+fazer exatamente o que foram feitos para fazer.
+
+NAVEGAÇÃO entre ecrãs comuns — tempo até haver conteúdo:
+    Carteira 14 ms · Mercado 18 ms · Vitrine 18 ms · Programação 32 ms
+    Meus Ativos 20 ms
+
+>>> CONCLUSÃO DURA: o Dashboard do utilizador comum NÃO é lento a aparecer, e a
+navegação também não. Qualquer plano que ataque render, code-splitting ou
+skeletons está a atacar 14–32 ms. O que é lento é OUTRA coisa — secções 2 e 3.
+
+================================================================================
+2. CASCATA DE REDE NO ARRANQUE  [MEDIDO, rede sã, 25 s]
+================================================================================
+    +ms   status  endpoint
+      0    200   edicoes
+      4    200   analytics
+      6    200   lances-flash?edicaoId=R-1
+    186    200   analytics                 ← 2ª vez em 182 ms
+   1351    200   auth-user
+   3320    200   lances-flash
+   4218    404   cotas?cliente_id=0x…      ← auth-user demorou ~2,9 s a responder
+   4220    200   saldo-rs
+   4221    200   notificacoes
+   6855    404   cotas?email=…@…           ← +2637 ms DEPOIS do primeiro cotas
+   9224    200   saldo-rs
+  ...
+
+2.1 — A CADEIA `cotas` É SEQUENCIAL E, PARA O COMUM, INÚTIL POR DESENHO.
+  AppContext.jsx:385-406 faz até três `await` em série: por endereço, por email
+  de login e por email de cadastro recente. Para quem NÃO é lojista, a resposta
+  certa é 404 nas três — e só se sabe isso depois de as fazer.
+  MEDIDO: cotas#1 aos 4218 (404, cold ~2,6 s) e cotas#2 aos 6855 (404).
+  `tipoCarregando` só cai por volta dos 7,1 s.
+
+  O comentário do MC88.33 no próprio ficheiro (linhas 368-375) explica porque as
+  três NÃO foram colapsadas numa: cobrem identidades diferentes. Está certo — mas
+  cobrir identidades diferentes não obriga a fazê-las EM SÉRIE. As duas primeiras
+  podem sair juntas; para quem é lojista por endereço, a segunda é descartada;
+  para quem é comum, poupa-se uma ida completa.
+
+2.2 — O CUSTO REAL É COLD START, NÃO NÚMERO DE PEDIDOS.
+  `auth-user` levou ~2,9 s a responder (1351 → 4218). Bate certo com os
+  ~2,7 s/função medidos no MC89.32 §3. O caminho crítico do arranque é
+  auth-user (cold) → cotas#1 (cold) → cotas#2 (warm) ≈ 7 s até a app saber
+  que perfil tem à frente.
+
+================================================================================
+3. POLLING EM REPOUSO  [MEDIDO, app parada, edição a decorrer]
+================================================================================
+  lances-flash    8× em 25 s   ≈ 3,3 s   ≈ 18 pedidos/min
+  saldo-rs        4× em 25 s   ≈ 5,0 s   ≈ 12 pedidos/min
+  notificacoes    2× em 25 s   ≈ 10 s    ≈  6 pedidos/min
+  ---------------------------------------------------------
+  TOTAL em repouso                       ≈ 36 pedidos/min
+
+3.1 — `lances-flash` a 3 s ESTÁ CORRETO E NÃO DEVE SER MEXIDO ÀS CEGAS.
+  O enunciado propõe passar 3 s → 5 s. Verifiquei o estado real antes de opinar:
+      gut_prazo_flash = 1785625165 → faltavam 1369 s (~23 min). Edição A DECORRER.
+  A cadência já é adaptativa desde o MC88.31 (AppContext.jsx:609-628): 3 s com
+  edição a correr, 15 s em repouso. Os 3 s medidos são o comportamento
+  DESENHADO para o momento em que o produto acontece — um leilão ao vivo.
+  Passar para 5 s degrada a responsividade no único momento que importa, por um
+  ganho de 6 pedidos/min. É uma decisão de produto, não uma otimização óbvia.
+
+3.2 — `saldo-rs` a 5 s NÃO tem pausa por visibilidade.  ⚠️ AQUI SIM.
+  AppContext.jsx:821-826 é um `setInterval(refetchSaldoRs, 5000)` seco. Compare
+  com `notificacoes` (linhas 828-833), que é adaptativo E pausa em
+  `visibilitychange`. O saldo continua a ser pedido 12×/min com a app aberta e
+  parada, sem nada em curso. É o polling com pior relação custo/benefício dos
+  três: o saldo em R$ do utilizador muda quando ELE faz algo ou quando um PIX
+  cai — não de 5 em 5 segundos, indefinidamente.
+
+3.3 — `lances-flash` NÃO TEM RATE LIMIT NO SERVIDOR.
+  Os imports de netlify/functions/lances-flash.mjs são só blobs, validate e cors
+  — não há `aplicarRateLimit`. Todos os outros do caminho comum têm
+  (auth-user 10, saldo-rs 30, cotas-get 30, notificacoes e edicoes por
+  constante). Não é um problema de latência para o utilizador; é exposição de
+  custo e de carga. Fica registado, não é prioridade deste plano.
+
+================================================================================
+4. PEDIDOS REDUNDANTES POR NAVEGAÇÃO  [MEDIDO]  ← O ACHADO NOVO
+================================================================================
+  rota           pedidos disparados numa única navegação
+  ------------   ------------------------------------------------------
+  Carteira       lances-flash, referral×2, analytics, saldo-rs
+  Mercado        cotas×4, analytics
+  Vitrine        cotas×2, produtos×8, analytics, saldo-rs
+  Programação    analytics, saldo-rs
+  Meus Ativos    analytics
+
+4.1 — `produtos×8` na Vitrine é um N+1 que corre DUAS vezes.
+  Vitrine.jsx:527-531 faz `SLOTS.map((s) => apiGet('produtos?categoria=' + s.id))`
+  — um pedido por categoria. São 4 slots, logo 4 pedidos; medi 8, portanto o
+  efeito corre duas vezes. Um único `produtos?categorias=a,b,c,d` resolveria os
+  quatro; corrigir a dupla execução resolve o resto.
+
+4.2 — `cotas×4` no Mercado, com `cotas` a ser justamente o endpoint mais caro do
+  arranque (§2.1). Quatro chamadas ao mesmo sítio numa navegação.
+
+Isto é o oposto do que o enunciado supunha: o problema não é renderizar demais,
+é PEDIR demais, e pedir repetido.
+
+================================================================================
+5. CACHE: NÃO EXISTE NO CAMINHO DO UTILIZADOR COMUM
+================================================================================
+Procura por `cacheGet|cacheAside|cacheSet` em netlify/functions: 11 ficheiros,
+e são TODOS admin-* mais `produtos` e o próprio _lib/cache.mjs.
+
+  saldo-rs · notificacoes · cotas · auth-user · lances-flash · edicoes
+  → NENHUM tem cache, sequer escrito.
+
+E, mesmo que tivessem, o MC89.32 §2 provou que a camada está DESLIGADA em
+produção (REDIS_URL/REDIS_TOKEN ausentes das 52 variáveis). Portanto, para o
+utilizador comum, hoje: nem cache implementado, nem camada ligada.
+
+================================================================================
+6. O QUE O ENUNCIADO SUPÔS E A MEDIÇÃO CORRIGE
+================================================================================
+  "Skeleton screens para o utilizador ver estrutura antes dos dados"  ❌ SERIA UMA REGRESSÃO.
+      O Dashboard já pinta VALORES REAIS (do cache otimista) aos 478 ms.
+      Trocar números por caixas cinzentas é andar para trás.
+  "Lazy loading de componentes (GUTO, Vitrine) com IntersectionObserver"  ❌ 14–32 ms.
+  "Priorizar dados críticos: saldo e edição primeiro"  ❌ JÁ SÃO OS PRIMEIROS (478 ms).
+  "Polling 3 s → 5 s"  ⚠️ VER §3.1 — os 3 s são o desenho correto com leilão a decorrer.
+  "cotas é chamado para o comum e devolve 404"  ✅ CONFIRMADO, e é sequencial (§2.1).
+  "Cold start das funções"  ✅ CONFIRMADO (~2,9 s em auth-user).
+  "Ausência de cache"  ✅ CONFIRMADO e pior do que supunha (§5).
+
+================================================================================
+7. EVIDÊNCIAS
+================================================================================
+  waterfall.mjs · marcos-comum.mjs · rotas-comuns.mjs · falhas.mjs ·
+  estado-edicao.mjs (scratchpad da sessão)
+  Código citado com ficheiro e linha. Contagens de pedidos por CDP Network.

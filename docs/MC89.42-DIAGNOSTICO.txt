@@ -1,0 +1,167 @@
+MC89.42 — DIAGNÓSTICO DO ADMIN PANEL
+Data: 2026-08-02 | R1 CUMPRIDA: zero alteração de código.
+Método: inventário do repositório + consultas read-only ao Supabase de produção.
+
+================================================================================
+⚠️ A PREMISSA DO ENUNCIADO ESTÁ DESATUALIZADA — E A DIFERENÇA MUDA O PLANO
+================================================================================
+O enunciado diz: "Atualmente apenas a Visão Geral (MC89.7) está implementada" e
+"algumas funções estão isoladas, outras ainda não integradas ao frontend".
+
+    NENHUMA DAS DUAS COISAS É VERDADE HOJE.
+
+    páginas admin ............ 11 ficheiros, 2 264 linhas
+    componentes admin ........ 11 ficheiros,   990 linhas
+    funções backend admin-* .. 22 ficheiros, 2 002 linhas
+    funções NÃO integradas ... 0   ← contei uma a uma
+
+As 22 funções `admin-*` são todas chamadas pelo frontend: alerts, aprovacao,
+commands, config, financeiro-relatorio, financeiro-resumo, financeiro-transacoes,
+list, logs, notifications, notify, onchain, queue, series, sessions,
+sessions-revoke, stats, status, user, user-ajuste, user-bloqueio, users.
+
+⇒ O painel NÃO é "simples". Tem nove destinos de navegação, tabelas com filtros,
+  gráficos, comandos de infraestrutura e um contexto de sessão próprio. O que
+  falta NÃO são páginas.
+
+⇒ ISTO IMPORTA PARA O PLANO: um MC que arranque a construir "gestão de
+  utilizadores" e "gestão de cotas" do zero estaria a reescrever o que existe. O
+  esforço tem de ir para onde estão as lacunas REAIS, que são outras (§3).
+
+================================================================================
+1. O QUE EXISTE — INVENTÁRIO
+================================================================================
+NAVEGAÇÃO (src/lib/adminNav.js): 9 destinos
+    /admin · /admin/usuarios · /admin/financeiro · /admin/operacoes
+    /admin/logs · /admin/notificacoes · /admin/configuracoes
+    /admin/aprovacoes · /admin/cotas
+
+PÁGINAS (linhas)
+    VisaoGeral 333 · Operacoes 282 · PerfilUsuario 260 · ConfiguracoesAdmins 220
+    Cotas 190 · GestaoUsuarios 190 · _ui 171 · LogsAuditoria 164
+    GestaoFinanceira 162 · Aprovacoes 157 · Comunicacao 135
+
+COMPONENTES: AdminLayout 286 · GraficoLinha 133 · ComandoButton 116 ·
+    EstadoVazio 99 · AtalhosAdmin 86 · EnderecoTruncado 83 ·
+    NavAdminPersistente 74 · StatusCard 36 · AdminToast 34 · Spinner 24 ·
+    ToastContainer 19
+
+⇒ Há infraestrutura de UI própria e reutilizável (estado vazio, toast, spinner,
+  gráfico, botão de comando, truncagem de endereço). Não é preciso inventá-la.
+
+================================================================================
+2. COBERTURA POR ÁREA DE GOVERNANÇA (as 10 do enunciado)
+================================================================================
+  ÁREA                    BACKEND   FRONTEND   OBSERVAÇÃO
+  Utilizadores ............ ✅       ✅        ⚠️ a FONTE é o problema (§3.1)
+  Cotas ................... ✅       ✅        ⚠️ formulário incompleto (§3.3)
+  Produtos/banners ........ parcial  ✅        aprovações genéricas, não moderação
+  Lances .................. ❌       ❌        tabela `lances` = 0 (é on-chain)
+  Financeiro .............. ✅       ✅        resumo + transações + relatório
+  Logs de auditoria ....... ✅       ✅        ⚠️ tabela VAZIA (§3.2)
+  Configurações sistema ... ✅       ✅        admin-config
+  Gestão de admins ........ ✅       ✅        ConfiguracoesAdmins
+  Comandos infra .......... ✅       ✅        Operacoes + ComandoButton
+  Notificações ............ ✅       ✅        admin-notify + Comunicacao
+
+  ⇒ 8 de 10 cobertas de ponta a ponta. As lacunas são "Lances" e a profundidade
+    de "Produtos/banners" — e ambas têm explicação estrutural, não desleixo.
+
+================================================================================
+3. AS LACUNAS REAIS — TRÊS, E NENHUMA SE RESOLVE COM UMA PÁGINA NOVA
+================================================================================
+
+3.1 ⚠️ O ADMIN NÃO VÊ OS UTILIZADORES. VÊ QUEM MOVIMENTOU DINHEIRO.
+    [MEDIDO — definição da vista em produção]
+
+    `admin-users.mjs` lê de `vw_utilizadores`, que é um UNION de TRÊS fontes:
+        cotas (só cliente_id em forma de endereço) ∪ saldo_rs ∪ saldo_rs_creditos
+
+    Ou seja: a lista de "utilizadores" é RECONSTRUÍDA a partir de pegadas
+    financeiras. É uma solução engenhosa para um problema real — a identidade
+    vive no Privy e não há tabela de utilizadores — mas tem uma consequência que
+    não está escrita em lado nenhum:
+
+      ⇒ QUEM ENTRA NA APP E NÃO TRANSACIONA É INVISÍVEL PARA O ADMIN.
+        Não aparece para ser bloqueado, consultado ou apoiado.
+
+    MEDIDO HOJE: `vw_utilizadores` devolve 7 linhas — o mesmo número que `cotas`.
+    Não há um único utilizador comum visível no painel.
+
+    ⇒ Isto NÃO se corrige com UI. Exige uma fonte de identidade/atividade — e é
+      a decisão mais importante deste MC (ver plano, P0-A).
+
+3.2 ⚠️ A TABELA DE AUDITORIA ESTÁ VAZIA — E ISSO PODE SER UM DE DOIS PROBLEMAS
+    [MEDIDO: `SELECT COUNT(*) FROM admin_logs` → 0]
+
+    ⚠️ CORREÇÃO A MIM PRÓPRIO: a minha primeira leitura foi que o log só estava
+    ligado numa função. Estava errada — procurei por `registrarLog`, e o helper
+    chama-se `registrarAcao`. Refeita a contagem:
+
+        admin-user-bloqueio ......... 2 chamadas (+ confirmarAcao)
+        admin-user-ajuste ........... 2 (+ confirmarAcao)
+        admin-commands .............. 3
+        admin-config ................ 2
+        admin-notify ................ 2
+        admin-sessions-revoke ....... 2
+        admin-financeiro-relatorio .. 2
+        admin-aprovacao ............. 0   ⚠️ ZERO
+
+    O desenho é bom: `registrarAcao` ANTES e `confirmarAcao` DEPOIS, portanto uma
+    ação que rebente fica registada como falhada em vez de desaparecer.
+
+    ⇒ MAS A TABELA TEM 0 LINHAS. Só há duas explicações, e são muito diferentes:
+        (a) nenhuma ação crítica foi alguma vez executada em produção; ou
+        (b) a escrita está a falhar em silêncio.
+      NÃO SEI QUAL É, e não é honesto escolher uma. Distinguir exige uma sonda
+      viva (executar uma ação inócua e ver se aparece linha) — está no plano.
+
+    ⇒ E `admin-aprovacao` com ZERO é lacuna certa: aprovar ou rejeitar um pedido
+      não deixa rasto nenhum. Isso é R3 por cumprir.
+
+3.3 ⚠️ O FORMULÁRIO DE COTAS CONSEGUE CRIAR COTAS MEIO-VÁLIDAS
+    [LIDO — src/pages/admin/Cotas.jsx:26]
+
+    Campos: cliente_id, cliente_nome, produto_nome, valor, `vendida`.
+    NÃO TEM `categoria`. Mas `cotas.mjs:148` aceita `categoria` no upsert.
+
+    ⇒ Um ADM que marque "vendida" produz `vendida:true, categoria:null` — que o
+      gate do MC89.40 trata como INATIVA. O lojista fica trancado por uma ação
+      administrativa de boa-fé, sem nada no ecrã a explicar porquê.
+    ⇒ Já estava registado no MC89.37 §4; continua por corrigir e agora tem
+      consequência real, porque o gate existe.
+
+================================================================================
+4. O QUE ESTÁ MELHOR DO QUE O ENUNCIADO ASSUME
+================================================================================
+  · UI NEUTRA RESPEITADA: procurei emoji usado como ícone/estado nas 22 páginas e
+    componentes admin — ZERO ocorrências. (O painel do LOJISTA usa emoji; o do
+    ADM não. A separação está a ser mantida.)
+  · Confirmação em ações destrutivas já existe em 5 das 11 páginas: Aprovacoes,
+    ConfiguracoesAdmins, LogsAuditoria, Operacoes, PerfilUsuario.
+  · `EstadoVazio` é um componente próprio — os estados vazios foram pensados.
+  · `ComandoButton` isola os comandos de infraestrutura num padrão único.
+
+================================================================================
+5. ESTADO DOS DADOS EM PRODUÇÃO (contexto para priorizar)
+================================================================================
+    vw_utilizadores ..  7      admin_logs .......  0
+    cotas ............  7 (1 paga desde o MC89.41)
+    usuarios_bloqueio   0      notifications ....  0
+    lances ...........  0 (on-chain)   produtos .  0 (vivem em Blobs)
+    saldo_rs .........  5      saldo_rs_creditos  18      fila_tarefas  5
+
+  ⇒ O painel está a governar um sistema quase vazio. Isso é BOM para mexer agora
+    (risco baixo) e MAU para validar (não há dados que exerçam os ecrãs).
+    Qualquer plano tem de dizer como valida — ver plano.
+
+================================================================================
+6. LIMITES DESTE DOCUMENTO
+================================================================================
+L1. Não abri o painel no aparelho neste MC. O inventário é de repositório e os
+    números são de consultas read-only. Não afirmo nada sobre como se COMPORTA.
+L2. Não testei nenhum endpoint admin. Não sei se algum devolve erro em produção.
+L3. §3.2 fica com uma dúvida por resolver de propósito — (a) ou (b) — em vez de
+    um palpite apresentado como facto.
+L4. Não avaliei a qualidade do que cada página mostra, só a existência. "Existe"
+    e "serve" são coisas diferentes, e a segunda exige ver a correr.

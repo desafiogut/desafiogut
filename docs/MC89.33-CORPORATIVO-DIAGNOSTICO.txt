@@ -1,0 +1,124 @@
+MC89.33 — DIAGNÓSTICO DA EXPERIÊNCIA DO UTILIZADOR CORPORATIVO
+Data: 2026-08-01 | APK: MC89.31 | R1 CUMPRIDA: zero alteração de código.
+
+================================================================================
+0. LIMITE DESTE DOCUMENTO — LEIA ANTES DE USAR OS NÚMEROS
+================================================================================
+NÃO MEDI O PAINEL CORPORATIVO NO APARELHO. A conta de teste do operador é ADM e
+NÃO é corporativa — provado pelos dois 404 de `/cotas` medidos no arranque
+(cliente_id e email). Entrar com uma conta de lojista exigiria credenciais que
+eu não tenho e terminaria a sessão do operador.
+
+O que este documento contém:
+  · MEDIDO — tudo o que o corporativo PARTILHA com o comum: o arranque do
+    AppContext (auth-user, cotas, saldo-rs, notificacoes), o polling, o custo de
+    navegação e o cold start. É a maior parte do caminho.
+  · LIDO NO CÓDIGO — o que é exclusivo do painel corporativo.
+  · INFERIDO — assinalado como tal, sempre.
+Nada aqui é apresentado como medição do painel corporativo, porque não é.
+
+================================================================================
+1. O ARRANQUE É O MESMO — E ISSO JÁ FOI MEDIDO
+================================================================================
+`AppContext` não distingue perfis no arranque. O lojista paga exatamente a mesma
+cascata medida em MC89.33-COMUM-DIAGNOSTICO §2:
+
+    t=0     edicoes, analytics, lances-flash
+    t=1351  auth-user            (cold ~2,9 s)
+    t=4218  cotas?cliente_id     ← para o LOJISTA, este responde 200
+    t=4220  saldo-rs, notificacoes
+
+DIFERENÇA A FAVOR DO LOJISTA: a cadeia `cotas` (AppContext.jsx:385-406) PÁRA na
+primeira chamada quando encontra a cota por endereço. O comum faz duas (ambas
+404, ~7,1 s até `tipoCarregando` cair); o lojista encontrado por endereço faz
+UMA (~4,2 s + resposta).
+
+⚠️ MAS: o lojista cuja cota está associada ao EMAIL e não ao endereço paga a
+cadeia inteira, tal como o comum. Pelo código não há como saber quantos são —
+`cliente_id` é a chave real (comentário em AppContext.jsx:50-52 diz que o campo
+`endereco` "fica como segunda tentativa para o dia em que a coluna passe a ser
+preenchida"). Consultei: das 7 cotas, o `cliente_id` é quem carrega o endereço.
+Não classifiquei quantas têm endereço válido — seria preciso ler dados de
+clientes, e não é necessário para o plano.
+
+================================================================================
+2. O QUE É EXCLUSIVO DO PAINEL CORPORATIVO  [LIDO NO CÓDIGO]
+================================================================================
+`pages/CorporativoDashboard.jsx`:
+
+  · linhas 121-139 — banners:
+        Promise.all([ banners?formato=app, banners?formato=site ])
+    JÁ É PARALELO.
+  · linhas 141-157 — `corporativo-analytics?endereco=…&periodo=30`, num efeito
+    SEPARADO e independente. Corre em paralelo com os banners.
+  · linhas 159+ — `produtos?…` do lojista, disparado por `fetchProdutos`,
+    dependente de `cotaCorporativa?.cliente_id` (logo, DEPOIS das cotas).
+
+⇒ O painel corporativo faz, no melhor caso: 2 banners (paralelos) + 1 analytics
+  (paralelo) + 1 produtos (depende das cotas). Três frentes concorrentes, uma
+  dependente.
+
+================================================================================
+3. O QUE O ENUNCIADO SUPÔS E O CÓDIGO DESMENTE
+================================================================================
+"P0 — O painel corporativo pode estar chamando cotas, banners, analytics,
+ carteira em série. Proposto: paralelizar com Promise.all. Impacto: de ~2s
+ para ~1s."
+                                                    ❌ JÁ ESTÁ PARALELIZADO.
+  `Promise.all` está literalmente escrito em CorporativoDashboard.jsx:126, e o
+  analytics vive noutro efeito, o que é ainda mais paralelo do que um
+  `Promise.all`. O ganho proposto não existe porque o trabalho já foi feito.
+
+  O que RESTA sequencial no caminho do lojista não é o painel — é a cadeia
+  `cotas` do AppContext (§1) e a dependência `produtos → cliente_id`, que é uma
+  dependência real de dados e não um descuido.
+
+"P1 — Cache de 5 min para cotas e banners."      ⚠️ CERTO NA INTENÇÃO, BLOQUEADO NA PRÁTICA.
+  Nem `cotas` nem `banners` têm cache escrito, e a camada está desligada
+  (MC89.32 §2: REDIS_URL/REDIS_TOKEN ausentes). Enquanto isso não mudar,
+  acrescentar cache a estes endpoints produz zero. Ordem correta: ligar a
+  camada primeiro.
+
+"P2 — Lazy loading de analytics, carregar só ao abrir a aba Analytics."
+  ⚠️ PLAUSÍVEL, MAS NÃO MEDIDO. O analytics já não bloqueia nada (efeito
+  independente). O ganho seria em pedidos poupados, não em tempo percebido.
+  Só vale a pena depois de medir o painel real. Não o vou recomendar às cegas.
+
+================================================================================
+4. O QUE O LOJISTA PARTILHA E QUE PESA  [MEDIDO no perfil comum]
+================================================================================
+  · Cold start ~2,7–2,9 s por função (MC89.32 §3). O painel corporativo toca
+    `banners`, `corporativo-analytics` e `produtos` — três funções que o comum
+    não toca, logo TRÊS cold starts adicionais na primeira visita.
+    ⇒ INFERÊNCIA, não medição: é aqui que deve estar a maior parte da lentidão
+      percebida do lojista. É a primeira coisa a medir quando houver conta.
+  · Polling em repouso idêntico ao comum: ~36 pedidos/min
+    (lances-flash 18 + saldo-rs 12 + notificacoes 6).
+    ⚠️ Nota: o lojista é redirecionado para /corporativo, mas o polling de
+    `lances-flash` vive no AppContext e NÃO depende da rota — continua a correr
+    a 3 s para um lojista que nem sequer está a ver o leilão. Isto é gasto
+    puro no perfil corporativo, e é o achado mais defensável desta secção.
+  · Sem cache em nenhum endpoint do caminho (MC89.33-COMUM §5).
+
+================================================================================
+5. FEEDBACK VISUAL  [LIDO NO CÓDIGO]
+================================================================================
+O redirecionamento otimista do MC88.42 já leva o lojista a /corporativo no
+primeiro render, e `CorporativoRoute` (App.jsx:94-107) já evita o ecrã em branco
+que o MC88.42 mediu (~74 ms). Não encontrei, no painel corporativo, o problema
+de "tela vazia" que o enunciado supõe — mas não o vi a correr, por isso não
+afirmo que não exista.
+
+================================================================================
+6. CONCLUSÃO HONESTA
+================================================================================
+O caminho do lojista está, em código, MELHOR do que o enunciado assume: o painel
+já é paralelo e o encaminhamento já é otimista. As causas prováveis da lentidão
+que ele sente são as MESMAS três do ADM e do comum — cold start, ausência de
+cache e camada de cache desligada — mais um custo próprio: três funções
+adicionais a arrancar a frio na primeira visita, e um polling de leilão que ele
+não está a ver.
+
+PRÓXIMO PASSO OBRIGATÓRIO ANTES DE EXECUTAR: medir com uma conta corporativa
+real. A sonda `rotas-comuns.mjs` serve tal e qual, mudando as rotas para
+/corporativo*. Sem isso, qualquer número sobre este perfil é palpite.

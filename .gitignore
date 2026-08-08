@@ -60,3 +60,9 @@ supabase/.branches/
 # CLI Supabase também é executada em desafio-gut/frontend/ → ignorar o .temp aninhado
 **/supabase/.temp/
 **/supabase/.branches/
+
+# ── MC89.46: artefatos temporários / scratch — NUNCA commitar ──────────
+UsersMoltbotAppDataLocalTemp/
+**/__pycache__/
+desafio-gut/frontend/android/cloud.md
+scripts/__pycache__/

@@ -1,0 +1,117 @@
+MC-EMAILS/WHATSAPP — DIAGNÓSTICO DA PASTA DE CONTATOS
+Data: 2026-08-01
+Pasta: C:\Users\Moltbot\Desktop\BASE-CONTATOS  (confirmada pelo operador)
+Método: leitura apenas. Nada foi escrito nem movido neste segmento.
+Nota R4: nenhum e-mail ou número aparece neste documento — só contagens.
+
+================================================================================
+1. INVENTÁRIO — 24 ficheiros
+================================================================================
+
+EMAILS\LISTAGEM BRUTA-VALIDADOS\      (bruto, não validado)
+  22 e-mails linkidin.csv                 1.070.154 B    3.617 linhas
+  23 e-mails linkidin II.csv                908.540 B   11.435 linhas
+  8 e-mails linkidin I.csv                1.068.867 B    3.606 linhas
+  Celulares III maio 26  OK.csv              72.021 B    5.144 linhas
+  lista-master-alta-confianca.csv         1.574.514 B   72.302 linhas
+  lista-para-validar.csv                  6.418.095 B  249.909 linhas
+  master-alta-confianca.csv               1.601.546 B   73.128 linhas
+
+EMAILS\REJEITADOS\                    (reprovados na validação)
+  invalidos-9306-lotes.csv                  184.919 B    7.682 linhas
+  parceiros-descartados.csv                     803 B       21 linhas (motivo=mx_invalido)
+  catchall-9306.csv / role-9306.csv / spamtrap-9306.csv   7 B cada — só cabeçalho, 0 dados
+
+EMAILS\VALIDADOS\
+  lista-validada-9306-lotes.csv              82.013 B    1.626 linhas  (1.625 dados)
+  lista-validada.csv                         36.419 B      674 linhas    (673 dados)
+  parceiros-subset.csv                       18.094 B      695 linhas    (694 dados)
+  parceiros-validated.json                  109.064 B      694 elementos
+  parceiros-validated-bulk.json             726.817 B    objecto {success,total,results,…}
+  validados-bulk-9306-lotes.json          7.094.483 B    objecto {total_enviados,…,results}
+  validados-checkpoint.json               7.094.507 B    objecto {lote_atual,total,results}
+
+WHATSAPP\OS NUMEROS EM USO AGORA\
+  whatsapp-validados-corrigido.csv           14.947 B      201 linhas (200 dados)
+  whatsapp-validados-twilio.csv               5.770 B       41 linhas  (40 dados)
+
+WHATSAPP\OS NUMEROS VALIDADOS\
+  numeros-brutos.json                     7.256.653 B    objecto {total,por_arquivo,registros}
+  telefones-padronizados.csv              4.461.696 B   63.307 linhas (63.306 dados)
+  whatsapp-base.csv                       2.418.951 B   28.104 linhas (28.103 dados)
+
+✅ SEM CREDENCIAIS nesta pasta. Procurados e não encontrados: *.key, *.env,
+config*.json. (As credenciais vivas que a memória do projeto regista —
+sendgrid.key, config_envio.json, config_whatsapp.json — estão em Desktop\EMAILS\
+e Desktop\MC-HISTORICO\WHATSAPP\, FORA desta pasta. Não foram tocadas — R5.)
+
+================================================================================
+2. QUATRO ACHADOS QUE MUDAM O PROCESSAMENTO
+================================================================================
+
+2.1 — QUATRO FICHEIROS NÃO TÊM CABEÇALHO. A primeira linha já é dado:
+        22 e-mails linkidin.csv        1ª linha = telefone (DDD + 9 dígitos)
+        Celulares III maio 26  OK.csv  1ª linha = telefone (9 dígitos, sem DDD)
+        23 e-mails linkidin II.csv     1ª linha = endereço de e-mail
+        8 e-mails linkidin I.csv       1ª linha = endereço de e-mail
+      [valores reais redigidos — R4. Estavam aqui na primeira versão deste
+       documento, por lapso meu, contra o que o próprio cabeçalho declara.]
+      Ler por cabeçalho perderia um registo em cada um e, pior, criaria uma
+      coluna com o nome de um contacto real. A extração será por REGEX sobre o
+      texto bruto, que ignora a questão do cabeçalho por completo.
+
+2.2 — O NOME DA PASTA NÃO DIZ O TIPO DE DADO. Dois ficheiros dentro de EMAILS\
+      contêm NÚMEROS, não e-mails:
+        "22 e-mails linkidin.csv"       → telefones (ex.: DDD 92 + 9 dígitos)
+        "Celulares III maio 26  OK.csv" → telefones (9 dígitos, sem DDD)
+      Classificar pela pasta produziria e-mails que são telefones. A
+      classificação será pelo FORMATO do valor, não pela origem.
+
+2.3 — HÁ REJEITADOS MISTURADOS COM VALIDADOS. 7.681 e-mails em
+      invalidos-9306-lotes.csv e 20 em parceiros-descartados.csv já foram
+      REPROVADOS na validação (MC83). Fundir tudo numa só lista de "únicos"
+      devolveria esses endereços ao circuito e destruiria o trabalho de
+      validação — com custo real de reputação de envio.
+      ⇒ Cada registo levará uma coluna ESTADO (validado / bruto / rejeitado), e
+        um e-mail que apareça em REJEITADOS é marcado como rejeitado mesmo que
+        também apareça numa lista bruta. O rejeitado ganha sempre.
+
+2.4 — OS NÚMEROS JÁ FORAM NORMALIZADOS ANTES. `telefones-padronizados.csv` tem
+      `numero_original` + `numero_padronizado`, e `whatsapp-base.csv` tem
+      `numero_padronizado` + `ocorrencias` + `n_fontes`. Existe também uma coluna
+      `tipo` com o valor "suspeito" em muitos registos.
+      ⇒ Onde existir `numero_padronizado`, é esse que vale. Não se re-inventa a
+        normalização por cima de um trabalho que já foi feito e auditado.
+
+================================================================================
+3. AMBIGUIDADE DE NORMALIZAÇÃO A RESOLVER (números sem DDD)
+================================================================================
+"Celulares III maio 26  OK.csv" tem 5.143 números de 9 dígitos SEM DDD
+(formato: 9 seguido de 8 dígitos). Não é possível derivar o DDD do próprio
+número. Opções:
+  (a) manter como estão, marcados `sem_ddd`, fora do bloco E.164;
+  (b) assumir um DDD (92, pela origem amazonense do resto da base) — seria
+      INVENTAR dados e produzir números que podem existir e pertencer a outra
+      pessoa.
+  ⇒ Adotado (a). Ficam num grupo próprio, contados e visíveis, nunca fundidos
+    com os +55 completos.
+
+================================================================================
+4. ORDEM DE GRANDEZA ESPERADA (antes da deduplicação)
+================================================================================
+  E-mails brutos           ~ 400.000 linhas em 7 ficheiros
+  E-mails validados        ~   2.992 (1.625 + 673 + 694, com sobreposição por apurar)
+  E-mails rejeitados       ~   7.701
+  Números padronizados     ~  91.400 linhas (63.306 + 28.103)
+  Números "em uso agora"          200 (198 com whatsapp_candidate=sim)
+
+A deduplicação vai reduzir estes valores de forma substancial — as contagens
+finais reais ficam no relatório, não aqui.
+
+================================================================================
+5. DECISÃO PENDENTE DO OPERADOR (colocada antes de gerar o Excel)
+================================================================================
+O âmbito muda o entregável em duas ordens de grandeza:
+  · TUDO (~400k e-mails brutos, na maioria raspados e nunca validados), ou
+  · SÓ o que serve para enviar (~3k validados + 198 WhatsApp em uso).
+Ambos são produzíveis. A pergunta está no relatório e foi feita ao operador.

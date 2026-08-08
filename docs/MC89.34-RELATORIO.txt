@@ -1,0 +1,120 @@
+================================================================================
+MC89.34 — SAÍDA DO PAINEL ADM: EXECUÇÃO
+Data: 2026-08-01 | Aparelho: Xiaomi 21091116UG (Android 13)
+Branch: feat/mc89.32-diagnostico-perf | 3 commits
+Veredito: ✅ ENTREGUE E VALIDADO NO APARELHO. Falta o deploy (operador).
+================================================================================
+
+RESUMO EM UMA LINHA
+-------------------
+O ADM deixou de estar fechado no painel — mas não pela via que estava aprovada.
+A meio do MC o operador mudou a decisão, e a saída passou a ser terminar a
+sessão em vez de navegar para o Dashboard comum.
+
+================================================================================
+1. O QUE SE ENTREGOU
+================================================================================
+  · Botão "Sair da conta" na barra de estado, com confirmação inline. Revoga a
+    sessão admin e depois termina a sessão do Privy. É a ÚNICA saída do painel.
+  · Botão "← Sair do painel" REMOVIDO.
+  · Guarda de "/" mantida INCONDICIONAL: o ADM nunca chega ao Dashboard comum.
+
+================================================================================
+2. A MUDANÇA DE DECISÃO — E O QUE FOI DEITADO FORA
+================================================================================
+O plano aprovado no MC89.33 era: pausa explícita em sessionStorage para o botão
+levar o ADM ao Dashboard comum, preservando o MC89.31 no arranque seguinte.
+
+Isso foi IMPLEMENTADO, testado (11 testes, 7/7 mutações apanhadas) e VALIDADO no
+aparelho. Funcionava, e ficou medido:
+    "Sair do painel" → rota "/", pausa "1", Dashboard visível ✅
+    /carteira, /mercado, / → sem ressalto ✅
+    voltar a /admin → pausa limpa ✅
+    depois disso, "/" volta a encaminhar → ["/", "/admin"] ✅
+
+O operador viu e decidiu o contrário: "essas telas de utilizador comum no
+utilizador ADM não podem existir". Foi tudo revertido.
+
+Não escondo o trabalho deitado fora porque ele produziu a informação que
+sustenta a decisão: sabe-se agora que a alternativa funciona e o que custaria
+repô-la. Ficam comentários em `App.jsx` e `lib/dicaSessao.js` a registar que a
+ausência de exceções é uma DECISÃO, e dois testes a impedir que volte por
+acidente.
+
+================================================================================
+3. DETALHES QUE VALEM A PENA REGISTAR
+================================================================================
+3.1 — A ordem do "Sair da conta" não é arbitrária.
+  `logout()` (admin) ANTES de `desconectar()` (Privy). A revogação do refresh
+  admin é um pedido ao backend e precisa da sessão Privy viva para sair. Pela
+  ordem inversa, o Privy caía primeiro e o refresh ficaria válido no servidor
+  até expirar sozinho. Há teste a fixar a ordem.
+
+3.2 — `desconectar` já existia.
+  Estava em `AppContext.jsx:1064` e já era exposto. Faltava apenas quem o
+  chamasse de dentro do painel. Zero fiação nova (R1).
+
+3.3 — Confirmação INLINE, não modal.
+  O enunciado pedia modal. A casa confirma inline (`ComandoButton`, e o próprio
+  formulário `pedindoLogin` do AdminLayout). Segui o padrão existente: menos
+  código, coerente, e sem acrescentar uma camada composta — que neste projeto
+  já custou 17,5 fps (MC88.36). Foi escolha, não esquecimento.
+
+================================================================================
+4. VALIDAÇÃO NO APARELHO (APK final)
+================================================================================
+  "/"                    → /admin, trilho ["/", "/admin"]
+  botões do painel       → ["Login Admin", "Sair da conta"]  (sem "Sair do painel")
+  links dentro de /admin → 7, TODOS /admin*  · zero para rotas comuns
+  "Sair da conta"        → confirmação visível, avisa que será preciso entrar
+                           outra vez, tem Cancelar
+  Cancelar               → fecha, continua no painel, sessão Privy intacta
+
+  ⚠️ O logout NÃO foi executado de propósito: terminaria a sessão do operador.
+  Validou-se a presença, a confirmação e o cancelamento — não o efeito final.
+  Esse passo fica para o operador, num momento à escolha dele.
+
+================================================================================
+5. RESÍDUO CONHECIDO — REPORTADO, NÃO SILENCIADO
+================================================================================
+A guarda vive na rota "/". Portanto `/carteira`, `/mercado`, `/vitrine` e
+`/ativos` ainda RENDERIZAM para um admin que lá chegue.
+
+  · No APK: inalcançável. Não há barra de endereço, e medi que nenhum link ou
+    botão do painel leva a essas rotas (7 links, todos /admin*).
+  · Na build WEB: um admin com teclado consegue escrever o URL e ver o ecrã.
+
+Fecha-se estendendo a guarda às rotas comuns, à semelhança do isolamento que já
+existe para o lojista (`AppContext.jsx:454-460`, `rotasProibidas`). Não o fiz
+por iniciativa própria porque alarga o raio de uma correção que tinha de ser
+cirúrgica, e porque o pedido nasceu da experiência no APK, onde o problema não
+existe. Decisão do operador.
+
+================================================================================
+6. TESTES
+================================================================================
+  Frontend : 70 → 81 (com a pausa) → 73 (revertida; +2 anti-regressão)
+  Backend  : 375/375, inalterado
+  Mutação  : 7/7 apanhadas, incluindo "volta a existir uma exceção na guarda" e
+             "volta o botão que leva o ADM às telas comuns"
+
+  Duas correções à própria suite, ambas apanhadas por mutação/execução:
+   · o teste "não há botão" casava com o meu COMENTÁRIO que explica a remoção;
+     passou a afirmar o JSX (`←\s*Sair do painel\s*</Button>`);
+   · o regex da guarda assumia `\n` e o ficheiro está em CRLF.
+
+================================================================================
+7. ENTREGÁVEIS E PENDÊNCIAS
+================================================================================
+  ✅ docs/MC89.34-DIAGNOSTICO.txt
+  ✅ Código: AdminLayout.jsx, App.jsx, lib/dicaSessao.js
+  ✅ Testes (73 frontend, 375 backend, 7/7 mutação)
+  ✅ APK recompilado (build:apk → gradlew → adb install) e validado
+  ✅ Desktop\MC89.34-RELATORIO.txt + cópia em docs/
+  ✅ cloud.md atualizado
+
+  ⏳ Deploy e merge: do operador.
+  ⏳ Executar um logout real para confirmar o efeito final (§4).
+  ⏳ Decidir sobre o resíduo da build web (§5).
+  ⏳ MC89.32 continua ABERTO: falta o login admin no aparelho para medir o
+     caminho autenticado.

@@ -1,6 +1,9 @@
 ================================================================================
 MC89 — SEGMENTO 3 · ARQUITETURA PROPOSTA
 ================================================================================
+⚠️ ATUALIZAÇÃO (MC89.46/47): o header `x-admin-token` foi REMOVIDO dos
+endpoints admin — só `Authorization: Bearer <admin-JWT>` é aceito. As
+menções a `x-admin-token` abaixo refletem o estado da época deste doc.
 Data....: 2026-07-29
 Base....: MC89-MAPA-CODIGO.txt · MC89-REQUISITOS.txt · MC89-VIABILIDADE.txt
 Código..: ZERO alterações (R1)

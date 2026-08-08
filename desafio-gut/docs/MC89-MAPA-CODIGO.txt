@@ -1,6 +1,9 @@
 ================================================================================
 MC89 — SEGMENTO 0 · MAPA DO CÓDIGO EXISTENTE (ESCOPO ADM)
 ================================================================================
+⚠️ ATUALIZAÇÃO (MC89.46/47): o header `x-admin-token` foi REMOVIDO dos
+endpoints admin — só `Authorization: Bearer <admin-JWT>` é aceito. As
+menções a `x-admin-token` abaixo refletem o estado da época deste mapa.
 Data....: 2026-07-29
 Branch..: feat/mc89-adm-system (criada de ec2fb94, o estado deployado)
 Método..: leitura do código + consulta ao Supabase + sondas ao backend de produção

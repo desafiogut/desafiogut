@@ -1,0 +1,170 @@
+# MC89.23 — Diagnóstico UX/UI e Plano de Reforma do Dashboard ADM
+Data: 2026-07-31 | Branch: main | ZERO alterações de código
+
+## PARTE 1 — DIAGNÓSTICO
+
+### 1.1 O que funciona bem (não mexer)
+
+- **Redirecionamento automático**: cold boot → /admin. Sem atrito. ✓
+- **Endereço truncado**: 0x1E1bAe7F…d198cB em todas as telas. Consistente. ✓
+- **Gates de autenticação**: cada tela mostra "Autentique-se para..." quando não há JWT.
+  Mensagens diferentes por tela, semanticamente corretas. ✓
+- **Backlinks**: "← Painel" e "← Utilizadores" consistentes em todas as filhas. ✓
+- **Títulos de secção**: h1 muda para o nome da tela atual. Dá contexto. ✓
+- **Sem erros de consola**: zero em todas as rotas. ✓
+- **Cores de estado**: verde (sucesso/OK), laranja (warning), vermelho (erro) —
+  aplicadas consistentemente em StatusCard, alertas, badges. ✓
+- **Badges de fonte**: cota/saldo_rs/credito com cores distintas. Reconhecíveis. ✓
+- **Paleta navy+laranja**: fundo opaco #0d1235, destaque #f5a623. Coerente com
+  a app de consumo mas com identidade própria (superfície preenchida, sem vídeos). ✓
+
+### 1.2 O que precisa de intervenção (por prioridade)
+
+**P0 — ALTA PRIORIDADE (impacto imediato na usabilidade)**
+
+A. NAVEGAÇÃO: os atalhos-cartão ocupam metade do ecrã no índice.
+   Os 8 cartões (Visão Geral não se lista) empurram o conteúdo real para baixo.
+   Num telemóvel, o admin faz scroll para ver as métricas. Cada abertura da
+   Visão Geral obriga a passar pelos cartões antes de chegar aos dados.
+   → Solução: navegação persistente (barra superior ou lateral) que NÃO ocupa
+   o espaço de conteúdo. Os cartões-atalho saem do índice e passam a ser a
+   NAVEGAÇÃO PRIMÁRIA (visível em todas as telas, não só no índice).
+
+B. HIERARQUIA DE INFORMAÇÃO: o índice é a tela mais importante e a que tem
+   MENOS hierarquia. Os alertas vêm DEPOIS das secções de métricas, e os
+   gráficos vêm ANTES dos alertas. Um alerta crítico (EOA sem gás) está
+   escondido no meio da página.
+   → Solução: alertas no TOPO (primeira coisa que o admin vê). Depois métricas
+   críticas (EOA, fila). Depois gráficos. Depois secções detalhadas.
+
+C. CONSISTÊNCIA DE CARREGAMENTO: cada tela tem o seu próprio padrão de
+   "carregando". Umas usam "A ler…", outras usam "A carregar…", outras não
+   mostram nada. Não há skeleton nem spinner padronizado.
+   → Solução: componente `<AdminSpinner />` ou `<AdminSkeleton />` partilhado.
+
+**P1 — MÉDIA PRIORIDADE (qualidade de vida)**
+
+D. TERMINOLOGIA: "Config" vs "Configurações" — o adminNav diz "Config"
+   (truncado para caber), o h1 diz "Configurações e Admins", o título
+   EmConstrucao dizia "Níveis de permissão e sessões". Três nomes para a
+   mesma tela.
+   → Solução: unificar. A tela chama-se "Configurações". O atalho diz
+   "Configurações". O h1 diz "Configurações". O adminNav pode ter label="Config"
+   se realmente não couber, mas o h1 nunca deve divergir.
+
+E. CARDS COM VALOR 0: o resumo de Cotas mostra "0 atribuídas" para cada tier.
+   É o valor correto (não há cotas vendidas), mas "0" junto de "—" (quando não
+   há dados) cria uma ambiguidade visual: o 0 é um zero real ou um "não sei"?
+   → Solução: mostrar "0" com opacidade reduzida ou com nota "(zero)" para
+   distinguir de "—" (ausência de dados). Ou: só mostrar tiers com > 0.
+
+F. FEEDBACK PÓS-AÇÃO: após aprovar/rejeitar um cliente ou ajustar um saldo,
+   o resultado aparece como texto inline que desaparece no próximo carregamento.
+   Não há toast, não há confirmação persistente, não há registo visível da ação
+   sem navegar para os Logs.
+   → Solução: sistema de toasts (já existe na app de consumo: Toast.jsx).
+   Reutilizar o componente existente para feedback de ações admin.
+
+**P2 — BAIXA PRIORIDADE (polimento)**
+
+G. ESTADO VAZIO GENÉRICO: "Nenhum pedido com status..." vs "Nenhum registo
+   de auditoria encontrado." vs "Nenhum utilizador encontrado." — todas
+   mensagens diferentes, estilos diferentes, algumas em itálico outras não.
+   → Solução: componente `<EstadoVazio>` partilhado com ícone + mensagem + ação
+   sugerida (quando aplicável).
+
+H. TABELAS SEM HOVER: as linhas das tabelas não têm highlight no hover.
+   Com 6-7 colunas, é fácil perder a linha numa tabela densa.
+   → Solução: `tr:hover { background: rgba(255,255,255,0.03); }` global.
+
+I. SCROLL HORIZONTAL SEM INDICADOR: as tabelas têm `overflow-x: auto` mas
+   sem indicador visual de que há mais colunas. No mobile é ainda pior —
+   o admin pode não saber que há colunas escondidas.
+   → Solução: gradiente de desvanecimento na borda direita quando há overflow,
+   ou badge "→" indicando scroll.
+
+J. TEMPO RELATIVO vs ABSOLUTO: as datas mostram sempre o formato absoluto
+   (dd/mm/aaaa hh:mm). Para ações recentes, "há 3 minutos" ou "hoje às 14:30"
+   seria mais legível. A informação absoluta está disponível no tooltip.
+   → Solução: componente `<TempoRelativo>` com tooltip mostrando a data exata.
+
+### 1.3 O que está BOM e deve ser PRESERVADO
+
+- Paleta de cores (navy + laranja + verde/vermelho/azul semânticos) ✓
+- Endereços truncados com tooltip ✓
+- "—" para dados indisponíveis (nunca 0 falso) ✓
+- Badges coloridos por fonte (cota/saldo_rs/credito) ✓
+- Backlinks consistentes em telas filhas ✓
+- Layout sem emojis, sem Orbitron, sem decoração ✓
+- Confirmação + justificativa obrigatória para ações destrutivas ✓
+- Registo em admin_logs ANTES de executar (fail-CLOSED) ✓
+
+## PARTE 2 — PLANO DE EXECUÇÃO
+
+### Fase 1: Fundação (MC90.0, 1-2 sessões)
+
+**Navegação persistente**: substituir os cartões-atalho do índice por uma barra
+de navegação fixa no topo (mobile: scroll horizontal com indicador; desktop:
+tabs). Os cartões-atalho SAEM do índice. O conteúdo de cada tela ganha o
+espaço que os cartões ocupavam.
+
+**Sistema de loading**: componente `<AdminSpinner />` partilhado, usado em todas
+as telas. Substitui "A ler…", "A carregar…", e estados vazios sem feedback.
+
+**Hierarquia no índice**: alertas → métricas críticas (EOA, fila) → gráficos →
+secções detalhadas. Os alertas são a PRIMEIRA coisa visível.
+
+**Unificar terminologia**: "Configurações" em todo o lado. adminNav label =
+"Configurações" (cabe, testado: 14 caracteres).
+
+### Fase 2: Feedback (MC90.1, 1 sessão)
+
+**Sistema de toasts**: reutilizar `Toast.jsx` da app de consumo. Toda ação de
+mutação (aprovar, bloquear, ajustar, notificar, comando) dispara um toast de
+confirmação. O toast some após 5s ou no clique.
+
+**Tabelas com hover**: `tr:hover` em todas as tabelas do painel.
+
+**Scroll indicador**: gradiente de fade na borda direita das tabelas com
+overflow. Só aparece quando há scroll horizontal.
+
+### Fase 3: Polimento (MC90.2, 1 sessão)
+
+**Estado vazio padronizado**: componente `<EstadoVazio>` com ícone, mensagem
+e ação sugerida. Usado em listas vazias de todas as telas.
+
+**Tempo relativo**: componente `<TempoRelativo>` que mostra "há 3 min" ou
+"hoje 14:30" com tooltip da data exata. Usado em tabelas de logs e transações.
+
+**Cards zero**: linhas com valor 0 mostram o 0 com opacidade reduzida
+(`color: rgba(255,255,255,0.3)`) para distinguir de "—".
+
+### Fase 4: Avançado (MC90.3, 1-2 sessões)
+
+**Busca global**: campo de busca no topo que pesquisa em todas as telas
+(usuários, logs, transações). Resultados agregados por tipo.
+
+**Atalhos de teclado** (desktop apenas): `Ctrl+1` a `Ctrl+7` para as 7 telas.
+`Ctrl+K` para busca global.
+
+**Favoritos**: o admin pode fixar ações frequentes no topo do índice.
+
+## PARTE 3 — O QUE NÃO MUDA
+
+- Infraestrutura de backend (endpoints, _lib, testes)
+- Modelo de segurança (JWT, níveis, fail-CLOSED)
+- Paleta de cores e identidade visual base
+- Fluxos de confirmação e auditoria
+- Decisões D11, D-SALDO, T6, T7
+- Nomes de rotas e endpoints
+
+## PARTE 4 — CRITÉRIOS DE SUCESSO
+
+- Todas as 7 telas navegáveis sem scroll para chegar ao menu
+- Alertas visíveis em < 1s após abertura do índice
+- Nenhuma ação de mutação sem feedback visual (toast)
+- Todas as tabelas com hover e indicador de scroll
+- Zero "A ler…" ou "A carregar…" genéricos (substituídos por AdminSpinner)
+- Terminologia unificada (Config → Configurações)
+- Suite ≥ 342 backend, ≥ 40 frontend em todas as fases
+- APK recompilado e validado após cada fase

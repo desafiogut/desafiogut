@@ -1,0 +1,103 @@
+================================================================================
+MC89.48 - SEGMENTO 0 - DIAGNOSTICO DAS VARIAVEIS DE AMBIENTE (NETLIFY)
+================================================================================
+Data.......: 2026-08-07
+Objetivo...: identificar qual projeto Supabase esta em uso em producao
+Regra......: R4/R5 - nenhum valor de chave/segredo foi transcrito neste ficheiro
+Metodo.....: Netlify CLI 26.1.0 (autenticado). O MCP do Netlify NAO existe neste
+             ambiente (nunca foi instalado), por isso todo o segmento foi feito
+             por CLI, e nao pelo dashboard como o enunciado sugeria.
+
+--------------------------------------------------------------------------------
+0.0 - IDENTIFICACAO DO SITE
+--------------------------------------------------------------------------------
+Projeto Netlify..: silly-stardust-ca71bc
+Project Id.......: be1cc8bb-682b-4667-a341-c8db1f4ab2b5
+URL de producao..: https://silly-stardust-ca71bc.netlify.app
+Dominio custom...: null (nao ha dominio proprio configurado)
+Aliases..........: [] (nenhum)
+Deploy publicado.: 6a6c16692ac428f067fac44b, branch "main", 2026-07-31T03:34:07Z
+
+--------------------------------------------------------------------------------
+0.1 / 0.2 - VARIAVEIS SUPABASE NO CONTEXTO "production"
+--------------------------------------------------------------------------------
+Existem QUATRO variaveis de Supabase (nao apenas uma). Duas para o backend
+(Netlify Functions) e duas para o frontend (prefixo VITE_, entram no bundle):
+
+  SUPABASE_URL              = https://vjslwowwrpcawijdiksm.supabase.co
+  VITE_SUPABASE_URL         = https://vjslwowwrpcawijdiksm.supabase.co
+  SUPABASE_SERVICE_ROLE_KEY = [valor NAO exposto]
+  VITE_SUPABASE_ANON_KEY    = [valor NAO exposto]
+
+Flags de contexto relevantes:
+  DATA_STORE_BACKEND = supabase   <-- o Supabase esta ATIVO, nao e legado dormente
+  NETWORK_STAGE      = mainnet
+
+--------------------------------------------------------------------------------
+0.2b - VERIFICACAO CRUZADA SEM EXPOR SEGREDOS
+--------------------------------------------------------------------------------
+As chaves do Supabase sao JWT cujo payload contem o claim "ref" = identificador
+do projeto. Foi descodificado APENAS esse claim; o token nunca foi impresso nem
+gravado. Isto prova que as chaves pertencem ao MESMO projeto que a URL:
+
+  SUPABASE_SERVICE_ROLE_KEY -> ref=vjslwowwrpcawijdiksm  role=service_role  exp=2036-06-20
+  VITE_SUPABASE_ANON_KEY    -> ref=vjslwowwrpcawijdiksm  role=anon          exp=2036-06-20
+
+Resultado: URL e as duas chaves apontam para o mesmo ref. Zero divergencia.
+
+--------------------------------------------------------------------------------
+0.2c - CONFIRMACAO NO BUNDLE VIVO DE PRODUCAO (licao do MC79)
+--------------------------------------------------------------------------------
+Variavel configurada nao prova o que esta deployado (MC79: producao ja foi
+revertida por drift). Por isso os 20 chunks JS servidos por producao foram
+descarregados e varridos (4.001.200 bytes no total):
+
+  Ocorrencias de "https://<ref>.supabase.co" no bundle vivo:
+     2 x https://vjslwowwrpcawijdiksm.supabase.co
+     (em useRecursosApp-B5qpQQfn.js e web3-zcWl1Atu.js)
+  Nenhuma outra ref de Supabase existe no bundle.
+
+  JWT embutido no bundle: 1 unico -> ref=vjslwowwrpcawijdiksm, role=anon.
+
+Resultado: o codigo REALMENTE SERVIDO ao utilizador fala com vjslwowwrpcawijdiksm.
+
+--------------------------------------------------------------------------------
+0.3 - ACHADO LATERAL: SUPABASE SO EXISTE NO CONTEXTO "production"
+--------------------------------------------------------------------------------
+Contagem de variaveis por contexto (controlo positivo do metodo - garante que o
+"ausente" abaixo e real e nao um erro de leitura):
+
+  production      -> 52 chaves
+  deploy-preview  -> 34 chaves
+  branch-deploy   -> 34 chaves
+  dev             -> 34 chaves
+
+As 18 chaves que existem SO em producao incluem TODAS as do Supabase:
+  CONTRATO_MAINNET, COORDENACAO_ADDRESS, CREDITO_ASSINCRONO, DATA_STORE_BACKEND,
+  LLM_MODEL, MAINNET_CHAIN_ID, MP_PAYER_ID_NUMBER, MP_WEBHOOK_SECRET,
+  NETWORK_STAGE, SENDGRID_API_KEY, SIGNER_BACKEND, SUPABASE_SERVICE_ROLE_KEY,
+  SUPABASE_URL, VITE_CHAIN_ID, VITE_EXPLORER_URL, VITE_NETWORK_STAGE,
+  VITE_SUPABASE_ANON_KEY, VITE_SUPABASE_URL
+
+CONSEQUENCIA (relevante para o objetivo do MC): nenhum contexto do Netlify
+aponta para um segundo projeto Supabase. Nao existe "staging no deploy-preview";
+o deploy-preview simplesmente NAO TEM Supabase nenhum configurado.
+
+--------------------------------------------------------------------------------
+CONCLUSAO DO SEGMENTO 0
+--------------------------------------------------------------------------------
+O projeto Supabase em uso em producao tem ref "vjslwowwrpcawijdiksm"
+(https://vjslwowwrpcawijdiksm.supabase.co), confirmado por 5 evidencias
+independentes e sem uma unica contradicao:
+  1. SUPABASE_URL (backend)
+  2. VITE_SUPABASE_URL (frontend)
+  3. claim ref da SERVICE_ROLE_KEY
+  4. claim ref da ANON_KEY
+  5. bundle JS vivo servido em producao (URL + JWT)
+
+PENDENTE para o Segmento 2: mapear o ref "vjslwowwrpcawijdiksm" para o NOME do
+projeto no dashboard ("DesafioGUT" ou "desafigut-staging"). O ref, por si so, nao
+diz o nome. Ate esse mapeamento estar feito, NENHUMA exclusao pode ser considerada.
+
+Criterio de sucesso do Segmento 0: ATINGIDO (URL identificada e coerente).
+================================================================================

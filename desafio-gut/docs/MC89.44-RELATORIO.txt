@@ -1,0 +1,252 @@
+================================================================================
+MC89.44 — ADMIN PANEL: ARQUITETURA DE INFORMAÇÃO PARA TELEMÓVEL (P1-A)
+================================================================================
+Data    : 2026-08-03
+Commits : 342c6c3 (S0) · a4779d3 (S1) · a3c073a (S2) · f1bac84 (S3) ·
+          eac53f1 (S4) · este (S5)
+Branch  : feat/mc89.32-diagnostico-perf   ⚠️ NÃO deployado (ver PENDÊNCIAS)
+Testes  : src 147/147 · netlify/functions 419/419 · aparelho 45/45
+Skills  : terminal-ops · ux-waiting-audit · verification-loop · canary-watch
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+A navegação do painel ADM está reorganizada por Quem · Dinheiro · Sistema, e
+validada no seu telemóvel. O veredito R8 cumpre-se.
+
+MAS O AGRUPAMENTO NÃO FOI O QUE MAIS IMPORTOU. Ao levantar a navegação para a
+reorganizar, encontrei isto:
+
+  ⚠️ DUAS TELAS VIVAS NÃO TINHAM ENTRADA NENHUMA NO MENU, DESDE O MC89.24.
+
+«Aprovações» e «Cotas» têm rota, componente e backend a funcionar. A barra
+filtrava-as (`TELAS_ADMIN.filter(t => !t.nota)`), e o único componente que ainda
+lhes chamava — `AtalhosAdmin.jsx` — era código morto desde o MC89.24. Só se
+chegava lá escrevendo o URL à mão. Num APK não há barra de endereços: na
+prática, durante vinte MCs, não existiam.
+
+E o MC89.43, há um dia, corrigiu o campo `categoria` do formulário de Cotas —
+um ecrã a que não se chegava.
+
+Isto não estava em lado nenhum do enunciado. Apareceu porque o primeiro
+segmento foi ler antes de escrever.
+
+================================================================================
+⚠️ O ENUNCIADO DESCREVIA UM PAINEL QUE NÃO EXISTE
+================================================================================
+Antes de qualquer código, uma correção — é a segunda vez seguida (o MC89.42
+abriu com a mesma).
+
+    O ENUNCIADO DIZ ......... Visão Geral · Utilizadores · Cotas · Produtos ·
+                              Banners · Lances · Financeiro · Logs · Configurações
+    O CÓDIGO TEM ............ Visão Geral · Usuários · Financeiro · Operações ·
+                              Logs · Notificações · Config · Aprovações · Cotas
+
+Não existem telas de Produtos, de Banners nem de Lances — procurei os termos nas
+onze páginas e nos onze componentes do painel. E faltavam três que existem:
+Operações, Notificações, Aprovações.
+
+⚠️ O TOTAL BATIA — nove e nove — E FOI ISSO QUE ESCONDEU A DIVERGÊNCIA. Um MC
+  que arrumasse "Produtos" e "Banners" em SISTEMA estaria a desenhar navegação
+  para ecrãs que ninguém escreveu.
+
+A estrutura que aprovou (três grupos, por pergunta) manteve-se, porque a decisão
+é sobre a FORMA e essa é boa. O que mudou foi o conteúdo de cada grupo, feito
+com os ecrãs reais.
+
+================================================================================
+O QUE FICOU FEITO
+================================================================================
+QUEM ....... Usuários · Aprovações · Cotas
+DINHEIRO ... Financeiro
+SISTEMA .... Operações · Logs · Notificações · Config
+             (a Visão Geral fica fora dos grupos, como índice)
+
+⚠️ «DINHEIRO» TEM UMA SÓ TELA, E FICA ASSIM DE PROPÓSITO. É a pergunta de maior
+  risco do painel e merece porta própria mesmo com um ecrã atrás — é onde
+  aterram a reconciliação e a exportação do P2, e os lances quando existirem.
+  Enchê-la agora com «Cotas» só para a equilibrar seria arrumar pela silhueta do
+  menu em vez de pelo assunto: em Cotas o objeto é o LOJISTA (tier, aprovação,
+  contacto) e o dinheiro é atributo dele.
+
+CORRIGIDO PELO CAMINHO, tudo verificado no aparelho:
+  · «Aprovações» e «Cotas» voltam a ser alcançáveis                      (D-1)
+  · os rótulos deixam de ser cortados a 4 caracteres no telemóvel        (D-3)
+      "Financeiro" aparecia "Fina"; "Notificações" aparecia "Noti"
+  · alvos de toque de ~28 px passam a 44,0 px MEDIDOS                    (D-4)
+  · saem os glifos ◉◒◓◔◑◐, que só existiam no desktop                    (D-5)
+  · removido o `AtalhosAdmin.jsx`, morto desde o MC89.24                 (D-2)
+  · corrigido o comentário do AdminLayout, que descrevia o contrário do
+    que o ficheiro faz
+
+================================================================================
+DOIS DEFEITOS QUE 45 ASSERTS VERDES NÃO APANHARAM
+================================================================================
+Vale mais do que a lista acima. A validação automática no aparelho deu TUDO
+VERDE — e a captura de ecrã mostrou a barra errada de duas maneiras:
+
+1. ⚠️ A SETA "→" DESENHAVA-SE SEMPRE. Os três grupos cabem folgados em 392 px,
+   por isso a seta prometia conteúdo à direita que não existia. Uma afordância
+   falsa é pior do que nenhuma: manda procurar. Passou a medir-se o corte real
+   (`scrollWidth` vs `clientWidth`, com ResizeObserver).
+   Controlo positivo: a 392 px não aparece; a 300 px e a 240 px aparece.
+
+2. ⚠️ O GRUPO ABERTO TAMBÉM TINHA FUNDO PREENCHIDO, tal como a página atual.
+   «Visão Geral» e «Sistema» liam-se como dois sítios atuais ao mesmo tempo.
+   Aberto ≠ atual: o preenchimento ficou reservado a "é aqui que estou", e o
+   grupo aberto marca-se por peso e contorno — quem diz que está aberto é a
+   linha de destinos que aparece por baixo dele.
+
+Nenhum dos dois é apanhável por assert. Ambos são óbvios a olhar. É a razão
+pela qual o 4.4 pedia capturas e não só um relatório de testes.
+
+================================================================================
+DESVIO AO ENUNCIADO — DECLARADO, NÃO ESCONDIDO
+================================================================================
+O §1.2 pede um "menu lateral" com cabeçalhos de secção INERTES, e nomeia
+`AdminSidebar.jsx`. Esse ficheiro não existe e o menu não é lateral: é uma barra
+horizontal (`NavAdminPersistente.jsx`).
+
+Com rótulos inteiros a 44 px, oito pastilhas mais três cabeçalhos dão ≈800 px
+num ecrã de ≈304 px úteis — TRÊS LINHAS FIXAS, um terço da altura. E isso já
+tinha sido medido neste repositório: o MC89.6 tentou a barra de nove destinos e
+registou que «partiu-se em três linhas irregulares» no aparelho. Repetir a
+tentativa era ignorar prova própria.
+
+  ⇒ NO TELEMÓVEL os grupos COLAPSAM: os cabeçalhos são controlos com
+    `aria-expanded`, e vê-se um grupo de cada vez.
+  ⇒ NO DESKTOP, onde a largura chega, tudo fica visível e os cabeçalhos são
+    inertes, exatamente como o §1.2 pede.
+
+CUSTO: a partir do índice, um destino fora do grupo aberto fica a dois toques em
+vez de um. Por isso o índice abre já com o primeiro grupo («Quem») aberto — é a
+única tela onde sempre se aterra, e deixá-la sem grupo aberto punha tudo a dois
+toques. Se preferir outra ordem de grupos, é uma linha em `GRUPOS_ADMIN`.
+
+================================================================================
+DOIS ACHADOS QUE NÃO PROCURAVA
+================================================================================
+Ambos vieram de a verificação passar a olhar onde não olhava.
+
+1. ⚠️ A GUARDA DE "ZERO EMOJI" DO MC89.4 NÃO VARRIA `components/admin`.
+   Lia `pages/admin` do disco, mas tinha DOIS ficheiros à mão — deixando os
+   outros nove componentes do painel (a barra de navegação incluída) fora da
+   regra que o próprio teste diz aplicar. O comentário dizia "varre a pasta
+   inteira"; o código não varria.
+   Só dei por isso porque apagar o `AtalhosAdmin.jsx` a pôs a rebentar com
+   ENOENT em vez de simplesmente deixar de verificar. Passa a ler as duas
+   pastas do disco.
+
+2. COM A GUARDA ALARGADA, DUAS VIOLAÇÕES VIVAS:
+   · `ComandoButton.jsx` — um ⚠️ a abrir uma linha que já é âmbar e já avisa
+     que a ação fica no log. Saiu.
+   · `StatusCard.jsx` — os quatro estados eram "OK", "⚠", "✗", "?": metade
+     palavra, metade glifo, no mesmo sítio e com o mesmo peso. Passam a ser
+     palavras (OK · AVISO · FALHA · —), e o "—" é o mesmo símbolo que a R-UI-1
+     já usa em todo o painel para "número indisponível".
+
+================================================================================
+E UM DEFEITO NA VISÃO GERAL (§2.1)
+================================================================================
+O §2.1 pedia para garantir que os alertas estão ordenados por urgência.
+NÃO ESTAVAM — nem no backend nem na junção.
+
+`_lib/admin-alertas.mjs` emite por ordem de CONSTRUÇÃO (fila, webhook, rag,
+blobs, cache), o que já punha um `info` antes de um `warning`. E a essa lista o
+frontend concatenava NO FIM `alertasDoFrontend` — que é onde nasce o ÚNICO
+`critical` do painel: a EOA coordenadora sem gás.
+
+  ⇒ "Sem gás, a compra de senhas deixa de ser creditada on-chain" aparecia POR
+    BAIXO de até cinco linhas informativas.
+
+A regra foi para `lib/alertasAdmin.js`, pura e testada: nível desconhecido cai
+para o FIM (não para o topo), o sort é estável (entre iguais o backend continua
+a mandar) e não muta a lista recebida.
+
+O §2.2 não produziu alteração: a Visão Geral não tem links para outras secções
+— tem títulos e métricas. Não havia nada para reapontar. E os títulos do índice
+(CADEIA, OPERAÇÃO, UTILIZADORES, FINANCEIRO) ficam como estão: o grupo é o
+recipiente e a secção é o conteúdo; trocar "UTILIZADORES" por "QUEM" perdia
+especificidade sem ganhar nada.
+
+================================================================================
+COMO SEI QUE ISTO FUNCIONA
+================================================================================
+TESTES ...... 16 novos. O que interessa é um: «TODA a tela é alcançável —
+              índice, ou exatamente um grupo». Entre o MC89.24 e o MC89.43 nada
+              detetava que duas telas tinham desaparecido do menu, porque o
+              MODELO estava certo: era a APRESENTAÇÃO que perdia telas.
+              Três testes leem o TEXTO do componente (não há runner de React):
+              que não filtra por `nota`, que não trunca, que declara 44 px e que
+              não tem mapa de ícones.
+
+MUTAÇÃO ..... Dez mutações, dez apanhadas, controlo verde antes e depois: tirar
+              Cotas do grupo · pôr uma tela em dois grupos · apontar a uma tela
+              fantasma · trocar a ordem dos grupos · repor o filtro por `nota` ·
+              repor o `slice(0,4)` · baixar o alvo para 28 px · tirar o sort ·
+              pôr o nível desconhecido no topo · ordenar in-place.
+              Um teste que passa ainda não provou nada.
+
+APARELHO .... 45 verificações por CDP no WebView (adb forward + WebSocket
+              nativo). Viewport real 392x827. Os 44 px são MEDIDOS com
+              `getBoundingClientRect`, não calculados a partir do CSS.
+
+⚠️ NOTA SOBRE OS TESTES DE TEXTO: a primeira versão falhou contra a PRÓPRIA
+  PROSA do componente — o cabeçalho explica que a barra deixou de fazer
+  `label.slice(0, 4)`, e a busca encontrava a frase. Um teste de texto que não
+  distingue código de comentário proíbe documentar o defeito que ele guarda.
+  Passa a ignorar comentários. Se algum dia houver um "//" dentro de uma string
+  neste ficheiro, parte — e parte a favor: falso ALARME, não falso verde.
+
+================================================================================
+LIMITES — DITOS À FRENTE
+================================================================================
+· A validação no aparelho correu com a SUA sessão, iniciada por si. Não toquei
+  em credenciais (R5).
+· O painel estava em "Login admin necessário para mutações" — validei a
+  NAVEGAÇÃO, não o conteúdo das nove telas com dados reais.
+· Os testes de texto do componente são mais fracos do que um teste de render.
+  Não há runner de React neste projeto (T-1 do MC89.6) e não foi este MC que o
+  introduziu.
+· A ordenação dos alertas está testada em unidade e NÃO foi vista com alertas
+  reais no ecrã — o painel não tinha sessão admin ativa para os carregar.
+· O desktop (≥768 px) não foi visto: a validação foi toda no telemóvel, que é
+  onde o problema estava.
+
+================================================================================
+ENTREGÁVEIS
+================================================================================
+  docs/MC89.44-DIAGNOSTICO.txt ............... os seis pontos de dor
+  docs/MC89.44-RELATORIO.txt ................. este ficheiro
+  docs/MC89.44-aparelho-indice-quem.png ...... índice, grupo «Quem» aberto
+  docs/MC89.44-aparelho-grupo-sistema.png .... grupo «Sistema» aberto
+  Desktop/MC89.44-RELATORIO.txt .............. este ficheiro
+  Desktop/MC89.44-EVIDENCIA-nav-*.png ........ as duas capturas
+  cloud.md ................................... atualizado
+
+  CÓDIGO: lib/adminNav.js (GRUPOS_ADMIN) · lib/alertasAdmin.js (novo) ·
+          components/admin/NavAdminPersistente.jsx (reescrito) ·
+          AdminLayout.jsx · ComandoButton.jsx · StatusCard.jsx ·
+          pages/admin/VisaoGeral.jsx · AtalhosAdmin.jsx (removido)
+  TESTES: lib/adminNav.test.mjs (+13) · lib/alertasAdmin.test.mjs (novo, 6) ·
+          _tests/mc894-rotas-trabalho.test.mjs (guarda alargada)
+
+================================================================================
+PENDÊNCIAS
+================================================================================
+FECHADA ..... P1-A (arquitetura de informação por perguntas)
+
+⚠️ POR SI ..... DEPLOY WEB. Isto está na branch `feat/mc89.32-diagnostico-perf`
+              e NÃO foi deployado. O APK no seu aparelho já tem tudo; a web
+              NÃO. E o deploy é seu — com `--build`, nunca `--dir=dist`.
+              Enquanto não for feito, o painel ADM no browser continua com a
+              barra antiga e com «Aprovações» e «Cotas» inalcançáveis.
+
+HERDADAS .... P1-B — moderação de conteúdo com rasto (é o MC89.45)
+              P2  — exportação · níveis de admin · lances
+              ⚠️ o P1-B do enunciado fala de "aprovação de produtos e banners".
+                Não há telas de Produtos nem de Banners. Vale decidir, ANTES do
+                MC89.45, se é para as construir ou se "moderação" quer dizer a
+                tela de Aprovações que já existe.
+              índice UNIQUE em `cnpj` (bloqueado pelos duplicados)
+              os 6 registos de teste na base

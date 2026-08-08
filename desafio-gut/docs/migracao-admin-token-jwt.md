@@ -1,6 +1,8 @@
 # Migração ADMIN_TOKEN → JWT Admin (15 min) + Refresh (7 dias)
 
-Status: **Compatibilidade dupla ativa**. Endpoints admin aceitam tanto `x-admin-token` (legado) quanto `Authorization: Bearer <admin-JWT>` (novo) durante a janela de transição.
+Status: **Etapa 3 concluída (MC89.46/47)** — o legado `x-admin-token` foi
+REMOVIDO dos endpoints; só `Authorization: Bearer <admin-JWT>` é aceito.
+A env var `ADMIN_TOKEN` permanece apenas no login (`auth-admin`) até a etapa 4.
 
 ## Por que mudar
 
@@ -64,14 +66,14 @@ Tri-modo:
 
 - Login: assinatura EIP-191 (formato `DESAFIOGUT-ADMIN:<ts>:<addr-lowercase>`, skew máx 5 min) **+** `adminToken === process.env.ADMIN_TOKEN` **+** `endereco ∈ adminAddresses` (Blob `admin-list:admins` ∪ coordenação).
 - Refresh: re-checa que `endereco` ainda é admin (admin removido perde acesso imediatamente).
-- Endpoints admin: `Authorization: Bearer <access>` aceito primeiro; fallback para `x-admin-token` legado.
+- Endpoints admin: `Authorization: Bearer <admin-JWT>` (única via aceita — legado `x-admin-token` removido no MC89.46/47).
 
 ## Cronograma
 
-1. **Agora (este PR)**: dual-mode ativo. AdminPanel continua usando `x-admin-token` (legado). Backend aceita ambos.
-2. **+1 PR (em até 7 dias)**: AdminPanel migra para JWT. Inclui fluxo de login (paste do `ADMIN_TOKEN` legado UMA vez por sessão para troca → access+refresh em memória + refresh em sessionStorage).
-3. **+30 dias após AdminPanel migrar**: remover `x-admin-token` dos endpoints. Auditoria de logs antes — se ainda houver tráfego com header legado, atrasa.
-4. **+90 dias**: remover env var `ADMIN_TOKEN` do Netlify após confirmação que zero tráfego legado restou. Rotação de `JWT_SECRET` em paralelo para invalidar todos os JWTs antigos.
+1. ✅ **Concluído**: dual-mode ativo (histórico).
+2. ✅ **Concluído**: AdminPanel migrado para JWT (login com troca do `ADMIN_TOKEN` uma vez por sessão → access+refresh em memória + refresh em sessionStorage).
+3. ✅ **Concluído (MC89.46/47)**: `x-admin-token` REMOVIDO dos endpoints — só `Authorization: Bearer <admin-JWT>` é aceito (guard admin-auth.mjs, health.mjs, CORS e testes atualizados).
+4. ⏳ **Pendente**: remover env var `ADMIN_TOKEN` do Netlify (auth-admin.mjs ainda a exige no login). Rotação de `JWT_SECRET` em paralelo para invalidar JWTs antigos.
 
 ## Procedimentos operacionais
 

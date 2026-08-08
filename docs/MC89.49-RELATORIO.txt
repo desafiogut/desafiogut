@@ -1,0 +1,187 @@
+================================================================================
+MC89.49 — DEPLOY WEB (NETLIFY): SINCRONIZAR FRONTEND
+RELATÓRIO FINAL
+================================================================================
+Data........: 2026-08-08
+Branch......: feat/mc89.32-diagnostico-perf
+Projeto.....: silly-stardust-ca71bc (be1cc8bb-682b-4667-a341-c8db1f4ab2b5)
+Veredito....: ✅ CONCLUÍDO — frontend web sincronizado e verificado em produção
+
+
+================================================================================
+1. RESUMO EXECUTIVO
+================================================================================
+A web estava parada em 2026-07-31 (commit 9409145, MC89.6–MC89.20) enquanto o
+APK já corria até ao MC89.48. O deploy fechou essa distância: 94 commits,
+28 MCs (MC89.21 → MC89.48).
+
+O deploy foi executado, está live, e foi verificado com evidências em três
+níveis: artefacto construído, artefacto servido pelo CDN, e comportamento do
+site no browser.
+
+Pontos que definem este MC:
+  • O commit em produção era ANTEPASSADO do HEAD → avanço puro, sem reversão.
+  • Acrescentei um deploy DRAFT antes do --prod (desvio justificado do plano).
+  • "CDN requesting 0 files" prova que produção recebeu o artefacto validado.
+  • A branch foi publicada no remoto a meio do trabalho, a pedido do operador.
+  • Encontrei um defeito visual — e provei que é PRÉ-EXISTENTE, não deste deploy.
+
+
+================================================================================
+2. URL DE PRODUÇÃO
+================================================================================
+Produção..........: https://silly-stardust-ca71bc.netlify.app     [HTTP 200]
+Deploy ID.........: 6a7708ba03f222438f8f7660
+Deploy único......: https://6a7708ba03f222438f8f7660--silly-stardust-ca71bc.netlify.app
+Build logs........: https://app.netlify.com/projects/silly-stardust-ca71bc/deploys/6a7708ba03f222438f8f7660
+
+Draft de validação: https://6a7706d01d124c7ed588c627--silly-stardust-ca71bc.netlify.app
+
+
+================================================================================
+3. LOGS DE DEPLOY (resumidos)
+================================================================================
+DRAFT   `netlify deploy --build`                                    exit 0
+        Functions bundling ...... 2m 56s (67 functions)
+        Netlify Build ........... 5m 57.1s
+        CDN ..................... requesting 41 files and 67 functions
+
+PROD    `netlify deploy --prod --build`                             exit 0
+        modules transformed ..... 3.632
+        vite built in ........... 6.23s
+        Netlify Build ........... 4m 41.7s
+        Hashing ................. 264 files + 67 functions
+        CDN ..................... requesting 0 files and 66 functions   <<<
+        Deploy is live .......... SIM
+
+>> "CDN requesting 0 files" é a prova-chave: os assets estáticos que produção
+   recebeu são bit-a-bit os mesmos aprovados no draft.
+
+Avisos: 6 linhas [INVALID_ANNOTATION] do Rolldown sobre comentários
+/*#__PURE__*/ em node_modules/@privy-io/react-auth. Dependência de terceiros,
+pré-existentes, build verde. Sem ação.
+Erros: NENHUM. Falhas de secrets scanning: NENHUMA.
+
+
+================================================================================
+4. PORTÕES PRÉ-DEPLOY (todos verdes)
+================================================================================
+NETWORK_STAGE ............. mainnet
+DATA_STORE_BACKEND ........ supabase      (lido, NÃO alterado — portão MC86)
+MP_WEBHOOK_SECRET ......... DEFINIDA      (portão CRÍTICO MC87, webhook fail-closed)
+CONTRATO_MAINNET .......... 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+VITE_CONTRATO_SEPOLIA ..... 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd  (o que o frontend lê)
+VITE_ALCHEMY_URL .......... eth-mainnet
+chainId ................... 1
+VITE_MOCK_MODE ............ false
+
+Linhagem mainnet: MC60, MC73, MC78, MC87 — todas ancestrais do HEAD.
+.env.production local: NÃO EXISTE (armadilha do MC88.12.1 removida).
+Deploy feito com --build; --dir=dist NUNCA usado.
+
+
+================================================================================
+5. VALIDAÇÃO PÓS-DEPLOY
+================================================================================
+5.1 O SITE
+    GET /                      200 em 0,374 s
+    Requisições da carga       15/15 OK (1 é 206 de range no .webm — normal)
+    Consola                    ZERO mensagens
+                               (com CONTROLO POSITIVO: injetei um console.error
+                               e foi captado → o zero é real, não cegueira)
+    Ecrã                       gate LGPD completo, GUTO, navy+laranja,
+                               botão de aceitar corretamente desativado.
+                               Sem ecrã branco. Sem aviso de "rede Sepolia".
+
+5.2 O BUNDLE SERVIDO POR PRODUÇÃO (download do CDN, não do disco)
+    MC89.44 nav agrupada   "Quem está na plataforma" ............ 1
+                           "Quanto entrou e saiu" ............... 1
+                           "Estado, rasto e definições" ......... 1
+                           "/admin/aprovacoes", "/admin/cotas" .. presentes
+    MC89.43 categoria      "Escolha a categoria da cota." ....... 1
+    Contrato mainnet       0x0052477A…16cd ...................... 1
+    Sepolia abandonado     0x59A73Acc…F6D5 ...................... 0
+    CONTROLO NEGATIVO      string inventada ..................... AUSENTE ✅
+
+5.3 CANARY DAS FUNCTIONS
+    recursos-app 200 · cotas 200 · produtos 200 · webhook-mercadopago 200
+    schedule 400 · saldo-rs 400  → validação de input correta, com corpo
+    ({"code":"mes_invalido"} / {"code":"endereco_obrigatorio"}). Nenhum 502.
+
+5.4 GATE DO ADM
+    /admin anónimo → gate LGPD → "Painel Admin — Faça login para verificar
+    privilégios" + botão Entrar. O gate FUNCIONA.
+
+
+================================================================================
+6. PENDÊNCIAS E LIMITES
+================================================================================
+6.1 TELAS ADM AUTENTICADAS — não validadas pelo agente
+    Exigem OAuth Google via Privy. O browser conduzido por MCP é um perfil
+    separado do do operador; ao navegar para /admin foi redirecionado para
+    accounts.google.com. Completar o login exigiria credenciais que o agente
+    não manuseia (R5).
+    >> COBERTO: o operador validou as telas por fora, na sua sessão ADM.
+    >> COBERTO: o código novo está provado publicado (secção 5.2).
+
+6.2 DEFEITO PRÉ-EXISTENTE — botão de consentimento encravado no <aside>
+    Com gut_consentimento={"aceito":true} e o modal fechado, o botão
+    "⚡ Aceito o DesafioGUT" continua desenhado no rodapé da barra lateral,
+    por cima do "Recolher". Persiste após recarregamento.
+    Confirmado no DOM: dentroDeAside=true, dentroDeDialog=false, visível.
+    NÃO É REGRESSÃO: o deploy de produção anterior (6a6c16692ac428f067fac44b,
+    MC89.6–MC89.20) tem o mesmo botão no mesmo sítio.
+    >> Fica para um MC próprio. Não tocado aqui (R1 — mínima alteração).
+
+6.3 VARIÁVEL MORTA — VITE_CONTRACT_ADDRESS = 0x0000…0000
+    Assusta quem a vê no dashboard, mas nenhum ficheiro em src/ a lê.
+    O contrato vem de VITE_CONTRATO_SEPOLIA via src/lib/network.js:19.
+    >> Sugestão: remover do Netlify para não voltar a induzir em erro.
+
+6.4 MERGE PARA main — NÃO FEITO
+    A branch está no remoto mas não foi aberta PR nem feito merge. Produção
+    corre código de uma branch, não da main. Enquanto assim for, a main é
+    enganadora como referência do que está publicado.
+    >> PR: https://github.com/desafiogut/desafiogut/pull/new/feat/mc89.32-diagnostico-perf
+    >> Decisão do operador (o CI tem checks vermelhos crónicos: Socket.dev /
+       npm audit — o merge histórico precisa de --admin).
+
+6.5 CLAUDE.md DESATUALIZADO
+    Diz "auto-deploy ao push em main" (§Instruções, ponto 3). É falso desde
+    ~MC73: o deploy é manual. Também descreve a rede como Sepolia e o contrato
+    como 0x59A73Acc…, ambos superados pelo MC60. Não corrigido aqui por estar
+    fora do âmbito deste MC.
+
+
+================================================================================
+7. COMMITS DESTE MC
+================================================================================
+e1a2803  MC89.49-S0: preparacao para deploy web
+5338c6a  MC89.49-S1: deploy web executado
+e5fb080  MC89.49-S2: validacao pos-deploy
+(+ commit final: relatorio e documentacao)
+
+Push: `git push -u origin feat/mc89.32-diagnostico-perf` — remoto idêntico ao
+local, verificado por comparação de SHA.
+
+
+================================================================================
+8. ENTREGÁVEIS
+================================================================================
+✅ docs/MC89.49-PRE-DEPLOY.txt        preparação e portões
+✅ docs/MC89.49-DEPLOY-LOG.txt        draft + validação de bundle + produção
+✅ docs/MC89.49-POS-DEPLOY.txt        verificação pós-deploy e evidências
+✅ Desktop\MC89.49-RELATORIO.txt      este ficheiro
+✅ cloud.md                           secção MC89.49 anexada (linha 6938)
+✅ Frontend web sincronizado          MC89.21 → MC89.48 em produção
+
+--------------------------------------------------------------------------------
+6.6 PENDÊNCIA DESCOBERTA NO FIM — package-lock.json com entradas obsoletas
+--------------------------------------------------------------------------------
+O `npm install --legacy-peer-deps` do build removeu 4 pacotes do lock:
+@tanstack/query-core, @tanstack/react-query, @types/react, typescript 5.9.3.
+Verifiquei: NENHUM está declarado em package.json nem é usado em src/.
+Eram entradas obsoletas; a remoção do npm está correta.
+REVERTIDO (R1 — mínima alteração): alterar a árvore de dependências não é
+âmbito de um MC de deploy, e o artefacto já publicado não é afetado.
+>> Fica para um MC de manutenção: regenerar o lock e commitar a limpeza.

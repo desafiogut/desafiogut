@@ -1,0 +1,31 @@
+================================================================================
+MC89.47 — BRANCHES CANDIDATAS A REMOÇÃO (S6/P7)
+Gerado em: 2026-08-06 · Branch atual: feat/mc89.32-diagnostico-perf
+================================================================================
+
+⚠️  NADA FOI DELETADO. Este documento requer APROVAÇÃO EXPLÍCITA do
+    operador antes de qualquer `git branch -d` / `git push origin --delete`.
+
+CRITÉRIOS:
+  A) Remotas JÁ MERGEADAS em origin/main (--merged) — conteúdo 100% em main;
+     deletar é seguro e reduz o ruído de 130 → ~37 branches.
+  B) Locais sem alteração há > 3 meses (committerdate < 2026-05-06).
+
+A) REMOTAS MERGEADAS EM MAIN — 93 candidatas:
+   chore/mc17.3.1.2.1-logs  docs/mc33-flip-done  docs/mc34-automacao  docs/mc56  feat/mc15.3-login  feat/mc15.4  feat/mc15.4.2  feat/mc15.4.3  feat/mc15.5.1  feat/mc15.6.1  feat/mc15.6.2  feat/mc15.7.1  feat/mc15.8.1  feat/mc17.1-hotfix  feat/mc17.2.1  feat/mc17.3.1  feat/mc17.3.1.1  feat/mc17.3.1.2.1  feat/mc17.4.1  feat/mc17.4.2  feat/mc19.1  feat/mc20.3  feat/mc21.1  feat/mc21.2  feat/mc22.1  feat/mc22.2  feat/mc23.1.1  feat/mc23.2  feat/mc23.I  feat/mc25.3  feat/mc25.5  feat/mc26.1  feat/mc27.1  feat/mc29.1  feat/mc30.2.1  feat/mc30.2.1-aceitar  feat/mc30.2.1-awssdk-fix  feat/mc30.2.1-deploy-fix  feat/mc30.2.1-deploy-fix2  feat/mc30.2.1-diag-token  feat/mc30.2.1-diagnostico  feat/mc30.2.1-smoke  feat/mc31  feat/mc31-corp-glass  feat/mc31-img-proxy  feat/mc32.1  feat/mc33.1  feat/mc33.2  feat/mc34  feat/mc35  feat/mc36  feat/mc36.1  feat/mc37  feat/mc37-fechamento  feat/mc38  feat/mc39  feat/mc39.1  feat/mc39.13  feat/mc39.15  feat/mc39.15.1  feat/mc39.17  feat/mc39.17.1  feat/mc39.17.2  feat/mc39.17.3  feat/mc39.18  feat/mc39.19  feat/mc39.2  feat/mc39.20  feat/mc39.22.1  feat/mc39.22.2  feat/mc39.22.3  feat/mc39.23  feat/mc39.3.1  feat/mc39.4.1  feat/mc39.4.2  feat/mc39.9  feat/mc40  feat/mc41-guto-fix  feat/mc42  feat/mc44  feat/mc45  feat/mc46  feat/mc47  feat/mc48  feat/mc49.3  feat/mc49.3.1  feat/mc59.4-nonce-runbook  feature/mc14.9-fase-b-guto-integration  fix/mc33-getlances-pagination  security/mc5-contract-security-ci  security/mc6-cf-waf-backup-dr  security/mc7-mfa-ir-audit  test-pr
+
+B) LOCAIS SEM ALTERAÇÃO > 3 MESES — 3 candidatas:
+   2026-04-23  claude/angry-faraday-46bb51
+   2026-04-23  claude/romantic-shamir-b1ec10
+   2026-04-24  claude/zen-goldberg-ce8759
+
+OBSERVAÇÕES:
+  - 0 branches remotas têm mais de 6 meses (repo nascido em 2026-04-24).
+  - As branches dependabot NÃO entram (PRs abertos — ver MC89.47-DEPENDABOT.txt).
+  - Excluída a branch atual feat/mc89.32-diagnostico-perf (47 commits à frente).
+  - Comando sugerido APÓS aprovação (por lotes, validando `git push` a cada 10):
+      git push origin --delete <branch>   # para cada remota da lista A
+      git branch -d <branch>              # para cada local da lista B
+
+DECISÃO DO OPERADOR: [ ] APROVADO  [ ] APROVADO PARCIAL  [ ] NÃO PODAR
+================================================================================

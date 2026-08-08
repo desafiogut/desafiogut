@@ -1,0 +1,289 @@
+MC89.35 — DIAGNÓSTICO DA TRANSIÇÃO DO CORPORATIVO PELO DASHBOARD COMUM
+Data: 2026-08-02 | APK instalado: 2026-08-01 20:32 (MC89.34) | R1 CUMPRIDA: zero alteração de código.
+Branch: feat/mc89.32-diagnostico-perf  ⚠️ (ver §9 — não é a que o enunciado indica)
+
+================================================================================
+0. LIMITE DESTE DOCUMENTO — LEIA ANTES DE USAR AS CONCLUSÕES
+================================================================================
+NÃO OBSERVEI O LOJISTA A ENTRAR NO APARELHO. A sessão viva no telemóvel é ADM
+(medido, §2), e o encaminhamento do ADM dispara ANTES do corporativo e de forma
+incondicional — logo essa sessão não consegue, por construção, exibir a transição
+do lojista. Entrar como lojista exigiria credenciais que eu não tenho (R5) e
+terminaria a sessão do operador.
+
+O que este documento contém, e como está etiquetado:
+  · MEDIDO NO APARELHO — o estado em disco, a cronologia do arranque, e o facto
+    de o código embarcado ser o correto.
+  · PROVADO POR EXECUÇÃO — a tabela de decisão da §4 corre as funções MINIFICADAS
+    EXTRAÍDAS DO APK INSTALADO, não uma reescrita minha. Tem controlo positivo e
+    negativo.
+  · LIDO NO CÓDIGO / INFERIDO — sempre assinalado.
+
+Uma pergunta fica em aberto para o operador (§9) e a resposta dela NÃO altera a
+correção proposta — apenas confirma qual dos cenários já identificados ele viu.
+
+================================================================================
+1. A PRIMEIRA HIPÓTESE A ELIMINAR: O APK NÃO TEM O MC88.42
+================================================================================
+[MEDIDO] Eliminada. Já houve um caso destes (MC79: produção revertida por drift),
+por isso não aceitei o código-fonte como prova do que corre no telemóvel.
+
+APK instalado (adb): lastUpdateTime 2026-08-01 20:32:04
+Assets embarcados  : android/app/src/main/assets/public/assets/, 2026-08-01 20:27
+  ⇒ o APK no aparelho foi construído a partir destes assets.
+
+Extraí do bundle EMBARCADO as cinco funções que decidem o encaminhamento e
+comparei-as com o fonte, expressão a expressão:
+
+  AppContext-Dqacf4JO.js
+    Cr  = enderecoSessaoSincrono   → idêntica (lê privy:connections, minúsculas)
+    Fr  = lerSaldoCache            → idêntica (4 guardas: existe / endereco / TTL 24 h / sessão)
+    Ir  = gravarSaldoCache         → idêntica (merge sobre lerSaldoCache)
+    Ee  = tipoProvavel             → idêntica:
+          J=I?.tipo===`corporativo`?`corporativo`:`comum`
+          Te=I==null&&D?.tipoConfirmado===`corporativo`?`corporativo`:null
+          Ee=J===`corporativo`?`corporativo`:Te??J
+  PrivyRoot-DukknW0T.js
+    Gn  = DashboardOuCorporativo   → idêntica:
+          (r?a&&!s:i)?→/admin
+          :e===`corporativo`&&(t!==`corporativo`||!n)?→/corporativo
+          :<Dashboard/>
+
+⇒ O MC88.42 e o MC89.31 ESTÃO no aparelho, e estão intactos. O defeito não é
+  drift de deploy nem um APK velho.
+
+================================================================================
+2. A SESSÃO QUE ESTÁ NO APARELHO É ADM, NÃO É LOJISTA
+================================================================================
+[MEDIDO — sonda de leitura por CDP, endereços mascarados por R4]
+
+  url                         : https://localhost/admin
+  privy:connections           : presente, 0x1E1b…98cB
+  gut_saldo_cache             : presente, endereço 0x1E1b…98cB, idade 1 s
+      chaves = [centavos, em, endereco, label, senhas]
+      tipoConfirmado          : AUSENTE  ← a chave nem sequer existe
+  gut_admin_hint              : presente, isAdmin=true, 0x1e1b…98cb
+  gut_admin_check             : presente, role="admin"
+  simulação de lerSaldoCache  : devolve o objeto ("todas as guardas passam")
+  tipoProvavel a t=0          : "comum"
+
+Isto confirma e atualiza o MC89.33 §0: a conta de teste do operador É ADM. Mas a
+sonda revelou algo que o MC89.33 não tinha: o aparelho JÁ VIU três perfis
+distintos, cada um com o seu histórico de chat:
+
+  gut_chat_history:admin:0x1e1b…98cb
+  gut_chat_history:comum:0x5baf…32b8
+  gut_chat_history:corporativo:0x6ac9…674d      ← existe uma conta de LOJISTA
+
+⇒ [INFERIDO, mas fortemente suportado] o operador testa TROCANDO DE CONTA no
+  mesmo aparelho. Guarde este facto: a §5 mostra que é exatamente o gesto que
+  destrói o mecanismo do MC88.42.
+
+================================================================================
+3. COMO O ENCAMINHAMENTO FUNCIONA, EM UMA FRASE
+================================================================================
+[LIDO NO CÓDIGO — App.jsx:163-205, AppContext.jsx:88-118, 452-462]
+
+No primeiro render não há `address` nem `cotaCorporativa`. A ÚNICA coisa que pode
+mandar o lojista direto para /corporativo é o palpite `tipoProvavel`, e esse
+palpite vale "corporativo" se e só se:
+
+    localStorage["gut_saldo_cache"].tipoConfirmado === "corporativo"
+    E o registo tem menos de 24 h
+    E o endereço do registo é o mesmo de localStorage["privy:connections"]
+
+E esse `tipoConfirmado` só é ESCRITO depois de `/cotas` responder (AppContext:459-462),
+isto é, na sessão ANTERIOR.
+
+    ⇒ O MC88.42 é, por desenho, uma otimização de SEGUNDA VISITA.
+      Na primeira visita de cada ciclo, o palpite não existe e não há nada a
+      adivinhar. O comentário do código diz isto ("o primeiro login de sempre de
+      um lojista continua a passar pelo comum") — mas subestima QUANTAS vezes é
+      "a primeira visita". É a §5.
+
+================================================================================
+4. TABELA DE DECISÃO — EXECUTADA, NÃO DEDUZIDA
+================================================================================
+[PROVADO POR EXECUÇÃO]
+
+Para não cair na armadilha de validar o código contra uma reescrita minha (que
+partilharia as minhas suposições), montei um arnês que importa as funções
+MINIFICADAS COPIADAS VERBATIM do APK instalado e as corre contra um localStorage
+falso. Inclui controlo positivo e negativo: se o arnês estivesse cego, o controlo
+positivo falhava.
+
+  ✔ CONTROLO POSITIVO — lojista, cache quente e coerente      → /corporativo
+  ✔ CONTROLO NEGATIVO — comum, cache quente sem tipo          → DASHBOARD COMUM
+  ✔ A  login logo após LOGOUT                                 → DASHBOARD COMUM
+  ✔ B  TROCA DE CONTA (cache da conta anterior em disco)      → DASHBOARD COMUM
+  ✔ C  reabertura passadas mais de 24 h (TTL expirado)        → DASHBOARD COMUM
+  ✔ D  reabertura às 23 h 59                                  → /corporativo
+  ✔ E  primeiro login de sempre                               → DASHBOARD COMUM
+  ✔ F  app reinstalada / dados limpos                         → DASHBOARD COMUM
+  ✔ G  privy:connections ausente, cache presente              → DASHBOARD COMUM
+  ✔ H  cache em minúsculas vs address em checksum             → /corporativo
+                                                    RESULTADO: 10/10
+
+  (H foi testado porque `gravarSaldoCache` compara o endereço com `===` sensível
+   a maiúsculas enquanto `lerSaldoCache` compara em minúsculas. Não é defeito
+   vivo — `lerSaldoCache` normaliza antes — mas é uma assimetria a não replicar.)
+
+Duas provas adicionais, corridas no mesmo arnês:
+
+  PROVA DO APAGAMENTO
+    antes do logout  : tipoConfirmado = "corporativo"
+    depois do logout : gut_saldo_cache = null          ← apagado por inteiro
+    novo login, t=0  : tipoProvavel = "comum"  → DASHBOARD COMUM
+
+  QUEM REPÕE O TIPO, E QUANDO
+    após refetchSaldo (chega ANTES das cotas) : chaves = em, endereco, senhas
+                                                tipoConfirmado = undefined
+    após /cotas responder 200                 : tipoConfirmado = "corporativo"
+    ⇒ o tipo só passa a existir em disco A PARTIR DA ABERTURA SEGUINTE.
+
+================================================================================
+5. CAUSA RAIZ — O PALPITE É DESTRUÍDO PELO GESTO QUE O OPERADOR USA PARA TESTAR
+================================================================================
+[LIDO NO CÓDIGO + PROVADO POR EXECUÇÃO]
+
+O `tipoConfirmado` do lojista não vive numa chave própria. Vive DENTRO do
+`gut_saldo_cache`, que é um recipiente com outro dono e outro ciclo de vida: a
+GUARDA DE COERÊNCIA DO SALDO (AppContext.jsx:659-670), do MC88.34.
+
+    useEffect(() => {
+      if (address) { jaTeveEnderecoRef.current = true;
+        if (saldoCacheInicial && saldoCacheInicial.endereco !== address) limparSaldoCache();
+        return; }
+      if (jaTeveEnderecoRef.current) limparSaldoCache();      // ← logout
+    }, [address, saldoCacheInicial]);
+
+Essa guarda existe por uma boa razão (impedir que o saldo de A apareça a B) e
+está correta para o que foi escrita. Mas ao apagar o registo inteiro leva à
+frente o `tipoConfirmado`, que não é saldo, não é dado pessoal, e cuja regra de
+invalidação é outra.
+
+  ⇒ SEMPRE que o utilizador sai da conta, ou troca de conta, o lojista volta ao
+    estado de "primeira visita". E, pelo §2, trocar de conta é precisamente o
+    que o operador faz para testar.
+
+⚠️ A ASSIMETRIA COM O ADM — E É ELA QUE EXPLICA "porque é que no ADM resultou".
+[MEDIDO por inspeção de todos os pontos de chamada]
+
+    limparDicaAdmin  → definida em lib/dicaSessao.js:74
+                       pontos de chamada no produto: NENHUM (só nos testes)
+    ⇒ gut_admin_hint SOBREVIVE ao logout.
+
+    tipoConfirmado   → vive dentro de gut_saldo_cache
+    ⇒ é APAGADO no logout, por uma guarda que nem sabe que ele lá está.
+
+O MC89.31 funcionou para o operador não porque a "dica de 24 h" seja melhor, mas
+porque a dica do ADM tem um recipiente próprio e o palpite do lojista não tem.
+São o mesmo desenho com ciclos de vida diferentes — e a diferença nunca foi
+deliberada.
+
+CENÁRIOS EM QUE O LOJISTA VÊ O DASHBOARD COMUM (a lista é exaustiva, §4):
+  A  logout → login                              ← o teste do operador
+  B  troca de conta                              ← o teste do operador
+  C  reabrir a app passadas mais de 24 h         ← o lojista real, na vida dele
+  E  primeiro login de sempre
+  F  reinstalação / limpeza de dados
+  G  sessão Privy em disco sem endereço legível
+
+C não é um caso de laboratório: um lojista anunciante não abre a app todos os
+dias. Para quem abre duas vezes por semana, o palpite NUNCA está quente e o
+MC88.42 nunca o serve.
+
+================================================================================
+6. QUANTO DURA A JANELA — MEDIDO HOJE, NO APARELHO
+================================================================================
+[MEDIDO — dois arranques a frio, Resource Timing via CDP]
+
+A janela é o tempo até `tipoCarregando` cair, isto é, até a cadeia /cotas
+terminar. Enquanto ela não cai, e sem palpite, o que está pintado é o Dashboard
+comum.
+
+  ARRANQUE 1 (funções Netlify a frio)
+    first-contentful-paint  876 ms
+    auth-user             4 619 → 8 261 ms
+    /cotas (1.ª)          8 271 → 11 231 ms
+    /cotas (2.ª)         11 236 → 11 950 ms     ⇒ janela ≈ 12,0 s
+
+  ARRANQUE 2 (funções já quentes)
+    first-contentful-paint  568 ms
+    auth-user             3 607 → 4 413 ms
+    /cotas (1.ª)          4 422 → 5 148 ms
+    /cotas (2.ª)          5 152 → 5 707 ms      ⇒ janela ≈ 5,7 s
+
+⚠️ CALIBRAGEM HONESTA: estes números são da conta ADM, que faz DUAS chamadas a
+  /cotas (ambas 404). O lojista encontrado por endereço faz UMA — nos mesmos
+  arranques teria caído aos ~11,2 s e aos ~5,1 s. A ordem de grandeza é a mesma,
+  e é PIOR do que os 3 873 / 3 994 / 9 012 ms que o MC88.42 mediu.
+
+  ⇒ Em cache fria, o lojista olha para o produto errado entre 5 e 12 segundos.
+
+Nota com peso para o plano: `Dashboard` é importado EAGER (App.jsx:20), não é
+lazy. Não o pintar não custa carregamento nenhum — o chunk já está em memória.
+
+================================================================================
+7. O QUE O ENUNCIADO SUPÔS E A MEDIÇÃO DESMENTE
+================================================================================
+"o cache pode estar sendo lido de forma assíncrona"
+    ❌ NÃO. `lerSaldoCache` é síncrona e corre dentro de `useState(...)`, antes do
+       primeiro paint. Provado na §4: com cache quente o primeiro render já
+       devolve →/corporativo.
+
+"a condição de redirecionamento pode estar atrasada"
+    ❌ NÃO. `tipoProvavel === "corporativo" && (tipoUsuario === "corporativo" ?
+       !tipoCarregando : true)` — com o palpite, o segundo termo é `true` e o
+       redirect é imediato. Nada espera por `tipoCarregando`.
+
+"Opção A: usar pareceAutenticado + cache de tipoConfirmado para redirecionar cedo
+ (recomendado)"
+    ❌ NÃO RESOLVE O CASO REPORTADO. `pareceAutenticado` responde "há sessão em
+       disco?", não "de que tipo é?". Nos cenários A, B, C, E, F o
+       `tipoConfirmado` NÃO EXISTE — não há palpite para antecipar. Aplicar a
+       Opção A produziria zero, porque o mecanismo que ela acelera já é
+       instantâneo (§4, controlo positivo) e o que falha é a AUSÊNCIA do dado.
+
+    ⇒ Esta é a correção mais importante deste diagnóstico. Executar a Opção A tal
+      como está escrita seria trabalho sem efeito observável.
+
+"Opção B: adiar o paint do Dashboard comum (pode aumentar o tempo de arranque)"
+    ✅ É A ÚNICA QUE ATACA O CASO FRIO — com duas ressalvas que o enunciado não
+       previu, e que o MC88.37 já pagou caro: (1) adiar NÃO pode ser `return
+       null`, que foi o que produziu CLS 0,373 e o ecrã que desaparecia; (2) não
+       pode aplicar-se a visitantes, para quem o Dashboard é a página pública.
+       Ver o plano.
+
+================================================================================
+8. O QUE NÃO É O DEFEITO — VERIFICADO E ARQUIVADO
+================================================================================
+  · Drift de deploy / APK velho ............ eliminado, §1
+  · Leitura assíncrona do cache ............ eliminado, §7
+  · Redirect atrasado por tipoCarregando ... eliminado, §7
+  · `address` em falta a bloquear o palpite  eliminado — o palpite não usa `address`
+  · Maiúsculas/minúsculas no endereço ...... testado (caso H), não é defeito vivo
+  · Ciclo /corporativo ↔ / do MC88.42 ...... não reproduzido; a guarda continua de pé
+
+================================================================================
+9. PENDÊNCIAS E RESSALVAS
+================================================================================
+P1. [PERGUNTA AO OPERADOR — não bloqueia a correção]
+    Em que cenário viu a transição? Se foi "saí do ADM e entrei como lojista", é
+    o cenário B e está explicado. Se foi "abri a app como lojista ao fim de uns
+    dias, sem ter saído", é o cenário C. A correção proposta cobre os dois; a
+    resposta só decide qual deles vale a pena filmar na validação.
+
+P2. [RESSALVA DE ÂMBITO] Não observei o painel /corporativo a correr. Tudo o que
+    digo sobre o que acontece DEPOIS do redirect é leitura de código.
+
+P3. ⚠️ [DESVIO AO ENUNCIADO] R10 indica a branch `feat/mc89-adm-system`. A branch
+    ativa é `feat/mc89.32-diagnostico-perf`, que é onde vivem os MC89.32/33/34.
+    Como este MC não altera código, mantive-me nela para não partir a linha
+    histórica dos documentos irmãos. Se o operador quiser os documentos na outra
+    branch, é um cherry-pick de dois ficheiros.
+
+P4. Sondas usadas (scratchpad, fora do repositório, R1):
+    sonda-estado.mjs    — leitura do estado em disco (endereços mascarados)
+    sonda-arranque.mjs  — cronologia do arranque por Resource Timing
+    tabela-decisao.mjs  — tabela de decisão com as funções verbatim do APK

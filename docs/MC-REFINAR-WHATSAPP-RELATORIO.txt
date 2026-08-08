@@ -1,0 +1,144 @@
+================================================================================
+MC-REFINAR-WHATSAPP — LISTA FINAL
+Data: 2026-08-01
+Origem : Desktop\CONTATOS-ORGANIZADOS\whatsapp_classificado.xlsx (27.737)
+Saída  : Desktop\CONTATOS-ORGANIZADOS\whatsapp_refinado.xlsx     (589.771 bytes)
+Veredito: ✅ CONCLUÍDO E VALIDADO
+Nota R4: nenhum número completo aparece aqui — só contagens e prefixos de DDD.
+================================================================================
+
+RESULTADO
+---------
+  Partida                              27.737
+  Removidos                             5.505
+      · inconsistentes (antigo bloco 5)    16
+      · duplicados sem DDD              5.489
+  ─────────────────────────────────────────────
+  FINAL                                22.232    IDs 1..22.232
+
+  Bloco 1 — CELULARES COM DDD          13.993    62,94%
+  Bloco 2 — FIXOS COM DDD               8.239    37,06%
+  Bloco 3 — FIXOS SEM DDD                   0     0,00%
+  Bloco 4 — (sem casos)                     0     0,00%
+
+  Colunas: ID · Numero · Bloco · Categoria · DDD
+  Removidas, conforme pedido: "Pronto para envio" e "Verificado Twilio".
+
+================================================================================
+1. A HIPÓTESE DO DDD 92 ESTAVA CERTA — MAS LEVAVA A OUTRA CONCLUSÃO
+================================================================================
+O enunciado mandava acrescentar o DDD 92 aos 5.489 do Bloco 2 e promovê-los ao
+Bloco 1. Antes de alterar 5.489 números, testei a premissa:
+
+  Quantos dos 5.489 passariam a coincidir com um número JÁ EXISTENTE na lista:
+      prefixo 92 :  5.489 de 5.489   100,00%   ←
+      prefixo 11 :      0 de 5.489     0,00%
+      prefixo 21 :      0 de 5.489     0,00%
+      prefixo 31 :      0 de 5.489     0,00%
+      prefixo 85 :      0 de 5.489     0,00%
+
+  E o DDD 92 domina mesmo a base: 15.560 números, 70,0% dos que têm DDD
+  (contra 26,7% do DDD 11 e 3,3% para os outros 62 DDD juntos).
+
+Cem por cento contra zero não é coincidência estatística. O operador estava
+certo: são mesmo números do DDD 92.
+
+⚠️ MAS a consequência não é a que o enunciado previa. Se TODOS, ao receberem o
+92, coincidem com números já presentes, então não são números órfãos a
+recuperar — são DUPLICADOS. O mesmo contacto foi apanhado pela extração duas
+vezes: uma completo (5592XXXXXXXXX) e outra truncado (XXXXXXXXX).
+
+Acrescentar-lhes o 92 e mantê-los criaria 5.489 REPETIDOS dentro do Bloco 1 —
+o oposto da regra que o operador fixou no início desta série. Foram removidos
+como duplicados. O operador confirmou a decisão ("não considerem eles então").
+
+================================================================================
+2. NENHUM CONTACTO SE PERDEU  — e isto foi provado, não assumido
+================================================================================
+Remover 5.489 números com o argumento "são duplicados" só é legítimo se cada um
+tiver mesmo o seu equivalente completo. Se um só não tivesse, o argumento caía e
+um contacto tinha sido apagado.
+
+  ✓ Guarda no próprio script de refinamento: contou os "órfãos" (sem-DDD sem
+    equivalente 5592…) ANTES de remover seja o que for, e abortaria se houvesse
+    algum. Resultado: 0 órfãos.
+  ✓ Verificado outra vez, de forma independente, no validador: os 5.489
+    removidos têm TODOS o equivalente 5592… presente na lista final.
+  ✓ Os 22.232 números dos antigos blocos 1 e 3 estão todos presentes: 0 perdidos.
+  ✓ Nenhum número novo foi inventado: 0.
+
+================================================================================
+3. VALIDAÇÃO  (scripts\validar_refinamento.py → exit 0)
+================================================================================
+  ✓ ZIP íntegro; todo índice de estilo usado existe em <cellXfs>
+  ✓ exactamente 5 colunas, com os nomes pedidos; "Pronto para envio" e
+    "Verificado Twilio" confirmadamente ausentes
+  ✓ 22.232 linhas, IDs renumerados 1..22.232 sem saltos
+  ✓ blocos: 13.993 / 8.239 / 0; nenhum do antigo Bloco 5 permanece; soma fecha
+  ✓ 22.232 valores distintos — zero repetidos
+  ✓ remapeamento 1→1, 3→2, 4→3 correcto em todas as linhas
+  ✓ a Categoria bate com o bloco novo; todos os dos blocos 1 e 2 têm DDD
+  ✓ TESTES POR MUTAÇÃO: um sem-DDD real tem par; o mesmo com outro DDD não
+    teria (a regra é sensível ao prefixo, não aceita qualquer coisa); um número
+    a mais seria detectado.
+
+⚠️ NÃO VERIFICADO: abrir o ficheiro no Excel. Não está instalado nesta máquina
+(COM devolve REGDB_E_CLASSNOTREG). A validação é estrutural.
+
+================================================================================
+4. O QUE SAI DESTE FICHEIRO E ONDE CONTINUA
+================================================================================
+"Verificado Twilio" identificava os 198 números com WhatsApp CONFIRMADO — a
+única informação da base que distingue um número que se SABE existir de um que
+apenas tem o formato certo. Saiu daqui por pedido explícito, mas continua em:
+    unicos\whatsapp_VERIFICADOS.txt        (198 linhas)
+    whatsapp_classificado.xlsx             (coluna 7)
+Nenhum desses ficheiros foi alterado. Fica registado para que ninguém conclua
+mais tarde que essa informação se perdeu.
+
+================================================================================
+5. NOTAS
+================================================================================
+  · `whatsapp.xlsx`, `whatsapp_organizado.xlsx` e `whatsapp_classificado.xlsx`
+    NÃO foram alterados. O refinado é um ficheiro NOVO.
+  · Zero alterações no código do DesafioGUT (R1). Nenhuma credencial tocada (R5).
+  · Nenhum contacto commitado no repositório.
+
+PENDENTE DO OPERADOR
+  · Abrir o .xlsx uma vez para confirmar.
+  · Decidir se os 8.239 fixos (Bloco 2) entram num envio de WhatsApp — em regra
+    não têm. Sem eles, restam 13.993.
+
+================================================================================
+6. AUDITORIA DE DUPLICADOS  (pedido do operador)
+================================================================================
+"Todos os valores são distintos" não chega: o MESMO telefone pode estar escrito
+de várias maneiras e passar por dois números diferentes. Foram procuradas cinco
+classes de duplicado, não uma.  (scripts\auditar_duplicados.py -> exit 0)
+
+  D1  duplicado EXACTO                                        0
+      22.232 distintos em 22.232 linhas.
+  D2  o mesmo número com e sem o código 55                     0
+  D3  móvel com e sem o NONO DÍGITO                            0
+      A portabilidade de 2012 acrescentou um 9 aos móveis; em bases antigas a
+      mesma pessoa aparece nas duas formas (5592 9XXXXXXXX e 5592 XXXXXXXX).
+      Testado par a par: nenhum móvel está na lista nas duas formas.
+  D4  o mesmo número truncado, sem DDD                         0
+      Não há nenhum número curto na lista final.
+  D5  pares que diferem só em zeros à esquerda                 0
+
+  Informativo, NÃO é duplicado: 17 casos de números com os mesmos 9 dígitos
+  finais mas DDD diferente. São pessoas diferentes em estados diferentes.
+
+VERIFICAÇÃO CRUZADA
+  whatsapp_somente_digitos.txt   27.737
+  whatsapp_refinado.xlsx         22.232
+  diferença                       5.505 = 16 inconsistentes + 5.489 duplicados
+  ✓ todo número do refinado existe na lista de origem — nada foi inventado.
+
+TESTES POR MUTAÇÃO
+  ✓ D1 apanharia um duplicado exacto injectado.
+  ✓ D3 apanharia a forma sem nono dígito se ela lá estivesse (confirmado que no
+    caso real não está).
+
+VEREDITO: SEM DUPLICADOS, EM NENHUMA DAS CINCO CLASSES.

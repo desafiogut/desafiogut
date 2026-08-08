@@ -1,0 +1,156 @@
+================================================================================
+MC89.27 — ELIMINAÇÃO DEFINITIVA DA MENSAGEM SEPOLIA
+Relatório final · 2026-07-31
+================================================================================
+
+VEREDITO (R8): CUMPRIDO.
+A mensagem "⚠️ Ambiente de teste — rede Sepolia · contrato não configurado"
+desapareceu do APK, verificada no DOM vivo do aparelho, com controlo negativo.
+
+--------------------------------------------------------------------------------
+1. A DESCOBERTA QUE MUDOU O PLANO
+--------------------------------------------------------------------------------
+O enunciado pressupunha um defeito a corrigir. Não era.
+
+A mensagem NÃO era um bug — era o alarme do MC88.25 a funcionar exactamente
+como foi desenhado. O APK do MC89.26 estava, de facto, configurado para
+Sepolia e SEM contrato. O aviso dizia a verdade.
+
+Isto inverte a correcção certa. As três "soluções" que o enunciado admitia —
+ajustar o código que gera a mensagem, mexer no default de network.js, ou fazer
+network.js aceitar VITE_CONTRATO_MAINNET — teriam apagado o alarme e deixado
+o defeito. O resultado seria um APK sem RPC de mainnet e sem contrato, agora
+silencioso: a recriação exacta do MC88.24 ("o PIX debitou e a senha não
+creditou"), mas sem nada na tela a denunciá-lo.
+
+Por isso AvisoRede.jsx e src/lib/network.js NÃO foram tocados.
+
+--------------------------------------------------------------------------------
+2. CAUSA-RAIZ
+--------------------------------------------------------------------------------
+O APK do MC89.26 foi compilado com `npm run build` (Vite puro), que lê os
+ficheiros .env do DISCO. O disco tinha apenas:
+
+    VITE_CONTRATO_MAINNET=0x0052477A…16cd     ← variável que NENHUM código lê
+    VITE_NETWORK_STAGE=mainnet
+
+src/lib/network.js lê VITE_CONTRATO_SEPOLIA (não …_MAINNET) e faz
+`Number(VITE_CHAIN_ID ?? 11155111)`. Sem essas duas variáveis:
+
+    CONTRATO     = ""         → "contrato não configurado"   (AvisoRede L30)
+    CHAIN_ID_DEC = 11155111   → "rede Sepolia"               (AvisoRede L28)
+    STAGE        = "mainnet"  → não dispara                  (L29 silente)
+
+Os dois ramos que dispararam, e o terceiro que não disparou, batem certo com o
+texto observado no ecrã. Assinatura exacta, sem ambiguidade.
+
+O env do Netlify em produção estava — e está — CORRECTO. Nunca foi injectado
+porque o comando usado não o injecta.
+
+--------------------------------------------------------------------------------
+3. POR QUE A LIMPEZA MANUAL DO BUNDLE NÃO PODIA FUNCIONAR
+--------------------------------------------------------------------------------
+A substituição manual no dist trocou ocorrências de um endereço. Mas o defeito
+eram duas variáveis AUSENTES — não havia `VITE_CHAIN_ID:` no ficheiro para
+substituir. Não se corrige uma ausência com find & replace. A configuração de
+rede resolve-se em tempo de build, não em tempo de execução.
+
+--------------------------------------------------------------------------------
+4. O QUE FOI ALTERADO (R1 — mínimo)
+--------------------------------------------------------------------------------
+Código-fonte rastreado alterado: NENHUM.
+   `git status -- desafio-gut/frontend/src` devolve vazio.
+
+Alteração 1 — processo de build
+   `npm run build` → `npm run build:apk`
+   (netlify build --context production && validar:dist && cap sync android)
+
+Alteração 2 — desafio-gut/frontend/.env (ficheiro gitignored, .gitignore:21)
+   Removido `VITE_CONTRATO_MAINNET`, variável que nenhum código lê e que dava
+   a ilusão de um disco configurado para mainnet. Era essa falsa confiança que
+   tornava `npm run build` plausível. Substituída por um comentário que aponta
+   para o comando correcto. Zero impacto em runtime: era código morto.
+
+--------------------------------------------------------------------------------
+5. RESULTADO — ENV DENTRO DO .apk
+--------------------------------------------------------------------------------
+                          ANTES (MC89.26)        DEPOIS (MC89.27)
+  VITE_CHAIN_ID           (AUSENTE)              1
+  VITE_CONTRATO_SEPOLIA   (AUSENTE)              0x0052477A…16cd
+  VITE_ALCHEMY_URL        (AUSENTE)              eth-mainnet.g.alchemy.com
+  VITE_EXPLORER_URL       (AUSENTE)              https://etherscan.io
+  VITE_NETWORK_STAGE      mainnet                mainnet
+  VITE_CONTRATO_MAINNET   0x0052477A…16cd        (removido)
+
+  validar-dist-rede.mjs   ✖ REJEITADO (2 erros)  ✓ coerente com PRODUÇÃO
+
+--------------------------------------------------------------------------------
+6. VALIDAÇÃO (R7 — cada segmento verificado)
+--------------------------------------------------------------------------------
+Prova estática — diagnosticar() minificada no bundle:
+   k=1, dn=1 → k!==dn falso · un="mainnet" → falso · A=0x0052…16cd ≠ fn → falso
+   ⇒ pn() devolve []  ⇒  mn() devolve null  ⇒  nada renderiza.
+
+Prova viva — CDP contra a WebView do APK instalado (adb forward + WebSocket
+nativo do Node; o MCP chrome-devtools não anexa a alvo remoto):
+   /admin autenticado como 0x1E1bAe7F…d198cB → temAvisoTeste false, role=status []
+   / após arranque limpo                      → temAvisoTeste false, role=status []
+   screenshot da raiz                          → rodapé sem a pílula vermelha
+
+Controlo negativo — banner falso injectado no DOM vivo:
+   COM  → temAvisoTeste true, roleStatus ["⚠️ Ambiente de teste — rede Sepolia…"]
+   SEM  → temAvisoTeste false, roleStatus []
+   A sonda deteta quando deve. Os "false" são negativos reais.
+
+--------------------------------------------------------------------------------
+7. O QUE NÃO FOI VALIDADO (dito por inteiro)
+--------------------------------------------------------------------------------
+• Exercício vivo dos toasts/spinner/tempo-relativo do MC89.26. Exige mutações
+  no painel ADM, que exigem login OAuth Privy — não automatizável. Por
+  construção não podem ter regredido (zero alterações de código-fonte), mas
+  não afirmo tê-los exercitado. Pendente do operador.
+
+• Nenhuma transacção on-chain foi feita (R2 — sem custo financeiro).
+
+--------------------------------------------------------------------------------
+8. ⚠️ EFEITO COLATERAL NO APARELHO
+--------------------------------------------------------------------------------
+Para obter um arranque limpo correu-se `adb shell pm clear com.desafiogut.app`.
+Os dados locais da app foram apagados: a sessão Privy e a sessão admin caíram.
+Será preciso voltar a entrar. Nada no servidor nem on-chain foi tocado.
+
+--------------------------------------------------------------------------------
+9. RISCO RESIDUAL E RECOMENDAÇÃO
+--------------------------------------------------------------------------------
+O gate `validar:dist` só corre dentro de `npm run build:apk`. Quem correr
+`npm run build` seguido de `npx cap sync android` à mão contorna-o e reproduz
+este MC. O .env já não engana, mas isso é uma defesa fraca — o ficheiro é
+local e não commitável.
+
+Recomendação (fora do escopo deste MC, R1): tornar o gate inevitável, ligando
+a validação ao próprio `cap sync` em vez de a deixar num script paralelo.
+Decisão do operador.
+
+--------------------------------------------------------------------------------
+10. COMMITS
+--------------------------------------------------------------------------------
+  c724f82  MC89.27-S0: diagnostico da origem da mensagem Sepolia
+  b0d6aa0  MC89.27-S1: correcao da origem da mensagem Sepolia
+  89c1efe  MC89.27-S2: APK validado sem mensagem Sepolia
+  (S3)     MC89.27-S3: relatorio final + cloud.md
+
+Documentos:
+  docs/MC89.27-DIAGNOSTICO.txt    — origem, causa-raiz, prova
+  docs/MC89.27-S1-EVIDENCIA.txt   — antes/depois do bundle, prova estática
+  docs/MC89.27-S2-VALIDACAO.txt   — build, CDP, controlo negativo
+  docs/MC89.27-RELATORIO.txt      — este relatório
+
+--------------------------------------------------------------------------------
+11. ESTADO DA SÉRIE 89.2x
+--------------------------------------------------------------------------------
+MC89.26 (código) + MC89.27 (build correcto e validado) fecham a Fase 2 da
+reforma UX/UI do painel ADM, com a ressalva do ponto 7.
+
+Próximo: pendências externas (EOA, BLOBS_TOKEN, RAG, Play Store) ou Fase 3
+(MC89.28).
+================================================================================

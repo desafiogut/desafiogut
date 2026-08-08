@@ -38,15 +38,15 @@ export default async (req) => {
     timestamp: new Date().toISOString(),
   };
 
-  // MC88.31 (Achado 6 do MC88.30) — autenticarAdmin só reconhece duas fontes de
-  // credencial: `Authorization: Bearer` e `x-admin-token`. Sem nenhuma delas o
-  // resultado seria obrigatoriamente { ok:false }, portanto nem vale a pena
-  // carregar o módulo. O health público (o medido em 2089 ms) passa a não pagar
-  // nem o ethers nem o @netlify/blobs/jwt.
+  // MC88.31 (Achado 6 do MC88.30) — autenticarAdmin só reconhece UMA fonte de
+  // credencial: `Authorization: Bearer <admin-JWT>` (o legado `x-admin-token`
+  // foi removido no MC89.46/47). Sem ela o resultado seria obrigatoriamente
+  // { ok:false }, portanto nem vale a pena carregar o módulo. O health público
+  // (o medido em 2089 ms) passa a não pagar nem o ethers nem o
+  // @netlify/blobs/jwt.
   let ehAdmin = false;
   const temCredencialAdmin = !!req && (
-    (req.headers.get("authorization") || "").startsWith("Bearer ") ||
-    !!req.headers.get("x-admin-token")
+    (req.headers.get("authorization") || "").startsWith("Bearer ")
   );
   if (temCredencialAdmin) {
     try {

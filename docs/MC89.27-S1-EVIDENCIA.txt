@@ -1,0 +1,86 @@
+MC89.27 — SEGMENTO 1: CORREÇÃO NA FONTE (EVIDÊNCIA)
+================================================================================
+Data: 2026-07-31
+Skills ECC: terminal-ops, verification-loop
+
+--------------------------------------------------------------------------------
+O QUE FOI ALTERADO
+--------------------------------------------------------------------------------
+1. desafio-gut/frontend/.env  (ficheiro NÃO rastreado — .gitignore:21)
+   Removida a linha `VITE_CONTRATO_MAINNET=0x0052477A…16cd`, variável que
+   NENHUM código do frontend lê (src/lib/network.js lê VITE_CONTRATO_SEPOLIA).
+   Substituída por um comentário que explica onde vive a config de rede e qual
+   é o comando de build correto. Sem impacto em runtime: era código morto que
+   apenas induzia em erro.
+
+2. Processo de build: passou-se de `npm run build` para `npm run build:apk`
+   (= netlify build --context production && validar:dist && cap sync android).
+
+3. NADA foi alterado em AvisoRede.jsx nem em src/lib/network.js — ver secção
+   0.6 do diagnóstico. O aviso estava correto; silenciá-lo seria o defeito.
+
+--------------------------------------------------------------------------------
+ANTES — env embutido nos assets do APK (MC89.26)
+--------------------------------------------------------------------------------
+   VITE_CONTRATO_MAINNET : 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd  (não lido)
+   VITE_NETWORK_STAGE    : mainnet
+   VITE_CONTRATO_SEPOLIA : (AUSENTE)
+   VITE_CHAIN_ID         : (AUSENTE)
+   VITE_ALCHEMY_URL      : (AUSENTE)
+
+   validar-dist-rede.mjs → ✖ BUNDLE REJEITADO (2 erros)
+
+--------------------------------------------------------------------------------
+DEPOIS — env embutido nos assets do APK (MC89.27)
+--------------------------------------------------------------------------------
+   VITE_CONTRATO_SEPOLIA : 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+   VITE_CHAIN_ID         : 1
+   VITE_ALCHEMY_URL      : mainnet (eth-mainnet.g.alchemy.com)
+   VITE_EXPLORER_URL     : https://etherscan.io
+   VITE_NETWORK_STAGE    : mainnet
+   VITE_CONTRATO_MAINNET : (removido — já não polui o bundle)
+
+   validar-dist-rede.mjs → ✓ bundle coerente com PRODUÇÃO (mainnet)
+   121 ficheiros .js analisados
+
+--------------------------------------------------------------------------------
+PROVA ESTÁTICA DE QUE O AVISO NÃO RENDERIZA
+--------------------------------------------------------------------------------
+diagnosticar() minificada em dist/assets/PrivyRoot-Cv17SE-O.js:
+
+  var un=`mainnet`, dn=1, fn=`0x59a73acc8e8b210c874b0e3a9ec9b8b64847f6d5`;
+  function pn(){let e=[];
+    return k!==dn && e.push(`rede ${k===11155111?`Sepolia`:k}`),
+           un && un!==`mainnet` && e.push(`stage "${un}"`),
+           A ? A.toLowerCase()===fn && e.push(`contrato abandonado`)
+             : e.push(`contrato não configurado`),
+           e}
+  function mn(){let e=pn(); return e.length===0 ? null : (…)}
+
+Em dist/assets/web3-DXI_5gTo.js (chunk de network.js), com o env inlined
+VITE_CHAIN_ID:`1` e VITE_CONTRATO_SEPOLIA:`0x0052477A…16cd`:
+
+  k (CHAIN_ID_DEC) = Number(`1`)              = 1     → k!==dn (1!==1) FALSO
+  un (STAGE)       = `mainnet`                        → un!=="mainnet" FALSO
+  A (CONTRATO)     = `0x0052477A…16cd` (truthy)       → !== fn, FALSO
+
+  ⇒ pn() devolve []  ⇒  mn() devolve null  ⇒  nada é renderizado.
+
+--------------------------------------------------------------------------------
+NOTA SOBRE O CRITÉRIO 1.5 DO ENUNCIADO
+--------------------------------------------------------------------------------
+O enunciado pedia "nenhuma referência a Sepolia, 11155111 ou contrato
+abandonado" no bundle. Esse critério, à letra, é inatingível E indesejável:
+
+  • `11155111` aparece em 4 ficheiros. Três são registos de cadeias de
+    TERCEIROS (Privy, viem, WalletConnect, ethers) que listam todas as redes
+    conhecidas — não são a nossa configuração. O quarto é o literal do default
+    em network.js (`?? 11155111`), que é código-fonte, não valor efetivo.
+
+  • O contrato abandonado aparece 1 vez: é `fn`, a LISTA NEGRA dentro do
+    próprio AvisoRede. Removê-lo desarmaria o guarda que deteta o contrato
+    abandonado. Tem de lá estar.
+
+O critério com significado é o do validador do próprio projeto: coerência
+entre os quatro sinais de env efetivamente embutidos. Esse passou.
+================================================================================

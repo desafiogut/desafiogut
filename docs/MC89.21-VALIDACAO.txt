@@ -1,0 +1,112 @@
+# MC89.21 — VALIDAÇÃO COMPLETA DA INFRAESTRUTURA ADM NO APARELHO
+Data: 2026-07-31 | Método: CDP (adb + WebView devtools) | ZERO alterações de código
+
+## RESULTADO: 6/7 TELAS OPERACIONAIS. 1 TELA COM PLACEHOLDER.
+
+## MÉTODO
+- APK MC89.20 instalado em fiem7xlvcufe855h
+- CDP via adb forward + WebSocket nativo
+- Log.clear() antes de cada medição
+- Navegação por history.pushState + PopStateEvent (simula o router do React)
+- Texto do DOM lido em cada tela; varredura de padrões aplicada
+
+## VALIDAÇÃO POR TELA
+
+### T1 — VISÃO GERAL (/admin) ✅ OPERACIONAL
+- Redirecionamento do cold boot: CONFIRMADO (vai direto para /admin)
+- Header: "Painel Admin" com endereço truncado (0x1E1bAe7F…d198cB)
+- Botão "← Sair do painel" presente
+- Barra de estado: "Login admin necessário para mutações" + botão "Login Admin"
+- Secção SECÇÕES com 8 cartões-atalho
+- Mensagem "Autentique-se para ver as métricas" (gate correto — sem JWT)
+- ⚠️ Métricas, gráficos e alertas NÃO validados (exigem autenticação admin)
+- Zero erros de consola
+
+### T2 — USUÁRIOS (/admin/usuarios) ✅ OPERACIONAL
+- "← Painel" backlink funcional, título "Usuários"
+- Gate correto: "Autentique-se para ver os utilizadores."
+- Sem erros de consola
+- ⚠️ Lista, busca, perfil e ações NÃO validados (exigem JWT)
+
+### T3 — FINANCEIRO (/admin/financeiro) ✅ OPERACIONAL
+- Título "Financeiro", backlink funcional
+- Gate correto: "Autentique-se para ver o financeiro."
+- Sem erros de consola
+
+### T4 — OPERAÇÕES (/admin/operacoes) ✅ OPERACIONAL
+- Título "Operações", backlink funcional
+- Gate correto: "Autentique-se para ver as operações."
+- Sem erros de consola
+
+### T5 — LOGS (/admin/logs) ⚠️ PLACEHOLDER
+- Título "Logs", backlink funcional
+- Exibe "[EM BREVE — PLANEAMENTO]" + "Logs e Auditoria"
+- O backend admin-logs.mjs EXISTE (MC89.11) mas o frontend LogsAuditoria.jsx
+  ainda é o EmConstrucao original
+- adminNav tem `pronta: false` — a tela reconhece que não está pronta
+- AÇÃO: MC89.22 deve substituir o placeholder pela Tela 5 funcional
+- Sem erros de consola
+
+### T6 — NOTIFICAÇÕES (/admin/notificacoes) ✅ OPERACIONAL
+- Título "Notificações", backlink funcional
+- Gate correto: "Autentique-se para usar as notificações."
+- Sem erros de consola
+
+### T7 — CONFIGURAÇÕES (/admin/configuracoes) ✅ OPERACIONAL
+- Título "Config", backlink funcional
+- Gate correto: "Autentique-se para gerir as configurações."
+- Sem erros de consola
+
+## VALIDAÇÃO DE FLUXOS TRANSVERSAIS
+
+### Redirecionamento ✅
+Cold boot → /admin. O admin NUNCA vê o Dashboard de consumo.
+Confirmado por CDP: `location.pathname = "/admin"` após arranque a frio.
+
+### Navegação ✅
+As 7 rotas resolvem e renderizam o componente correto.
+Backlinks "← Painel" e títulos de secção presentes em todas as filhas.
+Zero erros de consola em qualquer rota.
+
+### Estado não-autenticado ✅
+Todas as telas mostram o gate apropriado quando não há JWT admin.
+Nenhuma tela expõe dados sem autenticação.
+
+### Endereço truncado ✅
+"0x1E1bAe7F…d198cB" — confirmado em todas as telas.
+O endereço completo NÃO aparece em nenhum ecrã.
+
+## O QUE NÃO FOI VALIDADO (e porquê)
+- Estado AUTENTICADO (exige ADMIN_TOKEN + assinatura Privy — R5)
+- ALFA (exige sessão admin ativa)
+- Ações de mutação (bloqueio, ajuste, comandos, notificações)
+- Painel em second-screen (duas visitas na mesma sessão)
+
+## ACHADOS
+
+### A-1 (MÉDIO): Tela 5 — Logs e Auditoria com placeholder
+  O endpoint admin-logs.mjs existe e está funcional (342 testes passam).
+  O frontend LogsAuditoria.jsx nunca saiu do EmConstrucao do MC89.6.
+  adminNav tem `pronta: false` — o sistema sabe que não está pronto.
+  Impacto: o admin não consegue ver os logs de auditoria pela UI.
+  Correção: MC89.22 — substituir EmConstrucao por tabela funcional.
+
+### A-2 (BAIXO): Estado autenticado não pôde ser validado
+  Sem o ADMIN_TOKEN do operador, a validação cobriu apenas o estado
+  não-autenticado. O código foi auditado (source review) e as suítes
+  passam (342 backend, 40 frontend), mas a experiência real com dados
+  carregados não foi observada.
+
+### A-3 (INFO): Tela de Logs ainda listada como "em breve" nos atalhos
+  Consistente com A-1. O cartão "Logs" no AtalhosAdmin mostra "em breve"
+  porque adminNav tem pronta: false.
+
+## CONCLUSÃO
+
+O dashboard ADM está **86% operacional** (6 de 7 telas completas).
+A única lacuna é a Tela 5 (Logs e Auditoria), cujo backend existe desde o
+MC89.11 mas cujo frontend permanece como placeholder. As outras 6 telas
+renderizam corretamente, os gates de autenticação funcionam, o
+redirecionamento está correto e não há erros de consola.
+
+AÇÃO IMEDIATA: MC89.22 — implementar LogsAuditoria.jsx funcional.

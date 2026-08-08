@@ -16,7 +16,7 @@
 // Idempotência: chamada repetida no mesmo dia (mesma data ISO no fuso config.)
 // retorna { ok:true, idempotent:true } sem reprocessar.
 //
-// Auth: gated por x-admin-token. Sem ADMIN_TOKEN no env → 503.
+// Auth: gated por admin (Bearer admin-JWT).
 //
 // GET ?dryRun=1 → retorna o que SERIA feito sem persistir.
 // POST           → executa o reset.
@@ -160,7 +160,7 @@ export default async (req) => {
   if (preflight) return preflight;
   const rl = await aplicarRateLimit(req, "cron-reset", 10);
   if (rl) return rl;
-  // Auth: admin (Bearer admin-JWT preferido OR x-admin-token legado).
+  // Auth: admin (Bearer admin-JWT).
   const denied = await guardAdmin(req);
   if (denied) return denied;
 

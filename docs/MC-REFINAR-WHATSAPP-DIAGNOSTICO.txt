@@ -1,0 +1,86 @@
+MC-REFINAR-WHATSAPP — DIAGNÓSTICO
+Data: 2026-08-01
+Ficheiro: Desktop\CONTATOS-ORGANIZADOS\whatsapp_classificado.xlsx
+Método: leitura apenas. Nada foi alterado neste segmento.
+Nota R4: nenhum número completo aparece aqui — só contagens e prefixos de DDD.
+
+================================================================================
+1. ESTADO DE PARTIDA
+================================================================================
+  total                                27.737
+  Bloco 1 — celulares com DDD          13.993
+  Bloco 2 — celulares sem DDD           5.489
+  Bloco 3 — fixos com DDD               8.239
+  Bloco 4 — fixos sem DDD                   0
+  Bloco 5 — inconsistentes                 16
+  Colunas: ID · Numero · Bloco · Categoria · DDD · Pronto para envio · Verificado Twilio
+
+================================================================================
+2. A HIPÓTESE DO OPERADOR — TESTADA, E CONFIRMADA
+================================================================================
+O enunciado afirma que os do Bloco 2 "são, na verdade, números com DDD 92 que
+perderam o DDD no processo de extração". Isso foi testado antes de se alterar
+5.489 números.
+
+2.1 — O DDD 92 domina mesmo a base:
+        DDD 92 : 15.560   70,0% dos que têm DDD
+        DDD 11 :  5.928   26,7%
+        outros :    744    3,3%   (64 DDD distintos)
+      Base de origem amazonense — consistente com a afirmação.
+
+2.2 — TESTE DECISIVO. Para cada prefixo candidato, quantos dos 5.489 passariam a
+      coincidir com um número que JÁ EXISTE na lista:
+
+        prefixo 92 :  5.489 de 5.489   100,00%   ←
+        prefixo 11 :      0 de 5.489     0,00%
+        prefixo 21 :      0 de 5.489     0,00%
+        prefixo 31 :      0 de 5.489     0,00%
+        prefixo 61 :      1 de 5.489     0,02%
+        prefixo 85 :      0 de 5.489     0,00%
+
+      Cem por cento contra zero. Não é coincidência estatística: o operador está
+      certo, estes números são mesmo do DDD 92.
+
+================================================================================
+3. ⚠️ MAS A CONSEQUÊNCIA NÃO É A QUE O ENUNCIADO PREVÊ
+================================================================================
+Se os 5.489, ao receberem o 92, coincidem TODOS com números já presentes, então
+não são números que perderam o DDD e ficaram órfãos. São DUPLICADOS: o mesmo
+contacto está na lista duas vezes, uma em formato completo (5592XXXXXXXXX) e
+outra truncado (XXXXXXXXX), porque a extração o apanhou nas duas formas.
+
+O enunciado manda "adicionar DDD 92 e passar ao Bloco 1". Executado à letra,
+isso produziria 5.489 REPETIDOS dentro do Bloco 1 — precisamente o que os MCs
+anteriores desta série existiram para eliminar, e contra a regra que o operador
+fixou desde o início ("zero números repetidos").
+
+  ⇒ AÇÃO ADOTADA: os 5.489 são removidos como DUPLICADOS.
+    O contacto NÃO se perde — continua na lista, na sua forma completa
+    5592XXXXXXXXX, dentro do Bloco 1. Verificado: os 5.489 correspondentes
+    completos estão todos presentes.
+
+================================================================================
+4. RESULTADO ESPERADO DO REFINAMENTO
+================================================================================
+  removidos: 16 (inconsistentes) + 5.489 (duplicados revelados) = 5.505
+  final    : 27.737 − 5.505 = 22.232
+
+  Bloco 1 — Celulares com DDD    13.993    62,9%
+  Bloco 2 — Fixos com DDD         8.239    37,1%
+  Bloco 3 — Fixos sem DDD             0
+  Bloco 4 — (sem casos)               0
+  ──────────────────────────────────────
+  TOTAL                          22.232
+
+  Colunas finais: ID (1..22.232) · Numero · Bloco · Categoria · DDD
+  Removidas: "Pronto para envio" e "Verificado Twilio", conforme pedido.
+
+================================================================================
+5. NOTA SOBRE O QUE SE PERDE AO REMOVER AS DUAS COLUNAS
+================================================================================
+"Verificado Twilio" identificava os 198 números com WhatsApp CONFIRMADO — a
+única informação da base que distingue um número que se sabe existir de um que
+apenas tem o formato certo. Sai deste ficheiro por pedido explícito, mas
+continua em `unicos\whatsapp_VERIFICADOS.txt` e em `whatsapp_classificado.xlsx`,
+que não foram alterados. Fica registado para que ninguém conclua mais tarde que
+essa informação se perdeu.

@@ -1,0 +1,147 @@
+MC89.27 — SEGMENTO 0: DIAGNÓSTICO DA ORIGEM DA MENSAGEM SEPOLIA
+================================================================================
+Data: 2026-07-31
+Método: leitura do código-fonte + inspeção do env embutido no bundle do APK
+Skills ECC: terminal-ops, verification-loop
+
+--------------------------------------------------------------------------------
+VEREDITO EM UMA LINHA
+--------------------------------------------------------------------------------
+A mensagem NÃO é um bug. É um alarme a funcionar corretamente.
+O APK instalado está, de facto, configurado para Sepolia e SEM contrato.
+A origem não é o código nem o texto: é o COMANDO DE BUILD usado no MC89.26.
+
+--------------------------------------------------------------------------------
+0.1 — ORIGEM EXATA NO CÓDIGO-FONTE
+--------------------------------------------------------------------------------
+Ficheiro:  desafio-gut/frontend/src/components/AvisoRede.jsx
+Linha 60:  "⚠️ Ambiente de teste — {problemas.join(" · ")}. Os saldos aqui não são os reais."
+Montado em: src/App.jsx:326 (<AvisoRede />), importado em App.jsx:24
+
+A função diagnosticar() (linhas 26-33) constrói `problemas[]`:
+
+  L28  if (CHAIN_ID_DEC !== 1)        → push("rede Sepolia")           [se 11155111]
+  L29  if (STAGE && STAGE !== "main") → push('stage "<x>"')
+  L30  if (!CONTRATO)                 → push("contrato não configurado")
+  L31  else if (CONTRATO === abandonado) → push("contrato abandonado")
+
+O texto observado no aparelho é:
+  "⚠️ Ambiente de teste — rede Sepolia · contrato não configurado."
+                                 ^^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^^^^^^^^
+                                    L28              L30
+
+Ou seja: dispararam EXATAMENTE os ramos L28 e L30, e NÃO o L29 (stage).
+Isto é uma assinatura precisa — identifica o estado do env sem ambiguidade.
+
+--------------------------------------------------------------------------------
+0.2 — DE ONDE VÊM CHAIN_ID_DEC E CONTRATO
+--------------------------------------------------------------------------------
+Ficheiro: desafio-gut/frontend/src/lib/network.js (fonte única, MC59.2)
+
+  L19  CONTRATO      = env.VITE_CONTRATO_SEPOLIA ?? env.VITE_CONTRATO ?? ""
+  L23  CHAIN_ID_DEC  = Number(env.VITE_CHAIN_ID ?? 11155111)   ← default SEPOLIA
+  L31  EXPLORER_URL  = env.VITE_EXPLORER_URL ?? "https://sepolia.etherscan.io"
+
+Nota: network.js NÃO lê `VITE_CONTRATO_MAINNET`. Nenhum ficheiro do frontend lê
+essa variável — foi confirmado por grep em todo o src/.
+
+--------------------------------------------------------------------------------
+0.3 — PROVA EMPÍRICA: O QUE ESTÁ EMBUTIDO NO APK INSTALADO
+--------------------------------------------------------------------------------
+Inspeção dos assets que o Capacitor empacotou dentro do APK
+(android/app/src/main/assets/public/assets/*.js, mtime 2026-07-31 02:34):
+
+  VITE_CONTRATO_MAINNET : 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd   ← ninguém lê
+  VITE_NETWORK_STAGE    : mainnet
+  VITE_CONTRATO_SEPOLIA : (AUSENTE)
+  VITE_CHAIN_ID         : (AUSENTE)
+  VITE_ALCHEMY_URL      : (AUSENTE)
+
+Consequência mecânica, linha a linha:
+  CONTRATO      = "" (VITE_CONTRATO_SEPOLIA ausente)   → L30 dispara
+  CHAIN_ID_DEC  = 11155111 (default, VITE_CHAIN_ID ausente) → L28 dispara
+  STAGE         = "mainnet"                             → L29 NÃO dispara
+
+Corresponde 100% ao texto observado. Hipótese confirmada, sem margem.
+
+O validador oficial confirma o mesmo sobre o dist/ atual:
+  $ node scripts/validar-dist-rede.mjs
+  VITE_CONTRATO_SEPOLIA : (AUSENTE)
+  VITE_CHAIN_ID         : (AUSENTE)
+  ✖ BUNDLE REJEITADO
+
+--------------------------------------------------------------------------------
+0.4 — POR QUE FALTAM ESSAS VARIÁVEIS: A CAUSA-RAIZ
+--------------------------------------------------------------------------------
+Existem dois caminhos de build, e eles produzem bundles DIFERENTES:
+
+  (A) npm run build          = "vite build"
+      → Vite lê os ficheiros .env do DISCO.
+      → desafio-gut/frontend/.env contém APENAS:
+            VITE_CONTRATO_MAINNET=0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+            VITE_NETWORK_STAGE=mainnet
+      → Não há VITE_CHAIN_ID nem VITE_CONTRATO_SEPOLIA em lado nenhum do disco.
+      → RESULTADO: bundle Sepolia-por-omissão e sem contrato.  ← É ESTE O APK ATUAL
+
+  (B) npm run build:apk      = netlify build --context production
+                               && npm run validar:dist && npx cap sync android
+      → O Netlify injecta o env do contexto de produção, que está CORRETO:
+            VITE_CHAIN_ID         = 1
+            VITE_CONTRATO_SEPOLIA = 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+            VITE_ALCHEMY_URL      = https://eth-mainnet.g.alchemy.com/...
+            VITE_EXPLORER_URL     = https://etherscan.io
+            VITE_NETWORK_STAGE    = mainnet
+      → O env do contexto tem precedência sobre os .env do disco.
+      → RESULTADO: bundle mainnet coerente, e o validador deixa passar.
+
+O MC89.26 foi compilado pelo caminho (A). É essa, e apenas essa, a origem.
+
+--------------------------------------------------------------------------------
+0.5 — POR QUE A LIMPEZA MANUAL DO BUNDLE NÃO RESOLVEU
+--------------------------------------------------------------------------------
+A substituição manual no dist trocou ocorrências do endereço de contrato.
+Mas o defeito não era um endereço errado presente — era duas variáveis
+AUSENTES. Não se corrige uma ausência com um "find & replace": não havia
+`VITE_CHAIN_ID:` no ficheiro para substituir. O default 11155111 vive em
+network.js e só é evitado se a variável EXISTIR no momento do build.
+
+Lição: editar o artefacto compilado nunca podia funcionar aqui. A configuração
+de rede é resolvida em tempo de build, não em tempo de execução.
+
+--------------------------------------------------------------------------------
+0.6 — GRAVIDADE REAL (maior do que "uma mensagem incómoda")
+--------------------------------------------------------------------------------
+O aviso é cosmético; o estado que ele denuncia não é. No APK atual:
+  • CONTRATO = ""  → leitura de saldo de senhas e envio de lance falham.
+  • Sem VITE_ALCHEMY_URL → sem RPC de mainnet.
+  • É a mesma configuração que causou o MC88.24 ("o PIX debitou e a senha não
+    creditou"), que custou um MC inteiro a diagnosticar.
+
+Este componente (AvisoRede, MC88.25) foi criado precisamente para tornar esse
+estado visível em dois minutos em vez de um MC. Cumpriu a sua função.
+
+⚠️ CONCLUSÃO DE DESENHO: silenciar a mensagem — mexer em AvisoRede.jsx, no
+default de network.js, ou fazer network.js aceitar VITE_CONTRATO_MAINNET —
+seria a correção ERRADA. Apagaria o alarme e deixaria o defeito. A correção
+certa é recompilar pelo caminho (B); a mensagem desaparece por consequência,
+que é exatamente como este componente foi desenhado para se comportar.
+
+--------------------------------------------------------------------------------
+0.7 — ACHADO SECUNDÁRIO: A ARMADILHA DO .env LOCAL
+--------------------------------------------------------------------------------
+desafio-gut/frontend/.env (não rastreado pelo git — .gitignore:21) declara
+`VITE_CONTRATO_MAINNET`, uma variável que NENHUM código lê. Ela dá a impressão
+de que o disco está configurado para mainnet quando não está. Foi essa falsa
+confiança que tornou o `npm run build` plausível.
+
+Correção prevista no Segmento 1: tornar o .env honesto (é local, portanto a
+mudança não é commitável — fica documentada aqui).
+
+--------------------------------------------------------------------------------
+RESUMO DAS AÇÕES PARA O SEGMENTO 1
+--------------------------------------------------------------------------------
+  1. NÃO alterar AvisoRede.jsx nem network.js. (O alarme está correto.)
+  2. Neutralizar a armadilha no .env local (variável não lida).
+  3. Recompilar com `npm run build:apk` — que já inclui o gate validar:dist.
+  4. Confirmar o env embutido nos assets ANTES de gerar o APK.
+================================================================================

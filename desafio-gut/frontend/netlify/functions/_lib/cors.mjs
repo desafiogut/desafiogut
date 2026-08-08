@@ -44,7 +44,7 @@ export const ORIGEM_APK = "https://localhost";
  */
 export const CABECALHOS_CORS = Object.freeze({
   "access-control-allow-origin": ORIGEM_APK,
-  "access-control-allow-headers": "content-type, authorization, x-visitor-id, x-device-tracked, x-admin-token, sentry-trace, baggage",
+  "access-control-allow-headers": "content-type, authorization, x-visitor-id, x-device-tracked, sentry-trace, baggage",
   "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
   "access-control-max-age": "86400",
   // MC88.16 (P0) — cross-origin, o JS só LÊ os cabeçalhos safelisted

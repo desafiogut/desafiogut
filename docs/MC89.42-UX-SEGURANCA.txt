@@ -1,0 +1,119 @@
+MC89.42 — REQUISITOS DE UX E SEGURANÇA DO PAINEL ADM
+Data: 2026-08-02 | Skills: impeccable (OPERATE), ux-audit, security-review
+
+================================================================================
+1. UX — AS REGRAS DURAS (binárias, sem exceção)
+================================================================================
+U1. ZERO EMOJI COMO UI. Nada de emoji como ícone, indicador de estado, marcador
+    de secção ou rótulo de botão.
+    ✅ JÁ CUMPRIDO — verifiquei as 22 páginas e componentes admin: zero
+    ocorrências. O painel do LOJISTA usa emoji, o do ADM não. Manter essa
+    separação; é ela que faz o painel ler como ferramenta e não como app de
+    consumo.
+
+U2. UMA SÓ FAMÍLIA DE ÍCONES. Não misturar contornado com preenchido.
+
+U3. TODO O COMPONENTE INTERATIVO TEM SETE ESTADOS: default, hover, focus, active,
+    disabled, loading, error. Enviar com metade é enviar incompleto.
+    ⚠️ Num APK não há hover — mas há FOCUS (teclado/leitor de ecrã) e ACTIVE
+    (toque). Esses não são opcionais por não haver rato.
+
+U4. ALVOS DE TOQUE ≥ 44 px. O painel é usado no telemóvel; uma tabela densa com
+    botões de 24 px é uma tabela que não se consegue usar.
+
+U5. ESQUELETOS, NÃO SPINNERS NO MEIO DO CONTEÚDO. Um spinner que substitui a
+    tabela faz a página saltar quando os dados chegam. É a mesma lição que o
+    MC88.37 pagou com CLS 0,373 e o MC89.36 corrigiu com o EstadoNeutro.
+
+U6. ESTADOS VAZIOS QUE ENSINAM. "Nada aqui" é uma desistência. Num sistema com
+    0 logs, 0 bloqueios e 0 notificações, o estado vazio é o ecrã MAIS VISTO do
+    painel — tem de dizer o que apareceria ali e o que fazer para o provocar.
+    ⇒ `EstadoVazio` já existe como componente. É de melhorar, não de criar.
+
+U7. COR RESTRITA. Um acento, para ação primária, seleção atual e estado. Nunca
+    decoração. Os cinzentos fazem o trabalho pesado.
+
+U8. NADA DE MODAL COMO PRIMEIRA IDEIA. Modais são quase sempre preguiça. Esgotar
+    inline e divulgação progressiva primeiro. A exceção legítima é a confirmação
+    destrutiva (U9), que EXIGE interrupção.
+
+U9. CONFIRMAÇÃO DESTRUTIVA ENQUADRADA NA PERDA, NÃO NA AÇÃO.
+    ❌ "Tem a certeza que quer bloquear?"  [Sim] [Não]
+    ✅ "Bloquear 0x6ac9…674d? Perde o acesso à app e aos R$ 4,00 em carteira
+        até ser desbloqueado."  [Bloquear utilizador] [Cancelar]
+    ⚠️ ESTADO ATUAL: 5 das 11 páginas têm confirmação (Aprovacoes,
+    ConfiguracoesAdmins, LogsAuditoria, Operacoes, PerfilUsuario). Faltam nas
+    outras — e `Cotas.jsx` é a mais grave, porque marca dinheiro e não confirma.
+
+U10. MOTION 150–250 ms, e só para estado. Sem sequências de entrada: o
+     administrador entra numa tarefa, não quer ver a página a montar-se.
+
+================================================================================
+2. UX — A DECISÃO DE ARQUITETURA
+================================================================================
+A1. AGRUPAR POR PERGUNTA, NÃO POR TABELA. Quem · Dinheiro · Sistema (ver plano
+    §4.1). Nove itens numa barra de telemóvel é a ferramenta à frente da tarefa.
+
+A2. A VISÃO GERAL ORDENA-SE POR URGÊNCIA: o que está errado primeiro, o que está
+    a acontecer depois, os números por último. Um painel de governança abre-se
+    para responder "está tudo bem?", não para admirar gráficos.
+
+A3. DENSIDADE É PERMITIDA. O OPERATE autoriza — e aqui pede — tabelas com muitas
+    linhas. Cortar cromo, nunca dados.
+
+A4. RESPONSIVO POR ESTRUTURA, não por tipografia fluida. Barra → grupos;
+    tabela → cartões. Nada de `clamp()` em títulos.
+
+A5. CONSISTÊNCIA ACIMA DE SURPRESA. Se o botão de gravar é diferente em dois
+    ecrãs, um deles está errado. O painel já tem vocabulário próprio
+    (ComandoButton, StatusCard, EstadoVazio, AdminToast) — usar, não inventar.
+
+================================================================================
+3. SEGURANÇA
+================================================================================
+S1. AUTORIZAÇÃO NO SERVIDOR, SEMPRE. O painel é conforto; quem impede é o
+    backend. É a mesma regra que o MC89.40 aplicou ao lojista, e vale igual aqui:
+    esconder um botão não protege um endpoint.
+
+S2. RASTO EM TODA A AÇÃO QUE MUDA ESTADO. O padrão já existe e é bom:
+    `registrarAcao` ANTES + `confirmarAcao` DEPOIS, para que uma ação que rebente
+    fique registada como falhada em vez de desaparecer.
+    ⚠️ Por fechar: `admin-aprovacao` (zero chamadas) e o upsert de cotas.
+    ⚠️ E antes de acrescentar chamadas: DESCOBRIR PORQUE É QUE A TABELA TEM ZERO
+      LINHAS (plano §3.1). Escrever mais logs para uma tabela que talvez não
+      esteja a receber nada seria trabalho invisível.
+
+S3. FAIL-CLOSED. Erro de leitura de permissão nunca autoriza. Já é a regra em
+    `_lib/cota-utils.mjs` e em `getAdminNivel`; manter em tudo o que for novo.
+
+S4. JUSTIFICATIVA OBRIGATÓRIA em ações de consequência (bloqueio, ajuste de
+    saldo, cancelamento de cota). `admin_logs` já tem coluna `justificativa` —
+    está a ser pedida onde deve? É de verificar no MC89.43.
+
+S5. NÍVEIS DE ADMIN. `getAdminNivel()` já existe (MC89.11) e ALFA:panic já é só
+    de super-admin. Estender aos novos poderes, e NUNCA por omissão: um poder
+    novo nasce restrito e abre-se por decisão.
+
+S6. ⚠️ DADO PESSOAL NOVO EXIGE DECISÃO, NÃO SILÊNCIO. A tabela de atividade do
+    P0-A grava endereço + carimbo de uso — é dado pessoal e entra na política de
+    privacidade. Não é uma alteração técnica neutra e não deve ser feita como se
+    fosse.
+
+S7. NADA DE `ethers` NO PAINEL (MC88.31). Leitura on-chain passa por endpoint de
+    servidor. Já há teste a fixar isto; não o contornar por conveniência.
+
+S8. O PAINEL NÃO É SÍTIO PARA SEGREDOS. Nenhuma configuração exposta em
+    `admin-config` pode devolver chaves ou tokens ao cliente — a página mostra
+    o QUE está definido, nunca o VALOR. De verificar no MC89.43.
+
+================================================================================
+4. COMO SE VERIFICA (e o que não conta como verificação)
+================================================================================
+V1. Cada guarda de autorização nova: teste + MUTAÇÃO. Nesta série, 24 de 24
+    mutações foram apanhadas, e duas delas revelaram defeitos nos meus próprios
+    testes. Um teste que nunca viu vermelho não prova nada.
+V2. Estados vazios: validar com a base como está (é o caso real, não o excecional).
+V3. ⚠️ NÃO criar dados de teste em produção para validar ecrãs. O MC89.39 mostrou
+    onde isso acaba.
+V4. Validação no aparelho por sonda CDP com CONTROLO POSITIVO — confirmar que a
+    sonda VÊ o que procura antes de acreditar num "não apareceu".

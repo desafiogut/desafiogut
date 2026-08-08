@@ -237,7 +237,7 @@ function extrairEdicaoId(texto) {
  * por utilizadores logados normalmente — que possuem um JWT de *user-session*
  * (de /auth-user), não um admin-access JWT (só emitido pelo painel /admin).
  * Por isso aceitamos DOIS caminhos:
- *   1) autenticarAdmin → admin-access JWT ou x-admin-token legado (preferido).
+ *   1) autenticarAdmin → admin-access JWT (única via — legado removido no MC89.46).
  *   2) user-session JWT válido cujo endereço ∈ admin-list (getAdminAddresses).
  * Sem token, ou endereço fora da admin-list → { ok:false } (recusa). Segurança
  * preservada: o user-session é assinado (JWT_SECRET) e o gate de admin-list é o
@@ -246,7 +246,7 @@ function extrairEdicaoId(texto) {
  * @returns {Promise<{ ok: boolean, endereco?: string|null }>}
  */
 async function confirmarAdminChat(req) {
-  // 1) Caminho estrito (admin-access JWT / x-admin-token legado).
+  // 1) Caminho estrito (admin-access JWT).
   const adm = await autenticarAdmin(req);
   if (adm.ok) return { ok: true, endereco: adm.endereco || null };
 
@@ -287,7 +287,7 @@ async function confirmarAdminChat(req) {
  * @returns {Promise<{ perfil: "visitante"|"comum"|"corporativo"|"admin", endereco: string|null }>}
  */
 export async function detectarPerfil(req) {  // export: testado em _tests/mc8820-guto-personalidades
-  // 1) admin — admin-access JWT / x-admin-token / user-session ∈ admin-list.
+  // 1) admin — admin-access JWT / user-session ∈ admin-list.
   const adm = await confirmarAdminChat(req);
   if (adm.ok) return { perfil: "admin", endereco: adm.endereco || null };
 

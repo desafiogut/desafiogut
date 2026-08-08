@@ -55,13 +55,15 @@ mock.module("../_lib/rate-limiter.mjs", { namedExports: { aplicarRateLimit: asyn
 // por `resolverChamador`; só reconhece admin quando o header de teste vem certo,
 // para que os casos GET anónimos exercitem mesmo o caminho não-autenticado.
 // `guardAdmin` continua permissivo para não alterar os casos POST/DELETE (e).
+// MC89.47-S2 — mock atualizado para Bearer admin-JWT (o legado x-admin-token
+// foi removido do guard real).
 const ADMIN_TOKEN_TESTE = "token-admin-teste";
 mock.module("../_lib/admin-auth.mjs", {
   namedExports: {
     guardAdmin: async () => null,
     autenticarAdmin: async (req) =>
-      req.headers.get("x-admin-token") === ADMIN_TOKEN_TESTE
-        ? { ok: true, papel: "admin-legado", endereco: null }
+      (req.headers.get("authorization") || "") === `Bearer ${ADMIN_TOKEN_TESTE}`
+        ? { ok: true, papel: "admin-jwt", endereco: "0xadmin", fonte: "jwt", payload: { nivel: "admin" } }
         : { ok: false, papel: null, code: "admin_token_ausente" },
   },
 });
@@ -88,10 +90,10 @@ async function getComoUsuario(path, endereco) {
     method: "GET", headers: { authorization: `Bearer ${token}` },
   }));
 }
-/** GET autenticado como admin (x-admin-token legado). */
+/** GET autenticado como admin (Bearer admin-JWT). */
 function getComoAdmin(path) {
   return handler(new Request(`http://x/${path}`, {
-    method: "GET", headers: { "x-admin-token": ADMIN_TOKEN_TESTE },
+    method: "GET", headers: { authorization: `Bearer ${ADMIN_TOKEN_TESTE}` },
   }));
 }
 beforeEach(() => { cotasMem.clear(); fpMem.clear(); stores.clear(); trocoMem.clear(); });

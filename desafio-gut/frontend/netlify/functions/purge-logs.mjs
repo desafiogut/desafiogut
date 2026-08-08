@@ -13,7 +13,7 @@
 //   consent-log      → 5 anos
 //   fingerprint      → 24 horas
 //
-// Auth: admin-JWT (preferido) ou ADMIN_TOKEN legado. Idempotente.
+// Auth: admin-JWT (única via — ADMIN_TOKEN legado removido no MC89.46). Idempotente.
 // GET ?dryRun=1 → lista o que SERIA deletado sem persistir.
 // POST          → executa.
 

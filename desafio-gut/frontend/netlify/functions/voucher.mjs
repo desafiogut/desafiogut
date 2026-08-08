@@ -3,7 +3,7 @@
 // POST /.netlify/functions/voucher  body { acao, ... }
 //
 //   acao="gerar"     (admin)
-//     headers: x-admin-token
+//     headers: Authorization: Bearer <admin-JWT>
 //     body:    { acao:"gerar", endereco_emissor }
 //     ret:     { codigo, emissor, criadoEm }
 //
@@ -23,7 +23,7 @@
 //
 // Decisões (sessão 2026-05-12):
 //   - "Diamante" não tem ainda um gate real (REQ-04..07 AUSENTE).
-//     Por isso geração é admin-only (gated por x-admin-token) — só o operador
+//     Por isso geração é admin-only (gated por Bearer admin-JWT) — só o operador
 //     emite vouchers em nome do cliente Diamante. Quando o sistema de cotas
 //     existir, troca-se para verificar saldoVouchers do cliente.
 //   - Resgate exige JWT lance-auth para garantir que o endereco_resgatador
@@ -87,8 +87,7 @@ async function acaoGerar(req, body) {
   const auth = await autenticarAdmin(req);
   if (!auth.ok) {
     let status = 401;
-    if (auth.code === "admin_token_nao_configurado") status = 503;
-    else if (auth.code === "admin_removido")         status = 403;
+    if (auth.code === "admin_removido") status = 403;
     return jsonError(status, auth.code, auth.message);
   }
   // MC7: MFA gate — controlado por env MFA_ENFORCEMENT (off|warn|enforce)

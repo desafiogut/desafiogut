@@ -1,0 +1,125 @@
+════════════════════════════════════════════════════════════════════
+MC89.47 — RELATÓRIO FINAL (Hermes)
+Data: 2026-08-06
+Repositório: C:\Users\Moltbot\Desktop\DESAFIOGUT (github.com/desafiogut/desafiogut)
+Branch: feat/mc89.32-diagnostico-perf (53 commits à frente de main ao final)
+Escopo: segurança + infraestrutura + documentação — ZERO lógica de negócio
+Backup: bundle completo em C:\Users\Moltbot\Desktop\backup-mc8947-20260806-214403.bundle
+════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────
+1. RESUMO EXECUTIVO
+────────────────────────────────────────────────────────────────────
+Todos os 10 segmentos concluídos (S0–S10). As pendências P1–P9 do
+MC89.46 foram atacadas: P1 resolvida (ESLint configurado e bloqueante
+passando), P3 resolvida (x-admin-token erradicado do código), P4
+resolvida (código morto removido), P5 resolvida (backup fora do repo),
+P6 resolvida (gradle descartados — eram só line-ending), P7/P8/P9
+diagnosticadas com planos prontos (aguardam aprovação para executar),
+P2 com plano de migração documentado.
+
+Validações: ESLint 0 erros (230 warnings) no comando exato do CI;
+suíte de testes 391/391 verde (3× ao longo do MC); node --check em
+todos os arquivos alterados; YAML do CI válido.
+
+Working tree final: LIMPO. Nenhum arquivo fora do escopo foi tocado.
+
+────────────────────────────────────────────────────────────────────
+2. ARQUIVOS MODIFICADOS (por segmento)
+────────────────────────────────────────────────────────────────────
+S0: docs/MC89.47-DIAGNOSTICO.txt (+ bundle no Desktop, fora do repo)
+S1: desafio-gut/frontend/eslint.config.js (NOVO)
+    desafio-gut/frontend/package.json (devDeps eslint/globals/@eslint/js
+    + script "lint")
+    desafio-gut/frontend/package-lock.json
+    Fixes de lint semântica-neutros: src/PrivyRoot.jsx (regex \u),
+    src/utils/web3.js (cause nos throws), src/utils/sanitize.js
+    (escape hífen), scripts/test-mc11.{2,4,5,15,16}.mjs e
+    test-mc12.3.1.mjs, src/hooks/useAdmin.js, src/lib/dicaSessao.test.mjs,
+    src/pages/admin/{Aprovacoes,Cotas,GestaoUsuarios}.jsx
+    (comentários eslint-disable obsoletos removidos pelo --fix)
+S2: functions: health.mjs, _lib/cors.mjs, _tests/cotas-anti-fraude.test.mjs,
+    scripts/check-functions-health.mjs + comentários em 15 functions
+    (admin-aprovacao, admin-list, banners, chatbot, consolidar-lances,
+    cotas, cron-reset-programado, exportar-dados, notificacoes,
+    purge-lances, renovacao-adesao, schedule, voucher, wallet, purge-logs)
+    Docs: migracao-admin-token-jwt.md (status real), MC89-MAPA-CODIGO.txt,
+    MC89-ARQUITETURA.txt (nota de atualização)
+S3: _lib/admin-auth.mjs (2 guards) + admin-aprovacao.mjs,
+    admin-commands.mjs, admin-logs.mjs, voucher.mjs, wallet.mjs
+S4: (sem commit — backup movido para Desktop/GUTO/BACKUPS, era untracked)
+S5: (sem commit — gradle descartados via git checkout, EOL-only)
+S6: docs/MC89.47-BRANCHES-CANDIDATAS.txt (NOVO — aguarda aprovação)
+S7: docs/MC89.47-BLOAT-DIAGNOSTICO.txt (NOVO)
+S8: docs/MC89.47-DEPENDABOT.txt (NOVO)
+S9: docs/MC89.47-P2-PLANO.txt (NOVO)
+S10: cloud.md (seção MC89.46/47) + docs/MC89.47-RELATORIO.txt (NOVO)
+
+Commits (12): 3d8dafe (S0), b177049 (S1), 4ec78cd (S2), ea5742d (S3),
+99b6966 (S6), e2ab902 (S7), 1e06041 (S8), 42bab97 (S9), + final S10.
+
+────────────────────────────────────────────────────────────────────
+3. STATUS POR SEGMENTO
+────────────────────────────────────────────────────────────────────
+S0  Preparação e backup .................... [SUCESSO] bundle 63 MB no Desktop
+S1  P1 ESLint .............................. [SUCESSO] 0 erros / 230 warnings
+S2  P3 x-admin-token ........................ [SUCESSO] erradicado do código
+S3  P4 código morto ......................... [SUCESSO] 7 pontos removidos
+S4  P5 backup migração ...................... [SUCESSO] movido p/ Desktop/GUTO/BACKUPS
+S5  P6 gradle files ......................... [SUCESSO] descartados (EOL-only)
+S6  P7 branches ............................. [SUCESSO] lista gerada + commit
+                                                     (AGUARDA APROVAÇÃO p/ deletar)
+S7  P8 bloat .git ........................... [SUCESSO] diagnóstico + plano
+                                                     (AGUARDA APROVAÇÃO p/ gc)
+S8  P9 dependabot ........................... [SUCESSO] 15 PRs priorizados
+S9  P2 auth-admin ........................... [SUCESSO] plano de migração
+S10 Relatório + cloud.md .................... [SUCESSO]
+
+────────────────────────────────────────────────────────────────────
+4. PENDÊNCIAS QUE FICARAM (com justificativa)
+────────────────────────────────────────────────────────────────────
+[PEND-1] P7 — Deletar branches: 93 remotas mergeadas em main + 3 locais
+  paradas > 3 meses. LISTADAS em docs/MC89.47-BRANCHES-CANDIDATAS.txt.
+  NADA foi deletado: exige aprovação explícita do operador (regra MC89.47).
+[PEND-2] P8 — Reduzir .git: plano pronto (reflog expire + gc --prune=now,
+  recupera ~4,5 GB) em docs/MC89.47-BLOAT-DIAGNOSTICO.txt. NÃO executado:
+  ação destrutiva exige aprovação. Passo 0 do plano: inspecionar os zips
+  órfãos antes de podar.
+[PEND-3] P2 — ADMIN_TOKEN no login (auth-admin.mjs): plano de remoção
+  documentado (docs/MC89.47-P2-PLANO.txt). Não executado — mudança de
+  contrato do login + frontend; exige aprovação e deploy coordenado.
+[PEND-4] Warnings de ESLint (230): aceites por design (no-console/
+  no-unused-vars como warn). Redução gradual é possível em MCs futuros.
+[PEND-5] check-functions-health.mjs: com o legado removido, o smoke com
+  ADMIN_TOKEN cru não alcança mais o nível admin do /health (só público).
+  Para testar o nível admin é preciso um JWT real (via auth-admin login).
+[PEND-6] Deploy web: branch ainda não mergeada em main; Netlify deploy
+  pendente (herdado — ver MC89.44: "a web não está com o APK").
+[PEND-7] Docs históricos MC89-PLANO.txt e MC89.1-RELATORIO.txt mantêm
+  menções ao x-admin-token (registros da época — não reescritos para
+  preservar integridade do histórico; nota editorial adicionada aos docs
+  de referência ativa: MAPA-CODIGO e ARQUITETURA).
+
+────────────────────────────────────────────────────────────────────
+5. PRÓXIMOS PASSOS
+────────────────────────────────────────────────────────────────────
+1. [APROVAÇÃO] Podar branches (PEND-1) — comando no doc S6.
+2. [APROVAÇÃO] gc do .git (PEND-2) — 4 passos no doc S7 (4,6 GB → ~200 MB).
+3. [APROVAÇÃO] Migração do ADMIN_TOKEN (PEND-3) — opção A do plano S9.
+4. Mergear PRs dependabot na ordem do doc S8 (fechar #6/#7 obsoletos).
+5. Mergear feat/mc89.32-diagnostico-perf em main + deploy Netlify.
+6. (Opcional) Reduzir warnings de lint gradualmente (PEND-4).
+
+────────────────────────────────────────────────────────────────────
+6. VALIDAÇÕES EXECUTADAS
+────────────────────────────────────────────────────────────────────
+- npx eslint . --ext js,jsx --report-unused-disable-directives → 0 erros
+  (comando exato do CI; 230 warnings aceites)
+- node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+  → 391/391 passando (3 execuções no MC, incluindo após S2 e S3)
+- node --check em todos os .mjs/.js alterados → OK
+- git status final → working tree limpo
+- git bundle create --all → backup íntegro (63 MB, Desktop)
+════════════════════════════════════════════════════════════════════
+FIM DO RELATÓRIO MC89.47
+════════════════════════════════════════════════════════════════════

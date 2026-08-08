@@ -33,8 +33,7 @@ export default async (req) => {
   const auth = await autenticarAdmin(req);
   if (!auth.ok) {
     let status = 401;
-    if (auth.code === "admin_token_nao_configurado") status = 503;
-    else if (auth.code === "admin_removido") status = 403;
+    if (auth.code === "admin_removido") status = 403;
     return jsonError(status, auth.code, auth.message);
   }
 

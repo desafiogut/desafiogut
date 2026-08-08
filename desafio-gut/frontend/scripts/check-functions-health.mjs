@@ -29,11 +29,12 @@ const healthUrl = pathToFileURL(resolve(repoFrontend, "netlify/functions/health.
 const { default: health } = await import(healthUrl);
 
 // MC87 (P0-2) — o mapa `env` do /health passou a exigir credencial admin. O smoke
-// envia x-admin-token quando ADMIN_TOKEN está no ambiente; sem ele, valida apenas
-// o nível público (o que ainda prova que a função responde e o runtime está vivo).
+// envia Bearer admin-JWT quando ADMIN_TOKEN está no ambiente; sem ele, valida
+// apenas o nível público (o que ainda prova que a função responde e o runtime
+// está vivo). MC89.47-S2 — o legado x-admin-token foi removido do /health.
 const adminToken = process.env.ADMIN_TOKEN || null;
 const req = new Request("http://localhost/.netlify/functions/health", {
-  headers: adminToken ? { "x-admin-token": adminToken } : {},
+  headers: adminToken ? { authorization: `Bearer ${adminToken}` } : {},
 });
 const res = await health(req, {});
 const body = await res.json();

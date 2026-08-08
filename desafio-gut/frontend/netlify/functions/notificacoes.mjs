@@ -34,7 +34,7 @@ const COUNTERS_KEY = "counters";
 
 /**
  * Confirma admin com o MESMO gate do GUTO (MC15.4.2): admin-access JWT /
- * x-admin-token (autenticarAdmin) OU user-session cujo endereço ∈ admin-list.
+ * admin-JWT (autenticarAdmin) OU user-session cujo endereço ∈ admin-list.
  * @returns {Promise<{ ok: boolean, endereco?: string|null }>}
  */
 async function confirmarAdmin(req) {

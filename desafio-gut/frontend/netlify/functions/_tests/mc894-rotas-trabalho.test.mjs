@@ -110,11 +110,18 @@ test("zero emojis em NENHUM ecrã do painel, fora dos comentários", () => {
   // MC89.6 — antes o painel era um ficheiro; agora são onze. A guarda passa a
   // varrer a pasta inteira: com nove telas, verificar só uma delas seria dar por
   // cumprida uma regra que nem se está a medir onde ela pode ser quebrada.
-  const alvos = [
-    "components/admin/AdminLayout.jsx",
-    "components/admin/AtalhosAdmin.jsx",
-    ...readdirSync(resolve(SRC, "pages/admin")).map((f) => `pages/admin/${f}`),
-  ];
+  //
+  // ⚠️ MC89.44 — e até aqui NÃO varria a pasta inteira. `pages/admin` era lido
+  // do disco, mas de `components/admin` estavam DOIS ficheiros à mão, o que
+  // deixava os outros nove componentes do painel (a barra de navegação
+  // incluída) fora da regra que este teste diz aplicar. Foi apanhado por
+  // acidente: apagar `AtalhosAdmin.jsx` — código morto desde o MC89.24 — pôs
+  // o teste a rebentar com ENOENT em vez de simplesmente deixar de o verificar.
+  // Passam a ser as duas pastas, lidas do disco.
+  const daPasta = (dir) => readdirSync(resolve(SRC, dir))
+    .filter((f) => f.endsWith(".jsx") || f.endsWith(".js"))
+    .map((f) => `${dir}/${f}`);
+  const alvos = [...daPasta("components/admin"), ...daPasta("pages/admin")];
   assert.ok(alvos.length >= 11, `esperava ≥11 ficheiros de painel, vi ${alvos.length}`);
 
   for (const rel of alvos) {

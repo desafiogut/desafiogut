@@ -13,9 +13,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button } from "../../components/ui";
-import AtalhosAdmin from "../../components/admin/AtalhosAdmin.jsx";
 import GraficoLinha from "../../components/admin/GraficoLinha.jsx";
-import { COR, Metrica, Grelha, ouTraco, brl } from "./_ui.jsx";
+import { ordenarAlertas } from "../../lib/alertasAdmin.js";
+import { COR, Metrica, Grelha, ouTraco, brl , TituloSeccao } from "./_ui.jsx";
 
 // ── Alertas do frontend (R7: dependem de RPC, não do Postgres) ─────────────
 // Estes são computados AQUI porque o admin-onchain já tem os dados, e a regra
@@ -123,12 +123,9 @@ export default function VisaoGeral() {
 
   if (!chamarAdmin) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-        <AtalhosAdmin />
-        <p style={{ color: COR.muted, fontSize: "0.85rem", margin: 0 }}>
-          Autentique-se para ver as métricas.
-        </p>
-      </div>
+      <p style={{ color: COR.muted, fontSize: "0.85rem", margin: 0 }}>
+        Autentique-se para ver as métricas.
+      </p>
     );
   }
 
@@ -137,11 +134,16 @@ export default function VisaoGeral() {
   const c = stats?.cotas;
   const fila = stats?.operacao?.fila;
 
-  // Alertas do backend + do frontend (EOA), unidos.
-  const todosAlertas = [
+  // Alertas do backend + do frontend (EOA), unidos E ORDENADOS POR URGÊNCIA.
+  //
+  // ⚠️ MC89.44 — a ordenação faltava, e a consequência era a pior possível: o
+  // único `critical` do painel (EOA sem gás) nasce no FRONTEND e era
+  // concatenado no fim, por baixo de até cinco linhas informativas do backend.
+  // A regra vive em `lib/alertasAdmin.js` para poder ser testada.
+  const todosAlertas = ordenarAlertas([
     ...(alertas || []),
     ...alertasDoFrontend({ onchain }),
-  ];
+  ]);
 
   // Rótulos das datas: "2026-07-24" → "24/07"
   const rotularDia = (iso) => {
@@ -155,7 +157,6 @@ export default function VisaoGeral() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-      <AtalhosAdmin />
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
         <span style={{ fontSize: "0.72rem", color: COR.muted }}>
@@ -183,9 +184,9 @@ export default function VisaoGeral() {
       {/* ── MC89.7: ALERTAS ────────────────────────────────────────────────── */}
       {todosAlertas.length > 0 && (
         <section>
-          <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>
+          <TituloSeccao>
             ALERTAS ({todosAlertas.length})
-          </h3>
+          </TituloSeccao>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             {todosAlertas.map((a) => (
               <div key={a.id} style={{
@@ -214,10 +215,51 @@ export default function VisaoGeral() {
         </section>
       )}
 
+      {/* MC89.24 — métricas críticas (EOA + fila) sobem para DEPOIS dos alertas,
+          ANTES dos gráficos. São os números que o admin precisa de ver primeiro. */}
+      <section>
+        <TituloSeccao>
+          CADEIA <span style={{ color: COR.muted, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>· carrega à parte</span>
+        </TituloSeccao>
+        {erroChain && (
+          <div style={{ padding: "0.6rem 0.8rem", borderRadius: "8px", background: "rgba(251,191,36,0.08)", border: `1px solid ${COR.warn}55`, color: COR.warn, fontSize: "0.78rem", marginBottom: "0.5rem" }}>
+            Cadeia indisponível: {erroChain}
+          </div>
+        )}
+        <Grelha isMobile={isMobile}>
+          <Metrica
+            rotulo="Saldo da coordenadora"
+            valor={ouTraco(onchain?.saldoEth, (v) => `${v} ETH`)}
+            cor={COR.primary}
+            nota="É esta carteira que credita as senhas on-chain. Sem gás, a compra deixa de ser creditada."
+          />
+          <Metrica
+            rotulo="Em trânsito"
+            valor="—"
+            nota="Rastreabilidade on-chain ainda não disponível."
+          />
+          <Metrica rotulo="Bloco atual" valor={ouTraco(onchain?.bloco, (v) => v.toLocaleString("pt-BR"))} />
+        </Grelha>
+      </section>
+
+      <section>
+        <TituloSeccao>OPERAÇÃO</TituloSeccao>
+        <Grelha isMobile={isMobile}>
+          <Metrica
+            rotulo="Fila — pendentes"
+            valor={ouTraco(fila?.pendentes)}
+            cor={fila?.pendentes > 0 ? COR.warn : COR.success}
+            nota={fila?.atualizadaEm ? `última: ${new Date(fila.atualizadaEm).toLocaleString("pt-BR")}` : null}
+          />
+          <Metrica rotulo="Fila — falhadas" valor={ouTraco(fila?.falhadas)} cor={fila?.falhadas > 0 ? COR.danger : undefined} />
+          <Metrica rotulo="Fila — total" valor={ouTraco(fila?.total)} />
+        </Grelha>
+      </section>
+
       {/* ── MC89.7: GRÁFICOS ───────────────────────────────────────────────── */}
       {series && series.dias && series.dias.length > 0 && (
         <section>
-          <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>EVOLUÇÃO</h3>
+          <TituloSeccao>EVOLUÇÃO</TituloSeccao>
           <div style={{
             display: "grid",
             gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
@@ -261,10 +303,10 @@ export default function VisaoGeral() {
         </section>
       )}
 
-      {/* As 4 secções de métricas que já existiam — preservadas tal e qual. ── */}
-
+      {/* Secções de detalhe — UTILIZADORES e FINANCEIRO. As métricas críticas
+          (CADEIA, OPERAÇÃO) já estão no topo. */}
       <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>UTILIZADORES</h3>
+        <TituloSeccao>UTILIZADORES</TituloSeccao>
         <Grelha isMobile={isMobile}>
           <Metrica
             rotulo="Com atividade"
@@ -282,7 +324,7 @@ export default function VisaoGeral() {
       </section>
 
       <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>FINANCEIRO</h3>
+        <TituloSeccao>FINANCEIRO</TituloSeccao>
         <Grelha isMobile={isMobile}>
           <Metrica rotulo="Saldo em circulação" valor={ouTraco(f?.saldoTotalCentavos, brl)} cor={COR.success} />
           <Metrica rotulo="Já creditado" valor={ouTraco(f?.creditadoCentavos, brl)} nota={f ? `${f.creditos} crédito(s)` : null} />
@@ -290,45 +332,6 @@ export default function VisaoGeral() {
             rotulo={`Créditos (${stats?.janelaDias ?? 30} d)`}
             valor={ouTraco(f?.creditosJanela)}
           />
-        </Grelha>
-      </section>
-
-      <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>OPERAÇÃO</h3>
-        <Grelha isMobile={isMobile}>
-          <Metrica
-            rotulo="Fila — pendentes"
-            valor={ouTraco(fila?.pendentes)}
-            cor={fila?.pendentes > 0 ? COR.warn : COR.success}
-            nota={fila?.atualizadaEm ? `última: ${new Date(fila.atualizadaEm).toLocaleString("pt-BR")}` : null}
-          />
-          <Metrica rotulo="Fila — falhadas" valor={ouTraco(fila?.falhadas)} cor={fila?.falhadas > 0 ? COR.danger : undefined} />
-          <Metrica rotulo="Fila — total" valor={ouTraco(fila?.total)} />
-        </Grelha>
-      </section>
-
-      <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" }}>
-          CADEIA <span style={{ color: COR.muted, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>· carrega à parte</span>
-        </h3>
-        {erroChain && (
-          <div style={{ padding: "0.6rem 0.8rem", borderRadius: "8px", background: "rgba(251,191,36,0.08)", border: `1px solid ${COR.warn}55`, color: COR.warn, fontSize: "0.78rem", marginBottom: "0.5rem" }}>
-            Cadeia indisponível: {erroChain}
-          </div>
-        )}
-        <Grelha isMobile={isMobile}>
-          <Metrica
-            rotulo="Saldo da coordenadora"
-            valor={ouTraco(onchain?.saldoEth, (v) => `${v} ETH`)}
-            cor={COR.primary}
-            nota="É esta carteira que credita as senhas on-chain. Sem gás, a compra deixa de ser creditada."
-          />
-          <Metrica
-            rotulo="Em trânsito"
-            valor="—"
-            nota="Rastreabilidade on-chain ainda não disponível."
-          />
-          <Metrica rotulo="Bloco atual" valor={ouTraco(onchain?.bloco, (v) => v.toLocaleString("pt-BR"))} />
         </Grelha>
       </section>
     </div>

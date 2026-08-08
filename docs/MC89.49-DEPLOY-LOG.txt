@@ -1,0 +1,130 @@
+MC89.49 — SEGMENTO 1: EXECUÇÃO DO DEPLOY
+Data: 2026-08-08
+Skills ECC: terminal-ops, canary-watch
+
+================================================================================
+1.0 — MITIGAÇÃO DO RISCO DO SEGMENTO 0 (executada a pedido do operador)
+================================================================================
+`git push -u origin feat/mc89.32-diagnostico-perf`
+  -> * [new branch]  feat/mc89.32-diagnostico-perf -> feat/mc89.32-diagnostico-perf
+  -> upstream configurado: origin/feat/mc89.32-diagnostico-perf
+
+Verificação de identidade:
+  local  HEAD .......... e1a280379c21f74e17d792fce3d1b2570ddd8ab3
+  origin/feat/... ...... e1a280379c21f74e17d792fce3d1b2570ddd8ab3
+  SINCRONIZADO: SIM
+
+=> O risco de rastreabilidade registado no Segmento 0 (94 commits sem cópia
+   remota, sem ponto de rollback) está RESOLVIDO. R3 satisfeita.
+   PR disponível em:
+   https://github.com/desafiogut/desafiogut/pull/new/feat/mc89.32-diagnostico-perf
+
+================================================================================
+1.1a — DEPLOY DRAFT (passo acrescentado ao plano; fluxo seguro do MC88.12.1)
+================================================================================
+Justificação do desvio: 94 commits nunca revistos não deviam chegar a produção
+sem o artefacto ser validado primeiro. Custo: um build adicional (sem custo
+financeiro novo — plano já pago, R2).
+
+Comando:
+  netlify deploy --build --message "MC89.49 DRAFT: validacao pre-producao (MC89.21-MC89.48)"
+
+Resultado: exit 0
+  Functions bundling ......... 2m 56s  (67 functions)
+  Netlify Build .............. 5m 57.1s
+  Ficheiros ..................  264 files + 67 functions
+  CDN ........................ requesting 41 files and 67 functions
+  Draft URL .................. https://6a7706d01d124c7ed588c627--silly-stardust-ca71bc.netlify.app
+  Build logs ................. https://app.netlify.com/projects/silly-stardust-ca71bc/deploys/6a7706d01d124c7ed588c627
+
+--------------------------------------------------------------------------------
+VALIDAÇÃO DO BUNDLE NO DRAFT — antes de tocar em produção
+--------------------------------------------------------------------------------
+A) Contrato (portão do MC88.12.1 / MC60), em desafio-gut/frontend/dist/assets/*.js
+
+   0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd  (mainnet, CORRETO) ... 1 ocorrência
+       -> dist/assets/web3-DXI_5gTo.js
+   0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5  (Sepolia abandonado) . 0 ocorrências
+   0x0000...0000 ..................................................... 19 ocorrências
+
+   Nota sobre o endereço zero: são constantes do ethers (ZeroAddress/defaults de
+   ABI), NÃO o contrato ativo. Provado por leitura do código, não por suposição:
+   `grep -rn VITE_CONTRACT_ADDRESS desafio-gut/frontend/src` -> ZERO resultados.
+   O frontend resolve o contrato em src/lib/network.js:19, que lê
+   VITE_CONTRATO_SEPOLIA (= 0x0052477A…16cd em produção). VITE_CONTRACT_ADDRESS
+   está a 0x0000…0000 no Netlify mas é VARIÁVEL MORTA — ninguém a lê.
+
+B) Strings das melhorias novas (presença = código publicado)
+
+   MC89.44 — nav ADM agrupada, em dist/assets/AdminLayout--Eo3HDS2.js
+     "Quem está na plataforma" ......... OK
+     "Quanto entrou e saiu" ............ OK
+     "Estado, rasto e definições" ...... OK
+     "/admin/aprovacoes" ............... OK   (tela que esteve ~20 MCs fora do menu)
+     "/admin/cotas" .................... OK   (idem)
+
+   MC89.43 — categoria como campo próprio, em dist/assets/Cotas-BkSi_bdw.js
+     "Escolha a categoria da cota." .... OK
+     "Cota salva em" ................... OK
+
+C) CONTROLO NEGATIVO (a sonda discrimina?)
+     "Quem esta na plataforma XYZ123" .. AUSENTE, como exigido.
+   Sem este controlo, um grep que devolvesse sempre verde passaria por validação.
+
+D) O draft SERVE mesmo o que foi construído (não só o disco local)
+     GET /                             -> 200 em 0,36 s
+     GET /assets/AdminLayout--Eo3HDS2.js -> 200; "Quem está na plataforma" = 1
+     GET /assets/web3-DXI_5gTo.js        -> 200; contrato mainnet = 1
+
+VEREDITO DO DRAFT: APROVADO PARA PRODUÇÃO.
+
+================================================================================
+1.1b — DEPLOY DE PRODUÇÃO
+================================================================================
+Comando:
+  netlify deploy --prod --build --message "MC89.49: sincronizar frontend com
+  melhorias da branch feat/mc89.32-diagnostico-perf"
+
+  (`--build` obrigatório; `--dir=dist` NUNCA — regra do MC88.12.1)
+
+Resultado: exit 0
+  modules transformed ........ 3.632
+  vite built in .............. 6.23s
+  Netlify Build completed .... 4m 41.7s
+  Hashing .................... 264 files and 67 functions
+  CDN ........................ requesting 0 files and 66 functions
+  Upload ..................... 66 assets
+  Deploy is live ............. SIM
+
+  Production URL ............. https://silly-stardust-ca71bc.netlify.app
+  Unique deploy URL .......... https://6a7708ba03f222438f8f7660--silly-stardust-ca71bc.netlify.app
+  Build logs ................. https://app.netlify.com/projects/silly-stardust-ca71bc/deploys/6a7708ba03f222438f8f7660
+
+>> "CDN requesting 0 files" É A PROVA-CHAVE: os assets estáticos são
+   bit-a-bit idênticos aos que foram validados no draft. Produção recebeu
+   exatamente o artefacto aprovado — não uma reconstrução diferente.
+   (As 66 functions voltaram a subir por serem re-empacotadas a cada deploy.)
+
+--------------------------------------------------------------------------------
+AVISOS DO BUILD — analisados, NÃO são falhas
+--------------------------------------------------------------------------------
+6 linhas [INVALID_ANNOTATION] do Rolldown sobre comentários /*#__PURE__*/ mal
+posicionados em node_modules/@privy-io/react-auth/dist/esm/to-ui-error-*.mjs.
+São de dependência de terceiros (Privy), pré-existentes, e o build concluiu
+verde ("✓ built in 6.23s"). Efeito: tree-shaking ligeiramente menos agressivo
+nesse módulo. Nenhuma ação necessária.
+
+Nenhum erro. Nenhuma falha de secrets scanning (o gate do netlify.toml
+continua ativo para as chaves realmente secretas).
+
+================================================================================
+CRITÉRIO DE SUCESSO DO SEGMENTO 1
+================================================================================
+[x] Comando concluído sem erros (exit 0)
+[x] URL de produção gerada e live
+[x] Bundle validado ANTES de produção (draft)
+[x] Contrato mainnet confirmado no artefacto, Sepolia abandonado ausente
+[x] Artefacto de produção provado idêntico ao validado ("CDN requesting 0 files")
+[x] Branch com cópia no remoto (rollback possível)
+
+VEREDITO: APTO A AVANÇAR PARA O SEGMENTO 2.

@@ -5805,3 +5805,1216 @@ ALFA:admins, ALFA:sessoes, ALFA:revogar.
 O dashboard ADM do DESAFIOGUT está 100% funcional — 7 telas completas, sistema
 de auditoria fail-CLOSED, 3 níveis de permissão, 18 endpoints admin, ALFA com
 24 comandos. Próximo: pendências do operador.
+
+---
+
+## MC89.21 — Validação completa do dashboard ADM no aparelho
+
+Zero alterações de código. Validação por CDP (adb forward + WebSocket nativo)
+com Log.clear() antes de cada medição. APK MC89.20 em fiem7xlvcufe855h.
+
+### Resultado: 6/7 telas operacionais
+Todas as 7 telas renderizam, 6 com conteúdo funcional. Zero erros de consola.
+Redirecionamento cold boot → /admin confirmado. Endereço truncado em todas as
+telas (0x1E1bAe7F…d198cB). Gates de autenticação corretos em todas as rotas.
+
+### Achado: Tela 5 (Logs) ainda é placeholder
+O endpoint `admin-logs.mjs` existe desde o MC89.11, mas `LogsAuditoria.jsx`
+nunca foi atualizado — continua com EmConstrucao. `adminNav` confirma:
+`pronta: false`. O sistema sabe que não está pronto.
+
+### O que NÃO foi validado
+Estado autenticado (exige ADMIN_TOKEN + Privy — R5). ALFA, ações de mutação,
+dados reais carregados. As suítes (342 backend, 40 frontend) atestam a lógica;
+falta a experiência real com sessão admin.
+
+**Próximo:** MC89.22 — implementar Tela 5 funcional.
+
+---
+
+## MC89.22 — Tela 5 (Logs e Auditoria) — 7 TELAS COMPLETAS
+
+LogsAuditoria.jsx: tabela paginada com filtros, exportação CSV. adminNav: logs
+marcado pronto. CDP confirma: sem EmConstrucao, gate correto, zero erros.
+
+Dashboard ADM 100% funcional — 7 telas, todas verificadas no aparelho.
+
+---
+
+## MC89.23 — Diagnóstico UX/UI e Plano de Reforma do Dashboard ADM
+
+Zero alterações de código. O dashboard funciona mas não foi "projetado" — foi
+construído incrementalmente ao longo de 15 MCs. O diagnóstico identificou 12
+problemas (3 P0, 4 P1, 5 P2) e propõe 4 fases de reforma (5-6 sessões).
+
+### O que dói mais hoje
+1. Os cartões-atalho ocupam metade do ecrã e empurram os dados para baixo
+2. Alertas críticos estão escondidos no meio da página
+3. Não há componente de loading padronizado (cada tela inventa o seu)
+
+### O que se preserva
+Paleta navy+laranja, endereços truncados, "—" para nulos, badges coloridos,
+backlinks, confirmação obrigatória, auditoria fail-CLOSED, segurança.
+
+**Próximo:** MC90.0 — execução da Fase 1 (navegação persistente + hierarquia).
+
+---
+
+## MC89.24 — Fase 1: Navegação persistente + AdminSpinner + hierarquia
+
+AdminSpinner padronizado (SVG, 3 tamanhos, prefers-reduced-motion). Navegação
+persistente em barra horizontal (7 telas, scroll mobile). Cartões-atalho
+removidos do índice. Hierarquia corrigida: alertas → EOA/fila → gráficos →
+utilizadores/financeiro. 342/342, 40/40, build verde, APK instalado.
+
+**Próximo:** MC89.25 — Fase 2: toasts + hover + scroll-indicator.
+
+---
+
+## MC89.25 — Fase 2: Feedback Imediato (diagnóstico + plano)
+
+Zero alterações de código. Diagnosticadas 7 lacunas: sem toasts pós-ação,
+mensagens de erro genéricas, AdminSpinner não integrado, tabelas sem hover,
+scroll sem indicador, exportação sem confirmação, tempo absoluto sem contexto.
+
+Plano para MC89.26: AdminToast (CSS puro, sem emojis, reaproveitando o padrão
+do Toast.jsx da app de consumo), integração completa de AdminSpinner + toasts
+em todas as 7 telas, hover + scroll-indicator, TempoRelativo, erros humanizados.
+1-2 sessões.
+
+**Próximo:** MC89.26 — execução.
+
+---
+
+## MC89.27 — Eliminação da mensagem Sepolia (o alarme estava certo)
+
+A mensagem "⚠️ Ambiente de teste — rede Sepolia · contrato não configurado"
+não era um bug: era o AvisoRede (MC88.25) a funcionar. O APK do MC89.26 estava
+mesmo em Sepolia e sem contrato.
+
+Causa-raiz: o APK foi compilado com `npm run build` (Vite lê os .env do disco)
+em vez de `npm run build:apk` (netlify build --context production). O disco só
+tinha `VITE_CONTRATO_MAINNET` — variável que NENHUM código lê; network.js lê
+`VITE_CONTRATO_SEPOLIA` e faz `Number(VITE_CHAIN_ID ?? 11155111)`. Sem essas
+duas: CONTRATO="" e chainId=Sepolia por omissão.
+
+A limpeza manual do dist não podia funcionar — o defeito eram variáveis
+AUSENTES, não um endereço errado presente.
+
+Correção: zero alterações de código-fonte. Só o comando de build, mais a
+remoção da armadilha `VITE_CONTRATO_MAINNET` do .env local. AvisoRede.jsx e
+network.js intactos de propósito: silenciar o alarme recriaria o MC88.24 sem
+nada na tela a denunciá-lo.
+
+Validação: env verificado dentro do próprio .apk (chainId=1, contrato
+0x0052477A…16cd, RPC eth-mainnet); DOM interrogado por CDP no aparelho em
+/admin autenticado e na raiz após arranque limpo — sem a mensagem, sem
+role=status; sonda validada por mutação (banner falso injectado e detectado).
+
+Pendente do operador: exercício vivo dos toasts/spinner do MC89.26 (exige
+login OAuth Privy). `pm clear` durante a validação apagou os dados locais da
+app — é preciso voltar a entrar.
+
+**Próximo:** pendências externas (EOA, BLOBS_TOKEN, RAG, Play Store) ou
+MC89.28 (Fase 3).
+
+
+## MC89.29 — A mensagem Sepolia: não era env em falta, era sincronização
+
+O MC89.27 já tinha corrigido isto. O APK voltou a exibir a mensagem porque
+durante o MC89.28 alguém compilou outra vez com `npm run build`. Terceira
+ocorrência do mesmo defeito (MC88.24 → MC89.27 → MC89.29).
+
+Diagnóstico pelos timestamps: `dist/` (05:19) validava como mainnet coerente,
+mas `android/app/src/main/assets/public` (05:11) e o APK (05:12) eram
+ANTERIORES a esse build. O bundle empacotado não tinha `VITE_CONTRATO_SEPOLIA`
+nem `VITE_CHAIN_ID` — assinatura exacta de "rede Sepolia · contrato não
+configurado" (com `VITE_NETWORK_STAGE=mainnet` presente, que é porque o stage
+não aparecia na mensagem).
+
+**Desvio ao enunciado, deliberado.** O MC89.29 pedia criar `.env.local` com a
+rede fixa e compilar com `npm run build`. Não foi feito: (a) `npm run build`
+é Vite puro e ignora o env do Netlify — é a causa do MC88.24 e a própria R10 do
+enunciado o proíbe; (b) declarar a rede no disco cegaria permanentemente o
+guarda `validar-dist-rede.mjs`, que passaria a validar o disco em vez do env
+real; (c) `.env.local` está no .gitignore, e forçar o commit publicaria a chave
+Alchemy. Correcção real: `npm run build:apk` + `gradlew` + `adb install`.
+Zero alterações de código, zero alterações em `.env`.
+
+Validação em três níveis: o gate `validar-dist-rede.mjs` sobre assets/public
+passou de exit 1 a exit 0; o `.apk` foi extraído e o env confirmado lá dentro
+(chainId=1, contrato 0x0052477A…16cd, RPC eth-mainnet); e o DOM foi interrogado
+por CDP no aparelho em /admin, /mercado e /dashboard — sem banner, sem
+role=status. Sonda validada por mutação em cada rota. Um primeiro veredito deu
+falso negativo por um limiar meu de 400 chars no corpo: o painel Admin tem 228
+legítimos. O critério passou a ser "árvore montada + mutação detectada".
+
+**Achado lateral:** `AdminSpinner.jsx` não é importado por ficheiro nenhum. O
+tree-shaking remove-o — "admin-spin" aparece 0 vezes no bundle (AdminToast
+aparece 2). O registo do MC89.26 diz "integração completa de AdminSpinner +
+toasts em todas as 7 telas"; para os toasts é verdade, para o spinner não. Não
+corrigido aqui (fora do âmbito, R1).
+
+**Higiene sugerida, não implementada:** o guarda vive dentro do `build:apk`, ou
+seja, só protege quem já usa o caminho certo. Mover a validação para uma task do
+Gradle faria `gradlew assembleDebug` falhar sobre um bundle incoerente,
+independentemente de como o dist lá chegou. É o que quebra o ciclo.
+
+**Próximo:** pendências externas (EOA, BLOBS_TOKEN, RAG, Play Store) ou Fase 4
+da reforma UX/UI. Pendente do operador: exercício vivo dos toasts/EstadoVazio
+nas telas autenticadas (exige OAuth Privy).
+
+
+## MC89.30 — A transição do ADM: o gargalo é `address`, não `adminLoading`
+
+Medido no aparelho com a sonda instalada ANTES do primeiro script da app
+(`Page.addScriptToEvaluateOnNewDocument`) e a rede observada pelo domínio
+Network do CDP, sem instrumentar código da página.
+
+**Números.** Cache `gut_admin_check` quente, 3 corridas: o Dashboard comum fica
+visível 938 / 958 / 844 ms (média ~913 ms). Cache expirado: 4 849 ms.
+
+**Causa.** `App.jsx:172` exige `isAdmin && !adminLoading && address`.
+`useAdmin` já lê o cache de forma síncrona no primeiro render, mas só o aceita se
+`cache.endereco === address` — e `address` só existe depois do Privy restaurar
+(~1,2 s). A resposta certa está em disco desde o instante zero e não é usada
+porque falta a chave para a validar. O lojista não sofre disto: o `tipoProvavel`
+do MC88.42 valida o cache contra `privy:connections` lido sincronamente
+(AppContext.jsx:83-90). O caminho do ADM nunca recebeu esse tratamento.
+
+**A metade que faltava no enunciado.** `AdminLayout.jsx:76` tem
+`if (!isConnected) → "Faça login para verificar privilégios"`, com `isConnected`
+estrito. Redirecionar cedo sozinho trocaria "vejo o Dashboard errado 0,9 s" por
+"a app manda-me entrar quando eu já entrei" — o defeito que o MC88.37/88.38 já
+corrigiu no cabeçalho. A correção tem duas metades, e a do AdminLayout vem
+PRIMEIRO, para que uma reversão parcial nunca deixe a app pior.
+
+**Opções B e C rejeitadas por memória do projecto:** adiar o paint é o
+`return null` que o MC88.37 removeu com CLS 0,373 medido; o overlay mascara e
+acrescenta uma camada de blur (MC88.36: −17,5 fps).
+
+**Incidente à parte, resolvido durante o MC.** Em ~6 corridas o app nunca chegava
+a /admin: todos os pedidos a `auth.privy.io` davam `ERR_NAME_NOT_RESOLVED` e o
+ADM ficava permanentemente no Dashboard. Excluídos Private DNS, VPN e a hipótese
+IPv6 (testada em 5G com o WiFi desligado — manteve-se). Resolveu-se a desligar e
+ligar o WiFi, que reciclou a pilha de rede do Chromium. Estado transitório do
+WebView, não defeito da app — mas o sintoma é indistinguível de "a app travou",
+por isso fica registado.
+
+**Também descartei uma medição minha:** a primeira instrumentação embrulhou
+`window.fetch` e podia ser ela a causar as falhas que reportava. Repetida com o
+domínio Network, que observa de fora.
+
+**Por saber:** os 3,4 s entre a resposta do `admin-list` e a navegação na corrida
+de cache frio — uma observação, não reproduzida. É o primeiro passo do MC89.31.
+E o PRIMEIRO login de sempre não foi medido (OAuth Privy não é automatizável e
+forçá-lo terminaria a sessão do operador); tudo aqui é o caminho de RESTAURO.
+
+**Desvio a R10:** a branch `feat/mc89-adm-system` está 20 commits atrás de main e
+sem nada exclusivo. Os documentos foram para main, onde vivem os do MC89.28/29.
+
+**Próximo:** MC89.31 — execução, se o plano for aprovado.
+
+
+## MC-EMAILS/WHATSAPP — organização da base de contactos
+
+481.365 ocorrências de e-mail e 140.118 de telefone, lidas de 24 ficheiros em
+`Desktop\BASE-CONTATOS`, reduzidas a **250.360 e-mails** e **27.759 números**
+únicos, cada um numerado de 1 a N, sem uma repetição. Saída em
+`Desktop\CONTATOS-ORGANIZADOS` (.xlsx de 5 abas + pastas `unicos/` e
+`duplicatas/`).
+
+**⚠️ A pasta "OS NUMEROS VALIDADOS" não tem números validados.** Tem 27.704
+apenas padronizados, com `tipo="suspeito"`. Os que passaram mesmo pelo Twilio
+estão em "OS NUMEROS EM USO AGORA" e são **198**. Classifiquei mal à primeira,
+pelo nome da pasta, e o resultado marcava os 27.704 suspeitos como "validado" e
+os 198 reais como "bruto" — ao contrário do que serve para decidir um envio.
+Corrigido: os telefones passam a ser classificados pela coluna
+`whatsapp_candidate`, não pelo caminho. O 198 bate com o que a memória do
+projecto já registava.
+
+**Outras três decisões:** o tipo é decidido pelo FORMATO do valor, não pela
+pasta (dois ficheiros dentro de `EMAILS\` contêm telefones); "rejeitado" ganha
+sempre, para que os 7.700 e-mails já reprovados não voltem ao circuito; e os
+5.489 números de 9 dígitos sem DDD ficam num grupo próprio — assumir o DDD 92
+produziria números reais de outras pessoas.
+
+**Defeito meu, medido e corrigido.** O primeiro extractor levava **262,63 s num
+só ficheiro** para devolver ZERO resultados: o regex de telefone tinha `\s*`
+a seguir a um grupo opcional e, como os e-mails são substituídos por espaços
+antes dessa passagem, o motor testava todos os comprimentos do bloco de espaço
+em cada posição — backtracking quadrático. Com todos os quantificadores
+limitados: 0,03 s no mesmo ficheiro, ~5 s na execução completa. O regex novo foi
+testado contra os 6 formatos reais e contra falsos positivos antes de entrar.
+
+**Validação** por script independente que abre o .xlsx como ZIP e reconta:
+0 repetidos nas abas de únicos, IDs 1..N sem saltos, contagens do Excel iguais
+às dos .txt, e o verificador validado por MUTAÇÃO (duplicado artificial
+injectado foi apanhado). Não foi possível abrir o ficheiro no Excel — não está
+instalado nesta máquina; a validação é estrutural, não visual.
+
+Nada foi escrito dentro de `BASE-CONTATOS` (é a exportação byte-a-byte com
+manifesto SHA-256), nenhuma credencial foi tocada e nenhum contacto foi
+commitado — no repositório ficam só os três scripts e o relatório com contagens.
+
+**Pendente do operador:** abrir o .xlsx uma vez; decidir o que fazer com os
+240.384 e-mails "brutos", que nunca foram validados.
+
+
+## MC-EXPORTAR-CONTATOS-SIMPLES — dois ficheiros, duas colunas
+
+`emails.xlsx` (250.360 linhas) e `whatsapp.xlsx` (27.759 linhas) em
+`Desktop\CONTATOS-ORGANIZADOS`. Cada um com uma aba e duas colunas: "1 - ID"
+numerado 1..N e o valor. Nada mais. Origem: os `.txt` já deduplicados do
+MC-EMAILS/WHATSAPP, com as contagens confirmadas antes de gerar. Incluídos
+TODOS os 27.759 números, não apenas os 198 verificados, conforme pedido.
+
+O gerador reaproveita `escrever_xlsx` do MC anterior em vez de duplicar o
+escritor — um segundo escritor seria um segundo sítio para o mesmo defeito.
+
+**Validação** (`scripts/validar_excels_simples.py`, exit 0): abre cada .xlsx
+como ZIP e reconta, sem confiar no gerador. Contagem exata, IDs 1..N sem saltos,
+última linha com ID = N, zero células vazias, zero repetidos, e conteúdo
+idêntico ao .txt de origem na mesma ordem. O validador foi ele próprio testado
+por MUTAÇÃO: fabricou-se um .xlsx com um ID saltado e um valor repetido e
+exigiu-se que fosse REPROVADO — foi.
+
+Não foi possível abrir os ficheiros no Excel (não está instalado nesta máquina,
+COM devolve REGDB_E_CLASSNOTREG); a validação é estrutural, não visual.
+
+
+## MC-REMOVER-PREFIXOS — os prefixos estavam nos e-mails, não nos números
+
+O enunciado dizia "números do WhatsApp". Medido antes de tocar em nada:
+`whatsapp.xlsx` **não tem um único "%"** (0 ocorrências), e o "+" não estava nos
+IDs 231-257 mas em **22.270 números, IDs 1 a 22.270 em bloco contíguo** — todos
+os que ficaram em E.164 no MC anterior, que a ordenação alfabética juntou no
+início. Em `emails.xlsx`, pelo contrário, a descrição batia ao caractere:
+IDs 1-230 com "%", IDs 231-257 com "+". O operador confirmou a meio: era e-mails.
+
+**O achado que mudou o trabalho:** 254 dos 257 prefixados eram DUPLICADOS
+CORROMPIDOS de endereços que já existiam limpos na mesma lista
+("%airi…@x.com" e "airi…@x.com" são o mesmo contacto). Tirar o prefixo sem mais
+nada criaria 254 repetidos — o oposto do que estas listas existem para garantir.
+Eliminados: 250.360 → **250.104**, com verificação de que os 250.104 endereços
+distintos do original estão TODOS presentes e que as linhas removidas eram
+exclusivamente duplicados.
+
+Mais 3 casos que o enunciado não previa: começavam por "%20", um espaço
+codificado em URL. Remover só o "%" deixaria "20xxx@…", um endereço que não
+existe. O "%20" passou a sair como unidade.
+
+**No `whatsapp.xlsx`**, executado antes do esclarecimento: removi o "+" de todos
+os 22.270 (não só dos 27), porque limpar 27 e deixar 22.243 daria uma coluna com
+o mesmo dado em dois formatos. Ficaram 27.759 números só com dígitos, contagem
+inalterada. Backup guardado — a reversão é uma cópia de ficheiro.
+
+**Validação:** ambos os verificadores comparam o novo com o BACKUP linha a linha,
+porque olhar só para o resultado não distingue "removeu o prefixo" de "reescreveu
+outra coisa". Ambos testados por MUTAÇÃO (linha adulterada tem de ser reprovada).
+Não foi possível abrir no Excel — não está instalado nesta máquina.
+
+`contatos_organizados.xlsx` (o de 5 abas) NÃO foi alterado e mantém os valores
+originais.
+
+
+## MC-REMOVER-PRIMEIROS-22 — o corte estava no sítio certo, e confirmei porquê
+
+`whatsapp.xlsx`: 27.759 → **27.737**, IDs renumerados 1..27.737, novo ID 1 = antigo ID 23.
+
+Antes de apagar, olhei para o que eram: **não era uma fatia arbitrária**. Os 22
+primeiros são exactamente os números com **DDD inexistente** — 00, 01, 02, 03 e
+10. Os DDD brasileiros começam em 11, e a primeira linha que fica é DDD 11. A
+ordenação numérica juntou todos os inválidos no início, por isso "as 22
+primeiras" e "as de DDD 00–10" são o mesmo conjunto.
+
+**⚠️ O que fica por limpar:** cortar as 22 primeiras não elimina todos os DDD
+inválidos, porque os DDD válidos não são contíguos (não existe 20, 25, 26, 29,
+30, 39, 40, 50, 52, 56–60, 70, 76, 78, 80, 90) e esses estão espalhados, não no
+início. Sobram **16 números** com DDD inexistente (20, 23, 29, 56, 70, 72, 76,
+80, 90), mais os 5.489 que nunca tiveram DDD. Não removidos — o pedido eram 22 e
+foram 22. Limpar os 16 seria um corte por REGRA (DDD válido), não por posição.
+
+**Validação:** compara com o backup linha a linha, porque contar não chega —
+27.737 linhas erradas contam na mesma 27.737. Testado por MUTAÇÃO: exigi que a
+comparação reprovasse cortar 21, cortar 23, e cortar as ÚLTIMAS 22 em vez das
+primeiras. Reprovou os três e aceitou só o caso real, o que é o que distingue um
+corte certo de um off-by-one.
+
+
+## MC-ORGANIZAR-WHATSAPP — categorizar tornou visível que 30% são fixos
+
+`whatsapp_organizado.xlsx`, 6 abas, a partir dos 27.737 números limpos:
+
+| categoria | nº | formato |
+|---|---|---|
+| Celular (DDD + 9 dígitos) | 13.993 | `+55 (DD) 9 XXXX-XXXX` |
+| Fixo (DDD + 8 dígitos) | 8.239 | `+55 (DD) XXXX-XXXX` |
+| Celular sem DDD | 5.489 | `9XXXX-XXXX` |
+| Inconsistente (DDD inexistente) | 16 | — |
+
+**Os formatos foram medidos, não assumidos.** O enunciado listava cinco formatos
+possíveis; na lista real existem TRÊS. A categoria "fixo sem DDD" (8 dígitos)
+não tem **nenhum** caso — ficou no código com 0, sem se inventar conteúdo para
+uma aba vazia.
+
+**⚠️ O que a categorização tornou visível:** 8.239 são telefones FIXOS, ou seja
+30% da lista, e fixos em regra não têm WhatsApp. Restam 19.482 móveis, dos quais
+só 13.993 têm DDD e portanto são endereçáveis — e destes só **198** foram
+alguma vez verificados. Não removi nada: o pedido era categorizar, não filtrar.
+Mas com as abas separadas, excluir os fixos passa a ser copiar a aba certa.
+
+**Duas colunas por número, não uma:** só-dígitos (para enviar) e formatado (para
+ler). Um ficheiro só com a versão bonita obrigaria a desfazê-la antes de
+qualquer uso, e a pontuação seria mais um sítio por onde um erro entra sem se ver.
+
+**Validação:** a verificação que interessa é que a formatação seja REVERSÍVEL —
+tirar a pontuação de cada um dos 27.737 formatados devolve exactamente o número
+original (0 divergências). É a única que apanha um erro de formato: olhar e achar
+que "parece bem" não distingue `…9 8765-4321` de `…9 8756-4321`. Testada por
+mutação (dígito a mais tem de ser apanhado).
+
+
+### MC-ORGANIZAR-WHATSAPP v2 — um bloco intercalado não é um bloco
+
+O operador pediu que os blocos ficassem visualmente coerentes. A v1 categorizava
+mas mantinha a aba geral ordenada por ID, com as categorias intercaladas e uma
+coluna a dizer a qual pertenciam — isso é uma lista com etiqueta, não um bloco.
+
+**v2:** a aba passa a "Todos por bloco", agrupada e contígua, por ordem de
+utilidade decrescente para envio. Cada bloco tem uma linha de TÍTULO com o nome
+e a contagem, e cada linha tem COR DE FUNDO da categoria (verde = celular com
+DDD, azul = celular sem DDD, laranja = fixo, vermelho = inconsistente). Cada
+bloco tem numeração própria 1..N além do ID global. Cabeçalho fixo, larguras,
+filtro automático. 7 abas: Resumo + geral + uma por bloco.
+
+**Escritor novo, não alteração do partilhado.** Os estilos vivem em
+`scripts/xlsx_estilo.py`; `exportar_contatos.escrever_xlsx` ficou intacto porque
+quatro MCs têm validadores que comparam a saída dele com o ficheiro de origem.
+
+**Duas verificações novas, porque os estilos são escritos à mão:**
+(a) todo índice de estilo usado numa célula existe em `<cellXfs>` (maior usado 7
+< 8 declarados), e todo `fillId`/`fontId` referido existe — um índice fora do
+intervalo faz o Excel abrir em modo de reparação, e isso **não** se vê num parse
+que só confirma XML bem formado; (b) cada bloco é contíguo, de uma só categoria,
+numerado 1..N, e a contagem do seu título bate com as linhas seguintes — uma
+contagem global passaria à mesma com os blocos intercalados. Ambas testadas por
+mutação.
+
+Continua por verificar abrir no Excel: não está instalado nesta máquina.
+
+
+## MC-CLASSIFICAR-WHATSAPP — mesma classificação, ordem original preservada
+
+`whatsapp_classificado.xlsx`: uma aba com os 27.737 números na ORDEM e com os
+IDs ORIGINAIS, e o bloco como atributo de cada linha (cor de fundo mantida, para
+a classificação continuar visível sem os números estarem juntos).
+
+| bloco | nº | % |
+|---|---|---|
+| 1 — celulares com DDD | 13.993 | 50,45% |
+| 2 — celulares sem DDD | 5.489 | 19,79% |
+| 3 — fixos com DDD | 8.239 | 29,70% |
+| 4 — fixos sem DDD | 0 | 0,00% |
+| 5 — inconsistentes | 16 | 0,06% |
+
+**Coexiste com `whatsapp_organizado.xlsx`, não o substitui.** Agrupado serve
+para trabalhar um bloco de cada vez; ordenado serve para cruzar com qualquer
+lista que use o mesmo ID. A ordem original é informação que o agrupamento
+destrói.
+
+**A coluna "Verificado Twilio" exigiu uma conferência prévia.** O ficheiro dos
+198 foi escrito ANTES de se remover o "+" e ANTES do corte dos 22, portanto
+havia duas formas de a coluna sair errada sem dar erro: formato diferente e
+números entretanto removidos. Medido: normalizados para só dígitos, os 198
+casam todos, nenhum estava entre os 22 removidos, e todos caem no bloco 1.
+
+**Validação — duas verificações valem mais que as contagens:** a regra de
+classificação é REAPLICADA de forma independente no validador (0 divergências em
+27.737 — conferir totais não distingue "13.993 certos" de "13.993 com dois
+trocados entre si"), e a coluna Twilio é comparada CONJUNTO A CONJUNTO com o
+ficheiro (diferença simétrica 0 — 198 marcas nos números errados contariam na
+mesma 198).
+
+**Defeito do próprio validador, encontrado e corrigido:** a primeira versão lia o
+ficheiro de origem só como texto inline, e a coluna ID é célula NUMÉRICA (`<v>`),
+por isso vinha vazia e a comparação de IDs nunca podia passar — acusou falha sem
+haver falha nos dados. Registado porque um defeito destes, se tivesse falhado ao
+contrário, daria verde indevido sem se notar.
+
+
+## MC-REFINAR-WHATSAPP — a hipótese do DDD 92 estava certa, e por isso os números tinham de SAIR
+
+`whatsapp_refinado.xlsx`: **22.232** números (13.993 celulares com DDD + 8.239
+fixos), IDs 1..22.232, cinco colunas. Removidos 5.505 = 16 inconsistentes +
+5.489 duplicados.
+
+**O teste que mudou a conclusão.** O enunciado mandava acrescentar DDD 92 aos
+5.489 sem DDD e promovê-los ao Bloco 1. Antes de alterar 5.489 números, medi
+quantos passariam a coincidir com um número JÁ existente:
+
+| prefixo | coincidem |
+|---|---|
+| **92** | **5.489 de 5.489 — 100,00%** |
+| 11 / 21 / 31 / 85 | 0 de 5.489 — 0,00% |
+
+O DDD 92 domina mesmo a base (70,0% dos que têm DDD, contra 26,7% do 11). Cem
+por cento contra zero não é coincidência: o operador estava certo sobre a
+proveniência. **Mas se todos coincidem com números já presentes, não são órfãos
+a recuperar — são duplicados.** A extração apanhou o mesmo contacto duas vezes,
+completo e truncado. Acrescentar-lhes o 92 criaria 5.489 repetidos no Bloco 1,
+o oposto da regra fixada no início da série. Operador confirmou: "não considerem
+eles então".
+
+**Nenhum contacto se perdeu, e isso foi provado duas vezes.** O script de
+refinamento conta os órfãos (sem-DDD sem equivalente `5592…`) ANTES de remover
+seja o que for e aborta se houver algum — deu 0. O validador reverifica de forma
+independente: os 5.489 removidos têm todos o equivalente presente na lista final,
+os 22.232 dos antigos blocos 1 e 3 estão todos lá, e nenhum número foi inventado.
+
+**⚠️ Sai deste ficheiro a coluna "Verificado Twilio"** (pedido explícito), que
+era a única informação a distinguir um número que se SABE existir de um que
+apenas tem o formato certo. Continua em `unicos/whatsapp_VERIFICADOS.txt` e em
+`whatsapp_classificado.xlsx`, ambos intactos.
+
+
+## MC89.31 — o ADM já não passa pelo Dashboard, e medir apanhou dois defeitos a mais
+
+O ADM via o Dashboard comum durante ~1,3 s a cada restauro de sessão antes de
+ser encaminhado para /admin. A causa, diagnosticada no MC89.30, era que a
+condição de encaminhamento exigia `address`, que só existe depois de o Privy
+restaurar — embora a resposta certa já estivesse em disco no instante zero.
+
+**A primeira coisa que fiz foi medir, e isso mudou a forma da correção.** O
+plano aprovado ancorava o palpite no `gut_admin_check`, cujo TTL é 5 min, na
+convicção de que o cache frio era o caso caro (4849 ms numa corrida do MC89.30).
+Repeti 3× com o cache apagado: 1504 / 1430 / 1310 ms. Os 3,4 s "por explicar"
+não reproduzem — aquela corrida foi a primeira a seguir à reposição da rede
+descrita no próprio MC89.30, e traz o rasto (sessão Privy a 1449 ms contra
+~700 ms agora). Era rede a recuperar, não código.
+
+Se frio ≈ quente, um palpite preso aos 5 min corrigiria "reabri agora mesmo" e
+deixaria de pé "reabri amanhã" — o caso que o operador descreveu. O risco R-c do
+plano ("o primeiro login de sempre") era, na verdade, todo restauro passados
+5 minutos. Levado ao operador, que aprovou a âncora alternativa: uma dica de
+**encaminhamento** de 24 h, separada da resposta de **autorização**, que mantém
+os 5 min intactos. É a assimetria que o MC88.42 já usa para o lojista.
+
+**Dois defeitos só apareceram no aparelho.** O primeiro: "Acesso restrito" a um
+admin legítimo, aos 1582 ms. Com `endereco` a null, `useAdmin` devolvia
+`{ isAdmin:false, loading:false }` — um não definitivo a uma pergunta que ainda
+não tinha sido feita — e quem corrigia era um `useEffect`, que corre depois da
+renderização. Antes deste MC quase nunca se via, porque o ADM só chegava a
+/admin depois de `isAdmin` já ser true; encaminhar cedo tornou o encontro
+garantido. Eu tinha-o previsto por escrito no diagnóstico e mesmo assim a
+primeira correção não o cobria.
+
+O segundo: um ADM sem `gut_saldo_cache` via "Faça login" durante 737 ms, porque
+o portão usava `pareceAutenticado`, que ancora no cache de saldo. A pergunta
+certa é "há sessão em disco?", que se responde com `privy:connections`.
+
+**A sonda também estava a mentir-me, e o controlo positivo apanhou-a.** A marca
+de "Dashboard pintado" disparava com o rodapé e a barra inferior do AppLayout,
+sem o Dashboard montado — o filtro apanhava o rótulo "Lances" da navegação.
+Passou a exigir texto exclusivo do Dashboard, e o modo *sem-dica* serve de
+controlo: se a marca não disparar lá, a sonda está cega.
+
+Resultado, com o APK final: em 6 corridas (3 quentes, 3 frias) a marca do
+Dashboard **nunca** dispara, nem a de "Faça login", nem a de "Acesso restrito".
+A navegação para /admin passou de 1769-1990 ms para 442-1000 ms. Uma dica
+forjada com o endereço de outra conta não encaminha — validado no aparelho.
+
+Frontend 40 → 70 testes, backend 375/375, e a suite validada por mutação: 9/9.
+A validação por mutação apanhou um falso verde meu — o teste do AdminLayout
+afirmava só a ordem dos textos, e `if (false && …)` mantinha a ordem com o ramo
+morto.
+
+Fica por fazer: o primeiro login de sempre num aparelho continua a passar pelo
+Dashboard (~1,5 s), por desenho — não há nada em disco e adivinhar seria
+inventar. E um utilizador não-admin real não foi exercitado: entrar com outra
+conta terminaria a sessão do operador.
+
+
+## MC89.33 — o frontend estava inocente, e eu tinha fechado o admin lá dentro
+
+O operador disse que o app estava lento para o utilizador comum e para o
+lojista. Medi antes de propor, e a medição virou o enunciado do avesso.
+
+**O Dashboard comum pinta TUDO aos 478 ms** — primeiro texto, card de saldo,
+valor do saldo, conteúdo, saudação com nome, card de senhas, no mesmo fotograma.
+Navegar entre ecrãs custa 14–32 ms. O saldo otimista (MC88.34) e o rótulo
+otimista (MC88.38) estão a fazer exatamente o que foram feitos para fazer. Isso
+elimina metade do plano proposto: *skeleton screens* seriam uma **regressão**
+(trocar valores reais por caixas cinzentas), e *lazy loading* otimizaria 14 ms.
+
+O que é lento é a rede. `auth-user` responde ~2,9 s a frio; depois a cadeia
+`cotas` faz duas chamadas **em série** (4218 ms e 6855 ms), ambas 404 para quem
+não é lojista — ~7,1 s até a app saber que perfil tem à frente. Em repouso são
+~36 pedidos/min, e o `saldo-rs` a 5 s é o único dos três que **não** pausa por
+visibilidade, ao contrário do irmão `notificacoes`, que já faz o certo.
+
+**Verifiquei antes de recusar.** O enunciado pedia baixar o polling de lances de
+3 s para 5 s. Fui ver o prazo real: a edição estava a decorrer, faltavam 23
+minutos. Os 3 s são o desenho do MC88.31 para leilão ao vivo — o momento em que
+o produto acontece. Recusado com medição, não com opinião.
+
+**Um achado novo que ninguém supôs:** pedidos repetidos por navegação. A Vitrine
+dispara `produtos×8` (um por categoria, 4 slots, num efeito que corre duas
+vezes) e o Mercado `cotas×4`. O problema não é renderizar demais — é pedir
+demais, e pedir repetido.
+
+**E depois encontrei o que eu próprio tinha partido.** O botão "← Sair do
+painel" faz `navigate("/")`, e o MC89.31 pôs uma guarda na rota "/" que devolve
+o admin a /admin. Medido: `partida /admin → trilho ["/", "/admin"] → saiu: NÃO`.
+Como a guarda está na ROTA, tudo ressalta: o botão, o "Início" da barra
+inferior, o endereço escrito à mão. O ADM ficou **fechado dentro do painel**, sem
+sequer conseguir terminar a sessão da conta. O MC89.31 não apanhou isto porque
+testou a entrada no painel e nunca a saída — a lição é que uma correção de
+encaminhamento tem de testar os dois sentidos.
+
+No perfil corporativo fui obrigado a parar antes: a conta do operador é ADM e não
+é corporativa (provado pelos 404 de /cotas). Documentei o que medi, o que li no
+código e o que é inferência, marcado como tal. Em código o lojista está melhor do
+que o enunciado supõe — o painel já é paralelo (`Promise.all` nos banners,
+analytics em efeito separado). Mas paga três cold starts que o comum não paga, e
+continua a pollar o leilão a 3 s enquanto está em /corporativo, sem o ver.
+
+Também descartei uma cascata inteira: deu zero pedidos, e não era a app — era o
+defeito transitório de DNS do WebView outra vez (14× alchemy, 8× netlify, 8×
+privy, com o aparelho a resolver por ping em 6,6 ms). Reciclado o WiFi, repetido
+tudo. Nenhum número contaminado entrou no relatório.
+
+
+## MC89.34 — construí a saída certa, e o operador quis a porta fechada
+
+O MC89.33 tinha provado que eu próprio, no MC89.31, tinha fechado o administrador
+dentro do painel: a guarda de encaminhamento ficou na ROTA "/", por isso o botão
+"← Sair do painel", o "Início" da barra inferior e o endereço à mão ressaltavam
+todos de volta para /admin.
+
+Implementei o plano aprovado: uma pausa explícita em `sessionStorage`, para que
+sair do painel levasse ao Dashboard comum e lá ficasse, sem desfazer o ganho do
+MC89.31 (a pausa morre com o processo da WebView, portanto reabrir a app volta a
+ir direto ao painel). Ficou testado — 11 testes, 7/7 mutações apanhadas — e
+validado no aparelho: sair funcionava, voltar limpava a pausa, e reabrir voltava
+a encaminhar.
+
+**Depois o operador viu aquilo a funcionar e disse que não era isso que queria:**
+as telas de utilizador comum não devem existir para o ADM, de todo. Revertido
+tudo. O botão foi removido — sem destino, seria uma porta para uma parede — e
+"Sair da conta" passou a ser a única saída do painel.
+
+Não escondo o trabalho deitado fora, porque foi ele que produziu a informação em
+que a decisão assentou: sabe-se agora que a alternativa funciona e o que custaria
+repô-la. Ficaram comentários nos dois sítios e dois testes a garantir que a
+ausência de exceções é uma DECISÃO e não volta por distração.
+
+**Um detalhe que não é arbitrário:** o "Sair da conta" revoga a sessão admin
+ANTES de derrubar o Privy. Essa revogação é um pedido ao backend e precisa da
+sessão Privy viva para sair; pela ordem inversa, o refresh admin ficaria válido
+no servidor até expirar sozinho. Há teste a fixar a ordem, e uma mutação que a
+inverte e é apanhada.
+
+**A suite mentiu-me duas vezes e a mutação apanhou-a.** O teste "não há botão que
+leve o ADM às telas comuns" passava por casar com o meu próprio COMENTÁRIO que
+explica a remoção; passou a afirmar o JSX. E o regex da guarda assumia `\n` num
+ficheiro em CRLF. Um teste que nunca viu vermelho continua a não provar nada.
+
+**Resíduo reportado, não silenciado:** a guarda vive na rota "/", por isso
+/carteira, /mercado, /vitrine e /ativos ainda renderizam para quem lá chegue.
+No APK é inalcançável — não há barra de endereço, e medi que dentro de /admin há
+7 links e todos são /admin*. Na build web, um admin com teclado chega lá.
+Fecha-se estendendo a guarda como já se faz para o lojista; não o fiz por
+iniciativa própria porque alarga o raio de uma correção que tinha de ser
+cirúrgica.
+
+## MC89.35 — o palpite do lojista estava certo, e era apagado por uma guarda que não sabia que ele existia
+
+O operador disse que o lojista ainda passa pelo Dashboard comum, apesar do
+MC88.42. Passa mesmo. Mas nenhuma das três causas que o enunciado supunha era a
+causa — e a opção que ele marcava como "recomendada" não corrigiria nada.
+
+Comecei por não acreditar no código-fonte. Já aconteceu neste projeto o aparelho
+correr uma versão diferente da que está no repositório, por isso extraí do bundle
+minificado que está DENTRO do APK instalado as cinco funções que decidem o
+encaminhamento e comparei-as, expressão a expressão, com o fonte. Idênticas. O
+MC88.42 e o MC89.31 estão no telemóvel e estão intactos. O defeito era outro.
+
+**O MC88.42 é, por desenho, uma otimização de segunda visita.** O palpite que
+manda o lojista direto para /corporativo lê-se de um registo em disco que só é
+escrito depois de `/cotas` responder — ou seja, na sessão anterior. Na primeira
+visita de cada ciclo não há nada para adivinhar, e isso está escrito no
+comentário do código. O que o comentário subestima é quantas vezes é "a primeira
+visita".
+
+**E é aqui que está a causa raiz.** O `tipoConfirmado` do lojista não tem chave
+própria: vive dentro do `gut_saldo_cache`, que é apagado no logout pela guarda de
+coerência do SALDO, do MC88.34. Essa guarda existe por uma boa razão — impedir
+que o saldo de A apareça a B — e está correta para o que foi escrita. Só que ao
+apagar o registo inteiro leva à frente um valor que não é saldo, não é dado
+pessoal, e cuja regra de invalidação é outra.
+
+O contraste com o ADM é o que fecha o argumento: `limparDicaAdmin` está definida,
+está testada, e **não tem um único ponto de chamada no produto**. O
+`gut_admin_hint` sobrevive ao logout; o do lojista não. A assimetria nunca foi
+decidida — é consequência de o palpite do lojista ter sido guardado dentro de um
+recipiente com outro dono. O MC89.31 não resultou por ser melhor desenho;
+resultou por ter chave própria.
+
+**Para não validar o código contra uma reescrita minha,** montei a tabela de
+decisão com as funções minificadas copiadas verbatim do APK e corri-a contra um
+localStorage falso, com controlo positivo e negativo. Se a minha leitura estivesse
+errada, o arnês divergia. Deu 10/10, e produziu a lista exaustiva: seis cenários
+em que o lojista vê o Dashboard comum — logout, troca de conta, mais de 24 h,
+primeiro login, reinstalação, sessão ilegível. Dois deles são exatamente o gesto
+que o operador usa para testar. E o terceiro, as 24 h, é a vida de um anunciante
+que não abre a app todos os dias.
+
+Medi a janela hoje, no aparelho: 5,7 s com as funções Netlify quentes, 12,0 s a
+frio. O MC88.42 tinha medido 3,9–9,0 s. É pior do que se julgava.
+
+**Rejeitei a opção recomendada do enunciado, com prova.** `pareceAutenticado`
+responde "há sessão em disco?", não "de que tipo é?". Nos cenários reportados o
+`tipoConfirmado` nem sequer existe — não há palpite para antecipar, e onde ele
+existe o encaminhamento já é imediato no primeiro render. Implementá-la seria
+trabalho sem efeito observável.
+
+A correção proposta é parar de afirmar o que não se sabe: estado neutro em vez do
+Dashboard comum, só para quem parece autenticado, com prazo e a falhar para o
+lado aberto. Não pode ser `return null` — foi isso que produziu o CLS 0,373 do
+MC88.37 — nem pode apanhar visitantes, para quem o Dashboard é a página pública.
+Resolve os seis cenários sozinha, e não custa carregamento nenhum porque o
+`Dashboard` é eager e o chunk já está em memória.
+
+**Digo à frente o que não resolve:** a janela de 5 a 12 segundos continua lá. Isto
+troca "produto errado" por "estado honesto", não torna a app mais rápida. Quem a
+encurtaria seria devolver o perfil já no `auth-user` — mas isso é backend, tem
+raio maior, e não o medi no perfil certo. Fica registado como candidato, não
+recomendado às cegas.
+
+Nenhuma alteração de código neste MC, como pedido. Fica também uma pergunta ao
+operador que não bloqueia nada: em qual dos seis cenários é que ele viu a
+transição. Os três prováveis estão todos cobertos pela correção; a resposta só
+decide qual deles vale a pena filmar na validação.
+
+## MC89.37 — o painel do lojista abre-se ao cadastro, não ao pagamento
+
+O operador disse que o lojista consegue entrar no painel sem ter pago, ou que o
+nível da cota não é respeitado. As duas coisas são verdade, e a causa é a mesma
+linha.
+
+O `tipo: "corporativo"` é gravado no REGISTO, não no pagamento — o formulário
+"Seja Nosso Parceiro" cria o registo já com esse campo, e com `vendida: false`,
+`categoria: null`, `valor: 0`. E o portão do painel lê apenas esse campo. Não é
+preciso fraude nenhuma para entrar sem pagar: é o caminho normal do produto.
+
+**Mas o pior não está no frontend.** `POST /produtos` não chama `getCota` em
+ponto nenhum. Basta um JWT de user-session, que é emitido a toda a gente —
+portanto um utilizador comum autenticado publica na vitrine, e o nível é
+irrelevante. E o mesmo endpoint aceita o `cliente_id` vindo do corpo do pedido
+sem verificar posse, com um comentário logo por baixo a descrever um check
+anti-IDOR que não está implementado.
+
+Não apresentei isso como suspeita, porque não era preciso: o ficheiro irmão
+`banners.mjs` faz exatamente essa verificação e devolve 403. Dois endpoints do
+mesmo painel, escritos com o mesmo padrão, um com guarda e outro sem. É omissão,
+não desenho — e por isso recomendei que fosse sozinho e à frente do resto, já que
+não depende de decisão de negócio nenhuma.
+
+**A boa notícia é que os dados já estão certos.** `vendida` e `categoria`
+distinguem perfeitamente quem se cadastrou de quem pagou. O defeito não é falta
+de dados — é ninguém os ler. Isto é uma correção de leitura, não de modelo. E o
+painel até já pinta um crachá "INATIVA" a vermelho, calcula essa informação, e a
+seguir deixa usar tudo à mesma.
+
+**Uma ironia que registo porque é minha:** o MC89.36, que acabei há uma hora, fez
+o lojista chegar ao painel mais depressa e sem passar pelo Dashboard comum. Fez
+bem o que lhe foi pedido — e acelerou também o acesso de quem não pagou. Arrumei
+a antecâmara antes de haver fechadura.
+
+As três decisões do operador cortaram metade do trabalho. A que mais pesou foi
+"a cota não expira, por agora": sem expiração não há campo novo, não há backfill,
+não há migração. O objetivo original falava em revogar por validade, e essa era
+a única parte que exigia funcionalidade nova.
+
+O plano evita três coisas de propósito, cada uma por uma lição já paga aqui. O
+gate não vai na rota, senão volta o ciclo /corporativo ↔ / que o MC88.42 mediu.
+Nenhum estado de autorização vai para localStorage, porque é forjável e contraria
+a regra que o próprio `dicaSessao.js` tem escrita no cabeçalho. E não entra
+poller novo: ao aplicar a skill de latência descobri que já existe polling de
+confirmação de pagamento, e o que falta é ligar-lhe a atualização da cota — somar
+mais um poller a um arranque de 36 pedidos/min seria desfazer meses de MC88.3x.
+
+**O risco que mais me preocupa não é deixar passar quem não devia — é bloquear
+quem pagou.** A ativação grava a cota com a chave em minúsculas e o cadastro
+direto grava em `cnpj:XXXXX`; se o gate procurar pela chave errada, o resultado é
+"sem cota", indistinguível de "não pagou". Há três testes dedicados só a isso.
+
+E apanhei um segundo risco ao ir responder a uma pergunta lateral: o formulário
+do ADM define `vendida` mas não tem campo `categoria`. Um administrador de boa-fé
+pode produzir uma cota `vendida: true` com `categoria: null` — que a definição de
+"ativa" trataria como inativa, trancando um lojista pago sem nada no ecrã a
+explicar porquê. Fica como primeira coisa a ler no MC89.38.
+
+Não implementei nada. E deixei um bloqueio explícito: antes de ligar o gate é
+preciso saber quantas das cotas em produção estão realmente pagas. Se a maioria
+não estiver, a correção está tecnicamente certa e comercialmente errada — e essa
+decisão é do operador, com o número à frente. Trancar primeiro e contar depois é
+a ordem errada.
+
+## MC89.40/41 — o painel do lojista passou a exigir cota paga, e duas armadilhas quase o estragaram
+
+O MC89.37 tinha diagnosticado que o `tipo: "corporativo"` era gravado no registo
+e não no pagamento, e que `POST /produtos` não lia a cota de todo. Estes dois MCs
+fecharam isso.
+
+O gate vive no servidor (`_lib/cota-utils.mjs`): ativa é `vendida === true` E
+categoria válida. As duas metades são necessárias — a comparação estrita porque a
+string `"false"` é truthy, e a categoria porque o formulário do ADM define
+`vendida` mas não tem campo `categoria`, e sem essa metade uma cota meio-válida
+passaria o gate para rebentar depois na regra de nível. No painel há o mesmo
+gate, mas esse é conforto: quem impede de facto é o servidor, porque o endpoint
+pode sempre ser chamado à mão.
+
+**Três decisões de desenho que vieram de erros já pagos aqui.** O gate do painel
+substitui conteúdo e não redireciona, senão voltava o ciclo `/corporativo ↔ /`
+que o MC88.42 mediu. O `cotaAtiva` tem três estados e não dois — `null` é "ainda
+não sei", porque com `!cotaAtiva` um lojista pago veria "cota inativa" durante
+todo o arranque. E as rotas onde se COMPRA a cota ficam fora do gate: sem isso, o
+botão "Comprar cota" levaria ao próprio ecrã de bloqueio, que é a porta para uma
+parede que o MC89.34 já me ensinou a não construir.
+
+**A primeira armadilha esteve no SQL da marcação.** O enunciado propunha um
+UPDATE nas colunas `vendida`/`categoria`/`endereco`. Não teria funcionado:
+`getCota` faz `.select("payload")` e devolve o JSONB — as colunas são derivadas,
+para indexar. A cota ficaria paga para o SQL e por pagar para a app, e o sintoma
+seria o gate a bloquear alguém marcado como pago, que é precisamente o modo de
+falha que eu próprio tinha isolado como o mais provável. Escrevi nos dois sítios.
+
+Também não escrevi em `cotas_pagas`, apesar de pedido. Essa tabela é o registo de
+pagamentos reais, com o `pedidoId` do Mercado Pago; pôr lá uma linha sintética
+seria meter um pagamento que nunca existiu dentro do rasto de auditoria
+financeira. A proveniência ficou no payload, onde é visível e não se confunde
+com dinheiro.
+
+**A segunda armadilha fui eu que a criei.** Ao ligar o destranque automático,
+pus `atualizarTipoCorporativo` nas dependências de um `useCallback` que alimenta
+um `useEffect`. Como ela era recriada a cada render, o efeito voltava a correr
+sempre: fetch → estado → render → fetch, em ciclo fechado a bater no `/cotas`.
+Apanhei-o a rever as dependências, antes de correr. Corrigido com `useCallback` e
+com um teste a travar o regresso. Registo-o porque é o género de defeito que
+passa a revisão e só aparece como conta de infraestrutura no fim do mês.
+
+No aparelho ficaram os quatro cenários observados por sonda, não por impressão: a
+cota paga mostra "BRONZE · Cota ativa"; revertida, mostra o ecrã de bloqueio sem
+sair de `/corporativo`; reposta com a app aberta, o painel destrancou sem reabrir.
+E o login fresco fechou de caminho a pendência do MC89.36 — zero milissegundos de
+Dashboard comum depois do retorno do OAuth, onde antes havia 1 889, com o sinal
+novo visível nos próprios dados da medição.
+
+**O que não fiz e digo à frente:** um pagamento PIX de verdade (custa dinheiro), e
+publicar um produto real em produção. O gate de publicação está coberto por 17
+testes de servidor com controlo positivo; a transação em si não foi exercida.
+
+## MC89.42 — o painel do administrador já estava construído; o que lhe falta é ver e deixar rasto
+
+O enunciado pedia para transformar um painel "simples" num centro de governança,
+partindo de que só a Visão Geral estava feita e de que várias funções continuavam
+por integrar. Fui contar antes de planear: onze páginas, onze componentes, vinte
+e duas funções de backend — e zero por integrar. Oito das dez áreas de governança
+já estão cobertas de ponta a ponta.
+
+Isso não é um detalhe: o P0 do enunciado era construir gestão de utilizadores e
+de cotas, e ambas existem. Um MC que arrancasse por aí estaria a reescrever o que
+funciona. Por isso o plano mudou de tese — o painel não precisa de mais páginas,
+precisa de ver mais e de deixar rasto.
+
+**A primeira lacuna é que o administrador não vê os utilizadores.** Vê quem
+movimentou dinheiro. A vista que alimenta a listagem é um UNION de cotas, saldos
+e créditos: reconstrói a lista a partir de pegadas financeiras, porque a
+identidade vive no Privy e nunca houve tabela de utilizadores. A solução é
+engenhosa e a consequência não estava escrita em lado nenhum — quem entra na app
+e não transaciona é invisível, não pode ser apoiado nem bloqueado. Medi: a vista
+devolve sete linhas, exactamente o número de cotas.
+
+**A segunda é que a tabela de auditoria está vazia.** Zero linhas, apesar de o
+mecanismo estar bem desenhado e ligado em sete funções críticas. Há duas
+explicações possíveis e são muito diferentes — nunca foi exercido, ou está a
+falhar em silêncio — e não escolhi uma. O plano começa por medir, porque escrever
+mais chamadas de log antes de saber se as que existem funcionam seria construir
+sobre chão por verificar. O que é lacuna certa é o endpoint de aprovações, que
+não regista nada: aprovar ou rejeitar um pedido não deixa rasto.
+
+Aqui corrigi-me a mim próprio antes de entregar. A primeira leitura foi que o log
+só estava ligado numa função — tinha procurado pelo nome errado do helper. Refiz
+a contagem e o alarme era falso; o problema é outro e é mais interessante.
+
+**A terceira é pequena e das que mais custam:** o formulário de cotas do painel
+não tem campo de categoria, mas o backend aceita-o. Um administrador que marque
+"vendida" de boa-fé produz uma cota que o gate do MC89.40 lê como inativa — e
+tranca um cliente pago com um clique. São três linhas.
+
+No desenho, o que decidiu tudo foi lembrar que **o painel é usado no telemóvel**.
+Nove destinos de navegação num ecrã de seis polegadas é a ferramenta
+permanentemente à frente da tarefa, e em modo Operate a regra é o contrário: a
+ferramenta desaparece na tarefa. A proposta é agrupar por pergunta do
+administrador — quem, dinheiro, sistema — em vez de por tabela do backend, e
+ordenar a Visão Geral por urgência: o que está errado primeiro, os números por
+último. Um painel de governança abre-se para responder "está tudo bem?".
+
+Duas coisas que já estavam certas e vale a pena não estragar: não há um único
+emoji usado como ícone ou estado nas vinte e duas páginas e componentes do
+administrador — é isso que o faz ler como ferramenta e não como app de consumo —
+e já existe vocabulário de UI próprio, com estado vazio, toast e botão de comando.
+
+**O risco maior não estava no enunciado:** este painel governa um sistema quase
+vazio. Zero logs, zero lances, zero produtos, e sete utilizadores que são registos
+de teste. Não há dados que exerçam os ecrãs, o que faz do estado vazio o ecrã mais
+visto do painel — e por isso ele tem de ensinar a interface em vez de dizer "nada
+aqui". E não se criam dados de teste em produção para validar: foi por dados de
+teste em produção que o MC89.39 quase marcou "zzzzzz" como cota paga.
+
+Não abri o painel no aparelho. O inventário é de repositório e os números são de
+consultas de leitura — nada aqui diz como ele se comporta, só o que existe. São
+coisas diferentes, e avaliei a primeira.
+
+---
+
+## MC89.43 — O painel ganha olhos e memória (e duas premissas caem)
+
+Este MC devia ser execução directa de um plano aprovado. Foi — mas duas das três
+premissas não sobreviveram à medição, e vale mais registar isso do que fingir
+que o plano estava certo.
+
+**A dúvida que o MC89.42 deixou aberta de propósito ficou resolvida:** a tabela
+de auditoria estava vazia porque **nunca foi exercida**, não porque falhasse em
+silêncio. Medi-o com uma sonda dentro de uma transacção com rollback, como
+`service_role`, contra a tabela real — e com um controlo negativo, porque um
+verde sem controlo negativo só prova que o instrumento não vê nada. A primeira
+sonda que escrevi foi descartada: usei CTEs, e um UPDATE não vê a linha que um
+CTE irmão acabou de inserir. Era o instrumento que estava cego.
+
+A sonda destapou um defeito que ninguém procurava: a auditoria escrevia através
+do cliente de **leitura**. Hoje não parte nada, porque não há réplica configurada
+e o cliente cai para o primário — é um verde por acidente. No dia em que uma
+réplica for ligada, o INSERT de auditoria bate numa base só-de-leitura e, por a
+auditoria ser fail-closed, **todas** as acções de administrador passariam a
+devolver 503. Aprovar e rejeitar clientes, que não deixava rasto nenhum, passa a
+deixar.
+
+**A premissa do campo `categoria` era simplesmente falsa.** O formulário já
+enviava a categoria e o backend recusa um POST sem ela — a cota `vendida` sem
+tier, que trancaria um lojista pago, não era produzível por ali, e a base
+confirma-o: zero linhas nesse estado. Mas havia um defeito ao lado, mais
+silencioso: a categoria vinha do **separador de navegação**. O mesmo controlo
+filtrava a lista e decidia o tier do cliente novo — e no telemóvel esse separador
+está fora do ecrã quando o formulário está à vista. Dava para gravar um cliente
+em Diamante querendo Bronze, e como o mínimo por categoria decide o troco em
+senhas, o tier errado credita dinheiro errado. O campo passou a existir por essa
+razão, que é melhor do que a que estava escrita.
+
+**O painel passa a ver quem usa a app**, e não apenas quem mexeu em dinheiro. A
+lista era reconstruída a partir de pegadas financeiras; quem entrava e não
+transacionava não existia para o administrador. Guarda-se o mínimo — endereço e
+carimbos, sem email, sem IP, sem user-agent — e a exclusão de conta apaga a
+linha, que é a contrapartida obrigatória de passar a guardar isto.
+
+A parte que mais interessa contar: criei a função de escrita como
+`SECURITY DEFINER` e revoguei a PUBLIC, como manda o hábito. Fui verificar e
+`anon` continuava a poder executá-la — o Supabase dá EXECUTE a `anon` e
+`authenticated` **directamente**, por default privileges, e um revoke a PUBLIC
+não lhes toca. Com DEFINER, que ignora o RLS, isso era um buraco aberto por mim.
+Ficou `SECURITY INVOKER` com revoke aos papéis pelo nome. Só apareceu porque
+verifiquei o resultado em vez de acreditar que o comando tinha feito o que dizia.
+
+Um efeito lateral que não é bug mas muda comportamento: a mesma vista alimenta o
+envio "todos" das notificações, portanto um broadcast passa a alcançar também
+quem só faz login. É o significado correcto de "todos" — até aqui excluía-os em
+silêncio — mas o alcance aumenta e isso deve ser dito antes de alguém carregar
+no botão.
+
+Cada guarda nova foi validada por mutação, porque um teste que passa não prova
+nada até se ver falhar. Uma das mutações foi descartada por ser equivalente — o
+`throw` caía no mesmo `try` e não mudava o comportamento observável — e conto-a
+para não inflacionar a validação. A guarda de zero-emoji do painel apanhou um
+aviso meu num comentário JSX; corrigi a minha linha, não a guarda.
+
+**Nada disto está vivo para o utilizador.** O .apk leva o frontend, mas as
+funções e a base são serviço, e o deploy não é meu. Não validei no aparelho —
+não havia nenhum ligado, e não dou por cumprido um segmento que não cumpri.
+Falta também rotacionar a chave `service_role`: expu-la em claro na sessão, ao
+inspeccionar o ambiente com a flag errada. E a política de privacidade, que vive
+no iubenda, tem de acompanhar a tabela nova — foi a condição com que ela foi
+aprovada.
+
+## MC89.44 — a navegação foi agrupada, e a arrumação revelou que duas telas tinham desaparecido
+
+O pedido era arquitetura de informação: agrupar os destinos do painel ADM pelas
+perguntas do administrador — Quem, Dinheiro, Sistema — para caber num telemóvel.
+Isso está feito e validado no aparelho. Mas não foi o que mais importou.
+
+Ao levantar a navegação antes de lhe mexer, encontrei que **«Aprovações» e
+«Cotas» não tinham entrada nenhuma no menu, desde o MC89.24**. As duas têm rota,
+componente e backend a funcionar. A barra filtrava-as por um campo `nota` que as
+marcava como "sem lugar na estrutura de sete telas", e o único componente que
+ainda lhes chamava — `AtalhosAdmin.jsx` — era código morto desde essa altura.
+Só se chegava lá escrevendo o URL à mão, e num APK não há barra de endereços.
+Vinte MCs assim. O MC89.43, no dia anterior, corrigiu o campo `categoria` do
+formulário de Cotas: um ecrã a que não se chegava.
+
+Nada disto estava no enunciado. Apareceu porque o primeiro segmento foi ler.
+
+E o enunciado descrevia um painel que não existe — pela segunda vez seguida.
+Listava Produtos, Banners e Lances, que não têm telas, e omitia Operações,
+Notificações e Aprovações, que têm. O total batia, nove e nove, e foi isso que
+escondeu a divergência. Se tivesse aceitado a lista, teria desenhado navegação
+para ecrãs que ninguém escreveu.
+
+Havia mais três defeitos na mesma barra, todos só no telemóvel: os rótulos eram
+cortados a quatro caracteres (`Financeiro` aparecia `Fina`), os alvos de toque
+tinham cerca de 28 px, e os ícones decorativos só se desenhavam no desktop —
+cromo onde sobra largura e corte onde falta, exactamente ao contrário. O
+agrupamento é o que torna os dois primeiros corrigíveis: com quatro destinos por
+linha em vez de sete, o rótulo inteiro cabe a 44 px.
+
+O enunciado pedia cabeçalhos de secção inertes sobre uma lista, o que pressupõe
+uma sidebar. O painel não tem sidebar, tem uma barra horizontal, e com rótulos
+inteiros a 44 px as oito pastilhas mais três cabeçalhos dão três linhas fixas num
+ecrã de 6". Não especulei: o MC89.6 já tinha tentado a barra de nove destinos e
+registado que se partiu em três linhas no aparelho. Por isso os grupos colapsam
+no telemóvel — os cabeçalhos são controlos, com `aria-expanded` — e ficam todos
+abertos e inertes no desktop, onde a largura chega. É um desvio ao que foi pedido
+e está declarado no relatório, no commit e aqui, e não escondido no diff.
+
+**A parte que vale a pena guardar: a validação automática no aparelho deu 45
+asserts verdes, e a captura de ecrã mostrou a barra errada de duas maneiras.** A
+seta de "há mais à direita" desenhava-se sempre, mesmo quando tudo cabia — uma
+afordância falsa, que manda procurar o que não existe; e o grupo aberto tinha o
+mesmo fundo preenchido que a página actual, portanto «Visão Geral» e «Sistema»
+liam-se como dois sítios actuais ao mesmo tempo. Nenhum dos dois é apanhável por
+assert. Ambos são óbvios a olhar. Corrigi os dois e voltei a medir, com controlo
+positivo para a seta: a 392 px não aparece, a 300 e a 240 aparece.
+
+Alargar a verificação trouxe dois achados que não procurava. A guarda de
+zero-emoji do MC89.4 dizia no comentário que varria a pasta do painel inteira, e
+lia `pages/admin` do disco mas tinha dois ficheiros de `components/admin`
+escritos à mão — deixando os outros nove componentes, a barra de navegação
+incluída, fora da regra que ela própria enuncia. Só dei por isso porque apagar o
+ficheiro morto a pôs a rebentar em vez de calar. Com a guarda alargada
+apareceram duas violações vivas: um aviso emoji no `ComandoButton`, numa linha
+que já é âmbar e já avisa, e o `StatusCard`, onde metade dos quatro estados era
+palavra e metade glifo. Passaram a ser palavras, e o desconhecido passou a "—",
+que é o símbolo que o painel já usa em todo o lado para número indisponível.
+
+Na Visão Geral, o segmento pedia para garantir que os alertas estavam ordenados
+por urgência. Não estavam. O backend emite-os por ordem de construção, com um
+`info` a meio, e o frontend concatenava no fim os seus — que é onde nasce o único
+`critical` do painel, a EOA coordenadora sem gás. O alerta que diz que as compras
+deixaram de ser creditadas era o último de seis linhas. A regra saiu para um
+ficheiro próprio para poder ser testada, com nível desconhecido a cair para o fim
+e não para o topo.
+
+Os testes novos foram validados por mutação, dez de dez apanhadas. Três deles
+leem o texto do componente, porque não há runner de React e os defeitos deste MC
+viviam todos na apresentação, onde o modelo estava perfeito e nenhum teste
+olhava. A primeira versão desses três falhou contra a própria prosa do
+componente: o cabeçalho explica que a barra deixou de truncar rótulos, e a busca
+encontrava a frase. Um teste de texto que não distingue código de comentário
+proíbe documentar o defeito que ele guarda.
+
+**O APK no aparelho do operador já tem tudo isto. A web não.** Está numa branch
+e o deploy não é meu. Enquanto não for feito, o painel ADM no browser continua
+com a barra antiga e com as duas telas inalcançáveis.
+
+Fica uma pergunta para antes do MC89.45: o P1-B fala de moderação de produtos e
+banners, e não há telas nenhumas de produtos nem de banners. Ou se constroem, ou
+"moderação" quer dizer a tela de Aprovações que já existe. São dois MCs muito
+diferentes.
+
+## MC89.46/47 — a auditoria virou ação: lint de verdade, legado morto, e um .git que pesava 4,6 GB
+
+Dois MCs seguidos de segurança/infraestrutura, sem tocar em lógica de negócio.
+
+O MC89.46 (comandos S1–S5) começou por fechar os buracos mais baratos: o
+.gitignore passou a ignorar o lixo que se acumulava na raiz (UsersMoltbot...,
+__pycache__, cloud.md do android) e o working tree foi limpo; o guard de admin
+deixou de aceitar o header legado x-admin-token — só Authorization: Bearer
+<JWT> passou a autenticar; o comentário do webhook do Mercado Pago foi
+corrigido para o comportamento real (fail-closed por omissão, com a válvula
+MP_WEBHOOK_ALLOW_UNSIGNED documentada como exceção ruidosa); nasceu o
+CODEOWNERS com revisão obrigatória do @desafiogut; e o CI ganhou um job
+test-functions que corre os 391 testes das functions com o comando exato que
+roda na máquina (391/391 verdes).
+
+O MC89.47 (S0–S10) pegou nas pendências do relatório e resolveu o que dava
+para resolver. O lint deixou de ser cosmético: o job que estava mascarado por
+um '|| echo warning' passou a ser bloqueante, e para isso o frontend ganhou
+config ESLint flat (eslint.config.js) com eslint declarado como devDependency
+— antes não havia config nenhuma, e o job tinha estado a falhar em silêncio
+desde sempre. Ajustei o config para o codebase existente (JSX, .mjs, catch
+vazios intencionais) e limpei os erros residuais sem tocar em semântica:
+regex de zero-width do PrivyRoot reescrito com escapes \u (o comentário já
+pedia isso), cause anexado aos erros de troca de rede no web3, e um punhado
+de escapes inofensivos em scripts de teste antigos. O lint passa: 0 erros,
+230 warnings.
+
+As referências ao legado x-admin-token morreram de vez: o health deixou de
+considerar o header como credencial, o CORS tirou-o do allow-headers, o teste
+de anti-fraude passou a mockar Bearer JWT, e quinze functions tiveram
+comentários atualizados. O doc de migração ganhou o estado verdadeiro: a
+etapa 3 (remover o header dos endpoints) está concluída; falta a etapa 4, a
+env ADMIN_TOKEN, que só vive no login do auth-admin — plano de migração
+escrito (docs/MC89.47-P2-PLANO.txt). O código morto do 503
+admin_token_nao_configurado foi removido dos dois guards e de cinco handlers.
+
+A casa ficou arrumada: o backup da migração saiu do repo para
+Desktop/GUTO/BACKUPS; os gradle files do Capacitor, que só tinham mudado de
+line-ending, foram descartados; as 93 branches remotas já mergeadas em main
+foram listadas como candidatas (nada foi deletado — espera aprovação); o
+bloat do .git foi diagnosticado: um pack de 4,83 GB com ~30 zips órfãos de
+históricos reescritos — plano de gc documentado, não executado; e os 15 PRs
+do dependabot foram priorizados, com dois deles (dompurify, react-router-dom)
+já obsoletos porque o package.json passou à frente.
+
+Ficou pendente, para aprovação do operador: podar as branches listadas,
+rodar o gc para recuperar ~4,5 GB, e executar o plano de remoção do
+ADMIN_TOKEN do login. O CI está mais apertado do que nunca — e isso é
+exatamente o ponto.
+
+## MC89.48 — qual dos dois Supabase é o verdadeiro, e o ref que estava escrito aqui o tempo todo
+
+O operador tinha dois projetos no dashboard do Supabase — "DesafioGUT" e
+"desafigut-staging" — e queria apagar o que não usa. Faltava a certeza de qual
+era qual. Diagnóstico puro: nenhuma linha de código alterada, nenhuma exclusão
+executada.
+
+A resposta é **`vjslwowwrpcawijdiksm`** (= "DesafioGUT"), e chegaram nove
+evidências independentes sem uma única a apontar noutra direção: as duas
+variáveis do Netlify, o claim `ref` dentro de cada uma das duas chaves
+(descodificado sem nunca imprimir o token), o bundle JS **vivo** de produção —
+20 chunks, 4,0 MB descarregados e varridos, uma só referência lá dentro —, o
+JWT embutido nesse bundle, os assets do APK, o `project_ref` do próprio MCP, e
+a história completa do git, que nunca conheceu outra URL de Supabase em código.
+
+Mas a prova que fecha a questão não foi nenhuma dessas: foram os **logs da API
+do Supabase**. O projeto está a receber `POST /rest/v1/rpc/reservar_tarefas`
+com 200, de cinco em cinco minutos, ininterruptamente — o último sete minutos
+antes da análise. Um projeto pausado não responde a REST. Como os outros dois
+aparecem pausados no dashboard, a identificação deixou de depender do nome.
+
+O erro do caminho vale mais do que o resultado. O Segmento 1 varreu o repo à
+procura de `<ref>.supabase.co` e concluiu que só existia um projeto
+referenciado. Estava errado — e o ref do staging estava escrito **neste
+ficheiro**, na linha 867, na forma nua entre crases: produção
+(`vjslwowwrpcawijdiksm`) e staging (`gjuelqjjhuuwnlsjyeai`). Procurar um
+identificador por uma só das suas formas de escrita produz um "não existe" que
+é apenas "não procurei onde estava". A errata ficou registada no próprio
+documento do segmento, em vez de reescrita.
+
+Com isso, o staging deixou de ser um mistério: `gjuelqjjhuuwnlsjyeai`, criado no
+MC33.1 para validar o flip Blobs→Supabase (carga 2500 lances, RLS, visual),
+com o realtime do MC34 aplicado em 2026-06-21. Nunca mais tocado — 47 dias. O
+relatório final do MC89 já o tinha classificado como "legado MC33.1". Não tem
+um único consumidor executável: zero no Netlify, zero em código, zero nos
+`.env`, zero no bundle, zero no APK.
+
+Três coisas ficaram a saber-se de caminho. Os contextos deploy-preview,
+branch-deploy e dev **não têm nenhuma** das 18 variáveis exclusivas de produção
+— nem Supabase, nem `MP_WEBHOOK_SECRET`, nem `DATA_STORE_BACKEND` — o que
+explica porque validar em preview dá falsos negativos. O ambiente local também
+não tem Supabase nenhum configurado: não usa nem um projeto nem o outro. E a
+read replica do MC39.19, única arquitetura que justificaria manter dois
+projetos, tem a variável ausente nos quatro contextos e faz fallback ao
+primário.
+
+O plano de exclusão ficou no Desktop, com o passo que não se salta: confirmar
+com os olhos, em Settings → General, que o "Reference ID" de cada projeto
+bate certo — porque a exclusão no Supabase é irreversível e não há lixeira.
+Com um aviso extra: não rodar as chaves de produção "para limpar", porque elas
+estão embutidas no APK já distribuído.
+
+---
+
+## MC89.49 — o site apanhou 28 MCs de atraso, e o defeito que encontrei já lá estava
+
+A web estava parada em 2026-07-31, no commit `9409145`, com o dashboard ADM
+recém-nascido (MC89.6 a MC89.20). O APK, esse, já corria tudo até ao MC89.48.
+Entre os dois havia 94 commits e 28 MCs — a nav agrupada, o campo `categoria`
+das cotas, os gates, o lint, a segurança. O deploy foi só isto: pôr a web onde
+o telemóvel já estava.
+
+A primeira coisa que verifiquei não foi o build, foi a **direção do salto**.
+`git merge-base --is-ancestor 9409145 HEAD` respondeu sim: o commit que estava
+em produção é antepassado do que ia entrar. Isso transforma o deploy num avanço
+puro e elimina de uma vez a família inteira de riscos de drift que assombrou o
+MC79 e o MC88.12.1 — não havia nada publicado para reverter. As quatro branches
+da linhagem mainnet (MC60, MC73, MC78, MC87) continuam todas ancestrais.
+
+A armadilha antiga também já não existe: `.env.production` **desapareceu** do
+disco. Era ele que, num `--dir=dist`, assava o contrato Sepolia abandonado no
+bundle. Mesmo assim usei `--build`, porque a regra não depende de o ficheiro
+existir hoje.
+
+### O passo que acrescentei ao plano
+
+O plano mandava ir direto ao `--prod`. Fiz um **draft primeiro**. A razão é
+específica, não zelo genérico: 94 commits que nunca tinham sido vistos por
+ninguém — a branch nem sequer existia no remoto — não deviam estrear-se em
+produção. O draft custou um build; a alternativa custava um site partido.
+
+No draft validei o que interessa e como interessa. O contrato mainnet
+`0x0052477A…16cd` aparece uma vez em `web3-DXI_5gTo.js`; o Sepolia abandonado,
+zero vezes. As strings do MC89.44 estão em `AdminLayout--Eo3HDS2.js`, as do
+MC89.43 em `Cotas-BkSi_bdw.js`. E — isto é o que dá valor ao resto — pus um
+**controlo negativo**: procurei uma string que inventei, e ela faltou. Sem esse
+passo, um `grep` avariado que devolvesse sempre verde teria passado por
+validação. A sonda tinha de provar que sabe dizer que não.
+
+Depois a promoção. O sinal que fecha a questão é uma linha do CLI:
+**`CDN requesting 0 files`**. Significa que os assets estáticos que produção
+recebeu são bit-a-bit os mesmos que eu tinha aprovado no draft — não uma
+reconstrução parecida. As 66 functions voltaram a subir porque são
+re-empacotadas a cada deploy; os ficheiros do site, não.
+
+### Uma anomalia que não era anomalia
+
+`VITE_CONTRACT_ADDRESS` está a `0x0000…0000` no Netlify. Parece grave. Não é:
+`grep -rn VITE_CONTRACT_ADDRESS src/` devolve zero resultados. O frontend
+resolve o contrato em `src/lib/network.js:19`, que lê `VITE_CONTRATO_SEPOLIA`
+— e essa tem o endereço mainnet correto. É variável morta. Vale a pena
+registá-lo porque quem a vir no dashboard vai assustar-se outra vez.
+
+### O limite que não escondo
+
+As telas autenticadas do ADM não foram validadas por mim. Exigem OAuth Google
+via Privy, e o browser conduzido por MCP é um perfil separado do do operador —
+ao navegar para `/admin` o separador foi parar a `accounts.google.com` e ficou
+lá. Completar o login exigiria credenciais que o agente não manuseia. O que
+consegui provar foi (a) que o **gate** funciona — "Painel Admin — Faça login
+para verificar privilégios" — e (b) que o **código novo está publicado**, por
+download dos assets a partir do domínio de produção. O operador validou as
+telas por fora, na sua própria sessão.
+
+### O botão que estava lá antes de mim
+
+Com o consentimento aceite (`gut_consentimento: {"aceito":true}`) e o modal
+fechado, o botão laranja "⚡ Aceito o DesafioGUT" continua desenhado no rodapé
+do `<aside>`, por cima do "Recolher". Persiste depois de recarregar.
+
+O reflexo é culpar o deploy. Fui verificar: abri o **deploy de produção
+anterior** (`6a6c16692ac428f067fac44b`, MC89.6–MC89.20) e o botão está no mesmo
+sítio. É pré-existente. Este MC não o introduziu nem o corrigiu — fica como
+pendência com dono próprio, porque mexer nele aqui violaria a mínima alteração.
+
+A lição repete uma que já está escrita mais acima neste ficheiro, e por isso
+merece ficar: **um defeito encontrado logo a seguir a um deploy não é, por
+isso, um defeito do deploy.** Custou duas navegações confirmá-lo e evitou uma
+correção a perseguir a causa errada.
+
+### Estado
+
+Produção em `6a7708ba03f222438f8f7660`. 15/15 requisições OK, consola limpa
+(com controlo positivo a provar que a captura funciona), functions vivas — os
+dois 400 do canary são validação de input, com corpo a dizê-lo. A branch
+`feat/mc89.32-diagnostico-perf` passou a existir no remoto a meio do trabalho,
+a pedido do operador, o que deu ao deploy o ponto de rollback que lhe faltava.

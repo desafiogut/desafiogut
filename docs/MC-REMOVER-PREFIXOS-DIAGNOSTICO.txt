@@ -1,0 +1,77 @@
+MC-REMOVER-PREFIXOS — DIAGNÓSTICO
+Data: 2026-08-01
+Ficheiro: Desktop\CONTATOS-ORGANIZADOS\whatsapp.xlsx
+Método: leitura apenas. Nada foi alterado neste segmento.
+Nota R4: nenhum número completo aparece aqui — só contagens e amostras mascaradas.
+
+================================================================================
+1. ESTRUTURA CONFIRMADA
+================================================================================
+  cabeçalho      : ["1 - ID", "2 - Numero"]
+  linhas de dados: 27.759
+
+  Primeiro caractere de cada valor:
+      "+"  →  22.270 números
+      "9"  →   5.489 números
+  Caracteres não-numéricos presentes no ficheiro inteiro: apenas "+" (22.270).
+
+================================================================================
+2. A PREMISSA DO ENUNCIADO NÃO SE CONFIRMA
+================================================================================
+
+2.1 — "IDs de 1 a 230 → remover o '%'"
+      MEDIDO: 0 de 230 começam com "%".
+      MEDIDO: o caractere "%" NÃO EXISTE em lado nenhum deste ficheiro —
+              0 ocorrências em qualquer posição de qualquer dos 27.759 valores.
+
+      Onde está o "%" que o operador viu: nos E-MAILS, não nos números. A base
+      de e-mails tem endereços como "%2…@hotmail.com" (artefactos de
+      codificação URL nas listas raspadas). É outro ficheiro, outro problema.
+
+2.2 — "IDs de 231 a 257 → remover o '+'"
+      MEDIDO: 27 de 27 começam mesmo com "+" — esta parte está certa.
+      MAS o "+" não está confinado a essa faixa: está em 22.270 números,
+      nos IDs de 1 a 22.270, em BLOCO CONTÍGUO.
+
+      Porquê: no MC-EMAILS/WHATSAPP os números foram normalizados para E.164
+      ("+55…") quando tinham DDD, e deixados como 9 dígitos quando não tinham.
+      A lista foi ordenada alfabeticamente, e "+" ordena antes dos dígitos —
+      por isso todos os "+55…" ficaram no início. A faixa 231-257 que o
+      enunciado nomeia é apenas um pedaço arbitrário desse bloco.
+
+================================================================================
+3. CONSEQUÊNCIA DE EXECUTAR O ENUNCIADO À LETRA
+================================================================================
+      IDs 1-230    → nada a fazer (não há "%")
+      IDs 231-257  → "+" removido de 27 números
+      IDs 258-22.270 → 22.243 números FICAVAM com o "+"
+
+Resultado: uma coluna onde o mesmo tipo de número aparece em dois formatos
+diferentes, sem critério. Pior do que não mexer e pior do que limpar tudo:
+qualquer sistema que consuma o ficheiro teria de lidar com as duas formas, e a
+inconsistência não seria visível a olho num ficheiro de 27 mil linhas.
+
+================================================================================
+4. AÇÃO ADOTADA
+================================================================================
+O objetivo declarado pelo operador é "removê-los para que os números fiquem
+apenas com os dígitos". As faixas de ID eram a descrição de ONDE os caracteres
+estariam, e essa descrição estava errada; o objetivo não.
+
+  ⇒ Remover o "+" de TODOS os 22.270 números que o têm.
+  ⇒ Não há "%" para remover.
+  ⇒ Os 5.489 números sem DDD já são só dígitos e ficam intactos.
+  ⇒ Resultado: 27.759 números, 100% dígitos, contagem inalterada.
+
+Backup do ficheiro original antes de sobrescrever.
+
+================================================================================
+5. NOTA SOBRE O QUE FICA DEPOIS DA LIMPEZA
+================================================================================
+Sem o "+", o ficheiro passa a ter dois comprimentos misturados:
+    13 dígitos  (55 + DDD + 9 dígitos)  — os 22.270 que tinham "+55"
+     9 dígitos  (sem DDD)               — os 5.489 restantes
+Continuam distinguíveis pelo comprimento, mas deixa de haver um sinal visual.
+Quem consumir o ficheiro deve usar o comprimento, não a presença do "+".
+Isto é consequência inevitável do pedido, não um efeito secundário evitável —
+fica registado para não surpreender ninguém mais à frente.

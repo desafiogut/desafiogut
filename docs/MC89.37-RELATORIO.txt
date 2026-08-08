@@ -1,0 +1,154 @@
+================================================================================
+MC89.37 — ACESSO DO LOJISTA COM BASE NA COTA COMPRADA (DIAGNÓSTICO + PLANO)
+================================================================================
+Data    : 2026-08-02
+R1      : CUMPRIDA — zero alteração de código
+R2/R5   : CUMPRIDAS — nada com custo, nenhuma credencial tocada
+Commits : 6e49854 (S0) · 5850dfe (S1) · ef46c07 (S2) · 8bd44ce (S3) · este (S4)
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+O operador tem razão, e a causa é mais simples — e mais séria — do que "o nível
+da cota não é respeitado". São três coisas, não uma:
+
+1. O `tipo: "corporativo"` é gravado NO REGISTO, não no pagamento.
+   (cotas.mjs:427, com `vendida: false`, `categoria: null`, `valor: 0`.)
+   E o portão do painel lê APENAS esse campo (AppContext.jsx:505).
+   ⇒ Quem preenche o formulário "Seja Nosso Parceiro" entra no painel do lojista
+     sem ter pago nada. Não é fraude: é o caminho normal do produto.
+
+2. `POST /produtos` não verifica cota NENHUMA — não chama `getCota` em ponto
+   nenhum. Basta um JWT de user-session, que é emitido a toda a gente.
+   ⇒ Um utilizador COMUM autenticado pode publicar produtos na vitrine.
+   ⇒ E o nível é irrelevante: um bronze publica no slot diamante.
+
+3. ⚠️ E há uma terceira, que é de segurança e não de regra de negócio.
+   O mesmo endpoint aceita `cliente_id` vindo do CORPO do pedido, sem verificar
+   posse (produtos.mjs:275-277). O comentário da linha 279 descreve um check
+   anti-IDOR — que NÃO está implementado.
+   Não é especulação: o ficheiro irmão `banners.mjs:233` FAZ essa verificação e
+   devolve 403. Dois endpoints do mesmo painel, mesmo padrão, um com guarda e
+   outro sem. É omissão, não desenho.
+   ⇒ Efeito: publicar conteúdo atribuído a outro lojista. Não expõe dados de
+     ninguém, mas polui a vitrine e a listagem por lojista.
+   ⇒ Recomendo tratá-lo como P0 SEPARADO, à frente de tudo o resto: não depende
+     de nenhuma decisão de negócio e são poucas linhas.
+
+A BOA NOTÍCIA: os dados já existem e já estão corretos. `vendida` e `categoria`
+distinguem perfeitamente "cadastrou-se" de "pagou". O defeito não é falta de
+dados — é ninguém os ler. Isto é uma correção de LEITURA, não de modelo.
+
+⚠️ IRONIA A REGISTAR: o MC89.36, que acabei agora, fez o lojista chegar ao painel
+mais depressa e sem passar pelo Dashboard comum. Fez bem o que lhe foi pedido —
+e acelerou também o acesso de quem não pagou. O 89.36 arrumou a antecâmara; o
+89.38 tem de pôr a fechadura.
+
+================================================================================
+AS SUAS TRÊS DECISÕES, E O QUE ELAS POUPARAM
+================================================================================
+D1. Lojista sem cota paga → painel bloqueado, com área de compra.
+D2. A cota NÃO expira (por agora).
+D3. O nível restringe o slot: cada um publica só no slot do seu nível.
+
+⇒ A D2 cortou metade do trabalho. Sem expiração não há campo novo, não há
+  backfill, não há migração. O objetivo original falava em "revogar quando a
+  cota expira" — isso era a única parte que exigia funcionalidade nova, e sai
+  de âmbito por decisão sua. Foi a decisão certa.
+
+================================================================================
+O PLANO, EM CINCO PASSOS E POR ESTA ORDEM
+================================================================================
+P0  Posse do `cliente_id` em /produtos ......... independente, pode ir já
+F0  Contar cotas pagas em produção ............. ⚠️ PODE ALTERAR TUDO O RESTO
+F1  Gate no servidor ........................... é aqui que a correção acontece
+F2  Gate no painel ............................. conforto, não correção
+F3  Destrancar sem reabrir a app ............... requisito criado pela correção
+
+Três coisas que o plano evita de propósito, cada uma por uma lição já paga:
+
+· O gate do painel NÃO vai na rota. Expulsar quem não tem cota traria de volta o
+  ciclo /corporativo ↔ / que o MC88.42 mediu (sete voltas, 1974→5064 ms), porque
+  o MC89.36 encaminha pelo palpite ANTES de a cota responder. Envolve-se o
+  conteúdo do painel, não a rota.
+
+· NENHUM estado de autorização em localStorage. A dica `gut_corporativo_hint`
+  diz "é corporativo" e não pode passar a dizer "pagou": é forjável, e contraria
+  a regra escrita no cabeçalho de lib/dicaSessao.js.
+
+· NENHUM poller novo. Descobri, ao aplicar a skill de latência, que JÁ EXISTE
+  polling de confirmação de pagamento (CorporativoCarteira.jsx:106 +
+  lib/creditoPolling.js). Basta ligar-lhe a atualização da cota. Sem isso o
+  MC89.38 arriscava somar mais um poller a um arranque de ~36 pedidos/min, que
+  os MC88.3x passaram meses a limpar.
+
+================================================================================
+DOIS RISCOS QUE VALE A PENA LER ANTES DE APROVAR
+================================================================================
+R-A. O MODO DE FALHA MAIS PROVÁVEL NÃO É DEIXAR PASSAR — É BLOQUEAR QUEM PAGOU.
+     `ativarCotaPaga` grava a cota com a chave em minúsculas; o cadastro direto
+     grava em `cnpj:XXXXX`. Se o gate chamar `getCota` com a chave errada, o
+     resultado é "sem cota" — indistinguível de "não pagou". Há três testes
+     dedicados só a isto (§2 do plano de testes).
+
+R-B. O FORMULÁRIO DO ADM É UMA FÁBRICA DE COTAS MEIO-VÁLIDAS.
+     `src/pages/admin/Cotas.jsx:26` tem os campos cliente_id, cliente_nome,
+     produto_nome, valor e `vendida` — mas NÃO tem `categoria`. Um ADM que marque
+     "vendida" de boa-fé pode produzir uma cota com `vendida: true` e
+     `categoria: null`, que a definição de "cota ativa" trataria como INATIVA.
+     O lojista ficaria trancado por uma ação administrativa, sem nada no ecrã a
+     explicar porquê.
+     ⇒ Primeira coisa a ler no MC89.38: se o upsert do ADM PRESERVA ou APAGA a
+       categoria existente. A diferença é entre um incómodo e desativar um
+       lojista pago com um clique. Não confirmei.
+
+================================================================================
+O QUE PRECISO DE SI
+================================================================================
+1. ⚠️ O NÚMERO DA F0: das cotas registadas em produção, quantas têm
+   `vendida: true`? É uma consulta de segundos ao Supabase, mas NÃO a corri —
+   é dado de negócio (R2/R3).
+   PORQUE BLOQUEIA: se a maioria estiver por pagar, ligar o gate tira o painel a
+   pessoas que hoje o usam todos os dias. Isso é uma decisão comercial sua, e
+   tem de ser tomada com o número à frente — não depois. Trancar primeiro e
+   contar depois é a ordem errada.
+
+2. Aval para o P0 seguir sozinho e à frente do resto.
+
+3. Confirmação de Q3: proponho NÃO mexer nos produtos já publicados por quem não
+   tem cota ativa. O gate valeria só para publicações novas. Apagar conteúdo de
+   terceiros por engano não tem volta.
+
+================================================================================
+FORA DE ÂMBITO — DITO À FRENTE
+================================================================================
+· Expiração e renovação de cota (a D2 tirou-o).
+· Limite de QUANTIDADE de produtos por nível — a D3 resolveu o slot, não a
+  quantidade, e não há regra definida.
+· Alargar o gate a `banners.mjs` sem o medir primeiro.
+· Nada foi medido em produção. Todas as afirmações deste relatório são leitura de
+  código, com ficheiro e linha indicados para poderem ser conferidas.
+
+================================================================================
+⚠️ PENDÊNCIA HERDADA DO MC89.36 (não fechada)
+================================================================================
+O MC89.36 ficou com o Segmento 4 PARCIAL e o Segmento 5 por fazer. Falta:
+  · recompilar e reinstalar o APK com a correção MC89.36.1 (commit 39be2b4);
+  · um login fresco para confirmar que os 1 889 ms de Dashboard comum
+    desapareceram;
+  · validar o prazo de 10 s com a rede desligada;
+  · e decidir se o prazo sobe para 15 000 (o arranque a frio medido foi 11 950 ms,
+    acima do prazo atual).
+O código está commitado e testado; falta a validação no aparelho e o relatório.
+
+================================================================================
+ENTREGÁVEIS
+================================================================================
+  docs/MC89.37-DIAGNOSTICO.txt ... três pontos de falha, com ficheiro e linha
+  docs/MC89.37-REQUISITOS.txt .... as três decisões + regra única de cota ativa
+  docs/MC89.37-PLANO.txt ......... P0 + F0-F3, com as armadilhas
+  docs/MC89.37-TESTES.txt ........ testes por skill, com controlos positivos
+  Desktop/MC89.37-RELATORIO.txt .. este ficheiro (cópia em docs/)
+  cloud.md ....................... atualizado
+
+PRÓXIMO PASSO: com o número da F0 e o seu aval, avançar para o MC89.38.

@@ -5,7 +5,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { Button, Input } from "../../components/ui";
-import { COR, ouTraco } from "./_ui.jsx";
+import { COR , TituloSeccao } from "./_ui.jsx";
+import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 
 function quando(iso) { return iso ? new Date(iso).toLocaleString("pt-BR") : "—"; }
 
@@ -59,7 +60,7 @@ export default function Comunicacao() {
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       {/* FORMULÁRIO */}
       <section>
-        <h3 style={sh}>ENVIAR NOTIFICAÇÃO</h3>
+        <TituloSeccao>ENVIAR NOTIFICAÇÃO</TituloSeccao>
         <form onSubmit={enviar} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <select value={canal} onChange={(e) => setCanal(e.target.value)} style={sel}>
@@ -99,10 +100,15 @@ export default function Comunicacao() {
       {/* HISTÓRICO */}
       <section>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", marginBottom: "0.4rem" }}>
-          <h3 style={{ ...sh, margin: 0 }}>HISTÓRICO</h3>
+          <TituloSeccao semMargem>HISTÓRICO</TituloSeccao>
           <Button variant="ghost" size="sm" onClick={carregarHistorico} disabled={carregando} className="!border-white/15 !text-[#94a3b8]">↻</Button>
         </div>
-        {historico.length === 0 ? <p style={{ color: COR.muted, fontStyle: "italic", fontSize: "0.78rem" }}>Nenhuma notificação enviada.</p> : (
+        {historico.length === 0 ? (
+          <EstadoVazio
+            titulo="Nenhuma notificação"
+            descricao="As notificações enviadas por este painel aparecem aqui, com o estado de entrega."
+          />
+        ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.68rem" }}>
             <thead><tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
               <th style={th}>Data</th><th style={th}>Canal</th><th style={th}>Destino</th><th style={th}>Mensagem</th><th style={th}>Entregues</th>
@@ -123,7 +129,6 @@ export default function Comunicacao() {
   );
 }
 
-const sh = { fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.5rem", letterSpacing: "0.05em" };
 const th = { textAlign: "left", padding: "0.3rem 0.4rem", color: COR.muted, fontWeight: 600, whiteSpace: "nowrap" };
 const td = { padding: "0.3rem 0.4rem", verticalAlign: "top", color: COR.text };
 const sel = { background: "rgba(13,18,53,0.5)", color: COR.text, border: "1px solid rgba(255,255,255,0.12)", borderRadius: "6px", padding: "0.2rem 0.4rem", fontSize: "0.7rem" };

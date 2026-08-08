@@ -1,0 +1,104 @@
+MC89.29 — DIAGNÓSTICO DO AMBIENTE DE BUILD
+Data: 2026-07-31
+Objetivo: eliminar "⚠️ Ambiente de teste — rede Sepolia · contrato não configurado"
+
+================================================================================
+1. ONDE A MENSAGEM NASCE
+================================================================================
+Ficheiro: desafio-gut/frontend/src/components/AvisoRede.jsx
+Fonte de dados: src/lib/network.js (fonte única de config de rede)
+
+Condições que a disparam (AvisoRede.jsx:26-33):
+  - CHAIN_ID_DEC !== 1                → "rede Sepolia"   (default 11155111)
+  - VITE_NETWORK_STAGE !== "mainnet"  → 'stage "..."'
+  - CONTRATO === ""                   → "contrato não configurado"
+  - CONTRATO === 0x59a7...F6D5        → "contrato abandonado"
+
+O componente NÃO é o defeito. É um detector, criado no MC88.25 precisamente
+para apanhar o que se está a ver agora. A mensagem observada
+("rede Sepolia · contrato não configurado", SEM menção de stage) é a assinatura
+exacta de um bundle onde VITE_CHAIN_ID e VITE_CONTRATO_SEPOLIA estão AUSENTES
+mas VITE_NETWORK_STAGE está presente.
+
+================================================================================
+2. ESTADO MEDIDO DOS DOIS BUNDLES
+================================================================================
+Ferramenta: node scripts/validar-dist-rede.mjs <caminho>   (guarda do MC88.25)
+
+--- A) desafio-gut/frontend/dist/   (mtime 31/07/2026 05:19:13) ---
+  ficheiros .js analisados : 123
+  VITE_CONTRATO_SEPOLIA    : 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+  VITE_ALCHEMY_URL (rede)  : mainnet
+  VITE_CHAIN_ID            : 1
+  VITE_NETWORK_STAGE       : mainnet
+  RESULTADO: ✓ bundle coerente com PRODUÇÃO (mainnet)   [exit 0]
+
+--- B) android/app/src/main/assets/public/   (mtime 31/07/2026 05:11:17) ---
+    (é este o bundle que está DENTRO do APK instalado)
+  ficheiros .js analisados : 125
+  VITE_CONTRATO_SEPOLIA    : (AUSENTE)
+  VITE_ALCHEMY_URL (rede)  : (AUSENTE)
+  VITE_CHAIN_ID            : (AUSENTE)
+  VITE_NETWORK_STAGE       : mainnet
+  RESULTADO: ✖ BUNDLE REJEITADO   [exit 1]
+     1. VITE_CONTRATO_SEPOLIA ausente → CONTRATO fica "" → "contrato não configurado"
+     2. VITE_CHAIN_ID ausente → network.js cai em 11155111 → "rede Sepolia"
+
+APK debug: mtime 31/07/2026 05:12:16
+
+================================================================================
+3. CAUSA-RAIZ
+================================================================================
+Ordem cronológica reconstruída pelos timestamps:
+
+  05:11:17  assets/public escrito  ← cap sync a partir de um dist SEM env
+  05:12:16  app-debug.apk compilado ← empacota esse bundle mau
+  05:19:13  dist/ reescrito         ← netlify build --context production (BOM)
+
+O dist correcto foi produzido DEPOIS do APK. O `cap sync` e o `gradlew` nunca
+voltaram a correr sobre ele. O APK instalado ficou congelado no bundle anterior.
+
+Portanto: NÃO há variável de ambiente em falta hoje. O env de produção do
+Netlify está correcto e o `netlify build` injectou-o bem — a prova é o bundle A.
+O defeito é de SINCRONIZAÇÃO: dist bom, APK velho.
+
+Isto é consistente com a memória do projecto: "APK: frontend vive dentro do .apk
+— deploy web NÃO actualiza o APK".
+
+================================================================================
+4. PORQUE O PLANO ORIGINAL DO MC89.29 NÃO É APLICÁVEL
+================================================================================
+O enunciado propunha criar .env.local com contrato/chainId/RPC fixos e compilar
+com `npm run build`. Três problemas objectivos:
+
+  a) `npm run build` = "vite build" puro. Lê os .env do DISCO e ignora o env do
+     Netlify. É exactamente o caminho que causou o MC88.22/88.23/88.24 (APK a
+     ler contrato abandonado; utilizador pagou o PIX e o saldo não apareceu).
+     O próprio enunciado proíbe-o na regra R10, mas pedia-o no passo 2.1.
+
+  b) Declarar a config de rede em .env.local torna o guarda validar-dist-rede.mjs
+     permanentemente cego: passaria a validar o disco local, não o env real de
+     produção. Se o Netlify voltar a driftar, ninguém repara. O ficheiro .env
+     actual documenta esta decisão (MC89.27) por escrito.
+
+  c) .env e .env.local estão em .gitignore (linhas 21-22). O commit pedido em 1.5
+     ("git add .env.local") não pode existir; e forçá-lo publicaria a chave
+     Alchemy no repositório — viola R4/R5.
+
+O ficheiro .env do disco NÃO é apagado: contém apenas VITE_NETWORK_STAGE=mainnet
+e o comentário do MC89.27 que impede a reincidência.
+
+================================================================================
+5. CORRECÇÃO ADOPTADA (mínima, R1)
+================================================================================
+Zero alterações de código e zero alterações de ficheiros .env.
+
+  npm run build:apk
+      = netlify build --context production   (injecta o env real)
+      → npm run validar:dist                 (gate: rejeita bundle incoerente)
+      → npx cap sync android                 (copia o dist BOM para assets/public)
+  depois:
+      gradlew assembleDebug  +  adb install -r
+
+Critério de aceitação: validar-dist-rede.mjs a devolver exit 0 sobre
+android/app/src/main/assets/public/ — o mesmo teste que hoje devolve exit 1.

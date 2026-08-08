@@ -1,0 +1,219 @@
+MC89.37 — DIAGNÓSTICO DO FLUXO DE ACESSO DO LOJISTA
+Data: 2026-08-02 | R1 CUMPRIDA: zero alteração de código.
+Método: leitura de código no repositório. NADA aqui foi medido em produção (§7).
+
+================================================================================
+RESUMO EM SEIS LINHAS
+================================================================================
+O operador tem razão, e a causa é mais simples e mais grave do que "o nível não é
+respeitado":
+
+  1. O `tipo: "corporativo"` é gravado NO REGISTO, não no pagamento. Quem
+     preenche o formulário de parceiro fica corporativo com `vendida: false`.
+  2. O acesso ao painel lê APENAS `tipo`. Nunca lê `vendida` nem `categoria`.
+  3. `POST /produtos` não verifica cota NENHUMA — só exige um JWT válido de
+     qualquer utilizador — e aceita o `cliente_id` do CORPO do pedido.
+  4. Não existe expiração de cota no modelo de dados. O campo não existe.
+
+================================================================================
+1. O MODELO DE DADOS — O QUE EXISTE, E O QUE NÃO EXISTE
+================================================================================
+[LIDO NO CÓDIGO — cotas.mjs:423-441 (registo) e _lib/cota-ativacao.mjs:44-60 (ativação)]
+
+NO REGISTO (POST /cotas action=register-corporativo, cotas.mjs:423-441):
+    tipo:       "corporativo"      ← ⚠️ JÁ AQUI
+    categoria:  null
+    vendida:    false
+    disponivel: false
+    valor:      0
+
+NA ATIVAÇÃO PAGA (ativarCotaPaga, chamada pelo webhook MP / confirmar-pagamento):
+    categoria:  "bronze"|"prata"|"ouro"|"diamante"
+    vendida:    true
+    ativadaEm:  <ISO>
+    pedidoId:   <id>
+    valor:      <valor do produto>
+
+⇒ A INFORMAÇÃO PARA DECIDIR JÁ EXISTE E ESTÁ CORRETA. `vendida` e `categoria`
+  distinguem perfeitamente "cadastrou-se" de "pagou". O defeito não é falta de
+  dados — é ninguém os ler.
+
+⚠️ O QUE NÃO EXISTE: procurei `expira|validade|vencimento|renova` em
+  cota-ativacao.mjs, cotas.mjs e cotas-store.mjs. O único resultado é
+  `validadeDias`, que é dos 30 dias das SENHAS DE TROCO — não da cota.
+  ⇒ NÃO HÁ EXPIRAÇÃO DE COTA. O requisito "revogar quando expira" (objetivo
+    deste MC) não é uma correção: é uma FUNCIONALIDADE NOVA, com decisão de
+    negócio por tomar (§ Requisitos).
+
+VALORES OFICIAIS [cota-ativacao.mjs:15-17]:
+    contrato : bronze 2 640 · prata 5 600 · ouro 11 000 · diamante 18 000 (BRL)
+    mínimo   : bronze   660 · prata 1 350 · ouro  2 250 · diamante  4 500 (BRL)
+
+================================================================================
+2. O PONTO DE FALHA Nº 1 — O PORTÃO DO PAINEL LÊ O CAMPO ERRADO
+================================================================================
+[LIDO NO CÓDIGO — AppContext.jsx:505]
+
+    const tipoUsuario = cotaCorporativa?.tipo === "corporativo" ? "corporativo" : "comum";
+
+É esta linha, e só esta, que decide se alguém é lojista. Dela dependem:
+  · o encaminhamento para /corporativo (App.jsx, via `tipoProvavel`)
+  · a guarda `CorporativoRoute` (App.jsx:89-137), que autoriza a rota
+  · o isolamento das rotas comuns (AppContext:565-581)
+
+E `tipo` é gravado no REGISTO (§1). Logo:
+
+  ⇒ QUALQUER PESSOA QUE PREENCHA O FORMULÁRIO "Seja Nosso Parceiro" ENTRA NO
+    PAINEL DO LOJISTA SEM TER PAGO NADA.
+
+  Não é preciso fraude nenhuma: é o caminho normal do produto. É exatamente o
+  que o operador descreve.
+
+⚠️ A IRONIA DO MC89.36: o MC anterior fez o lojista chegar ao painel MAIS DEPRESSA
+  e sem passar pelo Dashboard comum. Fez bem o que lhe foi pedido — mas acelerou
+  também o acesso de quem não pagou. Os dois MCs tocam na mesma porta: o 89.36
+  arrumou a antecâmara, o 89.37 tem de pôr fechadura.
+
+================================================================================
+3. O PONTO DE FALHA Nº 2 — O BACKEND DE PRODUTOS NÃO VERIFICA COTA NENHUMA
+================================================================================
+[LIDO NO CÓDIGO — produtos.mjs:210-318]
+
+`POST /produtos` faz, por esta ordem:
+    1. exige `Authorization: Bearer <user-session JWT>`        (produtos.mjs:211-223)
+    2. valida nome/preço/categoria/imagem                       (produtos.mjs:234-269)
+    3. determina o lojista                                      (produtos.mjs:272-277)
+    4. grava                                                    (produtos.mjs:305-318)
+
+NÃO HÁ, EM PONTO NENHUM, UMA CHAMADA A `getCota`. Confirmei por busca.
+
+  ⇒ (3a) Um utilizador COMUM autenticado — que nunca se cadastrou como lojista —
+    pode publicar produtos. O JWT de user-session é emitido a toda a gente.
+  ⇒ (3b) O nível da cota é irrelevante: um bronze publica no slot "diamante".
+
+⚠️ (3c) E HÁ UMA TERCEIRA COISA, QUE É DE SEGURANÇA E NÃO DE REGRA DE NEGÓCIO.
+  Linha 275-277:
+
+      const lojista = body.cliente_id
+        ? String(body.cliente_id)
+        : (payloadEndereco ?? `anon:${randomUUID().slice(0, 8)}`);
+
+  O `cliente_id` vem do CORPO do pedido e é aceite sem verificação. O comentário
+  imediatamente abaixo (linha 279) diz:
+
+      // Anti-IDOR: se tem endereco no JWT, deve bater com payloadEndereco OU ser admin
+
+  ⇒ ESSE CHECK NÃO ESTÁ IMPLEMENTADO. O comentário descreve uma verificação que
+    não existe no código. Reli as linhas 272-318 inteiras para confirmar que não
+    aparece mais à frente: não aparece.
+
+  ⚠️ ISTO NÃO É ESPECULAÇÃO SOBRE O QUE PODIA CORRER MAL — é uma comparação com
+    o ficheiro IRMÃO. `banners.mjs:227-233` faz exatamente a verificação que
+    falta aqui:
+
+        try { cliente = validarEndereco(body.cliente_id); } …
+        return jsonError(403, "endereco_nao_corresponde", "JWT não pertence ao cliente_id informado");
+
+    Dois endpoints do mesmo painel, escritos com o mesmo padrão, e um deles tem
+    a guarda e o outro não. É omissão, não desenho.
+
+  CLASSIFICAÇÃO: atribuição de conteúdo a terceiros. Quem publica pode fazer o
+  produto aparecer como sendo de outro lojista. Não expõe dados de ninguém, mas
+  polui a vitrine e a listagem `?lojista=`.
+  ⇒ Recomendo tratar isto como P0 e SEPARADO do resto deste MC (§ Plano): é uma
+    correção de três linhas que não deve ficar à espera de decisões de negócio.
+
+================================================================================
+4. O PONTO DE FALHA Nº 3 — O FRONTEND MOSTRA O ESTADO MAS NÃO O USA
+================================================================================
+[LIDO NO CÓDIGO]
+
+    CorporativoCotas.jsx:100-105   pinta um crachá "ATIVA"/"INATIVA" a partir de
+                                   `cota.vendida` — verde ou vermelho.
+    CorporativoCarteira.jsx:202    condiciona um bloco a `cota?.categoria && cota?.vendida`.
+
+  ⇒ O painel JÁ SABE dizer ao lojista que a cota está INATIVA. Escreve-o no ecrã,
+    a vermelho — e a seguir deixa-o usar tudo à mesma. A informação está a ser
+    calculada e deitada fora no único sítio onde contava.
+
+  Nota útil para o plano: isto quer dizer que a UI de "cota inativa" JÁ EXISTE em
+  embrião. Não é preciso inventar linguagem nova.
+
+================================================================================
+5. ONDE A COTA VIVE, E COMO CHEGA AO ECRÃ
+================================================================================
+[LIDO NO CÓDIGO]
+
+  ARMAZENAMENTO : Supabase, via `_lib/cotas-store.mjs` (MC37/MC38 consolidaram;
+                  o fallback de leitura em Blobs foi removido).
+  LEITURA       : GET /cotas?cliente_id=<endereco>  → se falhar, ?email=<email>
+                  → se falhar, ?email=<cadastro recente em sessionStorage>
+                  (AppContext.jsx:445-497). Corre UMA vez por sessão, depois de
+                  `authToken` existir.
+  NO FRONTEND   : `cotaCorporativa` (estado do AppContext). O OBJETO INTEIRO já
+                  está em memória — `vendida`, `categoria`, `ativadaEm` inclusive.
+                  ⇒ Não é preciso endpoint novo para o gate do painel (§ Plano).
+  PERSISTÊNCIA  : ⚠️ o objeto NÃO é guardado em localStorage. O que é guardado é
+                  só a dica de encaminhamento `gut_corporativo_hint` (MC89.36),
+                  que contém `{endereco, corporativo:true, em}` — e NADA de
+                  nível ou de estado de pagamento.
+                  ⇒ Isto é uma BOA notícia para a segurança: não há nível em
+                    cache que se possa forjar. Mas é uma ARMADILHA para o plano —
+                    ver §6.
+
+  APÓS COMPRA   : a ativação é do lado do servidor (webhook MP → `ativarCotaPaga`,
+                  com fallback `confirmar-pagamento`). No frontend,
+                  `atualizarTipoCorporativo(data)` (AppContext:558) repõe a cota
+                  em memória sem novo fetch.
+                  ⚠️ NÃO EXISTE polling nem invalidação de `cotaCorporativa` após
+                  o pagamento: ela é buscada uma vez, no arranque. Um lojista que
+                  pague com a app aberta continua a ver a cota antiga até
+                  reabrir. Isto ainda não incomoda ninguém porque a cota antiga
+                  já dá acesso total (§2) — mas passa a incomodar no minuto em
+                  que o gate existir.
+
+================================================================================
+6. ⚠️ A ARMADILHA QUE O PLANO TEM DE EVITAR (E QUE ESTE MC JÁ PAGOU UMA VEZ)
+================================================================================
+O MC89.36 acabou de estabelecer que `gut_corporativo_hint` ENCAMINHA o lojista
+para /corporativo antes do primeiro paint, sem esperar pelo servidor. Essa dica
+diz apenas "é corporativo" — não diz "pagou".
+
+  ⇒ Se o gate de PAGAMENTO for posto só na renderização do painel, um lojista sem
+    cota paga será encaminhado para /corporativo e só depois expulso: exatamente
+    o ciclo /corporativo ↔ / que o MC88.42 mediu (sete voltas, 1974→5064 ms).
+
+  ⇒ E se a dica passar a incluir o nível ou o estado de pagamento para evitar
+    isso, cria-se um estado de AUTORIZAÇÃO em localStorage — que é forjável, e
+    que contraria a regra escrita em lib/dicaSessao.js: "tudo o que está aqui
+    serve para ENCAMINHAR, NUNCA para AUTORIZAR".
+
+  A saída é a mesma que o MC89.36 já usa: encaminhar cedo pelo palpite, e deixar
+  o painel resolver o estado com um ecrã honesto (o EstadoNeutro já existe) em
+  vez de expulsar. Está desenvolvido no plano.
+
+================================================================================
+7. LIMITES DESTE DOCUMENTO
+================================================================================
+L1. NÃO MEDI NADA EM PRODUÇÃO. Não tentei publicar um produto sem cota nem
+    aceder ao painel com uma conta por pagar — seria escrever em dados reais
+    (R2/R3). As afirmações de §2, §3 e §4 são leitura de código, e indiquei o
+    ficheiro e a linha de cada uma para poderem ser conferidas.
+
+L2. NÃO SEI QUANTOS LOJISTAS ESTÃO AFETADOS. O MC89.33 registou 7 cotas em
+    produção. Quantas têm `vendida: true` é uma consulta ao Supabase que NÃO
+    corri — dá para fazer em segundos, mas é dado de negócio e preferi perguntar
+    antes (§ Requisitos, Q4).
+
+L3. NÃO EXISTE, EM LADO NENHUM DO REPOSITÓRIO, UMA TABELA DO QUE CADA NÍVEL
+    LIBERTA. Procurei. Há preços e há mínimos; não há permissões. Portanto a
+    matriz de permissões do MC89.38 é uma DECISÃO DE NEGÓCIO do operador, não
+    algo que eu possa deduzir do código — e inventá-la seria a pior coisa que
+    este documento podia fazer.
+
+L4. `categoria` TEM DOIS SIGNIFICADOS NO CÓDIGO, e confundi-los seria fácil:
+      · em `cotas` → o NÍVEL COMPRADO pelo lojista (bronze…diamante)
+      · em `produtos` → o SLOT DA VITRINE onde o produto aparece
+    São o mesmo vocabulário para coisas diferentes. A regra "um lojista bronze só
+    publica no slot bronze" é plausível — mas é suposição minha, e está na lista
+    de perguntas, não no plano.

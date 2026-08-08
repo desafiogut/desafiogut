@@ -1,5 +1,9 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-06-14 | MC24 hotfix aplicado | Pipeline de lance 100% on-chain (Fase 6 — Faxina Final)
+> Atualizado em: 2026-08-08 (MC89.50) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain
+>
+> ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
+> como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
+> errado nos três pontos. Corrigido aqui.
 
 ---
 
@@ -20,7 +24,11 @@ Skills padronizadas em `~\.claude\skills\<nome>\SKILL.md` (formato SKILL.md, ati
 
 1. **Use `@file` para acesso focado** — leia arquivos individuais ao invés do projeto completo.
 2. **Privy é o padrão oficial** — use `wallets[0].getEthereumProvider()` (EIP-1193) para toda autenticação, assinatura e gestão de wallet.
-3. **Deploy é Netlify** — auto-deploy ao push em `main` no repo `desafiogut/desafiogut`.
+3. **Deploy é Netlify e é MANUAL** — **não há auto-deploy**. Publica-se com
+   `netlify deploy --prod --build` a partir da branch em checkout.
+   **Nunca usar `--dir=dist`**: assa o env local no bundle e pode regredir a rede.
+   Fluxo seguro: `netlify deploy --build` (draft) → validar o bundle → `--prod --build`.
+   Sinal de que produção recebeu o artefacto validado: o CLI dizer `CDN requesting 0 files`.
 4. **Mantenha `MOCK_MODE`** — necessário para dev/test sem Privy.
 5. **`VITE_PRIVY_APP_ID`** é obrigatório para o login funcionar em qualquer ambiente.
 
@@ -35,21 +43,24 @@ Skills padronizadas em `~\.claude\skills\<nome>\SKILL.md` (formato SKILL.md, ati
 | Estilo | Tailwind CSS v4 + Shadcn UI (manual) | ^4.2.2 |
 | Animações | Framer Motion | ^12.38.0 |
 | Blockchain | Ethers.js v6 | ^6.16.0 |
-| **Auth + Wallet** | **Privy** (Embedded Wallets — Google / E-mail / Apple) | **latest** |
-| Rede | Ethereum **Sepolia Testnet** (chainId `11155111` / `0xaa36a7`) | — |
+| **Auth + Wallet** | **Privy** (Embedded Wallets — Google; E-mail OTP só no fluxo corporativo) | **latest** |
+| Rede | Ethereum **MAINNET** (chainId `1` / `0x1`) — desde o MC60 | — |
 | Hash off-chain | Argon2id via `hash-wasm` WASM | ^4.11.0 |
 | Sanitização | DOMPurify + regex custom | ^3.1.6 |
 | Deploy | Netlify (SPA rewrite) — https://silly-stardust-ca71bc.netlify.app | — |
 
 > ✅ **Privy é o padrão oficial de autenticação e gerenciamento de carteira.**
 > Objetivo: **zero barreira de entrada** — sem extensão de browser, sem QR Code, sem seed phrase.
-> O usuário faz login com Google, e-mail ou Apple. A carteira Ethereum (Sepolia) é criada automaticamente.
+> O login público é **Google** (`login({ loginMethods: ["google"] })` em `AppContext.jsx`).
+> O **e-mail (OTP)** continua a ser usado no fluxo **corporativo**. **Apple está morto** —
+> não está ativo no painel Privy nem no código. A carteira Ethereum (mainnet) é criada
+> automaticamente.
 >
 > Hooks Privy disponíveis (importar de `@privy-io/react-auth`):
 > - `usePrivy()` → `{ ready, authenticated, user, login, logout }`
 > - `useWallets()` → `{ wallets }` — `wallets[0]` é a embedded wallet Privy
 > - `wallet.getEthereumProvider()` → provider EIP-1193 para assinar via ethers.js
-> - `wallet.switchChain(11155111)` → força rede Sepolia antes de transações
+> - `wallet.switchChain(1)` → força rede mainnet antes de transações
 
 ---
 
@@ -67,14 +78,18 @@ Skills padronizadas em `~\.claude\skills\<nome>\SKILL.md` (formato SKILL.md, ati
 
 ## Smart Contracts Ativos
 
-### `LeilaoGUT` — Sepolia Testnet
+### `LeilaoGUT` — Ethereum MAINNET (ativo)
 ```
-Endereço : 0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5
-Rede     : Ethereum Sepolia (chainId 11155111)
-Etherscan: https://sepolia.etherscan.io/address/0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5
+Endereço : 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+Rede     : Ethereum mainnet (chainId 1)
+Etherscan: https://etherscan.io/address/0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
 Arquivo  : desafio-gut/contracts/Leilao.sol
-Deploy   : Hardhat Ignition em 2026-04-28 (Iteração 5). Coordenacao = deployer.
+Marco    : MC60 — produção passou para mainnet. Coordenação = EOA 0xFea436…1E67.
 ```
+
+> ⚠️ **`0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5` é o contrato Sepolia ABANDONADO.**
+> Se aparecer num bundle de produção, é regressão — ver o portão de validação
+> em `docs/MC89.49-DEPLOY-LOG.txt`.
 
 **ABI mínimo utilizado pelo frontend:**
 ```solidity
@@ -95,10 +110,16 @@ function edicoes(string) view returns (string nome, bool ativa, uint256 prazo)
 | Variável | Valor | Arquivo |
 |---|---|---|
 | `VITE_PRIVY_APP_ID` | `cmo51f3v300l90clgzksivvad` | `.env.local` + Netlify Dashboard |
-| `VITE_CONTRATO_SEPOLIA` | `0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5` | `.env.local` + `.env.production` |
-| `VITE_ALCHEMY_URL` | `https://eth-sepolia.g.alchemy.com/v2/qU_kw3WpEY4gttS0Cfr2B` | `.env.production` + Netlify Dashboard |
+| `VITE_CONTRATO_SEPOLIA` | `0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd` — **apesar do nome, é o contrato MAINNET**; é esta a var que o frontend lê (`src/lib/network.js:19`) | Netlify Dashboard |
+| `VITE_ALCHEMY_URL` | endpoint **`eth-mainnet`** da Alchemy | Netlify Dashboard |
+| `VITE_CHAIN_ID` | `1` | Netlify Dashboard |
+| `VITE_NETWORK_STAGE` / `NETWORK_STAGE` | `mainnet` | Netlify Dashboard |
 | `VITE_MOCK_MODE` | `false` em prod | `.env` |
 | `VITE_WC_PROJECT_ID` | legado — não usado na lógica ativa | `.env.local` |
+| `VITE_CONTRACT_ADDRESS` | ⚠️ **VAR MORTA** — está a `0x0000…0000` no Netlify e **ninguém a lê**. Não confundir com a de cima. | Netlify Dashboard |
+
+> ⚠️ **`.env.production` já não existe** em `desafio-gut/frontend/`. Os valores de
+> produção vivem no **dashboard do Netlify** e são injetados pelo `--build`.
 
 > ⚠️ **`VITE_PRIVY_APP_ID` é obrigatório.** Sem ele, o login não inicializa.
 > 1. Acesse https://privy.io → projeto já criado (App ID `cmo51f3v300l90clgzksivvad`)
@@ -117,11 +138,12 @@ desafio-gut/
 └── frontend/
     ├── .env                        ← VITE_MOCK_MODE (dev)
     ├── .env.local                  ← VITE_PRIVY_APP_ID + VITE_CONTRATO_SEPOLIA (não commitar)
-    ├── .env.production             ← Idem (deploy Netlify)
-    └── (raiz do repo) netlify.toml ← SPA rewrite + headers de segurança
+    │   (.env.production JÁ NÃO EXISTE — produção vem do dashboard do Netlify)
+    └── (raiz do repo) netlify.toml ← base=desafio-gut/frontend + SPA rewrite + CSP
     ├── vite.config.js              ← Tailwind v4 plugin + alias @
     └── src/
-        ├── main.jsx                ← Entry point: PrivyProvider com Sepolia + Google/Email/Apple
+        ├── main.jsx                ← Entry point: PrivyProvider (mainnet) + Google
+        ├── lib/network.js          ← FONTE ÚNICA de rede/contrato/explorer (MC59.2)
         ├── globals.css             ← Design tokens @theme + keyframes
         ├── App.jsx                 ← Orquestrador: usePrivy + useWallets + timer + lances
         ├── lib/utils.js            ← cn() helper (clsx + tailwind-merge)
@@ -185,11 +207,11 @@ desafio-gut/
    ├─ sanitizeLance()              → valida range 1–999999
    ├─ verificarRateLimit()         → token bucket client-side
    ├─ hashLance()                  → Argon2id WASM (prova off-chain)
-   ├─ wallet.switchChain(11155111) → garante rede Sepolia
+   ├─ wallet.switchChain(1)        → garante rede mainnet
    ├─ wallet.getEthereumProvider() → provider EIP-1193
    ├─ getSignerFromProvider()      → ethers.js BrowserProvider + Signer
    ├─ assinarLance()               → EIP-191 signMessage (popup Privy na tela)
-   └─ enviarLance()                → darLance(idEdicao, valorEmCentavos) on-chain Sepolia
+   └─ enviarLance()                → darLance(idEdicao, valorEmCentavos) on-chain MAINNET
                                      ↳ contrato decrementa saldoSenhas[msg.sender]
                                        (não há gastarFicha localStorage no fluxo real)
 

@@ -1,0 +1,103 @@
+================================================================================
+MC-CLASSIFICAR-WHATSAPP — CLASSIFICAÇÃO POR BLOCOS, NUMERAÇÃO PRESERVADA
+Data: 2026-08-01
+Origem : Desktop\CONTATOS-ORGANIZADOS\whatsapp.xlsx           (27.737 números)
+Saída  : Desktop\CONTATOS-ORGANIZADOS\whatsapp_classificado.xlsx (948.586 bytes)
+Veredito: ✅ CONCLUÍDO E VALIDADO
+Nota R4: nenhum número completo aparece aqui — só contagens.
+================================================================================
+
+CONTAGENS POR BLOCO
+-------------------
+  Bloco 1 — CELULARES COM DDD      13.993    50,45%    prontos a enviar
+  Bloco 2 — CELULARES SEM DDD       5.489    19,79%    móveis, sem DDD para endereçar
+  Bloco 3 — FIXOS COM DDD           8.239    29,70%    em regra NÃO têm WhatsApp
+  Bloco 4 — FIXOS SEM DDD               0     0,00%    sem casos nesta base
+  Bloco 5 — INCONSISTENTES             16     0,06%    DDD inexistente
+  ─────────────────────────────────────────────────
+  TOTAL                            27.737   100,00%
+
+  Prontos a enviar (bloco 1)       13.993
+  Móveis sem DDD (bloco 2)          5.489
+  Fixos (blocos 3 + 4)              8.239
+  Verificados no Twilio                198    os únicos com WhatsApp CONFIRMADO
+
+Todas batem com os critérios de aceitação do enunciado (13.993 / 5.489 / 8.239).
+
+ESTRUTURA
+---------
+  Aba "Numeros"  27.737 linhas
+      1 - ID · 2 - Numero · 3 - Bloco · 4 - Categoria · 5 - DDD ·
+      6 - Pronto para envio · 7 - Verificado Twilio
+      ORDEM E IDs ORIGINAIS, de 1 a 27.737. Cor de fundo por bloco, para a
+      classificação continuar visível mesmo sem os números estarem agrupados.
+  Aba "Resumo"       13 linhas   bloco · quantidade · percentual · observação
+
+================================================================================
+1. PORQUE EXISTEM DOIS FICHEIROS E NENHUM SUBSTITUI O OUTRO
+================================================================================
+  whatsapp_organizado.xlsx   (MC anterior)  números AGRUPADOS por bloco
+  whatsapp_classificado.xlsx (este)         números na ORDEM ORIGINAL, com o
+                                            bloco como atributo de cada linha
+
+São usos diferentes: agrupado serve para trabalhar um bloco de cada vez;
+ordenado serve para cruzar com qualquer outra lista que use o mesmo ID. Nenhum
+foi apagado — a ordem original é informação que o agrupamento destrói.
+
+================================================================================
+2. A COLUNA "VERIFICADO TWILIO" — O QUE FOI PRECISO CONFERIR ANTES
+================================================================================
+`unicos\whatsapp_VERIFICADOS.txt` foi escrito ANTES de se remover o "+" e ANTES
+do corte dos 22 primeiros. Havia portanto duas maneiras de a coluna sair errada
+sem dar erro nenhum: formato diferente (com "+" contra só dígitos) e números
+entretanto removidos.
+
+  MEDIDO: os 198 estão em "+55…"; normalizados para só dígitos, os 198 casam
+  com a lista actual. NENHUM estava entre os 22 removidos.
+  E todos os 198 caem no bloco 1 — são celulares com DDD, como tinha de ser.
+
+================================================================================
+3. VALIDAÇÃO  (scripts\validar_classificacao.py → exit 0)
+================================================================================
+Duas verificações valem mais que as contagens:
+
+  ✓ A REGRA DE CLASSIFICAÇÃO É REAPLICADA de forma independente no validador e
+    tem de dar o mesmo bloco nas 27.737 linhas. 0 divergências.
+    Conferir só os totais não distingue "13.993 certos" de "13.993 com dois
+    trocados entre si".
+  ✓ "VERIFICADO TWILIO" É COMPARADO CONJUNTO A CONJUNTO com o ficheiro dos 198,
+    não pela contagem. Diferença simétrica: 0. 198 marcas nos números errados
+    contariam na mesma 198.
+
+  Mais:
+  ✓ ZIP íntegro; todo índice de estilo usado existe em <cellXfs> (7 < 8)
+  ✓ 27.737 linhas, IDs contínuos 1..27.737
+  ✓ a coluna Numero é idêntica a whatsapp.xlsx NA MESMA ORDEM, e os IDs também
+  ✓ contagens por bloco: 13.993 / 5.489 / 8.239 / 0 / 16, soma 27.737
+  ✓ a Categoria bate com o bloco em todas as linhas
+  ✓ "Pronto para envio = Sim" é EXACTAMENTE o conjunto do bloco 1
+  ✓ DDD vazio só nos blocos que não têm DDD
+  ✓ os percentuais por bloco somam 100,00%
+  ✓ testes por mutação: dígito a mais muda o bloco; marca Twilio a mais é apanhada
+
+  ⚠️ UM DEFEITO DO PRÓPRIO VALIDADOR, ENCONTRADO E CORRIGIDO: a primeira versão
+  lia o ficheiro de origem só como texto inline. A coluna ID é célula NUMÉRICA
+  (<v>), por isso vinha vazia e a comparação de IDs nunca podia passar — acusou
+  falha sem haver falha nos dados. Corrigida a leitura, passou. Fica registado
+  porque um validador com um defeito destes, se tivesse acusado o contrário
+  (verde indevido), não se notaria.
+
+⚠️ NÃO VERIFICADO: abrir o ficheiro no Excel. Não está instalado nesta máquina
+(COM devolve REGDB_E_CLASSNOTREG). A validação é estrutural.
+
+================================================================================
+4. NOTAS
+================================================================================
+  · `whatsapp.xlsx` e `whatsapp_organizado.xlsx` NÃO foram alterados.
+  · Zero alterações no código do DesafioGUT (R1). Nenhuma credencial tocada (R5).
+  · Nenhum contacto commitado no repositório.
+
+PENDENTE DO OPERADOR
+  · Abrir o .xlsx uma vez para confirmar.
+  · Para um envio real, a coluna "Pronto para envio" isola os 13.993; a coluna
+    "Verificado Twilio" isola os 198 que já se sabe terem WhatsApp.

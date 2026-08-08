@@ -8,7 +8,7 @@
 //   - Com ?raw=1: retorna o SVG cru com Content-Type: image/svg+xml.
 //
 // POST /.netlify/functions/banners
-//   - Modo Admin (x-admin-token):  status=aprovado, ativo imediatamente.
+//   - Modo Admin (Bearer admin-JWT):  status=aprovado, ativo imediatamente.
 //   - Modo Cliente (Authorization Bearer JWT lance-auth + premium flag):
 //       status=pendente · debita Wallet em valorCentavos (se body.premium=true).
 //   - Body: { cliente_id, dimensao: "app"|"site", imagemBase64, mime, premium?, valorCentavos? }
@@ -29,6 +29,8 @@ import {
 import { verificarLanceAuth } from "./_lib/jwt.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { autenticarAdmin } from "./_lib/admin-auth.mjs";
+// MC89.40 (F1) — mesma fonte única de "cota paga" que o produtos.mjs usa.
+import { validarCotaAtiva, MSG_COTA_INATIVA } from "./_lib/cota-utils.mjs";
 import { scrubSvg } from "./_lib/svg-sanitize.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 
@@ -195,7 +197,7 @@ async function debitarWallet(cliente, valorCentavos, motivo) {
 
 async function handlePost(req) {
   // Modo de autenticação tri-state:
-  //   1) Admin (Bearer admin-JWT OR x-admin-token legado, via autenticarAdmin).
+  //   1) Admin (Bearer admin-JWT, via autenticarAdmin).
   //   2) Cliente (Authorization: Bearer <lance-auth JWT>).
   const adminCheck = await autenticarAdmin(req);
   const isAdmin    = !!adminCheck?.ok;
@@ -205,7 +207,7 @@ async function handlePost(req) {
     const authHeader = req.headers.get("authorization") || "";
     const authToken  = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     if (!authToken) {
-      return jsonError(401, "auth_obrigatorio", "envie admin (Bearer admin-JWT ou x-admin-token) OU Authorization: Bearer <lance-auth>");
+      return jsonError(401, "auth_obrigatorio", "envie admin (Bearer admin-JWT) OU Authorization: Bearer <lance-auth>");
     }
     try { jwtPayload = await verificarLanceAuth(authToken); }
     catch (err) {
@@ -231,6 +233,26 @@ async function handlePost(req) {
   }
   if (!isAdmin && jwtPayload.endereco !== cliente) {
     return jsonError(403, "endereco_nao_corresponde", "JWT não pertence ao cliente_id informado");
+  }
+
+  // ── MC89.40 (F1) — A COTA TEM DE ESTAR PAGA ────────────────────────────────
+  //
+  // Vem DEPOIS da guarda de posse acima (`endereco_nao_corresponde`), pela mesma
+  // razão que em `produtos.mjs`: primeiro estabelece-se de quem é o pedido, só
+  // depois se pergunta se essa pessoa pode publicar.
+  //
+  // O admin fica de fora, como já ficava em tudo o resto deste handler — é ele
+  // que aprova banners, e trancá-lo aqui partiria a moderação.
+  //
+  // ⚠️ NÃO se impõe aqui a regra do NÍVEL (D3). Um banner não tem "slot" como o
+  // produto tem: a dimensão é `app`/`site`, que é formato e não categoria. Impor
+  // um vínculo ao nível seria inventar uma regra que o operador não decidiu.
+  // Fica registado como pergunta em aberto no relatório do MC89.40.
+  if (!isAdmin) {
+    const estadoCota = await validarCotaAtiva(cliente);
+    if (!estadoCota.ativa) {
+      return jsonError(403, "cota_inativa", MSG_COTA_INATIVA, { needsPayment: true });
+    }
   }
 
   const dimensao = body.dimensao === "site" ? "site" : "app";

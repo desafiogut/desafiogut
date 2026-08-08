@@ -1,0 +1,127 @@
+MC89.50 — SEGMENTO 1: DECISÃO SOBRE O CI E O package-lock.json
+Data: 2026-08-08
+Skills ECC: verification-loop
+
+================================================================================
+1.1/1.2 — O CI ESTÁ VERMELHO, MAS NÃO PELO MOTIVO QUE A MEMÓRIA DIZIA
+================================================================================
+A nota histórica do projeto dizia: "Socket.dev / npm audit sempre vermelhos".
+Isso está INCOMPLETO. O detalhe por job da última execução na `main`
+(runs 30601666154 e 30601666150, 2026-07-31, commit 9409145):
+
+  CI                                  Security Scan
+    install ......... failure           npm audit (frontend) .... failure
+    build ........... SKIPPED           npm audit (functions) ... failure
+    lint ............ SKIPPED           Lockfile integrity ...... failure
+    audit ........... SKIPPED           Socket.dev scan ......... failure
+                                        slither ................. success
+
+>> O `build` NÃO estava vermelho — estava SKIPPED, porque `install` falhou
+   antes dele. Um check obrigatório que nunca corre não é ruído: é bloqueio.
+
+CAUSA RAIZ do `install` (log do run):
+  npm error code EUSAGE
+  `npm ci` can only install packages when your package.json and
+  package-lock.json are in sync.
+    Missing: typescript@5.9.3 from lock file
+    Missing: @types/react@19.2.18 from lock file
+    Missing: @tanstack/react-query@5.101.4 from lock file
+    Missing: @tanstack/query-core@5.101.4 from lock file
+
+================================================================================
+1.5 — O package-lock.json: A RECOMENDAÇÃO DO PLANO É UM NO-OP
+================================================================================
+O plano recomendava "limpar o lock" com `npm install --package-lock-only`.
+Testei em vez de assumir. Resultado no HEAD (b643338):
+
+  A) `npm ci` em desafio-gut/frontend ................ EXIT 0  (SUCESSO)
+     => a dessincronia de 2026-07-31 JÁ ESTÁ CORRIGIDA algures nos 99 commits.
+        O job `install` vai PASSAR neste PR.
+
+  B) `npm install --package-lock-only` + `git diff --exit-code package-lock.json`
+     => SEM DIFF.
+        (Esta é exatamente a verificação do job `Lockfile integrity`.)
+     => o lock JÁ ESTÁ em sincronia. Não há nada para limpar.
+     Sonda revertida com `git checkout --` logo a seguir; tree limpo.
+
+>> ERRATA AO MC89.49: no relatório desse MC escrevi que o lock tinha
+   "4 entradas obsoletas" a regenerar num MC de manutenção. ESTÁ ERRADO.
+   Aquelas 4 entradas são NECESSÁRIAS — o `npm ci` exige-as. Quem as poda é o
+   `npm install --legacy-peer-deps` do build do Netlify, que resolve a árvore de
+   peer deps de outra maneira. Reverter a alteração no MC89.49 foi o acerto,
+   mas a justificação que dei ("entradas obsoletas") estava trocada.
+   NÃO abrir MC de manutenção para isto: não há dívida nenhuma aqui.
+
+DECISÃO 1.5/1.6: NÃO mexer no package-lock.json. Passos 1.6 do plano: NÃO
+EXECUTADOS por serem no-op comprovado. (R1 — mínima alteração.)
+
+================================================================================
+1.3/1.4 — O QUE BLOQUEIA MESMO: 8 CVEs HIGH
+================================================================================
+O job obrigatório `npm audit (frontend)` corre `npm audit --audit-level=high`.
+Execução local no HEAD:
+
+  24 vulnerabilidades: 16 moderate, 8 high, 0 critical
+
+  As 8 HIGH:
+    react-router          React Router: RSC Mode CSRF Bypass
+    react-router-dom      (via react-router)
+    postcss               Path Traversal em Source Map Auto-Loading
+    nanoid                loop infinito com size negativo
+    sharp                 CVE-2026-33327 / CVE-2026-3xxxx (libvips)
+    @xenova/transformers  (via sharp)
+    socket.io-parser      Zero-attachment Memory Exhaustion
+    brace-expansion       DoS por expansão sem limite
+
+>> Estas NÃO são ruído. São CVEs reais. A nota histórica que as descartava como
+   "12 moderate da stack Privy" está desatualizada — há 8 high agora.
+
+PREVISÃO DO CI NESTE PR (baseada em execução local, não em suposição):
+  install .................... PASSA   (npm ci exit 0)
+  build ...................... PASSA   (o Netlify construiu este código no MC89.49)
+  Lockfile integrity (sync) .. PASSA   (zero diff)
+  npm audit (frontend) ....... FALHA   (8 high)  <<< O BLOQUEIO
+
+--------------------------------------------------------------------------------
+DECISÃO DO OPERADOR (consultado, 2026-08-08)
+--------------------------------------------------------------------------------
+OPÇÃO A ESCOLHIDA: merge administrativo (`--admin`) + registo da dívida.
+
+Fundamentação:
+  • O âmbito do MC89.50 é o MERGE, não a correção de vulnerabilidades.
+  • `react-router` é a dependência central de routing de toda a app. Um bump
+    exige revalidar todas as rotas — incluindo as telas ADM, que o agente não
+    consegue validar (OAuth Privy, ver MC89.49 §6.1). Não é trabalho de
+    sub-passo: é um MC próprio.
+  • O bypass é LEGÍTIMO, não contornado: o ruleset lista o papel admin em
+    bypass_actors com bypass_mode "always".
+  • O merge não muda o que está publicado — o deploy é manual e já foi feito no
+    MC89.49. Mergear não expõe estas CVEs mais do que já estão expostas.
+
+DÍVIDA REGISTADA: corrigir as 8 CVEs high num MC dedicado (ver relatório §6).
+
+--------------------------------------------------------------------------------
+DECISÃO DE MÉTODO DE MERGE (operador, 2026-08-08): MERGE COMMIT — não squash
+--------------------------------------------------------------------------------
+Com `--squash`, a `main` receberia UM commit novo com a árvore certa, mas os 99
+commits não entrariam no seu histórico. Consequência concreta: o commit que está
+em produção (b643338) DEIXARIA de ser ancestral da `main`, e o portão de
+segurança usado no MC89.49
+   `git merge-base --is-ancestor <commit-em-producao> main`
+passaria a dar FALSO — transformando a verificação anti-drift num alarme
+permanente e inútil.
+
+Com `--merge`, os 99 commits e os 28 MCs ficam no histórico e a ancestralidade
+mantém-se. Escolhido `--merge`.
+
+================================================================================
+CRITÉRIO DE SUCESSO DO SEGMENTO 1
+================================================================================
+[x] Estado do CI analisado ao nível do JOB, não do workflow
+[x] Causa raiz do `install` identificada e comprovada já corrigida no HEAD
+[x] package-lock: recomendação do plano testada e refutada (no-op)
+[x] Errata ao MC89.49 registada
+[x] Bloqueio real identificado: 8 CVEs high
+[x] Decisão do operador obtida e fundamentada (Opção A + merge commit)
+
+VEREDITO: APTO A AVANÇAR PARA O SEGMENTO 2.

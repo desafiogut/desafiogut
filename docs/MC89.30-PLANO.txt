@@ -1,0 +1,110 @@
+MC89.30 — PLANO DE AÇÃO (execução no MC89.31)
+Base: docs/MC89.30-DIAGNOSTICO.txt
+Estado: PROPOSTO — aguarda aprovação do operador. Nada foi alterado (R1).
+
+================================================================================
+1. CRITÉRIO DE SUCESSO
+================================================================================
+  S1. O ADM nunca vê o Dashboard comum no restauro de sessão — nem 1 frame.
+  S2. O ADM nunca vê "Faça login para verificar privilégios" tendo sessão activa.
+  S3. Um utilizador NÃO-admin nunca vê o painel admin, nem por um instante, nem
+      com o localStorage manipulado à mão.
+  S4. Sem regressão no lojista (MC88.42) nem no comum.
+  Medição: mesma sonda do diagnóstico, 3 corridas, cache quente e cache expirado.
+
+================================================================================
+2. OPÇÕES CONSIDERADAS
+================================================================================
+
+OPÇÃO A — palpite optimista síncrono (`adminProvavel`), simétrico ao MC88.42
+  Ler o cache `gut_admin_check` no primeiro render validando-o contra
+  `privy:connections` (via `enderecoSessaoSincrono`, que já existe em
+  AppContext.jsx:83) em vez de contra `address`.
+  + Elimina a espera pelo Privy: decide a t≈0.
+  + Reaproveita um padrão já em produção, já auditado (MC88.42/88.34).
+  − Exige a segunda metade (secção 3.2), senão cai no ecrã de login.
+  − Não cobre o PRIMEIRO login de sempre — aí não há cache e adivinhar seria
+    inventar. Aceitável: é uma vez por aparelho.
+
+OPÇÃO B — adiar o paint do Dashboard até `useAdmin` resolver
+  ✗ REJEITADA. É literalmente o `return null` que o MC88.37 removeu, com CLS
+  0,373 medido. Trocaria o ecrã errado por um ecrã em branco de ~1,2 s e
+  penalizaria TODOS os utilizadores para servir um punhado de admins.
+
+OPÇÃO C — overlay de carregamento por cima do Dashboard
+  ✗ REJEITADA. Mascara, não corrige: o Dashboard continua montado e a pedir
+  dados. E acrescenta uma camada com backdrop-filter, que neste projecto já
+  custou 17,5 fps (ver memória do MC88.36).
+
+RECOMENDAÇÃO: Opção A + a segunda metade obrigatória.
+
+================================================================================
+3. A CORREÇÃO, EM DUAS METADES
+================================================================================
+
+3.1 — ENCAMINHAR CEDO  (src/context/AppContext.jsx + src/App.jsx)
+  · Expor `adminProvavel` no AppContext, calculado de forma síncrona:
+      cache `gut_admin_check` não expirado
+      E cache.isAdmin === true
+      E cache.endereco === enderecoSessaoSincrono()      ← a guarda do MC88.34
+  · App.jsx:172 passa a:
+      if (address ? (isAdmin && !adminLoading) : adminProvavel) → <Navigate to="/admin">
+    Confirmado manda sempre que existir; o palpite só actua na janela em que
+    `address` ainda não chegou.
+
+3.2 — NÃO ATERRAR NUM PEDIDO DE LOGIN  (AdminLayout.jsx + AdminAuthContext.jsx)
+  · O portão `if (!isConnected)` passa a distinguir três estados em vez de dois:
+      – há sessão em disco e o Privy ainda não respondeu → "A restaurar sessão…"
+      – Privy respondeu e NÃO há sessão                  → o ecrã actual [Entrar]
+      – ligado                                            → segue
+    O sinal já existe e já é usado noutro sítio: `pareceAutenticado` (MC88.38),
+    cuja condição correcta é `!(ready && !authenticated)` — NÃO `!ready`
+    (AppContext.jsx:494-504 documenta porquê: `ready` fica true antes de
+    `address`, e a fresta faz o ecrã regredir).
+  · `AdminAuthProvider` continua a exigir `isConnected` ESTRITO para criar ou
+    renovar sessão admin. O optimismo é só de UI.
+
+================================================================================
+4. SEGURANÇA (Pilar 3 / R4) — PORQUE ISTO NÃO ABRE UMA PORTA
+================================================================================
+  · O palpite só ENCAMINHA. Não concede nada. As três defesas continuam:
+      1. AdminLayout: `if (!isAdmin) → "Acesso restrito"` (isAdmin real, do backend).
+      2. AdminAuthContext: sessão admin exige assinatura EIP-191 + ADMIN_TOKEN,
+         e `chamarAdmin` é `null` enquanto não autenticado.
+      3. Backend: fail-closed no Postgres, níveis por endereço (MC89.11).
+  · Cache manipulado à mão não chega para nada: a guarda compara com
+    `privy:connections`, que é o endereço da sessão real. Um atacante que
+    pusesse `isAdmin:true` no cache com o SEU endereço veria o redirect e depois
+    "Acesso restrito" — exactamente o que já veria hoje ao escrever /admin na
+    barra de endereço. Não há ganho de superfície.
+  · `privy:connections` é endereço público, não credencial (nota já em
+    AppContext.jsx:80-82). Nenhum token é lido.
+
+================================================================================
+5. ORDEM DE EXECUÇÃO (MC89.31)
+================================================================================
+  S0. Fechar a lacuna 5(a) do diagnóstico: 3 medições com cache forçado a
+      expirar, para explicar os 3,4 s. Se a causa for outra que não a latência,
+      o plano muda — por isso vem PRIMEIRO.
+  S1. 3.2 (a segunda metade) ANTES da 3.1. Assim, se a 3.1 for revertida, a app
+      fica melhor e nunca pior; e a 3.1 sozinha nunca chega a produzir o ecrã
+      "faça login" a um admin.
+  S2. 3.1 (`adminProvavel` + App.jsx).
+  S3. Testes: `useAdmin`/palpite são lógica pura → node:test. ⚠️ Não há runner de
+      React neste frontend (memória do projecto), portanto os portões do
+      AdminLayout validam-se no aparelho, não em teste unitário.
+  S4. Validação no aparelho: 3 corridas cache quente + 3 cache expirado + 1
+      corrida com utilizador NÃO-admin (S3 do critério), sonda validada por
+      mutação como no MC89.29.
+  S5. build:apk → gradlew → adb install. NUNCA `npm run build`.
+
+================================================================================
+6. RISCOS
+================================================================================
+  R-a  Um ex-admin despromovido continua a ser encaminhado até o cache expirar
+       (≤5 min). Aterra em "Acesso restrito" — sem dano, mas é feio. Mitigação
+       possível: invalidar o cache no logout. Decisão do operador.
+  R-b  Mexer no portão do AdminLayout toca no caminho de TODOS os admins. É por
+       isso que S1 vem antes de S2 e que a validação inclui um não-admin.
+  R-c  O primeiro login de sempre continua a passar pelo Dashboard. Fora do
+       alcance de qualquer cache; documentar em vez de esconder.

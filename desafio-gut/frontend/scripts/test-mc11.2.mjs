@@ -52,7 +52,7 @@ reg(
 {
   // Procura `disabled={true}` ou `disabled` sozinho como atributo no JSX.
   // Aceita `disabled={ctaDisabled}` ou similar (estado), mas rejeita literal.
-  const hardcoded = /disabled\s*=\s*\{\s*true\s*\}|disabled\s*[}\s\/]/m;
+  const hardcoded = /disabled\s*=\s*\{\s*true\s*\}|disabled\s*[}\s/]/m;
   // Filtro: somente no contexto de botão "Aceito".
   const trecho = sidebar.match(/Aceito o DesafioGUT[\s\S]{0,400}<\/button>/);
   const tem = trecho ? hardcoded.test(trecho[0]) : false;

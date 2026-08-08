@@ -1,0 +1,179 @@
+================================================================================
+MC89.31 — ELIMINAÇÃO DA TRANSIÇÃO DO ADM PELO DASHBOARD COMUM (EXECUÇÃO)
+Data: 2026-08-01 | Aparelho: Xiaomi 21091116UG (Android 13)
+Branch: feat/mc89.31-adm-otimista | 4 commits
+Veredito: ✅ RESOLVIDO E VALIDADO NO APARELHO. Falta o deploy (operador).
+================================================================================
+
+RESUMO EM UMA LINHA
+-------------------
+O ADM deixou de ver o Dashboard comum — em 6 corridas (3 quentes, 3 frias) a
+marca nunca disparou, contra 1314 ms (quente) e 1310-1504 ms (frio) antes. Pelo
+caminho, a medição apanhou dois defeitos que os testes não viam, e ambos foram
+corrigidos.
+
+================================================================================
+1. O QUE MUDOU EM RELAÇÃO AO PLANO APROVADO — E PORQUÊ
+================================================================================
+O plano do MC89.30 ancorava o palpite no `gut_admin_check`, cujo TTL é 5 min.
+
+O Segmento 0 mediu o cache frio 3× e encontrou 1430 ms de mediana, contra os
+4849 ms de UMA corrida registada no MC89.30. Os 3,4 s "por explicar" NÃO
+reproduzem: aquela corrida foi a primeira a seguir à reposição da rede descrita
+no próprio MC89.30 §0.2, e traz o rasto (sessão Privy a 1449 ms contra ~700 ms
+agora). Era rede a recuperar, não código.
+
+Isso muda uma premissa. Se frio ≈ quente, um palpite preso aos 5 min do
+`gut_admin_check` corrigiria "reabri agora mesmo" e deixaria de pé "reabri
+amanhã" — que é o caso descrito. O risco R-c do plano ("o primeiro login de
+sempre") era, na verdade, TODO restauro passados 5 minutos de inatividade.
+
+Levado ao operador, que aprovou a âncora alternativa: uma dica de
+ENCAMINHAMENTO de 24 h, separada da resposta de AUTORIZAÇÃO. É a assimetria que
+o MC88.42 já usa para o lojista:
+
+    lojista : tipoConfirmado  (24 h, encaminha) + cotaCorporativa (servidor, autoriza)
+    admin   : gut_admin_hint  (24 h, encaminha) + gut_admin_check (5 min, autoriza)
+
+O TTL de 5 min do `gut_admin_check` NÃO foi tocado.
+
+================================================================================
+2. A CORREÇÃO, EM QUATRO PEÇAS
+================================================================================
+
+2.1 — src/lib/dicaSessao.js (novo)
+  Palpite síncrono lido a t=0. Três condições obrigatórias: dica existe e não
+  expirou (24 h), diz isAdmin === true, e o endereço bate certo com
+  `privy:connections`. Recebe o storage por injeção, logo é testável sem React.
+  Passou a alojar `enderecoSessaoSincrono`, que estava no AppContext, para não
+  existirem duas cópias da guarda que valida um cache contra a sessão em disco.
+
+2.2 — src/App.jsx
+      if (address ? (isAdmin && !adminLoading) : adminProvavel)
+  Com `address` manda o backend; sem ele manda o palpite. Ternário e não `||`:
+  um `||` deixaria o palpite sobreviver a uma negativa confirmada. Há um teste
+  que falha se alguém trocar isto.
+
+2.3 — src/components/admin/AdminLayout.jsx — o portão com três estados
+  "a restaurar" passou a ser distinto de "não autenticado". Sem esta metade, o
+  encaminhamento cedo trocaria "vejo o ecrã errado" por "a app manda-me entrar
+  quando eu já entrei".
+
+2.4 — src/hooks/useAdmin.js — reconciliação durante a renderização
+  Ver 3.1. Não estava no plano; foi a medição que o exigiu.
+
+Segurança: o palpite só ENCAMINHA. As três defesas continuam intactas —
+AdminLayout `!isAdmin` (backend), assinatura EIP-191 do AdminAuthContext, e o
+fail-closed do Postgres (MC89.11). `AdminAuthProvider` continua a exigir
+`isConnected` ESTRITO para criar ou renovar sessão admin; há um teste que falha
+se isso mudar.
+
+================================================================================
+3. DOIS DEFEITOS QUE SÓ O APARELHO MOSTROU
+================================================================================
+
+3.1 — "Acesso restrito" a um admin legítimo (marca aos 1582 ms)
+  Com `endereco` a null, `useAdmin` devolvia `{ isAdmin:false, loading:false }`
+  — um NÃO definitivo sobre uma pergunta que ainda não tinha sido feita. Quem
+  corrigia era o `useEffect`, que corre DEPOIS da renderização; no fotograma
+  pelo meio, `isConnected` já era true e o TERCEIRO portão do AdminLayout dizia
+  "Acesso restrito. Seu endereço … não está na lista de admins".
+
+  Antes deste MC quase nunca se via, porque o ADM só chegava a /admin depois de
+  `isAdmin` já ser true. O encaminhamento cedo não criou o defeito — tornou o
+  encontro garantido. Eu tinha-o PREVISTO no diagnóstico (§4.5) e mesmo assim a
+  primeira correção não o cobria; foi a medição que o obrigou a aparecer.
+
+  Corrigido por reconciliação durante a renderização. Beneficia também a
+  Sidebar, o BottomNav e o ChatbotWidget, que escondiam o acesso admin nesse
+  mesmo fotograma.
+
+3.2 — ADM sem `gut_saldo_cache` via "Faça login" durante 737 ms
+  O portão usava `pareceAutenticado`, que ancora no cache de SALDO. A pergunta
+  certa é "há sessão em disco?", e quem a responde é `privy:connections`. Novo
+  sinal `restaurandoSessao`, com a mesma regra de queda do MC88.37 (só cai com
+  `ready && !authenticated`, nunca com `!ready`), pelo que um logout dentro do
+  painel faz o ecrã de login voltar, como deve.
+
+================================================================================
+4. MEDIÇÃO FINAL (APK com o código final)
+================================================================================
+
+  ANTES (APK MC89.29/89.30)          DEPOIS (APK MC89.31)
+  ---------------------------        --------------------------
+  quente: 1314 ms de Dashboard       quente: marca NUNCA dispara (3 corridas)
+  frio:   1310-1504 ms (3 corridas)  frio:   marca NUNCA dispara (3 corridas)
+  navegou p/ /admin: 1769-1990 ms    navegou p/ /admin: 442-1000 ms
+
+  `portao_faca_login`      : nunca dispara
+  `portao_acesso_restrito` : nunca dispara
+  `portao_restaurando`     : dispara, como projetado
+
+  O que o ADM vê agora, do primeiro fotograma: a casca da app (rodapé e barra
+  inferior) durante ~60-100 ms, depois /admin com "Restaurando sessão…" e, no
+  cache frio, "Verificando privilégios…" antes do painel. São estados de espera
+  DENTRO do painel, não o ecrã de outro produto.
+
+  SEGURANÇA, no aparelho: dica forjada com o endereço de OUTRA conta NÃO
+  encaminha — o Dashboard renderiza e o redirect só acontece aos 2252 ms, pelo
+  caminho confirmado. É o comportamento correto.
+
+  Sem erros de consola novos. Os dois 404 são `/cotas` de uma conta não
+  corporativa (pré-existente) e o ERR_FAILED é o analytics do Privy.
+
+================================================================================
+5. TESTES
+================================================================================
+  Frontend : 40 → 70 (30 novos em src/lib/dicaSessao.test.mjs)
+  Backend  : 375/375, inalterado
+  Mutação  : 9/9 apanhadas
+
+  A validação por mutação apanhou um falso verde meu: o teste do AdminLayout
+  afirmava só a ORDEM dos textos, e `if (false && …)` mantinha a ordem com o
+  ramo morto. Passou a afirmar também a condição. Um segundo teste ficou sem
+  cobertura até eu extrair a função `reconciliar` — antes disso, a correção 3.1
+  estava protegida apenas por uma medição manual.
+
+================================================================================
+6. O QUE NÃO FOI FEITO, E PORQUÊ
+================================================================================
+  a) PRIMEIRO login de sempre num aparelho: continua a passar pelo Dashboard
+     (~1,5 s, medido no modo sem-dica). Por desenho — não há nada em disco e
+     adivinhar seria inventar. Acontece uma vez por aparelho.
+  b) Utilizador NÃO-admin real: não exercitado. Entrar com outra conta
+     terminaria a sessão do operador. O que foi validado no aparelho é o
+     mecanismo — sem dica não há encaminhamento, e dica de outro endereço é
+     rejeitada — e em teste unitário, a remoção da dica quando o backend
+     responde `isAdmin:false`.
+  c) ADM que também é lojista: não exercitado (a conta de teste não é
+     corporativa; confirmado pelos 404 de `/cotas`). Pelo código, o bloco
+     corporativo é testado depois e ganha.
+  d) Deduplicação dos pedidos `admin-list`: são 5 instâncias de `useAdmin` e
+     medem-se 2-3 pedidos em paralelo no cache frio. ~100 ms, fora do enunciado.
+     Fica como dívida registada no diagnóstico §5.
+  e) Deploy: é do operador (não corri deploy).
+
+================================================================================
+7. RISCO ACEITE (decidido pelo operador)
+================================================================================
+  Um ex-admin despromovido continua a ser ENCAMINHADO para /admin enquanto a
+  dica viver. Aterra em "Acesso restrito" — não ganha acesso nenhum. A janela é
+  na prática curta: a dica é apagada na PRIMEIRA resposta do backend que diga
+  `isAdmin:false`, o que acontece no arranque seguinte com o cache de 5 min já
+  frio. As 24 h só se aplicam a quem nunca mais abrir a app com rede.
+
+================================================================================
+8. ENTREGÁVEIS
+================================================================================
+  ✅ docs/MC89.31-DIAGNOSTICO.txt
+  ✅ src/lib/dicaSessao.js + 30 testes
+  ✅ Correções em App.jsx, AppContext.jsx, AdminAuthContext.jsx,
+     AdminLayout.jsx, useAdmin.js
+  ✅ APK recompilado (build:apk → gradlew → adb install) e validado
+  ✅ Desktop\MC89.31-RELATORIO.txt + cópia em docs/
+  ✅ cloud.md atualizado
+  ⏳ Deploy — do operador
+
+  DESVIO A REGISTAR: o trabalho foi feito na branch feat/mc89.31-adm-otimista,
+  não em main. O MC89.30 documentou ter usado main; a regra do meu harness é não
+  commitar diretamente na branch por omissão. A branch está pronta para merge.

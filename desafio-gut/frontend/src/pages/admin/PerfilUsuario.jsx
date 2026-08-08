@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { Button, Input } from "../../components/ui";
-import { COR, ouTraco, brl } from "./_ui.jsx";
+import { COR, ouTraco, brl , TituloSeccao } from "./_ui.jsx";
 
 function quando(iso) {
   if (!iso) return "—";
@@ -111,7 +111,7 @@ export default function PerfilUsuario() {
 
       {/* IDENTIFICAÇÃO */}
       <section style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: 0, letterSpacing: "0.05em" }}>IDENTIFICAÇÃO</h3>
+        <TituloSeccao semMargem>IDENTIFICAÇÃO</TituloSeccao>
         <div style={{
           padding: "0.7rem 0.85rem", background: "rgba(13,18,53,0.25)",
           border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px",
@@ -152,7 +152,7 @@ export default function PerfilUsuario() {
 
       {/* SALDO */}
       <section style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: 0, letterSpacing: "0.05em" }}>SALDO</h3>
+        <TituloSeccao semMargem>SALDO</TituloSeccao>
         <div style={{
           padding: "0.6rem 0.85rem", background: "rgba(13,18,53,0.25)",
           border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px",
@@ -173,7 +173,7 @@ export default function PerfilUsuario() {
 
       {/* CRÉDITOS */}
       <section>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: "0 0 0.35rem", letterSpacing: "0.05em" }}>CRÉDITOS</h3>
+        <TituloSeccao style={{ margin: "0 0 0.35rem" }}>CRÉDITOS</TituloSeccao>
         {perfil?.creditos?.length > 0 ? (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
             <thead>
@@ -196,7 +196,7 @@ export default function PerfilUsuario() {
 
       {/* AÇÕES */}
       <section style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-        <h3 style={{ fontSize: "0.78rem", color: COR.primary, margin: 0, letterSpacing: "0.05em" }}>AÇÕES</h3>
+        <TituloSeccao semMargem>AÇÕES</TituloSeccao>
 
         {/* Bloqueio */}
         <div style={{ padding: "0.6rem 0.8rem", background: "rgba(13,18,53,0.25)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px" }}>

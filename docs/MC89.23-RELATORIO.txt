@@ -1,0 +1,25 @@
+# MC89.23 — Diagnóstico UX/UI e Plano de Reforma do Dashboard ADM
+Data: 2026-07-31 | ZERO alterações de código
+
+## Diagnóstico: 3 problemas P0, 4 P1, 5 P2
+
+P0 (alto impacto): navegação por cartões ocupa metade do ecrã e empurra
+dados para baixo; alertas críticos estão escondidos no meio da página;
+não há componente de loading padronizado.
+
+P1 (médio): terminologia inconsistente (Config vs Configurações); cards
+com 0 ambíguos face a "—"; feedback pós-ação é texto inline que desaparece.
+
+P2 (baixo): estado vazio inconsistente; tabelas sem hover; scroll sem
+indicador; datas sempre absolutas.
+
+## Plano: 4 fases, 5-6 sessões
+
+Fase 1 (MC90.0): navegação persistente, AdminSpinner, hierarquia, terminologia.
+Fase 2 (MC90.1): toasts, hover, scroll-indicator.
+Fase 3 (MC90.2): EstadoVazio, TempoRelativo, cards-zero.
+Fase 4 (MC90.3): busca global, atalhos teclado, favoritos.
+
+## O que se preserva
+Paleta, endereços truncados, "—" para nulos, badges, backlinks, sem emojis,
+confirmação obrigatória, auditoria fail-CLOSED, segurança, endpoints, testes.

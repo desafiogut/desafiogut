@@ -1,0 +1,101 @@
+MC89.34 — SEGMENTO 0: DIAGNÓSTICO DO CÓDIGO ATUAL
+Data: 2026-08-01 | APK medido: MC89.31 | Base: docs/MC89.33-BOTAO-SAIR-PLANO.txt
+
+================================================================================
+1. O BOTÃO E A GUARDA QUE O ANULA
+================================================================================
+1.1 — `src/components/admin/AdminLayout.jsx` (bloco do cabeçalho):
+        <Button variant="ghost" size="sm" onClick={() => navigate("/")}
+          className="!border-white/15 !text-[#94a3b8] !rounded-md shrink-0">
+          ← Sair do painel
+        </Button>
+      Confirmado: faz `navigate("/")` e mais nada.
+
+1.2 — `src/App.jsx`, `DashboardOuCorporativo`:
+        if (address ? (isAdmin && !adminLoading) : adminProvavel) {
+          return <Navigate to="/admin" replace />;
+        }
+      Confirmado: é esta a guarda que anula o botão. Está na ROTA "/", logo
+      aplica-se a TODOS os caminhos até lá — o botão, o "Início" da barra
+      inferior e o endereço escrito à mão.
+
+1.3 — MEDIDO no aparelho (MC89.33, sonda botao-sair.mjs):
+        partida /admin → trilho ["/", "/admin"] → saiuMesmo: NÃO
+
+================================================================================
+2. NÃO EXISTE MECANISMO DE PAUSA  [item 0.3 do enunciado]
+================================================================================
+Procura por `pausa|bypass|sair|exit` em src/: nenhuma ocorrência que sirva de
+suspensão do encaminhamento. Confirma-se que é preciso criar.
+
+================================================================================
+3. O LOGOUT DO PRIVY JÁ EXISTE — NÃO É PRECISO LIGAR NADA  [item 0.4]
+================================================================================
+`AppContext.jsx:355`  const { ready, authenticated, user, login, logout } = usePrivy();
+`AppContext.jsx:1064` function desconectar() { logout(); }
+`AppContext.jsx:1162` `desconectar` já é exposto no valor do contexto.
+
+E o AdminLayout já consome o contexto: `const { abrirModal } = useAppContext();`
+⇒ Basta acrescentar `desconectar` a esse destructuring. Zero fiação nova (R1).
+
+3.1 — ⚠️ O `desconectar` sozinho NÃO cumpre o critério 2.4 do enunciado
+("a sessão admin é encerrada / JWT invalidado"). Ele só faz o logout do Privy.
+O refresh token admin continua VÁLIDO no servidor até expirar.
+O AdminLayout já tem `logout` do `useAdminAuth`, que revoga no backend
+(`adminAuth.js:231` → `pedirAuth({ acao: "logout" })`).
+⇒ "Sair da conta" tem de chamar PRIMEIRO o `logout()` admin (revoga) e só
+   depois o `desconectar()` (Privy). Pela ordem inversa, o Privy cai primeiro,
+   `isConnected` fica false e a revogação pode nem chegar a sair.
+
+================================================================================
+4. PADRÃO DE CONFIRMAÇÃO DA CASA — INLINE, NÃO MODAL
+================================================================================
+O enunciado pede "modal de confirmação". A casa não usa modais aqui:
+  · `ComandoButton.jsx:64-113` — painel INLINE que expande sob o botão.
+  · `AdminLayout.jsx` (bloco `pedindoLogin`) — formulário INLINE sob a barra de
+    estado, exatamente o mesmo desenho.
+⇒ Vou seguir o padrão inline. Razões, não preferência:
+  a) consistência com as duas confirmações que já existem no painel;
+  b) um overlay novo traria mais uma camada composta — e neste projeto camadas
+     com backdrop-filter já custaram 17,5 fps (memória do MC88.36);
+  c) R1: reaproveitar um padrão existente é menos código do que introduzir um
+     sistema de modais que o painel não tem.
+Se o operador quiser mesmo um modal sobreposto, é uma linha de decisão dele —
+fica registado que foi uma escolha, não um esquecimento.
+
+================================================================================
+5. ONDE VIVE A PAUSA, E PORQUÊ ALI
+================================================================================
+Decisão: `src/lib/dicaSessao.js`, junto de `adminProvavel`.
+É o módulo que já responde à pergunta "para onde encaminhar o admin, decidido de
+forma síncrona antes do primeiro paint". A pausa é a MESMA pergunta com sinal
+trocado. Pô-la noutro sítio espalharia a decisão de encaminhamento por dois
+ficheiros — que é exatamente o defeito que o MC89.31 evitou ao mudar o
+`enderecoSessaoSincrono` para lá.
+
+Storage: **sessionStorage** (não localStorage). Morre com o processo da WebView,
+portanto o arranque seguinte volta a encaminhar direto para /admin e o ganho do
+MC89.31 fica intacto. É a mesma propriedade que, no MC89.32 §1, é um PROBLEMA
+para a sessão admin — aqui é exatamente o que se quer.
+
+⚠️ A pausa é lida DURANTE a renderização de `DashboardOuCorporativo`, e não num
+`useState` de arranque. Tem de ser assim: um retrato do arranque não veria a
+pausa que acabou de ser gravada um instante antes do `navigate`. É leitura
+síncrona sem escrita — o mesmo que `lerSaldoCache` já faz.
+
+================================================================================
+6. TESTE QUE VAI TER DE SER ACTUALIZADO
+================================================================================
+`src/lib/dicaSessao.test.mjs` afirma a forma exacta da guarda:
+    /if \(address \? \(isAdmin && !adminLoading\) : adminProvavel\)/
+A guarda vai mudar, portanto este teste vai falhar — e é suposto falhar. A sua
+INTENÇÃO (o confirmado ganha sempre que houver `address`; o palpite nunca
+sobrevive a uma negativa confirmada) tem de ser preservada na nova forma, e a
+validação por mutação repetida.
+
+================================================================================
+7. RISCO
+================================================================================
+Concentrado num sítio: `DashboardOuCorporativo` é a guarda que o MC89.31 acabou
+de acertar. O teste que impede esta correção de a desfazer é o do aparelho:
+"fechar e reabrir a app → volta a ir DIRETO a /admin". Não é opcional.

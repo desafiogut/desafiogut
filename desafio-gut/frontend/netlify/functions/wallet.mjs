@@ -5,7 +5,7 @@
 //   Endpoint público (mesma política de saldo-rs).
 //
 // POST /.netlify/functions/wallet
-//   Header: x-admin-token: <ADMIN_TOKEN>  (gated; sem ADMIN_TOKEN no env, recusa)
+//   Header: Authorization: Bearer <admin-JWT>  (gated; sem JWT válido, recusa)
 //   Body:   { endereco, operacao: "credito"|"debito", valorCentavos, motivo, idempotencyKey? }
 //   Retorna 200 { endereco, saldoAntesCentavos, saldoDepoisCentavos, transacaoId }.
 //
@@ -86,8 +86,7 @@ async function handlePost(req) {
   const auth = await autenticarAdmin(req);
   if (!auth.ok) {
     let status = 401;
-    if (auth.code === "admin_token_nao_configurado") status = 503;
-    else if (auth.code === "admin_removido")         status = 403;
+    if (auth.code === "admin_removido") status = 403;
     return jsonError(status, auth.code, auth.message);
   }
   // MC7: MFA gate — controlado por env MFA_ENFORCEMENT (off|warn|enforce)

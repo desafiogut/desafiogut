@@ -1,0 +1,212 @@
+================================================================================
+MC89.43 — ADMIN PANEL: VISIBILIDADE, RASTRO E CAMPO CATEGORIA (EXECUÇÃO)
+================================================================================
+Data    : 2026-08-02
+Commits : c7b1075 (S0) · 3e316a5 (S1) · 76fb8df (S2) · este (S5)
+Suite   : 391/391 backend · APK recompilado (build:apk, R10)
+Skills  : security-review · verification-loop · terminal-ops · ux-waiting-audit
+          latency-critical-systems · supabase
+
+================================================================================
+RESUMO EXECUTIVO
+================================================================================
+Os três P0 estão implementados. Mas DUAS das três premissas do plano não
+sobreviveram à medição, e as correções que ficaram no repositório são melhores
+do que as que estavam planeadas — por razões diferentes das previstas.
+
+  P0-B  logs de auditoria .... premissa em aberto RESOLVIDA + defeito latente
+                               encontrado que ninguém procurava
+  P0-C  campo categoria ...... ⚠️ A PREMISSA ERA FALSA. O defeito real é outro
+  P0-A  ver utilizadores ..... implementado como aprovado (Opção A)
+
+⚠️ NADA DISTO ESTÁ VIVO PARA O UTILIZADOR AINDA. Ver "O QUE FALTA", ao fim.
+
+================================================================================
+P0-B — OS LOGS: A DÚVIDA QUE O MC89.42 DEIXOU DE PROPÓSITO
+================================================================================
+O MC89.42 recusou-se a adivinhar se `admin_logs` estava vazia por nunca ter
+sido exercida ou por falhar em silêncio. A resposta, medida:
+
+    NUNCA FOI EXERCIDA. O mecanismo está são.
+
+Como foi medido — e porque se pode confiar no verde:
+· sonda dentro de uma transação com ROLLBACK, como `service_role`, contra a
+  tabela real: INSERT (sucesso=NULL, carimbo automático) → UPDATE (sucesso=true)
+  → leitura. Os quatro passos passaram.
+· ⚠️ com CONTROLO NEGATIVO: a sonda tentou também um INSERT inválido e
+  confirmou que sabia vê-lo falhar. Sem isso, um verde só provaria que o
+  instrumento estava cego.
+· resíduo na trilha de auditoria: ZERO. A tabela ficou como estava.
+· primeira tentativa de sonda foi DESCARTADA por ser inválida: usei CTEs, e um
+  UPDATE não vê a linha que um CTE irmão acabou de inserir. O instrumento é que
+  estava cego, não o mecanismo. Refiz.
+
+⚠️ DEFEITO LATENTE QUE A SONDA DESTAPOU (ninguém o procurava)
+`registrarAcao`/`confirmarAcao` escreviam através de `getSupabaseReadOnly()`.
+Hoje isso não parte nada — `SUPABASE_READ_REPLICA_URL` não está definida e o
+cliente RO cai para o primário. É um VERDE POR ACIDENTE. No dia em que uma
+réplica for ligada, o INSERT de auditoria bate numa base só-de-leitura,
+`registrarAcao` lança e — por ser fail-CLOSED — TODAS as ações de admin passam
+a devolver 503. O próprio `supabase-client.mjs` já avisava: "ESCRITA NUNCA
+passa por aqui (R11 anti-split-brain)".
+⇒ Escrita passou ao primário; `lerLogs` continua na réplica.
+
+RASTO ALARGADO
+`admin-aprovacao` (aprovar/rejeitar) não deixava rasto nenhum — a única lacuna
+de auditoria CONFIRMADA do MC89.42. Passa a registar ANTES de gravar (503 se o
+log falhar, e a transição não acontece) e a confirmar o desfecho. Um pedido
+idempotente não polui a trilha.
+
+⚠️ NÃO CRIEI O ENDPOINT `admin-test-log` QUE O ENUNCIADO PEDIA.
+A sonda deu o diagnóstico sem ele. Um endpoint permanente capaz de escrever
+linhas de auditoria arbitrárias enfraquece exatamente a trilha que este
+segmento existe para tornar fiável. O objetivo do 0.2 ("medir antes de
+corrigir") foi cumprido; o artefacto não era necessário para o cumprir.
+
+================================================================================
+P0-C — ⚠️ A PREMISSA ERA FALSA (e o campo continua a fazer falta)
+================================================================================
+O plano dizia: o formulário não tem campo categoria, logo o ADM pode criar
+`vendida:true, categoria:null` e trancar um lojista pago.
+
+O QUE SE VERIFICOU, LENDO O CÓDIGO E A BASE:
+· o formulário JÁ enviava `categoria: catSel` (Cotas.jsx, linha 66);
+· o backend RECUSA um POST sem categoria válida (`validarCategoria` → 400);
+· logo a combinação perigosa NÃO É PRODUZÍVEL por esta via;
+· na base: 7 linhas em `cotas`, ZERO com `vendida=true, categoria=null`
+  (6 são registo sem pagamento — estado correto; 1 é bronze ativa);
+· e o gate já tinha o caso coberto por teste (mc8940-gate-cota, linha 91).
+
+⇒ Escrever a correção proposta seria corrigir um defeito que não existe.
+
+O DEFEITO REAL, QUE FICA CORRIGIDO:
+A categoria vinha de `catSel` — o separador de NAVEGAÇÃO. O mesmo controlo
+filtrava a lista E decidia o tier do cliente novo. No telemóvel (e o painel é
+usado no APK) esse separador está fora do ecrã quando o formulário está à
+vista. Dava para gravar um cliente em Diamante querendo Bronze.
+Não é cosmético: `MIN_POR_CATEGORIA_BRL` usa o tier para calcular o troco em
+senhas, portanto o tier errado credita dinheiro errado.
+
+⇒ Campo próprio no formulário: proposto pelo separador (comportamento de
+  sempre), contrariável sem sair do formulário, validado antes do envio. O
+  título deixou de anunciar a categoria — duas fontes a dizê-la podiam
+  discordar. Gravar noutra categoria muda o separador, senão a cota nova não
+  aparece e parece que não gravou.
+
+================================================================================
+P0-A — DAR OLHOS AO ADMIN (Opção A, aprovada por si)
+================================================================================
+A lista de utilizadores era um UNION de cotas + saldo_rs + saldo_rs_creditos:
+reconstruída a partir de PEGADAS FINANCEIRAS. Quem entrava e não transacionava
+era invisível — não podia ser apoiado nem bloqueado.
+
+O QUE FOI FEITO
+· tabela `atividade_utilizadores` (endereço + primeiro/último acesso + contador);
+· escrita em `auth-user`, o único ponto por onde toda a sessão autenticada passa;
+· `vw_utilizadores` ganhou uma QUARTA fonte e a coluna `ultimo_acesso` — assim
+  a paginação, a busca e os filtros existentes continuaram a funcionar sem
+  reescrita (mais pequeno do que juntar as duas listas em JavaScript);
+· `GestaoUsuarios`: coluna "Último acesso" em tempo relativo ("há 2 h") e
+  filtro Todos / Ativos 7 dias / Ativos 30 dias;
+· `admin-users`: parâmetro `?ativos=N`.
+
+O QUE **NÃO** SE GUARDA: email, IP, user-agent, ecrãs visitados. Não é
+telemetria de comportamento — é uma lista de quem existe.
+
+⚠️ BURACO DE SEGURANÇA QUE EU PRÓPRIO ABRI E FECHEI
+Criei a função de upsert como `SECURITY DEFINER` com `REVOKE ... FROM PUBLIC`.
+Medi a seguir e `has_function_privilege('anon', ...)` continuava TRUE: o
+Supabase dá EXECUTE a `anon`/`authenticated` DIRETAMENTE, por default
+privileges, e um REVOKE a PUBLIC não lhes toca. Com DEFINER (que ignora o RLS)
+isso deixava qualquer anónimo escrever na tabela.
+⇒ Corrigido para `SECURITY INVOKER` + REVOKE aos papéis PELO NOME.
+⇒ Verificado depois: anon=false, authenticated=false, service_role=true.
+Só apareceu porque verifiquei o resultado em vez de assumir que o REVOKE tinha
+feito o que dizia.
+
+⚠️ EFEITO LATERAL A NOTAR (não é bug, mas muda comportamento)
+A vista alargada também alimenta o envio "todos" de `admin-notify` e o comando
+ALFA do `chatbot`. Um broadcast passa a alcançar TAMBÉM quem só faz login. É o
+significado correto de "todos" — até aqui excluía-os em silêncio — mas o
+alcance aumenta. Email não é afetado (só existe para linhas de cota).
+
+⚠️ `ultimo_acesso` É NULL PARA OS UTILIZADORES ANTIGOS
+A contagem só começa no deploy. O ecrã diz isto à frente, porque um "—" lido
+como "nunca entrou" é diferente de "não sabemos".
+
+CONTRAPARTIDA LGPD, JÁ FEITA: `conta-delete` apaga a linha. Sem isso, apagar a
+conta deixava para trás o endereço e os carimbos (MC72 / Play Store).
+
+================================================================================
+TESTES
+================================================================================
+391/391 na suite backend (era 383 antes; +8 novos ficheiros de teste meus).
+
+⚠️ CADA GUARDA NOVA FOI VALIDADA POR MUTAÇÃO — um teste que passa não prova
+nada até se ver falhar:
+· escrita da auditoria no primário → revertida: falham os 2 testes de escrita,
+  o de leitura continua verde (discriminação correta);
+· fail-CLOSED da aprovação → guarda removida: falha exatamente esse teste;
+· fail-soft da atividade → `catch` a re-lançar: falha exatamente esse teste.
+· uma quarta mutação foi DESCARTADA por ser mutante equivalente (o `throw`
+  caía no mesmo `try`, logo não mudava o comportamento observável). Registo-a
+  porque não contá-la seria inflacionar a validação.
+
+A guarda de zero-emoji do painel apanhou um "⚠️" meu num comentário JSX.
+Corrigida a minha linha — a guarda não foi silenciada.
+
+Sem teste unitário de frontend: o projeto não tem runner de React. Os
+invariantes por trás do S1 já estavam cobertos em mc8940-gate-cota.
+
+================================================================================
+APK
+================================================================================
+· `npm run build:apk` (R10 — nunca `npm run build`): verde.
+· `validar:dist`: bundle coerente com PRODUÇÃO (mainnet, chainId 1,
+  contrato 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd).
+· `gradlew assembleDebug`: app-debug.apk, 37,4 MB, 2026-08-02 23:37.
+· Confirmado que as mudanças estão MESMO dentro do .apk, lendo o bundle
+  empacotado: "Categoria da cota" e "Ativos (7 dias)" presentes em
+  android/app/src/main/assets/public/assets/*.js.
+
+================================================================================
+⚠️ O QUE FALTA — E É SEU
+================================================================================
+⚠️ NÃO VALIDEI NADA NO APARELHO: não há dispositivo ligado (`adb devices`
+vazio). O segmento 4 do enunciado não foi cumprido, e não o dou por cumprido.
+
+⚠️ E MESMO COM APARELHO, METADE NÃO SE VERIA AINDA. O .apk leva o frontend;
+as funções Netlify e a base são serviço. O deploy é seu. Até ele acontecer:
+   · o campo `categoria` JÁ funciona (é frontend puro);
+   · "Último acesso" mostra "—" para toda a gente e o filtro não devolve nada,
+     porque o `auth-user` publicado ainda não marca presença;
+   · aprovar/rejeitar ainda não escreve em `admin_logs`.
+   Estado medido agora: `atividade_utilizadores` = 0 linhas,
+   `admin_logs` = 0 linhas. Schema no lugar, à espera do deploy.
+
+1. ⚠️ ROTACIONAR `SUPABASE_SERVICE_ROLE_KEY` — URGENTE, E A CULPA É MINHA.
+   Ao inspecionar o ambiente Netlify usei `--plain` e a chave saiu em claro
+   para a transcrição desta sessão. Essa chave ignora o RLS de toda a base.
+   Supabase → Settings → API → rodar a service_role → atualizar a variável no
+   Netlify. Nada foi escrito com ela além da sonda, que reverteu.
+
+2. Deploy web (Netlify) — sem ele, S0 e S2 não existem para o utilizador.
+
+3. ⚠️ POLÍTICA DE PRIVACIDADE (iubenda) — a tabela de atividade é dado pessoal
+   NOVO. Vive fora deste repositório; a atualização é sua. Foi a condição com
+   que a Opção A foi aprovada.
+
+4. As migrações foram aplicadas por mim na base de produção (aditivas,
+   idempotentes, sem DROP). O ficheiro .sql está no repositório para histórico.
+   Digo-o à frente porque a convenção do repositório é o operador aplicar (R12).
+
+================================================================================
+PENDÊNCIAS HERDADAS (não tocadas)
+================================================================================
+· P1-A arquitetura de informação para telemóvel (9 destinos) → MC89.44
+· P1-B moderação de conteúdo com rasto · P2 exportação/níveis/lances
+· índice UNIQUE em `cnpj` (bloqueado pelos duplicados)
+· os 6 registos de teste na base
+· bloqueio de utilizador continua a ser SÓ REGISTO: os gates de sessão e de
+  pagamento não leem `usuarios_bloqueio` (limitação anterior, documentada no
+  próprio endpoint)

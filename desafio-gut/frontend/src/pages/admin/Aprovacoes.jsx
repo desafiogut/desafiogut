@@ -12,12 +12,8 @@ import { useAdminAuth } from "../../context/AdminAuthContext.jsx";
 import { useIsMobile } from "../../hooks/useIsMobile.js";
 import { Button } from "../../components/ui";
 import { COR, StatusBadge } from "./_ui.jsx";
-
-/** "0x1E1bAe7F0f6E87E15F430B620Eca42B146d198cB" → "0x1E1b…d198cB" */
-function truncarEndereco(addr) {
-  if (!addr || typeof addr !== "string" || addr.length < 12) return addr || "—";
-  return `${addr.slice(0, 6)}…${addr.slice(-6)}`;
-}
+import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
+import EnderecoTruncado from "../../components/admin/EnderecoTruncado.jsx";
 
 export default function Aprovacoes() {
   const { chamarAdmin } = useAdminAuth();
@@ -50,7 +46,7 @@ export default function Aprovacoes() {
       setCarregando(false);
     }
   }
-  useEffect(() => { carregar(); /* eslint-disable-next-line */ }, [filtro, chamarAdmin]);
+  useEffect(() => { carregar();   }, [filtro, chamarAdmin]);
 
   async function decidir(cliente_id, novoStatus) {
     if (!chamarAdmin) return;
@@ -90,7 +86,10 @@ export default function Aprovacoes() {
       </div>
       {erro && <p role="alert" style={{ color: COR.danger, fontSize: "0.78rem" }}>{erro}</p>}
       {lista.length === 0 && !carregando && (
-        <p style={{ color: COR.muted, fontSize: "0.82rem", fontStyle: "italic" }}>Nenhum pedido com status "{filtro}".</p>
+        <EstadoVazio
+          titulo={`Nenhum pedido ${filtro}`}
+          descricao="Troque o filtro acima para ver pedidos com outro estado."
+        />
       )}
       <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
         {lista.map((p) => (
@@ -110,8 +109,8 @@ export default function Aprovacoes() {
                     ficam atrás de um toggle individual, porque o admin precisa de
                     os ver para aprovar, mas não deve tê-los expostos por omissão
                     em cada abertura do painel. */}
-                <code style={{ fontSize: "0.76rem", color: COR.text, fontFamily: "'JetBrains Mono', monospace" }}>
-                  {truncarEndereco(p.cliente_id)}
+                <code style={{ fontSize: "0.76rem", color: COR.text }}>
+                  <EnderecoTruncado endereco={p.cliente_id} />
                 </code>
                 {p.nome && (
                   <button

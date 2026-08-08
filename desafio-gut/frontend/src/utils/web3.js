@@ -44,11 +44,13 @@ async function ensureSepolia() {
   } catch (err) {
     if (err.code === 4902) {
       throw new Error(
-        "Rede Sepolia não encontrada na carteira. Adicione-a manualmente (chainId 11155111)."
+        "Rede Sepolia não encontrada na carteira. Adicione-a manualmente (chainId 11155111).",
+        { cause: err }
       );
     }
     throw new Error(
-      "Troca de rede recusada. Mude para Ethereum Sepolia (chainId 11155111) para continuar."
+      "Troca de rede recusada. Mude para Ethereum Sepolia (chainId 11155111) para continuar.",
+        { cause: err }
     );
   }
 

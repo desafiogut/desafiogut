@@ -1,0 +1,101 @@
+MC89.38 — F0: LEVANTAMENTO DE COTAS PAGAS EM PRODUÇÃO
+Data: 2026-08-02 | Consulta read-only ao Supabase de produção (autorizada pelo operador)
+R4: nenhum dado pessoal exposto — só agregados.
+
+================================================================================
+O NÚMERO
+================================================================================
+    total de cotas .................... 7
+    ⚠️ PAGAS (vendida = true) ......... 0
+    não pagas ......................... 7
+    com pedido_id ..................... 0
+    tabela `cotas_pagas` .............. 0 linhas
+
+⇒ NENHUMA COTA FOI ALGUMA VEZ PAGA. `cotas_pagas` é a tabela de idempotência que
+  `ativarCotaPaga` escreve quando o pagamento é confirmado; estar vazia confirma,
+  por um segundo caminho independente, que a ativação nunca correu.
+
+Todas as 7 têm `payload->>'tipo' = 'corporativo'` — que é exatamente o defeito
+diagnosticado no MC89.37: o `tipo` é gravado no REGISTO, não no pagamento.
+
+================================================================================
+A CONSEQUÊNCIA, DITA SEM ROUPAGEM
+================================================================================
+⚠️ LIGAR O GATE HOJE BLOQUEIA 100% DOS LOJISTAS EM PRODUÇÃO. Não é "a maioria" —
+é a totalidade. Sete de sete.
+
+O MC89.37 previu isto e escreveu-o como bloqueio: "se a maioria estiver por
+pagar, ligar o gate tira o painel a pessoas que hoje o usam, e isso é uma decisão
+comercial do operador, não técnica". A resposta veio pior do que o pior caso
+considerado.
+
+⇒ NÃO IMPLEMENTEI O F1 NEM O F2. Estão desenhados e prontos, mas ligá-los sem
+  esta decisão seria entregar uma correção tecnicamente certa e comercialmente
+  destrutiva. A decisão é do operador.
+
+================================================================================
+ESTRUTURA — E UM SEGUNDO ACHADO
+================================================================================
+Forma do `cliente_id`:
+    forma `cnpj:…` .................... 2   (origem = "direto")
+    forma endereço .................... 5   (origem AUSENTE)
+
+⚠️ NENHUMA DAS 7 TEM O CAMPO `endereco` PREENCHIDO — nem na coluna, nem dentro do
+  `payload`. Confirmei os dois.
+
+  Isto importa por duas razões:
+  (a) O gate do F1 tem de ler a cota por uma chave. Com `endereco` vazio em
+      todas, a única chave utilizável é o `cliente_id` — e para 5 delas ele É o
+      endereço, para 2 é `cnpj:…`. É exatamente a armadilha da chave que o
+      MC89.37 §2 dos testes isolou como o modo de falha mais provável.
+  (b) A guarda de posse do P0 (implementada) usa `cota.endereco` para validar um
+      `cliente_id` de terceiros. Com o campo vazio em todas, esse ramo não
+      autoriza ninguém hoje — ver §"mudança de comportamento" abaixo.
+
+As 5 de forma-endereço não têm a chave `origem` no payload, que
+`register-corporativo` sempre escreve. Foram criadas por outro caminho (upsert
+administrativo ou seed). Todas as 7 foram criadas no mesmo dia, 2026-06-21.
+Não investiguei mais: não é preciso para a decisão, e são dados de negócio.
+
+================================================================================
+MUDANÇA DE COMPORTAMENTO INTRODUZIDA PELO P0 (já implementado)
+================================================================================
+O P0 passou a exigir posse demonstrável do `cliente_id` enviado no corpo:
+  (a) igual ao endereço do JWT, ou
+  (b) uma cota cujo `endereco` bate com o do JWT, ou
+  (c) admin.
+
+Como nenhuma cota tem `endereco`, o ramo (b) não salva ninguém HOJE. Na prática:
+  · lojista que publica com o seu próprio endereço → continua a funcionar;
+  · lojista de cadastro direto que publique em nome de `cnpj:…` → passa a 403.
+
+⇒ São 2 cotas nessa forma. Nenhuma delas tem cota paga, e a tabela `produtos` do
+  Supabase está vazia (os produtos vivem em Blobs, não a consultei).
+⇒ Considero o risco baixo, mas É uma mudança de comportamento e não a escondo.
+  Se o operador quiser preservar esse fluxo, o caminho certo é VINCULAR a cota à
+  carteira (preencher `endereco`), não reabrir a guarda.
+
+================================================================================
+RECOMENDAÇÃO
+================================================================================
+R1. Enviar o P0 sozinho. É segurança, não muda nada para quem publica com o seu
+    próprio endereço, e não depende de nenhuma decisão comercial.
+
+R2. NÃO ligar o F1/F2 sem uma de três decisões do operador:
+    (i)   marcar as cotas legítimas como pagas antes de ligar o gate;
+    (ii)  ligar o gate só para cotas criadas a partir de uma data;
+    (iii) aceitar que os 7 passem a ver o ecrã de cota inativa.
+
+    ⚠️ (i) é escrita em dados de produção e NÃO a faço sem ordem explícita.
+
+R3. Independentemente da escolha, preencher `endereco` nas cotas ao vincular a
+    carteira. É o campo que falta para o sistema saber de quem é cada cota, e a
+    sua ausência é a raiz de metade das armadilhas deste MC.
+
+================================================================================
+CONSULTAS USADAS (read-only, agregadas)
+================================================================================
+  SELECT COUNT(*) FILTER (WHERE vendida IS TRUE) … FROM cotas;
+  SELECT … GROUP BY forma do cliente_id;
+  SELECT jsonb_object_keys(payload) … GROUP BY;
+Nenhuma escrita. Nenhum dado pessoal lido ou registado.

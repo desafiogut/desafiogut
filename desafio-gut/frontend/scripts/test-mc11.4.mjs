@@ -31,7 +31,7 @@ async function existe(rel)    { try { await stat(resolve(ROOT, rel)); return tru
 
 async function lerBundle() {
   const distDir = resolve(ROOT, "dist/assets");
-  let arquivos = [];
+  let arquivos;
   try { arquivos = (await readdir(distDir)).filter((f) => f.endsWith(".js")); }
   catch { return []; }
   const conteudos = [];
@@ -222,7 +222,7 @@ try {
   const ctx = await lerArquivo("src/context/AppContext.jsx");
   // Janela curta: setTimeout(...) ... setWalletCreationStuck(true) no mesmo bloco.
   const ok = /setTimeout\([\s\S]{0,200}setWalletCreationStuck\(true\)/.test(ctx)
-          || /setWalletCreationStuck\(true\)[\s\S]{0,200}\,\s*\d+\s*\)/.test(ctx);
+          || /setWalletCreationStuck\(true\)[\s\S]{0,200},\s*\d+\s*\)/.test(ctx);
   reg(ok, "AppContext: setTimeout próximo a setWalletCreationStuck(true)");
 }
 

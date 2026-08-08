@@ -1,6 +1,6 @@
 // force deploy 2026-05-11 — reset versionado + MOCK_MODE removido
-import { lazy, Suspense, useEffect } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 // MC88.4 — plugin nativo do Capacitor para interceptar o deep link do OAuth
 // (Privy/Google) no Android. Aliased para CapApp: o export chama-se App e
 // colidiria com o componente App() abaixo.
@@ -19,6 +19,14 @@ import { useAdmin } from "./hooks/useAdmin.js";
 // chunk-404 pós-deploy (reload). ChatbotWidget é eager (botão flutuante global).
 import Dashboard       from "./pages/Dashboard.jsx";
 import Vitrine         from "./pages/Vitrine.jsx";
+// MC89.36 — EAGER de propósito. É o que se mostra ANTES de tudo o resto quando
+// a app ainda não sabe quem é o utilizador; se fosse `lazy`, o primeiro render
+// pagava um fallback de Suspense — trocaríamos um ecrã errado por um ecrã
+// vazio, que é exatamente o que o MC88.37 corrigiu. São ~2 KB.
+import EstadoNeutro    from "./components/EstadoNeutro.jsx";
+// MC89.40 (F2) — ecrã de bloqueio do painel do lojista sem cota paga. Eager:
+// substitui conteúdo já em rota, um fallback de Suspense aqui seria um piscar.
+import CotaInativa     from "./components/CotaInativa.jsx";
 import ChatbotWidget   from "./components/ChatbotWidget.jsx";
 // MC88.25 (P3) — avisa se a app nao estiver na rede de producao. Silencioso em mainnet.
 import AvisoRede       from "./components/AvisoRede.jsx";
@@ -27,6 +35,10 @@ import LazyBoundary    from "./components/LazyBoundary.jsx";
 // `utils/web3.js` no topo (faz import dinâmico ao assinar), por isso não arrasta
 // ethers nem hash-wasm para o chunk inicial. Há um teste a fixar isso.
 import { AdminAuthProvider } from "./context/AdminAuthContext.jsx";
+// MC89.36 — a decisão de para onde vai quem abre a rota "/" saiu deste ficheiro
+// para uma função pura, porque o frontend não tem runner de React e era a única
+// forma de a testar (e de provar cada teste por mutação).
+import { decidirDestino, DESTINO, PRAZO_ESTADO_NEUTRO_MS } from "./lib/encaminhamento.js";
 
 const MinhaCarteira        = lazy(() => import("./pages/MinhaCarteira.jsx"));
 const MercadoLances        = lazy(() => import("./pages/MercadoLances.jsx"));
@@ -76,8 +88,22 @@ function RouteFallback() {
 // tipoCarregando evita redirect prematuro enquanto o fetch do blob está pendente.
 // MC17 — query param ?rc=1: acesso direto sem Privy após cadastro.
 // Usa window.location (full page reload garante search params corretos).
+// MC89.40 (F2) — rotas do mundo lojista que continuam abertas MESMO com a cota
+// inativa. Sem esta lista, o botão "Comprar cota" do ecrã de bloqueio levaria a
+// uma rota que mostra… o ecrã de bloqueio. Seria uma porta para uma parede — o
+// erro que o MC89.34 já ensinou a não repetir.
+//   /corporativo/carteira → é ONDE SE COMPRA
+//   /corporativo/cotas    → é onde se vê o estado ("ATIVA"/"INATIVA")
+const ROTAS_SEM_GATE_DE_COTA = new Set(["/corporativo/carteira", "/corporativo/cotas"]);
+
 function CorporativoRoute({ children }) {
-  const { tipoUsuario, tipoProvavel, tipoCarregando, cotaCorporativa, isConnected, pareceAutenticado, ready } = useAppContext();
+  const {
+    tipoUsuario, tipoProvavel, tipoCarregando, cotaCorporativa, isConnected,
+    pareceAutenticado, ready,
+    // MC89.40 (F2) — true | false | null (ainda não sei).
+    cotaAtiva,
+  } = useAppContext();
+  const { pathname } = useLocation();
   // MC39.4.1 — esperar o Privy inicializar antes de decidir o redirect. Sem isto, um
   // hard-reload de uma rota gated (ex.: /seguranca) bouncava o lojista para "/" porque
   // isConnected ainda era false durante a inicialização do Privy.
@@ -126,6 +152,27 @@ function CorporativoRoute({ children }) {
   if (tipoUsuario !== "corporativo" && tipoProvavel !== "corporativo") {
     return <Navigate to="/" replace />;
   }
+
+  // ── MC89.40 (F2) — A COTA TEM DE ESTAR PAGA PARA USAR O PAINEL ─────────────
+  //
+  // ⚠️ ESTE GATE SUBSTITUI O CONTEÚDO, NÃO REDIRECIONA. E isso não é estilo: se
+  // aqui houvesse um `<Navigate to="/">`, voltaria o CICLO que o MC88.42 mediu —
+  // sete voltas entre `/` e `/corporativo` nos 1974→5064 ms —, porque o MC89.36
+  // encaminha o lojista para cá pelo PALPITE, antes de a cota ter respondido.
+  // Encaminhar e autorizar continuam a ser coisas separadas.
+  //
+  // `cotaAtiva === null` significa "ainda não sei": nesse caso deixa-se passar,
+  // porque as guardas acima já garantiram que é lojista e o SERVIDOR recusa
+  // qualquer escrita que não deva acontecer. Bloquear no "não sei" mostraria
+  // "cota inativa" a um lojista pago durante o arranque — a mesma família de
+  // erro que o MC89.36 veio corrigir: afirmar o que ainda não se sabe.
+  //
+  // ⚠️ Isto é CONFORTO. Quem impede de facto é `_lib/cota-utils.mjs` no
+  // servidor. Um gate só aqui não fecha nada.
+  if (cotaAtiva === false && !ROTAS_SEM_GATE_DE_COTA.has(pathname)) {
+    return <CotaInativa />;
+  }
+
   return children;
 }
 
@@ -160,24 +207,78 @@ function CorporativoRoute({ children }) {
 // render quando a última sessão CONFIRMADA neste mesmo endereço foi corporativa
 // (ver AppContext), portanto o redirect acontece de imediato em vez de esperar
 // pelas cotas.
+//
+// MC89.36 — acrescenta um terceiro degrau ANTES do Dashboard comum: o estado
+// neutro. O que existia era uma escolha binária — "é lojista" ou "é comum" — e
+// o segundo ramo servia também de resposta a "ainda não sei". Isso não é um
+// palpite conservador: é uma AFIRMAÇÃO falsa, mantida no ecrã entre 5,7 s
+// (funções quentes) e 12,0 s (a frio), medidas no aparelho no MC89.35.
+//
+// A lógica em si mudou-se para `lib/encaminhamento.js` — ver o comentário do
+// import. Aqui fica só o que é React: os hooks e o prazo.
 function DashboardOuCorporativo() {
-  const { tipoProvavel, tipoUsuario, tipoCarregando, address } = useAppContext();
+  const {
+    tipoProvavel, tipoUsuario, tipoCarregando, address, adminProvavel,
+    // MC89.36 — `tipoResolvido` é "a pergunta /cotas já foi RESPONDIDA", e não
+    // "está a carregar". A diferença não é cosmética: medi que `tipoCarregando`
+    // só passa a true aos 4 422 ms, quando o Dashboard já está pintado desde os
+    // 568 ms — 76% da janela ficaria de fora. Ver docs/MC89.36-DIAGNOSTICO.txt §1.
+    tipoResolvido,
+    // MC89.36 (R-B) — as portas de entrada do estado neutro. Um visitante anónimo
+    // NUNCA passa por ele: para ele o Dashboard é a página pública de entrada.
+    // São TRÊS porque cada uma cobre um arranque diferente, todos medidos —
+    // ver o comentário do degrau 3 em lib/encaminhamento.js.
+    pareceAutenticado,
+    restaurandoSessao,
+    loginEmCurso,
+  } = useAppContext();
   const { isAdmin, loading: adminLoading } = useAdmin(address);
 
-  // MC89.12 — admin vai DIRETO para o painel, sem passar pelo Dashboard de
-  // consumo. É testado DEPOIS do corporate para não colidir com lojistas que
-  // também são admin — mas um lojista-admin vai para /corporativo primeiro
-  // (o corporate é mais específico). Se o operador quiser inverter, é trocar
-  // a ordem dos dois blocos.
-  if (isAdmin && !adminLoading && address) {
-    return <Navigate to="/admin" replace />;
-  }
+  // MC89.36 (R-C) — a válvula de segurança do estado neutro.
+  //
+  // `apiGet` não impõe timeout próprio: um fetch que nunca resolva deixaria
+  // `tipoResolvido` false para sempre e prenderia o utilizador no esqueleto —
+  // pior do que o defeito que este MC corrige. Passado o prazo, mostra-se o
+  // Dashboard comum: falha-se para o lado ABERTO, e o pior caso fica exatamente
+  // como estava antes deste MC.
+  //
+  // O prazo conta a partir da MONTAGEM deste componente (~FCP), não do início da
+  // navegação — dá alguns milissegundos de folga face aos números do MC89.35,
+  // que são medidos desde o `navigationStart`.
+  const [prazoEsgotado, setPrazoEsgotado] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setPrazoEsgotado(true), PRAZO_ESTADO_NEUTRO_MS);
+    return () => clearTimeout(t);
+  }, []);
 
-  // O palpite basta para ENCAMINHAR cedo; para o caso confirmado mantém-se a
-  // condição original (confirmado + já não está a carregar).
-  if (tipoProvavel === "corporativo" && (tipoUsuario === "corporativo" ? !tipoCarregando : true)) {
-    return <Navigate to="/corporativo" replace />;
-  }
+  // ── A DECISÃO ──────────────────────────────────────────────────────────────
+  // A ordem dos degraus, e o porquê de cada um, vive em lib/encaminhamento.js.
+  // Três notas de história que NÃO se devem perder e que continuam a valer:
+  //
+  // MC89.12 — o ADM é testado DEPOIS do corporate na intenção original, mas na
+  // prática vem primeiro: um lojista-que-também-é-admin vai para /admin. Se o
+  // operador quiser inverter, é trocar a ordem dos dois primeiros degraus na
+  // função pura — e há um teste a fixar a ordem atual.
+  //
+  // MC89.31 — a condição do ADM exigia `address`, que só existe depois de o
+  // Privy restaurar a sessão; media-se 1314/1430 ms de Dashboard comum a quem
+  // abriu a app para administrar. Daí o `address ? confirmado : palpite`.
+  //
+  // MC89.34 — ⚠️ O ENCAMINHAMENTO DO ADM É INCONDICIONAL, E É ASSIM DE PROPÓSITO.
+  // Chegou a existir uma "pausa" (sessionStorage) para o botão "Sair do painel"
+  // levar o ADM ao Dashboard comum. Foi implementada, testada, validada no
+  // aparelho — e revertida por decisão do operador: as telas de utilizador comum
+  // NÃO devem existir para o ADM. Quem for acrescentar aqui uma exceção deve
+  // primeiro perguntar se o que falta não é, outra vez, apenas uma forma de SAIR.
+  const destino = decidirDestino({
+    address, isAdmin, adminLoading, adminProvavel,
+    tipoProvavel, tipoUsuario, tipoCarregando, tipoResolvido,
+    pareceAutenticado, restaurandoSessao, loginEmCurso, prazoEsgotado,
+  });
+
+  if (destino === DESTINO.ADMIN)         return <Navigate to="/admin" replace />;
+  if (destino === DESTINO.CORPORATIVO)   return <Navigate to="/corporativo" replace />;
+  if (destino === DESTINO.ESTADO_NEUTRO) return <EstadoNeutro />;
   return <Dashboard />;
 }
 
