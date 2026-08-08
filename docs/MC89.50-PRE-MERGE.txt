@@ -1,0 +1,92 @@
+MC89.50 — SEGMENTO 0: PREPARAÇÃO E VALIDAÇÃO
+Data: 2026-08-08
+Skills ECC: terminal-ops, verification-loop
+
+================================================================================
+0.1/0.2 — REPOSITÓRIO
+================================================================================
+Raiz.................: C:\Users\Moltbot\Desktop\DESAFIOGUT
+Branch...............: feat/mc89.32-diagnostico-perf
+Working tree.........: LIMPO
+
+================================================================================
+0.3/0.4 — ESTADO DO REMOTO (duas correções ao estado assumido)
+================================================================================
+CORREÇÃO 1 — a branch estava DESATUALIZADA no remoto.
+  O MC89.49 fez push em e1a2803, mas os 4 commits de documentação seguintes
+  ficaram só em local:
+      b643338  MC89.49: registar pendencia do package-lock
+      9d4c6bc  MC89.49: relatorio e documentacao
+      e5fb080  MC89.49-S2: validacao pos-deploy
+      5338c6a  MC89.49-S1: deploy web executado
+  `git push origin feat/mc89.32-diagnostico-perf` -> e1a2803..b643338
+  Verificado: local e remoto ambos em b643338.
+
+CORREÇÃO 2 — a `main` LOCAL está velha e divergiu; a verdade é `origin/main`.
+  main (local) ..... 0474e89   (2026-08-01)
+  origin/main ...... 9409145   (2026-07-31, o commit que está em produção)
+  `git merge-base --is-ancestor main origin/main` -> FALSO (divergiram)
+  => A `main` local NÃO deve ser usada como referência. Todo o trabalho abaixo
+     usa `origin/main`.
+
+================================================================================
+DIREÇÃO DO MERGE — verificada, não assumida
+================================================================================
+`git merge-base --is-ancestor origin/main HEAD` -> VERDADEIRO
+
+  origin/main..HEAD .... 99 commits novos
+  HEAD..origin/main .....  0 commits só na main
+
+=> O merge é um AVANÇO LIMPO. Não há nada na `main` que falte na branch,
+   logo não há conflitos possíveis.
+
+================================================================================
+PROTEÇÃO DA `main` — o plano assumia errado
+================================================================================
+`gh api .../branches/main/protection` -> 404 "Branch not protected"
+MAS existe um RULESET ativo, que é a forma nova de proteção:
+
+  ruleset 16463466 "protecacao-main", enforcement: active
+
+  deletion .................... bloqueado
+  non_fast_forward ............ bloqueado (impede force-push; não afeta merge)
+  pull_request ................ obrigatório
+      required_approving_review_count .. 0      <<< NÃO precisa de aprovação
+      require_code_owner_review ........ false  <<< CODEOWNERS não bloqueia
+      required_review_thread_resolution  true
+      allowed_merge_methods ............ merge, squash, rebase
+  required_status_checks ...... strict, e exige:
+      "ci / build"
+      "security-scan / npm-audit-frontend"
+
+  bypass_actors ............... RepositoryRole 5 (admin), bypass_mode "always"
+      => a conta `desafiogut` é owner/admin, logo `--admin` É PERMITIDO.
+
+>> O plano dizia que "CODEOWNERS exige revisão do operador". O ficheiro
+   .github/CODEOWNERS existe (`* @desafiogut`, do MC89.46), mas o ruleset tem
+   require_code_owner_review=false e 0 aprovações exigidas — na prática NÃO
+   bloqueia. O que bloqueia são os status checks.
+
+================================================================================
+ANOMALIA REGISTADA — nomes dos checks exigidos não coincidem com os reais
+================================================================================
+Contextos exigidos pelo ruleset:   Checks que o repo realmente produz:
+  "ci / build"                       "build"
+  "security-scan / npm-audit-frontend"  "npm audit (frontend)"
+
+Os nomes dos check-runs vêm do campo `name:` do job, não do id. Se o
+emparelhamento for literal, os checks exigidos nunca são reportados e o PR fica
+bloqueado em "Expected" para sempre.
+>> NÃO CONCLUÍDO POR DEDUÇÃO: será observado no PR real (Segmento 2) e o que
+   se vir fica registado no Segmento 5.
+
+================================================================================
+CRITÉRIO DE SUCESSO DO SEGMENTO 0
+================================================================================
+[x] Branch correta e working tree limpo
+[x] Branch sincronizada com o remoto (4 commits publicados)
+[x] Direção do merge verificada: avanço limpo, 0 conflitos
+[x] Proteção real da main mapeada (ruleset, não branch protection)
+[!] Anomalia de nomes de checks registada para observação
+
+VEREDITO: APTO A AVANÇAR PARA O SEGMENTO 1.
