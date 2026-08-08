@@ -1,0 +1,137 @@
+MC89.49 — SEGMENTO 2: VALIDAÇÃO PÓS-DEPLOY
+Data: 2026-08-08
+Skills ECC: verification-loop, canary-watch
+Alvo: https://silly-stardust-ca71bc.netlify.app
+Deploy validado: 6a7708ba03f222438f8f7660 (2026-08-08T10:45:14Z)
+
+================================================================================
+2.1a — O SITE CARREGA
+================================================================================
+GET /                                    -> 200 em 0,374 s
+
+Requisições da carga inicial: 15 no total, TODAS bem-sucedidas.
+  index-BD7ZWpVQ.js, rolldown-runtime, react, router, motion .... 200
+  index-7L1Psgid.css .......................................... 200
+  backgrounds/background-desktop.webp ......................... 200
+  guto/custom/guto-bemvindo.png ............................... 200
+  fonts/inter-{400,700,800,900}-latin.woff2 ................... 200
+  backgrounds/loops/fundo-loop-v3-desktop.webm ................ 206 (range, normal)
+  favicon.ico ................................................. 200
+  ZERO requisições falhadas.
+
+Consola: ZERO mensagens.
+  >> Com CONTROLO POSITIVO: emiti `console.error("CONTROLO-POSITIVO-MC8949")`
+     e a captura registou-o (msgid=1). Logo o zero anterior é limpeza real,
+     não instrumento cego.
+
+Ecrã (captura prod-01-raiz.png): gate LGPD renderiza completo — GUTO, paleta
+navy+laranja, regulamento com os 20 artigos, 4 caixas de consentimento, botão
+"⚡ Aceito o DesafioGUT" corretamente DESATIVADO enquanto faltam marcações.
+Sem ecrã branco. Sem aviso vermelho de "rede Sepolia" (portão de env OK).
+
+================================================================================
+2.1b — PAINEL ADM: O QUE FOI E O QUE NÃO FOI VALIDADO  (honestidade sobre limites)
+================================================================================
+Rota /admin, anónimo (captura prod-02/prod-04):
+  1º o gate LGPD (o SPA serve o mesmo index.html em todas as rotas)
+  2º após consentimento: "Painel Admin — Faça login para verificar privilégios"
+     com botão "Entrar".
+  => O GATE DE AUTENTICAÇÃO DO ADM FUNCIONA EM PRODUÇÃO. Confirmado visualmente.
+
+NÃO VALIDADO POR MIM, e a razão:
+  As telas AUTENTICADAS do ADM (nav agrupada Quem·Dinheiro·Sistema em uso,
+  formulário de Cotas com o campo categoria, Visão Geral povoada) exigem login
+  Privy por OAuth Google. O browser conduzido por MCP é um PERFIL SEPARADO do
+  browser do operador — a sessão não transita. Tentar completar o OAuth exigiria
+  as credenciais do operador, que o agente NÃO manuseia (R5).
+  Ao navegar para /admin o separador MCP foi redirecionado para
+  accounts.google.com e ficou por aí.
+
+  >> COBERTO DE OUTRA FORMA:
+     (a) o OPERADOR validou as telas autenticadas por fora, na sua própria
+         sessão ADM ("entrou chat, eu validei ela conta adm" / "eu testei por fora");
+     (b) evidência independente de que o CÓDIGO NOVO está publicado: secção 2.2.
+
+================================================================================
+2.2 — O BUNDLE SERVIDO POR PRODUÇÃO CONTÉM AS MUDANÇAS
+================================================================================
+Verificado por download direto do asset a partir do domínio de produção
+(não do disco local — prova que é o que o CDN entrega).
+
+  GET /assets/AdminLayout--Eo3HDS2.js ......... 200
+  GET /assets/Cotas-BkSi_bdw.js ............... 200
+  GET /assets/web3-DXI_5gTo.js ................ 200
+
+  MC89.44 — nav ADM agrupada (AdminLayout--Eo3HDS2.js)
+    "Quem está na plataforma" .......... 1 ocorrência
+    "Quanto entrou e saiu" ............. 1 ocorrência
+    "Estado, rasto e definições" ....... 1 ocorrência
+    "/admin/aprovacoes" ................ presente
+    "/admin/cotas" ..................... presente
+    (Aprovações e Cotas estiveram ~20 MCs inalcançáveis pelo menu; agora a lista
+     vem de GRUPOS_ADMIN e cobre as nove telas por construção.)
+
+  MC89.43 — categoria como campo próprio (Cotas-BkSi_bdw.js)
+    "Escolha a categoria da cota." ..... 1 ocorrência
+    (src/pages/admin/Cotas.jsx:208 — <select> ligado a form.categoria)
+
+  Contrato (portão MC88.12.1 / MC60)
+    0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd (mainnet) ... 1 ocorrência
+    0x59A73Acc8E8B210C874B0E3A9eC9B8B64847F6D5 (abandonado)  0 ocorrências
+
+  CONTROLO NEGATIVO: string inventada "Quem esta na plataforma XYZ123"
+    -> AUSENTE. A sonda discrimina; não devolve verde por construção.
+
+================================================================================
+2.2b — CANARY DAS NETLIFY FUNCTIONS
+================================================================================
+  recursos-app ......... 200  1,72s  {"plataforma":"pwa","isLeilaoAtivo":true,...}
+  cotas ................ 200  0,57s
+  produtos ............. 200  2,79s
+  webhook-mercadopago .. 200  2,39s
+  schedule ............. 400  2,58s  {"error":{"code":"mes_invalido",...}}
+  saldo-rs ............. 400  0,29s  {"error":{"code":"endereco_obrigatorio",...}}
+
+Os dois 400 são VALIDAÇÃO DE INPUT correta (chamei sem parâmetros), não avaria.
+O corpo prova função viva a validar. Nenhum 502, nenhum timeout.
+
+================================================================================
+ACHADO: BOTÃO "⚡ Aceito o DesafioGUT" ENCRAVADO NA BARRA LATERAL
+================================================================================
+Sintoma: com `gut_consentimento = {"aceito":true,...}` gravado e o modal de
+consentimento FECHADO, o botão laranja "⚡ Aceito o DesafioGUT" continua a ser
+desenhado no rodapé do <aside>, por cima do botão "Recolher".
+Confirmado no DOM: dentroDeAside=true, dentroDeDialog=false, visível,
+rect {x:21, y:526, w:222, h:44}. Persiste após recarregamento completo.
+
+É REGRESSÃO DO MC89.49? NÃO.
+Testei o deploy de produção ANTERIOR (6a6c16692ac428f067fac44b — MC89.6 a
+MC89.20) e o mesmo botão está no mesmo sítio (captura prod-06-antigo-admin.png,
+`botoesNoAside: ["⚡Aceito o DesafioGUT","Recolher"]`).
+=> DEFEITO PRÉ-EXISTENTE, herdado. Este deploy não o introduziu nem o corrigiu.
+   Fica como pendência para um MC próprio. Não foi tocado aqui (R1).
+
+================================================================================
+EVIDÊNCIAS (capturas)
+================================================================================
+Em <scratchpad da sessão>:
+  prod-01-raiz.png ............... gate LGPD em produção
+  prod-02-admin.png .............. /admin anónimo, gate LGPD primeiro
+  prod-03-admin-pos-consent.png .. "Painel Admin — Faça login…" + botão Entrar
+  prod-04-admin-reload.png ....... idem, após recarregamento (botão persiste)
+  prod-05-admin-logado.png ....... OAuth Google — limite do perfil MCP
+  prod-06-antigo-admin.png ....... deploy ANTIGO, prova de pré-existência
+
+================================================================================
+CRITÉRIO DE SUCESSO DO SEGMENTO 2
+================================================================================
+[x] Site carrega em produção (HTTP 200, 15/15 requisições OK, consola limpa)
+[x] Bundle de produção contém MC89.44 (nav agrupada) e MC89.43 (campo categoria)
+[x] Contrato mainnet correto no artefacto servido; Sepolia abandonado ausente
+[x] Gate de autenticação do ADM funciona
+[x] Functions vivas (canary)
+[~] Telas ADM autenticadas: não validáveis pelo agente (OAuth Privy);
+    validadas pelo OPERADOR por fora
+[!] Defeito pré-existente registado (botão de consentimento no <aside>)
+
+VEREDITO: O SITE REFLETE AS MELHORIAS DA BRANCH. SEGMENTO 2 APROVADO.
