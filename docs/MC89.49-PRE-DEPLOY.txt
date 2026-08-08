@@ -1,0 +1,114 @@
+MC89.49 — SEGMENTO 0: PREPARAÇÃO E VERIFICAÇÃO DO AMBIENTE
+Data: 2026-08-08
+Skills ECC: terminal-ops, verification-loop
+
+================================================================================
+0.1/0.2/0.3 — REPOSITÓRIO
+================================================================================
+Raiz.................: C:\Users\Moltbot\Desktop\DESAFIOGUT
+Branch atual.........: feat/mc89.32-diagnostico-perf   (já era a correta; sem checkout)
+HEAD.................: c09f62b  2026-08-07  "MC89.48: relatorio e documentacao"
+Working tree.........: LIMPO (git status --short vazio)
+vs main..............: 0 commits atrás / 66 à frente  -> main é ancestral, sem divergência
+main.................: 0474e89  2026-08-01  "MC-REFINAR-WHATSAPP: 22.232 finais..."
+
+Linhagem mainnet confirmada por `git merge-base --is-ancestor` (portão do MC88.12.1):
+  OK ancestral: feat/mc60-marco-mainnet
+  OK ancestral: feat/mc73-correcao-deploy
+  OK ancestral: feat/mc78-icone-guto-release
+  OK ancestral: feat/mc87-seguranca
+=> Nenhum risco de regredir a linhagem mainnet.
+
+================================================================================
+0.4 — PULL DO REMOTE: NÃO APLICÁVEL  (desvio do plano, justificado)
+================================================================================
+`git ls-remote --heads origin | grep mc89` -> VAZIO
+`git rev-parse --abbrev-ref @{u}`          -> "no upstream configured"
+
+A branch feat/mc89.32-diagnostico-perf NÃO EXISTE no remoto
+(https://github.com/desafiogut/desafiogut.git). Existe apenas localmente.
+O passo 0.4 do plano (`git pull origin feat/mc89.32-diagnostico-perf`) falharia.
+Foi omitido por inaplicabilidade, não por falha.
+
+>> RISCO REGISTADO (R3 — rastreabilidade): 94 commits que vão para produção não
+   têm cópia no remoto, sem PR e sem revisão. Não há ponto de rollback remoto.
+   Mitigação disponível: `git push -u origin feat/mc89.32-diagnostico-perf`
+   (ação do operador — envolve escrita no repositório remoto).
+
+================================================================================
+0.5 — NETLIFY CLI
+================================================================================
+Autenticado..........: SIM — DESAFIO GUT <desafiogut@gmail.com>, team "desafiogut"
+                       (`netlify login` NÃO foi necessário)
+Projeto ligado.......: silly-stardust-ca71bc
+Project Id...........: be1cc8bb-682b-4667-a341-c8db1f4ab2b5
+Project URL..........: https://silly-stardust-ca71bc.netlify.app
+netlify.toml.........: C:\Users\Moltbot\Desktop\DESAFIOGUT\netlify.toml
+  base    = "desafio-gut/frontend"   (correto — portão do MC "netlify-deploy-estrutura")
+  command = npm install --legacy-peer-deps && npm install --prefix netlify/functions
+            --legacy-peer-deps && npm run build
+  publish = "dist"
+  functions.directory = "netlify/functions", node_bundler = "esbuild"
+
+================================================================================
+DELTA REAL A DEPLOYAR
+================================================================================
+Último deploy de produção: 2026-07-31T03:28:34Z
+  commit 9409145 — "feat: dashboard ADM completo (7 telas) — MC89.6 a MC89.20"
+
+`git merge-base --is-ancestor 9409145 HEAD` -> SIM.
+O commit que está em produção É ANCESTRAL do HEAD.
+=> O deploy é um AVANÇO PURO (fast-forward). Não reverte nenhum trabalho publicado.
+
+Commits novos: 94
+MCs abrangidos (28):
+  MC89.21 MC89.22 MC89.23 MC89.24 MC89.25 MC89.26 MC89.27 MC89.28 MC89.29
+  MC89.30 MC89.31 MC89.32 MC89.33 MC89.34 MC89.35 MC89.36 MC89.36.1 MC89.37
+  MC89.38 MC89.39 MC89.40 MC89.41 MC89.42 MC89.43 MC89.44 MC89.46 MC89.47 MC89.48
+
+================================================================================
+PORTÕES PRÉ-DEPLOY (contexto: production)
+================================================================================
+Lidos com `netlify env:list --context production --json`; o ficheiro temporário
+foi APAGADO logo após a leitura. Apenas chaves de configuração PÚBLICA têm o
+valor transcrito abaixo. Segredos: registada apenas a PRESENÇA (R4/R5).
+
+  NETWORK_STAGE............ mainnet     OK
+  VITE_NETWORK_STAGE....... mainnet     OK
+  DATA_STORE_BACKEND....... supabase    OK (lido, NÃO alterado — portão do MC86)
+  CONTRATO_MAINNET......... 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd   OK (mainnet MC60)
+  MAINNET_CHAIN_ID / VITE_CHAIN_ID .... 1 / 1   OK
+  VITE_MOCK_MODE........... false       OK
+  SIGNER_BACKEND........... local-key
+  CREDITO_ASSINCRONO....... true
+
+  MP_WEBHOOK_SECRET........ DEFINIDA    OK — portão CRÍTICO do MC87 (webhook fail-closed)
+  MP_ACCESS_TOKEN.......... DEFINIDA
+  COORDENACAO_PRIVATE_KEY.. DEFINIDA
+  JWT_SECRET............... DEFINIDA
+  ADMIN_WALLETS............ DEFINIDA
+  Total de variáveis no contexto production: 52
+
+  >> A VERIFICAR NO BUNDLE (não assumir):
+     VITE_CONTRACT_ADDRESS = 0x0000000000000000000000000000000000000000 (endereço zero).
+     Pelo MC59.15 esta var pode ser morta (o ativo é CONTRATO_MAINNET), mas isso será
+     PROVADO por grep ao bundle no Segmento 1, não presumido.
+
+================================================================================
+ARMADILHA DO MC88.12.1 — ESTADO
+================================================================================
+`ls desafio-gut/frontend/.env*` -> apenas .env e .env.example. NÃO existe
+.env.production local. A armadilha do artefacto pré-construído está removida.
+Mesmo assim o deploy usará `--build` (nunca `--dir=dist`), conforme a regra.
+
+================================================================================
+CRITÉRIO DE SUCESSO DO SEGMENTO 0
+================================================================================
+[x] Branch correta (feat/mc89.32-diagnostico-perf)
+[x] Netlify autenticado e ligado ao projeto certo
+[x] Working tree limpo
+[x] Portões de env verdes (MP_WEBHOOK_SECRET, NETWORK_STAGE, DATA_STORE_BACKEND)
+[x] Deploy confirmado como avanço puro sobre o que está em produção
+[!] Branch sem cópia no remoto — risco de rastreabilidade registado acima
+
+VEREDITO: APTO A AVANÇAR PARA O SEGMENTO 1.
