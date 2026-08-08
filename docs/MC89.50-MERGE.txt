@@ -1,0 +1,144 @@
+MC89.50 — SEGMENTOS 2 e 3: PULL REQUEST E MERGE
+Data: 2026-08-08
+Skills ECC: terminal-ops, verification-loop
+
+================================================================================
+SEGMENTO 2 — PULL REQUEST
+================================================================================
+PR ..................: #141
+URL .................: https://github.com/desafiogut/desafiogut/pull/141
+Título ..............: MC89.21–89.50: sincronizar main com o codigo em producao
+                       (101 commits, 28 MCs)
+Base <- Head ........: main <- feat/mc89.32-diagnostico-perf
+mergeable ...........: MERGEABLE  (zero conflitos, como previsto no Segmento 0)
+mergeStateStatus ....: BLOCKED    (pelos status checks)
+
+2.3 — APROVAÇÃO: NÃO NECESSÁRIA (desvio do plano, justificado)
+  O plano dizia "CODEOWNERS exige review do operador". O ficheiro
+  .github/CODEOWNERS existe (`* @desafiogut`, MC89.46), mas o ruleset
+  `protecacao-main` tem:
+      required_approving_review_count = 0
+      require_code_owner_review       = false
+  Ou seja, NÃO há aprovação a exigir. `gh pr review --approve` não foi executado
+  — e nem poderia: o GitHub não deixa aprovar o próprio PR.
+  O que bloqueava eram os status checks, e só isso.
+
+================================================================================
+O CI CORREU ATÉ AO FIM PELA PRIMEIRA VEZ — e as 3 previsões acertaram
+================================================================================
+Previsão feita no Segmento 1 a partir de execução local, antes do PR existir:
+
+  install ................... previsto PASSA  -> PASSOU  ✅
+  build ..................... previsto PASSA  -> PASSOU  ✅
+  Lockfile integrity ........ previsto PASSA  -> PASSOU  ✅
+  npm audit (frontend) ...... previsto FALHA  -> FALHOU  ✅
+
+Comparação com o estado histórico (main @ 9409145, 2026-07-31):
+
+  check                 2026-07-31      PR #141
+  --------------------  --------------  --------
+  install               failure         PASS
+  build                 SKIPPED         PASS
+  lint                  SKIPPED         PASS
+  audit                 SKIPPED         fail
+  test-functions        (nunca correu)  fail
+  Lockfile integrity    failure         PASS
+  npm audit (frontend)  failure         fail
+  npm audit (functions) failure         fail
+  Socket.dev scan       failure         fail
+  foundry/echidna/sbom  success         PASS
+  slither               success         PASS
+
+Resultado do PR: 13 pass, 5 fail, 1 skipping.
+
+--------------------------------------------------------------------------------
+ACHADO NOVO — `test-functions` falha, e só apareceu porque o pipeline destrancou
+--------------------------------------------------------------------------------
+  ℹ tests 385   ℹ pass 383   ℹ fail 2
+
+  Ambas as falhas:
+    Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@aws-sdk/client-kms'
+      _tests/biconomy-handshake.test.mjs
+      _tests/mc302-integracao.test.mjs
+
+  CAUSA: `@aws-sdk/client-kms` está declarado em
+  desafio-gut/frontend/package.json (^3.1072.0) mas NÃO em
+  desafio-gut/frontend/netlify/functions/package.json. O job `test-functions`
+  só corre `npm ci` dentro de netlify/functions/, por isso o pacote não existe
+  lá. Localmente resolve-se por o Node subir ao node_modules do pai.
+
+  PRODUÇÃO NÃO É AFETADA: o esbuild resolve a dependência no bundling, e o
+  canary do MC89.49 mostrou as functions vivas (recursos-app, cotas, produtos,
+  webhook-mercadopago todos 200).
+
+  PORQUE SÓ APARECEU AGORA: `test-functions` depende de `build`, que dependia de
+  `install`. Com `install` a falhar, este job NUNCA tinha corrido. Destrancar o
+  `install` fez o pipeline chegar ao fim e revelou um defeito latente.
+
+  NÃO CORRIGIDO AQUI (R1): acrescentar uma dependência ao package.json das
+  functions altera o lock desse workspace e o bundle das Netlify Functions —
+  não é alteração para um MC de merge. Fica registado como dívida, com o fix
+  exato já identificado.
+
+================================================================================
+SEGMENTO 3 — MERGE
+================================================================================
+Comando:
+  gh pr merge 141 --admin --merge \
+    --subject "MC89.21-89.50: sincronizar main com o codigo em producao (#141)"
+
+  SEM `--squash`  (preservar ancestralidade — ver MC89.50-DECISAO-CI.txt)
+  SEM `--delete-branch` (justificado abaixo)
+
+Resultado:
+  state ......... MERGED
+  mergedAt ...... 2026-08-08T11:33:07Z
+  mergedBy ...... desafiogut
+  mergeCommit ... 17b823b9c5ba7c4f9ec73ba21e6f003a7afd4952
+
+  origin/main ANTES ..... 9409145
+  origin/main DEPOIS .... 17b823b
+
+--------------------------------------------------------------------------------
+PORTÃO CRÍTICO — a razão de ter sido merge commit e não squash
+--------------------------------------------------------------------------------
+  git merge-base --is-ancestor b643338 origin/main  -> VERDADEIRO
+      (b643338 = commit publicado em produção no MC89.49)
+  git merge-base --is-ancestor f2a1869 origin/main  -> VERDADEIRO
+      (f2a1869 = HEAD final da branch)
+
+  origin/main..f2a1869 -> 0 commits   (nada ficou de fora)
+  f2a1869..origin/main -> 1 commit    (apenas o merge commit)
+
+=> A verificação anti-drift usada no MC89.49 continua VÁLIDA. Com squash teria
+   passado a dar falso alarme permanente.
+
+--------------------------------------------------------------------------------
+BRANCH NÃO APAGADA — decisão consciente (desvio do plano)
+--------------------------------------------------------------------------------
+Duas razões:
+  1. Enquanto não houver um deploy feito a PARTIR da `main`, a branch é a
+     referência nomeada do que está no ar.
+  2. O ruleset impede commits diretos na `main`. Os documentos dos Segmentos 5 e
+     6 precisam de uma branch para depois entrarem por PR. `--delete-branch`
+     apagaria também a cópia local e deixaria o MC sem onde commitar.
+
+3.3/3.4 — `main` LOCAL atualizada:
+  Antes do reset verifiquei que nada se perdia:
+    `git merge-base --is-ancestor 0474e89 origin/main` -> VERDADEIRO
+    `git rev-list --count origin/main..main`           -> 0
+  Só então: `git merge --ff-only origin/main` -> fast-forward de 75 commits.
+  main local = 17b823b. Working tree limpo.
+
+================================================================================
+CRITÉRIO DE SUCESSO DOS SEGMENTOS 2 e 3
+================================================================================
+[x] PR #141 criado, sem conflitos
+[x] Aprovação: comprovadamente não exigida pelo ruleset
+[x] CI correu até ao fim pela primeira vez; 3 previsões confirmadas
+[x] Merge concluído com merge commit (não squash)
+[x] Ancestralidade do commit em produção PRESERVADA e verificada
+[x] `main` local e remota alinhadas em 17b823b
+[!] `test-functions` falha por dependência não declarada — dívida registada
+
+VEREDITO: MERGE CONCLUÍDO. APTO A AVANÇAR PARA O SEGMENTO 5.

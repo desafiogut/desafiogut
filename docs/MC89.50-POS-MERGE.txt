@@ -1,0 +1,115 @@
+MC89.50 — SEGMENTO 5: VERIFICAÇÃO PÓS-MERGE
+Data: 2026-08-08
+Skills ECC: verification-loop, canary-watch
+main @ 17b823b9c5ba7c4f9ec73ba21e6f003a7afd4952
+
+================================================================================
+5.1 — CI NA `main` DEPOIS DO MERGE
+================================================================================
+Quatro workflows dispararam com o merge (todos no SHA 17b823b):
+
+  AgentShield ......... SUCCESS
+  Contract Security ... SUCCESS
+      foundry -> success | echidna -> success | sbom -> success
+  CI .................. FAILURE (run 31255231145)
+      install ......... success   <<< era failure
+      lint ............ success   <<< era skipped
+      build ........... success   <<< era skipped
+      test-functions .. failure   (dependência não declarada — ver abaixo)
+      audit ........... failure   (npm audit, as 8 CVEs high)
+  Security Scan ....... FAILURE (run 31255231143)
+      Lockfile integrity ... success   <<< era failure
+      slither .............. success
+      npm audit (frontend) . failure   (8 CVEs high)
+      npm audit (functions)  failure
+      Socket.dev scan ...... failure
+
+BALANÇO HONESTO: a `main` continua com workflows vermelhos, MAS a natureza da
+vermelhidão mudou por completo.
+
+  ANTES (9409145): o pipeline PARAVA no primeiro passo. `install` falhava e
+  `build`, `lint`, `audit` e `test-functions` nunca corriam. Não se sabia se o
+  código compilava, se passava no lint ou se os testes passavam. Um pipeline que
+  não corre não é um pipeline vermelho — é um pipeline cego.
+
+  AGORA (17b823b): o código COMPILA (build success), PASSA NO LINT (lint
+  success), o lock está ÍNTEGRO (Lockfile integrity success) e 383 de 385 testes
+  passam. O que resta vermelho está identificado, com causa e fix conhecidos:
+    - `audit` / `npm audit (*)` / `Socket.dev` -> as 8 CVEs high (dívida MC próprio)
+    - `test-functions` -> 1 linha em falta num package.json (dívida, fix abaixo)
+
+  De 4 jobs cegos para 0. É esse o ganho.
+
+--------------------------------------------------------------------------------
+FIX EXATO da dívida do `test-functions` (para o MC que a tratar)
+--------------------------------------------------------------------------------
+  Em desafio-gut/frontend/netlify/functions/package.json, acrescentar às
+  devDependencies:
+      "@aws-sdk/client-kms": "^3.1072.0"     (mesma versão do frontend)
+  e regenerar esse package-lock.json.
+
+  Verificação de que resolveu:
+      cd desafio-gut/frontend/netlify/functions
+      npm ci && node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+      -> esperado: 385 pass, 0 fail
+
+  ⚠️ Confirmar a seguir que o bundle das Netlify Functions não estourou o limite
+  de 50 MB da AWS Lambda (o netlify.toml tem um aviso longo sobre isso, do
+  fix de 2026-06-19 com @xenova/transformers).
+
+================================================================================
+5.2 — PRODUÇÃO: NENHUMA MUDANÇA (esperado, e verificado)
+================================================================================
+O deploy é MANUAL. Um merge não republica nada. Confirmado por medição:
+
+  GET /                                          -> 200
+  /assets/AdminLayout--Eo3HDS2.js  "Quem está na plataforma"  -> 1
+  /assets/web3-DXI_5gTo.js  0x0052477A…16cd (mainnet)         -> 1
+
+Os hashes dos assets são os mesmos do deploy 6a7708ba do MC89.49 — prova de que
+o site não mexeu.
+
+>> A `main` está agora ALINHADA com o que está publicado, mas isso não veio de
+   um deploy: veio de a `main` ter avançado até ao commit que já estava no ar.
+
+================================================================================
+5.3 — package-lock.json: NÃO FOI TOCADO, E O BUILD CONTINUA BOM
+================================================================================
+Nada foi alterado no lock neste MC (decisão do Segmento 1: a limpeza sugerida
+pelo plano era no-op comprovado).
+Evidência de que o lock está saudável:
+  `npm ci`                              -> exit 0 (local, no HEAD)
+  job `install` no CI                   -> success
+  job `build` no CI                     -> success
+  job `Lockfile integrity` no CI        -> success
+Os quatro concordam. Não há dívida de lock.
+
+================================================================================
+5.4 — CLAUDE.md NA `main`: CONFIRMADO
+================================================================================
+`git show origin/main:CLAUDE.md` mostra:
+  linha   2  "Atualizado em: 2026-08-08 (MC89.50) | Ethereum MAINNET ativa desde o MC60"
+  linha  27  "Deploy é Netlify e é MANUAL — não há auto-deploy"
+  linha  47  "Rede | Ethereum MAINNET (chainId 1 / 0x1) — desde o MC60"
+  linha  81  "### LeilaoGUT — Ethereum MAINNET (ativo)"
+  linha  83  "Endereço : 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd"
+  linha 214  "enviarLance() → darLance(...) on-chain MAINNET"
+
+Verificação por varrimento (não por leitura seletiva):
+  `grep -n "11155111" CLAUDE.md`  -> nenhum resultado
+  `grep -niE "sepolia" CLAUDE.md` -> 4 resultados, TODOS legítimos:
+      linha   5  a errata que explica o que estava errado
+      linha  90  o aviso de que 0x59A73Acc… é o contrato ABANDONADO
+      linha 113  o nome real da var `VITE_CONTRATO_SEPOLIA` (que aponta a mainnet)
+      linha 140  a mesma var na árvore de ficheiros
+
+================================================================================
+CRITÉRIO DE SUCESSO DO SEGMENTO 5
+================================================================================
+[x] CI da main analisado ao nível do job; mudança de natureza documentada
+[x] Produção verificada sem regressão (bundle idêntico ao do MC89.49)
+[x] Lock saudável, confirmado por quatro sinais independentes
+[x] CLAUDE.md verificado na main por varrimento, não por amostragem
+[!] `test-functions` e `audit` vermelhos — dívida com fix documentado
+
+VEREDITO: `main` FUNCIONAL E ALINHADA COM PRODUÇÃO. SEGMENTO 5 APROVADO.
