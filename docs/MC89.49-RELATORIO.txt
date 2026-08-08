@@ -174,3 +174,14 @@ local, verificado por comparação de SHA.
 ✅ Desktop\MC89.49-RELATORIO.txt      este ficheiro
 ✅ cloud.md                           secção MC89.49 anexada (linha 6938)
 ✅ Frontend web sincronizado          MC89.21 → MC89.48 em produção
+
+--------------------------------------------------------------------------------
+6.6 PENDÊNCIA DESCOBERTA NO FIM — package-lock.json com entradas obsoletas
+--------------------------------------------------------------------------------
+O `npm install --legacy-peer-deps` do build removeu 4 pacotes do lock:
+@tanstack/query-core, @tanstack/react-query, @types/react, typescript 5.9.3.
+Verifiquei: NENHUM está declarado em package.json nem é usado em src/.
+Eram entradas obsoletas; a remoção do npm está correta.
+REVERTIDO (R1 — mínima alteração): alterar a árvore de dependências não é
+âmbito de um MC de deploy, e o artefacto já publicado não é afetado.
+>> Fica para um MC de manutenção: regenerar o lock e commitar a limpeza.
