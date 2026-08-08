@@ -7018,3 +7018,118 @@ Produção em `6a7708ba03f222438f8f7660`. 15/15 requisições OK, consola limpa
 dois 400 do canary são validação de input, com corpo a dizê-lo. A branch
 `feat/mc89.32-diagnostico-perf` passou a existir no remoto a meio do trabalho,
 a pedido do operador, o que deu ao deploy o ponto de rollback que lhe faltava.
+
+---
+
+## MC89.50 — a main apanhou o que já estava no ar, e o CI não estava vermelho: estava cego
+
+Depois do MC89.49 ficou uma coisa torta: produção corria o HEAD de uma branch, e
+a `main` estava em `9409145`, de 31 de julho. Quem quisesse saber o que estava no
+ar não podia olhar para a `main` — ela mentia. Este MC foi endireitar isso: 103
+commits, 30 MCs, MC89.21 a MC89.50.
+
+A primeira verificação foi a direção, como no MC anterior.
+`git merge-base --is-ancestor origin/main HEAD` respondeu sim: 103 commits novos,
+zero commits só na `main`, zero conflitos possíveis. Também apanhei duas coisas
+que não estavam no enunciado — a branch tinha 4 commits por publicar (os docs do
+MC89.49, feitos depois do push), e a `main` **local** estava divergida da remota.
+A `main` local não servia de referência; usei sempre `origin/main`.
+
+### Três premissas do plano que caíram
+
+**"O CODEOWNERS exige revisão do operador."** Não exige. O `.github/CODEOWNERS`
+do MC89.46 existe, mas o ruleset `protecacao-main` tem
+`required_approving_review_count: 0` e `require_code_owner_review: false`. Não há
+aprovação a dar — e nem seria possível, o GitHub não deixa aprovar o próprio PR.
+O que bloqueia são os status checks, e só isso.
+
+**"O CI está cronicamente vermelho por ruído do Socket.dev."** Esta é a que
+importa. Fui ver o detalhe por JOB em vez de por workflow, e o quadro era outro:
+
+```
+install ......... failure
+build ........... SKIPPED
+lint ............ SKIPPED
+audit ........... SKIPPED
+test-functions .. (nunca correu)
+```
+
+O `build` não estava vermelho — **nunca tinha corrido**. O `install` falhava
+antes dele e arrastava tudo o resto. Um pipeline que não corre não é um pipeline
+vermelho; é um pipeline cego. Durante semanas ninguém soube se o código sequer
+compilava.
+
+A causa era `npm ci` a recusar um lock dessincronizado, com quatro pacotes em
+falta: `typescript`, `@types/react`, `@tanstack/react-query`, `@tanstack/query-core`.
+
+**"Convém limpar o package-lock.json."** Testei em vez de acreditar:
+`npm install --package-lock-only` seguido de `git diff --exit-code` deu **zero
+diff**. O lock já estava em sincronia. O passo era no-op.
+
+### A errata que este MC deve ao anterior
+
+No MC89.49 escrevi que aqueles quatro pacotes eram "entradas obsoletas" e deixei
+uma pendência para as regenerar. Estava trocado ao contrário. Eles são
+**necessários** — a ausência deles era exatamente o que partia o `install`. Quem
+os poda é o `npm install --legacy-peer-deps` do build do Netlify, que resolve a
+árvore de peer deps de outra maneira que o `npm ci`. Reverter foi o acerto; a
+razão que dei estava errada. Duas ferramentas, duas árvores, e eu tinha assumido
+que só havia uma.
+
+### Squash teria partido o portão do MC89.49
+
+A escolha do método de merge não é estética aqui. Com `--squash`, a `main`
+receberia um commit novo com a árvore certa, mas os 103 commits ficariam fora do
+histórico — e o commit publicado em produção **deixaria de ser ancestral da
+`main`**. O teste que usei no MC89.49 para provar que um deploy é avanço puro
+(`git merge-base --is-ancestor <commit-em-producao> main`) passaria a devolver
+falso para sempre, transformando a verificação anti-drift num alarme inútil.
+
+Escolhido merge commit. Verificado depois: `b643338` continua ancestral de
+`origin/main`, e `origin/main..f2a1869` dá 0 — nada ficou de fora.
+
+### O que se destrancou, e o defeito que isso revelou
+
+Com o `install` corrigido, o pipeline chegou ao fim pela primeira vez. As três
+previsões que fiz por execução local, antes de o PR existir, confirmaram-se:
+`install` passa, `build` passa, `Lockfile integrity` passa, `npm audit` falha.
+
+E apareceu uma falha que eu **não** tinha previsto: `test-functions`, com 383 de
+385 testes a passar. As duas falhas eram
+`Cannot find package '@aws-sdk/client-kms'` — está declarado no `package.json` do
+frontend, não no das functions, e o job só instala as deps das functions.
+Localmente resolve porque o Node sobe ao `node_modules` do pai. Produção não é
+afetada: o esbuild resolve no bundling, e o canary do MC89.49 mostrou as
+functions vivas.
+
+O interessante não é o defeito, é *quando* apareceu. Estava escondido atrás de um
+job que nunca corria. Consertar o primeiro degrau expôs o terceiro.
+
+### O que resta vermelho, e porquê
+
+O bloqueio real são **8 CVEs high** (`react-router`, `postcss`, `nanoid`,
+`sharp`, `socket.io-parser`, `brace-expansion`) — CVEs a sério, não ruído; a nota
+histórica que as descartava como "moderate da stack Privy" está desatualizada.
+Merge feito com `--admin`, que é bypass **legítimo**: o ruleset lista o papel
+admin em `bypass_actors` com `bypass_mode: always`. Corrigi-las exige mexer no
+`react-router`, que é o routing de toda a app — MC próprio.
+
+A `main` continua com workflows vermelhos, mas de 4 jobs cegos passou a 0. O
+código compila, passa no lint, o lock está íntegro, 383/385 testes passam, e o
+que falha tem causa e fix escritos.
+
+### Uma armadilha de configuração para tratar
+
+O ruleset exige os contextos `ci / build` e `security-scan / npm-audit-frontend`.
+Os checks que o repositório realmente produz chamam-se `build` e
+`npm audit (frontend)`. Os nomes não coincidem — o que significa que qualquer PR
+futuro fica à espera de checks que nunca são reportados, e todo o merge passa a
+precisar de `--admin`. Uma proteção que só se pode contornar deixou de proteger.
+
+### Estado
+
+`main` em `17b823b`, alinhada com o que está publicado — mas por a `main` ter
+avançado até ao commit que já estava no ar, não por um deploy novo. Produção
+inalterada e verificada. `CLAUDE.md` corrigido em três erros que persistiam desde
+o MC60/MC73: dizia que o deploy era automático, que a rede era Sepolia e que o
+login tinha Apple. Nenhuma das três era verdade.

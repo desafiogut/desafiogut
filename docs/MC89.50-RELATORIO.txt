@@ -1,0 +1,177 @@
+================================================================================
+MC89.50 — MERGE DA BRANCH feat/mc89.32-diagnostico-perf PARA main
+RELATÓRIO FINAL
+================================================================================
+Data........: 2026-08-08
+PR..........: #141 — https://github.com/desafiogut/desafiogut/pull/141
+main........: 17b823b9c5ba7c4f9ec73ba21e6f003a7afd4952
+Veredito....: ✅ CONCLUÍDO — main é agora a referência única do código publicado
+
+
+================================================================================
+1. RESUMO EXECUTIVO
+================================================================================
+A `main` estava em 9409145 (2026-07-31) enquanto produção corria o HEAD de uma
+branch. O merge fechou essa distância: 103 commits, 30 MCs (MC89.21 → MC89.50).
+
+  origin/main ANTES ..... 9409145
+  origin/main DEPOIS .... 17b823b   (merge commit do PR #141)
+  merged em ............. 2026-08-08T11:33:07Z, por desafiogut
+
+Três coisas definem este MC, e nenhuma estava no plano:
+
+  • O plano assumia que o CODEOWNERS bloqueava. NÃO BLOQUEIA: o ruleset exige
+    0 aprovações. O que bloqueava eram os status checks.
+  • O plano assumia CI "cronicamente vermelho por ruído". ERRADO: o `install`
+    falhava e SKIPPAVA o build, o lint, o audit e os testes. O pipeline não
+    estava vermelho — estava cego. E já vinha corrigido na branch.
+  • O plano recomendava limpar o package-lock.json. É NO-OP: testei, zero diff.
+
+
+================================================================================
+2. COMMITS REALIZADOS NESTE MC
+================================================================================
+  234f8ab  MC89.50-S0: preparacao para merge
+  fe8ef45  MC89.50-S1: decisao sobre CI e package-lock
+  f2a1869  MC89.50-S4: atualizar CLAUDE.md (deploy manual, contrato mainnet, login Google)
+  17b823b  MC89.21-89.50: sincronizar main com o codigo em producao (#141)   [merge]
+  00459bb  MC89.50-S3/S5: merge concluido e verificacao pos-merge            [PR docs]
+
+Nota: o ruleset proíbe commits diretos na `main`. Os documentos produzidos DEPOIS
+do merge (Segmentos 5 e 6) entram por um segundo PR, a partir da branch
+`docs/mc89.50-final`. Não é possível fazer de outra forma.
+
+
+================================================================================
+3. DECISÕES
+================================================================================
+3.1 MÉTODO DE MERGE: merge commit, NÃO squash  (decisão do operador)
+    Com squash, a `main` receberia um commit novo com a árvore certa, mas os 103
+    commits ficariam fora do seu histórico — e o commit publicado em produção
+    DEIXARIA de ser ancestral da `main`. O portão anti-drift do MC89.49
+        git merge-base --is-ancestor <commit-em-producao> main
+    passaria a dar falso alarme permanente.
+    VERIFICADO DEPOIS DO MERGE:
+        b643338 (produção) é ancestral de origin/main -> VERDADEIRO ✅
+        f2a1869 (HEAD da branch) é ancestral          -> VERDADEIRO ✅
+        origin/main..f2a1869 -> 0 commits (nada ficou de fora)
+
+3.2 CI: bypass administrativo + dívida registada  (decisão do operador)
+    Bloqueio real: `npm audit --audit-level=high` com 8 CVEs high.
+    Bypass LEGÍTIMO: o ruleset `protecacao-main` lista o papel admin em
+    bypass_actors com bypass_mode "always". Não foi contornado nada.
+    Fundamento: o âmbito do MC é o merge; `react-router` é a dependência central
+    de routing e corrigi-la exige revalidar todas as rotas — MC próprio.
+
+3.3 package-lock.json: NÃO TOCADO (plano refutado por teste)
+    `npm install --package-lock-only` + `git diff --exit-code` -> SEM DIFF.
+    O lock já está em sincronia. Não há nada para limpar.
+
+3.4 BRANCH NÃO APAGADA
+    Enquanto não houver um deploy feito a partir da `main`, a branch é a
+    referência nomeada do que está no ar. E era necessária para os docs finais.
+
+
+================================================================================
+4. ERRATA AO MC89.49
+================================================================================
+No relatório do MC89.49 escrevi que o package-lock.json tinha "4 entradas
+obsoletas" (@tanstack/query-core, @tanstack/react-query, @types/react,
+typescript) a regenerar num MC de manutenção. ESTÁ ERRADO.
+
+Aquelas 4 entradas são NECESSÁRIAS — o `npm ci` exige-as, e era precisamente a
+sua AUSÊNCIA que fazia o job `install` falhar em 2026-07-31. Quem as poda é o
+`npm install --legacy-peer-deps` do build do Netlify, que resolve a árvore de
+peer deps de outra maneira.
+
+Reverter a alteração no MC89.49 foi o ACERTO; a justificação que dei estava
+trocada. NÃO abrir MC de manutenção para isto — não há dívida nenhuma aqui.
+
+
+================================================================================
+5. ESTADO FINAL DO CI NA `main` (17b823b)
+================================================================================
+  AgentShield ......... SUCCESS
+  Contract Security ... SUCCESS   (foundry, echidna, sbom)
+  CI .................. FAILURE
+      install .......... success   <<< era failure
+      lint ............. success   <<< era skipped
+      build ............ success   <<< era skipped
+      test-functions ... failure   (383/385 passam; dependência não declarada)
+      audit ............ failure   (8 CVEs high)
+  Security Scan ....... FAILURE
+      Lockfile integrity  success  <<< era failure
+      slither ........... success
+      npm audit (frontend/functions), Socket.dev scan ... failure
+
+A `main` continua com workflows vermelhos, mas a NATUREZA mudou:
+  ANTES: 4 jobs nunca corriam. Não se sabia se o código compilava.
+  AGORA: compila, passa no lint, o lock está íntegro, 383/385 testes passam.
+         O que resta vermelho tem causa e fix identificados.
+  De 4 jobs cegos para 0.
+
+PRODUÇÃO: inalterada e verificada (200; bundle idêntico ao deploy 6a7708ba do
+MC89.49). Um merge não republica nada — o deploy é manual.
+
+
+================================================================================
+6. PENDÊNCIAS
+================================================================================
+--- VERIFICADAS NESTE MC (com fix identificado) ---
+
+6.1 [CI] 8 CVEs high bloqueiam `npm audit --audit-level=high`
+    react-router + react-router-dom (CSRF em RSC), postcss (path traversal),
+    nanoid, sharp + @xenova/transformers (libvips), socket.io-parser,
+    brace-expansion (DoS).
+    >> MC próprio. `react-router` é routing central: exige revalidar as rotas
+       todas, incluindo as telas ADM que o agente não valida (OAuth Privy).
+
+6.2 [CI] `test-functions` falha por dependência não declarada
+    `@aws-sdk/client-kms` está no package.json do FRONTEND mas não no das
+    FUNCTIONS; o job só instala as deps das functions.
+    FIX: acrescentar "@aws-sdk/client-kms": "^3.1072.0" às devDependencies de
+    desafio-gut/frontend/netlify/functions/package.json e regenerar o lock.
+    ⚠️ Confirmar depois que o bundle das functions não passa os 50 MB da Lambda.
+    Produção NÃO é afetada (esbuild resolve no bundling; canary do MC89.49 OK).
+
+6.3 [CONFIG] Ruleset `protecacao-main` exige checks que não existem
+    Exige "ci / build" e "security-scan / npm-audit-frontend".
+    Os checks realmente produzidos chamam-se "build" e "npm audit (frontend)".
+    >> Corrigir os contextos no ruleset, senão qualquer PR futuro fica bloqueado
+       à espera de checks que nunca são reportados — e todo o merge precisará de
+       --admin, o que esvazia a proteção.
+
+6.4 [CONFIG] `VITE_CONTRACT_ADDRESS = 0x0000…0000` no Netlify: var morta.
+    Ninguém a lê. Remover para não voltar a assustar quem a veja.
+
+6.5 [UI] Botão "⚡ Aceito o DesafioGUT" encravado no rodapé do <aside>
+    Pré-existente (confirmado no deploy anterior no MC89.49), não regressão.
+
+--- HERDADAS, NÃO RE-VERIFICADAS NESTE MC ---
+Listadas porque o enunciado as pede; o estado abaixo vem de MCs anteriores e
+NÃO foi medido hoje. Confirmar antes de agir.
+
+6.6 BLOBS_TOKEN — cega `monitor-onchain` E `ia-preditiva`; "atrasado: false" é
+    verde falso. (MC88.x)
+6.7 EOA coordenadora — saldo de créditos apertado (~19 no MC88.35).
+6.8 SUPABASE_SERVICE_ROLE_KEY — manuseada pelo operador; o agente não lhe toca.
+6.9 Supabase staging `gjuelqjjhuuwnlsjyeai` — plano de exclusão no Desktop
+    (MC89.48). Exclusão é IRREVERSÍVEL: confirmar o Reference ID com os olhos.
+    Não rodar chaves de produção "para limpar" — estão embutidas no APK
+    já distribuído.
+6.10 Play Store — envio/domínio/recebimento são do operador (MC69.10).
+6.11 Chave DeepSeek exposta no arquivo histórico — revogar (MC89).
+
+
+================================================================================
+7. ENTREGÁVEIS
+================================================================================
+✅ Merge para main concluído (PR #141, merge commit 17b823b)
+✅ CLAUDE.md atualizado (deploy manual, contrato mainnet, login Google-only)
+✅ package-lock.json: comprovadamente sem nada a limpar
+✅ docs/MC89.50-PRE-MERGE.txt      (Segmento 0)
+✅ docs/MC89.50-DECISAO-CI.txt     (Segmento 1)
+✅ docs/MC89.50-MERGE.txt          (Segmentos 2 e 3)
+✅ docs/MC89.50-POS-MERGE.txt      (Segmento 5)
+✅ Desktop\MC89.50-RELATORIO.txt   (este ficheiro)
+✅ cloud.md atualizado
