@@ -6932,3 +6932,89 @@ com os olhos, em Settings → General, que o "Reference ID" de cada projeto
 bate certo — porque a exclusão no Supabase é irreversível e não há lixeira.
 Com um aviso extra: não rodar as chaves de produção "para limpar", porque elas
 estão embutidas no APK já distribuído.
+
+---
+
+## MC89.49 — o site apanhou 28 MCs de atraso, e o defeito que encontrei já lá estava
+
+A web estava parada em 2026-07-31, no commit `9409145`, com o dashboard ADM
+recém-nascido (MC89.6 a MC89.20). O APK, esse, já corria tudo até ao MC89.48.
+Entre os dois havia 94 commits e 28 MCs — a nav agrupada, o campo `categoria`
+das cotas, os gates, o lint, a segurança. O deploy foi só isto: pôr a web onde
+o telemóvel já estava.
+
+A primeira coisa que verifiquei não foi o build, foi a **direção do salto**.
+`git merge-base --is-ancestor 9409145 HEAD` respondeu sim: o commit que estava
+em produção é antepassado do que ia entrar. Isso transforma o deploy num avanço
+puro e elimina de uma vez a família inteira de riscos de drift que assombrou o
+MC79 e o MC88.12.1 — não havia nada publicado para reverter. As quatro branches
+da linhagem mainnet (MC60, MC73, MC78, MC87) continuam todas ancestrais.
+
+A armadilha antiga também já não existe: `.env.production` **desapareceu** do
+disco. Era ele que, num `--dir=dist`, assava o contrato Sepolia abandonado no
+bundle. Mesmo assim usei `--build`, porque a regra não depende de o ficheiro
+existir hoje.
+
+### O passo que acrescentei ao plano
+
+O plano mandava ir direto ao `--prod`. Fiz um **draft primeiro**. A razão é
+específica, não zelo genérico: 94 commits que nunca tinham sido vistos por
+ninguém — a branch nem sequer existia no remoto — não deviam estrear-se em
+produção. O draft custou um build; a alternativa custava um site partido.
+
+No draft validei o que interessa e como interessa. O contrato mainnet
+`0x0052477A…16cd` aparece uma vez em `web3-DXI_5gTo.js`; o Sepolia abandonado,
+zero vezes. As strings do MC89.44 estão em `AdminLayout--Eo3HDS2.js`, as do
+MC89.43 em `Cotas-BkSi_bdw.js`. E — isto é o que dá valor ao resto — pus um
+**controlo negativo**: procurei uma string que inventei, e ela faltou. Sem esse
+passo, um `grep` avariado que devolvesse sempre verde teria passado por
+validação. A sonda tinha de provar que sabe dizer que não.
+
+Depois a promoção. O sinal que fecha a questão é uma linha do CLI:
+**`CDN requesting 0 files`**. Significa que os assets estáticos que produção
+recebeu são bit-a-bit os mesmos que eu tinha aprovado no draft — não uma
+reconstrução parecida. As 66 functions voltaram a subir porque são
+re-empacotadas a cada deploy; os ficheiros do site, não.
+
+### Uma anomalia que não era anomalia
+
+`VITE_CONTRACT_ADDRESS` está a `0x0000…0000` no Netlify. Parece grave. Não é:
+`grep -rn VITE_CONTRACT_ADDRESS src/` devolve zero resultados. O frontend
+resolve o contrato em `src/lib/network.js:19`, que lê `VITE_CONTRATO_SEPOLIA`
+— e essa tem o endereço mainnet correto. É variável morta. Vale a pena
+registá-lo porque quem a vir no dashboard vai assustar-se outra vez.
+
+### O limite que não escondo
+
+As telas autenticadas do ADM não foram validadas por mim. Exigem OAuth Google
+via Privy, e o browser conduzido por MCP é um perfil separado do do operador —
+ao navegar para `/admin` o separador foi parar a `accounts.google.com` e ficou
+lá. Completar o login exigiria credenciais que o agente não manuseia. O que
+consegui provar foi (a) que o **gate** funciona — "Painel Admin — Faça login
+para verificar privilégios" — e (b) que o **código novo está publicado**, por
+download dos assets a partir do domínio de produção. O operador validou as
+telas por fora, na sua própria sessão.
+
+### O botão que estava lá antes de mim
+
+Com o consentimento aceite (`gut_consentimento: {"aceito":true}`) e o modal
+fechado, o botão laranja "⚡ Aceito o DesafioGUT" continua desenhado no rodapé
+do `<aside>`, por cima do "Recolher". Persiste depois de recarregar.
+
+O reflexo é culpar o deploy. Fui verificar: abri o **deploy de produção
+anterior** (`6a6c16692ac428f067fac44b`, MC89.6–MC89.20) e o botão está no mesmo
+sítio. É pré-existente. Este MC não o introduziu nem o corrigiu — fica como
+pendência com dono próprio, porque mexer nele aqui violaria a mínima alteração.
+
+A lição repete uma que já está escrita mais acima neste ficheiro, e por isso
+merece ficar: **um defeito encontrado logo a seguir a um deploy não é, por
+isso, um defeito do deploy.** Custou duas navegações confirmá-lo e evitou uma
+correção a perseguir a causa errada.
+
+### Estado
+
+Produção em `6a7708ba03f222438f8f7660`. 15/15 requisições OK, consola limpa
+(com controlo positivo a provar que a captura funciona), functions vivas — os
+dois 400 do canary são validação de input, com corpo a dizê-lo. A branch
+`feat/mc89.32-diagnostico-perf` passou a existir no remoto a meio do trabalho,
+a pedido do operador, o que deu ao deploy o ponto de rollback que lhe faltava.
