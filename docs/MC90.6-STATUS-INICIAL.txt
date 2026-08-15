@@ -1,0 +1,45 @@
+================================================================================
+MC90.6-S0 — VERIFICAÇÃO DO ESTADO DO BLOBS_TOKEN NO NETLIFY
+DesafioGUT · Gerado: 2026-08-15 · Projeto: silly-stardust-ca71bc
+================================================================================
+
+--------------------------------------------------------------------------------
+0.1 — MÉTODO (R4/R5 — nenhum valor exposto)
+--------------------------------------------------------------------------------
+- Comando: netlify env:list --context production
+- O CLI do Netlify MASCARA os valores (*******) na saída — apenas os NOMES
+  das variáveis foram inspecionados. Nenhuma chave/segredo foi lido, exibido
+  ou gravado.
+- Verificação por padrão textual (grep -i "BLOBS") nos contextos:
+  production, deploy-preview, branch e "all".
+
+--------------------------------------------------------------------------------
+0.2 — RESULTADO
+--------------------------------------------------------------------------------
+- O Netlify reporta 52 variáveis de ambiente no contexto production.
+- BLOBS_TOKEN: NÃO ENCONTRADO em nenhum contexto
+  (production: 0 ocorrências · deploy-preview: 0 · branch: 0 · all: 0).
+- Chaves visíveis na listagem (amostra dos nomes, sem valores):
+  SECRETS_SCAN_OMIT_KEYS, SECRETS_SCAN_SMART_DETECTION_ENABLED,
+  VITE_MOCK_MODE, VITE_NETWORK_STAGE, VITE_PRIVY_APP_ID,
+  VITE_RPC_URL_SEPOLIA, VITE_SENTRY_DSN, VITE_SUPABASE_ANON_KEY,
+  VITE_SUPABASE_URL, VITE_WC_PROJECT_ID.
+
+--------------------------------------------------------------------------------
+0.3 — INTERPRETAÇÃO
+--------------------------------------------------------------------------------
+- O BLOBS_TOKEN (personal access token) NÃO está configurado. As funções que
+  dependem de Netlify Blobs podem estar a operar com o token automático do
+  site (NETLIFY_BLOBS_TOKEN, injetado pelo Netlify em funções do site) ou a
+  falhar — a verificação dos logs no S3 vai determinar o impacto real.
+- O briefing referia "monitor-onchain atrasado: false" (verde falso) — a
+  validação de logs (S3) vai confirmar se há erros de autenticação.
+- Conclusão: o operador deve configurar o BLOBS_TOKEN seguindo as instruções
+  (S1) — ou confirmar que o token automático do site é suficiente.
+
+--------------------------------------------------------------------------------
+0.4 — PRÓXIMO PASSO
+--------------------------------------------------------------------------------
+Segmento 1: gerar instruções para o operador configurar o BLOBS_TOKEN.
+Segmento 3: validar os logs das funções com blobs (estado atual, sem token).
+================================================================================
