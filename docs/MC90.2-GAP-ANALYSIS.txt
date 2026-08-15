@@ -1,0 +1,169 @@
+================================================================================
+MC90.2-S0 — GAP ANALYSIS: DESAFIOGUT vs. REQUISITOS GOOGLE PLAY (AGOSTO 2026)
+Gerado: 2026-08-15 · Fonte da análise: docs/MC90.2-REQUISITOS-2026.txt
+================================================================================
+Classificação de severidade: [CRÍTICO] bloqueia publicação ou gera risco de
+remoção · [ALTO] risco de rejeição na revisão · [MÉDIO] obrigatório mas
+operacional · [INFO] observação.
+
+--------------------------------------------------------------------------------
+GAP 1 — [CRÍTICO] Política de Privacidade INACESSÍVEL
+--------------------------------------------------------------------------------
+Evidência (verificada em 15/08/2026):
+- https://www.iubenda.com/privacy-policy/DESAFIOGUT -> HTTP 404 (política
+  inexistente/expirada na iubenda).
+- https://www.iubenda.com/privacy-policy/DESAFIOGUT/cookie-policy -> HTTP 404.
+- https://desafio-gut.com -> NXDOMAIN no DNS global (8.8.8.8): o domínio
+  custom NÃO está registrado/apontado. https://desafio-gut.com/privacy -> 000.
+- https://silly-stardust-ca71bc.netlify.app/privacy -> 200, mas é o fallback
+  SPA (redirect /* -> /index.html); NÃO existe rota React /privacy no App.jsx.
+- O app referencia a política via iubenda em 3 pontos (TermosConsentimento.jsx,
+  pages/Seguranca.jsx, pages/MercadoLances.jsx).
+
+Impacto: requisito obrigatório da User Data policy (política válida no Play
+Console E dentro do app). Sem URL pública válida, o app é rejeitado na revisão.
+
+Ações:
+1. (S1) Gerar texto atualizado da política.
+2. Publicar a política numa URL pública estável e não-editável: opção A =
+   recriar/atualizar a política na iubenda e corrigir os 3 links no app;
+   opção B = criar página /privacidade no frontend (SPA) e usar a URL do
+   Netlify/domínio custom. Custo: iubenda pode cobrar; página própria não.
+3. Corrigir o domínio desafio-gut.com (registrar DNS/domínio ou remover a
+   referência) — domínio não resolve no DNS global.
+4. Registrar a URL final no Play Console (campo Privacy Policy) e garantir
+   link no app.
+Responsável: operador (custo de iubenda = ação com custo; validar antes).
+
+--------------------------------------------------------------------------------
+GAP 2 — [CRÍTICO] Link web de Eliminação de Contas inexistente
+--------------------------------------------------------------------------------
+Evidência: função delete-account existe e funciona (in-app OK), mas NÃO existe
+um recurso web externo dedicado publicado; o campo "URL de eliminação de
+contas" do Play Console não tem URL para apontar.
+Impacto: requisito obrigatório (User Data policy — Account Deletion): o link
+web DEVE ser informado no Play Console; sem ele a revisão falha.
+
+Ações:
+1. Criar página web pública de eliminação. O SPA JÁ TEM a rota
+   /excluir-conta (pública, sem gate de consentimento) — basta publicá-la
+   numa URL estável (https://desafio-gut.com/excluir-conta após corrigir o
+   domínio, ou https://silly-stardust-ca71bc.netlify.app/excluir-conta).
+2. Registrar a URL no campo "Account deletion" do Play Console.
+3. Documentar no relatório S3.
+Observação: a rota /excluir-conta é funcional e leva ao fluxo de exclusão
+(ExcluirContaModal -> POST delete-account). Validar em dispositivo real.
+
+--------------------------------------------------------------------------------
+GAP 3 — [ALTO] Classificação financeira/cripto -> possível exigência de conta
+        ORGANIZAÇÃO (política de julho/2026, efetiva 30/09/2026)
+--------------------------------------------------------------------------------
+Evidência: "Preview: Play Console Requirements" (1.1) exige registro como
+organização para serviços financeiros, incluindo carteiras de software de
+criptomoeda e exchanges. O DesafioGUT usa embedded wallets Privy (carteira
+Ethereum criada no login), assina transações on-chain e processa PIX via
+Mercado Pago. O app NÃO é exchange nem carteira autônoma — a wallet é
+mecanismo interno de assinatura de lances; a compra é em R$ via PIX.
+Impacto: risco de o Google classificar o app como serviço financeiro e exigir
+conta organização (D-U-N-S, documentos da empresa) — ou de rejeição durante a
+revisão se a declaração financeira for inconsistente.
+
+Ações (decisão do operador — sem custo imediato):
+a) Preencher o "Financial features declaration" declarando o uso de
+   pagamentos (PIX via Mercado Pago) e transações on-chain, SEM declarar o
+   app como exchange/carteira de cripto (não é o propósito do app);
+b) Preparar, caso o Google peça, documentação de que a embedded wallet é
+   infraestrutura de assinatura (não um serviço de custódia/exchange);
+c) Alternativa: migrar a conta para organização usando o CNPJ do Grupo
+   União e Trabalho (23.040.066/0001-00) — exige D-U-N-S e documentos;
+   validar custos antes.
+Recomendação da auditoria: começar com conta pessoal + declaração financeira
+precisa; migrar só se o Google exigir.
+
+--------------------------------------------------------------------------------
+GAP 4 — [MÉDIO] Registro do app no Play Console (prazo 30/09/2026)
+--------------------------------------------------------------------------------
+Evidência: atualização de 15/07/2026 (blog) + Preview Play Console
+Requirements: apps devem estar registrados até 30/09/2026 (99% automático).
+O app ainda não foi criado no Play Console.
+Ação: criar o app na Play Console (tela "Criar seu primeiro app" — já aberta)
+com o package name com.desafiogut.app; verificar na Home que o app ficou
+"registrado". Sem custo adicional.
+
+--------------------------------------------------------------------------------
+GAP 5 — [MÉDIO] Data Safety Form não preenchido
+--------------------------------------------------------------------------------
+Evidência: app não criado; formulário disponível em App content > Data safety.
+Ação: copiar as respostas do rascunho (S2) ao criar o app; manter consistência
+com a política de privacidade (S1).
+
+--------------------------------------------------------------------------------
+GAP 6 — [MÉDIO] Closed testing não iniciado
+--------------------------------------------------------------------------------
+Evidência: nenhum testador recrutado; conta pessoal criada após 13/11/2023
+exige 12 testadores x 14 dias contínuos antes do acesso à produção.
+Ação: seguir o guia (S4): recrutar >= 12 testadores com contas Google
+legítimas, manter opt-in por >= 14 dias, coletar feedback, então aplicar para
+produção.
+
+--------------------------------------------------------------------------------
+GAP 7 — [MÉDIO] Conta demo / credenciais para revisão
+--------------------------------------------------------------------------------
+Evidência: Preview Play Console Requirements 3.3 exige conta demo ativa +
+login. O login público é Google OAuth (Privy).
+Ação: preparar uma conta Google de teste (ex.: gut.testador@gmail.com) com
+credenciais para a equipe de revisão do Google, e descrever o fluxo no
+formulário de revisão.
+
+--------------------------------------------------------------------------------
+GAP 8 — [MÉDIO] Financial features declaration pendente
+--------------------------------------------------------------------------------
+Evidência: Financial Services policy exige declaração para apps com recursos
+financeiros; DesafioGUT tem PIX + on-chain.
+Ação: preencher ao criar o app (App content > Financial features declaration).
+
+--------------------------------------------------------------------------------
+GAP 9 — [INFO] Domínio custom desafio-gut.com quebrado
+--------------------------------------------------------------------------------
+Evidência: NXDOMAIN no DNS global (15/08/2026). O site de produção vive em
+silly-stardust-ca71bc.netlify.app (HTTP 200). Sem o domínio, as URLs
+"desafio-gut.com/..." (política, eliminação) não funcionam para usuários.
+Ação: registrar/apontar o domínio no Netlify (DNS custom) ou decidir usar a
+URL do Netlify nos campos do Play Console.
+
+--------------------------------------------------------------------------------
+GAP 10 — [INFO] versionCode/versionName e assinatura
+--------------------------------------------------------------------------------
+Evidência: versionCode 1 / versionName "1.0.0" no build.gradle; assinatura de
+release via keystore.properties (não commitado — OK por segurança).
+Ação: na primeira publicação usar versionCode 1; gerar AAB assinado
+(bundleRelease) para upload na Play Console.
+
+--------------------------------------------------------------------------------
+PONTOS FORTES (já conformes — evidência)
+--------------------------------------------------------------------------------
+[OK] targetSdkVersion = 36 (Android 16) — cumpre 31/08/2026.
+[OK] Verificação de identidade do desenvolvedor (passaporte + comprovante de
+     endereço aprovados; e-mail/telefone verificados).
+[OK] Gate de consentimento LGPD no app (TermosConsentimento.jsx).
+[OK] Eliminação de conta IN-APP funcional (delete-account + atividade_utilizadores).
+[OK] Permissões Android mínimas (apenas INTERNET — nenhuma permissão sensível).
+[OK] Criptografia em trânsito (HTTPS em toda a stack).
+[OK] Dados financeiros nunca expostos publicamente (política interna já alinhada).
+
+--------------------------------------------------------------------------------
+PLANO DE AÇÃO RESUMIDO (ordem de execução)
+--------------------------------------------------------------------------------
+1. [S1] Texto da política de privacidade (feito nesta auditoria).
+2. [S2] Rascunho Data Safety (feito nesta auditoria).
+3. [S3] Relatório de eliminação de contas + criar link web (operador).
+4. [S4] Guia de closed testing (feito nesta auditoria).
+5. [S5] Requisitos técnicos verificados (targetSdk OK; verificação OK).
+6. [S6] Checklist consolidado.
+7. [Operador] Criar o app no Play Console -> preencher Data Safety +
+   Financial features declaration + política + link de eliminação; conferir
+   registro do app até 30/09/2026.
+8. [Operador] Corrigir domínio/iubenda (GAP 1) e publicar link web (GAP 2).
+9. [Operador] Recrutar 12 testadores e rodar closed testing por 14 dias.
+10. [Operador] Submeter para produção com conta demo.
+================================================================================

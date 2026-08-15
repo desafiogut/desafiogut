@@ -1,0 +1,289 @@
+================================================================================
+MC90.2-S0 — REQUISITOS GOOGLE PLAY 2026 (PESQUISA COM FONTES ATUALIZADAS)
+DesafioGUT · Auditoria de Conformidade Play Store · 2026-08-15
+================================================================================
+FONTES: pesquisadas e acessadas em 15/08/2026. Prioridade a fontes oficiais
+Google publicadas/atualizadas em 2026 (julho e junho de 2026 incluídos).
+Idioma: pt-BR. Status: OK = conforme / PENDENTE = falta ação / N/A = não aplica.
+
+--------------------------------------------------------------------------------
+0.1 — CLOSED TESTING (contas pessoais criadas após 13/11/2023)
+--------------------------------------------------------------------------------
+Fonte: Google Play Console Help — "App testing requirements for new personal
+developer accounts"
+URL: https://support.google.com/googleplay/android-developer/answer/14151465
+Data de acesso: 15/08/2026 (artigo vigente; requisito de 12 testadores mantido
+em 2026 — confirmado no texto atual).
+
+Requisitos confirmados:
+- Contas pessoais criadas após 13/11/2023 PRECISAM rodar um closed test antes de
+  solicitar acesso à produção (Production e Pre-registration ficam bloqueados).
+- Mínimo de 12 testadores com opt-in CONTÍNUO por pelo menos 14 dias ANTES de
+  pedir acesso à produção.
+- Ao aplicar, o desenvolvedor responde perguntas sobre design do app, processo
+  de teste e prontidão para produção.
+- Testadores devem permanecer opt-in durante todo o período; o Google não exige
+  "uso diário" formalmente, mas o engajamento e o feedback são parte da
+  avaliação de prontidão.
+- Internal testing é opcional/recomendado como passo inicial; NÃO substitui o
+  closed test.
+
+Status DesafioGUT: PENDENTE — closed testing ainda não iniciado (nenhum
+testador recrutado). Detalhes no guia (S4).
+
+--------------------------------------------------------------------------------
+0.2 — DATA SAFETY FORM (Formulário de Segurança dos Dados)
+--------------------------------------------------------------------------------
+Fonte: Google Play Console Help — "Provide information for Google Play's Data
+safety section"
+URL: https://support.google.com/googleplay/android-developer/answer/10787469
+Data de acesso: 15/08/2026.
+
+Requisitos confirmados:
+- TODOS os apps publicados (tracks closed, open ou production) devem preencher
+  o formulário. Apps apenas em internal testing estão isentos.
+- Apps que NÃO coletam dados também precisam preencher (declarando que não
+  coletam) e fornecer política de privacidade.
+- Deve declarar coleta, compartilhamento e segurança dos dados, INCLUINDO
+  dados coletados por SDKs de terceiros (Privy, Supabase, Mercado Pago,
+  Sentry etc.).
+- As informações do formulário DEVEM ser consistentes com a política de
+  privacidade (o Google compara as duas).
+- O formulário suporta exportar/importar CSV.
+- Seções: Data collection, Data sharing, Data handling (criptografia em
+  trânsito, possibilidade de pedir eliminação), outras divulgações
+  (coleta de dados de crianças, compromisso Families, revisão de segurança
+  independente, UPI).
+- Categorias de dados do formulário (16): Localização; Informações pessoais;
+  Informações financeiras; Saúde e fitness; Mensagens; Fotos ou vídeos;
+  Arquivos de áudio; Arquivos e documentos; Calendário; Contatos; Atividade
+  no app; Navegação na web; Informações de desempenho do app; Dispositivo ou
+  outros IDs.
+
+Status DesafioGUT: PENDENTE — app ainda não criado no Play Console; rascunho
+completo gerado no S2.
+
+--------------------------------------------------------------------------------
+0.3 — POLÍTICA DE PRIVACIDADE (User Data policy)
+--------------------------------------------------------------------------------
+Fonte: Google Play Policy Center — "User Data"
+URL: https://support.google.com/googleplay/android-developer/answer/10144311
+Data de acesso: 15/08/2026 (política vigente em 2026).
+
+Requisitos confirmados:
+- Política de privacidade OBRIGATÓRIA em dois lugares: campo designado no
+  Play Console E link/texto dentro do próprio app.
+- URL deve ser pública, ativa, acessível globalmente (sem geofencing), sem
+  PDF, e não-editável.
+- Conteúdo mínimo obrigatório:
+  a) Identificação do desenvolvedor + ponto de contato de privacidade
+     (mecanismo para envio de dúvidas);
+  b) Tipos de dados pessoais/sensíveis acessados, coletados, usados e
+     compartilhados, e as partes com quem são compartilhados;
+  c) Procedimentos seguros de tratamento de dados;
+  d) Política de retenção e exclusão de dados;
+  e) Título claro "Política de Privacidade".
+- A entidade nomeada no store listing deve constar na política (ou o app deve
+  ser nomeado).
+- Consentimento claro e afirmativo antes de coletar dados pessoais/sensíveis
+  (a LGPD exige o mesmo).
+- Dados sensíveis: criptografia em trânsito (HTTPS).
+- Não vender dados pessoais/sensíveis.
+- Apps que não coletam dados ainda assim precisam de política.
+
+Status DesafioGUT:
+- Gate de consentimento LGPD: OK (TermosConsentimento.jsx, checkboxes,
+  armazenamento de consentimento).
+- Política: PENDENTE/CRÍTICO — URL atual (iubenda.com/privacy-policy/DESAFIOGUT)
+  retorna 404; https://desafio-gut.com/privacy NÃO resolve (domínio
+  NXDOMAIN no DNS global); https://silly-stardust-ca71bc.netlify.app/privacy
+  responde 200 mas é o fallback SPA (não há rota React /privacy). Texto
+  atualizado gerado no S1 para colar na iubenda ou publicar como página web.
+
+--------------------------------------------------------------------------------
+0.4 — ELIMINAÇÃO DE CONTAS (Account Deletion)
+--------------------------------------------------------------------------------
+Fonte: Google Play Policy Center — "User Data" > "Account Deletion Requirement"
+URL: https://support.google.com/googleplay/android-developer/answer/10144311
+(seção "Account Deletion Requirement"; acesso em 15/08/2026).
+
+Requisitos confirmados:
+- Apps que permitem criar conta DEVEM permitir solicitar a eliminação da conta.
+- A eliminação deve estar disponível: (1) DENTRO do app, com opção facilmente
+  descobrível; e (2) FORA do app, via recurso web (ex.: página do site). O link
+  web deve ser informado no campo designado do Play Console.
+- Ao eliminar, TODOS os dados associados devem ser apagados. Congelar/desativar
+  a conta NÃO é aceite como eliminação.
+- Retenção por obrigação legal/segurança deve ser divulgada na política de
+  privacidade.
+- O processo deve ser claro, sem obstáculos nem "dark patterns".
+
+Status DesafioGUT:
+- In-app: OK — função delete-account (MC72/MC89.43) com hard-delete de dados
+  pessoais (inclui atividade_utilizadores), anonimização de registros fiscais
+  (PIX) e disclosure de dados on-chain; rota pública /excluir-conta no SPA.
+- Recurso web externo: PENDENTE — não existe página web dedicada de eliminação
+  publicada (a rota /excluir-conta do SPA existe mas depende de domínio/URL
+  pública estável). Ver relatório S3.
+
+--------------------------------------------------------------------------------
+0.5 — VERIFICAÇÃO DE DESENVOLVEDOR (novos requisitos 2026)
+--------------------------------------------------------------------------------
+Fontes:
+a) Android Developers Blog — "Android developer verification: Building a safer
+   ecosystem together" (18/06/2026, com atualização de 15/07/2026)
+   URL: https://android-developers.googleblog.com/2026/06/android-developer-verification-building-safer-ecosystem.html
+b) Google Play Console Help — "Verify your developer identity information"
+   URL: https://support.google.com/googleplay/android-developer/answer/14053507
+   (via busca do Help Center, acesso 15/08/2026)
+
+Requisitos confirmados (2026):
+- Identidade verificada: nome legal + endereço (via Google Payments profile),
+  e-mail de desenvolvedor verificado (mostrado na Play), telefone/e-mail de
+  contato verificados.
+- Device verification: contas pessoais novas devem verificar acesso a um
+  dispositivo Android REAL usando o app Play Console antes de publicar.
+- NOVO (atualização de 15/07/2026): desenvolvedores devem REGISTRAR os apps
+  Play no Play Console. ~99% dos apps já registrados automaticamente; apps
+  restantes devem ser registrados até 30/09/2026 para evitar remoção global.
+- 30/09/2026: verificação de desenvolvedor obrigatória começando com usuários
+  no BRASIL, Indonésia, Singapura e Tailândia (instalações verificadas em 7
+  lojas: Google Play, Honor, OPPO, Samsung, Transsion, vivo, Xiaomi).
+- Expansão global prevista para 2027.
+- Junho/2026: novo system service instalado em dispositivos Android para
+  verificar o registro do desenvolvedor.
+
+Status DesafioGUT:
+- Conta do Ruan (pessoal) verificada com passaporte + comprovante de endereço:
+  OK.
+- Device verification: presumivelmente OK (a confirmar no Play Console).
+- Registro do app (package name) no Play Console: PENDENTE — será feito
+  automaticamente ao criar o app (tela "Criar seu primeiro app"); conferir a
+  Home do Play Console antes de 30/09/2026.
+
+--------------------------------------------------------------------------------
+0.6 — TARGET API LEVEL (nível de API alvo) — 2026
+--------------------------------------------------------------------------------
+Fonte: Google Play Console Help — "Target API level requirements for Google
+Play apps"
+URL: https://support.google.com/googleplay/android-developer/answer/11926878
+Data de acesso: 15/08/2026.
+
+Requisitos confirmados:
+- Novos apps e atualizações: Android 16 (API level 36) a partir de
+  31 de agosto de 2026 (tabela "New apps" e "App updates" = August 31, 2026).
+- Android 15 (API 35) foi o requisito desde 31/08/2025.
+- Apps existentes com target < 35 ficam indisponíveis para usuários com
+  Android mais novo a partir de 31/08/2026 (pedido de extensão até
+  01/11/2026 possível em casos específicos).
+
+Status DesafioGUT: OK — variables.gradle define minSdkVersion 24,
+compileSdkVersion 36, targetSdkVersion 36 (Android 16). ApplicationId
+com.desafiogut.app; versionCode 1; versionName 1.0.0.
+
+--------------------------------------------------------------------------------
+0.7 — PLAY CONSOLE REQUIREMENTS (atualização de julho/2026 — efetiva 30/09/2026)
+--------------------------------------------------------------------------------
+Fonte: Google Play Policy Center — "Preview: Play Console Requirements"
+(atualizações de julho de 2026; preview acessado em 15/08/2026)
+URL: https://support.google.com/googleplay/android-developer/answer/13855671
+(acessado via link do post do blog; preview "effective September 30, 2026").
+
+Requisitos confirmados (vigentes a partir de 30/09/2026):
+- Registrar os Play apps no Play Console (Android developer verification).
+- 1.1 — Desenvolvedores que fornecem serviços financeiros, incluindo (mas não
+  limitado a) bancos, empréstimos, negociação de ações, fundos de investimento,
+  CARTEIRAS DE SOFTWARE DE CRIPTOMOEDA e EXCHANGES DE CRIPTOMOEDA, devem se
+  registrar como ORGANIZAÇÃO.
+- 2.1 — Informações precisas da conta: nome legal e endereço; D-U-N-S (somente
+  organização); e-mail e telefone de contato; e-mail/telefone de desenvolvedor
+  mostrado na Play; formas de pagamento; perfil de pagamentos Google vinculado.
+- 3.1 — Metadados do app precisos antes de submeter.
+- 3.2 — Política de privacidade carregada + Data safety section preenchida
+  antes de submeter o app.
+- 3.3 — Conta demo ATIVA, credenciais de login e todos os recursos necessários
+  para o Google revisar o app.
+- 3.4 — Registrar os package names do app via Play Console.
+
+Status DesafioGUT:
+- Registro do app: PENDENTE (automático ao criar; conferir até 30/09/2026).
+- Conta demo para revisão: PENDENTE (login é Google OAuth via Privy — fornecer
+  conta Google de teste ao submeter).
+- Política + Data safety antes da submissão: PENDENTE (S1 e S2 resolvem).
+- RISCO ALTO — classificação financeira/cripto: o app usa embedded wallets
+  Privy, transações on-chain (lances) e pagamentos PIX. A política exige conta
+  ORGANIZAÇÃO para "carteiras de software de criptomoeda" e "exchanges". O
+  DesafioGUT não é exchange nem carteira autônoma (a wallet é mecanismo interno
+  de assinatura), mas a classificação final é do Google. Recomendação: avaliar
+  a migração para conta organização (existe CNPJ — Grupo União e Trabalho
+  23.040.066/0001-00) OU preparar justificativa/documentação de que o app não é
+  um serviço de carteira/exchange. Decisão do operador documentada no
+  GAP-ANALYSIS.
+
+--------------------------------------------------------------------------------
+0.8 — DECLARAÇÃO DE RECURSOS FINANCEIROS (Financial features declaration)
+--------------------------------------------------------------------------------
+Fonte: Google Play Policy Center — "Financial Services"
+URL: https://support.google.com/googleplay/android-developer/answer/13754510
+(acessado em 15/08/2026 via link da política; vigente em 2026).
+
+Requisitos confirmados:
+- "Qualquer app que contenha recursos financeiros deve preencher o formulário
+  de declaração de recursos financeiros (Financial features declaration) no
+  Play Console."
+- Recursos financeiros = gestão ou investimento de dinheiro e criptomoedas.
+- Conformidade com leis locais do país-alvo (Brasil: regulamentação BACEN/
+  Mercado Pago como instituição de pagamento; o app usa Mercado Pago como
+  provedor de pagamento).
+
+Status DesafioGUT: PENDENTE — preencher o formulário ao criar o app no Play
+Console (pagamentos PIX via Mercado Pago + lances on-chain). Sem custo; só
+declaração. O app NÃO declara permissões sensíveis (manifest só tem INTERNET —
+nenhuma das permissões proibidas pela política Financeira: READ_CONTACTS,
+READ_MEDIA_IMAGES, etc.).
+
+--------------------------------------------------------------------------------
+0.9 — AGE SIGNALS API / EXPERIÊNCIAS ADEQUADAS À IDADE (julho/2026)
+--------------------------------------------------------------------------------
+Fonte: Android Developers Blog — "Delivering safer, age-appropriate
+experiences on Google Play" (29/07/2026)
+URL: https://android-developers.googleblog.com/2026/07/delivering-safer-age-appropriate-experiences.html
+
+Resumo: Google Play Age Signals API disponível globalmente (já ativa no
+Brasil; expansão para Austrália/Canadá em meados de agosto de 2026; rollout
+global depois). Permite que pais/usuários partilhem faixa etária com apps.
+
+Status DesafioGUT: N/A — o app não é direcionado a crianças; não há coleta de
+idade. O formulário de classificação de conteúdo (IARC) deve ser preenchido na
+criação do app refletindo conteúdo geral (sem restrição etária especial).
+
+--------------------------------------------------------------------------------
+0.10 — CONSENTIMENTO (LGPD/GDPR) E SEGURANÇA DOS DADOS
+--------------------------------------------------------------------------------
+Fonte: User Data policy (0.3) + LGPD (Lei 13.709/2018).
+
+Requisitos confirmados:
+- Consentimento claro e afirmativo antes da coleta de dados pessoais (o
+  DesafioGUT já implementa o gate LGPD).
+- Dados pessoais/sensíveis: criptografia em trânsito (HTTPS em toda a
+  comunicação; API via Netlify Functions).
+- Divulgação proeminente in-app quando a coleta não for óbvia.
+
+Status DesafioGUT:
+- Gate LGPD (TermosConsentimento.jsx, checkboxes, consentimento com data):
+  OK.
+- HTTPS em todo o tráfego (Netlify + Supabase + Privy + Mercado Pago):
+  OK.
+
+--------------------------------------------------------------------------------
+RESUMO DE STATUS (contagem)
+--------------------------------------------------------------------------------
+OK       : 5  (targetSdk 36, verificação de identidade, consentimento LGPD,
+              criptografia em trânsito, permissões Android mínimas)
+PENDENTE : 8  (política de privacidade acessível, link web de eliminação,
+              Data Safety form, closed testing, registro do app, conta demo,
+              Financial features declaration, classificação financeira/cripto)
+N/A      : 1  (Age Signals API)
+
+DETALHES E AÇÕES: ver MC90.2-GAP-ANALYSIS.txt.
+================================================================================
