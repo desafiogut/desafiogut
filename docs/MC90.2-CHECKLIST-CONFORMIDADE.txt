@@ -127,21 +127,34 @@ no código e em produção).
 31 EOA coordenadora abastecida com ETH               [PEND]  Fora do escopo
                                                              Play; executar
                                                              saque+bridge.
+32 BLOBS_TOKEN configurado no Netlify                [PEND]  MC90.6: ausente
+                                                             em todos os
+                                                             contextos; sistema
+                                                             OPERACIONAL sem
+                                                             ele (getStore
+                                                             automático
+                                                             validado em
+                                                             produção);
+                                                             preventivo p/
+                                                             scheduled funcs.
+                                                             Instruções em
+                                                             MC90.6-BLOBS-
+                                                             TOKEN-INSTRUCOES.
 
 --------------------------------------------------------------------------------
-RESUMO (revisado em MC90.3 — GAPs 1 e 2 eliminados)
+RESUMO (rev. MC90.3 GAPs 1-2 eliminados; MC90.6 item 32)
 --------------------------------------------------------------------------------
 [OK]   : 15  (política: URL pública, conteúdo/SDKs/eliminação/contacto, link
               in-app; Data Safety rascunho; eliminação in-app; link web de
               eliminação; targetSdk; minSdk; identidade dev; permissões;
               LGPD; HTTPS)
-[PEND] : 13  (Data Safety no console; closed testing x4; device verification;
+[PEND] : 14  (Data Safety no console; closed testing x4; device verification;
               registro app; conta demo; financial declaration; IARC; AAB;
-              domínio; whitelist; EOA)
+              domínio; whitelist; EOA; BLOBS_TOKEN)
 [RISCO]: 1   (classificação financeira/cripto)
 [N/A]  : 1   (D-U-N-S — conta pessoal)
 
-TOTAL: 30 itens avaliados. NENHUM requisito técnico de código bloqueia a
+TOTAL: 31 itens avaliados. NENHUM requisito técnico de código bloqueia a
 publicação (targetSdk 36, permissões, eliminação, política e consentimento já
 prontos). As pendências restantes são de CONFIGURAÇÃO no Play Console e
 OPERAÇÃO (closed testing), não de código.

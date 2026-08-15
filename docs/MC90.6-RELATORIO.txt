@@ -1,0 +1,76 @@
+================================================================================
+MC90.6 — RELATÓRIO FINAL: BLOBS_TOKEN NO NETLIFY — VERIFICAÇÃO E VALIDAÇÃO
+DesafioGUT · Gerado: 2026-08-15 · Branch: main
+================================================================================
+
+--------------------------------------------------------------------------------
+1. RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+O BLOBS_TOKEN NÃO está configurado no Netlify (verificado em todos os
+contextos: production, deploy-preview, branch e "all" — 0 ocorrências; o CLI
+mascara valores, nada foi exposto — R5).
+
+PORÉM, a validação funcional provou que o sistema está OPERACIONAL sem ele:
+o runtime da Netlify injeta o contexto automático dos Blobs nas funções de
+pedido (getStore sem token). Teste real em produção: a função banners (que
+faz store.get) respondeu 200 com o SVG gerado. Nenhum erro de autenticação
+em logs (monitor-onchain e backup-blobs simplesmente não têm agendamento
+ativo; ia-preditiva não existe no deploy atual).
+
+Conclusão: o BLOBS_TOKEN é uma configuração PREVENTIVA/operacional (necessária
+quando o operador montar scheduled functions ou acesso externo aos blobs) —
+instruções completas geradas (S1), pendência documentada.
+
+--------------------------------------------------------------------------------
+2. RESULTADO DAS VERIFICAÇÕES
+--------------------------------------------------------------------------------
+a) Estado inicial (S0): BLOBS_TOKEN AUSENTE em todos os contextos; 52 vars
+   no contexto production; valores sempre mascarados pelo CLI.
+b) Instruções (S1): docs/MC90.6-BLOBS-TOKEN-INSTRUCOES.txt — passo a passo
+   (Netlify → User settings → Applications → New access token → env var
+   BLOBS_TOKEN → deploy) + nota de segurança.
+c) Logs (S3): monitor-onchain e backup-blobs sem logs recentes (sem
+   agendamento); ia-preditiva não existe; banners em produção: 200 com
+   store.get no caminho — blobs operacionais.
+d) Deploy (S4): NÃO executado (a variável nem existe — deploy não ativaria
+   nada; executar só após o operador adicionar o token).
+e) Pós-configuração (S2): PENDENTE do operador — reverificar com:
+   netlify env:list --context production | grep -i BLOBS
+
+--------------------------------------------------------------------------------
+3. ENTREGÁVEIS (docs/)
+--------------------------------------------------------------------------------
+- MC90.6-STATUS-INICIAL.txt ......... BLOBS_TOKEN ausente (evidência)
+- MC90.6-BLOBS-TOKEN-INSTRUCOES.txt . passo a passo para o operador
+- MC90.6-LOGS-VALIDACAO.txt .......... logs + teste funcional (blobs OK)
+- MC90.6-DEPLOY.txt .................. decisão de deploy documentada
+- MC90.6-RELATORIO.txt ............... este relatório (Desktop + docs/)
+
+--------------------------------------------------------------------------------
+4. CHECKLIST DE CONFORMIDADE (MC90.2) — atualização
+--------------------------------------------------------------------------------
+Item adicionado: "32 — BLOBS_TOKEN configurado" -> [PEND] (preventivo;
+sistema operacional sem ele — validado). Sem impacto na submissão à Play
+Store.
+
+--------------------------------------------------------------------------------
+5. PRÓXIMOS PASSOS (operador)
+--------------------------------------------------------------------------------
+1. [Opcional/recomendado] Seguir MC90.6-BLOBS-TOKEN-INSTRUCOES.txt para
+   criar e configurar o BLOBS_TOKEN (preventivo — scheduled functions
+   futuras e acesso externo aos blobs).
+2. Após configurar: deploy (comando no S4) + reverificação (S2).
+3. Manter o foco da Play Store: criar o app (MC90.4), upload do AAB novo
+   (MC90.5) e closed testing (MC90.2) — o BLOBS_TOKEN não bloqueia nada.
+
+--------------------------------------------------------------------------------
+6. VEREDITO (R8)
+--------------------------------------------------------------------------------
+BLOBS_TOKEN: NÃO configurado (pendência documentada + instruções prontas).
+Funções com blobs: OPERACIONAIS — validadas em produção sem o token
+(getStore automático do site). Requisito do MC: cumprido com pendência
+operacional clara, sem custo e sem exposição de segredos (R2/R4/R5).
+
+================================================================================
+FIM DO RELATÓRIO MC90.6
+================================================================================

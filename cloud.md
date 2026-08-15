@@ -7239,3 +7239,27 @@ Play Console (MC90.4) e iniciar os 14 dias de teste.
 
 Artefactos: docs/MC90.5-{PRE-BUILD,BUILD-APK,BUILD-AAB,VALIDACAO-ASSINATURA,
 CONTEUDO-AAB,AAB-SHA256,RELATORIO}.txt
+## MC90.6 — o BLOBS_TOKEN não existe no Netlify, e isso não está a doer
+
+Verificação sem expor nada (R5 — o CLI mascara valores; só os nomes foram
+inspecionados): BLOBS_TOKEN está AUSENTE em todos os contextos do Netlify
+(production, deploy-preview, branch, all). As instruções completas para o
+operador criar o personal access token e adicioná-lo estão em
+docs/MC90.6-BLOBS-TOKEN-INSTRUCOES.txt.
+
+A parte interessante: o sistema está OPERACIONAL sem o token. O runtime da
+Netlify injeta o contexto automático dos Blobs nas funções de pedido — o
+_lib/blobs-manual.mjs (MC88.31) já tinha o fallback automático->manual. Prova
+real em produção: a função banners (que faz store.get no caminho GET)
+respondeu 200 com o SVG gerado. Os logs de monitor-onchain e backup-blobs
+estão vazios porque não há agendamento (sem scheduled functions, sem
+workflow — são admin-gated e "idealmente" disparadas por cron externo), e a
+ia-preditiva nem existe no deploy atual.
+
+Veredito: pendência preventiva documentada (necessária quando o operador
+montar scheduled functions ou acesso externo aos blobs), sem custo, sem
+bloqueio à Play Store e sem tocar em segredos. Checklist MC90.2 ganhou o
+item 32 (BLOBS_TOKEN -> PEND, preventivo).
+
+Artefactos: docs/MC90.6-{STATUS-INICIAL,BLOBS-TOKEN-INSTRUCOES,LOGS-VALIDACAO,
+DEPLOY,RELATORIO}.txt
