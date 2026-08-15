@@ -1,0 +1,42 @@
+================================================================================
+MC90.5-S2 — GERAÇÃO DO AAB RELEASE
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+
+--------------------------------------------------------------------------------
+2.1 — COMANDOS EXECUTADOS
+--------------------------------------------------------------------------------
+Tentativa 1: ./gradlew bundleRelease  -> FALHOU
+  Erro: "Java compilation initialization error: invalid source release: 21"
+  Causa: Capacitor 8 (android) exige Java 21; o JAVA_HOME apontava para o
+  OpenJDK 17 (Microsoft jdk-17.0.19.10-hotspot).
+
+Tentativa 2 (correção do ambiente, não variação): export JAVA_HOME="C:\Program
+Files\Android\Android Studio\jbr" (JBR 21.0.10 do Android Studio) + PATH e
+./gradlew bundleRelease -> BUILD SUCCESSFUL em 1m 33s.
+  Task de assinatura executada: :app:signReleaseBundle
+  Tasks: 155 (79 executadas, 76 up-to-date).
+
+--------------------------------------------------------------------------------
+2.2 — ARTEFACTO GERADO
+--------------------------------------------------------------------------------
+- Caminho: android/app/build/outputs/bundle/release/app-release.aab
+- Tamanho: 34.984.842 bytes (~35,0 MB)
+- Data: 15/08/2026 17:36 (antes: 21/07/2026, 34.416.933 bytes)
+- O tamanho aumentou ~568 KB — consistente com os novos assets (rotas
+  /privacidade e /excluir-conta + política).
+
+--------------------------------------------------------------------------------
+2.3 — LIÇÃO DE AMBIENTE (registada para MCs futuros)
+--------------------------------------------------------------------------------
+- O projeto Android (Capacitor 8) requer Java 21 para o build de release.
+- O JDK 17 (JAVA_HOME padrão da máquina) NÃO compila o capacitor-android.
+- Usar: JAVA_HOME="C:\Program Files\Android\Android Studio\jbr" (JBR 21)
+  antes de ./gradlew bundleRelease (ou qualquer task que compile o plugin).
+
+--------------------------------------------------------------------------------
+2.4 — STATUS
+--------------------------------------------------------------------------------
+AAB release regenerado com o código atual (inclui MC90.3). Próximo passo:
+validar assinatura (S3) e conteúdo (S4).
+================================================================================
