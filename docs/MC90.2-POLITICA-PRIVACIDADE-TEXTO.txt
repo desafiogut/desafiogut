@@ -1,0 +1,244 @@
+================================================================================
+MC90.2-S1 — TEXTO ATUALIZADO DA POLÍTICA DE PRIVACIDADE (CONFORME 2026)
+DesafioGUT · pronto para copiar e colar na iubenda (ou publicar como página)
+Gerado: 2026-08-15 · Base: User Data policy (Google Play, 2026) + LGPD
+================================================================================
+INSTRUÇÕES DE USO:
+1. Colar este texto na iubenda (seção de política de privacidade) OU publicar
+   como página própria (ex.: /privacidade no SPA).
+2. Substituir [E-MAIL DE CONTATO] pelo e-mail real de contato de privacidade.
+3. Substituir [URL DA POLÍTICA] pela URL pública final.
+4. Manter título claro "Política de Privacidade".
+5. A URL final deve ser pública, acessível globalmente, sem PDF e não-editável.
+6. Após publicar, corrigir os 3 links no app (TermosConsentimento.jsx,
+   pages/Seguranca.jsx, pages/MercadoLances.jsx) e registar a URL no campo
+   "Política de privacidade" do Play Console.
+
+================================================================================
+POLÍTICA DE PRIVACIDADE — DESAFIOGUT
+================================================================================
+
+1. IDENTIFICAÇÃO DO CONTROLADOR
+
+O aplicativo DesafioGUT ("DesafioGUT", "nós", "nosso") é operado pelo Grupo
+União e Trabalho, CNPJ 23.040.066/0001-00, com sede no Brasil.
+
+Para questões relacionadas a esta Política de Privacidade, ao tratamento de
+dados pessoais ou a pedidos de exercício de direitos, entre em contacto
+através do e-mail: [E-MAIL DE CONTATO] (ponto de contacto de privacidade).
+
+2. VISÃO GERAL
+
+Esta Política de Privacidade descreve, de forma clara e completa, como o
+DesafioGUT acessa, coleta, utiliza, partilha e protege os dados pessoais dos
+utilizadores, em conformidade com a Lei Geral de Proteção de Dados (LGPD —
+Lei nº 13.709/2018), com o Regulamento Geral sobre a Proteção de Dados (GDPR,
+quando aplicável) e com as políticas do Google Play (User Data policy, em
+vigor em 2026).
+
+O DesafioGUT é uma plataforma de leilão de "menor lance único": os utilizadores
+participam em leilões, lançam lances e podem adquirir produtos/senhas mediante
+pagamento. A participação requer a criação de uma conta e o aceite dos Termos
+de Consentimento (gate LGPD) antes de qualquer interação.
+
+3. DADOS COLETADOS E FINALIDADES
+
+3.1. Informações pessoais (identificação e contacto)
+- Nome, e-mail e endereço de carteira Ethereum (endereço público on-chain).
+- Coletados através do serviço de autenticação Privy (login com conta Google
+  ou e-mail com código OTP no fluxo corporativo).
+- Finalidade: criação e gestão da conta, autenticação, assinatura de
+  transações on-chain (lances) e prestação do serviço.
+- Obrigatório para o funcionamento do app. Base legal: execução do contrato
+  (termos de uso) e consentimento.
+
+3.2. Informações financeiras
+- Histórico de compras de senhas e transações de pagamento PIX processadas
+  através do Mercado Pago (instituição de pagamento).
+- Os dados de pagamento (PIX) são processados pelo Mercado Pago; o DesafioGUT
+  não armazena chaves PIX nem dados de cartão.
+- Finalidade: processamento de pagamentos, prevenção de fraude e obrigações
+  fiscais/legais.
+- Obrigatório para o funcionamento do app (compras). Base legal: execução do
+  contrato e obrigação legal (legislação fiscal brasileira).
+
+3.3. Atividade no app (interações, lances, histórico)
+- Registos de interações: lances (com hash Argon2id off-chain de prova de
+  intenção), histórico de compras, saldo de senhas e visualizações.
+- Armazenados na base de dados Supabase.
+- Finalidade: funcionamento do serviço, apuração do vencedor, resolução de
+  disputas, melhoria da experiência e prevenção de abuso/fraude.
+- Coleta não estritamente obrigatória para a navegação básica, mas necessária
+  para participar em leilões. Base legal: execução do contrato e interesse
+  legítimo (segurança e prevenção de fraude).
+
+3.4. Dados de atividade (presença)
+- Endereço de carteira + carimbo de data/hora da última atividade, registados
+  na tabela "atividade_utilizadores".
+- Finalidade: gestão da conta, painéis administrativos e segurança.
+- Base legal: execução do contrato e interesse legítimo.
+
+3.5. Dados on-chain (blockchain Ethereum)
+- Os lances são registados no smart contract LeilaoGUT na rede Ethereum
+  mainnet. Os dados on-chain (endereço da carteira, valores, timestamps) são
+  públicos por natureza da blockchain e IMUTÁVEIS — não podem ser apagados.
+- Finalidade: funcionamento do leilão (pipeline de lance 100% on-chain).
+- Estes dados são pseudónimos (identificados pelo endereço da carteira, não
+  pelo nome) e não são utilizados para fins de marketing.
+
+3.6. Informações de desempenho e dispositivo (crash logs)
+- Dados de diagnóstico e relatórios de falhas (crash logs), processados pelo
+  Sentry quando habilitado.
+- Finalidade: monitorização da estabilidade e correção de erros.
+- Coleta opcional, com consentimento; não é utilizada para publicidade nem
+  associada a identificadores persistentes de dispositivo.
+
+4. DADOS QUE NÃO SÃO COLETADOS
+
+O DesafioGUT NÃO coleta: localização (GPS), fotos, vídeos, áudio, ficheiros e
+documentos, calendário, contactos, mensagens SMS/MMS, dados de telefone,
+histórico de navegação web, dados de saúde, raça/etnia, opiniões políticas ou
+religiosas, nem orientação sexual.
+
+O app declara apenas a permissão Android INTERNET (necessária para a ligação à
+rede). Nenhuma permissão sensível (contactos, fotos, localização, SMS, etc.) é
+solicitada.
+
+5. COMPARTILHAMENTO COM TERCEIROS (SDKs E SERVIÇOS)
+
+Os seus dados são partilhados exclusivamente com prestadores de serviços
+essenciais ao funcionamento do app, sob contrato, e nunca são vendidos:
+
+| Serviço | Papel | Dados processados |
+|---|---|---|
+| Privy (privy.io) | Autenticação e carteira embutida (embedded wallet) | Nome, e-mail, endereço da carteira, identificador de utilizador |
+| Supabase (supabase.com) | Base de dados e armazenamento | Dados de conta, lances, histórico, atividade, saldos |
+| Netlify (netlify.com) | Backend serverless (funções) | Dados transitórios necessários às funções (ex.: processamento de pagamento e lances) |
+| Mercado Pago (mercadopago.com.br) | Processamento de pagamentos PIX | Dados de transação de pagamento (valor, data, referência) |
+| Sentry (sentry.io) | Monitorização de erros (crash logs) | Relatórios de falha e diagnóstico (se habilitado) |
+| Alchemy (RPC) | Acesso à rede Ethereum | Endereços e transações públicas on-chain |
+
+O DesafioGUT não vende dados pessoais e não utiliza dados pessoais para
+publicidade comportamental.
+
+6. CONSENTIMENTO (LGPD)
+
+Antes de qualquer interação com o app, o utilizador é apresentado ao Gate de
+Consentimento (Termos de Consentimento) onde deve:
+- declarar ter lido os Termos e Condições;
+- declarar ser maior de idade;
+- aceitar a Política de Privacidade;
+- consentir com o tratamento de dados nos termos desta Política.
+
+O consentimento é registado com data/hora. O utilizador pode revogar o
+consentimento a qualquer momento, o que pode implicar a impossibilidade de
+continuar a utilizar o serviço e/ou a eliminação da conta (secção 8).
+
+7. SEGURANÇA DOS DADOS
+
+- Criptografia em trânsito: todas as comunicações são feitas por HTTPS/TLS.
+- Criptografia em repouso: base de dados e armazenamento com encriptação
+  padrão dos fornecedores (Supabase/Netlify/AWS).
+- Acesso restrito: apenas o administrador e funções serverless autenticadas
+  acedem aos dados; chaves e credenciais nunca são expostas no cliente.
+- Autenticação forte: login via Privy (Google OAuth), com assinatura
+  criptográfica das transações (EIP-191) e limites de taxa (rate limit) nos
+  endpoints sensíveis.
+- Sem venda de dados e sem publicidade comportamental.
+
+8. ELIMINAÇÃO DE CONTA E DADOS
+
+O utilizador pode eliminar a sua conta e os dados associados a qualquer
+momento:
+
+- Dentro do app: menu de definições/segurança -> "Excluir conta" (rota
+  /excluir-conta). A exclusão é confirmada e processada pelo serviço
+  delete-account.
+- Fora do app (recurso web): página web de eliminação em [URL DE ELIMINAÇÃO]
+  (ex.: https://desafio-gut.com/excluir-conta).
+
+O que é apagado (hard-delete): dados pessoais de conta, atividade
+(atividade_utilizadores), lances, saldos, histórico e ficheiros associados à
+conta (Supabase + Blobs).
+
+O que é ANONIMIZADO e retido por obrigação legal: registos fiscais de
+pagamentos PIX (valor, data, pedido) — o vínculo com o utilizador é removido
+(substituído por endereço anónimo) e os registos são retidos pelo prazo
+exigido pela legislação fiscal brasileira.
+
+O que é retido por impossibilidade técnica (declarado): dados on-chain no
+smart contract (blockchain Ethereum) — são imutáveis e pseudónimos; não é
+tecnicamente possível apagá-los.
+
+Congelamento de conta não é utilizado como substituto de eliminação: o pedido
+de eliminação resulta na exclusão efetiva dos dados pessoais.
+
+9. RETENÇÃO DE DADOS
+
+- Dados pessoais: mantidos enquanto a conta estiver ativa; eliminados após
+  pedido de eliminação da conta.
+- Registos fiscais (PIX anonimizados): retidos pelo prazo legal exigido pela
+  legislação brasileira.
+- Dados on-chain: retidos permanentemente (natureza imutável da blockchain).
+- Crash logs (Sentry): retidos pelo período de retenção padrão do Sentry,
+  conforme a configuração do projeto.
+
+10. DIREITOS DO TITULAR (LGPD / GDPR)
+
+Nos termos da LGPD, o titular tem direito a:
+- Confirmação e acesso aos dados tratados;
+- Correção de dados incompletos, inexatos ou desatualizados;
+- Anonimização, bloqueio ou eliminação de dados desnecessários ou excessivos;
+- Portabilidade dos dados;
+- Eliminação dos dados tratados com consentimento (exceto retenção legal);
+- Informação sobre compartilhamento;
+- Revogação do consentimento;
+- Oposição ao tratamento.
+
+Para exercer estes direitos, contacte [E-MAIL DE CONTATO] ou utilize a
+funcionalidade de eliminação de conta do app (secção 8).
+
+11. TRANSFERÊNCIA INTERNACIONAL DE DADOS
+
+Os dados podem ser processados em servidores localizados fora do Brasil
+(Supabase, Netlify/AWS, Privy, Sentry, Mercado Pago). A transferência é
+realizada com prestadores que oferecem garantias adequadas de proteção de
+dados (cláusulas contratuais padrão, certificações de segurança) e em
+conformidade com a LGPD.
+
+12. CRIANÇAS
+
+O DesafioGUT não é direcionado a crianças e não coleta intencionalmente dados
+de menores de idade. O Gate de Consentimento exige declaração de maioridade.
+
+13. ALTERAÇÕES A ESTA POLÍTICA
+
+Esta Política pode ser atualizada periodicamente para refletir alterações
+legislativas, regulatórias ou de funcionalidades. A versão vigente será
+sempre a publicada em [URL DA POLÍTICA], e a data da última atualização será
+indicada no início do documento.
+
+14. CONTACTO E AUTORIDADE DE CONTROLO
+
+Para qualquer questão de privacidade ou proteção de dados, contacte:
+[E-MAIL DE CONTATO].
+
+Em caso de divergência não resolvida, o titular pode recorrer à Autoridade
+Nacional de Proteção de Dados (ANPD) — Brasil.
+
+Última atualização: 15 de agosto de 2026.
+
+================================================================================
+NOTAS DE CONFORMIDADE (para o operador — não publicar)
+================================================================================
+- A política cobre todos os elementos obrigatórios da User Data policy 2026:
+  identificação + contacto de privacidade; tipos de dados e finalidades;
+  partes com quem são partilhados; segurança; retenção e eliminação; título
+  claro "Política de Privacidade"; entidade (CNPJ) nomeada.
+- Consistente com o rascunho do Data Safety Form (MC90.2-S2).
+- A eliminação descrita (hard-delete + anonimização fiscal + retenção
+  on-chain) reflete exatamente o comportamento real de _lib/conta-delete.mjs
+  (MC72/MC89.43), incluindo atividade_utilizadores.
+- [E-MAIL DE CONTATO], [URL DA POLÍTICA] e [URL DE ELIMINAÇÃO] devem ser
+  preenchidos antes da publicação.
+================================================================================
