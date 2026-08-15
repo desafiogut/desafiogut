@@ -1,0 +1,65 @@
+================================================================================
+MC90.6-S1 — INSTRUÇÕES: CONFIGURAR O BLOBS_TOKEN NO NETLIFY
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+
+--------------------------------------------------------------------------------
+1.1 — O QUE É O BLOBS_TOKEN (contexto técnico)
+--------------------------------------------------------------------------------
+- O BLOBS_TOKEN é um "Personal access token" do Netlify usado pelo pacote
+  @netlify/blobs para autenticar operações de leitura/escrita nos Blobs do
+  site (getStore nas funções monitor-onchain, ia-preditiva, backup-blobs,
+  saldo-rs, wallet, cotas, etc.).
+- IMPORTANTE (nota técnica): em funções executadas DENTRO do site, o Netlify
+  injeta automaticamente o token do próprio site (NETLIFY_BLOBS_TOKEN) — por
+  isso algumas funções podem funcionar sem o BLOBS_TOKEN. O BLOBS_TOKEN
+  (pessoal) é necessário quando o acesso aos blobs é feito FORA do contexto
+  da função do site (scripts locais, CI/CD, funções com deploy context
+  distinto). Se as funções de produção estiverem a funcionar (verificar os
+  logs no S3), a configuração do BLOBS_TOKEN é PREVENTIVA/operacional, não
+  bloqueante.
+
+--------------------------------------------------------------------------------
+1.2 — PASSO A PASSO PARA CRIAR E CONFIGURAR O TOKEN
+--------------------------------------------------------------------------------
+1. Aceder ao Netlify Dashboard: https://app.netlify.com
+2. Clicar no avatar (canto superior direito) → "User settings" →
+   "Applications".
+3. Na secção "Personal access tokens", clicar em "New access token".
+4. Dar um nome ao token (ex.: "DesafioGUT-Blobs").
+5. Selecionar as permissões necessárias: pelo menos "Blobs: Read" e
+   "Blobs: Write" (o escopo de "Site" é suficiente; sem escopo de conta).
+6. Clicar em "Generate token" e COPIAR o token imediatamente (é exibido
+   UMA única vez; não é possível vê-lo novamente).
+7. Aceder ao site "silly-stardust-ca71bc" no Netlify →
+   "Site configuration" → "Environment variables".
+8. Adicionar a variável:
+   - Key    : BLOBS_TOKEN
+   - Value  : <o token copiado>
+   - Contexts: marcar "Production" (e "Deploy previews" se desejar paridade
+     em previews; "Branches" opcional).
+9. Clicar em "Save".
+10. Fazer um novo deploy (ou aguardar o próximo) para a variável ser
+    carregada no ambiente das funções:
+    netlify deploy --prod --build --message "MC90.6: adicionar BLOBS_TOKEN"
+11. Confirmar que o token foi reconhecido: os logs das funções com blobs não
+    devem mostrar erros de autenticação (verificar no dashboard → Logs →
+    Functions, ou no CLI: netlify logs --function <nome>).
+
+--------------------------------------------------------------------------------
+1.3 — NOTA DE SEGURANÇA (obrigatória)
+--------------------------------------------------------------------------------
+"O BLOBS_TOKEN é equivalente a uma palavra-passe: dá acesso de leitura/escrita
+aos Blobs do site. Não o partilhe, não o escreva em ficheiros do repositório e
+não o envie por mensagens. O Hermes NUNCA toca no valor do token — apenas
+verifica a sua EXISTÊNCIA no Netlify (o CLI mascara os valores na saída)."
+
+--------------------------------------------------------------------------------
+1.4 — PÓS-CONFIGURAÇÃO (o que o Hermes valida)
+--------------------------------------------------------------------------------
+- Reverificação: netlify env:list --context production | grep -i BLOBS
+  (deve aparecer BLOBS_TOKEN — valor mascarado).
+- Validação dos logs das funções com blobs (monitor-onchain, ia-preditiva,
+  backup-blobs) — sem erros "Missing authentication header" / "Invalid
+  token" / "Unauthorized".
+================================================================================
