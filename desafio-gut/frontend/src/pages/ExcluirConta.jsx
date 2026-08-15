@@ -40,6 +40,17 @@ export default function ExcluirConta() {
           <p style={{ margin: 0, color: COR.muted, fontSize: "0.92rem", lineHeight: 1.5 }}>
             Solicite a remoção permanente da sua conta e dos seus dados pessoais.
           </p>
+          {/* MC90.3 — aviso de irreversibilidade (User Data policy 2026: o pedido
+              de eliminação é efetivo e definitivo; congelamento não é substituto). */}
+          <p style={{
+            margin: "0.75rem auto 0", maxWidth: "480px",
+            color: COR.danger, fontSize: "0.84rem", lineHeight: 1.5,
+            border: "1px solid rgba(239,68,68,0.35)", borderRadius: "10px",
+            padding: "0.6rem 0.9rem", background: "rgba(239,68,68,0.08)",
+          }}>
+            ⚠️ Esta ação é <strong>irreversível</strong>. Ao confirmar, a conta e todos
+            os dados pessoais associados serão apagados permanentemente.
+          </p>
         </header>
 
         {/* O que é apagado / retido */}
@@ -105,6 +116,18 @@ export default function ExcluirConta() {
           Não consegue entrar? Solicite a exclusão pelo suporte:{" "}
           <a href="mailto:desafiogut01@gmail.com?subject=Solicita%C3%A7%C3%A3o%20de%20exclus%C3%A3o%20de%20conta"
             style={{ color: COR.blue300 }}>desafiogut01@gmail.com</a>
+        </p>
+        {/* MC90.3 — prazo de processamento (LGPD art. 15 e 18: atendimento em até
+            15 dias, prorrogável por mais 15) + link para a política de privacidade
+            (User Data policy: retenção e eliminação divulgadas na política). */}
+        <p style={{ textAlign: "center", color: COR.muted, fontSize: "0.8rem", lineHeight: 1.5 }}>
+          Prazo de processamento: o pedido é atendido em até <strong style={{ color: COR.text }}>15 dias</strong>,
+          prorrogável por mais 15 dias (LGPD).
+        </p>
+        <p style={{ textAlign: "center", color: COR.muted, fontSize: "0.8rem", lineHeight: 1.5 }}>
+          <a href="/privacidade" style={{ color: COR.blue300 }}>Política de Privacidade</a>
+          {" · "}
+          <a href="mailto:desafiogut01@gmail.com" style={{ color: COR.blue300 }}>Dúvidas: desafiogut01@gmail.com</a>
         </p>
         <p style={{ textAlign: "center", marginTop: "1.5rem" }}>
           <a href="/" style={{ color: COR.muted, fontSize: "0.82rem" }}>← Voltar ao app</a>
