@@ -1,0 +1,101 @@
+================================================================================
+MC90.4 — RELATÓRIO FINAL: PREPARAÇÃO PARA CRIAÇÃO DO APP E DATA SAFETY FORM
+DesafioGUT · Gerado: 2026-08-15 · Branch: main
+================================================================================
+
+--------------------------------------------------------------------------------
+1. RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+Foram gerados todos os artefactos para o operador criar o app na Play Console
+e preencher o Data Safety Form, sem executar ações na Play Console (R1: apenas
+documentos; R2: sem custo; R5: nenhuma credencial tocada — a keystore foi
+apenas LOCALIZADA e confirmada como gitignored).
+
+Destaques do levantamento (S0):
+- Rotas /privacidade e /excluir-conta ativas em produção (HTTP 200).
+- AAB release EXISTE e está ASSINADO (CN=DesafioGUT, Manaus/AM), MAS é de
+  21/07 — anterior ao MC90.3: precisa ser REGENERADO com o build atual.
+- Ícone 512x512 pronto (guto-icon-v3.png); feature graphic e screenshots
+  NÃO existem (pendências para a ficha).
+- Keystore em 2 locais (repo gitignored + backup "NÃO PERDER NUNCA").
+
+--------------------------------------------------------------------------------
+2. DOCUMENTOS GERADOS (todos em docs/, commitados)
+--------------------------------------------------------------------------------
+- MC90.4-LEVANTAMENTO.txt ......... estado dos artefactos (S0)
+- MC90.4-CRIAR-APP-DADOS.txt ...... dados de criação do app: nome, idioma
+                                   pt-BR, app gratuito, categoria FINANÇAS,
+                                   IARC sugerido (Livre/12), contactos, URLs
+                                   (S1)
+- MC90.4-DATA-SAFETY-FINAL.txt .... respostas finais do formulário com as
+                                   URLs de produção; 16 categorias; perguntas
+                                   de tratamento; consistência cruzada (S2)
+- MC90.4-FICHA-LOJA.txt ........... descrição curta (79 car.) e longa (~1500
+                                   car.), release notes, ícone, feature
+                                   graphic e screenshots pendentes, IARC (S3)
+- MC90.4-APK-RELEASE.txt .......... estado do AAB (desatualizado) + comandos
+                                   para regenerar (build:apk + bundleRelease)
+                                   + verificação de assinatura (S4)
+- MC90.4-CHECKLIST-SUBMISSAO.txt .. 18 passos com status [PRONTO]/[A FAZER]/
+                                   [BLOQUEIA] (S5)
+
+--------------------------------------------------------------------------------
+3. INSTRUÇÕES PASSO A PASSO PARA O OPERADOR
+--------------------------------------------------------------------------------
+1. CRIAR O APP NA PLAY CONSOLE
+   Abrir Play Console -> "Criar seu primeiro app" e copiar os dados do
+   MC90.4-CRIAR-APP-DADOS.txt (nome DesafioGUT, pt-BR, app gratuito,
+   categoria Finanças, marcar políticas). Package name: com.desafiogut.app.
+   Depois confirmar na Home que o app ficou registado (prazo 30/09/2026).
+
+2. PREENCHER O DATA SAFETY FORM
+   App content -> Data safety: copiar as respostas do
+   MC90.4-DATA-SAFETY-FINAL.txt. URLs a registar:
+   - Privacy Policy: https://silly-stardust-ca71bc.netlify.app/privacidade
+   - Account deletion: https://silly-stardust-ca71bc.netlify.app/excluir-conta
+   Em App content -> Financial features declaration: declarar pagamentos PIX
+   (Mercado Pago) e transações on-chain; NÃO declarar exchange/carteira.
+
+3. PREENCHER A FICHA DA LOJA
+   Copiar descrição curta e longa (MC90.4-FICHA-LOJA.txt), release notes,
+   contactos; fazer upload do ícone guto-icon-v3.png (512x512). GERAR antes:
+   feature graphic 1024x500 e 4-8 screenshots reais 1080x1920+ (telas
+   listadas no documento). Responder o questionário IARC com as sugestões.
+
+4. REGENERAR E SUBIR O AAB RELEASE
+   O AAB existente (21/07) está pré-MC90.3 (sem /privacidade). Executar:
+     cd desafio-gut/frontend && npm run build:apk
+     cd android && ./gradlew bundleRelease
+     jarsigner -verify app/build/outputs/bundle/release/app-release.aab
+   Subir o novo AAB na track de closed testing (versionCode 1).
+
+5. INICIAR O CLOSED TESTING
+   Seguir docs/MC90.2-CLOSED-TESTING-GUIDE.txt: 12+ testadores opt-in por 14
+   dias contínuos; uso guiado; feedback; depois aplicar para produção com a
+   conta demo (criar gut.testador@gmail.com) e o resumo do feedback.
+
+--------------------------------------------------------------------------------
+4. PRÓXIMOS PASSOS E PENDÊNCIAS (resumo)
+--------------------------------------------------------------------------------
+[BLOQUEIA] Regenerar AAB (assets Android pré-MC90.3) — comando documentado.
+[BLOQUEIA] Feature graphic 1024x500 (design).
+[BLOQUEIA] Screenshots 1080x1920+ (captura em dispositivo).
+[BLOQUEIA] Conta demo para revisão do Google.
+[BLOQUEIA] IARC (questionário interativo).
+[A FAZER]  Criar app, Data Safety, Financial declaration, ficha, closed
+           testing (12x14 dias), device verification, submissão.
+[Opcional] Domínio desafio-gut.com (DNS); ic_launcher do APK com ícone GUTO.
+[Paralelo] Whitelist Binance (24-48h); EOA coordenadora com ETH.
+
+--------------------------------------------------------------------------------
+5. VEREDITO (R8)
+--------------------------------------------------------------------------------
+O operador tem em mãos TODOS os artefactos para criar o app na Play Console e
+preencher o Data Safety Form: dados de criação, respostas finais consistentes
+com a política publicada, ficha da loja, passos do AAB e checklist priorizado.
+Nada neste MC requer desenvolvimento adicional; as pendências restantes são
+de configuração no Play Console e operação (closed testing).
+
+================================================================================
+FIM DO RELATÓRIO MC90.4
+================================================================================

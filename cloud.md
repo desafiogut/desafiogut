@@ -7192,3 +7192,27 @@ Artefactos: docs/MC90.3-{LEVANTAMENTO,VALIDACAO,DEPLOY,RELATORIO}.txt;
 src/pages/Privacidade.jsx (novo); src/pages/ExcluirConta.jsx, src/App.jsx,
 src/Boot.jsx, TermosConsentimento.jsx, Seguranca.jsx, MercadoLances.jsx
 (editados).
+## MC90.4 — os artefactos da Play Store estão prontos; o que falta é configurar
+
+MC de preparação (só documentos, zero código): tudo o que o operador precisa
+para criar o app na Play Console e preencher o Data Safety Form está em
+docs/MC90.4-*.txt — dados de criação (nome, idioma pt-BR, gratuito, categoria
+Finanças, IARC sugerido), respostas finais do formulário com as URLs de
+produção, ficha da loja (descrições, release notes, ícone 512x512 pronto) e
+checklist de submissão com 18 passos priorizados.
+
+O levantamento trouxe duas descobertas que mudam o plano:
+1) O AAB de release JÁ EXISTE e está assinado com a keystore do projeto
+(CN=DesafioGUT, Manaus/AM — verificado com jarsigner), mas é de 21/07,
+anterior ao MC90.3: não contém /privacidade nem /excluir-conta. Tem de ser
+regenerado (npm run build:apk + gradlew bundleRelease) antes da submissão.
+2) A keystore está gitignored e com backup em "BACKUP_KEYSTORE NÃO PERDER
+NUNCA" — só a existência foi documentada (R5), nada foi lido.
+
+Pendências bloqueantes para a submissão (nenhuma é código): regenerar o AAB,
+feature graphic 1024x500, 4-8 screenshots reais, conta demo para a revisão do
+Google e o questionário IARC. Depois disso: criar o app, preencher formulários
+e rodar o closed testing de 12 testadores x 14 dias (guia do MC90.2).
+
+Artefactos: docs/MC90.4-{LEVANTAMENTO,CRIAR-APP-DADOS,DATA-SAFETY-FINAL,
+FICHA-LOJA,APK-RELEASE,CHECKLIST-SUBMISSAO,RELATORIO}.txt
