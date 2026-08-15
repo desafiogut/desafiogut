@@ -1,0 +1,37 @@
+================================================================================
+MC90.6-S4 — DEPLOY: DECISÃO DOCUMENTADA
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1 — DECISÃO: deploy NÃO executado neste momento
+--------------------------------------------------------------------------------
+O briefing previa: "Se a variável foi adicionada, mas ainda não foi feito um
+deploy, sugerir ao operador (ou executar, se autorizado)".
+
+Estado real: a variável BLOBS_TOKEN AINDA NÃO foi adicionada ao Netlify (ação
+do operador — o Hermes não gera nem manipula o token, R5). Sem a variável,
+um deploy agora não ativaria nada — executá-lo violaria R1 (mínima alteração,
+sem ação desnecessária) e R2 (evitar trabalho sem efeito).
+
+--------------------------------------------------------------------------------
+4.2 — QUANDO EXECUTAR (procedimento do operador)
+--------------------------------------------------------------------------------
+Após adicionar o BLOBS_TOKEN no Netlify (instruções em
+docs/MC90.6-BLOBS-TOKEN-INSTRUCOES.txt):
+
+  cd C:\Users\Moltbot\Desktop\DESAFIOGUT
+  netlify deploy --prod --build --message "MC90.6: adicionar BLOBS_TOKEN"
+
+Depois:
+  netlify env:list --context production | grep -i BLOBS      (deve listar)
+  netlify logs --function monitor-onchain --since 10m        (sem auth errors)
+
+--------------------------------------------------------------------------------
+4.3 — NOTA
+--------------------------------------------------------------------------------
+O sistema está operacional SEM o token (getStore automático do site funciona
+— validado no S3). O deploy só é necessário para carregar a variável quando
+o operador a adicionar; o token é preventivo (scheduled functions futuras /
+acesso externo).
+================================================================================
