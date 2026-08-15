@@ -1,0 +1,76 @@
+================================================================================
+MC90.4-S0 — LEVANTAMENTO DO ESTADO DOS ARTEFACTOS (PLAY CONSOLE)
+DesafioGUT · Gerado: 2026-08-15 · Branch: main @ 1ed2ac8
+================================================================================
+
+--------------------------------------------------------------------------------
+0.1 — ARTEFACTOS DOS MCs ANTERIORES (docs/)
+--------------------------------------------------------------------------------
+Existem 13 documentos MC90.2/MC90.3 (confirmado por ls):
+- MC90.2: REQUISITOS-2026, GAP-ANALYSIS, POLITICA-PRIVACIDADE-TEXTO,
+  DATA-SAFETY-RASCUNHO, ELIMINACAO-CONTAS, CLOSED-TESTING-GUIDE,
+  REQUISITOS-TECNICOS, CHECKLIST-CONFORMIDADE, RELATORIO
+- MC90.3: LEVANTAMENTO, VALIDACAO, DEPLOY, RELATORIO
+
+Todos presentes e commitados.
+
+--------------------------------------------------------------------------------
+0.2 — ROTAS PÚBLICAS (validadas em produção, 2026-08-15)
+--------------------------------------------------------------------------------
+- https://silly-stardust-ca71bc.netlify.app/privacidade   -> HTTP 200
+- https://silly-stardust-ca71bc.netlify.app/excluir-conta -> HTTP 200
+=> URLs prontas para os campos Privacy Policy e Account deletion do Play
+   Console. (Domínio custom desafio-gut.com continua NXDOMAIN — pendência
+   de DNS do operador, não bloqueia.)
+
+--------------------------------------------------------------------------------
+0.3 — APK / AAB DE RELEASE
+--------------------------------------------------------------------------------
+- APK release (app-release.apk): NÃO EXISTE.
+- APK debug (app-debug.apk): EXISTE (build/outputs/apk/debug/) — serve para
+  testes locais, NÃO para a Play Store.
+- A Play Store exige AAB (bundle) ou APK release assinado. A geração do AAB
+  release assinado fica documentada no S4.
+
+--------------------------------------------------------------------------------
+0.4 — KEYSTORE (R5: só existência, nunca conteúdo)
+--------------------------------------------------------------------------------
+- keystore/desafiogut.keystore  (no repo, mas GITIGNORED — .gitignore:11
+  "keystore/"; confirmado via git check-ignore; NÃO versionado)
+- Backup: C:\Users\Moltbot\Desktop\GUTO\BACKUP_KEYSTORE NÃO PERDER NUNCA\
+  desafiogut.keystore
+- keystore.properties existe em android/ (referencia o keystore; contém
+  credenciais — não lido, não commitado).
+- Apenas a EXISTÊNCIA é documentada (R4/R5).
+
+--------------------------------------------------------------------------------
+0.5 — ÍCONE E SCREENSHOTS (para a ficha da loja)
+--------------------------------------------------------------------------------
+- Ícone Play Store (512x512 exigido):
+  desafio-gut/frontend/public/assets/guto/v3/guto-icon-v3.png (512x512 PNG) ✅
+  (alternativa: guto-icon-v2.png, 512x512)
+- Ícone Android (ic_launcher): res/mipmap-*/ic_launcher.png (192x192 xxxhdpi)
+  — provavelmente o padrão do Capacitor; a Play Store rejeita ícones padrão.
+  PENDÊNCIA: regenerar os ic_launcher do APK com o ícone GUTO (fora do
+  escopo deste MC — documentado no S3 como ação do operador/outro MC).
+- Screenshots do app: NÃO EXISTEM (public/assets/telas só tem imagens de
+  referência/identidade, não capturas do app). PENDÊNCIA: capturar 4-8 telas
+  reais (1080x1920) após o closed testing ou em dispositivo.
+
+--------------------------------------------------------------------------------
+0.6 — ESTADO DA CONTA/APP PLAY CONSOLE
+--------------------------------------------------------------------------------
+- Conta do Ruan: verificada (passaporte + comprovante; identidade OK).
+- App: NÃO criado (tela "Criar seu primeiro app").
+- Closed testing: não iniciado. Whitelist Binance: 24-48h (fora do escopo).
+
+--------------------------------------------------------------------------------
+0.7 — O QUE ESTE MC PRODUZ (docs prontos para copiar e colar)
+--------------------------------------------------------------------------------
+1. MC90.4-CRIAR-APP-DADOS.txt  (S1 — dados de criação do app)
+2. MC90.4-DATA-SAFETY-FINAL.txt (S2 — respostas finais do formulário)
+3. MC90.4-FICHA-LOJA.txt        (S3 — descrições, screenshots, ícone)
+4. MC90.4-APK-RELEASE.txt       (S4 — passos/comandos do AAB release)
+5. MC90.4-CHECKLIST-SUBMISSAO.txt (S5 — checklist final)
+R1: apenas documentos — nenhuma alteração de código.
+================================================================================
