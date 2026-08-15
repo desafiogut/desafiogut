@@ -1,0 +1,81 @@
+================================================================================
+MC90.4-S4 — APK/AAB DE RELEASE: ESTADO E GERAÇÃO
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1 — ESTADO ATUAL (verificado em 15/08/2026)
+--------------------------------------------------------------------------------
+- AAB release EXISTE: android/app/build/outputs/bundle/release/app-release.aab
+  * Tamanho: 34.416.933 bytes (~34,4 MB)
+  * Data: 21/07/2026 05:31
+  * Assinatura: VERIFICADA (jarsigner: "jar verified") com certificado
+    X.509 CN=DesafioGUT, OU=Desenvolvimento, O=DesafioGUT, L=Manaus,
+    ST=Amazonas, C=BR — ou seja, ASSINADO COM A KEYSTORE DO PROJETO (não é
+    a chave debug do Android Studio).
+- APK debug existe (app-debug.apk) — só para testes locais.
+- Assets do Capacitor (android/app/src/main/assets/public): sincronizados em
+  03/08/2026 — ANTES do MC90.3 (15/08).
+
+⚠️ CONCLUSÃO CRÍTICA: o AAB atual está DESATUALIZADO em relação ao código em
+produção:
+- Não contém as rotas /privacidade e /excluir-conta (MC90.3);
+- Não contém os links internos corrigidos (iubenda -> /privacidade);
+- Não contém o texto da Política de Privacidade.
+=> O AAB deve ser REGENERADO antes da submissão à Play Store.
+
+--------------------------------------------------------------------------------
+4.2 — COMO REGENERAR (ordem correta — R10 respeitado)
+--------------------------------------------------------------------------------
+Etapa 1 — Atualizar os assets web dentro do projeto Android (Capacitor):
+  cd C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend
+  npm run build:apk
+  (R10: NUNCA usar "npm run build" isolado para o APK — build:apk executa:
+   netlify build --context production -> validar:dist -> npx cap sync android.
+   O netlify build garante que as variáveis de produção do dashboard Netlify
+   entram no bundle; o cap sync copia dist/ para android/app/src/main/
+   assets/public.)
+
+Etapa 2 — Gerar o AAB de release ASSINADO:
+  cd C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\android
+  ./gradlew bundleRelease
+  (usa o signingConfig release de app/build.gradle, que lê
+   keystore.properties -> desafiogut.keystore; a assinatura foi validada no
+   AAB de 21/07 com o mesmo keystore.)
+
+Etapa 3 — Verificar o novo AAB:
+  jarsigner -verify app/build/outputs/bundle/release/app-release.aab
+  (deve dizer "jar verified")
+  ls -la app/build/outputs/bundle/release/app-release.aab
+  Confirmar data > 15/08/2026 e tamanho ~34+ MB.
+
+--------------------------------------------------------------------------------
+4.3 — PRÉ-REQUISITOS (verificados)
+--------------------------------------------------------------------------------
+- gradlew/gradlew.bat presentes.
+- Java: OpenJDK 17.0.19 (2026) — compatível com o Gradle do projeto.
+- ANDROID_HOME definido.
+- keystore.properties existe (android/) — aponta para o keystore.
+- Keystore: C:\Users\Moltbot\Desktop\DESAFIOGUT\keystore\desafiogut.keystore
+  (gitignored — confirmado) + backup em C:\Users\Moltbot\Desktop\GUTO\
+  BACKUP_KEYSTORE NÃO PERDER NUNCA\desafiogut.keystore.
+  (R5: nenhum segredo foi lido ou exposto neste documento.)
+
+--------------------------------------------------------------------------------
+4.4 — PLAY STORE: AAB VS APK
+--------------------------------------------------------------------------------
+- A Play Store exige AAB (Android App Bundle) para apps novos — o
+  app-release.aab regenerado é o artefacto correto para upload.
+- NÃO enviar o APK debug (rejeitado por estar assinado com chave debug).
+- versionCode 1 / versionName "1.0.0" (build.gradle) — corretos para a
+  primeira submissão; incrementar versionCode em submissões seguintes.
+
+--------------------------------------------------------------------------------
+4.5 — NOTAS DE SEGURANÇA (R4/R5)
+--------------------------------------------------------------------------------
+- A keystore NUNCA deve ser commitada (está gitignored — OK).
+- O backup "BACKUP_KEYSTORE NÃO PERDER NUNCA" é o ponto de recuperação —
+  sem ele, perde-se a identidade de assinatura e o app não pode ser
+  atualizado. Não mover/apagar.
+- keystore.properties contém credenciais — não commitado, não exposto.
+================================================================================
