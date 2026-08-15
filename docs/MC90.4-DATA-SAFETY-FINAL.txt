@@ -1,0 +1,151 @@
+================================================================================
+MC90.4-S2 — DATA SAFETY FORM: RESPOSTAS FINAIS (COPIAR E COLAR NO PLAY CONSOLE)
+DesafioGUT · Gerado: 2026-08-15 · Consistente com a política publicada
+URLs de referência:
+- Política de privacidade: https://silly-stardust-ca71bc.netlify.app/privacidade
+- Eliminação de conta:     https://silly-stardust-ca71bc.netlify.app/excluir-conta
+================================================================================
+ONDE PREENCHER: Play Console -> app -> App content (Conteúdo do app) ->
+Data safety (Segurança dos dados).
+
+--------------------------------------------------------------------------------
+PARTE A — PERGUNTAS GERAIS (topo do formulário)
+--------------------------------------------------------------------------------
+P1. O app coleta ou compartilha algum dos tipos de dados de usuário
+    obrigatórios?
+    RESPOSTA: SIM (coleta).
+
+P2. Todos os dados coletados são criptografados em trânsito?
+    RESPOSTA: SIM (HTTPS/TLS em toda a stack: Netlify, Supabase, Privy,
+    Mercado Pago, Sentry).
+
+P3. O app fornece um mecanismo para o usuário solicitar a exclusão dos dados?
+    RESPOSTA: SIM.
+    URL/mecanismo: https://silly-stardust-ca71bc.netlify.app/excluir-conta
+    (página web) + funcionalidade in-app (Configurações -> Excluir conta).
+
+P4. O app é comprometido com a política Famílias do Google Play?
+    RESPOSTA: NÃO (não direcionado a crianças; gate de maioridade).
+
+--------------------------------------------------------------------------------
+PARTE B — CATEGORIAS DE DADOS (declarar "Sim"/"Não" + detalhes)
+--------------------------------------------------------------------------------
+O formulário pergunta, por categoria coletada: coletado? compartilhado? (com
+quem) essencial? criptografado em trânsito? usuário pode pedir eliminação?
+
+[1] LOCALIZAÇÃO (aproximada/precisa)
+    Coleta: NÃO. (Sem permissão de localização; sem GPS.)
+
+[2] INFORMAÇÕES PESSOAIS
+    Coleta: SIM.
+    Subcategorias: Nome (Sim), E-mail (Sim), IDs de usuário (Sim),
+    Endereço (Não), Telefone (Não), Raça/etnia/crenças/orientação (Não),
+    Outras informações pessoais (Sim — endereço público de carteira
+    Ethereum, usado como identificador).
+    Compartilhado: SIM — Privy (autenticação), Supabase (armazenamento),
+    Netlify (backend), blockchain Ethereum (endereço pseudónimo).
+    Essencial: SIM. Criptografado em trânsito: SIM.
+    Eliminação: SIM (delete-account apaga os dados pessoais; endereço
+    on-chain é pseudónimo/imutável — divulgado na política).
+
+[3] INFORMAÇÕES FINANCEIRAS
+    Coleta: SIM.
+    Subcategorias: Histórico de compras (Sim), Número de cartão (Não — PIX
+    processado pelo Mercado Pago), Outras informações financeiras (Sim —
+    valores/transações).
+    Compartilhado: SIM — Mercado Pago (processamento PIX), Supabase,
+    Netlify.
+    Essencial: SIM. Criptografado: SIM.
+    Eliminação: SIM (hard-delete) — registos fiscais anonimizados retidos
+    por obrigação legal (divulgado na política).
+
+[4] SAÚDE E APTIDÃO FÍSICA — NÃO.
+
+[5] MENSAGENS (e-mail/SMS/in-app) — NÃO (o OTP da Privy não acede a
+    conteúdo de mensagens).
+
+[6] FOTOS OU VÍDEOS — NÃO.
+
+[7] ARQUIVOS DE ÁUDIO — NÃO.
+
+[8] ARQUIVOS E DOCUMENTOS — NÃO.
+
+[9] CALENDÁRIO — NÃO.
+
+[10] CONTATOS — NÃO.
+
+[11] ATIVIDADE NO APP
+    Coleta: SIM.
+    Subcategorias: Interações no app (Sim), Histórico de pesquisa (Não),
+    Apps instalados (Não), Outro conteúdo gerado pelo usuário (Sim — lances
+    com hash Argon2id, histórico), Outras ações (Sim — registos de presença
+    em atividade_utilizadores: endereço + carimbo de data/hora).
+    Compartilhado: SIM — Supabase; lances também de forma pseudónima na
+    blockchain.
+    Essencial: PARCIAL (lances: sim; interações de navegação: opcional —
+    declarar "opcional" se o formulário separar; na dúvida, marcar
+    essencial para lances e opcional para o resto, conforme subcategoria).
+    Criptografado: SIM. Eliminação: SIM (delete-account apaga lances e
+    atividade_utilizadores; on-chain retido/pseudónimo).
+
+[12] NAVEGAÇÃO NA WEB — NÃO.
+
+[13] INFORMAÇÕES DE DESEMPENHO DO APP
+    Coleta: SIM (apenas com consentimento).
+    Subcategorias: Crash logs (Sim — Sentry), Diagnósticos (Sim — Sentry),
+    Outros dados de desempenho (Não).
+    Compartilhado: SIM — Sentry.
+    Essencial: NÃO (opcional). Criptografado: SIM.
+    Eliminação: SIM (dados de diagnóstico removíveis; retenção padrão do
+    Sentry).
+
+[14] DISPOSITIVO OU OUTROS IDs
+    Coleta: SIM.
+    Subcategorias: Dispositivo ou outros IDs (Sim — IDs gerados pelos
+    serviços: Privy user ID, Supabase UUID; Android ID usado apenas
+    internamente para segurança/anti-fraude; NÃO ligado a identificadores
+    de publicidade).
+    Compartilhado: SIM — Privy, Supabase.
+    Essencial: SIM (conta e segurança). Criptografado: SIM.
+    Eliminação: SIM (delete-account remove identificadores da conta).
+
+[15] OUTROS TIPOS DE DADOS NÃO LISTADOS — NÃO aplicável (declarar nada
+     além do acima).
+
+--------------------------------------------------------------------------------
+PARTE C — PERGUNTAS DE TRATAMENTO (por categoria coletada)
+--------------------------------------------------------------------------------
+Para cada categoria coletada (2, 3, 11, 13, 14), responder:
+- Compartilhado com terceiros? SIM (listar os SDKs da Parte B).
+- É essencial para o funcionamento? Conforme indicado na Parte B.
+- Criptografado em trânsito? SIM.
+- Usuário pode solicitar eliminação? SIM (mecanismo /excluir-conta).
+
+Declaração uniforme (texto opcional no formulário, se houver campo livre):
+"Os dados são tratados exclusivamente para o funcionamento do serviço
+(autenticação, lances, pagamentos PIX e segurança). Nenhum dado é vendido
+nem usado para publicidade comportamental. A eliminação de conta apaga os
+dados pessoais; registos fiscais são anonimizados por obrigação legal e os
+dados on-chain são imutáveis — conforme a Política de Privacidade publicada
+em https://silly-stardust-ca71bc.netlify.app/privacidade."
+
+--------------------------------------------------------------------------------
+PARTE D — OUTRAS DECLARAÇÕES (fim do formulário)
+--------------------------------------------------------------------------------
+- Coleta de dados pessoais de crianças? NÃO (app não direcionado a menores).
+- O app é "comprometido com a política Famílias"? NÃO.
+- Revisão de segurança independente (Mobile App Security Assessment)?
+  NÃO (não realizada — opcional; considerar no futuro).
+- UPI (Unified Payments Interface)? NÃO (fora da Índia).
+
+--------------------------------------------------------------------------------
+PARTE E — CONSISTÊNCIA COM A POLÍTICA (verificação cruzada)
+--------------------------------------------------------------------------------
+[OK] Categorias "coletado" batem com SDKs reais (Privy, Supabase, Netlify,
+     Mercado Pago, Sentry) — package.json + functions.
+[OK] Categorias "não coletado" batem com o manifest Android (só INTERNET).
+[OK] atividade_utilizadores declarada em "Atividade no app".
+[OK] Eliminação declarada de forma idêntica à política (hard-delete +
+     anonimização fiscal + retenção on-chain).
+[OK] URLs finais (privacidade/excluir-conta) são as de produção (HTTP 200).
+================================================================================
