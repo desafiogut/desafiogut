@@ -1,0 +1,101 @@
+================================================================================
+MC90.4-S1 — DADOS PARA CRIAÇÃO DO APP NA PLAY CONSOLE (COPIAR E COLAR)
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+INSTRUÇÃO: abrir Play Console -> "Criar seu primeiro app" e preencher com os
+valores abaixo. Nenhum destes dados implica custo (R2).
+
+--------------------------------------------------------------------------------
+1. DADOS BÁSICOS DO APP
+--------------------------------------------------------------------------------
+- Nome do app (app name)............: DesafioGUT
+- Idioma padrão (default language)..: Português (Brasil) — pt-BR
+- Tipo de app (app type)............: App (NÃO é jogo)
+- Gratuito ou pago..................: Gratuito
+- Políticas de conteúdo.............:
+  * "Declaro que o meu app cumpre as Políticas do Programa de Desenvolvedores
+    e o Contrato de Distribuição de Desenvolvedores" -> MARCAR (verificar a
+    caixa)
+  * "A minha app cumpre a legislação aplicável nos EUA, incluindo a Lei de
+    Responsabilidade e Informação de Crédito (FCRA) e a Lei de Oportunidade
+    de Crédito Igualitária (ECOA)" -> MARCAR (a app não concede crédito;
+    cumpre por não se enquadrar)
+- Programa de benefícios (programs)...: Nenhum (não aderir a programas
+  especiais)
+
+--------------------------------------------------------------------------------
+2. CATEGORIA (Decisão da auditoria)
+--------------------------------------------------------------------------------
+- Categoria principal: FINANÇAS
+- Justificativa: o app processa pagamentos PIX (Mercado Pago) e transações
+  on-chain (lances na Ethereum mainnet via embedded wallet Privy). A
+  categoria Finanças é a mais coerente com a declaração financeira e reduz o
+  risco de o Google reclassificar o app. (Alternativa descartada: Jogos —
+  não é o foco.)
+- Subcategoria: escolher a mais próxima disponível (ex.: "Pagamentos" ou
+  "Finanças pessoais" conforme a lista exibida). Se "Finanças" exigir
+  subcategoria e houver dúvida, usar "Pagamentos".
+
+--------------------------------------------------------------------------------
+3. CLASSIFICAÇÃO INDICATIVA (IARC) — respostas sugeridas
+--------------------------------------------------------------------------------
+O questionário IARC é respondido na Play Console (não dá para automatizar).
+Sugestões com base no conteúdo real do app (leilão + compras + chat/social):
+
+a) Conteúdo gerado pelo utilizador (UGC): SIM, os utilizadores podem
+   partilhar lances/público? — na prática NÃO há upload de ficheiros; os
+   lances são valores numéricos. Responder "Não" a upload/partilha de
+   conteúdo do utilizador.
+b) Interação social / comunicação entre utilizadores: SIM (painéis, chat
+   GUTO, mas sem comunicação direta entre utilizadores). Se o questionário
+   perguntar por "interação social", responder o nível real (baixo).
+c) Compras no app (pagamentos reais): SIM — compra de senhas via PIX
+   (pagamento fora do billing do Google; declarar "pagamentos reais").
+d) Publicidade: NÃO há anúncios.
+e) Violência, sexo, linguagem, jogos de azar: NÃO. O app é um leilão
+   regulamentado (menor lance único) — NÃO é jogo de azar; sem conteúdo
+   violento/sexual.
+
+RESULTADO ESPERADO: Livre (0 anos) ou 12 anos (por compras/interação).
+Na dúvida, o questionário determina; o valor aceitável é Livre ou 12.
+
+--------------------------------------------------------------------------------
+4. CONTACTOS (Developer account — já preenchidos, confirmar)
+--------------------------------------------------------------------------------
+- E-mail de contacto (mostrado na Play): desafiogut01@gmail.com
+- E-mail de contacto (Google, não mostrado): desafiogut@gmail.com
+- Website (opcional): https://silly-stardust-ca71bc.netlify.app
+- Telefone: o verificado na conta (confirmar no About you)
+
+--------------------------------------------------------------------------------
+5. URLs OBRIGATÓRIAS (campos da ficha / app content)
+--------------------------------------------------------------------------------
+- Política de privacidade (Privacy Policy):
+  https://silly-stardust-ca71bc.netlify.app/privacidade
+- Eliminação de conta (Account deletion URL):
+  https://silly-stardust-ca71bc.netlify.app/excluir-conta
+
+--------------------------------------------------------------------------------
+6. DADOS TÉCNICOS (para a ficha e o bundle)
+--------------------------------------------------------------------------------
+- Package name (applicationId): com.desafiogut.app
+- Version code inicial...........: 1
+- Version name...................: 1.0.0
+- Target API level...............: 36 (Android 16) — já conforme (31/08/2026)
+- Min API level..................: 24 (Android 7.0)
+- Formato de distribuição........: AAB (bundle) — ver MC90.4-APK-RELEASE.txt
+
+--------------------------------------------------------------------------------
+7. NOTAS DE CONSISTÊNCIA
+--------------------------------------------------------------------------------
+- O nome "DesafioGUT" aparece na política de privacidade (controlador:
+  Grupo União e Trabalho, CNPJ 23.040.066/0001-00) — a entidade do store
+  listing deve corresponder (conta pessoal do Ruan: o nome de desenvolvedor
+  será o nome legal verificado; a política nomeia a empresa — requisito
+  "o app deve ser nomeado na política" está cumprido).
+- Categoria Finanças + Financial features declaration (App content):
+  declarar pagamentos PIX (Mercado Pago) e transações on-chain — NÃO
+  declarar exchange/carteira autónoma (ver GAP 3 do MC90.2).
+- O questionário IARC deve refletir que NÃO há jogo de azar (o leilão de
+  menor lance único é regido por regulamento próprio e não é sorteio).
+================================================================================
