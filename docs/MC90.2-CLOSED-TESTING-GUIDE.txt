@@ -1,0 +1,166 @@
+================================================================================
+MC90.2-S4 — GUIA PRÁTICO DE CLOSED TESTING (CONFORME 2026)
+DesafioGUT · Gerado: 2026-08-15
+Fonte: Play Console Help — "App testing requirements for new personal
+developer accounts" (https://support.google.com/googleplay/android-developer/answer/14151465)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. REQUISITOS EXATOS DO GOOGLE PLAY (2026)
+--------------------------------------------------------------------------------
+A conta do Ruan é PESSOAL e foi criada após 13/11/2023, portanto:
+
+[OBRIGATÓRIO] Mínimo de 12 testadores com opt-in CONTÍNUO por pelo menos 14
+              dias antes de solicitar acesso à produção.
+[OBRIGATÓRIO] Os testadores devem permanecer no programa durante todo o
+              período. Se o número cair abaixo de 12, o cronómetro dos 14 dias
+              é interrompido/avaliado — o Google verifica o opt-in contínuo de
+              12+ testadores nos 14 dias anteriores ao pedido de produção.
+[OBRIGATÓRIO] Ao aplicar para produção, responder perguntas sobre o design do
+              app, o processo de teste e a prontidão, incluindo um resumo do
+              feedback recebido.
+[NOTA] Internal testing é opcional e recomendado como primeiro passo (builds
+       disponíveis em segundos), mas NÃO substitui o closed test.
+[NOTA] Emuladores: o Google recomenda dispositivos reais; a revisão de
+       qualidade e o pre-launch report podem sinalizar problemas de
+       compatibilidade se só houver testes em emulador. Use dispositivos reais
+       sempre que possível.
+[NOTA] O Google NÃO exige formalmente "uso diário" mensurável, mas o
+       engajamento real e o feedback são parte da avaliação de prontidão —
+       testadores inativos ou contas suspeitas prejudicam a candidatura.
+
+--------------------------------------------------------------------------------
+2. ANTES DE COMEÇAR (pré-requisitos do app no Play Console)
+--------------------------------------------------------------------------------
+1. Criar o app na Play Console com o package name: com.desafiogut.app
+   (a tela "Criar seu primeiro app" já está aberta).
+2. Conferir na Home que o app ficou REGISTADO (requisito de verificação de
+   desenvolvedor — prazo 30/09/2026).
+3. Preencher antes do closed test (evita rejeição na revisão):
+   - Política de privacidade (URL pública — GAP 1) -> campo Privacy Policy;
+   - Data Safety form (rascunho S2);
+   - Financial features declaration (S2, parte 5);
+   - URL de eliminação de conta (S3 — usar rota /excluir-conta);
+   - Classificação de conteúdo (IARC) e classificação etária;
+   - Permissões declaradas: apenas INTERNET.
+4. Gerar o AAB (bundle) de release assinado e subir para a track de closed
+   testing (Test and release > Testing > Closed testing).
+
+--------------------------------------------------------------------------------
+3. COMO RECRUTAR OS 12+ TESTADORES
+--------------------------------------------------------------------------------
+Critérios dos testadores:
+- Contas Google legítimas e pessoais (nada de contas recém-criadas em massa
+  nem contas "fake" — o Google detecta e rejeita).
+- Diversos modelos Android reais (ideal: >= 3 fabricantes, >= 2 versões de
+  Android diferentes; o app tem targetSdk 36 / minSdk 24).
+- Idealmente pessoas do perfil do público: participantes de leilão,
+  curiosos do DesafioGUT.
+
+Canais de recrutamento (sem custo):
+- Amigos, familiares e colegas (Ruan) — o mais simples.
+- Grupo de Telegram/WhatsApp "Testadores DesafioGUT": orientações, lembretes
+  diários, canal de feedback e bugs.
+- Redes sociais do projeto (se houver): convite para o teste fechado.
+- Comunidades locais (grupos de leilão, dropshipping, finanças).
+
+Processo:
+1. No Play Console, criar a track de closed testing e adicionar os e-mails
+   Google dos testadores (lista de testadores) + gerar o link de opt-in.
+2. Enviar o link individualmente; cada testador clica, aceita o convite e
+   instala o app (via Play Store, conta configurada no dispositivo).
+3. Registrar a data de opt-in de cada testador (planilha simples): o Google
+   conta 14 dias contínuos a partir do momento em que os 12+ estão opt-in.
+4. Lembretes diários no grupo: "abra o app hoje e faça X" (ver secção 4).
+5. Coletar feedback estruturado (ver secção 5).
+
+--------------------------------------------------------------------------------
+4. O QUE TESTAR — FLUXOS CRÍTICOS DO DESAFIOGUT
+--------------------------------------------------------------------------------
+[P0 — bloqueiam lançamento se falharem]
+1. Login/registro com Google (Privy OAuth) em Android real; criação automática
+   da carteira; logout/login novamente.
+2. Gate de consentimento LGPD (aparece antes de qualquer interação; aceitar e
+   verificar que não reaparece na mesma sessão).
+3. Visualização do leilão ativo (edição "R-1"): contagem regressiva, lista de
+   lances, regra do menor lance único (Art. VIII).
+4. Lançamento de lance: fluxo normal (formulário -> hash Argon2id ->
+   assinatura EIP-191 via Privy -> transação on-chain mainnet) e o fluxo
+   programado/relâmpago (se disponível). Verificar confirmação e atualização
+   da tabela.
+5. Compra de senhas via PIX: iniciar pagamento -> QR Code/PIX -> esperar o
+   polling (confirmar-pagamento) -> saldo de senhas atualizado. (Usar PIX
+   real de valor mínimo com o operador para validar o ciclo completo.)
+6. Visualização de saldo: senhas disponíveis e saldo R$.
+
+[P1 — qualidade]
+7. Painel do lojista (cotas, produtos, banners) — se aplicável ao testador.
+8. Painel ADM (navegação, logs, utilizadores) — apenas com o Ruan/admin.
+9. Edição de perfil, configurações, página de segurança (links de política).
+10. Eliminação de conta: fluxo /excluir-conta (dryRun -> exclusão real) numa
+    conta de teste dedicada, verificando que os dados somem (tabelas
+    atividade_utilizadores, lances etc.) — evidência para o requisito de
+    eliminação.
+11. Erros de rede (modo avião): mensagens de erro amigáveis, sem crash.
+12. Atualização do app (nova versão) mantendo sessão.
+
+[P2 — regressão]
+13. Back/forward do Android, rotação de ecrã, notificações.
+14. Consumo de bateria/dados durante o uso normal.
+
+--------------------------------------------------------------------------------
+5. FEEDBACK E EVIDÊNCIAS
+--------------------------------------------------------------------------------
+- Criar formulário simples (Google Forms gratuito) ou canal no grupo:
+  "O que testou / O que falhou / Passos para reproduzir / Versão do Android e
+  modelo".
+- Registrar bugs com prints e passos (o Google pede resumo do feedback na
+  candidatura à produção — ter isto organizado é meio caminho andado).
+- Responder aos testadores (fechar o ciclo).
+- Manter o registo de: data de opt-in de cada testador, dias em que abriu o
+  app, bugs encontrados e correções.
+
+--------------------------------------------------------------------------------
+6. DICAS PARA EVITAR REJEIÇÃO
+--------------------------------------------------------------------------------
+- Nunca cair abaixo de 12 testadores opt-in durante os 14 dias — recrutar 14
+  ou 15 de reserva desde o início.
+- Testadores devem instalar a versão mais recente da track e abrir o app
+  regularmente (engajamento visível).
+- Não usar emuladores como substituto dos dispositivos reais.
+- Não usar contas Google duplicadas/suspeitas.
+- Manter o closed test ATIVO até o pedido de produção ser aprovado (não
+  encerrar a track antes).
+- Ter a política de privacidade, Data Safety e URL de eliminação prontos
+  ANTES de submeter (a revisão de produção valida tudo junto).
+- Evitar mudanças drásticas de código durante os 14 dias (testar o que será
+  publicado).
+
+--------------------------------------------------------------------------------
+7. LINHA DO TEMPO SUGERIDA
+--------------------------------------------------------------------------------
+Dia 0      : criar app no Play Console; preencher política/Data Safety/
+             financial/eliminação; subir AAB na track de closed testing.
+Dia 0-3    : recrutar 14+ testadores; adicionar e-mails; testadores fazem
+             opt-in e instalam; registar datas.
+Dia 3-17   : 14 dias contínuos com 12+ testadores ativos; uso diário guiado;
+             corrigir bugs (subir novas versões na track; testadores
+             atualizam e continuam opt-in — atualizar versão não reinicia o
+             cronómetro, desde que o testador permaneça no programa).
+Dia 17     : aplicar para acesso à produção (Dashboard) com resumo do
+             feedback; responder às perguntas de prontidão.
+Pós-       : manter closed test ativo até aprovação; depois decidir promoção
+aprovação   para open/production.
+
+--------------------------------------------------------------------------------
+8. LEMBRETES IMPORTANTES
+--------------------------------------------------------------------------------
+- O cronómetro é do GOOGLE (Play Console): ele valida 12+ testadores opt-in
+  contínuos nos 14 dias anteriores ao pedido. Não é necessário "14 dias de
+  uso ativo por cada testador" — é opt-in contínuo de 12+ durante 14 dias.
+- Custos: zero para o teste em si (taxa da conta já paga); PIX de teste com
+  valor mínimo se quiserem validar o ciclo completo.
+- O app em closed testing NÃO aparece publicamente na Play Store.
+- Testadores podem dar feedback privado pelo próprio Google Play (Testing
+  feedback no Play Console).
+================================================================================
