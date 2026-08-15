@@ -1,0 +1,96 @@
+================================================================================
+MC90.3-S0 — LEVANTAMENTO DA ESTRUTURA DE ROTEAMENTO
+DesafioGUT · Gerado: 2026-08-15 · Branch: main
+================================================================================
+
+--------------------------------------------------------------------------------
+0.1 — ESTADO INICIAL
+--------------------------------------------------------------------------------
+- Repo: C:\Users\Moltbot\Desktop\DESAFIOGUT (working tree limpo, main @ bc7b92d).
+- Frontend: desafio-gut/frontend (React 18 + Vite 8 + React Router).
+- Scripts package.json: "build": "vite build"; "build:apk": netlify build +
+  validar:dist + cap sync android (R10 — build APK usa build:apk, nunca
+  npm run build isolado para APK).
+
+--------------------------------------------------------------------------------
+0.2 — ESTRUTURA DO ROTEADOR (src/App.jsx)
+--------------------------------------------------------------------------------
+- BrowserRouter + <Routes> dentro de <Suspense fallback={<RouteFallback />}>
+  e <LazyBoundary> (chunk-404 pós-deploy -> reload).
+- Páginas lazy-loaded: const X = lazy(() => import("./pages/X.jsx"));
+  (ExcluirConta já segue este padrão — App.jsx:74).
+- Rotas públicas standalone (FORA do AppLayout e do gate LGPD):
+  <Route path="/excluir-conta" element={<ExcluirConta />} /> (App.jsx:370).
+- Rotas com layout: <Route element={<AppLayout />}> (3 camadas) contém as
+  páginas autenticadas (carteira, mercado, vitrine, admin, corporativo...).
+
+--------------------------------------------------------------------------------
+0.3 — PÁGINAS PÚBLICAS EXISTENTES
+--------------------------------------------------------------------------------
+- src/pages/ExcluirConta.jsx — JÁ EXISTE (MC72):
+  * Página pública standalone de solicitação de exclusão;
+  * Dentro dos providers (Privy/AppContext) — reutiliza login e JWT;
+  * Renderiza fora do gate LGPD e da navegação (Boot.jsx trata
+    rotaPublicaExclusao);
+  * Fluxo: login (BotaoLoginPrincipal) -> ExcluirContaModal -> POST
+    delete-account (owner-only, anti-IDOR);
+  * Canal alternativo: mailto:desafiogut01@gmail.com;
+  * Explica o que é apagado/retido (hard-delete vs anonimização fiscal vs
+    on-chain).
+  => Para o MC90.3 basta APERFEIÇOAR (link /privacidade, prazo 30 dias,
+     aviso de irreversibilidade) — R1 mínima alteração.
+- src/pages/Privacidade.jsx — NÃO EXISTE. Criar do zero.
+
+--------------------------------------------------------------------------------
+0.4 — GATE LGPD / ARRANQUE (src/Boot.jsx)
+--------------------------------------------------------------------------------
+- Boot decide carregar a app só após consentimento aceite, EXCETO em
+  rotaPublicaExclusao (pathname === "/excluir-conta").
+- Para /privacidade ser acessível sem gate (visitante que clica no link da
+  política), adicionar "/privacidade" ao conjunto de rotas públicas.
+- Padrão a seguir: ROTAS_PUBLICAS = ["/excluir-conta", "/privacidade"].
+
+--------------------------------------------------------------------------------
+0.5 — ESTILO / UI
+--------------------------------------------------------------------------------
+- Barrel @/components/ui: GlassCard, Button, Card, Badge, etc.
+- Páginas públicas standalone usam estilo inline com paleta COR
+  (bg #050818, text #e8f0fe, muted #6b7db8, gold #f5a623) + GlassCard
+  (padrão do ExcluirConta). Tailwind disponível (classes utilitárias).
+- Vou replicar o padrão visual do ExcluirConta na nova Privacidade
+  (coerência total com a UI).
+
+--------------------------------------------------------------------------------
+0.6 — LINKS DA POLÍTICA NO APP (GAP 1 — a corrigir neste MC)
+--------------------------------------------------------------------------------
+Referências à iubenda (404) em 3 ficheiros — trocar por rota interna
+/privacidade:
+- components/TermosConsentimento.jsx:204
+- pages/Seguranca.jsx:25-26 (Política de Privacidade + Política de Cookies)
+- pages/MercadoLances.jsx:317
+Nota: Política de Cookies não tem página própria; apontar também para
+/privacidade (a política cobre cookies/armazenamento local) ou remover o
+link. Decisão: apontar /privacidade e manter o rótulo.
+
+--------------------------------------------------------------------------------
+0.7 — PLANO DE ALTERAÇÕES (mínimo, R1)
+--------------------------------------------------------------------------------
+1. NOVO src/pages/Privacidade.jsx — política completa (texto MC90.2-S1,
+   contacto desafiogut01@gmail.com), standalone público.
+2. EDITAR src/pages/ExcluirConta.jsx — + link /privacidade, + prazo 30 dias
+   LGPD, + aviso irreversibilidade.
+3. EDITAR src/App.jsx — + import lazy Privacidade + rota /privacidade (junto
+   de /excluir-conta).
+4. EDITAR src/Boot.jsx — rotas públicas: ["/excluir-conta", "/privacidade"].
+5. EDITAR links iubenda -> /privacidade (3 ficheiros).
+
+--------------------------------------------------------------------------------
+0.8 — VALIDAÇÃO / DEPLOY (próximos segmentos)
+--------------------------------------------------------------------------------
+- npm run build (vite build) — validação local; NUNCA para APK (R10).
+- npx vite preview para navegar /privacidade e /excluir-conta.
+- netlify deploy --build (draft) -> validar bundle -> --prod --build (fluxo
+  oficial do CLAUDE.md; deploy manual; aprovação do operador = este briefing).
+- URLs alvo: https://silly-stardust-ca71bc.netlify.app/privacidade e
+  /excluir-conta (SPA rewrite /* -> index.html já cobre).
+================================================================================
