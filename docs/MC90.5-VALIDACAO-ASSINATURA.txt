@@ -1,0 +1,39 @@
+================================================================================
+MC90.5-S3 — VALIDAÇÃO DA ASSINATURA DO AAB
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1 — COMANDOS E RESULTADOS
+--------------------------------------------------------------------------------
+jarsigner -verify android/app/build/outputs/bundle/release/app-release.aab
+-> "jar verified." (ASSINATURA VÁLIDA)
+
+jarsigner -verify -verbose -certs <aab> | grep X.509
+-> X.509, CN=DesafioGUT, OU=Desenvolvimento, O=DesafioGUT,
+   L=Manaus, ST=Amazonas, C=BR
+
+--------------------------------------------------------------------------------
+3.2 — ANÁLISE
+--------------------------------------------------------------------------------
+- O certificado é o MESMO do AAB anterior (21/07): CN=DesafioGUT, Manaus/AM —
+  confirma que o novo AAB foi assinado com a MESMA keystore do projeto
+  (keystore/desafiogut.keystore via keystore.properties). Isso é ESSENCIAL:
+  a Play Store exige a MESMA chave de assinatura para atualizar um app; como
+  o app ainda não foi publicado, a chave agora define a identidade futura.
+- Nenhum segredo (senha/alias) foi lido ou exibido (R5) — a validação usa
+  apenas o certificado público embutido no artefacto.
+
+--------------------------------------------------------------------------------
+3.3 — BUNDLETOOL (validação Play Store — opcional)
+--------------------------------------------------------------------------------
+- bundletool NÃO está instalado na máquina. Pendência opcional: instalar
+  (sem custo) e rodar `bundletool validate --bundle <aab>` antes do upload.
+  O Play Console faz validação equivalente no upload — não bloqueia.
+
+--------------------------------------------------------------------------------
+3.4 — STATUS
+--------------------------------------------------------------------------------
+Assinatura: VÁLIDA, certificado correto (CN=DesafioGUT, Manaus/AM).
+Próximo passo: verificar o conteúdo do AAB (rotas MC90.3) — S4.
+================================================================================
