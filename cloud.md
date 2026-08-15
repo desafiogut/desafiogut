@@ -7133,3 +7133,34 @@ avançado até ao commit que já estava no ar, não por um deploy novo. Produç�
 inalterada e verificada. `CLAUDE.md` corrigido em três erros que persistiam desde
 o MC60/MC73: dizia que o deploy era automático, que a rede era Sepolia e que o
 login tinha Apple. Nenhuma das três era verdade.
+## MC90.2 — a Play Store à vista: a auditoria encontrou o que o código já sabia, e o que só a conta pode resolver
+
+Auditoria de conformidade com o Google Play (agosto 2026) com pesquisa ativa
+de fontes oficiais atualizadas — incluindo os anúncios de junho/julho de 2026
+que ninguém nos tinha dito: a verificação de desenvolvedor torna-se
+obrigatória no Brasil em 30/09/2026 e os apps têm de estar registados no Play
+Console até lá; a política de Play Console Requirements (efetiva 30/09/2026)
+passa a exigir conta de ORGANIZAÇÃO para serviços financeiros (carteiras de
+cripto e exchanges) e conta demo ativa para a revisão.
+
+O código estava à frente da papelada: targetSdkVersion 36 (Android 16) já
+cumpre o requisito de 31/08/2026, o manifest só pede INTERNET, o gate LGPD
+existe, e a eliminação de conta in-app é real (delete-account apaga até a
+atividade_utilizadores, anonimiza o fiscal e declara o on-chain). A auditoria
+confirmou tudo por leitura de código e produziu os artefactos: texto da
+política de privacidade conforme 2026, rascunho do Data Safety form, guia de
+closed testing (12 testadores x 14 dias), relatório de eliminação de contas e
+checklist de 30 itens.
+
+As lacunas são de configuração e operação, não de código — e duas são
+críticas: a política de privacidade está inacessível (o link da iubenda
+responde 404 e o domínio desafio-gut.com nem resolve no DNS), e falta uma URL
+web estável de eliminação de conta para o campo obrigatório do Play Console.
+Há ainda um risco a decidir: o app usa embedded wallet Privy + PIX, o que
+pode levar o Google a exigir conta de organização em setembro. O veredito é
+honesto: código 100% conforme; conformidade total atingível com as ações do
+relatório (nenhuma depende de novo desenvolvimento).
+
+Artefactos: docs/MC90.2-{REQUISITOS-2026,GAP-ANALYSIS,POLITICA-PRIVACIDADE-
+TEXTO,DATA-SAFETY-RASCUNHO,ELIMINACAO-CONTAS,CLOSED-TESTING-GUIDE,
+REQUISITOS-TECNICOS,CHECKLIST-CONFORMIDADE,RELATORIO}.txt

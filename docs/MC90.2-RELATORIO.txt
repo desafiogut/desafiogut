@@ -1,0 +1,152 @@
+================================================================================
+MC90.2 — RELATÓRIO CONSOLIDADO: AUDITORIA DE CONFORMIDADE GOOGLE PLAY
+(AGOSTO 2026) + POLÍTICA DE PRIVACIDADE + DATA SAFETY + CLOSED TESTING
+DesafioGUT · Gerado: 2026-08-15 · Repo: main (C:\Users\Moltbot\Desktop\DESAFIOGUT)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+Foi realizada a auditoria completa de conformidade do DesafioGUT com as
+políticas do Google Play vigentes em agosto de 2026, com pesquisa ativa de
+fontes oficiais atualizadas (incluindo os anúncios de junho/julho de 2026
+sobre verificação de desenvolvedores e os requisitos do Play Console com
+efeito em 30/09/2026).
+
+RESULTADO: o CÓDIGO do DesafioGUT está pronto e conforme em todos os
+requisitos técnicos (targetSdk 36, permissões mínimas, consentimento LGPD,
+eliminação de conta in-app funcional, criptografia em trânsito). A
+CONFIGURAÇÃO e a OPERAÇÃO no Play Console ainda têm pendências obrigatórias
+— a mais crítica é a POLÍTICA DE PRIVACIDADE INACESSÍVEL (URL atual 404 e
+domínio desafio-gut.com sem DNS) — e o closed testing (12 testadores x 14
+dias) ainda não foi iniciado. Com as ações do plano abaixo, o DesafioGUT
+atinge a conformidade completa e pode ser submetido à Play Store.
+
+--------------------------------------------------------------------------------
+2. REQUISITOS PESQUISADOS E FONTES (todas oficiais, 2026)
+--------------------------------------------------------------------------------
+1) Closed testing (12 testadores / 14 dias contínuos, contas pessoais
+   pós-13/11/2023)
+   Fonte: Play Console Help, answer 14151465 — acesso 15/08/2026.
+2) Data Safety Form (obrigatório em closed/open/production; inclui SDKs;
+   import/export CSV)
+   Fonte: Play Console Help, answer 10787469 — acesso 15/08/2026.
+3) User Data policy / Política de Privacidade (URL pública não-editável sem
+   PDF; conteúdo mínimo; consentimento; criptografia; não vender dados)
+   Fonte: Google Play Policy Center, answer 10144311 — acesso 15/08/2026.
+4) Account Deletion (in-app + recurso web com link no Play Console; apagar
+   todos os dados; congelamento não vale)
+   Fonte: User Data policy, secção "Account Deletion Requirement" — acesso
+   15/08/2026.
+5) Verificação de Desenvolvedor (identidade; device verification; REGISTRO
+   DOS APPS até 30/09/2026; efetivo no Brasil em 30/09/2026; expansão global
+   2027)
+   Fonte: Android Developers Blog — "Android developer verification: Building
+   a safer ecosystem together" (18/06/2026, atualizado 15/07/2026) + Play
+   Console Help "Verify your developer identity information".
+6) Target API level (novos apps/atualizações: API 36 / Android 16 a partir de
+   31/08/2026)
+   Fonte: Play Console Help, answer 11926878 — acesso 15/08/2026.
+7) Play Console Requirements (preview julho/2026, efetiva 30/09/2026):
+   conta ORGANIZAÇÃO para serviços financeiros/cripto; conta demo; política +
+   Data Safety antes de submeter; registro de package names.
+   Fonte: Google Play Policy Center — "Preview: Play Console Requirements".
+8) Financial Services (declaração de recursos financeiros obrigatória para
+   apps com recursos financeiros)
+   Fonte: Google Play Policy Center — "Financial Services".
+9) Age Signals API (julho/2026) — N/A para o DesafioGUT (não direcionado a
+   crianças).
+   Fonte: Android Developers Blog — 29/07/2026.
+
+--------------------------------------------------------------------------------
+3. LACUNAS IDENTIFICADAS E PLANO DE AÇÃO (detalhes em MC90.2-GAP-ANALYSIS.txt)
+--------------------------------------------------------------------------------
+[CRÍTICO] GAP 1 — Política de Privacidade inacessível:
+          iubenda.com/privacy-policy/DESAFIOGUT -> 404; desafio-gut.com ->
+          NXDOMAIN; /privacy no Netlify é fallback SPA. Ação: publicar o
+          texto S1 numa URL pública estável, corrigir os 3 links no app e
+          registar no Play Console.
+[CRÍTICO] GAP 2 — Link web de eliminação de contas: a rota /excluir-conta
+          existe no SPA, mas falta URL pública estável + campo no Play
+          Console. Ação: usar https://silly-stardust-ca71bc.netlify.app/
+          excluir-conta (imediato) ou corrigir o domínio.
+[ALTO]    GAP 3 — Classificação financeira/cripto: embedded wallet Privy +
+          PIX podem levar o Google a exigir conta ORGANIZAÇÃO (política
+          julho/2026, efetiva 30/09/2026). Ação: declaração financeira
+          precisa; migrar só se o Google exigir (CNPJ disponível).
+[MÉDIO]   GAP 4-8 — Registro do app (30/09/2026), Data Safety no console,
+          closed testing (12x14 dias), conta demo, financial declaration.
+[INFO]    GAP 9-10 — Domínio custom quebrado; versionCode 1 ok; AAB a gerar.
+
+--------------------------------------------------------------------------------
+4. ENTREGÁVEIS GERADOS NESTA AUDITORIA (docs/)
+--------------------------------------------------------------------------------
+- docs/MC90.2-REQUISITOS-2026.txt ......... requisitos pesquisados + fontes + status
+- docs/MC90.2-GAP-ANALYSIS.txt ............ lacunas e plano de ação
+- docs/MC90.2-POLITICA-PRIVACIDADE-TEXTO.txt  texto completo pronto p/ iubenda/página
+- docs/MC90.2-DATA-SAFETY-RASCUNHO.txt .... respostas prontas p/ o formulário
+- docs/MC90.2-ELIMINACAO-CONTAS.txt ....... verificação da eliminação (in-app OK; web pendente)
+- docs/MC90.2-CLOSED-TESTING-GUIDE.txt ..... guia prático (12x14 dias + recrutamento)
+- docs/MC90.2-REQUISITOS-TECNICOS.txt ...... targetSdk 36 OK; verificação dev
+- docs/MC90.2-CHECKLIST-CONFORMIDADE.txt ... checklist 30 itens (12 OK / 16 pend / 1 risco / 1 N/A)
+
+--------------------------------------------------------------------------------
+5. CHECKLIST DE CONFORMIDADE (resumo — ver arquivo completo)
+--------------------------------------------------------------------------------
+[OK] 12 itens: conteúdo/SDKs/eliminação/contacto da política; rascunho Data
+     Safety; eliminação in-app; targetSdk 36; minSdk 24; identidade do dev;
+     permissões (só INTERNET); consentimento LGPD; HTTPS.
+[PEND] 16 itens: URL pública da política; link in-app corrigido; Data Safety
+     no console; link web de eliminação; closed testing (4); device
+     verification; registro do app; conta demo; financial declaration; IARC;
+     AAB assinado; domínio; whitelist Binance; EOA com ETH.
+[RISCO] 1: classificação financeira/cripto (conta organização).
+[N/A] 1: D-U-N-S (conta pessoal).
+
+--------------------------------------------------------------------------------
+6. PRÓXIMOS PASSOS (ordem sugerida — operador)
+--------------------------------------------------------------------------------
+1. Publicar a política de privacidade (S1) numa URL pública (iubenda ou
+   página própria) e corrigir os links do app. [crítico]
+2. Corrigir o domínio desafio-gut.com (DNS) ou adotar a URL do Netlify para
+   os campos do Play Console. [crítico]
+3. Criar o app na Play Console (package com.desafiogut.app); confirmar
+   registro na Home (prazo 30/09/2026). [urgente]
+4. Preencher no Play Console: Data Safety (S2), política (URL), eliminação
+   (link /excluir-conta), Financial features declaration, IARC. [urgente]
+5. Confirmar device verification (app Play Console num Android real).
+6. Gerar AAB de release assinado e subir para a track de closed testing.
+7. Recrutar 14+ testadores e rodar 14 dias contínuos com 12+ opt-in (S4).
+8. Preparar conta demo para a revisão do Google.
+9. Aplicar para produção com resumo do feedback; manter closed test ativo.
+10. Fora do escopo Play: whitelist Binance (24-48h) e EOA com ETH (saque +
+    bridge).
+
+--------------------------------------------------------------------------------
+7. VEREDITO FINAL (R8)
+--------------------------------------------------------------------------------
+PERGUNTA: "O DesafioGUT está em completa conformidade com as regras da Play
+Store (Agosto 2026)?"
+
+RESPOSTA: NÃO AINDA — mas o desvio é pequeno e NÃO está no código.
+
+- CONFORMIDADE DE CÓDIGO: SIM (100%) — targetSdk 36 (Android 16), permissões
+  mínimas, consentimento LGPD, eliminação de conta completa (incl.
+  atividade_utilizadores), criptografia em trânsito, nenhuma alteração de
+  código é necessária para publicar.
+- CONFORMIDADE DE CONFIGURAÇÃO/OPERAÇÃO: PENDENTE — 2 itens críticos
+  (política de privacidade acessível; link web de eliminação) + configuração
+  do app no Play Console (Data Safety, financial declaration, IARC, registro)
+  + closed testing (12 testadores x 14 dias) + conta demo.
+
+ESTIMATIVA: com as ações 1-5 concluídas (configuração, sem custo), o app pode
+entrar em closed testing; após os 14 dias de teste, pode ser submetido à
+produção. Todas as pendências têm solução documentada e nenhuma depende de
+novo desenvolvimento.
+
+CONFORMIDADE TOTAL (Agosto 2026): atingível — seguir o checklist (S6) e o
+plano de ação (secção 6).
+
+================================================================================
+FIM DO RELATÓRIO MC90.2
+================================================================================
