@@ -1,0 +1,135 @@
+================================================================================
+MC90.2-S6 — CHECKLIST DE CONFORMIDADE GOOGLE PLAY (AGOSTO 2026)
+DesafioGUT · Gerado: 2026-08-15
+Legenda: [OK] conforme (com evidência) · [PEND] pendente de ação ·
+         [N/A] não aplicável · [RISCO] precisa decisão
+================================================================================
+
+#  Requisito                                        Status  Evidência / Ação
+-- ------------------------------------------------ ------- -----------------
+1  Política de Privacidade — URL pública acessível  [PEND]  iubenda 404;
+                                                             desafio-gut.com
+                                                             NXDOMAIN; S1 tem o
+                                                             texto. Ação:
+                                                             publicar URL +
+                                                             registar no Play
+                                                             Console.
+2  Política — dados coletados descritos             [OK]    Texto S1 cobre
+                                                             nome, e-mail,
+                                                             carteira, PIX,
+                                                             atividade,
+                                                             crashes.
+3  Política — SDKs listados                         [OK]    Texto S1: Privy,
+                                                             Supabase, Netlify,
+                                                             Mercado Pago,
+                                                             Sentry, Alchemy.
+4  Política — eliminação de contas descrita         [OK]    Texto S1 sec. 8
+                                                             (hard-delete,
+                                                             anonimização
+                                                             fiscal, on-chain).
+5  Política — link DENTRO do app                    [PEND]  App referencia
+                                                             iubenda (404).
+                                                             Corrigir links em
+                                                             TermosConsenti-
+                                                             mento/Seguranca/
+                                                             MercadoLances.
+6  Política — ponto de contacto + retenção          [OK]    Texto S1 sec. 1,
+                                                             7 e 9 (falta
+                                                             preencher e-mail
+                                                             real).
+7  Data Safety Form — rascunho                      [OK]    MC90.2-S2 pronto
+                                                             para copiar.
+8  Data Safety Form — preenchido no Play Console    [PEND]  Ao criar o app
+                                                             (App content >
+                                                             Data safety).
+9  Data Safety — consistente com a política         [OK]    Verificação
+                                                             cruzada S2 parte
+                                                             5.
+10 Eliminação de contas — funcionalidade in-app     [OK]    delete-account.mjs
+                                                             + conta-delete.mjs
+                                                             (hard-delete incl.
+                                                             atividade_utiliza-
+                                                             dores) + rota
+                                                             /excluir-conta +
+                                                             testes MC72/
+                                                             MC89.43.
+11 Eliminação de contas — link web externo          [PEND]  Rota /excluir-
+                                                             conta existe no
+                                                             SPA; falta URL
+                                                             estável + campo
+                                                             no Play Console.
+12 Closed Testing — 12+ testadores opt-in           [PEND]  Guia S4. Dia 0-3.
+13 Closed Testing — 14 dias contínuos               [PEND]  Guia S4. Dia 3-17.
+14 Closed Testing — dispositivos reais              [PEND]  Guia S4 sec. 3/6.
+15 Closed Testing — feedback e resumo p/ produção   [PEND]  Guia S4 sec. 5.
+16 targetSdkVersion >= 36 (Android 16)              [OK]    variables.gradle:
+                                                             target 36, compile
+                                                             36, min 24.
+17 minSdk / versionCode / versionName               [OK]    minSdk 24;
+                                                             versionCode 1;
+                                                             versionName
+                                                             1.0.0.
+18 Verificação de desenvolvedor — identidade        [OK]    Ruan aprovado
+                                                             (passaporte +
+                                                             comprovante).
+19 Verificação — device verification                [PEND]  Confirmar login
+                                                             no app Play
+                                                             Console em
+                                                             Android real.
+20 Registro do app (prazo 30/09/2026)               [PEND]  Automático ao
+                                                             criar o app;
+                                                             conferir Home.
+21 Conta demo + credenciais para revisão            [PEND]  Criar conta
+                                                             Google de teste
+                                                             e documentar
+                                                             fluxo.
+22 Financial features declaration                   [PEND]  Preencher no
+                                                             Play Console
+                                                             (PIX + on-chain).
+23 Classificação financeira/cripto (conta org.)     [RISCO] GAP 3 — avaliar
+                                                             se o Google
+                                                             exige conta
+                                                             organização.
+24 Permissões Android sensíveis                     [OK]    Manifest só tem
+                                                             INTERNET.
+25 Consentimento LGPD in-app                        [OK]    TermosConsenti-
+                                                             mento.jsx (gate,
+                                                             checkboxes,
+                                                             maioridade).
+26 Criptografia em trânsito (HTTPS)                 [OK]    Toda a stack
+                                                             HTTPS/TLS.
+27 Classificação de conteúdo (IARC)                 [PEND]  Preencher na
+                                                             criação do app.
+28 APK/AAB de release assinado                      [PEND]  Gerar com
+                                                             bundleRelease
+                                                             (keystore não
+                                                             commitado).
+29 Domínio custom desafio-gut.com                   [PEND]  NXDOMAIN —
+                                                             corrigir DNS ou
+                                                             usar URL do
+                                                             Netlify.
+30 Whitelist Binance -> MetaMask (24-48h)            [PEND]  Fora do escopo
+                                                             Play; verificar
+                                                             periodicamente.
+31 EOA coordenadora abastecida com ETH               [PEND]  Fora do escopo
+                                                             Play; executar
+                                                             saque+bridge.
+
+--------------------------------------------------------------------------------
+RESUMO
+--------------------------------------------------------------------------------
+[OK]   : 12  (política conteúdo/SDKs/eliminação/contacto; Data Safety rascunho;
+              eliminação in-app; targetSdk; minSdk; identidade dev; permissões;
+              LGPD; HTTPS)
+[PEND] : 16  (URL política; link in-app; Data Safety no console; link web
+              eliminação; closed testing x4; device verification; registro
+              app; conta demo; financial declaration; IARC; AAB; domínio;
+              whitelist; EOA)
+[RISCO]: 1   (classificação financeira/cripto)
+[N/A]  : 1   (D-U-N-S — conta pessoal)
+
+TOTAL: 30 itens avaliados. NENHUM requisito técnico de código bloqueia a
+publicação (targetSdk 36, permissões, eliminação e consentimento já prontos).
+As pendências restantes são de CONFIGURAÇÃO no Play Console e OPERAÇÃO
+(closed testing), não de código.
+================================================================================
