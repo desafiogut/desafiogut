@@ -1,0 +1,55 @@
+================================================================================
+MC90.3-S5 — DEPLOY PARA NETLIFY DAS ROTAS /privacidade E /excluir-conta
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+
+--------------------------------------------------------------------------------
+5.1 — FLUXO SEGUIDO (CLAUDE.md: draft -> validar -> prod)
+--------------------------------------------------------------------------------
+1. netlify deploy --build (draft)
+   -> Build concluído em 4m 27s; Draft URL:
+      https://6a80c43b50d23a4d86e8f0c3--silly-stardust-ca71bc.netlify.app
+   -> Validação no draft: /privacidade renderiza integralmente (14 secções)
+      e /excluir-conta responde 200.
+2. netlify deploy --prod --build --message "MC90.3: adicionar rotas
+   /privacidade e /excluir-conta"
+   -> Build concluído em 4m 33s; Production URL:
+      https://silly-stardust-ca71bc.netlify.app
+   -> Deploy único: https://6a80c583b24a4a8e69828c45--silly-stardust-ca71bc.netlify.app
+
+--------------------------------------------------------------------------------
+5.2 — VALIDAÇÃO EM PRODUÇÃO (2026-08-15)
+--------------------------------------------------------------------------------
+- GET https://silly-stardust-ca71bc.netlify.app/privacidade   -> 200
+- GET https://silly-stardust-ca71bc.netlify.app/excluir-conta -> 200
+- GET https://silly-stardust-ca71bc.netlify.app/               -> 200 (root ok)
+- Renderização /excluir-conta no browser (produção): título, aviso de
+  irreversibilidade, "O QUE ACONTECE AO EXCLUIR", "SOLICITAR EXCLUSÃO",
+  suporte por e-mail, prazo de processamento (15 dias, LGPD), link
+  "Política de Privacidade" e "← Voltar ao app" — tudo presente.
+- Renderização /privacidade no browser (draft, mesma build de produção):
+  conteúdo integral da política (secções 1-14), e-mail de contacto, link
+  para /excluir-conta.
+
+--------------------------------------------------------------------------------
+5.3 — GAPs ELIMINADOS (referência MC90.2)
+--------------------------------------------------------------------------------
+- GAP 1 (Política de Privacidade inacessível): RESOLVIDO —
+  https://silly-stardust-ca71bc.netlify.app/privacidade é pública, estável,
+  sem geofencing, sem PDF, não-editável (URL do deploy); links iubenda (404)
+  dentro do app substituídos pela rota interna.
+- GAP 2 (link web de eliminação): RESOLVIDO —
+  https://silly-stardust-ca71bc.netlify.app/excluir-conta é o recurso web de
+  eliminação; pronto para ser registado no campo "Account deletion" do Play
+  Console.
+- Observação: o domínio custom desafio-gut.com continua NXDOMAIN (fora do
+  escopo deste MC — ação de DNS do operador); enquanto isso, as URLs do
+  Netlify são as oficiais a usar no Play Console.
+
+--------------------------------------------------------------------------------
+5.4 — EVIDÊNCIAS
+--------------------------------------------------------------------------------
+- Saídas do netlify CLI (Build Complete 4m27s/4m33s; Production URL).
+- curl HTTP 200 nas 3 rotas em produção.
+- Snapshot de acessibilidade do browser com o conteúdo renderizado.
+================================================================================
