@@ -7164,3 +7164,31 @@ relatório (nenhuma depende de novo desenvolvimento).
 Artefactos: docs/MC90.2-{REQUISITOS-2026,GAP-ANALYSIS,POLITICA-PRIVACIDADE-
 TEXTO,DATA-SAFETY-RASCUNHO,ELIMINACAO-CONTAS,CLOSED-TESTING-GUIDE,
 REQUISITOS-TECNICOS,CHECKLIST-CONFORMIDADE,RELATORIO}.txt
+## MC90.3 — as rotas públicas chegaram à produção: /privacidade e /excluir-conta
+
+Os dois GAPs críticos da auditoria MC90.2 foram eliminados com código mínimo
+(R1) e deploy manual validado (draft -> produção), sem custo e sem tocar em
+credenciais.
+
+/privacidade é a Política de Privacidade integral (texto do MC90.2), pública,
+sem gate LGPD e sem autenticação; /excluir-conta (que já existia desde o
+MC72) ganhou aviso de irreversibilidade, prazo de processamento LGPD (15 dias
+prorrogável) e link para a política. Os três links internos que apontavam
+para a iubenda — que respondia 404 — passaram a apontar para a rota interna,
+fechando o GAP 1 também dentro do app.
+
+Validação com evidência: build local 21s sem erros, preview local 200 nas
+três rotas, deploy draft (4m27s) com renderização integral verificada no
+browser, e produção (4m33s) com as URLs públicas a responder 200 e conteúdo
+confirmado. O checklist MC90.2 subiu de 12 para 15 itens OK.
+
+URLs oficiais para o Play Console (enquanto o domínio custom não for
+corrigido): https://silly-stardust-ca71bc.netlify.app/privacidade e
+.../excluir-conta. O que resta é configuração no Play Console (Data Safety,
+financial declaration, registro do app até 30/09/2026, conta demo) e o
+closed testing de 12 testadores x 14 dias — tudo operacional, nada de código.
+
+Artefactos: docs/MC90.3-{LEVANTAMENTO,VALIDACAO,DEPLOY,RELATORIO}.txt;
+src/pages/Privacidade.jsx (novo); src/pages/ExcluirConta.jsx, src/App.jsx,
+src/Boot.jsx, TermosConsentimento.jsx, Seguranca.jsx, MercadoLances.jsx
+(editados).

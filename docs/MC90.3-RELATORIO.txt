@@ -1,0 +1,119 @@
+================================================================================
+MC90.3 — RELATÓRIO FINAL: ROTAS /privacidade E /excluir-conta NO FRONTEND
+DesafioGUT · Gerado: 2026-08-15 · Branch: main
+================================================================================
+
+--------------------------------------------------------------------------------
+1. RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+Foram criadas e publicadas em produção as duas rotas públicas exigidas pela
+Google Play Store (User Data policy 2026), eliminando os dois GAPs críticos
+identificados na auditoria MC90.2:
+
+- /privacidade  -> Política de Privacidade completa (texto do MC90.2-S1),
+                   pública, sem gate LGPD, sem autenticação.
+- /excluir-conta -> Página de eliminação de conta (já existia desde o MC72;
+                   agora com aviso de irreversibilidade, prazo LGPD de 15
+                   dias prorrogável e link para a política).
+
+Além disso, os 3 links internos que apontavam para a iubenda (que respondia
+404) passaram a apontar para a rota interna /privacidade
+(TermosConsentimento, Seguranca, MercadoLances) — o GAP 1 fica eliminado
+também dentro do app, não apenas na URL externa.
+
+Nenhuma ação com custo financeiro (R2). Deploy manual conforme o fluxo
+oficial do projeto (draft -> validação -> --prod). Nenhuma chave/credencial
+tocada (R5).
+
+--------------------------------------------------------------------------------
+2. NOVAS ROTAS E URLs PÚBLICAS (produção)
+--------------------------------------------------------------------------------
+- Política de Privacidade:
+  https://silly-stardust-ca71bc.netlify.app/privacidade   (HTTP 200)
+- Eliminação de Conta:
+  https://silly-stardust-ca71bc.netlify.app/excluir-conta (HTTP 200)
+
+Ambas renderizam o conteúdo integral (validado no browser em produção/draft).
+Usar estas URLs nos campos do Play Console (Privacy Policy e Account
+deletion) enquanto o domínio desafio-gut.com não é corrigido (NXDOMAIN —
+ação de DNS do operador, fora do escopo deste MC).
+
+--------------------------------------------------------------------------------
+3. ALTERAÇÕES DE CÓDIGO (R1 — mínimas)
+--------------------------------------------------------------------------------
+1. NOVO  src/pages/Privacidade.jsx        — página da política (14 secções,
+                                           texto fiel ao MC90.2-S1; contacto
+                                           desafiogut01@gmail.com).
+2. EDIT  src/pages/ExcluirConta.jsx       — + aviso de irreversibilidade,
+                                           + prazo de processamento (15 dias
+                                           prorrogável — LGPD), + link para
+                                           /privacidade e dúvidas.
+3. EDIT  src/App.jsx                      — + import lazy Privacidade e rota
+                                           /privacidade (pública, junto de
+                                           /excluir-conta, fora do AppLayout).
+4. EDIT  src/Boot.jsx                     — rotas públicas sem gate:
+                                           ["/excluir-conta", "/privacidade"].
+5. EDIT  src/components/TermosConsentimento.jsx — link iubenda 404 ->
+                                           /privacidade.
+6. EDIT  src/pages/Seguranca.jsx          — links iubenda 404 -> /privacidade
+                                           (Política de Privacidade + Cookies).
+7. EDIT  src/pages/MercadoLances.jsx      — link footer iubenda 404 ->
+                                           /privacidade.
+
+--------------------------------------------------------------------------------
+4. VALIDAÇÃO (evidências)
+--------------------------------------------------------------------------------
+- Build local: npm run build (vite build) — "✓ built in 21.10s" (só avisos
+  benignos de annotations do rolldown em node_modules).
+- Preview local (vite preview): /, /privacidade, /excluir-conta -> 200;
+  renderização integral verificada no browser.
+- Deploy draft Netlify: Build 4m27s; /privacidade renderizada integralmente.
+- Deploy produção Netlify: Build 4m33s; URLs públicas 200; /excluir-conta
+  renderizada com todos os elementos novos.
+- Detalhes: docs/MC90.3-VALIDACAO.txt e docs/MC90.3-DEPLOY.txt.
+
+--------------------------------------------------------------------------------
+5. GAPs ELIMINADOS (referência MC90.2)
+--------------------------------------------------------------------------------
+- GAP 1 (Política de Privacidade inacessível): RESOLVIDO — URL pública
+  estável + links internos corrigidos.
+- GAP 2 (link web de eliminação de conta): RESOLVIDO — URL pública funcional;
+  falta apenas registar a URL no campo "Account deletion" do Play Console
+  (ação na criação do app, junto do GAP 4).
+
+--------------------------------------------------------------------------------
+6. CHECKLIST MC90.2 ATUALIZADO
+--------------------------------------------------------------------------------
+[OK] subiu de 12 para 15 itens (URL da política, link in-app, link web de
+eliminação). [PEND] desceu de 16 para 13. Ver docs/MC90.2-CHECKLIST-
+CONFORMIDADE.txt (revisão MC90.3).
+
+--------------------------------------------------------------------------------
+7. PRÓXIMOS PASSOS (operador)
+--------------------------------------------------------------------------------
+1. Criar o app no Play Console (package com.desafiogut.app) e confirmar o
+   registro na Home (prazo 30/09/2026).
+2. No Play Console, registar as URLs:
+   - Privacy Policy: https://silly-stardust-ca71bc.netlify.app/privacidade
+   - Account deletion: https://silly-stardust-ca71bc.netlify.app/excluir-conta
+3. Preencher Data Safety (MC90.2-S2), Financial features declaration e IARC.
+4. Confirmar device verification (app Play Console em Android real).
+5. Gerar AAB assinado e iniciar o closed testing (12 testadores x 14 dias —
+   guia MC90.2-S4).
+6. Corrigir o domínio desafio-gut.com (DNS) para as URLs "bonitas" — opcional,
+   não bloqueia (as URLs do Netlify são válidas para o Play Console).
+7. Fora do escopo Play: whitelist Binance (24-48h) e EOA com ETH.
+
+--------------------------------------------------------------------------------
+8. VEREDITO (R8)
+--------------------------------------------------------------------------------
+As rotas /privacidade e /excluir-conta estão ACESSÍVEIS no frontend
+(Netlify, produção), com conteúdo correto e validado — GAPs 1 e 2 do MC90.2
+ELIMINADOS, sem custo e sem depender do domínio desafio-gut.com.
+Conformidade de código para publicação: 100% (targetSdk 36, permissões,
+consentimento, eliminação, política pública e link web). Falta apenas a
+configuração no Play Console e o closed testing (ação do operador).
+
+================================================================================
+FIM DO RELATÓRIO MC90.3
+================================================================================

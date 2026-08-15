@@ -3,17 +3,20 @@ MC90.2-S6 — CHECKLIST DE CONFORMIDADE GOOGLE PLAY (AGOSTO 2026)
 DesafioGUT · Gerado: 2026-08-15
 Legenda: [OK] conforme (com evidência) · [PEND] pendente de ação ·
          [N/A] não aplicável · [RISCO] precisa decisão
+REVISÃO MC90.3 (2026-08-15): itens 1, 5 e 11 atualizados — rotas
+/privacidade e /excluir-conta publicadas no Netlify (GAPs 1 e 2 eliminados
+no código e em produção).
 ================================================================================
 
 #  Requisito                                        Status  Evidência / Ação
 -- ------------------------------------------------ ------- -----------------
-1  Política de Privacidade — URL pública acessível  [PEND]  iubenda 404;
-                                                             desafio-gut.com
-                                                             NXDOMAIN; S1 tem o
-                                                             texto. Ação:
-                                                             publicar URL +
-                                                             registar no Play
-                                                             Console.
+1  Política de Privacidade — URL pública acessível  [OK]    https://silly-
+                                                             stardust-ca71bc.
+                                                             netlify.app/
+                                                             privacidade (200,
+                                                             conteúdo integral,
+                                                             MC90.3). Registar
+                                                             no Play Console.
 2  Política — dados coletados descritos             [OK]    Texto S1 cobre
                                                              nome, e-mail,
                                                              carteira, PIX,
@@ -27,12 +30,14 @@ Legenda: [OK] conforme (com evidência) · [PEND] pendente de ação ·
                                                              (hard-delete,
                                                              anonimização
                                                              fiscal, on-chain).
-5  Política — link DENTRO do app                    [PEND]  App referencia
-                                                             iubenda (404).
-                                                             Corrigir links em
-                                                             TermosConsenti-
-                                                             mento/Seguranca/
-                                                             MercadoLances.
+5  Política — link DENTRO do app                    [OK]    MC90.3: links
+                                                             iubenda (404)
+                                                             substituídos por
+                                                             rota interna
+                                                             /privacidade
+                                                             (TermosConsenti-
+                                                             mento, Seguranca,
+                                                             MercadoLances).
 6  Política — ponto de contacto + retenção          [OK]    Texto S1 sec. 1,
                                                              7 e 9 (falta
                                                              preencher e-mail
@@ -53,11 +58,19 @@ Legenda: [OK] conforme (com evidência) · [PEND] pendente de ação ·
                                                              /excluir-conta +
                                                              testes MC72/
                                                              MC89.43.
-11 Eliminação de contas — link web externo          [PEND]  Rota /excluir-
-                                                             conta existe no
-                                                             SPA; falta URL
-                                                             estável + campo
-                                                             no Play Console.
+11 Eliminação de contas — link web externo          [OK]    MC90.3: rota
+                                                             pública /excluir-
+                                                             conta publicada
+                                                             (https://silly-
+                                                             stardust-ca71bc.
+                                                             netlify.app/
+                                                             excluir-conta,
+                                                             200). Falta só
+                                                             registar a URL no
+                                                             campo "Account
+                                                             deletion" do Play
+                                                             Console (na
+                                                             criação do app).
 12 Closed Testing — 12+ testadores opt-in           [PEND]  Guia S4. Dia 0-3.
 13 Closed Testing — 14 dias contínuos               [PEND]  Guia S4. Dia 3-17.
 14 Closed Testing — dispositivos reais              [PEND]  Guia S4 sec. 3/6.
@@ -116,20 +129,20 @@ Legenda: [OK] conforme (com evidência) · [PEND] pendente de ação ·
                                                              saque+bridge.
 
 --------------------------------------------------------------------------------
-RESUMO
+RESUMO (revisado em MC90.3 — GAPs 1 e 2 eliminados)
 --------------------------------------------------------------------------------
-[OK]   : 12  (política conteúdo/SDKs/eliminação/contacto; Data Safety rascunho;
-              eliminação in-app; targetSdk; minSdk; identidade dev; permissões;
+[OK]   : 15  (política: URL pública, conteúdo/SDKs/eliminação/contacto, link
+              in-app; Data Safety rascunho; eliminação in-app; link web de
+              eliminação; targetSdk; minSdk; identidade dev; permissões;
               LGPD; HTTPS)
-[PEND] : 16  (URL política; link in-app; Data Safety no console; link web
-              eliminação; closed testing x4; device verification; registro
-              app; conta demo; financial declaration; IARC; AAB; domínio;
-              whitelist; EOA)
+[PEND] : 13  (Data Safety no console; closed testing x4; device verification;
+              registro app; conta demo; financial declaration; IARC; AAB;
+              domínio; whitelist; EOA)
 [RISCO]: 1   (classificação financeira/cripto)
 [N/A]  : 1   (D-U-N-S — conta pessoal)
 
 TOTAL: 30 itens avaliados. NENHUM requisito técnico de código bloqueia a
-publicação (targetSdk 36, permissões, eliminação e consentimento já prontos).
-As pendências restantes são de CONFIGURAÇÃO no Play Console e OPERAÇÃO
-(closed testing), não de código.
+publicação (targetSdk 36, permissões, eliminação, política e consentimento já
+prontos). As pendências restantes são de CONFIGURAÇÃO no Play Console e
+OPERAÇÃO (closed testing), não de código.
 ================================================================================
