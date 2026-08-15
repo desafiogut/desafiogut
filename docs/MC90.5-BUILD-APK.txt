@@ -1,0 +1,49 @@
+================================================================================
+MC90.5-S1 — BUILD DO APK (PASSO INTERMEDIÁRIO — npm run build:apk, R10)
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+
+--------------------------------------------------------------------------------
+1.1 — COMANDO EXECUTADO
+--------------------------------------------------------------------------------
+cd desafio-gut/frontend && npm run build:apk
+
+O script build:apk executa (package.json):
+  cd ../.. && netlify build --context production
+  && cd desafio-gut/frontend && npm run validar:dist
+  && npx cap sync android
+
+--------------------------------------------------------------------------------
+1.2 — RESULTADOS (saída real do terminal)
+--------------------------------------------------------------------------------
+- Netlify Build: concluído em 2m 48.8s (functions bundling 2m 23.2s).
+- validar:dist (scripts/validar-dist-rede.mjs): PASS
+  * 124 ficheiros .js analisados
+  * VITE_CONTRATO_SEPOLIA = 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+    (apesar do nome, é o contrato MAINNET — correto)
+  * VITE_ALCHEMY_URL (rede) = mainnet · VITE_CHAIN_ID = 1
+  * VITE_NETWORK_STAGE = mainnet
+  * "✓ bundle coerente com PRODUÇÃO (mainnet)."
+- cap sync android: concluído (assets copiados para
+  android/app/src/main/assets/public em ~0,6s; plugin @capacitor/app@8.1.1).
+
+--------------------------------------------------------------------------------
+1.3 — VERIFICAÇÃO PÓS-SYNC
+--------------------------------------------------------------------------------
+- android/app/src/main/assets/public/index.html: data 15/08/2026 17:30
+  (antes: 03/08) — assets ATUALIZADOS.
+- Bundle JS referenciado: assets/index-CIn9c4JU.js — MESMO hash do deploy
+  Netlify do MC90.3 (produção) — confirma paridade web/Android.
+- Bundle contém as rotas: "privacidade" e "excluir-conta" presentes
+  (grep no bundle) — as rotas MC90.3 estão nos assets do Capacitor.
+- APK debug (app-debug.apk): 37.434.881 bytes — o artefacto de debug
+  existente. OBSERVAÇÃO: o script build:apk NÃO executa gradle assembleDebug
+  (o briefing presumia que sim); o objetivo do passo (atualizar os assets
+  web do Capacitor) foi plenamente alcançado — o gradle roda no S2 para o AAB.
+
+--------------------------------------------------------------------------------
+1.4 — STATUS
+--------------------------------------------------------------------------------
+Build intermediário: OK. Assets do Android sincronizados com o código atual
+(incluindo MC90.3). Pronto para o bundleRelease (S2).
+================================================================================
