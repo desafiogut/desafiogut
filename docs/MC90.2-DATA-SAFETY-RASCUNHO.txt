@@ -1,0 +1,205 @@
+================================================================================
+MC90.2-S2 — RASCUNHO DO DATA SAFETY FORM (SEGURANÇA DOS DADOS) — AGOSTO 2026
+DesafioGUT · respostas prontas para copiar e colar no Play Console
+(App content > Data safety)
+Gerado: 2026-08-15 · Consistente com MC90.2-POLITICA-PRIVACIDADE-TEXTO.txt
+================================================================================
+NOTAS:
+- Base factual: SDKs reais do projeto (Privy, Supabase, Netlify, Mercado Pago,
+  Sentry), permissão Android (apenas INTERNET) e estratégia de dados
+  (conta-delete.mjs MC72/MC89.43).
+- O formulário oficial tem 16 categorias de dados. Preencher as respostas
+  abaixo, categoria a categoria, no Play Console.
+- "Criptografado em trânsito" = SIM para tudo (HTTPS/TLS em toda a stack).
+- "Pode solicitar eliminação" = SIM para dados pessoais (delete-account);
+  N/A/justificar para dados retidos por lei (fiscais anonimizados) e on-chain
+  (imutáveis).
+- Manter esta declaração SEMPRE consistente com a política de privacidade
+  publicada (o Google compara as duas).
+
+--------------------------------------------------------------------------------
+PARTE 1 — PERGUNTAS GERAIS (tela inicial do formulário)
+--------------------------------------------------------------------------------
+P: O app coleta ou compartilha algum dos tipos de dados de usuário obrigatórios?
+R: SIM (coleta).
+
+P: Todos os dados coletados são criptografados em trânsito?
+R: SIM.
+
+P: O app fornece um mecanismo para o usuário solicitar a exclusão dos dados?
+R: SIM (exclusão de conta in-app e via recurso web; ver política de
+privacidade — secção 8).
+
+P: O app é comprometido com a política Famílias do Google Play?
+R: NÃO (não direcionado a crianças; gate de maioridade no consentimento).
+
+--------------------------------------------------------------------------------
+PARTE 2 — CATEGORIAS DE DADOS (declarar "Sim" ou "Não" e detalhes)
+--------------------------------------------------------------------------------
+
+[1] LOCALIZAÇÃO (aproximada / precisa)
+R: NÃO coletado. (O app não acessa GPS nem localização de rede; nenhuma
+permissão de localização no manifest.)
+
+[2] INFORMAÇÕES PESSOAIS
+R: SIM — coletado.
+  Subcategorias declaradas:
+  - Nome (via login Google/Privy) — SIM
+  - E-mail — SIM
+  - IDs de usuário — SIM (identificador interno + endereço de carteira)
+  - Endereço — NÃO
+  - Telefone — NÃO
+  - Raça/etnia, crenças, orientação sexual — NÃO
+  - Outras informações pessoais — SIM (endereço público de carteira Ethereum,
+    usado como identificador on-chain)
+  Compartilhado com terceiros? SIM — com Privy (autenticação), Supabase
+  (armazenamento), Netlify (backend), e de forma pseudónima/publica na
+  blockchain Ethereum (endereço da carteira).
+  É essencial para o funcionamento do app? SIM (conta e lances).
+  Criptografado em trânsito? SIM (HTTPS).
+  O usuário pode solicitar a eliminação? SIM (delete-account apaga os dados
+  pessoais; o endereço on-chain é pseudónimo e imutável — declarado na
+  política).
+
+[3] INFORMAÇÕES FINANCEIRAS
+R: SIM — coletado.
+  Subcategorias declaradas:
+  - Histórico de compras — SIM (compras de senhas, PIX)
+  - Número de cartão de crédito/débito — NÃO (pagamentos processados
+    exclusivamente pelo Mercado Pago, que não partilha dados de cartão com o
+    app)
+  - Outras informações financeiras — SIM (valores de transação e pedidos,
+    processados via Mercado Pago e registados na Supabase)
+  Compartilhado? SIM — Mercado Pago (processamento PIX), Supabase
+  (armazenamento), Netlify (funções).
+  Essencial? SIM (compras).
+  Criptografado em trânsito? SIM.
+  Eliminação? SIM (hard-delete) — exceto registos fiscais anonimizados
+  retidos por obrigação legal (declarado na política).
+
+[4] SAÚDE E APTIDÃO FÍSICA
+R: NÃO coletado.
+
+[5] MENSAGENS (e-mails, SMS, mensagens in-app)
+R: NÃO coletado. (O app não acede à caixa de e-mail nem a SMS; o login OTP
+via Privy não confere acesso ao conteúdo de mensagens.)
+
+[6] FOTOS OU VÍDEOS
+R: NÃO coletado. (Nenhuma permissão de armazenamento/mídia.)
+
+[7] ARQUIVOS DE ÁUDIO
+R: NÃO coletado.
+
+[8] ARQUIVOS E DOCUMENTOS
+R: NÃO coletado.
+
+[9] CALENDÁRIO
+R: NÃO coletado.
+
+[10] CONTATOS
+R: NÃO coletado. (Nenhuma permissão READ_CONTACTS.)
+
+[11] ATIVIDADE NO APP
+R: SIM — coletado.
+  Subcategorias declaradas:
+  - Interações no app — SIM (navegação, visualização de leilões)
+  - Histórico de pesquisa no app — NÃO
+  - Apps instalados — NÃO
+  - Outro conteúdo gerado pelo usuário — SIM (lances com hash Argon2id,
+    histórico de lances, atividade registada em atividade_utilizadores)
+  - Outras ações — SIM (registos de presença: endereço + carimbo de data/hora)
+  Compartilhado? SIM — Supabase (armazenamento) e, para os lances, de forma
+  pseudónima na blockchain Ethereum.
+  Essencial? PARCIAL — a navegação básica não exige; participar em leilões
+  exige o registo de lances (declarar como "opcional" para interações, mas a
+  declaração oficial é feita por subcategoria: lances = essencial).
+  Criptografado em trânsito? SIM.
+  Eliminação? SIM (delete-account apaga lances e atividade_utilizadores;
+  on-chain retido e pseudónimo).
+
+[12] NAVEGAÇÃO NA WEB
+R: NÃO coletado.
+
+[13] INFORMAÇÕES DE DESEMPENHO DO APP
+R: SIM — coletado (apenas com consentimento).
+  Subcategorias declaradas:
+  - Relatórios de falhas (crash logs) — SIM, via Sentry (opcional, com
+    consentimento)
+  - Diagnósticos — SIM, via Sentry
+  - Outros dados de desempenho — NÃO
+  Compartilhado? SIM — Sentry (monitorização de erros).
+  Essencial? NÃO (opcional; o app funciona sem).
+  Criptografado em trânsito? SIM.
+  Eliminação? SIM (dados de diagnóstico removíveis; política de retenção do
+  Sentry conforme configuração).
+
+[14] DISPOSITIVO OU OUTROS IDs
+R: SIM — coletado.
+  Subcategorias declaradas:
+  - Dispositivo ou outros IDs — SIM: identificadores gerados pelos serviços
+    (Privy user ID, Supabase UUID) e, quando aplicável, Android ID do
+    dispositivo (utilizado apenas internamente para segurança/anti-fraude;
+    NÃO é ligado a identificadores persistentes de publicidade nem usado para
+    anúncios).
+  Compartilhado? SIM — Privy, Supabase (identificadores de conta).
+  Essencial? SIM (gestão de conta e segurança).
+  Criptografado em trânsito? SIM.
+  Eliminação? SIM (delete-account remove identificadores da conta).
+
+[15] INFORMAÇÕES FINANCEIRAS DO GOVERNO (NIF/CPF)
+R: NÃO coletado. (O app não coleta CPF; a entidade tem CNPJ próprio, mas o
+CPF do utilizador não é coletado.)
+
+[16] OUTROS TIPOS DE DADOS NÃO LISTADOS
+R: NÃO aplicável (declarar apenas o acima; a política de privacidade cobre
+tudo).
+
+--------------------------------------------------------------------------------
+PARTE 3 — COMPARTILHAMENTO (pergunta por categoria coletada)
+--------------------------------------------------------------------------------
+Para cada categoria coletada, o formulário pergunta se os dados são
+compartilhados com terceiros. Resposta uniforme:
+
+- Informações pessoais: SIM (Privy, Supabase, Netlify; blockchain para o
+  endereço da carteira).
+- Informações financeiras: SIM (Mercado Pago, Supabase, Netlify).
+- Atividade no app: SIM (Supabase; blockchain para lances).
+- Desempenho do app: SIM (Sentry).
+- Dispositivo ou outros IDs: SIM (Privy, Supabase).
+
+Nenhum dado é vendido. Nenhum dado é usado para publicidade ou marketing
+comportamental.
+
+--------------------------------------------------------------------------------
+PARTE 4 — POLÍTICA DE PRIVACIDADE (campo no Play Console)
+--------------------------------------------------------------------------------
+URL a preencher no Play Console (após corrigir o GAP 1):
+- [URL FINAL DA POLÍTICA] — atualmente pendente (iubenda 404 / domínio
+  quebrado). Ver docs/MC90.2-GAP-ANALYSIS.txt GAP 1.
+
+--------------------------------------------------------------------------------
+PARTE 5 — DECLARAÇÃO FINANCEIRA (Financial features declaration)
+--------------------------------------------------------------------------------
+Preencher no Play Console (App content > Financial features declaration):
+- O app permite compras de produtos (senhas) com pagamento PIX via Mercado
+  Pago: SIM (transações de pagamento).
+- O app processa transações on-chain (lances em Ethereum mainnet) via carteira
+  embutida Privy: SIM — declarar como transações de app, NÃO como exchange/
+  carteira de criptomoeda autónoma.
+- O app NÃO é exchange de criptomoedas, NÃO faz conversão fiat-cripto, NÃO
+  oferece empréstimos, NÃO negocia ações/títulos.
+- Nenhuma das permissões proibidas pela política financeira está declarada
+  (manifest só tem INTERNET).
+
+================================================================================
+CHECKLIST DE CONSISTÊNCIA (verificação cruzada)
+================================================================================
+[OK] As categorias declaradas batem com os SDKs reais (package.json: privy,
+     supabase, sentry; functions: mercadopago/webhook).
+[OK] As categorias "Não coletado" batem com o manifest (só INTERNET).
+[OK] Coleta de atividade_utilizadores declarada (atividade no app).
+[OK] Eliminação de dados declarada de forma idêntica à política (hard-delete +
+     anonimização fiscal + retenção on-chain).
+[OK] Consentimento LGPD declarado na política (gate no app).
+[PENDENTE] URL da política — depende do GAP 1 (operador).
+================================================================================
