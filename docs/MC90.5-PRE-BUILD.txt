@@ -1,0 +1,55 @@
+================================================================================
+MC90.5-S0 — VERIFICAÇÃO PRÉ-BUILD
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+
+--------------------------------------------------------------------------------
+0.1 — CÓDIGO
+--------------------------------------------------------------------------------
+- Branch: main
+- Working tree: LIMPO (git status --short vazio)
+- Último commit: e845fff (MC90.4: relatorio e documentacao)
+- O código contém os commits da série 89/90, incluindo o MC90.3 (rotas
+  /privacidade e /excluir-conta) e o MC90.4 (artefactos de submissão).
+
+--------------------------------------------------------------------------------
+0.2 — KEYSTORE (existência apenas — R5: nada foi lido/exibido)
+--------------------------------------------------------------------------------
+- C:\Users\Moltbot\Desktop\DESAFIOGUT\keystore\desafiogut.keystore
+  -> EXISTE; gitignored (.gitignore:11 "keystore/" — confirmado via
+     git check-ignore; NÃO versionado).
+- Backup: C:\Users\Moltbot\Desktop\GUTO\BACKUP_KEYSTORE NÃO PERDER NUNCA\
+  desafiogut.keystore (confirmado no MC90.4).
+- C:\...\desafio-gut\frontend\android\keystore.properties -> EXISTE
+  (171 bytes); gitignored (.gitignore:17 — confirmado; NÃO versionado).
+
+--------------------------------------------------------------------------------
+0.3 — AMBIENTE DE BUILD
+--------------------------------------------------------------------------------
+- Java: OpenJDK 17.0.19 (2026-04-21 LTS) — compatível.
+- ANDROID_HOME: definido.
+- Gradle wrapper: gradlew/gradlew.bat presentes.
+- gradle.properties: org.gradle.jvmargs=-Xmx512m (heap moderado), daemon off,
+  parallel off — adequado à máquina (5,7 GB RAM total).
+- Disco C:: 22 GB livres (92% usado) — suficiente para o build.
+- RAM livre no momento: ~1,0 GB; principais consumidores: Memory Compression
+  (519 MB, compressível), MsMpEng (257 MB), msedge (~490 MB somado),
+  python (173 MB). O Gradle com -Xmx512m cabe no orçamento; se o build
+  falhar por OOM, libertar memória antes de repetir.
+
+--------------------------------------------------------------------------------
+0.4 — ESTADO DO AAB ANTERIOR
+--------------------------------------------------------------------------------
+- android/app/build/outputs/bundle/release/app-release.aab (34,4 MB,
+  21/07/2026, assinado CN=DesafioGUT) — será SUBSTITUÍDO pela regeneração.
+
+--------------------------------------------------------------------------------
+0.5 — PLANO (R10 respeitado)
+--------------------------------------------------------------------------------
+S1: npm run build:apk (netlify build --context production + validar:dist +
+    cap sync android) — atualiza os assets do Capacitor com o build atual.
+S2: ./gradlew bundleRelease — gera o AAB release assinado.
+S3: jarsigner -verify — valida assinatura.
+S4: Inspeção do AAB — confirmar presença de /privacidade e /excluir-conta.
+S5: Cópia no Desktop + SHA-256.
+================================================================================
