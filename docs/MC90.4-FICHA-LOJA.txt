@@ -1,0 +1,111 @@
+================================================================================
+MC90.4-S3 — FICHA DA LOJA (STORE LISTING) — PRONTA PARA COPIAR
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+ONDE PREENCHER: Play Console -> app -> Store listing (Ficha da loja).
+Nota de precisão: o login é via Google ou e-mail (OTP) — NÃO há Apple
+(descontinuado no projeto). O contrato está na Ethereum MAINNET.
+
+--------------------------------------------------------------------------------
+1. DESCRIÇÃO CURTA (máx. 80 caracteres — usado)
+--------------------------------------------------------------------------------
+Leilão de menor lance único com pagamentos PIX e lances na blockchain.
+
+(79 caracteres)
+
+--------------------------------------------------------------------------------
+2. DESCRIÇÃO LONGA (máx. 4000 caracteres; ~1500 usados)
+--------------------------------------------------------------------------------
+DesafioGUT é uma plataforma de leilão onde o MENOR lance único ganha: a
+cada lance, o valor que aparece uma única vez é o vencedor (Art. VIII do
+regulamento). Combina a transparência da blockchain Ethereum (mainnet) com a
+simplicidade dos pagamentos brasileiros via PIX.
+
+Como funciona:
+- Participe do leilão ativo e lance valores em centavos.
+- O menor lance único (que aparece exatamente uma vez) vence o item.
+- Compre senhas para lançar via PIX (processado pelo Mercado Pago).
+- Acompanhe saldo de senhas e saldo em R$ em tempo real.
+
+Segurança e tecnologia:
+- Autenticação sem barreira via Privy (conta Google ou e-mail com código).
+- Carteira Ethereum embutida e criada automaticamente no login.
+- Lances registados no smart contract LeilaoGUT na Ethereum mainnet —
+  assinatura criptográfica (EIP-191) e prova de intenção com hash Argon2id.
+- Consentimento LGPD antes de qualquer interação; eliminação de conta
+  disponível no app e na web.
+- Compatível com Android (Capacitor) e web.
+
+Recursos adicionais:
+- Painel do lojista: gestão de cotas, produtos e banners.
+- Painel administrativo: utilizadores, transações e registos de auditoria.
+
+DesafioGUT · Grupo União e Trabalho · CNPJ 23.040.066/0001-00
+Política de privacidade: https://silly-stardust-ca71bc.netlify.app/privacidade
+
+--------------------------------------------------------------------------------
+3. ASSETS GRÁFICOS (exigências do Play Console)
+--------------------------------------------------------------------------------
+[OK] ÍCONE DO APP (512x512 PNG, obrigatório):
+     desafio-gut/frontend/public/assets/guto/v3/guto-icon-v3.png
+     (512x512, PNG, RGB — pronto para upload)
+     Alternativa: public/assets/guto/v2/guto-icon-v2.png (512x512).
+
+[PEND] FEATURE GRAPHIC (1024x500 PNG, obrigatório para a ficha):
+     NÃO existe. Gerar a partir da identidade GUTO (ex.: fundo navy #050818
+     + logo GUTO + tagline "O menor lance único ganha"). Ação do operador
+     (design) — não bloqueia a criação do app, mas bloqueia a submissão.
+
+[PEND] SCREENSHOTS (4-8 imagens; recomendado 1080x1920 ou 1080x2340):
+     NÃO existem capturas reais do app. Telas a capturar (após o closed
+     testing ou em dispositivo com build atual):
+     Tela 1: Home / Leilão ativo (contagem regressiva + tabela de lances)
+     Tela 2: Compra de senhas (PIX — QR Code/pagamento)
+     Tela 3: Lançamento de lance (formulário + confirmação)
+     Tela 4: Carteira / Saldo (senhas e saldo R$)
+     Tela 5: Vitrine de produtos (se aplicável)
+     Tela 6: Painel do lojista (cotas) — se aplicável
+     Regras: sem dados pessoais reais, sem valores sensíveis, sem captura de
+     ecrã de admin com dados de utilizadores (R4).
+
+--------------------------------------------------------------------------------
+4. CLASSIFICAÇÃO DE CONTEÚDO (IARC)
+--------------------------------------------------------------------------------
+Preencher o questionário IARC na Play Console com as respostas sugeridas no
+MC90.4-CRIAR-APP-DADOS.txt (secção 3): sem violência, sem sexual, sem
+jogos de azar, sem publicidade; compras reais (PIX) declaradas; interação
+social baixa. Resultado esperado: Livre ou 12 anos.
+
+--------------------------------------------------------------------------------
+5. CLASSIFICAÇÃO ETÁRIA E AUDIÊNCIA
+--------------------------------------------------------------------------------
+- Target audience: maiores de 18 anos (público-alvo de leilão/compras) —
+  pode-se marcar também "18+" na segmentação de audiência; a classificação
+  IARC (conteúdo) continua Livre/12.
+- App destinado a crianças? NÃO.
+- Usar "Restrict minor access" conforme a preferência do operador (recurso
+  disponível no Play Console).
+
+--------------------------------------------------------------------------------
+6. CONTACTOS (campos da ficha)
+--------------------------------------------------------------------------------
+- E-mail de suporte: desafiogut01@gmail.com
+- Website: https://silly-stardust-ca71bc.netlify.app
+- Política de privacidade:
+  https://silly-stardust-ca71bc.netlify.app/privacidade
+
+--------------------------------------------------------------------------------
+7. RELEASE NOTES ("Novidades desta versão") — primeira versão
+--------------------------------------------------------------------------------
+• Leilão de menor lance único com pipeline 100% on-chain (Ethereum mainnet).
+• Pagamentos PIX integrados (Mercado Pago).
+• Login com Google/e-mail via Privy (carteira embutida).
+• Painéis lojista e administrativo.
+• Conformidade LGPD (consentimento, eliminação de conta in-app e web).
+
+--------------------------------------------------------------------------------
+8. CATEGORIA E TAGS (seção "Categoria" da ficha)
+--------------------------------------------------------------------------------
+- Categoria: FINANÇAS (subcategoria conforme lista — preferir "Pagamentos").
+- Tags (opcionais, máx. 5): leilão, blockchain, lances, web3, pix
+================================================================================
