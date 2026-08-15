@@ -1,0 +1,60 @@
+================================================================================
+MC90.3-S4 — VALIDAÇÃO LOCAL DAS NOVAS ROTAS
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1 — BUILD LOCAL
+--------------------------------------------------------------------------------
+Comando: npm run build (vite build — frontend web; R10 respeitado: build APK
+só via build:apk, não usado aqui).
+Resultado: ✓ built in 21.10s — sucesso.
+Avisos: apenas [INVALID_ANNOTATION] benignos do rolldown em node_modules
+(@privy-io/react-auth, ox) — sem impacto no bundle.
+
+--------------------------------------------------------------------------------
+4.2 — PÁGINAS GERADAS
+--------------------------------------------------------------------------------
+dist/ gerado com sucesso (SPA — as rotas são client-side; o vite preview
+serve o index.html com fallback de rota).
+
+--------------------------------------------------------------------------------
+4.3 — TESTE LOCAL (npx vite preview --port 4173)
+--------------------------------------------------------------------------------
+Curl:
+- GET /                 -> 200
+- GET /privacidade      -> 200
+- GET /excluir-conta    -> 200
+
+Navegador (renderização real React):
+- /privacidade: renderiza integralmente — título "Política de Privacidade —
+  DesafioGUT", data 15/08/2026, 14 secções (1. Identificação do Controlador
+  ... 14. Contacto e Autoridade de Controlo), e-mail desafiogut01@gmail.com,
+  link "página de eliminação de conta" (-> /excluir-conta), "← Voltar ao
+  app". ACESSÍVEL SEM GATE LGPD (Boot.jsx rotas públicas).
+- /excluir-conta: renderiza integralmente — título, aviso de
+  irreversibilidade, "O QUE ACONTECE AO EXCLUIR", "SOLICITAR EXCLUSÃO"
+  (login Privy quando deslogado), suporte por e-mail, prazo de processamento
+  (15 dias prorrogável, LGPD), link "Política de Privacidade" (-> /privacidade),
+  "← Voltar ao app". ACESSÍVEL SEM GATE LGPD.
+
+--------------------------------------------------------------------------------
+4.4 — VERIFICAÇÃO CRUZADA (GAPs MC90.2)
+--------------------------------------------------------------------------------
+GAP 1 (política inacessível): RESOLVIDO no código — rota /privacidade
+pública + 3 links iubenda (404) substituídos por rota interna:
+- components/TermosConsentimento.jsx
+- pages/Seguranca.jsx (Política de Privacidade + Política de Cookies)
+- pages/MercadoLances.jsx (footer "Privacidade")
+GAP 2 (link web de eliminação): RESOLVIDO no código — /excluir-conta pública
+com fluxo completo + link para a política.
+Falta apenas o DEPLOY (S5) para as URLs públicas ficarem ativas.
+
+--------------------------------------------------------------------------------
+4.5 — EVIDÊNCIAS
+--------------------------------------------------------------------------------
+- Build: "✓ built in 21.10s" (saída do terminal).
+- Curl 200 nas 3 rotas do preview.
+- Renderização verificada no browser (snapshots de acessibilidade com o
+  conteúdo integral das duas páginas).
+================================================================================
