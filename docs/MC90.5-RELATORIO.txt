@@ -1,0 +1,78 @@
+================================================================================
+MC90.5 — RELATÓRIO FINAL: REGENERAÇÃO DO AAB DE RELEASE (COM AS ROTAS MC90.3)
+DesafioGUT · Gerado: 2026-08-15 · Branch: main
+================================================================================
+
+--------------------------------------------------------------------------------
+1. RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+O Android App Bundle (AAB) de release foi REGENERADO com o código atual
+(incluindo as rotas /privacidade e /excluir-conta do MC90.3), assinado com a
+keystore do projeto, e VALIDADO em três frentes: assinatura, conteúdo e hash.
+
+Obstáculo encontrado e resolvido: o Capacitor 8 exige Java 21, mas o
+JAVA_HOME padrão da máquina é o OpenJDK 17 — a primeira tentativa falhou com
+"invalid source release: 21". O build foi concluído com o JBR 21 do Android
+Studio (C:\Program Files\Android\Android Studio\jbr).
+
+--------------------------------------------------------------------------------
+2. ARTEFACTO GERADO
+--------------------------------------------------------------------------------
+- Local: desafio-gut/frontend/android/app/build/outputs/bundle/release/
+         app-release.aab
+- Cópia no Desktop: C:\Users\Moltbot\Desktop\DesafioGUT-20260815-release.aab
+- Tamanho: 34.984.842 bytes (~35,0 MB) — data 15/08/2026 17:36
+- SHA-256: ac7778a89053a433d947d0f55af2bdc14a09b90208a61d7d61ed0da7f935ff4a
+  (docs/MC90.5-AAB-SHA256.txt)
+- versionCode 1 / versionName "1.0.0" (build.gradle) — corretos para a
+  primeira submissão.
+
+--------------------------------------------------------------------------------
+3. VALIDAÇÕES (evidências)
+--------------------------------------------------------------------------------
+a) ASSINATURA (S3): jarsigner -verify -> "jar verified". Certificado:
+   X.509, CN=DesafioGUT, OU=Desenvolvimento, O=DesafioGUT, L=Manaus,
+   ST=Amazonas, C=BR — MESMA keystore do AAB anterior (identidade de
+   assinatura consistente).
+b) CONTEÚDO (S4): index.html do AAB referencia assets/index-CIn9c4JU.js
+   (mesmo hash do deploy MC90.3). Chunks lazy presentes:
+   Privacidade-wOuA1H6I.js (título, secções, contacto) e
+   ExcluirConta-Bqk2b1iF.js (aviso de irreversibilidade, prazo 15 dias).
+   Zero referências a iubenda. 124 assets JS (paridade com o validar:dist).
+c) BUILD INTERMEDIÁRIO (S1): netlify build 2m49s + validar:dist PASS
+   (mainnet, contrato 0x0052477A8C...16cd) + cap sync ok (assets 15/08).
+d) Hash da cópia Desktop = hash do artefacto (ac7778a8...) — cópia íntegra.
+
+--------------------------------------------------------------------------------
+4. PENDÊNCIAS QUE FICAM (não bloqueiam este MC)
+--------------------------------------------------------------------------------
+- bundletool não instalado (validação opcional pré-upload; o Play Console
+  valida no upload).
+- Ícone Android (ic_launcher) ainda é o padrão do Capacitor no APK — usar
+  guto-icon-v3.png na ficha da loja; idealmente regenerar os mipmap no futuro.
+- Demais pendências da submissão: feature graphic, screenshots, conta demo,
+  IARC (ver MC90.4-CHECKLIST-SUBMISSAO.txt).
+
+--------------------------------------------------------------------------------
+5. PRÓXIMOS PASSOS PARA O OPERADOR
+--------------------------------------------------------------------------------
+1. Criar o app na Play Console (MC90.4-CRIAR-APP-DADOS.txt); registrar as
+   URLs /privacidade e /excluir-conta.
+2. Preencher Data Safety (MC90.4-DATA-SAFETY-FINAL.txt) + Financial features
+   declaration.
+3. Fazer upload do AAB regenerado (Desktop\DesafioGUT-20260815-release.aab)
+   na track de CLOSED TESTING.
+4. Iniciar o closed testing (12 testadores x 14 dias — guia MC90.2).
+5. Após os 14 dias: submeter para produção com conta demo + resumo do
+   feedback.
+
+--------------------------------------------------------------------------------
+6. VEREDITO (R8)
+--------------------------------------------------------------------------------
+AAB de release ATUALIZADO, assinado com a keystore do projeto, contendo as
+rotas /privacidade e /excluir-conta do MC90.3 — CONFORME o esperado. Pronto
+para upload na Play Store (closed testing).
+
+================================================================================
+FIM DO RELATÓRIO MC90.5
+================================================================================

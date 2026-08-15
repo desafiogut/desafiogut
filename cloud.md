@@ -7216,3 +7216,26 @@ e rodar o closed testing de 12 testadores x 14 dias (guia do MC90.2).
 
 Artefactos: docs/MC90.4-{LEVANTAMENTO,CRIAR-APP-DADOS,DATA-SAFETY-FINAL,
 FICHA-LOJA,APK-RELEASE,CHECKLIST-SUBMISSAO,RELATORIO}.txt
+## MC90.5 — o AAB de release nasceu de novo, com as rotas públicas lá dentro
+
+O Android App Bundle estava desatualizado desde 21/07 (pré-MC90.3). Foi
+regenerado com o código atual, assinado com a keystore do projeto e validado
+em três frentes: assinatura (jarsigner "jar verified", CN=DesafioGUT,
+Manaus/AM — mesma chave do AAB anterior), conteúdo (o index.html do AAB
+aponta para o mesmo bundle do deploy MC90.3; os chunks Privacidade e
+ExcluirConta estão presentes com o texto integral; zero iubenda) e hash
+(SHA-256 ac7778a8... — cópia do Desktop íntegra, 34,98 MB).
+
+Houve um obstáculo de ambiente: o Capacitor 8 exige Java 21 e o JAVA_HOME da
+máquina aponta para o OpenJDK 17 ("invalid source release: 21" na primeira
+tentativa). A solução foi rodar o gradle com o JBR 21 do Android Studio
+(C:/Program Files/Android/Android Studio/jbr) — BUILD SUCCESSFUL em 1m33s.
+Lição registada em docs/MC90.5-BUILD-AAB.txt para os próximos builds.
+
+O AAB está em C:/Users/Moltbot/Desktop/DesafioGUT-20260815-release.aab e em
+android/app/build/outputs/bundle/release/, versionCode 1 — pronto para o
+upload na track de closed testing. Próximo passo operacional: criar o app na
+Play Console (MC90.4) e iniciar os 14 dias de teste.
+
+Artefactos: docs/MC90.5-{PRE-BUILD,BUILD-APK,BUILD-AAB,VALIDACAO-ASSINATURA,
+CONTEUDO-AAB,AAB-SHA256,RELATORIO}.txt
