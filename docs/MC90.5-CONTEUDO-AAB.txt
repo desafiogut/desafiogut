@@ -1,0 +1,47 @@
+================================================================================
+MC90.5-S4 — VERIFICAÇÃO DO CONTEÚDO DO AAB (ROTAS MC90.3)
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1 — MÉTODO
+--------------------------------------------------------------------------------
+O AAB é um ZIP. Inspeção por streaming (unzip -p) — sem extrair para o repo:
+- index.html do AAB -> bundle JS referenciado
+- Entry bundle -> strings das rotas
+- Chunks lazy (Privacidade-*.js, ExcluirConta-*.js) -> conteúdo real
+
+--------------------------------------------------------------------------------
+4.2 — RESULTADOS
+--------------------------------------------------------------------------------
+a) index.html no AAB referencia: assets/index-CIn9c4JU.js
+   -> MESMO hash do deploy Netlify do MC90.3 (produção) — paridade confirmada.
+
+b) Entry bundle (58.922 bytes):
+   - "privacidade"   : 2 ocorrências (rota /privacidade + import lazy)
+   - "excluir-conta" : 1 ocorrência (rota)
+   - "iubenda"       : 0 (links antigos removidos)
+
+c) Chunks lazy presentes no AAB (124 assets .js no total):
+   - Privacidade-wOuA1H6I.js (17.128 bytes)
+     * "Política de Privacidade — DesafioGUT" (título): presente
+     * "IDENTIFICAÇÃO DO CONTROLADOR" (secção 1): presente
+     * "desafiogut01@gmail.com" (contacto): presente
+   - ExcluirConta-Bqk2b1iF.js (5.221 bytes)
+     * "irrevers" (aviso de irreversibilidade MC90.3): presente
+     * "15 dias" (prazo LGPD MC90.3): presente
+   - ExcluirContaModal-C0OjmobT.js: presente
+
+--------------------------------------------------------------------------------
+4.3 — CONCLUSÃO
+--------------------------------------------------------------------------------
+O AAB regenerado CONTÉM as rotas /privacidade e /excluir-conta do MC90.3,
+com o conteúdo integral (política com 14 secções + página de eliminação
+aperfeiçoada) e SEM referências à iubenda. Critério do S4: CUMPRIDO.
+
+--------------------------------------------------------------------------------
+4.4 — LIMPEZA
+--------------------------------------------------------------------------------
+Arquivos temporários do bundle removidos após a inspeção (nada ficou no
+working tree — git status limpo).
+================================================================================
