@@ -1,0 +1,116 @@
+================================================================================
+MC90.2-S3 — VERIFICAÇÃO DE ELIMINAÇÃO DE CONTAS (REQUISITO OBRIGATÓRIO 2026)
+DesafioGUT · Gerado: 2026-08-15
+Fonte do requisito: User Data policy — "Account Deletion Requirement"
+(https://support.google.com/googleplay/android-developer/answer/10144311)
+================================================================================
+REQUISITO (Google Play, 2026):
+1. Opção de eliminação de conta DENTRO do app, facilmente descobrível.
+2. Recurso web EXTERNO para eliminação (ex.: página do site); o link deve ser
+   informado no campo designado do Play Console.
+3. Ao eliminar, TODOS os dados associados devem ser apagados (congelamento não
+   é aceite).
+4. Retenção por obrigação legal/segurança deve ser divulgada na política de
+   privacidade.
+
+--------------------------------------------------------------------------------
+3.1 — STATUS DA FUNCIONALIDADE NA APP: OK (verificado em código)
+--------------------------------------------------------------------------------
+Endpoint: POST /.netlify/functions/delete-account
+Arquivos:
+- desafio-gut/frontend/netlify/functions/delete-account.mjs (handler)
+- desafio-gut/frontend/netlify/functions/_lib/conta-delete.mjs (lógica pura)
+- desafio-gut/frontend/src/components/ExcluirContaModal.jsx (UI)
+- desafio-gut/frontend/src/App.jsx: rota pública /excluir-conta
+
+Evidências de conformidade (verificadas por leitura do código, 15/08/2026):
+a) Autenticação: JWT user-session obrigatório; autorização granular
+   (owner = JWT.endereco === body.endereco OU admin) — anti-IDOR.
+b) Rate limit: 3 requisições/janela (exclusão destrutiva).
+c) Modo dryRun: simula e devolve o manifesto do que SERIA apagado, sem mutar
+   (Pilar 1 SUPERPERS — validação antes de executar).
+d) Supabase obrigatório para exclusão completa (503 se não configurado).
+e) Escopo da exclusão (hard-delete):
+   - Supabase por cliente_id: saldo_rs, troco_senhas, wallet
+   - Supabase por endereco: lances, lojistas, atividade_utilizadores (MC89.43)
+   - Blobs por chave: saldo-rs, wallet, cotas, renovacao-adesao, voucher
+   - Blobs por valor: lance-idem
+f) Anonimização (retenção fiscal — obrigação legal BR):
+   - Supabase: saldo_rs_creditos (pk pedido_id), saldo_rs_debitos (pk
+     operacao_id) — endereço substituído por 0x0000...dead, demais PII
+     removidas (email, cpf, nome, telefone...).
+   - Blobs: pedidos, pedidos-pagos, pedidos-meta.
+g) Dados retidos por imposição técnica (disclosure):
+   - On-chain (smart contract Ethereum — imutável, pseudónimo).
+   - Fiscais (PIX anonimizados — prazo legal).
+h) Testes: netlify/functions/_tests/mc72-delete-account-auth.test.mjs e
+   mc8943-atividade-utilizadores.test.mjs (cobrem auth e a inclusão de
+   atividade_utilizadores na exclusão).
+
+VEREDITO DA FUNCIONALIDADE: a eliminação in-app está implementada e apaga
+efetivamente os dados pessoais associados (incluindo atividade_utilizadores),
+anonimiza os registos fiscais e declara a retenção on-chain. NÃO há
+"congelamento" como substituto.
+
+PENDÊNCIA OPERACIONAL: validar o fluxo completo num teste real (dryRun
+primeiro, depois exclusão real numa conta de teste) em ambiente de produção
+antes do closed testing — o código existe e está testado, mas a validação
+end-to-end com credenciais reais é do operador (sem custo).
+
+--------------------------------------------------------------------------------
+3.2 — STATUS DO LINK WEB (recurso externo): PENDENTE
+--------------------------------------------------------------------------------
+Situação atual:
+- O SPA TEM a rota pública /excluir-conta (App.jsx:370), que leva ao fluxo de
+  exclusão (ExcluirContaModal -> POST delete-account). A rota é pública
+  (Boot.jsx trata rotaPublicaExclusao) — não exige consentimento prévio.
+- PORÉM: não existe uma URL pública estável publicada/documentada para usar no
+  campo "Account deletion" do Play Console:
+  * https://desafio-gut.com/excluir-conta -> domínio NXDOMAIN (quebrado);
+  * https://silly-stardust-ca71bc.netlify.app/excluir-conta -> responde (SPA)
+    mas é uma URL de deploy do Netlify, utilizável como recurso web.
+
+Requisito do Google: "Users must have a readily discoverable option to
+initiate app account deletion from within your app AND outside of your app
+(for example, by visiting your website). A link to this web resource must be
+entered in the designated URL form field within Play Console."
+
+PLANO PARA CUMPRIR (ações do operador):
+1. Opção A (recomendada): corrigir o domínio custom desafio-gut.com (DNS no
+   Netlify/registrador) e usar https://desafio-gut.com/excluir-conta como URL
+   oficial de eliminação web.
+2. Opção B (imediata, sem custo): usar
+   https://silly-stardust-ca71bc.netlify.app/excluir-conta no campo do Play
+   Console enquanto o domínio não é corrigido.
+3. Após qualquer uma, registar a URL no campo "Account deletion" do Play
+   Console (App content > Account deletion).
+4. Garantir que a página web carrega o fluxo de exclusão em browser móvel e
+   desktop (o SPA já renderiza /excluir-conta sem login? — a rota é pública,
+   mas a exclusão exige JWT; verificar UX: o utilizador faz login para
+   eliminar. Isto cumpre o requisito — o Google exige um "mecanismo", não que
+   a exclusão dispense login).
+5. A política de privacidade (S1) já descreve o processo e os dois canais
+   (in-app e web).
+
+--------------------------------------------------------------------------------
+3.3 — RECOMENDAÇÕES
+--------------------------------------------------------------------------------
+[ALTA] Corrigir o domínio desafio-gut.com ou usar a URL do Netlify (GAP 1/9).
+[ALTA] Registrar a URL de eliminação no campo "Account deletion" do Play
+       Console ao criar o app.
+[MÉDIA] Testar o fluxo real de eliminação (dryRun -> execução) numa conta de
+        teste antes do closed testing, e capturar evidência (logs).
+[MÉDIA] Confirmar que o link web funciona em dispositivos móveis reais
+        (Android) durante o closed testing.
+[INFO] A rota /excluir-conta está no SPA e não requer mudança de código (R1:
+       mínima alteração — apenas publicação/URL).
+
+--------------------------------------------------------------------------------
+RESUMO
+--------------------------------------------------------------------------------
+Funcionalidade in-app : OK (delete-account + atividade_utilizadores + testes)
+Link web externo      : PENDENTE (rota existe no SPA; falta URL pública
+                        estável + registo no Play Console)
+Política (retenção)   : OK (S1 documenta hard-delete, anonimização fiscal e
+                        retenção on-chain)
+================================================================================
