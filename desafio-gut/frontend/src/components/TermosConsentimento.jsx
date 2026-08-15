@@ -201,7 +201,8 @@ export default function TermosConsentimento({ onAceitar }) {
             <input type="checkbox" checked={privacidade} onChange={(e) => setPrivacidade(e.target.checked)} style={estilos.checkbox} />
             <span>
               Concordo com o tratamento dos meus dados conforme a{" "}
-              <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: "#fbbf24" }}>
+              {/* MC90.3 — GAP 1 (MC90.2): link iubenda 404 -> rota pública /privacidade */}
+              <a href="/privacidade" style={{ color: "#fbbf24" }}>
                 Política de Privacidade
               </a>{" "}
               (LGPD/GDPR) e cedo minha imagem conforme Art. 33.

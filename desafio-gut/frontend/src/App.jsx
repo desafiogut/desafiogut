@@ -72,6 +72,9 @@ const EdicaoDetalhe        = lazy(() => import("./pages/EdicaoDetalhe.jsx"));
 // MC72 — página pública de exclusão de conta (Play Store). Standalone (fora do
 // AppLayout) e fora do gate LGPD, mas dentro dos providers (Privy/AppContext).
 const ExcluirConta         = lazy(() => import("./pages/ExcluirConta.jsx"));
+// MC90.3 — rota pública da Política de Privacidade (exigência User Data policy
+// 2026; substitui o link iubenda que respondia 404 — GAP 1 do MC90.2).
+const Privacidade          = lazy(() => import("./pages/Privacidade.jsx"));
 
 // Fallback discreto enquanto um chunk de rota carrega (sem layout shift agressivo).
 function RouteFallback() {
@@ -368,6 +371,9 @@ export default function App() {
         {/* MC72 — rota pública STANDALONE (fora do AppLayout e do gate LGPD): página
             de exclusão de conta exigida pela Google Play Store. */}
         <Route path="/excluir-conta" element={<ExcluirConta />} />
+        {/* MC90.3 — rota pública STANDALONE da Política de Privacidade (User Data
+            policy 2026): acessível sem autenticação e sem gate LGPD. */}
+        <Route path="/privacidade" element={<Privacidade />} />
         {/* MC20.2 FASE 1 · ITEM 2 — AppLayout (3 camadas) substitui Layout como
             rota-mãe; renderiza o Layout existente intacto na superfície (zero
             regressão de rotas/navegação — R1). */}

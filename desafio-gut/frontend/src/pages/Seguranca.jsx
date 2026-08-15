@@ -22,8 +22,10 @@ const CHECKS = [
 ];
 
 const LGPD_LINKS = [
-  { label: "Política de Privacidade",  href: "https://www.iubenda.com/privacy-policy/DESAFIOGUT" },
-  { label: "Política de Cookies",      href: "https://www.iubenda.com/privacy-policy/DESAFIOGUT/cookie-policy" },
+  // MC90.3 — GAP 1 (MC90.2): links iubenda respondiam 404; passam a apontar
+  // para a rota pública interna /privacidade (User Data policy 2026).
+  { label: "Política de Privacidade",  href: "/privacidade" },
+  { label: "Política de Cookies",      href: "/privacidade" },
   { label: "Regulamento RTD",          href: "#",                                                  note: "Registrado em cartório — Manaus/AM" },
   { label: "Contato DPO",              href: "mailto:desafiogut01@gmail.com",                       note: "desafiogut01@gmail.com" },
 ];

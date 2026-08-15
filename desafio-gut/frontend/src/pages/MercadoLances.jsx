@@ -314,7 +314,8 @@ export default function MercadoLances() {
             {!isMobile && (
               <>
                 {" · "}
-                <a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT" target="_blank" rel="noopener noreferrer" style={{ color: COR.gold }}>Privacidade</a>
+                {/* MC90.3 — GAP 1 (MC90.2): link iubenda 404 -> rota pública /privacidade */}
+                <a href="/privacidade" style={{ color: COR.gold }}>Privacidade</a>
                 {" · "}
                 <a href="https://www.grupouniaoetrabalho.com.br" target="_blank" rel="noopener noreferrer" style={{ color: COR.gold }}>grupouniaoetrabalho.com.br</a>
               </>

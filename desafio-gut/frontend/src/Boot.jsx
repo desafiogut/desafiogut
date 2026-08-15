@@ -44,11 +44,14 @@ export default function Boot() {
   const { pathname } = useLocation();
   const [aceito, setAceito] = useState(consentimentoJaAceito);
 
-  // MC72 — a página pública de exclusão de conta (exigência Play Store) tem de ser
-  // acessível sem passar pelo gate; continua dentro dos providers, por isso entra
-  // pelo caminho normal do PrivyRoot.
-  const rotaPublicaExclusao = pathname === "/excluir-conta";
-  const carregarApp = aceito || rotaPublicaExclusao;
+  // MC72/MC90.3 — páginas públicas exigidas pela Google Play Store (exclusão de
+  // conta e política de privacidade) têm de ser acessíveis sem passar pelo gate;
+  // continuam dentro dos providers, por isso entram pelo caminho normal do
+  // PrivyRoot. A política é conteúdo estático (sem Privy), a exclusão reutiliza
+  // o login — ambas fora do gate.
+  const ROTAS_PUBLICAS = ["/excluir-conta", "/privacidade"];
+  const rotaPublica = ROTAS_PUBLICAS.includes(pathname);
+  const carregarApp = aceito || rotaPublica;
 
   // NOTA (MC82.2): houve aqui um prefetch em requestIdleCallback para adiantar o
   // chunk enquanto o utilizador lia o regulamento. Foi REMOVIDO após medição: um
