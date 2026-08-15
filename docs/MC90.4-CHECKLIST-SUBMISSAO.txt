@@ -1,0 +1,72 @@
+================================================================================
+MC90.4-S5 — CHECKLIST FINAL PARA SUBMISSÃO À PLAY STORE
+DesafioGUT · Gerado: 2026-08-15
+Legenda: [PRONTO] artefacto disponível · [A FAZER] ação do operador ·
+         [BLOQUEIA] sem isto não submete
+================================================================================
+
+#  Passo                                          Artefacto / detalhe          Status
+-- ---------------------------------------------- ---------------------------- --------
+1  Criar o app na Play Console                   MC90.4-CRIAR-APP-DADOS.txt   [A FAZER]
+   (nome, idioma pt-BR, app gratuito, categoria  (copiar dados; confirmar      [BLOQUEIA]
+   Finanças, IARC, contactos, URLs)              registro até 30/09/2026)
+2  Registrar URLs obrigatórias no app            /privacidade + /excluir-conta [PRONTO]
+   (Privacy Policy + Account deletion)           (HTTP 200 — MC90.3)
+3  Preencher o Data Safety Form                  MC90.4-DATA-SAFETY-FINAL.txt  [A FAZER]
+   (App content > Data safety)                   (copiar respostas; consistente [BLOQUEIA]
+                                                  com a política)
+4  Preencher Financial features declaration      App content > Financial       [A FAZER]
+   (PIX + on-chain; NÃO declarar exchange)       features declaration          [BLOQUEIA]
+5  Preencher a ficha da loja                     MC90.4-FICHA-LOJA.txt         [A FAZER]
+   (descrição curta/longa, categoria, contactos) (copiar textos)               [BLOQUEIA]
+6  Ícone do app (512x512)                        public/assets/guto/v3/        [PRONTO]
+                                                  guto-icon-v3.png
+7  Feature graphic (1024x500)                    NÃO EXISTE — gerar            [A FAZER]
+                                                  (design com identidade GUTO)  [BLOQUEIA]
+8  Screenshots (4-8, 1080x1920+)                 NÃO EXISTEM — capturar telas  [A FAZER]
+                                                  reais (ver FICHA-LOJA sec.3)  [BLOQUEIA]
+9  Classificação IARC (conteúdo)                 Respostas sugeridas em        [A FAZER]
+                                                  CRIAR-APP-DADOS sec.3         [BLOQUEIA]
+10 REGENERAR o AAB release assinado              MC90.4-APK-RELEASE.txt        [A FAZER]
+   (AAB de 21/07 está pré-MC90.3 — sem as       (npm run build:apk +          [BLOQUEIA]
+   rotas novas; regerar com build atual)         gradlew bundleRelease)
+11 Upload do AAB na track de closed testing      app-release.aab regenerado    [A FAZER]
+   (Test and release > Closed testing)           + versionCode 1               [BLOQUEIA]
+12 Iniciar closed testing                         MC90.2-CLOSED-TESTING-GUIDE  [A FAZER]
+                                                 .txt
+13 Recrutar 12+ testadores (opt-in contínuo)     Guia MC90.2-S4 sec. 3         [A FAZER]
+14 14 dias de teste com 12+ opt-in + feedback    Guia MC90.2-S4 sec. 4-6       [A FAZER]
+15 Conta demo / credenciais p/ revisão           Criar conta Google de teste   [A FAZER]
+   (Play Console Requirements 3.3)               (ex.: gut.testador@gmail.com)
+16 Confirmar device verification                 Login no app Play Console     [A FAZER]
+   (conta pessoal nova)                          num Android real
+17 Submeter para produção (Dashboard)            Resumo do feedback +          [A FAZER]
+   após os 14 dias                               respostas de prontidão
+18 Fora do escopo Play: whitelist Binance (24-   —                           [A FAZER]
+   48h) e EOA coordenadora com ETH (saque+bridge)
+
+--------------------------------------------------------------------------------
+ORDEM DE EXECUÇÃO RECOMENDADA (dias)
+--------------------------------------------------------------------------------
+Dia 0  : (1) criar app -> (2) URLs -> (3) Data Safety -> (4) Financial ->
+        (5-9) ficha + ícone + feature graphic + screenshots + IARC ->
+        (10-11) regenerar AAB e subir na track de closed testing.
+Dia 0-3: (12-13) recrutar testadores e iniciar os 14 dias.
+Dia 3-17: (14) uso diário guiado + correção de bugs (subir versões novas).
+Dia 17 : (15-16) conta demo + device verification; (17) aplicar produção.
+Paralelo: (18) whitelist Binance e ETH da EOA.
+
+--------------------------------------------------------------------------------
+PENDÊNCIAS QUE PRECISAM DE AÇÃO EXTERNA (não são código)
+--------------------------------------------------------------------------------
+1. [BLOQUEIA] Regenerar o AAB (assets Android pré-MC90.3).
+2. [BLOQUEIA] Feature graphic 1024x500 (não existe).
+3. [BLOQUEIA] Screenshots reais 1080x1920+ (não existem).
+4. [BLOQUEIA] Conta demo para a revisão do Google.
+5. [BLOQUEIA] IARC (questionário interativo — não automatizável).
+6. [Opcional] Domínio desafio-gut.com (DNS) — não bloqueia (URLs Netlify ok).
+7. [Opcional] Regenerar ic_launcher do APK com o ícone GUTO (hoje é o padrão
+   do Capacitor — a Play Store pode sinalizar "ícone padrão"; usar
+   guto-icon-v3.png como ícone da ficha minimiza o risco; idealmente
+   atualizar os mipmap no APK).
+================================================================================
