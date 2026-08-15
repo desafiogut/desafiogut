@@ -1,0 +1,57 @@
+================================================================================
+MC90.6-S3 — VALIDAÇÃO DAS FUNÇÕES COM BLOBS (ESTADO ATUAL, SEM BLOBS_TOKEN)
+DesafioGUT · Gerado: 2026-08-15
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1 — LOGS DAS FUNÇÕES (netlify logs --function)
+--------------------------------------------------------------------------------
+- monitor-onchain: "No logs found for the given time range" (24h).
+- ia-preditiva   : "Could not find function ia-preditiva" — a função NÃO
+                   EXISTE no deploy atual (referência histórica no comentário
+                   do _lib/blobs-manual.mjs, MC88.31).
+- backup-blobs   : "No logs found for the given time range" (24h).
+
+INTERPRETAÇÃO: monitor-onchain e backup-blobs não têm agendamento ativo
+(nenhuma Netlify Scheduled Function — o próprio código afirma isso — nem
+workflow GitHub Actions para monitor-onchain; os workflows existentes são
+agentshield/ci/contract-security/security-scan). São funções admin-gated
+"idealmente disparadas por cron externo". Sem logs não há erro de
+autenticação — simplesmente não foram invocadas no período.
+
+--------------------------------------------------------------------------------
+3.2 — TESTE FUNCIONAL REAL (evidência de que os blobs OPERAM sem o token)
+--------------------------------------------------------------------------------
+Função: banners.mjs (GET público) — usa getStore({name}) AUTOMÁTICO
+(linha 47) e store.get() no fluxo GET (linhas 128-131).
+
+Chamada real em produção:
+  GET https://silly-stardust-ca71bc.netlify.app/.netlify/functions/banners
+      ?cliente_id=0x0000000000000000000000000000000000000001&formato=site
+RESPOSTA: 200 com SVG gerado (banner de fallback do cliente inexistente) —
+o store foi aberto e lido sem erro.
+
+CONCLUSÃO: nas funções de PEDIDO normais, o runtime da Netlify injeta o
+contexto automático dos Blobs (NETLIFY_BLOBS_TOKEN do site) — o BLOBS_TOKEN
+não é necessário para o funcionamento atual do sistema.
+
+--------------------------------------------------------------------------------
+3.3 — QUANDO O BLOBS_TOKEN SERÁ NECESSÁRIO (documentação preventiva)
+--------------------------------------------------------------------------------
+1. Se o operador criar NETLIFY SCHEDULED FUNCTIONS para monitor-onchain /
+   backup-blobs (o runtime não injeta o contexto automático nelas — erro
+   histórico documentado no MC88.31: 12x em monitor-onchain).
+2. Para acesso EXTERNO aos blobs (scripts locais, CI/CD fora do site).
+3. Como fallback se o contexto automático falhar (o _lib/blobs-manual.mjs
+   já tenta BLOBS_TOKEN → NETLIFY_BLOBS_TOKEN → NETLIFY_API_TOKEN).
+
+--------------------------------------------------------------------------------
+3.4 — STATUS
+--------------------------------------------------------------------------------
+- Nenhum erro de autenticação observado (sem logs de erro; teste funcional
+  passou).
+- BLOBS_TOKEN: PENDENTE de configuração pelo operador (preventivo — S1).
+- "monitor-onchain atrasado: false": campo da resposta da própria função
+  (MC88.31, linha 210) que sinaliza recuperação de blocos — não é um "verde
+  falso" causado pelo token; a função simplesmente não está agendada.
+================================================================================
