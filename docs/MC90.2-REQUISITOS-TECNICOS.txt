@@ -1,0 +1,104 @@
+================================================================================
+MC90.2-S5 — REQUISITOS TÉCNICOS: TARGET API LEVEL E VERIFICAÇÃO DE
+DESENVOLVEDOR (2026)
+DesafioGUT · Gerado: 2026-08-15
+Fontes: Play Console Help — "Target API level requirements for Google Play
+apps" (https://support.google.com/googleplay/android-developer/answer/11926878)
++ Android Developers Blog (18/06/2026, atualizado 15/07/2026) + Play Console
+Help — "Verify your developer identity information".
+================================================================================
+
+--------------------------------------------------------------------------------
+5.1 — TARGET API LEVEL (targetSdkVersion)
+--------------------------------------------------------------------------------
+REQUISITO 2026 (confirmado na fonte oficial, acesso 15/08/2026):
+- Novos apps e atualizações: devem ter target API level 36 (Android 16) a
+  partir de 31 de agosto de 2026.
+- (Em 2025 o requisito era API 35/Android 15 desde 31/08/2025.)
+
+VERIFICAÇÃO NO PROJETO (evidência — 15/08/2026):
+Arquivo: desafio-gut/frontend/android/variables.gradle
+- minSdkVersion    = 24
+- compileSdkVersion = 36
+- targetSdkVersion  = 36
+Arquivo: desafio-gut/frontend/android/app/build.gradle
+- applicationId     = "com.desafiogut.app"
+- versionCode       = 1
+- versionName       = "1.0.0"
+- signingConfigs.release carrega credenciais de keystore.properties (NÃO
+  commitado — correto do ponto de vista de segurança).
+
+STATUS: OK/CONFORME — targetSdkVersion 36 (Android 16) cumpre o requisito de
+31/08/2026 para novos apps. minSdk 24 (Android 7.0) garante cobertura ampla.
+
+OBSERVAÇÕES:
+- versionCode 1 é correto para a primeira publicação. Incrementar a cada
+  submissão seguinte.
+- O AAB de produção deve ser gerado com assembleRelease/bundleRelease e
+  assinado com o keystore de release (keystore.properties). O app não deve
+  usar a assinatura de debug em produção.
+- Capacitor: o build.gradle é o padrão Capacitor (variáveis em
+  variables.gradle) — sem configurações fora do padrão que possam rejeitar a
+  submissão.
+
+--------------------------------------------------------------------------------
+5.2 — VERIFICAÇÃO DE DESENVOLVEDOR (2026)
+--------------------------------------------------------------------------------
+REQUISITOS CONFIRMADOS (fontes de 2026):
+
+a) Identidade (Play Console Help — "Verify your developer identity
+   information", vigente):
+   - Nome legal + endereço verificados via Google Payments profile;
+   - E-mail de desenvolvedor verificado (mostrado na Play);
+   - E-mail e telefone de CONTATO verificados (não mostrados);
+   - Device verification: contas pessoais novas devem verificar acesso a um
+     dispositivo Android real via app Play Console (Play Console mobile).
+
+b) NOVO (15/07/2026 — Android Developers Blog): registro dos apps no Play
+   Console; 99% já registados automaticamente; registar apps restantes até
+   30/09/2026 para evitar remoção global.
+
+c) 30/09/2026: verificação de instalações em 7 lojas começando com usuários
+   no Brasil, Indonésia, Singapura e Tailândia (Google Play, Honor, OPPO,
+   Samsung, Transsion, vivo, Xiaomi). Expansão global em 2027.
+
+d) Preview: Play Console Requirements (julho/2026, efetiva 30/09/2026):
+   - Serviços financeiros (incl. carteiras cripto/exchanges) -> conta
+     ORGANIZAÇÃO (ver GAP 3);
+   - D-U-N-S apenas para organizações (não aplicável à conta pessoal do Ruan);
+   - Conta demo ativa + credenciais para a revisão do Google (item 3.3).
+
+STATUS DA CONTA DO RUAN (estado conhecido antes da auditoria + verificado):
+- Conta pessoal criada e VERIFICADA com passaporte + comprovante de endereço
+  (aprovados): OK.
+- E-mail/telefone de contacto: presumivelmente verificados (processo padrão da
+  conta): OK — confirmar no Play Console (About you).
+- Device verification: a confirmar no Play Console (fazer o login no app Play
+  Console num Android real se ainda não foi feito).
+- Registro do app: PENDENTE — será automático ao criar o app com o package
+  name; conferir a Home do Play Console (prazo 30/09/2026).
+- D-U-N-S: N/A (conta pessoal).
+
+--------------------------------------------------------------------------------
+5.3 — RECOMENDAÇÕES
+--------------------------------------------------------------------------------
+[ALTA] Confirmar no Play Console (About you) que e-mail, telefone e device
+       verification estão completos ANTES de criar o app.
+[ALTA] Criar o app com o package name com.desafiogut.app e verificar na Home
+       que ficou "registado" (prazo 30/09/2026).
+[MÉDIA] Gerar o AAB de release assinado (bundleRelease) e validar com o
+        bundletool/Play Console antes do closed testing.
+[MÉDIA] Avaliar a classificação financeira/cripto (GAP 3) — possível migração
+        para conta organização se o Google exigir.
+[INFO] Nenhuma mudança de código necessária para targetSdk (já em 36).
+
+--------------------------------------------------------------------------------
+RESUMO
+--------------------------------------------------------------------------------
+targetSdkVersion 36 (Android 16) : OK (cumpre 31/08/2026)
+minSdk 24                        : OK
+Verificação de identidade        : OK (Ruan aprovado)
+Device verification              : A CONFIRMAR no Play Console
+Registro do app (30/09/2026)     : PENDENTE (automático ao criar o app)
+D-U-N-S                          : N/A (conta pessoal)
+================================================================================
