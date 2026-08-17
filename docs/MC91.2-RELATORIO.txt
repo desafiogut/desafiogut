@@ -1,0 +1,133 @@
+================================================================================
+MC91.2 — RELATORIO FINAL: REMOCAO DO RAV (ReasonLabs) E ESTABILIDADE POS-REMOCAO
+================================================================================
+Data do relatorio : 17/08/2026 16:35
+Projeto           : DESAFIOGUT (monorepo C:\Users\Moltbot\Desktop\DESAFIOGUT)
+Branch            : main
+Commits           : 04779fd (S0) 071c51a (S1) ac476b4 (S2) fe2bdbb (S4)
+                    <S3-commit> (S3) <S5-commit> (S5)
+Contexto          : ~15 BSODs 0x50/0x20001 entre 07/08 e 16/08 (AutoReboot
+                    desabilitado em 17/08; dumps PAGEDU64 decodificados,
+                    bugcheck em offset 0x38). Suspeita n1: RAV (ReasonLabs)
+                    ativo (rsnf.sys/rsRTP.sys + rsEDRSvc/rsVPNSvc/rsDNSSvc/
+                    rsClientSvc). Este MC remove o RAV e verifica estabilidade.
+Metodo            : leitura/analise read-only + desinstalador oficial elevado
+                    + remocao manual de residuos + reinicio + verificacao
+                    pos-boot + watchdog 48h (cron Hermes). Nenhum dado do
+                    projeto foi alterado.
+
+--------------------------------------------------------------------------------
+RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+O RAV foi desinstalado com o desinstalador oficial (exit 0), os 7 servicos
+rs* e os drivers rsnf/rsRTP/rsElam/rsDwf/rsCamFilter foram eliminados, e o
+servico orfao rsEngineSvc + residuos de pasta/registro foram limpos no S2.
+O reinicio (S3) foi LIMPO: nenhum servico ou driver RAV voltou, o Windows
+Defender assumiu a protecao em tempo real desde o boot, e nao ha NENHUM
+evento 41/6008/1001 nem minidump novo na janela pos-boot. O watchdog de 48h
+esta ativo (cron ebf11658d428) com 2 checagens OK ate o momento (0 crashes).
+Criterio de sucesso em verificacao: 48h sem eventos 41/6008 novos (janela
+iniciada 17/08 16:27).
+
+--------------------------------------------------------------------------------
+SEGMENTOS
+--------------------------------------------------------------------------------
+S0 — PREPARACAO ............................ [OK] commit 04779fd
+  - Snapshot do estado antes da acao: RAV_SERVICES_BEFORE.txt,
+    RAV_DRIVERS_BEFORE.txt, RAV_UNINSTALL_BEFORE.txt (Desktop).
+  - Desinstalador oficial localizado; docs/MC91.2-PREPARACAO.txt.
+  - PENDENCIA registrada: System Restore desabilitado nesta maquina -> o
+    checkpoint de restauracao falhou; os snapshots de texto cumprem o papel
+    de backup do estado (nao bloqueia).
+
+S1 — DESINSTALACAO DO RAV .................. [OK] commit 071c51a
+  - Uninstall.exe oficial rodou elevado, exit=0.
+  - 7 dos 8 servicos rs* REMOVIDOS; drivers rsnf/rsRTP/rsElam/rsDwf/
+    rsCamFilter sumiram; registro de desinstalacao limpo; processos zerados.
+  - docs/MC91.2-REMOCAO.txt.
+
+S2 — LIMPEZA DE RESIDUOS ................... [OK] commit ac476b4
+  - Servico orfao rsEngineSvc removido (o CLI do RAV nao parava por linha de
+    comando — apenas GUI de bandeja; resolvido com a remocao do servico).
+  - rsCamFilter020502.sys eliminado; AppData\Roaming\ReasonLabs removido;
+    chaves de registro ja ausentes.
+  - rspndr.sys PRESERVADO (driver da Microsoft — Link-Layer Topology
+    Discovery — nao era RAV).
+  - docs/MC91.2-LIMPEZA.txt.
+
+S3 — VERIFICACAO POS-BOOT .................. [OK] commit <S3-commit>
+  - Boot: 17/08/2026 16:30:18 (reinicio manual do operador).
+  - [OK] Nenhum servico rs*; nenhum driver RAV carregado.
+  - [OK] rspndr.sys presente (preservado como planejado).
+  - [OK] Windows Defender: AntivirusEnabled=True, RealTimeProtectionEnabled=
+        True desde o boot.
+  - [OK] Zero eventos 41/6008 e zero 1001 (WER) desde o boot.
+  - Testes de estabilidade: Minidump vazio (nenhum BSOD novo); gameflt.sys
+    apenas no DriverStore (nao carregado — suspeita n2 rebaixada); RAM
+    0,64 GB livres de 5,74 GB (critica, porem estavel e conhecida).
+  - docs/MC91.2-POSBOOT.txt.
+
+S4 — MONITORAMENTO 48H ...................... [OK] commit fe2bdbb
+  - Cron "MC91.2-watchdog-crash-48h" (id ebf11658d428): a cada 6h x 8
+    (48h), checa eventos 41/6008/1001 novos e grava em Desktop\crash_log.txt.
+  - Checagens ate o momento: 16:27 (janela 10:27-16:27) e 16:33 (janela
+    16:27-16:33, cruza o reboot) -> 0 eventos em ambas. Proxima: 22:27.
+  - Contingencia documentada (docs/MC91.2-MONITORAMENTO.txt): se novo BSOD
+    nas 48h -> decodificar dump, revalidar ausencia do RAV, e so entao
+    gameflt/mdsched.
+
+S5 — RELATORIO FINAL ....................... [OK] commit <S5-commit>
+  - Este documento + copia versionada em docs/MC91.2-RELATORIO.txt +
+    secao ## MC91.2 em cloud.md.
+
+--------------------------------------------------------------------------------
+RESULTADOS DOS TESTES DE ESTABILIDADE (17/08 16:30-16:35)
+--------------------------------------------------------------------------------
+[OK] 0 eventos de crash (41/6008/1001) desde o boot 16:30:18
+[OK] 0 minidumps novos (C:\Windows\Minidump vazio)
+[OK] Watchdog: 2/2 checagens com 0 eventos
+[OK] Defender em tempo real ativo (sem RAV no caminho)
+[OK] 3 pares 41/6008 em 16/08 16:40-17:04 = TODOS pre-remocao (baseline
+     historico); janela pos-remocao limpa
+[INFO] RAM: 0,64 GB livres (11%) — limitacao de hardware, nao regressao
+
+--------------------------------------------------------------------------------
+CONTINGENCIA (status)
+--------------------------------------------------------------------------------
+- gameflt.sys: rebaixada — presente apenas no DriverStore (staging normal do
+  Windows 24H2), nao carregado como driver ativo.
+- mdsched.exe (teste de RAM): NAO executado — opcional; recomendado se as
+  quedas persistirem ou como saneamento preventivo da RAM critica.
+- Termicos/bateria (36/42Wh): so relevantes se 41 sem 1001 (corte de
+  energia) — nao e o padrao observado.
+
+--------------------------------------------------------------------------------
+PENDENCIAS E RECOMENDACOES
+--------------------------------------------------------------------------------
+P1. Watchdog depende do Hermes rodando: manter o Hermes aberto ate a ultima
+    checagem (18/08 ~10:27). Se fechar, rodar watchdog_crash.ps1 manualmente
+    antes de encerrar a janela de 48h.
+P2. System Restore desabilitado: nao bloqueia; considerar habilitar em uma
+    janela de manutencao futura.
+P3. RAM critica (0,64 GB livres): monitorar; mdsched.exe recomendado quando
+    houver 1h disponivel (reinicia e roda ~1h). Aumento de RAM e a correcao
+    definitiva se o uso continuar alto.
+P4. Confirmar o resultado do watchdog as 22:27 de 17/08 e na ultima
+    checagem; o relatorio pode ser atualizado se algo aparecer.
+
+--------------------------------------------------------------------------------
+PONTOS FORTES
+--------------------------------------------------------------------------------
+- Remocao feita pelo desinstalador oficial (nao por forca bruta) + limpeza
+  manual cirurgica de residuos, com snapshots de estado antes de cada acao.
+- rspndr.sys corretamente preservado (evitou quebrar a rede por engano).
+- Reinicio limpo e verificado por script (servicos, drivers, Defender,
+  eventos) — nao por observacao casual.
+- Watchdog automatizado de 48h com log em arquivo e alerta apenas em caso
+  de novo crash (sem ruido, sem custo).
+- Nenhum arquivo do projeto DESAFIOGUT foi alterado; working tree limpo
+  antes e depois dos commits de documentacao.
+
+================================================================================
+FIM — MC91.2
+================================================================================

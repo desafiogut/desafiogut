@@ -7263,3 +7263,21 @@ item 32 (BLOBS_TOKEN -> PEND, preventivo).
 
 Artefactos: docs/MC90.6-{STATUS-INICIAL,BLOBS-TOKEN-INSTRUCOES,LOGS-VALIDACAO,
 DEPLOY,RELATORIO}.txt
+
+## MC91.2 — o RAV saiu de cena: desinstalado, limpo e sob vigilancia de 48h
+
+A suspeita n1 dos ~15 BSODs (0x50/0x20001) era o ReasonLabs RAV (rsnf.sys/
+rsRTP.sys + rsEDRSvc/rsVPNSvc/rsDNSSvc/rsClientSvc). Foi desinstalado com o
+desinstalador oficial (exit 0), os 7 servicos rs* e os drivers sumiram, o
+servico orfao rsEngineSvc foi removido e os residuos limpos — preservando o
+rspndr.sys (Microsoft LLTD, nao era RAV). O reinicio foi limpo: nenhum
+servico/driver RAV voltou, o Windows Defender assumiu a protecao em tempo
+real desde o boot e nao ha nenhum evento 41/6008/1001 nem minidump novo na
+janela pos-boot. Um watchdog de 48h (cron ebf11658d428, a cada 6h x 8) vigia
+eventos de crash com log em Desktop\crash_log.txt — 2 checagens OK ate aqui,
+0 crashes. gameflt.sys foi rebaixada (so no DriverStore, nao carregada); RAM
+segue critica (0,64 GB livres de 5,74 GB) mas estavel. Criterio de sucesso em
+verificacao: 48h sem eventos novos (janela iniciada 17/08 16:27).
+
+Artefactos: docs/MC91.2-{PREPARACAO,REMOCAO,LIMPEZA,MONITORAMENTO,POSBOOT,
+RELATORIO}.txt + MC91.2-RELATORIO.txt no Desktop.
