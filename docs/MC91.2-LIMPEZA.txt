@@ -1,0 +1,22 @@
+# MC91.2 — SEGMENTO 2: REMOÇÃO DE DRIVERS E RESÍDUOS
+
+Data: 17/08/2026 16:26
+
+## Execução (script elevado — Desktop\MC91.2-S2-limpeza.ps1, log em
+Desktop\MC91.2-S2-elevated.log)
+- sc delete rsEngineSvc -> SUCESSO (serviço órfão removido)
+- Removido: C:\Windows\system32\drivers\rsCamFilter020502.sys (resíduo RAV)
+- MANTIDO: rspndr.sys (driver Microsoft LLTD — falso-positivo do filtro "rs*",
+  NÃO é do RAV; remoção quebraria o Mapa de Rede do Windows)
+- Removida: C:\Users\Moltbot\AppData\Roaming\ReasonLabs
+- Chaves de registro ReasonLabs (HKLM/HKCU): já ausentes
+- Entradas Run/RunOnce e tarefas agendadas Reason/RAV: nenhuma encontrada
+
+## Verificação final
+- Serviços rs*: NENHUM
+- rs*.sys em system32\drivers: apenas rspndr.sys (Microsoft)
+
+## Critério de sucesso
+[x] Drivers RAV removidos (rsnf, rsRTP, rsElam, rsDwf, rsCamFilter*)
+[x] Resíduos (pastas, registro, serviço órfão) eliminados
+[x] Driver Microsoft preservado (rspndr.sys)
