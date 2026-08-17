@@ -1,0 +1,31 @@
+# MC91.2 — SEGMENTO 1: DESINSTALAÇÃO DO RAV / REASON CYBERSECURITY
+
+Data: 17/08/2026 16:24-16:25
+
+## Execução
+- Desinstalador oficial localizado: C:\Program Files\ReasonLabs\EPP\Uninstall.exe
+  (DisplayName "RAV Endpoint Protection", UninstallString "/uninstall")
+- Executado ELEVADO (UAC autorizado pelo operador) com tentativa silenciosa
+  (/uninstall /SILENT /SUPPRESSMSGBOXES /NORESTART)
+- Uninstaller encerrou sozinho (exit=0) em <60s
+- Log: Desktop\MC91.2-S1-elevated.log
+
+## Resultado (verificação após execução)
+- Serviços rs*: 7 dos 8 REMOVIDOS pelo desinstalador. Restou apenas
+  rsEngineSvc (Stopped, já estava Disabled) — removido no S2.
+- Drivers (serviço de driver): rsnf, rsRTP, rsElam, rsDwf,
+  rsCamFilter020600 REMOVIDOS. Único "rs*" restante: rspndr.sys =
+  Link-Layer Topology Discovery Responder (driver MICROSOFT — NÃO é RAV,
+  preservado).
+- Registro de desinstalação: entrada "RAV Endpoint Protection" SUMIU.
+- Processos: nenhum rs*/RAV/EPP ativo.
+- Pastas: C:\Program Files\ReasonLabs e C:\ProgramData\ReasonLabs
+  REMOVIDAS pelo desinstalador.
+
+## Pendências registradas
+- Checkpoint-Computer falhou: serviço System Restore desabilitado na máquina
+  (não bloqueia; estado já preservado via snapshots de texto do S0).
+
+## Critério de sucesso
+[x] Serviços rs* inexistentes (após S2, zero)
+[x] Desinstalação via caminho oficial
