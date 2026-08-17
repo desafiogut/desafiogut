@@ -1,0 +1,33 @@
+# MC91.2 — SEGMENTO 0: PREPARAÇÃO E BACKUP DO ESTADO
+
+Data: 17/08/2026 16:23
+Máquina: Lenovo VIT — Windows 11 25H2 (26200) — RAM 5,74 GB utilizáveis
+Contexto: BSODs 0x50/0x20001 desde 07/08 (~15 quedas; 3 em 16/08). Causa
+provável: stack RAV/Reason Cybersecurity (filtros de kernel) sob pressão
+de memória. Operador autorizou a remoção (MC91.2).
+
+## Estado registrado (arquivos no Desktop)
+- RAV_SERVICES_BEFORE.txt — 8 serviços rs* (7 Running, 1 Disabled)
+- RAV_DRIVERS_BEFORE.txt — drivers RAV: rsnf (Running), rsRTP (Running),
+  rspndr (Running), rsElam (Stopped/ELAM), rsDwf (Stopped),
+  rsCamFilter020600 (Stopped)
+- RAV_UNINSTALL_BEFORE.txt — desinstalador oficial registrado:
+  "C:\Program Files\ReasonLabs\EPP\Uninstall.exe" /uninstall
+  (DisplayName: RAV Endpoint Protection)
+
+## Pastas instaladas
+- C:\Program Files\ReasonLabs (Common, DNS, EDR, EPP, VPN)
+- C:\ProgramData\ReasonLabs (DNS, EPP, ReasonEDR, VPN)
+- C:\Users\Moltbot\AppData\Roaming\ReasonLabs (EPP)
+
+## Processos ativos
+rsClientSvc, rsDNSResolver, rsDNSSvc, rsEDRSvc, rsSyncSvc, rsVPNSvc, rsWSC
+
+## Ações do segmento
+- [x] Snapshot de serviços/drivers/registro salvo no Desktop
+- [x] Desinstalador oficial localizado (Uninstall.exe /uninstall)
+- [x] Docs criado e commitado (MC91.2-S0)
+
+## Checkpoint de restauração
+- Tentado no script elevado do S1 (Checkpoint-Computer). Se o System Restore
+  estiver desabilitado, registrado como pendência (não bloqueia o segmento).
