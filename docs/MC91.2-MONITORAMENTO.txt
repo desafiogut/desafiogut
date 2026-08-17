@@ -1,0 +1,30 @@
+# MC91.2 — SEGMENTO 4: MONITORAMENTO DE ESTABILIDADE (48h)
+
+Data de configuracao: 17/08/2026 16:27
+
+## Mecanismo
+- Cron job do Hermes: `MC91.2-watchdog-crash-48h` (id ebf11658d428)
+  - Agenda: a cada 6h, 8 execucoes (48h) — proxima: 17/08 22:27
+  - Script: ~/.hermes/scripts/watchdog_crash.sh -> watchdog_crash.ps1
+  - Log: C:\Users\Moltbot\Desktop\crash_log.txt (append a cada checagem)
+  - Alerta: stdout somente se houver eventos 41/6008/1001 novos na janela
+  - Sem credenciais, sem custo financeiro (R2/R5)
+- Janela monitorada: eventos de crash desde a ultima checagem (marker em
+  .watchdog_last.txt)
+
+## Validacao inicial (17/08 16:27)
+- [OK] check 17/08 16:27 janela desde 10:27 -> 0 evento(s) de crash
+
+## Contingencia (se ocorrer novo BSOD nas 48h)
+1. Coletar novo despejo em C:\Windows\Minidump (elevado) e decodificar
+   (bugcheck em offset 0x38 p/ PAGEDU64).
+2. Verificar se o RAV foi realmente eliminado (Get-Service rs*, drivers).
+3. Se residuos: remover manualmente.
+4. Se o BSOD persistir sem RAV: remover/atualizar gameflt.sys (Gaming
+   Install Filter 10.0.26100.9426 — 0x50 conhecido no 24H2+) e/ou rodar
+   mdsched.exe (teste de RAM, reinicia e roda ~1h).
+5. Verificar termicos/bateria (36/42Wh) apenas se 41 sem 1001 (corte de
+   energia — nao e o padrao atual).
+
+## Criterio de sucesso
+- 48h sem eventos 41/6008 novos (verificado no relatorio final MC91.2).
