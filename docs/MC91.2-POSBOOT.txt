@@ -1,0 +1,45 @@
+# MC91.2 — SEGMENTO 3: VERIFICACAO POS-BOOT E TESTES DE ESTABILIDADE
+
+Data: 17/08/2026 16:30-16:35
+Metodo: reinicio manual do operador + scripts Desktop\MC91.2-S3-posboot.ps1 e
+Desktop\MC91.2-S3-estabilidade.ps1 (PowerShell, elevacao desnecessaria)
+
+## 1. Verificacao pos-boot (MC91.2-S3-posboot.ps1)
+
+[OK] SERVICOS rs*: NENHUM servico rs* presente (7 servicos RAV removidos no S1
+     permanecem ausentes apos o boot)
+[OK] DRIVERS RAV: nenhum driver ^rs(nf|RTP|Elam|Dwf|Cam) carregado
+[OK] rspndr.sys PRESERVADO (Microsoft LLTD — nao e RAV, conforme planejado)
+[OK] WINDOWS DEFENDER: AntivirusEnabled=True, RealTimeProtectionEnabled=True
+     (protecao real ativa desde o boot, sem RAV)
+[OK] EVENTOS 41/6008 DESDE O BOOT: nenhum (boot limpo as 17/08 16:30:18)
+[OK] EVENTOS 1001 (WER) DESDE O BOOT: nenhum
+
+## 2. Testes de estabilidade (MC91.2-S3-estabilidade.ps1)
+
+[OK] Uptime: 3 min no momento da checagem (boot 17/08 16:30:18)
+[OK] MINIDUMPS: pasta C:\Windows\Minidump existe mas VAZIA (nenhum dump novo
+     apos o boot — nenhum BSOD novo)
+[OK] GAMEFLT.SYS: nao carregado em System32\drivers; presente apenas no
+     DriverStore (gameflt.inf_amd64_152b7ad8bf20bdc5) — staging normal do
+     Windows, sem impacto. Suspeita n2 rebaixada.
+[INFO] MEMORIA: 5,74 GB total, 0,64 GB livres (11%) — critica, porem estavel
+     e conhecida; sem crescimento anormal de consumo apos o boot.
+[OK] EVENTOS 41/6008 EM 24H: 3 pares (41+6008) em 16/08 16:40-17:04 — TODOS
+     ANTERIORES a remocao do RAV (17/08 ~16:20). Janela pos-boot: ZERO.
+[OK] REGISTRO DE EVENTOS System: 33.449 registros, habilitado, saudavel.
+
+## 3. Watchdog (S4) — checagens ate o momento
+
+[OK] check 17/08 16:27 (pre-reinicio) janela 10:27-16:27 -> 0 eventos
+[OK] check 17/08 16:33 (pos-reinicio) janela 16:27-16:33 -> 0 eventos
+     (janela cruza o reboot 16:30:18; continua 0)
+- Proximas checagens automaticas: 22:27, 04:27, 10:27, 16:27, 22:27, 04:27,
+  10:27 (cron ebf11658d428, a cada 6h x 8 = 48h)
+
+## 4. Conclusao do segmento
+
+Reinicio limpo: sem RAV em servicos/drivers, Defender ativo desde o boot,
+zero eventos de crash na janela pos-boot, zero minidumps novos. O criterio de
+sucesso do MC91.2 (48h sem eventos 41/6008 novos) permanece em verificacao
+pelo watchdog — janela iniciada em 17/08 16:27.
