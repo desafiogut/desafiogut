@@ -1,0 +1,22 @@
+================================================================================
+MC91.12-S0 — INSTALACAO DO APK NO CELULAR
+DesafioGUT · 2026-08-18 ~18:10 (Brasília)
+================================================================================
+
+1. DISPOSITIVO (adb devices -l)
+   - fiem7xlvcufe855h | device | product:pissarropro_global | model:21091116UG
+     (Xiaomi Redmi Note 11 Pro+)
+
+2. INSTALACAO (adb install -r)
+   - APK: desafio-gut/frontend/android/app/build/outputs/apk/debug/app-debug.apk
+     (37.435.237 bytes, 18/08 14:51 — build MC91.11-S4, bundle mainnet validado)
+   - Resultado: "Performing Streamed Install / Success"
+
+3. CONFIRMACAO (adb shell pm list packages)
+   - package:com.desafiogut.app  ✓ presente
+
+4. ABERTURA (adb shell am start)
+   - Intent { cmp=com.desafiogut.app/.MainActivity } — app iniciado
+
+CRITERIO DE SUCESSO S0: APK instalado e app aberto. OK.
+================================================================================
