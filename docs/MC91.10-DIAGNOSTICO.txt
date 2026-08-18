@@ -81,29 +81,36 @@ C) SENHAS ON-CHAIN: NENHUMA function de producao CONSOME saldoSenhas em lances.
    (relampago). Edicao programada precisa ser criada (admin).
 
 ----------------------------------------------------------------------
-4. CUSTOS ESTIMADOS (gas mainnet ~120 gwei; ETH ~R$ 9.973)
+4. CUSTOS ESTIMADOS (CORRIGIDO — gas mainnet ~0,15 gwei; ETH ~R$ 9.973)
 ----------------------------------------------------------------------
-- adicionarSenhas (comprar-senhas): ~0,006-0,009 ETH  (~R$ 60-90)
-- comprometerLance (por lance):      ~0,007-0,010 ETH  (~R$ 70-100)
-- consolidarResultado (fecho):       ~0,005-0,007 ETH  (~R$ 50-70)
-- PIX (operador): R$ 2,00 (qtd=1; valor minimo p/ 1 senha)
-TOTAL fluxo completo (1 compra + 2 lances + fecho opcional): ~R$ 250-360.
-EOA atual: 0,004398 ETH (~R$ 44) — INSUFICIENTE. Com gas <= 30 gwei o total
-cai para ~R$ 45-70, coberto pela EOA atual. POR ISSO a sentinela de gas
-(sentinela_gas_mainnet.sh, cron 30min, limiar 30 gwei) foi criada.
+- CORRECAO DE ERRO: a leitura inicial 0x730e066 foi mal convertida. Sao
+  120.643.686 WEI = 0,1206 GWEI (nao 120 gwei). Confirmado em 2 RPCs
+  independentes (2026-08-18 ~17:20):
+    publicnode: 0x8fa9a16 = 0,1506 gwei
+    1rpc.io/eth: 0x8bde40e = 0,1466 gwei
+- Custo por tx do contrato (~60k gas, baseFee*1.5):
+  60.000 x 0,15 gwei x 1,5 ~= 0,0000000135 ETH ~= R$ 0,00013  (CENTAVOS)
+- Custo do fluxo completo (1 compra + 2 lances + fecho opcional, 4 txs):
+  ~R$ 0,001 de gas total. EOA atual (0,0044 ETH) cobre MILHOES de txs.
+- PIX (operador): R$ 2,00 (qtd=1) — NAO e custo liquido: vira saldo R$ na
+  carteira do usuario (deposito), usado depois em comprar-senhas/lances.
+- TOTAL liquido do teste: ~R$ 2,00 (deposito recuperavel) + ~R$ 0,001 gas.
+  O gas NAO e bloqueio. A sentinela de gas criada antes da correcao foi
+  REMOVIDA (sem proposito com gas estruturalmente baixo).
 
 ----------------------------------------------------------------------
-5. PRE-REQUISITOS PARA S1-S3 (quando o gas normalizar / com operador)
+5. PRE-REQUISITOS PARA S1-S3 (com operador presente)
 ----------------------------------------------------------------------
-a) Celular conectado via USB (adb devices) OU uso do app web (Chrome perfil
-   DESAFIO) para navegar na UI (S0 visual, S2/S3 pela interface).
+a) Autorizacao explicita (R2) para: (i) PIX R$ 2,00 (operador paga no app
+   bancario; saldo R$ fica na carteira da conta de teste), (ii) gas simbolico
+   da EOA nas 2-4 txs on-chain (backend assina; agente so orquestra — R5).
 b) Endereco da carteira da conta de teste (Privy) — necessario para consultar
    saldo-rs (anti-IDOR exige JWT da conta) e saldoSenhas on-chain.
-c) Operador paga PIX R$ 2,00 (autorizacao explicita — R2).
-d) Autorizacao para o gas da EOA (2-4 txs) — R2/R5 (o backend assina; o agente
-   apenas orquestra).
-e) (S2) Criar edicao programada (POST /edicoes, admin) — ex.: PROG-1, 30 min.
-f) (S4) Consultar saldoSenhas on-chain via RPC (leitura publica do contrato) e
+c) Celular conectado via USB (adb devices) OU uso do app web (Chrome perfil
+   DESAFIO) para navegar na UI (S0 visual, S2/S3 pela interface).
+d) (S2) Criar edicao programada (POST /edicoes, admin) — ex.: PROG-1, 30 min
+   (nenhuma programada ativa hoje).
+e) (S4) Consultar saldoSenhas on-chain via RPC (leitura publica do contrato) e
    saldo-rs via endpoint (com JWT da conta de teste ou admin).
 
 ----------------------------------------------------------------------
@@ -120,9 +127,10 @@ S4 (consistencia de saldos): PENDENTE — depende de S1-S3 + endereco da conta.
 S5 (relatorio final): PENDENTE.
 
 VEREDITO PARCIAL: infraestrutura de pagamento (MP real, QR valido) e backend
-OPERACIONAIS. Execucao financeira aguardando: (1) gas < 30 gwei (sentinela
-ativa), (2) autorizacao do operador (PIX + gas), (3) celular/UI e endereco da
-conta de teste.
+OPERACIONAIS. Gas da mainnet verificado BAIXO (~0,15 gwei em 2 RPCs) — custo
+de gas insignificante. A execucao financeira (S1-S3) aguarda apenas:
+(1) autorizacao do operador (PIX R$ 2,00 + gas simbolico — R2), (2) endereco
+da carteira da conta de teste, (3) celular/UI (ADB ou app web).
 
 CRITERIO DE SUCESSO S0-DIAG: estado real mapeado e registrado. OK.
 ================================================================================
