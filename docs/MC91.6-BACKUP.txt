@@ -1,0 +1,32 @@
+================================================================================
+MC91.6-S0 — DIAGNOSTICO E BACKUP DO ICONE ATUAL
+DesafioGUT · 2026-08-18
+================================================================================
+
+1. NOVA IMAGEM (fonte)
+   - C:\Users\Moltbot\Desktop\LOGO APP.jpeg
+   - 1024x1034 px, RGB, JPEG (106.447 bytes) — arte oficial do Guto
+     (terno azul + martelo de juiz, fundo azul escuro, confetes).
+
+2. ICONES ATUAIS DO APP (descobertos no diagnostico)
+   - O projeto NAO usa public/icon.png nem resources/ (nao existem).
+   - Os icones nativos ficam em
+     desafio-gut/frontend/android/app/src/main/res/:
+     * mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/ic_launcher.png
+     * mipmap-{...}/ic_launcher_round.png
+     * mipmap-{...}/ic_launcher_foreground.png
+     (15 PNGs + drawable/ic_launcher_background.xml + values/ic_launcher_background.xml)
+   - build:apk = netlify build --context production + validar:dist + cap sync android
+     (o APK em si e gerado pelo gradle: gradlew assembleDebug — JAVA 21 via JBR)
+
+3. BACKUP CRIADO (fora do repo, para nao poluir o git)
+   - C:\Users\Moltbot\Desktop\MC91.6-BACKUP-ICONES\
+     * mipmap-<densidade>/ic_launcher*.png (15 arquivos, por densidade)
+     * LOGO-APP-fonte.jpeg (fonte original)
+   - O git tambem preserva o estado atual (commit S0 e a linha de base).
+
+4. CELULAR (S3)
+   - adb devices: fiem7xlvcufe855h  device  (conectado, depuracao USB OK)
+
+CRITERIO DE SUCESSO S0: diagnostico feito, backup criado. OK.
+================================================================================
