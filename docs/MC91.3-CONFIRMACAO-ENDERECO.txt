@@ -1,0 +1,35 @@
+================================================================================
+MC91.3-S3 — CONFIRMACAO DO ENDERECO DE DESTINO
+DesafioGUT · 2026-08-17
+================================================================================
+
+1. COMPARACAO CARACTERE A CARACTERE (40 hex, case-insensitive)
+
+   Endereco do projeto (docs/tarefa): 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517
+   lowercase                          : 5b2af3327efb9ce019c8e68d9c3df8fb81ab1517
+
+   Endereco na tx (input 0xa9059cbb)  : 5b2af3327efb9ce019c8e68d9c3df8fb81ab1517
+   Endereco no log Transfer (to)      : 5b2af3327efb9ce019c8e68d9c3df8fb81ab1517
+
+   RESULTADO: IDENTICOS (40/40 hex). O campo "to" do Transfer da transacao
+   0xe530a9f1...dae316 e EXATAMENTE a carteira do projeto.
+
+2. CROSS-CHECK com a Binance
+   - Registro do saque: Endereco 0x5B2a...Ab1517, Rede BSC, etiqueta
+     "MetaMask-BSC" (endereco na Lista de Confiaveis selecionado no formulario
+     de saque — verificado na sessao MC91.2 de 17/08).
+   - O saque foi executado para o endereco confiavel rotulado como a carteira
+     MetaMask-BSC do projeto.
+
+3. OBSERVACAO DE RIGOR (checksum EIP-55)
+   - O endereco escrito nos docs (0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517)
+     NAO e o checksum EIP-55 canonico (o correto e
+     0x5B2af3327EfB9ce019C8e68d9c3dF8Fb81Ab1517).
+   - NAO e uma anomalia: a identidade de um endereco e definida pelos 40 hex
+     (case-insensitive). Os 40 hex sao identicos ao endereco on-chain.
+   - Acao sugerida (opcional, higiene): usar a forma checksum canonica nos
+     proximos documentos para evitar falsos alarmes em validadores.
+
+VEREDITO S3: endereco de destino confirmado como a carteira MetaMask-BSC do
+projeto (0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517). CRITERIO: atendido.
+================================================================================
