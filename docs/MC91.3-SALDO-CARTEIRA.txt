@@ -1,0 +1,30 @@
+================================================================================
+MC91.3-S2 — VERIFICACAO DO SALDO DA CARTEIRA (0x5B2af... no BSC)
+DesafioGUT · 2026-08-17
+================================================================================
+
+1. SALDO DO TOKEN ETH (Binance-Peg, BEP-20) — balanceOf em "latest"
+   Contrato: 0x2170Ed0880ac9A755fd29B2688956BD959F933F8
+   Carteira: 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517
+
+   RPC 1 — bsc-mainnet.nodereal.io : 5.520.240.000.000.000 wei = 0,00552024 ETH
+   RPC 2 — bsc-dataseed.bnbchain.org: 5.520.240.000.000.000 wei = 0,00552024 ETH
+
+   RESULTADO: 0,00552024 ETH — IDENTICO ao valor recebido esperado (ao wei).
+
+2. OUTROS SALDOS (sanity, mesmo endereco)
+   - BNB nativo (eth_getBalance): 0x0 (esperado — carteira so recebeu o token)
+   - WBETH (0xa2E3...2e1): 0,0
+   - BETH (0x2506...91B): 0,0
+   - ETH mainnet (ethereum-rpc.publicnode.com, eth_getBalance): 0x0
+     -> NADA foi para a rede errada (Ethereum mainnet)
+
+3. VARIACAO / INTEGRIDADE
+   - Transfer de ENTRADA localizado na blockchain: bloco 116.541.793,
+     tx 0xe530a9f1...dae316, valor 0,00552024 ETH (ver MC91.3-S1)
+   - Carteira com 0 BNB: impossivel ter enviado qualquer saida (sem gas)
+   - Saldo atual == valor recebido: fundos INTEGROS e na carteira
+
+VEREDITO S2: saldo da carteira atualizado com o valor esperado (0,00552024 ETH).
+CRITERIO DE SUCESSO: atendido.
+================================================================================
