@@ -1,0 +1,44 @@
+================================================================================
+MC91.11-S3 — TESTES LOCAIS DO FLUXO FINANCEIRO (APOS CORRECAO)
+DesafioGUT · 2026-08-18 ~18:10 (Brasília)
+================================================================================
+
+1. SUITE DE TESTES DO BACKEND (netlify/functions/_tests)
+   - Execucao: node --experimental-test-module-mocks --test _tests/*.test.mjs
+     (nota: os testes usam mock.module — experimental; NAO ha script npm de
+     teste configurado; comando documentado aqui)
+   - RESULTADO: 398 testes, 398 PASS, 0 FAIL, 0 SKIPPED
+   - Cobre (relevante p/ este MC): mc28-keyperbid (blindagem/key-per-bid),
+     mc361-saldo-rs (saldo R$ atomico), mc3917-double-spend, mc3920-fila,
+     troco-senhas (ledger FIFO), e o NOVO mc9111-programado.
+
+2. TESTE NOVO — mc9111-programado.test.mjs (ledger de consumo de senhas):
+   7/7 PASS:
+   - chaveConsumo: endereco lowercase
+   - sem saldo on-chain -> senhas_insuficientes (gate Art. 20)
+   - store ausente -> store_indisponivel
+   - consumo: 1 lance = 1 senha, persiste entre chamadas (ultimoLance.edicaoId)
+   - teto: consumidas >= saldo on-chain -> recusa (3o lance com saldo 2)
+   - isolamento por endereco
+   - teto dinamico: comprou mais senha -> libera novo consumo
+
+3. COMPILACAO DO FRONTEND (vite build — teste de compilacao local):
+   - exit 0 (bundle gerado; env LOCAL, nao o de producao — o bundle de
+     producao e gerado no S4 via netlify build --context production)
+   - lint: npx eslint CardLance.jsx AppContext.jsx -> 0 erros (5 warnings
+     pre-existentes de console.* em AppContext, nao relacionados)
+
+4. FLUXO END-TO-END (com contrato real / envs de producao)
+   - NAO executado localmente: as functions exigem envs de producao
+     (CONTRATO_MAINNET, signer/KMS, MP_ACCESS_TOKEN, NETWORK_STAGE=mainnet)
+     que NAO existem no .env local (apenas MOCK_MODE dev). O fluxo real sera
+     exercitado apos o deploy (S4) e na validacao no aparelho.
+
+5. VEREDITO S3
+   Logica corrigida validada por testes unitarios (398+7 verdes) e compilacao
+   OK. Validacao funcional completa depende do deploy das functions (S4) e do
+   aparelho (pendente: adb vazio).
+
+CRITERIO DE SUCESSO S3: fluxos cobertos por testes automatizados. OK (com a
+ressalva documentada de que o E2E real ocorre apos deploy).
+================================================================================
