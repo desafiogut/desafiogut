@@ -1,0 +1,27 @@
+================================================================================
+MC91.6-S4 — VALIDACAO VISUAL DO ICONE
+DesafioGUT · 2026-08-18
+================================================================================
+
+1. VALIDACAO NO PROJETO (antes da instalacao)
+   - Icone xxxhdpi gerado (192x192): arte integra, personagem Guto central,
+     sem cortes — OK (vision).
+   - Icone DENTRO do APK (extraido do zip):
+     res/mipmap-xxxhdpi-v4/ic_launcher.png = 192x192 RGB
+     md5 identico ao fonte gerado (923bc31a23e67dad) -> o APK empacota o
+     icone novo. OK.
+
+2. VALIDACAO NO CELULAR (operador, tela real)
+   - Enquadramento do icone na tela inicial: BOM (validado pelo operador).
+   - Nitidez: levemente desfocado na 1a versao -> regenerado com UnsharpMask
+     (radius 2, percent 130, threshold 2) e reinstalado (v2).
+   - A v2 (sharpened) foi instalada e o app aberto para o operador conferir
+     no celular.
+
+3. EVIDENCIAS
+   - C:\Users\Moltbot\Desktop\icone_pos_instalacao.png (screencap 1080x2400)
+   - C:\Users\Moltbot\Desktop\icone_pos_instalacao_50.jpg (50% p/ visualizacao)
+
+CRITERIO DE SUCESSO S4: icone confirmado como a nova LOGO APP. OK
+(pendente: confirmacao final do operador sobre a v2 sharpened).
+================================================================================

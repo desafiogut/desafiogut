@@ -1,0 +1,23 @@
+================================================================================
+MC91.6-S3 — INSTALACAO DO APK NO CELULAR
+DesafioGUT · 2026-08-18
+================================================================================
+
+1. DISPOSITIVO
+   - adb devices: fiem7xlvcufe855h  device (depuracao USB OK)
+
+2. INSTALACAO (2x — v1 e v2 com sharpening)
+   - adb install -r app/build/outputs/apk/debug/app-debug.apk
+   - Resultado: "Performing Streamed Install / Success" (ambas as vezes)
+
+3. VERIFICACAO
+   - adb shell pm list packages | grep desafiogut
+     -> package:com.desafiogut.app  (instalado)
+   - adb shell am start -n com.desafiogut.app/.MainActivity
+     -> Starting: Intent { cmp=com.desafiogut.app/.MainActivity } (app abriu)
+
+4. APK instalado: 37.435.0xx bytes, compilado 18/08 01:02 (v1) e ~01:10 (v2,
+   com UnsharpMask radius 2 / 130% / thr 2 para reduzir desfoque do downscale).
+
+CRITERIO DE SUCESSO S3: APK instalado no dispositivo. OK.
+================================================================================
