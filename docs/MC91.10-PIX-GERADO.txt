@@ -1,0 +1,54 @@
+================================================================================
+MC91.10-S0 — VERIFICACAO DA GERACAO DO QR CODE PIX
+DesafioGUT · 2026-08-18 ~17:10 (Brasília)
+================================================================================
+
+1. METODO
+   - Endpoint real de producao: POST /.netlify/functions/iniciar-pagamento
+     (https://silly-stardust-ca71bc.netlify.app) — sem autenticacao (fluxo real
+     do app: ComprarFichasModal.jsx chama iniciar-pagamento com {endereco, qtd}).
+   - Endereco usado no probe: 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517
+     (o endpoint nao exige auth; o pedido gerado expira em 15 min e NAO foi pago).
+
+2. RESULTADO (2 pedidos gerados — mesmo resultado):
+   - pedidoId 1: ccec3e9c-f3d8-4b7c-b876-87ca58426cf3
+   - pedidoId 2: 3fcaf8d3-0d0d-4f17-9e30-7c2cc74a4eca
+   - valorBRL: 2 (R$ 2,00) para qtd=1 senha -> confirma VALOR_POR_SENHA = R$ 2,00
+     (comprar-senhas.mjs: VALOR_POR_SENHA_CENTAVOS = 200)
+   - provider: "mercadopago" | simulated: false  -> PIX REAL (nao e mock)
+   - qrCodeText: payload EMV PIX (copia-e-cola) gerado
+   - qrCodeImage: data:image/png;base64 (QR Code PNG, ~3,1 KB)
+   - token: JWT de pedido (TTL 15 min) p/ /confirmar-pagamento
+   - validUntil: 15 min apos criacao
+
+3. DECODIFICACAO DO PAYLOAD EMV (prova de que e PIX valido):
+   - campo 00: 01 (formato EMV)
+   - campo 26: 0014br.gov.bcb.pix0120desafiogut@gmail.com  (chave PIX do recebedor
+     = PIX_FICHAS, desafiogut@gmail.com — Mercado Pago)
+   - campo 52: 0000 | campo 53: 986 (BRL)
+   - campo 54: 2.00 (valor)
+   - campo 58: BR | campo 59: DCGEFDAHB15595 (nome razao)
+   - campo 62: 0521mpqrinter173527964945 (identificador do provedor MP)
+   -> QR PIX valido, vinculado ao Mercado Pago (chave desafiogut@gmail.com),
+      valor R$ 2,00 — bate com o pedido.
+
+4. CONFIRMACAO DO BACKEND VIVO (verification-loop):
+   - GET /.netlify/functions/health -> {"ok":true,"service":"desafiogut-functions"}
+   - GET /.netlify/functions/edicoes  -> R-1 (relampago, aberta, termino
+     2026-08-19T17:08:55Z); RELAMP-1/2/3 encerradas. NAO ha edicao PROGRAMADA
+     ativa no momento (necessaria para o S2 — criar exige admin).
+
+5. LIMITACOES REGISTRADAS (transparencia SUPERPERS):
+   - A captura visual do QR NA TELA DO APP (screencap) ficou pendente: o
+     celular NAO esta conectado via ADB (adb devices = vazio) no momento.
+   - O pedido foi gerado via API (mesmo endpoint que o app usa); a geracao
+     pela UI sera capturada quando o aparelho/UI estiver disponivel.
+   - Nenhum pagamento foi executado (R2 — zero custo nesta etapa).
+
+6. VEREDITO S0
+   Geracao do QR Code PIX: FUNCIONAL em producao (provider Mercado Pago real,
+   payload EMV valido, valor correto). Pendente apenas a evidencia visual no
+   aparelho (ADB nao conectado).
+
+CRITERIO DE SUCESSO S0: QR Code gerado e registrado. OK (com pendencia de UI).
+================================================================================
