@@ -1,0 +1,26 @@
+================================================================================
+MC91.5-S1 — LOG DE MONITORAMENTO DA WHITELIST DE BNB (CADA 2h)
+DesafioGUT · 2026-08-17
+================================================================================
+
+CHECK #1 — 2026-08-17 ~21h30
+  Estado: BLOQUEADO
+  Mensagem da Binance: "Este endereco nao esta na sua lista de permissoes."
+  Acao: registrar; aguardar liberacao; operador deve verificar/adicionar o
+        endereco para BNB em Gerenciamento de Enderecos (ou selecionar o
+        endereco salvo na Lista de Confiaveis).
+
+MONITORAMENTO
+  - Cron "sentinela-whitelist-bnb": a cada 2h (schedule 0 */2 * * *)
+  - Checagem 1: saldo de BNB em 0x5B2af...B1517 via RPC (NodeReal) — se > 0,
+    o saque ocorreu e o MC91.5 pode seguir para S3 (validacao) e S4 (relatorio).
+  - Checagem 2 (quando o Edge estiver aberto): estado do formulario de saque
+    de BNB na Binance (liberado/bloqueado).
+
+LOG (preenchido a cada checagem)
+----------------------------------------------------------------------------
+# | data/hora     | estado    | detalhe
+----------------------------------------------------------------------------
+1 | 17/08 21:30   | BLOQUEADO | "nao esta na lista de permissoes" (form BNB)
+----------------------------------------------------------------------------
+================================================================================

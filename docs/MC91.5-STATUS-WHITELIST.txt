@@ -1,0 +1,36 @@
+================================================================================
+MC91.5-S0 — STATUS DA WHITELIST DE BNB (VERIFICACAO INICIAL)
+DesafioGUT · 2026-08-17
+================================================================================
+
+1. COMO FOI VERIFICADO
+   - Aba "Sacar - Carteira - Binance" (Edge, sessao autenticada).
+   - Formulario de saque com ativo BNB (BNB Chain) e endereco preenchido:
+     0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517 (exibido completo na tela).
+
+2. RESULTADO: BLOQUEADO
+   - Mensagem exibida no formulario (17/08 ~21h30):
+     "Este endereco nao esta na sua lista de permissoes. Por favor, confira e
+      tente novamente."
+   - Lista de Confiaveis do formulario: "Registrados: 3" (o endereco existe na
+     conta, mas NAO esta liberado para saque de BNB neste momento).
+
+3. CONTEXTO (por que o ETH passou e o BNB nao)
+   - O saque de ETH (BSC) para o MESMO endereco foi aprovado hoje 19:09 (MC91.3).
+   - A whitelist de enderecos da Binance pode ser por ativo/rede; para BNB o
+     endereco ainda nao esta liberado (ou esta em retencao de seguranca 24-48h,
+     ou precisa ser adicionado para o ativo BNB em Seguranca > Gerenciamento de
+     Enderecos).
+
+4. ACOES DO OPERADOR (para liberar)
+   a) No formulario de saque de BNB, usar o SELETOR da "Lista de Confiaveis"
+      (escolher o endereco salvo em vez de digitar) — descarta diferenca de
+      checksum/caixa.
+   b) Se persistir: Seguranca > Gerenciamento de Enderecos > verificar se o
+      endereco 0x5B2af...B1517 esta na whitelist do ativo BNB (BSC) e adicionar
+      se necessario.
+   c) Se houver retencao de 24-48h para endereco novo: aguardar o prazo
+      (monitoramento a cada 2h configurado no MC91.5-S1).
+
+CRITERIO DE SUCESSO S0: estado registrado (BLOQUEADO). OK.
+================================================================================
