@@ -1,0 +1,23 @@
+================================================================================
+MC91.4-S0 — SALDO NA BSC (VERIFICACAO FRESCA, 2026-08-17)
+DesafioGUT · Bridge BSC -> Mainnet
+================================================================================
+
+Carteira MetaMask-BSC: 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517
+
+1. ETH (token Ethereum Binance-Peg, BEP-20 — 0x2170Ed0880ac9A755fd29B2688956BD959F933F8)
+   RPC NodeReal (bsc-mainnet.nodereal.io), balanceOf latest:
+   0x139ca108466000 wei = 0,00552024 ETH
+   -> CONFIRMADO (mesmo valor do MC91.3; fundos integros na carteira)
+
+2. BNB (nativo, gas da BSC — eth_getBalance latest)
+   0x0 wei = 0 BNB
+   -> INSUFICIENTE para pagar gas de transacao na BSC
+
+3. Conclusao S0 (saldos)
+   - ETH pronto para a bridge: 0,00552024 ETH
+   - BNB necessario (gas da bridge na BSC): 0 BNB -> BLOQUEIO
+   - Acao necessaria: adquirir ~0,002-0,005 BNB e enviar para
+     0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517 (rede BSC)
+
+================================================================================

@@ -1,0 +1,26 @@
+================================================================================
+MC91.4-S0 — NECESSIDADE DE BNB (GAS DA BRIDGE NA BSC)
+DesafioGUT · 2026-08-17
+================================================================================
+
+POR QUE PRECISA DE BNB
+- A bridge BSC -> Ethereum Mainnet executa transacoes na BSC (aprovar token +
+  chamada do contrato da bridge). Todo gas na BSC e pago em BNB.
+- Saldo atual da carteira 0x5B2af...B1517: 0 BNB (verificado via RPC em 17/08).
+
+QUANTO PRECISA
+- Estimativa: 0,001 a 0,005 BNB (valor pequeno; sobra fica de reserva).
+- Recomendado: 0,002 BNB (suficiente para aprovacao + bridge com folga).
+
+COMO OBTER (operador)
+1. Na Binance (ou outra exchange com BNB/BEP-20): comprar ~0,002 BNB.
+2. Sacar para o endereco 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517
+   (rede BNB Smart Chain / BEP-20 — endereco ja na Lista de Confiaveis).
+3. Aguardar a confirmacao (1-3 min) e avisar — a verificacao do saldo sera
+   feita via RPC antes de qualquer acao.
+
+ATENCAO
+- Rede errada (ex.: BNB via ERC-20 na mainnet) = fundos em risco.
+  Confirmar "BSC"/"BEP-20" no momento do saque.
+
+================================================================================

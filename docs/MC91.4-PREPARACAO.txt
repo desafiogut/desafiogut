@@ -1,0 +1,30 @@
+================================================================================
+MC91.4-S0 — PREPARACAO E ESTADO INICIAL
+DesafioGUT · 2026-08-17
+================================================================================
+
+1. ESTADO CONHECIDO (confirmado via RPC em 17/08)
+   - ETH na MetaMask (BSC): 0,00552024 ETH  (0x2170Ed... Binance-Peg, BEP-20)
+   - BNB na BSC: 0 BNB  -> BLOQUEIO para a bridge
+   - EOA coordenadora (mainnet): 0xFea436f74059F885ea50D48aBbE21ef6665d1E67
+     saldo atual: 0,00027444 ETH (baseline para o S4)
+   - Carteira origem: 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517
+
+2. PLANO (S1-S5)
+   S1: bridge BSC -> Mainnet (Across/Orbiter/Socket) — exige BNB p/ gas
+   S2: verificar ETH nativo na Mainnet
+   S3: enviar ETH para a EOA 0xFea436...1E67 (gas da mainnet sai do proprio ETH)
+   S4: verificar saldo final da EOA (baseline 0,00027444 ETH)
+   S5: relatorio final + cloud.md
+
+3. AUTORIZACOES (R2)
+   - A bridge e o envio final tem taxas (gas) — acao com custo financeiro.
+   - Execucao SOMENTE apos autorizacao explicita do operador.
+   - Assinaturas na MetaMask (aprovacao/bridge/envio): confirmadas pelo
+     OPERADOR na interface (R5 — o agente nao toca em chaves/credenciais).
+
+4. PENDENCIA CRITICA (bloqueio do S1)
+   - BNB para gas na BSC: adquirir ~0,002 BNB e enviar para
+     0x5B2af...B1517 (rede BSC) — ver MC91.4-NECESSIDADE-BNB.txt.
+
+================================================================================
