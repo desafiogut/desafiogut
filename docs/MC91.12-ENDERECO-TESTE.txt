@@ -1,0 +1,28 @@
+================================================================================
+MC91.12-S1 — ENDERECO DA CONTA DE TESTE (AUTENTICACAO)
+DesafioGUT · 2026-08-18 ~18:15 (Brasília)
+================================================================================
+
+1. CONTA LOGADA (restauracao da sessao Privy no app)
+   - Nome exibido: "Novo Pernambucano" (dashboard)
+   - Sessao Privy restaurada automaticamente apos reinstalacao do APK
+
+2. ENDERECO DA CARTEIRA (obtido do JWT user-session do proprio app —
+   sessionStorage do WebView; payload decodificado)
+   - 0x5BAF46609dd9188E081cc78f70e61a6ea07f32B8
+   - (idem docs/MC88.29: corpo {"endereco":"0x5BAF46609dd9188E081cc78f70e61a6ea07f32B8","qtd":1} — mesma conta usada nos fluxos 202)
+
+3. VALIDACAO (verification-loop, 2 fontes independentes)
+   - saldoSenhas on-chain (contrato 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd,
+     selector 0x88aa6fc5) em publicnode E 1rpc: 12 em ambos — bate com a UI
+     ("12 Senhas" no dashboard/carteira)
+   - GET /saldo-rs (API, JWT user-session da conta): saldoCentavos=0 (R$ 0,00)
+   - GET /saldo-senhas (endpoint NOVO do MC91.11, mesmo JWT):
+     saldoOnChain=12, senhasConsumidas=0, saldoEfetivo=12
+
+4. NOTA DE SEGURANCA (R4/R5)
+   - O JWT de sessao foi usado EXCLUSIVAMENTE para leitura (saldo-rs,
+     saldo-senhas); o token NAO e registrado em nenhum doc/commit.
+
+CRITERIO DE SUCESSO S1: endereco obtido e validado. OK.
+================================================================================
