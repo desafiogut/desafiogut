@@ -1,0 +1,34 @@
+================================================================================
+MC91.3-S0 — DADOS DA TRANSACAO (COLETA)
+DesafioGUT · 2026-08-17 · Verificacao da transacao BSC (saque Binance -> MetaMask)
+================================================================================
+
+1. TXID (COMPLETO, confirmado na blockchain)
+   - 0xe530a9f1827f2a1308b40d608243ef214be9e287723bf34352a13ca9f5dae316
+   - Confere com o hash parcial da captura de ecra: 0xe530...dae316 (prefixo e sufixo)
+
+2. ENDERECO DE DESTINO (carteira do projeto, MetaMask-BSC)
+   - 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517
+   - Endereco on-chain (tx input + log Transfer): 0x5b2af3327efb9ce019c8e68d9c3df8fb81ab1517
+   - Identidade identica (hex case-insensitive). Ver MC91.3-S3.
+
+3. VALORES
+   - Enviado (debitado na Binance): 0,00552984 ETH
+   - Taxa cobrada pela Binance:       0,0000096 ETH
+   - Recebido na carteira:            0,00552024 ETH (= 5.520.240.000.000.000 wei)
+
+4. REDE / CHAIN
+   - BSC (BNB Smart Chain, BEP-20), chainId 0x38 (56)
+   - Token recebido: Ethereum Token (Binance-Peg ETH) 0x2170Ed0880ac9A755fd29B2688956BD959F933F8
+
+5. FONTES DOS DADOS
+   - Pagina da Binance "Sacar - Carteira" (registro do saque, status "Concluido")
+   - Blockchain BSC via RPC publico NodeReal (bsc-mainnet.nodereal.io) + bsc-dataseed
+
+6. REGISTRO NA BINANCE (evidencia visual da pagina aberta em 17/08 ~21h)
+   - Valor: 0,00552024 ETH | Status: Concluido | Data: 2026-08-17 19:09
+   - Withdraw wallet: Carteira Spot | Valor de saque: 0,00552024 | Taxa de rede: 0,0000096
+   - Endereco: 0x5B2a...Ab1517 | Rede: BSC | TxID: 0xe530...dae316
+
+CRITERIO DE SUCESSO: TxID, endereco e valores confirmados e documentados. OK.
+================================================================================
