@@ -1,0 +1,27 @@
+================================================================================
+MC91.13-S0 — IDENTIFICACAO DOS USUARIOS E CAMINHOS
+DesafioGUT · 2026-08-18 ~18:40 (Brasília)
+================================================================================
+
+1. USUARIO ATUAL (Hermes de origem)
+   - whoami: Moltbot
+   - Diretorio do hermes: C:\Users\Moltbot\AppData\Local\hermes\
+   - .env do hermes atual: C:\Users\Moltbot\AppData\Local\hermes\.env
+     (existe, 24.959 bytes, 06/08 16:13)
+
+2. OUTROS USUARIOS DO SISTEMA (C:\Users\)
+   - Vitória Marques  (unico perfil real alem de Moltbot)
+   - Todos os Usuários / Usuário Padrão (perfis de sistema, ignorados)
+
+3. CAMINHO ALVO (outro Hermes — Vitória Marques)
+   - C:\Users\Vitória Marques\AppData\Local\hermes\.env
+   - ACESSO NEGADO para o usuario Moltbot (Permission denied) — o Windows
+     bloqueia perfis de outros usuarios sem privilegios elevados. A copia
+     direta exigira admin ou acao do operador logado nesse usuario.
+
+4. NOTA: o MC menciona "~/.hermes/.env" (padrao Linux). Neste Windows o
+   hermes usa AppData\Local\hermes\.env; ~/.hermes existe mas so tem
+   skills/ e workflows/ (sem .env).
+
+CRITERIO DE SUCESSO S0: caminhos identificados e registrados. OK.
+================================================================================

@@ -1,0 +1,32 @@
+================================================================================
+MC91.13-S1 — LEITURA DA CHAVE DE ORIGEM: ENCONTRADA (CORRECAO DO ACHADO)
+DesafioGUT · 2026-08-18 ~18:50 (Brasília)
+================================================================================
+
+1. RESULTADO: ✅ Chave do ComfyUI Cloud ENCONTRADA — origem: ~/.claude.json
+   (NAO em ~/.hermes/.env, que nao existe neste Windows — premissa do MC
+   ajustada com evidencia).
+
+2. LOCALIZACAO REAL (referencia do skill brand-asset-generation +
+   verificacao direta):
+   - C:\Users\Moltbot\.claude.json
+     -> mcpServers["comfyui-cloud"]: url=https://cloud.comfy.org/mcp
+     -> headers["X-API-Key"] = "comfyui-..." (72 chars; formato comfyui-*)
+   - A chave e a MESMA usada nas geracoes de logo (MC69.1) e banners (17/08)
+     via skill brand-asset-generation (X-API-Key + extra_data.api_key_comfy_org
+     nos partner nodes).
+
+3. NOTA DE SEGURANCA (R4/R5)
+   - O valor da chave NAO foi exibido em logs nem registrado em arquivos.
+     Verificacao apenas de presenca/formato (prefixo comfyui-, 72 chars).
+
+4. IMPLICACAO PARA A TRANSFERENCIA
+   - A "variavel de ambiente" a copiar e o header X-API-Key do MCP
+     comfyui-cloud (que o Hermes/Claude Code injeta como env-equivalente).
+   - Destino alvo: <outro_usuario>\AppData\Local\hermes\.env com
+     COMFY_CLOUD_API_KEY=<chave> (ou equivalente do hermes destino).
+
+CRITERIO DE SUCESSO S1: chave confirmada e origem registrada (sem exposicao).
+OK — corrigido (a varredura inicial usava padroes errados: comfy-*/COMFY_CLOUD;
+a chave real e comfyui-* e vive no .claude.json).
+================================================================================
