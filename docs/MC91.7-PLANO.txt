@@ -1,0 +1,39 @@
+================================================================================
+MC91.7-S1 — PLANO DE INTEGRACAO (UI E FLUXO) — USUARIO COMUM
+DesafioGUT · 2026-08-18
+================================================================================
+
+DECISAO: Opcao A (minima alteracao, R1) — expor o email-OTP do Privy na
+entrada, SEM backend novo e SEM rotas novas. O cadastro e implicito no
+primeiro login (identidade Privy + carteira embedded + auth-user).
+
+1. MUDANCA 1 — NUCLEO (AppContext.jsx ~linha 1183)
+   - base.loginMethods = ["google"] -> ["google", "email"]
+   - Efeito: o modal Privy passa a oferecer Google E E-mail (OTP) para todos.
+   - Reverte a restricao do MC62 sem tocar nos overrides explícitos
+     (MC15.5: prefill/loginMethods do corporativo continuam preservados).
+
+2. MUDANCA 2 — UI DE ENTRADA (BottomNav.jsx ~linha 254)
+   - Apos o CTA "Aceito o DesafioGUT", adicionar botao secundario
+     "Entrar com e-mail" -> abrirModal({ loginMethods: ["email"] }).
+   - Modal focado no email (OTP) para o fluxo "so email".
+
+3. FLUXO RESULTANTE
+   - Primeiro acesso: clica em "Entrar com e-mail" (ou no CTA principal e
+     escolhe Email no modal) -> digita email -> recebe OTP -> conta Privy +
+     carteira embedded criadas -> auth-user -> Dashboard.
+   - Proximos acessos: mesmo caminho (o email ja cadastrado reconhece).
+
+4. FORA DE ESCOPO (documentado, decidido)
+   - Nome/telefone no cadastro: a infra existente (Privy) nao coleta esses
+     dados para usuario comum; SMS/phone desabilitado no painel. Coletar
+     exigiria endpoint novo de perfil -> nao implementado (R1).
+   - Rotas /cadastro e /login-email: desnecessarias (o modal cobre).
+
+5. VALIDACAO (S3/S4)
+   - build (vite/netlify) sem erros; APK com build:apk + gradlew (JBR21);
+     instalacao via adb; teste real no aparelho com email ficticio (OTP).
+
+CRITERIO DE SUCESSO S1: plano definido. OK (aprovacao implicita do briefing:
+"reutilizar a logica ja existente, apenas expor na entrada").
+================================================================================

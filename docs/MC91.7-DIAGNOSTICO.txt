@@ -1,0 +1,51 @@
+================================================================================
+MC91.7-S0 — DIAGNOSTICO DO FLUXO DE CADASTRO/LOGIN EXISTENTE
+DesafioGUT · 2026-08-18 · Fluxo: USUARIO COMUM
+================================================================================
+
+1. COMO O USUARIO COMUM ENTRA HOJE
+   - Privy (React) com carteira embedded; CTA "Aceito o DesafioGUT"
+     (BotaoLoginPrincipal / BottomNav / AuthArea).
+   - Login Google OAuth -> carteira embedded criada automaticamente
+     (createOnLogin:"all-users" na config do PrivyRoot).
+   - Apos o login: signMessage EIP-191 (DESAFIOGUT-AUTH:<ts>:<endereco>) ->
+     POST /.netlify/functions/auth-user -> JWT user-session 24h.
+   - Nao existem endpoints /auth/register nem /auth/login por senha:
+     o "cadastro" e a criacao da identidade Privy no primeiro login.
+
+2. EMAIL OTP NO PRIVY — JA ATIVO, MAS ESCONDIDO NO MODAL
+   - PrivyRoot.jsx:181 — config global do provider:
+       loginMethods: ["google", "email"]   <-- email JA ativo
+   - AppContext.jsx:1183 (MC62) — abrirModal SOBRESCREVE com:
+       if (!base.loginMethods) base.loginMethods = ["google"];
+     => o modal que abre na pratica SO mostra Google.
+   - Painel Privy (CLAUDE.md:126): Google + Email ativos (Apple desabilitado).
+   - AppContext ja trata email-OTP como identidade (MC15.2):
+       user?.email?.address || user?.google?.email || user?.apple?.email
+
+3. PADRAO EMAIL-OTP HEADLESS JA EXISTE NO CODIGO
+   - SejaNossoParceiro.jsx (MC15.6/MC62): useLoginWithEmail() com
+     sendCode({ email }) + loginWithCode — fluxo completo de OTP.
+   - Pode ser reutilizado se quisermos UX headless na entrada.
+
+4. UI DE ENTRADA (tela publica)
+   - Dashboard publico e a pagina de entrada do visitante (MC89.36 R-B).
+   - CTA de login principal: BottomNav.jsx:248-254 (menu "Mais") e
+     AuthArea.jsx (header). EstadoNeutro = skeleton, nao e a entrada.
+
+5. TELEFONE / SMS — NAO SUPORTADO PELA LOGICA EXISTENTE
+   - loginMethods do PrivyRoot: ["google","email"] — SEM sms/phone.
+   - Painel Privy: SMS desabilitado (nao listado).
+   - Nenhum campo de telefone no fluxo do usuario comum (grep no src:
+     telefone/phone/sms so em paginas admin/privacidade).
+   - Coletar nome/telefone exigiria endpoint novo de perfil (backend novo)
+     -> FORA DO ESCOPO R1 (reutilizar, apenas expor). Documentado.
+
+6. CONCLUSOES
+   - A mudanca minima (R1) para "cadastro/login com email": expor o email-OTP
+     do Privy na entrada — default do abrirModal de ["google"] para
+     ["google","email"] + botao "Entrar com e-mail" no BottomNav.
+   - Zero backend novo: carteira embedded + auth-user cobrem o resto.
+
+CRITERIO DE SUCESSO S0: fluxo mapeado. OK.
+================================================================================
