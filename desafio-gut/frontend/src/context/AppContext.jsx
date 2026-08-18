@@ -824,7 +824,30 @@ export function AppProvider({ children }) {
     }
     setSaldoSenhasStatus((prev) => (prev === "ok" || prev === "stale" ? prev : "loading"));
     try {
-      const valor = await getSaldoSenhasOnChain(address);
+      // MC91.11 — saldo EFETIVO (on-chain − senhas consumidas em lances
+      // programados) via GET /saldo-senhas; fallback para leitura on-chain
+      // pura (janela sem authToken ou endpoint indisponível).
+      let valor = null;
+      if (authToken) {
+        try {
+          const resp = await apiGet(`saldo-senhas?endereco=${encodeURIComponent(address)}`, {
+            token: authToken,
+            headers: visitorId ? { "X-Visitor-ID": visitorId } : undefined,
+          });
+          if (resp.status === 401) {
+            checkJwtFailures("saldo-senhas");
+            setAuthToken(null);
+            try { sessionStorage.removeItem("gut_auth_user"); } catch {}
+          } else if (resp.ok && resp.data && typeof resp.data.saldoEfetivo === "number") {
+            valor = resp.data.saldoEfetivo;
+          }
+        } catch (err) {
+          console.warn("[GUT-DEBUG] saldo-senhas (efetivo) falhou — fallback on-chain:", err?.message);
+        }
+      }
+      if (valor === null) {
+        valor = await getSaldoSenhasOnChain(address);
+      }
       setSaldoSenhas(valor);
       setSaldoSenhasStatus("ok");
       gravarSaldoCache(address, { senhas: valor });   // MC88.34 (P0)
@@ -834,7 +857,7 @@ export function AppProvider({ children }) {
       });
       setSaldoSenhasStatus((prev) => (prev === "ok" ? "stale" : "error"));
     }
-  }, [address]);
+  }, [address, authToken, visitorId]);
 
   useEffect(() => {
     refetchSaldo();

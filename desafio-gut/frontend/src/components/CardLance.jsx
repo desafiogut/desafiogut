@@ -22,6 +22,7 @@ import {
 } from "../utils/web3.js";
 // MC59.2 (B-4) — chainId e link do explorer vêm da config central de rede.
 import { CHAIN_ID_DEC, explorerTx } from "@/lib/network.js";
+import useTrocarPorSenhas from "../hooks/useTrocarPorSenhas.js";
 
 const SEPOLIA_CHAIN_ID = CHAIN_ID_DEC;
 
@@ -31,6 +32,7 @@ const MAINNET = import.meta.env.VITE_NETWORK_STAGE === "mainnet";
 
 const FASES = {
   IDLE:         "idle",
+  CONVERTENDO:  "convertendo",
   AUTENTICANDO: "autenticando",
   HASHING:      "hashing",
   ASSINANDO:    "assinando",
@@ -63,8 +65,12 @@ export default function CardLance({
   const {
     saldoSenhas, saldoSenhasStatus,
     refetchSaldoRs, saldoRsCentavos, saldoRsStatus,
+    refetchSaldo,
     userLabel,
   } = useAppContext();
+
+  // MC91.11 — conversão automática R$ → senha (programado sem senha on-chain).
+  const { trocarPorSenhas } = useTrocarPorSenhas();
 
   const [valor,             setValor]             = useState("");
   const [fase,              setFase]              = useState(FASES.IDLE);
@@ -79,13 +85,18 @@ export default function CardLance({
   const edicaoSanitizada = sanitizeEdicaoId(idEdicao ?? "");
   const ocupado = [
     FASES.AUTENTICANDO, FASES.HASHING, FASES.ASSINANDO, FASES.ENVIANDO,
+    FASES.CONVERTENDO,
   ].includes(fase);
   const isProgramado = tipoLeilao === "programado";
 
   const saldoCarregando = isProgramado &&
                           (saldoSenhasStatus === "loading" || saldoSenhasStatus === "idle");
   const saldoErro       = isProgramado && saldoSenhasStatus === "error";
-  const semFichas       = isProgramado && (saldoSenhas == null || saldoSenhas <= 0);
+  // MC91.11 — bloqueia o botão só quando NÃO há caminho: sem senha E sem saldo
+  // R$ para converter (R$ 2,00/senha). Com saldo R$ >= 200, o botão fica ativo
+  // e o clique converte automaticamente antes do lance.
+  const semFichas       = isProgramado && saldoSenhas != null && saldoSenhas <= 0 &&
+                          saldoRsCentavos !== null && saldoRsCentavos < 200;
   const valorParsed     = parseInt(valor || "0", 10);
   const semSaldoRsFlash = !isProgramado &&
                           saldoRsCentavos !== null && valorParsed > 0 &&
@@ -159,6 +170,28 @@ export default function CardLance({
       // MC28.1: em mainnet ambas as modalidades passam pelo backend (Compromisso
       // Cego + Key-Per-Bid). No Sepolia, só o flash usa este ramo (legado).
       if (!isProgramado || MAINNET) {
+        // MC91.11 — programado em mainnet: garante senha antes do lance.
+        // Sem senha on-chain, converte R$ → senha automaticamente (R$ 2,00/senha).
+        if (isProgramado && MAINNET && (saldoSenhas == null || saldoSenhas < 1)) {
+          if (saldoRsCentavos != null && saldoRsCentavos < 200) {
+            setErro("Sem senhas on-chain e saldo R$ insuficiente para converter (R$ 2,00/senha). Recarregue via PIX.");
+            setFase(FASES.ERRO);
+            return;
+          }
+          setFase(FASES.CONVERTENDO);
+          const conv = await trocarPorSenhas(1);
+          if (!conv.ok) {
+            setErro(conv.message || "Falha ao converter R$ em senha. Tente novamente.");
+            setFase(FASES.ERRO);
+            return;
+          }
+          if (conv.assincrono) {
+            setErro("Conversão R$ → senha em processamento on-chain. Aguarde a confirmação e tente novamente.");
+            setFase(FASES.ERRO);
+            return;
+          }
+          try { refetchSaldo?.(); } catch {}
+        }
         // 1. Obter token de auth (cached 10min — Privy popup só na 1ª vez)
         setFase(FASES.AUTENTICANDO);
         const authToken = await getFlashAuthToken();
@@ -194,6 +227,7 @@ export default function CardLance({
             token_expirado:           "Sessão expirada — nova autenticação necessária na próxima tentativa.",
             token_invalido:           "Falha na autenticação. Tente novamente.",
             endereco_nao_corresponde: "Endereço divergente. Saia e entre novamente.",
+            senhas_insuficientes:     "Saldo de senhas insuficiente — converta R$ em senhas (R$ 2,00/senha) ou recarregue via PIX.",
           };
           throw new Error(msgMap[data?.error?.code] ?? data?.error?.message ?? "Erro no lance relâmpago.");
         }
@@ -291,7 +325,9 @@ export default function CardLance({
   const tooltipBotao =
     saldoErro       ? "Erro ao ler saldo. Verifique sua conexão." :
     saldoCarregando ? "Aguardando leitura do saldo on-chain." :
-    semFichas       ? "Sem senhas on-chain — aguarde crédito da coordenacao" :
+    semFichas       ? (saldoRsCentavos != null && saldoRsCentavos >= 200
+                        ? "Sem senhas on-chain — o app converte R$ 2,00 automaticamente ao lançar"
+                        : "Sem senhas e sem saldo R$ para converter — recarregue via PIX") :
     semSaldoRsFlash ? `Saldo R$ insuficiente (R$ ${saldoRsCentavos != null ? (saldoRsCentavos / 100).toFixed(2) : "0"} disponível)` :
     "";
 
@@ -301,9 +337,9 @@ export default function CardLance({
         { f: FASES.ENVIANDO,     label: "⚡ Creditando on-chain…" },
       ]
     : [
-        { f: FASES.HASHING,   label: "Gerando hash Argon2id..." },
-        { f: FASES.ASSINANDO, label: "Assinando lance (Privy)..." },
-        { f: FASES.ENVIANDO,  label: "Registrando lance on-chain · −1 senha..." },
+        { f: FASES.CONVERTENDO, label: "🔄 Convertendo R$ → senha (R$ 2,00)…" },
+        { f: FASES.AUTENTICANDO, label: "🔐 Autenticando carteira…" },
+        { f: FASES.ENVIANDO,    label: "Registrando lance blindado · −1 senha..." },
       ];
 
   const labelBotao = fase === FASES.AUTENTICANDO
@@ -315,7 +351,9 @@ export default function CardLance({
     : saldoCarregando
       ? "⏳ Carregando saldo..."
     : isProgramado
-      ? "🎫 Confirmar Lance (−1 senha)"
+      ? (saldoSenhas != null && saldoSenhas < 1)
+        ? "🔄 Converter R$ → senha e Lançar"
+        : "🎫 Confirmar Lance (−1 senha)"
     : "⚡ Lance Relâmpago";
 
   // MC29.1 — skeleton de conformidade (não monta o formulário on-chain).
@@ -375,7 +413,7 @@ export default function CardLance({
         )}
         <p style={estilos.hintConexao}>
           {isProgramado
-            ? "Lance programado consome 1 senha on-chain (Art. 20: R$ 2,00) — adquira via Comprar Fichas."
+            ? "Lance programado consome 1 senha (Art. 20: R$ 2,00) — sem senha, o app converte R$ 2,00 do saldo automaticamente."
             : "DesafioGUT Flash · 30 min · debita saldo R$ · menor lance único vence (Art. 8)."}
         </p>
       </div>
@@ -414,7 +452,9 @@ export default function CardLance({
 
       {fase === FASES.SUCESSO && (
         <div style={estilos.boxSucesso}>
-          <p style={{ margin: 0, fontWeight: "600" }}>✅ Lance registrado!</p>
+          <p style={{ margin: 0, fontWeight: "600" }}>
+            {isProgramado ? "🎫 Lance registrado! (−1 senha)" : "✅ Lance registrado!"}
+          </p>
           {ultimaTxIsOnChain && ultimaTx ? (
             <>
               <p style={estilos.txText}>
@@ -471,7 +511,10 @@ export default function CardLance({
           borderRadius: "10px", padding: "0.75rem 1rem",
           color: "#f5a623", fontSize: "0.85rem", fontWeight: "600", textAlign: "center",
         }}>
-          🎫 Sem senhas on-chain — aguarde crédito da coordenacao após confirmação do PIX (Art. 20)
+          🎫 Sem senhas on-chain —{" "}
+          {saldoRsCentavos != null && saldoRsCentavos >= 200
+            ? "o app converte R$ 2,00 automaticamente ao lançar"
+            : "recarregue via PIX para converter R$ 2,00 → 1 senha (Art. 20)"}
         </div>
       )}
 
