@@ -10,6 +10,21 @@ CHECK #1 — 2026-08-17 ~21h30
         endereco para BNB em Gerenciamento de Enderecos (ou selecionar o
         endereco salvo na Lista de Confiaveis).
 
+CHECK #2 — 2026-08-17 ~22h15 (formulario preenchido: BNB, endereco selecionado
+  da Lista de Confiaveis = MetaMask-BSC, rede BSC, valor 0.001)
+  Estado: BLOQUEADO (retencao de seguranca da whitelist de BNB)
+  Evidencias capturadas:
+  - Endereco 0x5B2af...B1517 (etiqueta MetaMask-BSC, rede BSC) ACEITO — a
+    mensagem "nao esta na sua lista de permissoes" NAO aparece mais (a anterior
+    era efeito do endereco digitado com checksum nao-canonico).
+  - Campo "Valor de saque": helper "Minimo de 0.0005" + erro
+    "Favor inserir uma quantia que nao ultrapasse seu saldo disponivel".
+  - Maximo efetivo de saque: 0,00 BNB (saldo da conta: 13.269,401 BNB).
+  - Botao "Sacar": inativo/oculto na arvore de acessibilidade.
+  Interpretacao: retencao de seguranca (24-48h) da whitelist de BNB ativa
+  (endereco adicionado 17/08 ~16:00 -> liberacao esperada ~19/08 16:00).
+  A sentinela (cron 222a8d518e4c, 2h) permanece ativa.
+
 MONITORAMENTO
   - Cron "sentinela-whitelist-bnb": a cada 2h (schedule 0 */2 * * *)
   - Checagem 1: saldo de BNB em 0x5B2af...B1517 via RPC (NodeReal) — se > 0,
