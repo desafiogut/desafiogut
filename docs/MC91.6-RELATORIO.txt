@@ -21,16 +21,18 @@ COMANDOS EXECUTADOS
   S1: geracao PIL + substituicao dos mipmaps (commit e862000)
   S2: npm run build:apk (netlify build 3m24s + validar:dist PASS mainnet +
       cap sync) -> gradlew assembleDebug (JAVA_HOME=JBR21) BUILD SUCCESSFUL
-      1m11s (v1) / 37s (v2)
+      1m11s (v1) / 37s (v2) / 26s (final v1)
       Validacao do artefacto empacotado (licao do Opus):
       - dist 00:58:53 = assets/public 00:58:53 = APK 01:02:59 (sincrono)
       - validar-dist-rede.mjs no assets/public DENTRO do APK: PASS (mainnet)
       - icone no APK (res/mipmap-xxxhdpi-v4/ic_launcher.png): 192x192,
         md5 identico ao gerado (923bc31a23e67dad)
-  S3: adb install -r app-debug.apk -> Success (2x)
+  S3: adb install -r app-debug.apk -> Success (3x)
       pm list packages -> package:com.desafiogut.app
       am start -> MainActivity aberta
   S4: screencap -> Desktop\icone_pos_instalacao.png (1080x2400)
+      v2 (UnsharpMask) testada e DESCARTADA (granulava) — v1 LANCZOS puro e a
+      versao FINAL (equilibrio perfeito, validado pelo operador)
 
 RESULTADOS
   - APK: android/app/build/outputs/apk/debug/app-debug.apk (~37,4 MB, v2)

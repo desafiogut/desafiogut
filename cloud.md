@@ -7305,7 +7305,7 @@ CONFIRMACAO-ENDERECO,RELATORIO}.txt + MC91.3-RELATORIO.txt no Desktop.
 - build:apk + gradlew assembleDebug (JBR21) — validado o artefacto DENTRO do APK
   (assets/public mainnet PASS, icone md5 identico, timestamps sincronos)
 - APK instalado via adb: package com.desafiogut.app (Success)
-- Icone validado pelo operador no celular: enquadramento bom, v2 sharpened
+- Icone validado pelo operador no celular: enquadramento bom; FINAL = v1 LANCZOS puro (v2 granulava, descartada)
 - Backups: Desktop\MC91.6-BACKUP-ICONES\ | commits 1289d90..ecd4582
 - PENDENTE: MC91.4 (bridge BSC->Mainnet + envio p/ EOA 0xFea436...1E67) —
   aguardando BNB na carteira 0x5B2af (whitelist BNB retida ate ~19/08 16:00;

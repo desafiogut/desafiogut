@@ -13,10 +13,10 @@ DesafioGUT · 2026-08-18
 
 2. VALIDACAO NO CELULAR (operador, tela real)
    - Enquadramento do icone na tela inicial: BOM (validado pelo operador).
-   - Nitidez: levemente desfocado na 1a versao -> regenerado com UnsharpMask
-     (radius 2, percent 130, threshold 2) e reinstalado (v2).
-   - A v2 (sharpened) foi instalada e o app aberto para o operador conferir
-     no celular.
+   - Nitidez: v1 (LANCZOS puro) = EQUILIBRIO PERFEITO — ESCOLHA FINAL.
+   - v2 (UnsharpMask) melhorou a nitidez mas GRANULOU — descartada.
+   - Revertido para v1 (md5 923bc31a23e67dad identico ao commit original
+     e862000), recompilado e reinstalado em 18/08 ~01:2x. Commit 9268524.
 
 3. EVIDENCIAS
    - C:\Users\Moltbot\Desktop\icone_pos_instalacao.png (screencap 1080x2400)
