@@ -7356,3 +7356,24 @@ CONFIRMACAO-ENDERECO,RELATORIO}.txt + MC91.3-RELATORIO.txt no Desktop.
   PIX R$ 2,00 com autorizacao, edicao PROG-1 admin, endereco da conta teste).
 - Artefactos: docs/MC91.11-{DIAGNOSTICO,TESTES,VALIDACAO-APARELHO,RELATORIO}.txt
   + MC91.11-RELATORIO.txt no Desktop (commits 035697b..611a24a).
+
+
+## MC91.12 — validacao de codigo/testes do fluxo financeiro (18/08; zero custo)
+- Abordagem alterada pelo operador: NENHUM PIX real (autorizacao R$ 2,00 nao
+  usada). Validacao por codigo + testes + ambientes (deploy/APK).
+- Fluxo atestado consistente: PIX -> saldo R$ (confirmar-pagamento) ->
+  /comprar-senhas (R$ 2,00/senha, adicionarSenhas on-chain) -> senhas ->
+  PROGRAMADO consome 1 senha (gate on-chain + ledger off-chain, teto on-chain;
+  MC91.11) | RELAMPAGO consome R$ (menor lance unico no fecho).
+- Cobertura: suite backend 403/403 PASS — inclui NOVOS mc9111-programado
+  (7) e mc9112-integracao-lance (5: programado sem debito R$ + consumo +
+  blindagem; relampago debita R$; gates 400; sem metadata = relampago).
+- Ambientes verificados: deploy live 6a849bac (chunk MercadoLances com a
+  correcao; /saldo-senhas 401/200; conta teste 12/0/12) e APK instalado no
+  celular via USB (Success; mesmo bundle da correcao).
+- Conta de teste: Novo Pernambucano, 0x5BAF46609dd9188E081cc78f70e61a6ea07f32B8
+  (obtida do JWT user-session do WebView; saldoSenhas on-chain 12 em 2 RPCs).
+- PENDENCIA OPCIONAL: E2E no aparelho (criar PROG-1 via admin, PIX real,
+  lances na UI) — documentada, sem custo ate aqui.
+- Artefactos: docs/MC91.12-{INSTALACAO,ENDERECO-TESTE,RELATORIO}.txt +
+  MC91.12-RELATORIO.txt no Desktop (commits 73d009a, 3cb92a9, da42684).

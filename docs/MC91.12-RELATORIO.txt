@@ -1,0 +1,89 @@
+================================================================================
+MC91.12 — RELATORIO FINAL: VALIDACAO DE CODIGO E TESTES DO FLUXO FINANCEIRO
+DesafioGUT · 2026-08-18 ~18:25 (Brasília)
+================================================================================
+
+1. RESUMO EXECUTIVO
+   Abordagem ALTERADA por decisao do operador: NENHUM custo financeiro foi
+   incorrido (o PIX autorizado nao foi pago). Em vez da execucao real no
+   aparelho, o MC91.12 validou por CODIGO + TESTES + VERIFICACAO DE AMBIENTE
+   que o fluxo financeiro esta correto e consistente:
+     PIX -> saldo R$ (confirmar-pagamento) -> /comprar-senhas (R$ 2,00/senha)
+     -> senhas on-chain -> lance PROGRAMADO consome 1 senha (ledger com teto
+     on-chain) | lance RELAMPAGO consome saldo R$ (menor lance unico no
+     fecho). A validacao no aparelho fica como PENDENCIA OPERACIONAL OPCIONAL.
+
+2. REVISAO DE ENDPOINTS / UI / LOGICA (verification-loop)
+   - iniciar-pagamento: gera pedido PIX Mercado Pago real (provider
+     mercadopago; R$ 2,00/senha) — probe real OK (MC91.10-S0).
+   - confirmar-pagamento: PIX aprovado -> credita saldo R$ (blob saldo-rs,
+     idempotente por pedido; modelo dual: PIX credita R$, NAO senhas).
+   - comprar-senhas: debita R$ 2,00/senha e chama adicionarSenhas on-chain
+     (coordenacao paga o gas); reembolso automatico em falha; TX_PENDENTE ->
+     reconciliacao (nao reembolsa).
+   - lance-relampago (CORRIGIDO MC91.11): deriva o tipo da edicao
+     (buscarEdicao); PROGRAMADO = gate on-chain saldoSenhas>=1 + ledger de
+     consumo (senhas-programado-consumo; teto = saldo on-chain) SEM debitar
+     R$, mantendo a blindagem (comprometerLance + addLance/key-per-bid);
+     RELAMPAGO = debita saldo R$ (intocado). Resposta inclui modo e
+     senhaConsumida.
+   - saldo-senhas (NOVO MC91.11): saldo efetivo (on-chain - consumidas),
+     anti-IDOR (JWT user-session ou admin). Validado AO VIVO com o token real
+     da conta de teste: {saldoOnChain:12, senhasConsumidas:0, saldoEfetivo:12}.
+   - consolidar-lances: apura MENOR LANCE UNICO off-chain (apurarMenorUnico)
+     e publica consolidarResultado via Flashbots (EIP-712 + nonce).
+   - UI (CardLance): programado nao bloqueia por senha se houver R$ p/
+     converter (conversao automatica R$ 2,00 -> 1 senha); mensagens claras
+     ("-1 senha", "converta R$ 2,00", "recarregue via PIX"); saldo exibido =
+     efetivo (AppContext via /saldo-senhas com fallback on-chain).
+
+3. COBERTURA DE TESTES POR CENARIO
+   - PIX -> saldo R$: mc361-saldo-rs (creditarSaldoRsIdempotente/CAS),
+     mc3917-double-spend (webhook/duplo credito), mc8816-polling-vs-ratelimit.
+   - Conversao R$ -> senhas (on-chain, reembolso): mc593-b2-txhash
+     (reembolso por tx-hash), mc594-nonce-retry, mc595-async-blocks,
+     mc595-worker-credito.
+   - LANCE PROGRAMADO (correcao): mc9111-programado (7 testes: gate, teto,
+     persistencia, isolamento, teto dinamico) + mc9112-integracao-lance
+     (NOVO, 5 testes: programado sem debito R$ + consumo + blindagem; sem
+     senhas 400; relampago debita R$; saldo insuficiente 400; sem metadata =
+     relampago).
+   - LANCE RELAMPAGO: mc361-saldo-rs (debito CAS atomico), mc28-keyperbid
+     (key-per-bid, concorrencia, paginacao).
+   - MENOR LANCE UNICO: apurarMenorUnico em mc28-seguranca e mc33-load.
+   - Ledger FIFO (troco): troco-senhas (7 testes).
+   - SUITE COMPLETA: 403/403 PASS, 0 FAIL (rodada apos todas as mudancas).
+
+4. VERIFICACAO DE DEPLOY E APK (ambientes)
+   - DEPLOY NETLIFY (live): deploy 6a849bac (functions atualizadas +
+     frontend). Evidencias: /health ok; /saldo-senhas responde 401 sem token e
+     200 com token (12/0/12); chunk MercadoLances do SITE live contem a
+     correcao (string "senhas_insuficientes" presente — mesmo hash do APK).
+   - APK NO CELULAR (conectado via USB, fiem7xlvcufe855h): app-debug.apk
+     (MC91.11-S4, 37,4 MB) instalado com Success (S0, commit 73d009a);
+     conteudo verificado: bundle mainnet + chunk MercadoLances com a correcao
+     (mesmo hash do deploy) + saldoSenhas on-chain da conta = 12 (2 RPCs).
+   - CONTA DE TESTE: "Novo Pernambucano", endereco
+     0x5BAF46609dd9188E081cc78f70e61a6ea07f32B8 (S1, commit 3cb92a9); sessao
+     Privy restaurada no app.
+
+5. PENDENCIA OPERACIONAL (OPCIONAL — validacao E2E no aparelho)
+   Nao executada por decisao (zero custo). Quando o operador quiser:
+   a) Criar edicao programada PROG-1 (admin — painel ADM ou API com access
+      token admin; o token user-session NAO serve para guardAdmin).
+   b) PIX real R$ 2,00 (autorizacao ja concedida) -> conferir saldo R$ -> 
+      /comprar-senhas -> conferir saldo de senhas.
+   c) Lance programado (consome 1 senha) e lance relampago na R-1 (consome
+      R$; nota: a R-1 esta "Aguardando catalogo" na UI — conferir produto).
+   d) Verificar saldos finais (senhas efetivo + R$) e fecho (consolidar).
+
+6. VEREDITO
+   Fluxo financeiro CORRETO e CONSISTENTE: PIX -> saldo R$ -> conversao ->
+   senhas on-chain -> programado consome 1 senha; carteira (R$) -> relampago
+   consome R$ (menor lance unico). Testes 403/403 verdes (inclui 12 novos do
+   MC91.11/91.12); deploy live e APK no celular contem as correcoes
+   (verificado por conteudo). Nenhum custo financeiro incorrido.
+
+Artefactos: docs/MC91.12-{INSTALACAO,ENDERECO-TESTE,RELATORIO}.txt + commits
+73d009a (S0), 3cb92a9 (S1), da42684 (teste de integracao).
+================================================================================
