@@ -1,0 +1,32 @@
+================================================================================
+MC91.6-S1 — SUBSTITUICAO DO ICONE (LOGO APP)
+DesafioGUT · 2026-08-18
+================================================================================
+
+1. FONTE
+   - C:\Users\Moltbot\Desktop\LOGO APP.jpeg (1024x1034, RGB)
+   - Arte oficial do Guto (terno azul + martelo de juiz, fundo azul escuro,
+     confetes) — validada visualmente como adequada para launcher.
+
+2. PROCESSAMENTO (PIL 12.3, Python)
+   - Crop central quadrado 1024x1024 (sem distorcer proporcao)
+   - Resize LANCZOS por densidade (padrao Android):
+     launcher/round: mdpi 48 | hdpi 72 | xhdpi 96 | xxhdpi 144 | xxxhdpi 192
+     foreground   : mdpi 108 | hdpi 162 | xhdpi 216 | xxhdpi 324 | xxxhdpi 432
+   - Salvo como PNG (optimize) em
+     desafio-gut/frontend/android/app/src/main/res/mipmap-<densidade>/
+
+3. ARQUIVOS SUBSTITUIDOS (15, versionados no git)
+   - ic_launcher.png, ic_launcher_round.png, ic_launcher_foreground.png
+     em cada mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}
+   - drawable/ic_launcher_background.xml e values/ic_launcher_background.xml
+     NAO foram alterados (mantem o fundo adaptativo atual).
+
+4. VALIDACAO VISUAL (vision)
+   - icone xxxhdpi gerado: arte integra, personagem central, sem cortes.
+   - OK para uso como icone de launcher.
+
+5. BACKUP (S0): C:\Users\Moltbot\Desktop\MC91.6-BACKUP-ICONES\
+
+CRITERIO DE SUCESSO S1: novo icone no lugar, commit realizado. OK.
+================================================================================
