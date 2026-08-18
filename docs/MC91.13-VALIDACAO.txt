@@ -1,0 +1,29 @@
+================================================================================
+MC91.13-S3 — VALIDACAO DO ACESSO (ESTADO REAL)
+DesafioGUT · 2026-08-18 ~19:05 (Brasília)
+================================================================================
+
+1. VALIDACAO DA CHAVE (canary-watch)
+   - GET https://cloud.comfy.org/api/user com X-API-Key da ORIGEM:
+     HTTP 200, {"id":"V7eWyvhyMjbC3KywWZNQleNHDsH3","status":"active"}
+   - Assinatura/plano ATIVO — a chave copiada e a MESMA usada pelo acesso
+     funcional atual (geracoes de logo MC69.1 e banners 17/08).
+
+2. VALIDACAO DO DESTINO (Desktop\.env)
+   - C:\Users\Moltbot\Desktop\.env: COMFYUI_API_KEY presente, formato
+     comfyui-*, 72 chars (valor nao exibido).
+   - Leitura de volta confirma a linha (sem exposicao).
+
+3. VALIDACAO NO OUTRO HERMES (perfil Vitoria Marques) — PENDENTE
+   - Nao executavel nesta sessao: o perfil do outro usuario nao permite
+     escrita pelo usuario Moltbot (PermissionError em raiz e AppData/Local),
+     e nao ha instalacao do hermes acessivel nesse perfil para rodar
+     "hermes tools --check comfy".
+   - Passo pendente (admin): rodar C:\Users\Moltbot\Desktop\MC91.13-
+     COPIAR-CHAVE.ps1 ELEVADO (idempotente; le a chave da origem em runtime;
+     nunca imprime) para gravar no hermes da Vitoria, OU colar o .env do
+     Desktop no destino quando o acesso estiver disponivel.
+
+CRITERIO DE SUCESSO S3: validacao da chave ativa OK; validacao funcional no
+perfil do outro Hermes PENDENTE (permissao/admin). Registrado com transparencia.
+================================================================================

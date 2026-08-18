@@ -1,0 +1,54 @@
+================================================================================
+MC91.13 — RELATORIO FINAL: TRANSFERENCIA DO ACESSO COMFYUI CLOUD
+DesafioGUT · 2026-08-18 ~19:05 (Brasília)
+================================================================================
+
+1. RESUMO EXECUTIVO
+   A chave do ComfyUI Cloud foi localizada, validada como ATIVA e copiada para
+   um .env de destino. O destino original (perfil do outro usuario, Vitoria
+   Marques) esta bloqueado por permissoes do Windows (escrita negada para o
+   usuario atual); conforme instrucao explicita do operador, o fallback foi
+   executado: C:\Users\Moltbot\Desktop\.env. A transferencia para o perfil da
+   Vitoria fica pendente de execucao com privilegio admin (script pronto).
+
+2. COMO O ACESSO FUNCIONA (achado que desbloqueou o MC)
+   - O ComfyUI Cloud e acessado via API REST (https://cloud.comfy.org/mcp,
+     endpoints /api/*) com header X-API-Key + extra_data.api_key_comfy_org
+     nos partner nodes (Gemini/Nano Banana etc.) — padrao do skill
+     brand-asset-generation, validado nas geracoes de logo/banners.
+   - A chave vive em C:\Users\Moltbot\.claude.json ->
+     mcpServers["comfyui-cloud"].headers["X-API-Key"] (config MCP da era
+     Opus/Claude Code), formato comfyui-* (72 chars). NAO esta em
+     ~/.hermes/.env (premissa do MC ajustada com evidencia).
+
+3. CHAVE COPIADA (mascarada)
+   - comfyui-**** (72 chars) — valor nunca exibido/registrado (R4/R5).
+
+4. DESTINOS
+   - Solicitado: C:\Users\Vitória Marques\.env e
+     C:\Users\Vitória Marques\AppData\Local\hermes\.env
+     -> PERMISSAO NEGADA (escrita em perfil de outro usuario exige admin).
+   - Efetivo (fallback autorizado): C:\Users\Moltbot\Desktop\.env (criado)
+     com COMFYUI_API_KEY=comfyui-... (sem BOM, idempotente).
+   - Script p/ o perfil da Vitoria (admin): Desktop\MC91.13-COPIAR-CHAVE.ps1.
+
+5. VALIDACAO
+   - GET /api/user com a chave: HTTP 200 {"status":"active"} — assinatura
+     ATIVA (a mesma chave copiada).
+   - Destino Desktop\.env: variavel presente, formato comfyui-* ✓.
+
+6. PENDENCIA (registrada)
+   - Copia efetiva no perfil "Vitoria Marques" (admin): rodar o .ps1 elevado
+     ou copiar o .env quando o acesso estiver disponivel; depois validar com
+     "hermes tools --check comfy" nesse perfil.
+
+7. VEREDITO
+   Acesso ao ComfyUI Cloud LOCALIZADO, VALIDADO como ativo e COPIADO para o
+   destino efetivo autorizado (Desktop\.env). Transferencia para o perfil do
+   outro usuario: PENDENTE de privilegio admin (documentado, script pronto).
+   Nenhuma exposicao da chave em logs/commits (R4/R5 cumpridas).
+
+Artefactos: docs/MC91.13-{CAMINHOS,CHAVE-ORIGEM,CHAVE-DESTINO,VALIDACAO,
+RELATORIO}.txt + Desktop\MC91.13-COPIAR-CHAVE.ps1 + Desktop\.env
+(commits 35811a7, 0a0191c).
+================================================================================

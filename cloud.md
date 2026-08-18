@@ -7377,3 +7377,17 @@ CONFIRMACAO-ENDERECO,RELATORIO}.txt + MC91.3-RELATORIO.txt no Desktop.
   lances na UI) — documentada, sem custo ate aqui.
 - Artefactos: docs/MC91.12-{INSTALACAO,ENDERECO-TESTE,RELATORIO}.txt +
   MC91.12-RELATORIO.txt no Desktop (commits 73d009a, 3cb92a9, da42684).
+
+## MC91.13 — acesso ComfyUI Cloud: chave localizada, validada e copiada (18/08)
+- COMO O ACESSO FUNCIONA: API REST cloud.comfy.org/mcp com X-API-Key +
+  extra_data.api_key_comfy_org (partner nodes; skill brand-asset-generation).
+  A chave vive em ~/.claude.json -> mcpServers.comfyui-cloud.headers.X-API-Key
+  (formato comfyui-*, 72 chars) — NAO em ~/.hermes/.env (premissa ajustada).
+- Chave validada ATIVA: GET /api/user -> HTTP 200 {"status":"active"}.
+- Copia: perfil "Vitoria Marques" bloqueado por permissao (escrita negada) ->
+  fallback autorizado pelo operador: C:\Users\Moltbot\Desktop\.env
+  (COMFYUI_API_KEY=comfyui-...; sem BOM; valor nunca exposto — R4/R5).
+- Pendencia: copiar para o perfil da Vitoria com admin (script pronto:
+  Desktop\MC91.13-COPIAR-CHAVE.ps1, idempotente, nunca imprime a chave).
+- Artefactos: docs/MC91.13-{CAMINHOS,CHAVE-ORIGEM,CHAVE-DESTINO,VALIDACAO,
+  RELATORIO}.txt + relatorio no Desktop (commits 35811a7, 0a0191c).
