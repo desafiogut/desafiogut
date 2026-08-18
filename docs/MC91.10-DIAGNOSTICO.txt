@@ -1,0 +1,128 @@
+================================================================================
+MC91.10-S0-DIAG — DIAGNOSTICO DO FLUXO FINANCEIRO E DE SENHAS (RECONHECIMENTO)
+DesafioGUT · 2026-08-18 ~17:15 (Brasília)
+================================================================================
+
+OBJETIVO: validar o fluxo PIX -> senhas -> lances programados + carteira ->
+lances relampago (menor lance unico). Este documento registra o reconhecimento
+feito ANTES de qualquer acao financeira (R2: zero custo ate aqui).
+
+----------------------------------------------------------------------
+1. ESTADO REAL VERIFICADO (evidencias de 2026-08-18 ~17:10)
+----------------------------------------------------------------------
+- Backend (Netlify) VIVO: GET /health -> {"ok":true,"service":"desafiogut-functions"}
+- Edicoes (GET /edicoes): R-1 = relampago, ABERTA, termino 2026-08-19T17:08:55Z
+  (prazo ~24h); RELAMP-1/2/3 = encerradas. NAO existe edicao PROGRAMADA ativa
+  (necessaria para o S2; criacao e admin-only — POST /edicoes, guardAdmin).
+- PIX: provider ativo = "mercadopago" (simulated=false) — PIX REAL. Probe em
+  /iniciar-pagamento gerou pedido valido R$ 2,00 (qtd=1) com payload EMV PIX
+  (chave desafiogut@gmail.com; BRL; 2.00; campo 62 = id Mercado Pago).
+- Saldo EOA 0xFea436...1E67 (mainnet): ~0,004398 ETH (RPC publicnode).
+- Gas price mainnet: ~120 gwei (pico) — ver secao 4.
+- lances-flash (GET, publico): oculta valores ate consolidar (blindagem MC28.1);
+  R-1 com 0 lances no momento.
+- ADB: nenhum dispositivo conectado (celular nao esta via USB) — UI no aparelho
+  pendente.
+
+----------------------------------------------------------------------
+2. MAPA DO FLUXO FINANCEIRO REAL (leitura de codigo, netlify/functions)
+----------------------------------------------------------------------
+A) COMPRA DE SENHAS (fluxo real em producao):
+   iniciar-pagamento (POST, sem auth; {endereco, qtd}) -> pedido PIX MP
+     (qrCodeText/qrCodeImage + JWT de pedido TTL 15min)
+   -> operador paga o PIX (app bancario)
+   -> confirmar-pagamento (POST; {token}): verifica MP (blob mp-aprovados do
+     webhook ou API live) -> status approved -> CREDITA SALDO R$ (blob saldo-rs)
+     [Modelo dual: PIX credita R$, NAO senhas diretamente]
+   -> comprar-senhas (POST; JWT lance-auth; {endereco, qtd}): debita R$ 2,00 x
+     qtd do saldo-rs e chama adicionarSenhas ON-CHAIN (coordenacao/EOA paga o
+     gas) -> saldoSenhas[usuario] += qtd (contrato LeilaoGUT mainnet
+     0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd).
+   -> Idempotencia: pedidos-pagos (blob). Reembolso automatico em falha
+     on-chain (best-effort; TX_PENDENTE nao reembolsa -> reconciliacao).
+
+B) LANCES (fluxo real em producao — mainnet):
+   CardLance.jsx: em MAINNET, TANTO "flash" QUANTO "programado" usam o MESMO
+   ramo -> POST /lance-relampago (JWT lance-auth via /auth-lance, assinatura
+   EIP-191 da carteira Privy) com {endereco, valorCentavos, edicaoId,
+   idempotencyKey}:
+     - debita saldo R$ (blob saldo-rs; minimo 1 centavo, max R$ 9.999,99)
+     - mainnet: comprometerLance on-chain (coordenacao assina; so o HASH do
+       valor vai para a cadeia — keccak256(abi.encode(valor, endereco)))
+     - valor real -> data-store (Key-Per-Bid; blobs ou Supabase via fachada)
+   -> Fecho: consolidar-lances (admin): apura MENOR LANCE UNICO off-chain
+     (apurarMenorUnico) e publica consolidarResultado via Flashbots (EIP-712 +
+     edicaoNonce anti-replay).
+
+C) SENHAS ON-CHAIN: NENHUMA function de producao CONSOME saldoSenhas em lances.
+   darLance(idEdicao, valor) (que consome 1 senha) e chamado pelo frontend SO
+   no caminho legado (Sepolia/localhost, MAINNET=false). Em mainnet o lance
+   (inclusive "programado") debita R$. A UI de programado ainda exige
+   saldoSenhas > 0 para HABILITAR o botao (gate visual) — mas o debito real e
+   R$.
+
+----------------------------------------------------------------------
+3. DIVERGENCIAS ENTRE O MC91.10 E A IMPLEMENTACAO ATUAL (achados)
+----------------------------------------------------------------------
+1) MC assume "PIX -> credito DIRETO de senhas"; o real e PIX -> saldo R$ ->
+   comprar-senhas (R$ -> senhas on-chain). O QR gerado compra R$, nao senhas.
+2) MC assume "lance programado consome 1 senha"; em mainnet o lance (programado
+   e relampago) debita saldo R$ e registra compromisso cego on-chain. O consumo
+   de senhas por lance e legado (Sepolia).
+3) MC cita "tabela fila_tarefas no Supabase"; o pipeline real usa Netlify Blobs
+   (fila.mjs / worker-credito.mjs / pedidos-pagos). Supabase existe (fachada
+   data-store-supabase.mjs, DATA_STORE_BACKEND) como backend alternativo.
+4) MC cita "http://desafio-gut.com/api/..."; o dominio real e
+   https://silly-stardust-ca71bc.netlify.app/.netlify/functions/...
+5) "EOA abastecida (0,0055 ETH) para creditar senhas on-chain": saldo real
+   ~0,0044 ETH — proximo, mas com gas a 120 gwei cobre MENOS DE 1 transacao
+   (ver secao 4).
+6) MC cita edicoes "programada e relampago em andamento": existe apenas R-1
+   (relampago). Edicao programada precisa ser criada (admin).
+
+----------------------------------------------------------------------
+4. CUSTOS ESTIMADOS (gas mainnet ~120 gwei; ETH ~R$ 9.973)
+----------------------------------------------------------------------
+- adicionarSenhas (comprar-senhas): ~0,006-0,009 ETH  (~R$ 60-90)
+- comprometerLance (por lance):      ~0,007-0,010 ETH  (~R$ 70-100)
+- consolidarResultado (fecho):       ~0,005-0,007 ETH  (~R$ 50-70)
+- PIX (operador): R$ 2,00 (qtd=1; valor minimo p/ 1 senha)
+TOTAL fluxo completo (1 compra + 2 lances + fecho opcional): ~R$ 250-360.
+EOA atual: 0,004398 ETH (~R$ 44) — INSUFICIENTE. Com gas <= 30 gwei o total
+cai para ~R$ 45-70, coberto pela EOA atual. POR ISSO a sentinela de gas
+(sentinela_gas_mainnet.sh, cron 30min, limiar 30 gwei) foi criada.
+
+----------------------------------------------------------------------
+5. PRE-REQUISITOS PARA S1-S3 (quando o gas normalizar / com operador)
+----------------------------------------------------------------------
+a) Celular conectado via USB (adb devices) OU uso do app web (Chrome perfil
+   DESAFIO) para navegar na UI (S0 visual, S2/S3 pela interface).
+b) Endereco da carteira da conta de teste (Privy) — necessario para consultar
+   saldo-rs (anti-IDOR exige JWT da conta) e saldoSenhas on-chain.
+c) Operador paga PIX R$ 2,00 (autorizacao explicita — R2).
+d) Autorizacao para o gas da EOA (2-4 txs) — R2/R5 (o backend assina; o agente
+   apenas orquestra).
+e) (S2) Criar edicao programada (POST /edicoes, admin) — ex.: PROG-1, 30 min.
+f) (S4) Consultar saldoSenhas on-chain via RPC (leitura publica do contrato) e
+   saldo-rs via endpoint (com JWT da conta de teste ou admin).
+
+----------------------------------------------------------------------
+6. STATUS POR SEGMENTO
+----------------------------------------------------------------------
+S0 (QR PIX): VALIDADO via API (docs/MC91.10-PIX-GERADO.txt, commit 49ba2b2).
+   Pendente: captura visual no aparelho (ADB).
+S1 (PIX -> saldo R$): PENDENTE — exige pagamento real do operador (R$ 2,00) e
+   aprovacao do MP (webhook/polling). Nenhum pagamento feito (R2).
+S2 (lance programado): PENDENTE — sem edicao programada ativa + exige gas.
+   ACHADO: em mainnet nao consome senha on-chain; debita R$.
+S3 (lance relampago, menor lance unico): PENDENTE — exige saldo R$ e gas.
+S4 (consistencia de saldos): PENDENTE — depende de S1-S3 + endereco da conta.
+S5 (relatorio final): PENDENTE.
+
+VEREDITO PARCIAL: infraestrutura de pagamento (MP real, QR valido) e backend
+OPERACIONAIS. Execucao financeira aguardando: (1) gas < 30 gwei (sentinela
+ativa), (2) autorizacao do operador (PIX + gas), (3) celular/UI e endereco da
+conta de teste.
+
+CRITERIO DE SUCESSO S0-DIAG: estado real mapeado e registrado. OK.
+================================================================================
