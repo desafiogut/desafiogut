@@ -23,7 +23,9 @@ import { lerEstadoSistema, sistemaPausado } from "./_lib/system-state.mjs";
 import { registrarEventosDeLance } from "./_lib/notificacoes-usuario.mjs";
 // ── MC28.1: blindagem (ativa só em NETWORK_STAGE === 'mainnet') ──────────────
 import { addLance } from "./_lib/data-store.mjs";
-import { comprometerLanceOnchain } from "./_lib/contract.mjs";
+import { comprometerLanceOnchain, lerSaldoSenhas } from "./_lib/contract.mjs";
+import { buscarEdicao } from "./_lib/edicoes-core.mjs"; // MC91.11 — tipo da edição
+import { registrarConsumoSenha, BLOB_SENHAS_CONSUMO } from "./_lib/senhas-programado.mjs"; // MC91.11 — ledger
 import { keccak256, AbiCoder } from "ethers";
 import { respostaPreflight } from "./_lib/cors.mjs";
 
@@ -155,18 +157,71 @@ export default async (req) => {
     }
   }
 
-  // ── 6. Debitar saldo R$ ────────────────────────────────────────────────────
-  const debito = await debitarSaldoRs({ endereco, valorCentavos, motivo: `lance-${edicaoId}` });
-  if (!debito.ok) {
-    const status = debito.code === "saldo_insuficiente" ? 400 : 502;
-    return jsonError(status, debito.code || "debito_falhou", debito.message || "não foi possível debitar saldo R$");
+  // ── 5.5. MC91.11 — tipo da edição (metadata): programado consome SENHA
+  // (gate on-chain + ledger off-chain, teto = saldo on-chain); relampago
+  // consome saldo R$ (comportamento anterior INTOCADO). Edições sem metadata
+  // (ex.: R-1 sintética) são tratadas como relampago.
+  let tipoEdicao = null;
+  try {
+    const meta = await buscarEdicao(edicaoId);
+    tipoEdicao = meta?.tipo ?? null;
+  } catch (err) {
+    console.warn("[lance-relampago] buscarEdicao falhou — tratando como relampago:", err?.message);
+  }
+  const ehProgramado = tipoEdicao === "programado";
+
+  // ── 6. Consumo do pagamento (programado = senha; flash = saldo R$) ────────
+  let debito;
+  if (ehProgramado) {
+    // 6a. Gate on-chain: precisa ter saldo de senhas (Art. 20: R$ 2,00/senha).
+    let saldoOnChain;
+    try {
+      saldoOnChain = await lerSaldoSenhas(endereco);
+    } catch (err) {
+      console.error("[lance-relampago:programado] lerSaldoSenhas falhou:", err?.message);
+      return jsonError(502, "leitura_onchain_falhou", "não foi possível ler o saldo de senhas on-chain");
+    }
+    if (saldoOnChain < 1) {
+      return jsonError(400, "senhas_insuficientes",
+        "Saldo de senhas insuficiente (Art. 20: R$ 2,00/senha) — converta saldo R$ em senhas antes de lançar.",
+        { saldoOnChain });
+    }
+    // 6b. Ledger de consumo (CAS best-effort; consistency strong) — MC91.11.
+    const storeConsumo = abrirStore(BLOB_SENHAS_CONSUMO);
+    const consumo = await registrarConsumoSenha({ store: storeConsumo, endereco, saldoOnChain, edicaoId });
+    if (!consumo.ok) {
+      const status = consumo.code === "senhas_insuficientes" ? 400 : 502;
+      return jsonError(status, consumo.code, consumo.message, {
+        saldoOnChain,
+        consumidas: consumo.consumidas ?? null,
+      });
+    }
+    debito = {
+      ok: true,
+      resultado: {
+        saldoAntesCentavos: null,
+        saldoDepoisCentavos: null,
+        senhaConsumida: true,
+        saldoOnChain,
+        consumidasAgora: consumo.consumidas,
+      },
+    };
+  } else {
+    // 6c. Flash (e desconhecido): debita saldo R$ — comportamento INTOCADO.
+    debito = await debitarSaldoRs({ endereco, valorCentavos, motivo: `lance-${edicaoId}` });
+    if (!debito.ok) {
+      const status = debito.code === "saldo_insuficiente" ? 400 : 502;
+      return jsonError(status, debito.code || "debito_falhou", debito.message || "não foi possível debitar saldo R$");
+    }
   }
 
   const lanceId = randomUUID();
   const registro = {
     lanceId, edicaoId, endereco, valorCentavos, nomeExibicao,
-    saldoAntesCentavos:  debito.resultado.saldoAntesCentavos,
-    saldoDepoisCentavos: debito.resultado.saldoDepoisCentavos,
+    saldoAntesCentavos:  debito.resultado.saldoAntesCentavos ?? null,
+    saldoDepoisCentavos: debito.resultado.saldoDepoisCentavos ?? null,
+    modo: ehProgramado ? "programado" : "relampago",
+    ...(ehProgramado ? { senhaConsumida: true, saldoOnChain: debito.resultado.saldoOnChain } : {}),
     processadoEm: new Date().toISOString(),
   };
 
@@ -250,8 +305,11 @@ export default async (req) => {
   return jsonResponse({
     ok: true,
     lanceId, edicaoId, endereco, valorCentavos, nomeExibicao,
-    saldoRsAntesCentavos:  debito.resultado.saldoAntesCentavos,
-    saldoRsDepoisCentavos: debito.resultado.saldoDepoisCentavos,
+    modo: registro.modo,
+    senhaConsumida: !!registro.senhaConsumida,
+    saldoRsAntesCentavos:  debito.resultado.saldoAntesCentavos ?? null,
+    saldoRsDepoisCentavos: debito.resultado.saldoDepoisCentavos ?? null,
+    saldoOnChain: debito.resultado.saldoOnChain ?? null,
     processadoEm: registro.processadoEm,
     commitmentHash: registro.commitmentHash ?? null,
   }, 201);
