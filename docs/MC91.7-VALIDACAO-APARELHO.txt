@@ -1,0 +1,26 @@
+================================================================================
+MC91.7-S4 — VALIDACAO NO APARELHO (fluxo de cadastro/login por email)
+DesafioGUT · 2026-08-18
+================================================================================
+
+ESTADO: APK instalado (com.desafiogut.app, BUILD SUCCESSFUL 28s, adb Success)
+e app aberto no celular.
+
+FLUXOS PRONTOS PARA TESTE MANUAL (requer e-mail real para o codigo OTP):
+  A. "Mais" (menu inferior) deve mostrar 3 botoes: Aceito o DesafioGUT
+     (modal Google+Email), Entrar com e-mail (/login-email),
+     Cadastre-se (/cadastro).
+  B. Cadastro: nome + e-mail + telefone (opcional) -> codigo no e-mail ->
+     confirmar -> dashboard.
+  C. Login: e-mail + codigo -> dashboard.
+  D. Regressao: CTA principal abre modal com Google (e agora tambem E-mail).
+
+RESULTADO DO OPERADOR:
+  [preencher apos o teste manual no aparelho]
+  - Botoes visiveis no menu "Mais": SIM / NAO
+  - Cadastro com email ficticio: FUNCIONOU / FALHOU (detalhe: ___)
+  - Login com email: FUNCIONOU / FALHOU (detalhe: ___)
+  - Google OAuth (regressao): FUNCIONOU / FALHOU
+
+CRITERIO DE SUCESSO S4: fluxo funcional no celular (validacao do operador).
+================================================================================

@@ -7310,3 +7310,11 @@ CONFIRMACAO-ENDERECO,RELATORIO}.txt + MC91.3-RELATORIO.txt no Desktop.
 - PENDENTE: MC91.4 (bridge BSC->Mainnet + envio p/ EOA 0xFea436...1E67) —
   aguardando BNB na carteira 0x5B2af (whitelist BNB retida ate ~19/08 16:00;
   sentinela cron 222a8d518e4c a cada 2h + log Desktop\bnb_watchdog.log)
+
+## MC91.7 — fluxo de cadastro/login por email (usuario comum) (18/08)
+- abrirModal: loginMethods default -> [google, email] (email-OTP ativo no PrivyRoot era ocultado pelo MC62)
+- Rotas /cadastro e /login-email + componentes Cadastro.jsx (nome/email/telefone) e LoginEmail.jsx (OTP)
+- BottomNav: botoes Aceito o DesafioGUT (modal G+E), Entrar com e-mail, Cadastre-se
+- Zero backend novo (auth-user + carteira embedded cobrem); endpoints /auth/register|login NAO existem (S0)
+- APK instalado (BUILD 28s); validacao OTP pendente do operador (requer email real)
+- Commits: 2a51301, 9e8126a, (final)

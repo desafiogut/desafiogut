@@ -1,0 +1,46 @@
+================================================================================
+MC91.7-FIX — RELATORIO: FLUXO DE CADASTRO/LOGIN POR EMAIL (USUARIO COMUM)
+DesafioGUT · 2026-08-18
+================================================================================
+
+RESUMO DAS CORRECOES
+  1. NUCLEO (AppContext.jsx) — o modal Privy de entrada passou a oferecer
+     Google + E-mail: `loginMethods` default de ["google"] -> ["google","email"].
+     O email-OTP ja estava ativo no painel Privy e na config do PrivyRoot;
+     o abrirModal (MC62) o escondia. Revertido sem quebrar overrides (MC15.5).
+  2. ROTAS (App.jsx) — /cadastro e /login-email adicionadas (publicas,
+     standalone, lazy como as demais paginas).
+  3. COMPONENTES (src/pages/) — Cadastro.jsx (nome, e-mail, telefone opcional,
+     OTP) e LoginEmail.jsx (e-mail + OTP), reutilizando o padrao headless do
+     SejaNossoParceiro (MC15.6: useLoginWithEmail / sendCode / loginWithCode).
+     Links cruzados: Cadastro <-> LoginEmail.
+  4. ENTRADA (BottomNav.jsx) — 3 botoes quando nao autenticado:
+     - "⚡ Aceito o DesafioGUT" (CTA principal: modal Google + E-mail)
+     - "📧 Entrar com e-mail" -> /login-email
+     - "✨ Cadastre-se" -> /cadastro
+  5. Backend: ZERO mudancas. O "cadastro" e a criacao da identidade Privy no
+     primeiro login (carteira embedded) + auth-user (JWT 24h) — a infra real.
+     NOTA: os endpoints /auth/register e /auth/login citados no briefing NAO
+     existem no projeto (verificado no S0); a logica real e Privy+auth-user.
+
+EVIDENCIAS
+  - vite build: ✓ built in 3.90s (antes: erro de parse de JSX — dois elementos
+    irmaos no ternario do BottomNav sem fragmento; corrigido com <>...</>).
+  - npm run build:apk: validar:dist PASS (mainnet, VITE_CHAIN_ID=1) + cap sync.
+  - gradlew assembleDebug (JAVA_HOME=JBR21): BUILD SUCCESSFUL em 28s.
+  - adb install -r: Success. package: com.desafiogut.app.
+  - App aberto no aparelho (MainActivity) — pronto para teste manual do fluxo.
+
+VALIDACAO NO APARELHO (pendente do operador — requer e-mail real p/ OTP)
+  1. Abrir "Mais" -> ver os 3 botoes de entrada.
+  2. "✨ Cadastre-se" -> preencher nome/e-mail/telefone -> receber codigo no
+     e-mail -> confirmar -> entrar.
+  3. "📧 Entrar com e-mail" -> OTP -> entrar (usuario ja cadastrado).
+  4. "⚡ Aceito o DesafioGUT" -> modal com Google + E-mail (regressao ok).
+
+VEREDITO: "FLUXO DE CADASTRO/LOGIN POR E-MAIL IMPLEMENTADO E INSTALADO NO APK
+  — validacao funcional do OTP em curso pelo operador (requer e-mail real)."
+
+COMMITS
+  2a51301 S0/S1 diagnostico+plano | 9e8126a hotfix rotas/botoes | (este)
+================================================================================
