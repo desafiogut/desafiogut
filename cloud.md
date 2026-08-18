@@ -7299,3 +7299,14 @@ projeto carregada; proximo passo: bridge BSC -> Mainnet e envio p/ EOA 0xFea436.
 
 Artefactos: docs/MC91.3-{DADOS-TRANSACAO,VERIFICACAO-TX,SALDO-CARTEIRA,
 CONFIRMACAO-ENDERECO,RELATORIO}.txt + MC91.3-RELATORIO.txt no Desktop.
+
+## MC91.6 — icone substituido e APK instalado (18/08)
+- Nova LOGO APP (Desktop\LOGO APP.jpeg) gerada p/ 15 mipmaps (LANCZOS + UnsharpMask v2)
+- build:apk + gradlew assembleDebug (JBR21) — validado o artefacto DENTRO do APK
+  (assets/public mainnet PASS, icone md5 identico, timestamps sincronos)
+- APK instalado via adb: package com.desafiogut.app (Success)
+- Icone validado pelo operador no celular: enquadramento bom, v2 sharpened
+- Backups: Desktop\MC91.6-BACKUP-ICONES\ | commits 1289d90..ecd4582
+- PENDENTE: MC91.4 (bridge BSC->Mainnet + envio p/ EOA 0xFea436...1E67) —
+  aguardando BNB na carteira 0x5B2af (whitelist BNB retida ate ~19/08 16:00;
+  sentinela cron 222a8d518e4c a cada 2h + log Desktop\bnb_watchdog.log)

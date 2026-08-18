@@ -1,0 +1,48 @@
+================================================================================
+MC91.6 — RELATORIO FINAL: ICONE SUBSTITUIDO E APK INSTALADO
+DesafioGUT · 2026-08-18
+================================================================================
+
+RESUMO EXECUTIVO
+  Icone do app substituido pela nova LOGO APP (arte oficial do Guto: terno
+  azul + martelo de juiz, fundo azul escuro). APK recompilado com o novo
+  icone e instalado no celular via USB (adb). Enquadramento validado pelo
+  operador: BOM. Nitidez: 1a versao levemente desfocada -> regenerada com
+  UnsharpMask (v2) e reinstalada.
+
+NOVA IMAGEM UTILIZADA
+  C:\Users\Moltbot\Desktop\LOGO APP.jpeg (1024x1034, JPEG)
+  -> crop quadrado 1024x1024 -> resize LANCZOS por densidade (+ UnsharpMask v2)
+  -> mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/ic_launcher{,round,foreground}.png
+  (15 arquivos; drawable/ic_launcher_background.xml inalterado)
+
+COMANDOS EXECUTADOS
+  S0: backup 15 icones -> C:\Users\Moltbot\Desktop\MC91.6-BACKUP-ICONES\
+  S1: geracao PIL + substituicao dos mipmaps (commit e862000)
+  S2: npm run build:apk (netlify build 3m24s + validar:dist PASS mainnet +
+      cap sync) -> gradlew assembleDebug (JAVA_HOME=JBR21) BUILD SUCCESSFUL
+      1m11s (v1) / 37s (v2)
+      Validacao do artefacto empacotado (licao do Opus):
+      - dist 00:58:53 = assets/public 00:58:53 = APK 01:02:59 (sincrono)
+      - validar-dist-rede.mjs no assets/public DENTRO do APK: PASS (mainnet)
+      - icone no APK (res/mipmap-xxxhdpi-v4/ic_launcher.png): 192x192,
+        md5 identico ao gerado (923bc31a23e67dad)
+  S3: adb install -r app-debug.apk -> Success (2x)
+      pm list packages -> package:com.desafiogut.app
+      am start -> MainActivity aberta
+  S4: screencap -> Desktop\icone_pos_instalacao.png (1080x2400)
+
+RESULTADOS
+  - APK: android/app/build/outputs/apk/debug/app-debug.apk (~37,4 MB, v2)
+  - Package: com.desafiogut.app
+  - Icone na tela inicial: NOVO (LOGO APP), enquadramento bom
+  - Backups: Desktop\MC91.6-BACKUP-ICONES\ + git (commits S0-S4)
+
+VEREDITO: "ICONE ATUALIZADO COM SUCESSO — APK instalado no celular com a
+  nova LOGO APP (v2 sharpened)." Proximo passo: MC91.4 (bridge BSC -> Mainnet)
+  quando o BNB chegar (sentinela ativa a cada 2h).
+
+COMMITS
+  1289d90 S0 diagnostico/backup | e862000 S1 icones | c81df63 S3/S4 instalacao
+  + validacao | ecd4582 lock/gradle | (proximo: este relatorio)
+================================================================================
