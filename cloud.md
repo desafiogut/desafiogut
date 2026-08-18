@@ -7281,3 +7281,21 @@ verificacao: 48h sem eventos novos (janela iniciada 17/08 16:27).
 
 Artefactos: docs/MC91.2-{PREPARACAO,REMOCAO,LIMPEZA,MONITORAMENTO,POSBOOT,
 RELATORIO}.txt + MC91.2-RELATORIO.txt no Desktop.
+## MC91.3 — saque Binance -> MetaMask-BSC verificado na blockchain: 0x5B2af... carregada com 0,00552024 ETH
+
+O saque de ETH (BEP-20) feito hoje 17/08 ~19:09 foi localizado e validado on-chain.
+TxID completo: 0xe530a9f1827f2a1308b40d608243ef214be9e287723bf34352a13ca9f5dae316
+(bloco 116.541.793, timestamp 22:09:18Z = 19:09:18 local — confere com a Binance).
+Status do receipt: 0x1 (sucesso). from: hot wallet da Binance (0xe2fc31f..., ~53M tx).
+Destino do transfer: 0x5b2af3327efb9ce019c8e68d9c3df8fb81ab1517 — identico (40/40 hex)
+a 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517 (MetaMask-BSC do projeto, Lista de
+Confiaveis da Binance). Valor: 0,00552024 ETH = saldo atual da carteira (ao wei,
+confirmado em 2 RPCs). Nada na mainnet; BNB 0 (nota: bridge BSC->Mainnet exigira BNB
+de gas). Obs. de rigor: a forma escrita do endereco nos docs nao e o checksum EIP-55
+canonico (0x5B2af3327EfB9ce019C8e68d9c3dF8Fb81Ab1517) — mesma identidade, so caixa.
+
+Veredito: TRANSACAO CONFIRMADA — fundos seguros na MetaMask (rede BSC). Carteira do
+projeto carregada; proximo passo: bridge BSC -> Mainnet e envio p/ EOA 0xFea436...1E67.
+
+Artefactos: docs/MC91.3-{DADOS-TRANSACAO,VERIFICACAO-TX,SALDO-CARTEIRA,
+CONFIRMACAO-ENDERECO,RELATORIO}.txt + MC91.3-RELATORIO.txt no Desktop.

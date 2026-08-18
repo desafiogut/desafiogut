@@ -1,0 +1,76 @@
+================================================================================
+MC91.3 — RELATORIO FINAL: VERIFICACAO DA TRANSACAO BSC (SAQUE BINANCE -> METAMASK)
+DesafioGUT · 2026-08-17 · Branch: main
+================================================================================
+
+1. RESUMO EXECUTIVO
+--------------------------------------------------------------------------------
+A transacao de saque de ETH da Binance para a carteira MetaMask-BSC do projeto
+foi LOCALIZADA e VERIFICADA na blockchain BSC com sucesso:
+
+  - TxID completo obtido: 0xe530a9f1827f2a1308b40d608243ef214be9e287723bf34352a13ca9f5dae316
+  - Status on-chain: 0x1 (SUCESSO)
+  - Destino: 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517 (carteira correta do projeto)
+  - Valor recebido: 0,00552024 ETH (bate ao wei com o saldo atual da carteira)
+  - Nenhum erro: rede correta (BSC/BEP-20), endereco correto, valor correto,
+    sem perda de fundos.
+
+VEREDITO FINAL (R8): TRANSACAO CONFIRMADA — fundos seguros na MetaMask (rede BSC).
+
+2. EVIDENCIAS (provas)
+--------------------------------------------------------------------------------
+a) Registro na Binance (pagina "Sacar - Carteira", 17/08 ~21h):
+   0,00552024 ETH | Status: Concluido | 2026-08-17 19:09 | Carteira Spot
+   Taxa de rede: 0,0000096 | Endereco: 0x5B2a...Ab1517 | Rede: BSC
+   TxID (truncado na tela): 0xe530...dae316
+
+b) Blockchain BSC (RPC publico NodeReal + bsc-dataseed):
+   - tx 0xe530a9f1827f2a1308b40d608243ef214be9e287723bf34352a13ca9f5dae316
+   - bloco 116.541.793 | timestamp 2026-08-17 22:09:18 UTC = 19:09:18 local
+     (confere com o registro da Binance)
+   - from : 0xe2fc31f816a9b94326492132018c3aecc4a93ae1 (hot wallet Binance;
+     ~52,98 milhoes de tx e ~3.045 BNB — perfil de exchange)
+   - to   : 0x2170Ed0880ac9A755fd29B2688956BD959F933F8 (token Ethereum Binance-Peg)
+   - input: transfer(0x5b2af3327efb9ce019c8e68d9c3df8fb81ab1517, 0x139ca108466000)
+            -> destinatario EXATO da carteira do projeto, valor 0,00552024 ETH
+   - receipt: status 0x1 (sucesso), gasUsed 51.603, gasPrice 1 gwei
+   - log Transfer: from Binance -> to 0x5b2af... = carteira do projeto, 0,00552024 ETH
+
+c) Saldo da carteira (2 RPCs independentes, "latest"):
+   - Token ETH (Binance-Peg BEP-20): 0,00552024 ETH — identico ao recebido (ao wei)
+   - BNB: 0 (esperado) | WBETH: 0 | BETH: 0
+   - ETH mainnet: 0x0 (nada foi para a rede errada)
+
+3. ENDERECO DE DESTINO
+--------------------------------------------------------------------------------
+0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517 (MetaMask-BSC, Lista de Confiaveis
+da Binance; etiqueta "MetaMask-BSC").
+Comparacao 40/40 hex com o endereco on-chain: IDENTICOS.
+Observacao: a forma escrita nos docs nao e o checksum EIP-55 canonico
+(canonico: 0x5B2af3327EfB9ce019C8e68d9c3dF8Fb81Ab1517) — apenas diferenca de
+caixa na exibicao; a identidade da carteira e a mesma (ver MC91.3-S3).
+
+4. VALORES
+--------------------------------------------------------------------------------
+Enviado (debitado):  0,00552984 ETH
+Taxa (Binance):      0,0000096 ETH
+Recebido (on-chain): 0,00552024 ETH  (= saldo atual da carteira, ao wei)
+
+5. CONCLUSAO / PROXIMOS PASSOS
+--------------------------------------------------------------------------------
+- A carteira do projeto esta carregada com 0,00552024 ETH na rede BSC.
+- Proximo passo do plano (checklist MC90.2, item 31): bridge BSC -> Ethereum
+  Mainnet (Across/Orbiter/Socket) e envio do ETH nativo para a EOA coordenadora
+  0xFea436...1E67. NOTA: a bridge exige BNB para gas na BSC — a carteira nao
+  tem BNB (0); providenciar BNB antes da bridge.
+- Nenhuma anomalia encontrada. Fundos seguros.
+
+6. ARTEFACTOS (docs/)
+--------------------------------------------------------------------------------
+MC91.3-DADOS-TRANSACAO.txt · MC91.3-VERIFICACAO-TX.txt ·
+MC91.3-SALDO-CARTEIRA.txt · MC91.3-CONFIRMACAO-ENDERECO.txt ·
+MC91.3-RELATORIO.txt (Desktop + docs/)
+
+================================================================================
+FIM DO RELATORIO MC91.3 — VEREDITO: TRANSACAO CONFIRMADA, FUNDOS SEGUROS
+================================================================================
