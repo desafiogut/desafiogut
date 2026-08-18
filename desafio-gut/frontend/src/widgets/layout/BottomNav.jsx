@@ -252,15 +252,12 @@ export default function BottomNav() {
                 className="w-full mb-2 !rounded-xl">
                 ⚡ Aceito o DesafioGUT
               </Button>
-              {/* MC91.7 — portas de entrada do usuário comum: CTA principal
-                  (modal Google + E-mail), login por e-mail (rota) e cadastro
-                  (rota). O cadastro é implícito no primeiro login (carteira
-                  embedded + auth-user), reutilizando a lógica existente. */}
-              <Button variant="secondary" size="lg" type="button"
-                onClick={() => { navigate("/login-email"); setMoreOpen(false); }}
-                className="w-full !rounded-xl">
-                📧 Entrar com e-mail
-              </Button>
+              {/* MC91.7 — portas de entrada do usuário comum: o CTA principal
+                  abre o modal Privy com Google + E-mail (login por e-mail
+                  DENTRO do modal, como pedido pelo operador); Cadastre-se leva
+                  à rota de cadastro (nome/e-mail/telefone). O cadastro é
+                  implícito no primeiro login (carteira embedded + auth-user),
+                  reutilizando a lógica existente. */}
               <Button variant="secondary" size="lg" type="button"
                 onClick={() => { navigate("/cadastro"); setMoreOpen(false); }}
                 className="w-full !rounded-xl">
