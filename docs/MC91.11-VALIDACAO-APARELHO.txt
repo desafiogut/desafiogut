@@ -1,0 +1,44 @@
+================================================================================
+MC91.11-S4 — BUILD, DEPLOY E INSTALACAO (ESTADO FINAL)
+DesafioGUT · 2026-08-18 ~17:55 (Brasília)
+================================================================================
+
+1. BUILD DO BUNDLE DE PRODUCAO (npm run build:apk) — CONCLUIDO
+   - netlify build --context production: OK (2m52s)
+   - validar:dist: 127 .js analisados; contrato 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd;
+     rede mainnet; VITE_NETWORK_STAGE=mainnet -> "bundle coerente com PRODUÇÃO"
+   - cap sync android: OK (@capacitor/app@8.1.1)
+
+2. GRADLE (assembleDebug, Java 21 = jbr Android Studio) — CONCLUIDO
+   - BUILD SUCCESSFUL in 28s (123 tasks: 27 executadas, 96 up-to-date)
+   - APK: android/app/build/outputs/apk/debug/app-debug.apk (37.435.237 bytes,
+     18/08 14:51; bundle mainnet dentro do APK = dist sincronizado)
+
+3. DEPLOY DAS FUNCTIONS (backend corrigido) — CONCLUIDO
+   - netlify deploy --prod --build: Deploy live!
+   - Deploy URL: 6a849bac24a536323f530a6f
+   - Production: https://silly-stardust-ca71bc.netlify.app
+   - 268 arquivos + 68 functions; CDN: 42 files + 2 functions novas
+   - VALIDACAO POS-DEPLOY (verification-loop, 17:54Z):
+     * /health ok
+     * /edicoes ok (R-1 relampago aberta)
+     * /saldo-senhas (NOVO): 401 sem token | 400 endereco_invalido ✓
+     * /lance-relampago (ATUALIZADO): 401 sem token ✓
+
+4. INSTALACAO NO CELULAR — PENDENTE
+   - adb devices = vazio (celular nao conectado via USB no momento).
+   - Comando quando conectado:
+       adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+
+5. VALIDACAO NO APARELHO (fluxo PIX -> R$ -> senhas -> lances) — PENDENTE
+   - Requisitos: celular via USB; operador logado na conta de teste; endereco
+     da carteira da conta de teste; autorizacao explicita (R2) para PIX real
+     R$ 2,00; criacao de edicao programada (PROG-1) pelo admin (hoje so R-1
+     relampago existe).
+   - Passos previstos: comprar senhas via PIX -> saldo R$ -> /comprar-senhas
+     -> senha on-chain -> lance programado (consome senha) -> lance relampago
+     (consome R$) -> conferir saldos (senhas efetivo + R$).
+
+VEREDITO S4: bundle + APK + deploy + validacao pos-deploy OK. Instalacao e
+teste no aparelho PENDENTES (sem dispositivo conectado).
+================================================================================
