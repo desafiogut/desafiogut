@@ -1,0 +1,132 @@
+================================================================================
+MC91.11-S0 — DIAGNOSTICO DETALHADO DO CODIGO (FLUXO FINANCEIRO)
+DesafioGUT · 2026-08-18 ~17:35 (Brasília)
+================================================================================
+
+CONTEXTO: o MC91.10 (diagnostico) identificou que em MAINNET o lance em edicao
+programada debita saldo R$ (via lance-relampago) em vez de consumir senha, e a
+UI bloqueia o botao programado sem saldo de senhas. O MC91.11 corrige isso.
+
+----------------------------------------------------------------------
+1. MAPEAMENTO DO CODIGO ATUAL
+----------------------------------------------------------------------
+FRONTEND (desafio-gut/frontend/src):
+- components/CardLance.jsx  — formulario de lance (usado por pages/Dashboard.jsx
+  e pages/MercadoLances.jsx com prop tipoLeilao="flash"|"programado").
+  * Linha 83: isProgramado = tipoLeilao === "programado".
+  * Linha 88: semFichas = isProgramado && (saldoSenhas == null || <= 0) ->
+    desabilita o botao (gate de UI por saldo de SENHAS).
+  * Linha 90-92: semSaldoRsFlash = !isProgramado && ... (gate R$ p/ flash).
+  * Linha 161: em MAINNET (MAINNET=true), AMBAS modalidades chamam
+    POST /lance-relampago (backend blindado). O ramo "darLance on-chain"
+    (linhas 212-232: hash Argon2id -> assinar -> enviarLance/darLance) so roda
+    com MAINNET=false (Sepolia/localhost, legado).
+  * Linha 277-284: saldoLabel: programado mostra "N senhas" (on-chain);
+    flash mostra "R$ X".
+  * Linha 378: hint "Lance programado consome 1 senha on-chain (Art. 20:
+    R$ 2,00)" — TEXTO assume consumo de senha, mas o backend debita R$.
+- context/AppContext.jsx — refetchSaldo (linhas 814-832) le o saldo de senhas
+  DIRETO on-chain: getSaldoSenhasOnChain(address) (utils/web3.js:249) +
+  subscribeSaldoSenhas (evento do contrato). Nao ha endpoint de saldo efetivo.
+- hooks/useTrocarPorSenhas.js — conversao R$ -> senhas PRONTA e reutilizavel:
+  auth-lance (JWT) -> POST /comprar-senhas (qtd; R$ 2,00/senha) -> adicionarSenhas
+  on-chain (coordenacao paga o gas). Suporta resposta 202 (assin crono).
+- lib/api.js — helper apiPost (usado por todos).
+
+BACKEND (desafio-gut/frontend/netlify/functions):
+- lance-relampago.mjs — UNICO endpoint de lance usado em mainnet.
+  * Passo 6 (linha 159): debitarSaldoRs({endereco, valorCentavos, motivo}) —
+    DEBITA R$ SEMPRE (flash e programado indistintos).
+  * Passo 7 (linha 176): mainnet -> comprometerLanceOnchain (hash blindado,
+    coordenacao assina) + addLance (data-store: blob/Supabase, key-per-bid).
+  * NAO ha gate nem consumo de saldoSenhas em nenhum caminho.
+- comprar-senhas.mjs — conversao R$ -> senhas: debita R$ 2,00/senha (saldo-rs),
+  chama adicionarSenhas on-chain (coordenacao). VALOR_POR_SENHA = 200 centavos.
+  Reembolso automatico em falha on-chain; TX_PENDENTE -> reconciliacao.
+- consolidar-lances.mjs — fecho admin: apura MENOR LANCE UNICO off-chain
+  (apurarMenorUnico, linha 30-40) e publica consolidarResultado via Flashbots.
+  Funciona para QUALQUER edicaoId (programado ou relampago) — sem mudanca.
+- _lib/edicoes-core.mjs — blob "edicoes-metadata" (id -> {tipo, status, ...}).
+  listarEdicoes() existe; NAO ha get-por-id exportado (aditivo necessario).
+- _lib/troco-senhas.mjs — PRECEDENTE do padrao "ledger off-chain com consumo
+  FIFO" (senhas de troco do lojista, validade 30 dias). Mesmo padrao usado na
+  correcao abaixo para o consumo de senhas em lances programados.
+- _lib/saldoRs.mjs — saldo R$ em blob (CAS atomico, coberto por
+  mc361-saldo-rs.test.mjs).
+
+CONTRATO (contracts/Leilao.sol, mainnet 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd):
+- saldoSenhas(address) — credito via adicionarSenhas (apenasCoordenacao).
+- darLance(idEdicao, valor) — UNICA funcao que CONSOME senha
+  (saldoSenhas[msg.sender]--), mas registra o lance em CLARO e usa msg.sender
+  (o usuario assina e paga o gas). NAO ha funcao de debito para a coordenacao.
+- comprometerLance/consolidarResultado — fluxo blindado (anti-bot MC28.1).
+
+----------------------------------------------------------------------
+2. RESTRICAO DE DESIGN (por que nao "darLance" na mainnet)
+----------------------------------------------------------------------
+- Consumir a senha on-chain exige darLance com msg.sender = usuario. O backend
+  nao tem a chave do usuario (Privy) e o usuario nao tem ETH para gas na
+  Privy wallet. Expor o valor do lance em claro (darLance) tambem anularia a
+  blindagem anti-bot (MC28.1) — o valor iria para o mempool publico.
+- Adicionar funcao de debito ao contrato exigiria redeploy + migracao da
+  mainnet (fora do escopo R1 deste MC).
+
+DECISAO: consumo de senha em lances programados = GATE ON-CHAIN (saldoSenhas
+>= 1) + LEDGER OFF-CHAIN de consumo (blob "senhas-programado-consumo"),
+mesmo padrao do troco-senhas. O saldo on-chain funciona como TETO; o ledger
+registra o gasto; o backend recusa quando consumidas >= teto. A UI exibe o
+saldo EFETIVO (on-chain - consumidas) via endpoint novo.
+
+----------------------------------------------------------------------
+3. PLANO DE CORRECAO (arquivos afetados)
+----------------------------------------------------------------------
+BACKEND (S2):
+- _lib/edicoes-core.mjs: ADITIVO buscarEdicao(id) (get por id do blob).
+- lance-relampago.mjs: derivar tipo da edicao (buscarEdicao); se "programado":
+  * gate lerSaldoSenhas(endereco) >= 1 (senao 400 senhas_insuficientes);
+  * NAO debitar R$ (sem debitarSaldoRs);
+  * registrar consumo no blob senhas-programado-consumo:{endereco}
+    (CAS: consumidas >= teto -> recusa; senao incrementa e grava);
+  * manter blindagem (comprometerLance + addLance) identica ao flash;
+  * resposta com modo:"programado", senhaConsumida:true.
+  Se "relampago": comportamento ATUAL intacto (debito R$).
+- saldo-senhas.mjs (NOVO, GET): { endereco, saldoOnChain, senhasConsumidas,
+  saldoEfetivo } — auth JWT user-session ou admin (anti-IDOR, padrao saldo-rs).
+
+FRONTEND (S1):
+- components/CardLance.jsx:
+  * programado: remover gate cego semFichas; botao habilitado se
+    saldoEfetivo >= 1 OU saldoRs >= 200;
+  * no clique (programado, sem senha): conversao AUTOMATICA via
+    useTrocarPorSenhas(qtd=1) antes do lance; se saldo R$ < 200 -> mensagem
+    clara ("recarregue via PIX");
+  * mensagens de sucesso/erro: "-1 senha (Art. 20)" / "senha insuficiente";
+  * flash: INTOCADO (consumo R$, menor lance unico ja no fecho).
+- context/AppContext.jsx: refetchSaldo passa a usar GET /saldo-senhas
+  (efetivo) com FALLBACK para getSaldoSenhasOnChain se o endpoint falhar.
+
+TESTES (S3):
+- Rodar suite _tests/ existente (mc28-keyperbid, mc361-saldo-rs, mc3917-
+  double-spend etc.); adicionar teste do gate programado (consumo + teto).
+
+DEPLOY/BUILD (S3/S4):
+- Deploy das functions (netlify deploy --prod --build — fluxo manual do
+  projeto; SEM --dir=dist) apos validacao local; build:apk (netlify build
+  --context production + validar:dist + cap sync) e gradle assembleDebug
+  (Java 21, JAVA_HOME Android Studio jbr); adb install se o aparelho
+  estiver conectado (hoje: adb vazio).
+
+----------------------------------------------------------------------
+4. RISCOS / LIMITACOES REGISTRADAS (SUPERPERS)
+----------------------------------------------------------------------
+- O saldo on-chain NAO decresce com lances programados (ledger off-chain
+  controla o gasto; teto = saldo on-chain). Upgrades futuros: adicionar
+  funcao consumirSenha(address) apenasCoordenacao ao contrato (redeploy) p/
+  refletir o consumo on-chain de verdade.
+- darLance direto no contrato (bypass do app) continua possivel e consome a
+  senha on-chain (sem blindagem) — comportamento legado aceito.
+- O fecho de edicoes programadas em mainnet deve usar consolidar-lances
+  (admin), que apura o menor lance unico (mesmo do flash).
+
+CRITERIO DE SUCESSO S0: fluxo atual mapeado + design de correcao definido. OK.
+================================================================================
