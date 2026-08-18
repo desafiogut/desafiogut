@@ -1,0 +1,43 @@
+================================================================================
+MC91.8-S0 — STATUS DO SALDO DE BNB NA METAMASK (BSC)
+DesafioGUT · 2026-08-18 12:50 (Brasília)
+================================================================================
+
+1. OBJETIVO
+   Verificar se o BNB (nativo, BSC) chegou na carteira MetaMask
+   0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517 — requisito para o gas da bridge
+   BSC -> Mainnet (MC91.8-S1).
+
+2. METODO (verification-loop: RPCs independentes + nonce)
+   - eth_getBalance (nativo BNB) em 3 RPCs publicos, mesmo bloco (latest):
+       a) bsc-dataseed.bnbchain.org        -> 0x0
+       b) bsc-mainnet.nodereal.io (NodeReal) -> 0x0
+       c) bsc.publicnode.com               -> 0x0
+   - eth_blockNumber (bsc-dataseed) = 0x6f4714a -> no vivo e sincronizado
+     (respostas de um no atual, nao de cache/erro).
+   - eth_getTransactionCount (NodeReal) = 0x0 -> a carteira NUNCA enviou
+     transacao na BSC; os fundos nunca sairam deste endereco.
+
+3. RESULTADO: BNB AINDA NAO DISPONIVEL (saldo nativo = 0)
+   - Whitelist de BNB adicionada em 17/08 ~21h30 (MC91.5-S0: BLOQUEADO).
+   - Retencao de seguranca 24-48h -> liberacao esperada ~19/08 16:00.
+   - Hoje: 18/08 12:50 -> ainda DENTRO do periodo de retencao. Consistente.
+
+4. CONFIRMACAO DO INSUMO DA BRIDGE (nao e o alvo deste segmento, mas preserva
+   o estado conhecido do MC91.3 para o proximo ciclo)
+   - balanceOf 0x2170Ed0880ac9A755fd29B2688956BD959F933F8 (ETH pegada Binance,
+     BEP-20) em 2 RPCs: 0x139ca108466000 wei = 0,00552024 ETH — identico ao
+     MC91.3. O ETH esta intacto; falta apenas o BNB para o gas.
+
+5. SENTINELA
+   - Cron "sentinela-whitelist-bnb" (job 222a8d518e4c, no_agent, a cada 2h)
+     ativo e monitorando o MESMO endereco via NodeReal; silencioso enquanto
+     saldo = 0; alerta automaticamente quando BNB > 0.
+
+6. VEREDITO S0
+   BNB ainda nao disponivel — whitelist em periodo de seguranca (ate ~19/08
+   16:00). Nenhuma acao financeira executada (R2). MC91.8 pausado; retomar no
+   proximo ciclo da sentinela.
+
+CRITERIO DE SUCESSO S0: estado registrado com evidencia em 3 RPCs. OK (0.2).
+================================================================================
