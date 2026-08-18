@@ -246,11 +246,27 @@ export default function BottomNav() {
                 )}
               </div>
             ) : (
+              <>
               <Button variant="primary" size="lg" type="button"
                 onClick={() => { abrirModal(); setMoreOpen(false); }}
                 className="w-full mb-2 !rounded-xl">
                 ⚡ Aceito o DesafioGUT
               </Button>
+              {/* MC91.7 — portas de entrada do usuário comum: CTA principal
+                  (modal Google + E-mail), login por e-mail (rota) e cadastro
+                  (rota). O cadastro é implícito no primeiro login (carteira
+                  embedded + auth-user), reutilizando a lógica existente. */}
+              <Button variant="secondary" size="lg" type="button"
+                onClick={() => { navigate("/login-email"); setMoreOpen(false); }}
+                className="w-full !rounded-xl">
+                📧 Entrar com e-mail
+              </Button>
+              <Button variant="secondary" size="lg" type="button"
+                onClick={() => { navigate("/cadastro"); setMoreOpen(false); }}
+                className="w-full !rounded-xl">
+                ✨ Cadastre-se
+              </Button>
+              </>
             )}
 
             {/* MC43 — itens internos do "Mais" entram em cascata (stagger 50ms),

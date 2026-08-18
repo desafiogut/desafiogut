@@ -1179,8 +1179,11 @@ export function AppProvider({ children }) {
       // config global — Privy v3, verificado). Overrides explícitos (ex.: prefill
       // ou loginMethods do corporativo) são preservados. NÃO afeta o email-OTP
       // headless (SejaNossoParceiro usa sendCode direto, sem abrirModal).
+      // MC91.7 — expor o e-mail na entrada (usuário comum): o painel Privy e a
+      // config global já têm email ativo; o default passa a ["google","email"]
+      // para o modal oferecer os dois. Overrides explícitos continuam valendo.
       const base = opts && (opts.prefill || opts.loginMethods) ? { ...opts } : {};
-      if (!base.loginMethods) base.loginMethods = ["google"];
+      if (!base.loginMethods) base.loginMethods = ["google", "email"];
       const result = login(base);
       if (result && typeof result.then === "function") {
         result

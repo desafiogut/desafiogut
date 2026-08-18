@@ -67,6 +67,10 @@ const CorporativoBanners   = lazy(() => import("./pages/CorporativoBanners.jsx")
 const CorporativoAnalytics = lazy(() => import("./pages/CorporativoAnalytics.jsx"));
 const CorporativoCarteira  = lazy(() => import("./pages/CorporativoCarteira.jsx"));
 const SejaNossoParceiro    = lazy(() => import("./pages/SejaNossoParceiro.jsx"));
+// MC91.7 — rotas públicas de entrada por e-mail (usuário comum). Lazy: saem
+// do chunk inicial (code-splitting MC39.19), padrão das demais páginas.
+const Cadastro             = lazy(() => import("./pages/Cadastro.jsx"));
+const LoginEmail           = lazy(() => import("./pages/LoginEmail.jsx"));
 const DetalheProduto       = lazy(() => import("./pages/DetalheProduto.jsx"));
 const EdicaoDetalhe        = lazy(() => import("./pages/EdicaoDetalhe.jsx"));
 // MC72 — página pública de exclusão de conta (Play Store). Standalone (fora do
@@ -374,6 +378,10 @@ export default function App() {
         {/* MC90.3 — rota pública STANDALONE da Política de Privacidade (User Data
             policy 2026): acessível sem autenticação e sem gate LGPD. */}
         <Route path="/privacidade" element={<Privacidade />} />
+        {/* MC91.7 — rotas públicas de entrada por e-mail (usuário comum):
+            cadastro (nome/e-mail/telefone) e login com e-mail (OTP). */}
+        <Route path="/cadastro" element={<Cadastro />} />
+        <Route path="/login-email" element={<LoginEmail />} />
         {/* MC20.2 FASE 1 · ITEM 2 — AppLayout (3 camadas) substitui Layout como
             rota-mãe; renderiza o Layout existente intacto na superfície (zero
             regressão de rotas/navegação — R1). */}
