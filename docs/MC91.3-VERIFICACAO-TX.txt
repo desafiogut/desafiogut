@@ -1,0 +1,46 @@
+================================================================================
+MC91.3-S1 — VERIFICACAO DA TRANSACAO NO BSCScan / BSC (STATUS ON-CHAIN)
+DesafioGUT · 2026-08-17
+================================================================================
+
+NOTA METODOLOGICA: a API V1 do BSCScan (api.bscscan.com) foi descontinuada
+(resposta "deprecated V1 endpoint"); a API V2 exige chave (nao criada — R5).
+Fallback executado: verificacao direta na blockchain BSC via RPC publico
+(NodeReal bsc-mainnet.nodereal.io), que serve logs reais (validado: 17.240
+Transfers do token ETH em 30 blocos). Resultados:
+
+1. eth_getTransactionByHash
+   hash       : 0xe530a9f1827f2a1308b40d608243ef214be9e287723bf34352a13ca9f5dae316
+   from       : 0xe2fc31f816a9b94326492132018c3aecc4a93ae1  (hot wallet Binance)
+   to         : 0x2170ed0880ac9a755fd29b2688956bd959f933f8  (token Ethereum Binance-Peg)
+   input      : 0xa9059cbb 0000...5b2af3327efb9ce019c8e68d9c3df8fb81ab1517
+                         0000...0000139ca108466000   <- transfer(0x5B2af..., 0.00552024 ETH)
+   value      : 0x0 (transferencia de token, nao nativa) — esperado
+   chainId    : 0x38 (56 = BSC)
+   blockNumber: 0x6f24961 = 116.541.793
+   gas        : 0x32918 | gasPrice: 0x5f5e100 (1 gwei)
+   nonce      : 0x32845b5 (hot wallet Binance)
+
+2. eth_getTransactionReceipt
+   status        : 0x1  -> SUCESSO (transacao confirmada sem reverter)
+   blockNumber   : 116.541.793
+   gasUsed       : 51.603 (tipico de transfer de ERC-20/BEP-20)
+   effectiveGasPrice: 100.000.000 wei (1 gwei)
+   Log Transfer (token 0x2170Ed...):
+     topic0: Transfer(address,address,uint256)
+     from  : 0xe2fc31f816a9b94326492132018c3aecc4a93ae1  (Binance)
+     to    : 0x5b2af3327efb9ce019c8e68d9c3df8fb81ab1517  (= 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517)
+     valor : 0x139ca108466000 = 0,00552024 ETH
+
+3. Timestamp do bloco (eth_getBlockByNumber)
+   bloco 116.541.793 -> 2026-08-17 22:09:18 UTC = 19:09:18 (Manaus, UTC-3)
+   CONFERE com "2026-08-17 19:09" do registro da Binance.
+
+4. Perfil do remetente (corroboracao de hot wallet da Binance)
+   - 0xe2fc31f816a9b94326492132018c3aecc4a93ae1
+   - eth_getTransactionCount: 0x3284f67 = 52.976.487 transacoes
+   - eth_getBalance (BNB): 0xa902ec82ef0b13be98 wei = ~3.045 BNB
+
+VEREDITO S1: transacao CONFIRMADA na blockchain BSC com status 0x1 (sucesso).
+CRITERIO DE SUCESSO: atendido.
+================================================================================
