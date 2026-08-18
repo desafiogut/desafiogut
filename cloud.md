@@ -7318,3 +7318,41 @@ CONFIRMACAO-ENDERECO,RELATORIO}.txt + MC91.3-RELATORIO.txt no Desktop.
 - Zero backend novo (auth-user + carteira embedded cobrem); endpoints /auth/register|login NAO existem (S0)
 - APK instalado (BUILD 28s); validacao OTP pendente do operador (requer email real)
 - Commits: 2a51301, 9e8126a, (final)
+
+
+## MC91.10 — diagnostico do fluxo financeiro (18/08; execucao financeira pausada)
+- QR PIX validado em producao: /iniciar-pagamento gera pedido Mercado Pago REAL
+  (provider mercadopago, simulated=false), R$ 2,00/senha, payload EMV decodificado
+  (chave desafiogut@gmail.com; BRL; 2.00; campo 62 MP). Backend vivo (/health).
+- Mapa do fluxo real: PIX -> saldo R$ (blob saldo-rs) -> /comprar-senhas
+  (R$ 2,00 -> adicionarSenhas on-chain, gas da EOA) -> lances via backend
+  blindado (lance-relampago: compromisso cego + key-per-bid).
+- ACHADO (origem do MC91.11): em mainnet o lance em edicao PROGRAMADA debitava
+  R$ (nao senha); darLance (consome 1 senha) e legado Sepolia/localhost.
+- Gas mainnet verificado ~0,15 gwei em 2 RPCs (publicnode/1rpc) — custo por tx
+  ~R$ 0,0001 (corrige leitura inicial mal convertida de 0x730e066).
+- Execucao financeira (S1-S3) NAO executada: aguarda autorizacao do operador
+  (PIX R$ 2,00 + gas simbolico), endereco da conta de teste e celular/UI.
+- Artefactos: docs/MC91.10-{PIX-GERADO,DIAGNOSTICO}.txt (commits 49ba2b2,
+  b8fc24b, 211e5e7).
+
+## MC91.11 — fluxo financeiro corrigido: programado = senha; relampago = R$ (18/08)
+- Correcao alinhada a logica esperada: PIX -> saldo R$ -> /comprar-senhas ->
+  senhas on-chain -> lances PROGRAMADOS consomem 1 senha (Art. 20); lances
+  RELAMPAGO consomem saldo R$ (menor lance unico no fecho, consolidar-lances).
+- UI (CardLance.jsx): botao programado nao bloqueia mais por senha — converte
+  R$ 2,00 em senha AUTOMATICAMENTE quando falta senha; mensagens claras.
+  AppContext: saldo de senhas exibido = EFETIVO (on-chain - consumidas).
+- Backend: lance-relampago deriva o tipo da edicao (buscarEdicao) e no modo
+  programado faz gate on-chain (saldoSenhas >= 1) + ledger off-chain de consumo
+  (senhas-programado-consumo; teto = saldo on-chain; padrao troco-senhas) SEM
+  debitar R$; relampago intocado. Endpoint novo /saldo-senhas (anti-IDOR).
+- Contrato mainnet NAO alterado (R1): consumo de senha e rastreado off-chain;
+  upgrade futuro recomendado: consumirSenha(address) apenasCoordenacao.
+- Testes: suite backend 398/398 + novo mc9111-programado 7/7; lint 0 erros;
+  vite build OK. Deploy live (6a849bac; 268 arquivos + 68 functions).
+  APK: gradle BUILD SUCCESSFUL (28s) -> app-debug.apk (mainnet validado).
+- PENDENTE: instalacao/validacao no aparelho (adb vazio; requer operador:
+  PIX R$ 2,00 com autorizacao, edicao PROG-1 admin, endereco da conta teste).
+- Artefactos: docs/MC91.11-{DIAGNOSTICO,TESTES,VALIDACAO-APARELHO,RELATORIO}.txt
+  + MC91.11-RELATORIO.txt no Desktop (commits 035697b..611a24a).

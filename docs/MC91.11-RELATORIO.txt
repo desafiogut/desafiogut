@@ -1,0 +1,71 @@
+================================================================================
+MC91.11 — RELATORIO FINAL: CORRECAO DO FLUXO FINANCEIRO
+DesafioGUT · 2026-08-18 ~18:00 (Brasília)
+================================================================================
+
+1. RESUMO EXECUTIVO
+   O fluxo financeiro foi corrigido para a logica esperada:
+   - LANCE PROGRAMADO -> consome SENHA (1 por lance; Art. 20: R$ 2,00/senha).
+     A UI converte saldo R$ em senha AUTOMATICAMENTE quando falta senha
+     (R$ 2,00 = 1 senha) e nao bloqueia mais o botao cegamente.
+   - LANCE RELAMPAGO -> consome SALDO R$ (menor lance unico no fecho,
+     consolidar-lances — ja implementado, inalterado).
+   - Saldo de senhas exibido passa a ser o EFETIVO (on-chain - consumidas).
+   Implementado sem alterar o contrato mainnet (R1): o consumo de senha usa
+   gate on-chain (saldoSenhas >= 1) + ledger off-chain de consumo (padrao
+   troco-senhas; teto = saldo on-chain).
+
+2. ARQUIVOS MODIFICADOS / CRIADOS
+   FRONTEND:
+   - src/components/CardLance.jsx — conversao automatica R$->senha (programado
+     sem senha), gate do botao so quando sem senha E sem R$ (>= R$ 2,00),
+     mensagens claras ("-1 senha", "converta R$ 2,00"), pipeline/feedback.
+   - src/context/AppContext.jsx — refetchSaldo via GET /saldo-senhas (efetivo)
+     com fallback on-chain.
+   BACKEND (netlify/functions):
+   - lance-relampago.mjs — modo programado: gate lerSaldoSenhas >= 1, sem
+     debito R$, consumo no ledger, blindagem (comprometerLance + addLance)
+     mantida; resposta com modo/senhaConsumida. Modo relampago INTOCADO.
+   - saldo-senhas.mjs (NOVO) — saldo efetivo { saldoOnChain, senhasConsumidas,
+     saldoEfetivo }; anti-IDOR (JWT user-session ou admin), padrao saldo-rs.
+   - _lib/senhas-programado.mjs (NOVO) — ledger de consumo (CAS, teto).
+   - _lib/edicoes-core.mjs — buscarEdicao(id) aditivo (tipo da edicao).
+   - _tests/mc9111-programado.test.mjs (NOVO) — 7 testes do ledger/gate.
+
+3. RESULTADOS DOS TESTES
+   - Suite completa backend: 398/398 PASS (0 fail) — inclui mc28-keyperbid,
+     mc361-saldo-rs, mc3917-double-spend, mc3920-fila, troco-senhas.
+   - Novo mc9111-programado: 7/7 (gate, teto, persistencia, isolamento).
+   - lint frontend: 0 erros; compilacao (vite build): OK.
+
+4. BUILD / DEPLOY / VALIDACAO
+   - build:apk (netlify build --context production): bundle validado como
+     PRODUCAO/mainnet (127 .js; contrato 0x0052477...d16cd; stage=mainnet).
+   - gradlew assembleDebug (Java 21): BUILD SUCCESSFUL (28s) -> app-debug.apk
+     (37,4 MB).
+   - netlify deploy --prod --build: LIVE (deploy 6a849bac; 268 arquivos +
+     68 functions; 2 functions novas no CDN).
+   - Pos-deploy: /health ok; /edicoes ok; /saldo-senhas 401/400 corretos;
+     /lance-relampago 401 (token exigido).
+
+5. PENDENCIAS (registradas, nao bloqueiam a entrega do codigo)
+   a) Instalacao do APK no celular e validacao funcional no aparelho:
+      adb devices = vazio (celular nao conectado). Passos: adb install -r
+      app-debug.apk; comprar 1 senha via PIX real R$ 2,00 (autorizacao do
+      operador — R2); lance programado (requer edicao PROG-1 criada por admin
+      — hoje so R-1 relampago existe); lance relampago; conferir saldos.
+   b) Limite conhecido (arquitetura, documentado no S0): o contrato mainnet
+      nao tem funcao de debito de senha para a coordenacao; o consumo e
+      rastreado off-chain com teto on-chain. Upgrade futuro recomendado:
+      adicionar consumirSenha(address) apenasCoordenacao ao contrato.
+
+6. VEREDITO
+   Fluxo financeiro CORRIGIDO e consistente com a logica esperada:
+   PIX -> saldo R$ -> /comprar-senhas -> senhas on-chain -> lances
+   programados consomem 1 senha; carteira (saldo R$) -> lances relampago
+   (menor lance unico). Testes 398+7 verdes; deploy em producao validado.
+   Resta a validacao no aparelho (depende do operador/celular).
+
+Artefactos: docs/MC91.11-{DIAGNOSTICO,TESTES,VALIDACAO-APARELHO,RELATORIO}.txt
++ commits 035697b (S0), b7179b4 (S1), dbda031 (S2), 196a506 (S3), 611a24a (S4).
+================================================================================
