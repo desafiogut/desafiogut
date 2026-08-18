@@ -1,0 +1,39 @@
+================================================================================
+MC91.13-S2 — COPIA DA CHAVE PARA O DESTINO (CONCLUIDA)
+DesafioGUT · 2026-08-18 ~19:00 (Brasília)
+================================================================================
+
+1. ORIGEM (lida sem exposicao — R4/R5)
+   - C:\Users\Moltbot\.claude.json -> mcpServers.comfyui-cloud.headers."X-API-Key"
+   - Chave: 72 chars, formato comfyui-* (valor NUNCA exibido/registrado)
+
+2. DESTINO SOLICITADO (perfil do outro usuario)
+   - C:\Users\Vitória Marques\.env (raiz do perfil) e
+     C:\Users\Vitória Marques\AppData\Local\hermes\.env
+   - RESULTADO: PERMISSAO NEGADA para o usuario Moltbot (escrita no perfil de
+     outro usuario exige privilegio elevado; a leitura da raiz funciona, a
+     escrita nao). Teste de escrita realizado (arquivo temporario) em ambos
+     os caminhos: PermissionError em ambos.
+
+3. DESTINO EFETIVO (fallback autorizado pelo operador — instrucao explicita:
+   "Se nao souber o destino, crie um novo arquivo .env no Desktop e salve a
+   chave la")
+   - C:\Users\Moltbot\Desktop\.env (CRIADO)
+   - Linha: COMFYUI_API_KEY=comfyui-... (72 chars; escrita sem BOM; nao duplica
+     se o arquivo ja tivesse a variavel)
+   - VERIFICACAO: variavel presente com formato comfyui-* ✓ (valor nao exibido)
+
+4. TESTE DA CHAVE (canary-watch / verification-loop)
+   - GET https://cloud.comfy.org/api/user com X-API-Key: HTTP 200,
+     {"id":"V7eWyvhyMjbC3KywWZNQleNHDsH3","status":"active"} — assinatura
+     ATIVA. A mesma chave copiada funciona.
+
+5. NOTAS
+   - Script de copia pronto para o perfil da Vitoria (quando houver admin):
+     C:\Users\Moltbot\Desktop\MC91.13-COPIAR-CHAVE.ps1 (le da origem em
+     runtime, nunca imprime a chave; idempotente).
+   - O valor da chave NAO aparece em nenhum doc/commit/log (R4).
+
+CRITERIO DE SUCESSO S2: chave copiada e confirmada (destino efetivo Desktop;
+perfil Vitoria bloqueado por permissao — pendencia para execucao com admin).
+================================================================================
