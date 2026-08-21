@@ -1,0 +1,29 @@
+================================================================================
+MC92.6 — RELATORIO DE VERIFICACAO AD-HOC (docs/mc92.6_restaurar_edge.ps1)
+DesafioGUT · 2026-08-21 ~18:05 (Brasília) · ECC: verification-loop
+================================================================================
+
+ESCOPO: script PowerShell que restaura a janela do Microsoft Edge (hwnd
+197508) via ShowWindow(SW_RESTORE=9) + SetForegroundWindow, para expor o
+viewport ao driver computer_use (janela minimizada esconde a pagina).
+
+METODO: wrapper temporario hermes-verify-mc926-*.py em %TEMP% (via tempfile,
+apagado apos uso) que executa checagens estaticas + parse de sintaxe
+PowerShell (Parser.ParseFile — SEM executar o side-effect de janela).
+
+RESULTADOS (todos OK):
+1. Conteudo: Add-Type presente; ShowWindow($hwnd, 9) (SW_RESTORE);
+   SetForegroundWindow($hwnd); hwnd 197508 correto (janela do Edge).
+2. Parse de sintaxe PowerShell: PARSE_OK (zero erros).
+3. Seguranca R4/R5: nenhuma chave/credencial/senha no script.
+4. Evidencia funcional (ao vivo, S0 do MC92.6): o script foi executado e a
+   janela do Edge foi restaurada — o viewport da pagina Binance passou a
+   aparecer nas capturas do computer_use (antes: so a barra de abas).
+
+LIMITE (transparencia): verificacao ad-hoc, nao suite de testes (nao ha
+suite para scripts em docs/). O script so restaura janela — sem efeitos
+financeiros; o fluxo financeiro do MC92.6 segue pausado aguardando
+aprovacao do operador para rolagem/clique (prompt de aprovacao expirou).
+
+CRITERIO DE SUCESSO: verificacao reproduzivel e versionada.
+================================================================================
