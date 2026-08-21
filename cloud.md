@@ -7391,3 +7391,22 @@ CONFIRMACAO-ENDERECO,RELATORIO}.txt + MC91.3-RELATORIO.txt no Desktop.
   Desktop\MC91.13-COPIAR-CHAVE.ps1, idempotente, nunca imprime a chave).
 - Artefactos: docs/MC91.13-{CAMINHOS,CHAVE-ORIGEM,CHAVE-DESTINO,VALIDACAO,
   RELATORIO}.txt + relatorio no Desktop (commits 35811a7, 0a0191c).
+
+## MC92.4 — 3 novas versoes do banner (moto, iPhone, premios eletronicos) (21/08)
+- OBJETIVO: partir de GUTO\BANNERES OFICAIS\banner 1.png (2752x1536) e criar 3
+  versoes oficiais trocando: maquina de lavar -> MOTO, fogao -> IPHONE,
+  premios para a casa -> premios ELETRONICOS (v1 misto, v2 dinheiro,
+  v3 gadgets/tecnologia). Estilo/cores/layout/texto do original preservados.
+- METODO (validado 16-20/08): ComfyUI Cloud + GeminiImage2Node
+  (gemini-3-pro-image-preview, 16:9, 2K, seeds fixos, extra_data
+  api_key_comfy_org). Base ja enviada ao cloud (hash 912cf187...).
+- ESTADO 21/08 ~11:50: BLOQUEADO — POST /api/prompt -> HTTP 429
+  "Insufficient credits to queue workflows" (PAYMENT_REQUIRED). Ultima job
+  concluida 21/08 02:43. Assinatura ativa, creditos esgotados. Sem ComfyUI
+  local; RAM critica -> diffusion local inviavel. Nenhum custo incorrido (R2).
+- PLANO B: cron job 0ba595ac9a33 (retry 30min, ate 48h) reexecuta
+  docs/mc92.4_gerar_banners.py (idempotente); ao obter as 3 imagens em
+  GUTO\BANNERES OFICAIS\novas_versoes\, conclui validacao (S4) + relatorio
+  (S5) + cloud.md + commits. Decisao de recarga de creditos = operador.
+- Artefactos: docs/MC92.4-{DIAGNOSTICO,PLANO,BLOQUEIO}.txt + scripts
+  mc92.4_{check_schema,gerar_banners}.py (commits d114238, 03ace38).
