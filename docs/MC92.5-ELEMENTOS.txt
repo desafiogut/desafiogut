@@ -1,0 +1,49 @@
+================================================================================
+MC92.5-S1 — OBTENCAO DOS NOVOS ELEMENTOS (MOTO, IPHONE, PREMIOS)
+DesafioGUT · 2026-08-21 ~14:00 (Brasília) · ECC: terminal-ops, security-review
+================================================================================
+
+1. CRITERIO DE ESCOLHA
+   - Wikimedia Commons (API publica, sem chave) NAO ofereceu moto/dinheiro
+     utilizaveis (resultados: patentes e PDFs de livros antigos).
+   - Solucao: OpenMoji (hfg-gmuend/openmoji, GitHub) — conjunto de emojis em
+     SVG, licenca CC BY-SA 4.0, estilo ilustrativo colorido, rasterizados
+     localmente via svglib+rlPyCairo (dpi 400 -> PNG ~300px) e recortados
+     por croma (fundo claro -> alpha).
+   - Assets oficiais do projeto (GUTO-Eletrodomesticos) foram avaliados:
+     mostram o GUTO segurando o objeto (cenas, nao objetos isolados) —
+     descartados para composicao isolada; usados apenas como referencia de
+     estilo. (smartphone_oficial/notebook_oficial/tv_oficial: mantidos na
+     pasta temp_assets para referencia, sem uso na composicao.)
+
+2. ASSETS SELECIONADOS (C:\Users\Moltbot\Desktop\temp_assets\)
+   - moto_cut.png          (284x163) — MOTO (OpenMoji U+1F3CD, CC BY-SA 4.0)
+   - iphone_smartphone_cut.png (172x266) — SMARTPHONE p/ "iPhone"
+                               (OpenMoji U+1F4F1, CC BY-SA 4.0)
+   - dinheiro_notas_cut.png (231x155) — notas de dinheiro (U+1F4B5)
+   - dinheiro_saco_cut.png  (199x232) — saco de dinheiro (U+1F4B0)
+   - moeda_cut.png          (247x257) — moeda dourada (U+1FA99)
+   - nota_cut.png           (234x157) — cartao/nota (U+1F4B3)
+   - fones_cut.png          (252x256) — fones de ouvido (U+1F3A7)
+   - smartwatch_cut.png     (170x258) — smartwatch (U+231A)
+   - desktop_pc_cut.png     (292x263) — desktop (U+1F5A5)
+   - (referencia) smartphone_oficial_cut / notebook_oficial_cut /
+     tv_oficial_cut — do projeto GUTO (descarte para composicao)
+
+3. LICENCAS / ORIGEM
+   - OpenMoji: CC BY-SA 4.0 — https://openmoji.org (GitHub hfg-gmuend/openmoji)
+     Autor: OpenMoji project. Atribuicao registrada neste doc (arquivo
+     completo com creditos tambem em MC92.5-RELATORIO.txt).
+   - Rasterizacao: svglib + rlPyCairo (open source) — locais, sem custo.
+   - Nenhum download de banco pago; R2 respeitado (zero custo financeiro).
+
+4. PREPARACAO
+   - scripts: docs/mc92.5_buscar_assets.py (busca Commons — documenta a
+     negativa), docs/mc92.5_preparar_assets.py (croma cut), 
+     docs/mc92.5_asset_smartphone.py (smartphone/desktop).
+   - validacao visual (qwen2.5vl:3b): contact sheet confirmou todos os
+     elementos identificaveis e bem recortados (sem bordas brancas).
+
+CRITERIO DE SUCESSO S1: elementos disponiveis para composicao, origem e
+licenca registrados. OK.
+================================================================================
