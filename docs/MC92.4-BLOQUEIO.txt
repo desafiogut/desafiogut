@@ -1,0 +1,44 @@
+================================================================================
+MC92.4-S2/S3 — BLOQUEIO EXTERNO: CREDITOS DO COMIFYUI CLOUD ESGOTADOS
+DesafioGUT · 2026-08-21 ~11:50 (Brasília) · ECC: terminal-ops, verification-loop
+================================================================================
+
+1. O QUE FOI TENTADO (evidencia)
+   - Workflow validado (relatorio de consistencia 20/08): LoadImage(banner 1)
+     -> GeminiImage2Node (gemini-3-pro-image-preview, 16:9, 2K, seeds
+     20260821/22/23) -> SaveImage (prefix mc924_vN_*), extra_data com
+     api_key_comfy_org, 3 variacoes de premios.
+   - Upload da base OK: hash 912cf1874894ab1f0e757b9aa33b5513566aa7146e150f5
+     12b17b9e1f6b506519.png (banner 1 RGB, 2752x1536).
+   - GETs OK: /api/user 200 active; /api/queue vazia; /api/object_info 6.6MB.
+   - POST /api/prompt -> HTTP 429 REPETIDO (4 tentativas com backoff),
+     corpo: {"error":{"message":"Insufficient credits to queue workflows",
+     "type":"PAYMENT_REQUIRED"}}.
+
+2. DIAGNOSTICO
+   - Assinatura ATIVA (status active) mas SEM CREDITOS para enfileirar jobs.
+   - Historico (/api/history_v2): 191 jobs; dezenas concluidos HOJE entre
+     01:57 e 02:43 BRT; ultimo job 6459d85b completed 02:43. Apos isso,
+     nenhum job rodou -> saldo zerado na madrugada de hoje.
+   - Sem endpoint publico de saldo/plano (404 em /user/credits, /credits,
+     /billing, /account, /plans, /user/plan).
+   - Sem ComfyUI local instalado; RAM da maquina critica (~0,7GB livres,
+     nota de memoria) -> diffusion local inviavel (R2: sem custo novo).
+
+3. IMPACTO
+   - Opcao A (ComfyUI Cloud img2img) BLOQUEADA temporariamente.
+   - Upload/idempotencia preservados: o hash 912cf187... ja esta no cloud;
+   - quando os creditos voltarem, o mesmo script reexecuta sem re-upload.
+
+4. OPCOES PARA O OPERADOR (decisao humana; R2 = sem custo automatico)
+   a) Aguardar reset de creditos (ciclo mensal/diario do plano) e reexecutar
+      docs/mc92.4_gerar_banners.py (script pronto, idempotente).
+   b) Recarregar creditos no painel Comfy Cloud (custo financeiro — SOMENTE
+      se o operador autorizar explicitamente).
+   c) Abordagem local alternativa (PIL + assets gratuitos de moto/iPhone em
+      estilo cartoon 3D) — qualidade de composicao inferior a do Gemini
+      (historico T1/T2 do relatorio de consistencia).
+
+CRITERIO DE SUCESSO S2/S3: bloqueio registrado com evidencia; sem custo
+incorrido; decisao delegada ao operador.
+================================================================================
