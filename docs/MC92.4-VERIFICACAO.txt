@@ -1,0 +1,37 @@
+================================================================================
+MC92.4 — RELATORIO DE VERIFICACAO AD-HOC (scripts de geracao)
+DesafioGUT · 2026-08-21 ~11:59 (Brasília) · ECC: verification-loop
+================================================================================
+
+ESCOPO: docs/mc92.4_check_schema.py e docs/mc92.4_gerar_banners.py
+METODO: script durável docs/mc92.4_verify_workflow.py (exit 0 = ok),
+executado via wrapper temporario hermes-verify-* em %TEMP% (apagado apos
+uso). SEM acesso de rede e SEM consumo de creditos.
+
+RESULTADOS (todos OK):
+1. py_compile: sintaxe valida nos 2 scripts.
+2. Estrutura do workflow (bloco real do arquivo, com hash de upload
+   validado ao vivo 912cf187...): 7 nos — LoadImage(1) -> 3x
+   GeminiImage2Node(2,3,4) -> 3x SaveImage(5,6,7); inputs obrigatorios
+   presentes (prompt, model gemini-3-pro-image-preview, seed,
+   aspect_ratio 16:9, resolution 2K, response_modalities IMAGE);
+   images=['1',0]; seeds distintos (20260821/22/23); SaveImage com
+   filename_prefix mc924_v* e origem correta.
+3. Mapeamento seed -> nome final consistente com o dict de download
+   (v1_premios / v2_dinheiro / v3_tecnologia).
+4. Prompts: contem as 3 substituicoes (washing machine->motorcycle,
+   stove->smartphone), clausulas de preservacao (texto/lettering e
+   medalhao do GUTO) e placeholder de premios substituido nas 3 variacoes.
+5. Seguranca R4/R5: scan de exposicao — nenhum print/log emite a chave
+   crua (somente prefixo+comprimento).
+6. Retry HTTP 429 com backoff e extra_data.api_key_comfy_org presentes.
+
+LIMITE (transparencia): a geracao em si NAO foi executada — bloqueio
+externo por creditos esgotados do ComfyUI Cloud (ver MC92.4-BLOQUEIO.txt).
+O fluxo de rede ja foi exercitado ao vivo: liveness 200 active, upload OK
+(hash estavel), submit -> 429 PAYMENT_REQUIRED. Isto e verificacao ad-hoc,
+NAO suite de testes do projeto (nao ha suite para scripts docs/).
+
+CRITERIO DE SUCESSO: verificacao reproduzivel commitada; reexecutar com
+`python docs/mc92.4_verify_workflow.py` a qualquer momento.
+================================================================================
