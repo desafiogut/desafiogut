@@ -1,0 +1,44 @@
+================================================================================
+MC92.6-S2 (PARCIAL) — NAVEGACAO PARA A PAGINA DE SAQUE: LIMITACOES DA UI REMOTA
+DesafioGUT · 2026-08-21 ~19:10 (Brasília) · ECC: browser-automation, verification-loop
+================================================================================
+
+1. ESTADO ATUAL (verificado por capturas)
+   - Aba ativa: "Gerenciamento de Enderecos - Seguranca - Binance"
+     (whitelist continua ATIVA — "Lista de permissoes ativada.").
+   - A aba "Sacar - Carteira - Binance" foi FECHADA em algum momento
+     (nao esta mais na barra de abas).
+   - Endereco alvo continua registrado: MetaMask-BSC | BNB | 0x5B2...b1517 |
+     BSC | atualizado 17/08 23:32 (retencao expirada).
+
+2. TENTATIVAS DE NAVEGACAO PARA A PAGINA DE SAQUE (sem sucesso)
+   N1: click foreground na barra de enderecos + type URL + Enter ->
+       driver converteu coordenada (895,60)->(1572,61) [offset de monitor],
+       pagina nao navegou.
+   N2: Ctrl+L (foreground) + type "binance.com/pt-BR/my/wallet/account/
+       withdrawal" + Enter -> "Typed via SendInput" OK, porem a pagina
+       continua em "Gerenciamento de Enderecos" (nao navegou).
+   Causa provavel: eventos SendInput vao para a janela/foco errado do Edge
+   (processo multi-janela) OU o campo da barra de enderecos nao recebeu o
+   foco real. Setup: Edge em monitor secundario (offset x~677px), o que
+   tambem quebrou cliques por coordenada antes.
+
+3. CONCLUSAO (Boulder Loop esgotado na UI remota — regra da skill MC91.14)
+   - A automacao remota da UI (cliques, digitacao, navegacao) esta
+     limitada neste setup (multi-monitor + foreground/HWND).
+   - NENHUMA transacao executada; nada foi alterado na conta; R5 ok.
+   - O operador esta ativo no PC: a forma mais segura e rapida e ele
+     navegar/digitar na UI (ou autorizar novas tentativas).
+
+4. PROXIMO PASSO (decisao do operador)
+   a) Operador digita na barra de enderecos da aba Binance atual:
+      https://www.binance.com/pt-BR/my/wallet/account/withdrawal
+      e avisa "pronto" -> eu sigo preenchendo o formulario (BNB, endereco
+      da lista confiavel, rede BSC, 0,002) e verifico se o botao Sacar
+      ativa; se pedir 2FA, paro e aviso (R5).
+   b) Operador navega pelo menu (Carteira > Sacar) e me avisa.
+   c) Operador autoriza novas tentativas remotas (posso tentar o menu
+      lateral da Binance ou outros caminhos).
+
+CRITERIO DE SUCESSO S2 (parcial): limitacao documentada, decisao delegada.
+================================================================================
