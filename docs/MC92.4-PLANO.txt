@@ -1,0 +1,69 @@
+================================================================================
+MC92.4-S1 — PLANO DE CRIACAO (3 VERSOES DO BANNER)
+DesafioGUT · 2026-08-21 (Brasília) · Segmento 1 (ECC: ux-waiting-audit, security-review)
+================================================================================
+
+1. ABORDAGEM ESCOLHIDA: OPCAO A (ComfyUI Cloud, img2img via Gemini)
+   - Motivo: edicao direta da imagem base preserva layout, cores, texto e
+     identidade do GUTO (R1: minima alteracao). Fluxo ja validado nos MCs
+     anteriores (logos MC69.1 e banners 17/08) com o node GeminiImage2Node.
+   - Modelo: gemini-3-pro-image-preview (Nano Banana Pro)
+   - Parametros: aspect_ratio "16:9", resolution "2K" (-> saida 2752x1536,
+     mesmo tamanho do banner original), response_modalities "IMAGE",
+     seed fixo por versao.
+   - Referencia: a propria imagem base (banner 1.png) via LoadImage ->
+     images do GeminiImage2Node. NAO gera texto novo: instrui-se preservar
+     TODO o texto original exatamente como esta.
+   - Auth: X-API-Key no header + extra_data.api_key_comfy_org no body
+     (exigencia de partner node; sem isso o job falha com Unauthorized).
+   - Custo: ZERO (assinatura ja ativa — R2).
+
+2. AS 3 VERSOES (substituicoes comuns: lavadora -> MOTO, fogao -> IPHONE)
+   - Versao 1 (banner_1_v1_moto_iphone_premios.png):
+       premios = prêmios eletronicos gerais (dinheiro + gadgets + icones de
+       tecnologia, sem predominio).
+   - Versao 2 (banner_1_v2_moto_iphone_dinheiro.png):
+       premios = foco em DINHEIRO (notas, moedas de ouro, cofrinho/baú).
+   - Versao 3 (banner_1_v3_moto_iphone_tecnologia.png):
+       premios = foco em GADGETS/tecnologia (smartphone, fones sem fio,
+       smartwatch, tablet, caixa de som).
+   - Todas: manter estilo 3D/cartoon ilustrativo, fundo azul-marinho,
+     confete dourado, posicao/tamanho/iluminacao dos elementos substituidos
+     no MESMO lugar dos originais, GUTO intacto (incl. medalhao Uniao e
+     Trabalho — regra permanente), todo o texto original preservado.
+
+3. PROMPT BASE (traduzido/enriquecido para cada versao no S3):
+   "Edit this banner image. Keep the exact same composition, background,
+   colors, lighting, character and ALL text unchanged. Replace: (1) the
+   washing machine with a modern sporty motorcycle in the same position,
+   size and lighting; (2) the stove/cooker with a modern premium smartphone
+   (iPhone style, titanium/silver) in the same position, size and lighting;
+   (3) the household appliance prizes with [variante de premios]. Style:
+   glossy 3D cartoon render, dark navy background, golden confetti, silver
+   and gold accents. Do NOT modify the character, his medallion, or any
+   lettering/text."
+
+4. WORKFLOW (1 submission, 3 variacoes)
+   - LoadImage (banner 1) -> 3x GeminiImage2Node (seeds distintos, prompts
+     com variante de premios) -> 3x SaveImage (filename_prefix mc924_vN_*).
+   - Poll GET /api/job/{id}/status ate "completed"; baixar outputs via
+     GET /api/view?filename=...&type=output (302; drop da chave no 2o hop).
+
+5. DESTINO DOS ARQUIVOS
+   - C:\Users\Moltbot\Desktop\GUTO\BANNERES OFICAIS\novas_versoes\
+     (pasta nova; originais banner 1/2.png intocados — R1).
+   - Nomes: banner_1_v1_moto_iphone_premios.png,
+            banner_1_v2_moto_iphone_dinheiro.png,
+            banner_1_v3_moto_iphone_tecnologia.png
+
+6. RISCOS E MITIGACAO
+   - Texto original distorcido pela IA -> validar no S4; se ocorrer, refazer
+     com prompt reforçado OU sobrepor o texto original por recorte PIL
+     (a regiao de texto e estavel; origem = o proprio banner base).
+   - Moto/iPhone em posicao errada -> reforcar "same position/size/lighting"
+     e, se preciso, iterar (Boulder Loop, max 3).
+   - Custo: zero; rastreabilidade: commits por segmento + logs (R3).
+
+CRITERIO DE SUCESSO S1: plano definido e registrado. Aprovacao: operador
+orientou "faca direto no ComfyUI Cloud como ja validamos" (out-of-band).
+================================================================================

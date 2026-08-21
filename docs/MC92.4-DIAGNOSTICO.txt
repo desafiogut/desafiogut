@@ -1,0 +1,54 @@
+================================================================================
+MC92.4-S0 — DIAGNOSTICO E LEVANTAMENTO DE ASSETS
+DesafioGUT · 2026-08-21 (Brasília) · Segmento 0 (ECC: terminal-ops, verification-loop)
+================================================================================
+
+1. IMAGEM BASE LOCALIZADA
+   - Caminho real: C:\Users\Moltbot\Desktop\GUTO\BANNERES OFICAIS\banner 1.png
+     (atencao: a pasta chama-se "BANNERES OFICAIS" e NAO "BANNERES OFICIAL")
+   - Dimensoes: 2752 x 1536 px (16:9), modo RGBA, 6.112.369 bytes
+   - Tambem presente: banner 2.png (2752x1536, RGBA, 6.253.702 bytes) — NAO
+     alterado neste MC (R1: minima alteracao; R2: sem custo extra).
+   - Hash: banner 1.png  ->  (calculado no S3 para rastreabilidade)
+
+2. ANALISE VISUAL INICIAL (modelo auxiliar qwen2.5vl:3b, preview 900px)
+   - Fundo azul-marinho escuro com luzes/confete dourados caindo do topo.
+   - Mascote GUTO ao CENTRO, com brilho dourado ao redor da cabeca.
+   - Eletrodomesticos ao redor do GUTO, estilo prateado:
+       * MAQUINA DE LAVAR: a ESQUERDA do personagem
+       * FOGAO: a DIREITA do personagem
+       * TV: acima do personagem
+       * GELADEIRA e AR-CONDICIONADO: a direita
+   - Texto presente (nao legivel pelo modelo auxiliar; sera preservado por
+     edicao localizada, ver S1).
+   - Cores dominantes: azul-marinho (fundo), dourado (luzes/confete),
+     prata (eletrodomesticos), bege/laranja (GUTO).
+
+3. LEVANTAMENTO DE ASSETS EXISTENTES (GUTO)
+   - GUTO\GUTO-Eletrodomesticos\: 01-guto-tv, 02-guto-geladeira,
+     03-guto-maquina-lavar, 04-guto-ar-condicionado, 05-guto-notebook,
+     06-guto-smartphone, 07-guto-fogao, 08-guto-conjunto-eletrodomesticos.
+   - NAO ha assets de MOTO nem de IPHONE isolados -> necessaria geracao/
+     edicao via IA (ComfyUI Cloud, assinatura ativa — validada abaixo).
+   - LOGO DO MEDALHAO.jpeg (Desktop\GUTO) — regra do medalhao GUTO:
+     o simbolo Uniao e Trabalho DEVE permanecer (a edicao nao toca o GUTO).
+
+4. COMIFYUI CLOUD — ACESSO VALIDADO (verification-loop)
+   - Chave lida de ~/.claude.json -> mcpServers.comfyui-cloud.headers
+     ["X-API-Key"] (formato comfyui-*, 72 chars; valor NUNCA exibido — R4/R5).
+   - GET https://cloud.comfy.org/api/user com X-API-Key -> HTTP 200,
+     {"id":"V7eWyvhyMjbC3KywWZNQleNHDsH3","status":"active"} -> assinatura ATIVA.
+   - object_info baixado (6.6 MB, 3654 nodes). Node-alvo GeminiImage2Node:
+     required = [prompt, model, seed, aspect_ratio, resolution,
+     response_modalities]; optional = [images, files, system_prompt].
+     SaveImage requer filename_prefix (cloud).
+
+5. DECISAO DE ABORDAGEM (previa — detalhada no S1)
+   - Opcao A: edicao img2img da imagem base via GeminiImage2Node
+     (gemini-3-pro-image-preview / Nano Banana Pro), 16:9, 2K -> saida
+     2752x1536 (mesmo formato do original). Sem custo financeiro (R2):
+     assinatura ja ativa e utilizada nos MCs anteriores (MC69.1, 17/08).
+
+CRITERIO DE SUCESSO S0: diagnostico completo OK (imagem localizada, elementos
+identificados, acesso ao gerador validado).
+================================================================================
