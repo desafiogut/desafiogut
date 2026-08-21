@@ -1,0 +1,61 @@
+================================================================================
+MC92.5-S0 — DIAGNOSTICO E PREPARACAO DO AMBIENTE
+DesafioGUT · 2026-08-21 ~13:10 (Brasília) · ECC: terminal-ops, verification-loop
+================================================================================
+
+1. IMAGEM BASE
+   - C:\Users\Moltbot\Desktop\GUTO\BANNERES OFICAIS\banner 1.png (pasta real:
+     "OFICAIS"; o MC cita "OFICIAL"/"OFICIAIS" — corrigido).
+   - 2752 x 1536 px (16:9), RGBA, 6.112.369 bytes. banner 2.png presente
+     (nao alterado — R1). Originais INTOCADOS.
+
+2. AMBIENTE
+   - Python 3.11.15 = venv do Hermes (C:\Users\Moltbot\AppData\Local\hermes\
+     hermes-agent\venv). pip habilitado via ensurepip (pip 24.0).
+   - torch 2.13.0+cpu e torchvision 0.27.0 JA presentes no venv (reaproveitados
+     pelo IOPaint — evita ~2,5 GB de download; disco C com apenas 9 GB livres).
+   - RAM CRITICA: 5,74 GB total / 0,72 GB livre -> IOPaint em CPU (LaMa) pode
+     paginar; estrategia: inpaint por RECORTE da regiao (memoria controlada).
+   - IOPaint instalado via pip no venv (CLI `iopaint run` com --image/--mask/
+     --output; modelo lama; download do modelo em C:\Users\Moltbot\.cache).
+   - IMPORTANTE (ambiente restaurado): o pip do IOPaint rebaixou websockets
+     15.0.1->11.0.3 e Pillow 12.3.0->9.5.0 (exigencias do hermes-agent) —
+     RESTAURADOS para websockets==15.0.1 e Pillow==12.3.0. Starlette ficou
+     0.32.0 (sse-starlette do iopaint pede >=0.49 — risco so para o iopaint,
+     nao para o hermes; monitorar).
+   - Cron MC92.4-retry-banners-comfy (0ba595ac9a33) REMOVIDO (agendador nao
+     disparava; MC92.5 e o caminho oficial sem custo).
+
+3. LOCALIZACAO DOS ELEMENTOS NO BANNER (pixel analysis + confirmacao visual
+   qwen2.5vl:3b, que voltou a funcionar nesta sessao; coords originais):
+   - GUTO (mascote, martelo de leilao, medalhao Uniao e Trabalho): centro,
+     x ~1280-1918, y ~140-870. NAO sera tocado (regra do medalhao).
+   - MAQUINA DE LAVAR: x ~1167-1688, y ~836-990 (esq-inferior do GUTO).
+   - FOGAO: x ~1947-2351, y ~828-950+ (dir-inferior do GUTO).
+   - TV (tela preta): x ~1100-1400, y ~0-583 (esq-superior).
+   - GELADEIRA (aberta): x ~1651-2200, y ~0-583 (dir-superior).
+   - AR-CONDICIONADO: centro-direita, entre geladeira e fogao.
+   - TEXTO grande: x ~1945-2370, y ~322-738 (direita) — NAO sera tocado.
+   - Nota: qwen falha intermitentemente (muitas chamadas -> erro 400); usar
+     1 chamada por vez com pausa; fallback = pixel analysis (ja usado).
+
+4. ESTRATEGIA (R1 minima alteracao, R2 zero custo):
+   - OPCAO 1 (IOPaint/LaMa): limpar as 5 regioes de eletrodomesticos
+     (lavadora, fogao, TV, geladeira, ar-condicionado) preenchendo com fundo
+     navy+confete (LaMa NAO insere objetos via prompt — so preenche mascara).
+   - OPCAO 2 (Pillow): colar os NOVOS elementos (moto, iPhone, premios
+     eletronicos) sobre as regioes limpas, com sombra/rotação/blend.
+   - Assets: download gratuito (Wikimedia Commons — API publica sem chave;
+     operador autorizou) -> C:\Users\Moltbot\Desktop\temp_assets\.
+   - Valores de cor do fundo: navy ~#0a0e22 (para mascara de diferenca).
+
+5. RISCOS
+   - RAM 0,72 GB livre: inpaint por recorte reduz risco; se OOM, reduzir
+     recorte ou usar pagefile (lento). Boulder Loop max 3.
+   - Estilo dos assets (foto vs cartoon 3D): aplicar blend/sombra/filtro
+     leve para integracao; validacao visual do operador e o gate final.
+   - Texto original: nunca tocado (regioes de texto fora das mascaras).
+
+CRITERIO DE SUCESSO S0: ambiente verificado, elementos localizados,
+estrategia definida. OK.
+================================================================================
