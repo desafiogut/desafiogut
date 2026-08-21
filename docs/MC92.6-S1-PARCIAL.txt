@@ -1,0 +1,46 @@
+================================================================================
+MC92.6-S1 (PARCIAL) — DESATIVACAO DA WHITELIST: TENTATIVAS SEM EFEITO + ROTA ALTERNATIVA
+DesafioGUT · 2026-08-21 ~18:30 (Brasília) · ECC: browser-automation, security-review
+================================================================================
+
+1. ESTADO VERIFICADO (evidencia em capturas computer_use)
+   - Pagina: Painel de Controle > Configuracoes > Secao "Saque" >
+     "Lista de Permissoes para Saques" = ATIVA (texto "Habilitar" + botao
+     "Desativar" presentes; Gerenciamento de Enderecos mostrava
+     "Lista de permissoes ativada.").
+   - Endereco alvo JA REGISTRADO na whitelist p/ BNB/BSC:
+     MetaMask-BSC | BNB | 0x5B2...b1517 | rede BSC | atualizado 2026-08-17
+     23:32:12 (retencao de endereco novo: 24-48h, ja expirada — 21/08).
+
+2. TENTATIVAS DE DESATIVACAO (Boulder Loop — 4 tentativas, sem efeito)
+   T1: click background no botao "Desativar" (elemento AX) -> posted, sem
+       mudanca visivel na arvore (sem modal).
+   T2: click foreground por coordenada (848,741) -> foreground_unavailable
+       (HWND alvo 0x30384 nao ficou em foreground; foreground real = 0x100d6).
+   T3: double_click background por coordenada -> background_occluded (coordenada
+       calculada pelo driver (1525,742) fora do viewport; janela coberta).
+   T4: apos re-rodar mc92.6_restaurar_edge.ps1 (SetForegroundWindow), click
+       foreground de novo -> foreground_unavailable persistente (0x100d6).
+   -> Conforme skill (MC91.14/evm-onchain-verification): parar apos 2-3
+      tentativas de escalada de UI; whitelist fica INDEFINIDA; operador
+      completa manualmente se quiser desativar.
+
+3. ANALISE / ROTA ALTERNATIVA (R1 - minima alteracao)
+   - A desativacao pode NAO ser necessaria: o endereco 0x5B2...b1517 esta na
+     whitelist de BNB/BSC desde 17/08 e a retencao ja expirou. O bloqueio
+     do MC91.5 era por endereco NAO registrado p/ BNB; agora esta registrado.
+   - Proximo passo proposto (aguardando operador): ir a aba "Sacar - Carteira
+     - Binance" e tentar o saque de 0,002 BNB para o endereco da Lista de
+     Confiaveis (rede BSC). Se o formulario aceitar e mostrar liquido
+     ("Voce recebera") + botao "Sacar" ativo -> saque sem desativar nada.
+     Se bloquear -> desativar whitelist (operador manual ou nova tentativa).
+   - PENDENTE de aprovacao do operador: o clique na aba "Sacar" teve o prompt
+     de aprovacao EXPIRADO ("silence is not consent") — nenhuma acao de UI
+     foi feita apos isso.
+
+4. NENHUMA TRANSACAO EXECUTADA — nada foi sacado, nada foi alterado na conta
+   (somente leitura + cliques sem efeito). R5 respeitado (sem 2FA/senha).
+
+CRITERIO DE SUCESSO S1 (parcial): tentativas documentadas, rota alternativa
+definida, decisao delegada ao operador.
+================================================================================
