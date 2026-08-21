@@ -1,0 +1,37 @@
+================================================================================
+MC92.6-S0 — VERIFICACAO DO STATUS DA WHITELIST (BINANCE)
+DesafioGUT · 2026-08-21 ~17:40 (Brasília) · ECC: browser-automation, verification-loop
+================================================================================
+
+1. SESSAO/Navegador
+   - Microsoft Edge (perfil Pessoal), aba "Gerenciamento de Enderecos -
+     Seguranca - Binance" (2 abas abertas) + aba "Sacar - Carteira -
+     Binance". Sessao Binance AUTENTICADA.
+   - Janela estava minimizada -> restaurada via PowerShell ShowWindow
+     (docs/mc92.6_restaurar_edge.ps1; metodo MC91.14) para expor o viewport.
+
+2. STATUS DA WHITELIST
+   - Texto exato na pagina: "Lista de permissoes ativada." -> WHITELIST ATIVA.
+   - Link disponivel: "Configuracoes da Lista de Permissoes".
+
+3. ENDERECOS NA LISTA DE CONFIAVEIS (whitelist POR ATIVO — skill MC91.5)
+   a) MetaMask-BSC | Moeda: BNB | Endereco: 0x5B2...b1517 | Rede: BSC
+      Ultima atualizacao: 2026-08-17 23:32:12   <- ENDERECO ALVO (0x5B2af3327
+      EFB9ce019C8e68d9c3df8Fb81Ab1517) JA REGISTRADO p/ BNB/BSC
+   b) MetaMask-BSC | Moeda: ETH | Endereco: 0x5B2...b1517 | Rede: BSC
+      Origem: MetaMask | Ultima atualizacao: 2026-08-15 15:29:47
+   c) EOA-Mainnet | Moeda: ETH | Endereco: 0xFea...d1E67 | Rede: ETH
+      Ultima atualizacao: 2026-07-08 20:25:53  (EOA coordenadora)
+
+4. ANALISE
+   - O endereco alvo (MetaMask-BSC, 0x5B2...b1517) esta registrado na
+     whitelist para BNB na rede BSC desde 17/08 23:32 -> o periodo de
+     seguranca de 24-48h (retencao de endereco novo) ja expirou (72h+).
+   - Mesmo assim, o operador autorizou a DESATIVACAO TEMPORARIA da whitelist
+     para garantir o saque (MC92.6) — proceder ao S1.
+   - Observacao: conforme skill (MC91.5), whitelist e por ATIVO; em tese o
+     saque de BNB poderia funcionar com o endereco registrado, mas segue-se
+     a instrucao do MC (desativar temporariamente e reativar ao final).
+
+CRITERIO DE SUCESSO S0: whitelist localizada e status registrado. OK.
+================================================================================
