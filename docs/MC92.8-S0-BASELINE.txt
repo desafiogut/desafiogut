@@ -1,0 +1,48 @@
+================================================================================
+MC92.8-S0 — BASELINE (ESTADO ANTES DA BRIDGE BSC -> MAINNET + ENVIO A EOA)
+DesafioGUT · 2026-08-23 (Brasília)
+================================================================================
+
+OBJETIVO: concluir o abastecimento da EOA coordenadora (plano MC91.4 S1-S5,
+retomado quando o BNB chegou - MC92.7): bridge do ETH BSC -> Ethereum Mainnet
+e envio do ETH nativo para a EOA 0xFea436f74059F885ea50D48aBbE21ef6665d1E67.
+Execucao MANUAL pelo operador no navegador desktop (MetaMask); Hermes verifica
+on-chain, registra hashes e fecha documentacao (R5: assinaturas so do operador;
+R2: operacao autorizada pelo operador).
+
+1. CARTEIRAS
+   - Origem (MetaMask, BSC): 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517
+   - Destino (EOA coordenadora, mainnet): 0xFea436f74059F885ea50D48aBbE21ef6665d1E67
+   - Contrato LeilaoGUT (mainnet): 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd
+
+2. BASELINE ON-CHAIN (verificacao fresca 2026-08-23, RPCs independentes)
+   BSC (NodeReal bsc-mainnet.nodereal.io, bloco 0x70324a5):
+     - BNB nativo (gas):     0x1bf3fa2176e000 wei = 0,00786808 BNB
+     - ETH BEP-20 (0x2170Ed): 0x139ca108466000 wei = 0,00552024 ETH
+     - nonce da carteira: 0x0 (nunca enviou tx na BSC)
+   MAINNET (ethereum.publicnode.com, bloco 0x189f775):
+     - MetaMask 0x5B2af: 0x0 (bridge ainda nao executada)
+     - EOA 0xFea436:     0xf999a21a8e7c3 wei = 0,004391011919390659 ETH
+
+3. GAS (medido no baseline)
+   - BSC: 0,05 gwei -> aprovacao ~0,000003 BNB + bridge ~0,00002 BNB (folga OK)
+   - Mainnet: ~0,31 gwei -> envio 21k gas ~0,0000064 ETH (irrisorio)
+
+4. PLANO DE EXECUCAO (operador, manual)
+   P1. Bridge BSC -> Ethereum (Across/Orbiter/Socket; sugerido app.across.to),
+       token ETH, valor 0,00552024 ETH (MAX); 2 assinaturas no MetaMask
+       (aprovar + confirmar) em rede BSC.
+   P2. Trocar MetaMask para Ethereum Mainnet; confirmar ETH nativo recebido.
+   P3. Enviar ETH nativo para a EOA 0xFea436...1E67 (MAX, reservando gas);
+       1 assinatura no MetaMask em rede mainnet.
+   P4. Hermes: verificar saldos (BSC, mainnet MM e EOA), localizar hashes,
+       gerar docs/MC92.8-RELATORIO.txt + atualizar cloud.md + commits.
+
+5. VERIFICACAO PREVISTA POS-EXECUCAO
+   - MM mainnet: 0x0 -> ~0,0055 ETH (chegada da bridge)
+   - EOA mainnet: 0,0043910 -> ~0,0097 ETH (apos envio)
+   - Hashes: tx(s) da bridge na BSC + tx de envio na mainnet
+   - Saldo BSC: ETH BEP-20 0 (consumido pela bridge); BNB reduzido so do gas
+
+CRITERIO DE SUCESSO S0: baseline registrado e commitado. OK.
+================================================================================
