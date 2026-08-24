@@ -1,0 +1,74 @@
+============================================================
+MC92.9 — RELATÓRIO FINAL: VERIFICAÇÃO DO ABASTECIMENTO DA EOA
+============================================================
+Data: 2026-08-24
+Rede: Ethereum MAINNET (chainId 1)
+EOA coordenadora: 0xFea436f74059F885ea50D48aBbE21ef6665d1E67
+                    (relayer que paga o gas do LeilaoGUT
+                     0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd)
+
+------------------------------------------------------------
+1. SALDO ANTERIOR (baseline MC92.8-S0, 23/08, bloco 0x189f775)
+------------------------------------------------------------
+  0,004391011919390659 ETH  (0x0f999a21a8e7c3 wei)
+
+------------------------------------------------------------
+2. VALOR RECEBIDO (saque Binance -> EOA, 24/08)
+------------------------------------------------------------
+  0,00230911 ETH  (2.309.110.000.000.000 wei)
+
+------------------------------------------------------------
+3. NOVO SALDO (verificado agora em 3 RPCs independentes)
+------------------------------------------------------------
+  0,006700121919390659 ETH  (0x17cdb9b2f503c3 wei)  ~ 0,0067 ETH
+
+  RPCs consultados (eth_getBalance, bloco latest):
+  - ethereum.publicnode.com : 0x17cdb9b2f503c3  ✅
+  - 1rpc.io/eth             : 0x17cdb9b2f503c3  ✅
+  - rpc.flashbots.net       : 0x17cdb9b2f503c3  ✅
+
+  Conferência ao wei:
+  0,004391011919390659 + 0,00230911 = 0,006700121919390659  ✅ EXATO
+
+------------------------------------------------------------
+4. HASH DA TRANSAÇÃO (TxID do saque)
+------------------------------------------------------------
+  0x09261b0ddff14c3349caec91cc7469026f595aab0328f38a49688876bd99de3c
+
+  Verificação on-chain (eth_getTransactionByHash / Receipt):
+  - Bloco      : 25.825.478 (0x18a10c6)
+  - Timestamp  : 2026-08-24 13:56:47 UTC (10:56:47 BRT)
+                 (coincide com a captura de ecrã das 10:56)
+  - From       : 0x28c6c06298d514db089934071355e5743bf21d60
+                 (carteira de saque da Binance)
+  - To         : 0xfea436f74059f885ea50d48abbe21ef6665d1e67  (EOA) ✅
+  - Value      : 0x8341f914c1c00 wei = 0,00230911 ETH EXATO ✅
+  - Input      : 0x (ETH nativo, sem calldata)
+  - Status     : 0x1 (SUCESSO) ✅
+  - Gas usado  : 21.000 (transferência simples)
+  - Gas price  : 1,4372 gwei (custo ~0,00003 ETH)
+
+  Obs.: o TxID exibido na UI da Binance (0x092...9de3c) bate com o
+  prefixo/sufixo deste hash. ETH nativo não emite log Transfer —
+  a chegada foi confirmada por saldo + hash (receita MC92.8).
+
+------------------------------------------------------------
+5. ESTADO ATUAL DA EOA
+------------------------------------------------------------
+  - Saldo      : 0,006700121919390659 ETH (~0,0067 ETH)
+  - Nonce      : 0xd (13) — EOA ativa como relayer (já enviou txs)
+  - Suficiente para o closed testing: SIM
+    (custo típico de envio 21k gas x ~1,4 gwei ~ 0,00003 ETH/tx;
+     autonomia de centenas de transações)
+
+------------------------------------------------------------
+VEREDITO
+------------------------------------------------------------
+  ✅ EOA abastecida com sucesso — saldo suficiente para o closed testing
+
+------------------------------------------------------------
+Evidência: capturas de ecrã em ~/Pictures/Screenshots/
+  (Captura de tela 2026-08-24 110028.png: página de saque Binance,
+   valor 0,00230911 ETH, rede ETH, destino 0xFea...d1E67, Concluído)
+Referência: docs/MC92.8-S0-BASELINE.txt (saldo anterior)
+============================================================

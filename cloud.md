@@ -7410,3 +7410,18 @@ CONFIRMACAO-ENDERECO,RELATORIO}.txt + MC91.3-RELATORIO.txt no Desktop.
   (S5) + cloud.md + commits. Decisao de recarga de creditos = operador.
 - Artefactos: docs/MC92.4-{DIAGNOSTICO,PLANO,BLOQUEIO}.txt + scripts
   mc92.4_{check_schema,gerar_banners}.py (commits d114238, 03ace38).
+
+## MC92.9 — EOA coordenadora abastecida: saque Binance verificado on-chain (24/08)
+- SAQUE: Binance -> EOA 0xFea436f74059F885ea50D48aBbE21ef6665d1E67 (mainnet).
+  Tx 0x09261b0ddff14c3349caec91cc7469026f595aab0328f38a49688876bd99de3c,
+  bloco 25.825.478, 2026-08-24 13:56:47 UTC (10:56 BRT), from
+  0x28c6c06298d514db089934071355e5743bf21d60 (Binance), value 0,00230911 ETH
+  exato, input 0x (ETH nativo), status 0x1, gas 21.000. TxID da UI
+  (0x092...9de3c) confere com o hash completo.
+- SALDO EOA: 0,004391011919390659 (baseline MC92.8-S0) + 0,00230911 =
+  0,006700121919390659 ETH (~0,0067 ETH) — conferido ao wei em 3 RPCs
+  independentes (publicnode, 1rpc.io, flashbots). Nonce 0xd (13).
+- VEREDITO: ✅ EOA abastecida com sucesso — saldo suficiente para o
+  closed testing (autonomia de centenas de txs; custo ~0,00003 ETH/tx).
+- Artefactos: docs/MC92.9-RELATORIO.txt + MC92.9-RELATORIO.txt no Desktop
+  (mesmo conteúdo; evidência: captura 110028.png em ~/Pictures/Screenshots).
