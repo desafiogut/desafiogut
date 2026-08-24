@@ -1,0 +1,66 @@
+================================================================================
+MC90.6 — TRANSFERÊNCIA LOCAL DE ARTEFACTOS PARA O RUAN (PLAY STORE / CLOSED TESTING)
+DesafioGUT · Registo da operação · 2026-08-24
+================================================================================
+
+1. CONTEXTO
+--------------------------------------------------------------------------------
+- Operação retomada após paragem para análise (RELATORIO-ANALISE-ENVIO-RUAN.txt,
+  Desktop). Decisão do operador: OPÇÃO A — usar o AAB reconstruído em 24/08,
+  que é EXATAMENTE o código em produção (Netlify) e no celular.
+- O AAB de 15/08 (MC-HISTORICO/DesafioGUT-20260815-release.aab) foi REJEITADO:
+  não continha as correções MC91.7 (login email), MC91.11 (programado = senha,
+  /saldo-senhas) e MC91.12 (testes integração).
+
+2. ESTRUTURA DO PACOTE LOCAL
+--------------------------------------------------------------------------------
+C:\Users\Moltbot\Desktop\ARTEFACTOS-RUAN\
+├── 1-AAB\
+│   └── DesafioGUT-20260824-release.aab   (35.712.166 bytes — build 24/08 14:43)
+├── 2-Documentos\
+│   ├── MC90.4-CRIAR-APP-DADOS.txt
+│   ├── MC90.4-DATA-SAFETY-FINAL.txt
+│   ├── MC90.4-FICHA-LOJA.txt
+│   └── MC90.2-CLOSED-TESTING-GUIDE.txt
+├── 3-Screenshots\
+│   └── README.txt                        (fallback — ver secção 4)
+├── 4-URLs\
+│   └── urls.txt
+└── 5-Instruções\
+    └── INSTRUCOES-RUAN.txt
+
+3. VERIFICAÇÃO DO AAB (hash SHA-256)
+--------------------------------------------------------------------------------
+- Hash do AAB no pacote: 15e94fdd40c22a96dcc0da33b4fc09f8fdcde8ab7bbf31c229141eec7f490060
+- Confere com o build output atual (android/app/build/outputs/bundle/release/
+  app-release.aab, 24/08 14:43). ✅
+- Correspondência validada (24/08): 269/269 assets vs APK do celular
+  (lastUpdate 18/08) e 8/8 bundles vs produção Netlify. Contrato mainnet
+  0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd. ✅
+- docs/MC90.5-AAB-SHA256.txt ATUALIZADO com o hash do build de 24/08.
+
+4. SCREENSHOTS — ESTADO
+--------------------------------------------------------------------------------
+- Nenhuma captura real do app disponível até 2026-08-24 (as imagens em
+  MC-HISTORICO/_*.png|jpg são de sessões do Canva, não do app).
+- Fallback: 3-Screenshots/README.txt (indica as 4 telas a capturar: home,
+  leilão, senhas, perfil — requisitos da Play Store).
+- Operador vai capturar as 4 imagens (após esta operação): quando entregues,
+  substituir o README.txt e REGENERAR o zip.
+
+5. ZIP
+--------------------------------------------------------------------------------
+- C:\Users\Moltbot\Desktop\DesafioGUT-PlayStore-Ruan.zip
+- Raiz do zip: ARTEFACTOS-RUAN/ (estrutura da secção 2).
+
+6. PRÓXIMOS PASSOS (upload — separado desta operação)
+--------------------------------------------------------------------------------
+1. Upload do zip para o Drive do desafiogut@gmail.com, pasta
+   "Play Store - DesafioGUT (para Ruan)" (Chrome perfil DESAFIO já logado).
+2. Gerar link de partilha (qualquer pessoa com o link, leitor).
+3. Enviar o link + resumo para o Ruan (confirmar endereço de e-mail).
+4. Após o Ruan iniciar o closed testing: registar inicio.txt e ativar o
+   monitoramento (skill closed-testing-30d).
+
+PENDÊNCIA: 4 screenshots do app (operador) → regenerar zip após entrega.
+================================================================================

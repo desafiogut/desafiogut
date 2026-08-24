@@ -1,1 +1,2 @@
-ac7778a89053a433d947d0f55af2bdc14a09b90208a61d7d61ed0da7f935ff4a *desafio-gut/frontend/android/app/build/outputs/bundle/release/app-release.aab
+ac7778a89053a433d947d0f55af2bdc14a09b90208a61d7d61ed0da7f935ff4a *desafio-gut/frontend/android/app/build/outputs/bundle/release/app-release.aab  [15/08/2026 — SUBSTITUÍDO]
+15e94fdd40c22a96dcc0da33b4fc09f8fdcde8ab7bbf31c229141eec7f490060 *desafio-gut/frontend/android/app/build/outputs/bundle/release/app-release.aab  [24/08/2026 14:43 — AAB ATUAL, rebuild pós-MC91.7/91.11/91.12]
