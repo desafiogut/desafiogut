@@ -7425,3 +7425,34 @@ CONFIRMACAO-ENDERECO,RELATORIO}.txt + MC91.3-RELATORIO.txt no Desktop.
   closed testing (autonomia de centenas de txs; custo ~0,00003 ETH/tx).
 - Artefactos: docs/MC92.9-RELATORIO.txt + MC92.9-RELATORIO.txt no Desktop
   (mesmo conteúdo; evidência: captura 110028.png em ~/Pictures/Screenshots).
+
+## MC92.10 — skill closed-testing-30d criada e configurada p/ orquestrar o teste (24/08)
+- SKILL: `closed-testing-30d` (software-development) criada no Hermes —
+  orquestra os 30 dias de closed testing (20 testadores) conforme Play Store
+  (12+ opt-in contínuos por 14 dias; guia docs/MC90.2-CLOSED-TESTING-GUIDE.txt).
+  7 tarefas: monitorar-testadores (2h), monitorar-backend (2h),
+  relatorio-diario (23h), relatorio-semanal (dias 7/14/21/28),
+  relatorio-final (dia 30 do teste), sintetizar-feedback (6h), gerir-premios
+  (dias 7/11/14: 50/50/200 senhas; one-shots na data real do teste).
+- CRONS ATIVOS (repeat=forever): monitorar-testadores 6f4a41a2134b,
+  monitorar-backend 084bff793a1d, relatorio-diario 5d838f8c8626,
+  relatorio-semanal 7f538e586a5f (0 0 7,14,21,28 * * — corrigido do rascunho
+  "0 0 * * 0" que é domingo), relatorio-final 3297df75c583 (placeholder —
+  ajustar p/ one-shot no dia 30 real), sintetizar-feedback 596eb4a01f98
+  (script coletar-feedback.sh + agente). Sentinela EOA segue ativa.
+- INTEGRAÇÃO GUTO (real, sem URLs fictícias): GUTO comum = /chatbot (RAG);
+  GUTO ADM = /admin-commands (fail-CLOSED; comandos forcar_fila,
+  limpar_cache, executar_monitor, panic, unpause). Feedback de testadores
+  entra via canal do operador (grupo/Play Testing feedback) — NÃO há
+  endpoint público de feedback. Script de coleta testado: health=ok,
+  saldo EOA 0,006700 ETH, teste nao_iniciado. Ações com custo só com
+  aprovação (R2); nunca chaves (R5).
+- TESTE (S4): skill carrega; dry-runs com evidência (health {"ok":true},
+  saída silenciosa sem inicio.txt, snapshot real); 6 crons scheduled.
+- VEREDITO: ✅ Skill closed-testing-30d pronta para orquestrar o closed
+  testing. Pendências: iniciar teste na Play Console (Ruan) + informar data
+  de início (criar closed-testing/inicio.txt + agendar one-shots) + token
+  admin de curta duração p/ ler atividade_utilizadores (ou painel ADM).
+- Artefactos: docs/MC92.10-{SKILL-CLOSED-TESTING,CRON-JOBS,GUTO-INTEGRACAO,
+  PREMIOS,TESTE,RELATORIO}.txt + MC92.10-RELATORIO.txt no Desktop (commits
+  642524d..560513e + final).

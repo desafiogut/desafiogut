@@ -1,0 +1,75 @@
+================================================================================
+MC92.10 — RELATÓRIO FINAL: SKILL closed-testing-30d CRIADA E CONFIGURADA
+DesafioGUT · 2026-08-24 · SUPERPERS + ECC (terminal-ops, verification-loop,
+canary-watch, ux-waiting-audit) · RUFLO: skill (transação) + validação + GUTO
+================================================================================
+
+RESUMO EXECUTIVO
+----------------
+A skill `closed-testing-30d` foi criada no Hermes e configurada para
+orquestrar todo o closed testing de 30 dias (20 testadores) em conformidade
+com a Play Store (12+ opt-in contínuos por 14 dias — guia
+docs/MC90.2-CLOSED-TESTING-GUIDE.txt). Todos os cron jobs de monitoramento
+e relatórios estão ativos. A integração GUTO comum -> GUTO ADM -> operador
+foi configurada com as funções REAIS do backend (sem URLs fictícias).
+
+1. SKILL CRIADA
+   - closed-testing-30d (software-development)
+   - Caminho: C:\Users\Moltbot\AppData\Local\hermes\skills\
+     software-development\closed-testing-30d\SKILL.md
+   - 7 tarefas: monitorar-testadores, monitorar-backend, relatorio-diario,
+     relatorio-semanal, relatorio-final, sintetizar-feedback, gerir-premios.
+   - Baseada em evidência real: endpoints do backend (health, chatbot,
+     admin-commands, admin-users), tabela atividade_utilizadores (Supabase),
+     saldo EOA 0,0067 ETH + sentinela ativa, comandos GUTO ADM reais
+     (forcar_fila, limpar_cache, executar_monitor, panic, unpause).
+
+2. TAREFAS AGENDADAS (cron jobs ativos, repeat=forever)
+   - monitorar-testadores (6f4a41a2134b)  a cada 2h
+   - monitorar-backend    (084bff793a1d)  a cada 2h
+   - relatorio-diario     (5d838f8c8626)  todos os dias 23h
+   - relatorio-semanal    (7f538e586a5f)  dias 7/14/21/28 do mês
+   - relatorio-final      (3297df75c583)  placeholder dia 30 do mês
+     (ajustar p/ one-shot no dia 30 REAL do teste quando iniciar)
+   - sintetizar-feedback  (596eb4a01f98)  a cada 6h (script de coleta +
+     agente sintetiza sugestões ao operador)
+   - sentinela-eoa-saldo (MC92.9)         a cada 2h (alerta saldo < 0,002)
+
+3. INTEGRAÇÃO GUTO (verificação)
+   - GUTO comum = /chatbot (RAG) | GUTO ADM = /admin-commands (fail-CLOSED)
+   - Script de coleta testado: health=ok, saldo_eoa=0,006700 ETH,
+     closed_testing=nao_iniciado, sem alertas. Snapshots em
+     closed-testing/logs/.
+   - Fluxo: GUTO comum conversa -> feedback via canal do operador ->
+     snapshot 6h -> síntese -> sugestões -> operador aprova -> GUTO ADM
+     (com token do operador, R5). Nada com custo sem aprovação (R2).
+
+4. PRÉMIOS/SORTEIOS (configurados na skill)
+   - Dia 7: 50 senhas | Dia 11: 50 senhas | Dia 14: 200 senhas
+   - One-shots agendados na DATA REAL do teste (quando o operador informar
+     o início); creditação on-chain exige autorização (R2).
+
+5. TESTE REALIZADO (S4, dry-runs com evidência)
+   - Skill carrega (readiness available); teste não iniciado -> monitores
+     saem silenciosos; health responde {"ok":true}; script de coleta gera
+     snapshot real; 6 crons state=scheduled. ✅
+
+VEREDITO
+--------
+✅ Skill closed-testing-30d pronta para orquestrar o closed testing.
+
+PENDÊNCIAS (não bloqueiam a skill; aguardam o operador/Ruan)
+- Iniciar o closed testing na Play Console (Ruan).
+- Informar a data de início -> criar closed-testing/inicio.txt -> agendar
+  one-shots dos sorteios (dias 7/11/14) e do relatório final (dia 30).
+- Fornecer token admin de curta duração (ou usar painel ADM) para o
+  monitoramento de testadores ler atividade_utilizadores.
+
+EVIDÊNCIAS (commits)
+- 642524d MC92.10-S0: criacao da skill closed-testing-30d
+- ca2a803 MC92.10-S1: configuracao dos cron jobs
+- 9de4012 MC92.10-S2: configuracao da integracao GUTO comum -> GUTO ADM
+- df9b4d9 MC92.10-S3: configuracao dos premios e sorteios
+- 560513e MC92.10-S4: teste da skill e validacao
+- <final>  MC92.10: relatorio final — skill closed-testing-30d criada
+================================================================================
