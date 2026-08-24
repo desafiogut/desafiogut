@@ -1,0 +1,45 @@
+================================================================================
+MC92.10-S4 — TESTE DA SKILL E VALIDAÇÃO (dry-run com evidência real)
+DesafioGUT · 2026-08-24 · SUPERPERS: cada checagem com evidência
+================================================================================
+
+4.1 — Skill carrega: skill_view(closed-testing-30d) -> readiness available,
+     conteúdo íntegro (7 tarefas, fatos de referência, pitfalls). ✅
+
+4.2 — Dry-run 'monitorar-testadores' (comportamento com estado atual):
+     closed-testing/inicio.txt NÃO existe (teste ainda não iniciado —
+     aguarda Ruan). Resultado esperado e obtido: saída SILENCIOSA (sem
+     consulta admin, sem ruído). ✅
+
+4.3 — Dry-run 'monitorar-backend' (checagem real):
+     GET https://silly-stardust-ca71bc.netlify.app/.netlify/functions/health
+     -> {"ok":true,"service":"desafiogut-functions","timestamp":...} ✅
+     (health OK — nenhum alerta a disparar)
+
+4.4 — Dry-run 'sintetizar-feedback' (script de coleta):
+     coletar-feedback.sh executado -> snapshot real gravado em
+     closed-testing/logs/coleta-2026-08-24_12-12-04.txt:
+     health=ok, saldo_eoa_eth=0.006700, closed_testing=nao_iniciado,
+     ultimos_alertas_eoa: nenhum. ✅
+
+4.5 — Acesso admin (validação de comportamento): /admin-users exige auth
+     admin (autenticarAdmin fail-CLOSED, código admin-users.mjs). Sem token
+     do operador, o fluxo correto da skill é reportar "sem acesso admin" e
+     seguir com fontes públicas — comportamento documentado e validado
+     (nunca contornar auth — R5). ✅
+
+4.6 — Cron jobs ativos (cronjob list): 6 novos jobs do MC92.10, todos
+     state=scheduled, repeat=forever, skill closed-testing-30d carregada:
+     - monitorar-testadores (6f4a41a2134b)  "0 */2 * * *"
+     - monitorar-backend    (084bff793a1d)  "0 */2 * * *"
+     - relatorio-diario     (5d838f8c8626)  "0 23 * * *"
+     - relatorio-semanal    (7f538e586a5f)  "0 0 7,14,21,28 * *"
+     - relatorio-final      (3297df75c583)  "0 23 30 * *" (placeholder)
+     - sintetizar-feedback  (596eb4a01f98)  "0 */6 * * *" (com script)
+     + sentinela-eoa-saldo (MC92.9) ativa. ✅
+
+RESULTADO: skill funcional, cron jobs ativos, dry-runs sem erros.
+PENDÊNCIA de início (não é falha): teste aguarda o Ruan iniciar na Play
+Console; ao iniciar, criar closed-testing/inicio.txt (ver skill) e ajustar
+o one-shot do relatório final para o dia 30 real.
+================================================================================
