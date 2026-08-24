@@ -1,0 +1,40 @@
+================================================================================
+MC92.10-S1 — CONFIGURAÇÃO DOS CRON JOBS (MONITORAMENTO E RELATÓRIOS)
+DesafioGUT · 2026-08-24 · SUPERPERS: criados e verificados via cronjob list
+================================================================================
+
+Cron jobs criados (todos com a skill closed-testing-30d carregada,
+enabled_toolsets: web+terminal+file, repeat=forever, deliver local):
+
+1. monitorar-testadores  (6f4a41a2134b) — "0 */2 * * *" (a cada 2h)
+   Tarefa: verificar último acesso de cada testador, contar ativos 24h
+   (meta >= 12), inativos > 48h; gravar evidência em
+   closed-testing/logs/monitor-testadores-<data>.txt SEM commit; alertar
+   apenas em caso crítico. Teste não iniciado = saída silenciosa.
+
+2. monitorar-backend     (084bff793a1d) — "0 */2 * * *" (a cada 2h)
+   Tarefa: GET /health (público), polling de PIX, consolidação de lances;
+   gravar evidência em closed-testing/logs/monitor-backend-<data>.txt SEM
+   commit; alertar apenas em caso crítico (5xx, PIX falha >= 3).
+
+3. relatorio-diario      (5d838f8c8626) — "0 23 * * *" (todos os dias 23h)
+   Tarefa: consolidar logs do dia, escrever
+   closed-testing/relatorios-diarios/MC-CT-DIA-<n>.txt e COMMIT
+   ('MC-CT-DIA-<n>: relatorio diario'). Nunca inventar números.
+
+4. relatorio-semanal     (7f538e586a5f) — "0 0 7,14,21,28 * *"
+   OBSERVAÇÃO: o cron do rascunho era "0 0 * * 0" (domingo) — corrigido para
+   os dias 7/14/21/28 do mês (0 0 7,14,21,28 * *), fiel ao objetivo.
+   Tarefa: consolidar diários da semana em
+   closed-testing/relatorios-semanais/MC-CT-SEMANA-<n>.txt e COMMIT.
+
+5. relatorio-final       (3297df75c583) — "0 23 30 * *" (dia 30 do mês)
+   PLACEHOLDER: o relatório final real é no dia 30 DO TESTE. Quando a data
+   de início for conhecida (operador informar), REMOVER este cron e criar
+   um one-shot na data real (dia 30 do teste, 23h). Tarefa: consolidar
+   tudo, atestar prontidão COM evidência, escrever
+   closed-testing/relatorio-final.txt + cópia no Desktop, COMMIT.
+
+Verificação: cronjob action=list retorna os 5 jobs com state=scheduled,
+repeat=forever. ✅
+================================================================================
