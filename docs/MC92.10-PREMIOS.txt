@@ -1,0 +1,36 @@
+================================================================================
+MC92.10-S3 — PRÉMIOS E SORTEIOS (dias 7, 11 e 14 do closed testing)
+DesafioGUT · 2026-08-24 · SUPERPERS: configuração validada na skill
+================================================================================
+
+SORTEIOS DEFINIDOS (tarefa 'gerir-premios' da skill closed-testing-30d):
+- Dia 7  : sorteio relâmpago — 50 senhas
+- Dia 11 : sorteio relâmpago — 50 senhas
+- Dia 14 : grande prémio    — 200 senhas
+
+MECÂNICA (regras do projeto):
+1. Seleção do vencedor: critério definido pelo operador (menor lance único
+   do dia / participação ativa — Art. VIII ou critério do sorteio).
+2. Creditar senhas ON-CHAIN = ação COM CUSTO (gas da EOA) → exige
+   autorização explícita do operador (R2). NUNCA executar sem aprovação.
+3. GUTO ADM acionado via /admin-commands (comandos reais: forcar_fila,
+   executar_monitor etc.) apenas com token fornecido pelo operador (R5).
+4. Comunicação do resultado: via GUTO comum/canal do grupo de testadores
+   (ação do operador ou com autorização).
+
+AGENDAMENTO (importante):
+- O closed testing ainda NÃO iniciou (aguarda o Ruan iniciar na Play
+  Console). Os sorteios são eventos do DIA N DO TESTE — portanto NÃO podem
+  ser agendados com data fixa agora.
+- Quando o operador informar a DATA DE INÍCIO do teste:
+  1. Criar ~/Desktop/DESAFIOGUT/closed-testing/inicio.txt (data ISO).
+  2. Agendar 3 one-shots (cronjob create com data ISO) nos dias 7/11/14
+     do teste (23h), prompt referenciando a tarefa 'gerir-premios' da
+     skill closed-testing-30d.
+  3. O one-shot valida com o operador ANTES de qualquer ação com custo.
+- Este arquivo é a configuração; o agendamento é passo do operador +
+  Hermes na data de início (documentado na skill, seção gerir-premios).
+
+Verificação: skill closed-testing-30d contém a tarefa 7 'gerir-premios'
+com os 3 sorteios e as restrições R2/R5. ✅
+================================================================================
