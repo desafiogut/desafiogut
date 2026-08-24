@@ -1,0 +1,34 @@
+================================================================================
+MC92.10-S2 — INTEGRAÇÃO GUTO COMUM → GUTO ADM → OPERADOR
+DesafioGUT · 2026-08-24 · SUPERPERS: script testado com dados reais
+================================================================================
+
+CONTEXTO REAL (levantado do código — Pilar 1, sem URLs fictícias):
+- GUTO comum = POST /.netlify/functions/chatbot (RAG sobre o regulamento;
+  LLM DeepSeek default; rate limit 10/min/IP).
+- GUTO ADM = POST /.netlify/functions/admin-commands (auth admin,
+  fail-CLOSED; comandos: forcar_fila, limpar_cache, executar_monitor,
+  panic, unpause).
+- NÃO EXISTEM os endpoints /api/guto/feedback e /api/guto/adm/sugerir do
+  rascunho — feedback de testadores entra por canal do operador (grupo
+  Telegram/WhatsApp ou Google Play "Testing feedback", guia MC90.2).
+
+IMPLEMENTADO:
+1. Script de coleta (testado 12:12 — saída real):
+   C:\Users\Moltbot\AppData\Local\hermes\scripts\guto-integration\
+   coletar-feedback.sh
+   - Coleta fontes reais e públicas: health (ok:true), saldo EOA via RPC
+     (0,006700 ETH), estado do teste (nao_iniciado), últimos alertas da
+     sentinela (nenhum).
+   - Grava snapshot em closed-testing/logs/coleta-<data>.txt e imprime no
+     stdout (vira contexto do agente).
+2. Cron sintetizar-feedback (596eb4a01f98) — "0 */6 * * *" (a cada 6h),
+   forever, com o script acima como contexto + skill closed-testing-30d:
+   o agente sintetiza o snapshot em sugestões acionáveis ao operador e
+   escreve closed-testing/feedback-sintetizado-<data>.txt. NUNCA executa
+   ações com custo sem aprovação (R2).
+
+Fluxo: GUTO comum conversa com testadores -> (canal do operador coleta o
+feedback) -> snapshot 6h -> síntese (agente) -> sugestões ao operador ->
+operador aprova/rejeita -> ações no GUTO ADM com token do operador.
+================================================================================
