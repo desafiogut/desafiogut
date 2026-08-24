@@ -23,7 +23,10 @@ C:\Users\Moltbot\Desktop\ARTEFACTOS-RUAN\
 │   ├── MC90.4-FICHA-LOJA.txt
 │   └── MC90.2-CLOSED-TESTING-GUIDE.txt
 ├── 3-Screenshots\
-│   └── README.txt                        (fallback — ver secção 4)
+│   ├── screenshot-home.png
+│   ├── screenshot-leilao.png
+│   ├── screenshot-produto.png
+│   └── screenshot-relampago.png
 ├── 4-URLs\
 │   └── urls.txt
 └── 5-Instruções\
@@ -39,14 +42,19 @@ C:\Users\Moltbot\Desktop\ARTEFACTOS-RUAN\
   0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd. ✅
 - docs/MC90.5-AAB-SHA256.txt ATUALIZADO com o hash do build de 24/08.
 
-4. SCREENSHOTS — ESTADO
+4. SCREENSHOTS — ESTADO (atualizado 24/08)
 --------------------------------------------------------------------------------
-- Nenhuma captura real do app disponível até 2026-08-24 (as imagens em
-  MC-HISTORICO/_*.png|jpg são de sessões do Canva, não do app).
-- Fallback: 3-Screenshots/README.txt (indica as 4 telas a capturar: home,
-  leilão, senhas, perfil — requisitos da Play Store).
-- Operador vai capturar as 4 imagens (após esta operação): quando entregues,
-  substituir o README.txt e REGENERAR o zip.
+- 4 capturas reais do app recebidas do operador (Downloads/1..4.jpeg) e
+  convertidas para PNG em 3-Screenshots/:
+    screenshot-home.png       — Início (Edição Ativa R-1 Bronze, saldo/senhas)
+    screenshot-leilao.png     — Lances/Meus Ativos (tabela de lances)
+    screenshot-produto.png    — Prémio da edição (TV 65" R-1 Prata, EM BREVE)
+    screenshot-relampago.png  — Leilões relâmpago (TV 60"/Fogão/Smartphone)
+- Dimensões ~1024x1536 (dentro do mínimo 320px da Play Store; recomendado
+  1080x1920 — aceitável).
+- NOTA: o operador capturou estas 4 telas (não inclui telas de compra de
+  senhas/PIX nem perfil). Nomes escolhidos pelo conteúdo real; podem ser
+  acrescentadas mais telas depois (até 8 por tipo).
 
 5. ZIP
 --------------------------------------------------------------------------------
@@ -62,5 +70,5 @@ C:\Users\Moltbot\Desktop\ARTEFACTOS-RUAN\
 4. Após o Ruan iniciar o closed testing: registar inicio.txt e ativar o
    monitoramento (skill closed-testing-30d).
 
-PENDÊNCIA: 4 screenshots do app (operador) → regenerar zip após entrega.
+PENDÊNCIA RESOLVIDA: 4 screenshots do app incluídas em 24/08 (secção 4).
 ================================================================================
