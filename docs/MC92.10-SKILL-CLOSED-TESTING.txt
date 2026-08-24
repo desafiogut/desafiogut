@@ -1,0 +1,44 @@
+================================================================================
+MC92.10-S0 — CRIAÇÃO DA SKILL closed-testing-30d (evidência)
+DesafioGUT · 2026-08-24 · SUPERPERS: validado passo a passo
+================================================================================
+
+Skill criada via skill_manage(action='create') no Hermes:
+  Nome      : closed-testing-30d
+  Categoria : software-development
+  Caminho   : C:\Users\Moltbot\AppData\Local\hermes\skills\
+              software-development\closed-testing-30d\SKILL.md
+  Descrição : "Use when orchestrating DesafioGUT's 30-day closed testing."
+  Verificação: skills_list (categoria software-development) retorna a skill. ✅
+
+CONTEÚDO DA SKILL (resumo do SKILL.md):
+- Overview: orquestra os 30 dias de closed testing (20 testadores) em
+  conformidade com a Play Store (12+ opt-in contínuos por 14 dias — guia
+  docs/MC90.2-CLOSED-TESTING-GUIDE.txt).
+- Fatos de referência REAIS (levantados do código/on-chain, sem URLs
+  fictícias): contrato mainnet 0x0052477A...16cd, EOA 0xFea436...1E67
+  (saldo 0,0067 ETH; sentinela sentinela-eoa-saldo ativa, limiar 0,002 ETH),
+  backend BASE silly-stardust-ca71bc.netlify.app com functions reais
+  (health público, chatbot = GUTO comum, admin-commands = GUTO ADM com
+  comandos forcar_fila/limpar_cache/executar_monitor/panic/unpause,
+  admin-users com tabela Supabase atividade_utilizadores).
+- 7 tarefas: monitorar-testadores (2h), monitorar-backend (2h),
+  relatorio-diario (23h), relatorio-semanal (dias 7/14/21/28),
+  relatorio-final (dia 30 do teste), sintetizar-feedback (6h),
+  gerir-premios (dias 7/11/14: 50/50/200 senhas, one-shots na data real).
+- Acesso admin: nunca contornar auth (R5); token do operador OU painel ADM
+  OU computer_use aprovado; sem acesso = reportar "sem acesso admin".
+- Alertas: inativo>48h, ativos<12, EOA<0,002, backend 5xx, PIX falha repetida.
+- Restrições: R2 (nada com custo sem autorização), R5 (nunca chaves),
+  R4 (dados truncados), ritmo lento.
+- Pitfalls: não inventar endpoints (/api/guto/feedback NÃO existe), cron
+  "0 0 * * 0" = domingo (dias do mês = 0 0 7,14,21,28 * *), ultimo_acesso
+  NULL = inativo, cronómetro Play 12+/14 dias contínuos.
+
+Arquivos do Opus lidos como base (Pilar 1 — evidência):
+- docs/MC90.2-CLOSED-TESTING-GUIDE.txt (requisitos Play 2026)
+- docs/MC90.2-CHECKLIST-CONFORMIDADE.txt (checklist; closed testing [PEND])
+- plans/002-playstore-submission.md (Step 7 = closed testing)
+- Código real: admin-comandos.mjs, admin-users.mjs, chatbot.mjs,
+  health (vivo: {"ok":true}), atividade-utilizadores.mjs
+================================================================================
