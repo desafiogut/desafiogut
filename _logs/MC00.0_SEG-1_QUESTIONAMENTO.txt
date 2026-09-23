@@ -1,0 +1,285 @@
+================================================================================
+MC00.0 — SEG-1 · QUESTIONAMENTO DO BRIEFING (HARD GATE)
+DesafioGUT · Análise de impacto: leilão de menor lance único → e-commerce por
+dropshipping
+Data: 2026-09-23 · Commit base: b31a961 (main)
+Skills ECC declaradas e disponíveis: smart-explore, brainstorming,
+security-review  (as três existem em disco — ver §6)
+================================================================================
+
+-1.1 — VERIFICAÇÃO DAS PREMISSAS
+--------------------------------------------------------------------------------
+Método: varredura scriptada de `desafio-gut/frontend/src`,
+`desafio-gut/frontend/netlify/functions`, `supabase/migrations`,
+`desafio-gut/contracts`, `docs/`, `cloud.md`, `CLAUDE.md`, `index.html`, com
+classificação de cada ocorrência em TEXTO-UI / STRING-TECNICA / IDENTIFICADOR /
+COMENTARIO / TEXTO-DOC. Leitura direta da base Supabase de produção (MCP, só
+leitura). Inspeção visual do ícone do launcher.
+
+P1 — "O DesafioGUT usa o termo 'leilão' de forma explícita no app."
+     VEREDITO: CONFIRMADA, mas com uma correção material.
+     O termo dominante NÃO é "leilão" — é "lance". Ocorrências visíveis ao
+     utilizador (TEXTO-UI, sem testes, sem backups):
+         FRONTEND  128
+         BACKEND    85   (respostas do GUTO, notificações, mensagens de erro)
+         CONTRATO    2
+     A palavra "leilão"/"leilões" propriamente dita aparece em poucos ecrãs
+     (Vitrine "Ir para o leilão →", ComingSoonHero aria-label, GUTO). O que
+     satura o produto é o vocabulário de leilão: lance, lances, menor lance
+     único, licitante, arrematar, edição, senhas.
+     CONSEQUÊNCIA PARA O PLANO: tirar a palavra "leilão" é cosmético e barato.
+     Tirar o MECANISMO de leilão é outro projeto. O briefing trata as duas
+     coisas como uma só. Ver -1.3.
+
+P2 — "O backend tem endpoints com 'leilao', 'lance', 'arremataçao' no nome."
+     VEREDITO: CONFIRMADA.
+     Ficheiros-função com o termo no NOME: auth-lance.mjs, lance-relampago.mjs,
+     lances-flash.mjs, consolidar-lances.mjs, purge-lances.mjs.
+     Ficheiros com o termo no CONTEÚDO: 69 (inclui _lib/ e _tests/).
+     Nenhuma ROTA HTTP pública leva "leilao" no caminho — os nomes de função é
+     que carregam o vocabulário.
+
+P3 — "O banco tem tabelas/colunas com esses termos."
+     VEREDITO: CONFIRMADA, e o impacto é MENOR do que o briefing supõe.
+     Verificado na base de produção (Supabase MCP, leitura):
+       - tabela `lances` (colunas: id, edicao_id, endereco, hash_lance,
+         valor_centavos, created_at, payload) — **0 linhas**
+       - matview `mv_lances_por_edicao` (declarada em migração; não presente
+         na lista de matviews vivas da base)
+       - `lojistas` — 0 linhas; `produtos` — 0 linhas
+     As 20 tabelas públicas vivas são: admin_logs, atividade_utilizadores,
+     config_remota, cota_fingerprints, cotas(7), cotas_pagas, fila_tarefas(5),
+     fila_tarefas_legado, lances(0), lojistas(0), notifications, produtos(0),
+     saldo_rs(8), saldo_rs_creditos(21), saldo_rs_debitos, troco_senhas,
+     usuarios_bloqueio, vw_utilizadores, wallet, wallet_idem.
+     NENHUMA coluna com "leilao"/"arremat". O termo no banco resume-se a
+     `lances` e `hash_lance`. Renomear é barato; não há dados a migrar.
+
+P4 — "A documentação usa 'leilão'."
+     VEREDITO: CONFIRMADA e é o maior volume bruto.
+     1.011 ocorrências em 100 ficheiros. Concentração: cloud.md (238),
+     docs/auditoria-contrato.md (75), docs/validacao-final.md (54),
+     docs/chatbot/regulamento.md (40), docs/mapa-navegacao.md (34),
+     CLAUDE.md (31).
+     RESSALVA CRÍTICA: a esmagadora maioria é **histórico de MCs** — registo do
+     que foi feito, não especificação do que o produto é. Reescrever histórico
+     destrói rastreabilidade (contraria ECC/R3). Só 2 documentos são
+     normativos e vivos: `docs/chatbot/regulamento.md` (alimenta o RAG do GUTO)
+     e `CLAUDE.md` (fonte de verdade do agente).
+
+P5 — "A Play Console e o App Store Connect têm declarações que mencionam
+      'leilão' ou 'lance'."
+     VEREDITO: CONFIRMADA para a Play Store — por artefacto local, NÃO por
+     acesso à consola (ver L-4 em -1.5).
+     Fonte: `Desktop\ARTEFACTOS-RUAN\2-Documentos\MC90.4-FICHA-LOJA.txt` e
+     `MC90.4-CRIAR-APP-DADOS.txt`. Declarações contaminadas:
+       - Descrição curta (79 car.): "Leilão de menor lance único com pagamentos
+         PIX e lances na blockchain."
+       - Descrição longa: ~8 ocorrências de leilão/lance.
+       - Categoria: FINANÇAS (justificada pela natureza de leilão).
+       - Tags: leilão, blockchain, lances, web3, pix.
+       - Release notes: "Leilão de menor lance único…".
+       - IARC: a resposta "NÃO é jogo de azar" é argumentada *a partir* de o
+         app ser um leilão regulamentado.
+       - Data Safety: "Outro conteúdo gerado pelo usuário (Sim — lances)".
+       - Screenshot no pacote de envio chama-se `screenshot-leilao.png`.
+     App Store Connect: NÃO verificável nesta sessão (L-4).
+
+--------------------------------------------------------------------------------
+ACHADOS QUE O BRIEFING NÃO PREVIU (e que mudam a conclusão)
+--------------------------------------------------------------------------------
+A1 — O APP JÁ ESTÁ, DE FACTO, EM MODO LOJA. Não é preciso "mudar para
+     e-commerce": o leilão já está desligado.
+       • `src/lib/leilaoLock.js` → `EM_BREVE_MODE = true`. Trava global: todos
+         os cronómetros do app mostram "EM BREVE". Em vigor desde o MC67.
+       • `netlify/functions/_lib/recursos-app-config.mjs` →
+         `isLeilaoAtivo: { ios:false, android:false, pwa:true }`. O leilão está
+         DESLIGADO por plataforma nas apps de loja desde o MC29.1.
+       • `src/pages/MercadoLances.jsx:338` — "Vista de conformidade (modo loja
+         iOS/Android)": o ecrã declara que o leilão vive na versão Web.
+       • `netlify/functions/_lib/guto-perfis.mjs:74` — PROMPT_CONFORMIDADE:
+         *"Você é o GUTO, assistente do DESAFIOGUT nesta versão do app (loja de
+         e-commerce). Nesta versão os leilões NÃO estão disponíveis…"*
+       • `index.html:8` — a meta description JÁ diz "E-commerce via
+         Dropshipping".
+       • `src/components/glass/GlassHeader.jsx:35` — o cabeçalho do app JÁ diz
+         "E-commerce através de Dropshipping".
+       • `src/components/TermosConsentimento.jsx:76` — Art. 1 do regulamento JÁ
+         diz "atividade comercial em formato de E-commerce através de
+         Dropshipping".
+     O briefing descreve como decisão nova algo que o código executa há dezenas
+     de MCs. A decisão do cliente não é "virar e-commerce" — é **parar de
+     dizer leilão em paralelo**.
+
+A2 — A CONTRADIÇÃO REAL NÃO É DE VOCABULÁRIO, É JURÍDICA E ESTÁ DENTRO DO
+     REGULAMENTO. `TermosConsentimento.jsx` declara no Art. 1 que é e-commerce
+     por dropshipping e, 30 linhas abaixo, no Art. 8, que *"O MENOR LANCE ÚNICO
+     GANHA"*, e no Art. 14 que o contemplado recebe "prémio" em dinheiro (80%
+     do valor acima de R$10.000). Um documento que se declara compra e venda e
+     opera sorteio-com-prémio é a exposição, não a palavra "leilão" num botão.
+
+A3 — A IDENTIDADE VISUAL É DE LEILÃO E NÃO ESTÁ NO ESCOPO DO BRIEFING.
+     Verificado por inspeção visual directa do ficheiro
+     `android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png`: o ÍCONE DO APP
+     é o GUTO de fato azul a erguer um **martelo de leiloeiro**, rodeado de
+     eletrodomésticos. O martelo é a marca. Consta também das 3 artes
+     promocionais oficiais (MC69/69.1 — "termos obrigatórios + martelo nas 3"),
+     dos loops de vídeo (cloud.md 1657-1739: "martelo em pedestal", "gavel +
+     pódio", TV a dizer "Menor Lance Único") e do favicon/og-image.
+     Nenhuma dessas superfícies aparece no briefing.
+
+A4 — O CONTRATO ON-CHAIN É IRREVERSÍVEL E PÚBLICO.
+     `contract LeilaoGUT` em 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd,
+     Ethereum mainnet, verificado no Etherscan. Funções e eventos públicos e
+     permanentes: `darLance`, `apurarVencedor`, `LanceDado`,
+     `LanceComprometido`, `ResultadoConsolidado`, `saldoSenhas`. Não há rename
+     possível: qualquer "remoção do termo leilão" no on-chain é **redeploy +
+     migração de saldos**, não uma edição. Enquanto o app ligar a este
+     endereço, o vocabulário de leilão é auditável por terceiros.
+
+A5 — NÃO EXISTE UMA LINHA DE INFRAESTRUTURA DE E-COMMERCE.
+     Sonda por termo, em `src/` + `netlify/functions/` (excluindo
+     node_modules), com fronteira de palavra:
+         carrinho 0 · cart 0 · checkout 0(*) · frete 0 · CEP 0 · rastreio 0(*)
+         devolução 0(*) · nota fiscal 0 · NF-e 0 · estoque 0 · SKU 0
+         fornecedor 0(*) · dropship 2 (ambos cosméticos) · correios 0
+         transportadora 0 · endereço de entrega 0
+     (*) as ocorrências residuais são de outro sentido: "abandono de checkout"
+     é uma métrica do leilão; "rastreia" é scroll-depth; "fornecedores" são
+     Supabase/Netlify/AWS na política de privacidade.
+     A tabela `produtos` tem 7 colunas (nome, descrição, preço, imagem,
+     categoria) e 0 linhas — não tem stock, SKU, peso, dimensões, fornecedor
+     nem prazo. `produtos.mjs` abre-se com o comentário "Marketplace Local com
+     Leilão de Menor Lance Único (MC15)" e as suas categorias são
+     bronze/prata/ouro/diamante (planos de cota do lojista), não categorias de
+     produto.
+     ⇒ O trabalho real não é remover "leilão". É **construir um e-commerce**.
+
+--------------------------------------------------------------------------------
+-1.2 — VERIFICAÇÃO DE AUTOSSUFICIÊNCIA (R19) — DECLARAÇÃO OBRIGATÓRIA
+--------------------------------------------------------------------------------
+Este MC é AUTOSSUFICIENTE como diagnóstico e NÃO gera `.1`.
+Razão: o entregável é documento; todas as seis áreas do enunciado (frontend,
+backend, banco, lojas, jurídico, fiscal) foram varridas com fonte verificável
+nesta sessão, mais duas áreas não previstas.
+
+R19 É ATIVADA — AMPLIAÇÃO DENTRO DESTA MESMA EXECUÇÃO, com três áreas de
+impacto acrescentadas ao inventário:
+  (i)   IDENTIDADE VISUAL — ícone do launcher, favicon, og-image, artes
+        promocionais, loops de vídeo, mascote GUTO (achado A3).
+  (ii)  CONTRATO ON-CHAIN — irreversibilidade do `LeilaoGUT` e destino dos
+        saldos de senhas (achado A4).
+  (iii) INFRAESTRUTURA DE E-COMMERCE EM FALTA — carrinho, endereço, frete,
+        NF-e, rastreio, devolução, stock, fornecedor (achado A5).
+Justificação: as três estão no MESMO objetivo declarado ("mapear TODO o
+impacto da mudança"). Omiti-las produziria uma estimativa que subestima o
+trabalho por uma ordem de grandeza. O operador pode vetar qualquer uma.
+Default, conforme R19: seguir.
+
+Trabalho extra viola alguma autorização? NÃO. Tudo é leitura + escrita em
+`_logs/` + `CLAUDE.md`, ambos expressamente autorizados. Toca segurança não
+prevista? NÃO — a única leitura privilegiada foi ao Supabase por MCP já
+autenticado, em SELECT de metadados, sem dados pessoais e sem credenciais
+(R4/R5 respeitadas).
+
+--------------------------------------------------------------------------------
+-1.3 — VERIFICAÇÃO DE ESCOPO
+--------------------------------------------------------------------------------
+O MC cabe num só? SIM, como diagnóstico.
+
+O briefing contém uma AMBIGUIDADE DE ESCOPO que o operador tem de resolver
+antes de qualquer execução (fica registada aqui e é a Decisão D1 do SEG3).
+São três mudanças distintas, com custos separados por ordens de grandeza:
+
+  NÍVEL 1 — TERMINOLÓGICO ("retirar o termo leilão").
+      Trocar palavras nas superfícies visíveis. Não muda o que o produto faz.
+      Superfície: ~215 strings de UI + ficha da Play Store + regulamento.
+  NÍVEL 2 — DECLARATIVO ("declarar-se e-commerce por dropshipping").
+      Alinhar categoria de loja, regulamento, política e identidade visual com
+      a natureza declarada. Não muda o que o produto faz, mas muda a promessa
+      jurídica — e por isso exige que a promessa seja verdadeira.
+  NÍVEL 3 — FUNCIONAL ("ser um e-commerce por dropshipping").
+      Construir carrinho, endereço, frete, checkout, NF-e, rastreio, devolução,
+      contrato com fornecedor. Isto é um produto novo sobre a base existente.
+
+O enunciado usa "de forma explícita no app", o que soa a Nível 1. O objetivo
+diz "mapear TODO o impacto", o que obriga a medir até ao Nível 3. Este MC
+inventaria os três e recomenda; NÃO escolhe pelo operador.
+
+O que NÃO está no escopo mas seria natural incluir (declaração exigida):
+  • Contrato com lojistas/fornecedores — quem responde civilmente pelo produto
+    entregue. No dropshipping é a questão central do CDC. FORA do escopo deste
+    MC; entra como dependência jurídica bloqueante (SEG2).
+  • Site institucional — não existe no repo (o domínio de produção é o Netlify
+    `silly-stardust-ca71bc`). FORA.
+  • Comunicação ao cliente e aos 22 testadores do closed testing — FORA
+    (o MC não autoriza contactar o cliente).
+  • Destino económico das senhas já vendidas e dos saldos on-chain — entra
+    como Decisão pendente, não como execução.
+
+--------------------------------------------------------------------------------
+-1.4 — VEREDITO DO SEG-1
+--------------------------------------------------------------------------------
+                            >>> SEGUIR <<<
+com duas ressalvas que acompanham o MC até ao relatório final:
+
+R-a) O briefing subestima a mudança. Descrita como troca de termo; medida,
+     é a diferença entre um app que NÃO vende (0 produtos, 0 carrinho, 0
+     entrega) e um e-commerce. O inventário reflete a realidade medida, não a
+     premissa do enunciado — é isso que R15 manda fazer.
+R-b) O briefing trata como futuro um estado que já é presente (achado A1). A
+     recomendação de sequência parte do que existe, não do que o enunciado
+     supõe.
+
+Nada aqui justifica PARAR: as premissas confirmam-se, a informação necessária
+está acessível, e as lacunas (Play/Apple Console, parecer jurídico) estão
+declaradas em L-4 e não impedem o diagnóstico.
+
+--------------------------------------------------------------------------------
+-1.5 — L-4 · O QUE NÃO FOI MEDIDO (declarado à cabeça, não no fim)
+--------------------------------------------------------------------------------
+N1 Play Console — sem acesso à consola nesta sessão. As declarações foram lidas
+   dos artefactos locais gerados no MC90.4, que são a fonte do que foi
+   preenchido, não prova do estado atual do painel. Pode haver divergência.
+N2 App Store Connect — sem conta, sem acesso, zero evidência. Tudo o que o
+   relatório diz sobre a Apple é inferência a partir das políticas públicas e
+   do que já se sabe do projeto. NÃO é verificação.
+N3 Parecer jurídico e fiscal — não há advogado nem contabilista nesta sessão.
+   As secções jurídica/fiscal são levantamento de risco, NÃO parecer. Nenhuma
+   delas deve ser usada como base de decisão sem validação profissional.
+N4 Confirmação do cliente sobre qual dos três níveis (-1.3) foi decidido.
+N5 Validação visual em runtime — os MCPs `chrome-devtools` e `claude-eyes`
+   falharam a ligar nesta sessão (CONNECT_TIMEOUT). Nenhum ecrã foi observado
+   a correr; as afirmações sobre UI vêm do código e de um ficheiro de imagem
+   lido directamente, não de captura do app vivo.
+N6 Classificação automática TEXTO-UI/IDENTIFICADOR tem margem. Controlo
+   positivo passou (5/5 frases conhecidas classificadas como TEXTO-UI);
+   controlo negativo apanhou 2 falsos positivos residuais (fragmentos de ABI
+   `event LanceDado(...)` contados como UI). Margem estimada ±5%. Os números
+   servem para dimensionar esforço, não para auditoria linha a linha.
+N7 O estado real do closed testing não é verificável: `closed-testing/inicio.txt`
+   NÃO existe, logo a data de início dos 30 dias não está registada no repo.
+
+--------------------------------------------------------------------------------
+-1.6 — SKILLS ECC (R6) — declaração de disponibilidade
+--------------------------------------------------------------------------------
+Todas as 9 skills nomeadas no enunciado existem em disco e foram confirmadas:
+  smart-explore .................... ~/.claude/skills + projeto (.claude/.agents)
+  brainstorming .................... projeto (.claude/skills + .agents/skills)
+  security-review .................. ~/.claude/skills
+  terminal-ops ..................... ~/.claude/skills
+  ux-waiting-audit ................. ~/.claude/skills  [ver ressalva]
+  make-plan ........................ ~/.claude/skills + projeto
+  verification-before-completion ... projeto
+  systematic-debugging ............. projeto
+  requesting-code-review ........... projeto
+RESSALVA: `ux-waiting-audit` exige automação de browser (Chrome MCP). Os dois
+MCPs necessários falharam a ligar (N5). No SEG2 a skill é usada na sua parte
+analítica (mapa de dependências e de espera derivado do código); a parte de
+medição em runtime NÃO foi executada e está declarada como não medida.
+RESSALVA 2: `brainstorming` traz um HARD-GATE que proíbe implementar antes de
+aprovação do desenho. Aqui é redundante e compatível: o MC já é zero-código.
+
+================================================================================
+FIM DO SEG-1 · VEREDITO: SEGUIR · R19 ATIVADA (3 áreas acrescentadas)
+================================================================================

@@ -1,0 +1,327 @@
+== TERMO DE LEILÃO (PT+EN+ES, com fronteira de palavra) ==
+AREA	BALDE	OCORRENCIAS
+BACKEND	COMENTARIO	166
+BACKEND	IDENTIFICADOR	129
+BACKEND	STRING-TECNICA	64
+BACKEND	TEXTO-UI	73
+BACKEND-TESTES	COMENTARIO	26
+BACKEND-TESTES	IDENTIFICADOR	44
+BACKEND-TESTES	STRING-TECNICA	19
+BACKEND-TESTES	TEXTO-UI	37
+BANCO	COMENTARIO	27
+BANCO	IDENTIFICADOR	25
+CI	COMENTARIO	2
+CI	CONFIG	1
+CONTRATO	COMENTARIO	5
+CONTRATO	IDENTIFICADOR	5
+CONTRATO	TEXTO-UI	2
+DOCS	COMENTARIO	111
+DOCS	CONFIG	23
+DOCS	TEXTO-DOC	1121
+FRONTEND	COMENTARIO	92
+FRONTEND	IDENTIFICADOR	136
+FRONTEND	STRING-TECNICA	20
+FRONTEND	TEXTO-UI	128
+PLANOS	COMENTARIO	1
+PLANOS	TEXTO-DOC	21
+SCRIPTS	COMENTARIO	1
+
+== VOCABULÁRIO ADJACENTE (medido à parte, NÃO somar) ==
+AREA	OCORRENCIAS
+BACKEND	713
+BACKEND-TESTES	197
+BANCO	36
+CONTRATO	30
+DOCS	1638
+FRONTEND	659
+PLANOS	11
+SCRIPTS	1
+
+== POR FICHEIRO (AREA / TEXTO-UI / TOTAL / FICHEIRO) ==
+BACKEND	40	52	desafio-gut/frontend/netlify/functions/_lib/guto-perfis.mjs
+FRONTEND	15	28	desafio-gut/frontend/src/components/CardLance.jsx
+FRONTEND	13	41	desafio-gut/frontend/src/pages/MeusAtivos.jsx
+FRONTEND	10	14	desafio-gut/frontend/src/pages/Privacidade.jsx
+BACKEND	8	37	desafio-gut/frontend/netlify/functions/_lib/notificacoes-usuario.mjs
+BACKEND-TESTES	8	14	desafio-gut/frontend/netlify/functions/_tests/mc33-rls.mjs
+FRONTEND	8	11	desafio-gut/frontend/src/components/TermosConsentimento.jsx
+FRONTEND	7	15	desafio-gut/frontend/src/pages/Dashboard.jsx
+FRONTEND	7	11	desafio-gut/frontend/src/pages/Vitrine.jsx
+FRONTEND	6	8	desafio-gut/frontend/src/i18n/en.js
+FRONTEND	6	8	desafio-gut/frontend/src/i18n/es.js
+FRONTEND	6	8	desafio-gut/frontend/src/i18n/pt.js
+FRONTEND	6	6	desafio-gut/frontend/index.html
+BACKEND	5	52	desafio-gut/frontend/netlify/functions/lance-relampago.mjs
+FRONTEND	5	16	desafio-gut/frontend/src/pages/MinhaCarteira.jsx
+BACKEND-TESTES	5	8	desafio-gut/frontend/netlify/functions/_tests/mc28-keyperbid.test.mjs
+FRONTEND	4	30	desafio-gut/frontend/src/components/TabelaLances.jsx
+BACKEND-TESTES	4	10	desafio-gut/frontend/netlify/functions/_tests/mc28-seguranca.test.mjs
+FRONTEND	4	4	desafio-gut/frontend/src/pages/Seguranca.jsx
+BACKEND-TESTES	4	4	desafio-gut/frontend/netlify/functions/_tests/mc8820-guto-personalidades.test.mjs
+FRONTEND	3	10	desafio-gut/frontend/src/utils/rateLimiter.js
+BACKEND-TESTES	3	7	desafio-gut/frontend/netlify/functions/_tests/mc39171-p0-fixes.test.mjs
+BACKEND	3	4	desafio-gut/frontend/netlify/functions/troco.mjs
+BACKEND-TESTES	2	30	desafio-gut/frontend/netlify/functions/_tests/mc321-data-store-supabase.test.mjs
+BACKEND	2	27	desafio-gut/frontend/netlify/functions/_lib/data-store-supabase.mjs
+FRONTEND	2	20	desafio-gut/frontend/src/pages/MercadoLances.jsx
+CONTRATO	2	12	desafio-gut/contracts/Leilao.sol
+BACKEND	2	8	desafio-gut/frontend/netlify/functions/comprar-senhas.mjs
+BACKEND-TESTES	2	8	desafio-gut/frontend/netlify/functions/_tests/mc361-saldo-rs.test.mjs
+FRONTEND	2	6	desafio-gut/frontend/src/pages/EdicaoDetalhe.jsx
+FRONTEND	2	4	desafio-gut/frontend/src/components/glass/ComingSoonHero.jsx
+BACKEND	2	4	desafio-gut/frontend/netlify/functions/banners.mjs
+BACKEND-TESTES	2	4	desafio-gut/frontend/netlify/functions/_tests/mc8843-estado-edicao.test.mjs
+FRONTEND	2	3	desafio-gut/frontend/src/components/LanceStatusBadge.jsx
+FRONTEND	2	3	desafio-gut/frontend/src/pages/Configuracoes.jsx
+FRONTEND	2	3	desafio-gut/frontend/src/utils/edicao.js
+FRONTEND	2	2	desafio-gut/frontend/src/components/ExcluirContaModal.jsx
+FRONTEND	2	2	desafio-gut/frontend/src/components/PainelIndicacao.jsx
+FRONTEND	2	2	desafio-gut/frontend/src/pages/ExcluirConta.jsx
+BACKEND-TESTES	2	2	desafio-gut/frontend/netlify/functions/_tests/chatbot-dispatch.test.mjs
+FRONTEND	1	33	desafio-gut/frontend/src/context/AppContext.jsx
+BACKEND	1	23	desafio-gut/frontend/netlify/functions/cron-reset-programado.mjs
+BACKEND	1	21	desafio-gut/frontend/netlify/functions/lances-flash.mjs
+FRONTEND	1	19	desafio-gut/frontend/src/pages/DetalheProduto.jsx
+BACKEND	1	15	desafio-gut/frontend/netlify/functions/consolidar-lances.mjs
+BACKEND	1	15	desafio-gut/frontend/netlify/functions/_lib/bids-store.mjs
+BACKEND	1	13	desafio-gut/frontend/netlify/functions/_lib/data-store-blobs.mjs
+FRONTEND	1	6	desafio-gut/frontend/src/components/ChatbotWidget.jsx
+BACKEND-TESTES	1	5	desafio-gut/frontend/netlify/functions/_tests/mc9112-integracao-lance.test.mjs
+FRONTEND	1	4	desafio-gut/frontend/src/pages/CorporativoCarteira.jsx
+FRONTEND	1	4	desafio-gut/frontend/src/utils/web3.js
+BACKEND	1	4	desafio-gut/frontend/netlify/functions/_lib/senhas-programado.mjs
+FRONTEND	1	3	desafio-gut/frontend/src/components/FimLeilaoOverlay.jsx
+FRONTEND	1	3	desafio-gut/frontend/src/widgets/layout/Sidebar.jsx
+BACKEND	1	3	desafio-gut/frontend/netlify/functions/_lib/conta-delete.mjs
+BACKEND	1	3	desafio-gut/frontend/netlify/functions/_lib/jwt.mjs
+BACKEND-TESTES	1	3	desafio-gut/frontend/netlify/functions/_tests/mc9111-programado.test.mjs
+FRONTEND	1	2	desafio-gut/frontend/src/components/ComprarFichasModal.jsx
+FRONTEND	1	2	desafio-gut/frontend/src/widgets/layout/BottomNav.jsx
+BACKEND	1	2	desafio-gut/frontend/netlify/functions/notificacoes.mjs
+BACKEND	1	2	desafio-gut/frontend/netlify/functions/_lib/ia-preditiva.mjs
+BACKEND	1	2	desafio-gut/frontend/netlify/functions/_lib/pix-config.mjs
+BACKEND-TESTES	1	2	desafio-gut/frontend/netlify/functions/_tests/mc302-integracao.test.mjs
+BACKEND-TESTES	1	2	desafio-gut/frontend/netlify/functions/_tests/mc892-guto-metricas.test.mjs
+FRONTEND	1	1	desafio-gut/frontend/src/hooks/useLanceFeedback.js
+BACKEND-TESTES	1	1	desafio-gut/frontend/netlify/functions/_tests/test-intents-mc1581.mjs
+DOCS	0	166	cloud.md
+DOCS	0	104	RELATORIO-FINAL.md
+DOCS	0	54	docs/auditoria-contrato.md
+DOCS	0	36	docs/chatbot/regulamento.md
+DOCS	0	28	docs/design-model.yaml
+DOCS	0	28	docs/validacao-final.md
+DOCS	0	23	docs/MC91.10-DIAGNOSTICO.txt
+BACKEND	0	22	desafio-gut/frontend/netlify/functions/_lib/pulso.mjs
+DOCS	0	22	docs/mapa-navegacao.md
+DOCS	0	22	docs/MC91.11-DIAGNOSTICO.txt
+BACKEND	0	21	desafio-gut/frontend/netlify/functions/_lib/simulador.mjs
+DOCS	0	21	desafio-gut/docs/MC88.41-FLUXOS.txt
+DOCS	0	20	docs/relatorio-limpeza-blobs.md
+DOCS	0	19	docs/MC89.5-MAPA.txt
+DOCS	0	19	docs/MC90.4-FICHA-LOJA.txt
+DOCS	0	19	docs/stress-test.md
+DOCS	0	18	docs/diagnostico-estado-atual.md
+DOCS	0	18	docs/explanation/regras-de-negocio.md
+DOCS	0	18	desafio-gut/docs/MC28.1-blindagem.md
+DOCS	0	18	desafio-gut/docs/MC69-artes-promocionais.txt
+BANCO	0	17	desafio-gut/frontend/supabase/migrations/20260629_materialized_views.sql
+DOCS	0	16	CLAUDE.md
+BACKEND	0	15	desafio-gut/frontend/netlify/functions/purge-lances.mjs
+DOCS	0	15	docs/auditoria-frontend-vs-spec.md
+DOCS	0	15	docs/MC91.12-RELATORIO.txt
+DOCS	0	15	desafio-gut/docs/MC65-redesign-glass.txt
+PLANOS	0	15	plans/001-mc40-mainnet-deploy.md
+DOCS	0	14	docs/MC39.18-escalabilidade.md
+DOCS	0	14	docs/MC90.2-POLITICA-PRIVACIDADE-TEXTO.txt
+DOCS	0	13	desafio-gut/docs/MC89-relatorio-final.txt
+BACKEND	0	12	desafio-gut/frontend/netlify/functions/auth-lance.mjs
+BACKEND	0	12	desafio-gut/frontend/netlify/functions/chatbot.mjs
+DOCS	0	12	docs/MC89.42-PLANO.txt
+DOCS	0	12	docs/MC91.11-RELATORIO.txt
+DOCS	0	12	docs/reference/contrato-leilao-abi.md
+DOCS	0	12	desafio-gut/docs/MC59-relatorio.txt
+BANCO	0	11	desafio-gut/frontend/supabase/migrations/20260620_schema_definitivo.sql
+DOCS	0	11	docs/design-system-desafiogut-final.md
+DOCS	0	11	docs/MC89.33-COMUM-DIAGNOSTICO.txt
+DOCS	0	11	docs/MC90.2-DATA-SAFETY-RASCUNHO.txt
+BANCO	0	10	desafio-gut/frontend/supabase/migrations/20260620_amend_jsonb_payload.sql
+DOCS	0	10	docs/MC89.33-RELATORIO.txt
+BACKEND-TESTES	0	9	desafio-gut/frontend/netlify/functions/_tests/mc33-load.mjs
+BACKEND-TESTES	0	9	desafio-gut/frontend/netlify/functions/_tests/mc72-conta-delete.test.mjs
+BANCO	0	9	desafio-gut/frontend/supabase/migrations/20260629_indices_escalabilidade.sql
+DOCS	0	9	docs/inventario-remocao.md
+DOCS	0	9	docs/MC89.5-TELAS.txt
+DOCS	0	9	desafio-gut/docs/MC88.35-estado-consolidado.txt
+DOCS	0	9	desafio-gut/docs/MC88.41-BUGS.txt
+DOCS	0	9	desafio-gut/docs/MC88.41-GUTO-ESFORCO.txt
+BACKEND	0	8	desafio-gut/frontend/netlify/functions/_lib/edicoes-core.mjs
+DOCS	0	8	docs/analise-programacao-junho-2026.md
+DOCS	0	8	docs/especificacao-extraida.md
+DOCS	0	8	docs/MC89.33-PLANO.txt
+DOCS	0	8	docs/MC90.4-CRIAR-APP-DADOS.txt
+DOCS	0	8	docs/plano-refatoracao-navegacao.md
+DOCS	0	8	docs/tutorials/01-primeiro-lance.md
+DOCS	0	8	desafio-gut/docs/MC80.4.1.1-artes-final.txt
+BACKEND	0	7	desafio-gut/frontend/netlify/functions/_lib/admin-metricas.mjs
+BACKEND-TESTES	0	7	desafio-gut/frontend/netlify/functions/_tests/mc891-admin-stats.test.mjs
+DOCS	0	7	docs/how-to-guides/como-comprar-senhas.md
+DOCS	0	7	docs/MC89.5-TABELAS.txt
+DOCS	0	7	docs/MC90.2-CLOSED-TESTING-GUIDE.txt
+DOCS	0	7	desafio-gut/docs/MC30.2.1-isolamento-chave.md
+DOCS	0	7	desafio-gut/docs/MC64-reforma-glass.txt
+DOCS	0	7	desafio-gut/docs/MC88.42-DIAGNOSTICO.txt
+DOCS	0	7	desafio-gut/docs/runbook-incidentes.md
+BACKEND	0	6	desafio-gut/frontend/netlify/functions/monitor-onchain.mjs
+BACKEND	0	6	desafio-gut/frontend/netlify/functions/_lib/data-store.mjs
+DOCS	0	6	docs/DESIGN.md
+DOCS	0	6	docs/MC89.5-RELATORIO.txt
+DOCS	0	6	docs/MC90.4-DATA-SAFETY-FINAL.txt
+DOCS	0	6	docs/SUMARIO.md
+DOCS	0	6	desafio-gut/docs/MC69.1-artes-promocionais-v2.txt
+DOCS	0	6	desafio-gut/docs/MC69.2-artes-promocionais-v2.txt
+DOCS	0	6	desafio-gut/docs/MC89-MAPA-CODIGO.txt
+DOCS	0	6	README.md
+FRONTEND	0	5	desafio-gut/frontend/src/context/useAppContextEnvironment.jsx
+DOCS	0	5	docs/auditoria-externa.md
+DOCS	0	5	docs/MC89.33-CORPORATIVO-DIAGNOSTICO.txt
+DOCS	0	5	docs/mfa-setup.md
+DOCS	0	5	docs/relatorio-ondas.md
+DOCS	0	5	docs/transferencia-ruan-local.txt
+DOCS	0	5	desafio-gut/docs/mainnet-prerequisites.md
+DOCS	0	5	desafio-gut/docs/MC59.10-relatorio.txt
+DOCS	0	5	desafio-gut/docs/MC80-screenshots-editadas.txt
+FRONTEND	0	4	desafio-gut/frontend/src/hooks/useEdicoes.js
+BACKEND	0	4	desafio-gut/frontend/netlify/functions/_lib/signer.mjs
+DOCS	0	4	docs/configuracao-cron-reset.md
+DOCS	0	4	docs/MC89.13-DIAGNOSTICO.txt
+DOCS	0	4	docs/MC89.42-DIAGNOSTICO.txt
+DOCS	0	4	docs/MC89.42-RELATORIO.txt
+DOCS	0	4	docs/MC89.8-DIAGNOSTICO.txt
+DOCS	0	4	docs/MC91.11-VALIDACAO-APARELHO.txt
+DOCS	0	4	desafio-gut/docs/MC67-refinamentos.txt
+DOCS	0	4	desafio-gut/docs/MC78.2-icones-diagnostico.txt
+DOCS	0	4	desafio-gut/docs/MC80.1-screenshots-editadas.txt
+DOCS	0	4	desafio-gut/docs/MC88.41-RELATORIO.txt
+DOCS	0	4	desafio-gut/docs/MC88.43-EDICAO-DIAGNOSTICO.txt
+DOCS	0	4	desafio-gut/docs/MC89.3-ELEMENTOS.txt
+DOCS	0	4	desafio-gut/docs/MC89.44-RELATORIO.txt
+PLANOS	0	4	plans/002-playstore-submission.md
+FRONTEND	0	3	desafio-gut/frontend/src/components/glass/AuctionStatusBar.jsx
+FRONTEND	0	3	desafio-gut/frontend/src/globals.css
+FRONTEND	0	3	desafio-gut/frontend/src/hooks/useTrocarPorSenhas.js
+FRONTEND	0	3	desafio-gut/frontend/src/lib/leilaoTimer.js
+BACKEND	0	3	desafio-gut/frontend/netlify/functions/auth-user.mjs
+BACKEND	0	3	desafio-gut/frontend/netlify/functions/exportar-dados.mjs
+BACKEND	0	3	desafio-gut/frontend/netlify/functions/saldo-senhas.mjs
+BACKEND	0	3	desafio-gut/frontend/netlify/functions/voucher.mjs
+BACKEND	0	3	desafio-gut/frontend/netlify/functions/_lib/recursos-app-config.mjs
+BACKEND	0	3	desafio-gut/frontend/netlify/functions/_lib/system-state.mjs
+BANCO	0	3	desafio-gut/frontend/supabase/migrations/20260621_enable_realtime_config.sql
+DOCS	0	3	docs/backup-blobs.md
+DOCS	0	3	docs/disaster-recovery.md
+DOCS	0	3	docs/lgpd-politica-retencao.md
+DOCS	0	3	docs/limpeza-pre-auditoria.md
+DOCS	0	3	docs/MC89.13-PLANO.txt
+DOCS	0	3	docs/MC89.13-RELATORIO.txt
+DOCS	0	3	docs/MC89.36-VALIDACAO.txt
+DOCS	0	3	docs/MC91.11-TESTES.txt
+DOCS	0	3	desafio-gut/docs/MC59.11-relatorio.txt
+DOCS	0	3	desafio-gut/docs/MC72-delete-account.txt
+DOCS	0	3	desafio-gut/docs/MC86-seguranca.txt
+DOCS	0	3	desafio-gut/docs/MC89-ARQUITETURA.txt
+DOCS	0	3	desafio-gut/docs/MC89.44-DIAGNOSTICO.txt
+PLANOS	0	3	plans/003-launch-campaign.md
+FRONTEND	0	2	desafio-gut/frontend/src/hooks/useRecursosApp.js
+FRONTEND	0	2	desafio-gut/frontend/src/lib/leilaoLock.js
+FRONTEND	0	2	desafio-gut/frontend/src/lib/sentry-alerts.js
+FRONTEND	0	2	desafio-gut/frontend/src/lib/sentryLazy.js
+FRONTEND	0	2	desafio-gut/frontend/src/pages/CorporativoBanners.jsx
+FRONTEND	0	2	desafio-gut/frontend/src/PrivyRoot.jsx
+BACKEND	0	2	desafio-gut/frontend/netlify/functions/edicoes.mjs
+BACKEND	0	2	desafio-gut/frontend/netlify/functions/produtos.mjs
+BACKEND	0	2	desafio-gut/frontend/netlify/functions/_lib/referral.mjs
+DOCS	0	2	docs/MC89.10-DIAGNOSTICO.txt
+DOCS	0	2	docs/MC89.10-PLANO.txt
+DOCS	0	2	docs/MC89.17-PLANO.txt
+DOCS	0	2	docs/MC89.32-DIAGNOSTICO.txt
+DOCS	0	2	docs/MC89.35-PLANO.txt
+DOCS	0	2	docs/MC89.47-RELATORIO.txt
+DOCS	0	2	docs/MC89.5-ENDPOINTS.txt
+DOCS	0	2	docs/MC89.8-RELATORIO.txt
+DOCS	0	2	docs/MC89.9-RELATORIO.txt
+DOCS	0	2	docs/MC90.2-ELIMINACAO-CONTAS.txt
+DOCS	0	2	docs/MC90.2-REQUISITOS-2026.txt
+DOCS	0	2	desafio-gut/docs/MC30.1-isolamento-chave.md
+DOCS	0	2	desafio-gut/docs/MC59.14-relatorio.txt
+DOCS	0	2	desafio-gut/docs/MC66-redesign-glass.txt
+DOCS	0	2	desafio-gut/docs/MC82.1-performance.txt
+DOCS	0	2	desafio-gut/docs/MC88.2-webview-debugging.txt
+DOCS	0	2	desafio-gut/docs/MC88.38-BASELINE-FRICCAO.txt
+DOCS	0	2	desafio-gut/docs/MC88.42-RELATORIO.txt
+DOCS	0	2	desafio-gut/docs/MC88.43-RELATORIO.txt
+DOCS	0	2	desafio-gut/docs/MC89.2-RELATORIO.txt
+CI	0	2	.github/workflows/security-scan.yml
+FRONTEND	0	1	desafio-gut/frontend/src/App.jsx
+FRONTEND	0	1	desafio-gut/frontend/src/components/CarrosselGUTO.jsx
+FRONTEND	0	1	desafio-gut/frontend/src/components/glass/GlassHeader.jsx
+FRONTEND	0	1	desafio-gut/frontend/src/components/glass/glassTokens.js
+FRONTEND	0	1	desafio-gut/frontend/src/hooks/useRealtimeConfig.js
+FRONTEND	0	1	desafio-gut/frontend/src/hooks/useShakeOnError.js
+FRONTEND	0	1	desafio-gut/frontend/src/lib/adminNav.js
+FRONTEND	0	1	desafio-gut/frontend/src/lib/analytics.js
+FRONTEND	0	1	desafio-gut/frontend/src/utils/sanitize.js
+FRONTEND	0	1	desafio-gut/frontend/src/widgets/layout/AppLayout.jsx
+FRONTEND	0	1	desafio-gut/frontend/src/widgets/layout/navModel.jsx
+BACKEND	0	1	desafio-gut/frontend/netlify/functions/backup-blobs.mjs
+BACKEND	0	1	desafio-gut/frontend/netlify/functions/purge-logs.mjs
+BACKEND	0	1	desafio-gut/frontend/netlify/functions/recursos-app.mjs
+BACKEND	0	1	desafio-gut/frontend/netlify/functions/referral.mjs
+BACKEND	0	1	desafio-gut/frontend/netlify/functions/saldo-rs.mjs
+BACKEND	0	1	desafio-gut/frontend/netlify/functions/_lib/saldoRs-store.mjs
+BACKEND	0	1	desafio-gut/frontend/netlify/functions/_lib/saldoRs.mjs
+BACKEND	0	1	desafio-gut/frontend/netlify/functions/_lib/troco-senhas.mjs
+BACKEND-TESTES	0	1	desafio-gut/frontend/netlify/functions/_tests/test-conversao-e2e-mc1581.mjs
+BANCO	0	1	desafio-gut/frontend/supabase/migrations/20260621_cotas_schema.sql
+BANCO	0	1	desafio-gut/frontend/supabase/migrations/20260621_saldo_troco_wallet_schema.sql
+DOCS	0	1	docs/cloudflare-waf-setup.md
+DOCS	0	1	docs/configuracao-admin-token.md
+DOCS	0	1	docs/incident-response.md
+DOCS	0	1	docs/MC89.27-DIAGNOSTICO.txt
+DOCS	0	1	docs/MC89.29-RELATORIO.txt
+DOCS	0	1	docs/MC89.47-DEPENDABOT.txt
+DOCS	0	1	docs/MC89.48-DIAGNOSTICO-SUPABASE.txt
+DOCS	0	1	docs/MC89.48-EVIDENCIAS.txt
+DOCS	0	1	docs/MC89.5-FLUXOS.txt
+DOCS	0	1	docs/MC89.5-PLANO.txt
+DOCS	0	1	docs/MC90.2-GAP-ANALYSIS.txt
+DOCS	0	1	docs/MC92.10-CRON-JOBS.txt
+DOCS	0	1	docs/MC92.10-PREMIOS.txt
+DOCS	0	1	docs/MC92.5-DIAGNOSTICO.txt
+DOCS	0	1	desafio-gut/docs/MC59.8-migracao-fila-cli.txt
+DOCS	0	1	desafio-gut/docs/MC60-marco-mainnet.txt
+DOCS	0	1	desafio-gut/docs/MC60-NOGO-relatorio.txt
+DOCS	0	1	desafio-gut/docs/MC69.3-correcao-texto-oficial.txt
+DOCS	0	1	desafio-gut/docs/MC69.4-correcao-texto-oficial.txt
+DOCS	0	1	desafio-gut/docs/MC78.3-icones-guto.txt
+DOCS	0	1	desafio-gut/docs/MC79-screenshots.txt
+DOCS	0	1	desafio-gut/docs/MC80.3-screenshots-refinadas.txt
+DOCS	0	1	desafio-gut/docs/MC82-performance.txt
+DOCS	0	1	desafio-gut/docs/MC82.3-sentry.txt
+DOCS	0	1	desafio-gut/docs/MC82.4-replay.txt
+DOCS	0	1	desafio-gut/docs/MC87-seguranca-correcao.txt
+DOCS	0	1	desafio-gut/docs/MC88.1-privy-allowlist.txt
+DOCS	0	1	desafio-gut/docs/MC88.1-validacao.txt
+DOCS	0	1	desafio-gut/docs/MC88.3-esquema-oauth.txt
+DOCS	0	1	desafio-gut/docs/MC88.37-CLS-DIAGNOSTICO.txt
+DOCS	0	1	desafio-gut/docs/MC88.37-RELATORIO.txt
+DOCS	0	1	desafio-gut/docs/MC88.44-RELATORIO.txt
+DOCS	0	1	desafio-gut/docs/MC89-RELATORIO.txt
+DOCS	0	1	desafio-gut/docs/MC89-REQUISITOS.txt
+DOCS	0	1	desafio-gut/docs/MC89-VIABILIDADE.txt
+DOCS	0	1	desafio-gut/docs/MC89.3-DIAGNOSTICO.txt
+DOCS	0	1	desafio-gut/docs/MC89.3-RELATORIO.txt
+DOCS	0	1	desafio-gut/docs/MC89.4-RELATORIO.txt
+DOCS	0	1	desafio-gut/docs/MC89.43-RELATORIO.txt
+DOCS	0	1	desafio-gut/docs/migracao-admin-token-jwt.md
+CI	0	1	.github/workflows/contract-security.yml
+SCRIPTS	0	1	scripts/seed-recursos-app.mjs

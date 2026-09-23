@@ -1,0 +1,259 @@
+================================================================================
+MC00.0 — SEG3 · ESTIMATIVA DE ESFORÇO, SEQUÊNCIA, RISCOS E DECISÕES
+DesafioGUT · Data: 2026-09-23
+Skills ECC: make-plan, brainstorming
+================================================================================
+
+3.1 — ESTIMATIVA EM MCs
+================================================================================
+Unidade: 1 MC = um enunciado do operador com SEG0→SEG5. A estimativa é de
+NÚMERO DE MCs, não de horas — o projeto não tem base histórica de tempo por MC
+que suporte estimativa temporal honesta.
+
+────────────────────────────────────────────────────────────────────────────────
+BLOCO A — DECISÃO E BASE JURÍDICA  (2 MCs · bloqueia todo o resto)
+────────────────────────────────────────────────────────────────────────────────
+A1  Dossiê de decisão + perguntas ao advogado/contabilista.
+    Agente produz: as 10 perguntas de A-J1..A-J10 (SEG2 §2.2) formuladas com o
+    contexto do código, + as 3 opções de nível com consequências.
+    Executor: agente. Aprovador: cliente + advogado. ZERO código.
+A2  Reescrita do regulamento, termos de venda, política de devolução/entrega e
+    política de privacidade, a partir do parecer.
+    ⚠ DEPENDE de A1 aprovado. Sem parecer, este MC não abre.
+
+────────────────────────────────────────────────────────────────────────────────
+BLOCO B — NÍVEL 1+2: DIZER A VERDADE SOBRE O QUE O APP JÁ É  (7 MCs)
+────────────────────────────────────────────────────────────────────────────────
+B1  GUTO: 4 prompts de sistema + ~40 respostas canónicas em
+    `_lib/guto-perfis.mjs` + reescrita de `docs/chatbot/regulamento.md`
+    + **rebuild do índice RAG** (ação do operador, fora do repo).
+    ★ ÚNICO MC QUE PRODUZ EFEITO VISÍVEL SEM APK NEM REVISÃO DE LOJA.
+    Vale 44 das 85 strings de UI do backend.
+B2  Copy do backend restante: notificações, mensagens de erro, textos de
+    `troco`, `comprar-senhas`, `banners`, `data-store-*`. (~41 strings)
+B3  Copy do frontend em bloco: i18n (19 chaves × 3 idiomas) + rótulos de
+    navegação (4) + index.html/og (6) + 30 ficheiros JSX (~99 strings).
+    Não fatiar: C2/C3 do SEG2 — meia mudança produz app incoerente.
+B4  Identidade visual núcleo: ícone Android (15 ficheiros), ícone 512 da ficha,
+    favicon, apple-touch, og-image. Sem martelo.
+    ⚠ Risco conhecido do projeto: regenerar o GUTO só preserva a identidade
+    partindo da MESMA referência.
+B5  Artes de loja: feature graphic 1024×500 (hoje inexistente) + 4-8
+    screenshots recapturados do app já com a copy nova.
+    ⚠ DEPENDE de B3 concluído — screenshots do app antigo contradizem a ficha.
+B6  Ficha da Play: descrição curta, descrição longa, CATEGORIA (Finanças→
+    Compras), tags, release notes, IARC refeito, Data Safety atualizado,
+    público-alvo. Entregável = documento para o operador preencher (o agente
+    não tem acesso à consola).
+B7  Build do APK (`npm run build:apk`, com o gate `validar:dist`), validação e
+    submissão. Executor do envio: operador.
+
+────────────────────────────────────────────────────────────────────────────────
+BLOCO C — NÍVEL 3: SER UM E-COMMERCE  (12 MCs · só se D1 = Nível 3)
+────────────────────────────────────────────────────────────────────────────────
+C1  Liquidação da economia de senhas: converter/reembolsar/honrar `saldo_rs`(8),
+    `saldo_rs_creditos`(21) e `saldoSenhas` on-chain. ⚠ DINHEIRO REAL.
+    Exige A-J2 aprovado. É o MC de maior risco do programa inteiro.
+C2  Schema: 9 tabelas novas (pedidos, itens_pedido, enderecos_entrega, envios,
+    devolucoes, notas_fiscais, fornecedores, carrinho?, cupons?) + 11 colunas
+    em `produtos` + separação de `categoria` + RLS em todas.
+C3  Catálogo real: `produtos.mjs` (categorias, stock, publicação) + Vitrine +
+    DetalheProduto adaptados.
+C4  Carrinho + endereço de entrega + consulta de CEP.
+C5  Frete: cálculo e escolha.
+C6  Checkout + criação de pedido, reaproveitando o PIX que já funciona.
+    ⚠ Mexe no fluxo de pagamento vivo com dinheiro real (C9 do SEG2).
+C7  Repasse do pedido ao fornecedor — o núcleo do dropshipping. Assíncrono,
+    sobre a `fila_tarefas` que já existe.
+C8  NF-e: integração fiscal, NCM/CFOP, certificado. ⚠ Depende de A-J7/A-J8.
+C9  Rastreio e acompanhamento do pedido.
+C10 Devolução, troca e estorno (CDC art. 49). ⚠ Não é opcional.
+C11 Desmontagem do leilão: remover ~17 funções, desligar `web3.js` do fluxo de
+    compra, rotas de compatibilidade 410 para os 5 endpoints públicos,
+    DROP de `lances`/matview, arquivar o contrato on-chain.
+    ⚠ Só DEPOIS de C1. Nunca antes.
+C12 Painel do fornecedor + auditoria final + nova submissão às lojas.
+
+────────────────────────────────────────────────────────────────────────────────
+TOTAIS
+────────────────────────────────────────────────────────────────────────────────
+  Nível 1 isolado (só palavras) ......... 4 MCs   (B1,B2,B3,B7) — NÃO RECOMENDADO
+  Nível 1+2 (recomendado mínimo) ........ 9 MCs   (A1,A2,B1..B7)
+  Nível 3 completo ...................... 21 MCs  (A1,A2,B1..B7,C1..C12)
+
+INTERVALO DE CONFIANÇA (declarado, não escondido):
+  Bloco A e B: confiança ALTA. A superfície está contada linha a linha.
+  Bloco C: confiança MÉDIA-BAIXA. É trabalho ainda não especificado; C7 e C8
+  dependem de integrações externas cuja complexidade real só se conhece depois
+  de escolher fornecedor e API fiscal. Margem realista: **C pode ser 12 a 18
+  MCs**. Qualquer número apresentado como exato seria invenção.
+
+================================================================================
+3.2 — ORDEM RECOMENDADA (e porquê esta e não outra)
+================================================================================
+  1º  A1 — decisão e perguntas jurídicas.
+      PORQUÊ PRIMEIRO: é o que quebra o único ciclo do grafo (SEG2 §2.D) e é a
+      única coisa que, se vier errada, faz deitar fora todo o resto.
+  2º  B1 — GUTO + regulamento + RAG.
+      PORQUÊ AQUI: é o ÚNICO trabalho que produz efeito visível sem passar pelo
+      estrangulamento do APK nem pela revisão da loja. Entrega valor enquanto o
+      jurídico corre. E é o maior foco isolado de texto do projeto (44 strings).
+  3º  A2 — regulamento e políticas formais, com o parecer em mão.
+  4º  B2 + B3 — copy backend e frontend, em bloco.
+      PORQUÊ JUNTOS: C2/C3 do SEG2 — o texto vive nos dois lados; separar
+      produz um app que diz "pedido" no ecrã e "lance" na notificação.
+  5º  B4 — identidade visual (o ícone é o rosto do app; tem de entrar no mesmo
+      APK que a copy nova, senão gasta-se duas revisões).
+  6º  B5 — screenshots e feature graphic, DEPOIS de B3/B4 (têm de mostrar o app
+      real já mudado).
+  7º  B6 — ficha da loja.
+  8º  B7 — APK + submissão, UMA vez, com tudo dentro.
+  9º  C1..C12 — só se o nível decidido for 3, e sempre C1 antes de C11.
+
+PRINCÍPIO QUE ORGANIZA A ORDEM: **agrupar tudo o que exige APK numa só
+submissão.** O ciclo de revisão da loja é o relógio do projeto; cada submissão
+extra custa mais que qualquer refactor.
+
+PORQUE NÃO "primeiro os textos, depois o jurídico": porque trocar a palavra
+"leilão" por "compra" sem mudar o mecanismo transforma uma declaração honesta
+("isto é um leilão") numa declaração falsa ("isto é uma loja"), perante o
+consumidor E perante a loja de aplicações. O texto é a promessa; a promessa
+vem depois de se saber o que se pode prometer.
+
+================================================================================
+3.3 — RISCOS IDENTIFICADOS  (risco → mitigação)
+================================================================================
+Gravidade: ⛔ crítico · ⚠ alto · • médio
+
+⛔ R1 FALSA DECLARAÇÃO POR MUDANÇA SÓ TERMINOLÓGICA
+   Trocar as palavras mantendo o mecanismo de menor lance único faz o app
+   declarar-se e-commerce enquanto opera concurso pago. É pior do que a
+   situação actual.
+   MITIGAÇÃO: proibir o Nível 1 isolado. Só executar N1 acoplado a N2 (que
+   alinha a promessa) ou a N3 (que alinha o mecanismo). Registar esta
+   proibição como regra do programa.
+
+⛔ R2 DINHEIRO DE CLIENTES PRESO NA ECONOMIA DE SENHAS
+   `saldo_rs`(8) + `saldo_rs_creditos`(21) + `saldoSenhas` on-chain. Desmontar
+   o leilão sem liquidar estes saldos é apropriação.
+   MITIGAÇÃO: C1 obrigatoriamente antes de C11. Parecer A-J2 antes de C1.
+   Congelar novas vendas de senha no momento em que a decisão for tomada.
+
+⛔ R3 FICHA DA LOJA JÁ DIVERGE DO APK ENTREGUE — DÍVIDA PRESENTE
+   A ficha descreve um leilão; o APK tem `isLeilaoAtivo:{android:false}` e
+   mostra "EM BREVE". Descrever o que não se entrega é motivo de rejeição,
+   independentemente desta mudança.
+   MITIGAÇÃO: tratar B6 como correção urgente, não como consequência. É o
+   único item deste MC que já está errado hoje.
+
+⚠ R4 REVISÃO DA LOJA REJEITA A RECLASSIFICAÇÃO
+   Mudar de FINANÇAS para COMPRAS + refazer IARC + alterar Data Safety, tudo
+   de uma vez, numa app em teste fechado, é uma mudança grande aos olhos da
+   revisão.
+   MITIGAÇÃO: mudar a ficha e a categoria ANTES de submeter o APK novo, para
+   separar "mudei a descrição" de "mudei o binário". Documentar a coerência
+   entre o que se declara e o que o APK faz.
+
+⚠ R5 O ÍNDICE RAG NÃO É RECONSTRUÍDO E O GUTO CONTINUA A DIZER "LEILÃO"
+   O índice vive fora do repo. É um passo manual do operador, fácil de
+   esquecer, e o sintoma é invisível em testes de código.
+   MITIGAÇÃO: fazer do rebuild do índice um critério de aceitação explícito de
+   B1, verificado por PERGUNTA REAL ao GUTO em produção, não por leitura do
+   ficheiro .md.
+
+⚠ R6 A IDENTIDADE VISUAL PERDE O PERSONAGEM
+   Regenerar o GUTO sem martelo pode devolver outro personagem — o projeto já
+   passou por isto.
+   MITIGAÇÃO: composição determinística a partir das fontes existentes em alta
+   resolução; nunca text-to-image do zero. Aprovação do operador antes de
+   qualquer uso.
+
+⚠ R7 MUDANÇA A MEIO DO TESTE FECHADO INVALIDA O FEEDBACK
+   Se o teste de 30 dias já começou, mudar a proposta de valor a meio
+   desperdiça o ciclo.
+   MITIGAÇÃO: confirmar com o operador o estado real (`inicio.txt` não existe
+   no repo). Se não começou: mudar AGORA, antes de gastar o ciclo. Se começou:
+   decidir explicitamente entre terminar o ciclo ou reiniciá-lo.
+
+⚠ R8 REGRESSÃO NO PAGAMENTO
+   C6 mexe no fluxo PIX que funciona em produção com dinheiro real.
+   MITIGAÇÃO: não alterar `webhook-mercadopago`/`confirmar-pagamento`; criar o
+   fluxo de pedido AO LADO e só depois cortar. Validar com pagamento real de
+   valor mínimo antes de cortar.
+
+⚠ R9 ENDPOINTS RENOMEADOS PARTEM OS APKs JÁ INSTALADOS
+   O APK dos 22 testadores não se actualiza com deploy web e chama as URLs
+   antigas.
+   MITIGAÇÃO: nunca renomear função Netlify sem manter a rota antiga a
+   responder; só remover depois de a base instalada ter migrado.
+
+• R10 CUSTO DE GAS E JANELA DE INCONSISTÊNCIA NA MAINNET
+   Qualquer ação on-chain (migrar saldos, arquivar contrato) custa ETH real.
+   MITIGAÇÃO: R2 do projeto — custo financeiro exige autorização explícita.
+   Preferir liquidação off-chain (crédito/reembolso) a migração on-chain.
+
+• R11 SCREENSHOTS E ARTES DESATUALIZADOS CONTRADIZEM A FICHA
+   Há um `screenshot-leilao.png` no pacote de envio.
+   MITIGAÇÃO: B5 depois de B3/B4, com varredura de todos os assets da ficha.
+
+• R12 REESCRITA DO HISTÓRICO
+   Há 1.011 ocorrências em docs, mas ~94 ficheiros são registo histórico de MCs.
+   Reescrevê-los destrói a rastreabilidade que o próprio método exige (R3).
+   MITIGAÇÃO: tocar apenas os ~6 documentos normativos vivos. Marcar os
+   históricos como históricos; não os editar.
+
+• R13 ESTIMATIVA DO BLOCO C SUBESTIMADA
+   C7 (repasse ao fornecedor) e C8 (NF-e) dependem de integrações externas
+   ainda não escolhidas.
+   MITIGAÇÃO: um MC de especificação antes de C7/C8, quando o fornecedor e a
+   API fiscal estiverem escolhidos. Não planear datas sobre o Bloco C.
+
+================================================================================
+3.4 — DECISÕES PENDENTES (o que tem de ser decidido ANTES de executar)
+================================================================================
+D1 ⛔ QUAL É O NÍVEL? Terminológico, declarativo ou funcional?
+   Decide 4, 9 ou 21 MCs. Sem esta resposta nenhum MC de execução deve abrir.
+   Recomendação do agente: **Nível 2 já**, Nível 3 planeado. Ver SEG5.
+   Decide: cliente.
+
+D2 ⛔ O MECANISMO DE MENOR LANCE ÚNICO CONTINUA A EXISTIR?
+   Se sim: onde (só web?), com que regulamento, e como se concilia com um app
+   que se declara loja. Se não: quando se desliga e como se comunica.
+   Decide: cliente + advogado.
+
+D3 ⛔ O QUE ACONTECE AOS SALDOS JÁ PAGOS (senhas, saldo R$, saldo on-chain)?
+   Converter em crédito de loja / reembolsar / honrar até esgotar.
+   Decide: cliente + advogado + contabilista.
+
+D4 ⚠ QUEM VENDE — o GUT em nome próprio, ou intermediação do fornecedor?
+   Determina NF-e, tributo, responsabilidade e o texto da ficha da loja.
+   Decide: advogado + contabilista.
+
+D5 ⚠ O TESTE FECHADO JÁ COMEÇOU? (`inicio.txt` não existe no repo)
+   Determina se a mudança é barata agora ou custa um ciclo.
+   Decide: operador. É a pergunta mais urgente e a mais barata de responder.
+
+D6 ⚠ A CATEGORIA DA PLAY MUDA PARA COMPRAS?
+   Muda o regime de políticas aplicáveis. Decide: cliente, com o parecer D4.
+
+D7 ⚠ O MARTELO SAI DA MARCA?
+   O ícone do app é o GUTO com um martelo de leiloeiro. Se fica, a imagem
+   contradiz o texto. Decide: cliente (é decisão de marca, não técnica).
+
+D8 • O CONTRATO ON-CHAIN CONTINUA LIGADO AO APP?
+   Enquanto ligado, `darLance` é público e auditável no Etherscan.
+   Decide: cliente, informado por D2.
+
+D9 • A "VITRINE (4 SLOTS)" E AS COTAS BRONZE/PRATA/OURO/DIAMANTE MANTÊM-SE?
+   É o modelo de receita do lojista. Num e-commerce real, o lojista é
+   fornecedor, não comprador de slot. Decide: cliente.
+
+D10 • QUAL É O DOMÍNIO DEFINITIVO?
+   A produção corre em `silly-stardust-ca71bc.netlify.app`, mas o GUTO já diz
+   aos utilizadores "desafiogut.com". Uma loja precisa de domínio próprio para
+   ser credível e para cumprir a identificação do fornecedor.
+   Decide: operador/cliente.
+
+================================================================================
+FIM DO SEG3
+================================================================================

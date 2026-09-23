@@ -1,0 +1,386 @@
+================================================================================
+MC00.0 — SEG0 · INVENTÁRIO DE IMPACTO
+DesafioGUT · Data: 2026-09-23 · Commit base: b31a961
+Skills ECC: smart-explore, terminal-ops
+Dados brutos (grep-áveis): _logs/MC00.0_SEG0_INVENTARIO-BRUTO.tsv  (2.664 linhas)
+Contagens por área/balde: _logs/MC00.0_SEG0_RESUMO-CONTAGENS.txt
+================================================================================
+
+LEGENDA DOS BALDES
+  TEXTO-UI       frase visível ao utilizador → MUDAR é obrigatório no Nível 1
+  STRING-TECNICA caminho, URL, nome de evento, chave i18n, log → interno
+  IDENTIFICADOR  nome de variável/função/ficheiro/coluna → interno, opcional
+  COMENTARIO     comentário de código → interno, custo zero
+  TEXTO-DOC      .md/.txt → documentação (grande parte é histórico)
+
+TOTAIS MEDIDOS (excluindo node_modules, dist, backups .bak)
+  ÁREA              TEXTO-UI  STR-TEC  IDENT  COMENT  TEXTO-DOC   TOTAL
+  FRONTEND              128       50     371     134          —     683
+  BACKEND                85       69     256     182          —     592
+  BACKEND-TESTES         47       29      78      32          —     186
+  BANCO                   0        0      25      28          —      53
+  CONTRATO                2        0      18       6          —      26
+  DOCS                    —        —       —     114      1.011   1.125
+  ---------------------------------------------------------------------
+  TOTAL                                                           2.665
+  Ficheiros tocados: 238 · Ficheiros com TEXTO-UI: 67
+
+================================================================================
+0.1 — INVENTÁRIO DO FRONTEND
+================================================================================
+
+(a) ROTAS DO REACT ROUTER QUE MENCIONAM "leilao": **NENHUMA.**
+    Rotas existentes (App.jsx:377-434): /, /carteira, /mercado, /vitrine,
+    /vitrine/:slot, /produto/:id, /edicao/:id, /programacao, /ativos,
+    /seguranca, /configuracoes, /cadastro, /login-email, /privacidade,
+    /excluir-conta, /seja-nosso-parceiro, /corp, /corporativo[/cotas|/banners|
+    /analytics|/carteira|/mercado], /admin[+9 subrotas].
+    ⇒ Nenhuma URL precisa de redirect. Impacto de rota = ZERO.
+
+(b) FICHEIROS COM O TERMO NO NOME (8):
+    src/components/CardLance.jsx          formulário de lance + assinatura
+    src/components/TabelaLances.jsx       tabela ordenada de lances
+    src/components/LanceStatusBadge.jsx   badge de estado do lance
+    src/components/FimLeilaoOverlay.jsx   overlay de fim de leilão
+    src/hooks/useLanceFeedback.js         feedback háptico/sonoro do lance
+    src/lib/leilaoLock.js                 TRAVA "EM BREVE" (EM_BREVE_MODE)
+    src/lib/leilaoTimer.js                helpers puros de prazo
+    src/pages/MercadoLances.jsx           ecrã /mercado + vista de conformidade
+
+(c) TEXTO-UI POR FICHEIRO (128 ocorrências em 30 ficheiros; ordem decrescente):
+     15  src/components/CardLance.jsx          ex.: "🎫 Confirmar Lance (−1 senha)";
+                                               "Edição encerrada — novos lances bloqueados"
+     13  src/pages/MeusAtivos.jsx              "Lances Únicos", "ID do Lance",
+                                               cabeçalhos de tabela
+     11  src/pages/Privacidade.jsx             texto legal LGPD que cita "lances"
+                                               como dado tratado  ← jurídico
+      8  src/components/TermosConsentimento.jsx  REGULAMENTO (Art. 8/26/27) ← jurídico
+      7  src/pages/Vitrine.jsx                 "Ir para o leilão →"
+      7  src/pages/Dashboard.jsx               KPI "Total de Lances"
+      7  src/components/TabelaLances.jsx       cabeçalhos e estados
+      6  src/pages/Seguranca.jsx               "Contrato LeilaoGUT verificado on-chain"
+      6  src/i18n/pt.js                        nav.lances, dash.menorLanceUnico,
+                                               dash.lancesUnicos, dash.totalLances,
+                                               dash.nenhumLanceUnico, config.notifLances
+      6  index.html                            <title>, og:title, og:description,
+                                               twitter:*  ← indexado por buscadores
+      5  src/utils/web3.js                     mensagens de erro do pipeline
+      5  src/pages/MinhaCarteira.jsx           histórico
+      3  src/utils/rateLimiter.js              "Limite de N lances por minuto…"
+      2  cada: utils/edicao.js, pages/MercadoLances.jsx, pages/ExcluirConta.jsx,
+            pages/EdicaoDetalhe.jsx, pages/Configuracoes.jsx,
+            components/glass/ComingSoonHero.jsx, components/PainelIndicacao.jsx,
+            components/LanceStatusBadge.jsx, components/ExcluirContaModal.jsx
+      1  cada: widgets/layout/Sidebar.jsx, widgets/layout/BottomNav.jsx,
+            pages/DetalheProduto.jsx, pages/CorporativoCarteira.jsx, i18n/en.js,
+            hooks/useLanceFeedback.js, context/AppContext.jsx,
+            components/glass/ModeSelector.jsx, components/FimLeilaoOverlay.jsx,
+            components/ComprarFichasModal.jsx, components/ChatbotWidget.jsx
+    (i18n/es.js tem 6 ocorrências, contadas no total de STRING-TECNICA/UI por
+     via das chaves; o conteúdo traduzido espelha o pt.js.)
+
+(d) RÓTULOS DE NAVEGAÇÃO — as strings mais vistas do produto:
+    BottomNav.jsx:23   label "Lances"              ariaLabel "Ir para Mercado de Lances"
+    Sidebar.jsx:28     label "Mercado de Lances"
+    Sidebar.jsx:29 / BottomNav.jsx:28  "Vitrine (4 Slots)"   ← jargão de cota, não de loja
+    i18n/pt.js:6       "nav.lances": "Lances"
+    ⇒ 4 strings decidem a leitura que o utilizador faz do app inteiro.
+
+(e) ESTADO ATUAL DA APRESENTAÇÃO (achado A1 do SEG-1) — já em modo loja:
+    src/lib/leilaoLock.js:10            EM_BREVE_MODE = true (trava global)
+    src/utils/edicao.js:106             getEstadoEdicao → EM_BREVE enquanto a trava
+                                        estiver ligada (fonte única, MC88.43)
+    src/pages/MercadoLances.jsx:338     "Vista de conformidade (modo loja iOS/Android)"
+    src/components/CardLance.jsx:59,359 rede de segurança + skeleton de conformidade
+    src/components/glass/GlassHeader.jsx:35  "E-commerce através de Dropshipping"
+    index.html:8                        meta description já diz "E-commerce via
+                                        Dropshipping"
+
+(f) SUPERFÍCIE DE E-COMMERCE QUE JÁ EXISTE (reaproveitável):
+    src/pages/Vitrine.jsx        728 linhas — grelha de produtos por 4 slots
+    src/pages/DetalheProduto.jsx 331 linhas — página de produto
+    src/pages/MeusAtivos.jsx     273 linhas — "meus itens"
+    rota /produto/:id            já existe
+    ⇒ o esqueleto de catálogo existe; falta tudo o que vem DEPOIS do clique.
+
+================================================================================
+0.2 — INVENTÁRIO DO BACKEND (Netlify Functions)
+================================================================================
+Total de funções .mjs no diretório: 68 (+ _lib/ + _tests/).
+Ficheiros com o termo no conteúdo: 69. TEXTO-UI: 85 ocorrências.
+
+(a) FUNÇÕES COM O TERMO NO NOME (5) — são endpoints públicos:
+    auth-lance.mjs          emite/valida o JWT de sessão do lance
+    lance-relampago.mjs     leilão Relâmpago (Flash) — off-chain
+    lances-flash.mjs        leitura/polling dos lances flash
+    consolidar-lances.mjs   consolida resultado da edição
+    purge-lances.mjs        purga administrativa de lances
+    ⇒ o caminho HTTP é `/.netlify/functions/<nome>`, logo o nome É a URL
+      pública. Renomear quebra o cliente; exige rota de compatibilidade.
+
+(b) TEXTO-UI NO BACKEND — ATENÇÃO, é o maior foco isolado do projeto:
+     44  _lib/guto-perfis.mjs        ← 52% de todo o TEXTO-UI do backend.
+                                     Respostas do assistente GUTO por perfil
+                                     (visitante/comum/corporativo/admin), todas
+                                     escritas em vocabulário de leilão:
+                                     "participar dos leilões", "podes dar lances
+                                     nas edições ativas", "vencedor provisório",
+                                     "licitantes únicos", "menor lance sobre base".
+      9  _lib/notificacoes-usuario.mjs  textos de notificação ao utilizador
+      5  lance-relampago.mjs
+      5  _lib/contract.mjs           (2 são fragmento de ABI — falso positivo)
+      4  _lib/data-store-supabase.mjs
+      3  troco.mjs
+      2  cada: comprar-senhas.mjs, banners.mjs, _lib/data-store-blobs.mjs
+      1  cada: notificacoes.mjs, lances-flash.mjs, cron-reset-programado.mjs,
+            consolidar-lances.mjs, _lib/senhas-programado.mjs, _lib/pix-config.mjs,
+            _lib/jwt.mjs, _lib/ia-preditiva.mjs, _lib/conta-delete.mjs
+
+(c) O INTERRUPTOR DE CONFORMIDADE JÁ EXISTE:
+    _lib/recursos-app-config.mjs
+        DEFAULT_RECURSOS_APP = {
+          isLeilaoAtivo:          { ios: false, android: false, pwa: true },
+          isPagamentoNativoAtivo: { ios: false, android: false, pwa: false },
+        }
+    recursos-app.mjs      endpoint que serve estes booleanos por plataforma
+    chatbot.mjs:1376      lê `modoConformidade` e troca o system prompt
+    _lib/guto-perfis.mjs:74  PROMPT_CONFORMIDADE ("loja de e-commerce")
+    ⇒ existe um único ponto onde se declara "esta plataforma não tem leilão".
+
+(d) LÓGICA DE NEGÓCIO DE LEILÃO (o que desapareceria no Nível 3):
+    auth-lance, lance-relampago, lances-flash, consolidar-lances, purge-lances,
+    cron-reset-programado, monitor-onchain(-scheduled), saldo-senhas,
+    comprar-senhas, troco, voucher, _lib/simulador, _lib/pulso,
+    _lib/senhas-programado, _lib/bids-store, _lib/troco-senhas,
+    _lib/ia-preditiva  ≈ 17 funções/módulos.
+
+(e) INFRAESTRUTURA DE E-COMMERCE PRESENTE: produtos.mjs (636 linhas, CRUD de
+    catálogo por lojista), banners.mjs, cotas.mjs, iniciar-pagamento.mjs,
+    webhook-mercadopago.mjs, confirmar-pagamento.mjs, info-pagamento.mjs.
+    NOTA: produtos.mjs abre com "Marketplace Local com Leilão de Menor Lance
+    Único (MC15)" e as suas CATEGORIAS são bronze/prata/ouro/diamante — que são
+    PLANOS DE COTA do lojista, não categorias de produto.
+
+================================================================================
+0.3 — INVENTÁRIO DO BANCO DE DADOS (Supabase, produção, leitura MCP)
+================================================================================
+20 objetos no schema public. Ocorrências do termo: 25 IDENTIFICADOR + 28
+COMENTARIO nas migrações. TEXTO-UI: ZERO.
+
+(a) OBJETOS COM O TERMO NO NOME:
+    tabela `lances`  — colunas: id, edicao_id, endereco, hash_lance,
+                       valor_centavos, created_at, payload
+                       LINHAS EM PRODUÇÃO: **0**
+    coluna `hash_lance` (em `lances`)
+    matview `mv_lances_por_edicao` — declarada em
+        supabase/migrations/20260629_materialized_views.sql; NÃO aparece na
+        lista de matviews vivas da base consultada.
+    ⇒ Nenhuma outra tabela ou coluna contém leilao/lance/arremat.
+
+(b) TABELAS COM DADOS REAIS (a coisa que uma migração pode partir):
+    saldo_rs_creditos 21 · saldo_rs 8 · atividade_utilizadores 17 · cotas 7 ·
+    fila_tarefas 5 · config_remota 1.
+    produtos 0 · lojistas 0 · lances 0 · cotas_pagas 0 · wallet 0 · troco_senhas 0.
+
+(c) TABELA `produtos` — O QUE FALTA PARA SER E-COMMERCE:
+    TEM:    id, nome, descricao, preco, imagem, categoria, created_at
+    NÃO TEM: stock/quantidade, SKU, peso, dimensões, fornecedor/lojista_id,
+             prazo de envio, variações (cor/tamanho), status de publicação,
+             preço de custo, margem, NCM, origem.
+    `categoria` está limitada a bronze/prata/ouro/diamante no backend.
+
+(d) TABELAS QUE NÃO EXISTEM E UM E-COMMERCE EXIGE:
+    pedidos, itens_pedido, enderecos_entrega, envios/rastreio, devolucoes,
+    notas_fiscais, fornecedores, carrinho, cupons.
+    RLS está ativa em todas as tabelas existentes (herda-se o padrão).
+
+================================================================================
+0.4 — INVENTÁRIO DA DOCUMENTAÇÃO
+================================================================================
+1.011 ocorrências TEXTO-DOC + 114 em comentários, espalhadas por 100 ficheiros.
+Maiores concentrações:
+    238  cloud.md                         histórico de TODOS os MCs
+     75  docs/auditoria-contrato.md       auditoria do contrato on-chain
+     54  docs/validacao-final.md
+     40  docs/chatbot/regulamento.md      ★ NORMATIVO — alimenta o RAG do GUTO
+     39  docs/MC91.11-DIAGNOSTICO.txt
+     34  docs/mapa-navegacao.md
+     31  CLAUDE.md                        ★ NORMATIVO — fonte de verdade do agente
+     26  docs/MC91.10-DIAGNOSTICO.txt
+     24  docs/inventario-remocao.md
+     24  docs/auditoria-frontend-vs-spec.md
+     21  docs/reference/contrato-leilao-abi.md
+     20  docs/MC90.4-FICHA-LOJA.txt       ★ NORMATIVO — ficha da Play Store
+     19  docs/explanation/regras-de-negocio.md  ★ NORMATIVO
+     …   +88 ficheiros com <18 ocorrências cada
+
+CLASSIFICAÇÃO OPERACIONAL (decisiva para a estimativa):
+  NORMATIVO E VIVO (reescrever): regulamento.md, CLAUDE.md, MC90.4-FICHA-LOJA.txt,
+      explanation/regras-de-negocio.md, mapa-navegacao.md, reference/*  ≈ 6 doc.
+  HISTÓRICO (NÃO reescrever — destruiria a rastreabilidade exigida por R3/ECC):
+      cloud.md e todos os MCxx-*.txt/-DIAGNOSTICO/-RELATORIO  ≈ 94 ficheiros.
+  ⇒ O número "1.011 ocorrências" é enganador: só ~150 estão em documentos
+    normativos vivos.
+
+RESSALVA CRÍTICA (memória do projeto, confirmada): o índice RAG do GUTO **vive
+fora do repositório**. Editar `docs/chatbot/regulamento.md` NÃO muda o que o
+GUTO responde; é preciso reconstruir o índice (`scripts/build-rag-index.mjs`),
+ação do operador.
+
+================================================================================
+0.5 — INVENTÁRIO DAS LOJAS
+================================================================================
+FONTE: artefactos locais do MC90.4 (`Desktop\ARTEFACTOS-RUAN\2-Documentos\`).
+NÃO foi possível ler a Play Console nem o App Store Connect nesta sessão (L-4,
+N1/N2). O que segue é o que foi PREPARADO para ser preenchido.
+
+GOOGLE PLAY — declarações contaminadas por vocabulário de leilão:
+  1. Descrição curta (79/80 car.)
+     "Leilão de menor lance único com pagamentos PIX e lances na blockchain."
+  2. Descrição longa (~1.500 car.) — 8+ ocorrências; abre com "plataforma de
+     leilão onde o MENOR lance único ganha (Art. VIII do regulamento)".
+  3. Categoria: **FINANÇAS** (subcategoria "Pagamentos"). A escolha está
+     documentada como derivando da natureza de leilão/on-chain.
+  4. Tags (5): leilão, blockchain, lances, web3, pix.
+  5. Release notes v1.0.0: "Leilão de menor lance único com pipeline 100%
+     on-chain".
+  6. Classificação IARC: a resposta "NÃO há jogo de azar" está justificada por
+     ser "um leilão regulamentado (menor lance único)".
+  7. Público-alvo: 18+ "público-alvo de leilão/compras".
+  8. Data Safety: "Outro conteúdo gerado pelo usuário (Sim — lances)";
+     "essencial para lances"; "delete-account apaga lances".
+  9. Financial features declaration associada à categoria Finanças.
+ 10. Screenshot do pacote de envio: `3-Screenshots/screenshot-leilao.png`.
+ 11. Feature graphic (1024×500): marcado [PEND] — sugestão registada era
+     tagline "O menor lance único ganha".
+
+  NÃO contaminados (não mexem): política de privacidade (URL), eliminação de
+  conta (URL), e-mail de suporte, ícone 512×512 (mas ver 0.7), package name
+  `com.desafiogut.app`, app_name "DesafioGUT".
+
+  ESTADO DO TESTE FECHADO: `closed-testing/inicio.txt` NÃO EXISTE no repo →
+  a data de início dos 30 dias não está registada. versionCode 1 /
+  versionName 1.0.0.
+
+APPLE APP STORE — NÃO VERIFICADO (N2). Pendências já conhecidas do projeto:
+  conta de programador, entitlement, pagamento externo, declaração de idade.
+  Nenhuma evidência foi recolhida nesta sessão.
+
+================================================================================
+0.6 — [R19] INVENTÁRIO DO CONTRATO ON-CHAIN
+================================================================================
+ARQUIVO: desafio-gut/contracts/Leilao.sol (168 linhas)
+NOME DO CONTRATO: `contract LeilaoGUT`
+ENDEREÇO: 0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd — Ethereum MAINNET,
+verificado publicamente no Etherscan.
+
+Superfície pública PERMANENTE com vocabulário de leilão:
+  funções: darLance, apurarVencedor, abrirEdicao, adicionarSenhas, saldoSenhas,
+           edicoes, lancesComprometidos, edicaoNonce, resultados, coordenacao
+  eventos: LanceDado, LanceComprometido, ResultadoConsolidado, EdicaoAberta,
+           SenhasCreditadas
+  ⇒ IMUTÁVEL. Não existe "renomear". A única forma de remover o termo do
+    on-chain é DEPLOY DE NOVO CONTRATO + migração de `saldoSenhas`, com custo
+    de gas em mainnet e uma janela de inconsistência.
+  ⇒ Enquanto o frontend apontar para este endereço, qualquer pessoa vê
+    `darLance` no Etherscan. Uma declaração de loja "não somos leilão" é
+    contraditada por prova pública permanente.
+
+ESTADO ECONÓMICO: a EOA coordenadora detém ~19 créditos de senha (registo de
+projeto). `saldoSenhas` por endereço é obrigação para com utilizadores que
+pagaram — o destino desses saldos é DECISÃO PENDENTE, não detalhe técnico.
+
+================================================================================
+0.7 — [R19] INVENTÁRIO DA IDENTIDADE VISUAL
+================================================================================
+VERIFICADO POR INSPEÇÃO DIRECTA DA IMAGEM (não por metadados):
+  android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+  → GUTO de fato azul erguendo um **MARTELO DE LEILOEIRO**, rodeado de
+    eletrodomésticos (frigorífico, máquina de lavar, micro-ondas, TV), confete.
+  O martelo é literalmente o ícone do app em todos os telemóveis Android.
+
+Superfícies afetadas:
+  • 15 ficheiros de ícone Android (ic_launcher / _round / _foreground × 5
+    densidades) — origem `Desktop\LOGO APP.jpeg` (MC91.6)
+  • public/assets/guto/v3/guto-icon-v3.png — ícone 512×512 da ficha Play
+  • public/assets/guto/guto-favicon-32.png, guto-apple-touch-180.png
+  • public/assets/guto/og-image.png (= guto-login.png) — partilha social
+  • 3 artes promocionais oficiais (MC69/69.1): "termos obrigatórios
+    ('leilão de menor lance único' + 'e-commerce por dropshipping') e martelo
+    presentes nas 3"
+  • loops de vídeo e animações GUTO (cloud.md 1657-1739): "martelo em pedestal",
+    "gavel + pódio", TV a exibir "Menor Lance Único"
+  • carrossel guto-1..8.png e expressões v3 (a auditar caso a caso)
+
+⇒ Esta área NÃO consta do briefing. Sem tratá-la, o app pode trocar todas as
+  palavras e continuar a anunciar-se como leilão pela imagem — inclusive na
+  ficha da loja, onde o ícone é o primeiro elemento que o revisor vê.
+
+================================================================================
+0.8 — [R19] INVENTÁRIO DO QUE FALTA PARA SER E-COMMERCE (sonda negativa)
+================================================================================
+Varredura com fronteira de palavra em `src/` + `netlify/functions/`:
+
+  CONCEITO                 FICHEIROS   OBSERVAÇÃO
+  carrinho / cart              0       não existe
+  checkout                     0*      * só "abandono de checkout" (métrica de leilão)
+  frete                        0       não existe
+  CEP                          0       não existe
+  endereço de entrega          0       não existe
+  rastreio / rastreamento      0*      * "rastreia" = scroll-depth
+  correios / transportadora    0       não existe
+  devolução / troca(CDC)       0*      * "troca" existe = trocar senhas
+  nota fiscal / NF-e           0       não existe
+  estoque / SKU                0       não existe
+  fornecedor                   0*      * "fornecedores" = Supabase/Netlify/AWS
+  dropship                     2       GlassHeader.jsx:35 e
+                                       TermosConsentimento.jsx:76 — ambos rótulo,
+                                       nenhum comportamento
+
+⇒ A palavra "dropshipping" aparece 2 vezes no código e 0 vezes na lógica.
+  O app declara-se dropshipping sem ter nenhum mecanismo de dropshipping.
+
+================================================================================
+0.9 — INVENTÁRIO JURÍDICO E FISCAL (o que existe hoje, no app)
+================================================================================
+  src/components/TermosConsentimento.jsx — REGULAMENTO no gate LGPD.
+     Art. 1  "atividade comercial em formato de E-commerce através de
+              Dropshipping" (GUT, CNPJ 23.040.066/0001-00)
+     Art. 6  cadastro gratuito → "comprar senhas e realizar lances"
+     Art. 8  "QUANTO VOCÊ PAGA POR ESSE BEM OU PRODUTO? — O MENOR LANCE
+              ÚNICO GANHA"
+     Art. 9  "lances indeterminados através de senhas", versões Relâmpago
+              e Programado
+     Art. 14 "o contemplado poderá optar por receber o PRÉMIO em dinheiro";
+             acima de R$10.000 recebe 80% do valor
+     Art. 26/27 apuração dos lances, regras de lance
+     ⇒ CONTRADIÇÃO INTERNA: declara compra e venda (Art.1) e opera
+       concurso-com-prémio (Art.8/14) no mesmo documento.
+  src/pages/Privacidade.jsx — política LGPD; 11 ocorrências de "lances" como
+     categoria de dado tratado, partilhado e eliminável.
+  docs/chatbot/regulamento.md (237 linhas) — versão longa que alimenta o RAG.
+
+  AUSENTES POR COMPLETO: política de trocas e devoluções (CDC art. 49 — direito
+  de arrependimento em 7 dias), política de entrega e prazos, termos de venda
+  (distintos do regulamento), contrato com fornecedor/lojista sobre
+  responsabilidade solidária pelo produto (CDC art. 18/20), emissão de NF-e,
+  regime tributário da operação, canal de SAC.
+
+================================================================================
+RESUMO DO SEG0 — AS SEIS ÁREAS DO ENUNCIADO + 3 ACRESCENTADAS POR R19
+================================================================================
+  1 FRONTEND ............ 128 strings de UI, 30 ficheiros, 0 rotas. MÉDIO.
+  2 BACKEND .............  85 strings de UI (52% num só ficheiro), 5 endpoints
+                           com o termo na URL pública. MÉDIO.
+  3 BANCO ............... 1 tabela + 1 coluna + 1 matview; 0 linhas. BAIXO.
+  4 LOJAS ............... 11 declarações contaminadas, incl. CATEGORIA. ALTO.
+  5 JURÍDICO ............ regulamento internamente contraditório; 7 documentos
+                           obrigatórios inexistentes. CRÍTICO.
+  6 FISCAL .............. zero infraestrutura (NF-e, tributação). CRÍTICO.
+  7 [R19] CONTRATO ...... imutável e público em mainnet. ALTO/IRREVERSÍVEL.
+  8 [R19] VISUAL ........ o ícone do app é um martelo de leiloeiro. ALTO.
+  9 [R19] E-COMMERCE .... nenhuma das 12 capacidades básicas existe. CRÍTICO.
+
+================================================================================
+FIM DO SEG0
+================================================================================

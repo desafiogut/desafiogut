@@ -1,0 +1,115 @@
+================================================================================
+MC00.0 — SEG5 · ENTREGA
+DesafioGUT · Data: 2026-09-23 · Commit base: b31a961
+Skills ECC: requesting-code-review (usada: Validador independente despachado
+como subagente no SEG4, exatamente como a skill prescreve — contexto curado,
+sem acesso ao raciocínio do Executor)
+================================================================================
+
+5.1 — CONSOLIDAÇÃO DOS LOGS
+--------------------------------------------------------------------------------
+  _logs/MC00.0_SEG-1_QUESTIONAMENTO.txt            veredito SEGUIR, R19 ativada
+  _logs/MC00.0_SEG0_INVENTARIO.txt                 inventário das 9 áreas
+  _logs/MC00.0_SEG0_INVENTARIO-BRUTO.tsv           v2 (com o defeito E1) — registo
+  _logs/MC00.0_SEG0_RESUMO-CONTAGENS.txt           contagens v2
+  _logs/MC00.0_SEG1_GAP-ANALYSIS.txt               item → ação, por nível
+  _logs/MC00.0_SEG2_DEPENDENCIAS.txt               grafo, estrangulamentos, ciclo
+  _logs/MC00.0_SEG3_ESTIMATIVA-SEQUENCIA.txt       MCs, ordem, riscos, decisões
+  _logs/MC00.0_SEG4_VALIDACAO.txt                  relatório do Validador
+  _logs/MC00.0_SEG4_ERRATA-EXECUTOR.txt            ★ SUPERSEDE os números acima
+  _logs/MC00.0_SEG4_INVENTARIO-V3-CORRIGIDO.tsv    inventário corrigido
+  _logs/MC00.0_SEG4_RESUMO-V3-CORRIGIDO.txt        contagens v3 + adjacente
+  _logs/MC00.0_SEG5_ENTREGA.txt                    este ficheiro
+  _logs/MC00.0-RELATORIO.md                        ★ relatório final
+  Desktop\MC00.0-RELATORIO.md                      cópia (pedido do operador)
+  CLAUDE.md                                        secção MC00.0 (linhas 257-405)
+
+DECISÃO DE MÉTODO: os SEG0–SEG3 NÃO foram reescritos depois da validação. Ficam
+como registo do que a validação apanhou — é para isso que serve a verificação em
+dois níveis (Pilar 1, hard gate 3). A errata do SEG4 supersede-os onde divergem.
+
+5.2 — CLAUDE.md (R14)
+--------------------------------------------------------------------------------
+Atualizado ANTES do commit, de 255 para 405 linhas. Regista: o estado real do
+leilão no código, os três níveis, a superfície medida (números v3), a contradição
+do regulamento, os três estrangulamentos, a dívida presente, o teste fechado não
+iniciado, o catálogo em Blobs, as 10 decisões pendentes, a sequência corrigida e
+a lição de método sobre controlo negativo.
+
+5.3 — DECISÕES DO OPERADOR DURANTE O MC (R18)
+--------------------------------------------------------------------------------
+NENHUMA decisão de escopo. O operador enviou uma única instrução durante a
+execução — *"ao final relatorio completo no desktop"* — que é de entrega, não de
+escopo. Cumprida (5.1). Registada aqui, no relatório final §3.5 e não carece de
+entrada no CLAUDE.md por não alterar nada do produto.
+
+5.4 — DECLARAÇÃO DE R15
+--------------------------------------------------------------------------------
+Exercida. O enunciado lista seis áreas de impacto; o inventário mede nove, e o
+Validador acrescentou uma décima (planos + CI). As acrescentadas:
+  • contrato on-chain (imutável, público, com obrigações financeiras associadas)
+  • identidade visual (o ícone do app é um martelo de leiloeiro)
+  • infraestrutura de e-commerce em falta (12 capacidades a zero)
+  • planos vivos (plans/002 manda declarar "leilão pago" à Google) e CI
+Nenhuma alteração de código foi feita ao abrigo de R15 — este MC é diagnóstico.
+
+5.5 — DECLARAÇÃO DE R19
+--------------------------------------------------------------------------------
+"Este MC incluiu o contrato on-chain, a identidade visual e o levantamento da
+infraestrutura de e-commerce em falta além do previsto, porque o objetivo
+declarado era mapear TODO o impacto e, sem essas três áreas, a estimativa
+subestimaria o trabalho por uma ordem de grandeza."
+Declarada no SEG-1 §-1.2, antes de executar, como a regra exige. O operador pode
+vetar qualquer uma das três. Default aplicado: seguir.
+
+5.6 — MÉTRICAS DE EFICIÊNCIA
+--------------------------------------------------------------------------------
+  Boulder Loop (SEG0) ......... 3 iterações (limite do enunciado).
+      v1 classificador ingénuo → v2 com baldes → v3 com fronteira de palavra.
+      As iterações 2 e 3 foram ambas disparadas por CONTROLO NEGATIVO, não por
+      intuição. Sem o controlo negativo, o defeito "Balance" teria passado.
+  Boulder Loop (outros SEG) ... 0 iterações extra.
+  Escopo ...................... 100% do enunciado (6 áreas) + 3 por R19 + 1 pelo
+                                Validador = 10 áreas inventariadas.
+  Validação ................... 1 subagente, 62 chamadas de ferramenta, 7
+                                ressalvas (3 bloqueantes). Encontrou 1 defeito de
+                                instrumento, 1 erro material de arquitetura e 1
+                                inversão de dependência que o Executor não veria
+                                sozinho. A validação independente pagou-se.
+  Correções aceites ........... 10 de 11. Uma refutada com evidência (as linhas
+                                "duplicadas" do TSV são ocorrências reais na mesma
+                                linha; a v3 acrescenta a coluna que as desambigua).
+  MC de fechamento ............ NÃO gerado. O MC é autossuficiente como
+                                diagnóstico; o trabalho seguinte é execução (A1),
+                                não fechamento.
+
+5.7 — RELATÓRIO FINAL
+--------------------------------------------------------------------------------
+_logs/MC00.0-RELATORIO.md, com as três secções distintas do Pilar 3:
+  §1 EXECUTOR ...... inventário, gap, mapa, estimativa
+  §2 VALIDADOR ..... as 7 ressalvas e os 2 achados novos
+  §3 DOCUMENTADOR .. riscos, decisões, sequência, registo operacional, métricas
+  §4 RECOMENDAÇÃO .. Nível 2 já; Nível 3 só depois de D1–D4 e D11
+
+5.8 — COMMIT
+--------------------------------------------------------------------------------
+Mensagem: docs: MC[00.0] — análise de impacto da mudança para e-commerce por
+          dropshipping
+Conteúdo: _logs/ (13 ficheiros) + CLAUDE.md.
+
+RESSALVA SOBRE "WORKING TREE LIMPO": ficam 3 ficheiros untracked que JÁ EXISTIAM
+antes deste MC (docs/MC91.14-STATUS-BNB.txt, docs/mc92.5_gerar_mascaras.py,
+docs/mc92.5_refinar_bboxes.py). NÃO foram commitados: não são trabalho deste MC e
+commitá-los seria alterar o repositório para lá do escopo autorizado. A árvore
+fica limpa QUANTO AO MC00.0.
+
+VERIFICAÇÃO DE R1 (zero código): antes do commit, `git status --short` mostrava
+apenas `?? _logs/`, `M CLAUDE.md` e os 3 untracked pré-existentes. Nenhum
+ficheiro de código, texto de produto, rota, declaração ou configuração foi
+tocado.
+
+================================================================================
+VEREDITO DO MC00.0: CONCLUÍDO · diagnóstico entregue · zero código alterado
+RECOMENDAÇÃO: executar o Nível 2, começando por A1. Não autorizar o Nível 1
+isolado. Confirmar N8 (valor vivo do Blob recursos_app) no MC seguinte.
+================================================================================

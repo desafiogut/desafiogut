@@ -1,0 +1,626 @@
+================================================================================
+MC00.0 — SEG4 · VALIDAÇÃO INDEPENDENTE DO DIAGNÓSTICO
+PAPEL: VALIDADOR (RUFLO) · Data: 2026-09-23
+Objecto: _logs/MC00.0_SEG-1 / SEG0 / SEG0-BRUTO.tsv / SEG1 / SEG2 / SEG3
+Método: releitura dos artefactos + recontagem independente sobre o código real
+        (ripgrep, node, leitura directa de ficheiros, inspecção visual de PNG e
+        SELECTs de agregado na base de produção via MCP Supabase, só leitura).
+Zero ficheiros do projecto alterados. Única escrita: este ficheiro.
+================================================================================
+
+SUMÁRIO EXECUTIVO
+--------------------------------------------------------------------------------
+As CONCLUSÕES ESTRATÉGICAS do Executor sustentam-se: verifiquei e confirmo
+(i) que não há rota React com "leilao", (ii) que EM_BREVE_MODE=true,
+(iii) que isLeilaoAtivo está a false em ios/android, (iv) que o índice RAG vive
+fora do repo, (v) que o APK empacota o frontend, (vi) que o ícone do app é um
+martelo de leiloeiro, (vii) que não existe uma linha de infraestrutura de
+e-commerce (carrinho/frete/CEP/NF-e/estoque), e (viii) que o regulamento é
+internamente contraditório.
+
+O que NÃO se sustenta é a COMPLETUDE declarada. O inventário mede apenas três
+radicais (leil / lance / arremat) e depois apresenta-se como "TODO o impacto".
+Ao medir o vocabulário que o próprio SEG-1 nomeia (senha, edição, vencedor,
+slot), a superfície mais do que duplica. E a área DOCS omite um directório
+inteiro de 76 ficheiros. O SEG1 afirma uma consistência que não tem: 19 dos
+ficheiros com TEXTO-UI do SEG0 não recebem acção nenhuma, e uma ÁREA COMPLETA
+do SEG0 (BACKEND-TESTES, 186 itens) não existe no SEG1 nem no SEG3.
+
+Há ainda uma inversão de dependência na ordem recomendada do SEG3 (B1 reescreve
+o regulamento antes de A2 produzir o regulamento a partir do parecer) que
+contradiz a regra R1 do próprio documento.
+
+================================================================================
+4.1 — COMPLETUDE DO INVENTÁRIO
+================================================================================
+VEREDITO: **INCOMPLETO**
+
+O que está coberto e confirmo: frontend, backend, banco, lojas, jurídico, fiscal
++ contrato on-chain, identidade visual e e-commerce em falta. As nove áreas
+existem e têm conteúdo verificável.
+
+SUPERFÍCIES QUE PROCUREI ACTIVAMENTE E **NÃO** ESTÃO NO INVENTÁRIO
+--------------------------------------------------------------------------------
+G-1 ⛔ `desafio-gut/docs/` — 76 FICHEIROS COM O TERMO, ZERO INVENTARIADOS.
+    O balde DOCS do TSV cobre 100 ficheiros distintos. A minha varredura
+    independente (excluindo node_modules, _logs, .agents, .claude, graphify-out)
+    encontra 263 .md/.txt com o termo; retirando skills e worktrees, restam
+    ~187 ficheiros legítimos do projecto. Os 87 em falta concentram-se em:
+        76  desafio-gut/docs/            (MC59…MC89, MC88.4x, MC80.x artes…)
+         4  plans/
+         2  desafio-gut/ (CLAUDE_DEBUG.md, security_audit.md)
+         +  README.md, RELATORIO-FINAL.md, security_audit.md,
+            MC39.19-diagnostico.md, MC39.20-diagnostico.md
+    Comando: find . \( -name "*.md" -o -name "*.txt" \) … | xargs grep -liE
+             "leil|lance|arremat"   →  263
+             awk '$1=="DOCS"{print $3}' …TSV | sort -u | wc -l  →  100
+    Efeito: o número "1.011 ocorrências / 100 ficheiros" do SEG0 §0.4 é uma
+    medição de METADE do corpus documental. A conclusão do Executor (quase tudo
+    é histórico, logo não se reescreve) atenua o impacto prático, mas o número
+    apresentado não é o que diz ser.
+
+G-2 ⛔ `plans/002-playstore-submission.md` e `plans/003-launch-campaign.md` —
+    NÃO são histórico, são PLANOS VIVOS, e estão fora do inventário.
+    plans/002-playstore-submission.md:97 manda declarar à Google que
+        "o app envolve leilão pago (senhas R$2)"
+    plans/002-playstore-submission.md:139 avisa que se o leilão ficar visível
+        no app "passa a real-money gaming".
+    plans/003-launch-campaign.md:69,74,116 constrói toda a campanha sobre
+        "Como funciona o menor lance único" / "a emoção do leilão".
+    Qualquer pessoa que execute estes planos anula a mudança. O SEG0 classifica
+    documentos em NORMATIVO (6) vs HISTÓRICO (94) e estes dois não entram em
+    nenhum dos dois grupos porque nem sequer foram vistos.
+
+G-3 ⛔ O PROBE É MONOLINGUE — a cópia de leilão em EN e ES é invisível.
+    Em `i18n/es.js` e `i18n/en.js` o radical "lance" só aparece na CHAVE; os
+    VALORES já estão traduzidos e são, esses sim, o que o utilizador lê:
+        en.js:4  "nav.lances": "Bids"
+        en.js:31 "dash.menorLanceUnico": "🏆 Lowest Unique Bid"
+        es.js:4  "nav.lances": "Pujas"
+        es.js:31 "dash.menorLanceUnico": "🏆 Puja Única Más Baja"
+    O TSV regista es.js com **0** TEXTO-UI e en.js com **1** (e essa 1 é falsa —
+    ver G-8). Contagem real de "bid|bids|auction|puja|pujas" em src: 15
+    ocorrências, 7 em en.js e 7 em es.js. Nenhuma está no inventário.
+
+G-4 ⛔ VOCABULÁRIO ADJACENTE NÃO CONTADO — a maior lacuna isolada.
+    O próprio SEG-1 P1 escreve: "o que satura o produto é o vocabulário de
+    leilão: lance, lances, menor lance único, licitante, arrematar, EDIÇÃO,
+    SENHAS". O SEG0 depois conta só leil/lance/arremat. Recontagem em
+    `desafio-gut/frontend/src` (excluindo .bak):
+        leil|lance|arremat ........  677      (base do inventário)
+        edição / edições ..........  352      NÃO CONTADO
+        senha / senhas ............  287      NÃO CONTADO
+        slot / slots ..............  170      NÃO CONTADO
+        vencedor ..................  103      NÃO CONTADO
+        ficha / fichas ............   18      NÃO CONTADO
+        relâmpago .................   14      NÃO CONTADO
+    Numa loja não há "edição", não há "senha", não há "slot", não há "vencedor".
+    Só no `i18n/pt.js` isto passa de 7 linhas contaminadas para 12 (ex.:
+    "dash.senhas": "Senhas"; "dash.edicaoAtiva": "🎯 Edição Ativa";
+    "config.notifVencedor": "Resultado do vencedor"; "nav.vitrine":
+    "Vitrine (4 Slots)"). Os "~215 strings" do Nível 1 são, no mínimo, o dobro.
+
+G-5 ⚠ `src/data/programacao-junho-2026.js` — DADOS DE LEILÃO, ZERO TERMOS.
+    Existe uma área `src/data/` (o inventário não a nomeia) com um único
+    ficheiro: a grelha de programação (168 sessões, horários por tipo de dia,
+    tiers bronze/prata/ouro/diamante, "Slot 21:00 é overnight"). É a agenda de
+    sessões de leilão e alimenta a rota `/programacao`. Contém **0** ocorrências
+    de leil/lance/arremat — logo é estruturalmente invisível ao método usado.
+    Um e-commerce não tem grelha horária de sessões. Nem o SEG0 nem o SEG1 nem
+    o SEG3 mencionam `/programacao` ou este ficheiro.
+
+G-6 ⚠ CI (.github/workflows) — fora do inventário.
+    .github/workflows/contract-security.yml:44,61,64,65 e
+    .github/workflows/security-scan.yml:97,126 referem `Leilao.sol`,
+    `tests/fuzzing/LeilaoGUT.sol` e `contract: LeilaoGUTFuzzing`.
+    Se o C11 do SEG3 "arquivar o contrato on-chain" for executado, estes dois
+    gates de CI partem-se. Nenhum MC prevê isso.
+    (Verifiquei `netlify.toml`: **zero** ocorrências — aqui o Executor não tem
+    lacuna, mas também nunca declarou ter verificado.)
+
+G-7 ⚠ CONTRATO — o inventário do SEG0 §0.6 está incompleto.
+    Além das funções listadas, `desafio-gut/contracts/Leilao.sol` expõe ainda
+        linha 148  function comprometerLance(...)
+        linha 160  function consolidarResultado(...)
+        linha  53  event TransferenciaIniciada(...)
+    e existem dois harnesses de contrato fora do inventário:
+        desafio-gut/tests/foundry/LeilaoGUT.t.sol
+        desafio-gut/tests/fuzzing/LeilaoGUT.sol  +  desafio-gut/echidna.yaml
+        ignition/modules/LeilaoModule.js, desafio-gut/ignition/modules/Leilao.js
+        desafio-gut/ignition/deployments/chain-11155111/  (artefactos Sepolia)
+
+G-8 ⚠ IDENTIDADE VISUAL — faltam os XML do adaptive icon.
+    SEG0 §0.7 diz "15 ficheiros de ícone Android". São 15 PNG **+ 3 XML**:
+        android/app/src/main/res/drawable-v24/ic_launcher_foreground.xml
+        android/app/src/main/res/drawable/ic_launcher_background.xml
+        android/app/src/main/res/values/ic_launcher_background.xml
+    Em API 26+ o ícone mostrado é composto a partir destes XML. Regenerar só
+    os PNG pode não mudar o que o telemóvel desenha. 18 ficheiros, não 15.
+
+G-9 • NÃO EXISTE MANIFEST PWA NEM SERVICE WORKER.
+    Procurei manifest.json / manifest.webmanifest / site.webmanifest / sw.js /
+    service-worker.js em todo o repo: nenhum (os dois manifest.json achados são
+    do `graphify-out` e do `.netlify/`). O `index.html` não tem
+    <link rel="manifest">. Não é lacuna do inventário — mas invalida a leitura
+    de que "pwa" é uma plataforma instalável: em `recursos-app-config.mjs`
+    "pwa" é apenas um rótulo de configuração.
+
+G-10 • Templates de e-mail: `netlify/functions/_lib/email.mjs` (SendGrid) e
+    `admin-notify.mjs` existem e **não** contêm vocabulário de leilão hoje
+    (verificado). Superfície coberta por omissão, não por verificação.
+    Sentry/analytics: `lib/analytics.js`, `lib/sentry-alerts.js`,
+    `lib/sentryLazy.js` só têm o termo em COMENTÁRIOS — nenhum nome de evento
+    enviado a terceiros contém "lance". Aqui o inventário está correcto.
+
+ACHADO QUE INVALIDA UMA AFIRMAÇÃO DO SEG0 §0.3
+--------------------------------------------------------------------------------
+G-11 ⛔ A TABELA `produtos` DO SUPABASE NÃO É A LOJA. O catálogo vive em BLOBS.
+    `netlify/functions/produtos.mjs:20` importa `getStore` de `@netlify/blobs`
+    e **nunca** toca em Supabase (nenhuma referência a data-store / supabase no
+    ficheiro). O SEG0 §0.3(c) analisa a tabela Supabase `produtos` (7 colunas,
+    0 linhas) e conclui "NÃO TEM: ... status de publicação". Falso no código
+    que corre:
+        produtos.mjs:52   const STATUS_VALIDOS =
+                          new Set(["rascunho","ativo","vendido","entregue"]);
+        produtos.mjs:396  vendido_em: null
+        produtos.mjs:397  entregue_em: null
+        produtos.mjs:464  PUT ?acao=marcar-entregue  (exige status==="vendido")
+        produtos.mjs:485  ?acao=registrar-vencedor → status="vendido"
+    E há UI para isso: `pages/CorporativoDashboard.jsx:297`
+        `Confirmar entrega de "${produto.nome}"?`
+    ⇒ Já existe uma máquina de estados de cumprimento rudimentar
+      (rascunho→ativo→vendido→entregue) que o SEG0 §0.8 declara inexistente
+      ("devolução/entrega 0"). O que falta é morada, frete e rastreio — não o
+      conceito de entrega.
+    ⇒ Consequência para o SEG1 §1.3: "ACRESCENTAR 11 colunas a `produtos`" e
+      "`lojistas` passa a FORNECEDOR" apontam a tabelas **mortas**. A migração
+      real é dos Blobs (`produto:{id}`, `produtos-indice:{lojista}`,
+      `produtos-indice-cat:{categoria}`), que nunca são mencionados.
+
+ERRATA DE CAMINHO
+--------------------------------------------------------------------------------
+G-12 • SEG0 §0.3(a) cita `supabase/migrations/20260629_materialized_views.sql`.
+    Esse caminho **não existe**. As migrações vivem em
+    `desafio-gut/frontend/supabase/migrations/`. (`supabase/` na raiz só tem
+    `.temp/`.) O ficheiro citado existe, mas noutro sítio.
+
+================================================================================
+4.2 — CONSISTÊNCIA DO GAP ANALYSIS (SEG0 → SEG1)
+================================================================================
+VEREDITO: **INCOMPLETO** — e o SEG1 afirma explicitamente o contrário.
+
+O SEG1 fecha com: "CONSISTÊNCIA (pré-condição do SEG4 4.2): todos os itens do
+inventário SEG0 têm ação correspondente nesta secção." Essa frase é falsa.
+
+(A) ITENS DO SEG0 SEM QUALQUER ACÇÃO NO SEG1
+--------------------------------------------------------------------------------
+Extraí do TSV todos os ficheiros com balde TEXTO-UI e procurei cada nome no
+SEG1 (`grep -ci <nome> MC00.0_SEG1_GAP-ANALYSIS.txt`). Resultado: **0 menções**
+para os seguintes, todos com TEXTO-UI inventariado:
+
+  FRONTEND (11 ficheiros, 21 strings de UI órfãs)
+    src/pages/MercadoLances.jsx ......... 2 UI  (e 52 ocorrências totais — é o
+                                          ecrã /mercado, o maior foco do app)
+    src/pages/MinhaCarteira.jsx ......... 5 UI
+    src/pages/ExcluirConta.jsx .......... 2 UI
+    src/pages/EdicaoDetalhe.jsx ......... 2 UI
+    src/pages/Configuracoes.jsx ......... 2 UI
+    src/components/PainelIndicacao.jsx .. 2 UI
+    src/components/ExcluirContaModal.jsx  2 UI
+    src/components/ChatbotWidget.jsx .... 1 UI
+    src/components/ComprarFichasModal.jsx 1 UI
+    src/pages/CorporativoCarteira.jsx ... 1 UI
+    src/context/AppContext.jsx .......... 1 UI
+    (src/pages/Seguranca.jsx tem 6 UI; o SEG1 só trata 1 delas, em §1.7.)
+
+  BACKEND (8 ficheiros com TEXTO-UI, nenhuma linha no SEG1 §1.2)
+    _lib/contract.mjs, _lib/data-store-supabase.mjs, _lib/data-store-blobs.mjs,
+    banners.mjs, notificacoes.mjs, _lib/pix-config.mjs, _lib/jwt.mjs,
+    _lib/conta-delete.mjs
+    (banners e data-store-* reaparecem no SEG3 B2 — mas o gap analysis, que é
+     onde a acção se decide, não os tem.)
+
+(B) UMA ÁREA INTEIRA DO SEG0 DESAPARECE
+--------------------------------------------------------------------------------
+⛔ `BACKEND-TESTES` — 186 itens no SEG0, dos quais **47 TEXTO-UI** — não tem
+   secção no SEG1 nem MC no SEG3. As strings "_tests" e "BACKEND-TESTES" não
+   aparecem uma única vez no SEG1. São 62 ficheiros de teste, 22 dos quais
+   contêm o termo. Verifiquei que os testes NÃO asseveram cópia de UI (procurei
+   `assert(...leil|lance...)` e não há ocorrências), pelo que o risco real é
+   menor do que parece — mas renomear funções/endpoints (SEG1 §1.2, SEG3 C11)
+   parte-os, e ninguém alocou o trabalho.
+
+(C) ACÇÕES DO SEG1 SEM ITEM NO SEG0 (verificação inversa)
+--------------------------------------------------------------------------------
+Não encontrei nenhuma acção INVENTADA. As linhas "AUSENTE: … | CRIAR" estão
+todas ancoradas na sonda negativa do SEG0 §0.8 — o próprio SEG1 declara isso.
+Há, porém, EXPANSÃO não ancorada, legítima mas não sinalizada:
+  • SEG0 §0.9 lista 7 documentos jurídico-fiscais em falta; o SEG1 §1.5 lista
+    13 (J1–J8 + F1–F5). J5 (identificação do fornecedor, Decreto 7.962/2013),
+    J7 (revisão da privacidade), F3 (DIFAL), F4 (retenção fiscal) e F5
+    (conciliação PIX↔pedido↔NF-e) não têm contrapartida no SEG0. São derivações
+    correctas da lei, não invenções — mas o SEG1 apresenta-as como se viessem
+    do inventário.
+
+================================================================================
+4.3 — COERÊNCIA DO MAPA DE DEPENDÊNCIAS (SEG2)
+================================================================================
+VEREDITO: **COMPLETO quanto ao grafo; AMBÍGUO quanto à calibração do ★★★**
+
+GRAFO, CICLOS E SENTIDO DAS SETAS
+--------------------------------------------------------------------------------
+Reli o grafo (A), os acoplamentos (C1–C9) e o ciclo (D). O sentido das setas é
+coerente: em toda a cadeia D1→jurídico→regulamento→copy→build→APK→loja, B só
+faz sentido depois de A. Não encontrei seta invertida no SEG2.
+O CICLO-1 declarado (Data Safety ⇄ schema ⇄ decisão de nível) é real e a
+quebra proposta (fixar D1 por decisão de negócio) é válida.
+
+CICLO NÃO DECLARADO, entre SEG2 e SEG3:
+  ⚠ SEG2 §2.4 diz que o trabalho que "pode começar sem esperar por nada" é
+    "o rebuild do índice RAG e a reescrita de `_lib/guto-perfis.mjs`".
+    Mas `guto-perfis.mjs` contém os 4 prompts de sistema que DECLARAM AO
+    UTILIZADOR O QUE O PRODUTO É (verifiquei: PROMPT_CONFORMIDADE em
+    guto-perfis.mjs:74 diz "loja de e-commerce"; o ficheiro tem 54 ocorrências
+    do termo). Reescrevê-lo antes do parecer é exactamente "mudar a palavra sem
+    mudar o mecanismo" — que o SEG3 R1 classifica como ⛔ e PROÍBE. SEG2 §2.4 e
+    SEG3 R1 contradizem-se. Ver 4.4.
+
+(a) ÍNDICE RAG FORA DO REPOSITÓRIO — **CONFIRMADO**
+--------------------------------------------------------------------------------
+  scripts/build-rag-index.mjs:6-7   persiste em "Blob `rag:{n}` no store `rag`";
+                                    metadados em `rag:meta`
+  scripts/build-rag-index.mjs:10    exige NETLIFY_SITE_ID, NETLIFY_AUTH_TOKEN,
+                                    OPENAI_API_KEY
+  scripts/build-rag-index.mjs:64-70 abrirStore() falha explicitamente sem
+                                    siteID/token
+  _lib/rag.mjs:12-14                convenção do store "rag"; rag:meta / rag:{n}
+  _lib/rag.mjs:29-31                em produção usa HF Inference API e
+                                    "EXIGE HF_API_TOKEN"
+  Único consumidor: `chatbot.mjs` (grep de consumidores → 1 ficheiro).
+  O script lê por omissão apenas `docs/chatbot/regulamento.md`.
+  ⇒ A afirmação do Executor é exacta: editar o .md não muda o GUTO.
+  ⚠ ACRESCENTO: `desafio-gut/frontend/.env.example` NÃO documenta HF_*,
+    OPENAI_* nem nada de RAG (grep → vazio). O pré-requisito do rebuild — que
+    o SEG3 R5 transforma em critério de aceitação de B1 — não está registado em
+    lado nenhum do repo. É um passo manual sem documentação.
+
+(b) O APK EMPACOTA O FRONTEND — **CONFIRMADO**
+--------------------------------------------------------------------------------
+  desafio-gut/frontend/package.json → "build:apk":
+      "cd ../.. && netlify build --context production && cd desafio-gut/frontend
+       && npm run validar:dist && npx cap sync android"
+  desafio-gut/frontend/capacitor.config.ts → webDir: 'dist',
+      appId: 'com.desafiogut.app'
+  `cap sync android` copia `dist/` para dentro do projecto Android; confirmei
+  que a cópia empacotada existe em
+      android/app/src/main/assets/public/…
+  ⇒ Exacto: deploy web não actualiza o APK; toda a cópia e todo o ícone exigem
+    novo binário e nova revisão. O agrupamento numa só submissão é a conclusão
+    certa.
+
+(c) SALDOS REAIS DE CLIENTES — **CONFIRMADO NA EXISTÊNCIA, SOBRE-DIMENSIONADO
+    NA MAGNITUDE**
+--------------------------------------------------------------------------------
+Consultei a base de produção (SELECT de agregados, sem dados pessoais):
+
+    saldo_rs ................ 8 linhas · 7 com saldo > 0
+                              TOTAL EM ABERTO = 2.375 centavos = **R$ 23,75**
+    saldo_rs_creditos ....... 21 linhas · 8 endereços distintos
+                              TOTAL CREDITADO (histórico) = 5.800 centavos
+                              = **R$ 58,00**
+    saldo_rs_debitos ........ 0 linhas
+    lances / produtos / lojistas / troco_senhas / cotas_pagas / wallet = 0
+    matviews em `public` .... **0** → `mv_lances_por_edicao` NÃO EXISTE
+                              (o Executor disse "não presente na lista";
+                               confirmo de forma definitiva: pg_matviews vazio)
+
+  ⇒ Os números de LINHAS do Executor estão todos certos. O que ele nunca fez
+    foi convertê-los em dinheiro — e é a conversão que muda a leitura.
+    O SEG2 ★★★ escreve "A ECONOMIA DE SENHAS TEM DINHEIRO REAL DENTRO" e o
+    SEG3 chama a C1 "o MC de maior risco do programa inteiro" e ⛔ R2
+    "apropriação". A exposição medível no livro-razão Supabase é de
+    **R$ 23,75 em aberto sobre 7 endereços**. É uma obrigação real e não pode
+    ser ignorada — mas não é, por si, o maior risco de um programa de 21 MCs.
+  ⚠ RESSALVA HONESTA: não consegui medir `saldoSenhas` on-chain por endereço
+    (exigiria varrer o contrato em mainnet) nem excluir a hipótese de existir
+    um livro paralelo em Netlify Blobs. O registo de projecto fala de ~19
+    créditos na EOA coordenadora. O que afirmo é o que medi: o ledger Supabase
+    vale R$ 23,75.
+
+OUTROS ACOPLAMENTOS QUE VERIFIQUEI
+--------------------------------------------------------------------------------
+  C1 (nome de função = URL pública): CONFIRMADO. As 5 funções com o termo no
+     nome existem e são ficheiros de topo — auth-lance.mjs, lance-relampago.mjs,
+     lances-flash.mjs, consolidar-lances.mjs, purge-lances.mjs.
+  C3 (i18n é ilha): CONFIRMADO e SUBESTIMADO — ver G-3/G-4. Além de o grosso
+     estar hardcoded em JSX, as traduções en/es já contêm cópia de leilão que
+     o probe não vê.
+  C5 (`recursos-app-config.mjs` é o interruptor): CONFIRMADO COM RESSALVA
+     MATERIAL. `DEFAULT_RECURSOS_APP` é só o DEFAULT; `resolverRecursos()`
+     (linhas 34-47) lê primeiro o Blob `config-experiencia:recursos_app`. O
+     valor VIVO em produção não foi verificado por ninguém — nem por mim nem
+     pelo Executor, que apresenta o default como se fosse o estado actual.
+
+================================================================================
+4.4 — REALISMO DA ESTIMATIVA (SEG3)
+================================================================================
+VEREDITO: **AMBÍGUO** — a contagem é defensável na forma, mas tem uma inversão
+de dependência e erra em ambas as direcções na substância.
+
+(A) PASSO QUE DEPENDE DE OUTRO QUE VEM DEPOIS — **SIM, HÁ UM, E É GRAVE**
+--------------------------------------------------------------------------------
+⛔ A ordem recomendada do SEG3 §3.2 é: 1º A1, **2º B1**, **3º A2**.
+   B1 é definido como: "GUTO: 4 prompts de sistema + ~40 respostas canónicas em
+   `_lib/guto-perfis.mjs` + **reescrita de `docs/chatbot/regulamento.md`** +
+   rebuild do índice RAG".
+   A2 é definido como: "**Reescrita do regulamento**, termos de venda, política
+   de devolução/entrega e política de privacidade, **a partir do parecer**.
+   ⚠ DEPENDE de A1 aprovado."
+   ⇒ O regulamento é reescrito em B1 **antes** do parecer que A2 exige, e
+     depois reescrito outra vez em A2. O índice RAG (passo manual, pago, com
+     tokens que nem estão documentados — ver 4.3(a)) tem de ser reconstruído
+     duas vezes.
+   ⇒ E é a violação literal da regra ⛔ R1 do próprio SEG3 ("proibir o Nível 1
+     isolado; só executar N1 acoplado a N2 ou N3") e da justificação de §3.2
+     ("O texto é a promessa; a promessa vem depois de se saber o que se pode
+     prometer"). B1 é precisamente N1 isolado, executado primeiro.
+   CORRECÇÃO MÍNIMA: B1 deve ficar depois de A2, ou B1 deve ser reduzido aos
+   prompts de conformidade sem tocar no regulamento.
+
+(B) SUB-ESTIMATIVAS CONCRETAS
+--------------------------------------------------------------------------------
+S-1 B3 diz "30 ficheiros JSX (~99 strings)". São **33** ficheiros com TEXTO-UI
+    no próprio TSV do Executor (contei os distintos: 33, soma 128). O número 30
+    do SEG0 §0.1(c) está errado em relação aos seus próprios dados.
+S-2 "~215 strings" para o Nível 1 exclui todo o vocabulário adjacente (G-4:
+    +352 edição, +287 senha, +170 slot, +103 vencedor só no frontend) e exclui
+    en.js/es.js (G-3). O Nível 1 real é, no mínimo, o dobro do orçamentado.
+S-3 "Vitrine (4 Slots)" é tratado como **2 ficheiros** (SEG1 §1.1). São **6**
+    sítios: i18n/pt.js:9, i18n/en.js:7, i18n/es.js:7, Dashboard.jsx:41,
+    BottomNav.jsx:28, Sidebar.jsx:29.
+S-4 `Vitrine.jsx` tem DUAS ligações "Ir para o leilão": linha 353 e linha 442
+    ("Ir para o leilão atual (R-1) →"). O SEG1 só trata a 353.
+S-5 NENHUM MC cobre BACKEND-TESTES (62 ficheiros, 22 com o termo) — ver 4.2(B).
+S-6 NENHUM MC cobre o CI (G-6). C11 ("arquivar o contrato") parte
+    contract-security.yml e security-scan.yml.
+S-7 NENHUM MC cobre `src/data/programacao-junho-2026.js` nem a rota
+    `/programacao` (G-5).
+S-8 NENHUM MC cobre `desafio-gut/docs/` (76 ficheiros) nem `plans/` (G-1/G-2).
+S-9 B4 orçamenta 15 ficheiros de ícone; são 18, e os 3 XML são os que o Android
+    moderno realmente compõe (G-8).
+S-10 O SEG3 não prevê MC para verificar o valor VIVO do Blob
+    `config-experiencia:recursos_app` — que é o interruptor de que toda a
+    conformidade depende (4.3, C5).
+
+(C) SOBRE-ESTIMATIVAS CONCRETAS
+--------------------------------------------------------------------------------
+O-1 ⛔ C1 ("liquidação da economia de senhas… o MC de maior risco do programa
+    inteiro") está calibrado para um passivo que medi em **R$ 23,75** em aberto
+    sobre 7 endereços (R$ 58,00 creditados em toda a história, 8 endereços).
+    Continua a ser obrigação para com clientes e a exigir decisão — mas como MC
+    é pequeno, e o risco ⛔ R2 ("apropriação") está desproporcionado. Convertido
+    em dinheiro, o problema resolve-se por reembolso directo.
+O-2 C2 inclui "DROP da matview `mv_lances_por_edicao`". Verificado: **não há
+    nenhuma matview no schema public**. É trabalho zero.
+O-3 SEG1 §1.3 orçamenta "ACRESCENTAR 11 colunas a `produtos`" e "`lojistas`
+    passa a FORNECEDOR". Ambas as tabelas Supabase estão **mortas** — o
+    catálogo real está em Netlify Blobs (G-11). Trabalho mal dirigido: nem o
+    esforço estimado nem o alvo estão certos.
+O-4 C11 inclui "DROP de `lances`" — 0 linhas, RLS service_role-only, nenhum
+    consumidor. Trivial, não merece peso num MC.
+O-5 O SEG3 orçamenta como novo o conceito de "entrega" (C9 rastreio, C10
+    devolução) sem reconhecer que já existe `?acao=marcar-entregue` + UI
+    (G-11). Parte do caminho está andado.
+
+(D) A CONTAGEM GLOBAL
+--------------------------------------------------------------------------------
+"4 / 9 / 21 MCs" é defensável como ordem de grandeza e o intervalo de confiança
+declarado para o Bloco C (12–18) é honesto. Com as sub-estimativas S-1..S-10 e
+as sobre-estimativas O-1..O-5, o número não se move muito — o que se move é a
+DISTRIBUIÇÃO: o Bloco B (copy/identidade) está subestimado e o Bloco C
+(desmontagem do leilão/banco) está sobrestimado. Recomendo +1 MC em B para
+"vocabulário adjacente + en/es + docs vivos + CI" e −1 na dimensão atribuída a
+C1/C2.
+
+================================================================================
+DIVERGÊNCIAS NUMÉRICAS (recontagem independente)
+================================================================================
+MÉTRICA                                    | EXECUTOR | VALIDADOR      | VEREDITO
+-------------------------------------------|----------|----------------|----------
+.mjs no topo de netlify/functions          |    68    |      68        | CONFIRMA
+Ficheiros .mjs com o termo (c/ _lib,_tests)|    69    |      70        | DIVERGE +1
+  └ topo / _lib / _tests                   |    —     | 24 / 24 / 22   | —
+Ocorrências leil|lance|arremat em src      | 677 (*)  |     677        | CONFIRMA
+  (*) implícito: FRONTEND 683 = src 677 + index.html 6 — reconciliei exactamente
+index.html                                 |     6    |       6        | CONFIRMA
+Ficheiros de src com o termo (excl .bak)   |    —     |      58        | —
+FRONTEND TEXTO-UI (total)                  |   128    | 128 no TSV     | CONFIRMA
+FRONTEND TEXTO-UI — nº de ficheiros        | "30"     |      33        | DIVERGE
+Falsos positivos em TEXTO-UI               | "2"      | ≥8 (5 FE+3 BE) | DIVERGE
+  └ FE: en.js:24 "Balance (R$)" + web3.js:6,12,21,21 (fragmentos de ABI)
+  └ BE: _lib/contract.mjs:29,35,35 (fragmentos de ABI)
+  └ web3.js: SEG0 diz "5 = mensagens de erro"; 4 das 5 são ABI → 1 real
+Linhas duplicadas no TSV (2+ baldes)       |  n/d     | 223 (8,4%)     | NOVO
+  └ 2.665 linhas de dados vs 2.442 triplos (ficheiro,linha,termo) distintos
+  └ o cabeçalho do SEG0 diz "2.664 linhas"; a tabela diz "2.665"  (−1)
+Ficheiros tocados                          |   238    |     238        | CONFIRMA
+Ficheiros com TEXTO-UI (todas as áreas)    |    67    |      67        | CONFIRMA
+EM_BREVE_MODE                              |  true    | true (leilaoLock.js:10) | CONFIRMA
+isLeilaoAtivo ios/android/pwa              | F/F/T    | F/F/T (recursos-app-config.mjs:19) | CONFIRMA*
+  * é o DEFAULT; o valor vivo vem do Blob e não foi verificado por ninguém
+Rotas React com "leilao"                   |     0    | 0 (31 paths, 37 <Route>) | CONFIRMA
+carrinho/cart/frete/CEP/NF-e/estoque/SKU   |     0    |       0        | CONFIRMA
+"status de publicação" em produtos         | "NÃO TEM"| TEM (4 estados)| **REFUTADO**
+matview mv_lances_por_edicao               |"não está"| 0 matviews     | CONFIRMA+
+saldo_rs                                   | 8 linhas | 8 = R$ 23,75   | CONFIRMA+quant.
+saldo_rs_creditos                          | 21 linhas| 21 = R$ 58,00  | CONFIRMA+quant.
+lances / produtos / lojistas (linhas)      |     0    |       0        | CONFIRMA
+Ícones Android                             |    15    | 15 PNG + 3 XML | DIVERGE
+"Vitrine (4 Slots)"                        | 2 files  |    6 sítios    | DIVERGE
+"Ir para o leilão" em Vitrine.jsx          | 1 (:353) | 2 (:353,:442)  | DIVERGE
+i18n/pt.js — linhas com o termo            |     6    |       7        | DIVERGE
+i18n/pt.js — linhas com vocab. de leilão   |    n/d   |      12        | NOVO
+en.js/es.js — cópia de leilão traduzida    |  0 e 1   |  7 e 7 (bid/puja) | **NOVO**
+DOCS — ficheiros inventariados             |   100    | 100 de ~187    | DIVERGE −87
+  └ ausentes: desafio-gut/docs (76), plans (4), README, RELATORIO-FINAL,
+    security_audit, MC39.19/20-diagnostico, desafio-gut/CLAUDE_DEBUG
+Vocabulário adjacente em src (não contado) |     —    | edição 352 · senha 287
+                                           |          | slot 170 · vencedor 103
+                                           |          | ficha 18 · relâmpago 14 | **NOVO**
+Contrato: funções/eventos públicos         | 10 fn +  | +comprometerLance,
+                                           |  5 ev    | +consolidarResultado,
+                                           |          | +TransferenciaIniciada | DIVERGE
+closed-testing iniciado?                   |"não veri-| evidência NO REPO:
+                                           | ficável" | closed_testing=nao_iniciado | DIVERGE
+
+================================================================================
+ACHADOS NOVOS (o que o Executor não viu)
+================================================================================
+N-1 ⛔ `GlassHeader.jsx:35` **NÃO APARECE NO TELEMÓVEL.**
+    Lido o ficheiro: o parágrafo "E-commerce através de Dropshipping" está
+    dentro de `{!isMobile && ( … )}`. O SEG-1 §A1 usa-o como prova de que "o
+    cabeçalho do app JÁ diz E-commerce através de Dropshipping". No APK, que é
+    a superfície que a Play Store revê e que os 22 testadores usam, essa
+    declaração **não é mostrada**. Uma das 6 provas da tese central A1
+    ("o app já está de facto em modo loja") não se verifica onde importa.
+
+N-2 ⛔ `index.html:8` — a MESMA linha que diz "E-commerce" TAMBÉM VENDE LEILÃO.
+    A meta description completa é:
+      "DesafioGUT · Grupo União e Trabalho — E-commerce via Dropshipping.
+       **Dê seu lance: o menor valor único vence.** Grátis para se cadastrar."
+    O SEG-1 §A1 cita só a primeira metade como prova de alinhamento. É a
+    contradição, não a prova — e está no snippet que os motores de busca e as
+    partilhas sociais mostram.
+
+N-3 ⛔ O ESTADO DO CLOSED TESTING **ESTÁ** REGISTADO NO REPO.
+    `closed-testing/logs/coleta-2026-08-24_12-12-53.txt` contém literalmente:
+        closed_testing=nao_iniciado
+    E `closed-testing/` só tem `README.md` + `logs/` — **não existe**
+    `relatorios-diarios/` nem `relatorios-semanais/`, que os crons do MC92.10
+    (docs/MC92.10-CRON-JOBS.txt) comprometiam a criar e a COMITAR todos os dias
+    a partir do arranque. Zero relatórios = o contador de 30 dias nunca arrancou.
+    ⇒ O SEG-1 N7, o SEG2 G6 e o SEG3 D5 declaram isto "não verificável" e
+      elevam-no a "a pergunta mais urgente". A resposta provável já está no
+      repo, e é a favorável: **não começou** ⇒ a janela barata para mudar está
+      aberta. Só `inicio.txt` falta; a ausência de relatórios é a prova indirecta.
+      (Não afirmo o estado em 2026-09-23; afirmo que há mais evidência do que o
+       diagnóstico reconhece e que ela aponta num só sentido.)
+
+N-4 ⛔ A MÁQUINA DE CUMPRIMENTO JÁ EXISTE (G-11). `produtos.mjs` tem
+    rascunho→ativo→vendido→entregue, `vendido_em`, `entregue_em`,
+    `?acao=marcar-entregue`, `?acao=registrar-vencedor`, e UI em
+    `CorporativoDashboard.jsx:297`. O SEG0 §0.8 declara "devolução/entrega 0".
+
+N-5 ⛔ O CATÁLOGO VIVE EM NETLIFY BLOBS, NÃO NO SUPABASE (G-11). Toda a secção
+    de banco do SEG1 §1.3 relativa a `produtos`/`lojistas` aponta a tabelas que
+    o código não usa.
+
+N-6 ⚠ `plans/002-playstore-submission.md` e `plans/003-launch-campaign.md`
+    são planos VIVOS que mandam declarar leilão à Google e lançar a campanha
+    sobre "menor lance único" — e estão fora do inventário (G-2).
+
+N-7 ⚠ A CAMPANHA E O CI FICAM ÓRFÃOS: nenhum MC do SEG3 toca em
+    `.github/workflows/*` (que referem LeilaoGUT/LeilaoGUTFuzzing) nem em
+    `ignition/modules/Leilao*.js` nem em `desafio-gut/tests/foundry|fuzzing`.
+
+N-8 ⚠ `/programacao` + `src/data/programacao-junho-2026.js`: a grelha de 168
+    sessões por tier é pura arquitectura de leilão e tem **0** ocorrências dos
+    termos — invisível a este método de inventário (G-5).
+
+N-9 ⚠ O pré-requisito do rebuild do RAG (HF_API_TOKEN / OPENAI_API_KEY /
+    NETLIFY_*) não está em `.env.example` nem em documentação nenhuma.
+    O SEG3 R5 faz do rebuild um critério de aceitação de B1 sem que exista
+    instrução para o executar.
+
+N-10 • `MercadoLances.jsx:342` fixa `const PWA_URL = "https://desafiogut.com"`
+    no código, enquanto a produção corre em `silly-stardust-ca71bc.netlify.app`.
+    A decisão D10 do SEG3 (domínio) já tem uma dependência dura no código que o
+    diagnóstico não regista: o ecrã de conformidade envia os utilizadores de
+    iOS/Android para um domínio que pode não servir a app.
+
+N-11 • O app NÃO É UM PWA instalável (G-9): sem manifest, sem service worker.
+    A plataforma "pwa" de `recursos-app-config.mjs` é um rótulo de config, não
+    uma app instalável — o que enfraquece a tese "o leilão vive na versão Web"
+    que o ecrã de conformidade e o prompt do GUTO declaram aos utilizadores e,
+    por extensão, à revisão da loja.
+
+N-12 • O TSV DUPLICA 223 LINHAS entre baldes (a mesma ocorrência contada como
+    IDENTIFICADOR e como STRING-TECNICA — ex.: App.jsx:44). O headline
+    "2.665 ocorrências" está inflacionado em ~8,4%.
+
+================================================================================
+VEREDITO FINAL DO VALIDADOR
+================================================================================
+
+                    >>> APROVADO COM RESSALVAS <<<
+
+APROVA-SE porque: todas as afirmações estruturais que testei resistiram.
+Não há rota de leilão, o EM_BREVE_MODE está ligado, o interruptor de
+conformidade existe e está a false nas lojas, o índice RAG vive fora do repo, o
+APK empacota o frontend, o ícone é mesmo um martelo de leiloeiro, o contrato em
+mainnet é mesmo irreversível, o regulamento é mesmo contraditório, e não existe
+mesmo infraestrutura de e-commerce. A tese central — que o Nível 1 isolado é a
+opção mais perigosa, porque troca uma declaração honesta por uma falsa — é
+correcta e é o maior valor do diagnóstico. As lacunas que declara (L-4 N1..N7)
+são honestas e estão à cabeça, como devem estar.
+
+RESSALVAS QUE TÊM DE ACOMPANHAR O DOCUMENTO ATÉ AO MC DE EXECUÇÃO:
+
+R-V1 ⛔ O INVENTÁRIO NÃO É "TODO O IMPACTO". Mede 3 radicais. O vocabulário que
+     o próprio SEG-1 nomeia (edição, senha, slot, vencedor) fica de fora e vale
+     mais ocorrências do que o que foi medido. Antes de abrir B3, refazer a
+     varredura com o léxico completo e com EN/ES.
+
+R-V2 ⛔ O SEG1 DECLARA UMA CONSISTÊNCIA QUE NÃO TEM. 19 ficheiros com TEXTO-UI
+     inventariado não têm acção, e a área BACKEND-TESTES desapareceu entre o
+     SEG0 e o SEG1. Corrigir a tabela antes de usar o SEG1 como plano.
+
+R-V3 ⛔ A ORDEM DO SEG3 TEM UMA INVERSÃO: B1 reescreve o regulamento antes de A2
+     o produzir a partir do parecer, e isso é o N1 isolado que a regra R1 do
+     mesmo documento proíbe. B1 desce para depois de A2, ou reduz-se aos
+     prompts sem tocar no regulamento.
+
+R-V4 ⚠ A CAMADA DE DADOS DO CATÁLOGO ESTÁ MAL IDENTIFICADA. O SEG1 §1.3 planeia
+     migrações em tabelas Supabase mortas; o catálogo vivo está em Netlify
+     Blobs e já tem máquina de estados com "entregue". Reescrever §1.3.
+
+R-V5 ⚠ O PASSIVO DE CLIENTES É DE R$ 23,75, NÃO DE UMA ORDEM DESCONHECIDA. C1
+     e R2 estão calibrados para um risco que não medi como existindo nessa
+     escala. Reponderar — sem o dispensar: continua a ser dinheiro de terceiros.
+
+R-V6 ⚠ DUAS DAS SEIS PROVAS DO ACHADO A1 ("o app já está em modo loja") não
+     resistem: GlassHeader não é mostrado em telemóvel, e a meta description que
+     é citada como prova contém, na mesma frase, "Dê seu lance". A tese A1
+     continua de pé pelos outros quatro pontos, mas com menos força do que
+     está escrita.
+
+R-V7 ⚠ D5 (o teste fechado começou?) tem resposta provável no próprio repo:
+     `closed_testing=nao_iniciado` + ausência de relatórios diários. Perguntar
+     ao operador continua certo; apresentar como "não verificável" não.
+
+NÃO REPROVO porque nenhuma das lacunas inverte uma conclusão: todas alargam
+superfície ou recalibram peso. O diagnóstico é utilizável como base de decisão
+desde que R-V1, R-V2 e R-V3 sejam corrigidas antes de qualquer MC de execução.
+
+O QUE **NÃO** FOI VERIFICADO POR MIM (declarado, não presumido)
+--------------------------------------------------------------------------------
+V-N1 Play Console e App Store Connect — sem acesso. Não validei nada do SEG0
+     §0.5 além da existência dos 4 artefactos em
+     `Desktop\ARTEFACTOS-RUAN\2-Documentos\` (confirmei que existem).
+V-N2 `saldoSenhas` on-chain por endereço e o saldo da EOA coordenadora — não
+     consultei a mainnet. O número R$ 23,75 é só do ledger Supabase.
+V-N3 O valor VIVO do Blob `config-experiencia:recursos_app`. Verifiquei o
+     DEFAULT no código; o valor efectivo em produção continua por medir — por
+     mim e pelo Executor.
+V-N4 Runtime: não corri o app nem capturei ecrãs. Os MCPs `chrome-devtools` e
+     `claude-eyes` falharam a ligar também nesta sessão (CONNECT_TIMEOUT).
+     Tudo o que digo sobre UI vem do código e de um PNG lido directamente.
+V-N5 Jurídico e fiscal — não sou advogado nem contabilista. Não validei nem
+     invalidei uma única afirmação de direito do SEG1 §1.5.
+V-N6 Não reclassifiquei as 2.665 linhas do TSV uma a uma. Amostrei os baldes e
+     testei hipóteses concretas (ABI, "Balance", i18n). A margem de ±5% que o
+     Executor declara em N6 parece-me optimista, mas não a refutei no conjunto.
+
+================================================================================
+FIM DO SEG4 · VEREDITO: APROVADO COM RESSALVAS (7 ressalvas, 3 bloqueantes)
+================================================================================

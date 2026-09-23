@@ -1,0 +1,266 @@
+================================================================================
+MC00.0 — SEG4 · ERRATA DO EXECUTOR (resposta à validação independente)
+DesafioGUT · Data: 2026-09-23
+Skills ECC: verification-before-completion, systematic-debugging
+================================================================================
+
+Este ficheiro SUPERSEDE os números e as afirmações abaixo indicadas nos
+SEG0/SEG1/SEG2/SEG3. Os ficheiros originais NÃO foram reescritos: ficam como
+registo do que a validação apanhou (é para isso que serve a validação em dois
+níveis do Pilar 1). Quando este documento diverge deles, vale este.
+
+Dados corrigidos: _logs/MC00.0_SEG4_INVENTARIO-V3-CORRIGIDO.tsv
+Relatório do Validador: _logs/MC00.0_SEG4_VALIDACAO.txt
+Veredito do Validador: APROVADO COM RESSALVAS (7 ressalvas, 3 bloqueantes).
+
+--------------------------------------------------------------------------------
+E1 — DEFEITO DE INSTRUMENTO: o scanner casava dentro de outras palavras
+--------------------------------------------------------------------------------
+O regex da v2 era `/lances?/i`, SEM fronteira de palavra. Consequência
+verificada por execução:
+    node -e 'console.log(/lances?/i.test("Balance (R$)"))'   →  true
+"Balance" contém "lance". 31 linhas do inventário original eram deste tipo,
+incluindo `i18n/en.js:24 "Balance (R$)"` — contada como texto de leilão.
+
+Corrigido no scanner v3 com fronteira de palavra. Controlos:
+    grep -ci "balance" inventario-v3.tsv                      →  0   ✔
+    fragmentos de ABI `event LanceDado(...)` em TEXTO-UI      →  0   ✔
+    termos EN/ES ("Bids", "Pujas") agora capturados           →  15  ✔
+
+DEFEITO ESPELHADO INTRODUZIDO PELA CORREÇÃO, e declarado: a fronteira
+`(?<![a-zA-Z])` também rejeita camelCase — `CardLance`, `darLance`,
+`TabelaLances`, `MercadoLances` deixam de ser contados. Medido à parte, por
+regra de maiúscula (`[a-z]` seguido de `Lance`/`Leilao`):
+    **557 ocorrências camelCase em 80 ficheiros.**
+Isto afeta SÓ o balde IDENTIFICADOR (interno, opcional). O balde TEXTO-UI —
+o único que decide esforço de copy — está correto nas duas versões.
+
+--------------------------------------------------------------------------------
+E2 — ÁREAS QUE FICARAM FORA DO INVENTÁRIO (o Validador tinha razão)
+--------------------------------------------------------------------------------
+A v2 varria `docs/` mas NÃO `desafio-gut/docs/` (113 ficheiros), nem `plans/`,
+nem `.github/workflows/`, nem `scripts/`. Corrigido na v3. Ficheiros com o
+termo nessas áreas:
+
+  DOCS ................ 154 ficheiros (era 100) · 1.121 ocorrências
+  PLANOS .............. plans/001-mc40-mainnet-deploy.md
+                        plans/002-playstore-submission.md
+                        plans/003-launch-campaign.md          · 22 ocorrências
+  CI .................. .github/workflows/contract-security.yml
+                        .github/workflows/security-scan.yml   ·  3 ocorrências
+  SCRIPTS ............. scripts/seed-recursos-app.mjs         ·  1 ocorrência
+
+⛔ ACHADO GRAVE dentro de `plans/002-playstore-submission.md` (plano VIVO):
+   linha 97: *"**Funcionalidades financeiras/Web3**: declarar que o app envolve
+   **leilão pago (senhas R$2)** e wallet — atender às políticas de
+   'real-money/financial' e crypto wallet do Google"*
+   linha 139: *"Se o modelo de entrega híbrida mudar (leilão visível no app),
+   revisar `useRecursosApp.js` + as políticas declaradas (**passa a
+   'real-money gaming'**)"*
+   ⇒ Existe no repositório um plano que instrui a declarar à Google um
+     **leilão pago** e que reconhece, por escrito, que tornar o leilão visível
+     reclassifica a app como **real-money gaming**. Este documento contradiz
+     frontalmente qualquer declaração de "e-commerce por dropshipping" e tem
+     de ser tratado no mesmo MC que reescrever a ficha da loja (B6).
+
+⚠ CI: `contract-security.yml:64-65` e `security-scan.yml:97,126` apontam para
+  `desafio-gut/tests/fuzzing/LeilaoGUT.sol`, `LeilaoGUTFuzzing` e
+  `contracts/Leilao.sol`. O MC C11 (desmontar o leilão) PARTE estes dois
+  workflows e nenhum MC previa isso. Acrescentar ao escopo de C11.
+
+--------------------------------------------------------------------------------
+E3 — ERRO MATERIAL: o catálogo vivo NÃO está no Supabase
+--------------------------------------------------------------------------------
+O SEG1 §1.3 planeia acrescentar 11 colunas à tabela Supabase `produtos` e criar
+9 tabelas ao lado dela. **Está errado.** Verificado em
+`netlify/functions/produtos.mjs`:
+    linha 20  import { getStore } from "@netlify/blobs";
+    linha 47  const BLOB_PRODUTOS = "produtos";
+    linhas 130/400/438  abrirStore(BLOB_PRODUTOS)
+O CRUD de produtos vive em **Netlify Blobs**. A tabela Supabase `produtos`
+(0 linhas) é infraestrutura morta.
+
+CORREÇÃO ADICIONAL: o SEG0 §0.3(c) afirma que falta "status de publicação".
+FALSO no modelo vivo — `produtos.mjs` define
+    STATUS_VALIDOS = new Set(["rascunho","ativo","vendido","entregue"])
+mais `?acao=marcar-entregue`. O status existe; existe é no Blob, não na tabela.
+
+CONSEQUÊNCIA PARA O PLANO: o MC C2 muda de natureza. Não é "acrescentar colunas
+a uma tabela" — é **decidir primeiro onde vive o catálogo** (Blobs, Supabase, ou
+migração de um para o outro) e só depois desenhar o schema. Isto acrescenta uma
+decisão pendente:
+
+  D11 ⚠ ONDE VIVE O CATÁLOGO? Blobs (hoje) ou Supabase (planeado)?
+        Um e-commerce com stock, pedidos e relações precisa de transações e
+        integridade referencial que Blobs não dá. Migrar é trabalho real e
+        não estava contado. Decide: operador, com o agente a dimensionar.
+
+--------------------------------------------------------------------------------
+E4 — DECISÃO D5 RESPONDIDA (o Executor declarou "não verificável"; era)
+--------------------------------------------------------------------------------
+O SEG0 §0.5 e o SEG3 D5 dizem que o estado do teste fechado não é verificável
+porque `closed-testing/inicio.txt` não existe. O Validador encontrou a
+evidência que estava no repositório o tempo todo:
+    closed-testing/logs/coleta-2026-08-24_12-12-04.txt : closed_testing=nao_iniciado
+    closed-testing/logs/coleta-2026-08-24_12-12-53.txt : closed_testing=nao_iniciado
+Confirmado por execução directa. Não existe `relatorios-diarios/` (os crons do
+MC92.10 tê-lo-iam preenchido).
+
+>>> O TESTE FECHADO NÃO COMEÇOU. <<<
+
+Isto MELHORA a situação e muda a recomendação: **este é o momento barato para
+mudar.** Não há ciclo de feedback a desperdiçar nem testadores a confundir.
+Adiar custa mais do que agir. D5 deixa de ser bloqueante e passa a argumento
+de urgência. (Ressalva: a evidência é de 2026-08-24; o operador deve confirmar
+que nada mudou desde então.)
+
+--------------------------------------------------------------------------------
+E5 — UMA DAS PROVAS DO ACHADO A1 FALHA ONDE MAIS IMPORTA
+--------------------------------------------------------------------------------
+O SEG-1 lista `GlassHeader.jsx:35` ("E-commerce através de Dropshipping") como
+prova de que o app já se declara loja. Verificado em
+`src/components/glass/GlassHeader.jsx:33-37`: a linha está dentro de
+    {!isMobile && ( <p>E-commerce através de Dropshipping</p> )}
+**Não aparece no telemóvel** — ou seja, não aparece na superfície que a Play
+Store distribui. E `index.html:8`, a outra prova citada, diz na mesma frase:
+    "…E-commerce via Dropshipping. **Dê seu lance: o menor valor único vence.**"
+
+O achado A1 mantém-se (as outras 5 provas resistiram: EM_BREVE_MODE,
+isLeilaoAtivo, vista de conformidade, PROMPT_CONFORMIDADE, ScheduleView), mas
+com uma correção importante: **o alinhamento com o e-commerce é parcial e
+inconsistente, e falha precisamente no telemóvel.** Não é "já está feito, falta
+o nome" — é "está meio feito, e a metade que falta é a que a loja vê".
+
+--------------------------------------------------------------------------------
+E6 — INVERSÃO DE DEPENDÊNCIA NA SEQUÊNCIA RECOMENDADA (falha de raciocínio)
+--------------------------------------------------------------------------------
+O SEG3 §3.2 põe B1 (GUTO + reescrever `regulamento.md` + rebuild RAG) em 2º
+lugar, ANTES de A2 (que produz o regulamento a partir do parecer jurídico) em
+3º. O Validador tem razão e a crítica é dupla:
+  (i)  o regulamento seria escrito duas vezes e o RAG reconstruído duas vezes;
+  (ii) pior: B1 executado antes de A2 é exatamente o **"Nível 1 isolado"** que
+       a regra ⛔R1 do mesmo documento proíbe — mudar a linguagem do assistente
+       antes de mudar a promessa.
+O Executor deixou-se levar pelo atrativo de "entregar valor cedo" e violou a
+sua própria regra.
+
+SEQUÊNCIA CORRIGIDA (substitui o §3.2):
+    1º  A1  decisão de nível + perguntas ao advogado/contabilista
+    2º  A2  regulamento, termos de venda, devolução/entrega, privacidade
+    3º  B1  GUTO + regulamento.md + rebuild RAG   ← agora DEPOIS de A2
+    4º  B2+B3  copy backend e frontend, em bloco
+    5º  B4  identidade visual
+    6º  B5  screenshots + feature graphic
+    7º  B6  ficha da Play **+ plans/002 e plans/003**   ← ver E2
+    8º  B7  APK + submissão, uma vez
+    9º  C1..C12 (só se D1 = Nível 3), sempre C1 antes de C11, e C11 a incluir
+        a correção dos 2 workflows de CI.
+B1 continua a ser o único trabalho que não passa pelo estrangulamento do APK —
+mas isso é uma propriedade dele, não uma licença para o antecipar ao jurídico.
+
+--------------------------------------------------------------------------------
+E7 — O SEG1 AFIRMOU CONSISTÊNCIA QUE NÃO TINHA
+--------------------------------------------------------------------------------
+O SEG1 termina com "todos os itens do inventário SEG0 têm ação correspondente".
+É falso, e é o tipo de afirmação que este MC não devia conter. O Validador
+identificou:
+  • 11 ficheiros de frontend com TEXTO-UI sem ação no gap — incluindo
+    `MercadoLances.jsx`, que É o ecrã `/mercado`.
+  • 8 ficheiros de backend com TEXTO-UI sem ação.
+  • A área BACKEND-TESTES (186 itens, 37 TEXTO-UI na contagem v3) aparece no
+    SEG0 e desaparece do SEG1 e do SEG3. Os testes referem `darLance`,
+    `purge-lances`, `EM_BREVE_MODE` e a economia de senhas; qualquer MC do
+    bloco C parte-os. **Acrescentar "atualizar a suíte de testes" ao escopo de
+    todos os MCs do bloco C.**
+
+--------------------------------------------------------------------------------
+E8 — VOCABULÁRIO ADJACENTE: medido, e é maior que o termo
+--------------------------------------------------------------------------------
+O SEG-1 nomeia "edição, senhas, licitante" como vocabulário de leilão e depois
+não os conta. Medido na v3, à parte (NÃO somar ao termo, são coisas diferentes):
+
+  ÁREA              TERMO DE LEILÃO   VOCABULÁRIO ADJACENTE
+  FRONTEND                 376                659
+  BACKEND                  432                713
+  DOCS                   1.255              1.638
+  (adjacente = edição/edições, senha(s), slot(s), vencedor, ficha(s), relâmpago)
+
+⇒ O vocabulário adjacente é ~1,7× o termo directo no frontend. "Senha" e
+  "edição" são conceitos de leilão sem os quais um e-commerce não funciona
+  (numa loja não há senhas nem edições — há produtos e pedidos). Isto NÃO
+  aumenta o esforço do Nível 1 (são palavras que podem ficar), mas confirma
+  que o Nível 3 é reescrita conceptual, não renomeação.
+
+--------------------------------------------------------------------------------
+E9 — CORREÇÕES NUMÉRICAS MENORES (aceites)
+--------------------------------------------------------------------------------
+  • Ícones Android: 15 → **18** (faltavam os 3 XML do adaptive icon, que são
+    os que o Android ≥26 realmente compõe). Corrige SEG1 §1.6.
+  • Ficheiros de frontend com TEXTO-UI: 30 → **33**.
+  • Ficheiros .mjs com o termo: 69 → 70.
+  • "Vitrine (4 Slots)": 2 → 6 sítios. "Ir para o leilão": 1 → 2.
+  • TEXTO-UI backend: 85 → **73** (v3, sem os falsos positivos de ABI).
+  • TEXTO-UI frontend: 128 → **128** (inalterado: as perdas por fronteira de
+    palavra compensaram os ganhos de EN/ES).
+  • i18n: en.js e es.js passam de 1 e 6 para **6 e 6** — a cópia de leilão JÁ
+    ESTÁ TRADUZIDA ("Bids", "Total Bids", "Lowest Unique Bid", "Pujas",
+    "Puja Única Más Baja"). São 3 idiomas a reescrever, não 1.
+  • Dinheiro em aberto: verificado por SQL nesta sessão —
+    **saldo_rs = R$ 23,75 em 7 contas** (8 linhas, 7 com saldo > 0);
+    saldo_rs_creditos = 21 registos. O Executor tinha os row counts certos e
+    nunca os converteu em dinheiro, que é a única unidade que importa em D3.
+  • matview `mv_lances_por_edicao`: confirmado — **0 matviews** no schema
+    public. A migração declara-a; a base não a tem.
+
+NÃO ACEITE: o Validador infere que 223 linhas repetidas no TSV "inflam o total
+em 8,4%". Não inflam. Duas ocorrências do termo NA MESMA LINHA produzem duas
+linhas de saída idênticas na v2 porque a v2 não registava a coluna — mas são
+duas ocorrências reais. A v3 acrescenta a coluna `COL` e desambigua-as.
+
+--------------------------------------------------------------------------------
+E10 — RESSALVA DE FUNDO DO VALIDADOR (R-V1), aceite
+--------------------------------------------------------------------------------
+"O inventário mede 3 radicais e apresenta-se como 'TODO o impacto'."
+Aceite. A formulação correta, que passa a valer para o relatório final:
+**o inventário mede exaustivamente a SUPERFÍCIE LEXICAL do leilão e mapeia
+qualitativamente as áreas de impacto; não é uma contagem completa do
+acoplamento conceptual**, que E8 mostra ser maior e que só uma especificação
+funcional (não uma varredura) consegue fechar.
+
+--------------------------------------------------------------------------------
+E11 — NÃO VERIFICADO, acrescentado ao L-4
+--------------------------------------------------------------------------------
+N8  O valor VIVO do Blob `config-experiencia:recursos_app` não foi lido. Tudo
+    o que este MC afirma sobre `isLeilaoAtivo` vem do **DEFAULT no código**
+    (`recursos-app-config.mjs:19`). Se o Blob em produção tiver outro valor, o
+    estado real difere. Fica como verificação obrigatória do MC seguinte.
+N9  Pré-requisitos do rebuild do índice RAG (tokens HF/OpenAI/Netlify) não
+    estão documentados em lado nenhum, e o SEG3 faz do rebuild critério de
+    aceitação de B1. Levantar antes de abrir B1.
+N10 `MercadoLances.jsx:342` fixa `PWA_URL = "https://desafiogut.com"` e diz ao
+    utilizador para ir a esse domínio, enquanto a produção corre em
+    `silly-stardust-ca71bc.netlify.app`. Não foi verificado se o domínio
+    resolve. Reforça a decisão D10.
+
+================================================================================
+VEREDITO DO EXECUTOR SOBRE A VALIDAÇÃO
+================================================================================
+A validação independente apanhou um defeito de instrumento (E1), quatro áreas
+não varridas (E2), um erro material de arquitetura (E3), uma resposta que já
+estava no repositório (E4), uma prova sobrevalorizada (E5), uma inversão de
+dependência que violava a regra do próprio documento (E6) e uma afirmação de
+consistência falsa (E7).
+
+Nenhum destes altera as CONCLUSÕES do diagnóstico — os três níveis, os três
+estrangulamentos, a contradição do regulamento, o martelo no ícone e a
+proibição do Nível 1 isolado mantêm-se todos. Dois deles MELHORAM a posição
+(E4: o teste não começou, logo mudar agora é barato) e dois AGRAVAM-NA
+(E2: existe um plano vivo a mandar declarar "leilão pago" à Google;
+E3: o catálogo está em Blobs e o plano de banco estava errado).
+
+A estimativa mantém-se em 9 MCs (Nível 2) e 21 MCs (Nível 3), com o bloco C a
+subir para **13–19 MCs** por causa de D11 (decidir onde vive o catálogo).
+
+================================================================================
+FIM DA ERRATA
+================================================================================

@@ -1,0 +1,226 @@
+================================================================================
+MC00.0 — SEG2 · MAPA DE DEPENDÊNCIAS
+DesafioGUT · Data: 2026-09-23
+Skills ECC: smart-explore, ux-waiting-audit
+RESSALVA: `ux-waiting-audit` foi usada só na parte analítica. Os MCPs
+`chrome-devtools` e `claude-eyes` falharam a ligar (CONNECT_TIMEOUT) — nenhuma
+medição de estado de espera em runtime foi feita (L-4/N5).
+================================================================================
+
+2.1 — DEPENDÊNCIAS TÉCNICAS
+================================================================================
+
+(A) GRAFO PRINCIPAL — lê-se "A → B" como "B só faz sentido depois de A"
+
+   [D1 DECISÃO DE NÍVEL (operador/cliente)]
+        │
+        ├──→ [J: parecer jurídico]  ─────────┐
+        │         │                           │
+        │         ├──→ [REGULAMENTO novo]     │
+        │         │        │                  │
+        │         │        ├──→ TermosConsentimento.jsx
+        │         │        ├──→ docs/chatbot/regulamento.md
+        │         │        │        │
+        │         │        │        └──→ [REBUILD DO ÍNDICE RAG] ★ fora do repo
+        │         │        │                   └──→ respostas do GUTO
+        │         │        └──→ Privacidade.jsx
+        │         │
+        │         └──→ [DATA SAFETY da Play]  ←─ também depende de (C)
+        │
+        ├──→ [COPY: i18n + nav + 215 strings]
+        │         │
+        │         └──→ [BUILD WEB]  ──→ deploy Netlify (operador)
+        │                   │
+        │                   └──→ [BUILD APK] ★★ ponto de estrangulamento
+        │                             │
+        │                             └──→ [SUBMISSÃO À PLAY] ──→ [REVISÃO]
+        │
+        ├──→ [IDENTIDADE VISUAL: ícone/artes/og]
+        │         │
+        │         ├──→ [BUILD APK]   (ícone vive no APK)
+        │         └──→ [FICHA DA LOJA] (ícone 512, feature graphic, screenshots)
+        │
+        └──→ [N3: e-commerce funcional]
+                  │
+                  ├──→ [SCHEMA: 9 tabelas novas + colunas em produtos]
+                  │         └──→ [RLS por tabela]
+                  │                   └──→ [endpoints de pedido/envio/devolução]
+                  │                             └──→ [ecrãs: carrinho→checkout]
+                  │                                       └──→ [screenshots novos]
+                  │
+                  ├──→ [CONTRATO COM FORNECEDOR] (J4) ──→ [fluxo de repasse]
+                  ├──→ [INTEGRAÇÃO FISCAL NF-e] ──→ precisa de NCM/CFOP em produtos
+                  ├──→ [LIQUIDAÇÃO DAS SENHAS] ★★★ ──→ desligar contrato on-chain
+                  └──→ [DESLIGAR web3.js/Privy-signing do fluxo de compra]
+
+(B) OS TRÊS PONTOS DE ESTRANGULAMENTO
+★   ÍNDICE RAG FORA DO REPOSITÓRIO
+    Editar `docs/chatbot/regulamento.md` **não muda o que o GUTO responde**.
+    O índice é construído por `scripts/build-rag-index.mjs` e vive fora do
+    repo. Consequência: é possível reescrever todo o regulamento, fazer deploy,
+    e o assistente continuar a explicar o leilão ao utilizador. Qualquer MC que
+    toque no regulamento TEM de incluir o rebuild do índice (ação do operador).
+
+★★  O APK NÃO SE ACTUALIZA COM DEPLOY WEB
+    `build:apk` = `netlify build --context production` + `validar:dist` +
+    `npx cap sync android`. O frontend é EMPACOTADO dentro do .apk. Logo:
+    qualquer mudança de texto, ícone ou ecrã exige **recompilar o APK e
+    submeter à Play** — não há hotfix de copy no Android.
+    Só três coisas mudam sem novo APK: (i) respostas do backend/GUTO,
+    (ii) o flag `recursos_app` (isLeilaoAtivo por plataforma), (iii) conteúdo
+    servido por API. Tudo o resto é ciclo de loja.
+    ⇒ Isto força AGRUPAMENTO: não se faz "uma correção de texto por MC".
+      Acumula-se e submete-se uma vez.
+
+★★★ A ECONOMIA DE SENHAS TEM DINHEIRO REAL DENTRO
+    `saldo_rs` (8 registos), `saldo_rs_creditos` (21) e `saldoSenhas` on-chain
+    (a EOA coordenadora detém ~19 créditos) representam valor pago por
+    utilizadores. Nenhuma desmontagem do leilão pode começar antes de decidir
+    o que lhes acontece. É a dependência que bloqueia o Nível 3 inteiro.
+
+(C) DEPENDÊNCIAS DE ACOPLAMENTO (o que quebra se mudar sozinho)
+  C1 Nome de função Netlify = URL pública.
+     `lance-relampago.mjs` → `/.netlify/functions/lance-relampago`.
+     Renomear no backend SEM tocar no frontend parte o app. Pior: o APK já
+     instalado nos 22 testadores continua a chamar a URL antiga. Renomear
+     endpoints exige rota de compatibilidade e só depois remoção.
+  C2 Frontend ↔ backend de texto: as strings de UI estão nos DOIS lados.
+     Trocar só num lado produz um app que diz "pedido" no ecrã e "lance" na
+     notificação. Copy tem de mudar em bloco (128 front + 85 back).
+  C3 i18n é ilha, não sistema. Só 19 chaves com o termo em 3 ficheiros de
+     55-60 linhas; as outras ~200 strings estão HARDCODED em JSX. Não há
+     "trocar num sítio" — há 30 ficheiros de frontend a editar.
+  C4 `getEstadoEdicao` (utils/edicao.js) é fonte única do estado da edição.
+     Mexer em `EM_BREVE_MODE` propaga-se a todos os ecrãs de uma vez — isso é
+     bom (um ponto) e perigoso (efeito global). Testar o conjunto, não o ecrã.
+  C5 `recursos-app-config.mjs` é o único interruptor de conformidade. Mudá-lo
+     muda simultaneamente o ecrã /mercado, o CardLance e o prompt do GUTO.
+  C6 `produtos.categoria` carrega dois conceitos (plano de cota do lojista E
+     categoria de produto). Separar exige migração + mudança no endpoint +
+     mudança na Vitrine, em conjunto.
+  C7 Schema → RLS → endpoint → ecrã: cada tabela nova arrasta 4 camadas. Não há
+     atalho: RLS está ativa em todas as tabelas existentes e o padrão tem de
+     manter-se.
+  C8 NF-e ↔ exclusão de conta: retenção fiscal (anos) conflitua com o direito
+     ao apagamento. O projeto já tem o padrão resolvido (anonimizar o fiscal,
+     apagar o pessoal); o novo volume de dados obriga a revisitá-lo.
+  C9 Pagamento: `iniciar-pagamento`/`webhook-mercadopago`/`confirmar-pagamento`
+     hoje creditam SENHAS. Passar a liquidar PEDIDOS é mudança no meio do
+     fluxo que já funciona em produção com dinheiro real — é o sítio onde uma
+     regressão custa mais.
+
+(D) CICLOS — HÁ UM, E É REAL
+    CICLO-1:  [Data Safety declara os dados] → exige saber que dados o
+              e-commerce recolhe → exige o SCHEMA definido → exige a DECISÃO de
+              nível → que depende do parecer jurídico → que depende de saber o
+              que a loja permite declarar → volta a [Data Safety].
+    QUEBRA:   fixar a DECISÃO DE NÍVEL (D1) primeiro, por decisão de negócio,
+              não por dedução técnica. Com o nível fixado o ciclo abre-se.
+    Nenhum outro ciclo foi encontrado no grafo.
+
+(E) ESTADOS DE ESPERA (parte analítica de ux-waiting-audit)
+    Operações que passam a existir e cujo tempo o utilizador vai sentir:
+      • consulta de CEP e cálculo de frete — bloqueia o checkout
+      • confirmação PIX — JÁ EXISTE e JÁ TEM latência conhecida (o
+        rate-limiter próprio do projeto foi identificado como gargalo)
+      • repasse do pedido ao fornecedor — assíncrono, pode falhar
+      • emissão de NF-e — assíncrona, pode demorar e pode falhar
+      • atualização de rastreio — polling ou webhook
+    Hoje NENHUM destes estados tem UI. O projeto já tem fila de tarefas
+    (`fila_tarefas`, 5 registos, viva) — é a base certa para os assíncronos.
+    NÃO MEDIDO (N5): nenhuma latência foi observada em runtime nesta sessão.
+
+================================================================================
+2.2 — DEPENDÊNCIAS JURÍDICAS (aprovações necessárias ANTES de implementar)
+================================================================================
+⚠ Levantamento, não parecer (L-4/N3).
+
+APROVAÇÃO   | O QUÊ                                  | BLOQUEIA
+------------|----------------------------------------|---------------------------
+A-J1 ADVOG. | Natureza da operação: o GUT vende em    | TUDO. Sem isto não se
+            | nome próprio ou intermedeia o           | sabe o que declarar na
+            | fornecedor?                             | loja nem quem emite NF-e.
+A-J2 ADVOG. | Destino do mecanismo "menor lance       | Nível de execução (D1).
+            | único" e das senhas já vendidas.        | Bloqueia N3 inteiro.
+A-J3 ADVOG. | Novo regulamento / termos de venda      | TermosConsentimento.jsx,
+            | (substitui o actual, contraditório).    | regulamento.md, RAG.
+A-J4 ADVOG. | Política de trocas/devoluções (CDC 49)  | Fluxo de devolução, ficha
+            | e de entrega.                           | da loja, SAC.
+A-J5 ADVOG. | Contrato com fornecedor/lojista —       | Onboarding de fornecedor,
+            | responsabilidade solidária.             | tabela `lojistas`.
+A-J6 ADVOG. | Política de privacidade revista         | Data Safety da Play.
+            | (morada de entrega, CPF).               |
+A-J7 CONTAB.| Regime tributário e quem emite a nota.  | Integração fiscal, campos
+            |                                         | NCM/CFOP em `produtos`.
+A-J8 CONTAB.| ICMS interestadual / DIFAL no           | Cálculo de preço final.
+            | dropshipping.                           |
+A-J9 CONTAB.| Retenção de documento fiscal vs. LGPD.  | delete-account.mjs.
+A-J10 CLIENTE| Decisão de nível (D1) e destino dos     | O MC de execução seguinte.
+            | saldos.                                 |
+
+ORDEM MÍNIMA: A-J1 e A-J2 são raiz. Sem elas, qualquer código escrito tem
+probabilidade alta de ser deitado fora.
+
+================================================================================
+2.3 — DEPENDÊNCIAS COM AS LOJAS
+================================================================================
+⚠ O que segue sobre a Apple é INFERÊNCIA de políticas públicas, não
+  verificação — não houve acesso ao App Store Connect (L-4/N2).
+
+GOOGLE PLAY
+  G1 A ficha da loja é editável a qualquer momento e passa por revisão de
+     conteúdo. Mudar descrição/tags é barato.
+  G2 A CATEGORIA muda o conjunto de políticas aplicáveis. Sair de FINANÇAS
+     retira o escrutínio de serviços financeiros; entrar em COMPRAS traz
+     obrigações de comércio (identificação do vendedor, política de devolução
+     acessível). É mudança de regime, não de rótulo.
+  G3 O QUESTIONÁRIO IARC tem de ser refeito, porque a justificação actual
+     ("é leilão regulamentado, logo não é jogo de azar") deixa de se aplicar.
+     Reclassificação pode mudar a faixa etária exibida.
+  G4 DATA SAFETY: declarar morada de entrega é uma declaração NOVA de dado de
+     localização/contacto. Divergência entre o declarado e o que a app recolhe
+     é das causas mais comuns de suspensão.
+  G5 QUALQUER mudança de texto no app = novo APK = nova submissão = nova
+     revisão. O ciclo de revisão é o relógio real do projeto.
+  G6 TESTE FECHADO: `closed-testing/inicio.txt` NÃO EXISTE no repo, logo a
+     data de início não está registada e o estado do contador de 30 dias não é
+     verificável daqui (N7). Se o teste JÁ começou, mudar a proposta de valor a
+     meio invalida o feedback recolhido; se NÃO começou, este é o momento
+     BARATO para mudar — antes de gastar o ciclo de teste na versão errada.
+     ⇒ Confirmar isto com o operador é a primeira coisa a fazer.
+  G7 ⚠ RISCO DE FICHA ENGANOSA **QUE JÁ EXISTE HOJE**: a ficha descreve um
+     leilão; o APK entregue tem o leilão DESLIGADO (`isLeilaoAtivo:
+     {android:false}`) e mostra "EM BREVE". Descrever funcionalidade que a app
+     não entrega é, por si só, motivo de rejeição — independentemente desta
+     mudança. Isto não é risco futuro; é dívida presente.
+
+APPLE APP STORE (inferência, não verificado)
+  A1 A mudança tende a AJUDAR, não a atrapalhar: venda de BENS FÍSICOS é
+     tipicamente tratada fora do In-App Purchase, enquanto "senhas" (moeda
+     virtual consumida dentro da app) tende a cair em IAP — com comissão e
+     exigência de usar o sistema da Apple. Sair do modelo de senhas pode
+     REMOVER um bloqueio que hoje existe.
+  A2 As pendências já conhecidas do projeto (conta, entitlement, pagamento
+     externo, declaração de idade) continuam todas de pé.
+  A3 Nenhuma destas afirmações foi verificada nesta sessão.
+
+================================================================================
+2.4 — O CAMINHO CRÍTICO (a leitura curta do grafo)
+================================================================================
+  D1 decisão de nível
+    → A-J1/A-J2 parecer jurídico de raiz
+      → novo regulamento
+        → copy (front+back em bloco) + identidade visual
+          → build web + BUILD APK
+            → ficha da loja (categoria, IARC, Data Safety, screenshots)
+              → submissão e revisão
+
+  Tudo o que é Nível 3 pendura-se de A-J2 (destino das senhas) e do schema.
+  O ÚNICO trabalho que pode começar sem esperar por nada: o rebuild do índice
+  RAG e a reescrita de `_lib/guto-perfis.mjs` — servidos pelo backend, não
+  precisam de APK nem de revisão de loja, e valem 44 das 85 strings de UI do
+  backend. É a única melhoria visível que não passa pelo estrangulamento.
+
+================================================================================
+FIM DO SEG2
+================================================================================

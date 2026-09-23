@@ -1,0 +1,276 @@
+================================================================================
+MC00.0 — SEG1 · GAP ANALYSIS (o que temos vs. o que precisamos)
+DesafioGUT · Data: 2026-09-23
+Skills ECC: smart-explore, brainstorming
+================================================================================
+
+CONVENÇÃO DE NÍVEL (definida no SEG-1 §-1.3). Cada linha diz em que nível a
+ação é obrigatória:
+  N1 TERMINOLÓGICO  — trocar a palavra
+  N2 DECLARATIVO    — alinhar a promessa (loja, regulamento, identidade)
+  N3 FUNCIONAL      — construir o e-commerce
+
+================================================================================
+1.1 — FRONTEND
+================================================================================
+ITEM                                      | AÇÃO                                                      | NÍVEL | ESF.
+------------------------------------------|-----------------------------------------------------------|-------|-----
+i18n/pt.js|en.js|es.js (19 chaves)         | Traduzir vocabulário: lance→oferta/compra;                | N1    | S
+                                           | "Menor Lance Único"→termo de produto novo. É o ponto       |       |
+                                           | de entrada mais barato: 3 ficheiros, 170 linhas.           |       |
+nav: BottomNav:23 "Lances"                 | →"Loja" / "Produtos". 1 string, visível em todos os ecrãs. | N1    | S
+nav: Sidebar:28 "Mercado de Lances"        | →"Loja"                                                    | N1    | S
+nav: "Vitrine (4 Slots)" (2 ficheiros)     | →"Vitrine". "4 Slots" é jargão interno de cota.            | N1    | S
+index.html <title>/og:*/twitter:* (6)      | "O Menor Lance Único Ganha"→proposta de loja. ATENÇÃO:     | N1    | S
+                                           | já indexado por buscadores e usado em partilha social.     |       |
+Vitrine.jsx:353 "Ir para o leilão →"       | →"Ver produto →"                                           | N1    | S
+CardLance.jsx (15 strings)                 | Se N1: reescrever cópia mantendo o fluxo.                  | N1/N3 | M
+                                           | Se N3: o componente inteiro é substituído por "Comprar".   |       |
+TabelaLances.jsx (7)                       | N1: renomear colunas. N3: componente deixa de existir.     | N1/N3 | M
+MeusAtivos.jsx (13)                        | "Lances Únicos"/"ID do Lance"→"Pedidos"/"Nº do pedido".    | N1/N3 | M
+Dashboard.jsx (7) KPIs                     | "Total de Lances"→"Pedidos"/"Compras".                     | N1    | M
+LanceStatusBadge / FimLeilaoOverlay /      | N1: só copy. N3: remover — não há "fim de leilão" numa     | N1/N3 | M
+useLanceFeedback / ModeSelector            | loja; ModeSelector (Relâmpago/Programado) perde sentido.   |       |
+ComingSoonHero.jsx:10 aria-label           | "Leilão em breve"→estado de loja. a11y: leitor de ecrã.    | N1    | S
+GlassHeader.jsx:35                         | JÁ diz "E-commerce através de Dropshipping" — manter.      | —     | —
+leilaoLock.js (EM_BREVE_MODE=true)         | Hoje é a trava que esconde o leilão. Em N2/N3 deixa de ser | N2    | M
+                                           | trava e passa a ser decisão de produto: ou se remove o      |       |
+                                           | leilão, ou se assume. Não pode ficar "em breve" para sempre |       |
+                                           | num app que se declara loja — é a contradição visível.      |       |
+utils/edicao.js + leilaoTimer.js           | O modelo "edição com prazo" é de leilão. Numa loja não há  | N3    | L
+                                           | prazo — há disponibilidade. Reescrita conceptual.          |       |
+rateLimiter.js:50 "N lances por minuto"    | →"N pedidos por minuto" (ou remover: loja não limita).     | N1    | S
+web3.js (5 UI + 28 ident.)                 | N1: mensagens de erro. N3: o pipeline on-chain inteiro     | N1/N3 | L
+                                           | (Argon2id+EIP-191+darLance) deixa de fazer sentido numa    |       |
+                                           | compra — comprar um produto não precisa de assinatura      |       |
+                                           | criptográfica nem de carteira.                             |       |
+Privacidade.jsx (11)                       | Reescrever com advogado: o que é tratado muda se deixar    | N2    | M
+                                           | de haver lances e passar a haver morada de entrega.        |       |
+TermosConsentimento.jsx (8)                | Ver 1.5 — é o item mais crítico do MC inteiro.             | N2    | XL
+AUSENTE: carrinho                          | CRIAR componente + estado + persistência.                  | N3    | L
+AUSENTE: formulário de endereço + CEP      | CRIAR (com consulta de CEP).                               | N3    | M
+AUSENTE: cálculo/escolha de frete          | CRIAR (integração transportadora ou tabela fixa).          | N3    | L
+AUSENTE: checkout multi-passo              | CRIAR (endereço→frete→pagamento→confirmação).              | N3    | XL
+AUSENTE: acompanhamento de pedido/rastreio | CRIAR.                                                     | N3    | L
+AUSENTE: fluxo de devolução/troca          | CRIAR (obrigatório por CDC, não opcional).                 | N3    | L
+REAPROVEITÁVEL: Vitrine.jsx (728 l.)       | Adaptar de "slots de cota" para catálogo real.             | N3    | M
+REAPROVEITÁVEL: DetalheProduto.jsx (331)   | Adaptar: acrescentar stock, frete, prazo, CTA de compra.   | N3    | M
+
+================================================================================
+1.2 — BACKEND
+================================================================================
+ITEM                                      | AÇÃO                                                      | NÍVEL | ESF.
+------------------------------------------|-----------------------------------------------------------|-------|-----
+_lib/guto-perfis.mjs (44 strings de UI)    | O ÚNICO MAIOR FOCO. Reescrever os 4 prompts de sistema e   | N1    | L
+                                           | ~40 respostas canónicas. Se ficar por fazer, o assistente   |       |
+                                           | continua a dizer "leilão" ao utilizador em todo o app.     |       |
+_lib/recursos-app-config.mjs               | Já tem `isLeilaoAtivo` por plataforma. Em N2/N3 o flag      | N2    | S
+                                           | passa a false em TODAS as plataformas (incl. pwa) ou        |       |
+                                           | desaparece. É o interruptor central — 1 ficheiro.           |       |
+chatbot.mjs:1376 modoConformidade          | Passa de exceção (só lojas) a regra (sempre).              | N2    | S
+_lib/notificacoes-usuario.mjs (9)          | Reescrever textos: "novo lance"→"pedido confirmado" etc.   | N1    | M
+auth-lance.mjs                             | N1: manter nome (é URL pública), mudar só mensagens.       | N1/N3 | M
+                                           | N3: remover; a sessão de compra não precisa de JWT de lance|       |
+lance-relampago.mjs / lances-flash.mjs /   | N1: só mensagens. N3: REMOVER as 5 funções + criar rota de | N1/N3 | L
+consolidar-lances.mjs / purge-lances.mjs   | compatibilidade (410 Gone) — são URLs públicas em uso pelo |       |
+                                           | APK já instalado, que NÃO se actualiza com deploy web.     |       |
+cron-reset-programado.mjs                  | N3: remover (não há edição a reiniciar numa loja).         | N3    | M
+saldo-senhas / comprar-senhas / troco /    | N3: a "senha" é a moeda do leilão. Numa loja o utilizador  | N3    | XL
+voucher / _lib/senhas-programado /         | paga o produto. Desmontar a economia de senhas é a         |       |
+_lib/troco-senhas                          | mudança de maior risco (há saldo real de clientes).        |       |
+monitor-onchain(-scheduled) /              | N3: sem lance on-chain, não há o que monitorizar.          | N3    | M
+_lib/simulador / _lib/pulso /              | (_lib/pulso mede "abandono de checkout" do leilão —        |       |
+_lib/ia-preditiva                          | a métrica passaria a ter o sentido literal de e-commerce.) |       |
+produtos.mjs (636 l.)                      | Reescrever cabeçalho ("Marketplace Local com Leilão…") e   | N3    | L
+                                           | trocar CATEGORIAS bronze/prata/ouro/diamante (planos de     |       |
+                                           | cota) por categorias reais de produto. Acrescentar stock.   |       |
+iniciar-pagamento / webhook-mercadopago /  | REAPROVEITÁVEL quase integralmente: PIX já funciona.       | N3    | S
+confirmar-pagamento / info-pagamento       | Muda o QUE se compra (produto em vez de senha), não o COMO.|       |
+AUSENTE: pedidos (criar/listar/cancelar)   | CRIAR.                                                     | N3    | L
+AUSENTE: envio ao fornecedor (dropshipping)| CRIAR — é o núcleo do modelo: repassar o pedido.           | N3    | XL
+AUSENTE: rastreio                          | CRIAR.                                                     | N3    | L
+AUSENTE: emissão de NF-e                   | CRIAR — integração com API fiscal (ver 1.5).               | N3    | XL
+AUSENTE: devolução/estorno                 | CRIAR (estorno PIX tem regras próprias).                   | N3    | L
+
+================================================================================
+1.3 — BANCO DE DADOS
+================================================================================
+ITEM                                      | AÇÃO                                                      | NÍVEL | ESF.
+------------------------------------------|-----------------------------------------------------------|-------|-----
+tabela `lances` (0 linhas)                 | N1: nada (invisível ao utilizador). N3: DROP — mas SÓ     | N3    | S
+                                           | depois de confirmar que o histórico on-chain é suficiente. |       |
+                                           | ⚠ NUNCA re-executar migrações com DROP TABLE às cegas.     |       |
+coluna `hash_lance`                        | N3: remove-se com a tabela.                                | N3    | S
+matview `mv_lances_por_edicao`             | N3: DROP. Está declarada mas não aparece viva na base —   | N3    | S
+                                           | confirmar antes (pode já não existir).                     |       |
+`produtos`: faltam 11 colunas              | ACRESCENTAR: stock, sku, fornecedor_id, peso, dimensoes,   | N3    | M
+                                           | prazo_envio, status, preco_custo, ncm, origem, variacoes.  |       |
+`produtos.categoria` = bronze/prata/ouro/  | Separar dois conceitos que hoje partilham a coluna:        | N3    | M
+diamante                                   | PLANO DE COTA do lojista ≠ CATEGORIA do produto.           |       |
+`lojistas` (0 linhas)                      | Passa a FORNECEDOR no modelo dropshipping. Acrescentar     | N3    | M
+                                           | dados fiscais (CNPJ já existe em `cotas`), contrato,       |       |
+                                           | prazo de expedição, política de devolução própria.         |       |
+AUSENTE: pedidos                           | CRIAR + RLS.                                               | N3    | M
+AUSENTE: itens_pedido                      | CRIAR + RLS.                                               | N3    | M
+AUSENTE: enderecos_entrega                 | CRIAR + RLS. ⚠ dado pessoal novo → impacto LGPD direto.    | N3    | M
+AUSENTE: envios / rastreio                 | CRIAR + RLS.                                               | N3    | M
+AUSENTE: devolucoes                        | CRIAR + RLS.                                               | N3    | M
+AUSENTE: notas_fiscais                     | CRIAR + RLS. ⚠ retenção fiscal ≠ retenção LGPD:            | N3    | L
+                                           | a NF-e deve sobreviver ao pedido de exclusão de conta      |       |
+                                           | (já há precedente no projeto: anonimizar em vez de apagar).|       |
+AUSENTE: carrinho (ou só client-side)      | DECIDIR (ver D5 no SEG3).                                  | N3    | M
+saldo_rs (8) + saldo_rs_creditos (21)      | ⚠ SÃO DADOS REAIS DE CLIENTES. Qualquer desmontagem da     | N3    | L
+                                           | economia de senhas tem de os preservar ou liquidar.        |       |
+
+================================================================================
+1.4 — LOJAS
+================================================================================
+ITEM                                      | AÇÃO                                                      | NÍVEL | ESF.
+------------------------------------------|-----------------------------------------------------------|-------|-----
+Descrição curta (Play)                     | Reescrever (máx. 80 car.) sem "leilão"/"lance".            | N1    | S
+Descrição longa (Play)                     | Reescrever integralmente (~1.500 car.).                    | N1    | M
+CATEGORIA: FINANÇAS → COMPRAS              | MUDAR. É a declaração mais importante das lojas: define    | N2    | M
+                                           | que conjunto de políticas se aplica à app. Um app de loja  |       |
+                                           | em FINANÇAS atrai revisão de serviços financeiros que não  |       |
+                                           | presta; um app de leilão em COMPRAS atrai revisão de venda |       |
+                                           | que não faz. Hoje está errado nos dois sentidos.           |       |
+Tags: leilão/blockchain/lances/web3/pix    | Substituir por tags de e-commerce.                         | N1    | S
+Release notes v1.0.0                       | Reescrever.                                                | N1    | S
+Questionário IARC                          | REFAZER. A resposta "não é jogo de azar" está argumentada  | N2    | M
+                                           | por ser leilão regulamentado. Sem leilão, o argumento muda  |       |
+                                           | (e fica mais simples). Reclassificação pode alterar a       |       |
+                                           | faixa etária.                                              |       |
+Público-alvo 18+ "de leilão/compras"       | Rever: uma loja pode não precisar de 18+ — mas venda com   | N2    | S
+                                           | pagamento exige capacidade civil. DECISÃO jurídica.        |       |
+Data Safety                                | ATUALIZAR: sai "lances" como conteúdo gerado; ENTRA        | N2/N3 | M
+                                           | **morada de entrega** (dado pessoal sensível de localização)|       |
+                                           | e possivelmente CPF para NF-e. Declaração NOVA, não edição.|       |
+Financial features declaration             | Rever com a mudança de categoria.                          | N2    | S
+Screenshots (incl. screenshot-leilao.png)  | RECAPTURAR todas. Screenshots com tabela de lances         | N2    | M
+                                           | contradizem uma ficha de loja.                             |       |
+Feature graphic 1024×500 [PEND]            | CRIAR já com a identidade nova (nunca com "menor lance     | N2    | M
+                                           | único", como estava planeado).                             |       |
+Ícone 512×512 (martelo)                    | Ver 1.6 — [R19].                                           | N2    | L
+Política de privacidade (URL)              | Mantém a URL; o CONTEÚDO muda (ver 1.5).                   | N2    | —
+Eliminação de conta (URL)                  | Mantém. ⚠ passa a ter de conciliar-se com retenção fiscal. | N3    | M
+Apple App Store                            | NÃO AVALIÁVEL (L-4/N2). Nota: a Apple trata pagamento de   | N2    | ?
+                                           | bens físicos fora do IAP — o que FAVORECE o e-commerce     |       |
+                                           | face ao modelo de "senhas" (moeda virtual), que tende a    |       |
+                                           | cair em IAP. A mudança pode DESBLOQUEAR o iOS.             |       |
+                                           | ⚠ Isto é inferência de política pública, não verificação.  |       |
+
+================================================================================
+1.5 — JURÍDICO E FISCAL (lista do que precisa ser CRIADO DO ZERO)
+================================================================================
+⚠ ESTA SECÇÃO É LEVANTAMENTO DE RISCO, NÃO PARECER (L-4/N3). Nenhum item aqui
+  deve ser implementado sem validação de advogado e contabilista.
+
+A CRIAR (nenhum existe hoje):
+  J1 TERMOS DE VENDA (dropshipping) — distintos do regulamento actual. Têm de
+     identificar QUEM vende: o GUT vende em nome próprio, ou é intermediário do
+     fornecedor? No dropshipping esta é a questão que determina tudo o resto.
+  J2 POLÍTICA DE TROCAS E DEVOLUÇÕES — CDC art. 49 (direito de arrependimento,
+     7 dias, compra fora do estabelecimento) e art. 18/20 (vício do produto).
+     Não é opcional e não é negociável por contrato.
+  J3 POLÍTICA DE ENTREGA E PRAZOS — prazo, área de cobertura, o que acontece no
+     atraso. Dropshipping com fornecedor externo tem prazos que o GUT não
+     controla mas pelos quais responde perante o consumidor.
+  J4 CONTRATO COM FORNECEDOR/LOJISTA — responsabilidade pelo produto, prazo de
+     expedição, regresso em caso de devolução, dados fiscais, penalidades.
+     ⚠ Perante o consumidor, a responsabilidade tende a ser SOLIDÁRIA (CDC):
+     o contrato reparte o risco entre GUT e fornecedor, mas não isenta o GUT.
+  J5 IDENTIFICAÇÃO DO FORNECEDOR NO SITE — Decreto 7.962/2013 (regulamenta o
+     CDC para o comércio eletrónico) exige, em local de destaque: razão social,
+     CNPJ, endereço físico e eletrónico, resumo do contrato, e canal de
+     atendimento. Hoje o app mostra CNPJ do GUT em 2 sítios e mais nada.
+  J6 SAC / CANAL DE ATENDIMENTO — exigência do mesmo decreto. Hoje existe o
+     GUTO (chatbot) e um e-mail; nenhum está declarado como SAC.
+  J7 REVISÃO DA POLÍTICA DE PRIVACIDADE — entram morada de entrega e,
+     provavelmente, CPF (NF-e). São categorias novas de dado pessoal, com base
+     legal e retenção diferentes (execução de contrato + obrigação legal).
+  J8 REVISÃO/SUBSTITUIÇÃO DO REGULAMENTO — o actual é internamente
+     contraditório (Art.1 e-commerce vs Art.8/14 menor lance único com prémio).
+     Enquanto existir, é ele que define o produto juridicamente, não o código.
+
+FISCAL (a criar, zero existe hoje):
+  F1 DEFINIÇÃO DO REGIME — quem emite a nota: GUT ou fornecedor? Venda por
+     conta própria, consignação, ou intermediação? Muda o tributo.
+  F2 EMISSÃO DE NF-e — integração com API fiscal. Requer certificado digital,
+     inscrição estadual (se houver circulação de mercadoria), NCM por produto,
+     CFOP por operação. NENHUM destes campos existe na tabela `produtos`.
+  F3 ICMS INTERESTADUAL / DIFAL — se o fornecedor estiver noutro estado que o
+     consumidor, há partilha de imposto. Dropshipping é, por definição,
+     tipicamente interestadual.
+  F4 RETENÇÃO DE DOCUMENTO FISCAL — prazo legal de guarda (tipicamente 5 anos)
+     que CONFLITA com o "apagar tudo" da exclusão de conta LGPD. O projeto já
+     resolveu este conflito uma vez (anonimizar o fiscal, apagar o pessoal) —
+     o mesmo padrão aplica-se, mas o volume cresce.
+  F5 CONCILIAÇÃO PIX↔PEDIDO↔NF-e — hoje o PIX credita "senhas"; passará a
+     liquidar um pedido com nota. É reconciliação financeira nova.
+
+QUESTÃO JURÍDICA DE FUNDO (a maior deste MC):
+  O modelo actual — o utilizador COMPRA SENHAS (dinheiro real) e com elas
+  DISPUTA um produto, e só UM ganha — tem a forma de concurso/sorteio pago,
+  não de compra e venda. Foi isso que a ficha da Play teve de defender
+  explicitamente ("NÃO é jogo de azar"). Migrar para e-commerce real resolve
+  esta exposição. Mas migrar só a PALAVRA, mantendo o mecanismo, PIORA-A:
+  passa a haver uma declaração de e-commerce a cobrir uma operação que não é
+  e-commerce. Falsa declaração à loja e ao consumidor é pior que a declaração
+  honesta de leilão.
+  ⇒ É por isto que o Nível 1 isolado é a opção mais perigosa das três.
+
+================================================================================
+1.6 — [R19] IDENTIDADE VISUAL
+================================================================================
+ITEM                                      | AÇÃO                                                      | NÍVEL | ESF.
+------------------------------------------|-----------------------------------------------------------|-------|-----
+Ícone Android (15 ficheiros, 5 densidades) | REGERAR sem martelo. É o rosto do app no telemóvel.        | N2    | L
+                                           | ⚠ Mudar o ícone de um app em teste fechado é visível para  |       |
+                                           | os testadores e para a revisão.                            |       |
+guto-icon-v3.png 512×512 (ficha Play)      | REGERAR.                                                   | N2    | M
+favicon-32 / apple-touch-180 / og-image    | REGERAR (og-image é o que aparece em partilhas).           | N2    | M
+3 artes promocionais (MC69/69.1)           | REGERAR — contêm martelo E a frase "leilão de menor lance  | N2    | L
+                                           | único" como termo obrigatório.                             |       |
+Loops de vídeo / animações GUTO            | AUDITAR e regerar os que mostram martelo/pódio/"Menor      | N2    | XL
+                                           | Lance Único" na TV.                                        |       |
+carrossel guto-1..8 + expressões v3        | AUDITAR caso a caso (nem todos terão martelo).             | N2    | M
+Mascote GUTO (conceito)                    | DECIDIR: o martelo é acessório ou é a personagem?          | N2    | ?
+                                           | Se for acessório, troca-se (ex.: saco de compras).         |       |
+                                           | Se for a personagem, a marca inteira é de leilão.          |       |
+                                           | ⚠ Regenerar o GUTO tem risco conhecido de perder a         |       |
+                                           | identidade do personagem (histórico do projeto: só a       |       |
+                                           | MESMA referência preserva a identidade).                    |       |
+
+================================================================================
+1.7 — [R19] CONTRATO ON-CHAIN
+================================================================================
+ITEM                                      | AÇÃO                                                      | NÍVEL | ESF.
+------------------------------------------|-----------------------------------------------------------|-------|-----
+`contract LeilaoGUT` em mainnet            | IRREVERSÍVEL. Nenhuma ação o renomeia.                     | —     | —
+Ligação frontend↔contrato                  | N3: DESLIGAR. Uma loja não precisa de blockchain para      | N3    | M
+                                           | vender. Esta é a decisão que torna a mudança credível:     |       |
+                                           | enquanto o app chamar `darLance`, é um leilão.             |       |
+`saldoSenhas` por endereço                 | ⚠ OBRIGAÇÃO PARA COM CLIENTES QUE PAGARAM. Tem de ser      | N3    | L
+                                           | liquidada: converter em crédito de loja, reembolsar, ou    |       |
+                                           | honrar. DECISÃO DO OPERADOR/CLIENTE, não técnica.          |       |
+docs/reference/contrato-leilao-abi.md      | Manter como registo histórico; marcar como descontinuado.  | N2    | S
+Seguranca.jsx:21 "Contrato LeilaoGUT       | Remover ou reescrever — hoje o app ANUNCIA o contrato de   | N1    | S
+verificado on-chain no Etherscan"          | leilão como funcionalidade de segurança.                   |       |
+
+================================================================================
+RESUMO DO GAP — CONTAGEM DE ITENS POR NÍVEL
+================================================================================
+  NÍVEL 1 (terminológico)  ~22 itens · ~215 strings · 0 tabelas · 0 endpoints novos
+  NÍVEL 2 (declarativo)    +~20 itens · lojas, jurídico base, identidade visual
+  NÍVEL 3 (funcional)      +~35 itens · 9 tabelas novas, ~10 endpoints novos,
+                            6 ecrãs novos, 17 funções a remover, 2 integrações
+                            externas (fiscal + logística), desmontagem da
+                            economia de senhas com saldo real de clientes.
+
+CONSISTÊNCIA (pré-condição do SEG4 4.2): todos os itens do inventário SEG0
+têm ação correspondente nesta secção. Os itens do SEG0 §0.8 (sonda negativa)
+aparecem aqui como linhas "AUSENTE: … | CRIAR".
+
+================================================================================
+FIM DO SEG1
+================================================================================

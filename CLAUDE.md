@@ -253,3 +253,153 @@ Antes de merge de migração de UI:
 1. `rg '\.\.\.(card|cardStyle|inputStyle|buttonStyle|modalStyle|tableStyle|badgeStyle)[^a-zA-Z]' src/` → cada spread deve ter `const` correspondente no mesmo ficheiro
 2. `npm run build` → verde obrigatório
 3. Smoke test MCP em `/` (Dashboard) — página mais complexa
+
+---
+
+## MC00.0 — Análise de impacto: leilão → e-commerce por dropshipping (2026-09-23)
+
+**Natureza:** diagnóstico puro, zero código. **SEG-1: SEGUIR** (R19 ativada).
+**Validação independente: APROVADO COM RESSALVAS** (7 ressalvas, 3 bloqueantes).
+**Relatório:** `_logs/MC00.0-RELATORIO.md`.
+⚠️ Os números corrigidos vivem em `_logs/MC00.0_SEG4_ERRATA-EXECUTOR.txt`, que
+**supersede** os SEG0–SEG3. Inventário bruto grep-ável:
+`_logs/MC00.0_SEG4_INVENTARIO-V3-CORRIGIDO.tsv`.
+
+### O leilão já está desligado — mas o alinhamento falha onde importa
+
+Não é plano; é o estado do código em `main`:
+
+| Onde | O quê |
+|---|---|
+| `src/lib/leilaoLock.js:10` | `EM_BREVE_MODE = true` — todos os cronómetros mostram "EM BREVE" |
+| `netlify/functions/_lib/recursos-app-config.mjs:19` | `isLeilaoAtivo: { ios:false, android:false, pwa:true }` ⚠️ é o **default no código**; o valor vivo do Blob não foi lido |
+| `src/pages/MercadoLances.jsx:338` | "Vista de conformidade (modo loja iOS/Android)" |
+| `netlify/functions/_lib/guto-perfis.mjs:74` | `PROMPT_CONFORMIDADE`: *"…nesta versão do app (loja de e-commerce)"* |
+| `src/components/ScheduleView.jsx` | lógica do calendário removida; só resta "EM BREVE" |
+
+⚠️ **Mas:** `GlassHeader.jsx:35` ("E-commerce através de Dropshipping") está dentro
+de `{!isMobile && …}` — **não aparece no telemóvel**, que é a superfície que a Play
+distribui. E `index.html:8` diz, na mesma frase, *"E-commerce via Dropshipping. Dê
+seu lance: o menor valor único vence."* O alinhamento é **parcial e inconsistente**.
+
+### Os três níveis (decisão D1 — nenhum MC de execução abre sem esta resposta)
+
+| Nível | O que é | Custo |
+|---|---|---|
+| **N1 terminológico** | trocar as palavras | 4 MCs · **⛔ PROIBIDO isolado** |
+| **N2 declarativo** | alinhar loja + regulamento + identidade visual | 9 MCs (recomendado **já**) |
+| **N3 funcional** | construir o e-commerce | 22 MCs (bloco C: 13–19) |
+
+**Porque N1 isolado é proibido:** trocar a palavra mantendo o mecanismo de menor
+lance único transforma uma declaração honesta ("isto é um leilão") numa declaração
+falsa ("isto é uma loja"), perante o consumidor **e** perante a Play.
+
+### Superfície medida (números v3 — com fronteira de palavra, PT+EN+ES)
+
+| Área | Medida | Grau |
+|---|---|---|
+| Frontend | 128 strings de UI · 33 ficheiros · **0 rotas** com "leilao" | MÉDIO |
+| Backend | 73 strings · **40 só em `_lib/guto-perfis.mjs`** · 5 nomes de função = URL pública | MÉDIO |
+| Banco | tabela `lances` **0 linhas**; **0 matviews** no schema public | BAIXO |
+| Docs | 1.121 em 154 ficheiros, mas **só ~6 normativos vivos** | BAIXO |
+| Planos | ⛔ `plans/002:97` manda declarar "leilão pago (senhas R$2)" à Google; `:139` admite que leilão visível = **"real-money gaming"** | ALTO |
+| CI | `contract-security.yml` + `security-scan.yml` apontam a `LeilaoGUT.sol` | MÉDIO |
+| Lojas | 11 declarações, **incl. a CATEGORIA (Finanças)** | ALTO |
+| Jurídico | regulamento **internamente contraditório**; 8 documentos inexistentes | CRÍTICO |
+| Fiscal | zero infraestrutura (NF-e, NCM/CFOP, regime) | CRÍTICO |
+| *[R19]* Contrato | `LeilaoGUT` em mainnet — **imutável**; `require("Lance minimo e R$ 0,01")` é permanente | IRREVERSÍVEL |
+| *[R19]* Visual | **o ícone do app é o GUTO com um martelo de leiloeiro** (18 ficheiros) | ALTO |
+| *[R19]* E-commerce | carrinho, frete, CEP, morada, NF-e, rastreio, devolução, stock, SKU, fornecedor = **0** | CRÍTICO |
+
+> ⚠️ "dropshipping" aparece **2 vezes** no código, ambas cosméticas. **Zero** comportamento.
+> ⚠️ A cópia de leilão **já está traduzida** em en.js/es.js ("Bids", "Pujas",
+> "Lowest Unique Bid"). São **3 idiomas** a reescrever, não 1.
+> ⚠️ Vocabulário adjacente (edição/senha/slot/vencedor) é **~1,7× o termo directo**
+> no frontend (659 vs 376). Contar palavras dimensiona a copy, não o produto:
+> `src/data/programacao-junho-2026.js` codifica 168 sessões de leilão por mês e tem
+> **0 ocorrências** do termo.
+
+### A contradição jurídica está dentro do regulamento, não na UI
+
+`src/components/TermosConsentimento.jsx` declara no **Art. 1** que é *"atividade
+comercial em formato de E-commerce através de Dropshipping"* e, 30 linhas abaixo,
+no **Art. 8**, que *"O MENOR LANCE ÚNICO GANHA"*, e no **Art. 14** que o
+contemplado recebe **prémio** em dinheiro (80% acima de R$ 10.000).
+
+### Os três estrangulamentos (mandam na sequência)
+
+1. **O índice RAG vive fora do repo.** Editar `docs/chatbot/regulamento.md` **não**
+   muda o que o GUTO responde — é preciso `scripts/build-rag-index.mjs` (operador).
+   Critério de aceitação = *perguntar ao GUTO em produção*, não ler o .md.
+   ⚠️ Os pré-requisitos do rebuild (tokens HF/OpenAI/Netlify) **não estão
+   documentados em lado nenhum**.
+2. **O APK não se actualiza com deploy web.** Só mudam sem APK novo: respostas do
+   backend/GUTO, o flag `recursos_app`, e conteúdo por API. ⇒ **agrupar tudo numa
+   só submissão**; nunca "um MC por correção de texto".
+3. **Há dinheiro real na economia de senhas.** Verificado por SQL:
+   **R$ 23,75 em aberto, em 7 contas** + 21 registos de crédito + `saldoSenhas`
+   on-chain. Nada se desmonta antes de decidir o que lhes acontece.
+
+### ⛔ Dívida PRESENTE (não é risco futuro)
+
+A ficha da Play descreve um leilão; o APK entregue tem `isLeilaoAtivo:{android:false}`
+e mostra "EM BREVE". **Descrever funcionalidade que a app não entrega é motivo de
+rejeição hoje.** E `plans/002` manda declarar "leilão pago" à Google.
+
+### ✅ O teste fechado NÃO começou — a janela está aberta e é barata
+
+`closed-testing/logs/coleta-2026-08-24_*.txt` → `closed_testing=nao_iniciado`, e não
+existe `relatorios-diarios/`. Não há feedback a desperdiçar nem testadores a
+confundir. **Adiar custa mais do que agir.** (Evidência de 2026-08-24 — confirmar
+que nada mudou.)
+
+### ⚠️ O catálogo vivo está em Netlify Blobs, NÃO no Supabase
+
+`produtos.mjs:20,47` → `getStore` + `BLOB_PRODUTOS`. A tabela Supabase `produtos`
+(0 linhas) é infraestrutura morta. O status de publicação **existe** no Blob
+(`rascunho/ativo/vendido/entregue`). Qualquer plano de schema que ignore isto está
+a desenhar migrações em tabelas mortas.
+
+### Decisões pendentes (bloqueiam execução)
+
+| # | Decisão | Quem decide |
+|---|---|---|
+| D1 ⛔ | Qual o nível (1, 2 ou 3)? | cliente |
+| D2 ⛔ | O menor lance único continua a existir? Onde? | cliente + advogado |
+| D3 ⛔ | Destino dos saldos já pagos (**R$ 23,75 em 7 contas** + on-chain) | cliente + advogado + contabilista |
+| D4 ⚠️ | Quem vende: GUT em nome próprio ou intermediação? | advogado + contabilista |
+| D11 ⚠️ | **Onde vive o catálogo: Blobs (hoje) ou Supabase?** | operador + agente |
+| D6 ⚠️ | Categoria da Play passa de Finanças a Compras? | cliente |
+| D7 ⚠️ | O martelo sai da marca? | cliente |
+| D8 • | O contrato on-chain fica ligado ao app? | cliente |
+| D9 • | "Vitrine (4 Slots)" e as cotas mantêm-se? | cliente |
+| D10 • | Domínio definitivo (`MercadoLances.jsx:342` fixa `desafiogut.com`) | operador |
+| ~~D5~~ | ~~O teste fechado já começou?~~ | **RESPONDIDA: não começou** |
+
+### Sequência recomendada
+
+```
+A1 decisão+jurídico → A2 regulamento/políticas → B1 GUTO+RAG → B2+B3 copy em bloco
+→ B4 identidade → B5 screenshots → B6 ficha+plans/002+003 → B7 APK (uma submissão)
+```
+e, só se D1 = Nível 3: `C1 liquidar senhas → … → C11 desmontar o leilão`
+(**C1 sempre antes de C11**; C11 parte 2 workflows de CI e a suíte de testes).
+
+> ⚠️ **B1 vem DEPOIS de A2, nunca antes.** A primeira versão deste plano invertia-os,
+> e o Validador mostrou que isso era o "Nível 1 isolado" que a própria regra proíbe.
+> O texto é a promessa; a promessa vem depois de se saber o que se pode prometer.
+
+### Lição de método (vale para lá deste MC)
+
+O scanner original usava `/lances?/` **sem fronteira de palavra** e contava "lance"
+dentro de **"Balance"**. Só o **controlo negativo** o expôs — o controlo positivo
+passava a 5/5. Varredura por palavra-chave precisa sempre dos dois controlos, e
+fronteira de palavra em PT precisa da variante espelhada para camelCase
+(`darLance`, `CardLance`: 557 ocorrências que a versão corrigida deixa de ver).
+
+### Não medido (L-4)
+
+Sem acesso à Play Console nem ao App Store Connect. Sem advogado nem contabilista —
+as secções jurídica e fiscal são **levantamento de risco, não parecer**. MCPs
+`chrome-devtools` e `claude-eyes` falharam a ligar: **nenhum ecrã foi observado a
+correr**. O valor **vivo** do Blob `config-experiencia:recursos_app` não foi lido.
