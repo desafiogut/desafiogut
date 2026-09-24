@@ -1,0 +1,85 @@
+================================================================================
+MC93-E — SEG5 · ENTREGA
+DesafioGUT · 2026-09-24 · base f8bc6c0
+================================================================================
+
+FICHEIROS NOVOS
+  desafio-gut/frontend/netlify/functions/_tests/_evm-local.mjs
+  desafio-gut/frontend/netlify/functions/_tests/mc93e-fork-onchain.test.mjs
+  desafio-gut/frontend/netlify/functions/_tests/mc93e-ci-config.test.mjs
+  desafio-gut/frontend/netlify/functions/_tests/fixtures/leilao-gut.evm.json
+  desafio-gut/scripts/ci-postgrest-local.sh      (equivalente local do CI)
+  desafio-gut/scripts/run-fork-onchain.sh        (cenário on-chain)
+  desafio-gut/scripts/gerar-fixture-evm.cjs      (regenera a fixture)
+  _logs/MC93E_SEG-1_QUESTIONAMENTO.txt
+  _logs/MC93E_SEG1-2-3_PLANO-TDD-INTEGRACAO.txt
+  _logs/MC93E_SEG4_EXECUTOR.txt
+  _logs/MC93E_SEG4_VALIDACAO-A.txt
+  _logs/MC93E_SEG4_VALIDACAO-B.txt
+  _logs/MC93E-RELATORIO.md
+
+FICHEIROS MODIFICADOS
+  .github/workflows/ci.yml                       (autorizado — é o objecto do MC)
+  CLAUDE.md                                      (autorizado)
+  docs/TORNEIO-HABILIDADE.md                     (autorizado — §4e, e §4d corrigida)
+  _tests/mc93d-contrato-postgrest.test.mjs       (R15 — ver abaixo)
+  _tests/mc93d-contrato-onchain.test.mjs         (R15 — ver abaixo)
+
+ALTERAÇÕES AO ABRIGO DA R15, DECLARADAS
+  1. `mc93d-contrato-postgrest.test.mjs`
+     a) `SUPABASE_CONTRATO_URL` passou a ser a BASE DO POSTGREST (deixou de se
+        acrescentar `/rest/v1`). Era essa concatenação que tornava impossível
+        apontar a um PostgREST puro — e, portanto, correr em CI.
+        Quem usava o valor antigo acrescenta `/rest/v1` ao que já tinha.
+     b) O teste dos CHECKs deixou de aceitar qualquer erro: exige o SQLSTATE
+        `23514` e o nome da restrição. Passava com a tabela apagada.
+  2. `mc93d-contrato-onchain.test.mjs`
+     Dois dos três saltos "FORK" desapareceram — o trabalho foi feito, e um teste
+     novo liga-os ao ficheiro sucessor. O terceiro mudou de razão ("POR FAZER" ->
+     "BLOQUEADO PELA R5") e ganhou uma alavanca: `MAINNET_RPC_URL`.
+
+NÃO TOCADOS (verificado por `git diff` contra f8bc6c0)
+  _lib/pontuacao-utils.mjs · consolidar-lances.mjs · _lib/pontuacao-store.mjs ·
+  pontuacao.mjs · ranking.mjs · fila-processor-scheduled.mjs ·
+  _lib/bonus-emissao.mjs · _lib/worker-bonus.mjs · _lib/sweeper-divida-orfa.mjs ·
+  _lib/contract.mjs · contracts/Leilao.sol · a migração · hardhat.config.cjs ·
+  frontend/src (0 ficheiros alterados).
+  `BONUS_EMISSAO_ATIVA` continua por definir, em CI e em todo o lado.
+
+NÃO COMMITADOS (pré-existentes, não são deste MC)
+  docs/MC91.14-STATUS-BNB.txt · docs/mc92.5_gerar_mascaras.py ·
+  docs/mc92.5_refinar_bboxes.py
+
+NÚMEROS
+  590 testes · 589 verdes · 0 falhas · 1 saltado   (condições do CI)
+  590 testes · 584 verdes · 0 falhas · 6 saltados  (sem servidor local)
+  Base do MC93-D: 543 · 535 · 0 · 8
+  Mutação: 39 mutantes · 37 mortos · 2 equivalentes declarados · 0 vivos
+
+HARD GATES
+  1 (SEG-1 questiona antes de executar) ....... cumprido — veredito AJUSTAR
+  2 (medir, não supor) ........................ cumprido — todas as afirmações
+     sobre o ambiente têm comando e saída registados no SEG-1
+  3 (CI como artefacto) ....................... cumprido POR EQUIVALENTE.
+     `act` não existe nesta máquina; usou-se Docker com as mesmas imagens e um
+     teste que impede os dois de divergirem. ⚠️ NÃO prova a semântica do runner
+     do GitHub — declarado em L-4.
+  4 (fork provado) ............................ cumprido — `adicionarSenhas` ->
+     `darLance` -> saldo decrementado, com controlo negativo E positivo.
+     ⚠️ EVM local, não fork de mainnet. Declarado.
+  5 (nenhuma emissão on-chain real) ........... cumprido, e MEDIDO por execução
+     pela validação independente (sentinela em net/tls/dns/http/fetch).
+
+⛔ PARA O OPERADOR, COM PRAZO
+  ROTAR a chave Alchemy de `desafio-gut/hardhat.config.cjs`. Texto simples,
+  commitada desde `a2c40ee` (MC89.14). Apagar o ficheiro não a tira do histórico.
+  Não foi tocada (R5).
+
+⚠️ RESSALVA MATERIAL
+  As correcções feitas DEPOIS dos dois validadores não passaram por uma terceira
+  validação independente. Cinco MCs seguidos, cinco vezes que a validação
+  independente encontrou o que o Executor não encontrou.
+
+================================================================================
+FIM DO SEG5
+================================================================================

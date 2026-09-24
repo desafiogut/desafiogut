@@ -1,0 +1,159 @@
+================================================================================
+MC93-E — SEG4 · VALIDAÇÃO INDEPENDENTE A (CI + contrato PostgREST)
+DesafioGUT · 2026-09-24 · worktree próprio, em série (regra do MC93-C)
+================================================================================
+
+VEREDITO DO VALIDADOR A: **APROVADO COM RESSALVAS** — 2 achados ⛔.
+
+Frase que resume o relatório dele, e que aceito inteira:
+  "O que o MC93-E veio corrigir, corrigiu, e está medido.
+   O que ele veio IMPEDIR DE VOLTAR A ACONTECER, quase não impede."
+
+--------------------------------------------------------------------------------
+O QUE ELE CONFIRMOU
+--------------------------------------------------------------------------------
+Correu `ci-postgrest-local.sh` do zero (21,1 s): 9/9 pass, 0 skipped, guarda a
+dar `saltados=0`. Replicou os comandos EXACTOS do ci.yml contra um Postgres real:
+papéis exit 0, migração exit 0, migração inexistente exit 1. YAML parseia; os 10
+blocos `run:` passam `bash -n`.
+
+Suíte no worktree dele:
+    sem servidor: 570 testes · 562 pass · 2 fail · 6 skipped
+    com servidor: 570 testes · 567 pass · 2 fail · 1 skipped
+Δ = 5 saltados a menos = exactamente os 5 `SERVIDOR:`.
+⇒ A PENDÊNCIA Nº 1 DO MC93-D ESTÁ RESOLVIDA. Confirmado por terceiro.
+
+--------------------------------------------------------------------------------
+A-1 ⛔ O JOB NÃO PODIA FICAR VERDE — e eu não tinha visto
+--------------------------------------------------------------------------------
+`@aws-sdk/client-kms` e `@biconomy/account` NÃO estão no `package-lock.json` das
+functions. Dois testes do MC30.2.1 fazem `mock.module("@aws-sdk/client-kms")`, e
+o `mock.module` do node EXIGE que o especificador RESOLVA.
+
+Aqui resolvem — a partir de `desafio-gut/frontend/node_modules`, por subida da
+árvore de directórios. Em CI, o job `test-functions` só fazia `npm ci` nas
+functions ⇒ ERR_MODULE_NOT_FOUND ⇒ passo VERMELHO.
+
+⇒ A minha correcção do nível 2 estaria correcta e SERIA INVISÍVEL: o job nunca
+  ficaria verde. E a minha suíte local dava 0 falhas por acidente de ambiente.
+
+⚠️ É A MESMA CLASSE DE ERRO QUE ESTE MC EXISTE PARA CORRIGIR, e eu voltei a
+cair nela — desta vez do lado do CI em vez do lado do hardhat. Verifiquei por
+execução própria antes de aceitar:
+    no lockfile das functions: AUSENTE
+    resolve local:             .../desafio-gut/frontend/node_modules/@aws-sdk/...
+    no lockfile do frontend:   PRESENTE (os dois)
+
+CORRIGIDO: o job `test-functions` passou a fazer `npm ci` também em
+`desafio-gut/frontend`. É a correcção de menor raio — NÃO acrescenta dependência
+nenhuma ao bundle das Netlify Functions (que era o risco da alternativa).
+
+E ficou uma GUARDA GERAL, que é o que faltava: um bloco de testes que varre
+`_tests/*.mjs`, extrai os especificadores de `import`, `import()`, `require()` e
+`mock.module()`, e exige que cada pacote venha de um lockfile que ALGUM job do CI
+instala. Se vier só do de `desafio-gut/`, tem de estar declarado em
+`SO_NO_JOB_ONCHAIN`. Isto teria apanhado o A-1 no dia em que nasceu.
+
+--------------------------------------------------------------------------------
+A-2 ⛔ O TESTE DOS CHECKs DA MIGRAÇÃO ERA VÁCUO
+--------------------------------------------------------------------------------
+Dizia só `assert.ok(error)`. QUALQUER erro servia. Ele mediu-o a passar com:
+  (a) o URL apontado a uma rota inexistente (404);
+  (b) `DROP TABLE public.rankings_ciclo CASCADE`.
+
+É o ÚNICO teste dos CHECKs desta migração — e o MC93-E acabava de o promover a
+"cobertura em CI". Estava a contar como prova o que não era prova.
+
+CORRIGIDO (R15): passou a exigir o SQLSTATE `23514` (`check_violation`) E o nome
+da restrição na mensagem. Verificado por execução própria com os dois controlos
+negativos dele:
+    [normal]          -> ok 9
+    [URL errado]      -> not ok 9
+    [tabela apagada]  -> not ok 9
+
+--------------------------------------------------------------------------------
+A-3 a A-8, A-13 ⚠️ A GUARDA DO ci.yml ERA FRACA — 19 de 25 mutações vivas (24 %)
+--------------------------------------------------------------------------------
+A parte mais dura do relatório, e tem razão. Os defeitos, e o que ficou feito:
+
+A-3  Comentar configuração enganava a guarda. `semComentarios()` estava aplicado
+     a 1 dos 10 testes. Comentar o bloco `services:` inteiro, ou o `env:` do
+     passo, deixava tudo verde.
+     ⇒ CORRIGIDO: TODO o ficheiro passou a ler `ci.yml` e o script com os
+       comentários fora. **Terceira vez neste projeto que um comentário corrompe
+       uma prova** — desta vez numa asserção, não numa mutação.
+
+A-4  O `working-directory` não era asserido. E um glob que não casa faz o
+     `node --test` sair **0 com zero testes** — o passo fica VERDE a não testar
+     nada. É o verde silencioso outra vez, noutra variável.
+     ⇒ CORRIGIDO em dois sítios: a guarda asserta o `working-directory`, e o
+       passo de prova do próprio CI passou a exigir `# pass > 0`.
+
+A-5  O nome da migração era lido do COMENTÁRIO (primeira ocorrência no bloco),
+     não do comando `-f`. Apontar o `-f` a um ficheiro inexistente sobrevivia.
+     ⇒ CORRIGIDO: a regex ancora em `-f /mig/<nome>.sql`.
+
+A-6  A guarda de "YAML válido" só via caracteres de controlo. TAB na indentação
+     e chave `run:` duplicada — ambos fatais para o workflow INTEIRO — passavam.
+     ⇒ CORRIGIDO com dois testes novos, sem dependências.
+     ⚠️ Ele recomendou usar `js-yaml`. **NÃO SEGUI, e a razão é o próprio A-1:**
+       `js-yaml` também não está no lockfile das functions (medido). Usá-lo
+       reproduziria exactamente o defeito que acabámos de corrigir. O diagnóstico
+       dele estava certo; a receita teria trazido a doença de volta.
+
+A-7  A guarda podia ser apontada a qualquer ficheiro (um que nunca salta) e
+     ficava verde para sempre. ⇒ CORRIGIDO: o nome do ficheiro é asserido.
+
+A-8  A comparação de imagens CI↔script via só a PRIMEIRA ocorrência: o
+     `services:` a 17 e os `docker run` a 13 passava.
+     ⇒ CORRIGIDO: compara o CONJUNTO de todas as ocorrências e exige que seja
+       unitário dos dois lados.
+
+A-13 Falso VERMELHO: mover o `env:` do passo para o job é válido em GitHub
+     Actions e a minha guarda bloqueava-o. ⇒ CORRIGIDO: aceita as duas formas.
+
+A-10/A-11 ⚠️ Mutações de impacto operacional que ninguém apanhava:
+     `PGRST_JWT_SECRET` removido, `--network host` removido, `continue-on-error`
+     na migração, `ON_ERROR_STOP` removido, `if: always()` removido, e o script
+     local a deixar de correr o ficheiro que diz correr.
+     ⇒ TODAS cobertas agora.
+     E a afirmação do script ("o COMANDO EXACTO do passo") era exagerada: o CI
+     corre a suíte toda e o script um ficheiro; o CI usa `--network host` e o
+     script rede bridge; a migração entra por `-f` num e por `exec -i` no outro.
+     ⇒ O comentário foi corrigido para dizer o que é garantidamente igual
+       (imagens, papéis, migração) e o que não é.
+
+A-12 • `BYPASSRLS` no `service_role` é inócuo — ele mediu 9/9 sem ele. Aceite
+     como informação; fica porque é o que o Supabase faz.
+
+A-9  ⚠️ `docs/TORNEIO-HABILIDADE.md` e `CLAUDE.md` continuavam a declarar a
+     pendência como ABERTA. ⇒ CORRIGIDO nos dois.
+
+--------------------------------------------------------------------------------
+RONDA DE MUTAÇÃO B — as que sobreviveram ao Validador A, re-corridas
+--------------------------------------------------------------------------------
+17 mutantes (15 dele + 2 meus), **17 MORTOS, 0 vivos, 0 erros de arnês**:
+A-M01 working-directory · A-M03 comentar o env · A-M04 comentar services ·
+A-M05 migração inexistente · A-M06 versões de Postgres divergentes ·
+A-M07 sem ON_ERROR_STOP · A-M12 sem PGRST_JWT_SECRET · A-M14 sem --network host ·
+A-M15 continue-on-error · A-M17 sem if: always() · A-M18 guarda noutro ficheiro ·
+A-M21 TAB · A-M22 run: duplicado · A-M23 comentar CREATE ROLE ·
+A-M24 script não corre o ficheiro · NOVO-1 tirar o npm ci do frontend ·
+NOVO-2 guarda sem verificar `# pass`.
+
+Somando a ronda própria: **31 mutantes · 30 mortos · 1 equivalente declarado**.
+
+--------------------------------------------------------------------------------
+O QUE O VALIDADOR A NÃO CONSEGUIU MEDIR (declarado por ele, aceite por mim)
+--------------------------------------------------------------------------------
+1. A semântica do runner do GitHub: `${{ env.X }}` dentro de `run`, propagação
+   de `$GITHUB_ENV`, `if: always()`, e um `--network host` a alcançar um
+   `services:` mapeado. Documentados e coerentes — **nenhum provado por execução**.
+2. `--network host` em Windows: o Docker Desktop não o reproduz; ele usou rede
+   bridge. O caminho do `ci.yml` fica por provar.
+3. `-v "$PWD/..."` na forma do runner Linux.
+4. Se o `test-functions` está hoje vermelho na `main` (sem rede, por R4/R5).
+
+================================================================================
+FIM DA VALIDAÇÃO A
+================================================================================

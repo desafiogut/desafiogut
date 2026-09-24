@@ -439,11 +439,154 @@ o tecto de 1000 linhas, `maybeSingle` com mais de uma linha (o real dá
 `PGRST116`), `select("a,b")` a ser ignorado, upsert sem `onConflict`, upsert a
 omitir colunas `NOT NULL`.
 
-⚠️ E os testes de nível 2 — os únicos que exercem a migração — **estão
-saltados em CI**, porque o `ci.yml` não define `SUPABASE_CONTRATO_URL/KEY`.
-Ligá-los é a acção de maior efeito e menor custo que fica por fazer.
+⚠️ E os testes de nível 2 — os únicos que exercem a migração — **estavam
+saltados em CI**, porque o `ci.yml` não definia `SUPABASE_CONTRATO_URL/KEY`.
+✅ **RESOLVIDO no MC93-E** — ver §4e.
 
 ---
+
+## 4e. O CI que corre mesmo, e a EVM local (MC93-E)
+
+O MC93-D deixou duas pendências nomeadas. Esta secção regista o que fechou cada
+uma, e — mais importante — **o que continua por fechar e porquê**.
+
+### ⛔ Pendência 1: os testes de contrato saltavam em CI
+
+`ci.yml` não definia `SUPABASE_CONTRATO_URL`/`KEY`, logo os cinco testes
+`SERVIDOR:` — **os únicos que exercem a migração `20260923_mc93b_pontuacoes.sql`** —
+eram saltados em todos os PRs. Um verde silencioso durante um MC inteiro.
+
+O job `test-functions` passou a levantar **Postgres 17** como `service:`, criar os
+papéis que a migração pressupõe (`anon`, `authenticated`, `service_role`,
+`authenticator`), aplicar a migração, e correr **PostgREST v12.2.3** com um JWT
+de `service_role` assinado no próprio job.
+
+> ⚠️ **O PostgREST NÃO é um `service:`, e a ordem é a razão.** Os papéis e a
+> migração têm de existir **antes** de ele ligar e ler o schema; um `service:`
+> arranca antes de qualquer passo. Fica num `docker run --network host`, depois.
+
+**Medido:** sem servidor `# skipped 5`; com servidor `# skipped 0`. A suíte
+completa nas condições do CI: **590 testes · 589 verdes · 0 falhas · 1 saltado**
+(a base do MC93-D era 543 · 535 · 8).
+
+> ⛔ **E o job não podia ficar verde, por uma razão que nada tinha a ver com
+> isto.** Dois testes do MC30.2.1 fazem `mock.module("@aws-sdk/client-kms")`, e
+> `mock.module` exige que o especificador RESOLVA. Esse pacote não está no
+> lockfile das *functions* — resolve por subida de directórios a partir de
+> `frontend/node_modules`. Em CI dava `ERR_MODULE_NOT_FOUND`. O job passou a
+> fazer `npm ci` também no frontend, e há uma guarda que varre `_tests/*.mjs` e
+> exige que **cada pacote importado venha de um lockfile que algum job instala**.
+
+### A guarda que impede a regressão
+
+Corrigir uma vez não chega — a configuração pode desaparecer num merge sem que
+nada fique vermelho. Por isso há **duas** camadas:
+
+1. um passo no próprio CI que lê o número de saltados e **falha** se não for 0;
+2. `_tests/mc93e-ci-config.test.mjs`, que lê o `ci.yml` e exige o serviço, o
+   `env:` no passo certo, a máscara do token, a migração existente, e que o
+   `desafio-gut/scripts/ci-postgrest-local.sh` use **as mesmas imagens**.
+
+> ⚠️ `--test-reporter=tap` está **fixado de propósito**. O repórter por defeito
+> escreve `ℹ skipped N`, que o parse não apanha — a guarda ficaria vermelha para
+> sempre. Medido.
+
+> ⛔ **E contar saltos não chega.** Um `describe` saltado **não conta** em
+> `# skipped` e os filhos nem são emitidos: medido, o gate via `skipped 0` com a
+> EVM inteira por correr. O gate exige agora, **pelo nome**, o teste
+> "saldo on-chain DECREMENTA" e o "CONTROLO NEGATIVO".
+> Um `grep` por `adicionarSenhas` não servia: era satisfeito pelo teste de
+> selectores, que nem toca na EVM.
+
+### ⛔ Pendência 2: o cenário on-chain
+
+`_tests/mc93e-fork-onchain.test.mjs` levanta uma **EVM em-processo** (chainId
+31337), deploya o bytecode do `LeilaoGUT` e corre o cenário completo em ~2 s:
+
+```
+adicionarSenhas(participante, 20)  -> saldoSenhas == 20
+abrirEdicao("R-MC93E", ...)
+darLance("R-MC93E", 1234)          -> saldoSenhas == 19
+controlo negativo: sem senhas      -> revert "Voce nao possui senhas disponiveis"
+controlo positivo: com 1 senha     -> a MESMA chamada passa
+```
+
+### ⚠️ NÃO É UM FORK DE MAINNET — e a diferença importa
+
+O enunciado pedia fork via `ALCHEMY_URL`. Medido no SEG-1: é uma **credencial**
+(R5 proíbe), e sem credencial não há fork — `eth.llamarpc.com` devolve 525,
+`cloudflare-eth.com` rate-limit, `rpc.ankr.com` 401.
+
+⚠️ **Três endpoints é uma amostra estreita**, e a validação independente teve
+razão em dizê-lo: a afirmação honesta é *"os três que testei recusaram"*, não
+*"não existe RPC público utilizável"*. E o salto passou a ter **alavanca**: se o
+operador definir `MAINNET_RPC_URL`, o teste corre e lê o bytecode de produção
+(só `eth_getCode` — nunca transacção). Antes dizia "desbloqueia com autorização
+do operador" e não havia mecanismo nenhum.
+
+**Consequência que fica declarada:** isto exerce a **lógica** do contrato, não o
+**bytecode realmente deployado** em `0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd`.
+A deriva entre fonte e deployado continua **por medir**.
+
+O que se cobre dessa lacuna são as **assinaturas** que o backend usa. E aqui há
+uma armadilha que o teste do MC93-D não via **e a primeira versão deste também
+não**: `topic0 = keccak(sighash)`, e o sighash **não inclui `indexed`, nem os
+nomes, nem a mutabilidade**.
+
+> ⛔ Tirar `indexed` de `LanceDado.lancador` **mantém o mesmo topic0**. Medido:
+> a descodificação passa a devolver lançador errado, `valor: 0`,
+> `repetido: true` — e **não lança excepção nenhuma**, porque
+> `getLanceDadoEvents` lê `args[0..4]` por posição. Corrupção silenciosa.
+> O teste compara agora `indexed`, os nomes dos parâmetros e a
+> `stateMutability`, depois de casar o selector.
+
+### ⚠️ Três verdades diferentes: node_modules, package.json, package-lock.json
+
+| fonte | hardhat | edr | solc |
+|---|---|---|---|
+| `node_modules` (esta árvore) | 2.28.0 | next.17 | 0.8.26 |
+| `package.json` | `^3.4.0` | — | — |
+| **`package-lock.json` (o que o CI instala)** | **3.4.2** | **next.29** | **ausente** |
+
+Reproduzido com `npm ci` numa pasta isolada. Por isso o arnês fala **só com a API
+pública do EDR** (cujo `createProvider` é idêntico nas duas versões) e **nunca**
+com `hardhat/internal/...`, que existe numa e não na outra.
+
+E por isso o ABI+bytecode vivem numa **fixture versionada**
+(`_tests/fixtures/leilao-gut.evm.json`): `artifacts/` está em `.gitignore`, logo
+o CI nunca teria o artefacto compilado. A fixture guarda o **sha256 da fonte**, e
+há um teste que falha se o `Leilao.sol` mudar sem ela ser regenerada
+(`node scripts/gerar-fixture-evm.cjs`).
+
+> ⚠️ Mas o sha256 cobre só a **fonte**. O que ligava a fixture ao seu próprio
+> ABI era a recompilação com `solc` — que **salta em CI**, porque o `solc` não
+> vem no `package-lock.json`. Editar o ABI da fixture à mão passava despercebido.
+> Fechado sem acrescentar dependência: o **selector de cada função do ABI tem de
+> aparecer literalmente no bytecode** da própria fixture (é assim que o
+> despachante do Solidity funciona). Adulterar só os `settings` continua
+> invisível em CI — pendência nomeada.
+
+### Os saltos, corrigidos (R15)
+
+Dois dos três saltos "FORK" do MC93-D deixaram de existir — o trabalho foi feito.
+O terceiro mudou de razão, porque foi **medido**:
+
+> "POR FAZER" ⇒ **"BLOQUEADO PELA R5"**. Ler a mainnet exige um RPC com
+> credencial. Não é falta de trabalho; desbloqueia com uma **decisão do
+> operador** (autorizar um RPC de leitura), não com código.
+
+### O que continua por fazer
+
+1. ⛔ **Deriva entre `contracts/Leilao.sol` e o bytecode em mainnet** — só um fork
+   a mede. Desbloqueia com `MAINNET_RPC_URL` autorizado pelo operador.
+2. ⛔ **O `ci.yml` nunca correu num runner do GitHub.** Foi validado com o
+   equivalente local (`ci-postgrest-local.sh`, mesmas imagens) e com um teste que
+   impede os dois de divergirem; `act` não está instalado nesta máquina.
+   Por provar: `${{ env.X }}` dentro de `run`, `$GITHUB_ENV` entre passos,
+   `if: always()`, e `--network host` a alcançar um `services:` mapeado.
+3. ⚠️ Adulterar os `settings` da fixture continua invisível em CI — fecha-se com
+   `npm i -D solc@0.8.26` na raiz de `desafio-gut/` e `saltados == 0`.
+4. Antes de activar a emissão: migração em produção + R2 reativada.
 
 ## 5. O que o motor NÃO faz (por decisão, não por esquecimento)
 

@@ -1,0 +1,227 @@
+================================================================================
+MC93-E — SEG-1 · QUESTIONAMENTO DO BRIEFING (HARD GATE)
+DesafioGUT · Data: 2026-09-24 · Commit base: f8bc6c0 · árvore limpa
+Skills ECC: verification-before-completion, root-cause-tracing
+HARD GATE 2 EM VIGOR: toda a afirmação sobre o ambiente é MEDIDA por execução,
+com saída registada. Ler o package.json NÃO é medir. Foi assim que errei no
+MC93-D, e é por isso que este ficheiro só contém factos com comando ao lado.
+================================================================================
+
+VEREDITO: **AJUSTAR**
+R19 (irreversibilidade): NÃO ativada — nada aqui toca mainnet, produção ou
+credenciais. Ver porém o ACHADO NOVO 1, que é de segurança e é para o operador.
+
+--------------------------------------------------------------------------------
+RESUMO EM CINCO LINHAS
+--------------------------------------------------------------------------------
+1. A pendência nº 1 (nível 2 saltado em CI) CONFIRMA-SE: ci.yml:97 não tem `env:`
+   nem `services:`. É real e é corrigível.
+2. HARD GATE 3 como escrito é IMPOSSÍVEL: `act` não existe nesta máquina.
+   Mas o enunciado admite "ou equivalente", e o Docker está de pé -> satisfazível.
+3. O fork via `ALCHEMY_URL` é IMPOSSÍVEL sem violar a R5, e os três RPC públicos
+   sem credencial RECUSAM. Medido, não suposto.
+4. HARD GATE 4 é satisfazível SEM fork e SEM rede: EVM em-processo + o artefacto
+   já compilado. Cenário completo corrido em 509 ms. Prova em baixo.
+5. ACHADO NOVO, fora do enunciado: há uma chave de API Alchemy COMMITADA no
+   repositório desde o MC89.14.
+
+================================================================================
+PARTE A — MEDIÇÕES (HARD GATE 2)
+================================================================================
+
+[M0] Base
+     git rev-parse --short HEAD          -> f8bc6c0
+     git status --porcelain              -> (vazio)
+
+[M1] A versão INSTALADA, não a que o package.json pina — a lição do MC93-D
+     package.json pina hardhat             -> ^3.4.0
+     node_modules/hardhat                  -> 2.28.0
+     ./node_modules/.bin/hardhat --version -> "2.28.0", exit 0
+
+[M2] EDR
+     @nomicfoundation/edr                -> 0.12.0-next.17
+     edr-win32-x64-msvc                  -> PRESENTE
+
+[M17] ⚠️ E O PAR CASA EXACTAMENTE:
+     hardhat 2.28.0 declara `"@nomicfoundation/edr": "0.12.0-next.17"`
+     (versão EXACTA, sem ^) e é essa que está instalada. Não há incompatibilidade
+     nenhuma. A minha frase do MC93-D ("o hardhat está partido") era falsa por
+     duas razões independentes, não uma.
+
+[M3][M7] DOIS ficheiros de configuração coexistem:
+     hardhat.config.cjs -> CommonJS, solidity "0.8.24"
+     hardhat.config.js  -> ESM, sintaxe do hardhat v3 (`plugins: [...]`), 0.8.20
+
+[M10] ⚠️ O CLI do hardhat NÃO ARRANCA — e a minha hipótese sobre o porquê
+      ESTAVA ERRADA:
+     hardhat --version                          -> 2.28.0, exit 0
+     hardhat --help                             -> erro
+     hardhat --config hardhat.config.cjs --help -> erro TAMBÉM
+     => Apontar explicitamente o config CommonJS NÃO resolve. Logo a explicação
+       "é o .js v3 que o v2 não entende" não se sustenta sozinha. Registo o
+       facto (o CLI não arranca) e NÃO registo uma causa que não medi.
+       CONSEQUÊNCIA PRÁTICA: NENHUMA. Ver [M18].
+
+[M18] O caminho que interessa não passa pelo CLI:
+     require("hardhat/internal/hardhat-network/provider/provider.js")
+       -> { DEFAULT_COINBASE, getGlobalEdrContext, EdrProviderWrapper,
+            createHardhatNetworkProvider }
+     Uma EVM em-processo não precisa do binário, do config, nem de tarefas.
+
+[M11] O contrato JÁ ESTÁ COMPILADO:
+     artifacts/contracts/Leilao.sol/LeilaoGUT.json -> 29.595 bytes
+     abi: 23 entradas · bytecode: 9.740 chars
+     => não é preciso descarregar solc, nem compilar, nem estar online.
+
+[M13] ethers 6.16.0 instalado · LeilaoGUT tem construtor sem argumentos.
+
+[M4][M22] ci.yml — A PENDÊNCIA Nº 1, CONFIRMADA
+     Linha 97, job `test`:
+         - name: Testes (node --test)
+           working-directory: desafio-gut/frontend/netlify/functions
+           run: node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+     SEM bloco `env:`. SEM bloco `services:`.
+     => SUPABASE_CONTRATO_URL/KEY nunca existem em CI
+     => os testes de NÍVEL 2 — os ÚNICOS que exercem a migração — saltam sempre.
+
+[M5] ⛔ `act` — ABSENTE
+     command -v act  -> (nada)
+     where act       -> (nada)
+
+[M20] ✅ Docker — DE PÉ
+     docker info --format '{{.ServerVersion}}' -> 29.7.2
+
+[M21] ⛔ RPC público de mainnet SEM credencial — OS TRÊS RECUSAM
+     https://eth.llamarpc.com   -> error code: 525
+     https://cloudflare-eth.com -> "Rate limiting threshold exceeded for the
+                                   public endpoint"
+     https://rpc.ankr.com/eth   -> -32000 "Unauthorized: You must authenticate
+                                   your request with an API key"
+
+[M14] ✅ PROVA DE QUE O HARD GATE 4 É SATISFAZÍVEL — corrida, com saída:
+     EVM viva — chainId: 31337 | arranque: 75 ms
+     LeilaoGUT deployado: 0xAE519FC2...ff90 | 4823 bytes
+     coordenacao() === signer0? true
+     saldoSenhas apos adicionarSenhas(20): 20
+     saldoSenhas apos darLance          : 19
+     ✅ controlo negativo reverteu: execution reverted: "Voce nao possui senhas
+        disponiveis"
+     TOTAL: 509 ms
+     Sem rede. Sem credencial. Sem CLI. Sem solc. Sem tocar em mainnet.
+
+================================================================================
+PARTE B — PREMISSAS DO ENUNCIADO, CONFRONTADAS COM O CÓDIGO
+================================================================================
+
+P1. "o ci.yml não define SUPABASE_CONTRATO_URL/KEY, logo o nível 2 salta"
+    ✅ CONFIRMADA — [M4][M22]. É a acção de maior efeito e menor custo.
+
+P2. "HARD GATE 3 — alterações ao ci.yml são testadas correndo o CI local
+     (`act` ou equivalente) antes do commit"
+    ⚠️ AJUSTAR. `act` não existe aqui [M5] e instalá-lo não está autorizado.
+    O enunciado admite "ou equivalente" — e o equivalente É possível porque o
+    Docker está de pé [M20]. Equivalente que proponho, e que é honesto:
+      (a) levantar Postgres + PostgREST em Docker com as MESMAS IMAGENS e as
+          MESMAS variáveis que o ci.yml passará a declarar;
+      (b) aplicar a migração 20260923_mc93b_pontuacoes.sql tal como o CI o fará;
+      (c) correr o COMANDO EXACTO do passo, com o env do passo, e provar por
+          execução que os testes de nível 2 DEIXAM DE SALTAR e passam;
+      (d) um teste que lê o ci.yml e falha se o env voltar a desaparecer.
+    ⚠️ LIMITE QUE FICA DECLARADO, e que não escondo: isto prova que o COMANDO e
+    o SERVIÇO funcionam. NÃO prova que o runner do GitHub Actions interpreta o
+    YAML como eu espero. Vai para o L-4. Um `act` daria essa garantia; não o
+    tenho, e prefiro dizê-lo a fingir que o equivalente é igual.
+
+P3. "scripts/run-fork-onchain.sh ... faz fork de mainnet via ALCHEMY_URL"
+    ⛔ REFUTADA, por DUAS razões independentes e ambas medidas:
+      1. `ALCHEMY_URL` é uma CREDENCIAL. A R5 diz "nunca toca credenciais".
+         Existe uma chave Alchemy no repositório (ACHADO NOVO 1) — usá-la seria
+         exactamente o que a R5 proíbe, e ainda por cima é de Sepolia.
+      2. Sem credencial não há fork: os três endpoints públicos recusam [M21].
+    => AJUSTE: o fork de mainnet sai. Entra a EVM em-processo com DEPLOY DO
+      ARTEFACTO REAL JÁ COMPILADO — que satisfaz o HARD GATE 4 na sua própria
+      letra (`adicionarSenhas -> darLance -> saldo decrementado` + controlo
+      negativo), e está PROVADO em [M14] antes de eu escrever uma linha.
+
+P4. "o fork é possível, ao contrário do que eu disse no MC93-D"
+    ✅ CONFIRMADA no que interessa, e a minha errata do MC93-D mantém-se de pé:
+    uma EVM local É possível sem instalar nada. Mas com uma PRECISÃO que o
+    MC93-D não fez e que faço agora:
+      • EVM local com deploy do artefacto  -> possível OFFLINE. Medido [M14].
+      • FORK DE MAINNET                    -> precisa de RPC com credencial [M21].
+    O validador do MC93-D conseguiu o fork porque tinha um RPC utilizável.
+    Eu, sob a R5, não tenho. Não é a mesma capacidade, e tratá-las como a mesma
+    coisa seria repetir o erro de método que este MC existe para não repetir.
+
+P5. "HARD GATE 5 — nenhuma emissão on-chain real"
+    ✅ Respeitada por construção: chainId 31337, contas descartáveis
+    (0x11.../0x22.../0x33...), contrato deployado no momento. Nenhum byte sai da
+    máquina. `BONUS_EMISSAO_ATIVA` continua por definir.
+
+================================================================================
+PARTE C — DIFERENÇA QUE O AJUSTE CRIA, E QUE NÃO ESCONDO
+================================================================================
+Um FORK exerceria o BYTECODE REALMENTE DEPLOYADO em
+0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd.
+Uma EVM LOCAL exerce o bytecode COMPILADO A PARTIR DE contracts/Leilao.sol.
+
+São a mesma coisa apenas SE a fonte corresponder ao deployado — e isso é
+precisamente o que nenhum teste do projeto verifica hoje. Portanto:
+  • o que o MC93-E entrega cobre a LÓGICA do contrato (saldo, gate de senhas,
+    coordenação, reversão), que é o que o worker do bónus depende;
+  • o que NÃO cobre é o DRIFT entre a fonte e o deployado. Fica em L-4 como
+    pendência nomeada, não como coisa resolvida.
+Mitigação parcial que cabe aqui sem rede: comparar os SELECTORES do ABI
+compilado com os que `_lib/contract.mjs` usa. Isso apanha divergência de
+assinatura, que é a classe de drift que partiria o worker.
+
+================================================================================
+PARTE D — ACHADOS NOVOS (fora do enunciado)
+================================================================================
+ACHADO NOVO 1 ⛔ SEGURANÇA — CHAVE DE API ALCHEMY COMMITADA
+     desafio-gut/hardhat.config.cjs contém, em texto simples, um endpoint
+     Alchemy de Sepolia com a chave embutida.
+     git ls-files --error-unmatch  -> o ficheiro ESTÁ sob controlo de versão
+     último commit a tocá-lo       -> a2c40ee "MC89.14: Tela 2 (Gestao de
+                                      Usuarios) + view + 4 endpoints"
+     => está no histórico do repositório, logo remover o ficheiro agora NÃO a
+       remove do histórico. Mitigar a sério é ROTAR A CHAVE no painel Alchemy.
+     => NÃO TOQUEI NO FICHEIRO (R5, e não está autorizado neste MC). Não repito
+       aqui o valor da chave (R4). É acção do OPERADOR, e é a única coisa deste
+       SEG-1 que tem prazo.
+     (Precedente do projeto: a chave DeepSeek do MC89 e a EOA do MC59.11 — mesma
+      classe, mesma resposta: rotar, não esconder.)
+
+ACHADO NOVO 2 ⚠️ O ci.yml vai precisar de `services:`, não só de `env:`
+     Pôr as variáveis sem levantar o serviço faz os testes DEIXAREM de saltar e
+     passarem a FALHAR — trocar um falso verde silencioso por vermelho em todos
+     os PRs. O ajuste tem de trazer Postgres + PostgREST como `services`, e a
+     aplicação da migração como passo, ou não é entrega.
+
+ACHADO NOVO 3 ⚠️ O CLI do hardhat continua partido [M10] e fica assim.
+     Não é alterável neste MC e não bloqueia nada — o caminho usado é
+     programático [M18]. Registo para não voltar a diagnosticá-lo do zero.
+
+================================================================================
+PARTE E — AJUSTES QUE PROPONHO, E QUE VOU EXECUTAR
+================================================================================
+A1. HARD GATE 3 cumpre-se por EQUIVALENTE medido (Docker + imagens e env
+    idênticos + comando exacto + teste estrutural do ci.yml). Limite declarado
+    em L-4: não prova a interpretação do YAML pelo runner do GitHub.
+A2. `ALCHEMY_URL` e o fork de mainnet SAEM do âmbito. Entra EVM em-processo com
+    deploy do artefacto já compilado. HARD GATE 4 cumpre-se na letra.
+A3. Acrescenta-se, por causa da Parte C, uma verificação de SELECTORES do ABI
+    compilado contra `_lib/contract.mjs`.
+A4. `scripts/run-fork-onchain.sh` mantém o nome pedido, mas passa a ser um
+    invólucro fino sobre o teste em node — porque é o teste que tem de correr em
+    CI, e um .sh não corre no Windows onde isto é desenvolvido.
+A5. O ACHADO NOVO 1 é reportado ao operador e NÃO é corrigido por mim.
+
+NADA DO QUE ESTE MC NÃO AUTORIZA FOI TOCADO: pontuacao-utils.mjs,
+consolidar-lances.mjs, pontuacao-store.mjs, pontuacao.mjs, ranking.mjs,
+fila-processor-scheduled.mjs, Leilao.sol, a migração, o frontend, e
+BONUS_EMISSAO_ATIVA continua por definir.
+
+================================================================================
+FIM DO SEG-1 — VEREDITO: AJUSTAR
+================================================================================

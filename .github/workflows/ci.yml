@@ -79,22 +79,187 @@ jobs:
     name: test-functions
     runs-on: ubuntu-latest
     needs: build
-    timeout-minutes: 10
+    timeout-minutes: 15
+
+    # ── MC93-E · o Postgres onde a migracao do MC93-B e aplicada e exercida.
+    # A MESMA imagem que desafio-gut/scripts/ci-postgrest-local.sh usa. Se as
+    # duas divergirem, o script deixa de ser o equivalente local deste job.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # Segredo DESCARTAVEL para assinar o JWT deste runner efemero. Nao e uma
+      # credencial de lado nenhum e nao da acesso a nada fora deste job (R4/R5).
+      PGRST_JWT_SECRET: mc93e-segredo-de-teste-apenas-32-chars-min
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: desafio-gut/frontend/netlify/functions/package-lock.json
+          cache-dependency-path: |
+            desafio-gut/frontend/package-lock.json
+            desafio-gut/frontend/netlify/functions/package-lock.json
+
+      # ── MC93-E, achado da validacao independente (A-1) ──────────────────────
+      # DOIS ficheiros de teste do MC30.2.1 fazem mock.module("@aws-sdk/client-kms")
+      # e mock.module("@biconomy/account"). O `mock.module` do node EXIGE que o
+      # especificador RESOLVA. Nenhum dos dois esta no lockfile das functions:
+      # resolvem a partir de desafio-gut/frontend/node_modules, que este job nao
+      # instalava. Em CI davam ERR_MODULE_NOT_FOUND e o passo saia VERMELHO --
+      # ou seja, a correccao do nivel 2 nunca seria observavel em verde.
+      # Instalar o frontend e a correccao de menor raio: nao acrescenta
+      # dependencia nenhuma ao bundle das Netlify Functions.
+      - name: npm ci frontend (resolve @aws-sdk/client-kms e @biconomy/account)
+        working-directory: desafio-gut/frontend
+        run: npm ci
 
       - name: npm ci functions
         working-directory: desafio-gut/frontend/netlify/functions
         run: npm ci
 
+      # ── MC93-E · os testes de contrato de NIVEL 2 deixam de saltar ──────────
+      # O MC93-D mediu a migracao 20260923_mc93b_pontuacoes.sql contra um
+      # PostgreSQL real e provou o P0 do MC93-C (`eq.null` -> 22007). Mas este
+      # passo nao definia SUPABASE_CONTRATO_URL/KEY, logo os UNICOS testes que
+      # exercem a migracao eram saltados em todos os PRs. Verde silencioso.
+      #
+      # ATENCAO: o PostgREST NAO e um `service:`, e a ordem e a razao. Os papeis
+      # e a migracao tem de existir ANTES de ele ligar; um service arranca antes
+      # de qualquer step. Corre-se com `docker run --network host` depois.
+      # Equivalente local, com as MESMAS imagens:
+      #   bash desafio-gut/scripts/ci-postgrest-local.sh
+      - name: Papeis + migracao no Postgres
+        run: |
+          docker run --rm --network host -e PGPASSWORD=postgres             postgres:17-alpine psql -v ON_ERROR_STOP=1             -h localhost -U postgres -d postgres -c "
+              CREATE ROLE anon NOLOGIN;
+              CREATE ROLE authenticated NOLOGIN;
+              CREATE ROLE service_role NOLOGIN BYPASSRLS;
+              CREATE ROLE authenticator NOINHERIT LOGIN PASSWORD 'postgres';
+              GRANT anon, authenticated, service_role TO authenticator;"
+          docker run --rm --network host -e PGPASSWORD=postgres             -v "$PWD/desafio-gut/frontend/supabase/migrations:/mig:ro"             postgres:17-alpine psql -v ON_ERROR_STOP=1             -h localhost -U postgres -d postgres             -f /mig/20260923_mc93b_pontuacoes.sql
+
+      - name: PostgREST
+        run: |
+          docker run -d --name mc93e-postgrest --network host             -e PGRST_DB_URI="postgres://authenticator:postgres@localhost:5432/postgres"             -e PGRST_DB_SCHEMAS=public             -e PGRST_DB_ANON_ROLE=anon             -e PGRST_JWT_SECRET="${{ env.PGRST_JWT_SECRET }}"             postgrest/postgrest:v12.2.3
+          for _ in $(seq 1 60); do
+            curl -fsS http://localhost:3000/ >/dev/null 2>&1 && break
+            sleep 1
+          done
+          curl -fsS http://localhost:3000/ >/dev/null
+
+      - name: Token service_role
+        working-directory: desafio-gut/frontend/netlify/functions
+        run: |
+          TOKEN=$(SEGREDO="${{ env.PGRST_JWT_SECRET }}" node -e '
+            import("jose").then(async ({ SignJWT }) => {
+              const s = new TextEncoder().encode(process.env.SEGREDO);
+              process.stdout.write(await new SignJWT({ role: "service_role" })
+                .setProtectedHeader({ alg: "HS256" })
+                .setIssuedAt().setExpirationTime("1h").sign(s));
+            });')
+          echo "::add-mask::$TOKEN"
+          echo "SUPABASE_CONTRATO_KEY=$TOKEN" >> "$GITHUB_ENV"
+
       - name: Testes (node --test)
         working-directory: desafio-gut/frontend/netlify/functions
+        env:
+          # A base do POSTGREST, nao a raiz do gateway do Supabase (MC93-E, R15).
+          SUPABASE_CONTRATO_URL: http://localhost:3000
         run: node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+
+      - name: Prova de que o NIVEL 2 nao saltou
+        if: always()
+        working-directory: desafio-gut/frontend/netlify/functions
+        env:
+          SUPABASE_CONTRATO_URL: http://localhost:3000
+        run: |
+          # Um passo verde nao distingue "passou" de "saltou". Este distingue:
+          # e a diferenca entre corrigir a pendencia e parecer corrigi-la.
+          # --test-reporter=tap FIXADO de proposito: o repórter por defeito
+          # (spec) escreve "i skipped N" e o parse abaixo devolveria vazio ->
+          # a guarda ficaria VERMELHA para sempre, mesmo com o nivel 2 a correr.
+          # Medido, nao suposto.
+          saida=$(node --test --test-reporter=tap --experimental-test-module-mocks             "_tests/mc93d-contrato-postgrest.test.mjs" 2>&1) || true
+          echo "$saida" | tail -20
+          saltados=$(echo "$saida" | grep -oE '^# skipped [0-9]+' | tail -1 | tr -dc '0-9')
+          passados=$(echo "$saida" | grep -oE '^# pass [0-9]+' | tail -1 | tr -dc '0-9')
+          echo "passados=${passados:-?} saltados=${saltados:-?}"
+          # ATENCAO (achado A-4 da validacao independente): um glob vazio faz o
+          # `node --test` sair 0 com ZERO testes. Sem esta verificacao, apontar o
+          # passo ao directorio errado deixava tudo verde a nao testar nada --
+          # o mesmo verde silencioso que este MC veio matar, noutra variavel.
+          test "${passados:-0}" -gt 0 || {
+            echo "::error::a suite de contrato nao correu (0 testes). Nao e um salto: e nao ter corrido."
+            exit 1; }
+          test "${saltados:-1}" = "0" || {
+            echo "::error::os testes de contrato de nivel 2 voltaram a saltar"; exit 1; }
+
+  # ── Stage 3b: cenario on-chain numa EVM local (MC93-E) ─────────────────────
+  # Job proprio porque precisa das dependencias de desafio-gut/ (o EDR vem com o
+  # hardhat) e o job acima so instala as das functions. Sem isto o cenario
+  # saltaria em CI -- que e exactamente o defeito que este MC veio corrigir.
+  # HARD GATE 5: chainId 31337, chaves descartaveis, nenhuma transacao real.
+  test-onchain:
+    name: test-onchain
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            desafio-gut/package-lock.json
+            desafio-gut/frontend/netlify/functions/package-lock.json
+
+      - name: npm ci (raiz -- traz o @nomicfoundation/edr)
+        working-directory: desafio-gut
+        run: npm ci --ignore-scripts=false
+
+      - name: npm ci functions
+        working-directory: desafio-gut/frontend/netlify/functions
+        run: npm ci
+
+      - name: Cenario on-chain
+        working-directory: desafio-gut/frontend/netlify/functions
+        run: node --test --experimental-test-module-mocks "_tests/mc93e-fork-onchain.test.mjs"
+
+      - name: Prova de que a EVM nao saltou
+        working-directory: desafio-gut/frontend/netlify/functions
+        run: |
+          saida=$(node --test --test-reporter=tap --experimental-test-module-mocks             "_tests/mc93e-fork-onchain.test.mjs" 2>&1) || true
+          saltados=$(echo "$saida" | grep -oE '^# skipped [0-9]+' | tail -1 | tr -dc '0-9')
+          echo "saltados=${saltados:-?}"
+          # 1 salto e o tolerado: a recompilacao com solc, que nao vem no
+          # package-lock.json. O CENARIO da EVM nao pode saltar.
+          test "${saltados:-9}" -le 1 || {
+            echo "::error::o cenario on-chain saltou em CI"; exit 1; }
+          # ⚠️ ACHADO DA VALIDACAO INDEPENDENTE B, e era um verde silencioso meu:
+          # um `describe` saltado NAO conta em `# skipped` e os filhos nem sao
+          # emitidos -- medido, dava `skipped 0` com a EVM inteira por correr.
+          # E o `grep adicionarSenhas` anterior era satisfeito pelo teste de
+          # DERIVA DE SELECTORES, que nem toca na EVM. Colisao de substring.
+          # O sinal certo e o nome do teste decisivo, que so existe se o bloco
+          # correr mesmo.
+          echo "$saida" | grep -q "saldo on-chain DECREMENTA" || {
+            echo "::error::o cenario da EVM nao correu (o describe saltou)"; exit 1; }
+          echo "$saida" | grep -q "CONTROLO NEGATIVO" || {
+            echo "::error::o controlo negativo do cenario nao correu"; exit 1; }
 
   # ── Stage 4: Security Audit ─────────────────────────────────────────
   audit:

@@ -1,0 +1,170 @@
+================================================================================
+MC93-E — SEG4 · VALIDAÇÃO INDEPENDENTE B (cenário on-chain + arnês de EVM)
+DesafioGUT · 2026-09-24 · worktree próprio, EM SÉRIE depois do A
+================================================================================
+
+VEREDITO DO VALIDADOR B: **APROVADO COM RESSALVAS** — 2 achados ⛔.
+Todos os cinco pontos do "mínimo para subir a APROVADO" foram feitos.
+
+--------------------------------------------------------------------------------
+O QUE ELE CONFIRMOU — e uma confirmação que vale mais do que a minha prova
+--------------------------------------------------------------------------------
+• O cenário corre e NÃO é vácuo: comentou `saldoSenhas[msg.sender]--;` em
+  `Leilao.sol`, regenerou a fixture, e três testes morreram. Mede mesmo o contrato.
+• O controlo negativo discrimina: tentou fazê-lo passar por edição inexistente,
+  valor zero, chamador errado — cada causa dá a SUA mensagem. Não conseguiu.
+• HARD GATE 5 limpo, e mediu-o com uma SENTINELA que rebenta em `net.connect`,
+  `tls.connect`, `dns.lookup`, `http(s).request` e `fetch`: 24/24 sem disparar,
+  e o controlo positivo da sentinela disparou. Melhor prova do que a minha.
+  ⚠️ Ressalva dele, justa: a sentinela é JS; o addon nativo do EDR poderia abrir
+  sockets a partir do Rust. Sem `fork` no config não há para onde ligar, mas não
+  foi medido ao nível do SO.
+
+⚠️ E CORRIGIU A MINHA PROVA DE PORTABILIDADE, que não provava nada:
+diffar a LINHA de `createProvider` não pode revelar mudanças DENTRO de
+`ProviderConfig` — é um tipo nomeado. Ele foi buscar o tarball do
+`edr 0.12.0-next.29` à cache do npm (sem rede), extraiu-o, e correu a suíte real
+contra ele com um hook de `resolve`: **24/24 verde**, com controlo positivo do
+instrumento. A conclusão era verdadeira; a evidência que eu dei não a sustentava.
+
+--------------------------------------------------------------------------------
+B-1 ⛔ O GATE DE CI DA EVM NÃO PROVAVA NADA — o meu defeito, um nível acima
+--------------------------------------------------------------------------------
+Um `describe` com `skip` faz o `node --test` NÃO contar os filhos em `# skipped`,
+e os filhos nem são emitidos. Reproduzido por execução própria:
+
+    describe forçado a saltar ->  # tests 17 · pass 17 · skipped 0
+    saltados parseados         =  0          (o gate `-le 1` passava)
+    grep "adicionarSenhas"     -> ENCONTRADO (o gate passava)
+    "saldo on-chain DECREMENTA"-> 0 ocorrências
+
+E o `grep "adicionarSenhas"` era satisfeito pelo teste de DERIVA DE SELECTORES,
+que nem toca na EVM. Colisão de substring.
+
+⇒ Se o `@nomicfoundation/edr` faltasse em CI, os 7 testes do cenário
+  DESAPARECIAM e o job ficava VERDE. É a reintrodução, um nível acima, do
+  defeito que este MC veio matar — e num comentário meu do `ci.yml` que diz
+  exactamente isso.
+
+CORRIGIDO: o gate passou a exigir, pelo NOME, o teste decisivo
+("saldo on-chain DECREMENTA") e o "CONTROLO NEGATIVO". Verificado:
+    [normal]           -> VERDE (saltos=0)
+    [describe saltado] -> VERMELHO (cenário não correu)
+
+--------------------------------------------------------------------------------
+B-2 ⛔ O TESTE DE DERIVA ERA CEGO A `indexed` E À ORDEM DE PARÂMETROS
+--------------------------------------------------------------------------------
+Eu afirmei que ele fechava o achado B1 do MC93-D ("cego a aridade e tipos").
+Fecha isso — mas `topic0 = keccak(sighash)` e o SIGHASH NÃO INCLUI `indexed`,
+nem os nomes, nem a mutabilidade.
+
+Ele mediu o estrago, e é pior do que uma falha: tirou `indexed` de
+`LanceDado.lancador` e descodificou uma linha real de log —
+    topic0 BOM = 0x2355ed2c…   topic0 MAU = 0x2355ed2c…   IGUAIS
+    decodificado: lançador 0x…001092, valor 0, repetido true, timestamp 3
+    correcto:     lançador 0x1111…, valor 4242, repetido false, ts 1700000000
+**Sem excepção nenhuma.** `getLanceDadoEvents` lê `args[0..4]` por POSIÇÃO, logo
+`monitor-onchain.mjs` passaria a detectar "anomalias" sobre lixo. Corrupção
+silenciosa, não falha.
+
+CORRIGIDO: depois de casar o selector/topic0, compara-se `indexed`, o NOME de
+cada parâmetro (quando ambos o têm) e a `stateMutability`.
+Mutação: B-M8 (tirar indexed) MORTO · B-M9 (trocar os dois uint256) MORTO ·
+B-M10 (`view`) MORTO.
+
+--------------------------------------------------------------------------------
+B-3 ⚠️ "A fixture não pode mentir" era FALSO EM CI
+--------------------------------------------------------------------------------
+O `sha256` cobre só `Leilao.sol`. O que ligava a fixture à fonte era a
+recompilação com `solc` — que SALTA em CI. Logo, em CI, editar o ABI da fixture
+à mão passava. Ele mediu: M5 (tirar indexed do ABI da fixture) e M6 (mexer nos
+`settings`) ficavam VIVOS sem solc.
+
+CORRIGIDO sem acrescentar dependência nenhuma: um teste novo verifica que o
+SELECTOR de cada função do ABI da fixture aparece literalmente no BYTECODE da
+fixture — o despachante que o Solidity gera compara `msg.sig` com cada selector,
+logo tem de lá estar. Amarra ABI↔bytecode sem `solc` e corre em CI.
+Mutação NOVO-3 (adulterar só o `abi` da fixture): **MORTO (2 falhas)**.
+E acrescentou-se `assert.equal(solc.version(), fixture.solcVersion)`, para um
+bump de solc não dar falso vermelho com a mensagem errada.
+
+⚠️ FICA POR FECHAR: adulterar os `settings` da fixture continua invisível em CI.
+Fecha-se com `npm i -D solc@0.8.26` na raiz de `desafio-gut/` e apertando o gate
+para `saltados == 0`. Não o fiz: mexer no `package-lock.json` da app tem raio
+maior do que o deste MC. Fica como pendência nomeada.
+
+--------------------------------------------------------------------------------
+B-4 ⚠️ A MINHA RESSALVA "NÃO É PRENDÍVEL" ERA FALSA
+--------------------------------------------------------------------------------
+Eu escrevi, no próprio teste, que o defeito da cache era "dependente de
+temporização" e não se prendia. **Não era o relógio; era eu a olhar para o sítio
+errado.** A cache do ethers é indexada pelos ARGUMENTOS (`getTag(method, req)`).
+Eu usava `darLance(…,111)` e depois `(…,222)`: duas chaves, nunca havia acerto.
+Com o MESMO argumento, a promessa rejeitada é reservida e o defeito reproduz
+5 em 5.
+
+CORRIGIDO: `222 → 111`. A ressalva foi apagada e substituída pela explicação
+verdadeira. Mutação B-M2c (religar a cache): **MORTO**.
+
+Lição, e é dura: eu declarei uma impossibilidade a partir de UMA tentativa
+falhada. É o mesmo erro do SEG-1 do MC93-D, em ponto pequeno.
+
+--------------------------------------------------------------------------------
+B-5 ⚠️ ASSIMETRIA DE RIGOR
+--------------------------------------------------------------------------------
+Duas linhas depois de eu pregar "a razão em LITERAL", o teste "só a coordenação
+credita senhas" só exigia "uma string não vazia". Ele trocou a mensagem do
+modificador por **"Voce nao possui senhas disponiveis"** — activamente
+enganadora — e passou. CORRIGIDO com o literal "Acesso restrito a coordenacao".
+Mutação B-M24 (mensagem enganadora + fixture regenerada): **MORTO**.
+
+--------------------------------------------------------------------------------
+B-6 / B-7 / B-8 •
+--------------------------------------------------------------------------------
+B-6 `fragmentos.length >= 8` com 11 fragmentos: apagar três deixava verde.
+    CORRIGIDO para `equal(…, 11)`. Mutação B-M13: **MORTO**.
+B-7 A asserção "EIP-170" media o bytecode de CRIAÇÃO (limite EIP-3860), não o de
+    runtime. CORRIGIDO: o nome passou a dizer EIP-3860, e o limite EIP-170 é
+    agora medido no runtime, depois do deploy.
+B-8 `provedor: () => criarProvedor(...)` era código morto. REMOVIDO.
+
+--------------------------------------------------------------------------------
+SOBRE O SALTO "BLOQUEADO PELA R5" — ele tem razão nas duas objecções
+--------------------------------------------------------------------------------
+1. AMOSTRA ESTREITA. Concluir "não é executável" a partir de TRÊS endpoints é
+   fraco, e é o mesmo tipo de salto que produziu o SEG-1 errado do MC93-D.
+   O texto passou a dizer "os três que testei recusaram", não "não existe".
+2. NÃO HAVIA ALAVANCA. O salto dizia "desbloqueia com autorização do operador" e
+   não havia mecanismo: se o operador autorizasse amanhã, continuaria a não
+   haver código. CORRIGIDO: se `MAINNET_RPC_URL` existir no ambiente, o teste
+   corre e verifica o bytecode em `0x0052…16cd`. Só LEITURA (`eth_getCode`),
+   nunca transacção — a HARD GATE 5 mantém-se. Um `if` sobre uma variável não
+   toca credencial nenhuma: o que a R5 proíbe é eu ir buscar uma chave.
+
+--------------------------------------------------------------------------------
+MUTAÇÃO — RONDA C (as que sobreviveram ao Validador B)
+--------------------------------------------------------------------------------
+B-M8 indexed · B-M9 ordem dos uint256 · B-M10 view · B-M13 erosão do ABI ·
+B-M2c cache com isco · B-M24 mensagem enganadora · NOVO-3 adulterar o ABI da
+fixture  →  **7 MORTOS · 0 VIVOS**
+B-M15 (`allowUnlimitedContractSize`) permanece EQUIVALENTE DECLARADO: quem
+apanha o excesso é a asserção explícita de tamanho, não a bandeira.
+
+Ele repôs tudo e provou-o (`md5` idênticos, `git status` igual, worktree
+principal intacta). A fixture regenerada saiu byte-a-byte igual à commitada —
+prova lateral de que o gerador é determinista.
+
+--------------------------------------------------------------------------------
+O QUE O VALIDADOR B NÃO CONSEGUIU MEDIR (declarado por ele)
+--------------------------------------------------------------------------------
+1. Os três RPC públicos (exige rede; a R5 proíbe). Nem confirma nem desmente.
+2. O drift entre a fonte e o bytecode deployado em `0x0052…16cd` (exige fork).
+3. Comportamento do edr next.29 além dos caminhos que a suíte exerce.
+4. Se `allowUnlimitedContractSize: false` alguma vez rejeita — não há um
+   LeilaoGUT > 24 KiB para o provocar.
+5. Sockets abertos pelo addon NATIVO do EDR (a sentinela é só JS).
+6. Um bump de `solc` a produzir o falso vermelho que ele descreve.
+
+================================================================================
+FIM DA VALIDAÇÃO B
+================================================================================

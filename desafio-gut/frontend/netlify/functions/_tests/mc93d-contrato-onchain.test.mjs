@@ -135,25 +135,60 @@ test("INVARIANTE: só o worker do bónus pode creditar, e está em dry-run", asy
 });
 
 // ── O QUE FICA POR MEDIR — saltado, nunca fingido ───────────────────────────
+//
+// ✅ MC93-E: os dois primeiros saltos DEIXARAM DE EXISTIR porque o trabalho foi
+// feito. O cenário `adicionarSenhas` -> `darLance` -> saldo decrementado, e o
+// seu controlo negativo, vivem agora em `_tests/mc93e-fork-onchain.test.mjs`,
+// numa EVM em-processo, sem rede e sem credencial. Correm em CI no job
+// `test-onchain`. O teste abaixo garante que não voltam a desaparecer.
 
-test("FORK: adicionarSenhas → darLance → saldo decrementado", (t) => {
-  t.skip("POR FAZER, não impossível. Hardhat 2.28.0 e @nomicfoundation/edr "
-    + "estão instalados: dá para levantar uma EVM em-processo sem instalar nada. "
-    + "A validação independente do MC93-D correu este cenário completo. Fica "
-    + "para o MC seguinte — ver a errata no cabeçalho deste ficheiro.");
+test("os cenários on-chain do MC93-E existem e não são saltos", () => {
+  // Apagar o ficheiro sucessor faria estes saltos parecerem resolvidos sem o
+  // estarem. Isto liga o que foi prometido aqui ao que foi entregue lá.
+  const sucessor = readFileSync(resolve(AQUI, "mc93e-fork-onchain.test.mjs"), "utf8");
+  assert.match(sucessor, /adicionarSenhas → darLance → o saldo on-chain DECREMENTA/);
+  assert.match(sucessor, /CONTROLO NEGATIVO/);
+  assert.match(sucessor, /CONTROLO POSITIVO/);
 });
 
-test("FORK: darLance sem senhas reverte (controlo negativo)", (t) => {
-  t.skip("POR FAZER, mesma razão. É o controlo negativo do teste acima.");
-});
+test("FORK DE MAINNET: o CONTRATO_ADDRESS de produção tem bytecode", async (t) => {
+  // ⚠️ MC93-E, ao abrigo da R15: a razão mudou, porque foi MEDIDA.
+  // Dizia "POR FAZER", o que sugere que basta alguém sentar-se e fazê-lo.
+  // Não basta: isto exige LER a mainnet, logo um RPC.
+  //   • `ALCHEMY_URL` é uma credencial -> a R5 proíbe.
+  //   • os três endpoints públicos que testei recusaram (llamarpc 525,
+  //     cloudflare rate-limit, ankr 401 "must authenticate").
+  //     ⚠️ TRÊS é uma amostra estreita, e a validação independente teve razão em
+  //     dizê-lo: não posso concluir daí que NÃO EXISTE RPC público utilizável.
+  //     A afirmação honesta é "os três que testei recusaram".
+  //
+  // ⚠️ E A SEGUNDA CRÍTICA DA VALIDAÇÃO INDEPENDENTE ERA PIOR: o salto dizia
+  // "desbloqueia com autorização do operador" e NÃO HAVIA MECANISMO NENHUM.
+  // Se o operador autorizasse amanhã, continuaria a não haver código. Agora há:
+  // basta `MAINNET_RPC_URL` no ambiente. Um `if` sobre uma variável não toca
+  // credencial nenhuma, logo cabe dentro da R5 — o que a R5 proíbe é eu ir
+  // buscar uma chave, não o operador fornecer uma.
+  //
+  // ⚠️ SÓ LEITURA. `eth_getCode` não é transacção; nada é assinado, nada é
+  // emitido, e a HARD GATE 5 mantém-se.
+  const rpc = process.env.MAINNET_RPC_URL;
+  if (!rpc) {
+    t.skip("BLOQUEADO PELA R5 enquanto não houver RPC autorizado: ler mainnet "
+      + "exige um endpoint, e eu não posso ir buscar credenciais. Para "
+      + "desbloquear, o operador define MAINNET_RPC_URL (só leitura) e este "
+      + "teste passa a correr — sem alterar código nenhum.");
+    return;
+  }
 
-test("FORK: o CONTRATO_ADDRESS de produção tem bytecode", (t) => {
-  t.skip("POR FAZER. A validação independente mediu, num fork, que o endereço "
-    + "de recurso 0x273Ef9…445e tem ZERO bytes — e que adicionarSenhas contra "
-    + "um endereço sem código NÃO reverte (status 1). Só verificarCoordenacao() "
-    + "impede a dívida de ser marcada liquidada sem ninguém receber senhas. "
-    + "Esse gate está agora coberto por teste estrutural, mas a medição do "
-    + "bytecode num fork continua por fazer.");
+  const { JsonRpcProvider } = await import("ethers");
+  const alvo = "0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd"; // CLAUDE.md, MC60
+  const provider = new JsonRpcProvider(rpc);
+  const code = await provider.getCode(alvo);
+  const bytes = (code.length - 2) / 2;
+  assert.ok(bytes > 1000,
+    `o contrato de produção ${alvo} tem ${bytes} bytes de bytecode — ` +
+    "se for 0, o backend está a falar com um endereço sem código e "
+    + "`adicionarSenhas` NÃO reverteria (ver o achado B2 do MC93-D)");
 });
 
 test("CONTRATO: creditar exige verificarCoordenacao() — o endereço de recurso não tem código", () => {

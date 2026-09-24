@@ -1,0 +1,154 @@
+================================================================================
+MC93-E — SEG4 · VALIDAÇÃO (lado do EXECUTOR)
+DesafioGUT · 2026-09-24 · base f8bc6c0
+Skills ECC: verification-before-completion, root-cause-tracing
+Relatórios independentes (EM SÉRIE, worktrees separados):
+  _logs/MC93E_SEG4_VALIDACAO-A.txt  — CI + contrato PostgREST
+  _logs/MC93E_SEG4_VALIDACAO-B.txt  — cenário on-chain + arnês de EVM
+================================================================================
+
+  VALIDADOR A: APROVADO COM RESSALVAS — 2 achados ⛔, ambos corrigidos
+  VALIDADOR B: APROVADO COM RESSALVAS — 2 achados ⛔, ambos corrigidos
+  Os cinco pontos do "mínimo para subir a APROVADO" do B estão feitos.
+
+================================================================================
+4.1 — SUÍTE
+================================================================================
+  Base do MC93-D:            543 testes · 535 pass · 0 fail · 8 skipped
+  MC93-E, sem servidor:      590 testes · 584 pass · 0 fail · 6 skipped
+  MC93-E, condições do CI:   590 testes · 589 pass · 0 fail · **1 skipped**
+
+  Os 6 saltos locais: 5 de PostgREST (sem Supabase local) + 1 de mainnet.
+  O 1 salto em CI: o de mainnet, bloqueado pela R5 — e agora com alavanca
+  (`MAINNET_RPC_URL`), o que antes não existia.
+
+4.2 — SUÍTE DE SEGURANÇA — não isolável (5.ª vez que se declara).
+      O que este MC acrescenta: o HARD GATE 5 foi medido por EXECUÇÃO pela
+      validação independente, com uma sentinela que rebenta em `net.connect`,
+      `tls.connect`, `dns.lookup`, `http(s).request` e `fetch` — 24/24 sem
+      disparar, e o controlo positivo da sentinela disparou.
+      ⚠️ A sentinela é JS; o addon nativo do EDR (Rust) não foi medido ao nível
+      do SO. Sem `fork` no `ProviderConfig` não há para onde ligar.
+
+4.3 — COBERTURA
+      ⚠️ Global: NÃO MEDIDA (o projeto não tem alvo configurado).
+      ✅ A migração `20260923_mc93b_pontuacoes.sql` passou a ser exercida EM CI,
+      não só na máquina de quem se lembrar de levantar o Supabase. Era a
+      pendência nº 1 do MC93-D.
+
+4.4 — PROVA DE R1
+      Modificados: `.github/workflows/ci.yml`, `CLAUDE.md`,
+      `docs/TORNEIO-HABILIDADE.md` (todos autorizados).
+      Alterados ao abrigo da R15: `_tests/mc93d-contrato-postgrest.test.mjs`
+      (significado de SUPABASE_CONTRATO_URL + o teste vácuo dos CHECKs) e
+      `_tests/mc93d-contrato-onchain.test.mjs` (os três saltos).
+      Novos: `_tests/_evm-local.mjs`, `_tests/mc93e-fork-onchain.test.mjs`,
+      `_tests/mc93e-ci-config.test.mjs`, `_tests/fixtures/leilao-gut.evm.json`,
+      `scripts/{ci-postgrest-local.sh,run-fork-onchain.sh,gerar-fixture-evm.cjs}`.
+      INTACTOS: `_lib/pontuacao-utils.mjs`, `consolidar-lances.mjs`,
+      `_lib/pontuacao-store.mjs`, `pontuacao.mjs`, `ranking.mjs`,
+      `fila-processor-scheduled.mjs`, `_lib/bonus-emissao.mjs`,
+      `_lib/worker-bonus.mjs`, `_lib/sweeper-divida-orfa.mjs`,
+      `_lib/contract.mjs`, `contracts/Leilao.sol`, a migração, o frontend,
+      `hardhat.config.cjs`. `BONUS_EMISSAO_ATIVA` continua por definir.
+
+================================================================================
+4.5 — MUTAÇÃO (R16) — TRÊS RONDAS
+================================================================================
+  RONDA A (própria):  14 mutantes · 13 mortos · 1 equivalente · 0 erros
+  RONDA B (as que sobreviveram ao Validador A): 17 · **17 mortos** · 0 vivos
+  RONDA C (as que sobreviveram ao Validador B):  8 · **7 mortos** ·
+                                                 1 equivalente declarado
+
+  TOTAL: 39 mutantes · 37 mortos · 2 equivalentes declarados · 0 vivos.
+
+  O equivalente é o mesmo nas rondas A e C: `allowUnlimitedContractSize` —
+  quem apanha o excesso de tamanho é a asserção explícita, não a bandeira.
+  Está declarado no código, sem fingir protecção que não existe.
+
+  ⚠️ A RONDA A ENCONTROU TRÊS DEFEITOS MEUS, e vale a pena nomeá-los:
+   • uma asserção minha satisfeita pelo MEU PRÓPRIO COMENTÁRIO (3.ª vez no
+     projeto, 1.ª vez numa asserção em vez de numa mutação);
+   • uma asserção sobre o JOB inteiro que sobrevivia a tirar a variável do PASSO;
+   • três opções do provider mudadas de uma vez, o que impedia saber qual
+     corrigia. A bissecção mostrou que só `cacheTimeout: -1` faz diferença.
+
+================================================================================
+4.6 — OS QUATRO ACHADOS ⛔, E O QUE FICOU FEITO
+================================================================================
+A-1 ⛔ O JOB NÃO PODIA FICAR VERDE. `@aws-sdk/client-kms` e `@biconomy/account`
+    não estão no lockfile das functions; resolvem por subida de directórios a
+    partir de `frontend/node_modules`. Em CI: ERR_MODULE_NOT_FOUND.
+    ⇒ A minha correcção estaria certa e SERIA INVISÍVEL.
+    ⇒ É A MESMA CLASSE DE ERRO QUE ESTE MC EXISTE PARA CORRIGIR. Voltei a cair
+      nela, do lado do CI em vez do lado do hardhat.
+    CORRIGIDO: `npm ci` também no frontend (raio mínimo; nada entra no bundle
+    das Netlify Functions). E uma GUARDA GERAL que varre `_tests/*.mjs`, extrai
+    os especificadores de `import`/`import()`/`require()`/`mock.module()` e
+    exige que cada pacote venha de um lockfile que ALGUM job instala.
+    ⚠️ O Validador A recomendou usar `js-yaml` para parsear o workflow. NÃO
+    SEGUI: medi, e `js-yaml` também não está no lockfile das functions. A
+    receita reproduziria a doença que ele próprio diagnosticou.
+
+A-2 ⛔ O TESTE DOS CHECKs DA MIGRAÇÃO ERA VÁCUO — `assert.ok(error)`. Ele
+    mediu-o a passar com a TABELA APAGADA e com o URL apontado a uma rota
+    inexistente. Sendo o único teste desta migração, eu acabava de o promover a
+    "cobertura em CI".
+    CORRIGIDO: exige o SQLSTATE `23514` e o nome da restrição. Verificado por
+    execução própria: [normal] ok · [URL errado] not ok · [tabela apagada] not ok.
+
+B-1 ⛔ O GATE DA EVM NÃO PROVAVA NADA. Um `describe` saltado não conta em
+    `# skipped` e os filhos nem aparecem; e o `grep "adicionarSenhas"` era
+    satisfeito pelo teste de SELECTORES, que nem toca na EVM.
+    Reproduzido: describe saltado -> `skipped 0`, gate VERDE, cenário por correr.
+    CORRIGIDO: o gate exige, pelo nome, "saldo on-chain DECREMENTA" e
+    "CONTROLO NEGATIVO". Verificado: normal VERDE · describe saltado VERMELHO.
+
+B-2 ⛔ O TESTE DE DERIVA ERA CEGO A `indexed` E À ORDEM. `topic0` é
+    `keccak(sighash)`, e o sighash não inclui `indexed`, nomes nem mutabilidade.
+    Tirar `indexed` de `LanceDado.lancador` mantém o topic0 e faz
+    `getLanceDadoEvents` ler LIXO por posição, SEM excepção.
+    CORRIGIDO: compara `indexed`, nomes e `stateMutability` depois do selector.
+
+================================================================================
+4.7 — L-4 · O QUE NÃO FOI MEDIDO
+================================================================================
+N1 ⛔ **O `ci.yml` NUNCA CORREU NUM RUNNER DO GITHUB.** Não há `act` nesta
+   máquina. O que se fez foi o equivalente com Docker, as MESMAS imagens e um
+   teste que impede os dois de divergirem. Por provar: `${{ env.X }}` dentro de
+   `run`, propagação de `$GITHUB_ENV`, `if: always()`, e `--network host` a
+   alcançar um `services:` mapeado. São comportamentos documentados; nenhum
+   está provado por execução.
+N2 ⛔ **A deriva entre `contracts/Leilao.sol` e o bytecode deployado em
+   `0x0052…16cd`.** Só um fork a mede. Agora há alavanca: `MAINNET_RPC_URL`.
+N3 ⚠️ Adulterar os `settings` da fixture continua invisível em CI (o teste que o
+   apanharia precisa de `solc`, que não vem no lockfile). Fecha-se com
+   `npm i -D solc@0.8.26` na raiz — não feito, por ter raio maior que este MC.
+N4 ⚠️ A sentinela de rede do Validador B é JS; o addon nativo do EDR não foi
+   medido ao nível do SO.
+N5 Cobertura global não medida.
+N6 ⚠️ **As correcções feitas DEPOIS dos dois validadores não passaram por uma
+   terceira validação.** Cinco MCs seguidos, cinco vezes que a validação
+   independente encontrou o que eu não encontrei. A ressalva é material.
+
+================================================================================
+4.8 — AS DUAS MÉTRICAS QUE O ENUNCIADO PEDE
+================================================================================
+**Os validadores apanharam o que o Executor não viu?** Sim, os dois, e em
+quantidade: 4 achados ⛔ e 13 mutações vivas que eu dava por cobertas. O A
+mostrou que o meu CI nunca ficaria verde; o B mostrou que o meu gate da EVM
+não provava nada e que uma afirmação minha de impossibilidade era falsa.
+**Quinta vez consecutiva.**
+
+**O que mudou de método?** Três coisas, todas nascidas de erro medido:
+  1. A verdade que o CI corre é o **package-lock.json** — nem `node_modules`,
+     nem `package.json`. Há agora um teste que o exige.
+  2. Asserções sobre configuração executável leem-se **sem comentários**, e
+     ancoradas no **passo exacto**, nunca no agregado.
+  3. Uma impossibilidade declarada a partir de UMA tentativa falhada não é uma
+     medição. Foi assim que errei no MC93-D sobre o hardhat, e voltei a errar
+     aqui sobre a cache do ethers — em ponto pequeno, mas o mesmo erro.
+
+================================================================================
+FIM DO SEG4
+================================================================================

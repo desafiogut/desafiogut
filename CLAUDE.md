@@ -782,8 +782,128 @@ possível e **fica por fazer**.
 
 ### Pendências
 
-1. ⛔ **Ligar os testes de NÍVEL 2 em CI** — o `ci.yml` não define
-   `SUPABASE_CONTRATO_URL/KEY`, logo os únicos testes que exercem a migração
-   ficam saltados. Maior efeito, menor custo.
-2. ⛔ **O fork on-chain**, que é possível e não está feito.
+1. ✅ **RESOLVIDA no MC93-E** — ligar os testes de NÍVEL 2 em CI. O `ci.yml`
+   passou a levantar Postgres + PostgREST reais; medido `# skipped 0`.
+2. ✅ **RESOLVIDA no MC93-E** — o cenário on-chain existe e corre numa EVM
+   local. ⚠️ NÃO é fork de mainnet: isso exige um RPC com credencial (R5).
 3. Antes de activar a emissão: aplicar a migração em produção e reativar a R2.
+
+---
+
+## MC93-E — CI de contrato a correr + EVM local (2026-09-24)
+
+**Entregue:** `ci.yml` com Postgres+PostgREST reais, `_tests/mc93e-ci-config.test.mjs`,
+`_tests/mc93e-fork-onchain.test.mjs`, `_tests/_evm-local.mjs`, fixture do contrato,
+3 scripts. **Fecha as DUAS pendências do MC93-D.**
+**590 testes · 589 verdes · 0 falhas · 1 saltado** (condições do CI; base 543/535/8).
+**Logs:** `_logs/MC93E_*` · **Spec:** `docs/TORNEIO-HABILIDADE.md` §4e.
+**SEG-1: AJUSTAR.** Dois validadores independentes, em série: ambos
+**APROVADO COM RESSALVAS**, com **4 achados ⛔** — todos corrigidos.
+
+### ⚠️ A REGRA NOVA: a verdade que o CI corre é o `package-lock.json`
+
+O MC93-D ensinou que `package.json` ≠ `node_modules`. Este mediu a terceira, e
+depois levou com ela na cara uma segunda vez:
+
+| fonte | hardhat | edr | solc |
+|---|---|---|---|
+| `node_modules` (esta árvore) | 2.28.0 | next.17 | 0.8.26 |
+| `package.json` | `^3.4.0` | — | — |
+| **`package-lock.json` — é ISTO que o CI corre** | **3.4.2** | **next.29** | **ausente** |
+
+Reproduzido com `npm ci` numa pasta isolada. Por isso o arnês de EVM fala só com
+a **API pública do `@nomicfoundation/edr`**, nunca com `hardhat/internal/...`.
+
+> ⛔ **E a mesma armadilha apanhou-me outra vez, do lado do CI.** Dois testes do
+> MC30.2.1 fazem `mock.module("@aws-sdk/client-kms")` — e `mock.module` **exige
+> que o especificador resolva**. Esse pacote não está no lockfile das functions:
+> resolve aqui por subir a árvore até `frontend/node_modules`. Em CI dava
+> `ERR_MODULE_NOT_FOUND` e **o job nunca ficaria verde** — a correcção do nível 2
+> estaria certa e seria invisível. A minha suíte local dava 0 falhas *por
+> acidente de ambiente*.
+>
+> **Regra:** antes de um teste depender de um pacote, confirmar que ele está no
+> lockfile que o job instala. Há agora uma guarda que varre `_tests/*.mjs` e
+> exige exactamente isso — teria apanhado isto no dia em que nasceu.
+
+### ✅ Os testes de contrato de nível 2 correm mesmo
+
+`ci.yml` levanta **Postgres 17** (`service:` com health-check), cria os papéis
+(`anon`/`authenticated`/`service_role`/`authenticator`), aplica a migração e corre
+**PostgREST v12.2.3** com JWT de `service_role`.
+Medido: sem servidor `# skipped 5` · com servidor `# skipped 0`.
+
+> ⚠️ **O PostgREST NÃO pode ser um `service:`.** Os papéis e a migração têm de
+> existir antes de ele ler o schema, e um `service:` arranca antes de qualquer
+> passo. Fica em `docker run --network host`, depois da migração.
+
+### ⚠️ Três formas de um gate de CI mentir — todas medidas neste MC
+
+1. **Repórter errado.** `--test-reporter=tap` é obrigatório em qualquer guarda
+   que conte saltos: o repórter por defeito escreve `ℹ skipped N`, e o parse de
+   `# skipped N` devolve vazio. A guarda fica vermelha para sempre.
+2. **Glob vazio.** `node --test` com um glob que não casa sai **0 com zero
+   testes**. Apontar o passo ao directório errado deixa tudo verde a não testar
+   nada. A guarda exige `# pass > 0`.
+3. **`describe` saltado.** Os filhos **não contam** em `# skipped` e nem são
+   emitidos — o gate via `skipped 0` com a EVM inteira por correr. E um `grep`
+   por `adicionarSenhas` era satisfeito pelo teste de *selectores*, que nem toca
+   na EVM. O gate exige agora o **nome do teste decisivo**.
+
+### ✅ O cenário on-chain, que o MC93-D dizia impossível
+
+`adicionarSenhas(20)` → `darLance` → saldo 19, com controlo **negativo** (razão do
+revert em literal) e **positivo**, numa EVM em-processo. ~2 s, sem rede, sem
+credencial, sem CLI do hardhat (que continua partido e não é preciso).
+
+⚠️ **NÃO é fork de mainnet.** `ALCHEMY_URL` é credencial (R5) e os **três**
+endpoints públicos que testei recusaram — três é amostra estreita, e a afirmação
+honesta é essa. O salto passou a ter **alavanca**: `MAINNET_RPC_URL` no ambiente
+faz o teste correr (só `eth_getCode`, nunca transacção).
+
+### ⛔ `indexed` não entra no `topic0` — e a corrupção é SILENCIOSA
+
+`topic0 = keccak(sighash)`, e o sighash **não inclui `indexed`, nem os nomes, nem
+a mutabilidade**. Medido: tirar `indexed` de `LanceDado.lancador` mantém o mesmo
+topic0, e `getLanceDadoEvents` — que lê `args[0..4]` **por posição** — passa a
+devolver lançador errado, `valor: 0`, `repetido: true`, **sem excepção nenhuma**.
+`monitor-onchain.mjs` detectaria "anomalias" sobre lixo.
+
+**Regra:** comparar selectores fecha a cegueira a **aridade e tipos**; para
+eventos é preciso comparar também `indexed`, e para funções a `stateMutability`.
+
+### Lições de método (5.º MC seguido)
+
+- **Terceira vez que um comentário meu satisfaz a minha própria asserção.** A
+  guarda do `--test-reporter=tap` passava por causa do comentário que o
+  explicava. Configuração executável lê-se sempre com os comentários fora.
+- **Asserção sobre o agregado esconde o defeito no sítio exacto.** Procurar a
+  variável no JOB inteiro sobrevivia a tirá-la do PASSO certo.
+- **Mudar três coisas de uma vez impede saber qual corrigiu.** A bissecção
+  mostrou que só `cacheTimeout: -1` faz diferença; `staticNetwork` e
+  `batchMaxCount` não fazem nada.
+- ⛔ **Declarar uma impossibilidade a partir de UMA tentativa falhada não é
+  medir.** Escrevi no teste que o defeito da cache "não era prendível de forma
+  fiável". Era: a cache do ethers é indexada pelos **argumentos**, e eu usava
+  111 e depois 222 — nunca havia acerto. Com o mesmo argumento reproduz 5 em 5.
+  É o mesmo erro do SEG-1 do MC93-D, em ponto pequeno.
+
+### ⛔ Para o operador
+
+**ROTAR a chave Alchemy de `desafio-gut/hardhat.config.cjs`.** Está em texto
+simples e **commitada desde o MC89.14** (`a2c40ee`) — apagar o ficheiro agora não
+a tira do histórico. Não foi tocada (R5). Mesma classe da chave DeepSeek do MC89
+e da EOA do MC59.11.
+
+### Pendências
+
+1. ⛔ **O `ci.yml` nunca correu num runner do GitHub** (`act` não está instalado).
+   Validado com `desafio-gut/scripts/ci-postgrest-local.sh`, mesmas imagens, e um
+   teste que impede os dois de divergirem. Por provar: `${{ env.X }}` dentro de
+   `run`, `$GITHUB_ENV` entre passos, `if: always()`, `--network host` a alcançar
+   um `services:`.
+2. ⛔ **Deriva entre `contracts/Leilao.sol` e o bytecode em mainnet.** Desbloqueia
+   com `MAINNET_RPC_URL` autorizado pelo operador.
+3. ⚠️ Adulterar os `settings` da fixture continua invisível em CI — fecha-se com
+   `npm i -D solc@0.8.26` na raiz de `desafio-gut/`.
+4. Antes de activar a emissão: migração em produção + R2 reativada.

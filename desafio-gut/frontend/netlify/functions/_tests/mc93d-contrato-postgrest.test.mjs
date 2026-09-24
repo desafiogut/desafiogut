@@ -17,7 +17,17 @@
 //   supabase init && supabase start -x storage-api,imgproxy,studio,inbucket,\
 //     realtime,logflare,vector,edge-runtime,supavisor,pgbouncer
 //   psql < supabase/migrations/20260923_mc93b_pontuacoes.sql
-//   SUPABASE_CONTRATO_URL=http://127.0.0.1:54321 SUPABASE_CONTRATO_KEY=<service_role>
+//   SUPABASE_CONTRATO_URL=http://127.0.0.1:54321/rest/v1 SUPABASE_CONTRATO_KEY=<service_role>
+//
+// PostgREST puro (e o que o CI faz -- ver .github/workflows/ci.yml, job
+// `test-functions`, e scripts/ci-postgrest-local.sh para o correr a mao):
+//   SUPABASE_CONTRATO_URL=http://localhost:3000 SUPABASE_CONTRATO_KEY=<jwt service_role>
+//
+// ATENCAO (MC93-E, ao abrigo da R15): `SUPABASE_CONTRATO_URL` passou a ser a
+// BASE DO POSTGREST, nao a raiz do gateway do Supabase. Este ficheiro
+// acrescentava `/rest/v1`, o que servia o Supabase local mas tornava
+// IMPOSSIVEL apontar a um PostgREST puro -- e era por isso que estes testes
+// nao podiam correr em CI. Quem usava o valor antigo acrescenta `/rest/v1`.
 //
 // node --test --experimental-test-module-mocks _tests/mc93d-contrato-postgrest.test.mjs
 
@@ -33,7 +43,7 @@ const TEM_SERVIDOR = Boolean(URL_REAL && KEY_REAL);
 const offline = () => new PostgrestClient("https://contrato.test");
 
 /** Cliente contra o PostgREST real (nível 2). */
-const online = () => new PostgrestClient(`${URL_REAL}/rest/v1`, {
+const online = () => new PostgrestClient(URL_REAL.replace(/\/+$/, ""), {
   headers: { apikey: KEY_REAL, Authorization: `Bearer ${KEY_REAL}` },
 });
 
@@ -161,18 +171,37 @@ if (!TEM_SERVIDOR) {
 
   test("SERVIDOR: os CHECKs da migração recusam o que devem recusar", async () => {
     // A migração nunca tinha sido exercida contra um PostgreSQL. Cobertura
-    // zero até este MC.
+    // zero até ao MC93-D.
+    //
+    // ⚠️ MC93-E, ao abrigo da R15 — ACHADO DA VALIDAÇÃO INDEPENDENTE (A-2).
+    // Este teste dizia só `assert.ok(error)`. QUALQUER erro servia: 404, URL
+    // errado, servidor morto — e foi MEDIDO a passar com a tabela APAGADA
+    // (`DROP TABLE rankings_ciclo CASCADE`) e com o URL apontado a uma rota
+    // inexistente. Sendo o ÚNICO teste dos CHECKs desta migração, estava a
+    // contar como prova o que não era prova nenhuma.
+    // Agora exige `23514` — o SQLSTATE de `check_violation`. Um 404 já não passa.
+    const VIOLACAO_DE_CHECK = "23514";
+    const recusadoPeloCheck = (res, oQue, restricao) => {
+      assert.ok(res.error, `${oQue}: não houve erro nenhum`);
+      assert.equal(res.error.code, VIOLACAO_DE_CHECK,
+        `${oQue}: esperava 23514 (check_violation) e veio ${res.error.code} — ` +
+        `${JSON.stringify(res.error.message ?? res.error)}`);
+      assert.match(String(res.error.message ?? ""), new RegExp(restricao),
+        `${oQue}: o erro não nomeia a restrição \`${restricao}\``);
+    };
+
     const c = `CHK-${Date.now()}`;
-    const maiusculas = await online().from("rankings_ciclo")
-      .insert(linha(c, { endereco: A.toUpperCase() }));
-    assert.ok(maiusculas.error, "endereço em maiúsculas viola o CHECK de formato");
+    recusadoPeloCheck(
+      await online().from("rankings_ciclo").insert(linha(c, { endereco: A.toUpperCase() })),
+      "endereço em maiúsculas", "rankings_ciclo_endereco_check");
 
-    const negativo = await online().from("rankings_ciclo")
-      .insert(linha(`${c}-N`, { pontos_totais: -1 }));
-    assert.ok(negativo.error, "pontos negativos violam o CHECK");
+    recusadoPeloCheck(
+      await online().from("rankings_ciclo").insert(linha(`${c}-N`, { pontos_totais: -1 })),
+      "pontos negativos", "rankings_ciclo_pontos_check");
 
-    const liquidadoSemBonus = await online().from("rankings_ciclo")
-      .insert(linha(`${c}-L`, { bonus_emitido: false, liquidado_em: new Date().toISOString() }));
-    assert.ok(liquidadoSemBonus.error, "liquidar sem bónus viola o CHECK");
+    recusadoPeloCheck(
+      await online().from("rankings_ciclo").insert(
+        linha(`${c}-L`, { bonus_emitido: false, liquidado_em: new Date().toISOString() })),
+      "liquidar sem bónus", "rankings_ciclo_liquidacao_check");
   });
 }

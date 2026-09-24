@@ -1,0 +1,89 @@
+================================================================================
+MC93-E — SEG1 · SEG2 · SEG3 (plano, TDD, integração)
+DesafioGUT · 2026-09-24 · base f8bc6c0 · veredito do SEG-1: AJUSTAR
+Skills ECC: verification-before-completion, root-cause-tracing, test-doubles
+================================================================================
+
+SEG1 — O PLANO, DEPOIS DOS AJUSTES
+--------------------------------------------------------------------------------
+O SEG-1 refutou duas premissas do enunciado por medição (`act` ausente;
+`ALCHEMY_URL` é credencial e os RPC públicos recusam). O plano executado é o
+enunciado com os ajustes A1–A5 desse ficheiro.
+
+  P1 · CI de contrato   -> serviço Postgres + PostgREST + migração + JWT, e uma
+                           GUARDA que falha se o nível 2 voltar a saltar.
+  P2 · Cenário on-chain -> EVM em-processo sobre a API PÚBLICA do EDR, com o
+                           bytecode compilado a partir de contracts/Leilao.sol.
+  P3 · Saltos           -> corrigidos ao abrigo da R15, cada um a dizer a
+                           verdade sobre o seu motivo.
+
+SEG2 — TDD: O QUE FALHOU PRIMEIRO
+--------------------------------------------------------------------------------
+Cada peça começou por uma medição que a justificasse, não por código.
+
+1. ANTES de escrever o teste de CI, mediu-se que o nível 2 saltava:
+     node --test ... mc93d-contrato-postgrest.test.mjs  -> # skipped 5
+   E, com o Docker de pé e o env certo:                 -> # skipped 0
+   Só depois se escreveu a guarda que exige o segundo caso.
+
+2. ANTES de escrever o cenário on-chain, levantou-se uma EVM num spike e correu-se
+   `adicionarSenhas(20)` -> `darLance` -> saldo 19, com controlo negativo. 509 ms.
+   O teste só foi escrito depois de o cenário estar provado à mão.
+
+3. O controlo negativo foi REESCRITO depois de medido. A primeira versão dizia
+   apenas "falhou": com `bailOnCallFailure: false` o EDR devolve os bytes do
+   revert como RESULTADO e o ethers dá "invalid length for result data".
+   Um controlo que não distingue "sem senhas" de "ABI errada" não é controlo.
+   Com `bail: true` + normalização do `err.data`, a razão chega em literal:
+     reason === "Voce nao possui senhas disponiveis"
+
+SEG3 — INTEGRAÇÃO: AS QUATRO DECISÕES QUE AFASTAM DO ENUNCIADO
+--------------------------------------------------------------------------------
+
+D1. A API PÚBLICA DO EDR, NÃO O CAMINHO INTERNO DO HARDHAT.
+    O primeiro spike usava `hardhat/internal/hardhat-network/provider/provider.js`
+    e funcionava. Foi DEITADO FORA depois de uma medição:
+
+      node_modules      -> hardhat 2.28.0 · edr next.17 · solc 0.8.26
+      package.json      -> hardhat ^3.4.0
+      package-lock.json -> hardhat 3.4.2  · edr next.29 · SEM solc
+
+    Reproduzido com `npm ci` numa pasta isolada: o que o CI instala é a TERCEIRA
+    coluna. O caminho interno do hardhat 2.x não existe lá. Teria dado verde
+    aqui e partido no CI — a mesma classe de erro do MC93-D, um grau acima.
+    A superfície pública do EDR foi diffada entre next.17 e next.29:
+    `createProvider` é IDÊNTICO; as diferenças são aditivas e noutra área.
+
+D2. FIXTURE VERSIONADA, NÃO O ARTEFACTO DO HARDHAT.
+    `artifacts/` está em `.gitignore` -> o CI nunca tem `LeilaoGUT.json`.
+    Um teste que dependesse dele SALTARIA em CI, que é o defeito a corrigir.
+    Entra `_tests/fixtures/leilao-gut.evm.json` (ABI + bytecode + sha256 da
+    fonte + versão do solc + settings), com três guardas:
+      • sha256 da fonte  -> corre sempre, sem dependência nenhuma;
+      • recompilação     -> só onde há solc, com salto honesto;
+      • EIP-170          -> o contrato tem de caber no limite real.
+
+D3. O POSTGREST NÃO É UM `service:`, E A ORDEM É A RAZÃO.
+    Os papéis (`anon`, `authenticated`, `service_role`, `authenticator`) e a
+    migração têm de existir ANTES de o PostgREST ligar e ler o schema. Um
+    `service:` arranca antes de qualquer passo. Fica `docker run --network host`
+    num passo, depois da migração. O Postgres, esse, é `service:` com health-check.
+
+D4. `SUPABASE_CONTRATO_URL` PASSOU A SER A BASE DO POSTGREST (R15).
+    O ficheiro do MC93-D acrescentava `/rest/v1`, o que servia o gateway do
+    Supabase local mas tornava IMPOSSÍVEL apontar a um PostgREST puro — e era
+    essa a razão técnica de os testes não poderem correr em CI. Documentado no
+    cabeçalho do ficheiro e nos dois scripts.
+
+O QUE NÃO FOI TOCADO (R1)
+--------------------------------------------------------------------------------
+`_lib/pontuacao-utils.mjs`, `consolidar-lances.mjs`, `_lib/pontuacao-store.mjs`,
+`pontuacao.mjs`, `ranking.mjs`, `fila-processor-scheduled.mjs`,
+`_lib/bonus-emissao.mjs`, `_lib/worker-bonus.mjs`, `_lib/sweeper-divida-orfa.mjs`,
+`_lib/contract.mjs`, `contracts/Leilao.sol`, a migração, o frontend.
+`BONUS_EMISSAO_ATIVA` continua por definir. `hardhat.config.cjs` NÃO foi tocado
+(contém uma credencial — ver o ACHADO NOVO 1 do SEG-1).
+
+================================================================================
+FIM DO SEG1-2-3
+================================================================================
