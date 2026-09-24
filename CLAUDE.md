@@ -403,3 +403,102 @@ Sem acesso à Play Console nem ao App Store Connect. Sem advogado nem contabilis
 as secções jurídica e fiscal são **levantamento de risco, não parecer**. MCPs
 `chrome-devtools` e `claude-eyes` falharam a ligar: **nenhum ecrã foi observado a
 correr**. O valor **vivo** do Blob `config-experiencia:recursos_app` não foi lido.
+
+---
+
+## MC93-A — Motor de pontuação do torneio de habilidade (2026-09-23)
+
+**Entregue:** motor PURO. **Não entregue, por decisão do operador (R18):** tabelas,
+endpoints, gancho de rodada e emissão de senhas → **MC93-B**.
+**Código:** `netlify/functions/_lib/pontuacao-utils.mjs` ·
+**Testes:** `_tests/mc93-pontuacao.test.mjs` (33) ·
+**Spec:** `docs/TORNEIO-HABILIDADE.md` · **Logs:** `_logs/MC93_*`
+
+### ⚠️ O enunciado do MC93 tinha 7 de 9 premissas erradas
+
+Verificado no SEG-1 (`_logs/MC93_SEG-1_QUESTIONAMENTO.txt`). Guardar, porque
+qualquer MC futuro que parta do mesmo enunciado repete os mesmos erros:
+
+| Premissa do enunciado | Realidade |
+|---|---|
+| `lance-programado.mjs` | **não existe** |
+| `admin-cotas.mjs` (padrão de referência) | **não existe** — o padrão é `guardAdmin` de `_lib/admin-auth.mjs` |
+| tabela `edicoes` | **não existe** — é `mapping` dentro do contrato `LeilaoGUT` |
+| tabela `usuarios` | **não existe** — a chave é o `endereco` da carteira (Privy) |
+| tabela `senhas` | **não existe** |
+| `lances` tem `usuario_id`/`criado_em`/`repetido` | tem `endereco`/`created_at`/`payload`; e **0 linhas** (os lances vivem em Blobs) |
+| baseline 842 verdes | **403** (medido) |
+| `pytest` / `ruff` | são de Python; aqui é `node --test` e `eslint` |
+| gancho de fim de rodada em `lance-relampago.mjs` | é endpoint **por lance**; o fecho está em **`consolidar-lances.mjs`** |
+
+### ⛔ O bónus de senhas NÃO é um UPDATE
+
+`comprar-senhas.mjs:281` e `troco.mjs:89` → `creditarSenhas()` → `adicionarSenhas`
+**on-chain, Ethereum mainnet** (`_lib/contract.mjs`). Creditar 20 senhas é uma
+transação assinada pela coordenação: **gas real + R$ 40,00 de valor emitido** por
+sequência, sem limite definido. O enunciado declarava "R2 SUSPENSA (custo zero)" —
+premissa falsa. **R2 tem de ser reativada antes de qualquer emissão.**
+
+Por isso o motor **calcula e não executa**: `detectarConsecutivos` devolve
+`senhasBonus`/`pontosBonus` — o que *seria* devido. Não credita nada.
+
+### Regras implementadas (fonte única em `REGRAS`, `Object.freeze`)
+
+`VALOR_MINIMO_CENTAVOS 1` (Art. XXIII) · `PONTOS_ACERTO_UNICO 1` ·
+`PONTOS_MENOR_UNICO 3` · `ACERTOS_PARA_BONUS 5` · `PONTOS_BONUS 5` ·
+`SENHAS_BONUS 20`.
+**Quando o MC95 fixar o regulamento, muda-se ali — num sítio só.** Há testes que
+fixam os cinco números **em literal**: se mudarem, a suíte falha de propósito.
+
+### ⚠️ Defeitos encontrados por validação independente (e o que os causou)
+
+A minha própria prova de mutação deu **12/12 mortos** e eu dei o segmento por
+fechado. O Validador encontrou **seis defeitos reais**. Todos confirmados por
+execução antes de aceitar:
+
+1. **`valorCentavos: null` ganhava a rodada.** `Number.isInteger(Number(null))` é
+   `true` porque `Number(null) === 0` → lance único, o mais baixo, vencedor, 4
+   pontos. ⚠️ **`Number.isInteger` NÃO coage** — o defeito era o `Number()` à
+   volta dele. E há caminho real: `_lib/data-store-supabase.mjs:117` grava
+   `valor_centavos = null` **de propósito** para marcar lance inválido. Duas
+   convenções opostas.
+2. **Zero e negativos pontuavam**, contra o Art. XXIII.
+3. **Lance sem dono anulava o +3 para todos** — era eleito menor único e o bónus
+   evaporava-se em vez de passar ao seguinte.
+4. **`atualizarRanking` rebentava** com `Map` de chaves não-textuais: o caminho do
+   Map não normalizava, o da lista sim — duas políticas na mesma função.
+5. **`detectarConsecutivos` falhava ABERTO**: `Boolean("sim")` pagava 20 senhas.
+6. **O teste de pureza é cego através do import** — `simulador.mjs` importa
+   `@netlify/blobs`. E o teste "não duplicar" só via a *linha* de import: apagar
+   a *chamada* e reimplementar localmente deixava tudo verde.
+
+### Lições de método (recorrência alta, impacto alto)
+
+- **Asserção que usa a mesma constante do código não testa a regra de negócio.**
+  Na 1ª ronda, `PONTOS_MENOR_UNICO: 3 → 0` deixou a suíte toda verde, porque os
+  testes comparavam contra `REGRAS.*`. Valores de negócio fixam-se **em literal**.
+- **Uma prova de mutação só é tão boa quanto os mutantes que alguém se lembra de
+  escrever.** Foi a independência que pagou, não o método.
+- **Teste de estrutura por regex lê prosa.** O primeiro `R1: é PURO` falhou por
+  causa do meu próprio comentário a nomear `process.env`. Usar `semComentarios()`
+  (convenção já existente em `_tests/mc8843-estado-edicao.test.mjs:33`).
+
+### Estado e pendências
+
+**436/436 verdes** (baseline 403 + 33). **Zero ficheiros modificados** — o motor
+não tem chamador, logo zero efeito em produção (R1 trivial).
+⚠️ Validado só com **dados sintéticos**: o leilão está travado
+(`EM_BREVE_MODE = true`; `isLeilaoAtivo:{ios:false,android:false}`), não há rodadas
+reais. Cobertura **não medida** (o projeto não tem alvo configurado).
+
+**A fechar antes do MC93-B:** definir "ciclo" (não existe em lado nenhum);
+desempate e limite de bónus por participante (ambos com efeito financeiro);
+reativar R2; decidir se se inverte a dependência do Blobs. Ver
+`docs/TORNEIO-HABILIDADE.md` §6 e §7.
+
+> ⚠️ **Conflito de sequência, registado:** este MC constrói o mecanismo do torneio
+> enquanto o regulamento (`TermosConsentimento.jsx` Art. 8) continua a prometer
+> "O MENOR LANCE ÚNICO GANHA" e prémio em dinheiro (Art. 14). É a inversão que o
+> MC00.0 identificou (errata E6) — mecanismo antes da promessa. O motor foi mantido
+> puro e sem chamador precisamente para que essa divergência não chegue a produção
+> antes do MC95.

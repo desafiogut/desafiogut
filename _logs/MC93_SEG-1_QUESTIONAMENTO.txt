@@ -1,0 +1,249 @@
+================================================================================
+MC93 — SEG-1 · QUESTIONAMENTO DO BRIEFING (HARD GATE)
+DesafioGUT · Backend: sistema de pontuação e ranking do torneio de habilidade
+Data: 2026-09-23 · Commit base: e6703e2 (main) — CONFIRMADO
+Skills ECC: smart-explore, brainstorming, security-review
+================================================================================
+
+                        >>> VEREDITO: AJUSTAR <<<
+        7 das 9 premissas técnicas REFUTADAS · 6 contradições de política
+          O MC não executa como está escrito. Proposta concreta em §-1.5.
+
+================================================================================
+-1.1 — VERIFICAÇÃO DAS PREMISSAS
+================================================================================
+Método: leitura directa do código e consulta à base Supabase de produção (MCP,
+só leitura). Cada veredito tem comando ou caminho:linha.
+
+────────────────────────────────────────────────────────────────────────────────
+P1 — "AUTORIZA alterar `netlify/functions/lance-programado.mjs`"
+     ❌ REFUTADA. **O ficheiro não existe.**
+     Existem, com "lance"/"programado" no nome: auth-lance.mjs,
+     consolidar-lances.mjs, cron-reset-programado.mjs, lance-relampago.mjs,
+     lances-flash.mjs, purge-lances.mjs.
+     O leilão programado é 100% on-chain (`darLance` no contrato); não há
+     endpoint de lance programado no backend.
+
+P2 — "seguir o padrão de `admin-cotas.mjs` como referência" (SEG0 0.4)
+     ❌ REFUTADA. **O ficheiro não existe.** Existem `cotas.mjs`,
+     `admin-config.mjs`, `iniciar-cota.mjs`. O padrão real de endpoint admin
+     é `guardAdmin` de `_lib/admin-auth.mjs` (ver consolidar-lances.mjs:15).
+
+P3 — "`edicoes` existe com `id`, `tipo`, `cota_id`"
+     ❌ REFUTADA. **A tabela não existe no Supabase.**
+     `select ... information_schema.tables` → AUSENTE.
+     `edicoes` é um `mapping(string => Edicao)` DENTRO do contrato
+     `LeilaoGUT` (Leilao.sol:20). Não é uma tabela; é estado on-chain.
+
+P4 — "`usuarios` existe com `id`, `endereco`, `saldo_senhas`"
+     ❌ REFUTADA. **A tabela não existe.** Não há tabela de utilizadores —
+     a identidade vem do Privy e o identificador é o `endereco` da carteira.
+     O que existe: `atividade_utilizadores` (17 linhas: endereco, acessos) e a
+     vista `vw_utilizadores`. `saldo_senhas` existe como coluna de `lojistas`
+     (0 linhas) — e não é a fonte de verdade (ver P9).
+
+P5 — "`senhas` existe com `usuario_id`, `quantidade`, `valor_unitario`"
+     ❌ REFUTADA. **A tabela não existe.**
+
+P6 — "`lances` existe com `id`, `edicao_id`, `usuario_id`, `valor_centavos`,
+      `criado_em`, `repetido`"
+     ⚠️ PARCIAL. A tabela existe; **3 das 6 colunas não existem**.
+     Real (information_schema): id, edicao_id, **endereco**, **hash_lance**,
+     valor_centavos, **created_at**, **payload**.
+     Não há `usuario_id` (é `endereco`), não há `criado_em` (é `created_at`),
+     não há `repetido` (o flag `repetido` existe, mas no EVENTO on-chain
+     `LanceDado`, Leilao.sol:44).
+     ⚠️ E a tabela tem **0 linhas**: os lances vivos estão em Netlify Blobs
+     (`_lib/bids-store.mjs`, Key-Per-Bid do MC28.1), não no Postgres.
+
+P7 — "842 verdes, cobertura 91,2% / 89,8%"
+     ❌ REFUTADA. Execução real nesta sessão:
+       cd desafio-gut/frontend/netlify/functions
+       node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+       → ℹ tests 403 · pass 403 · **fail 0** · 58 ficheiros de teste
+     São **403 verdes**, não 842. A suíte está verde — o número é que está
+     errado por mais do dobro. Cobertura não medida (sem alvo configurado).
+
+P8 — "`pytest -q`" (SEG0 0.1) e "`ruff check --diff`" (SEG2 2.3)
+     ❌ REFUTADAS. **São ferramentas de Python.** Este backend é ES Modules com
+     `node --test`. Não há pytest, ruff, nem qualquer config Python no projeto.
+     O lint é `eslint` (package.json do frontend).
+
+P9 — "existe ponto de extensão para chamar `registrarPontos` ao encerrar a rodada"
+     ❌ REFUTADA, e é a refutação que mais custa.
+     `lance-relampago.mjs` é um endpoint **POR LANCE**, não por rodada: recebe
+     um lance, valida JWT, debita saldo e grava. Não encerra nada; não apura
+     vencedor. `grep -nE "encerr|vencedor|apurar"` → nenhuma ocorrência de
+     lógica de fecho.
+     Quem apura o vencedor:
+       • `consolidar-lances.mjs` — admin/coordenação, JWT de admin, **só corre
+         em NETWORK_STAGE === 'mainnet'**, assina EIP-712 e envia
+         `consolidarResultado` via Flashbots.
+       • `cron-reset-programado.mjs` e `_lib/simulador.mjs`.
+     ⇒ O gancho existe, mas **noutro sítio e com outro dono**. Pendurar
+       pontuação no `lance-relampago` seria pendurá-la no evento errado.
+
+P10 — "`saldo_senhas` pode receber bónus sem quebrar invariantes"
+     ❌ REFUTADA, e é a refutação mais grave.
+     **As senhas são creditadas ON-CHAIN, na Ethereum mainnet.**
+       comprar-senhas.mjs:281 → `creditarSenhas(endereco, qtd)`
+       troco.mjs:89           → `creditarSenhas(endereco, qtd)`
+       _lib/contract.mjs:1    → "Wrapper ethers para a coordenação chamar
+                                 `adicionarSenhas` on-chain."
+       saldo-senhas.mjs:10    → "o saldo on-chain só por comprar-senhas
+                                 (adicionarSenhas)"
+       admin-user.mjs:70      → "saldoSenhas NÃO incluído — é on-chain"
+     Creditar 20 senhas não é um UPDATE; é **uma transação em mainnet assinada
+     pela coordenação, que custa gas real**. Ver contradição C4 em §-1.2.
+
+────────────────────────────────────────────────────────────────────────────────
+CONFIRMADAS (2 de 9, mais o estado do repo)
+  ✅ `lance-relampago.mjs` existe (316 linhas).
+  ✅ `lances` existe no Supabase, RLS ativa (como em todas as tabelas).
+  ✅ Commit base `e6703e2`; working tree sem alterações minhas (só os 3
+     untracked em docs/ anteriores ao MC00.0).
+  ✅ Backend é ES Modules com `node --test`; suíte verde (403/403).
+  ✅ `pontuacoes`, `rankings_ciclo`, `pontuacao.mjs`, `ranking.mjs` não
+     existem — correcto, são para criar.
+
+================================================================================
+-1.2 — CONTRADIÇÕES DE POLÍTICA (mais graves que as técnicas)
+================================================================================
+
+C1 ⛔ O MC CONTRADIZ A DECISÃO QUE ELE PRÓPRIO CITA.
+     O enunciado declara "**Decisão D1: Nível 2 (declarativo)**". O MC00.0
+     definiu Nível 2 como *alinhar a promessa sem mudar o mecanismo*, e
+     Nível 3 como *mudar o mecanismo*. Este MC muda **como o vencedor é
+     definido** — é Nível 3 por definição. Não cabe em D1=Nível 2.
+
+C2 ⛔ O ENUNCIADO CONTRADIZ-SE A SI MESMO.
+     "Decisão D2: menor lance único continua a existir" **vs** objetivo:
+     "o que muda é COMO o vencedor é definido: por pontuação acumulada, **não
+     por lance isolado**". Ou o menor lance único define o vencedor, ou define-o
+     a pontuação. As duas não podem valer ao mesmo tempo, e a regra
+     "+3 pontos pelo menor lance único da rodada" sugere que o menor lance
+     vira *insumo* de pontos — o que é uma terceira coisa, não declarada.
+
+C3 ⛔ INVERSÃO: MECANISMO ANTES DA PROMESSA.
+     O MC constrói o motor do torneio e **proíbe explicitamente** tocar o
+     regulamento ("é MC95"), o GUTO ("é MC96") e o frontend ("é MC94"). Isto é
+     exactamente a inversão que o MC00.0 identificou (errata E6) e que a regra
+     ⛔R1 do MC00.0 proíbe: mudar o mecanismo enquanto o documento que rege o
+     produto continua a dizer outra coisa.
+     Durante MC93→MC95 o app teria um motor de torneio a correr sob um
+     regulamento que promete "O MENOR LANCE ÚNICO GANHA" (Art. 8) e prémio em
+     dinheiro (Art. 14). É um período de divergência entre o que o sistema faz
+     e o que o contrato com o utilizador diz.
+
+C4 ⛔ R2 ESTÁ DECLARADA "SUSPENSA (custo zero)" SOBRE UMA PREMISSA FALSA.
+     O bónus de 20 senhas (SEG3 3.2) é uma transação on-chain em **mainnet**
+     (P10). Custo real, em dois eixos:
+       • **gas**: a EOA coordenadora foi abastecida no MC92.9 com 0,0067 ETH;
+         cada bónus queima parte disso.
+       • **valor**: 20 senhas × R$ 2,00 = **R$ 40,00 por utilizador por
+         sequência de 5**. Um gatilho automático de emissão de valor, sem
+         limite declarado.
+     R2 não pode ser suspensa aqui. Isto exige autorização explícita de custo.
+
+C5 ⚠️ "TORNEIO DE HABILIDADE" É UM TERMO JURÍDICO, NÃO UM TERMO DE PRODUTO.
+     No Brasil, a fronteira entre concurso de habilidade e sorteio/loteria é
+     precisamente o que determina se a operação é permitida e sob que regime.
+     O MC00.0 registou isto como decisões **D2 e D4, ainda sem resposta**, e a
+     ficha da Play (MC90.4) já teve de argumentar por escrito que "NÃO é jogo
+     de azar". Implementar o mecanismo que dá nome a essa tese, antes de ela
+     existir, é decidir a questão jurídica por via do código.
+     ⚠️ Agravante verificado no MC00.0: `plans/002-playstore-submission.md:139`
+     diz, por escrito, que tornar o leilão visível reclassifica a app como
+     "real-money gaming". Um torneio pago com prémios anda na mesma fronteira.
+
+C6 ⚠️ O MOTOR SERIA CONSTRUÍDO PARA UM LEILÃO DESLIGADO.
+     `src/lib/leilaoLock.js:10` → `EM_BREVE_MODE = true`.
+     `_lib/recursos-app-config.mjs:19` → `isLeilaoAtivo:{ios:false,android:false}`.
+     Não há rodadas a encerrar hoje. O código nasceria sem caminho de execução
+     real — e portanto sem validação real (só dados sintéticos, como o próprio
+     enunciado admite em L-4).
+
+================================================================================
+-1.3 — VERIFICAÇÃO DE ESCOPO
+================================================================================
+O MC cabe num só? **Não como está escrito.** Metade das autorizações aponta
+para ficheiros e tabelas inexistentes; cumpri-las à letra obrigaria a inventar
+`lance-programado.mjs`, `usuarios`, `senhas` e `edicoes` — o que ultrapassa as
+autorizações, não as cumpre.
+
+O que NÃO está no escopo mas seria natural incluir:
+  • Endpoint de histórico de pontos por utilizador (o enunciado pergunta) —
+    cabe em `GET /feedback`, sem MC extra.
+  • Webhook de notificação de bónus — NÃO incluir: `_lib/notificacoes-usuario.mjs`
+    já existe e o MC00.0 marcou-o para reescrita de copy no B2. Tocar-lhe agora
+    cria conflito.
+  • **Definição de "ciclo"** — `rankings_ciclo` tem `ciclo_id` e nada no
+    enunciado nem no código diz o que é um ciclo, quando abre, quando fecha,
+    nem quem o fecha. É uma lacuna de especificação, não de implementação.
+  • **Política de desempate** — dois utilizadores com os mesmos pontos ocupam
+    que posição? Se o ranking decide prémio, o desempate é regra de negócio com
+    efeito financeiro.
+
+================================================================================
+-1.4 — VERIFICAÇÃO DE AUTOSSUFICIÊNCIA (R19) — DECLARAÇÃO OBRIGATÓRIA
+================================================================================
+Este MC **NÃO é autossuficiente** e **vai gerar `.1`** — ou pior, vai gerar
+retrabalho no MC95, quando o regulamento definir regras diferentes das que aqui
+se tiverem codificado.
+
+**R19 NÃO É ATIVADA.** A regra manda ampliar quando o trabalho extra está no
+mesmo objetivo e não toca segurança nem autorizações novas. Aqui falham as três
+condições de exceção previstas pela própria R19:
+  • **autorização nova**: creditar senhas on-chain é custo financeiro — R2 tem
+    de ser reativada pelo operador (C4);
+  • **segurança não prevista**: um endpoint que emite valor (senhas) precisa de
+    controlo de acesso, idempotência e limite, e nada disso está especificado;
+  • **operador pediu divisão explícita**: o enunciado já divide MC94/95/96.
+Ampliar aqui seria decidir sozinho questões jurídicas e financeiras. Não o faço.
+
+================================================================================
+-1.5 — PROPOSTA DE AJUSTE (o que dá para fazer hoje, com segurança)
+================================================================================
+O objetivo do MC é legítimo e parte dele é construível sem tocar em nada
+perigoso. Proponho partir em duas, mantendo o número:
+
+▸ MC93-A — **MOTOR PURO** (executável já, risco baixo, zero efeito colateral)
+    ✅ `_lib/pontuacao-utils.mjs` — funções puras, sem I/O:
+         calcularPontosRodada(lances) → Map<endereco, pontos>
+         detectarConsecutivos(historico) → sequências ≥5
+         atualizarRanking(pontuacoes) → posições, com desempate explícito
+    ✅ `_tests/mc93-pontuacao.test.mjs` — TDD RED→GREEN + mutação (R16)
+    ✅ `docs/TORNEIO-HABILIDADE.md` — especificação, incluindo as lacunas
+       (ciclo, desempate) marcadas como pendentes
+    ✅ `_logs/MC93_*` + relatório
+    Porquê é seguro: funções puras não tocam banco, não emitem senhas, não
+    mudam comportamento de nada. Se o regulamento (MC95) mudar as regras,
+    muda-se uma constante — não se deita fora integração nenhuma.
+    ⚠️ Adaptações obrigatórias face ao enunciado: a chave do utilizador é
+    `endereco` (não `usuario_id`) e a fonte dos lances é Blobs (não Postgres).
+
+▸ MC93-B — **PERSISTÊNCIA E INTEGRAÇÃO** (bloqueado; precisa de decisões)
+    ⛔ tabelas `pontuacoes`/`rankings_ciclo`, endpoints, gancho no fecho da
+       rodada, bónus de senhas.
+    Bloqueadores, por ordem: (1) definição de "ciclo"; (2) D2/D4 — natureza
+    jurídica do torneio; (3) R2 reativada para o custo on-chain; (4) decidir
+    se o gancho vai a `consolidar-lances.mjs` (o sítio real) em vez dos dois
+    ficheiros nomeados, um dos quais não existe.
+
+================================================================================
+-1.6 — L-4 · O QUE NÃO FOI MEDIDO
+================================================================================
+N1 Cobertura de testes — o enunciado dá alvos (91,2%/89,8%) mas não há alvo de
+   cobertura configurado no projeto; não foi medida.
+N2 Saldo de gas real da EOA coordenadora — não consultado nesta sessão. O valor
+   citado (0,0067 ETH) vem do registo do MC92.9, não de leitura on-chain.
+N3 Valor VIVO do Blob `config-experiencia:recursos_app` — continua por ler
+   (pendência N8 do MC00.0). A afirmação C6 baseia-se no default do código.
+N4 Conteúdo dos lances em Blobs — não foi lido nenhum lance real; a estrutura
+   de `_lib/bids-store.mjs` foi inferida do nome e dos imports, não auditada.
+N5 Parecer jurídico sobre "torneio de habilidade" — inexistente (D2/D4 abertas).
+   C5 é levantamento de risco, **não parecer**.
+
+================================================================================
+FIM DO SEG-1 · VEREDITO: AJUSTAR · R19 NÃO ATIVADA · aguarda decisão do operador
+================================================================================

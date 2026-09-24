@@ -1,0 +1,78 @@
+================================================================================
+MC93-A — SEG3 · INTEGRAÇÃO
+DesafioGUT · Data: 2026-09-23
+Skills ECC: test-driven-development, systematic-debugging
+================================================================================
+
+                    >>> SEGMENTO NÃO EXECUTADO — POR DECISÃO <<<
+
+3.1 — CHAMADA DE `registrarPontos` NO ENCERRAMENTO DA RODADA
+--------------------------------------------------------------------------------
+  ⛔ NÃO EXECUTADO. Decisão do operador durante o MC (R18): escopo reduzido a
+  MC93-A (motor puro). Registada também no CLAUDE.md e no relatório final.
+
+  Razão técnica independente da decisão — o enunciado aponta para o sítio
+  errado (SEG-1, premissas P1 e P9):
+    • `lance-programado.mjs` **não existe** no projeto;
+    • `lance-relampago.mjs` é endpoint **POR LANCE**, não por rodada: valida
+      JWT, aplica rate-limit/RBAC/MFA, debita saldo e grava um lance. Não
+      encerra rodada nem apura vencedor (`grep -nE "encerr|vencedor|apurar"`
+      → zero ocorrências de lógica de fecho).
+
+  PONTO DE EXTENSÃO CORRECTO, para quando o MC93-B abrir:
+    `consolidar-lances.mjs` — imediatamente após a apuração do menor lance
+    único e ANTES da submissão de `consolidarResultado` on-chain. É o fecho
+    oficial da rodada: admin/coordenação, JWT de admin, assinatura EIP-712,
+    envio via Flashbots, e só corre em NETWORK_STAGE === 'mainnet'.
+  Registado em docs/TORNEIO-HABILIDADE.md §7.
+
+3.2 — BÓNUS DE 20 SENHAS POR 5 CONSECUTIVOS
+--------------------------------------------------------------------------------
+  ⛔ NÃO EXECUTADO, e não devia ser executado sob as regras em vigor.
+
+  O enunciado descreve "creditar `saldo_senhas` do usuário" como se fosse um
+  UPDATE. Não é. Evidência (SEG-1, premissa P10):
+    comprar-senhas.mjs:281  → creditarSenhas(endereco, qtd)
+    troco.mjs:89            → creditarSenhas(endereco, qtd)
+    _lib/contract.mjs:1     → "Wrapper ethers para a coordenação chamar
+                               `adicionarSenhas` on-chain."
+    saldo-senhas.mjs:10     → "o saldo on-chain só por comprar-senhas"
+    admin-user.mjs:70       → "saldoSenhas NÃO incluído — é on-chain"
+
+  Creditar 20 senhas é uma **transação assinada na Ethereum mainnet**:
+    • custo de gas real (a EOA coordenadora foi abastecida no MC92.9 com
+      0,0067 ETH — não verificado on-chain nesta sessão, ver L-4/N2);
+    • **R$ 40,00 de valor emitido** por utilizador por sequência (20 × R$ 2,00);
+    • sem limite por participante nem por ciclo definido em lado nenhum
+      (lacuna G5).
+
+  O enunciado declara "R2 — custo financeiro exige autorização — SUSPENSA
+  (custo zero)". A premissa é falsa: há custo em dois eixos. **R2 tem de ser
+  reativada pelo operador antes de qualquer emissão.**
+
+  O QUE FOI FEITO EM VEZ DISSO: `detectarConsecutivos` devolve `senhasBonus` e
+  `pontosBonus` — **o que seria devido**, calculado e testado. A emissão fica
+  para o MC93-B. O motor sabe quanto; não emite nada.
+
+3.3 — INTEGRAÇÃO COM OUTROS ENDPOINTS (R19)
+--------------------------------------------------------------------------------
+  ⛔ NÃO EXECUTADO. R19 **não foi ativada** neste MC — ver SEG-1 §-1.4: falham
+  as três condições de exceção previstas pela própria regra (autorização nova
+  de custo; segurança não prevista num endpoint que emite valor; operador já
+  dividiu o trabalho em MC94/95/96).
+
+3.4 — VERIFICAÇÃO DE QUE A NÃO-INTEGRAÇÃO É REAL
+--------------------------------------------------------------------------------
+  `git status --porcelain` → **nenhum ficheiro modificado**. Os únicos
+  ficheiros novos de código são os dois autorizados do MC93-A. Nenhum endpoint
+  existente importa `pontuacao-utils.mjs`; o motor está em produção no
+  repositório e **fora de qualquer caminho de execução**.
+
+  Consequência assumida: sem pontuação, o comportamento é exactamente o de
+  antes (R1). E o motor não tem ambiente onde ser observado — o leilão está
+  travado (`EM_BREVE_MODE = true`; `isLeilaoAtivo:{ios:false,android:false}`),
+  logo a suíte é a única prova de que funciona. Está declarado em L-4.
+
+================================================================================
+FIM DO SEG3
+================================================================================

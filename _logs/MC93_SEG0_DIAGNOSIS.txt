@@ -1,0 +1,96 @@
+================================================================================
+MC93-A — SEG0 · DIAGNÓSTICO
+DesafioGUT · Data: 2026-09-23 · Commit base: e6703e2
+Skills ECC: smart-explore, terminal-ops
+Escopo: MC93-A (motor puro) — decisão do operador, ver R18 no SEG5.
+================================================================================
+
+0.1 — VERIFICAÇÃO DO AMBIENTE
+--------------------------------------------------------------------------------
+  git log --oneline -1        → e6703e2  ✅ base correcta
+  git status --porcelain      → só os 3 untracked em docs/ anteriores ao MC00.0
+                                (MC91.14-STATUS-BNB.txt, mc92.5_*.py) ✅
+  Suíte (execução real):
+    cd desafio-gut/frontend/netlify/functions
+    node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+    → ℹ tests 403 · pass 403 · fail 0 · duration 17,1 s   ✅ VERDE
+  ⚠️ O enunciado dizia 842 verdes. São **403**. Ficheiros de teste: 58.
+  ⚠️ `pytest -q` (pedido em 0.1) não se aplica — não há Python no projeto.
+
+0.2 — ONDE A RODADA É ENCERRADA E O VENCEDOR APURADO
+--------------------------------------------------------------------------------
+  `lance-relampago.mjs` (316 l.) é endpoint **POR LANCE**: valida JWT
+  `lance-auth`, aplica rate-limit, RBAC, MFA, verifica pausa do sistema, debita
+  saldo R$ e grava o lance. **Não encerra rodada, não apura vencedor.**
+
+  Apuração do vencedor, nos três sítios onde existe:
+    • `_lib/simulador.mjs:32` — `apurarMenorLanceUnico(lances)` ← **função PURA**
+      já existente. Agrupa por `valorCentavos`, filtra frequência === 1, devolve
+      o menor. Devolve { ok, vencedorEndereco, vencedorNome, valorCentavos,
+      totalLances, lancesUnicos }.
+    • `consolidar-lances.mjs` — fecho oficial: admin/coordenação, JWT de admin,
+      **só em NETWORK_STAGE === 'mainnet'**, assina EIP-712 e envia
+      `consolidarResultado` via Flashbots.
+    • `cron-reset-programado.mjs` — reinício do ciclo programado.
+
+  ⇒ PONTO DE EXTENSÃO REAL (para o MC93-B, não para este MC):
+    `consolidar-lances.mjs`, imediatamente após a apuração e antes da submissão
+    on-chain. NÃO `lance-relampago.mjs`, e NÃO `lance-programado.mjs` (que não
+    existe).
+
+  ⇒ DECISÃO DE REAPROVEITAMENTO: `apurarMenorLanceUnico` já resolve metade do
+    problema deste MC (quais valores são únicos, qual é o menor). O motor de
+    pontuação **importa-a** em vez de reimplementar a mesma contagem. Duplicar
+    criaria duas definições de "lance único" que podem divergir — precisamente o
+    defeito que o MC88.43 documentou para o estado da edição.
+
+0.3 — ESTRUTURA DOS DADOS
+--------------------------------------------------------------------------------
+  FONTE VIVA DOS LANCES: **Netlify Blobs**, não Postgres.
+    `_lib/bids-store.mjs` (73 l.) — MC28.1 "Stateless Key-Per-Bid".
+    Chave: `bid:{edicaoId}:{endereco}:{sufixo randomUUID 8}`
+    Marcador de fecho: `bid:{edicaoId}:consolidado`
+    Leitura exaustiva por cursor, lotes de 75 em paralelo.
+    A tabela Postgres `lances` existe mas tem **0 linhas**.
+
+  FORMA REAL DE UM LANCE (assinatura de `apurarMenorLanceUnico`):
+    { endereco?: string, valorCentavos: number, nomeExibicao?: string }
+  ⚠️ A chave do participante é **`endereco`** (carteira). Não existe
+    `usuario_id` — nem coluna, nem tabela `usuarios`. O motor usa `endereco`.
+
+  RLS: ativa em todas as tabelas do schema public. Irrelevante para o MC93-A
+  (funções puras não tocam o banco), relevante para o MC93-B.
+
+0.4 — PADRÃO DE CÓDIGO A SEGUIR
+--------------------------------------------------------------------------------
+  Módulo puro: `_lib/simulador.mjs` é o modelo — ES Modules, `export function`,
+  JSDoc com `@param`/`@returns` em toda função pública (ECC MECANISMO 4),
+  cabeçalho a explicar o PORQUÊ, tolerância a entrada inválida sem lançar
+  (`Number.isInteger` + `continue`).
+  Teste: `_tests/mc8843-estado-edicao.test.mjs` é o modelo — `node:test` +
+  `node:assert/strict`, cabeçalho a dizer **porque o teste existe**, e a linha
+  de invocação documentada no topo.
+  ⚠️ `ruff check --diff` (pedido em SEG2 2.3) não se aplica — é Python. O lint
+  do projeto é `eslint`.
+
+0.5 — LACUNAS DE ESPECIFICAÇÃO ENCONTRADAS (a decidir, não a inventar)
+--------------------------------------------------------------------------------
+  G1 "ACERTO" não está definido. Leitura adoptada: **ter feito um lance cujo
+     valor é único na rodada**. É a única leitura compatível com "+1 ponto por
+     acerto de lance único". Documentada em docs/TORNEIO-HABILIDADE.md.
+  G2 DESEMPATE não está definido, e o ranking decide prémio. Default adoptado:
+     posição partilhada (padrão "1-2-2-4") e ordem determinística por `endereco`
+     dentro do empate. Marcado como PENDENTE para o MC95.
+  G3 SEQUÊNCIA DE 5: um utilizador com 10 acertos seguidos ganha 1 bónus ou 2?
+     Default adoptado: **a cada 5** (10 acertos → 2 bónus). Marcado como
+     PENDENTE.
+  G4 "CICLO" (`rankings_ciclo.ciclo_id`) não existe em lado nenhum — nem no
+     enunciado, nem no código. Não é implementável neste MC. Fica para o MC93-B.
+  G5 O leilão está DESLIGADO (`EM_BREVE_MODE = true`;
+     `isLeilaoAtivo:{ios:false,android:false}`). O motor não terá rodadas reais
+     para processar até que isso mude — mais uma razão para ele nascer puro e
+     testável sem ambiente.
+
+================================================================================
+FIM DO SEG0
+================================================================================

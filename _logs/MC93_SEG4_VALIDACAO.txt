@@ -1,0 +1,391 @@
+================================================================================
+MC93 — SEG4 · VALIDAÇÃO INDEPENDENTE (papel VALIDADOR / RUFLO)
+DesafioGUT · MC93-A "motor puro" de pontuação e ranking
+Data: 2026-09-23 · Branch: main · Plataforma: Windows 11 · Node v24.14.1
+================================================================================
+
+              >>> VEREDITO FINAL: APROVADO COM RESSALVAS <<<
+   Suíte 24/24 verde e 427/427 na suíte completa · lógica central correcta
+   MAS: 3 mutações reais sobreviveram, a prova de pureza é furada pelo próprio
+   import de reutilização, e a coerção de `valorCentavos` deixa um lance
+   "null" ganhar o bónus de +3 — com caminho de chegada real (Supabase).
+
+O que validei: só o diff (2 ficheiros novos), os testes e o SEG-1. Não vi o
+raciocínio do Executor. Não alterei nenhum ficheiro do projeto: as mutações
+foram aplicadas e restauradas a partir de backup fora do repo, e o md5 final é
+igual ao inicial (a534ec0b75956fb33548b8ea52f067d8).
+
+================================================================================
+V1 — CORRECÇÃO DA LÓGICA
+VEREDITO: PASSOU nas três regras · COM 6 RESSALVAS (1 delas com caminho real)
+================================================================================
+
+As regras decididas estão implementadas e conferem à mão:
+  · +1 por lance de valor único         → PONTOS_ACERTO_UNICO, loop principal
+  · +3 ao menor lance único da rodada   → PONTOS_MENOR_UNICO, via apuração
+  · +5 pontos e 20 senhas a cada 5      → Math.floor(corrida/5), a cada corrida
+  · "menor único = 1+3 = 4 pontos"      → confirmado por probe independente
+  · empates 1-2-2-4 e desempate estável → confirmado nos dois sentidos do input
+
+Sondei 38 casos com script próprio (não reutilizei as fixtures do Executor).
+Os que interessam:
+
+R1.1 ⚠️ COERÇÃO — um lance "vazio" vale ZERO CENTAVOS e GANHA o bónus de +3.
+     `Number(l?.valorCentavos)` aceita tudo o que coaja a inteiro:
+       valorCentavos: null  → 0  → único, menor  → 4 pontos
+       valorCentavos: ""    → 0  → único, menor  → 4 pontos
+       valorCentavos: false → 0  → único, menor  → 4 pontos
+       valorCentavos: []    → 0  → único, menor  → 4 pontos
+       valorCentavos: true  → 1  → lance de 1 centavo válido
+       valorCentavos: "0x10"→ 16 · " 20 " → 20 · [4] → 4
+     Só `undefined` e `NaN` são recusados (dão NaN).
+     ► ISTO TEM CAMINHO DE CHEGADA REAL, e é o achado mais sério:
+       `_lib/data-store-supabase.mjs:117` grava DE PROPÓSITO
+         valor_centavos = Number.isInteger(...) ? ... : null
+       isto é, usa `null` como marcador de "valor inválido". Se o MC93-B ler a
+       tabela `lances` (que é o que o enunciado original pedia), cada linha com
+       valor_centavos NULL entra no motor como um lance de 0 centavos — único,
+       o mais baixo da rodada — e leva 4 pontos. Dois módulos com convenções
+       OPOSTAS para o mesmo marcador. Hoje é inofensivo porque o único escritor
+       vivo (`lance-relampago.mjs:48`) valida `Number.isInteger` e a gama
+       [1, LANCE_MAX] antes de gravar; o motor herda essa segurança sem a ter.
+     ► Recomendação (MC93-B, barata): trocar `Number(l?.valorCentavos)` por
+       aceitar apenas `Number.isInteger(l?.valorCentavos)` no valor CRU, e
+       rejeitar `v < 1` (Art. XXIII, lance mínimo R$ 0,01).
+
+R1.2 ⚠️ VALORES ZERO E NEGATIVOS são pontuados e ganham o bónus de menor.
+       [A:-500, B:10, C:20] → A leva 4 pontos, "menorUnico": true.
+     Não há guarda de lance mínimo. Art. XXIII diz R$ 0,01. Igual ao
+     `apurarMenorLanceUnico` existente — é dívida herdada, não regressão nova,
+     mas o motor de PRÉMIO é o pior sítio para a herdar em silêncio.
+
+R1.3 ⚠️ LANCE ÚNICO SEM ENDEREÇO ANULA O BÓNUS DE +3 PARA TODOS.
+       [{valorCentavos:10}(sem endereco), A:20, B:30]
+         → A: 1 ponto, B: 1 ponto, NINGUÉM com menorUnico:true
+       O menor valor único é 10; como o autor não tem endereço, o `continue`
+       salta-o, e o +3 evapora — não passa para o segundo mais baixo. O mesmo
+       com endereco "" e endereco null. É coerente com `apurarMenorLanceUnico`
+       (que devolveria ok:true e vencedorEndereco null), logo é defensável,
+       mas está indocumentado no JSDoc e não tem um único teste.
+
+R1.4 ⚠️ EXCEPÇÃO NÃO COBERTA: `atualizarRanking` REBENTA com um Map de chaves
+       não-string em empate.
+         atualizarRanking(new Map([[42,{pontos:1}],[7,{pontos:1}]]))
+         → TypeError: a.endereco.localeCompare is not a function
+       Só o caminho ARRAY passa por `normalizarEndereco`; o caminho MAP confia
+       cegamente nas chaves. Consequências gémeas:
+         · Map com chave "0xAAA" NÃO é normalizada → sai "0xAAA" no ranking,
+           ao contrário do array, que sai "0xaaa" (assimetria entre os dois
+           caminhos da MESMA função);
+         · Map com chave null → sai `endereco: null` no ranking, enquanto o
+           array filtra null. Duas políticas na mesma função.
+       Hoje não é alcançável (o Map só nasce de `calcularPontosRodada`), mas o
+       JSDoc anuncia `Map<string,{pontos}>` como entrada pública.
+
+R1.5 ⚠️ HISTÓRICO: falha-ABERTO num caso, falha-FECHADO nos outros.
+       `{acertou:'sim'}` × 5 → bonus 1 (+5 pontos, 20 SENHAS = R$ 40) porque
+       `Boolean("sim")` é true. Já `1`, `"sim"`, `{}` e `{acerto:true}` (erro
+       de digitação sem o "u") contam como FALHA e partem a corrente.
+       Ou seja: lixo no campo `acertou` paga; lixo na FORMA do registo não
+       paga. Não há validação nem aviso. `null` no meio parte a corrente
+       (correcto). Pontos negativos no ranking ordenam bem (−5 < −1 < 0).
+
+R1.6 ⚠️ `atualizarRanking` NÃO AGREGA: o mesmo endereço duas vezes no array
+       dá DUAS linhas e DUAS posições ([A:5 → 1º, A:3 → 2º]). Como o nome é
+       "atualizarRanking" e o ranking decide prémio, é preciso que o MC93-B
+       saiba que a agregação é responsabilidade do chamador.
+
+Casos que pedia e que estão CORRECTOS: rodada com um só lance (4 pontos,
+é acerto e é menor — coerente com as regras escritas); todos os valores
+repetidos (Map vazio, `size` 0); Map vazio no ranking (devolve []);
+pontos negativos; `NaN` em pontosTotais (vira 0, silenciosamente).
+
+================================================================================
+V2 — O MOTOR É MESMO PURO?
+VEREDITO: PASSOU nas funções · FALHOU na PROVA de pureza
+================================================================================
+
+✅ O que confirmei como puro:
+   · zero `let`/`var` a nível de módulo, zero `globalThis`, zero `process.*`,
+     zero `Date.now`, zero `Math.random`, zero `new Date` (grep no ficheiro);
+   · `REGRAS` está `Object.freeze` e é plana, logo o freeze é suficiente;
+   · nenhuma chamada de I/O é executada por nenhuma das três funções.
+
+✅ NÃO HÁ MUTAÇÃO DE ENTRADA (verifiquei, não deduzi):
+   · `calcularPontosRodada`: array e objectos de entrada idênticos antes/depois
+     (comparação JSON). Os objectos `{pontos,acertos,menorUnico}` que mutua são
+     dele próprio, criados dentro da função;
+   · `atualizarRanking`: o `lista.sort(...)` incide num array NOVO (saído do
+     `.map()` de `normalizarPontuacoes`) — o array do chamador NÃO é reordenado.
+     Isto era o efeito colateral escondido mais provável e não existe.
+
+❌ A PROVA DE PUREZA É FURADA — e é furada pela linha seguinte ao comentário
+   que a anuncia. `pontuacao-utils.mjs` importa `./simulador.mjs`, e
+   `simulador.mjs:11` faz `import { getStore } from "@netlify/blobs"`.
+   Instrumentei o carregador de módulos do Node (`module.registerHooks`) e
+   importei SÓ `pontuacao-utils.mjs`:
+
+     - …/_lib/pontuacao-utils.mjs
+     - …/_lib/simulador.mjs
+     - …/netlify/functions/node_modules/@netlify/blobs/dist/main.js
+     - …/netlify/functions/node_modules/@netlify/blobs/dist/chunk-XR3MUBBK.js
+
+   O SDK de Netlify Blobs é resolvido e AVALIADO ao importar o "motor puro"
+   (ligação ESM é eager). Consequências concretas:
+     · o módulo não é importável onde `@netlify/blobs` não esteja instalado —
+       não é uma função pura portátil, é um módulo com dependência de SDK de
+       infraestrutura (note-se que `@netlify/blobs` não está em
+       `frontend/package.json`: resolve por `functions/node_modules`);
+     · o teste "R1: pontuacao-utils é PURO" faz `assert.doesNotMatch` sobre o
+       TEXTO do próprio ficheiro. Por construção não consegue ver nada através
+       de um import. O teste que existe para garantir a pureza é derrotado
+       exactamente pela indirecção que o outro teste (R1 duplicação) EXIGE.
+       As duas asserções estruturais empurram em sentidos opostos e nenhuma
+       das duas o percebe.
+   ► Não é I/O executado — a pureza COMPORTAMENTAL mantém-se. É a GARANTIA que
+     é falsa. Correcção barata para o MC93-B: extrair `apurarMenorLanceUnico`
+     para um `_lib/apuracao-pura.mjs` sem dependências e fazer `simulador.mjs`
+     importá-lo (inverter a direcção), ou passar o teste a percorrer o grafo de
+     imports em vez de regex sobre uma só linha.
+
+================================================================================
+V3 — REUTILIZAÇÃO vs DUPLICAÇÃO
+VEREDITO: a reutilização é REAL mas REDUNDANTE e NÃO PROTEGIDA
+================================================================================
+
+Sim: a contagem de valores únicos é feita DUAS vezes, e o `valorCentavos` de
+cada lance é lido TRÊS vezes por rodada (medido com um getter contador: 3
+leituras por lance — uma em `contarPorValor`, uma em `apurarMenorLanceUnico`,
+uma no loop principal).
+
+PODEM DIVERGIR? Para dados JSON, NÃO — e isto é demonstração, não opinião.
+Os dois laços são idênticos no critério (`Number(l?.valorCentavos)` +
+`Number.isInteger` + `Map` com igualdade SameValueZero). Provei por diferencial:
+substituí a chamada a `apurarMenorLanceUnico` por uma reimplementação local do
+mínimo sobre o mapa de `contarPorValor` e comparei as duas versões em 20.000
+rodadas aleatórias (endereços vazios/null/maiúsculos; valores 0, negativos,
+fraccionários, NaN, null, "7", true, Infinity, "0x10", [], [4]):
+  → 0 divergências.
+O único input que as separa é `valorCentavos` NÃO-DETERMINÍSTICO (getter ou
+Proxy). Exemplo construído que diverge: um lance cujo getter devolve 10 na
+primeira leitura e 999 depois → `contarPorValor` vê {10:1}, a apuração vê
+{999:1}, e o lance acaba por não pontuar nada. Irrelevante para dados de Blobs.
+
+► Onde a reutilização É decorativa: o teste que a defende ("R1: a definição de
+  'lance único' não foi duplicada") só verifica com regex que a LINHA DE IMPORT
+  existe. Apaguei a chamada e reimplementei a lógica localmente MANTENDO o
+  import: a suíte ficou TODA VERDE (mutação M12 abaixo). O invariante
+  arquitectural que o teste diz proteger pode ser violado sem que ele falhe.
+  A reutilização de hoje é genuína; nada impede que amanhã deixe de o ser.
+
+================================================================================
+V4 — QUALIDADE DA SUÍTE
+VEREDITO: PASSOU na execução · FALHOU em 3 mutações reais
+================================================================================
+
+Execução minha, no diretório indicado:
+  node --test --experimental-test-module-mocks _tests/mc93-pontuacao.test.mjs
+  → tests 24 · suites 0 · pass 24 · fail 0 · duration 226 ms
+Suíte completa (regressão): `_tests/*.test.mjs` → tests 427 · pass 427 · fail 0
+(o SEG-1 media 403; 403 + 24 = 427 — o novo ficheiro não perturba nada).
+`git grep` confirma que NADA importa `pontuacao-utils.mjs` além do seu teste:
+o motor não está ligado a caminho de execução nenhum (coerente com MC93-A).
+
+PROVA DE MUTAÇÃO PRÓPRIA — 14 mutações, todas DIFERENTES das 10 do Executor.
+Backup em %TEMP%\...\scratchpad\bak\, restauro verificado por conteúdo a cada
+passo, md5 final igual ao original.
+
+  morta      | M2  filtro de repetidos `!== 1` → `< 1`            (fail=3)
+  morta      | M3  sort do ranking invertido (ascendente)          (fail=2)
+  morta      | M4  devolve [] em vez de Map no caso vazio          (fail=1)
+  morta      | M6  Math.floor → Math.ceil nos bónus                (fail=2)
+  morta      | M9  leuAcerto sem o ramo booleano                   (fail=6)
+  morta      | M13 a falha NÃO quebra a corrida                    (fail=2)
+  SOBREVIVEU | M1  maiorSequencia `>` → `>=`
+  SOBREVIVEU | M5  remove Number.isInteger só de contarPorValor
+  SOBREVIVEU | M7  remove a guarda de endereço ausente
+  SOBREVIVEU | M8  normalizarEndereco aceita string vazia
+  SOBREVIVEU | M10 pontosAnteriores inicia a 0 em vez de null
+  SOBREVIVEU | M11 Map path sem a coerção Number(...)||0
+  SOBREVIVEU | M12 reimplementa o menor único localmente
+  SOBREVIVEU | M14 bónus de menor `===` → `<=`
+
+Não me fiquei pelo "sobreviveu": classifiquei cada sobrevivente por diferencial
+(4.000 iterações × 4 funções, mais 20.000 para o M12), porque um mutante
+EQUIVALENTE não é falha de teste — é ruído que inflaciona o relatório.
+
+================================================================================
+MUTAÇÕES SOBREVIVENTES — classificadas
+================================================================================
+
+▸ EQUIVALENTES (0 divergências em 16.000 comparações — a suíte está certa em
+  não os matar; são informação sobre o CÓDIGO, não sobre os testes):
+
+  M1  `corrida > maiorSequencia` → `>=`. Como `corrida` cresce de 1 em 1, os
+      dois operadores dão sempre o mesmo máximo. Mutante equivalente.
+  M14 `v === menorValor` → `v <= menorValor`. Só valores ÚNICOS chegam àquela
+      linha e `menorValor` é o mínimo dos únicos, logo `v >= menorValor` é
+      invariante. Equivalente.
+  M5  Remover `Number.isInteger` de `contarPorValor` não muda resultado nenhum,
+      porque o loop principal volta a filtrar. ⇒ ACHADO: essa guarda é
+      REDUNDANTE (código defensivo sem efeito). O comentário que a justifica
+      ("exactamente o critério de apurarMenorLanceUnico") descreve uma
+      intenção que o filtro do loop principal já garante.
+  M11 Retirar `Number(v?.pontos) || 0` no caminho Map é indetectável porque o
+      único produtor de Maps é `calcularPontosRodada`, que garante números.
+      Diverge apenas com Map feito à mão (`new Map([["0xaa",{}]])`).
+  M12 Reimplementação local do menor único: equivalente por construção (ver
+      V3). Sobrevive porque NENHUM teste observa comportamento de
+      reutilização — só a presença da linha de import.
+
+▸ ESCAPES REAIS (o mutante muda comportamento observável e a suíte não vê):
+
+  M10 ⚠️ O MAIS GRAVE. `let pontosAnteriores = null` → `= 0`.
+      Com a mutação, um ranking cujo LÍDER tem 0 pontos recebe `posicao: 0`
+      em vez de `posicao: 1` — toda a tabela desce uma casa.
+        entrada: 4 participantes com pontosTotais 0
+        original: posições [1,1,1,1]   mutante: posições [0,0,0,0]
+      Causa da cegueira: NÃO EXISTE UM ÚNICO TESTE com `pontosTotais: 0` no
+      ranking. É um cenário trivialmente real (rodada em que ninguém acertou,
+      ou participantes listados com zero). Uma classe inteira de erros de
+      posição é invisível. ► Pedido: um teste com líder a 0 pontos.
+
+  M7  ⚠️ Remover `if (endereco === null) continue;` deixa entrar a chave `null`
+      no Map de pontuações:
+        entrada: [{endereco:"0xAA",valorCentavos:30.5},{endereco:"",valorCentavos:2}]
+        original: Map vazio   mutante: Map{ null → 4 pontos, menorUnico:true }
+      Ou seja: a guarda que impede um participante FANTASMA de aparecer no
+      ranking com 4 pontos não tem teste. ► Pedido: um teste com lance de
+      valor inteiro válido e `endereco` ausente.
+
+  M8  ⚠️ `valor.length > 0` → `>= 0` faz o endereço "" tornar-se participante:
+        mutante: Map{ "" → 4 pontos, menorUnico:true }
+      ► Pedido: um teste com `endereco: ""`.
+
+Resumo honesto do score: 14 mutações, 6 mortas, 5 equivalentes, 3 escapes
+reais. Todos os 3 escapes estão no MESMO ponto cego: o motor nunca é testado
+com participantes sem endereço nem com pontuações a zero. A suíte é boa nas
+regras de negócio (e o teste de REGRAS em literal, com a lição registada sobre
+asserções que partilham a constante, é exemplar) e fraca nas guardas de entrada
+— que são precisamente as linhas de código que o Executor escreveu para se
+defender e para as quais não escreveu prova.
+
+================================================================================
+V5 — CONFORMIDADE COM O SEG-1
+VEREDITO: PASSOU
+================================================================================
+
+O SEG-1 §-1.5 declara para o MC93-A exactamente quatro entregáveis:
+`_lib/pontuacao-utils.mjs`, `_tests/mc93-pontuacao.test.mjs`,
+`docs/TORNEIO-HABILIDADE.md` e `_logs/MC93_*` + relatório. Foi o que existe.
+
+`git status --porcelain` (main), no fim da minha validação:
+  ?? _logs/MC93_SEG-1_QUESTIONAMENTO.txt
+  ?? _logs/MC93_SEG0_DIAGNOSIS.txt
+  ?? _logs/MC93_SEG1_PLANEAMENTO.txt
+  ?? _logs/MC93_SEG2_TDD.txt
+  ?? _logs/MC93_SEG3_INTEGRACAO.txt
+  ?? _logs/MC93_SEG4_EXECUTOR.txt
+  ?? desafio-gut/frontend/netlify/functions/_lib/pontuacao-utils.mjs
+  ?? desafio-gut/frontend/netlify/functions/_tests/mc93-pontuacao.test.mjs
+  ?? docs/MC91.14-STATUS-BNB.txt
+  ?? docs/TORNEIO-HABILIDADE.md
+  ?? docs/mc92.5_gerar_mascaras.py
+  ?? docs/mc92.5_refinar_bboxes.py
+
+· ZERO ficheiros MODIFICADOS. Nenhum ficheiro versionado foi tocado — logo
+  `_lib/simulador.mjs` está intacto (não aparece como ` M`), `lance-relampago.mjs`
+  também, e não há endpoints, migrações, banco nem on-chain.
+· Os 2 novos ficheiros de código são os declarados.
+· Nota de exactidão sobre o enunciado desta validação: os untracked em docs/
+  são QUATRO, não três — `docs/TORNEIO-HABILIDADE.md` é novo e é do MC93
+  (entregável declarado no §-1.5, e citado em `pontuacao-utils.mjs:27`).
+  Os outros três (MC91.14, mc92.5_*.py) são pré-existentes, de MCs anteriores.
+· Entre o meu primeiro e o último `git status` apareceram 4 logs SEG novos: o
+  pipeline estava ainda a escrever enquanto eu validava. Não afecta o veredito
+  (são ficheiros de registo), mas registo que NÃO validei o conteúdo dos
+  SEG1/SEG2/SEG3/SEG4_EXECUTOR — li apenas o SEG-1 e o SEG0, como mandatado.
+· Escopo negativo confirmado por busca: nada no repositório importa
+  `pontuacao-utils.mjs` (só o seu teste). Zero efeito colateral em produção —
+  este MC não muda o comportamento de nada que esteja a correr.
+
+================================================================================
+ACHADOS NOVOS (não estão no SEG-1 nem, pelo que o diff mostra, nos testes)
+================================================================================
+
+A1 ⚠️ Convenções OPOSTAS para "valor inválido" entre dois módulos do mesmo
+   backend: `data-store-supabase.mjs:117` escreve `valor_centavos = null` para
+   marcar inválido; `pontuacao-utils` lê `null` como ZERO CENTAVOS e premeia-o
+   com o bónus de menor lance único. Se o MC93-B alimentar o motor a partir da
+   tabela `lances` (o que o enunciado original pedia), cada NULL vira o lance
+   vencedor da rodada. Bloqueio a registar no MC93-B.
+
+A2 ⚠️ A pureza declarada não sobrevive ao grafo de imports: importar o "motor
+   puro" carrega `@netlify/blobs` (provado por instrumentação do loader). E o
+   pacote não está em `frontend/package.json` — resolve por
+   `netlify/functions/node_modules`.
+
+A3 ⚠️ Os dois testes estruturais anulam-se: "não duplicar" obriga ao import que
+   "ser puro" não consegue inspeccionar. Nenhum dos dois falha quando o seu
+   próprio invariante é violado (provado por M12 e pelo grafo de A2).
+
+A4 ⚠️ `atualizarRanking` tem DUAS políticas de endereço na mesma função: o
+   caminho array normaliza para minúsculas e filtra null; o caminho Map não
+   faz nem uma coisa nem outra, e rebenta com `TypeError` se as chaves não
+   forem strings e houver empate.
+
+A5 ⚠️ Um lance único SEM endereço faz o bónus de +3 desaparecer da rodada em
+   vez de passar ao segundo valor único mais baixo. Comportamento plausível,
+   mas indocumentado e sem teste (é o escape M7).
+
+A6 ⚠️ `detectarConsecutivos` falha-ABERTO com `{acertou:'sim'}` (paga 20
+   senhas) e falha-FECHADO com `1`, `"sim"`, `{}` ou `{acerto:true}`. Num motor
+   que decide senhas com valor de R$ 40 por evento, a assimetria devia ser
+   uma decisão escrita, não um efeito de `Boolean()`.
+
+A7 • `atualizarRanking` não agrega endereços repetidos: a mesma carteira duas
+   vezes ocupa duas posições. Contrato do chamador, a documentar.
+
+A8 • Guarda redundante: o `Number.isInteger` de `contarPorValor` não tem efeito
+   observável (mutante M5 equivalente). Ou se remove, ou se assume que o filtro
+   duplicado é intencional e se diz porquê.
+
+A9 • Nenhuma guarda de lance mínimo: 0 e negativos pontuam e ganham o bónus,
+   contra o Art. XXIII (R$ 0,01). Herdado de `apurarMenorLanceUnico`.
+
+NÃO VERIFICADO
+  · Cobertura de linhas/ramos (não há alvo de cobertura configurado no projeto;
+    não corri `--experimental-test-coverage` para não inventar um número que o
+    projeto não mede).
+  · Conteúdo dos SEG1/SEG2/SEG3/SEG4_EXECUTOR (fora do mandato; e apareceram
+    durante a minha execução).
+  · `docs/TORNEIO-HABILIDADE.md` — confirmei que existe e é entregável
+    declarado; NÃO auditei o seu conteúdo contra o código.
+  · Nenhum lance real de Blobs foi lido (mesma lacuna N4 do SEG-1), logo a
+    forma real dos dados de produção foi inferida de `lance-relampago.mjs` e
+    `data-store-supabase.mjs`, não observada.
+
+================================================================================
+VEREDITO FINAL: APROVADO COM RESSALVAS
+================================================================================
+Aprovo porque: o escopo é o declarado, zero ficheiros modificados, zero efeito
+em produção, 427/427 verdes, as três regras de pontuação estão correctas para
+dados bem formados, não há mutação de entrada, e a decisão de calcular sem
+executar (nem senhas, nem banco, nem on-chain) é a decisão certa dado o SEG-1.
+
+Ressalvas a fechar ANTES do MC93-B (por ordem de gravidade):
+  1. A1 — recusar `valorCentavos` que não seja inteiro CRU e `< 1`, antes de
+     qualquer leitura de Postgres. É a única ressalva com caminho para dinheiro.
+  2. M10/M7/M8 — três testes que faltam: líder com 0 pontos; lance válido sem
+     endereço; endereço "".
+  3. A2/A3 — inverter a dependência (extrair a apuração pura) ou passar o teste
+     de pureza a percorrer o grafo de imports.
+  4. A4 — uma só política de endereço em `atualizarRanking`.
+  5. A6/A7/A9 — decidir e DOCUMENTAR: fail-open no histórico, agregação por
+     endereço, lance mínimo.
+
+Nenhuma destas ressalvas justifica reprovar um motor que não está ligado a
+nada. Todas justificam não o ligar antes de as fechar.
+================================================================================
+FIM DO SEG4 · VALIDADOR · ficheiro do projeto restaurado e verificado por md5
+================================================================================

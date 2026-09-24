@@ -1,0 +1,117 @@
+================================================================================
+MC93-A — SEG5 · ENTREGA
+DesafioGUT · Data: 2026-09-23 · Commit base: e6703e2
+Skills ECC: requesting-code-review (usada: Validador independente despachado
+como subagente, com contexto curado e sem acesso ao raciocínio do Executor —
+exactamente o que a skill prescreve)
+================================================================================
+
+5.1 — CONSOLIDAÇÃO DOS LOGS
+--------------------------------------------------------------------------------
+  _logs/MC93_SEG-1_QUESTIONAMENTO.txt   hard gate · 7/9 premissas refutadas
+  _logs/MC93_SEG0_DIAGNOSIS.txt         ambiente, pontos de extensão, lacunas
+  _logs/MC93_SEG1_PLANEAMENTO.txt       contratos + skills (com errata própria)
+  _logs/MC93_SEG2_TDD.txt               RED → GREEN → REFACTOR
+  _logs/MC93_SEG3_INTEGRACAO.txt        NÃO EXECUTADO, com a razão
+  _logs/MC93_SEG4_EXECUTOR.txt          suíte, R1, 25 mutantes, errata pós-validação
+  _logs/MC93_SEG4_VALIDACAO.txt         relatório do Validador independente
+  _logs/MC93_SEG5_ENTREGA.txt           este ficheiro
+  _logs/MC93-RELATORIO.md               relatório final (3 secções RUFLO)
+
+5.2 — CLAUDE.md (R14)
+--------------------------------------------------------------------------------
+Atualizado ANTES do commit: 405 → 504 linhas. Regista a tabela das 7 premissas
+refutadas, o facto de o bónus de senhas ser on-chain, as regras e onde mudá-las,
+os 6 defeitos encontrados por validação independente, as 3 lições de método, o
+estado (436/436) e as pendências do MC93-B.
+
+5.3 — DECISÕES DO OPERADOR DURANTE O MC (R18)
+--------------------------------------------------------------------------------
+UMA decisão, registada nos três lugares exigidos (log de segmento, CLAUDE.md,
+relatório final):
+
+  DECISÃO: perante o veredito AJUSTAR do SEG-1 (7 de 9 premissas refutadas, 6
+  contradições de política), o operador escolheu **"MC93-A: só o motor puro"**
+  de entre três opções apresentadas (motor puro / MC93 completo com correcções /
+  PARAR e fazer primeiro o MC95).
+  CONSEQUÊNCIA: SEG3 não executado; sem tabelas, sem endpoints, sem gancho de
+  rodada, sem emissão de senhas. Entregues: motor puro, 33 testes, especificação.
+
+5.4 — DECLARAÇÃO DE R15
+--------------------------------------------------------------------------------
+EXERCIDA, uma vez, e dentro dos ficheiros autorizados.
+Depois do relatório do Validador, seis defeitos em código escrito NESTE MC foram
+confirmados por execução própria e corrigidos: coerção de `valorCentavos`
+(lance nulo ganhava a rodada), zero/negativos a pontuar contra o Art. XXIII,
+lance sem dono a anular o bónus de menor único, excepção no ranking com chaves
+não-textuais, `detectarConsecutivos` a falhar aberto, e ranking sem agregação.
+Foram também corrigidas as DUAS asserções que davam garantia falsa (pureza cega
+através do import; "não duplicar" que só via a linha de import).
+
+A correção estendeu-se ao que o MC tornou falso, como a R15 manda:
+`docs/TORNEIO-HABILIDADE.md` (§Lance válido, §5, §detectarConsecutivos,
+§atualizarRanking) e `_logs/MC93_SEG4_EXECUTOR.txt` (§4.9).
+Nenhum ficheiro fora do escopo autorizado foi tocado.
+
+5.5 — DECLARAÇÃO DE R19
+--------------------------------------------------------------------------------
+**R19 NÃO FOI ATIVADA.** Declarado no SEG-1 §-1.4, antes de executar.
+Razão: falham as três condições de exceção previstas pela própria regra —
+(i) autorização nova (creditar senhas on-chain é custo financeiro; R2 estava
+suspensa sobre premissa falsa); (ii) segurança não prevista (um endpoint que
+emite valor exige controlo de acesso, idempotência e limite, nada disso
+especificado); (iii) o operador já dividira o trabalho em MC94/95/96.
+Ampliar teria sido decidir sozinho questões jurídicas e financeiras.
+
+5.6 — MÉTRICAS DE EFICIÊNCIA
+--------------------------------------------------------------------------------
+  Boulder Loop
+    SEG2: 2 iterações de 3 (a 2ª por o teste de estrutura ler o comentário).
+    SEG4: 3 rondas de mutação — 1ª (12 mutantes, 2 vivos), 2ª (correcção),
+          3ª (13 mutantes após a validação independente, 1 equivalente).
+  Escopo
+    Entregue: 100% do MC93-A tal como definido no SEG-1 §-1.5.
+    Face ao enunciado original: ~35% (o motor), porque 7 das 9 premissas do
+    resto eram falsas e o bónus tinha custo não autorizado.
+    Adicionado por R15: 9 testes e 6 correcções, todos dentro dos ficheiros
+    autorizados, nenhum por iniciativa de escopo.
+  Testes
+    403 baseline → 436. Ficheiro do MC93: 21 → 24 → 33.
+    Mutantes: 25 aplicados · 24 mortos · 1 equivalente (código simplificado).
+  Custo da validação independente
+    27 chamadas de ferramenta, 38 sondas, 14 mutações próprias.
+    Encontrou 6 defeitos reais — entre eles um lance nulo a vencer a rodada —
+    depois de a minha própria prova de mutação ter dado 12/12 mortos.
+    **A validação independente pagou-se, e pela segunda vez neste projeto.**
+  MC de fechamento
+    Não gerado. O MC93-B já está definido e depende de decisões do operador,
+    não de trabalho pendente meu.
+
+5.7 — RELATÓRIO FINAL
+--------------------------------------------------------------------------------
+_logs/MC93-RELATORIO.md, com as três secções do Pilar 3 (Executor, Validador,
+Documentador) e veredito explícito.
+
+5.8 — COMMIT
+--------------------------------------------------------------------------------
+Mensagem: feat: MC[93-A] — motor de pontuação do torneio de habilidade
+          (funções puras)
+Conteúdo: 2 ficheiros de código novos + docs/TORNEIO-HABILIDADE.md + _logs/ +
+CLAUDE.md.
+
+RESSALVA SOBRE "WORKING TREE LIMPO": ficam 3 ficheiros untracked ANTERIORES a
+este MC e ao MC00.0 (docs/MC91.14-STATUS-BNB.txt, docs/mc92.5_gerar_mascaras.py,
+docs/mc92.5_refinar_bboxes.py). Não são trabalho deste MC e não foram
+commitados. A árvore fica limpa QUANTO AO MC93.
+
+VERIFICAÇÃO DE R1: `git status --porcelain | grep -v '^??'` → **vazio**.
+Nenhum ficheiro existente foi modificado. Nenhum endpoint importa o módulo novo.
+Sem pontuação, o comportamento é exactamente o de antes.
+
+================================================================================
+VEREDITO DO MC93-A: CONCLUÍDO
+  Motor puro entregue, 33 testes, 436/436 verdes, 24 mutantes mortos.
+  SEG3 não executado por decisão do operador; MC93-B especificado e bloqueado
+  por 5 decisões (ciclo, desempate, limite de bónus, R2, natureza jurídica).
+  ⚠️ O motor NÃO tem chamador e NÃO foi validado com dados reais.
+================================================================================

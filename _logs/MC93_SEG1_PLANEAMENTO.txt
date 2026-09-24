@@ -1,0 +1,113 @@
+================================================================================
+MC93-A — SEG1 · PLANEAMENTO
+DesafioGUT · Data: 2026-09-23
+Skills ECC: make-plan, brainstorming   (⚠️ `caveman` não existe em disco — ver §1.7)
+================================================================================
+
+1.1/1.2 — ESTRUTURA DAS TABELAS `pontuacoes` / `rankings_ciclo`
+--------------------------------------------------------------------------------
+  ⛔ FORA DE ESCOPO por decisão do operador (MC93-A = motor puro).
+  Além disso, `rankings_ciclo` NÃO É IMPLEMENTÁVEL hoje: a coluna `ciclo_id`
+  pressupõe um conceito de "ciclo" que não existe no enunciado nem no código
+  (lacuna G4 do SEG0). Definir ciclo é decisão de produto, não de schema.
+  Registado em docs/TORNEIO-HABILIDADE.md §6 e §7.
+
+1.3 — CONTRATO DOS ENDPOINTS
+--------------------------------------------------------------------------------
+  ⛔ FORA DE ESCOPO (MC93-B). Registado o padrão a seguir quando abrir:
+  `guardAdmin` de `_lib/admin-auth.mjs` (como `consolidar-lances.mjs:15`), e não
+  `admin-cotas.mjs`, que não existe.
+
+1.4 — CONTRATO DAS FUNÇÕES PURAS  ← O QUE ESTE MC ENTREGA
+--------------------------------------------------------------------------------
+  Módulo: `netlify/functions/_lib/pontuacao-utils.mjs`
+
+  REGRAS (Object.freeze) — fonte única dos cinco números do torneio:
+      PONTOS_ACERTO_UNICO  1
+      PONTOS_MENOR_UNICO   3
+      ACERTOS_PARA_BONUS   5
+      PONTOS_BONUS         5
+      SENHAS_BONUS        20
+  Decisão de desenho: TODAS as constantes num objecto congelado, para que o
+  MC95 mude o regulamento em UM sítio sem tocar na lógica. É a justificação
+  técnica de construir o motor antes da integração.
+
+  calcularPontosRodada(lances)
+      → Map<endereco_minusculas, { pontos, acertos, menorUnico }>
+      Entrada na forma de `_lib/bids-store.mjs`: { endereco, valorCentavos }.
+      ⚠️ ADAPTAÇÃO FACE AO ENUNCIADO (SEG-1 P4/P6): a chave é `endereco`, não
+        `usuario_id` — não existe tabela `usuarios` no projeto.
+
+  detectarConsecutivos(historico)
+      → { bonus, sequenciaAtual, maiorSequencia, pontosBonus, senhasBonus }
+      Aceita boolean[] ou {acertou}[]. Devolve o que SERIA devido; não credita.
+
+  atualizarRanking(pontuacoes)
+      → [{ endereco, pontosTotais, posicao }]
+      Aceita o Map acima ou lista. Empate partilha posição (1-2-2-4).
+
+  DECISÃO DE REAPROVEITAMENTO (do SEG0 0.2): quem é o menor lance único é
+  decidido por `apurarMenorLanceUnico` (`_lib/simulador.mjs`), importada. Não
+  se reimplementa a regra do Artigo VIII — duas definições podem divergir, que
+  é o defeito que o MC88.43 documentou para o estado da edição. Há um teste de
+  estrutura que falha se o import desaparecer.
+
+1.5 — TESTES RED PLANEADOS
+--------------------------------------------------------------------------------
+  Os 4 do enunciado, mais o que a natureza do módulo exige:
+    [1] calcular pontos — um acerto de lance único
+    [2] calcular pontos — menor lance único acumula acerto + bónus
+    [3] detectar 5 consecutivos
+    [4] atualizar ranking — posição
+    [+] repetido não pontua · dois únicos do mesmo endereço · normalização de
+        endereço · entrada inválida · valor não inteiro
+    [+] 4 seguidos NÃO dão bónus · falha parte a sequência · 10 seguidos = 2
+        bónus · duas corridas de 5 = 2 bónus · histórico de objectos · vazio
+    [+] empate 1-2-2-4 · empate determinístico (inverter o input não muda o
+        ranking — decide prémio) · aceita o Map · entrada inválida
+    [+] ESTRUTURA: o motor é puro (sem Blobs/Supabase/ethers/fetch/fs/env)
+    [+] ESTRUTURA: a definição de "lance único" não foi duplicada
+
+1.6 — LACUNAS QUE O PLANO NÃO PODE FECHAR SOZINHO
+--------------------------------------------------------------------------------
+  G1 definição de "acerto" · G2 desempate · G3 bónus "a cada 5" vs "uma vez"
+  G4 o que é um ciclo · G5 limite de bónus por participante · G6 natureza
+  jurídica. Defaults adoptados e marcados como PENDENTES em
+  docs/TORNEIO-HABILIDADE.md §6. G2, G3 e G5 têm efeito FINANCEIRO directo.
+
+1.7 — SKILLS ECC: VERIFICAÇÃO DE DISPONIBILIDADE (R6)
+--------------------------------------------------------------------------------
+  Verificadas uma a uma em disco (~/.claude/skills, .claude/skills e
+  .agents/skills do projeto, .claude/skills do frontend):
+
+    caveman ........................ EXISTE  (.claude/skills/caveman — é um
+                                     repositório de plugin, não um SKILL.md
+                                     plano; o SKILL.md vive em
+                                     caveman/skills/caveman/SKILL.md. Trata de
+                                     compressão de tokens na saída, não de
+                                     planeamento; sem efeito material no SEG1.)
+    make-plan ...................... EXISTE
+    brainstorming .................. EXISTE
+    test-driven-development ........ EXISTE
+    systematic-debugging ........... EXISTE
+    verification-before-completion . EXISTE
+    requesting-code-review ......... EXISTE
+    smart-explore .................. EXISTE
+    terminal-ops ................... EXISTE
+    security-review ................ EXISTE
+    mutation-test .................. ⚠️ **AUSENTE** — declarada no SEG4 pelo
+                                     enunciado, não existe em lado nenhum.
+
+  DESVIO DECLARADO: o SEG4 correu a prova de mutação **à mão** (12 mutantes
+  aplicados por `sed` sobre uma cópia, suíte corrida a cada um, módulo
+  restaurado e verificado por `diff`). O procedimento está no log do SEG4.
+
+  ERRATA DESTE LOG: a primeira versão afirmava que `caveman` não existia. Era
+  falso — só o `mutation-test` está ausente. A afirmação foi feita sem
+  verificar; corrigida depois de correr a verificação. Fica registada porque o
+  mesmo erro (declarar ausência sem medir) é o que o MC00.0 apanhou no seu
+  próprio SEG0.
+
+================================================================================
+FIM DO SEG1
+================================================================================

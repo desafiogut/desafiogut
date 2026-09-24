@@ -1,0 +1,209 @@
+================================================================================
+MC93-A — SEG4 · VALIDAÇÃO (lado do EXECUTOR)
+DesafioGUT · Data: 2026-09-23
+Skills ECC: verification-before-completion
+⚠️ `mutation-test` declarada pelo enunciado NÃO EXISTE em disco — a prova de
+   mutação foi feita à mão. Procedimento completo em §4.5.
+O relatório do VALIDADOR independente está em _logs/MC93_SEG4_VALIDACAO.txt.
+================================================================================
+
+4.1 — SUÍTE COMPLETA
+--------------------------------------------------------------------------------
+  cd desafio-gut/frontend/netlify/functions
+  node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+    → ℹ tests 427 · pass 427 · **fail 0**
+
+  Baseline medida no SEG0: 403. Novos: 24. 403 + 24 = 427. ✅
+  ⚠️ O enunciado dizia baseline 842. É 403 (SEG-1, premissa P7, refutada).
+  O critério "≥ 842 + N" é inatingível porque parte de um número que não existe;
+  o critério cumprido é o real: **zero regressões, zero falhas**.
+
+4.2 — SUÍTE DE SEGURANÇA
+--------------------------------------------------------------------------------
+  Os testes de segurança do projeto não vivem numa suíte separada — estão
+  distribuídos pelos ficheiros `_tests/mc28-seguranca.test.mjs`,
+  `mc39171-p0-fixes.test.mjs`, `mc33-rls.mjs`, `kms-handshake.test.mjs`,
+  `biconomy-handshake.test.mjs`, entre outros, todos incluídos nos 427 acima e
+  todos verdes. O alvo "≥ 12 + N" não é verificável como contagem isolada.
+  ⚠️ NÃO MEDIDO como suíte autónoma. Declarado, não contornado.
+
+4.3 — COBERTURA
+--------------------------------------------------------------------------------
+  ⚠️ **NÃO MEDIDA.** O projeto não tem alvo de cobertura configurado (nem
+  c8/nyc, nem `--experimental-test-coverage` em script). Os alvos do enunciado
+  (91,2% / 89,8%) não têm com que ser comparados. Declarado em L-4.
+  O que É verificável: o módulo tem 3 funções públicas e 4 auxiliares, e os 24
+  testes exercem todas as 3 públicas em caminho feliz, caminho degenerado
+  (vazio/inválido) e fronteira (4 vs 5 acertos, empate, valor não inteiro).
+
+4.4 — PROVA DE R1
+--------------------------------------------------------------------------------
+  git status --porcelain →
+    ?? _logs/MC93_*                                      (logs deste MC)
+    ?? desafio-gut/frontend/netlify/functions/_lib/pontuacao-utils.mjs
+    ?? desafio-gut/frontend/netlify/functions/_tests/mc93-pontuacao.test.mjs
+    ?? docs/TORNEIO-HABILIDADE.md
+    ?? docs/MC91.14-STATUS-BNB.txt        ← anteriores ao MC00.0, não são meus
+    ?? docs/mc92.5_gerar_mascaras.py      ←
+    ?? docs/mc92.5_refinar_bboxes.py      ←
+
+  **ZERO ficheiros modificados.** Tudo o que este MC produziu é novo. Não há
+  como haver regressão: nenhum caminho de execução existente foi tocado, e
+  nenhum endpoint importa o módulo novo.
+
+  Há ainda DUAS asserções automatizadas que protegem R1 no futuro:
+    • "R1: pontuacao-utils é PURO" — falha se alguém importar Netlify Blobs,
+      Supabase, ethers/creditarSenhas/adicionarSenhas, fetch, node:fs ou
+      process.env dentro do módulo.
+    • "R1: a definição de 'lance único' não foi duplicada" — falha se o import
+      de `./simulador.mjs` desaparecer.
+
+4.5 — PROVA DE MUTAÇÃO (R16)
+--------------------------------------------------------------------------------
+PROCEDIMENTO: backup do módulo fora do repo → `sed` aplica a mutação → suíte
+corre → conta testes falhados → módulo restaurado do backup. No fim,
+`diff` confirma que o módulo ficou idêntico ao original.
+
+RONDA 1 — 7 mutantes, **2 SOBREVIVERAM**:
+  MORTO (8)  consecutivos ignorados (bónus da corrida em aberto = 0)
+  MORTO (2)  desempate não determinístico (remover localeCompare)
+  MORTO (2)  ranking 1-2-2-3 em vez de 1-2-2-4
+  MORTO (6)  filtro de repetidos neutralizado
+  MORTO (2)  endereço deixa de normalizar para minúsculas
+  ⚠️ VIVO    PONTOS_MENOR_UNICO: 3 → 0
+  ⚠️ VIVO    PONTOS_ACERTO_UNICO: 1 → 2
+
+DIAGNÓSTICO (é o achado mais importante deste segmento): baixar o bónus do
+menor lance único para ZERO deixava a suíte inteira verde. A causa não é
+cobertura — é que as asserções comparavam o resultado contra `REGRAS.*`, **a
+mesma constante que o código usa**. Os dois lados mudavam juntos. Era um teste
+que partilhava a premissa com o código, logo não testava a regra de negócio,
+apenas a coerência interna do módulo. Sem a prova de mutação, teria passado
+por suíte completa e verde.
+
+CORREÇÃO: três testes novos com os valores **em literal** (1 / 3 / 5 / 5 / 20),
+mais uma asserção de que `REGRAS` está congelado. O comentário desses testes
+explica porquê, para que ninguém os "simplifique" de volta para `REGRAS.*`.
+Se o MC95 ratificar outros números, estes testes falham de propósito — a
+alteração passa a ser consciente.
+
+RONDA 2 — 5 mutantes (os 2 sobreviventes + 3 novos), **TODOS MORTOS**:
+  MORTO (4)  PONTOS_MENOR_UNICO: 3 → 0
+  MORTO (4)  PONTOS_ACERTO_UNICO: 1 → 2
+  MORTO (4)  SENHAS_BONUS: 20 → 10
+  MORTO (8)  ACERTOS_PARA_BONUS: 5 → 3
+  MORTO (2)  REGRAS deixa de ser Object.freeze
+
+TOTAL: 12 mutantes aplicados, **12 mortos**. Módulo restaurado e verificado
+por `diff` (idêntico). Suíte final: 24/24 no ficheiro, 427/427 no conjunto.
+
+4.7 — L-4 · O QUE NÃO FOI MEDIDO
+--------------------------------------------------------------------------------
+N1 **Sem frontend** — a interface de ranking é o MC94. Nada foi visto a correr.
+N2 **Sem dados reais** — o motor foi exercido só com dados sintéticos. Não há
+   alternativa hoje: o leilão está travado (`EM_BREVE_MODE = true`;
+   `isLeilaoAtivo:{ios:false,android:false}`), logo não existem rodadas reais.
+   A suíte é a única prova de correcção que existe.
+N3 **Sem testes de carga** — não foi medido o custo de pontuar uma rodada
+   grande. `apurarMenorLanceUnico` é O(n) e o motor acrescenta O(n); mas isto é
+   leitura de código, não medição.
+N4 **Cobertura não medida** (4.3).
+N5 **Suíte de segurança não isolável** (4.2).
+N6 **Saldo de gas da EOA coordenadora** não consultado on-chain.
+N7 **Sem integração** — por decisão. O motor não tem chamador. Que funcione
+   ligado ao `consolidar-lances.mjs` é hipótese, não facto verificado.
+N8 **Valor vivo do Blob `config-experiencia:recursos_app`** continua por ler
+   (pendência herdada do MC00.0/N8). A afirmação de que o leilão está desligado
+   baseia-se no default do código.
+
+================================================================================
+FIM DO SEG4 (lado do Executor) · aguarda o relatório do Validador independente
+================================================================================
+
+================================================================================
+4.9 — ERRATA APÓS A VALIDAÇÃO INDEPENDENTE (acrescentado depois do relatório
+       do Validador; supersede 4.1, 4.4 e 4.5 acima)
+================================================================================
+O Validador correu 38 sondas próprias e 14 mutações diferentes das minhas.
+Veredito: APROVADO COM RESSALVAS. Verifiquei cada alegação grave eu mesmo,
+por execução, antes de aceitar. **Todas se confirmaram.** Seis defeitos reais
+em código escrito neste MC — corrigidos ao abrigo da R15.
+
+D1 ⛔ COERÇÃO DE `valorCentavos`. `Number.isInteger(Number(null))` é `true`,
+     porque `Number(null) === 0`. Verificado:
+       calcularPontosRodada([{endereco:A, valorCentavos:null}, …])
+       → [["0xaaa",{"pontos":4,"acertos":1,"menorUnico":true}]]
+     Um lance NULO era único, o mais baixo, e VENCEDOR — com 4 pontos.
+     O mesmo para "", false, [], "50", true, [4].
+     ⚠️ E tem caminho real: `_lib/data-store-supabase.mjs:117` grava
+       `valor_centavos = null` **de propósito** para marcar lance inválido.
+       Duas convenções opostas: o que um módulo marca como lixo, o outro
+       elegia como vencedor.
+     CAUSA RAIZ (medida, não suposta): `Number.isInteger` NÃO coage. O defeito
+     era inteiramente o `Number()` que eu lhe tinha posto à volta.
+     CORREÇÃO: guarda `lanceValido()` com `Number.isInteger` cru.
+
+D2 ⛔ ZERO E NEGATIVOS PONTUAVAM. `-5` rendia 4 pontos e ganhava a rodada,
+     contra o Art. XXIII (lance mínimo R$ 0,01). Verificado.
+     CORREÇÃO: `REGRAS.VALOR_MINIMO_CENTAVOS = 1` na mesma guarda.
+
+D3 ⛔ LANCE VÁLIDO SEM DONO ANULAVA O BÓNUS PARA TODOS. Verificado:
+       [{valorCentavos:10}, {endereco:B, valorCentavos:20}, …]
+       → B e C com 1 ponto cada; ninguém com o +3.
+     O lance sem endereço era eleito menor único e os 3 pontos evaporavam-se
+     em vez de passarem ao menor lance atribuível.
+     CORREÇÃO: sem endereço não é lance; a mesma guarda exclui-o ANTES da
+     apuração, logo o +3 passa ao seguinte.
+
+D4 ⛔ EXCEPÇÃO NO RANKING. `atualizarRanking(new Map([[42,{pontos:1}]]))`
+     → TypeError: a.endereco.localeCompare is not a function. Verificado.
+     O caminho do Map não normalizava nem filtrava; o da lista sim. Duas
+     políticas na mesma função.
+     CORREÇÃO: `normalizarPontuacoes` passou a ter uma porta só para os dois.
+
+D5 ⚠️ `detectarConsecutivos` FALHAVA ABERTO. `Boolean("sim")` é true, logo
+     `{acertou:"sim"}` pagava 20 senhas (R$ 40,00).
+     CORREÇÃO: `entrada?.acertou === true`. Quando a dúvida vale dinheiro, a
+     dúvida não paga.
+
+D6 ⚠️ O RANKING NÃO AGREGAVA: a mesma carteira ocupava duas posições.
+     CORREÇÃO: soma por endereço normalizado.
+
+D7 ⚠️ A MINHA ASSERÇÃO DE PUREZA ERA CEGA ATRAVÉS DO IMPORT. O teste "R1: é
+     PURO" é uma regex sobre o texto do próprio ficheiro — e `simulador.mjs`
+     importa `@netlify/blobs` (confirmado, linha 11). As funções não executam
+     I/O, mas carregar o módulo carrega o SDK dos Blobs.
+     E o teste "não duplicar" só verificava a LINHA de import: o Validador
+     apagou a chamada, reimplementou a lógica localmente, e a suíte ficou toda
+     verde.
+     CORREÇÃO: o teste passou a exigir a CHAMADA, não só o import; e há agora
+     um teste que fixa por escrito a dependência transitiva em vez de fingir
+     que não existe. Registado em docs/TORNEIO-HABILIDADE.md §5.
+
+RONDA 3 DE MUTAÇÃO — 13 mutantes (os 3 escapes do Validador + 4 sobre as
+guardas novas + 6 de regressão):
+  MORTO (4) M7  guarda de endereço removida        ← escape do Validador
+  MORTO (2) M8  endereço vazio aceite              ← escape do Validador
+  MORTO (2) M10 pontosAnteriores começa a 0        ← escape do Validador
+  MORTO (2) M13 VALOR_MINIMO 1 → 0
+  MORTO (2) M15 acerto volta a falhar-aberto
+  MORTO (2) M16 ranking deixa de agregar
+  MORTO (6) M1 · MORTO (6) M2 · MORTO (2) M4 · MORTO (2) M5 · MORTO (6) M6
+  MORTO (8) M2c
+  ⚠️ VIVO   M14 `typeof === "number"` → `true`
+       INVESTIGADO E CLASSIFICADO COMO **MUTANTE EQUIVALENTE**, por medição:
+       `Number.isInteger` é estrito para null/""/false/[]/"50"/true/[4]/0.5.
+       A verificação de tipo era redundante. **Removida** — código mais curto
+       com o mesmo comportamento, e o comentário passou a carregar a lição.
+
+ESTADO FINAL (verificado por execução, não por memória):
+  MC93 .................. 33/33 verdes  (eram 24; +9 dos defeitos acima)
+  SUÍTE COMPLETA ........ **436/436 verdes, 0 falhas** (baseline 403 + 33)
+  Ficheiros MODIFICADOS . **nenhum** — `git status --porcelain` sem linhas 'M'
+  Mutantes acumulados ... 25 aplicados · 24 mortos · 1 equivalente (removido)
+
+LIÇÃO QUE FICA: a minha primeira prova de mutação deu 12/12 mortos e eu dei o
+segmento por fechado. O Validador, com sondas que eu não tinha imaginado,
+encontrou seis defeitos reais — entre eles um lance nulo a ganhar a rodada.
+Uma prova de mutação só é tão boa quanto os mutantes que alguém se lembra de
+escrever; foi a independência que pagou, não o método.

@@ -1,0 +1,69 @@
+================================================================================
+MC93-A — SEG2 · EXECUÇÃO TDD (RED → GREEN → REFACTOR)
+DesafioGUT · Data: 2026-09-23
+Skills ECC: test-driven-development, systematic-debugging
+Invocação: cd desafio-gut/frontend/netlify/functions
+           node --test --experimental-test-module-mocks _tests/mc93-pontuacao.test.mjs
+================================================================================
+
+2.1 — RED
+--------------------------------------------------------------------------------
+Testes escritos ANTES do módulo. Execução:
+
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module
+    '...\netlify\functions\_lib\pontuacao-utils.mjs'
+    imported from '...\netlify\functions\_tests\mc93-pontuacao.test.mjs'
+  ℹ tests 1 · pass 0 · fail 1
+
+✅ RED pelo motivo CERTO: falha por o módulo não existir, não por erro de teste.
+
+2.2 — GREEN (2 iterações do Boulder Loop)
+--------------------------------------------------------------------------------
+ITERAÇÃO 1 — 20/21. Uma falha:
+
+  ✖ R1: pontuacao-utils é PURO — sem I/O, sem rede, sem on-chain
+    AssertionError: o motor de pontuação não pode tocar em ambiente
+    expected: /process\.env/  operator: 'doesNotMatch'
+
+CAUSA (systematic-debugging, sem adivinhar): o módulo NÃO usa `process.env`.
+O que casou foi a **linha 15 do próprio comentário de cabeçalho**, que explica
+a proibição: *"…falha se alguém importar Blobs, Supabase, ethers, fetch, fs ou
+process.env aqui dentro."* A asserção de estrutura lia o ficheiro inteiro —
+prosa incluída.
+
+DECISÃO: corrigir o TESTE, não o comentário. Reescrever o comentário fazia o
+verde aparecer e deixava a armadilha montada: qualquer futura linha de prosa a
+nomear uma das seis proibições voltaria a partir a suíte. Um teste de estrutura
+que tropeça em texto é um gerador de falsos positivos.
+
+CORREÇÃO: adoptada a convenção que o projeto já tem em
+`_tests/mc8843-estado-edicao.test.mjs:33` — `semComentarios(src)`, que filtra
+linhas iniciadas por `//`, `*` ou `/*` antes de casar os padrões. As duas
+asserções de estrutura passaram a usar `lerModulo()`.
+
+ITERAÇÃO 2 — ℹ tests 21 · pass 21 · fail 0  ✅ GREEN
+
+2.3 — REFACTOR
+--------------------------------------------------------------------------------
+Nenhuma refactoração de código foi necessária: o módulo nasceu com as funções
+auxiliares já extraídas (`normalizarEndereco`, `contarPorValor`, `leuAcerto`,
+`normalizarPontuacoes`).
+
+⚠️ `ruff check --diff` (pedido pelo enunciado em 2.3) **não se aplica** — é
+ferramenta de Python; este backend é ES Modules. O lint do projeto é `eslint`.
+Declarado no SEG-1 (premissa P8, refutada).
+
+APÓS O SEG4: o ficheiro de teste cresceu de 21 para 24 testes, porque a prova
+de mutação expôs uma família inteira de asserções fracas. Ver o log do SEG4.
+
+2.4 — ESTADO FINAL DO SEG2
+--------------------------------------------------------------------------------
+  Ficheiros criados (2, ambos autorizados):
+    netlify/functions/_lib/pontuacao-utils.mjs        (motor puro)
+    netlify/functions/_tests/mc93-pontuacao.test.mjs  (24 testes)
+  Ficheiros modificados: **NENHUM**.
+  Boulder Loop: 2 iterações de 3.
+
+================================================================================
+FIM DO SEG2
+================================================================================
