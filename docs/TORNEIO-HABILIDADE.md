@@ -1,6 +1,6 @@
 # Torneio de habilidade — especificação do motor de pontuação
 
-> **Origem:** MC93-A (motor puro) + MC93-B (persistência, endpoints, integração), 2026-09-23/24.
+> **Origem:** MC93-A (motor puro) + MC93-B (persistência, endpoints) + MC93-C (liquidação do bónus), 2026-09-23/24.
 > **Estado:** implementado e testado. ⚠️ **A migração SQL ainda NÃO foi aplicada** e a
 > **emissão on-chain do bónus continua por fazer** — ambas dependem do operador.
 > **Código:** `_lib/pontuacao-utils.mjs` (motor) · `_lib/pontuacao-store.mjs` (persistência) ·
@@ -204,6 +204,154 @@ Em `consolidar-lances.mjs`, **depois do recibo confirmado** e **antes de
 > *(Uma versão anterior desta secção afirmava que a edição ficava por marcar e
 > que a repetição resolvia sozinha. Era falso — o `catch` impede-o. Corrigido
 > depois de a validação independente o apanhar.)*
+
+---
+
+## 4c. Liquidação do bónus — e como se activa (MC93-C)
+
+> **Estado hoje: DRY-RUN.** O handler existe, está registado na fila e corre de
+> 5 em 5 minutos — e **não emite nada**. Confirmado por execução:
+> com uma dívida perfeita em aberto, a decisão é `{"emitir":false,"motivo":"flag_desligada"}`.
+
+### Quem faz o quê
+
+```
+pontuacao-store.mjs          fila_tarefas              worker-bonus.mjs
+  completa 5 acertos    →    "creditar-senhas-bonus"  →  cron */5
+  grava a DÍVIDA             (payload é uma PISTA)       lê a dívida no
+  liquidado_em = NULL                                    LIVRO-RAZÃO
+                                                              ↓
+                                                      podeEmitir(3 condições)
+                                                              ↓
+                                                    RECLAMAR → CREDITAR
+```
+
+Antes deste MC o tipo `creditar-senhas-bonus` **não tinha handler**: a tarefa
+esgotava 5 tentativas com backoff exponencial e caía na DLQ. Era a ressalva nº 2
+do MC93-B.
+
+### Três condições, não uma
+
+O MC pedia "wire-up desligado por default" através de uma flag. Uma flag sozinha
+é **fail-open por omissão de disciplina**: basta alguém pôr
+`BONUS_EMISSAO_ATIVA=true` no painel do Netlify para o sistema começar a emitir
+R$ 40,00 por sequência, sem mais barreira nenhuma. Por isso exige-se, em
+simultâneo:
+
+| # | Condição | Porquê |
+|---|---|---|
+| 1 | `BONUS_EMISSAO_ATIVA === "true"` (string exacta) | o interruptor do operador. `"1"`, `"sim"`, `"TRUE"` **não** contam |
+| 2 | dívida existe e `liquidado_em IS NULL` em `rankings_ciclo` | a idempotência ancora no **livro-razão**, não na fila: uma tarefa pode ser reprocessada, o registo é que é a verdade |
+| 3 | payload coincide com o livro-razão em ciclo, endereço e quantidade | um payload divergente é **recusado**, nunca "ajustado" — divergir já é sinal de problema |
+
+A quantidade emitida vem sempre do **livro-razão**, nunca do payload.
+
+### Reclamar antes de creditar
+
+```
+UPDATE rankings_ciclo
+   SET liquidado_em = now()
+ WHERE ciclo_id = $1 AND endereco = $2 AND liquidado_em IS NULL
+RETURNING *
+```
+
+Só uma execução afecta linha. Se o `RETURNING` vier vazio, outra já reclamou e
+o handler sai **sem creditar**.
+
+> ⚠️ No cliente isto escreve-se `.is("liquidado_em", null)` — **nunca** `.eq()`.
+> O postgrest-js traduz `.eq(col, null)` para `col=eq.null`, que o PostgREST
+> rejeita numa coluna TIMESTAMPTZ com HTTP 400 (`22007`). A primeira versão do
+> handler usava `.eq()`: o compare-and-set **não existia** e, com a flag ligada,
+> teria falhado em 100% das execuções. Há um teste que exige `.is()` e um duplo
+> que rebenta se alguém voltar a `.eq(col, null)`.
+
+É a disciplina do `_lib/worker-credito.mjs` ("CLAIM ANTES do reembolso"): grava-se
+o marcador antes de mover dinheiro, para que um processo que morra a meio nunca
+pague duas vezes. **Entre pagar a dobrar e pagar a menos, escolhe-se pagar a
+menos** — o excesso é irreversível on-chain; a falta reconcilia-se à mão.
+
+⚠️ Se o crédito on-chain falhar, a reclamação **não é desfeita**: a tx pode ter
+sido submetida e ter falhado só a confirmação, e reabrir a dívida criaria a
+janela de pagamento duplo. Sai um alerta `error`
+(`worker_bonus_credito_falhou`) para reconciliação manual.
+
+### Em dry-run, o handler NÃO lança
+
+Termina em silêncio e a tarefa fica `done`. Lançar faria a fila re-enfileirar
+com backoff e, ao fim de 5 tentativas, encher a DLQ de tarefas que só estão à
+espera de uma decisão — que é precisamente o problema que este MC veio resolver.
+
+### Caminho de activação — três passos, todos do operador
+
+1. **Aplicar a migração** `20260923_mc93b_pontuacoes.sql`. Sem ela as tabelas
+   não existem e nada disto funciona (a leitura da dívida falha).
+2. **Reativar a R2** com autorização de custo explícita: cada liquidação são
+   20 senhas × R$ 2,00 = **R$ 40,00**, mais gas na mainnet. Confirmar que a EOA
+   coordenadora tem saldo.
+3. **Definir `BONUS_EMISSAO_ATIVA=true`** no contexto certo do Netlify
+   (⚠️ o env é **por contexto**: `production` ≠ `deploy-preview`).
+
+Antes do passo 3, vale correr uma consulta de controlo — quanto se vai emitir:
+
+```sql
+SELECT count(*) AS dividas, sum(senhas_a_creditar) AS senhas,
+       sum(senhas_a_creditar) * 2.00 AS reais
+  FROM rankings_ciclo
+ WHERE liquidado_em IS NULL AND senhas_a_creditar > 0;
+```
+
+### ⛔ Bloqueador: a dívida órfã
+
+Em dry-run o handler consome a tarefa (fica `done`) **sem liquidar a dívida**.
+E `enfileirar` só corre dentro do compare-and-set que transita `bonus_emitido`
+de `false` para `true` — ou seja, **uma dívida só gera tarefa uma vez, no
+instante em que nasce**.
+
+Consequência: toda a dívida criada enquanto a flag estiver desligada fica
+**permanentemente fora do alcance da fila**. Quando o operador ligar a emissão,
+essas dívidas antigas não são pagas por ninguém — não há sweeper, não há
+backfill, não há runbook. Achado da validação independente (MC93-C, Validador B).
+
+**Antes de ligar a flag, é preciso re-enfileirar o que está em aberto.** A
+consulta que as identifica:
+
+```sql
+SELECT ciclo_id, endereco, senhas_a_creditar
+  FROM rankings_ciclo
+ WHERE bonus_emitido = true
+   AND liquidado_em IS NULL
+   AND senhas_a_creditar > 0;
+```
+
+Para cada linha, uma tarefa `creditar-senhas-bonus` com
+`{ cicloId, endereco, quantidade }`. Re-enfileirar é seguro: o handler valida
+contra o livro-razão e o compare-and-set impede pagamento duplo.
+
+⚠️ **Não está implementado.** É a primeira coisa a fazer no MC seguinte, antes
+de qualquer activação.
+
+### Outros pontos em aberto (validação independente)
+
+- **`txHash` não é persistido.** Se o processo morrer entre a reclamação e a
+  confirmação, não há prova de que a transação foi submetida — a reconciliação
+  manual fica sem âncora.
+- **`err.code` é descartado** no `catch`: uma tx revertida (`TX_REVERTED`) é
+  tratada como qualquer outra falha e a dívida fica marcada como liquidada
+  sem o ter sido.
+- **`GET /ranking` é público** e, desde que se passou a gravar uma linha por
+  participante (MC93-B), enumera e posiciona **todas as carteiras que
+  licitaram** — o que enfraquece a razão declarada do anti-IDOR do `/feedback`.
+  Decidir se o placar deve mostrar endereços completos ou mascarados.
+- **A migração SQL tem cobertura de teste zero** — CHECKs, RLS e GRANTs só
+  podem ser exercidos contra um PostgreSQL real.
+
+### O que NÃO está feito
+
+- **Não há limite global de emissão.** O limite é 1 bónus por ciclo por
+  participante; nada trava o total. Com muitos ciclos, o custo acumula.
+- **Não há notificação** ao operador quando se acumula dívida por liquidar
+  (`_lib/notificacoes-usuario.mjs` está reservado ao bloco B2 do MC00.0).
+- **Nada foi exercido contra o Supabase real nem contra a mainnet.**
 
 ---
 

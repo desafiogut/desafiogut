@@ -1,0 +1,89 @@
+================================================================================
+MC93-C — SEG1 (plano) · SEG2 (TDD) · SEG3 (integração)
+DesafioGUT · Data: 2026-09-24
+Skills ECC: make-plan, brainstorming, caveman · test-driven-development,
+            systematic-debugging
+Consolidados num só ficheiro: os três segmentos correram sem iteração entre
+eles, e separá-los produziria três documentos a repetir o mesmo contexto.
+================================================================================
+
+SEG1 — PLANEAMENTO
+================================================================================
+1.1/1.2 ARQUITECTURA (ajustada pelo SEG-1 e autorizada pelo operador)
+  `_lib/bonus-emissao.mjs`  — decisão PURA, sem I/O:
+      podeEmitir({flagAtiva, divida, payload}) → {emitir, motivo, quantidade}
+      emissaoArmada(env)  → lê BONUS_EMISSAO_ATIVA === "true"
+      MOTIVOS (congelado) — vocabulário de recusa para os logs
+  `_lib/worker-bonus.mjs`   — handler da fila:
+      creditarSenhasBonus(payload) → void
+  ⚠️ NÃO em `netlify/functions/` (seria endpoint HTTP público que emite
+    senhas — SEG-1/R1). Decisão do operador: Opção A.
+
+  TRÊS CONDIÇÕES, NÃO UMA (justificação em SEG-1 §-1.2): a flag sozinha é
+  fail-OPEN por omissão de disciplina. Exige-se em simultâneo: (1) flag ligada;
+  (2) dívida existente e por liquidar no LIVRO-RAZÃO; (3) payload coincidente
+  em alvo e quantidade.
+
+1.3 AJUSTE AO `pontuacao-store.mjs` — **NO-OP**, o tipo já está correcto.
+
+1.4 PLANO DE VALIDAÇÃO DUPLA
+  Validador A → as 6 correcções do MC93-B (diff de `3dabb10`).
+  Validador B → o handler novo.
+  Despachados em separado, com contexto próprio, sem ver o output um do outro.
+  O mandato de B diz-lhe explicitamente para não tocar nos ficheiros de A.
+
+SEG2 — TDD
+================================================================================
+2.1 RED (duas vezes, pelo motivo certo)
+  `_tests/mc93c-fila-bonus.test.mjs`:
+     Cannot find module '…/_lib/bonus-emissao.mjs'   → tests 1 · pass 0 · fail 1
+  `_tests/mc93c-validacao-b.test.mjs`:
+     Cannot find module '…/_lib/worker-bonus.mjs'    → tests 1 · pass 0 · fail 1
+
+2.2 GREEN
+  `_lib/bonus-emissao.mjs`  → 12/12 à primeira
+  `_lib/worker-bonus.mjs`   → 11/11 à primeira
+  (Boulder Loop: 0 iterações. "À primeira" não é garantia — ver a mutação.)
+
+2.3 REFACTOR
+  Nenhuma necessária. ⚠️ `eslint --fix` não foi corrido como passo separado: o
+  eslint do projeto está configurado no frontend, não nas funções Netlify.
+  Declarado em vez de simulado.
+
+SEG3 — INTEGRAÇÃO
+================================================================================
+3.1 REGISTO NO MAPA DA FILA — a linha que fecha a ressalva nº 2 do MC93-B
+  `fila-processor-scheduled.mjs`:
+      + import { creditarSenhasBonus } from "./_lib/worker-bonus.mjs";
+      +   "creditar-senhas-bonus": creditarSenhasBonus,
+  ⚠️ Ficheiro fora da lista de autorizações original. Autorizado pelo operador
+  (R18, Opção A), porque sem esta linha o handler é inalcançável e o MC
+  entregaria exactamente o defeito que vem corrigir.
+  Verificado: `import("./_lib/worker-bonus.mjs")` resolve e exporta
+  `creditarSenhasBonus`; o cron existente não parte.
+
+3.2 DRY-RUN CONFIRMADO **POR EXECUÇÃO**, não por leitura
+  $ node --input-type=module -e '…'
+      BONUS_EMISSAO_ATIVA no ambiente = undefined
+      emissaoArmada() = false
+      decisão com dívida PERFEITA em aberto:
+        {"emitir":false,"motivo":"flag_desligada","quantidade":0}
+  ⇒ Mesmo com tudo o resto a favor, não emite. É o estado de produção hoje.
+
+3.3 R19 — NÃO ATIVADA
+  O SEG3.3 pergunta se o `GET /feedback` precisa de expor o estado do bónus.
+  **Já expõe**, desde o MC93-B: `bonusEmitido`, `senhasACreditar`, `liquidado`.
+  Nada a fazer; declarado para não inventar trabalho.
+
+3.4 ORDEM DAS OPERAÇÕES NO HANDLER — a decisão que mais importa
+  ler dívida → decidir → **RECLAMAR** (compare-and-set) → **CREDITAR** → log
+  Reclamar primeiro é a disciplina do `worker-credito` ("CLAIM ANTES do
+  reembolso"). Entre pagar a dobrar e pagar a menos, escolhe-se pagar a menos:
+  o excesso é irreversível on-chain; a falta reconcilia-se à mão.
+  Se o crédito falhar, a reclamação **NÃO é desfeita** — desfazê-la reabriria a
+  janela de pagamento duplo, porque a tx pode ter sido submetida e ter falhado
+  só a confirmação. Vai alerta `error` para reconciliação manual.
+
+================================================================================
+FIM DOS SEG1/SEG2/SEG3
+================================================================================

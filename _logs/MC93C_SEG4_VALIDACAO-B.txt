@@ -1,0 +1,501 @@
+================================================================================
+MC93-C — SEG4 · VALIDAÇÃO INDEPENDENTE B (papel RUFLO)
+DesafioGUT · Handler de fila do bónus do torneio + módulo de decisão
+Papel: VALIDADOR B · Data: 2026-09-24
+Base: main @ 3dabb10 · Mandato: só o handler novo (bonus-emissao, worker-bonus,
+      os 2 testes mc93c-*, e o registo em fila-processor-scheduled.mjs)
+Não visto: o raciocínio de quem escreveu o código. Zero ficheiros do projeto
+      alterados por mim (mutações aplicadas e restauradas, md5 conferido).
+================================================================================
+
+                  >>> VEREDITO FINAL: REPROVADO <<<
+
+   A trava de emissão é sólida e fail-closed (B1 PASSOU). O que está errado é a
+   mecânica: `.eq("liquidado_em", null)` NÃO se traduz em `IS NULL` no PostgREST.
+   Traduz-se em `liquidado_em = 'null'`, que a base recusa com o erro 22007.
+   Consequência: **o compare-and-set que protege contra pagamento duplo não
+   existe**, e no dia em que a flag ligar o handler falha em 100% das execuções,
+   nunca credita nada, e enche a DLQ — exactamente a ressalva nº 2 do MC93-B que
+   este MC vem fechar. Provado contra o PostgREST REAL deste projeto.
+   ⚠️ E a suíte de testes PINA O DEFEITO: corrigir o código para `.is(..., null)`
+   faz 6 testes FALHAREM. Um teste que mata a correcção não é rede, é âncora.
+
+   Falha fechada (nada é emitido sem autorização), logo não há risco financeiro
+   imediato. Mas o MC não entrega o que diz entregar.
+
+================================================================================
+NÚMEROS REAIS (medidos, não citados)
+================================================================================
+Comando do mandato, corrido em `desafio-gut/frontend/netlify/functions`:
+  node --test --experimental-test-module-mocks "_tests/mc93c-*.test.mjs"
+  → tests 24 · pass 24 · fail 0 · duration_ms 191,0
+
+Estado da base (MCP Supabase, leitura):
+  rankings_ciclo  existe = FALSE      pontuacoes existe = FALSE
+  fila_tarefas    existe = TRUE       (5 linhas, todas `confirmar-credito-senhas`
+                                       com status `done`; ZERO tarefas de bónus)
+Fins de linha: os 4 ficheiros NOVOS são LF puro (CR=0);
+  `fila-processor-scheduled.mjs` é CRLF (CR=43, LF=43). Convenção mista no mesmo MC.
+
+================================================================================
+B1 — A TRAVA É MESMO FAIL-CLOSED?  ▸ VEREDITO: PASSOU
+================================================================================
+Tentei fazer o sistema emitir sem querer. Sonda executada sobre o módulo real
+(`podeEmitir`, `emissaoArmada`), não por leitura. Resultados por execução:
+
+CAMINHO ÚNICO — confirmado por varredura
+  `creditarSenhas` só é chamado em `_lib/worker-bonus.mjs:94`, dentro do bloco
+  que só se alcança depois de (a) `if (!decisao.emitir) return;` e (b) o claim
+  devolver ≥1 linha. Não existe segundo caminho. Os outros chamadores de
+  `creditarSenhas` no repo são pré-existentes (comprar-senhas, troco, referral,
+  _lib/credito) e não foram tocados.
+
+COERÇÃO — tudo recusado (0 emissões indevidas)
+  flagAtiva ∈ {1, "true", new Boolean(true), {valueOf:()=>true}} → flag_desligada
+  bonus_emitido ∈ {"true", 1, "1", [], {}}                       → sem_divida
+  senhas_a_creditar ∈ {"20", 20.5, true, [20], {}, Infinity}     → sem_divida
+  senhas_a_creditar ∈ {1e21, 2**53}  → quantidade_divergente (a 3ª perna apanha)
+  liquidado_em ∈ {0, "", false, NaN, -0, 0n}                     → ja_liquidada
+    ↳ nota: todos os falsy que NÃO são null/undefined são tratados como
+      "já liquidada", isto é, RECUSAM. É a direcção certa.
+
+UMA ENTRADA ESTRANHA QUE EMITE (⚠️ latente, sem caminho vivo)
+  `liquidado_em` AUSENTE do objecto (a chave não existe) → EMITE.
+  O código aceita `undefined` como "não liquidada". Hoje é inofensivo porque
+  `worker-bonus` lê com `.select("*")` e a coluna vem sempre. Mas basta alguém
+  estreitar esse select (optimização trivial e apetecível) para a ausência da
+  coluna passar a valer autorização de pagamento. Recomendo exigir presença:
+  `if (!("liquidado_em" in divida) || divida.liquidado_em !== null) return ...`.
+
+PROXY / GETTERS — TOCTOU real na quantidade
+  `divida` como Proxy permissivo → EMITE (esperado: o Proxy mente em tudo).
+  Mais interessante: `senhas_a_creditar` como GETTER que devolve 20 nas três
+  primeiras leituras e 1.000.000 na quarta →
+      { emitir: true, quantidade: 1000000 }
+  `podeEmitir` lê `divida.senhas_a_creditar` quatro vezes e devolve a ÚLTIMA
+  leitura sem a reconfrontar com `REGRAS.SENHAS_BONUS`. `worker-bonus` passa
+  esse número directamente a `creditarSenhas`. Sem caminho vivo (o Supabase
+  devolve JSON simples, sem getters), mas fecha-se com uma linha:
+  `return { emitir: true, quantidade: REGRAS.SENHAS_BONUS };` — ou um
+  `if (q !== REGRAS.SENHAS_BONUS) return recusa(...)` antes do return.
+
+PROTÓTIPO POLUÍDO — a flag NÃO é imune
+  Com `Object.prototype.{flagAtiva,bonus_emitido,senhas_a_creditar,liquidado_em,
+  ciclo_id,endereco,cicloId,quantidade}` definidos:
+      podeEmitir({ divida:{}, payload:{} })  → EMITE
+  E, pior, a leitura do ambiente também atravessa o protótipo:
+      Object.prototype.BONUS_EMISSAO_ATIVA = "true";
+      emissaoArmada()  // lê process.env  → TRUE
+  Não conheço sink de prototype-pollution neste repo, logo classifico como
+  INFORMATIVO. Mitigação de 1 linha se se quiser: `Object.hasOwn(env, FLAG)`.
+
+`Object.freeze(MOTIVOS)` — PROTEGE, MAS NÃO PROTEGE DINHEIRO
+  Verificado: `Object.isFrozen(MOTIVOS) === true`; escrita e `delete` lançam
+  TypeError (módulo ESM = strict) e o valor mantém-se `flag_desligada`. Logo, sim,
+  o freeze é efectivo. Mas o que ele protege é um RÓTULO DE DIAGNÓSTICO: `MOTIVOS`
+  só é usado (i) no valor devolvido e (ii) em `worker-bonus.mjs:78` para escolher
+  entre `console.info` e `console.warn`. Nenhuma decisão de emissão depende dele.
+  O freeze que é financeiramente load-bearing é o de `REGRAS` (verificado:
+  `Object.isFrozen(REGRAS) === true`) — é lá que vive `SENHAS_BONUS: 20`.
+
+Conclusão B1: não encontrei caminho vivo que emita sem as três condições. A trava
+é genuinamente fail-closed e resiste a coerção. Os três achados acima são
+endurecimento, não brechas exploráveis hoje.
+
+================================================================================
+B2 — ORDEM E IDEMPOTÊNCIA  ▸ VEREDITO: FALHOU (defeito P0)
+================================================================================
+
+B2.1 — `.eq("liquidado_em", null)` traduz-se em `IS NULL`?  **NÃO.**
+       Três provas independentes, todas por execução.
+
+PROVA 1 — a fonte instalada do postgrest-js (v2.108.2)
+  node_modules/@supabase/postgrest-js/src/PostgrestFilterBuilder.ts:195
+      this.url.searchParams.append(column as string, `eq.${value}`)
+  Não há tratamento especial de `null`. E o próprio ficheiro documenta o contrário
+  do que o handler faz, em :712-715:
+      "Using the `eq()` filter doesn't work when filtering for `null`.
+       Instead, you need to use `is()`."
+  O tipo do argumento é `NonNullable<...>` — `null` não é nem um valor válido de
+  `eq` na API tipada. Em `.mjs` não há verificação de tipos, por isso passa.
+
+PROVA 2 — o URL que sai no wire (sonda com `fetch` capturado, cliente real)
+  Reproduzi exactamente a cadeia de `worker-bonus.mjs`:
+    PATCH …/rankings_ciclo?ciclo_id=eq.R-1&endereco=eq.0xaaa&liquidado_em=eq.null&select=*
+  E, para comparar, a versão com `.is()`:
+    PATCH …/rankings_ciclo?ciclo_id=eq.R-1&liquidado_em=is.null&select=*
+  São filtros DIFERENTES. `eq.null` não é `is.null`.
+
+PROVA 3 — o PostgREST REAL deste projeto responde (GET, só leitura, numa tabela
+  com uma coluna TIMESTAMPTZ nullable — `usuarios_bloqueio.desbloqueado_em`)
+    ?desbloqueado_em=eq.null → HTTP 400
+        {"code":"22007","message":"invalid input syntax for type timestamp with
+          time zone: \"null\""}
+    ?desbloqueado_em=is.null → HTTP 200  []
+  E a raiz, no próprio Postgres (MCP, `SELECT 'null'::timestamptz`):
+        ERROR: 22007: invalid input syntax for type timestamp with time zone: "null"
+  `rankings_ciclo.liquidado_em` é TIMESTAMPTZ (migração 20260923, linha "liquidado_em
+  TIMESTAMPTZ"). Portanto o claim do handler produzirá SEMPRE 22007.
+
+O QUE ISSO CAUSA, linha a linha (`_lib/worker-bonus.mjs:81-90`)
+  `erroClaim` vem preenchido → `throw new Error("[worker-bonus] reclamar dívida:
+  invalid input syntax …")` → `processarLote` apanha (`_lib/fila.mjs:66`) → grava
+  `status:"failed"` com backoff → ao esgotar `max_tentativas` (5) a RPC deixa de
+  reservar → **DLQ**. Nunca credita. Nunca marca liquidado.
+  ⇒ A ressalva nº 2 do MC93-B (tarefa esgota tentativas e cai na DLQ) **não é
+    fechada** por este MC no cenário "flag ligada": só muda a mensagem de erro
+    de «sem handler para tipo» para «ler/reclamar dívida».
+  ⇒ E, sobretudo: **o compare-and-set anunciado como a trava de concorrência
+    nunca é avaliado pela base.** A propriedade "só uma execução passa daqui"
+    não está implementada. Hoje não paga a dobrar porque não paga nada.
+
+  A spec do MC (docs/TORNEIO-HABILIDADE.md:250-255) escreve o SQL CORRECTO
+  (`WHERE … AND liquidado_em IS NULL RETURNING *`). O código não o implementa.
+  A divergência é entre a spec e o código, e a spec é que está certa.
+
+  CORRECÇÃO: `.eq("liquidado_em", null)` → `.is("liquidado_em", null)`.
+  NÃO VERIFICADO: que o PATCH falhe atomicamente sem escrever. Não o testei por
+  não fazer escritas em produção. É o comportamento esperado (o erro de coerção
+  aborta a instrução; o PostgREST faz ROLLBACK da transação do pedido), mas
+  fica declarado como não medido.
+
+B2.2 — Morte do processo ENTRE o claim e o crédito
+  A ordem está certa e é a do `worker-credito` (verificado por teste: a mutação
+  "creditar antes de reclamar" é apanhada pela asserção `deepEqual(ordem,
+  ["reclamar","creditar"])`). A escolha "pagar a menos" está correcta e assumida.
+  MAS falta-lhe o instrumento de reconciliação:
+    • a linha grava `liquidado_em` e NADA MAIS — não há coluna nem registo do
+      `txHash`. Depois de uma morte a meio, ninguém consegue distinguir, a partir
+      da base, «liquidada e paga» de «liquidada e não paga». O `txHash` só vai
+      para o `console.info`, que não é livro-razão;
+    • se o processo é MORTO (timeout/OOM da função), não há alerta nenhum — o
+      `captureSecurityAlert` só dispara quando `creditarSenhas` LANÇA;
+    • a segunda passagem da tarefa encontra `liquidado_em` preenchido e sai em
+      "já reclamada — no-op", em silêncio. A perda é silenciosa.
+  Recomendo persistir o txHash (coluna nova ou tabela de liquidações) antes de
+  ligar a flag.
+
+B2.3 — `creditarSenhas` submete a tx e falha só a confirmação
+  `_lib/contract.mjs:177-210` distingue três estados e anexa dados estruturados:
+  `err.code = "TX_REVERTED" | "TX_PENDENTE"` e `err.txHash`. O handler descarta
+  ambos: o alerta leva só `String(err?.message).slice(0,300)`. Duas consequências:
+    • TX_REVERTED é o caso em que se SABE com certeza que nada foi creditado —
+      reabrir a dívida seria seguro e correcto. O handler trata-o como se fosse
+      pendente e deixa a dívida marcada como liquidada para sempre. O
+      `worker-credito`, no mesmo cenário, reembolsa. Assimetria não justificada;
+    • `err.code` desaparece, logo nenhuma automação futura pode separar os casos.
+  (O txHash sobrevive por acidente, dentro do texto da mensagem.)
+
+B2.4 — O duplo de Supabase é fiel ao PostgREST real?  **NÃO. É mais permissivo em
+       quatro pontos, e o primeiro é precisamente onde está o defeito.**
+  `_tests/mc93c-validacao-b.test.mjs:47-51`:
+      const podia = !estado.claimVazio && estado.divida
+        && (st.filtros.liquidado_em === undefined
+          || estado.divida.liquidado_em === st.filtros.liquidado_em);
+  (1) O duplo implementa `eq(col, null)` com a IGUUALDADE ESTRITA DO JAVASCRIPT,
+      onde `null === null` é verdade. Assim `eq.null` "funciona" e coincide com
+      `IS NULL` — o PostgREST real recusa com 22007. É este ponto de permissividade
+      que esconde o defeito P0. É a lição do MC93-B repetida: «um duplo que aceita
+      mais do que o original esconde o defeito que devia apanhar».
+  (2) `maybeSingle()` IGNORA TODOS os filtros: devolve `estado.divida` seja qual
+      for o `ciclo_id`/`endereco`. Nenhum teste pode detectar a perda desses
+      filtros na leitura (ver M8 em B4).
+  (3) `eq(c,v)` faz `st.filtros[c]=v`: filtros repetidos sobrepõem-se em vez de
+      se conjugarem, e filtros AUSENTES são indistinguíveis de filtros presentes
+      no cálculo de `podia` (que só consulta `liquidado_em`). Daí M6 e M7.
+  (4) Não modela erro nenhum: `error` é sempre `null`. Os dois `if (error) throw`
+      do handler — incluindo o caminho 22007 real e o PGRST205 de hoje — nunca
+      são exercidos.
+
+================================================================================
+B3 — COMPORTAMENTO NA FILA  ▸ VEREDITO: AMBÍGUO (com uma ressalva bloqueante)
+================================================================================
+
+B3.1 — Em dry-run o handler devolve void → a tarefa fica `done`. Certo?
+  A FAVOR de não lançar (o argumento do autor, e é bom):
+    lançar faz `processarLote` gravar `failed` + backoff; 5 tentativas depois a
+    tarefa fica na DLQ à espera de uma decisão humana. Enche a DLQ de ruído que
+    não representa avaria. E o livro-razão é a verdade: a dívida sobrevive em
+    `rankings_ciclo` com `liquidado_em IS NULL`, e a migração até criou o índice
+    parcial `idx_rankings_ciclo_por_liquidar` exactamente para a encontrar.
+  CONTRA (e é o que decide):
+    `done` consome o ÚNICO gatilho que existe. Verifiquei por varredura: o tipo
+    `creditar-senhas-bonus` é enfileirado num só lugar,
+    `_lib/pontuacao-store.mjs:163`, e só quando `reclamarBonus` devolve verdade —
+    e `reclamarBonus` é um compare-and-set `.eq("bonus_emitido", false)`
+    (`:211`). Depois de a linha ter `bonus_emitido = true`, **nenhum caminho do
+    sistema volta a enfileirar essa dívida.** Repontuar com `POST /pontuacao` não
+    o faz (é idempotente e preserva o bónus). Não existe endpoint de backfill,
+    nem sweeper, nem script.
+    ⇒ Tudo o que for consumido em dry-run fica PERMANENTEMENTE inalcançável pela
+      fila. Quando o operador ligar a flag, as dívidas antigas não são pagas: a
+      fila está vazia e ninguém a reabastece. A secção de activação da spec
+      (§«Caminho de activação», 3 passos) não cobre este passo, e a secção «O que
+      NÃO está feito» também não o menciona.
+  VEREDITO: **não lançar está certo; ficar `done` sem rede de recuperação está
+  errado como entregue.** Bastava uma das três: (a) um sweeper agendado sobre o
+  índice parcial que já existe; (b) um endpoint admin de backfill; (c) no mínimo,
+  um runbook SQL explícito na spec, antes do passo 3 da activação.
+  Hoje o dano é nulo (a tabela não existe, não há dívidas), mas a ordem dos
+  passos do operador — migração → dívidas acumulam em dry-run → flag — produz
+  exactamente esta perda.
+
+B3.2 — Com `rankings_ciclo` inexistente (o estado de HOJE), o que acontece?
+  Medido contra o PostgREST real:
+    GET /rest/v1/rankings_ciclo?select=*&ciclo_id=eq.R-1
+    → HTTP 404 {"code":"PGRST205","message":"Could not find the table
+        'public.rankings_ciclo' in the schema cache"}
+  No handler (`worker-bonus.mjs:60`): `if (error) throw` → `processarLote` grava
+  `failed` + backoff → 5 tentativas → **DLQ**. Não é silêncio; não é inerte.
+  Ironia registada: `_lib/fila.mjs:17` já tem `pareceTabelaAusente()`, que casa
+  com /schema cache/i — mas só é aplicado à RPC `reservar_tarefas`, nunca aos
+  erros dos handlers. O handler novo podia ter usado a mesma noção de "inerte" e
+  não usou.
+  ⚠️ Efeito prático HOJE = ZERO, e por uma razão que convém dizer: sem as tabelas,
+  `pontuacao-store` também não consegue gravar nada, logo NENHUMA tarefa de bónus
+  é produzida. Confirmado na fila real: `fila_tarefas` tem 5 linhas, todas
+  `confirmar-credito-senhas` / `done`. A avaria só se materializa no instante em
+  que o operador aplicar a migração.
+
+B3.3 — O registo novo pode partir o cron existente?  **NÃO.**
+  Importei o módulo de verdade:
+    import('./fila-processor-scheduled.mjs') → OK; exports ['handler'];
+    typeof handler === 'function'
+  O único risco seria um throw em tempo de import; não há. As dependências novas
+  (`contract.mjs`, `supabase-client.mjs`, `sentry-server.mjs`, `validate.mjs`)
+  já eram todas importadas pelo `worker-credito`, que vive no mesmo grafo.
+  O diff é aditivo: 1 import + 1 chave no mapa; a chave antiga
+  `"confirmar-credito-senhas"` está intacta.
+
+  BÓNUS de verificação (a R1 do SEG-1 estava certa, e confirmei-a em produção):
+    GET /.netlify/functions/_lib/worker-credito        → 200 text/html
+    GET /.netlify/functions/_lib/worker-bonus          → 200 text/html
+    GET /.netlify/functions/nao-existe-xyz             → 200 text/html
+    GET /.netlify/functions/fila-processor-scheduled   → 403 text/plain
+  Os 200 são o rewrite SPA a devolver `index.html` — NÃO são funções (o nome
+  inventado devolve o mesmo 200). Isto é a armadilha já registada em memória
+  («caminho relativo vira index.html com 200»): quem testasse só o código HTTP
+  «encontrava» um endpoint público que não existe. `_lib/` não é exposto, e o
+  próprio scheduled devolve 403 a invocação directa. Decisão de colocar o
+  handler em `_lib/` está correcta e verificada.
+
+================================================================================
+B4 — MUTAÇÃO PRÓPRIA  ▸ VEREDITO: FALHOU (6 sobreviventes materiais)
+================================================================================
+Método: harness em Node (não `sed`, por causa do CRLF e do Unicode). Para cada
+mutação: restaurar do backup → verificar que o alvo EXISTE na fonte → substituir
+→ **reler do disco e confirmar que o alvo desapareceu e o substituto está lá** →
+correr os dois ficheiros de teste mc93c → restaurar. Nenhuma mutação foi
+declarada sobrevivente sem essa confirmação (nenhuma saiu como "NÃO APLICADA").
+
+CONTROLO POSITIVO (tinha de morrer):
+  ✔ MORTO (fail=4) — `if (!decisao.emitir)` → `if (false)`
+     O instrumento vê. A ronda vale.
+
+  ✔ MORTO (fail=1) M1  comparação de endereço passa a distinguir maiúsculas
+  ✖ SOBREVIVEU   M2  `quantidade` devolvida vem da CONSTANTE, não do livro-razão
+  ✖ SOBREVIVEU   M3  cai a 3ª perna do cadeado (`!== REGRAS.SENHAS_BONUS`)
+  ✖ SOBREVIVEU   M4  `MOTIVOS` deixa de estar congelado
+  ✔ MORTO (fail=6) M5  **A CORRECÇÃO REAL**: `.eq("liquidado_em",null)` → `.is(...)`
+  ✖ SOBREVIVEU   M6  claim sem `.eq("ciclo_id", cicloId)`
+  ✖ SOBREVIVEU   M7  claim sem `.eq("endereco", endereco)`
+  ✖ SOBREVIVEU   M8  leitura da dívida sem filtros nenhuns
+  ✖ SOBREVIVEU   M9  endereço do payload deixa de ser normalizado (`toLowerCase`)
+  ✔ MORTO (fail=1) M10 alerta `worker_bonus_credito_falhou` deixa de ser emitido
+
+  11 mutações · 4 mortas · 7 sobreviventes (6 materiais + M4 cosmética).
+  Restauro conferido: md5 de ambos os ficheiros idêntico ao original
+  (396b3daf… / 14ffd934…) e `diff` contra o backup vazio.
+
+--------------------------------------------------------------------------------
+MUTAÇÕES SOBREVIVENTES — o que cada uma significa
+--------------------------------------------------------------------------------
+M5 é o inverso de um sobrevivente e é o achado mais grave da ronda:
+   **corrigir o defeito P0 faz 6 dos 24 testes falharem.** A asserção
+   `mc93c-validacao-b.test.mjs:156` — `assert.equal(claim.filtros.liquidado_em,
+   null)` — fixa o VALOR do filtro `eq`, e o duplo só sabe registar `eq()`; com
+   `.is()` o duplo nem tem o método. A suíte, tal como está, é uma âncora que
+   impede a correcção em vez de uma rede que apanha o erro. Qualquer futuro
+   agente que tente corrigir isto vai ver a suíte «provar» que ele quebrou algo.
+
+M6 e M7 — remover o filtro de ciclo, ou o de endereço, do UPDATE de reclamação.
+   Em produção, M7 marcaria como liquidadas TODAS as linhas do ciclo e creditaria
+   um só endereço; M6 marcaria as linhas desse endereço em TODOS os ciclos.
+   Nenhum teste falha, porque o duplo só consulta `filtros.liquidado_em` para
+   decidir se «afectou linha». As duas mutações mais destrutivas da ronda passam
+   invisíveis. Falta uma asserção sobre o conjunto COMPLETO de filtros do claim.
+
+M8 — leitura da dívida sem `ciclo_id`/`endereco`. Sobrevive porque o
+   `maybeSingle` do duplo devolve `estado.divida` independentemente dos filtros.
+   O handler poderia ler a dívida de outra pessoa e a suíte não notaria.
+
+M9 — remover `toLowerCase()` do endereço do payload. Sobrevive porque todos os
+   testes usam um endereço já minúsculo. O CHECK da migração
+   (`endereco ~ '^0x[0-9a-f]{40}$'`) só aceita minúsculas: com um payload em
+   maiúsculas, a leitura não encontraria a dívida e o bónus seria perdido em
+   silêncio. Falta um caso com endereço em maiúsculas a atravessar o handler
+   (existe para `podeEmitir`, não para o worker).
+
+M3 — cai a exigência de a quantidade coincidir com `REGRAS.SENHAS_BONUS`, isto é,
+   a 3ª perna do cadeado triplo que é a razão de ser deste módulo. Sobrevive
+   porque em TODOS os testes `divida.senhas_a_creditar === 20`: nenhum exercita
+   o caso em que o livro-razão e o payload CONCORDAM num valor que não é 20
+   (p.ex. 40 — que o próprio motor do MC93-A sabe produzir:
+   `pontuacao-utils.mjs:196  senhasBonus: bonus * REGRAS.SENHAS_BONUS`, e
+   «10 acertos = 2 bónus»). A perna que trava esse caso não tem teste nenhum.
+
+M2 — devolver `REGRAS.SENHAS_BONUS` em vez de `divida.senhas_a_creditar`.
+   Mutante equivalente em todos os caminhos testados: o teste «a quantidade
+   emitida é a do livro-razão» compara com `bom().divida.senhas_a_creditar`, que
+   É 20. É a lição do MC93-A outra vez: asserção que usa o mesmo valor dos dois
+   lados não testa a regra. (Curiosidade: aplicar M2 fecharia o TOCTOU do B1.)
+
+M4 — remover `Object.freeze(MOTIVOS)`. Sobrevive porque nada o assere; e, como
+   se mostrou em B1, o freeze não protege dinheiro. Sobrevivente de baixo valor.
+
+================================================================================
+B5 — CONFORMIDADE  ▸ VEREDITO: AMBÍGUO (medição contaminada, ver nota)
+================================================================================
+`git status --porcelain` na raiz (00:50, 2026-09-24):
+   M desafio-gut/frontend/netlify/functions/_lib/pontuacao-store.mjs
+   M desafio-gut/frontend/netlify/functions/fila-processor-scheduled.mjs
+   M docs/TORNEIO-HABILIDADE.md
+  ?? _logs/MC93C_SEG-1_QUESTIONAMENTO.txt
+  ?? _logs/MC93C_SEG0_DIAGNOSIS.txt
+  ?? _logs/MC93C_SEG1-2-3_PLANO-TDD-INTEGRACAO.txt
+  ?? desafio-gut/frontend/netlify/functions/_lib/bonus-emissao.mjs
+  ?? desafio-gut/frontend/netlify/functions/_lib/worker-bonus.mjs
+  ?? desafio-gut/frontend/netlify/functions/_tests/mc93c-fila-bonus.test.mjs
+  ?? desafio-gut/frontend/netlify/functions/_tests/mc93c-validacao-b.test.mjs
+  ?? docs/MC91.14-STATUS-BNB.txt
+  ?? docs/mc92.5_gerar_mascaras.py
+  ?? docs/mc92.5_refinar_bboxes.py
+
+NÃO TOCADOS — confirmado, ausentes da lista:
+  `_lib/pontuacao-utils.mjs` · `consolidar-lances.mjs` · `pontuacao.mjs` ·
+  `ranking.mjs` · a migração `20260923_mc93b_pontuacoes.sql` · os testes mc93b-*.
+
+Os 4 ficheiros novos e o único modificado do mandato estão presentes e o diff de
+`fila-processor-scheduled.mjs` é estritamente aditivo (1 import + 1 chave + 6
+linhas de comentário). Os 3 `??` de `docs/` (MC91.14, dois .py do MC92.5) são
+detritos anteriores, alheios a este MC.
+
+⚠️ NOTA DE MÉTODO — POR QUE É QUE ESTE SEGMENTO É AMBÍGUO
+  `_lib/pontuacao-store.mjs` aparece como ` M`. Às 00:49 capturei o seu diff e ele
+  mostrava conteúdo alterado: a remoção do invólucro `exigir(...)` do UPDATE de
+  `posicao` em `recalcularPosicoes` (ou seja, a REGRESSÃO do defeito P1 do
+  MC93-B — erro do Supabase ignorado). Às 00:50, o mesmo `git diff` veio VAZIO e
+  a leitura do ficheiro mostra `exigir(...)` no lugar. Isto é, quase com certeza,
+  a ronda de mutação do OUTRO validador em voo sobre a mesma árvore de trabalho,
+  aplicada e restaurada entre as minhas duas medições. O ` M` residual é artefacto
+  de mtime/normalização CRLF (o git avisa «LF will be replaced by CRLF»).
+  ⇒ NÃO atribuo a alteração ao MC93-C. ⇒ E declaro: **B5 não é mensurável de forma
+    limpa enquanto duas rondas de mutação partilham a mesma working tree.** Quem
+    fechar o MC deve reconfirmar `git status` com a árvore parada.
+  (Consistente com o SEG-1, que declarou a R3 um no-op e prometeu que o ficheiro
+   não apareceria no diff final. Confirmo que o seu CONTEÚDO é igual ao de HEAD.)
+
+================================================================================
+ACHADOS NOVOS (não constam do SEG-1 nem, pelo que li, da spec)
+================================================================================
+A1 ⛔ P0 — `.eq("liquidado_em", null)` não é `IS NULL`. Produz 22007 no PostgREST
+      real. O compare-and-set não existe; o handler nunca credita com a flag
+      ligada; as tarefas vão para a DLQ. A spec escreve o SQL certo; o código não
+      o implementa. Correcção: `.is("liquidado_em", null)`.  [B2.1]
+A2 ⛔ P0 — A suíte PINA O DEFEITO: aplicar a correcção faz 6 dos 24 testes
+      falharem, porque `mc93c-validacao-b.test.mjs:156` assere o valor do filtro
+      `eq` e o duplo não implementa `is()`. Corrigir o código exige corrigir o
+      teste primeiro.  [B4/M5]
+A3 ⛔ P0 — Não há caminho de re-enfileiramento. `enfileirar` só é chamado dentro
+      do compare-and-set `bonus_emitido = false`; uma dívida consumida em
+      dry-run (tarefa → `done`) fica permanentemente fora do alcance da fila.
+      Quando a flag ligar, as dívidas antigas não são pagas por ninguém.  [B3.1]
+A4 ⚠️ P1 — O `txHash` não é persistido. `liquidado_em` fica gravado sem prova de
+      pagamento; depois de uma morte entre claim e crédito, a base não distingue
+      «paga» de «não paga». Só vai para `console.info`.  [B2.2]
+A5 ⚠️ P1 — `err.code`/`err.txHash` de `creditarSenhas` são descartados no alerta.
+      TX_REVERTED (onde se SABE que nada foi creditado, e reabrir seria seguro) é
+      tratado como TX_PENDENTE. O `worker-credito`, no mesmo caso, reembolsa.  [B2.3]
+A6 ⚠️ P1 — As duas mutações mais destrutivas possíveis no claim (perder o filtro
+      de ciclo, ou o de endereço) SOBREVIVEM à suíte. O duplo só consulta
+      `filtros.liquidado_em`.  [B4/M6,M7]
+A7 ⚠️ P1 — O duplo de Supabase é mais permissivo que o PostgREST em 4 pontos, e
+      nunca devolve `error` — os dois `if (error) throw` do handler, incluindo os
+      dois erros REAIS que hoje ocorrem (PGRST205 e 22007), nunca são exercidos.  [B2.4]
+A8 ⚠️ P2 — A 3ª perna do cadeado (`quantidade === REGRAS.SENHAS_BONUS`) não tem
+      teste: nenhum caso tem livro-razão e payload a concordarem num valor ≠ 20,
+      e o motor do MC93-A sabe produzir 40 («a cada 5 acertos»).  [B4/M3]
+A9 ⚠️ P2 — `liquidado_em` AUSENTE do objecto autoriza a emissão. Latente: basta
+      estreitar o `.select("*")`.  [B1]
+A10 • P2 — `podeEmitir` devolve a 4ª leitura de `senhas_a_creditar` sem a
+      reconfrontar com `REGRAS.SENHAS_BONUS` (TOCTOU por getter → quantidade
+      arbitrária). Sem caminho vivo; fecha-se com uma linha.  [B1]
+A11 • P3 — `Object.prototype` poluído liga a flag através de `process.env`
+      (`emissaoArmada()` → true). Informativo: sem sink conhecido.  [B1]
+A12 • P3 — Os 4 ficheiros novos são LF; o modificado é CRLF. Convenção mista;
+      relevante porque mutações por `sed` com padrões LF falham em silêncio
+      nesse ficheiro (armadilha já registada no MC93-B).
+A13 • Nota — `_lib/fila.mjs` já tem `pareceTabelaAusente()` (casa /schema cache/i),
+      mas só é aplicado à RPC. O handler novo podia herdar a noção de «inerte»
+      e não o faz — daí a DLQ no estado de hoje.  [B3.2]
+
+O QUE ESTÁ GENUINAMENTE BEM (e convém não estragar ao corrigir)
+  • A trava de três condições resiste a toda a coerção que lhe atirei. Nenhum
+    `"true"`, `1`, `"20"`, `0`, `NaN` ou `false` a abre.  [B1]
+  • A ordem reclamar→creditar está certa e TEM teste que a mata se for invertida.
+  • A decisão de não desfazer a reclamação em falha on-chain está certa em
+    princípio (embora indistinta entre revertido e pendente).
+  • Colocar o handler em `_lib/` (R1 do SEG-1) está certo e verificado contra
+    produção: `_lib/` não é endpoint HTTP.
+  • O registo no mapa não parte o cron (import verificado).
+  • `REGRAS` está congelado — é o freeze que importa.
+
+================================================================================
+NÃO VERIFICADO (L-4)
+================================================================================
+N1 Nada exercido contra a mainnet. Zero senhas emitidas. Saldo de gas da EOA
+   coordenadora não consultado.
+N2 `rankings_ciclo`/`pontuacoes` não existem: nada exercido contra o Supabase
+   real NESSAS tabelas. As provas de `eq.null` foram feitas contra outra tabela
+   com a MESMA coluna-tipo (TIMESTAMPTZ nullable) e contra o Postgres directo.
+N3 Não fiz nenhuma ESCRITA em produção — logo não medi que o PATCH com `eq.null`
+   falhe atomicamente sem escrever (é o esperado; fica declarado).
+N4 Env de produção não lido: não sei o valor vivo de `BONUS_EMISSAO_ATIVA` em
+   nenhum contexto do Netlify (lembrete: o env é POR CONTEXTO).
+N5 O `fila-processor-scheduled` não foi invocado: é scheduled (403 a HTTP directo).
+   Comportamento na fila inferido de `processarLote` lido + fila real observada.
+N6 Cobertura não medida (o projecto não tem alvo configurado).
+N7 Suíte completa não corrida: apenas os 24 testes `mc93c-*`, para não medir a
+   árvore enquanto o outro validador a muta.
+
+================================================================================
+VEREDITO FINAL: **REPROVADO**
+================================================================================
+Não reprovo por risco financeiro: falha fechada, e hoje nem chega a correr (as
+tabelas não existem e nenhuma tarefa de bónus é produzida). Reprovo porque o MC
+não entrega o que declara:
+  • a trava de concorrência anunciada (compare-and-set em `liquidado_em IS NULL`)
+    NÃO EXISTE — a tradução para PostgREST está errada [A1];
+  • a suíte impede a correcção em vez de a exigir [A2];
+  • a ressalva nº 2 do MC93-B não é fechada: com a flag ligada as tarefas
+    continuam a ir para a DLQ, agora com outra mensagem [B2.1/B3.2];
+  • e o desenho do dry-run destrói, sem rede, o único gatilho de pagamento [A3].
+
+MÍNIMO PARA PASSAR A «APROVADO COM RESSALVAS», por ordem:
+  1. `.eq("liquidado_em", null)` → `.is("liquidado_em", null)`.
+  2. Corrigir o duplo para recusar `eq(col, null)` como o PostgREST recusa, e
+     reescrever a asserção do claim para exigir `is.null` — o duplo tem de
+     rejeitar o que o original rejeita.
+  3. Asserção sobre o CONJUNTO COMPLETO de filtros do claim (mata M6, M7, M8).
+  4. Um teste com livro-razão e payload a concordarem em 40 (mata M3), e um com
+     endereço em maiúsculas a atravessar o worker (mata M9).
+  5. Decidir e documentar o backfill/re-enfileiramento antes do passo 3 da
+     activação (A3). O índice parcial para a consulta já existe.
+  6. Persistir o `txHash` e propagar `err.code` (A4, A5).
+
+⚠️ E antes de fechar: reconfirmar `git status` com a árvore de trabalho parada —
+a minha medição de B5 foi contaminada por outra ronda de mutação em voo.
+
+================================================================================
+FIM DO SEG4 · VALIDADOR B · REPROVADO · 13 achados novos (3 P0) · 6 sobreviventes
+================================================================================

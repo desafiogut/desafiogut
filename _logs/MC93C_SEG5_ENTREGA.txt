@@ -1,0 +1,74 @@
+================================================================================
+MC93-C — SEG5 · ENTREGA
+DesafioGUT · Data: 2026-09-24 · Commit base: 3dabb10
+Skills ECC: requesting-code-review (DOIS validadores independentes, despachados
+em separado e sem ver o output um do outro)
+================================================================================
+
+5.1 — LOGS
+  _logs/MC93C_SEG-1_QUESTIONAMENTO.txt        hard gate · AJUSTAR · 3 refutações
+  _logs/MC93C_SEG0_DIAGNOSIS.txt              ambiente, mapa da fila, padrões
+  _logs/MC93C_SEG1-2-3_PLANO-TDD-INTEGRACAO.txt  plano, RED/GREEN, integração
+  _logs/MC93C_SEG4_EXECUTOR.txt               suíte, R1, 19 mutantes, os 3 P0
+  _logs/MC93C_SEG4_VALIDACAO-A.txt            Validador A (REPROVADO)
+  _logs/MC93C_SEG4_VALIDACAO-B.txt            Validador B (REPROVADO)
+  _logs/MC93C_SEG5_ENTREGA.txt                este ficheiro
+  _logs/MC93C-RELATORIO.md                    relatório final
+
+5.2 — CLAUDE.md (R14) — actualizado antes do commit.
+
+5.3 — DECISÕES DO OPERADOR (R18)
+  TRÊS de 2026-09-24, do enunciado: correr a 2ª validação independente; criar o
+  handler sem activar o wire-up on-chain; documentar o caminho de activação.
+  MAIS UMA, tomada durante o MC: perante a refutação R1 do SEG-1 (um handler de
+  fila não é um ficheiro em `netlify/functions/` — seria um endpoint HTTP
+  público que emite senhas), o operador escolheu a **Opção A**: handler em
+  `_lib/` + autorização explícita para a linha de registo em
+  `fila-processor-scheduled.mjs`. Sem ela o handler ficaria inalcançável.
+
+5.4 — DECLARAÇÃO DE R15
+  EXERCIDA. Três P0 corrigidos depois da validação dupla, todos confirmados por
+  execução própria antes de aceitar:
+    • o bónus repetia-se para sempre (R$ 440 em vez de R$ 40) — código do MC93-B;
+    • o compare-and-set do MC93-B era neutralizado pelo upsert acima;
+    • `.eq(col, null)` não é `IS NULL` — o CAS do handler não existia.
+  Mais: o duplo de testes passou a recusar o que o PostgREST recusa e a aplicar
+  os DEFAULTs das colunas. A correcção estendeu-se ao que o MC tornou falso
+  (docs §4c, comentários do código).
+  ⚠️ `_lib/pontuacao-store.mjs` foi alterado ao abrigo da autorização explícita
+  do MC; `fila-processor-scheduled.mjs` ao abrigo da decisão do operador.
+
+5.5 — DECLARAÇÃO DE R19 — **NÃO ATIVADA**, declarado no SEG-1 antes de executar.
+  O sweeper da dívida órfã seria comportamento novo, fora do autorizado; fica
+  documentado como bloqueador da activação em vez de improvisado.
+
+5.6 — MÉTRICAS DE EFICIÊNCIA
+  Boulder Loop: SEG2 0 iterações · SEG4 2 rondas de mutação.
+  Testes: 477 baseline → 507. MC93-C: 30 (13 + 17).
+  Mutação: 19 aplicados e assertados · 18 mortos · 1 equivalente (medido).
+  ★ A MÉTRICA QUE O ENUNCIADO PEDE — o Validador A apanhou o que o Executor
+    não viu? **SIM, e era o mais caro de todos.** A regressão do bónus a pagar
+    11× o devido estava em código já committado (`3dabb10`), com 477 testes
+    verdes, e eu não a vi. O Validador B apanhou o P0 que tornava o meu próprio
+    handler inoperante. **Nenhum dos dois P0 seria encontrado sem validação
+    independente.** É a terceira vez consecutiva.
+  Custo: 2 subagentes, ~104 chamadas de ferramenta, 29 mutações entre os dois.
+  MC de fechamento: não gerado. O que falta (sweeper, migração, activação)
+  depende de decisões do operador.
+
+5.7 — RELATÓRIO FINAL: _logs/MC93C-RELATORIO.md
+
+5.8 — COMMIT
+  feat: MC[93-C] — handler de fila do bónus + 2ª validação independente
+  4 novos + 4 modificados (todos autorizados) + logs + CLAUDE.md + docs.
+  R1: `_lib/pontuacao-utils.mjs`, `consolidar-lances.mjs`, `pontuacao.mjs`,
+  `ranking.mjs` e a migração SQL ficaram INTACTOS.
+
+================================================================================
+VEREDITO DO MC93-C: CONCLUÍDO COM RESSALVA MATERIAL
+  Handler entregue, registado e em dry-run confirmado por execução. Os dois
+  vereditos REPROVADO foram aceites e os três P0 corrigidos e testados.
+  ⛔ NÃO ACTIVAR sem: (1) aplicar a migração; (2) re-enfileirar a dívida órfã;
+  (3) reativar a R2 com autorização de custo.
+  ⚠️ As correcções deste MC não passaram por uma terceira validação.
+================================================================================

@@ -1,0 +1,142 @@
+================================================================================
+MC93-C — SEG-1 · QUESTIONAMENTO DO BRIEFING (HARD GATE)
+DesafioGUT · Handler de fila do bónus + 2ª validação independente
+Data: 2026-09-24 · Commit base: 3dabb10 (main) — CONFIRMADO
+Skills ECC: smart-explore, brainstorming, security-review
+================================================================================
+
+                        >>> VEREDITO: AJUSTAR <<<
+   As duas validações independentes correm sem alteração e são o entregável
+   mais valioso do MC. O HANDLER, como está autorizado, cria um endpoint HTTP
+   público que emite senhas — e não fica alcançável pela fila. Ver §-1.5.
+
+================================================================================
+-1.1 — VERIFICAÇÃO DAS PREMISSAS
+================================================================================
+
+CONFIRMADAS (4)
+────────────────────────────────────────────────────────────────────────────────
+C1 ✅ Base `3dabb10`, working tree sem modificados.
+C2 ✅ `_lib/fila.mjs:25` expõe `enfileirar(tipo, payload, {agendadoPara,
+      maxTentativas})` e `processarLote(handlers, limite)`. A fila degrada para
+      `{ ok:true, inerte:true }` se a tabela não existir (`:50,:55`) — e a
+      tabela EXISTE (5 linhas, verificadas no MC00.0), logo a fila está viva.
+C3 ✅ `_lib/contract.mjs` expõe `creditarSenhas(endereco, qtd)` (:177),
+      `submeterCredito` (:222) e `lerSaldoSenhas` (:95).
+C4 ✅ O handler de referência existe e a sua forma é simples:
+      `_lib/worker-credito.mjs:21  export async function confirmarCreditoSenhas(payload)`
+      — recebe só o payload, devolve void, e sai cedo (`return`) nos casos que
+      não deve tratar.
+
+REFUTADAS (3, e a primeira é de segurança)
+────────────────────────────────────────────────────────────────────────────────
+R1 ⛔ **UM HANDLER DE FILA NÃO É UM FICHEIRO EM `netlify/functions/`.**
+      A autorização manda criar `netlify/functions/fila-creditar-senhas-bonus.mjs`.
+      Tudo o que está na raiz de `netlify/functions/` é um **endpoint HTTP
+      público** (`netlify.toml`: `directory = "netlify/functions"`). O padrão
+      real do projeto é o oposto:
+        • a lógica vive em `_lib/worker-credito.mjs`;
+        • é **registada num mapa** dentro de `fila-processor-scheduled.mjs:20-24`;
+        • é o *scheduled* `*/5 * * * *` que a invoca, nunca a rede.
+      Criar o ficheiro onde a autorização diz produziria
+      `POST /.netlify/functions/fila-creditar-senhas-bonus` — **um endpoint
+      público cuja função é emitir senhas**. Mesmo em dry-run, é uma superfície
+      que não devia existir; e no dia em que a flag ligasse, qualquer pessoa na
+      internet poderia invocá-lo.
+
+R2 ⛔ **REGISTAR O HANDLER EXIGE UM FICHEIRO QUE O MC NÃO AUTORIZA.**
+      O mapa vive em `fila-processor-scheduled.mjs`, que não consta das
+      autorizações. Sem essa linha, o handler **não é alcançável pela fila** —
+      ou seja, o MC entregaria exactamente o defeito que vem corrigir: a tarefa
+      continuaria a esgotar as 5 tentativas e a cair na DLQ.
+      O SEG3.1 manda fazê-lo ("adicionar ao mapa de handlers") sem o autorizar.
+
+R3 ⚠️ **O AJUSTE AO `pontuacao-store.mjs` É UM NO-OP.**
+      O SEG1.3/SEG2.2 mandam "garantir que o tipo da tarefa enfileirada é
+      `creditar-senhas-bonus` (não outro)". Já é, desde o MC93-B:
+        `_lib/pontuacao-store.mjs:33  export const TIPO_TAREFA_BONUS = "creditar-senhas-bonus";`
+        `_lib/pontuacao-store.mjs:163 await enfileirar(TIPO_TAREFA_BONUS, {…})`
+      Não há nada a ajustar. Declaro para não simular trabalho: se o ficheiro
+      não aparecer no diff final, é porque não precisava de mudar.
+
+================================================================================
+-1.2 — OBSERVAÇÃO SOBRE O HARD GATE 4 (a que dá valor ao MC)
+================================================================================
+A trava "wire-up on-chain desligado por default" é boa, mas não chega sozinha.
+Uma flag de ambiente é fail-OPEN por omissão de disciplina: basta alguém pôr
+`BONUS_EMISSAO_ATIVA=true` no painel do Netlify para o sistema começar a emitir
+R$ 40,00 por sequência, sem mais nenhuma barreira e sem limite declarado.
+
+Proponho (dentro do escopo, sem pedir autorização nova) que a emissão exija
+**três condições simultâneas**, não uma:
+  1. `BONUS_EMISSAO_ATIVA === "true"` (a flag do enunciado);
+  2. a dívida existir e estar por liquidar em `rankings_ciclo`
+     (`senhas_a_creditar > 0 AND liquidado_em IS NULL`) — idempotência ancorada
+     no livro-razão, não na fila;
+  3. a quantidade coincidir com `REGRAS.SENHAS_BONUS` — uma tarefa com payload
+     adulterado ou com outra quantidade é recusada, não "ajustada".
+Em qualquer outro caso: **não emite, e regista porquê**. É o mesmo princípio do
+MC93-A: quando a dúvida vale dinheiro, a dúvida não paga.
+
+================================================================================
+-1.3 — VERIFICAÇÃO DE AUTOSSUFICIÊNCIA (R19)
+================================================================================
+O MC é autossuficiente e **não gera `.1`**, desde que as duas refutações de
+autorização (R1, R2) sejam resolvidas — ver §-1.5.
+
+**R19 NÃO É ATIVADA.** O trabalho extra que seria natural (aplicar a migração,
+notificar o operador quando houver dívida por liquidar) está explicitamente
+fora: a migração é acção do operador, e a notificação toca
+`_lib/notificacoes-usuario.mjs`, reservado ao bloco B2 do MC00.0.
+A proposta do §-1.2 não é ampliação de escopo: é o mesmo objectivo ("handler
+gated") feito de forma que resista a um erro de configuração.
+
+================================================================================
+-1.4 — VERIFICAÇÃO DE ESCOPO
+================================================================================
+Cabe num só MC. O que NÃO está no escopo e seria natural incluir:
+  • **Aplicar a migração** — FORA, é acção do operador (e sem ela as tabelas
+    não existem, logo a condição 2 do §-1.2 falha fechado — o que é o
+    comportamento correcto).
+  • **Notificar o operador de dívidas por liquidar** — FORA (conflito com B2).
+  • **Expor o estado do bónus no `GET /feedback`** — JÁ FEITO no MC93-B
+    (`bonusEmitido`, `senhasACreditar`, `liquidado`). O SEG3.3 pergunta se é
+    preciso; não é.
+
+================================================================================
+-1.5 — PROPOSTA DE AJUSTE
+================================================================================
+▸ SEGUE sem alteração, e é o mais valioso do MC:
+    • **Validador A** — 2ª validação independente das 6 correcções do MC93-B.
+    • **Validador B** — validação do handler novo.
+    Ambos despachados em separado, sem ver o output um do outro.
+
+▸ AJUSTE PEDIDO — onde vive o handler e quem o alcança:
+    (a) A lógica de emissão fica em `_lib/bonus-emissao.mjs` **(autorizado)**,
+        com as três condições do §-1.2.
+    (b) O handler da fila fica em **`_lib/worker-bonus.mjs`**, seguindo o
+        padrão de `_lib/worker-credito.mjs` — e **não** como ficheiro de topo.
+        ⚠️ Isto substitui `netlify/functions/fila-creditar-senhas-bonus.mjs`
+        pela mesma coisa no sítio certo. Peço ao operador que o confirme.
+    (c) **Uma linha** em `fila-processor-scheduled.mjs` regista o tipo no mapa.
+        Sem ela o handler não é alcançável e o MC não fecha a ressalva nº 2.
+        ⚠️ Ficheiro não autorizado — peço autorização explícita.
+
+    Se o operador preferir manter a letra da autorização, entrego o handler em
+    `_lib/` e **deixo a linha de registo por aplicar**, documentada — mas nesse
+    caso o MC93-C **não fecha** a ressalva do handler, só a prepara.
+
+================================================================================
+-1.6 — L-4 · O QUE NÃO SERÁ MEDIDO
+================================================================================
+N1 Sem emissão on-chain real (dry-run por default; e a flag fica off).
+N2 Migração não aplicada → as tabelas não existem; a condição 2 do §-1.2 não
+   pode ser exercida contra o Supabase real, só contra o duplo.
+N3 A fila não será exercida ponta a ponta: `fila-processor-scheduled` é um
+   *scheduled* de 5 em 5 minutos, não invocável nos testes.
+N4 Env de produção não lida (`BONUS_EMISSAO_ATIVA`, `DATA_STORE_BACKEND`).
+N5 Saldo de gas da EOA coordenadora não consultado.
+
+================================================================================
+FIM DO SEG-1 · VEREDITO: AJUSTAR · R19 NÃO ATIVADA · aguarda 2 autorizações
+================================================================================

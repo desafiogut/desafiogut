@@ -1,0 +1,81 @@
+================================================================================
+MC93-C — SEG0 · DIAGNÓSTICO
+DesafioGUT · Data: 2026-09-24 · Commit base: 3dabb10
+Skills ECC: smart-explore, terminal-ops
+================================================================================
+
+0.1 — AMBIENTE
+--------------------------------------------------------------------------------
+  git log --oneline -1   → 3dabb10 ✅
+  git status --porcelain → sem modificados (3 untracked em docs/, anteriores) ✅
+  Suíte: **477/477 verdes** ✅ (baseline do enunciado confirmada)
+
+0.2 — O QUE PRECISA DE 2ª VALIDAÇÃO (diff de `3dabb10`)
+--------------------------------------------------------------------------------
+Seis correcções feitas pelo Executor sem revisão de terceiro:
+  1. `/feedback` passava o Request a `verificarUserSession` (que quer a string
+     do token) → `JWSInvalid` → 500 sem CORS. Endpoint avariado a 100%.
+  2. O bónus era inalcançável: a integração nunca passava `historicos`. O store
+     passou a ler o histórico da própria tabela e a gravar linha para CADA
+     participante (inclusive quem não acertou).
+  3. Concorrência: read-then-write → compare-and-set em `reclamarBonus`.
+  4. `error` do Supabase ignorado em todas as chamadas → helper `exigir()`.
+  5. Refechar a rodada apagava os pontos do bónus (9 → 4).
+  6. SQL sem `GRANT … TO service_role`; CHECK a bloquear a liquidação.
+⇒ Despachadas DUAS validações independentes, em separado e sem se verem
+  (Validador A = as seis correcções; Validador B = o handler novo).
+
+0.3 — O MAPA DE HANDLERS DA FILA
+--------------------------------------------------------------------------------
+  `fila-processor-scheduled.mjs:13-24`
+    import { schedule } from "@netlify/functions";
+    import { processarLote } from "./_lib/fila.mjs";
+    import { confirmarCreditoSenhas } from "./_lib/worker-credito.mjs";
+    const handlers = { "confirmar-credito-senhas": confirmarCreditoSenhas };
+    export const handler = schedule("*/5 * * * *", …)
+
+  ⚠️ ACHADO QUE MUDOU O MC (SEG-1/R1): **um handler de fila NÃO é um ficheiro
+  em `netlify/functions/`** — tudo o que está nessa raiz é um endpoint HTTP
+  público. O padrão real é: lógica em `_lib/worker-*.mjs` + registo no mapa.
+  Criar `netlify/functions/fila-creditar-senhas-bonus.mjs`, como a autorização
+  mandava, produziria um endpoint público cuja função é emitir senhas.
+
+  `_lib/fila.mjs:43-78` — `processarLote(handlers, limite)`:
+    • `sem handler para tipo "X"` → excepção → backoff exponencial
+      (30s, 60s, 120s … até 1h) → ao esgotar `max_tentativas`, DLQ (`failed`).
+      É exactamente o que acontecia ao `creditar-senhas-bonus` antes deste MC.
+    • Tabela ausente → `{ ok:true, inerte:true }` sem erro nem log.
+
+0.4 — O HANDLER DE REFERÊNCIA (`_lib/worker-credito.mjs`)
+--------------------------------------------------------------------------------
+Forma: `export async function confirmarCreditoSenhas(payload)` — recebe só o
+payload, devolve void, sai cedo com `return` nos casos que não trata, e **lança**
+quando quer que a fila retente.
+
+⚠️ LIÇÃO QUE FOI ADOPTADA, e está no comentário dele:
+  "CLAIM ANTES do reembolso (idempotência forte): grava o marcador primeiro, de
+   modo que um reprocesso NUNCA reembolse duas vezes (mesmo que o processo morra
+   após o reembolso). Se o reembolso falhar, o alerta encaminha para
+   reconciliação manual — não auto-retenta (evita double-refund)."
+É a mesma escolha do `worker-bonus`: reclamar antes de creditar, e nunca desfazer
+a reclamação quando o crédito falha.
+
+0.5 — O PONTO DE ENFILEIRAMENTO
+--------------------------------------------------------------------------------
+  `_lib/pontuacao-store.mjs:33`  export const TIPO_TAREFA_BONUS = "creditar-senhas-bonus";
+  `_lib/pontuacao-store.mjs:163` await enfileirar(TIPO_TAREFA_BONUS, { cicloId, endereco, quantidade });
+  ⚠️ O tipo **já está correcto** desde o MC93-B. O ajuste que o SEG1.3/SEG2.2
+  mandavam fazer é um **no-op** — declarado no SEG-1/R3 para não simular
+  trabalho. O ficheiro não aparece no diff porque não precisava de mudar.
+
+0.6 — PEÇAS REAPROVEITADAS
+--------------------------------------------------------------------------------
+  `_lib/contract.mjs:177`  creditarSenhas(endereco, qtd)
+  `_lib/supabase-client.mjs`  getSupabase()
+  `_lib/sentry-server.mjs`  captureSecurityAlert(nome, dados, nivel)
+  `_lib/validate.mjs`  mascararEndereco() — MC87 (P3-1), carteira mascarada nos logs
+  `_lib/pontuacao-utils.mjs`  REGRAS.SENHAS_BONUS (fonte única do 20)
+
+================================================================================
+FIM DO SEG0
+================================================================================

@@ -13,12 +13,20 @@ import { schedule } from "@netlify/functions";
 import { processarLote } from "./_lib/fila.mjs";
 // MC59.5 (ADR) — worker de confirmação assíncrona do crédito de senhas.
 import { confirmarCreditoSenhas } from "./_lib/worker-credito.mjs";
+// MC93-C — bónus do torneio de habilidade. Sem este registo, as tarefas
+// produzidas por `_lib/pontuacao-store.mjs` esgotavam 5 tentativas e caíam
+// na DLQ (ressalva nº 2 do MC93-B).
+import { creditarSenhasBonus } from "./_lib/worker-bonus.mjs";
 
 const handlers = {
   // MC59.5: confirma em background a tx de adicionarSenhas submetida por
   // comprar-senhas (flag CREDITO_ASSINCRONO). Dormant enquanto a fila estiver
   // inerte (migração 20260629_fila_tarefas não aplicada).
   "confirmar-credito-senhas": confirmarCreditoSenhas,
+  // MC93-C: liquida o direito a bónus do torneio. ⚠️ Em DRY-RUN por default —
+  // sem `BONUS_EMISSAO_ATIVA=true` lê, decide "não emitir", regista o motivo e
+  // termina. Nada é creditado on-chain. Activação = decisão do operador (R2).
+  "creditar-senhas-bonus": creditarSenhasBonus,
 };
 
 export const handler = schedule("*/5 * * * *", async () => {

@@ -25,7 +25,7 @@ import { test, mock, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 // ── Supabase falso in-memory, com update+select e propagação de erro ─────────
-const db = { pontuacoes: [], rankings: [] };
+const db = { pontuacoes: [], rankings: [], upserts: [] };
 const filaEnfileirada = [];
 let erroForcado = null;   // { tabela, operacao } → força `error` naquela chamada
 let relogio = 0;
@@ -62,26 +62,46 @@ function builder(nome) {
     return { data: linhas, error: null };
   };
 
+  // ⚠️ LATÊNCIA. Um duplo síncrono serializa as chamadas e esconde toda a
+  // classe de defeitos de leitura-desactualizada: duas execuções paralelas
+  // nunca chegam a intercalar-se. Ceder o event loop antes de cada escrita
+  // aproxima-o de uma ida real à rede — foi assim que se passou a ver o
+  // upsert de uma execução a apagar o que a outra acabara de gravar.
+  const latencia = () => new Promise((r) => setImmediate(r));
   const api = {
     select() { return api; },
     eq(col, val) { st.filtros[col] = val; return api; },
     order(col, opts) { st.ordem.push([col, opts?.ascending !== false]); return api; },
     update(campos) { st.update = campos; return api; },
-    upsert(linhas, opts) {
-      const e = erro(nome, "upsert"); if (e) return Promise.resolve(e);
+    async upsert(linhas, opts) {
+      await latencia();
+      const e = erro(nome, "upsert"); if (e) return e;
+      for (const l of [].concat(linhas)) db.upserts.push({ tabela: nome, colunas: Object.keys(l) });
       const chave = (opts?.onConflict || "").split(",").map((s) => s.trim());
       for (const linha of [].concat(linhas)) {
         const alvo = tabela(nome).find((r) => chave.every((k) => r[k] === linha[k]));
         if (alvo) Object.assign(alvo, linha);
-        else tabela(nome).push({ criado_em: ++relogio, liquidado_em: null, ...linha });
+        // ⚠️ DEFAULTS da migração, como na tabela real. Sem eles, uma coluna
+        // omitida no INSERT ficava `undefined` no duplo e `0`/`false` no
+        // PostgreSQL — e um UPDATE condicional por `bonus_emitido` nunca
+        // casava. Um duplo que não aplica defaults não testa o mesmo sistema.
+        else tabela(nome).push({
+          criado_em: ++relogio,
+          ...(nome === "rankings_ciclo" ? {
+            pontos_totais: 0, acertos_totais: 0, posicao: 0,
+            bonus_emitido: false, senhas_a_creditar: 0, liquidado_em: null,
+          } : { menor_unico: false }),
+          ...linha,
+        });
       }
       return Promise.resolve({ data: null, error: null });
     },
-    maybeSingle() {
-      const e = erro(nome, "select"); if (e) return Promise.resolve(e);
-      return Promise.resolve({ data: filtrar()[0] ?? null, error: null });
+    async maybeSingle() {
+      await latencia();
+      const e = erro(nome, "select"); if (e) return e;
+      return { data: filtrar()[0] ?? null, error: null };
     },
-    then(res, rej) { return Promise.resolve(resolver()).then(res, rej); },
+    then(res, rej) { return latencia().then(() => resolver()).then(res, rej); },
   };
   return api;
 }
@@ -116,7 +136,7 @@ const rodada = (vencedor, perdedor) => [
 ];
 
 beforeEach(() => {
-  db.pontuacoes.length = 0; db.rankings.length = 0;
+  db.pontuacoes.length = 0; db.rankings.length = 0; db.upserts.length = 0;
   filaEnfileirada.length = 0; erroForcado = null; relogio = 0;
 });
 
@@ -398,4 +418,65 @@ test("endereços são normalizados para minúsculas (o CHECK do SQL exige)", asy
     assert.match(linha.endereco, /^0x[0-9a-f]{40}$/,
       `${linha.endereco} não passa no CHECK da migração`);
   }
+});
+
+// ── O bónus repetia-se para sempre (achado da 2ª validação independente) ─────
+
+test("depois de UM bónus, os ciclos seguintes NÃO concedem outro", async () => {
+  // DEFEITO MEDIDO: `detectarConsecutivos().bonus` é cumulativo sobre todo o
+  // histórico e nunca decresce; a guarda `bonus_emitido` é POR CICLO. Cada
+  // ciclo novo nascia com a bandeira a false e concedia OUTRO bónus.
+  // 5 vitórias + 10 derrotas davam 11 bónus = 220 senhas = R$ 440, em vez de
+  // um só. Nenhum teste passava de 5 ciclos, por isso ninguém o via.
+  for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
+  assert.equal(filaEnfileirada.length, 1, "o primeiro bónus, aos 5 acertos");
+
+  // Dez ciclos em que A PERDE — a corrente está partida, não há bónus novo.
+  for (let i = 6; i <= 15; i++) {
+    await registrarPontuacaoRodada(`R-${i}`, [lance(A, 50), lance(B, 50)]);
+  }
+  assert.equal(filaEnfileirada.length, 1,
+    "derrotas não podem conceder bónus — eram 11 antes da correcção");
+  const comBonus = db.rankings.filter((r) => r.bonus_emitido === true);
+  assert.equal(comBonus.length, 1, "um só ciclo com bónus em todo o histórico");
+  assert.equal(comBonus[0].ciclo_id, "R-5");
+});
+
+test("uma SEGUNDA sequência de 5 concede um segundo bónus (e só um)", async () => {
+  // O contrapeso não pode ser tão forte que trave o que é devido.
+  for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
+  await registrarPontuacaoRodada("R-6", [lance(A, 50), lance(B, 50)]);   // parte a corrente
+  for (const c of ["R-7", "R-8", "R-9", "R-10", "R-11"]) await registrarPontuacaoRodada(c, rodada(A, B));
+  assert.equal(filaEnfileirada.length, 2, "duas sequências completas = dois bónus");
+  await registrarPontuacaoRodada("R-12", rodada(A, B));
+  assert.equal(filaEnfileirada.length, 2, "o 6.º acerto da 2.ª corrida não paga outra vez");
+});
+
+test("refechar um ciclo com bónus não concede um bónus extra", async () => {
+  for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
+  await registrarPontuacaoRodada("R-5", rodada(A, B));
+  await registrarPontuacaoRodada("R-5", rodada(A, B));
+  assert.equal(filaEnfileirada.length, 1);
+  assert.equal(db.rankings.find((r) => r.ciclo_id === "R-5" && r.endereco === A).senhas_a_creditar,
+    REGRAS.SENHAS_BONUS, "20 senhas, não 40 nem 60");
+});
+
+test("o upsert NUNCA escreve as colunas do cadeado do bónus", async () => {
+  // As três colunas pertencem só ao compare-and-set e ao worker de liquidação.
+  // A versão anterior repunha-as a partir de uma leitura feita antes, noutra
+  // transacção: com latência real, o upsert de uma execução apagava o
+  // `bonus_emitido: true` que a outra acabara de gravar, e o CAS concedia
+  // outra vez — o pagamento duplo reaparecia.
+  // Esta asserção é COMPORTAMENTAL (observa as escritas reais), porque o
+  // defeito precisa de MVCC para se manifestar e um duplo in-memory não o
+  // reproduz. Guarda a causa, já que não se consegue guardar o sintoma.
+  for (const c of ["R-1", "R-2", "R-3", "R-4", "R-5"]) await registrarPontuacaoRodada(c, rodada(A, B));
+  const proibidas = ["bonus_emitido", "senhas_a_creditar", "liquidado_em"];
+  for (const u of db.upserts.filter((x) => x.tabela === "rankings_ciclo")) {
+    for (const col of proibidas) {
+      assert.ok(!u.colunas.includes(col),
+        `upsert em rankings_ciclo escreveu "${col}" — essa coluna é do CAS, não do upsert`);
+    }
+  }
+  assert.ok(db.upserts.some((x) => x.tabela === "rankings_ciclo"), "houve upserts a observar");
 });

@@ -594,3 +594,98 @@ uma **rodada real** (leilão travado em `EM_BREVE_MODE`;
 `consolidar-lances.mjs:51` só corre em mainnet). Cobertura não medida.
 ⚠️ **As correcções aos seis defeitos não passaram por uma segunda validação
 independente** — foram verificadas por quem as escreveu.
+
+---
+
+## MC93-C — Handler do bónus + validação dupla independente (2026-09-24)
+
+**Entregue:** `_lib/bonus-emissao.mjs`, `_lib/worker-bonus.mjs`, registo no mapa da
+fila, 30 testes. **507/507 verdes.** **Logs:** `_logs/MC93C_*` · **Spec:** §4c.
+⚠️ **Os DOIS validadores independentes deram REPROVADO.** Três P0 confirmados por
+execução e corrigidos — ver `_logs/MC93C_SEG4_EXECUTOR.txt` §4.8.
+
+### ⛔ O bónus pagava 11× o devido (regressão do MC93-B, agora corrigida)
+
+`detectarConsecutivos().bonus` é **cumulativo sobre todo o histórico e nunca
+decresce**; a guarda `bonus_emitido` é **por ciclo**. Uma bandeira por-ciclo não
+pode limitar um contador que atravessa ciclos: cada ciclo novo nascia com a
+bandeira a `false` e concedia outro bónus.
+
+**Medido:** 5 vitórias + 10 derrotas = **11 bónus = 220 senhas = R$ 440** (devidos
+R$ 40), com bónus concedido em edições de `acertos_totais = 0`. Nenhum teste
+passava de 5 ciclos, por isso a suíte não via.
+
+**Correcção:** `contarBonusConcedidos(endereco)` conta os bónus já dados em todos
+os ciclos; concede-se só se `sequencia.bonus > jaConcedidos`.
+
+### ⛔ `.eq(col, null)` NÃO é `IS NULL` — regra permanente do projeto
+
+O postgrest-js traduz `.eq(col, null)` para `col=eq.null`, que o PostgREST
+rejeita numa coluna TIMESTAMPTZ com **HTTP 400 (`22007`)**. Só `.is()` gera
+`col=is.null`. Verificado por execução:
+
+```
+.eq("liquidado_em", null) → ?liquidado_em=eq.null   ❌ 400
+.is("liquidado_em", null) → ?liquidado_em=is.null   ✅
+.eq("bonus_emitido", false) → ?bonus_emitido=eq.false  ✅ (booleano, eq é válido)
+```
+
+O compare-and-set do handler usava `.eq()`: **não existia**. Com a flag ligada
+teria falhado em 100% das execuções → DLQ. E a suíte **pinava o defeito** — o
+teste assertava o valor do filtro `eq`, logo a correcção partia 6 testes.
+Hoje: o duplo **lança** se alguém chamar `.eq(col, null)`, como o PostgREST faz.
+
+### ⛔ O CAS do MC93-B era neutralizado pelo upsert acima
+
+O `upsert` repunha `bonus_emitido: false` a partir de uma leitura anterior,
+noutra transacção — com latência real, o pagamento duplo reaparecia.
+**Correcção:** o upsert deixou de escrever `bonus_emitido`, `senhas_a_creditar` e
+`liquidado_em`. Essas três colunas são **exclusivas** do compare-and-set e do
+worker de liquidação. Os pontos passaram a duas UPDATEs condicionais.
+
+> O teste que o guarda é **comportamental** (observa as colunas realmente
+> escritas), porque o sintoma precisa de MVCC e um duplo in-memory não o
+> reproduz. Guarda-se a causa, já que não se consegue guardar o sintoma.
+
+### O cadeado de três condições (além do pedido)
+
+O MC pedia uma flag. Uma flag sozinha é **fail-open por omissão de disciplina**.
+A emissão exige, em simultâneo: (1) `BONUS_EMISSAO_ATIVA === "true"` (string
+exacta); (2) dívida existente e `liquidado_em IS NULL` no **livro-razão** — a
+idempotência ancora no registo, não na fila; (3) payload a coincidir com o
+livro-razão **e com a regra** em ciclo, endereço e quantidade.
+
+**Estado hoje: DRY-RUN**, confirmado por execução — com dívida perfeita em
+aberto, a decisão é `{"emitir":false,"motivo":"flag_desligada"}`.
+
+### ⛔ Pendência que bloqueia a activação: a dívida órfã
+
+Em dry-run a tarefa é consumida sem liquidar, e `enfileirar` só corre quando a
+dívida **nasce**. Toda a dívida criada com a flag desligada fica
+**permanentemente fora do alcance da fila**. Antes de ligar, re-enfileirar o que
+está em aberto — a consulta está em `docs/TORNEIO-HABILIDADE.md` §4c. **Não
+implementado.**
+
+### Lições de método (recorrência ALTA — 3.º MC seguido)
+
+- **Um duplo que aceita o que o sistema real recusa dá verde a código partido.**
+  Já aconteceu com um mock que ignorava o argumento (MC93-B) e agora com um que
+  aceitava `eq(col, null)`. Regra: o duplo **recusa o que o original recusa**, e
+  **aplica os DEFAULTs das colunas** como a tabela real.
+- **Um teste pode PINAR o defeito.** Aqui a correcção certa partia 6 testes,
+  porque eles assertavam o mecanismo errado. Quando uma correcção óbvia parte
+  testes, suspeitar dos testes primeiro.
+- **Ancorar mutações em sintaxe executável, nunca numa expressão citada.**
+  Segunda vez que um comentário meu corrompe a minha própria prova de mutação.
+- **Duas validações em paralelo sobre a mesma working tree contaminam-se.** O
+  Validador B viu ficheiros a mudar debaixo dos pés (era o A a mutar) e declarou
+  a conformidade não-mensurável. Em série, ou cada um no seu worktree.
+
+### Não medido (L-4)
+
+Nada correu contra Supabase real nem contra a mainnet; a migração continua por
+aplicar e tem **cobertura de teste zero**. `txHash` não é persistido e `err.code`
+é descartado. `GET /ranking` é público e enumera todas as carteiras que
+licitaram — decisão de produto por tomar.
+⚠️ **As correcções deste MC não passaram por uma terceira validação
+independente.** Três MCs, três reprovações: a ressalva é material.

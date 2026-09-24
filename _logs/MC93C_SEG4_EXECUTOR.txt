@@ -1,0 +1,167 @@
+================================================================================
+MC93-C — SEG4 · VALIDAÇÃO (lado do EXECUTOR)
+DesafioGUT · Data: 2026-09-24
+Skills ECC: verification-before-completion
+Relatórios independentes:
+  _logs/MC93C_SEG4_VALIDACAO-A.txt  — 2ª validação das 6 correcções do MC93-B
+  _logs/MC93C_SEG4_VALIDACAO-B.txt  — validação do handler novo
+================================================================================
+
+                 OS DOIS VALIDADORES DERAM **REPROVADO**.
+       Verifiquei por execução cada alegação grave. Todas se confirmaram.
+
+4.1 — SUÍTE COMPLETA
+--------------------------------------------------------------------------------
+  Antes das correcções: 501/501 (477 baseline + 24 do MC93-C)
+  Depois das correcções: **507/507 · fail 0** (477 + 30)
+  Os 6 testes a mais nasceram dos defeitos que a validação dupla encontrou.
+
+4.2 — SUÍTE DE SEGURANÇA
+--------------------------------------------------------------------------------
+⚠️ NÃO ISOLÁVEL (como no MC93-A/B): os testes de segurança estão distribuídos.
+O que este MC acrescenta e está coberto: o cadeado de três condições, o
+compare-and-set com `.is()`, a ancoragem do claim ao ciclo E ao endereço, e a
+recusa de payload divergente.
+
+4.3 — COBERTURA
+--------------------------------------------------------------------------------
+⚠️ **NÃO MEDIDA** — o projeto continua sem alvo configurado. Terceira vez que se
+declara. ⚠️ E a migração SQL tem cobertura **zero**: CHECKs, RLS e GRANTs só se
+exercem contra um PostgreSQL real (achado do Validador A, aceite).
+
+4.4 — PROVA DE R1
+--------------------------------------------------------------------------------
+  Modificados (4, todos autorizados):
+    _lib/pontuacao-store.mjs          ← autorizado explicitamente
+    _tests/mc93b-pontuacao-store.test.mjs
+    fila-processor-scheduled.mjs      ← autorizado pelo operador (R18)
+    docs/TORNEIO-HABILIDADE.md        ← autorizado
+  Novos (4): _lib/bonus-emissao.mjs, _lib/worker-bonus.mjs, 2 testes.
+  INTACTOS: `_lib/pontuacao-utils.mjs`, `consolidar-lances.mjs`,
+  `pontuacao.mjs`, `ranking.mjs`, a migração SQL.
+
+4.5 — PROVA DE MUTAÇÃO (R16)
+--------------------------------------------------------------------------------
+RONDA 1 (antes da validação dupla) — 12 mutantes sobre o código novo:
+  10 mortos · 1 escape real (creditar sem ter reclamado linha → teste de corrida
+  acrescentado) · 1 classificado como EQUIVALENTE **por medição**, não por
+  suposição (a condição 3 força payload === livro-razão no ponto de retorno).
+
+⚠️ FALSO SOBREVIVENTE DE NOVO, E OUTRA VEZ POR CAUSA DE UM COMENTÁRIO MEU.
+Na ronda pós-validação, "voltar a `.eq(col, null)`" apareceu VIVO. Investigado:
+o meu `replace` tinha substituído o texto **dentro do comentário** que cita
+`.is("liquidado_em", null)`, não a linha de código. Com âncora no código
+(incluindo o marcador de comentário da própria linha) → **MORTO, 14 falhas**.
+É a segunda vez neste projeto que um comentário meu corrompe a minha própria
+prova de mutação. A regra passa a ser: ancorar sempre numa porção que inclua
+sintaxe executável, nunca só a expressão citada.
+
+RONDA 2 (os P0 dos dois validadores, após correcção):
+  MORTO (14) B-P0-1  voltar a `.eq(col, null)`
+  MORTO ( 2) B-M6    claim sem filtro de ciclo
+  MORTO ( 2) B-M7    claim sem filtro de endereço
+  MORTO ( 2) B-M3    cai a 3ª perna do cadeado
+  MORTO ( 4) A-P0-1  bónus volta a `sequencia.bonus > 0`
+  MORTO ( 2) A-P0-2  upsert volta a repor `bonus_emitido`
+  MORTO ( 8) CTRL    remover a guarda da decisão  ← controlo positivo válido
+
+TOTAL do MC: 19 mutantes aplicados e assertados · 18 mortos · 1 equivalente.
+
+4.6/4.7 — OS DOIS VEREDITOS INDEPENDENTES
+--------------------------------------------------------------------------------
+VALIDADOR A — 2ª validação das 6 correcções do MC93-B: **REPROVADO**
+  nº1 CORRIGIDO · nº2 MAL CORRIGIDO + REGRESSÃO P0 · nº3 MAL CORRIGIDO ·
+  nº4 causa corrigida, cobertura mínima · nº5 MAL CORRIGIDO · nº6 NÃO VERIFICADO.
+  18 mutações, 11 mortas, 7 sobreviventes, controlo positivo morto.
+
+VALIDADOR B — handler novo: **REPROVADO**
+  B1 PASSOU (a trava de três condições resistiu a tudo) · B2 FALHOU (P0) ·
+  B3 FALHOU (P0) · B4 FALHOU (7 de 11 sobreviveram) · B5 AMBÍGUO.
+  Ressalva do próprio B, aceite: a árvore mudou durante a sua execução porque o
+  Validador A estava a mutar em paralelo — B5 não é mensurável com duas
+  validações na mesma working tree. **É um defeito do meu desenho da validação
+  dupla, não dele:** despachei-as em simultâneo sobre a mesma árvore.
+
+4.8 — OS TRÊS P0, VERIFICADOS E CORRIGIDOS (R15)
+--------------------------------------------------------------------------------
+P0-1 ⛔ **O BÓNUS REPETIA-SE PARA SEMPRE** (Validador A). O meu "fix" do MC93-B
+     trocou "nunca dispara" por "dispara sempre".
+     MEDIDO por execução: `detectarConsecutivos().bonus` é CUMULATIVO sobre todo
+     o histórico e nunca decresce —
+        5 vitórias → 1 · 5 vitórias + 10 derrotas → 1 · 10 vitórias → 2
+     e a guarda `bonus_emitido` é POR CICLO. Cada ciclo novo nascia com a
+     bandeira a `false` e concedia OUTRO bónus.
+     Medição do Validador A: 5 vitórias + 10 derrotas = **11 bónus = 220 senhas
+     = R$ 440**, em vez de R$ 40 — com bónus concedido em edições de
+     `acertos_totais = 0`. Nenhum teste passava de 5 ciclos, por isso ninguém
+     via.
+     CORRIGIDO: `contarBonusConcedidos(endereco)` conta os bónus já dados em
+     TODOS os ciclos; concede-se apenas se `sequencia.bonus > jaConcedidos`.
+     Três testes novos: 10 derrotas não pagam; uma SEGUNDA sequência de 5 paga
+     (e só uma); refechar não paga extra.
+
+P0-2 ⛔ **O COMPARE-AND-SET DO MC93-B ERA NEUTRALIZADO** (Validador A).
+     O `upsert` 12 linhas acima repunha `bonus_emitido: false` a partir de uma
+     leitura anterior, noutra transacção. Com latência real, o pagamento duplo
+     reaparecia — "fila 40 senhas, livro-razão 20", palavra por palavra o
+     sintoma que o MC93-B dizia ter corrigido.
+     CORRIGIDO: o upsert deixou de escrever `bonus_emitido`,
+     `senhas_a_creditar` e `liquidado_em`. Essas três colunas pertencem
+     exclusivamente ao CAS e ao worker. Os pontos passaram a ser escritos por
+     duas UPDATEs condicionais (`bonus_emitido = false` / `= true`), para que os
+     +5 nunca se percam nem se dupliquem sem depender de leitura desactualizada.
+     ⚠️ O teste que o guarda é COMPORTAMENTAL, não textual: observa as colunas
+     realmente escritas nos upserts. O sintoma precisa de MVCC para aparecer e
+     um duplo in-memory não o reproduz — guarda-se a causa, já que não se
+     consegue guardar o sintoma. Tentei injectar latência no duplo
+     (`setImmediate` antes de cada escrita); a suíte manteve-se verde mas a
+     mutação continuou viva, o que confirma o diagnóstico do Validador A.
+
+P0-3 ⛔ **`.eq("liquidado_em", null)` NÃO É `IS NULL`** (Validador B).
+     Verificado por execução própria:
+       .eq(col, null) → ?liquidado_em=eq.null
+       .is(col, null) → ?liquidado_em=is.null
+     O PostgREST rejeita `eq.null` numa coluna TIMESTAMPTZ com HTTP 400
+     (`22007 invalid input syntax`). ⇒ **O meu compare-and-set não existia.**
+     Com a flag ligada, o handler teria falhado em 100% das execuções → DLQ.
+     Fail-CLOSED (sem risco financeiro), mas o MC não entregava o que declarava.
+     ⚠️ E a minha suíte PINAVA O DEFEITO: o teste assertava o valor do filtro
+     `eq`, logo a correcção partia 6 testes. O duplo aceitava `eq(col, null)`.
+     CORRIGIDO em três frentes: `.is()` no código; o duplo passou a **lançar**
+     se alguém chamar `.eq(col, null)`, como o PostgREST faz; e o teste passou a
+     exigir que se tenha usado `.is()`, além de assertar o conjunto COMPLETO de
+     filtros do claim (o que mata B-M6 e B-M7, as duas mutações mais
+     destrutivas: liquidar outros ciclos ou o ciclo inteiro).
+
+CORRIGIDO TAMBÉM: o duplo do store não aplicava os DEFAULTs das colunas, ao
+contrário da tabela real — uma coluna omitida no INSERT ficava `undefined` no
+duplo e `0`/`false` no PostgreSQL. Era mais uma infidelidade a esconder
+comportamento.
+
+4.9 — L-4 · O QUE NÃO FOI MEDIDO NEM CORRIGIDO
+--------------------------------------------------------------------------------
+N1 ⛔ **DÍVIDA ÓRFÃ, NÃO RESOLVIDA** (Validador B, aceite). Em dry-run a tarefa
+   é consumida sem liquidar, e `enfileirar` só corre quando a dívida NASCE.
+   Toda a dívida criada com a flag desligada fica permanentemente fora do
+   alcance da fila. **Antes de activar, é preciso re-enfileirar o que está em
+   aberto** — a consulta está em docs/TORNEIO-HABILIDADE.md §4c. Não implementei
+   o sweeper: é comportamento novo, fora do que este MC autoriza.
+N2 `txHash` não é persistido; `err.code` é descartado (uma tx revertida é
+   tratada como falha genérica). Aceites, não corrigidos.
+N3 `GET /ranking` é público e, desde o MC93-B, enumera todas as carteiras que
+   licitaram. Achado do Validador A; é decisão de produto, registada em §4c.
+N4 `exigir()` só está exercido por teste em 1 dos 8 sítios onde é chamado.
+N5 Nada correu contra Supabase real nem contra a mainnet. A migração continua
+   por aplicar.
+N6 **A validação dupla correu sobre a MESMA working tree, em paralelo** — erro
+   meu de desenho. O Validador B viu `pontuacao-store.mjs` a mudar debaixo dos
+   pés (era o A a mutar) e declarou B5 não-mensurável. Da próxima vez: em série,
+   ou cada um no seu worktree.
+N7 **As correcções DESTE MC não passaram por uma terceira validação.** Foram
+   verificadas por execução e cobertas por testes e mutação — mas quem as
+   escreveu fui eu. Dado o histórico (três MCs, três reprovações), isto é uma
+   ressalva material.
+
+================================================================================
+FIM DO SEG4
+================================================================================

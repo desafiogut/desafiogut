@@ -135,27 +135,48 @@ export async function registrarPontuacaoRodada(cicloId, lances) {
     // devolvia sempre `bonus: 0` e o bónus de sequência era INALCANÇÁVEL no
     // único caminho de produção. Achado da validação independente do SEG4.
     const sequencia = detectarConsecutivos(await lerHistoricoAcertos(endereco, supabase));
+    const jaConcedidos = await contarBonusConcedidos(endereco, supabase);
 
     const atual = await supabase.from(T_RANKINGS)
       .select("*").eq("ciclo_id", ciclo).eq("endereco", endereco).maybeSingle();
     const anterior = exigir(atual, "ler rankings_ciclo");
     const jaTemBonus = anterior?.bonus_emitido === true;
 
+    // ⚠️ O upsert NÃO escreve `bonus_emitido`, `senhas_a_creditar` nem
+    // `liquidado_em`. Essas três colunas pertencem EXCLUSIVAMENTE ao
+    // compare-and-set (`reclamarBonus`) e ao worker de liquidação.
+    // A versão anterior repunha-as a partir de uma leitura feita antes, noutra
+    // transacção: com latência real, o upsert de uma execução apagava o
+    // `bonus_emitido: true` que a outra acabara de gravar, e o CAS voltava a
+    // conceder — reaparecendo o pagamento duplo que o MC93-B dizia ter
+    // corrigido. O PostgREST preserva as colunas não listadas no ON CONFLICT.
     exigir(await supabase.from(T_RANKINGS).upsert({
       ciclo_id: ciclo,
       endereco,
-      // Os pontos do bónus fazem parte do total e NÃO podem desaparecer ao
-      // refechar a rodada — a versão anterior repunha só `v.pontos` e apagava-os.
-      pontos_totais: v.pontos + (jaTemBonus ? REGRAS.PONTOS_BONUS : 0),
       acertos_totais: v.acertos,
-      posicao: anterior?.posicao ?? 0,
-      bonus_emitido: jaTemBonus,
-      senhas_a_creditar: anterior?.senhas_a_creditar ?? 0,
-      liquidado_em: anterior?.liquidado_em ?? null,
       atualizado_em: new Date().toISOString(),
     }, { onConflict: "ciclo_id,endereco" }), "upsert rankings_ciclo");
 
-    if (!jaTemBonus && sequencia.bonus > 0) {
+    // Pontos: duas escritas condicionais, para que os +5 do bónus nunca se
+    // percam nem se dupliquem, sem depender de uma leitura desactualizada.
+    exigir(await supabase.from(T_RANKINGS)
+      .update({ pontos_totais: v.pontos })
+      .eq("ciclo_id", ciclo).eq("endereco", endereco).eq("bonus_emitido", false),
+    "pontos sem bónus");
+    exigir(await supabase.from(T_RANKINGS)
+      .update({ pontos_totais: v.pontos + REGRAS.PONTOS_BONUS })
+      .eq("ciclo_id", ciclo).eq("endereco", endereco).eq("bonus_emitido", true),
+    "pontos com bónus");
+
+    // ⚠️ `sequencia.bonus` é CUMULATIVO sobre todo o histórico e nunca decresce:
+    // uma vez atingidos 5 acertos seguidos, vale ≥1 para sempre. A guarda
+    // `jaTemBonus` é POR CICLO, logo não o limita — cada ciclo novo nascia com
+    // `bonus_emitido: false` e concedia OUTRO bónus. Medido pela validação
+    // independente: 5 vitórias + 10 derrotas davam 11 bónus (R$ 440 em vez de
+    // R$ 40), inclusive em edições com zero acertos.
+    // A comparação certa é contra o que JÁ FOI concedido ao participante, em
+    // todos os ciclos.
+    if (!jaTemBonus && sequencia.bonus > jaConcedidos) {
       const ganhou = await reclamarBonus(ciclo, endereco, v.pontos, supabase);
       if (ganhou) {
         bonusRegistados += 1;
@@ -179,6 +200,20 @@ export async function registrarPontuacaoRodada(cicloId, lances) {
  * ⚠️ É por isto que se grava uma linha para QUEM NÃO ACERTOU: sem as falhas, a
  * corrente nunca se parte e o contador que paga 20 senhas conta a mais.
  */
+/**
+ * Quantos bónus já foram concedidos a este participante, somando TODOS os
+ * ciclos. É o contrapeso de `detectarConsecutivos().bonus`, que é cumulativo.
+ *
+ * ⚠️ Sem isto, uma bandeira por-ciclo (`bonus_emitido`) tentava limitar um
+ * contador que atravessa ciclos — e falhava: depois da primeira sequência de 5,
+ * TODOS os ciclos seguintes concediam bónus.
+ */
+async function contarBonusConcedidos(endereco, supabase = getSupabase()) {
+  const r = await supabase.from(T_RANKINGS)
+    .select("*").eq("endereco", endereco).eq("bonus_emitido", true);
+  return (exigir(r, "contar bónus concedidos") || []).length;
+}
+
 async function lerHistoricoAcertos(endereco, supabase = getSupabase()) {
   const r = await supabase.from(T_PONTUACOES)
     .select("*").eq("endereco", endereco).order("criado_em", { ascending: true });
