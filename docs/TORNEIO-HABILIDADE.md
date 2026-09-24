@@ -1,8 +1,11 @@
 # Torneio de habilidade — especificação do motor de pontuação
 
-> **Origem:** MC93-A (2026-09-23) · **Estado:** motor puro implementado; persistência, endpoints e emissão de senhas **por fazer** (MC93-B).
-> **Código:** `desafio-gut/frontend/netlify/functions/_lib/pontuacao-utils.mjs`
-> **Testes:** `desafio-gut/frontend/netlify/functions/_tests/mc93-pontuacao.test.mjs`
+> **Origem:** MC93-A (motor puro) + MC93-B (persistência, endpoints, integração), 2026-09-23/24.
+> **Estado:** implementado e testado. ⚠️ **A migração SQL ainda NÃO foi aplicada** e a
+> **emissão on-chain do bónus continua por fazer** — ambas dependem do operador.
+> **Código:** `_lib/pontuacao-utils.mjs` (motor) · `_lib/pontuacao-store.mjs` (persistência) ·
+> `pontuacao.mjs` · `ranking.mjs` · `supabase/migrations/20260923_mc93b_pontuacoes.sql`
+> **Testes:** `_tests/mc93-pontuacao.test.mjs` · `mc93b-pontuacao-store.test.mjs` · `mc93b-endpoints.test.mjs`
 
 ---
 
@@ -98,6 +101,109 @@ atualizarRanking([{endereco:"0xA…",pontosTotais:10},{endereco:"0xB…",pontosT
 - Dentro do empate, ordem por **endereço ascendente** — determinística de propósito: o ranking decide prémio, logo a ordem de chegada dos dados nunca pode alterar o resultado. Há um teste que inverte o input e exige o mesmo output.
 - **Agrega por carteira**: a mesma carteira nunca ocupa duas posições.
 - Entradas sem endereço utilizável (incluindo chaves não-textuais num `Map`) são descartadas. Uma só política para o caminho do `Map` e o da lista.
+
+---
+
+## 4b. Persistência, endpoints e integração (MC93-B)
+
+> **Estado:** implementado; a migração SQL **ainda não foi aplicada** — execução do operador.
+
+### Tabelas
+
+`pontuacoes` — um registo por participante por ciclo, escrito no fecho da rodada.
+`ciclo_id` é **TEXT**, porque o ciclo é a edição e os ids são strings ("R-1");
+`lances.edicao_id` é `VARCHAR(66)`, logo um UUID impediria o join.
+`UNIQUE (ciclo_id, endereco)` dá a idempotência do fecho.
+
+`rankings_ciclo` — agregado do ciclo mais o estado do bónus:
+`pontos_totais`, `acertos_totais`, `posicao`, `bonus_emitido`,
+`senhas_a_creditar`, `liquidado_em`.
+
+RLS activa nas duas, com política **só para `service_role`**. A chave `anon` não
+lê estas tabelas: o placar é servido pelo endpoint, do lado do servidor. É a
+brecha A-04 que o MC87 fechou.
+
+### A sequência de acertos vive na própria tabela
+
+`registrarPontuacaoRodada` lê o histórico de `pontuacoes` sozinho — o chamador
+não passa histórico nenhum. ⚠️ A primeira versão exigia-o por parâmetro e a
+integração em `consolidar-lances.mjs` nunca o passava: `detectarConsecutivos([])`
+devolvia sempre `bonus: 0` e **o bónus de sequência era inalcançável no único
+caminho de produção**. Achado da validação independente.
+
+Por isso grava-se uma linha para **cada participante da rodada**, incluindo quem
+não acertou (`acertos: 0`): sem as falhas registadas, a corrente nunca se parte
+e o contador que paga 20 senhas conta a mais.
+
+### Concorrência: o bónus é reclamado, não escrito
+
+`reclamarBonus` faz um **compare-and-set** — `UPDATE … WHERE bonus_emitido = false`
+— e só enfileira a dívida se tiver afectado alguma linha. ⚠️ Com read-then-write,
+duas consolidações em paralelo liam ambas `false`, ambas gravavam 20 senhas e
+ambas enfileiravam: o livro-razão dizia 20 e a fila mandava creditar 40.
+
+### O bónus é um DIREITO, não um saldo
+
+⚠️ **`senhas_a_creditar` nunca entra em `saldoEfetivo`.** O contrato é a única
+autoridade: `darLance` exige `saldoSenhas[msg.sender] > 0` on-chain
+(`Leilao.sol:88`) e decrementa-o (`:107`). Uma senha creditada fora da cadeia
+não habilita lance nenhum — o utilizador veria "+20 senhas" e a transação
+reverteria com "Voce nao possui senhas disponiveis". E `saldo-senhas.mjs`
+calcula `saldoEfetivo = saldoOnChain − senhasConsumidas`: somar-lhe um termo
+off-chain quebraria a invariante `saldoEfetivo ≤ saldoOnChain`.
+
+Por isso o store grava a dívida (`liquidado_em = NULL`) e enfileira
+`creditar-senhas-bonus` em `fila_tarefas` — o mesmo caminho que o projeto já
+usa para creditar senhas depois do PIX. A emissão on-chain acontece quando o
+operador a autorizar.
+
+**A UI (MC94) tem de dizer "20 senhas a creditar", não "+20 senhas".**
+
+### Desempate: duas regras, de propósito
+
+O operador fixou **"mais acertos totais"** (2026-09-23). O motor do MC93-A
+desempata por endereço, e o MC93-B não podia alterá-lo. Por isso o ranking do
+ciclo é ordenado **no store**: `pontos desc → acertos desc → endereço asc`.
+Há um teste que exige que as duas regras **coincidam quando os acertos são
+iguais**, para que a divergência deliberada não se alargue.
+⇒ Quando o MC95 ratificar a regra, leva-se o desempate ao motor e o store
+delega.
+
+### Endpoints
+
+| | Acesso | Resposta |
+|---|---|---|
+| `POST /pontuacao` | admin (`guardAdmin`) | `{ok, cicloId, participantes, bonusRegistados}` |
+| `GET /ranking?cicloId=` | público, rate-limited | `{cicloId, total, ranking[]}` |
+| `GET /ranking?recurso=feedback&cicloId=&endereco=` | **dono ou admin** | pontos, posição, sequência, quanto falta, direito |
+
+⚠️ O `feedback` exige `validarOwnerOuAdmin`, não só sessão válida: os endereços
+são públicos na blockchain, logo "ter sessão" não é autorização para ler a
+atividade de outrem. Mesmo guarda de `saldo-rs.mjs:51`.
+
+### Integração no fecho da rodada
+
+Em `consolidar-lances.mjs`, **depois do recibo confirmado** e **antes de
+`marcarConsolidado`**, em `try/catch` **fail-soft**:
+
+- *depois do recibo* — uma tx pendente (202) ou falhada (502) sai antes, logo
+  não gera pontos;
+- *fail-soft* — a transação já está minerada e é irreversível; a pontuação é
+  reconstituível, a tx não é. Rebentar aqui faria o caller crer que a
+  consolidação falhou.
+
+> ⚠️ **Consequência assumida.** Como o `catch` engole, o `marcarConsolidado`
+> corre na mesma: se a pontuação falhar, a edição fica **consolidada sem
+> pontos**, e a segunda chamada sai logo no `estaConsolidado`. **O estado
+> parcial é permanente por este caminho.** A recuperação é manual e existe de
+> propósito: `POST /pontuacao` com o mesmo `cicloId` repontua a edição (é
+> idempotente por ciclo+endereço, e preserva bónus e liquidação já feitos).
+> A resposta da consolidação devolve `pontuacao: null` precisamente para que a
+> coordenação veja que há uma edição por repontuar.
+>
+> *(Uma versão anterior desta secção afirmava que a edição ficava por marcar e
+> que a repetição resolvia sozinha. Era falso — o `catch` impede-o. Corrigido
+> depois de a validação independente o apanhar.)*
 
 ---
 

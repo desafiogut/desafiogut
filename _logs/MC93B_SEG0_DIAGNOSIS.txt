@@ -1,0 +1,110 @@
+================================================================================
+MC93-B — SEG0 · DIAGNÓSTICO
+DesafioGUT · Data: 2026-09-23 · Commit base: 11894bd
+Skills ECC: smart-explore, terminal-ops
+================================================================================
+
+0.1 — AMBIENTE
+--------------------------------------------------------------------------------
+  git log --oneline -1   → 11894bd ✅
+  git status --porcelain → sem modificados (3 untracked em docs/, anteriores) ✅
+  node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+    → ℹ tests 436 · pass 436 · fail 0  ✅  (baseline do enunciado confirmada)
+
+0.2 — `consolidar-lances.mjs` — PONTO DE EXTENSÃO
+--------------------------------------------------------------------------------
+Sequência real (linhas):
+   :55  guardAdmin → denied
+   :58  edicaoId do body
+   :63  estaConsolidado(edicaoId)   ← idempotência: sai cedo se já fechado
+   :67  ENV obrigatórias (503 se faltar)
+   :76  lances = await getLances(edicaoId)
+   :77  apurado = apurarMenorUnico(lances)   → 422 se não houver único
+   :85  signer da coordenação
+   :91  nonce + EIP-712
+   :110 contrato.consolidarResultado(...)     ← SUBMISSÃO ON-CHAIN
+   :117 waitForTransaction (202 "pendente" se não minerar)
+   :133 marcarConsolidado(edicaoId, resultado) ← FECHO
+   :134 jsonResponse ok
+
+DECISÃO DE COLOCAÇÃO (a mais importante deste MC):
+  A pontuação entra **depois do recibo confirmado e antes de
+  `marcarConsolidado`** — e é **FAIL-SOFT**.
+  Porquê depois do recibo: pontuar uma rodada cuja transação ficou pendente
+  (202) ou falhou (502) seria pontuar um resultado que não existe on-chain.
+  Porquê fail-soft: nesse ponto a transação **já está minerada e é
+  irreversível**. Se a persistência falhar, não há rollback possível — e
+  rebentar a resposta faria o caller pensar que a consolidação falhou, quando
+  o dinheiro já se moveu. Logo: try/catch, log, e a consolidação responde ok.
+  Porquê antes de `marcarConsolidado`: se a pontuação falhar, a edição fica
+  por marcar e uma nova chamada repete tudo — e a pontuação é idempotente por
+  UNIQUE (ciclo_id, endereco) com upsert de REPLACE, logo repetir não duplica.
+
+⚠️ `:50` → `if (process.env.NETWORK_STAGE !== "mainnet") return`. A integração
+  só tem caminho de execução em produção mainnet. Testável apenas por mock
+  (L-4).
+
+0.3 — FORMA DO LANCE
+--------------------------------------------------------------------------------
+`getLances(edicaoId)` (fachada `_lib/data-store.mjs:52`) → lista de registos na
+forma `{ endereco, valorCentavos, nomeExibicao? , … }` — a mesma assinatura que
+`apurarMenorLanceUnico` e `calcularPontosRodada` já consomem.
+⚠️ `_lib/data-store.mjs:21` → `const BACKEND = process.env.DATA_STORE_BACKEND
+  || "blobs"`. O default do código é Blobs; o valor de produção não foi lido
+  nesta sessão (L-4/N1).
+
+0.4 — PADRÃO DE MIGRAÇÃO E RLS
+--------------------------------------------------------------------------------
+Nomenclatura: `YYYYMMDD_nome.sql` (11 ficheiros em `supabase/migrations/`).
+RLS (padrão de `20260621_cotas_schema.sql:52-60`):
+    ALTER TABLE <t> ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY "service_role total <t>" ON <t>
+      FOR ALL TO service_role USING (true) WITH CHECK (true);
+Lições registadas nas migrações anteriores, a respeitar (MC87/MC88.29):
+  • `CREATE OR REPLACE FUNCTION` falha com 42P13 se o NOME do parâmetro mudar
+    → usar DROP + CREATE quando houver função.
+  • O PostgreSQL concede EXECUTE a PUBLIC por omissão → `REVOKE ... FROM PUBLIC`,
+    não só de anon/authenticated.
+  • Fixar `search_path` em funções (achado A-15 do MC87).
+  • Índices e constraints vivem no SCHEMA: `IF NOT EXISTS` pode mascarar a
+    ausência de índice.
+  • **Nunca re-executar migrações com DROP TABLE.**
+
+0.5 — `guardAdmin`
+--------------------------------------------------------------------------------
+`_lib/admin-auth.mjs:191  export async function guardAdmin(req)` — devolve uma
+Response de negação ou `null`/undefined se autorizado. Uso em
+`consolidar-lances.mjs:55`: `const denied = await guardAdmin(req); if (denied)
+return denied;`. Há também `guardAdminNivel(req, nivelMinimo)` (:210).
+
+0.6 — PEÇAS REAPROVEITÁVEIS
+--------------------------------------------------------------------------------
+  `_lib/supabase-client.mjs`  → `getSupabase()`, `getSupabaseReadOnly()`,
+                                `supabaseConfigurado()`
+  `_lib/fila.mjs:25`          → `enfileirar(tipo, payload, {agendadoPara,
+                                maxTentativas})` — é o mecanismo que o projeto
+                                já usa para creditar senhas on-chain após PIX.
+                                É por aqui que o DIREITO a bónus é registado
+                                (decisão do operador, Opção A).
+  `_lib/cors.mjs`             → `respostaPreflight(req)`
+  `_lib/rate-limiter.mjs`     → `aplicarRateLimit(req, nome, limite)`
+  `_lib/validate.mjs`         → `jsonResponse`, `jsonError`, `parseJsonBody`,
+                                `validarEndereco`, `ValidationError`
+  `_lib/jwt.mjs`              → `verificarUserSession` (anti-IDOR no /feedback)
+  Padrão de teste offline     → `_tests/mc321-data-store-supabase.test.mjs`
+                                (Supabase falso in-memory, builder encadeável
+                                e "thenable"; `mock.module`)
+
+0.7 — LACUNAS RESOLVIDAS PELO OPERADOR (R18, 2026-09-23)
+--------------------------------------------------------------------------------
+  Ciclo ............ 1 edição  → `ciclo_id` é **TEXT**, não UUID (SEG-1/A1)
+  Desempate ........ mais acertos totais → muda a ordenação do MC93-A, que
+                     desempatava por endereço. O motor puro **não é alterado**
+                     (proibido); o desempate final é feito no store, que tem
+                     `acertos_totais`. Documentado em §1.4 do SEG1.
+  Limite de bónus .. 1 por ciclo por participante (`bonus_emitido`)
+  Bónus ............ **DIREITO**, não saldo (Opção A). Ver SEG-1 §-1.5.
+
+================================================================================
+FIM DO SEG0
+================================================================================

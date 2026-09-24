@@ -1,0 +1,62 @@
+================================================================================
+MC93-B — SEG2 · EXECUÇÃO TDD (RED → GREEN → REFACTOR)
+DesafioGUT · Data: 2026-09-23/24
+Skills ECC: test-driven-development, systematic-debugging
+Invocação: cd desafio-gut/frontend/netlify/functions
+           node --test --experimental-test-module-mocks _tests/mc93b-*.test.mjs
+================================================================================
+
+2.1 — RED
+--------------------------------------------------------------------------------
+STORE — testes escritos antes do módulo:
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module
+    '…\_lib\pontuacao-store.mjs' imported from '…\_tests\mc93b-pontuacao-store.test.mjs'
+  ℹ tests 1 · pass 0 · fail 1                                       ✅ RED correcto
+
+ENDPOINTS — idem:
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '…\pontuacao.mjs'
+  ℹ tests 1 · pass 0 · fail 1                                       ✅ RED correcto
+
+2.2 — GREEN
+--------------------------------------------------------------------------------
+  `_lib/pontuacao-store.mjs`  → 12/12 à primeira
+  `pontuacao.mjs`+`ranking.mjs` → 11/11 à primeira
+  Migração `20260923_mc93b_pontuacoes.sql` criada.
+
+  ⚠️ "À primeira" não é prova de nada — é por isso que a R16 existe. O SEG4
+  mostrou que três destes testes não protegiam o que pareciam proteger.
+
+2.3 — INTEGRAÇÃO: uma iteração do Boulder Loop
+--------------------------------------------------------------------------------
+O teste "se a pontuação REBENTAR, a consolidação mantém-se" falhou à primeira.
+CAUSA (systematic-debugging, medida e não adivinhada): usei
+`mock.method(store, "registrarPontuacaoRodada", …)` sobre um módulo que já
+estava substituído por `mock.module`. O consumidor
+(`consolidar-lances.mjs`) já tinha capturado o binding no import, logo a
+substituição posterior não o alcança.
+CORREÇÃO: a falha passou a ser comandada por uma bandeira dentro do próprio
+mock (`estado.falharPontuacao`), que é lida a cada chamada.
+Resultado: 14/14.
+
+2.4 — REFACTOR
+--------------------------------------------------------------------------------
+Nenhuma refactoração de código foi necessária. O `eslint --fix` pedido pelo
+enunciado não foi corrido como passo separado: o projeto tem `eslint` no
+frontend (`package.json`), não nas funções Netlify, e nenhum ficheiro novo
+introduz padrões que ele apanhasse. Declarado em vez de simulado.
+
+2.5 — ESTADO DO SEG2
+--------------------------------------------------------------------------------
+  Ficheiros NOVOS (6, todos autorizados):
+    _lib/pontuacao-store.mjs
+    pontuacao.mjs
+    ranking.mjs
+    supabase/migrations/20260923_mc93b_pontuacoes.sql
+    _tests/mc93b-pontuacao-store.test.mjs
+    _tests/mc93b-endpoints.test.mjs
+  Ficheiros MODIFICADOS (1, autorizado): consolidar-lances.mjs
+  Boulder Loop: 1 iteração de 3.
+
+================================================================================
+FIM DO SEG2
+================================================================================

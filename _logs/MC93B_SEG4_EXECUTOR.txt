@@ -1,0 +1,274 @@
+================================================================================
+MC93-B — SEG4 · VALIDAÇÃO (lado do EXECUTOR)
+DesafioGUT · Data: 2026-09-24
+Skills ECC: verification-before-completion
+⚠️ `mutation-test` não existe em disco (confirmado no MC93-A e reconhecido pelo
+   próprio enunciado). Prova de mutação feita à mão — procedimento em §4.5.
+O relatório do VALIDADOR independente está em _logs/MC93B_SEG4_VALIDACAO.txt.
+================================================================================
+
+4.1 — SUÍTE COMPLETA
+--------------------------------------------------------------------------------
+  cd desafio-gut/frontend/netlify/functions
+  node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+    → ℹ tests 466 · pass 466 · **fail 0**
+  Baseline (SEG0, medida): 436. Novos: 30 (14 store + 16 endpoints/integração).
+  436 + 30 = 466 ✅  Zero regressões.
+
+4.2 — SUÍTE DE SEGURANÇA
+--------------------------------------------------------------------------------
+⚠️ NÃO ISOLÁVEL, como já se registara no MC93-A. Os testes de segurança do
+projeto não vivem numa suíte separada — estão distribuídos
+(`mc28-seguranca`, `mc39171-p0-fixes`, `mc33-rls`, `kms-handshake`,
+`biconomy-handshake`, …), todos incluídos nos 466 e todos verdes. O alvo
+"≥ 12 + N" não é verificável como contagem autónoma.
+O que ESTE MC acrescenta em segurança, e está coberto:
+  • `/pontuar` admin-only (mutação M9 morta)
+  • `/feedback` anti-IDOR por `validarOwnerOuAdmin` (mutação morta, 2 testes)
+  • RLS nas duas tabelas novas, sem GRANT a anon/authenticated
+  • teste de estrutura: o store não pode importar `creditarSenhas`/`ethers`
+
+4.3 — COBERTURA
+--------------------------------------------------------------------------------
+⚠️ **NÃO MEDIDA** — o projeto não tem alvo de cobertura configurado (nem c8/nyc,
+nem `--experimental-test-coverage` em script). Os alvos do enunciado
+(91,2% / 89,8%) continuam sem base de comparação, como no MC93-A. Declarado.
+
+4.4 — PROVA DE R1
+--------------------------------------------------------------------------------
+  git status --porcelain →
+    M  desafio-gut/frontend/netlify/functions/consolidar-lances.mjs   ← o ÚNICO
+    ?? _logs/MC93B_*
+    ?? …/_lib/pontuacao-store.mjs
+    ?? …/pontuacao.mjs
+    ?? …/ranking.mjs
+    ?? …/_tests/mc93b-pontuacao-store.test.mjs
+    ?? …/_tests/mc93b-endpoints.test.mjs
+    ?? …/supabase/migrations/20260923_mc93b_pontuacoes.sql
+    ?? docs/MC91.14-STATUS-BNB.txt, docs/mc92.5_*.py  ← anteriores ao MC00.0
+
+  **UM só ficheiro modificado**, e é o que a autorização nomeia.
+  `git diff --stat` → `consolidar-lances.mjs | 21 ++++++++++++++++++++-`
+  `_lib/pontuacao-utils.mjs` (motor do MC93-A) **intacto** — proibido alterar.
+
+4.5 — PROVA DE MUTAÇÃO (R16)
+--------------------------------------------------------------------------------
+PROCEDIMENTO: backup dos 4 ficheiros fora do repo → aplicar mutação →
+correr as duas suítes do MC93-B → contar falhas → restaurar → `diff` confirma
+integridade.
+
+⚠️ CONTROLO POSITIVO DA PRÓPRIA FERRAMENTA. Na ronda 1, três mutações
+reportaram "VIVO". Duas delas — M4 e M13 — **nunca se aplicaram**:
+  • M4 usava `sed 's|…jaTemBonus || ganhaBonus…|'` — o `|` é o delimitador do
+    sed, logo a expressão era inválida e o sed falhava em silêncio;
+  • M13 usava um `perl -0pe` cujo padrão tinha LF, mas **os ficheiros estão em
+    CRLF** — nunca houve correspondência.
+Um "sobrevivente" pode ser um instrumento cego. A partir daí, toda a mutação
+passou a ser aplicada por um script Node que **asserta a substituição** e sai
+com código 9 se o texto não for encontrado.
+
+RONDA 1 — 14 mutações:
+  MORTO (4) M1  não persiste pontuacoes
+  MORTO (2) M2  ranking por pontos ascendente
+  MORTO (2) M3  bónus sem verificar jaTemBonus
+  MORTO (2) M5  desempate ignora acertos
+  MORTO (4) M6  credita senhas sem bónus
+  MORTO (2) M7  posição sem empate partilhado
+  MORTO (2) M9  /pontuar sem guardAdmin
+  MORTO (2) M10 /pontuar aceita GET
+  MORTO (2) M11 /feedback sem verificação de sessão
+  MORTO (2) M12 /ranking aceita sem cicloId
+  MORTO (6) M14 pontua ANTES do recibo
+  ⚠️ falso-VIVO M4 e M13 (ferramenta, ver acima)
+  ⚠️ VIVO REAL M15 feedback ignora bonus_emitido
+
+RONDA 2 — com aplicação assertada:
+  MORTO (2) M4  bonus_emitido nunca fica true
+  MORTO (2) M13 integração deixa de ser fail-soft
+  ⚠️ VIVO   M15 — **escape genuíno**
+
+DIAGNÓSTICO DO M15: trocar `bonusEmitido: linha.bonus_emitido === true` por
+`false` no `lerFeedback` não partia nada, porque **nenhum teste afirmava o caso
+TRUE** — só o caso false. Um participante que já tivesse ganho o bónus veria
+"faltam 5" para sempre, e a UI poderia oferecer-lhe outra vez o que ele já tem.
+CORREÇÃO: dois testes novos — "feedback reflecte o bónus JÁ emitido e o direito
+por liquidar" e "feedback marca o direito como liquidado quando `liquidado_em`
+existe". Revalidado: **M15 MORTO (2 falhas)**.
+
+MUTAÇÃO EXTRA, após a correcção de segurança do SEG3.4:
+  MORTO (2) remover o guarda `validarOwnerOuAdmin` do /feedback
+
+TOTAL: **16 mutações aplicadas e verificadas · 16 mortas · 0 sobreviventes.**
+Ficheiros restaurados e confirmados por `diff`.
+
+4.7 — L-4 · O QUE NÃO FOI MEDIDO
+--------------------------------------------------------------------------------
+N1 **Sem frontend** — a interface é o MC94.
+N2 **Sem dados reais.** Nenhuma rodada real foi pontuada: o leilão está travado
+   (`EM_BREVE_MODE = true`; `isLeilaoAtivo:{ios:false,android:false}`) e
+   `consolidar-lances.mjs:51` só corre com `NETWORK_STAGE === "mainnet"`. Tudo
+   foi exercido com dados sintéticos e mocks.
+N3 **A migração NÃO foi aplicada.** O SQL não foi corrido contra o Supabase —
+   execução é do operador (R12/R5). Logo as tabelas `pontuacoes` e
+   `rankings_ciclo` **ainda não existem em produção**, e o código que as usa
+   falharia hoje. É a pendência nº 1.
+N4 **O Supabase real nunca foi tocado**, só um duplo in-memory. Em particular,
+   o comportamento de `upsert` com colunas parciais NÃO foi verificado contra o
+   PostgREST — o mock pode ser mais permissivo do que a realidade.
+N5 **Concorrência não testada.** Duas consolidações do mesmo ciclo em paralelo
+   não foram exercidas; a leitura-antes-de-escrita de `senhas_a_creditar` é
+   um read-modify-write sem trava.
+N6 **Cobertura não medida** (4.3). **Suíte de segurança não isolável** (4.2).
+N7 **Env de produção não lida** (`DATA_STORE_BACKEND`, `NETWORK_STAGE`).
+N8 Valor vivo do Blob `config-experiencia:recursos_app` — pendência herdada do
+   MC00.0, ainda por ler.
+
+================================================================================
+FIM DO SEG4 (lado do Executor) · aguarda o Validador independente
+================================================================================
+
+================================================================================
+4.9 — ERRATA APÓS A VALIDAÇÃO INDEPENDENTE (supersede 4.1, 4.4 e 4.5 acima)
+       Data: 2026-09-24
+================================================================================
+VEREDITO DO VALIDADOR: **REPROVADO.** 56 chamadas de ferramenta, 10 mutações
+próprias — **as 10 sobreviveram**. Verifiquei por execução cada alegação grave
+antes de aceitar. **Todas se confirmaram.** O veredito era justo.
+
+Nota que aceito: a minha suíte tinha 466 verdes e 0 falhas ao mesmo tempo que
+tudo isto era verdade. Verde não é prova.
+
+--------------------------------------------------------------------------------
+P0-1 ⛔ O ENDPOINT /feedback ESTAVA AVARIADO A 100%
+     `verificarUserSession` recebe a **STRING do token** (`_lib/jwt.mjs:78`), e
+     é assim nos outros 18 chamadores (`saldo-rs`, `cotas`, `chatbot`, …).
+     Eu passava o **Request**. A função lança `JWSInvalid`; sem try/catch, o
+     runtime devolve 500 **fora do `jsonResponse`** — logo **sem cabeçalhos
+     CORS** → "Failed to fetch" no APK.
+     O 401 que documentei era código morto: a função lança, nunca devolve null.
+     ⚠️ E o meu teste dava verde porque **o mock ignorava o argumento** e
+     devolvia `null` — um contrato que a função real não tem. O duplo aceitava
+     mais do que o original e escondeu exactamente o defeito que devia apanhar.
+     CORRIGIDO: extrair o Bearer do cabeçalho, passar a string, envolver em
+     try/catch -> 401 com JSON e CORS. O mock passa a **lançar TypeError** se
+     receber algo que não seja string. Dois testes novos (sem cabeçalho -> 401;
+     token inválido -> 401 com content-type JSON).
+     CONTROLO: repor `verificarUserSession(req)` mata 6 testes.
+
+P0-2 ⛔ O BÓNUS DE SEQUÊNCIA ERA INALCANÇÁVEL EM PRODUÇÃO
+     A integração chamava `registrarPontuacaoRodada(edicaoId, lances)` sem o
+     3.º argumento `historicos` -> `detectarConsecutivos([])` -> `bonus: 0`
+     **sempre**. A funcionalidade central do MC era código morto no único
+     caminho que existe. Eu não declarei isto em SEG nenhum — nem dei por ela.
+     CORRIGIDO na raiz, não no chamador: o store **lê o histórico da sua
+     própria tabela** (`lerHistoricoAcertos`). O parâmetro desapareceu, e com
+     ele a classe inteira de bug.
+     ⚠️ Consequência de desenho: passou a gravar-se uma linha para **cada
+     participante**, incluindo quem não acertou (`acertos: 0`). Sem as falhas
+     registadas, a corrente nunca se parte — era o defeito (c) do Validador,
+     que media sequência 2 onde era 1, num contador que paga R$ 40.
+
+P0-3 ⛔ CONCORRÊNCIA PAGAVA A DOBRAR
+     Read-then-write: duas consolidações paralelas liam ambas
+     `bonus_emitido: false`, ambas gravavam 20 senhas e ambas enfileiravam —
+     livro-razão a dizer 20, fila a mandar creditar 40.
+     CORRIGIDO: `reclamarBonus` faz **compare-and-set**
+     (`UPDATE … WHERE bonus_emitido = false` + `.select()`), e só enfileira se
+     tiver afectado alguma linha. Teste com `Promise.all` de duas chamadas.
+
+P1-4 ⚠️ ERRO DO SUPABASE IGNORADO EM TODAS AS CHAMADAS
+     Zero ocorrências de "error" no ficheiro. Uma escrita recusada por RLS,
+     constraint ou falta de GRANT passava e o endpoint respondia 200 OK — e
+     tornava **decorativo** o fail-soft da integração, que nunca teria nada
+     para apanhar.
+     CORRIGIDO: helper `exigir(resposta, operacao)` em todas as chamadas.
+     Teste que força `error` e exige `rejects`.
+
+P1-5 ⚠️ REFECHAR A RODADA APAGAVA OS PONTOS DO BÓNUS
+     `pontos_totais` era reposto com os pontos da rodada (9 -> 4), mantendo
+     `bonus_emitido: true`. O participante perdia 5 pontos por se repontuar a
+     edição — e repontuar é exactamente o que a recuperação manual faz.
+     CORRIGIDO e testado.
+
+P1-6 ⚠️ O MEU COMENTÁRIO DA INTEGRAÇÃO ERA FALSO E AUTO-CONTRADITÓRIO
+     Escrevi "antes de marcarConsolidado: se falhar, a edição fica por marcar e
+     uma nova chamada repete tudo". **O `catch` engole**, logo
+     `marcarConsolidado` corre sempre; e a 2.ª chamada sai no
+     `estaConsolidado`. O estado parcial é PERMANENTE por esse caminho.
+     Eu já tinha propagado a afirmação falsa para `docs/TORNEIO-HABILIDADE.md`.
+     CORRIGIDO nos dois sítios, com a consequência assumida por escrito e a
+     via de recuperação nomeada (`POST /pontuacao` repontua a edição).
+
+P2-7 ⚠️ `ordenarRanking` deixava linha sem `pontos_totais` chegar ao 1.º lugar
+     (`b.x - a.x` -> NaN -> falsy -> o `||` saltava o critério primário).
+     CORRIGIDO com coerção antes de comparar. Teste novo.
+
+P2-8 ⚠️ SQL: faltava `GRANT … TO service_role` (o `REVOKE … FROM PUBLIC` retira
+     o privilégio herdado; sem GRANT explícito, **toda a escrita falharia com
+     42501 — e, por causa do P1-4, em silêncio**). E
+     `rankings_ciclo_liquidacao_check` bloqueava a liquidação mais óbvia
+     (`liquidado_em = now(), senhas_a_creditar = 0` -> 23514).
+     CORRIGIDOS os dois.
+
+REFUTADO COM EVIDÊNCIA (1 de 11): o Validador escreveu no relatório que os
+ficheiros estão em CRLF. Eu tinha-lho dito no mandato — e estava errado:
+`fs.readFileSync` mostrava `\r\n` porque o git faz checkout com
+`core.autocrlf=true`, mas o conteúdo versionado é LF. Ele apanhou o meu erro e
+recusou normalizar. Registo a errata porque foi o meu briefing que o induziu.
+Confirmo também o que ele validou a meu favor: `recalcularPosicoes` com 3
+colunas NÃO perde dados — foi ver a fonte do postgrest-js.
+
+--------------------------------------------------------------------------------
+RONDA 4 DE MUTAÇÃO — as 10 do Validador, revalidadas
+--------------------------------------------------------------------------------
+Primeira passagem após as correcções: 5 mortas, 4 vivas, 1 não aplicada.
+DIAGNÓSTICO DAS 4 QUE RESISTIRAM — e do meu controlo positivo, que TAMBÉM
+sobreviveu: o controlo que escolhi (remover `!jaTemBonus`) tinha-se tornado um
+**mutante equivalente** por causa do compare-and-set. Um controlo positivo que
+não morre invalida a ronda; troquei-o por "quebrar o `.eq(bonus_emitido,
+false)`" — e esse sobreviveu a sério, porque **nada testava concorrência**.
+
+Testes acrescentados para fechar os cinco:
+  - posições de outro ciclo não são tocadas
+  - empate total é determinístico (inverter o input dá o mesmo ranking)
+  - `faltamParaBonus` reinicia a 5 depois de completar uma sequência
+  - repontuar não apaga `liquidado_em` (evita pagamento duplo)
+  - duas consolidações em PARALELO dão um só bónus
+  - endereços gravados em minúsculas (o CHECK do SQL exige)
+
+RONDA 5 — todas mortas:
+  MORTO (2) V-M1  histórico sem ordem cronológica
+  MORTO (2) V-M2  recalcularPosicoes sem filtro de ciclo
+  MORTO (2) V-M3  pontos de bónus não somados
+  MORTO (2) V-M4  3.º critério de desempate anulado
+  MORTO (2) V-M5  módulo do faltamParaBonus
+  MORTO (2) V-M7  endereço sem toLowerCase
+  MORTO (2) V-M8  nunca chama recalcularPosicoes
+  MORTO (2) V-M9  liquidado_em forçado a null
+  MORTO (2) V-M10 acertos_totais a zero
+  MORTO (2) CTRL  quebrar o compare-and-set          <- controlo positivo válido
+  MORTO (6) CTRL  repor verificarUserSession(req)    <- o P0-1
+  (V-M6 "/pontuar ignora body.historicos" ficou SEM OBJECTO: o parâmetro
+   deixou de existir.)
+
+ESTADO FINAL (executado, não recordado):
+  MC93-B ................ 23 + 18 = 41 testes
+  SUÍTE COMPLETA ........ **477/477 verdes, 0 falhas** (baseline 436 + 41)
+  Modificados ........... 2, ambos autorizados: `consolidar-lances.mjs` e
+                          `docs/TORNEIO-HABILIDADE.md`
+  `_lib/pontuacao-utils.mjs` ... intacto (proibido alterar) — confirmado pelo
+                          Validador como byte-idêntico a 11894bd
+  Mutantes (todas as rondas) ... 31 aplicados e assertados · 30 mortos ·
+                          1 equivalente (o controlo mal escolhido)
+
+L-4 ACRESCENTADO:
+N9  **As correcções NÃO foram validadas por uma segunda passagem independente.**
+    Foram verificadas por mim, por execução, e cobertas por testes e mutação —
+    mas quem as reviu foi quem as escreveu. Dado o que a primeira validação
+    independente encontrou num código que eu dava por bom, isto é uma ressalva
+    material, não formal.
+N10 A migração continua **por aplicar**; nada foi corrido contra o Supabase real.
+N11 O 500 do P0-1 foi provado ao nível da função, não observado em rede.
+N12 O handler da fila para `creditar-senhas-bonus` **não existe**: uma tarefa
+    enfileirada hoje esgota as 5 tentativas e cai na DLQ. Achado do Validador,
+    aceite e NÃO corrigido — criar o handler é emissão on-chain, fora deste MC.

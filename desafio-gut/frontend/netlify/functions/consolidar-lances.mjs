@@ -18,6 +18,7 @@ import { getLances } from "./_lib/data-store.mjs";
 import { obterSignerCoordenacao, backendAssinatura } from "./_lib/signer.mjs";
 import { escolherRpc } from "./_lib/rpc-fallback.mjs"; // MC39.2 — fallback RPC/Flashbots (opt-in)
 import { respostaPreflight } from "./_lib/cors.mjs";
+import { registrarPontuacaoRodada } from "./_lib/pontuacao-store.mjs";
 
 const ABI = [
   "function consolidarResultado(string idEdicao, address vencedor, uint256 menorUnico) public",
@@ -130,6 +131,33 @@ export default async (req) => {
     nonceUsado: nonce, assinaturaEip712,
     txHash: receipt.hash, blockNumber: receipt.blockNumber, totalLances: lances.length,
   };
+
+  // MC93-B — pontuação do torneio, DEPOIS do recibo: pontuar uma rodada cuja
+  // tx ficou pendente (202) ou falhou (502) seria pontuar um resultado que não
+  // existe on-chain. Esses dois caminhos saem antes deste ponto.
+  //
+  // FAIL-SOFT, de propósito: aqui a transação JÁ ESTÁ MINERADA e é
+  // irreversível. Rebentar faria o caller crer que a consolidação falhou,
+  // quando o dinheiro já se moveu. A pontuação é reconstituível; a tx não é.
+  //
+  // ⚠️ CONSEQUÊNCIA ASSUMIDA, e não escondida: como o catch engole, o
+  // `marcarConsolidado` abaixo corre na mesma. Se a pontuação falhar, a edição
+  // fica consolidada SEM pontos, e a segunda chamada sai logo no
+  // `estaConsolidado` — o estado parcial é PERMANENTE por este caminho.
+  // A recuperação é manual e existe de propósito: `POST /pontuacao` com o
+  // mesmo `cicloId` repontua a edição (é idempotente por ciclo+endereço).
+  // A resposta devolve `pontuacao: null` precisamente para que a coordenação
+  // veja que há uma edição por repontuar.
+  // (Uma versão anterior deste comentário afirmava que a edição ficava por
+  //  marcar e que a repetição resolvia. Era falso — o catch impede-o.)
+  let pontuacao = null;
+  try {
+    pontuacao = await registrarPontuacaoRodada(edicaoId, lances);
+  } catch (err) {
+    console.error("[consolidar-lances] pontuação falhou (consolidação mantém-se)",
+      edicaoId, err?.message);
+  }
+
   await marcarConsolidado(edicaoId, resultado);
-  return jsonResponse({ ok: true, edicaoId, ...resultado });
+  return jsonResponse({ ok: true, edicaoId, ...resultado, pontuacao });
 };

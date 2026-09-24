@@ -1,0 +1,97 @@
+================================================================================
+MC93-B — SEG3 · INTEGRAÇÃO
+DesafioGUT · Data: 2026-09-23/24
+Skills ECC: test-driven-development, systematic-debugging
+================================================================================
+
+3.1 — GANCHO EM `consolidar-lances.mjs`
+--------------------------------------------------------------------------------
+Uma única alteração, de 20 linhas, entre o recibo confirmado e
+`marcarConsolidado`:
+
+    let pontuacao = null;
+    try {
+      pontuacao = await registrarPontuacaoRodada(edicaoId, lances);
+    } catch (err) {
+      console.error("[consolidar-lances] pontuação falhou (consolidação mantém-se)",
+        edicaoId, err?.message);
+    }
+
+TRÊS DECISÕES, cada uma com uma razão que não é de estilo:
+
+(a) DEPOIS DO RECIBO. Pontuar antes da confirmação pontuaria uma rodada que
+    não existe on-chain. Os dois caminhos em que a tx não confirma —
+    `502 envio_falhou` e `202 pendente` — saem da função ANTES deste ponto,
+    logo não geram pontos. Coberto pelo teste "tx NÃO minerada (202) não
+    pontua nada" e pela mutação M14 (pontuar antes do recibo → 6 testes
+    falham).
+
+(b) ANTES DE `marcarConsolidado`. Se a pontuação falhar, a edição fica por
+    marcar e uma nova chamada repete o fluxo — e `registrarPontuacaoRodada` é
+    idempotente por `(ciclo_id, endereco)` com upsert de REPOSIÇÃO, logo
+    repetir não duplica nem soma. Coberto pelo teste "fechar a mesma rodada
+    duas vezes não duplica nem soma".
+
+(c) FAIL-SOFT. Neste ponto a transação **já está minerada e é irreversível**.
+    Deixar a excepção subir faria o caller receber um erro e crer que a
+    consolidação falhou, quando o dinheiro já se moveu. A pontuação é
+    reconstituível a partir dos lances; a transação não é.
+    Coberto pelo teste "se a pontuação REBENTAR, a consolidação mantém-se" e
+    pela mutação M13 (remover o try/catch → 2 testes falham).
+
+A resposta passou a incluir `pontuacao` (null quando falhou), para que a
+coordenação veja no mesmo sítio se a rodada foi pontuada.
+
+3.2 — EMISSÃO DO BÓNUS
+--------------------------------------------------------------------------------
+⚠️ NÃO É CRÉDITO DE SALDO. Decisão do operador (R18), tomada depois de o SEG-1
+demonstrar que "creditar em `saldo_senhas` (Supabase)" produz um bug garantido:
+  • `saldo_senhas` em Supabase é coluna de **`lojistas`** (0 linhas), não do
+    participante — `20260620_schema_definitivo.sql:22-29`;
+  • `darLance` exige `saldoSenhas[msg.sender] > 0` ON-CHAIN (`Leilao.sol:88`) e
+    decrementa-o (`:107`): uma senha off-chain não habilita lance nenhum;
+  • `saldo-senhas.mjs:2-4` calcula `saldoEfetivo = saldoOnChain −
+    senhasConsumidas`; somar um termo off-chain quebraria a invariante
+    `saldoEfetivo ≤ saldoOnChain`.
+
+O QUE FOI FEITO: ao completar uma sequência de 5 acertos e não havendo ainda
+bónus nesse ciclo, o store grava
+    bonus_emitido = true
+    senhas_a_creditar += 20
+    liquidado_em = NULL          ← a dívida fica em aberto
+e enfileira `creditar-senhas-bonus` em `fila_tarefas` — o mesmo mecanismo que o
+projeto já usa para creditar senhas on-chain depois do PIX
+(`_lib/fila.mjs:25` → `worker-credito` → `creditarSenhas`).
+
+A emissão on-chain acontece quando o operador a autorizar, por esse caminho já
+auditado. Há um teste de estrutura que falha se `pontuacao-store.mjs` voltar a
+importar `creditarSenhas`, `adicionarSenhas`, `ethers` ou `contract.mjs`.
+
+LIMITE DE 1 POR CICLO: garantido por `!jaTemBonus`, lido de
+`rankings_ciclo.bonus_emitido` antes de cada escrita. Coberto pelos testes
+"bónus é registado UMA vez por ciclo" (20 senhas, não 40) e pelas mutações M3 e
+M6 (ambas mortas).
+
+3.3 — R19
+--------------------------------------------------------------------------------
+NÃO ATIVADA (declarado no SEG-1 §-1.2). Nenhum endpoint existente foi
+alterado para consumir o ranking.
+
+3.4 — CORREÇÃO DE SEGURANÇA DURANTE O SEG3 (R15)
+--------------------------------------------------------------------------------
+Ao preparar o mandato do Validador, dei-me conta de que o `/feedback` só
+verificava **se havia sessão**, não **de quem era**. Qualquer utilizador
+autenticado poderia ler a posição e a atividade de qualquer carteira cujo
+endereço conhecesse — e os endereços são públicos na blockchain.
+
+CORRIGIDO antes da validação, com o guarda que o projeto já usa em
+`saldo-rs.mjs:51` e `saldo-senhas.mjs`:
+    const admins = await getAdminAddresses();
+    const guard = validarOwnerOuAdmin(sessao, endereco, admins);
+    if (!guard.ok) return jsonError(403, "acesso_negado", …);
+Dois testes novos: sessão de outra carteira → 403; admin → 200.
+Controlo de mutação: trocar `if (guard.ok)` por `if (false)` mata 2 testes.
+
+================================================================================
+FIM DO SEG3
+================================================================================

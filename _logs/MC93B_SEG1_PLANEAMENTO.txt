@@ -1,0 +1,121 @@
+================================================================================
+MC93-B — SEG1 · PLANEAMENTO
+DesafioGUT · Data: 2026-09-23
+Skills ECC: make-plan, brainstorming, caveman
+  (`caveman` existe em `.claude/skills/caveman` — é um plugin de compressão de
+   saída, sem efeito material no planeamento. Verificado, não presumido.)
+================================================================================
+
+1.0 — ⚠️ CONFLITO DECLARADO: DESEMPATE vs MOTOR DO MC93-A
+--------------------------------------------------------------------------------
+O operador decidiu **"desempate = mais acertos totais"**. O motor do MC93-A
+desempata por **endereço ascendente** (`atualizarRanking`, documentado como
+default pendente de ratificação). Este MC **NÃO AUTORIZA** alterar
+`_lib/pontuacao-utils.mjs`.
+
+Não há como implementar a decisão dentro do motor sem violar a autorização, e
+não há truque que a contorne: `atualizarRanking` ordena por
+`pontosTotais desc || endereco.localeCompare` e o comparador de endereço
+sobrepõe-se a qualquer pré-ordenação (o `sort` é estável, mas o comparador
+decide primeiro).
+
+RESOLUÇÃO: o **ranking do ciclo é calculado no store**, com o comparador do
+operador — `pontos desc → acertos desc → endereço asc`. O terceiro critério
+mantém-se para garantir determinismo (o ranking decide prémio; a ordem de
+chegada dos dados nunca pode alterar o resultado).
+
+`atualizarRanking` do MC93-A **continua a valer para o ranking de rodada**, onde
+não há `acertos_totais` acumulados. Para que os dois não divirjam em silêncio,
+há um teste que exige que **coincidam quando os acertos são iguais** — que é
+exactamente o caso em que as duas regras devem dar o mesmo resultado.
+
+⇒ Consequência para o MC95: a regra de desempate ratificada deve ser levada ao
+  motor puro, e então este store passa a delegar. Registado em
+  docs/TORNEIO-HABILIDADE.md §6 (lacuna G2, agora decidida mas em dois sítios).
+
+1.1 — TABELA `pontuacoes` (evento por rodada)
+--------------------------------------------------------------------------------
+  id            UUID PK default gen_random_uuid()
+  ciclo_id      TEXT NOT NULL        ← **TEXT, não UUID** (SEG-1/A1: ciclo = 1
+                                       edição, e `lances.edicao_id` é VARCHAR;
+                                       os ids são strings como "R-1")
+  endereco      TEXT NOT NULL CHECK (endereco ~ '^0x[0-9a-f]{40}$')
+  pontos        INT  NOT NULL CHECK (pontos >= 0)
+  acertos       INT  NOT NULL CHECK (acertos >= 0)
+  menor_unico   BOOLEAN NOT NULL DEFAULT false
+  criado_em     TIMESTAMPTZ NOT NULL DEFAULT now()
+  UNIQUE (ciclo_id, endereco)   ← idempotência do fecho de rodada
+  INDEX (ciclo_id), INDEX (endereco, criado_em)  ← o 2º serve o histórico de
+                                                   sequências entre ciclos
+  CHECK do endereço em minúsculas: espelha `atividade_utilizadores`
+  (`20260802_mc8943`), que já usa `endereco ~ '^0x[0-9a-f]{40}$'`.
+
+1.2 — TABELA `rankings_ciclo` (agregado + estado do bónus)
+--------------------------------------------------------------------------------
+  id                UUID PK
+  ciclo_id          TEXT NOT NULL
+  endereco          TEXT NOT NULL CHECK (…)
+  pontos_totais     INT  NOT NULL
+  acertos_totais    INT  NOT NULL
+  posicao           INT  NOT NULL CHECK (posicao >= 1)
+  bonus_emitido     BOOLEAN NOT NULL DEFAULT false
+  senhas_a_creditar INT NOT NULL DEFAULT 0   ← **DIREITO**, não saldo (Opção A)
+  liquidado_em      TIMESTAMPTZ              ← NULL = por liquidar on-chain
+  atualizado_em     TIMESTAMPTZ NOT NULL DEFAULT now()
+  UNIQUE (ciclo_id, endereco)
+
+  ⚠️ `senhas_a_creditar` NÃO é um saldo e NÃO entra em `saldoEfetivo`. A
+  invariante `saldoEfetivo ≤ saldoOnChain` (`saldo-senhas.mjs:2-4`) fica
+  intacta. É uma dívida registada, liquidável pelo caminho já existente
+  (`fila.enfileirar` → `creditarSenhas` → `adicionarSenhas`).
+
+1.3 — RLS
+--------------------------------------------------------------------------------
+  ENABLE ROW LEVEL SECURITY nas duas.
+  `service_role total <t>` FOR ALL USING(true) WITH CHECK(true) — padrão de
+  `20260621_cotas_schema.sql:56`.
+  **Sem policy para anon/authenticated**: a leitura pública do ranking passa
+  pelo endpoint `GET /ranking`, que usa a service key do lado do servidor. Não
+  se abre a tabela à chave anon — é a brecha A-04 que o MC87 fechou.
+
+1.4 — CONTRATO DOS ENDPOINTS
+--------------------------------------------------------------------------------
+  POST /pontuar            admin-only (`guardAdmin`)
+      body { cicloId, lances[] }  ou  { cicloId } (lê por `getLances`)
+      → { ok, cicloId, participantes, bonusRegistados }
+  GET  /ranking?cicloId=X  público (rate-limited)
+      → { cicloId, total, ranking:[{posicao, endereco, pontosTotais,
+          acertosTotais, bonusEmitido}] }
+      400 se faltar cicloId.
+  GET  /feedback?cicloId=X&endereco=Y   anti-IDOR (dono ou admin)
+      → { cicloId, endereco, pontosTotais, acertosTotais, posicao,
+          sequenciaAtual, faltamParaBonus, bonusEmitido, senhasACreditar }
+
+1.5 — REGRA DO BÓNUS (1 por ciclo)
+--------------------------------------------------------------------------------
+  `detectarConsecutivos` (MC93-A) continua a devolver `senhasBonus: 20`.
+  O store **só regista o direito** se `bonus_emitido === false` para
+  (ciclo_id, endereco). Ao registar: `bonus_emitido = true`,
+  `senhas_a_creditar += 20`, e `enfileirar("creditar-senhas-bonus", …)`.
+  Nunca credita on-chain neste MC.
+
+1.6 — TESTES RED PLANEADOS
+--------------------------------------------------------------------------------
+  store:  persistir pontuação de rodada · idempotência do fecho ·
+          ranking ordenado por pontos e desempate por acertos ·
+          desempate concorda com `atualizarRanking` quando os acertos são
+          iguais · bónus uma só vez por ciclo · o direito não é saldo
+  endpoints: /ranking exige cicloId · /ranking devolve ordenado ·
+          /feedback devolve próximo bónus · /pontuar exige admin ·
+          método errado → 405
+  integração: o gancho é fail-soft e corre DEPOIS do recibo
+
+1.7 — ORDEM DE EXECUÇÃO
+--------------------------------------------------------------------------------
+  SEG2: testes RED → store → endpoints → migração
+  SEG3: gancho em `consolidar-lances.mjs` (fail-soft, após recibo)
+  SEG4: suíte + R1 + mutação + Validador independente
+
+================================================================================
+FIM DO SEG1
+================================================================================

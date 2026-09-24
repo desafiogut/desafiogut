@@ -1,0 +1,172 @@
+================================================================================
+MC93-B — SEG-1 · QUESTIONAMENTO DO BRIEFING (HARD GATE)
+DesafioGUT · Persistência, endpoints e integração do torneio de habilidade
+Data: 2026-09-23 · Commit base: 11894bd (main) — CONFIRMADO
+Skills ECC: smart-explore, brainstorming, security-review
+================================================================================
+
+                        >>> VEREDITO: AJUSTAR <<<
+    O núcleo do MC (persistência + endpoints) é construível tal como está.
+    O SEG3.2 (emissão do bónus) NÃO é — produz um saldo que o utilizador vê
+    e não consegue gastar. Proposta concreta em §-1.5.
+
+================================================================================
+-1.1 — VERIFICAÇÃO DAS PREMISSAS
+================================================================================
+
+CONFIRMADAS (5)
+────────────────────────────────────────────────────────────────────────────────
+C1 ✅ Base `11894bd`, working tree sem modificados, **436/436 verdes**
+      (execução real nesta sessão). Os 3 untracked em docs/ são anteriores.
+C2 ✅ `consolidar-lances.mjs` existe e é o fecho da rodada:
+        :63  estaConsolidado(edicaoId)          — idempotência
+        :76  getLances(edicaoId)                — lê os lances
+        :111 contrato.consolidarResultado(…)    — submete on-chain
+        :133 marcarConsolidado(edicaoId, …)     — fecha
+      Ponto de extensão correcto: **entre :76 e :111**, depois da apuração e
+      antes da submissão.
+C3 ✅ `guardAdmin` existe em `_lib/admin-auth.mjs:191` (e `guardAdminNivel:210`).
+C4 ✅ `_lib/pontuacao-utils.mjs` existe com a API documentada (MC93-A).
+C5 ✅ Padrão de migração existe: 11 ficheiros `YYYYMMDD_nome.sql` em
+      `desafio-gut/frontend/supabase/migrations/`.
+
+REFUTADAS (3, e a primeira invalida o SEG3.2)
+────────────────────────────────────────────────────────────────────────────────
+R1 ⛔ "creditar em `saldo_senhas` (Supabase)" — **esse campo não é do
+      participante.** `20260620_schema_definitivo.sql:22-29`: `saldo_senhas`
+      é coluna da tabela **`lojistas`** (0 linhas), a par de `cota`
+      bronze/prata/ouro/diamante. É o saldo do LOJISTA, não do jogador.
+      **Não existe, em Supabase, saldo de senhas de participante.**
+
+R2 ⛔ **UMA SENHA CREDITADA EM SUPABASE NÃO É UMA SENHA.**
+      O contrato é a única autoridade sobre o consumo (`Leilao.sol`):
+        :88   require(saldoSenhas[msg.sender] > 0, "Voce nao possui senhas disponiveis");
+        :107  saldoSenhas[msg.sender]--;   // Consome uma senha (R$ 2,00)
+      `darLance` só vê `saldoSenhas` on-chain. Um crédito off-chain **não
+      habilita nenhum lance**. O utilizador veria "+20 senhas" e, ao tentar
+      usá-las, a transação reverteria com "Voce nao possui senhas disponiveis".
+      Isto não é um risco: é o comportamento garantido.
+
+R3 ⛔ **O LEDGER OFF-CHAIN EXISTENTE É SUBTRACTIVO — e o MC quer somar-lhe.**
+      `saldo-senhas.mjs:2-4`:
+        saldoEfetivo = saldoOnChain − senhasConsumidas
+      (`senhasConsumidas` é o ledger de lances programados, em Blobs,
+      `_lib/senhas-programado.mjs`). A invariante do sistema é
+      **saldoEfetivo ≤ saldoOnChain**. Introduzir um termo aditivo em Supabase
+      quebra-a: o app passaria a mostrar saldo acima do que existe.
+      ⇒ Não é só "não funciona": estraga a fórmula que hoje está correcta.
+
+AJUSTES MENORES (2)
+────────────────────────────────────────────────────────────────────────────────
+A1 ⚠️ `ciclo_id UUID NOT NULL` contradiz a decisão "**Ciclo = 1 edição**".
+      As edições são identificadas por string: `lances.edicao_id` é
+      `VARCHAR(66)` e a edição activa chama-se `"R-1"`. UUID não serve —
+      tem de ser TEXT/VARCHAR, ou o join com `lances` é impossível.
+
+A2 ⚠️ `consolidar-lances.mjs:50` → `if (process.env.NETWORK_STAGE !== "mainnet")`
+      sai. A integração do SEG3.1 **só tem caminho de execução em produção
+      mainnet**. Somado ao leilão estar travado (`EM_BREVE_MODE = true`,
+      `isLeilaoAtivo:{ios:false,android:false}`), a integração nasce sem forma
+      de ser observada — só testável por mock. Declarado em L-4.
+
+NOTA SOBRE R2 DO ENUNCIADO ("custo zero confirmado por arquitetura")
+────────────────────────────────────────────────────────────────────────────────
+É verdade que não há **gas**. Mas o custo não desaparece — bifurca-se:
+  • Se a senha off-chain nunca for honrada on-chain, não há custo **e não há
+    benefício**: é uma promessa não executável, e o utilizador descobre isso
+    ao tentar dar o lance.
+  • Se vier a ser honrada, o custo (gas + R$ 2,00 por senha) **reaparece
+    inteiro** — apenas diferido, e agora com uma dívida acumulada de bónus
+    por liquidar.
+"Custo zero por arquitetura" só é verdadeiro sob a primeira leitura. Registado
+porque a diferença é do operador, não minha.
+
+================================================================================
+-1.2 — VERIFICAÇÃO DE AUTOSSUFICIÊNCIA (R19) — DECLARAÇÃO OBRIGATÓRIA
+================================================================================
+O MC É AUTOSSUFICIENTE para persistência + endpoints + integração, e **não
+gera `.1`** — desde que o SEG3.2 seja ajustado (§-1.5).
+
+**R19 NÃO É ATIVADA.** O trabalho extra que seria natural (notificação de
+bónus, histórico por utilizador) ou já cabe no `GET /feedback`, ou toca
+`_lib/notificacoes-usuario.mjs`, que o MC00.0 marcou para reescrita de copy no
+bloco B2 — mexer-lhe agora cria conflito com um MC já planeado. Não amplio.
+
+================================================================================
+-1.3 — VERIFICAÇÃO DE ESCOPO
+================================================================================
+Cabe num só MC. O que NÃO está no escopo e seria natural incluir:
+  • **Webhook/notificação de bónus** — FORA (conflito com o B2 do MC00.0).
+  • **Histórico por utilizador** — DENTRO, cabe no `GET /feedback` sem custo.
+  • **Liquidação on-chain dos bónus acumulados** — FORA, e é precisamente a
+    decisão que o §-1.5 devolve ao operador.
+  • **`DATA_STORE_BACKEND`** — ⚠️ o default no código é `"blobs"`
+    (`_lib/data-store.mjs:21`). Não foi possível ler a env de produção nesta
+    sessão. As tabelas novas seriam Supabase directo; se a produção ainda
+    estiver em Blobs para lances, o sistema passa a ter lances num sítio e
+    pontuação noutro. **Verificar antes do deploy** (não bloqueia o código).
+
+================================================================================
+-1.4 — VEREDITO
+================================================================================
+                              >>> AJUSTAR <<<
+
+SEGUE sem alteração:
+  • migração `pontuacoes` + `rankings_ciclo` (com `ciclo_id` TEXT, não UUID)
+  • RLS: leitura pública, escrita só service_role
+  • `_lib/pontuacao-store.mjs`
+  • `pontuacao.mjs` (POST, admin-only) e `ranking.mjs` (GET ranking/feedback)
+  • regra "1 bónus por ciclo" (`bonus_emitido`)
+  • integração em `consolidar-lances.mjs`
+  • testes, docs, CLAUDE.md, commit
+
+PARA DECISÃO DO OPERADOR — o SEG3.2 "creditar em `saldo_senhas` (Supabase)":
+não é executável como está escrito (R1, R2, R3). Ver §-1.5.
+
+================================================================================
+-1.5 — PROPOSTA DE AJUSTE PARA O SEG3.2
+================================================================================
+A diferença entre as duas opções é visível ao utilizador final, por isso é
+decisão de produto, não técnica.
+
+▸ OPÇÃO A — **DIREITO A BÓNUS** (registo de dívida, liquidação depois)
+    O store grava `bonus_emitido = true` e **regista um direito** de 20 senhas
+    em `rankings_ciclo` (e/ou enfileira em `fila_tarefas`, que já existe e está
+    viva com 5 registos e é exactamente o mecanismo que o projeto usa para
+    creditar senhas on-chain depois do PIX).
+    ✅ UMA só fonte de verdade para o saldo — a invariante
+       `saldoEfetivo ≤ saldoOnChain` mantém-se intacta.
+    ✅ Zero gas NESTE MC, como o operador quis.
+    ✅ Quando o operador autorizar, a liquidação corre pelo caminho já
+       existente e já auditado (`creditarSenhas`).
+    ⚠️ O utilizador ganha um **direito**, não um saldo. A UI (MC94) tem de o
+       dizer — "20 senhas a creditar", não "+20 senhas".
+
+▸ OPÇÃO B — **SALDO PARALELO EM SUPABASE** (o que o enunciado pede à letra)
+    Criar um saldo de senhas de participante em Supabase e somá-lo.
+    ❌ Dois livros-razão para o mesmo activo.
+    ❌ Quebra `saldoEfetivo ≤ saldoOnChain`.
+    ❌ O lance falha: `darLance` reverte com "Voce nao possui senhas
+       disponiveis". O bug é garantido, não provável.
+    Só faria sentido acompanhada de uma decisão maior: mover as senhas
+    inteiras para off-chain, o que é outro MC e toca `comprar-senhas`,
+    `troco`, `saldo-senhas` e o contrato.
+
+RECOMENDAÇÃO: **Opção A.** Entrega tudo o que o MC quer, sem gas, sem segundo
+ledger e sem prometer ao utilizador um saldo que o contrato recusa.
+
+================================================================================
+-1.6 — L-4 · O QUE NÃO FOI MEDIDO
+================================================================================
+N1 Env de produção (`DATA_STORE_BACKEND`, `NETWORK_STAGE`) — não lida.
+N2 Valor vivo do Blob `config-experiencia:recursos_app` — pendência herdada
+   do MC00.0/N8, ainda por ler.
+N3 Nenhum lance real foi lido de Blobs; a forma do lance vem da assinatura de
+   `apurarMenorLanceUnico` e de `bids-store.mjs`, não de um registo real.
+N4 Saldo de gas da EOA coordenadora — não consultado on-chain.
+N5 Parecer jurídico sobre o torneio (D2/D4) — continua em aberto; nada neste
+   MC o resolve.
+
+================================================================================
+FIM DO SEG-1 · VEREDITO: AJUSTAR · R19 NÃO ATIVADA · aguarda decisão do SEG3.2
+================================================================================

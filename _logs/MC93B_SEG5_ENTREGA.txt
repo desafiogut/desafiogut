@@ -1,0 +1,116 @@
+================================================================================
+MC93-B — SEG5 · ENTREGA
+DesafioGUT · Data: 2026-09-24 · Commit base: 11894bd
+Skills ECC: requesting-code-review (Validador independente despachado como
+subagente, com contexto curado e sem acesso ao raciocínio do Executor)
+================================================================================
+
+5.1 — CONSOLIDAÇÃO DOS LOGS
+--------------------------------------------------------------------------------
+  _logs/MC93B_SEG-1_QUESTIONAMENTO.txt   hard gate · AJUSTAR · 3 premissas refutadas
+  _logs/MC93B_SEG0_DIAGNOSIS.txt         ambiente, ponto de extensão, padrões
+  _logs/MC93B_SEG1_PLANEAMENTO.txt       DDL, contratos, conflito do desempate
+  _logs/MC93B_SEG2_TDD.txt               RED → GREEN → REFACTOR
+  _logs/MC93B_SEG3_INTEGRACAO.txt        gancho, bónus como direito, correcção IDOR
+  _logs/MC93B_SEG4_EXECUTOR.txt          suíte, R1, 31 mutantes, **errata §4.9**
+  _logs/MC93B_SEG4_VALIDACAO.txt         relatório do Validador (REPROVADO)
+  _logs/MC93B_SEG5_ENTREGA.txt           este ficheiro
+  _logs/MC93B-RELATORIO.md               relatório final (3 secções RUFLO)
+
+5.2 — CLAUDE.md (R14)
+--------------------------------------------------------------------------------
+Atualizado ANTES do commit: 504 → 596 linhas. Regista as duas pendências que
+bloqueiam o uso, porque o bónus é um direito e não um saldo, as decisões do
+operador materializadas, os seis defeitos encontrados pela validação e as
+quatro lições de método.
+
+5.3 — DECISÕES DO OPERADOR (R18)
+--------------------------------------------------------------------------------
+CINCO decisões de 2026-09-23, materializadas no esquema e no código:
+  • CICLO = 1 EDIÇÃO        → `ciclo_id` TEXT (não UUID)
+  • DESEMPATE = mais acertos → comparador no store (não cabia no motor)
+  • LIMITE = 1 bónus/ciclo   → `bonus_emitido` + compare-and-set
+  • R2 como custo zero       → sem gas: nada é emitido on-chain neste MC
+  • D4 = intermediação       → sem efeito técnico neste MC; registado
+
+MAIS UMA, tomada DURANTE o MC (2026-09-23, após o veredito AJUSTAR do SEG-1):
+  • BÓNUS = **DIREITO por liquidar** (Opção A), e não crédito em Supabase
+    (Opção B) nem emissão on-chain (Opção C). O operador escolheu entre três
+    opções apresentadas com as consequências de cada uma.
+Registada aqui, no CLAUDE.md e no relatório final.
+
+5.4 — DECLARAÇÃO DE R15
+--------------------------------------------------------------------------------
+EXERCIDA DUAS VEZES, sempre dentro dos ficheiros autorizados:
+
+(a) DURANTE o SEG3, por iniciativa própria: o `/feedback` só verificava se
+    HAVIA sessão, não DE QUEM era. Qualquer utilizador autenticado lia a
+    posição e a atividade de qualquer carteira cujo endereço conhecesse — e os
+    endereços são públicos na blockchain. Corrigido com `validarOwnerOuAdmin`,
+    o guarda que `saldo-rs.mjs:51` já usa.
+
+(b) DEPOIS da validação independente: seis defeitos em código escrito neste MC,
+    todos confirmados por execução própria antes de aceitar — ver §4.9 do SEG4.
+    Três eram P0, e um deles (`/feedback` a receber o Request em vez do token)
+    tornava o endpoint inutilizável para 100% dos chamadores.
+
+A correcção estendeu-se ao que o MC tornou falso, como a R15 manda:
+`docs/TORNEIO-HABILIDADE.md` (§4b: histórico, concorrência e a consequência
+assumida da integração) e os comentários do próprio código.
+
+5.5 — DECLARAÇÃO DE R19
+--------------------------------------------------------------------------------
+**NÃO ATIVADA**, declarado no SEG-1 §-1.2 antes de executar. O trabalho extra
+natural (notificação de bónus) toca `_lib/notificacoes-usuario.mjs`, que o
+MC00.0 marcou para reescrita de copy no bloco B2 — mexer-lhe agora criaria
+conflito com um MC já planeado. O histórico por utilizador, que também seria
+natural, coube no `GET /feedback` sem custo.
+
+5.6 — MÉTRICAS DE EFICIÊNCIA
+--------------------------------------------------------------------------------
+  Boulder Loop
+    SEG2: 1 iteração de 3 (o mock de módulo que não alcançava o binding).
+    SEG4: 5 rondas de mutação — 2 antes da validação, 3 depois.
+  Escopo
+    Entregue: 100% do MC93-B, com o SEG3.2 ajustado por decisão do operador.
+    Adicionado por R15: 1 correcção de segurança + 6 correcções pós-validação,
+    todas dentro dos ficheiros autorizados. Zero expansão de escopo.
+  Testes
+    436 baseline → 477. MC93-B: 23 (store) + 18 (endpoints/integração) = 41.
+    Cresceram de 30 para 41 por causa dos defeitos encontrados.
+  Mutação
+    31 mutantes aplicados e **assertados** · 30 mortos · 1 equivalente.
+    Duas rondas iniciais tiveram falsos sobreviventes por falha do instrumento.
+  Custo da validação independente
+    Duas tentativas (a primeira caiu no limite de sessão). A que correu:
+    56 chamadas, 10 mutações próprias — **as 10 sobreviveram** — e um veredito
+    REPROVADO que estava certo. Encontrou três P0 num código com 466 verdes.
+    **É a terceira vez neste projeto que a validação independente se paga.**
+  MC de fechamento
+    Não gerado. As pendências (migração por aplicar, handler da fila) são
+    execução do operador ou dependem de R2, não de trabalho meu pendente.
+
+5.7 — RELATÓRIO FINAL
+--------------------------------------------------------------------------------
+_logs/MC93B-RELATORIO.md, com as três secções do Pilar 3 e veredito explícito.
+
+5.8 — COMMIT
+--------------------------------------------------------------------------------
+Mensagem: feat: MC[93-B] — persistência e endpoints do torneio
+Conteúdo: 4 ficheiros de código novos + 2 de teste + migração + 2 modificados
+(`consolidar-lances.mjs`, `docs/TORNEIO-HABILIDADE.md`) + `_logs/` + `CLAUDE.md`.
+
+VERIFICAÇÃO DE R1: `git status --porcelain | grep '^ M'` → exactamente dois
+ficheiros, ambos nomeados nas autorizações. `_lib/pontuacao-utils.mjs` (motor
+do MC93-A) intacto — confirmado pelo Validador como byte-idêntico a 11894bd.
+Ficam 3 untracked em `docs/` anteriores ao MC00.0, que não são deste MC.
+
+================================================================================
+VEREDITO DO MC93-B: CONCLUÍDO COM RESSALVA MATERIAL
+  Persistência, endpoints e integração entregues; 477/477 verdes; 30 mutantes
+  mortos. O veredito REPROVADO da validação independente foi aceite e os seis
+  defeitos corrigidos e testados.
+  ⚠️ MAS: as correcções NÃO passaram por uma segunda validação independente, e
+  a funcionalidade não é utilizável até o operador aplicar a migração e decidir
+  sobre o handler de liquidação.
+================================================================================

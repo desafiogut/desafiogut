@@ -502,3 +502,95 @@ reativar R2; decidir se se inverte a dependência do Blobs. Ver
 > MC00.0 identificou (errata E6) — mecanismo antes da promessa. O motor foi mantido
 > puro e sem chamador precisamente para que essa divergência não chegue a produção
 > antes do MC95.
+
+---
+
+## MC93-B — Persistência, endpoints e integração do torneio (2026-09-24)
+
+**Entregue:** `_lib/pontuacao-store.mjs`, `pontuacao.mjs`, `ranking.mjs`,
+migração `20260923_mc93b_pontuacoes.sql`, gancho em `consolidar-lances.mjs`, 41 testes.
+**477/477 verdes** (baseline 436 + 41). **Logs:** `_logs/MC93B_*` · **Spec:** `docs/TORNEIO-HABILIDADE.md` §4b.
+⚠️ **Validação independente: REPROVADO à primeira.** Os números e as afirmações
+válidas são os da errata `_logs/MC93B_SEG4_EXECUTOR.txt` §4.9.
+
+### ⛔ PENDÊNCIAS QUE BLOQUEIAM O USO
+
+1. **A migração NÃO foi aplicada.** `pontuacoes` e `rankings_ciclo` não existem
+   em produção. O código que as usa falha hoje. Execução é do operador.
+2. **Não há handler de fila para `creditar-senhas-bonus`.** Uma tarefa
+   enfileirada esgota as 5 tentativas e cai na DLQ. Criar o handler é emissão
+   on-chain — fora deste MC, precisa de R2 reativada.
+
+### ⚠️ O bónus é um DIREITO, não um saldo — e porquê
+
+O enunciado mandava "creditar em `saldo_senhas` (Supabase)". **Não é possível:**
+`saldo_senhas` nessa base é coluna de **`lojistas`** (0 linhas), não do
+participante; e `darLance` exige `saldoSenhas[msg.sender] > 0` **on-chain**
+(`Leilao.sol:88`), decrementando-o em `:107`. Uma senha creditada fora da cadeia
+**não habilita lance nenhum** — o utilizador veria "+20 senhas" e a transação
+reverteria. Além disso `saldo-senhas.mjs` calcula
+`saldoEfetivo = saldoOnChain − senhasConsumidas`: somar um termo off-chain
+quebraria a invariante `saldoEfetivo ≤ saldoOnChain`.
+
+Decisão do operador (Opção A): grava-se `senhas_a_creditar` com
+`liquidado_em = NULL` e enfileira-se `creditar-senhas-bonus`. **A UI do MC94 tem
+de dizer "20 senhas a creditar", não "+20 senhas".**
+
+### Decisões do operador materializadas (R18, 2026-09-23)
+
+`ciclo_id` é **TEXT** (ciclo = 1 edição; os ids são `"R-1"` e `lances.edicao_id`
+é `VARCHAR(66)` — um UUID impediria o join) · desempate por **mais acertos** ·
+**1 bónus por ciclo** · bónus como direito, sem gas.
+
+> ⚠️ O desempate por acertos **não cabia no motor** do MC93-A (que desempata por
+> endereço e este MC não podia alterar). Vive no store; há um teste que exige
+> que as duas regras coincidam quando os acertos são iguais. Quando o MC95
+> ratificar a regra, leva-se ao motor e o store delega.
+
+### Os seis defeitos que a validação independente encontrou
+
+A minha suíte tinha **466 verdes e 0 falhas** ao mesmo tempo que tudo isto era
+verdade. **Verde não é prova.**
+
+| | Defeito | Correcção |
+|---|---|---|
+| P0 | **`/feedback` avariado a 100%** — passei o `Request` onde `verificarUserSession` quer a **string do token** (`_lib/jwt.mjs:78`, como nos outros 18 chamadores). Lançava `JWSInvalid` → 500 fora do `jsonResponse` → **sem CORS** → "Failed to fetch" no APK | Bearer extraído + try/catch → 401. **O mock passou a exigir string** |
+| P0 | **Bónus inalcançável em produção** — a integração nunca passava `historicos` → `detectarConsecutivos([])` → `bonus: 0` sempre | O store lê o histórico da **sua própria tabela** |
+| P0 | **Concorrência pagava a dobrar** — read-then-write: duas consolidações paralelas gravavam 20 e enfileiravam 40 | **Compare-and-set** (`UPDATE … WHERE bonus_emitido = false`) |
+| P1 | **`error` do Supabase ignorado em todas as chamadas** → escrita recusada respondia 200 OK, e tornava decorativo o fail-soft | helper `exigir()` |
+| P1 | **Refechar apagava os pontos do bónus** (9 → 4) | preservados e testados |
+| P2 | SQL sem `GRANT … TO service_role` (o `REVOKE … FROM PUBLIC` retira o herdado → 42501 **em silêncio**) e CHECK a bloquear a liquidação óbvia | ambos corrigidos |
+
+### ⚠️ Consequência assumida da integração
+
+O gancho é **fail-soft depois do recibo**. Como o `catch` engole,
+`marcarConsolidado` **corre na mesma**: se a pontuação falhar, a edição fica
+consolidada **sem pontos**, e a 2.ª chamada sai no `estaConsolidado` — o estado
+parcial é **permanente** por esse caminho. A recuperação é manual:
+`POST /pontuacao` com o mesmo `cicloId` repontua (idempotente, preserva bónus e
+liquidação). A resposta devolve `pontuacao: null` para a coordenação ver.
+*(Um comentário anterior afirmava que a edição ficava por marcar e a repetição
+resolvia. Era falso — corrigido no código e na spec.)*
+
+### Lições de método (recorrência alta, impacto alto)
+
+- **Um duplo que aceita mais do que o original esconde o defeito que devia
+  apanhar.** O mock de `verificarUserSession` ignorava o argumento e deu verde a
+  um endpoint avariado a 100%. Mocks de funções de segurança têm de **rejeitar
+  o que a real rejeita**.
+- **Um controlo positivo que não morre invalida a ronda de mutação.** O meu
+  tinha-se tornado mutante equivalente por causa do compare-and-set; trocá-lo
+  revelou que **nada testava concorrência**.
+- **Uma mutação que "sobrevive" pode nunca ter sido aplicada.** Duas das minhas
+  falharam em silêncio (delimitador `|` do `sed`; padrão com LF). Assertar
+  sempre a substituição antes de declarar um sobrevivente.
+- **Testes que fazem `db.push()` e depois só leem não ligam escrita a leitura** —
+  foi o padrão por trás de 10 mutações sobreviventes.
+
+### Não medido (L-4)
+
+Nada foi corrido contra o **Supabase real** (migração por aplicar) nem contra
+uma **rodada real** (leilão travado em `EM_BREVE_MODE`;
+`consolidar-lances.mjs:51` só corre em mainnet). Cobertura não medida.
+⚠️ **As correcções aos seis defeitos não passaram por uma segunda validação
+independente** — foram verificadas por quem as escreveu.

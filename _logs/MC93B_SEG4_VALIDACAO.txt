@@ -1,0 +1,531 @@
+================================================================================
+MC93-B — SEG4 · VALIDAÇÃO INDEPENDENTE (papel VALIDADOR / RUFLO)
+DesafioGUT · Persistência, endpoints e integração do torneio de habilidade
+Data: 2026-09-24 · Commit base: 11894bd (main) · Working tree NÃO commitado
+================================================================================
+
+                    >>> VEREDITO FINAL: REPROVADO <<<
+  Dois defeitos P0 provados por execução: (1) `GET /ranking?recurso=feedback`
+  está 100% avariado para todos os chamadores; (2) a integração no fecho da
+  rodada NUNCA pode conceder o bónus — o mecanismo central do MC é inalcançável
+  no único caminho de produção. Mais 10 de 10 mutações minhas sobreviveram a uma
+  suíte de 466 verdes. Detalhe em V2, V4 e V5.
+
+O que NÃO está errado, e vale registar: a decisão de arquitetura (bónus =
+DIREITO por liquidar, nunca saldo) está correcta, bem fundamentada e coerente
+entre código, SQL e docs. A refutação do SEG-1 foi respeitada à letra. O
+problema não é o desenho — é a execução.
+
+================================================================================
+MÉTODO E DISCIPLINA DE NÃO-ALTERAÇÃO
+================================================================================
+• Nenhum ficheiro do projeto foi alterado por mim. As 12 mutações e os 2
+  controlos positivos foram aplicados um a um, com backup FORA do repo
+  (scratchpad) e restauro verificado a cada passo.
+• Prova final: `md5sum -c` contra os hashes tirados antes de qualquer mutação →
+  `_lib/pontuacao-store.mjs: OK`, `pontuacao.mjs: OK`, `ranking.mjs: OK`,
+  `consolidar-lances.mjs: OK`.
+
+⚠️ ERRATA AO BRIEFING — «os ficheiros têm fim de linha CRLF». É FALSO.
+  `od -c` sobre os 6 artefactos mostra `\n` puro; `git config core.autocrlf` é
+  `true` e o próprio git avisa «LF will be replaced by CRLF the NEXT time Git
+  touches it» — isto é, a árvore de trabalho é **LF** e a conversão ainda não
+  aconteceu. (Nota: `grep -c $'\r'` devolve o nº total de linhas e engana; é
+  preciso `od -c`.) A consequência é exactamente a armadilha que o briefing
+  quis evitar, com a polaridade invertida: a MINHA primeira versão do harness
+  normalizava o alvo para CRLF, e por isso as duas mutações multi-linha (M6, M8)
+  não casaram. O harness asserta a contagem de ocorrências e recusou-as
+  («NAO APLICADA (0 ocorrencias) -> INVALIDO») em vez de as reportar como
+  sobreviventes. Depois de passar a LF, ambas aplicaram e ambas sobreviveram.
+
+================================================================================
+V1 — CORRECÇÃO DO STORE ....................................... FALHOU
+================================================================================
+Cinco defeitos, quatro deles provados por execução contra o MESMO duplo de
+Supabase que o Executor usa nos seus testes (para que o defeito não se possa
+atribuir ao meu duplo).
+
+V1.a CONCORRÊNCIA — o limite «1 bónus por ciclo» NÃO se sustenta. FALHOU
+────────────────────────────────────────────────────────────────────────────────
+`registrarPontuacaoRodada` lê `atual` (linha 105-106) e só depois faz o upsert
+(112-124): read-modify-write sem atomicidade nem constraint que o feche.
+Duas chamadas em paralelo ao mesmo ciclo, medido:
+
+    senhas_a_creditar=20  |  tarefas na fila=2
+    >>> LIMITE '1 BONUS POR CICLO' VIOLADO
+
+E o modo de falha é PIOR do que "conta a dobrar": as duas escritas correram
+sobre a mesma leitura de 0, logo ambas gravaram 0+20=20 e a **coluna disfarça**
+o problema — enquanto a **fila tem duas tarefas**. Ou seja, `rankings_ciclo` diz
+20 senhas e a instrução de pagamento diz 40. O livro-razão e a ordem de crédito
+ficam em desacordo, e é a fila que credita on-chain (R$ 40,00 a mais).
+
+O caminho existe, não é teórico: `consolidar-lances.mjs:63` faz
+`estaConsolidado` (TOCTOU) e `marcarConsolidado` só corre no FIM (linha 153) —
+duas consolidações concorrentes da mesma edição passam ambas o guarda e chegam
+ambas à pontuação. E `POST /pontuacao` é invocável em paralelo sem rate-limit.
+
+V1.b `pontos_totais` — repetir o fecho APAGA os pontos de bónus. FALHOU
+────────────────────────────────────────────────────────────────────────────────
+A docstring diz «REPÕE os valores, nunca os soma», e é isso que faz. Mas a
+reposição tem um defeito: na 2.ª passagem `jaTemBonus === true` →
+`ganhaBonus === false` → `pontos_totais = v.pontos` **sem** o `pontosBonus`.
+Medido:
+
+    1.a chamada: pontos_totais=9  bonus_emitido=true  senhas=20   (4 + 5 = 9 ✓)
+    2.a chamada: pontos_totais=4  bonus_emitido=true  senhas=20
+    >>> NÃO IDEMPOTENTE: os 5 pontos de bónus foram APAGADOS, mas
+        bonus_emitido continua true e a dívida de 20 senhas mantém-se
+
+Isto importa porque **repetir o fecho é precisamente o que o comentário da
+integração invoca como garantia de segurança** (V4). E há uma assimetria de
+política na mesma chamada: `senhas_a_creditar` ACUMULA (`atual + x`) enquanto
+`pontos_totais` SUBSTITUI. Nada no código nem no SQL impede mais do que uma
+rodada por ciclo — simplesmente substitui em silêncio e perde a anterior.
+(Hoje ciclo = 1 edição, logo é latente; mas é a regra que o MC95 pode mexer.)
+
+V1.c `recalcularPosicoes` com upsert de 3 colunas ................ PASSOU
+────────────────────────────────────────────────────────────────────────────────
+O briefing apontou-o como «provavelmente o ponto mais frágil». **Não é, e o
+mock não esconde bug nenhum aqui** — verificado na fonte instalada, não por
+suposição: `node_modules/@supabase/postgrest-js/src/PostgrestQueryBuilder.ts`
+  :1390  headers.append('Prefer', `resolution=merge-duplicates`)
+  :1176  «defaultToNull … This only applies when inserting new rows, not when
+          merging with existing rows under `ignoreDuplicates: false`. This also
+          only applies when doing bulk upserts.»
+  :1399  o parâmetro `columns` só é enviado `if (Array.isArray(values))`
+Logo, num upsert de UMA linha sobre uma linha existente, o `ON CONFLICT DO
+UPDATE` toca apenas as colunas do payload e **preserva as restantes**. O
+`Object.assign(alvo, linha)` do duplo reproduz isso fielmente.
+RESSALVAS: (i) `atualizado_em` fica desactualizado, porque não vai no payload;
+(ii) o `error` é ignorado (V1.f), logo uma recálculo falhado é invisível;
+(iii) as mutações M2 (tirar o filtro `.eq("ciclo_id")`) e M8 (nunca chamar
+`recalcularPosicoes`) sobrevivem à suíte — a função inteira está sem rede.
+
+V1.d `lerFeedback` com `.map(() => true)` ....................... FALHOU
+────────────────────────────────────────────────────────────────────────────────
+Está errado face à definição de sequência, e quebra o caso que mais interessa:
+a rodada FALHADA. `calcularPontosRodada` só devolve quem acertou, logo
+`pontuacoes` **não tem linha** para um ciclo em que o participante jogou e não
+fez lance único. Mapear tudo para `true` torna essa falha invisível e a corrente
+nunca parte. Medido (acertou em R-1, falhou em R-2, acertou em R-3):
+
+    sequenciaAtual=2 (real = 1: o R-2 partiu a corrente) | faltamParaBonus=3
+    >>> SEQUÊNCIA INFLACIONADA — o bónus (R$ 40,00) chega mais cedo do que é devido
+
+O contador que decide 20 senhas por sequência conta a mais, de forma
+sistemática. A informação para o fazer bem existe (`pontuacoes.ciclo_id` +
+a lista de ciclos), mas não é usada. Secundário: a query lê TODOS os ciclos de
+sempre, sem `limit` e sem janela; e a mutação M1 (remover a ordenação por
+`criado_em`) sobrevive, o que prova que a cronologia — de que a detecção de
+corrida depende — não está testada.
+
+V1.e `ordenarRanking` com `pontos_totais` ausente/NaN ........... FALHOU
+────────────────────────────────────────────────────────────────────────────────
+`b.pontos_totais - a.pontos_totais` dá `NaN`, `NaN` é falsy, e o `||` **salta em
+silêncio para o critério seguinte**. Medido:
+
+    1. 0xaaaa pontos=undefined acertos=9
+    2. 0xbbbb pontos=10        acertos=1
+    >>> CRITÉRIO PRIMÁRIO IGNORADO: a linha sem pontos ficou em 1.º lugar
+
+Negativos ordenam bem (e o CHECK do SQL proíbe-os). A chave de empate
+`${pontos}|${acertos}` com valores ausentes dá `"undefined|undefined"` e agrupa
+todas as linhas defeituosas numa posição partilhada. A probabilidade real é
+baixa (`NOT NULL DEFAULT 0`), mas é uma resposta errada em silêncio numa tabela
+que decide prémio — e o modo de falha certo aqui é rebentar, não adivinhar.
+
+V1.f [ACHADO NOVO, o mais grave do store] O store FALHA EM SILÊNCIO. FALHOU
+────────────────────────────────────────────────────────────────────────────────
+`grep -n "error" _lib/pontuacao-store.mjs` → **zero ocorrências**. Todas as
+leituras fazem `const { data } = await …` e todos os `upsert` descartam o
+retorno. O supabase-js NÃO lança em erro de base de dados: devolve
+`{ data: null, error }`. Consequência: uma violação de CHECK (23514), uma
+negação de permissão (42501) ou uma tabela inexistente (42P01) é um **no-op
+silencioso**, e a função devolve `{ participantes: N }` a declarar sucesso.
+Comparar com o padrão do próprio projeto, que trata `error`:
+`_lib/data-store-supabase.mjs` (9 ocorrências), `_lib/fila.mjs` (6),
+`_lib/cotas-store.mjs` (22).
+⇒ Isto torna o fail-soft da integração **decorativo**: o store quase nunca
+lança, logo o `catch` quase nunca dispara, e uma falha total de escrita responde
+200 OK com `pontuacao: {...}` preenchido. É também o que transforma a ressalva
+do V3 (GRANT em falta) de "risco" em "avaria indetectável".
+
+================================================================================
+V2 — SEGURANÇA DOS ENDPOINTS .................................. FALHOU (P0)
+================================================================================
+V2.a A comparação anti-IDOR é REAL — mas é INALCANÇÁVEL. [ACHADO NOVO, P0]
+────────────────────────────────────────────────────────────────────────────────
+A forma do guarda está certa e igual ao padrão: `validarOwnerOuAdmin(sessao,
+endereco, admins)` e o tratamento de caixa é seguro dos dois lados
+(`validate.mjs:29` `input.toLowerCase()`; `:149-150` baixa `owner` e `alvo`).
+**Mas o guarda nunca corre.** `ranking.mjs:55` faz:
+
+    const sessao = await verificarUserSession(req);      // ← passa o REQUEST
+
+É o **único** dos 19 chamadores do projeto que passa o objecto `Request`. Todos
+os outros passam a string do Bearer (`saldo-rs.mjs:45`, `saldo-senhas.mjs:51`,
+`troco.mjs:36`, `wallet.mjs:72`, `produtos.mjs:226/424/562`, `voucher.mjs:223`,
+`delete-account.mjs:69`, `exportar-dados.mjs:120`, `cotas.mjs:176`,
+`referral.mjs:41`, `notificacoes.mjs:48/69`, `chatbot.mjs:258/302`,
+`admin-aprovacao.mjs:68`, `corporativo-analytics.mjs:142`,
+`renovacao-adesao.mjs:77`). Provado por execução contra o `_lib/jwt.mjs` real e
+o `jose` instalado, com um token VÁLIDO e bem assinado:
+
+    A) como ranking.mjs:55 chama — passa o REQUEST:
+       LANCOU: JWSInvalid | code: ERR_JWS_INVALID
+               | Compact JWS must be a string or Uint8Array
+    B) como saldo-rs.mjs:45 chama — passa o TOKEN:
+       OK, endereco = 0xaaaa…aaaa
+
+⇒ `GET /ranking?recurso=feedback` **falha para 100% dos chamadores**, com token
+válido ou sem ele. E `ranking.mjs` não tem try/catch à volta da chamada, logo a
+excepção escapa ao handler → 500 do runtime Netlify, que **não passa por
+`jsonResponse`** e por isso **não leva os cabeçalhos CORS** (`validate.mjs:115`
+`...CABECALHOS_CORS`). No APK isto aparece como «Failed to fetch», não como 500
+— o mesmo sintoma já registado no MC88.15.
+Gravidade: P0 de funcionalidade. Fail-CLOSED: não há fuga de dados.
+
+V2.b O 401 documentado é código morto, e o teste que o afirma é verde falso.
+────────────────────────────────────────────────────────────────────────────────
+`verificarUserSession` **nunca devolve `null`** — lança (`_lib/jwt.mjs:78-88`).
+Logo `if (!sessao) return jsonError(401, "sessao_invalida", …)` é inalcançável e
+o 401 que o cabeçalho de `ranking.mjs:20` documenta não existe. O teste
+«/feedback: sem sessão válida → 401» passa porque o mock
+(`mc93b-endpoints.test.mjs:31-36`) **devolve `null`** — contrato que a função
+real não tem — e porque **ignora o argumento** (`async () => …`), que é
+precisamente o que esconde o defeito V2.a. Dois erros do duplo a somar-se num
+verde.
+Falta ainda, por comparação com `saldo-rs.mjs:41-50`: o 401 `token_ausente`
+antes de verificar, e o mapeamento `ERR_JWT_EXPIRED → token_expirado`.
+
+V2.c `/pontuar` — o guarda admin está certo; o que ele protege é que não está.
+────────────────────────────────────────────────────────────────────────────────
+`guardAdmin` está bem colocado (depois do 405, antes de `parseJsonBody`), e a
+mutação do Executor cobre a sua remoção. PASSOU nesse ponto.
+MAS: `historicos` vem do **body** e é o **único** input capaz de criar a dívida
+de 20 senhas. Não há derivação a partir de dados guardados nem cruzamento com
+`pontuacoes`. Um POST
+`{cicloId:"R-1", lances:[…], historicos:{"0x…":[true,true,true,true,true]}}`
+cria 20 senhas de dívida para qualquer endereço, sem base auditável. Admin-only
+limita o raio, mas remove o fundamento do registo — e a mutação M6 (ignorar
+`body.historicos` por completo) sobrevive à suíte, o que mostra que nenhum teste
+afirma que este input tem efeito. Secundário: `/pontuar` não tem rate-limit
+(os outros dois têm).
+
+================================================================================
+V3 — MIGRAÇÃO SQL ................................ APROVADO COM RESSALVAS
+================================================================================
+IDEMPOTÊNCIA: sim. `CREATE TABLE/INDEX IF NOT EXISTS`, `DROP POLICY IF EXISTS`
+antes de `CREATE POLICY`, `ALTER TABLE … ENABLE RLS` idempotente, tudo em
+BEGIN/COMMIT. Ressalva habitual e não mitigada: se uma das tabelas já existir
+com outra forma, o `IF NOT EXISTS` salta em silêncio e nenhuma coluna ou
+constraint é acrescentada.
+
+`posicao: 0` INICIAL: **PERMITIDO**. `posicao INT NOT NULL DEFAULT 0` +
+`CHECK (posicao >= 0)`. Coerente com `pontuacao-store.mjs:117`. PASSOU.
+
+ENDEREÇOS EM MINÚSCULAS: **SIM**, o CHECK é satisfeito.
+`pontuacao-utils.mjs:normalizarEndereco` e `pontuacao-store.mjs:normalizar`
+baixam ambos. RESSALVA: um endereço que seja string não-vazia mas não 40-hex
+(ex.: `"0xa"` — literalmente o valor usado no mock de `getLances` do teste de
+endpoints) passa `lanceValido` e depois viola
+`pontuacoes_endereco_check`; e, por V1.f, é descartado **em silêncio**. A
+mutação M7 (deixar de baixar para minúsculas) sobrevive à suíte.
+
+`rankings_ciclo_liquidacao_check` — não bloqueia NADA do que o código escreve
+hoje (o store preserva sempre `liquidado_em` e só soma a `senhas_a_creditar`).
+⚠️ MAS bloqueia a liquidação óbvia: `UPDATE … SET liquidado_em = now(),
+senhas_a_creditar = 0` viola a constraint (23514). O modelo implícito é «a
+dívida fica registada para sempre e só se marca a data», e o índice parcial
+`idx_rankings_ciclo_por_liquidar` assume o mesmo. Isto tem de estar escrito
+ANTES de alguém escrever o handler, ou o handler nasce a falhar.
+
+REVOKE/GRANT — **INSUFICIENTE face ao precedente do próprio projeto.**
+O padrão nas duas migrações anteriores é REVOKE **emparelhado com** GRANT:
+  20260722_mc87:52-53  REVOKE … FROM anon, authenticated;
+                       GRANT EXECUTE … TO service_role;
+  20260802_mc8943:71-72 REVOKE … FROM PUBLIC, anon, authenticated;
+                        GRANT EXECUTE … TO service_role;
+Esta migração faz o REVOKE e **omite o GRANT a `service_role`**. Funciona *se*
+os default privileges do Supabase para o role que executa concederem ALL a
+service_role (verdade quando corre como `postgres`). Se não for o caso, toda a
+escrita falha com 42501 — e, por V1.f, **em absoluto silêncio, com resposta
+200 OK**. Correcção de uma linha:
+    GRANT ALL ON public.pontuacoes, public.rankings_ciclo TO service_role;
+O que NÃO falta, verificado: não há sequências (`gen_random_uuid`, com
+precedente em 4 migrações anteriores — `20260620_schema_definitivo.sql:14`,
+`20260629_fila_tarefas.sql:10`, …), e `USAGE` no schema `public` é default.
+A política `FOR ALL TO service_role` é redundante (service_role tem BYPASSRLS)
+mas é o padrão do projeto e é inócua.
+
+Menor: `idx_rankings_ciclo_por_liquidar` indexa `(liquidado_em)` sob o predicado
+`liquidado_em IS NULL` — a coluna-chave é sempre NULL dentro do índice; só o
+predicado serve. `(ciclo_id, endereco)` seria a chave útil.
+
+================================================================================
+V4 — INTEGRAÇÃO EM consolidar-lances.mjs ...................... FALHOU (P0)
+================================================================================
+V4.a «Depois do recibo» ......................................... PASSOU
+O 202 (`:119-127`) e o 502 (`:112-114`) saem antes do bloco. Correcto, bem
+justificado, e há teste que o cobre («tx NÃO minerada (202) não pontua nada»).
+
+V4.b «Antes de marcarConsolidado» — a justificação é FALSA, e contradiz o
+      fail-soft escrito três linhas abaixo. FALHOU
+────────────────────────────────────────────────────────────────────────────────
+O comentário (`:137-139`) diz: «se isto falhar, a edição fica por marcar e uma
+nova chamada repete tudo». Não fica: o `catch` engole, e
+`await marcarConsolidado(edicaoId, resultado)` (`:153`) corre sempre. As duas
+metades do mesmo comentário desdizem-se.
+Respondendo directamente às duas perguntas do briefing:
+  • pontuação corre e a consolidação NÃO fica marcada → **nenhum caminho**
+    (entre as duas só há o próprio `marcarConsolidado`).
+  • consolidação marcada e pontuação ausente ou PARCIAL → **sim, e é o modo de
+    falha esperado.** `enfileirar` é a única chamada do store que lança
+    (`_lib/fila.mjs:30`), e `getSupabase()` lança se faltar `SUPABASE_URL` /
+    `SUPABASE_SERVICE_ROLE_KEY` (`supabase-client.mjs:36`). Um throw a meio do
+    ciclo `for` deixa: uns participantes gravados e outros não;
+    `bonus_emitido=true` sem tarefa na fila; e `recalcularPosicoes` nunca
+    chamado, logo TODAS as `posicao` presas a 0.
+  • segunda chamada após falha parcial → `estaConsolidado` (`:63`) já devolve
+    valor → `return jsonResponse({ok:true, idempotent:true, …})` **antes** de
+    chegar ao bloco de pontuação. **O estado parcial é permanente e a repetição
+    que o comentário promete não existe.** Única recuperação: `POST /pontuacao`
+    à mão — que, para o bónus, ainda precisa dos `historicos` fornecidos a mão.
+⚠️ O `docs/TORNEIO-HABILIDADE.md` (modificado neste MC) repete a mesma
+afirmação falsa — «se falhar, a edição fica por marcar e a repetição é segura»
+— para a fonte única de verdade do projeto.
+
+V4.c [ACHADO NOVO, P0] A integração NUNCA pode conceder o bónus.
+────────────────────────────────────────────────────────────────────────────────
+`consolidar-lances.mjs:148` chama `registrarPontuacaoRodada(edicaoId, lances)`
+— **sem o 3.º argumento**. Logo `historicos = {}` →
+`historicos[endereco] || []` → `detectarConsecutivos([])`. Medido:
+
+    detectarConsecutivos([]) => {"bonus":0,"sequenciaAtual":0,"maiorSequencia":0,
+                                 "pontosBonus":0,"senhasBonus":0}
+    bonus > 0 possivel sem historico? false
+
+⇒ No único caminho de produção, `ganhaBonus` é SEMPRE false: nunca há
+`bonus_emitido`, nunca há `senhas_a_creditar`, nunca há tarefa na fila. O bónus
+de sequência de 5 acertos — o mecanismo central do MC — só nasce de um POST
+admin com o histórico escrito à mão. E o store TEM o histórico na sua própria
+tabela (`lerFeedback` lê `pontuacoes` para calcular a sequência), mas
+`registrarPontuacaoRodada` nunca o consulta. A assimetria está dentro do mesmo
+ficheiro.
+`grep -rn "historico" _logs/MC93B_*.txt` → **zero**: o Executor não declarou
+esta lacuna em nenhum segmento.
+
+V4.d [ACHADO NOVO] `creditar-senhas-bonus` não tem handler → vai para a DLQ.
+────────────────────────────────────────────────────────────────────────────────
+`fila-processor-scheduled.mjs:17-22` registra só `"confirmar-credito-senhas"`.
+`processarLote` lança `sem handler para tipo "…"` (`fila.mjs:64`), aplica
+backoff e, ao atingir `max_tentativas` (5, o default de `enfileirar`), a tarefa
+fica em `failed`. A fila **não é um estacionamento**: cada bónus queimaria 5
+tentativas e aterraria na DLQ, com ruído no `console.info("[cron:fila] lote")`.
+A dívida não se perde (o registo durável é `rankings_ciclo.senhas_a_creditar`),
+mas «enfileira-se a liquidação» diz mais do que acontece. Hoje é discutível por
+causa do V4.c — o bónus não chega a nascer.
+
+================================================================================
+V5 — QUALIDADE DA SUÍTE + MUTAÇÃO PRÓPRIA ..................... FALHOU
+================================================================================
+NÚMEROS REAIS (execução nesta sessão, no cwd pedido):
+    cd desafio-gut/frontend/netlify/functions
+    node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+    → tests 466 · pass 466 · fail 0 · cancelled 0 · skipped 0 · todo 0
+      duration_ms 9402
+    MC93-B isolado ("mc93b-*.test.mjs") → tests 30 · pass 30 · fail 0
+    (16 no store + 14 nos endpoints; coerente com o baseline 436 do MC93-A)
+
+CONTROLO POSITIVO (obrigatório: 10/10 sobreviventes pode ser instrumento cego)
+    CTRL1 `pontos: v.pontos` → `pontos: 0`      → pass 28 fail 2 → MORREU
+    CTRL2 `/ranking` aceita qualquer método     → pass 29 fail 1 → MORREU
+⇒ O instrumento mata mutantes. Os sobreviventes abaixo são genuínos.
+
+Cada mutação: 1 ocorrência ASSERTADA antes de aplicar (contagem exacta),
+variação de bytes registada, e restauro verificado byte-idêntico.
+
+────────────────────────── MUTAÇÕES SOBREVIVENTES ──────────────────────────
+Nenhuma destas consta da lista de 15 que o Executor já tentou. **10 de 10
+sobreviveram.**
+
+M1  `lerFeedback`: remove `.order("criado_em", {ascending:true})`.
+    9231→9191 B. pass=30 fail=0 → SOBREVIVEU.
+    A cronologia de que a detecção de corrida depende não está testada —
+    porque `.map(() => true)` torna a ordem irrelevante (ver V1.d).
+
+M2  `recalcularPosicoes`: remove `.eq("ciclo_id", ciclo)` → posições calculadas
+    sobre TODOS os ciclos. 9231→9209 B. pass=30 fail=0 → SOBREVIVEU.
+    Nenhum teste tem dois ciclos vivos ao mesmo tempo no caminho de escrita.
+
+M3  `pontos_totais: v.pontos + (ganhaBonus ? sequencia.pontosBonus : 0)`
+    → `pontos_totais: v.pontos`. 9231→9188 B. pass=30 fail=0 → SOBREVIVEU.
+    Os 5 pontos de bónus nunca são afirmados em lado nenhum (é o mesmo defeito
+    que o V1.b já produz sozinho, sem mutação).
+
+M4  `ordenarRanking`: 3.º critério `localeCompare(endereço)` → `0`.
+    9231→9180 B. pass=30 fail=0 → SOBREVIVEU.
+    O teste «desempate concorda com atualizarRanking» é VÁCUO: insere B e depois
+    C, e a ordem por endereço coincide com a ordem de inserção, logo um sort
+    estável com comparador 0 dá o mesmo. A garantia de determinismo que a
+    docstring declara («a ordem de chegada dos dados NUNCA pode alterar o
+    resultado») não está testada.
+
+M5  `faltamParaBonus`: remove o módulo → `ACERTOS_PARA_BONUS - sequenciaAtual`.
+    9231→9201 B. pass=30 fail=0 → SOBREVIVEU.
+    O único teste usa `sequenciaAtual=2`, onde as duas fórmulas coincidem (3).
+    Com 7 acertos o correcto é 3 e o mutante diz 0.
+
+M6  `pontuacao.mjs`: `const historicos = …body.historicos… : {}` → `= {}`
+    (ignora o body). 2194→2106 B. pass=30 fail=0 → SOBREVIVEU.
+    O único input que cria a dívida de 20 senhas pode ser deitado fora sem que
+    um único teste note.
+
+M7  `normalizar`: deixa de fazer `.toLowerCase()`. 9231→9217 B.
+    pass=30 fail=0 → SOBREVIVEU. Todos os fixtures já são minúsculas; o CHECK
+    `^0x[0-9a-f]{40}$` que isto protege não tem teste.
+
+M8  remove a chamada a `recalcularPosicoes` no fim de
+    `registrarPontuacaoRodada`. 9231→9186 B. pass=30 fail=0 → SOBREVIVEU.
+    Nenhum teste verifica `posicao` DEPOIS de uma escrita real: os testes de
+    ranking injectam linhas directamente em `db.rankings`.
+
+M9  `liquidado_em: atual?.liquidado_em ?? null` → `liquidado_em: null`
+    (um direito já liquidado volta a "em aberto"). 9231→9208 B.
+    pass=30 fail=0 → SOBREVIVEU. Duplo pagamento possível; o teste
+    «feedback marca o direito como liquidado» injecta a linha à mão e nunca
+    passa pelo caminho de escrita.
+
+M10 `acertos_totais: v.acertos` → `acertos_totais: 0` — mata o desempate que o
+    operador decidiu. 9231→9223 B. pass=30 fail=0 → SOBREVIVEU.
+    O teste do desempate injecta `acertos_totais` directamente, logo nunca
+    exercita quem o escreve.
+
+PADRÃO ÚNICO POR TRÁS DE 5 DESTES SOBREVIVENTES (M2, M4, M8, M9, M10): os
+testes de ranking e de liquidação fazem `db.rankings.push({...})` e depois só
+leem. **O caminho de ESCRITA nunca é ligado ao de LEITURA.** Toda a coluna que
+só é afirmada por injecção directa está, de facto, sem teste. É o mesmo tipo de
+cegueira que o MC93-A já registou («asserção que usa a mesma constante do código
+não testa a regra»), noutra forma: asserção sobre dados que o código sob teste
+nunca produziu.
+
+Higiene, menor: o `beforeEach` de `mc93b-endpoints.test.mjs:96` não reinicia
+`estado.admins` nem `estado.enderecoSessao`. Os dois últimos testes mutam-nos e
+só passam por estarem no fim do ficheiro — a suíte depende da ordem.
+
+================================================================================
+V6 — CONFORMIDADE ............................................. AMBÍGUO
+================================================================================
+`_lib/pontuacao-utils.mjs` NÃO FOI TOCADO — **CONFIRMADO**:
+    git diff --stat HEAD -- …/_lib/pontuacao-utils.mjs  → vazio
+    git log --oneline -1 -- …/_lib/pontuacao-utils.mjs  → 11894bd (MC93-A)
+Byte-idêntico a `11894bd`. A regra foi respeitada.
+
+MAS `git status --porcelain` mostra **DOIS** modificados, não um:
+    M desafio-gut/frontend/netlify/functions/consolidar-lances.mjs   (esperado)
+    M docs/TORNEIO-HABILIDADE.md            (+79 / −3 — NÃO declarado no briefing)
+O conteúdo do doc é coerente com o código (excepto por propagar a afirmação
+falsa do V4.b). Não é uma violação grave, mas é uma divergência do enunciado.
+
+⚠️ A ÁRVORE MUDOU DURANTE A MINHA VALIDAÇÃO. Primeiro `git status`: 1 ficheiro
+modificado e 3 logs SEG. Mais tarde: 2 modificados e 6 logs (apareceram
+`MC93B_SEG2_TDD.txt`, `MC93B_SEG3_INTEGRACAO.txt`, `MC93B_SEG4_EXECUTOR.txt`).
+O Executor continuava a escrever enquanto eu validava. V1–V5 referem-se ao
+estado POSTERIOR, cujos hashes registei:
+    740217aee7429c8d965d42145c19d1cf  _lib/pontuacao-store.mjs
+    3a9fd7c1c49f2a067f7e2543721960de  pontuacao.mjs
+    2341cc21328231cb3948306bd980316e  ranking.mjs
+    355d2d215349d5fd452fe0590082d632  consolidar-lances.mjs
+
+`CLAUDE.md` NÃO foi actualizado e **não há commit** (HEAD continua `11894bd`),
+apesar de o SEG-1 §-1.4 listar «testes, docs, CLAUDE.md, commit» no escopo.
+Os 3 untracked em `docs/` (MC91.14-STATUS-BNB.txt, mc92.5_*.py) são anteriores
+a este MC, coerente com o SEG-1 C1.
+
+================================================================================
+ACHADOS NOVOS (não constam de nenhum segmento do Executor)
+================================================================================
+N1 P0 `verificarUserSession(req)` em `ranking.mjs:55` — passa o Request onde os
+      outros 18 chamadores passam a string do token. `GET /ranking?recurso=
+      feedback` responde 500 (sem CORS → «Failed to fetch» no APK) para TODOS os
+      chamadores, com token válido ou não. Provado por execução. Fail-closed.
+      Correcção: extrair o Bearer e envolver em try/catch como `saldo-rs.mjs:41-50`.
+N2 P0 A integração nunca passa `historicos` → o bónus de sequência é
+      inalcançável no único caminho de produção. Provado por execução.
+      Correcção: derivar o histórico de `pontuacoes` dentro do store.
+N3 P1 O store ignora `error` em TODAS as chamadas Supabase → falha silenciosa
+      com resposta 200 OK; torna o fail-soft da integração decorativo e a
+      ressalva do GRANT indetectável.
+N4 P1 `pontos_totais` perde os pontos de bónus ao repetir o fecho (9 → 4), que é
+      exactamente a repetição que o comentário da integração invoca como
+      garantia. Provado por execução.
+N5 P1 Concorrência: duas chamadas paralelas geram 2 tarefas na fila e deixam
+      `senhas_a_creditar` a 20 — o livro-razão e a ordem de crédito on-chain
+      ficam em desacordo (20 vs 40). Provado por execução.
+N6 P1 `lerFeedback` não vê a rodada falhada → sequência inflacionada (2 em vez
+      de 1) num contador que paga R$ 40,00. Provado por execução.
+N7 P2 A justificação «antes de marcarConsolidado» é falsa e auto-contraditória,
+      e já foi propagada para `docs/TORNEIO-HABILIDADE.md`. Após falha parcial,
+      `estaConsolidado` fecha a porta: o estado parcial é PERMANENTE.
+N8 P2 `creditar-senhas-bonus` não tem handler → 5 tentativas e DLQ.
+N9 P2 A migração omite `GRANT … TO service_role`, ao contrário do precedente do
+      MC87 e do MC89.43 na mesma pasta.
+N10 P2 `rankings_ciclo_liquidacao_check` bloqueia a liquidação óbvia
+      (`liquidado_em = now(), senhas_a_creditar = 0` → 23514).
+N11 P3 `ordenarRanking` deixa uma linha sem `pontos_totais` chegar ao 1.º lugar,
+      porque `NaN` é falsy e o `||` salta o critério primário.
+N12 P3 ERRATA de método: o briefing afirma CRLF; os ficheiros são LF
+      (`od -c` + `core.autocrlf=true` + o aviso do git). Normalizar para CRLF
+      cria falsos sobreviventes multi-linha.
+
+================================================================================
+VEREDITO FINAL: REPROVADO
+================================================================================
+O desenho está certo e a decisão do operador foi implementada com fidelidade: o
+bónus é um DIREITO por liquidar, nunca um saldo, e isso está coerente em código,
+SQL e documentação. Não é aí que o MC falha.
+
+Falha porque **duas das três peças não funcionam**: o endpoint de feedback está
+avariado para todos os chamadores (N1) e o bónus — o mecanismo central — é
+inalcançável no único caminho de produção (N2). Ambos provados por execução,
+não por leitura. E falha porque a suíte que os declara verdes não os poderia ter
+apanhado: 10 de 10 mutações minhas sobreviveram a 466 testes verdes, com
+controlo positivo a confirmar que o instrumento vê. O teste do 401 é verde falso
+por um mock cujo contrato contradiz a função real — e é esse mesmo mock que
+esconde o N1.
+
+O que é preciso antes de reapresentar (ordem de precedência):
+  1. N1 — extrair o Bearer em `ranking.mjs` e envolver em try/catch. Um teste
+     que passe um Request REAL com um token REAL assinado, sem mockar `jwt.mjs`.
+  2. N2 — derivar `historicos` de `pontuacoes` dentro do store; teste que feche
+     duas rodadas seguidas pela integração e exija o bónus à quinta.
+  3. N3 — verificar `error` em todas as chamadas Supabase e lançar. Só depois o
+     fail-soft da integração passa a significar algo.
+  4. N4/N5/N6 — idempotência de `pontos_totais`, atomicidade do bónus (o lugar
+     natural é uma constraint ou um UPDATE condicional, não um read-then-write),
+     e sequência que veja a rodada falhada.
+  5. Corrigir os comentários de `consolidar-lances.mjs:137-139` e o parágrafo
+     correspondente em `docs/TORNEIO-HABILIDADE.md` — hoje afirmam o contrário
+     do que o código faz.
+  6. N9/N10 antes de o operador aplicar a migração.
+  7. Reescrever os testes de ranking e liquidação para ligarem ESCRITA a
+     LEITURA. Cinco dos meus dez sobreviventes morrem só com isso.
+
+NÃO VERIFICADO (L-4)
+  • Nada foi exercitado contra um Supabase real: as tabelas não existem (a
+    migração não foi aplicada) e não usei o MCP Supabase para as criar.
+  • O 500 do `ranking.mjs` foi provado ao nível da função (`verificarUserSession`
+    lança, sem catch no handler); não observei a resposta HTTP do runtime
+    Netlify nem a ausência de CORS em rede.
+  • `DATA_STORE_BACKEND` e `NETWORK_STAGE` de produção: não lidos (pendência
+    herdada do SEG-1 N1). Se a produção estiver em Blobs para os lances, os
+    lances e a pontuação ficam em sistemas diferentes.
+  • Concorrência medida com `Promise.all` sobre um duplo in-memory, não contra
+    o PostgREST real — a corrida real pode ser pior (o duplo não tem latência).
+  • Cobertura: o projeto não tem alvo configurado; não medida.
+  • Nenhum ecrã observado: os MCP `chrome-devtools` e `claude-eyes` falharam a
+    ligar nesta sessão.
+================================================================================
+FIM DO SEG4 · VALIDAÇÃO INDEPENDENTE · VEREDITO: REPROVADO
+================================================================================
