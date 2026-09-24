@@ -1,0 +1,178 @@
+================================================================================
+MC93-D — SEG4 · VALIDAÇÃO (lado do EXECUTOR)
+DesafioGUT · Data: 2026-09-24
+Skills ECC: verification-before-completion
+Relatórios independentes (em SÉRIE, worktrees separados — HARD GATE 3):
+  _logs/MC93D_SEG4_VALIDACAO-A.txt  — contrato PostgREST
+  _logs/MC93D_SEG4_VALIDACAO-B.txt  — contrato on-chain
+================================================================================
+
+  VALIDADOR A: APROVADO COM RESSALVAS (3 achados altos, todos corrigidos)
+  VALIDADOR B: APROVADO COM RESSALVAS no código · **PARTE 1 REPROVADO**
+               — a minha refutação do fork on-chain era FALSA.
+
+================================================================================
+4.1 — SUÍTE
+================================================================================
+  Antes das correcções: 526 (521 + 5 saltados)
+  Depois:               **543 · 535 pass · 0 fail · 8 skipped**
+  Os 8 saltados: 5 de servidor PostgREST (sem Supabase local) + 3 de fork.
+
+4.2 — SUÍTE DE SEGURANÇA — não isolável (4.ª vez que se declara).
+      O que este MC acrescenta e está coberto: o cadeado de três condições
+      resistiu a 7 ataques do Validador B; a poluição de protótipo, que PASSOU,
+      está corrigida e coberta; e o gate `verificarCoordenacao()` passou a ter
+      teste.
+
+4.3 — COBERTURA
+      ⚠️ Global: NÃO MEDIDA (o projeto não tem alvo configurado).
+      ✅ MAS: **a migração `20260923_mc93b_pontuacoes.sql` deixou de ter
+      cobertura ZERO.** Foi aplicada a um PostgreSQL real (17.6) e os 8 CHECKs
+      foram exercidos. Era a lacuna nº 1 herdada do MC93-B.
+
+4.4 — PROVA DE R1
+      Modificados: `fila-processor-scheduled.mjs` (autorizado),
+      `docs/TORNEIO-HABILIDADE.md` (autorizado).
+      Novos: `_lib/sweeper-divida-orfa.mjs` + 3 ficheiros de teste.
+      Alterado ao abrigo de R15: `_lib/bonus-emissao.mjs` (poluição de
+      protótipo) e `_tests/mc93c-fila-bonus.test.mjs`.
+      INTACTOS: `_lib/pontuacao-utils.mjs`, `consolidar-lances.mjs`,
+      `_lib/pontuacao-store.mjs`, `pontuacao.mjs`, `ranking.mjs`,
+      `_lib/contract.mjs`, `Leilao.sol`, a migração.
+
+4.5 — MUTAÇÃO (R16) — com HARD GATE 4 aplicado
+      Ronda própria: 10 mutantes, **10 mortos**, controlo positivo morto.
+      Harness `mut-sc.mjs`: procura o alvo SÓ em linhas que não são comentário
+      e asserta a substituição nessa linha.
+      ⚠️ AINDA ASSIM houve um falso sobrevivente, o terceiro do projeto: o
+      controlo do M11 (remover `verificarCoordenacao`) deu VIVO porque o meu
+      `replace` multilinha não chegou a aplicar-se. Com aplicação verificada
+      linha a linha → **MORTO (2 falhas)**.
+      LIÇÃO: o HARD GATE 4 resolve o problema do comentário, não o da
+      substituição multilinha. A regra completa é: **assertar sempre que o
+      ficheiro mudou, não só que o padrão existia.**
+
+================================================================================
+4.6 — VALIDADOR A (contrato PostgREST): os 3 achados altos, corrigidos
+================================================================================
+A-N1 ⛔ **`.select()` no compare-and-set não estava protegido.**
+     Tirá-lo é invisível aos duplos (devolvem as linhas na mesma), mas em
+     produção o PostgREST devolve 204 e `data: null`: o código conclui que
+     perdeu a corrida e **o bónus NUNCA é concedido nem creditado**. Mesma
+     classe do P0 do MC93-C.
+     CORRIGIDO: guarda que exige `.select()` em todo o UPDATE de corrida cujo
+     resultado seja LIDO. ⚠️ A primeira versão do guarda acusava também as
+     UPDATEs condicionais de pontos, que descartam o resultado de propósito —
+     falso positivo meu, corrigido distinguindo pelo `const … = await`.
+     Controlo: mata nos DOIS sítios (worker e store).
+
+A-N2 ⛔ **`limite` era do lado do cliente e `encontradas` mentia.**
+     O PostgREST trunca em `db-max-rows` (1000): com 1500 órfãs, o sweeper via
+     1000 e reportava 1000. E sem `.order()` não havia garantia de progresso —
+     as mesmas dívidas podiam voltar sempre e as do fim nunca ser tratadas.
+     CORRIGIDO: `.order("atualizado_em")` + `.limit()` no SERVIDOR.
+
+A-N3 ⛔ **O SWEEPER QUE EU CRIEI ERA UM MOTO-CONTÍNUO.**
+     `enfileirar` é um INSERT puro sem deduplicação. Em dry-run o handler
+     consome a tarefa sem liquidar, a dívida continua órfã, e a varredura
+     seguinte reenfileira-a — **~51.840 linhas/dia** em `fila_tarefas`.
+     Defeito INTRODUZIDO POR MIM ao fechar a ressalva do MC93-C.
+     CORRIGIDO em três frentes: (1) no-op enquanto a emissão estiver
+     desarmada — re-enfileirar só faz sentido quando há quem liquide;
+     (2) dedup contra as tarefas por concluir na fila; (3) ordenação.
+
+     Outros achados de A, aceites: 8 de 16 métodos dos duplos divergem do real
+     (todos na direcção permissiva); faltavam 2 DEFAULTs no duplo do mc93b; e
+     ⚠️ **os testes de nível 2 estão SALTADOS em CI** (o `ci.yml` não define
+     `SUPABASE_CONTRATO_URL/KEY`) — é a acção de maior efeito que fica por
+     fazer, registada na §4d da spec.
+
+================================================================================
+4.7 — VALIDADOR B: a PARTE 1 é sobre mim, e tem razão
+================================================================================
+⛔ **A MINHA REFUTAÇÃO DO FORK ERA FALSA.**
+O SEG-1 §-1.1/R2 afirmou que o `hardhat` estava partido ("plugin da série 2 com
+hardhat v3; nem `--help` arranca") e que não havia como levantar uma EVM sem
+instalar nada. Reconfirmei por execução própria, e está errado:
+
+    node_modules/hardhat                          → 2.28.0
+    node_modules/@nomicfoundation/hardhat-ethers  → 4.0.9    (par CORRECTO)
+    ./node_modules/.bin/hardhat --version         → "2.28.0", exit 0
+    @nomicfoundation/edr + edr-win32-x64-msvc     → INSTALADOS
+
+CAUSA DO MEU ERRO: diagnostiquei o binário errado. O `package.json` PINA
+`hardhat: ^3.4.0`, mas o que está INSTALADO é o 2.28.0 — e o erro que reportei
+vinha do hardhat v3.9.1 da cache do `npx`, não do que o projeto usa. Li o
+`package.json` e uma mensagem de erro, e não confirmei a versão instalada.
+
+E o argumento de mérito também não se sustinha: eu disse "o handler está em
+dry-run, logo não há saldo emitido para testar". Num fork credita-se com a
+mesma função, personificando o mesmo coordenador. E o CI Foundry mede o
+CÓDIGO-FONTE, não o bytecode deployado nem o endereço que o backend usa.
+
+O Validador B levantou, **sem instalar nada**: uma EVM local (chainId 31337) e
+um FORK DE MAINNET no bloco 26.047.956, leu `coordenacao()` do contrato real, e
+correu o cenário inteiro — `adicionarSenhas(20)` → saldo 20 → `abrirEdicao` →
+`darLance` → saldo 19 → `apurarVencedor`, com controlo negativo.
+
+⇒ **A decisão do operador de não instalar Foundry foi tomada sobre informação
+  errada minha.** Foundry continua a não ser necessário — mas o fork É possível
+  e NÃO está feito. Os testes de fork passaram de "saltados por
+  impossibilidade" a "saltados por trabalho por fazer", com o texto corrigido
+  no ficheiro. Está declarado em L-4/N1 como pendência.
+
+ACHADOS DE B CORRIGIDOS:
+B-N1 ⚠️ **PROLUIÇÃO DE PROTÓTIPO ARMAVA A EMISSÃO.**
+     `process.env.X` resolve pela cadeia de protótipos: com
+     `Object.prototype.BONUS_EMISSAO_ATIVA = "true"`, `emissaoArmada()`
+     devolvia `true` sem variável de ambiente nenhuma — e B chegou a creditar
+     no arnês por esta via. Verificado por execução própria:
+       Object.prototype.X="true" → process.env.X === "true"
+       Object.hasOwn(process.env,"X") === false
+     CORRIGIDO com `Object.hasOwn` antes de ler, mais teste e controlo.
+     (B não achou gadget de poluição no projeto: é endurecimento, não correcção
+     de exploração conhecida. Mas a barreira para transacções irreversíveis em
+     mainnet não se deixa depender disso.)
+
+B-N2 ⚠️ **`CONTRATO_ADDRESS` tem fallback para um endereço SEM BYTECODE.**
+     `_lib/contract.mjs:50` → `0x273Ef96f5be04601FD39DAcDFB039d6fB552445e`, que
+     B mediu num fork: **zero bytes**. Uma chamada a `adicionarSenhas` contra um
+     endereço sem código **NÃO reverte** — devolve status 1. O worker marcaria a
+     dívida liquidada e ninguém receberia senhas. O que salva é
+     `verificarCoordenacao()` (linhas 179 e 224) — e removê-la sobrevivia à
+     suíte inteira (mutação M11 de B).
+     CORRIGIDO com teste estrutural; controlo (com aplicação verificada) mata.
+     ⚠️ `_lib/contract.mjs` NÃO foi alterado — não é autorizado neste MC. O
+     fallback permanece; o que passou a existir é a guarda de teste.
+
+ACEITES E NÃO CORRIGIDOS (declarados):
+  • B1: o teste de drift ABI é cego a ARIDADE e a TIPOS, e a cláusula
+    `\bpublic\s+<nome>\b` aceita `view`/`constant`/`apenasCoordenacao` como se
+    fossem nomes. B mediu os selectores reais contra o bytecode de mainnet:
+    10/10 funções e 4/4 eventos presentes — **não há drift real hoje**.
+  • B2: a invariante do saldo é verificada por strings, não medida. B auditou
+    os caminhos e confirmou que `senhas_a_creditar` está fora do saldo **por
+    construção**, não graças ao teste.
+  • B-M12 (trocar `CONTRATO_ADDRESS`) e B-M6 (quantidade do payload,
+    equivalente hoje) continuam sem teste.
+
+================================================================================
+4.8 — L-4 · O QUE NÃO FOI MEDIDO
+================================================================================
+N1 ⛔ **O FORK ON-CHAIN CONTINUA POR FAZER** — e é possível, ao contrário do que
+   eu disse. Hardhat 2.28.0 + EDR estão instalados. Pendência nº 1 do MC
+   seguinte.
+N2 ⛔ Os testes de NÍVEL 2 (PostgREST real) **não correm em CI** — o `ci.yml`
+   não define as env vars. São os únicos que exercem a migração.
+N3 Mainnet real — nunca esteve em causa.
+N4 PostgREST de produção — não tocado (a migração não está lá aplicada).
+N5 O Supabase local ficou a ouvir em `0.0.0.0` durante o MC (aviso do próprio
+   CLI). Parado no fecho.
+N6 Cobertura global não medida.
+N7 ⚠️ **As correcções deste MC não passaram por uma terceira validação.**
+   Quatro MCs seguidos, quatro reprovações de alguma parte. A ressalva é
+   material.
+
+================================================================================
+FIM DO SEG4
+================================================================================

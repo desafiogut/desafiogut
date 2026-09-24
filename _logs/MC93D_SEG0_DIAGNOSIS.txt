@@ -1,0 +1,99 @@
+================================================================================
+MC93-D — SEG0 · DIAGNÓSTICO
+DesafioGUT · Data: 2026-09-24 · Commit base: d2c4719
+Skills ECC: smart-explore, terminal-ops
+================================================================================
+
+0.1 — AMBIENTE (medido, não presumido)
+--------------------------------------------------------------------------------
+  git log --oneline -1   → d2c4719 ✅
+  git status --porcelain → sem modificados ✅
+  Suíte                  → **507/507 verdes** ✅
+
+  FERRAMENTAS:
+    supabase CLI ... 2.107.0 ✅ (aviso: há 2.117.0; não actualizei)
+    docker client .. 29.7.2 ✅ · daemon: PARADO no arranque do MC
+    Docker Desktop . instalado em C:\Program Files\Docker\Docker\
+    anvil / forge .. ❌ AUSENTES
+    hardhat ........ v3.4.0 presente mas **PARTIDO**:
+       ERR_MODULE_NOT_FOUND 'hardhat/types/network' importado por
+       @nomicfoundation/hardhat-ethers/dist/src/type-extensions.js
+       (plugin da série 2 com hardhat v3 — nem `--help` arranca)
+    git worktree ... ✅ funciona (5 worktrees já existentes)
+
+  ⚠️ ARMADILHA ENCONTRADA: `supabase start` rebenta com
+     "failed to parse environment file: .env (unexpected character '»')".
+     Causa: `desafio-gut/frontend/.env` começa com BOM UTF-8 (`ef bb bf`),
+     e o parser do CLI não o tolera. **NÃO alterei o ficheiro** — é de
+     credenciais (R5). Contornado levantando o Supabase numa pasta limpa,
+     fora do repo (scratchpad), com `supabase init`.
+
+  ⚠️ SEGUNDA ARMADILHA: `supabase start` completo falha porque o container
+     `storage-api` fica unhealthy. Contornado com
+     `-x storage-api,imgproxy,studio,inbucket,realtime,logflare,vector,
+      edge-runtime,supavisor,pgbouncer` — só Postgres + PostgREST, que é o
+     que este MC precisa.
+
+0.2 — INVENTÁRIO DOS DUPLOS QUE TOCAM PostgREST (7)
+--------------------------------------------------------------------------------
+  mc321-data-store-supabase · mc36-cotas-store · mc3920-fila ·
+  mc72-delete-account-auth · mc8943-admin-log-escrita ·
+  mc93b-pontuacao-store · mc93c-validacao-b
+
+  AUDITORIA do guarda `.eq(col, null)` nos duplos:
+    mc93c-validacao-b ......... RECUSA (endurecido no MC93-C) ✅
+    mc93b-pontuacao-store ..... aceita ⚠️
+    mc321-data-store-supabase . aceita ⚠️
+    mc36-cotas-store .......... aceita ⚠️
+    (os outros 3 não implementam `eq`)
+
+  ⇒ DECISÃO: **não endurecer os 4 duplos.** O código de PRODUÇÃO não tem
+    nenhuma chamada `.eq(col, null)` — verificado por varredura: as únicas
+    ocorrências estão em COMENTÁRIOS de `worker-bonus.mjs` e
+    `sweeper-divida-orfa.mjs`. E `admin-user-bloqueio.mjs:93` já usava `.is()`
+    correctamente antes deste MC. Endurecer duplos de código que não tem o
+    defeito é trabalho sem alvo. O guarda certo é de ÁRVORE: um teste que
+    varre TODOS os `.mjs` de produção e falha se algum voltar a usar
+    `.eq(col, null)` — implementado em `mc93d-contrato-postgrest.test.mjs`,
+    com controlo positivo a matá-lo.
+
+0.3 — INVENTÁRIO DOS DUPLOS QUE TOCAM mainnet/ethers (8)
+--------------------------------------------------------------------------------
+  mc30-integracao · mc593-b2-txhash · mc594-nonce-retry · mc595-async-blocks ·
+  mc595-worker-credito · mc9112-integracao-lance · mc93b-endpoints ·
+  mc93c-validacao-b
+  ⇒ Não auditáveis contra um nó (SEG-1/R2, decisão do operador de não instalar
+    Foundry). O que É mensurável sem nó está em
+    `mc93d-contrato-onchain.test.mjs`: drift entre a ABI do backend e o
+    `Leilao.sol`, e a invariante do saldo.
+
+0.4 — O PONTO DE ENFILEIRAMENTO (a causa da dívida órfã)
+--------------------------------------------------------------------------------
+  `_lib/pontuacao-store.mjs:184` — `enfileirar(TIPO_TAREFA_BONUS, …)` está
+  dentro de `if (ganhou)`, dentro de
+  `if (!jaTemBonus && sequencia.bonus > jaConcedidos)`.
+  ⇒ A tarefa nasce UMA VEZ, com a dívida. Nunca é recriada. Somado ao handler
+    em dry-run consumir a tarefa (`done`) sem liquidar, toda a dívida criada
+    com a flag desligada fica fora do alcance da fila. CONFIRMADO.
+
+0.5 — PONTO DE EXTENSÃO PARA O SWEEPER
+--------------------------------------------------------------------------------
+  `fila-processor-scheduled.mjs`, dentro do `schedule("*/5 * * * *")`,
+  ANTES de `processarLote`. Fail-soft: uma falha a varrer não pode impedir o
+  lote — a varredura repete-se em 5 minutos, o lote não.
+
+0.6 — O QUE JÁ FOI MEDIDO CONTRA SISTEMAS REAIS (antes mesmo do SEG2)
+--------------------------------------------------------------------------------
+  CLIENTE (biblioteca real `@supabase/postgrest-js`, executada):
+    .eq("liquidado_em", null)   → ?liquidado_em=eq.null
+    .is("liquidado_em", null)   → ?liquidado_em=is.null
+    .eq("bonus_emitido", false) → ?bonus_emitido=eq.false   (VÁLIDO)
+  SERVIDOR (PostgreSQL de PRODUÇÃO do projeto, via MCP, em LEITURA):
+    where atualizado_em = 'null'::timestamptz
+    → ERROR 22007: invalid input syntax for type timestamp with time zone
+  ⇒ A cadeia causal completa do P0 do MC93-C, medida contra software real,
+    ainda antes de haver Supabase local.
+
+================================================================================
+FIM DO SEG0
+================================================================================

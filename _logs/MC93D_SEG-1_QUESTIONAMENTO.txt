@@ -1,0 +1,179 @@
+================================================================================
+MC93-D — SEG-1 · QUESTIONAMENTO DO BRIEFING (HARD GATE)
+DesafioGUT · Validação de contrato: mocks vs sistemas reais + sweeper
+Data: 2026-09-24 · Commit base: d2c4719 (main) — CONFIRMADO
+Skills ECC: smart-explore, brainstorming, security-review
+================================================================================
+
+                        >>> VEREDITO: AJUSTAR <<<
+  O sweeper e metade da validação de contrato correm hoje, sem autorizações
+  novas. A OUTRA METADE NÃO: o ambiente não tem como levantar nem o Supabase
+  local nem um fork de mainnet. Ver §-1.5.
+
+================================================================================
+-1.1 — VERIFICAÇÃO DAS PREMISSAS
+================================================================================
+
+CONFIRMADAS (5)
+────────────────────────────────────────────────────────────────────────────────
+C1 ✅ Base `d2c4719`, working tree sem modificados, **507/507 verdes**.
+C2 ✅ **A dívida órfã é real**, e a causa é exactamente a descrita:
+      `_lib/pontuacao-store.mjs:184` — `enfileirar(TIPO_TAREFA_BONUS, …)` está
+      DENTRO de `if (ganhou)`, que por sua vez está dentro de
+      `if (!jaTemBonus && sequencia.bonus > jaConcedidos)`. A tarefa só nasce
+      no instante em que a dívida nasce. Nunca é re-enfileirada.
+C3 ✅ Inventário dos mocks (SEG0 antecipado):
+      **PostgREST/Supabase — 7 ficheiros:** mc321-data-store-supabase,
+      mc36-cotas-store, mc3920-fila, mc72-delete-account-auth,
+      mc8943-admin-log-escrita, mc93b-pontuacao-store, mc93c-validacao-b.
+      **ethers/contract — 8 ficheiros:** mc30-integracao, mc593-b2-txhash,
+      mc594-nonce-retry, mc595-async-blocks, mc595-worker-credito,
+      mc9112-integracao-lance, mc93b-endpoints, mc93c-validacao-b.
+C4 ✅ `git worktree` funciona; já existem 5 worktrees no projeto.
+C5 ✅ Supabase CLI presente — **versão 2.107.0**.
+
+REFUTADAS (4, e duas bloqueiam o núcleo do MC)
+────────────────────────────────────────────────────────────────────────────────
+R1 ⛔ **`supabase start` NÃO É EXECUTÁVEL: o daemon do Docker não corre.**
+      `docker version` → só a secção *Client* (29.7.2); `docker info` falha.
+      O Docker Desktop **está instalado** (`C:\Program Files\Docker\Docker\
+      Docker Desktop.exe`), mas o serviço está parado. Sem daemon não há
+      Postgres local, não há PostgREST local, não há migração aplicada.
+      ⇒ O SEG1.2 (testes de contrato PostgREST contra Supabase local) **não
+        corre** sem uma acção sobre a máquina do operador.
+
+R2 ⛔ **NÃO HÁ COMO LEVANTAR UM FORK DE MAINNET.**
+      • `anvil` — AUSENTE. `forge` — AUSENTE. Não há Foundry instalado.
+      • `hardhat` existe (v3.4.0) mas **está partido**: `hardhat --help`
+        rebenta com
+          ERR_MODULE_NOT_FOUND: 'hardhat/types/network' imported from
+          @nomicfoundation/hardhat-ethers/dist/src/type-extensions.js
+        — o plugin `hardhat-ethers` instalado é da série 2 e o hardhat é v3.
+        Nem sequer chega a listar comandos, quanto mais correr `node`.
+      ⇒ O SEG1.3 (contrato on-chain em fork) **não corre**. Reparar exigiria
+        mexer em `package.json`/`node_modules` do `desafio-gut`, o que este MC
+        não autoriza — e seria uma alteração de ambiente com efeitos para lá
+        deste MC.
+
+R3 ⚠️ **A QUERY DO SWEEPER NO ENUNCIADO USA UMA COLUNA QUE NÃO EXISTE.**
+      SEG1.1 escreve `… AND updated_at < now() - interval 'X'`.
+      A coluna chama-se **`atualizado_em`** (migração
+      `20260923_mc93b_pontuacoes.sql`). `updated_at` não existe em
+      `rankings_ciclo`. A query da §4c do MC93-C, essa, está correcta — não usa
+      janela temporal nenhuma.
+      ⚠️ E a janela temporal é, ela própria, discutível: filtrar por
+      `atualizado_em < now() - X` **esconde** dívidas recentes que já são
+      órfãs (a tarefa foi consumida em dry-run no minuto seguinte ao
+      nascimento). O critério certo é o estado, não a idade — a idempotência
+      vem da fila e do compare-and-set, não de uma janela.
+
+R4 ⚠️ **"SUPABASE LOCAL" NÃO É O ÚNICO SISTEMA REAL DISPONÍVEL.**
+      O enunciado assume que medir o contrato PostgREST exige Docker. Não
+      exige, para a parte que interessa. Já medi, nesta sessão, a **cadeia
+      causal completa** do P0 do MC93-C contra sistemas reais:
+        • CLIENTE (biblioteca real `@supabase/postgrest-js`, executada):
+            .eq("liquidado_em", null)   → ?liquidado_em=eq.null
+            .is("liquidado_em", null)   → ?liquidado_em=is.null
+            .eq("bonus_emitido", false) → ?bonus_emitido=eq.false   (válido)
+        • SERVIDOR (PostgreSQL REAL do projeto, via MCP, em LEITURA):
+            select … where atualizado_em = 'null'::timestamptz
+            → ERROR 22007: invalid input syntax for type timestamp with
+              time zone: "null"
+      ⇒ As duas metades do defeito estão medidas contra software real. O que
+        Docker acrescentaria é a camada HTTP do PostgREST (código de estado) e
+        o efeito de RLS/GRANT/CHECK com a migração aplicada — valioso, mas não
+        é o que produziu o P0.
+
+================================================================================
+-1.2 — O QUE ESTE MC PODE MESMO ENTREGAR HOJE
+================================================================================
+SEM autorizações novas:
+  ✅ `_lib/sweeper-divida-orfa.mjs` + testes (o entregável que fecha a
+     ressalva nº 2 do MC93-C).
+  ✅ **AUDITORIA DE CONTRATO DOS 7 DUPLOS DE SUPABASE** — que é o verdadeiro
+     objectivo declarado ("um duplo que herda a suposição do Executor mede
+     coerência, não contrato"). Comparar, método a método, o que cada duplo
+     faz com o que o `postgrest-js` REAL faz, executando a biblioteca.
+     Não precisa de Docker: precisa de correr a biblioteca, que está instalada.
+  ✅ Testes de contrato do cliente PostgREST (geração de URL) com controlo
+     positivo e negativo.
+  ✅ A regra permanente `eq(col,null)` → proibido, já aplicada nos duplos.
+
+COM Docker a correr (decisão do operador):
+  ➕ PostgREST HTTP real: códigos de estado, RLS, GRANT, CHECKs da migração.
+  ➕ Prova de que a migração aplica sem erro — hoje tem cobertura ZERO.
+
+COM Foundry instalado ou hardhat reparado (decisão do operador):
+  ➕ Contrato on-chain em fork. ⚠️ Mesmo assim, ver §-1.4.
+
+================================================================================
+-1.3 — VERIFICAÇÃO DE AUTOSSUFICIÊNCIA (R19)
+================================================================================
+O MC **NÃO é autossuficiente como está escrito** — dois dos três pilares
+dependem de ferramentas ausentes. É autossuficiente na versão reduzida da
+§-1.5.
+
+**R19 NÃO É ATIVADA.** Ampliar aqui significaria instalar Foundry ou reparar a
+cadeia hardhat/ethers — alteração de ambiente com efeitos para lá deste MC,
+que a R19 exclui explicitamente ("autorização nova"). Não o faço por
+iniciativa própria.
+
+================================================================================
+-1.4 — OBSERVAÇÃO SOBRE O VALOR REAL DO TESTE ON-CHAIN
+================================================================================
+Vale a pena dizer antes de o operador gastar uma instalação: **o teste on-chain
+proposto no SEG1.3 não mede o que o MC diz querer medir.**
+
+  "testar que `darLance` aceita o saldo emitido pelo handler" — o handler
+  **não emite saldo nenhum**: está em dry-run, e o MC93-D proíbe activá-lo
+  (HARD GATE 5). Num fork, teríamos de creditar o saldo à mão, com uma chave
+  de teste, e depois verificar que `darLance` o aceita. Isso mede o
+  `Leilao.sol`, que **não foi alterado desde o MC60** e já tem suíte Foundry
+  + Echidna no CI (`contract-security.yml`, 7 invariantes).
+
+  A invariante que interessa — `saldoEfetivo ≤ saldoOnChain` — vive em
+  `saldo-senhas.mjs`, é aritmética off-chain, e quebra-se ou não quebra-se sem
+  depender da cadeia. Já está garantida por construção: o MC93-B/C não
+  acrescentou nenhum termo aditivo ao saldo (`senhas_a_creditar` é uma dívida,
+  não entra em `saldoEfetivo`).
+
+⇒ Recomendo **não** instalar Foundry para este MC. O risco real não está no
+  contrato on-chain; está nos duplos de PostgREST, que é onde os três P0
+  nasceram.
+
+================================================================================
+-1.5 — PROPOSTA DE AJUSTE
+================================================================================
+▸ SEGUE hoje, sem mexer no ambiente:
+    1. `_lib/sweeper-divida-orfa.mjs` + testes + integração no processor.
+       ⚠️ Sem a janela temporal do SEG1.1: o critério é o ESTADO
+       (`bonus_emitido AND liquidado_em IS NULL AND senhas_a_creditar > 0`),
+       e a coluna é `atualizado_em`, não `updated_at`.
+    2. **Auditoria de contrato dos 7 duplos de Supabase** contra o
+       `postgrest-js` real — o objectivo declarado do MC, e a origem dos 3 P0.
+    3. Testes de contrato do cliente (URL) com controlo positivo e negativo.
+    4. Validação independente **em série, em worktrees separados**, com
+       mutação sobre código **sem comentários** (os dois hard gates novos).
+
+▸ PRECISA DE DECISÃO — duas, independentes:
+    (a) **Arrancar o Docker Desktop?** Desbloqueia PostgREST HTTP real, a
+        migração aplicada e a sua cobertura (hoje zero). É a peça que falta com
+        valor real. Custo: arrancar um serviço pesado na máquina do operador.
+    (b) **Instalar Foundry / reparar o hardhat?** Desbloqueia o fork de
+        mainnet. **NÃO recomendo** — ver §-1.4.
+
+================================================================================
+-1.6 — L-4 · O QUE NÃO SERÁ MEDIDO
+================================================================================
+N1 Mainnet real — nunca esteve em causa; e fork, só com instalação nova.
+N2 PostgREST de produção — não, e não deve: a migração não está aplicada lá e
+   este MC não autoriza aplicá-la.
+N3 A migração SQL continua com **cobertura zero** enquanto não houver Postgres
+   local com ela aplicada.
+N4 O sweeper não será exercido contra a fila real (`fila_tarefas` existe em
+   produção, mas `rankings_ciclo` não).
+N5 Nenhuma emissão on-chain (HARD GATE 5, respeitado).
+
+================================================================================
+FIM DO SEG-1 · VEREDITO: AJUSTAR · R19 NÃO ATIVADA · aguarda 2 decisões
+================================================================================

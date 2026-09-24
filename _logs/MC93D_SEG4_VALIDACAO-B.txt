@@ -1,0 +1,491 @@
+================================================================================
+MC93-D — SEG4 · VALIDAÇÃO INDEPENDENTE B (papel RUFLO)
+Eixo: O LADO ON-CHAIN, E A HONESTIDADE DA REFUTAÇÃO
+Data: 2026-09-24
+Worktree: …/scratchpad/wt-validador-b (cópia isolada; DESAFIOGUT não foi tocado)
+Base: d2c4719 · Suíte MC93-D: 33 testes (26 pass / 7 skip / 0 fail)
+Suíte completa no worktree: 534 testes, 525 pass, 7 skip, 2 fail AMBIENTAIS
+  (biconomy-handshake e mc302-integracao — `Cannot find package
+  '@aws-sdk/client-kms'`: o worktree não tem node_modules. Não são defeitos
+  do MC; são a linha de base contra a qual medi as mutações.)
+
+                >>> VEREDITO FINAL: APROVADO COM RESSALVAS <<<
+     PARTE 1 (honestidade da refutação): REPROVADO — a premissa era falsa.
+     PARTE 2 (o que foi entregue):       APROVADO COM RESSALVAS.
+
+================================================================================
+PARTE 1 — A REFUTAÇÃO ERA HONESTA, OU CONVENIENTE?
+================================================================================
+
+                        VEREDITO: NÃO FOI HONESTA.
+   Não por má-fé: por diagnóstico errado, feito sobre o binário errado, e
+   nunca reconferido. O operador decidiu não instalar Foundry com base numa
+   premissa falsa — e o fork de mainnet, que o MC pedia, era executável em
+   minutos, SEM INSTALAR NADA. Eu executei-o. Passou.
+
+────────────────────────────────────────────────────────────────────────────────
+1.A — `anvil` / `forge`: A ÚNICA PARTE DA REFUTAÇÃO QUE SE CONFIRMA
+────────────────────────────────────────────────────────────────────────────────
+CONFIRMADO ✅  `which anvil`, `which forge`, `which cast` → todos ausentes.
+              `~/.foundry` não existe. Foundry NÃO está instalado.
+              `ganache` também ausente.
+Esta metade de R2 é verdadeira. Tudo o resto não é.
+
+────────────────────────────────────────────────────────────────────────────────
+1.B — «hardhat v3.4.0 está PARTIDO» — REFUTADO POR EXECUÇÃO
+────────────────────────────────────────────────────────────────────────────────
+O Executor escreveu (SEG-1 §-1.1/R2, e repetiu-o no cabeçalho do ficheiro de
+teste, linhas 7-9):
+
+  «`hardhat` existe (v3.4.0) mas está partido: ERR_MODULE_NOT_FOUND:
+   'hardhat/types/network' imported from @nomicfoundation/hardhat-ethers/
+   dist/src/type-extensions.js — o plugin hardhat-ethers instalado é da série
+   2 e o hardhat é v3. Nem sequer chega a listar comandos.»
+
+MEDIDO POR MIM, no próprio repositório:
+
+  • `package.json` (raiz) pina  "hardhat": "^2.28.0"
+  • `node_modules/hardhat/package.json`  →  "version": "2.28.0"
+  • `node_modules/@nomicfoundation/hardhat-ethers/package.json` → "3.1.3"
+    — que é EXACTAMENTE o par correcto: hardhat-ethers v3 serve hardhat v2.
+    A frase «o plugin é da série 2 e o hardhat é v3» está invertida nos dois
+    lados.
+  • O caminho citado no erro NÃO EXISTE no pacote instalado:
+      existe   …/hardhat-ethers/internal/type-extensions.js
+      NÃO existe …/hardhat-ethers/dist/src/type-extensions.js   ← o do erro
+    e `grep -rl "hardhat/types/network"` no pacote instalado → ZERO ficheiros.
+  • E a CLI do repositório arranca:
+      $ node node_modules/hardhat/internal/cli/bootstrap.js --version
+      2.28.0        (exit 0)
+
+DE ONDE VEIO ENTÃO O «v3.4.0»? Encontrei-o:
+      C:\Users\Moltbot\AppData\Local\npm-cache\_npx\ef9ef3f50c7d7dc1\
+        node_modules\hardhat\package.json  →  "version": "3.9.1"
+  Há uma entrada de cache do `npx` com **hardhat da série 3**. Isto é o que
+  acontece quando se corre `npx hardhat …` a partir de um directório SEM
+  hardhat local (p.ex. `desafio-gut/frontend`, ou um worktree sem
+  node_modules): o npm vai ao registo buscar a versão mais recente — a v3 —
+  que é uma CLI completamente diferente e rebenta contra a config e os
+  plugins v2 do projeto.
+  ⇒ O Executor diagnosticou um binário que não é o do projeto, e atribuiu a
+    avaria ao projeto. A cadeia hardhat do DESAFIOGUT nunca esteve partida.
+
+────────────────────────────────────────────────────────────────────────────────
+1.C — «NÃO HÁ COMO LEVANTAR UM FORK DE MAINNET» — REFUTADO POR EXECUÇÃO
+────────────────────────────────────────────────────────────────────────────────
+Havia, e há. Procurei «a sério», como pedido, e encontrei o motor já instalado:
+
+  node_modules/@nomicfoundation/edr                  (0.12.0-next.17)
+  node_modules/@nomicfoundation/edr-win32-x64-msvc   ← o binário NATIVO desta
+                                                        máquina, já presente
+  node_modules/hardhat/internal/hardhat-network
+  node_modules/@ethereumjs/…
+
+EDR é a EVM em-processo que alimenta o Hardhat Network, incluindo `--fork`.
+Carrega nesta máquina (`require(...edr/index.js)` devolve EdrContext, Provider,
+l1ProviderFactory, …). Nenhuma instalação é necessária.
+
+PROVA 1 — EVM local em-processo, zero instalações:
+  createProvider(cfg,"hardhat") → eth_blockNumber=0x0, eth_chainId=0x7a69
+  (31337), eth_accounts = 20 contas. **EVM_OK**
+
+PROVA 2 — FORK DE MAINNET, zero instalações:
+  forking.url = https://ethereum-rpc.publicnode.com   (RPC público, alcançável
+  desta máquina — verificado: bloco 26.047.987)
+  → FORK_OK, bloco forkado 26.047.956
+  → eth_getCode(0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd) = 4823 bytes
+  → eth_call coordenacao() = 0xFea436F74059f885eA50D48Abbe21eF6665D1E67
+     (exactamente o coordenador do MC60)
+
+PROVA 3 — O TESTE QUE O MC PEDIA, E QUE FOI SALTADO. Corri-o inteiro, contra
+o contrato REAL em mainnet forkada, personificando o coordenador REAL:
+      coordenacao()          = 0xFea436f74059F885ea50D48aBbE21ef6665d1E67
+      saldoSenhas(USER) t0   = 0
+      adicionarSenhas(20)    = status 1
+      saldoSenhas(USER) t1   = 20      ← o «saldo emitido pelo handler»
+      abrirEdicao(...)       = status 1
+      darLance(ED, 777)      = status 1  ← «darLance aceita o saldo emitido»
+      saldoSenhas(USER) t2   = 19      ← consumiu EXACTAMENTE uma senha
+      apurarVencedor(ED)     = 777, 0x7099…79C8
+      CONTROLO NEGATIVO: darLance a partir de conta SEM senhas →
+        revert "Voce nao possui senhas disponiveis"   ✅
+  Tempo total do trabalho: ~20 minutos. Custo: zero. Instalações: zero.
+
+────────────────────────────────────────────────────────────────────────────────
+1.D — O ARGUMENTO DE MÉRITO: «está em dry-run, logo não há saldo para testar»
+────────────────────────────────────────────────────────────────────────────────
+VEREDITO: **é uma desculpa, embora contenha uma verdade.**
+
+A verdade: `Leilao.sol` não muda desde o MC60 e tem Foundry+Echidna no CI, e o
+handler está mesmo em dry-run. Concedo isso.
+
+Porque não chega:
+ (a) «Não há saldo emitido para testar» é um sofisma de encenação. Num fork
+     credita-se o saldo com a MESMA função que o handler chama
+     (`adicionarSenhas`), personificando o MESMO coordenador. Foi o que fiz em
+     PROVA 3. O que se mede não é «o handler emitiu», é «a ABI, o endereço, o
+     coordenador e a semântica de consumo do contrato em PRODUÇÃO batem certo
+     com o que o backend assume». Isso é contrato, e não está coberto.
+ (b) O CI Foundry+Echidna testa o **código-fonte**, não o **bytecode
+     deployado** nem o **endereço que o backend usa**. São coisas diferentes,
+     e é precisamente na diferença que vivem dois dos meus achados (N2 e N3).
+ (c) O próprio SEG-1 aconselhou o operador a não instalar Foundry («NÃO
+     recomendo — ver §-1.4»). O conselho estava certo, mas pela razão errada:
+     não era preciso instalar Foundry para nada. Ao empacotar «não instales»
+     junto com «não dá para medir», fechou-se a porta à medição.
+
+⇒ A refutação foi CONVENIENTE: poupou trabalho difícil apoiando-se numa
+  avaria que não existia. Não a chamo de desonesta no sentido de mentira —
+  chamo-lhe **verificação que partilha o defeito**: mediu-se o ambiente com um
+  instrumento errado e nunca se procurou controlo. E foi ESSA medição que o
+  operador usou para decidir.
+
+⚠️ NOTA SOBRE R1 (Docker), fora do meu mandato mas medido ao passar:
+   O SEG-1 afirma «o daemon do Docker não corre». HOJE CORRE:
+   `docker info` devolve secção **Server**, 6 contentores, 6 a correr. Não sei
+   se o operador o arrancou depois do SEG-1 — NÃO VERIFICADO. Mas o Validador
+   A / o operador devem reconferir: 5 dos 7 testes saltados na suíte MC93-D
+   saltam por falta de `SUPABASE_CONTRATO_URL/KEY`, e essa parte podia deixar
+   de ser hipotética.
+
+⚠️ NÃO INSTALEI NADA. Todas as provas acima usam binários e pacotes que já
+   estavam na máquina. Não era preciso instalar; era preciso procurar.
+
+================================================================================
+PARTE 2 — O QUE FOI ENTREGUE EM VEZ DO FORK
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+B1 — O TESTE DE DRIFT ABI ↔ Solidity É SÓLIDO?
+────────────────────────────────────────────────────────────────────────────────
+VEREDITO: **parcialmente. Vê NOMES. Não vê FORMA.** E o tratamento do getter
+implícito está correcto num eixo e permissivo de mais noutro.
+
+Tentei enganá-lo com 8 mutações (tabela em baixo). Resultados:
+
+ ✅ APANHA  função na ABI que não existe no .sol (controlo positivo, P1)
+ ✅ APANHA  `event` declarado como `function` (P4)
+ ✅ APANHA  variável de estado `public` renomeada no .sol — saldoSenhas (P5),
+            coordenacao (P7), edicaoNonce (P8). O getter implícito está BEM
+            tratado neste eixo: renomear no .sol mata o teste.
+ ❌ CEGO    **ARIDADE.** `adicionarSenhas(address,uint256)` → `(address)`
+            passa verde. Em produção isto é `no matching function` em runtime,
+            na mainnet, com dinheiro em jogo.
+ ❌ CEGO    **TIPOS.** `saldoSenhas(address)→uint256` mudado para
+            `saldoSenhas(string,bytes32)→bool` passa verde. É o mesmo nome; o
+            teste só olha para o nome.
+ ❌ PERMISSIVO DE MAIS  A terceira cláusula de `existe()`,
+              new RegExp(`\\bpublic\\s+${nome}\\b`)
+            casa com QUALQUER token imediatamente a seguir a `public`. Em
+            Leilao.sol isso inclui `constant` (l.9), `apenasCoordenacao`
+            (l.69/81/130/149/161) e `view` (l.114). Acrescentei à ABI
+            `function view()`, `function constant()` e
+            `function apenasCoordenacao()` — **as três passaram**. O teste
+            declara que existem funções que são modificadores e palavras-
+            -chave. É pequeno, mas é falso-verde por construção.
+
+O QUE FALTAVA, E QUE EU FIZ: comparar os **selectores reais** da ABI com o
+**bytecode deployado**. Feito contra a mainnet (read-only), e o resultado é
+BOM — quero que fique registado que o código está certo:
+
+  0x0052477A8CA81BCAF4a60e21e635F9e00a5d16cd (4823 bytes) — 10/10 selectores
+  e 4/4 topics de evento PRESENTES:
+    96dcd555 abrirEdicao(string,string,uint256)   6643c40c adicionarSenhas(address,uint256)
+    5ca309fd apurarVencedor(string)               08516b41 comprometerLance(string,address,bytes32)
+    f82dd5bc consolidarResultado(string,address,uint256)  e06f9dbf coordenacao()
+    68789e9d darLance(string,uint256)             b03f464b edicaoNonce(string)
+    d81e5fa9 resultados(string)                   88aa6fc5 saldoSenhas(address)
+    ev LanceComprometido / LanceDado / ResultadoConsolidado / SenhasCreditadas
+  ⇒ NÃO HÁ DRIFT REAL HOJE. A ABI do backend está correcta. O que critico é a
+    sensibilidade do guarda, não o estado do código.
+  RECOMENDAÇÃO: substituir o casamento por nome por `new Interface(ABI)` +
+  comparação de `f.selector` contra um bytecode fixado no repositório (ou
+  contra a lista de selectores derivada do .sol). Mata P2, P3 e P6 de uma vez,
+  sem rede.
+
+────────────────────────────────────────────────────────────────────────────────
+B2 — A INVARIANTE `saldoEfetivo <= saldoOnChain`: MEDIDA OU SÓ STRINGS?
+────────────────────────────────────────────────────────────────────────────────
+VEREDITO: **só strings. Não mede nada.** O teste nunca executa
+`saldo-senhas.mjs`; faz `assert.match` sobre o texto do ficheiro.
+
+Provei-o por mutação (glob mc93d-*):
+ ❌ SOBREVIVE  `Math.max(0, saldoOnChain - senhasConsumidas + 20)`
+               A regex é /saldoOnChain\s*-\s*\w+/ — casa com o prefixo. Pode
+               somar-se o que se quiser À DIREITA e o teste continua verde.
+               Este é exactamente o defeito que o teste diz impedir.
+ ❌ SOBREVIVE  um termo aditivo trazido por ALIAS
+               (`const divida = …; saldoEfetivo = (on-chain − consumo) + divida`)
+               O `assert.doesNotMatch(/senhas_a_creditar|senhasACreditar/)`
+               proíbe DOIS NOMES, não o conceito. Qualquer outro identificador
+               passa.
+ ✅ MORRE      inverter o sinal (`saldoOnChain + senhasConsumidas`) — único
+               caso que o teste apanha.
+
+AUDITORIA DE CAMINHOS (a pergunta «o senhas_a_creditar está mesmo fora?»):
+ SIM, está — **por construção do código, não por causa do teste.** Segui todos
+ os caminhos:
+  • `saldo-senhas.mjs:61,68,74` — as ÚNICAS entradas são `lerSaldoSenhas()`
+    (on-chain) e `lerConsumoSenhas()` (ledger de consumo). Nada mais.
+  • `_lib/senhas-programado.mjs` — só escreve `consumidas: consumidas + 1`, e
+    recusa quando `consumidas >= saldo`. Monotónico e subtractivo. OK.
+  • `_lib/pontuacao-store.mjs:239` — grava `senhas_a_creditar` em
+    `rankings_ciclo` com `liquidado_em = NULL`. É DÍVIDA, fica no livro-razão.
+  • `ranking.mjs` devolve `senhasACreditar` ao frontend como campo SEPARADO;
+    `src/context/AppContext.jsx:841-842` consome `resp.data.saldoEfetivo` e só
+    esse. Não há soma em lado nenhum.
+  ⇒ A invariante é verdadeira HOJE. Mas o guarda que a defende é de papel: as
+    duas mutações que a quebram passam verdes. Um teste que EXECUTA
+    `saldo-senhas.mjs` com `lerSaldoSenhas` mockado e assere
+    `saldoEfetivo <= saldoOnChain` sobre uma matriz de entradas mataria as
+    três em vez de uma.
+
+────────────────────────────────────────────────────────────────────────────────
+B3 — OS DOIS `skip` SÃO HONESTOS?
+────────────────────────────────────────────────────────────────────────────────
+VEREDITO: **honestos na FORMA, falsos no CONTEÚDO.**
+
+ ✅ Na forma não há nada a apontar: usam `t.skip(motivo)`, o motivo é visível
+    no output, o runner conta `skipped 7`, e o cabeçalho do ficheiro (l.3-16)
+    diz em voz alta o que não faz. Não fingem cobertura. Não são falso-verde.
+    Isto é o oposto de esconder, e reconheço-o.
+
+ ❌ No conteúdo, o motivo escrito no repositório é FALSO, e ficará lá a
+    enganar quem o ler daqui a seis meses:
+      «sem anvil/forge e com hardhat v3 partido (hardhat-ethers da série 2)»
+    — hardhat é 2.28.0, hardhat-ethers 3.1.3, o par está certo, a CLI arranca
+    (exit 0) e o fork levanta-se sem instalar nada (PROVAS 1-3 da PARTE 1).
+    O segundo skip («mesma razão») herda o erro.
+
+ ❌ E o segundo skip — «FORK: adicionarSenhas seguido de darLance» — é
+    nominalmente o teste que eu corri em ~20 minutos, com controlo positivo e
+    negativo, e que PASSA. Não havia trabalho impossível: havia trabalho por
+    fazer.
+
+ ⇒ Um skip com boa justificação é legítimo. Este tem justificação **errada**,
+   o que o torna pior do que um skip sem justificação nenhuma: consolida um
+   diagnóstico falso como facto do projeto. Classifico-o como RESSALVA MAIOR,
+   não como falso-verde.
+
+────────────────────────────────────────────────────────────────────────────────
+B4 — MUTAÇÃO PRÓPRIA (eixo on-chain / emissão)
+────────────────────────────────────────────────────────────────────────────────
+Método: arnês que (i) asserta que o alvo existe numa **LINHA DE CÓDIGO** —
+rejeita alvos que só aparecem em comentário; (ii) aplica UMA substituição;
+(iii) corre a suíte; (iv) restaura e confirma por **md5** que o ficheiro voltou
+ao byte original. Todas as 24 mutações restauraram (`restaurado=true`).
+Fim de linha verificado ANTES: contract.mjs e Leilao.sol são **CRLF**;
+bonus-emissao / worker-bonus / sweeper / os testes novos são **LF**.
+
+ ── B1 · drift ABI↔Solidity (glob `_tests/mc93d-*.test.mjs`) ──────────────────
+ ID  ALVO (ficheiro:linha de CÓDIGO)          MUTAÇÃO                    MORREU
+ P1  _lib/contract.mjs:25   (CONTROLO +)  +ABI "naoExisteNoSol(address)"  SIM ✅
+ P2  _lib/contract.mjs:23                 adicionarSenhas: 2 args → 1     NÃO ❌
+ P3  _lib/contract.mjs:24                 saldoSenhas(address)→(string,   NÃO ❌
+                                          bytes32) returns bool
+ P4  _lib/contract.mjs:26                 event SenhasCreditadas→function SIM ✅
+ P5  contracts/Leilao.sol:21              public saldoSenhas→saldoDeSenhas SIM ✅
+ P6  _lib/contract.mjs:25                 +ABI view()/constant()/          NÃO ❌
+                                          apenasCoordenacao()
+ P7  contracts/Leilao.sol:5               coordenacao→coordenacaoXX        SIM ✅
+ P8  contracts/Leilao.sol:38              edicaoNonce→edicaoNonceV2        SIM ✅
+
+ ── B4 · eixo emissão/on-chain ────────────────────────────────────────────────
+ (mc93d = glob do MC; full = `_tests/*.test.mjs`, linha de base fail=2)
+ ID   ALVO                                MUTAÇÃO                 mc93d   full
+ M0   _lib/bonus-emissao.mjs:53  (CTRL +) emissaoArmada→`true`     SIM✅  —
+ M1   _lib/bonus-emissao.mjs:76           flagAtiva deixa de ser   NÃO❌  SIM✅
+                                          exigida
+ M2   _lib/bonus-emissao.mjs:84           aceita dívida já         NÃO❌  SIM✅
+                                          liquidada
+ M3   _lib/bonus-emissao.mjs:99           quantidade livre         NÃO❌  SIM✅
+                                          (sem REGRAS.SENHAS_BONUS)
+ M4   _lib/worker-bonus.mjs:89            .is(liquidado_em,null)   SIM✅  —
+                                          → .eq(...)  [o P0 do 93-C]
+ M5   _lib/worker-bonus.mjs:93            credita sem verificar    NÃO❌  SIM✅
+                                          se reclamou linha
+ M6   _lib/worker-bonus.mjs:102           creditarSenhas(…,        NÃO❌  NÃO❌
+                                          payload.quantidade)
+ M7   _lib/sweeper-divida-orfa.mjs:57     remove a guarda dry-run  SIM✅  —
+ M8   _lib/sweeper-divida-orfa.mjs:76     .is(null)→.not(is,null)  SIM✅  —
+                                          (13 testes morrem)
+ M9   _lib/sweeper-divida-orfa.mjs:94     remove dedup da fila     SIM✅  —
+ M10  _lib/contract.mjs:23                ABI adicionarSenhas→XX   SIM✅  —
+ M11  _lib/contract.mjs:179               remove o gate            —      NÃO❌
+                                          verificarCoordenacao()
+ M12  _lib/contract.mjs:50                fallback do contrato →   —      NÃO❌
+                                          0x…dEaD
+
+ ── B2 · invariante do saldo (glob mc93d-*) ───────────────────────────────────
+ ID   ALVO                          MUTAÇÃO                              MORREU
+ S1   saldo-senhas.mjs:74           `… - senhasConsumidas + 20`           NÃO ❌
+ S2   saldo-senhas.mjs:74           sinal invertido (`+ senhasConsumidas`) SIM ✅
+ S3   saldo-senhas.mjs:74           dívida somada por ALIAS                NÃO ❌
+
+ CONTROLOS POSITIVOS: P1, M0 e S2 morreram como tinham de morrer — o arnês vê
+ mortes. Nenhum «sobreviveu» desta tabela é cegueira do instrumento.
+
+ SOBREVIVENTES QUE INTERESSAM (resistem à SUÍTE INTEIRA, não só ao glob):
+  • M11 — `creditarSenhas()` sem `verificarCoordenacao()`: nenhum teste do
+    projeto pina o último portão antes de `adicionarSenhas` on-chain. É o
+    eixo que este MC diz cobrir.
+  • M12 — o endereço do contrato pode ser trocado sem um único teste falhar.
+    Ver ACHADO N2, que é o que torna isto grave.
+  • M6 — a quantidade enviada on-chain pode passar a vir do PAYLOAD em vez do
+    LIVRO-RAZÃO sem ninguém dar por isso. Hoje é equivalente (M3 força
+    payload.quantidade === divida.senhas_a_creditar === 20), logo NÃO é bug
+    vivo; é defesa-em-profundidade por pinar, e o comentário em
+    bonus-emissao.mjs:69 promete explicitamente esta propriedade.
+
+────────────────────────────────────────────────────────────────────────────────
+B5 — SEGURANÇA DA EMISSÃO: TENTEI MESMO FAZER O SISTEMA EMITIR
+────────────────────────────────────────────────────────────────────────────────
+Arnês adversarial com `creditarSenhas` instrumentado (qualquer chamada é
+registada), Supabase e fila falsos. 7 ataques. O ficheiro de ataque foi
+removido do worktree no fim (git status confirmado idêntico ao inicial).
+
+ A1 CONTROLO POSITIVO — flag="true" + dívida válida → **EMITE** (1 × 20
+    senhas, txHash capturado). O arnês consegue detectar emissão; sem isto
+    todos os «não emitiu» seguintes seriam instrumento cego.
+ A2 flags quase-verdadeiras — "1","TRUE","True"," true","true ","yes","sim",
+    "0","false","" → **10/10 recusadas** (`flag_desligada`). A comparação
+    estrita com a string "true" aguenta.
+ A3 ⚠️ **POLUIÇÃO DE PROTÓTIPO — ARMOU A EMISSÃO.**
+      Object.prototype.BONUS_EMISSAO_ATIVA = "true";
+      → `emissaoArmada()` devolve `true` SEM variável de ambiente nenhuma
+        (`process.env` em Node 24 resolve pela cadeia de protótipos), e o
+        worker creditou: log «[worker-bonus] bónus creditado … 0xATAQUE».
+      A causa é `env?.[FLAG_EMISSAO] === "true"` (bonus-emissao.mjs:53) usar
+      acesso por propriedade herdável. CORRECÇÃO de uma linha:
+        return Object.hasOwn(env ?? {}, FLAG_EMISSAO) && env[FLAG_EMISSAO] === "true";
+      EXPLORABILIDADE: **não encontrei gadget de poluição** nos caminhos do
+      bónus — `worker-bonus.mjs` lê `payload?.cicloId` / `payload?.endereco`
+      sem spread nem merge recursivo do payload da fila. Classifico como
+      **endurecimento**, não como vulnerabilidade viva. Mas a variável é «a
+      única coisa entre o sistema e transacções irreversíveis em mainnet», e
+      uma barreira única não deve ser contornável por uma propriedade herdada.
+ A4 `liquidado_em` esquisito ("" / 0 / false / NaN / data passada) →
+    **0 emissões**, todas `divida_ja_liquidada`. Fail-CLOSED correcto.
+ A5 quantidade inflada (payload 1000 = livro-razão 1000) → **recusa**
+    `quantidade_divergente`. O tecto de REGRAS.SENHAS_BONUS=20 aguenta: o
+    livro-razão sozinho não chega para emitir mais.
+ A6 compare-and-set a devolver 0 linhas (corrida) → **não credita**. A ordem
+    reclamar-antes-de-creditar está correcta e é eficaz.
+ A7 sweeper com a flag LIGADA → `creditarSenhas` chamado **0 vezes**; devolve
+    `{reenfileiradas:0, saltadas:0, encontradas:0}`. O sweeper é read-only
+    como anuncia. Com a flag desligada é inerte (M7 confirma por mutação).
+ A8 `fila-processor-scheduled.mjs` — revi o diff inteiro: a varredura corre
+    ANTES do lote, dentro de try/catch fail-soft, e não regista handler novo
+    nenhum. Não há caminho de emissão «fora de horas»: o cron é */5 e o
+    portão continua a ser a flag, dentro do worker.
+
+ VEREDITO B5: a emissão está **bem fechada**. Sete dos oito vectores batem
+ numa parede e todos falham para o lado seguro. O único que passou (A3) exige
+ um gadget que não existe hoje — mas é uma correcção de uma linha e devia ser
+ feita.
+
+================================================================================
+ACHADOS NOVOS (não constam do SEG-1 nem do ficheiro de teste)
+================================================================================
+N1 ⛔ **A refutação R2 é falsa e o fork era executável sem instalar nada.**
+      Ver PARTE 1. O operador decidiu com informação errada.
+      → Acção: corrigir o cabeçalho de `mc93d-contrato-onchain.test.mjs`
+        (l.7-9) e os dois `t.skip` (l.126-133), e reabrir a decisão do
+        operador com o custo real: ZERO instalações, ~20 minutos.
+
+N2 ⛔ **O endereço de contrato por omissão não é um contrato em mainnet.**
+      `_lib/contract.mjs:50` — `CONTRATO_ADDRESS` cai para
+      `0x273Ef96f5be04601FD39DAcDFB039d6fB552445e` quando nem
+      `CONTRATO_SEPOLIA` nem `VITE_CONTRATO_SEPOLIA` existem. Medido no fork:
+      esse endereço tem **0 bytes de código na mainnet**. Uma chamada a
+      `adicionarSenhas` contra um endereço sem código **não reverte** — é uma
+      transacção normal com dados, que confirma com `status = 1`. Ou seja:
+      `creditarSenhas` devolveria txHash e blockNumber, o worker marcaria a
+      dívida como liquidada, e **ninguém receberia senha nenhuma**. Falha
+      silenciosa com aparência de sucesso, exactamente o padrão «ok:true
+      mascara tudo».
+      Atenua: `verificarCoordenacao()` corre primeiro e `coordenacao()` contra
+      código vazio devolve `0x` → o ethers lança → fail-closed. **É o gate do
+      M11 que salva isto** — e o M11 não tem teste. Os dois achados agravam-se
+      um ao outro.
+      → Acção: (a) fazer `ensureEnv()` exigir explicitamente o endereço em
+        mainnet em vez de cair para um literal; (b) teste que pina
+        `CONTRATO_ADDRESS` e que mata M11 e M12.
+
+N3 ⚠️ **O CI on-chain mede o FONTE, não o DEPLOYADO.** `contract-security.yml`
+      (Foundry+Echidna, 7 invariantes) compila `Leilao.sol`. Nada no projeto
+      compara a ABI do backend com o **bytecode que está em
+      0x0052…16cd**. Fi-lo à mão: 10/10 selectores + 4/4 topics presentes,
+      está tudo certo HOJE. Mas é uma verificação que ninguém repete.
+      → Acção: fixar a lista de selectores do bytecode deployado num ficheiro
+        do repositório e compará-la no CI (offline, sem rede).
+
+N4 ⚠️ `emissaoArmada()` contornável por poluição de protótipo (B5/A3). Uma
+      linha. `Object.hasOwn`.
+
+N5 ⚠️ O guarda `existe()` do drift ABI aceita `view`, `constant` e
+      `apenasCoordenacao` como funções do contrato (B1/P6).
+
+N6 ℹ️ O daemon do Docker **está a correr** agora (6 contentores), ao contrário
+      do afirmado em R1. Não sei se mudou depois do SEG-1 — NÃO VERIFICADO.
+      Se já corria, 5 dos 7 testes saltados da suíte MC93-D eram executáveis.
+
+N7 ℹ️ `_lib/worker-bonus.mjs` e `_lib/bonus-emissao.mjs` aparecem como ` M` no
+      `git status` mas o conteúdo é **byte-idêntico ao HEAD** (md5 dabdfbcf e
+      396b3daf em ambos): é só o índice a normalizar CRLF. A única alteração
+      de produção do MC93-D é `fila-processor-scheduled.mjs` (+15 linhas) mais
+      o sweeper e os 3 testes novos. Quem ler o `git status` ao contrário
+      pensa que o MC mexeu no worker do dinheiro — não mexeu.
+
+================================================================================
+O QUE ESTÁ BEM, E QUERO QUE FIQUE REGISTADO
+================================================================================
+ • O `_lib/sweeper-divida-orfa.mjs` é sólido: 9/9 mutações que lhe apliquei ou
+   a mim próprio morreram no glob do MC (M7, M8, M9 mataram 1, 13 e 1 testes).
+   A recusa da janela temporal do enunciado (R3) está certa e bem argumentada.
+   A guarda de dry-run (M7) evita o moto-contínuo e é a decisão correcta.
+ • A ordem reclamar-antes-de-creditar aguenta a corrida (A6).
+ • O tecto de 20 senhas aguenta payload e livro-razão inflados (A5).
+ • O sweeper é genuinamente read-only e não toca on-chain (A7, verificado por
+   execução, não por leitura).
+ • A ABI do backend está **correcta** contra o bytecode em mainnet (N3).
+ • Os skips não fingem cobertura (B3).
+
+================================================================================
+INTEGRIDADE DO WORKTREE
+================================================================================
+`git status --short` final é **idêntico ao inicial** (3 ` M` de EOL + 5 `??`).
+`git diff --stat` = 1 ficheiro, 15 inserções (a alteração do Executor).
+As 24 mutações reportaram `restaurado=true` (md5 antes == md5 depois).
+O ficheiro de ataque `_tests/zz-valb-ataque-emissao.test.mjs` foi criado,
+executado e **removido**. `C:\Users\Moltbot\Desktop\DESAFIOGUT` NÃO foi
+escrito, excepto este relatório. Nada foi instalado.
+
+================================================================================
+VEREDITO FINAL
+================================================================================
+                        >>> APROVADO COM RESSALVAS <<<
+
+O QUE FOI ENTREGUE (sweeper + testes de contrato + integração) é bom trabalho:
+não encontrei um único defeito VIVO, e sete de oito ataques à emissão batem
+numa parede que fecha para o lado seguro.
+
+AS RESSALVAS, por ordem de gravidade:
+ R-A (BLOQUEANTE PARA O RELATÓRIO, não para o código) — a refutação do fork é
+     factualmente falsa e está escrita no repositório como se fosse facto.
+     Corrigir o cabeçalho e os skips de `mc93d-contrato-onchain.test.mjs`, e
+     reabrir a decisão do operador com o custo real (zero).
+ R-B — N2: o fallback de `CONTRATO_ADDRESS` aponta para um endereço sem código
+     em mainnet, e o único gate que o salva (`verificarCoordenacao`) não tem
+     teste (M11/M12 sobrevivem à suíte inteira).
+ R-C — B2: a invariante `saldoEfetivo ≤ saldoOnChain` não é MEDIDA, só
+     casada por string; dois dos três ataques passam verdes (S1, S3).
+ R-D — B1: o drift ABI↔Solidity é cego a aridade e a tipos (P2, P3) e aceita
+     palavras-chave como funções (P6).
+ R-E — N4: `emissaoArmada()` contornável por poluição de protótipo.
+
+Nenhuma destas ressalvas justifica REPROVAR o código entregue. A PARTE 1,
+essa, reprova — e é a que deve ir à decisão do operador.
+================================================================================
+FIM · VALIDADOR B · MC93-D SEG4
+================================================================================

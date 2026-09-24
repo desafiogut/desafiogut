@@ -1,6 +1,6 @@
 # Torneio de habilidade — especificação do motor de pontuação
 
-> **Origem:** MC93-A (motor puro) + MC93-B (persistência, endpoints) + MC93-C (liquidação do bónus), 2026-09-23/24.
+> **Origem:** MC93-A (motor) + MC93-B (persistência) + MC93-C (liquidação) + MC93-D (contrato medido + sweeper), 2026-09-23/24.
 > **Estado:** implementado e testado. ⚠️ **A migração SQL ainda NÃO foi aplicada** e a
 > **emissão on-chain do bónus continua por fazer** — ambas dependem do operador.
 > **Código:** `_lib/pontuacao-utils.mjs` (motor) · `_lib/pontuacao-store.mjs` (persistência) ·
@@ -352,6 +352,96 @@ de qualquer activação.
 - **Não há notificação** ao operador quando se acumula dívida por liquidar
   (`_lib/notificacoes-usuario.mjs` está reservado ao bloco B2 do MC00.0).
 - **Nada foi exercido contra o Supabase real nem contra a mainnet.**
+
+---
+
+## 4d. O contrato real, medido (MC93-D)
+
+> Os três P0 do MC93-C nasceram todos da mesma causa: os duplos de teste foram
+> escritos por quem escreveu o código e herdaram as suas suposições. Um duplo
+> assim mede **coerência**, não **contrato**. Este secção regista o que foi
+> medido contra software real.
+
+### PostgREST — medido contra um servidor a sério
+
+Supabase local (Postgres 17.6 + PostgREST), com a migração `20260923_mc93b_*`
+**aplicada pela primeira vez**. Até aqui esse SQL tinha cobertura **zero**.
+
+| O que se mediu | Resultado |
+|---|---|
+| `.eq(col, null)` numa `TIMESTAMPTZ` | **ERRO `22007 invalid input syntax`** — confirma o P0 do MC93-C |
+| `.is(col, null)` | funciona (`is.null`) |
+| `.eq(col, false)` num booleano | funciona (`eq.false`) — o CAS do `pontuacao-store` estava certo |
+| compare-and-set real | a 1.ª reclamação devolve 1 linha, a 2.ª devolve **0** |
+| upsert parcial | **preserva** as colunas não listadas no `ON CONFLICT` |
+| CHECKs da migração | recusam endereço em maiúsculas, pontos negativos, liquidar sem bónus |
+
+**Regra permanente do projeto:** para `IS NULL` usa-se `.is()`, nunca `.eq()`.
+Há um teste que varre **toda** a árvore de produção e falha se algum ficheiro
+voltar a usar `.eq(col, null)`.
+
+> ⚠️ **`.select()` no fim do compare-and-set não é decoração.** Sem ele o
+> PostgREST devolve `204` e `data: null`; o código conclui que perdeu a corrida
+> e **o bónus nunca é concedido nem creditado**. Os duplos não viam isto porque
+> devolviam as linhas na mesma. Há agora um guarda que exige `.select()` em
+> todo o UPDATE de corrida cujo resultado seja lido.
+
+### On-chain — o que foi medido, e o que não foi
+
+**Não houve fork de mainnet.** `anvil`/`forge` estão ausentes e o `hardhat`
+v3.4.0 está partido (o `@nomicfoundation/hardhat-ethers` instalado é da série 2).
+O operador decidiu não instalar Foundry (R18, 2026-09-24), e a razão de mérito
+é que o teste proposto não mediria o que dizia: **o handler está em dry-run e o
+MC proíbe activá-lo**, logo não há "saldo emitido pelo handler" para exercer;
+o que se mediria era o `Leilao.sol`, inalterado desde o MC60 e já coberto por
+Foundry + Echidna no CI.
+
+Em vez disso mede-se, sem nó:
+
+- **Drift ABI ↔ `Leilao.sol`**: toda a função e todo o evento que o backend
+  declara têm de existir no Solidity. ⚠️ Contando que uma variável de estado
+  `public` gera um **getter implícito** — `saldoSenhas`, `coordenacao`,
+  `edicaoNonce` e `resultados` são mappings/variáveis públicas, não funções.
+- **A invariante `saldoEfetivo ≤ saldoOnChain`**: a fórmula de
+  `saldo-senhas.mjs` tem de continuar subtractiva, e `senhas_a_creditar` não
+  pode aparecer lá. É por isso que o bónus é **dívida**, não saldo.
+- **A emissão está desarmada**: `emissaoArmada()` só aceita a string `"true"`.
+
+Os dois testes de fork ficam **explicitamente saltados**, com a razão escrita.
+Um `skip` justificado é honesto; um `skip` que finge cobertura não é.
+
+### O sweeper da dívida órfã
+
+Re-enfileira o que ficou por liquidar. Três decisões que o distinguem do que o
+enunciado propunha:
+
+1. **Critério de estado, não de idade.** O enunciado propunha
+   `atualizado_em < now() - interval 'X'`. Em dry-run a tarefa é consumida no
+   minuto seguinte ao nascimento — a dívida é órfã **e** recente. Uma janela
+   esconderia o caso mais comum. (E a coluna chama-se `atualizado_em`;
+   `updated_at` não existe.)
+2. **No-op enquanto a emissão estiver desarmada.** Sem isto era um
+   moto-contínuo: o handler em dry-run consome a tarefa sem liquidar, a dívida
+   continua órfã, o sweeper reenfileira 5 minutos depois — **~51.840 linhas por
+   dia** em `fila_tarefas`, medido pela validação independente. Re-enfileirar
+   só faz sentido quando há quem liquide.
+3. **`order` e `limit` no servidor, mais dedup contra a fila.** O PostgREST
+   trunca em `db-max-rows` (1000): com `.slice()` no cliente, o total reportado
+   mentiria. Sem ordenação não havia garantia de progresso. E como `enfileirar`
+   é um INSERT puro sem deduplicação, o sweeper salta as dívidas que já têm
+   tarefa por concluir.
+
+### O que os duplos ainda NÃO medem
+
+A validação independente mediu 16 métodos e encontrou **8 divergências, todas
+na direcção permissiva**: `update` sem `.select()` (o real devolve `null`),
+o tecto de 1000 linhas, `maybeSingle` com mais de uma linha (o real dá
+`PGRST116`), `select("a,b")` a ser ignorado, upsert sem `onConflict`, upsert a
+omitir colunas `NOT NULL`.
+
+⚠️ E os testes de nível 2 — os únicos que exercem a migração — **estão
+saltados em CI**, porque o `ci.yml` não define `SUPABASE_CONTRATO_URL/KEY`.
+Ligá-los é a acção de maior efeito e menor custo que fica por fazer.
 
 ---
 

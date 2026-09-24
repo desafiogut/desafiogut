@@ -1,0 +1,90 @@
+================================================================================
+MC93-D — SEG1 (plano) · SEG2 (TDD) · SEG3 (integração)
+DesafioGUT · Data: 2026-09-24
+Skills ECC: make-plan, brainstorming, caveman · test-driven-development,
+            systematic-debugging
+================================================================================
+
+SEG1 — PLANEAMENTO
+================================================================================
+1.1 SWEEPER — contrato
+  `varrerDividaOrfa({ limite = 200 })` →
+     { reenfileiradas, encontradas }
+  Query: `bonus_emitido = true AND liquidado_em IS NULL AND senhas_a_creditar > 0`
+
+  ⚠️ DUAS CORREÇÕES AO ENUNCIADO (SEG-1/R3):
+   (a) A coluna chama-se **`atualizado_em`**; `updated_at` não existe em
+       `rankings_ciclo`.
+   (b) **Sem janela temporal.** O enunciado propunha
+       `atualizado_em < now() - interval 'X'`. Uma janela ESCONDE o caso mais
+       comum: em dry-run a tarefa é consumida no minuto seguinte ao nascimento,
+       logo a dívida é órfã E recente. O que a torna órfã é o ESTADO, não a
+       idade. A protecção contra re-enfileirar de mais já existe onde deve:
+       no handler, que valida contra o livro-razão e reclama com
+       compare-and-set. Uma tarefa a mais para uma dívida liquidada sai sem
+       creditar.
+
+  READ-ONLY: o sweeper não escreve em `rankings_ciclo`. Quem escreve é o
+  handler. Há um teste que falha se aparecer `update`/`upsert`/`insert`.
+
+1.2/1.3 CONTRATO — dois níveis, e um refutado
+  PostgREST — NÍVEL 1 (cliente): executar a biblioteca REAL e observar o URL.
+              NÍVEL 2 (servidor): PostgREST real com a migração aplicada.
+              Sem servidor, o nível 2 **SALTA COM AVISO** — nunca verde falso.
+  On-chain  — REFUTADO no SEG-1 e confirmado pelo operador (R18): sem anvil,
+              hardhat partido, e o handler em dry-run não emite saldo nenhum
+              para testar. Em vez disso mede-se o que É mensurável sem nó:
+              drift ABI↔Leilao.sol e a invariante do saldo.
+
+1.4 PROCESSO DE VALIDAÇÃO — as duas regras novas
+  • SÉRIE, não paralelo: B só arranca depois de A fechar. No MC93-C os dois
+    correram juntos e B viu ficheiros a mudar debaixo dos pés.
+  • WORKTREE PRÓPRIO por validador, via `git worktree add --detach`, com o
+    trabalho não-commitado copiado e `node_modules` por symlink.
+  • MUTAÇÃO SEM COMENTÁRIOS: o harness (`mut-sc.mjs`) procura o alvo apenas em
+    linhas que NÃO são comentário, e asserta a substituição nessa linha.
+
+SEG2 — TDD
+================================================================================
+2.1 RED, três vezes, pelo motivo certo
+  mc93d-sweeper            → Cannot find module '…/_lib/sweeper-divida-orfa.mjs'
+  mc93d-contrato-postgrest → correu logo (nível 1 não precisa de módulo novo)
+  mc93d-contrato-onchain   → ver 2.2, teve uma iteração
+
+2.2 GREEN + UMA ITERAÇÃO DO BOULDER LOOP
+  `_lib/sweeper-divida-orfa.mjs` → 10/10 à primeira.
+  `mc93d-contrato-postgrest`     → nível 1: 4/4; nível 2 (servidor): 5/5.
+  `mc93d-contrato-onchain`       → **FALHOU à primeira**, e foi um FALSO
+     POSITIVO DO MEU TESTE, não um defeito do código:
+       "a ABI do backend declara saldoSenhas(), que NÃO existe em Leilao.sol"
+     Causa: `saldoSenhas` é `mapping(address => uint256) public` — o Solidity
+     gera um getter IMPLÍCITO com o mesmo nome. O mesmo vale para
+     `coordenacao`, `edicaoNonce` e `resultados`. Verifiquei ANTES de reportar
+     como defeito. O teste passou a aceitar variáveis de estado públicas.
+     ⇒ Registado porque é o erro que este MC existe para combater, só que do
+       outro lado: um teste que acusa o código sem medir o contrato real.
+
+2.3 REFACTOR — nenhum necessário. `eslint --fix` não corrido como passo
+  separado (o eslint do projeto vive no frontend, não nas funções).
+
+SEG3 — INTEGRAÇÃO
+================================================================================
+3.1 SWEEPER NO PROCESSOR
+  `fila-processor-scheduled.mjs`, dentro do `schedule("*/5 * * * *")`, antes de
+  `processarLote`, em try/catch **fail-soft**: uma falha a varrer não pode
+  impedir o lote de correr. A varredura repete-se em 5 minutos; o lote não.
+  Verificado: o módulo continua a carregar e a exportar `handler`.
+
+3.2 DRY-RUN MANTIDO — confirmado POR EXECUÇÃO
+  BONUS_EMISSAO_ATIVA = undefined · emissaoArmada() = false
+  ⇒ O sweeper re-enfileira; o handler continua a NÃO emitir. Exactamente o que
+    o HARD GATE 5 exige.
+
+3.3 R19 — NÃO ATIVADA
+  O SEG3.3 pergunta se o `GET /feedback` precisa de expor o sweeper. Não: o
+  feedback já expõe `bonusEmitido`, `senhasACreditar` e `liquidado` desde o
+  MC93-B. O sweeper é infraestrutura, não informação de utilizador.
+
+================================================================================
+FIM DOS SEG1/SEG2/SEG3
+================================================================================

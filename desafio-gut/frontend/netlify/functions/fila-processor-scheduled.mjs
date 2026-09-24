@@ -17,6 +17,8 @@ import { confirmarCreditoSenhas } from "./_lib/worker-credito.mjs";
 // produzidas por `_lib/pontuacao-store.mjs` esgotavam 5 tentativas e caíam
 // na DLQ (ressalva nº 2 do MC93-B).
 import { creditarSenhasBonus } from "./_lib/worker-bonus.mjs";
+// MC93-D — varredura da dívida órfã, antes de cada lote.
+import { varrerDividaOrfa } from "./_lib/sweeper-divida-orfa.mjs";
 
 const handlers = {
   // MC59.5: confirma em background a tx de adicionarSenhas submetida por
@@ -31,6 +33,19 @@ const handlers = {
 
 export const handler = schedule("*/5 * * * *", async () => {
   try {
+    // MC93-D — antes de processar, recolhe as dívidas de bónus que ficaram sem
+    // tarefa. `pontuacao-store` só enfileira quando a dívida NASCE, e em
+    // dry-run o handler consome a tarefa sem liquidar: sem esta varredura,
+    // tudo o que for criado com `BONUS_EMISSAO_ATIVA` desligado ficava
+    // permanentemente fora do alcance da fila.
+    // FAIL-SOFT: uma falha a varrer não pode impedir o lote de correr — a
+    // varredura repete-se daqui a 5 minutos, o lote não.
+    try {
+      await varrerDividaOrfa();
+    } catch (err) {
+      console.warn("[cron:fila] sweeper falhou (lote continua):", err?.message);
+    }
+
     const r = await processarLote(handlers, 20);
     if (!r.inerte && (r.processadas || !r.ok)) {
       console.info("[cron:fila] lote", r);

@@ -149,3 +149,20 @@ test("dívida com quantidade fora da REGRA não emite, mesmo coincidindo com o p
   assert.equal(r.emitir, false, "40 senhas não são a regra em vigor");
   assert.equal(r.motivo, MOTIVOS.QUANTIDADE_DIVERGENTE);
 });
+
+test("poluição de protótipo NÃO arma a emissão", async () => {
+  // `process.env.X` resolve pela cadeia de protótipos: sem `Object.hasOwn`,
+  // `Object.prototype.BONUS_EMISSAO_ATIVA = "true"` armava a emissão sem
+  // variável de ambiente nenhuma. Provado por execução na validação
+  // independente do MC93-D — chegou a creditar no arnês.
+  const { emissaoArmada, FLAG_EMISSAO } = await import("../_lib/bonus-emissao.mjs");
+  try {
+    Object.prototype[FLAG_EMISSAO] = "true";                 // eslint-disable-line no-extend-native
+    assert.equal({}[FLAG_EMISSAO], "true", "o cenário está mesmo montado");
+    assert.equal(emissaoArmada({}), false,
+      "só uma propriedade PRÓPRIA pode armar a emissão");
+    assert.equal(emissaoArmada(), false, "nem através de process.env");
+  } finally {
+    delete Object.prototype[FLAG_EMISSAO];
+  }
+});

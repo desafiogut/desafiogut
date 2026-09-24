@@ -689,3 +689,101 @@ aplicar e tem **cobertura de teste zero**. `txHash` não é persistido e `err.co
 licitaram — decisão de produto por tomar.
 ⚠️ **As correcções deste MC não passaram por uma terceira validação
 independente.** Três MCs, três reprovações: a ressalva é material.
+
+---
+
+## MC93-D — Contrato medido + sweeper da dívida órfã (2026-09-24)
+
+**Entregue:** `_lib/sweeper-divida-orfa.mjs`, 3 ficheiros de teste de contrato,
+registo no processor. **543 testes · 535 verdes · 0 falhas · 8 saltados.**
+**Logs:** `_logs/MC93D_*` · **Spec:** `docs/TORNEIO-HABILIDADE.md` §4d.
+Validadores **em série, em worktrees separados** (regra nova, nascida do MC93-C).
+
+### ✅ A migração deixou de ter cobertura zero
+
+Aplicada a um PostgreSQL real (17.6) com PostgREST: aplica limpa, e os 8 CHECKs
+recusam o que devem. Era a lacuna nº 1 herdada do MC93-B.
+
+### ⚠️ Regra permanente: `.eq(col, null)` NÃO é `IS NULL` — agora provada no servidor
+
+| medido contra PostgREST real | |
+|---|---|
+| `.eq(col, null)` numa TIMESTAMPTZ | **ERRO `22007`** |
+| `.is(col, null)` | funciona |
+| `.eq(col, false)` num booleano | funciona (o CAS do store estava certo) |
+| upsert parcial | **preserva** as colunas não listadas |
+
+Há um teste que varre **toda** a árvore de produção e falha se algum ficheiro
+voltar a usar `.eq(col, null)`.
+
+> ⚠️ **`.select()` no fim do compare-and-set não é decoração.** Sem ele o
+> PostgREST devolve `204`/`null`, o código conclui que perdeu a corrida e **o
+> bónus nunca é concedido**. Invisível aos duplos. Guarda acrescentado; mata nos
+> dois sítios.
+
+### ⛔ O sweeper que eu criei era um moto-contínuo
+
+`enfileirar` é um INSERT puro sem dedup. Em dry-run o handler consome a tarefa
+sem liquidar → a dívida continua órfã → nova varredura reenfileira →
+**~51.840 linhas/dia** em `fila_tarefas`. Corrigido: **no-op enquanto a emissão
+estiver desarmada**, dedup contra tarefas por concluir, e `order`+`limit` no
+**servidor** (o cliente truncava em 1000 e `encontradas` mentia).
+
+### ⚠️ Poluição de protótipo armava a emissão
+
+`process.env.X` resolve pela **cadeia de protótipos**:
+`Object.prototype.BONUS_EMISSAO_ATIVA = "true"` armava a emissão sem variável
+nenhuma — a validação independente chegou a creditar por essa via. Corrigido
+com `Object.hasOwn` antes de ler. **Regra:** toda a flag que decide dinheiro
+lê-se com `Object.hasOwn`, nunca por acesso directo.
+
+### ⚠️ `CONTRATO_ADDRESS` tem fallback para um endereço SEM bytecode
+
+`_lib/contract.mjs:50` → `0x273Ef9…445e`, medido num fork: **zero bytes**. Uma
+chamada a `adicionarSenhas` contra endereço sem código **não reverte** (status 1)
+— o worker marcaria a dívida liquidada e ninguém receberia senhas. Só
+`verificarCoordenacao()` impede. Agora coberto por teste; o fallback permanece
+(`contract.mjs` não é alterável neste MC).
+
+### ⛔ ERRATA: a minha refutação do fork on-chain era FALSA
+
+O SEG-1 afirmou que o `hardhat` estava partido e que não havia como levantar uma
+EVM sem instalar nada. **Errado**, reconfirmado por execução:
+
+```
+node_modules/hardhat                         → 2.28.0
+node_modules/@nomicfoundation/hardhat-ethers → 4.0.9   (par CORRECTO)
+./node_modules/.bin/hardhat --version        → 2.28.0, exit 0
+@nomicfoundation/edr                         → INSTALADO (EVM em-processo)
+```
+
+**Causa:** o `package.json` PINA `^3.4.0` mas o INSTALADO é 2.28.0 — e o erro que
+reportei vinha do hardhat v3.9.1 da cache do `npx`. Li o `package.json` e uma
+mensagem de erro, **sem confirmar a versão instalada**.
+
+A validação independente levantou um fork de mainnet sem instalar nada e correu
+o cenário completo (`adicionarSenhas` → `darLance` → saldo decrementado, com
+controlo negativo). ⇒ **A decisão de não instalar Foundry foi tomada sobre
+informação errada minha.** Foundry continua a não ser preciso — mas o fork é
+possível e **fica por fazer**.
+
+### Lições de método (recorrência ALTA — 4.º MC seguido)
+
+- **Confirmar a versão INSTALADA, não a que o `package.json` pina.** Um erro de
+  `npx` pode vir de um binário que o projeto nem usa.
+- **Assertar que o ficheiro MUDOU, não só que o padrão existia.** O HARD GATE 4
+  (ignorar comentários) resolveu o falso sobrevivente por comentário; apareceu
+  logo outro, por `replace` multilinha que não aplicou. Terceiro do projeto.
+- **Um `skip` tem de dizer a verdade sobre porquê.** "Impossível" e "por fazer"
+  não são a mesma coisa, e o primeiro dispensa-me de voltar lá.
+- **Duplos: 8 de 16 métodos divergem do real, todos na direcção permissiva.**
+  `update` sem `.select()`, tecto de 1000 linhas, `maybeSingle` com >1 linha,
+  `select("a,b")` ignorado, upsert sem `onConflict`, upsert a omitir NOT NULL.
+
+### Pendências
+
+1. ⛔ **Ligar os testes de NÍVEL 2 em CI** — o `ci.yml` não define
+   `SUPABASE_CONTRATO_URL/KEY`, logo os únicos testes que exercem a migração
+   ficam saltados. Maior efeito, menor custo.
+2. ⛔ **O fork on-chain**, que é possível e não está feito.
+3. Antes de activar a emissão: aplicar a migração em produção e reativar a R2.

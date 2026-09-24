@@ -50,7 +50,15 @@ const recusa = (motivo) => ({ emitir: false, motivo, quantidade: 0 });
  * @returns {boolean}
  */
 export function emissaoArmada(env = process.env) {
-  return env?.[FLAG_EMISSAO] === "true";
+  // ⚠️ `Object.hasOwn` ANTES de ler. `process.env.X` resolve pela CADEIA DE
+  // PROTÓTIPOS: com `Object.prototype.BONUS_EMISSAO_ATIVA = "true"`, a leitura
+  // devolve "true" sem existir variável de ambiente nenhuma — e a emissão
+  // ficava armada. Provado por execução na validação independente do MC93-D,
+  // que chegou a creditar no arnês de teste por esta via.
+  // Não encontrámos um gadget de poluição no projeto; isto é endurecimento,
+  // não a correcção de uma exploração conhecida. Mas a barreira entre o
+  // sistema e transacções irreversíveis em mainnet não se deixa depender disso.
+  return Object.hasOwn(Object(env), FLAG_EMISSAO) && env[FLAG_EMISSAO] === "true";
 }
 
 /**

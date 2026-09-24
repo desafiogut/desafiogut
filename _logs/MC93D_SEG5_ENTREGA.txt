@@ -1,0 +1,99 @@
+================================================================================
+MC93-D — SEG5 · ENTREGA
+DesafioGUT · Data: 2026-09-24 · Commit base: d2c4719
+Skills ECC: requesting-code-review (dois validadores, EM SÉRIE, em worktrees
+separados — HARD GATE 3, regra nascida do MC93-C)
+================================================================================
+
+5.1 — LOGS
+  MC93D_SEG-1_QUESTIONAMENTO.txt        hard gate · AJUSTAR · 4 refutações
+                                        (⚠️ uma delas, a R2, era FALSA — ver 5.4)
+  MC93D_SEG0_DIAGNOSIS.txt              ambiente, inventário dos 15 duplos
+  MC93D_SEG1-2-3_PLANO-TDD-INTEGRACAO.txt
+  MC93D_SEG4_EXECUTOR.txt               suíte, R1, mutação, os 2 vereditos
+  MC93D_SEG4_VALIDACAO-A.txt            Validador A — contrato PostgREST
+  MC93D_SEG4_VALIDACAO-B.txt            Validador B — contrato on-chain
+  MC93D_SEG5_ENTREGA.txt                este ficheiro
+  MC93D-RELATORIO.md                    relatório final
+
+5.2 — CLAUDE.md (R14) — actualizado antes do commit.
+
+5.3 — DECISÕES DO OPERADOR (R18)
+  CINCO do enunciado (2026-09-24): validação de contrato antes do MC94;
+  validadores em série e em worktrees; mutação sem comentários; autorizar o
+  sweeper; não activar o wire-up on-chain.
+  MAIS DUAS, tomadas durante o MC, perante o veredito AJUSTAR do SEG-1:
+    (a) ARRANCAR O DOCKER — desbloqueou o PostgREST real e deu à migração a sua
+        primeira cobertura.
+    (b) NÃO INSTALAR FOUNDRY — ⚠️ tomada sobre informação ERRADA minha. Ver 5.4.
+
+5.4 — DECLARAÇÃO DE R15 (e a correcção que me obriga a declarar contra mim)
+  EXERCIDA para corrigir o que a medição provou errado:
+    • sweeper: no-op em dry-run, dedup e limite no servidor (3 achados do A);
+    • `_lib/bonus-emissao.mjs`: `Object.hasOwn` contra poluição de protótipo
+      (achado do B, que chegou a creditar por essa via no seu arnês);
+    • guardas de teste novos: `.select()` no compare-and-set,
+      `verificarCoordenacao()` antes de creditar, `.eq(col,null)` na árvore toda.
+
+  ⛔ E UMA CORRECÇÃO QUE É SOBRE MIM: o SEG-1 §-1.1/R2 afirmou que o `hardhat`
+  estava partido e que não havia EVM local possível sem instalar nada. **Era
+  falso.** O instalado é hardhat 2.28.0 + hardhat-ethers 4.0.9 (par correcto),
+  o binário local arranca com exit 0, e o `@nomicfoundation/edr` está instalado.
+  Diagnostiquei o binário errado — o v3.9.1 da cache do `npx` — porque li o
+  `package.json` (que pina ^3.4.0) e uma mensagem de erro, sem confirmar a
+  versão realmente instalada.
+  O operador decidiu não instalar Foundry com base nisso. A decisão continua
+  defensável (Foundry não é preciso), mas foi tomada com informação errada, e o
+  fork É possível e fica POR FAZER. Corrigido no cabeçalho do ficheiro de teste,
+  nos `skip` (de "impossível" para "por fazer"), no SEG4 e no CLAUDE.md.
+
+5.5 — DECLARAÇÃO DE R19 — **NÃO ATIVADA**, declarado no SEG-1 antes de executar.
+  Ampliar teria significado instalar Foundry ou reparar a cadeia hardhat —
+  alteração de ambiente que a própria R19 exclui. (Ironia registada: a premissa
+  em que assentei essa não-ampliação era falsa; mas a conclusão — não instalar —
+  mantém-se, porque afinal não era preciso instalar nada.)
+
+5.6 — MÉTRICAS DE EFICIÊNCIA
+  Boulder Loop: SEG2 1 iteração (falso positivo do meu teste de drift ABI —
+    `saldoSenhas` é mapping público, gera getter implícito); SEG4 2 rondas.
+  Testes: 507 baseline → 543. Deste MC: 36.
+  Mutação própria: 10 aplicados, 10 mortos. Mais 3 controlos de correcção.
+  ⚠️ FALSOS SOBREVIVENTES DO MEU HARNESS: 1 neste MC (o 3.º do projeto), por
+    `replace` multilinha que não aplicou. O HARD GATE 4 resolveu o problema do
+    comentário, não o da substituição.
+
+  ★ A MÉTRICA QUE O ENUNCIADO PEDE — os validadores apanharam o que o Executor
+    não viu?
+      VALIDADOR A: SIM, três achados altos, um deles um defeito que EU tinha
+        acabado de introduzir (o moto-contínuo do sweeper, ~51.840 linhas/dia).
+      VALIDADOR B: SIM, e o mais importante de todo o MC — **provou que a minha
+        refutação era falsa**, levantando um fork sem instalar nada. Mais a
+        poluição de protótipo, que é a única via que conseguiu armar a emissão
+        em 7 ataques.
+    É a quarta vez consecutiva que a validação independente encontra o que o
+    Executor não encontra.
+
+  ★ QUANTOS DUPLOS DIVERGIRAM DO CONTRATO REAL — a métrica que mede o custo
+    acumulado do erro de método: **8 de 16 métodos medidos, todos na direcção
+    permissiva.** É por isto que três P0 do MC93-C passaram despercebidos.
+
+5.7 — RELATÓRIO FINAL: _logs/MC93D-RELATORIO.md
+
+5.8 — COMMIT
+  feat: MC[93-D] — validação de contrato + sweeper da dívida órfã
+  R1: `pontuacao-utils.mjs`, `consolidar-lances.mjs`, `pontuacao-store.mjs`,
+  `pontuacao.mjs`, `ranking.mjs`, `contract.mjs`, `Leilao.sol` e a migração
+  ficaram INTACTOS.
+
+5.9 — LIMPEZA
+  Supabase local parado (ficara a ouvir em 0.0.0.0, por aviso do próprio CLI).
+  Worktrees dos validadores removidos do registo do git.
+
+================================================================================
+VEREDITO DO MC93-D: CONCLUÍDO COM RESSALVA MATERIAL
+  A migração ganhou cobertura; o contrato PostgREST está medido; o sweeper
+  existe e já não é um moto-contínuo; duas vias de emissão indevida fechadas.
+  ⛔ POR FAZER: ligar o NÍVEL 2 em CI, e o fork on-chain — que é possível,
+  ao contrário do que o meu SEG-1 afirmou.
+  ⚠️ As correcções deste MC não passaram por uma terceira validação.
+================================================================================

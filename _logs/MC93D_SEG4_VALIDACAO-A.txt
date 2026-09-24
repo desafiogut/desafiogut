@@ -1,0 +1,329 @@
+================================================================================
+MC93-D — SEG4 · VALIDAÇÃO INDEPENDENTE A (papel RUFLO)
+Escopo: CONTRATO PostgREST/PostgreSQL — os DUPLOS contra os sistemas REAIS
+Data: 2026-09-24
+Worktree: ...\scratchpad\wt-validador-a  (o repo em Desktop\DESAFIOGUT NÃO foi tocado)
+Servidor real: Supabase local sb-contrato · PostgreSQL 17.6 · PostgREST via kong
+               migração 20260923_mc93b_pontuacoes.sql APLICADA e confirmada (\d)
+Biblioteca real: @supabase/postgrest-js 2.108.2 (executada, não simulada)
+Fins de linha: LF confirmado por `cat -A` antes de qualquer edição.
+================================================================================
+
+                 >>> VEREDITO FINAL: APROVADO COM RESSALVAS <<<
+
+  O entregável está CERTO no que diz respeito ao defeito que veio corrigir: a
+  query do sweeper devolve exactamente o conjunto certo contra a base real, o
+  compare-and-set real funciona, e os CHECKs da migração passaram a ter
+  cobertura. O que NÃO está resolvido é a premissa do MC: **os duplos continuam
+  a medir coerência, não contrato**. Seis mutações minhas sobreviveram aos
+  duplos; quatro delas matam o sistema real, e uma mata-o com uma severidade
+  que chega a "o bónus nunca é pago a ninguém". Ver A5 e ACHADOS NOVOS.
+
+  ⚠️ NOTA SOBRE A PREMISSA R1 DO SEG-1: o SEG-1 declarou `supabase start` NÃO
+  EXECUTÁVEL (daemon Docker parado) e, com base nisso, classificou metade do MC
+  como não-entregável. Essa premissa CAIU: o daemon está a correr, os 6
+  contentores de pé, e toda a §A1-A3 deste relatório foi medida contra o
+  servidor real. As 5 conclusões "N3: a migração continua com cobertura zero" e
+  afins já não se aplicam.
+
+================================================================================
+A1 — DIVERGÊNCIAS DOS DUPLOS vs POSTGREST REAL        VEREDITO: INFIEL
+================================================================================
+Método a método, medido por execução contra http://127.0.0.1:54321/rest/v1.
+TODAS as divergências apontam para o mesmo lado: **o duplo é mais permissivo**.
+
+ #  MÉTODO                       POSTGREST REAL (medido)        DUPLO (mc93b)          VEREDITO
+─────────────────────────────────────────────────────────────────────────────────────────────
+ 1  maybeSingle(), 0 linhas      data:null, error:null, 200     data:null              FIEL
+ 2  maybeSingle(), 2 linhas      ERRO PGRST116, HTTP 406,       devolve a 1.ª linha,   INFIEL
+                                 data:null                      sem erro
+ 3  single(), 2 linhas           ERRO PGRST116, HTTP 406        não implementado       N/VERIF.
+ 4  update() SEM .select()       HTTP 204, **data: null**       devolve as LINHAS      INFIEL
+                                                                 afectadas             (grave)
+ 5  update() COM .select()       200 + array das linhas         idem                   FIEL
+ 6  select("a, b, c")            devolve SÓ essas 3 colunas     ignora o argumento,    INFIEL
+                                 (confirmado: payload do         devolve a linha
+                                  sweeper tem 3 chaves)          INTEIRA
+ 7  upsert sem onConflict,       ERRO 23505, HTTP 409           `chave=[""]` casa      INFIEL
+    chave já existente                                           com a 1.ª linha da
+                                                                 tabela e funde-se
+                                                                 nela em silêncio
+ 8  upsert omitindo coluna       ERRO 23502 ("null value in     cria a linha com a     INFIEL
+    NOT NULL sem default          column \"pontos\" ... violates  coluna `undefined`
+    (pontuacoes.pontos)           not-null"), HTTP 400
+ 9  insert duplicado             ERRO 23505, HTTP 409           não implementado       N/VERIF.
+10  eq(col, null) TIMESTAMPTZ    ERRO 22007, HTTP 400           mc93b: ACEITA (!)      INFIEL
+                                                                 mc93c/mc93d: recusam  FIEL
+11  eq(col, null) INTEGER        ERRO **22P02** (não 22007)     idem                   —
+12  is(col, null)                filtro correcto                `r[k] == null` (solto: INFIEL
+                                                                 `undefined` também     (menor)
+                                                                 casa)
+13  order() com NULLs            ASC → NULLS LAST               comparador devolve 0   INFIEL
+                                 DESC → NULLS FIRST              → trata NULL como      (menor)
+                                 (medido nos dois sentidos)      igual a tudo
+14  escape de valores            vírgula, aspas, parênteses,    `===` em JS            FIEL
+    (`,` `"` `()` `.` espaço)     ponto e espaço: todos OK       (equivalente)
+15  LIMITE DE LINHAS             **CAP DE 1000** por omissão    sem cap nenhum         INFIEL
+                                 (1500 linhas na base →                                (grave)
+                                  1000 devolvidas)
+16  gt(col, "0") string          coage e funciona               `Number()` — idem      FIEL
+
+Os itens 2, 4, 6, 7, 8, 15 são os que produzem sobreviventes de mutação (A4).
+O item 4 é o mais perigoso: **um `update` sem `.select()` devolve `data: null`
+no PostgREST real, e o duplo devolve as linhas afectadas.** Todo o
+compare-and-set do sistema — `worker-bonus.mjs:90` e
+`pontuacao-store.mjs:246` — decide "ganhou / já foi reclamado" lendo
+`data.length`. Tirar o `.select()` é invisível para os duplos e desliga o
+bónus por completo em produção.
+
+================================================================================
+A2 — DEFAULTS E CONSTRAINTS                           VEREDITO: INFIEL
+================================================================================
+DEFAULTS REAIS, medidos com um `insert` mínimo + `.select()` (não lidos do .sql):
+
+  rankings_ciclo → id=uuid, pontos_totais=0, acertos_totais=0, posicao=0,
+                   bonus_emitido=false, senhas_a_creditar=0, liquidado_em=null,
+                   atualizado_em=<now()>
+  pontuacoes     → id=uuid, menor_unico=false, criado_em=<now()>
+                   (pontos e acertos são NOT NULL SEM default)
+
+O duplo do mc93b (`_tests/mc93b-pontuacao-store.test.mjs`, bloco `upsert`) aplica:
+  rankings_ciclo → pontos_totais, acertos_totais, posicao, bonus_emitido,
+                   senhas_a_creditar, liquidado_em      ← 6 de 8
+  pontuacoes     → menor_unico, criado_em                ← 2 de 3
+
+FALTAM DOIS, e um deles importa:
+  ✗ `id` (ambas as tabelas) — inofensivo hoje; nenhum código lê `id`.
+  ✗ `atualizado_em` (rankings_ciclo) — **NÃO é inofensivo.** O enunciado do
+    MC93-D propunha filtrar o sweeper por `atualizado_em < now() - interval`.
+    Se essa versão tivesse sido implementada, no duplo a coluna seria
+    `undefined`, toda a comparação daria `false`, o sweeper devolveria vazio —
+    e os testes teriam de ser escritos à volta disso. O duplo teria ditado o
+    desenho. Que o Executor tenha recusado a janela temporal por outra razão
+    (correcta) não fecha o buraco.
+  ⚠️ `criado_em` no duplo é um INTEIRO monotónico (`++relogio`); no servidor é
+    TIMESTAMPTZ. O duplo GARANTE ordem total estrita; o PostgreSQL não. Medi 6
+    escritas consecutivas: 6 valores distintos (~10 ms de intervalo), logo o
+    risco de empate é baixo — mas `lerHistoricoAcertos` ordena por `criado_em`
+    SEM critério de desempate, e a ordem de linhas empatadas é indefinida no
+    PostgreSQL. `detectarConsecutivos` depende dessa ordem. NÃO VERIFICADO que
+    aconteça na prática; VERIFICADO que o duplo não pode exibi-lo.
+
+CHECKs — todos exercidos por mim contra a base real, todos correctos:
+  23514 ✓ endereco "0xabc" (curto)        23514 ✓ pontuacoes.pontos = -1
+  23514 ✓ endereco "0X" + 40 (maiúsculas) 23514 ✓ pontuacoes.acertos = -1
+  23514 ✓ acertos_totais = -1             23514 ✓ senhas_a_creditar = -1
+  23514 ✓ posicao = -1                    (sem CHECK) ciclo_id = "" é ACEITE
+  ✓ `liquidado_em = now()` + `senhas_a_creditar = 0` no MESMO update PASSA —
+    o `rankings_ciclo_liquidacao_check` corrigido está certo.
+
+⚠️ MAS: **em CI, nenhum destes CHECKs é exercido.** Os 5 testes de NÍVEL 2 de
+`mc93d-contrato-postgrest.test.mjs` estão atrás de `if (!TEM_SERVIDOR)` e
+`.github/workflows/ci.yml:97` corre `node --test "_tests/*.test.mjs"` SEM
+`SUPABASE_CONTRATO_URL`/`KEY`. Resultado: `ℹ skipped 7` e suite VERDE. A
+cobertura da migração continua a ser zero em CI — exactamente a conclusão N3
+do SEG-1, que o entregável documenta mas não resolve. O `console.warn`
+("isto não é um verde") é honesto, mas um aviso não é um gate.
+
+Baseline que eu próprio medi no worktree: **534 testes, 527 pass, 0 fail, 7 skipped.**
+Com `SUPABASE_CONTRATO_URL`/`KEY` apontados ao servidor local, os 9 testes de
+`mc93d-contrato-postgrest.test.mjs` passam TODOS (0 skipped). Os testes são bons;
+o problema é que ninguém os liga.
+
+================================================================================
+A3 — O SWEEPER CONTRA A BASE REAL              VEREDITO: FIEL no conjunto,
+                                                         INFIEL na escala
+================================================================================
+Corri o `_lib/sweeper-divida-orfa.mjs` REAL contra o PostgREST REAL (só
+`fila.mjs` ficou duplo), com dívidas que eu próprio inseri.
+
+A3.1 ✔ CONJUNTO EXACTO. 5 candidatos plantados — órfã / liquidada / sem bónus /
+       quantidade zero / inerte. Resultado: `{reenfileiradas:1, encontradas:1}`,
+       e a única re-enfileirada é a órfã, com `quantidade:20` e o ciclo certo.
+       O trio `.eq(bonus_emitido,true).is(liquidado_em,null).gt(senhas,0)`
+       está CORRECTO contra o PostgREST real.
+A3.2 ✔ O payload traz EXACTAMENTE 3 chaves — o servidor honra a lista de
+       colunas do `.select()`. (O duplo devolveria a linha inteira.)
+A3.3 ✖ **CAP DE 1000 LINHAS.** 1500 dívidas órfãs na base (count exacto = 1500).
+       `varrerDividaOrfa({limite:5000})` → `{reenfileiradas:1000, encontradas:1000}`.
+       **500 dívidas são invisíveis e `encontradas` MENTE.** O PostgREST corta
+       a 1000 por omissão e o sweeper não pagina, não ordena e não detecta o
+       corte. Nenhum duplo pode mostrar isto: nenhum tem cap.
+A3.4 ✖ **`limite` NÃO CHEGA AO SERVIDOR.** 300 órfãs, `varrerDividaOrfa({limite:10})`
+       → `{reenfileiradas:10, encontradas:300}`. O `.slice(0, limite)` é
+       client-side: transfere-se sempre tudo (até ao cap) e só depois se corta.
+       `encontradas` reporta o transferido, não o real.
+A3.5 ✔ O CHECK `senhas_a_creditar >= 0` recusa negativos (23514). O duplo aceitaria.
+
+E2E completo contra a base real (6 rodadas, motor de pontuação + store + sweeper
++ worker), tudo verde depois de eu corrigir a MINHA suposição errada:
+  ✔ "acerto" = lance ÚNICO, não vitória → 2 participantes com lances distintos
+    ganham AMBOS o bónus. Comportamento correcto por Art. VIII; foi o meu teste
+    que estava errado, não o código. Registado para que ninguém o releia como defeito.
+  ✔ A guarda cumulativa do MC93-C aguenta contra a base real: 6 rodadas → 1
+    bónus por endereço, nunca 2.
+  ✔ O compare-and-set real é idempotente: 2ª execução do worker = no-op, 1 só crédito.
+  ✔ Depois de liquidada, o sweeper deixa de a ver.
+
+================================================================================
+A4 — MUTAÇÕES PRÓPRIAS (11, nenhuma da lista já tentada)
+================================================================================
+HARD GATE 4 aplicado: cada mutação valida que a linha tocada NÃO começa por
+`//`, `*` ou `/*` e contém o token esperado, ANTES de escrever. 4 tentativas
+iniciais foram ABORTADAS pelo gate/`replace` por não casarem com código exacto
+— e re-feitas por número de linha verificado. Todos os ficheiros restaurados e
+conferidos por md5 (`restaurado=true` em todas as linhas).
+
+ID   MUTAÇÃO                                             DUPLOS      SERVIDOR REAL
+──────────────────────────────────────────────────────────────────────────────────
+M0   CONTROLO POSITIVO: `reenfileiradas += 1` → `+= 0`   MORREU(3)   —          ✓ ok
+M3   upsert rankings sem `{onConflict}`                  MORREU(12)  —
+M5   upsert `pontuacoes` omite `pontos` (NOT NULL)       MORREU(2)   —
+M8   CAS do worker sem `.eq("endereco")`                 MORREU(1)   —
+M9   sweeper: `.is(liquidado_em,null)` → `.eq(...)`      MORREU(10)  —
+──────────────────────────────────────────────────────────────────────────────────
+M1   worker-bonus: CAS **sem `.select()`**               SOBREVIVEU  MORREU (0!==1)
+M2   reclamarBonus: **sem `.select()`**                  SOBREVIVEU  MORREU (0!==2)
+M6   sweeper: `.select()` sem `senhas_a_creditar`        SOBREVIVEU  MORREU (undefined!==20)
+M7   worker-bonus: maybeSingle sem `.eq("endereco")`     SOBREVIVEU  MORREU (fail=1)
+M4   pontuacao-store: maybeSingle sem `.eq("endereco")`  SOBREVIVEU  SOBREVIVEU c/ 2 particip.
+                                                                     MORREU c/ 3 (PGRST116)
+M10  sweeper ignora o `limite` e envia tudo              SOBREVIVEU  SOBREVIVEU (nada o testa)
+
+CONTAGEM: 11 mutações · controlo positivo morreu ✓ · 5 mortas pelos duplos ·
+**6 sobreviveram aos duplos** · dessas, **5 morrem contra o servidor real**
+(M4 só com ≥3 participantes) · 1 (M10) não é apanhada por ninguém.
+
+================================================================================
+ACHADOS NOVOS
+================================================================================
+N1 [ALTO] `update` sem `.select()` devolve `data:null` (HTTP 204) no PostgREST
+   real e AS LINHAS AFECTADAS no duplo. Os DOIS compare-and-set do sistema
+   decidem por `data.length`. M1 e M2 sobrevivem aos duplos e, em produção,
+   significam **o bónus nunca ser concedido (M2) e nunca ser creditado (M1)** —
+   fail-closed, sem risco financeiro, mas sem funcionar nunca. É literalmente
+   a mesma classe de defeito que o P0 do MC93-C (`.eq` vs `.is`): silencioso,
+   fail-closed, e invisível para o duplo.
+
+N2 [ALTO] CAP DE 1000 LINHAS + `limite` client-side. Medido: 1500 órfãs → o
+   sweeper vê 1000 e reporta `encontradas:1000`. Sem `.limit()`, sem `.order()`
+   e sem paginação, não há garantia de progresso: em dry-run as dívidas nunca
+   saem do filtro, logo as mesmas ~1000 voltam a ser varridas indefinidamente e
+   as restantes podem ficar em INANIÇÃO. Correcção: `.order("atualizado_em")` +
+   `.limit(limite)` no SERVIDOR, e `encontradas` separado do transferido.
+
+N3 [ALTO] CRESCIMENTO ILIMITADO DA FILA. `fila-processor-scheduled.mjs` chama
+   `varrerDividaOrfa()` SEM argumento (→ limite 200) a cada 5 min, e logo a
+   seguir `processarLote(handlers, 20)`. `_lib/fila.mjs:29` (`enfileirar`) é um
+   INSERT puro, **sem deduplicação nenhuma**. Em dry-run o worker consome a
+   tarefa sem liquidar, logo a dívida é re-varrida de 5 em 5 minutos:
+   entram até 200 tarefas por ciclo e saem 20. Saldo ≈ +180/5 min ≈ **+51.840
+   linhas/dia em `fila_tarefas`**. O sweeper resolve a dívida órfã criando um
+   problema de escala novo. Nenhum duplo modela profundidade de fila.
+
+N4 [MÉDIO] Os 5 testes de NÍVEL 2 (os únicos que exercem a migração e os CHECKs)
+   estão SKIPPED em CI — `ci.yml:97` não define `SUPABASE_CONTRATO_URL/KEY`.
+   Passam todos quando ligados; ninguém os liga. Cobertura efectiva da migração
+   em CI: ZERO. O aviso em `console.warn` não é um gate.
+
+N5 [MÉDIO] O duplo do `mc93b` — o mais usado dos sete — é o ÚNICO dos três
+   duplos do MC93 que NÃO tem a guarda `.eq(col, null)`. A regra permanente foi
+   aplicada em `mc93c` e `mc93d`, e esquecida exactamente onde mais código
+   passa. A guarda estática de `mc93d-contrato-postgrest.test.mjs` cobre a
+   lacuna SÓ para o literal `null` escrito à mão: `.eq("liquidado_em", x)` com
+   `x` a valer `null` em runtime escapa à regex E ao duplo.
+
+N6 [MÉDIO] `maybeSingle()` com >1 linha é ERRO PGRST116/406 no servidor e "a
+   primeira linha" nos duplos (`mc93b`, `mc36`; o de `mc93c` ignora até os
+   filtros todos). M4 e M7 vivem aqui. M4 só morre com ≥3 participantes num
+   ciclo — com 2 apenas empurra o bónus de B para o ciclo seguinte. Um cenário
+   de 2 é insuficiente: **os testes de torneio deviam usar 3+ participantes.**
+
+N7 [BAIXO] `order()` com NULLs: real = NULLS LAST (asc) / NULLS FIRST (desc);
+   duplo trata NULL como igual a tudo. Hoje sem impacto (só se ordena por
+   `criado_em`, NOT NULL), mas `liquidado_em` é o candidato óbvio a ser
+   ordenado na correcção de N2.
+
+N8 [INFO] `eq(col,null)` num INTEGER dá **22P02**, não 22007 (que é o do
+   TIMESTAMPTZ). As asserções que casam `/22007|invalid input syntax/` estão
+   salvas pelo segundo ramo, não pelo primeiro.
+
+N9 [INFO/ERRATA AO SEG-1] A premissa R1 ("`supabase start` não é executável")
+   está superada: o daemon corre, a migração está aplicada, e tudo em A1–A3
+   foi medido contra o servidor real. As decisões (a)/(b) que o SEG-1 deixou
+   pendentes: (a) já foi tomada de facto; (b) mantém-se não recomendada — nada
+   do que encontrei está no contrato on-chain.
+
+================================================================================
+A5 — PARECER: OS DUPLOS PODEM CONTINUAR A SER CONFIADOS?
+================================================================================
+**Parcialmente, e não para o que este MC diz que servem.**
+
+O que MELHOROU e merece ser dito: os duplos de `mc93c` e `mc93d` são
+qualitativamente melhores que os do MC93-B. Recusam `.eq(col,null)` como o
+servidor recusa; o de `mc93b` passou a construir estado CHAMANDO o código de
+escrita em vez de empurrar linhas para um array, e introduziu latência para
+deixar as execuções intercalarem-se. Isso matou 5 das minhas 11 mutações,
+incluindo três (M5, M8, M9) que são defeitos de contrato a sério.
+
+ONDE AINDA MEDEM COERÊNCIA EM VEZ DE CONTRATO — três eixos, todos medidos:
+ 1. FORMA DA RESPOSTA. Os duplos devolvem sempre `{data: <linhas>}`, tenham ou
+    não recebido `.select()`, e ignoram a lista de colunas. O PostgREST
+    distingue 204/`null` de 200/array, e devolve só as colunas pedidas. É daqui
+    que saem M1, M2 e M6 — e M1/M2 desligam o bónus em produção.
+ 2. ERROS QUE NÃO EXISTEM NO DUPLO. PGRST116 (>1 linha), 23502 (NOT NULL),
+    23505 (duplicado), 23514 (CHECK), 22007/22P02. Os duplos só sabem simular
+    erro por `erroForcado` — um erro que o teste MANDA acontecer, nunca um erro
+    que o esquema IMPÕE. Um duplo que só erra quando lhe pedem não testa
+    constraints.
+ 3. ESCALA E TEMPO. Sem cap de linhas, sem custo de rede, sem relógio real. N2
+    e N3 são invisíveis por construção — e são, na minha leitura, o risco
+    operacional mais provável deste entregável.
+
+O QUE FALTA PARA DEIXAREM DE O FAZER — por ordem de retorno:
+ a) LIGAR O NÍVEL 2 EM CI (N4). É a correcção mais barata e a de maior efeito:
+    os testes já existem e já passam. Um serviço Postgres no workflow + as duas
+    env vars, e `skipped` deixa de poder esconder-se atrás de verde. Enquanto
+    forem opcionais, a migração não tem cobertura.
+ b) UM DUPLO ÚNICO E PARTILHADO, escrito contra as observações de A1 e não
+    contra o código que vai testar: `.select()` obrigatório para haver `data`
+    em mutações; lista de colunas honrada; PGRST116 em >1 linha; NOT NULL e
+    CHECK verificados; cap de 1000. Hoje há sete duplos divergentes, e o mais
+    usado é o mais permissivo (N5).
+ c) TESTES DE TORNEIO COM 3+ PARTICIPANTES (N6). Com 2, M4 é indistinguível.
+ d) CORRIGIR N2 e N3 antes de o operador ligar `BONUS_EMISSAO_ATIVA` — são
+    defeitos do entregável deste MC, não herdados.
+
+RESSALVA DE MÉTODO, contra mim próprio: o meu primeiro E2E contra a base real
+deu VERMELHO e eu quase o contei como defeito do código. Era a minha suposição
+("acerto = vitória") que estava errada. E M4 "sobreviveu" ao servidor real até
+eu perceber que o cenário de 2 participantes é que era cego — não o servidor.
+Verificação que partilha a suposição do código não valida nada; verificação
+que partilha a suposição do VALIDADOR também não.
+
+================================================================================
+RESTAURO E CONTAMINAÇÃO
+================================================================================
+• `Desktop\DESAFIOGUT` NÃO foi modificado. `git status` do repo principal antes
+  e depois: idêntico (apenas o WIP do MC93-D do Executor). Único acesso: LEITURA
+  de `node_modules` através de uma junction temporária, já removida — o alvo
+  ficou intacto (verificado).
+• Worktree: `git status --porcelain` final = só os 5 ficheiros do entregável
+  MC93-D. Zero resíduo das 11 mutações; md5 conferido a cada restauro.
+• Ficheiros de sonda (`_probe/`, `_probe_a3.test.mjs`, `_probe_real.test.mjs`)
+  criados dentro do worktree e APAGADOS.
+• Base local: escrita e limpa à vontade, como autorizado. Fica com resíduo das
+  sondas (`rankings_ciclo`/`pontuacoes`); é descartável.
+• Suite final no worktree, pós-restauro: **534 tests · 527 pass · 0 fail · 7 skipped.**
+
+================================================================================
+                 VEREDITO FINAL: APROVADO COM RESSALVAS
+  Aprovado: o sweeper faz o que promete contra o PostgREST real (A3.1/A3.2), o
+  CAS real é idempotente, os CHECKs da migração estão certos e passaram a ter
+  testes que passam.
+  Ressalvas bloqueantes antes de ligar BONUS_EMISSAO_ATIVA: N2 (cap de 1000 +
+  `limite` client-side) e N3 (fila cresce ~180 tarefas/5 min em dry-run).
+  Ressalva estrutural: N1/N4/N5/N6 — os duplos continuam a poder dar verde a um
+  compare-and-set que não existe, que foi exactamente o P0 do MC93-C.
+================================================================================
+FIM DO SEG4 · VALIDADOR A
