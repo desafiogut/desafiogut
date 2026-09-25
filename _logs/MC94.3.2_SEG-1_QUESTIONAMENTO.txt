@@ -1,0 +1,59 @@
+MC94.3.2 — SEG-1 — QUESTIONAMENTO DO BRIEFING (medir o padrao ANTES de alterar)
+Skills ECC: smart-explore, brainstorming | Base real: 2a85bf8
+
+⚠️ O briefing diz "Base: commit 47cdc65" e "A especial esta entre 'Edicao Ativa' e
+'Acesso Rapido' (seccao propria)". NENHUMA das duas e verdade no codigo actual: a base e
+2a85bf8 e a especial esta DENTRO do slot (adendo do MC94.3.1). Medi antes de agir.
+
+═══ -1.1 PADRAO DE DIMENSAO (HARD GATE 3) ═══
+  EdicaoBanner: `size = 52` (default do componente) e `radius = 8`.
+  R-1 no Dashboard (linha 315): <EdicaoBanner edicao={edicaoAtiva} size={52} />
+  EdicaoCard (Outras Edicoes): size={isMobile ? 52 : 56}
+  EdicaoDetalhe: size={isMobile ? 84 : 104}
+  ESPECIAL (CardEdicaoEspecial): size = BANNER_ESPECIAL_PX = 96
+  ⇒ PADRAO MEDIDO = 52 px (o do slot e o default). A especial estava a 96 px =
+    +44 px = 84% maior. Objetivo do operador: IGUAL ao padrao.
+
+═══ -1.2 TEXTO CONTROVERSO ═══
+  CardEdicaoEspecial.jsx:189 -> t("edicao.especial.regra", "Vence o menor lance único ·
+  cada lance usa 1 senha"). Chave edicao.especial.regra nos 3 dicionarios (pt:123,
+  en:118, es:118). UNICO call-site (o teste i18n exige zero chaves orfas).
+  Copia canonica da app (CardLance:416): "Lance programado consome 1 senha (Art. 20:
+  R$ 2,00) — sem senha, o app converte R$ 2,00 do saldo automaticamente."
+  Regulamento (Art. 20): "Cada senha custa o valor unico de R$ 2,00 (dois reais) para
+  todas as edicoes, seja Relampago ou Programado."
+
+═══ -1.3 BUG "TOTAL DE LANCES" TRANSPARENTE — CAUSA RAIZ ENCONTRADA ═══
+  Button variant="secondary" -> "gut-glass-standard gut-glass--interactive" (Button.jsx:17)
+  .gut-glass-standard { background: rgba(13,18,53,0.88) }           <- SOLIDO (MC82.1)
+  .gut-glass-standard.gut-glass--interactive:hover {
+      background: rgba(13,18,53,0.35); }                            <- MAIS TRANSPARENTE
+  git log -S: o hover 0.35 nasceu no MC25.3 (07c4d88) quando a base era 0.25; o
+  MC82.1 (936b724) subiu a base para 0.88 e NAO tocou no hover.
+  ⇒ O hover/tap torna a superficie ~2,5x MAIS transparente. Num ecra tactil o :hover
+    fica "colado" depois do toque -> ao rolar, o KPI aparece transparente.
+    CAUSA RAIZ: regra obsoleta, exactamente "alguma regra foi quebrada".
+
+═══ -1.4 BUG DE LOGIN — o que foi possivel medir ═══
+  Fluxo: Privy login -> carteira embedded -> POST /auth-user -> JWT 24h (AppContext:883).
+  PrivyRoot.jsx:242 -> embeddedWallets.ethereum.createOnLogin = "OFF" (a criacao e
+  explicita, no onComplete do PrivyEventsBridge).
+  AppContext:916 (efeito) -> `if (!authToken) obterAuthToken();` — UMA unica tentativa.
+  As dependencias sao [address, authToken, obterAuthToken]: numa falha o authToken
+  continua null e as deps nao mudam => o efeito NAO volta a correr. Uma falha
+  transitoria do /auth-user deixa o utilizador autenticado no Privy e SEM sessao,
+  definitivamente. Beco sem saida #1.
+  AppContext:1193 -> `if (authenticated && !address) return;` com o comentario
+  "aguardando createOnLogin criar carteira automaticamente" — mas createOnLogin e
+  "off": espera por um mecanismo DESLIGADO. Beco sem saida #2 (nao alterado — ver SEG4).
+  ⛔ REPRODUCAO EM RUNTIME: NAO FOI POSSIVEL. Completar um login exige credenciais de
+  conta real (R5 proibe) e a conclusao do OAuth Google e accao do operador. Um browser
+  automatico novo ve o gate LGPD (medido em producao). HARD GATE 9 fica PARCIALMENTE
+  satisfeito: medi a logica, nao o fluxo vivo. Dito sem o disfarcar.
+
+═══ -1.5 R19 ═══
+  Cabem os 4 pontos, MAS o login fica com reproducao em falta. Nao amplio para la do
+  que a medicao justifica: corrijo a causa provada por leitura e segura; nao mexo no
+  PrivyEventsBridge sem reproducao.
+
+═══ -1.6 VEREDITO: SEGUIR (com o login marcado como parcialmente reproduzido) ═══

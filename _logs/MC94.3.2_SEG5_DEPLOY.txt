@@ -1,0 +1,68 @@
+MC94.3.2 — SEG5 — DEPLOY E VALIDACAO EM PRODUCAO
+Skills ECC: canary-watch, verification-before-completion
+
+═══ 5.1 SUITES ANTES DO DEPLOY ═══
+  Frontend: 355 testes | 355 pass | 0 fail   (era 346; +5 retryAuth, +4 padraoVidro)
+  Backend : 637 testes | 631 pass | 0 fail | 6 skipped   (intocado neste MC)
+  ESLint  : 0 erros (11 warnings, todos pre-existentes)
+
+═══ 5.2 COMMIT + PUSH ═══
+  0848e4a "fix(MC94.3.2): dimensionamento, texto, bug de transparencia, padrao navy
+           glass, retry da sessao"
+  13 files changed, 254 insertions(+), 33 deletions(-)
+  $ git push origin main -> 2a85bf8..0848e4a  main -> main
+
+═══ 5.3 DEPLOY ═══
+  $ netlify deploy --prod --build --message "MC94.3.2 — correcoes pontuais"
+     Functions bundling completed in 3m 34.7s
+     CDN requesting 38 files and 0 functions   <- 0 functions: so frontend (correcto)
+     ✔ Deploy is live!   (Netlify Build completed in 4m 20.8s)
+     Deploy ID      : 6ab6d8e66a0dcad1ec96b1ab
+     Production URL : https://silly-stardust-ca71bc.netlify.app
+
+═══ 5.4 VALIDACAO EM PRODUCAO ═══
+
+  (a) FOLHA DE ESTILO SERVIDA — /assets/index-DMeoVS9R.css
+      Base do vidro:
+        .gut-glass-standard{background:#0d1235e0;border:1px solid #ffffff1a;
+          border-radius:14px;box-shadow:0 8px 32px #0006,inset 0 0 0 1px #ffffff0d}
+        #0d1235e0 = navy alpha 0.88  -> o padrao do MC82.1. SEM backdrop-filter. ✅
+      Regra de hover:
+        @media (hover:hover) and (pointer:fine){
+          .gut-glass-standard.gut-glass--interactive:hover{
+            background:#0d1235f2;border-color:#ffffff2e}}
+        #0d1235f2 = alpha 0.949 (~0.95) -> o hover ELEVA, ja nao esvazia. ✅
+        E esta DENTRO do @media (hover:hover) -> no toque nao se aplica. ✅
+      O valor antigo (0.35 / #0d123559): grep no bundle = 0 ocorrencias. ✅
+      ⇒ O BUG DA TRANSPARENCIA esta corrigido no artefacto servido ao utilizador.
+
+  (b) DOM AO VIVO (Dashboard em producao, apos o gate LGPD)
+      slotEncontrado            : true   (a especial continua a preencher o slot)
+      larguraDeCadaBanner       : [52, 56, 56, 56]
+          -> 52 = a especial NO SLOT (era 96 no MC94.3.1)  ✅ IGUAL ao padrao
+          -> 56 = os 3 EdicaoCard de "Outras Edicoes" (inalterados: zero regressao)
+      regraDaEspecial           : "Rodada programada · vence o menor lance único ·
+                                   cada lance usa 1 senha (R$ 2,00)"          ✅
+      temRodadaProgramada       : true · temPrecoDaSenha: true                ✅
+      kpisComGlass              : 4   (os KPIs mantem .gut-glass-standard)
+      cronometro                : "ABRE EM 09 DIAS 02 HORAS 27 MIN 31 SEG"    ✅
+
+  (c) REGRESSAO DA R-1 (HARD GATE 4) ═══
+      A R-1 continua a renderizar com o banner PADRAO: o teste do Dashboard exige
+      IGUALDADE entre a especial e a R-1, e a medicao em producao mostra a especial
+      a 52 — o mesmo valor que a R-1 usa. Nenhuma alteracao foi feita ao conteudo do
+      slot da R-1 (so o valor do tamanho passou de literal a constante, com o MESMO
+      numero). Zero regressao.
+
+═══ 5.5 CAPTURAS ═══
+  _logs/MC94.3.2_captura-antes.png            (MC94.3.1: especial a 96 px, texto antigo)
+  _logs/MC94.3.2_captura-depois.png           (agora: 52 px, texto corrigido)
+  _logs/MC94.3.2_captura-slot-especial.png    (a mesma, enquadrada no slot)
+
+═══ 5.6 OBSERVACAO REGISTADA (nao corrigida) ═══
+  Na captura, os 4 tiles de KPI aparecem mais CLAROS do que o navy 0.88 do padrao.
+  NAO e regressao deste MC (a captura do MC94.3.1, anterior a estas alteracoes, mostra
+  o mesmo), e nao se reproduziu a variacao "ao rolar" que o operador descreveu — o que
+  se corrigiu foi a regra de hover, cuja causa esta provada. Fica como ponto a olhar se
+  o operador continuar a ver superficies claras: pode haver uma segunda regra a
+  sobrepor-se ao fundo do padrao nesses tiles.

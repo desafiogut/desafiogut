@@ -1120,6 +1120,98 @@ assimetria dentro.
    (herdado do MC93-F). Chave Alchemy por rotacionar (operador, R5).
 ---
 
+---
+
+## MC94.3.2 — Correções pontuais pós-MC94.3.1 (2026-09-25)
+
+**Data:** 2026-09-25 · **Origem:** MC94.3.2 (4 problemas reportados pelo operador) ·
+**Recorrência:** ALTA (a regra do vidro e a lição do tamanho servem todo o design system) ·
+**Impacto:** MÉDIO-ALTO (superfície pública + uma sessão que não nascia).
+**Logs:** `_logs/MC94.3.2_SEG*` · **Relatório:** `_logs/MC94.3.2-RELATORIO.md`
+
+### 1. Dimensão: um valor só, não literais espalhados
+
+A especial estava a **96 px** e o padrão medido é **52 px** (`EdicaoBanner` default e
+`size` da R-1). Passou a existir `TAMANHO_BANNER_PADRAO` em `EdicaoBanner.jsx`, usada
+pela R-1 **e** pela especial. "Igual ao padrão" deixou de ser coincidência entre dois
+literais e passou a ser estrutural — não podem divergir outra vez. O teste exige
+**igualdade**, não um número.
+
+> Lição: quando duas superfícies têm de ser iguais, igualdade tem de ser uma
+> consequência do código, não uma promessa. Três comentários diziam "96 px" e ficaram a
+> mentir — um comentário falso é uma armadilha para o próximo agente.
+
+### 2. Texto das senhas
+
+`edicao.especial.regra` passou a "Rodada programada · vence o menor lance único · cada
+lance usa 1 senha (R$ 2,00)" (pt/en/es). Suportado por duas fontes do próprio código:
+Art. 20 do regulamento e a cópia do `CardLance` ("Lance programado consome 1 senha
+(Art. 20: R$ 2,00)"). Se a intenção era o oposto (lance gratuito na especial), é uma
+linha por idioma.
+
+### 3. ⛔ A regra de hover que ficou obsoleta (bug do "Total de Lances" transparente)
+
+**Causa raiz com história** — e é o achado de método deste MC:
+
+| commit | o que fez |
+|---|---|
+| `07c4d88` (MC25.3) | criou `.gut-glass-standard` com base **0.25** e hover **0.35** (hover MAIS opaco → "lift") |
+| `936b724` (MC82.1) | subiu a base para **0.88** (vidro sólido) e **não tocou no hover** |
+
+Desde o MC82.1 o hover **inverteu o sentido**: passou a tornar a superfície ~2,5× **mais
+transparente**. Num ecrã táctil o `:hover` fica *colado* depois de um toque → ao rolar, o
+KPI aparece transparente. Correção em duas partes: o hover eleva em vez de esvaziar, e
+passa a existir **só** dentro de `@media (hover: hover) and (pointer: fine)` — num ecrã
+táctil não há hover, e não aplicar a regra elimina o *estado colado*, que é a causa.
+
+> Lição: **ao subir a opacidade de uma base, procurem-se as regras que a comparavam com
+> ela.** Um `-S` no git acha-as em segundos. O MC82.1 mudou a base e deixou o par dela
+> para trás; o defeito só apareceu no aparelho, meses depois.
+
+### 4. Navy glass onde havia vidro de segunda linguagem
+
+`SejaNossoParceiro.jsx` tinha **zero** `gut-glass-standard` e usava
+`COR.bg = rgba(13,18,53,0.25)` — a opacidade **antiga** do vidro — mais
+`backdrop-filter: blur(16px)`, exactamente a combinação que o MC82.1 mediu como custo
+dominante de render. As 3 secções passam a `.gut-glass-standard` (fonte única) e o
+separador inactivo deixa de ser `variant="ghost"` (que o `Button.jsx` documenta como
+*transparente*) para `variant="secondary"`. Bónus medido: sai o `backdrop-filter`.
+
+### 5. Sessão que não nascia (bug de login) — parcialmente reproduzido
+
+**Beco #1, provado e corrigido:** `obterAuthToken` era tentado **uma só vez** e o efeito
+não voltava a correr numa falha (as dependências não mudavam). Uma falha transitória do
+`/auth-user` (rede, 429, 500, CORS, cold start) deixava o utilizador **autenticado no
+Privy e sem sessão, para sempre**. A política passou a `src/lib/retryAuth.js` (pura,
+testável): 4 tentativas, recuo exponencial com tecto, aviso ao desistir.
+
+**Beco #2, provado e NÃO alterado:** `AppContext` recusa abrir o modal com
+`authenticated && !address` à espera de uma auto-criação de carteira que está
+**desligada** (`createOnLogin: "off"` em `PrivyRoot.jsx`).
+
+⛔ **O HARD GATE 9 (reproduzir primeiro) ficou PARCIALMENTE satisfeito** e diz-se assim:
+completar um login exige credenciais de conta real (R5) e concluir o OAuth Google é acção
+do operador. Mediu-se a **lógica**, não o fluxo vivo. Não se tocou no
+`PrivyEventsBridge` — o próprio ficheiro avisa que o histórico de crashes do arranque do
+Privy torna arriscado "melhorar" ali sem reprodução.
+
+### Lições de método (recorrência ALTA)
+
+- **Um mutante que não aplica dá um verde falso.** Na 1.ª tentativa da mutação do CSS a
+  âncora falhou por CRLF: a substituição não aconteceu e o teste ficou **verde**. Verde
+  que não provava nada. Detetei-o pelo próprio resultado e refiz a mutação. Confirmar
+  sempre que o mutante ENTROU (contar as substituições) antes de ler o resultado.
+- **Um teste pode apanhar código errado — e isso é o sistema a funcionar.** O teste do
+  recuo mostrou que o tecto de 30 s era código morto (o expoente limitado a 5 dava no
+  máximo 25 600 ms). Estava certo o teste, não o código.
+- **Declarar o âmbito de um teste.** Os testes de `retryAuth` provam a **regra**, não o
+  efeito de React (o `AppContext` não é testável por unidade: os testes do Dashboard
+  substituem-no por um duplo). Dizê-lo é mais honesto do que apresentar aritmética de
+  recuo como prova de ponta a ponta.
+- **Testar CSS na folha, não no render.** O SSR não aplica a folha, logo nenhum teste de
+  componente apanharia o defeito do hover. O invariante testa-se lendo `globals.css` —
+  como o teste i18n lê os dicionários.
+
 ## MC94 — O torneio dentro de "Meus Ativos" (2026-09-25)
 
 **Entregue:** 5 secções + 2 hooks + 2 arneses de teste, tudo **numa só tela**.

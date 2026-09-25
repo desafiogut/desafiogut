@@ -1,0 +1,42 @@
+MC94.3.2 — SEG1 — TEXTO SOBRE SENHAS
+Skills ECC: terminal-ops, verification-before-completion
+
+═══ 1.1 LOCALIZACAO ═══
+  Unico call-site: CardEdicaoEspecial.jsx:189. Chave `edicao.especial.regra` em pt.js,
+  en.js, es.js. Nenhum outro texto da especial fala de senhas (grep em components/
+  edicao-especial/: so o comentario do topo e o test name).
+
+═══ 1.2 CORRECCAO ═══
+  ANTES  pt: "Vence o menor lance único · cada lance usa 1 senha"
+         en: "Lowest unique bid wins · each bid uses 1 ticket"
+         es: "Gana la puja única más baja · cada puja usa 1 contraseña"
+  DEPOIS pt: "Rodada programada · vence o menor lance único · cada lance usa 1 senha (R$ 2,00)"
+         en: "Scheduled round · lowest unique bid wins · each bid uses 1 ticket (R$ 2.00)"
+         es: "Ronda programada · gana la puja única más baja · cada puja usa 1 contraseña (R$ 2,00)"
+  O fallback no componente foi actualizado em conjunto — o teste i18n exige
+  `pt == fallback`, chave a chave.
+
+  ⚠️ INTERPRETACAO DECLARADA (R18). O operador disse: "as senhas custam R$ 2 e so podem
+  ser usadas nas edicoes programadas; a especial e uma edicao relampago programada".
+  O texto passa a dizer (a) que a edicao e uma RODADA PROGRAMADA — que e o que o
+  backend diz (tipo: "programado", janela inicio_em/termino_em) — e (b) o preco real da
+  senha. Fontes usadas, ambas do codigo: Art. 20 do regulamento ("Cada senha custa o
+  valor único de R$ 2,00 ... seja Relâmpago ou Programado") e a copia canonica do
+  CardLance:416 ("Lance programado consome 1 senha (Art. 20: R$ 2,00)").
+  NAO inventei regime de preco: mantive "1 senha por lance" porque e o que o backend e o
+  formulario fazem (renderLance passa tipoLeilao="programado", D1 do MC94.1).
+  ⇒ Se a intencao era o OPOSTO (lance gratuito na especial), e uma linha por idioma:
+    di-lo e eu troco. Fica registado como ponto a confirmar.
+
+═══ 1.3 CONSISTENCIA COM O BACKEND ═══
+  A especial consolida por menor lance unico (apurarMenorUnico) e nao pontua o torneio
+  (guarda ESPECIAL-*). O texto do card nao afirma pontuacao — nao havia contradicao a
+  corrigir ai. O campo `tipo` da especial e "programado" (medido em /edicoes de
+  producao), o que sustenta "Rodada programada".
+
+═══ 1.4 TESTE + MUTACAO ═══
+  O teste i18n (especial-i18n.test.mjs) cobre pt==fallback e a presenca em en/es.
+  Mutacao M3: alterado o texto de pt.js mantendo o fallback => especial-i18n 3/4, 1 falha
+  ("pt é IGUAL aos fallbacks, chave a chave"). Restaurado, md5 igual.
+
+═══ 1.5 CAPTURA ═══ _logs/MC94.3.2_captura-slot-especial.png (ver SEG5)

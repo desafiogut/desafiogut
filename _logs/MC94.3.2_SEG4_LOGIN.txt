@@ -1,0 +1,74 @@
+MC94.3.2 — SEG4 — BUG DE LOGIN
+Skills ECC: systematic-debugging, verification-before-completion
+
+═══ 4.1 REPRODUCAO — PARCIAL, E DITO SEM O DISFARCAR ═══
+  ⛔ NAO consegui reproduzir o fluxo VIVO ate ao fim. Motivos, medidos:
+     - completar o login exige credenciais de uma conta real: R5 proibe ler/usar
+       credenciais, e concluir o consentimento Google e accao do operador;
+     - um browser automatico novo aterra no gate LGPD (medido em producao nesta sessao);
+     - uma conta de teste nao existe no projecto (nao ha MOCK_MODE de login em prod).
+  ⇒ HARD GATE 9 fica PARCIALMENTE satisfeito. O que seguiu foi ANALISE DE CAMINHO
+    (leitura de codigo), nao reproducao. Nao vou chamar-lhe outra coisa.
+
+═══ 4.2 DIAGNOSTICO — DOIS BECOS SEM SAIDA, PROVADOS POR LEITURA ═══
+  Fluxo: Privy login -> carteira embedded -> POST /auth-user -> JWT 24h (AppContext:883).
+
+  BECO #1 [PROVADO E CORRIGIDO] — a sessao so era tentada UMA vez.
+    AppContext:916 (antes): useEffect(() => { ... if (!authToken) obterAuthToken(); },
+                                     [address, authToken, obterAuthToken])
+    As dependencias nao mudam numa falha (authToken continua null; as funcoes sao
+    estaveis por useCallback), logo o efeito NAO volta a correr. Uma falha transitoria
+    do /auth-user — rede, 429, 500, CORS, cold start da function — deixava o utilizador
+    autenticado no Privy e SEM sessao, para sempre, sem qualquer retry.
+    ⇒ E a forma mais provavel de "o processo nao conclui e nao entra na conta":
+      o Privy diz "autenticado", a app fica sem JWT e as consultas gated por `authToken`
+      (saldo R$, feedback) nunca carregam.
+
+  BECO #2 [PROVADO, NAO ALTERADO] — a espera por um mecanismo DESLIGADO.
+    AppContext:1193: if (authenticated && !address) return;   // "aguardando
+    createOnLogin criar carteira automaticamente"
+    Mas PrivyRoot.jsx:242 diz: embeddedWallets.ethereum.createOnLogin = "off".
+    Ou seja: o abrirModal recusa abrir o modal a espera de uma auto-criacao que esta
+    desligada de proposito. A carteira e criada explicitamente no onComplete do
+    PrivyEventsBridge — se ESSA criacao falhar uma vez, o utilizador fica sem endereco,
+    sem sessao e sem caminho de recuperacao pela UI.
+
+═══ 4.3 CORRECCAO APLICADA (minima e segura) ═══
+  A politica de tentativas foi extraida para `src/lib/retryAuth.js` — PURA e testavel —
+  e o AppContext passa a usa-la:
+    MAX_TENTATIVAS_AUTH = 4
+    atrasoDaTentativaAuth(n) = min(800 * 2^n, 30_000)   -> 0,8s / 1,6s / 3,2s / 6,4s
+    deveTentarAuth({address, authToken, tentativa})
+  Ao esgotar as tentativas, AVISA no console em vez de ficar em silencio.
+  Assim: uma falha transitoria deixa de ser definitiva; e um servico em baixo nao gera
+  laco infinito (o defeito oposto, pior).
+
+═══ 4.4 TESTE + MUTACAO ═══
+  src/lib/retryAuth.test.mjs — 5 testes: sem endereco nao tenta; com token nao repete;
+  tenta enquanto nao houver token; desiste em MAX_TENTATIVAS_AUTH; o recuo e
+  exponencial, nunca zero e tem tecto.
+  ⚠️ AMBITO DECLARADO: provam a REGRA, nao o efeito de React. O AppContext nao e
+  testavel por unidade neste projecto (os testes do Dashboard substituem-no por um duplo
+  e ele importa os hooks do Privy). Diz-lo e mais honesto que apresentar um teste da
+  aritmetica do recuo como se fosse prova de ponta a ponta.
+  Mutacao M4: `return n < MAX_TENTATIVAS_AUTH` -> `return true` (laco infinito) =>
+  retryAuth 4/5, 1 falha ("desiste em MAX_TENTATIVAS_AUTH"). Restaurado, md5 igual.
+  Um teste meu apanhou ainda implementacao errada: o tecto de 30 s era CODIGO MORTO
+  (o expoente limitado a 5 dava no maximo 25 600 ms). Corrigido — o teste estava certo
+  e o codigo nao.
+
+═══ 4.5 PORQUE NAO SE TOCOU NO PRIVYEVENTSBRIDGE ═══
+  O proprio ficheiro avisa, no topo: "o historico de crashes do arranque do Privy
+  (MC17.3.1.x, race do createWallet) tornaria arriscado 'melhorar' qualquer coisa aqui
+  de passagem". Alterar o caminho de criacao da carteira SEM reproducao com uma conta
+  real seria exactamente isso: mexer num sitio com historico de crashes de arranque, em
+  producao, a partir de uma hipotese. O beco #2 fica DOCUMENTADO como pendencia com o
+  passo exacto para o reproduzir.
+
+═══ 4.6 PARA FECHAR O BUG (o que preciso do operador) ═══
+  1. Tentar entrar com uma conta e dizer em que passo para (o modal abre? volta do
+     Google? aparece "Ola, ..."? o saldo carrega?).
+  2. Abrir a consola do browser e copiar as linhas [GUT-DEBUG] — em especial
+     "auth-user HTTP <status>" e "obterAuthToken falhou".
+  Com isso, o beco #1 confirma-se ou descarta-se em minutos, e o beco #2 decide-se com
+  base em evidencia em vez de hipotese.

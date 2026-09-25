@@ -1,0 +1,49 @@
+MC94.3.2 — SEG3 — PADRONIZACAO NAVY GLASS
+Skills ECC: impeccable, verification-before-completion
+
+═══ 3.1 O PADRAO MEDIDO ═══
+  .gut-glass-standard (globals.css:406) — "o padrao-ouro; todas as superficies de vidro
+  do app usam esta classe":
+    background: rgba(13,18,53,0.88)      <- navy SOLIDO (MC82.1; era 0.25)
+    border:     1px solid rgba(255,255,255,0.10)
+    box-shadow: 0 8px 32px rgba(0,0,0,0.40), inset 0 0 0 1px rgba(255,255,255,0.05)
+    border-radius: 14px
+    SEM backdrop-filter (removido no MC82.1 por ser o custo DOMINANTE de render)
+  Variante interativa: .gut-glass--interactive (hover/active) — corrigida no SEG2.
+
+═══ 3.2 AS AREAS TRANSPARENTES (medidas) ═══
+  SejaNossoParceiro.jsx tinha ZERO ocorrencias de gut-glass-standard (grep -c = 0) e:
+    - `const card` usava COR.bg = "rgba(13,18,53,0.25)" — a opacidade ANTIGA do vidro,
+      de antes do MC82.1 — mais `backdropFilter: "blur(16px)"`, exactamente a
+      combinacao que o MC82.1 mediu como o gargalo dominante de render. Aplicado a 3
+      seccoes (OTP, formulario de cadastro, login de parceiro).
+    - os separadores "Novo cadastro" / "Ja tenho conta" usavam
+      variant={ativo ? "primary" : "ghost"} — e o proprio Button.jsx documenta
+      `ghost -> transparente`. O separador INACTIVO era, literalmente, transparente.
+
+═══ 3.3 CORRECCAO ═══
+  - `card` passa a ser SO layout (borderRadius + padding). O vidro vem da CLASSE.
+  - Cada uma das 3 motion.section recebe className="gut-glass-standard" (mesma
+    superficie do resto da app — fonte unica, sem duplicar valores).
+  - COR.bg foi removido (so era usado ali; ficaria pendente e a lint avisaria).
+  - O separador inactivo passa de variant="ghost" para variant="secondary" (que e
+    .gut-glass-standard + interativo) e o className deixa de forcar border/cor por
+    cima do padrao (os !border/!text do ghost lutariam contra a classe).
+  - "Mais -> Seja nosso parceiro": o item de navegacao ja vive dentro do dock
+    .gut-glass-standard (BottomNav.jsx:100 e :161) — nada a fazer ai; o que estava
+    transparente era a PAGINA de destino, corrigida acima.
+
+  ⚠️ NAO se tocou no botao "Reenviar codigo" (variant="ghost", linha 474): o operador
+     nomeou "os dois botoes de 'Novo cadastro' e 'Ja tenho conta'". R1 — zero alteracao
+     desnecessaria. Fica registado como candidato se o operador quiser uniformizar.
+
+═══ 3.4 CONSISTENCIA ═══
+  As 3 seccoes passam a partilhar a MESMA classe que os KPIs, os cartoes do Dashboard e
+  o dock de navegacao — deixa de haver uma segunda linguagem visual de vidro na app.
+  BONUS medido: sai o backdrop-filter, que o MC82.1 tinha identificado como custo de
+  render — a correccao alinha o design E reduz trabalho de GPU.
+
+═══ 3.5 TESTE ═══
+  O invariante "o padrao nao reintroduz backdrop-filter" fica coberto em
+  padraoVidro.test.mjs (teste 4). O resto e verificacao visual (SEG5).
+  Suites: frontend 355/355 · backend 637 (0 falhas) · eslint 0 erros.

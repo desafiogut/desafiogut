@@ -1,0 +1,52 @@
+MC94.3.2 — SEG2 — BUG "TOTAL DE LANCES" TRANSPARENTE
+Skills ECC: systematic-debugging, verification-before-completion
+
+═══ 2.1/2.2 REPRODUCAO E CAUSA RAIZ (medida, com historia) ═══
+  Nao foi preciso "rolar a tela e apanhar o momento": a causa raiz e deterministica e
+  esta na folha de estilo.
+
+  Button variant="secondary" -> classes "gut-glass-standard gut-glass--interactive"
+    (Button.jsx:17 — e o variant dos 4 KPIs, via StatTile.jsx)
+  .gut-glass-standard                        { background: rgba(13,18,53,0.88) }
+  .gut-glass-standard.gut-glass--interactive:hover { background: rgba(13,18,53,0.35) }
+
+  $ git log -S"rgba(13,18,53,0.35)" -- src/globals.css
+      07c4d88 feat(mc25.3): cria .gut-glass-standard — padrao unico navy-based
+      5737180 fix(mc25.4): corrige backdrop-filter stripado pelo build
+  $ git log -S"rgba(13,18,53,0.88)" -- src/globals.css
+      936b724 perf(glass): remover backdrop-filter do padrao de vidro (MC82.1)
+  $ git show 936b724 -- src/globals.css | grep 13,18,53
+      -  background: rgba(13,18,53,0.25);
+      +  background: rgba(13,18,53,0.88);
+      (a regra de hover NAO aparece no diff)
+
+  ⇒ CAUSA RAIZ: o hover foi escrito no MC25.3 quando a base era 0.25 — nessa altura o
+    hover (0.35) era MAIS OPACO, portanto dava "lift". O MC82.1 subiu a base para 0.88
+    (vidro solido) e deixou o hover intacto: desde entao o hover INVERTEU o sentido e
+    TORNA a superficie ~2,5x MAIS TRANSPARENTE. Num ecra tactil o `:hover` cola depois
+    do toque, e ao rolar o KPI ("Total de Lances") aparece transparente por momentos.
+    E exactamente a "regra que foi quebrada" descrita pelo operador.
+
+═══ 2.3 CORRECCAO (duas partes, porque ha duas causas) ═══
+  (1) SEMANTICA: o hover passa a ELEVAR a superficie (navy 0.95), nunca a esvaziar.
+  (2) ESCOPO: o hover passa a viver dentro de
+      @media (hover: hover) and (pointer: fine) { ... }
+      Num ecra tactil NAO HA hover — deixar de aplicar a regra elimina o ESTADO COLADO,
+      que e a causa, e nao apenas o sintoma de o ver.
+
+═══ 2.4 TESTE + MUTACAO ═══
+  CSS nao tem teste de componente possivel (o SSR nao aplica a folha; nenhum teste de
+  render apanharia isto). Por isso o invariante testa-se na FOLHA, como o teste i18n le
+  os dicionarios: src/lib/padraoVidro.test.mjs (4 testes)
+    - a base e 0.88 (o MC82.1) — ancora, para o teste abaixo saber contra o que compara
+    - o hover NUNCA e mais transparente que a base      <- mata o defeito
+    - o hover esta sob @media (hover: hover)            <- mata o estado colado
+    - o padrao nao reintroduz backdrop-filter (orcamento do MC82.1)
+  Mutacao M2 (retirar a regra de hover de dentro do @media): padraoVidro 3/4, 1 falha
+  com a mensagem exacta. Restaurado, md5 igual.
+  ⚠️ Na 1.a tentativa o mutante NAO aplicou (ancora falhava por CRLF) e o teste ficou
+     VERDE — um verde que nao provava nada. Detetei-o pelo proprio resultado e refiz a
+     mutacao com consciencia do CRLF. Registo porque e o tipo de verde falso que a R16
+     existe para apanhar.
+
+═══ 2.5 CAPTURA ═══ antes/depois em _logs/MC94.3.2_captura-*.png (ver SEG5)

@@ -1,0 +1,30 @@
+MC94.3.2 — SEG0 — DIMENSIONAMENTO DA ESPECIAL
+Skills ECC: impeccable, verification-before-completion
+
+═══ 0.1 MEDICAO ═══
+  padrao (EdicaoBanner default e R-1 no slot) = 52 px, radius 8
+  especial (BANNER_ESPECIAL_PX)                = 96 px
+  diferenca                                    = +44 px (+84%)
+  caixa amarela: a R-1 e a especial ja usavam o MESMO padding/background/border/radius
+  (0.6rem 0.75rem · rgba(245,166,35,0.07) · 1px rgba(245,166,35,0.22) · 10px). A unica
+  divergencia de estilo era o marginBottom (fixo 0.75rem na especial; mobile-aware na
+  R-1) — alinhado tambem.
+
+═══ 0.2 CORRECCAO ═══
+  EdicaoBanner: `export const TAMANHO_BANNER_PADRAO = 52;` e o default passa a usa-la.
+  Dashboard (R-1): size={TAMANHO_BANNER_PADRAO} (era o literal 52 — mesmo valor).
+  CardEdicaoEspecial: removido BANNER_ESPECIAL_PX=96; passa a usar TAMANHO_BANNER_PADRAO.
+  ⇒ "igual ao padrao" deixa de ser coincidencia entre literais espalhados e passa a ser
+    ESTRUTURAL: ha um valor so, e ambos os call-sites apontam para ele. Uma alteracao
+    futura do padrao propaga-se aos dois — nao podem divergir outra vez.
+  ⚠️ Removidos 3 comentarios que diziam "96 px": um comentario que mente e uma armadilha
+     para o proximo agente (licao do MC94.3.1).
+
+═══ 0.3 TESTE + MUTACAO ═══
+  Dashboard.test.mjs — o teste que exigia 96 px passa a exigir IGUALDADE:
+    assert.equal(ladoEspecial, ladoR1, `a especial (Xpx) difere do padrao da R-1 (Ypx)`)
+    assert.equal(ladoEspecial, "52")   <- o padrao medido, como ancora
+  Mutacao M1: `size = TAMANHO_BANNER_PADRAO` -> `size = 96` => Dashboard 9/10, 1 falha.
+  Restaurado, md5 igual.
+
+═══ 0.4 CAPTURA ═══ _logs/MC94.3.2_captura-slot-especial.png (ver SEG5)
