@@ -64,3 +64,24 @@ Skills ECC: brainstorming, impeccable, test-driven-development, terminal-ops
   ⚠️ O guarda de ancora (exigir 1 ocorrencia exacta) APANHOU o M5 na 1.a tentativa
      (a ancora estava sem acento: "ilegivel" vs "ilegível") — um mutante que nao
      aplica da' um VERDE FALSO, que e' pior que um vermelho.
+
+═══ SEG4-ADENDO — VERIFICACAO AD-HOC (script proprio, mantido em %TEMP%/hermes-verify-mc945.sh) ═══
+  29 verificacoes, VEREDITO: PASS (0 falhas). Cobre: as constantes do modulo (alvo 20:00 BRT
+  e nao 20:00 UTC), a mensagem (elementos exigidos + nao falar de senhas), o nucleo
+  injectavel e as guardas (marcador ilegivel, publico indisponivel, ensaio, fail-soft), o
+  teste 15/15, o ensaio nas 4 direccoes, as 5 MUTACOES, a fronteira do commit 786dd07
+  (4 ficheiros, todos novos, nada de producao alterado), a producao (health 200, especial
+  relampago, scheduled 403 = nao invocavel) e zero mutantes no disco.
+
+  ⚠️ TRES VEZES A ANCORA ME APANHOU NESTE MC — e as tres teriam dado VERDE FALSO:
+    1. 1.a tentativa do M5: ancora sem acento ("ilegivel" vs "ilegível") -> n=0 -> nao aplicou.
+    2. 2.a tentativa do M5: ancora com `\r\n` explicito, mas o ficheiro tem LF (a regra *.mjs
+       do .gitattributes normaliza) -> n=0 -> nao aplicou OUTRA VEZ.
+    3. "guarda de publico vazio": procurei a string na SAIDA do ensaio quando ela vive no
+       CODIGO dele -> FALHA FALSA.
+  ⇒ E' o mesmo padrao que mais me tem custado nesta serie: **a medicao a medir a coisa errada.**
+    O guarda de "1 ocorrencia exacta" nao chega — tem de se CONFIRMAR QUE A ANCORA E' A CERTA
+    (acentos, fins de linha). Sem ele, um mutante que nao entra passa por sobrevivente.
+  ⇒ E a licao do harness (do MC94.4.1, repetida): **apagar o script de verificacao torna a
+    verificacao nao-verificavel.** Fica em disco.
+
