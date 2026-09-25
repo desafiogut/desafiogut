@@ -594,9 +594,9 @@ Decisão do operador: **tudo numa só tela**, a que o utilizador já conhece. Se
 rota nova, sem página nova, sem tocar na navegação. As secções entram **entre as
 estatísticas e o histórico**, e nada do que já existia foi removido ou reordenado.
 
-⚠️ **A validação independente deu REPROVADO à primeira ronda.** Nove dos defeitos
-descritos abaixo foram encontrados por ela, não por mim, e os números válidos são
-os desta versão. Ver `_logs/MC94_SEG4_EXECUTOR.txt`.
+⚠️ **DUAS validações independentes, ambas REPROVADO.** A maioria dos defeitos
+descritos abaixo foi encontrada por elas, não por mim, e os números válidos são os
+desta versão. Ver `_logs/MC94_SEG4_EXECUTOR.txt`.
 
 ### As cinco secções
 
@@ -810,6 +810,105 @@ ficheiros em paralelo duplicavam o consumo. Diagnostiquei "colisão" a partir de
 apanhado a fazer com a cache do ethers. A série continua a ser preferível, mas por
 outra razão (o pico de memória é a soma), e isso é uma escolha de recursos, não a
 correcção de um defeito.
+
+### ⛔ A 2.ª VALIDAÇÃO INDEPENDENTE TAMBÉM REPROVOU — e o padrão é sempre o mesmo
+
+Dois ⛔, ambos alcançáveis em produção, ambos a **mesma** falta que a 1.ª ronda já
+tinha apanhado noutro sítio: **afirmar um facto sobre uma pessoa que a app não
+identificou**.
+
+| | defeito | onde estava a lição |
+|---|---|---|
+| ⛔1 | `FeedbackLance` não tinha estado de sessão: dizia a um **anónimo** "Ainda não há lances seus nesta edição.", ao lado de três secções a dizer "Entre na sua conta" | aplicada a 3 das 4 secções pessoais |
+| ⛔2 | A **janela do `authToken`**: `useFeedback` devolve `semSessao` sem token, e a página lia isso como "não tens sessão" — mandava entrar quem já tinha entrado **e** mostrava-lhe os lances dele ao lado | `AppContext.jsx:937` já documentava que o `address` chega ~2 s antes do token; o MC88.39 já corrigira isto para o saldo em R$ |
+
+O ⛔1 estava na **captura de produção que eu próprio tirei e olhei**
+(`_logs/MC94_captura-producao-1a-ronda-68a09a5.png`). Olhar não é ver: a captura só
+serve se alguém a confrontar com uma regra, e a regra estava escrita nesta mesma
+secção.
+
+**"Sem sessão" e "sessão sem token ainda" são estados diferentes.** Quem sabe se há
+sessão é o contexto (`isConnected` + `address`), não o hook. A espera pelo token é
+o que é — **estar a carregar** — e é assim que o resto da app já a trata
+(`AppContext.jsx:458`).
+
+### ⛔ "Sequência completa" era CÓDIGO MORTO — e o ecrã mentia a quem fechava a série
+
+`_lib/pontuacao-store.mjs:314` calcula `faltam = max(0, 5 - (sequenciaAtual % 5))`,
+cujo domínio é **[1..5] — nunca 0**. Medido: `sequencia=5 -> faltam=5`. Como o
+componente decidia "completa" por `faltam === 0`, o ramo era inalcançável **e** quem
+completava cinco acertos lia:
+
+> `0 / 5 acertos seguidos · Faltam 5 acertos`
+
+— a app a dizer-lhe que não tem acertos nenhuns no instante exacto em que fechou a
+série. Hoje deriva-se de `sequenciaAtual`, que é o número do **próprio backend**;
+derivar a posição dentro do ciclo (`% alvo`) é aritmética de apresentação, não
+recalcular a regra. O backend é de outro MC e não foi tocado.
+
+### ⚠️ Três "meias correcções" — a lição aplicada a alguns sítios e não a todos
+
+1. `inteiroSeguro` chegou ao `EstadoBonus` e ao `RankingCiclo` na 1.ª ronda, e não
+   ao `PainelTorneio`: `{posicao: 1.5, pontosTotais: Infinity}` renderizava
+   **"1.5º · Infinity Pontos · 1e+21 Acertos"**.
+2. O 5.º estado `sem-dados` (o spinner que nunca acaba) foi separado no
+   `PainelTorneio` e não no `ProgressoBonus`.
+3. `valorUtilizavel` exigia "finito" enquanto `inteiroSeguro` exigia inteiro
+   seguro: `reais(3.7)` dava `"R$ 0,04"`. Um lance é em **centavos**.
+
+É o mesmo padrão do `if: always()` do MC93-E, e agora com três instâncias num só MC.
+
+### ⛔ O instrumento tinha um ponto cego que tornava duas asserções minhas vácuas
+
+O condutor de hooks **engolia** as escritas de estado posteriores ao desmonte
+(`if (desmontado) return` no agendamento). Logo `resultado()` nunca podia reflectir
+uma fuga, e dois testes que diziam "não escreveu estado depois de desmontar" **não
+podiam falhar**. O 3.º controlo positivo cobria a metade errada: afirmava que o
+temporizador disparou, não que a escrita era **observável**.
+
+E a minha primeira tentativa de corrigir isto também não matava o mutante, pela
+mesma razão: os testes de desmonte usavam respostas **lentas**, que o `abort`
+rejeita, e o `catch` do `AbortError` tratava tudo. A janela real é a outra — a
+resposta **chega**, e só depois o componente desmonta. O duplo passou a saber
+exprimi-la (`aposResposta`), e o mutante morre.
+
+### ⚠️ O dicionário divergia do fallback — e é o fallback que os testes leem
+
+`ativos.lance.aviso` tinha **"Projecção"** no fallback e **"Projeção"** no
+dicionário. Parece cosmético e não é: todos os testes de componente renderizam com
+`T_PADRAO`, que devolve o **fallback** — a suíte media um texto e o utilizador lia
+outro. Havia ainda `ativos.bonus.completo`, **órfã nos três idiomas**, a guardar
+exactamente a frase ("bónus conquistado!") que esta secção proíbe.
+
+E o **dialecto**: medido, a app é **pt-BR** (`Carregando` 93× vs `A carregar` 3×;
+`bônus` em 3 ficheiros vs `bónus` em 1, que era o meu). A minha copy nova era a
+única em pt-PT, no mesmo ecrã que "Nenhum lance registrado". Corrigida.
+
+A correcção estrutural é `src/i18n/__tests__/ativos-i18n.test.mjs`: as entradas `pt`
+são geradas a partir dos fallbacks e há uma guarda que exige que continuem iguais,
+que não haja chaves órfãs nem em falta nos três idiomas, que nenhuma declare o bónus
+e que nenhuma use a palavra "saldo".
+
+### ⛔ ERRATA: o comentário sobre o `apiGet` e a origem do APK era falso
+
+Dizia-se que se usa `apiGet` "porque é ele que aplica a origem correcta no APK
+(`src/lib/apiOrigin.js`)". **`src/lib/api.js` nunca importa `apiOrigin.js`** e faz
+`fetch` com caminho relativo; quem reescreve a origem é um patch do `fetch`
+**global**, instalado em `main.jsx`. Um `fetch` cru teria o mesmo tratamento.
+Quarta vez neste projeto que um comentário meu satisfaz a asserção do autor. A
+escolha de `apiGet` continua certa, por outra razão: exercita o contrato partilhado
+de headers e de parse.
+
+### Estado final
+
+**137 testes · 137 verdes.** Mutação: **64 mutantes, 63 mortos**; o único
+sobrevivente era **equivalente por redundância minha** (um ternário cujo ramo nunca
+chegava ao ecrã), e a redundância saiu do código em vez de se fingir que morria.
+
+> ⚠️ **Os 137 testes NÃO são um portão.** O `ci.yml` só corre
+> `netlify/functions/_tests/*.test.mjs`; nenhum workflow corre a suíte do frontend.
+> Não é regressão — o HARD GATE 5 proibia tocar no `ci.yml` — mas "137 verdes" é
+> uma medição, não protecção contínua. Fica para um MC que possa alterar a CI.
 
 ### Achado não corrigido: o formato de moeda divergente
 

@@ -1124,10 +1124,10 @@ assimetria dentro.
 
 **Entregue:** 5 secções + 2 hooks + 2 arneses de teste, tudo **numa só tela**.
 Zero rotas novas, zero páginas novas, navegação intacta.
-****101 testes · 101 verdes · 0 saltados** · mutação **39/39 mortos**** · build verde · `eslint` sem erros.
+****137 testes · 137 verdes · 0 saltados** · mutação **63/64** (1 equivalente, removido do código)** · build verde · `eslint` sem erros.
 **Logs:** `_logs/MC94_*` · **Spec:** `docs/TORNEIO-HABILIDADE.md` §4f ·
 **Relatório:** `_logs/MC94-RELATORIO.md`
-⚠️ **Validação independente: REPROVADO à primeira ronda.** Os números e afirmações
+⚠️ **DUAS validações independentes, ambas REPROVADO.** Os números e afirmações
 válidos são os desta entrada.
 
 ### ⛔ Um ecrã que afirma factos sobre quem não identificou
@@ -1214,6 +1214,29 @@ Lancei uma segunda ronda de mutação julgando a primeira morta — a saída est
 vazia por **tamponamento do Python**, não por fim de processo. As duas mutaram a
 mesma árvore e o controlo negativo falhou com um mutante da outra aplicado.
 **`wc -c` a zero não significa processo morto.** Confirmar com a lista de processos.
+
+### ⛔ A 2.ª ronda: a mesma lição, nos sítios onde ela não tinha sido aplicada
+
+| | defeito |
+|---|---|
+| ⛔ | `FeedbackLance` sem estado de sessão: dizia a um **anónimo** "Ainda não há lances seus", ao lado de três secções a convidar a entrar. **Estava na captura que eu tirei e olhei.** |
+| ⛔ | A **janela do `authToken`** (~2 s): a página mandava entrar quem já tinha entrado **e** mostrava-lhe os lances dele ao mesmo tempo |
+| ⛔ | "Sequência completa" era **código morto**: o backend nunca manda `faltam: 0` (domínio [1..5]), logo quem fechava 5 acertos lia "0 / 5 · Faltam 5 acertos" |
+| ⚠️ | `inteiroSeguro` em 2 de 3 sítios; o 5.º estado em 1 de 2; `valorUtilizavel` mais frouxo que `inteiroSeguro` |
+| ⚠️ | o condutor de hooks **engolia** escritas pós-desmonte → duas asserções minhas eram vácuas |
+| ⚠️ | dicionário ≠ fallback, chave órfã com a frase proibida, e copy em **pt-PT** num app **pt-BR** |
+
+**Regra nova:** "sem sessão" e "sessão sem token ainda" são estados **diferentes**.
+Quem sabe se há sessão é o contexto (`isConnected` + `address`), não o hook que
+precisa do token. A espera pelo token é **estar a carregar**.
+
+**Regra nova:** o dicionário `pt` gera-se **a partir dos fallbacks**, e há uma
+guarda (`src/i18n/__tests__/ativos-i18n.test.mjs`) que exige que continuem iguais —
+porque os testes renderizam com o fallback, logo uma divergência faz a suíte medir
+um texto e o utilizador ler outro.
+
+⚠️ **Os testes do frontend NÃO são um portão de CI.** O `ci.yml` só corre os testes
+das functions. "137 verdes" é medição, não protecção contínua.
 
 ### Não entregue, e porquê
 

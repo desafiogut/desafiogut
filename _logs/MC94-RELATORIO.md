@@ -154,3 +154,37 @@ Nenhuma mostra endereço real, token, e-mail ou dado pessoal (R4).
   valor **do projeto** — os 8% restantes deixam passar a ilustração de fundo por
   baixo do ranking. O texto lê-se. Mudar o valor é identidade visual, que é o MC98 e
   não está autorizado aqui. Foi a inventar um valor novo que eu errei da 1.ª vez.
+
+## 2.ª validação independente: REPROVADO
+
+Dois ⛔, ambos alcançáveis em produção, ambos a **mesma** falta — afirmar um facto
+sobre uma pessoa que a app não identificou — nos sítios onde a lição da 1.ª ronda
+**não** tinha sido aplicada.
+
+| | defeito | comentário |
+|---|---|---|
+| ⛔ | `FeedbackLance` dizia a um anónimo "Ainda não há lances seus nesta edição." | **estava na captura que eu tirei e olhei** |
+| ⛔ | a janela do `authToken` (~2 s) mandava entrar quem já entrara, e mostrava-lhe os lances ao lado | o projeto já o tinha documentado e corrigido noutro sítio (MC88.39) |
+| ⛔ | "Sequência completa" era código morto; quem fechava 5 acertos lia "0 / 5 · Faltam 5" | o backend nunca manda `faltam: 0` |
+| ⚠️ | `inteiroSeguro` em 2 de 3 sítios · 5.º estado em 1 de 2 · `valorUtilizavel` mais frouxo | três meias correcções minhas |
+| ⚠️ | o condutor de hooks engolia escritas pós-desmonte | duas asserções minhas eram **vácuas** |
+| ⚠️ | dicionário ≠ fallback · chave órfã com a frase proibida · copy pt-PT num app pt-BR | os testes leem o fallback |
+
+**137 testes · 137 verdes.** Mutação: 64 mutantes, **63 mortos**; o sobrevivente era
+equivalente por redundância minha, e a redundância saiu do código.
+
+### O que aprendi que vale para lá deste MC
+
+- **Uma lição aplicada a alguns sítios não é uma lição aplicada.** Três instâncias
+  num só MC, e a quarta secção pessoal foi para produção a mentir porque eu tinha
+  corrigido as outras três e dado o assunto por fechado.
+- **Olhar para a captura não é vê-la.** O ⛔1 estava visível na imagem que eu tirei,
+  descrevi e commitei. Uma captura só mede alguma coisa quando é confrontada com
+  uma regra escrita — foi o validador que a leu contra a regra que eu próprio
+  escrevera.
+- **Um instrumento pode ter um ponto cego exactamente onde promete ver.** O condutor
+  engolia a fuga que os seus próprios testes diziam procurar; o controlo positivo
+  cobria a metade errada da afirmação.
+- **Um teste que não mata o mutante pode estar a testar a janela errada.** A minha
+  primeira correcção falhou porque usava respostas lentas, que o `abort` rejeita —
+  o caminho que o `catch` já tratava, não o que a guarda existe para travar.

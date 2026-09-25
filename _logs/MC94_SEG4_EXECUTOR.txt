@@ -174,3 +174,94 @@ Estado: fechado. Produção a servir 68a09a5, verificado no bundle e no ecrã.
     fica REGISTADO, não alterado.
   - MCPs chrome-devtools e claude-eyes falharam a ligar; as capturas foram feitas
     com tapsite.
+
+================================================================================
+10. SEGUNDA RONDA — 2.ª VALIDAÇÃO INDEPENDENTE: REPROVADO
+================================================================================
+Commit: 464c1ef (sobre 68a09a5 + edc5f8e)
+⚠️ ESTA SECÇÃO SUPERSEDE os números das secções 1 a 9.
+
+10.1 MEDIDO
+  testes ............. 137 · 137 verdes · 0 falhas · 0 saltados
+                       (componentes 60 · página 27 · hooks 30 · i18n 7 · 13 novos
+                        de cablagem)  [antes: 101]
+  mutação ............ 64 mutantes · 63 mortos · 1 EQUIVALENTE · 0 não-aplicados
+                       controlo negativo VERDE, controlo positivo MORREU
+  build .............. verde · eslint 0 erros (1 aviso `cardPad`, pré-existente)
+  i18n ............... 52 chaves em pt/en/es; dicionário pt == fallbacks, provado
+                       por teste; 0 órfãs; 0 em falta
+  produção ........... 464c1ef ready; DOM vivo: as CINCO secções com
+                       rgba(13,18,53,0.92), as QUATRO pessoais em
+                       data-estado="sem-sessao", o ranking em "vazio"
+
+10.2 OS DOIS ⛔ (verificados por execução ANTES de tocar em código)
+  ⛔1 FeedbackLance não tinha estado de sessão.
+      Com address=null dizia a um ANÓNIMO "Ainda não há lances seus nesta edição.",
+      ao lado de três secções a dizer "Entre na sua conta".
+      ⚠️ ESTAVA NA CAPTURA QUE EU TIREI E OLHEI (MC94_captura-producao-1a-ronda).
+      Olhar não é ver: a captura só serve confrontada com uma regra — e a regra
+      estava escrita por mim, na spec, nessa mesma secção.
+      É o MESMO defeito que a 1.ª ronda apanhou nas outras duas secções: a lição
+      foi aplicada a 3 dos 4 sítios onde se aplicava.
+
+  ⛔2 A janela do authToken.
+      useFeedback devolve semSessao:true sem token; a página lia isso como "não
+      tens sessão". Mas o address chega ANTES do authToken — medido e documentado
+      pelo próprio projeto (AppContext.jsx:937, ~2,0 s), e é o defeito que o
+      MC88.39 corrigiu para o saldo em R$.
+      Efeito: durante ~2 s a página dizia "Entre na sua conta" a quem já tinha
+      entrado E mostrava-lhe os lances dele na secção ao lado.
+      Correcção: temSessao = isConnected && Boolean(address); a espera pelo token
+      é `carregando`, como o resto da app já faz (AppContext.jsx:458).
+
+10.3 OS ⚠️ QUE ERAM MEIAS CORRECÇÕES MINHAS
+  - inteiroSeguro chegou ao EstadoBonus e ao RankingCiclo na 1.ª ronda e NÃO ao
+    PainelTorneio: "1.5º · Infinity Pontos · 1e+21 Acertos".
+  - o 5.º estado (sem-dados, o spinner eterno) foi separado no PainelTorneio e não
+    no ProgressoBonus.
+  - valorUtilizavel exigia "finito" e inteiroSeguro exigia inteiro seguro:
+    reais(3.7) = "R$ 0,04". Um lance é em CENTAVOS.
+  É o padrão do `if: always()` do MC93-E — três instâncias num só MC.
+
+10.4 "SEQUÊNCIA COMPLETA" ERA CÓDIGO MORTO, E O ECRÃ MENTIA
+  _lib/pontuacao-store.mjs:314 -> faltam = max(0, 5 - (seq % 5)), domínio [1..5].
+  Medido: seq=5 -> faltam=5. Decidir "completa" por faltam===0 tornava o ramo
+  inalcançável E fazia quem fechava 5 acertos ler "0 / 5 · Faltam 5 acertos".
+  Hoje deriva-se de sequenciaAtual (o número do próprio backend). O backend não
+  foi tocado (é de outro MC).
+
+10.5 O INSTRUMENTO TINHA UM PONTO CEGO
+  O condutor de hooks engolia escritas de estado pós-desmonte, logo DUAS asserções
+  minhas ("não escreveu estado depois de desmontar") não podiam falhar, e o 3.º
+  controlo positivo afirmava que o temporizador disparou — não que a escrita era
+  OBSERVÁVEL. Cobria a metade errada.
+  ⚠️ E a minha primeira correcção também não matava o mutante: os testes de
+  desmonte usavam respostas LENTAS, que o abort rejeita, e o catch do AbortError
+  tratava tudo. A janela real é a outra — a resposta CHEGA e só depois o componente
+  desmonta. O duplo passou a saber exprimi-la (`aposResposta`).
+
+10.6 ERRATAS
+  - O comentário "usa-se apiGet porque ele aplica a origem do APK" era FALSO:
+    src/lib/api.js nunca importa apiOrigin.js; quem reescreve é o patch do fetch
+    GLOBAL instalado em main.jsx. 4.ª vez que um comentário meu satisfaz a asserção
+    do autor.
+  - O comentário "validar por content-type" não descrevia o código, que valida o
+    sucesso do JSON.parse. Corrigido o texto, não o código.
+
+10.7 O ÚNICO SOBREVIVENTE DA MUTAÇÃO ERA EQUIVALENTE — POR REDUNDÂNCIA MINHA
+  `faltam = sequenciaCompleta ? 0 : alvo - noCiclo` — o ramo `0` nunca chega ao
+  ecrã, porque quando a sequência fecha mostra-se a frase e não a contagem.
+  Computação morta que eu tinha descrito como defeito. A redundância saiu do
+  código; não se fingiu que o mutante morria.
+
+10.8 NÃO MEDIDO / RESSALVAS
+  - ⛔ Os 137 testes NÃO são um portão: ci.yml só corre
+    netlify/functions/_tests/*.test.mjs. Nenhum workflow corre a suíte do frontend.
+    Não é regressão (o HARD GATE 5 proibia tocar no ci.yml), mas "137 verdes" é
+    medição, não protecção contínua.
+  - O estado COM SESSÃO continua sem observação num ecrã real (OAuth Privy não
+    automatizável). Coberto por testes, não por captura.
+  - Nenhuma rodada real; as tabelas do torneio estão a zero.
+  - Estas correcções da 2.ª ronda NÃO passaram por uma terceira validação.
+  - O condutor de hooks continua a implementar a comparação de deps e o
+    agendamento — não é o React. Os controlos positivos limitam, não eliminam.
