@@ -1,0 +1,46 @@
+MC94.4 — SEG0 — INVENTARIO COMPLETO
+Skills ECC: smart-explore, terminal-ops
+
+═══ 0.1 REPOSITORIO ═══
+  git: HEAD 108c0bb, 1501 ficheiros rastreados, .git 80 MB
+  Estrutura: desafio-gut/ (frontend/, docs/, scripts/, ignition/, ignition/deployments/)
+             docs/ (260), _logs/ (127), closed-testing/, builds/, cache/, keystore/,
+             .github/, .claude/, .agents/, .aidesigner/, graphify-out/, ignition/
+  Ficheiros soltos na raiz que sao claramente ARQUIVO historico (nao codigo):
+    CLAUDE_DEBUG.md 192 KB · cloud.md 481 KB · AUDITORIA-TOPOGRAFICA.md · MC37-plano.md
+    MC39.17.2/17.3/19/20-diagnostico.md · RELATORIO-FINAL.md 42 KB · security_audit.md 99 KB
+    diagnostico.mjs · diagnostico-erro.mjs · diagnostico-oauth.mjs · capturar-token.mjs
+  ⇒ Sao restos de MCs antigos. NAO movidos: ver SEG3 (decisao) e SEG4 (pendencia).
+
+═══ 0.2 PC (fora do repo) — SO CAMINHOS, NUNCA VALORES ═══
+  Chaves/artefactos sensiveis encontrados:
+    Desktop/DESAFIOGUT/keystore/desafiogut.keystore + credenciais.txt (671 B)
+    Desktop/GUTO/BACKUP_KEYSTORE NAO PERDER NUNCA/{credenciais.txt, desafiogut.keystore}
+    Desktop/MC-HISTORICO/.env (89 B) -> variavel COMFYUI_API_KEY (outro projecto)
+    Desktop/MC-HISTORICO/DesafioGUT-20260815-release.aab
+    Desktop/ARTEFACTOS-RUAN/1-AAB/DesafioGUT-20260824-release.aab (35,7 MB)
+    Desktop/Devir/.env, Desktop/Devir/.env.example, Desktop/ESek/.env.example (outros projectos)
+    ~/.env.txt (158 B) -> TELEGRAM_TOKEN, DOLPHIN_API_KEY, MEU_USER_ID, DB_PATH (outro projecto)
+    ~/.mc33-staging.env (617 B) -> SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY
+    ~/.env (0 B, VAZIO)
+    ~/.claude.json + 5 x .claude.json.tmp.* (45 KB cada, de julho) + .backup + .bak
+  Classificacao feita pelos NOMES das variaveis (nome nao e' segredo; valor nao foi lido).
+  Desktop root: 52 entradas, inclui "Nova pasta" (so 4 atalhos .lnk) e relatorios MC antigos.
+
+═══ 0.3 CHAVES — TABELA (a que existe e onde vive) ═══
+  ALCHEMY_API_KEY    | 11 ficheiros RASTREADOS (hardcode repetido) | EXPOSTA (no bundle!) | rodar
+  SUPABASE_SERVICE_ROLE_KEY | ~/.mc33-staging.env (solto) + env Netlify | solta no perfil | MOVIDA
+  ADMIN_TOKEN / BLOBS_TOKEN | env Netlify | sem ficheiro local | OK
+  PRIVY_APP_SECRET   | env Netlify | sem ficheiro local | OK
+  Keystore APK + senha | Desktop/DESAFIOGUT/keystore/ + backup GUTO | fora do git | OK
+  COMFYUI_API_KEY    | ~/.claude.json + Desktop/MC-HISTORICO/.env | fora do git | OK (outro projecto)
+  comfyui-* (MCP)    | ~/.claude.json mcpServers.comfyui-cloud | fora do git | OK
+
+═══ 0.4 DOCUMENTACAO ═══
+  4 ficheiros de doc na raiz do repo + 260 em docs/ + 127 em _logs/.
+  desactualizados por definicao: tudo o que descreve estados anteriores ao MC94.3.2.
+  CLAUDE.md (91 KB) e' o unico mantido em dia (actualizado em cada MC).
+  cloud.md (481 KB) e CLAUDE_DEBUG.md (192 KB) sao logs de conversa antigos, nao documentacao.
+
+═══ 0.5 VEREDITO: inventario completo; ha mais chaves soltas de OUTROS projectos do que
+     do DesafioGUT — so' uma era do DesafioGUT (movida). ═══

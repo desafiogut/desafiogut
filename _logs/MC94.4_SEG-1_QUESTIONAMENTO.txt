@@ -1,0 +1,37 @@
+MC94.4 — SEG-1 — QUESTIONAMENTO DO BRIEFING (medir, nao supor)
+Skills ECC: smart-explore, brainstorming, security-review
+
+═══ -1.1 PREMISSAS MEDIDAS ═══
+  HEAD: 108c0bb · arvore limpa (so 3 untracked pre-existentes em docs/)
+  .git = 80 MB · 1501 ficheiros rastreados · ~20 branches antigas (claude/*, docs/*)
+  docs/ = 260 entradas · _logs/ = 127 · 4 blobs de documentacao na raiz
+  Raiz do repo com ficheiros soltos antigos: CLAUDE_DEBUG.md (192 KB), cloud.md (481 KB),
+    AUDITORIA-TOPOGRAFICA.md, MC37-plano.md, MC39.x-diagnostico.md (x4), RELATORIO-FINAL.md,
+    security_audit.md, diagnostico*.mjs (x3), capturar-token.mjs, graphify-out/, cache/, builds/
+  Integridade dos testes: backend 637 (0 falhas) · frontend 360 (0 falhas)
+
+═══ -1.2 DUAS PREMISSAS DO BRIEFING ESTAVAM ERRADAS ═══
+  1. "Chave Alchemy exposta em desafio-gut/hardhat.config.cjs" — ERRADO no FICHEIRO:
+     os 3 hardhat.config.* usam `process.env.PRIVATE_KEY` / `process.env.DEPLOYER_PRIVATE_KEY`.
+     NAO ha chave literal ali. A chave Alchemy existe, mas noutros 11 ficheiros
+     (ver SEG1). Substancio certa, ficheiro errado.
+  2. "Base: commit mais recente na main (pos MC94.3 / MC94.3.1)" — incompleto: ja' inclui
+     o MC94.3.2 (108c0bb) e o adendo do login.
+  ⇒ 3.ª vez seguida que o enunciado diverge do estado real. O CODIGO e' a fonte da verdade.
+
+═══ -1.3 AUTOSSUFICIENCIA (R19) ═══
+  Nao cabe num so'. O escopo real (260 docs + 127 logs + 1501 ficheiros + auditoria de
+  seguranca + organizacao + deploy + validacao) excede um contexto. DECLARO AGORA o corte:
+  faz-se o que e' RAPIDO E SEGURO (R19/HARD GATE 3); o que exige >30 min ou toca areas
+  sensiveis vira PENDENCIA DOCUMENTADA. Nao vai gerar MC94.4.1: as pendencias passam para
+  a sequencia operacional (MC94.5+), que e' onde pertencem.
+
+═══ -1.4 ESCOPO ═══
+  DENTRO: inventario, auditoria de seguranca (sem ler valores), cofre de chaves,
+  faxina rapida, .gitignore/.gitattributes, indice de docs, deploy final, relatorio.
+  FORA (deliberado, com motivo): renomear/reorganizar 260 ficheiros de docs (nao e' rapido;
+  risco de partir referencias), corrigir o regex das edicoes especiais (area declarada
+  fechada pelo MC), `npm audit fix` com 38 vulnerabilidades (pode ser breaking),
+  apagar os 6 worktrees antigos (podem conter trabalho nao commitado — decisao do operador).
+
+═══ VEREDITO: SEGUIR (com o corte de escopo declarado acima) ═══

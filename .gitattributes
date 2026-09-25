@@ -1,0 +1,37 @@
+# MC94.4 — normalizacao de fim de linha.
+#
+# PORQUE: o validador independente do MC94.3.1 teve 1 falha de teste atribuida ao CRLF
+# de um worktree novo (o MESMO ficheiro passava 25/25 no repo principal e 25/25 depois de
+# convertido para LF). Sem este ficheiro, um `git worktree`/clone novo pode trazer CRLF e
+# fazer parecer que ha regressao onde nao ha — um falso vermelho que custa tempo a
+# desmontar. Nao mudava nada em producao: so estabiliza o que os testes vêem.
+#
+# `text=auto` deixa o git decidir por ficheiro (detecta binarios sozinho).
+* text=auto
+
+# Ficheiros que TEM de ser LF: testes e scripts consumidos por shell/node.
+*.mjs   text eol=lf
+*.js    text eol=lf
+*.cjs   text eol=lf
+*.sh    text eol=lf
+*.py    text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.toml  text eol=lf
+
+# .bat/.ps1 continuam CRLF (ferramentas do Windows dependem disso).
+*.bat   text eol=crlf
+*.ps1   text eol=crlf
+*.cmd   text eol=crlf
+
+# Binarios: nunca tocar.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.aab   binary
+*.apk   binary
+*.keystore binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary

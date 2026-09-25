@@ -66,3 +66,8 @@ UsersMoltbotAppDataLocalTemp/
 **/__pycache__/
 desafio-gut/frontend/android/cloud.md
 scripts/__pycache__/
+
+# MC94.4 — cofre de chaves/credenciais do projecto. NUNCA commitar conteudo:
+# o README.md descreve o MAPA (caminhos e finalidade), nunca valores.
+secrets/*
+!secrets/README.md

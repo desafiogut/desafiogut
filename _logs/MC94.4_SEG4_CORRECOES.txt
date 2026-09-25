@@ -1,0 +1,42 @@
+MC94.4 — SEG4 — CORRECOES PONTUAIS E PENDENCIAS
+Skills ECC: terminal-ops, verification-before-completion
+
+═══ 4.1 CORRIGIDO NESTE MC (rapido e seguro) ═══
+  C1. .gitignore: `secrets/*` + `!secrets/README.md` (cofre criado e protegido)
+  C2. .gitattributes: normalizacao LF/CRLF (resolve a fragilidade dos testes em worktrees)
+  C3. docs/README.md: indice de 256 ficheiros gerado do conteudo real
+  C4. secrets/README.md: mapa de chaves (sem valores)
+  C5. Faxina: 227 405 bytes de temporarios removidos (5 x .claude.json.tmp.* + .env vazio)
+  C6. ~/.mc33-staging.env -> secrets/ (chave Supabase de admin fora de local publico)
+  ⇒ Nenhuma destas toca codigo de producao. Por isso NAO ha mutacao (R16):
+    a R16 aplica-se a CORRECCAO DE CODIGO, e nenhuma correccao deste MC alterou codigo
+    executavel. Declaro-o explicitamente para que a ausencia de mutacao nao pareca omissao.
+    (As mudancas de C1-C4 SAO verificaveis e foram verificadas: `git add -n` para o
+    .gitignore, contagem de linhas para o indice, md5 das duas pontas para o cofre.)
+
+═══ 4.2 PENDENCIAS (o que NAO coube — com prioridade e motivo) ═══
+  P1 (ALTA) — ALCHEMY: rotacao da chave + retirada do hardcode de 11 ficheiros, comecando por
+     frontend/src/utils/web3.js (a chave vai no bundle publico). Exige alterar variaveis de
+     ambiente no Netlify -> NAO AUTORIZADO sem confirmacao (R18) + rotacao e' do operador (R5).
+  P2 (ALTA, tecnica) — keystore.properties ausente -> release assina com chave de DEBUG
+     (build.gradle:38). Corrigir exige ler credenciais (R5 proibe). ACCAO DO OPERADOR.
+  P3 (MEDIA) — npm audit: 38 vulnerabilidades (10 altas; xmldom, DOMPurify). `npm audit fix`
+     pode ser breaking -> fazer numa janela propria, nao num MC de faxina.
+  P4 (MEDIA) — docs/: 260 entradas, muitas de maio-julho e desactualizadas; 12 ficheiros de
+     arquivo soltos na raiz do repo (CLAUDE_DEBUG.md 192 KB, cloud.md 481 KB, etc.).
+     Reorganizar/renomear em massa nao cabe em 30 min nem e' seguro a frio.
+  P5 (MEDIA) — regex `^ESPECIAL-[A-Z0-9]+$` e' SENSIVEL A CAIXA (herdada do MC94.3.1,
+     PRIORIDADE 1 la'). Um id `especial-airfryer` (minusculas) NAO seria apanhado pela guarda,
+     e `listarEdicoes` ignora chaves invalidas em SILENCIO (fail-silent no auto-fecho).
+     Correccao: flag `i` + normalizacao. NAO FEITA: o MC diz "NAO AUTORIZA alterar a logica das
+     edicoes especiais (MC94.1/94.2/94.3) sem necessidade comprovada", e esta area guarda
+     pontuacao (dinheiro). E' uma correccao de DONO, nao de faxina.
+  P6 (BAIXA) — ~20 branches antigas (claude/*, docs/*) e 6 worktrees em .claude/worktrees.
+     NAO TOCADOS: podem conter trabalho nao commitado; `git worktree prune` e' irreversivel
+     para esses restos. Decisao do operador.
+  P7 (BAIXA) — Desktop: "Nova pasta" (so' 4 atalhos .lnk) e relatorios de MCs antigos na raiz.
+     Sugestao: mover para MC-HISTORICO. Nao feito: atalhos podem estar em uso.
+  P8 (herdada) — captura por CDP no dispositivo: exige Android ligado.
+
+═══ 4.3 VEREDITO: 6 correccoes rapidas aplicadas; 8 pendencias documentadas com prioridade.
+     Zero alteracao a codigo de producao — o que explica por que nao ha mutacao (ver 4.1). ═══

@@ -1,0 +1,39 @@
+MC94.4 — SEG2 — BUGS E VULNERABILIDADES
+Skills ECC: systematic-debugging, verification-before-completion
+
+═══ 2.1 SUITES ═══
+  Backend : 637 testes | 631 pass | 0 fail | 6 skipped
+  Frontend: 360 testes | 360 pass | 0 fail | 0 skipped
+  ⇒ Identicos ao fim do MC94.3.2. NADA derivou.
+
+═══ 2.2 LINT ═══
+  eslint: 0 erros. Warnings todos pre-existentes (console.info no AppContext, o console.log do
+  deep link no App.jsx). O MC94.3.2 REDUZIU de 5 para 4 console.info (removeu o que mentia).
+
+═══ 2.3 npm audit ═══
+  38 vulnerabilidades (28 moderadas, 10 altas). Destaques: xmldom (2 altas, validacao de
+  nomes XML contornavel), DOMPurify (bypass de CUSTOM_ELEMENT_HANDLING).
+  NAO CORRIGIDO: `npm audit fix` pode ser BREAKING (o relatorio sugere --force para tudo), e
+  este e' um MC de faxina as vesperas de submissao a Play Store. Mexer em dependencias agora
+  e' o oposto de "rapido e seguro". PENDENCIA P3 (com a data).
+
+═══ 2.4 DEPENDENCIAS DESACTUALIZADAS ═══
+  Nao corrido `npm outdated` a fundo (custo/beneficio baixo face a P3). Decisao declarada.
+
+═══ 2.5 CONSISTENCIA APK <-> BACKEND ═══
+  Todas as functions chamadas pelo frontend existem em producao (medido no MC94.3.2: /cotas
+  200, /ranking 200, /edicoes 200, /health 200). A 404 do /cotas era a resposta CORRECTA para
+  utilizador sem cota — ja' desmontado no MC94.3.2, nao e' regressao.
+
+═══ 2.6 ACHADO NOVO E CRITICO (nao estava em nenhum briefing) ═══
+  `desafio-gut/frontend/android/app/build.gradle:38`:
+      signingConfig keystorePropsFile.exists() ? signingConfigs.release : signingConfigs.debug
+  E `keystore.properties` (linha 4: rootProject.file("keystore.properties")) **NAO EXISTE** no
+  disco nem no repo (esta' no .gitignore). O bloco `signingConfigs.release` so' preenche as 4
+  chaves (storeFile/storePassword/keyAlias/keyPassword) SE o ficheiro existir — logo fica VAZIO.
+  ⇒ Um `bundleRelease`/`assembleRelease` hoje assina com a chave de DEBUG. A Play Store rejeita
+    ou, pior, gera um artefacto com assinatura errada para um app em TESTE FECHADO.
+  ⇒ NAO CORRIGIDO, e a razao importa: corrigir exige LER a senha do keystore em
+    `keystore/credenciais.txt` — o que a R5 / HARD GATE 4 PROIBE explicitamente. Um agente que
+    "resolve" isto a ler credenciais viola a regra mais importante do projecto. E' accao do
+    operador. PENDENCIA P2 (a mais alta prioridade tecnica deste MC).

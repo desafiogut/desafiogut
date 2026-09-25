@@ -1,0 +1,44 @@
+MC94.4 — SEG1 — AUDITORIA DE SEGURANCA
+Skills ECC: security-review, verification-before-completion
+
+METODO: varredura por CLASSE de segredo. Onde havia risco de imprimir valor, usei
+`grep -l` (so nomes de ficheiro), `grep -n | cut -d: -f1` (so linhas) e, para comparar
+valores, o SHA-256 TRUNCADO — o valor nunca entrou no contexto do agente.
+
+═══ 1.1 SEGREDOS EM FICHEIROS RASTREADOS ═══
+  A) Chave privada PEM ("BEGIN ... PRIVATE KEY")   -> NENHUMA ✅
+  B) Token literal "Bearer <20+>"                  -> NENHUM ✅
+  C) Chave estilo "sk-..."                         -> NENHUMA ✅
+  D) 0x + 64 hex -> 19 ficheiros. Classificados por CONTEXTO (hex mascarado):
+     - _lib/kms-signer.mjs:26  -> `const SECP256K1_N = 0x...n` = CONSTANTE PUBLICA da curva ✅
+     - _tests/mc591-...:12     -> `const TEST_PK = "0x..."`, comentario na linha 8:
+                                  "Chave de TESTE descartavel (conta #0 do Hardhat) — NUNCA
+                                  e' uma chave real." ✅
+     - docs/MC91.3-*.txt etc.  -> tx hashes ("TxID completo obtido: 0x...") = dados PUBLICOS ✅
+  ⇒ ZERO segredos reais em ficheiros rastreados.
+
+═══ 1.2 A CHAVE ALCHEMY — EXPOSICAO REAL ═══
+  Uma unica chave Alchemy (sha256 truncado `28cd3803...`, 21 caracteres) esta' replicada em
+  **11 ficheiros rastreados** (determinado por hash, sem revelar o valor):
+    frontend/src/utils/web3.js            <- CODIGO DE PRODUCAO (vai no bundle!)
+    hardhat.config.cjs · hardhat.config.js
+    frontend/scripts/test-mc11.5.mjs
+    scripts/debug-privy-connection.js · scripts/deploy-direct.cjs · scripts/probe-saldo-onchain.js
+    CLAUDE_DEBUG.md · cloud.md · desafio-gut/docs/MC59.15-relatorio.txt · docs/MC88.29-RELATORIO.txt
+  `.env.example` tem um valor DIFERENTE e mais curto (14 chars) = PLACEHOLDER ✅
+  IMPACTO: uma chave em `src/` e' empacotada pelo Vite -> qualquer pessoa que descarregue o
+  JS de producao le' a chave. E fica no historico do git para sempre.
+  NAO CORRIGIDO — e deliberado: a correccao exige (a) passar a chave para variavel de
+  ambiente, o que implica ALTERAR VARIAVEIS NO NETLIFY (NAO AUTORIZADO sem confirmacao do
+  operador, R18) e (b) a rotacao e' accao do operador (R5). Ver SEG4/pendencia P1.
+
+═══ 1.3 SEGREDOS EM LOGS/TRANSCRICAO ═══
+  _logs/ varrido: nenhum Bearer/PEM/sk-. O incidente MC89.43 (SERVICE_ROLE_KEY exposta) esta'
+  documentado, nao vive em ficheiro.
+
+═══ 1.4 .gitignore ═══
+  Ja' cobria: node_modules/, dist/, keystore/, builds/, *.keystore, keystore.properties, .env*,
+  .netlify ✅  ACrescentado: `secrets/*` + `!secrets/README.md` ✅
+  PROVA (o teste que nao engana — `git check-ignore -v` sozinho pode enganar com regras `!`):
+    git add -n secrets/README.md        -> "add 'secrets/README.md'"        (sera' rastreado)
+    git add -n secrets/mc33-staging.env -> "ignored by one of your .gitignore files" (recusado)

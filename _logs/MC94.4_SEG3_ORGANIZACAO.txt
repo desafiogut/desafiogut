@@ -1,0 +1,61 @@
+MC94.4 — SEG3 — ORGANIZACAO DE FICHEIROS E CHAVES
+Skills ECC: terminal-ops, impeccable
+
+═══ 3.1 COFRE CRIADO ═══
+  DESAFIOGUT/secrets/ criada ✅
+  .gitignore: acrescentado
+      secrets/*
+      !secrets/README.md
+  PROVA (com `git add -n`, o teste definitivo): README entra, env recusado (ver SEG1.4).
+
+═══ 3.2 MOVIMENTACOES (so' UMA — e a razao do resto nao ter sido movido) ═══
+  MOVIDO: ~/.mc33-staging.env -> DESAFIOGUT/secrets/mc33-staging.env  (617 B)
+     Classificado como do DesafioGUT pelos NOMES das variaveis: SUPABASE_URL,
+     SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY. Estava SOLTO na raiz do perfil do
+     utilizador. Contem uma SERVICE_ROLE_KEY (administracao total do Supabase — o tipo de
+     chave exposta no incidente MC89.43). Agora vive no cofre, ignorado pelo git.
+
+  NAO MOVIDO, com motivo medido (nao e' timidez — e' engenharia):
+  - DESAFIOGUT/keystore/ (desafiogut.keystore + credenciais.txt): o `storeFile` do
+    keystore.properties aponta para este caminho. Mover quebraria a assinatura do APK EM
+    SILENCIO (agravado pelo achado 2.6). Ja' esta' no repo e gitignorado — esta' centralizado.
+  - Desktop/GUTO/BACKUP_KEYSTORE NAO PERDER NUNCA/: copia de seguranca com nome explicito do
+    operador. Realoca-la sem o avisar e' risco num cenario de emergencia. **Mover e' um
+    comando** — decisao do operador (R18). Registada no secrets/README.md.
+  - ~/.env.txt: variaveis sao TELEGRAM_TOKEN/DOLPHIN_API_KEY/MEU_USER_ID/DB_PATH -> OUTRO
+    projecto. Nao e' meu para mover.
+  - Desktop/MC-HISTORICO/.env: COMFYUI_API_KEY -> outro projecto.
+  - ~/.claude.json: configuracao VIVA do Claude Code (contem a chave comfyui-* do MCP).
+    Mover quebraria o MCP. Nao e' ficheiro de chaves, e' config de ferramenta.
+  ⇒ Resultado: o problema real ("chaves espalhadas") estava em UMA chave do DesafioGUT solta
+    no perfil. As outras pertencem a outros projectos ou sao artefactos em uso.
+
+═══ 3.3 secrets/README.md ═══
+  Criado: mapa completo (ficheiro | proposito pelos NOMES das variaveis | origem), a tabela
+  das chaves que ficaram FORA com o motivo, e as chaves que so' existem em env do Netlify.
+  ZERO valores. Regista tambem o achado do keystore.properties.
+
+═══ 3.4 DOCUMENTACAO ═══
+  docs/README.md CRIADO: indice de **256 ficheiros**, gerado a partir do CONTEUDO real de cada
+  um (primeira linha com texto), com tamanho em KB. Nao inventado: varredura de disco.
+  Aviso no topo: "a fonte da verdade e' o codigo e o CLAUDE.md; este docs/ e' arquivo".
+  NAO renomeados os 256 (decisao declarada): renomear em massa parte referencias cruzadas e
+  nao cabe em 30 min. PENDENCIA P4.
+
+═══ 3.5 FAXINA (rapida e segura) ═══
+  Removidos 6 ficheiros de LIXO no perfil do utilizador (227 405 bytes):
+    5 x .claude.json.tmp.<pid>.<hex> (45 481 B cada, de 18/jul — temporarios obsoletos)
+    ~/.env (0 bytes, vazio)
+  Verificado antes de apagar: o .claude.json PRINCIPAL (69 KB) e os .backup/.bak ficaram.
+  Os 5 .tmp sao padrao conhecido de temporario do Claude Code (gravacao atomica); nao sao
+  configuracao. Nenhuma chave foi lida.
+
+═══ 3.6 .gitattributes CRIADO (resolve a pendencia MEDIA herdada do MC94.3.1) ═══
+  Motivacao registada no proprio ficheiro: o validador independente do MC94.3.1 teve 1 falha
+  de teste atribuida ao CRLF de um worktree novo — o MESMO ficheiro passava 25/25 no repo
+  principal. Sem normalizacao, um worktree/clone novo pode trazer CRLF e criar um FALSO
+  VERMELHO que custa tempo a desmontar.
+  Regras: text=auto; LF obrigatorio para *.mjs/*.js/*.cjs/*.sh/*.py/*.json/*.yml; CRLF
+  mantido para *.bat/*.ps1/*.cmd (ferramentas Windows); binarios marcados.
+  VERIFICADO: `git status --porcelain | wc -l` = 7 entradas e NENHUMA modificacao em massa
+  ⇒ o .gitattributes NAO provocou re-normalizacao (era o risco real desta mudanca).
