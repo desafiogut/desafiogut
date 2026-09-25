@@ -1,0 +1,55 @@
+MC94.3.1 — SEG5-ADENDO — RE-DEPLOY E PROVA EM PRODUÇÃO DO SLOT
+Skills ECC: canary-watch, verification-before-completion
+
+═══ COMMIT E PUSH ═══
+$ git commit -> 0448216
+  "feat(MC94.3.1): a edição especial passa a preencher o SLOT da 'Edição Ativa'"
+  4 files changed, 230 insertions(+), 136 deletions(-)
+    Dashboard.jsx (+60/-…), Dashboard.test.mjs (+112), CardEdicaoEspecial.jsx (+186),
+    EdicaoBanner.jsx (+8)
+$ git push origin main -> 1e6adcd..0448216  main -> main
+
+═══ RE-DEPLOY ═══
+$ netlify deploy --prod --build --message "MC94.3.1 — especial no slot da Edicao Ativa"
+  Functions bundling completed in 4m 6.3s
+  CDN requesting 37 files and 0 functions   <- 0 functions: só o frontend mudou (correcto)
+  ✔ Deploy is live!   (5m 6.5s)
+  Deploy ID      : 6ab6c73bfb745b40f11e08cf
+  Production URL : https://silly-stardust-ca71bc.netlify.app
+
+═══ PROVA POR BYTES (não por fé) ═══
+$ sha256sum dist/assets/index-O6OL5QKj.js   vs   o servido
+  f2fa8cb0f082ebe424fab4584255240a51e8523574a22e63b3abe70d1996218e  (iguais)
+$ sha256sum dist/assets/PrivyRoot-CJxpz9xS.js   vs   o servido
+  f1927cb8a51f839837f40eba626e3345071e24b270c2b7d22ab307db69a8ad58  (iguais)
+E, dentro do artefacto de produção, lê-se o markup NOVO:
+  (0,B.jsxs)(`div`,{"data-slot":`edicao-especial`,"data-estado":l,"data-edicao":e.id,...})
+
+═══ PROVA PELO DOM DE PRODUÇÃO (a mais directa) ═══
+Inspeccionado o DOM em https://silly-stardust-ca71bc.netlify.app (após o gate LGPD):
+  data-slot            = "edicao-especial"            <- o slot é preenchido pela especial
+  data-edicao          = "ESPECIAL-AIRFRYER"
+  data-estado          = "agendada"                   <- faltam dias para 04/10
+  banner largura       = 96px                         <- R18 "maior só na especial"
+  banner alt           = "Arte da edição especial: Air Fryer"   <- chave i18n reutilizada
+  banner src           = /artes/edicao-especial-airfryer.jpg
+  cronómetro aria-label= "Abre em 9d 03:41:19"        <- hora do SERVIDOR, a contar
+  GUTO presente        = <video> dentro do slot       <- sprite reaproveitado
+  cabeçalho R-1        = AUSENTE (innerText sem "🎯 Edição Ativa")
+  texto do slot        = "🎁 Edição especial 🕒 Em breve PRÊMIO EM DISPUTA Air Fryer
+                          04/10 · 20:00–20:30 (horário de Brasília) Vence o menor lance
+                          único · cada lance usa 1 senha ABRE EM 09 DIAS 03 HORAS 41 MIN 19 SEG"
+
+═══ CAPTURA ═══
+_logs/MC94.3.1_captura-slot-producao.png — o slot preenchido em produção:
+"🎁 Edição especial" + badge, caixa amarela com a arte da Air Fryer (96 px), GUTO e, ao
+lado, "ABRE EM 09 DIAS 03 HORAS 40 MIN 54 SEG"; à direita "🏆 Menor Lance Único"; abaixo
+"🗓️ Outras Edições" com RELAMP-1/2/3. O cabeçalho "🎯 Edição Ativa" NÃO existe — prova
+visual de que a especial ocupou o slot.
+
+Nota de processo: para chegar ao Dashboard foi preciso aceitar as 4 caixas do gate LGPD
+— procedimento de captura já documentado no CLAUDE.md deste projecto (lição do MC94.2).
+A aceitação é registada no perfil do browser automatizado, não numa conta real.
+
+VEREDITO: PASS — a especial preenche o slot em produção, provado por bytes, por DOM e por
+imagem.

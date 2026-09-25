@@ -1427,15 +1427,29 @@ Um cron que repetisse a cada falha reenviaria 60× por hora. Por isso:
   de 04/10 meses depois. A retenção é sobre o **fim**: antes de abrir também se mostra.
   Sem `termino_em` legível não se mostra (não se inventa janela).
 
-### ⏳ Pendência declarada — MC94.3.2
+### ✅ A especial preenche o SLOT (adendo do operador, reversão do MC94.2)
 
-**Absorver a secção da especial dentro do card "🎯 Edição Ativa" + `EdicaoBanner` a 96 px
-só na especial + captura por CDP no dispositivo** (HARD GATE 8 do MC94.3.1). Razão medida,
-não conveniência: `src/pages/__tests__/Dashboard.test.mjs:85` **exige** que a especial seja
-uma secção própria entre "Edição Ativa" e "Acesso Rápido" com a R-1 presente — o layout
-actual é um requisito testado do MC94.2. Substituí-lo obriga a reescrever esse teste e a
-decidir a janela em que a especial passa a substituir a R-1, decisão que não está em
-nenhum artefacto disponível. Não se inventa: fecha-se o backend e documenta-se.
+O MC94.3.1 parou no HARD GATE 8 porque a "absorção no slot" obrigava a reverter um teste
+**commitado** do MC94.2 (`Dashboard.test.mjs:85` exigia a especial como secção própria) e a
+decidir, sem as D originais, em que janela a especial substitui a R-1. Parou-se, mediu-se e
+documentou-se — e o operador enviou o adendo com a autorização explícita ("esse teste foi um
+erro do MC94.2"). Executado no mesmo MC (commit `0448216`):
+
+- `Dashboard.jsx` — o slot "🎯 Edição Ativa" tem DOIS ramos: com especial é ela que o
+  preenche; sem especial, o conteúdo da R-1 de sempre. A secção própria do MC94.2 saiu.
+- `CardEdicaoEspecial.jsx` — deixou de ser `<section>` e passou a ser o CORPO do slot:
+  caixa amarela com o `EdicaoBanner`, GUTO (o mesmo `GutoSpritePlayer`) com o cronómetro ao
+  lado, e o formulário/painel por baixo.
+- `EdicaoBanner.jsx` — prop `alt` OPCIONAL (aditiva). Evita que a chave
+  `edicao.especial.altArte` ficasse órfã nos 3 dicionários: em vez de apagar uma tradução
+  útil, o alt passa a dizer o que a imagem mostra.
+- **96 px SÓ na especial** (R18); a R-1 fica a 52 px.
+- `Dashboard.test.mjs` reescrito ao novo contrato (10 testes): inclui um que verifica que o
+  antigo marcador `data-secao` **desapareceu** e outro que exige a especial **uma só vez**
+  no ecrã. Mutação: o mutante "a especial não entra no slot" é morto por 7 de 10 testes.
+
+⏳ Continua pendente apenas a **captura por CDP no dispositivo** (`webview-devtools.ps1`),
+que exige um Android ligado.
 
 ### Lições de método (recorrência ALTA)
 

@@ -1,0 +1,74 @@
+MC94.3.1 — ADENDO — A ESPECIAL PASSA A PREENCHER O SLOT (reversão do MC94.2)
+Data: 2026-09-25 | Skills ECC: impeccable, verification-before-completion, ux-waiting-audit
+
+═══ O QUE MUDOU ═══
+O operador autorizou explicitamente (adendo escrito, 2026-09-25) a REVERSÃO do design
+do MC94.2 que este MC tinha parado no HARD GATE 8:
+  "a especial TEM de sair da secção própria criada pelo MC94.2 e ser absorvida no
+   SLOT EXISTENTE da 'Edição Ativa'. Esse teste foi um erro do MC94.2."
+
+Isto é o desbloqueio que faltava. A paragem anterior foi correcta (não se inventa um
+requisito), e agora há decisão do operador — logo executa-se.
+
+═══ A3 · COMO FICOU ═══
+Dashboard.jsx — o slot da "Edição Ativa" passou a ter DOIS ramos:
+    {edicaoEspecial ? <CardEdicaoEspecial .../> : <>…conteúdo da R-1 de sempre…</>}
+Removida a secção própria do MC94.2 (29 linhas) que ficava entre "Edição Ativa" e
+"Outras Edições". Verify: Dashboard.jsx 574 -> 545 linhas.
+
+CardEdicaoEspecial.jsx — deixou de ser uma <section> de topo e passou a ser o CORPO
+que vive dentro do slot, pela ordem que o operador pediu:
+    caixa amarela (a MESMA da R-1) -> <EdicaoBanner size={96}> + prémio/janela
+    ↓
+    GUTO (o GutoSpritePlayer do Dashboard, reaproveitado — NÃO se criou um novo)
+      + ao lado o cronómetro e o estado
+    ↓
+    formulário de lance DESTA edição (activa)  ou  painel do vencedor (encerrada)
+O cabeçalho (título "🎁 Edição especial" + badge de estado) vive no componente e NÃO
+se duplica no Dashboard: quando a especial ocupa o slot, o cabeçalho "🎯 Edição Ativa"
+desaparece (é ela que identifica o slot).
+
+EdicaoBanner.jsx — prop `alt` OPCIONAL e aditiva (default = comportamento actual).
+Motivo: o teste i18n exige que nenhuma chave fique órfã. Ao trocar o <img> pelo
+EdicaoBanner, a chave `edicao.especial.altArte` perdia a call-site. Em vez de apagar
+uma tradução útil em 3 idiomas, passou a ser usada: o alt diz o que a imagem MOSTRA
+("Arte da edição especial: Air Fryer") em vez do genérico "Banner da edição <id>".
+
+Tamanhos (R18 "maior só na especial"):
+    especial -> BANNER_ESPECIAL_PX = 96   ·   R-1 -> 52 (inalterado)
+
+═══ A4 · TESTES REESCRITOS AO NOVO CONTRATO ═══
+Dashboard.test.mjs — o teste que o MC94.2 tinha
+   test("fica entre 'Edição Ativa' e 'Acesso Rápido' — a R-1 continua lá")
+foi SUBSTITUÍDO por testes do novo contrato (10 testes, era 8):
+   ✔ a especial preenche o slot (marca data-slot="edicao-especial")
+   ✔ o antigo marcador de secção (data-secao) DESAPARECEU
+   ✔ quando a especial está no slot, "🎯 Edição Ativa" já não aparece no ecrã
+   ✔ a especial fica DENTRO do slot — antes do card "Menor Lance Único"
+   ✔ o ícone de presente a 96 px SÓ na especial; a R-1 fica a 52 px
+   ✔ sem especial: nenhuma marca de slot, página de sempre
+   ✔ a contagem usa o offset do SERVIDOR
+   ✔ na hora: o formulário é o da ESPECIAL (id e tipo correctos); o botão
+     "Ir para o Mercado de Lances" da R-1 desaparece do slot
+   ✔ a especial aparece UMA só vez no ecrã (contagem directa de ocorrências)
+   ✔ uma PROG-* em `agendadas` não vira especial
+
+especial.test.mjs — sem alterações de fundo: os 4 estados, o cronómetro, o offset e o
+"sincronizando" continuam a passar tal como estavam. 44/44.
+especial-i18n.test.mjs — volta a verde porque a chave altArte voltou a ter call-site.
+
+Suíte frontend: 346/346 (era 344) | eslint 0 erros | backend 637 (0 falhas).
+
+═══ A5 · MUTAÇÃO (R16) ═══
+Mutante A — `{edicaoEspecial ? (` -> `{false ? (` em Dashboard.jsx:
+   MATOU 7 de 10 testes (todos os do slot). md5 restaurado: 907d9e6d...
+Mutante B — `size = BANNER_ESPECIAL_PX` -> `size = 52` em CardEdicaoEspecial.jsx:
+   MATOU "o ícone de presente cresce para 96 px SÓ na especial (R18)".
+   md5 restaurado: 5c2684bd...
+`grep -rn MUTANTE src/` -> zero. Nenhum mutante ficou no disco.
+
+═══ NOTA DE MÉTODO ═══
+O HARD GATE 8 do briefing salvou este MC de um erro: sem ele teria reescrito um teste
+commitado a partir de uma inferência. Com ele, parou-se, mediu-se e documentou-se — e
+quando a decisão chegou do operador, executou-se com o caminho já traçado. Parar não é
+atrasar quando a alternativa é inventar.
