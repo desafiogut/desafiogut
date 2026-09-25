@@ -1206,8 +1206,15 @@ export function AppProvider({ children }) {
   function abrirModal(opts) {
     console.info("[GUT-DEBUG] abrirModal", { ready, authenticated, hasUser: !!user, hasAddress: !!address });
     // MC11.17: abrirModal restaurado ao comportamento pré-MC11.2.
-    // createOnLogin: "all-users" no PrivyProvider cria a carteira automaticamente
-    // após o login — não é necessário chamar createWallet() aqui.
+    // ⚠️ MC94.3.2 — CORRECÇÃO DE UM COMENTÁRIO QUE MENTIA: aqui dizia-se que o
+    // `createOnLogin: "all-users"` do PrivyProvider criava a carteira
+    // automaticamente. É FALSO desde o MC17.3.1.2.1: o PrivyRoot tem
+    // `embeddedWallets.ethereum.createOnLogin: "off"`, e a carteira é criada
+    // EXPLICITAMENTE no `onComplete` do login (PrivyEventsBridge), para eliminar a
+    // race que rebentava o arranque. Consequência prática: NÃO há auto-criação a
+    // esperar; se a criação explícita falhar, o utilizador fica sem endereço — e um
+    // recarregamento da página volta a correr o `onComplete` e a tentar de novo.
+    // Ver a correcção do ramo abaixo.
     if (!ready) {
       console.warn("[GUT-DEBUG] abrirModal ignorado: Privy ready=false (UI deve mostrar skeleton).");
       return;
@@ -1217,7 +1224,14 @@ export function AppProvider({ children }) {
       return;
     }
     if (authenticated && !address) {
-      console.info("[GUT-DEBUG] abrirModal: aguardando createOnLogin criar carteira automaticamente.");
+      // ⚠️ MC94.3.2 — este log dizia "aguardando createOnLogin criar carteira
+      // automaticamente", o que é FALSO: o createOnLogin está "off" (ver acima).
+      // Não se está à espera de nada automático — a carteira devia ter sido criada
+      // no `onComplete` do login e não foi. Não se abre o modal por um palpite (o
+      // utilizador já está autenticado; o que falta é a carteira), mas diz-se o que
+      // se sabe e o que resolve: recarregar a página volta a correr o `onComplete`.
+      console.warn("[GUT-DEBUG] abrirModal: autenticado mas SEM carteira — a criação "
+        + "explícita do login falhou. Recarregar a página volta a tentá-la.");
       return;
     }
     try {

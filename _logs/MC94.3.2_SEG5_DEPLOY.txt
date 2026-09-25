@@ -59,10 +59,23 @@ Skills ECC: canary-watch, verification-before-completion
   _logs/MC94.3.2_captura-depois.png           (agora: 52 px, texto corrigido)
   _logs/MC94.3.2_captura-slot-especial.png    (a mesma, enquadrada no slot)
 
-═══ 5.6 OBSERVACAO REGISTADA (nao corrigida) ═══
-  Na captura, os 4 tiles de KPI aparecem mais CLAROS do que o navy 0.88 do padrao.
-  NAO e regressao deste MC (a captura do MC94.3.1, anterior a estas alteracoes, mostra
-  o mesmo), e nao se reproduziu a variacao "ao rolar" que o operador descreveu — o que
-  se corrigiu foi a regra de hover, cuja causa esta provada. Fica como ponto a olhar se
-  o operador continuar a ver superficies claras: pode haver uma segunda regra a
-  sobrepor-se ao fundo do padrao nesses tiles.
+═══ 5.6 OBSERVACAO — LEVANTADA E DEPOIS DESMENTIDA POR MEDICAO ═══
+  Na captura, os 4 tiles de KPI PARECIAM mais claros do que o navy 0.88 do padrao, e
+  registei-o como ponto a olhar. Medi-o em vez de o deixar em suspenso:
+
+    $ (em producao, getComputedStyle nos 4 tiles de KPI)
+      background computado : rgba(13, 18, 53, 0.88)   em TODOS os 4
+      opacity              : 1
+      background-image     : none
+      classes              : gut-glass-standard + gut-glass--interactive
+  ⇒ OS TILES SAO O PADRAO. Nao ha segunda regra a sobrepor-se ao fundo. A impressao
+    de "mais claro" era contraste percebido (texto/icone claro sobre a ilustracao de
+    fundo) e compressao da imagem — nao um defeito.
+  ⚠️ Corrijo aqui a nota especulativa que tinha escrito: uma nota que a medicao
+     desmente e exactamente o "comentario que mente" que este par de MCs anda a
+     corrigir. Nao se deixa especulacao no registo quando ha um numero que a resolve.
+
+  Nota sobre a variacao "ao rolar": o que se corrigiu foi a regra de hover (causa
+  provada, com historia de commits). A medicao do fundo base fecha a outra hipotese.
+  Nao consegui emular o hover "colado" de um ecra tactil por automacao — a prova e a
+  folha de estilo (o hover deixou de existir fora de @media (hover: hover)).
