@@ -1,0 +1,72 @@
+MC94.3.2 — ADENDO — CAUSA RAIZ DO LOGIN: A ROTA DE RETORNO DO OAUTH NÃO EXISTIA
+Data: 2026-09-25 | Evidência: reproduzida pelo operador | Base: 8242661
+
+═══ O QUE O OPERADOR MEDIU ═══
+  Após login com sucesso, a app cai em /redirect e a consola mostra:
+    [GUT] login completo {isNewUser: false, wasAlreadyAuthenticated: false}
+    [GUT] [MC17.4.2] T2/T3 a aguardar pré-condições
+         {temAddress: true, temAuthToken: true, temCodigo: false}
+  + dois 404 em /.netlify/functions/cotas (por cliente_id e por email)
+  A página fica presa à espera do temCodigo.
+
+═══ A HIPÓTESE DO ADENDO FOI DESCARTADA POR MEDIÇÃO ═══
+  Hipotese: "a Netlify Function cotas.mjs esta ausente, com import quebrado, ou a devolver
+  404 em producao; sem ela o /redirect nunca obtem o codigo". Medi, e nao fecha:
+    $ ls cotas.mjs                                  -> existe, 28 349 bytes
+    $ git log -- cotas.mjs                          -> ultimo commit MC89.47 (muito antes)
+    $ git diff --stat 47cdc65 HEAD -- cotas.mjs     -> VAZIO (nao foi tocada)
+    $ git diff --stat 47cdc65 HEAD -- _lib/         -> VAZIO (nenhuma _lib dela mudou)
+    $ o log do deploy lista `- cotas.mjs` como empacotada
+    $ curl producao:
+        GET /.netlify/functions/cotas              -> HTTP 200 {"resumo":{"bronze":{...}}}
+        GET /...?cliente_id=<40 hex>               -> HTTP 400 endereco_invalido
+        GET /...?email=a@b.c                       -> HTTP 401 token_ausente
+  ⇒ A FUNCTION ESTA VIVA E CORRECTA EM PRODUCAO.
+  E os 404 vistos no browser sao a resposta CERTA da própria function para um utilizador
+  SEM cota atribuida:
+        cotas.mjs:291  jsonError(404,"email_nao_encontrado","Nenhum cadastro encontrado...")
+        cotas.mjs:316  jsonError(404,"cota_nao_encontrada","cliente não tem cota atribuída")
+        cotas.mjs:579  idem
+  ⇒ Ruido, nao causa. (O `temCodigo` também não é do login: é do ReferralRegistrar.jsx:51,
+    que espera o código de REFERRAL — outro assunto, e por desenho.)
+
+═══ A CAUSA RAIZ VERDADEIRA ═══
+  A evidência diz duas coisas decisivas: `login completo` e `temAddress: true` +
+  `temAuthToken: true`. **O login CONCLUIU.** O que falta é a app SAIR de /redirect.
+
+  $ grep -n 'redirect' src/App.jsx | grep -i "path=\|Route"     -> VAZIO
+  $ grep -n 'path="\*"' src/App.jsx                              -> VAZIO (nem catch-all)
+  /redirect só existia como `customOAuthRedirectUrl` no PrivyRoot.jsx:217 — pensado para o
+  deep link NATIVO (Capacitor, App Link HTTPS). Em web, o efeito que trata o deep link
+  começa com `if (typeof window === "undefined" || !window.Capacitor) return;` — é NO-OP.
+  Resultado: o Privy completa o OAuth, o React Router nao encontra rota para /redirect e
+  o utilizador fica numa pagina VAZIA, sem nunca entrar na conta.
+
+═══ CORRECÇÃO ═══
+  - Nova rota STANDALONE `/redirect` em App.jsx, FORA do <Route element={<AppLayout/>}>:
+    dentro, os gates de cota/LGPD poderiam bloquear a própria página que existe para
+    completar a entrada.
+  - Componente `EntradaOAuth`: com `ready && isConnected` -> navigate('/', {replace:true});
+    sem sessão -> estado de entrada e, ao fim de 6 s, saída MANUAL em <a href="/"> (um
+    carregamento novo, que é onde o SDK restaura a sessão). NUNCA página em branco.
+  - Decisão em src/lib/retornoOAuth.js (pura, testável).
+
+═══ TESTE + MUTAÇÃO ═══
+  src/lib/retornoOAuth.test.mjs (5 testes). Dois leem a FONTE:
+    - o App.jsx TEM de declarar <Route path="/redirect">
+    - as duas pontas têm de coincidir: ROTA_RETORNO_OAUTH == o path do
+      customOAuthRedirectUrl do PrivyRoot (se alguém mudar uma, o teste avisa)
+  TDD: o teste da rota foi escrito ANTES da rota e deu RED ("não há <Route path=\"/redirect\">
+  em App.jsx — o browser fica preso nessa página depois de o Privy concluir o login").
+  Mutação: M5 remove a rota -> RED; M6 "nunca navega" -> RED; ambos restaurados idênticos.
+
+  ⚠️ Nenhum teste de componente podia apanhar isto: o App.jsx não é renderizável em teste
+  (precisa do Privy). Por isso o invariante testa-se na FONTE — como o teste i18n lê os
+  dicionários e o teste do vidro lê a folha de estilo.
+
+═══ O QUE ISTO NOS DIZ SOBRE O MÉTODO ═══
+  A hipótese do adendo era razoável e teria levado a "restaurar uma function" que nunca
+  esteve ausente — trabalho inútil, e provavelmente a "correcção" de um 404 que é a
+  resposta correcta. Medir primeiro poupou isso. E a evidência do operador (que foi
+  excelente) continha a resposta à vista: `temAddress: true` + `temAuthToken: true` dizem
+  que o login funcionou — o problema só podia estar DEPOIS do login.

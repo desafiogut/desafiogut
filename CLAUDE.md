@@ -1122,6 +1122,81 @@ assimetria dentro.
 
 ---
 
+## MC94.3.2 — ADENDO — O retorno do OAuth não tinha rota (bug de login) (2026-09-25)
+
+**Data:** 2026-09-25 · **Origem:** evidência reproduzida pelo operador · **Recorrência:**
+ALTA (qualquer OAuth que volte a um caminho sem rota) · **Impacto:** ALTO (impede entrar na conta).
+
+### ⛔ O defeito
+
+`/redirect` é o `customOAuthRedirectUrl` do Privy. **Não tinha `<Route>` nenhum** em
+`App.jsx` (nem catch-all): existia apenas para o deep link **nativo** (Capacitor), e em web
+esse efeito é **no-op** (`if (!window.Capacitor) return`). O privy CONCLUÍA o login
+(`[GUT] login completo`, `temAddress:true`, `temAuthToken:true` — medido na consola) e o
+utilizador ficava numa **página vazia**, sem entrar na conta.
+
+### ⛔ E a hipótese inicial estava errada — o que se mediu
+
+O adendo apontava para a function `cotas.mjs` ausente/com 404. **Medido:**
+
+- `cotas.mjs` existe, não foi tocada pelo MC94.3.1/94.3.2, e aparece empacotada no deploy;
+- `GET /.netlify/functions/cotas` → **200** com dados reais;
+- os 404 vistos são a resposta **certa** da própria function para um utilizador **sem cota
+  atribuída** (`jsonError(404,"email_nao_encontrado")` :291, `"cota_nao_encontrada"` :316/579).
+
+⇒ Os 404 são **ruído**, não causa. E `temCodigo` não é do login — é do
+`ReferralRegistrar.jsx:51` (código de *referral*), outro assunto.
+
+> **Lição:** a evidência já continha a resposta — `temAddress:true` + `temAuthToken:true`
+> dizem que **o login funcionou**. Se o login funcionou, o defeito só pode estar DEPOIS dele.
+> Ler a evidência até ao fim antes de ir atrás da hipótese mais chamativa.
+
+### Correção
+
+Rota **standalone** `/redirect` (fora do `<Route element={<AppLayout/>}>` — dentro, os gates
+de cota/LGPD podiam bloquear a própria página que existe para completar a entrada) +
+`EntradaOAuth`: com `ready && isConnected` → `navigate('/', {replace:true})`; sem sessão →
+estado de entrada e, ao fim de **6 s**, saída **manual** em `<a href="/">` (carregamento novo,
+que é onde o SDK restaura a sessão). Decisão em `src/lib/retornoOAuth.js`, pura e testável.
+
+### O teste que faltava
+
+`src/lib/retornoOAuth.test.mjs` — dois testes **leem a fonte**: o `App.jsx` tem de declarar
+`<Route path="/redirect">`, e as duas pontas têm de coincidir (`ROTA_RETORNO_OAUTH` ↔ o path
+do `customOAuthRedirectUrl` do `PrivyRoot`). **Este defeito viveu meses** e nenhum teste de
+componente o podia apanhar (o `App.jsx` não é renderizável em teste — precisa do Privy).
+
+### ⚠️ REGRA DE MÉTODO — um FAIL é um pedido de segunda medição
+
+Neste par de MCs (94.3.1 + 94.3.2) uma asserção **minha** acusou um defeito inexistente
+**quatro vezes**:
+
+| acusou | era |
+|---|---|
+| "buraco de cobertura" no caminho `202` | `grep` a ler o ficheiro errado |
+| mutante do CSS "sobreviveu" | a mutação não aplicou (CRLF) → **verde falso** |
+| `COR.bg` ainda usado | o check apanhava o meu comentário **e** `COR.bgSoft` |
+| "introduzi um `console.log`" / "a rota ficou no AppLayout" | o `console.log` já existia no HEAD; o caminho MSYS `/c/...` que o python do Windows lê como `C:\c\...` |
+
+**Em todos, o código estava certo e a asserção errada.** Portanto:
+1. **Nunca reportar um FAIL sem o re-medir** — o primeiro suspeito é a asserção.
+2. **Confirmar que o mutante ENTROU** (contar substituições) antes de ler o resultado. Um
+   mutante que não aplica dá um **verde falso**, que é pior que um vermelho.
+3. **Não misturar dialectos de caminho** (MSYS `/c/...` vs Windows `C:/...`) em scripts que
+   correm sob python no Windows.
+4. Num teste que compara, **preferir asserção de IGUALDADE entre dois valores medidos** a um
+   literal — foi assim que o teste da dimensão da especial passou a travar a divergência.
+
+### Lição de design
+
+Quando uma superfície tem de ser igual a outra, faça-se a igualdade **estrutural** (uma
+constante partilhada), não uma coincidência entre dois literais. E quando um caminho é um
+ponto de retorno externo (OAuth, pagamento, deep link), ele **tem de ter rota** — e um teste
+que LÊ a fonte a exigir que ela exista.
+
+
+---
+
 ## MC94.3.2 — Correções pontuais pós-MC94.3.1 (2026-09-25)
 
 **Data:** 2026-09-25 · **Origem:** MC94.3.2 (4 problemas reportados pelo operador) ·
