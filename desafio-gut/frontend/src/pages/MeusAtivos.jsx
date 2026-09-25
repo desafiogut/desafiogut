@@ -3,6 +3,21 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
+import { useT } from "../context/IdiomaContext.jsx";
+import { useRanking } from "../hooks/useRanking.js";
+import { useFeedback } from "../hooks/useFeedback.js";
+import PainelTorneio from "../components/meus-ativos/PainelTorneio.jsx";
+import ProgressoBonus from "../components/meus-ativos/ProgressoBonus.jsx";
+import EstadoBonus from "../components/meus-ativos/EstadoBonus.jsx";
+import FeedbackLance from "../components/meus-ativos/FeedbackLance.jsx";
+import RankingCiclo from "../components/meus-ativos/RankingCiclo.jsx";
+
+// ⚠️ Espelha `REGRAS.ACERTOS_PARA_BONUS` de
+// `netlify/functions/_lib/pontuacao-utils.mjs`. O frontend não importa do
+// backend, logo isto é uma CÓPIA: se a regra mudar lá (MC95 ratifica o
+// regulamento), muda-se aqui. O número só serve para desenhar a barra — quem
+// decide quantos faltam é sempre o backend, via `faltamParaBonus`.
+const ACERTOS_PARA_BONUS = 5;
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -18,8 +33,14 @@ const FILTROS = [
 
 export default function MeusAtivos() {
   const isMobile = useIsMobile();
-  const { lances, address, isConnected, abrirModal, EDICAO_ATIVA } = useAppContext();
+  const { lances, address, isConnected, abrirModal, EDICAO_ATIVA, authToken } = useAppContext();
   const [filtro, setFiltro] = useState("todos");
+  const t = useT();
+
+  // O ciclo do torneio é a edição activa: `ciclo_id` é TEXT e os ids são "R-1"
+  // (decisão do operador no MC93-B — um UUID impediria o join com `lances`).
+  const ranking = useRanking(EDICAO_ATIVA);
+  const feedback = useFeedback(EDICAO_ATIVA, address, authToken);
 
   const meusLances = lances.filter(
     (l) => !address || l.endereco?.toLowerCase() === address?.toLowerCase()
@@ -84,6 +105,58 @@ export default function MeusAtivos() {
             }}>{label}</div>
           </GlassCard>
         ))}
+      </div>
+
+      {/* ── Torneio de habilidade (MC94) ────────────────────────────────────
+          Secções ADITIVAS: entram entre os stats e o histórico, e nada do que
+          já existia foi removido ou reordenado. Os componentes são
+          apresentacionais; o I/O vive nos hooks acima. */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+        gap: isMobile ? "0.75rem" : "1rem",
+        marginBottom: sectionGap,
+      }}>
+        <PainelTorneio
+          temSessao={!feedback.semSessao}
+          feedback={feedback.feedback}
+          carregando={feedback.carregando}
+          erro={feedback.erro}
+          isMobile={isMobile}
+          t={t}
+        />
+        <ProgressoBonus
+          sequenciaAtual={feedback.feedback?.sequenciaAtual ?? 0}
+          faltamParaBonus={feedback.feedback?.faltamParaBonus ?? ACERTOS_PARA_BONUS}
+          acertosParaBonus={ACERTOS_PARA_BONUS}
+          isMobile={isMobile}
+          t={t}
+        />
+        <EstadoBonus
+          senhasACreditar={feedback.feedback?.senhasACreditar ?? 0}
+          bonusEmitido={feedback.feedback?.bonusEmitido ?? false}
+          liquidado={feedback.feedback?.liquidado}
+          isMobile={isMobile}
+          t={t}
+        />
+        <FeedbackLance
+          lances={lances}
+          address={address}
+          isMobile={isMobile}
+          t={t}
+        />
+      </div>
+
+      <div style={{ marginBottom: sectionGap }}>
+        <RankingCiclo
+          ranking={ranking.ranking}
+          total={ranking.total}
+          address={address}
+          carregando={ranking.carregando}
+          erro={ranking.erro}
+          isMobile={isMobile}
+          t={t}
+        />
       </div>
 
       {/* Filtros */}
