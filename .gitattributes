@@ -25,6 +25,14 @@
 *.ps1   text eol=crlf
 *.cmd   text eol=crlf
 
+# ⚠️ ARMADILHA CONHECIDA (medida no MC94.4): depois desta normalizacao, um lockfile
+# gerado por maquina pode aparecer em `git status` como modificado SEM ter diferenca real
+# de conteudo — e' so' fim de linha (o npm escreve CRLF, a regra acima diz LF).
+# Como distinguir: `git diff --numstat <ficheiro>` vazio E
+# `git diff --ignore-cr-at-eol --stat <ficheiro>` vazio => NAO ha alteracao real.
+# Como resolver: `git add --renormalize <ficheiro>` (o indice fica normalizado e o status
+# volta a limpo). NAO vale a pena "corrigir" o ficheiro nem marca-lo `-text`.
+
 # Binarios: nunca tocar.
 *.png   binary
 *.jpg   binary
