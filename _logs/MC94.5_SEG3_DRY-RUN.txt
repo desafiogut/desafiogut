@@ -1,0 +1,39 @@
+──────────────────────────────────────────────────────────────────────────
+MC94.5 — ENSAIO DO ANÚNCIO DO GUTO (HARD GATE 8)
+──────────────────────────────────────────────────────────────────────────
+Edição          : ESPECIAL-AIRFRYER
+Alvo do envio   : 2026-10-03T23:00:00.000Z  =  03/10/2026, 20:00:00 (Brasília)
+Corte do público: 2026-10-03T02:59:00.000Z  =  02/10/2026, 23:59:00 (Brasília)
+Tipo da notif.  : anuncio_especial
+Mensagem        : Faltam 24h! Amanhã às 20h começa a rodada especial da Air Fryer. É relâmpago: lance a partir de R$ 0,01, debita do saldo. Só 30 minutos. Não fica de fora!
+──────────────────────────────────────────────────────────────────────────
+[anuncio-especial] sem disparo (antes_do_alvo)
+1) RELÓGIO REAL (hoje)
+   agora = 2026-09-25T23:09:59.516Z  =  25/09/2026, 20:09:59 (Brasília)
+   veredicto = {"acao":"sem_disparo","motivo":"antes_do_alvo"}
+   envios = 0  |  marcador gravado = false
+   ✅ não dispara hoje — correcto
+──────────────────────────────────────────────────────────────────────────
+[anuncio-especial:ENSAIO] dispararia para 3 endereço(s); nada escrito.
+2) RELÓGIO SIMULADO NO ALVO, em MODO ENSAIO
+   veredicto = {"acao":"ensaio","total":3}
+   envios novos = 0  |  marcador gravado = false
+   ✅ diria a 3 endereço(s) e não escreveu nada
+──────────────────────────────────────────────────────────────────────────
+[anuncio-especial] anunciado: 3 escrita(s), 0 não-escrita(s), de 3.
+3) RELÓGIO SIMULADO NO ALVO, sem ensaio — sobre FAKES em memória
+   veredicto = {"acao":"anunciado","total":3,"escritas":3,"naoEscritas":0}
+   destinatários:
+     - 0x1111111111111111111111111111111111111111   tipo=anuncio_especial  edicao=ESPECIAL-AIRFRYER
+     - 0x2222222222222222222222222222222222222222   tipo=anuncio_especial  edicao=ESPECIAL-AIRFRYER
+     - 0x3333333333333333333333333333333333333333   tipo=anuncio_especial  edicao=ESPECIAL-AIRFRYER
+   marcador = {"enviadoEm":"2026-10-03T23:00:00.000Z","edicao":"ESPECIAL-AIRFRYER","total":3,"escritas":3,"naoEscritas":0,"corte":"2026-10-03T02:59:00.000Z"}
+──────────────────────────────────────────────────────────────────────────
+[anuncio-especial] sem disparo (ja_enviado)
+4) SEGUNDA PASSAGEM no mesmo dia (o cron corre de 5 em 5 min)
+   veredicto = {"acao":"sem_disparo","motivo":"ja_enviado"}
+   envios acumulados = 3 (esperado: 3)
+   ✅ não repetiu — uma única vez
+──────────────────────────────────────────────────────────────────────────
+NOTA: este ensaio usa fakes em memória. NÃO escreveu no Blob real, NÃO leu o
+      Supabase e NÃO notificou ninguém. O que ele prova é a LÓGICA do tick.
