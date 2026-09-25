@@ -7,6 +7,8 @@
 // Resposta 400: saldo_insuficiente | params_invalidos
 // Resposta 401: token_ausente | token_expirado | token_invalido
 // Resposta 403: endereco_nao_corresponde
+// Resposta 409: edicao_nao_iniciada | edicao_encerrada   (MC94.1 — janela da edição)
+// Resposta 503: edicao_indisponivel                      (MC94.1 — ESPECIAL-* sem metadata)
 
 import { getStore } from "@netlify/blobs";
 import { randomUUID } from "node:crypto";
@@ -25,6 +27,7 @@ import { registrarEventosDeLance } from "./_lib/notificacoes-usuario.mjs";
 import { addLance } from "./_lib/data-store.mjs";
 import { comprometerLanceOnchain, lerSaldoSenhas } from "./_lib/contract.mjs";
 import { buscarEdicao } from "./_lib/edicoes-core.mjs"; // MC91.11 — tipo da edição
+import { verificarJanelaLance, EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.mjs"; // MC94.1 — janela
 import { registrarConsumoSenha, BLOB_SENHAS_CONSUMO } from "./_lib/senhas-programado.mjs"; // MC91.11 — ledger
 import { keccak256, AbiCoder } from "ethers";
 import { respostaPreflight } from "./_lib/cors.mjs";
@@ -161,13 +164,26 @@ export default async (req) => {
   // (gate on-chain + ledger off-chain, teto = saldo on-chain); relampago
   // consome saldo R$ (comportamento anterior INTOCADO). Edições sem metadata
   // (ex.: R-1 sintética) são tratadas como relampago.
-  let tipoEdicao = null;
+  let meta = null;
   try {
-    const meta = await buscarEdicao(edicaoId);
-    tipoEdicao = meta?.tipo ?? null;
+    meta = await buscarEdicao(edicaoId);
   } catch (err) {
     console.warn("[lance-relampago] buscarEdicao falhou — tratando como relampago:", err?.message);
   }
+  const tipoEdicao = meta?.tipo ?? null;
+
+  // ── 5.6. MC94.1 — janela da edição, pelo relógio do servidor ───────────────
+  // Uma edição especial só existe com metadata: sem ele não se sabe o preço
+  // (senha ou R$) nem a janela, logo recusa — cair em "relampago" cobraria R$
+  // num sorteio pago em senhas. As outras mantêm o fallback de sempre.
+  if (!meta && EDICAO_ESPECIAL_RE.test(edicaoId)) {
+    return jsonError(503, "edicao_indisponivel", `não foi possível ler a edição ${edicaoId}`);
+  }
+  const foraDaJanela = verificarJanelaLance(meta);
+  if (foraDaJanela) {
+    return jsonError(409, foraDaJanela.code, foraDaJanela.message);
+  }
+
   const ehProgramado = tipoEdicao === "programado";
 
   // ── 6. Consumo do pagamento (programado = senha; flash = saldo R$) ────────

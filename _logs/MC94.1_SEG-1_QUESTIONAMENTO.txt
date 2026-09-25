@@ -1,0 +1,95 @@
+MC94.1 — SEG-1 — QUESTIONAMENTO DO BRIEFING
+Data: 2026-09-25 (12:09Z)   Skills: smart-explore, brainstorming
+Base real: HEAD = 6e762dd (2 commits docs depois do 464c1ef declarado). Untracked
+pré-existentes (não meus): docs/MC91.14-STATUS-BNB.txt, docs/mc92.5_*.py.
+
+═══ -1.1 PREMISSAS MEDIDAS ═══
+
+M1. ONDE AS EDIÇÕES VIVEM — Netlify Blobs, store "edicoes-metadata" (strong).
+    desafio-gut/frontend/netlify/functions/_lib/edicoes-core.mjs:6-12,28
+    Consumidores: edicoes.mjs (GET público), chatbot.mjs:961,1135,1152 (GUTO),
+    lance-relampago.mjs:166 (buscarEdicao → tipo), notificacoes.mjs:32, _lib/pulso.mjs:18.
+    Produção (GET /edicoes, 12:09Z): RELAMP-1..3 (encerrado) + R-1 SINTETIZADA.
+
+M2. TABELA `edicoes` NO SUPABASE — NÃO EXISTE (MCP execute_sql):
+    tabelas public ~ edic|ciclo|pontua|lance → [lances, pontuacoes, rankings_ciclo].
+    On-chain existe `edicoes[id]` (Leilao.sol:69 abrirEdicao) mas o prazo é
+    "agora + duração" — o contrato NÃO sabe agendar início. E não se toca.
+
+M3. ⛔ O ID "ESPECIAL-AIRFRYER" É INVISÍVEL HOJE.
+    edicoes-core.mjs:41  EDICAO_ID_RE = /^(PROG|RELAMP)-\d+$/
+    listarEdicoes():156 salta a chave; buscarEdicao():185 devolve null;
+    encerrarEdicao():277 recusa. Um seed "puro" no Blob seria gravado e nunca lido.
+
+M4. FORMATO DA EDIÇÃO (shapeEdicao, :92-104): id, tipo ("programado"|"relampago"),
+    produto, termino_em (ISO UTC), lances, status, valorBaseCentavos, incrementoCentavos.
+    NÃO há inicio_em. NÃO há campo de imagem na resposta.
+    ⚠️ `tipo` NÃO é a regra de apuração — é o MEIO DE PAGAMENTO do lance
+    (lance-relampago.mjs:160-170: programado = senha on-chain; resto = saldo R$).
+    "Menor lance único" é a regra de TODAS as edições.
+
+M5. CAMPO DE IMAGEM — o frontend JÁ o lê: src/hooks/useEdicoes.js:81
+    `imagem_url: e.imagem_url ?? e.banner_url ?? e.imagem ?? null` (MC45, EdicaoBanner).
+    Mas o backend nunca o devolve. → o campo certo é `imagem_url`, não `imagem_path`.
+
+M6. /ranking NÃO LÊ EDIÇÕES. ranking.mjs:86 → lerRankingCiclo(cicloId) →
+    pontuacao-store.mjs:271 SELECT rankings_ciclo WHERE ciclo_id = cicloId.
+    rankings_ciclo só é escrito por consolidar-lances.mjs:155 (admin, DEPOIS do fim).
+    Medido em produção agora:
+      /ranking?cicloId=ESPECIAL-AIRFRYER → 200 {"cicloId":"ESPECIAL-AIRFRYER","total":0,"ranking":[]}
+      /ranking?cicloId=R-1               → 200 {"cicloId":"R-1","total":0,"ranking":[]}
+    ⇒ HARD GATE 4, tal como escrito, está verde HOJE e por vacuidade: o /ranking
+      devolve [] para QUALQUER ciclo inexistente. E a premissa "a partir das 20:00
+      aparece no ranking" é FALSA: o ranking só enche depois da consolidação
+      (pós-20:30, acção do admin). Não é um defeito — é o desenho do MC93-B.
+
+M7. ⛔ ONDE A EDIÇÃO "APARECERIA ANTES DA HORA" DE FACTO: no /edicoes, não no /ranking.
+    Dashboard.jsx:70  edicoesExtra = todas as edições ≠ R-1 → cada uma ganha cartão
+    com cronómetro. Vitrine.jsx:579 usa as de status "aberto". Se a edição entrar
+    no /edicoes hoje, aparece no Início HOJE, a contar para as 20:30 (fim), não
+    para as 20:00. É esse o gate que protege a decisão do operador.
+
+M8. ⛔ O SERVIDOR NÃO IMPÕE JANELA A LANCES. lance-relampago.mjs:131 aceita
+    QUALQUER edicaoId; nenhuma verificação de início/termino/status (só
+    sistemaPausado:73). Contrato comprometerLance (Leilao.sol:148) também não.
+    consolidar-lances.mjs:77 apura TODOS os lances da edição. ⇒ um lance forjado
+    com edicaoId=ESPECIAL-AIRFRYER antes das 20:00 ou depois das 20:30 seria aceite
+    e contado. Pré-existente (vale para PROG/RELAMP), mas numa edição com prémio
+    físico e hora anunciada é o risco nº 1. Corrigir = tocar lance-relampago.mjs
+    → NÃO AUTORIZADO neste MC.
+
+M9. IMAGEM: C:\Users\Moltbot\Desktop\air fryer do sorteio especial.jpeg
+    JPEG 1254×1254, 207 054 bytes, progressive.
+    Destino natural: frontend/public/artes/ (já existe, tem email-banner.jpg).
+
+═══ -1.2 AUTOSSUFICIÊNCIA (R19) ═══
+Sem ampliação o MC gera .1 com certeza: seed num id invisível (M3), sem inicio_em
+(HG5 falha), sem imagem na resposta (M5) e com a edição a aparecer antes da hora (M7).
+R19 EXERCIDA — ampliação dentro do mesmo objectivo, só em _lib/edicoes-core.mjs +
+edicoes.mjs (1 linha), aditiva:
+  a) EDICAO_ID_RE aceita também ESPECIAL-[A-Z0-9]+ (sem mudar as regras PROG/RELAMP).
+  b) shapeEdicao passa inicio_em e imagem_url (null quando ausentes — aditivo).
+  c) listarEdicoes separa: inicio_em no futuro → fora de `edicoes`, dentro de um
+     mapa novo `agendadas` (status "agendado"). O frontend actual ignora esse mapa
+     (useEdicoes lê só payload.edicoes) → zero UI; o MC94.3 lê daí o inicio_em.
+     O estado deriva do relógio do SERVIDOR (sem cron, sem flip manual).
+  d) A resposta leva `agora` (ISO do servidor) — HG5: o MC94.3 calcula o offset.
+Não viola autorizações de dados/contrato/credenciais. Toca uma _lib fora da letra
+("só para o /ranking") — declarado aqui; operador pode vetar.
+NÃO amplio para M8 (lance-relampago.mjs): é backend de lance, fora da autorização.
+
+═══ -1.3 ESCOPO ═══
+Vive em: Blobs "edicoes-metadata", chave ESPECIAL-AIRFRYER (onde o resto do sistema
+já lê). Supabase: NÃO — não há tabela, e criar uma seria segunda fonte de verdade.
+Migração 20260925_mc941_*.sql: NÃO criada (desnecessária).
+Seed: scripts/mc941-seed-edicao-especial.mjs → `netlify blobs:set` (usa o login do
+CLI; nenhum token manuseado — R5).
+Natural mas fora: gate temporal de lances (M8); encerramento automático às 20:30
+(hoje é acção admin, igual às RELAMP); abrir no contrato (não é preciso: o fluxo
+off-chain comprometerLance não exige abrirEdicao).
+
+═══ -1.4 VEREDITO ═══
+AJUSTAR → SEGUIR com a ampliação R19 acima, após 2 decisões do operador:
+  D1. `tipo` = programado (lance paga 1 senha) ou relampago (lance paga saldo R$)?
+  D2. M8: autorizar gate de janela em lance-relampago.mjs neste MC, ou deixar
+      registado como pendência bloqueante antes de 04/10?

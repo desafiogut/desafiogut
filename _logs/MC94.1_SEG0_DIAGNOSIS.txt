@@ -1,0 +1,34 @@
+MC94.1 — SEG0 — DIAGNÓSTICO          Skills: smart-explore, terminal-ops
+Data: 2026-09-25
+
+0.1 AMBIENTE
+  git log --oneline -3 → 6e762dd docs: MC94 — um deploy 'error'… / 995db32 / 464c1ef
+  ⚠️ Base = 6e762dd, não 464c1ef: são 2 commits só de docs em cima do declarado.
+  Working tree: 3 untracked pré-existentes em docs/ (não meus, não tocados).
+  Baseline functions: 590 testes · 584 ✔ · 0 ✖ · 6 ﹣ (node --test "_tests/*.test.mjs").
+
+0.2 MAPA DAS EDIÇÕES (detalhe no SEG-1 M1–M5)
+  Fonte: Blob "edicoes-metadata". Produção (netlify blobs:list, 12:1xZ):
+    RELAMP-1, RELAMP-2, RELAMP-3, counters   — ESPECIAL-AIRFRYER ausente.
+  Formato real (netlify blobs:get RELAMP-3):
+    {"id":"RELAMP-3","tipo":"relampago","produto":"Smart TV",
+     "termino_em":"2026-05-31T03:52:13.827Z","lances":0,"status":"encerrado",
+     "criadoEm":"…","criadoPor":null,"encerradoEm":"…"}
+  Leitores do Blob: edicoes-core (listar/buscar/encerrar), notificacoes.mjs:80
+  (admin, lê cru sem filtro de regex), _lib/pulso.mjs:84 (get por id).
+
+0.3 /ranking
+  ranking.mjs:43 cicloId obrigatório → :86 lerRankingCiclo → SELECT rankings_ciclo
+  WHERE ciclo_id = cicloId (pontuacao-store.mjs:271). NÃO consulta edições.
+  Único escritor: consolidar-lances.mjs:155 (admin, pós-fecho).
+  ⇒ vazio para qualquer ciclo até haver consolidação.
+
+0.4 IMAGEM
+  C:\Users\Moltbot\Desktop\air fryer do sorteio especial.jpeg
+  sha256 25a2045731ba8137c18c79fdcf89f4b8bcbc5946d06cda75ea4a3f87941f95c8
+  JPEG 1254×1254, 207 054 B.
+
+0.5 ACHADO QUE MUDA O DESENHO
+  O lugar onde a edição "apareceria antes da hora" é GET /edicoes → Dashboard
+  (edicoesExtra) e Vitrine, não o /ranking. E o lance-relampago aceita qualquer
+  edicaoId a qualquer hora. Ambos tratados no SEG1 (decisões D1/D2 do operador).

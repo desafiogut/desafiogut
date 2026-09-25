@@ -2,8 +2,10 @@
 //
 // GET  /.netlify/functions/edicoes
 //   Leitura PÚBLICA (sem auth). Rate-limit ~30/min/IP.
-//   Resposta 200: { edicoes: { "<id>": { id, tipo, produto, termino_em, lances, status } } }
+//   Resposta 200: { edicoes: { "<id>": { id, tipo, produto, termino_em, lances, status,
+//                   inicio_em, imagem_url } }, agendadas: { … }, agora: ISO }
 //   SEMPRE inclui R-1 (real ou sintetizada — compat D5).
+//   MC94.1: edição com inicio_em no futuro sai de `edicoes` e vai para `agendadas`.
 //
 // POST /.netlify/functions/edicoes               → cria edição (admin only)
 //   Body: { tipo: "programado"|"relampago", produto, duracaoSegundos | duracaoMin }
@@ -45,8 +47,11 @@ export default async (req) => {
     const rl = await aplicarRateLimit(req, "edicoes-get", RL_GET_RPM);
     if (rl) return rl;
     try {
-      const { edicoes } = await listarEdicoes();
-      return jsonResponse({ edicoes });
+      // MC94.1 — `agendadas` (inicio_em no futuro) e `agora` (relógio do
+      // servidor) são aditivos: o useEdicoes de hoje só lê `edicoes`.
+      const agoraMs = Date.now();
+      const { edicoes, agendadas } = await listarEdicoes(agoraMs);
+      return jsonResponse({ edicoes, agendadas, agora: new Date(agoraMs).toISOString() });
     } catch (err) {
       console.warn("[edicoes] GET falhou:", err?.message);
       return jsonError(500, "listagem_falhou", "não foi possível listar edições");

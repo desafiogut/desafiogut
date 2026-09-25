@@ -1,0 +1,20 @@
+MORTO  M1 inicio <= (fronteira 20:00)
+MORTO  M2 termino >= (fronteira 20:30)
+MORTO  M3 sem verificação de fim
+MORTO  M4 sem verificação de início
+MORTO  M5 listagem ignora agendamento
+MORTO  M6 regex antiga
+MORTO  M7 regex sem âncora final
+MORTO  M8 imagem_url não passa
+MORTO  M9 inicio_em não passa
+MORTO  M10 status agendado some
+MORTO  M11 endpoint sem agendadas
+MORTO  M12 endpoint agora do cliente
+MORTO  M13 lance sem gate de janela
+MORTO  M14 lance sem fail-closed
+MORTO  M15 gate depois do débito
+MORTO  M16 seed tipo relampago
+MORTO  M17 seed hora local em vez de UTC
+MORTO  M18 seed fim 20:00
+MORTO  M19 seed imagem errada
+controlo sem mutação: verde · vivos/não aplicados: 0/19

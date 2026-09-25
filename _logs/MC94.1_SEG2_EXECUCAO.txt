@@ -1,0 +1,196 @@
+MC94.1 — SEG2 — EXECUÇÃO (código)     Skill: terminal-ops
+Data: 2026-09-25
+
+2.3 git diff --cached --stat
+ _logs/MC94.1_SEG-1_QUESTIONAMENTO.txt              |  95 ++++++++++++
+ _logs/MC94.1_SEG0_DIAGNOSIS.txt                    |  34 +++++
+ _logs/MC94.1_SEG1_PLANO.txt                        |  50 ++++++
+ _logs/MC94.1_SEG4_MUTACAO.txt                      |  20 +++
+ .../netlify/functions/_lib/edicao-janela.mjs       |  41 +++++
+ .../netlify/functions/_lib/edicoes-core.mjs        | Bin 12033 -> 13331 bytes
+ .../_tests/mc941-edicao-especial.test.mjs          | 169 +++++++++++++++++++++
+ .../functions/_tests/mc941-lance-janela.test.mjs   | 151 ++++++++++++++++++
+ desafio-gut/frontend/netlify/functions/edicoes.mjs |  11 +-
+ .../frontend/netlify/functions/lance-relampago.mjs |  22 ++-
+ .../public/artes/edicao-especial-airfryer.jpg      | Bin 0 -> 207054 bytes
+ scripts/mc941-seed-edicao-especial.mjs             |  91 +++++++++++
+ 12 files changed, 678 insertions(+), 6 deletions(-)
+
+Ficheiros .jsx/.tsx/.css no diff: 0 (HARD GATE 3)
+Imagem: sha256 origem == cópia == 25a20457…941f95c8
+Nota: edicoes-core.mjs aparece como 'Bin' porque já tinha caracteres de controlo
+(regex de sanitizarProduto, :57) antes deste MC. Diff em texto:
+
+diff --git a/desafio-gut/frontend/netlify/functions/_lib/edicoes-core.mjs b/desafio-gut/frontend/netlify/functions/_lib/edicoes-core.mjs
+index 49fda21..b5be5c7 100644
+--- a/desafio-gut/frontend/netlify/functions/_lib/edicoes-core.mjs
++++ b/desafio-gut/frontend/netlify/functions/_lib/edicoes-core.mjs
+@@ -4,9 +4,10 @@
+ // confiável em Lambda — cold starts, URL desconhecida, recursão).
+ //
+ // Fonte de verdade: Blob store "edicoes-metadata" (consistency: strong).
+-//   chave = edicaoId ("PROG-3" | "RELAMP-7" | "R-1")
++//   chave = edicaoId ("PROG-3" | "RELAMP-7" | "R-1" | "ESPECIAL-AIRFRYER")
+ //   valor = {
+ //     id, tipo, produto, termino_em (ISO-8601 UTC, server-authoritative),
++//     inicio_em? + imagem_url? (MC94.1 — hoje só nas edições ESPECIAL-*),
+ //     lances (int resumo), status ("aberto"|"encerrado"|"apurado"),
+ //     criadoEm (ISO), criadoPor (endereco admin | null)
+ //   }
+@@ -24,6 +25,7 @@
+ 
+ import { getStore } from "@netlify/blobs";
+ import { gerarResumosPosEdicao } from "./notificacoes-usuario.mjs";
++import { estaAgendada } from "./edicao-janela.mjs";
+ 
+ const STORE_EDICOES   = "edicoes-metadata";
+ const STORE_AUDITORIA = "auditoria";
+@@ -38,7 +40,9 @@ const R1_FALLBACK_SEGUNDOS = 24 * 60 * 60; // 24h
+ const DUR_MIN_SEG = 30;            // 30s
+ const DUR_MAX_SEG = 90 * 24 * 3600; // 90 dias
+ 
+-export const EDICAO_ID_RE = /^(PROG|RELAMP)-\d+$/;
++export const EDICAO_ID_RE = /^(?:(PROG|RELAMP)-\d+|ESPECIAL-[A-Z0-9]+)$/;
++// MC94.1 — ESPECIAL-* (id do operador, criado por seed; criarEdicao continua a
++// gerar só PROG/RELAMP). A janela temporal vive em ./edicao-janela.mjs.
+ 
+ // ── Helpers de store (fail-soft, mesmo padrão das outras functions) ──────────
+ 
+@@ -100,6 +104,10 @@ function shapeEdicao(meta) {
+     // MC15.6 ITEM 3 — params do wizard (aditivo; null quando não informado).
+     valorBaseCentavos:  Number.isInteger(meta.valorBaseCentavos) ? meta.valorBaseCentavos : null,
+     incrementoCentavos: Number.isInteger(meta.incrementoCentavos) ? meta.incrementoCentavos : null,
++    // MC94.1 — aditivos. inicio_em em ISO UTC (o cronómetro do MC94.3 conta até
++    // aqui); imagem_url é o nome que o useEdicoes já lê desde o MC45.
++    inicio_em:  meta.inicio_em ?? null,
++    imagem_url: meta.imagem_url ?? null,
+   };
+ }
+ 
+@@ -141,11 +149,20 @@ async function gravarAuditoria({ acao, edicaoId, endereco, origem }) {
+ 
+ /**
+  * Lista todas as edições do Blob, sempre incluindo R-1 (real ou sintetizada).
+- * @returns {Promise<{ edicoes: Record<string, object> }>}
++ *
++ * MC94.1 — uma edição cujo inicio_em ainda não chegou NÃO entra em `edicoes`
++ * (o Dashboard desenha um cartão para cada edição desse mapa): vai para
++ * `agendadas`, com status "agendado". O frontend de hoje só lê `edicoes`, logo
++ * ela fica invisível até à hora, e passa a `edicoes` sozinha quando o relógio
++ * do servidor lá chega, sem cron nem flip manual.
++ *
++ * @param {number} [agoraMs] relógio do servidor (injectável nos testes)
++ * @returns {Promise<{ edicoes: Record<string, object>, agendadas: Record<string, object> }>}
+  */
+-export async function listarEdicoes() {
++export async function listarEdicoes(agoraMs = Date.now()) {
+   const store = abrirStore(STORE_EDICOES);
+   const edicoes = {};
++  const agendadas = {};
+ 
+   if (store) {
+     try {
+@@ -156,7 +173,12 @@ export async function listarEdicoes() {
+         if (b.key !== EDICAO_PADRAO && !EDICAO_ID_RE.test(b.key)) continue;
+         try {
+           const meta = await store.get(b.key, { type: "json" });
+-          if (meta && meta.id) edicoes[b.key] = shapeEdicao(meta);
++          if (!meta || !meta.id) continue;
++          if (estaAgendada(meta, agoraMs)) {
++            agendadas[b.key] = { ...shapeEdicao(meta), status: "agendado" };
++          } else {
++            edicoes[b.key] = shapeEdicao(meta);
++          }
+         } catch { /* ignora chave corrompida */ }
+       }
+     } catch (err) {
+@@ -169,7 +191,7 @@ export async function listarEdicoes() {
+     edicoes[EDICAO_PADRAO] = sintetizarR1();
+   }
+ 
+-  return { edicoes };
++  return { edicoes, agendadas };
+ }
+ 
+ /**
+diff --git a/desafio-gut/frontend/netlify/functions/edicoes.mjs b/desafio-gut/frontend/netlify/functions/edicoes.mjs
+index be2ae14..194e39c 100644
+--- a/desafio-gut/frontend/netlify/functions/edicoes.mjs
++++ b/desafio-gut/frontend/netlify/functions/edicoes.mjs
+@@ -2,8 +2,10 @@
+ //
+ // GET  /.netlify/functions/edicoes
+ //   Leitura PÚBLICA (sem auth). Rate-limit ~30/min/IP.
+-//   Resposta 200: { edicoes: { "<id>": { id, tipo, produto, termino_em, lances, status } } }
++//   Resposta 200: { edicoes: { "<id>": { id, tipo, produto, termino_em, lances, status,
++//                   inicio_em, imagem_url } }, agendadas: { … }, agora: ISO }
+ //   SEMPRE inclui R-1 (real ou sintetizada — compat D5).
++//   MC94.1: edição com inicio_em no futuro sai de `edicoes` e vai para `agendadas`.
+ //
+ // POST /.netlify/functions/edicoes               → cria edição (admin only)
+ //   Body: { tipo: "programado"|"relampago", produto, duracaoSegundos | duracaoMin }
+@@ -45,8 +47,11 @@ export default async (req) => {
+     const rl = await aplicarRateLimit(req, "edicoes-get", RL_GET_RPM);
+     if (rl) return rl;
+     try {
+-      const { edicoes } = await listarEdicoes();
+-      return jsonResponse({ edicoes });
++      // MC94.1 — `agendadas` (inicio_em no futuro) e `agora` (relógio do
++      // servidor) são aditivos: o useEdicoes de hoje só lê `edicoes`.
++      const agoraMs = Date.now();
++      const { edicoes, agendadas } = await listarEdicoes(agoraMs);
++      return jsonResponse({ edicoes, agendadas, agora: new Date(agoraMs).toISOString() });
+     } catch (err) {
+       console.warn("[edicoes] GET falhou:", err?.message);
+       return jsonError(500, "listagem_falhou", "não foi possível listar edições");
+diff --git a/desafio-gut/frontend/netlify/functions/lance-relampago.mjs b/desafio-gut/frontend/netlify/functions/lance-relampago.mjs
+index 8fd933e..aff7b75 100644
+--- a/desafio-gut/frontend/netlify/functions/lance-relampago.mjs
++++ b/desafio-gut/frontend/netlify/functions/lance-relampago.mjs
+@@ -7,6 +7,8 @@
+ // Resposta 400: saldo_insuficiente | params_invalidos
+ // Resposta 401: token_ausente | token_expirado | token_invalido
+ // Resposta 403: endereco_nao_corresponde
++// Resposta 409: edicao_nao_iniciada | edicao_encerrada   (MC94.1 — janela da edição)
++// Resposta 503: edicao_indisponivel                      (MC94.1 — ESPECIAL-* sem metadata)
+ 
+ import { getStore } from "@netlify/blobs";
+ import { randomUUID } from "node:crypto";
+@@ -25,6 +27,7 @@ import { registrarEventosDeLance } from "./_lib/notificacoes-usuario.mjs";
+ import { addLance } from "./_lib/data-store.mjs";
+ import { comprometerLanceOnchain, lerSaldoSenhas } from "./_lib/contract.mjs";
+ import { buscarEdicao } from "./_lib/edicoes-core.mjs"; // MC91.11 — tipo da edição
++import { verificarJanelaLance, EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.mjs"; // MC94.1 — janela
+ import { registrarConsumoSenha, BLOB_SENHAS_CONSUMO } from "./_lib/senhas-programado.mjs"; // MC91.11 — ledger
+ import { keccak256, AbiCoder } from "ethers";
+ import { respostaPreflight } from "./_lib/cors.mjs";
+@@ -161,13 +164,26 @@ export default async (req) => {
+   // (gate on-chain + ledger off-chain, teto = saldo on-chain); relampago
+   // consome saldo R$ (comportamento anterior INTOCADO). Edições sem metadata
+   // (ex.: R-1 sintética) são tratadas como relampago.
+-  let tipoEdicao = null;
++  let meta = null;
+   try {
+-    const meta = await buscarEdicao(edicaoId);
+-    tipoEdicao = meta?.tipo ?? null;
++    meta = await buscarEdicao(edicaoId);
+   } catch (err) {
+     console.warn("[lance-relampago] buscarEdicao falhou — tratando como relampago:", err?.message);
+   }
++  const tipoEdicao = meta?.tipo ?? null;
++
++  // ── 5.6. MC94.1 — janela da edição, pelo relógio do servidor ───────────────
++  // Uma edição especial só existe com metadata: sem ele não se sabe o preço
++  // (senha ou R$) nem a janela, logo recusa — cair em "relampago" cobraria R$
++  // num sorteio pago em senhas. As outras mantêm o fallback de sempre.
++  if (!meta && EDICAO_ESPECIAL_RE.test(edicaoId)) {
++    return jsonError(503, "edicao_indisponivel", `não foi possível ler a edição ${edicaoId}`);
++  }
++  const foraDaJanela = verificarJanelaLance(meta);
++  if (foraDaJanela) {
++    return jsonError(409, foraDaJanela.code, foraDaJanela.message);
++  }
++
+   const ehProgramado = tipoEdicao === "programado";
+ 
+   // ── 6. Consumo do pagamento (programado = senha; flash = saldo R$) ────────

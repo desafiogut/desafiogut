@@ -1,0 +1,50 @@
+MC94.1 — SEG1 — PLANEAMENTO          Skill: make-plan
+Data: 2026-09-25
+
+DECISÕES DO OPERADOR NESTE MC (R18, 2026-09-25, via pergunta no SEG-1)
+  D1. tipo = "programado": cada lance na especial gasta 1 senha on-chain (não R$).
+  D2. AUTORIZADA a guarda de janela em lance-relampago.mjs neste MC.
+
+1.1 ONDE VIVE → Netlify Blobs "edicoes-metadata", chave ESPECIAL-AIRFRYER.
+  Porque: é onde edicoes.mjs, lance-relampago.mjs e o GUTO já leem. Supabase não
+  tem tabela de edições; criar uma faria duas fontes de verdade. Sem migração SQL.
+  Via: scripts/mc941-seed-edicao-especial.mjs → `netlify blobs:set --input`
+  (login do CLI; nenhum token manuseado, R5). Idempotente (--force para regravar).
+
+1.2 ESTRUTURA (gravada)
+  { id:"ESPECIAL-AIRFRYER", tipo:"programado", produto:"Air Fryer",
+    inicio_em:"2026-10-04T23:00:00.000Z", termino_em:"2026-10-04T23:30:00.000Z",
+    lances:0, status:"aberto", imagem_url:"/artes/edicao-especial-airfryer.jpg",
+    regra:"menor_lance_unico", criadoPor:null, origem:"seed-mc94.1", criadoEm:<ISO> }
+  Desvios ao briefing, justificados:
+  - `imagem_url`, não `imagem_path`: é o nome que src/hooks/useEdicoes.js:81 já lê.
+  - `valor` omitido: o operador não deu valor do prémio; não se inventa.
+  - `estado` não é gravado como "agendada": o estado DERIVA do relógio do servidor
+    (agendado < inicio_em ≤ aberto ≤ termino_em). Guardar o estado exigiria um
+    cron para o virar às 20:00 — e um cron que falhe deixa a edição fechada.
+
+1.3 CONTRATO DOS ENDPOINTS
+  GET /edicoes      antes de 23:00Z → especial em `agendadas` (status "agendado"),
+                    ausente de `edicoes`. A partir de 23:00Z → em `edicoes`, "aberto".
+                    + `agora` (ISO do servidor) para o cronómetro do MC94.3 (HG5).
+  POST /lance-relampago (especial)
+                    < 23:00Z → 409 edicao_nao_iniciada · > 23:30Z → 409 edicao_encerrada
+                    sem metadata → 503 edicao_indisponivel (fail-closed)
+                    na janela → paga 1 senha (programado).
+                    A guarda aplica-se a QUALQUER edição com inicio_em/termino_em
+                    (PROG/RELAMP passadas também passam a recusar lances atrasados).
+  GET /ranking?cicloId=ESPECIAL-AIRFRYER
+                    [] até à consolidação (desenho do MC93-B — sem alteração).
+
+FICHEIROS
+  novo  _lib/edicao-janela.mjs (puro: EDICAO_ESPECIAL_RE, msDe, estaAgendada, verificarJanelaLance)
+  mod   _lib/edicoes-core.mjs (regex + inicio_em/imagem_url + agendadas)
+  mod   edicoes.mjs (agendadas + agora)
+  mod   lance-relampago.mjs (passo 5.6)
+  novo  scripts/mc941-seed-edicao-especial.mjs · public/artes/edicao-especial-airfryer.jpg
+  novo  _tests/mc941-edicao-especial.test.mjs · _tests/mc941-lance-janela.test.mjs
+  Porque o módulo à parte: o teste existente mc9112 faz duplo de edicoes-core; com a
+  janela lá dentro, o teste de integração correria um duplo da regra, não a regra.
+
+ORDEM: código → testes + mutação → commit/push (auto-deploy) → validar /edicoes
+       sem seed → seed → validar /edicoes, /ranking, lance.
