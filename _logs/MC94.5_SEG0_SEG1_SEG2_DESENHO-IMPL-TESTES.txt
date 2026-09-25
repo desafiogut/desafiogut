@@ -66,7 +66,7 @@ Skills ECC: brainstorming, impeccable, test-driven-development, terminal-ops
      aplica da' um VERDE FALSO, que e' pior que um vermelho.
 
 ═══ SEG4-ADENDO — VERIFICACAO AD-HOC (script proprio, mantido em %TEMP%/hermes-verify-mc945.sh) ═══
-  29 verificacoes, VEREDITO: PASS (0 falhas). Cobre: as constantes do modulo (alvo 20:00 BRT
+  35 verificacoes, VEREDITO: PASS (0 falhas). Cobre: as constantes do modulo (alvo 20:00 BRT
   e nao 20:00 UTC), a mensagem (elementos exigidos + nao falar de senhas), o nucleo
   injectavel e as guardas (marcador ilegivel, publico indisponivel, ensaio, fail-soft), o
   teste 15/15, o ensaio nas 4 direccoes, as 5 MUTACOES, a fronteira do commit 786dd07
