@@ -63,13 +63,21 @@ export function encurtar(endereco) {
  * ⚠️ E SEM `backdrop-filter`, de propósito: o projeto mediu que o custo é por
  * CAMADA (11 camadas de blur custaram 29 fps). Cinco secções novas com blur
  * seriam cinco camadas a mais. Um fundo sólido custa zero e lê-se melhor.
+ *
+ * ⚠️ O VALOR É O DO PROJETO, NÃO UM INVENTADO. `rgba(13,18,53,0.92)` é o
+ * `.gut-glass--solid` de `globals.css:429`, criado no MC25.7 e reutilizado no
+ * MC89.4 pelo MESMO sintoma: "o texto assentava DIRECTAMENTE na ilustração de
+ * fundo e havia frases que não se liam". A minha primeira tentativa usou
+ * `rgba(5,8,24,0.82)` — 18% de transparência, que chega para os
+ * electrodomésticos brancos do fundo atravessarem a secção do ranking.
+ * Não se inventa fundo novo: usa-se o navy que já existe.
  */
 export function caixa(isMobile) {
   return {
     border: `1px solid ${COR.borda}`,
     borderRadius: "14px",
     padding: isMobile ? "0.9rem" : "1.1rem",
-    background: "rgba(5, 8, 24, 0.82)",
+    background: "rgba(13, 18, 53, 0.92)",
   };
 }
 
