@@ -1,7 +1,7 @@
 import { COR, T_PADRAO, caixa, tituloSecao, legenda, inteiroSeguro } from "./_estilo.js";
 
 /**
- * Estado do bónus: senhas a creditar, e se já foram creditadas.
+ * Estado do bônus: senhas a creditar, e se já foram creditadas.
  *
  * ⚠️ ISTO NÃO É UM SALDO, E A PALAVRA IMPORTA.
  * `senhasACreditar` é um DIREITO por liquidar, gravado em `rankings_ciclo`. O
@@ -33,7 +33,7 @@ export default function EstadoBonus({
   isMobile = false,
   t = T_PADRAO,
 }) {
-  const titulo = t("ativos.bonus.estadoTitulo", "🎟️ Bónus de senhas");
+  const titulo = t("ativos.bonus.estadoTitulo", "🎟️ Bônus de senhas");
   const moldura = (corpo) => (
     <section style={caixa(isMobile)} data-secao="estado-bonus">
       <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
@@ -42,7 +42,7 @@ export default function EstadoBonus({
   );
 
   // ⚠️ OS QUATRO ESTADOS, e a razão chegou a PRODUÇÃO: a primeira versão só
-  // tinha "com dados", logo um utilizador ANÓNIMO lia "Nenhum bónus conquistado
+  // tinha "com dados", logo um utilizador ANÓNIMO lia "Nenhum bônus conquistado
   // neste ciclo" — uma afirmação sobre alguém que a app não identificou — e uma
   // falha de rede dava exactamente o mesmo texto. Achado da validação
   // independente do MC94.
@@ -50,7 +50,7 @@ export default function EstadoBonus({
     return moldura(
       <p style={legenda(isMobile)} data-estado="sem-sessao">
         {t("ativos.bonus.estadoSemSessao",
-           "Entre na sua conta para ver os seus bónus de senhas.")}
+           "Entre na sua conta para ver seus bônus de senhas.")}
       </p>,
     );
   }
@@ -59,7 +59,7 @@ export default function EstadoBonus({
     return moldura(
       <p style={{ ...legenda(isMobile), color: COR.danger }} data-estado="erro">
         {t("ativos.bonus.estadoErro",
-           "Não foi possível carregar o seu bónus agora. Tente novamente mais tarde.")}
+           "Não foi possível carregar seu bônus agora. Tente novamente mais tarde.")}
       </p>,
     );
   }
@@ -67,7 +67,7 @@ export default function EstadoBonus({
   if (carregando) {
     return moldura(
       <p style={{ ...legenda(isMobile), minHeight: "2.4rem" }} data-estado="carregando">
-        {t("ativos.bonus.estadoCarregando", "A carregar o seu bónus…")}
+        {t("ativos.bonus.estadoCarregando", "Carregando seu bônus…")}
       </p>,
     );
   }
@@ -75,7 +75,16 @@ export default function EstadoBonus({
   // ⚠️ `inteiroSeguro` e não `Number(...) || 0`: a coerção fazia
   // `Infinity` -> "Infinity senhas" e `1e21` -> "1e+21 senhas" no ecrã.
   const quantidade = inteiroSeguro(senhasACreditar) ?? 0;
-  const temDireito = bonusEmitido === true && quantidade > 0;
+  // ⚠️ QUEM DECIDE SE HÁ BÓNUS É O `bonusEmitido`, não a quantidade.
+  // Com `bonusEmitido: true` e `senhasACreditar: 0` o ecrã dizia "Nenhum bônus
+  // conquistado neste ciclo" a quem o tinha conquistado. Não é alcançável hoje
+  // (`_lib/worker-bonus.mjs` liquida escrevendo só `liquidado_em` e deixa a
+  // quantidade intacta) — mas o CHECK da migração foi afrouxado DE PROPÓSITO
+  // (`20260923_mc93b_pontuacoes.sql:81-86`) para permitir liquidar zerando, "a
+  // liquidação mais óbvia de todas". No dia em que o worker adoptar esse padrão,
+  // quem recebeu o bônus passa a ler que nunca o ganhou.
+  // Achado da 2.ª validação independente.
+  const temDireito = bonusEmitido === true;
   // `undefined` e `null` contam como NÃO liquidado. Só o `true` explícito liquida.
   const foiLiquidado = liquidado === true;
 
@@ -83,7 +92,7 @@ export default function EstadoBonus({
     return moldura(
       <p style={legenda(isMobile)} data-estado="sem-bonus">
         {t("ativos.bonus.nada",
-           "Nenhum bónus conquistado neste ciclo. Complete a sequência de acertos para conquistar senhas.")}
+           "Nenhum bônus conquistado neste ciclo. Complete a sequência de acertos para conquistar senhas.")}
       </p>,
     );
   }
@@ -91,6 +100,7 @@ export default function EstadoBonus({
   return moldura(
     <>
 
+      {quantidade > 0 && (
       <div style={{ display: "flex", alignItems: "baseline", gap: "0.45rem" }}>
         <strong style={{
           fontSize: isMobile ? "1.3rem" : "1.55rem",
@@ -104,6 +114,7 @@ export default function EstadoBonus({
             : t("ativos.bonus.senhaN", "senhas")}
         </span>
       </div>
+      )}
 
       <div style={{
         display: "inline-block",
@@ -117,7 +128,7 @@ export default function EstadoBonus({
       }} data-estado={foiLiquidado ? "liquidado" : "pendente"}>
         {foiLiquidado
           ? t("ativos.bonus.liquidado", "Já creditadas na sua conta")
-          : t("ativos.bonus.pendente", "A creditar — aguarda a coordenação")}
+          : t("ativos.bonus.pendente", "A creditar — aguardando a coordenação")}
       </div>
 
       <p style={{ ...legenda(isMobile), marginTop: "0.55rem" }}>
@@ -126,7 +137,7 @@ export default function EstadoBonus({
           // correcta: uma secção que a usa num estado e não no outro convida a
           // ler os dois como a mesma coisa. O facto útil é poder licitar.
           ? t("ativos.bonus.explicaLiquidado",
-              "As senhas do bónus já foram creditadas pela coordenação e já podem ser usadas num lance.")
+              "As senhas do bônus já foram creditadas pela coordenação e já podem ser usadas num lance.")
           : t("ativos.bonus.explicaPendente",
               "É um direito já conquistado. As senhas são creditadas pela coordenação e só então podem ser usadas num lance.")}
       </p>

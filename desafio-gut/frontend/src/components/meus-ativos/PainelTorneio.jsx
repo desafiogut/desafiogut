@@ -1,4 +1,4 @@
-import { COR, T_PADRAO, caixa, tituloSecao, legenda } from "./_estilo.js";
+import { COR, T_PADRAO, caixa, tituloSecao, legenda, inteiroSeguro } from "./_estilo.js";
 
 /**
  * Painel do torneio de habilidade: posição, pontos e acertos do utilizador no
@@ -36,7 +36,7 @@ export default function PainelTorneio({
         <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
         <p style={legenda(isMobile)} data-estado="sem-sessao">
           {t("ativos.torneio.semSessao",
-             "Entre na sua conta para ver a sua posição, os seus pontos e os seus acertos.")}
+             "Entre na sua conta para ver sua posição, seus pontos e seus acertos.")}
         </p>
       </section>
     );
@@ -48,7 +48,7 @@ export default function PainelTorneio({
         <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
         <p style={{ ...legenda(isMobile), color: COR.danger }} data-estado="erro">
           {t("ativos.torneio.erro",
-             "Não foi possível carregar a sua pontuação agora. Tente novamente mais tarde.")}
+             "Não foi possível carregar sua pontuação agora. Tente novamente mais tarde.")}
         </p>
       </section>
     );
@@ -60,7 +60,7 @@ export default function PainelTorneio({
         <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
         {/* Altura reservada: sem isto a secção salta quando os dados chegam. */}
         <p style={{ ...legenda(isMobile), minHeight: "2.4rem" }} data-estado="carregando">
-          {t("ativos.torneio.carregando", "A carregar a sua pontuação…")}
+          {t("ativos.torneio.carregando", "Carregando sua pontuação…")}
         </p>
       </section>
     );
@@ -84,7 +84,18 @@ export default function PainelTorneio({
     );
   }
 
-  const { posicao, pontosTotais, acertosTotais } = feedback;
+  // ⚠️ `inteiroSeguro` NOS TRÊS, e a razão é que eu já tinha aprendido isto e
+  // aplicado a lição a dois sítios só. `EstadoBonus` e `RankingCiclo` passaram a
+  // usá-lo na 1.ª ronda; este ficou com `?? 0` e `posicao ?`, e portanto
+  // `{posicao: 1.5, pontosTotais: Infinity, acertosTotais: 1e21}` renderizava
+  // **"1.5º · Infinity Pontos · 1e+21 Acertos"** — exactamente o sintoma que o
+  // comentário de `_estilo.js` diz ter sido corrigido. Achado da 2.ª validação
+  // independente; é o mesmo padrão do `if: always()` do MC93-E, meia correcção.
+  // E `?? 0` é pior do que parece: transforma "não sei" em "zero", que é a classe
+  // de mentira que esta tela inteira existe para não contar.
+  const posicao = inteiroSeguro(feedback.posicao);
+  const pontosTotais = inteiroSeguro(feedback.pontosTotais);
+  const acertosTotais = inteiroSeguro(feedback.acertosTotais);
 
   const celulas = [
     {
@@ -94,12 +105,12 @@ export default function PainelTorneio({
     },
     {
       rotulo: t("ativos.torneio.pontos", "Pontos"),
-      valor: String(pontosTotais ?? 0),
+      valor: pontosTotais === null ? "—" : String(pontosTotais),
       cor: COR.primary,
     },
     {
       rotulo: t("ativos.torneio.acertos", "Acertos"),
-      valor: String(acertosTotais ?? 0),
+      valor: acertosTotais === null ? "—" : String(acertosTotais),
       cor: COR.success,
     },
   ];

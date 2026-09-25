@@ -42,6 +42,23 @@ export default function MeusAtivos() {
   const ranking = useRanking(EDICAO_ATIVA);
   const feedback = useFeedback(EDICAO_ATIVA, address, authToken);
 
+  // ⛔ "SEM SESSÃO" E "SESSÃO SEM TOKEN AINDA" SÃO COISAS DIFERENTES.
+  // `useFeedback` devolve `semSessao: true` enquanto não tiver `token`, porque sem
+  // ele o endpoint dá 401 de certeza. Mas o `address` chega ANTES do `authToken`:
+  // está medido e documentado no próprio projeto (`AppContext.jsx:937` — "o
+  // `address` chega ANTES do `authToken`… valor correcto aos ~2,0 s"), e é o
+  // defeito que o MC88.39 corrigiu para o saldo em R$. Nessa janela a página dizia
+  // "Entre na sua conta" a quem JÁ tinha entrado — e mostrava-lhe os lances dele
+  // na secção ao lado, ao mesmo tempo. Achado da 2.ª validação independente.
+  //
+  // Quem sabe se há sessão é o contexto (`isConnected` + `address`), não o hook.
+  // A espera pelo token é o que ela é: estar A CARREGAR. É como o resto da app já
+  // trata esta janela (`AppContext.jsx:458` — "`tipoCarregando` fica true; re-corre
+  // com o token").
+  const temSessao = isConnected && Boolean(address);
+  const aEsperarToken = temSessao && feedback.semSessao;
+  const feedbackCarregando = feedback.carregando || aEsperarToken;
+
   const meusLances = lances.filter(
     (l) => !address || l.endereco?.toLowerCase() === address?.toLowerCase()
   );
@@ -118,31 +135,33 @@ export default function MeusAtivos() {
         marginBottom: sectionGap,
       }}>
         <PainelTorneio
-          temSessao={!feedback.semSessao}
+          temSessao={temSessao}
           feedback={feedback.feedback}
-          carregando={feedback.carregando}
+          carregando={feedbackCarregando}
           erro={feedback.erro}
           isMobile={isMobile}
           t={t}
         />
-        {/* ⚠️ As três secções pessoais recebem os MESMOS quatro estados. A
-            primeira versão só passava os dados a estas duas, e em produção um
-            utilizador anónimo lia "0 / 5 acertos seguidos · Faltam 5 acertos" e
-            "Nenhum bónus conquistado neste ciclo" — afirmações sobre alguém que a
-            app não identificou. Uma falha de rede dava o mesmo texto. */}
+        {/* ⚠️ As QUATRO secções pessoais recebem o MESMO estado de sessão. A
+            primeira versão só passava os dados a duas, e em produção um utilizador
+            anónimo lia "0 / 5 acertos seguidos · Faltam 5 acertos" e "Nenhum bónus
+            conquistado neste ciclo" — afirmações sobre alguém que a app não
+            identificou. A segunda corrigiu três das quatro, e a quarta continuou a
+            dizer-lhe "Ainda não há lances seus nesta edição.". São precisas DUAS
+            rondas de validação independente para uma lição ser aplicada a todos os
+            sítios onde se aplica. */}
         <ProgressoBonus
-          temSessao={!feedback.semSessao}
-          carregando={feedback.carregando}
+          temSessao={temSessao}
+          carregando={feedbackCarregando}
           erro={feedback.erro}
           sequenciaAtual={feedback.feedback?.sequenciaAtual}
-          faltamParaBonus={feedback.feedback?.faltamParaBonus}
           acertosParaBonus={ACERTOS_PARA_BONUS}
           isMobile={isMobile}
           t={t}
         />
         <EstadoBonus
-          temSessao={!feedback.semSessao}
-          carregando={feedback.carregando}
+          temSessao={temSessao}
+          carregando={feedbackCarregando}
           erro={feedback.erro}
           senhasACreditar={feedback.feedback?.senhasACreditar}
           bonusEmitido={feedback.feedback?.bonusEmitido ?? false}
@@ -151,6 +170,7 @@ export default function MeusAtivos() {
           t={t}
         />
         <FeedbackLance
+          temSessao={temSessao}
           lances={lances}
           address={address}
           isMobile={isMobile}

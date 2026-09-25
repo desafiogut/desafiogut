@@ -26,17 +26,59 @@ after(fechar);
 
 // ───────────────────────────────────────────────────────────────────────────
 describe("MC94 · PainelTorneio", () => {
-  test("renderiza posição, pontos e acertos", () => {
-    const t = texto(render(Painel, {
+  test("renderiza posição, pontos e acertos — cada número com o SEU rótulo", () => {
+    // ⚠️ ASSERÇÃO ANCORADA AO PAR. A versão anterior asseria /3/, /7/ e /2/ soltos,
+    // e por isso trocar os VALORES de Pontos e Acertos mantendo os rótulos
+    // sobrevivia à suíte inteira (mutante da 2.ª validação independente). É a
+    // mesma classe de asserção fraca que a 1.ª ronda listou como ⛔ corrigido —
+    // corrigida nalguns testes, e não neste.
+    const html = render(Painel, {
       temSessao: true,
       feedback: { posicao: 3, pontosTotais: 7, acertosTotais: 2 },
+    });
+    const celulas = html.split('data-celula="painel"').slice(1)
+      .map((c) => texto(c.slice(0, c.indexOf("</div></div>") + 12)));
+    assert.equal(celulas.length, 3, "não são três células");
+    assert.match(celulas[0], /(^|\s)3º\s+Posição/, `posição errada: ${celulas[0]}`);
+    assert.match(celulas[1], /(^|\s)7\s+Pontos/, `pontos errados: ${celulas[1]}`);
+    assert.match(celulas[2], /(^|\s)2\s+Acertos/, `acertos errados: ${celulas[2]}`);
+  });
+
+  test("⚠️ quantidades impossíveis não chegam ao painel", () => {
+    // ⚠️ `EstadoBonus` e `RankingCiclo` passaram a usar `inteiroSeguro` na 1.ª
+    // ronda; este ficou com `?? 0` e `posicao ?`. Resultado medido:
+    // "1.5º · Infinity Pontos · 1e+21 Acertos". Meia correcção, outra vez.
+    const t = texto(render(Painel, {
+      temSessao: true,
+      feedback: { posicao: 1.5, pontosTotais: Infinity, acertosTotais: 1e21 },
     }));
-    // Literais de propósito: se a UI parar de mostrar um destes números, falha.
-    assert.match(t, /3/, "não mostra a posição");
-    assert.match(t, /7/, "não mostra os pontos");
-    assert.match(t, /2/, "não mostra os acertos");
-    assert.match(t, /pontos/i);
-    assert.match(t, /acertos/i);
+    assert.doesNotMatch(t, /Infinity|e\+|\d+\.\d/, `renderizou lixo: ${t}`);
+  });
+
+  test("⚠️ pontos ausentes mostram — , não um zero inventado", () => {
+    const t = texto(render(Painel, {
+      temSessao: true,
+      feedback: { posicao: 2, pontosTotais: null, acertosTotais: null },
+    }));
+    assert.match(t, /—/, "não marca a ausência");
+    assert.doesNotMatch(t, /\b0\s+Pontos/, "inventou zero pontos");
+    assert.doesNotMatch(t, /\b0\s+Acertos/, "inventou zero acertos");
+  });
+
+  test("⚠️ `posicao: null` não vira 'nullº'", () => {
+    const t = texto(render(Painel, {
+      temSessao: true,
+      feedback: { posicao: null, pontosTotais: 3, acertosTotais: 1 },
+    }));
+    assert.doesNotMatch(t, /null/i);
+    assert.match(t, /—\s+Posição/);
+  });
+
+  test("com ERRO e a carregar ao mesmo tempo, o erro ganha", () => {
+    // Precedência uniforme nas quatro secções: dizer "a carregar" quando já se
+    // sabe que falhou deixa o utilizador à espera de nada.
+    const t = texto(render(Painel, { temSessao: true, carregando: true, erro: "rede" }));
+    assert.match(t, /não foi possível/i, "a espera escondeu o erro");
   });
 
   test("sem sessão CONVIDA a entrar, e não mostra erro", () => {
@@ -50,6 +92,18 @@ describe("MC94 · PainelTorneio", () => {
     assert.match(t, /não foi possível|erro/i);
     // ⚠️ Zeros inventados seriam pior do que um erro: o utilizador acreditaria.
     assert.doesNotMatch(t, /\b0 pontos\b/i, "inventa zeros quando falhou");
+  });
+
+  test("⚠️ com sessão e SEM dados, não finge que está a carregar", () => {
+    // O ramo `sem-dados` do painel não tinha teste nenhum: um mutante que o
+    // removesse passava a suíte inteira (e faria o componente rebentar ao ler
+    // `feedback.posicao` de null). Achado da minha ronda de mutação da 2.ª volta.
+    const html = render(Painel, { temSessao: true, feedback: null });
+    assert.match(html, /data-estado="sem-dados"/, "não distingue 'sem dados' de 'a carregar'");
+    const t = texto(html);
+    assert.doesNotMatch(t, /Carregando/i, "spinner eterno");
+    assert.doesNotMatch(t, /erro|falh/i);
+    assert.match(t, /\S/);
   });
 
   test("a carregar, não mostra números nem erro", () => {
@@ -92,8 +146,18 @@ describe("MC94 · ProgressoBonus", () => {
     // ⚠️ Só `bonusEmitido` (do livro-razão) pode afirmar que há bónus. Esta
     // secção derivava-o de uma conta local e CONTRADIZIA a secção ao lado, que
     // dizia "Nenhum bónus conquistado". Achado da validação independente.
-    assert.doesNotMatch(t, /bónus conquistado|bonus conquistado/i,
+    assert.doesNotMatch(t, /b[oôó]nus conquistado/i,
       "declara o bónus a partir de uma conta local, contradizendo o EstadoBonus");
+  });
+
+  test("a barra anuncia-se a quem não a vê", () => {
+    // Uma barra de progresso que não diz o seu valor e o seu máximo é uma faixa
+    // colorida para um leitor de ecrã.
+    const html = render(Progresso, { temSessao: true, sequenciaAtual: 3, acertosParaBonus: 5 });
+    assert.match(html, /role="progressbar"/);
+    assert.match(html, /aria-valuenow="3"/, "o valor anunciado não é o mostrado");
+    assert.match(html, /aria-valuemax="5"/, "o máximo anunciado não é o alvo");
+    assert.match(html, /aria-valuemin="0"/);
   });
 
   test("a zero, mostra o alvo e não uma barra cheia", () => {
@@ -127,6 +191,56 @@ describe("MC94 · ProgressoBonus", () => {
     assert.match(html, /width:\s*0%/, "barra cheia com zero acertos");
   });
 
+  test("⛔ quem FECHA uma sequência de 5 vê 5/5, não 0/5", () => {
+    // ⛔ O BACKEND NUNCA MANDA `faltamParaBonus: 0`.
+    // `_lib/pontuacao-store.mjs:314` calcula `max(0, 5 - (sequenciaAtual % 5))`,
+    // cujo domínio é [1..5]. Medido: sequencia=5 -> faltam=5.
+    // A versão anterior decidia "completa" por `faltam === 0`, logo o ramo era
+    // CÓDIGO MORTO e quem fechava cinco acertos lia "0 / 5 acertos seguidos ·
+    // Faltam 5 acertos" — a app a dizer-lhe que não tem acertos nenhuns no
+    // instante exacto em que completou a série. Achado da 2.ª validação.
+    // Agora deriva-se de `sequenciaAtual`, que é o número do próprio backend.
+    const html = render(Progresso, {
+      temSessao: true, sequenciaAtual: 5, acertosParaBonus: 5,
+      faltamParaBonus: 5,   // o que o backend MANDA MESMO neste ponto
+    });
+    const t = texto(html);
+    assert.match(t, /\b5\b[\s\S]*\/\s*5/, "mostra 0/5 a quem fechou a sequência");
+    assert.doesNotMatch(t, /Faltam \d+ acertos/i, "diz que faltam acertos a quem os fez todos");
+    assert.match(t, /Sequência completa/i);
+    assert.match(html, /width:\s*100%/, "a barra não está cheia");
+  });
+
+  test("a 10 acertos (dois ciclos) também está completa", () => {
+    const t = texto(render(Progresso, {
+      temSessao: true, sequenciaAtual: 10, acertosParaBonus: 5, faltamParaBonus: 5,
+    }));
+    assert.match(t, /Sequência completa/i);
+    assert.doesNotMatch(t, /\b10\s*\/\s*5/, "mostrou a sequência crua");
+  });
+
+  test("⚠️ sem dados NÃO é 'a carregar' — um spinner eterno é uma afirmação falsa", () => {
+    // Sem `carregando` e sem `erro`, um `sequenciaAtual` ausente mostrava
+    // "A carregar a sua sequência…" para sempre. O `PainelTorneio` já tinha sido
+    // corrigido disto na 1.ª ronda; esta secção não. Achado da 2.ª validação.
+    const html = render(Progresso, { temSessao: true });
+    assert.match(html, /data-estado="sem-dados"/, "continua a fingir que está a carregar");
+    assert.doesNotMatch(texto(html), /Carregando/i);
+  });
+
+  test("com ERRO e a carregar ao mesmo tempo, o erro ganha", () => {
+    const t = texto(render(Progresso, { temSessao: true, carregando: true, erro: "rede" }));
+    assert.match(t, /não foi possível/i);
+  });
+
+  test("um alvo inválido não parte a barra", () => {
+    for (const alvo2 of [0, -5, null, "5", NaN]) {
+      const html = render(Progresso, { temSessao: true, sequenciaAtual: 3, acertosParaBonus: alvo2 });
+      assert.doesNotMatch(texto(html), /Infinity|NaN/, `alvo ${String(alvo2)} partiu o cálculo`);
+      assert.match(html, /width:\s*\d+(\.\d+)?%/, `alvo ${String(alvo2)} não produziu barra`);
+    }
+  });
+
   test("SEM SESSÃO não afirma zero acertos — convida a entrar", () => {
     // ⚠️ Isto chegou a PRODUÇÃO: um anónimo lia "0 / 5 acertos seguidos ·
     // Faltam 5 acertos", um facto sobre alguém que a app não identificou.
@@ -146,7 +260,7 @@ describe("MC94 · ProgressoBonus", () => {
     const t = texto(render(Progresso, { temSessao: true, carregando: true }));
     assert.doesNotMatch(t, /não foi possível|erro/i);
     assert.doesNotMatch(t, /Faltam \d+ acertos/i);
-    assert.match(t, /carregar/i);
+    assert.match(t, /carregando/i);
   });
 });
 
@@ -159,6 +273,22 @@ describe("MC94 · EstadoBonus", () => {
     assert.match(pendente, /A creditar/i);
     assert.match(liquidado, /Já creditadas/i);
     assert.notEqual(pendente, liquidado, "pendente e liquidado renderizam igual");
+  });
+
+  test("pendente e liquidado distinguem-se também na cor, não só nas palavras", () => {
+    const pendente = render(Estado, { ...base, senhasACreditar: 20, bonusEmitido: true, liquidado: false });
+    const liquidado = render(Estado, { ...base, senhasACreditar: 20, bonusEmitido: true, liquidado: true });
+    assert.match(pendente, /data-estado="pendente"/);
+    assert.match(liquidado, /data-estado="liquidado"/);
+    const cor = (h) => (h.match(/data-estado="(?:pendente|liquidado)"/) ? h : "");
+    assert.notEqual(cor(pendente), cor(liquidado), "os dois estados renderizam igual");
+    // ⚠️ ANCORAR NA COR DO TEXTO, não no ficheiro inteiro. A versão anterior
+    // asseria /#10b981|rgba\(16,185,129/, que casava no FUNDO do selo — e por isso
+    // um mutante que pintasse o texto sempre de roxo sobrevivia. Terceira vez que
+    // uma asserção minha é satisfeita por outra coisa que não o que ela nomeia.
+    assert.match(liquidado, /color:\s*#10b981/, "o texto do liquidado não usa o verde de sucesso");
+    assert.match(pendente, /color:\s*#a78bfa/, "o texto do pendente não usa o roxo de senhas");
+    assert.doesNotMatch(pendente, /color:\s*#10b981/, "o pendente está pintado de liquidado");
   });
 
   test("`liquidado: undefined` conta como PENDENTE", () => {
@@ -180,10 +310,29 @@ describe("MC94 · EstadoBonus", () => {
     }
   });
 
+  test("⚠️ bónus emitido com quantidade ZERO não vira 'nenhum bónus'", () => {
+    // ⚠️ `temDireito` exigia `quantidade > 0`, logo `bonusEmitido: true` com
+    // `senhasACreditar: 0` dizia "Nenhum bónus conquistado neste ciclo" a quem o
+    // tinha conquistado. Não é alcançável hoje, mas o CHECK da migração foi
+    // afrouxado DE PROPÓSITO para permitir liquidar zerando a quantidade
+    // (`20260923_mc93b_pontuacoes.sql:81-86`). Achado da 2.ª validação.
+    const t = texto(render(Estado, {
+      ...base, senhasACreditar: 0, bonusEmitido: true, liquidado: true,
+    }));
+    assert.doesNotMatch(t, /Nenhum bônus/i, "negou um bónus que o livro-razão confirma");
+    assert.match(t, /Já creditadas/i);
+    assert.doesNotMatch(t, /\b0\s+senhas\b/, "escreveu '0 senhas'");
+  });
+
+  test("com ERRO e a carregar ao mesmo tempo, o erro ganha", () => {
+    const t = texto(render(Estado, { ...base, carregando: true, erro: "rede" }));
+    assert.match(t, /não foi possível/i);
+  });
+
   test("sem bónus nenhum, não promete nada", () => {
     const t = texto(render(Estado, { ...base, senhasACreditar: 0, bonusEmitido: false }));
     assert.doesNotMatch(t, /\b20\b/, "mostra 20 senhas sem haver bónus");
-    assert.match(t, /Nenhum bónus/i);
+    assert.match(t, /Nenhum bônus/i);
   });
 
   test("mostra a quantidade que o livro-razão diz, não a constante", () => {
@@ -203,13 +352,13 @@ describe("MC94 · EstadoBonus", () => {
   test("SEM SESSÃO não afirma que não há bónus — convida a entrar", () => {
     const t = texto(render(Estado, { temSessao: false }));
     assert.match(t, /Entre na sua conta/i);
-    assert.doesNotMatch(t, /Nenhum bónus conquistado/i, "afirma ausência sem saber quem é");
+    assert.doesNotMatch(t, /Nenhum bônus conquistado/i, "afirma ausência sem saber quem é");
   });
 
   test("COM ERRO não finge ausência de bónus", () => {
     const t = texto(render(Estado, { temSessao: true, erro: "rede" }));
     assert.match(t, /não foi possível/i);
-    assert.doesNotMatch(t, /Nenhum bónus conquistado/i);
+    assert.doesNotMatch(t, /Nenhum bônus conquistado/i);
   });
 });
 
@@ -219,7 +368,7 @@ describe("MC94 · FeedbackLance", () => {
 
   test("diz quanto cada lance VALE, nunca que já ganhou", () => {
     // Um lance sozinho é, por definição, o menor único do utilizador: vale 3.
-    const t = texto(render(Feedback, { address: EU, lances: lances({ valor: 100 }) }));
+    const t = texto(render(Feedback, { temSessao: true, address: EU, lances: lances({ valor: 100 }) }));
     assert.match(t, /vale 3 pontos\b/, "não diz quanto vale");
     // ⚠️ Nenhum endpoint devolve pontos POR LANCE: o `lerFeedback` devolve
     // agregados e a pontuação é atribuída no fecho da rodada. "Ganhou" seria a UI
@@ -230,7 +379,7 @@ describe("MC94 · FeedbackLance", () => {
 
   test("o menor único vale 3, os outros únicos valem 1", () => {
     const t = texto(render(Feedback, {
-      address: EU,
+      temSessao: true, address: EU,
       lances: lances({ valor: 100 }, { valor: 900 }),
     }));
     assert.match(t, /R\$ 1,00[\s\S]*menor único seu[\s\S]*vale 3 pontos/,
@@ -244,7 +393,7 @@ describe("MC94 · FeedbackLance", () => {
     // dois lances de R$ 1,00 — um a "vale 3 pontos" e o outro a "vale 1 ponto".
     // Achado da validação independente. Quem desempata é o backend, no fecho.
     const html = render(Feedback, {
-      address: EU,
+      temSessao: true, address: EU,
       lances: lances({ valor: 100 }, { valor: 100 }, { valor: 900 }),
     });
     const linhas = html.split('data-linha="lance"').slice(1);
@@ -260,7 +409,7 @@ describe("MC94 · FeedbackLance", () => {
 
   test("um lance repetido vale zero e di-lo por palavras", () => {
     const t = texto(render(Feedback, {
-      address: EU, lances: lances({ valor: 250, repetido: true }),
+      temSessao: true, address: EU, lances: lances({ valor: 250, repetido: true }),
     }));
     assert.match(t, /repetido/i);
     assert.match(t, /não vale pontos/i, "escreve 'vale 0 pontos' em vez de o dizer");
@@ -269,7 +418,7 @@ describe("MC94 · FeedbackLance", () => {
 
   test("um repetido NÃO pode ser eleito menor único", () => {
     const t = texto(render(Feedback, {
-      address: EU,
+      temSessao: true, address: EU,
       lances: lances({ valor: 100, repetido: true }, { valor: 900 }),
     }));
     // O de 900 é o único ÚNICO, logo é ele o menor único — e vale 3.
@@ -284,7 +433,7 @@ describe("MC94 · FeedbackLance", () => {
     // DE PROPÓSITO para marcar lance inválido. Reproduzi a mesma armadilha aqui e a
     // validação independente apanhou-a: aparecia "R$ 0,00 · menor único seu".
     const html = render(Feedback, {
-      address: EU,
+      temSessao: true, address: EU,
       lances: lances({ valor: null }, { valor: 900 }),
     });
     const t = texto(html);
@@ -297,7 +446,7 @@ describe("MC94 · FeedbackLance", () => {
 
   test("valores impossíveis não entram na lista", () => {
     for (const valor of [undefined, NaN, Infinity, -1, "100", {}, true]) {
-      const html = render(Feedback, { address: EU, lances: lances({ valor }) });
+      const html = render(Feedback, { temSessao: true, address: EU, lances: lances({ valor }) });
       assert.equal(html.split('data-linha="lance"').length - 1, 0,
         `aceitou o valor ${String(valor)}`);
       assert.match(texto(html), /Ainda não há lances seus/i);
@@ -305,14 +454,14 @@ describe("MC94 · FeedbackLance", () => {
   });
 
   test("sem lances, não inventa linhas", () => {
-    const t = texto(render(Feedback, { address: EU, lances: [] }));
+    const t = texto(render(Feedback, { temSessao: true, address: EU, lances: [] }));
     assert.match(t, /Ainda não há lances seus/i);
     assert.doesNotMatch(t, /vale \d+ ponto/, "inventou uma linha de lance");
   });
 
   test("só considera os lances do PRÓPRIO endereço", () => {
     const html = render(Feedback, {
-      address: EU,
+      temSessao: true, address: EU,
       lances: [
         { valor: 100, repetido: false, endereco: "0xBBBBbbbbBBBBbbbbBBBBbbbbBBBBbbbbBBBBbbbb" },
         { valor: 900, repetido: false, endereco: EU },
@@ -325,17 +474,49 @@ describe("MC94 · FeedbackLance", () => {
 
   test("o endereço compara-se sem distinguir maiúsculas", () => {
     const html = render(Feedback, {
-      address: EU.toLowerCase(),
+      temSessao: true, address: EU.toLowerCase(),
       lances: [{ valor: 900, repetido: false, endereco: EU.toUpperCase() }],
     });
     assert.equal(html.split('data-linha="lance"').length - 1, 1,
       "perdeu o próprio lance por causa da capitalização do endereço");
   });
 
-  test("sem endereço não atribui os lances a ninguém", () => {
-    const html = render(Feedback, { address: null, lances: lances({ valor: 100 }) });
+  test("com sessão mas sem endereço ainda não atribui lances a ninguém", () => {
+    const html = render(Feedback, { temSessao: true, address: null, lances: lances({ valor: 100 }) });
     assert.equal(html.split('data-linha="lance"').length - 1, 0,
       "mostrou lances como sendo do utilizador sem saber quem ele é");
+  });
+
+  test("⛔ SEM SESSÃO convida a entrar — não afirma que não há lances seus", () => {
+    // ⚠️ ISTO ESTAVA EM PRODUÇÃO, e na captura que eu próprio olhei: três secções
+    // a dizer "Entre na sua conta" e esta, ao lado, a dizer a um ANÓNIMO
+    // "Ainda não há lances seus nesta edição." — um facto sobre uma pessoa que a
+    // app não identificou, possivelmente falso (há lances na edição).
+    // Achado da 2.ª validação independente. É o MESMO defeito que a 1.ª apanhou
+    // nas outras duas secções: a lição foi aplicada a 3 dos 4 sítios.
+    const t = texto(render(Feedback, { temSessao: false, lances: lances({ valor: 100 }) }));
+    assert.match(t, /Entre na sua conta/i);
+    assert.doesNotMatch(t, /Ainda não há lances seus/i,
+      "afirma a ausência de lances de alguém que não identificou");
+    assert.doesNotMatch(t, /vale \d+ ponto/, "mostrou lances sem sessão");
+  });
+
+  test("os lances aparecem do menor para o maior", () => {
+    const html = render(Feedback, {
+      temSessao: true, address: EU,
+      lances: lances({ valor: 900 }, { valor: 100 }, { valor: 500 }),
+    });
+    const valores = [...html.matchAll(/R\$ ([\d.,]+)/g)].map((m) => m[1]);
+    assert.deepEqual(valores, ["1,00", "5,00", "9,00"], "a lista não está ordenada");
+  });
+
+  test("`repetido: undefined` conta como ÚNICO, não como repetido", () => {
+    const t = texto(render(Feedback, {
+      temSessao: true, address: EU,
+      lances: [{ valor: 100, endereco: EU }],
+    }));
+    assert.match(t, /menor único seu/i);
+    assert.doesNotMatch(t, /repetido/i, "tratou um lance sem a marca como repetido");
   });
 });
 
@@ -373,9 +554,14 @@ describe("MC94 · RankingCiclo", () => {
     assert.doesNotMatch(erro, /Ainda não há pontuações/i, "chama ciclo vazio a uma falha de rede");
   });
 
+  test("com ERRO e a carregar ao mesmo tempo, o erro ganha", () => {
+    const t = texto(render(Ranking, { ranking: [], total: 0, carregando: true, erro: "rede" }));
+    assert.match(t, /não foi possível/i, "a espera escondeu o erro");
+  });
+
   test("A CARREGAR não é vazio nem erro", () => {
     const t = texto(render(Ranking, { ranking: [], total: 0, carregando: true }));
-    assert.match(t, /carregar/i);
+    assert.match(t, /carregando/i);
     assert.doesNotMatch(t, /Ainda não há pontuações|não foi possível/i);
   });
 
@@ -455,9 +641,27 @@ describe("MC94 · RankingCiclo", () => {
       ],
       total: 17,
     }));
-    assert.match(t, /A sua posição/i, "não mostra a linha do utilizador fora do top");
+    assert.match(t, /Sua posição/i, "não mostra a linha do utilizador fora do top");
     assert.match(t, /17º/, "não mostra a posição real de quem está fora do top");
     assert.match(t, /você/i);
+  });
+
+  test("a ordem da lista é preservada — o 1.º do backend é o 1.º no ecrã", () => {
+    const html = render(Ranking, {
+      ranking: [linhaRank(1), linhaRank(2), linhaRank(3)],
+      total: 3,
+    });
+    const ordem = [...html.matchAll(/data-linha="rank"[\s\S]*?>(\d+)º/g)].map((m) => m[1]);
+    assert.deepEqual(ordem, ["1", "2", "3"], "o ranking foi reordenado");
+  });
+
+  test("um `total` que não é número não escreve lixo", () => {
+    for (const total of [null, undefined, NaN, "muitos", Infinity, -3]) {
+      const t = texto(render(Ranking, { ranking: [linhaRank(1), linhaRank(2)], total }));
+      assert.doesNotMatch(t, /NaN|Infinity|undefined|null|muitos/,
+        `total ${String(total)} chegou ao ecrã`);
+      assert.match(t, /\b2 participantes\b/, `não reconciliou com a lista (total=${String(total)})`);
+    }
   });
 
   test("os endereços aparecem ABREVIADOS (R4)", () => {
@@ -552,6 +756,17 @@ describe("MC94 · _estilo — as guardas sem coerção", () => {
   test("`reais` recusa tudo o que não é um valor, e NUNCA devolve R$ 0,00", () => {
     for (const v of [null, undefined, NaN, Infinity, -Infinity, -1, "100", "", {}, [], true, false]) {
       assert.equal(reais(v), "—", `reais(${JSON.stringify(v)}) devia ser "—"`);
+    }
+  });
+
+  test("⚠️ `reais` recusa não-inteiros e inteiros não seguros", () => {
+    // ⚠️ `valorUtilizavel` exigia só "finito", enquanto `inteiroSeguro` exigia
+    // inteiro seguro — assimetria que deixava passar `reais(3.7)` = "R$ 0,04",
+    // `reais(0.5)` = "R$ 0,01" e `reais(1e21)` = "R$ 10000000000000000000,00".
+    // Um lance é em CENTAVOS: inteiros por definição. Achado da 2.ª validação.
+    for (const v of [3.7, 0.5, 1e21, Number.MAX_SAFE_INTEGER + 2]) {
+      assert.equal(reais(v), "—", `reais(${v}) devia ser "—"`);
+      assert.equal(valorUtilizavel(v), false, `valorUtilizavel(${v}) devia ser false`);
     }
   });
 

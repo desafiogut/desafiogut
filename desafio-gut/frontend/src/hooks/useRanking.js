@@ -4,7 +4,12 @@ import { apiGet } from "../lib/api.js";
 /**
  * Diz se o corpo da resposta é mesmo JSON de um objecto.
  *
- * ⚠️ NÃO BASTA O `ok`. `netlify.toml:34` reescreve `/*` para `/index.html` com
+ * ⚠️ NÃO BASTA O `ok`. E a guarda é sobre o CORPO: o que se exige é que o
+ * `JSON.parse` do `apiGet` tenha produzido um objecto. Uma versão anterior deste
+ * comentário dizia "validar por `content-type: application/json`" — não é o que o
+ * código faz, e com o instrumento de teste actual nem seria testável (o duplo de
+ * `fetch` devolve `headers: new Map()`). O efeito prático é o mesmo para o caso
+ * que interessa. `netlify.toml:34` reescreve `/*` para `/index.html` com
  * **status 200**: uma função ausente, mal deployada ou inalcançável (o caso do APK,
  * onde a origem é `https://localhost`) devolve HTML com 200, e o `apiGet` devolve
  * `{ ok: true, data: null }` porque o `JSON.parse` falhou. Sem esta guarda a tela
@@ -28,10 +33,15 @@ function corpoEhJson(data) {
  * `{ok, status, data, text, headers}`. Escrever contra `data.ok` — como o
  * enunciado do MC94 descrevia o contrato — daria sempre falso.
  *
- * ⚠️ Usa-se `apiGet` e não `fetch` de propósito: é ele que aplica a origem
- * correcta no APK (`src/lib/apiOrigin.js`), onde a origem é `https://localhost` e
- * um caminho relativo devolveria o `index.html` com 200 — o defeito que o projeto
- * já registou como "backend inalcançável".
+ * ⛔ ERRATA. Este comentário dizia que se usa `apiGet` porque "é ele que aplica a
+ * origem correcta no APK (`src/lib/apiOrigin.js`)". **Falso, e verificável:**
+ * `src/lib/api.js` nunca importa `apiOrigin.js` e faz `fetch(BASE + path)` com um
+ * caminho RELATIVO. Quem reescreve a origem é um patch do `fetch` GLOBAL, instalado
+ * em `src/main.jsx` — logo um `fetch` cru receberia o mesmo tratamento.
+ * Achado da 2.ª validação independente; é o padrão "o comentário do autor satisfaz
+ * a asserção do autor", pela quarta vez neste projeto.
+ * A escolha de `apiGet` continua certa, por OUTRA razão: exercita o contrato
+ * partilhado de headers e de parse, que é o que os testes deste MC verificam.
  *
  * @param {string|null|undefined} cicloId
  * @returns {{ranking: Array<object>, total: number, carregando: boolean, erro: string|null}}

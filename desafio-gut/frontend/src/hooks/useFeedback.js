@@ -4,7 +4,9 @@ import { apiGet } from "../lib/api.js";
 /**
  * Diz se o corpo da resposta é mesmo JSON de um objecto.
  *
- * ⚠️ NÃO BASTA O `ok`. `netlify.toml:34` reescreve `/*` para `/index.html` com
+ * ⚠️ NÃO BASTA O `ok`. E a guarda é sobre o CORPO (o `JSON.parse` do `apiGet` ter
+ * produzido um objecto), não sobre o `content-type` — ver a errata em `useRanking.js`.
+ * `netlify.toml:34` reescreve `/*` para `/index.html` com
  * **status 200**: uma função ausente, mal deployada ou inalcançável (o caso do APK,
  * onde a origem é `https://localhost`) devolve HTML com 200, e o `apiGet` devolve
  * `{ ok: true, data: null }` porque o `JSON.parse` falhou. Sem esta guarda a tela

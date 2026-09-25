@@ -221,7 +221,7 @@ describe("MC94 · MeusAtivos — resiliência", () => {
       },
     }));
     assert.doesNotMatch(t, /não foi possível|erro/i, "mostra erro durante a espera");
-    assert.match(t, /carregar/i, "não avisa que está a carregar");
+    assert.match(t, /carregando/i, "não avisa que está a carregar");
   });
 
   test("sem sessão, convida a entrar em vez de mostrar erro", () => {
@@ -362,7 +362,7 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
     }
     const t = texto(html);
     assert.doesNotMatch(t, /Faltam \d+ acertos/i, "afirma o progresso de alguém que não identificou");
-    assert.doesNotMatch(t, /Nenhum bónus conquistado/i, "afirma a ausência de bónus de alguém que não identificou");
+    assert.doesNotMatch(t, /Nenhum bônus conquistado/i, "afirma a ausência de bónus de alguém que não identificou");
   });
 
   test("os campos do feedback chegam ao sítio certo, cada um ao seu", () => {
@@ -413,8 +413,8 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
       },
     }));
     assert.match(t, /Sequência completa/i, "não diz que a sequência está completa");
-    assert.match(t, /Nenhum bónus/i, "não reporta o que o livro-razão diz");
-    assert.doesNotMatch(t, /bónus conquistado!|bonus conquistado!/i,
+    assert.match(t, /Nenhum bônus/i, "não reporta o que o livro-razão diz");
+    assert.doesNotMatch(t, /b[oôó]nus conquistado!/i,
       "declara o bónus a partir de uma conta local e contradiz a secção ao lado");
   });
 
@@ -434,5 +434,108 @@ describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () =>
     }));
     assert.match(t, /Já creditadas/i);
     assert.doesNotMatch(t, /A creditar/i, "promete creditar senhas que já foram creditadas");
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// Os dois ⛔ da 2.ª validação independente, na página inteira. Ambos eram
+// afirmações de facto sobre uma pessoa — a que a app não identificou, e a que
+// identificou mas cujo token ainda não tinha chegado.
+// ───────────────────────────────────────────────────────────────────────────
+describe("MC94 · MeusAtivos — a página não fala de quem não conhece", () => {
+  const EU = "0xAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaaa";
+  const LANCES_DE_TODOS = [
+    { valor: 100, repetido: false, endereco: EU },
+    { valor: 250, repetido: true,  endereco: EU },
+    { valor: 500, repetido: false, endereco: "0xBBBBbbbbBBBBbbbbBBBBbbbbBBBBbbbbBBBBbbbb" },
+  ];
+
+  /** O texto de uma secção, isolado das outras. */
+  const dentro = (html, secao) => {
+    const i = html.indexOf(`data-secao="${secao}"`);
+    assert.notEqual(i, -1, `a secção ${secao} desapareceu`);
+    return texto(html.slice(i, i + html.slice(i).indexOf("</section>")));
+  };
+
+  test("⛔ ANÓNIMO: as QUATRO secções pessoais convidam a entrar, sem excepção", () => {
+    // ⚠️ Estava em produção, e na captura: três diziam "Entre na sua conta" e a
+    // quarta dizia "Ainda não há lances seus nesta edição." ao mesmo anónimo.
+    // A 1.ª validação corrigiu duas secções, a 2.ª apanhou a que ficou. Este teste
+    // varre as quatro de uma vez, para não haver uma quinta vez.
+    const html = renderizar({
+      contexto: { address: null, authToken: null, isConnected: false, lances: LANCES_DE_TODOS },
+      hooks: { feedback: { feedback: null, carregando: false, erro: null, semSessao: true } },
+    });
+    for (const secao of ["painel-torneio", "progresso-bonus", "estado-bonus", "feedback-lance"]) {
+      const t = dentro(html, secao);
+      assert.match(t, /Entre na sua conta/i, `"${secao}" não convida a entrar`);
+    }
+    const t = texto(html);
+    assert.doesNotMatch(t, /Ainda não há lances seus/i,
+      "afirma a ausência de lances de alguém que não identificou");
+    assert.doesNotMatch(t, /Faltam \d+ acertos/i);
+    assert.doesNotMatch(t, /Nenhum bônus conquistado/i);
+    assert.doesNotMatch(t, /vale \d+ ponto/,
+      "mostrou os lances de toda a gente como sendo do utilizador");
+  });
+
+  test("⛔ JANELA DO TOKEN: com sessão e sem token ainda, a página NÃO manda entrar", () => {
+    // ⚠️ `address` chega ANTES do `authToken` — medido e documentado pelo próprio
+    // projeto (`AppContext.jsx:937`, "valor correcto aos ~2,0 s"), e é o defeito
+    // que o MC88.39 corrigiu para o saldo em R$. `useFeedback` devolve
+    // `semSessao: true` sem token, e a página lia isso como "não tens sessão":
+    // durante ~2 s dizia "Entre na sua conta" a quem já tinha entrado — E
+    // mostrava-lhe os lances dele na secção ao lado, ao mesmo tempo.
+    const html = renderizar({
+      contexto: { address: EU, authToken: null, isConnected: true, lances: LANCES_DE_TODOS },
+      hooks: { feedback: { feedback: null, carregando: false, erro: null, semSessao: true } },
+    });
+    for (const secao of ["painel-torneio", "progresso-bonus", "estado-bonus"]) {
+      const t = dentro(html, secao);
+      assert.doesNotMatch(t, /Entre na sua conta/i,
+        `"${secao}" manda entrar na conta quem já entrou`);
+      assert.match(t, /carregando/i, `"${secao}" não diz que está a preparar a sessão`);
+    }
+    // E a secção de lances, que só precisa do endereço, mostra-os — sem contradição.
+    assert.match(dentro(html, "feedback-lance"), /R\$ 1,00/,
+      "escondeu os lances de quem tem sessão");
+    assert.doesNotMatch(texto(html), /Entre na sua conta/i,
+      "a página inteira ainda manda entrar quem já entrou");
+  });
+
+  test("o token chega: a página passa a mostrar os dados, sem passar por 'entre na conta'", () => {
+    const html = renderizar({
+      contexto: { address: EU, authToken: "tok", isConnected: true, lances: LANCES_DE_TODOS },
+      hooks: {
+        feedback: {
+          feedback: { posicao: 2, pontosTotais: 9, acertosTotais: 3, sequenciaAtual: 3,
+                      bonusEmitido: false, senhasACreditar: 0 },
+          carregando: false, erro: null, semSessao: false,
+        },
+      },
+    });
+    const t = texto(html);
+    assert.doesNotMatch(t, /Entre na sua conta/i);
+    assert.match(t, /2º/);
+    assert.match(t, /Faltam 2 acertos/i);
+  });
+
+  test("o ranking é público: aparece com ou sem sessão, e não entra na conversa da sessão", () => {
+    const rank = {
+      ranking: [{ posicao: 1, endereco: "0xCCCCccccCCCCccccCCCCccccCCCCccccCCCCcccc",
+                  pontosTotais: 12, acertosTotais: 4, bonusEmitido: false }],
+      total: 1, carregando: false, erro: null,
+    };
+    for (const ctx of [
+      { address: null, authToken: null, isConnected: false },
+      { address: EU, authToken: null, isConnected: true },
+      { address: EU, authToken: "tok", isConnected: true },
+    ]) {
+      const html = renderizar({ contexto: ctx, hooks: { ranking: rank } });
+      const t = dentro(html, "ranking-ciclo");
+      assert.match(t, /0xCCCC/i, `o ranking desapareceu com ${JSON.stringify(ctx)}`);
+      assert.doesNotMatch(t, /Entre na sua conta|carregando/i,
+        "o ranking, que é público, ficou preso ao estado da sessão");
+    }
   });
 });

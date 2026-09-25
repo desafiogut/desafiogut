@@ -17,13 +17,25 @@ import { COR, T_PADRAO, caixa, tituloSecao, legenda, reais, valorUtilizavel } fr
  * facto) depende dos lances de todos, e essa apuração é do backend. O texto
  * diz-lhe isso em vez de fingir autoridade.
  *
+ * ⛔ E TEM ESTADO DE SESSÃO, porque sem ele mentia a um anónimo.
+ * Esta tela é acessível sem sessão (`MeusAtivos.jsx` renderiza o botão de entrar
+ * quando `!isConnected`). Sem `temSessao`, com `address = null`, a secção caía no
+ * ramo vazio e escrevia **"Ainda não há lances seus nesta edição."** — uma
+ * afirmação de facto sobre uma pessoa que a app não identificou, e possivelmente
+ * falsa, ao lado de três secções que diziam correctamente "Entre na sua conta".
+ * Está na captura de produção de `68a09a5` e eu olhei para ela sem ver.
+ * Achado da 2.ª validação independente. É o MESMO defeito que a 1.ª ronda apanhou
+ * nas outras duas secções — aplicado a três das quatro secções pessoais.
+ *
  * @param {object} props
+ * @param {boolean} [props.temSessao]
  * @param {Array<{valor:number, repetido:boolean, endereco:string}>} [props.lances]
  * @param {string|null} [props.address]
  * @param {boolean} [props.isMobile]
  * @param {(chave:string, fallback:string)=>string} [props.t]
  */
 export default function FeedbackLance({
+  temSessao = false,
   lances = [],
   address = null,
   isMobile = false,
@@ -52,11 +64,23 @@ export default function FeedbackLance({
 
   const titulo = t("ativos.lance.titulo", "💡 Quanto vale cada lance seu");
 
+  if (!temSessao) {
+    return (
+      <section style={caixa(isMobile)} data-secao="feedback-lance">
+        <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
+        <p style={legenda(isMobile)} data-estado="sem-sessao">
+          {t("ativos.lance.semSessao",
+             "Entre na sua conta para ver quanto vale cada lance seu.")}
+        </p>
+      </section>
+    );
+  }
+
   if (meus.length === 0) {
     return (
       <section style={caixa(isMobile)} data-secao="feedback-lance">
         <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
-        <p style={legenda(isMobile)}>
+        <p style={legenda(isMobile)} data-estado="vazio">
           {t("ativos.lance.vazio",
              "Ainda não há lances seus nesta edição.")}
         </p>
@@ -67,7 +91,7 @@ export default function FeedbackLance({
   const ordenados = [...meus].sort((a, b) => Number(a.valor) - Number(b.valor));
 
   return (
-    <section style={caixa(isMobile)} data-secao="feedback-lance">
+    <section style={caixa(isMobile)} data-secao="feedback-lance" data-estado="dados">
       <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
 
       <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "0.35rem" }}>
@@ -109,7 +133,7 @@ export default function FeedbackLance({
 
       <p style={{ ...legenda(isMobile), marginTop: "0.55rem" }}>
         {t("ativos.lance.aviso",
-           "Projecção pela regra do torneio. Os pontos são apurados pela coordenação no fecho da rodada, e o menor lance único da rodada depende dos lances de todos os participantes.")}
+           "Projeção pela regra do torneio. Os pontos são apurados pela coordenação no fechamento da rodada, e o menor lance único da rodada depende dos lances de todos os participantes.")}
       </p>
     </section>
   );

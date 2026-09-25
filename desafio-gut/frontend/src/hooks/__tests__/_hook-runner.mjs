@@ -83,6 +83,8 @@ export function montar(hook, args = []) {
   let renderizacoes = 0;
   let desmontado = false;
   let rerenderPendente = null;
+  /** Escritas de estado que chegaram DEPOIS do desmonte — a fuga que se procura. */
+  const tardias = [];
 
   function agendarRerender() {
     if (desmontado) return;
@@ -104,6 +106,19 @@ export function montar(hook, args = []) {
           estado: typeof inicial === "function" ? inicial() : inicial,
           setter: (proximo) => {
             const valor = typeof proximo === "function" ? proximo(slot.estado) : proximo;
+            // ⚠️ UMA ESCRITA DEPOIS DO DESMONTE É REGISTADA, NÃO ENGOLIDA.
+            // A primeira versão do condutor saía em `agendarRerender` com
+            // `if (desmontado) return`, e portanto `resultado()` NUNCA podia
+            // reflectir um `setEstado` tardio: duas asserções de "não escreveu
+            // depois de desmontar" eram vácuas — não podiam falhar — e um mutante
+            // que removesse a guarda `if (!vivo) return` do hook sobrevivia à
+            // suíte inteira. Achado da 2.ª validação independente.
+            // O React também não re-renderiza um componente desmontado; o que
+            // estava errado era o instrumento não deixar VER a fuga. Agora regista.
+            if (desmontado) {
+              tardias.push(valor);
+              return;
+            }
             // Bail-out do React: mesmo valor não re-renderiza. Sem isto, um hook
             // que escreve o mesmo objecto a cada resposta entraria em ciclo
             // infinito AQUI e não em produção — falso defeito.
@@ -211,6 +226,8 @@ export function montar(hook, args = []) {
   return {
     resultado: () => resultado,
     renderizacoes: () => renderizacoes,
+    /** Escritas de estado ocorridas depois de `desmontar()`. Deve ser vazio. */
+    tardias: () => tardias.slice(),
     async actualizar(novosArgs) {
       if (novosArgs !== undefined) argsActuais = novosArgs;
       renderizar();
@@ -242,7 +259,16 @@ export function montar(hook, args = []) {
  * desse helper mudar, estes testes vêem.
  *
  * @param {(url: string, opts: object) => (object|Promise<object>)} responder
- *   devolve `{ status?, corpo?, json?, demora?, abortavel? }` ou lança.
+ *   devolve `{ status?, corpo?, json?, demora?, aposResposta? }` ou lança.
+ *
+ * ⚠️ `aposResposta` corre no instante em que a resposta JÁ EXISTE e ainda não foi
+ * lida pelo chamador. É a única forma de exprimir a janela que a guarda `vivo` dos
+ * hooks existe para travar: a resposta chegou, e SÓ DEPOIS o componente desmontou —
+ * altura em que o `abort` já não desfaz nada, porque não há nada em voo. Sem isto,
+ * qualquer teste de desmonte usava respostas lentas, o `abort` rejeitava-as, o
+ * `catch` do `AbortError` tratava tudo, e um mutante que removesse a guarda
+ * sobrevivia à suíte inteira. Achado da 2.ª validação independente — e a primeira
+ * tentativa de teste que eu escrevi para ele TAMBÉM não o matava, pela mesma razão.
  * @returns {{chamadas: Array<{url: string, headers: object, signal: AbortSignal|undefined}>, restaurar: () => void}}
  */
 export function duploDeFetch(responder) {
@@ -272,6 +298,10 @@ export function duploDeFetch(responder) {
       erro.name = "AbortError";
       throw erro;
     }
+
+    // A resposta existe a partir daqui. O que acontecer agora acontece DEPOIS de
+    // o pedido ter sido bem-sucedido — um `abort` a esta altura já não o desfaz.
+    if (typeof r.aposResposta === "function") await r.aposResposta();
 
     const texto = r.corpo !== undefined
       ? r.corpo

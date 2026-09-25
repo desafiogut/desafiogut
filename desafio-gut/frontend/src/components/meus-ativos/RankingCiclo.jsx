@@ -52,7 +52,7 @@ export default function RankingCiclo({
       <section style={caixa(isMobile)} data-secao="ranking-ciclo">
         <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
         <p style={{ ...legenda(isMobile), minHeight: "2.4rem" }} data-estado="carregando">
-          {t("ativos.rank.carregando", "A carregar o ranking…")}
+          {t("ativos.rank.carregando", "Carregando o ranking…")}
         </p>
       </section>
     );
@@ -114,7 +114,7 @@ export default function RankingCiclo({
         )}
       </span>
       {r.bonusEmitido && (
-        <span title={t("ativos.rank.comBonus", "conquistou bónus")}
+        <span title={t("ativos.rank.comBonus", "conquistou bônus")}
               style={{ fontSize: "0.72rem" }}>🎟️</span>
       )}
       <span style={{ color: COR.primary, fontWeight: 800, minWidth: "2.6rem", textAlign: "right" }}>
@@ -134,7 +134,7 @@ export default function RankingCiclo({
       {euFora !== null && (
         <>
           <p style={{ ...legenda(isMobile), margin: "0.45rem 0 0.2rem" }}>
-            {t("ativos.rank.suaPosicao", "A sua posição")}
+            {t("ativos.rank.suaPosicao", "Sua posição")}
           </p>
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
             {linha(euFora, true, inteiroSeguro(euFora.posicao) ?? lista.indexOf(euFora) + 1)}

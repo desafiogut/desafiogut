@@ -34,11 +34,17 @@ export const T_PADRAO = (_chave, fallback) => fallback;
  * Reproduzi a mesma armadilha aqui, e a validação independente apanhou-a: um
  * lance `null` aparecia como "R$ 0,00 · menor único seu · vale 3 pontos".
  *
+ * ⚠️ E exige INTEIRO SEGURO, não só finito — a assimetria com `inteiroSeguro`
+ * era um buraco: `reais(3.7)` dava `"R$ 0,04"`, `reais(0.5)` dava `"R$ 0,01"` e
+ * `reais(1e21)` dava `"R$ 10000000000000000000,00"`. Um lance é em CENTAVOS, que
+ * são inteiros por definição (`Leilao.sol` recebe `uint256`), logo um não-inteiro
+ * nunca é um lance — é ruído a caminho do ecrã. Achado da 2.ª validação independente.
+ *
  * @param {unknown} centavos
  * @returns {boolean}
  */
 export function valorUtilizavel(centavos) {
-  return typeof centavos === "number" && Number.isFinite(centavos) && centavos >= 0;
+  return typeof centavos === "number" && Number.isSafeInteger(centavos) && centavos >= 0;
 }
 
 /**

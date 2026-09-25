@@ -69,7 +69,14 @@ describe("MC94 · controlo positivo do condutor de hooks", () => {
     const c = montar(useFugaDeMemoria, []);
     await c.desmontar();
     await new Promise((r) => setTimeout(r, 5));
-    assert.equal(escreveuTarde, true, "o condutor não deixa o trabalho tardio acontecer — é CEGO");
+    assert.equal(escreveuTarde, true, "o condutor não deixa o trabalho tardio acontecer");
+    // ⚠️ A METADE QUE FALTAVA. A versão anterior parava na linha acima — afirmava
+    // que o temporizador DISPAROU, não que a escrita é VISÍVEL ao instrumento. E
+    // não era: o condutor engolia-a, e por isso as asserções de "não escreveu
+    // depois de desmontar" nos testes dos hooks reais não podiam falhar.
+    // Achado da 2.ª validação independente.
+    assert.deepEqual(c.tardias(), [1],
+      "o condutor não VÊ a escrita tardia — as asserções de fuga são vácuas");
   });
 
   test("o duplo de fetch honra o AbortSignal, como o fetch real", async () => {
@@ -173,7 +180,7 @@ describe("MC94 · useRanking", () => {
       await c.desmontar();
       assert.equal(f.chamadas[0].signal?.aborted, true, "não abortou o pedido em curso");
       await new Promise((r) => setTimeout(r, 60));
-      assert.deepEqual(c.resultado().ranking, [], "escreveu estado depois de desmontar");
+      assert.deepEqual(c.tardias(), [], "escreveu estado depois de desmontar");
     } finally { f.restaurar(); }
   });
 
@@ -199,6 +206,46 @@ describe("MC94 · useRanking", () => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────
+describe("MC94 · useRanking — a corrida que a guarda `vivo` trava", () => {
+  test("resposta JÁ resolvida que aterra depois do desmonte não escreve estado", async () => {
+    // ⚠️ Esta é a corrida real: o `fetch` resolve, e SÓ DEPOIS o componente
+    // desmonta — o `abort` já não desfaz nada, porque a resposta veio. Sem o
+    // `if (!vivo) return` depois do `await`, o hook escreve estado num componente
+    // que já não existe. Nenhum teste cobria isto: o mutante que removia a guarda
+    // sobrevivia à suíte inteira (achado da 2.ª validação independente), porque os
+    // testes de desmonte usavam respostas LENTAS, que o `abort` rejeita.
+    let controlador = null;
+    const f = duploDeFetch(() => ({
+      json: { total: 1, ranking: [{ endereco: "0xaa" }] },
+      // O desmonte acontece DEPOIS de a resposta existir — a janela exacta.
+      aposResposta: async () => { await controlador.desmontar(); },
+    }));
+    try {
+      controlador = montar(useRanking, ["R-1"]);
+      await new Promise((r) => setTimeout(r, 30));
+      assert.deepEqual(controlador.tardias(), [],
+        "escreveu o resultado num hook já desmontado");
+    } finally { f.restaurar(); }
+  });
+
+  test("um pedido novo limpa o erro do anterior", async () => {
+    // Sem isto, mudar de ciclo depois de uma falha mostrava o ERRO do ciclo antigo
+    // em vez de "a carregar" — porque a secção testa `erro` antes de `carregando`.
+    let vez = 0;
+    const f = duploDeFetch(() => (vez++ === 0
+      ? { status: 500, json: { erro: "interno" } }
+      : { demora: 20, json: { total: 1, ranking: [{ endereco: "0xbb" }] } }));
+    try {
+      const c = montar(useRanking, ["R-1"]);
+      await ate(c, (e) => e.erro !== null, "não falhou como esperado");
+      await c.actualizar(["R-2"]);
+      assert.equal(c.resultado().erro, null,
+        "manteve o erro do ciclo anterior enquanto o novo carregava");
+      assert.equal(c.resultado().carregando, true);
+    } finally { f.restaurar(); }
+  });
+});
+
 describe("MC94 · useFeedback", () => {
   const ARGS = ["R-1", "0xda3a83aaaaaaaaaaaaaaaaaaaaaaaaaaaaaae84e", "jwt-de-teste"];
 
@@ -304,7 +351,7 @@ describe("MC94 · useFeedback", () => {
       await c.desmontar();
       assert.equal(f.chamadas[0].signal?.aborted, true, "não abortou");
       await new Promise((r) => setTimeout(r, 60));
-      assert.equal(c.resultado().feedback, null, "escreveu estado depois de desmontar");
+      assert.deepEqual(c.tardias(), [], "escreveu estado depois de desmontar");
     } finally { f.restaurar(); }
   });
 
@@ -321,6 +368,40 @@ describe("MC94 · useFeedback", () => {
       assert.equal(f.chamadas.length, 1);
       assert.equal(r.feedback.pontosTotais, 3);
       assert.equal(r.semSessao, false);
+    } finally { f.restaurar(); }
+  });
+
+  test("⚠️ TROCAR DE CARTEIRA refaz o pedido e não deixa os dados do endereço anterior", async () => {
+    // ⚠️ R4: mostrar a pontuação da carteira anterior a uma carteira nova é
+    // expor dados de outra pessoa. As deps do efeito incluem `endereco`, mas
+    // nada o testava — o mutante que as removia sobrevivia (2.ª validação).
+    const OUTRO = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const f = duploDeFetch((url) => (url.includes(OUTRO)
+      ? { json: { pontosTotais: 99 } }
+      : { json: { pontosTotais: 7 } }));
+    try {
+      const c = montar(useFeedback, ARGS);
+      await ate(c, (e) => e.feedback !== null, "não carregou o primeiro");
+      assert.equal(c.resultado().feedback.pontosTotais, 7);
+
+      await c.actualizar(["R-1", OUTRO, ARGS[2]]);
+      const r = await ate(c, (e) => e.feedback !== null && !e.carregando, "não pediu para a carteira nova");
+      assert.equal(f.chamadas.length, 2, "não refez o pedido ao trocar de carteira");
+      assert.match(f.chamadas[1].url, new RegExp(OUTRO));
+      assert.equal(r.feedback.pontosTotais, 99,
+        "deixou no ecrã a pontuação da carteira anterior");
+    } finally { f.restaurar(); }
+  });
+
+  test("⚠️ RENOVAR O TOKEN refaz o pedido", async () => {
+    const f = duploDeFetch(() => ({ json: { pontosTotais: 7 } }));
+    try {
+      const c = montar(useFeedback, ARGS);
+      await ate(c, (e) => e.feedback !== null, "não carregou");
+      await c.actualizar(["R-1", ARGS[1], "jwt-renovado"]);
+      await ate(c, (e) => e.feedback !== null && !e.carregando, "não repetiu com o token novo");
+      assert.equal(f.chamadas.length, 2, "não refez o pedido com o token renovado");
+      assert.equal(f.chamadas[1].headers.Authorization, "Bearer jwt-renovado");
     } finally { f.restaurar(); }
   });
 
