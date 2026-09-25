@@ -265,3 +265,15 @@ Commit: 464c1ef (sobre 68a09a5 + edc5f8e)
   - Estas correcções da 2.ª ronda NÃO passaram por uma terceira validação.
   - O condutor de hooks continua a implementar a comparação de deps e o
     agendamento — não é o React. Os controlos positivos limitam, não eliminam.
+
+10.9 UM DEPLOY "error" QUE NÃO É UMA FALHA
+  O commit 995db32 (só documentação) aparece na lista de deploys como **error**:
+    "Failed during stage 'checking build content for changes':
+     Canceled build due to no content change"
+  É a optimização do Netlify: o artefacto saiu byte-idêntico, logo o build foi
+  CANCELADO. Produção continua a servir o artefacto de 464c1ef, que é o correcto.
+  ⚠️ Duas consequências práticas:
+   - um vermelho na lista de deploys pode significar "nada mudou", não "partiu";
+   - o commit_ref servido fica no ÚLTIMO commit que mudou o artefacto (464c1ef),
+     não no HEAD (995db32). Perguntar "que commit está em produção?" e comparar
+     com o HEAD dá um falso drift.
