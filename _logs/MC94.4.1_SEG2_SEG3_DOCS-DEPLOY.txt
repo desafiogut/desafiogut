@@ -1,0 +1,65 @@
+MC94.4.1 — SEG2 (documentacao) + SEG3 (deploy e validacao)
+Skills ECC: terminal-ops, canary-watch, verification-before-completion
+
+═══ 2.1 CLAUDE.md (R14) ═══ ACTUALIZADO com a seccao MC94.4.1: a causa (campo de dados,
+  nao codigo), a tabela das 4 correccoes, o achado dos ficheiros invisiveis ao grep, e as
+  3 regras que saem daqui (procurar o CAMPO antes do bug; verificar TODOS os lados que o
+  consultam; perguntar se a ferramenta consegue ver o que se procura).
+
+═══ 2.2 COERENCIA COM O REGULAMENTO — ACHADO, NAO CORRIGIDO ═══
+  O gate LGPD mostra o resumo do regulamento. Dois artigos em tensao com o fluxo real:
+    Art. 9  — "O participante podera' ofertar lances indeterminados ATRAVES DE SENHAS,
+               escolhendo a versao Relampago (Flash) ou Programado"
+    Art. 20 — "Cada senha custa o valor unico de R$ 2,00 (dois reais) PARA TODAS AS
+               EDICOES, SEJA RELAMPAGO OU PROGRAMADO."
+  O fluxo real (operador, R18) e': PIX -> SALDO -> (a) lance RELAMPAGO debita o proprio
+  saldo a partir de R$ 0,01, OU (b) converte em SENHAS (R$2) -> lance PROGRAMADO.
+  ⇒ O regulamento descreve lances "atraves de senhas" escolhendo versao flash OU
+    programado — o que NAO corresponde ao que a app faz agora (flash = saldo direto).
+  NAO CORRIGIDO: e' documento LEGAL (registado em cartorio, citado no proprio gate) e nao
+  esta' no escopo autorizado. FICA REGISTADO como P1-DOC para o operador decidir se o
+  regulamento se ajusta ou se o produto se ajusta ao regulamento. E' material para o
+  juridico, nao para o agente.
+
+═══ 3.1 SUITES ANTES DO DEPLOY ═══
+  Frontend 360/360 · Backend 637 (631 pass, 0 fail, 6 skipped) · 4 mutacoes RED->GREEN
+
+═══ 3.2 COMMIT + PUSH ═══
+  299acc0 "fix(MC94.4.1): lance da especial debita SALDO (R$ 0,01+), nao senha"
+  12 files changed, 129 insertions(+), 18 deletions(-)
+
+═══ 3.3 DEPLOY ═══
+  $ netlify deploy --prod --build --message "MC94.4.1 — lógica de lance da especial corrigida"
+     CDN requesting 37 files and 2 functions   <- 2 FUNCTIONS: o backend mudou mesmo
+     ✔ Deploy is live!  (Netlify Build completed in 5m 24.8s)
+     Deploy ID: 6ab6f4669c70acbbe0871291
+
+═══ 3.4 VALIDACAO EM PRODUCAO ═══
+  health                                -> HTTP 200 ✅
+  ranking?cicloId=R-1                   -> HTTP 200 ✅
+  /edicoes                              -> ESPECIAL-AIRFRYER com "tipo":"relampago" ✅
+                                           (0 edicoes com "programado" — nao ha nenhuma
+                                            programada activa neste momento)
+  bytes (sha256, local == servido)      -> PrivyRoot 396260d989b18a8a5612 IDENTICO ✅
+                                           IdiomaContext c883c2dd7c7335b4593e IDENTICO ✅
+                                           CardLance 1e69ff5b1afa46bd84f9 IDENTICO ✅
+  bundle servido contem a chamada       -> idEdicao:e.id,tipoLeilao:`flash`,encerrado:!1 ✅
+  texto ANTIGO em TODOS os chunks       -> 0 ocorrencias ✅
+  DOM ao vivo do slot                   -> data-estado="agendada" ✅
+     texto: "🎁 Edição especial · Em breve · PRÊMIO EM DISPUTA Air Fryer · 04/10 ·
+             20:00-20:30 (horário de Brasília) · Lance relâmpago · vence o menor lance
+             único · a partir de R$ 0,01 (debita do saldo)"
+     temTextoNovo: true · temTextoSenha: false ✅
+     cronometro: "Abre em 9d 00:29:03" -> conta para o INICIO ✅
+  captura: _logs/MC94.4.1_captura-especial-corrigida.png
+
+═══ 3.5 O QUE NAO PUDE MEDIR (HARD GATE 8, parte do "lance real") ═══
+  ⛔ NAO executei um lance REAL a debitar saldo: exige uma conta autenticada COM saldo, e
+     as credenciais nao sao minhas para usar (R5). O que tenho em vez disso:
+       - o backend TESTADO com mocks: teste que exige `chamadasDebitoRs === 1`,
+         `chamadasSaldoOnChain === 0` e `data.modo === "relampago"` na especial dentro da
+         janela (passa; e morre quando revertido — M2);
+       - a METADATA em producao medida: tipo=relampago;
+       - o BUNDLE servido: o cartao pede flash.
+     ⇒ A cadeia esta' fechada ponta a ponta por medicao, EXCEPTO o acto de clicar e gastar
+       dinheiro real. Isso e' do operador.

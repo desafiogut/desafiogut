@@ -1,0 +1,53 @@
+MC94.4.1 — SEG0 (backend) + SEG1 (frontend/texto) — CORRECCOES
+Skills ECC: systematic-debugging, impeccable, verification-before-completion
+
+═══ C1 — DADOS (a correccao que resolve o problema) ═══
+  `scripts/mc941-seed-edicao-especial.mjs`:
+      tipo: "programado",   // D1 do operador: cada lance gasta 1 senha
+   ->
+      // MC94.4.1 — R18: o operador REVERTEU a decisao D1 do MC94.1. ...
+      tipo: "relampago",
+  Regravado: `node scripts/mc941-seed-edicao-especial.mjs --print` (mostrou relampago)
+  depois `--force`. O script grava via `netlify blobs:set` e RELÊ o que gravou —
+  e o cabecalho do proprio script diz: "nao le' nem pede token nenhum (R5)" ✅.
+  Confirmado em PRODUCAO pelo endpoint publico:
+      {"id":"ESPECIAL-AIRFRYER","tipo":"relampago", ...}   (estava "programado")
+  Estado: em `agendadas` (janela futura), 0 lances -> zero impacto em utilizadores.
+
+═══ C2 — FRONTEND ═══
+  `CardEdicaoEspecial.jsx`: `tipoLeilao: "programado"` -> `"flash"` (+ comentario a
+  explicar porque e' este campo que decide o caminho todo em CardLance).
+  Sem esta alteracao, a UI continuaria a exigir senha e a converter R$->senha mesmo com
+  a metadata correcta — os dois lados tem de concordar.
+
+═══ C3 — TEXTO (3 idiomas + fallback) ═══
+  ANTES: "Rodada programada . vence o menor lance unico . cada lance usa 1 senha (R$ 2,00)"
+  DEPOIS: "Lance relampago . vence o menor lance unico . a partir de R$ 0,01 (debita do saldo)"
+  en: "Flash bid . lowest unique bid wins . from R$ 0.01 (charged to your balance)"
+  es: "Puja relampago . gana la puja unica mas baja . desde R$ 0,01 (se debita del saldo)"
+  (Formulacao da sugestao do operador, com o "menor lance unico vence" mantido por ser a
+  regra real da edicao - Art. 8.)
+
+═══ C4 — FONTE (os ficheiros invisiveis ao grep) ═══
+  `_lib/edicoes-core.mjs`: `[<NUL>-<0x1f><0x7f>]` (bytes crus) -> `[\x00-\x1f\x7f]`
+     Mesma semantica de regex. +9 bytes. Resultado MEDIDO:
+       file  -> "JavaScript source, Unicode text, UTF-8 text"
+       grep  -> de "Binary file matches" para contar 5 linhas
+  `_tests/mc93e-ci-config.test.mjs`: 1 byte 0x01 cru -> texto "0x01" no comentario.
+     O byte estava DENTRO DE UM COMENTARIO, logo nao havia mudanca funcional possivel.
+     A explicacao do autor foi preservada (a licao e' boa: uma retro-referencia de sed).
+  Nota: o `git diff` do edicoes-core.mjs ainda mostra "Bin" porque o blob ANTIGO e'
+  binario; depois deste commit os diffs futuros sao textuais.
+
+═══ TESTE NOVO — trava a CLASSE, nao o caso ═══
+  `_tests/mc9441-fonte-texto.test.mjs`: varre TODOS os .mjs de functions/ e falha se algum
+  tiver bytes de controlo crus (fora de \t \n \r). Mais um teste que exige o escape em
+  edicoes-core.mjs. Um caso pontual corrigido sem um invariante e' um caso que volta.
+
+═══ HARD GATE 4 — SEM REGRESSAO NAS PROGRAMADAS ═══
+  Nao houve alteracao nenhuma ao caminho `ehProgramado`. O que mudou foi:
+    - o valor de `tipo` da ESPECIAL (dado);
+    - qual dos dois caminhos o cartao da ESPECIAL pede (UI);
+    - texto.
+  As edicoes programadas continuam com tipo "programado" na metadata e continuam a
+  debitar senha pelo MESMO codigo de antes. A R-1 nao foi tocada.

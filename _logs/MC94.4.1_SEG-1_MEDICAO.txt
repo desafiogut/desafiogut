@@ -1,0 +1,56 @@
+MC94.4.1 — SEG-1 — MEDICAO (o briefing estava wrong em 3 pontos)
+Skills ECC: smart-explore, brainstorming, systematic-debugging
+
+═══ -1.0 BASE REAL ═══
+  O briefing dizia "pos MC94.3.2, 108c0bb" e deploy 6ab6e4cf7c6500393caa87e9.
+  Realidade: HEAD f4481d6 (o MC94.4 ja' tinha fechado) e o deploy activo era
+  6ab6e97eb824cd4d73ed648e. 4.ª vez seguida que o enunciado diverge. MEDIDO antes de agir.
+
+═══ -1.1 BACKEND: NAO HA BUG DE CODIGO. O codigo ja' estava certo. ═══
+  `lance-relampago.mjs`:
+    LANCE_MIN_CENTAVOS = 1                         -> aceita R$ 0,01 ✅ (nao ha trava de R$ 2)
+    :187  const ehProgramado = tipoEdicao === "programado";
+    :189  // ── 6. Consumo do pagamento (programado = senha; flash = saldo R$) ────
+    :191  if (ehProgramado) { ...gate on-chain de senhas + registrarConsumoSenha... }
+    :225  else { debito = await debitarSaldoRs({ endereco, valorCentavos, ... }) }
+  ⇒ O debito e' DATA-DRIVEN: quem decide senha vs saldo e' o campo `tipo` da METADATA.
+
+  E a metadata da especial, medida em PRODUCAO:
+    {"id":"ESPECIAL-AIRFRYER","tipo":"programado", ...}
+  ⇒ ERA ESTE CAMPO, e so' ele, que fazia a especial cobrar senha.
+  A ORIGEM do valor, encontrada em `scripts/mc941-seed-edicao-especial.mjs`:
+    tipo: "programado",   // D1 do operador: cada lance gasta 1 senha
+  ⇒ NAO e' bug: e' uma DECISAO ANTERIOR (D1 do MC94.1) que o operador REVERTEU agora
+    (R18). O ficheiro declara-o por escrito — o que torna a correccao legitima e nao
+    um "conserto as cegas".
+
+═══ -1.2 FRONTEND ═══
+  `CardEdicaoEspecial.jsx:148` passa `tipoLeilao: "programado"` hardcoded. Em
+  `CardLance.jsx`, `isProgramado = tipoLeilao === "programado"` decide TUDO:
+    - gate on-chain de saldo de senhas (linhas 153-165)
+    - conversao automatica R$ -> senha (linhas 172-193)
+    - e posta em `/auth-lance` (linha 120) em vez de `/lance-relampago` (linha 206)
+  ⇒ Com "flash": sem gate de senha, sem conversao, e debita SALDO. Coerente com o backend.
+  O minimo da UI ja' e' R$ 0,01 (linha 144: "entre 1 e 999999 (centavos). Art. 27: min R$ 0,01").
+
+═══ -1.3 CRONOMETRO ═══
+  JA' ESTA' CERTO: em producao o cartao mostra "ABRE EM 09 DIAS 02 HORAS..." com
+  aria-label "Abre em ...". Conta para o INICIO (20h de 04/10), como o operador descreve.
+  Nada a corrigir. (Registado para nao voltar a ser levantado.)
+
+═══ -1.4 ACHADO NOVO, NAO PEDIDO: DOIS FICHEIROS INVISIVEIS AO GREP ═══
+  `_lib/edicoes-core.mjs` (PRODUCAO) tem 3 bytes de controlo CRUS na classe de uma regex:
+    .replace(/[<NUL>-<0x1f><0x7f>]/g, " ")   // em vez de /[\x00-\x1f\x7f]/
+  Consequencia medida: `file` -> "data"; `grep` -> "Binary file ... matches" e SALTA o
+  ficheiro; `git diff` -> "Bin 13331 -> 13340 bytes".
+  ⇒ TODAS as minhas varreduras anteriores (incluindo as auditorias de segredos dos MC94.3
+    e MC94.4) passaram por cima deste ficheiro em SILENCIO. Nao estava a mentir — estava cega.
+  O mesmo em `_tests/mc93e-ci-config.test.mjs` (1 byte 0x01), cujo proprio comentario
+  admite: "Ao escrever este MC injectei dois 0x01 por uma retro-referencia de sed".
+  Ironicamente, e' o ficheiro que VERIFICA que o ci.yml nao tem caracteres de controlo.
+
+═══ -1.5 AUTOSSUFICIENCIA (R19): cabe num so' ═══
+═══ VEREDITO: SEGUIR — com a hipotese do briefing REFUTADA por medicao ═══
+  O briefing previa "backend possivelmente debita senha" (verdadeiro no efeito) e
+  "possivelmente ha trava de R$ 2" (FALSO: o minimo e' R$ 0,01 desde sempre). A causa
+  nao era codigo — era um campo de dados. Corrigir o codigo teria sido o erro.

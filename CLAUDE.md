@@ -1122,6 +1122,82 @@ assimetria dentro.
 
 ---
 
+## MC94.4.1 — Lance da edição especial debita SALDO, não senha (2026-09-25)
+
+**Data:** 2026-09-25 · **Origem:** desvio reportado pelo operador ·
+**Recorrência:** ALTA (a classe «campo de dados decide o débito») · **Impacto:** ALTO (cobrança errada)
+**Base:** `f4481d6` · **Fecho:** `299acc0`
+
+### ⛔ A causa NÃO era código — era um campo de dados
+
+O briefing previa um bug no backend. Medido: **o código estava certo.**
+`lance-relampago.mjs:187` faz `ehProgramado = tipoEdicao === "programado"` e o comentário
+da linha 189 diz, por escrito: *«programado = senha; flash = saldo R$»*. E
+`LANCE_MIN_CENTAVOS = 1` — **não há trava de R$ 2** (o mínimo é R$ 0,01 desde sempre).
+
+O que decidia a cobrança era o campo `tipo` da **metadata** da edição, e a especial tinha
+`tipo: "programado"` — valor que nasce no seed:
+
+```js
+tipo: "programado",   // D1 do operador: cada lance gasta 1 senha
+```
+
+⇒ **Não era um defeito: era uma decisão anterior (D1 do MC94.1) que o operador reverteu
+(R18).** A especial é uma edição **RELÂMPAGO** e o lance debita **saldo em dinheiro a
+partir de R$ 0,01**. *(A minha interpretação do MC94.3.2 — «a especial é programada» —
+era exactamente a que eu tinha marcado como a confirmar. Ficou confirmada ao contrário.)*
+
+### A correcção (4 partes)
+
+| # | onde | o que |
+|---|---|---|
+| C1 | `scripts/mc941-seed-edicao-especial.mjs` | `tipo: "relampago"` + comentário a registar a reversão da D1. Regravado com `--force` (o script relê e confirma; escreve por `netlify blobs:set`, **sem ler token — R5**) |
+| C2 | `CardEdicaoEspecial.jsx` | `tipoLeilao: "flash"` (era `"programado"`). Em `CardLance` **é este campo que escolhe tudo**: `"programado"` liga o gate on-chain de senhas + a conversão R$→senha e posta em `auth-lance`; `"flash"` posta em `lance-relampago` e debita saldo |
+| C3 | `i18n/{pt,en,es}.js` + fallback | «Lance relâmpago · vence o menor lance único · **a partir de R$ 0,01 (debita do saldo)**» |
+| C4 | ver abaixo | os ficheiros invisíveis ao `grep` |
+
+**Os dois lados têm de concordar:** a metadata e o `tipoLeilao` do cartão. Corrigir só um
+deixa a UI a exigir senha (ou o backend a debitar senha) — é a coerência dos dois que muda
+o comportamento.
+
+### ⛔ C4 — dois ficheiros que o `grep` NÃO conseguia ler
+
+`_lib/edicoes-core.mjs` (produção) tinha **3 bytes de controlo crus** dentro da classe de uma
+regex — `/[ -]/` escrito com os bytes literais 0x00, 0x1F, 0x7F em vez dos escapes
+` `, ``, ``. A regex funcionava (mesma semântica), e é por isso que ninguém notou.
+O custo estava nas **ferramentas**:
+
+```
+file  -> "data"                    (binário)
+grep  -> "Binary file ... matches"  e SALTava o ficheiro em silêncio
+git   -> "Bin 13331 -> 13340 bytes" (diff ilegível)
+```
+
+> ⇒ **Um ficheiro invisível ao `grep` é um ficheiro invisível à auditoria.** Todas as
+> varreduras dos MC94.3 e MC94.4 passaram por cima deste ficheiro — não por descuido, mas
+> porque a ferramenta não o lia. Corrigido para os escapes; medido: `file` passa a
+> «JavaScript source, UTF-8 text» e o `grep` conta linhas.
+
+O mesmo problema existia em `_tests/mc93e-ci-config.test.mjs` (1 byte `0x01`), e o
+comentário do próprio ficheiro admite-o: *«Ao escrever este MC injectei dois 0x01 por uma
+retro-referência de `sed`»*. Ironia: é o ficheiro que **verifica** que o `ci.yml` não tem
+caracteres de controlo.
+
+**Invariante novo:** `_tests/mc9441-fonte-texto.test.mjs` varre **todos** os `.mjs` e falha
+se algum tiver controlo cru. Um caso corrigido sem invariante é um caso que volta.
+
+### Regra que sai daqui
+
+> **Quando um comportamento é escolhido por um CAMPO DE DADOS, procure-se o campo antes de
+> se procurar o bug.** E ao corrigir, verifique-se **todos** os lados que o consultam — no
+> DesafioGUT, `tipo` decide o débito no backend **e** o formulário no frontend.
+
+> **Ao medir, pergunte-se se a ferramenta consegue ver o que se procura.** O `grep` falha em
+> silêncio em ficheiros «binários»: uma varredura que devolve zero resultados pode estar a
+> dizer «não há» quando devia dizer «não consigo ler».
+
+---
+
 ## MC94.4 — Inspecção geral e faxina (2026-09-25)
 
 **Data:** 2026-09-25 · **Origem:** inspecção antes da sequência operacional ·
