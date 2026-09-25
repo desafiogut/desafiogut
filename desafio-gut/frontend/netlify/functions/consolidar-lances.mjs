@@ -9,37 +9,19 @@
 //   5) trata transação descartada (NUNCA reenvia automaticamente — ITEM 4.2).
 //
 // Só corre em NETWORK_STAGE === 'mainnet' (R9).
+//
+// MC94.3 — os passos 3–10 vivem em `_lib/consolidacao.mjs` (autorização do
+// operador): a scheduled `scheduled-encerrar-especial.mjs` precisa do MESMO código,
+// e duas cópias do que move dinheiro on-chain divergiriam. Este handler ficou com
+// o que é HTTP: preflight, método, rede, autorização e corpo. Respostas iguais.
 
-import { Contract } from "ethers";
 import { jsonResponse, jsonError, parseJsonBody } from "./_lib/validate.mjs";
 import { guardAdmin } from "./_lib/admin-auth.mjs";
-import { marcarConsolidado, estaConsolidado } from "./_lib/bids-store.mjs";
-import { getLances } from "./_lib/data-store.mjs";
-import { obterSignerCoordenacao, backendAssinatura } from "./_lib/signer.mjs";
-import { escolherRpc } from "./_lib/rpc-fallback.mjs"; // MC39.2 — fallback RPC/Flashbots (opt-in)
 import { respostaPreflight } from "./_lib/cors.mjs";
-import { registrarPontuacaoRodada } from "./_lib/pontuacao-store.mjs";
-import { EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.mjs"; // MC94.2 — especial não pontua
+import { consolidarEdicao } from "./_lib/consolidacao.mjs";
 
-const ABI = [
-  "function consolidarResultado(string idEdicao, address vencedor, uint256 menorUnico) public",
-  "function edicaoNonce(string) view returns (uint256)",
-];
-const ZERO             = "0x0000000000000000000000000000000000000000";
-const TIMEOUT_MINER_MS = 90_000; // janela de mineração antes de reportar "pendente"
-
-/** Menor valor que aparece EXATAMENTE uma vez (Artigo VIII). null se não houver. */
-export function apurarMenorUnico(lances) {
-  const cont = new Map();
-  for (const l of lances) cont.set(l.valorCentavos, (cont.get(l.valorCentavos) || 0) + 1);
-  let menor = Infinity, vencedor = ZERO;
-  for (const l of lances) {
-    if (cont.get(l.valorCentavos) === 1 && l.valorCentavos < menor) {
-      menor = l.valorCentavos; vencedor = l.endereco;
-    }
-  }
-  return menor === Infinity ? null : { menorUnico: menor, vencedor };
-}
+// Compat: `apurarMenorUnico` era exportado daqui (mc28-seguranca, mc33-load).
+export { apurarMenorUnico } from "./_lib/consolidacao.mjs";
 
 export default async (req) => {
   // MC88.12 — preflight CORS do APK. Tem de ser a primeira coisa: o OPTIONS não
@@ -61,117 +43,9 @@ export default async (req) => {
   const edicaoId = String(body?.edicaoId || "").trim();
   if (!edicaoId) return jsonError(400, "edicao_obrigatoria", "edicaoId obrigatório");
 
-  // 3. Idempotência de fecho — não reconsolida
-  const jaFechado = await estaConsolidado(edicaoId);
-  if (jaFechado) return jsonResponse({ ok: true, idempotent: true, edicaoId, ...jaFechado });
-
-  // 4. ENV obrigatórias — credenciais conforme o backend de assinatura (MC30.1)
-  const requeridas = ["CONSOLIDATION_RPC_URL", "CONTRATO_MAINNET", "MAINNET_CHAIN_ID"];
-  if (backendAssinatura() === "local-key") requeridas.push("COORDENACAO_PRIVATE_KEY");
-  else requeridas.push("KMS_KEY_ID", "BICONOMY_BUNDLER_URL");
-  for (const k of requeridas) {
-    if (!process.env[k]) return jsonError(503, "config_ausente", `${k} não configurado`);
-  }
-
-  // 5. Apurar menor lance único OFF-CHAIN — leitura via fachada data-store
-  //    (MC32.1). Backend 'blobs' = listarBids (byte-idêntico); pronto p/ Supabase.
-  const lances  = await getLances(edicaoId);
-  const apurado = apurarMenorUnico(lances);
-  if (!apurado) return jsonError(422, "sem_vencedor", "nenhum lance único nesta edição");
-
-  // 6. Signer da coordenação via módulo central (MC30.1). No backend local-key
-  //    o provider é o Flashbots Protect (CONSOLIDATION_RPC_URL); no backend
-  //    'biconomy' o envio/assinatura ocorrem via Smart Account ERC-4337 (owner KMS).
-  // MC39.2 — fallback de RPC/Flashbots: se CONSOLIDATION_RPC_URL_FALLBACK estiver
-  // definido, escolhe o 1.º endpoint saudável; sem fallback, usa o primário (zero mudança).
-  const rpcConsolidacao = await escolherRpc(
-    process.env.CONSOLIDATION_RPC_URL,
-    process.env.CONSOLIDATION_RPC_URL_FALLBACK,
-  );
-  const { provider, signer } = await obterSignerCoordenacao(rpcConsolidacao);
-  const contrato = new Contract(process.env.CONTRATO_MAINNET, ABI, signer);
-
-  // 7. EIP-712 (recibo de auditoria off-chain) — nonce do leilão (anti-replay)
-  const nonce  = Number(await contrato.edicaoNonce(edicaoId));
-  const domain = {
-    name: "LeilaoGUT", version: "1",
-    chainId: Number(process.env.MAINNET_CHAIN_ID),
-    verifyingContract: process.env.CONTRATO_MAINNET,
-  };
-  const types = { Consolidacao: [
-    { name: "idEdicao",   type: "string"  },
-    { name: "vencedor",   type: "address" },
-    { name: "menorUnico", type: "uint256" },
-    { name: "nonce",      type: "uint256" },
-  ] };
-  const value = { idEdicao: edicaoId, vencedor: apurado.vencedor, menorUnico: apurado.menorUnico, nonce };
-  const assinaturaEip712 = await signer.signTypedData(domain, types, value);
-
-  // 8. Enviar consolidarResultado via Flashbots (fora do mempool público)
-  let tx;
-  try {
-    tx = await contrato.consolidarResultado(edicaoId, apurado.vencedor, apurado.menorUnico);
-  } catch (err) {
-    return jsonError(502, "envio_falhou", "falha ao submeter consolidação: " + (err?.shortMessage || err?.message));
-  }
-
-  // 9. Dropped tx handling (ITEM 4.2): espera com timeout; NUNCA reenvia auto.
-  const receipt = await provider.waitForTransaction(tx.hash, 1, TIMEOUT_MINER_MS).catch(() => null);
-  if (!receipt) {
-    return jsonResponse({
-      ok: false, status: "pendente", edicaoId, txHash: tx.hash,
-      vencedor: apurado.vencedor, menorUnicoCentavos: apurado.menorUnico,
-      nonceUsado: nonce, assinaturaEip712,
-      mensagem: "Transação não minerada na janela. NÃO foi reenviada — a coordenação deve reenviar manualmente com maxFeePerGas mais alto.",
-    }, 202);
-  }
-
-  // 10. Marcar consolidado (idempotência) e responder
-  const resultado = {
-    vencedor: apurado.vencedor, menorUnicoCentavos: apurado.menorUnico,
-    nonceUsado: nonce, assinaturaEip712,
-    txHash: receipt.hash, blockNumber: receipt.blockNumber, totalLances: lances.length,
-  };
-
-  // MC93-B — pontuação do torneio, DEPOIS do recibo: pontuar uma rodada cuja
-  // tx ficou pendente (202) ou falhou (502) seria pontuar um resultado que não
-  // existe on-chain. Esses dois caminhos saem antes deste ponto.
-  //
-  // FAIL-SOFT, de propósito: aqui a transação JÁ ESTÁ MINERADA e é
-  // irreversível. Rebentar faria o caller crer que a consolidação falhou,
-  // quando o dinheiro já se moveu. A pontuação é reconstituível; a tx não é.
-  //
-  // ⚠️ CONSEQUÊNCIA ASSUMIDA, e não escondida: como o catch engole, o
-  // `marcarConsolidado` abaixo corre na mesma. Se a pontuação falhar, a edição
-  // fica consolidada SEM pontos, e a segunda chamada sai logo no
-  // `estaConsolidado` — o estado parcial é PERMANENTE por este caminho.
-  // A recuperação é manual e existe de propósito: `POST /pontuacao` com o
-  // mesmo `cicloId` repontua a edição (é idempotente por ciclo+endereço).
-  // A resposta devolve `pontuacao: null` precisamente para que a coordenação
-  // veja que há uma edição por repontuar.
-  // ⛔ EXCEPTO com `pontua: false` (edição ESPECIAL-*, MC94.2): aí o null é
-  // de propósito e NÃO se repontua — `POST /pontuacao` não tem esta guarda
-  // (backend do MC93, fora do MC94.2) e meteria a especial no torneio.
-  // (Uma versão anterior deste comentário afirmava que a edição ficava por
-  //  marcar e que a repetição resolvia. Era falso — o catch impede-o.)
-  //
-  // MC94.2 — edições ESPECIAL-* NÃO pontuam (decisão do operador, R18,
-  // 2026-09-25): o sorteio especial não entra nas sequências de 5 acertos nem
-  // no bónus de 20 senhas. A consolidação on-chain acima corre na mesma — é
-  // ela que publica o vencedor em `resultados`, que o Dashboard lê.
-  const pontua = !EDICAO_ESPECIAL_RE.test(edicaoId);
-  let pontuacao = null;
-  if (!pontua) {
-    console.info("[consolidar-lances] edição especial consolidada SEM pontuar o torneio", edicaoId);
-  } else {
-    try {
-      pontuacao = await registrarPontuacaoRodada(edicaoId, lances);
-    } catch (err) {
-      console.error("[consolidar-lances] pontuação falhou (consolidação mantém-se)",
-        edicaoId, err?.message);
-    }
-  }
-
-  await marcarConsolidado(edicaoId, resultado);
-  return jsonResponse({ ok: true, edicaoId, ...resultado, pontua, pontuacao });
+  // 3–10. Núcleo partilhado (idempotência, env, apuração, EIP-712, envio,
+  // recibo, pontuação, marcação).
+  const r = await consolidarEdicao(edicaoId);
+  if (r.erro) return jsonError(r.status, r.erro.code, r.erro.message);
+  return jsonResponse(r.corpo, r.status);
 };

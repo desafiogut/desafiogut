@@ -1,0 +1,79 @@
+MC94.3 — SEG-1 — QUESTIONAMENTO DO BRIEFING
+Data: 2026-09-25   Skills: smart-explore, brainstorming, ux-waiting-audit
+Base: f855dd0 (confere). Working tree: só os 3 untracked pré-existentes em docs/.
+
+═══ -1.1 MEDIÇÕES ═══
+
+S1. O SLOT (Dashboard.jsx, card "🎯 Edição Ativa", :262–357):
+    :264 título + badge com EDICAO_ATIVA ("R-1")
+    :276–301 o RECTÂNGULO AMARELO TRANSPARENTE = <div> "Prêmio em Disputa",
+         background rgba(245,166,35,0.07), border rgba(245,166,35,0.22), radius 10px.
+         Dentro dele, à esquerda:
+    :288 o ÍCONE DE PRESENTE CLICÁVEL = <EdicaoBanner edicao={edicaoAtiva} size={52}/>
+         (components/EdicaoBanner.jsx). Quadrado 52 px, gradiente dourado, 🎁 quando a
+         edição NÃO tem imagem_url; com imagem_url mostra a imagem (object-fit cover)
+         e o clique abre-a em MODAL (ImageModal, MC47) — o mecanismo já existe desde o
+         MC45, só nunca recebeu imagem. À direita: "Prêmio em Disputa / Em breve /
+         Aguardando catálogo" (texto fixo).
+    :308–336 por baixo: GUTO = <GutoSpritePlayer variant="inline" size={88|104}
+         mood={encerrada ? "celebrating" : undefined}/> à ESQUERDA; à DIREITA a coluna
+         do cronómetro (estAtiva.timer — "EM BREVE" pela trava — / "⚡ Relâmpago" /
+         "Aguardando abertura").
+    :338–356 botão "⚡ Ir para o Mercado de Lances" → navigate("/mercado") — que licita
+         SEMPRE na R-1 (MC94.2 A1).
+    ⇒ D2/D3 têm correspondência exacta no código: imagem → EdicaoBanner; GUTO +
+      cronómetro → a linha :308. Nenhuma estrutura nova é precisa.
+
+S2. O QUE O MC94.2 ACRESCENTOU COMO SECÇÃO: Dashboard.jsx :391–420
+    `{edicaoEspecial && (<div …><CardEdicaoEspecial …/></div>)}` + imports :18–26 +
+    CardLance lazy. Mais o filtro de "Outras Edições" (:89) — que FICA (senão a
+    especial aparece duas vezes às 20:00).
+
+S3. HG2 — A SECÇÃO É REDUNDANTE? Só se o slot absorver o que ela faz a mais:
+    formulário de lance no estado activa e painel do vencedor no encerrada. O slot
+    tem o sítio certo para ambos: o lugar do botão "Ir para o Mercado" (:338), que
+    para a especial está ERRADO de qualquer forma (licita na R-1).
+    ⇒ Redundante, com o formulário e o painel levados para o slot. SEGUIR.
+
+S4. GUARDA CENTRAL: registrarPontuacaoRodada(cicloId, lances) (pontuacao-store.mjs:106),
+    2 chamadores: consolidar-lances.mjs:168 e pontuacao.mjs:47. Guarda no início:
+    ESPECIAL-* → {cicloId, pontua:false, participantes:0, bonusRegistados:0}, zero
+    escritas. ⚠️ "POST /pontuacao recusa": pontuacao.mjs NÃO está autorizado, logo
+    responde 200 {ok:true, pontua:false} sem escrever — recusa por efeito, não por
+    código HTTP. Validação em produção exige JWT de admin (R5) → por teste.
+
+S5. SCHEDULED: o padrão do projecto é `export const handler = schedule("cron", fn)`
+    de @netlify/functions, no próprio ficheiro (backup-blobs-, fila-processor-,
+    ia-preditiva-scheduled). O netlify.toml NÃO tem nenhuma entrada `schedule`.
+    ⇒ sigo o padrão do código; não toco no netlify.toml (R1). Nome:
+    `encerrar-especial-scheduled.mjs`? O enunciado fixa
+    `scheduled-encerrar-especial.mjs` — mantenho o do enunciado.
+
+S6. ⛔ CONSOLIDAR A PARTIR DA SCHEDULED — NÃO HÁ CAMINHO AUTORIZADO:
+    - consolidar-lances é o único código que faz a transacção (Flashbots, EIP-712,
+      nonce, recibo, marcarConsolidado) e só exporta `apurarMenorUnico`; o handler
+      exige Bearer admin-JWT (admin-auth.mjs:163 — o x-admin-token foi removido no
+      MC89.46).
+    - Chamá-lo da scheduled obrigaria a FABRICAR um JWT de admin no servidor → não.
+    - Extrair o núcleo para _lib exige alterar consolidar-lances → NÃO AUTORIZADO.
+    - Reescrever a transacção na scheduled = segunda cópia de código que move
+      dinheiro on-chain → não.
+    ⚠️ E a premissa "R2 suspensa (custo zero)" é FALSA para esta parte: consolidar é
+      uma transacção na MAINNET, paga gas pela coordenação. Feita à mão custa o mesmo,
+      mas automatizá-la é gastar sem clique humano.
+    ENCERRAR (status "encerrado" no Blob, via encerrarEdicao) é seguro e automatizável.
+
+S7. ux-waiting: o slot hoje mostra a R-1 a partir do 1.º render; a especial chega com
+    o fetch de /edicoes. Sem cuidado, o slot "salta" de R-1 para Air Fryer ~1 s depois
+    do arranque (o card não muda de tamanho se o layout for o mesmo — medir no SEG3).
+
+═══ -1.2 R19 ═══
+Amplio: (a) formulário e painel do vencedor dentro do slot (sem eles a remoção da
+secção perde funcionalidade — HG2); (b) badge do card passa a dizer o id da edição
+que o slot mostra; (c) o rótulo "Aguardando catálogo" passa ao prémio e janela.
+Não amplio para a consolidação on-chain (S6) sem decisão do operador.
+
+═══ -1.3 ESCOPO ═══ As 3 frentes cabem num MC. Fora: Vitrine (MC94.2 A5), APK,
+POST /pontuacao a responder 4xx (pontuacao.mjs fora da autorização).
+
+═══ -1.4 VEREDITO: AJUSTAR → SEGUIR após 3 decisões do operador (S6 e duas de UI) ═══

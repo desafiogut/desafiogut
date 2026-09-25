@@ -14,6 +14,7 @@ import { carregar, render, texto, fechar } from "../../meus-ativos/__tests__/_re
 import {
   ESTADO_ESPECIAL, estadoEspecial, alvoDaContagem, decompor, formatarContagem,
   escolherEspecial, metricasDeLances, nomeDoVencedor, ehEspecial,
+  dentroDaRetencao, RETENCAO_APOS_FIM_MS,
 } from "../_estilo-especial.js";
 import { calcularOffset } from "../../../hooks/useEdicoes.js";
 
@@ -291,5 +292,43 @@ describe("MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã", () => {
   });
   test("edição sem datas legíveis: não renderiza nada", () => {
     assert.equal(render(Card, props(INICIO, { edicao: { ...AIRFRYER, inicio_em: null } })), "");
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+describe("MC94.3.1 · retenção de 24 h depois do fim (R18, 2026-09-25)", () => {
+  const HORA = 3_600_000;
+  const DIA  = 24 * HORA;
+
+  test("o valor da retenção é 24 h", () => {
+    assert.equal(RETENCAO_APOS_FIM_MS, DIA);
+  });
+
+  test("dentro das 24 h seguintes ao fim, continua a mostrar-se", () => {
+    assert.ok(dentroDaRetencao(AIRFRYER, TERMINO + HORA), "1 h depois do fim");
+    assert.ok(dentroDaRetencao(AIRFRYER, TERMINO + DIA), "exactamente 24 h: inclusive");
+  });
+
+  test("passadas 24 h, deixa de se mostrar", () => {
+    assert.ok(!dentroDaRetencao(AIRFRYER, TERMINO + DIA + 1));
+    assert.ok(!dentroDaRetencao(AIRFRYER, TERMINO + 30 * DIA));
+  });
+
+  test("antes de abrir mostra-se — a retenção é sobre o FIM, não sobre o início", () => {
+    assert.ok(dentroDaRetencao(AIRFRYER, INICIO - 30 * DIA));
+  });
+
+  test("sem `termino_em` legível ou sem `agora` legível, não se mostra", () => {
+    assert.ok(!dentroDaRetencao({ ...AIRFRYER, termino_em: null }, TERMINO));
+    assert.ok(!dentroDaRetencao({ ...AIRFRYER, termino_em: "amanhã" }, TERMINO));
+    assert.ok(!dentroDaRetencao(AIRFRYER, Number.NaN));
+  });
+
+  test("escolherEspecial deixa de a devolver 24 h depois do fim (o defeito real)", () => {
+    // Sem a retenção, `escolherEspecial` devolvia `lista.at(-1)` para sempre: o
+    // Dashboard ficava preso à especial encerrada meses antes.
+    const mapa = { "ESPECIAL-AIRFRYER": AIRFRYER };
+    assert.equal(escolherEspecial(mapa, {}, TERMINO + HORA)?.id, "ESPECIAL-AIRFRYER");
+    assert.equal(escolherEspecial(mapa, {}, TERMINO + DIA + 1), null);
   });
 });

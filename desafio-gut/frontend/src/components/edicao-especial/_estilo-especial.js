@@ -25,6 +25,12 @@ export const ESTADO_ESPECIAL = Object.freeze({
 /** Quanto antes da abertura o card passa a "abrindo". */
 export const JANELA_A_ABRIR_MS = 60_000;
 
+/**
+ * MC94.3.1 — quanto tempo a especial continua a mostrar-se DEPOIS do fim
+ * (decisão do operador, R18, 2026-09-25: "24h após o fim").
+ */
+export const RETENCAO_APOS_FIM_MS = 24 * 60 * 60 * 1000;
+
 /** Endereço nulo: `resultados()` devolve-o quando não houve lance único. */
 export const ENDERECO_ZERO = "0x0000000000000000000000000000000000000000";
 
@@ -114,9 +120,28 @@ export function formatarContagem(ms) {
 }
 
 /**
+ * MC94.3.1 — a especial ainda se mostra no Dashboard? Sim desde que tenha um
+ * `termino_em` legível até 24 h depois do fim (R18, 2026-09-25). Antes de abrir
+ * também mostra (o fim está no futuro), logo a regra é só sobre o FIM.
+ *
+ * Sem isto o `escolherEspecial` devolvia `lista.at(-1)` PARA SEMPRE — o
+ * Dashboard ficava preso à última especial encerrada, meses depois do sorteio.
+ *
+ * @param {{termino_em?:string}|null|undefined} edicao
+ * @param {number} agoraMs relógio do SERVIDOR
+ * @returns {boolean}
+ */
+export function dentroDaRetencao(edicao, agoraMs) {
+  const fim = msDe(edicao?.termino_em);
+  if (fim == null || !Number.isFinite(agoraMs)) return false;
+  return agoraMs <= fim + RETENCAO_APOS_FIM_MS;
+}
+
+/**
  * Escolhe a especial a mostrar. Antes das 20:00 ela vem em `agendadas`; depois,
  * em `edicoes` (o backend muda-a de mapa sozinho). Com várias, a primeira que
- * ainda não acabou; se todas acabaram, a mais recente.
+ * ainda não acabou; se todas acabaram, a mais recente — mas só dentro das 24 h
+ * seguintes ao fim (MC94.3.1).
  *
  * @param {Record<string, object>|undefined} edicoes
  * @param {Record<string, object>|undefined} agendadas
@@ -127,7 +152,8 @@ export function escolherEspecial(edicoes, agendadas, agoraMs) {
   const porId = new Map();
   for (const mapa of [edicoes, agendadas]) {
     for (const e of Object.values(mapa || {})) {
-      if (e && ehEspecial(e.id) && estadoEspecial(e, agoraMs) !== null) porId.set(e.id, e);
+      if (e && ehEspecial(e.id) && estadoEspecial(e, agoraMs) !== null
+          && dentroDaRetencao(e, agoraMs)) porId.set(e.id, e);
     }
   }
   const lista = [...porId.values()].sort((a, b) => msDe(a.inicio_em) - msDe(b.inicio_em));

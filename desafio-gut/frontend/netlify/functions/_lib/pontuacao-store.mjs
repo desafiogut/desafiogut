@@ -24,6 +24,7 @@
 // permitiria o join.
 
 import { getSupabase } from "./supabase-client.mjs";
+import { EDICAO_ESPECIAL_RE } from "./edicao-janela.mjs"; // MC94.3 — guarda central
 import { enfileirar } from "./fila.mjs";
 import { calcularPontosRodada, detectarConsecutivos, REGRAS } from "./pontuacao-utils.mjs";
 
@@ -106,6 +107,15 @@ export function ordenarRanking(linhas) {
 export async function registrarPontuacaoRodada(cicloId, lances) {
   const ciclo = String(cicloId || "").trim();
   if (!ciclo) throw new Error("[pontuacao-store] cicloId obrigatório");
+
+  // MC94.3 — GUARDA CENTRAL: edições ESPECIAL-* não entram no torneio (decisão
+  // do operador, R18, 2026-09-25). Aqui, e não nos chamadores, porque o MC94.2
+  // a pôs só em `consolidar-lances` e o `POST /pontuacao` — o caminho de
+  // recuperação que o próprio consolidar-lances manda usar — continuava a
+  // pontuá-las. Zero escritas: nem uma ligação ao Supabase.
+  if (EDICAO_ESPECIAL_RE.test(ciclo)) {
+    return { cicloId: ciclo, pontua: false, participantes: 0, bonusRegistados: 0 };
+  }
 
   const pontos = calcularPontosRodada(lances);
   // Participantes da rodada, COM e SEM acerto. Quem falhou tem de ficar
