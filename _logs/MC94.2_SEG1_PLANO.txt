@@ -1,0 +1,39 @@
+MC94.2 — SEG1 — PLANEAMENTO          Skills: make-plan, impeccable
+Data: 2026-09-25
+
+DECISÕES DO OPERADOR (R18, 2026-09-25): D1 arte mantém-se · D2 especial não
+pontua · D3 cronómetro usa `agendadas` da API · D4 após encerramento: "Edição
+encerrada" + vencedor + métricas · D5 cronómetro na hora do servidor.
+
+1.1 WIREFRAME (mobile: 1 coluna; desktop: arte 220 px | conteúdo)
+  ┌ 🎁 Edição especial ─────────────── [🕒 Em breve] ┐
+  │ [ARTE 1:1, alt "Arte da edição especial: Air Fryer"]│
+  │ PRÊMIO EM DISPUTA · Air Fryer                       │
+  │ 04/10 · 20:00–20:30 (horário de Brasília)           │
+  │ Vence o menor lance único · cada lance usa 1 senha  │
+  │ ABRE EM  [09 dias][10 horas][49 min][33 seg]        │
+  └─────────────────────────────────────────────────────┘
+  a_abrir: "Abrindo em instantes…" + contagem âmbar
+  activa : "FECHA EM" + contagem verde + CardLance(ESPECIAL-AIRFRYER, programado)
+  encerrada: PainelVencedorEspecial
+  Fundo: navy sólido rgba(13,18,53,0.92) (regra de legibilidade, sem blur).
+  Copy em pt-BR (a app é pt-BR): "Abrindo", não "A abrir".
+
+1.2 CRONÓMETRO: t0 → GET /edicoes → t1; offset = Date.parse(agora) − (t0+t1)/2;
+  agora_servidor = Date.now() + offset a cada tick de 1 s (dentro do card);
+  restante = alvo − agora_servidor; alvo = inicio_em (agendada/a_abrir) ou
+  termino_em (activa). Offset null → "…". Cleanup: clearInterval no unmount.
+
+1.3 ESTADOS (hora do servidor): status encerrado|apurado → encerrada;
+  agora > termino → encerrada; agora ≥ inicio → activa; agora ≥ inicio−60 s →
+  a_abrir; senão agendada. Pontas da janela = activa (igual ao backend).
+
+1.4 PAINEL DO VENCEDOR: on-chain resultados(id) (vencedor, menor único,
+  consolidado) + lances-flash (total, participantes distintos, nome de exibição).
+  Nunca /ranking (a especial não pontua ⇒ rankings_ciclo vazio para ela).
+
+1.5 NÃO-PONTUA: consolidar-lances salta registrarPontuacaoRodada para ESPECIAL-*,
+  log info, `pontua:false` na resposta; consolida on-chain e marca na mesma.
+
+1.6 TESTES: especial.test.mjs (lógica + 3 componentes) · useEdicoes-especial ·
+  Dashboard.test.mjs (página inteira) · especial-i18n · mc942-especial-nao-pontua.

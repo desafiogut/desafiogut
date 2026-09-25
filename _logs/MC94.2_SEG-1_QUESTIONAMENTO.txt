@@ -1,0 +1,102 @@
+MC94.2 — SEG-1 — QUESTIONAMENTO DO BRIEFING
+Data: 2026-09-25   Skills: smart-explore, brainstorming, ux-waiting-audit
+Base: 5c5849b (confere). Working tree: só os 3 untracked pré-existentes em docs/.
+
+═══ -1.1 PREMISSAS MEDIDAS ═══
+
+P1. Dashboard.jsx (494 linhas). Secções, por ordem:
+    saudação (:149) → KPIs (:220) → "Edição Ativa" (grid 2 col: card R-1 :241 +
+    "Menor Lance Único" :339) → "Outras Edições" (:371, edicoesExtra → EdicaoCard)
+    → "Acesso Rápido" (:397) → overlay/footer.
+    ⛔ NÃO existe secção "Em Breve" no Dashboard. O card especial entra entre
+    "Edição Ativa" e "Outras Edições", como secção própria.
+    Estilo local: COR (:19), GlassCard, cardTitulo Orbitron dourado, isMobile.
+
+P2. useEdicoes.js lê SÓ payload.edicoes (:62); descarta `agendadas` e `agora`.
+    É chamado UMA vez, em AppContext.jsx:174, que expõe só { edicoes,
+    edicoesStatus } (:1280). ⛔ Expor agendadas ao Dashboard EXIGE tocar no
+    AppContext (2 linhas aditivas). Alternativa — chamar useEdicoes 2.ª vez no
+    card — duplicaria o polling e daria duas fontes. → R19 (abaixo).
+
+P3. consolidar-lances.mjs:155 → registrarPontuacaoRodada(edicaoId, lances),
+    fail-soft, depois do recibo on-chain; :161 marcarConsolidado. Confere.
+
+P4. imagem_url: useEdicoes.js:81 lê imagem_url ?? banner_url ?? imagem. Mas o
+    mapa `agendadas` não passa pelo normalizador — será normalizado pelo mesmo.
+
+P5. Testes: não há Dashboard.test.mjs. Há arnês de página (MeusAtivos.test.mjs:
+    vite + react-dom/server + aliases para _stubs) e de componentes
+    (meus-ativos/__tests__/_render.mjs). Reutilizáveis.
+
+P6. Paleta: `components/meus-ativos/_estilo.js` (COR, caixa() com o navy sólido
+    rgba(13,18,53,0.92), encurtar, reais, inteiroSeguro, T_PADRAO). Reutiliza-se
+    — o _estilo-especial.js re-exporta e acrescenta só o que falta.
+
+P7. Contagem decrescente: não há componente genérico. Padrões: Dashboard
+    timerDisplay (:101) d/h:m:s; AppTimerContext (MC44) isola o tick de 1 s do
+    AppContext para não re-renderizar a app inteira. ⇒ o tick vive DENTRO do
+    card especial, nunca no contexto.
+
+═══ ACHADOS QUE MUDAM O DESENHO ═══
+
+A1. ⛔ "Dar lance" NÃO pode navegar para /mercado. O único formulário
+    (MercadoLances.jsx:279) monta <CardLance idEdicao={EDICAO_ATIVA}> e
+    EDICAO_ATIVA = "R-1" fixo (AppContext.jsx:48). O botão levaria o lance para
+    a R-1. Medido: CardLance recebe idEdicao/tipoLeilao por props e, em mainnet,
+    envia o programado a /lance-relampago com esse edicaoId (CardLance.jsx:170,
+    :215), com conversão R$→senha incluída. sanitizeEdicaoId corta a 20 chars —
+    "ESPECIAL-AIRFRYER" tem 17. ⇒ o estado "activa" MONTA o CardLance dentro do
+    card, com idEdicao="ESPECIAL-AIRFRYER", tipoLeilao="programado".
+    Herda o gate de conformidade (isLeilaoAtivo=false → skeleton no APK).
+
+A2. ⛔ A trava EM_BREVE_MODE=true (lib/leilaoLock.js) faz getEstadoEdicao devolver
+    "em_breve" para TUDO. Se o card especial perguntasse à fonte única, o
+    cronómetro nunca apareceria. O operador pede cronómetro + "Dar lance" ⇒ o card
+    especial é uma EXCEPÇÃO DECLARADA à fonte única do MC88.43, com a sua própria
+    função pura `estadoEspecial()` (4 estados do HARD GATE 4). Não importa
+    EM_BREVE_MODE (a guarda estrutural continua verde). O card da R-1 continua
+    "EM BREVE" ao lado — é o que o operador pediu, e fica escrito.
+
+A3. ⛔ Às 20:00 a especial passa de `agendadas` para `edicoes` e o Dashboard
+    desenhá-la-ia DUAS vezes (card especial + EdicaoCard em "Outras Edições",
+    Dashboard.jsx:70). ⇒ edicoesExtra exclui ESPECIAL-*.
+
+A4. ⛔ Vencedor e métricas: /ranking NÃO serve — com a guarda de não-pontuar
+    (HG5), rankings_ciclo nunca terá a especial. Fontes públicas medidas:
+      - vencedor + menor único: on-chain `resultados(string)` é PUBLIC
+        (Leilao.sol:42), escrito por consolidarResultado. Leitura com
+        getProvider() + CONTRATO_SEPOLIA já exportados por utils/web3.js (sem
+        alterar web3.js; fragmento de ABI local).
+      - total de lances e participantes: GET lances-flash?edicaoId= (público;
+        em mainnet devolve a lista blindada mas CONTÁVEL, com endereco e
+        nomeExibicao — lance-relampago.mjs grava no mesmo Blob, :38/:269).
+      - nome do vencedor: nomeExibicao do lance do vencedor; senão encurtar().
+    Entre 20:30 e a consolidação NÃO há vencedor → "apuração em curso", nunca
+    um vencedor inventado.
+
+A5. ⚠️ FORA DA FRONTEIRA, registado: Vitrine.jsx:579 escolhe a 1.ª edição
+    `aberto` do tipo "programado" para o cronómetro dos slots Diamante/Ouro. Das
+    20:00 em diante pode escolher a ESPECIAL. Não toco (Vitrine fora de R1).
+    Mitigação natural: está sob a mesma trava EM BREVE da fonte única? — a
+    confirmar no SEG0.
+
+═══ -1.2 AUTOSSUFICIÊNCIA (R19) ═══
+Declarado pelo enunciado: não-pontua + cronómetro (ex-MC94.3).
+Amplio, no mesmo objectivo:
+  R19-a AppContext.jsx: +agendadas, +offsetRelogioMs no value (aditivo, 2 linhas).
+  R19-b CardLance montado dentro do card (componente existente, sem alterações).
+  R19-c edicoesExtra exclui ESPECIAL-* (Dashboard.jsx, dentro da fronteira).
+  R19-d offset com correcção de latência: offset = agora − (t0+t1)/2 (meio do
+        pedido), recalculado a cada fetch (60 s), em vez de agora − t1.
+Não toca: rotas, BottomNav, MeusAtivos, torneio (o não-pontua é no
+consolidar-lances, autorizado), contrato, ci.yml, credenciais.
+
+═══ -1.3 ESCOPO ═══
+Dentro: card + 4 estados + estados de dados (a carregar / erro / sem especial),
+cronómetro sincronizado, lance real na especial, vencedor/métricas públicos,
+não-pontua, i18n pt/en/es, testes + mutação, deploy, captura.
+Fora (natural mas não pedido): notificação a testadores; partilha social;
+encerramento/consolidação automáticos às 20:30 (continuam manuais — MC94.1);
+Vitrine (A5); APK (o card só chega ao APK com cap sync + build).
+
+═══ -1.4 VEREDITO: SEGUIR (com A1–A4 incorporados e R19-a..d declarados) ═══

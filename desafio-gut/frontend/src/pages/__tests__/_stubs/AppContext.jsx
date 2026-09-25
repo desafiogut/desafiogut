@@ -35,8 +35,18 @@ export function AppProvider({ children }) {
   return children ?? null;
 }
 
+// MC94.2 — a MESMA forma do real (`AppContext.jsx:1390`: tempoRestante,
+// edicoesTick, timeLeftEdicaoSegundos). A versão anterior devolvia chaves que o
+// original não tem, e o Dashboard/EdicaoCard partiam contra ela.
 export function useAppTimer() {
-  return { segundosRestantes: 0, prazo: null };
+  return {
+    tempoRestante: 0,
+    edicoesTick: 0,
+    timeLeftEdicaoSegundos: (edicao) => {
+      const fim = Date.parse(edicao?.termino_em ?? "");
+      return Number.isNaN(fim) ? 0 : Math.max(0, Math.floor((fim - Date.now()) / 1000));
+    },
+  };
 }
 
 export default { useAppContext, AppProvider, definirContexto };

@@ -1,0 +1,27 @@
+MORTO  F1 ignora status encerrado
+MORTO  F2 a_abrir fronteira
+MORTO  F3 activa fronteira
+MORTO  F4 fim fronteira
+MORTO  F5 estados invertidos
+MORTO  F6 sem a_abrir
+MORTO  F7 floor em vez de ceil
+MORTO  F8 especial por 'contém'
+MORTO  F9 fuso do aparelho
+MORTO  F10 escolhe encerrada
+MORTO  F11 participantes = lances
+MORTO  F12 offset ignorado no card
+MORTO  F13 conta sem offset
+MORTO  F14 lance em R$
+MORTO  F15 lance noutra edição
+MORTO  F16 vencedor antes de consolidar
+MORTO  F17 endereço inteiro (R4)
+--- RONDA INTERROMPIDA (2026-09-25) ---
+O processo em fundo foi MORTO pelo Claude Code por memória baixa do sistema,
+durante o F18. O F18 estava APLICADO no disco no momento da morte
+(ContagemDecrescente.jsx: `if (false) {`) — reposto à mão e verificado:
+greps dos 28 alvos presentes, `git diff --stat` sem ficheiros inesperados,
+52/52 verdes com o original.
+Resultado válido: F1–F17 MORTOS (17/17). F18 sem veredito. F19–F28 NÃO CORRERAM
+(offset/agendadas do useEdicoes, Dashboard, não-pontua).
+Não relançado automaticamente (pressão de memória) — decisão do operador.
+Nota: o não-pontua (F27/F28) já tem prova de RED→GREEN no SEG2 (3 ✖ antes da guarda).

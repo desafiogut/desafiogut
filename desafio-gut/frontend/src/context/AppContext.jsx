@@ -171,7 +171,8 @@ export function AppProvider({ children }) {
   // MC15.4 ITEM 5/6 — múltiplas edições (mapa keyed por id). Sempre tem ao
   // menos R-1 (real ou fallback sintetizado). Aditivo: o fluxo R-1 abaixo
   // (prazoFlash/prazoProgramado/tempoRestante) permanece intacto.
-  const { edicoes, edicoesStatus } = useEdicoes();
+  // MC94.2 — + `agendadas` (edições por abrir) e o desvio do relógio do servidor.
+  const { edicoes, edicoesStatus, agendadas, offsetRelogioMs } = useEdicoes();
 
   // lances on-chain (programado). lancesFlash off-chain (polling do blob).
   const [lances,       setLances]       = useState([]);
@@ -1278,6 +1279,7 @@ export function AppProvider({ children }) {
     tipoLeilao, setTipoLeilao,
     // MC15.4 — múltiplas edições (aditivo). edicoes nunca é vazio (R-1 garantida).
     edicoes, edicoesStatus,
+    agendadas, offsetRelogioMs, // MC94.2 — card da edição especial no Dashboard
     getFimDisparadoRef,
     // MC44 P0 — timeLeftEdicaoSegundos/edicoesTick/tempoRestante movidos para
     // o AppTimerContext (useAppTimer); fora do value estável do AppContext.

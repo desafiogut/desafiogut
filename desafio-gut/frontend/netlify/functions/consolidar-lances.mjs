@@ -19,6 +19,7 @@ import { obterSignerCoordenacao, backendAssinatura } from "./_lib/signer.mjs";
 import { escolherRpc } from "./_lib/rpc-fallback.mjs"; // MC39.2 — fallback RPC/Flashbots (opt-in)
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { registrarPontuacaoRodada } from "./_lib/pontuacao-store.mjs";
+import { EDICAO_ESPECIAL_RE } from "./_lib/edicao-janela.mjs"; // MC94.2 — especial não pontua
 
 const ABI = [
   "function consolidarResultado(string idEdicao, address vencedor, uint256 menorUnico) public",
@@ -150,14 +151,24 @@ export default async (req) => {
   // veja que há uma edição por repontuar.
   // (Uma versão anterior deste comentário afirmava que a edição ficava por
   //  marcar e que a repetição resolvia. Era falso — o catch impede-o.)
+  //
+  // MC94.2 — edições ESPECIAL-* NÃO pontuam (decisão do operador, R18,
+  // 2026-09-25): o sorteio especial não entra nas sequências de 5 acertos nem
+  // no bónus de 20 senhas. A consolidação on-chain acima corre na mesma — é
+  // ela que publica o vencedor em `resultados`, que o Dashboard lê.
+  const pontua = !EDICAO_ESPECIAL_RE.test(edicaoId);
   let pontuacao = null;
-  try {
-    pontuacao = await registrarPontuacaoRodada(edicaoId, lances);
-  } catch (err) {
-    console.error("[consolidar-lances] pontuação falhou (consolidação mantém-se)",
-      edicaoId, err?.message);
+  if (!pontua) {
+    console.info("[consolidar-lances] edição especial consolidada SEM pontuar o torneio", edicaoId);
+  } else {
+    try {
+      pontuacao = await registrarPontuacaoRodada(edicaoId, lances);
+    } catch (err) {
+      console.error("[consolidar-lances] pontuação falhou (consolidação mantém-se)",
+        edicaoId, err?.message);
+    }
   }
 
   await marcarConsolidado(edicaoId, resultado);
-  return jsonResponse({ ok: true, edicaoId, ...resultado, pontuacao });
+  return jsonResponse({ ok: true, edicaoId, ...resultado, pontua, pontuacao });
 };

@@ -1,0 +1,37 @@
+MC94.2 — SEG0 — DIAGNÓSTICO          Skills: smart-explore, terminal-ops
+Data: 2026-09-25
+
+0.1 AMBIENTE: base 5c5849b; só os 3 untracked pré-existentes em docs/.
+    Baseline: functions 611 · 605 ✔ · 0 ✖ · 6 ﹣ ; frontend 137 · 137 ✔.
+
+0.2 DASHBOARD (mapa no SEG-1 P1). O card entra como secção própria entre o grid
+    "Edição Ativa"/"Menor Lance Único" e "Outras Edições". Não há "Em Breve".
+
+0.3 useEdicoes: só `edicoes`; AppContext expõe {edicoes, edicoesStatus}.
+    Plano: normalizar `agendadas` com o mesmo normalizador; `inicio_em` passa a ser
+    mantido; offset calculado a cada fetch (60 s) pelo meio do pedido.
+
+0.4 consolidar-lances: gancho em :155, depois do recibo on-chain, fail-soft.
+    Guarda: `pontua = !EDICAO_ESPECIAL_RE.test(edicaoId)` (regex do MC94.1, prefixo
+    exacto), resposta ganha `pontua`. A consolidação on-chain corre SEMPRE — é ela
+    que escreve `resultados(id)`, de onde o Dashboard lê o vencedor.
+    ⚠️ Se a especial não tiver lance único, consolidar-lances devolve 422
+    sem_vencedor e nada vai on-chain → o painel mostra "apuração em curso" (ou
+    "nenhum lance" se lances-flash vier vazio). Ver L-4.
+
+0.5 ESTADOS DE ESPERA (ux-waiting-audit, por leitura de código — sem browser):
+  - useEdicoes arranca com a R-1 sintética e status idle→loading; `agendadas` = {}
+    até ao 1.º fetch ⇒ o card NÃO aparece durante o carregamento (não há como saber
+    se existe especial antes da resposta). Aparece depois do fetch: um salto de
+    layout por baixo da dobra no primeiro carregamento (secção abaixo dos KPIs e
+    do card da R-1). Aceite e declarado: um esqueleto para todos os utilizadores,
+    todos os dias, por uma edição que existe 30 min, seria pior.
+  - Falha do /edicoes: nenhum card (não se afirma uma edição que não se leu).
+  - Offset desconhecido: contagem "…" (sincronizando), nunca o relógio do aparelho.
+  - Encerrada: painel com estados carregando / erro / apuração / sem-lances /
+    sem-vencedor / vencedor; relê de 60 em 60 s até consolidar.
+  - Vitrine (A5): cronómetros continuam "EM BREVE" pela fonte única — sem efeito hoje.
+
+0.6 Relógios e perf: o tick de 1 s vive DENTRO do card (MC44: tick no contexto
+    re-renderizava a app). CardLance carregado com React.lazy — o /mercado já é
+    lazy (App.jsx:44); eager metê-lo-ia no chunk do primeiro ecrã.

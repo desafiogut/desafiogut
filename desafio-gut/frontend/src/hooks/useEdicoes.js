@@ -60,9 +60,15 @@ function sintetizarR1() {
 // edição tem id e termino_em utilizáveis; caso contrário cai no fallback.
 function normalizarEdicoes(payload) {
   const mapa = payload && typeof payload === "object" ? payload.edicoes : null;
+  const out = normalizarMapa(mapa);
+  return out && Object.keys(out).length > 0 ? out : null;
+}
+
+// MC94.2 — o mesmo normalizador serve `edicoes` e `agendadas`. Um mapa ausente
+// ou vazio dá {} / null (não é erro: quase sempre não há edição agendada).
+function normalizarMapa(mapa) {
   if (!mapa || typeof mapa !== "object" || Array.isArray(mapa)) return null;
   const ids = Object.keys(mapa);
-  if (ids.length === 0) return null;
   const out = {};
   for (const id of ids) {
     const e = mapa[id];
@@ -79,15 +85,41 @@ function normalizarEdicoes(payload) {
       // MC45 — imagem do banner da edição (quando o backend a fornecer). Aceita
       // aliases; null → EdicaoBanner usa o placeholder padrão.
       imagem_url: e.imagem_url ?? e.banner_url ?? e.imagem ?? null,
+      // MC94.2 — início da janela (edições especiais); null nas restantes.
+      inicio_em: typeof e.inicio_em === "string" && !Number.isNaN(Date.parse(e.inicio_em)) ? e.inicio_em : null,
     };
   }
-  if (Object.keys(out).length === 0) return null;
   return out;
+}
+
+/**
+ * MC94.2 — desvio entre o relógio do SERVIDOR e o do aparelho (HARD GATE 3).
+ *
+ * `agora` é carimbado pelo servidor algures entre a saída do pedido (t0) e a
+ * chegada da resposta (t1), ambos no relógio do aparelho. Compara-se com o MEIO
+ * do pedido, não com t1: com t1 o erro seria a latência inteira; com o meio fica
+ * limitado a metade do tempo de ida e volta.
+ * Hora do servidor, a qualquer instante: `Date.now() + offset`.
+ *
+ * @param {unknown} agoraServidorIso
+ * @param {number} t0 Date.now() antes do pedido
+ * @param {number} t1 Date.now() depois da resposta
+ * @returns {number|null} ms; null (nunca 0) quando não há `agora` legível — um
+ *   0 inventado faria o cronómetro seguir o relógio do aparelho em silêncio.
+ */
+export function calcularOffset(agoraServidorIso, t0, t1) {
+  if (typeof agoraServidorIso !== "string") return null;
+  const servidor = Date.parse(agoraServidorIso);
+  if (Number.isNaN(servidor) || !Number.isFinite(t0) || !Number.isFinite(t1)) return null;
+  return Math.round(servidor - (t0 + t1) / 2);
 }
 
 export function useEdicoes() {
   const [edicoes, setEdicoes] = useState(() => sintetizarR1());
   const [edicoesStatus, setEdicoesStatus] = useState("idle"); // idle | loading | ok | error
+  // MC94.2 — edições por abrir (`agendadas` do GET /edicoes) e desvio do relógio.
+  const [agendadas, setAgendadas] = useState({});
+  const [offsetRelogioMs, setOffsetRelogioMs] = useState(null);
   const canceladoRef = useRef(false);
   // true assim que o backend devolveu dados reais ao menos uma vez. Em falha
   // posterior preferimos manter os últimos dados reais a recair no fallback.
@@ -96,13 +128,20 @@ export function useEdicoes() {
   const buscar = useCallback(async () => {
     setEdicoesStatus((prev) => (prev === "ok" ? prev : "loading"));
     try {
+      const t0 = Date.now();
       const { ok, status, data } = await apiGet("edicoes");
+      const t1 = Date.now();
       if (!ok) throw new Error(`HTTP ${status}`);
       const normalizado = normalizarEdicoes(data);
       if (!normalizado) throw new Error("payload_invalido");
       if (canceladoRef.current) return;
       teveDadosReaisRef.current = true;
       setEdicoes(normalizado);
+      setAgendadas(normalizarMapa(data.agendadas) || {});
+      // Recalculado a cada fetch (60 s): acompanha o aparelho se alguém lhe mexer
+      // no relógio. Sem `agora` na resposta, mantém o último valor válido.
+      const offset = calcularOffset(data.agora, t0, t1);
+      if (offset !== null) setOffsetRelogioMs(offset);
       setEdicoesStatus("ok");
     } catch (err) {
       // FALLBACK D5: nunca propaga erro à UI; mantém R-1 sintetizada.
@@ -130,5 +169,5 @@ export function useEdicoes() {
     };
   }, [buscar]);
 
-  return { edicoes, edicoesStatus };
+  return { edicoes, edicoesStatus, agendadas, offsetRelogioMs };
 }

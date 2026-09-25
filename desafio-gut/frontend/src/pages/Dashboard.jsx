@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
@@ -15,6 +15,15 @@ import { GlassCard } from "@/components/ui";
 // EM_BREVE_MODE e o resto do card obedecia ao `encerrado`, e o título da secção
 // dizia "em Andamento" à mão — três vozes no mesmo ecrã (B3/B4).
 import { getEstadoEdicao } from "../utils/edicao.js";
+// MC94.2 — edição especial (Air Fryer): card próprio com os seus 4 estados.
+import CardEdicaoEspecial from "../components/edicao-especial/CardEdicaoEspecial.jsx";
+import { escolherEspecial, ehEspecial } from "../components/edicao-especial/_estilo-especial.js";
+import { useT } from "../context/IdiomaContext.jsx";
+
+// MC94.2 — o CardLance só é preciso das 20:00 às 20:30 da especial. O /mercado,
+// que o usa hoje, é lazy (App.jsx:44); importá-lo aqui de forma eager metê-lo-ia
+// no chunk do primeiro ecrã de todos os utilizadores, todos os dias.
+const CardLance = lazy(() => import("../components/CardLance.jsx"));
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -62,13 +71,25 @@ export default function Dashboard() {
     address, userLabel, EDICAO_ATIVA,
     showOverlay, showCountdown, handleNovaRodada, setPrazoTimestamp,
     edicoes,
+    // MC94.2 — edição especial: `agendadas` antes da hora, `offsetRelogioMs`
+    // para a contagem na hora do servidor; o resto é para o CardLance dela.
+    agendadas, offsetRelogioMs, isConnected, ready, abrirModal, desconectar,
   } = useAppContext();
   const { tempoRestante } = useAppTimer(); // MC44 P0 — timer isolado
+  const t = useT();
+
+  // MC94.2 — a especial a mostrar (ou nenhuma). Escolhida na hora do servidor;
+  // o card tem o seu próprio relógio de 1 s, o Dashboard não re-renderiza por ele.
+  const edicaoEspecial = escolherEspecial(
+    edicoes, agendadas, Date.now() + (Number.isFinite(offsetRelogioMs) ? offsetRelogioMs : 0),
+  );
 
   // MC15.4 ITEM 7 — edições adicionais (todas menos R-1, que já tem o card
   // "Edição Ativa" abaixo). Cada uma renderiza um cronómetro independente.
+  // MC94.2 — e menos as ESPECIAL-*: às 20:00 a especial passa para `edicoes` e
+  // seria desenhada duas vezes (card especial + EdicaoCard com "EM BREVE").
   const edicoesExtra = Object.values(edicoes || {}).filter(
-    (e) => e && e.id !== EDICAO_ATIVA
+    (e) => e && e.id !== EDICAO_ATIVA && !ehEspecial(e.id)
   );
 
   // MC45 — edição ativa (objeto) para o banner clicável. Fallback defensivo
@@ -366,6 +387,35 @@ export default function Dashboard() {
           )}
         </GlassCard>
       </section>
+
+      {/* ── MC94.2 — Edição especial (Air Fryer) ──
+          Entre "Edição Ativa" e "Outras Edições". O lance é dado AQUI, no
+          CardLance desta edição: o /mercado licita sempre na R-1. Sem
+          onLanceSucesso — o handler do contexto acrescenta à tabela da R-1. */}
+      {edicaoEspecial && (
+        <div style={{ marginBottom: sectionGap }}>
+          <CardEdicaoEspecial
+            edicao={edicaoEspecial}
+            offsetMs={offsetRelogioMs}
+            isMobile={isMobile}
+            t={t}
+            renderLance={({ idEdicao, tipoLeilao, encerrado: fechada }) => (
+              <Suspense fallback={<div aria-busy="true" style={{ minHeight: "12rem" }} />}>
+              <CardLance
+                idEdicao={idEdicao}
+                tipoLeilao={tipoLeilao}
+                encerrado={fechada}
+                address={address}
+                isConnected={isConnected}
+                onConnect={abrirModal}
+                onDisconnect={desconectar}
+                ready={ready}
+              />
+              </Suspense>
+            )}
+          />
+        </div>
+      )}
 
       {/* ── MC15.4 ITEM 7 — Outras edições com cronómetros independentes ── */}
       {edicoesExtra.length > 0 && (
