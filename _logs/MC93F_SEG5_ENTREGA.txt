@@ -1,0 +1,93 @@
+================================================================================
+MC93-F — SEG5 · ENTREGA
+DesafioGUT · 2026-09-25 · Skills ECC: requesting-code-review
+================================================================================
+
+5.1 — LOGS
+     _logs/MC93F_SEG-1_QUESTIONAMENTO.txt      (veredito AJUSTAR + R19)
+     _logs/MC93F_SEG0_DIAGNOSIS.txt            (estado medido por MCP/CLI)
+     _logs/MC93F_SEG1_PLANO.txt                (plano + os 2 ajustes de critério)
+     _logs/MC93F_SEG2-3_MIGRACAO-E-DEPLOY.txt  (migração, push, deploy, validação)
+     _logs/MC93F_SEG4_VALIDACAO.txt            (validação independente + L-4)
+     _logs/MC93F_SEG5_ENTREGA.txt              (este)
+     _logs/MC93F-RELATORIO.md                  (relatório final, 3 papéis RUFLO)
+
+5.2 — CLAUDE.md ACTUALIZADO (R14)
+     Secção "MC93-F" acrescentada, com Data · Origem · Recorrência · Impacto
+     (MECANISMO 2 do pilar ECC). Regras novas que ficam registadas:
+       • HTTP 200 não prova que a função existe (SPA fallback);
+       • `/feedback` é `GET /ranking?recurso=feedback`, não uma função;
+       • não existe MCP do Netlify — usar o CLI;
+       • com auto-deploy ligado, o `git push` É o deploy.
+
+5.3 — DECISÕES DO OPERADOR (R18) — registadas em 3 lugares
+     (1) aplicar a migração a produção agora
+     (2) push dos 104 commits antes do deploy
+     (3) não correr `--prod` (o auto-deploy já publicara o mesmo commit)
+     Lugares: este SEG5 · _logs/MC93F-RELATORIO.md §3.3 · CLAUDE.md §MC93-F.
+
+5.4 — DECLARAÇÃO DE R15
+     UMA só alteração de execução, e não toca no schema: o DDL foi passado ao
+     `apply_migration` **sem o `BEGIN;`/`COMMIT;`** das linhas 35 e 123, porque o
+     MCP já envolve a query numa transacção própria e um `COMMIT` aninhado
+     fecharia a transacção da ferramenta a meio.
+     ZERO linhas de DDL alteradas. O ficheiro `.sql` no repositório está intacto
+     (`git diff --stat c199591` -> vazio).
+
+5.5 — DECLARAÇÃO DE R19 (ATIVADA)
+     O SEG-1 atestou que o MC não era autossuficiente como escrito: um
+     `--prod --build` do local publicaria 104 commits de frontend e seria
+     revertido pelo próximo merge em `main` (21 PRs dependabot abertos,
+     `stop_builds: false`).
+     AMPLIAÇÃO PROPOSTA: pôr o `origin/main` em dia ANTES do deploy.
+     O operador escolheu-a. Provou-se necessária: o auto-deploy disparou de
+     facto, e foi ele que publicou a produção nova.
+     ⇒ A ampliação evitou um MC93-F.1.
+
+5.6 — MÉTRICA DE EFICIÊNCIA DO HARD GATE 2
+     O SEG-1 mediu o estado real sem supor? **Sim**, e o ganho é nomeável:
+       • 2 premissas FALSAS (MCP do Netlify; nomes dos endpoints);
+       • 1 premissa SUBESTIMADA (o auto-deploy era 104 commits de drift, não uma
+         possibilidade vaga);
+       • 1 critério de aceitação que era satisfeito por LIXO (SEG3.4 julgava por
+         código HTTP contra um SPA fallback que devolve 200 com HTML).
+     Se o MC tivesse arrancado no SEG0: procurava um MCP inexistente, validava um
+     endpoint inexistente por um critério que não distingue nada, e deixava a
+     produção a ser revertida pelo primeiro dependabot mergeado.
+
+5.7 — PROVA DE R1
+     `git diff --stat c199591` -> VAZIO. Zero código alterado.
+     Ao commit vão apenas: `_logs/MC93F_*` (7 ficheiros) e `CLAUDE.md`.
+     NÃO vão (pré-existentes, não deste MC):
+       docs/MC91.14-STATUS-BNB.txt
+       docs/mc92.5_gerar_mascaras.py
+       docs/mc92.5_refinar_bboxes.py
+
+5.8 — HARD GATES
+     1 (SEG-1 obrigatório) ....... cumprido — veredito AJUSTAR, com R19
+     2 (medir, não supor) ........ cumprido — tudo com output; ver §5.6
+     3 (zero código novo) ........ cumprido — `git diff --stat` vazio
+     4 (nenhuma chave tocada) .... cumprido — chave Alchemy só registada
+     5 (deploy só com ambiente
+        verde) ................... cumprido com uma ressalva honesta: as tabelas
+        existem e as variáveis críticas estão definidas, MAS a `CI` do GitHub
+        está VERMELHA (lockfile do frontend, pré-existente). O deploy não foi
+        travado por isso porque (a) o vermelho é anterior a este MC, (b) o build
+        do Netlify usa `npm install --legacy-peer-deps` e passa, e (c) foi o
+        auto-deploy que publicou, não eu. Declarado, não escondido.
+
+5.9 — ⛔ O QUE FICA ABERTO (ver L-4 no SEG4)
+     N1 chave Alchemy por rotar (operador, R5)
+     N2 lockfile do frontend dessincronizado -> bloqueia a CI inteira, e com ela
+        o `ci.yml` do MC93-E, que CONTINUA a nunca ter corrido num runner real
+     N3 `test_limiteMaxLancesUnicos()` do Foundry vencido por deriva de toolchain
+     N4 auto-deploy continua ligado (hoje inofensivo; `main` == local)
+     N5 proteção de branch contornada no push
+     N6 build settings do site divergem do `netlify.toml`
+     N7 nenhuma rodada real processada (leilão em `EM_BREVE_MODE`)
+     N8 créditos do plano Netlify não medidos por API
+     N9 3.ª validação das correcções do MC93-E, herdada
+
+================================================================================
+FIM DO SEG5 — MC93-F CONCLUÍDO
+================================================================================

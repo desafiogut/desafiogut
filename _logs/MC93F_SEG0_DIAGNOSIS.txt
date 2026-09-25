@@ -1,0 +1,79 @@
+================================================================================
+MC93-F — SEG0 · DIAGNÓSTICO (medido por MCP + CLI)
+DesafioGUT · 2026-09-24/25 · base c199591
+Skills ECC: smart-explore, terminal-ops
+As medições em bruto estão em _logs/MC93F_SEG-1_QUESTIONAMENTO.txt [M0]–[M11].
+================================================================================
+
+0.1 — REPOSITÓRIO
+     HEAD: c199591 (MC93-E) · f8bc6c0 (MC93-D)
+     working tree: limpo, tirando 3 ficheiros NÃO RASTREADOS que são
+     pré-existentes e não deste MC:
+       docs/MC91.14-STATUS-BNB.txt
+       docs/mc92.5_gerar_mascaras.py
+       docs/mc92.5_refinar_bboxes.py
+     ⛔ ACHADO: **104 commits à frente de `origin/main`**. Tudo desde o MC90.2.
+
+0.2 — SUPABASE (via MCP)
+     projeto: vjslwowwrpcawijdiksm (= DesafioGUT PRODUÇÃO; staging é
+     gjuelqjjhuuwnlsjyeai, confirmado em cloud.md:867/6891)
+     tabelas em `public`: 19
+     ⛔ `pontuacoes`     -> AUSENTE
+     ⛔ `rankings_ciclo` -> AUSENTE
+     migrações aplicadas: 9, a mais recente 20260803011715
+     ⛔ `20260923_mc93b_pontuacoes` -> AUSENTE do registo
+     ⇒ PREMISSA DO ENUNCIADO CONFIRMADA. A migração nunca foi aplicada.
+
+     Nota lateral, com efeito no MC94: `saldo_rs` tem **8 linhas** e
+     `saldo_rs_creditos` **21**. É o dinheiro real que o MC00.0 identificou
+     (então em 7 contas). `fila_tarefas`: 5 linhas. `cotas`: 7.
+
+0.3 — NETLIFY (via CLI — o MCP NÃO existe)
+     ⛔ Não há ferramenta `mcp__netlify__*`. O enunciado pressupõe um MCP que
+     nunca foi instalado. CLI 26.1.0, autenticado (DESAFIO GUT / team desafiogut).
+     site_id          : be1cc8bb-682b-4667-a341-c8db1f4ab2b5
+     published_deploy : 6a849bac… · 2026-08-18 · commit_ref AUSENTE (deploy CLI)
+     ⇒ A produção estava na árvore de **18 de Agosto** (deploy do MC91.11-S4).
+     repo_branch      : main
+     ⛔ stop_builds    : **false** -> AUTO-DEPLOY LIGADO
+     plano            : Pro
+     21 branches `dependabot/*` activas no remoto.
+     ⇒ RISCO MEDIDO: qualquer merge em `main` reconstruiria a árvore de Agosto
+       POR CIMA de um deploy manual. É o drift dos MC79 e MC89.49.
+
+     Variáveis em Production: 52 definidas (só nomes lidos — R4).
+       ✅ SUPABASE_URL · SUPABASE_SERVICE_ROLE_KEY · DATA_STORE_BACKEND
+       ✅ COORDENACAO_PRIVATE_KEY · CONTRATO_SEPOLIA · JWT_SECRET
+       ⛔ ALCHEMY_URL        AUSENTE (há `VITE_ALCHEMY_URL` e `RPC_URL`)
+       ✅ BONUS_EMISSAO_ATIVA AUSENTE — **é o que se quer**: dry-run por omissão
+
+     ⚠️ Definições de build ao nível do SITE divergem do `netlify.toml`
+     (`base` vazio vs `desafio-gut/frontend`; `dir` `frontend/dist` vs `dist`).
+     O `netlify.toml` ganha, logo não bloqueia — divergência registada.
+
+0.4 — A CHAVE ALCHEMY (leitura, sem tocar — R5 / HARD GATE 4)
+     `desafio-gut/hardhat.config.cjs`: 1 ocorrência em texto simples.
+     último commit do ficheiro: a2c40ee (MC89.14).
+     ⚠️ a2c40ee **já estava em `origin/main` antes deste MC** — a chave já era
+     pública no GitHub, não passou a ser por causa do push de hoje.
+     PENDÊNCIA REGISTADA. NÃO TOCADA.
+
+0.5 — ⚠️ O ACHADO DE INSTRUMENTAÇÃO QUE MUDA O CRITÉRIO DE ACEITAÇÃO
+     Os endpoints do torneio devolvem **HTTP 200** hoje:
+       /ranking?cicloId=teste     -> 200 · text/html
+       /feedback?…                -> 200 · text/html
+       /pontuacao                 -> 200 · text/html
+     CONTROLO NEGATIVO (endpoint inventado):
+       /isto-nao-existe-mc93f     -> 200 · text/html   ← IGUAL
+     CONTROLO POSITIVO (função deployada desde o MC91.11):
+       /saldo-senhas?endereco=0x0 -> 400 · application/json
+     CAUSA: `netlify.toml:34` — `from "/*" to "/index.html" status 200`.
+     ⇒ Uma função AUSENTE é indistinguível de uma função OK se se olhar só para
+       o código HTTP. O critério do enunciado (SEG3.4: "confirmar resposta",
+       "esperado 400 ou 403, não 500") seria satisfeito por lixo.
+     ⇒ AJUSTE: a validação exige `content-type: application/json`.
+     ⇒ E confirma o diagnóstico: os endpoints do torneio NÃO estavam no ar.
+
+================================================================================
+FIM DO SEG0
+================================================================================

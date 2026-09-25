@@ -1,0 +1,155 @@
+================================================================================
+MC93-F — SEG2 (migração) · SEG3 (deploy)
+DesafioGUT · 2026-09-24/25 · Skills ECC: terminal-ops, canary-watch
+================================================================================
+
+================================ SEG2 — MIGRAÇÃO ===============================
+
+2.1 — PRÉ-CONDIÇÃO
+     Operador autorizou explicitamente (R18): "Sim, aplicar agora".
+     sha256 do ficheiro-fonte: d2736a3f2fc58acc903d4c8f… (123 linhas)
+
+2.2 — APLICAÇÃO
+     `mcp__supabase__apply_migration` · name: `mc93b_pontuacoes`
+     projeto: vjslwowwrpcawijdiksm (PRODUÇÃO)
+     resultado: **{"success": true}**
+     versão gravada: **20260925002324 mc93b_pontuacoes**
+     ⚠️ R15: passou-se o DDL sem o `BEGIN;`/`COMMIT;` do ficheiro, porque o MCP
+     já envolve em transacção. Zero alterações ao DDL em si.
+
+2.3 — PÓS-CONDIÇÃO (medida por MCP, não assumida)
+     `list_migrations` -> 10 migrações; a 10.ª é `mc93b_pontuacoes` ✅
+     Consulta a `pg_class`/`pg_policy`/`pg_constraint`/`pg_index`:
+
+       tabela          | rls  | políticas | checks | índices | SR insert | anon select
+       ----------------|------|-----------|--------|---------|-----------|------------
+       pontuacoes      | true |     1     |   3    |    4    |   true    |   false
+       rankings_ciclo  | true |     1     |   6    |    4    |   true    |   false
+
+     ⇒ RLS activa · política só para `service_role` · `anon` SEM leitura ·
+       9 CHECKs no total (3 + 6) · 4 índices em cada.
+     ⚠️ NOTA DE PRECISÃO: a documentação do MC93-B/D dizia "8 CHECKs". O medido
+     é **9**. Corrige-se aqui o número, não o schema.
+     `list_tables` -> 21 tabelas (eram 19). As duas novas com 0 linhas.
+
+================================= SEG3 — DEPLOY ================================
+
+3.0 — PUSH DOS 104 COMMITS (decisão do operador)
+     `git push origin main` -> **df691cf..c199591  main -> main**, exit 0
+     convergência confirmada: `rev-list --left-right --count` -> 0 | 0
+
+     ⚠️⚠️ FACTO OPERACIONAL QUE O OPERADOR TEM DE SABER:
+     o GitHub respondeu **"Bypassed rule violations for refs/heads/main"**,
+     listando duas regras contornadas:
+        - "Changes must be made through a pull request."
+        - "2 of 2 required status checks are expected."
+     O push passou porque a conta tem direito de bypass. Não foi uma escolha
+     minha — não usei `--force` nem nenhuma flag de contorno — mas o efeito é
+     que 104 commits entraram em `main` sem PR e sem status checks verdes.
+     Se essa proteção existe por desenho, isto merece decisão do operador.
+
+3.1 — O QUE O PUSH DISPAROU (observado, não suposto)
+     (a) NETLIFY — build automático, como o SEG-1 previa:
+         deploy   : 6ab5bf47d5da6700082f1fe8
+         commit   : c199591cfcc53e569ceaa69a432ea4b0d695367a
+         criado   : 2026-09-25T00:24:39Z
+         estado   : building -> **ready**
+         publicado: **2026-09-25T00:27:25Z**
+         funções  : **70** · inclui `ranking`, `pontuacao`,
+                    `fila-processor-scheduled`, `saldo-senhas`
+         ⇒ A produção saiu da árvore de 18/08 e passou a servir `c199591`.
+         ⇒ E, ao contrário do deploy anterior (`commit_ref` ausente), este TEM
+           commit_ref — a produção voltou a ser rastreável ao repositório.
+
+     (b) GITHUB ACTIONS — 4 workflows, e dois vermelhos. Ver §3.6.
+
+3.2 — DECISÃO SOBRE `--prod`
+     Pedido OK ao operador com o facto novo em cima da mesa: o auto-deploy já
+     tinha publicado o MESMO commit, logo `--prod --build` seria outro build sem
+     informação nova — e produziria um deploy SEM `commit_ref` por cima de um
+     que tem, que é precisamente o padrão que gerou o drift dos MC79/MC89.49.
+     Decisão do operador (R18): **NÃO correr `--prod`. Objectivo cumprido.**
+     ⇒ SEG3.1 (draft) e SEG3.3 (`--prod`) ficam cumpridos PELO AUTO-DEPLOY, não
+       pelo CLI. Declarado, não escondido.
+
+3.4 — VALIDAÇÃO DOS ENDPOINTS EM PRODUÇÃO
+     Critério: `content-type: application/json` (ver SEG1.3), com os dois
+     controlos. Base: https://silly-stardust-ca71bc.netlify.app/.netlify/functions
+
+     GET /ranking?cicloId=teste
+        200 · application/json · {"cicloId":"teste","total":0,"ranking":[]}   ✅
+     GET /ranking?recurso=feedback&cicloId=teste&endereco=0xaaaa…aaaa   (sem JWT)
+        401 · application/json · {"error":{"code":"sessao_invalida",…}}      ✅
+        ⇒ o anti-IDOR do MC93-B está activo em produção
+     GET /ranking?recurso=feedback&…&endereco=0x0
+        400 · application/json · {"error":{"code":"endereco_invalido",…}}    ✅
+     POST /pontuacao  (sem token)
+        401 · application/json · {"error":{"code":"admin_token_ausente",…}}  ✅
+     GET /ranking  (sem cicloId)
+        400 · application/json · {"error":{"code":"ciclo_obrigatorio",…}}    ✅
+     CONTROLO NEGATIVO  GET /isto-nao-existe-mc93f
+        200 · **text/html** · "<!DOCTYPE html>…"                            ✅
+        ⇒ o instrumento distingue: uma função ausente NÃO se disfarça de OK
+
+     PROVA PONTA A PONTA (a que o código HTTP não daria):
+        INSERT via MCP em `rankings_ciclo`: ciclo `MC93F-SONDA`,
+           0xaaaa…aaaa, 7 pontos, 2 acertos, posição 1
+        GET /ranking?cicloId=MC93F-SONDA ->
+           {"cicloId":"MC93F-SONDA","total":1,"ranking":[{"posicao":1,
+            "endereco":"0xaaaa…aaaa","pontosTotais":7,"acertosTotais":2,
+            "bonusEmitido":false}]}                                          ✅
+        GET /ranking?cicloId=MC93F-SONDA-NAO-EXISTE -> total 0               ✅
+        DELETE da sonda -> 1 linha removida
+        contagem final -> pontuacoes 0 · rankings_ciclo 0                    ✅
+     ⇒ Fica provado que o endpoint em PRODUÇÃO lê a tabela em PRODUÇÃO, e que o
+       `total: 0` inicial era tabela vazia, não erro engolido.
+     ⇒ Nota: o endpoint NÃO expõe `senhas_a_creditar` nem `liquidado_em` — é a
+       forma pretendida.
+
+3.5 — DEPLOY REGISTADO
+     deploy_id : 6ab5bf47d5da6700082f1fe8
+     commit    : c199591cfcc53e569ceaa69a432ea4b0d695367a
+     publicado : 2026-09-25T00:27:25.516Z
+     url       : https://silly-stardust-ca71bc.netlify.app
+
+3.6 — ⚠️ OS DOIS WORKFLOWS VERMELHOS, DIAGNOSTICADOS
+     AgentShield      -> success
+     Security Scan    -> failure  (conhecido: Socket.dev/npm audit sempre
+                         vermelhos na `main`; pré-existente, registado no projeto)
+     CI               -> **failure**, e é o primeiro achado importante:
+        job `install`, passo `npm ci frontend`, `npm error code EUSAGE`:
+          "package.json and package-lock.json are not in sync"
+          Missing: typescript@5.9.3 · @types/react@19.3.0
+                   @tanstack/react-query@5.103.2 · @tanstack/query-core@5.103.2
+        ⇒ **`desafio-gut/frontend/package-lock.json` está DESSINCRONIZADO** do
+          `package.json`. É PRÉ-EXISTENTE: a `CI` também estava `failure` em
+          `4fe6c859`, antes deste push.
+        ⇒ CONSEQUÊNCIA PARA O MC93-E: os jobs `build`, `lint`, `test-functions` e
+          `test-onchain` saíram **skipped**, porque dependem de `install`.
+          Ou seja: **o `ci.yml` do MC93-E continua a nunca ter corrido num runner
+          real** — não por culpa dele, mas porque está atrás de um job que falha
+          antes. A pendência N1 do MC93-E fica MEDIDA e continua ABERTA.
+        ⇒ Porque é que o Netlify constrói e a CI não: o `netlify.toml` usa
+          `npm install --legacy-peer-deps` (tolerante) e a CI usa `npm ci`
+          (estrito). Nunca se cruzaram até hoje.
+        ⇒ REMÉDIO (NÃO aplicado — HARD GATE 3 proíbe código):
+          `cd desafio-gut/frontend && npm install --package-lock-only`
+
+     Contract Security -> **failure**, e este parecia uma regressão nossa:
+        job `foundry`, `test_limiteMaxLancesUnicos()`:
+          [FAIL: EvmError: Revert] (gas: 1 073 719 444 ≈ 2^30 = tecto do forge)
+          15 passaram, 1 falhou.
+        ⇒ NÃO é regressão do push. Medido:
+           `git log df691cf..c199591 -- desafio-gut/contracts/ tests/foundry/`
+             -> VAZIO. Nem o contrato nem o teste mudaram nos 104 commits.
+           último Contract Security verde: **2026-08-10** · o nosso: **2026-09-25**
+           o workflow usa `foundry-rs/foundry-toolchain@v1` **sem versão fixada**
+        ⇒ DIAGNÓSTICO: deriva de TOOLCHAIN. O teste faz 10 000 `darLance` em
+          ciclo (`LeilaoGUT.t.sol:110`) e passou a estourar um limite que o
+          Foundry mudou nos 46 dias entre as duas corridas.
+        ⇒ REMÉDIO (NÃO aplicado): fixar a versão no `foundry-toolchain`, ou
+          baixar o ciclo / subir o `--gas-limit`.
+
+================================================================================
+FIM DO SEG2-3
+================================================================================

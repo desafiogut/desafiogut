@@ -907,3 +907,104 @@ e da EOA do MC59.11.
 3. ⚠️ Adulterar os `settings` da fixture continua invisível em CI — fecha-se com
    `npm i -D solc@0.8.26` na raiz de `desafio-gut/`.
 4. Antes de activar a emissão: migração em produção + R2 reativada.
+
+---
+
+## MC93-F — Preparação bloqueante do MC94: Supabase + Netlify (2026-09-25)
+
+**Data:** 2026-09-25 · **Origem:** MC93-F, medição por MCP/CLI · **Recorrência:**
+ALTA (drift de produção é o 3.º caso) · **Impacto:** ALTO (desbloqueia o MC94).
+**SEG-1: AJUSTAR** · **R19 ativada** · **SEG4: APROVADO** · **Zero código novo.**
+**Logs:** `_logs/MC93F_*` · **Relatório:** `_logs/MC93F-RELATORIO.md`
+
+### ✅ O que mudou em produção
+
+| | antes | depois |
+|---|---|---|
+| tabelas em `public` | 19 | **21** (`pontuacoes`, `rankings_ciclo`) |
+| migrações | 9 (última 2026-08-03) | **10** (`20260925002324 mc93b_pontuacoes`) |
+| produção servia | árvore de **2026-08-18**, sem `commit_ref` | **`c199591`, com `commit_ref`** |
+| `origin/main` | **104 commits atrás** | convergido |
+| `/ranking` | 200 · `text/html` (ausente) | **200 · JSON, a ler a tabela** |
+
+Projeto Supabase de produção: **`vjslwowwrpcawijdiksm`** (staging é
+`gjuelqjjhuuwnlsjyeai`). Confirmar SEMPRE antes de escrever.
+Medido: `pontuacoes` 3 CHECKs · `rankings_ciclo` 6 CHECKs = **9** no total
+(a documentação do MC93-B/D dizia 8 — o número certo é 9).
+
+### ⚠️ HTTP 200 não prova que a função existe
+
+`netlify.toml:34` reescreve `/*` → `/index.html` com **status 200**. Uma função
+AUSENTE responde `200` com `text/html`, indistinguível de um OK.
+
+> **Regra:** validar endpoints por **`content-type: application/json`**, nunca
+> pelo código HTTP. E sempre com os dois controlos — um endpoint inventado (tem
+> de dar HTML) e um que se sabe deployado (tem de dar JSON).
+
+E `total: 0` também não prova que se está a ler a tabela: pode ser erro engolido.
+A prova é inserir uma linha sintética, ver o endpoint devolvê-la, e apagá-la.
+
+### ⚠️ `/feedback` não existe como função
+
+É `GET /ranking?recurso=feedback&cicloId=…&endereco=…` (`ranking.mjs:46`), com
+JWT de user-session obrigatório (anti-IDOR, validado a responder `401
+sessao_invalida` em produção). E o endpoint de escrita é **`/pontuacao`**, não
+`/pontuar`.
+
+### ⛔ NÃO existe MCP do Netlify
+
+Nunca foi instalado. Usar o **CLI 26.1.0**, já autenticado. O MCP do Supabase
+existe e funciona.
+
+### ⛔ TRÊS PENDÊNCIAS PARA O OPERADOR
+
+1. **Rotar a chave Alchemy** de `desafio-gut/hardhat.config.cjs`. Introduzida em
+   `a2c40ee` (MC89.14), que **já estava no GitHub antes deste MC**. Não tocada (R5).
+2. **`desafio-gut/frontend/package-lock.json` está dessincronizado** do
+   `package.json` (`typescript@5.9.3`, `@types/react@19.3.0`,
+   `@tanstack/react-query@5.103.2`, `@tanstack/query-core@5.103.2` ausentes do
+   lock). O job `install` da CI falha e **`build`/`lint`/`test-functions`/
+   `test-onchain` saem `skipped`.
+   ⇒ **É por isto que o `ci.yml` do MC93-E continua a nunca ter corrido.**
+   Remédio: `cd desafio-gut/frontend && npm install --package-lock-only`.
+   ⇒ E explica a divergência: o Netlify usa `npm install --legacy-peer-deps`
+   (tolerante), a CI usa `npm ci` (estrito).
+3. **`test_limiteMaxLancesUnicos()` do Foundry falha** — e **não é regressão**:
+   `git log df691cf..c199591` nos caminhos do contrato e do teste vem vazio.
+   Último verde **2026-08-10**, este **2026-09-25**, e o workflow usa
+   `foundry-rs/foundry-toolchain@v1` **sem versão fixada**. O teste faz 10 000
+   `darLance` em ciclo e estoura o tecto de gas (2³⁰). Remédio: fixar a versão.
+
+### ⚠️ O push contornou a proteção de branch
+
+```
+remote: Bypassed rule violations for refs/heads/main:
+remote: - Changes must be made through a pull request.
+remote: - 2 of 2 required status checks are expected.
+```
+104 commits entraram em `main` sem PR e sem checks verdes, porque a conta tem
+bypass. Não foi usada nenhuma flag de contorno. Se a proteção existe por desenho,
+é decisão do operador.
+
+### ⚠️ O auto-deploy continua LIGADO (`stop_builds: false`)
+
+Hoje é inofensivo **porque `main` == local**. Volta a ser perigoso no dia em que
+o local se adiantar sem push. Foi assim que nasceu o drift dos MC79 e MC89.49.
+
+> **Regra que este MC confirma pela terceira vez:** com auto-deploy ligado, o
+> `git push` É o deploy. Um `netlify deploy --prod` manual produz um deploy **sem
+> `commit_ref`** — irrastreável — e é revertido pelo próximo merge.
+
+### Decisões do operador (R18)
+
+1. Aplicar a migração a produção **agora**.
+2. **Push dos 104 commits primeiro**, depois o deploy.
+3. **Não correr `--prod`** — o auto-deploy já publicara o mesmo commit, e um
+   deploy manual por cima teria removido o `commit_ref`.
+
+### Ressalvas (L-4)
+
+Nenhuma rodada real processada (o leilão continua em `EM_BREVE_MODE`); as tabelas
+estão vazias. Créditos do plano Netlify não medidos por API. As definições de
+build ao nível do site divergem do `netlify.toml` (o toml ganha). A 3.ª validação
+das correcções do MC93-E continua por fazer.

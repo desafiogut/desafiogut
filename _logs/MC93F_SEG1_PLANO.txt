@@ -1,0 +1,57 @@
+================================================================================
+MC93-F — SEG1 · PLANEAMENTO
+DesafioGUT · 2026-09-24/25 · Skills ECC: make-plan
+================================================================================
+
+1.1 — MIGRAÇÃO
+     Pré-condição medida (SEG0): as tabelas NÃO existem; a migração NÃO está no
+     registo. Logo não é no-op.
+     Confirmação do operador: **PEDIDA E OBTIDA** (R18) — "Sim, aplicar agora".
+     Via: `mcp__supabase__apply_migration` no projeto vjslwowwrpcawijdiksm.
+     ⚠️ AJUSTE DE EXECUÇÃO (R15): o ficheiro tem `BEGIN;`/`COMMIT;` explícitos
+     nas linhas 35 e 123. O `apply_migration` do MCP já envolve a query numa
+     transacção própria; um `COMMIT` aninhado fecharia a transacção da
+     ferramenta a meio. Passou-se o DDL **sem o envelope de transacção**.
+     Nenhuma linha de DDL foi alterada — não é reescrita do schema.
+     Reversível: as tabelas nascem vazias; `DROP TABLE` desfaz.
+     Risco às 19 tabelas existentes: nenhum (só `CREATE`/`GRANT` sobre as novas,
+     mais um `GRANT USAGE ON SCHEMA public TO service_role` que é idempotente).
+
+1.2 — DEPLOY
+     Pré-condição medida: 104 commits à frente do GitHub; auto-deploy LIGADO
+     apontando a `main`; 21 PRs dependabot abertos.
+     ⇒ Um `--prod` a partir do local seria REVERTIDO no próximo merge.
+     Decisão do operador (R18): **push dos 104 commits primeiro, depois --prod**.
+     Ordem planeada:
+       (a) `git push origin main`
+       (b) observar o que o push dispara (auto-deploy + GitHub Actions)
+       (c) validar endpoints
+       (d) `--prod` só se ainda fizer sentido depois de (b)
+     ⚠️ O passo (d) ficou condicionado de propósito: se o auto-deploy publicar o
+     MESMO commit, o `--prod` passa a ser um build redundante.
+
+1.3 — VALIDAÇÃO DOS ENDPOINTS
+     ⚠️ AJUSTE OBRIGATÓRIO face ao enunciado, e é a razão de ser do SEG-1:
+     `netlify.toml:34` reescreve `/*` para `/index.html` com **status 200**.
+     Logo um endpoint AUSENTE responde 200 com HTML, indistinguível de um OK se
+     se julgar pelo código. O critério passa a exigir
+     **`content-type: application/json`**, com controlo negativo (um endpoint
+     inventado) e controlo positivo (uma função já deployada).
+
+     ⚠️ SEGUNDO AJUSTE: o enunciado nomeia `/feedback` e `POST /pontuar`.
+     Medido: não existe função `feedback`; é
+     `GET /ranking?recurso=feedback&cicloId=…&endereco=…` (ranking.mjs:46), com
+     JWT de user-session obrigatório. E o endpoint é `/pontuacao`, não
+     `/pontuar`.
+
+     Dados: SINTÉTICOS. Uma linha em `rankings_ciclo` com `ciclo_id`
+     `MC93F-SONDA`, para provar que o endpoint lê a tabela e não devolve `[]` por
+     erro engolido. Apagada no fim, com contagem final a confirmar 0 linhas.
+
+1.4 — ORDEM FINAL
+     SEG2 migração -> SEG3 push -> observar -> validar -> decidir `--prod`
+     -> SEG4 validação independente por MCP -> SEG5 entrega.
+
+================================================================================
+FIM DO SEG1
+================================================================================

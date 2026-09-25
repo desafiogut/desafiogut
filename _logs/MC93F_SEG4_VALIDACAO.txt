@@ -1,0 +1,84 @@
+================================================================================
+MC93-F — SEG4 · VALIDAÇÃO
+DesafioGUT · 2026-09-25 · Skills ECC: verification-before-completion
+RUFLO: o VALIDADOR consultou os MCPs/CLI de novo, do zero, sem reaproveitar
+nenhuma leitura do Executor.
+================================================================================
+
+4.1 — SUPABASE (consulta independente, via MCP)
+     `list_tables` -> **21 tabelas** (o diagnóstico inicial contou 19)
+       ✅ public.pontuacoes      · rls_enabled: true · rows: 0
+       ✅ public.rankings_ciclo  · rls_enabled: true · rows: 0
+     `list_migrations` -> 10, a última **20260925002324 mc93b_pontuacoes**
+     ⇒ CONFIRMADO. As tabelas existem, com RLS, e vazias.
+     ⇒ As 19 tabelas pré-existentes mantêm as contagens do diagnóstico:
+       cotas 7 · saldo_rs 8 · saldo_rs_creditos 21 · fila_tarefas 5 ·
+       atividade_utilizadores 18 · config_remota 1.
+       **Nenhum dado existente foi tocado.**
+
+4.2 — NETLIFY (consulta independente, via CLI — não há MCP)
+     published_deploy : 6ab5bf47d5da6700082f1fe8
+     estado           : **ready**
+     commit_ref       : c199591cfcc53e569ceaa69a432ea4b0d695367a
+     publicado em     : 2026-09-25T00:27:25.516Z
+     stop_builds      : false  (auto-deploy continua LIGADO)
+     ⇒ CONFIRMADO. A produção serve o commit `c199591`, e o deploy é rastreável
+       ao repositório (tem `commit_ref`, ao contrário do anterior).
+     ⇒ E o auto-deploy, que era o risco nº 1 do SEG-1, deixou de ser perigoso
+       pela razão certa: `origin/main` e o local convergiram. Um merge futuro
+       reconstrói a MESMA árvore, já não uma de Agosto.
+
+4.3 — PROVA DE R1
+     `git diff --stat c199591` -> **VAZIO**. Zero linhas de código alteradas.
+     `git status --porcelain` -> só ficheiros NOVOS e não rastreados:
+       _logs/MC93F_* (deste MC)
+       docs/MC91.14-STATUS-BNB.txt · docs/mc92.5_*.py  (PRÉ-EXISTENTES, não meus,
+       e que NÃO vão ao commit)
+     ⇒ HARD GATE 3 cumprido: nenhum `.mjs`, `.js`, `.ts`, `.jsx`, `.tsx` ou
+       `.sql` foi alterado. A migração foi APLICADA, não reescrita.
+     ⇒ HARD GATE 4 cumprido: a chave Alchemy não foi tocada.
+     ⇒ `BONUS_EMISSAO_ATIVA` continua AUSENTE do ambiente de produção.
+
+4.4 — L-4 · O QUE NÃO FOI MEDIDO, E O QUE FICA ABERTO
+     N1 ⛔ **A chave Alchemy NÃO foi rotacionada** (R5 / HARD GATE 4). Continua em
+        texto simples em `desafio-gut/hardhat.config.cjs`, e o commit que a
+        introduziu (`a2c40ee`, MC89.14) **já estava em `origin/main` antes deste
+        MC** — o push de hoje não a expôs, ela já estava exposta.
+     N2 ⛔ **O `ci.yml` do MC93-E CONTINUA a nunca ter corrido num runner real.**
+        Agora sabe-se porquê, e foi medido: o job `install` falha antes
+        (`npm ci frontend`, lockfile do frontend dessincronizado), e os jobs
+        `test-functions`/`test-onchain` saem `skipped`. A pendência do MC93-E
+        muda de "nunca correu" para "está bloqueada por um lockfile".
+     N3 ⛔ **`test_limiteMaxLancesUnicos()` do Foundry falha** por deriva de
+        toolchain (`foundry-toolchain@v1` sem versão fixada; 46 dias entre a
+        última corrida verde e esta). Não é regressão do push — provado por
+        `git log` vazio nos caminhos do contrato e do teste.
+     N4 ⚠️ **O auto-deploy continua LIGADO** (`stop_builds: false`). Hoje é
+        inofensivo porque `main` == local. Volta a ser perigoso no dia em que o
+        local se adiantar outra vez sem push.
+     N5 ⚠️ **A proteção de branch foi contornada** no push (PR obrigatório + 2
+        status checks). Facto, não escolha; mas é decisão do operador se aquela
+        proteção deve valer para si próprio.
+     N6 ⚠️ **As definições de build ao nível do site divergem do `netlify.toml`**
+        (`base` vazio vs `desafio-gut/frontend`). O toml ganha, logo não morde —
+        mas é uma armadilha por desarmar.
+     N7 ⚠️ **Nenhuma rodada real foi processada.** O leilão continua travado
+        (`EM_BREVE_MODE = true`). As tabelas estão no ar e vazias; o fluxo
+        completo (consolidar rodada -> pontuar -> ranking) nunca correu em
+        produção com dados reais.
+     N8 ⚠️ **Créditos do plano Netlify não medidos.** O enunciado diz 2 938 e que
+        o período termina hoje; não confirmei por API (exigiria o endpoint de
+        facturação). O build correu sem erro de fatura, o que é evidência
+        indirecta e não uma medição.
+     N9 ⚠️ **A 3.ª validação das correcções do MC93-E** continua por fazer,
+        herdada.
+
+4.5 — VEREDITO DO SEG4
+     **APROVADO.** Os dois bloqueantes do MC94 estão levantados e medidos por
+     consulta independente: as tabelas existem em produção e os endpoints
+     respondem JSON a partir delas. As ressalvas N1–N9 são todas declaradas, e
+     nenhuma delas bloqueia o MC94.
+
+================================================================================
+FIM DO SEG4
+================================================================================

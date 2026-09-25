@@ -1,0 +1,197 @@
+================================================================================
+MC93-F — SEG-1 · QUESTIONAMENTO DO BRIEFING (HARD GATE)
+DesafioGUT · 2026-09-24 · base c199591 · Skills ECC: smart-explore, brainstorming
+HARD GATE 2 EM VIGOR: toda afirmação sobre o ambiente é MEDIDA, com output.
+================================================================================
+
+VEREDITO: **AJUSTAR** — e com DUAS decisões bloqueantes para o operador.
+R19: ATIVADA. Ver §-1.2.
+
+--------------------------------------------------------------------------------
+RESUMO EM SEIS LINHAS
+--------------------------------------------------------------------------------
+1. A migração NÃO está em produção. Confirmado: 19 tabelas, nenhuma é
+   `pontuacoes`/`rankings_ciclo`; 9 migrações, a última de 2026-08-03.
+2. ⛔ **NÃO EXISTE MCP DO NETLIFY.** O enunciado pressupõe um que nunca foi
+   instalado. O CLI 26.1.0 existe e está autenticado — é por aí.
+3. ⛔ **O LOCAL ESTÁ 104 COMMITS À FRENTE DO `origin/main`.** Logo
+   `--prod --build` não é "backend novo no ar": é despachar 104 commits de
+   FRONTEND para produção ao mesmo tempo.
+4. ⛔ **O AUTO-DEPLOY DO GITHUB ESTÁ LIGADO** (`stop_builds: false`) e aponta a
+   `main`, que está 104 commits atrás. Há 21 branches dependabot activas. O
+   próximo merge em `main` REVERTE a produção que eu acabar de publicar.
+5. ⚠️ Os endpoints `/ranking`, `/feedback` e `/pontuacao` devolvem **HTTP 200**
+   hoje — com `text/html`. É o SPA fallback. O critério de aceitação do
+   enunciado, que julga por código HTTP, seria satisfeito por lixo.
+6. O enunciado nomeia `POST /pontuar`. O endpoint chama-se `/pontuacao`.
+
+================================================================================
+-1.1 — MEDIÇÕES (todas com output)
+================================================================================
+
+[M0] MCPs — o que existe DE FACTO
+     Supabase MCP  -> EXISTE (mcp__supabase__*), e responde.
+     Netlify MCP   -> ⛔ NÃO EXISTE. Nenhuma ferramenta `mcp__netlify__*`.
+     ⇒ Consistente com o que o projeto já sabia. O enunciado assume errado.
+     ⇒ AJUSTE: tudo o que é Netlify vai pelo CLI (que é, aliás, o que os
+       comandos autorizados pelo próprio enunciado são: `netlify deploy`,
+       `netlify env:list`).
+
+[M1] QUAL projeto o Supabase MCP aponta — verificado ANTES de qualquer escrita
+     get_project_url -> https://vjslwowwrpcawijdiksm.supabase.co
+     `cloud.md:6891` -> "A resposta é `vjslwowwrpcawijdiksm` (= DesafioGUT)"
+     `cloud.md:867`  -> staging é `gjuelqjjhuuwnlsjyeai`
+     ⇒ O MCP aponta a PRODUÇÃO, não a staging. É o projeto certo, e é por isso
+       que a confirmação antes de escrever não é formalidade.
+
+[M2] TABELAS EM PRODUÇÃO (public) — 19, e nenhuma é a que interessa
+     produtos · lojistas · lances · config_remota · cotas(7) · cotas_pagas ·
+     cota_fingerprints · saldo_rs(8) · saldo_rs_creditos(21) · saldo_rs_debitos ·
+     troco_senhas · wallet · wallet_idem · fila_tarefas_legado ·
+     fila_tarefas(5) · admin_logs · usuarios_bloqueio · notifications ·
+     atividade_utilizadores(18)
+     ⛔ `pontuacoes`      -> NÃO EXISTE
+     ⛔ `rankings_ciclo`  -> NÃO EXISTE
+     (nota lateral: `saldo_rs` tem 8 linhas e `saldo_rs_creditos` 21 — é o
+      dinheiro real que o MC00.0 identificou, agora em 8 contas.)
+
+[M3] MIGRAÇÕES APLICADAS — 9, a última a 2026-08-03
+     20260722040324 mc87_hardening_reservar_tarefas
+     20260726224230 mc8829_fila_tarefas_corrigida
+     20260731012012 20260731_admin_logs
+     20260731021338 20260731_usuarios_bloqueio
+     20260731021350 20260731_vw_utilizadores
+     20260731025648 20260731_notifications
+     20260803011332 mc8943_atividade_utilizadores
+     20260803011413 mc8943_atividade_invoker_e_revoke
+     20260803011715 mc8943_vw_utilizadores_com_acesso
+     ⛔ `20260923_mc93b_pontuacoes` NÃO está listada. Premissa CONFIRMADA.
+
+[M4] NETLIFY CLI
+     netlify-cli/26.1.0 win32-x64 node-v24.14.1
+     autenticado: DESAFIO GUT <desafiogut@gmail.com> · team desafiogut
+     projeto actual: silly-stardust-ca71bc · toml: <raiz>/netlify.toml
+
+[M5] ⛔ O REPOSITÓRIO LOCAL vs O GITHUB
+     git rev-list --left-right --count origin/main...HEAD
+       -> atrás de origin: 0 | **à frente: 104**
+     Os 104 incluem TUDO desde o MC90.2: MC90.x, MC91.x, MC92.x, MC00.0,
+     MC93-A, MC93-B, MC93-C, MC93-D, MC93-E.
+     ⇒ O GitHub NÃO tem o backend do torneio. Nem o frontend dos MC91.x.
+
+[M6] ESTADO DO SITE (netlify api listSites)
+     site_id          : be1cc8bb-682b-4667-a341-c8db1f4ab2b5
+     published_deploy : 6a849bac24a536323f530a6f · 2026-08-18T17:51:40Z
+     commit_ref       : (nenhum) -> a produção actual veio de um deploy por CLI
+     branch           : main
+     repo_url         : https://github.com/desafiogut/desafiogut
+     repo_branch      : main
+     **stop_builds    : false**  -> AUTO-DEPLOY LIGADO
+     plano            : Pro
+     ⇒ O deploy 6a849bac é o do MC91.11-S4 (18/08). A produção está em Agosto.
+
+[M7] VARIÁVEIS EM PRODUCTION (só nomes — R4) — 52 definidas
+     As que o backend do torneio precisa:
+       ✅ SUPABASE_URL · ✅ SUPABASE_SERVICE_ROLE_KEY · ✅ DATA_STORE_BACKEND
+       ✅ COORDENACAO_PRIVATE_KEY · ✅ CONTRATO_SEPOLIA · ✅ JWT_SECRET
+       ⛔ ALCHEMY_URL       AUSENTE (existem `VITE_ALCHEMY_URL` e `RPC_URL`)
+       ⛔ BONUS_EMISSAO_ATIVA AUSENTE  ← **é o que se quer**: dry-run por omissão
+
+[M8] ⚠️ OS ENDPOINTS HOJE — e porque o critério do enunciado não serve
+     /ranking?cicloId=teste    -> 200 · text/html · "<!DOCTYPE html>…"
+     /feedback?…               -> 200 · text/html · "<!DOCTYPE html>…"
+     /pontuacao                -> 200 · text/html · "<!DOCTYPE html>…"
+     CONTROLO NEGATIVO:
+     /isto-nao-existe-mc93f    -> 200 · text/html · "<!DOCTYPE html>…"  (IGUAL)
+     CONTROLO POSITIVO (função que ESTÁ deployada desde o MC91.11):
+     /saldo-senhas?endereco=0x0 -> 400 · application/json ·
+         {"error":{"code":"endereco_invalido",…}}
+     ⇒ A causa é `netlify.toml:34` — `from "/*" to "/index.html" status 200`.
+     ⇒ Uma função ausente é indistinguível de uma função OK **se se olhar para o
+       código HTTP**. A validação TEM de exigir `content-type: application/json`.
+     ⇒ Isto confirma por medição o que se queria saber: os endpoints do torneio
+       NÃO estão em produção.
+
+[M9] netlify.toml governa o build (e está correcto)
+     base = "desafio-gut/frontend" · publish = "dist"
+     functions.directory = "netlify/functions"
+     ⚠️ As definições ao NÍVEL DO SITE divergem (`base` vazio, `dir`
+     `frontend/dist`). O `netlify.toml` ganha, logo não é bloqueante — mas é
+     divergência registada.
+
+[M10] A CHAVE ALCHEMY — registada, NÃO tocada (R5 / HARD GATE 4)
+     `desafio-gut/hardhat.config.cjs` -> 1 ocorrência, em texto simples.
+     último commit do ficheiro: a2c40ee "MC89.14".
+     ⇒ Continua exposta no histórico. NÃO foi tocada. É acção do operador.
+
+[M11] 21 branches `dependabot/*` no remoto, com actividade hoje
+     (vi um force-update durante o `git fetch`).
+     ⇒ O risco do auto-deploy não é teórico: há PRs a poder ser mergeados.
+
+================================================================================
+-1.2 — AUTOSSUFICIÊNCIA (R19) — ATIVADA
+================================================================================
+Este MC **não é autossuficiente como está escrito**, e vai gerar um `.1` se for
+executado à letra. Razão, medida:
+
+O enunciado descreve o SEG3 como "backend novo no ar". Mas `netlify deploy
+--prod --build` corre `npm run build` no frontend e publica `dist` — ou seja
+**despacha os 104 commits de frontend ao mesmo tempo**. Isso inclui MC91.7
+(login por e-mail no modal), MC91.11 (fluxo financeiro senha/R$), MC91.6 (ícone),
+MC90.3 (rotas /privacidade e /excluir-conta) e tudo o resto. Nenhum desses foi
+validado hoje, e o MC não os menciona.
+
+E há um segundo problema que torna o deploy **efémero**: com `stop_builds: false`
+e `main` 104 commits atrás, o próximo merge em `main` (há 21 PRs dependabot
+abertos) reconstrói a árvore de Agosto POR CIMA da produção nova. É exactamente
+o drift que o projeto já registou duas vezes (MC79, MC89.49).
+
+AMPLIAÇÃO QUE A R19 MANDA PROPOR (o operador pode vetar):
+  A. Antes do `--prod`, **desligar o auto-deploy** OU **pôr o `origin/main` em
+     dia** (push dos 104 commits). Sem uma das duas, a entrega não sobrevive ao
+     próximo merge — e o MC94 encontraria o backend desaparecido.
+  B. A validação dos endpoints passa a exigir `content-type: application/json`,
+     não só o código HTTP.
+⚠️ A alínea A envolve **push para o GitHub** ou **alterar configuração do site** —
+nenhuma das duas está autorizada por este MC ("NÃO AUTORIZA desligar auto-deploy
+do GitHub sem confirmação do operador"). Logo é decisão do operador.
+
+================================================================================
+-1.3 — ESCOPO
+================================================================================
+CABE NO MC, e está medido:
+  • aplicar a migração via Supabase MCP (operação pequena, reversível por
+    `DROP TABLE`, e as tabelas nascem vazias);
+  • medir o ambiente (feito);
+  • registar a chave Alchemy (feito);
+  • validar endpoints com o critério corrigido.
+
+NÃO CABE, e declara-se:
+  • rotação da chave Alchemy — R5, operador (HARD GATE 4);
+  • CI em runner real — continua pendente do MC93-E, e não há `act`;
+  • 3.ª validação independente das correcções do MC93-E — continua pendente;
+  • resolver a divergência de `build_settings` ao nível do site;
+  • os 104 commits por empurrar para o GitHub — é decisão de release, não deste MC.
+
+================================================================================
+-1.4 — VEREDITO
+================================================================================
+**AJUSTAR**, com dois ajustes já aplicados e duas decisões bloqueantes.
+
+AJUSTES QUE EU FAÇO (não precisam de decisão):
+  A1. Netlify pelo CLI, não por MCP (o MCP não existe).
+  A2. A validação dos endpoints exige `content-type: application/json` e o corpo,
+      nunca só o código HTTP. E o endpoint é `/pontuacao`, não `/pontuar`.
+
+DECISÕES BLOQUEANTES DO OPERADOR (o MC não avança sem elas):
+  D1. Aplicar `20260923_mc93b_pontuacoes.sql` ao Supabase de **PRODUÇÃO**?
+      (o próprio enunciado exige confirmação explícita)
+  D2. O que fazer com o deploy, dado que `--prod --build` despacha 104 commits
+      de frontend e que o auto-deploy vai revertê-lo no próximo merge?
+
+⚠️ Nada foi escrito em produção. Nenhuma credencial foi tocada. Nenhum ficheiro
+de código foi alterado. `BONUS_EMISSAO_ATIVA` continua ausente.
+
+================================================================================
+FIM DO SEG-1 — VEREDITO: AJUSTAR
+================================================================================
