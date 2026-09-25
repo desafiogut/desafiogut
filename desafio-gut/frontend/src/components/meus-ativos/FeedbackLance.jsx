@@ -1,4 +1,4 @@
-import { COR, T_PADRAO, caixa, tituloSecao, legenda, reais } from "./_estilo.js";
+import { COR, T_PADRAO, caixa, tituloSecao, legenda, reais, valorUtilizavel } from "./_estilo.js";
 
 /**
  * Quanto vale cada lance do utilizador, pela regra do torneio.
@@ -29,13 +29,25 @@ export default function FeedbackLance({
   isMobile = false,
   t = T_PADRAO,
 }) {
+  // ⚠️ O `valorUtilizavel` NÃO é zelo: um lance com `valor: null` era formatado
+  // como "R$ 0,00" (porque `Number(null) === 0`) e, sendo o menor de todos, era
+  // eleito "menor único seu · vale 3 pontos". É a armadilha EXACTA que o MC93-A
+  // pagou no motor, e há caminho real para o `null` —
+  // `_lib/data-store-supabase.mjs` grava `valor_centavos = null` de propósito
+  // para marcar lance inválido. Achado da validação independente do MC94.
   const meus = (Array.isArray(lances) ? lances : []).filter(
-    (l) => address && l?.endereco?.toLowerCase() === String(address).toLowerCase(),
+    (l) => address
+      && l?.endereco?.toLowerCase() === String(address).toLowerCase()
+      && valorUtilizavel(l?.valor),
   );
 
   const unicos = meus.filter((l) => !l.repetido);
-  const menor = unicos.length
-    ? unicos.reduce((a, b) => (Number(b.valor) < Number(a.valor) ? b : a))
+  // ⚠️ Com empate no menor valor, marcam-se TODOS os empatados. A versão
+  // anterior escolhia um arbitrariamente e mostrava, lado a lado, dois lances de
+  // R$ 1,00 — um a "vale 3 pontos" e o outro a "vale 1 ponto". Achado da
+  // validação independente. Quem desempata de facto é o backend, no fecho.
+  const valorMenor = unicos.length
+    ? Math.min(...unicos.map((l) => l.valor))
     : null;
 
   const titulo = t("ativos.lance.titulo", "💡 Quanto vale cada lance seu");
@@ -60,7 +72,7 @@ export default function FeedbackLance({
 
       <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "0.35rem" }}>
         {ordenados.map((l, i) => {
-          const ehMenor = menor !== null && l === menor;
+          const ehMenor = valorMenor !== null && !l.repetido && l.valor === valorMenor;
           const pontos = l.repetido ? 0 : (ehMenor ? 3 : 1);
           const rotulo = l.repetido
             ? t("ativos.lance.repetido", "repetido")

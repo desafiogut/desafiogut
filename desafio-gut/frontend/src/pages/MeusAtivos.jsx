@@ -125,15 +125,26 @@ export default function MeusAtivos() {
           isMobile={isMobile}
           t={t}
         />
+        {/* ⚠️ As três secções pessoais recebem os MESMOS quatro estados. A
+            primeira versão só passava os dados a estas duas, e em produção um
+            utilizador anónimo lia "0 / 5 acertos seguidos · Faltam 5 acertos" e
+            "Nenhum bónus conquistado neste ciclo" — afirmações sobre alguém que a
+            app não identificou. Uma falha de rede dava o mesmo texto. */}
         <ProgressoBonus
-          sequenciaAtual={feedback.feedback?.sequenciaAtual ?? 0}
-          faltamParaBonus={feedback.feedback?.faltamParaBonus ?? ACERTOS_PARA_BONUS}
+          temSessao={!feedback.semSessao}
+          carregando={feedback.carregando}
+          erro={feedback.erro}
+          sequenciaAtual={feedback.feedback?.sequenciaAtual}
+          faltamParaBonus={feedback.feedback?.faltamParaBonus}
           acertosParaBonus={ACERTOS_PARA_BONUS}
           isMobile={isMobile}
           t={t}
         />
         <EstadoBonus
-          senhasACreditar={feedback.feedback?.senhasACreditar ?? 0}
+          temSessao={!feedback.semSessao}
+          carregando={feedback.carregando}
+          erro={feedback.erro}
+          senhasACreditar={feedback.feedback?.senhasACreditar}
           bonusEmitido={feedback.feedback?.bonusEmitido ?? false}
           liquidado={feedback.feedback?.liquidado}
           isMobile={isMobile}

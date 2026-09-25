@@ -27,6 +27,7 @@ let vite = null;
 let Pagina = null;
 let definirContexto = null;
 let definirHooks = null;
+let argumentos = null;
 
 before(async () => {
   vite = await createServer({
@@ -53,7 +54,7 @@ before(async () => {
     },
   });
   ({ definirContexto } = await vite.ssrLoadModule(`${STUBS}/AppContext.jsx`));
-  ({ definirHooks }    = await vite.ssrLoadModule(`${STUBS}/hooks.js`));
+  ({ definirHooks, argumentos } = await vite.ssrLoadModule(`${STUBS}/hooks.js`));
   Pagina = (await vite.ssrLoadModule("/src/pages/MeusAtivos.jsx")).default;
 });
 
@@ -243,5 +244,195 @@ describe("MC94 · MeusAtivos — resiliência", () => {
     assert.match(t, /Ranking do ciclo/i);
     assert.match(t, /0xdddd/, "não mostra a linha do ranking sem sessão");
     assert.doesNotMatch(t, /você|voce/i, "destaca alguém sem saber quem é o utilizador");
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// CABLAGEM. Os testes acima provam que as secções SABEM renderizar; estes provam
+// que a página lhes ENTREGA os dados. A validação independente do MC94 mostrou
+// que as duas coisas são independentes: um componente correcto ligado a `undefined`
+// renderiza o estado "sem dados" e a suíte fica verde.
+// ───────────────────────────────────────────────────────────────────────────
+describe("MC94 · MeusAtivos — cablagem: os dados chegam às secções", () => {
+  const EU = "0xAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaaa";
+
+  test("`useFeedback` é chamado com ciclo, endereço E token — os três", () => {
+    renderizar({ contexto: { address: EU, authToken: "tok", isConnected: true, EDICAO_ATIVA: "R-1" } });
+    const [args] = argumentos().feedback;
+    assert.ok(args, "a página não chamou `useFeedback`");
+    assert.equal(args[0], "R-1",   "não passou a edição activa");
+    assert.equal(args[1], EU,      "não passou o endereço — o endpoint devolveria 401/403");
+    assert.equal(args[2], "tok",   "não passou o authToken — o endpoint devolveria 401");
+  });
+
+  test("`useRanking` é chamado com a edição activa, não com `undefined`", () => {
+    renderizar({ contexto: { EDICAO_ATIVA: "R-7" } });
+    const [args] = argumentos().ranking;
+    assert.ok(args, "a página não chamou `useRanking`");
+    assert.equal(args[0], "R-7",
+      "chamou o ranking sem ciclo — o hook devolve vazio e a secção parece um ciclo sem pontuações");
+  });
+
+  test("a edição activa vem do contexto, não de um literal na página", () => {
+    // ⚠️ `EDICAO_ATIVA` é "R-1" hoje. Um literal cravado na página continuaria a
+    // pedir "R-1" depois de o ciclo mudar, e o ranking ficaria congelado no ciclo
+    // anterior sem ninguém dar por isso.
+    renderizar({ contexto: { EDICAO_ATIVA: "R-99", address: EU, authToken: "tok" } });
+    assert.equal(argumentos().ranking[0][0], "R-99", "o ciclo do ranking está cravado na página");
+    assert.equal(argumentos().feedback[0][0], "R-99", "o ciclo do feedback está cravado na página");
+  });
+
+  test("`address` chega ao RANKING: sem ele ninguém é destacado; com ele, o próprio é", () => {
+    const comum = {
+      ranking: {
+        ranking: [
+          { posicao: 1, endereco: "0xCCCCccccCCCCccccCCCCccccCCCCccccCCCCcccc", pontosTotais: 12, acertosTotais: 4, bonusEmitido: false },
+          { posicao: 2, endereco: EU, pontosTotais: 9, acertosTotais: 3, bonusEmitido: false },
+        ],
+        total: 2, carregando: false, erro: null,
+      },
+    };
+    const semEndereco = renderizar({ contexto: { address: null }, hooks: comum });
+    const comEndereco = renderizar({ contexto: { address: EU, authToken: "tok", isConnected: true }, hooks: comum });
+    assert.doesNotMatch(semEndereco, /data-eu="sim"/);
+    assert.match(comEndereco, /data-eu="sim"/,
+      "o `address` do contexto não chega ao RankingCiclo — ninguém se encontra no ranking");
+  });
+
+  test("`address` chega ao FEEDBACK DE LANCES: só os lances do próprio aparecem", () => {
+    const lances = [
+      { valor: 100, repetido: false, endereco: "0xBBBBbbbbBBBBbbbbBBBBbbbbBBBBbbbbBBBBbbbb" },
+      { valor: 900, repetido: false, endereco: EU },
+    ];
+    const html = renderizar({ contexto: { address: EU, authToken: "tok", isConnected: true, lances } });
+    const secao = html.slice(html.indexOf('data-secao="feedback-lance"'));
+    const corpo = secao.slice(0, secao.indexOf("</section>"));
+    assert.equal(corpo.split('data-linha="lance"').length - 1, 1,
+      "a secção de lances não recebeu o `address` — mostra os lances de todos como sendo do utilizador");
+    assert.match(texto(corpo), /R\$ 9,00/);
+    assert.doesNotMatch(texto(corpo), /R\$ 1,00/, "mostrou o lance de outra pessoa como sendo do utilizador");
+  });
+
+  test("`erro` do feedback chega às TRÊS secções pessoais — e só a essas", () => {
+    // ⚠️ V22/V23/V24: a primeira versão passava os dados às três secções mas o
+    // `erro` só a uma. As outras duas mostravam o estado "sem dados", isto é,
+    // zeros — que é pior do que um aviso, porque o utilizador acredita neles.
+    const html = renderizar({
+      contexto: { address: EU, authToken: "tok", isConnected: true },
+      hooks: {
+        feedback: { feedback: null, carregando: false, erro: "rede", semSessao: false },
+        ranking:  { ranking: [], total: 0, carregando: false, erro: null },
+      },
+    });
+    for (const secao of ["painel-torneio", "progresso-bonus", "estado-bonus"]) {
+      const i = html.indexOf(`data-secao="${secao}"`);
+      assert.notEqual(i, -1, `a secção ${secao} desapareceu`);
+      const corpo = html.slice(i, i + html.slice(i).indexOf("</section>"));
+      assert.match(corpo, /data-estado="erro"/,
+        `o \`erro\` não chega a "${secao}" — a secção mostra zeros com o endpoint em baixo`);
+    }
+    // O ranking é OUTRO endpoint: o erro de um não pode apagar o outro.
+    const iRank = html.indexOf('data-secao="ranking-ciclo"');
+    const corpoRank = html.slice(iRank, iRank + html.slice(iRank).indexOf("</section>"));
+    assert.doesNotMatch(corpoRank, /data-estado="erro"/,
+      "o erro do feedback contaminou o ranking, que é um endpoint independente e público");
+  });
+
+  test("`carregando` do feedback chega às três secções pessoais", () => {
+    const html = renderizar({
+      contexto: { address: EU, authToken: "tok", isConnected: true },
+      hooks: { feedback: { feedback: null, carregando: true, erro: null, semSessao: false } },
+    });
+    for (const secao of ["painel-torneio", "progresso-bonus", "estado-bonus"]) {
+      const i = html.indexOf(`data-secao="${secao}"`);
+      const corpo = html.slice(i, i + html.slice(i).indexOf("</section>"));
+      assert.match(corpo, /data-estado="carregando"/, `"${secao}" não recebe o \`carregando\``);
+    }
+  });
+
+  test("`semSessao` chega às três: um anónimo não lê factos sobre si próprio", () => {
+    const html = renderizar({
+      contexto: { address: null, authToken: null, isConnected: false },
+      hooks: { feedback: { feedback: null, carregando: false, erro: null, semSessao: true } },
+    });
+    for (const secao of ["painel-torneio", "progresso-bonus", "estado-bonus"]) {
+      const i = html.indexOf(`data-secao="${secao}"`);
+      const corpo = html.slice(i, i + html.slice(i).indexOf("</section>"));
+      assert.match(corpo, /data-estado="sem-sessao"/, `"${secao}" não recebe o \`semSessao\``);
+    }
+    const t = texto(html);
+    assert.doesNotMatch(t, /Faltam \d+ acertos/i, "afirma o progresso de alguém que não identificou");
+    assert.doesNotMatch(t, /Nenhum bónus conquistado/i, "afirma a ausência de bónus de alguém que não identificou");
+  });
+
+  test("os campos do feedback chegam ao sítio certo, cada um ao seu", () => {
+    // Números distintos e improváveis, para que um campo trocado por outro salte.
+    const html = renderizar({
+      contexto: { address: EU, authToken: "tok", isConnected: true },
+      hooks: {
+        feedback: {
+          feedback: {
+            posicao: 4, pontosTotais: 13, acertosTotais: 6,
+            sequenciaAtual: 3, faltamParaBonus: 2,
+            bonusEmitido: true, senhasACreditar: 40, liquidado: false,
+          },
+          carregando: false, erro: null, semSessao: false,
+        },
+      },
+    });
+    const dentro = (secao) => {
+      const i = html.indexOf(`data-secao="${secao}"`);
+      return texto(html.slice(i, i + html.slice(i).indexOf("</section>")));
+    };
+    assert.match(dentro("painel-torneio"), /4º/, "a posição não chega ao painel");
+    assert.match(dentro("painel-torneio"), /\b13\b/, "os pontos não chegam ao painel");
+    assert.match(dentro("progresso-bonus"), /\b3\b[\s\S]*\/\s*5/, "a sequência não chega ao progresso");
+    assert.match(dentro("progresso-bonus"), /Faltam 2 acertos/, "o `faltamParaBonus` não chega ao progresso");
+    assert.match(dentro("estado-bonus"), /\b40\s+senhas\b/,
+      "o `senhasACreditar` não chega ao estado do bónus — ou está em literal");
+    assert.match(dentro("estado-bonus"), /A creditar/i, "o `liquidado: false` não chega");
+  });
+
+  test("⚠️ as secções NÃO se contradizem quando a sequência está completa", () => {
+    // ⚠️ Achado da validação independente: com 5/5 o ProgressoBonus declarava
+    // "bónus conquistado!" a partir de uma conta LOCAL, enquanto o EstadoBonus
+    // lia `bonusEmitido: false` do livro-razão e escrevia "Nenhum bónus
+    // conquistado neste ciclo" — as duas frases na mesma página, uma por cima da
+    // outra. Só o backend pode afirmar que há bónus.
+    const t = texto(renderizar({
+      contexto: { address: EU, authToken: "tok", isConnected: true },
+      hooks: {
+        feedback: {
+          feedback: {
+            posicao: 1, pontosTotais: 5, acertosTotais: 5,
+            sequenciaAtual: 5, faltamParaBonus: 0,
+            bonusEmitido: false, senhasACreditar: 0, liquidado: false,
+          },
+          carregando: false, erro: null, semSessao: false,
+        },
+      },
+    }));
+    assert.match(t, /Sequência completa/i, "não diz que a sequência está completa");
+    assert.match(t, /Nenhum bónus/i, "não reporta o que o livro-razão diz");
+    assert.doesNotMatch(t, /bónus conquistado!|bonus conquistado!/i,
+      "declara o bónus a partir de uma conta local e contradiz a secção ao lado");
+  });
+
+  test("com bónus já LIQUIDADO, a página não promete creditar outra vez", () => {
+    const t = texto(renderizar({
+      contexto: { address: EU, authToken: "tok", isConnected: true },
+      hooks: {
+        feedback: {
+          feedback: {
+            posicao: 1, pontosTotais: 10, acertosTotais: 5,
+            sequenciaAtual: 5, faltamParaBonus: 0,
+            bonusEmitido: true, senhasACreditar: 20, liquidado: true,
+          },
+          carregando: false, erro: null, semSessao: false,
+        },
+      },
+    }));
+    assert.match(t, /Já creditadas/i);
+    assert.doesNotMatch(t, /A creditar/i, "promete creditar senhas que já foram creditadas");
   });
 });

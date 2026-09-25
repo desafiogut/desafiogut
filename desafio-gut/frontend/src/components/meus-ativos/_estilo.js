@@ -24,14 +24,48 @@ export const COR = {
 export const T_PADRAO = (_chave, fallback) => fallback;
 
 /**
+ * Diz se um valor de lance é utilizável — sem coerção.
+ *
+ * ⚠️ `Number(null)` é `0`, e `0` é finito. Esta é a armadilha EXACTA que o
+ * projeto já pagou no MC93-A: `Number.isInteger(Number(null))` devolvia `true` e
+ * um lance com `valorCentavos: null` era eleito o MENOR ÚNICO da rodada. E há
+ * caminho real para o `null`: `_lib/data-store-supabase.mjs` grava
+ * `valor_centavos = null` DE PROPÓSITO para marcar lance inválido.
+ * Reproduzi a mesma armadilha aqui, e a validação independente apanhou-a: um
+ * lance `null` aparecia como "R$ 0,00 · menor único seu · vale 3 pontos".
+ *
+ * @param {unknown} centavos
+ * @returns {boolean}
+ */
+export function valorUtilizavel(centavos) {
+  return typeof centavos === "number" && Number.isFinite(centavos) && centavos >= 0;
+}
+
+/**
  * Centavos para reais, no formato pt-BR.
- * @param {number} centavos
+ *
+ * ⚠️ NÃO COAGE. `null`, `undefined`, strings e negativos dão "—", não "R$ 0,00".
+ * Ver `valorUtilizavel` para a razão.
+ *
+ * @param {unknown} centavos
  * @returns {string} ex.: "R$ 9,00"
  */
 export function reais(centavos) {
-  const n = Number(centavos);
-  if (!Number.isFinite(n)) return "—";
-  return `R$ ${(n / 100).toFixed(2).replace(".", ",")}`;
+  if (!valorUtilizavel(centavos)) return "—";
+  return `R$ ${(centavos / 100).toFixed(2).replace(".", ",")}`;
+}
+
+/**
+ * Inteiro não-negativo para exibição — ou `null` se não for utilizável.
+ *
+ * ⚠️ Mesma razão: `senhasACreditar: Infinity` renderizava "Infinity senhas" e
+ * `1e21` renderizava "1e+21 senhas". Achado da validação independente.
+ *
+ * @param {unknown} n
+ * @returns {number|null}
+ */
+export function inteiroSeguro(n) {
+  return typeof n === "number" && Number.isSafeInteger(n) && n >= 0 ? n : null;
 }
 
 /**

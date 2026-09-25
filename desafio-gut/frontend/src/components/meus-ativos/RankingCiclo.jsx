@@ -1,4 +1,4 @@
-import { COR, T_PADRAO, caixa, tituloSecao, legenda, encurtar } from "./_estilo.js";
+import { COR, T_PADRAO, caixa, tituloSecao, legenda, encurtar, inteiroSeguro } from "./_estilo.js";
 
 const LIMITE = 10;
 
@@ -71,6 +71,7 @@ export default function RankingCiclo({
   }
 
   const meu = address ? String(address).toLowerCase() : null;
+  const totalReal = Math.max(inteiroSeguro(total) ?? 0, lista.length);
   const visiveis = lista.slice(0, LIMITE);
   const euEstouNoTopo = meu !== null
     && visiveis.some((r) => String(r.endereco).toLowerCase() === meu);
@@ -78,7 +79,7 @@ export default function RankingCiclo({
     ? lista.find((r) => String(r.endereco).toLowerCase() === meu) ?? null
     : null;
 
-  const linha = (r, souEu) => (
+  const linha = (r, souEu, ordem) => (
     <li
       key={`${r.posicao}-${r.endereco}`}
       data-linha="rank"
@@ -92,10 +93,14 @@ export default function RankingCiclo({
         fontSize: isMobile ? "0.78rem" : "0.83rem",
       }}
     >
+      {/* ⚠️ `posicao: null` renderizava um "º" solto e `posicao: 0` renderizava
+          "0º". O backend pode devolver `posicao: null` (é `linha.posicao || null`
+          em `lerFeedback`). Sem posição utilizável, cai-se na ORDEM da lista, que
+          é o que o ranking já garante. Achado da validação independente. */}
       <span style={{
         color: souEu ? COR.senhas : COR.muted,
         fontWeight: 800, minWidth: "1.9rem",
-      }}>{r.posicao}º</span>
+      }}>{(inteiroSeguro(r.posicao) ?? ordem) || ordem}º</span>
       <span style={{
         color: COR.text, fontWeight: souEu ? 800 : 600,
         fontFamily: "monospace", flex: 1,
@@ -113,7 +118,7 @@ export default function RankingCiclo({
               style={{ fontSize: "0.72rem" }}>🎟️</span>
       )}
       <span style={{ color: COR.primary, fontWeight: 800, minWidth: "2.6rem", textAlign: "right" }}>
-        {r.pontosTotais}
+        {inteiroSeguro(r.pontosTotais) ?? "—"}
       </span>
     </li>
   );
@@ -123,7 +128,7 @@ export default function RankingCiclo({
       <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
 
       <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "0.2rem" }}>
-        {visiveis.map((r) => linha(r, meu !== null && String(r.endereco).toLowerCase() === meu))}
+        {visiveis.map((r, i) => linha(r, meu !== null && String(r.endereco).toLowerCase() === meu, i + 1))}
       </ul>
 
       {euFora !== null && (
@@ -132,18 +137,27 @@ export default function RankingCiclo({
             {t("ativos.rank.suaPosicao", "A sua posição")}
           </p>
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {linha(euFora, true)}
+            {linha(euFora, true, inteiroSeguro(euFora.posicao) ?? lista.indexOf(euFora) + 1)}
           </ul>
         </>
       )}
 
+      {/* ⚠️ `total` vem do endpoint e a lista vem do mesmo sítio, mas podem
+          divergir: `useRanking` faz `Number(data?.total) || 0`, logo um endpoint
+          que omita `total` escrevia "0 participantes." por baixo de 4 linhas.
+          Reconcilia-se com o que está REALMENTE na lista.
+          ⚠️ E `totalReal` tem de ser usado nos DOIS ramos. A primeira correcção
+          calculou-o e aplicou-o só ao ramo "a mostrar os N primeiros de M" — o
+          ramo `else`, que é o caso COMUM (menos de 10 participantes), continuava
+          a escrever `total` cru e o defeito sobrevivia intacto. É o mesmo padrão
+          do MC93-E: aplicar a lição a metade dos sítios. */}
       <p style={{ ...legenda(isMobile), marginTop: "0.55rem" }}>
-        {total > visiveis.length
+        {totalReal > visiveis.length
           ? `${t("ativos.rank.mostrando", "A mostrar os")} ${visiveis.length} ${
-              t("ativos.rank.de", "primeiros de")} ${total} ${
+              t("ativos.rank.de", "primeiros de")} ${totalReal} ${
               t("ativos.rank.participantes", "participantes")}.`
-          : `${total} ${
-              total === 1
+          : `${totalReal} ${
+              totalReal === 1
                 ? t("ativos.rank.participante1", "participante")
                 : t("ativos.rank.participantes", "participantes")
             }.`}

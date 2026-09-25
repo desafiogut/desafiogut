@@ -2,6 +2,24 @@ import { useEffect, useState } from "react";
 import { apiGet } from "../lib/api.js";
 
 /**
+ * Diz se o corpo da resposta é mesmo JSON de um objecto.
+ *
+ * ⚠️ NÃO BASTA O `ok`. `netlify.toml:34` reescreve `/*` para `/index.html` com
+ * **status 200**: uma função ausente, mal deployada ou inalcançável (o caso do APK,
+ * onde a origem é `https://localhost`) devolve HTML com 200, e o `apiGet` devolve
+ * `{ ok: true, data: null }` porque o `JSON.parse` falhou. Sem esta guarda a tela
+ * dizia "Ainda não há pontuações neste ciclo" com o backend em baixo — um facto
+ * inventado, que é a classe de defeito que este projeto já registou duas vezes
+ * ("ok:true mascara tudo"). A regra do MC93-F é validar o CORPO, não o código HTTP.
+ *
+ * @param {unknown} data corpo já parseado pelo `apiGet`
+ * @returns {boolean}
+ */
+function corpoEhJson(data) {
+  return data !== null && typeof data === "object";
+}
+
+/**
  * Lê o ranking do ciclo. Endpoint PÚBLICO — não precisa de sessão.
  *
  * ⚠️ A resposta do endpoint NÃO tem campo `ok`. Medido em produção:
@@ -41,7 +59,7 @@ export function useRanking(cicloId) {
           { signal: controlador.signal },
         );
         if (!vivo) return;
-        if (!ok) {
+        if (!ok || !corpoEhJson(data)) {
           setEstado({ ranking: [], total: 0, carregando: false, erro: "resposta_invalida" });
           return;
         }

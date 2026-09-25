@@ -588,6 +588,251 @@ O terceiro mudou de razão, porque foi **medido**:
    `npm i -D solc@0.8.26` na raiz de `desafio-gut/` e `saltados == 0`.
 4. Antes de activar a emissão: migração em produção + R2 reativada.
 
+## 4f. A UI do torneio, dentro de "Meus Ativos" (MC94)
+
+Decisão do operador: **tudo numa só tela**, a que o utilizador já conhece. Sem
+rota nova, sem página nova, sem tocar na navegação. As secções entram **entre as
+estatísticas e o histórico**, e nada do que já existia foi removido ou reordenado.
+
+⚠️ **A validação independente deu REPROVADO à primeira ronda.** Nove dos defeitos
+descritos abaixo foram encontrados por ela, não por mim, e os números válidos são
+os desta versão. Ver `_logs/MC94_SEG4_EXECUTOR.txt`.
+
+### As cinco secções
+
+| secção | fonte | o que mostra |
+|---|---|---|
+| `PainelTorneio` | `GET /ranking?recurso=feedback` | posição · pontos · acertos |
+| `ProgressoBonus` | idem (`sequenciaAtual`, `faltamParaBonus`) | barra N/5 e quantos faltam |
+| `EstadoBonus` | idem (`senhasACreditar`, `bonusEmitido`, `liquidado`) | senhas a creditar, pendente vs liquidado |
+| `FeedbackLance` | `lances` do `AppContext` | quanto cada lance **vale** pela regra |
+| `RankingCiclo` | `GET /ranking?cicloId=` (público) | top 10 + a própria posição |
+
+Todos **apresentacionais**: recebem dados por props e não fazem I/O. O I/O vive em
+`useRanking` e `useFeedback`, que usam o helper `apiGet` — e por isso herdam o
+shim de origem do APK sem alteração a `apiOrigin.js`.
+
+### ⛔ CADA SECÇÃO PESSOAL TEM QUATRO ESTADOS, E ISSO NÃO É ZELO
+
+A primeira versão tinha **um** estado — "com dados" — nas três secções pessoais.
+Consequência, observada em produção: um utilizador **anónimo** lia
+
+> `0 / 5 acertos seguidos · Faltam 5 acertos`
+> `Nenhum bónus conquistado neste ciclo`
+
+— duas afirmações de facto sobre uma pessoa que a app **não identificou**. E uma
+falha de rede produzia exactamente o mesmo texto. Um zero inventado é pior do que
+um aviso, porque o utilizador **acredita nele**: vê "0 pontos" e conclui que não
+pontuou, quando o que aconteceu foi o endpoint não responder.
+
+Os quatro estados são portanto obrigatórios em `PainelTorneio`, `ProgressoBonus` e
+`EstadoBonus`, e cada um marca-se no markup com `data-estado`:
+
+| estado | quando | `data-estado` |
+|---|---|---|
+| sem sessão | `semSessao` do hook (inclui 401 e 403) | `sem-sessao` |
+| erro | `erro` do hook | `erro` |
+| a carregar | pedido em curso | `carregando` |
+| com dados | resposta válida | `dados` |
+
+> `PainelTorneio` tem um quinto, `sem-dados`: **"a carregar" e "não há dados"
+> estavam colapsados na mesma frase**, e um `feedback` nulo sem erro mostrava
+> "A carregar a sua pontuação…" **para sempre**. Um indicador de espera que nunca
+> acaba é uma afirmação falsa sobre o que o sistema está a fazer.
+
+O `data-estado` não é decoração: é por ele que os testes da **página** provam que
+o `erro`, o `carregando` e o `semSessao` chegam mesmo às três secções. Sem esse
+marcador, a única alternativa era procurar prosa por regex — e este projeto já foi
+mordido três vezes por asserções que leem comentários em vez de código.
+
+### ⛔ ESTA SECÇÃO NÃO DECLARA "BÓNUS CONQUISTADO"
+
+`ProgressoBonus` derivava-o de uma conta **local** (`faltam === 0`) e escrevia
+"Bónus conquistado!". Ao lado, `EstadoBonus` lia `bonusEmitido` do livro-razão e
+escrevia "Nenhum bónus conquistado neste ciclo". **As duas frases apareciam na
+mesma página, uma por cima da outra.** Só o backend pode afirmar que há bónus —
+a concessão tem um cadeado de três condições (§4c) e custa senhas reais.
+
+Hoje `ProgressoBonus` diz que a **sequência** está completa, que é o que esta
+secção observa, e remete a confirmação para a coordenação. Há um teste na página
+inteira que falha se as duas secções voltarem a contradizer-se.
+
+### ⚠️ A palavra "saldo" é proibida nestas secções
+
+`senhasACreditar` é um **direito por liquidar**. O saldo que autoriza um lance é
+`saldoSenhas` **no contrato** (`Leilao.sol:88` exige `> 0` e decrementa em `:107`).
+Chamar-lhe saldo faria o utilizador tentar licitar e a transacção reverteria — é
+exactamente o que o MC93-B evitou ao escolher "direito, liquidação depois".
+
+> Há **dois** testes a garanti-lo: um no componente (nos cinco estados) e um na
+> página inteira, para que ninguém a introduza num título ao juntar as secções.
+
+E `liquidado` chega **`undefined`** quando não há linha (o default `vazio` de
+`lerFeedback` não inclui o campo). Tratado explicitamente como **pendente**: dizer
+"já creditado" sem saber é a única leitura que causa prejuízo. `liquidado === true`,
+nunca `Boolean(liquidado)`.
+
+### ⚠️ "Vale", nunca "ganhou"
+
+Medido: **nenhum endpoint devolve pontos por lance**. A pontuação é atribuída pelo
+backend no fecho da rodada. `FeedbackLance` mostra a **projecção pela regra**
+(único = 1, menor único = 3, repetido = 0) e diz que o menor único da rodada
+depende dos lances de todos. Há um teste que falha se alguém trocar a palavra.
+
+### ⛔ `Number(null) === 0` chegou ao ecrã — outra vez
+
+O MC93-A pagou esta armadilha no motor (`Number.isInteger(Number(null))` é `true`
+→ lance nulo eleito vencedor). Eu reproduzi-a na UI e a validação independente
+apanhou-a: um lance com `valor: null` aparecia como
+
+> `R$ 0,00 · menor único seu · vale 3 pontos`
+
+E há caminho real para o `null`: `_lib/data-store-supabase.mjs` grava
+`valor_centavos = null` **de propósito** para marcar lance inválido.
+
+`_estilo.js` tem agora duas guardas **sem coerção**, e é por elas que passa tudo o
+que vai ao ecrã:
+
+| função | recusa | devolve |
+|---|---|---|
+| `valorUtilizavel(c)` | não-número, `NaN`, `Infinity`, negativo, string | `boolean` |
+| `reais(c)` | o mesmo | `"—"`, nunca `"R$ 0,00"` |
+| `inteiroSeguro(n)` | o mesmo + fraccionários + `> 2^53` | `number \| null` |
+
+`inteiroSeguro` nasceu do mesmo achado do outro lado: `senhasACreditar: Infinity`
+renderizava **"Infinity senhas"** e `1e21` renderizava **"1e+21 senhas"**, porque
+`Number(x) || 0` deixa ambos passar.
+
+### ⚠️ Com empate no menor valor, marcam-se TODOS os empatados
+
+A versão anterior escolhia um arbitrariamente, e a tela mostrava dois lances de
+`R$ 1,00` lado a lado — um a "vale 3 pontos", o outro a "vale 1 ponto". Quem
+desempata de facto é o backend, no fecho (§4b: desempate por **mais acertos**).
+
+### ⚠️ A posição e a contagem são as do backend, não as da lista
+
+Três defeitos na mesma secção, todos de assumir que a lista *é* a verdade:
+
+1. `posicao: null` (o `lerFeedback` devolve `linha.posicao || null`) renderizava um
+   **"º" solto**, e `posicao: 0` renderizava **"0º"**. Hoje cai-se na ordem da lista.
+2. `pontosTotais` ausente renderizava **`0`** — um zero inventado. Hoje mostra `—`.
+3. `total` vem do endpoint e `useRanking` faz `Number(data?.total) || 0`: um
+   endpoint que o omita escrevia **"0 participantes."** por baixo de 4 linhas
+   visíveis. Reconcilia-se com `Math.max(total, lista.length)`.
+
+> ⛔ E o (3) sobreviveu à primeira correcção. Calculei `totalReal` e apliquei-o
+> **só ao ramo** "a mostrar os N primeiros de M" — o ramo `else`, que é o caso
+> **comum** (menos de 10 participantes), continuava a escrever `total` cru. É o
+> mesmo padrão do MC93-E: aplicar a lição a metade dos sítios e o teste de
+> configuração passar verde com a assimetria dentro. Encontrado por mim, ao
+> escrever o teste antes de olhar para o código.
+
+### ⛔ O `index.html` com status 200 passava por resposta válida
+
+`netlify.toml:34` reescreve `/*` para `/index.html` com **status 200**. Uma função
+ausente, mal deployada ou inalcançável (o caso do APK, onde a origem é
+`https://localhost`) devolve **HTML com 200**, e o `apiGet` devolve
+`{ ok: true, data: null }` porque o `JSON.parse` falhou.
+
+Os dois hooks aceitavam isso: `useRanking` mostrava "Ainda não há pontuações neste
+ciclo" e `useFeedback` mostrava a secção pessoal vazia — **com o backend em baixo**.
+É a regra que o MC93-F já tinha registado (validar por corpo JSON, nunca pelo
+código HTTP) aplicada onde faltava. Hoje: `!ok || !corpoEhJson(data)` → erro.
+
+### ⚠️ 401 e 403 não são erros de rede
+
+O endpoint aplica o anti-IDOR do MC93-B: sem `Bearer` responde **401
+`sessao_invalida`**, com sessão de outro endereço responde **403 `acesso_negado`**.
+"Não tens sessão" e "não consegui ligar" pedem acções **opostas** ao utilizador, e
+por isso `useFeedback` mapeia ambos para `semSessao`, não para `erro`. E não chama
+nada sem `endereco` **e** `token` — poupa um 401 certo.
+
+### `EvolucaoPontos` não foi entregue, e a razão está medida
+
+O enunciado condicionava-o a "se o SEG-1 atestar que há dados". Medido via MCP:
+`pontuacoes` tem **0 linhas** em produção e **0 ciclos distintos**. Não há série
+temporal para desenhar. Fica para quando houver rodadas processadas.
+
+### Como isto é testado sem runner de React — dois instrumentos
+
+O frontend **não tem** vitest, jest, Testing Library nem jsdom, e nenhum se
+instalou: o MC93-G mediu que `npm install --legacy-peer-deps` (o comando do
+`netlify.toml` e do `build:apk`) **reverte o `package-lock.json` em silêncio**.
+Medido também neste MC: `jsdom` · `linkedom` · `happy-dom` ·
+`react-test-renderer` · `@testing-library/react` → **todos ausentes**.
+
+**1. Renderização** (`__tests__/_render.mjs`): **`vite` transpila o JSX** e
+**`react-dom/server` renderiza sem DOM**. Renderização real — corpo do componente,
+props, ramos condicionais, filhos. O que não corre são efeitos e eventos.
+
+**2. Hooks a correr** (`src/hooks/__tests__/_hook-runner.mjs`): toda a lógica dos
+hooks vive num `useEffect`, que em SSR **nunca corre**. O condutor instala um
+despachante próprio em `ReactCurrentDispatcher` e chama a função-hook directamente,
+com `useState`/`useEffect` reais do lado do hook: a ordem das chamadas, o corpo do
+efeito, o `AbortController`, o array de dependências e a limpeza são os do projeto.
+
+> ⚠️ **O duplo é de `fetch`, NÃO de `apiGet`** — de propósito. O que corre é o
+> `apiGet` verdadeiro: a montagem do `Authorization: Bearer`, o `BASE` das Netlify
+> Functions, a leitura do corpo **uma** vez e o mapeamento
+> `{ok, status, data, text, headers}`. Este projeto pagou duas vezes por duplos
+> permissivos (MC93-B: mock que ignorava o argumento deu verde a um endpoint
+> avariado a 100%; MC93-C: duplo que aceitava `.eq(col,null)`). Um duplo de
+> `apiGet` teria escondido exactamente o defeito do `index.html` com 200.
+
+> ⚠️ **O limite, declarado:** a comparação de dependências e o agendamento do
+> re-render são implementados no condutor, não pelo React. Um erro meu ali daria
+> verde a um hook com deps erradas. É por isso que a suíte abre com **quatro
+> controlos positivos** — deps `[]`, deps corretas, efeito sem limpeza, e um
+> `fetch` que honra o `AbortSignal` — que partem coisas de propósito e **têm** de
+> ser vistos. Se um deles passar, o instrumento é cego e o resto não vale nada.
+
+O teste da página troca `AppContext`, `IdiomaContext`, os dois hooks e o
+`BotaoLoginPrincipal` (que arrasta 2,68 MB de Privy e estoura a heap em SSR) por
+duplos, via `resolve.alias` do Vite — **sem alterar ficheiro nenhum do projeto**.
+
+> ⚠️ **O duplo dos hooks REGISTA os argumentos.** A primeira versão ignorava-os, e
+> por isso uma página que se esquecesse de ligar `address` ou `authToken` passava
+> **todos** os testes: o componente correcto, ligado a `undefined`, renderiza o
+> estado "sem dados" e a suíte fica verde. Os testes de **cablagem** existem por
+> causa disso, e são o que mata os achados V22/V23/V24 da validação independente.
+
+### ⛔ ERRATA: a minha afirmação sobre a concorrência dos testes era falsa
+
+`_render.mjs` dizia: *"cada ficheiro levanta o SEU servidor Vite; em paralelo
+colidem e os dois ficheiros falham — medido `# fail 2`"*. **Remedido:** os três
+ficheiros do MC94 em paralelo, sem `--test-concurrency=1`, dão **91/91 verdes, 3
+corridas de 3**. Não há colisão nenhuma.
+
+O `# fail 2` foi real, mas a **causa** que lhe atribuí não: na altura o teste da
+página importava o `BotaoLoginPrincipal` sem duplo e estourava a heap; dois
+ficheiros em paralelo duplicavam o consumo. Diagnostiquei "colisão" a partir de
+**uma** observação e de um palpite — o mesmo erro que o MC93-E já me tinha
+apanhado a fazer com a cache do ethers. A série continua a ser preferível, mas por
+outra razão (o pico de memória é a soma), e isso é uma escolha de recursos, não a
+correcção de um defeito.
+
+### Achado não corrigido: o formato de moeda divergente
+
+A tela existente formata o "Menor Lance" com `.toFixed(2)` e mostra **`R$ 1.00`**
+— ponto, não vírgula. Está errado para pt-BR, mas é o comportamento actual e o
+HARD GATE 5 manda não o alterar. As secções novas usam `R$ 1,00`. **A divergência
+fica registada para o MC97** (copy).
+
+### O que um teste não vê
+
+O fundo das secções foi um defeito **encontrado só na captura de ecrã**: a primeira
+versão usava `rgba(255,255,255,0.02)` e a ilustração de fundo do app atravessava o
+texto. O markup estava correcto, por isso **nenhum teste falhou** — e a minha
+segunda tentativa inventou `rgba(5,8,24,0.82)`, que continua a deixar passar os
+electrodomésticos brancos. O valor certo já existia no projeto:
+`.gut-glass--solid` = `rgba(13,18,53,0.92)` (`globals.css:429`, MC25.7, reutilizado
+no MC89.4 pelo mesmo sintoma).
+
+Depois de a captura ver, prende-se: há agora um bloco de testes que exige o vidro
+sólido nas cinco secções, proíbe `backdrop-filter` (o custo é por **camada** —
+medido: 11 camadas custaram 29 fps) e fixa o roxo `#a78bfa` como cor semântica de
+senhas. Um teste não descobre isto; depois de descoberto, guarda-o.
+
 ## 5. O que o motor NÃO faz (por decisão, não por esquecimento)
 
 Não grava, não lê banco, não chama rede, não toca no on-chain, não emite senhas. Há um **teste de estrutura** que falha se alguém importar Netlify Blobs, Supabase, `ethers`, `fetch`, `node:fs` ou `process.env` dentro do módulo.

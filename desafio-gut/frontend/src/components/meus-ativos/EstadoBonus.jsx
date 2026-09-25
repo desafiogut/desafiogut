@@ -1,4 +1,4 @@
-import { COR, T_PADRAO, caixa, tituloSecao, legenda } from "./_estilo.js";
+import { COR, T_PADRAO, caixa, tituloSecao, legenda, inteiroSeguro } from "./_estilo.js";
 
 /**
  * Estado do bónus: senhas a creditar, e se já foram creditadas.
@@ -24,34 +24,72 @@ import { COR, T_PADRAO, caixa, tituloSecao, legenda } from "./_estilo.js";
  * @param {(chave:string, fallback:string)=>string} [props.t]
  */
 export default function EstadoBonus({
-  senhasACreditar = 0,
+  temSessao = false,
+  carregando = false,
+  erro = null,
+  senhasACreditar,
   bonusEmitido = false,
   liquidado,
   isMobile = false,
   t = T_PADRAO,
 }) {
-  const quantidade = Math.max(0, Number(senhasACreditar) || 0);
+  const titulo = t("ativos.bonus.estadoTitulo", "🎟️ Bónus de senhas");
+  const moldura = (corpo) => (
+    <section style={caixa(isMobile)} data-secao="estado-bonus">
+      <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
+      {corpo}
+    </section>
+  );
+
+  // ⚠️ OS QUATRO ESTADOS, e a razão chegou a PRODUÇÃO: a primeira versão só
+  // tinha "com dados", logo um utilizador ANÓNIMO lia "Nenhum bónus conquistado
+  // neste ciclo" — uma afirmação sobre alguém que a app não identificou — e uma
+  // falha de rede dava exactamente o mesmo texto. Achado da validação
+  // independente do MC94.
+  if (!temSessao) {
+    return moldura(
+      <p style={legenda(isMobile)} data-estado="sem-sessao">
+        {t("ativos.bonus.estadoSemSessao",
+           "Entre na sua conta para ver os seus bónus de senhas.")}
+      </p>,
+    );
+  }
+
+  if (erro) {
+    return moldura(
+      <p style={{ ...legenda(isMobile), color: COR.danger }} data-estado="erro">
+        {t("ativos.bonus.estadoErro",
+           "Não foi possível carregar o seu bónus agora. Tente novamente mais tarde.")}
+      </p>,
+    );
+  }
+
+  if (carregando) {
+    return moldura(
+      <p style={{ ...legenda(isMobile), minHeight: "2.4rem" }} data-estado="carregando">
+        {t("ativos.bonus.estadoCarregando", "A carregar o seu bónus…")}
+      </p>,
+    );
+  }
+
+  // ⚠️ `inteiroSeguro` e não `Number(...) || 0`: a coerção fazia
+  // `Infinity` -> "Infinity senhas" e `1e21` -> "1e+21 senhas" no ecrã.
+  const quantidade = inteiroSeguro(senhasACreditar) ?? 0;
   const temDireito = bonusEmitido === true && quantidade > 0;
   // `undefined` e `null` contam como NÃO liquidado. Só o `true` explícito liquida.
   const foiLiquidado = liquidado === true;
 
-  const titulo = t("ativos.bonus.estadoTitulo", "🎟️ Bónus de senhas");
-
   if (!temDireito) {
-    return (
-      <section style={caixa(isMobile)} data-secao="estado-bonus">
-        <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
-        <p style={legenda(isMobile)}>
-          {t("ativos.bonus.nada",
-             "Nenhum bónus conquistado neste ciclo. Complete a sequência de acertos para conquistar senhas.")}
-        </p>
-      </section>
+    return moldura(
+      <p style={legenda(isMobile)} data-estado="sem-bonus">
+        {t("ativos.bonus.nada",
+           "Nenhum bónus conquistado neste ciclo. Complete a sequência de acertos para conquistar senhas.")}
+      </p>,
     );
   }
 
-  return (
-    <section style={caixa(isMobile)} data-secao="estado-bonus">
-      <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
+  return moldura(
+    <>
 
       <div style={{ display: "flex", alignItems: "baseline", gap: "0.45rem" }}>
         <strong style={{
@@ -92,6 +130,6 @@ export default function EstadoBonus({
           : t("ativos.bonus.explicaPendente",
               "É um direito já conquistado. As senhas são creditadas pela coordenação e só então podem ser usadas num lance.")}
       </p>
-    </section>
+    </>,
   );
 }

@@ -31,11 +31,26 @@
 // presente sabe executar JSX DENTRO de um ficheiro de teste. Os componentes
 // continuam `.jsx` e são carregados através do Vite.
 //
-// ⚠️ CORRER A SUÍTE EM SÉRIE:
-//     node --test --test-concurrency=1 src/**/__tests__/*.test.mjs
-// Cada ficheiro levanta o SEU servidor Vite. Em paralelo colidem e os dois
-// ficheiros falham — medido: `# fail 2` em conjunto, 23/23 e 12/12 em separado.
-// Sem `--test-concurrency=1` veem-se falhas que não são dos testes.
+// ⛔ ERRATA MINHA, corrigida por medição. Este comentário dizia:
+//     "Cada ficheiro levanta o SEU servidor Vite. Em paralelo colidem e os dois
+//      ficheiros falham — medido: `# fail 2` em conjunto."
+// **Era falso.** Remedido com os três ficheiros de teste do MC94 em paralelo, sem
+// `--test-concurrency=1`: **91/91 verdes, 3 corridas de 3**. Não há colisão nenhuma
+// entre servidores Vite em modo middleware — cada um escolhe o seu porto.
+//
+// O `# fail 2` que eu observei era real, mas a CAUSA que lhe atribuí não. Na altura
+// o teste da página importava `BotaoLoginPrincipal`, que arrasta 2,68 MB de SDK do
+// Privy e estoura a heap em SSR; correr dois ficheiros ao mesmo tempo duplicava o
+// consumo e ambos morriam. Com o duplo desse componente no lugar, o sintoma
+// desapareceu. Diagnostiquei "colisão" a partir de UMA observação e de um palpite —
+// exactamente o erro que o MC93-E já me apanhou a fazer com a cache do ethers
+// ("não era prendível de forma fiável"; era, com o mesmo argumento).
+//
+// Ainda assim há razão para preferir a série, e é outra: cada ficheiro levanta um
+// servidor Vite, e em paralelo o pico de memória é a soma. `--test-concurrency=1`
+// mantém o custo constante à medida que a suíte cresce. É uma escolha de recursos,
+// não uma correcção de defeito — e a diferença importa, porque a primeira versão
+// deste comentário mandava alguém contornar um problema que não existe.
 
 import { createServer } from "vite";
 import { renderToStaticMarkup } from "react-dom/server";

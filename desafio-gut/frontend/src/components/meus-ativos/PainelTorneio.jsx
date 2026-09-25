@@ -34,7 +34,7 @@ export default function PainelTorneio({
     return (
       <section style={caixa(isMobile)} data-secao="painel-torneio">
         <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
-        <p style={legenda(isMobile)}>
+        <p style={legenda(isMobile)} data-estado="sem-sessao">
           {t("ativos.torneio.semSessao",
              "Entre na sua conta para ver a sua posição, os seus pontos e os seus acertos.")}
         </p>
@@ -46,7 +46,7 @@ export default function PainelTorneio({
     return (
       <section style={caixa(isMobile)} data-secao="painel-torneio">
         <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
-        <p style={{ ...legenda(isMobile), color: COR.danger }}>
+        <p style={{ ...legenda(isMobile), color: COR.danger }} data-estado="erro">
           {t("ativos.torneio.erro",
              "Não foi possível carregar a sua pontuação agora. Tente novamente mais tarde.")}
         </p>
@@ -54,13 +54,31 @@ export default function PainelTorneio({
     );
   }
 
-  if (carregando || !feedback) {
+  if (carregando) {
     return (
       <section style={caixa(isMobile)} data-secao="painel-torneio">
         <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
         {/* Altura reservada: sem isto a secção salta quando os dados chegam. */}
-        <p style={{ ...legenda(isMobile), minHeight: "2.4rem" }}>
+        <p style={{ ...legenda(isMobile), minHeight: "2.4rem" }} data-estado="carregando">
           {t("ativos.torneio.carregando", "A carregar a sua pontuação…")}
+        </p>
+      </section>
+    );
+  }
+
+  // ⚠️ "A CARREGAR" E "NÃO HÁ DADOS" ESTAVAM NA MESMA FRASE.
+  // Com `feedback` nulo, sem erro e sem `carregando`, a secção mostrava "A carregar
+  // a sua pontuação…" para sempre. Um indicador de espera que nunca acaba não é um
+  // detalhe de estilo: é uma afirmação falsa sobre o que o sistema está a fazer, e
+  // o utilizador fica à espera de algo que não vem. É a mesma classe de defeito que
+  // os zeros inventados — o ecrã a dizer o que não sabe.
+  if (!feedback) {
+    return (
+      <section style={caixa(isMobile)} data-secao="painel-torneio">
+        <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
+        <p style={{ ...legenda(isMobile), minHeight: "2.4rem" }} data-estado="sem-dados">
+          {t("ativos.torneio.semDados",
+             "Ainda não há pontuação sua neste ciclo.")}
         </p>
       </section>
     );
@@ -89,7 +107,7 @@ export default function PainelTorneio({
   const semAtividade = !posicao && !pontosTotais && !acertosTotais;
 
   return (
-    <section style={caixa(isMobile)} data-secao="painel-torneio">
+    <section style={caixa(isMobile)} data-secao="painel-torneio" data-estado="dados">
       <h2 style={tituloSecao(isMobile)}>{titulo}</h2>
       <div style={{
         display: "grid",
