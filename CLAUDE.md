@@ -1451,8 +1451,25 @@ erro do MC94.2"). Executado no mesmo MC (commit `0448216`):
 ⏳ Continua pendente apenas a **captura por CDP no dispositivo** (`webview-devtools.ps1`),
 que exige um Android ligado.
 
+### ⚠️ Achado prioritário para o MC94.4 — id com sufixo minúsculas escapa a TUDO
+
+`EDICAO_ESPECIAL_RE` / `EDICAO_ID_RE` são `^ESPECIAL-[A-Z0-9]+$` (sensível à caixa).
+Com um id como `ESPECIAL-airfryer`: a guarda central **não dispara** (a especial pontuaria
+o torneio), o cron **nunca** a encerra nem consolida, a retenção de 24 h não se aplica, e
+`listarEdicoes` **ignora a chave em silêncio** (`continue`) — a edição desaparece do
+dashboard sem aviso. Fail-closed quanto a "não pontua", **fail-silent quanto ao auto-fecho**.
+Hoje os ids nascem de `scripts/mc941-seed-edicao-especial.mjs` (constante em maiúsculas),
+logo o risco é um id escrito à mão. **Correcção a fazer:** normalizar o id no ponto de
+entrada (`.toUpperCase()`) **e** logar em vez de ignorar as chaves inválidas em
+`listarEdicoes`, com um teste por efeito. Não se fez no MC94.3.1 porque o regex é
+partilhado com a janela de lances e a mudança não era comprovadamente necessária (R1).
+
 ### Lições de método (recorrência ALTA)
 
+- **A medição vem do resumo da ferramenta, não de uma linha filtrada.** O log do SEG6
+  chegou a dizer "backend fail 0" a partir de um `grep` parcial; o número real era
+  `606 pass / 1 fail` (um teste frágil a CRLF, provado não-regressão). Corrigido no mesmo
+  log, à vista.
 - **O briefing não é a fonte da verdade; o código é.** O MC94.3.1 pedia para subir
   `EdicaoBanner` para 96 px dentro do slot — mas o slot é um teste commitado que diz o
   contrário. Medir primeiro evitou reescrever um requisito sem saber porquê.
