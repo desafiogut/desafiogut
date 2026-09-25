@@ -1,0 +1,62 @@
+MC94.4.1 — SEG4 — VERIFICACAO (ad-hoc + indicios independentes)
+Skills ECC: requesting-code-review
+
+═══ 4.1/4.2 SUITES + FRONTEIRA (frescas) ═══
+  Frontend: 360 testes | 360 pass | 0 fail | 0 skipped
+  Backend : 639 testes | 633 pass | 0 fail | 6 skipped
+     (639 e nao 637: +2 do teste NOVO mc9441-fonte-texto.test.mjs)
+  Commit 299acc0 — ficheiros, por `--numstat --format=""` (nao por grep da mensagem):
+      -   -   netlify/functions/_lib/edicoes-core.mjs            (bin->texto: bytes iguais em conteudo)
+      4   1   netlify/functions/_tests/mc93e-ci-config.test.mjs
+      5   2   netlify/functions/_tests/mc941-edicao-especial.test.mjs
+     12   4   netlify/functions/_tests/mc941-lance-janela.test.mjs
+     78   0   netlify/functions/_tests/mc9441-fonte-texto.test.mjs   (NOVO)
+      9   3   src/components/edicao-especial/CardEdicaoEspecial.jsx
+      5   2   src/components/edicao-especial/__tests__/especial.test.mjs
+      1   1   src/i18n/en.js  ·  1  1 es.js  ·  4  1 pt.js
+      4   2   src/pages/__tests__/Dashboard.test.mjs
+      6   1   scripts/mc941-seed-edicao-especial.mjs
+  ⇒ NENHUMA area declarada fechada foi tocada (contrato, torneio, guarda central,
+    scheduled, schema). Zero regressao estrutural.
+
+═══ 4.3 VERIFICACAO AD-HOC (script proprio, 37 verificacoes) ═══
+  Script focado nos 4 comportamentos alterados + a nao-regressao das programadas +
+  os factos de producao. RESULTADO: **VEREDITO: PASS (0 falhas)**.
+  Destaques (todos com o comando no proprio script):
+    - LANCE_MIN_CENTAVOS = 1 e ausencia de trava de R$ 2  -> a hipotese do briefing refutada
+    - o ramo PROGRAMADO intacto: lerSaldoSenhas, registrarConsumoSenha,
+      senhas_insuficientes e o discriminador `tipoEdicao === "programado"` todos presentes
+    - os 2 ficheiros sem controlo cru (medido lendo os bytes em modo binario)
+    - producao: health 200, ESPECIAL-AIRFRYER tipo relampago, em `agendadas`
+    - bundle SERVIDO descarregado a serio (58 987 bytes): contem tipoLeilao:`flash` e
+      NAO contem o texto antigo
+
+═══ 4.4 O QUE NAO FOI MEDIDO (declaracao L-4) ═══
+  1. NAO executei um lance real a debitar saldo: exige conta autenticada COM saldo, e as
+     credenciais nao sao minhas para usar (R5). Coberto por: teste com mocks
+     (chamadasDebitoRs === 1, chamadasSaldoOnChain === 0, data.modo === "relampago"),
+     metadata em producao medida, e o bundle servido. Cada via cobre o que cobre;
+     nenhuma cobre "clicar e gastar dinheiro".
+  2. NAO ha nenhuma edicao PROGRAMADA activa em producao neste momento (0 valores
+     "programado" no /edicoes), logo a nao-regressao das programadas esta' provada pelos
+     TESTES e pela fronteira do commit, nao por observacao em producao.
+  3. Os ficheiros de controlo cru foram limpos, mas NAO varri o repositorio INTEIRO
+     (docs/, scripts/, raiz) — so' os .mjs de netlify/functions, que e' onde o invariante
+     actua. Documentos de texto podem ainda ter controlo cru (impacto: so' os torna
+     invisiveis ao grep).
+  4. O Validador independente (worktree proprio) foi despachado — ver o veredito dele
+     quando devolver; nao declaro aprovacao antes disso.
+
+═══ 4.5 HISTORICO DE FALSOS POSITIVOS DO PROPRIO SCRIPT DE VERIFICACAO ═══
+  (registado porque e' o padrao que mais me tem custado nesta serie)
+  1. A 1.a corrida deu 3 FALHAS — todas do SCRIPT: (a) padrao sem acento onde o comentario
+     tinha "decisão"; (b) `nat` sobre o FICHEIRO TODO, quando 3 ficheiros CITAM o texto
+     antigo no comentario que documenta a mudanca (mesma classe do `grep COR.bg` que
+     apanhava o proprio comentario); (c) `git -C /c/...` — o git e' binario Windows e nao
+     entende caminho MSYS.
+  2. E DOIS PASS FALSOS na 2.a corrida: `grep` a ficheiros que o curl nao chegou a criar
+     (`curl` e' MinGW x86_64-w64-mingw32 e nao escreve em /tmp do MSYS) — o `grep` falhava
+     por ficheiro ausente e o teste dava PASS. Corrigido com `[ -s ficheiro ]` antes de
+     qualquer assercao: **um PASS sobre ficheiro ausente e' pior que um vermelho.**
+  3. `bash -n` passou a ser o primeiro passo obrigatorio: na 1.a versao um apostrofo solto
+     numa string partiu o script e o erro so' apareceu a meio da execucao.
