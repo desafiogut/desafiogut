@@ -1,0 +1,191 @@
+================================================================================
+MC93-G — SEG4 · VALIDAÇÃO
+DesafioGUT · 2026-09-25 · Skills ECC: verification-before-completion
+Validador independente: worktree próprio em `3e8beb3`, sem ver o raciocínio do
+Executor. VEREDITO DELE: **APROVADO COM RESSALVAS**.
+================================================================================
+
+4.1 — O RUN REAL: **36080693006** · commit `3e8beb3` · evento push · branch main
+      conclusão global: **failure**
+
+   job              | resultado | tempo | nota
+   -----------------|-----------|-------|--------------------------------------
+   install          | ✅ success |  79s  | **1.ª vez** — antes falhava em ~3s
+   lint             | ✅ success |  69s  | eslint limpo, 1.ª corrida real
+   build            | ✅ success |  69s  | `vite build` ok, 1.ª corrida real
+   test-functions   | ⛔ failure |  93s  | 583 testes · 580 ✔ · 1 ✖ · 2 ﹣
+   test-onchain     | ⛔ failure |  54s  | 24 testes · 22 ✔ · 1 ✖ · 1 ﹣
+   audit            | ⛔ failure |  61s  | `npm audit --audit-level=high`
+
+   ⇒ **A PENDÊNCIA CENTRAL ESTÁ FECHADA.** O `ci.yml` do MC93-E correu num runner
+     GitHub real. Nos dois runs anteriores (`36077402507` em `c199591` e
+     `36078828506` em `99e78e4`) o `install` falhava e TODOS os jobs a jusante
+     saíam `skipped` — confirmado pelo Validador, independentemente.
+
+4.1b — ⭐ AS DUAS AFIRMAÇÕES DO MC93-E QUE DEIXARAM DE SER PROMESSAS
+     (a) **Os cinco testes `SERVIDOR:` passaram** num runner real:
+         `.eq(col,null)` devolve erro ✔ · `.is(col,null)` funciona ✔ ·
+         compare-and-set afecta UMA linha ✔ · upsert parcial preserva ✔ ·
+         os CHECKs da migração recusam o que devem ✔
+         E o guarda `Prova de que o NIVEL 2 nao saltou` correu e deu
+         `passados=9 saltados=0`.
+         ⇒ Postgres 17 + PostgREST v12.2.3 + papéis + migração + JWT funcionam.
+     (b) **Os 7 testes do cenário EVM passaram**, com **hardhat 3.4.2 + edr
+         next.29** — versões que esta máquina NÃO tem (tem 2.28.0 / next.17).
+         ⇒ A portabilidade contra a API pública do EDR estava argumentada no
+           MC93-E; agora está MEDIDA. E o `npm ci` na raiz de `desafio-gut`
+           (que nunca tinha corrido) passou.
+
+4.2 — AS CAUSAS DO VERMELHO, SEPARADAS (HARD GATE 5)
+     São DUAS, e **nenhuma é imputável ao MC93-G**:
+
+     ⛔ CAUSA 1 — `sha256` da fixture. **Defeito do MC93-E (`c199591`), meu.**
+        O hash depende dos FINS DE LINHA:
+          em disco (Windows, CRLF) : 3a3c6ed8e6f259cf…  <- gravado na fixture
+          normalizado a LF         : ee745ccbe27a73c9…  <- o que o runner calculou
+          `git config core.autocrlf` -> **true**
+        Confirmado nos dois sentidos, por mim e pelo Validador (que verificou
+        também que o hash do blob git == o do runner).
+        CAUSA-RAIZ: `scripts/gerar-fixture-evm.cjs` faz `readFileSync` como
+        Buffer e hasheia bytes crus; o teste faz o mesmo. Gerado em Windows,
+        grava o hash do CRLF. **O teste nunca poderia passar em CI**, e
+        regenerar a fixture em Windows não o corrige.
+        ⇒ Falha em AMBOS os jobs (é o mesmo ficheiro de teste).
+
+     ⛔ CAUSA 2 — `npm audit --audit-level=high`. **Dívida pré-existente.**
+        `@xmldom/xmldom` (13 high), `brace-expansion` (2 high), e a cadeia
+        `decode-uri-component → query-string → @walletconnect/* → wagmi`.
+        O Validador correu o audit nos DOIS lockfiles: **38 vulnerabilidades
+        (28 moderate, 10 high), exit 1, idêntico**. Também com `--omit=dev`.
+        ⇒ Desimputado do MC93-G por medição, não por alegação.
+        (O projeto já registava "npm audit/Socket.dev sempre vermelhos na main".)
+
+4.3 — VALIDADOR INDEPENDENTE: as 7 afirmações do Executor
+     1. só o frontend estava dessincronizado ......... CONFIRMADA (4 locks
+        medidos; e com CONTROLO POSITIVO: reproduziu o EUSAGE no lock antigo)
+     2. +4 / 0 removidos / 0 versões alteradas ....... CONFIRMADA ao número, e
+        comparou campo a campo (`resolved`, `integrity`, `dependencies`,
+        `engines`): zero diferenças além do flag `dev`
+     3. os dois modos passam depois ................... CONFIRMADA NA LETRA,
+        **REFUTADA NA SUBSTÂNCIA** — ver A-1
+     4. 31 dev->prod, 0 prod->dev, nada desaparece .... CONFIRMADA, e mediu o
+        efeito real (`--omit=dev`: 932 -> 947 pacotes). Varreu a árvore
+        versionada por `--omit=dev|--production|NODE_ENV=production|NPM_FLAGS`:
+        **zero ocorrências**, e não há `.npmrc`.
+     5. nada de aplicação alterado ................... CONFIRMADA
+     6. o CI e os seus números ....................... CONFIRMADOS
+     7. a causa é fins de linha ...................... CONFIRMADA, e foi MAIS
+        FUNDO do que eu — ver A-3
+
+4.4 — ACHADOS NOVOS DO VALIDADOR (verifiquei os dois ⛔ por execução própria)
+
+     ⛔ A-1 — **A MINHA ENTREGA TEM PRAZO DE VALIDADE.**
+        O comando que o próprio repositório manda usar
+        (`netlify.toml:3` -> `npm install --legacy-peer-deps`, e o
+        `npm run build:apk` que chama `netlify build`) **desfaz a correcção**.
+        MEDIDO POR MIM, em cópia isolada do lock NOVO:
+          `npm install --package-lock-only --legacy-peer-deps`
+          entradas: 1067 -> 1063
+          sha do lock: 044780d8f5bdc5bf -> d1f12aafefad249c
+          sha do lock PRÉ-MC93-G:          d1f12aafefad249c   ← **byte-idêntico**
+          e o `npm ci` volta a dar o MESMO EUSAGE nos MESMOS 4 pacotes
+        E o npm diz apenas **"up to date in 3s"** — em silêncio.
+        ⇒ Quem correr o build do Netlify localmente, ou `npm run build:apk`, fica
+          com o lockfile revertido na árvore de trabalho sem aviso; o primeiro
+          commit que o inclua parte o CI outra vez.
+        ⇒ Os dois modos NÃO coexistem: `npm ci` exige os peers, `npm install
+          --legacy-peer-deps` apaga-os. Nada arbitra (não há `.npmrc`) e nenhum
+          teste detecta a reversão.
+        ⚠️ Nota de justiça, medida: o BUILD do Netlify não quebra (o `npm install`
+          é permissivo e a árvore resolvida é idêntica — 0 versões alteradas). O
+          dano é só no lockfile. Mas é recorrente e silencioso.
+        ⇒ FORA DO ÂMBITO deste MC: a correcção é `.npmrc` (ficheiro novo, não
+          autorizado) ou `netlify.toml` (explicitamente não autorizado).
+
+     ⛔ A-2 — **O GUARDA DA EVM NÃO CORRE QUANDO É MAIS NECESSÁRIO**, e o meu
+        próprio teste de configuração não o apanha. Medido:
+          `Prova de que o NIVEL 2 nao saltou`  -> TEM `if: always()`
+          `Prova de que a EVM nao saltou`      -> **NÃO TEM**
+          no run real, saiu **`skipped`** porque o passo anterior falhou
+          `mc93e-ci-config.test.mjs:196-200` exige `working-directory`, o nome do
+          ficheiro e `--test-reporter=tap` para o job on-chain — **mas não o
+          `if: always()`**, que exige para o outro guarda (linha 193)
+        ⇒ A lição que eu próprio escrevi no MC93-E ("Achado M17: sem isto, se o
+          passo dos testes falhar a prova nem corre") foi aplicada a METADE dos
+          sítios, e o meu teste de configuração passou VERDE com a assimetria
+          lá dentro. Só soube que os 7 testes de EVM correram por ler o log à mão.
+        ⇒ FORA DO ÂMBITO: corrigir exige tocar `ci.yml` (não autorizado) e um
+          `.mjs` (HARD GATE 3).
+
+     ⛔ A-3 — **O CRLF CAUSA DUAS FALHAS, NÃO UMA.** O Validador foi compilar, e
+        eu não tinha ido. Com solc 0.8.26 (a versão exacta que a fixture declara),
+        a partir da mesma fonte nas duas formas:
+          CRLF -> bytecode sha e4018201…  == fixture.bytecode ? **TRUE**
+          LF   -> bytecode sha bbd90c2c…  == fixture.bytecode ? **FALSE**
+          primeiro hex divergente: 10012 de 10098 (cauda = metadados)
+        Razão: o solc embute por omissão um bloco CBOR com o **hash IPFS da
+        fonte**. Logo o bytecode depende dos bytes exactos, fins de linha
+        incluídos.
+        ⇒ O teste "a fixture é o que o solc produz a partir desta fonte" — hoje
+          saltado por falta de solc — **também falharia em Linux** se alguém
+          seguisse a instrução do próprio skip (`npm i -D solc@0.8.26`), e com a
+          mensagem ERRADA ("foi editada à mão?").
+        ⇒ A fixture do MC93-E **não é reproduzível fora de Windows**.
+        ⇒ Os 7 testes de EVM continuam válidos: a divergência é nos metadados, a
+          lógica compilada é a mesma.
+
+     ⚠️ A-4 — **Não existe `.gitattributes` no repositório.** Sem `* text=auto`
+        nem `*.sol text eol=lf`, e com `core.autocrlf=true` global, TODO o ficheiro
+        de texto chega ao disco em CRLF e ao runner em LF. A-3 é a primeira
+        manifestação; qualquer fixture de bytes futura repete-a.
+        ⇒ A correcção de raiz é `.gitattributes` + `git add --renormalize` +
+          regenerar a fixture. Regenerar sozinho NÃO resolve.
+
+     • A-5 — A fixture é o único artefacto do repo com hash de conteúdo de
+        ficheiro. Os outros `createHash` são HMAC de payloads de webhook. Os ~15
+        testes que leem código-fonte usam `readFileSync(…, "utf8")` + regex, e
+        nesse caminho o CRLF quebraria em Windows, não em Linux.
+     • A-6 — Os quatro lockfiles são **idempotentes** sob `npm install
+        --package-lock-only` estrito (sha inalterado nos quatro). Não há deriva
+        latente. A reescrita só acontece com `--legacy-peer-deps` (A-1).
+     • A-7 — `validar:dist` e o APK não são afectados pelo CONTEÚDO do lock
+        (0 versões alteradas, e o job `build` do CI saiu verde). O único impacto
+        no caminho do APK é o do A-1.
+
+4.5 — PROVA DE R1
+     `git show --stat 3e8beb3` -> 1 ficheiro:
+       desafio-gut/frontend/package-lock.json | 53 +++, 31 ---
+     `git diff --stat 3e8beb3` -> VAZIO (nada alterado desde então).
+     Nenhum `.mjs`/`.js`/`.ts`/`.jsx`/`.tsx`/`.sql`/`.sol` tocado (HARD GATE 3 ✅).
+     Nenhum `package.json` tocado. Nenhum `ci.yml` tocado.
+     Nenhuma variável de ambiente lida ou escrita (HARD GATE 4 ✅).
+     A chave Alchemy não foi tocada (R5 ✅).
+
+4.6 — L-4 · O QUE NÃO FOI MEDIDO
+     N1 ⛔ **Variáveis do Netlify na UI.** Se alguém definiu `NODE_ENV=production`
+        ou `NPM_FLAGS` no painel, o argumento do §2.3b deixa de valer para o build
+        de produção. O `netlify.toml` está limpo; o env remoto não foi lido (R4/R5).
+        Confirmável pelo operador — e o env do Netlify é **por contexto**.
+     N2 ⚠️ O `npm ci` foi medido em Windows/npm 11.11.0; o runner é Ubuntu/node 24.
+        A convergência (o job `install` passou verde) torna isto secundário, mas as
+        contagens de pacotes reportadas são de win32.
+     N3 ⚠️ Não se provou que o teste do solc passaria com a fixture regenerada em
+        Linux — provou-se que CRLF≠LF no bytecode, não o ciclo completo.
+     N4 ⚠️ Nenhum `npm ci` real (sem `--dry-run`) nem `npm run build`/`build:apk`
+        foi corrido localmente — disco com <700 MB.
+     N5 `test_limiteMaxLancesUnicos()` do Foundry: continua a falhar, herdado do
+        MC93-F, deriva de toolchain. Fora do âmbito.
+     N6 Chave Alchemy por rotacionar — operador (R5).
+     N7 O bypass da protecção de `main` — decisão do operador.
+     N8 As correcções A-1..A-4 **não passaram por validação** — nem foram feitas.
+
+4.7 — VEREDITO DO SEG4
+     **A entrega é válida e o objectivo foi atingido**, com uma ressalva material:
+     por HARD GATE 5, **NÃO me declaro fechado** quanto a "CI verde". O CI correu,
+     está vermelho, e as duas causas estão identificadas com output — nenhuma
+     imputável a este MC. E a correcção que este MC entregou **tem prazo de
+     validade** (A-1) enquanto o repositório tiver dois modos de instalação.
+
+================================================================================
+FIM DO SEG4
+================================================================================

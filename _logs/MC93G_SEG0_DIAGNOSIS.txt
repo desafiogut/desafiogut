@@ -1,0 +1,64 @@
+================================================================================
+MC93-G — SEG0 · DIAGNÓSTICO
+DesafioGUT · 2026-09-25 · base 99e78e4 · Skills ECC: terminal-ops
+Medições em bruto: _logs/MC93G_SEG-1_QUESTIONAMENTO.txt [M1]–[M18]
+================================================================================
+
+0.1 — AMBIENTE
+     HEAD 99e78e4 (MC93-F) · working tree limpo
+     não rastreados PRÉ-EXISTENTES, alheios a este MC e que não entram em commit:
+       docs/MC91.14-STATUS-BNB.txt · docs/mc92.5_gerar_mascaras.py
+       docs/mc92.5_refinar_bboxes.py
+     `gh auth status` -> autenticado (conta desafiogut) ✅
+     npm 11.11.0 · node v24.14.1 · **722 MB livres em C:**
+
+0.2/0.3 — INVENTÁRIO E ESTADO, medido com `npm ci --dry-run --ignore-scripts`
+
+   directório                              | package.json | lock | estado
+   ----------------------------------------|--------------|------|--------------
+   <raiz>                                  | sim          | sim  | ✅ sincronizado
+   desafio-gut                             | sim          | sim  | ✅ sincronizado
+   desafio-gut/frontend                    | sim          | sim  | ⛔ DESSINCRONIZADO
+   desafio-gut/frontend/netlify/functions   | sim          | sim  | ✅ sincronizado
+
+   ⇒ **UM** lockfile dessincronizado (o MC93-F implicava que fosse "o" problema;
+     confirma-se que é só este), com **exactamente 4** entradas em falta:
+       typescript@5.9.3 · @types/react@19.3.0
+       @tanstack/react-query@5.103.2 · @tanstack/query-core@5.103.2
+
+   ⚠️ A raiz do repositório TEM package.json + lock. O MC93-F não o mencionou;
+     está sincronizado.
+
+0.3b — A CAUSA (mais precisa do que a registada no MC93-F)
+     O MC93-F escreveu "dessincronizado", o que sugere edição do package.json sem
+     `npm install`. **Não é isso**, e a diferença muda a correcção:
+       • as 4 NÃO estão declaradas no package.json — são transitivas [M5]
+       • o lock é MAIS RECENTE que o package.json (MC91.6 vs MC89.47) [M7]
+       • não há ranges flutuantes: 33 deps, 0 com `latest`/`*` [M8]
+       • as 4 são **peerDependencies**: `typescript` de `abitype`,
+         `@tanstack/react-query` de `wagmi`, `@types/react` de `@lit/react`,
+         `valtio` e `zustand` [M9]
+     ⇒ O npm 7+ auto-instala peers; `--legacy-peer-deps` salta-os.
+     ⇒ PROVA [M10]:  `npm ci --dry-run`                     -> EUSAGE
+                     `npm ci --dry-run --legacy-peer-deps`  -> PASSA
+     ⇒ O lock foi gerado no modo do `netlify.toml:3`
+       (`npm install --legacy-peer-deps`) e o `ci.yml` corre `npm ci` simples.
+       Dois modos divergentes que nunca se cruzaram até o MC93-F empurrar os
+       104 commits e o CI correr contra este código pela primeira vez.
+
+0.4 — ESTADO DO CI
+     99e78e4 · CI            -> failure  (job `install`, passo `npm ci frontend`)
+     99e78e4 · Security Scan -> failure  (conhecido/pré-existente no projeto)
+     6f3e519 · idem
+     Medido no MC93-F: `build`, `lint`, `test-functions`, `test-onchain` e `audit`
+     saem **skipped**, porque dependem de `install`.
+     ⇒ É por isto que o `ci.yml` do MC93-E nunca correu num runner real.
+
+0.5 — CONCLUSÃO DO DIAGNÓSTICO
+     Um só ficheiro a corrigir. Causa identificada e provada. Correcção validada
+     em cópia isolada antes de tocar no repo [M12][M13][M14]: +4 pacotes,
+     0 remoções, 0 versões alteradas, e os dois modos de instalação verdes.
+
+================================================================================
+FIM DO SEG0
+================================================================================

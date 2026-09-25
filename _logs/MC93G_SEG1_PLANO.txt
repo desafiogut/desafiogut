@@ -1,0 +1,50 @@
+================================================================================
+MC93-G — SEG1 · PLANEAMENTO
+DesafioGUT · 2026-09-25 · Skills ECC: make-plan
+================================================================================
+
+1.1 — ORDEM DE SINCRONIZAÇÃO
+     Três dos quatro lockfiles estão sincronizados (medido). Logo **não se toca
+     neles** — tocar seria alteração desnecessária (R1) e cada regeneração é uma
+     oportunidade de bumpar transitivas sem razão.
+     ⇒ **UM só alvo**: `desafio-gut/frontend/package-lock.json`.
+     ⇒ Comando: `npm install --package-lock-only --ignore-scripts`
+       **ESTRITO, sem `--legacy-peer-deps`** — é justamente o modo estrito que
+       introduz os peers que faltam ao `ci.yml`. Usar `--legacy-peer-deps` aqui
+       reproduziria o lock actual e não corrigiria nada.
+
+1.2 — PLANO DE VALIDAÇÃO (dois modos, não um)
+     Depois de sincronizar, exigir que **ambos** passem:
+       (a) `npm ci --dry-run --ignore-scripts`                   <- o do `ci.yml`
+       (b) `npm ci --dry-run --ignore-scripts --legacy-peer-deps` <- o do Netlify
+     Se (b) falhar, a correcção partiu o build de produção e tem de ser revertida.
+     ⇒ Já medido em cópia isolada: ambos passam [M14]. Repete-se no repo real.
+
+     E o diff tem de ser CIRÚRGICO: exactamente +4 pacotes, 0 remoções,
+     0 versões alteradas. Verificado por comparação programática das duas árvores,
+     não por leitura do diff.
+
+1.3 — PLANO DE OBSERVAÇÃO DO CI
+     Após o push: identificar o run novo por `gh run list`, e fazer polling do
+     estado até concluir (em fundo, para não bloquear).
+     Para cada job: registar `conclusion` e, nos que falharem, o **passo** e o
+     **output concreto** — nunca "falhou".
+     ⚠️ O push também dispara build no Netlify (`stop_builds: false`). Verificar
+     no fim que a produção continua a servir o deploy bom e que `/ranking`
+     continua `200 · application/json` — o MC93-F provou que um build cancelado
+     por "no content change" aparece como `state: error` e não é falha.
+
+1.4 — CRITÉRIO DE FECHO (HARD GATE 5, lido à letra)
+     O MC fecha quando o `ci.yml` correr num runner real **com resultado
+     observável e causa identificada**, não quando ficar verde.
+     • se `install` passar e tudo o resto passar -> CI VERDE, pendência do MC93-E
+       fechada por completo;
+     • se `install` passar e algo a jusante falhar -> a pendência "o ci.yml nunca
+       correu" fecha-se, e a nova causa é registada como pendência NOVA, sem
+       auto-declarar fecho (foi anunciado no SEG-1 §-1.2 que isto é provável);
+     • se `install` continuar a falhar -> a correcção não serviu; reverter e
+       reportar.
+
+================================================================================
+FIM DO SEG1
+================================================================================

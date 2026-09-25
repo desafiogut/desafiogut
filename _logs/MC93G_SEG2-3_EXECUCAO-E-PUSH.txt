@@ -1,0 +1,67 @@
+================================================================================
+MC93-G — SEG2 (execução) · SEG3 (commit e push)
+DesafioGUT · 2026-09-25 · Skills ECC: terminal-ops
+================================================================================
+
+=============================== SEG2 — EXECUÇÃO ================================
+
+2.1 — SINCRONIZAÇÃO
+     Alvo único: `desafio-gut/frontend/package-lock.json`.
+     Os outros três lockfiles passavam `npm ci --dry-run` e **não foram tocados**
+     (tocá-los seria alteração desnecessária — R1).
+     Comando: `npm install --package-lock-only --ignore-scripts --no-audit --no-fund`
+     **ESTRITO, sem `--legacy-peer-deps`** — é o modo estrito que introduz os peers
+     que o `ci.yml` espera. Saída: "up to date in 4s", exit 0.
+     Cópia do lock anterior guardada em scratchpad para comparação programática.
+
+2.2 — VALIDAÇÃO NOS DOIS MODOS
+     `npm ci --dry-run --ignore-scripts`                    -> ✅ PASSA (ci.yml)
+     `npm ci --dry-run --ignore-scripts --legacy-peer-deps` -> ✅ PASSA (Netlify)
+
+2.3 — O DIFF, MEDIDO PROGRAMATICAMENTE (não lido)
+     pacotes: 1063 -> 1067
+       + node_modules/@tanstack/query-core   5.103.2
+       + node_modules/@tanstack/react-query  5.103.2
+       + node_modules/@types/react           19.3.0
+       + node_modules/typescript             5.9.3
+     removidos: 0 · versão alterada: 0
+     `git diff --stat` -> 1 ficheiro, 53 inserções, 31 remoções.
+
+2.3b — ⚠️ AS 31 REMOÇÕES, AUDITADAS EM VEZ DE IGNORADAS
+     Não são pacotes: são 31 entradas da subárvore do vite/rolldown que perderam
+     o flag `"dev": true` (vite, os 15 `@rolldown/binding-*`, postcss, nanoid,
+     picocolors, picomatch, fdir, tinyglobby, fsevents, @emnapi/*,
+     @tybys/wasm-util, @napi-rs/wasm-runtime, @oxc-project/types).
+     Causa: `typescript` passou a ser alcançável pelo grafo de PRODUÇÃO (é peer de
+     `abitype`, `viem`, `ox`, `@biconomy/account`, `@solana/accounts`).
+     DIRECÇÃO MEDIDA: **31 dev->prod e 0 prod->dev** ⇒ passam a ser instaladas em
+     MAIS cenários, nunca em menos. Nada desaparece de nenhuma instalação.
+     E medido: NENHUM caminho no repositório instala com `--omit=dev`,
+     `--production`, `NODE_ENV=production` ou `NPM_FLAGS`; não há `.npmrc`.
+     ⇒ Confirmado independentemente pelo Validador, que foi além e mediu o efeito:
+       `npm ci --dry-run --omit=dev` dá 932 pacotes com o lock antigo e 947 com o
+       novo. Mais, não menos.
+
+============================ SEG3 — COMMIT E PUSH ==============================
+
+3.1 — COMMIT `3e8beb3` — "chore: sincronizar package-lock.json (MC93-G)"
+     Um só ficheiro staged: `desafio-gut/frontend/package-lock.json`.
+
+3.2 — PUSH `99e78e4..3e8beb3  main -> main`
+     ⚠️ O GitHub voltou a responder **"Bypassed rule violations"** (PR obrigatório
+     + 2 status checks), como no MC93-F. A conta tem bypass; nenhuma flag de
+     contorno foi usada. Facto registado, decisão do operador.
+
+3.3 — O QUE O PUSH DISPAROU
+     (a) GITHUB ACTIONS — run **36080693006**, `ci.yml`, sobre `3e8beb3`.
+     (b) NETLIFY — deploy `6ab5c98294c5480008b9cd47`:
+         estado **ready** · publicado 2026-09-25T01:10:10Z · **70 funções**
+         ⇒ A alteração do lockfile NÃO partiu o build de produção.
+         ⇒ `/ranking?cicloId=teste` continua `200 · application/json`.
+         (Contraste útil: os dois pushes de documentação do MC93-F deram
+          `state: error` = "Canceled build due to no content change". Este
+          construiu de verdade, porque o lockfile mudou o input do install.)
+
+================================================================================
+FIM DO SEG2-3
+================================================================================

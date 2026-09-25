@@ -1008,3 +1008,113 @@ Nenhuma rodada real processada (o leilão continua em `EM_BREVE_MODE`); as tabel
 estão vazias. Créditos do plano Netlify não medidos por API. As definições de
 build ao nível do site divergem do `netlify.toml` (o toml ganha). A 3.ª validação
 das correcções do MC93-E continua por fazer.
+
+---
+
+## MC93-G — Lockfile sincronizado e o CI a correr a sério (2026-09-25)
+
+**Data:** 2026-09-25 · **Origem:** MC93-G, medição em runner GitHub real ·
+**Recorrência:** ALTA · **Impacto:** ALTO (desbloqueou 5 jobs de CI).
+**Modo LEVE** · **SEG-1: SEGUIR** · **Validador: APROVADO COM RESSALVAS**
+**Zero código de aplicação.** Um só ficheiro: `desafio-gut/frontend/package-lock.json`.
+**Logs:** `_logs/MC93G_*` · **Relatório:** `_logs/MC93G-RELATORIO.md`
+
+### ✅ Estado dos lockfiles (medido com `npm ci --dry-run`)
+
+| directório | estado |
+|---|---|
+| `<raiz>` | ✅ sincronizado |
+| `desafio-gut` | ✅ sincronizado |
+| `desafio-gut/frontend` | ✅ **corrigido neste MC** (era o único quebrado) |
+| `desafio-gut/frontend/netlify/functions` | ✅ sincronizado |
+
+### ⚠️ A causa: DOIS modos de instalação que não coexistem
+
+As 4 entradas em falta (`typescript`, `@types/react`, `@tanstack/react-query`,
+`@tanstack/query-core`) **não estavam declaradas** — são **peerDependencies** de
+pacotes de produção (`abitype`, `viem`, `ox`, `@biconomy/account`, `wagmi`,
+`valtio`, `zustand`). O npm 7+ auto-instala peers; `--legacy-peer-deps` salta-os.
+
+```
+npm ci --dry-run                     -> EUSAGE
+npm ci --dry-run --legacy-peer-deps  -> passa
+```
+
+O lock era gerado no modo do `netlify.toml` e o `ci.yml` corre `npm ci` simples.
+
+> ⛔ **ESTA CORRECÇÃO TEM PRAZO DE VALIDADE.** Medido: correr
+> `npm install --legacy-peer-deps` (é o que `netlify.toml:3` e `npm run build:apk`
+> fazem) **reverte o lockfile a byte-idêntico ao anterior** — 1067→1063 entradas,
+> `sha 044780d8… -> d1f12aaf…` — e o npm diz só **"up to date"**. O `npm ci`
+> volta a falhar nos mesmos 4 pacotes.
+> **Antes de commitar um lockfile, correr `npm ci --dry-run` no directório.**
+> Correcção de raiz (próximo MC): um modo só — `.npmrc` com
+> `legacy-peer-deps=true`, ou `netlify.toml` a usar `npm ci`.
+
+### ⭐ O CI correu num runner real pela primeira vez (run 36080693006)
+
+| job | resultado |
+|---|---|
+| `install` · `lint` · `build` | ✅ **success** (1.ª vez; o `install` falhava em ~3 s) |
+| `test-functions` | 583 testes · 580 ✔ · 1 ✖ · 2 ﹣ |
+| `test-onchain` | 24 testes · 22 ✔ · 1 ✖ · 1 ﹣ |
+| `audit` | ⛔ dívida pré-existente (10 high; idêntico nos dois lockfiles) |
+
+**Os cinco testes `SERVIDOR:` do MC93-E passaram** — Postgres 17 + PostgREST
+v12.2.3 + papéis + migração + JWT funcionam mesmo em CI.
+**Os 7 testes do cenário EVM passaram**, com **hardhat 3.4.2 + edr next.29** —
+versões que esta máquina não tem. A portabilidade contra a API pública do EDR
+deixou de ser argumento e passou a medição.
+
+### ⛔ REGRA NOVA: hash de ficheiro quebra entre sistemas operativos
+
+`core.autocrlf=true` e **não existe `.gitattributes`** ⇒ o Windows tem CRLF no
+disco, o runner Linux tem LF, e o **mesmo ficheiro em git tem sha256 diferente**:
+
+```
+Leilao.sol em disco (CRLF) : 3a3c6ed8e6f259cf…   <- gravado na fixture do MC93-E
+normalizado a LF           : ee745ccbe27a73c9…   <- o que o runner calculou
+```
+
+⇒ O teste `"o sha256 da fixture corresponde ao Leilao.sol actual"` **nunca poderia
+passar em CI**. Não "podia falhar": não podia passar. E os avisos
+`LF will be replaced by CRLF` de cada commit eram a pista.
+
+⚠️ **E afecta o BYTECODE também**: o solc embute um bloco CBOR com o **hash IPFS
+da fonte**, logo CRLF e LF produzem bytecode diferente na cauda (divergência no
+hex 10012 de 10098). O teste do solc — hoje saltado — **também falharia em Linux**,
+com a mensagem errada. **A fixture do MC93-E não é reproduzível fora de Windows.**
+
+> **Regra:** nunca hashear bytes crus de um ficheiro de texto versionado. Normalizar
+> a LF antes, ou usar o hash do blob do git. E o repositório precisa de
+> `.gitattributes` (`*.sol text eol=lf`) — regenerar a fixture sozinho não resolve.
+
+### ⛔ Um guarda que não corre quando é preciso
+
+| guarda no `ci.yml` | `if: always()` | no run real |
+|---|---|---|
+| `Prova de que o NIVEL 2 nao saltou` | ✅ tem | correu, `saltados=0` |
+| `Prova de que a EVM nao saltou` | ⛔ **não tem** | **`skipped`** |
+
+E `mc93e-ci-config.test.mjs` exige `if: always()` para o primeiro e **não** para o
+segundo. A lição do MC93-E ("sem isto, se o passo falhar a prova nem corre") foi
+aplicada a metade dos sítios, e o teste de configuração passou **verde** com a
+assimetria dentro.
+
+### Lições de método
+
+- **Um teste que só correu na máquina de quem o escreveu mede também o sistema
+  operativo dele.** Três dos quatro defeitos deste MC são do MC93-E e nenhum era
+  visível sem runner real.
+- **Auditar as remoções do diff, não só as adições.** As 31 remoções deste commit
+  não eram pacotes: eram entradas que perderam `"dev": true`. Direcção medida:
+  31 dev→prod, 0 prod→dev ⇒ instaladas em mais cenários, nunca menos.
+- **Validar a correcção em cópia isolada antes de tocar no repositório.**
+
+### Pendências
+
+1. ⛔ **Um modo de instalação só** (A-1) — sem isto o lockfile volta a dessincronizar.
+2. ⛔ **`.gitattributes` + regenerar a fixture** (A-3/A-4) — fecha as duas falhas CRLF.
+3. ⛔ **`if: always()` no guarda da EVM** + a asserção que falta (A-2).
+4. `npm audit`: 10 high pré-existentes. `test_limiteMaxLancesUnicos()` do Foundry
+   (herdado do MC93-F). Chave Alchemy por rotacionar (operador, R5).

@@ -1,0 +1,194 @@
+================================================================================
+MC93-G — SEG-1 · QUESTIONAMENTO DO BRIEFING (HARD GATE)
+DesafioGUT · 2026-09-25 · base 99e78e4 · Skills ECC: smart-explore, brainstorming
+HARD GATE 2: o estado dos lockfiles é MEDIDO por execução, não inferido.
+================================================================================
+
+VEREDITO: **SEGUIR**
+R19: ativada — declaração em §-1.2, sem ampliação de escopo necessária.
+
+--------------------------------------------------------------------------------
+RESUMO EM QUATRO LINHAS
+--------------------------------------------------------------------------------
+1. Premissa CONFIRMADA: só `desafio-gut/frontend` está dessincronizado. Os outros
+   três lockfiles do repo passam `npm ci --dry-run`.
+2. A CAUSA não é a que o MC93-F supôs. Não é "alguém mexeu no package.json sem
+   actualizar o lock" — as 4 entradas em falta são **peerDependencies
+   auto-instaláveis**, e o lock foi gerado com `--legacy-peer-deps`, que as salta.
+3. A correcção foi MEDIDA em cópia isolada antes de se tocar no repo: acrescenta
+   **exactamente 4 pacotes**, zero remoções, zero versões alteradas, e os **dois**
+   modos de instalação passam depois (o do `ci.yml` e o do Netlify).
+4. ⚠️ O CI muito provavelmente NÃO vai ficar verde — e isso é um resultado
+   previsto, não uma falha do MC. Ver §-1.2.
+
+================================================================================
+-1.1 — MEDIÇÕES
+================================================================================
+
+[M1] Base: 99e78e4 · working tree limpo, tirando 3 ficheiros não rastreados
+     PRÉ-EXISTENTES e alheios a este MC (docs/MC91.14-STATUS-BNB.txt,
+     docs/mc92.5_*.py). Não entram em nenhum commit.
+
+[M2] `gh auth status` -> Logged in to github.com account desafiogut (keyring) ✅
+
+[M3] Inventário — 4 `package.json` fora de node_modules, TODOS com lockfile:
+       ./package.json                                        (raiz do repo)
+       ./desafio-gut/package.json
+       ./desafio-gut/frontend/package.json
+       ./desafio-gut/frontend/netlify/functions/package.json
+     ⚠️ A raiz do repo tem package.json+lock. O MC93-F não o mencionou.
+
+[M4] ESTADO MEDIDO — `npm ci --dry-run --ignore-scripts` em cada um:
+
+       directório                                  | estado
+       --------------------------------------------|---------------------------
+       <raiz>                                      | ✅ SINCRONIZADO
+       desafio-gut                                 | ✅ SINCRONIZADO (47 pacotes)
+       desafio-gut/frontend                        | ⛔ DESSINCRONIZADO
+       desafio-gut/frontend/netlify/functions       | ✅ SINCRONIZADO (4 pacotes)
+
+     O erro, textual:
+       npm error code EUSAGE
+       npm error Missing: typescript@5.9.3 from lock file
+       npm error Missing: @types/react@19.3.0 from lock file
+       npm error Missing: @tanstack/react-query@5.103.2 from lock file
+       npm error Missing: @tanstack/query-core@5.103.2 from lock file
+
+     ⇒ **UM** lockfile dessincronizado, não vários. Exactamente 4 entradas.
+
+[M5] ⚠️ AS 4 EM FALTA **NÃO ESTÃO DECLARADAS** no package.json do frontend.
+     São transitivas. Logo NÃO é o caso clássico de "editaram o package.json e
+     esqueceram o lock".
+
+[M6] O lock tem 1063 pacotes, lockfileVersion 3, e nenhuma das 4.
+
+[M7] HISTÓRICO — o lock é MAIS RECENTE que o package.json:
+       package.json : b177049 (MC89.47-S1, ESLint flat config)
+       lock         : ecd4582 (MC91.6, "lock/gradle atualizados pelo cap sync")
+     ⇒ ninguém mexeu no package.json depois do lock. Reforça que a causa é outra.
+
+[M8] Não há ranges FLUTUANTES: 33 dependências, 0 com `latest`/`*`/`x`.
+     (Isto refuta a minha primeira hipótese, que era o `Privy: latest` do CLAUDE.md
+      — esse está no desenho, não no package.json do frontend.)
+
+[M9] ⇒ **A CAUSA REAL**, encontrada: as 4 são **peerDependencies**
+       typescript             <- peer de `abitype@1.2.3` (>=5.0.4)
+       @tanstack/react-query  <- peer de `wagmi@2.19.5` (>=5.0.0)
+       @types/react           <- peer de `@lit/react` (17||18||19),
+                                 `valtio@2.1.7` (>=18), `zustand@5.0.12` (>=18)
+     O npm 7+ **auto-instala peers**. O `--legacy-peer-deps` **não**.
+
+[M10] ⇒ **HIPÓTESE CONFIRMADA POR EXECUÇÃO**, e é o cerne do MC:
+       `npm ci --dry-run`                      -> ⛔ EUSAGE
+       `npm ci --dry-run --legacy-peer-deps`   -> ✅ PASSA
+     O lock está COERENTE consigo mesmo. Foi construído no modo
+     `--legacy-peer-deps` (que é o que o `netlify.toml:3` usa) enquanto o
+     `ci.yml` corre `npm ci` simples, que espera os peers auto-instalados.
+     ⇒ Nunca se cruzaram até o MC93-F empurrar os 104 commits.
+
+[M11] npm 11.11.0 · node v24.14.1
+
+[M12] ⇒ **A CORRECÇÃO FOI MEDIDA ANTES DE SE TOCAR NO REPO**, em cópia isolada
+      (só package.json + lock, sem node_modules):
+       `npm install --package-lock-only` (ESTRITO) -> exit 0, sem ERESOLVE
+       1063 -> 1067 pacotes (delta +4)
+       typescript 5.9.3 · @types/react 19.3.0 ·
+       @tanstack/react-query 5.103.2 · @tanstack/query-core 5.103.2  ✅
+
+[M13] ⇒ O DIFF É CIRÚRGICO:
+       ACRESCENTADOS : 4
+       REMOVIDOS     : 0
+       VERSÃO MUDADA : 0
+     ⇒ Nada mais na árvore de dependências se move. Era o risco principal
+       (uma regeneração que bumpasse 200 transitivas) e não se materializa.
+
+[M14] ⇒ COM O LOCK NOVO, OS DOIS MODOS PASSAM:
+       `npm ci` estrito              (o que o ci.yml corre) -> ✅ PASSA
+       `npm ci --legacy-peer-deps`   (o que o Netlify corre) -> ✅ PASSA
+     ⇒ Não há troca de um problema por outro. O Netlify continua a construir.
+
+[M15][M16] RISCO DE TIPOS — avaliado por medição, não por suposição.
+     Preocupação legítima: `@types/react@19.3.0` numa app React 18.
+     Medido:  frontend `build` = **`vite build`** -> NÃO faz type-check
+              frontend `lint`  = `eslint . --ext js,jsx` -> **não cobre TS**
+              o `ci.yml` corre exactamente `npm run build` e `npm run lint`
+     ⇒ `typescript` e `@types/react` entram na árvore mas não participam de
+       nenhum passo do CI que os leia. Risco BAIXO, e a razão está medida.
+     ⇒ E 19.3.0 é resolução LEGÍTIMA: três peers aceitam-na (`@lit/react`
+       17||18||19, `valtio` >=18, `zustand` >=18).
+
+[M17] ESTADO ACTUAL DO CI (o ponto de partida a bater):
+       99e78e4  CI            -> failure
+       99e78e4  Security Scan -> failure
+       6f3e519  CI            -> failure
+       6f3e519  Security Scan -> failure
+     ⇒ A `CI` falha no job `install`, e `build`/`lint`/`test-functions`/
+       `test-onchain`/`audit` saem **skipped** (medido no MC93-F).
+
+[M18] ⚠️ AMBIENTE: **722 MB livres em C:**. Não bloqueia este MC — a correcção
+      é `--package-lock-only`, que não instala node_modules. Mas não haverá
+      margem para um `npm ci` completo local.
+
+================================================================================
+-1.2 — AUTOSSUFICIÊNCIA (R19)
+================================================================================
+Este MC **é autossuficiente para o que promete**: sincronizar o lockfile e MEDIR
+o CI num runner real. Não precisa de ampliação.
+
+⚠️ MAS TENHO DE DIZER ISTO ANTES DE EXECUTAR, E NÃO DEPOIS:
+**é improvável que o CI fique verde.** Razão: corrigir o `install` desbloqueia
+cinco jobs que NUNCA correram num runner. Cada um tem probabilidade própria de
+falhar, e nenhum foi validado neste ambiente:
+  • `audit`          — o projeto já registou que npm audit/Socket.dev estão
+                        sempre vermelhos na `main`;
+  • `lint`           — eslint flat config do MC89.47, nunca corrido em CI;
+  • `build`          — `vite build` com 4 pacotes novos na árvore;
+  • `test-functions` — o trabalho do MC93-E: Postgres + PostgREST + migração +
+                        JWT, tudo por estrear num runner;
+  • `test-onchain`   — `npm ci` em desafio-gut/ (hardhat 3.4.2 + edr next.29,
+                        versões que a minha máquina NÃO tem).
+
+O HARD GATE 5 do próprio enunciado prevê isto: "se o CI correr e falhar por
+motivo alheio ao lockfile, o MC regista a nova causa e não se auto-declara
+fechado". ⇒ Um CI vermelho por causa NOVA é **entrega válida deste MC**: a
+pendência "o ci.yml nunca correu" fecha-se por medição, e o que aparecer é
+informação nova, não um `.1` deste MC.
+
+NÃO PROPONHO AMPLIAÇÃO. Corrigir o que aparecer a jusante seria escrever código
+de aplicação, que o HARD GATE 3 proíbe.
+
+================================================================================
+-1.3 — ESCOPO
+================================================================================
+CABE:
+  • sincronizar `desafio-gut/frontend/package-lock.json` (o único dessincronizado)
+  • commit + push
+  • observar o CI até concluir, e registar o resultado com causa
+  • validação independente
+  • relatório + CLAUDE.md
+
+NÃO CABE, e fica declarado:
+  • `test_limiteMaxLancesUnicos()` do Foundry (deriva de toolchain; MC93-H)
+  • rotação da chave Alchemy (operador, R5)
+  • o bypass da protecção de `main` (decisão do operador)
+  • **corrigir o que o CI revelar a jusante** — é código de aplicação (HARD GATE 3)
+  • alinhar o `ci.yml` com o `--legacy-peer-deps` do Netlify: seria a alternativa
+    a este MC, mas o `ci.yml` está fechado (MC93-E) e a via escolhida é melhor —
+    um lock que satisfaz os dois modos é mais robusto que dois modos divergentes.
+
+================================================================================
+-1.4 — VEREDITO
+================================================================================
+**SEGUIR.** As três premissas do enunciado confirmam-se, a causa foi encontrada e
+é mais precisa do que a declarada, e a correcção foi medida em isolamento antes
+de tocar no repositório: 4 adições, zero regressões, os dois modos de instalação
+verdes.
+
+⚠️ Com a ressalva do §-1.2 registada de antemão: o critério "CI verde" pode não
+ser atingível neste MC, e isso estará medido em vez de prometido.
+
+Nada foi alterado no repositório até aqui. Nenhuma credencial lida (HARD GATE 4).
+
+================================================================================
+FIM DO SEG-1 — VEREDITO: SEGUIR
+================================================================================

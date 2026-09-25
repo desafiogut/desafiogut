@@ -1,0 +1,87 @@
+================================================================================
+MC93-G — SEG5 · ENTREGA
+DesafioGUT · 2026-09-25 · Skills ECC: requesting-code-review
+================================================================================
+
+5.1 — LOGS
+     _logs/MC93G_SEG-1_QUESTIONAMENTO.txt        (veredito SEGUIR + R19)
+     _logs/MC93G_SEG0_DIAGNOSIS.txt              (4 lockfiles medidos + causa)
+     _logs/MC93G_SEG1_PLANO.txt                  (alvo único + validação dupla)
+     _logs/MC93G_SEG2-3_EXECUCAO-E-PUSH.txt      (diff auditado, push, disparos)
+     _logs/MC93G_SEG4_VALIDACAO.txt              (run real + achados A-1..A-7)
+     _logs/MC93G_SEG5_ENTREGA.txt                (este)
+     _logs/MC93G-RELATORIO.md                    (relatório final, 3 papéis RUFLO)
+
+5.2 — CLAUDE.md ACTUALIZADO (R14)
+     Secção "MC93-G" com Data · Origem · Recorrência · Impacto (MECANISMO 2 do
+     pilar ECC), tabela do estado de cada lockfile, o resultado do CI, e três
+     regras novas:
+       • a correcção tem PRAZO DE VALIDADE — `npm install --legacy-peer-deps`
+         reverte o lockfile em silêncio; correr `npm ci --dry-run` antes de commitar;
+       • nunca hashear bytes crus de ficheiro de texto versionado (CRLF vs LF);
+       • auditar as REMOÇÕES do diff, não só as adições.
+
+5.3 — DECISÕES DO OPERADOR (R18) — registadas em 3 lugares
+     (1) MC dedicado ao lockfile antes do MC94
+     (2) modo LEVE, foco único
+     (3) CI verde como critério de fecho
+     Lugares: este SEG5 · _logs/MC93G-RELATORIO.md §3.4 · CLAUDE.md §MC93-G.
+
+5.4 — DECLARAÇÃO DE R15
+     Nenhuma correcção de rota foi necessária. A única decisão de execução foi
+     regenerar o lock em modo **ESTRITO** e não com `--legacy-peer-deps`: o modo
+     permissivo reproduziria o lock actual e não corrigiria nada (justificado no
+     SEG1.1, e depois provado em A-1, onde o modo permissivo REVERTE a correcção).
+     Zero ficheiros de aplicação tocados.
+
+5.5 — DECLARAÇÃO DE R19 (ATIVADA)
+     O SEG-1 declarou, ANTES de executar, que era improvável o CI ficar verde,
+     porque corrigir o `install` desbloqueava cinco jobs nunca corridos, cada um
+     com probabilidade própria de falhar.
+     NÃO se propôs ampliação: corrigir o que aparecesse a jusante é código de
+     aplicação, proibido pelo HARD GATE 3.
+     ⇒ A previsão confirmou-se. O resultado é informação nova, não um `.1`.
+
+5.6 — MÉTRICAS DE EFICIÊNCIA
+     lockfiles dessincronizados .......... **1 de 4**
+     entradas em falta ................... 4 (todas peerDependencies)
+     diff .................................. +4 pacotes · 0 removidos ·
+                                            0 versões alteradas · 31 flags `dev`
+     push -> conclusão do CI ............. 01:08:18Z -> ~01:12:30Z ≈ **4 min 10 s**
+     `install`: antes ~3 s (falha) ....... depois **79 s (success)**
+     jobs que correram pela 1.ª vez ...... **5** (lint, build, test-functions,
+                                            test-onchain, audit)
+     testes que correram em CI pela 1.ª vez: **583** em test-functions
+                                            + **24** em test-onchain
+
+5.7 — HARD GATES
+     1 (SEG-1 obrigatório) ....... cumprido — veredito SEGUIR
+     2 (medir, não supor) ........ cumprido — `npm ci --dry-run` em cada lockfile,
+        causa provada por execução, correcção validada em cópia isolada ANTES de
+        tocar no repo, e o diff comparado programaticamente em vez de lido
+     3 (zero código de aplicação)  cumprido — `git show --stat 3e8beb3` = 1 ficheiro
+     4 (nenhum segredo tocado) ... cumprido — nenhuma env lida ou escrita
+     5 (CI verde como critério) .. ⚠️ **NÃO CUMPRIDO, e assumido.** O CI correu e
+        está VERMELHO. As duas causas estão identificadas com output, e nenhuma é
+        imputável a este MC. Por instrução expressa do HARD GATE 5, o MC **não se
+        auto-declara fechado** nesse ponto.
+
+5.8 — O QUE FICA ABERTO
+     ⛔ A-1  um modo de instalação só (`.npmrc` ou `netlify.toml`) — sem isto este
+             MC tem prazo de validade. FORA DO ÂMBITO (nem um nem outro autorizado).
+     ⛔ A-3/A-4  `.gitattributes` (`*.sol text eol=lf`) + `git add --renormalize` +
+             regenerar a fixture. Fecha AS DUAS falhas de CRLF (o hash da fonte E
+             o bytecode, que o solc contamina com o hash IPFS da fonte).
+     ⛔ A-2  `if: always()` no `Prova de que a EVM nao saltou`, e a asserção que
+             falta em `mc93e-ci-config.test.mjs`.
+     ⚠️ `npm audit`: 10 high pré-existentes, idênticos nos dois lockfiles.
+     ⚠️ `test_limiteMaxLancesUnicos()` do Foundry — herdado do MC93-F.
+     ⚠️ Chave Alchemy por rotacionar — operador (R5).
+     ⚠️ Variáveis do Netlify na UI não lidas (R4/R5): se lá houver
+        `NODE_ENV=production` ou `NPM_FLAGS`, o argumento do §2.3b deixa de valer
+        para o build de produção. Confirmável pelo operador.
+     ⚠️ O bypass da protecção de `main` — decisão do operador.
+
+================================================================================
+FIM DO SEG5 — MC93-G: OBJECTIVO ATINGIDO, SEM AUTO-DECLARAR "CI VERDE"
+================================================================================
