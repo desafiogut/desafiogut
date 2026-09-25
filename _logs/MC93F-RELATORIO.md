@@ -194,3 +194,25 @@ um SPA fallback, e deixado a produção a ser revertida pelo primeiro dependabot
 
 **O MC94 está desbloqueado.** A canalização funciona e a electricidade está
 ligada — e ficou registado onde os fios estão à vista.
+
+---
+
+## 5. Adenda — o push de documentação e um falso alarme
+
+O commit final (`6f3e519`, só `_logs/` + `CLAUDE.md`) foi empurrado, porque
+deixá-lo local recriaria o drift descrito em N4. O push disparou um build que
+ficou em **`state: error`** — e não é uma falha:
+
+```
+Failed during stage 'checking build content for changes':
+Canceled build due to no content change
+```
+
+O Netlify viu que o output de build era idêntico e cancelou. **Cancelamentos são
+registados como `error`**, o que se confunde facilmente com um build partido.
+
+Verificado depois: `published_deploy` continua `6ab5bf47…` (`c199591`, ready) e
+`GET /ranking?cicloId=teste` continua `200 · application/json`. Produção intacta.
+
+> **Regra:** no Netlify, ler o `error_message` antes de tratar um `state: error`
+> como falha. "No content change" é o Netlify a poupar um build, não um problema.

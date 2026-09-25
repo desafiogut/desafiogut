@@ -91,3 +91,29 @@ DesafioGUT · 2026-09-25 · Skills ECC: requesting-code-review
 ================================================================================
 FIM DO SEG5 — MC93-F CONCLUÍDO
 ================================================================================
+
+================================================================================
+ADENDA PÓS-COMMIT — o push de documentação, e um falso alarme esclarecido
+================================================================================
+O commit 6f3e519 (só `_logs/` + `CLAUDE.md`) foi empurrado para `origin/main`.
+Razão: deixá-lo local recriaria exactamente o drift descrito em N4, e um push
+mantém o `commit_ref` — ao contrário de um deploy manual, que o remove.
+
+`c199591..6f3e519  main -> main` · convergência 0 | 0
+⚠️ O GitHub voltou a responder "Bypassed rule violations" (ver N5).
+
+O push disparou um build que ficou em estado **`error`** — e NÃO é uma falha:
+    error_message: "Failed during stage 'checking build content for changes':
+                    Canceled build due to no content change"
+⇒ O Netlify detectou que o output de build era IDÊNTICO e cancelou. Cancelamentos
+  são registados como `error`, o que é facilmente confundido com um build partido.
+
+VERIFICADO DEPOIS DO PUSH:
+    published_deploy : 6ab5bf47d5da6700082f1fe8  (INALTERADO)
+    estado           : ready · commit_ref c199591c
+    GET /ranking?cicloId=teste -> 200 · application/json
+⇒ A produção não foi tocada, e os endpoints continuam vivos.
+
+LIÇÃO REGISTADA: no Netlify, `state: error` pode significar "cancelado por não
+haver alteração de conteúdo". Ler sempre o `error_message` antes de tratar um
+build como falhado.
