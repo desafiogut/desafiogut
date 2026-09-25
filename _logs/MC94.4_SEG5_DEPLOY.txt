@@ -1,0 +1,44 @@
+MC94.4 — SEG5 — DEPLOY FINAL E VALIDACAO EM PRODUCAO
+Skills ECC: canary-watch, verification-before-completion
+
+═══ 5.1 SUITES ANTES DO DEPLOY ═══
+  Backend : 637 | 631 pass | 0 fail | 6 skipped
+  Frontend: 360 | 360 pass | 0 fail | 0 skipped
+  eslint  : 0 erros
+
+═══ 5.2 COMMIT + PUSH ═══
+  3e39de0 "chore: MC94.4 — inspeccao geral, faxina e organizacao"
+  10 files changed, 624 insertions(+), 0 deletions(-)
+  git diff --cached --name-only | grep -E "src/|netlify/functions/"  -> VAZIO
+  ⇒ ZERO ficheiros de codigo de producao no commit (prova da fronteira R1).
+  $ git push origin main -> 108c0bb..3e39de0  main -> main
+
+═══ 5.3 DEPLOY ═══
+  $ netlify deploy --prod --build --message "MC94.4 — inspecção geral + faxina"
+     Functions bundling completed in 6m 2.1s
+     CDN requesting 0 files and 0 functions
+     ✔ Finished uploading 0 assets          <<<<< PROVA MAIS FORTE DO MC
+     ✔ Deploy is live!   (Netlify Build completed in 7m 3.2s)
+     Deploy ID: 6ab6e97eb824cd4d73ed648e
+     Production URL: https://silly-stardust-ca71bc.netlify.app
+
+  ⭐ INTERPRETACAO DE "0 files / 0 assets": o Netlify compara o build com o que ja' esta' no
+     CDN. Pedir ZERO ficheiros significa que o frontend construido e' BYTE-IDENTICO ao deploy
+     anterior (o do MC94.3.2, commit 108c0bb). Isto nao e' um deploy vazio por falha — e' a
+     confirmacao mais forte possivel de que o MC94.4 NAO tocou em codigo de producao:
+     se tivesse tocado, o hash dos assets mudava e haveria ficheiros a subir.
+     Vale mais do que qualquer afirmacao minha — e' o CDN a medi-lo.
+
+═══ 5.4 VALIDACAO EM PRODUCAO ═══
+  /.netlify/functions/health              -> HTTP 200 ✅
+  /.netlify/functions/ranking?cicloId=R-1 -> HTTP 200 ✅
+  /.netlify/functions/edicoes             -> devolve ESPECIAL-AIRFRYER (2x) ✅
+  Dashboard (DOM + captura) -> carrega; hero bem-vindo, 4 KPIs, slot
+     "🎁 Edição especial" com badge "Em breve" e o card Air Fryer
+     (04/10 · 20:00-20:30 horario de Brasilia) ✅
+
+═══ 5.5 CAPTURA ═══
+  _logs/MC94.4_captura-producao.png
+
+═══ 5.6 NOTA: o deploy foi pedido como "ultimo acto" (HARD GATE 5) e foi. Nao houve deploy
+     antes de a inspeccao, das correccoes e dos testes estarem feitos. ═══

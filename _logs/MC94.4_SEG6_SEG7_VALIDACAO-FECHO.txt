@@ -1,0 +1,58 @@
+MC94.4 — SEG6 (VALIDACAO INDEPENDENTE) + SEG7 (FECHO)
+Skills ECC: requesting-code-review
+
+═══ 6.1 SUITE COMPLETA LOCAL ═══
+  Backend 637 (0 falhas, 6 skipped) · Frontend 360/360 · eslint 0 erros
+
+═══ 6.2 PROVA DE R1 (FRONTEIRA FECHADA) — TRES provas independentes ═══
+  P1. `git diff --cached --name-only | grep -E "src/|netlify/functions/"` -> VAZIO
+  P2. Commit 3e39de0: 10 files changed, 624 insertions(+), **0 deletions(-)**
+      (os 10: .gitattributes, .gitignore, docs/README.md, secrets/README.md, 6 logs)
+  P3. ⭐ O CDN DO NETLIFY: `CDN requesting 0 files · Uploading 0 assets` no deploy
+      6ab6e97eb824cd4d73ed648e => o frontend construido e' BYTE-IDENTICO ao do deploy
+      anterior. Prova externa, nao auto-declarada: se eu tivesse mexido em producao,
+      haveria ficheiros a subir.
+
+═══ 6.3 VALIDADOR INDEPENDENTE ═══
+  Despachado subagente com brief adversarial e worktree proprio (delegacao deleg_ac2abf0c).
+  Pediu-se-lhe explicitamente: procurar alteracoes NAO declaradas em codigo de producao,
+  re-medir 2 afirmacoes minhas de forma independente, e re-medir as suas proprias
+  verificacoes antes de reportar (para nao repetir os 7 falsos positivos deste par de MCs).
+  RESULTADO: ver o anexo/relatorio do validador (registado a parte, quando devolver).
+
+═══ 6.4 O QUE **NAO** FOI MEDIDO (declaracao L-4 — limitacoes honestas) ═══
+  1. NAO medi o conteudo de nenhuma chave (R5). Toda a auditoria de segredos e'
+     classificatoria (caminho, linha, hash), nunca valor. Se uma chave estiver comprometida
+     e em uso, so' o operador o pode confirmar.
+  2. NAO testei a assinatura do APK (exigiria ler credenciais e correr gradle). O achado P2
+     e' de LEITURA DE CODIGO (build.gradle:38 + ausencia do keystore.properties). E' solido,
+     mas nao esta' confirmado num build real.
+  3. NAO resolvi o regex case-sensitive das especiais (P5): medido em MC94.3.1, nao tocado
+     aqui por a area estar declarada fechada.
+  4. NAO corri `npm audit fix` nem `npm outdated` a fundo (P3).
+  5. NAO reorganizei os 260 ficheiros de docs/ (P4) — so' os indexei.
+  6. NAO medi o custo/beneficio de apagar as ~20 branches e os 6 worktrees (P6).
+  7. A captura por CDP no dispositivo continua por fazer (P8, exige Android ligado).
+
+═══ 7.1 CONSOLIDACAO DE LOGS ═══
+  MC94.4_SEG-1_QUESTIONAMENTO · SEG0_INVENTARIO · SEG1_SEGURANCA · SEG2_FALHAS ·
+  SEG3_ORGANIZACAO · SEG4_CORRECOES · SEG5_DEPLOY · SEG6_SEG7_VALIDACAO-FECHO
+  + MC94.4-RELATORIO.md + MC94.4_captura-producao.png
+
+═══ 7.2 CLAUDE.md (R14) ═══
+  Seccao MC94.4 acrescentada: P2 e P1 em destaque, o metodo de auditoria de segredos
+  (reutilizavel), o cofre, o .gitattributes e as licoes.
+
+═══ 7.3 R18 · 7.4 R15 · 7.5 R19 · 7.6 METRICAS ═══
+  Ver MC94.4-RELATORIO.md seccao 11 (registado nos 3 lugares: relatorio, CLAUDE.md, commit).
+
+═══ 7.7/7.8 RELATORIO + COPIA DESKTOP ═══
+  _logs/MC94.4-RELATORIO.md e Desktop/MC94.4-RELATORIO.md
+
+═══ 7.9 COMMIT FINAL ═══
+  "chore: MC94.4 — inspeccao geral, faxina e organizacao"
+
+═══ VEREDITO DO MC: FECHADO ═══
+  6 correccoes rapidas e seguras · 8 pendencias priorizadas · 0 alteracao a codigo de
+  producao · deploy validado · achado critico P2 (assinatura de release) que nenhum
+  briefing previa. R16 nao aplicavel (nao houve correccao de codigo) — declarado, nao omitido.

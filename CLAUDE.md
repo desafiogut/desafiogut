@@ -1122,6 +1122,83 @@ assimetria dentro.
 
 ---
 
+## MC94.4 — Inspecção geral e faxina (2026-09-25)
+
+**Data:** 2026-09-25 · **Origem:** inspecção antes da sequência operacional ·
+**Recorrência:** única (MC de casa-a-limpo) · **Impacto:** ALTO (achado P2 pode bloquear a Play Store)
+**Fecho:** commit `3e39de0` · **Zero alteração a código de produção.**
+
+### ⛔ P2 — O RELEASE ASSINA COM A CHAVE DE DEBUG (achado crítico, ainda ABERTO)
+
+`desafio-gut/frontend/android/app/build.gradle:38`:
+
+```groovy
+signingConfig keystorePropsFile.exists() ? signingConfigs.release : signingConfigs.debug
+```
+
+`keystore.properties` **não existe** (linha 4 lê-o; está no `.gitignore`). Logo o bloco
+`signingConfigs.release` fica vazio e **um `bundleRelease` assina com a chave de DEBUG** — a
+Play Store rejeita. **ACÇÃO DO OPERADOR:** recriar `keystore.properties` com `storeFile`,
+`storePassword`, `keyAlias`, `keyPassword` a partir de `keystore/credenciais.txt`.
+**Não foi corrigido por agente de propósito:** a correcção exige ler a senha (R5/HARD GATE 4
+proíbem). É o primeiro item a resolver antes de qualquer submissão.
+
+### ⛔ P1 — Chave Alchemy em 11 ficheiros rastreados (ABERTO)
+
+Uma chave Alchemy (21 chars) está replicada em **11 ficheiros rastreados**, incluindo
+`frontend/src/utils/web3.js` — que é **empacotada pelo Vite e vai no bundle público**, e fica
+no histórico do git para sempre. Os 3 `hardhat.config.*` estão **limpos** (usam
+`process.env`) — o briefing apontava o ficheiro errado. `.env.example` tem um placeholder.
+Retirar o hardcode exige variáveis de ambiente no Netlify (**não autorizado sem o operador**);
+a rotação é do operador (R5).
+
+### Método de auditoria de segredos (reutilizável)
+
+1. Varrer por **classe**, não por padrão solto: PEM, `Bearer`, `sk-`, depois `0x`+64hex.
+2. `0x`+64hex **classificar por CONTEXTO** — pode ser `SECP256K1_N` (constante pública),
+   chave de teste documentada, ou **tx hash** (dado público). Encontrar ≠ expor.
+3. Para saber se dois locais têm o **mesmo** segredo sem o ler: **SHA-256 truncado**.
+   (Foi assim que se provou «mesma chave em 11 ficheiros, placeholder no `.env.example`».)
+4. Nunca imprimir o valor: `grep -l` (só nomes), `cut -d: -f1` (só linhas), hash para comparar.
+
+### Cofre de chaves
+
+`DESAFIOGUT/secrets/` existe, ignorada pelo git (`secrets/*` + `!secrets/README.md`).
+`secrets/README.md` é o **mapa** (ficheiro | propósito pelos NOMES das variáveis | origem)
+— **nunca** valores. Foi movida para lá a única chave do DesafioGUT que estava solta
+(`~/.mc33-staging.env`, com `SUPABASE_SERVICE_ROLE_KEY`). As que **não** foram movidas, e
+porquê, estão tabeladas no README.
+
+> **Regra:** o keystore (`DESAFIOGUT/keystore/`) **não se move** — o `storeFile` do
+> `keystore.properties` aponta para lá. Já está no repo e gitignorado.
+
+### `.gitattributes` (resolve a fragilidade CRLF)
+
+Normaliza LF para `*.mjs/*.js/*.cjs/*.sh/*.py/*.json/*.yml` e mantém CRLF em `*.bat/*.ps1`.
+Motivo: no MC94.3.1 o validador independente viu **1 falha falsa** por CRLF de um worktree novo
+(o mesmo ficheiro passava 25/25 no repo principal).
+⚠️ Ao adicionar/alterar `.gitattributes`, **medir sempre** `git status --porcelain | wc -l`:
+a re-normalização em massa é o risco real dessa mudança (aqui não aconteceu: 7 entradas).
+
+### `docs/`
+
+`docs/README.md` é índice de **256 ficheiros**, gerado do conteúdo real. O `docs/` é
+**arquivo**: a maioria dos ficheiros é de maio–julho e descreve estados que já não existem.
+**A fonte da verdade é o código + este `CLAUDE.md`.** Verificar a data antes de confiar.
+
+### Lições
+
+1. **Antes de mover um ficheiro, perguntar quem o referencia.** Foi esse reflexo (ver quem usava
+   o keystore) que revelou o achado P2 — que nenhum briefing mencionava.
+2. **A R5 não impede a auditoria; obriga-a a ser melhor.** O hash truncado respondeu a
+   «é a mesma chave nos 11 ficheiros?» sem o valor entrar no contexto.
+3. **Uma regra cumpre-se quando custa.** P2 estava a um `cat` de distância e não foi feito.
+4. **Não inflacionar.** O SEG3 pedia «centralizar todas as chaves»; mover **uma** e justificar
+   as outras é o resultado honesto.
+
+
+---
+
 ## MC94.3.2 — ADENDO — O retorno do OAuth não tinha rota (bug de login) (2026-09-25)
 
 **Data:** 2026-09-25 · **Origem:** evidência reproduzida pelo operador · **Recorrência:**
