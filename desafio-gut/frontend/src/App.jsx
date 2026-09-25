@@ -6,6 +6,10 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-
 // colidiria com o componente App() abaixo.
 import { App as CapApp } from "@capacitor/app";
 import { AppProvider, useAppContext } from "./context/AppContext.jsx";
+// MC94.3.2 — decisão da rota de retorno do OAuth (/redirect). Ver o módulo para o
+// defeito: a rota não existia e o utilizador ficava preso ali DEPOIS de o login
+// concluir. A regra vive fora do componente para ser testável.
+import { decidirSaidaDoRetorno, deveOferecerSaidaManual } from "./lib/retornoOAuth.js";
 import AppLayout from "./widgets/layout/AppLayout.jsx";
 import BackgroundCanvas from "./widgets/layout/BackgroundCanvas.jsx";
 import { AppEnvironmentProvider } from "./context/useAppContextEnvironment.jsx";
@@ -301,6 +305,63 @@ function DashboardOuCorporativo() {
  * utilizador tem de aceitar antes de ver qualquer conteúdo — só que agora a
  * aplicação (e o Privy) nem sequer são descarregados até lá.
  */
+/**
+ * MC94.3.2 — destino do RETORNO DO OAUTH.
+ *
+ * ⛔ O DEFEITO: `/redirect` é o `customOAuthRedirectUrl` do Privy, mas só existia
+ * para o deep link NATIVO (Capacitor). Em web esse efeito é no-op, e não havia
+ * <Route> para este caminho: o Privy CONCLUÍA o login ("login completo",
+ * temAddress/temAuthToken a true, medido na consola do operador) e o utilizador
+ * ficava preso numa página vazia, sem entrar na conta.
+ *
+ * Esta rota dá-lhe destino: enquanto a sessão não estiver pronta mostra o estado de
+ * entrada; assim que estiver, segue para o destino do login. Ao fim do prazo
+ * oferece saída MANUAL — nunca se deixa alguém sem nada para clicar.
+ */
+function EntradaOAuth() {
+  const navigate = useNavigate();
+  const { ready, isConnected } = useAppContext();
+  const [decorridoMs, setDecorridoMs] = useState(0);
+
+  useEffect(() => {
+    const saida = decidirSaidaDoRetorno({ ready, isConnected });
+    if (saida.tipo === "navegar") {
+      navigate(saida.para, { replace: true });
+      return undefined;
+    }
+    const id = setInterval(() => setDecorridoMs((n) => n + 1000), 1000);
+    return () => clearInterval(id);
+  }, [ready, isConnected, navigate]);
+
+  const desistir = deveOferecerSaidaManual(decorridoMs);
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#0a0f1a", color: "#e8f0fe",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: "1.25rem",
+    }}>
+      <div className="gut-glass-standard" style={{ maxWidth: 420, width: "100%", padding: "1.5rem", borderRadius: "18px", textAlign: "center" }}>
+        <h1 style={{ margin: "0 0 0.5rem", fontSize: "1.15rem", fontWeight: 800 }}>
+          🔐 A concluir a entrada…
+        </h1>
+        <p style={{ margin: "0 0 0.9rem", color: "#6b7db8", fontSize: "0.85rem", lineHeight: 1.45 }}>
+          {desistir
+            ? "Está a demorar mais que o esperado. Pode continuar manualmente:"
+            : "Só um instante — estamos a restabelecer a sua sessão."}
+        </p>
+        {desistir && (
+          // <a> e não navigate(): força um carregamento novo, que é onde o SDK do
+          // Privy restaura a sessão a partir dos params do OAuth.
+          <a href="/" style={{
+            display: "inline-block", padding: "0.7rem 1rem", borderRadius: "10px",
+            background: "linear-gradient(135deg,#f5a623,#e89400)", color: "#0a0f1a",
+            fontWeight: 800, textDecoration: "none", fontSize: "0.9rem",
+          }}>Ir para o DesafioGUT →</a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const { toasts, add, remove } = useToast();
   const navigate = useNavigate();
@@ -382,6 +443,10 @@ export default function App() {
             cadastro (nome/e-mail/telefone) e login com e-mail (OTP). */}
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/login-email" element={<LoginEmail />} />
+        {/* MC94.3.2 — retorno do OAuth. STANDALONE (fora do AppLayout) de propósito:
+            se estivesse dentro, os gates de cota/LGPD podiam bloquear a própria
+            página que existe para completar a entrada. */}
+        <Route path="/redirect" element={<EntradaOAuth />} />
         {/* MC20.2 FASE 1 · ITEM 2 — AppLayout (3 camadas) substitui Layout como
             rota-mãe; renderiza o Layout existente intacto na superfície (zero
             regressão de rotas/navegação — R1). */}
