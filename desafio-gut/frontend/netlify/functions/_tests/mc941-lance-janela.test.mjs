@@ -89,10 +89,12 @@ function nadaConsumido() {
 
 const iso = (ms) => new Date(ms).toISOString();
 
-test("ESPECIAL-AIRFRYER hoje (antes de 04/10 20:00): 409 edicao_nao_iniciada, nada consumido", async () => {
+// Datas relativas ao relógio real (o handler não o recebe injectado): uma data
+// fixa deixaria a suíte vermelha para sempre a partir de 04/10.
+test("especial antes da abertura: 409 edicao_nao_iniciada, nada consumido", async () => {
   zerar();
-  assert.ok(Date.now() < Date.parse("2026-10-04T23:00:00Z"), "este teste assume correr antes da abertura");
-  mockEdicao = { ...seed.EDICAO_ESPECIAL_AIRFRYER };
+  const agora = Date.now();
+  mockEdicao = { ...seed.EDICAO_ESPECIAL_AIRFRYER, inicio_em: iso(agora + 60_000), termino_em: iso(agora + 120_000) };
   const resp = await handler(pedido("ESPECIAL-AIRFRYER"));
   assert.equal(resp.status, 409);
   assert.equal((await resp.json()).error.code, "edicao_nao_iniciada");
@@ -117,6 +119,17 @@ test("especial depois do fim: 409 edicao_encerrada, nada consumido", async () =>
   zerar();
   const agora = Date.now();
   mockEdicao = { ...seed.EDICAO_ESPECIAL_AIRFRYER, inicio_em: iso(agora - 120_000), termino_em: iso(agora - 1_000) };
+  const resp = await handler(pedido("ESPECIAL-AIRFRYER"));
+  assert.equal(resp.status, 409);
+  assert.equal((await resp.json()).error.code, "edicao_encerrada");
+  nadaConsumido();
+});
+
+test("especial encerrada pelo admin dentro da janela: 409, nada consumido", async () => {
+  zerar();
+  const agora = Date.now();
+  mockEdicao = { ...seed.EDICAO_ESPECIAL_AIRFRYER, status: "encerrado",
+    inicio_em: iso(agora - 60_000), termino_em: iso(agora + 60_000) };
   const resp = await handler(pedido("ESPECIAL-AIRFRYER"));
   assert.equal(resp.status, 409);
   assert.equal((await resp.json()).error.code, "edicao_encerrada");

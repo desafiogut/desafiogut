@@ -1,0 +1,17 @@
+=== 2026-09-25T12:59:13Z — depois do seed ===
+--- GET /edicoes (resumo) ---
+edicoes: RELAMP-1,RELAMP-2,RELAMP-3,R-1
+ESPECIAL em edicoes? false
+agendadas: {"ESPECIAL-AIRFRYER":{"id":"ESPECIAL-AIRFRYER","tipo":"programado","produto":"Air Fryer","termino_em":"2026-10-04T23:30:00.000Z","lances":0,"status":"agendado","valorBaseCentavos":null,"incrementoCentavos":null,"inicio_em":"2026-10-04T23:00:00.000Z","imagem_url":"/artes/edicao-especial-airfryer.jpg"}}
+agora: 2026-09-25T12:59:12.543Z
+--- /ranking?cicloId=ESPECIAL-AIRFRYER ---
+{"cicloId":"ESPECIAL-AIRFRYER","total":0,"ranking":[]}
+[200 application/json; charset=utf-8]
+--- /ranking?cicloId=R-1 (não-regressão) ---
+{"cicloId":"R-1","total":0,"ranking":[]}
+[200 application/json; charset=utf-8]
+--- lance-relampago sem token (a guarda fica atrás da auth) ---
+{"error":{"code":"token_ausente","message":"Authorization: Bearer <token> obrigatório — obtenha via POST /auth-lance"}}
+[401 application/json; charset=utf-8]
+--- seed de novo, sem --force (idempotência) ---
+[seed] edicoes-metadata:ESPECIAL-AIRFRYER já existe — nada gravado. Use --force para sobrescrever.

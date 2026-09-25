@@ -30,6 +30,10 @@ export function estaAgendada(meta, agoraMs = Date.now()) {
  */
 export function verificarJanelaLance(meta, agoraMs = Date.now()) {
   if (!meta) return null;
+  // Encerrada pelo admin antes do fim: o encerramento manda sobre o relógio.
+  if (meta.status === "encerrado" || meta.status === "apurado") {
+    return { code: "edicao_encerrada", message: `a edição ${meta.id} está ${meta.status}` };
+  }
   if (estaAgendada(meta, agoraMs)) {
     return { code: "edicao_nao_iniciada", message: `a edição ${meta.id} abre em ${meta.inicio_em}` };
   }

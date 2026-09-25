@@ -1,0 +1,49 @@
+MC94.1 — SEG4 — VALIDAÇÃO          Skill: verification-before-completion
+Data: 2026-09-25
+
+4.1 SUÍTE LOCAL (functions)
+  baseline 6e762dd : 590 · 584 ✔ · 0 ✖ · 6 ﹣
+  8e3986c          : 609 · 603 ✔ · 0 ✖ · 6 ﹣
+  após correcções  : 611 · 605 ✔ · 0 ✖ · 6 ﹣
+  Com o relógio deslocado para 2026-10-05 (preload que desloca Date.now):
+    mc941-*: 21 · 21 ✔ · 0 ✖   (antes da correcção: 17/19 — achado 1 do Validador)
+  Mutação: 21/21 mortos, controlo verde (_logs/MC94.1_SEG4_MUTACAO.txt).
+  R16 dizia "não se aplica"; aplicou-se, porque o MC acabou por ter código e testes.
+
+4.2 R1 — FRONTEIRA
+  git diff 6e762dd..HEAD --name-only: functions (_lib/edicao-janela.mjs novo,
+  _lib/edicoes-core.mjs, edicoes.mjs, lance-relampago.mjs), 2 testes novos,
+  scripts/mc941-seed-*.mjs, public/artes/edicao-especial-airfryer.jpg, _logs/, docs/,
+  CLAUDE.md. Zero .jsx/.tsx/.css. Contrato, ci.yml, BONUS_EMISSAO_ATIVA,
+  saldos e lances: intocados. lance-relampago.mjs: autorizado pelo operador (D2).
+
+4.3 VALIDADOR INDEPENDENTE (worktree próprio; viu só o diff, os dados e os outputs)
+  VEREDITO: APROVADO COM RESSALVAS. Nenhum defeito de correcção no código entregue.
+  ⚠️1 testes caducavam em 04/10 23:00Z (CONFIRMADO: 17/19 com o relógio a 05/10)
+       → CORRIGIDO: datas relativas nos 2 testes que usam o relógio real.
+  ⚠️2 a arte diz "PERÍODO: 20/setembro a 04/outubro" → OPERADOR.
+  ⚠️3 GET /edicoes é público e já expõe `agendadas` → OPERADOR (escolha registada).
+  ⚠️4 a guarda ignorava `status` (admin encerra antes da hora e os lances
+       continuam) → CORRIGIDO: encerrado|apurado → 409 edicao_encerrada (+2 testes,
+       +2 mutantes mortos).
+  ⚠️5 consolidar a especial pontua-a no torneio (consolidar-lances.mjs:155) → OPERADOR.
+  •6 RELAMP-1..3 passam a 409 (melhoria; antes aceitavam e cobravam R$).
+  •7 menores: GUTO não encerra ESPECIAL-*; pulso conta desde criadoEm; fica
+     "aberto" depois das 20:30 até encerrar; seed.lerAtual() engole erro do CLI
+     como "não existe" → declarados, não corrigidos.
+  Medições do Validador em produção (13:01:44Z) coincidem com as do Executor;
+  controlo negativo (/artes/nao-existe → text/html) prova que a sonda não é cega.
+  Suíte no worktree: 586 · 579 ✔ · 1 ✖ (mc93e-ci-config: CRLF do ci.yml no
+  checkout — ambiental, pré-existente, ficheiro não tocado).
+  O Validador apanhou 2 coisas que o Executor não viu (⚠️1 e ⚠️4) e 3 decisões
+  de produto (⚠️2, ⚠️3, ⚠️5).
+
+4.4 NÃO MEDIDO (L-4)
+  - Comportamento em produção às 20:00 e depois (futuro). Medido só por testes
+    com relógio injectado/deslocado.
+  - POST /lance-relampago em produção: a guarda fica atrás do JWT lance-auth
+    (medido: 401 token_ausente sem token); sem sessão Privy não se chega lá.
+  - Ecrã: nenhum (chrome-devtools e claude-eyes falharam a ligar). A invisibilidade
+    no Dashboard é inferida do código (useEdicoes lê só payload.edicoes).
+  - Cronómetro (MC94.3), arte/UI (MC94.2), GUTO (MC94.4): fora do escopo.
+  - APK: imagem_url relativa só existe no APK após cap sync + build.

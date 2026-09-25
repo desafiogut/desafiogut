@@ -111,6 +111,12 @@ test("janela: depois das 20:30 recusa com edicao_encerrada", () => {
   assert.equal(janela.verificarJanelaLance(e, TERMINO + 1)?.code, "edicao_encerrada");
 });
 
+test("janela: encerrada pelo admin dentro da janela recusa (o status manda)", () => {
+  const e = { ...seed.EDICAO_ESPECIAL_AIRFRYER, status: "encerrado" };
+  assert.equal(janela.verificarJanelaLance(e, INICIO + 60_000)?.code, "edicao_encerrada");
+  assert.equal(janela.verificarJanelaLance({ ...e, status: "apurado" }, INICIO + 60_000)?.code, "edicao_encerrada");
+});
+
 test("janela: sem metadata, ou sem datas, não impõe nada (compat R-1)", () => {
   assert.equal(janela.verificarJanelaLance(null, INICIO), null);
   assert.equal(janela.verificarJanelaLance({ id: "PROG-1", tipo: "programado" }, INICIO), null);
@@ -151,9 +157,15 @@ test("edições sem inicio_em saem com inicio_em/imagem_url null (aditivo)", asy
 
 // ── O endpoint, com o relógio real (hoje é antes de 04/10) ───────────────────
 
-test("GET /edicoes hoje: a especial só em `agendadas`, e `agora` vem do servidor", async () => {
-  semear();
+// O handler usa o relógio real, por isso as datas são relativas a "agora": uma
+// data fixa (04/10) faria este teste ficar vermelho para sempre a partir do dia.
+test("GET /edicoes: por abrir só em `agendadas`, e `agora` vem do servidor", async () => {
   const antes = Date.now();
+  semear([["ESPECIAL-AIRFRYER", {
+    ...seed.EDICAO_ESPECIAL_AIRFRYER,
+    inicio_em: new Date(antes + 3_600_000).toISOString(),
+    termino_em: new Date(antes + 5_400_000).toISOString(),
+  }]]);
   const resp = await handlerEdicoes({
     method: "GET",
     url: "http://localhost/.netlify/functions/edicoes",
@@ -161,9 +173,9 @@ test("GET /edicoes hoje: a especial só em `agendadas`, e `agora` vem do servido
   });
   assert.equal(resp.status, 200);
   const data = await resp.json();
-  assert.ok(Date.now() < INICIO, "este teste assume correr antes de 04/10/2026 23:00Z");
   assert.equal(data.edicoes["ESPECIAL-AIRFRYER"], undefined);
-  assert.equal(data.agendadas["ESPECIAL-AIRFRYER"].inicio_em, "2026-10-04T23:00:00.000Z");
+  assert.equal(data.agendadas["ESPECIAL-AIRFRYER"].status, "agendado");
+  assert.equal(data.agendadas["ESPECIAL-AIRFRYER"].imagem_url, "/artes/edicao-especial-airfryer.jpg");
   const agora = Date.parse(data.agora);
   assert.ok(agora >= antes && agora <= Date.now(), "agora tem de ser o relógio do servidor");
 });

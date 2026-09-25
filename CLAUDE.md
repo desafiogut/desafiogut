@@ -1253,3 +1253,67 @@ existente neste MC.
 
 `.gitattributes`/CRLF · um modo de instalação só · `if: always()` no guarda da EVM ·
 chave Alchemy por rotacionar (operador, R5) · versão do Foundry por fixar.
+
+---
+
+## MC94.1 — Dados da edição especial Air Fryer (2026-09-25)
+
+**Data:** 2026-09-25 · **Origem:** MC94.1, medição por execução · **Recorrência:**
+MÉDIA (próximas edições especiais usam o mesmo caminho) · **Impacto:** ALTO (sorteio
+com prémio físico e hora anunciada).
+**SEG-1: AJUSTAR** · **R19 exercida** · **Validador: APROVADO COM RESSALVAS**
+**Logs:** `_logs/MC94.1_*` · **Relatório:** `_logs/MC94.1-RELATORIO.md` · **Spec:** `docs/TORNEIO-HABILIDADE.md` §4g
+
+### O que existe agora
+
+Blob `edicoes-metadata`, chave **`ESPECIAL-AIRFRYER`**: Air Fryer, `inicio_em
+2026-10-04T23:00:00.000Z` (20:00 Brasília), `termino_em 2026-10-04T23:30:00.000Z`,
+`tipo programado` (lance = 1 senha), `imagem_url /artes/edicao-especial-airfryer.jpg`.
+Seed idempotente: `node scripts/mc941-seed-edicao-especial.mjs [--print|--force]`
+(pelo login do CLI; nenhum token manuseado).
+
+### ⛔ Premissas do enunciado que eram falsas
+
+| enunciado | realidade medida |
+|---|---|
+| edição em Supabase ou mappings | vive em **Blobs** (`edicoes-metadata`); Supabase não tem tabela de edições |
+| gravar `ESPECIAL-AIRFRYER` basta | o regex `^(PROG\|RELAMP)-\d+$` **descartava-a em silêncio** (listar, buscar, encerrar) |
+| `/ranking` vazio antes da hora = gate | `/ranking` devolve `[]` para **qualquer** ciclo até à consolidação — é vacuidade, não gate |
+| "a partir das 20:00 aparece no ranking" | aparece no **`/edicoes`**; no ranking só depois de `consolidar-lances` |
+| `imagem_path` | o frontend já lê **`imagem_url`** (`useEdicoes.js:81`, MC45) |
+| "Tipo: menor lance único" | `tipo` é o **meio de pagamento** (senha vs R$); a regra é a mesma para todas |
+
+### ⛔ O servidor aceitava lances a qualquer hora, em qualquer edição
+
+`lance-relampago.mjs` não verificava início, fim nem estado; o contrato também não.
+Agora (`_lib/edicao-janela.mjs`, passo 5.6, decisão D2 do operador): **409** antes de
+`inicio_em`, depois de `termino_em`, ou com `status` encerrado/apurado; **503
+fail-closed** para `ESPECIAL-*` sem metadata (antes cairia em "relâmpago" e cobraria R$).
+
+### Regra: estado derivado do relógio do servidor, não gravado
+
+Uma edição com `inicio_em` no futuro sai de `edicoes` e vai para **`agendadas`**
+(`GET /edicoes`), que o frontend actual não lê → invisível no ecrã sem tocar em `.jsx`.
+Às 23:00Z passa sozinha. `GET /edicoes` devolve também **`agora`** (servidor) para o
+cronómetro do MC94.3. Gravar "agendada" exigiria um cron — e um cron que falhe
+fecha a edição no dia.
+
+### ⚠️ Lição de método: teste com data fixa caduca
+
+Dois testes meus comparavam com `Date.now()` real e a data do evento: ficariam
+**vermelhos para sempre a partir de 04/10**. Apanhado pelo Validador (17/19 com o
+relógio a 05/10). Regra: se o código lê o relógio real, o teste usa datas
+**relativas**; datas literais só com o relógio injectado. Verificar correndo a
+suíte com `Date.now` deslocado para depois da data.
+
+### ⛔ Por decidir pelo operador ANTES de 04/10
+
+1. A arte diz **"PERÍODO: 20/setembro a 04/outubro"** — contradiz 20:00–20:30.
+2. `consolidar-lances` **pontua a especial no torneio** (sequências e bónus de 20 senhas).
+3. A especial já é **pública pela API** (`agendadas`), embora não no ecrã.
+4. Encerramento às 20:30 é **manual** (`POST /edicoes?acao=encerrar&id=ESPECIAL-AIRFRYER`).
+
+### Decisões do operador (R18, 2026-09-25)
+
+Data-alvo e fim (enunciado) · **D1** `tipo = programado` (1 senha por lance) ·
+**D2** guarda de janela em `lance-relampago.mjs` autorizada neste MC.

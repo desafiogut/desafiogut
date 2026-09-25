@@ -932,6 +932,85 @@ sólido nas cinco secções, proíbe `backdrop-filter` (o custo é por **camada*
 medido: 11 camadas custaram 29 fps) e fixa o roxo `#a78bfa` como cor semântica de
 senhas. Um teste não descobre isto; depois de descoberto, guarda-o.
 
+## 4g. A edição especial Air Fryer (MC94.1)
+
+**Dados** (Blob `edicoes-metadata`, chave `ESPECIAL-AIRFRYER`, gravada por
+`scripts/mc941-seed-edicao-especial.mjs` em 2026-09-25T12:58:43Z):
+
+| campo | valor | nota |
+|---|---|---|
+| `produto` | Air Fryer | |
+| `inicio_em` | `2026-10-04T23:00:00.000Z` | 04/10 20:00 Brasília (UTC−3, sem horário de verão) |
+| `termino_em` | `2026-10-04T23:30:00.000Z` | 04/10 20:30 Brasília |
+| `tipo` | `programado` | **meio de pagamento**: cada lance gasta 1 senha (decisão D1) |
+| `regra` | `menor_lance_unico` | a mesma de todas as edições (Art. VIII) |
+| `imagem_url` | `/artes/edicao-especial-airfryer.jpg` | nome que o `useEdicoes` já lê desde o MC45 |
+| `status` | `aberto` | o estado **visível** deriva do relógio — ver abaixo |
+
+### ⚠️ `tipo` não é a regra de apuração
+
+No código, `tipo` ∈ {`programado`, `relampago`} decide **com que se paga** o lance
+(`lance-relampago.mjs`: senha on-chain vs saldo R$). O menor lance único vale para
+todas. "Tipo: menor lance único", no enunciado, não tinha onde caber — foi para
+`regra`, que é informativo.
+
+### O estado deriva do relógio do servidor, não de um campo
+
+| momento (servidor) | `GET /edicoes` | lance na especial |
+|---|---|---|
+| antes de 23:00Z | só em `agendadas`, `status: "agendado"` | **409 `edicao_nao_iniciada`** |
+| 23:00Z – 23:30Z (inclusive) | em `edicoes`, `status: "aberto"` | aceite, **1 senha** |
+| depois de 23:30Z | em `edicoes`, `status: "aberto"` até o admin encerrar | **409 `edicao_encerrada`** |
+| Blob ilegível | — | **503 `edicao_indisponivel`** (fail-closed) |
+| `status` encerrado/apurado (admin) | como estiver | **409 `edicao_encerrada`** — o encerramento manda sobre o relógio |
+
+Guardar "agendada" como estado exigiria um cron para o virar às 20:00, e um cron
+que falhasse deixava a edição fechada no dia. O `Dashboard` desenha um cartão para
+**cada** edição do mapa `edicoes`; o frontend de hoje não lê `agendadas`, logo a
+especial fica invisível até à hora sem tocar em nenhum `.jsx`.
+
+`GET /edicoes` passou a devolver `agora` (ISO do servidor): é daí que o
+cronómetro do MC94.3 tira o desvio do relógio do dispositivo.
+
+### ⛔ O `/ranking` não é o sítio onde a edição "aparece antes da hora"
+
+`ranking.mjs` lê `rankings_ciclo` e não consulta edições. Devolve `[]` para **qualquer**
+ciclo sem consolidação — antes das 20:00, e também **depois** delas, até o admin
+correr `consolidar-lances` (pós-20:30). "A partir das 20:00 aparece no ranking" era
+premissa falsa: aparece no `/edicoes`; no ranking, só depois do apuramento.
+
+### ⛔ Antes do MC94.1, o servidor aceitava lances a qualquer hora
+
+`lance-relampago.mjs` não verificava início, fim nem estado da edição, e o contrato
+(`comprometerLance`) também não. A guarda (`_lib/edicao-janela.mjs`, passo 5.6)
+aplica-se a **qualquer** edição com `inicio_em`/`termino_em` — as PROG/RELAMP
+passadas passaram também a recusar lances atrasados. A R-1 (sem metadata) não muda.
+
+### Para os MCs seguintes
+
+- **MC94.2 (arte):** ler `imagem_url`; para a especial antes da hora, ler de `agendadas`.
+- **MC94.3 (cronómetro):** contar até `agendadas["ESPECIAL-AIRFRYER"].inicio_em`
+  com o desvio `agora − Date.now()`.
+- **Encerramento às 20:30 é manual** (`POST /edicoes?acao=encerrar&id=ESPECIAL-AIRFRYER`
+  e `consolidar-lances`), como nas RELAMP. Não há automação.
+- ⚠️ **APK:** `imagem_url` é relativa. Na web resolve; no APK só existe após
+  `cap sync` + build novo.
+
+### ⛔ Por decidir pelo operador ANTES de 04/10 (achados da validação independente)
+
+1. **A arte diz "PERÍODO: 20/setembro a 04/outubro"**; a edição gravada é 04/10
+   20:00–20:30. O MC94.2 vai mostrá-la ao público — ou se muda a arte, ou a janela.
+2. **Consolidar a especial pontua-a no torneio.** `consolidar-lances.mjs:155` chama
+   `registrarPontuacaoRodada` para qualquer edição → conta para as sequências de
+   5 acertos e para o bónus de 20 senhas. `regra` não é lido por código nenhum.
+3. **"Não aparece antes das 20:00" vale para o ecrã, não para a API.** `GET /edicoes`
+   é público e já devolve a especial em `agendadas` (o MC94.3 precisa dela). Se o
+   segredo tem de ser total, o cronómetro precisa de outra fonte.
+
+Menores: o GUTO não reconhece `ESPECIAL-*` no comando de encerrar (usar o
+endpoint); `_lib/pulso.mjs` conta volume desde `criadoEm`, não desde `inicio_em`;
+depois das 20:30 a edição continua "aberto" na listagem até o admin a encerrar.
+
 ## 5. O que o motor NÃO faz (por decisão, não por esquecimento)
 
 Não grava, não lê banco, não chama rede, não toca no on-chain, não emite senhas. Há um **teste de estrutura** que falha se alguém importar Netlify Blobs, Supabase, `ethers`, `fetch`, `node:fs` ou `process.env` dentro do módulo.

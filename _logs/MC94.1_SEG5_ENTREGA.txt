@@ -1,0 +1,12 @@
+MC94.1 — SEG5 — ENTREGA          Skill: requesting-code-review
+Data: 2026-09-25
+5.1 Logs: MC94.1_SEG-1, SEG0, SEG1, SEG2, SEG3_ENDPOINT, SEG4_VALIDACAO, SEG4_MUTACAO, SEG5.
+5.2 CLAUDE.md §MC94.1 (Data · Origem · Recorrência · Impacto).
+5.3 docs/TORNEIO-HABILIDADE.md §4g.
+5.4 R18: D1 tipo=programado; D2 guarda de janela autorizada (2026-09-25).
+5.5 R15: 2 correcções pós-Validador (testes com data fixa; guarda sem status).
+5.6 R19: edição passou a ser legível (regex), campos inicio_em/imagem_url,
+    mapa `agendadas` + `agora`, módulo _lib/edicao-janela.mjs.
+5.7 Push→endpoint validado 3m18s. Validador apanhou 2 defeitos + 3 decisões de produto.
+5.8 _logs/MC94.1-RELATORIO.md.
+5.9 Commit final + push; a validação em produção depois do 2.º deploy vai em anexo abaixo.

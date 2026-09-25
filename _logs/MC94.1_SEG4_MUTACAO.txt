@@ -13,8 +13,10 @@ MORTO  M12 endpoint agora do cliente
 MORTO  M13 lance sem gate de janela
 MORTO  M14 lance sem fail-closed
 MORTO  M15 gate depois do débito
+MORTO  M20 guarda ignora status
+MORTO  M21 só encerrado, não apurado
 MORTO  M16 seed tipo relampago
 MORTO  M17 seed hora local em vez de UTC
 MORTO  M18 seed fim 20:00
 MORTO  M19 seed imagem errada
-controlo sem mutação: verde · vivos/não aplicados: 0/19
+controlo sem mutação: verde · vivos/não aplicados: 0/21
