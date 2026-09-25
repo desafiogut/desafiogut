@@ -1349,9 +1349,10 @@ Com `EM_BREVE_MODE = true`, `getEstadoEdicao` diz "em breve" a tudo; a especial 
 
 ### ⛔ Por decidir pelo operador
 
-1. **`POST /pontuacao` repontua a especial** — a guarda só existe no consolidar-lances;
-   pô-la em `registrarPontuacaoRodada` é backend do MC93. Até lá: **nunca** repontuar
-   uma edição cuja consolidação respondeu `pontua:false`.
+1. ~~**`POST /pontuacao` repontua a especial**~~ — ✅ **RESOLVIDO no MC94.3** (2026-09-25).
+   A guarda passou para `registrarPontuacaoRodada` (`_lib/pontuacao-store.mjs`), o ponto
+   único por onde passam os DOIS caminhos (`consolidar-lances` e `POST /pontuacao`).
+   Ver a secção do MC94.3 abaixo.
 2. A arte ("20/set a 04/out") agora é **pública** ao lado de "20:00–20:30".
 3. Especial sem lance único → consolidar-lances dá 422 e o painel fica em
    "apuração em curso" para sempre.
@@ -1373,3 +1374,91 @@ Com `EM_BREVE_MODE = true`, `getEstadoEdicao` diz "em breve" a tudo; a especial 
 ### Decisões do operador (R18, 2026-09-25)
 D1 arte mantém-se · D2 especial não pontua · D3 cronómetro usa `agendadas` ·
 D4 encerrada = "Edição encerrada" + vencedor + métricas · D5 hora do servidor.
+
+---
+
+## MC94.3 / MC94.3.1 — Cronómetro, auto-fecho da especial e a guarda central (2026-09-25)
+
+**Data:** 2026-09-25 · **Origem:** MC94.3 (backend, agente anterior) + MC94.3.1 (validação,
+mutação, frontend e deploy, HERMES) · **Recorrência:** ALTA (a guarda e o cron servem
+todas as especiais futuras) · **Impacto:** ALTO (impede que um sorteio de teste entre no
+ranking do torneio; move dinheiro on-chain sem clique humano).
+**SEG-1: SEGUIR com escopo ajustado** · **Validador: ver `_logs/MC94.3.1_SEG6_*`**
+**Logs:** `_logs/MC94.3.1_SEG*` · **Relatório:** `_logs/MC94.3.1-RELATORIO.md`
+**Commit:** `47cdc65` (+ commit de fecho) · **Deploy:** `netlify deploy --prod --build`
+
+### O que existe (backend)
+
+1. **Guarda central — `_lib/pontuacao-store.mjs`.** `registrarPontuacaoRodada(cicloId, lances)`
+   devolve `{ cicloId, pontua:false, participantes:0, bonusRegistados:0 }` **antes de
+   qualquer ligação ao Supabase** quando o ciclo casa `^ESPECIAL-[A-Z0-9]+$`. Está aqui e
+   não nos chamadores porque o `POST /pontuacao` — o caminho de recuperação que o próprio
+   `consolidar-lances` manda usar — não tinha guarda nenhuma (era o defeito do MC94.2).
+2. **Núcleo partilhado — `_lib/consolidacao.mjs`.** O que move dinheiro on-chain
+   (apuração off-chain, EIP-712 com `edicaoNonce`, envio via Flashbots, recibo, marcação)
+   extraído do handler para ter DOIS chamadores sem duas cópias. **Não lê nenhum `Request`**:
+   a autorização fica em quem chama. Devolve `{ status, corpo }` / `{ status, erro }`.
+3. **Handler fino — `consolidar-lances.mjs`.** Preflight CORS, método, rede, `guardAdmin`,
+   corpo. Contratos HTTP preservados: 405/409/400/503/422/502/202/200. Reexporta
+   `apurarMenorUnico` (compat de `mc28-seguranca` e `mc33-load`).
+4. **Cron — `scheduled-encerrar-especial.mjs`.** `schedule("* * * * *")`; por especial
+   vencida (`agora > termino_em`, estritamente maior — a mesma fronteira de
+   `edicao-janela.mjs`, que aceita lances no último milissegundo): encerra
+   (`encerrarEdicao({origem:"scheduled"})`) e consolida **UMA vez**.
+
+### ⛔ O cron NUNCA reenvia uma transacção (ITEM 4.2)
+
+Um cron que repetisse a cada falha reenviaria 60× por hora. Por isso:
+
+- o marcador (Blob `consolidacao-automatica`) é gravado **ANTES** da consolidação: se o
+  Netlify matar a função aos ~30 s, o tick seguinte não repete;
+- `202` (pendente), `502` (envio falhou), `200` e excepção são **finais** — o caminho
+  automático acaba, o que falte faz-se à mão (`POST /consolidar-lances`);
+- só as falhas de **antes do envio** (`409/422/503/400`) se repetem, no máximo
+  `MAX_TENTATIVAS_ANTES_DO_ENVIO = 5`;
+- `timeoutMinerMs = 20_000` na scheduled (o `90_000` do handler morreria a meio, DEPOIS de
+  a transacção ter saído).
+
+### Frontend (MC94.3.1)
+
+- **Retenção de 24 h — `_estilo-especial.js`.** `RETENCAO_APOS_FIM_MS` + `dentroDaRetencao()`;
+  `escolherEspecial` passou a filtrar. Sem isto, terminava em `?? lista.at(-1)` e uma
+  especial encerrada era devolvida **para sempre** — o Dashboard ficava preso ao sorteio
+  de 04/10 meses depois. A retenção é sobre o **fim**: antes de abrir também se mostra.
+  Sem `termino_em` legível não se mostra (não se inventa janela).
+
+### ⏳ Pendência declarada — MC94.3.2
+
+**Absorver a secção da especial dentro do card "🎯 Edição Ativa" + `EdicaoBanner` a 96 px
+só na especial + captura por CDP no dispositivo** (HARD GATE 8 do MC94.3.1). Razão medida,
+não conveniência: `src/pages/__tests__/Dashboard.test.mjs:85` **exige** que a especial seja
+uma secção própria entre "Edição Ativa" e "Acesso Rápido" com a R-1 presente — o layout
+actual é um requisito testado do MC94.2. Substituí-lo obriga a reescrever esse teste e a
+decidir a janela em que a especial passa a substituir a R-1, decisão que não está em
+nenhum artefacto disponível. Não se inventa: fecha-se o backend e documenta-se.
+
+### Lições de método (recorrência ALTA)
+
+- **O briefing não é a fonte da verdade; o código é.** O MC94.3.1 pedia para subir
+  `EdicaoBanner` para 96 px dentro do slot — mas o slot é um teste commitado que diz o
+  contrário. Medir primeiro evitou reescrever um requisito sem saber porquê.
+- **Contagens de teste do briefing ≠ contagens reais.** "34/34" saía 51 porque o glob
+  `mc93b-*.test.mjs` apanha dois ficheiros que a suíte anterior já contava; `mc33-load.test.mjs`
+  não existe (é `.mjs`). 0 falhas é o que importa; o número é cosmética.
+- **Mutação antes de confiar num teste.** Os 4 mutantes foram mortos por testes nomeados —
+  e o mutante do marcador matou exactamente o teste do marcador.
+- **Duvidar de si mesmo antes de acusar o código.** Por pouco não se reportou um falso
+  "buraco de cobertura" no caminho `202`: o grep inicial tinha lido o ficheiro errado.
+  Voltar a medir custa um comando; um falso positivo custa credibilidade.
+- **O working tree de outro agente é sagrado.** Nada de stash/reset/checkout; medir,
+  validar, continuar.
+- **Teste flaky sob paralelismo ≠ regressão.** `hooks-torneio.test.mjs` falha 1 em 28 sob
+  carga (`demora: 20 ms` + asserção a `carregando`); isolado passa sempre. Fica registado
+  para o MC94.4.
+
+### Decisões do operador (R18, 2026-09-25 — as que fecharam o MC94.3)
+
+E1 **"Encerrar e consolidar"** — a scheduled encerra E consolida (gasta gas da coordenação;
+autorizado). · E2 **"Maior só na especial"** — o ícone de presente a ~96 px só na especial
+(pendente em MC94.3.2). · E3 **"24 h após o fim"** — a especial fica no slot 24 h depois do
+fim (implementado e testado neste MC).

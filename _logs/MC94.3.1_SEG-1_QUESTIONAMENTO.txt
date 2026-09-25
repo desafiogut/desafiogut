@@ -1,0 +1,43 @@
+MC94.3.1 — SEG-1 — QUESTIONAMENTO DO BRIEFING (continuação do Opus)
+Data: 2026-09-25 | Skills ECC: smart-explore, terminal-ops | Agente: HERMES
+
+═══ -1.1 MEDIÇÃO DO WORKING TREE (HARD GATE 1) ═══
+$ git status --porcelain
+ M .../netlify/functions/_lib/pontuacao-store.mjs       (modificado)
+ M .../netlify/functions/consolidar-lances.mjs          (modificado)
+?? .../netlify/functions/_lib/consolidacao.mjs           (novo)
+?? .../netlify/functions/scheduled-encerrar-especial.mjs (novo)
+?? .../netlify/functions/_tests/mc943-guarda-central.test.mjs     (novo)
+?? .../netlify/functions/_tests/mc943-scheduled-encerrar.test.mjs (novo)
+?? _logs/MC94.3_SEG-1_QUESTIONAMENTO.txt                (novo, do Opus)
+
+$ git log --oneline -3  (à entrada)
+f855dd0 feat: MC94.2 — edição especial Air Fryer no Dashboard   <- BASE
+cbc6d11 feat: MC94.2 — card da edição especial no Dashboard + especial não pontua
+5c5849b feat: MC94.1 — dados da edição especial Air Fryer
+
+$ git stash list      -> VAZIO (nenhuma stash a atrapalhar)
+$ git branch --show-current -> main
+
+RESULTADO: os 6 ficheiros do Opus presentes e intactos, NÃO commitados.
+Os 3 untracked pré-existentes em docs/ (MC91.14-STATUS-BNB.txt, mc92.5_gerar_mascaras.py,
+mc92.5_refinar_bboxes.py) continuam lá — FORA do escopo deste MC, não tocados.
+
+═══ -1.2 BASE ═══
+HEAD = f855dd0, igual a origin/main. Confere com o SEG-1 do Opus. OK
+
+═══ -1.3 AUTOSSUFICIÊNCIA (R19) ═══
+O MC cabe num só SE o frontend se limitar à parte inequívoca. MEDIDO (ver SEG3):
+`Dashboard.test.mjs:85` EXIGE que a especial seja secção própria entre "Edição Ativa" e
+"Acesso Rápido", com a R-1 presente. A "absorção no slot" implicaria REVERTER um teste
+commitado do MC94.2 (design deliberado) e decidir, sem as decisões D originais, a janela
+em que a especial substitui a R-1. Não se inventa: HARD GATE 8 manda documentar como
+MC94.3.2.
+
+═══ -1.4 VEREDITO: SEGUIR, com escopo ajustado ═══
+- Validar e fechar o backend do Opus (guarda + núcleo + scheduled): SIM.
+- Mutação dos testes novos: SIM (R16).
+- Frontend: implementar SÓ a decisão R18 inequívoca — "24h após o fim" — que corrige um
+  DEFEITO REAL medido (a especial nunca saía do Dashboard). A absorção no slot fica para
+  MC94.3.2, documentada com a razão.
+Nenhuma acção destrutiva de git. O working tree do Opus é sagrado (HARD GATE 3).

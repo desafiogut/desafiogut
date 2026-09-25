@@ -1,0 +1,70 @@
+MC94.3.1 — SEG3 — FRONTEND: ONDE O OPUS PAROU
+Skills ECC: impeccable, verification-before-completion, ux-waiting-audit
+
+═══ 3.1 ESTADO MEDIDO (não presumido) ═══
+O frontend da especial JÁ EXISTE e está COMMITADO (MC94.2), não interrompido:
+  src/components/edicao-especial/CardEdicaoEspecial.jsx   (8033 B) — 4 estados
+  src/components/edicao-especial/ContagemDecrescente.jsx  (3366 B) — cronómetro puro
+  src/components/edicao-especial/PainelVencedorEspecial.jsx
+  src/components/edicao-especial/useResultadoEspecial.js
+  src/components/edicao-especial/_estilo-especial.js      (7206 B) — lógica pura
+  + 3 ficheiros de teste em __tests__/ (especial, especial-i18n, useEdicoes-especial)
+Um total de 338 testes frontend verdes à entrada, em série.
+
+O que o Opus tinha deixado escrito como PLANO (MC94.3_SEG-1_QUESTIONAMENTO.txt, S2/S3)
+era ABSORVER a secção do MC94.2 dentro do card "🎯 Edição Ativa" e aumentar o
+EdicaoBanner para 96 px só na especial.
+
+═══ 3.1 PORQUE NÃO SE FEZ A ABSORÇÃO (medição, não opinião) ═══
+`src/pages/__tests__/Dashboard.test.mjs:85` — teste COMMITADO do MC94.2:
+   test("fica entre 'Edição Ativa' e 'Acesso Rápido' — a R-1 continua lá") {
+     assert.ok(iAtiva >= 0 && iEsp > iAtiva && iRapido > iEsp);
+   }
+⇒ O layout actual (secção própria ENTRE os dois, com a R-1 mantida) é um requisito
+  testado, deliberado, não um acidente. Substituí-lo por "a especial ocupa o slot"
+  exige: (a) reescrever esse teste; (b) decidir a janela em que a especial substitui a
+  R-1 — decisão que não consta de nenhum artefacto que este MC tenha em mãos.
+Sem as decisões D originais, implementar isso seria INVENTAR. HARD GATE 8 cobre este
+caso exactamente: não insistir, documentar como MC94.3.2. R1 também manda não alterar
+o que não precisa de ser alterado.
+Além disso, SEG3.5 (captura por CDP no dispositivo via webview-devtools.ps1) exige um
+Android ligado — não verificável neste ambiente.
+
+═══ 3.2 O QUE FOI IMPLEMENTADO: "24h após o fim" (R18) — DEFEITO REAL ═══
+Grep provou que a regra NÃO existia em lado nenhum:
+  $ grep -rn "RETENCAO|retencao|24 \* 60" src  -> só TTLs de saldo/sessão, nada da especial.
+`escolherEspecial` (_estilo-especial.js:135) terminava com:
+  return lista.find(e => estadoEspecial(e, agora) !== ENCERRADA) ?? lista.at(-1);
+⇒ uma especial encerrada era devolvida PARA SEMPRE: o Dashboard ficava permanentemente
+  preso à especial do dia 04/10, meses depois do sorteio.
+
+Implementado (TDD: vermelho primeiro, ver abaixo):
+  export const RETENCAO_APOS_FIM_MS = 24 * 60 * 60 * 1000;
+  export function dentroDaRetencao(edicao, agoraMs) {
+    const fim = msDe(edicao?.termino_em);
+    if (fim == null || !Number.isFinite(agoraMs)) return false;
+    return agoraMs <= fim + RETENCAO_APOS_FIM_MS;
+  }
++ filtro em escolherEspecial: ... && dentroDaRetencao(e, agoraMs)
+A retenção é sobre o FIM (antes de abrir também se mostra — o fim está no futuro).
+Sem `termino_em` legível, NÃO se mostra (não se inventa janela).
+
+═══ 3.3 TESTES: RED PRIMEIRO (comprovado) ═══
+Antes de implementar, adicionado o bloco ao especial.test.mjs:
+  $ node --test src/components/edicao-especial/__tests__/especial.test.mjs
+  RED: "SyntaxError: The requested module '../_estilo-especial.js' does not provide
+        an export named 'RETENCAO_APOS_FIM_MS'"  (tests 1 | pass 0 | fail 1)
+6 testes novos:
+  - o valor da retenção é 24 h
+  - dentro das 24 h seguintes ao fim, continua a mostrar-se (inclusive nos 24 h exactos)
+  - passadas 24 h, deixa de se mostrar
+  - antes de abrir mostra-se — a retenção é sobre o FIM, não sobre o início
+  - sem `termino_em` legível ou sem `agora` legível, não se mostra
+  - escolherEspecial deixa de a devolver 24 h depois do fim (o defeito real)
+
+═══ 3.4 GREEN ═══
+  especial.test.mjs: 44/44 (era 38; +6 novos)
+  Suíte frontend completa (série): 344/344 | 0 falhas (era 338; +6)
+
+VEREDITO SEG3: PARCIAL — "24h após o fim" FEITO e testado. Absorção no slot + 96 px +
+captura CDP: PENDÊNCIA MC94.3.2 (HARD GATE 8). Razão medida, não conveniência.

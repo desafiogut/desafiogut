@@ -1,0 +1,36 @@
+MC94.3.1 — SEG7 — FECHO, ENTREGA E DECLARAÇÕES
+Skills ECC: requesting-code-review
+
+═══ 7.1 LOGS CONSOLIDADOS ═══
+_logs/MC94.3.1_SEG-1_QUESTIONAMENTO.txt · SEG0_VALIDACAO-BACKEND · SEG1_SUITES ·
+SEG2_BYTE-COMPAT · SEG3_FRONTEND · SEG4_MUTACAO · SEG5_DEPLOY · SEG6_VALIDACAO-INDEPENDENTE
+· SEG7_ENTREGA · RELATORIO.md · MC94.3.1_captura-producao.png
+
+═══ 7.2 CLAUDE.md (R14) ═══
+Nova secção "MC94.3 / MC94.3.1" (com Data · Origem · Recorrência · Impacto, o que
+existe, o cron que nunca reenvia, o frontend, a pendência MC94.3.2, lições e as
+decisões R18). Corrigido também o item 1 do MC94.2 ("POST /pontuacao repontua a
+especial — por decidir"), que este MC FECHOU: deixou de ser verdade e um documento
+com uma frase falsa é pior que nenhum. CLAUDE.md: 1375 -> 1464 linhas.
+
+═══ 7.3 DECISÕES DO OPERADOR (R18) — registo em 3 lugares ═══
+E1 "Encerrar e consolidar" · E2 "Maior só na especial" · E3 "24h após o fim".
+Registadas em: (a) CLAUDE.md secção MC94.3; (b) _logs/MC94.3.1_SEG7_ENTREGA.txt (aqui);
+(c) mensagem de commit. E3 está IMPLEMENTADA; E2 fica em MC94.3.2; E1 é a scheduled.
+
+═══ 7.4 DECLARAÇÃO DE R15 (autonomia para corrigir o que a medição provou errado) ═══
+Foi accionado UMA vez: a regra "24h após o fim" (E3) não existia em lado nenhum e
+`escolherEspecial` devolvia a especial encerrada PARA SEMPRE. Corrigido com função pura
++ 6 testes + mutação. Nada do backend do Opus precisou de correcção: a medição confirmou-o.
+
+═══ 7.5 DECLARAÇÃO DE R19 (autonomia ampliada, com parcimónia) ═══
+Ampliei DENTRO do que a medição justificou e NÃO além: guarda, núcleo, scheduled,
+retenção de 24 h. NÃO ampliei para a reescrita do slot (HARD GATE 8), NÃO activei
+BONUS_EMISSAO_ATIVA, NÃO toquei no contrato on-chain, NÃO alterei variáveis de ambiente,
+NÃO rotacionei chaves, NÃO abri frentes novas. Recusei explicitamente `git add -A`.
+
+═══ 7.6/7.7 RELATÓRIO ═══
+_logs/MC94.3.1-RELATORIO.md + cópia Desktop/MC94.3.1-RELATORIO.md
+
+═══ 7.8 COMMIT FINAL ═══
+"chore(MC94.3.1): fecho do MC94.3 — validação, frontend, deploy"

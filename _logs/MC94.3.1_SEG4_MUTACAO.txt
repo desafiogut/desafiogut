@@ -1,0 +1,49 @@
+MC94.3.1 — SEG4 — MUTAÇÃO DOS TESTES NOVOS (HARD GATE 4 / R16)
+Skills ECC: terminal-ops, verification-before-completion
+Método: backup com md5 -> quebrar -> correr -> restaurar -> correr -> md5 igual.
+
+Backups: /tmp/mc943-bak/{pontuacao-store,scheduled-encerrar-especial,consolidacao,_estilo-especial}
+md5 de entrada = md5 de saída em TODOS os casos (restauro byte-exacto).
+
+═══ 4.1 GUARDA CENTRAL (mc943-guarda-central.test.mjs) ═══
+Mutante: removido o bloco `if (EDICAO_ESPECIAL_RE.test(ciclo)) { return {...} }` de
+         _lib/pontuacao-store.mjs.
+RED (real): ✖ registrarPontuacaoRodada recusa ESPECIAL-* sem tocar no Supabase
+            ✖ qualquer ESPECIAL-*, e com espaços à volta do id
+            ✖ POST /pontuacao com ESPECIAL-AIRFRYER: não pontua, e di-lo
+            tests 6 | pass 3 | fail 3
+RESTAURO: md5 52a3535be49a1af25f9eb0d2de1e8e34 (igual ao backup)
+GREEN: tests 6 | pass 6 | fail 0                                        ✅
+
+═══ 4.2 MARCADOR ANTES DA CONSOLIDAÇÃO (mc943-scheduled-encerrar.test.mjs) ═══
+Mutante: removido o `await marcas.setJSON(id, marca)` de ANTES da chamada a
+         consolidarEdicao (o marcador passa a ser gravado só DEPOIS).
+RED: ✖ o marcador é gravado ANTES de chamar (uma morte a meio não causa reenvio)
+     tests 14 | pass 13 | fail 1
+RESTAURO: md5 21939f281d7ba9f224189c3183e313d5
+GREEN: tests 14 | pass 14 | fail 0                                       ✅
+
+═══ 4.3 CONTRATO HTTP (mc93b-endpoints.test.mjs) ═══
+Mutante: `status: 202` -> `status: 200` no ramo "tx não minerada" de _lib/consolidacao.mjs.
+RED: ✖ consolidar: tx NÃO minerada (202) não pontua nada
+     tests 18 | pass 17 | fail 1
+RESTAURO: md5 51c26ff000d49c6ebecad842c99a47da
+GREEN: tests 38 | pass 38 | fail 0 (mc93b-endpoints + mc943-guarda + mc943-scheduled) ✅
+(Nota de processo: eu próprio duvidei que o 202 estivesse coberto e por pouco não
+ reportei um falso "buraco de cobertura" — o grep inicial tinha filtrado o ficheiro
+ errado. Medir outra vez antes de afirmar.)
+
+═══ 4.4 RETENÇÃO DE 24 h (especial.test.mjs) ═══
+Mutante: `return agoraMs <= fim + RETENCAO_APOS_FIM_MS;` -> `return true;`
+RED: ✖ passadas 24 h, deixa de se mostrar
+     ✖ escolherEspecial deixa de a devolver 24 h depois do fim (o defeito real)
+     tests 44 | pass 42 | fail 2
+RESTAURO: md5 b2005e7596cdfc1a45f7add92d1ddbab
+GREEN: suíte frontend 344/344 | 0 falhas                                ✅
+
+═══ VERIFICAÇÃO FINAL DOS RESTAUROS ═══
+$ grep -rn "MUTANTE" _lib/ scheduled-encerrar-especial.mjs src/
+  -> OK: zero mutantes no código
+$ md5sum dos 3 ficheiros backend  -> idênticos aos backups
+
+VEREDITO SEG4: PASS — 4 ciclos RED -> GREEN comprovados (briefing pedia 3).

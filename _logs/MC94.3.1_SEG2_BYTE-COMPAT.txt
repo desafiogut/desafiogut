@@ -1,0 +1,34 @@
+MC94.3.1 — SEG2 — BYTE-COMPATIBILIDADE DA EXTRAÇÃO
+Skills ECC: systematic-debugging, verification-before-completion
+
+═══ 2.1 DIFF DO HANDLER ═══
+$ git diff HEAD -- .../consolidar-lances.mjs --stat
+ 1 file changed, 13 insertions(+), 139 deletions(-)
+⇒ corte, não reescrita: 139 linhas saíram para _lib/consolidacao.mjs.
+
+═══ 2.3 DIFF DIRECTO: consolidar-lances.mjs ANTES vs _lib/consolidacao.mjs DEPOIS ═══
+$ git show HEAD:.../consolidar-lances.mjs > /tmp/cl-antes.mjs
+$ diff /tmp/cl-antes.mjs _lib/consolidacao.mjs
+Linhas de LÓGICA: IDÊNTICAS. As diferenças são todas de forma, nunca de fundo:
+  - Cabeçalho de comentários reescrito (novo, explicativo).
+  - Imports: acrescentado prefixo "./" (o ficheiro mudou de ./ para _lib/).
+  - `jsonError(s,"c","m")`  -> `falha(s,"c","m")`   (mesmos s/c/m em TODAS as chamadas)
+  - `jsonResponse(x, s)`    -> `{ status: s, corpo: x }`
+  - `TIMEOUT_MINER_MS` const-> parâmetro `timeoutMinerMs` (default 90_000 = mesmo valor
+                              para o handler; a scheduled passa 20_000)
+  - prefixo de log "[consolidar-lances]" -> "[consolidacao]"
+  - comentário do MC94.3 actualizado (deixa de afirmar que POST /pontuacao não tem guarda
+    — agora tem, é a guarda central)
+Nenhum `if`, nenhum valor de status, nenhuma ordem de operações foi alterada. ✅
+
+═══ 2.2 REEXPORTS ═══
+$ grep -n "^export" _lib/consolidacao.mjs
+  35: export const TIMEOUT_MINER_MS = 90_000;
+  40: export function apurarMenorUnico(lances)
+  61: export async function consolidarEdicao(edicaoId, {timeoutMinerMs} = {})
+consolidar-lances.mjs:24: export { apurarMenorUnico } from "./_lib/consolidacao.mjs";
+⇒ mc28-seguranca e mc33-load, que importavam `apurarMenorUnico` do handler, continuam a
+  funcionar. Provado pelos testes (0 falhas em ambas as suítes). ✅
+
+VEREDITO SEG2: PASS — extração byte-compatível nos contratos; as únicas mudanças de
+comportamento são as DECLARADAS (janela de mineração injectável e prefixo de log).

@@ -1,0 +1,50 @@
+MC94.3.1 — SEG0 — VALIDAÇÃO DO BACKEND DO OPUS
+Skills ECC: smart-explore, terminal-ops
+
+═══ 0.1 OS 4 FICHEIROS, LIDOS ═══
+
+1) _lib/pontuacao-store.mjs (modificado, +10 linhas)
+   Import novo: EDICAO_ESPECIAL_RE de "./edicao-janela.mjs".
+   Em registrarPontuacaoRodada, logo após validar `ciclo`:
+     if (EDICAO_ESPECIAL_RE.test(ciclo)) {
+       return { cicloId: ciclo, pontua: false, participantes: 0, bonusRegistados: 0 };
+     }
+   Está ANTES de `calcularPontosRodada` e antes de qualquer `getSupabase()`.
+   ⇒ "Zero escritas: nem uma ligação ao Supabase" é literal, não retórico. ✅
+
+2) _lib/consolidacao.mjs (novo, 180 linhas)
+   Núcleo EXTRAÍDO do handler: idempotência (estaConsolidado), env obrigatórias,
+   apuração off-chain (apurarMenorUnico), EIP-712 com edicaoNonce, envio
+   consolidarResultado, recibo com janela `timeoutMinerMs` injectável, pontuação
+   fail-soft depois do recibo, marcarConsolidado.
+   Devolve { status, corpo } ou { status, erro:{code,message} }.
+   ⚠️ NÃO lê nenhum Request — a autorização ficou no handler. Bom corte. ✅
+
+3) consolidar-lances.mjs (modificado: +13 / -139)
+   Ficou com o que é HTTP: respostaPreflight (CORS, primeiro), método 405,
+   rede 409, guardAdmin, corpo 400. Depois `consolidarEdicao(edicaoId)`.
+   Reexporta `apurarMenorUnico` → export { apurarMenorUnico } from "./_lib/consolidacao.mjs".
+   ⇒ compat com mc28-seguranca (importa daqui) preservada. ✅
+
+4) scheduled-encerrar-especial.mjs (novo, 136 linhas)
+   `export const handler = schedule("* * * * *", ...)`; `tick(agoraMs)` exportado
+   para testes com relógio injectável. Por especial vencida (agora > termino_em,
+   ESTritamente maior — coerente com edicao-janela que aceita lances no último ms):
+   encerraEdicao(origem "scheduled") se status "aberto", depois consolida UMA vez.
+   `consolidarUmaVez`: marcador gravado ANTES da chamada; ANTES_DO_ENVIO={400,409,422,503}
+   são os únicos repetíveis (max 5); 200/202/502/excepção ⇒ final:true ⇒ não repete.
+   Store de marcas indisponível ⇒ fail-soft, sem consolidação automática. ✅
+
+═══ 0.2 IMPORTS ═══
+consolidacao.mjs importa APENAS de "./" (mesmo diretório _lib/): bids-store, data-store,
+signer, rpc-fallback, pontuacao-store, edicao-janela (+ ethers). Zero imports cruzados
+estranhos. scheduled importa edicoes-core, consolidacao, edicao-janela + @netlify/*. ✅
+
+═══ 0.3 CONTRATOS HTTP ═══
+Códigos preservados na extração: 405 (método), 409 (fora de mainnet), 400
+(edicao_obrigatoria), 503 (config_ausente), 422 (sem_vencedor), 502 (envio_falhou),
+202 (pendente), 200 (sucesso / idempotente). Provado por teste em SEG1 e por mutação
+em SEG4 (202 → 200 fica VERMELHO). ✅
+
+═══ 0.4 VEREDITO SEG0: PASS ═══ O backend do Opus é coerente com o que o briefing
+descreve. Nada a corrigir (R15 não teve de ser accionado aqui).

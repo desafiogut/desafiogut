@@ -1,0 +1,64 @@
+MC94.3.1 — SEG6 — VALIDAÇÃO INDEPENDENTE (RUFLO, papel VALIDADOR)
+Skills ECC: requesting-code-review
+
+═══ 6.3 VALIDADOR INDEPENDENTE ═══
+Despachado um subagente com contexto ISOLADO (não viu esta conversa) e instruções
+ADVERSARIAIS: "a tua função é tentar FALSIFICAR, não confirmar". Trabalhou num
+`git worktree` próprio (`git worktree add /tmp/valida-943 47cdc65`), detached HEAD,
+pai `f855dd0` confirmado. Não tocou no working tree principal, não fez deploy.
+Duração: 644 s.
+
+O QUE ELE MEDIU (números dele, não meus):
+  Backend  (suíte completa, no worktree): pass 606 | fail 0
+  Frontend (suíte completa, no worktree): pass 344 | fail 0   <- igual ao meu 344/344
+  CI (mc93e-ci-config, após corrigir CRLF->LF no worktree): 25/25
+  Fronteira: confirmou os ficheiros do commit.
+  Regressão cruzada: correu a suíte no REPO PRINCIPAL para comparar.
+
+MUTAÇÃO INDEPENDENTE (o achado mais valioso):
+  O validador repetiu a minha mutação POR SUA CONTA — removeu a guarda central e
+  obteve o MESMO resultado: "sem a guarda falham 3 de 6 testes (incluindo o caminho
+  POST /pontuacao)". Ou seja, o teste não passa por acaso: ele morre quando o código
+  morre. Reprodução independente de um resultado é a validação mais forte que existe.
+
+FALSIFICAÇÃO DA GUARDA (variantes de cicloId que ele próprio testou):
+  "ESPECIAL-AIRFRYER"      -> guardado: SIM
+  " ESPECIAL-NATAL2026 "   -> guardado: SIM (o .trim() do store limpa)
+  "ESPECIAL-AIRFRYER "     -> guardado: SIM
+  " ESPECIAL-TOY"          -> guardado: SIM
+  "ESPECIAL-airfryer"      -> guardado: NÃO  <-- ⚠️ FRAGILIDADE RESIDUAL
+  "PROG-ESPECIAL-1"        -> guardado: NÃO  (correcto: não é especial)
+  "ESPECIAL-"              -> guardado: NÃO  (correcto: sem sufixo)
+
+  ⚠️ ACHADO A REGISTAR (não é regressão deste MC — o regex do MC94.2 já era
+  case-sensitive, e mantê-lo igual foi R1): `^ESPECIAL-[A-Z0-9]+$` é SENSÍVEL À CAIXA.
+  Só a coordenação (admin) pode chamar `POST /pontuacao`, e os ids nascem em maiúsculas
+  no seed (mc941-seed-edicao-especial.mjs) — logo o risco é um admin escrever o id em
+  minúsculas e a especial entrar no torneio por engano. Recomendação para o MC94.4:
+  normalizar o id para maiúsculas no store (`.toUpperCase()`) ou usar `/i`, e cobrir
+  com teste. Não foi feito agora porque alteraria o contrato do regex partilhado com
+  `edicao-janela.mjs` (janela de lances) sem necessidade comprovada (R1).
+
+⚠️ OBSERVAÇÃO DO VALIDADOR, JÁ TRATADA: ele notou que o repo principal "ganhou
+   modificações" durante a validação (CLAUDE.md e package-lock.json). Causa: processos
+   CONCORRENTES meus (npm install do build Netlify + escrita do CLAUDE.md). CLAUDE.md é
+   intencional (R14); o package-lock foi revertido. O validador não confundiu isto com
+   sabotagem — distinguiu processo concorrente de alteração maliciosa. Bom sinal.
+
+HIGIENE: o validador desmontou o worktree (teve de remover ligações `ReparsePoint` de
+node_modules à mão, via API .NET), correu `git worktree prune` e confirmou o HEAD
+inalterado. Não deixou lixo.
+
+LIMITE: o validador esgotou o orçamento de iterações e a sua mensagem final ficou
+truncada no transcript; os veredictos acima foram extraídos por mim do registo
+completo das suas execuções (comandos + saídas), não da sua prosa final.
+
+VEREDITO SEG6: PASS com 1 fragilidade residual registada (case-sensitivity do regex).
+
+═══ 6.4 NÃO MEDIDO (L-4) ═══
+1. POST /pontuacao e /consolidar-lances em produção com ESPECIAL-* (401 antes da guarda;
+   exigiria JWT de admin -> R5).
+2. O card da especial a renderizar em produção/dispositivo (gate LGPD + janela do evento).
+3. A scheduled a correr de facto aos 20:30 (o cron só dispara no dia 04/10).
+4. Comportamento com várias especiais simultâneas em produção (só por teste unitário).
+5. A transacção on-chain da consolidação (gas real) — nunca é exercitada em teste.

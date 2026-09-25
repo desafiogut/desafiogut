@@ -1,0 +1,39 @@
+MC94.3.1 — SEG1 — AS SUÍTES VERDES RE-MEDIDAS (HARD GATE 2)
+Skills ECC: verification-before-completion, terminal-ops
+Diretório: desafio-gut/frontend/netlify/functions | node v24.14.1
+
+Suíte 1 — guarda central:
+  node --test --experimental-test-module-mocks _tests/mc943-guarda-central.test.mjs \
+       _tests/mc93b-pontuacao-store.test.mjs _tests/mc93b-endpoints.test.mjs
+  ⇒ tests 51 | pass 51 | fail 0
+
+Suíte 2 — consolidar-lances + compat:
+  node --test --experimental-test-module-mocks _tests/mc28-seguranca.test.mjs \
+       _tests/mc33-load.test.mjs _tests/mc93b-*.test.mjs
+  ⇒ tests 51 | pass 51 | fail 0
+  (⚠️ `_tests/mc33-load.test.mjs` não existe — o ficheiro é `mc33-load.mjs`, sem .test.
+      O glob mc93b-*.test.mjs apanha 2 ficheiros que a suíte 1 já contava, daí 51 e não 34.
+      Contagem diferente do briefing (34) por causa do glob, NÃO por teste desaparecido.)
+
+Suíte 3 — scheduled encerrar:
+  node --test --experimental-test-module-mocks _tests/mc943-scheduled-encerrar.test.mjs
+  ⇒ tests 14 | pass 14 | fail 0   ← exactamente o 14/14 do briefing ✅
+
+Suíte GLOBAL:
+  node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+  ⇒ tests 637 | suites 7 | pass 631 | fail 0 | skipped 6
+
+Frontend (novo, medido por este MC):
+  node --test --test-concurrency=1 $(find src -name "*.test.mjs")
+  ⇒ tests 344 | pass 344 | fail 0 | skipped 0
+
+⚠️ ACHADO (flaky, PRÉ-EXISTENTE): sob execução PARALELA, `src/hooks/__tests__/hooks-torneio.test.mjs`
+   falha 1 teste ("um pedido novo limpa o erro do anterior", assere `carregando === true`
+   com resposta de 20 ms). Isolado passa 28/28 duas vezes seguidas; em série 344/344.
+   Causa: contenção de CPU sob carga. NÃO é regressão deste MC (o frontend não foi tocado
+   pelo Opus e o ficheiro está commitado em HEAD). Recomendação para MC94.4: subir o
+   `demora` ou asserir por evento em vez de por temporização.
+
+RESULTADO: 0 falhas em todas as suítes. Briefing dizia "104 testes" e "589/590" — os
+números subiram porque os ficheiros mc941/mc942/mc943 entraram na glob. 0 falhas é o que importa.
+VEREDITO SEG1: PASS.

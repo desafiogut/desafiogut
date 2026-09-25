@@ -1,0 +1,98 @@
+MC94.3.1 — SEG5 — COMMIT, PUSH, DEPLOY E VALIDAÇÃO EM PRODUÇÃO
+Skills ECC: canary-watch, verification-before-completion
+
+═══ 5.1 SUÍTE COMPLETA ANTES DO DEPLOY ═══
+Backend   : tests 637 | pass 631 | fail 0 | skipped 6
+Frontend  : tests 344 | pass 344 | fail 0
+=> 0 falhas. Nada vermelho. Deploy autorizado.
+
+═══ 5.2 COMMIT (fronteira fechada, R1) ═══
+$ git add <9 caminhos em escopo>   (NÃO `git add -A`)
+$ git diff --cached --stat
+ 9 files changed, 737 insertions(+), 141 deletions(-)
+   _logs/MC94.3_SEG-1_QUESTIONAMENTO.txt              |  79 ++
+   .../_lib/consolidacao.mjs                          | 180 ++
+   .../_lib/pontuacao-store.mjs                       |  10 +
+   .../_tests/mc943-guarda-central.test.mjs           |  79 ++
+   .../_tests/mc943-scheduled-encerrar.test.mjs       | 173 ++
+   .../consolidar-lances.mjs                          | 152 +-- (13 insertions, 139 deletions)
+   .../scheduled-encerrar-especial.mjs                | 136 ++
+   .../edicao-especial/__tests__/especial.test.mjs    |  39 ++
+   .../edicao-especial/_estilo-especial.js            |  30 +-
+Ficaram FORA (intencionalmente) os 3 untracked pré-existentes em docs/.
+⚠️ O briefing dizia `git add -A`. Não foi usado: arrastaria trabalho alheio para o commit.
+
+$ git commit -> 47cdc65
+  "feat(MC94.3): guarda central ESPECIAL-* + núcleo de consolidação + scheduled + retenção 24h"
+
+═══ 5.3 PUSH ═══
+$ git push origin main
+  remote: Bypassed rule violations for refs/heads/main:
+    - Changes must be made through a pull request.
+    - 2 of 2 required status checks are expected.
+  To https://github.com/desafiogut/desafiogut.git
+     f855dd0..47cdc65  main -> main
+=> pushed. A branch `main` tem protecção (PR + 2 checks obrigatórios); as credenciais do
+   operador têm direito de bypass. Registado porque é um facto com consequências (R3).
+
+═══ 5.4 DEPLOY ═══
+$ netlify deploy --prod --build --message "MC94.3.1 — fecho do MC94.3"
+  Config file      : netlify.toml (raiz)
+  Current dir      : desafio-gut/frontend
+  build.command    : npm install --legacy-peer-deps && npm install --prefix netlify/functions --legacy-peer-deps && npm run build
+  Functions bundling completed in 6m 44.1s  (46 functions listadas, incl.
+     consolidar-lances.mjs · pontuacao.mjs · scheduled-encerrar-especial.mjs)
+  Netlify Build completed in 10m 11.5s
+  CDN requesting 38 files and 8 functions -> Uploading 46 files -> ✔ Deploy is live!
+  Deploy ID        : 6ab6c090c41bca2a536e25c4
+  Production URL   : https://silly-stardust-ca71bc.netlify.app
+Nenhum `netlify trigger deploy` (anti-padrão: reconstrói da main antiga).
+
+⚠️ EFEITO COLATERAL MEDIDO: o `npm install` do build reescreveu
+   `desafio-gut/frontend/package-lock.json` (+31/-53, apenas bandeiras `"dev": true`
+   em dependências opcionais). Revertido com
+   `git restore --source=HEAD --worktree -- desafio-gut/frontend/package-lock.json`.
+   Não entrou em commit nenhum (R1).
+
+═══ 5.5 VALIDAÇÃO EM PRODUÇÃO ═══
+$ curl $B/health                                  -> HTTP 200
+   ⚠️ O briefing dizia "curl /health → 200". Dá 200, mas devolve o index.html do SPA
+      (o rewrite apanha o caminho antes da função). A função real é
+      /.netlify/functions/health.
+$ curl $B/.netlify/functions/health                -> HTTP 200 {"ok":true,"service":"desafiogut-functions",...}
+$ curl "$B/.netlify/functions/ranking?cicloId=R-1" -> HTTP 200 {"cicloId":"R-1","total":0,"ranking":[]}
+$ curl "$B/.netlify/functions/edicoes"             -> HTTP 200 (mapa de edições)
+$ curl -X POST /pontuacao {cicloId:ESPECIAL-AIRFRYER}
+                                                   -> HTTP 401 admin_token_ausente
+$ curl -X POST /consolidar-lances {edicaoId:ESPECIAL-AIRFRYER}
+                                                   -> HTTP 401 admin_token_ausente
+$ curl -sI $B/artes/edicao-especial-airfryer.jpg   -> HTTP 200 · Content-Length 207054 · image/jpeg
+
+⛔ LIMITE HONESTO: o briefing mandava comprovar em produção que "POST /pontuacao com
+   ESPECIAL-AIRFRYER é recusado". NÃO É POSSÍVEL sem um JWT de admin: ambos os
+   endpoints respondem 401 ANTES de chegar ao código da guarda (guardAdmin é o
+   primeiro passo). Fabricar um JWT de admin no servidor está fora (R5). A guarda
+   prova-se pelos testes locais (6 testes, 4 mutações) — não por curl.
+
+═══ PROVA DE QUE A ALTERAÇÃO ESTÁ MESMO EM PRODUÇÃO (não por fé) ═══
+Em vez de "o deploy disse que correu", comparei BYTES:
+$ sha256sum dist/assets/index-DOoGwlcc.js   vs   curl $B/assets/index-DOoGwlcc.js | sha256sum
+  45f3cd255ae27cba522ce57a6be46a67490e3789bf5f196c820e0ad90e259dfa  (iguais)
+$ o mesmo para o chunk do Dashboard (PrivyRoot-PU8IaOf1.js):
+  bd087889f9ad99b5c9f2d7d3c2937489d09c33d649a0f66a930af53a8109fd0f  (iguais)
+E, dentro do bundle minificado de produção, o código alterado está lá, legível:
+  Gt=1440*60*1e3, Kt=/^ESPECIAL-[A-Z0-9]+$/;
+  function $t(e,t){let n=W(e?.termino_em);return n==null||!Number.isFinite(t)?!1:t<=n+Gt}
+  function en(e,t,n){...}          <- escolherEspecial
+  `1440*60*1e3` = 86 400 000 ms = 24 h = RETENCAO_APOS_FIM_MS, e `$t` é dentroDaRetencao.
+=> A regra das 24 h está em produção, comprovada no artefacto servido ao utilizador.
+
+═══ 5.6 CAPTURA ═══
+_logs/MC94.3.1_captura-producao.png — produção viva, gate LGPD com o GUTO e as 4 caixas.
+⛔ Dois limites: (a) um browser novo vê o gate LGPD, não o Dashboard; aceitar termos
+   legais em nome do operador é uma decisão dele, não minha; (b) o card da especial só
+   aparece dentro da janela do evento. A captura visual do card em produção NÃO foi feita
+   (ver L-4 no relatório). Fica para o MC94.3.2 / para o operador no Chrome perfil DESAFIO.
+
+VEREDITO SEG5: PASS — commit, push e deploy feitos; produção validada por bytes e por
+endpoints. Com 2 limites declarados (JWT de admin; captura do card no dispositivo).
