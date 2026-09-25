@@ -1011,6 +1011,58 @@ Menores: o GUTO não reconhece `ESPECIAL-*` no comando de encerrar (usar o
 endpoint); `_lib/pulso.mjs` conta volume desde `criadoEm`, não desde `inicio_em`;
 depois das 20:30 a edição continua "aberto" na listagem até o admin a encerrar.
 
+## 4h. A edição especial no Dashboard (MC94.2)
+
+**Onde:** `Dashboard.jsx`, secção própria entre "Edição Ativa" e "Outras Edições".
+**Código:** `src/components/edicao-especial/` (`CardEdicaoEspecial`, `ContagemDecrescente`,
+`PainelVencedorEspecial`, `_estilo-especial.js`, `useResultadoEspecial.js`).
+
+### Os quatro estados (hora do SERVIDOR)
+
+| estado | quando | o card mostra |
+|---|---|---|
+| `agendada` | antes de `inicio_em − 60 s` | arte + "Abre em" dd/hh/mm/ss |
+| `a_abrir` | último minuto | "Abrindo em instantes…" + contagem |
+| `activa` | `inicio_em` ≤ agora ≤ `termino_em` | "Fecha em" + **o `CardLance` desta edição** |
+| `encerrada` | depois de `termino_em`, ou `status` encerrado/apurado | "Edição encerrada" + vencedor + métricas |
+
+### ⛔ A especial NÃO pontua o torneio
+
+`consolidar-lances.mjs`: para `ESPECIAL-*` (prefixo exacto) consolida on-chain e marca,
+mas **não** chama `registrarPontuacaoRodada`; a resposta traz `pontua: false`.
+Decisão do operador (R18, 2026-09-25). Consequência: `/ranking?cicloId=ESPECIAL-*`
+fica vazio para sempre — o vencedor lê-se de `resultados(id)` on-chain.
+
+### O relógio
+
+`useEdicoes` mede `t0`/`t1` à volta do `GET /edicoes` e guarda
+`offset = agora − (t0 + t1)/2`, recalculado a cada fetch (60 s). O tick de 1 s vive
+dentro do card (não no contexto). Sem `agora` na resposta, `offset` fica `null` e a
+contagem mostra "…" — nunca o relógio do aparelho em silêncio.
+
+### ⚠️ "Dar lance" não é um link para o /mercado
+
+O `/mercado` monta o `CardLance` com `EDICAO_ATIVA = "R-1"` fixo. O card monta o
+`CardLance` existente com `idEdicao="ESPECIAL-AIRFRYER"` e `tipoLeilao="programado"`
+(carregado com `lazy`). Não liga o `handleLanceSucesso` do contexto, que acrescentaria
+o lance à tabela da R-1. No APK (`isLeilaoAtivo=false`) o `CardLance` mostra o skeleton
+de conformidade — e o card só chega ao APK com build novo.
+
+### ⚠️ Excepção declarada à fonte única do MC88.43
+
+Com `EM_BREVE_MODE = true`, `getEstadoEdicao` dá "em breve" a tudo. A especial tem os
+seus próprios estados (`estadoEspecial`) — o card da R-1 ao lado continua "EM BREVE".
+Quando a trava sair, a Vitrine pode escolher a especial (`tipo programado`, `aberto`)
+para o cronómetro dos slots Diamante/Ouro (`Vitrine.jsx:579`) — hoje travado.
+
+### Vencedor e métricas (estado `encerrada`)
+
+On-chain `resultados(id)` (vencedor, menor único, consolidado) + `GET lances-flash`
+(total de lances, participantes distintos, nome de exibição do vencedor). Antes da
+consolidação: "apuração em curso", relido a cada 60 s. Endereço sempre encurtado (R4).
+⚠️ Se não houver lance único, `consolidar-lances` responde 422 e nada vai on-chain:
+o painel fica em "apuração em curso" (ou "nenhum lance", se a lista vier vazia).
+
 ## 5. O que o motor NÃO faz (por decisão, não por esquecimento)
 
 Não grava, não lê banco, não chama rede, não toca no on-chain, não emite senhas. Há um **teste de estrutura** que falha se alguém importar Netlify Blobs, Supabase, `ethers`, `fetch`, `node:fs` ou `process.env` dentro do módulo.

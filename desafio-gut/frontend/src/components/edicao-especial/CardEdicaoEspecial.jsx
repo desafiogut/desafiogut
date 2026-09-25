@@ -89,6 +89,11 @@ export default function CardEdicaoEspecial({
       </div>
       <ContagemDecrescente restanteMs={restanteMs} cor="#fbbf24" isMobile={isMobile} t={t} />
     </>;
+  } else if (estado === ESTADO_ESPECIAL.ACTIVA && !Number.isFinite(offsetMs)) {
+    // Sem hora do servidor, "activa" foi decidido pelo relógio do APARELHO — que
+    // pode estar adiantado. Não se abre o formulário por um palpite: o backend
+    // recusaria com 409. Achado da validação independente.
+    corpo = <ContagemDecrescente restanteMs={null} isMobile={isMobile} t={t} />;
   } else if (estado === ESTADO_ESPECIAL.ACTIVA) {
     corpo = <>
       <ContagemDecrescente restanteMs={restanteMs} rotulo={t("edicao.especial.fechaEm", "Fecha em")} cor={COR.success} isMobile={isMobile} t={t} />

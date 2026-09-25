@@ -1,0 +1,52 @@
+MC94.2 — SEG4 — VALIDAÇÃO          Skill: verification-before-completion
+Data: 2026-09-25
+
+4.1 SUÍTES
+  frontend : 137 → 191 · 191 ✔ · 0 ✖ (node --test --test-concurrency=1; NÃO é portão de CI)
+  functions: 611 → 616 · 610 ✔ · 0 ✖ · 6 ﹣
+  eslint (ficheiros tocados): 0 erros; os 10 avisos em Dashboard/AppContext são pré-existentes.
+  build: verde.
+
+4.2 R1 — FRONTEIRA (git diff 5c5849b..HEAD)
+  Dashboard.jsx · components/edicao-especial/* · useEdicoes.js · consolidar-lances.mjs ·
+  i18n pt/en/es · testes (+ duplos em pages/__tests__/_stubs) · CLAUDE.md · docs · _logs.
+  Fora da letra, declarado no SEG-1 (R19-a): AppContext.jsx, +2 linhas aditivas —
+  o Validador julgou-o justificado (chamar useEdicoes 2.ª vez duplicaria o polling).
+  Zero: App.jsx/rotas, BottomNav, páginas novas, MeusAtivos.jsx, contrato, ci.yml, MC93.
+
+4.3 MUTAÇÃO (R16) — _logs/MC94.2_SEG4_MUTACAO.txt
+  Executor: F1–F17 mortos (17/17). Ronda MORTA pelo sistema por memória baixa no F18
+  (F18 ficou aplicado no disco — reposto e verificado). F19–F28 não correram.
+  Validador, no worktree dele: 6/6 mortos, precisamente nas áreas F19–F28.
+  Correcções pós-Validador: F29, F30 mortos.
+  ⇒ 25 mutantes mortos, 0 vivos; F18 (contagem inventa número) sem veredito de
+  mutação, mas coberto pelo teste "sem relógio do servidor ainda: '…'".
+
+4.4 VALIDADOR INDEPENDENTE — APROVADO COM RESSALVAS
+  Confirmou por execução: 4 estados; contagem = hora do servidor (aparelho normal e
+  aparelho +2h17m: 0 s de diferença; +0,84 s face ao `agora`, RTT 488 ms); 1 card só;
+  CardLance da especial, pago em senha; não-pontua em consolidar-lances; i18n; perf.
+  Captura própria: .claude/worktrees/agent-ab397f6377251548e/_validacao-mc942/.
+  Achados e destino:
+  ⚠️1 painel: "Nenhum lance" por cima de vencedor consolidado se lances-flash falhar
+       com 200 → CORRIGIDO (on-chain manda) + teste + F29.
+  ⚠️2 POST /pontuacao (pontuacao.mjs:47) repontua a especial, e o comentário do
+       consolidar-lances mandava repontuar quando `pontuacao: null` → comentário
+       CORRIGIDO; a guarda em pontuacao.mjs/registrarPontuacaoRodada é backend do
+       MC93 (proibido) → OPERADOR.
+  ⚠️3 arte "20/setembro a 04/outubro" ao lado de "04/10 · 20:00–20:30" → OPERADOR
+       (D1: mantém-se; agora é pública).
+  •4 teste de hook podia pendurar a suíte (desmontar fora do finally) → CORRIGIDO.
+  •5 sem `agora`, o card podia abrir o formulário pelo relógio do aparelho →
+       CORRIGIDO (activa sem offset = "…") + teste + F30.
+  O Validador apanhou 2 defeitos meus (1, 5), 1 instrumento frágil (4) e 1 caminho
+  de backend (2) que eu não tinha visto.
+
+4.5 NÃO MEDIDO (L-4)
+  - Estados a_abrir / activa / encerrada em produção (só existem a 04/10) — por SSR.
+  - Nenhum lance real; leitura on-chain de resultados() não exercida.
+  - APK: isLeilaoAtivo=false no Android → CardLance em skeleton; o card só chega
+    ao APK com cap sync + build.
+  - Dev server local não corrido (functions 404 localmente).
+  - Captura mobile do Validador: células da contagem por baixo da BottomNav fixa —
+    enquadramento (scroll), não layout; a minha captura mobile do card está inteira.

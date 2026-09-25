@@ -1,0 +1,28 @@
+MC94.2 — SEG3 — INTEGRAÇÃO E DEPLOY          Skills: test-driven-development, systematic-debugging
+Data: 2026-09-25
+
+3.1 LOCAL: NÃO corrido em dev server — as functions dão 404 localmente (netlify dev partido,
+    memória do projeto), logo o card nunca apareceria. Substituído por: página inteira
+    renderizada em SSR (Dashboard.test.mjs, 8 testes) + captura de PRODUÇÃO.
+
+3.2 push cbc6d11 15:02:32Z · 3.3 deploy ready 15:04:46Z (auto-deploy, commit_ref)
+
+3.4 PRODUÇÃO (HARD GATE 7) — Chrome headless via playwright-core, sessão limpa,
+    gate LGPD aceite (4 caixas + botão), viewport 1440x900 e 390x844:
+    15:09:03Z desktop: data-estado=agendada · 'Abre em 9d 07:51:01' → 2 s depois '9d 07:50:59'
+    15:09:13Z mobile : data-estado=agendada · 'Abre em 9d 07:50:52' → '9d 07:50:50'
+    Capturas: _logs/MC94.2_captura-producao-{card,pagina}-{desktop,mobile}.png
+    Erros de consola: 401 /purge-lances e 400 /analytics — PRÉ-EXISTENTES, não deste MC.
+
+    HARD GATE 3 medido em produção (tapsite):
+      contagem vs hora do servidor: 806075 s esperados = 9d 07:54:35; ecrã 9d 07:54:36 ✔
+      offset real do aparelho: −1653 ms
+      Date.now adiantado 3 h + novo fetch: 9d 07:54:26 → 9d 07:54:23 (Δ 3 s = tempo decorrido;
+      sem offset seria Δ ≈ 10 800 s) ✔
+      ⚠️ efeito observado: entre a mudança do relógio e o fetch seguinte (≤ 60 s) o offset
+      antigo continua em vigor — a captura tirada nessa janela mostrou 10 h em vez de 7 h.
+      Num aparelho real isto só acontece se o utilizador mexer no relógio com a página aberta.
+
+3.5 NÃO-REGRESSÃO (2026-09-25T15:10:29Z):
+{"cicloId":"R-1","total":0,"ranking":[]} [application/json; charset=utf-8]
+/edicoes chaves: edicoes,agendadas,agora · agendadas: ESPECIAL-AIRFRYER

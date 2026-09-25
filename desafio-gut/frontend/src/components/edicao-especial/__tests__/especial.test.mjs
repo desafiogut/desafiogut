@@ -211,6 +211,14 @@ describe("MC94.2 · PainelVencedorEspecial (D4)", () => {
     assert.match(html, /data-estado="sem-vencedor"/);
     assert.doesNotMatch(texto(html), /Vencedor:/);
   });
+  test("consolidado com métricas a ZERO (lances-flash falhou com 200): o vencedor on-chain manda", () => {
+    const html = render(Painel, {
+      metricas: { totalLances: 0, participantes: 0 },
+      resultado: { consolidado: true, vencedor: A, menorUnicoCentavos: 42 }, nomeVencedor: null,
+    });
+    assert.match(html, /data-estado="vencedor"/);
+    assert.doesNotMatch(texto(html), /Nenhum lance/);
+  });
   test("a carregar e erro são estados próprios", () => {
     assert.match(render(Painel, { carregando: true }), /data-estado="carregando"/);
     const erro = render(Painel, { erro: "falhou", ...base });
@@ -269,6 +277,13 @@ describe("MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã", () => {
     const html = render(Card, props(aparelho, { offsetMs: -2 * 3_600_000 }));
     assert.match(html, /data-estado="agendada"/);
     assert.match(texto(html), /01 horas/);
+  });
+  test("sem offset: o formulário NÃO abre por um relógio de aparelho adiantado", () => {
+    lanceChamado.length = 0;
+    const html = render(Card, props(INICIO + 60_000, { offsetMs: null }));
+    assert.doesNotMatch(html, /FORMULARIO-DE-LANCE/);
+    assert.equal(lanceChamado.length, 0);
+    assert.match(html, /data-estado="sincronizando"/);
   });
   test("sem offset ainda: '…' em vez de uma contagem pelo relógio do aparelho", () => {
     const html = render(Card, props(INICIO - 3_600_000, { offsetMs: null }));

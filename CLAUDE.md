@@ -1317,3 +1317,59 @@ suíte com `Date.now` deslocado para depois da data.
 
 Data-alvo e fim (enunciado) · **D1** `tipo = programado` (1 senha por lance) ·
 **D2** guarda de janela em `lance-relampago.mjs` autorizada neste MC.
+
+---
+
+## MC94.2 — Edição especial Air Fryer no Dashboard (2026-09-25)
+
+**Data:** 2026-09-25 · **Origem:** MC94.2 · **Recorrência:** MÉDIA (próximas especiais
+reutilizam o card) · **Impacto:** ALTO (UI pública + sorteio com prémio físico).
+**SEG-1: SEGUIR** (R19: AppContext +2 linhas) · **Validador: APROVADO COM RESSALVAS**
+**Logs:** `_logs/MC94.2_*` · **Relatório:** `_logs/MC94.2-RELATORIO.md` · **Spec:** §4h
+**Capturas:** `_logs/MC94.2_captura-producao-{card,pagina}-{desktop,mobile}.png`
+
+### O que existe
+
+`src/components/edicao-especial/` — card com 4 estados (agendada · a_abrir · activa ·
+encerrada), contagem na **hora do servidor** (`offset = agora − (t0+t1)/2`, por fetch),
+painel do vencedor (on-chain `resultados(id)` + `lances-flash`). `consolidar-lances`
+**não pontua** `ESPECIAL-*` (`pontua:false`).
+
+### ⛔ "Dar lance" NÃO pode ir para o /mercado
+
+O `/mercado` monta o `CardLance` com `EDICAO_ATIVA = "R-1"` **fixo** — um link levaria
+o lance para a edição errada. O card monta o `CardLance` com o id da especial e
+`tipoLeilao="programado"`, em `lazy` (o /mercado já é lazy; eager poria o form no
+chunk do primeiro ecrã). Sem `handleLanceSucesso` (acrescentaria à tabela da R-1).
+
+### ⚠️ Excepção declarada à fonte única do MC88.43
+
+Com `EM_BREVE_MODE = true`, `getEstadoEdicao` diz "em breve" a tudo; a especial usa
+`estadoEspecial()` própria. A R-1 ao lado continua "EM BREVE" — é o pedido.
+
+### ⛔ Por decidir pelo operador
+
+1. **`POST /pontuacao` repontua a especial** — a guarda só existe no consolidar-lances;
+   pô-la em `registrarPontuacaoRodada` é backend do MC93. Até lá: **nunca** repontuar
+   uma edição cuja consolidação respondeu `pontua:false`.
+2. A arte ("20/set a 04/out") agora é **pública** ao lado de "20:00–20:30".
+3. Especial sem lance único → consolidar-lances dá 422 e o painel fica em
+   "apuração em curso" para sempre.
+
+### Lições de método (recorrência ALTA)
+
+- **Um teste com ramo "ou isto ou aquilo" pode nunca executar a asserção que importa.**
+  O teste do formulário aceitava "duplo OU fallback do Suspense" e, medido, corria
+  SEMPRE o fallback. Correcção: re-renderizar depois de o `lazy` resolver e exigir.
+- **Duplo de contexto com forma diferente do real parte em sítios longe do teste**
+  (`useAppTimer` devolvia chaves que o real não tem → EdicaoCard partia).
+- **Captura de ecrã depois de mexer no relógio mostra o offset velho** (≤ 60 s):
+  recapturar num documento novo antes de concluir.
+- **Um processo de mutação morto a meio deixa o mutante no disco.** Verificar os alvos
+  com grep e `git diff --stat` antes de qualquer outra coisa.
+- **Gate LGPD:** uma sessão de browser nova vê o regulamento, não o Dashboard —
+  capturas automáticas têm de aceitar as 4 caixas + "Aceito o DesafioGUT".
+
+### Decisões do operador (R18, 2026-09-25)
+D1 arte mantém-se · D2 especial não pontua · D3 cronómetro usa `agendadas` ·
+D4 encerrada = "Edição encerrada" + vencedor + métricas · D5 hora do servidor.

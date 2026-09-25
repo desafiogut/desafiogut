@@ -35,8 +35,9 @@ const ESPECIAL = {
 describe("MC94.2 · useEdicoes — agendadas e relógio do servidor", () => {
   test("expõe `agendadas` normalizadas, com inicio_em e imagem_url", async () => {
     const f = duploDeFetch(() => ({ json: { edicoes: { "R-1": R1 }, agendadas: { "ESPECIAL-AIRFRYER": ESPECIAL }, agora: new Date().toISOString() } }));
+    let c = null;
     try {
-      const c = montar(useEdicoes, []);
+      c = montar(useEdicoes, []);
       const r = await ate(c, (e) => e.edicoesStatus === "ok", "não chegou a ok");
       const a = r.agendadas["ESPECIAL-AIRFRYER"];
       assert.ok(a, "agendadas foi ignorado");
@@ -45,39 +46,38 @@ describe("MC94.2 · useEdicoes — agendadas e relógio do servidor", () => {
       assert.equal(a.tipo, "programado");
       assert.equal(r.edicoes["R-1"].inicio_em, null, "edições sem início ficam null");
       assert.match(f.chamadas[0].url, /^\/\.netlify\/functions\/edicoes$/);
-      await c.desmontar();
-    } finally { f.restaurar(); }
+    } finally { if (c) await c.desmontar(); f.restaurar(); }
   });
 
   test("offset = hora do servidor − hora do aparelho (servidor 5 min à frente)", async () => {
     const f = duploDeFetch(() => ({ json: { edicoes: { "R-1": R1 }, agendadas: {}, agora: new Date(Date.now() + 300_000).toISOString() } }));
+    let c = null;
     try {
-      const c = montar(useEdicoes, []);
+      c = montar(useEdicoes, []);
       const r = await ate(c, (e) => e.offsetRelogioMs !== null, "offset nunca chegou");
       assert.ok(Math.abs(r.offsetRelogioMs - 300_000) < 1_000, `offset ${r.offsetRelogioMs}`);
-      await c.desmontar();
-    } finally { f.restaurar(); }
+    } finally { if (c) await c.desmontar(); f.restaurar(); }
   });
 
   test("resposta sem `agora`: offset fica null — nunca um 0 inventado", async () => {
     const f = duploDeFetch(() => ({ json: { edicoes: { "R-1": R1 } } }));
+    let c = null;
     try {
-      const c = montar(useEdicoes, []);
+      c = montar(useEdicoes, []);
       const r = await ate(c, (e) => e.edicoesStatus === "ok", "não chegou a ok");
       assert.equal(r.offsetRelogioMs, null);
       assert.deepEqual(r.agendadas, {});
-      await c.desmontar();
-    } finally { f.restaurar(); }
+    } finally { if (c) await c.desmontar(); f.restaurar(); }
   });
 
   test("index.html com 200 (SPA fallback): erro, e nenhuma agendada inventada", async () => {
     const f = duploDeFetch(() => ({ corpo: "<!doctype html><html></html>" }));
+    let c = null;
     try {
-      const c = montar(useEdicoes, []);
+      c = montar(useEdicoes, []);
       const r = await ate(c, (e) => e.edicoesStatus === "error", "não deu erro");
       assert.deepEqual(r.agendadas, {});
       assert.equal(r.offsetRelogioMs, null);
-      await c.desmontar();
-    } finally { f.restaurar(); }
+    } finally { if (c) await c.desmontar(); f.restaurar(); }
   });
 });

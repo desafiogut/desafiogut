@@ -25,3 +25,7 @@ Resultado válido: F1–F17 MORTOS (17/17). F18 sem veredito. F19–F28 NÃO COR
 (offset/agendadas do useEdicoes, Dashboard, não-pontua).
 Não relançado automaticamente (pressão de memória) — decisão do operador.
 Nota: o não-pontua (F27/F28) já tem prova de RED→GREEN no SEG2 (3 ✖ antes da guarda).
+--- correcções pós-Validador (em série, foreground) ---
+MORTO F29 métricas zero escondem vencedor
+MORTO F30 formulário abre sem offset
+--- Validador independente (worktree próprio): 6/6 MORTOS — sinal do offset, agendadas ignoradas no hook, especial em Outras Edições, offsetMs={0}, CardLance R-1, guarda por "contém". Cobre as áreas F19–F28 que a ronda interrompida não correu.

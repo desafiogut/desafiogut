@@ -50,7 +50,12 @@ export default function PainelVencedorEspecial({
     </div>
   );
 
-  if (total === 0) return moldura("sem-lances", nota(t("edicao.especial.semLances", "Nenhum lance foi dado nesta edição.")));
+  // ⚠️ O resultado ON-CHAIN manda sobre as métricas: `lances-flash` devolve
+  // `{lances: []}` com 200 quando o Blob falha, e um "nenhum lance" por cima de um
+  // vencedor consolidado seria uma mentira. Achado da validação independente.
+  if (total === 0 && !resultado?.consolidado) {
+    return moldura("sem-lances", nota(t("edicao.especial.semLances", "Nenhum lance foi dado nesta edição.")));
+  }
 
   if (!resultado?.consolidado) {
     return moldura("apuracao", <>

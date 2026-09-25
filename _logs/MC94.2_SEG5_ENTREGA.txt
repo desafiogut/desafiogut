@@ -1,0 +1,9 @@
+MC94.2 — SEG5 — ENTREGA          Skill: requesting-code-review
+Data: 2026-09-25
+5.1 Logs: SEG-1, SEG0, SEG1, SEG3_DEPLOY, SEG4_VALIDACAO, SEG4_MUTACAO, SEG5 + 4 capturas.
+5.2 CLAUDE.md §MC94.2 · 5.3 docs/TORNEIO-HABILIDADE.md §4h
+5.4 R18: D1–D5 (2026-09-25) em 3 lugares (SEG1, CLAUDE.md, relatório).
+5.5 R15: 6 correcções (4 do Validador, 2 minhas durante a execução).
+5.6 R19: não-pontua + cronómetro (ex-MC94.3) + AppContext +2 linhas + CardLance no card.
+5.7 Push→captura ≈ 3 min. Validador: 2 defeitos + 1 teste frágil + 1 caminho de backend.
+5.8 _logs/MC94.2-RELATORIO.md · 5.9 commit final.

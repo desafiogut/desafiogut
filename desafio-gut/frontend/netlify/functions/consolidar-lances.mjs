@@ -149,6 +149,9 @@ export default async (req) => {
   // mesmo `cicloId` repontua a edição (é idempotente por ciclo+endereço).
   // A resposta devolve `pontuacao: null` precisamente para que a coordenação
   // veja que há uma edição por repontuar.
+  // ⛔ EXCEPTO com `pontua: false` (edição ESPECIAL-*, MC94.2): aí o null é
+  // de propósito e NÃO se repontua — `POST /pontuacao` não tem esta guarda
+  // (backend do MC93, fora do MC94.2) e meteria a especial no torneio.
   // (Uma versão anterior deste comentário afirmava que a edição ficava por
   //  marcar e que a repetição resolvia. Era falso — o catch impede-o.)
   //
