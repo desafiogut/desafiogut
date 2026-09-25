@@ -1186,6 +1186,23 @@ caracteres de controlo.
 **Invariante novo:** `_tests/mc9441-fonte-texto.test.mjs` varre **todos** os `.mjs` e falha
 se algum tiver controlo cru. Um caso corrigido sem invariante é um caso que volta.
 
+### ⚠️ Duas armadilhas de ambiente (achadas pela validação independente do MC94.4.1)
+
+1. **Flaky pré-existente**: `src/hooks/__tests__/hooks-torneio.test.mjs:231` («um pedido novo
+   limpa o erro do anterior») falha por corrida de `setTimeout` (~1 em N execuções). É
+   **byte-idêntico a `f4481d6`** — não é regressão de nenhum MC recente. **Vale corrigir:**
+   um flaky a viver num ficheiro de *guarda* mascara regressões reais (obriga a re-medir
+   tudo, e a segunda medição pode esconder as que existem).
+2. **`@nomicfoundation/edr` está FORA do `package-lock.json`** ⇒ os **6 skips** das suítes
+   backend dependem de instalação manual/prévia. Num CI limpo, esses testes saltam — o CI
+   «funciona por acidente». Documentar/achar o lock antes de confiar no verde do CI.
+
+3. **Nunca `rm -rf` num directório com junctions.** Um worktree com `node_modules` por
+   junction: `rm -rf` **segue o link e apaga o alvo** (o `node_modules` do repo principal,
+   >20 000 ficheiros). Medir `st_file_attributes & REPARSE_POINT` antes; remover o link com
+   `os.rmdir` / `RemoveDirectory` (que apaga **só** o link) e verificar a contagem do alvo
+   antes e depois. `git worktree remove --force` falha com `Filename too long` nestes casos.
+
 ### Regra que sai daqui
 
 > **Quando um comportamento é escolhido por um CAMPO DE DADOS, procure-se o campo antes de
