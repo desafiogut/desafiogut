@@ -15,6 +15,10 @@ import {
   checkGeoAnomaly,
 } from "../lib/sentry-alerts.js";
 import { getVisitorId, getCachedVisitorId } from "../lib/fingerprint.js";
+// MC94.3.2 — política de tentativas da sessão (bug de login). Ver o ficheiro
+// para o porquê: uma falha transitória do /auth-user deixava o utilizador
+// autenticado no Privy e SEM sessão, sem qualquer tentativa de recuperação.
+import { atrasoDaTentativaAuth, deveTentarAuth, MAX_TENTATIVAS_AUTH } from "../lib/retryAuth.js";
 import { useEdicoes } from "../hooks/useEdicoes.js";
 import {
   trackPageview,
@@ -913,14 +917,36 @@ export function AppProvider({ children }) {
     }
   }, [address, privyWallet, visitorId]);
 
+  // MC94.3.2 — BUG DE LOGIN (uma das causas provadas por leitura): este efeito
+  // só chamava `obterAuthToken()` UMA vez. Numa falha o `authToken` fica `null` e
+  // o efeito não volta a correr (as dependências não mudaram), logo NÃO havia
+  // segunda tentativa: uma falha transitória do /auth-user — rede, 429, 500,
+  // CORS, cold start da function — deixava o utilizador autenticado no Privy e
+  // sem sessão, para sempre. Passa a haver tentativas LIMITADAS com recuo
+  // exponencial; ao esgotá-las, avisa-se em vez de ficar em silêncio.
+  const [tentativaAuth, setTentativaAuth] = useState(0);
+
   useEffect(() => {
     if (!address) {
       setAuthToken(null);
       try { sessionStorage.removeItem("gut_auth_user"); } catch {}
+      setTentativaAuth(0);
       return;
     }
-    if (!authToken) obterAuthToken();
-  }, [address, authToken, obterAuthToken]);
+    if (!deveTentarAuth({ address, authToken, tentativa: tentativaAuth })) {
+      if (!authToken && tentativaAuth >= MAX_TENTATIVAS_AUTH) {
+        console.warn("[GUT-DEBUG] sessão não obtida após", MAX_TENTATIVAS_AUTH,
+          "tentativas — o utilizador fica sem sessão até recarregar a página");
+      }
+      return;
+    }
+    let morto = false;
+    const id = setTimeout(async () => {
+      const token = await obterAuthToken();
+      if (!morto && !token) setTentativaAuth((n) => n + 1);
+    }, atrasoDaTentativaAuth(tentativaAuth));
+    return () => { morto = true; clearTimeout(id); };
+  }, [address, authToken, obterAuthToken, tentativaAuth]);
 
   // ── Saldo R$ off-chain: polling 5s (gated em authToken para anti-IDOR) ──
   const refetchSaldoRs = useCallback(async () => {

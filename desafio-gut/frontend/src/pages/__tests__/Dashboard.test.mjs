@@ -15,7 +15,7 @@
 //   • sem especial  -> o slot mostra a R-1 de sempre ("🎯 Edição Ativa")
 //   • com especial  -> o slot é preenchido pela especial (marca `data-slot`),
 //                      o cabeçalho da R-1 DESAPARECE, e o ícone de presente
-//                      cresce para 96 px (R18: "maior só na especial")
+//                      usa o TAMANHO PADRÃO do ícone, igual às outras edições (MC94.3.2)
 //   • a especial continua a NÃO aparecer em "Outras Edições"
 //
 // ⚠️ Em SSR o `useEffect` não corre, logo o relógio de 1 s do card não avança:
@@ -119,11 +119,18 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     assert.ok(iRapido > iEsp, "a especial ficou depois do Acesso Rápido");
   });
 
-  test("o ícone de presente cresce para 96 px SÓ na especial (R18)", () => {
+  test("MC94.3.2 — o ícone da especial é IGUAL ao padrão das outras edições (não maior)", () => {
+    // Medido no SEG-1: o padrão é 52 px (default do EdicaoBanner e o que a R-1 usa).
+    // O MC94.3.1 tinha-o subido a 96 px SÓ na especial; o operador corrigiu: a
+    // especial tem de ficar IGUAL, não maior. Este teste exige a IGUALDADE — não
+    // um literal — para que uma futura alteração do padrão não volte a divergir.
     const comEspecial = renderizar({ agendadas: { "ESPECIAL-AIRFRYER": especial(Date.now() + 5 * H) } });
-    assert.equal(ladoDoBanner(comEspecial), "96", "o banner da especial não ficou a 96 px");
     const semEspecial = renderizar();
-    assert.equal(ladoDoBanner(semEspecial), "52", "a R-1 mudou de tamanho de banner");
+    const ladoEspecial = ladoDoBanner(comEspecial);
+    const ladoR1 = ladoDoBanner(semEspecial);
+    assert.ok(ladoEspecial, "não medi o ícone da especial");
+    assert.equal(ladoEspecial, ladoR1, `a especial (${ladoEspecial}px) difere do padrão da R-1 (${ladoR1}px)`);
+    assert.equal(ladoEspecial, "52", "o padrão medido no SEG-1 é 52 px");
   });
 
   test("sem especial: nenhuma marca de slot, e a página é a de sempre", () => {

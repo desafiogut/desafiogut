@@ -120,7 +120,7 @@ export default {
   "edicao.especial.altArte": "Arte da edição especial",
   "edicao.especial.premioEmDisputa": "Prêmio em disputa",
   "edicao.especial.brasilia": "(horário de Brasília)",
-  "edicao.especial.regra": "Vence o menor lance único · cada lance usa 1 senha",
+  "edicao.especial.regra": "Rodada programada · vence o menor lance único · cada lance usa 1 senha (R$ 2,00)",
   "edicao.especial.badgeEmBreve": "🕒 Em breve",
   "edicao.especial.badgeAbrindo": "⏳ Abrindo",
   "edicao.especial.badgeAberta": "🟢 Aberta",

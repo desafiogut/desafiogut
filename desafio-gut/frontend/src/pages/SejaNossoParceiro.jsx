@@ -17,7 +17,7 @@ import { Button, Input } from "@/components/ui";
 
 const COR = {
   text: "#e8f0fe", muted: "#6b7db8", primary: "#f5a623",
-  bg: "rgba(13,18,53,0.25)", bgSoft: "rgba(245,166,35,0.07)",
+  bgSoft: "rgba(245,166,35,0.07)",
   teal: "#00d4aa", success: "#10b981",
 };
 
@@ -298,12 +298,15 @@ export default function SejaNossoParceiro() {
 
   const wrap = { padding: "1rem 0", maxWidth: "1200px", margin: "0 auto" };
   const wrapClass = "px-4 md:px-8";
+  // MC94.3.2 — o operador reportou áreas transparentes nesta página. O `card`
+  // local usava COR.bg = rgba(13,18,53,0.25) (a opacidade ANTIGA do vidro, de
+  // antes do MC82.1) e reintroduzia `backdrop-filter: blur(16px)` — exactamente
+  // a combinação que o MC82.1 mediu como o custo DOMINANTE de render e tirou do
+  // padrão. Passa a ser SÓ layout: o vidro vem da classe .gut-glass-standard,
+  // aplicada em cada secção (a mesma superfície do resto da app).
   const card = {
-    background: COR.bg,
-    border: "1px solid rgba(245,166,35,0.18)",
     borderRadius: "16px",
     padding: isMobile ? "1.25rem" : "1.5rem",
-    backdropFilter: "blur(16px)",
   };
   // MC24 — selectStyle preservado para <select> (não migrado para Input componente).
   const selectStyle = {
@@ -432,6 +435,7 @@ export default function SejaNossoParceiro() {
             background: "rgba(0,212,170,0.06)",
             maxWidth: "460px",
           }}
+          className="gut-glass-standard"
           aria-label="Confirmação por código"
         >
           <h2 style={{
@@ -497,12 +501,12 @@ export default function SejaNossoParceiro() {
             return (
               <Button
                 key={t.id}
-                variant={ativo ? "primary" : "ghost"}
+                variant={ativo ? "primary" : "secondary"}
                 size="md"
                 role="tab"
                 aria-selected={ativo}
                 onClick={() => setAba(t.id)}
-                className={ativo ? "flex-1 font-['Orbitron'] tracking-[0.02em]" : "flex-1 !border-[#f5a623]/30 !text-[#6b7db8] font-['Orbitron'] tracking-[0.02em]"}
+                className="flex-1 font-['Orbitron'] tracking-[0.02em]"
               >
                 {t.rotulo}
               </Button>
@@ -514,6 +518,7 @@ export default function SejaNossoParceiro() {
       {/* ── FORMULÁRIO DE CADASTRO ── MC12.3: visível SEM login prévio. */}
       {!otpAberto && tipoUsuario !== "corporativo" && aba === "novo" && (
         <motion.section
+          className="gut-glass-standard"
           id="form-corporativo"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -633,6 +638,7 @@ export default function SejaNossoParceiro() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
           style={{ ...card, marginBottom: isMobile ? "2rem" : "3rem" }}
+          className="gut-glass-standard"
           aria-label="Login de Parceiro"
         >
           <h2 style={{

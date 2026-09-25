@@ -19,7 +19,13 @@ import ImageModal from "./ImageModal.jsx";
 // MC94.3.1 — `alt` opcional: quem sabe o que a imagem MOSTRA (a especial, que
 // conhece o produto) pode dizê-lo; sem `alt`, o genérico de sempre. Aditivo:
 // nenhum chamador existente muda de comportamento.
-export default function EdicaoBanner({ edicao, size = 52, radius = 8, clicavel = true, className = "", alt }) {
+// MC94.3.2 — o TAMANHO PADRAO do icone quadrado, numa constante so. O operador
+// mediu que a especial estava maior que as outras edicoes: o objetivo passou a ser
+// a especial ficar IGUAL ao padrao. Com um valor unico, "igual" deixa de ser uma
+// coincidencia entre literais espalhados e passa a ser estrutural (e testavel).
+export const TAMANHO_BANNER_PADRAO = 52;
+
+export default function EdicaoBanner({ edicao, size = TAMANHO_BANNER_PADRAO, radius = 8, clicavel = true, className = "", alt }) {
   const [aberto, setAberto] = useState(false);
   const id = edicao?.id;
   const imagem = edicao?.imagem_url || edicao?.banner_url || edicao?.imagem || null;

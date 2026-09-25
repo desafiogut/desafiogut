@@ -7,7 +7,7 @@
 // componente deixou de ser uma <section> e passou a ser o corpo que o Dashboard
 // monta lá dentro, no lugar do conteúdo da R-1:
 //
-//   caixa amarela (a mesma da R-1): EdicaoBanner a ~96 px SÓ na especial
+//   caixa amarela (a MESMA da R-1, ícone de presente no TAMANHO PADRÃO — MC94.3.2)
 //   ↓
 //   GUTO (o mesmo componente do Dashboard) + o cronómetro/informações ao lado
 //   ↓
@@ -30,7 +30,7 @@
 // da R-1 quando este componente ocupa o slot.
 
 import { useEffect, useState } from "react";
-import EdicaoBanner from "../EdicaoBanner.jsx";
+import EdicaoBanner, { TAMANHO_BANNER_PADRAO } from "../EdicaoBanner.jsx";
 import GutoSpritePlayer from "../GutoSpritePlayer.jsx";
 import ContagemDecrescente from "./ContagemDecrescente.jsx";
 import PainelVencedorEspecial from "./PainelVencedorEspecial.jsx";
@@ -39,8 +39,6 @@ import {
   COR, T_PADRAO, ESTADO_ESPECIAL, estadoEspecial, alvoDaContagem, janelaEmBrasilia,
 } from "./_estilo-especial.js";
 
-/** Tamanho do ícone de presente na especial (R18: "maior só na especial"). */
-export const BANNER_ESPECIAL_PX = 96;
 
 /**
  * Hora do SERVIDOR, a avançar de segundo a segundo — só dentro deste card.
@@ -75,14 +73,14 @@ const BADGE = {
 
 // A caixa amarela translúcida — a MESMA da R-1 (Dashboard.jsx). Não se inventa
 // um segundo estilo: a especial tem de parecer parte do slot, não um anexo.
-const CAIXA = {
+const caixa = (isMobile) => ({
   display: "flex", alignItems: "center", gap: "0.65rem",
   padding: "0.6rem 0.75rem",
   background: "rgba(245,166,35,0.07)",
   border: "1px solid rgba(245,166,35,0.22)",
   borderRadius: "10px",
-  marginBottom: "0.75rem",
-};
+  marginBottom: isMobile ? "0.6rem" : "0.75rem",
+});
 
 const ROTULO = {
   fontSize: "0.58rem", color: COR.muted, textTransform: "uppercase",
@@ -104,7 +102,7 @@ const ROTULO = {
  */
 export default function CardEdicaoEspecial({
   edicao, offsetMs, renderLance, isMobile = false, t = T_PADRAO, agoraMs,
-  resultadoEspecial, size = BANNER_ESPECIAL_PX,
+  resultadoEspecial, size = TAMANHO_BANNER_PADRAO,
 }) {
   const agora = useAgoraServidor(offsetMs, agoraMs);
   const estado = estadoEspecial(edicao, agora);
@@ -171,8 +169,8 @@ export default function CardEdicaoEspecial({
         }}>{t(badge.chave, badge.texto)}</span>
       </div>
 
-      {/* A caixa amarela do slot: ícone de presente a 96 px + prémio e janela. */}
-      <div style={CAIXA}>
+      {/* A caixa amarela do slot: ícone no tamanho PADRÃO + prémio e janela. */}
+      <div style={caixa(isMobile)}>
         <EdicaoBanner edicao={edicao} size={size} alt={altArte} />
 
         <div style={{ minWidth: 0 }}>
@@ -186,7 +184,7 @@ export default function CardEdicaoEspecial({
             </div>
           )}
           <div style={{ fontSize: "0.66rem", color: COR.muted, lineHeight: 1.3 }}>
-            {t("edicao.especial.regra", "Vence o menor lance único · cada lance usa 1 senha")}
+            {t("edicao.especial.regra", "Rodada programada · vence o menor lance único · cada lance usa 1 senha (R$ 2,00)")}
           </div>
         </div>
       </div>

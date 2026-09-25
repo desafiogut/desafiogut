@@ -9,7 +9,7 @@ import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
 import CarrosselGUTO from "../components/CarrosselGUTO.jsx";
 import StatTile from "../components/StatTile.jsx";
 import EdicaoCard from "../components/EdicaoCard.jsx";
-import EdicaoBanner from "../components/EdicaoBanner.jsx";
+import EdicaoBanner, { TAMANHO_BANNER_PADRAO } from "../components/EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
 // MC88.43 — fonte única do estado da edição. Antes o cronómetro obedecia à trava
 // EM_BREVE_MODE e o resto do card obedecia ao `encerrado`, e o título da secção
@@ -262,7 +262,7 @@ export default function Dashboard() {
             especial, é ELA que o preenche (adendo do operador, 2026-09-25: a
             especial sai da secção própria do MC94.2 e entra no slot existente);
             sem especial, o slot mostra a R-1 de sempre. O ícone de presente do
-            slot cresce para ~96 px só na especial (R18: "maior só na especial"). */}
+            slot usa o TAMANHO PADRÃO do ícone, igual às outras edições (MC94.3.2). */}
         <GlassCard className={cardCls}>
           {edicaoEspecial ? (
             <CardEdicaoEspecial
@@ -312,7 +312,7 @@ export default function Dashboard() {
             marginBottom: isMobile ? "0.6rem" : "0.75rem",
           }}>
             {/* MC45 — banner QUADRADO clicável da edição ativa (antes: 🎁 estático). */}
-            <EdicaoBanner edicao={edicaoAtiva} size={52} />
+            <EdicaoBanner edicao={edicaoAtiva} size={TAMANHO_BANNER_PADRAO} />
 
             <div>
               <div style={{ fontSize: "0.58rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: "700", marginBottom: "0.15rem" }}>

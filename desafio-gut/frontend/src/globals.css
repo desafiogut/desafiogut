@@ -413,9 +413,20 @@ img, svg { display: block; }
 .gut-glass-standard.gut-glass--interactive {
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
-.gut-glass-standard.gut-glass--interactive:hover {
-  background: rgba(13,18,53,0.35);
-  border-color: rgba(255,255,255,0.18);
+/* MC94.3.2 — BUG MEDIDO: o hover punha o fundo a rgba(13,18,53,0.35), escrito no
+   MC25.3 quando a base era 0.25 (portanto MAIS opaco). O MC82.1 subiu a base para
+   0.88 e nao tocou nesta regra — desde entao o hover TORNAVA A SUPERFICIE ~2,5x MAIS
+   TRANSPARENTE. Num ecra tactil o `:hover` fica "colado" depois de um toque, e ao
+   rolar o KPI (ex.: "Total de Lances") aparecia transparente por momentos.
+   Correcao em duas partes:
+     (1) o hover eleva a superficie em vez de a esvaziar;
+     (2) o hover so existe onde HA hover real — num ecra tactil nao ha, e deixar de
+         o aplicar elimina a causa (o estado colado), nao so o sintoma. */
+@media (hover: hover) and (pointer: fine) {
+  .gut-glass-standard.gut-glass--interactive:hover {
+    background: rgba(13,18,53,0.95);
+    border-color: rgba(255,255,255,0.18);
+  }
 }
 .gut-glass-standard.gut-glass--interactive:active {
   transform: scale(0.98);
