@@ -1118,3 +1118,115 @@ assimetria dentro.
 3. ⛔ **`if: always()` no guarda da EVM** + a asserção que falta (A-2).
 4. `npm audit`: 10 high pré-existentes. `test_limiteMaxLancesUnicos()` do Foundry
    (herdado do MC93-F). Chave Alchemy por rotacionar (operador, R5).
+---
+
+## MC94 — O torneio dentro de "Meus Ativos" (2026-09-25)
+
+**Entregue:** 5 secções + 2 hooks + 2 arneses de teste, tudo **numa só tela**.
+Zero rotas novas, zero páginas novas, navegação intacta.
+****101 testes · 101 verdes · 0 saltados** · mutação **39/39 mortos**** · build verde · `eslint` sem erros.
+**Logs:** `_logs/MC94_*` · **Spec:** `docs/TORNEIO-HABILIDADE.md` §4f ·
+**Relatório:** `_logs/MC94-RELATORIO.md`
+⚠️ **Validação independente: REPROVADO à primeira ronda.** Os números e afirmações
+válidos são os desta entrada.
+
+### ⛔ Um ecrã que afirma factos sobre quem não identificou
+
+Visível em **produção**, na captura de `e3d8791`: um utilizador **anónimo** lia
+`0 / 5 acertos seguidos · Faltam 5 acertos` e `Nenhum bónus conquistado neste
+ciclo`, enquanto o painel ao lado dizia correctamente "Entre na sua conta". Uma
+falha de rede dava exactamente o mesmo texto.
+
+**Causa:** escrevi os quatro estados (sem sessão · erro · a carregar · dados) no
+`PainelTorneio` e **não os levei às outras duas secções**. Um zero inventado é pior
+do que um aviso, porque o utilizador acredita nele.
+
+**Regra:** toda a secção que mostra dados de uma pessoa tem de saber dizer *"não sei
+quem és"*, *"não consegui ler"* e *"estou a ler"* — não só *"aqui está"*. O estado
+marca-se no markup (`data-estado`), para a página poder provar que ele lá chega.
+
+### ⛔ `Number(null) === 0` chegou ao ecrã (a armadilha do MC93-A, repetida por mim)
+
+Um lance com `valor: null` aparecia como **`R$ 0,00 · menor único seu · vale 3
+pontos`** — e há caminho real: `_lib/data-store-supabase.mjs` grava
+`valor_centavos = null` **de propósito**. Do outro lado, `senhasACreditar: Infinity`
+renderizava **"Infinity senhas"** (`Number(x) || 0` deixa passar).
+`_estilo.js` tem agora `valorUtilizavel` / `reais` / `inteiroSeguro`, **sem coerção**.
+
+### ⛔ O `index.html` com status 200 passava por resposta válida
+
+`netlify.toml:34` reescreve `/*` → `/index.html` com **200**; o `apiGet` devolve
+`{ok:true, data:null}` e os dois hooks mostravam "ainda não há pontuações" **com o
+backend em baixo**. A regra já estava registada no MC93-F (validar o **corpo**, não
+o código HTTP) — faltava aplicá-la aqui. Hoje: `!ok || !corpoEhJson(data)` → erro.
+
+### ⚠️ Duas secções a contradizerem-se na mesma página
+
+`ProgressoBonus` declarava "Bónus conquistado!" a partir de uma conta **local**
+(`faltam === 0`) enquanto `EstadoBonus`, a ler `bonusEmitido` do livro-razão, dizia
+"Nenhum bónus conquistado neste ciclo". Só o backend o pode afirmar — a concessão
+tem o cadeado de três condições do MC93-C e custa senhas reais.
+
+### ⚠️ Aplicar a correcção a metade dos sítios
+
+`totalReal` (reconciliar `total` com o tamanho da lista) foi aplicado só ao ramo
+"a mostrar os N primeiros de M". O ramo `else` — **o caso comum**, menos de 10
+participantes — continuava a escrever `total` cru: **"0 participantes."** por baixo
+de 4 linhas. Mesmo padrão do `if: always()` do MC93-E.
+
+### Como se testa React neste projeto (não há runner, e não se instala um)
+
+Medido: `jsdom` · `linkedom` · `happy-dom` · `react-test-renderer` ·
+`@testing-library/react` → **todos ausentes**. E instalar um cai no ciclo do MC93-G
+(`npm install --legacy-peer-deps` reverte o lockfile em silêncio).
+
+| instrumento | o que faz | limite |
+|---|---|---|
+| `_render.mjs` | `vite` transpila o JSX + `react-dom/server` renderiza | `useEffect` **não corre** |
+| `_hook-runner.mjs` | despachante próprio em `ReactCurrentDispatcher`; o hook corre a sério | a comparação de **deps** é minha, não do React |
+
+> ⚠️ Por isso a suíte de hooks abre com **quatro controlos positivos** (deps `[]`,
+> deps certas, efeito sem limpeza, `AbortSignal` honrado). Se um passar, o
+> instrumento é cego. *Sonda precisa de controlo positivo.*
+
+> ⚠️ **O duplo é de `fetch`, nunca de `apiGet`.** Deixar o `apiGet` real correr foi
+> o que expôs o defeito do `index.html` com 200. Um duplo de `apiGet` tê-lo-ia
+> escondido — a 4.ª vez que este projeto encontra a mesma família de defeito.
+
+### ⚠️ Um duplo que ignora os argumentos torna a CABLAGEM invisível
+
+O duplo dos hooks devolvia os dados combinados aconteça o que acontecesse. Uma
+página que se esquecesse de ligar `address` ou `authToken` passava **todos** os
+testes: o componente correcto, ligado a `undefined`, renderiza "sem dados" e fica
+verde. Hoje o duplo **regista os argumentos**, e há testes que exigem que `erro`,
+`carregando`, `semSessao` e `address` cheguem a cada secção.
+
+### ⛔ ERRATA minha: a "colisão" entre servidores Vite em paralelo não existe
+
+`_render.mjs` afirmava `# fail 2` por colisão. **Falso** — 91/91 verdes, 3 corridas
+de 3, sem `--test-concurrency=1`. A causa real do `# fail 2` era a heap estourada
+pelo `BotaoLoginPrincipal` (2,68 MB de Privy) sem duplo. Diagnosticado de **uma**
+observação, como no MC93-E com a cache do ethers.
+
+### ⛔ E repeti a lição do MC93-C sobre validações em paralelo
+
+Lancei uma segunda ronda de mutação julgando a primeira morta — a saída estava
+vazia por **tamponamento do Python**, não por fim de processo. As duas mutaram a
+mesma árvore e o controlo negativo falhou com um mutante da outra aplicado.
+**`wc -c` a zero não significa processo morto.** Confirmar com a lista de processos.
+
+### Não entregue, e porquê
+
+`EvolucaoPontos`: medido via MCP — `pontuacoes` tem **0 linhas** e **0 ciclos
+distintos** em produção. Não há série temporal para desenhar.
+
+### Achado registado para o MC97 (copy)
+
+A tela existente mostra **`R$ 1.00`** (`.toFixed(2)` sem troca de separador); as
+secções novas mostram `R$ 1,00`. **Não corrigido** — HARD GATE 5 proíbe alterar o
+existente neste MC.
+
+### Pendências herdadas (nenhuma nasce aqui)
+
+`.gitattributes`/CRLF · um modo de instalação só · `if: always()` no guarda da EVM ·
+chave Alchemy por rotacionar (operador, R5) · versão do Foundry por fixar.

@@ -1,0 +1,225 @@
+================================================================================
+MC94 — SEG-1 · QUESTIONAMENTO DO BRIEFING (HARD GATE)
+DesafioGUT · 2026-09-25 · base 244ca62 (MC93-G)
+Skills ECC: smart-explore, brainstorming, ux-waiting-audit
+HARD GATE 2 herdado dos MC93-D/E/F/G: toda afirmação sobre o código é MEDIDA.
+================================================================================
+
+VEREDITO: **AJUSTAR**
+R19: ATIVADA — com REDUÇÃO de escopo declarada, não ampliação. Ver §-1.2.
+
+--------------------------------------------------------------------------------
+RESUMO EM SEIS LINHAS
+--------------------------------------------------------------------------------
+1. ⛔ **O frontend NÃO TEM runner de testes.** Zero vitest/jest/Testing
+   Library/jsdom, nenhum script `test`, e **zero ficheiros `.test.jsx` em todo o
+   `src/`**. O HARD GATE 3 não é satisfazível como escrito.
+2. ✅ **Mas há caminho sem instalar nada**, e está MEDIDO: a API programática do
+   Vite transpila o JSX e o `react-dom/server` renderiza. 915 ms a quente.
+3. ⚠️ **As respostas dos endpoints NÃO têm campo `ok`.** O `{ok,…}` do enunciado é
+   a forma do helper `apiGet`, não do endpoint. Um hook escrito à letra parte.
+4. ⚠️ **`MeusAtivos.jsx` não usa i18n** (0 ocorrências) — e só 2 ficheiros no
+   `src/` inteiro usam. Existe `useT()` com fallback por chave.
+5. ⛔ **Dois dos seis componentes não têm fonte de dados.** `EvolucaoPontos` não
+   tem série (0 linhas em `pontuacoes`) e `FeedbackLance` não tem pontos por lance
+   (nenhum endpoint os devolve).
+6. ✅ **HARD GATE 4 é alcançável**: `/ativos` NÃO é rota protegida e renderiza sem
+   login. Passei o gate de consentimento e li a tela em produção.
+
+================================================================================
+-1.1 — MEDIÇÕES
+================================================================================
+
+[M1] Base: 244ca62 · árvore limpa (3 não rastreados pré-existentes, alheios).
+
+[M2] ⛔ **RUNNER DE TESTES — NÃO EXISTE**
+     scripts do frontend: dev · build · preview · build:rag · validar:dist ·
+                          lint · build:apk    — **NENHUM `test`**
+       ⛔ vitest · ⛔ jest · ⛔ @testing-library/react · ⛔ @testing-library/jest-dom
+       ⛔ jsdom · ⛔ happy-dom · ⛔ global-jsdom
+       ✅ @vitejs/plugin-react ^6.0.1
+[M4] E **zero** ficheiros `*.test.jsx` / `*.test.js` / `__tests__/` em `src/`.
+     ⇒ Confirma o que o projeto já registara ("Frontend sem runner de React").
+     ⇒ O HARD GATE 3 pede "Testing Library ou equivalente". Não há nem um nem o
+       outro. Instalá-los exigiria mexer no `frontend/package.json` — que este MC
+       NÃO autoriza — e no lockfile, que o MC93-G acabou de provar ser revertido em
+       silêncio por `npm install --legacy-peer-deps` (o comando do `netlify.toml`).
+
+[M5] O QUE JÁ ESTÁ INSTALADO E SERVE:
+       ✅ react 18.3.1 · ✅ react-dom 18.3.1 · ✅ **react-dom/server**
+       ✅ vite 8.1.0 · ✅ rolldown       ⛔ esbuild (não resolve)
+[M7] O node NÃO importa `.jsx` directamente ("Unknown file extension .jsx").
+
+[M8][M9] ✅ **O EQUIVALENTE, MEDIDO POR EXECUÇÃO:**
+     `createServer({middlewareMode})` + `vite.ssrLoadModule("/src/…/X.jsx")`
+     + `renderToStaticMarkup(React.createElement(X, props))`
+       primeira corrida (optimização de deps a frio) : 33 385 ms
+       **a quente: arranque 501 ms + 2 módulos 402 ms = 915 ms TOTAL**
+     Prova com um componente de controlo:
+       props {pontos:7, posicao:3} -> `<span>3º</span><strong>7 pontos</strong>`
+       props {}                    -> `<p>sem dados</p>`
+     ⇒ É renderização REAL: executa o componente, as props e os ramos
+       condicionais. NÃO é regex sobre o texto — que é exactamente o que o HARD
+       GATE 3 proíbe.
+     ⚠️ LIMITE, declarado: em SSR o `useEffect` não corre. Logo os componentes têm
+       de receber os dados por PROPS (apresentacionais) e os hooks são testados à
+       parte. É boa arquitectura de qualquer modo, mas é uma restrição imposta pelo
+       instrumento e não uma escolha estética.
+     ⚠️ E os ficheiros de teste têm de ser `.test.mjs`, não `.test.jsx`: nenhum
+       runner presente sabe executar JSX num ficheiro de teste. Os COMPONENTES
+       continuam `.jsx`.
+
+[M10] A TELA: `src/pages/MeusAtivos.jsx`, 273 linhas.
+     imports: useState · useAppContext · useIsMobile · GlassCard · BotaoLoginPrincipal
+     contexto: `{ lances, address, isConnected, abrirModal, EDICAO_ATIVA }`
+     internos: `MobileList` (160) · `DesktopTable` (223)
+     secções actuais (que NÃO podem regredir — HARD GATE 5):
+       "📊 Meus Ativos" · "Histórico de lances e posições da edição"
+       Total de Lances · Lances Únicos · Lances Repetidos · Menor Lance
+       filtros Todos / ✅ Únicos / ❌ Repetidos · lista/tabela de lances
+
+[M11] ⚠️ **A TELA NÃO USA i18n**: 0 ocorrências de `i18n`/`useTranslation`.
+     No `src/` inteiro, só **2** ficheiros usam: `App.jsx` e `IdiomaContext.jsx`.
+     Os 3 dicionários existem e são pequenos (pt 2469 B · en 2084 B · es 2210 B).
+[M18] MAS existe hook: `useT()` -> `t(key, fallback)`, com chaves **PLANAS**
+     (`dict[key]`) e cascata `lang → pt → fallback → key`.
+     ⇒ AJUSTE: as secções novas usam `useT()` com fallback PT em cada chamada.
+       Fica traduzível, não força refactor da tela existente, e não regride nada.
+
+[M12][M13] ⚠️ **A FORMA DAS RESPOSTAS — o enunciado está errado.**
+     Medido em produção:
+       GET /ranking?cicloId=R-1
+         -> {"cicloId":"R-1","total":0,"ranking":[]}          ← SEM `ok`
+       GET /ranking?recurso=feedback&… (sem sessão)
+         -> {"error":{"code":"sessao_invalida",…}}            ← SEM `ok`
+     Fonte autoritativa (`ranking.mjs:2-6` + `pontuacao-store.mjs`):
+       ranking   -> { cicloId, total, ranking:[{posicao, endereco, pontosTotais,
+                      acertosTotais, bonusEmitido}] }
+       feedback  -> { cicloId, endereco, pontosTotais, acertosTotais, posicao,
+                      sequenciaAtual, faltamParaBonus, bonusEmitido,
+                      senhasACreditar, liquidado }
+[M16] ⇒ **RESOLVIDO, e a explicação importa:** o `{ok,…}` do enunciado é a forma do
+     HELPER `apiGet` (`src/lib/api.js:48`), que devolve
+     `{ok, status, data, text, headers}`. O `AppContext:761` já usa
+     `const {ok, data} = await apiGet(...)`.
+     ⇒ Os hooks novos usam `apiGet` e desestruturam `{ok, data}` — não `fetch`.
+       Assim herdam o `apiOrigin` (shim do APK) de graça, e `apiOrigin.js` NÃO
+       precisa de alteração nenhuma.
+
+[M19] ⚠️ **`liquidado` EXISTE mas com uma assimetria.** O caminho com linha
+     devolve `liquidado: linha.liquidado_em !== null && !== undefined`. O default
+     `vazio` (linhas 298-300) **não inclui `liquidado`** ⇒ vem `undefined`.
+     ⇒ O componente tem de tratar `undefined` como "não liquidado", explicitamente.
+     ⚠️ E a docstring de `ranking.mjs:5-6` NÃO lista `liquidado`, apesar de o código
+       o devolver. Documentação incompleta, registada.
+
+[M21] ✅ `EDICAO_ATIVA = "R-1"` (`AppContext.jsx:48`) — é o `cicloId`.
+
+[M20][M21b] ✅ **A ROTA NÃO É PROTEGIDA**: `<Route path="/ativos"
+     element={<MeusAtivos />} />` (`App.jsx:399`), sem guarda. E a tela renderiza
+     sem `address` (`linha 30`: usa `todosLances` quando não há endereço).
+     ⇒ É por isto que o HARD GATE 4 é alcançável sem Privy.
+
+[M-visual] ✅ **VALIDAÇÃO VISUAL — INSTRUMENTO TESTADO**
+     ⛔ Os MCPs `chrome-devtools` e `claude-eyes` **falharam a ligar** nesta sessão.
+     ✅ O MCP **tapsite** está vivo e serve.
+     ⚠️ O **gate de consentimento** bloqueia tudo (4 checkboxes + botão "⚡ Aceito
+       o DesafioGUT") — medido, e **passável**: marquei os 4 e cliquei.
+     Depois do gate, `/ativos` em produção lê-se:
+       heading "📊 Meus Ativos" · "Histórico de lances e posições da edição"
+       Total de Lances · Lances Únicos · Lances Repetidos · Menor Lance
+       botões Todos / ✅ Únicos / ❌ Repetidos
+     ⇒ HARD GATE 4 é executável. A tela é capturável em produção, sem login.
+
+[M22][M23][M24] ⛔ **DOIS COMPONENTES SEM FONTE DE DADOS**
+     (a) `EvolucaoPontos.jsx` — o próprio enunciado o condiciona a "se o SEG-1
+         atestar que há dados". Medido AGORA, via MCP do Supabase:
+           pontuacoes: **0 linhas** · rankings_ciclo: **0 linhas**
+           ciclos distintos: **0**
+         ⇒ Não há série temporal para desenhar. **SAI do escopo**, medido.
+     (b) `FeedbackLance.jsx` — o enunciado pede "+1 ponto" do ÚLTIMO lance.
+         Medido: **nenhum endpoint devolve pontos por lance.** O `lerFeedback` só
+         devolve agregados por ciclo. E o objecto de lance no contexto expõe
+         `endereco`, `repetido` e `valor`.
+         ⇒ O que É derivável, das regras (`PONTOS_ACERTO_UNICO: 1`,
+           `PONTOS_MENOR_UNICO: 3`): quanto cada lance **VALE**, não quanto
+           **GANHOU**. A diferença não é semântica: a pontuação é atribuída no
+           fecho da rodada pelo backend, e produção tem 0 linhas.
+         ⇒ AJUSTE: o componente mostra "vale N pontos" com o estado do lance
+           (único / repetido / menor único), enquadrado como projecção pela regra,
+           nunca como pontos creditados. A UI não pode afirmar o que o backend não
+           atribuiu.
+
+[M-ux] ESTADOS DE ESPERA (ux-waiting-audit)
+     A tela actual **não tem estado de carregamento**: lê `lances` do contexto, que
+     já vem resolvido, e mostra "📭 Nenhum lance registrado nesta edição" quando
+     está vazio. Não há skeleton nem spinner.
+     ⇒ As secções novas fazem I/O (dois endpoints) e introduzem espera onde não
+       havia. Para não criar salto de layout, cada secção nova reserva altura e
+       mostra um estado de espera próprio — e o vazio tem de ser distinguível do
+       erro, que a tela actual não distingue.
+
+================================================================================
+-1.2 — AUTOSSUFICIÊNCIA (R19) — ATIVADA, COM REDUÇÃO
+================================================================================
+O enunciado pede 6 componentes + 2 hooks + i18n em 3 idiomas + testes + deploy +
+validação visual. **Medido, dois dos seis não têm dados** (§M22). Entregar
+`EvolucaoPontos` com uma série vazia, ou `FeedbackLance` a afirmar pontos que o
+backend não atribuiu, seria entregar fachada.
+
+⇒ A R19 manda AMPLIAR quando o MC vai gerar um `.1`. Aqui o risco é o inverso: o
+  escopo escrito é maior do que os dados sustentam. **Declaro REDUÇÃO:**
+    • `EvolucaoPontos.jsx` — **NÃO entregue.** Zero linhas em `pontuacoes`; não há
+      série. Fica para quando houver rodadas processadas.
+    • `FeedbackLance.jsx` — **entregue REDEFINIDO**: "quanto vale cada lance pela
+      regra", não "pontos ganhos". Fonte: `lances` do contexto, que a tela já tem.
+  Os outros quatro (`PainelTorneio`, `ProgressoBonus`, `EstadoBonus`,
+  `RankingCiclo`) têm fonte real e entram.
+
+⇒ E há uma ampliação técnica obrigatória, sem a qual o HARD GATE 3 fica por
+  cumprir: **criar o arnês de teste de renderização** (Vite SSR + react-dom/server)
+  como ficheiro auxiliar. Não é dependência nova; é ~30 linhas.
+
+Nada disto viola fronteira: tudo vive em `MeusAtivos.jsx`, `components/meus-ativos/`,
+`hooks/`, `i18n/` e testes. Zero rotas, zero páginas, zero navegação.
+
+================================================================================
+-1.3 — ESCOPO
+================================================================================
+ENTRA: 4 componentes + `FeedbackLance` redefinido · 2 hooks · chaves i18n PT/EN/ES
+       · arnês de render · testes por renderização real · mutação · deploy por push
+       · captura visual de produção.
+
+NÃO ENTRA, e fica declarado:
+  • `EvolucaoPontos` — sem dados (medido).
+  • Instalar runner de testes — desnecessário (há equivalente) e arriscado
+    (lockfile frágil, MC93-G A-1).
+  • `netlify deploy --prod --build` — os MC93-F/G mediram que, com auto-deploy
+    ligado, **o `git push` É o deploy**, e um `--prod` manual produz deploy **sem
+    `commit_ref`**, que foi a origem do drift dos MC79/MC89.49.
+    ⇒ AJUSTE: deploy por push. Declarado.
+  • i18n da tela EXISTENTE — só as chaves novas (a tela é PT hardcoded; converter
+    tudo é o MC97).
+  • As pendências herdadas: `.gitattributes`/CRLF (MC93-G), um só modo de npm,
+    `if: always()` no guarda da EVM, chave Alchemy, Foundry.
+
+================================================================================
+-1.4 — VEREDITO
+================================================================================
+**AJUSTAR.** Cinco ajustes, todos medidos:
+
+A1. HARD GATE 3 cumpre-se por **equivalente medido** (Vite SSR +
+    `react-dom/server`), sem dependências novas. Testes em `.test.mjs`.
+A2. Os hooks consomem `apiGet` (que fornece o `{ok,data}`), não `fetch`.
+    `apiOrigin.js` não precisa de alteração.
+A3. As secções novas usam `useT()` com fallback PT — aditivo, sem refactor.
+A4. `EvolucaoPontos` SAI (0 linhas). `FeedbackLance` é REDEFINIDO para "vale",
+    não "ganhou".
+A5. Deploy por **push**, não `--prod` manual.
+
+Nada foi alterado no repositório até aqui. Nenhuma credencial tocada.
+`BONUS_EMISSAO_ATIVA` continua ausente.
+
+================================================================================
+FIM DO SEG-1 — VEREDITO: AJUSTAR
+================================================================================

@@ -1,0 +1,120 @@
+================================================================================
+MC94 — SEG2 (execução TDD) · SEG3 (integração e deploy)
+DesafioGUT · 2026-09-25 · base 244ca62 · commit a7526e1
+Skills ECC: test-driven-development, systematic-debugging
+================================================================================
+
+============================== SEG2 — EXECUÇÃO TDD =============================
+
+2.0 — O ARNÊS, PRIMEIRO (porque sem ele o HARD GATE 3 não existe)
+     `src/components/meus-ativos/__tests__/_render.mjs` (~30 linhas, zero deps):
+       createServer({middlewareMode}) do vite  -> transpila o JSX
+       vite.ssrLoadModule("/src/…/X.jsx")      -> carrega o componente
+       renderToStaticMarkup(createElement(…))  -> renderiza sem DOM
+     + `texto(html)` que remove as etiquetas antes de afirmar, para um
+       `aria-label` não poder dizer o que o corpo não diz.
+
+2.1 — RED, e falhou pelo motivo certo
+     `node --test src/components/meus-ativos/__tests__/componentes.test.mjs`
+       -> "Failed to load url /src/components/meus-ativos/PainelTorneio.jsx"
+     Os 23 testes falharam porque os componentes não existiam — não por um
+     `expect` mal escrito.
+
+2.2 — GREEN
+     Componentes (todos apresentacionais, props e sem I/O):
+       PainelTorneio   posição · pontos · acertos · 4 estados distintos
+       ProgressoBonus  barra proporcional · "faltam N" vs "completo"
+       EstadoBonus     senhas a creditar · pendente vs liquidado
+       FeedbackLance   quanto cada lance VALE pela regra
+       RankingCiclo    top 10 · destaque do próprio · vazio ≠ erro
+       _estilo.js      paleta da tela + `reais()` + `encurtar()`
+     Hooks: `useRanking` (público) e `useFeedback` (sessão + endereço).
+     i18n: 43 chaves × 3 idiomas (92 chaves totais em cada ficheiro, a parsear).
+     Tela: inserção entre os stats e os filtros. NADA foi removido ou reordenado.
+
+     RESULTADO: **23 verdes (componentes) + 12 verdes (página) = 35, zero falhas.**
+
+2.2b — DOIS ERROS MEUS, APANHADOS PELOS PRÓPRIOS TESTES
+     (a) escrevi "contam no seu **saldo** de senhas" no texto de liquidado, e o
+         meu teste que proíbe a palavra apanhou-o. O teste está certo: uma secção
+         que usa "saldo" num estado e não no outro convida a ler os dois como a
+         mesma coisa. Reescrito para "já podem ser usadas num lance".
+     (b) o `resolve.alias` do teste da página casava só o SUFIXO
+         (`/context/AppContext.jsx`), e o Vite substituía apenas essa parte —
+         construindo `..C:/Users/…` em silêncio. Ancorado em `^…$`.
+         ⚠️ O sintoma foi **heap out of memory**, não "ficheiro não encontrado".
+
+2.2c — O DUPLO DO `BotaoLoginPrincipal`, e porquê
+     O componente real arrasta o SDK do Privy (2,68 MB, medido no MC88.36) e em
+     SSR estoura a heap do node. Substituído por um duplo que renderiza o MESMO
+     texto visível, que é o que o teste de não-regressão precisa de afirmar.
+     ⚠️ Os duplos do contexto LANÇAM se o teste se esquecer de os configurar,
+     como o original lança fora do provider — a lição dos MC93-B/C/D: um duplo
+     que aceita mais do que o original esconde o defeito que devia apanhar.
+
+2.3 — REFACTOR / QUALIDADE
+     `eslint . --ext js,jsx` -> **0 erros**, 230 avisos (todos PRÉ-EXISTENTES
+     noutros ficheiros). Nos caminhos deste MC: 1 aviso, `cardPad` em
+     `MeusAtivos.jsx`, **pré-existente** (confirmado em `git show 244ca62`) —
+     R1 manda não tocar.
+     `npm run build` -> **✓ built in 10.03s**.
+
+2.4 — MUTAÇÃO (R16): 16 mutantes, **16 MORTOS, 0 vivos**
+     M1 painel sem posição · M2 liquidado invertido · M3 `undefined` como
+     liquidado · M4 constante 20 em vez do livro-razão · M5 volta a dizer "saldo"
+     · M6 ignora `faltamParaBonus` · M7 "faltam 0" em vez de completo · M8 barra
+     sempre a 100% · M9 "ganhou" em vez de "vale" · M10 não filtra pelo próprio
+     endereço · M11 não destaca o próprio · M12 colapsa vazio e erro · M13 mostra
+     o endereço inteiro (R4) · M14 cai o limite de 10 · M15 a página não renderiza
+     o ranking · M16 secções movidas para depois do histórico (reordenação real).
+
+     ⚠️ **O MEU ARNÊS DE MUTAÇÃO TINHA UM DEFEITO, e é o 5.º desta família no
+     projeto.** A ronda A reportou M15 e M16 como VIVOS. Investiguei antes de
+     acreditar:
+       • M15 **MATA**: produz `not ok 1` + `Transform failed` e 12 testes
+         `cancelled`. Mas o meu critério de morte lia só `# fail N`, e quando o
+         módulo não compila o node põe 0 em `# fail` e conta em `# cancelled`.
+         ⇒ Critério corrigido para `# fail` + `# cancelled` + `^not ok`.
+       • M16 era um **mutante equivalente por construção, por erro meu**: renomear
+         o comentário `{/* ── Torneio` não move nada. Reescrito para recortar e
+         colar o bloco DEPOIS do histórico — e mata com `fail=1`.
+     ⇒ Ronda B com o critério corrigido: **2 mortos, 0 vivos**.
+
+======================== SEG3 — INTEGRAÇÃO E DEPLOY ============================
+
+3.1 — VALIDAÇÃO LOCAL
+     Feita por renderização da PÁGINA INTEIRA com estado controlado, nos quatro
+     estados de cada secção (vazio, a carregar, erro, com dados) — 12 testes.
+     É mais do que abrir o dev server e olhar uma vez: cobre os estados que só
+     aparecem quando a rede falha.
+
+3.2 — COMMIT E PUSH
+     `a7526e1` · `244ca62..a7526e1 main -> main`
+     ⚠️ Deploy por **push**, não `netlify deploy --prod`: com `stop_builds: false`
+     o push É o deploy, e um `--prod` manual produz deploy **sem `commit_ref`**,
+     que foi a origem do drift dos MC79/MC89.49 (medido nos MC93-F/G).
+
+3.3 — PROVA DE FRONTEIRA (R1), medida
+     Alterados : i18n/{pt,en,es}.js · pages/MeusAtivos.jsx
+     Novos     : components/meus-ativos/ (5 componentes + _estilo + 2 testes)
+                 hooks/useRanking.js · hooks/useFeedback.js
+                 pages/__tests__/ (1 teste + 4 duplos)
+     INTACTOS  : App.jsx · BottomNav · NavLojista · NavAdminPersistente ·
+                 Dashboard · Vitrine · MinhaCarteira · netlify/functions ·
+                 ci.yml · hardhat.config ·
+                 **package.json e package-lock.json do frontend**
+     ⇒ Zero rotas novas, zero páginas novas, zero navegação, zero backend.
+
+3.4 — DADOS SINTÉTICOS PARA A CAPTURA (autorizado pelo operador)
+     As tabelas do torneio em produção tinham **0 linhas**, logo uma captura só
+     mostraria estados vazios. Inseridas 4 linhas em `rankings_ciclo` para o
+     ciclo `R-1`, uma delas com bónus (`bonus_emitido: true`,
+     `senhas_a_creditar: 20`).
+     Confirmado no endpoint público: `{"cicloId":"R-1","total":4,…}`.
+     ⚠️ O ranking público NÃO expõe `senhas_a_creditar` — só posição, endereço,
+     pontos, acertos e bónus. Verificado na resposta.
+     ⇒ Removidas no fim do MC; contagem final registada no SEG4.
+
+================================================================================
+FIM DO SEG2-3
+================================================================================

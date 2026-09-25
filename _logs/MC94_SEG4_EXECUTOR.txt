@@ -1,0 +1,176 @@
+MC94 — SEG4 — LOG DO EXECUTOR (2.ª ronda, depois do REPROVADO da validação independente)
+=========================================================================================
+Data: 2026-09-25
+Commit: 68a09a5 (sobre e3d8791, a1.ª ronda)
+Estado: fechado. Produção a servir 68a09a5, verificado no bundle e no ecrã.
+
+⚠️ ESTE FICHEIRO SUPERSEDE os números do SEG2-3 da 1.ª ronda.
+
+
+1. O QUE FOI MEDIDO (não estimado)
+-----------------------------------
+  testes .............. 101 · 101 verdes · 0 falhas · 0 saltados
+                        (componentes 54 · página 23 · hooks 24)
+                        baseline da 1.ª ronda: 35, dos quais 5 a falhar no fim
+  mutação ............. 39 mutantes · 39 mortos · 0 vivos · 0 não-aplicados
+                        controlo negativo VERDE, controlo positivo MORREU
+  build ............... verde (8,06 s)
+  eslint .............. 0 erros · 1 aviso (`cardPad`), PRÉ-EXISTENTE (está em HEAD)
+  i18n ................ 51 chaves `ativos.*` em pt/en/es, paridade verificada por script
+  deploy .............. auto-deploy, commit_ref=68a09a5, state=ready
+  produção ............ 5 de 5 `data-secao` com background rgba(13,18,53,0.92)
+                        e backdrop-filter: none, lidos do DOM VIVO
+  endpoint ............ GET /ranking?cicloId=R-1 -> 200 application/json {"total":0,"ranking":[]}
+
+
+2. OS ⛔ DA VALIDAÇÃO INDEPENDENTE — TODOS CORRIGIDOS E VERIFICADOS POR EXECUÇÃO
+-------------------------------------------------------------------------------
+  V-a  reais(null) -> "R$ 0,00"; o lance nulo era eleito "menor único seu · vale 3 pontos"
+       CAUSA: Number(null) === 0. A armadilha do MC93-A, reproduzida por mim na UI.
+       Caminho real: _lib/data-store-supabase.mjs grava valor_centavos = null de propósito.
+       CORRIGIDO: valorUtilizavel/reais/inteiroSeguro, SEM coerção. Mutantes M01, M02, M13.
+
+  V-b  ProgressoBonus e EstadoBonus sem estados: um ANÓNIMO lia
+       "0 / 5 acertos seguidos · Faltam 5 acertos" e "Nenhum bónus conquistado".
+       VISÍVEL EM PRODUÇÃO — ver _logs/MC94_captura-producao-ANTES-e3d8791.png.
+       CORRIGIDO: 4 estados em cada, marcados com data-estado. Mutantes M20, M21, M25, M26.
+
+  V-c  ProgressoBonus declarava "Bónus conquistado!" de uma conta LOCAL e contradizia
+       o EstadoBonus ao lado, que lê bonusEmitido do livro-razão.
+       CORRIGIDO: diz "Sequência completa", e remete a confirmação. Mutante M22.
+
+  V-d  senhasACreditar: Infinity -> "Infinity senhas"; 1e21 -> "1e+21 senhas".
+       CORRIGIDO: inteiroSeguro. Mutante M23.
+
+  V-e  Com empate no menor valor, só UM dos empatados era marcado.
+       CORRIGIDO: Math.min marca todos. Mutante M14.
+
+  V-f  Asserções fracas (/0/, /3/, /1/, /25/) casavam em qualquer dígito.
+       CORRIGIDO: asserções sobre a FRASE ("Faltam 2 acertos", "A mostrar os 10
+       primeiros de 25 participantes."), não sobre o número solto.
+
+  V-g  V22/V23/V24 — cablagem não assertada. O duplo dos hooks IGNORAVA os argumentos.
+       CORRIGIDO: o duplo regista-os; 11 testes de cablagem. Mutantes M35..M39.
+
+
+3. OS DEFEITOS QUE EU ENCONTREI AO ESCREVER OS TESTES QUE ELA EXIGIU
+--------------------------------------------------------------------
+  E-1 ⛔ O index.html com status 200 passava por resposta VÁLIDA nos DOIS hooks.
+        netlify.toml:34 reescreve /* -> /index.html com 200; o apiGet devolve
+        {ok:true, data:null} porque o JSON.parse falha. A tela dizia "ainda não há
+        pontuações" COM O BACKEND EM BAIXO.
+        A regra já existia (MC93-F: validar o CORPO, não o código HTTP) — faltava aqui.
+        CORRIGIDO: !ok || !corpoEhJson(data) -> erro. Mutantes M27, M32.
+        ⚠️ E mordeu-me outra vez neste mesmo SEG: ao validar o deploy, pedi um chunk
+        com o nome do MEU build local, recebi 200 com text/html e quase concluí que
+        o vidro sólido não tinha sido deployado. O build do Netlify usa outro env,
+        logo outro hash. A verificação certa foi ler o DOM vivo.
+
+  E-2 ⛔ totalReal aplicado a METADE dos ramos. O ramo `else` — o caso COMUM, menos de
+        10 participantes — continuava a escrever `total` cru: "0 participantes." por
+        baixo de 4 linhas. Mesmo padrão do if: always() do MC93-E.
+        CORRIGIDO. Mutantes M06, M07.
+
+  E-3 ⛔ "A carregar" e "não há dados" na MESMA frase (carregando || !feedback).
+        Um feedback nulo sem erro mostrava "A carregar a sua pontuação…" para sempre.
+        Um indicador de espera que nunca acaba é uma afirmação falsa.
+        CORRIGIDO: ramo sem-dados separado + chave i18n nova nas 3 línguas.
+
+  E-4 ⚠️ O fundo das secções não tinha teste NENHUM — só a captura o via.
+        CORRIGIDO: bloco de aparência (vidro sólido, sem backdrop-filter, roxo das
+        senhas, data-secao das cinco). Mutantes M04, M05.
+
+
+4. ERRATA A UMA AFIRMAÇÃO MINHA
+--------------------------------
+  _render.mjs afirmava: "cada ficheiro levanta o SEU servidor Vite; em paralelo
+  colidem e os dois ficheiros falham — medido # fail 2".
+  FALSO. Remedido: 91/91 verdes, 3 corridas de 3, SEM --test-concurrency=1.
+  O # fail 2 era real; a causa era a heap estourada pelo BotaoLoginPrincipal
+  (2,68 MB de Privy) sem duplo. Diagnostiquei "colisão" de UMA observação.
+  Mesmo erro do MC93-E com a cache do ethers.
+  A série continua preferível, mas por causa do pico de MEMÓRIA — escolha de
+  recursos, não correcção de defeito.
+
+
+5. OS DOIS SOBREVIVENTES DA 1.ª RONDA DE MUTAÇÃO (e porque sobreviveram)
+------------------------------------------------------------------------
+  Ronda 1: 37/39 mortos.
+
+  M02  reais() a devolver "R$ 0,00" em vez de "—" sobreviveu porque FeedbackLance
+       filtra com valorUtilizavel ANTES de chamar reais: o ramo de recusa do reais
+       nunca era exercitado. A guarda existe em DOIS sítios e eu só testava o de fora.
+       FECHADO: bloco que importa _estilo.js directamente e testa o contrato das
+       três guardas (12 valores recusados cada).
+
+  M18  sequenciaCompleta = faltam === 0 (sem && feitos > 0) sobreviveu porque os meus
+       casos a zero tinham sempre faltam: 5. Nunca testei as duas condições juntas —
+       que é exactamente o caso que o feitos > 0 existe para travar.
+       FECHADO: teste com sequenciaAtual: 0 E faltamParaBonus: 0.
+
+  Ronda 2 (só M02 e M18): 2/2 mortos. Total final: 39/39.
+
+  ⚠️ NENHUM dos dois era mutante equivalente. Eram lacunas reais dos meus testes.
+
+
+6. ERRO DE PROCESSO MEU, REGISTADO
+-----------------------------------
+  Lancei uma SEGUNDA ronda de mutação julgando a primeira morta. Sinal que me
+  enganou: `wc -c` da saída a ZERO durante minutos — mas era tamponamento do Python
+  (escreve só ao sair), não fim de processo. As duas rondas mutaram a MESMA árvore
+  e o controlo negativo da segunda falhou com um mutante da primeira aplicado.
+  É TEXTUALMENTE a lição do MC93-C ("duas validações em paralelo sobre a mesma
+  working tree contaminam-se"), repetida por mim seis MCs depois.
+  REGRA: confirmar com a lista de processos, não pelo tamanho do ficheiro de saída.
+  O controlo NEGATIVO apanhou-o — é para isso que ele existe.
+
+
+7. HARD GATES
+--------------
+  GATE 2 (uma só tela) ....... ✅ App.jsx, BottomNav, NavLojista, NavAdminPersistente
+                                  INTACTOS (git diff --quiet). Zero páginas novas.
+                                  Entre as páginas, só MeusAtivos.jsx alterado.
+  GATE 3 (renderização real) . ✅ dois instrumentos, ambos com limites declarados;
+                                  hooks com 4 controlos positivos.
+  GATE 4 (captura produção) .. ✅ três capturas em _logs/:
+                                  ANTES-e3d8791 (com os defeitos visíveis),
+                                  meus-ativos (68a09a5, corrigido, ranking com dados),
+                                  ciclo-vazio (68a09a5, estado vazio honesto).
+  GATE 5 (zero regressão) .... ✅ 4 estatísticas, cabeçalho, Art. 26, Art. 8,
+                                  3 filtros e o convite a entrar, todos assertados
+                                  na página renderizada.
+
+  R4 ......................... ✅ nenhuma captura mostra endereço real, token, e-mail
+                                  ou dado pessoal. Só endereços sintéticos, abreviados.
+  R5 ......................... ✅ nenhuma credencial tocada.
+  Proibições do enunciado .... ✅ backend, contrato, ci.yml, rotas, navegação,
+                                  regulamento, GUTO, copy global e identidade visual:
+                                  ZERO ficheiros alterados (git status confirma).
+
+
+8. LIMPEZA DE PRODUÇÃO
+-----------------------
+  As 4 linhas sintéticas de rankings_ciclo (ciclo R-1, endereços de dígito repetido,
+  inseridas no MC93-F para provar que o endpoint LÊ a tabela) foram removidas depois
+  da captura. Verificado: rankings_ciclo 0 linhas, pontuacoes 0 linhas.
+  O endpoint devolve {"total":0,"ranking":[]} e a tela mostra o estado vazio correcto.
+
+
+9. NÃO MEDIDO / RESSALVAS (L-4)
+--------------------------------
+  - NENHUMA rodada real foi processada. O leilão continua travado (EM_BREVE_MODE) e
+    as duas tabelas do torneio estão VAZIAS. Tudo o que se viu com dados foi com
+    linhas sintéticas.
+  - O estado COM SESSÃO nunca foi observado em produção: o login é OAuth Privy, que
+    não é automatizável (limitação registada desde o MC39.3.1). Os estados com sessão
+    estão cobertos por testes, não por captura.
+  - Cobertura de código não medida (o projeto não tem alvo configurado).
+  - A comparação de dependências do condutor de hooks é minha, não do React. Os quatro
+    controlos positivos limitam o risco; não o eliminam.
+  - ⚠️ Estas correcções NÃO passaram por uma segunda validação independente.
+  - O resíduo visual: com rgba(13,18,53,0.92) — o valor do PROJETO — os 8% restantes
+    deixam passar a ilustração de fundo (electrodomésticos claros) por baixo do
+    ranking. O texto lê-se. Mudar o valor é identidade visual (MC98, não autorizado):
+    fica REGISTADO, não alterado.
+  - MCPs chrome-devtools e claude-eyes falharam a ligar; as capturas foram feitas
+    com tapsite.

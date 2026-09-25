@@ -1,0 +1,126 @@
+================================================================================
+MC94 — SEG0 (diagnóstico) · SEG1 (planeamento)
+DesafioGUT · 2026-09-25 · base 244ca62
+Skills ECC: smart-explore, terminal-ops, ux-waiting-audit · make-plan, impeccable
+Medições em bruto: _logs/MC94_SEG-1_QUESTIONAMENTO.txt [M1]–[M24]
+================================================================================
+
+============================== SEG0 — DIAGNÓSTICO ==============================
+
+0.1 — AMBIENTE
+     HEAD 244ca62 · árvore limpa (3 não rastreados pré-existentes, alheios).
+     ⚠️ Baseline de testes do frontend: **ZERO**. Não há suíte para comparar; a
+     linha de base é 0 e tudo o que este MC acrescentar é novo.
+     (A suíte das functions — 583 testes — é backend e não é tocada.)
+
+0.2 — MAPA DE `MeusAtivos.jsx` (273 linhas) E O PONTO DE INSERÇÃO
+     estrutura actual, de cima para baixo:
+       header    "📊 Meus Ativos" + subtítulo com `EDICAO_ATIVA`
+       stats     4 GlassCards: Total · Únicos · Repetidos · Menor Lance
+       filtros   Todos / ✅ Únicos / ❌ Repetidos  (+ "📍 Mostrando seus lances")
+       lista     GlassCard com `MobileList` ou `DesktopTable`
+       login     `BotaoLoginPrincipal` quando `!isConnected`
+       rodapé    "Art. 26 … Art. 8 …"
+     estilo: estilos INLINE, paleta `COR` local, `GlassCard` com classes Tailwind,
+             `isMobile` para todas as medidas (`pad`, `cardPad`, `sectionGap`).
+     ⇒ PONTO DE INSERÇÃO: **entre os `stats` e os `filtros`** (depois da linha 87).
+       As secções do torneio ficam acima do histórico, que é o que já existia, e
+       nada do que existe é removido ou reordenado (HARD GATE 5).
+
+0.3 — ENDPOINTS EM PRODUÇÃO — vivos e coerentes
+       GET /ranking?cicloId=R-1  -> 200 · {"cicloId":"R-1","total":0,"ranking":[]}
+       GET /ranking?recurso=feedback&… (sem sessão) -> 401 · sessao_invalida
+     ⇒ O ranking é PÚBLICO; o feedback exige sessão + endereço coincidente
+       (anti-IDOR do MC93-B, medido a funcionar em produção no MC93-F).
+
+0.4 — i18n
+     `src/i18n/{pt,en,es}.js`, chaves **PLANAS**. `useT()` -> `t(key, fallback)`,
+     cascata `lang → pt → fallback → key`.
+     Prefixo novo: **`ma_torneio_*`** (plano, coerente com o formato existente).
+     ⚠️ A tela existente NÃO usa i18n; as chaves novas são aditivas e cada chamada
+       leva fallback PT, logo a UI nunca mostra a chave crua.
+
+0.5 — ESTADOS DE ESPERA (ux-waiting-audit)
+     A tela actual **não tem** carregamento: `lances` vem resolvido do contexto e o
+     vazio mostra "📭 Nenhum lance registrado nesta edição". Não distingue vazio de
+     erro.
+     ⇒ As secções novas fazem I/O e introduzem espera onde não havia. Decisões:
+       • cada secção reserva altura mínima no estado de espera (sem salto de layout);
+       • **vazio ≠ erro**: textos distintos, e o erro nunca derruba a tela;
+       • a secção pessoal (feedback) só aparece com sessão; sem ela, convida a entrar
+         em vez de mostrar um erro.
+
+0.6 — PALETA (convenção do projeto, não invenção)
+     `COR.gold #f5a623` acento · `COR.success #10b981` · `COR.danger #ef4444`
+     `COR.muted #6b7db8` · `COR.text #e8f0fe`
+     ⚠️ **`#a78bfa` é a cor semântica de SENHAS em todo o app** (KPI Senhas,
+       "Trocar por senhas"). ⇒ `EstadoBonus` usa roxo porque fala de SENHAS.
+
+============================== SEG1 — PLANEAMENTO ==============================
+
+1.1 — ORDEM DAS SECÇÕES (decisão do operador: empilhadas, sem abas)
+       1. header + stats                       (existente, intocado)
+       2. **PainelTorneio**    posição · pontos · acertos
+       3. **ProgressoBonus**   barra N/5 + "faltam X"
+       4. **EstadoBonus**      "20 senhas a creditar" · pendente vs liquidado
+       5. **FeedbackLance**    quanto vale cada lance pela regra
+       6. **RankingCiclo**     top 10 + a própria posição destacada
+       7. filtros + histórico + login + rodapé (existente, intocado)
+
+1.2 — CONTRATOS DOS COMPONENTES
+     Todos **apresentacionais**: recebem dados por PROPS, não fazem I/O.
+     É o que torna o teste por SSR possível (o `useEffect` não corre em SSR) e é
+     também a fronteira certa: o I/O vive nos hooks.
+
+     PainelTorneio({ feedback, carregando, erro, temSessao })
+     ProgressoBonus({ sequenciaAtual, faltamParaBonus, acertosParaBonus })
+     EstadoBonus({ senhasACreditar, bonusEmitido, liquidado })
+       ⚠️ `liquidado` pode vir `undefined` (assimetria medida em [M19]) -> tratado
+         explicitamente como "não liquidado".
+       ⚠️ NUNCA chamar "saldo". É DIREITO por liquidar; o saldo que habilita lance
+         é `saldoSenhas` on-chain.
+     FeedbackLance({ lances, address, acertoUnico, menorUnico })
+     RankingCiclo({ ranking, total, address, carregando, erro })
+
+1.3 — HOOKS
+     useRanking(cicloId)             -> { ranking, total, carregando, erro }
+     useFeedback(cicloId, endereco, token) -> { feedback, carregando, erro }
+     Ambos via **`apiGet`** de `src/lib/api.js` (herdam o shim de origem do APK) e
+     com `AbortController` para não escrever depois de desmontar.
+     ⚠️ `apiGet` devolve `{ok, status, data}` — o `ok` é DO HELPER, não do endpoint.
+
+1.4 — CHAVES i18n (PT/EN/ES), planas, com fallback PT em cada chamada
+     ma_torneio_titulo · ma_torneio_sub · ma_torneio_posicao · ma_torneio_pontos ·
+     ma_torneio_acertos · ma_torneio_sem_sessao · ma_torneio_sem_dados ·
+     ma_torneio_erro · ma_bonus_titulo · ma_bonus_faltam · ma_bonus_completo ·
+     ma_bonus_senhas · ma_bonus_pendente · ma_bonus_liquidado · ma_bonus_nada ·
+     ma_lance_vale · ma_lance_unico · ma_lance_repetido · ma_lance_menor ·
+     ma_rank_titulo · ma_rank_vazio · ma_rank_voce · ma_rank_carregando
+
+1.5 — TESTES RED (renderização real por SSR; ficheiros `.test.mjs`)
+     _t1 painel renderiza posição, pontos e acertos
+     _t2 painel sem sessão convida a entrar, não mostra erro
+     _t3 progresso mostra a barra e quantos faltam
+     _t4 progresso a 5/5 diz completo, não "faltam 0"
+     _t5 estado do bónus distingue pendente de liquidado
+     _t6 estado do bónus trata `liquidado: undefined` como pendente
+     _t7 estado do bónus nunca escreve "saldo"
+     _t8 feedback do lance diz quanto VALE, não "ganhou"
+     _t9 ranking destaca a própria posição
+     _t10 ranking vazio diz vazio, e erro diz erro (não são a mesma coisa)
+     _t11 a tela mantém as secções antigas (não-regressão)
+     _t12 a tela não parte quando os endpoints falham
+
+1.6 — MUTAÇÃO (R16) prevista
+     M1 remover `posicao` do painel · M2 inverter `liquidado` ·
+     M3 ignorar `faltamParaBonus` · M4 deixar de destacar o próprio endereço ·
+     M5 trocar "vale" por "ganhou" · M6 colapsar vazio e erro no mesmo texto
+
+1.7 — DEPLOY
+     Por **`git push`** (com auto-deploy ligado, o push É o deploy — medido nos
+     MC93-F/G). NÃO `netlify deploy --prod` manual: produz deploy sem `commit_ref`,
+     que foi a origem do drift dos MC79/MC89.49.
+
+================================================================================
+FIM DO SEG0-1
+================================================================================
