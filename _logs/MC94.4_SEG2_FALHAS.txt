@@ -25,13 +25,30 @@ Skills ECC: systematic-debugging, verification-before-completion
   200, /ranking 200, /edicoes 200, /health 200). A 404 do /cotas era a resposta CORRECTA para
   utilizador sem cota — ja' desmontado no MC94.3.2, nao e' regressao.
 
-═══ 2.6 ACHADO NOVO E CRITICO (nao estava em nenhum briefing) ═══
+═══ 2.6 ⛔ ACHADO RETIRADO — ERA UM FALSO POSITIVO (corrigido pos-validacao) ═══
+  O texto abaixo foi escrito por mim e esta' ERRADO. Mantenho-o visivel em vez de o apagar
+  porque o erro e a sua causa sao a parte util. O Validador independente refutou-o, e eu
+  confirmei a refutacao.
+     O QUE EU AFIRMEI: `keystore.properties` nao existia -> o release assinaria com a chave
+     de DEBUG.
+     REALIDADE MEDIDA: `desafio-gut/frontend/android/keystore.properties` EXISTE (171 B,
+     jul 19). O `build.gradle:4` faz `rootProject.file("keystore.properties")` e o
+     `settings.gradle` esta' em `android/` -> o root project do Gradle e' `android/`, logo o
+     caminho resolve para LA'. O ternario da linha 38 escolhe `signingConfigs.release`.
+     ⇒ O RELEASE E' ASSINADO A SERIO. NAO HA DEFEITO.
+     CAUSA DO ERRO: a minha busca era `find . -maxdepth 3 -name "*keystore*"` e o ficheiro
+     esta' a PROFUNDIDADE 4. Reportei uma AUSENCIA a partir de uma busca que a nao podia ver.
+  ⇒ REGRA: uma afirmacao de ausencia exige uma busca cujo alcance cubra PROVADAMENTE o
+     espaco. Com um limite, a afirmacao correcta e' "nao encontrei dentro do limite X" —
+     uma frase sobre a busca, nao sobre o mundo.
+
+═══ (texto original, ERRADO, mantido para memoria do erro) ═══
   `desafio-gut/frontend/android/app/build.gradle:38`:
       signingConfig keystorePropsFile.exists() ? signingConfigs.release : signingConfigs.debug
   E `keystore.properties` (linha 4: rootProject.file("keystore.properties")) **NAO EXISTE** no
   disco nem no repo (esta' no .gitignore). O bloco `signingConfigs.release` so' preenche as 4
   chaves (storeFile/storePassword/keyAlias/keyPassword) SE o ficheiro existir — logo fica VAZIO.
-  ⇒ Um `bundleRelease`/`assembleRelease` hoje assina com a chave de DEBUG. A Play Store rejeita
+  ❌ ERRADO (retirado): "Um `bundleRelease`/`assembleRelease` hoje assina com a chave de DEBUG." 
     ou, pior, gera um artefacto com assinatura errada para um app em TESTE FECHADO.
   ⇒ NAO CORRIGIDO, e a razao importa: corrigir exige LER a senha do keystore em
     `keystore/credenciais.txt` — o que a R5 / HARD GATE 4 PROIBE explicitamente. Um agente que

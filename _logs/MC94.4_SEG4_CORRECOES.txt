@@ -18,8 +18,10 @@ Skills ECC: terminal-ops, verification-before-completion
   P1 (ALTA) — ALCHEMY: rotacao da chave + retirada do hardcode de 11 ficheiros, comecando por
      frontend/src/utils/web3.js (a chave vai no bundle publico). Exige alterar variaveis de
      ambiente no Netlify -> NAO AUTORIZADO sem confirmacao (R18) + rotacao e' do operador (R5).
-  P2 (ALTA, tecnica) — keystore.properties ausente -> release assina com chave de DEBUG
-     (build.gradle:38). Corrigir exige ler credenciais (R5 proibe). ACCAO DO OPERADOR.
+  ~~P2 (ALTA, tecnica) — keystore.properties ausente -> release assina com chave de DEBUG.~~
+     RETIRADA — FALSO POSITIVO. `android/keystore.properties` EXISTE (171 B) e o root project
+     do Gradle e' `android/`, logo o release assina a serio. Causa do erro: busca com
+     `-maxdepth 3` para um ficheiro a profundidade 4.
   P3 (MEDIA) — npm audit: 38 vulnerabilidades (10 altas; xmldom, DOMPurify). `npm audit fix`
      pode ser breaking -> fazer numa janela propria, nao num MC de faxina.
   P4 (MEDIA) — docs/: 260 entradas, muitas de maio-julho e desactualizadas; 12 ficheiros de

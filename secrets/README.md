@@ -28,17 +28,19 @@ local — é o padrão correcto): ADMIN_TOKEN, BLOBS_TOKEN, ALCHEMY_API_KEY, PRI
 SUPABASE_SERVICE_ROLE_KEY (produção), entre outras. **Não foram tocadas nem listadas com
 valores** (R5).
 
-## ⛔ Achado crítico relacionado com o keystore
+## Onde o keystore é REALMENTE lido (correcção de um falso positivo meu)
 
-`desafio-gut/frontend/android/app/build.gradle:38`:
+O gradle resolve `rootProject.file("keystore.properties")` — e o *root project* do Gradle é
+**`desafio-gut/frontend/android/`** (onde está o `settings.gradle`). O ficheiro está lá:
 
-```groovy
-signingConfig keystorePropsFile.exists() ? signingConfigs.release : signingConfigs.debug
+```
+desafio-gut/frontend/android/keystore.properties   (171 B, jul 19)
 ```
 
-O ficheiro `keystore.properties` (que o gradle lê para obter `storeFile`, `storePassword`,
-`keyAlias`, `keyPassword`) **não existe** no repositório nem no disco, e está no `.gitignore`.
-Consequência: **um build de release assina com a chave de DEBUG** — a Play Store rejeita, ou
-pior, gera um artefacto com assinatura errada. **Não corrigido neste MC porque a correcção
-exige ler a senha do `credenciais.txt` — o que a R5 proíbe.** Acção do operador: recriar
-`keystore.properties` com as 4 chaves. Ver `docs/README.md` seção de pendências.
+⇒ o release **é** assinado com a chave verdadeira. **Não há problema de assinatura.**
+
+⚠️ Nota de transparência: numa primeira versão deste README afirmei que esse ficheiro **não
+existia** e que o release cairia na chave de debug. Era **falso** — a minha busca usava
+`find -maxdepth 3` e o ficheiro está à profundidade 4. O erro foi apanhado pelo Validador
+independente. Fica registado para que a lição sobreviva: **afirmar ausência exige uma busca
+cujo alcance cubra provadamente o espaço.**

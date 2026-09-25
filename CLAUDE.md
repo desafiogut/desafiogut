@@ -1128,20 +1128,34 @@ assimetria dentro.
 **Recorrência:** única (MC de casa-a-limpo) · **Impacto:** ALTO (achado P2 pode bloquear a Play Store)
 **Fecho:** commit `3e39de0` · **Zero alteração a código de produção.**
 
-### ⛔ P2 — O RELEASE ASSINA COM A CHAVE DE DEBUG (achado crítico, ainda ABERTO)
+### ⛔⛔ FALSO POSITIVO RETIRADO — NÃO HÁ PROBLEMA DE ASSINATURA
 
-`desafio-gut/frontend/android/app/build.gradle:38`:
+**Um achado meu (declarado "crítico") foi REFUTADO pelo Validador independente e retirado.**
+Fica registado em vez de apagado, porque o erro é instrutivo.
 
-```groovy
-signingConfig keystorePropsFile.exists() ? signingConfigs.release : signingConfigs.debug
+**O que afirmei:** o `keystore.properties` não existiria, e o release assinaria com a chave de
+debug. **FALSO.** O ficheiro existe:
+
+```
+desafio-gut/frontend/android/keystore.properties   (171 B, jul 19)
 ```
 
-`keystore.properties` **não existe** (linha 4 lê-o; está no `.gitignore`). Logo o bloco
-`signingConfigs.release` fica vazio e **um `bundleRelease` assina com a chave de DEBUG** — a
-Play Store rejeita. **ACÇÃO DO OPERADOR:** recriar `keystore.properties` com `storeFile`,
-`storePassword`, `keyAlias`, `keyPassword` a partir de `keystore/credenciais.txt`.
-**Não foi corrigido por agente de propósito:** a correcção exige ler a senha (R5/HARD GATE 4
-proíbem). É o primeiro item a resolver antes de qualquer submissão.
+e `build.gradle:4` (`rootProject.file("keystore.properties")`) resolve para **`android/`** —
+porque é aí que está o `settings.gradle`, logo é o *root project* do Gradle. O ternário da
+linha 38 escolhe `signingConfigs.release`. **O release é assinado com a chave verdadeira.**
+
+**Causa do erro (reutilizável):** a minha busca era `find . -maxdepth 3 -name "*keystore*"`,
+e o ficheiro está à **profundidade 4**. Reportei uma AUSÊNCIA a partir de uma busca que não a
+podia ver.
+
+> **REGRA: uma afirmação de ausência («não existe», «nenhum») exige uma busca cuja
+> profundidade/alcance cubra PROVADAMENTE o espaço. Com um limite, a afirmação correcta é
+> «não encontrei dentro do limite X» — uma frase sobre a busca, não sobre o mundo.**
+
+Corolário: **antes de propor uma correcção, localizar o artefacto real** (aqui:
+`find` sem limite + `grep` do nome do ficheiro em TODO o repo, não só na raiz). E: um
+veredito de terceiros apanha o que a auto-verificação não apanha, porque um agente verifica o
+que julga saber.
 
 ### ⛔ P1 — Chave Alchemy em 11 ficheiros rastreados (ABERTO)
 
