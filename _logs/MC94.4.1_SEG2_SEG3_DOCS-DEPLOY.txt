@@ -23,6 +23,10 @@ Skills ECC: terminal-ops, canary-watch, verification-before-completion
 
 ═══ 3.1 SUITES ANTES DO DEPLOY ═══
   Frontend 360/360 · Backend 637 (631 pass, 0 fail, 6 skipped) · 4 mutacoes RED->GREEN
+  ⚠️ MC94.4.1 (correccao pos-validacao): 637/631 era a contagem ANTES do invariante novo
+  `mc9441-fonte-texto.test.mjs` (+2 testes). A contagem FINAL e' **639 / 633 / 0 fail / 6
+  skipped** — medido 2x pelo Validador independente e reconfirmado por mim. O numerro
+  arquivado estava desactualizado.
 
 ═══ 3.2 COMMIT + PUSH ═══
   299acc0 "fix(MC94.4.1): lance da especial debita SALDO (R$ 0,01+), nao senha"
