@@ -30,6 +30,12 @@
 // ⚠️ Os ficheiros de teste são `.test.mjs`, não `.test.jsx`: nenhum runner
 // presente sabe executar JSX DENTRO de um ficheiro de teste. Os componentes
 // continuam `.jsx` e são carregados através do Vite.
+//
+// ⚠️ CORRER A SUÍTE EM SÉRIE:
+//     node --test --test-concurrency=1 src/**/__tests__/*.test.mjs
+// Cada ficheiro levanta o SEU servidor Vite. Em paralelo colidem e os dois
+// ficheiros falham — medido: `# fail 2` em conjunto, 23/23 e 12/12 em separado.
+// Sem `--test-concurrency=1` veem-se falhas que não são dos testes.
 
 import { createServer } from "vite";
 import { renderToStaticMarkup } from "react-dom/server";

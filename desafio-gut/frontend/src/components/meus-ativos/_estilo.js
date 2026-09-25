@@ -49,13 +49,27 @@ export function encurtar(endereco) {
   return `${e.slice(0, 6)}…${e.slice(-4)}`;
 }
 
-/** Cartão de secção, no mesmo desenho dos cartões existentes da tela. */
+/**
+ * Cartão de secção.
+ *
+ * ⚠️ O FUNDO É QUASE OPACO, E A RAZÃO VEIO DA CAPTURA DE PRODUÇÃO.
+ * A primeira versão usava `rgba(255,255,255,0.02)` — quase transparente. Na
+ * captura, a imagem de fundo do app (electrodomésticos, confetes, luzes) passava
+ * através do texto e as secções ficavam ilegíveis. Nenhum teste apanhava isto:
+ * o markup estava correcto.
+ * É a regra que o projeto já tinha registado para texto longo — vidro SÓLIDO
+ * (navy ~0.9), não o vidro padrão translúcido.
+ *
+ * ⚠️ E SEM `backdrop-filter`, de propósito: o projeto mediu que o custo é por
+ * CAMADA (11 camadas de blur custaram 29 fps). Cinco secções novas com blur
+ * seriam cinco camadas a mais. Um fundo sólido custa zero e lê-se melhor.
+ */
 export function caixa(isMobile) {
   return {
     border: `1px solid ${COR.borda}`,
     borderRadius: "14px",
     padding: isMobile ? "0.9rem" : "1.1rem",
-    background: "rgba(255,255,255,0.02)",
+    background: "rgba(5, 8, 24, 0.82)",
   };
 }
 
