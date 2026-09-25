@@ -153,7 +153,9 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     assert.match(texto(html), /0[12] horas/);
   });
 
-  test("na hora (já em `edicoes`): o formulário é o da ESPECIAL, pago em senha", async () => {
+  // MC94.4.1 — era "pago em senha" (R18 antiga do MC94.1). O operador reverteu: a
+  // especial é RELÂMPAGO e o lance debita SALDO R$ a partir de R$ 0,01.
+  test("na hora (já em `edicoes`): o formulário é o da ESPECIAL, pago em SALDO (flash)", async () => {
     const ctx = { edicoes: { "R-1": R1, "ESPECIAL-AIRFRYER": especial(Date.now() - 60_000, { status: "aberto" }) } };
     // O CardLance é lazy: o 1.º render em SSR dá o espaço reservado e dispara o
     // import. ⚠️ Uma 1.ª versão deste teste aceitava "duplo OU espaço reservado"
@@ -170,7 +172,7 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     }
     assert.match(html, /data-stub="card-lance"/, "o formulário nunca chegou");
     assert.match(html, /data-id-edicao="ESPECIAL-AIRFRYER"/, "licitaria noutra edição");
-    assert.match(html, /data-tipo="programado"/, "a especial paga-se em senha (D1 do MC94.1)");
+    assert.match(html, /data-tipo="flash"/, "a especial debita SALDO R$ (MC94.4.1), não senha");
     assert.match(html, /data-encerrado="false"/);
     // O botão do slot da R-1 desapareceu com a especial lá dentro.
     assert.doesNotMatch(texto(html), /Ir para o Mercado de Lances/, "o botão da R-1 ficou no slot da especial");

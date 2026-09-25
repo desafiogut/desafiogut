@@ -50,7 +50,10 @@ test("seed: horários, prémio, preço e imagem são os decididos pelo operador"
   assert.equal(e.inicio_em, "2026-10-04T23:00:00.000Z");  // 20:00 Brasília
   assert.equal(e.termino_em, "2026-10-04T23:30:00.000Z"); // 20:30 Brasília
   assert.equal(e.produto, "Air Fryer");
-  assert.equal(e.tipo, "programado");                     // D1: lance paga 1 senha
+  // MC94.4.1 — R18: o operador REVERTEU a D1 do MC94.1. A especial é RELÂMPAGO e o
+  // lance debita SALDO (a partir de R$ 0,01), não senha. Este teste media a decisão
+  // antiga; passa a medir a actual.
+  assert.equal(e.tipo, "relampago");
   assert.equal(e.regra, "menor_lance_unico");
   assert.equal(e.imagem_url, "/artes/edicao-especial-airfryer.jpg");
   assert.ok(Object.isFrozen(e));
@@ -87,7 +90,7 @@ test("EDICAO_ID_RE aceita ESPECIAL-AIRFRYER e continua a aceitar PROG/RELAMP", (
 test("buscarEdicao devolve a edição especial (antes do MC94.1 devolvia null)", async () => {
   semear();
   const meta = await core.buscarEdicao("ESPECIAL-AIRFRYER");
-  assert.equal(meta?.tipo, "programado");
+  assert.equal(meta?.tipo, "relampago");   // MC94.4.1 (R18): saldo R$, não senha
   assert.equal(meta?.inicio_em, "2026-10-04T23:00:00.000Z");
 });
 

@@ -19,7 +19,7 @@
 // ⚠️ O FORMULÁRIO NÃO É UM LINK PARA /mercado. O /mercado monta o `CardLance`
 // com `EDICAO_ATIVA = "R-1"` fixo: um botão "Dar lance" que navegasse para lá
 // mandaria o lance para a edição errada. O Dashboard passa `renderLance`, que
-// monta o `CardLance` existente com o id da especial e `tipoLeilao="programado"`
+// monta o `CardLance` existente com o id da especial e `tipoLeilao="flash"`
 // (decisão D1 do MC94.1: cada lance gasta 1 senha).
 //
 // ⚠️ Estado e contagem usam a hora do SERVIDOR (`offsetMs`, calculado pelo
@@ -145,7 +145,13 @@ export default function CardEdicaoEspecial({
   if (estado === ESTADO_ESPECIAL.ACTIVA && !semRelogio) {
     abaixo = (
       <div style={{ marginTop: "0.9rem" }}>
-        {renderLance?.({ idEdicao: edicao.id, tipoLeilao: "programado", encerrado: false })}
+        {/* MC94.4.1 — era "programado" (R18 antiga do MC94.1). O operador reverteu: a
+            especial é RELÂMPAGO e o lance debita SALDO (a partir de R$ 0,01), não senha.
+            Em `CardLance`, `tipoLeilao` decide o caminho todo: "programado" liga o gate
+            on-chain de senhas + a conversão R$→senha e posta em `auth-lance`; "flash"
+            posta em `lance-relampago` e debita saldo. Alinhar aqui com o `tipo` da
+            metadata é o que mantém UI e backend coerentes. */}
+        {renderLance?.({ idEdicao: edicao.id, tipoLeilao: "flash", encerrado: false })}
       </div>
     );
   } else if (estado === ESTADO_ESPECIAL.ENCERRADA) {
@@ -184,7 +190,7 @@ export default function CardEdicaoEspecial({
             </div>
           )}
           <div style={{ fontSize: "0.66rem", color: COR.muted, lineHeight: 1.3 }}>
-            {t("edicao.especial.regra", "Rodada programada · vence o menor lance único · cada lance usa 1 senha (R$ 2,00)")}
+            {t("edicao.especial.regra", "Lance relâmpago · vence o menor lance único · a partir de R$ 0,01 (debita do saldo)")}
           </div>
         </div>
       </div>

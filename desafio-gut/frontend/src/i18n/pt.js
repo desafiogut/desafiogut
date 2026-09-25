@@ -120,7 +120,10 @@ export default {
   "edicao.especial.altArte": "Arte da edição especial",
   "edicao.especial.premioEmDisputa": "Prêmio em disputa",
   "edicao.especial.brasilia": "(horário de Brasília)",
-  "edicao.especial.regra": "Rodada programada · vence o menor lance único · cada lance usa 1 senha (R$ 2,00)",
+  // MC94.4.1 — R18: a especial é RELÂMPAGO e debita SALDO (a partir de R$ 0,01). O texto
+  // anterior ("Rodada programada · ... cada lance usa 1 senha (R$ 2,00)") descrevia o
+  // comportamento ANTIGO e era a causa visível do desvio reportado pelo operador.
+  "edicao.especial.regra": "Lance relâmpago · vence o menor lance único · a partir de R$ 0,01 (debita do saldo)",
   "edicao.especial.badgeEmBreve": "🕒 Em breve",
   "edicao.especial.badgeAbrindo": "⏳ Abrindo",
   "edicao.especial.badgeAberta": "🟢 Aberta",

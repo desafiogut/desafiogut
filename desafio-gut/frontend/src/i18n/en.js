@@ -115,7 +115,7 @@ export default {
   "edicao.especial.altArte": "Special edition artwork",
   "edicao.especial.premioEmDisputa": "Prize up for grabs",
   "edicao.especial.brasilia": "(Brasília time)",
-  "edicao.especial.regra": "Scheduled round · lowest unique bid wins · each bid uses 1 ticket (R$ 2.00)",
+  "edicao.especial.regra": "Flash bid · lowest unique bid wins · from R$ 0.01 (charged to your balance)",
   "edicao.especial.badgeEmBreve": "🕒 Coming soon",
   "edicao.especial.badgeAbrindo": "⏳ Opening",
   "edicao.especial.badgeAberta": "🟢 Open",

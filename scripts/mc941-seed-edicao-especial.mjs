@@ -31,7 +31,12 @@ export const CHAVE = "ESPECIAL-AIRFRYER";
 
 export const EDICAO_ESPECIAL_AIRFRYER = Object.freeze({
   id:         CHAVE,
-  tipo:       "programado",                 // D1 do operador: cada lance gasta 1 senha
+  // MC94.4.1 — R18: o operador REVERTEU a decisão D1 do MC94.1. A especial é uma
+  // edição RELÂMPAGO: o lance debita SALDO em dinheiro a partir de R$ 0,01, e NÃO
+  // consome senha. O `tipo` é o que decide o débito no backend (lance-relampago.mjs:
+  // `ehProgramado = tipoEdicao === "programado"` → senha; senão → saldo R$), logo
+  // era ESTE campo que fazia a especial cobrar senha, sem nenhum bug de código.
+  tipo:       "relampago",
   produto:    "Air Fryer",
   inicio_em:  "2026-10-04T23:00:00.000Z",
   termino_em: "2026-10-04T23:30:00.000Z",

@@ -74,8 +74,11 @@ const jobOnchain = bloco(ci, "test-onchain");
 // ───────────────────────────────────────────────────────────────────────────
 describe("MC93-E · o ci.yml é sintacticamente utilizável", () => {
   test("sem caracteres de controlo", () => {
-    // Ao escrever este MC injectei dois  por uma retro-referência de
+    // Ao escrever este MC injectei dois bytes 0x01 por uma retro-referência de
     // `sed` mal escapada. O GitHub teria recusado o workflow INTEIRO.
+    // MC94.4.1: o byte CRU saiu daqui (era invisível ao grep, que passava a tratar
+    // este ficheiro como binário e a saltá-lo — incluindo este próprio teste, que
+    // verifica caracteres de controlo). A lição fica; o byte não.
     const maus = [...ciBruto].filter((c) => {
       const n = c.codePointAt(0);
       return n < 9 || n === 11 || n === 12 || (n >= 14 && n < 32);

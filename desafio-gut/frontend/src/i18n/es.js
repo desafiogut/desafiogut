@@ -115,7 +115,7 @@ export default {
   "edicao.especial.altArte": "Arte de la edición especial",
   "edicao.especial.premioEmDisputa": "Premio en disputa",
   "edicao.especial.brasilia": "(hora de Brasilia)",
-  "edicao.especial.regra": "Ronda programada · gana la puja única más baja · cada puja usa 1 contraseña (R$ 2,00)",
+  "edicao.especial.regra": "Puja relámpago · gana la puja única más baja · desde R$ 0,01 (se debita del saldo)",
   "edicao.especial.badgeEmBreve": "🕒 Próximamente",
   "edicao.especial.badgeAbrindo": "⏳ Abriendo",
   "edicao.especial.badgeAberta": "🟢 Abierta",

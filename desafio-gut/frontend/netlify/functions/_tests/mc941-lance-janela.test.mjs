@@ -101,16 +101,24 @@ test("especial antes da abertura: 409 edicao_nao_iniciada, nada consumido", asyn
   nadaConsumido();
 });
 
-test("especial dentro da janela: 201, paga 1 SENHA e não R$ (tipo programado)", async () => {
+// MC94.4.1 — R18: era "paga 1 SENHA e não R$ (tipo programado)". O operador reverteu a
+// decisão: a especial é RELÂMPAGO e o lance debita SALDO R$ (a partir de R$ 0,01). O
+// teste passa a medir o contrário — e é isso que protege contra a regressão ao caminho
+// de senha.
+test("especial dentro da janela: 201, paga SALDO R$ (a partir de R$ 0,01) e NÃO senha", async () => {
   zerar();
   const agora = Date.now();
   mockEdicao = { ...seed.EDICAO_ESPECIAL_AIRFRYER, inicio_em: iso(agora - 60_000), termino_em: iso(agora + 60_000) };
   const resp = await handler(pedido("ESPECIAL-AIRFRYER"));
   assert.equal(resp.status, 201);
   const data = await resp.json();
-  assert.equal(data.modo, "programado");
-  assert.equal(chamadasDebitoRs, 0, "a especial paga-se em senhas");
-  assert.equal(chamadasSaldoOnChain, 1);
+  assert.equal(data.modo, "relampago");
+  // `false` (e não `undefined`): o campo existe e diz que NÃO se consumiu senha — que é
+  // o sentido correcto. Asserimos o SENTIDO, não a forma exacta: era a forma que a minha
+  // 1.ª versão media, e teria falhado num caso correcto.
+  assert.ok(!data.senhaConsumida, "não pode haver consumo de senha na especial");
+  assert.equal(chamadasDebitoRs, 1, "a especial debita SALDO R$");
+  assert.equal(chamadasSaldoOnChain, 0, "sem senha: não há leitura on-chain de senhas");
   assert.equal(chamadasCompromete, 1);
   assert.equal(chamadasAddLance, 1);
 });

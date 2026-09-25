@@ -254,12 +254,15 @@ describe("MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã", () => {
     assert.match(texto(html), /30 seg/);
     assert.doesNotMatch(html, /FORMULARIO-DE-LANCE/);
   });
-  test("activa: o formulário de lance é o DESTA edição, pago em senha", () => {
+  // MC94.4.1 — era "pago em senha" (R18 antiga). O operador reverteu: o lance da
+  // especial é RELÂMPAGO e debita SALDO R$ (a partir de R$ 0,01), logo o `tipoLeilao`
+  // passado ao CardLance tem de ser "flash" — é ele que escolhe o caminho de débito.
+  test("activa: o formulário de lance é o DESTA edição, pago em SALDO (flash)", () => {
     lanceChamado.length = 0;
     const html = render(Card, props(INICIO + 60_000));
     assert.match(html, /data-estado="activa"/);
     assert.match(html, /FORMULARIO-DE-LANCE/);
-    assert.deepEqual(lanceChamado.at(-1), { idEdicao: "ESPECIAL-AIRFRYER", tipoLeilao: "programado", encerrado: false });
+    assert.deepEqual(lanceChamado.at(-1), { idEdicao: "ESPECIAL-AIRFRYER", tipoLeilao: "flash", encerrado: false });
     assert.match(texto(html), /29 min/, "conta até às 20:30");
   });
   test("encerrada: painel do vencedor, sem formulário nem cronómetro", () => {
