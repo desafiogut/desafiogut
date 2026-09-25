@@ -1122,6 +1122,79 @@ assimetria dentro.
 
 ---
 
+## MC94.5 — O GUTO anuncia a rodada especial (2026-09-25)
+
+**Data:** 2026-09-25 · **Origem:** sequência operacional · **Base:** `2bd9b5e` · **Fecho:** `786dd07`
+**Deploy:** `6ab7007d7c650014baaa889d` · **4 ficheiros novos, 0 modificados.**
+
+### ⛔ Há DUAS coisas chamadas «notificações» — e um comentário que mente sobre a que importa
+
+| | o que é | quem lê |
+|---|---|---|
+| `_lib/notificacoes-usuario.mjs` | Blob **por endereço** (`notificacoes`), FIFO 50, fail-soft. **É aqui que se escreve.** | `GET /notificacoes` no ramo do **PARTICIPANTE** (`getParticipante` → `lerNotificacoes`) → mostrado pelo **`ChatbotWidget.jsx`** como **card no chat do GUTO** + badge `🔔 N` |
+| `GET /notificacoes` (ramo **admin**) | eventos **DERIVADOS on-read** (`tempo_limite_5min`, `sistema_pausado`, …), **sem store** | badge do admin |
+
+⛔ **`AppContext.jsx:337` diz «notificacoes: … (admin-only)» — é FALSO.** O endpoint tem ramo
+de participante. Quem ler só o comentário conclui que **não existe canal para o participante** —
+e um MC de anúncio parece impossível. *(3.º caso desta série, depois dos «96 px» e do
+`createOnLogin`: comentários que mentem custam MCs inteiros.)*
+
+**Um `tipo` DESCONHECIDO aparece na mesma:** `ChatbotWidget` faz
+`cardKind: NOTIF_CARD_KIND[n.tipo] || "notificacao"` — o fallback é o que permite anunciar sem
+tocar no frontend.
+
+### Push não existe
+
+`admin-notify.mjs:34` → `canal: "push"` devolve **501** («após Firebase + APK novo»), `whatsapp`
+também. **Anúncio ao participante = in-app apenas.**
+
+### Estado dos destinatários (o que o código NÃO sabe)
+
+`atividade_utilizadores` = `endereco, primeiro_acesso, ultimo_acesso, acessos` — **sem campo de
+testador**; `registarAtividade` corre no login (logo: todos); **zero** marcadores de
+testador/beta no projecto. **Os testadores vivem na Play Console.** Para anunciar por
+aproximação: `primeiro_acesso <= corte` (R18: 02/10/2026 23:59 BRT).
+
+### `scheduled-anuncio-especial.mjs` — e a idempotência INVERTIDA de propósito
+
+Cron `*/5 * * * *`, alvo `2026-10-03T23:00:00Z` (03/10 20:00 BRT). Marcador no Blob
+`anuncio-especial`/`ESPECIAL-AIRFRYER-24h`.
+
+> ⚠️ **Marca DEPOIS, ao contrário do irmão `scheduled-encerrar-especial.mjs`.** O irmão marca
+> **antes** porque a acção dele é uma transacção on-chain que **custa dinheiro** (duplicado
+> caro; perda resolve-se à mão). Aqui o custo de um duplicado é um card repetido e o custo de
+> uma perda é **um anúncio que nunca chegou**. Camada 2: `adicionarNotificacao` ignora
+> duplicado **não-lido** com a mesma chave `tipo:edicaoId:valor` — se o lambda morrer a meio, o
+> tick seguinte não duplica. **Não «corrigir» isto para o padrão do irmão.**
+
+Regras do tick: marcador ilegível → **não envia**; público indisponível → aborta **sem marcar**;
+falha por destinatário → contada, **não trava os outros**; `dryRun` → calcula e **não escreve**.
+
+**Ensaio executável:** `_tests/mc945-dry-run.script.mjs` (não é teste: corre à mão e lê-se).
+⚠️ A 1.ª versão deu **público vazio** (fake com strings em vez de linhas-objecto) e parecia
+aprovada → passou a haver guarda que **exige público não-vazio**. *Um ensaio sem gente não prova nada.*
+
+### Pendência NOVA (ALTA): dependências NÃO DECLARADAS em código de produção
+
+`_lib/kms/aws-kms.mjs` faz `await import("@aws-sdk/client-kms")` — pacote que **não está no
+`package.json`** (que declara o **v2** `aws-sdk`) **nem no lockfile**. O import é **dinâmico**,
+logo o deploy empacota e a app funciona hoje; se o caminho **KMS** for usado sem o pacote,
+falha nesse instante — **caminho de dinheiro**. É a mesma classe do `@nomicfoundation/edr`
+(MC94.4): **dependências que existem só por acidente do ambiente local**; num CI limpo o verde
+seria outro e ninguém saberia porquê. Sintoma visível: `biconomy-handshake` e
+`mc302-integracao` falham com `ERR_MODULE_NOT_FOUND`.
+
+### Lições
+
+1. **Ler o CÓDIGO, não o comentário.** Um «admin-only» falso quase cancelou um MC possível.
+2. **Duas coisas com o mesmo nome não são a mesma coisa** — distingui-las foi o que abriu o MC.
+3. **Um verde que mede o vazio é pior que um vermelho** (o ensaio com público vazio).
+4. **Provar a não-regressão por experimento**: esconder os ficheiros novos e ver as MESMAS
+   falhas fechar a questão sem margem — e é reprodutível.
+
+
+---
+
 ## MC94.4.1 — Lance da edição especial debita SALDO, não senha (2026-09-25)
 
 **Data:** 2026-09-25 · **Origem:** desvio reportado pelo operador ·

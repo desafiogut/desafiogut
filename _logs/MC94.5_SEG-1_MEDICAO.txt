@@ -1,0 +1,71 @@
+MC94.5 — SEG-1 — MEDICAO E AS 5 PERGUNTAS
+Skills ECC: smart-explore, brainstorming, systematic-debugging
+
+═══ BASE REAL ═══
+  O briefing dizia "pos MC94.4.1, c359b61" e deploy 6ab6f4669c70acbbe0871291.
+  Realidade: o MC94.4.1 ja' tinha fechado em 2bd9b5e (com o veredito do validador e
+  a correccao do numero do backend). 5.a vez seguida que o enunciado fica atras.
+  MEDIDO antes de agir (HARD GATE 1).
+
+═══ Q1 — ONDE O GUTO FALA HOJE? ═══
+  (a) IN-APP, pela loja de notificacoes do participante:
+      `_lib/notificacoes-usuario.mjs` (MC15.7, "GUTO para o Participante") — Blob
+      `notificacoes`, chave = endereco lowercase, FIFO 50, fail-soft.
+      => QUEM MOSTRA: `ChatbotWidget.jsx` (o widget do GUTO, presente em TODAS as
+      rotas) consome `notificacoes`+`notificacoesNaoLidas`, conta o badge `🔔 N` e
+      injeta cada mensagem como CARD no chat:
+          cardKind: NOTIF_CARD_KIND[n.tipo] || "notificacao",   <- FALLBACK
+          texto: n.mensagem || "Notificação do sistema.",
+      Um `tipo` DESCONHECIDO cai no fallback -> aparece na mesma. E' isto que torna
+      o anuncio possivel sem tocar no frontend.
+  (b) Conversacionalmente, no `chatbot.mjs` (LLM + RAG).
+  (c) No painel admin, o envio: `admin-notify.mjs`.
+  ⛔ ARMADILHA MEDIDA: ha DUAS coisas chamadas "notificacoes":
+       - a loja por endereco (acima);
+       - `GET /notificacoes` no ramo ADMIN -> eventos DERIVADOS on-read
+         (`tempo_limite_5min`, `sistema_pausado`, ...), SEM store. Outra coisa.
+     E o comentario em `AppContext.jsx:337` diz "notificacoes: array de eventos vindos
+     de GET /notificacoes (admin-only)" — FALSO: o endpoint tem ramo de PARTICIPANTE
+     (`getParticipante(req)` -> `lerNotificacoes(endereco)`, linha 217-224). Quem lesse
+     so' esse comentario concluia que o canal nao existe e que o MC era impossivel.
+     (Mesma classe dos "96 px" e do `createOnLogin` ja' corrigidos.)
+
+═══ Q2 — QUEM SAO OS "TESTADORES"? ⛔ O CODIGO NAO SABE. ═══
+  - `atividade_utilizadores`: colunas `endereco, primeiro_acesso, ultimo_acesso,
+    acessos` — NENHUM campo de testador (lido na migration
+    20260802_mc8943_atividade_utilizadores.sql).
+  - `registarAtividade` e' chamado em `auth-user.mjs` a cada login -> a tabela contem
+    TODOS os que se autenticaram, nao so' testadores.
+  - Varredura por testador/tester/beta/closed_testing/playstore: ZERO no codigo do
+    projecto (so' comentarios "Beta" do PixProvider mock, sem relacao).
+  - Os testadores vivem na LISTA DA PLAY CONSOLE, fora da app.
+  => AMBIGUIDADE REAL. O briefing manda: "Se ficar ambiguo, PARAR no SEG-1 e pedir
+     clarificacao." PARADO e PERGUNTADO (2 perguntas, com opcoes medidas).
+  => R18 (2026-09-25), decisao do operador: APROXIMACAO —
+     "todos os que se autenticaram antes de uma data que eu indico (via
+     atividade_utilizadores)". Data indicada: 02/10/2026 23:59 BRT = 03/10 02:59 UTC.
+     ⚠️ E' uma APROXIMACAO declarada, nao um facto: nao ha no codigo como saber quem e'
+        testador. Fica escrito no cabecalho do modulo.
+
+═══ Q3 — HA INFRA DE PUSH? NAO. ═══
+  `admin-notify.mjs:34` -> `canal === "push"` devolve **501** `push_nao_implementado`
+  com a mensagem do proprio codigo: "Push (FCM) sera implementado apos Firebase + APK
+  novo." `whatsapp` -> 501 tambem. Logo: **in-app apenas**, como o briefing previa.
+
+═══ Q4 — COMO O GUTO PRODUZ MENSAGENS? ═══
+  `_lib/guto-perfis.mjs` (MC15.5) = TOM (system prompt do LLM) + dicionario de
+  respostas por PERFIL (visitante/comum/corporativo/admin). So' FORMATA texto; a
+  deteccao de perfil esta' no chatbot.mjs. Para um ANUNCIO: template determinista
+  (nao precisa de LLM — e' uma mensagem fixa, uma vez).
+
+═══ Q5 — JA' EXISTE SCHEDULED DE ANUNCIOS? NAO. ═══
+  Scheduled existentes: encerrar-especial, purge-logs, monitor-onchain, ia-preditiva,
+  backup-blobs, fila-processor. NENHUMA de anuncio.
+  PADRAO: `schedule("cron", fn)` NO PROPRIO FICHEIRO — sem entrada no netlify.toml
+  (o netlify.toml so' fala de scheduled para explicar o limite de 50MB da Lambda).
+  Irmas a seguir: `scheduled-encerrar-especial.mjs` (marcador + fail-soft).
+
+═══ VEREDITO: AJUSTAR (parar, perguntar, e depois SEGUIR) ═══
+  A unica peca que o codigo nao tem e' QUEM sao os testadores — e o briefing manda
+  parar nesse caso. Perguntado; respondido; o mecanismo todo e' reutilizavel
+  (destino "especifico"/lista), logo o MC e' executavel depois da decisao.

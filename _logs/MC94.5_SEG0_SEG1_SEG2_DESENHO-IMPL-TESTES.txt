@@ -1,0 +1,66 @@
+MC94.5 — SEG0 (desenho) + SEG1 (implementacao) + SEG2 (testes e mutacao)
+Skills ECC: brainstorming, impeccable, test-driven-development, terminal-ops
+
+═══ 0.1 CANAL ═══ In-app (o unico que existe: push = 501). Reutiliza-se a loja da
+  MC15.7 via `adicionarNotificacao` — NAO se cria sistema de notificacoes (HARD GATE 3).
+
+═══ 0.2 TEXTO (PT-BR) ═══
+  "Faltam 24h! Amanhã às 20h começa a rodada especial da Air Fryer. É relâmpago:
+   lance a partir de R$ 0,01, debita do saldo. Só 30 minutos. Não fica de fora!"
+  (Sugestao do operador, usada tal-e-qual. Traz: prémio, 04/10 20h, relâmpago,
+   R$ 0,01, debita do saldo, 30 min.) ⚠️ Por CONFIRMAR pelo operador (SEG0.2).
+  O teste trava os elementos E trava que NAO volte a falar de senhas (regressao do
+  MC94.4.1).
+
+═══ 0.3 MECANISMO ═══ Cron `*/5 * * * *` + verificar o momento (resiliente: se o tick
+  do minuto falhar, o seguinte apanha). NAO um cron de data exacta.
+═══ 0.4 PUBLICO ═══ `atividade_utilizadores` com `primeiro_acesso <= corte` (R18).
+  Enderecos normalizados e validados (`^0x[0-9a-f]{40}$`); duplicados removidos.
+═══ 0.5 IDEMPOTENCIA ═══ Marcador no Blob `anuncio-especial`/`ESPECIAL-AIRFRYER-24h`.
+  ORDEM DELIBERADAMENTE INVERSA a' do irmao `scheduled-encerrar-especial.mjs`:
+    - irmao: marca ANTES, porque a accao dele e' uma transaccao on-chain que CUSTA
+      DINHEIRO (duplicado caro; perda resolve-se a mao);
+    - aqui: marca DEPOIS, porque o custo de um duplicado e' um card repetido e o
+      custo de uma perda e' um anuncio que nunca chegou.
+  CAMADA 2: `adicionarNotificacao` ja' ignora duplicado NAO-LIDO com a mesma chave
+  `tipo:edicaoId:valor` -> se o lambda morrer a meio do ciclo, o tick seguinte
+  (sem marcador) nao duplica para quem ja' recebeu.
+  => A inversao esta' ESCRITA no cabecalho do modulo, para ninguem a "corrigir"
+     para o padrao do irmao sem perceber que o risco e' outro.
+
+═══ 1.1/1.2 IMPLEMENTACAO ═══
+  `scheduled-anuncio-especial.mjs` (222 linhas):
+    - constantes exportadas: EDICAO, ALVO_ISO, CORTE_TESTADORES_ISO, CRON, TIPO,
+      MENSAGEM, STORE_MARCADOR/CHAVE_MARCADOR;
+    - `decidirDisparo({agoraMs, alvoMs, jaEnviado})` — PURA;
+    - `listarPublico({corteIso, sb})` — le e filtra;
+    - `executarTick({agoraMs, store, sb, dryRun, notificar})` — NUCLEO com tudo
+      injectavel, para os testes medirem a logica REAL com relogio simulado (sem
+      truques de mock de Date nem de timezone);
+    - `handler = schedule(CRON, () => executarTick())` — fino de proposito
+      (mesmo desenho de consolidar-lances -> _lib/consolidacao.mjs).
+  Decisoes de robustez:
+    - marcador ILEGIVEL -> NAO envia (perder um tick recupera-se em 5 min; um segundo
+      envio a toda a gente nao);
+    - publico INDISPONIVEL -> aborta SEM marcar (o tick seguinte tenta);
+    - fail-soft POR DESTINATARIO (uma falha nao impede os outros);
+    - dry-run por env (`ANUNCIO_ESPECIAL_DRY_RUN=1`) e por parametro.
+
+═══ 2. TESTES + MUTACAO (R16) ═══
+  `_tests/mc945-anuncio-especial.test.mjs` — 15 testes: regra pura (antes/no alvo/ja
+  enviado), o alvo e' 20:00 BRT e nao 20:00 UTC, o corte e' o decidido, o publico
+  filtra enderecos invalidos e normaliza, tick antes do alvo nao escreve nada, tick
+  no alvo envia a TODOS os do publico com tipo/edicao/mensagem certos e marca,
+  IDEMPOTENCIA na segunda passagem, so' o publico (nunca "todos"), marcador ilegivel
+  nao envia, publico indisponivel nao marca, ensaio nao escreve nada, falha de envio
+  e' contada e nao trava os outros, e a mensagem tem os elementos exigidos (e nao
+  fala de senhas).
+  5 MUTANTES, todos RED -> GREEN com md5 restaurado identico:
+    M1 data (deixa de verificar "antes do alvo")      -> 13/2 -> 15/0
+    M2 idempotencia (deixa de respeitar o marcador)   -> 13/2 -> 15/0
+    M3 publico (deixa de aplicar o corte)             -> 14/1 -> 15/0
+    M4 ensaio (deixa de honrar o dry-run)             -> 14/1 -> 15/0
+    M5 marcador ilegivel (passa a enviar)             -> 14/1 -> 15/0
+  ⚠️ O guarda de ancora (exigir 1 ocorrencia exacta) APANHOU o M5 na 1.a tentativa
+     (a ancora estava sem acento: "ilegivel" vs "ilegível") — um mutante que nao
+     aplica da' um VERDE FALSO, que e' pior que um vermelho.
