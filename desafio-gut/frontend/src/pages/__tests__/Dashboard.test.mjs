@@ -1,9 +1,22 @@
-// Dashboard.test.mjs — MC94.2. Renderiza a PÁGINA INTEIRA do Dashboard, a sério.
+// Dashboard.test.mjs — MC94.2, revisto no MC94.3.1. Renderiza a PÁGINA INTEIRA do
+// Dashboard, a sério.
 //
 // Corre com:  node --test src/pages/__tests__/Dashboard.test.mjs
 // (a partir de desafio-gut/frontend). Mesmo arnês do MeusAtivos.test.mjs: Vite
 // transpila, react-dom/server renderiza, `resolve.alias` troca o AppContext, o
 // IdiomaContext e o CardLance por duplos. Nenhum ficheiro do projeto muda.
+//
+// ⚠️ MC94.3.1 (adendo do operador, 2026-09-25) — REVERSÃO DO DESIGN DO MC94.2.
+// O MC94.2 montava a especial numa SECÇÃO PRÓPRIA entre "Edição Ativa" e
+// "Acesso Rápido", com a R-1 a continuar ao lado. O operador confirmou que isso
+// foi um erro: a especial tem de PREENCHER O SLOT EXISTENTE. Este ficheiro testa
+// o novo contrato:
+//
+//   • sem especial  -> o slot mostra a R-1 de sempre ("🎯 Edição Ativa")
+//   • com especial  -> o slot é preenchido pela especial (marca `data-slot`),
+//                      o cabeçalho da R-1 DESAPARECE, e o ícone de presente
+//                      cresce para 96 px (R18: "maior só na especial")
+//   • a especial continua a NÃO aparecer em "Outras Edições"
 //
 // ⚠️ Em SSR o `useEffect` não corre, logo o relógio de 1 s do card não avança:
 // o card usa o instante do render. As datas são RELATIVAS ao relógio real — uma
@@ -70,28 +83,58 @@ function renderizar(contexto = {}) {
   );
 }
 const texto = (html) => html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
-const secaoEspecial = (html) => html.match(/<section[^>]*data-secao="edicao-especial"[\s\S]*?<\/section>/)?.[0] ?? "";
+/** O corpo da especial DENTRO do slot (marca `data-slot`, desde o MC94.3.1). */
+const dentroDoSlot = (html) => /data-slot="edicao-especial"/.test(html);
+/** Lado do ícone de presente, em px, tal como saiu no `style` inline. */
+const ladoDoBanner = (html) => html.match(/width:\s*(\d+)px;\s*height:\s*\d+px;\s*flex-shrink:\s*0;\s*border-radius:\s*\d+px;\s*overflow:\s*hidden/)?.[1] ?? null;
 
-describe("MC94.2 · Dashboard — o card da edição especial", () => {
-  test("antes da hora (em `agendadas`): card agendado, com arte e cronómetro", () => {
+describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
+  test("antes da hora (em `agendadas`): a especial preenche o slot, com arte e cronómetro", () => {
     const html = renderizar({ agendadas: { "ESPECIAL-AIRFRYER": especial(Date.now() + 5 * H) } });
-    const sec = secaoEspecial(html);
-    assert.ok(sec, "o card não apareceu");
-    assert.match(sec, /data-estado="agendada"/);
-    assert.match(sec, /src="\/artes\/edicao-especial-airfryer\.jpg"/);
-    assert.match(sec, /role="timer"/);
+    assert.ok(dentroDoSlot(html), "a especial não apareceu no slot");
+    assert.match(html, /data-estado="agendada"/);
+    assert.match(html, /src="\/artes\/edicao-especial-airfryer\.jpg"/);
+    assert.match(html, /role="timer"/);
   });
 
-  test("fica entre 'Edição Ativa' e 'Acesso Rápido' — a R-1 continua lá", () => {
+  test("⛔ a secção própria do MC94.2 DESAPARECEU (o teste que o MC94.2 tinha exigia o contrário)", () => {
     const html = renderizar({ agendadas: { "ESPECIAL-AIRFRYER": especial(Date.now() + 5 * H) } });
+    assert.doesNotMatch(html, /data-secao="edicao-especial"/, "o antigo marcador de secção voltou");
     const t = texto(html);
-    const iAtiva = t.indexOf("Edição Ativa");
-    const iEsp = t.indexOf("Edição especial");
-    const iRapido = t.indexOf("Acesso Rápido");
-    assert.ok(iAtiva >= 0 && iEsp > iAtiva && iRapido > iEsp, `ordem errada: ${iAtiva} ${iEsp} ${iRapido}`);
+    // A R-1 continua na página (o card "Menor Lance Único" e os atalhos ficam),
+    // mas o CABEÇALHO do slot deixa de dizer "🎯 Edição Ativa": quem o preenche
+    // é a especial, e o cabeçalho tem de dizê-lo.
+    assert.match(t, /Edição especial/, "o cabeçalho da especial");
+    assert.doesNotMatch(t, /🎯 Edição Ativa/, "o slot continuava a dizer 'Edição Ativa' com a especial lá dentro");
+    assert.match(t, /Menor Lance Único/, "a R-1 desapareceu da página");
   });
 
-  test("a contagem da PÁGINA usa o offset do servidor que vem do contexto", () => {
+  test("a especial fica DENTRO do slot — antes do card 'Menor Lance Único'", () => {
+    const html = renderizar({ agendadas: { "ESPECIAL-AIRFRYER": especial(Date.now() + 5 * H) } });
+    const iEsp = html.indexOf("data-slot=\"edicao-especial\"");
+    const iMenor = html.indexOf("Menor Lance Único");
+    assert.ok(iEsp >= 0 && iMenor > iEsp, `ordem errada: slot=${iEsp} menor=${iMenor}`);
+    // e ANTES de "Outras Edições"/"Acesso Rápido" (não é uma secção de topo)
+    const iRapido = html.indexOf("Acesso Rápido");
+    assert.ok(iRapido > iEsp, "a especial ficou depois do Acesso Rápido");
+  });
+
+  test("o ícone de presente cresce para 96 px SÓ na especial (R18)", () => {
+    const comEspecial = renderizar({ agendadas: { "ESPECIAL-AIRFRYER": especial(Date.now() + 5 * H) } });
+    assert.equal(ladoDoBanner(comEspecial), "96", "o banner da especial não ficou a 96 px");
+    const semEspecial = renderizar();
+    assert.equal(ladoDoBanner(semEspecial), "52", "a R-1 mudou de tamanho de banner");
+  });
+
+  test("sem especial: nenhuma marca de slot, e a página é a de sempre", () => {
+    const html = renderizar();
+    assert.equal(dentroDoSlot(html), false, "apareceu um card especial sem haver especial");
+    const t = texto(html);
+    for (const s of ["🎯 Edição Ativa", "Menor Lance Único", "Acesso Rápido"]) assert.match(t, new RegExp(s));
+    assert.doesNotMatch(t, /🎁 Edição especial/);
+  });
+
+  test("a contagem do slot usa o offset do servidor que vem do contexto", () => {
     // Aparelho 3 h adiantado: pelo relógio dele a especial já teria acabado.
     // Na hora do servidor faltam ~2 h.
     const offset = -3 * H;
@@ -99,9 +142,8 @@ describe("MC94.2 · Dashboard — o card da edição especial", () => {
       agendadas: { "ESPECIAL-AIRFRYER": especial(Date.now() + offset + 2 * H) },
       offsetRelogioMs: offset,
     });
-    const sec = secaoEspecial(html);
-    assert.match(sec, /data-estado="agendada"/, "o offset não chegou ao card");
-    assert.match(texto(sec), /0[12] horas/);
+    assert.match(html, /data-estado="agendada"/, "o offset não chegou ao card");
+    assert.match(texto(html), /0[12] horas/);
   });
 
   test("na hora (já em `edicoes`): o formulário é o da ESPECIAL, pago em senha", async () => {
@@ -111,19 +153,20 @@ describe("MC94.2 · Dashboard — o card da edição especial", () => {
     // e, medido, corria SEMPRE o ramo do espaço reservado — a asserção do id
     // nunca executava. O lazy fica em cache depois de resolvido, por isso
     // re-renderiza-se e EXIGE-SE o formulário, sem alternativa.
-    const primeiro = secaoEspecial(renderizar(ctx));
+    const primeiro = renderizar(ctx);
     assert.match(primeiro, /data-estado="activa"/);
     assert.match(primeiro, /aria-busy="true"/, "espaço reservado enquanto carrega");
-    let sec = "";
-    for (let i = 0; i < 50 && !/data-stub="card-lance"/.test(sec); i++) {
+    let html = "";
+    for (let i = 0; i < 50 && !/data-stub="card-lance"/.test(html); i++) {
       await new Promise((r) => setTimeout(r, 20));
-      sec = secaoEspecial(renderizar(ctx));
+      html = renderizar(ctx);
     }
-    assert.match(sec, /data-stub="card-lance"/, "o formulário nunca chegou");
-    assert.match(sec, /data-id-edicao="ESPECIAL-AIRFRYER"/, "licitaria noutra edição");
-    assert.match(sec, /data-tipo="programado"/, "a especial paga-se em senha (D1 do MC94.1)");
-    assert.match(sec, /data-encerrado="false"/);
-    assert.doesNotMatch(sec, /href="\/mercado"/, "o /mercado licita na R-1");
+    assert.match(html, /data-stub="card-lance"/, "o formulário nunca chegou");
+    assert.match(html, /data-id-edicao="ESPECIAL-AIRFRYER"/, "licitaria noutra edição");
+    assert.match(html, /data-tipo="programado"/, "a especial paga-se em senha (D1 do MC94.1)");
+    assert.match(html, /data-encerrado="false"/);
+    // O botão do slot da R-1 desapareceu com a especial lá dentro.
+    assert.doesNotMatch(texto(html), /Ir para o Mercado de Lances/, "o botão da R-1 ficou no slot da especial");
   });
 
   test("na hora, a especial NÃO aparece também em 'Outras Edições'", () => {
@@ -131,8 +174,9 @@ describe("MC94.2 · Dashboard — o card da edição especial", () => {
       edicoes: { "R-1": R1, "ESPECIAL-AIRFRYER": especial(Date.now() - 60_000, { status: "aberto" }) },
     });
     assert.doesNotMatch(texto(html), /Outras Edições/, "desenhada duas vezes");
-    const fora = html.replace(secaoEspecial(html), "");
-    assert.doesNotMatch(fora, /ESPECIAL-AIRFRYER|Air Fryer/, "só o card especial fala dela");
+    // Contagem directa: a especial tem de aparecer UMA vez em todo o ecrã.
+    const vezes = (texto(html).match(/Air Fryer/g) || []).length;
+    assert.equal(vezes, 1, `a especial apareceu ${vezes} vezes no ecrã`);
   });
 
   test("'Outras Edições' continua a mostrar as outras", () => {
@@ -144,15 +188,9 @@ describe("MC94.2 · Dashboard — o card da edição especial", () => {
     assert.match(html, /Smart TV/);
   });
 
-  test("sem especial: nenhum card, e a página é a de sempre", () => {
-    const html = renderizar();
-    assert.equal(secaoEspecial(html), "");
-    const t = texto(html);
-    for (const s of ["Edição Ativa", "Menor Lance Único", "Acesso Rápido"]) assert.match(t, new RegExp(s));
-  });
-
   test("uma PROG-* em `agendadas` não vira card especial", () => {
     const html = renderizar({ agendadas: { "PROG-9": { ...especial(Date.now() + H), id: "PROG-9" } } });
-    assert.equal(secaoEspecial(html), "");
+    assert.equal(dentroDoSlot(html), false);
+    assert.match(texto(html), /🎯 Edição Ativa/);
   });
 });

@@ -258,8 +258,35 @@ export default function Dashboard() {
         gap: innerGap,
         marginBottom: sectionGap,
       }}>
-        {/* Status do leilão */}
+        {/* Status do leilão — MC94.3.1: é aqui o SLOT. Quando há uma edição
+            especial, é ELA que o preenche (adendo do operador, 2026-09-25: a
+            especial sai da secção própria do MC94.2 e entra no slot existente);
+            sem especial, o slot mostra a R-1 de sempre. O ícone de presente do
+            slot cresce para ~96 px só na especial (R18: "maior só na especial"). */}
         <GlassCard className={cardCls}>
+          {edicaoEspecial ? (
+            <CardEdicaoEspecial
+              edicao={edicaoEspecial}
+              offsetMs={offsetRelogioMs}
+              isMobile={isMobile}
+              t={t}
+              renderLance={({ idEdicao, tipoLeilao, encerrado: fechada }) => (
+                <Suspense fallback={<div aria-busy="true" style={{ minHeight: "12rem" }} />}>
+                  <CardLance
+                    idEdicao={idEdicao}
+                    tipoLeilao={tipoLeilao}
+                    encerrado={fechada}
+                    address={address}
+                    isConnected={isConnected}
+                    onConnect={abrirModal}
+                    onDisconnect={desconectar}
+                    ready={ready}
+                  />
+                </Suspense>
+              )}
+            />
+          ) : (
+          <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? "0.5rem" : "0.75rem" }}>
             <h3 style={{ ...cardTitulo, margin: 0 }}>🎯 Edição Ativa</h3>
             <span style={{
@@ -354,6 +381,8 @@ export default function Dashboard() {
           >
             ⚡ Ir para o Mercado de Lances
           </button>
+          </>
+          )}
         </GlassCard>
 
         {/* Vencedor atual */}
@@ -387,35 +416,6 @@ export default function Dashboard() {
           )}
         </GlassCard>
       </section>
-
-      {/* ── MC94.2 — Edição especial (Air Fryer) ──
-          Entre "Edição Ativa" e "Outras Edições". O lance é dado AQUI, no
-          CardLance desta edição: o /mercado licita sempre na R-1. Sem
-          onLanceSucesso — o handler do contexto acrescenta à tabela da R-1. */}
-      {edicaoEspecial && (
-        <div style={{ marginBottom: sectionGap }}>
-          <CardEdicaoEspecial
-            edicao={edicaoEspecial}
-            offsetMs={offsetRelogioMs}
-            isMobile={isMobile}
-            t={t}
-            renderLance={({ idEdicao, tipoLeilao, encerrado: fechada }) => (
-              <Suspense fallback={<div aria-busy="true" style={{ minHeight: "12rem" }} />}>
-              <CardLance
-                idEdicao={idEdicao}
-                tipoLeilao={tipoLeilao}
-                encerrado={fechada}
-                address={address}
-                isConnected={isConnected}
-                onConnect={abrirModal}
-                onDisconnect={desconectar}
-                ready={ready}
-              />
-              </Suspense>
-            )}
-          />
-        </div>
-      )}
 
       {/* ── MC15.4 ITEM 7 — Outras edições com cronómetros independentes ── */}
       {edicoesExtra.length > 0 && (

@@ -1,10 +1,46 @@
+// CardEdicaoEspecial — MC94.2 / MC94.3.1. O CORPO da edição especial, desenhado
+// para viver DENTRO do slot "🎯 Edição Ativa" do Dashboard.
+//
+// ⚠️ MC94.3.1 (adendo do operador, 2026-09-25) — REVERSÃO DO DESIGN DO MC94.2.
+// O MC94.2 montou a especial numa SECÇÃO PRÓPRIA entre "Edição Ativa" e "Outras
+// Edições". Foi um erro: a especial tem de PREENCHER O SLOT EXISTENTE. Este
+// componente deixou de ser uma <section> e passou a ser o corpo que o Dashboard
+// monta lá dentro, no lugar do conteúdo da R-1:
+//
+//   caixa amarela (a mesma da R-1): EdicaoBanner a ~96 px SÓ na especial
+//   ↓
+//   GUTO (o mesmo componente do Dashboard) + o cronómetro/informações ao lado
+//   ↓
+//   o formulário de lance DESTA edição (activa) ou o painel do vencedor (encerrada)
+//
+// Os quatro estados (agendada · a_abrir · activa · encerrada) e TODA a lógica de
+// hora-do-servidor vêm do MC94.2, sem alteração.
+//
+// ⚠️ O FORMULÁRIO NÃO É UM LINK PARA /mercado. O /mercado monta o `CardLance`
+// com `EDICAO_ATIVA = "R-1"` fixo: um botão "Dar lance" que navegasse para lá
+// mandaria o lance para a edição errada. O Dashboard passa `renderLance`, que
+// monta o `CardLance` existente com o id da especial e `tipoLeilao="programado"`
+// (decisão D1 do MC94.1: cada lance gasta 1 senha).
+//
+// ⚠️ Estado e contagem usam a hora do SERVIDOR (`offsetMs`, calculado pelo
+// `useEdicoes` a cada fetch). Sem offset ainda, a contagem mostra "…".
+//
+// ⚠️ O cabeçalho (título + badge de estado) vive AQUI e não no Dashboard: é o que
+// identifica o slot como sendo da especial. O Dashboard não desenha o cabeçalho
+// da R-1 quando este componente ocupa o slot.
+
 import { useEffect, useState } from "react";
+import EdicaoBanner from "../EdicaoBanner.jsx";
+import GutoSpritePlayer from "../GutoSpritePlayer.jsx";
 import ContagemDecrescente from "./ContagemDecrescente.jsx";
 import PainelVencedorEspecial from "./PainelVencedorEspecial.jsx";
 import { useResultadoEspecial } from "./useResultadoEspecial.js";
 import {
-  COR, T_PADRAO, caixa, ESTADO_ESPECIAL, estadoEspecial, alvoDaContagem, janelaEmBrasilia,
+  COR, T_PADRAO, ESTADO_ESPECIAL, estadoEspecial, alvoDaContagem, janelaEmBrasilia,
 } from "./_estilo-especial.js";
+
+/** Tamanho do ícone de presente na especial (R18: "maior só na especial"). */
+export const BANNER_ESPECIAL_PX = 96;
 
 /**
  * Hora do SERVIDOR, a avançar de segundo a segundo — só dentro deste card.
@@ -37,22 +73,24 @@ const BADGE = {
   [ESTADO_ESPECIAL.ENCERRADA]: { chave: "edicao.especial.badgeEncerrada", texto: "🔴 Encerrada",  cor: COR.danger },
 };
 
+// A caixa amarela translúcida — a MESMA da R-1 (Dashboard.jsx). Não se inventa
+// um segundo estilo: a especial tem de parecer parte do slot, não um anexo.
+const CAIXA = {
+  display: "flex", alignItems: "center", gap: "0.65rem",
+  padding: "0.6rem 0.75rem",
+  background: "rgba(245,166,35,0.07)",
+  border: "1px solid rgba(245,166,35,0.22)",
+  borderRadius: "10px",
+  marginBottom: "0.75rem",
+};
+
+const ROTULO = {
+  fontSize: "0.58rem", color: COR.muted, textTransform: "uppercase",
+  letterSpacing: "0.07em", fontWeight: 700, marginBottom: "0.15rem",
+};
+
 /**
- * Card da edição especial no Dashboard (MC94.2). Orquestra os quatro estados:
- *
- *   agendada  → arte + contagem até à abertura
- *   a_abrir   → arte + "Abrindo…" + contagem (último minuto)
- *   activa    → arte + contagem até ao fim + o formulário de lance DESTA edição
- *   encerrada → arte + resultado (vencedor e métricas) — decisão D4
- *
- * ⚠️ O FORMULÁRIO NÃO É UM LINK PARA /mercado. O /mercado monta o `CardLance`
- * com `EDICAO_ATIVA = "R-1"` fixo: um botão "Dar lance" que navegasse para lá
- * mandaria o lance para a edição errada. O Dashboard passa `renderLance`, que
- * monta o `CardLance` existente com o id da especial e `tipoLeilao="programado"`
- * (decisão D1 do MC94.1: cada lance gasta 1 senha).
- *
- * ⚠️ Estado e contagem usam a hora do SERVIDOR (`offsetMs`, calculado pelo
- * `useEdicoes` a cada fetch). Sem offset ainda, a contagem mostra "…".
+ * Corpo da edição especial dentro do slot do Dashboard.
  *
  * @param {object} props
  * @param {object} props.edicao edição normalizada pelo useEdicoes (com inicio_em)
@@ -62,9 +100,11 @@ const BADGE = {
  * @param {(chave:string, fallback:string)=>string} [props.t]
  * @param {number} [props.agoraMs] instante fixo (testes)
  * @param {object} [props.resultadoEspecial] resultado já lido (testes); senão lê-se
+ * @param {number} [props.size] lado do ícone de presente (px)
  */
 export default function CardEdicaoEspecial({
-  edicao, offsetMs, renderLance, isMobile = false, t = T_PADRAO, agoraMs, resultadoEspecial,
+  edicao, offsetMs, renderLance, isMobile = false, t = T_PADRAO, agoraMs,
+  resultadoEspecial, size = BANNER_ESPECIAL_PX,
 }) {
   const agora = useAgoraServidor(offsetMs, agoraMs);
   const estado = estadoEspecial(edicao, agora);
@@ -78,36 +118,50 @@ export default function CardEdicaoEspecial({
   const restanteMs = Number.isFinite(offsetMs) && alvo != null ? alvo - agora : null;
   const badge = BADGE[estado];
   const produto = edicao.produto || t("edicao.especial.premio", "Prêmio especial");
+  // O alt do banner diz o que a imagem mostra (o produto), não só que existe.
+  const altArte = `${t("edicao.especial.altArte", "Arte da edição especial")}: ${produto}`;
+  const semRelogio = !Number.isFinite(offsetMs);
 
-  let corpo;
-  if (estado === ESTADO_ESPECIAL.AGENDADA) {
-    corpo = <ContagemDecrescente restanteMs={restanteMs} rotulo={t("edicao.especial.abreEm", "Abre em")} isMobile={isMobile} t={t} />;
-  } else if (estado === ESTADO_ESPECIAL.A_ABRIR) {
-    corpo = <>
+  // ── O cronómetro (e o que o substitui em cada estado) ──
+  let contagem = null;
+  if (estado === ESTADO_ESPECIAL.A_ABRIR) {
+    contagem = <>
       <div style={{ textAlign: "center", color: "#fbbf24", fontWeight: 800, marginBottom: "0.4rem" }}>
         {t("edicao.especial.abrindo", "Abrindo em instantes…")}
       </div>
       <ContagemDecrescente restanteMs={restanteMs} cor="#fbbf24" isMobile={isMobile} t={t} />
     </>;
-  } else if (estado === ESTADO_ESPECIAL.ACTIVA && !Number.isFinite(offsetMs)) {
+  } else if (estado === ESTADO_ESPECIAL.AGENDADA) {
+    contagem = <ContagemDecrescente restanteMs={restanteMs} rotulo={t("edicao.especial.abreEm", "Abre em")} isMobile={isMobile} t={t} />;
+  } else if (estado === ESTADO_ESPECIAL.ACTIVA && semRelogio) {
     // Sem hora do servidor, "activa" foi decidido pelo relógio do APARELHO — que
     // pode estar adiantado. Não se abre o formulário por um palpite: o backend
-    // recusaria com 409. Achado da validação independente.
-    corpo = <ContagemDecrescente restanteMs={null} isMobile={isMobile} t={t} />;
+    // recusaria com 409. Achado da validação independente do MC94.2.
+    contagem = <ContagemDecrescente restanteMs={null} isMobile={isMobile} t={t} />;
   } else if (estado === ESTADO_ESPECIAL.ACTIVA) {
-    corpo = <>
-      <ContagemDecrescente restanteMs={restanteMs} rotulo={t("edicao.especial.fechaEm", "Fecha em")} cor={COR.success} isMobile={isMobile} t={t} />
+    contagem = <ContagemDecrescente restanteMs={restanteMs} rotulo={t("edicao.especial.fechaEm", "Fecha em")} cor={COR.success} isMobile={isMobile} t={t} />;
+  }
+
+  // ── Abaixo do cronómetro: o formulário DESTA edição, ou o resultado ──
+  let abaixo = null;
+  if (estado === ESTADO_ESPECIAL.ACTIVA && !semRelogio) {
+    abaixo = (
       <div style={{ marginTop: "0.9rem" }}>
         {renderLance?.({ idEdicao: edicao.id, tipoLeilao: "programado", encerrado: false })}
       </div>
-    </>;
-  } else {
-    corpo = <PainelVencedorEspecial {...resultado} isMobile={isMobile} t={t} />;
+    );
+  } else if (estado === ESTADO_ESPECIAL.ENCERRADA) {
+    abaixo = (
+      <div style={{ marginTop: "0.9rem" }}>
+        <PainelVencedorEspecial {...resultado} isMobile={isMobile} t={t} />
+      </div>
+    );
   }
 
   return (
-    <section data-secao="edicao-especial" data-estado={estado} data-edicao={edicao.id} style={caixa(isMobile)}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+    <div data-slot="edicao-especial" data-estado={estado} data-edicao={edicao.id}>
+      {/* Cabeçalho do slot: identifica a edição que o slot está a mostrar. */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", marginBottom: isMobile ? "0.5rem" : "0.75rem" }}>
         <h3 style={{ margin: 0, fontSize: "0.85rem", fontWeight: 800, color: COR.gold, letterSpacing: "0.04em", fontFamily: "'Orbitron', sans-serif" }}>
           {t("edicao.especial.titulo", "🎁 Edição especial")}
         </h3>
@@ -117,45 +171,43 @@ export default function CardEdicaoEspecial({
         }}>{t(badge.chave, badge.texto)}</span>
       </div>
 
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 220px) minmax(0, 1fr)",
-        gap: isMobile ? "0.8rem" : "1.1rem",
-        alignItems: "center",
-      }}>
-        {edicao.imagem_url && (
-          <img
-            src={edicao.imagem_url}
-            alt={`${t("edicao.especial.altArte", "Arte da edição especial")}: ${produto}`}
-            width={1254}
-            height={1254}
-            loading="lazy"
-            decoding="async"
-            style={{
-              width: "100%", height: "auto", aspectRatio: "1 / 1",
-              maxWidth: isMobile ? "340px" : "220px", justifySelf: "center",
-              borderRadius: "12px", display: "block", objectFit: "cover",
-            }}
-          />
-        )}
-        <div>
-          <div style={{ textAlign: "center", marginBottom: "0.75rem" }}>
-            <div style={{ fontSize: "0.62rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>
-              {t("edicao.especial.premioEmDisputa", "Prêmio em disputa")}
-            </div>
-            <div style={{ fontSize: isMobile ? "1.1rem" : "1.2rem", fontWeight: 900, color: COR.text }}>{produto}</div>
-            {janela && (
-              <div style={{ fontSize: "0.75rem", color: COR.muted, marginTop: "0.15rem" }}>
-                {janela.dia} · {janela.inicio}–{janela.fim} {t("edicao.especial.brasilia", "(horário de Brasília)")}
-              </div>
-            )}
-            <div style={{ fontSize: "0.7rem", color: COR.muted, marginTop: "0.15rem" }}>
-              {t("edicao.especial.regra", "Vence o menor lance único · cada lance usa 1 senha")}
-            </div>
+      {/* A caixa amarela do slot: ícone de presente a 96 px + prémio e janela. */}
+      <div style={CAIXA}>
+        <EdicaoBanner edicao={edicao} size={size} alt={altArte} />
+
+        <div style={{ minWidth: 0 }}>
+          <div style={ROTULO}>{t("edicao.especial.premioEmDisputa", "Prêmio em disputa")}</div>
+          <div style={{ fontSize: isMobile ? "0.95rem" : "1.05rem", color: COR.text, fontWeight: 800, lineHeight: 1.25 }}>
+            {produto}
           </div>
-          {corpo}
+          {janela && (
+            <div style={{ fontSize: "0.68rem", color: COR.muted, lineHeight: 1.3 }}>
+              {janela.dia} · {janela.inicio}–{janela.fim} {t("edicao.especial.brasilia", "(horário de Brasília)")}
+            </div>
+          )}
+          <div style={{ fontSize: "0.66rem", color: COR.muted, lineHeight: 1.3 }}>
+            {t("edicao.especial.regra", "Vence o menor lance único · cada lance usa 1 senha")}
+          </div>
         </div>
       </div>
-    </section>
+
+      {/* GUTO (o mesmo do Dashboard) + o cronómetro e o estado ao lado. */}
+      <div style={{
+        display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center",
+        gap: isMobile ? "0.6rem" : "0.9rem",
+        padding: isMobile ? "0.5rem 0 0.6rem" : "0.25rem 0 0.6rem",
+      }}>
+        <GutoSpritePlayer variant="inline" size={isMobile ? 88 : 104} mood={encerrada ? "celebrating" : undefined} />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem", minWidth: 0 }}>
+          {contagem ?? (
+            <div style={{ fontSize: isMobile ? "1.05rem" : "0.98rem", fontWeight: 900, color: COR.danger, letterSpacing: "0.04em" }}>
+              {t("edicao.especial.encerrada", "Edição encerrada")}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {abaixo}
+    </div>
   );
 }

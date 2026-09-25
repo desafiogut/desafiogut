@@ -16,10 +16,14 @@
 import { useState } from "react";
 import ImageModal from "./ImageModal.jsx";
 
-export default function EdicaoBanner({ edicao, size = 52, radius = 8, clicavel = true, className = "" }) {
+// MC94.3.1 — `alt` opcional: quem sabe o que a imagem MOSTRA (a especial, que
+// conhece o produto) pode dizê-lo; sem `alt`, o genérico de sempre. Aditivo:
+// nenhum chamador existente muda de comportamento.
+export default function EdicaoBanner({ edicao, size = 52, radius = 8, clicavel = true, className = "", alt }) {
   const [aberto, setAberto] = useState(false);
   const id = edicao?.id;
   const imagem = edicao?.imagem_url || edicao?.banner_url || edicao?.imagem || null;
+  const descricao = alt || `Banner da edição ${id ?? ""}`.trim();
 
   const box = {
     width: `${size}px`, height: `${size}px`, flexShrink: 0,
@@ -33,7 +37,7 @@ export default function EdicaoBanner({ edicao, size = 52, radius = 8, clicavel =
   const conteudo = imagem
     ? <img
         src={imagem}
-        alt={`Banner da edição ${id ?? ""}`.trim()}
+        alt={descricao}
         loading="lazy"
         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
       />
