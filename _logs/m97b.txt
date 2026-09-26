@@ -1,0 +1,33 @@
+fix(MC97): corrigir as 4 regressoes que a minha substituicao mecanica introduziu + guarda value-blind
+
+VEREDICTO DO VALIDADOR (deleg_ebdb6ee3, 50 chamadas, 736 s). Confirmou o essencial (0 proibidos
+nos valores medido por ESM import; 129 chaves; 9/9 campos da Play; suites) e REFUTOU o que eu
+nao vi. Tudo o que segue e' meu.
+
+REGRESSOES GRAMATICAIS INTRODUZIDAS POR MIM (a substituicao `\bbid\b -> offer` foi cega a gramatica):
+  en.js:86  «can already be used in A offer»   -> «an offer»     (era «a bid»)
+  en.js:97  «every participant offer»          -> «participant's offer»
+  es.js:85  «LAS tokens las acredita»          -> «LOS tokens los acredita»  (era «Las contraseñas»)
+  es.js:86  «LAS tokens del bono ya fueron acreditadas» -> «LOS tokens ... acreditados»
+
+TERMO PROIBIDO QUE O MEU GUARDA NAO COBRIA:
+  es.js:25  «dash.senhas» = «Fichas» -> «Tokens»   (o glossario proibe «ficha» explicitamente)
+
+GUARDA «VALUE-BLIND» (4 mutacoes do validador SOBREVIVIAM; agora morrem todas):
+  M4 «Skill-based tournament»->«Skill tournament»   (o COMENTARIO do ficheiro mantinha a frase:
+      o teste fazia grep ao FICHEIRO, nao ao VALOR)  -> OBRIGATORIOS passam a medir os VALORES
+  M5 EN «Offers»->«Lances» e M6 ES «Ofertas»->«Lances»  (um valor em PORTUGUES passava!)
+      -> novo teste de IDIOMA com marcadores de PT
+  M8 PT «Senhas»->«Tokens»  -> novo teste: o PT respeita o proprio glossario
+  M9 «Fichas» em ES  -> «ficha/ticket» acrescentados aos proibidos ES
+
+⚠️ E um falso positivo meu, encontrado ao correr a base: o marcador `pr[ée]mio` casava o ESPANHOL
+correcto «premio» (2 valores de es.js). As marcadores passaram a exigir as formas ACENTUADAS
+(prémio, edição, apuração) — a distincao e' o acento, e o regex tem de a fazer.
+
+⚠️ E a 1.a corrida das mutacoes foi ILEGIVEL: a base estava a fail 1, logo nao se distinguia uma
+falha nova de uma pre-existente. Mutacao sobre base vermelha nao prova nada.
+A mutacao M4 ainda sobreviveu a 1.a tentativa porque eu substitui so' a 1.a ocorrencia — mutacao
+incompleta nao e' mutacao. Com TODAS as ocorrencias, morre (fail 2).
+
+Baseline 8/8 · 5 mutacoes morrem · md5 restaurados.
