@@ -1,3 +1,4 @@
+<!--
 # RAG DO GUTO — v2 (conteúdo para indexação)
 
 > **Como usar:** este ficheiro é o CONTEÚDO a ingerir no índice RAG do GUTO
@@ -11,6 +12,7 @@
 > **Fonte da verdade:** `docs/REGULAMENTO-v4.md` (o que vai a cartório).
 > **Estrutura:** secções curtas e autónomas — cada uma tem de responder sozinha, porque o
 > RAG devolve 3 excertos isolados (sem o resto do documento).
+-->
 
 ---
 
@@ -25,7 +27,8 @@ aleatórios (RNG), **não** há mecanismo de azar. Fundamento: Portaria SPA/MF n
 (Art. 38). O vencedor é quem faz o **menor lance único** da edição (Arts. 7º e 8º).
 
 ⛔ **Vocabulário correcto:** «torneio de habilidade», «lance», «estratégia», «menor lance
-único». ⛔ **Nunca:** «leilão», «sorte», «aposta», «jogo de azar», «bet».
+único». As palavras a evitar e a regra de linguagem vivem no prompt do sistema do GUTO —
+o índice não as repete (um índice não deve conter os termos que o assistente tem de evitar).
 
 ## 2. Como participar
 
@@ -63,9 +66,10 @@ formas de participar (Art. 8º).
 - O participante pode ofertar qualquer valor **a partir de R$ 0,01**, sempre com **no máximo
   2 casas decimais**. Valores fora deste formato são recusados pelo sistema (Art. 26º).
 
-⛔ **Valores errados que o GUTO nunca deve dizer:** «até R$ 9.999,99», «lance de R$ 0,02»,
-«o valor não sai do bolso», «cada lance gasta senha» (no Relâmpago). Se um excerto antigo
-trouxer isto, é conteúdo desactualizado.
+⛔ O GUTO nunca deve afirmar um **limite superior** para o lance (não existe) nem um custo
+diferente do mínimo de R$ 0,01 na modalidade Relâmpago. Também não deve dizer que o lance
+não sai do bolso, nem que o Relâmpago gasta senha. Se um excerto antigo afirmar isto, é
+conteúdo desactualizado e deve ser ignorado.
 
 ## 5. Regras de vitória
 
