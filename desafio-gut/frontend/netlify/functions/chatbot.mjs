@@ -1267,6 +1267,46 @@ function abrirStore() {
   }
 }
 
+// ── MC96.1 — CONTEXTO CONVERSACIONAL ────────────────────────────────────────
+//
+// MEDIDO no SEG-1: o `messages` era montado com DUAS entradas (`system`, `user`) e
+// nada mais — cada pedido era amnésico. Um «Sim» chegava sem referente e o GUTO
+// respondia «Sim pra quê? Não peguei!». Era o problema #1 dos 12 do MC96.
+//
+// COMO: o histórico vem do CLIENTE (`body.historico`), a partir da lista que o
+// `ChatbotWidget` JÁ tem em memória — não se criou armazenamento novo, não se
+// tocou em Blob/tabela. Sem histórico, o payload fica exactamente como estava
+// (retrocompatível: um APK antigo que só envie `pergunta` não nota diferença).
+export const HISTORICO_MAX = 8;       // mensagens no payload (4 turnos user+assistant)
+const HISTORICO_ITEM_MAX = 600;       // chars por mensagem (tecto de orçamento)
+
+/** Instrução que faz o modelo interpretar respostas curtas pela última pergunta. */
+export const INSTRUCAO_CONTEXTO =
+  "\n\nContexto da conversa: se o utilizador responder de forma curta (\"sim\", \"não\", " +
+  "\"ok\", \"isso\", \"pode ser\"), interpreta como resposta à TUA última pergunta e continua " +
+  "o assunto. Não voltes a perguntar o que já perguntaste nem peças para esclarecer a que te referes.";
+
+/**
+ * Normaliza o histórico vindo do cliente. PURA — é o que os testes medem e as mutações quebram.
+ * Regras: só `user`/`assistant`; `content` string não-vazia; tecto por item; mantém os
+ * ÚLTIMOS `HISTORICO_MAX` (a conversa recente é a que dá referente a um «sim»).
+ * @param {unknown} bruto
+ * @returns {{role:"user"|"assistant", content:string}[]}
+ */
+export function montarHistorico(bruto) {
+  if (!Array.isArray(bruto)) return [];
+  const limpos = [];
+  for (const m of bruto) {
+    if (!m || typeof m !== "object") continue;
+    const role = m.role === "assistant" ? "assistant" : m.role === "user" ? "user" : null;
+    if (!role) continue; // ignora role:system e qualquer coisa inesperada (o system é nosso)
+    const content = typeof m.content === "string" ? m.content.trim() : "";
+    if (!content) continue;
+    limpos.push({ role, content: content.slice(0, HISTORICO_ITEM_MAX) });
+  }
+  return limpos.slice(-HISTORICO_MAX);
+}
+
 export async function chamarLLM(pergunta, contexto, opts = {}) {  // export: testado em _tests/mc8820-guto-personalidades
   const apiKey  = opts.apiKey  || process.env.LLM_API_KEY;
   const baseUrl = (opts.baseUrl || process.env.LLM_BASE_URL || DEFAULT_LLM_URL).replace(/\/$/, "");
@@ -1286,10 +1326,13 @@ export async function chamarLLM(pergunta, contexto, opts = {}) {  // export: tes
     e.code = "systemprompt_ausente";  // marcado para o caller NÃO o confundir com indisponibilidade
     throw e;
   }
+  // MC96.1 — `[system, ...histórico, user]`. Sem histórico, isto é exactamente o que era.
+  const historico = montarHistorico(opts.historico);
   const body = JSON.stringify({
     model,
     messages: [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: systemPrompt + INSTRUCAO_CONTEXTO },
+      ...historico,
       { role: "user",   content: userContent  },
     ],
     temperature: 0.7,
@@ -1431,7 +1474,12 @@ export default async (req) => {
   let resposta;
   let modoResposta = "llm";
   try {
-    resposta = await chamarLLM(pergunta, contexto, { systemPrompt: obterPromptSystem(perfil, { conformidade: modoConformidade }) });
+    // MC96.1 — o histórico vem do cliente e é normalizado em `montarHistorico` (dentro do
+    // chamarLLM). Campo OPCIONAL: sem ele o comportamento é o de antes.
+    resposta = await chamarLLM(pergunta, contexto, {
+      systemPrompt: obterPromptSystem(perfil, { conformidade: modoConformidade }),
+      historico: body.historico,
+    });
   } catch (err) {
     // MC88.20 (P3) — o catch existe para INDISPONIBILIDADE do LLM. Um systemPrompt
     // em falta é bug de programação: se fosse engolido aqui, o sintoma seria "o GUTO

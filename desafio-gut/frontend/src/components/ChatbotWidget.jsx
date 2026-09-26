@@ -25,6 +25,7 @@ import { useAppEnvironment } from "../context/useAppContextEnvironment.jsx";
 import { useAdmin } from "../hooks/useAdmin.js";
 import { detectarPlataforma } from "../hooks/useRecursosApp.js";
 import { apiPost } from "../lib/api.js";
+import { historicoParaEnviar } from "../lib/historicoChat.js"; // MC96.1
 // MC88.22 — identidade do visitante para a chave do histórico (já existente,
 // gravado pelo FingerprintJS). Leitura síncrona, sem await.
 import { getCachedVisitorId } from "../lib/fingerprint.js";
@@ -358,7 +359,12 @@ export default function ChatbotWidget() {
     try {
       const { ok, status, data } = await apiPost(
         "chatbot",
-        { pergunta: texto, plataforma: detectarPlataforma() },
+        {
+          pergunta: texto,
+          plataforma: detectarPlataforma(),
+          // MC96.1 — turnos ANTERIORES (a pergunta actual vai em `pergunta`).
+          historico: historicoParaEnviar(mensagens),
+        },
         { token: authToken },
       );
       if (status === 503) {
