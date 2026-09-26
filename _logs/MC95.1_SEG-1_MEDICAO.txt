@@ -1,0 +1,52 @@
+MC95.1 — SEG-1 — MEDICAO
+Skills ECC: smart-explore, terminal-ops
+
+═══ 1.1 ESTADO REAL DE PRODUCAO (HARD GATE 1/2) ═══
+  Fiz CRAWL COMPLETO por BFS (49 chunks, 4,27 MB) a partir do index.html, seguindo as
+  referencias internas entre chunks — porque o index.html so' referencia 5 chunks e a
+  app tem ~130 (lazy). Uma conclusao a partir de 5 de 130 chunks seria uma medicao
+  parcial (erro que ja' cometi em MCs anteriores).
+  RESULTADO: os 7 marcadores do MC95 estao TODOS em producao (gate Art.20 "Relampago
+  nao consome senhas", linha de consentimento Art.7/26, CardLance "Art. 26: min/Mín
+  R$ 0,01", TabelaLances/MeusAtivos "Art. 25: apuracao", Seguranca "Art. 9 e Art. 10")
+  e TODOS os antigos ausentes. => o deploy do MC95 ESTA FEITO.
+  ⚠️ NAO MEDIDO: COMO chegou la'. Nao corri deploy no MC95. Hipotese testada (auto-build
+     no push do GitHub) e REFUTADA: o push do MC95.1 (8d0a3ce) NAO alterou producao
+     (mesmo chunk index-CTBFzD8k.js, dados antigos). Escrito como nao-medido, nao como
+     "provavelmente foi X".
+  ⚠️ NOTA DE METODO: o primeiro check foi incompleto por construcao — o grep de 5 chunks
+     dizia "nao" a 5 dos 7 marcadores e teria levado a redeployar por habito (o que o
+     HARD GATE 1 proibe). Foi o crawl completo que decidiu.
+
+═══ 1.2/1.3 DADOS DE PAGAMENTO — INVENTARIO ═══
+  Regulamento v4: Art. 1 (e-mail institucional), Art. 21 (PIX + agencia), Art. 27
+  (Bradesco ag 0320 cc 0812782-4, PIX renascendoam@gmail.com = pagamento de PREMIO).
+  No app (src/), ocorrencias relevantes:
+    TermosConsentimento.jsx:78   e-mail institucional  grupouniaoetrabalhoam@gmail.com   -> DIVERGE
+    TermosConsentimento.jsx:123  PIX do Art. 21        desafiogut01@gmail.com           -> DIVERGE
+    TermosConsentimento.jsx:124  agencia BB            181627                           -> DIVERGE
+    TermosConsentimento.jsx:171  "Duvidas:" (suporte)  desafiogut01@gmail.com           -> SUPORTE
+    ExcluirConta.jsx:117/118/130, Privacidade.jsx (x6), Seguranca.jsx:30 (DPO),
+    Layout.jsx:36, _lib/guto-perfis.mjs:28 (EMAIL_SUPORTE)   -> SUPORTE (MC88.44)
+  NAO existem no app: 198627, renascendoam, contato@grupouniaoetrabalho.
+  Art. 27: os dados do Bradesco NAO estao no app => nada a fazer (o briefing confirma).
+
+  ⚠️ A ARMADILHA: `desafiogut01@gmail.com` tem DOIS papeis — e' o PIX do Art. 21 (a
+     alinhar) E o e-mail de SUPORTE/DPO (decisao do operador no MC88.44, gravada em
+     EMAIL_SUPORTE e usada em 5 ficheiros). Um replace global teria arrastado o suporte
+     em silencio. As edicoes foram CIRURGICAS (2) e o suporte ficou intacto — e ha' um
+     TESTE que trava isso (mutante M4: arrastar o EMAIL_SUPORTE -> RED).
+
+═══ 1.4 COMO O APP GERA O PIX ═══
+  COMPRA: DINAMICO. `netlify/functions/iniciar-pagamento.mjs:99` ->
+  `getPixProvider().gerarPedidoPix({pedidoId, valorBRL, pagador})` -> devolve
+  `qrCodeText`/`qrCodeImage`; o frontend mostra o QR e um botao de copiar
+  (`ComprarFichasModal.jsx:203-205,446`). Provider: `_lib/pix-provider/index.mjs`.
+  Logo, no fluxo de compra NAO HA' nada a mudar (o briefing preve isto).
+  TEXTO LEGAL: o que divergia era uma REFERENCIA ESTATICA no Art. 21 do gate. Passou a
+  indicar a chave oficial (CNPJ) E a geracao dinamica a cada compra — as duas coisas
+  sao verdadeiras e a segunda e' o que o codigo realmente faz.
+
+═══ 1.5 VEREDITO: SEGUIR ═══
+  Deploy do MC95 confirmado (nada a fazer no SEG0 para o gate); alinhamento de pagamento
+  medido e cirurgico; Art. 27 confirmado como destino diferente (nao existe no app).

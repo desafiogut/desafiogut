@@ -1,0 +1,33 @@
+MC95.1 — SEG0 (deploy) + SEG1 (alinhamento de pagamento)
+Skills ECC: terminal-ops, systematic-debugging, verification-before-completion
+
+═══ SEG0 — DEPLOY / PENDENCIA A ═══
+  As 26 alteracoes do MC95 JA' ESTAVAM em producao (crawl completo de 49 chunks: os 7
+  marcadores presentes, todos os antigos ausentes). Nao redeployei por habito (HARD
+  GATE 1). Fica registado que NAO foi medido COMO chegaram la'.
+
+═══ SEG1 — ALINHAMENTO ═══
+  2 edicoes cirurgicas em `src/components/TermosConsentimento.jsx`:
+    (1) Art. 21 — de "PIX desafiogut01@gmail.com ... Agencia 181627"
+                  para "PIX — chave: 23.040.066/0001-00 (codigo gerado dinamicamente no
+                  aplicativo a cada compra) ... Agencia 198627"
+    (2) Art. 1  — e-mail institucional -> contato@grupouniaoetrabalho.com.br
+  NAO tocado (R1 + HARD GATE 3):
+    - EMAIL_SUPORTE / mailtos de suporte e DPO (decisao MC88.44);
+    - os dados do Art. 27 (Bradesco) — nao existem no app;
+    - o PIX de compra, que ja' e' dinamico.
+
+═══ TESTES + MUTACAO (R16) ═══
+  `src/components/__tests__/dadosPagamento.test.mjs` — 5 testes:
+    - o PIX do gate e' o CNPJ oficial e nao um e-mail (e o v4 regista o mesmo);
+    - a agencia e' 198627 e nao 181627 (e o v4 regista a mesma);
+    - o e-mail institucional do Art. 1 e' o oficial;
+    - o e-mail de SUPORTE continua desafiogut01@gmail.com (protege o MC88.44);
+    - o PIX de compra continua a ser gerado dinamicamente (`gerarPedidoPix`).
+  5 MUTACOES, todas RED -> GREEN com md5 restaurado identico:
+    M1 agencia 198627->181627                          -> fail=1
+    M2 PIX do gate volta a e-mail                      -> fail=1
+    M3 e-mail institucional volta ao gmail             -> fail=1
+    M4 arrasta o EMAIL_SUPORTE (MC88.44)               -> fail=1  <- o dano silencioso
+    M5 o v4 passa a registar outra agencia             -> fail=1
+  Suite frontend: 369/369.

@@ -1122,6 +1122,48 @@ assimetria dentro.
 
 ---
 
+## MC95.1 — Deploy do gate + alinhamento de dados de pagamento (2026-09-25)
+
+**Base**  · **Fecho**  · **Deploy**  (0 functions).
+
+### Dados de pagamento — o que o app dizia e o que o Regulamento regista
+
+| | app (antes) | Regulamento v4 | estado |
+|---|---|---|---|
+| PIX (Art. 21) |  | chave  (CNPJ) | **alinhado** |
+| Agência BB |  |  | **alinhado** |
+| E-mail institucional (Art. 1) |  |  | **alinhado** |
+| E-mail de **suporte/DPO** |  | — | **mantido** (decisão MC88.44) |
+| Art. 27 (Bradesco ag 0320, PIX ) | não existe no app | pagamento de **prémio** | **mantido só no Regulamento** |
+
+### ⛔  tem DOIS papéis — não fazer 
+
+É o **PIX do Art. 21 do gate** (divergia → alinhado) **e** o **e-mail de SUPORTE/DPO**
+( em , decisão do operador no **MC88.44**, usado em
+, , , ). Substituir por padrão
+arrastaria o suporte **sem dar erro nenhum**. O teste 
+trava as duas coisas ao mesmo tempo — inclusive um mutante que arrasta o .
+
+### O PIX de compra é DINÂMICO — o texto legal é que era estático
+
+ →  →  (QR + copiar em
+). **Nada a mudar no fluxo.** O que divergia era a **referência estática** no
+Art. 21 do gate, que passou a indicar a chave oficial e a geração dinâmica.
+
+### Método: um crawl parcial dá um veredicto errado com toda a confiança
+
+O  só referencia **5 chunks**; a app tem ~130 (lazy). O primeiro check, sobre 5,
+concluía «o deploy do MC95 não está feito» — e teria levado a **redeployar por hábito**, que é o que
+o HARD GATE 1 proíbe. O **crawl completo por BFS (49 chunks, 4,27 MB)** mostrou os 7 marcadores do
+MC95 em produção e todos os antigos ausentes. **A pergunta «quantos chunks olhei?» tem de vir antes
+da conclusão «não está lá».**
+
+⚠️ Fica **não medido** *como* as alterações do MC95 chegaram a produção. A hipótese «auto-build no
+push» foi testada e **refutada** (o push do MC95.1 não alterou produção). Registado como não-medido,
+não como «provavelmente foi X».
+
+---
+
 ## MC95 — Regulamento v4 + alinhamento do gate legal (2026-09-25)
 
 **Entrada:** `Desktop/regulation_v3.md` (**nome em inglês** — o briefing dizia `regulamento_desafiogut_v3.md`, que não existe). **Saída:** `Desktop/regulamento_desafiogut_v4.md`. **8 artigos alterados de 40**; 32 idênticos.
