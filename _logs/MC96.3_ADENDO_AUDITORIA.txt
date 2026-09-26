@@ -124,3 +124,27 @@ Testes: backend **8/8** (eram 6) · UI **3/3** · suítes **381/381** e **682/67
 5. **Contagens que apresentei como factos e não eram reprodutíveis.** «33 ficheiros / 141
    ocorrências» — ele mede 34/~155. A conclusão mantém-se, o número não devia ter sido afirmado
    com aquela precisão. **Medir não chega: é preciso dizer como, para ser reproduzível.**
+
+
+---
+
+## Verificação final pós-deploy (`6ab742970c3412a2dc881f61`)
+
+Medido DEPOIS de publicar — é a única verificação que conta.
+
+```
+"O DesafioGUT precisa de autorização específica?"
+  → "Não precisa, não — segundo o Art. 38º, o DesafioGUT é um torneio de habilidade nos termos
+     da Portaria SPA/MF nº 1.207/2024, e não uma aposta de quota fixa nem loteria."     ✅
+
+"O que diz o Art. 20 sobre senhas?"
+  → "as senhas custam R$ 2,00 cada — e só valem na modalidade Programado, tá? Ah, e fica ligado:
+     no Relâmpago você usa saldo, não senha."                                          ✅
+
+health → HTTP 200 · «leilão»: 0 nas duas respostas
+```
+
+**A 1.ª pergunta é a prova da correcção 4.** «Autorização específica» é a expressão **verbatim** do
+Art. 38º do v4 — a que eu tinha substituído por uma paráfrase minha («de sorte»). O GUTO agora
+responde a uma pergunta que **só existe porque o texto certo está no prompt**. Não é o teste que
+o demonstra: é a pergunta que o teste não fazia.
