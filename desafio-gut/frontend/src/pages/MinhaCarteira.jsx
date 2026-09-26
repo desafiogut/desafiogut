@@ -345,7 +345,7 @@ export default function MinhaCarteira() {
                     cursor: !saldoNumero ? "not-allowed" : "pointer",
                     opacity: !saldoNumero ? 0.5 : 1,
                   }}
-                  title={!saldoNumero ? "Compre fichas para participar do leilão" : "Ir ao Mercado de Lances"}
+                  title={!saldoNumero ? "Compre fichas para participar da edição" : "Ir ao Mercado de Lances"}
                 >
                   🎯 Usar no Mercado de Lances
                 </button>

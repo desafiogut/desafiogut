@@ -228,7 +228,7 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
           {timer?.display && (
             <span
               aria-label={timer.display === timerTravado() ? "Em breve" : `Tempo restante: ${timer.display}`}
-              title={timer.display === timerTravado() ? "Leilão em breve" : "Tempo restante do leilão"}
+              title={timer.display === timerTravado() ? "Edição em breve" : "Tempo restante da edição"}
               style={{
                 fontSize: "0.74rem", fontWeight: 900,
                 fontFamily: "'JetBrains Mono', monospace",
@@ -350,7 +350,7 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
           letterSpacing: "0.04em",
           boxShadow: `0 4px 14px ${slot.corDim}`,
         }}
-      >{hrefOverride ? "Ir para o leilão →" : "Ver detalhes →"}</Link>
+      >{hrefOverride ? "Ir para a edição →" : "Ver detalhes →"}</Link>
     </GlassCard>
   );
 }
@@ -439,7 +439,7 @@ function VitrineDetalhe({ slot, isMobile, corporativo }) {
             letterSpacing: "0.04em",
             boxShadow: `0 4px 14px ${slot.corDim}`,
           }}
-        >Ir para o leilão atual (R-1) →</Link>
+        >Ir para a edição atual (R-1) →</Link>
       </section>
     </div>
   );
@@ -459,11 +459,11 @@ function statusDoSlot(slotId, visibilidade, tz) {
   const ativo = tierAtivoAgora(slotId, tz);
   if (ativo) {
     if (slotId === "diamante" || slotId === "ouro") {
-      return { texto: "● Programado 24h", cor: "#10b981", ariaLabel: "Leilão programado ativo agora" };
+      return { texto: "● Programado 24h", cor: "#10b981", ariaLabel: "Edição programada ativa agora" };
     }
-    return { texto: "● Ao vivo agora", cor: "#10b981", ariaLabel: "Leilão ativo agora" };
+    return { texto: "● Ao vivo agora", cor: "#10b981", ariaLabel: "Edição ativa agora" };
   }
-  return { texto: "Agendado", cor: "#94a3b8", ariaLabel: "Sem leilão ativo no horário atual" };
+  return { texto: "Agendado", cor: "#94a3b8", ariaLabel: "Sem edição ativa no horário atual" };
 }
 
 export default function Vitrine() {

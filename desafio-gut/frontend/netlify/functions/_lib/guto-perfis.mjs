@@ -108,9 +108,54 @@ REGRA DE LINGUAGEM (obrigatória — Portaria SPA/MF 1.207/2024):
   "saldo", "senha".
 - Vale MESMO que os textos que recebes usem outro termo: a forma de falar é tua.`;
 
+// MC96.3 — LIGAÇÃO AO REGULAMENTO v4.
+//
+// Medido no SEG-1: `Art.N = 0` em `chatbot.mjs` e em `guto-perfis.mjs` — o GUTO não citava
+// artigo nenhum. As respostas sobre regras vinham dos chunks do RAG (que o operador ainda não
+// ingeriu na versão v2), logo o GUTO respondia "de memória" e sem âncora normativa.
+//
+// ⚠️ Os textos abaixo foram COPIADOS de `docs/REGULAMENTO-v4.md` (medido, não suposto). Se o
+// v4 mudar, estes factos têm de mudar com ele — é o que o teste bidireccional verifica.
+export const ARTIGOS_V4 = {
+  "5":  "O interessado deverá se cadastrar gratuitamente para participar do DesafioGUT.",
+  "6":  "O(a) cadastrado(a) deverá ser obrigatoriamente maior de idade e receberá um código único, intransferível e exclusivo de acesso para realizar lances.",
+  // ⚠️ Corrigido pelo teste bidireccional: o Art. 7 NÃO usa a expressão «torneio de habilidade»
+  // (essa está nos Arts. 1º e 38º). O Art. 7º define a MECÂNICA: a pergunta «QUANTO VOCÊ OFERTA
+  // POR... este produto ou serviço?», o menor lance único, e o resultado determinado pela
+  // ESTRATÉGIA do participante — não por aleatoriedade.
+  "7":  "O DesafioGUT funciona por aplicativo, pela pergunta \"QUANTO VOCÊ OFERTA POR... este produto ou serviço?\". Vence quem realizar o menor lance único, sendo o resultado determinado pela estratégia do participante e não por mecanismos de aleatoriedade.",
+  "8":  "O(a) participante poderá ofertar lances por meio de: (i) saldo em dinheiro, na modalidade Relâmpago; (ii) senhas, na modalidade Programado.",
+  "20": "As senhas, quando utilizadas na modalidade Programado, têm custo unitário de R$ 2,00 (dois reais).",
+  "26": "O participante poderá ofertar qualquer valor de lance a partir de R$ 0,01 (um centavo), sempre com o máximo de 2 (duas) casas decimais.",
+  "27": "O participante ganhador é aquele identificado pelo sistema como autor do menor lance único.",
+  // Art. 38º — o artigo que sustenta a TESE JURÍDICA (e que o briefing do MC NÃO listava).
+  // É aqui que o v4 diz «torneio de habilidade nos termos da Portaria SPA/MF nº 1.207/2024» e
+  // nega expressamente «aposta de quota fixa, jogo de azar, loteria». Sem ele, o GUTO cita
+  // factos de mecânica mas não a base legal — que é o que a defesa do modelo exige.
+  "38": "O DesafioGUT constitui torneio de habilidade nos termos da Portaria SPA/MF nº 1.207/2024, sendo o resultado determinado majoritariamente pela estratégia do participante. Não se trata de aposta de quota fixa, jogo de azar, loteria ou qualquer modalidade de sorte.",
+  "1":  "Atividade comercial operada como torneio de habilidade no aplicativo DesafioGUT.",
+};
+
+export const REGRA_REGULAMENTO = `
+
+REGULAMENTO (v4 — a versão que vai a cartório):
+Quando responderes sobre regras, CITA o artigo que fundamenta a resposta, assim: «segundo o
+Art. 26º do Regulamento». Factos verificados que deves usar (não inventes números nem artigos):
+- Cadastro: GRATUITO, e é obrigatório ser maior de idade (Arts. 5º e 6º).
+- A mecânica: a pergunta «QUANTO VOCÊ OFERTA POR... este produto ou serviço?» e o menor lance
+  único, decidido pela ESTRATÉGIA do participante — não por aleatoriedade (Art. 7º).
+- A base legal: é um TORNEIO DE HABILIDADE nos termos da Portaria SPA/MF nº 1.207/2024, e NÃO
+  uma aposta de quota fixa, jogo de azar ou loteria (Art. 38º).
+- Duas modalidades: Relâmpago (debita SALDO em dinheiro) e Programado (consome SENHAS) (Art. 8º).
+- Senha: R$ 2,00 cada, e SÓ na modalidade Programado — o Relâmpago NÃO gasta senhas (Art. 20º).
+- Lance: qualquer valor A PARTIR de R$ 0,01, com no máximo 2 casas decimais (Art. 26º).
+- Vence o MENOR LANCE ÚNICO (Art. 27º).
+- Dúvidas oficiais: contato@grupouniaoetrabalho.com.br (Art. 36º).
+NUNCA cites um artigo que não esteja aqui e nunca inventes o número de um artigo.`;
+
 export function obterPromptSystem(perfil, { conformidade = false } = {}) {
   const base = conformidade ? PROMPT_CONFORMIDADE : (PROMPT_SYSTEMS[perfil] || PROMPT_SYSTEMS.visitante);
-  return base + REGRA_LINGUAGEM; // MC96.2 — ver REGRA_LINGUAGEM
+  return base + REGRA_LINGUAGEM + REGRA_REGULAMENTO; // MC96.2 + MC96.3
 }
 
 // ── Helpers de formatação ────────────────────────────────────────────────────

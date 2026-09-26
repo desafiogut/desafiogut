@@ -58,7 +58,7 @@ const PERFIL_ESTADO = {
   },
   [ESTADO_EDICAO.ENCERRADA]: {
     rotulo:      "Encerrada",
-    rotuloLongo: "Leilão encerrado",
+    rotuloLongo: "Edição encerrada",
     badge:       "🔴 Encerrado",
     timer:       null,
     icone:       "🔴",

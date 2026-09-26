@@ -39,7 +39,7 @@ export default function FimLeilaoOverlay({ vencedor, tipoLeilao, onNovaRodada, E
           fontWeight: "900",
           color: "#fbbf24", letterSpacing: "0.04em",
           textShadow: "0 0 20px #fbbf24",
-        }}>LEILÃO ENCERRADO</h2>
+        }}>EDIÇÃO ENCERRADA</h2>
         <p style={{ margin: "0 0 1.25rem", color: "#94a3b8", fontSize: isMobile ? "0.78rem" : "0.9rem", lineHeight: 1.5 }}>
           <strong style={{ color: COR.gold }}>DesafioGUT</strong>
           {" · Edição "}<strong style={{ color: COR.gold }}>{EDICAO_ATIVA}</strong>

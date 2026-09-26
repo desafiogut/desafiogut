@@ -123,7 +123,7 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, isM
             fontWeight: "900",
             color: "#fbbf24", letterSpacing: "0.04em",
             textShadow: "0 0 20px #fbbf24",
-          }}>LEILÃO ENCERRADO</h2>
+          }}>EDIÇÃO ENCERRADA</h2>
           <p style={{ margin: "0 0 1.25rem", color: "#94a3b8", fontSize: isMobile ? "0.78rem" : "0.9rem", lineHeight: 1.5 }}>
             <strong style={{ color: COR.gold }}>DesafioGUT</strong>
             {" · Edição "}<strong style={{ color: COR.gold }}>{EDICAO_ATIVA}</strong>
@@ -259,7 +259,7 @@ export default function MercadoLances() {
                 margin: "0.4rem 0 0", fontSize: "0.72rem", color: COR.muted,
                 textAlign: "center", letterSpacing: "0.04em",
               }}>
-                Leilão {tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"} ·
+                Edição {tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"} ·
                 cliente <strong style={{ color: COR.gold }}>{clienteAtivo.nome}</strong>
                 {" "}({clienteAtivo.categoria})
               </p>
@@ -358,7 +358,7 @@ function MercadoConformidade({ isMobile }) {
           margin: "1rem 0 0.5rem",
           fontSize: isMobile ? "1.25rem" : "1.5rem",
           fontWeight: 800, color: COR.text, letterSpacing: "0.01em",
-        }}>Leilões na versão Web</h2>
+        }}>Edições na versão Web</h2>
         <p style={{
           margin: "0 0 1.5rem", color: COR.muted,
           fontSize: isMobile ? "0.9rem" : "0.95rem", lineHeight: 1.6,

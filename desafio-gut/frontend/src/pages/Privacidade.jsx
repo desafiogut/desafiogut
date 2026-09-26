@@ -108,7 +108,7 @@ export default function Privacidade() {
             <li style={liStyle}>Registos de interações: lances (com hash Argon2id off-chain de prova de intenção), histórico de compras, saldo de senhas e visualizações.</li>
             <li style={liStyle}>Armazenados na base de dados Supabase.</li>
             <li style={liStyle}>Finalidade: funcionamento do serviço, apuração do vencedor, resolução de disputas, melhoria da experiência e prevenção de abuso/fraude.</li>
-            <li style={liStyle}>Coleta não estritamente obrigatória para a navegação básica, mas necessária para participar em leilões. Base legal: execução do contrato e interesse legítimo (segurança e prevenção de fraude).</li>
+            <li style={liStyle}>Coleta não estritamente obrigatória para a navegação básica, mas necessária para participar em edições. Base legal: execução do contrato e interesse legítimo (segurança e prevenção de fraude).</li>
           </ul>
           <p style={{ ...pStyle, fontWeight: 700, color: COR.text }}>
             3.4. Dados de atividade (presença)
@@ -123,7 +123,7 @@ export default function Privacidade() {
           </p>
           <ul style={{ margin: "0 0 0.75rem", paddingLeft: "1.2rem" }}>
             <li style={liStyle}>Os lances são registados no smart contract LeilaoGUT na rede Ethereum mainnet. Os dados on-chain (endereço da carteira, valores, timestamps) são públicos por natureza da blockchain e IMUTÁVEIS — não podem ser apagados.</li>
-            <li style={liStyle}>Finalidade: funcionamento do leilão (pipeline de lance 100% on-chain).</li>
+            <li style={liStyle}>Finalidade: funcionamento do torneio (pipeline de lance 100% on-chain).</li>
             <li style={liStyle}>Estes dados são pseudónimos (identificados pelo endereço da carteira, não pelo nome) e não são utilizados para fins de marketing.</li>
           </ul>
           <p style={{ ...pStyle, fontWeight: 700, color: COR.text }}>

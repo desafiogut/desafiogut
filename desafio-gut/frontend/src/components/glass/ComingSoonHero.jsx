@@ -7,7 +7,7 @@ export default function ComingSoonHero({ isMobile, edicao }) {
   return (
     <div
       role="status"
-      aria-label={`Leilão em breve — edição ${edicao || "R-1"}`}
+      aria-label={`Edição em breve — edição ${edicao || "R-1"}`}
       style={{
         display: "flex", flexDirection: "column", alignItems: "center",
         justifyContent: "center", gap: isMobile ? "0.5rem" : "0.6rem",

@@ -32,7 +32,7 @@ const COTAS = [
   { id: "prata",    nome: "Prata",    preco: 5600,  minimo: 1350, cor: "#cbd5e1",
     beneficios: "Banner site 1200x300 · 3 vouchers/mês · Analytics 30d" },
   { id: "ouro",     nome: "Ouro",     preco: 11000, minimo: 2250, cor: "#f5a623",
-    beneficios: "Leilões Programados 24h · 10 vouchers/mês · Analytics 90d" },
+    beneficios: "Edições Programadas 24h · 10 vouchers/mês · Analytics 90d" },
   { id: "diamante", nome: "Diamante", preco: 18000, minimo: 4500, cor: "#00d4ff",
     beneficios: "Topo fixo · 28 banners app · 10 vouchers bônus" },
 ];
