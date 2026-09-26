@@ -62,7 +62,7 @@ export default function Dashboard() {
     lances, vencedor,
     saldoSenhas, saldoSenhasStatus,
     saldoRsCentavos, saldoRsStatus,
-    encerrado, tipoLeilao, DURACAO,
+    encerrado, modalidade, DURACAO,
     // MC88.38 — `pareceAutenticado` substitui `isConnected` APENAS no texto do
     // cabeçalho. `isConnected` deixou de ser usado neste ficheiro; continua a
     // ser a fonte única para HABILITAR ações nos componentes que o fazem
@@ -96,7 +96,7 @@ export default function Dashboard() {
   // garante sempre um id navegável mesmo antes de o mapa hidratar.
   const edicaoAtiva = (edicoes && edicoes[EDICAO_ATIVA]) || {
     id: EDICAO_ATIVA,
-    tipo: tipoLeilao === "flash" ? "relampago" : "programado",
+    tipo: modalidade === "flash" ? "relampago" : "programado",
   };
 
   // MC88.43 — estado da R-1. `encerrado` (FONTE A: prazoTimestamp on-chain) é
@@ -270,11 +270,11 @@ export default function Dashboard() {
               offsetMs={offsetRelogioMs}
               isMobile={isMobile}
               t={t}
-              renderLance={({ idEdicao, tipoLeilao, encerrado: fechada }) => (
+              renderLance={({ idEdicao, modalidade, encerrado: fechada }) => (
                 <Suspense fallback={<div aria-busy="true" style={{ minHeight: "12rem" }} />}>
                   <CardLance
                     idEdicao={idEdicao}
-                    tipoLeilao={tipoLeilao}
+                    modalidade={modalidade}
                     encerrado={fechada}
                     address={address}
                     isConnected={isConnected}
@@ -341,7 +341,7 @@ export default function Dashboard() {
                 fontSize: estAtiva.timer ? (isMobile ? "1.6rem" : "1.5rem") : (isMobile ? "2.5rem" : "2.25rem"),
                 fontWeight: "900",
                 fontFamily: estAtiva.timer ? "'Orbitron', sans-serif" : "'JetBrains Mono', monospace",
-                color: estAtiva.timer ? estAtiva.cor : (encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[tipoLeilao])),
+                color: estAtiva.timer ? estAtiva.cor : (encerrado ? COR.danger : timerColor(tempoRestante, DURACAO?.[modalidade])),
                 letterSpacing: estAtiva.timer ? "0.12em" : "0.02em",
                 lineHeight: 1,
                 transition: "color 0.6s ease",
@@ -352,7 +352,7 @@ export default function Dashboard() {
               }}>
                 {/* Encerrado deixa de aparecer aqui quando a fonte única diz outra
                     coisa; o tipo de leilão (Relâmpago/Programado) é factual e fica. */}
-                {estAtiva.encerrada ? "ENCERRADO" : tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
+                {estAtiva.encerrada ? "ENCERRADO" : modalidade === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
               </div>
               <div style={{
                 fontSize: "0.78rem", color: estAtiva.encerrada ? "#fca5a5" : COR.text,
@@ -480,7 +480,7 @@ export default function Dashboard() {
       {showOverlay && (
         <FimLeilaoOverlay
           vencedor={vencedor}
-          tipoLeilao={tipoLeilao}
+          modalidade={modalidade}
           onNovaRodada={handleNovaRodada}
           EDICAO_ATIVA={EDICAO_ATIVA}
         />

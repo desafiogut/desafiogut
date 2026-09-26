@@ -95,7 +95,7 @@ const SLOTS = [
     valorContrato: "R$ 18.000,00",
     valorMinProduto: "R$ 4.500,00",
     beneficios: ["2 banners rotativos", "28 banners app", "10 bônus (vouchers VIP)"],
-    tipoLeilao: "Programado · 24 h",
+    modalidade: "Programado · 24 h",
     rotuloSecao: "Slot fixo do topo",
   },
   {
@@ -111,7 +111,7 @@ const SLOTS = [
     valorContrato: "R$ 11.000,00",
     valorMinProduto: "R$ 2.250,00",
     beneficios: ["2 banners rotativos", "20 banners app"],
-    tipoLeilao: "Programado · 24 h",
+    modalidade: "Programado · 24 h",
     rotuloSecao: "Slot fixo do topo",
   },
   {
@@ -127,7 +127,7 @@ const SLOTS = [
     valorContrato: "R$ 5.600,00",
     valorMinProduto: "R$ 1.350,00",
     beneficios: ["1 banner fixo", "12 banners app"],
-    tipoLeilao: "Relâmpago · 30 min – 1 h",
+    modalidade: "Relâmpago · 30 min – 1 h",
     rotuloSecao: "Oportunidade Agora",
   },
   {
@@ -143,7 +143,7 @@ const SLOTS = [
     valorContrato: "R$ 2.640,00",
     valorMinProduto: "R$ 660,00",
     beneficios: ["1 banner vitrine", "8 banners app"],
-    tipoLeilao: "Relâmpago · 30 min – 1 h",
+    modalidade: "Relâmpago · 30 min – 1 h",
     rotuloSecao: "Oportunidade Agora",
   },
 ];

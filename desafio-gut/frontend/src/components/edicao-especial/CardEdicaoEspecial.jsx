@@ -151,7 +151,7 @@ export default function CardEdicaoEspecial({
             on-chain de senhas + a conversão R$→senha e posta em `auth-lance`; "flash"
             posta em `lance-relampago` e debita saldo. Alinhar aqui com o `tipo` da
             metadata é o que mantém UI e backend coerentes. */}
-        {renderLance?.({ idEdicao: edicao.id, tipoLeilao: "flash", encerrado: false })}
+        {renderLance?.({ idEdicao: edicao.id, modalidade: "flash", encerrado: false })}
       </div>
     );
   } else if (estado === ESTADO_ESPECIAL.ENCERRADA) {

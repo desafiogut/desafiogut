@@ -83,7 +83,7 @@ function CountdownOverlay() {
   );
 }
 
-function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, isMobile }) {
+function OverlayVencedor({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA, isMobile }) {
   const enderecoAbrev = vencedor
     ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
     : "—";
@@ -127,7 +127,7 @@ function OverlayVencedor({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA, isM
           <p style={{ margin: "0 0 1.25rem", color: "#94a3b8", fontSize: isMobile ? "0.78rem" : "0.9rem", lineHeight: 1.5 }}>
             <strong style={{ color: COR.gold }}>DesafioGUT</strong>
             {" · Edição "}<strong style={{ color: COR.gold }}>{EDICAO_ATIVA}</strong>
-            {" · "}{tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
+            {" · "}{modalidade === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
           </p>
           {vencedor ? (
             <div style={{
@@ -167,7 +167,7 @@ export default function MercadoLances() {
   const isMobile = useIsMobile();
   const {
     EDICAO_ATIVA,
-    tipoLeilao, setTipoLeilao,
+    modalidade, setTipoLeilao,
     lances,
     prazoTimestamp, encerrado, showOverlay,
     address, isConnected, userLabel, ready,
@@ -201,9 +201,9 @@ export default function MercadoLances() {
   const [clienteAtivo, setClienteAtivo] = useState(null);
   useEffect(() => {
     let cancelado = false;
-    buscarClienteDoLeilaoAtivo(tipoLeilao).then((c) => { if (!cancelado) setClienteAtivo(c); });
+    buscarClienteDoLeilaoAtivo(modalidade).then((c) => { if (!cancelado) setClienteAtivo(c); });
     return () => { cancelado = true; };
-  }, [tipoLeilao]);
+  }, [modalidade]);
 
   // MC29.1 — gate de plataforma. Skeleton enquanto a config carrega (CLS=0);
   // vista de conformidade quando o leilão não está ativo nesta plataforma.
@@ -218,7 +218,7 @@ export default function MercadoLances() {
       {showOverlay && (
         <OverlayVencedor
           vencedor={vencedor}
-          tipoLeilao={tipoLeilao}
+          modalidade={modalidade}
           onNovaRodada={handleNovaRodada}
           EDICAO_ATIVA={EDICAO_ATIVA}
           isMobile={isMobile}
@@ -238,7 +238,7 @@ export default function MercadoLances() {
           address={address}
           userLabel={userLabel}
           onLogin={abrirModal}
-          tipoLeilao={tipoLeilao}
+          modalidade={modalidade}
           setTipoLeilao={setTipoLeilao}
           encerrado={encerrado}
           edicao={EDICAO_ATIVA}
@@ -259,7 +259,7 @@ export default function MercadoLances() {
                 margin: "0.4rem 0 0", fontSize: "0.72rem", color: COR.muted,
                 textAlign: "center", letterSpacing: "0.04em",
               }}>
-                Edição {tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"} ·
+                Edição {modalidade === "flash" ? "⚡ Relâmpago" : "🎫 Programado"} ·
                 cliente <strong style={{ color: COR.gold }}>{clienteAtivo.nome}</strong>
                 {" "}({clienteAtivo.categoria})
               </p>
@@ -284,7 +284,7 @@ export default function MercadoLances() {
               onConnect={abrirModal}
               onDisconnect={desconectar}
               encerrado={encerrado}
-              tipoLeilao={tipoLeilao}
+              modalidade={modalidade}
               ready={ready}
             />
 

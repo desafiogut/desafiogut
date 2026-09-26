@@ -8,12 +8,12 @@ const MODOS = [
   { id: "programado", label: "🎫 Programado", cor: COR.primary },
 ];
 
-export default function ModeSelector({ tipoLeilao, setTipoLeilao }) {
+export default function ModeSelector({ modalidade, setTipoLeilao }) {
   return (
     <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
       <span style={{ fontSize: "0.68rem", color: COR.muted, marginRight: "0.2rem" }}>Modo:</span>
       {MODOS.map(({ id, label, cor }) => {
-        const ativo = tipoLeilao === id;
+        const ativo = modalidade === id;
         return (
           <button
             key={id}

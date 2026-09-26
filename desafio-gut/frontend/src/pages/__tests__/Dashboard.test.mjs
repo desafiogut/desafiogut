@@ -71,7 +71,7 @@ function renderizar(contexto = {}) {
   definirContexto({
     lances: [], vencedor: null,
     saldoSenhas: null, saldoSenhasStatus: "idle", saldoRsCentavos: null, saldoRsStatus: "idle",
-    encerrado: false, tipoLeilao: "flash", DURACAO: { flash: 1800, programado: 86400 },
+    encerrado: false, modalidade: "flash", DURACAO: { flash: 1800, programado: 86400 },
     pareceAutenticado: false, address: null, userLabel: null, EDICAO_ATIVA: "R-1",
     showOverlay: false, showCountdown: false, handleNovaRodada: () => {}, setPrazoTimestamp: () => {},
     edicoes: { "R-1": R1 }, agendadas: {}, offsetRelogioMs: 0,

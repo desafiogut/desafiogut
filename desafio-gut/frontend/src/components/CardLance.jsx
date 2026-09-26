@@ -49,7 +49,7 @@ export default function CardLance({
   onConnect,
   onDisconnect,
   encerrado,
-  tipoLeilao = "flash",
+  modalidade = "flash",
   ready      = true,
 }) {
   const { wallets } = useWallets();
@@ -87,7 +87,7 @@ export default function CardLance({
     FASES.AUTENTICANDO, FASES.HASHING, FASES.ASSINANDO, FASES.ENVIANDO,
     FASES.CONVERTENDO,
   ].includes(fase);
-  const isProgramado = tipoLeilao === "programado";
+  const isProgramado = modalidade === "programado";
 
   const saldoCarregando = isProgramado &&
                           (saldoSenhasStatus === "loading" || saldoSenhasStatus === "idle");

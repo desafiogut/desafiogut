@@ -262,7 +262,7 @@ describe("MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã", () => {
     const html = render(Card, props(INICIO + 60_000));
     assert.match(html, /data-estado="activa"/);
     assert.match(html, /FORMULARIO-DE-LANCE/);
-    assert.deepEqual(lanceChamado.at(-1), { idEdicao: "ESPECIAL-AIRFRYER", tipoLeilao: "flash", encerrado: false });
+    assert.deepEqual(lanceChamado.at(-1), { idEdicao: "ESPECIAL-AIRFRYER", modalidade: "flash", encerrado: false });
     assert.match(texto(html), /29 min/, "conta até às 20:30");
   });
   test("encerrada: painel do vencedor, sem formulário nem cronómetro", () => {

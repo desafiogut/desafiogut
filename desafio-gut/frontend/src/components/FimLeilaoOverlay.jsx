@@ -8,7 +8,7 @@ import Confetti from "./Confetti.jsx";
 
 const COR = { gold: "#f5a623" };
 
-export default function FimLeilaoOverlay({ vencedor, tipoLeilao, onNovaRodada, EDICAO_ATIVA }) {
+export default function FimLeilaoOverlay({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA }) {
   const isMobile = useIsMobile();
   const enderecoAbrev = vencedor
     ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
@@ -43,7 +43,7 @@ export default function FimLeilaoOverlay({ vencedor, tipoLeilao, onNovaRodada, E
         <p style={{ margin: "0 0 1.25rem", color: "#94a3b8", fontSize: isMobile ? "0.78rem" : "0.9rem", lineHeight: 1.5 }}>
           <strong style={{ color: COR.gold }}>DesafioGUT</strong>
           {" · Edição "}<strong style={{ color: COR.gold }}>{EDICAO_ATIVA}</strong>
-          {" · "}{tipoLeilao === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
+          {" · "}{modalidade === "flash" ? "⚡ Relâmpago" : "🎫 Programado"}
         </p>
         {vencedor ? (
           <GlassCard className={`!border-[#fbbf24] !rounded-xl ${isMobile ? 'p-4' : 'p-5'} mb-5`}>

@@ -170,7 +170,7 @@ export function timeLeftEdicaoSegundos(edicao) {
 
 export function AppProvider({ children }) {
   // Tipo de leilão (Art. 8)
-  const [tipoLeilao, setTipoLeilao] = useState("flash");
+  const [modalidade, setTipoLeilao] = useState("flash");
 
   // MC15.4 ITEM 5/6 — múltiplas edições (mapa keyed por id). Sempre tem ao
   // menos R-1 (real ou fallback sintetizado). Aditivo: o fluxo R-1 abaixo
@@ -191,7 +191,7 @@ export function AppProvider({ children }) {
   const [prazoProgramado, setPrazoProgramado] = useState(() =>
     lerPrazoStorage(LS_PRAZO_PROG) ?? (Math.floor(Date.now() / 1000) + DURACAO.programado)
   );
-  const prazoTimestamp = tipoLeilao === "flash" ? prazoFlash : prazoProgramado;
+  const prazoTimestamp = modalidade === "flash" ? prazoFlash : prazoProgramado;
 
   // MC15.6 ITEM 2 — ref do prazo corrente para o polling de notificações decidir
   // a cadência (2s nos 5 min finais) SEM re-criar o timer a cada segundo.
@@ -213,14 +213,14 @@ export function AppProvider({ children }) {
 
   // Setter que troca o prazo do tipo CORRENTE e persiste.
   const setPrazoTimestamp = useCallback((novo) => {
-    if (tipoLeilao === "flash") {
+    if (modalidade === "flash") {
       setPrazoFlash(novo);
       gravarPrazoStorage(LS_PRAZO_FLASH, novo);
     } else {
       setPrazoProgramado(novo);
       gravarPrazoStorage(LS_PRAZO_PROG, novo);
     }
-  }, [tipoLeilao]);
+  }, [modalidade]);
 
   // MC88.34 (P0) — SALDO OTIMISTA.
   // O MC88.33 mediu: o ecrã pinta aos 536 ms mas o saldo real só aparece aos
@@ -690,7 +690,7 @@ export function AppProvider({ children }) {
     if (address && userLabelReal) gravarSaldoCache(address, { label: userLabelReal });
   }, [address, userLabelReal]);
 
-  const lancesExibidos = tipoLeilao === "flash" ? lancesFlash : lances;
+  const lancesExibidos = modalidade === "flash" ? lancesFlash : lances;
 
   // Vencedor — Menor Lance Único (Art. 8)
   const vencedor = [...lancesExibidos]
@@ -738,7 +738,7 @@ export function AppProvider({ children }) {
   useEffect(() => {
     setShowOverlay(false);
     setLightningActive(false);
-  }, [tipoLeilao]);
+  }, [modalidade]);
 
   // Polling de lances flash do blob (cross-user em tempo real).
   //
@@ -753,7 +753,7 @@ export function AppProvider({ children }) {
   // edição abre e abranda quando o prazo passa, sem pôr `prazoFlash` nas
   // dependências (o que reiniciaria o polling a cada actualização do prazo).
   useEffect(() => {
-    if (tipoLeilao !== "flash") return;
+    if (modalidade !== "flash") return;
     let cancelado = false;
     let id = null;
     // Reaproveita prazoNotifRef (já mantém o prazo do tipo CORRENTE, atualizado
@@ -771,7 +771,7 @@ export function AppProvider({ children }) {
     };
     poll();
     return () => { cancelado = true; if (id) clearTimeout(id); };
-  }, [tipoLeilao]);
+  }, [modalidade]);
 
   // Listener on-chain do evento LanceDado — atualiza tabela em tempo real.
   useEffect(() => {
@@ -1283,7 +1283,7 @@ export function AppProvider({ children }) {
       endereco: addr, valor: valorCentavos, txHash,
       nomeExibicao: nomeExibicao || null,
     };
-    const setter = tipoLeilao === "flash" ? setLancesFlash : setLances;
+    const setter = modalidade === "flash" ? setLancesFlash : setLances;
     setter((prev) => {
       const jaRepetido = prev.some((l) => l.valor === valorCentavos);
       return [
@@ -1304,7 +1304,7 @@ export function AppProvider({ children }) {
     fimDisparadoRef.current = false;
     if (timeoutAnimRef.current) { clearTimeout(timeoutAnimRef.current); timeoutAnimRef.current = null; }
     setTimeout(() => {
-      const dur = DURACAO[tipoLeilao];
+      const dur = DURACAO[modalidade];
       // setPrazoTimestamp também persiste no localStorage (chave do tipo atual).
       // MC44 P0 — tempoRestante recalcula-se sozinho no TimerProvider (cálculo
       // absoluto a partir do novo prazoTimestamp); não há setter local a chamar.
@@ -1316,7 +1316,7 @@ export function AppProvider({ children }) {
   // ── Value ────────────────────────────────────────────────────────────────
   const value = {
     EDICAO_ATIVA, DURACAO,
-    tipoLeilao, setTipoLeilao,
+    modalidade, setTipoLeilao,
     // MC15.4 — múltiplas edições (aditivo). edicoes nunca é vazio (R-1 garantida).
     edicoes, edicoesStatus,
     agendadas, offsetRelogioMs, // MC94.2 — card da edição especial no Dashboard
@@ -1399,13 +1399,13 @@ export function AppProvider({ children }) {
 // o seu re-render a cada tick NÃO afeta o AppProvider nem os consumidores de
 // useAppContext — só quem usa useAppTimer (os componentes de cronómetro).
 function TimerProvider({ children }) {
-  const { prazoTimestamp, tipoLeilao, prazoFlash, prazoProgramado } = useAppContext();
+  const { prazoTimestamp, modalidade, prazoFlash, prazoProgramado } = useAppContext();
 
   // Cronómetro da edição ativa (display). Cálculo ABSOLUTO (prazo - now); o
   // setInterval só re-renderiza (250ms) e React ignora o setState quando o
   // inteiro de segundos não muda → re-render efetivo ~1×/s, só aqui.
   const [tempoRestante, setTempoRestante] = useState(() => Math.max(0,
-    (tipoLeilao === "flash" ? prazoFlash : prazoProgramado) - Math.floor(Date.now() / 1000)
+    (modalidade === "flash" ? prazoFlash : prazoProgramado) - Math.floor(Date.now() / 1000)
   ));
   useEffect(() => {
     const tick = () => setTempoRestante(Math.max(0, prazoTimestamp - Math.floor(Date.now() / 1000)));
