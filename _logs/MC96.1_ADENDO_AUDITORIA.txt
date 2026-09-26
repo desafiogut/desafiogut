@@ -1,0 +1,82 @@
+MC96.1 — ADENDO: AUDITORIA ADVERSARIAL (deleg_5fecd2ad) E AS 3 REFUTAÇÕES
+
+**Veredicto do auditor: APROVADO COM RESSALVAS.** 42 chamadas API, 397 s, worktree próprio
+(`valida-961-wt`, removido no fim, junctions limpas, repo principal intacto). Método
+**reforçado em relação ao meu**: servidor HTTP real a capturar o corpo que sai no fio, em vez
+do `fetch` mockado que eu usei.
+
+═══ CONFIRMADO (não exigiu correcção) ═══
+- o histórico **vai mesmo** ao LLM (`messages:[system, ...historico, user]`, handler passa
+  `body.historico`). Ressalva registada: só no ramo RAG/LLM — se o intent router tratar o
+  pedido, o histórico não é usado (correcto: esse ramo responde por outra via).
+- tecto dos **últimos 8** (com 50 mensagens → 1 system + 8 histórico + 1 user, mantendo os
+  mais recentes). O filtro corre **antes** do slice, logo inválidos não gastam orçamento.
+- defesa contra `role:"system"` injectado: nomes não-string descartados, `__proto__` não
+  polui, JSON não parte. **n=1 system no payload** (o nosso).
+- retrocompatibilidade de **contagem** sem histórico (`n=2`), inclusive com `historico` a
+  string/número/null/object — sem lançar.
+- **M1, M2, M3 morrem** (mutantes do auditor, md5 restaurado). Controlos não-regressão
+  (comentário, rename de variável local) ficam GREEN ✅ — a distinção correcta.
+- **nenhuma alteração não declarada** no commit (5 ficheiros, todos declarados).
+- suítes **== ao alegado**: backend 663/657/0/6, frontend 376/376 (antes destas correcções).
+
+═══ REFUTADO — 3, todas corrigidas ═══
+
+**R1. A minha asserção de cablagem era REGEX FRACA.** Casava o texto-fonte cru e **passava com
+a chamada COMENTADA** (`// historico: historicoParaEnviar(mensagens),`). O auditor demonstrou-o
+(M4a → GREEN). Ou seja: **a "confissão" que eu escrevi no relatório não estava resolvida** — eu
+tinha declarado o buraco e deixado um teste que não o tapava.
+→ O teste remove comentários (`/* … */` e `// …`) antes de comparar; **M4a agora MORRE**.
+
+**R2. «Payload exactamente como era» era FALSO para o conteúdo do system.** O
+`INSTRUCAO_CONTEXTO` acrescenta-se **sempre** (263 chars), logo o system **mudou para todos** —
+incluindo APKs antigos que não mandam histórico. O meu teste (c) só fixava `length`/roles e
+**nunca o conteúdo do system**, deixando uma alteração comportamental **global** por declarar.
+→ Novo teste explícito (o system leva sempre a instrução); a alteração fica **declarada**.
+   Decisão consciente: mantém-se sempre (o MC pede a instrução no prompt, e sem histórico ela é
+   apenas inerte).
+
+**R3. ⚠️ DEFEITO REAL — CLOSURE OBSOLETA (o achado mais grave, e NÃO medido por mim).**
+`enviarMensagem` é `useCallback(..., [carregando, resetToIdle, authToken, signalThinking,
+signalIdle])` — **sem `mensagens`**. Em regime normal escapava **por acidente** (o `carregando`
+alterna a cada turno e força recriação, que recaptura `mensagens`). Mas **após um reload**, em
+que o efeito que carrega o histórico não muda nenhuma dessas deps, **a 1.ª mensagem podia
+enviar histórico vazio/obsoleto** — a funcionalidade que este MC entrega, a falhar em silêncio
+no caso mais provável (o utilizador volta à app e retoma a conversa).
+→ `mensagens` acrescentado às deps + teste que lê o `useCallback` e exige a dependência.
+   Contra-mutação M4b (tirar `mensagens` das deps) → **RED**.
+
+═══ RESSALVA NOVA (baixa severidade, registada) ═══
+Um cliente pode injectar um turno **`assistant` fabricado** (ex. «Já confirmei o pagamento…»)
+e o modelo vê-o como fala sua. Medido: passa. **Severidade baixa** — nenhuma acção privilegiada
+deriva do histórico (o admin exige JWT), mas é um vector que não existia antes deste MC.
+Pendência para o MC96.2 ou para um hardening dedicado.
+
+═══ O QUE O AUDITOR NÃO CONSEGUIU MEDIR (e disse) ═══
+- **Runtime do React** (não correu jsdom/browser) — daí a suspeita do closure, que ele marcou
+  como *não medida* e que eu confirmei por leitura do código. Ele foi honesto ao classificá-la
+  como suspeita; era real.
+- **Produção** — não exercitou o endpoint real (fora de escopo/credenciais). A validação em
+  produção foi feita por mim (POST com «sim» + histórico → resposta continuada, ver §5).
+- Notou ` M package-lock.json` na árvore — **não é do commit nem da auditoria** (é o `npm install`
+  do meu deploy, armadilha documentada no CLAUDE.md; já restaurado).
+
+═══ RESULTADO DAS CORRECÇÕES ═══
+| | antes | depois |
+|---|---|---|
+| testes frontend | 5 | **7** |
+| M4a (comentar a chamada) | sobrevivia ❌ | **RED** ✅ |
+| M4b (deps sem `mensagens`) | não existia teste | **RED** ✅ |
+| suíte frontend | 376/376 | **378/378** |
+| suíte backend | 663/657/0/6 | 663/657/0/6 |
+
+═══ LIÇÃO (a mais dura desta sessão) ═══
+**Escrevi a confissão no relatório e não tapei o buraco.** Reconheci por escrito que a mutação
+M4 tinha sobrevivido, acrescentei uma asserção — e a asserção não travava, porque casava texto
+comentado. **Declarar um problema não é resolvê-lo**; e um teste escrito para tapar um buraco
+precisa de ser atacado com o mesmo rigor que o buraco. O auditor atacou-o e ele cedeu.
+
+**E o defeito que eu não vi era o mais grave de todos** — não no teste, no PRODUTO: a
+funcionalidade que este MC entrega falhava em silêncio exactamente no caso mais provável (voltar
+à app). Nenhum teste o apanhava, e o meu próprio teste de produção passou ao lado porque testou
+o endpoint directamente, não o widget. **Testar o backend não é testar o produto.**

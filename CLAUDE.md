@@ -1122,6 +1122,43 @@ assimetria dentro.
 
 ---
 
+## MC96.1 — ADENDO: 3 refutações da auditoria adversarial (2026-09-25)
+
+Veredicto do auditor `deleg_5fecd2ad`: **APROVADO COM RESSALVAS**, 3 refutações — todas corrigidas.
+
+### 1. ⚠️ Um teste que aceita código COMENTADO não verifica cablagem nenhuma
+
+A asserção `/historico:\s*historicoParaEnviar\(mensagens\)/` casava o texto-fonte **cru** e
+passava com a chamada **comentada** (`// historico: …`). O auditor provou-o (M4a → GREEN).
+**Eu tinha escrito a confissão do buraco no relatório e deixado um teste que não o tapava.**
+→ Remover comentários (`/* … */`, `// …`) antes de comparar. Regra: **ao validar cablagem por
+leitura de fonte, retirar comentários primeiro** — senão o teste mede a *menção*, não o *uso*.
+
+### 2. «Payload exactamente como era» era falso
+
+`INSTRUCAO_CONTEXTO` acrescenta-se **sempre** ao system ⇒ o system mudou **para todos**,
+incluindo clientes antigos. O teste (c) só fixava `length`/roles e **nunca o conteúdo do system**,
+deixando a alteração **global por declarar**. → Teste explícito + declarado no relatório.
+*(Decisão consciente: mantém-se sempre; sem histórico a instrução é inerte.)*
+
+### 3. ⚠️ O defeito que eu não vi era no PRODUTO, não no teste: closure obsoleta
+
+`enviarMensagem` é `useCallback` e **faltava `mensagens` nas deps**. Em regime normal escapava
+**por acidente** (o `carregando` alterna a cada turno e força recriação). Mas **após um reload**
+— em que o efeito que carrega o histórico não muda nenhuma dessas deps — a **1.ª mensagem podia
+enviar histórico vazio**. A funcionalidade deste MC falhava em silêncio **no caso mais provável**
+(voltar à app e retomar a conversa). → `mensagens` nas deps + teste que lê o `useCallback`.
+
+> **Testar o backend não é testar o produto.** A minha validação em produção passou ao lado
+> porque fez POST directo ao endpoint, não passou pelo widget. O defeito vivia no widget.
+> **Uma funcionalidade nova precisa de um teste que a exerça pelo caminho do utilizador.**
+
+### Ressalva aberta (baixa severidade)
+
+Um cliente pode injectar um turno `assistant` **fabricado** (ex. «Já confirmei o pagamento…») e o
+modelo vê-o como fala sua. Nenhuma acção privilegiada deriva do histórico (admin exige JWT), mas
+é um vector que não existia antes. Pendente para hardening (MC96.2 ou dedicado).
+
 ## MC96.1 — Contexto conversacional do GUTO (2026-09-25)
 
 **Fecho de código** `418ace1` · frontend **376/376** · backend **663/657/0/6** · validador `deleg_5fecd2ad`.
