@@ -1246,6 +1246,24 @@ Aleguei «33 ficheiros / 141 ocorrências»; o auditor mede **34 / ~155**. A con
 mantém-se, o número **não era reprodutível**. **Medir não chega: é preciso dizer COMO, para ser
 reproduzível.**
 
+## MC96.6 — Refactor AST + fecho definitivo (2026-09-26)
+
+**Fecho** `c34e4b5` · frontend **381/381** · backend **676/682** · validador da série: **pendente**.
+
+- **`scripts/mc966-suite-harness.mjs`** — o verificador que faltava: **três** estados
+  (VERDE / VERMELHO / **NAO_MEDI**) e não dois. **Saída vazia é NAO_MEDI, não «0 falhas»**, e
+  NAO_MEDI pesa mais que VERMELHO.
+- **Renames executados** (AST, um de cada vez, suíte entre cada): `tipoLeilao`→`modalidade` (65
+  ids/12 ficheiros) · `setTipoLeilao`→`setModalidade` · `FimLeilaoOverlay`→`FimEdicaoOverlay`
+  (+ `git mv` do ficheiro). `isLeilaoAtivo` fica (categoria c).
+- ⚠️ **Dois defeitos do meu próprio renamer**, apanhados pelo harness à primeira: **`JSXIdentifier`
+  é um tipo de nó diferente de `Identifier`** (os atributos JSX ficaram por renomear → componente
+  lê `undefined` → quebrou o invariante do MC94.4.1); e **acessos a membro** (`slot.tipoLeilao`)
+  ignorados enquanto as chaves do mesmo objecto eram renomeadas.
+- ⚠️ **A minha lista de excepções mascarava o defeito**: excluía `tipoLeilao`, o identificador sob
+  rename. **Uma lista de excepções pode ser um ponto cego com nome bonito.**
+- ⚠️ **Corrigida uma atribuição FALSA minha** (ver acima): o vazio não era do `^.` vs `^ℹ`.
+
 ## MC96.5 — Fecho da série MC96 (2026-09-26)
 
 **HEAD** fcee691 · Relatório consolidado: **Desktop/MC96-SERIE-RELATORIO.md** · Validador da série: deleg_af25f606 (pendente).
@@ -1274,11 +1292,17 @@ rename e o resto revertido = prop quebrado. **Revertido por completo**; confirma
 > existe para impedir.** Prefiro um MC parcial e honesto a um MC «completo» que não sei provar.
 
 ### ⚠️ O grep do reporter: a lição que custou um MC inteiro
-```bash
-node --test ... | grep -E '^ℹ (tests|pass|fail)'    # CORRECTO — o ℹ é multi-byte
-node --test ... | grep -E '^. (tests|pass|fail)'    # ERRADO — casa nada, devolve vazio
-```
-**Saída vazia do reporter não é «0 falhas»: é «não medi».** Uma guarda tem de distinguir
+⚠️ **CORRECÇÃO do MC96.6 — a explicação acima estava ERRADA.** Eu atribuí o vazio ao `^.` não
+casar com o `ℹ` multi-byte. Medi: **`grep -cE '^. (tests|pass|fail)'` devolve os MESMOS 3 matchs**
+que o `^ℹ` — em MSYS o `.` casa o carácter inteiro. A causa real foi a suíte **não ter corrido**
+(o `$(find src …)` não resolveu dentro de um `bash -c` chamado por python → `node --test` sem
+ficheiros → zero output, o mesmo `stdin is not a tty`).
+
+O que **continua** verdadeiro e é o que importa: **saída vazia do reporter não é «0 falhas»: é
+«não medi»** — e a solução certa é o harness que separa os três estados
+(`scripts/mc966-suite-harness.mjs`: VERDE / VERMELHO / NAO_MEDI, com NAO_MEDI tratado como mais
+grave que VERMELHO). **Atribuir uma causa sem a medir é o mesmo defeito que não medir o
+resultado** — e esta correcção só apareceu no MC seguinte. Uma guarda tem de distinguir
 «medi e está verde» de «não consegui medir» — senão o silêncio passa por aprovação.
 
 ### ⚠️ Backticks em heredoc bash -c — 4.ª vez

@@ -1,0 +1,8 @@
+docs(MC96.6): relatorio do MC + correccao de uma atribuicao FALSA no CLAUDE.md
+
+O MC96.5 afirmou que o vazio da verificacao vinha de `^.` nao casar com o `ℹ` multi-byte.
+MEDIDO no MC96.6: falso — `grep -cE '^. (tests|pass|fail)'` devolve os mesmos 3 matchs que o `^ℹ`.
+A causa real foi a suite nao ter corrido (o find nao resolveu dentro do bash -c via python).
+A correccao do harness continua certa (saida vazia = NAO_MEDI, nao "0 falhas"); a EXPLICACAO
+estava errada, e foi corrigida no proprio CLAUDE.md. Atribuir uma causa sem a medir e' o mesmo
+defeito que nao medir o resultado.
