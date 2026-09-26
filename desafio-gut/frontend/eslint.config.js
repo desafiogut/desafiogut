@@ -32,7 +32,6 @@ export default [
       "node_modules/**",
       "android/**",
       "netlify/functions/**",
-      "chunk_prod.js",
       ".claude/**",
     ],
   },
