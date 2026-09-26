@@ -74,8 +74,8 @@ export default function Privacidade() {
             vigor em 2026).
           </p>
           <p style={pStyle}>
-            O DesafioGUT é uma plataforma de leilão de "menor lance único": os utilizadores
-            participam em leilões, lançam lances e podem adquirir produtos/senhas mediante
+            O DesafioGUT é uma plataforma de torneio de habilidade de "menor lance único": os utilizadores
+            participam em edições, lançam lances e podem adquirir produtos/senhas mediante
             pagamento. A participação requer a criação de uma conta e o aceite dos Termos
             de Consentimento (gate LGPD) antes de qualquer interação.
           </p>

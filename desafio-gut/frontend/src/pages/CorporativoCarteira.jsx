@@ -200,7 +200,7 @@ export default function CorporativoCarteira() {
             </div>
             {expiramEmBreve > 0 && (
               <p style={{ margin: "0 0 0.6rem", fontSize: "0.78rem", color: "#fbbf24", fontWeight: 700 }}>
-                Atenção: {expiramEmBreve} senha(s) expiram nos próximos 5 dias. Use-as nos leilões.
+                Atenção: {expiramEmBreve} senha(s) expiram nos próximos 5 dias. Use-as nas edições.
               </p>
             )}
             <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap" }}>

@@ -35,26 +35,47 @@ const ler = (f) => readFileSync(resolve(process.cwd(), f), "utf8");
 const semComentarios = (s) =>
   s.split("\n").map((l) => (/^[ \t]*(\/\/|\/?\*)/.test(l) ? "" : l)).join("\n");
 
-/** Extrai o que o utilizador LÊ: texto entre >…<, e strings/aria-labels entre aspas. */
+/**
+ * Extrai o que o utilizador LÊ.
+ *
+ * ⚠️ ESTA FUNÇÃO ESTAVA MORTA E EU NÃO SABIA. A 1.ª versão usava `m[1]` em regexes **sem grupo
+ * de captura** → `undefined` → concatenava `""`. Só a regex `>…<` capturava, e ela excluía `\n`
+ * e `{` — logo **JSX multi-linha e texto interpolado eram invisíveis**. A auditoria adversarial
+ * provou-o: um `<p>` multi-linha com «leilão» e um `ariaLabel` alterado passavam em VERDE.
+ * Um extractor cego faz um teste vacuoso — e um teste vacuoso é pior que nenhum, porque afirma.
+ */
 function textoVisivel(src) {
   const fora = [];
-  for (const m of src.matchAll(/>([^<>{}\n]{3,})</g)) fora.push(m[1]);
-  for (const m of src.matchAll(/"[^"\n]{3,}"/g)) fora.push(m[1]);
-  for (const m of src.matchAll(/`[^`\n]{3,}`/g)) fora.push(m[1]);
-  return fora.join(" \n ");
+  const add = (m) => fora.push(m[1]);
+  for (const m of src.matchAll(/>([^<>]{4,})</g)) add(m);            // texto JSX (1 linha)
+  for (const m of src.matchAll(/"([^"\n]{4,})"/g)) add(m);          // atributos/strings
+  for (const m of src.matchAll(/'([^'\n]{4,})'/g)) add(m);
+  for (const m of src.matchAll(/`([^`]{4,}?)`/gs)) add(m);           // templates (MULTI-LINHA)
+  // JSX multi-linha: blocos de texto entre > e < que atravessam linhas
+  for (const m of src.matchAll(/>([^<>]{4,}?)</gs)) add(m);
+  return fora.join("\n").split("\n").map((l) => l.trim()).filter(Boolean);
 }
 
 const PAD = /leil[ãõa]o|leil[õo]es/i;
 // Excepções DECLARADAS: o nome do contrato on-chain. Renomeá-lo seria falsear um facto —
 // o contrato publicado chama-se mesmo LeilaoGUT (fora do escopo deste MC).
-const EXCEPCOES = /LeilaoGUT/g;
+// Excepções DECLARADAS. Aqui está a decisão deste MC, escrita em código:
+//  - `LeilaoGUT` é o NOME DO CONTRATO ON-CHAIN (está em `desafio-gut/contracts/Leilao.sol`) —
+//    renomeá-lo seria falsear um facto publicado;
+//  - os IDENTIFICADORES internos não são texto visível. O extractor largo (multi-linha) apanha
+//    object literals como `tipoLeilao: "Programado · 24 h"` — o NOME da chave é código; o valor
+//    é que é visível, e esse já é verificado.
+const EXCEPCOES = /LeilaoGUT|tipoLeilao|setTipoLeilao|isLeilaoAtivo|buscarClienteDoLeilaoAtivo|leilaoTimer|leilaoLock|FimLeilaoOverlay|AuctionStatusBar|LeilaoGUT/g;
 
 test("(a) nenhum texto VISÍVEL da UI diz «leilão»", () => {
   const achados = [];
   for (const f of FICHEIROS) {
-    const texto = textoVisivel(semComentarios(ler(f))).replace(EXCEPCOES, "@");
+    const texto = textoVisivel(semComentarios(ler(f))).join("\n")
+      .replace(EXCEPCOES, "@")
+      // comentários JSX ({/* … */}) são DOCUMENTAÇÃO, não texto visível: preservam-se.
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
     for (const linha of texto.split("\n")) {
-      if (PAD.test(linha)) achados.push(`${f}: «${linha.trim().slice(0, 70)}»`);
+      if (PAD.test(linha)) achados.push(`${f}: «${linha.slice(0, 70)}»`);
     }
   }
   assert.deepEqual(achados, [], `texto visível com «leilão»:\n  ${achados.join("\n  ")}`);
@@ -63,7 +84,9 @@ test("(a) nenhum texto VISÍVEL da UI diz «leilão»", () => {
 test("(b) o vocabulário correcto está presente nos ficheiros tocados", () => {
   for (const f of FICHEIROS) {
     const s = semComentarios(ler(f));
-    assert.doesNotMatch(textoVisivel(s).replace(EXCEPCOES, "@"), PAD, `${f}: ainda diz «leilão»`);
+    // JSX comments ({/* … */}) são DOCUMENTAÇÃO (HARD GATE 5) — a mesma exclusão do teste (a).
+    const semJsxComment = textoVisivel(s).join("\n").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+    assert.doesNotMatch(semJsxComment.replace(EXCEPCOES, "@"), PAD, `${f}: ainda diz «leilão»`);
   }
   // e as substituições concretas existem (não basta apagar)
   assert.match(ler("src/pages/Vitrine.jsx"), /"Edição em breve"/, "Vitrine: falta «Edição em breve»");

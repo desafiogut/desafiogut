@@ -132,7 +132,7 @@ export const ARTIGOS_V4 = {
   // É aqui que o v4 diz «torneio de habilidade nos termos da Portaria SPA/MF nº 1.207/2024» e
   // nega expressamente «aposta de quota fixa, jogo de azar, loteria». Sem ele, o GUTO cita
   // factos de mecânica mas não a base legal — que é o que a defesa do modelo exige.
-  "38": "O DesafioGUT constitui torneio de habilidade nos termos da Portaria SPA/MF nº 1.207/2024, sendo o resultado determinado majoritariamente pela estratégia do participante. Não se trata de aposta de quota fixa, jogo de azar, loteria ou qualquer modalidade de sorte.",
+  "38": "O DesafioGUT constitui torneio de habilidade nos termos da Portaria SPA/MF nº 1.207/2024, sendo o resultado determinado majoritariamente pela estratégia do participante. Não se trata de aposta de quota fixa, jogo de azar, loteria ou qualquer modalidade sujeita a autorização específica.",
   "1":  "Atividade comercial operada como torneio de habilidade no aplicativo DesafioGUT.",
 };
 
@@ -151,7 +151,10 @@ Art. 26º do Regulamento». Factos verificados que deves usar (não inventes nú
 - Lance: qualquer valor A PARTIR de R$ 0,01, com no máximo 2 casas decimais (Art. 26º).
 - Vence o MENOR LANCE ÚNICO (Art. 27º).
 - Dúvidas oficiais: contato@grupouniaoetrabalho.com.br (Art. 36º).
-NUNCA cites um artigo que não esteja aqui e nunca inventes o número de um artigo.`;
+NUNCA cites um artigo que não esteja aqui e nunca inventes o número de um artigo.
+
+ARTIGOS (texto do Regulamento v4, para citação literal):
+${Object.entries(ARTIGOS_V4).map(([n, t]) => `- Art. ${n}º — ${t}`).join("\n")}`;
 
 export function obterPromptSystem(perfil, { conformidade = false } = {}) {
   const base = conformidade ? PROMPT_CONFORMIDADE : (PROMPT_SYSTEMS[perfil] || PROMPT_SYSTEMS.visitante);

@@ -363,7 +363,7 @@ function MercadoConformidade({ isMobile }) {
           margin: "0 0 1.5rem", color: COR.muted,
           fontSize: isMobile ? "0.9rem" : "0.95rem", lineHeight: 1.6,
         }}>
-          Os leilões do DesafioGUT acontecem na nossa versão Web. Abre{" "}
+          As edições do DesafioGUT acontecem na nossa versão Web. Abre{" "}
           <strong style={{ color: COR.gold }}>desafiogut.com</strong> no teu navegador
           para participar com saldo, lances e carteira — tudo o que já usas.
           Por aqui, continua a explorar a loja e os produtos.
@@ -382,7 +382,7 @@ function MercadoConformidade({ isMobile }) {
           }}
         >Abrir versão Web</a>
         <p style={{ margin: "1.25rem 0 0", color: COR.muted, fontSize: "0.78rem", lineHeight: 1.5 }}>
-          Esta versão da loja não inclui o leilão. Nada fica escondido — é só uma
+          Esta versão da loja não inclui a edição. Nada fica escondido — é só uma
           questão de onde cada funcionalidade vive.
         </p>
       </GlassCard>

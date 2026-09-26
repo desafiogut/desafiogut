@@ -423,8 +423,8 @@ function VitrineDetalhe({ slot, isMobile, corporativo }) {
           fontSize: "0.78rem", color: "#94a3b8", lineHeight: 1.5,
         }}>
           ⚠ <strong style={{ color: "#fbbf24" }}>Aviso</strong>: o sistema de cotas Diamante/Ouro/Prata/Bronze
-          ainda não está ativo no contrato. O CTA abaixo leva ao leilão atual
-          em produção (Edição R-1) — quando os 4 leilões paralelos da spec
+          ainda não está ativo no contrato. O CTA abaixo leva à edição atual
+          em produção (Edição R-1) — quando as 4 edições paralelas da spec
           forem implementados, cada slot terá seu próprio destino.
         </div>
 

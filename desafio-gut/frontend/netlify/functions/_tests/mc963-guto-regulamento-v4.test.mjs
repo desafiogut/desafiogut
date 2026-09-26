@@ -99,7 +99,9 @@ test("(b2) ARTIGOS_V4 (o que o prompt usa) bate com o documento, artigo a artigo
     // DESCARTava «R$ 0,01», «0,05», «um», «cinco» — a verificação ficava VACUOSA nos valores, que
     // são o cerne jurídico. O mutante M2 (trocar R$ 0,01 por R$ 0,05 no prompt) SOBREVIVEU por
     // isso. Um filtro de ruído que come o sinal não é um filtro: é um buraco.
-    const numeros = afirmacao.match(/R\$\s*[\d.,]+|\b\d+\b/g) || [];
+    // ⚠️ Incluir os ORDINAIS escritos («2 (duas) casas»): a 1.ª versão procurava só \b\d+\b e o
+    // mutante A1 («1 (uma) casas») passava — o «1» solto existe no documento por outros motivos.
+    const numeros = afirmacao.match(/R\$\s*[\d.,]+|\b\d+\s*\([^)]+\)|\b\d+\b/g) || [];
     for (const num of numeros) {
       const limpo = num.replace(/\s+/g, " ");
       assert.ok(txt.replace(/\s+/g, " ").includes(limpo),
@@ -115,6 +117,51 @@ test("(b3) o Art. 20 diz que a senha é SÓ no Programado — o erro que já nos
 });
 
 // ── (c) a mutação sobre o DOCUMENTO ─────────────────────────────────────────
+
+test("(c0) ⚠️ OS NÚMEROS DO TEXTO VIVO (o que vai ao LLM) também batem no documento", () => {
+  // A auditoria adversarial mostrou que ARTIGOS_V4 estava MORTO e que só ele era verificado: o
+  // texto que REALMENTE vai ao LLM é REGRA_REGULAMENTO, e os seus números não eram conferidos.
+  // Mutante A1 («2 (duas) casas» -> «1 (uma) casas») passava em VERDE. Agora não passa.
+  // ⚠️ `[\d.,]+` apanhava a VÍRGULA da frase («R$ 0,01,» não consta do doc -> falso positivo).
+  const vivos = REGRA_REGULAMENTO.match(/R\$\s*\d+(?:[.,]\d+)*|\b\d+\s*\((?:uma|duas|três|cinco|vinte)\)/g) || [];
+  assert.ok(vivos.length > 0, "não encontrei valores no texto vivo — a verificação seria vacuosa");
+  const doc = V4.replace(/\s+/g, " ");
+  for (const v of vivos) {
+    const limpo = v.replace(/\s+/g, " ").trim();
+    assert.ok(doc.includes(limpo), `o texto VIVO afirma «${limpo}» e o documento não o diz`);
+  }
+});
+
+test("(c0a) ⚠️ OS VALORES CRÍTICOS estão no SEU artigo, não em qualquer parte do documento", () => {
+  // A auditoria adversarial mostrou que a verificação «o número existe no documento» era fraca:
+  // o mutante A1 («2 (duas) casas» -> «1 (uma) casas») passava, porque «1 (uma)» existe no v4
+  // noutro artigo (o Art. 33, das indicações). Presença num documento de 40 artigos não é
+  // correspondência. Aqui cada valor fica AMARRADO ao artigo que o fundamenta.
+  const AMARRAS = [
+    ["20", ["R$ 2,00", "Programado"]],
+    ["26", ["R$ 0,01", "2 (duas) casas"]],
+    ["27", ["menor lance único"]],
+    ["38", ["torneio de habilidade", "Portaria SPA/MF"]],
+    ["8",  ["Relâmpago", "Programado"]],
+  ];
+  for (const [n, frases] of AMARRAS) {
+    const txt = artigo(n);
+    assert.ok(txt, `Art. ${n} ausente`);
+    for (const f of frases) {
+      assert.ok(txt.toLowerCase().includes(f.toLowerCase()),
+        `o v4 Art. ${n} não contém «${f}» — o prompt amarra-o lá`);
+      assert.ok(REGRA_REGULAMENTO.toLowerCase().includes(f.toLowerCase()),
+        `o prompt vivo perdeu «${f}» (Art. ${n})`);
+    }
+  }
+});
+
+test("(c0b) ARTIGOS_V4 NÃO é código morto: alimenta mesmo o prompt", () => {
+  const p = obterPromptSystem("comum", {});
+  for (const [n, txt] of Object.entries(ARTIGOS_V4)) {
+    assert.ok(p.includes(txt), `Art. ${n}: o texto de ARTIGOS_V4 não chega ao prompt (seria código morto)`);
+  }
+});
 
 test("(c) o teste realmente lê o documento (não uma cópia): o v4 tem >= 40 artigos", () => {
   const arts = V4.match(/Art\.\s*\d+\u00ba/g) || [];
