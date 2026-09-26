@@ -198,8 +198,8 @@ export default function Configuracoes() {
             ["Anti-abuso",  "Limite de velocidade por conta contra automações."],
             ["Privacidade", "Todos os campos são higienizados contra ataques."],
             ["Art. 20",     "Senha: R$ 2,00 por edição."],
-            ["Art. 27",     "Lance mínimo: R$ 0,01 · máx. 2 casas decimais."],
-            ["Art. 26",     "Apuração automática pelo Painel interno."],
+            ["Art. 26",     "Lance mínimo: R$ 0,01 · máx. 2 casas decimais."],
+            ["Art. 25",     "Apuração automática pelo Painel interno."],
           ].map(([nome, desc]) => (
             <div key={nome} style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
               <span style={{

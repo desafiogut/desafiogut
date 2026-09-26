@@ -139,7 +139,7 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
         borderTop: "1px solid rgba(245,166,35,0.12)", paddingTop: "0.75rem",
         textAlign: isMobile ? "center" : "left",
       }}>
-        🔒 Dados sanitizados · Art. 26: apuração automática
+        🔒 Dados sanitizados · Art. 25: apuração automática
       </p>
     </div>
   );

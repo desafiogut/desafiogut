@@ -1122,6 +1122,46 @@ assimetria dentro.
 
 ---
 
+## MC95 — Regulamento v4 + alinhamento do gate legal (2026-09-25)
+
+**Entrada:** `Desktop/regulation_v3.md` (**nome em inglês** — o briefing dizia `regulamento_desafiogut_v3.md`, que não existe). **Saída:** `Desktop/regulamento_desafiogut_v4.md`. **8 artigos alterados de 40**; 32 idênticos.
+
+### ⛔ O gate de consentimento citava 8 dos 15 artigos com o número ERRADO
+
+`TermosConsentimento.jsx` (o gate LGPD) — corrigido em MC95, com o teste `src/components/__tests__/citacoesRegulamento.test.mjs`:
+
+| dizia | é | conteúdo |
+|---|---|---|
+| Art. 6 | **5** | cadastro gratuito |
+| Art. 8 | **7** | menor lance único |
+| Art. 9 | **8** | modalidades de lance |
+| Art. 16 | **13** | transferência de propriedade |
+| Art. 26 | **25** | apuração automática |
+| Art. 27 | **26** | lance mínimo R$ 0,01 |
+| Art. 30 | **34** | proibição de funcionários |
+| Art. 33 | **29** | cessão de imagem |
+| Art. 35 | **37** | registo no RTD |
+
+E duas **contradições materiais**: o gate dizia «cada senha custa R$ 2,00 **para todas as edições, seja Relâmpago ou Programado**» (o Art. 20 diz o contrário: o Relâmpago **não consome senhas**), e citava a redacção **antiga** do Art. 14. Também corrigidos: datas do Art. 4 (1º junho → 5 outubro) e do RTD.
+
+**Regra:** o app NÃO pode dizer aos utilizadores algo diferente do Regulamento notariado. Ao mudar o Regulamento, verificar o que o app cita — e verificar por **conteúdo**, não por presença do número (um teste que só procura «Art. 26» no ficheiro deixa passar a ocorrência que mudou; foi uma mutação que o mostrou).
+
+### ⚠️ Dados de pagamento divergem entre app e Regulamento — decisão do operador, NÃO alinhada
+
+| | app | Regulamento v4 |
+|---|---|---|
+| PIX | `desafiogut01@gmail.com` | `23.040.066/0001-00` |
+| Agência (BB) | 181627 | **198627** |
+| e-mail (Art. 1) | `grupouniaoetrabalhoam@gmail.com` | `contato@grupouniaoetrabalho.com.br` |
+
+O Regulamento tem ainda **dois destinos** (Art. 21: BB ag. 198627 cc 847534; Art. 27: Bradesco ag. 0320 cc 0812782-4, PIX `renascendoam@gmail.com`). **Não foi alinhado de propósito:** escolher um número de agência é decidir para onde vai dinheiro de terceiros. Pendente de decisão.
+
+### Lição de método (custa a aprender, vale a pena repetir)
+
+**Um diff é uma medição — e mede a coisa errada se o escopo for mau.** O diff v3→v4 errou **duas vezes** antes de acertar: (1) comparava só a linha do «Art. Nº» e dava o **Art. 35** por não alterado — que tem 16 linhas e leva **duas** das nove correcções; (2) deixava o bloco do último artigo engolir a secção «Notas Internas» removida e acusava o **Art. 40** de ter mudado. Confiar no primeiro teria produzido um relatório a dizer que as correcções 6 e 9 não foram aplicadas.
+
+---
+
 ## MC94.5 — O GUTO anuncia a rodada especial (2026-09-25)
 
 **Data:** 2026-09-25 · **Origem:** sequência operacional · **Base:** `2bd9b5e` · **Fecho:** `786dd07`

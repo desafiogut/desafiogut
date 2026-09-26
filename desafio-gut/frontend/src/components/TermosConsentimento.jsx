@@ -80,46 +80,42 @@ export default function TermosConsentimento({ onAceitar }) {
 
           <p style={estilos.artigo}>
             <strong style={estilos.artLabel}>Art. 4</strong> — O aplicativo DesafioGUT será
-            implantado a partir do dia <strong>1º (primeiro) de junho de 2026</strong> por tempo
+            implantado a partir do dia <strong>5 (cinco) de outubro de 2026</strong> por tempo
             indeterminado, sob coordenação da diretoria do Grupo União e Trabalho.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 6</strong> — O interessado deverá se cadastrar
+            <strong style={estilos.artLabel}>Art. 5</strong> — O interessado deverá se cadastrar
             gratuitamente e receberá um código único, intransferível e exclusivo de acesso para
             comprar senhas e realizar lances.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 8</strong> — O DesafioGUT funciona sempre
+            <strong style={estilos.artLabel}>Art. 7</strong> — O DesafioGUT funciona sempre
             através da pergunta: <em>"QUANTO VOCÊ PAGA POR ESSE BEM OU PRODUTO?"</em> —{" "}
             <strong style={{ color: "#f5a623" }}>O MENOR LANCE ÚNICO GANHA.</strong>
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 9</strong> — O participante poderá ofertar
-            lances indeterminados através de senhas, escolhendo a versão Relâmpago (Flash) ou
-            Programado, com data e tempo estipulado conforme descrito em cada edição.
+            <strong style={estilos.artLabel}>Art. 8</strong> — O participante poderá ofertar
+            lances por meio de saldo em dinheiro, na modalidade Relâmpago (Flash), ou de senhas, na modalidade Programado (adquiridas pela conversão de saldo),
+            com data e tempo estipulado conforme descrito em cada edição.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 14</strong> — O contemplado poderá optar por
-            receber o prêmio em dinheiro (moeda Real Brasileira). Para bens com valor acima de
-            R$ 10.000,00, receberá no prazo máximo de 24 horas{" "}
-            <strong>somente 80% (oitenta por cento) do valor descrito na edição</strong>, exceto
-            se o ofertado seja em dinheiro, que pagará integralmente (residentes em Manaus/AM).
+            <strong style={estilos.artLabel}>Art. 14</strong> — O contemplado residente em Manaus/AM que optar por receber o prêmio em dinheiro receberá o valor integral. Os demais contemplados que optarem por receber o prêmio em dinheiro receberão{" "}
+            <strong>80% (oitenta por cento) do valor descrito na edição</strong>, exceto se o prêmio já for ofertado em dinheiro (moeda Real Brasileira), caso em que receberão o valor integral. Produtos ou serviços com valor acima de R$ 10.000,00 (dez mil reais) seguem o prazo de 24 (vinte e quatro) horas para o pagamento.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 16</strong> — Bens ou produtos com valor acima
+            <strong style={estilos.artLabel}>Art. 13</strong> — Bens ou produtos com valor acima
             de R$ 10.000,00: as despesas com transferência de propriedade são de total
             responsabilidade do participante contemplado, com prazo máximo de 15 (quinze) dias.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 20</strong> — Cada senha custa o valor único
-            de <strong style={{ color: "#f5a623" }}>R$ 2,00 (dois reais)</strong> para todas as
-            edições, seja Relâmpago ou Programado.
+            <strong style={estilos.artLabel}>Art. 20</strong> — As senhas, quando utilizadas na modalidade Programado, têm custo unitário de{" "}
+            <strong style={{ color: "#f5a623" }}>R$ 2,00 (dois reais)</strong>, adquiridas exclusivamente pela conversão de saldo em dinheiro. A modalidade <strong>Relâmpago não consome senhas</strong>, operando com débito de saldo em dinheiro a partir de R$ 0,01 por lance.
           </p>
 
           <p style={estilos.artigo}>
@@ -136,39 +132,38 @@ export default function TermosConsentimento({ onAceitar }) {
             <li>a) <em>"Seu lance é o menor e único até agora, parabéns"</em></li>
             <li>b) <em>"Seu lance não é o menor mas é único, tente novamente"</em></li>
             <li>c) <em>"Já recebemos um lance igual ao seu, tente novamente"</em></li>
-            <li>d) <em>"A senha digitada não é válida, tente novamente"</em></li>
+            <li>d) <em>"O valor informado não é válido, tente novamente"</em></li>
             <li>e) <em>"Lance inválido — envie apenas o valor, ex: 0,01"</em></li>
             <li>f) <em>"Fique de olho no relógio para o final da edição"</em></li>
           </ul>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 26</strong> — A apuração dos lances é
+            <strong style={estilos.artLabel}>Art. 25</strong> — A apuração dos lances é
             automática através do painel interno de controle restrito.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 27</strong> — O participante poderá ofertar
+            <strong style={estilos.artLabel}>Art. 26</strong> — O participante poderá ofertar
             qualquer valor de lance a partir de{" "}
             <strong style={{ color: "#f5a623" }}>R$ 0,01 (um centavo)</strong>, sempre com no
             máximo 2 (duas) casas decimais. Valores fora deste formato não serão aceitos.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 30</strong> — É proibida a participação de
+            <strong style={estilos.artLabel}>Art. 34</strong> — É proibida a participação de
             funcionários, colaboradores, prestadores de serviços e familiares de qualquer empresa
             envolvida no DesafioGUT.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 33</strong> — Os participantes cedem,
+            <strong style={estilos.artLabel}>Art. 29</strong> — Os participantes cedem,
             gratuitamente, os direitos de utilização de seu nome, imagem e som de voz para
             divulgação em qualquer mídia, exclusivamente referente ao evento.
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 35</strong> — Este regulamento está registrado
-            no RTD — Cartório de Títulos e Documentos da comarca de Manaus/AM, Brasil, em 1º
-            (primeiro) de maio de 2026.
+            <strong style={estilos.artLabel}>Art. 37</strong> — Este regulamento está registrado
+            no RTD — Cartório de Títulos e Documentos da comarca de Manaus/AM, Brasil, em 5 (cinco) de outubro de 2026.
           </p>
 
           <div style={estilos.contatoBox}>
@@ -194,7 +189,7 @@ export default function TermosConsentimento({ onAceitar }) {
 
           <label style={estilos.label}>
             <input type="checkbox" checked={termos} onChange={(e) => setTermos(e.target.checked)} style={estilos.checkbox} />
-            <span>Aceito os Termos de Participação, o mecanismo "Menor Lance Único Ganha" (Art. 8) e as regras de lance (Art. 27).</span>
+            <span>Aceito os Termos de Participação, o mecanismo "Menor Lance Único Ganha" (Art. 7) e as regras de lance (Art. 26).</span>
           </label>
 
           <label style={estilos.label}>
@@ -205,7 +200,7 @@ export default function TermosConsentimento({ onAceitar }) {
               <a href="/privacidade" style={{ color: "#fbbf24" }}>
                 Política de Privacidade
               </a>{" "}
-              (LGPD/GDPR) e cedo minha imagem conforme Art. 33.
+              (LGPD/GDPR) e cedo minha imagem conforme Art. 29.
             </span>
           </label>
         </div>

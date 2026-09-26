@@ -108,8 +108,8 @@ describe("MC94 · MeusAtivos — HARD GATE 5: nada regride", () => {
     const t = texto(renderizar());
     assert.match(t, /Meus Ativos/);
     assert.match(t, /Histórico de lances/i);
-    assert.match(t, /Art\. 26/, "perdeu a nota do Art. 26");
-    assert.match(t, /Art\. 8/,  "perdeu a nota do Art. 8");
+    assert.match(t, /Art\. 25/, "perdeu a nota do Art. 25");
+    assert.match(t, /Art\. 7/,  "perdeu a nota do Art. 7");
   });
 
   test("os filtros continuam lá", () => {

@@ -61,7 +61,7 @@ export default function Seguranca() {
           fontWeight: "900", color: COR.text, lineHeight: 1.2,
         }}>🛡️ Segurança</h1>
         <p style={{ margin: 0, color: COR.muted, fontSize: isMobile ? "0.82rem" : "0.88rem", lineHeight: 1.4 }}>
-          Proteção de dados e autenticação do DesafioGUT — Art. 9 e Art. 35 do Regulamento.
+          Proteção de dados e autenticação do DesafioGUT — Art. 9 e Art. 10 do Regulamento.
         </p>
       </header>
 

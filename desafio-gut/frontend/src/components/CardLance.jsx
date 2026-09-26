@@ -141,7 +141,7 @@ export default function CardLance({
 
     const valorCentavos = sanitizeLance(valor);
     if (valorCentavos === null) {
-      setErro("Valor inválido. Use um inteiro entre 1 e 999999 (centavos). Art. 27: mín R$ 0,01.");
+      setErro("Valor inválido. Use um inteiro entre 1 e 999999 (centavos). Art. 26: mín R$ 0,01.");
       return;
     }
 
@@ -271,7 +271,7 @@ export default function CardLance({
         "Voce nao possui senhas disponiveis": "Saldo insuficiente na blockchain. Aguarde crédito da coordenacao após confirmação do PIX.",
         "Edicao nao esta ativa":              "Edição não está ativa on-chain. Aguarde a coordenacao reabrir.",
         "Prazo da edicao encerrado":          "Prazo da edição encerrado on-chain. Aguarde nova rodada.",
-        "Lance minimo e R$ 0,01":             "Lance mínimo é R$ 0,01 (Art. 27).",
+        "Lance minimo e R$ 0,01":             "Lance mínimo é R$ 0,01 (Art. 26).",
       };
       const msg =
         traduzirRevert[reasonRaw] ??
@@ -433,7 +433,7 @@ export default function CardLance({
           />
           {valorReais && <span style={estilos.valorPreview}>{valorReais}</span>}
         </div>
-        <p style={estilos.hintInput}>Art. 27: Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s</p>
+        <p style={estilos.hintInput}>Art. 26: Mín R$ 0,01 · Máx 5 lances/min · Cooldown 3s</p>
       </div>
 
       {ocupado && (
