@@ -1159,6 +1159,47 @@ Um cliente pode injectar um turno `assistant` **fabricado** (ex. «Já confirmei
 modelo vê-o como fala sua. Nenhuma acção privilegiada deriva do histórico (admin exige JWT), mas
 é um vector que não existia antes. Pendente para hardening (MC96.2 ou dedicado).
 
+## MC96.2 — ADENDO: 3 refutações da auditoria + 3 armadilhas de teste (2026-09-25)
+
+Validador `deleg_56475bcc`: **APROVADO COM RESSALVAS**, 3 refutações — todas corrigidas (testes 10/10).
+
+### 1. Testar o enquadramento num só perfil não é testar o enquadramento
+
+O mutante P9 (despejo CRU no **corporativo**, mantendo « » nos outros) **sobreviveu** — o teste
+só media o perfil `comum`. **Sempre que um invariante vale por perfil, o teste tem de correr os
+perfis.** Idem para o `admin`, que era o único fallback **sem saída**.
+
+### 2. Um stripper de comentários que não sabe onde estão as strings apaga o que devia julgar
+
+`/\/\*[\s\S]*?\*\//g` + `^[ \t]*\/\/.*$` tinha **2 pontos cegos medidos**: prosa com
+`// leilões` **dentro de um template literal**, e `/* leilões */` **dentro de uma string** — ambos
+passavam em VERDE. Agora só se removem comentários que **abrem a linha**.
+
+### 3. ⚠️ Prova textual de código que não corre é falso-verde (classe do MC96.1, reproduzida)
+
+`assert.match(CHAT, /novo leilao/)` casava o texto **COMENTADO**: comentar a linha inteira do
+regex deixava o teste **VERDE** enquanto o módulo **rebentava no import**. **Um invariante sobre
+comportamento exige uma asserção comportamental** — importar e chamar, não procurar a string.
+
+### 4. «Leilão» em prosa existe FORA do GUTO (achado que transcende o MC)
+
+`MercadoLances.jsx` (9), `AppContext.jsx` (6), `Vitrine.jsx` (6), `produtos.mjs`,
+`ia-preditiva.mjs`, `ComingSoonHero.jsx`, `Sidebar.jsx`, `edicao.js`. Os MC96.x limpam a
+**persona do GUTO**; o vocabulário da **interface** (o que o testador vê a navegar) não foi coberto.
+
+### 5. Uma mensagem de erro também é uma medição
+
+O push respondeu `Bypassed rule violations ... Cannot force-push`. Li como **bloqueio**; o código
+de saída era **0** e «bypassed» = a conta **contornou** a regra. Quase registei que o remoto ficara
+com a mensagem partida quando não ficou. **Medir o resultado da correcção**, não interpretá-lo.
+
+### 6. Limpar worktrees com junctions: usar `os.lstat`, não `os.path.islink`/`os.stat`
+
+`os.path.islink` dá **False** numa junction e `os.stat` **segue o link** (devolve os atributos do
+alvo) — o detector correcto é `os.lstat(p).st_file_attributes & 0x400`. No `valida-962-wt` havia
+**3 junctions** a apontar para o `node_modules` do principal: removidas com `os.rmdir` (numa
+junction apaga só o link), com contagem antes/depois — **175807 ficheiros intactos**.
+
 ## MC96.2 — Fallback natural + vocabulário jurídico do GUTO (2026-09-25)
 
 **Fecho de código** `7f06832` · frontend **378/378** · backend **670/664/0/6** · validador `deleg_56475bcc`.
