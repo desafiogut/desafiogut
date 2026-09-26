@@ -1122,6 +1122,28 @@ assimetria dentro.
 
 ---
 
+## MC95.2 — Auditoria adversarial: 4 refutações no gate (2026-09-25)
+
+**Fecho** `d920b6d` · chunk `index-Ca2PLhI-.js` LIVE · suíte **371/371**.
+
+O validador independente (`deleg_ba1c22bc`) **confirmou** o essencial (dados de pagamento
+cirúrgicos, produção com sha256 == local, Art. 20 correto nos dois lados) e **refutou 4 coisas**:
+
+1. **Cabeçalho do gate** — «Vigência: a partir de 1º de junho de 2026», com o v4 a ter **zero**
+   «junho». O MC95 corrigiu os blocos dos Art. 4/37 e **não viu o cabeçalho** (estava em produção).
+2. **Bloco «Art. 5» era FUSÃO** de Art. 5 + Art. 6 — a renomeação 6→5 corrigiu metade.
+3. **Pergunta do Art. 7** — «PAGA POR ESSE BEM» vs v4 «OFERTA POR…».
+4. ⚠️ **O teste `citacoesRegulamento` não travava o que o nome promete**: repor Art. 14 ou
+   Art. 24(d) na redacção pré-MC95 dava **9/9 PASS** — nunca comparava o **texto do bloco**.
+
+**REGRA QUE SAI DAQUI — UM TESTE COM O NOME CERTO PODE NÃO TESTAR NADA.** Se um teste diz
+«trava que X corresponde a Y», tem de verificar **nos dois sentidos** (as chaves no lado A **e**
+no lado B) e tem de ser demolido por uma mutação que **reponha o texto antigo**. Um teste que só
+verifica PRESENÇA de chaves curadas passa por cima de qualquer regressão de conteúdo.
+
+**E o validador vê o que o autor não vê — não se compensa com cuidado.** Corrigi 8 números
+errados e deixei o cabeçalho, com a mesma data errada, a 5 linhas de distância.
+
 ## MC95.1 — Deploy do gate + alinhamento de dados de pagamento (2026-09-25)
 
 **Base** `5d516a7` · **Fecho** `8d0a3ce` · **Deploy** `6ab720bf552deaee8b39a0a8` (0 functions).

@@ -1,0 +1,76 @@
+MC95.2 — AUDITORIA ADVERSÁVEL: ACHADOS E CORRECÇÕES
+(desencadeado pelo validador independente deleg_ba1c22bc, 854 s, worktree próprio)
+
+═══ VEREDITO DO VALIDADOR: APROVADO COM RESSALVAS ═══
+CONFIRMOU (com método próprio): o Art. 20 (Relâmpago não consome senhas) nos dois lados;
+os dados de pagamento cirúrgicos (7 mailtos de suporte intactos, EMAIL_SUPORTE intacto,
+Art. 27 intocado); produção LIVE com sha256 do chunk == local, byte a byte; 369/369;
+4 mutações RED; zero alteração de código não declarada nos commits 693e6ef/8d0a3ce.
+
+REFUTOU 4 COISAS — todas confirmadas por medição própria e corrigidas:
+
+1. CABEÇALHO DO GATE: «Vigência: a partir de 1º de junho de 2026» (linha 66), enquanto o v4
+   tem ZERO ocorrências de «junho» (Art. 4 e 37 = 5 de outubro de 2026). O MC95 corrigiu os
+   BLOCOS dos Art. 4/37 e não viu o cabeçalho. ESTAVA EM PRODUÇÃO.
+   -> corrigido para 5 de outubro de 2026.
+
+2. O BLOCO «Art. 5» ERA UMA FUSÃO de dois artigos: «cadastrar gratuitamente» é Art. 5;
+   «código único, intransferível e exclusivo de acesso para comprar senhas e realizar lances»
+   é Art. 6. O medidor independente (Jaccard, sem lista curada) mostrou que com a etiqueta
+   ANTIGA (6) o bloco casava MELHOR com o artigo certo (0.196 vs 0.150) — ou seja, a minha
+   renomeação 6->5 corrigiu METADE e degradou a outra.
+   -> separado em dois blocos, com o texto do v4. «comprar senhas» saiu (não existe em
+      nenhum artigo — e é falso desde o MC94.4.1, porque o Relâmpago não consome senhas).
+
+3. PERGUNTA CITADA NO Art. 7: o gate dizia «QUANTO VOCÊ PAGA POR ESSE BEM OU PRODUTO?»; o v4
+   diz «QUANTO VOCÊ OFERTA POR... este produto ou serviço?».
+   -> alinhado. (Eu tinha visto esta divergência no MC95 e decidi não a tocar por prudência
+      de produto, mas NÃO a declarei no relatório — o validador apanhou a omissão, com razão.)
+
+4. ⚠️ O ACHADO MAIS GRAVE — O MEU TESTE NÃO TRAVAVA O QUE O NOME PROMETIA.
+   `citacoesRegulamento.test.mjs` verificava (a) bloco não-vazio e (b) que o ARTIGO do v4
+   continha palavras-chave curadas. NUNCA comparava o TEXTO DO BLOCO com o artigo.
+   Prova decisiva do auditor: repor o bloco Art. 14 ou Art. 24(d) na redacção pré-MC95 dava
+   **9/9 PASS, fail 0**. Chaves fracas: [24] casava só a linha de intro (as 6 mensagens a)-f)
+   não eram verificadas), [29]=«imagem», [34]=«funcionários», [13]=«15», [21]=[«PIX»,«pagamento»].
+   -> A trava passou a verificar NOS DOIS SENTIDOS: as mesmas chaves têm de estar no artigo do
+      v4 E no bloco do gate. Mais 2 testes novos: «o gate não apresenta datas que o
+      Regulamento não regista» e «nenhum bloco funde dois artigos».
+      6/6 verdes.
+
+═══ MUTAÇÃO (R16) — AS 4 REGRESSÕES QUE O AUDITOR PROVOU QUE PASSAVAM ═══
+Com o teste reforçado, todas MORREM:
+  Art. 14 na redacção pré-MC95            -> fail=1
+  Art. 24(d) «a senha digitada»           -> fail=1
+  cabeçalho «1º de junho de 2026»         -> fail=1
+  bloco Art. 5 em fusão com o Art. 6      -> fail=1
+  md5 restaurados idênticos. Suite: 371/371.
+
+⚠️ O PRÓPRIO TESTE REFORÇADO NASCEU COM 1 FALHA — culpa minha, não do código: usei a chave
+   «5 de outubro de 2026» quando o v4 escreve «5 (cinco) de outubro de 2026». Não aceitei o
+   verde sem resolver: a mensagem de asserção que eu tinha escrito («o mapa do teste está
+   errado») foi o que o disse. Corrigido antes de continuar.
+
+═══ PRODUÇÃO (deploy 37 ficheiros / 0 functions; chunk `index-Ca2PLhI-.js`) ═══
+  ausente «1º de junho» ✅ · presente «5 de outubro de 2026» ✅ · presente «QUANTO VOCÊ
+  OFERTA POR» ✅ · ausente «PAGA POR ESSE BEM» ✅ · ausente «comprar senhas» ✅ · presente o
+  bloco Art. 6 ✅ · presente «cadastrar gratuitamente para poder participar» ✅
+  Sem regressão: Art. 20, Agência 198627, CNPJ, e-mail institucional, linha de consentimento.
+  Antigos fora: 181627, grupouniaoetrabalhoam, «para todas as edições» ✅
+  `desafiogut01` presente = o e-mail de SUPORTE (decisão MC88.44) ✅ — não foi arrastado.
+
+═══ LIÇÕES ═══
+1. UM TESTE COM O NOME CERTO PODE NÃO TESTAR NADA. «Trava que cada bloco aponta para o artigo
+   cujo texto corresponde» era a promessa; a implementação verificava só um sentido. Um
+   auditor independente derrubou-o com um experimento de 30 segundos (repor o texto antigo e
+   ver verde). **Verificação em dois sentidos ou não é verificação.**
+2. O VALIDADOR VÊ O QUE EU NÃO VEJO — E ISSO NÃO SE COMPENSA COM CUIDADO. Corrigi 8 números
+   e deixei o cabeçalho, com a mesma data errada, a 5 linhas de distância. Não foi falta de
+   zelo: foi o zelo a olhar para onde eu tinha decidido olhar.
+3. PRUDÊNCIA QUE NÃO SE DECLARA PARECE OMISSÃO. Optei por não mexer na pergunta do Art. 7 por
+   ser texto de produto; não o escrevi no relatório. O validador classificou-o como
+   «divergência não declarada». Tinha razão: uma decisão de não fazer também é uma decisão, e
+   tem de ficar registada.
+4. UMA CHAVE DE TESTE ERRADA ACUSA O CÓDIGO. O teste reforçado nasceu vermelho por erro meu
+   no mapa. Se eu tivesse «resolvido» o vermelho mexendo no gate, teria estragado o código
+   para satisfazer um teste errado.
