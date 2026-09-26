@@ -20,7 +20,9 @@ const { splitIntoChunks, gerarEmbedding } = await import(`file://${RAG_LIB.repla
 
 const TAMANHO = 500, OVERLAP = 50;
 const fonte = resolve(REPO_ROOT, process.argv[2] || "docs/RAG-GUTO-v2.md");
-const SAIDA = join(REPO_ROOT, "_rag-out");
+// Directório de saída: `RAG_OUT_DIR` permite à verificação escrever num sítio próprio e
+// comparar, sem tocar no artefacto de produção. Sem a variável, o comportamento é o de antes.
+const SAIDA = process.env.RAG_OUT_DIR ? resolve(process.env.RAG_OUT_DIR) : join(REPO_ROOT, "_rag-out");
 
 const bruto = await readFile(fonte, "utf8");
 // ⚠️ Remover comentários HTML: o cabeçalho do ficheiro tem INSTRUÇÕES DE INGESTÃO para o
