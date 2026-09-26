@@ -34,7 +34,7 @@ export default function MinhaCarteira() {
     address, userLabel, lances, user,
     saldoSenhas, saldoSenhasStatus, refetchSaldo,
     saldoRsCentavos, saldoRsStatus, refetchSaldoRs,
-    setTipoLeilao,
+    setModalidade,
   } = useAppContext();
 
   // Email do pagador para o PIX (MC39.15.1): coletado automaticamente do login
@@ -79,7 +79,7 @@ export default function MinhaCarteira() {
   const saldoReais = saldoRsCentavos == null ? null : saldoRsCentavos / 100;
 
   function irParaLanceRelampago() {
-    try { setTipoLeilao?.("flash"); } catch {}
+    try { setModalidade?.("flash"); } catch {}
     navigate("/mercado");
   }
 

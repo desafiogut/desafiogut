@@ -167,7 +167,7 @@ export default function MercadoLances() {
   const isMobile = useIsMobile();
   const {
     EDICAO_ATIVA,
-    modalidade, setTipoLeilao,
+    modalidade, setModalidade,
     lances,
     prazoTimestamp, encerrado, showOverlay,
     address, isConnected, userLabel, ready,
@@ -239,7 +239,7 @@ export default function MercadoLances() {
           userLabel={userLabel}
           onLogin={abrirModal}
           modalidade={modalidade}
-          setTipoLeilao={setTipoLeilao}
+          setModalidade={setModalidade}
           encerrado={encerrado}
           edicao={EDICAO_ATIVA}
         />

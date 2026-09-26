@@ -8,7 +8,7 @@ const MODOS = [
   { id: "programado", label: "🎫 Programado", cor: COR.primary },
 ];
 
-export default function ModeSelector({ modalidade, setTipoLeilao }) {
+export default function ModeSelector({ modalidade, setModalidade }) {
   return (
     <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
       <span style={{ fontSize: "0.68rem", color: COR.muted, marginRight: "0.2rem" }}>Modo:</span>
@@ -17,7 +17,7 @@ export default function ModeSelector({ modalidade, setTipoLeilao }) {
         return (
           <button
             key={id}
-            onClick={() => setTipoLeilao(id)}
+            onClick={() => setModalidade(id)}
             aria-pressed={ativo}
             style={{
               padding: "0.32rem 0.7rem", borderRadius: "16px",

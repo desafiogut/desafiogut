@@ -11,7 +11,7 @@ import AuctionStatusBar from "./AuctionStatusBar.jsx";
 
 export default function GlassHeader({
   isMobile, isConnected, ready, address, userLabel, onLogin,
-  modalidade, setTipoLeilao, encerrado, edicao,
+  modalidade, setModalidade, encerrado, edicao,
 }) {
   return (
     <div style={{ padding: isMobile ? "1rem 1rem 0" : "1.5rem 2rem 0" }}>
@@ -47,7 +47,7 @@ export default function GlassHeader({
         {/* Secção 2 — HERO "EM BREVE" (foco) + seletor de modo */}
         <div className={`flex flex-col items-center border-b border-white/10 ${isMobile ? 'gap-3 px-3 py-5' : 'gap-4 px-8 py-7'}`}>
           <ComingSoonHero isMobile={isMobile} edicao={edicao} />
-          <ModeSelector modalidade={modalidade} setTipoLeilao={setTipoLeilao} />
+          <ModeSelector modalidade={modalidade} setModalidade={setModalidade} />
         </div>
 
         {/* Secção 3 — disclaimer legal (rodapé fino) */}

@@ -170,7 +170,7 @@ export function timeLeftEdicaoSegundos(edicao) {
 
 export function AppProvider({ children }) {
   // Tipo de leilão (Art. 8)
-  const [modalidade, setTipoLeilao] = useState("flash");
+  const [modalidade, setModalidade] = useState("flash");
 
   // MC15.4 ITEM 5/6 — múltiplas edições (mapa keyed por id). Sempre tem ao
   // menos R-1 (real ou fallback sintetizado). Aditivo: o fluxo R-1 abaixo
@@ -1316,7 +1316,7 @@ export function AppProvider({ children }) {
   // ── Value ────────────────────────────────────────────────────────────────
   const value = {
     EDICAO_ATIVA, DURACAO,
-    modalidade, setTipoLeilao,
+    modalidade, setModalidade,
     // MC15.4 — múltiplas edições (aditivo). edicoes nunca é vazio (R-1 garantida).
     edicoes, edicoesStatus,
     agendadas, offsetRelogioMs, // MC94.2 — card da edição especial no Dashboard
