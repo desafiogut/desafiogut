@@ -317,7 +317,7 @@ export const respostasPorPerfil = {
       : "Não encontrei isso no regulamento. Reformula a pergunta, consulta o Painel Lojista ou escreve para contato@grupouniaoetrabalho.com.br."),
     admin: (p) => (p.trecho
       ? `Regulamento: «${p.trecho}»`
-      : "Sem correspondência no regulamento para essa consulta."),
+      : "Sem correspondência no regulamento para essa consulta. Consulta a coordenação ou o Painel Lojista."),
   },
 
   // Wrapper do RAG: respostaRAG é a resposta gerada; cada perfil acrescenta o seu enquadramento.

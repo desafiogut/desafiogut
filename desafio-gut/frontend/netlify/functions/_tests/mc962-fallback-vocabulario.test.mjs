@@ -30,10 +30,24 @@ const GUTO = ler("_lib/guto-perfis.mjs");
 const CHAT = ler("chatbot.mjs");
 const PERFIS = ["visitante", "comum", "corporativo", "admin"];
 
-/** Remove comentários (// e /* *​/) — um teste que aceita código comentado não testa nada
- *  (lição do MC96.1: a asserção de cablagem passava com a chamada comentada). */
+/**
+ * Remove comentários — um teste que aceita código comentado não testa nada (MC96.1).
+ *
+ * ⚠️ A 1.ª versão usava `s.replace(/\/\*[\s\S]*?\*\//g,"")` + `^[ \t]*\/\/.*$` e a
+ * auditoria adversarial REFUTOU-a com 2 pontos cegos medidos:
+ *   P6b — prosa com `// leilões` DENTRO de um template literal → o stripper apagava-a (verde);
+ *   P10 — `/* leilões *​/` dentro de uma string → idem.
+ * Um stripper que não sabe onde estão as strings apaga o que devia julgar.
+ *
+ * Agora só são removidos comentários que comecem a LINHA (é o estilo real do ficheiro) — e um
+ * `//` ou `/*` dentro de uma string/template deixa de ser tratado como comentário. Um comentário
+ * "de cauda" (código seguido de `//`) passa a contar como prosa: é o preço, e é o lado seguro.
+ */
 const semComentarios = (s) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
+  s.split("\n")
+   .map((l) => (/^[ \t]*(\/\/|\/?\*)/.test(l) ? "" : l))   // comentário que ABRE a linha
+   .join("\n")
+   .replace(/\/\*[^\n]*?\*\//g, (m, off, todo) => (/^[ \t]*\/\*/.test(m) ? m : m)); // blocos numa linha: mantidos
 
 const CONTACTO = "contato@grupouniaoetrabalho.com.br";
 
@@ -64,10 +78,18 @@ test("(b) o fallback é uma frase natural com SAÍDA para o utilizador", () => {
   assert.match(comTrecho, new RegExp(CONTACTO.replace(/\./g, "\\.")), "e com uma saída");
 });
 
-test("(c) o chunk bruto NÃO é colado sem enquadramento (sem markdown de documento)", () => {
-  const r = obterResposta("fallback_sem_llm", "comum", { trecho: "# Regulamento\n> Documento consolidado" });
-  assert.doesNotMatch(r, /^#\s/m, "não pode começar uma linha com markdown de título");
-  assert.match(r, /«/, "o trecho deve vir entre delimitadores (enquadrado), não cru");
+test("(c) o chunk bruto NÃO é colado sem enquadramento — NOS 4 PERFIS", () => {
+  // ⚠️ A 1.ª versão só media o perfil `comum`. A auditoria adversarial provou (mutante P9) que
+  // se podia repor o despejo CRU no corporativo mantendo «…» e o teste ficava VERDE. Verificação
+  // num só sentido — a mesma classe de erro do MC96.1.
+  for (const perfil of PERFIS) {
+    const r = obterResposta("fallback_sem_llm", perfil, { trecho: "# Regulamento\n> Documento" });
+    assert.match(r, /«[^»]*# Regulamento/, `${perfil}: o trecho tem de vir DENTRO de « » (enquadrado)`);
+    assert.doesNotMatch(r, /^#\s/m, `${perfil}: não pode ficar markdown de título fora do enquadramento`);
+    const semEnquadrar = r.replace(/«[^»]*»/g, "@");
+    assert.doesNotMatch(semEnquadrar, /# Regulamento|> Documento/,
+      `${perfil}: há trecho colado FORA do enquadramento`);
+  }
 });
 
 // ── #10 O VOCABULÁRIO ────────────────────────────────────────────────────────
@@ -111,8 +133,11 @@ test("o que fica em chatbot.mjs é deliberado e NÃO é prosa da persona", () =>
     /leil[ãõ]o ativo/.test(o));
   assert.equal(justificadas.length, ocorr.length,
     `há «leilão» em prosa no chatbot.mjs:\n  ${ocorr.filter((o) => !justificadas.includes(o)).join("\n  ")}`);
-  // e os regexes do router TEM de continuar a reconhecer a palavra do utilizador
-  assert.match(CHAT, /novo leilao/, "o router tem de continuar a reconhecer «novo leilão» do utilizador");
+  // e os regexes do router TEM de continuar a reconhecer a palavra do utilizador.
+  // ⚠️ NÃO basta procurar a string no fonte: a auditoria adversarial mostrou (C4) que
+  // COMENTAR a linha inteira do regex deixava este teste VERDE enquanto o módulo rebentava no
+  // import (TypeError em chatbot.mjs:189) — a mesma classe de falso-verde do MC96.1. A prova
+  // tem de ser comportamental: importar o módulo e pedir ao router que classifique a frase.
 });
 
 // ── A REGRA DE LINGUAGEM (a correcção que a produção exigiu) ──────────────────
@@ -139,4 +164,20 @@ test("(c2) a regra proíbe TAMBÉM as palavras da família (não só «leilão»
   for (const p of ["jogo de azar", "aposta", "bet", "sorte"]) {
     assert.ok(REGRA_LINGUAGEM.toLowerCase().includes(p), `a regra tem de proibir «${p}»`);
   }
+});
+
+// ── A prova COMPORTAMENTAL do router (C4 da auditoria adversarial) ────────────
+// O teste textual acima casava a string `novo leilao` mesmo numa linha COMENTADA — e a
+// auditoria mostrou que com a linha comentada o módulo REBENTA no import (chatbot.mjs:189),
+// enquanto o teste ficava verde. Prova textual de código que não corre é falso-verde.
+test("o router FUNCIONA (não só menciona): «novo leilão» do utilizador é reconhecido", async () => {
+  const { detectarIntent } = await import("../chatbot.mjs");
+  assert.equal(typeof detectarIntent, "function", "detectarIntent tem de estar exportada");
+  for (const frase of ["novo leilão", "novo leilao", "quero criar uma edição"]) {
+    assert.equal(detectarIntent(frase), "criar_edicao_wizard",
+      `o router tem de reconhecer «${frase}» — se o regex foi comentado, o módulo nem carregava`);
+  }
+  // e as outras duas entradas que carregam a palavra do utilizador continuam a classificar
+  assert.equal(detectarIntent("se o leilao terminasse agora"), "simular_vencedor");
+  assert.equal(detectarIntent("como esta o leilao"), "pulso_edicao");
 });
