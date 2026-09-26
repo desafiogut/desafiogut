@@ -1,1 +1,0 @@
-docs(MC97): veredicto do validador + o que fica por fazer
