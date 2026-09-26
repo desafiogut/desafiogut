@@ -161,3 +161,22 @@ Um número de agência trocado num PIX é dinheiro que vai para o lado errado. *
 - **§6 dados de pagamento (decisão sua)** — a única com impacto financeiro.
 - **`git` e os 3 `??` pré-existentes em `docs/`** (herdado).
 - **Herdadas do MC94.x:** P1 tokens no bundle · flaky `hooks-torneio` · `npm audit` 38 vulns · dependências não declaradas (`@aws-sdk/client-kms`) · Art. 9/20 do regulamento **agora resolvidos** (esta era a pendência P1-DOC).
+
+═══ SEG4-ADENDO — VERIFICACAO AD-HOC (script proprio, MANTIDO em %TEMP%/hermes-verify-mc95.sh) ═══
+  Cobre: os entregaveis, a preservacao byte-a-byte da v3 (HARD GATE 4), a separacao das notas
+  (HARD GATE 6), as 9 correccoes com os alvos antigos a zero + 40 artigos + pt-BR limpo +
+  URLs, a honestidade do proprio diff (8 artigos, Art. 40 provado intocado), o teste novo
+  4/4, as 5 MUTACOES, a fronteira do commit (13 ficheiros, nenhuma area fechada) e o app sem
+  os numeros errados.
+
+  ⚠️ LIÇÃO DE METODO — UM MUTANTE TEM DE SER UMA REGRESSAO:
+  A 1.ª versao do M3 trocava apenas a ABERTURA do Art. 20 no gate ("As senhas... custo
+  unitario" -> "Cada senha custa o valor unico") e deixava a frase "Relampago nao consome
+  senhas" no lugar. O resultado era uma redaccao SEM contradicao: o teste ficava verde — e
+  estava CERTO, porque nao havia defeito a apanhar. Eu tinha-o contado como mutante
+  sobrevivente, o que e' um erro de julgamento MEU, nao uma lacuna do teste.
+  Separado em duas categorias: os mutantes que SAO regressao (5) tem de morrer; uma
+  reescrita inofensiva nao. So' o mutante que reintroduz a CONTRADICAO inteira morre (fail=1).
+  => Um numero de mutacoes so' vale o que valer a qualidade dos mutantes. "Todos morreram" e'
+     uma afirmacao sobre a minha imaginacao de mutantes, nao (so') sobre a robustez do teste.
+
