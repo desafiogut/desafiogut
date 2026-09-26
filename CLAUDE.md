@@ -1159,6 +1159,40 @@ Um cliente pode injectar um turno `assistant` **fabricado** (ex. «Já confirmei
 modelo vê-o como fala sua. Nenhuma acção privilegiada deriva do histórico (admin exige JWT), mas
 é um vector que não existia antes. Pendente para hardening (MC96.2 ou dedicado).
 
+## MC96.2 — Fallback natural + vocabulário jurídico do GUTO (2026-09-25)
+
+**Fecho de código** `7f06832` · frontend **378/378** · backend **670/664/0/6** · validador `deleg_56475bcc`.
+
+### ⛔ «LEILÃO»: o briefing dizia «todas as 33 ocorrências têm de sair» — e isso PARTIRIA o produto
+
+Medido: **32** ocorrências, das quais **5 não podem sair** porque não são vocabulário do GUTO:
+
+| onde | o que é | porque fica |
+|---|---|---|
+| regexes do intent router (`novo leilao`, `se (o leilao )?terminasse`, `como esta (a edicao\|o leilao\|indo)`) | **palavras do UTILIZADOR** que o router reconhece | apagá-las faria o GUTO deixar de entender quem escreve «leilão» — e de criar edições por «novo leilão» |
+| `isLeilaoAtivo` | chave de config de `_lib/recursos-app-config.mjs` | fora do escopo; renomear exige mexer em ficheiro não autorizado + nos dados do Blob |
+| comentários `MC29.1` / `MC88.20` | documentam decisões | histórico, não persona |
+| 1 `console.warn` | log interno | não é o GUTO a falar |
+
+**O que sai é a PROSA DA PERSONA.** Cada excepção está justificada **dentro do teste**, com
+asserção que impede «leilão» em prosa no `chatbot.mjs`. **Medir o enunciado antes de o cumprir**
+— 4.ª vez nesta série (MC94.4.1, MC95, MC96) que o briefing estava desactualizado.
+
+### O fallback (fallback_sem_llm, 4 perfis)
+
+Antes: `Olha o que encontrei no regulamento: ${trecho}` — o **chunk cru**, com markdown de
+documento. Agora: `Encontrei isto no regulamento: «${trecho}» …` — **enquadrado**, com a fonte
+nomeada e uma **saída** (o contacto oficial). Sem correspondência: frase natural com saída,
+mantendo o tom de cada perfil (visitante «! 😅», admin técnico sem emojis — MC15.5 §D3).
+
+### Regra que sai daqui
+
+**Uma asserção forte demais é um convite a estender o escopo.** O teste exigia «torneio de
+habilidade» (o termo oficial, que vive no v4). A resposta certa **não** era ir reescrever as
+saudações para o satisfazer (isso invadiria o MC96.3): era **baixar a asserção ao que a medição
+sustenta** («torneio») e registar o resto como pendência. **Nunca alargar o trabalho para
+satisfazer um teste** — corrigir o teste.
+
 ## MC96.1 — Contexto conversacional do GUTO (2026-09-25)
 
 **Fecho de código** `418ace1` · frontend **376/376** · backend **663/657/0/6** · validador `deleg_5fecd2ad`.
