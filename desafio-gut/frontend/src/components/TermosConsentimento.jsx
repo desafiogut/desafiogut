@@ -63,7 +63,7 @@ export default function TermosConsentimento({ onAceitar }) {
           </div>
           <p style={estilos.subtitulo}>
             Leia e aceite o regulamento antes de participar. Vigência: a partir de{" "}
-            <strong style={{ color: "#f5a623" }}>1º de junho de 2026</strong>.
+            <strong style={{ color: "#f5a623" }}>5 de outubro de 2026</strong>.
           </p>
         </div>
 
@@ -85,14 +85,20 @@ export default function TermosConsentimento({ onAceitar }) {
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 5</strong> — O interessado deverá se cadastrar
-            gratuitamente e receberá um código único, intransferível e exclusivo de acesso para
-            comprar senhas e realizar lances.
+            <strong style={estilos.artLabel}>Art. 5</strong> — O interessado na aquisição do
+            produto ou serviço oferecido deverá se cadastrar gratuitamente para poder participar do
+            DesafioGUT.
+          </p>
+
+          <p style={estilos.artigo}>
+            <strong style={estilos.artLabel}>Art. 6</strong> — O(a) cadastrado(a) deverá ser
+            obrigatoriamente maior de idade e receberá um código único, intransferível e exclusivo de
+            acesso para realizar lances no aplicativo DesafioGUT.
           </p>
 
           <p style={estilos.artigo}>
             <strong style={estilos.artLabel}>Art. 7</strong> — O DesafioGUT funciona sempre
-            através da pergunta: <em>"QUANTO VOCÊ PAGA POR ESSE BEM OU PRODUTO?"</em> —{" "}
+            através da pergunta: <em>"QUANTO VOCÊ OFERTA POR... este produto ou serviço?"</em> —{" "}
             <strong style={{ color: "#f5a623" }}>O MENOR LANCE ÚNICO GANHA.</strong>
           </p>
 
