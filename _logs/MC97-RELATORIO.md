@@ -88,3 +88,49 @@ en.js · es.js .................... 22+29 substituições cada
 2. **Medir a língua exige fronteira de palavra** — senão «better» conta como «bet».
 3. **Escrever um número sem o medir é inventá-lo.** Cinco ✅ meus, cinco limites violados.
 4. **Testar o dicionário não é testar o produto** — a UI pode chamar chaves que mudaram.
+
+
+---
+
+## 7. Veredicto do validador independente (`deleg_ebdb6ee3`) — e o que ele refutou
+
+50 chamadas, 736 s. **Confirmou** o essencial com medição própria, mais forte que a minha — leu o
+**objecto importado por ESM** (não o regex): 0 termos proibidos nos valores · 129/129/129 chaves ·
+9/9 campos da Play dentro dos limites, medidos com parser dele · suites 389/389 e 680/686.
+E confirmou a lição central que eu já suspeitava: **35 de 129 chaves são MORTAS** — 18 `nav.*`,
+10 `dash.*`, 7 `config.*`, nunca referenciadas. `Sidebar.jsx` tem `NAV_ITEMS` com **PT hardcoded**
+(«Mercado de Lances», «Meus Ativos») e `Dashboard.jsx:143-149` hardcoda `label: "Senhas"`.
+⇒ **A minha correcção «Bids→Offers» em `nav.lances` tem efeito visível ZERO.** O dicionário está
+certo; o ecrã não o usa. É a lição do MC96.1 («testar o dicionário não é testar o produto») a
+fechar-se contra mim, **no mesmo MC em que a citei**.
+
+**REFUTADO — tudo meu, tudo corrigido:**
+
+| achado | correcção |
+|---|---|
+| `en.js:86` «a offer» · `en.js:97` «participant offer» | «an offer» · «participant's offer» |
+| `es.js:85/86` «**Las** tokens» (concordância quebrada) | «**Los** tokens» |
+| `es.js:25` `dash.senhas` = «**Fichas**» — proibido pelo glossário | «Tokens» |
+| guarda **value-blind**: 4 mutações escapavam | 3 testes novos; as 4 morrem |
+| contagem ×2 declarada no commit | **medido: 2** em `en.js` (ele mediu 1 — divirjo no método, registo ambos) |
+
+As 4 mutações que **sobreviviam** ao meu guarda e agora morrem: «Skill-based tournament»→«Skill
+tournament» (escape *file-vs-value*: o teste fazia grep ao **ficheiro**, e o comentário mantinha a
+frase) · EN «Offers»→«Lances» e ES «Ofertas»→«Lances» (um **valor em português** passava!) · PT
+«Senhas»→«Tokens» (desalinhamento do glossário PT) · «Fichas» em ES.
+
+⚠️ E dois erros meus **na própria medição das mutações**: a 1.ª corrida foi **ilegível** (base a
+`fail 1`, logo não se distinguia falha nova de pré-existente) e a mutação M4 sobreviveu porque
+substituí **só a 1.ª ocorrência** — havia 2. *Mutação sobre base vermelha não prova nada; mutação
+incompleta não é mutação.*
+
+**Não resolvido (fica para o MC98/MC100):**
+1. **35 chaves mortas** + `NAV_ITEMS`/`Dashboard` com PT hardcoded — o trabalho de i18n real.
+2. **59 de 62 `.jsx`** com texto de UI não usam i18n; **96 atributos** literais (`aria-label`,
+   `placeholder`, `alt`, `title`), todos PT.
+3. **A ficha da Play contém «sorteio», «azar», «luck», «draw» dentro de NEGAÇÕES** — a mesma lista
+   que o guarda proíbe no i18n. Decisão do operador: manter a negação (clareza jurídica) ou
+   reescrever (fricção de keyword-scan). **E o título EN não usa o termo do glossário.**
+4. **6 skips do backend** (5 sem `SUPABASE_*`, 1 sem `MAINNET_RPC_URL`) — não medidos, **não verdes**.
+5. O **HEAD moveu-se 3×** durante a auditoria: eu commitei enquanto ele media. **Congelar o HEAD
+   antes de auditar.**
