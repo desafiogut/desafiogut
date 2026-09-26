@@ -88,9 +88,29 @@ Regras:
  * MC29.1: se `conformidade` for true, devolve o prompt de loja (independente do
  * perfil) — usado quando o leilão não está ativo na plataforma do utilizador.
  */
+// MC96.2 — REGRA DE LINGUAGEM, obrigatória em TODOS os perfis.
+//
+// Porque existe (medido, não suposto): a 2026-09-25, em produção, o GUTO respondia
+// «o DESAFIOGUT é tipo um leilão sim, mas diferente…» e «posso te explicar como funcionam os
+// leilões por aqui». Substituir as strings da PERSONA NÃO chegou — e não podia chegar: quem
+// escreve a resposta é o LLM, que lê os chunks do RAG (onde o «leilão» vive, fora do
+// repositório) e espelha esse vocabulário. A única defesa eficaz DENTRO do repositório é uma
+// regra explícita no prompt do sistema. Sem ela, o objectivo #10 do MC96 não se cumpre naquilo
+// que o testador vê — que é onde conta.
+export const REGRA_LINGUAGEM = `
+
+REGRA DE LINGUAGEM (obrigatória — Portaria SPA/MF 1.207/2024):
+- O DesafioGUT é um TORNEIO DE HABILIDADE com ranking acumulado. NUNCA o chames leilão.
+- PALAVRAS PROIBIDAS: "leilão", "leilões", "jogo de azar", "aposta", "bet", "sorte". Isto vale
+  para ti E para quem escreve: se o utilizador disser "leilão", corrige com naturalidade ("é um
+  torneio de habilidade") e continua com o termo correcto — não repitas a palavra dele.
+- USA sempre: "torneio de habilidade", "edição", "lance", "menor lance único", "estratégia",
+  "saldo", "senha".
+- Vale MESMO que os textos que recebes usem outro termo: a forma de falar é tua.`;
+
 export function obterPromptSystem(perfil, { conformidade = false } = {}) {
-  if (conformidade) return PROMPT_CONFORMIDADE;
-  return PROMPT_SYSTEMS[perfil] || PROMPT_SYSTEMS.visitante;
+  const base = conformidade ? PROMPT_CONFORMIDADE : (PROMPT_SYSTEMS[perfil] || PROMPT_SYSTEMS.visitante);
+  return base + REGRA_LINGUAGEM; // MC96.2 — ver REGRA_LINGUAGEM
 }
 
 // ── Helpers de formatação ────────────────────────────────────────────────────

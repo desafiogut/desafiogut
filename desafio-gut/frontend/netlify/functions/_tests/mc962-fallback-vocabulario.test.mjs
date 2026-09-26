@@ -72,9 +72,17 @@ test("(c) o chunk bruto NÃO é colado sem enquadramento (sem markdown de docume
 
 // ── #10 O VOCABULÁRIO ────────────────────────────────────────────────────────
 
-test("(a) NÃO há «leilão» na prosa do GUTO (só em comentários)", () => {
-  const limpo = semComentarios(GUTO);
-  const achados = [...limpo.matchAll(/.{0,40}(leil[ãõa]o|leil[õo]es).{0,40}/gi)].map((m) => m[0].trim());
+test("(a) NÃO há «leilão» na prosa do GUTO (só em comentários e NA PRÓPRIA REGRA)", () => {
+  // ⚠️ A REGRA_LINGUAGEM TEM de escrever «leilão» — é o objecto da proibição. Sem esta exclusão,
+  // o teste acusava a regra que existe justamente para eliminar o termo (aconteceu: 1 falha).
+  // A exclusão é delimitada e verificada, para NÃO virar um esconderijo: se a regra crescer ou
+  // mudar de forma, o teste falha em vez de ignorar em silêncio.
+  const bruto = semComentarios(GUTO);
+  const m = bruto.match(/export const REGRA_LINGUAGEM = `[\s\S]*?`;/);
+  assert.ok(m, "não encontrei o bloco REGRA_LINGUAGEM (a exclusão deixaria de ser segura)");
+  assert.match(m[0], /PALAVRAS PROIBIDAS/, "o bloco excluído tem de ser mesmo a regra de linguagem");
+  const limpo = bruto.replace(m[0], "");
+  const achados = [...limpo.matchAll(/.{0,40}(leil[ãõa]o|leil[õo]es).{0,40}/gi)].map((x) => x[0].trim());
   assert.deepEqual(achados, [], `a persona ainda diz «leilão»:\n  ${achados.join("\n  ")}`);
 });
 
@@ -105,4 +113,30 @@ test("o que fica em chatbot.mjs é deliberado e NÃO é prosa da persona", () =>
     `há «leilão» em prosa no chatbot.mjs:\n  ${ocorr.filter((o) => !justificadas.includes(o)).join("\n  ")}`);
   // e os regexes do router TEM de continuar a reconhecer a palavra do utilizador
   assert.match(CHAT, /novo leilao/, "o router tem de continuar a reconhecer «novo leilão» do utilizador");
+});
+
+// ── A REGRA DE LINGUAGEM (a correcção que a produção exigiu) ──────────────────
+// Medido em produção a 2026-09-25, DEPOIS de substituir as strings da persona: o GUTO ainda
+// respondia «o DESAFIOGUT é tipo um leilão sim». As strings da persona não bastam — quem
+// escreve é o LLM, que espelha o vocabulário dos chunks do RAG. Esta é a defesa no repositório.
+
+test("(c) TODOS os prompts (4 perfis + conformidade) levam a regra de linguagem", async () => {
+  const { obterPromptSystem, REGRA_LINGUAGEM } = await import("../_lib/guto-perfis.mjs");
+  assert.ok(REGRA_LINGUAGEM && REGRA_LINGUAGEM.length > 100, "a regra tem de existir");
+  for (const perfil of PERFIS) {
+    const p = obterPromptSystem(perfil, {});
+    assert.ok(p.includes(REGRA_LINGUAGEM), `${perfil}: o prompt não leva a regra`);
+    assert.match(p, /NUNCA o chames leilão/, `${perfil}: falta a proibição explícita`);
+    assert.match(p, /torneio de habilidade/i, `${perfil}: falta o termo correcto`);
+    assert.match(p, /se o utilizador disser "leilão"/i, `${perfil}: falta a instrução de corrigir quem diz «leilão»`);
+  }
+  const conf = obterPromptSystem("visitante", { conformidade: true });
+  assert.ok(conf.includes(REGRA_LINGUAGEM), "o modo de conformidade também tem de levar a regra");
+});
+
+test("(c2) a regra proíbe TAMBÉM as palavras da família (não só «leilão»)", async () => {
+  const { REGRA_LINGUAGEM } = await import("../_lib/guto-perfis.mjs");
+  for (const p of ["jogo de azar", "aposta", "bet", "sorte"]) {
+    assert.ok(REGRA_LINGUAGEM.toLowerCase().includes(p), `a regra tem de proibir «${p}»`);
+  }
 });
