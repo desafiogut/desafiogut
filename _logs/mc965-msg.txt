@@ -1,0 +1,11 @@
+docs(MC96.5): relatorio consolidado da serie MC96 + CLAUDE.md (R14)
+
+Relatorio consolidado em Desktop/MC96-SERIE-RELATORIO.md (HARD GATE 10):
+estado de cada MC com prova, o que cada um entregou, o que NAO foi feito e
+porque, estado final do GUTO/indice/UI/regulamento, 8 licoes consolidadas e
+recomendacoes para o proximo chat.
+
+CLAUDE.md: a licao que custou um MC inteiro — o grep do reporter tem de usar o
+caracter multi-byte correto; saida vazia NAO e "0 falhas", e "nao medi".
+E a 4.a ocorrencia de backticks em heredoc: desta vez o shell executou um script
+a partir do texto da mensagem de commit. Mensagens passam a ir por FICHEIRO.

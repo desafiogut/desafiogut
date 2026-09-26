@@ -1246,6 +1246,46 @@ Aleguei «33 ficheiros / 141 ocorrências»; o auditor mede **34 / ~155**. A con
 mantém-se, o número **não era reprodutível**. **Medir não chega: é preciso dizer COMO, para ser
 reproduzível.**
 
+## MC96.5 — Fecho da série MC96 (2026-09-26)
+
+**HEAD** fcee691 · Relatório consolidado: **Desktop/MC96-SERIE-RELATORIO.md** · Validador da série: deleg_af25f606 (pendente).
+
+### Feito
+- `docs/chatbot/regulamento.md` (fonte POR OMISSÃO de build-rag-index.mjs) tinha 7 «leilão», 2
+  «9.999,99», 1 «0,02» → **0/0/0**, com o conteúdo do v2. Era a armadilha mais provável: quem
+  corresse o script do Opus sem --fonte reconstruía o índice errado.
+- `chunk_prod.js` (31 963 B de build stale) **apagado** — a única referência era uma linha de
+  ignore no eslint.config.js, removida também. Zero referências provadas por grep global.
+- `scripts/mc965-rename-ast.mjs`: rename **por AST** com `espree` (JÁ presente no projecto — não se
+  instalou nada). 3 guardas: colisão, sombras, chaves não-shorthand. **Prova embutida: se os
+  comentários mudarem, aborta.**
+
+### ⚠️ NÃO feito: o refactor AST (P3)
+O DRY RUN funcionou e ensinou: `tipoLeilao`→`tipoEdicao` **colide** (tipoEdicao já existe em
+Vitrine.jsx — a guarda apanhou; um sed teria corrompido em silêncio); `→modalidade` dá 12
+ficheiros/57 identificadores, incluindo 7 chaves de objecto que TÊM de ser renomeadas.
+
+Parou porque **não consegui ler o resultado da suíte com segurança**: o meu grep usava `^.` (não
+casa com o `ℹ` multi-byte do reporter). A reversão automática ficou parcial → 2 ficheiros com o
+rename e o resto revertido = prop quebrado. **Revertido por completo**; confirmado por
+`git diff --ignore-cr-at-eol` = vazio (o resto era normalização CRLF/LF).
+
+> **Aplicar 5 renames sobre um verificador que mente é o trabalho não-verificado que esta série
+> existe para impedir.** Prefiro um MC parcial e honesto a um MC «completo» que não sei provar.
+
+### ⚠️ O grep do reporter: a lição que custou um MC inteiro
+```bash
+node --test ... | grep -E '^ℹ (tests|pass|fail)'    # CORRECTO — o ℹ é multi-byte
+node --test ... | grep -E '^. (tests|pass|fail)'    # ERRADO — casa nada, devolve vazio
+```
+**Saída vazia do reporter não é «0 falhas»: é «não medi».** Uma guarda tem de distinguir
+«medi e está verde» de «não consegui medir» — senão o silêncio passa por aprovação.
+
+### ⚠️ Backticks em heredoc bash -c — 4.ª vez
+Desta vez o shell **EXECUTOU** um script a partir do texto da mensagem de commit
+(`build-rag-index.mjs` correu e falhou por falta de env vars). Saiu ileso **por sorte**, não por
+desenho. **Nunca mais**: mensagens de commit vão por **ficheiro**, escritas em python puro.
+
 ## MC96.3 — GUTO ligado ao regulamento v4 + vocabulário visível da UI (2026-09-25)
 
 **Fecho de código** `78be035` · frontend **381/381** · backend **679/673/0/6** · validador `deleg_bfdf8ee9`.
