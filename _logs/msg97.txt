@@ -1,0 +1,24 @@
+feat(MC97): copy PT/EN/ES alinhada ao torneio de habilidade + ficha da Play
+
+MEDIDO ANTES DE TOCAR (HARD GATE 1): en.js tinha 22 termos proibidos (bid x13, bids x9) e
+es.js 22 (puja x14, pujas x8). Verifiquei com fronteira de palavra — a 1.a varredura sem \b
+dava falsos positivos («bet» dentro de «better», «draw» dentro de «drawer»).
+
+APLICADO (glossario do operador):
+  EN  bid(s) -> offer(s) x22        password(s) -> token(s) x7
+      «Skill tournament» -> «Skill-based tournament» x2   (faltava o termo do glossario)
+  ES  puja(s) -> oferta(s) x22      contraseña(s) -> token(s) x7
+Resultado: 0 termos proibidos nos valores das 3 linguas; 129 chaves em cada (sincronizados).
+
+⚠️ A MINHA 1.a VERSAO DO TESTE TINHA UM BURACO DO TAMANHO DO USO REAL: o padrao ES era
+`\bsubasta\b` (singular) e a mutacao que reintroduzia «Subastas» SOBREVIVEU. Ninguem escreve
+«Subasta» num botao. Todos os padroes passaram a cobrir o plural — e as 3 mutacoes morrem
+(bid, Auctions, Subastas), mais a remocao de uma chave.
+
+⚠️ E A FICHA DA PLAY: a 1.a versao tinha as CONTAGENS ESCRITAS A MAO e 5 dos 9 campos
+EXCEDIAM o limite, com um ✅ inventado ao lado (titulos PT 34/30 e ES 32/30; as 3 descricoes
+curtas >80). Copy encurtada e contagens passaram a ser MEDIDAS por `scripts/mc97-medir-ficha.mjs`,
+que recusa se algum campo estourar. E a mesma licao do validador do MC96.6: numeros inventados.
+
+Novos: docs/GLOSSARIO-OFICIAL.md · docs/FICHA-PLAY-3-IDIOMAS.md · scripts/mc97-medir-ficha.mjs
+       src/i18n/__tests__/glossario.test.mjs (5 assercoes, bidireccional)
