@@ -19,16 +19,32 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join, resolve as _res } from "node:path";
 import { resolve } from "node:path";
 
 // Ficheiros com texto visível ao utilizador (medidos no SEG-1).
-const FICHEIROS = [
-  "src/pages/Vitrine.jsx", "src/pages/MercadoLances.jsx", "src/pages/Dashboard.jsx",
-  "src/pages/MinhaCarteira.jsx", "src/pages/CorporativoCarteira.jsx", "src/pages/Privacidade.jsx",
-  "src/pages/Seguranca.jsx", "src/components/FimEdicaoOverlay.jsx",
-  "src/components/glass/ComingSoonHero.jsx", "src/utils/edicao.js",
-];
+// MC96.7 — VARREDURA TOTAL (era uma lista fixa de 10 ficheiros, num universo de 164).
+// ⚠️ Uma guarda que só vigia os ficheiros que EU escolhi vigia o que eu já sabia. O validador
+// provou-o: a mesma string introduzida em `CardLance.jsx` (não-listado) SOBREVIVEU verde.
+// Agora enumera-se tudo sob `src/` e excluem-se só os testes (que contêm as palavras proibidas
+// por direito próprio — é o que ESTÃO a testar).
+const FICHEIROS = (() => {
+  const out = [];
+  const IGNORAR = new Set(["node_modules", "dist", ".vite", "android", "__tests__"]);
+  (function walk(dir) {
+    for (const e of readdirSync(dir)) {
+      if (IGNORAR.has(e)) continue;
+      const p = join(dir, e);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.(jsx?|tsx?)$/.test(e)) {
+        // caminho relativo a `frontend/` (o `ler` resolve a partir do cwd)
+        out.push(p.replace(/\\/g, "/").replace(/^.*\/frontend\//, ""));
+      }
+    }
+  })(_res(process.cwd(), "src"));
+  return out.sort();
+})();
 const ler = (f) => readFileSync(resolve(process.cwd(), f), "utf8");
 
 /** Só comentários que ABREM a linha (a lição do MC96.2). */
@@ -45,14 +61,23 @@ const semComentarios = (s) =>
  * Um extractor cego faz um teste vacuoso — e um teste vacuoso é pior que nenhum, porque afirma.
  */
 function textoVisivel(src) {
+  // MC96.7 — REMOVER COMENTÁRIOS ANTES DE EXTRAIR. Sem isto, um comentário (ou uma anotação
+  // JSDoc `@param`) que mencione «leilão»/'tipoLeilao' passa por TEXTO VISÍVEL — falso positivo.
+  // Foi o que a guarda alargada apanhou à 1.ª corrida, em `CardEdicaoEspecial.jsx`, onde as
+  // 3 ocorrências estão todas em comentários.
+  // A ordem importa: blocos primeiro (englobam o `{/* */}` do JSX), e `//` só quando precedido
+  // de início-de-linha ou espaço — assim `https://…` dentro de uma string não é truncado.
+  const semComentarios = src
+    .replace(/\/\*[\s\S]*?\*\//g, "")        // /* … */ (inclui JSDoc /** … */)
+    .replace(/(^|\s)\/\/[^\n]*/g, "$1");       // // … (não apanha o `//` de `https://`)
   const fora = [];
   const add = (m) => fora.push(m[1]);
-  for (const m of src.matchAll(/>([^<>]{4,})</g)) add(m);            // texto JSX (1 linha)
-  for (const m of src.matchAll(/"([^"\n]{4,})"/g)) add(m);          // atributos/strings
-  for (const m of src.matchAll(/'([^'\n]{4,})'/g)) add(m);
-  for (const m of src.matchAll(/`([^`]{4,}?)`/gs)) add(m);           // templates (MULTI-LINHA)
+  for (const m of semComentarios.matchAll(/>([^<>]{4,})</g)) add(m);            // texto JSX (1 linha)
+  for (const m of semComentarios.matchAll(/"([^"\n]{4,})"/g)) add(m);          // atributos/strings
+  for (const m of semComentarios.matchAll(/'([^'\n]{4,})'/g)) add(m);
+  for (const m of semComentarios.matchAll(/`([^`]{4,}?)`/gs)) add(m);           // templates (MULTI-LINHA)
   // JSX multi-linha: blocos de texto entre > e < que atravessam linhas
-  for (const m of src.matchAll(/>([^<>]{4,}?)</gs)) add(m);
+  for (const m of semComentarios.matchAll(/>([^<>]{4,}?)</gs)) add(m);
   return fora.join("\n").split("\n").map((l) => l.trim()).filter(Boolean);
 }
 

@@ -1,0 +1,39 @@
+feat(MC96.7): governacao da serie MC96 — guardas alargadas, artigos travados, fontes unificadas
+
+VEREDICTO DO VALIDADOR DA SERIE (deleg_af25f606, 50 chamadas, 991 s): APROVADA COM RESSALVAS.
+As 4 promessas centrais resistiram a refutacao. O que nao resistiu foi a GOVERNACAO — e e' isso
+que este MC arruma. Itens 3 a 7 da lista dele:
+
+3) GUARDA DA UI ALARGADA — estava limitada a 10 ficheiros fixos de um universo de 164. O exemplo
+   do validador era exacto: uma string visivel introduzida em `CardLance.jsx` (nao-listado)
+   sobrevivia VERDE. Agora `vocabularioUI.test.mjs` varre TODO o `src/` recursivamente.
+   PROVA: o mutante nesse mesmo `CardLance.jsx` passa a FALHAR (pass 1 / fail 2).
+   E o extractor passou a REMOVER COMENTARIOS antes de extrair: sem isso um comentario com
+   «leilao» passava por texto visivel (falso positivo medido em `CardEdicaoEspecial.jsx`).
+   Uma guarda que julga codigo tem de remover comentarios primeiro — 3.a vez nesta serie.
+
+4) NUMEROS DE ARTIGO TRAVADOS — `artigosUI.test.mjs` (novo). Cada `Art. Nº` citado na UI tem de
+   ter, perto, uma palavra-chave do assunto DESSE artigo, medida no v4. Mapeados os 18 artigos
+   citados (1,4,5,6,7,8,9,10,13,14,20,21,24,25,26,29,34,37).
+   ⚠️ O DEFAULT E' REPROVAR: a 1.a versao ignorava artigos fora do mapa, e a mutacao do validador
+   (`Art. 7º` -> `Art. 9º`) SOBREVIVIA por isso mesmo. Invertido, a mutacao MORRE (pass 2 / fail 1)
+   — e revelou 8 artigos que antes passavam em silencio.
+   Citações colectivas (>=2 artigos na mesma linha) usam a uniao das palavras — uma legenda como
+   «Protecao de dados — Art. 9 e Art. 10» nao repete o assunto de cada um.
+
+5) FONTES UNIFICADAS — `docs/RAG-GUTO-v2.md` e' a FONTE; `docs/chatbot/regulamento.md` passa a
+   ser DERIVADA por `scripts/mc967-unificar-fontes.mjs` (idempotente). Teste de divergencia
+   `_tests/mc967-fontes-rag.test.mjs` (4 testes): adulterar a derivada -> 2 falhas.
+   O cabecalho em comentario HTML NAO vai para a derivada (o script do Opus nao remove
+   comentarios: seriam indexados). Indice re-ingerido.
+
+6) CONTAGENS — `_logs/MC96.7_CONTAGENS.md`: medida UNICA com o METODO escrito. As versoes
+   anteriores «69» / «12-57» / «14-87» ficam revogadas. Medido: 167 ficheiros, 390 ocorrencias,
+   87 identificadores.
+
+7) REGRESSAO DO fcee691 DECLARADA — o commit `fcee691` (MC96.5) viveu ~7 minutos com o backend
+   a 682/675/1 (a reintroducao de suporte@desafiogut.com.br pelo cabecalho copiado). Foi corrigida
+   em `b7d2c9f`, mas NUNCA foi declarada no proprio commit — foi o validador que a encontrou.
+   Fica declarada aqui, retroactivamente, como o HARD GATE 6 exige.
+
+Suites: frontend 384/384 · backend 680/686 · VERDE (harness de 3 estados).

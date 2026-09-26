@@ -1,8 +1,4 @@
-<!-- MC96.5 — a fonte por omissão do índice. Conteúdo FACTUAL, sem meta-texto: o
-script `scripts/build-rag-index.mjs` NÃO remove comentários HTML, logo o que aqui
-estiver entre <!-- --> seria indexado. Este ficheiro tem o mesmo conteúdo factual do
-`docs/RAG-GUTO-v2.md`, que é a fonte de referência. Se mudar um, mude o outro. -->
-
+<!-- MC96.7 — FONTE DERIVADA. Nao editar a mao: e' gerado do docs/RAG-GUTO-v2.md (a fonte editorial) por scripts/mc967-unificar-fontes.mjs. O teste fontesRAG.test.mjs falha se os dois divergirem. -->
 ---
 
 ## 1. O que é o DesafioGUT

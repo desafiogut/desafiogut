@@ -1,0 +1,70 @@
+================================================================================
+MC91.14 - STATUS BNB (bridge DesafioGUT)
+Data: 2026-08-18
+Operacao: verificacao somente (R2 — sem saque sem autorizacao do operador)
+================================================================================
+
+1) SALDO DE BNB NA METAMASK (BSC)
+---------------------------------
+Endereco: 0x5B2af3327EFB9ce019C8e68d9c3df8Fb81Ab1517
+Rede    : BNB Smart Chain (BSC, chainId 56)
+
+Resultado: SALDO = 0,00000000 BNB (0x0)
+
+Conferido em 3 RPCs publicos independentes (eth_getBalance, bloco latest):
+  - bsc-dataseed.binance.org ....... 0x0
+  - bsc.publicnode.com ............. 0x0
+  - 1rpc.io/bnb .................... 0x0
+
+=> BNB AINDA NAO CHEGOU a carteira MetaMask-BSC.
+   Fluxo: saldo = 0 -> seguir para passo 2 (whitelist Binance).
+
+2) STATUS DA WHITELIST NA BINANCE (saque de BNB)
+-------------------------------------------------
+Verificacao via UI (Microsoft Edge, perfil Pessoal — navegador do operador):
+
+  - Pagina de saque BNB aberta:
+    https://www.binance.com/pt-BR/my/wallet/account/main/withdrawal/crypto/BNB
+  - Ativo selecionado: BNB (BNB Chain).
+  - Modo "Endereco" ativo; secao "Lista de Confiaveis" com "Registrados: 3".
+  - Historico de saques: ultimo saque CONCLUIDO em 2026-08-17 19:09 de
+    0,00552024 ETH (rede BSC) para 0x5B2a...Ab1517 (TxID 0xe530...dae316)
+    -> evidencia de que o endereco MetaMask-BSC JA FOI utilizado com sucesso
+       em saque anterior pela mesma conta Binance.
+
+  TESTE DO FORMULARIO (selecionar endereco + valor 0,001 + botao "Sacar"):
+  NAO CONCLUIDO. O dropdown "Selecionar Endereco" nao abriu de forma estavel
+  via automacao (cliques background e foreground; a pagina tambem alterna
+  entre renderizacao e suspensao por memoria). A interacao foi PARADA a
+  pedido do operador antes de digitar 0,001 BNB.
+
+  OBSERVACOES DA SKILL (MC91.5): a whitelist da Binance e POR ATIVO —
+  o mesmo endereco aprovou ETH (BEP-20) e bloqueou BNB ("Este endereco nao
+  esta na sua lista de permissoes") enquanto a lista nao era liberada para o
+  ativo; enderecos novos podem ter retencao de 24-48h. Portanto o status da
+  whitelist de BNB permanece INDEFINIDO nesta verificacao.
+
+3) RESULTADO GLOBAL
+-------------------
+  Saldo BNB na MetaMask : 0,00 BNB  -> bridge NAO pode ser executada.
+  Whitelist BNB Binance : indefinida (verificacao UI incompleta).
+
+4) PROXIMOS PASSOS
+------------------
+  a) Bridge: AGUARDAR o BNB chegar na carteira. Sugestao: sentinela via RPC
+     (eth_getBalance do endereco a cada 2h, alerta somente quando saldo > 0).
+  b) Whitelist BNB: completar manualmente (operador) a selecao do endereco
+     na "Lista de Confiaveis" na pagina de saque BNB e conferir se o botao
+     "Sacar" fica ativo com 0,001 BNB digitado. Se bloqueado, registrar a
+     mensagem/tempo restante de retencao.
+  c) Com saldo > 0 na carteira E whitelist confirmada, executar o saque de
+     0,002 BNB SOMENTE com autorizacao explicita do operador (R2) e entao
+     prosseguir com a bridge (MC91.4).
+
+--------------------------------------------------------------------------------
+Evidencia on-chain (saldo): respostas JSON-RPC 0x0 nos 3 RPCs acima.
+Evidencia UI: capturas da pagina de saque BNB (abas "Sacar - Carteira - Binance"
+e "Gerenciamento de Enderecos" abertas; campo "Selecionar Endereco"; secao
+"Lista de Confiaveis / Registrados: 3"; historico com saque ETH 0,00552024
+Concluido para 0x5B2a...Ab1517 em BSC em 17/08 19:09).
+================================================================================
