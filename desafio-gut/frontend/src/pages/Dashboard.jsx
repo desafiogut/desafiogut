@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
-import FimLeilaoOverlay from "../components/FimLeilaoOverlay.jsx";
+import FimEdicaoOverlay from "../components/FimEdicaoOverlay.jsx";
 import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
 import CarrosselGUTO from "../components/CarrosselGUTO.jsx";
 import StatTile from "../components/StatTile.jsx";
@@ -478,7 +478,7 @@ export default function Dashboard() {
 
       {/* MC16 — overlay de fim de leilão (relâmpago e programado) */}
       {showOverlay && (
-        <FimLeilaoOverlay
+        <FimEdicaoOverlay
           vencedor={vencedor}
           modalidade={modalidade}
           onNovaRodada={handleNovaRodada}

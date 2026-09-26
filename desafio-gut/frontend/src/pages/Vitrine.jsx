@@ -249,7 +249,7 @@ function SlotCard({ slot, isMobile, sticky, hrefOverride, status, timer, cotaInf
             ? `${cotaInfo.atribuidas} de ${cotaInfo.total}`
             : `${slot.cotasDisponiveis}`}
         />
-        <Info label="Tipo" value={slot.tipoLeilao} small />
+        <Info label="Tipo" value={slot.modalidade} small />
         {/* MC39.3.1 (#8): "Contrato"/"Mín. produto" são dados internos do lojista —
             só visíveis ao perfil corporativo. O utilizador final vê Cotas + Tipo + benefícios. */}
         {corporativo && <Info label="Contrato" value={slot.valorContrato} />}
@@ -381,7 +381,7 @@ function VitrineDetalhe({ slot, isMobile, corporativo }) {
           letterSpacing: "0.05em",
         }}>{slot.emoji} Slot {slot.posicao} — {slot.nome}</h1>
         <p style={{ margin: "0.25rem 0 0", fontSize: isMobile ? "0.78rem" : "0.86rem", color: "#94a3b8", lineHeight: 1.5 }}>
-          {slot.rotuloSecao} · {slot.tipoLeilao}
+          {slot.rotuloSecao} · {slot.modalidade}
         </p>
       </header>
 

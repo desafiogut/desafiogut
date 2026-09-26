@@ -1,5 +1,5 @@
 // MC23.3 (AUDITORIA 5 — DRY) — Confetti partilhado.
-// Extraído verbatim das definições locais IDÊNTICAS em FimLeilaoOverlay.jsx e
+// Extraído verbatim das definições locais IDÊNTICAS em FimEdicaoOverlay.jsx e
 // MercadoLances.jsx (overlay de vencedor). Mesma saída visual (70 peças, mesmas
 // cores e keyframe) — zero alteração de aparência; apenas remove duplicação.
 import { useMemo } from "react";

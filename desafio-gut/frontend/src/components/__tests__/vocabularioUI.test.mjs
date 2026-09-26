@@ -26,7 +26,7 @@ import { resolve } from "node:path";
 const FICHEIROS = [
   "src/pages/Vitrine.jsx", "src/pages/MercadoLances.jsx", "src/pages/Dashboard.jsx",
   "src/pages/MinhaCarteira.jsx", "src/pages/CorporativoCarteira.jsx", "src/pages/Privacidade.jsx",
-  "src/pages/Seguranca.jsx", "src/components/FimLeilaoOverlay.jsx",
+  "src/pages/Seguranca.jsx", "src/components/FimEdicaoOverlay.jsx",
   "src/components/glass/ComingSoonHero.jsx", "src/utils/edicao.js",
 ];
 const ler = (f) => readFileSync(resolve(process.cwd(), f), "utf8");
@@ -65,7 +65,14 @@ const PAD = /leil[ãõa]o|leil[õo]es/i;
 //  - os IDENTIFICADORES internos não são texto visível. O extractor largo (multi-linha) apanha
 //    object literals como `tipoLeilao: "Programado · 24 h"` — o NOME da chave é código; o valor
 //    é que é visível, e esse já é verificado.
-const EXCEPCOES = /LeilaoGUT|tipoLeilao|setTipoLeilao|isLeilaoAtivo|buscarClienteDoLeilaoAtivo|leilaoTimer|leilaoLock|FimLeilaoOverlay|AuctionStatusBar|LeilaoGUT/g;
+// MC96.6 — a lista tem de conter os identificadores que AINDA EXISTEM, e só esses:
+//   renomeados (fora daqui): tipoLeilao, setTipoLeilao, FimLeilaoOverlay
+//   não autorizados a renomear (aqui): buscarClienteDoLeilaoAtivo (função), isLeilaoAtivo
+//     (chave de config, categoria c), leilaoTimer/leilaoLock (nomes de ficheiro/binding),
+//     AuctionStatusBar, LeilaoGUT (contrato on-chain)
+// ⚠️ A 1.ª versão desta lista removeu `buscarClienteDoLeilaoAtivo` por engano — e o teste
+// acusou-o, com razão: ele continua no código. Um teste que acusa correctamente não é ruído.
+const EXCEPCOES = /LeilaoGUT|buscarClienteDoLeilaoAtivo|isLeilaoAtivo|leilaoTimer|leilaoLock|AuctionStatusBar/g;
 
 test("(a) nenhum texto VISÍVEL da UI diz «leilão»", () => {
   const achados = [];
@@ -97,7 +104,10 @@ test("(b) o vocabulário correcto está presente nos ficheiros tocados", () => {
 
 test("os IDENTIFICADORES e o NOME DO CONTRATO são preservados (não é um refactor)", () => {
   // Se algum destes desaparecer, alguém renomeou um símbolo — o que quebraria imports/contrato.
-  assert.match(ler("src/pages/Vitrine.jsx"), /tipoLeilao/, "o campo tipoLeilao é um contrato interno");
+  // MC96.6 — este assert foi ESCRITO NO MC96.3 a afirmar que `tipoLeilao` se preservava (a
+  // decisão de então era não renomear identificadores). A decisão do operador no MC96.6 revogou
+  // essa premissa: o campo continua a ser contrato interno, agora com o nome novo.
+  assert.match(ler("src/pages/Vitrine.jsx"), /\bmodalidade\b/, "o campo modalidade (ex-tipoLeilao) é contrato interno");
   assert.match(ler("src/context/AppContext.jsx"), /leilaoTimer\.js/, "o import de leilaoTimer é interno");
   assert.match(ler("src/pages/Seguranca.jsx"), /LeilaoGUT/, "o nome do contrato on-chain é um facto");
 });

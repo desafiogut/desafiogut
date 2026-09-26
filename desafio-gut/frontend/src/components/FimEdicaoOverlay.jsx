@@ -8,7 +8,7 @@ import Confetti from "./Confetti.jsx";
 
 const COR = { gold: "#f5a623" };
 
-export default function FimLeilaoOverlay({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA }) {
+export default function FimEdicaoOverlay({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA }) {
   const isMobile = useIsMobile();
   const enderecoAbrev = vencedor
     ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
