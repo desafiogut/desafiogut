@@ -1,0 +1,126 @@
+MC96.3 — ADENDO: AS 4 REFUTAÇÕES DA AUDITORIA ADVERSARIAL (deleg_bfdf8ee9)
+
+**Veredicto do auditor: nem APROVADO nem REPROVADO** — porque «duas das alegações centrais são
+**falsas como afirmação de garantia**». 50 chamadas API, 762 s, worktree próprio
+(`DG_AUDIT963`, removido por mim no fim — 3 junctions com `os.rmdir`, `node_modules` do
+principal intacto: 175807 ficheiros).
+
+---
+
+## Confirmado (sem correcção necessária)
+
+- **Art. 5/6/20/26/27 do prompt batem com o v4, incluindo R$ e casas decimais.**
+- **A minha auto-correcção do Art. 7º é verdadeira**: o Art. 7º define a MECÂNICA; «torneio de
+  habilidade» está no preâmbulo, Art. 1º e Art. 38º. Ele leu o documento e confirmou.
+- **Identificadores e o nome do contrato preservados** — `LeilaoGUT` está em
+  `desafio-gut/contracts/Leilao.sol:4` e o contrato não está no commit.
+- **Ligação ao v4 em produção — CONFIRMADA e mais forte do que a minha alegação**: 3 POST reais,
+  HTTP 200, citando Art. 20º (senha R$ 2,00, só Programado), 26º (R$ 0,01, 2 casas), 27º, 36º
+  e 38º (Portaria SPA/MF 1.207/2024).
+- **Nenhuma alteração não declarada**: as 17 linhas removidas no commit correspondem 1:1 ao
+  declarado. *(Única inexactidão: eu declarei `ARTIGOS_V4` «no prompt» — era **sobre-declaração**,
+  porque era código morto. Ver refutação 3.)*
+- **Suítes**: frontend **381/381** (reprodução exacta); backend **679/673/0/6** (reprodução
+  exacta, após a junction de `desafio-gut/node_modules`). Sem a junction, 7 skips de ambiente.
+- **Sem regressão.**
+
+---
+
+## ⚠️ Referências que NÃO reproduzi (e digo-o)
+
+- A minha contagem **«33 ficheiros / 141 ocorrências»** **não é reprodutível**: ele mede **34
+  ficheiros** (dos quais 3 são testes → 31 fontes) e **~155 ocorrências**. **A minha contagem era
+  metodologia-dependente** e apresentei-a como um facto. A conclusão qualitativa mantém-se, mas
+  o número não devia ter sido afirmado com aquela precisão.
+- `chunk_prod.js` — artefacto de build *stale* commitado que ainda contém «Compre fichas para
+  participar do leilão». Ele **não conseguiu descarregá-lo** (inconclusivo) → **NÃO MEDIDO**.
+  Impacto baixo (ignorado pelo eslint, não referenciado pelo `index.html`), mas é «leilão» visível
+  em potência. **Fica como pendência.**
+
+---
+
+## Refutado — 4, todas corrigidas
+
+### 1. ⚠️ O MEU TESTE DE UI ERA VACUOSO (a refutação mais grave)
+
+`textoVisivel` usava `m[1]` em regexes **sem grupo de captura** → `undefined` → concatenava `""`.
+Só a regex `>…<` capturava, e ela **excluía `\n` e `{`** — logo **JSX multi-linha e texto
+interpolado eram invisíveis**. Ele provou-o:
+- **B1** (um `<p>` multi-linha com «leilão» num ficheiro coberto) → **GREEN**;
+- **B2** (`ariaLabel` «Edição ativa agora» → «Leilão ativo agora») → **GREEN**.
+
+> **Um extractor cego faz um teste vacuoso — e um teste vacuoso é pior que nenhum, porque afirma.**
+> Eu tinha corrigido exactamente este bug no *script ad-hoc* e **esqueci-me do teste**.
+
+→ Extractor corrigido (`group(1)` + templates multi-linha + JSX multi-linha), com as excepções
+**declaradas em código** — `LeilaoGUT` (nome do contrato) e as chaves de object literal que o
+extractor largo apanha (`tipoLeilao: "Programado · 24 h"` — a chave é código, o valor é que é
+visível). **B1 e B2 morrem.**
+
+### 2. A limpeza da UI estava incompleta — porque eu não a conseguia ver
+
+Com o extractor corrigido: **+7 strings visíveis** que ficaram:
+
+| ficheiro | o que ficou |
+|---|---|
+| `Privacidade.jsx` | «plataforma de leilão de menor lance único» · «participam em leilões» |
+| `Vitrine.jsx` | «leva ao leilão atual» · «os 4 leilões paralelos da spec» |
+| `MercadoLances.jsx` | «Os leilões do DesafioGUT acontecem na nossa versão Web» · «não inclui o leilão» |
+| `CorporativoCarteira.jsx` | «Use-as nos leilões» |
+
+Todas corrigidas. *(Ele acusou 40+; a maioria são identificadores, o nome do contrato e
+comentários JSX — documentação, preservada por desenho, HARD GATE 5. Mas estas 7 eram reais, e
+estavam em ficheiros que eu tinha declarado «cobertos».)*
+
+### 3. `ARTIGOS_V4` ERA CÓDIGO MORTO
+
+Exportado e **nunca usado**: o texto que vai ao LLM é `REGRA_REGULAMENTO`, escrito à mão. O teste
+verificava o `ARTIGOS_V4` (morto) enquanto **o texto vivo não tinha verificação numérica nenhuma**.
+
+→ `ARTIGOS_V4` **passa a alimentar o prompt** (o LLM recebe o texto verbatim dos artigos) e o
+teste ganha duas provas: **(c0a)** os valores críticos **amarrados ao seu artigo**; **(c0b)**
+`ARTIGOS_V4` tem de chegar ao prompt — morre se voltar a ser código morto.
+
+### 4. Divergência no Art. 38º — o artigo juridicamente central
+
+Eu escrevi «…loteria ou qualquer modalidade **de sorte**». O documento diz «…modalidade **sujeita
+a autorização específica**». **Parafraseei o artigo que sustenta a tese** — no prompt, e por
+minha conta.
+
+→ Texto do documento, **verbatim**.
+
+---
+
+## Contra-mutações do auditor, replicadas
+
+| mutante | antes | depois |
+|---|---|---|
+| **A1** «2 (duas) casas» → «1 (uma) casas» | sobrevivia | **RED** ✅ *(só após a 2.ª correcção)* |
+| **B1** JSX multi-linha com «leilão» | sobrevivia | **RED** ✅ |
+| **B2** `ariaLabel` alterado | sobrevivia | **RED** ✅ |
+| **código morto** (`ARTIGOS_V4` fora do prompt) | era o estado real | **RED** ✅ |
+
+⚠️ **A1 sobreviveu à 1.ª correcção** — e pela razão de sempre: o meu check procurava o número
+**em qualquer parte** do documento, e «1 (uma)» existe lá — no **Art. 33** (indicações), noutro
+contexto. **Presença num documento de 40 artigos não é correspondência.** Amarrado ao artigo
+certo, **A1 morre**.
+
+Testes: backend **8/8** (eram 6) · UI **3/3** · suítes **381/381** e **682/676/0/6**.
+
+---
+
+## Lições
+
+1. **Um verificador cego é pior que nenhum.** O extractor devolvia `undefined` em silêncio e o
+   teste dizia «não há leilão visível» com a mesma confiança com que diria a verdade. A frase
+   «o teste afirma X» só vale se o teste **consegue ver** X.
+2. **Corrigir o script e esquecer o teste.** Corrigi `m[1]→m[0]` no script ad-hoc do MC96.3 e
+   deixei o mesmo bug no ficheiro de testes. **Duas cópias da mesma lógica: corrigi uma.** A
+   auditoria apanhou a outra — e é por isso que ela é obrigatória.
+3. **Código morto que passa nos testes dá uma segurança falsa.** `ARTIGOS_V4` era o objecto de
+   6 asserções verdes e não chegava ao LLM. O teste media uma constante; o produto usava outra.
+4. **Presença não é correspondência** — 2.ª vez nesta série (a 1.ª foi o `grep` de artigos no
+   MC95). Num documento de 40 artigos, «o número existe» não diz nada sobre o artigo certo.
+5. **Contagens que apresentei como factos e não eram reprodutíveis.** «33 ficheiros / 141
+   ocorrências» — ele mede 34/~155. A conclusão mantém-se, o número não devia ter sido afirmado
+   com aquela precisão. **Medir não chega: é preciso dizer como, para ser reproduzível.**

@@ -1200,6 +1200,52 @@ alvo) — o detector correcto é `os.lstat(p).st_file_attributes & 0x400`. No `v
 **3 junctions** a apontar para o `node_modules` do principal: removidas com `os.rmdir` (numa
 junction apaga só o link), com contagem antes/depois — **175807 ficheiros intactos**.
 
+## MC96.3 — ADENDO: 4 refutações da auditoria (2026-09-25)
+
+Validador `deleg_bfdf8ee9` (50 chamadas, 762 s): **nem APROVADO nem REPROVADO** — «duas das
+alegações centrais (teste que trava / nenhuma string visível) são **falsas como garantia**».
+
+### 1. ⚠️ UM VERIFICADOR CEGO É PIOR QUE NENHUM
+
+`textoVisivel` usava `m[1]` em regexes **sem grupo de captura** → `undefined` → `""` em silêncio.
+Só a regex `>…<` capturava, e excluía `\n` e `{` ⇒ **JSX multi-linha e texto interpolado eram
+invisíveis**. B1 (um `<p>` multi-linha com «leilão») e B2 (`ariaLabel` alterado) → **GREEN**.
+>> «O teste afirma X» só vale se o teste **consegue ver** X.
+
+E a lição operacional: **corrigi este bug no script ad-hoc e esqueci-o no ficheiro de testes.**
+Duas cópias da mesma lógica — corrigi uma. **Ao corrigir um bug, procurar as outras cópias.**
+
+### 2. Sem o extractor corrigido, a limpeza estava incompleta — e eu não a via
+
++7 strings visíveis que ficaram, **em ficheiros que eu tinha declarado «cobertos»**:
+`Privacidade.jsx` (2) · `Vitrine.jsx` (2) · `MercadoLances.jsx` (2) · `CorporativoCarteira.jsx` (1).
+
+### 3. CÓDIGO MORTO QUE PASSA NOS TESTES DÁ SEGURANÇA FALSA
+
+`ARTIGOS_V4` era objecto de 6 asserções verdes e **nunca chegava ao LLM** (o texto vivo é
+`REGRA_REGULAMENTO`, escrito à mão, sem verificação numérica). **O teste media uma constante; o
+produto usava outra.** → `ARTIGOS_V4` passa a alimentar o prompt (o LLM recebe o texto verbatim),
+e o teste ganha (c0a) valores **amarrados ao seu artigo** + (c0b) ARTIGOS_V4 **tem de chegar ao
+prompt**.
+
+### 4. PRESENÇA ≠ CORRESPONDÊNCIA (2.ª vez nesta série)
+
+O check «o número existe no documento» deixou sobreviver o mutante A1 («2 (duas) casas» →
+«1 (uma) casas»): **«1 (uma)» existe no v4 — no Art. 33**, noutro contexto. **Num documento de 40
+artigos, «o valor existe» não diz nada sobre o artigo certo.** Amarrar ao artigo mata o mutante.
+
+### 5. Parafrasear o artigo que sustenta a tese
+
+Eu escrevi «loteria ou qualquer modalidade **de sorte**»; o v4 diz «…**sujeita a autorização
+específica**». No prompt, e por minha conta, no artigo juridicamente central. **Texto do
+documento, verbatim — sempre.**
+
+### 6. Contagens apresentadas como factos
+
+Aleguei «33 ficheiros / 141 ocorrências»; o auditor mede **34 / ~155**. A conclusão qualitativa
+mantém-se, o número **não era reprodutível**. **Medir não chega: é preciso dizer COMO, para ser
+reproduzível.**
+
 ## MC96.3 — GUTO ligado ao regulamento v4 + vocabulário visível da UI (2026-09-25)
 
 **Fecho de código** `78be035` · frontend **381/381** · backend **679/673/0/6** · validador `deleg_bfdf8ee9`.
