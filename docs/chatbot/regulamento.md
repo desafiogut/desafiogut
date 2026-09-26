@@ -104,10 +104,6 @@ conteúdo desactualizado e deve ser ignorado.
   dinamicamente no aplicativo a cada compra); cartão de débito nacional/internacional; ou
   TED — Banco do Brasil, **Agência 198627**, Conta Corrente 847534.
 
-⛔ **Domínio morto:** `suporte@desafiogut.com.br` **não existe** (NXDOMAIN) e nunca deve ser
-indicado. Foi removido no MC88.44.
-
-## 9. Como responder (regras para o GUTO)
 
 1. **Se o participante responder de forma curta** («sim», «não», «ok», «isso», «pode ser»),
    interpreta como resposta à **tua última pergunta** e continua o assunto. Não voltes a
