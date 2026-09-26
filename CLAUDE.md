@@ -1162,6 +1162,23 @@ da conclusão «não está lá».**
 push» foi testada e **refutada** (o push do MC95.1 não alterou produção). Registado como não-medido,
 não como «provavelmente foi X».
 
+### ⚠️ `netlify deploy --build` MEXE NO `package-lock.json` — e não só em CRLF
+
+Medido no MC95.1: depois do deploy, `git diff --numstat --ignore-cr-at-eol -- desafio-gut/frontend/package-lock.json`
+devolveu **31 / 53** — **não vazio**, logo há **alteração de conteúdo**, não apenas fim de linha.
+(`--ignore-cr-at-eol` vazio = falso-modificado por CRLF; com números = conteúdo real.)
+
+**Isto liga-se a uma pendência registada:** o `npm install` do build **poda** do `node_modules`
+local os pacotes que não estão no lockfile — é a explicação provável do desaparecimento de
+`@aws-sdk/client-kms` e `@biconomy/account` (importados **dinamicamente** por `_lib/kms/aws-kms.mjs`
+e por dois testes), que fez 2 ficheiros de teste falharem com `ERR_MODULE_NOT_FOUND` no MC94.5.
+
+**Procedimento:** depois de cada `netlify deploy --prod --build`, correr
+`git restore --source=HEAD --worktree -- desafio-gut/frontend/package-lock.json` e, se o
+`--ignore-cr-at-eol` **não** estiver vazio, **reportar** a alteração de conteúdo — é o build a
+mexer no grafo de dependências, e o lockfile do repo é a fonte da verdade (o MC não autoriza
+alterações de dependências).
+
 ### ⚠️ Ferramenta: NÃO passar markdown com backticks através do `bash -c`
 
 A primeira versão desta secção foi escrita a partir de uma linha de bash e chegou ao ficheiro
