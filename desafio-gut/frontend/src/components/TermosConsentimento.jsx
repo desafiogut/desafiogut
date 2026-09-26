@@ -75,7 +75,7 @@ export default function TermosConsentimento({ onAceitar }) {
             <strong style={estilos.artLabel}>Art. 1</strong> — O DesafioGUT é uma atividade
             comercial em formato de E-commerce através de Dropshipping, operada pelo Grupo União e
             Trabalho (GUT), CNPJ 23.040.066/0001-00, contato (92) 98428-5774,
-            e-mail: grupouniaoetrabalhoam@gmail.com.
+            e-mail: contato@grupouniaoetrabalho.com.br.
           </p>
 
           <p style={estilos.artigo}>
@@ -119,9 +119,9 @@ export default function TermosConsentimento({ onAceitar }) {
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 21</strong> — Formas de pagamento: PIX
-            desafiogut01@gmail.com, cartão de débito nacional/internacional ou TED — Banco do
-            Brasil, Agência 181627, Conta Corrente 847534.
+            <strong style={estilos.artLabel}>Art. 21</strong> — Formas de pagamento: PIX — chave: <strong>23.040.066/0001-00</strong> (código gerado
+            dinamicamente no aplicativo a cada compra), cartão de débito nacional/internacional
+            ou TED — Banco do Brasil, Agência 198627, Conta Corrente 847534.
           </p>
 
           <p style={estilos.artigo}>
