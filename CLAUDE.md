@@ -1200,6 +1200,50 @@ alvo) — o detector correcto é `os.lstat(p).st_file_attributes & 0x400`. No `v
 **3 junctions** a apontar para o `node_modules` do principal: removidas com `os.rmdir` (numa
 junction apaga só o link), com contagem antes/depois — **175807 ficheiros intactos**.
 
+## MC96.3 — GUTO ligado ao regulamento v4 + vocabulário visível da UI (2026-09-25)
+
+**Fecho de código** `78be035` · frontend **381/381** · backend **679/673/0/6** · validador `deleg_bfdf8ee9`.
+
+### ⚠️ O teste bidireccional apanhou um facto MEU errado — e o briefing estava incompleto
+
+Eu afirmava que o **Art. 7º** diz «torneio de habilidade». **Não diz** — define a MECÂNICA
+(«QUANTO VOCÊ OFERTA POR…», menor lance único, decidido pela **estratégia**, não por
+aleatoriedade). A expressão está nos **Arts. 1º e 38º**, e o **Art. 38º** (Portaria SPA/MF
+1.207/2024 + «não se trata de aposta de quota fixa, jogo de azar, loteria») é o artigo que
+sustenta a tese jurídica inteira — **e o briefing do MC não o listava.** Acrescentado.
+
+> **Um teste bidireccional não confirma o que escrevi: verifica se o que escrevi está no mundo.**
+> Se ele só olhasse para o prompt, teria passado — e o GUTO citaria «torneio de habilidade» num
+> artigo que diz outra coisa.
+
+### «N ficheiros têm o termo» ≠ «N ficheiros precisam de correcção»
+
+O briefing dizia 8 ficheiros; medido: **33 ficheiros / 141 ocorrências**. Mas o que é **vocabulário
+visível** cabia em **16 strings de 10 ficheiros**. O resto divide-se em:
+
+- **identificadores** (`tipoLeilao`, `isLeilaoAtivo`, `FimLeilaoOverlay`, `leilaoTimer.js`,
+  `leilaoLock.js`) — **preservados**: renomear é um **refactor** (imports/contrato interno), não
+  uma correcção de vocabulário;
+- **nome do contrato on-chain** (`LeilaoGUT`) — **preservado**: é um **facto**;
+- comentários históricos que documentam decisões (`MC29.1`, `MC88.20`) — preservados.
+
+**Contar ocorrências não é medir o problema.**
+
+### Formatos que enganam (dois medidos neste MC)
+
+1. **O v4 escreve `Art. 20º -`** (com o ordinal). Um regex `Art\.\s*20\b` **não encontra nada** e
+   devolveria `""` — e **um teste que compara com `""` passa sempre**. Tem de ser `Art\.\s*20\u00ba`.
+2. **Um filtro de ruído pode comer o sinal.** A verificação de correspondência descartava palavras
+   com ≤5 caracteres — e «R$ 0,01», «0,05», «um», «cinco» caíam **todos** lá: era **vacuosa
+   exactamente nos valores em R$**, o cerne jurídico. A mutação M2 (R$ 0,01 → R$ 0,05) sobreviveu
+   por isso. **Ao filtrar ruído para comparar textos, garantir que o filtro não come o que se quer
+   comparar.**
+
+### Ligação ao v4 (o que fica)
+
+`REGRA_REGULAMENTO` + `ARTIGOS_V4` no prompt de todos os perfis (ponto único `obterPromptSystem`):
+cita o artigo, fixa os factos (5º/6º/7º/8º/20º/26º/27º/36º/**38º**) e **proíbe inventar artigos**.
+
 ## MC96.2 — Fallback natural + vocabulário jurídico do GUTO (2026-09-25)
 
 **Fecho de código** `7f06832` · frontend **378/378** · backend **670/664/0/6** · validador `deleg_56475bcc`.
