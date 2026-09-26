@@ -1,0 +1,23 @@
+MC95.2 — VERIFICACAO AD-HOC (script proprio, MANTIDO em %TEMP%/hermes-verify-mc952.sh)
+   VEREDITO: PASS (0 falhas). Cobre: as 3 correccoes do gate; a trava reforcada 6/6; as 4
+   REGRESSOES que o validador provou que passavam em verde (morrem todas, md5 restaurados);
+   dadosPagamento 5/5; suite 371/371; a fronteira dos commits d920b6d/5532729; a producao
+   (crawl de 128 chunks, chunk index-Ca2PLhI-.js) com as correccoes presentes e as
+   nao-regressoes intactas; zero mutantes em disco.
+
+⚠️ A PROPRIA SECCAO DE PRODUCAO FALHOU DUAS VEZES ANTES DE MEDIR — E AS DUAS VEZES MENTIU
+   PARA O LADO DO "PASS":
+   1.a: descarregou 0 chunks (o helper chamava `bash` via subprocess do python, que falha
+        aqui com erro de WSL). As verificacoes de AUSENCIA ("181627 fora", "'1º de junho'
+        fora") deram PASS sobre string vazia — **5 PASS falsos**. As de PRESENCA deram FALHA
+        honesta, e foi por elas que percebi.
+   2.a: usei `mktemp -d` e depois `$TEMP` — ambos dao /tmp/... (MSYS), e o **curl e' binario
+        WINDOWS**: nao escreve la'. Outra vez 0 chunks.
+   3.a: caminho Windows explicito (C:/Users/Moltbot/AppData/Local/Temp/...) -> 128 chunks,
+        medicao real.
+
+   => A LICAO, e e' o padrao que mais me persegue: **uma verificacao de AUSENCIA sobre o
+      vazio passa sempre.** Por isso o script passou a ter uma guarda que REBENTA se o crawl
+      nao descarregar chunks (< 10) em vez de reportar "ausente = ok". Sem essa guarda, a
+      seccao 6 teria dado um verde que nao media nada — e o Veredicto global seria PASS com
+      a producao por verificar.
