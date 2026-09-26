@@ -428,7 +428,12 @@ export default function ChatbotWidget() {
       setCarregando(false);
       signalIdle(); // MC20.2 — resposta chegou (ou falhou): GUTO global volta a idle
     }
-  }, [carregando, resetToIdle, authToken, signalThinking, signalIdle]);
+    // ⚠️ `mensagens` TEM de estar nas deps: sem ele o useCallback captura uma lista obsoleta e o
+  // `historico` enviado é o antigo. Em regime normal escapava por ACIDENTE (o `carregando`
+  // alterna a cada turno e força recriação), mas APÓS UM RELOAD — em que o efeito que carrega o
+  // histórico não muda nenhuma destas deps — a 1.ª mensagem podia enviar histórico vazio.
+  // Achado da auditoria adversarial do MC96.1 (deleg_5fecd2ad); não era coberto por teste algum.
+}, [carregando, resetToIdle, authToken, signalThinking, signalIdle, mensagens]);
 
   const enviar = useCallback(() => enviarMensagem(pergunta), [enviarMensagem, pergunta]);
 
