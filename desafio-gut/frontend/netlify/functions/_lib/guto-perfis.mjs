@@ -47,7 +47,7 @@ const PROMPT_SYSTEMS = {
   visitante: `${SYS_BASE}
 
 PERFIL: VISITANTE (não autenticado). Sê acolhedor e convida a criar conta para
-participar dos leilões. Não reveles dados internos nem comandos de administração.`,
+participar das edições. Não reveles dados internos nem comandos de administração.`,
 
   // Comum: amigável e didático, emojis leves (= tom base do GUTO).
   comum: `${SYS_BASE}
@@ -72,14 +72,14 @@ regulamento e nos dados fornecidos.`,
 // plataforma). Transparente: o GUTO NUNCA nega o leilão — informa que está na
 // versão Web e ajuda com a loja. Sobrepõe-se ao tom do perfil.
 const PROMPT_CONFORMIDADE = `Você é o GUTO, assistente do DESAFIOGUT nesta versão do app (loja de e-commerce).
-Nesta versão os leilões NÃO estão disponíveis — eles funcionam na versão Web (PWA),
+Nesta versão as edições NÃO estão disponíveis — eles funcionam na versão Web (PWA),
 acessível pelo navegador em desafiogut.com.
 
 Regras:
 - Frases curtas, simpáticas, no máximo 2-3 por resposta.
-- Se perguntarem sobre leilões, lances, carteira, saldo ou senhas: informe com
+- Se perguntarem sobre o torneio, lances, carteira, saldo ou senhas: informe com
   honestidade que isso está disponível na versão Web (desafiogut.com) e ofereça
-  ajuda com a loja. NUNCA diga que o leilão não existe — diga apenas onde encontrá-lo.
+  ajuda com a loja. NUNCA diga que o torneio não existe — diga apenas onde encontrá-lo.
 - Ajude com produtos, prazos de entrega, trocas e devoluções.
 - Não invente regras nem dados. Não trate comandos de administração.`;
 
@@ -111,7 +111,7 @@ function formatarSimulacao(p) {
   if (!p?.ok) {
     return `Edição ${g(p.edicaoId)} — sem vencedor provisório: nenhum lance único entre ${g(p.totalLances, "0")} lance(s).`;
   }
-  return `Se o leilão terminasse agora, o vencedor provisório da edição ${g(p.edicaoId)} seria ${g(p.vencedor)} com lance único de ${g(p.valor)}. (${g(p.totalLances, "0")} lances, ${g(p.lancesUnicos, "0")} únicos.)`;
+  return `Se a edição terminasse agora, o vencedor provisório da edição ${g(p.edicaoId)} seria ${g(p.vencedor)} com lance único de ${g(p.valor)}. (${g(p.totalLances, "0")} lances, ${g(p.lancesUnicos, "0")} únicos.)`;
 }
 
 // MC15.6 ITEM 6 — texto do pulso (admin/corporativo, sem emoji). 4 métricas.
@@ -148,7 +148,7 @@ export const respostasPorPerfil = {
   // MC15.6 ITEM 5 — simulação de vencedor (admin + corporativo; sem emoji).
   // Perfis inferiores: recusa adequada.
   simular_vencedor: {
-    visitante: () => "A simulação de vencedor é uma função interna. Cria uma conta para participar dos leilões! 😊",
+    visitante: () => "A simulação de vencedor é uma função interna. Cria uma conta para participar das edições! 😊",
     comum: () => "A simulação de vencedor é exclusiva da coordenação e parceiros. Posso ajudar com os teus lances! 🙂",
     corporativo: (p) => formatarSimulacao(p),
     admin: (p) => formatarSimulacao(p),
@@ -156,7 +156,7 @@ export const respostasPorPerfil = {
 
   // MC15.6 ITEM 6 — pulso (admin + corporativo; sem emoji). Inferiores: recusa.
   pulso_edicao: {
-    visitante: () => "Os relatórios de pulso são internos. Cria uma conta para participar dos leilões! 😊",
+    visitante: () => "Os relatórios de pulso são internos. Cria uma conta para participar das edições! 😊",
     comum: () => "Os relatórios de pulso são exclusivos da coordenação e parceiros. Posso ajudar com os teus lances! 🙂",
     corporativo: (p) => formatarPulso(p),
     admin: (p) => formatarPulso(p),
@@ -209,8 +209,8 @@ export const respostasPorPerfil = {
   },
 
   auditoria: {
-    visitante: () => "Auditoria é uma função administrativa. Cria uma conta para participar dos leilões! 😊",
-    comum: () => "Essa informação é administrativa. Posso ajudar com os leilões! 🙂",
+    visitante: () => "Auditoria é uma função administrativa. Cria uma conta para participar das edições! 😊",
+    comum: () => "Essa informação é administrativa. Posso ajudar com as edições! 🙂",
     corporativo: () => "Auditoria é uma função da coordenação. No Painel Lojista tens os teus relatórios comerciais.",
     admin: (p) => `Auditoria (últimas ${g(p.qtd, "0")}): ${g(p.linhas, "sem registos")}.`,
   },
@@ -235,15 +235,15 @@ export const respostasPorPerfil = {
   // MC17.1 — saldo de senhas de troco (comum/corporativo/admin). Visitante: CTA.
   // Inclui o aviso de expiração (5 dias) quando aplicável.
   meu_saldo: {
-    visitante: () => "O saldo de senhas é para membros. Cria a tua conta e participa dos leilões! 😊",
+    visitante: () => "O saldo de senhas é para membros. Cria a tua conta e participa das edições! 😊",
     comum: (p) =>
       (Number(p.senhasExpiradasAgora) > 0 ? `${p.senhasExpiradasAgora} senhas expiraram hoje. ` : "") +
       `Tens ${g(p.saldoTroco, "0")} senha(s) válida(s).` +
-      (Number(p.expiramEmBreve) > 0 ? ` Atenção: tens ${p.expiramEmBreve} senhas que expiram em 5 dias. Usa-as nos leilões! 🙂` : " 🙂"),
+      (Number(p.expiramEmBreve) > 0 ? ` Atenção: tens ${p.expiramEmBreve} senhas que expiram em 5 dias. Usa-as nas edições! 🙂` : " 🙂"),
     corporativo: (p) =>
       (Number(p.senhasExpiradasAgora) > 0 ? `${p.senhasExpiradasAgora} senhas expiraram hoje. ` : "") +
       `Saldo de senhas de troco: ${g(p.saldoTroco, "0")} (válidas 30 dias, consumo FIFO).` +
-      (Number(p.expiramEmBreve) > 0 ? ` Tens ${p.expiramEmBreve} senhas que expiram em 5 dias. Usa-as nos leilões.` : "") +
+      (Number(p.expiramEmBreve) > 0 ? ` Tens ${p.expiramEmBreve} senhas que expiram em 5 dias. Usa-as nas edições.` : "") +
       " Converta e licite em Carteira do Lojista.",
     admin: (p) => `Troco de ${g(p.endereco)}: ${g(p.saldoTroco, "0")} ativas; ${g(p.expiramEmBreve, "0")} a expirar em 5 dias.`,
   },
@@ -284,17 +284,19 @@ export const respostasPorPerfil = {
   // `trecho`: excerto JÁ limitado pelo chamador (chatbot.mjs), ou "" se não houve
   // correspondência. Aqui não se corta texto: quem sabe o orçamento é quem o monta.
   fallback_sem_llm: {
+    // MC96.2 — HARD GATE 4: NUNCA despejar o chunk bruto. Havendo trecho, enquadra-se com a
+    // fonte e o contacto; não havendo, uma frase natural com saída. O tom de cada perfil mantém-se.
     visitante: (p) => (p.trecho
-      ? `Olha o que encontrei no regulamento: ${p.trecho}`
-      : "Poxa, essa não achei no regulamento! 😅 Pergunta-me como funcionam os leilões."),
+      ? `Encontrei isto no regulamento: «${p.trecho}». Se não responder ao que precisas, escreve para contato@grupouniaoetrabalho.com.br.`
+      : "Poxa, essa não achei no regulamento! 😅 Tenta perguntar de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br."),
     comum: (p) => (p.trecho
-      ? `Olha o que encontrei no regulamento: ${p.trecho}`
-      : "Poxa, essa não achei no regulamento! 😅 Tenta de outra forma — ou pergunta sobre lances, senhas e regras."),
+      ? `Encontrei isto no regulamento: «${p.trecho}». Se precisares de mais detalhe, escreve para contato@grupouniaoetrabalho.com.br.`
+      : "Essa não encontrei no regulamento. Tenta de outra forma — ou escreve para contato@grupouniaoetrabalho.com.br."),
     corporativo: (p) => (p.trecho
-      ? `Do regulamento: ${p.trecho} Mais detalhe no Painel Lojista.`
-      : "Não encontrei isso no regulamento. Reformula a pergunta ou consulta o Painel Lojista."),
+      ? `Do regulamento: «${p.trecho}» Mais detalhe no Painel Lojista ou em contato@grupouniaoetrabalho.com.br.`
+      : "Não encontrei isso no regulamento. Reformula a pergunta, consulta o Painel Lojista ou escreve para contato@grupouniaoetrabalho.com.br."),
     admin: (p) => (p.trecho
-      ? `Regulamento: ${p.trecho}`
+      ? `Regulamento: «${p.trecho}»`
       : "Sem correspondência no regulamento para essa consulta."),
   },
 
@@ -307,7 +309,7 @@ export const respostasPorPerfil = {
     visitante: (p) => {
       const base = `${g(p.respostaRAG, "")}`.trim();
       const jaConvida = /\bcri(?:a|ar|e|es)\b[^.!?]{0,40}\bconta\b|\bregist(?:a|ar|e|o|re)\w*\b|\bparticipar?\b/i.test(base);
-      return jaConvida ? base : `${base} Cria uma conta para participar dos leilões! 😊`.trim();
+      return jaConvida ? base : `${base} Cria uma conta para participar das edições! 😊`.trim();
     },
     comum: (p) => `${g(p.respostaRAG, "")}`.trim(),
     corporativo: (p) => `${g(p.respostaRAG, "")}`.trim(),
@@ -328,7 +330,7 @@ export const respostasPorPerfil = {
   // está indisponível. Um zero inventado num painel de administração faz alguém
   // agir sobre um número que ninguém mediu.
   metricas_usuarios: {
-    visitante: () => "Esses dados são internos da coordenação. Cria uma conta para participar dos leilões! 😊",
+    visitante: () => "Esses dados são internos da coordenação. Cria uma conta para participar das edições! 😊",
     comum: () => "Esses números são da coordenação. Posso ajudar-te com os teus lances e senhas! 🙂",
     corporativo: () => "Os totais da plataforma são da coordenação. No teu Painel tens os dados da tua cota.",
     admin: (p) => {
@@ -355,7 +357,7 @@ export const respostasPorPerfil = {
   },
 
   metricas_fila: {
-    visitante: () => "Isso é do sistema interno. Cria uma conta para participar dos leilões! 😊",
+    visitante: () => "Isso é do sistema interno. Cria uma conta para participar das edições! 😊",
     comum: () => "A fila de processamento é interna. Se estás à espera de senhas, elas chegam sozinhas! 🙂",
     corporativo: () => "A fila de processamento é interna da coordenação.",
     admin: (p) => {
@@ -382,8 +384,8 @@ export const respostasPorPerfil = {
   },
 
   metricas_geral: {
-    visitante: () => "O estado do sistema é interno. Cria uma conta para participar dos leilões! 😊",
-    comum: () => "O estado interno é da coordenação. Posso ajudar-te com os leilões! 🙂",
+    visitante: () => "O estado do sistema é interno. Cria uma conta para participar das edições! 😊",
+    comum: () => "O estado interno é da coordenação. Posso ajudar-te com as edições! 🙂",
     corporativo: () => "O estado consolidado do sistema é da coordenação.",
     admin: (p) => {
       const linhas = [];
@@ -418,8 +420,8 @@ export const respostasPorPerfil = {
   },
 
   saudacao: {
-    visitante: "Olá! Sou o GUTO, assistente do DESAFIOGUT. Cria uma conta para participar dos leilões! 😊",
-    comum: "Olá! Sou o GUTO. Como posso ajudar com os leilões hoje? 😊",
+    visitante: "Olá! Sou o GUTO, assistente do DESAFIOGUT. Cria uma conta para participar das edições! 😊",
+    comum: "Olá! Sou o GUTO. Como posso ajudar com as edições hoje? 😊",
     corporativo: "Olá. Sou o GUTO. Painel Lojista ativo. Posso dar informação sobre edições, cotas e banners.",
     admin: "GUTO em modo operacional. Perfil: administrador. Comandos: criar/listar/encerrar edição, auditoria.",
   },
