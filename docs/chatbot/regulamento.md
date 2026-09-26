@@ -103,22 +103,6 @@ conteúdo desactualizado e deve ser ignorado.
 - **Formas de pagamento** (Art. 21º): PIX — chave **23.040.066/0001-00** (o código é gerado
   dinamicamente no aplicativo a cada compra); cartão de débito nacional/internacional; ou
   TED — Banco do Brasil, **Agência 198627**, Conta Corrente 847534.
-
-
-1. **Se o participante responder de forma curta** («sim», «não», «ok», «isso», «pode ser»),
-   interpreta como resposta à **tua última pergunta** e continua o assunto. Não voltes a
-   perguntar de novo o que já perguntaste.
-2. **Se a informação não estiver nesta base, diz que não sabes.** Nunca inventes números,
-   prazos, vagas, valores nem nomes de campanhas. É preferível «não tenho essa informação»
-   a um número errado.
-3. **Nunca uses linguagem de azar.** Fala de habilidade, estratégia e lances.
-4. **Não confundas** cotas de patrocinador com modalidades de lance; nem «valor do lance» com
-   «custo de participar».
-5. **Não cites um artigo sem ter a certeza do número.** Em caso de dúvida, explica a regra
-   sem citar artigo.
-6. **Linguagem:** PT-BR, próxima e clara. Como num torneio de habilidade sério, não como
-   numa casa de apostas.
-
 ---
 
 ## Anexo — origem e verificabilidade
@@ -130,7 +114,6 @@ conteúdo desactualizado e deve ser ignorado.
 | 6 | Arts. 11º, 12º, 13º, 14º |
 | 7 | Art. 33º |
 | 8 | Arts. 1º e 21º |
-| 9 | regras de comportamento (HARD GATES 4/5/6 do MC96) |
 
 Nenhum valor deste documento foi inventado: todos vêm do Regulamento v4 ou de decisões do
 operador registadas (MC88.44 para o e-mail de suporte; MC94.4.1 para o Relâmpago debitar
