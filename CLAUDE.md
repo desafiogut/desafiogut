@@ -1122,6 +1122,34 @@ assimetria dentro.
 
 ---
 
+## MC96.1 — Contexto conversacional do GUTO (2026-09-25)
+
+**Fecho de código** `418ace1` · frontend **376/376** · backend **663/657/0/6** · validador `deleg_5fecd2ad`.
+
+`chatbot.mjs` montava `messages: [{system},{user}]` — **zero histórico**. Um «Sim» chegava sem
+referente («Sim pra quê? Não peguei!»). Agora `montarHistorico()` (puro) normaliza o histórico
+que o **cliente** envia e `chamarLLM` monta `[system, ...histórico, user]`, com
+`INSTRUCAO_CONTEXTO` no system. Sem histórico, o payload fica **exactamente** como era.
+
+### Regras que saem daqui
+
+1. **O histórico vem do cliente, não de armazenamento novo.** O `ChatbotWidget` já tinha a
+   conversa em `mensagens`; criar um store seria trabalho a mais e mais um sítio a falhar.
+2. **`montarHistorico` descarta `role: "system"` vindo do cliente** — senão o cliente
+   reescreve a persona pela API. Nunca aceitar `system` do exterior.
+3. **O body do `/chatbot` não tem schema estrito** ⇒ campos novos são retrocompatíveis e um
+   APK antigo que só mande `pergunta` não nota diferença. Medir isto ANTES evitou um «PARAR».
+   ⚠️ **`setMensagens` corre ANTES do `apiPost` e o React não é síncrono** ⇒ o que o helper
+   vê são os turnos ANTERIORES. É o correcto: a pergunta actual vai em `pergunta`. Montar o
+   histórico depois do `setMensagens` duplicaria a pergunta no payload.
+4. **Helpers testáveis vivem em `.js`, não dentro de `.jsx`** — o `node:test` não interpreta
+   JSX, e um helper não testável foi o que falhou no MC95.2.
+5. ⚠️ **A LIÇÃO DO MC95.2 APANHOU-ME A MIM, UM MC DEPOIS.** A mutação «o widget deixa de
+   enviar o histórico» **SOBREVIVEU**: o teste media o **helper**, não a **cablagem**. O helper
+   estar certo não prova que alguém o usa. Passou a haver asserção de cablagem (lê o
+   `ChatbotWidget.jsx` e exige a chamada). **Ao testar uma peça nova, perguntar sempre: e quem
+   a LIGA?** Uma lição não se herda — aplica-se a cada peça.
+
 ## MC95.2 — Auditoria adversarial: 4 refutações no gate (2026-09-25)
 
 **Fecho** `d920b6d` · chunk `index-Ca2PLhI-.js` LIVE · suíte **371/371**.
