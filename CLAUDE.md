@@ -1124,35 +1124,35 @@ assimetria dentro.
 
 ## MC95.1 — Deploy do gate + alinhamento de dados de pagamento (2026-09-25)
 
-**Base**  · **Fecho**  · **Deploy**  (0 functions).
+**Base** `5d516a7` · **Fecho** `8d0a3ce` · **Deploy** `6ab720bf552deaee8b39a0a8` (0 functions).
 
 ### Dados de pagamento — o que o app dizia e o que o Regulamento regista
 
 | | app (antes) | Regulamento v4 | estado |
 |---|---|---|---|
-| PIX (Art. 21) |  | chave  (CNPJ) | **alinhado** |
-| Agência BB |  |  | **alinhado** |
-| E-mail institucional (Art. 1) |  |  | **alinhado** |
-| E-mail de **suporte/DPO** |  | — | **mantido** (decisão MC88.44) |
-| Art. 27 (Bradesco ag 0320, PIX ) | não existe no app | pagamento de **prémio** | **mantido só no Regulamento** |
+| PIX (Art. 21) | `desafiogut01@gmail.com` | chave `23.040.066/0001-00` (CNPJ) | **alinhado** |
+| Agência BB | `181627` | `198627` | **alinhado** |
+| E-mail institucional (Art. 1) | `grupouniaoetrabalhoam@gmail.com` | `contato@grupouniaoetrabalho.com.br` | **alinhado** |
+| E-mail de **suporte/DPO** | `desafiogut01@gmail.com` | — | **mantido** (decisão MC88.44) |
+| Art. 27 (Bradesco ag 0320, PIX `renascendoam@gmail.com`) | não existe no app | pagamento de **prémio** | **mantido só no Regulamento** |
 
-### ⛔  tem DOIS papéis — não fazer 
+### ⛔ `desafiogut01@gmail.com` tem DOIS papéis — nunca fazer replace_all
 
 É o **PIX do Art. 21 do gate** (divergia → alinhado) **e** o **e-mail de SUPORTE/DPO**
-( em , decisão do operador no **MC88.44**, usado em
-, , , ). Substituir por padrão
-arrastaria o suporte **sem dar erro nenhum**. O teste 
-trava as duas coisas ao mesmo tempo — inclusive um mutante que arrasta o .
+(`EMAIL_SUPORTE` em `_lib/guto-perfis.mjs`, decisão do operador no **MC88.44**, usado em
+`ExcluirConta.jsx`, `Privacidade.jsx`, `Seguranca.jsx`, `Layout.jsx`). Substituir por padrão
+arrastaria o suporte **sem dar erro nenhum**. O teste `src/components/__tests__/dadosPagamento.test.mjs`
+trava as duas coisas ao mesmo tempo — inclusive um mutante que arrasta o `EMAIL_SUPORTE`.
 
 ### O PIX de compra é DINÂMICO — o texto legal é que era estático
 
- →  →  (QR + copiar em
-). **Nada a mudar no fluxo.** O que divergia era a **referência estática** no
+`iniciar-pagamento.mjs:99` → `getPixProvider().gerarPedidoPix(...)` → `qrCodeText` (QR + copiar em
+`ComprarFichasModal`). **Nada a mudar no fluxo.** O que divergia era a **referência estática** no
 Art. 21 do gate, que passou a indicar a chave oficial e a geração dinâmica.
 
 ### Método: um crawl parcial dá um veredicto errado com toda a confiança
 
-O  só referencia **5 chunks**; a app tem ~130 (lazy). O primeiro check, sobre 5,
+O `index.html` só referencia **5 chunks**; a app tem ~130 (lazy). O primeiro check, sobre 5,
 concluía «o deploy do MC95 não está feito» — e teria levado a **redeployar por hábito**, que é o que
 o HARD GATE 1 proíbe. O **crawl completo por BFS (49 chunks, 4,27 MB)** mostrou os 7 marcadores do
 MC95 em produção e todos os antigos ausentes. **A pergunta «quantos chunks olhei?» tem de vir antes
@@ -1161,6 +1161,14 @@ da conclusão «não está lá».**
 ⚠️ Fica **não medido** *como* as alterações do MC95 chegaram a produção. A hipótese «auto-build no
 push» foi testada e **refutada** (o push do MC95.1 não alterou produção). Registado como não-medido,
 não como «provavelmente foi X».
+
+### ⚠️ Ferramenta: NÃO passar markdown com backticks através do `bash -c`
+
+A primeira versão desta secção foi escrita a partir de uma linha de bash e chegou ao ficheiro
+**mutilada**: cada fragmento entre backticks foi interpretado pelo shell como substituição de
+comandos e substituído por vazio (`**Base**  · **Fecho**` sem os hashes, células de tabela vazias).
+Para escrever conteúdo com backticks, `$`, `<!` ou acentos, usar `write_file`/`patch`/python —
+**nunca** interpolar num comando de shell.
 
 ---
 
