@@ -55,9 +55,14 @@ function analisar(ast, txt) {
   (function walk(n, dentroDeFuncao) {
     if (!n || typeof n !== "object") return;
     if (Array.isArray(n)) return n.forEach((x) => walk(x, dentroDeFuncao));
-    if (n.type === "Identifier" && n.name === antigo) {
+    // ⚠️ `JSXIdentifier` é um TIPO DE NÓ DIFERENTE de `Identifier`. Um rename que só trate
+    // `Identifier` deixa INTACTOS os atributos JSX (`<CardLance tipoLeilao="flash" />`) e os
+    // nomes de componente JSX (`<FimLeilaoOverlay />`) — o componente passa a ler `modalidade`
+    // e recebe `undefined`. MEDIDO: foi exactamente isto que quebrou o invariante do MC94.4.1
+    // («a especial debita SALDO, não senha») na 1.ª aplicação real do rename.
+    if ((n.type === "Identifier" || n.type === "JSXIdentifier") && n.name === antigo) {
       const p = n.parent;
-      const ehChaveNaoShorthand = p && p.type === "Property" && p.key === n && !p.shorthand;
+      const ehChaveNaoShorthand = n.type === "Identifier" && p && p.type === "Property" && p.key === n && !p.shorthand;
       const ehMembro = p && (p.type === "MemberExpression" && p.property === n && !p.computed);
       if (ehChaveNaoShorthand) {
         // ⚠️ Chave não-shorthand (`{ tipoLeilao: x }`): renomeá-la é NECESSÁRIO para o prop não
@@ -67,7 +72,16 @@ function analisar(ast, txt) {
         chaves.push(`${relative(RAIZ, CAMINHO_ATUAL)}:${n.loc.start.line}`);
         alvos.push([n.range[0], n.range[1]]);
       }
-      else if (ehMembro) { /* obj.tipoLeilao → não é o binding; ignora */ }
+      else if (ehMembro) {
+        // ⚠️ `obj.tipoLeilao` (acesso a membro não-computado). A 1.ª versão IGNORAVA-O, por
+        // prudência de "pode ser um objecto externo" — mas renomeava a CHAVE do objecto
+        // (`tipoLeilao: x` → `modalidade: x`) do MESMO objecto interno, deixando `slot.modalidade`
+        // a ler `undefined`. MEDIDO: quebrou a Vitrine, e o meu próprio teste de UI só o apanhou
+        // depois de eu tirar `tipoLeilao` das excepções — ou seja, a excepção mascarava o defeito.
+        // Seguro aqui porque foi MEDIDO que nenhum destes nomes cruza a fronteira do backend.
+        chaves.push(`${relative(RAIZ, CAMINHO_ATUAL)}:${n.loc.start.line} (membro)`);
+        alvos.push([n.range[0], n.range[1]]);
+      }
       else alvos.push([n.range[0], n.range[1]]);
       if (n.__decl) declaracoes.push(n.name);
     }
