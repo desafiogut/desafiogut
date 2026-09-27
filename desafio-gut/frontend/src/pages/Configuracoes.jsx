@@ -149,7 +149,7 @@ export default function Configuracoes() {
         }}>
           <SobreItem label="Versão" value="1.0" valueColor={COR.gold} />
           <SobreItem label="CNPJ" value="23.040.066/0001-00 — Grupo União e Trabalho" />
-          <SobreItem label="Implantação" value="1º de junho de 2026" valueColor={COR.gold} />
+          <SobreItem label="Implantação" value="5 de outubro de 2026" valueColor={COR.gold} />
           <div style={{ marginTop: "0.4rem" }}>
             <a
               href="https://www.grupouniaoetrabalho.com.br"

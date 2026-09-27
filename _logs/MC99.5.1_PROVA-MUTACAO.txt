@@ -1,0 +1,21 @@
+M1 repor o maxHeight: 260px (a causa exacta do defeito)
+  entrou=true red=true provado=true
+  matou: controlo positivo: o stripper de comentários vê mesmo o comentário desta correcção | MC99.5.1 · (a) o texto legal é servido por inteiro (sem maxHeight nem scroll aninhado)
+
+M2 tirar o flexShrink: 0 (o flex volta a encolher a caixa)
+  entrou=false red=true provado=false
+  matou: 
+
+M3 tirar um aceite legal (checkbox do LGPD)
+  entrou=true red=true provado=true
+  matou: MC99.5.1 · (b) os 4 aceites legais continuam presentes
+
+M4 repor a data errada (1º de junho)
+  entrou=true red=true provado=true
+  matou: MC99.5.1 · a data de vigência é 5 de outubro em TODO o lado
+
+M5 apagar robots.txt
+  entrou=true red=true provado=true
+  matou: MC99.5.1 · robotstxt e sitemap existem e não devolvem HTML
+
+md5_restaurado=true

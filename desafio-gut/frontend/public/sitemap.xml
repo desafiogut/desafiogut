@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- MC99.5.1: antes nao existia (devolvia o index.html). So a rota publica: o resto
+     da app esta atras do gate de consentimento, logo nao e indexavel por definicao. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://silly-stardust-ca71bc.netlify.app/</loc></url>
+</urlset>

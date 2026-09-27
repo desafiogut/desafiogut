@@ -1,0 +1,10 @@
+# DesafioGUT — robots.txt
+# MC99.5.1: antes nao existia; em producao o rewrite /* -> /index.html 200 devolvia
+# o proprio index.html (HTTP 200 text/html) a quem pedisse /robots.txt.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /corporativo
+Disallow: /.netlify/
+
+Sitemap: https://silly-stardust-ca71bc.netlify.app/sitemap.xml

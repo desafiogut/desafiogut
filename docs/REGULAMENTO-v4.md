@@ -1,4 +1,4 @@
-# REGULAMENTO OFICIAL DA PLATAFORMA DESAFIOGUT — v3.0
+# REGULAMENTO OFICIAL DA PLATAFORMA DESAFIOGUT — v4.0
 
 O GRUPO UNIÃO E TRABALHO — GUT, pessoa jurídica de direito privado, inscrito no CNPJ sob o nº 23.040.066/0001-00, com sede e foro na cidade de Manaus, Estado do Amazonas, proprietário e detentor dos direitos de propriedade intelectual da plataforma digital e aplicativo "DesafioGUT", estabelece o presente Regulamento Oficial que rege as condições de uso, participação e premiação do torneio de habilidade ofertado por meio de seu ecossistema digital, aplicável a todos os usuários cadastrados.
 

@@ -1,0 +1,9 @@
+# MC99.5.1 / SEG1 — verdades publicas
+
+- robots.txt CRIADO (330 B)
+- sitemap.xml CRIADO (351 B, 1 rota)
+- index.html: 1 data(s) corrigida(s)
+- src/pages/Configuracoes.jsx: 1 data(s) corrigida(s)
+- src/pages/MercadoLances.jsx: 1 data(s) corrigida(s)
+- REGULAMENTO-v4.md linha 1 ANTES: # REGULAMENTO OFICIAL DA PLATAFORMA DESAFIOGUT — v3.0
+- REGULAMENTO-v4.md linha 1 DEPOIS: # REGULAMENTO OFICIAL DA PLATAFORMA DESAFIOGUT — v4.0
