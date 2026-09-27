@@ -2755,6 +2755,40 @@ suficientes para intervalo de confiança.
 ### Estado
 frontend 431/431 (era 426) · backend 680/686 · 5 mutações provadas · deploy live.
 
+### ⚠️ MC99.3 — CORRECÇÃO PÓS-VALIDADOR (o ganho de FCP NÃO se reproduz)
+
+O validador independente fez um **A/B pareado** (Chrome headless + CDP, servindo a MESMA
+produção COM e SEM os preloads, alternando corrida a corrida, cache desligado): **+50 ms CONTRA o
+preload**, t=1.01, **IC95% [-47,+147] ms — contém zero**. Os −312 ms e o «FCP 136 ms com cache
+quente» deste MC **não se reproduzem**. O argumento «o TTFB estava pior, logo o ganho está
+subestimado» é **logicamente inválido**: um TTFB pior desloca os DOIS braços — torna a amostra
+não comparável, não conservadora.
+
+**Dois desperdícios medidos no que eu escrevi:**
+1. Os 2 preloads de fonte são o **MESMO ficheiro** — os 7 pesos «Inter» (300–900) são
+   byte-idênticos (md5 `260c81a4…`) e o browser descarrega **4 cópias** do mesmo blob de
+   48 556 B (~145 KB/sessão). **O comentário «2 pesos da Inter (400 corpo, 900 título)» que eu
+   escrevi no `index.html` é FACTUALMENTE FALSO** — não existem pesos distintos.
+2. O fundo escolhido para telemóvel é a variante **1,8× MAIOR** (200 368 vs 109 622 B), no
+   caminho crítico — o oposto do que o comentário promete.
+
+**Duas auditorias independentes do MC99.5 (DEP2-06 e DEP2-08) acharam o mesmo defeito sem ver
+este relatório** — porque eu medi o que queria provar e elas mediram o que estava lá.
+
+**O que resistiu:** a mudança estrutural é real (o atraso de descoberta existia: sem preload as
+fontes só arrancam depois do React, 89–336 ms; com preload, 26–47 ms) e **nada quebrou**
+(+297/−0, zero remoções; `font-display:swap` ×15 em produção; `BackgroundCanvas.jsx` intacto).
+**Mas o ganho não existe.** O ratchet manda reverter o que não melhora: a optimização passa a
+item de correcção no MC99.5 — **não fica «mantida»**.
+
+**E o meu teste (e) é VÁCUO:** procura `poster=` no ficheiro CRU e é satisfeito pelo *comentário*
+das linhas 100/115/126, não pelo código. *Mesma família de defeito há 4 MCs — agora dentro de um
+teste meu.*
+
+**Nota de linguagem:** «680/686 VERDE» é uma forma optimista de escrever «6 testes não correm»
+(431/431 pass, 0 fail; 686 tests, 680 pass, 6 skipped, 0 fail). A contagem estava certa; a
+adjectivação vendia mais que os números.
+
 ### Lições
 - **A escada Ponytail poupou uma alteração inútil:** ia aplicar font-display: swap como «a
   correção de 1 linha» — fui ver (degrau 2: já está no codebase?) e JA EXISTIA.
