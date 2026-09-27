@@ -64,3 +64,45 @@ automatizável a partir daqui. Para instalar: o operador corre `npx arc-skills-d
 **Vinte instalações, dezenove relatórios a dizer «instalado».** As duas que falharam falharam
 por razões legítimas (conta, interacção) — mas as duas que eu tinha dado por boas não estavam lá.
 *O que distingue um relatório honesto não é não falhar: é a falha aparecer nele.*
+
+---
+
+## ADENDA (verificação ad-hoc do fecho) — 2 coisas que a minha tabela não via
+
+A verificação ad-hoc passou a limpo 40 verificações, mas expôs **2 defeitos meus** que a
+tabela de instalações não apanhava. Ficam aqui, não escondidos:
+
+### 1. Colisão de nomes genéricos (possível perda, indecidível daqui)
+
+O `addyo.mjs` gravou 6 skills para o nome da pasta de origem — e 4 desses nomes são genéricos:
+`performance`, `accessibility`, `seo`, `best-practices`. **Dois deles (`accessibility/` e
+`seo/`) JÁ EXISTIAM** antes deste MC (medido em SEG-1). Escrevi por cima do `SKILL.md` **sem
+verificar colisões antes de escrever** — a verificação que o MC pede (SEG1: «não há conflito de
+nome») eu só a corri **depois** de instalar.
+
+**Estado:** as 4 pastas contêm hoje exactamente os ficheiros do Addy Osmani (md5 idêntico à
+origem) e **nenhum vestígio de ficheiros anteriores** — se a skill anterior era outra, era só
+um `SKILL.md` e o conteúdo perdeu-se. **Não é decidível a partir daqui** se houve dano, e não o
+vou afirmar nem negar. Não há cópia de segurança em `~/.claude/plugins` nem em
+`~/.claude/skills-archive` (procurado).
+
+**O que devia ter sido feito:** escrever para `web-quality-<nome>` (como o próprio script já
+fazia no outro ramo do `if`) e verificar colisões ANTES. É a diferença entre instalar e
+**ocupar espaço de outro**.
+
+### 2. Pasta `skill/` com `name: browser-qa` (colisão de frontmatter)
+
+A 2.ª metade do mesmo defeito de nomes: no repo `browser-qa-plus`, o caminho `skill/SKILL.md`
+produziu uma pasta chamada literalmente `skill`, cujo `name` é `browser-qa` — o mesmo nome já
+usado pela pasta `browser-qa/`. Duas versões **diferentes** (6 604 B vs 3 832 B).
+
+**Correcção:** a pasta `skill/` foi renomeada para `browser-qa-plus/`, **preservando o
+ficheiro**. Não apaguei nenhum dos dois: qual é o canónico é decisão do operador, não minha —
+eu só removi a ambiguidade. Conflitos de `name`: **0**.
+
+### Nota de método
+
+Os 2 defeitos têm a **mesma raiz**: derivei o nome da pasta a partir do CAMINHO no repositório
+em vez de o derivar do FRONTMATTER. Quando o caminho é genérico (`SKILL.md`, `skill/`,
+`performance/`), o nome sai genérico — e genérico colide. *Um nome derivado do sítio errado não
+falha: só ocupa o lugar de outro.*
