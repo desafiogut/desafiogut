@@ -11,10 +11,14 @@
 
 ## 1. Sumário executivo
 
-7 alterações de UI/UX feitas, **8 mutações provadas** contra 11 testes novos, suite de
-**407/407** (era 396) com o backend intacto em 680/686, 0 erros de ESLint nos ficheiros
-tocados, e deploy validado. A Carteira passou de 479 para ~290 linhas — sem perder uma única
-informação (medido, campo a campo).
+7 alterações de UI/UX feitas, **8 mutações provadas** contra 14 testes novos, suite de
+**411/411** (era 396) com o backend intacto em 680/686, 0 erros de ESLint nos ficheiros
+tocados, e deploy validado. A Carteira passou de 479 para ~290 linhas.
+
+⚠️ **O validador independente REFUTOU a minha alegação de que nada se perdeu** (§8). Tinha
+razão em três pontos: o email de pagamento `desafiogut@gmail.com` desapareceu por completo do
+frontend, o botão «↻ Atualizar saldo» não tinha substituto nenhum, e «Sidebar em todos os
+ecrãs» era falso no telemóvel. **As três estão corrigidas** (commit `2867cad`).
 
 E a análise de caminhos clicáveis entregue como **análise** (6 sugestões priorizadas), com uma
 **hipótese minha refutada** pelo próprio método antes de virar código.
@@ -43,14 +47,23 @@ transparente). O cartão de saldo da Carteira era o **único** vidro fora do pad
 | removido | informação | onde continua |
 |---|---|---|
 | glass de cabeçalho | nome da página | barra inferior («Carteira»), item activo + o título agora no cartão de saldo |
-| «🔗 Saldo de Senhas» | saldo on-chain | **Sidebar** (`Sidebar.jsx:176`, todos os ecrãs) + KPI do Dashboard |
+| «🔗 Saldo de Senhas» | saldo on-chain | ⚠️ **CORRIGIDO:** o indicador do Sidebar **não é renderizado no telemóvel** (`Layout.jsx:84`: `{!isMobile && <Sidebar />}`). No mobile a cobertura é o **KPI "Senhas" do Dashboard**. A minha 1.ª frase ("em todos os ecrãs") era falsa. |
 | «🏦 Dados para Pagamento (Art. 21)» | R$ 2,00/senha | botão «Trocar R$ 2,00 → 1 Senha» + Configurações «Art. 20» |
-| | dados bancários/PIX | **regulamento** (gate de consentimento, Art. 21) |
+| | dados bancários/PIX | regulamento (`TermosConsentimento.jsx:128`). ⚠️ **Ressalva do validador:** vive no ecrã de ACEITAÇÃO — o utilizador não o volta a ver na Carteira, onde está quando vai pagar. |
+| — | **email de pagamento** | ❌ **NÃO EXISTIA EM LADO NENHUM.** `grep -rn "desafiogut@gmail.com" src/` → **0 resultados**. Removido com o card e perdido. **CORRIGIDO** em `2867cad`: voltou como nota de uma linha sob o botão de depósito. |
 | «📋 Meus Lances» | lances do utilizador | **/ativos**, que os classifica (único/repetido/pontos) — melhor que a lista crua |
 | «Carteira Conectada» | endereço | **Sidebar** (truncado) + Configurações (completo) |
 
-**Nenhuma informação ficou órfã.** Foi essa medição que autorizou remover em vez de
-documentar como pendência.
+**Duas coisas NÃO estavam cobertas — e eu declarei que estavam.** Foi essa medição (a minha) que
+autorizou remover; o validador independente provou que ela estava incompleta:
+
+- **o email de pagamento** (desafiogut@gmail.com) desapareceu por completo do frontend;
+- **a acção «↻ Atualizar saldo»** (refresh manual do saldo on-chain) ficou **sem substituto**:
+  o Sidebar não chama `refetchSaldo`, os `StatTile` do Dashboard só navegam, e o
+  auto-refresh é de 30 s (`AppContext`: `setInterval(refetchSaldo, 30000)`).
+
+Ambas repostas em `2867cad`, com guarda cada uma. **A lição não é «faltou medir»: é que medi
+contra a minha hipótese, e não contra o que o utilizador perde.**
 
 ## 3. Testes e mutação (R16 / HARD GATE 5)
 
@@ -59,7 +72,7 @@ restauração por snapshot binário e md5 idêntico nos 7 ficheiros.
 
 | | antes | depois |
 |---|---|---|
-| frontend | 396/396 VERDE | **407/407 VERDE** |
+| frontend | 396/396 VERDE | **411/411 VERDE** |
 | backend | 680/686 VERDE | **680/686 VERDE** |
 | ESLint (ficheiros tocados) | — | **0 erros** · 9 warnings, todas **pré-existentes** (confirmadas em `ce6fbd3`) |
 
@@ -148,15 +161,26 @@ CTAs de `EdicaoDetalhe` (70/142) se sobrepõem; (4) `irParaPainel()` em `SejaNos
 
 ## 8. Veredicto do validador independente (HARD GATE 6)
 
-Validador despachado em worktree próprio (`mc99-validador`, `deleg_e7cc1a0e`), instruído a
-**TENTAR REFUTAR** (não confirmar), com foco em: telas funcionais, vidro removido por engano,
-informação que o utilizador perdeu, guardas vácuas e falsos verdes por comentário.
+Validador em worktree próprio, instruído a **TENTAR REFUTAR**. **Não conseguiu refutar A1
+(zero regressão), A3 (lint/órfãos) nem A7 (copy intacta) — e refutou A2, A4 e A5.** Sete
+defeitos, todos corrigidos no commit `2867cad`:
 
-**Na altura em que este relatório foi escrito o validador ainda estava a trabalhar** (já tinha
-percorrido o `git diff`, os `SECONDARY_LINKS`, a Carteira e os testes do MC99, e já tinha
-apanhado a armadilha do `stdin is not a tty` no harness). **O veredicto não estava fechado —
-isto é uma pendência aberta, não um veredicto em falta no fim.** Quando chegar, vai para
-`_logs/MC99_SEG-VEREDICTO-VALIDADOR.txt` e, se refutar algo, este relatório é corrigido.
+| # | refutação | o que era | correcção |
+|---|---|---|---|
+| 1 | **A2 — dado PERDIDO** | `desafiogut@gmail.com` (pagamento Mercado Pago) não existia em sítio nenhum: `grep -rn ... src/` → **0** | nota de uma linha sob o botão de depósito + guarda |
+| 2 | **A2 — ACÇÃO perdida** | «↻ Atualizar saldo» **sem substituto** (auto-refresh de 30 s; Sidebar e StatTile não chamam `refetchSaldo`) | botão ↻ compacto no cartão de saldo + guarda |
+| 3 | **A2 — alegação falsa** | eu escrevi «Sidebar em todos os ecrãs»; `Layout.jsx:84` faz `{!isMobile && <Sidebar />}` | tabela e sumário corrigidos |
+| 4 | **A5 — guarda VÁCUA** | o guarda que substituí em `vocabularioUI` lia o ficheiro **cru**: passava com o par de modalidades **só num comentário** | passa a medir sobre código, com os blocos JSX removidos |
+| 5 | **A5 — falso-vermelho** | um `// ...` de **fim de linha** a nomear o que saiu dava RED num ficheiro correcto | stripper passou a cortar `//` de fim de linha (sem comer `://` de URLs) + controlo positivo |
+| 6 | **A4 — guarda do cabeçalho** | o revert fiel era morto **por acidente** (contagem de vidros); e um título escrito `{"💰 Minha Carteira"}` — ou posto **depois** do cartão de saldo — passava VERDE | guarda por **contagem**: «Minha Carteira» só pode existir 1× em código, e sem `<h1>` |
+| 7 | **A3 — excepção morta** | `buscarClienteDoLeilaoAtivo` continuava na lista `EXCEPCOES` de `vocabularioUI`, protegendo um símbolo que já não existe | removida da lista |
 
-> Um relatório que declara «validação independente: pendente» é mais útil do que um que
+**Um defeito que o validador apontou e NÃO corrigi (declarado):** `docs/validacao-final.md:1150`
+continua a descrever «Banner do cliente da cota ativa aparece em /mercado» — **drift de
+documentação** criado pelo MC99. Não reescrevi um documento de validação histórico; fica
+registado aqui.
+
+> O validador fez o trabalho que a série lhe pede: não confirmou, mediu contra o código, e
+> encontrou **dois falsos verdes meus** (a alegação do HARD GATE 4 e um guarda vácuo) mais
+> um falso vermelho. Todos os sete achados tinham comando e saída.
 > escreve «aprovado» antes de ler o veredicto.
