@@ -1148,6 +1148,12 @@ $ grep -nE "gut_reset_v|LS_RESET_VERSION|LS_RESET_KEY" src/context/AppContext.js
 | ID | Descrição | Status | Evidência |
 |---|---|---|---|
 | **REQ-01** | Plataforma híbrida: publicidade (banners) + leilões | ✅ | Banner do cliente da cota ativa aparece em `/mercado` (BannerCard acima do grid). Vitrine + Banners + Leilões integrados |
+> **MC99.1 (SEG7) — correcção de drift.** A frase acima descreve o estado ANTERIOR. O MC99
+> removeu o banner do cliente de `/mercado`: era um segundo vidro colado ao topo, antes do
+> painel de lances, e o `BannerCard` só se renderiza agora no painel do lojista
+> (`/corporativo`, via `BannerUpload.jsx` em modo pré-visualização). O endpoint `banners`
+> está intacto. Esta nota existe para que o documento de validação não afirme o contrário
+> do produto — foi o validador independente do MC99 que detectou a divergência.
 | **REQ-02** | Eliminar ambiguidades na grade de horários | ✅ | `/programacao` (`ScheduleView.jsx`) + dados em `src/data/programacao-junho-2026.js` codificam horários por tipo de dia |
 | **REQ-03** | Automatizar processos financeiros | ✅ | MP/Fichas (REQ-21), Voucher (REQ-26), Premium Wallet (REQ-23), **Renovação Adesão (REQ-03 endpoint próprio)** e Reset 00:00 (REQ-10). PIX manual restante (REQ-20) tem workflow Admin ativo |
 

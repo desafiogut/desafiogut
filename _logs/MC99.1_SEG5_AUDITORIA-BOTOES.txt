@@ -1,0 +1,81 @@
+### BOTOES AUDITADOS: 58
+### CATEGORIA: {"accao":49,"navegacao":9}
+### SEM aria-label: 50
+### COM sinal: 12
+
+### LISTA COMPLETA (ficheiro:linha | cat | aria | texto | sinais)
+components/BotaoLoginPrincipal.jsx:25	accao	sim		
+components/CardLance.jsx:391	accao	NAO		SEM_NOME
+components/CardLance.jsx:411	accao	NAO	Sair	
+components/ChatbotWidget.jsx:165	accao	sim		
+components/ChatbotWidget.jsx:600	accao	NAO	Limpar	
+components/ChatbotWidget.jsx:607	accao	NAO	setAberto(false)} aria-label="Fechar" style=	
+components/ChatbotWidget.jsx:683	accao	NAO	enviarMensagem(label)} style= ` : "none", ba	
+components/ChatbotWidget.jsx:781	accao	sim	➤	SO_ICONE
+components/ComprarFichasModal.jsx:310	accao	sim	×	SO_ICONE
+components/ComprarFichasModal.jsx:327	accao	NAO	setQtd(p)} style= >	
+components/ComprarFichasModal.jsx:358	accao	NAO		SEM_NOME
+components/ComprarFichasModal.jsx:448	accao	NAO		SEM_NOME
+components/ComprarFichasModal.jsx:481	accao	NAO		SEM_NOME
+components/ComprarFichasModal.jsx:550	accao	NAO	Fechar	
+components/CotaInativa.jsx:100	navegacao	NAO	navigate("/corporativo/carteira")} style= } 	
+components/CotaInativa.jsx:122	navegacao	NAO	navigate("/corporativo/cotas")} style= } > V	
+components/EdicaoBanner.jsx:6	navegacao	NAO	(nunca ) — elimina a // "página/aba" desnece	
+components/EdicaoBanner.jsx:60	accao	NAO	setAberto(true)} aria-label= `.trim()} aria-	
+components/EdicaoCard.jsx:123	navegacao	NAO	navigate("/mercado")} style= } >⚡ Ir para o 	
+components/FimEdicaoOverlay.jsx:64	accao	NAO	⚡ NOVA RODADA	
+components/ImageModal.jsx:71	accao	sim	✕	SO_ICONE
+components/LazyBoundary.jsx:60	accao	NAO	catch }} style= } >↻ Recarregar	
+components/PainelIndicacao.jsx:189	accao	NAO		SEM_NOME
+components/PainelIndicacao.jsx:192	accao	NAO		SEM_NOME
+components/TermosConsentimento.jsx:214	accao	NAO	⚡ Aceito o DesafioGUT	
+components/WalletCard.jsx:85	accao	sim		
+components/admin/EstadoVazio.jsx:77	accao	NAO		SEM_NOME
+components/admin/NavAdminPersistente.jsx:168	accao	NAO	setManual(aberto ? null : g.id)} style= `, f	
+components/glass/AuthArea.jsx:18	accao	sim		
+components/glass/ModeSelector.jsx:18	accao	NAO	setModalidade(id)} aria-pressed= style= `, f	
+pages/Cadastro.jsx:134	accao	NAO	setEtapa("form")} style= }> ← Voltar e corri	
+pages/Configuracoes.jsx:116	accao	NAO	setter((v) => !v)} aria-pressed= style= } >	
+pages/CorporativoAnalytics.jsx:80	accao	NAO	setPeriodo(dias)} style= `, borderRadius: "1	
+pages/CorporativoBanners.jsx:143	accao	NAO	togglePausa(key)} style= } >	
+pages/CorporativoBanners.jsx:154	accao	NAO	setMostrarUpload(true)} style= } > 📤 Novo b	
+pages/CorporativoCarteira.jsx:211	accao	NAO		SEM_NOME
+pages/CorporativoCarteira.jsx:214	navegacao	NAO	navigate("/corporativo/mercado")} disabled= 	
+pages/CorporativoCarteira.jsx:240	accao	NAO	setTier(c)} style= `, }}> produto mínimo	
+pages/CorporativoCarteira.jsx:273	accao	NAO	via PIX ($ )` : "Selecione uma cota"}	
+pages/CorporativoCarteira.jsx:285	accao	NAO	catch }} style= }> Copiar código PIX	
+pages/CorporativoCotas.jsx:117	accao	NAO	🔄 Renovar cota	
+pages/CorporativoCotas.jsx:119	accao	NAO	⬆️ Upgrade para	
+pages/Dashboard.jsx:366	navegacao	NAO	navigate("/mercado")} style= } > ⚡ Ir para o	
+pages/Dashboard.jsx:473	navegacao	NAO	navigate(to)} style= } >	
+pages/Dashboard.jsx:523	accao	NAO	} style= } >	
+pages/DetalheProduto.jsx:242	accao	NAO	🎯 Dar Lance	
+pages/EdicaoDetalhe.jsx:69	navegacao	NAO	navigate("/mercado")} style= } >⚡ Ir para o 	
+pages/EdicaoDetalhe.jsx:141	navegacao	NAO	navigate("/mercado")} style= } >⚡ Ir para o 	
+pages/LoginEmail.jsx:118	accao	NAO	setEtapa("form")} style= }> ← Voltar	
+pages/MercadoLances.jsx:135	accao	NAO	🔄 Nova Rodada	
+pages/MeusAtivos.jsx:204	accao	NAO	setFiltro(id)} style= `, background: filtro 	
+pages/MinhaCarteira.jsx:153	accao	NAO	catch }} aria-label="Atualizar o saldo on-ch	
+pages/MinhaCarteira.jsx:203	accao	NAO	setComprarAberto(true)} style= } title="Depó	
+pages/MinhaCarteira.jsx:217	accao	NAO	} disabled= style= } title= por 1 senha on-c	
+pages/MinhaCarteira.jsx:238	accao	NAO	⚡ Lance Relâmpago	
+pages/admin/Aprovacoes.jsx:116	accao	NAO	setPiiVisivel((v) => ( ))} style= 44`, borde	
+widgets/layout/BottomNav.jsx:132	accao	NAO	setMoreOpen(true)} aria-label="Mais opções" 	
+widgets/toast/Toast.jsx:100	accao	sim	✕	SO_ICONE
+
+### ROTULOS IGUAIS COM HANDLERS DIFERENTES (risco de confusao)
+  (nenhum)
+
+### OS QUE PRECISAM DE ATENCAO (sinais nao vazios)
+  components/CardLance.jsx:391  [SEM_NOME]  texto=""   style={{ ...estilos.botaoConectar, opacity: ready ? 1 : 0.7, cursor: 
+  components/ChatbotWidget.jsx:781  [SO_ICONE]  texto="➤"   onClick={enviar} disabled={carregando || !pergunta.trim()} aria-label
+  components/ComprarFichasModal.jsx:310  [SO_ICONE]  texto="×"   onClick={fechar} aria-label="Fechar" style={btnFechar} disabled={load
+  components/ComprarFichasModal.jsx:358  [SEM_NOME]  texto=""   onClick={iniciarPagamento} disabled={loading || !address} style={btnP
+  components/ComprarFichasModal.jsx:448  [SEM_NOME]  texto=""   onClick={copiarQr} style={{ ...btnSecundario, marginTop: 0, marginBot
+  components/ComprarFichasModal.jsx:481  [SEM_NOME]  texto=""   onClick={fechar} style={btnSecundario} disabled={loading}
+  components/ImageModal.jsx:71  [SO_ICONE]  texto="✕"   ref={closeRef} type="button" onClick={onClose} aria-label="Fechar ima
+  components/PainelIndicacao.jsx:189  [SEM_NOME]  texto=""   onClick={copiarCodigo} disabled={!dados.codigo} style={botaoPrimario}
+  components/PainelIndicacao.jsx:192  [SEM_NOME]  texto=""   onClick={compartilhar} disabled={!dados.codigo} style={botaoSecundari
+  components/admin/EstadoVazio.jsx:77  [SEM_NOME]  texto=""   type="button" onClick={acao.onClick} style={{ marginTop: "0.35rem", p
+  pages/CorporativoCarteira.jsx:211  [SEM_NOME]  texto=""   onClick={converter} disabled={convertendo || saldoTroco < 1} style={b
+  widgets/toast/Toast.jsx:100  [SO_ICONE]  texto="✕"   onClick={onDismiss} className="ml-2 opacity-60 hover:opacity-100 tran

@@ -1,0 +1,115 @@
+### BOTOES/onClick (114)
+  components/BannerUpload.jsx	165	accao	onClick={() => setDimensao(k)}
+  components/BotaoLoginPrincipal.jsx	25	accao	<button
+  components/BotaoLoginPrincipal.jsx	27	accao	onClick={onClick}
+  components/CardLance.jsx	391	accao	<button
+  components/CardLance.jsx	393	accao	onClick={onConnect}
+  components/CardLance.jsx	411	accao	<button style={estilos.botaoSair} onClick={onDisconnect}>Sair</button>
+  components/CardLance.jsx	543	accao	onClick={handleDarLance}
+  components/ChatbotWidget.jsx	165	accao	<button onClick={copiar} disabled={!link} aria-label="Copiar link de indicação"
+  components/ChatbotWidget.jsx	485	accao	onClick={() => setAberto((v) => !v)}
+  components/ChatbotWidget.jsx	600	accao	<button onClick={limparHistorico} title="Limpar conversa"
+  components/ChatbotWidget.jsx	607	accao	<button onClick={() => setAberto(false)} aria-label="Fechar"
+  components/ChatbotWidget.jsx	683	accao	<button key={bi}
+  components/ChatbotWidget.jsx	684	accao	onClick={() => enviarMensagem(label)}
+  components/ChatbotWidget.jsx	781	accao	<button
+  components/ChatbotWidget.jsx	782	accao	onClick={enviar}
+  components/ComprarFichasModal.jsx	310	accao	<button onClick={fechar} aria-label="Fechar" style={btnFechar} disabled={loading}>×</button>
+  components/ComprarFichasModal.jsx	327	accao	<button key={p} onClick={() => setQtd(p)} style={presetBtn(qtd === p)}>
+  components/ComprarFichasModal.jsx	358	accao	<button
+  components/ComprarFichasModal.jsx	359	accao	onClick={iniciarPagamento}
+  components/ComprarFichasModal.jsx	448	accao	<button onClick={copiarQr} style={{ ...btnSecundario, marginTop: 0, marginBottom: "0.85rem" }}>
+  components/ComprarFichasModal.jsx	481	accao	<button onClick={fechar} style={btnSecundario} disabled={loading}>
+  components/ComprarFichasModal.jsx	550	accao	<button onClick={fecharComSucesso} style={btnPrimario(false)}>
+  components/CotaInativa.jsx	100	accao	<button
+  components/CotaInativa.jsx	102	navegacao	onClick={() => navigate("/corporativo/carteira")}
+  components/CotaInativa.jsx	122	accao	<button
+  components/CotaInativa.jsx	124	navegacao	onClick={() => navigate("/corporativo/cotas")}
+  components/EdicaoBanner.jsx	6	accao	// página /edicao/:id). O banner é sempre um <button> (nunca <Link>) — elimina a
+  components/EdicaoBanner.jsx	60	accao	<button
+  components/EdicaoBanner.jsx	62	accao	onClick={() => setAberto(true)}
+  components/EdicaoCard.jsx	123	accao	<button
+  components/EdicaoCard.jsx	124	navegacao	onClick={() => navigate("/mercado")}
+  components/ExcluirContaModal.jsx	132	accao	onClick={handleExcluir}
+  components/FimEdicaoOverlay.jsx	64	accao	<button
+  components/FimEdicaoOverlay.jsx	65	accao	onClick={onNovaRodada}
+  components/ImageModal.jsx	65	accao	onClick={(e) => e.stopPropagation()}
+  components/ImageModal.jsx	71	accao	<button
+  components/ImageModal.jsx	74	accao	onClick={onClose}
+  components/LazyBoundary.jsx	60	accao	<button
+  components/LazyBoundary.jsx	61	accao	onClick={() => { try { window.location.reload(); } catch { /* noop */ } }}
+  components/PainelIndicacao.jsx	189	accao	<button onClick={copiarCodigo} disabled={!dados.codigo} style={botaoPrimario}>
+  components/PainelIndicacao.jsx	192	accao	<button onClick={compartilhar} disabled={!dados.codigo} style={botaoSecundario}>
+  components/StatTile.jsx	32	accao	onClick={handle}
+  components/TermosConsentimento.jsx	214	accao	<button
+  components/TermosConsentimento.jsx	216	accao	onClick={handleAceitar}
+  components/WalletCard.jsx	85	accao	<button
+  components/WalletCard.jsx	86	accao	onClick={carregar}
+  components/admin/AdminToast.jsx	27	accao	onClick={(e) => { e.stopPropagation(); onDismiss(); }}>✕</span>
+  components/admin/ComandoButton.jsx	55	accao	onClick={() => setAberto(true)}
+  components/admin/ComandoButton.jsx	92	accao	onClick={confirmar}
+  components/admin/EnderecoTruncado.jsx	66	accao	onClick={podeCopiar ? copiar : undefined}
+  components/admin/EstadoVazio.jsx	77	accao	<button
+  components/admin/EstadoVazio.jsx	79	accao	onClick={acao.onClick}
+  components/admin/NavAdminPersistente.jsx	168	accao	<button
+  components/admin/NavAdminPersistente.jsx	173	accao	onClick={() => setManual(aberto ? null : g.id)}
+  components/glass/AuthArea.jsx	18	accao	<button
+  components/glass/AuthArea.jsx	19	accao	onClick={onLogin}
+  components/glass/ModeSelector.jsx	18	accao	<button
+  components/glass/ModeSelector.jsx	20	accao	onClick={() => setModalidade(id)}
+  pages/Cadastro.jsx	134	accao	<button type="button" onClick={() => setEtapa("form")} style={{ background: "none", border: "none", color: COR
+  pages/Configuracoes.jsx	116	accao	<button
+  pages/Configuracoes.jsx	117	accao	onClick={() => setter((v) => !v)}
+  pages/CorporativoAnalytics.jsx	80	accao	<button
+  pages/CorporativoAnalytics.jsx	82	accao	onClick={() => setPeriodo(dias)}
+  pages/CorporativoBanners.jsx	143	accao	<button
+  pages/CorporativoBanners.jsx	144	accao	onClick={() => togglePausa(key)}
+  pages/CorporativoBanners.jsx	154	accao	<button
+  pages/CorporativoBanners.jsx	155	accao	onClick={() => setMostrarUpload(true)}
+  pages/CorporativoCarteira.jsx	211	accao	<button onClick={converter} disabled={convertendo || saldoTroco < 1} style={btn("#10b981", convertendo || sald
+  pages/CorporativoCarteira.jsx	214	navegacao	<button onClick={() => navigate("/corporativo/mercado")} disabled={!saldoOnChain} style={btn("#f5a623", !saldo
+  pages/CorporativoCarteira.jsx	240	accao	<button key={c.id} onClick={() => setTier(c)} style={{
+  pages/CorporativoCarteira.jsx	273	accao	<button onClick={contratar} disabled={!tier || contratando || pagStatus === "aguardando"}
+  pages/CorporativoCarteira.jsx	285	accao	<button onClick={() => { try { navigator.clipboard.writeText(pedido.qrCodeText); } catch {} }}
+  pages/CorporativoCotas.jsx	117	accao	<button onClick={handleRenovar} style={btn("#f5a623")}>🔄 Renovar cota</button>
+  pages/CorporativoCotas.jsx	119	accao	<button onClick={handleUpgrade} style={btn("#00d4aa")}>
+  pages/CorporativoDashboard.jsx	393	navegacao	onClick={() => navigate("/programacao")}
+  pages/Dashboard.jsx	366	accao	<button
+  pages/Dashboard.jsx	367	navegacao	onClick={() => navigate("/mercado")}
+  pages/Dashboard.jsx	473	accao	<button
+  pages/Dashboard.jsx	475	navegacao	onClick={() => navigate(to)}
+  pages/Dashboard.jsx	523	accao	<button
+  pages/Dashboard.jsx	525	accao	onClick={() => {
+  pages/DetalheProduto.jsx	242	accao	<button
+  pages/EdicaoDetalhe.jsx	69	accao	<button
+  pages/EdicaoDetalhe.jsx	70	navegacao	onClick={() => navigate("/mercado")}
+  pages/EdicaoDetalhe.jsx	141	accao	<button
+  pages/EdicaoDetalhe.jsx	142	navegacao	onClick={() => navigate("/mercado")}
+  pages/ExcluirConta.jsx	97	accao	onClick={() => setModal(true)}
+  pages/LoginEmail.jsx	118	accao	<button type="button" onClick={() => setEtapa("form")} style={{ background: "none", border: "none", color: COR
+  pages/MercadoLances.jsx	135	accao	<button
+  pages/MercadoLances.jsx	136	accao	onClick={onNovaRodada}
+  pages/MeusAtivos.jsx	204	accao	<button
+  pages/MeusAtivos.jsx	206	accao	onClick={() => setFiltro(id)}
+  pages/MinhaCarteira.jsx	153	accao	<button
+  pages/MinhaCarteira.jsx	155	accao	onClick={() => { try { refetchSaldo?.(); } catch {} }}
+  pages/MinhaCarteira.jsx	203	accao	<button
+  pages/MinhaCarteira.jsx	204	accao	onClick={() => setComprarAberto(true)}
+  pages/MinhaCarteira.jsx	217	accao	<button
+  pages/MinhaCarteira.jsx	218	accao	onClick={async () => {
+  pages/MinhaCarteira.jsx	238	accao	<button
+  pages/MinhaCarteira.jsx	239	accao	onClick={irParaLanceRelampago}
+  pages/SejaNossoParceiro.jsx	515	accao	onClick={() => setAba(t.id)}
+  pages/admin/Aprovacoes.jsx	116	accao	<button
+  pages/admin/Aprovacoes.jsx	118	accao	onClick={() => setPiiVisivel((v) => ({ ...v, [p.cliente_id]: !v[p.cliente_id] }))}
+  widgets/layout/BottomNav.jsx	132	accao	<button
+  widgets/layout/BottomNav.jsx	134	accao	onClick={() => setMoreOpen(true)}
+  widgets/layout/BottomNav.jsx	149	accao	onClick={() => setMoreOpen(false)}
+  widgets/layout/BottomNav.jsx	187	accao	onClick={() => setMoreOpen(false)} aria-label="Fechar"
+  widgets/layout/BottomNav.jsx	254	accao	onClick={() => { abrirModal(); setMoreOpen(false); }}
+  widgets/layout/BottomNav.jsx	265	misto	onClick={() => { navigate("/cadastro"); setMoreOpen(false); }}
+  widgets/layout/BottomNav.jsx	284	misto	onClick={() => { navigate(path); setMoreOpen(false); }}
+  widgets/layout/BottomNav.jsx	304	accao	onClick={() => { desconectar(); setMoreOpen(false); }}
+  widgets/layout/Sidebar.jsx	132	accao	onClick={!isConnected ? abrirModal : undefined}
+  widgets/toast/Toast.jsx	100	accao	<button
+  widgets/toast/Toast.jsx	101	accao	onClick={onDismiss}

@@ -67,6 +67,14 @@ export default function SejaNossoParceiro() {
   const isMobile = useIsMobile();
   const { isConnected, tipoUsuario, atualizarTipoCorporativo, address } = useAppContext();
   const navigate = useNavigate();
+
+  // MC99.1 (SEG2) — UM único ponto de entrada para o painel do lojista. Eram QUATRO
+  // navigate("/corporativo", { replace: true }) espalhados por ramos diferentes deste
+  // ficheiro (linhas 108, 120, 173 e 223 na versão anterior). Quatro cópias da mesma
+  // navegação são quatro sítios onde o destino pode divergir sem ninguém notar — e o
+  // destino tem de ser exacto: "/corporativo" é a rota do painel E uma família
+  // (/corporativo/cotas, /banners, /analytics, /carteira, /mercado).
+  const irParaPainel = () => navigate("/corporativo", { replace: true });
   // MC15.6 — login via One-Time Code (headless): envia o OTP direto ao email
   // do cadastro e mostra só o campo de código, sem o modal de email do Privy.
   const { sendCode, loginWithCode, state: otpState } = useLoginWithEmail();
@@ -105,7 +113,7 @@ export default function SejaNossoParceiro() {
   useEffect(() => {
     if (cnpjJaExiste && isConnected && address && cnpjEndereco) {
       if (address.toLowerCase() === cnpjEndereco.toLowerCase()) {
-        navigate("/corporativo", { replace: true });
+        irParaPainel();
       } else {
         setErro("CNPJ já registrado em outra conta. Faça login com a conta correta.");
         setCnpjJaExiste(false);
@@ -117,7 +125,7 @@ export default function SejaNossoParceiro() {
   // MC17 — redirect automático quando lojista fica corporate + conectado
   useEffect(() => {
     if (isConnected && tipoUsuario === "corporativo") {
-      navigate("/corporativo", { replace: true });
+      irParaPainel();
     }
   }, [isConnected, tipoUsuario, navigate]);
 
@@ -170,7 +178,7 @@ export default function SejaNossoParceiro() {
         if (isConnected) {
           // Já logado: verifica se address bate com o cadastro
           if (address && endereco && address.toLowerCase() === endereco.toLowerCase()) {
-            navigate("/corporativo", { replace: true });
+            irParaPainel();
             return;
           }
           setErro("CNPJ já registrado em outra conta. Faça login com a conta correta.");
@@ -220,7 +228,7 @@ export default function SejaNossoParceiro() {
       // tipoUsuario==="corporativo").
       if (isConnected) {
         atualizarTipoCorporativo(registro);
-        navigate("/corporativo", { replace: true });
+        irParaPainel();
       } else {
         // MC15.6 — envia o OTP direto ao email do cadastro e abre o campo de código.
         await enviarOtp(registro.email);

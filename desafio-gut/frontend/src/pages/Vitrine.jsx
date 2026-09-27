@@ -393,13 +393,26 @@ function VitrineDetalhe({ slot, isMobile, corporativo }) {
         display: "flex", flexDirection: "column", gap: "1rem",
         boxShadow: `0 4px 18px rgba(0,0,0,0.35), 0 0 0 1px ${slot.corDim}`,
       }}>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: "0.75rem" }}>
-          <Info label="Cotas disponíveis" value={`${slot.cotasDisponiveis}`} />
-          <Info label="Exclusividade" value={slot.exclusiva ? "Sim" : "Não"} small />
-          {/* MC39.3.1 (#8): dados internos do lojista — só perfil corporativo. */}
-          {corporativo && <Info label="Valor de contrato" value={slot.valorContrato} />}
-          {corporativo && <Info label="Valor mín. produto" value={slot.valorMinProduto} />}
-        </div>
+        {/* MC99.1 (SEG6) — decisão do operador (R18): «Cotas disponíveis» e «Exclusividade»
+            passam a ser dados do LOJISTA. Medido ANTES de gatear — a lição do MC99 é
+            perguntar o que o utilizador PERDE, não onde eu disse que estava:
+              · as COTAS não se perdem: o SlotCard já mostra «Cotas» («N de M» atribuídas)
+                a todos, com decisão anterior a documentá-lo (MC39.3.1 #8). O que sai daqui
+                é uma REPETIÇÃO na vista de detalhe, não a informação;
+              · «EXCLUSIVIDADE» não existe em mais lado nenhum: passa a ser visível apenas
+                ao perfil corporativo. Fica registado no relatório como perda ASSUMIDA por
+                decisão do operador — não como descuido.
+            A grelha inteira é gateada (e não só as duas linhas): com as quatro células
+            gated, o comum veria uma caixa vazia com padding e borda. */}
+        {corporativo && (
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: "0.75rem" }}>
+            <Info label="Cotas disponíveis" value={`${slot.cotasDisponiveis}`} />
+            <Info label="Exclusividade" value={slot.exclusiva ? "Sim" : "Não"} small />
+            {/* MC39.3.1 (#8): dados internos do lojista — só perfil corporativo. */}
+            <Info label="Valor de contrato" value={slot.valorContrato} />
+            <Info label="Valor mín. produto" value={slot.valorMinProduto} />
+          </div>
+        )}
 
         <div>
           <h2 style={{ margin: "0 0 0.5rem", fontSize: "0.85rem", fontWeight: 800, color: slot.cor, letterSpacing: "0.04em", textTransform: "uppercase" }}>

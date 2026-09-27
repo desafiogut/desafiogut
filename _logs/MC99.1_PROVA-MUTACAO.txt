@@ -1,0 +1,22 @@
+M1 SEG0 — introduzir rota órfã ALCANÇADA (referência sem registo)
+  entrou=true red=true provado=true
+  matou: MC99.1/a · toda a rota REFERENCIADA existe no router
+  suite: {"exit":1,"falhas":["MC99.1/a · toda a rota REFERENCIADA existe no router"],"tests":2,"pass":1,"fail":1}
+
+M2 SEG0 — registar rota NOVA que ninguém alcança
+  entrou=true red=true provado=true
+  matou: MC99.1/b · toda a rota REGISTADA é alcançável (ou está justificada)
+  suite: {"exit":1,"falhas":["MC99.1/b · toda a rota REGISTADA é alcançável (ou está justificada)"],"tests":2,"pass":1,"fail":1}
+
+M3 SEG2 — repor um navigate directo (segundo ponto de entrada)
+  entrou=true red=true provado=true
+  matou: MC99.1/SEG2 · um único ponto de entrada para o painel do lojista
+  suite: {"exit":1,"falhas":["MC99.1/SEG2 · um único ponto de entrada para o painel do lojista"],"tests":4,"pass":3,"fail":1}
+
+M4 SEG6 — tirar o guarda corporativo das cotas
+  entrou=true red=true provado=true
+  matou: MC99.1/SEG6 · «Cotas disponíveis» e «Exclusividade» são dados do LOJISTA
+  suite: {"exit":1,"falhas":["MC99.1/SEG6 · «Cotas disponíveis» e «Exclusividade» são dados do LOJISTA"],"tests":4,"pass":3,"fail":1}
+
+restauracao_md5_identica=true
+final=VERDE tests=2 pass=2 fail=0
