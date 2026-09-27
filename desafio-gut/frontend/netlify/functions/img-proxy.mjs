@@ -36,14 +36,16 @@ export function isBlockedIp(ip) {
   if (h.startsWith("fe80") || h.startsWith("fc") || h.startsWith("fd")) return true; // link-local / ULA
   const mapped = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/); // IPv4-mapped (dotted)
   if (mapped) return isBlockedIp(mapped[1]);
-  // MC99.5.2 — IPv4-mapeado em HEX. O WHATWG URL NORMALIZA a forma mapeada: a entrada
-  // `[::ffff:127.0.0.1]` chega aqui como "::ffff:7f00:1", que a regex acima (que exige decimal
-  // pontuado) NÃO reconhecia. Descoberto ao RE-CORRER o PoC depois da 1.ª correcção: fechou 3 de
-  // 4 payloads e este continuava a passar. Sem esta linha, eu teria reportado «corrigido» com um
-  // buraco aberto. Descodifica para decimal pontuado e reutiliza o isBlockedIp.
-  const mappedHex = h.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
-  if (mappedHex) {
-    const n = parseInt(mappedHex[1], 16) * 65536 + parseInt(mappedHex[2], 16);
+  // MC99.5.2 — IPv4 EMBUTIDO em IPv6, TODAS as formas que o WHATWG URL aceita.
+  // A 1.ª correcção tratou só o IPv4-mapeado (2 grupos hex) e fechou 3 de 4 payloads; ao CAÇAR 17
+  // payloads apareceram mais TRÊS famílias, todas a saltar o DNS:
+  //   [::ffff:0:7f00:1]  IPv4-traduzido   [2002:7f00:1::]  6to4       [64:ff9b::7f00:1]  NAT64
+  // Nota: `http://[::1]@evil.com/` NÃO é bypass — o hostname é `evil.com` (o `[::1]` é userinfo).
+  // Decodifica o IPv4 embutido e reutiliza o isBlockedIp: as gamas privadas ficam num só sítio.
+  const emb = h.match(/^(?:64:ff9b::|::ffff:0:|::ffff:)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/)
+           || h.match(/^2002:([0-9a-f]{1,4}):([0-9a-f]{1,4})/);
+  if (emb) {
+    const n = parseInt(emb[1], 16) * 65536 + parseInt(emb[2], 16);
     return isBlockedIp([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join("."));
   }
   return false;
