@@ -39,6 +39,7 @@ try {
     /^desafio-gut\/frontend\/src\/__tests__\/mc9952-seguranca-gate\.test\.mjs$/,
     /^scripts\/mc9952-poc-ssrf\.mjs$/, /^scripts\/mc9952-prova-mutacao\.mjs$/,
     /^scripts\/mc99521e-.*\.mjs$/, /^_logs\/.*$/,
+    /^CLAUDE\.md$/,   // R14 obriga a actualizar o CLAUDE.md antes do commit final
   ];
   const PROIBIDOS = [/^desafio-gut\/contracts\//, /^desafio-gut\/frontend\/src\/(?!__tests__)/, /^supabase\//, /^netlify\.toml$/, /^desafio-gut\/frontend\/vite\.config/];
   console.log("  HEAD=" + execFileSync("git", ["-C", R, "rev-parse", "HEAD"], { encoding: "utf8" }).trim() + "  base=" + base);
