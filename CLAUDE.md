@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.5.2) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.5.2.1a) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -2920,3 +2920,34 @@ pelo URL** — testava um caminho que não existe em produção.
 logo valida uma versão já substituída. **O HEAD ainda não foi validado.**
 
 **Pendentes:** re-validar o HEAD · DOMPurify 3.4.11 · página de exclusão · PIX/domínio/iubenda.
+
+---
+
+## MC99.5.2.1a — @opentelemetry reparado + validador ao SSRF novo (2026-09-27)
+
+**Backend 45 falhas → VERDE 680/686. Frontend 446/446.**
+
+**A causa era instalação INCOMPLETA, não ausente:** `@opentelemetry/instrumentation-http@0.57.2`
+existia em `node_modules`, o `package.json` declarava `main: build/src/index.js` — e **esse
+ficheiro não existia** (`build/` vazio). O `@sentry/node` rebentava ao importá-lo → 45 funções
+vermelhas. **O npm dizia «up to date» porque a pasta existia: verifica a existência, não a
+integridade.**
+
+**Reparado com `npm install --force @opentelemetry/instrumentation-http@0.57.2` no manifesto
+CORRECTO (`netlify/functions/`)** — o `--force` **sobrepõe em vez de apagar**, contornando o
+`Device or resource busy` que bloqueava o `rm -rf`. **Não matei processo nenhum** (o plano
+herdado previa matar o node que segurava o handle). *Quando o caminho está bloqueado, a
+pergunta não é «como forço?», é «existe outro caminho que não precise de forçar?»*
+
+npm declarou o peer no manifesto das funções: `"@opentelemetry/instrumentation-http": "^0.57.2"`.
+Verificados os **14** pacotes `@opentelemetry/*` — só este estava vazio.
+
+⚠️ **CORRECÇÃO DE UM DIAGNÓSTICO MEU (3.ª vez na série):** eu tinha escrito que o
+**`@netlify/blobs` NÃO estava declarado**. **Era falso** — está em
+**`netlify/functions/package.json`** (`^8.2.0`). **Há DOIS manifestos** (raiz e funções) e eu li
+um. Pior: o meu remédio de então (`npm install --no-save @netlify/blobs` na raiz) instalou a
+**v11.1.1** onde o manifesto pedia `^8.2.0` — **um conflito de major a resolver um problema que
+não existia**. Desfeito. *Um diagnóstico errado não fica em paz: ele age.*
+
+Validador adversarial ao SSRF novo (allowlist `2000::/3`): **despachado** (`deleg_e48f596e`) —
+é a única parte da série nunca atacada.
