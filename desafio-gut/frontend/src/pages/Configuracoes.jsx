@@ -18,7 +18,7 @@ const COR = {
 export default function Configuracoes() {
   const isMobile = useIsMobile();
   const { isConnected, address, userLabel, authToken, desconectar, abrirModal } = useAppContext();
-  const { lang, setLang, t } = useIdioma();
+  const { t } = useIdioma();
   const navigate = useNavigate();
 
   const [notifLances,    setNotifLances]    = useState(true);
@@ -135,37 +135,10 @@ export default function Configuracoes() {
         </div>
       </GlassCard>
 
-      {/* Preferências */}
-      <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
-        <h3 style={cardTituloStyle}>{t("config.preferencias")}</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          {/* Idioma */}
-          <div style={{
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-            gap: "0.75rem", flexWrap: "wrap",
-          }}>
-            <span style={{ fontSize: isMobile ? "0.84rem" : "0.86rem", color: COR.text }}>{t("config.idioma")}</span>
-            <select
-              value={lang}
-              onChange={(e) => setLang(e.target.value)}
-              aria-label={t("config.idioma")}
-              style={{
-                background: "rgba(13,18,53,0.25)",
-                border: "1px solid rgba(245,166,35,0.25)",
-                borderRadius: "8px", color: COR.blue300,
-                padding: "0.4rem 0.75rem",
-                fontSize: "0.82rem", cursor: "pointer",
-              }}
-            >
-              <option value="pt">🇧🇷 Português (Brasil)</option>
-              <option value="en">🇺🇸 English (US)</option>
-              <option value="es">🇪🇸 Español</option>
-            </select>
-          </div>
-
-          {/* MC25.3 — Slider de opacidade removido. O vidro .gut-glass-standard é fixo e imutável. */}
-        </div>
-      </GlassCard>
+      {/* MC98 — card «Preferências» REMOVIDO. O seu único conteúdo era o selector de
+          idioma (pt/en/es). O DesafioGUT é PT-BR only; manter um card com título
+          «Preferências» e corpo vazio seria pior do que não ter card. O selector
+          que aqui vivia foi a única UI que tocava em `setLang`. */}
 
       {/* Sobre */}
       <GlassCard className={cardCls}>

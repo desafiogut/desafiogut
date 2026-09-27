@@ -1,5 +1,6 @@
 // MC22.1 — Dicionário PT (fonte de verdade). Chaves planas (dot.notation).
-// Fallback de todas as línguas: se faltar chave em en/es, cai para PT.
+// MC98 — PT-BR ONLY: é o ÚNICO dicionário. `en.js` e `es.js` foram removidos; o
+// `t(key, fallback)` continua a cair aqui. Não há outra língua para onde divergir.
 export default {
   // Navegação (Nav Dock / menu Mais)
   "nav.inicio": "Início",
@@ -51,8 +52,6 @@ export default {
   "config.notifLances": "Novos lances na edição",
   "config.notifVencedor": "Resultado do vencedor",
   "config.notifPix": "Confirmação de depósito PIX",
-  "config.preferencias": "🌐 Preferências",
-  "config.idioma": "Idioma",
   "config.intensidadeVidro": "Intensidade do vidro",
   "config.sobre": "ℹ️ Sobre o DesafioGUT",
   "config.salvar": "💾 Salvar Configurações",

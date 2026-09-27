@@ -34,6 +34,11 @@ function dicionario(lang) {
   return m;
 }
 
+// MC98 — o DesafioGUT é PT-BR only (`en.js`/`es.js` removidos). O teste que exigia
+// «en e es têm todas as chaves, traduzidas» foi REMOVIDO: media idiomas que já não
+// existem. O que fica é a regra que sempre valeu — o dicionário PT não pode divergir
+// dos fallbacks que os componentes renderizam, nem guardar chaves sem call-site.
+
 test("há chaves (controlo positivo: o extractor não está cego)", () => {
   assert.ok(fallbacks().size >= 20, `só ${fallbacks().size} chaves encontradas`);
 });
@@ -44,18 +49,9 @@ test("pt é IGUAL aos fallbacks, chave a chave", () => {
   for (const [k, v] of fb) assert.equal(pt.get(k), v, `${k}: pt ≠ fallback`);
 });
 
-test("en e es têm todas as chaves, traduzidas", () => {
-  const fb = fallbacks();
-  for (const lang of ["en", "es"]) {
-    const d = dicionario(lang);
-    for (const k of fb.keys()) assert.ok(d.get(k), `${k} falta em ${lang}.js`);
-  }
-  assert.notEqual(dicionario("en").get("edicao.especial.encerrada"), fallbacks().get("edicao.especial.encerrada"));
-});
-
 test("nenhuma chave órfã nos dicionários", () => {
   const fb = fallbacks();
-  for (const lang of ["pt", "en", "es"]) {
+  for (const lang of ["pt"]) {   // MC98 — PT-BR only: en.js/es.js removidos
     for (const k of dicionario(lang).keys()) assert.ok(fb.has(k), `${k} em ${lang}.js sem call-site`);
   }
 });

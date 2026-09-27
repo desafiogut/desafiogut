@@ -9,9 +9,14 @@
 // testes de componente renderizam com `T_PADRAO` (`_estilo.js`), que devolve o
 // FALLBACK. Logo a prosa que a suíte assere não era a que embarca — uma suíte que
 // mede um texto e um utilizador que lê outro.
-// Encontrou também `ativos.bonus.completo`: uma chave ÓRFÃ nos três idiomas, a
+// Encontrou também `ativos.bonus.completo`: uma chave ÓRFÃ nos dicionários, a
 // carregar exactamente a frase ("bónus conquistado!") que a spec proíbe. Uma arma
 // carregada no dicionário, que nenhum teste apanhava porque ninguém a usava.
+//
+// MC98 — o DesafioGUT passou a PT-BR only. `IDIOMAS` tem um elemento; as asserções
+// que comparavam os três idiomas entre si deixaram de ter objecto e foram removidas
+// (a consistência de chaves PT↔EN↔ES era o que o MC94 media). Fica a inteligência
+// que continua a valer: PT == fallbacks, sem órfãs, sem «saldo», sem prometer bónus.
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
@@ -27,7 +32,7 @@ const COMPONENTES = [
   "src/components/meus-ativos/FeedbackLance.jsx",
   "src/components/meus-ativos/RankingCiclo.jsx",
 ];
-const IDIOMAS = ["pt", "en", "es"];
+const IDIOMAS = ["pt"];   // MC98 — PT-BR only: en.js e es.js foram removidos (o DesafioGUT tem um idioma).
 
 const ler = (p) => readFileSync(resolve(RAIZ, p), "utf8");
 
@@ -80,7 +85,7 @@ describe("MC94 · i18n das secções do torneio", () => {
     }
   });
 
-  test("não há chaves em falta: tudo o que o código usa existe nos três idiomas", () => {
+  test("não há chaves em falta: tudo o que o código usa existe no dicionário PT", () => {
     const fb = fallbacks();
     for (const lang of IDIOMAS) {
       const dic = dicionario(lang);
@@ -89,13 +94,7 @@ describe("MC94 · i18n das secções do torneio", () => {
     }
   });
 
-  test("os três idiomas têm exactamente o mesmo conjunto de chaves", () => {
-    const conjuntos = IDIOMAS.map((l) => [...dicionario(l).keys()].sort());
-    assert.deepEqual(conjuntos[1], conjuntos[0], "en diverge de pt");
-    assert.deepEqual(conjuntos[2], conjuntos[0], "es diverge de pt");
-  });
-
-  test("nenhum idioma promete um bónus que só o backend pode confirmar", () => {
+  test("nenhum dicionário promete um bónus que só o backend pode confirmar", () => {
     // A spec (§4f) proíbe declarar o bónus a partir do ecrã. Aqui a regra é
     // aplicada ao DICIONÁRIO, não só ao componente: foi de lá que a frase
     // sobreviveu à primeira correcção.
@@ -133,7 +132,7 @@ describe("MC94 · i18n das secções do torneio", () => {
     }
   });
 
-  test("a palavra 'saldo' não entra no dicionário de nenhum idioma", () => {
+  test("a palavra 'saldo' não entra no dicionário PT", () => {
     // `senhasACreditar` é um DIREITO por liquidar. O saldo que autoriza lances é
     // on-chain — ver §4b. A proibição vale também para as traduções.
     for (const lang of IDIOMAS) {

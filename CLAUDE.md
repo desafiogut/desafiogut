@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-08-08 (MC89.50) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain
+> Atualizado em: 2026-09-27 (MC98) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -312,8 +312,11 @@ falsa ("isto é uma loja"), perante o consumidor **e** perante a Play.
 | *[R19]* E-commerce | carrinho, frete, CEP, morada, NF-e, rastreio, devolução, stock, SKU, fornecedor = **0** | CRÍTICO |
 
 > ⚠️ "dropshipping" aparece **2 vezes** no código, ambas cosméticas. **Zero** comportamento.
-> ⚠️ A cópia de leilão **já está traduzida** em en.js/es.js ("Bids", "Pujas",
-> "Lowest Unique Bid"). São **3 idiomas** a reescrever, não 1.
+> ~~⚠️ A cópia de leilão **já está traduzida** em en.js/es.js ("Bids", "Pujas",
+> "Lowest Unique Bid"). São **3 idiomas** a reescrever, não 1.~~
+> ⚠️ **REVOGADO pelo MC98 (2026-09-27).** `en.js` e `es.js` foram **removidos** — o
+> DesafioGUT é **PT-BR only** (decisão do operador, R18). Não há "3 idiomas a
+> reescrever": há **um**. Ver a secção MC98 no fim deste ficheiro.
 > ⚠️ Vocabulário adjacente (edição/senha/slot/vencedor) é **~1,7× o termo directo**
 > no frontend (659 vs 376). Contar palavras dimensiona a copy, não o produto:
 > `src/data/programacao-junho-2026.js` codifica 168 sessões de leilão por mês e tem
@@ -2340,3 +2343,107 @@ E1 **"Encerrar e consolidar"** — a scheduled encerra E consolida (gasta gas da
 autorizado). · E2 **"Maior só na especial"** — o ícone de presente a ~96 px só na especial
 (pendente em MC94.3.2). · E3 **"24 h após o fim"** — a especial fica no slot 24 h depois do
 fim (implementado e testado neste MC).
+
+---
+
+## MC98 — DesafioGUT declarado PT-BR only (2026-09-27)
+
+**Data:** 2026-09-27 · **Origem:** MC98, medição por execução · **Recorrência:** BAIXA
+(é uma decisão de produto, não um defeito) · **Impacto:** MÉDIO (fecha uma contradição
+entre a ficha da loja e o app; simplifica o i18n).
+**Base:** commit 56f8305 (MC97 fechado). **Logs:** _logs/MC98_* ·
+**Relatório:** _logs/MC98-RELATORIO.md.
+
+### A decisão (operador, R18 — 2026-09-27)
+
+**O DesafioGUT é PT-BR only.** O MC97 mediu que 59 de 62 ficheiros de UI escrevem
+português hardcoded e que 35 das 129 chaves de i18n nunca eram usadas pela UI: o app
+**dizia** ter 3 idiomas e falava 1. A ficha da Play prometia 3 idiomas; o app entregava
+PT — e um revisor que mudasse o selector via a promessa não cumprida.
+
+Não é bloqueante (a Google e a Apple não exigem múltiplos idiomas) e o mercado-alvo é o
+Brasil. Declarar um idioma é mais honesto e mais simples do que manter três dicionários
+que o produto não lê.
+
+### O que foi medido antes de tocar (e as duas premissas erradas do enunciado)
+
+| premissa do MC98 | medido | veredicto |
+|---|---|---|
+| «simplificar src/i18n/index.js» | **não existe**; o *entry* é src/context/IdiomaContext.jsx | ❌ falsa |
+| «remover o selector de idioma (se existir)» | existe: Configuracoes.jsx:142-164 (<select> pt/en/es) | ✅ |
+
+E **o âmbito do próprio extractor falhou**: o SEG-1 procurou dependências de en.js/es.js
+só em src/ e scripts/ e declarou «UM único ficheiro». Havia **dois**: o segundo estava em
+netlify/functions/_tests/mc8843-estado-edicao.test.mjs, e só apareceu quando a suíte do
+backend ficou vermelha. *Um extractor com âmbito estreito «não encontra» exactamente como
+um extractor cego.*
+
+### O que mudou
+
+| # | onde | o que |
+|---|---|---|
+| 1 | src/i18n/en.js, src/i18n/es.js | **removidos** (276 linhas). O único importador era o IdiomaContext |
+| 2 | src/context/IdiomaContext.jsx | DICTS = { pt }, SUPPORTED = ["pt"], **sem navigator.language**, e <html lang> fixado a pt-BR (antes o runtime sobrescrevia o pt-BR do index.html com pt, genérico) |
+| 3 | src/pages/Configuracoes.jsx | card **«Preferências» removido**: o seu único conteúdo era o selector de idioma. Um card com título e corpo vazio seria pior |
+| 4 | src/i18n/pt.js | 2 chaves mortas (config.idioma, config.preferencias) removidas. 129 → **127** chaves |
+| 5 | 4 testes | âmbito 3-idiomas reduzido a PT; 4 asserções que comparavam idiomas **removidas** |
+| 6 | src/i18n/__tests__/pt-only.test.mjs | **novo**: 6 guardas da declaração PT-only |
+| 7 | docs/FICHA-PLAY-PT.md | **novo**; docs/FICHA-PLAY-3-IDIOMAS.md removido (9 → 3 blocos) |
+| 8 | docs/GLOSSARIO-OFICIAL.md | só PT: as colunas EN/ES e as listas de proibidos em EN/ES saíram |
+| 9 | scripts/mc97-medir-ficha.mjs | reapontado para a ficha PT (3 blocos) **e** passou a exigir que a contagem **declarada** no texto seja igual à **medida** |
+| 10 | netlify/functions/_tests/mc8843-estado-edicao.test.mjs | 2 entradas i18n/es.js + i18n/en.js removidas da lista de proibidos (os ficheiros deixaram de existir) |
+
+**Nenhuma string de UI em PT foi alterada** — este MC remove, não reescreve.
+
+### ✅ Zero regressão, medido
+
+| | antes | depois |
+|---|---|---|
+| frontend | 392/392 VERDE | **395/395 VERDE** |
+| backend | 680/686 VERDE | **680/686 VERDE** |
+
+A aritmética fecha: 392 − 4 (asserções removidas) + 7 (1 glossário + 6 pt-only) = 395.
+O backend esteve **1 falha** a meio do MC — o teste mc8843-estado-edicao.test.mjs, que
+também lia i18n/es.js pelo mesmo âmbito estreito do SEG-1. Corrigido no mesmo MC.
+
+### Mutações (R16) — 4 mutantes, todos mortos e todos confirmados a ENTRAR
+
+| mutação | teste que a matou |
+|---|---|
+| reintroduzir src/i18n/en.js | «a pasta i18n tem UM só dicionário» + «o dicionario PT e o UNICO» |
+| reintroduzir o **import** de i18n/en.js | «nenhum ficheiro do produto importa i18n/en.js nem i18n/es.js» |
+| reintroduzir o **selector** de idioma na UI | «nenhum selector de idioma na UI do produto» |
+| remover o pt.js | 8 testes, incluindo todas as guardas de medição vazia |
+
+Restauração por **snapshot binário**, com md5 idêntico nos 3 ficheiros e suíte de volta a
+VERDE. (A 1.ª versão do restaurador desfazia por .replace() inverso e deixava um \r\n
+órfão — md5 diferente. Restaurar não é desfazer: é repor.)
+
+### Lições de método
+
+- **O escape file-vs-value, outra vez — agora ao contrário.** O guarda do MC97 falhava
+  porque media o FICHEIRO e o COMENTÁRIO mentia. Aqui o risco era o inverso: o código
+  novo **fala** de en.js, es.js e navigator.language nos seus próprios comentários
+  explicativos. Um grep cru ao ficheiro dava RED a um ficheiro **correcto** — uma guarda
+  que grita no sítio errado. pt-only.test.mjs mede sempre sobre `semComentarios()`.
+- **O âmbito do extractor é parte da medição.** «Procurei em src/ e não encontrei» não é
+  «não existe». O 2.º importador apareceu no backend. Varredura final com âmbito
+  repo-inteiro: **3434 ficheiros**, zero imports reais de i18n/en.js|es.js.
+- **Um byte NUL num .md não é corrupção — pode ser o objecto do texto.** Este ficheiro
+  tem 4 bytes de controlo crus na linha 1732 porque a secção C4 **ilustra** o defeito que
+  descreve. Consequência real, medida: `grep` sem `-a` declara o CLAUDE.md **binário** e
+  **salta as linhas** a partir do byte 94011 — as primeiras varreduras deste MC perderam
+  CLAUDE.md:1652, :1905, :1968 e :2081 em silêncio. *Ao auditar este ficheiro, use
+  `grep -a`, ou não verá metade dele.*
+- **`grep` sem fronteira de palavra inventa dependências.** `grep "es\.js"` casa
+  Lanc**es.js**x — dezenas de falsos positivos. A medição usa fronteira:
+  `(^|[^A-Za-z])es\.js([^A-Za-z]|$)`.
+
+### Pendências (nenhuma nasce deste MC)
+
+- **8 worktrees antigos** em .claude/worktrees/ (validadores dos MC94–MC97) mais 2 fora do
+  repo. Não removidos: fora do âmbito do MC98, e um deles pode ser preciso. **A revisitar.**
+- As referências **históricas** a i18n/{pt,en,es}.js nas secções dos MC94.x ficam como
+  registo do que se fez então (ex.: CLAUDE.md:1652). Não são instruções actuais.
+- Herdadas: chave Alchemy por rotacionar (operador, R5) · auto-deploy do Netlify ligado
+  (stop_builds: false) · testes do frontend fora do CI.

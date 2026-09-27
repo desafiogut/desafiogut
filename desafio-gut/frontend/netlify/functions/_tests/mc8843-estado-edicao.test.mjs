@@ -192,8 +192,10 @@ test("os textos contraditórios do B3/B4 saíram do código", () => {
     // O dicionário i18n tinha a MESMA frase numa chave adormecida
     // (dash.outrasEdicoes, sem call-site). Ligá-la ressuscitaria o B3.
     ["i18n/pt.js",                          /Outras Edições em Andamento/,                       'a chave i18n com "em Andamento"'],
-    ["i18n/es.js",                          /Ediciones en Curso/,                                'a chave i18n espanhola "en Curso"'],
-    ["i18n/en.js",                          /Other Editions Running/,                            'a chave i18n inglesa "Running"'],
+    // MC98 — as entradas de `i18n/es.js` («Ediciones en Curso») e `i18n/en.js`
+    // («Other Editions Running») foram REMOVIDAS: o DesafioGUT é PT-BR only e os
+    // dois ficheiros deixaram de existir. A guarda que interessa é a do `pt.js`
+    // acima — é a única língua que o produto pode ler.
     ["components/glass/AuctionStatusBar.jsx", /🔴 Leilão encerrado/,                             '"Leilão encerrado" cru'],
     ["components/CardLance.jsx",            /🔴 Edição encerrada/,                               '"Edição encerrada" cru'],
   ];
