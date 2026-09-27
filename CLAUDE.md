@@ -2949,5 +2949,14 @@ um. Pior: o meu remédio de então (`npm install --no-save @netlify/blobs` na ra
 **v11.1.1** onde o manifesto pedia `^8.2.0` — **um conflito de major a resolver um problema que
 não existia**. Desfeito. *Um diagnóstico errado não fica em paz: ele age.*
 
-Validador adversarial ao SSRF novo (allowlist `2000::/3`): **despachado** (`deleg_e48f596e`) —
-é a única parte da série nunca atacada.
+⚠️⚠️ **O VALIDADOR ADVERSARIAL REFUTOU A 3.ª GERAÇÃO (8 payloads).** `[2002:a00::1]`,
+`[2002:7f00::1]`, `[2002:c0a8::1]`, `[2002:ac10::1]`, `[2002:a9fe::1]` (METADATA!), `[2002:64::1]`,
+`[2002:a::1]` e `[2001:0:0:0:0:0:80ff:fffe]` (Teredo) **passam** — o handler devolve 502, não 403.
+**A premissa estava errada:** `2000::/3` NÃO é «seguro» — o 6to4 (`2002::/16`) e o Teredo
+(`2001::/32`) vivem lá dentro e transportam IPv4. E a regex de 6to4 exigia DOIS hextetos, logo a
+forma comprimida (`2002:a00::1`) escapava. *Trocar uma lista por um intervalo não resolve se o
+intervalo contiver o que se quer excluir.* **SSRF ESTÁ ABERTO — 4.ª geração por fazer** (prefixos
+de transição fora explicitamente; tratar a compressão; pergunta certa = «que endereço é PÚBLICO?»).
+⚠️ O instrumento «34 payloads, 0 bypass» **NÃO EXECUTA** (asserção central apoiada em script
+quebrado) e a afirmação «caminho hardcoded corrigido» era **falsa** (corrigi o mutador do 9951, não
+o do 9952 — corrigido agora).

@@ -4,7 +4,10 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-const R = "C:/Users/Moltbot/Desktop/DESAFIOGUT";
+// Caminho DERIVADO do ficheiro (nao hardcoded): corrido num worktree, mutaria o repo errado.
+import { dirname, resolve as rp } from "node:path";
+import { fileURLToPath } from "node:url";
+const R = rp(dirname(fileURLToPath(import.meta.url)), "..");
 const FE = R + "/desafio-gut/frontend";
 const PROXY = FE + "/netlify/functions/img-proxy.mjs";
 const TERMOS = FE + "/src/components/TermosConsentimento.jsx";
