@@ -2986,6 +2986,15 @@ não achar o alvo, controlo positivo visível). Reproduziu o veredicto: **8/8 a 
 correcção: **0/8 buracos, 0/32 anteriores, 6/6 legítimos, 0 legítimos bloqueados**. 10 testes,
 **7 mutações** (incl. M2 6to4 → RED e M7 Teredo → RED).
 
-⚠️ **O validador adversarial desta geração (`deleg_a225cfbf`) está PENDENTE.** As 3 anteriores
-foram refutadas — **este guard não é declarado seguro antes de o adversário falar.** Falta também
-a validação dos 8 payloads contra o endpoint em produção.
+⚠️ **O validador CHEGOU e REFUTOU (parcial):** A1/A2/A3/A4/A5 **CONFIRMADAS** (parser fail-closed,
+78 formas de 6to4/Teredo bloqueadas, 0 falsos positivos) **mas o descodificador é incompleto** —
+**ISATAP**, **6rd** e **NAT64 com prefixo próprio** passam em produção (502, não 403), incluindo
+**`[2601::5efe:a9fe:a9fe]` = 169.254.169.254 (METADATA CLOUD)**.
+
+**As 4 gerações falharam pelo mesmo motivo, com nomes diferentes: eu estava a ENUMERAR uma família
+sem fim** (mapeado, traduzido, 6to4, Teredo, ISATAP, 6rd, NAT64 — cada protocolo novo inventa uma
+forma). **5.ª geração = INVERSÃO, não mais um caso: parar de descodificar.** Um `img-proxy` não tem
+valor de negócio em literais IPv6 (quem serve imagens usa nomes, resolvidos por DNS) → **recusar
+todos os literais IPv6 e deixar a decisão ao `resolvesToBlocked`**, que já resolve e valida
+fail-closed. **É menos código e fecha a classe inteira, presente e futura.**
+⚠️ **O SSRF NÃO ESTÁ FECHADO:** o que está em produção é melhor que a 3.ª geração e **não é seguro**.
