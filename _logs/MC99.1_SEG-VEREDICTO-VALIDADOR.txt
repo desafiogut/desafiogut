@@ -1,0 +1,141 @@
+## VEREDICTO GLOBAL: **REFUTADA** — 3 de 7 afirmações caem (A2, A3, A7); A1/A4/A5/A6 confirmadas.
+
+⚠️ **O executor commitou o MC99.1 (commit `8fda555`, depois `52039b0`) DURANTE o meu trabalho** — o worktree de `46f8ad3` que criei não tinha nem os testes nem o `scripts/mc991-prova-mutacao.mjs`. Copiei-os do working tree em leitura para o meu worktree, como previsto no plano.
+
+⚠️ **PENDÊNCIA DE LIMPEZA**: `git worktree remove --force` FALHOU (`Permission denied`). O worktree continua em `.claude/worktrees/mc991-validador`. Retentar:
+```
+cd /c/Users/Moltbot/Desktop/DESAFIOGUT && git worktree remove --force .claude/worktrees/mc991-validador
+```
+O repo principal está **intacto** (`git status --short` vazio, HEAD `52039b0`).
+
+---
+
+### A1 — As 4 mutações provam os guardas → **CONFIRMADA**
+```
+$ node scripts/mc991-prova-mutacao.mjs
+M1 … entrou=SIM  RED (exit 1)  PROVADO   matou: MC99.1/a
+M2 … entrou=SIM  RED (exit 1)  PROVADO   matou: MC99.1/b
+M3 … entrou=SIM  RED (exit 1)  PROVADO   matou: MC99.1/SEG2
+M4 … entrou=SIM  RED (exit 1)  PROVADO   matou: MC99.1/SEG6
+  IDÊNTICO src/pages/{App.jsx,Dashboard.jsx,SejaNossoParceiro.jsx,Vitrine.jsx} (md5)
+suite após restaurar: VERDE (tests=2 pass=2 fail=0)
+```
+Escrevi o **meu** harness (`_validador/evasoes.mjs`, 15 mutações) com snapshot binário + CRLF + asserção `entrou` lida do ficheiro ANTES de medir. **Todas as 15 entrou=SIM**, `restauro_exacto=true`. Nenhuma das 4 do executor é vácuA.
+
+### A2 — Resolvedor correcto / não cego → **REFUTADA**
+Contagem: resolvedor **independente** meu (tokenizador multi-linha) = **34** rotas = probe injetado das funções internas do executor:
+```
+REGISTADAS(34)=["/","/admin",…,"/vitrine/:slot"]
+```
+(a) ✅ conta bem. `casam('/vitrine/') = ["/vitrine","/vitrine/:slot"]` — a correcção da lista está lá. `casam('/')=["/"]`.
+(c) ✅ template literal **multi-linha** é apanhado (C10 RED).
+
+**MAS o resolvedor é cego e o guarda (b) tem dois buracos:**
+```
+E3 GREEN  entrou=SIM  rota nova <Route path="zz-orfa-admin"> dentro de /admin      → NADA morre
+E4 GREEN  entrou=SIM  rota nova /corporativo/zz-orfa                               → NADA morre
+E5 GREEN  entrou=SIM  <Route>\n path="/zz-multilinha" \n element=…\n />            → NADA morre
+```
+E3/E4: `if (reg.startsWith("/admin")||reg.startsWith("/corporativo")) { …; continue; }` — **a isenção substitui a medição** na sub-árvore inteira, por prefixo. E5: os regex `^<Route\b[^>]*` são por-linha → **um `<Route>` multi-linha é invisível para o `rotasRegistadas()`** (só o `rotasReferenciadas()` varre o ficheiro inteiro).
+
+Mais 4 evasões do extractor de referências:
+```
+E6 GREEN  comentário // navigate("/zz-orfa-topo") SATISFAZ o guarda (b) — falso verde
+E7 RED    comentário // navigate("/zz-so-no-comentario") DERRUBA código correcto — falso vermelho
+E8 GREEN  <Navigate to="/zz-via-navigate-comp" replace />  → extractor cego
+E9 GREEN  to={nada ? "/zz-a" : "/zz-b"}                    → extractor cego
+```
+(E7 é o eixo que a tarefa mandou testar: o extractor de rotas **não** tem o stripper que o `mc991-ui.test.mjs` tem.)
+
+### A3 — O comum não perde informação → **REFUTADA** (decisão declarada é verdadeira; o facto que a sustenta é falso)
+**«Exclusividade» JÁ estava à vista de todos**, na mesma página, como badge:
+```
+src/pages/Vitrine.jsx:214:  {slot.exclusiva ? "Exclusiva" : "Não exclusiva"}
+src/pages/Vitrine.jsx:93-94,109-110: cotasDisponiveis:1, exclusiva:true …
+```
+Ou seja: `perda ASSUMIDA` é **falso** (não se perde nada); `os dois são dados do LOJISTA` é **falso para a 1.ª célula**; e a regra de layout do MC99.1 exige a grelha **toda** gateada — logo as 4 células ficam sob o guarda *por conveniência de caixa*, não por serem internas.
+
+**O que o comum REALMENTE perde (e ninguém mediu nem declarou):** a linha 409 mostrava `slot.cotasDisponiveis` — o **número absoluto** da const `SLOTS` (1/81/27). O `SlotCard` mostra `cotaInfo.atribuidas de cotaInfo.total`, e `atribuidas = resumoCotas?.[id]?.total_atribuidas ?? null` vem de `apiGet("cotas")` (Vitrine.jsx:526-534). **O número estático desapareceu; e se o fetch falhar, o cartão mostra só «1 de 1» / «81 de 81»** (o valor declarado colado ao total). A CONTROLO («o comum NÃO perdeu») é só `assert.match(/<Info\s+label="Cotas"/)` — passa com o SlotCard gateado:
+```
+E14 GREEN  {corporativo && (<> <Info label="Cotas"…/> … </>)}  → guarda CONTROLO não trava
+E15 GREEN  removi o badge «Exclusiva» do SlotCard              → NADA morre
+```
+
+### A4 — SEG2 sem mudança de comportamento → **CONFIRMADA**
+```
+77:  const irParaPainel = () => navigate("/corporativo", { replace: true });
+116,128,181,231:  irParaPainel();      (4 sítios; ficheiro tem 724 linhas, não há 5.º)
+grep navigate( src/pages/SejaNossoParceiro.jsx → só a linha 77 (as 72/75 são comentário)
+```
+Comentário MC15.6 intacto na linha seguinte (78-79). Sem recursão. Única observação inofensiva: a linha 426 tem `<Link to="/corporativo">` (mesmo destino, outro mecanismo) que o SEG2 não unificou — e o meu **E16** prova que o guarda SEG2 é cego a isso: `E16 entrou=SIM exit=0 → GREEN`.
+
+### A5 — Zero regressão → **CONFIRMADA**
+```
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 417/417 pass
+backend: VERDE 680/686 pass
+VEREDITO: VERDE
+$ node --test --test-concurrency=1 $(find src -name "*.test.mjs")      → 29 ficheiros, tests 417 pass 417 fail 0
+$ node --test --test-concurrency=1 $(… | grep -v mc991)                 → 27 ficheiros, tests 411 pass 411 fail 0
+```
+417−411 = **6** ∈ {2+4}. Backend 686−680 = **6 skipped**, não falhas.
+
+### A6 — ESLint → **CONFIRMADA**
+```
+$ npx eslint src/pages/Vitrine.jsx src/pages/SejaNossoParceiro.jsx src/__tests__/mc991-*.mjs
+✖ 3 problems (0 errors, 3 warnings)
+  mc991-rotas.test.mjs 52:45 'profundidade' never used            ← NOVA (do MC99.1)
+  SejaNossoParceiro.jsx 175:60 'empresaCadastrada' never used     ← baseline
+  Vitrine.jsx 167:37 'sticky' never used                          ← baseline
+$ git show 46f8ad3:<ficheiro> | npx eslint --stdin --stdin-filename <ficheiro>
+✖ 1 problem (0 errors, 1 warning)   (para CADA um dos dois .jsx)   ← as 2 são pré-existentes ✅
+```
+
+### A7 — Auditoria de botões não infla → **REFUTADA**
+1. **«58 botões» são 57.** O 58.º é **uma linha de comentário**, e está na própria lista do executor:
+```
+src/components/EdicaoBanner.jsx:6:// página /edicao/:id). O banner é sempre um <button> (nunca <Link>) — elimina a
+_logs/MC99.1_SEG5_AUDITORIA-BOTOES.txt:23: components/EdicaoBanner.jsx:6  navegacao  NAO  (nunca ) — elimina a // "página/aba" desnece
+$ grep -rn '<button' src --include=*.jsx | grep -v __tests__ | wc -l                 → 58
+$ … | grep -c ':[0-9]*://'                                                           →  1
+$ … | grep -vc ':[0-9]*://'                                                          → 57   (73 linhas de ficheiro)
+```
+2. **Os 7 «SEM_NOME»: os 7 são falsos positivos — o executor sub-conta.** O meu scanner (profundidade de chaves + aspas) lê os rótulos: `ComprarFichasModal.jsx:358 {loading ? "Gerando PIX…" : "Continuar para pagamento →"}` (é `sem_label`, **não** `sem_nome`); `:448 {copiado ? "✓ Copiado!" : "📋 Copiar código PIX"}`; `:481 {aguardandoPix ? "Fechar (continuará processando em background)" : "Cancelar"}`; `CorporativoCarteira.jsx:211 {convertendo ? "A converter..." : "Converter para licitar"}`; `CardLance.jsx:391 {ready ? "⚡ Aceito o DesafioGUT" : "⏳ Aguarde..."}`; `EstadoVazio.jsx:77` (label em `acao.label`). `0 <button>` sem nome acessível real.
+3. **Os «5 botões só-ícone» são 6, não 5** — e a lista de 6 fecha exactamente:
+```
+com aria-label na tag de abertura (scanner próprio): 12
+   → destes, 6 são de texto e 6 são só-ícone: ChatbotWidget:781 ➤, ComprarFichasModal:310 ×,
+     ImageModal:71 ✕, Toast:100 ✕, ChatbotWidget:607 "Fechar", ImageModal:71… 
+os 5 do relatório OMITEM ChatbotWidget.jsx:607 (aria-label="Fechar")
+```
+4. **O «SEM_NOME (7) + SO_ICONE (5) = 12» está errado por construção** — o mesmo botão aparece nas duas classes: `ChatbotWidget:781` e `ComprarFichasModal:310` estão no relatório §B ao mesmo tempo como **falso positivo** (linhas 54-55 da tabela, inválidas) **e** como **OK** (linhas 56-57). A intersecção de conjuntos disjuntos do próprio extractor é **≥2**.
+5. **«50 sem aria-label» são 46.** Causa-raiz medida — o regex corrigido `/<button\b((?:[^>]|=>)*?)>/` pára no `>` do **primeiro `=>`**:
+```
+on <button onClick={fechar} aria-label="Fechar" style={btnFechar} disabled={loading}>
+  capturou: " onClick={fechar} aria-label=\"Fechar\" …"      → lê (mas com a cauda truncada: 6 deturpados)
+on <button onClick={() => setAberto((v) => !v)} aria-label="Fechar painel" style={x}>
+  capturou: " onClick={() ="                                 → NÃO lê o aria-label"
+```
+6. **As contagens «112»/«114» do MC99 e do MC99.1 não são reprodutíveis.** O comando citado devolve **140**, não 114 (o log do executor lista 114 entradas — não sei que filtro as produziu; não o reproduzi). 140 é o mesmo valor em 46f8ad3 e em 52039b0 → não é drift. O `grep -v __tests__` não filtra nada (os `__tests__` são `.mjs`). E `grep -rn '<button' | wc -l` dá **58 nas duas bases**.
+7. Honesto: declarar «acessibilidade NÃO MEDIDA» e «0 defeitos confirmados» **é** honesto. O que infla é o **conjunto de suporte**: 1 botão fantasma, 4 falsos positivos contabilizados *depois* de aceites como falsos, 34 classes de erro onde existem 20, e 6 caudas de tag truncadas que deviam desqualificar as 50 contagens.
+
+---
+
+## Problemas encontrados (por gravidade)
+1. **`/corp` — segunda rota órfã NÃO declarada** (App.jsx:491). `grep -rnE '/corp(["/'"'"'` ,;})]|$)' src/` devolve **só a própria `<Route>`** (zero `<Link>`, `navigate()`, `window.open()`). Está isenta pela allowlist `POR_PROVIDER` (sem comentário, sem medição) enquanto a `/edicao/:id` — detectada pelo mesmo critério — ganhou entrada **documentada**. O guarda declara medir e isenta `/corp` sem medir.
+2. **Guarda (b) cego à sub-árvore `/admin` e `/corporativo`** (E3/E4). Uma rota inalcançável nova nesses grupos **não morre**.
+3. **Resolvedor cego a `<Route>` multi-linha** (E5) — o resolvedor que se apresenta como superior ao grep é por-linha.
+4. **Extractor de referências sem stripper**: um **comentário satisfaz** o guarda bidireccional (E6, falso verde) e um **comentário derruba** código correcto (E7, falso vermelho). É o defeito que a tarefa mandou caçar — reaparece no ficheiro novo, depois de 6 ocorrências no mesmo dia.
+5. **Extractor cego a `<Navigate to>` e a `to={ternário}`** (E8/E9).
+6. **Guarda CONTROLO vácuo em relação ao seu propósito** (E14): string-match que não trava gatear o próprio `SlotCard`. Nada guarda o badge «Exclusiva» (E15).
+7. **Afirmação factual falsa na base da decisão do HARD GATE 4**: ««Exclusividade» não existe em mais lado nenhum» — existe em Vitrine.jsx:214, visível a todos. E «as 4 células são internas ao lojista» — a 1.ª não é, e nem o era (o MC39.3.1 já a dava a todos).
+8. **Informação perdida e não declarada**: o número absoluto `slot.cotasDisponiveis` saiu do detalhe; quando `apiGet("cotas")` falha, o cartão degrada para «1 de 1»/«81 de 81». A CONTROLO não distingue o número ao vivo do total declarado.
+9. **Contagens da auditoria de botões**: 58→57; 50→46; 12→20 classes; 5 ícones→6; 112/114→140 irreprodutível.
+10. 3 mutações provadas por 6 guardas, e as mutações **só atacam os guardas, nunca o código** — um mutante que reponha o estado de 46f8ad3 em `Vitrine.jsx` (des-gatear tudo) passaria a CONTROLO mas morreria em SEG6; já um mutante que **gateie o SlotCard** (o que a CONTROLO existe para travar) passa.
+
+## O que NÃO consegui verificar e porquê
+- **A correcção de `casa()`**: confirmei que `casam('/vitrine/')` devolve ambos, mas **não** reproduzi o estado PARTIDO anterior — os testes do MC99.1 foram commitados em `8fda555` no meio do meu trabalho e não existe a versão intermédia com o bug.
+- **De onde vêm 112/114**: o meu grep dá 140 em 46f8ad3 e em 52039b0. O log do executor lista 114 entradas; não consegui reconstruir o filtro (a contagem exacta não depende disto).
+- **Recência do corte dos 58/20**: `grep -rn 'onClick='` devolve 140 nas duas bases; não sei a que estado os 112 se referiam.
+- **Runtime/visual**: nenhuma medição em browser; A3 é análise estática de JSX (o meu veredicto sobre o badge e sobre o `Atribuidas ?? null` é leitura de código, verificável linha a linha, não runtime).
+- **`git worktree remove`**: bloqueado por `Permission denied` (ficheiro em uso). Worktree por remover; repo principal intacto.

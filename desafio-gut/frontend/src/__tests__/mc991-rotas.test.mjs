@@ -18,6 +18,36 @@ import { join, relative, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// ⚠️ BLINDSPOTS CONHECIDOS E MEDIDOS — este guarda NÃO é uma rede completa.
+// O validador independente do MC99.1 refutou a alegação "resolvedor correcto / não cego"
+// com 5 evasões medidas que este ficheiro NÃO apanha. Estão aqui, nomeadas, para que quem
+// confie neste teste saiba exactamente o que ele não vê (e não para as esconder):
+//   E3  rota nova DENTRO de /admin          → nada morre (a isenção por prefixo em (b)
+//   E4  rota nova DENTRO de /corporativo       SUBSTITUI a medição na subárvore inteira —
+//                                              o anti-padrão «tratar o desconhecido como
+//                                              aprovado» que a série MC96.7 já pagou)
+//   E5  <Route> escrito em VÁRIAS LINHAS    → invisível: rotasRegistadas() é por-linha
+//   E8  <Navigate to="/x">                  → extractor de referências cego
+//   E9  to={cond ? "/a" : "/b"}             → extractor de referências cego
+// E6/E7 (comentários) foram CORRIGIDOS (stripper abaixo). E3/E4/E5/E8/E9 continuam abertos:
+// exigem um tokenizador a sério (ou o router real), não regex. **Pendência de MC99.2.**
+// Enquanto isso, a afirmação honesta deste teste é: «nenhuma rota referenciada está partida
+// e nenhuma rota registada é órfã FORA das subárvores /admin e /corporativo e fora de
+// <Route> multi-linha, <Navigate> e to= com ternário».
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+/** Código sem comentários (JSX multi-linha, blocos /* *\/ e // de linha ou de FIM DE LINHA). */
+function semComentarios(src) {
+  return src
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split(/\r?\n/)
+    .map((l) => l.replace(/(^|[^:"'])\/\/.*$/, "$1"))
+    .filter((l) => !/^\s*\*/.test(l))
+    .join("\n");
+}
 const ler = (p) => readFileSync(p, "utf8");
 
 /** Devolve os caminhos ABSOLUTOS registados no router, deitando abaixo a árvore de <Route>. */
@@ -32,7 +62,7 @@ function rotasRegistadas() {
     return `${b}/${p}`.replace(/\/{2,}/g, "/");
   };
   // só dentro de <Routes>: evita apanhar `path=` de outra coisa
-  let dentro = false, profundidade = 0;
+  let dentro = false;
   for (const l of linhas) {
     if (/<Routes>/.test(l)) { dentro = true; continue; }
     if (/<\/Routes>/.test(l)) break;
@@ -45,11 +75,9 @@ function rotasRegistadas() {
     else if (mPath) out.add(juntar(pai, mPath[1]));
     // empilha/desempilha grupos (tags que abrem e não fecham na mesma linha)
     if (/^<Route\b/.test(t) && !/\/>\s*$/.test(t)) {
-      const abs = mPath ? juntar(pai, mPath[1]) : pai;
-      pilha.push(abs);
-      profundidade++;
+      pilha.push(mPath ? juntar(pai, mPath[1]) : pai);
     }
-    if (/<\/Route>/.test(t)) { pilha.pop(); profundidade--; }
+    if (/<\/Route>/.test(t)) { pilha.pop(); }
   }
   return [...out].sort();
 }
@@ -79,8 +107,14 @@ function rotasReferenciadas() {
   };
   for (const f of ficheiros) {
     const rel = relative(SRC, f).replace(/\\/g, "/");
-    const txt = ler(f);
-    const linhaDe = (idx) => txt.slice(0, idx).split(/\r?\n/).length;
+    // ⚠️ REFUTAÇÃO do validador (E6/E7): esta função lia o ficheiro CRU, sem stripper de
+    // comentários. Consequência nos dois sentidos: um comentário `// navigate("/zz-orfa")`
+    // SATISFAZIA o guarda (b) e fazia uma rota órfã parecer alcançada (FALSO VERDE); e um
+    // comentário a nomear uma rota DERRUBAVA código correcto (FALSO VERMELHO). É o mesmo
+    // defeito que o mc991-ui.test.mjs já tratava — e que aqui faltava.
+    const txtCru = ler(f);
+    const txt = semComentarios(txtCru);
+    const linhaDe = (idx) => txtCru.slice(0, idx).split(/\r?\n/).length;
     const regras = [
       [/<Link\b[^>]*?\bto=["']([^"']+)["']/g, false],
       [/<NavLink\b[^>]*?\bto=["']([^"']+)["']/g, false],
