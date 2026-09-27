@@ -2387,10 +2387,11 @@ um extractor cego.*
 | 3 | src/pages/Configuracoes.jsx | card **«Preferências» removido**: o seu único conteúdo era o selector de idioma. Um card com título e corpo vazio seria pior |
 | 4 | src/i18n/pt.js | 2 chaves mortas (config.idioma, config.preferencias) removidas. 129 → **127** chaves |
 | 5 | 4 testes | âmbito 3-idiomas reduzido a PT; 4 asserções que comparavam idiomas **removidas** |
-| 6 | src/i18n/__tests__/pt-only.test.mjs | **novo**: 6 guardas da declaração PT-only |
+| 6 | src/i18n/__tests__/pt-only.test.mjs | **novo**: 7 guardas da declaração PT-only (endurecidas após a refutação do validador — ver «O validador independente refutou-me em duas coisas») |
 | 7 | docs/FICHA-PLAY-PT.md | **novo**; docs/FICHA-PLAY-3-IDIOMAS.md removido (9 → 3 blocos) |
 | 8 | docs/GLOSSARIO-OFICIAL.md | só PT: as colunas EN/ES e as listas de proibidos em EN/ES saíram |
-| 9 | scripts/mc97-medir-ficha.mjs | reapontado para a ficha PT (3 blocos) **e** passou a exigir que a contagem **declarada** no texto seja igual à **medida** |
+| 9 | scripts/mc97-medir-ficha.mjs | reapontado para a ficha PT (3 blocos), passou a exigir que a contagem **declarada** no texto seja igual à **medida**, e a tolerar CRLF |
+| 11 | .gitattributes | **`*.md text eol=lf`** — torna a medição reprodutível num worktree limpo (ver «O validador independente refutou-me») |
 | 10 | netlify/functions/_tests/mc8843-estado-edicao.test.mjs | 2 entradas i18n/es.js + i18n/en.js removidas da lista de proibidos (os ficheiros deixaram de existir) |
 
 **Nenhuma string de UI em PT foi alterada** — este MC remove, não reescreve.
@@ -2399,25 +2400,58 @@ um extractor cego.*
 
 | | antes | depois |
 |---|---|---|
-| frontend | 392/392 VERDE | **395/395 VERDE** |
+| frontend | 392/392 VERDE | **396/396 VERDE** |
 | backend | 680/686 VERDE | **680/686 VERDE** |
 
-A aritmética fecha: 392 − 4 (asserções removidas) + 7 (1 glossário + 6 pt-only) = 395.
+A aritmética fecha: 392 − 4 (asserções removidas) + 8 (1 glossário + 7 pt-only) = 396.
 O backend esteve **1 falha** a meio do MC — o teste mc8843-estado-edicao.test.mjs, que
 também lia i18n/es.js pelo mesmo âmbito estreito do SEG-1. Corrigido no mesmo MC.
 
-### Mutações (R16) — 4 mutantes, todos mortos e todos confirmados a ENTRAR
+### Mutações (R16) — 7 mutantes, todos mortos e todos confirmados a ENTRAR
 
 | mutação | teste que a matou |
 |---|---|
-| reintroduzir src/i18n/en.js | «a pasta i18n tem UM só dicionário» + «o dicionario PT e o UNICO» |
-| reintroduzir o **import** de i18n/en.js | «nenhum ficheiro do produto importa i18n/en.js nem i18n/es.js» |
-| reintroduzir o **selector** de idioma na UI | «nenhum selector de idioma na UI do produto» |
+| reintroduzir src/i18n/en.js | «a pasta i18n só pode conter pt.js» + «o dicionario PT e o UNICO» |
+| reintroduzir o **import** de i18n/en.js | «nenhum ficheiro do produto importa um dicionário en/es removido» |
+| **EVASÃO E2** — dicionário como src/i18n/en.mjs + import .mjs | as duas guardas acima (a pasta deixou de filtrar só `.js`) |
+| reintroduzir o **selector** (forma original, aspas duplas + «English (US)») | «nenhum selector de idioma na UI do produto» |
+| **EVASÃO E1** — selector com aspas SIMPLES + rótulos «English»/«Spanish» | idem (o detector passou a casar as 2 formas de aspas) |
+| **EVASÃO E1b** — selector com rótulos «Inglés»/«Español» | idem (3 grafias de rótulo, com fronteiras de palavra) |
 | remover o pt.js | 8 testes, incluindo todas as guardas de medição vazia |
+
+**Instrumento (não é mutação):** o medidor da ficha passou a ser exercido com
+`docs/FICHA-PLAY-PT.md` em **CRLF** — exit 0 e `3/3 dentro dos limites`, com restauração
+byte a byte. Antes da correcção dava exit 2 num ficheiro correcto.
 
 Restauração por **snapshot binário**, com md5 idêntico nos 3 ficheiros e suíte de volta a
 VERDE. (A 1.ª versão do restaurador desfazia por .replace() inverso e deixava um \r\n
 órfão — md5 diferente. Restaurar não é desfazer: é repor.)
+
+### ⚠️ O validador independente refutou-me em duas coisas (e as duas estão corrigidas)
+
+O validador do SEG3 (worktree próprio, instruído a **TENTAR REFUTAR**) confirmou A1, A2,
+A3, A4 e A7 com medição própria — e **refutou parcialmente A5** e encontrou um defeito de
+reprodutibilidade em A6. Os dois são reais e foram corrigidos no commit `80b5dbc`:
+
+1. **As minhas guardas eram cegas a duas evasões realistas.** `MUT2` e o detector de
+   selector usavam a MESMA forma uma da outra (`value="en"` + «English (US)») — era uma
+   mutação **circular**, que media o autor e não o atacante. O validador provou-o com
+   `<option value='en'>English</option>` (aspas simples, rótulo sem «(US)») e com um
+   dicionário reintroduzido como `src/i18n/en.mjs` + respectivo import: **6/6 VERDE** nas
+   duas. Corrigido (aspas duplas OU simples, 3 grafias de rótulo com fronteiras de palavra
+   medidas, `src/i18n/` só pode conter `pt.js` seja qual for a extensão) e as duas evasões
+   entraram na bateria como `MUT1c`/`MUT2b`/`MUT2c` — todas agora RED.
+2. **O medidor da ficha não era reprodutível.** `node scripts/mc97-medir-ficha.mjs` num
+   worktree limpo devolvia **exit 2** (`esperava 3 blocos, vi 0`) num ficheiro **correcto**:
+   `core.autocrlf=true` + ausência de regra `*.md` no `.gitattributes` faz o
+   `git worktree add` entregar CRLF, e a regex assumia LF. Corrigido no script (`\r?\n`) **e**
+   na causa-raiz (`.gitattributes` ganhou `*.md text eol=lf`; medido: os `.md` já estavam LF
+   no índice, logo não muda conteúdo nenhum).
+
+> **A lição, que é a do MC96.3 outra vez com outro ângulo:** uma guarda tem de ser testada
+> contra as variantes que o **atacante** escolheria, não contra a que o **autor** escreveu.
+> E a régua também se mede: o validador registou que correr a suíte do backend sem
+> `cwd=netlify/functions` **e** `--experimental-test-module-mocks` dá **61 falhas falsas**.
 
 ### Lições de método
 

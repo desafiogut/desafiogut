@@ -1,0 +1,157 @@
+# RELATÓRIO DE REFUTAÇÃO — MC98 (commit b7a9057)
+
+Worktree próprio: `C:/Users/Moltbot/Desktop/DESAFIOGUT/.claude/worktrees/mc98-refutador` (detached HEAD b7a9057).
+⚠️ **NÃO consegui remover o worktree** (esgotei as iterações). Comando para o pai executar:
+`cd /c/Users/Moltbot/Desktop/DESAFIOGUT && git worktree remove --force "C:/Users/Moltbot/Desktop/DESAFIOGUT/.claude/worktrees/mc98-refutador"`
+Dentro dele deixei só scratch em `_refut/` (4 ficheiros + mutadores). **Nada escrevi no repo principal.**
+
+---
+
+## A1 — `CONFIRMADA` (zero imports quebrados)
+
+```
+$ grep -rna --exclude-dir=node_modules --include=*.jsx --include=*.js --include=*.mjs "i18n" desafio-gut/frontend/src desafio-gut/frontend/netlify | grep -E "import|require"
+desafio-gut/frontend/src/context/IdiomaContext.jsx:13:import pt from "../i18n/pt.js";
+desafio-gut/frontend/src/i18n/__tests__/pt-only.test.mjs:7://   MUT1  reintroduzir `en.js` ...
+desafio-gut/frontend/src/i18n/__tests__/pt-only.test.mjs:89:test("MC98 · nenhum ficheiro do produto importa i18n/en.js nem i18n/es.js", () => {
+desafio-gut/frontend/src/i18n/__tests__/pt-only.test.mjs:104:  assert.match(codigo, /from\s+"\.\.\/i18n\/pt\.js"/, ...);
+```
+```
+$ grep -rnaE --exclude-dir=.git -E "(^|[^A-Za-z])(en|es)\.js([^A-Za-z]|$)" .
+```
+→ todas as ocorrências são **comentários/docs** (CLAUDE.md, pt-only.test.mjs, FICHA-PLAY-PT.md, GLOSSARIO-OFICIAL.md, `_logs/*`). Zero em código. `git rev-parse` do worktree = b7a9057. Nenhum `en.js`/`es.js` existe em disco (`ls src/i18n/` → só `pt.js` + `__tests__`).
+
+## A2 — `CONFIRMADA` (nenhum selector de idioma)
+
+```
+$ grep -rnaE --include=*.jsx -iE 'option value="(en|es|pt)"|>(English|Espanhol|Spanish|Português)<' desafio-gut/frontend/src/
+rc=1   (nada)
+$ grep -rna --include=*.jsx -oE '<option[^>]*>' ... (enumerados todos)
+inapp, email, whatsapp, push, todos, admins, especifico, super-admin, admin, operador, "", bloquear_usuario,
+enviar_notificacao, forcar_fila, panic, unpause, revogar_sessao, alterar_config, exportar_relatorio_financeiro,
+diamante, ouro, prata, bronze        ← nenhum é en/es
+```
+`English|Español|LanguageSelector|setIdioma` → só aparecem em comentários de `IdiomaContext.jsx` e no stub de teste (`src/pages/__tests__/_stubs/IdiomaContext.jsx:9`). O diff de `Configuracoes.jsx` mostra a remoção **líquida** do card «Preferências» (únicas linhas adicionadas: o comentário).
+
+## A3 — `CONFIRMADA` (nenhuma string de UI desapareceu)
+
+`pt.js` tem **127 chaves** (medido por import dinâmico). Escrevi o meu próprio medidor:
+```
+$ node _refut/check3.mjs
+ficheiros analisados: 174
+pares t(chave,fallback) encontrados: 78
+chaves distintas usadas nos componentes: 76
+=== PROBLEMAS (total 0) ===
+$ node _refut/check3b.mjs
+chamadas t("chave") sem fallback com dot.notation: 12; ausentes do dict: 0
+=== chaves do dict NUNCA referenciadas no codigo (possiveis strings orfas) ===
+total orfas: 0
+```
+Os 4 `edicao.especial.badge*` não usam `t()` de 2 args mas um objeto `{chave, texto}` em `CardEdicaoEspecial.jsx:68-71` — e os `texto` são **idênticos** aos valores do dict. Zero divergências dict↔fallback em 78 pares.
+
+## A4 — `CONFIRMADA` (395/395 e 680/686, exactos)
+
+```
+$ node --test --test-concurrency=1 <26 ficheiros de src/**/*.test.mjs>
+ℹ tests 395 / suites 28 / pass 395 / fail 0 / skipped 0        EXIT_SUITE=0
+
+$ cd netlify/functions && node --test --experimental-test-module-mocks --test-concurrency=1 <79 ficheiros>
+ℹ tests 686 / suites 7 / pass 680 / fail 0 / skipped 6          EXIT_SUITE=0
+```
+⚠️ **Metodologia (importante para futuros validadores):** correr os testes de backend a partir de `frontend/` (ou sem `--experimental-test-module-mocks`) dá **61 falhas falsas** — `TypeError: mock.module is not a function` e `ENOENT ... _lib/guto-perfis.mjs`. É preciso `cwd = netlify/functions` **e** a flag. Sem isso mede-se um falso vermelho.
+
+## A5 — `PARCIALMENTE REFUTADA` ⚠️ **as guardas são cegas a 2 variantes realistas**
+
+As 4 mutações prescritas **matam** as guardas (todas confirmadas com `grep -a` depois de escrever, e restauradas com `git checkout` + re-verificação):
+
+| Mutação | Resultado |
+|---|---|
+| A: `src/i18n/en.js` = `export default {};` | `fail 2` (`✖ a pasta i18n tem UM só dicionário` + glossário) |
+| B: `import en from "../i18n/en.js";` no IdiomaContext | `fail 3` (idem + `✖ nenhum ficheiro do produto importa i18n/en.js`) |
+| C: `<option value="en">English (US)</option>` em Configuracoes | `fail 1` (`✖ nenhum selector de idioma na UI do produto`) |
+| D: `mv src/i18n/pt.js pt.js.bak` | `fail 14` |
+| Restauro | `pass 19 / fail 0` verde |
+
+**Mas as minhas próprias mutações de evasão NÃO morrem:**
+
+```
+E1  <option value='en'>English</option>      (aspas simples, "English" sem "(US)", "Spanish")
+$ grep -an "option value" .../Configuracoes.jsx
+144:          <option value='pt'>Portugues</option>
+145:          <option value='en'>English</option>
+146:          <option value='es'>Spanish</option>
+$ node --test ... src/i18n/__tests__/pt-only.test.mjs
+ℹ tests 6 / pass 6 / fail 0        ← GUARDA 5 PASSA COM O SELECTOR NA UI
+```
+Causa: `RE_SELECTOR = /<option\s+value="(en|es)"|English\s*\(US\)|Espa[nñ]ol/i` exige **aspas duplas** e os rótulos literais `English (US)`/`Español`. Um selector reintroduzido com aspas simples e rótulos `English`/`Spanish` — ou `English (UK)`, `Inglés` — é invisível. É **exactamente** a classe de defeito «escape file-vs-value» que o MC97 diz ter corrigido.
+
+```
+E2  src/i18n/en.mjs + import en from "../i18n/en.mjs";
+$ ls src/i18n/  →  __tests__  en.mjs  pt.js
+$ grep -an "en.mjs" src/context/IdiomaContext.jsx
+14:import en from "../i18n/en.mjs";
+$ node --test ... pt-only.test.mjs
+ℹ tests 6 / pass 6 / fail 0        ← GUARDAS 2,3,4 PASSAM COM UM DICIONÁRIO REINTRODUZIDO
+```
+Causa: guarda 2 filtra `.endsWith(".js")`; guarda 3 procura `/i18n\/(en|es)\.js/`. O **walker** até visita o `.mjs` (`/\.(jsx?|mjs)$/`), mas nenhuma asserta sobre ele. Um dicionário reintroduzido como `.mjs` (ou `.jsx`, `.cjs`, `.json`) passa verde — e o `import` de um módulo inexistente só rebentaria em runtime.
+
+## A6 — números `CONFIRMADA`, mas com **defeito de reprodutibilidade**
+
+Medição independente (normalizando CRLF eu mesmo, sem confiar no script):
+```
+blocos encontrados (apos normalizar CRLF): 3
+titulo len=29 lim=30 DENTRO
+curta len=74 lim=80 DENTRO
+longa len=1132 lim=4000 DENTRO
+declaradas no texto: 29,74,1132        ← declarado == medido
+```
+No repo principal o script concorda: `OK PT titulo: 29/30 (declarado 29)` / `OK PT curta: 74/80` / `OK PT longa: 1132/4000` / `EXIT=0`.
+
+⚠️ **MAS no meu worktree novo o script falha, e não foi por eu ter mexido:**
+```
+$ node scripts/mc97-medir-ficha.mjs     (no worktree, ficheiro intocado)
+esperava 3 blocos, vi 0 — medicao invalida
+EXIT=2
+
+$ file docs/FICHA-PLAY-PT.md
+... UTF-8 text, with CRLF line terminators
+$ node -e ...  → docs/FICHA-PLAY-PT.md CR=86 LF=86 (4053 bytes)
+$ git show b7a9057:docs/FICHA-PLAY-PT.md  → BLOB CR=0 len=3967
+$ git config --show-origin --get core.autocrlf  → file:C:/Program Files/Git/etc/gitconfig  true
+$ grep -a "" .gitattributes   → * text=auto ; *.mjs/*.js/*.cjs/*.sh/*.py/*.json/*.yml têm eol=lf
+                                (NÃO há regra para *.md)
+```
+Causa: `core.autocrlf=true` + ausência de `*.md text eol=lf` no `.gitattributes` ⇒ `git worktree add` faz checkout CRLF; a regex ` ```\n ` do script (que assume LF — o próprio comentário diz «O ficheiro e' LF») deixa de casar ⇒ **exit 2**. A ficha é correcta e está dentro dos limites; o que **não é reprodutível** é a medição num worktree limpo.
+
+## A7 — `CONFIRMADA` (nenhuma string PT alterada)
+
+```
+$ git diff --stat 56f8305 b7a9057 -- src/pages src/components src/context
+ .../__tests__/especial-i18n.test.mjs           | 16 ++++-----   (só testes)
+ src/context/IdiomaContext.jsx                  | 38 ++++--       (comentários/lógica)
+ src/pages/Configuracoes.jsx                    | 37 ++------     (só remoção)
+```
+O diff de `Configuracoes.jsx` contém **apenas linhas removidas** (o card inteiro, incluindo as 3 `<option>`) + 4 linhas de comentário adicionadas. A única alteração não-string: `-  const { lang, setLang, t } = useIdioma();` → `+  const { t } = useIdioma();`. Em `pt.js`, o diff é **puro apagamento** de `config.preferencias` e `config.idioma` + 1 comentário. `IdiomaContext.jsx`: `DICTS = { pt }`, `SUPPORTED = ["pt"]`, sem `navigator.language`, `LANG_HTML = "pt-BR"` — confirmado por leitura, nenhum texto de UI tocado.
+
+---
+
+## 1) Problemas / inconsistências encontradas
+
+- **[Real, médio] Guarda 5 é vácuas contra variantes realistas** — aceita `<option value='en'>English</option>` (aspas simples, rótulos sem `(US)`/`Español`). Evidência E1 acima. A mutação do executor foi feita com a forma exacta testada pelo próprio detector — circular.
+- **[Real, médio] Guardas 2/3/4 são cegas a `.mjs`** — um dicionário reintroduzido como `src/i18n/en.mjs` + respectivo import passa 6/6 verde. Evidência E2 acima.
+- **[Real, baixo-médio] `scripts/mc97-medir-ficha.mjs` falha (exit 2) num worktree limpo** — CRLF em `docs/FICHA-PLAY-PT.md` por falta de `*.md text eol=lf` no `.gitattributes` face a `core.autocrlf=true`. A medição de A6 não é reprodutível fora do repo principal.
+- **[Nota de metodologia, não defeito do MC98]** Os testes de backend exigem `cwd=netlify/functions` **e** `--experimental-test-module-mocks`; sem isso dá 61 falhas falsas (`mock.module is not a function`, `ENOENT .../frontend/_lib/guto-perfis.mjs`). Quem repetir a medição sem isto declara uma regressão que não existe.
+- **[Verificado, sem problema]** Doc diz «129 chaves» e o dict tem 127 — consistente (129 − 2 removidas). «35 órfãs» refere-se ao estado pré-MC98; hoje **0 órfãs**.
+- **[Nota de ambiente]** Untracked em `_logs/` na raiz mudou entre duas leituras minhas (`MC98_SEG0/SEG1/SEG2_RELATORIO.md` apareceram). Outro processo estava activo no repo principal. `git status` nunca mostrou ficheiros **tracked** modificados, portanto o conteúdo de b7a9057 (o que todos os testes leram) estava intacto.
+
+## 2) O que não consegui verificar
+
+- **Não corri a suíte na totalidade de uma só vez** no backend e no frontend em simultâneo — medi cada metade separadamente (395 e 686). A soma 1081 não foi medida como um número único.
+- **Não validei a ficha contra a Play Console real** — só contra os limites declarados (30/80/4000) e a aritmética de caracteres. Contagem de caracteres da Play para emojis/`«»` não é verificável localmente.
+- **Não corri o frontend num worktree limpo** (sem `node_modules`), conforme instruído; usei o repo principal (leitura pura, `git status` limpo nos tracked). Os 4 ficheiros que precisam de `node_modules` foram medidos no principal.
+- **Não fiz build/Vite** — não verifiquei se algum bundle referenciaria `en.js`. O grep estático a 174 ficheiros é a evidência disponível.
+- **Não removi o meu worktree** (limite de iterações) — comando no topo deste relatório.
+
+## 3) Veredicto global
+
+**Não consegui refutar A1, A2, A3, A4, A6 (números) nem A7 — todas confirmadas com medição própria e independente; A5 é PARCIALMENTE REFUTADA porque as guardas matam as 4 mutações prescritas mas falham em silêncio contra duas variantes realistas da mesma reintrodução (`value='en'` com aspas simples, e dicionário/import `.mjs`), e A6 sofre de um defeito de reprodutibilidade (o medidor falha com exit 2 num worktree limpo por CRLF em `docs/*.md`).**

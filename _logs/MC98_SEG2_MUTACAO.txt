@@ -1,0 +1,40 @@
+MUT1 reintroduzir o dicionário src/i18n/en.js
+  entrou=true red=true provado=true
+  falhas: MC98 — o dicionario PT e o UNICO (en.js/es.js nao voltaram) | MC98 · a pasta i18n só pode conter pt.js (seja qual for a extensão)
+  suite: tests=14 pass=12 fail=2
+
+MUT1b reintroduzir o IMPORT de i18n/en.js no IdiomaContext
+  entrou=true red=true provado=true
+  falhas: MC98 · nenhum ficheiro do produto importa um dicionário en/es removido
+  suite: tests=14 pass=13 fail=1
+
+MUT1c EVASÃO E2 — dicionário como src/i18n/en.mjs + import .mjs
+  entrou=true red=true provado=true
+  falhas: MC98 · a pasta i18n só pode conter pt.js (seja qual for a extensão) | MC98 · nenhum ficheiro do produto importa um dicionário en/es removido
+  suite: tests=14 pass=12 fail=2
+
+MUT2 reintroduzir o selector (forma ORIGINAL: aspas duplas + «English (US)»)
+  entrou=true red=true provado=true
+  falhas: MC98 · nenhum selector de idioma na UI do produto
+  suite: tests=14 pass=13 fail=1
+
+MUT2b EVASÃO E1 — selector com ASPAS SIMPLES + rótulos «English»/«Spanish»
+  entrou=true red=true provado=true
+  falhas: MC98 · nenhum selector de idioma na UI do produto
+  suite: tests=14 pass=13 fail=1
+
+MUT2c EVASÃO E1b — selector com rótulos «Inglés»/«Español»
+  entrou=true red=true provado=true
+  falhas: MC98 · nenhum selector de idioma na UI do produto
+  suite: tests=14 pass=13 fail=1
+
+MUT3 remover o pt.js (o único dicionário)
+  entrou=true red=true provado=true
+  falhas: o dicionario PT e legivel e nao vazio (guarda contra medicao vazia) | NENHUM termo proibido nos VALORES do dicionario PT | os termos OBRIGATORIOS do glossario estao presentes | nenhum valor esta VAZIO (chave presente mas por traduzir) | os termos obrigatorios sao medidos sobre os VALORES, nao sobre o ficheiro | PT respeita o proprio glossario (Senha continua «senha», nao «token») | MC98 · a pasta i18n só pode conter pt.js (seja qual for a extensão) | MC98 · o dicionário PT existe e não está vazio (guarda contra medição vazia)
+  suite: tests=14 pass=6 fail=8
+
+INSTRUMENTO (ficha em CRLF): exit_ok=true restaurado=true
+  saida: OK    PT titulo: 29/30 (declarado 29) | OK    PT curta: 74/80 (declarado 74) | OK    PT longa: 1132/4000 (declarado 1132) |  | Ficha PT-BR: 3/3 campos dentro dos limites da Play Console e contagens declaradas == medidas.
+
+restauracao_md5_identica=true lixo_removido=true
+final=VERDE tests=14 pass=14 fail=0
