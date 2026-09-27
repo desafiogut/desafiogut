@@ -74,6 +74,37 @@ test("MC99.5.2/SSRF · (a2) IPv4 EMBUTIDO + TODAS as familias (meus 16 + os 12 d
   }
 });
 
+test("MC99.5.2.1b/SSRF · (a5) 4.ª GERAÇÃO: 6to4 e Teredo — os 8 que o validador deixou passar", () => {
+  // A 3.ª geração (allowlist `2000::/3`) foi REFUTADA: 6to4 (2002::/16) e Teredo (2001::/32) VIVEM
+  // dentro de 2000::/3 e transportam IPv4. Passavam 8 payloads, incluindo a METADATA CLOUD.
+  // A causa de fundo era regex que exigiam hextetos presentes: `2002:h1:h2` não casava com a forma
+  // COMPRIMIDA `2002:a00::1`. Agora há um parser de hextetos + descodificação do IPv4 embutido.
+  const OITO = [
+    "http://[2002:a00::1]/",      // 10.0.0.0
+    "http://[2002:7f00::1]/",     // 127.0.0.0
+    "http://[2002:c0a8::1]/",     // 192.168.0.0
+    "http://[2002:ac10::1]/",     // 172.16.0.0
+    "http://[2002:a9fe::1]/",     // 169.254.0.0  <-- METADATA CLOUD
+    "http://[2002:64::1]/",       // 100.64.0.0   (CGNAT)
+    "http://[2002:a::1]/",        // 10.0.0.0     (hexteto de 1 digito)
+    "http://[2001:0:0:0:0:0:80ff:fffe]/", // Teredo -> 127.0.0.1 (XOR 0xffffffff)
+  ];
+  for (const alvo of OITO) {
+    const host = new URL(alvo).hostname;
+    assert.equal(isBlockedHostname(host), true, host + " NAO e bloqueado (6to4/Teredo)");
+    assert.equal(passaria(alvo), "403", alvo + " ainda passa -> fetch");
+  }
+  // 6to4 com IPv4 PUBLICO tem de continuar a passar (nao e bloqueio cego do prefixo)
+  for (const alvo of ["http://[2002:0808:0808::]/", "http://[2606:4700::1111]/"]) {
+    assert.match(passaria(alvo), /^PASSA/, alvo + " — IPv6/6to4 PUBLICO foi bloqueado");
+  }
+  // e o desenho tem de usar o parser de hextetos, nao regex sobre a string
+  const c = codigo(ler(FE + "/netlify/functions/img-proxy.mjs"));
+  assert.match(c, /function hextetos/, "falta o parser de hextetos (a compressao e o que falhava)");
+  assert.match(c, /he\[0\] === 0x2002/, "falta o bloco 6to4 explicito");
+  assert.match(c, /he\[0\] === 0x2001 && he\[1\] === 0x0000/, "falta o bloco Teredo explicito");
+});
+
 test("MC99.5.2/SSRF · (a4) REGRESSÃO: um DOMINIO legitimo NAO e bloqueado", () => {
   // isBlockedIp é chamado TAMBEM com NOMES de dominio (última linha de isBlockedHostname). A 1.ª
   // versão do guard de intervalo nao distinguiu dominio de IPv6 e bloqueou i.imgur.com — o proxy
@@ -104,7 +135,9 @@ test("MC99.5.2/SSRF · (b) as URLs LEGÍTIMAS continuam a passar (senão era blo
 test("MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador", () => {
   const c = codigo(ler(FE + "/netlify/functions/img-proxy.mjs"));
   assert.match(c, /replace\(\/\^\\\[\|\\\]\$\/g, ""\)/, "falta a normalização dos brackets");
-  assert.match(c, /const emb = h\.match/, "falta a descodificacao do IPv4 embutido");
+  assert.match(c, /function hextetos/, "falta o parser de hextetos (4.ª geração)");
+  assert.match(c, /he\[0\] === 0x2002/, "falta o bloco 6to4 explicito");
+  assert.match(c, /he\[0\] === 0x2001 && he\[1\] === 0x0000/, "falta o bloco Teredo explicito");
   // o desenho novo ABANDONA a lista de prefixos: o que tem de estar la e o intervalo 2000::/3
   assert.match(c, /0x2000/, "falta o limite inferior do intervalo 2000::/3");
   assert.match(c, /0x3fff/, "falta o limite superior do intervalo 2000::/3");

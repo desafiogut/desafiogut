@@ -19,6 +19,23 @@ const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const TIMEOUT_MS = 6000;
 
 /** True se o IP (v4/v6 literal) pertence a um range não roteável/privado. */
+/** Expande um literal IPv6 em 8 hextetos (respeitando a compressão `::`), ou null se for inválido.
+ * MC99.5.2.1b — substitui as regex que exigiam hextetos presentes: era isso que deixava passar
+ * `2002:a00::1`, onde o `::` come o 2.º hexteto do IPv4 embutido. */
+function hextetos(h) {
+  if (!/^[0-9a-f:]+$/.test(h) || !h.includes(":")) return null;
+  const partes = h.split("::");
+  if (partes.length > 2) return null;
+  const esq = partes[0] ? partes[0].split(":") : [];
+  const dir = partes.length === 2 ? (partes[1] ? partes[1].split(":") : []) : [];
+  if (partes.length === 1 && esq.length !== 8) return null;
+  const faltam = 8 - esq.length - dir.length;
+  if (faltam < 0) return null;
+  const tudo = [...esq, ...Array(faltam).fill("0"), ...dir];
+  if (tudo.some((x) => x === "" || !/^[0-9a-f]{1,4}$/.test(x))) return null;
+  return tudo.map((x) => parseInt(x, 16));
+}
+
 export function isBlockedIp(ip) {
   const v4 = String(ip).match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (v4) {
@@ -40,22 +57,23 @@ export function isBlockedIp(ip) {
   if (!h.includes(":")) return false;
   const mapped = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/); // IPv4-mapped (dotted)
   if (mapped) return isBlockedIp(mapped[1]);
-  // MC99.5.2c — PARAR DE ENUMERAR. O validador independente refutou a 2.ª iteração com ≥15
-  // payloads (fe90..febf = cauda de fe80::/10, fec0..feff = site-local, ::7f00:1 e ::a00:1 =
-  // IPv4-compatível, 64:ff9b:1:: e mapeados com >2 grupos). Uma guarda por lista de prefixos
-  // nunca fecha: cada iteração parecia completa e faltava sempre uma família.
-  // Agora: (a) descodifica o IPv4 EMBUTIDO de qualquer forma mapeada/6to4/NAT64 e reutiliza este
-  // isBlockedIp; (b) para o resto, ALLOWLIST de intervalo — só 2000::/3 (unicast global) passa,
-  // TUDO o resto é recusado. Menos código que enumerar, e correcto nos casos-limite.
-  const emb = h.match(/^(?:::ffff:|64:ff9b:(?:1:)?:{0,1})(?:(?:0|):)*([0-9a-f]{1,4}):([0-9a-f]{1,4})$/)
-           || h.match(/^2002:([0-9a-f]{1,4}):([0-9a-f]{1,4})/);
-  if (emb) {
-    const n = parseInt(emb[1], 16) * 65536 + parseInt(emb[2], 16);
-    return isBlockedIp([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join("."));
-  }
-  if (!/^[0-9a-f]/.test(h)) return true;                       // começa em ":" -> fora de 2000::/3
-  const g = parseInt(h.slice(0, 4).padEnd(4, "0"), 16);        // 1.º grupo hexteto
-  return !(g >= 0x2000 && g <= 0x3fff);                        // só 2000::/3 é permitido
+  // ── MC99.5.2.1b (4.ª geração) — A PERGUNTA CERTA É «QUE ENDEREÇO É PÚBLICO?» ──
+  // A 3.ª geração provou que `2000::/3` NÃO significa «seguro»: o 6to4 (`2002::/16`) e o Teredo
+  // (`2001::/32`) VIVEM lá dentro e transportam um IPv4 embutido. O validador adversarial deixou
+  // passar 8 payloads, incluindo `[2002:a9fe::1]` = **metadata cloud 169.254.169.254**.
+  // A causa de fundo: regex que exigiam hextetos presentes (`2002:h1:h2`), logo a forma COMPRIMIDA
+  // (`2002:a00::1`, com o `::` a comer o 2.º hexteto) escapava. Agora há um parser de hextetos
+  // (`hextetos`) que respeita a compressão, e a decisão é sempre «descodifica o IPv4 e pergunta se
+  // é público» — reutilizando `isBlockedIp`. Blocos de transição primeiro, intervalo no fim.
+  const he = hextetos(h);
+  if (!he) return true;                                    // IPv6 malformado -> fail-closed
+  const v4de = (a, b) => [(a >> 8) & 255, a & 255, (b >> 8) & 255, b & 255].join(".");
+  if (he[0] === 0x2002) return isBlockedIp(v4de(he[1], he[2]));                    // 6to4: IPv4 = bits 16-48
+  if (he[0] === 0x2001 && he[1] === 0x0000)                                       // Teredo
+    return isBlockedIp(v4de(he[6] ^ 0xffff, he[7] ^ 0xffff));                     //   cliente = XOR 0xffffffff
+  if (he[0] === 0x2001 && he[1] === 0x0db8) return true;                          // documentação (2001:db8::/32)
+  if (he.slice(0, 6).includes(0xffff)) return isBlockedIp(v4de(he[6], he[7]));    // mapeado/traduzido
+  return !(he[0] >= 0x2000 && he[0] <= 0x3fff);            // ALLOWLIST: só 2000::/3 (fora dos acima)
 }
 
 /** True se o hostname é local/interno ou um IP literal bloqueado. */
