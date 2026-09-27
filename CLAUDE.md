@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.1) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -2557,3 +2557,96 @@ binário com md5 idêntico. `_logs/MC99_PROVA-MUTACAO.txt`.
   corporativo exposto ao comum — **ambíguo, NÃO removido** (documentado como pendência).
 - Herdadas: 8 worktrees antigos em `.claude/worktrees/` · chave Alchemy por rotacionar (R5) ·
   auto-deploy do Netlify ligado · testes do frontend fora do CI.
+
+---
+
+## MC99.1 — Sugestões de caminhos clicáveis + auditoria dos botões (2026-09-27)
+
+**Data:** 2026-09-27 · **Origem:** MC99.1 · **Recorrência:** MÉDIA · **Impacto:** BAIXO-MÉDIO
+(arrumação de navegação e coerência; nenhuma lógica de produto tocada).
+**Base:** 46f8ad3 (MC99 fechado). **Logs:** _logs/MC99.1_* · **Relatório:** _logs/MC99.1-RELATORIO.md
+· **Auditoria dos botões:** docs/MC99.1-AUDITORIA-BOTOES.md.
+
+### Decisões do operador (R18, 2026-09-27)
+
+1. «Meus Ativos» na barra inferior — **NÃO fazer**.
+2. Sugestões de caminhos clicáveis — executar as **#2 a #6**.
+3. Auditar **todos** os botões (navegação + acção).
+4. «Cotas disponíveis» / «Exclusividade» — mover para o **lojista**.
+5. `docs/validacao-final.md` — corrigir o drift. 6. Instrumento de produção — corrigir.
+7. P1 Alchemy — MC separado.
+
+### O que mudou
+
+| # | onde | o que |
+|---|---|---|
+| #2 | `src/__tests__/mc991-rotas.test.mjs` (**novo**) | **teste bidireccional** rotas referenciadas × registadas, com **resolvedor** da árvore de `<Route>` (grupo aninhado `/admin` + `index` = `/`). **0 rotas partidas** |
+| #4 | `src/pages/SejaNossoParceiro.jsx` | `irParaPainel()`: as **4** chamadas `navigate("/corporativo", { replace: true })` espalhadas passaram a uma função única |
+| #4b | `src/pages/Vitrine.jsx` | grelha de **«Cotas disponíveis»/«Exclusividade»** gateada por `corporativo &&` (segue a decisão do operador) |
+| #5 | `docs/validacao-final.md` | nota de correcção: o banner do cliente **deixou** de aparecer em `/mercado` (MC99) |
+| — | `src/__tests__/mc991-ui.test.mjs` (**novo**) | 4 guardas: controlo do stripper, helper único, cotas gated, e **CONTROLO** de que o comum não perdeu as cotas |
+| — | `scripts/mc991-prova-mutacao.mjs` (**novo**) | bateria de 4 mutações |
+
+### ✅ Sugestões REFUTADAS por medição (o resultado, não uma falha)
+
+- **#3 (fundir os 2 CTAs de `EdicaoDetalhe`):** estão em **ramos de render diferentes**
+  («Edição não encontrada» vs render normal). **Nunca aparecem juntos.** Fundir seria alterar
+  o que funciona.
+- **#5 (uniformizar links «voltar ao app»):** o de `App.jsx:354` **tem de ser `<a>`** —
+  força um carregamento novo, que é onde o SDK do Privy restaura a sessão OAuth. Trocar por
+  `<Link>` **quebraria o login**.
+- **#6 (rodapés técnicos):** varredura ampla feita, **0 encontrados** (o único candidato é uma
+  etiqueta do painel de administração, onde o vocabulário é adequado).
+
+### ⚠️ Descoberta MÉDIA — não executada (framework de descoberta)
+
+**`/edicao/:id` está órfã:** a página `EdicaoDetalhe` não tem um **único** link de entrada —
+`grep -rn "/edicao/" src/` só encontra a própria `<Route>` (`App.jsx:462`). A prova é o gémeo
+morto **`hrefOverride`** em `Vitrine.jsx` (declarado, usado, e **nenhum chamador o passa**; o
+rótulo diz «Ir para a edição →»). Ligar isto muda para onde os utilizadores vão → decisão de
+**produto**. Registado como excepção **documentada** no teste (uma rota NOVA sem referência
+continua a morrer no guarda) e proposto para MC99.2.
+
+### ⚠️ A perda assumida do SEG6 (a lição do MC99 aplicada)
+
+Antes de gatear, mediu-se o que o utilizador **perde**:
+**as COTAS não se perdem** — o `SlotCard` já mostra «Cotas» («N de M») a todos, com decisão
+anterior documentada (MC39.3.1 #8); o que saiu foi uma **repetição**. Há um teste de CONTROLO a
+exigi-lo. **«EXCLUSIVIDADE» perde-se** — não existe em mais lado nenhum; passa a ser só do
+lojista, **por decisão do operador**, registado como perda assumida.
+
+### Auditoria dos botões — «112» era impreciso
+
+**58** elementos `<button>` (49 acção, 9 navegação) · **0** rótulos iguais com handlers
+diferentes · **0 defeitos confirmados**. Os «112 botões» do MC99 eram **114 linhas com
+`onClick`**, das quais 58 são `<button>` (o resto são `<div>`/`<span>` clicáveis).
+Os 12 sinais mecânicos: **7 são falsos positivos** do extractor (o rótulo vem de expressões —
+`{copiado ? "✓ Copiado!" : "📋 Copiar código"}` — que o extractor apaga) e 5 são botões de
+ícone que **já têm** `aria-label`. **A acessibilidade ficou declarada como NÃO MEDIDA.**
+
+### Lições de método
+
+- **Um resultado que confirma a suspeita mas com números estranhos é um resultado por
+  verificar.** A 1.ª auditoria de botões produziu 57 de 112 com `NO_OP` em 80% — implausível
+  numa app em produção. Causa: `(<button\b[\s\S]*?)>` fecha a captura no **`>` de `onClick={() =>`**.
+  Só não virou relatório porque os números gritaram.
+- **Um script de edição precisa de asserções de contagem.** O `irParaPainel()` quase virou
+  **recursão infinita** (`const irParaPainel = () => irParaPainel();`): substituir as chamadas
+  DEPOIS de inserir o helper faz a substituição global acertar na própria linha do helper. A
+  contagem (5 em vez de 4) apanhou-o. **Ordem: substituir primeiro, inserir depois.**
+- **A contaminação por comentário chegou a 6 ocorrências num dia**, a última dentro de um
+  script *de verificação*. Documentar uma remoção ao lado da remoção transforma todo o grep
+  ingénuo em falso positivo. Não é distracção, é a forma do problema.
+
+### Pendências
+
+- **Validador independente (HARD GATE 7):** despachado em worktree próprio; veredicto em
+  `_logs/MC99.1_SEG-VEREDICTO-VALIDADOR.txt`.
+- **`/edicao/:id` órfã + `hrefOverride` morto** — decisão de produto (MC99.2).
+- **Decision #6, metade não feita:** o instrumento de produção. Causa-raiz documentada (o match
+  por conteúdo apanha chunks onde a string existe como **chave de dicionário**; e a ordem das
+  strings num bundle **minificado** não reflecte a ordem do código, pelo que o SEG1 do MC99
+  nunca poderá ser medido por análise de bundle). O instrumento novo não foi escrito.
+- **Acessibilidade** (foco, tabulação, contraste, nomes em runtime) e ~56 `<div>/<span>`
+  clicáveis que não são `<button>` — MC próprio.
+- Herdadas: 8 worktrees antigos · Alchemy (MC separado) · auto-deploy ligado · frontend fora do CI.
