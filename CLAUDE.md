@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.5.1) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.5.2) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -2881,3 +2881,35 @@ hardcoded — corrido de um worktree, mutaria o repo principal.
 **Pendentes deste Grupo 1:** e-mail PIX (`MinhaCarteira.jsx:266` + um teste que congela o
 errado em `mc99-limpeza-ui.test.mjs:213`), domínio `desafiogut.com`, 2 iubenda em 404, o
 `16`->`17` do Grupo 2.
+
+---
+
+## MC99.5.2 — SSRF (3 iterações) + gate com botão de expansão (2026-09-27)
+
+**SSRF `img-proxy.mjs` — explorado antes de corrigido.** `new URL("http://[::1]/").hostname`
+devolve `[::1]` com brackets: `isBlockedIp` não casava e `hostname.includes(":")` **saltava a
+verificação DNS** — duas guardas caídas pela mesma causa. Correcção na **função partilhada**
+`isBlockedHostname`: normalizar brackets + descodificar o **IPv4 embutido** em IPv6
+(`::ffff:`, `::ffff:0:`, `2002:` 6to4, `64:ff9b::` NAT64), reutilizando `isBlockedIp`.
+
+⚠️ **Foram precisas 3 iterações, e nenhuma parecia incompleta:** a 1.ª fechou 3 de 4 payloads
+(o 4.º achou-o o PoC re-corrido); a 2.ª fechou o mapeado em hex, mas ficaram **traduzido, 6to4 e
+NAT64** (achados ao caçar **17 formas**). *Uma correcção de segurança sem caça adversarial é
+uma correcção com sorte.*
+
+**Falsos alarmes declarados:** `http://[::1]@evil.com/` **não é SSRF** (hostname `evil.com`).
+A lista de caça estava errada, não o código.
+
+**Gate legal — decisão do operador (R18):** «no gate, não precisa de resumo, somente um botão
+para expandir». Implementado com `<details>`/`<summary>` **nativo** (sem `useState`). Os **4
+aceites ficam FORA** do bloco escondido. Nota do HERMES: o MC99.5.1 existiu porque o texto
+estava ilegível; agora está a um clique — é a diferença entre «podia ler» e «viu».
+
+**Testes:** 8 testes + 5 mutações provadas (incl. esconder os aceites dentro do `<details>` →
+RED). Bug meu no teste: media a forma decimal escrita à mão em vez do hostname **já normalizado
+pelo URL** — testava um caminho que não existe em produção.
+
+⚠️ **Validação independente DESACTUALIZADA:** o validador foi despachado antes da 3.ª iteração,
+logo valida uma versão já substituída. **O HEAD ainda não foi validado.**
+
+**Pendentes:** re-validar o HEAD · DOMPurify 3.4.11 · página de exclusão · PIX/domínio/iubenda.
