@@ -34,7 +34,12 @@ if (/English \(US\)|Espa[nñ]ol/.test(doc)) {
   process.exit(1);
 }
 
-const blocos = [...doc.matchAll(/```\n([\s\S]*?)```/g)].map((m) => m[1].trim());
+// ⚠️ CRLF: um `git worktree` limpo faz checkout CRLF nos .md (o .gitattributes não tinha
+// regra para *.md e core.autocrlf=true). A 1.ª versão exigia `` ```\n `` e num worktree
+// limpo via `esperava 3 blocos, vi 0 — medicao invalida` (exit 2) NUM FICHEIRO CORRECTO.
+// Apanhado pelo validador independente do MC98. Agora tolera CRLF — e o .gitattributes
+// ganhou `*.md text eol=lf` para a causa-raiz.
+const blocos = [...doc.matchAll(/```\r?\n([\s\S]*?)```/g)].map((m) => m[1].trim());
 if (blocos.length !== 3) { console.error(`esperava 3 blocos, vi ${blocos.length} — medicao invalida`); process.exit(2); }
 
 // GUARDA (a) — as contagens declaradas no texto tem de ser as medidas.

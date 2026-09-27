@@ -19,6 +19,14 @@
 *.yml   text eol=lf
 *.yaml  text eol=lf
 *.toml  text eol=lf
+# MC98 — *.md também LF. Motivo: com `* text=auto` e `core.autocrlf=true`, um
+# `git worktree add` limpo faz checkout CRLF nos .md — e qualquer medidor que faça regex
+# a um bloco de código num .md (ex.: scripts/mc97-medir-ficha.mjs) rebenta num ficheiro
+# que está CORRECTO. Foi medido pelo validador independente do MC98: o script devolvia
+# exit 2 («esperava 3 blocos, vi 0») só por causa do fim de linha. Os .md do repo já
+# estavam LF no índice, logo esta regra não altera conteúdo nenhum — só torna o checkout
+# reprodutível fora do repo principal.
+*.md    text eol=lf
 
 # .bat/.ps1 continuam CRLF (ferramentas do Windows dependem disso).
 *.bat   text eol=crlf
