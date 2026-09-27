@@ -2957,6 +2957,10 @@ não existia**. Desfeito. *Um diagnóstico errado não fica em paz: ele age.*
 forma comprimida (`2002:a00::1`) escapava. *Trocar uma lista por um intervalo não resolve se o
 intervalo contiver o que se quer excluir.* **SSRF ESTÁ ABERTO — 4.ª geração por fazer** (prefixos
 de transição fora explicitamente; tratar a compressão; pergunta certa = «que endereço é PÚBLICO?»).
-⚠️ O instrumento «34 payloads, 0 bypass» **NÃO EXECUTA** (asserção central apoiada em script
-quebrado) e a afirmação «caminho hardcoded corrigido» era **falsa** (corrigi o mutador do 9951, não
+⚠️ O instrumento «34 payloads, 0 bypass» **NÃO EXECUTA** e a causa foi medida: o PoC faz
+`import "./img-proxy.mjs"`, que **resolvia em `netlify/functions/`** e **morreu ao ser copiado para
+`scripts/`** — movi-o, **nunca o voltei a correr**, e citei o seu resultado em 3 relatórios e num
+commit. *Um instrumento que se para de correr não fica silencioso: repete a última coisa que disse.*
+Próximo MC: PoC com caminho ABSOLUTO derivado + controlo positivo visível ANTES de acreditar em
+qualquer número. e a afirmação «caminho hardcoded corrigido» era **falsa** (corrigi o mutador do 9951, não
 o do 9952 — corrigido agora).
