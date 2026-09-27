@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.5.2.1d, PARADO) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.5.2.1d, Opcao A aplicada) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -3058,3 +3058,23 @@ real (`export` em resolvesToBlocked, instrumentacao apenas — suite 443/443 + 6
 2. vez neste MC-serie que a minha classificacao de risco estava errada: primeiro «exige DNS hostil»
 (quando ha um servico publico dedicado), agora «hosts IPv6-only, raro» (quando atinge todo o
 dual-stack). *Avaliei o risco pelo que me lembrei de imaginar, nao pelo que fui medir.*
+
+### DECISÃO DO OPERADOR (Opção A) APLICADA — R18, commit 933de6d
+
+A inversão literal foi **rejeitada depois de medir que partia `cdn.jsdelivr.net`** (dual-stack:
+`2606:4700::6811:d005` + `104.17.207.5`). Regra aprovada em `resolvesToBlocked`:
+
+```js
+const v4 = results.filter((r) => !r.address.includes(":"));
+return v4.length === 0 || v4.some((r) => isBlockedIp(r.address));
+```
+
+**Ignorar AAAA, validar A; sem IPv4 -> 403.** Medido: sslip.io **3/3 -> 0/3** (exploit fechado) e
+`cdn.jsdelivr.net` + `i.imgur.com` + `exemplo.com` continuam a **PASSAR**. 7 testes (novo: o
+**caminho do DNS**, a lacuna que o 5.º validador explorou) + **M10 provado (RED)**. Suíte
+444/444 + 680/686.
+
+**Custo declarado e ACEITE pelo operador:** hosts IPv6-only deixam de funcionar.
+
+**PENDENTE:** validador adversarial da 6.ª geração (`deleg_e238da85`). As 5 anteriores foram todas
+refutadas — **não se declara seguro antes de ele falar.**
