@@ -1,10 +1,10 @@
 M1 SSRF: tirar a normalizacao dos brackets (reabre os 4 payloads)
   entrou=true red=true provado=true
-  matou: MC99.5.2/SSRF · (a) IPv6 entre brackets é RECUSADO | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
+  matou: MC99.5.2/SSRF · (a) IPv6 entre brackets é RECUSADO | MC99.5.2/SSRF · (a2) IPv4 EMBUTIDO em IPv6 — as 3 famílias achadas ao caçar 17 payloads | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
 
-M2 SSRF: tirar o tratamento da forma HEX do IPv4-mapeado
+M2 SSRF: tirar a decodificacao do IPv4 EMBUTIDO (reabre traduzido/6to4/NAT64)
   entrou=true red=true provado=true
-  matou: MC99.5.2/SSRF · (a) IPv6 entre brackets é RECUSADO
+  matou: MC99.5.2/SSRF · (a) IPv6 entre brackets é RECUSADO | MC99.5.2/SSRF · (a2) IPv4 EMBUTIDO em IPv6 — as 3 famílias achadas ao caçar 17 payloads | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
 
 M3 gate: abrir o <details> por padrao (mostra o texto todo)
   entrou=true red=true provado=true
