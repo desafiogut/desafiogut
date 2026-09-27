@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.1) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.2) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -2650,3 +2650,51 @@ Os 12 sinais mecânicos: **7 são falsos positivos** do extractor (o rótulo vem
 - **Acessibilidade** (foco, tabulação, contraste, nomes em runtime) e ~56 `<div>/<span>`
   clicáveis que não são `<button>` — MC próprio.
 - Herdadas: 8 worktrees antigos · Alchemy (MC separado) · auto-deploy ligado · frontend fora do CI.
+
+---
+
+## MC99.2 — CSP + singleton Supabase + realtime (2026-09-27)
+
+**Origem:** 3 erros na consola de produção · **Base:** 7b4368b · **Commit:** 2502ccb
+**Logs:** _logs/MC99.2_* · **Relatório:** _logs/MC99.2-RELATORIO.md
+
+| # | onde | o que mudou |
+|---|---|---|
+| 1 | `netlify.toml` (CSP, L82) | `connect-src` ganha **`https://*.supabase.co`** (REST) e **`wss://*.supabase.co`** (Realtime). **Nenhum wildcard genérico** — e há guarda que recusa `*`, `https://*`, `*.com` (HARD GATE 4) |
+| 2 | `src/lib/supabaseClient.js` | o cache do singleton passou de **valor** (`_client`) a **promessa** (`_promessa`) |
+| 3 | `src/hooks/useRealtimeConfig.js` | `await sb?.removeChannel(c)` (era sem `await`) + `canal = null` antes do await |
+| 4 | `src/__tests__/mc992-conexao.test.mjs` (**novo**) | 8 guardas · `_logs/MC99.2_PROVA-MUTACAO.txt` (5 mutações) |
+
+### ⚠️ A MEDIÇÃO CORRIGIU O ENUNCIADO EM 3 PONTOS — as causas eram outras
+
+1. **«Múltiplos clientes Supabase» → não.** Há **um** só `createClient`. O que havia era um
+   **singleton que guardava o VALOR dentro de uma função `async`**: entre o `if (_client)` e a
+   atribuição há um `await import`. Dois effectos de montagem
+   (`useRealtimeConfig.ligar()` e `useRecursosApp.carregarRecursos()`) passavam **ambos** o `if`
+   → dois clientes → *Multiple GoTrueClient*. **Um singleton que guarda o valor em `async` não é
+   um singleton.** Correcção: memorizar a **promessa** (o `.catch` solta-a para permitir retry).
+2. **«O hook `useRecursosApp` subscreve mal» → ficheiro errado.** O `useRecursosApp` não
+   subscreve nada (só faz um `select` e cai em fallback). Quem subscreve é o `useRealtimeConfig`.
+3. **«O `.on()` está depois do `.subscribe()`» → a ordem já estava CERTA**
+   (`.channel().on().subscribe()`). Trocar a ordem não teria mudado nada. A causa real é uma
+   **corrida**: o `supabase-js` **deduplica canais por topic**, o `removeChannel` é assíncrono e
+   era chamado **sem `await`** — o reconnect pedia o mesmo topic antes de a remoção terminar,
+   recebia o canal ainda subscrito, e o `.on()` seguinte rebentava.
+
+### Estado
+frontend **425/425** (era 417) · backend **680/686** · ESLint 0 problemas · deploy live
+· CSP **verificado por header real** em produção (`curl -sI`) · **5 mutações provadas**.
+
+### Lições
+- **Cumprir o pedido teria deixado o bug vivo.** «Juntar clientes» (que não existiam) e trocar uma
+  ordem (que já estava certa) era executar dois não-problemas e mudar dois ficheiros sem razão.
+  A medição primeiro é o que separa cumprir de corrigir.
+- **Consola vazia ≠ consola limpa.** O **controlo positivo** (injectar um erro e vê-lo aparecer)
+  é o que distingue «0 erros» de «captador cego». Foi feito: o captador vê, e os 3 erros não estão
+  no carregamento.
+- **Há limites que não se contornam.** Os 3 erros só surgem **depois do gate LGPD**, e o gate é um
+  **consentimento legal** (maioridade, LGPD/GDPR, **cessão de imagem** Art. 29) em nome do
+  operador. **Não foi aceite** — declarado como não medido. O operador aceita-o em 5 segundos.
+- **10.ª ocorrência da contaminação por comentário num dia** (M5 declarou «não entrou» a um mutante
+  que entrou, porque o comentário da correcção nomeia `.on()` e `.subscribe()`). Continua a ser o
+  defeito mais produtivo da série — e o mais fácil de repetir.
