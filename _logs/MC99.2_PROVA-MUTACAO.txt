@@ -1,0 +1,22 @@
+M1 SEG0 — tirar o *.supabase.co do connect-src
+  entrou=true red=true provado=true
+  matou: MC99.2/SEG0 · o CSP deixa o browser falar com o Supabase (REST e WebSocket)
+
+M2 SEG0/HARD GATE 4 — abrir o CSP TODO (wildcard generico)
+  entrou=true red=true provado=true
+  matou: MC99.2/SEG0 · HARD GATE 4 — nunca um wildcard CSP genérico
+
+M3 SEG1 — voltar ao cache do VALOR (a janela que criava 2 clientes)
+  entrou=true red=true provado=true
+  matou: MC99.2/SEG1 · só existe UM sítio a criar cliente Supabase no frontend
+
+M4 SEG2 — tirar o await da remocao do canal
+  entrou=true red=true provado=true
+  matou: MC99.2/SEG2 · a remoção do canal é AGUARDADA (a causa do subscribe-after-subscribe)
+
+M5 SEG2 — inverter a ordem (.subscribe antes de .on)
+  entrou=true red=true provado=true
+  matou: MC99.2/SEG2 · `.on()` vem ANTES de `.subscribe()`
+
+restauracao_md5_identica=true
+final=VERDE

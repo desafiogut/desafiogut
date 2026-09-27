@@ -35,8 +35,19 @@ export function useRealtimeConfig(chave, onValor) {
 
     const limparCanal = async () => {
       if (!canal) return;
-      try { const sb = await getSupabaseBrowser(); sb?.removeChannel(canal); } catch { /* noop */ }
-      canal = null;
+      const c = canal;
+      canal = null; // marca JÁ como sem canal: uma 2.ª chamada concorrente não o remove duas vezes
+      try {
+        const sb = await getSupabaseBrowser();
+        // ⚠️ AWAIT é o que faltava, e é a causa-raiz do erro de produção
+        // "cannot add `postgres_changes` callbacks after `subscribe()`".
+        // O supabase-js DEDUPLICA canais por topic: `sb.channel("config_remota:X")` devolve o
+        // canal EXISTENTE se o mesmo topic ainda estiver vivo. Como `removeChannel` é
+        // assíncrono e não era aguardado, o `ligar()` do reconnect pedia o MESMO topic antes
+        // de a remoção terminar → recebia o canal já subscrito → `.on()` depois do
+        // `.subscribe()`. Com o await, a remoção conclui antes de se pedir o topic outra vez.
+        await sb?.removeChannel(c);
+      } catch { /* noop */ }
       canalFechado(); // item 32 — métrica: canal removido
     };
 
