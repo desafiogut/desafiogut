@@ -45,12 +45,24 @@ function hextetos(h) {
 export function isBlockedIp(ip) {
   const v4 = String(ip).match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (v4) {
-    const a = +v4[1], b = +v4[2];
+    const a = +v4[1], b = +v4[2], c = +v4[3];
     if (a === 0 || a === 10 || a === 127) return true;          // this-host / privado / loopback
     if (a === 169 && b === 254) return true;                     // link-local (metadata 169.254.169.254)
     if (a === 172 && b >= 16 && b <= 31) return true;            // privado
     if (a === 192 && b === 168) return true;                     // privado
     if (a === 100 && b >= 64 && b <= 127) return true;           // CGNAT
+    // ── MC99.5.3 (Opção A) — FAIXAS DE PROPÓSITO ESPECIAL (RFC 6890) ──
+    // Um validador adversarial mediu 6 faixas que PASSavam a classificação (handler devolvia 502
+    // para literais destas faixas — DEP4 da série). Não eram SSRF VIVO (são globalmente
+    // não-roteáveis) mas passavam a guarda. Alargamento cirúrgico: mesmas linhas do check acima,
+    // sem refactor. Nenhuma imagem legítima vive nestas faixas (verificado: os CDNs usados pelo
+    // app resolvem fora delas). A metadata cloud (169.254.169.254) já estava bloqueada.
+    if (a === 192 && b === 0 && c === 0) return true;            // 192.0.0.0/24   atribuições IETF
+    if (a === 192 && b === 88 && c === 99) return true;          // 192.88.99.0/24 6to4 relay anycast
+    if (a === 192 && b === 0 && c === 2) return true;            // 192.0.2.0/24   TEST-NET-1 (RFC 5737)
+    if (a === 198 && (b === 18 || b === 19)) return true;        // 198.18.0.0/15  benchmarking (RFC 2544)
+    if (a === 198 && b === 51 && c === 100) return true;         // 198.51.100.0/24 TEST-NET-2 (RFC 5737)
+    if (a === 203 && b === 0 && c === 113) return true;          // 203.0.113.0/24 TEST-NET-3 (RFC 5737)
     if (a >= 224) return true;                                    // multicast / reservado
     return false;
   }

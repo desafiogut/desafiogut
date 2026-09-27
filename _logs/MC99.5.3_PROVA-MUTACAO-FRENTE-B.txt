@@ -1,0 +1,23 @@
+M1 repor 192.0.0.0/24 (atribuicoes IETF) ao estado anterior
+  entrou=true red=true estado=PROVADO
+  matou: isBlockedIp: as 6 faixas de propósito especial são bloqueadas (Opção A)
+
+M2 repor 198.18.0.0/15 (benchmarking) ao estado anterior
+  entrou=true red=true estado=PROVADO
+  matou: isBlockedIp: as 6 faixas de propósito especial são bloqueadas (Opção A) | isBlockedHostname: a metadata cloud e o loopback continuam bloqueados (não regrediu)
+
+M3 repor 203.0.113.0/24 (TEST-NET-3) ao estado anterior
+  entrou=true red=true estado=PROVADO
+  matou: isBlockedIp: as 6 faixas de propósito especial são bloqueadas (Opção A) | isBlockedHostname: a metadata cloud e o loopback continuam bloqueados (não regrediu)
+
+M4 alargar demais: 192.0.0.0/24 sem o `c` (passa a bloquear 192.0.1.x e 192.0.3.x)
+  entrou=true red=true estado=PROVADO
+  matou: isBlockedIp: o COMPLEMENTO das faixas continua permitido (a correcção não alarga demais)
+
+M5 «bloquear tudo»: devolver true para qualquer IPv4
+  entrou=true red=true estado=PROVADO
+  matou: isBlockedIp: IPs públicos são permitidos | isBlockedIp: o COMPLEMENTO das faixas continua permitido (a correcção não alarga demais)
+
+md5_com_correccao=4c6d3a95f670099ed784d326fd5a730a
+md5_restaurado_identico=true
+suite_final=VERDE 8

@@ -1,0 +1,22 @@
+MA1 repor um .woff2 duplicado em public/fonts (dedup desfeito)
+  entrou=true red=true provado=true
+  matou: MC99.5.3 · public/fonts: nenhum .woff2 duplica os bytes de outro (o defeito DEP2-06) | MC99.5.3 · public/fonts cabe no orçamento de bytes
+
+MA2 repor o 2.º preload da fonte (o mesmo ficheiro duas vezes)
+  entrou=true red=true provado=true
+  matou: MC99.5.3 · nenhum preload de fonte duplica os bytes de outro (o defeito do MC99.3)
+
+MA3 apontar um @font-face a um src inexistente (/fonts/inter-900-latin.woff2)
+  entrou=true red=true provado=true
+  matou: MC99.5.3 · cada url() do fontes.css aponta para um ficheiro existente (dedup sem src morto)
+
+MA4 repor o fundo mobile original (200 068 B) do commit base
+  entrou=true red=true provado=true
+  matou: MC99.5.3 · fundo mobile: cabe no orçamento e NÃO é maior que o desktop
+
+MA5 repor o fontes.css ANTIGO (dedup revertido) com os duplicados já apagados
+  entrou=true red=true provado=true
+  matou: MC99.5.3 · cada url() do fontes.css aponta para um ficheiro existente (dedup sem src morto)
+
+restauracao_exacta=true
+suite_final=VERDE

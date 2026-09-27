@@ -46,7 +46,11 @@
          O vídeo de fundo (345 KB) NÃO é pré-carregado de propósito: é decorativo e
          competiria com estes. -->
     <link rel="preload" href="/fonts/inter-400-latin.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="/fonts/inter-900-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- MC99.5.3 — o preload de `/fonts/inter-900-latin.woff2` SAIU: depois do dedup (DEP2-06) o
+         peso 700/800/900 aponta ao MESMO ficheiro do 400 (eram byte-idênticos, md5 260c81a4…), logo
+         o segundo preload era um pedido de 48 256 B para o mesmo conteúdo — o browser buscava-o
+         duas vezes. O 400 pré-carregado cobre agora todos os pesos da Inter usados acima da dobra
+         (o gate usa 400/700/800/900 em estilos inline). -->
     <link rel="preload" href="/assets/guto/custom/guto-bemvindo.png" as="image">
     <link rel="preload" href="/assets/backgrounds/background-desktop.webp" as="image" media="(min-width: 768px)">
     <link rel="preload" href="/assets/backgrounds/background-mobile.webp" as="image" media="(max-width: 767.98px)">
