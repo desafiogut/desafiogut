@@ -1,0 +1,146 @@
+# VALIDAÇÃO MC99.2 — relatório do refutador
+
+Worktree: `.claude/worktrees/mc992-validador` @ `2502ccb` (criado por mim; repo principal intocado).
+
+## A1 — CSP em produção — **CONFIRMADA**
+
+```
+cd .../mc992-validador && node _tmp992val/exp-a1-csp.mjs
+HTTP status: 200 | data: 2026-09-27T06:18:04.883Z
+header presente: true
+header == toml (byte a byte): true
+
+--- DIRETIVA A DIRETIVA (so as que diferem) ---
+  directivas que diferem: 0 | total: 11
+  directivas no header: 11 | no toml: 11
+  header: 'self' https://*.supabase.co wss://*.supabase.co http://127.0.0.1:8545 ...
+  https://*.supabase.co presente: true
+  wss://*.supabase.co presente: true
+  wildcards largos encontrados: 0 []
+  directivas com token '*': []
+  directivas com '*.com'/'*.*': []
+```
+O deploy já tinha chegado quando medi (06:18Z). Header idêntico ao `netlify.toml`, 11 directivas, nenhuma aberta, `*` genérico ausente em TODO o header.
+
+## A2 — Singleton — **CONFIRMADA** (com janela residual nomeada)
+
+```
+node _tmp992val/exp-a2-singleton.mjs
+== VARIANTE ANTES (cache de VALOR) ==   clients no total: 2 | mesmo cliente? false | ids: 1 2
+== VARIANTE DEPOIS (cache de PROMESSA) == clients no total: 1 | mesmo cliente? true  | ids: 1 1
+== VARIANTE M6 (promessa, mas com await que reabre a janela) == clients: 2 | mesmo cliente? false
+== CAMINHO DO .catch (import falha 1x, depois recupera) == clients totais (2 rejeitados + 2 retries): 1
+```
+A promessa fecha a janela: 2 → 1 cliente. **Corrida residual**: sim, existe no `.catch` (`_promessa = null` + rethrow — ambos os 2 chamadores concorrentes voltam a importar, mas o `.catch` é apenso **depois** do `.then`, logo o `_promessa = null` corre *síncrono na rejeição*, antes de qualquer microtask dos chamadores → o retry é imediato e converge para 1 cliente; medido: 1). Não é falso-verde, mas é frágil. Não há outro sítio a criar cliente no frontend (3 usos, 1 módulo).
+
+## A3 — Causa-raiz do erro (3) — **REFUTADA** ← refutação principal
+
+Li a biblioteca real (`@supabase/realtime-js` **2.108.2** + `@supabase/phoenix` **0.4.4**):
+
+```
+node _tmp992val/exp-a3-v3.cjs
+EXP1 dedupe por topic (a===b): true | getChannels().length: 1
+EXP2 SINCRONO logo apos removeChannel (sem await): length = 0 | state = closed | isJoined: false
+EXP2 channel(mesmo topic) devolveu o canal ANTIGO? false
+EXP B (socket LIGADO) SINCRONO apos removeChannel: length = 0 | state: closed
+     dedupe devolveu o antigo? false | .on() -> NAO lancou | .subscribe() -> NAO lancou
+EXP D DOIS ligar() para o MESMO topic, SEM remocao: dedupe devolveu o mesmo? true
+     .on() no 2.o -> THROW: cannot add `postgres_changes` callbacks for realtime:config_remota:X after `subscribe()`.
+```
+A dedupe **existe** e `removeChannel` **é** assíncrono — mas a conclusão do MC é falsa. Cadeia real: `removeChannel` → `unsubscribe()` → phoenix `leave()` → `if(!this.canPush()) leavePush.trigger("ok")` → `onClose` → `state = closed` + `socket.remove(this)` → `RealtimeClient._remove` filtra o array **sincronamente**; e `channel()` só reutiliza canais **não-fechados** (`if(!exists)`… na versão lida: `_remove` no `onClose`). Logo, **sem await** a remoção já retirou o canal: o reconnect recebe um canal NOVO fechado e `.on()` não lança. Medi com socket ligado e desligado — igual. **O `await` é defensivo, não é a causa-raiz.**
+
+Causa real que **reproduzi** (com o hook do 2502ccb verbatim + biblioteca real):
+```
+node _tmp992val/exp-a3-final.cjs
+=== ROTA /mercado: MercadoLances monta primeiro, CardLance a seguir ===
+  [MercadoLances] ligou o canal, canal = true
+  2.o hook LANCOU: cannot add `postgres_changes` callbacks for realtime:config_remota:recursos_app after `subscribe()`.
+```
+A rota `/mercado` monta `MercadoLances` **e** `CardLance`; ambos importam `useRecursosApp`, que chama `useRealtimeConfig(CHAVE_RECURSOS=...)` → **dois hooks, MESMO topic, MESMO cliente global** → a dedupe devolve o canal subscrito e o 2.º `.on()` rebenta. **O defeito real continua em produção.**
+
+## A4 — Suíte — **CONFIRMADA com ressalva**
+
+```
+cd /c/.../DESAFIOGUT && node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 425/425 pass
+backend: VERDE 680/686 pass
+VEREDITO: VERDE
+```
+Medição directa do backend (o "680/686" é ambíguo, mas há 0 falhas):
+```
+cd .../frontend/netlify/functions && node --test --experimental-test-module-mocks "_tests/*.test.mjs"
+ℹ tests 686 / ℹ pass 680 / ℹ fail 0 / ℹ cancelled 0 / ℹ skipped 6
+```
+Ressalva: o harness devolve **VERDE** com `fail===0` mesmo com `pass≠tests`; leia-se "680 pass, 6 skipped, 0 falhas". (Ressalva 2: a minha reconferência ad-hoc do frontend deu 203 testes/7 falhas por ter passado a lista de ficheiros sem aspas — medição inválida, **não** é regressão provada; não consegui reconciliar.)
+
+## A5 — Escopo — **CONFIRMADA**
+
+```
+git diff --name-status 7b4368b 2502ccb
+A _logs/MC99.2_PROVA-MUTACAO.txt
+A .../src/__tests__/mc992-conexao.test.mjs
+M .../src/hooks/useRealtimeConfig.js
+M .../src/lib/supabaseClient.js
+M netlify.toml
+```
+CSP, directiva a directiva: só `connect-src` difere; `so no head: ['https://*.supabase.co','wss://*.supabase.co']`, `so na base: []`; **comprimento 1936 → 1978 (Δ=42 = exactamente os dois tokens + 2 espaços)**. Nada de lógica de negócio, strings de UI ou credenciais.
+
+## A6 — Mutações — **CONFIRMADA nas de M1–M5, REFUTADA na guarda SEG1**
+
+M1–M5: todas entram (confirmado por releitura) e dão RED no teste certo; restauração byte-a-byte `true`. **Mas o meu mutante M6 sobrevive**:
+```
+### M6 (MEU) — getSupabaseBrowser async com await a reabrir a janela apos o if (_promessa)
+  -L32: export function getSupabaseBrowser() {
+  +L32: export async function getSupabaseBrowser() {     (+ await Promise.resolve())
+  mutante CONFIRMADO no ficheiro: true   8 pass / 8 tests / 0 fail -> GREEN
+```
+M6 mantém *todos* os tokens que o SEG1 pesquisa (`createClient=1`, `let _promessa = null`, `if (!_promessa)`, `return _promessa;`, `_client=0`) mas **recria dois clientes (medido: 2)** — exactamente o defeito que o guarda diz provar. A guarda é de **forma**, não de identidade: o falso-verde que o MC diz ter eliminado (a "janela") não é detectável por ela.
+
+## A7 — HARD GATE 4 — **REFUTADA em três eixos**
+
+```
+### M9  (MEU) BYPASS: connect-src += https://*.*.com   -> 8 pass / 0 fail -> GREEN  (o regex ^\w+:\/\/\*\.\S+\.\S+$ aceita-o)
+### M10 (MEU) connect-src ok, += '*' no font-src        -> 8 pass / 0 fail -> GREEN  (directiva nao vigiada)
+### M11 (MEU) += '*' no style-src                       -> 8 pass / 0 fail -> GREEN  (directiva nao vigiada)
+### M12       connect-src += https://*.com              -> 7 pass / 1 fail -> RED    (recusa correta)
+### M13 (MEU) comentario com wildcard proibido no toml  -> 8 pass / 0 fail -> GREEN  (CSP lido CRU, sem stripper)
+```
+`*`/`*.com` em `connect-src` → RED ✔; `https://*.supabase.co` continua a passar (sem falso-vermelho) ✔. **Mas** o gate só varre `connect-src, script-src, default-src, frame-src, img-src` — `style-src` e `font-src` escapam; o regex aceita `https://*.*.com`; e um **comentário** que nomeie um wildcard proibido no `netlify.toml` não é visto (o CSP é lido cru — o inverso do vector que o MC estudou).
+
+## A8 — "A assinatura não mudou" — **CONFIRMADA na substância, contagem imprecisa**
+
+```
+grep -rn "getSupabaseBrowser" . (fora node_modules)
+useRealtimeConfig.js:41  const sb = await getSupabaseBrowser();
+useRealtimeConfig.js:67  const sb = await getSupabaseBrowser();
+useRecursosApp.js:80     const sb = await getSupabaseBrowser();
+```
+**3** sítios (não 4) em 2 ficheiros, todos `await`. Nenhum uso de `.then()` sobre o retorno, nenhuma comparação de referência de cliente, nenhum uso incompatível de `supabaseConfigurado()`. A promoção `async → sync` é segura.
+
+## Problemas encontrados (por gravidade)
+
+1. **Causa-raiz de (3) errada** (A3). O `await` não corrige nada do que o comentário afirma; medido contra a biblioteca real. O erro real vem de **dois hooks para o mesmo topic no mesmo cliente** via `/mercado` → `MercadoLances` + `CardLance` → `useRecursosApp`. **Muito provavelmente o erro (3) persiste em produção.**
+2. **HARD GATE 4 contornável**: `https://*.*.com`, e `*` em directivas não vigiadas (`style-src`, `font-src`), e cego a comentários.
+3. **SEG1 é vacuidade real**: o mutante M6 (async + await, forma intacta) sobrevive a medir 2 clientes.
+4. `.catch` do singleton: janela residual (converge para 1 na prática, mas não é garantido por desenho).
+5. O mesmo defeito de contagem (`?`) aparece como "10 ocorrências" no enunciado e "9×" no comentário do teste.
+6. Endurecimento ausente: `_promessa`/`canal` guardas de reentrada dependem de disciplina; `.channel()` devolve canal não-fechado, logo o padrão "um topic por hook" não é imposto.
+7. `useRecursosApp` e `useRealtimeConfig` usam o mesmo tema; o fix devia ter deduplicado **por (chave, consumidor)** ou elevado o canal a um contexto.
+
+## Não verifiquei / porquê
+
+- **O aviso `Multiple GoTrueClient` em runtime**: `GoTrueClient` só o emite se `instanceID > 0 && isBrowser()` (`auth-js/dist/main/GoTrueClient.js:157`). Fora do browser não o reproduzo; a conclusão de A2 é *por construção/medição do contador de clientes*, não pela ocorrência do aviso literal.
+- **Recontagem independente do frontend (425)**: o meu `find | xargs` sem aspas deu 203 testes/7 falhas — lista inválida, não conclusiva. O harness mediu 425/425.
+- **Auditoria de `git diff` linha a linha** para além das 3 directivas: coberto por `--name-status` + Δ=42 caracteres.
+- **Deploy**: não toquei nem fiz deploy; A1 foi medido no header de produção em 2026-09-27T06:18Z (já reflectia o commit).
+
+**VEREDICTO GLOBAL: REFUTADA** — a correcção de CSP (A1) e o singleton (A2) são reais, cirúrgicos e sem regressões medidas, mas a **hipótese causal do erro (3) é falsa perante a biblioteca real (A3 REFUTADA)**, o **HARD GATE 4 tem três contornos medidos (A7 REFUTADA)** e **o gu... [truncated]
+
+---
+
+### Nota operacional (lixo deixado, por transparência)
+Esgotei as iterações de ferramentas antes de remover o worktree. **Não removi** `.claude/worktrees/mc992-validador`. Comando de limpeza:
+```
+cd /c/Users/Moltbot/Desktop/DESAFIOGUT && git worktree remove --force .claude/worktrees/mc992-validador
+```
+Ficheiros que criei (só dentro do worktree, descartáveis): `_tmp992val/exp-a1-csp.mjs`, `exp-a2-singleton.mjs`, `exp-a3-realtime.{mjs,cjs}`, `exp-a3-v3.cjs`, `exp-a3-final.cjs`, `mutacoes.cjs`, `mutacoes2.cjs`. Ficheiros do repo **repostos byte-a-byte** (verificado a cada mutação: `restaurado byte-a-byte: true`). O repo principal não foi tocado (já tinha `_tmp992/` e `package-lock.json` modificados **antes** de eu começar).

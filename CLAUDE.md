@@ -2663,7 +2663,7 @@ Os 12 sinais mecânicos: **7 são falsos positivos** do extractor (o rótulo vem
 | 1 | `netlify.toml` (CSP, L82) | `connect-src` ganha **`https://*.supabase.co`** (REST) e **`wss://*.supabase.co`** (Realtime). **Nenhum wildcard genérico** — e há guarda que recusa `*`, `https://*`, `*.com` (HARD GATE 4) |
 | 2 | `src/lib/supabaseClient.js` | o cache do singleton passou de **valor** (`_client`) a **promessa** (`_promessa`) |
 | 3 | `src/hooks/useRealtimeConfig.js` | `await sb?.removeChannel(c)` (era sem `await`) + `canal = null` antes do await |
-| 4 | `src/__tests__/mc992-conexao.test.mjs` (**novo**) | 8 guardas · `_logs/MC99.2_PROVA-MUTACAO.txt` (5 mutações) |
+| 4 | `src/__tests__/mc992-conexao.test.mjs` (**novo**) | 8 guardas · `_logs/MC99.2_PROVA-MUTACAO.txt` (7 mutações) |
 
 ### ⚠️ A MEDIÇÃO CORRIGIU O ENUNCIADO EM 3 PONTOS — as causas eram outras
 
@@ -2675,14 +2675,18 @@ Os 12 sinais mecânicos: **7 são falsos positivos** do extractor (o rótulo vem
    um singleton.** Correcção: memorizar a **promessa** (o `.catch` solta-a para permitir retry).
 2. **«O hook `useRecursosApp` subscreve mal» → ficheiro errado.** O `useRecursosApp` não
    subscreve nada (só faz um `select` e cai em fallback). Quem subscreve é o `useRealtimeConfig`.
-3. **«O `.on()` está depois do `.subscribe()`» → a ordem já estava CERTA**
-   (`.channel().on().subscribe()`). Trocar a ordem não teria mudado nada. A causa real é uma
-   **corrida**: o `supabase-js` **deduplica canais por topic**, o `removeChannel` é assíncrono e
-   era chamado **sem `await`** — o reconnect pedia o mesmo topic antes de a remoção terminar,
-   recebia o canal ainda subscrito, e o `.on()` seguinte rebentava.
+3. **A MINHA causa-raiz do realtime estava ERRADA (refutada pelo validador).** Eu apontei uma
+   corrida no `removeChannel` sem `await`. Lido o `@supabase/realtime-js` 2.108.2: o
+   `removeChannel` fecha o canal e retira-o do array **sincronamente**, e `channel()` só
+   reutiliza canais não fechados — o `await` é defensivo, não era a causa. **A causa real,
+   reproduzida pelo validador:** a rota `/mercado` monta `MercadoLances` **e** `CardLance`,
+   ambos via `useRecursosApp` → `useRealtimeConfig(MESMA chave)` → dois hooks, mesmo topic,
+   mesmo cliente → a dedupe devolve o canal já subscrito e o 2.º `.on()` rebenta. **O defeito
+   continuava vivo.** Correcção causal: **canal PARTILHADO por topic, com registo de
+   assinantes** (`REGISTO`), fechado só quando sai o último + guarda e mutação M6 próprias.
 
 ### Estado
-frontend **425/425** (era 417) · backend **680/686** · ESLint 0 problemas · deploy live
+frontend **426/426** (era 417) · backend **680/686** · ESLint 0 problemas · deploy live
 · CSP **verificado por header real** em produção (`curl -sI`) · **5 mutações provadas**.
 
 ### Lições
