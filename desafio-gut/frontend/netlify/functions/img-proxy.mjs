@@ -32,23 +32,30 @@ export function isBlockedIp(ip) {
     return false;
   }
   const h = String(ip).toLowerCase();
-  if (h === "::1" || h === "::") return true;                    // loopback / unspecified
-  if (h.startsWith("fe80") || h.startsWith("fc") || h.startsWith("fd")) return true; // link-local / ULA
+  // ⚠️ isBlockedIp é chamado TAMBÉM com NOMES DE DOMÍNIO (última linha de isBlockedHostname).
+  // O IPv4 pontuado sai no regex `v4` acima; o que chega aqui sem ":" é um DOMÍNIO -> não se
+  // aplica o intervalo. (A 1.ª versão deste guard faltou esta linha e passou a BLOQUEAR
+  // i.imgur.com — o proxy de imagens recusava todas as imagens. Apanhado pelos controlos
+  // POSITIVOS do HARD GATE 7, não pelos negativos: «bloquear tudo» passa em todos os negativos.)
+  if (!h.includes(":")) return false;
   const mapped = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/); // IPv4-mapped (dotted)
   if (mapped) return isBlockedIp(mapped[1]);
-  // MC99.5.2 — IPv4 EMBUTIDO em IPv6, TODAS as formas que o WHATWG URL aceita.
-  // A 1.ª correcção tratou só o IPv4-mapeado (2 grupos hex) e fechou 3 de 4 payloads; ao CAÇAR 17
-  // payloads apareceram mais TRÊS famílias, todas a saltar o DNS:
-  //   [::ffff:0:7f00:1]  IPv4-traduzido   [2002:7f00:1::]  6to4       [64:ff9b::7f00:1]  NAT64
-  // Nota: `http://[::1]@evil.com/` NÃO é bypass — o hostname é `evil.com` (o `[::1]` é userinfo).
-  // Decodifica o IPv4 embutido e reutiliza o isBlockedIp: as gamas privadas ficam num só sítio.
-  const emb = h.match(/^(?:64:ff9b::|::ffff:0:|::ffff:)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/)
+  // MC99.5.2c — PARAR DE ENUMERAR. O validador independente refutou a 2.ª iteração com ≥15
+  // payloads (fe90..febf = cauda de fe80::/10, fec0..feff = site-local, ::7f00:1 e ::a00:1 =
+  // IPv4-compatível, 64:ff9b:1:: e mapeados com >2 grupos). Uma guarda por lista de prefixos
+  // nunca fecha: cada iteração parecia completa e faltava sempre uma família.
+  // Agora: (a) descodifica o IPv4 EMBUTIDO de qualquer forma mapeada/6to4/NAT64 e reutiliza este
+  // isBlockedIp; (b) para o resto, ALLOWLIST de intervalo — só 2000::/3 (unicast global) passa,
+  // TUDO o resto é recusado. Menos código que enumerar, e correcto nos casos-limite.
+  const emb = h.match(/^(?:::ffff:|64:ff9b:(?:1:)?:{0,1})(?:(?:0|):)*([0-9a-f]{1,4}):([0-9a-f]{1,4})$/)
            || h.match(/^2002:([0-9a-f]{1,4}):([0-9a-f]{1,4})/);
   if (emb) {
     const n = parseInt(emb[1], 16) * 65536 + parseInt(emb[2], 16);
     return isBlockedIp([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join("."));
   }
-  return false;
+  if (!/^[0-9a-f]/.test(h)) return true;                       // começa em ":" -> fora de 2000::/3
+  const g = parseInt(h.slice(0, 4).padEnd(4, "0"), 16);        // 1.º grupo hexteto
+  return !(g >= 0x2000 && g <= 0x3fff);                        // só 2000::/3 é permitido
 }
 
 /** True se o hostname é local/interno ou um IP literal bloqueado. */

@@ -45,22 +45,46 @@ test("MC99.5.2/SSRF · (a) IPv6 entre brackets é RECUSADO (4 payloads explorado
   assert.equal(isBlockedHostname("[::ffff:7f00:1]"), true, "forma HEX nao bloqueada");
 });
 
-test("MC99.5.2/SSRF · (a2) IPv4 EMBUTIDO em IPv6 — as 3 famílias achadas ao caçar 17 payloads", () => {
-  // A 1.ª correcção fechou só o IPv4-mapeado. Ao caçar, apareceram mais 3 famílias que saltavam
-  // o DNS: IPv4-traduzido, 6to4 e NAT64.
-  // ⚠️ Mede-se sobre o hostname JÁ NORMALIZADO pelo URL — que é o que a função recebe em produção.
-  // A 1.ª versão deste teste passava a forma decimal pontuada escrita à mão e dava RED a um código
-  // correcto: `new URL("http://[::ffff:0:127.0.0.1]/").hostname` é "[::ffff:0:7f00:1]" (hex).
-  for (const alvo of ["http://[::ffff:0:127.0.0.1]/", "http://[2002:7f00:1::]/", "http://[64:ff9b::7f00:1]/"]) {
+test("MC99.5.2/SSRF · (a2) IPv4 EMBUTIDO + TODAS as familias (meus 16 + os 12 do validador)", () => {
+  // A 1.ª correcção fechou 3 de 4. A 2.ª fechou o mapeado em hex e parecia completa — e o
+  // VALIDADOR INDEPENDENTE refutou-a com ≥12 payloads novos. Cada iteração parecia completa.
+  // A correcção final ABANDONA a enumeração de prefixos: allowlist de intervalo (só 2000::/3).
+  // Aqui ficam TODOS, os que eu imaginei e os que ele encontrou.
+  // ⚠️ Mede-se sobre o hostname JA NORMALIZADO pelo URL — e o que a função recebe em produção.
+  const FAMILIAS = [
+    "http://[::ffff:0:127.0.0.1]/", "http://[2002:7f00:1::]/", "http://[64:ff9b::7f00:1]/",
+    // as que o validador encontrou (eu não as tinha imaginado):
+    "http://[fe90::1]/", "http://[fea0::1]/", "http://[febf::1]/",     // cauda de fe80::/10
+    "http://[fec0::1]/", "http://[feff::1]/",                          // site-local fec0::/10
+    "http://[::ffff:0:0:a00:1]/", "http://[::7f00:1]/", "http://[::a00:1]/",
+    "http://[64:ff9b:1::7f00:1]/", "http://[0:0:0:0:0:ffff:7f00:1]/",
+  ];
+  for (const alvo of FAMILIAS) {
     const host = new URL(alvo).hostname;
     assert.equal(isBlockedHostname(host), true, host + " NAO e bloqueado (familia de IPv4 embutido)");
     assert.equal(passaria(alvo), "403", alvo + " ainda passa (DNS saltada)");
   }
   // e um IPv4-mapeado PUBLICO continua a passar — nao e bloqueio cego da familia.
-  // Tambem pela via real (o URL normaliza 8.8.8.8 para hex: [::ffff:808:808]).
   const pub = new URL("http://[::ffff:8.8.8.8]/").hostname;
   assert.equal(isBlockedHostname(pub), false, "bloqueou um IPv4-mapeado PUBLICO: " + pub);
   assert.match(passaria("http://[::ffff:8.8.8.8]/"), /^PASSA/);
+  // IPv6 publico (2000::/3) tem de passar
+  for (const ip of ["http://[2606:4700::1111]/", "http://[2a00:1450:4001::1]/"]) {
+    assert.match(passaria(ip), /^PASSA/, ip + " — IPv6 PUBLICO foi bloqueado");
+  }
+});
+
+test("MC99.5.2/SSRF · (a4) REGRESSÃO: um DOMINIO legitimo NAO e bloqueado", () => {
+  // isBlockedIp é chamado TAMBEM com NOMES de dominio (última linha de isBlockedHostname). A 1.ª
+  // versão do guard de intervalo nao distinguiu dominio de IPv6 e bloqueou i.imgur.com — o proxy
+  // recusava TODAS as imagens. Apanhado pelos controlos POSITIVOS: «bloquear tudo» passa em todos
+  // os controlos negativos e num teste só de payloads.
+  for (const d of ["i.imgur.com", "cdn.jsdelivr.net", "exemplo.com", "a.b.c.d.com.br"]) {
+    assert.equal(isBlockedHostname(d), false, d + " (dominio legitimo) foi BLOQUEADO");
+  }
+  for (const alvo of ["https://i.imgur.com/foto.png", "https://cdn.jsdelivr.net/x.png"]) {
+    assert.match(passaria(alvo), /^PASSA/, alvo + " foi bloqueado — o proxy de imagens morreu");
+  }
 });
 
 test("MC99.5.2/SSRF · (a3) o que NAO e bypass: userinfo com IP interno no username", () => {
@@ -81,8 +105,11 @@ test("MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num 
   const c = codigo(ler(FE + "/netlify/functions/img-proxy.mjs"));
   assert.match(c, /replace\(\/\^\\\[\|\\\]\$\/g, ""\)/, "falta a normalização dos brackets");
   assert.match(c, /const emb = h\.match/, "falta a descodificacao do IPv4 embutido");
-  assert.match(c, /64:ff9b::/, "falta a familia NAT64");
-  assert.match(c, /2002:/, "falta a familia 6to4");
+  // o desenho novo ABANDONA a lista de prefixos: o que tem de estar la e o intervalo 2000::/3
+  assert.match(c, /0x2000/, "falta o limite inferior do intervalo 2000::/3");
+  assert.match(c, /0x3fff/, "falta o limite superior do intervalo 2000::/3");
+  assert.ok(!/startsWith\("fe80"\)/.test(c), "voltou a lista de prefixos (fe80/fc/fd) que falhava nas familias");
+  assert.match(c, /if \(!h\.includes\(":"\)\) return false;/, "falta o corte dominio-vs-IPv6 (bloqueava i.imgur.com)");
   // o guard dos brackets tem de estar DENTRO de isBlockedHostname
   const fn = c.slice(c.indexOf("export function isBlockedHostname"));
   assert.ok(fn.indexOf('replace(/^\\[|\\]$/g') < fn.indexOf("return isBlockedIp(h)"),

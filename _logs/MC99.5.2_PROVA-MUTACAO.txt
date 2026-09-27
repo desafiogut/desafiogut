@@ -1,10 +1,14 @@
 M1 SSRF: tirar a normalizacao dos brackets (reabre os 4 payloads)
   entrou=true red=true provado=true
-  matou: MC99.5.2/SSRF · (a) IPv6 entre brackets é RECUSADO | MC99.5.2/SSRF · (a2) IPv4 EMBUTIDO em IPv6 — as 3 famílias achadas ao caçar 17 payloads | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
+  matou: MC99.5.2/SSRF · (a2) IPv4 EMBUTIDO + TODAS as familias (meus 16 + os 12 do validador) | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
 
 M2 SSRF: tirar a decodificacao do IPv4 EMBUTIDO (reabre traduzido/6to4/NAT64)
   entrou=true red=true provado=true
-  matou: MC99.5.2/SSRF · (a) IPv6 entre brackets é RECUSADO | MC99.5.2/SSRF · (a2) IPv4 EMBUTIDO em IPv6 — as 3 famílias achadas ao caçar 17 payloads | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
+  matou: MC99.5.2/SSRF · (a2) IPv4 EMBUTIDO + TODAS as familias (meus 16 + os 12 do validador) | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
+
+M6 SSRF: tirar o corte dominio-vs-IPv6 (bloqueia i.imgur.com — a regressao que EU introduzi)
+  entrou=true red=true provado=true
+  matou: MC99.5.2/SSRF · (a4) REGRESSÃO: um DOMINIO legitimo NAO e bloqueado | MC99.5.2/SSRF · (a3) o que NAO e bypass: userinfo com IP interno no username | MC99.5.2/SSRF · (b) as URLs LEGÍTIMAS continuam a passar (senão era bloqueio total) | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
 
 M3 gate: abrir o <details> por padrao (mostra o texto todo)
   entrou=true red=true provado=true
