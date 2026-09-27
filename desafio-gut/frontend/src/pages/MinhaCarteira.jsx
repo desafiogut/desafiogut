@@ -144,6 +144,25 @@ export default function MinhaCarteira() {
                 }} title={`Saldo R$ off-chain (blob saldo-rs) · status ${saldoRsStatus}`}>
                   R$ off-chain
                 </span>
+                {/* MC99 (correcção do HARD GATE 4 — refutação do validador) — o botão
+                    "↻ Atualizar saldo" vivia no card "Saldo de Senhas" e foi removido com
+                    ele. Medido: NÃO tinha substituto nenhum — o Sidebar não o chama, os
+                    StatTile do Dashboard só navegam, e o auto-refresh é de 30 s
+                    (AppContext: setInterval(refetchSaldo, 30000)). Volta aqui, compacto,
+                    junto do saldo a que diz respeito. */}
+                <button
+                  type="button"
+                  onClick={() => { try { refetchSaldo?.(); } catch {} }}
+                  aria-label="Atualizar o saldo on-chain"
+                  title="Ler o saldo on-chain agora (normalmente actualiza sozinho a cada 30 s)"
+                  style={{
+                    background: "transparent", border: "1px solid rgba(245,166,35,0.18)",
+                    borderRadius: "999px", color: COR.muted, cursor: "pointer",
+                    fontSize: "0.72rem", padding: "0.1rem 0.45rem", lineHeight: 1.4,
+                  }}
+                >
+                  ↻
+                </button>
               </div>
 
               {/* MC99 — a etiqueta veio do glass de cabeçalho removido: o número
@@ -234,6 +253,19 @@ export default function MinhaCarteira() {
                   ⚡ Lance Relâmpago
                 </button>
               </div>
+
+              {/* MC99 (correcção do HARD GATE 4) — o card "Dados para Pagamento (Art. 21)"
+                  foi removido e levou consigo o ÚNICO sítio do frontend onde constava o
+                  email de pagamento do Mercado Pago. Medido pelo validador:
+                  `grep -rn "desafiogut@gmail.com" src/` → 0 resultados. O custo da senha
+                  tinha substituto; o email não. Volta como nota de uma linha, no sítio onde
+                  o utilizador está quando vai pagar. */}
+              <p style={{
+                margin: "0.6rem 0 0", fontSize: "0.68rem", color: COR.muted, lineHeight: 1.45,
+              }}>
+                Depósito por PIX via Mercado Pago — <strong style={{ color: COR.blue300 }}>desafiogut@gmail.com</strong>{" "}
+                (crédito automático após a aprovação). Custo de cada senha: R$ {VALOR_POR_SENHA_BRL.toFixed(2)} por edição (Art. 20).
+              </p>
 
               {trocaInfo && (
                 <p style={{ margin: "0.6rem 0 0", fontSize: "0.78rem", color: COR.success, lineHeight: 1.4, fontWeight: 700 }}>

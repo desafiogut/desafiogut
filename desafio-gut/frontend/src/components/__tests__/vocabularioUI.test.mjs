@@ -97,7 +97,10 @@ const PAD = /leil[ãõa]o|leil[õo]es/i;
 //     AuctionStatusBar, LeilaoGUT (contrato on-chain)
 // ⚠️ A 1.ª versão desta lista removeu `buscarClienteDoLeilaoAtivo` por engano — e o teste
 // acusou-o, com razão: ele continua no código. Um teste que acusa correctamente não é ruído.
-const EXCEPCOES = /LeilaoGUT|buscarClienteDoLeilaoAtivo|isLeilaoAtivo|leilaoTimer|leilaoLock|AuctionStatusBar/g;
+// MC99 — `buscarClienteDoLeilaoAtivo` saiu desta lista: a função foi removida de
+// MercadoLances.jsx com o banner (REQ-01) e já não existe em lado nenhum. Uma excepção
+// que protege um símbolo morto é uma excepção que esconde a próxima reintrodução.
+const EXCEPCOES = /LeilaoGUT|isLeilaoAtivo|leilaoTimer|leilaoLock|AuctionStatusBar/g;
 
 test("(a) nenhum texto VISÍVEL da UI diz «leilão»", () => {
   const achados = [];
@@ -128,8 +131,15 @@ test("(b) o vocabulário correcto está presente nos ficheiros tocados", () => {
   // exacta (o elemento que a mostrava foi removido por decisão de produto, MC99) mas
   // continua a exigir VOCABULÁRIO APROVADO na Carteira — senão bastava apagar o ecrã
   // para passar este teste. O par de modalidades é o vocabulário que sobreviveu.
-  assert.match(ler("src/pages/MinhaCarteira.jsx"), /Lance Relâmpago[\s\S]{0,200}Lance Programado/,
-    "Carteira: falta o par de modalidades (vocabulário aprovado)");
+  //
+  // ⚠️ E mede sobre CÓDIGO, não sobre o ficheiro. REFUTAÇÃO do validador: a 1.ª versão
+  // desta linha usava o ler() cru, e o teste passava com o par de modalidades apenas
+  // dentro de um COMENTÁRIO — um guarda que certifica «vocabulário aprovado presente»
+  // sobre texto que o utilizador nunca lê. É a definição de guarda vácuo.
+  const cartSemComentarios = semComentarios(ler("src/pages/MinhaCarteira.jsx"))
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "");   // comentários JSX (multi-linha)
+  assert.match(cartSemComentarios, /Lance Relâmpago[\s\S]{0,200}Lance Programado/,
+    "Carteira: falta o par de modalidades EM CÓDIGO (vocabulário aprovado)");
   assert.match(ler("src/utils/edicao.js"), /rotuloLongo: "Edição encerrada"/, "edicao.js: falta o rótulo");
 });
 

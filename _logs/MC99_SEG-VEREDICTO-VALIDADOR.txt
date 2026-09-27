@@ -1,0 +1,172 @@
+# RELATÓRIO — TENTATIVA DE REFUTAÇÃO DO MC99 (5550537)
+
+**Worktree próprio:** `git worktree add .claude/worktrees/mc99-validador-sub 5550537` (usei o sufixo `-sub` para não colidir com o `mc99-validador` do executor). Toda a mutação correu dentro dele; `git status --porcelain` no fim = **vazio** e 11/11 verde após restauro. **AVISO: não pude remover o worktree** (esgotei o orçamento de ferramentas antes do passo de limpeza) — remover com `git worktree remove --force .claude/worktrees/mc99-validador-sub`. Nada foi tocado no repositório principal: o eslint dos ficheiros do commit pai foi feito por `--stdin`.
+
+Instrumentos que escrevi (ficheiro: `C:\Users\Moltbot\`): `mc99-probe2.mjs` (22 mutações+sondas), `mc99-hero.mjs`, `mc99-eslint.mjs`, `mc99-strings2.mjs`.
+
+---
+
+## A1 — “frontend 407/407 verde e backend 680/686 verde”
+
+**VEREDITO: CONFIRMADA**
+
+```
+$ cd /c/.../DESAFIOGUT && node scripts/mc966-suite-harness.mjs ambos > /tmp/harness-mc99.txt
+$ cat /tmp/harness-mc99.txt
+frontend: VERDE 407/407 pass
+backend: VERDE 680/686 pass
+VEREDITO: VERDE
+```
+(Leitura não-vazia do /tmp/harness-mc99.txt = medição real, não “NÃO MEDI”. Não são 407/407 vs 686/686 literalmente: são 407/407 no frontend e 680/686 no backend — a segunda fracção inclui os 6 testes que o harness não conta como pass, o commit não mexe no backend.)
+
+## A2 — “nenhuma informação perdida; cada dado existe noutro sítio”
+
+**VEREDITO: REFUTADA EM 3 PONTOS (parcialmente verdadeira)**
+
+Medido com `grep -rn` no worktree + extração mecânica de cópia:
+
+| Dado removido | Existe noutro sítio? | Comando / evidência |
+|---|---|---|
+| Saldo de senhas | **DESKTOP sim / MOBILE não** | `grep -n saldoSenhas src/widgets/layout/Sidebar.jsx` → `176: 🔗 {saldoSenhas}`; `grep -n "Sidebar" src/widgets/layout/Layout.jsx` → `84: {!isMobile && <Sidebar />}` — o indicador está no ficheiro do **Sidebar**, que **não é renderizado no mobile**. O KPI “Senhas” está no Dashboard, portanto aí há cobertura. |
+| Endereço completo | sim | `src/pages/Configuracoes.jsx:65: <InfoRow label="Carteira" value={address}` |
+| Lances do utilizador | sim | `src/pages/MeusAtivos.jsx:62: const meusLances = lances.filter((l) => ...endereco?...=== address?...` |
+| Custo R$ 2,00 | sim | botão + `src/pages/Configuracoes.jsx:173: ["Art. 20", "Senha: R$ 2,00 por edição."]` + `TermosConsentimento.jsx:123-124` |
+| Dados bancários Art. 21 | sim, **mas só no gate** | `TermosConsentimento.jsx:128: Art. 21 — Formas de pagamento: PIX — chave: 23.040.066/0001-00` |
+| **“Fichas (Mercado Pago) — desafiogut@gmail.com — automatizado”** | **NÃO** | `grep -rn "desafiogut@gmail.com" desafio-gut/frontend/src/ -a` → **0 resultados** |
+
+A alegação do executor (“dados bancários do Art. 21 → regulamento (gate de consentimento)”) é **factualmente frágil**: o gate é o ecrã que o utilizador aceita **antes** de participar; depois disso os dados só voltam a aparecer se nas Configurações existir caminho para reabri-lo — a informação deixa de estar na Carteira, o sítio onde o utilizador está quando vai pagar. O email de pagamento do Mercado Pago desapareceu **por completo** do frontend.
+
+## A3 — “0 erros eslint, 9 warnings pré-existentes”
+
+**VEREDITO: CONFIRMADA (medida em ambos os lados)**
+
+```
+$ git show <rev>:desafio-gut/frontend/<f> | npx eslint --stdin --stdin-filename <f> -f json
+ce6fbd3  src/pages/MercadoLances.jsx           -> erros=0 warnings=0
+5550537  src/pages/MercadoLances.jsx           -> erros=0 warnings=0
+ce6fbd3  src/pages/PainelIndicacao.jsx         -> erros=0 warnings=0
+5550537  src/pages/PainelIndicacao.jsx         -> erros=0 warnings=0
+ce6fbd3  src/pages/Dashboard.jsx               -> erros=0 warnings=5
+5550537  src/pages/Dashboard.jsx               -> erros=0 warnings=5
+ce6fbd3  src/pages/MinhaCarteira.jsx           -> erros=0 warnings=1
+5550537  src/pages/MinhaCarteira.jsx           -> erros=0 warnings=1
+ce6fbd3  src/pages/Vitrine.jsx                 -> erros=0 warnings=1
+5550537  src/pages/Vitrine.jsx                 -> erros=0 warnings=1
+ce6fbd3  src/pages/SejaNossoParceiro.jsx       -> erros=0 warnings=1
+5550537  src/pages/SejaNossoParceiro.jsx       -> erros=0 warnings=1
+ce6fbd3  src/widgets/layout/BottomNav.jsx      -> erros=0 warnings=1
+5550537  src/widgets/layout/BottomNav.jsx      -> erros=0 warnings=1
+```
+0 erros; **exatamente 9 warnings no pai e 9 no commit** — a mesma natureza, contagem prova-a idêntica. Órfãos: `BannerCard.jsx` continua **usado** (`BannerUpload.jsx:13,155`), `buscarClienteDoLeilaoAtivo` **não existe em lado nenhum fora de comentários** — só aparece na lista de `EXCEPCOES` de `vocabularioUI.test.mjs:100` e num comentário do próprio `MercadoLances.jsx` (a EXCEÇÃO da guarda de vocabulário passou a proteger um símbolo morto).
+
+## A4 — “os 11 testes matam as mutações”
+
+**VEREDITO: CONFIRMADA no essencial, COM 2 DEFEITOS ENCONTRADOS**
+
+Medi **10 mutações minhas** (não as do executor), confirmando que o mutante entrou no ficheiro antes de ler o resultado:
+
+```
+M1  repor o grid empilhado de Outras Edições          guarda #2  -> RED
+M2  repor Lances antes de Carteira no MAIN_TABS       guarda #3  -> RED
+M3  repor o card «📋 Meus Lances»                     guarda #5  -> RED
+M4  repor o rodapé técnico da Vitrine                 guarda #11 -> RED
+M5  repor «MC10 · Growth»                             guarda #8  -> RED
+M6  repor o BannerCard nos Lances                     guarda #9  -> RED
+M7  repor o background/borderColor inline             guarda #7  -> RED
+(tirar o vidro do ÚLTIMO hero — mc99-hero.mjs)        guarda #10 -> RED
+```
+
+**DEFEITO 1 — o guarda do cabeçalho mata o revert por ACIDENTE.** A mutação fiel (`<GlassCard as="header">` + `<h1>` + o parágrafo, exatamente o que perdeste):
+```
+M8  REVERT FIEL do glass de cabeçalho  -> RED, mas com DOIS vermelhos: [4,5]
+      #4 = “a Carteira tem 2 vidros” (contagem de <GlassCard>)
+      #5 = “os 5 cards removidos não voltaram”
+   O guarda SEG2.2 (o que podia detetar a duplicação do título) NÃO dispara.
+```
+Isto é relevante para **A7**: o reverso do cabeçalho não é apanhado por um guarda semântico, só pelo contador de vidros.
+
+**DEFEITO 2 — o mesmo revert ESCAPA quando não usa o texto literal:**
+```
+M9   <div className="gut-glass-standard"><h1>{"💰 Minha Carteira"}</h1>…  -> VERDE
+M10  <div className="gut-glass-standard">… (no fim do ramo, longe do cartão de saldo) -> VERDE (nenhum vermelho)
+```
+O guarda `SEG2 · «Minha Carteira» está DENTRO do vidro de saldo` só faz `c.indexOf("💰 Minha Carteira")` e exige que essa **primeira** ocorrência preceda `>Saldo Disponível<`; e o guarda dos *cards* procura só o literal com o emoji colado (`/<h1[^>]*>\s*💰 Minha Carteira/`). Um segundo vidro de cabeçalho com o título escrito como `{"💰 Minha Carteira"}` — ou colocado **depois** do cartão de saldo — **reintroduz o «dois títulos a dizer o mesmo na mesma dobra» que o MC99 diz ter eliminado, sem o guarda apitar**. É precisamente a regressão que o MC99 existe para prevenir.
+
+## A5 — “os guardas não são enganados pelos comentários”
+
+**VEREDITO: CONFIRMADA para comentários JSX; REFUTADA para `//`**
+
+```
+C1  «Saldo de Senhas» só em comentário JSX de 1 linha          -> VERDE  (correto)
+C2  «Saldo de Senhas»/«Meus Lances» em comentário MULTI-LINHA  -> VERDE  (correto)
+C3  «Saldo de Senhas» em { /* … */ } (espaço depois de {)      -> VERDE  (correto)
+V1  Vitrine: «Pipeline de lance» só em comentário multi-linha  -> VERDE  (correto)
+C4  o mesmo termo em CÓDIGO (controlo negativo)                -> RED    (a sonda morde)
+V2  Vitrine: «Pipeline de lance» em CÓDIGO                     -> RED
+V3  Vitrine: «validada em produção» em CÓDIGO                  -> RED
+```
+O stripper remove mesmo os blocos JSX multi-linha — a alegação do executado é verdadeira **neste eixo**.
+
+**MAS o outro eixo está aberto:**
+```
+C5  «Saldo de Senhas» em comentário // de fim de linha         -> RED  (FALSO-VERMELHO)
+```
+`codigo()` filtra linhas que **começam** por `//` e apaga `/* … */`, mas uma linha de código terminada com `// «Saldo de Senhas»` sobrevive → a guarda grita num ficheiro correto. É o vetor declarado da armadilha A5 e continua lá; basta um `//` de fim de linha a nomear o que saiu (e o estilo do MC99 escreve remoções em comentário…).
+
+E o defeito mais grave, medido na **outra** guarda tocada pelo MC99 — `vocabularioUI.test.mjs`, cujo `ler()` é **sem tratamento de comentários**:
+```
+V4  tirar «Lance Relâmpago…Lance Programado» do CÓDIGO e deixar a frase só num comentário //  -> VERDE (guarda cega)
+V5  tirar o par de modalidades SEM deixar rasto                                                -> RED  (correto)
+```
+O MC99 **substituiu** um guarda de vocabulário (`/participar da edição/`) por outro, e o substituto pode ser satisfeito por um comentário — um guarda que certifica "vocabulário aprovado presente" sobre um comentário. Isso é exatamente “guarda vácuo”.
+
+## A6 — “a remoção do banner não quebrou nada”
+
+**VEREDITO: CONFIRMADA, com perda funcional para o consumidor**
+
+```
+$ grep -rn "BannerCard" src/ -a | grep -v "BannerCard.jsx:"
+BannerUpload.jsx:13:import BannerCard from "./BannerCard.jsx";
+BannerUpload.jsx:155:<BannerCard key={...} clienteId={endereco} formato={dimensao} mostrarFonte />
+```
+`BannerCard` **não é órfão** (vive em `/corporativo` via `CorporativoBanners.jsx:175`). `apiGet` não vem no import removido — é usado por outros ficheiros. Nada quebra a nível de imports. **Mas** `BannerCard` renderiza-se **apenas** em modo pré-visualização do lojista (`mostrarFonte`), portanto o banner deixou de ser visível para os utilizadores da app (o lado "publicidade" do **REQ-01** existia só aqui: `docs/validacao-final.md:1150` descreve-o como "Banner do cliente da cota ativa aparece em /mercado"). Isto é intencional pelo MC99, mas a documentação ficou a afirmar o contrário.
+
+## A7 — “nenhuma string PT alterada por acidente”
+
+**VEREDITO: CONFIRMADA** (extração mecânica de cópia, comentários removidos, pai vs commit):
+
+```
+### BottomNav.jsx  (copia antes=112 depois=112)   -> sem alterações
+### PainelIndicacao.jsx                            -> - "MC10 · Growth"   (a remoção declarada)
+### Vitrine.jsx                                    -> - "Vitrine em modo informativo · Pipeline de lance em"
+                                                     - "(Edição R-1, validada em produção)."   (a remoção declarada)
+### MinhaCarteira.jsx (antes=78 depois=46)          -> só remoções dos blocos + "+ Saldo Disponível"
+### Dashboard / SejaNossoParceiro                   -> só CSS/testid/flex
+```
+Nenhuma cópia sobrevivente foi reescrita. A exceção assumida confere: **existe** `- "💰 Saldo Disponível"` e `+ "Saldo Disponível"`, `+ "Minha Carteira"`, `+ "Carteira"`. Também `+ "💰 Depositar PIX"` e `+ "Acompanhe seu saldo…"` são **comentários/falsos positivos do meu extrator** (verifiquei o ficheiro: o botão e o texto do apoio são pré-existentes).
+
+## R7 — a Carteira perdeu AÇÕES (não só informação)
+
+```
+$ git show ce6fbd3:.../MinhaCarteira.jsx | grep -c "<button"   -> 5
+$ grep -c "<button" .../MinhaCarteira.jsx   (5550537)          -> 3
+$ git show ce6fbd3:.../MinhaCarteira.jsx | grep -c "onClick"   -> 6
+$ grep -c "onClick" .../MinhaCarteira.jsx   (5550537)          -> 4
+```
+Perdidas: **«🎯 Usar no Mercado de Lances»** (navegava para /mercado) e **«↻ Atualizar saldo»** (forçava `refetchSaldo` do saldo on-chain). Alternativas reais: voltar à mesma rota exige 2 cliques (Mais → Mercado de Lances); o refresh manual do saldo on-chain **não tem substituto em lado nenhum** (`refetchSaldo` é chamado por `CardLance.jsx:193` e `useTrocarPorSenhas.js:75`, não pelo Sidebar nem pelos `StatTile` do Dashboard — `StatTile` só faz `navigate(to)`), e o auto-refresh é de 30 s (`AppContext.jsx:877 setInterval(refetchSaldo, 30000)`).
+
+## Outros achados (R2)
+
+- **A nova barra `Início · Carteira · Lances` é só um atalho**: o item `Carteira` do `BottomNav` tem `end: false`, logo **ativa o estado "ativo" também em `/carteira/...`**; e a ordem da barra no **Sidebar** (`/`, `/carteira`, `/mercado`) já era esta — a mudança alinha o mobile com o desktop. Sem regressão.
+- **Scroll lateral de "Outras Edições"**: `edicoesExtra.length > 0 &&` continua a guardar a secção; `EdicaoCard` recebe as mesmas props. O único custo é o cartão deixar de poder ser visto "de relance" (só o da frente é visível sem swipe) — é a decisão declarada, não um defeito. **Não consegui medir** se há mais de uma edição real (a fonte é `GET edicoes`, e `useEdicoes.js:64` devolve `null` → fallback; em `data/programacao-junho-2026.js` não há nenhum `id:`).
+
+## O que NÃO consegui verificar
+
+1. **Remover o worktree** (orçamento esgotado) — ação pendente minha, listada acima.
+2. **Render real** (3.000 utilizadores, mobile vs desktop) — só medí leitura de ficheiros; a alegação “Sidebar visível em todos os ecrãs” foi refutada por código (`{!isMobile && <Sidebar/>}`), mas não observei o ecrã.
+3. **Se o gate de consentimento é reabível** a partir das Configurações depois de aceite (o que decidiria se os dados do Art. 21 estão de facto recuperáveis) — não segui o ciclo de vida do `TermosConsentimento`.
+4. **CONFIRMAÇÃO DE HW/CRLF**: os 7 ficheiros são 100% CRLF (`bareLF=0`) — não interferiu, mas significa que qualquer mutação de terceiro que escreva LF cria ruído de diff total.
+
+## Veredicto global (1 linha)
+
+**A alegação central “zero regressão, zero perda, zero guarda vácuo” não se sustenta por inteiro: A1/A3/A6/A7 confirmam-se, mas A2 está refutada em 3 pontos (email de pagamento desapareceu do frontend; “Sidebar em todos os ecrãs” é falso no mobile; Art. 21 só vive no ecrã de aceitação), A4 tem 2 defeitos (o revert do cabeçalho é morto por acidente pelo contador de vidros, e o mesmo revert escapa ao guarda quando o título não é o literal colado ao emoji), e A5 é falsa no eixo dos comentários `//` — falso-vermelho no `mc99-limpeza-ui` e, mais grave, a guarda substituta de `vocabularioUI` fica **satisfeita por um comentário**.**

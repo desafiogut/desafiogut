@@ -23,13 +23,19 @@ import { fileURLToPath } from "node:url";
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const ler = (p) => readFileSync(resolve(RAIZ, p), "utf8");
 
-/** Texto de CÓDIGO: fora comentários JSX multi-linha, blocos /* *\/ e linhas // … */
+/** Texto de CÓDIGO: fora comentários JSX multi-linha, blocos /* *\/ e comentários // (de
+ * linha inteira E de FIM DE LINHA).
+ * ⚠️ O `//` de fim de linha foi uma REFUTAÇÃO do validador: a versão anterior filtrava só
+ * linhas que COMEÇAM por «//», e uma linha de código terminada com
+ * `const x = 1; // «Saldo de Senhas»` sobrevivia → o guarda dava RED num ficheiro CORRECTO.
+ * O guarda a gritar no sítio errado é a classe de defeito que esta série mais paga. */
 function codigo(src) {
   return src
-    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")   // comentário JSX (multi-linha) — o que faltava no MC98
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")   // comentário JSX (multi-linha)
     .replace(/\/\*[\s\S]*?\*\//g, "")        // bloco /* … */
     .split(/\r?\n/)
-    .filter((l) => !/^\s*(\/\/|\*)/.test(l))
+    .map((l) => l.replace(/(^|[^:"'`])\/\/.*$/, "$1"))   // // de fim de linha (não casa :// de URL)
+    .filter((l) => !/^\s*\*/.test(l))                    // continuações de bloco
     .join("\n");
 }
 
@@ -101,6 +107,20 @@ test("MC99/SEG2 · os 5 cards removidos não voltaram", () => {
   assert.ok(!/<h1[^>]*>\s*💰 Minha Carteira/.test(c), "o glass de cabeçalho voltou");
 });
 
+test("MC99/SEG2 · «Minha Carteira» aparece UMA só vez — o cabeçalho não pode voltar", () => {
+  // ⚠️ REFUTAÇÃO do validador: a versão anterior procurava só o literal `<h1 …>💰 Minha Carteira`
+  // e olhava apenas a PRIMEIRA ocorrência. Duas evasões passavam VERDE, ambas reintroduzindo
+  // exactamente o defeito que o MC99 removeu (dois títulos iguais na mesma dobra):
+  //   1. título escrito como {`💰 Minha Carteira`} ou com outro emoji;
+  //   2. um segundo vidro de cabeçalho colocado DEPOIS do cartão de saldo.
+  // A invariante certa é a CONTAGEM: o nome só pode existir no título do cartão de saldo.
+  const c = codigo(ler("src/pages/MinhaCarteira.jsx"));
+  const ocorrencias = (c.match(/Minha Carteira/g) || []).length;
+  assert.equal(ocorrencias, 1,
+    `«Minha Carteira» aparece ${ocorrencias}× no código; tem de ser 1 (só o título do cartão de saldo)`);
+  assert.ok(!/<h1/.test(c), "há um <h1> — o glass de cabeçalho voltou noutra forma");
+});
+
 test("MC99/SEG2 · «Minha Carteira» está DENTRO do vidro de saldo, e «Saldo Disponível» etiqueta o número", () => {
   const c = codigo(ler("src/pages/MinhaCarteira.jsx"));
   const posTitulo = c.indexOf("💰 Minha Carteira");
@@ -164,4 +184,42 @@ test("MC99/SEG4 · o rodapé TÉCNICO da Vitrine não está exposto ao utilizado
   // a Vitrine continua funcional
   assert.ok(v.includes("Ver detalhes →") || v.includes("Ir para a edição →"),
     "os CTAs dos slots desapareceram");
+});
+
+// ── Correcções às REFUTAÇÕES do validador independente (a guarda de cada correcção) ──
+
+test("controlo positivo: o stripper também trata o comentário `//` de FIM DE LINHA", () => {
+  // REFUTAÇÃO: a versão anterior filtrava só linhas que COMEÇAM por `//`. Uma linha de
+  // CÓDIGO terminada com `const x = 1; // «Saldo de Senhas»` sobrevivia, e a guarda dava
+  // RED num ficheiro CORRECTO. Este teste é o controlo positivo dessa correcção: se o
+  // stripper voltar a ser line-based, este teste morre.
+  const amostra = [
+    'const a = 1; // aqui fala-se de «Saldo de Senhas»',
+    'const url = "https://exemplo.pt/xx"; // o :// nao pode ser comido',
+    'const b = 2;',
+  ].join("\n");
+  const c = codigo(amostra);
+  assert.ok(!c.includes("Saldo de Senhas"), "o `//` de fim de linha sobreviveu ao stripper");
+  assert.ok(c.includes("https://exemplo.pt/xx"), "o stripper comeu o :// de um URL (falso negativo novo)");
+  assert.ok(c.includes("const b = 2;"), "o stripper apagou código");
+});
+
+test("MC99/F1 · o email de pagamento perdido voltou ao CÓDIGO da Carteira", () => {
+  // REFUTAÇÃO do validador: o card "Dados para Pagamento" foi removido e levou consigo o
+  // ÚNICO sítio do frontend onde constava o email do Mercado Pago
+  // (`grep -rn "desafiogut@gmail.com" src/` → 0 resultados). O custo da senha tinha
+  // substituto; o email não. Guarda: tem de existir EM CÓDIGO (não num comentário).
+  const c = codigo(ler("src/pages/MinhaCarteira.jsx"));
+  assert.ok(c.includes("desafiogut@gmail.com"),
+    "o email de pagamento desapareceu outra vez do código da Carteira");
+});
+
+test("MC99/F2 · a acção «atualizar saldo on-chain» tem um controlo na UI", () => {
+  // REFUTAÇÃO do validador: o botão "↻ Atualizar saldo" saiu com o card e NÃO tinha
+  // substituto — o Sidebar não chama refetchSaldo, os StatTile só navegam, e o auto-refresh
+  // é de 30 s (AppContext: setInterval(refetchSaldo, 30000)). Guarda: o código tem de
+  // continuar a oferecer o refresh manual.
+  const c = codigo(ler("src/pages/MinhaCarteira.jsx"));
+  assert.match(c, /onClick=\{\(\) => \{ try \{ refetchSaldo\?\.\(\); \} catch \{\} \}\}/,
+    "o controlo de atualização manual do saldo on-chain desapareceu (a auto-atualização é de 30 s)");
 });
