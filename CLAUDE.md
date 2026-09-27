@@ -3027,5 +3027,13 @@ forte do que fechar por tratamento.*
 (`resolvesToBlocked` → `isBlockedIp`) e **não tem teste**. Se o DNS devolver ISATAP/6rd, a
 descodificação incompleta decide. **Aberto, não testado.**
 
-**Pendente:** validador adversarial da inversão (`deleg_d3e3d848`) — as 4 anteriores foram
-refutadas; **não se declara segura antes de ele falar.**
+O VALIDADOR CHEGOU E REFUTOU A4 — o buraco MUDOU DE PORTA. 26/26 no caminho dos literais (md5
+verificado), mas isBlockedIp(ISATAP/6rd/NAT64) == false e EXPLORA-SE com um DNS publico de wildcard:
+https://2601--5efe-a9fe-a9fe.sslip.io/x.png -> 502, caminho para a METADATA CLOUD. Eu tinha
+catalogado a lacuna como "exige DNS hostil" — ERRADO; classificar de exotico o que tem servico
+publico dedicado era o proprio defeito.
+
+6. GERACAO (NAO FEITA) — a MESMA inversao no caminho do DNS: em resolvesToBlocked, recusar
+r.address.includes(":") || isBlockedIp(r.address). Custo: hosts IPv6-only (raro; CDNs dual-stack).
+A inversao foi aplicada a UM caminho e nao ao outro — parei-a onde era comodo. Declarar uma lacuna
+nao e trata-la.
