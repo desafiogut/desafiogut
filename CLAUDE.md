@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.3) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.4) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -2766,3 +2766,24 @@ frontend 431/431 (era 426) · backend 680/686 · 5 mutações provadas · deploy
 - **O mutador abortou com «a mutação não alterou nada»** porque o index.html é CRLF e eu
   comparava com 
  — a armadilha que o próprio enunciado avisa, e a 2.ª vez que me apanha.
+
+---
+
+## MC99.4 — 19 skills de engenharia: instalação e atestação (2026-09-27)
+
+**Referência permanente:** docs/SKILLS-INSTALADAS.md · **Logs:** _logs/MC99.4_*
+
+18 de 20 alvos instalados em **~/.claude/skills/ (GLOBAL)** — o repositório do app não recebeu
+nenhuma skill (decisão deliberada). 195 SKILL.md escritos; 524 pastas
+com SKILL.md no total.
+
+**Não instalados (declarado):** Snyk (exige conta autenticada, R5) e T-Mobile ARC (repo 404; o
+pacote npm é interactivo).
+
+**Duas falhas minhas, apanhadas pelo teste de fumo:** perf-analyzer e chrome-devtools foram
+sobrescritos — três alvos escreveram para a mesma pasta errada (nome tirado do caminho quando
+o SKILL.md está na raiz, ficando literalmente SKILL.md), e a tabela reportava-os como
+instalados. Reparados e reconferidos. *A contagem não é a verificação.*
+
+**Ambiente:** Node v24.14.1 · npm 11.11.0 · claude CLI presente · chrome-devtools **não** está
+configurado no MCP (a skill sim, o servidor não). API do GitHub sem token = 60 pedidos/hora.
