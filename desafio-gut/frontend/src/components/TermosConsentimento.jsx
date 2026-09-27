@@ -67,8 +67,14 @@ export default function TermosConsentimento({ onAceitar }) {
           </p>
         </div>
 
-        {/* Regulamento resumido */}
-        <div style={estilos.scrollBox}>
+        {/* MC99.5.2 — DECISÃO DO OPERADOR (R18): no gate, sem resumo — SÓ um botão para expandir.
+            Usa-se <details>/<summary> NATIVO (Ponytail, degrau 4): botão acessível por teclado e
+            leitor de ecrã, sem useState e sem re-render. Fechado por omissão; ao abrir, o texto
+            é 100% visível (herança da correcção do MC99.5.1). Os 4 aceites ficam FORA daqui —
+            continuam sempre visíveis e clicáveis, aberto ou fechado. */}
+        <details style={estilos.regulamento}>
+          <summary style={estilos.botaoExpandir}>📖 Ler o regulamento completo</summary>
+          <div style={estilos.scrollBox}>
           <h3 style={estilos.secaoTitulo}>Regulamento Oficial — Resumo dos Artigos Principais</h3>
 
           <p style={estilos.artigo}>
@@ -180,6 +186,7 @@ export default function TermosConsentimento({ onAceitar }) {
             </p>
           </div>
         </div>
+        </details>
 
         {/* Checkboxes de consentimento */}
         <div style={estilos.checkboxes}>
@@ -241,6 +248,14 @@ const estilos = {
   secaoTitulo: {
     margin: "0 0 1rem", fontSize: "0.9rem", fontWeight: "800",
     color: "#fbbf24", letterSpacing: "0.05em", textTransform: "uppercase",
+  },
+  // MC99.5.2 — o <details> que esconde o regulamento (só o botão, sem resumo; decisão do operador).
+  regulamento: { margin: "0" },
+  botaoExpandir: {
+    cursor: "pointer", padding: "0.85rem 1.1rem", borderRadius: "12px",
+    background: "rgba(245,166,35,0.12)", border: "1px solid rgba(245,166,35,0.35)",
+    color: "#f5a623", fontWeight: 700, fontSize: "0.9rem", textAlign: "center",
+    listStyle: "none", userSelect: "none",
   },
   scrollBox: {
     // MC99.5.1 — o texto legal era ilegível: clientHeight 40 para scrollHeight 1654 (2,4%).

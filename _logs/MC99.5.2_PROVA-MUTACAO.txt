@@ -1,0 +1,21 @@
+M1 SSRF: tirar a normalizacao dos brackets (reabre os 4 payloads)
+  entrou=true red=true provado=true
+  matou: MC99.5.2/SSRF · (a) IPv6 entre brackets é RECUSADO | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
+
+M2 SSRF: tirar o tratamento da forma HEX do IPv4-mapeado
+  entrou=true red=true provado=true
+  matou: MC99.5.2/SSRF · (a) IPv6 entre brackets é RECUSADO
+
+M3 gate: abrir o <details> por padrao (mostra o texto todo)
+  entrou=true red=true provado=true
+  matou: MC99.5.2/gate · (a) o texto legal está atrás de um botão (sem resumo), FECHADO por padrão
+
+M4 gate: tirar o botao (summary)
+  entrou=true red=true provado=true
+  matou: MC99.5.2/gate · (a) o texto legal está atrás de um botão (sem resumo), FECHADO por padrão
+
+M5 gate: meter os 4 aceites DENTRO do details (escondidos quando fechado)
+  entrou=true red=true provado=true
+  matou: MC99.5.2/gate · (a) o texto legal está atrás de um botão (sem resumo), FECHADO por padrão
+
+md5_proxy=true md5_termos=true

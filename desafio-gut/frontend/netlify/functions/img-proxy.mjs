@@ -34,14 +34,33 @@ export function isBlockedIp(ip) {
   const h = String(ip).toLowerCase();
   if (h === "::1" || h === "::") return true;                    // loopback / unspecified
   if (h.startsWith("fe80") || h.startsWith("fc") || h.startsWith("fd")) return true; // link-local / ULA
-  const mapped = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/); // IPv4-mapped
+  const mapped = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/); // IPv4-mapped (dotted)
   if (mapped) return isBlockedIp(mapped[1]);
+  // MC99.5.2 — IPv4-mapeado em HEX. O WHATWG URL NORMALIZA a forma mapeada: a entrada
+  // `[::ffff:127.0.0.1]` chega aqui como "::ffff:7f00:1", que a regex acima (que exige decimal
+  // pontuado) NÃO reconhecia. Descoberto ao RE-CORRER o PoC depois da 1.ª correcção: fechou 3 de
+  // 4 payloads e este continuava a passar. Sem esta linha, eu teria reportado «corrigido» com um
+  // buraco aberto. Descodifica para decimal pontuado e reutiliza o isBlockedIp.
+  const mappedHex = h.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (mappedHex) {
+    const n = parseInt(mappedHex[1], 16) * 65536 + parseInt(mappedHex[2], 16);
+    return isBlockedIp([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join("."));
+  }
   return false;
 }
 
 /** True se o hostname é local/interno ou um IP literal bloqueado. */
 export function isBlockedHostname(hostname) {
-  const h = String(hostname || "").toLowerCase().replace(/\.$/, "");
+  // MC99.5.2 — SSRF ENTRE BRACKETS IPv6, explorado antes de corrigido.
+  // `new URL("http://[::1]/").hostname` devolve "[::1]" COM os brackets, e `isBlockedIp` só
+  // conhece a forma sem eles ("::1", "fe80*", "fc"/"fd"*). Resultado: NÃO era bloqueado aqui,
+  // e logo a seguir a linha `u.hostname.includes(":")` marcava-o como IP literal e SALTAVA a
+  // verificação DNS — duas guardas caíam pela mesma causa.
+  // PoC reproduzido contra este código: passavam [::1], [::ffff:127.0.0.1], [fc00::1] e [fd00::1],
+  // enquanto 127.0.0.1, localhost e 169.254.169.254 eram correctamente recusados.
+  // Correção na FUNÇÃO PARTILHADA (um guard aqui vale por todos os chamadores): normalizar os
+  // brackets faz cair no `isBlockedIp` já existente — sem lista nova, sem dependência.
+  const h = String(hostname || "").toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
   if (!h) return true;
   if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal")) return true;
   return isBlockedIp(h);
