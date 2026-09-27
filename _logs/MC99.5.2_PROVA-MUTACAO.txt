@@ -1,3 +1,7 @@
+M10 DNS: tirar o filtro dos AAAA (reabre o sslip.io que o 5.º validador explorou)
+  entrou=true red=true provado=true
+  matou: MC99.5.2.1d/DNS · (f) o caminho do DNS: AAAA ignorados, A validados (decisao do operador)
+
 M8 SSRF: tirar a INVERSÃO (literal IPv6 volta a passar, sem descodificar nada)
   entrou=true red=true provado=true
   matou: MC99.5.2.1c/INVERSÃO · (a) TODOS os literais IPv6 são recusados — os 49 das 4 gerações | MC99.5.2.1c/INVERSÃO · (c) o guard RECUSA sem descodificar, e a decisão de rede mantem-se

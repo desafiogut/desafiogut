@@ -73,6 +73,28 @@ test("MC99.5.2.1c/INVERSÃO · (d) os internos classicos continuam recusados", (
   }
 });
 
+test("MC99.5.2.1d/DNS · (f) o caminho do DNS: AAAA ignorados, A validados (decisao do operador)", async () => {
+  // A lacuna que o 5.º validador explorou: o caminho do DNS nao tinha teste, e o sslip.io (DNS
+  // PUBLICO que codifica o endereco no nome) chegava ao fetch. Decisao do operador (R18): ignorar
+  // AAAA e validar A — fecha o exploit E mantem os CDNs dual-stack.
+  const { resolvesToBlocked } = await import("file://" + resolve(FE, "netlify/functions/img-proxy.mjs").replace(/\\/g, "/"));
+  assert.equal(typeof resolvesToBlocked, "function", "resolvesToBlocked tem de estar exportada para ser testavel");
+  // (a) o ataque: sslip.io resolve SO para o endereco embutido -> sem IPv4 -> bloqueado
+  for (const host of ["2601--5efe-a9fe-a9fe.sslip.io", "2600--5efe-0a00-0001.sslip.io"]) {
+    assert.equal(await resolvesToBlocked(host), true, host + " NAO e bloqueado (exploit do DNS reaberto)");
+  }
+  // (b) dominios legitimos: PASSA (o CDN dual-stack tem de continuar a funcionar)
+  for (const host of ["i.imgur.com", "cdn.jsdelivr.net", "exemplo.com"]) {
+    assert.equal(await resolvesToBlocked(host), false, host + " foi BLOQUEADO (o proxy de imagens morre)");
+  }
+  // (c) o desenho: filtra os IPv6 e continua a chamar isBlockedIp para IPv4
+  const c = codigo(ler(FE + "/netlify/functions/img-proxy.mjs"));
+  assert.match(c, /const v4 = results\.filter\(\(r\) => !r\.address\.includes\(":"\)\)/,
+    "falta o filtro que ignora os AAAA");
+  assert.match(c, /v4\.length === 0 \|\| v4\.some\(\(r\) => isBlockedIp\(r\.address\)\)/,
+    "o isBlockedIp deixou de validar os IPv4 (validacao de rede perdida)");
+});
+
 test("MC99.5.2/gate · o texto legal esta atras de um botao (sem resumo), FECHADO por padrao", () => {
   const c = codigo(ler(FE + "/src/components/TermosConsentimento.jsx"));
   const det = c.match(/<details([^>]*)>/) || ["", ""];

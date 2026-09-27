@@ -102,7 +102,18 @@ export function isBlockedHostname(hostname) {
 export async function resolvesToBlocked(hostname) {
   try {
     const results = await lookup(hostname, { all: true });
-    return results.length === 0 || results.some((r) => isBlockedIp(r.address));
+    // ── MC99.5.2.1d — DECISÃO DO OPERADOR (R18): ignorar AAAA, validar A. ──
+    // A inversão literal (`r.address.includes(":") || ...`) fechava o exploit MAS bloqueava
+    // `cdn.jsdelivr.net` — que é DUAL-STACK (2606:4700::6811:d005 + 104.17.207.5). Bloquear por
+    // QUALQUER IPv6 bloqueia todo o host dual-stack, ou seja a maior parte da web moderna e o CDN
+    // que esta app usa. Medido antes de decidir, não estimado.
+    // Regra aprovada: os endereços IPv6 são IGNORADOS; valida-se o IPv4 (`isBlockedIp`); e se não
+    // houver NENHUM IPv4, bloqueia-se (fail-closed).
+    //   cdn.jsdelivr.net (dual-stack) -> v4 publico -> PASSA
+    //   2601--5efe-a9fe-a9fe.sslip.io (só AAAA) -> v4=[] -> 403  (exploit fechado)
+    //   IPv6-ONLY -> v4=[] -> 403  (custo declarado e aceite pelo operador)
+    const v4 = results.filter((r) => !r.address.includes(":"));
+    return v4.length === 0 || v4.some((r) => isBlockedIp(r.address));
   } catch {
     return true;
   }

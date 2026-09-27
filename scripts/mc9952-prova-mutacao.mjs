@@ -27,6 +27,9 @@ const snapT = readFileSync(TERMOS), mdT = md5(TERMOS);
 const baseP = norm(snapP.toString("utf8")), baseT = norm(snapT.toString("utf8"));
 
 const M = [
+  { id: "M10", nome: "DNS: tirar o filtro dos AAAA (reabre o sslip.io que o 5.º validador explorou)", f: "P",
+    apl: (s) => s.replace('    const v4 = results.filter((r) => !r.address.includes(":"));\n', "").replace("return v4.length === 0 || v4.some", "return results.length === 0 || results.some"),
+    entrou: (s) => !/const v4 = results\.filter/.test(codigo(s)) },
   { id: "M8", nome: "SSRF: tirar a INVERSÃO (literal IPv6 volta a passar, sem descodificar nada)", f: "P",
     apl: (s) => s.replace('  if (h.includes(":")) return true;                    // literal IPv6 -> recusado, sem descodificar\n', ""),
     entrou: (s) => !/if \(h\.includes\(":"\)\) return true;/.test(codigo(s)) },
