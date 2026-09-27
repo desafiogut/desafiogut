@@ -2892,10 +2892,17 @@ verificação DNS** — duas guardas caídas pela mesma causa. Correcção na **
 `isBlockedHostname`: normalizar brackets + descodificar o **IPv4 embutido** em IPv6
 (`::ffff:`, `::ffff:0:`, `2002:` 6to4, `64:ff9b::` NAT64), reutilizando `isBlockedIp`.
 
-⚠️ **Foram precisas 3 iterações, e nenhuma parecia incompleta:** a 1.ª fechou 3 de 4 payloads
-(o 4.º achou-o o PoC re-corrido); a 2.ª fechou o mapeado em hex, mas ficaram **traduzido, 6to4 e
-NAT64** (achados ao caçar **17 formas**). *Uma correcção de segurança sem caça adversarial é
-uma correcção com sorte.*
+⚠️⚠️ **O VALIDADOR INDEPENDENTE REFUTOU A 3.ª ITERAÇÃO.** Eu tinha escrito «0 bypass» — e faltavam
+**≥15 payloads** (`fe90..febf` = cauda de `fe80::/10`; `fec0..feff` = site-local; `::7f00:1`;
+`::a00:1`; `64:ff9b:1::`; mapeados com >2 grupos). **O erro de fundo era ESTAR A ENUMERAR
+PREFIXOS** — três iterações, cada uma a parecer completa. **Correcção final: abandonar a enumeração**
+e usar **allowlist de intervalo** (`2000::/3` é o único permitido; tudo o resto cai de uma vez) +
+descodificação do IPv4 embutido. **Menos código do que a lista que falhava.**
+
+⚠️ Ao corrigir, introduzi uma **regressão grave**: o guard não distinguia domínio de IPv6 e passou a
+bloquear `i.imgur.com` — **o proxy de imagens recusava todas as imagens**. Apanhado pelos controlos
+**POSITIVOS**, não pelos negativos: um teste que só verifica «o malicioso é recusado» fica verde com
+«bloquear tudo». *Foi exactamente para isto que existe o HARD GATE 7.*
 
 **Falsos alarmes declarados:** `http://[::1]@evil.com/` **não é SSRF** (hostname `evil.com`).
 A lista de caça estava errada, não o código.
