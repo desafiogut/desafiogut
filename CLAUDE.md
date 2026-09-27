@@ -3176,6 +3176,23 @@ tocado nesta geração) e **fora do âmbito autorizado** — **decisão do opera
 classificador (recomendado, ~6 linhas, risco nulo para imagens legítimas) ou aceitar e documentar.
 As faixas ficam **medidas à vista** em `scripts/mc99521e-producao.mjs`.
 
+⚠️ **INVARIANTE DE DESENHO — `redirect: "error"` é PARTE DA BARREIRA, não um detalhe.** Medido com
+um Agent próprio: com `redirect: "follow"`, um redirect para um **NOME** re-invoca o `connect.lookup`
+(o pin aplica-se), mas um redirect para um **IP LITERAL salta o lookup por completo** — um
+`302 → http://127.0.0.1` atravessaria a guarda. **Quem mexer no `fetch` mantém `"error"`, ou valida
+CADA salto.** (Hoje está fechado; o que fica registado é a condição.)
+
+**A prova mais forte do `pin` (nome 6rd NOVO inventado pelo validador):**
+`1-1-1-1.2602--a9fe-a9fe.sslip.io` → `A=[1.1.1.1] AAAA=[2602::a9fe:a9fe]`, `resolvesToBlocked=false`
+(a lista de mecanismos É incompleta) — e a ligação foi ao **A validado** (`socket ev=connect
+REMOTO=1.1.1.1:80`), isco **0 toques**. **A classificação falhar deixou de ser suficiente para
+explorar: o que decide é o endereço fixado.**
+
+**NÃO MEDIDO (declarado):** rebinding real de 2 respostas (o `dns.lookup` usa getaddrinfo e não
+segue `dns.setServers`; 0 pacotes recebidos por um servidor DNS local); **não existe serviço de
+metadata cloud neste host**, logo os veredictos sobre `169.254.169.254` são da **blocklist**, não
+medições de alcance real.
+
 ⚠️ **Erros dos MEUS instrumentos, corrigidos nesta geração (ficam à vista):**
 1. A régua `codigo()` (stripper de comentários) **comia CÓDIGO real**: em `/^image\//i` a barra conta
    como início de comentário e a linha desaparecia do texto medido. Presa a barras invertidas.
