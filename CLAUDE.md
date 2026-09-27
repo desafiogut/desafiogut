@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.5) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.5.1) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -2848,3 +2848,29 @@ redundância — é o sinal mais fiável que esta série produziu.*
 **A auditoria mediu o meu próprio erro:** o DEP-2 achou os dois desperdícios que a optimização
 do MC99.3 introduziu/agravou (7 fontes Inter byte-idênticas; fundo mobile 1,8× maior), sem ver
 o meu relatório — onde eu tinha reportado essa optimização como um ganho de 20,6% no FCP.
+
+---
+
+## MC99.5.1 — Gate legal legível + verdades públicas (2026-09-27)
+
+**Commit `59fd556` · suíte 437/437 + 680/686 · zero alterações fora do Grupo 1.**
+
+**O achado do DEP-5 era real e a causa era outra:** a caixa do texto legal tinha
+`maxHeight: 260px` mas, como **filho flex com `flexShrink: 1`**, o algoritmo encolhia-a a
+**40 px** (`clientHeight 40` / `scrollHeight 1654` = **2,4% visível**). O utilizador aceitava
+4 declarações legais cujo texto não conseguia ler. **Correcção: `flexShrink: 0` + remoção do
+`maxHeight`/`overflowY`** (eliminação) -> **100% visível** (medido no DOM vivo antes de
+escrever: 40 -> 258 -> 1654).
+
+Também: `robots.txt` + `sitemap.xml` criados (antes produção devolvia o index.html em ambos),
+data «1º de junho» -> «5 de outubro» em 3 sítios, título do Regulamento v3.0 -> v4.0.
+
+**⚠️ NÃO MEDIDO:** o `clientHeight` no **build implantado** (o browser não renderiza a página
+e o gate LGPD não se aceita). A prova de 100% é por injecção no DOM, não no artefacto.
+**⚠️ M2 (tirar o `flexShrink: 0`) ficou por provar** — o predicado não distingue «não entrou»
+de «guarda vácuo»; é a 14.ª ocorrência da família comentário-vs-código, a 2.ª dentro de uma
+asserção minha.
+
+**Pendentes deste Grupo 1:** e-mail PIX (`MinhaCarteira.jsx:266` + um teste que congela o
+errado em `mc99-limpeza-ui.test.mjs:213`), domínio `desafiogut.com`, 2 iubenda em 404, o
+`16`->`17` do Grupo 2.
