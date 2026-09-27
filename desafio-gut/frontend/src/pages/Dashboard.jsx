@@ -425,19 +425,37 @@ export default function Dashboard() {
               diziam "Encerrada" (B3). O título passa a ser neutro: quem declara
               o estado é cada cartão, e só a fonte única lho dita. */}
           <h3 style={{ ...cardTitulo, marginBottom: innerGap }}>🗓️ Outras Edições</h3>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: innerGap,
-          }}>
+          {/* MC99 — scroll LATERAL (era empilhado). No telemóvel o `grid` punha as
+              edições numa coluna única, uma sobre a outra, e "Outras Edições" comia a
+              dobra inteira. Passa a UMA edição visível de cada vez, as restantes por
+              swipe. `scroll-snap` prende cada cartão ao início — sem ele o swipe para a
+              meio. Toda a informação de cada edição é preservada: só o eixo de leitura
+              mudou (vertical → horizontal). */}
+          <div
+            data-testid="outras-edicoes-scroll"
+            style={{
+              display: "flex",
+              gap: innerGap,
+              overflowX: "auto",
+              overflowY: "hidden",
+              scrollSnapType: "x mandatory",
+              WebkitOverflowScrolling: "touch",
+              paddingBottom: "0.25rem",
+            }}
+          >
             {edicoesExtra.map((ed) => (
-              <EdicaoCard
+              <div
                 key={ed.id}
-                edicao={ed}
-                isMobile={isMobile}
-                cardCls={cardCls}
-                cardTituloStyle={cardTitulo}
-              />
+                data-testid="outras-edicoes-item"
+                style={{ flex: "0 0 100%", minWidth: 0, scrollSnapAlign: "start" }}
+              >
+                <EdicaoCard
+                  edicao={ed}
+                  isMobile={isMobile}
+                  cardCls={cardCls}
+                  cardTituloStyle={cardTitulo}
+                />
+              </div>
             ))}
           </div>
         </section>

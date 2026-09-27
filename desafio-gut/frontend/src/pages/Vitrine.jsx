@@ -720,9 +720,13 @@ export default function Vitrine() {
         )}
       </section>
 
-      <footer style={{ marginTop: "0.5rem", fontSize: "0.7rem", color: COR.muted, lineHeight: 1.5 }}>
-        Vitrine em modo informativo · Pipeline de lance em <code style={{ color: "#f5a623" }}>/mercado</code> (Edição R-1, validada em produção).
-      </footer>
+      {/* MC99 (SEG4) — rodapé TÉCNICO removido. Dizia, à vista do utilizador comum:
+          "Vitrine em modo informativo · Pipeline de lance em /mercado (Edição R-1,
+          validada em produção)" — vocabulário de equipa de desenvolvimento, não de
+          produto: "pipeline de lance", o nome de uma rota interna e a referência a uma
+          edição de teste. Nada disto ajuda quem quer ofertar; e o caminho que ele
+          descreve ("ir para /mercado") já está no botão de cada slot
+          ("Ver detalhes →" / "Ir para a edição →"). */}
     </div>
   );
 }

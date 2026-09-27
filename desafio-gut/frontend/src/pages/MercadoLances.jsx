@@ -6,34 +6,17 @@ import { useLanceFeedback } from "../hooks/useLanceFeedback.js";
 import CardLance from "../components/CardLance.jsx";
 import LanceStatusBadge from "../components/LanceStatusBadge.jsx";
 import TabelaLances from "../components/TabelaLances.jsx";
-import BannerCard from "../components/BannerCard.jsx";
 import { GlassCard } from "@/components/ui";
 import GlassHeader from "../components/glass/GlassHeader.jsx";
 import { COR } from "../components/glass/glassTokens.js";
 import { useRecursosApp } from "../hooks/useRecursosApp.js";
-import { apiGet } from "../lib/api.js";
 
-// REQ-01: descobre o cliente cujo leilão está ativo no momento, conforme
-// a categoria correspondente ao tipoLeilao atual. Sem cota cadastrada:
-// retorna null e o banner não é exibido.
-const CATEGORIAS_POR_TIPO = {
-  flash:      ["bronze", "prata"],   // relâmpago
-  programado: ["diamante", "ouro"],  // 24h fixo
-};
-async function buscarClienteDoLeilaoAtivo(tipo) {
-  const cats = CATEGORIAS_POR_TIPO[tipo] || [];
-  for (const cat of cats) {
-    try {
-      const { ok, data } = await apiGet(`cotas?categoria=${cat}`);
-      if (!ok) continue;
-      const cotas = Array.isArray(data?.cotas) ? data.cotas : [];
-      const ativa = cotas.find((c) => c?.disponivel || c?.vendida);
-      if (ativa?.cliente_id) return { cliente_id: ativa.cliente_id, categoria: cat, nome: ativa.cliente_nome };
-    } catch {}
-  }
-  return null;
-}
-
+// MC99 — `CATEGORIAS_POR_TIPO` + `buscarClienteDoLeilaoAtivo` viveram aqui para
+// alimentar o banner do cliente (REQ-01). Com o banner removido desta tela, o
+// resultado da função deixou de ser lido por alguém — mantê-la seria uma chamada de
+// rede cujo resultado ninguém vê. A funcionalidade NÃO desapareceu: o banner
+// continua a ser gerido e visto pelo lojista em /corporativo (BannerUpload) e o
+// endpoint `banners` continua intacto.
 // MC66 — COR migrado para components/glass/glassTokens.js (fonte única, compartilhada
 // com os subcomponentes do Glass). Importado no topo.
 
@@ -197,14 +180,6 @@ export default function MercadoLances() {
     handleLanceSucesso?.(info);
   }, [handleLanceSucesso, EDICAO_ATIVA]);
 
-  // REQ-01: banner do cliente do leilão ativo.
-  const [clienteAtivo, setClienteAtivo] = useState(null);
-  useEffect(() => {
-    let cancelado = false;
-    buscarClienteDoLeilaoAtivo(modalidade).then((c) => { if (!cancelado) setClienteAtivo(c); });
-    return () => { cancelado = true; };
-  }, [modalidade]);
-
   // MC29.1 — gate de plataforma. Skeleton enquanto a config carrega (CLS=0);
   // vista de conformidade quando o leilão não está ativo nesta plataforma.
   // Os componentes de leilão (CardLance, TabelaLances, timers) ficam DESMONTADOS.
@@ -244,28 +219,12 @@ export default function MercadoLances() {
           edicao={EDICAO_ATIVA}
         />
 
-        {/* ── Banner do cliente do leilão ativo (REQ-01) ── */}
-        {clienteAtivo?.cliente_id && (
-          <div style={{
-            padding: isMobile ? "0.75rem 1rem 0" : "1rem 2rem 0",
-          }}>
-            <BannerCard
-              clienteId={clienteAtivo.cliente_id}
-              formato={isMobile ? "app" : "site"}
-              style={{ width: "100%" }}
-            />
-            {clienteAtivo.nome && (
-              <p style={{
-                margin: "0.4rem 0 0", fontSize: "0.72rem", color: COR.muted,
-                textAlign: "center", letterSpacing: "0.04em",
-              }}>
-                Edição {modalidade === "flash" ? "⚡ Relâmpago" : "🎫 Programado"} ·
-                cliente <strong style={{ color: COR.gold }}>{clienteAtivo.nome}</strong>
-                {" "}({clienteAtivo.categoria})
-              </p>
-            )}
-          </div>
-        )}
+        {/* MC99 — o banner do cliente (REQ-01) foi REMOVIDO desta tela: era um
+            SEGUNDO vidro colado ao topo, antes do vidro do painel principal, e a
+            primeira coisa que o utilizador via nos Lances era publicidade — e não a
+            pergunta do torneio ("QUANTO VOCÊ OFERTA POR..."). O banner continua a
+            existir para o lojista em `/corporativo` (BannerUpload), que é quem o gere;
+            aqui sai a superfície, não a funcionalidade. */}
 
         {/* ── Grid principal ── */}
         <main style={{

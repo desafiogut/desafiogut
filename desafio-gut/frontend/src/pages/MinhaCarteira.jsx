@@ -17,22 +17,29 @@ const COR = {
   success: "#10b981", danger: "#ef4444", blue300: "#fbbf24", purple: "#a78bfa",
 };
 
-// MC17.3 — apenas o fluxo de pagamento do utilizador COMUM (Operação Interna):
-// Fichas via Mercado Pago → desafiogut@gmail.com (webhook automatizado).
-// DESCONTINUADO no comum: "Adesão (Consultoria)" (pertence ao universo
-// corporativo — RenovacaoCard movida em MC17.3) e a linha legada "Cartão Débito".
-const DADOS_PAGAMENTO = [
-  { label: "Fichas (Mercado Pago)",   value: "desafiogut@gmail.com — automatizado" },
-  { label: "Custo por senha",         value: "R$ 2,00 por edição (Art. 20)"        },
-];
+// MC99 (HARD GATE 4) — o card "🏦 Dados para Pagamento (Art. 21)", que consumia esta
+// lista, foi REMOVIDO. Medido: a informação não se perdeu —
+//   · "R$ 2,00 por senha" está no próprio cartão de saldo (botão "Trocar R$ 2,00 → 1
+//     Senha") e em Configurações → Segurança e Transparência ("Art. 20 — Senha:
+//     R$ 2,00 por edição");
+//   · os dados bancários/PIX do Art. 21 estão no regulamento (gate de consentimento,
+//     Art. 21: chave PIX, agência e conta);
+//   · o fluxo de pagamento em si é o modal "💰 Depositar PIX", que gera o código.
+// Ou seja: o cartão repetia no ecrã o que o utilizador já lê no regulamento e no
+// próprio botão de depósito.
 
 export default function MinhaCarteira() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  // MC99 — o destructure encolheu com os cartões: saíram `lances` (só servia o card
+  // "Meus Lances") e `userLabel` (só o card "Carteira Conectada").
+  // `refetchSaldo` FICA: apesar de o card "Saldo de Senhas" ter saído, o saldo de
+  // senhas continua a ser mostrado no Sidebar (indicador "🔗 N"), e a compra de fichas
+  // tem de o refrescar também — senão o rail fica com um número antigo.
   const {
     isConnected, abrirModal,
-    address, userLabel, lances, user,
-    saldoSenhas, saldoSenhasStatus, refetchSaldo,
+    address, user,
+    refetchSaldo,
     saldoRsCentavos, saldoRsStatus, refetchSaldoRs,
     setModalidade,
   } = useAppContext();
@@ -57,17 +64,6 @@ export default function MinhaCarteira() {
   // Inerte enquanto CREDITO_ASSINCRONO=OFF (o caminho síncrono não retorna txHash).
   const [creditoTxHash, setCreditoTxHash] = useState(null);
 
-  // Saldo on-chain — sufixo de status alinhado ao Sidebar/Dashboard.
-  // MC88.40 — o "◇" do estado "stale" foi removido. Era o mesmo problema que o
-  // " (antigo)" do Dashboard noutra roupagem: um símbolo solto ao lado de um
-  // saldo, que nada diz ao utilizador. Passa a ser esbatido (.gut-valor-pendente).
-  const saldoStatusSuffix =
-    saldoSenhasStatus === "loading" ? " ⏳" :
-    saldoSenhasStatus === "error"   ? " ✗" : "";
-  const saldoPendente   = saldoSenhasStatus === "stale";
-  const saldoNumero     = (saldoSenhas == null) ? null : Number(saldoSenhas);
-  const valorFinanceiro = saldoNumero == null ? null : saldoNumero * VALOR_POR_SENHA_BRL;
-
   const statusRsSuffix =
     saldoRsStatus === "loading" ? " ⏳" :
     saldoRsStatus === "error"   ? " ✗" : "";
@@ -82,10 +78,6 @@ export default function MinhaCarteira() {
     try { setModalidade?.("flash"); } catch {}
     navigate("/mercado");
   }
-
-  const meusLances = lances.filter(
-    (l) => l.endereco?.toLowerCase() === address?.toLowerCase()
-  );
 
   const pad        = isMobile ? "1rem" : "2rem";
   const cardPad    = isMobile ? "1rem" : "1.25rem";
@@ -105,28 +97,17 @@ export default function MinhaCarteira() {
     fontWeight: "800", fontSize: "0.85rem", cursor: "pointer",
     boxShadow: "0 4px 14px rgba(245,166,35,0.35)",
   };
-  const botaoSecundario = {
-    width: "100%",
-    padding: isMobile ? "0.75rem 1rem" : "0.7rem 1.2rem",
-    background: "rgba(167,139,250,0.12)",
-    border: "1px solid rgba(167,139,250,0.35)",
-    borderRadius: "12px", color: COR.purple,
-    fontWeight: "800", fontSize: "0.85rem",
-  };
 
   return (
     <div style={{ padding: pad, flex: 1 }}>
-      {/* MC67 (item 1) — cabeçalho da carteira DENTRO de um Glass (.gut-glass-standard). */}
-      <GlassCard as="header" className={cardCls} style={{ marginBottom: sectionGap }}>
-        <h1 style={{
-          margin: "0 0 0.35rem",
-          fontSize: isMobile ? "1.3rem" : "1.5rem",
-          fontWeight: "900", color: COR.text, lineHeight: 1.2,
-        }}>💰 Minha Carteira</h1>
-        <p style={{ margin: 0, color: COR.muted, fontSize: isMobile ? "0.82rem" : "0.88rem", lineHeight: 1.4 }}>
-          Acompanhe seu saldo de senhas e seus lances no DesafioGUT.
-        </p>
-      </GlassCard>
+      {/* MC99 — o GLASS DE CABEÇALHO foi removido. Dois títulos a dizer o mesmo na
+          mesma dobra ("Minha Carteira" no cabeçalho e "Saldo Disponível" no cartão
+          logo abaixo) era ruído: o nome da página já vem na navegação ("Carteira" na
+          barra inferior, item activo). O nome foi INCORPORADO no cartão de saldo,
+          que passa a ser o primeiro — e único — título da página. O texto de apoio
+          ("Acompanhe seu saldo de senhas e seus lances") saiu porque descrevia
+          exactamente o que os cartões mostram; e os "lances" que ele prometia já não
+          estão aqui (ver remoção do card "Meus Lances"). */}
 
       {!isConnected ? (
         <GlassCard className={cardCls}>
@@ -140,15 +121,18 @@ export default function MinhaCarteira() {
           {/* Saldo Disponível (R$) — modelo dual Frente B.9.
               Fonte: blob saldo-rs:${address}. PIX → +R$. /comprar-senhas → -R$.
               /lance-relampago → -centavos. */}
-          <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`} style={{
-              borderColor: "rgba(245,166,35,0.32)",
-              background: "linear-gradient(180deg, rgba(10,16,42,0.6), rgba(245,166,35,0.06))",
-            }}>
+          {/* MC99 (HARD GATE 2) — SEM `background` nem `borderColor` inline. Este cartão
+              tinha um vidro PRÓPRIO (gradiente quase transparente, 0.6 → 0.06) no meio
+              de vidros standard (navy 0.88) — o texto do saldo assentava em
+              transparência, e era o único cartão da app fora do padrão. Passa a
+              .gut-glass-standard puro. O destaque do saldo fica a cargo do que sempre
+              devia: o TAMANHO do número e a cor do valor. */}
+          <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
               <div style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 marginBottom: "0.55rem", gap: "0.5rem",
               }}>
-                <h3 style={{ ...tituloStyle, margin: 0, color: COR.gold }}>💰 Saldo Disponível</h3>
+                <h3 style={{ ...tituloStyle, margin: 0, color: COR.gold }}>💰 Minha Carteira</h3>
                 <span style={{
                   fontSize: "0.62rem", fontWeight: 700,
                   color: saldoRsStatus === "error" ? COR.danger : COR.muted,
@@ -162,6 +146,13 @@ export default function MinhaCarteira() {
                 </span>
               </div>
 
+              {/* MC99 — a etiqueta veio do glass de cabeçalho removido: o número
+                  grande precisa de dizer o que é. */}
+              <div style={{
+                fontSize: "0.62rem", color: COR.muted, fontWeight: 700,
+                textTransform: "uppercase", letterSpacing: "0.06em",
+                marginBottom: "0.15rem",
+              }}>Saldo Disponível</div>
               <div
                 className={saldoRsPendente ? "gut-valor-pendente" : undefined}
                 style={{
@@ -268,199 +259,29 @@ export default function MinhaCarteira() {
             <PainelIndicacao isMobile={isMobile} />
           </div>
 
-          {/* Saldo de Senhas — fonte: saldoSenhas on-chain (AppContext).
-              Atualiza via listener SenhasCreditadas + LanceDado e polling
-              guardião 30s — não precisa hook próprio. */}
-          <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`} style={{
-              borderColor: "rgba(16,185,129,0.28)",
-              background: "linear-gradient(180deg, rgba(10,16,42,0.6), rgba(16,185,129,0.04))",
-            }}>
-              <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                marginBottom: "0.6rem", gap: "0.5rem",
-              }}>
-                <h3 style={{ ...tituloStyle, margin: 0, color: COR.success }}>🔗 Saldo de Senhas</h3>
-                <span style={{
-                  fontSize: "0.62rem", fontWeight: 700,
-                  color: saldoSenhasStatus === "error" ? COR.danger : COR.muted,
-                  background: "rgba(13,18,53,0.25)",
-                  border: "1px solid rgba(245,166,35,0.18)",
-                  borderRadius: "999px",
-                  padding: "0.18rem 0.55rem",
-                  textTransform: "uppercase", letterSpacing: "0.06em",
-                }} title={`Status on-chain: ${saldoSenhasStatus}`}>
-                  on-chain
-                </span>
-              </div>
+          {/* MC99 (HARD GATE 4) — card "🔗 Saldo de Senhas" REMOVIDO. A informação NÃO
+              se perdeu: o mesmo saldo on-chain está no Sidebar (indicador "🔗 N" com
+              status, visível em todos os ecrãs) e no KPI "Senhas" do Dashboard. Aqui
+              era um terceiro sítio a mostrar o mesmo número, com botões próprios
+              ("Usar no Mercado de Lances" / "Atualizar saldo") que duplicavam caminhos
+              que já existem na barra inferior e nos Lances. */}
 
-              <div
-                className={saldoPendente ? "gut-valor-pendente" : undefined}
-                style={{
-                  display: "flex", alignItems: "baseline", gap: "0.5rem",
-                  marginBottom: "0.35rem", flexWrap: "wrap",
-                }}
-              >
-                <span style={{
-                  fontSize: isMobile ? "2.6rem" : "3.2rem",
-                  fontWeight: 900, color: COR.success, lineHeight: 1,
-                }}>
-                  {saldoNumero == null
-                    ? (saldoSenhasStatus === "loading" ? "…" : "—")
-                    : saldoNumero}
-                </span>
-                <span style={{ fontSize: "0.85rem", color: COR.muted, fontWeight: 700 }}>
-                  {saldoNumero === 1 ? "senha" : "senhas"}{saldoStatusSuffix}
-                </span>
-              </div>
+          {/* MC99 (HARD GATE 4) — card "🏦 Dados para Pagamento (Art. 21)" REMOVIDO.
+              Ver a nota no topo do ficheiro: o custo da senha está no botão de troca e
+              nas Configurações; os dados bancários estão no regulamento (Art. 21), que
+              o utilizador aceita antes de participar. */}
 
-              <div style={{
-                fontSize: isMobile ? "0.82rem" : "0.88rem",
-                color: COR.blue300, fontWeight: 600, marginBottom: "0.85rem",
-                lineHeight: 1.4,
-              }}>
-                {valorFinanceiro == null
-                  ? "Aguardando leitura on-chain…"
-                  : <>
-                      {saldoNumero} × R$ {VALOR_POR_SENHA_BRL.toFixed(2)} ={" "}
-                      <strong style={{ color: COR.gold }}>R$ {valorFinanceiro.toFixed(2)}</strong>
-                    </>
-                }
-              </div>
+          {/* MC99 (HARD GATE 4) — card "📋 Meus Lances" REMOVIDO. A informação existe e
+              está MELHOR noutro sítio: /ativos ("Meus Ativos") filtra os lances do
+              endereço e classifica-os (único/repetido/pontos) — este card mostrava uma
+              lista crua de txHash + valor, sem os pontos nem o estado do torneio. */}
 
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-                gap: "0.6rem",
-              }}>
-                <button
-                  onClick={() => navigate("/mercado")}
-                  disabled={!saldoNumero}
-                  style={{
-                    // MC48 P2 — laranja suave (CTA mercado).
-                    ...botaoPrimario,
-                    background: "rgba(245,166,35,0.14)",
-                    border: "1px solid rgba(245,166,35,0.4)",
-                    color: "#f5a623",
-                    boxShadow: "none",
-                    cursor: !saldoNumero ? "not-allowed" : "pointer",
-                    opacity: !saldoNumero ? 0.5 : 1,
-                  }}
-                  title={!saldoNumero ? "Compre fichas para participar da edição" : "Ir ao Mercado de Lances"}
-                >
-                  🎯 Usar no Mercado de Lances
-                </button>
-                <button
-                  onClick={() => { try { refetchSaldo?.(); } catch {} }}
-                  disabled={saldoSenhasStatus === "loading"}
-                  style={{
-                    ...botaoSecundario,
-                    cursor: saldoSenhasStatus === "loading" ? "wait" : "pointer",
-                    opacity: saldoSenhasStatus === "loading" ? 0.6 : 1,
-                  }}
-                >
-                  {saldoSenhasStatus === "loading" ? "Atualizando…" : "↻ Atualizar saldo"}
-                </button>
-              </div>
+          {/* MC99 (HARD GATE 4) — card "Carteira Conectada" (endereço completo) REMOVIDO.
+              O endereço truncado e o nome do utilizador estão no Sidebar (cartão de
+              conta, no rodapé do rail) — visível em todos os ecrãs — e o endereço
+              completo está nas Configurações, onde faz sentido (é lá que se gere a
+              conta). */}
 
-              {saldoSenhasStatus === "error" && (
-                <p style={{
-                  margin: "0.6rem 0 0", fontSize: "0.72rem",
-                  color: COR.danger, lineHeight: 1.4,
-                }}>
-                  ⚠️ Não foi possível ler o saldo on-chain agora. Use “Atualizar saldo”.
-                </p>
-              )}
-            </GlassCard>
-
-          {/* Dados de pagamento */}
-          <GlassCard className={`${cardCls} ${isMobile ? 'mb-5' : 'mb-6'}`}>
-            <h3 style={tituloStyle}>🏦 Dados para Pagamento (Art. 21)</h3>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: isMobile ? "0.5rem" : "0.75rem",
-            }}>
-              {DADOS_PAGAMENTO.map(({ label, value }) => (
-                <div key={label} style={{
-                  background: "rgba(13,18,53,0.25)", borderRadius: "10px",
-                  padding: "0.7rem 0.85rem",
-                  border: "1px solid rgba(245,166,35,0.12)",
-                  minWidth: 0,
-                }}>
-                  <div style={{
-                    fontSize: "0.62rem", color: COR.muted,
-                    textTransform: "uppercase", letterSpacing: "0.06em",
-                    marginBottom: "0.25rem", fontWeight: "600",
-                  }}>{label}</div>
-                  <div style={{
-                    fontSize: "0.82rem", color: COR.blue300, fontWeight: "600",
-                    wordBreak: "break-word",
-                  }}>{value}</div>
-                </div>
-              ))}
-            </div>
-          </GlassCard>
-
-          {/* Meus lances */}
-          <GlassCard className={cardCls}>
-            <h3 style={tituloStyle}>📋 Meus Lances ({meusLances.length})</h3>
-            {meusLances.length === 0 ? (
-              <div style={{
-                padding: "1.5rem 0", textAlign: "center", color: COR.muted,
-                display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "center",
-              }}>
-                <span style={{ fontSize: "1.4rem", opacity: 0.45 }}>📭</span>
-                <span style={{ fontSize: "0.82rem" }}>Nenhum lance registrado ainda com esta carteira.</span>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {meusLances.map((l, i) => (
-                  <div key={i} style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "0.7rem 0.85rem", background: "rgba(13,18,53,0.25)",
-                    borderRadius: "10px", border: "1px solid rgba(245,166,35,0.1)",
-                    gap: "0.6rem",
-                  }}>
-                    <span style={{
-                      fontFamily: "monospace", fontSize: "0.74rem", color: COR.muted,
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      flex: 1, minWidth: 0,
-                    }}>
-                      {l.txHash ? `${l.txHash.slice(0, 14)}...` : "—"}
-                    </span>
-                    <span style={{
-                      fontWeight: "700",
-                      color: l.repetido ? COR.danger : COR.success,
-                      fontSize: "0.82rem",
-                      whiteSpace: "nowrap",
-                    }}>{l.repetido ? "❌" : "✅"} R$ {(l.valor / 100).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </GlassCard>
-
-          {/* Account info — MC39.3.1 (#1): padronizado com GlassCard (.gut-glass-standard)
-              em vez do <div> ad-hoc; mantém padding/margem, dropa background/border ad-hoc. */}
-          <GlassCard style={{
-            marginTop: sectionGap,
-            padding: isMobile ? "0.85rem" : "0.75rem 1rem",
-          }}>
-            <div style={{
-              fontSize: "0.62rem", color: COR.muted,
-              textTransform: "uppercase", letterSpacing: "0.06em",
-              marginBottom: "0.35rem", fontWeight: "700",
-            }}>Carteira Conectada</div>
-            <div style={{
-              fontFamily: "monospace", fontSize: isMobile ? "0.74rem" : "0.82rem",
-              color: COR.blue300, wordBreak: "break-all", lineHeight: 1.4,
-            }}>{address}</div>
-            {userLabel && (
-              <div style={{ fontSize: "0.72rem", color: COR.muted, marginTop: "0.35rem" }}>
-                {userLabel}
-              </div>
-            )}
-          </GlassCard>
         </>
       )}
 

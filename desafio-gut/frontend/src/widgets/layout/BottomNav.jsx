@@ -18,10 +18,13 @@ const IconSettings  = (p) => <NavIcon name="settings" size={22} {...p} />;
 const IconLogOut    = (p) => <NavIcon name="logout" size={22} {...p} />;
 const IconClose     = (p) => <NavIcon name="close" size={22} {...p} />;
 
+// MC99 — ordem: Início · Carteira · Lances · Mais (era Início · Lances · Carteira).
+// A Carteira sobe para 2.º porque é onde o utilizador COMUM deposita (PIX) e troca por
+// senhas — é a porta do dinheiro, e estava atrás dos Lances. "Mais" fecha sempre.
 const MAIN_TABS = [
   { path: "/",         label: "Início",   Icon: IconDashboard, end: true,  ariaLabel: "Ir para Dashboard" },
-  { path: "/mercado",  label: "Lances",   Icon: IconTarget,    end: false, ariaLabel: "Ir para Mercado de Lances" },
   { path: "/carteira", label: "Carteira", Icon: IconWallet,    end: false, ariaLabel: "Ir para Minha Carteira" },
+  { path: "/mercado",  label: "Lances",   Icon: IconTarget,    end: false, ariaLabel: "Ir para Mercado de Lances" },
 ];
 
 const SECONDARY_LINKS = [

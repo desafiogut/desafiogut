@@ -123,7 +123,13 @@ test("(b) o vocabulário correcto está presente nos ficheiros tocados", () => {
   // e as substituições concretas existem (não basta apagar)
   assert.match(ler("src/pages/Vitrine.jsx"), /"Edição em breve"/, "Vitrine: falta «Edição em breve»");
   assert.match(ler("src/pages/MercadoLances.jsx"), /EDIÇÃO ENCERRADA/, "Mercado: falta «EDIÇÃO ENCERRADA»");
-  assert.match(ler("src/pages/MinhaCarteira.jsx"), /participar da edição/, "Carteira: falta «participar da edição»");
+  // MC99 — a Carteira perdeu o card "Saldo de Senhas", e com ele o título do botão
+  // «Compre fichas para participar da edição». A guarda deixa de exigir ESSA frase
+  // exacta (o elemento que a mostrava foi removido por decisão de produto, MC99) mas
+  // continua a exigir VOCABULÁRIO APROVADO na Carteira — senão bastava apagar o ecrã
+  // para passar este teste. O par de modalidades é o vocabulário que sobreviveu.
+  assert.match(ler("src/pages/MinhaCarteira.jsx"), /Lance Relâmpago[\s\S]{0,200}Lance Programado/,
+    "Carteira: falta o par de modalidades (vocabulário aprovado)");
   assert.match(ler("src/utils/edicao.js"), /rotuloLongo: "Edição encerrada"/, "edicao.js: falta o rótulo");
 });
 

@@ -329,9 +329,10 @@ export default function SejaNossoParceiro() {
         {/* MC43 — entrada da página é dada pelo wrapper padrão no Layout; este
             header deixa de animar por conta própria (evita entrada dupla). */}
         <motion.header
+          className="gut-glass-standard"
           style={{
             textAlign: "center",
-            padding: isMobile ? "1.5rem 0.5rem" : "3rem 1rem",
+            padding: isMobile ? "1.5rem 1rem" : "2.5rem 2rem",
           }}
         >
           <h1 style={{
@@ -354,11 +355,17 @@ export default function SejaNossoParceiro() {
   return (
     <div style={wrap} className={wrapClass}>
       {/* ── HERO ── (MC43: entrada dada pelo wrapper padrão no Layout) */}
+      {/* MC99 (HARD GATE 2) — o hero estava SOLTO sobre a ilustração de fundo: o
+          badge, o título e o parágrafo assentavam directamente na arte, sem
+          superfície. É o mesmo defeito que o MC89.4 mediu no /admin ("havia frases
+          que não se liam"). Passa a .gut-glass-standard, o padrão do app — um só
+          vidro, o mesmo dos 3 cartões abaixo. */}
       <motion.header
+        className="gut-glass-standard"
         style={{
           textAlign: "center",
           marginBottom: isMobile ? "2rem" : "3rem",
-          padding: isMobile ? "1.5rem 0.5rem" : "3rem 1rem",
+          padding: isMobile ? "1.5rem 1rem" : "2.5rem 2rem",
         }}
       >
         {/* MC67 — avatar GUTO removido do hero de parceiros. */}

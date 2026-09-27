@@ -155,12 +155,6 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.5rem" }}>
         <h3 style={tituloStyle}>🎁 Indique e Ganhe</h3>
-        <span style={{
-          fontSize: "0.62rem", color: COR.muted,
-          textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700,
-        }}>
-          MC10 · Growth
-        </span>
       </div>
 
       <p style={{ margin: "0 0 1rem", fontSize: isMobile ? "0.85rem" : "0.9rem", color: COR.text, lineHeight: 1.5 }}>
