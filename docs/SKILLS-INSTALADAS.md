@@ -23,7 +23,7 @@ Medição do disco no fecho: **195 skills escritas nesta sessão**;
 | 13 | Webapp Testing (Anthropic) | QA | (c) download pela API | INSTALADA | 1 | ~/.claude/skills/webapp-testing/ |
 | 14 | Browser QA Plus | QA | (c) download pela API | INSTALADA | 1 | ~/.claude/skills/browser-qa/ |
 | 15 | CometWeb Agent Skills | QA | (c) download pela API | INSTALADA | 32 | ~/.claude/skills/ |
-| 16 | Accessibility (T-Mobile ARC) | A11y | (a) npm existe mas INTERACTIVO | NÃO INSTALADA | 0 | — |
+| 16 | Accessibility (T-Mobile ARC) | A11y | — (não instalado POR MIM) | **JÁ EXISTIA** | 10 | ~/.claude/skills/arc-a11y-* |
 | 17 | Claude SEO | SEO | (c) download pela API | INSTALADA | 8 | ~/.claude/skills/ |
 | 18 | Roier SEO | SEO | (c) download + CORREÇÃO de pasta | INSTALADA | 1 | ~/.claude/skills/roier-seo/ |
 | 19 | MCP Builder (Anthropic) | Meta | (c) download pela API | INSTALADA | 1 | ~/.claude/skills/mcp-builder/ |
@@ -39,7 +39,16 @@ conta paga. **R5 — não se toca em credenciais.** Para instalar: o operador au
 **Accessibility (T-Mobile ARC)** — o repo `tmobile/arc-a11y-skills` **não existe** (404 medido).
 O pacote npm `arc-skills-deploy` existe (v1.2.7) mas é **interactivo** (abre um menu que pede
 para escolher o perfil com as setas: «Accessibility SME» / «Developer (Web)»), pelo que não é
-automatizável a partir daqui. Para instalar: o operador corre `npx arc-skills-deploy` e escolhe.
+automatizável a partir daqui.
+
+⚠️ **CORRECÇÃO FACTUAL:** as 10 skills `arc-a11y-*` **já estavam instaladas** neste ambiente
+(mtime **2026-07-09**, medido — anteriores a esta sessão). «NÃO INSTALADA» descreve o **meu
+processo**, não o estado do disco. A família ARC está presente: `arc-a11y-base-web`,
+`arc-a11y-full-audit`, `arc-a11y-full-audit-remediate`, `arc-a11y-issue-writer`,
+`arc-a11y-orchestrator`, `arc-a11y-quick-test`, `arc-a11y-remediator`,
+`arc-a11y-tester-basic`, `arc-a11y-validator`, `arc-a11y-web-standards` (10 skills, ~89 KB).
+
+**Consequência para a contagem: o único alvo realmente ausente deste MC é o Snyk.**
 
 ## Notas de método (porque é que isto não foi só correr 20 comandos)
 
