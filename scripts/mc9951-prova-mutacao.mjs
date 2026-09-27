@@ -3,7 +3,12 @@
 import { readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-const R = "C:/Users/Moltbot/Desktop/DESAFIOGUT";
+// ⚠️ O caminho do repo é DERIVADO do ficheiro, não hardcoded: a 1.ª versão fixava o repo
+// PRINCIPAL, e corrida de dentro de um worktree mutaria o repo errado (defeito achado pelo
+// validador independente, não por mim). Agora respeita onde o script está.
+import { dirname, resolve as rp } from "node:path";
+import { fileURLToPath } from "node:url";
+const R = rp(dirname(fileURLToPath(import.meta.url)), "..");
 const FE = R + "/desafio-gut/frontend";
 const TERMOS = FE + "/src/components/TermosConsentimento.jsx";
 const TESTE = "src/__tests__/mc9951-gate-legal.test.mjs";
