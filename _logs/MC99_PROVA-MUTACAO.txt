@@ -1,0 +1,42 @@
+MUT1 SEG0 — voltar a empilhar Outras Edições (grid)
+  entrou=true red=true provado=true
+  matou: MC99/SEG0 · Outras Edições em scroll LATERAL (não empilhado)
+  suite: tests=11 pass=10 fail=1
+
+MUT2 SEG1 — voltar à ordem antiga da barra inferior
+  entrou=true red=true provado=true
+  matou: MC99/SEG1 · barra inferior na ordem Início · Carteira · Lances
+  suite: tests=11 pass=10 fail=1
+
+MUT3 SEG2 — reintroduzir um card removido (Saldo de Senhas)
+  entrou=true red=true provado=true
+  matou: MC99/SEG2 · a Carteira tem 2 vidros (login + saldo) e mais nenhum | MC99/SEG2 · os 5 cards removidos não voltaram
+  suite: tests=11 pass=9 fail=2
+
+MUT4 SEG2 — voltar a pôr vidro próprio no cartão de saldo
+  entrou=true red=true provado=true
+  matou: MC99/SEG2 · o vidro de saldo usa o PADRÃO (sem background/borderColor inline)
+  suite: tests=11 pass=10 fail=1
+
+MUT5 SEG2.3 — voltar a pôr o rótulo «MC10 · Growth»
+  entrou=true red=true provado=true
+  matou: MC99/SEG2.3 · o rótulo técnico «MC10 · Growth» saiu do Indique e Ganhe
+  suite: tests=11 pass=10 fail=1
+
+MUT6 SEG3.1 — voltar a pôr o banner nos Lances
+  entrou=true red=true provado=true
+  matou: MC99/SEG3.1 · o banner
+  suite: tests=11 pass=10 fail=1
+
+MUT7 SEG3.2 — tirar o vidro de UM dos dois heroes
+  entrou=true red=true provado=true
+  matou: MC99/SEG3.2 · os heroes de Seja Nosso Parceiro estão em vidro padrão
+  suite: tests=11 pass=10 fail=1
+
+MUT8 SEG4 — voltar a pôr o rodapé técnico na Vitrine
+  entrou=true red=true provado=true
+  matou: MC99/SEG4 · o rodapé TÉCNICO da Vitrine não está exposto ao utilizador
+  suite: tests=11 pass=10 fail=1
+
+restauracao_md5_identica=true
+final=VERDE tests=11 pass=11 fail=0

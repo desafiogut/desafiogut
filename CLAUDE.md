@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC98) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -2481,3 +2481,79 @@ reprodutibilidade em A6. Os dois são reais e foram corrigidos no commit `80b5db
   registo do que se fez então (ex.: CLAUDE.md:1652). Não são instruções actuais.
 - Herdadas: chave Alchemy por rotacionar (operador, R5) · auto-deploy do Netlify ligado
   (stop_builds: false) · testes do frontend fora do CI.
+
+---
+
+## MC99 — Limpeza de UX/UI + análise dos caminhos clicáveis (2026-09-27)
+
+**Data:** 2026-09-27 · **Origem:** MC99 (MC de PRODUTO, não de infraestrutura) ·
+**Recorrência:** MÉDIA (a série de limpezas de ecrã continua) · **Impacto:** MÉDIO
+(ruído visual e coerência para o utilizador comum).
+**Base:** ce6fbd3 (pós-MC98). **Logs:** _logs/MC99_* · **Relatório:** _logs/MC99-RELATORIO.md ·
+**Análise de caminhos:** docs/MC99-CAMINHOS-CLICAVEIS.md.
+
+### O que mudou (só UI/UX — nenhuma lógica de produto)
+
+| # | onde | o que |
+|---|---|---|
+| 1 | pages/Dashboard.jsx | «Outras Edições»: `grid` empilhado → **scroll LATERAL** (flex + overflowX + scroll-snap, 1 edição visível de cada vez) |
+| 2 | widgets/layout/BottomNav.jsx | barra inferior: Início · **Carteira** · **Lances** · Mais (era Início · Lances · Carteira) |
+| 3 | pages/MinhaCarteira.jsx | **5 blocos removidos** (glass de cabeçalho, Saldo de Senhas, Dados para Pagamento, Meus Lances, Carteira Conectada); «Minha Carteira» incorporado no cartão de saldo, que perdeu o vidro próprio (gradiente) e usa `.gut-glass-standard`. 479 → ~290 linhas |
+| 4 | components/PainelIndicacao.jsx | saiu o rótulo técnico «MC10 · Growth» |
+| 5 | pages/MercadoLances.jsx | saiu o **banner do cliente** (2.º vidro) e o código que só o alimentava (`clienteAtivo`, efeito, `buscarClienteDoLeilaoAtivo`, `CATEGORIAS_POR_TIPO`, imports `BannerCard`/`apiGet`) |
+| 6 | pages/SejaNossoParceiro.jsx | os **dois** heroes ganharam `.gut-glass-standard` (estavam soltos sobre a ilustração — defeito classe MC89.4) |
+| 7 | pages/Vitrine.jsx | saiu o rodapé TÉCNICO («Pipeline de lance em /mercado (Edição R-1, validada em produção)») |
+
+### ✅ HARD GATE 4 — nenhuma informação se perdeu (medido, um a um)
+
+Antes de remover os 5 blocos da Carteira, verificou-se onde cada informação vive agora:
+saldo de senhas → **Sidebar** (indicador 🔗, em todos os ecrãs) + KPI do Dashboard;
+endereço → **Sidebar** (truncado) + Configurações (completo); lances do utilizador →
+**/ativos** (que os classifica, melhor que a lista removida); custo da senha → botão de troca
++ Configurações «Art. 20»; dados bancários do Art. 21 → **regulamento**. Zero informação órfã.
+
+### ✅ Zero regressão, medido
+
+| | antes | depois |
+|---|---|---|
+| frontend | 396/396 VERDE | **407/407 VERDE** |
+| backend | 680/686 VERDE | **680/686 VERDE** |
+| ESLint (tocados) | — | 0 erros; 9 warnings **pré-existentes** (confirmadas no base) |
+
+**8 mutações, 8 provadas** (`scripts/mc99-prova-mutacao.mjs`), restauração por snapshot
+binário com md5 idêntico. `_logs/MC99_PROVA-MUTACAO.txt`.
+
+### Lições de método (a que mais vale)
+
+- **Um guarda que verifica «o primeiro» quando existem DOIS é meio guarda.** O hero de
+  SejaNossoParceiro tem dois ramos de render (normal + «cadastro indisponível»). A minha
+  1.ª correcção glazou um só, e foi o meu próprio teste — que olhava só para o primeiro
+  `<motion.header` — que o deixou passar. Só quando o teste passou a exigir TODOS é que a
+  correcção incompleta apareceu. **O guarda e o defeito nasceram da mesma leitura parcial.**
+- **Documentar a remoção em comentário contamina TODOS os greps.** O MC99 escreve, no sítio
+  onde remove, um comentário que NOMEIA o que saiu («Saldo de Senhas», «MC10 · Growth»,
+  «Pipeline de lance»). Qualquer guarda que faça grep ao FICHEIRO dá RED num ficheiro
+  CORRECTO. Pior: o stripper do MC98 não bastava — remove linhas que COMEÇAM por `//`/`*`/`{/*`,
+  e um comentário JSX ocupa VÁRIAS linhas cujas continuações não começam por nada disso.
+  Agora remove-se o BLOCO `{/* … */}` inteiro antes de olhar.
+- **`grep` sem contexto produz hipóteses, não conclusões.** O extractor de caminhos acusou um
+  `<Link to="/vitrine">` dentro do próprio Vitrine.jsx → «link para si própria». **Falso:**
+  está no sub-componente `VitrineDetalhe` (rota `/vitrine/:slot`) e é a migalha «← Voltar à
+  Vitrine». A hipótese só caiu ao ler 10 linhas à volta. A sugestão foi RETIRADA do relatório,
+  com o erro registado em vez de apagado.
+- **Ao mutar ficheiros CRLF, normalize na leitura.** A 1.ª bateria de mutações de várias
+  linhas não casava (li `.jsx` CRLF com padrões LF) e o script abortava com «a mutação não
+  alterou nada» — que, lido à pressa, se confunde com «a guarda não a apanhou».
+
+### Pendências
+
+- **Análise de caminhos clicáveis:** `docs/MC99-CAMINHOS-CLICAVEIS.md` é ANÁLISE, não
+  execução. 6 sugestões priorizadas (a #1: pôr «Meus Ativos» na barra e mover
+  «Configurações» para «Mais»). Execução = MC futuro, por decisão do operador.
+- **Não cruzadas** as rotas referenciadas × rotas registadas em `App.jsx` (apanharia link
+  para rota inexistente) — próximo passo barato e valioso.
+- Os 112 `<button onClick>` não foram auditados um a um (classificados em acção/navegação).
+- Os campos `Info` de «Cotas disponíveis» / «Exclusividade» na Vitrine: vocabulário possivelmente
+  corporativo exposto ao comum — **ambíguo, NÃO removido** (documentado como pendência).
+- Herdadas: 8 worktrees antigos em `.claude/worktrees/` · chave Alchemy por rotacionar (R5) ·
+  auto-deploy do Netlify ligado · testes do frontend fora do CI.

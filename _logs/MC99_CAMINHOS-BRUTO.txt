@@ -1,0 +1,272 @@
+### ROTAS REFERENCIADAS (15)
+${pathname || 
+/
+/admin
+/admin/usuarios
+/admin/usuarios/${u.cliente_id
+/cadastro
+/corporativo
+/corporativo/carteira
+/corporativo/cotas
+/corporativo/mercado
+/login-email
+/mercado
+/programacao
+/vitrine
+…
+
+### NAVEGACAO (Link/NavLink/navigate/window.open) — 33
+App.jsx	395	navigate	${pathname || 	navigate(`${pathname || "/carteira"}${search}${hash}`);
+App.jsx	395	navigate(tpl)	${pathname || "/carteira"}${search}${hash}	navigate(`${pathname || "/carteira"}${search}${hash}`);
+components/CotaInativa.jsx	102	navigate	/corporativo/carteira	onClick={() => navigate("/corporativo/carteira")}
+components/CotaInativa.jsx	124	navigate	/corporativo/cotas	onClick={() => navigate("/corporativo/cotas")}
+components/EdicaoCard.jsx	124	navigate	/mercado	onClick={() => navigate("/mercado")}
+components/admin/AdminLayout.jsx	89	navigate	/	navigate("/");
+components/admin/AdminLayout.jsx	182	Link	/admin	<Link to="/admin" style={{
+context/AppContext.jsx	632	navigate	/corporativo	navigate("/corporativo", { replace: true });
+pages/Cadastro.jsx	54	navigate	/	if (isConnected) navigate("/", { replace: true });
+pages/Cadastro.jsx	142	Link	/login-email	<Link to="/login-email" style={{ color: COR.accent, fontWeight: 700 }}>Entrar com e-mail</
+pages/Configuracoes.jsx	208	navigate	/	onExcluido={() => { setModalExcluir(false); desconectar(); navigate("/"); }}
+pages/CorporativoCarteira.jsx	214	navigate	/corporativo/mercado	<button onClick={() => navigate("/corporativo/mercado")} disabled={!saldoOnChain} style={b
+pages/CorporativoCotas.jsx	50	navigate	/corporativo/carteira	const handleRenovar = () => navigate("/corporativo/carteira");
+pages/CorporativoDashboard.jsx	34	navigate	/corporativo	navigate("/corporativo", { replace: true });
+pages/CorporativoDashboard.jsx	393	navigate	/programacao	onClick={() => navigate("/programacao")}
+pages/Dashboard.jsx	367	navigate	/mercado	onClick={() => navigate("/mercado")}
+pages/DetalheProduto.jsx	117	Link	/vitrine	<Link to="/vitrine" style={{ color: COR.primary, textDecoration: "none", fontWeight: 600, 
+pages/DetalheProduto.jsx	135	Link	/vitrine	<Link to="/vitrine" style={{ color: COR.primary, textDecoration: "none", fontWeight: 600 }
+pages/EdicaoDetalhe.jsx	38	Link	/	<Link to="/" style={{ color: COR.gold, textDecoration: "none", fontWeight: 700, fontSize: 
+pages/EdicaoDetalhe.jsx	70	navigate	/mercado	onClick={() => navigate("/mercado")}
+pages/EdicaoDetalhe.jsx	142	navigate	/mercado	onClick={() => navigate("/mercado")}
+pages/LoginEmail.jsx	47	navigate	/	if (isConnected) navigate("/", { replace: true });
+pages/LoginEmail.jsx	126	Link	/cadastro	<Link to="/cadastro" style={{ color: COR.accent, fontWeight: 700 }}>Cadastre-se</Link>
+pages/MinhaCarteira.jsx	79	navigate	/mercado	navigate("/mercado");
+pages/SejaNossoParceiro.jsx	108	navigate	/corporativo	navigate("/corporativo", { replace: true });
+pages/SejaNossoParceiro.jsx	120	navigate	/corporativo	navigate("/corporativo", { replace: true });
+pages/SejaNossoParceiro.jsx	173	navigate	/corporativo	navigate("/corporativo", { replace: true });
+pages/SejaNossoParceiro.jsx	223	navigate	/corporativo	navigate("/corporativo", { replace: true });
+pages/Vitrine.jsx	371	Link	/vitrine	<Link to="/vitrine" style={{ color: "#f5a623", textDecoration: "none", fontWeight: 600 }}>
+pages/admin/GestaoUsuarios.jsx	188	Link	/admin/usuarios/${u.cliente_id	<Link to={`/admin/usuarios/${u.cliente_id}`} style={{ color: COR.primary, textDecoration: 
+pages/admin/GestaoUsuarios.jsx	218	Link	/admin/usuarios/${u.cliente_id	<Link to={`/admin/usuarios/${u.cliente_id}`}
+pages/admin/PerfilUsuario.jsx	107	Link	/admin/usuarios	<Link to="/admin/usuarios" style={{ fontSize: "0.76rem", color: COR.muted, textDecoration:
+widgets/layout/BottomNav.jsx	265	navigate	/cadastro	onClick={() => { navigate("/cadastro"); setMoreOpen(false); }}
+
+### <a href> — 19
+App.jsx	354	/	<a href="/" style={{
+components/TermosConsentimento.jsx	206	/privacidade	<a href="/privacidade" style={{ color: "#fbbf24" }}>
+pages/Configuracoes.jsx	81	/excluir-conta	<a href="/excluir-conta" style={{ color: COR.blue300 }}>Saiba mais</a>.
+pages/ExcluirConta.jsx	117	mailto:desafiogut01@gmail.com?subject=Solicita%C3%A7%C3%A3o%20de%20exclus%C3%A3o%20de%20conta	<a href="mailto:desafiogut01@gmail.com?subject=Solicita%C3%A7%C3%A3o%20de%20exclus%C3%A3o%
+pages/ExcluirConta.jsx	128	/privacidade	<a href="/privacidade" style={{ color: COR.blue300 }}>Política de Privacidade</a>
+pages/ExcluirConta.jsx	130	mailto:desafiogut01@gmail.com	<a href="mailto:desafiogut01@gmail.com" style={{ color: COR.blue300 }}>Dúvidas: desafiogut
+pages/ExcluirConta.jsx	133	/	<a href="/" style={{ color: COR.muted, fontSize: "0.82rem" }}>← Voltar ao app</a>
+pages/MercadoLances.jsx	277	/privacidade	<a href="/privacidade" style={{ color: COR.gold }}>Privacidade</a>
+pages/MercadoLances.jsx	279	https://www.grupouniaoetrabalho.com.br	<a href="https://www.grupouniaoetrabalho.com.br" target="_blank" rel="noopener noreferrer"
+pages/Privacidade.jsx	59	mailto:desafiogut01@gmail.com	<a href="mailto:desafiogut01@gmail.com" style={{ color: COR.blue300 }}>
+pages/Privacidade.jsx	213	/excluir-conta	<a href="/excluir-conta" style={{ color: COR.blue300 }}>página de eliminação de conta</a>{
+pages/Privacidade.jsx	257	mailto:desafiogut01@gmail.com	<a href="mailto:desafiogut01@gmail.com" style={{ color: COR.blue300 }}>
+pages/Privacidade.jsx	297	mailto:desafiogut01@gmail.com	<a href="mailto:desafiogut01@gmail.com" style={{ color: COR.blue300 }}>
+pages/Privacidade.jsx	309	/excluir-conta	<a href="/excluir-conta" style={{ color: COR.blue300, fontSize: "0.86rem" }}>
+pages/Privacidade.jsx	314	/	<a href="/" style={{ color: COR.muted, fontSize: "0.82rem" }}>← Voltar ao app</a>
+widgets/layout/Layout.jsx	34	https://www.iubenda.com/privacy-policy/DESAFIOGUT	<a href="https://www.iubenda.com/privacy-policy/DESAFIOGUT" target="_blank" rel="noopener 
+widgets/layout/Layout.jsx	35	https://www.iubenda.com/terms-and-conditions/DESAFIOGUT	<a href="https://www.iubenda.com/terms-and-conditions/DESAFIOGUT" target="_blank" rel="noo
+widgets/layout/Layout.jsx	36	mailto:desafiogut01@gmail.com	<a href="mailto:desafiogut01@gmail.com" style={{ color: "inherit", textDecoration: "none" 
+widgets/layout/Layout.jsx	38	/excluir-conta	<a href="/excluir-conta" style={{ color: "inherit", textDecoration: "none" }}>Excluir cont
+
+### BOTOES (onClick) — 112
+
+-- components/BannerUpload.jsx (1)
+   165	accao	onClick={() => setDimensao(k)}
+
+-- components/BotaoLoginPrincipal.jsx (2)
+   25	accao	<button
+   27	accao	onClick={onClick}
+
+-- components/CardLance.jsx (4)
+   391	accao	<button
+   393	accao	onClick={onConnect}
+   411	accao	<button style={estilos.botaoSair} onClick={onDisconnect}>Sair</button>
+   543	accao	onClick={handleDarLance}
+
+-- components/ChatbotWidget.jsx (8)
+   165	accao	<button onClick={copiar} disabled={!link} aria-label="Copiar link de indicação"
+   485	accao	onClick={() => setAberto((v) => !v)}
+   600	accao	<button onClick={limparHistorico} title="Limpar conversa"
+   607	accao	<button onClick={() => setAberto(false)} aria-label="Fechar"
+   683	accao	<button key={bi}
+   684	accao	onClick={() => enviarMensagem(label)}
+   781	accao	<button
+   782	accao	onClick={enviar}
+
+-- components/ComprarFichasModal.jsx (7)
+   310	accao	<button onClick={fechar} aria-label="Fechar" style={btnFechar} disabled={loading}>×</button>
+   327	accao	<button key={p} onClick={() => setQtd(p)} style={presetBtn(qtd === p)}>
+   358	accao	<button
+   359	accao	onClick={iniciarPagamento}
+   448	accao	<button onClick={copiarQr} style={{ ...btnSecundario, marginTop: 0, marginBottom: "0.85rem" }}>
+   481	accao	<button onClick={fechar} style={btnSecundario} disabled={loading}>
+   550	accao	<button onClick={fecharComSucesso} style={btnPrimario(false)}>
+
+-- components/CotaInativa.jsx (4)
+   100	accao	<button
+   102	navega	onClick={() => navigate("/corporativo/carteira")}
+   122	accao	<button
+   124	navega	onClick={() => navigate("/corporativo/cotas")}
+
+-- components/EdicaoBanner.jsx (3)
+   6	accao	// página /edicao/:id). O banner é sempre um <button> (nunca <Link>) — elimina a
+   60	accao	<button
+   62	accao	onClick={() => setAberto(true)}
+
+-- components/EdicaoCard.jsx (2)
+   123	accao	<button
+   124	navega	onClick={() => navigate("/mercado")}
+
+-- components/ExcluirContaModal.jsx (1)
+   132	accao	onClick={handleExcluir}
+
+-- components/FimEdicaoOverlay.jsx (2)
+   64	accao	<button
+   65	accao	onClick={onNovaRodada}
+
+-- components/ImageModal.jsx (3)
+   65	accao	onClick={(e) => e.stopPropagation()}
+   71	accao	<button
+   74	accao	onClick={onClose}
+
+-- components/LazyBoundary.jsx (2)
+   60	accao	<button
+   61	accao	onClick={() => { try { window.location.reload(); } catch { /* noop */ } }}
+
+-- components/PainelIndicacao.jsx (2)
+   189	accao	<button onClick={copiarCodigo} disabled={!dados.codigo} style={botaoPrimario}>
+   192	accao	<button onClick={compartilhar} disabled={!dados.codigo} style={botaoSecundario}>
+
+-- components/StatTile.jsx (1)
+   32	accao	onClick={handle}
+
+-- components/TermosConsentimento.jsx (2)
+   214	accao	<button
+   216	accao	onClick={handleAceitar}
+
+-- components/WalletCard.jsx (2)
+   85	accao	<button
+   86	accao	onClick={carregar}
+
+-- components/admin/AdminToast.jsx (1)
+   27	accao	onClick={(e) => { e.stopPropagation(); onDismiss(); }}>✕</span>
+
+-- components/admin/ComandoButton.jsx (2)
+   55	accao	onClick={() => setAberto(true)}
+   92	accao	onClick={confirmar}
+
+-- components/admin/EnderecoTruncado.jsx (1)
+   66	accao	onClick={podeCopiar ? copiar : undefined}
+
+-- components/admin/EstadoVazio.jsx (2)
+   77	accao	<button
+   79	accao	onClick={acao.onClick}
+
+-- components/admin/NavAdminPersistente.jsx (2)
+   168	accao	<button
+   173	accao	onClick={() => setManual(aberto ? null : g.id)}
+
+-- components/glass/AuthArea.jsx (2)
+   18	accao	<button
+   19	accao	onClick={onLogin}
+
+-- components/glass/ModeSelector.jsx (2)
+   18	accao	<button
+   20	accao	onClick={() => setModalidade(id)}
+
+-- pages/Cadastro.jsx (1)
+   134	accao	<button type="button" onClick={() => setEtapa("form")} style={{ background: "none", border: "none", 
+
+-- pages/Configuracoes.jsx (2)
+   116	accao	<button
+   117	accao	onClick={() => setter((v) => !v)}
+
+-- pages/CorporativoAnalytics.jsx (2)
+   80	accao	<button
+   82	accao	onClick={() => setPeriodo(dias)}
+
+-- pages/CorporativoBanners.jsx (4)
+   143	accao	<button
+   144	accao	onClick={() => togglePausa(key)}
+   154	accao	<button
+   155	accao	onClick={() => setMostrarUpload(true)}
+
+-- pages/CorporativoCarteira.jsx (5)
+   211	accao	<button onClick={converter} disabled={convertendo || saldoTroco < 1} style={btn("#10b981", converten
+   214	navega	<button onClick={() => navigate("/corporativo/mercado")} disabled={!saldoOnChain} style={btn("#f5a62
+   240	accao	<button key={c.id} onClick={() => setTier(c)} style={{
+   273	accao	<button onClick={contratar} disabled={!tier || contratando || pagStatus === "aguardando"}
+   285	accao	<button onClick={() => { try { navigator.clipboard.writeText(pedido.qrCodeText); } catch {} }}
+
+-- pages/CorporativoCotas.jsx (2)
+   117	accao	<button onClick={handleRenovar} style={btn("#f5a623")}>🔄 Renovar cota</button>
+   119	accao	<button onClick={handleUpgrade} style={btn("#00d4aa")}>
+
+-- pages/CorporativoDashboard.jsx (1)
+   393	navega	onClick={() => navigate("/programacao")}
+
+-- pages/Dashboard.jsx (6)
+   366	accao	<button
+   367	navega	onClick={() => navigate("/mercado")}
+   473	accao	<button
+   475	navega	onClick={() => navigate(to)}
+   523	accao	<button
+   525	accao	onClick={() => {
+
+-- pages/DetalheProduto.jsx (1)
+   242	accao	<button
+
+-- pages/EdicaoDetalhe.jsx (4)
+   69	accao	<button
+   70	navega	onClick={() => navigate("/mercado")}
+   141	accao	<button
+   142	navega	onClick={() => navigate("/mercado")}
+
+-- pages/ExcluirConta.jsx (1)
+   97	accao	onClick={() => setModal(true)}
+
+-- pages/LoginEmail.jsx (1)
+   118	accao	<button type="button" onClick={() => setEtapa("form")} style={{ background: "none", border: "none", 
+
+-- pages/MercadoLances.jsx (2)
+   135	accao	<button
+   136	accao	onClick={onNovaRodada}
+
+-- pages/MeusAtivos.jsx (2)
+   204	accao	<button
+   206	accao	onClick={() => setFiltro(id)}
+
+-- pages/MinhaCarteira.jsx (6)
+   184	accao	<button
+   185	accao	onClick={() => setComprarAberto(true)}
+   198	accao	<button
+   199	accao	onClick={async () => {
+   219	accao	<button
+   220	accao	onClick={irParaLanceRelampago}
+
+-- pages/SejaNossoParceiro.jsx (1)
+   515	accao	onClick={() => setAba(t.id)}
+
+-- pages/admin/Aprovacoes.jsx (2)
+   116	accao	<button
+   118	accao	onClick={() => setPiiVisivel((v) => ({ ...v, [p.cliente_id]: !v[p.cliente_id] }))}
+
+-- widgets/layout/BottomNav.jsx (8)
+   132	accao	<button
+   134	accao	onClick={() => setMoreOpen(true)}
+   149	accao	onClick={() => setMoreOpen(false)}
+   187	accao	onClick={() => setMoreOpen(false)} aria-label="Fechar"
+   254	accao	onClick={() => { abrirModal(); setMoreOpen(false); }}
+   265	navega	onClick={() => { navigate("/cadastro"); setMoreOpen(false); }}
+   284	navega	onClick={() => { navigate(path); setMoreOpen(false); }}
+   304	accao	onClick={() => { desconectar(); setMoreOpen(false); }}
+
+-- widgets/layout/Sidebar.jsx (1)
+   132	accao	onClick={!isConnected ? abrirModal : undefined}
+
+-- widgets/toast/Toast.jsx (2)
+   100	accao	<button
+   101	accao	onClick={onDismiss}
