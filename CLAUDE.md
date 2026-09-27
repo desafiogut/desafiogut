@@ -2855,9 +2855,12 @@ o meu relatório — onde eu tinha reportado essa optimização como um ganho de
 
 **Commit `59fd556` · suíte 437/437 + 680/686 · zero alterações fora do Grupo 1.**
 
-**O achado do DEP-5 era real e a causa era outra:** a caixa do texto legal tinha
-`maxHeight: 260px` mas, como **filho flex com `flexShrink: 1`**, o algoritmo encolhia-a a
-**40 px** (`clientHeight 40` / `scrollHeight 1654` = **2,4% visível**). O utilizador aceitava
+**O achado do DEP-5 era real:** a caixa do texto legal tinha
+`maxHeight: 260px` e mostrava **40 px** de 1654 (**2,4% visível**).
+⚠️ **MECANISMO CORRIGIDO PELO VALIDADOR (A7):** eu creditava o `flexShrink: 1` pelo colapso —
+**estava errado**, ele mediu que `flexShrink: 1` SOZINHO não encolhe a caixa (V1/V7 = 100%).
+**Quem corrige é a ELIMINAÇÃO do `maxHeight`/`overflowY`.** O `flexShrink: 0` que acrescentei é
+defensivo, não é a propriedade que faz o trabalho. O utilizador aceitava
 4 declarações legais cujo texto não conseguia ler. **Correcção: `flexShrink: 0` + remoção do
 `maxHeight`/`overflowY`** (eliminação) -> **100% visível** (medido no DOM vivo antes de
 escrever: 40 -> 258 -> 1654).
@@ -2865,11 +2868,15 @@ escrever: 40 -> 258 -> 1654).
 Também: `robots.txt` + `sitemap.xml` criados (antes produção devolvia o index.html em ambos),
 data «1º de junho» -> «5 de outubro» em 3 sítios, título do Regulamento v3.0 -> v4.0.
 
-**⚠️ NÃO MEDIDO:** o `clientHeight` no **build implantado** (o browser não renderiza a página
-e o gate LGPD não se aceita). A prova de 100% é por injecção no DOM, não no artefacto.
-**⚠️ M2 (tirar o `flexShrink: 0`) ficou por provar** — o predicado não distingue «não entrou»
-de «guarda vácuo»; é a 14.ª ocorrência da família comentário-vs-código, a 2.ª dentro de uma
-asserção minha.
+✅ **MEDIDO EM PRODUÇÃO pelo validador independente (A1):** 1654/1654 = **100%**, 0 oculto, com o
+bundle amarrado à medição. A maior pendência deste MC foi fechada por ele, não por mim.
+✅ **M2 RESOLVIDO:** a guarda **não é vácuo** — o mutante entra e o teste morde (RED 5/1). O defeito
+era **só o meu predicado**, que casava um SEGUNDO `flexShrink: 0` na linha 274 (estilo `checkbox`).
+É a 15.ª ocorrência da família, com mecanismo novo: não é um comentário a contaminar, é **uma
+ocorrência legítima do mesmo token noutro sítio do ficheiro**. *O predicado tem de medir o SÍTIO
+certo, não o ficheiro todo.*
+🔧 **Defeito real do instrumento, achado por ele:** o mutador tem o caminho do **repo principal**
+hardcoded — corrido de um worktree, mutaria o repo principal.
 
 **Pendentes deste Grupo 1:** e-mail PIX (`MinhaCarteira.jsx:266` + um teste que congela o
 errado em `mc99-limpeza-ui.test.mjs:213`), domínio `desafiogut.com`, 2 iubenda em 404, o

@@ -243,13 +243,13 @@ const estilos = {
     color: "#fbbf24", letterSpacing: "0.05em", textTransform: "uppercase",
   },
   scrollBox: {
-    // MC99.5.1 — CAUSA do texto legal ilegível, MEDIDA: clientHeight 40 para scrollHeight 1654
-    // (2,4% visível, 1 linha de 17 artigos). O `maxHeight: 260px` existia e não protegia nada:
-    // como FILHO FLEX com flexShrink:1, o algoritmo encolhia a caixa até ~40px.
-    // Correcção (medida no DOM antes de escrever): `flexShrink: 0` + SEM maxHeight ->
-    // clientHeight = scrollHeight = 1654, ou seja 100% do texto no DOM e ZERO oculto.
-    // O aninhamento de scroll sai: quem rola é o DIÁLOGO (já tem overflow-y em :43), como num
-    // contrato normal — o utilizador passa pelo texto antes de chegar aos 4 aceites.
+    // MC99.5.1 — o texto legal era ilegível: clientHeight 40 para scrollHeight 1654 (2,4%).
+    // ⚠️ ATENÇÃO À CAUSA (corrigida após o validador independente, A7): NÃO é o flexShrink.
+    // Ele mediu que `flexShrink: 1` SOZINHO não encolhe a caixa (variantes V1/V7 = 100%).
+    // O que corrige é a ELIMINAÇÃO do maxHeight + overflowY: sem contentor de scroll, a caixa
+    // deixa de poder encolher. O `flexShrink: 0` abaixo é defensivo, NÃO é a propriedade que
+    // faz o trabalho — tirá-lo sozinho não reintroduz o defeito. Medido em produção: 1654/1654,
+    // 100%, 0 oculto. O aninhamento de scroll sai: quem rola é o DIÁLOGO (overflow-y em :43).
     flexShrink: 0,
     padding: "1.25rem",
     background: "rgba(3,15,36,0.6)", borderRadius: "12px", fontSize: "0.84rem",

@@ -1,0 +1,146 @@
+# VALIDAÇÃO MC99.5.1 — «verdades públicas» (tentativa de refutação)
+
+Worktree próprio criado: `59fd556` em `.claude/worktrees/mc9951-validador`. Medições em produção feitas por mim (curl + DOM/CDP). Não alterei o repo principal, não fiz push, não fiz deploy.
+
+**NOTA DE CRONOLOGIA (importante):** na minha 1.ª medição (08:38Z) o deploy ainda NÃO tinha chegado. Re-medido às 08:42Z, o deploy tinha aterrado. Os veredictos abaixo são sobre o artefacto FINAL. Onde a 1.ª medição contradiz a 2.ª, digo-o.
+
+---
+
+## A1. O texto legal é legível em produção? — **CONFIRMADA**
+
+Instrumento próprio: localizei a caixa pelo **conteúdo**, subindo a árvore ao nó mais fundo que contém o texto.
+
+```
+var a=document.querySelectorAll("*"),b=null,d=-1; ... indexOf("resumo dos artigos")>=0 && indexOf("art. 1")>=0 ...
+SAÍDA: {"tag":"DIV","clientH":1654,"scrollH":1654,"oculto":0,"pct":100,
+        "cs":{"overflowY":"visible","maxHeight":"none","flexShrink":"0"}}
+```
+
+E o estilo inline REAL lido do DOM (não do ficheiro):
+```
+"flex-shrink: 0; padding: 1.25rem; background: rgba(3, 15, 36, 0.6); ..."   ← sem max-height
+```
+Bundle amarrado à medição: `document.querySelectorAll("script[src]")` → `/assets/index-LWYsvVKv.js`, que é o hash servido no HTML fresco. **1654/1654 = 100%, 0 px oculto.** De 2,4% para 100%.
+
+**ARMADILHA QUE ME APANHOU (e é a mesma família):** a minha 1.ª sonda procurou `"RESUMO DOS ARTIGOS PRINCIPAIS"` em `textContent` e devolveu **"NAO ACHEI"**. O heading é escrito em maiúsculas por **CSS** (`textTransform: uppercase`); o `textContent` guarda `"Resumo dos Artigos Principais"`. Instrumento a procurar o que não existe → «não acho nada». Corrigido com `.toLowerCase()`.
+
+## A2. Os 4 aceites continuam presentes e clicáveis? — **CONFIRMADA**
+
+```
+{"nCheckbox":4,"checkboxes":[{"i":0,"area":256,"opacity":"1","pointerEvents":"auto"}, ... 4x area 256 ...],
+ "nLabel":4,"botaoDisab":1}
+```
+4 checkboxes reais, 16×16, opacidade 1, pointer-events auto, cada um dentro de um `<label>` clicável de 554 px. Botão continua `disabled` no estado inicial (correcto — os aceites ainda não estão marcados). **Não aceitei o gate.**
+
+## A3. robots.txt e sitemap.xml servidos a sério? — **CONFIRMADA** (2.ª medição)
+
+```
+curl -sI .../robots.txt   →  HTTP/1.1 200 OK / Content-Length: 332 / Content-Type: text/plain; charset=UTF-8
+curl -s  .../robots.txt   →  # DesafioGUT — robots.txt ... User-agent: * / Allow: / / Disallow: /admin ...
+                             Sitemap: https://silly-stardust-ca71bc.netlify.app/sitemap.xml
+
+curl -sI .../sitemap.xml  →  HTTP/1.1 200 OK / Content-Length: 351 / Content-Type: application/xml
+curl -s  .../sitemap.xml  →  <?xml version="1.0"?> ... <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+```
+**Causalidade do rewrite confirmada no código:** `public/_redirects` = `/* /index.html 200` — **sem `force`**. No Netlify sem `force` o ficheiro estático real ganha ao rewrite; com `force` o rewrite ganharia. Daí o 4828 B/`text/html` de antes.
+
+⚠️ **1.ª medição (08:38Z) contradizia:** ambos devolviam `HTTP/1.1 200 / Content-Length: 4828 / Content-Type: text/html` e o corpo era o index.html. **Era o deploy em voo, não a correcção a falhar.**
+
+## A4. Datas e título corrigidos no SERVIDO? — **CONFIRMADA** (2.ª medição)
+
+```
+curl -s https://.../ -o prod_index.html
+grep -c "junho de 2026" prod_index.html          → 0
+grep -o "5 de outubro de 2026" prod_index.html   → 5 de outubro de 2026
+<meta name="description" content="... Vigência: 5 de outubro de 2026." />
+```
+⚠️ **1.ª medição (08:38Z):** o index.html servido ainda dizia `"Vigência: 1º de junho de 2026"`. Idem deploy em voo.
+
+## A5. Nada que funcionava quebrou? — **CONFIRMADA** (diff) / **NÃO MEDIDA no meu worktree** (suite)
+
+**Diff:** 11 ficheiros, **11 hunks**, todos nos 4 assuntos. Zero toques em performance, React, design, promessas, contrato, `GATE ESPECIAL-*`, GUTO/RAG. A única ocorrência de "contrato" é um **comentário** novo. Confirmado.
+
+**Suite:** o executar declara frontend 437/437 e backend 680/686. Medido por mim:
+```
+node scripts/mc966-suite-harness.mjs ambos
+→ frontend: VERMELHO 7 falha(s)
+  backend:  VERDE 680/686 pass        ← bate exactamente com o declarado
+```
+As 7 falhas **não são regressões**: `Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'react'` — o meu `node_modules` é *junction* para o repo principal e o resolvedor ESM do Node resolve o caminho REAL e não encontra `react`. **É o MEU ambiente.** Controlo, no repo principal (leitura pura, os testes só lêem):
+```
+cd .../DESAFIOGUT/desafio-gut/frontend
+node --test --test-concurrency=1 $(find src -name "*.test.mjs")
+→ ℹ tests 437 / ℹ pass 437 / ℹ fail 0 / ℹ skipped 0
+```
+**437/437 exacto.** Backend 680/686 exacto. Números do executar confirmados.
+
+## A6. A guarda morde? M2 — **REFUTADA a leitura do executar** (é falso negativo, não guarda vácuo)
+
+O executar declara `M2 entrou=false red=true provado=false`. **Descobri porquê — e não é o que ele pensa.** Instrumento próprio, ficheiro por ficheiro:
+
+```
+=== 1. ONDE ESTAO OS flexShrink (ficheiro cru) ===  4 ocorrências:
+    248:// ... flexShrink:1 ...            ← COMENTÁRIO
+    249:// `flexShrink: 0` ...             ← COMENTÁRIO
+    253:flexShrink: 0,                     ← o scrollBox (alvo do mutante)
+    274:checkbox: { ... flexShrink: 0 ...} ← SEGUNDO flexShrink: 0
+
+=== 3. O MUTANTE ENTROU? ===
+bloco scrollBox DEPOIS (código) = "padding: \"1.25rem\", background: ..."   ← sem flexShrink:0
+md5 com mutante ≠ md5 base = true
+
+=== 4. OS DOIS PREDICADOS SOBRE O MESMO FICHEIRO MUTADO ===
+predicado do EXECUTOR (ficheiro INTEIRO)  entrou = false   ← FALSO NEGATIVO
+predicado CORRECTO    (só o bloco)        entrou = true
+
+=== 5. SUITE COM O MUTANTE DENTRO ===
+{"exit":1,"pass":"5","fail":"1",
+ "falhas":["MC99.5.1 · (a) o texto legal é servido por inteiro (sem maxHeight nem scroll aninhado)"]}
+```
+
+**Veredicto A6: (iii).** O mutante **ENTRA** e o teste **MORDE** (RED, 5/1). **A guarda NÃO é vácuo.** O defeito é **só o predicado** `entrou`: procura `/flexShrink:\s*0/` no **ficheiro inteiro**; há um **2.º `flexShrink: 0`** no estilo `checkbox` (linha 274), não-comentário, que o stripper não remove. O predicado compara com um token **que não é o seu**. Consequência: `suite()` **nunca correu** para M2 — e o `matou: (vazio)` no log é *artefacto do predicado*, não ausência de mordida. A ironia: o comentário do script diz que corrigiu a «14.ª vez esta família» — corrigiu **comentário** e deixou **escopo**.
+
+Onde M2 toca no mecanismo real (ver A7): **`overflowY` foi também removido**, logo tirar `flexShrink:0` **sozinho NÃO reintroduz** o defeito. O mutante não é uma mutação causal: é a remoção de um dos dois cintos.
+
+## A7. A correcção é causal? — **CONFIRMADA, mas o MECANISMO DECLARADO ESTÁ ERRADO**
+
+Contra-experimento no DOM vivo (reverter a correcção no próprio elemento e medir, sem mexer no repo):
+
+```
+V0 fix actual  (fs=0, maxH=none, overflow=visible)  → 1654/1654 → 100,0%
+V1 só fs=1     (fs=1, maxH=none, overflow=visible)  → 1654/1654 → 100,0%   ← NÃO encolhe!
+V2 só maxH=260 (fs=0, maxH=260,  overflow=visible)  →  258/1634 →  15,8%   ← NÃO dá 40px
+V3 PRÉ-FIX EXACTO (fs=1, maxH=260, overflow=auto)   →   40/1654 →   2,4%   ← REPRODUZ O DEFEITO
+V5 (fs=1, maxH=none, overflow=auto)                 →   40/1654 →   2,4%
+V6 (fs=0, maxH=none, overflow=auto)                 → 1654/1654 → 100,0%
+V7 (fs=1, maxH=none, overflow=visible)              → 1654/1654 → 100,0%
+```
+
+**V3 reproduz exactamente o `40 / 1654 = 2,4%` original** → a correcção é **causal, confirmada**, não coincidente. Mas:
+
+- **`flexShrink: 1` SOZINHO não encolhe a caixa** (V1/V7 = 100%). O executar atribui a causa ao `flexShrink:1`, o que está errado.
+- **`maxHeight: 260px` sozinho daria 15,8%, não 2,4%** (V2). A caixa nunca chegou aos 260px.
+- O que **liga** o encolhimento é o `overflow-y: auto` (V5 = 40px): `overflow` não-`visible` **anula o `min-height: auto`** do item flex, tirando-lhe o piso. Sem piso, com `flexShrink:1`, a caixa desce abaixo do conteúdo. Isto é o mecanismo clássico `min-height:auto` — e **não está nomeado em lado nenhum** da correcção.
+- Consequência prática: **duas correcções independentes e suficientes** foram aplicadas (remover `overflowY` **ou** pôr `flexShrink:0` — V6 e V7). O comentário do commit diz que a `flexShrink: 0` é «a causa» invertida; não é a única.
+
+---
+
+## PROBLEMAS ENCONTRADOS
+
+1. **M2 mal diagnosticado pelo executar** (A6): predicado com escopo errado → falso negativo; `flexShrink:\s*0` existe em 2 sítios de código. O log `_logs/MC99.5.1_PROVA-MUTACAO.txt` reporta `matou: (vazio)` — **falso**: o teste mata, mas o predicado falseou o `entrou` e a `suite()` nem correu.
+2. **Mecanismo da correcção mal documentado** (A7): a causa real é a interacção `flexShrink:1` + `overflow-y:auto` (que zera o `min-height:auto`). Documentado como «filho flex com flexShrink:1 encolhia até 40px». Um comentário legal que explica mal o seu próprio mecanismo é um passivo.
+3. **`scripts/mc9951-prova-mutacao.mjs` tem caminho HARDCODED do repo principal** (`R = "C:/Users/Moltbot/Desktop/DESAFIOGUT"`). Quem o correr a partir de um worktree **muta o checkout principal**. Eu não o corri por isso. Deveria resolver o caminho a partir do próprio ficheiro.
+4. **A suite do teste mc9951 não guarda o `overflowY` no caminho… está bem** (`assert.ok(!/overflowY/.test(box))`), mas o **predicado do M2** devia isolar o bloco como o teste faz.
+5. **Nenhuma guarda mede o efeito real** (clientHeight). O próprio teste o declara honestamente nas linhas 9-11 — é a limitação certa, mas significa que **só produção prova A1**.
+
+## O QUE NÃO CONSEGUI VERIFICAR
+
+- **Hit-test `elementFromPoint` nos checkboxes:** o daemon do browser caiu (`A daemon for session 'h_d368...' started concurrently`). Não provei por hit-test que cada checkbox recebe o clique — provei que são 4 `input[type=checkbox]`, área 256 px², opacidade 1, pointer-events auto, com `<label>` clicável. As caixas ficam em `top 1978–2120` numa viewport de 625 px: **exigem rolar o diálogo** (normal num contrato; o diálogo tem `overflow-y:auto`, `scrollH 2275 / clientH 573`).
+- **Suite no meu worktree:** falhou por `ERR_MODULE_NOT_FOUND` (junction + resolvedor ESM). Medida no repo principal, leitura pura.
+- **Remoção do worktree:** não executada (esgotámos as iterações). Comando pendente:
+  `git -C /c/Users/Moltbot/Desktop/DESAFIOGUT worktree remove .claude/worktrees/mc9951-validador`
+  Antes disso, apagar as 2 junctions (`frontend/node_modules`, `frontend/netlify/functions/node_modules`) e os ficheiros que escrevi: `scripts/mc9951-validador-m2.mjs`.
+
+## VEREDICTO GLOBAL (uma linha)
+
+**A1–A5 CONFIRMADAS por medição própria (o gate passou de 2,4% para 100% no DOM de produção, com bundle amarrado), A7 CONFIRMADA como causal mas com o mecanismo declarado errado, e A6 REFUTADA na leitura do executar — M2 não é guarda vácuo nem mutante ausente: é um falso negativo de um predicado que procura `flexShrink:0` no ficheiro inteiro e tropeça num 2.º `flexShrink:0` do estilo `checkbox` (linha 274), quando o mutante entra e o teste morde (RED 5/1); o maior risco real é o mutador ter o caminho do repo principal hardcoded.**
