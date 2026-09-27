@@ -96,9 +96,10 @@ A 2.ª metade do mesmo defeito de nomes: no repo `browser-qa-plus`, o caminho `s
 produziu uma pasta chamada literalmente `skill`, cujo `name` é `browser-qa` — o mesmo nome já
 usado pela pasta `browser-qa/`. Duas versões **diferentes** (6 604 B vs 3 832 B).
 
-**Correcção:** a pasta `skill/` foi renomeada para `browser-qa-plus/`, **preservando o
-ficheiro**. Não apaguei nenhum dos dois: qual é o canónico é decisão do operador, não minha —
-eu só removi a ambiguidade. Conflitos de `name`: **0**.
+⚠️ **O conflito de `name` NÃO ficou resolvido — continua 1.** Renomear a pasta não muda o
+`frontmatter`: `browser-qa/` e `browser-qa-plus/` declaram ambas `name: browser-qa`. Resolvê-lo
+exige apagar uma versão ou reeditar o `name` de uma — decisões sobre conteúdo de terceiros.
+**Declarado, com a contagem medida, não como resolvido.**
 
 ### Nota de método
 
