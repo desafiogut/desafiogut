@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.5.2.1b) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.5.2.1c) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -2998,3 +2998,34 @@ valor de negócio em literais IPv6 (quem serve imagens usa nomes, resolvidos por
 todos os literais IPv6 e deixar a decisão ao `resolvesToBlocked`**, que já resolve e valida
 fail-closed. **É menos código e fecha a classe inteira, presente e futura.**
 ⚠️ **O SSRF NÃO ESTÁ FECHADO:** o que está em produção é melhor que a 3.ª geração e **não é seguro**.
+
+---
+
+## MC99.5.2.1c — SSRF 5.ª geração: A INVERSÃO (2026-09-27)
+
+**Commit `3f2d6a6` · `Deploy is live!` · frontend 443/443 · backend 680/686.**
+
+**Quatro gerações a descodificar IPv4 embutido foram TODAS refutadas** (mapeado → 6to4/Teredo →
+ISATAP/6rd/NAT64-custom): a família de transição é **aberta por construção**. A 5.ª **inverte**:
+não descodifica — **recusa todo o literal IPv6** e aceita só **domínios**, validados pelo
+`resolvesToBlocked` (fail-closed).
+
+```js
+if (h.includes(":")) return true;   // literal IPv6 -> recusado, SEM descodificar
+```
+
+**1 linha de lógica. 49 payloads de 5 gerações → 0 passam · 5/5 domínios passam.** O `isBlockedIp`
+**não** foi simplificado: serve o caminho do DNS.
+
+**A pergunta mudou:** «este IPv4 embutido é privado?» (respondível para sempre) → **«preciso mesmo
+de aceitar um literal IPv6?»** (respondível uma vez). *Fechar por inexistência de caminho é mais
+forte do que fechar por tratamento.*
+
+⚠️ **3 mutações ficaram OBSOLETAS (verde esperado)**: M1/M2/M7 mexem em código que a inversão tornou
+**inalcançável pelo caminho dos literais** — não é guarda fraca, é a inversão a ser mais forte.
+⚠️ **Mas revela uma lacuna minha:** esse código continua **vivo no caminho do DNS**
+(`resolvesToBlocked` → `isBlockedIp`) e **não tem teste**. Se o DNS devolver ISATAP/6rd, a
+descodificação incompleta decide. **Aberto, não testado.**
+
+**Pendente:** validador adversarial da inversão (`deleg_d3e3d848`) — as 4 anteriores foram
+refutadas; **não se declara segura antes de ele falar.**
