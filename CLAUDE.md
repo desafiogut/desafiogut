@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.4) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.5) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -2821,3 +2821,30 @@ instalados. Reparados e reconferidos. *A contagem não é a verificação.*
 
 **Ambiente:** Node v24.14.1 · npm 11.11.0 · claude CLI presente · chrome-devtools **não** está
 configurado no MCP (a skill sim, o servidor não). API do GitHub sem token = 60 pedidos/hora.
+
+---
+
+## MC99.5 — Auditoria multi-departamental (2026-09-27) — AUDITORIA, nada corrigido
+
+**7 departamentos · 130 problemas medidos · 0 correcções.** Relatórios: `docs/MC99.5-DEP*.md`.
+Lista mestra + plano: `docs/MC99.5-LISTA-MESTRA.md`. Relatório: `_logs/MC99.5-RELATORIO.md`.
+
+**Decisão da operadora (R18): OPÇÃO B** — aprovado Grupo 1 (verdades públicas) + Grupo 2
+(segurança) + Grupo 3 (performance) + Grupo 6 (design/tokens) + DEP-3 (React/Engenharia),
+≈ 77 itens. **NÃO aprovado: o Grupo 4** (as promessas ao utilizador — dropshipping, conta do
+ganhador Art. 27, pontuação com migração não aplicada, bónus on-chain, «EM BREVE» global):
+é decisão de produto, e reservá-la foi o acerto.
+
+**5 sub-MCs planeados, nenhum despachado:** MC99.5.1 verdades públicas · MC99.5.2 segurança
+(**SSRF primeiro** — exploração provada em `img-proxy`) · MC99.5.3 performance (inclui
+reverter a optimização do MC99.3, cujo ganho foi refutado) · MC99.5.4 React/Engenharia
+(`useMemo` no `AppContext` — 60 chaves, 37 consumidores) · MC99.5.5 design/tokens.
+
+**O achado mais forte: concordância de medições independentes.** Dois departamentos sem
+contacto entre si acharam a mesma data contraditória (app diz 1º de junho, Regulamento diz
+5 de outubro), os mesmos monólitos e as mesmas fontes duplicadas. *Corroboração, não
+redundância — é o sinal mais fiável que esta série produziu.*
+
+**A auditoria mediu o meu próprio erro:** o DEP-2 achou os dois desperdícios que a optimização
+do MC99.3 introduziu/agravou (7 fontes Inter byte-idênticas; fundo mobile 1,8× maior), sem ver
+o meu relatório — onde eu tinha reportado essa optimização como um ganho de 20,6% no FCP.
