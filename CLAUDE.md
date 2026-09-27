@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.5.2.1d, Opcao A aplicada) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.5.2.1e: PARADO, viabilidade medida) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -3094,3 +3094,24 @@ validar metade e achar que tinha validado o todo.
 **O SSRF NÃO ESTÁ FECHADO.** As 6 gerações foram todas refutadas, cada uma fechando o ataque da
 anterior e abrindo outro. *O padrão já não é «falta um caso»: é que eu valido num sítio e ligo
 noutro.*
+
+---
+
+## MC99.5.2.1e — PARADO antes de começar (7.ª geração, validar na ligação)
+
+**Viabilidade MEDIDA, correcção NÃO implementada.** O `undici` está disponível (`Agent`, `fetch`),
+Node v24.14.1, e o guard usa hoje `fetch` simples sem `dispatcher` — logo a Opção B do MC é viável:
+`fetch(url, { dispatcher: new Agent({ connect: { lookup: validarNaLigacao } }) })`. Uma só resolução
+(a nossa), no momento da ligação — o TOCTOU desaparece.
+
+**Porque parei:** mudança arquitectural (caminho da ligação, TLS/SNI) + orçamento de contexto no fim.
+Uma correcção desta classe feita a meio e sem verificação produziria o que esta série puniu 6×: um
+número que ninguém mediu. O MC autoriza parar.
+
+**O SSRF CONTINUA ABERTO em produção** (nome prefixado: `1-1-1-1.2601--5efe-a9fe-a9fe.sslip.io`,
+A público + AAAA privado — medido: A: 1.1.1.1 | AAAA: 2601::5efe:a9fe:a9fe). Risco: metadata cloud
+-> credenciais IAM temporárias da Lambda.
+
+**Decisão do operador:** (a) 7.ª geração numa sessão limpa (desenho pronto no relatório §2);
+(b) desactivar o img-proxy; (c) allowlist de CDNs como mitigação interina. **Não desactivei o
+img-proxy sem autorização.**
