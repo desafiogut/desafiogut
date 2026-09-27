@@ -1,0 +1,22 @@
+M1 tirar o preload da fonte 400 (o corpo do texto)
+  entrou=true red=true provado=true
+  matou: MC99.3/SEG2 · os recursos acima da dobra SÃO pré-carregados
+
+M2 pre-carregar o video decorativo de 345 KB
+  entrou=true red=true provado=true
+  matou: MC99.3/SEG2 · o vídeo decorativo NÃO é pré-carregado (decisão deliberada)
+
+M3 tirar o media do fundo (seria pedido em ambos os ecras)
+  entrou=true red=true provado=true
+  matou: MC99.3/SEG2 · os recursos acima da dobra SÃO pré-carregados
+
+M4 apontar um preload para um ficheiro que nao existe (pedido a 404)
+  entrou=true red=true provado=true
+  matou: MC99.3/SEG2 · os recursos acima da dobra SÃO pré-carregados | MC99.3/SEG2 · (c) cada preload aponta para um ficheiro que EXISTE
+
+M5 fonte sem crossorigin (descarregada duas vezes)
+  entrou=true red=true provado=true
+  matou: MC99.3/SEG2 · os recursos acima da dobra SÃO pré-carregados
+
+restauracao_md5_identica=true
+final=VERDE

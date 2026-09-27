@@ -35,6 +35,21 @@
          pintura aos 2114 ms). Passaram a ser servidas do próprio APK via
          src/fontes.css, com font-display:swap. Os preconnect saíram com elas —
          sem pedidos para esses hosts, só custavam duas ligações inúteis. -->
+    <!-- MC99.3 (SEG2, optimização 1) — PRELOAD dos recursos críticos.
+         Medido em produção ANTES desta linha existir: o browser só descobria as
+         fontes, as imagens e o vídeo DEPOIS de o React executar (react.js terminava
+         aos 733 ms; os pedidos às fontes/imagens só começavam aos 849 ms) — um
+         waterfall de ~800 ms que empurrava o FCP para 1512 ms. O preload arranca-os
+         juntamente com o JS, em vez de meio segundo depois.
+         Só o que está ACIMA DA DOBRA do primeiro ecrã: 2 pesos da Inter (400 corpo,
+         900 título), o mascote do gate (15 KB) e o fundo na variante do ecrã.
+         O vídeo de fundo (345 KB) NÃO é pré-carregado de propósito: é decorativo e
+         competiria com estes. -->
+    <link rel="preload" href="/fonts/inter-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/inter-900-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/assets/guto/custom/guto-bemvindo.png" as="image">
+    <link rel="preload" href="/assets/backgrounds/background-desktop.webp" as="image" media="(min-width: 768px)">
+    <link rel="preload" href="/assets/backgrounds/background-mobile.webp" as="image" media="(max-width: 767.98px)">
   </head>
   <body>
     <div id="root"></div>

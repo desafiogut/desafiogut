@@ -1,0 +1,18 @@
+### SKILLS INSTALADAS (MC99.3)
+
+| skill | ficheiro | bytes | md5 (8) | origem |
+|---|---|---|---|---|
+| ponytail | SKILL.md | 5957 B | a811056d | https://raw.githubusercontent.com/DietrichGebert/ponytail/main/.openclaw/skills/ponytail/SKILL.md |
+| vercel-react-best-practices | SKILL.md | 7251 B | 995a667e | https://raw.githubusercontent.com/vercel-labs/agent-skills/main/skills/react-best-practices/SKILL.md |
+| huashu-flash | SKILL.md | 7361 B | c15a6b5e | https://raw.githubusercontent.com/alchaincyf/huashu-flash/master/SKILL.md |
+| huashu-flash | scripts/bench.py | 8327 B | 9fdf9edb | https://raw.githubusercontent.com/alchaincyf/huashu-flash/master/scripts/bench.py |
+| huashu-flash | scripts/ratchet.py | 2679 B | 7311b095 | https://raw.githubusercontent.com/alchaincyf/huashu-flash/master/scripts/ratchet.py |
+| perf-analyzer | SKILL.md | 4999 B | 39d64d43 | https://raw.githubusercontent.com/hardikpandya/perf-analyzer/main/SKILL.md |
+| chrome-devtools-mcp | SKILL.md | 14139 B | 371ce72d | https://raw.githubusercontent.com/justfinethanku/cc_chrome_devtools_mcp_skill/main/SKILL.md |
+
+### EFEITO DECLARADO
+- ponytail: ladder: YAGNI -> reutilizar -> stdlib -> nativo -> dep existente -> uma linha
+- vercel-react-best-practices: 45 regras React do código de produção da Vercel
+- huashu-flash: medir/provar/subir com ratchet que só permite melhorar
+- perf-analyzer: Lighthouse + Core Web Vitals, correcções por severidade
+- chrome-devtools-mcp: Core Web Vitals via Chrome DevTools Protocol
