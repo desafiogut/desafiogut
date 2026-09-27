@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>DesafioGUT — O Menor Lance Único Ganha</title>
+    <meta name="description" content="DesafioGUT · Grupo União e Trabalho — E-commerce via Dropshipping. Dê seu lance: o menor valor único vence. Grátis para se cadastrar. Vigência: 1º de junho de 2026." />
+    <meta property="og:title" content="DesafioGUT — O Menor Lance Único Ganha" />
+    <meta property="og:description" content="Dê seu lance no DesafioGUT. Menor valor único ganha o produto. Grupo União e Trabalho · CNPJ 23.040.066/0001-00." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://silly-stardust-ca71bc.netlify.app/" />
+    <!-- MC78.3: imagem de compartilhamento (OG/Twitter) = rosto do GUTO, 1200×630. URL absoluta (exigida por WhatsApp/Facebook). -->
+    <meta property="og:image" content="https://silly-stardust-ca71bc.netlify.app/assets/guto/og-image.png" />
+    <!-- MC78.4: secure_url + type para robustez com scrapers (algumas versões do WhatsApp/FB os usam). -->
+    <meta property="og:image:secure_url" content="https://silly-stardust-ca71bc.netlify.app/assets/guto/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="GUTO — DesafioGUT" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="DesafioGUT — O Menor Lance Único Ganha" />
+    <meta name="twitter:description" content="Dê seu lance no DesafioGUT. Menor valor único ganha o produto." />
+    <meta name="twitter:image" content="https://silly-stardust-ca71bc.netlify.app/assets/guto/og-image.png" />
+    <meta name="robots" content="index, follow" />
+    <!-- MC78.3: favicon = rosto do GUTO (same-origin). favicon.ico real na raiz +
+         PNG 32px + apple-touch 180px. Substitui o antigo gut-logo-icon-v2.png. -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/guto/guto-favicon-32.png" />
+    <link rel="apple-touch-icon" href="/assets/guto/guto-apple-touch-180.png" />
+    <!-- MC88.36 — as fontes deixaram de vir do Google. Este <link> era
+         BLOQUEANTE e apontava para um host EXTERNO: no arranque a frio do APK
+         obrigava a DNS + TLS + duas idas ao servidor antes de o texto poder ser
+         desenhado (o MC88.35 mediu fonts.gstatic.com aos 2092 ms, colado à
+         pintura aos 2114 ms). Passaram a ser servidas do próprio APK via
+         src/fontes.css, com font-display:swap. Os preconnect saíram com elas —
+         sem pedidos para esses hosts, só custavam duas ligações inúteis. -->
+    <!-- MC99.3 (SEG2, optimização 1) — PRELOAD dos recursos críticos.
+         Medido em produção ANTES desta linha existir: o browser só descobria as
+         fontes, as imagens e o vídeo DEPOIS de o React executar (react.js terminava
+         aos 733 ms; os pedidos às fontes/imagens só começavam aos 849 ms) — um
+         waterfall de ~800 ms que empurrava o FCP para 1512 ms. O preload arranca-os
+         juntamente com o JS, em vez de meio segundo depois.
+         Só o que está ACIMA DA DOBRA do primeiro ecrã: 2 pesos da Inter (400 corpo,
+         900 título), o mascote do gate (15 KB) e o fundo na variante do ecrã.
+         O vídeo de fundo (345 KB) NÃO é pré-carregado de propósito: é decorativo e
+         competiria com estes. -->
+    <link rel="preload" href="/fonts/inter-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/inter-900-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/assets/guto/custom/guto-bemvindo.png" as="image">
+    <link rel="preload" href="/assets/backgrounds/background-desktop.webp" as="image" media="(min-width: 768px)">
+    <link rel="preload" href="/assets/backgrounds/background-mobile.webp" as="image" media="(max-width: 767.98px)">
+    <script type="module" crossorigin src="/assets/index-DcMkbAw0.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-C_JxhDyB.js">
+    <link rel="modulepreload" crossorigin href="/assets/react-BQx8e5sa.js">
+    <link rel="modulepreload" crossorigin href="/assets/router-E7mEnNxE.js">
+    <link rel="modulepreload" crossorigin href="/assets/motion-DlDDV8N9.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-7Velo9M3.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

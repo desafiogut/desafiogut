@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.2) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.3) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -2702,3 +2702,67 @@ frontend **426/426** (era 417) · backend **680/686** · ESLint 0 problemas · d
 - **10.ª ocorrência da contaminação por comentário num dia** (M5 declarou «não entrou» a um mutante
   que entrou, porque o comentário da correcção nomeia `.on()` e `.subscribe()`). Continua a ser o
   defeito mais produtivo da série — e o mais fácil de repetir.
+
+---
+
+## MC99.3 — Skills de performance + otimização do arranque (2026-09-27)
+
+**Origem:** app lento (reportado) · **Base:** ba1c39d · **Commit:** 8579723
+**Logs:** _logs/MC99.3_* · **Relatório:** _logs/MC99.3-RELATORIO.md
+
+### 5 skills instaladas em .claude/skills/ (verificadas no disco, com md5)
+
+| skill | bytes | para que serviu |
+|---|---|---|
+| ponytail | 5 957 | a escada de decisão que governou as escolhas deste MC |
+| vercel-react-best-practices | 7 251 | a categoria CRÍTICA nº 1 (waterfalls) foi o diagnóstico exato |
+| huashu-flash | 7 361 + bench.py + ratchet.py | a disciplina medir -> provar -> manter-ou-reverter |
+| perf-analyzer | 4 999 | internamente chama-se perf-expert |
+| chrome-devtools-mcp | 14 139 | Core Web Vitals via CDP |
+
+NOTA: npx skills add NAO funcionou (o npx recusou instalar). Os ficheiros foram buscados a
+origem, com o caminho real de cada repo descoberto pela API do GitHub. Isso salvou o
+huashu-flash, que está no ramo MASTER e não main — 3 ficheiros deram 404 à primeira. Sem
+essa verificação, o manifesto diria 5/5 com 3 ficheiros a faltar.
+
+### A medição (produção, Performance API)
+
+| métrica | antes | depois |
+|---|---|---|
+| início dos recursos críticos | 849 ms (DEPOIS do react terminar, aos 733 ms) | 403 ms (EM PARALELO com o JS) |
+| FCP (amostra sem cache) | 1512 ms | 1200 ms |
+| first-paint | 712 ms | 832 ms |
+| TTFB dessa amostra | 289 ms | 380 ms (PIOR) |
+| FCP com cache quente | — | 136 ms |
+
+⚠️ O privy-*.js (2,6 MB, 43% do JS) era a suspeita nº 1 — e NAO está no caminho crítico: a
+primeira carga puxa 5 ficheiros (363 KB) e o privy é chunk lazy. *O maior número não é o
+gargalo; o gargalo é o que está no caminho crítico.*
+
+### A única otimização (5 linhas, 1 ficheiro, zero dependências)
+
+index.html: preload de inter-400 + inter-900 (as=font, type=font/woff2, CROSSORIGIN — sem ele
+a fonte é descarregada duas vezes), o mascote do gate (15 KB) e a imagem de fundo na variante
+do ecrã (media com os 768 px lidos de useIsMobile.js). O vídeo de fundo (345 KB) NAO é
+pré-carregado — decisão deliberada, guardada por teste. Deploy: CDN requesting 1 files.
+
+### Ratchet (a regra que fecha o MC)
+MANTER. O que é determinístico não é o FCP — é a posição dos pedidos: passaram de 849 ms
+para 403 ms e de série para paralelo. E o FCP melhorou numa amostra cujo TTFB era PIOR, pelo
+que o ganho está subestimado. LIMITAÇÃO DECLARADA: uma amostra de cada lado — sem repetições
+suficientes para intervalo de confiança.
+
+### Estado
+frontend 431/431 (era 426) · backend 680/686 · 5 mutações provadas · deploy live.
+
+### Lições
+- **A escada Ponytail poupou uma alteração inútil:** ia aplicar font-display: swap como «a
+  correção de 1 linha» — fui ver (degrau 2: já está no codebase?) e JA EXISTIA.
+- **A suspeita óbvia estava errada** (o maior chunk não estava no caminho crítico).
+- **O determinístico vende-se melhor que o ruidoso:** não se prova -312 ms com uma amostra;
+  prova-se que os pedidos mudaram de 849 para 403 ms e de série para paralelo.
+- **Instalar uma skill também se mede:** o huashu-flash dava 404 (ramo errado). Confiar no
+  comando daria um manifesto «5/5» falso — a mesma classe de erro desde o MC96.
+- **O mutador abortou com «a mutação não alterou nada»** porque o index.html é CRLF e eu
+  comparava com 
+ — a armadilha que o próprio enunciado avisa, e a 2.ª vez que me apanha.

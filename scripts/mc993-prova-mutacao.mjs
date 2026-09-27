@@ -1,3 +1,5 @@
+// MC99.3 — instrumento preservado (estava em _tmp993/, movido no fecho).
+// Uso: node scripts/mc993-prova-mutacao.mjs
 // MC99.3 — prova de mutação da guarda do preload (HARD GATE 7). 4 mutações, todas têm de
 // ENTRAR (lidas do ficheiro ANTES de medir) e dar RED. Restauração por snapshot + md5.
 import { readFileSync, writeFileSync } from "node:fs";
