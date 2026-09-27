@@ -97,7 +97,9 @@ export function isBlockedHostname(hostname) {
 }
 
 /** Resolve um nome DNS e bloqueia se QUALQUER endereço for privado (fail-closed). */
-async function resolvesToBlocked(hostname) {
+// MC99.5.2.1d — `export` APENAS para instrumentação: o PoC mede esta função real (o caminho do DNS)
+// em vez de replicar a lógica. NÃO é a inversão: o comportamento mantém-se exactamente o implantado.
+export async function resolvesToBlocked(hostname) {
   try {
     const results = await lookup(hostname, { all: true });
     return results.length === 0 || results.some((r) => isBlockedIp(r.address));

@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.5.2.1c) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.5.2.1d, PARADO) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -3037,3 +3037,24 @@ publico dedicado era o proprio defeito.
 r.address.includes(":") || isBlockedIp(r.address). Custo: hosts IPv6-only (raro; CDNs dual-stack).
 A inversao foi aplicada a UM caminho e nao ao outro — parei-a onde era comodo. Declarar uma lacuna
 nao e trata-la.
+
+---
+
+## MC99.5.2.1d — PARADO: a inversao no caminho DNS parte os CDNs dual-stack
+
+A inversao literal (`results.some(r => r.address.includes(":") || isBlockedIp(...))`)
+**fecha o buraco (0/3 sslip.io) mas bloqueia `cdn.jsdelivr.net`** — que e DUAL-STACK
+(`2606:4700::6811:d005` + `104.17.207.5`): bloquear por *qualquer* IPv6 bloqueia todo o host
+dual-stack, ou seja a maior parte da web moderna, incluindo o CDN que a app usa.
+
+**Proposta (NAO aplicada — o MC manda parar):** ignorar AAAA e validar A;
+`const v4 = results.filter(r => !r.address.includes(":")); return v4.length === 0 || v4.some(r => isBlockedIp(r.address));`
+-> sslip.io (so AAAA) = 403 · cdn.jsdelivr.net (A publico) = PASSA · IPv6-only = 403 (custo real).
+
+**Feito e commitado:** PoC passa a medir o caminho do DNS com resolucao DNS REAL contra a funcao
+real (`export` em resolvesToBlocked, instrumentacao apenas — suite 443/443 + 680/686 provam-no).
+**O SSRF CONTINUA ABERTO em producao (3/3 via sslip.io).** Nao aplicado, nao implantado.
+
+2. vez neste MC-serie que a minha classificacao de risco estava errada: primeiro «exige DNS hostil»
+(quando ha um servico publico dedicado), agora «hosts IPv6-only, raro» (quando atinge todo o
+dual-stack). *Avaliei o risco pelo que me lembrei de imaginar, nao pelo que fui medir.*

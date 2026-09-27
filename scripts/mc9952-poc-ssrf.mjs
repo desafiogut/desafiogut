@@ -8,6 +8,7 @@
 // Correção: o caminho do guard é DERIVADO de import.meta.url (absoluto, independente de onde o
 // script é corrido) — e o script FALHA ALTO se não o encontrar, em vez de dar um resultado vazio.
 import { existsSync } from "node:fs";
+import { lookup } from "node:dns/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,9 +21,9 @@ if (!existsSync(GUARD)) {
   console.error("(sem alvo, este PoC nao mede nada — e um instrumento cego mente nos dois sentidos)");
   process.exit(2);
 }
-const { isBlockedHostname } = await import("file://" + GUARD.replace(/\\/g, "/"));
-if (typeof isBlockedHostname !== "function") {
-  console.error("ABORTA: importei o ficheiro mas isBlockedHostname nao e uma funcao");
+const { isBlockedHostname, isBlockedIp, resolvesToBlocked } = await import("file://" + GUARD.replace(/\\/g, "/"));
+if (typeof isBlockedHostname !== "function" || typeof isBlockedIp !== "function" || typeof resolvesToBlocked !== "function") {
+  console.error("ABORTA: importei o ficheiro mas faltam funcoes (isBlockedHostname/isBlockedIp/resolvesToBlocked)");
   process.exit(2);
 }
 
@@ -94,6 +95,25 @@ const v6 = bloco("IPv6 LITERAL (recusado POR DESENHO — tem de dar 403)", LITER
 const legitimos = bloco("CONTROLOS POSITIVOS: DOMINIOS (tem de PASSAR)", LEGITIMOS);
 const bloqueadosLegitimos = LEGITIMOS.filter((p) => !legitimos.includes(p));
 
+// ── CAMINHO_DNS (MC99.5.2.1d) — a INVERSÃO QUE FALTAVA. O handler, para um DOMINIO, decide por
+//    resolvesToBlocked. Um atacante NAO precisa de DNS hostil: o sslip.io e um DNS PUBLICO que
+//    devolve o endereco codificado no proprio nome. Mede-se a FUNCAO REAL, nao uma replica. ──
+const MAL_DNS = ["2601--5efe-a9fe-a9fe.sslip.io", "2600--5efe-0a00-0001.sslip.io", "3ffe--5efe-7f00-0001.sslip.io"];
+const BOM_DNS = ["i.imgur.com", "cdn.jsdelivr.net", "exemplo.com"];
+let dnsBypass = 0, dnsRegressao = 0;
+console.log("\n=== CAMINHO_DNS (resolucao DNS REAL, funcao real) ===");
+for (const h of MAL_DNS) {
+  let addrs = []; try { addrs = (await lookup(h, { all: true })).map((a) => a.address); } catch { }
+  const bloqueado = await resolvesToBlocked(h);
+  if (!bloqueado) dnsBypass++;
+  console.log("  " + (bloqueado ? "403   " : "PASSA ") + h.padEnd(38) + " -> " + (addrs.join(",") || "(nao resolveu)"));
+}
+for (const h of BOM_DNS) {
+  const bloqueado = await resolvesToBlocked(h);
+  if (bloqueado) dnsRegressao++;
+  console.log("  " + (bloqueado ? "403(!)" : "PASSA ") + " " + h.padEnd(38) + " (legitimo)");
+}
+
 console.log("\n=== RESUMO ===");
 console.log("  buracos do validador a passar: " + mausDoValidador.length + "/" + DO_VALIDADOR.length);
 console.log("  buracos anteriores a passar:   " + mausAnteriores.length + "/" + ANTERIORES.length);
@@ -102,7 +122,9 @@ console.log("  legítimos BLOQUEADOS (mau!):   " + bloqueadosLegitimos.length + 
 
 console.log("  buracos da 4.ª geração a passar: " + maus4a.length + "/" + QUARTA_GERACAO.length);
 console.log("  literais IPv6 que PASSARAM (tem de ser 0): " + v6.length + "/" + LITERAIS_V6.length);
-const total = mausDoValidador.length + maus4a.length + mausAnteriores.length + v6.length;
+console.log("  CAMINHO_DNS: maliciosos que PASSARAM (tem de ser 0): " + dnsBypass + "/" + MAL_DNS.length);
+console.log("  CAMINHO_DNS: legitimos BLOQUEADOS (tem de ser 0):    " + dnsRegressao + "/" + BOM_DNS.length);
+const total = mausDoValidador.length + maus4a.length + mausAnteriores.length + v6.length + dnsBypass;
 if (bloqueadosLegitimos.length) {
   console.log("\nVEREDITO: REGRESSÃO — o guard bloqueia tráfego legítimo (" + bloqueadosLegitimos.length + ")");
   process.exit(1);
