@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.5.2.1e: PARADO, viabilidade medida) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.5.2.1e: 7.ª geração IMPLEMENTADA — validar no momento da ligação; deploy pendente) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -3097,7 +3097,12 @@ noutro.*
 
 ---
 
-## MC99.5.2.1e — PARADO antes de começar (7.ª geração, validar na ligação)
+## MC99.5.2.1e — PARADO antes de começar (7.ª geração, validar na ligação) — SUPERADO
+
+> ⚠️ **ESTA CONCLUSÃO FOI SUPERADA** pela secção seguinte (mesma sessão, MC99.5.2.1e continuado).
+> O texto fica à vista porque o «PARADO» foi um estado real e a razão dele importa: a sessão
+> anterior parou por orçamento de contexto e medição de viabilidade. O que mudou não foi a
+> conclusão técnica (a Opção B era a certa) — foi ter sido executada e medida.
 
 **Viabilidade MEDIDA, correcção NÃO implementada.** O `undici` está disponível (`Agent`, `fetch`),
 Node v24.14.1, e o guard usa hoje `fetch` simples sem `dispatcher` — logo a Opção B do MC é viável:
@@ -3115,3 +3120,78 @@ A público + AAAA privado — medido: A: 1.1.1.1 | AAAA: 2601::5efe:a9fe:a9fe). 
 **Decisão do operador:** (a) 7.ª geração numa sessão limpa (desenho pronto no relatório §2);
 (b) desactivar o img-proxy; (c) allowlist de CDNs como mitigação interina. **Não desactivei o
 img-proxy sem autorização.**
+
+---
+
+## MC99.5.2.1e — 7.ª GERAÇÃO: validar NO MOMENTO DA LIGAÇÃO (2026-09-27) — IMPLEMENTADA
+
+**A causa-raiz das 6 refutações:** a guarda validava o resultado de UMA resolução de DNS e o `fetch`
+fazia OUTRA resolução independente, escolhendo livremente o endereço. **A correcção não acrescenta
+regras — muda ONDE a decisão acontece.**
+
+- `resolverEEscolher(nome)` — resolve **UMA vez** (`lookup(all:true)`), autoriza **CADA** endereço
+  (`isBlockedIp` + IPv6 com IPv4 embutido por mecanismo de transição), exige **≥1 IPv4** e devolve
+  `{bloqueado, pin}`. Sem IPv4 para fixar → bloqueado (fail-closed).
+- `lookupValidado` — o `connect.lookup` de um `undici.Agent` **partilhado**. O conector chama-o **no
+  momento da ligação**: devolve SÓ o endereço validado (`[{address: pin, family: 4}]`) ou RECUSA
+  (`Error(HOST_BLOQUEADO)`), e a recusa sobe no `cause` → **403** (não 502).
+- O handler **deixou de ter pré-check de DNS**. O `fetch` leva `dispatcher` → **uma só resolução, a
+  nossa; o `fetch` já não resolve outra vez**.
+- `isBlockedHostname` **não foi tocado** (a 5.ª geração continua fechada). Literais de IP não passam
+  pelo dispatcher (sem DNS).
+
+Medições (foreground; instrumentos novos em `scripts/mc99521e-*.mjs`):
+- **SEG-1 ANTES do fix** (handler REAL + isco HTTP em `[::1]`, `mc99521e-seg1-poc-prefixo.mjs`):
+  `1-1-1-1.--1.sslip.io:<porta>` → **200 image/png, isco servido** (SSRF vivo, 2×). **DEPOIS: 403,
+  isco 0 toques.**
+- **A/B PAREADO** (`mc99521e-ab-guardas.mjs`; guarda `df0439a` vs nova, mesma sonda, mesmo processo):
+  os 4 nomes prefixados vão de **200/502/502/502 → 403/403/403/403**; **todo o resto idêntico**,
+  incluindo os CDNs dual-stack a **200 image/*** e o NXDOMAIN a 403 nas DUAS (herdado, não regressão).
+- `mc99521e-bidirecional.mjs`: maliciosos 403; imagens HTTPS reais 200 image/*; e a **prova do
+  mecanismo** (pin → `::1` com `fetch` a OUTRO nome: o isco responde e o DNS é consultado 1×).
+- **14 mutações PROVADAS + restauração md5-exacta** (`mc9952-prova-mutacao.mjs`). Novas: M11
+  (marcador de transição), M12 (`connect.lookup`), M13 (voltar ao pré-check = TOCTOU), M14 (recusa
+  na ligação). **M2/M7 passaram de OBSOLETA a PROVADO** — o teste (g) passou a cobrir as famílias de
+  transição pelo caminho do DNS com isca A pública (6to4, Teredo, ISATAP, NAT64).
+- Suites: **445/445** frontend · **680/686** backend (harness `mc966-suite-harness.mjs`, 3 estados).
+
+### Validador adversarial independente (HARD GATE 7) — **NÃO REFUTADO**
+
+Subagente em worktree próprio (`valida-99521e-*`), 10 vectores, DNS instrumentado por patch e sockets
+por evento. **Controlo de capacidade:** o mesmo rig, contra a guarda ANTIGA (`df0439a`), deu **200
+SSRF VIVO**; contra a nova, 403 — a instrumentação vê o SSRF quando existe. Resultados:
+`redirect:"error"` **lança**; esquemas não-http(s) recusados antes de ligar; userinfo
+(`http://[::1]@1.1.1.1/`) → `hostname` é `1.1.1.1` (**não é SSRF**); **em todos os casos
+`resolucoesDoGuard=1 · resolucoesDefaultDoNet=0 · chamadasAoLookupNaLigacao=1`**; `http://cdn.jsdelivr.net/…`
+→ socket **ligou a `104.17.208.5:80`** (o endereço FIXADO); **6 controlos positivos 200 image/**\*.
+**Não medido (declarado):** rebinding real de 2 respostas (o `dns.lookup` usa getaddrinfo e não
+segue `dns.setServers`; o wildcard `sslip.io` é estático).
+
+⚠️ **FRAGILIDADE RESIDUAL (achado do validador, e erro da MINHA lista de payloads):** as faixas de
+**propósito especial** `192.0.0.0/24`, `192.88.99.0/24`, `192.0.2.0/24`, `198.18.0.0/15`,
+`198.51.100.0/24`, `203.0.113.0/24` **passam a classificação** (502). **Classificação honesta:
+passam a guarda, NÃO são SSRF vivo** (globalmente não-roteáveis; a metadata `169.254.169.254` e o
+task metadata `169.254.170.2` **estão bloqueadas**). **Pré-existente** (o `isBlockedIp` não foi
+tocado nesta geração) e **fora do âmbito autorizado** — **decisão do operador**: alargar o
+classificador (recomendado, ~6 linhas, risco nulo para imagens legítimas) ou aceitar e documentar.
+As faixas ficam **medidas à vista** em `scripts/mc99521e-producao.mjs`.
+
+⚠️ **Erros dos MEUS instrumentos, corrigidos nesta geração (ficam à vista):**
+1. A régua `codigo()` (stripper de comentários) **comia CÓDIGO real**: em `/^image\//i` a barra conta
+   como início de comentário e a linha desaparecia do texto medido. Presa a barras invertidas.
+2. O PoC da série (`mc9952-poc-ssrf.mjs`) replicava no `decidir` a cadeia ANTIGA e **por isso nunca
+   viu o ataque prefixado** — o instrumento era o ponto cego. Passa a medir `resolverEEscolher`.
+3. `a.b.c.d.com.br` (NXDOMAIN) saiu da lista de «legítimos» do PoC: este acusava-o de regressão; o
+   A/B provou 403 nas duas gerações (fail-closed herdado).
+4. `undici` era **dependência-fantasma** (resolvia por hoisting, em manifesto nenhum) — declarado em
+   `netlify/functions/package.json`.
+
+**Base real vs. declarada:** o MC declara `df0439a`; o HEAD real era `719f45b` = `df0439a` + **só
+documentação** (CLAUDE.md + `_logs/MC99.5.2.1e-RELATORIO.md`), zero código. Sem impacto na medição.
+
+**Limites declarados (NÃO medidos / por desenho):** DNS rebinding **real** (exige DNS que responda
+coisas diferentes em duas perguntas; o wildcard `sslip.io` é estático) — mas com o pin a 2.ª resolução
+do `fetch` deixou de existir; 6rd e NAT64-custom **sem marcador** continuam a passar a classificação
+(a ligação, essa, fica fixada ao IPv4 validado); nomes **IPv6-only** → 403 (fail-closed, custo já
+aceite na 6.ª geração).
+
