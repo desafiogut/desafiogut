@@ -41,7 +41,14 @@ test("controlo positivo: o stripper apaga comentários e poupa código", () => {
 
 // ─────────────────────────── SEG0 — CSP ───────────────────────────
 const cspDoToml = () => {
-  const m = ler("netlify.toml").match(/Content-Security-Policy = "([^"]+)"/);
+  // ⚠️ REFUTAÇÃO A7/M13: ler o TOML cru deixava um `# Content-Security-Policy = "…"`
+  // (linha COMENTADA) satisfazer a guarda no lugar do CSP real. Removem-se os comentários
+  // antes de extrair o valor — sem isto, bastava comentar o CSP para a guarda ler outro.
+  const toml = ler("netlify.toml")
+    .split(/\r?\n/)
+    .filter((l) => !/^\s*#/.test(l))
+    .join("\n");
+  const m = toml.match(/Content-Security-Policy = "([^"]+)"/);
   assert.ok(m, "não encontrei o Content-Security-Policy no netlify.toml");
   return m[1];
 };
@@ -63,21 +70,35 @@ test("MC99.2/SEG0 · HARD GATE 4 — nunca um wildcard CSP genérico", () => {
   // Esta guarda é o travão da decisão anterior: abrir o CSP é aceitável; abri-lo TODO não é.
   // Aceita só wildcards de SUBDOMÍNIO COM ESQUEMA (`https://*.dominio.tld`); recusa `*`,
   // `https://*`, `*.com`, `*.*`.
+  // ⚠️ REFUTAÇÃO do validador (A7): 3 evasões medidas, agora fechadas.
+  //   M9  `https://*.*.com` passava (o \S+ antigo aceitava o `*` no meio do domínio);
+  //   M10 `*` em `font-src` passava (directiva fora da lista vigiada);
+  //   M11 `*` em `style-src` idem.
+  // Agora vigia TODAS as directivas presentes e exige host a sério: `*.rotulo.tld`.
   const csp = cspDoToml();
   const suspeitos = [];
-  for (const nome of ["connect-src", "script-src", "default-src", "frame-src", "img-src"]) {
+  const nomes = csp.split(";").map((x) => x.trim().split(/\s+/)[0]).filter((n) => /^[a-z-]+$/.test(n));
+  for (const nome of nomes) {
     for (const tok of diretiva(csp, nome).split(/\s+/)) {
       if (!tok || !tok.includes("*")) continue;
-      if (/^\w+:\/\/\*\.\S+\.\S+$/.test(tok)) continue;   // https://*.dominio.tld — ok
-      suspeitos.push(`${nome} → ${tok}`);
+      // aceita só esquema + UM rótulo curinga + domínio com TLD (>= 2 rótulos reais)
+      if (/^[a-z]+:\/\/\*\.([a-z0-9-]+\.)+[a-z]{2,}$/.test(tok)) continue;
+      suspeitos.push(nome + " -> " + tok);
     }
   }
   assert.deepEqual(suspeitos, [],
-    `wildcard largo no CSP (proibido pelo HARD GATE 4):\n  ${suspeitos.join("\n  ")}`);
+    "wildcard largo no CSP (proibido pelo HARD GATE 4): " + suspeitos.join(", "));
 });
 
 // ──────────────────── SEG1 — singleton verdadeiro ────────────────────
 test("MC99.2/SEG1 · só existe UM sítio a criar cliente Supabase no frontend", () => {
+  // ⚠️ LIMITAÇÃO MEDIDA (refutação A6 do validador): esta guarda é de FORMA, não de
+  // IDENTIDADE. O mutante M6 do validador — repor `async` + um `await` a reabrir a janela,
+  // MANTENDO todos os tokens que aqui se procuram — sobrevive a esta guarda **e mede 2
+  // clientes**. Ou seja: ela detecta a regressão "voltou o cache do valor", não a família
+  // inteira de regressões que produzem dois clientes. Provar identidade exige runtime (o
+  // módulo depende do `import.meta.env` do Vite, indisponível no `node --test`), e essa
+  // prova NÃO existe aqui. Declarado em vez de escondido.
   const f = codigo(ler("desafio-gut/frontend/src/lib/supabaseClient.js"));
   // (a) existe 1 instância: um só `createClient(`
   assert.equal(conta(f, "createClient("), 1,
@@ -122,8 +143,25 @@ test("MC99.2/SEG2 · a remoção do canal é AGUARDADA (a causa do subscribe-aft
     "`canal = null` tem de vir ANTES do await, senão duas limpezas removem o mesmo canal");
 });
 
-test("MC99.2/SEG2 · o cleanup do useEffect remove o canal", () => {
+test("MC99.2/SEG2 · UM canal por topic — dois hooks com a mesma chave NÃO criam dois canais", () => {
+  // ⚠️ ESTA é a guarda que faltava, e sem ela o defeito real ficou vivo.
+  // Reproduzido pelo validador: a rota /mercado monta MercadoLances E CardLance, ambos via
+  // useRecursosApp → useRealtimeConfig(MESMA chave). Dois canais para o mesmo topic no mesmo
+  // cliente global → o supabase-js deduplica, devolve o canal JÁ SUBSCRITO, e o .on() do 2.º
+  // rebenta com o erro de produção. A ordem .on()/.subscribe() estar certa não salvava nada.
   const c = codigo(ler("desafio-gut/frontend/src/hooks/useRealtimeConfig.js"));
-  assert.match(c, /return \(\) => \{[\s\S]*?limparCanal\(\)/, "o cleanup deixou de chamar limparCanal()");
-  assert.match(c, /if \(timer\) clearTimeout\(timer\)/, "o cleanup deixou de cancelar o backoff");
+  assert.match(c, /const REGISTO = new Map\(\)/, "desapareceu o registo de canais partilhados");
+  assert.match(c, /if \(entrada\) \{[\s\S]*?entrada\.assinantes\.add\(entrega\)/,
+    "um 2.º hook para o mesmo topic deixou de se juntar como assinante (volta a criar canal)");
+  // UM só ponto no módulo onde um canal nasce de um topic
+  assert.equal(conta(c, ".channel(topic)"), 1,
+    "há mais do que um sítio a criar canal — é por aqui que voltam os dois canais por topic");
+});
+
+test("MC99.2/SEG2 · o cleanup fecha o canal quando sai o ÚLTIMO assinante", () => {
+  const c = codigo(ler("desafio-gut/frontend/src/hooks/useRealtimeConfig.js"));
+  assert.match(c, /return \(\) => \{[\s\S]*?largar\(e\)/, "o cleanup deixou de largar o canal");
+  assert.match(c, /clearTimeout\(e\.timer\)/, "o cleanup deixou de cancelar o backoff");
+  assert.match(c, /if \(e\.assinantes\.size > 0\) return/,
+    "o canal passa a ser fechado mesmo havendo outros consumidores — quebra o reuso");
 });

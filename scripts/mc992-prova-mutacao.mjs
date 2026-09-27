@@ -48,21 +48,15 @@ const M = [
   { id: "M4", nome: "SEG2 — tirar o await da remocao do canal", f: RT,
     apl: (s) => s.replace("await sb?.removeChannel(c);", "sb?.removeChannel(c);"),
     entrou: (s) => s.includes("sb?.removeChannel(c);") && !s.includes("await sb?.removeChannel(c);") },
-  { id: "M5", nome: "SEG2 — inverter a ordem (.subscribe antes de .on)", f: RT,    apl: (s) => s.replace(`        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "config_remota", filter: \`chave=eq.\${chave}\` },
-          (payload) => {
-            const valor = payload?.new?.valor;
-            if (valor !== undefined && !cancelado) cbRef.current?.(valor);
-          }
-        )
-        .subscribe((status) => {`,
-      `        .subscribe((status) => {`).replace(`        });
-      canalAberto();`, `        })
-        .on("postgres_changes", { event: "*", schema: "public", table: "config_remota" }, (payload) => {
-          if (!cancelado) cbRef.current?.(payload?.new?.valor);
-        });
-      canalAberto();`),
+  // ── acrescentadas depois das REFUTAÇÕES do validador ──
+  { id: "M6", nome: "SEG2 — repor DOIS canais por topic (tirar o registo partilhado)", f: RT,
+    apl: (s) => s.replace("    let entrada = REGISTO.get(topic);\n    if (entrada) {", "    let entrada = null;\n    if (false) {"),
+    entrou: (s) => s.includes("if (false) {") && !s.includes("let entrada = REGISTO.get(topic);") },
+  { id: "M7", nome: "SEG0/HARD GATE 4 — wildcard numa directiva que antes NAO era vigiada (style-src)", f: TOML,
+    apl: (s) => s.replace("style-src 'self' 'unsafe-inline'", "style-src * 'self' 'unsafe-inline'"),
+    entrou: (s) => /style-src \* /.test(s) },
+  { id: "M5", nome: "SEG2 — inverter a ordem (.subscribe antes de .on)", f: RT,    apl: (s) => s.replace(".channel(topic)\n      .on(",
+      '.channel(topic)\n      .subscribe((status) => { if (status === "SUBSCRIBED") entrada.tentativa = 0; })\n      .on('),
     // ⚠️ 10.ª vez hoje: a 1.ª versão media o ficheiro CRU e o comentário do `limparCanal`
     // nomeia «.on() depois do .subscribe()» — dando «não entrou» a um mutante que entrou.
     // Mede-se sobre CÓDIGO.

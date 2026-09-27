@@ -14,6 +14,14 @@ M4 SEG2 — tirar o await da remocao do canal
   entrou=true red=true provado=true
   matou: MC99.2/SEG2 · a remoção do canal é AGUARDADA (a causa do subscribe-after-subscribe)
 
+M6 SEG2 — repor DOIS canais por topic (tirar o registo partilhado)
+  entrou=true red=true provado=true
+  matou: MC99.2/SEG2 · UM canal por topic — dois hooks com a mesma chave NÃO criam dois canais
+
+M7 SEG0/HARD GATE 4 — wildcard numa directiva que antes NAO era vigiada (style-src)
+  entrou=true red=true provado=true
+  matou: MC99.2/SEG0 · HARD GATE 4 — nunca um wildcard CSP genérico
+
 M5 SEG2 — inverter a ordem (.subscribe antes de .on)
   entrou=true red=true provado=true
   matou: MC99.2/SEG2 · `.on()` vem ANTES de `.subscribe()`
