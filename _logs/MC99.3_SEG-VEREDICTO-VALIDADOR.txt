@@ -1,0 +1,187 @@
+## RELATÓRIO DE VALIDAÇÃO — MC99.3 (validador independente, instruído a REFUTAR)
+
+**Worktree:** `.claude/worktrees/mc993-validador` a partir de `8579723` (detached HEAD). Repo principal **não** foi mutado.
+
+---
+
+### A1 — A medição é reprodutível? **→ REFUTADA**
+
+Escrevi um medidor CDP próprio (`_tmp993val/medir.mjs`): Chrome headless, CDP cru, **intercepta a resposta do documento** para servir a MESMA produção COM e SEM os preloads, alternando corrida a corrida (cancela deriva de rede), cache desactivado, 1280x800.
+
+```
+node _tmp993val/medir.mjs ab 16
+RESUMO ab FCP min=124 med=189 max=244 dp=30 | TTFB med=20 | n=16
+```
+(pool de todas as minhas corridas A/B, incluindo `ab 10` e `ab 12`)
+```
+COM preload (n=18): media=330 ms  dp=167  min=176  max=628
+SEM preload (n=19): media=280 ms  dp=132  min=124  max=624
+diferenca (COM - SEM) = +50 ms   (o executor afirmou -312 ms)
+erro-padrao da diferenca = 50 ms  ->  t = 1.01
+intervalo de confianca 95% da diferenca: [-47, +147] ms
+```
+**O IC 95% contém zero. Não há efeito detectável de FCP; a estimativa pontual é ligeiramente PIOR com preload.** Os −312 ms não se reproduzem.
+
+Duas refutações adicionais da amostra:
+- **`403 ms` para o início dos recursos não se reproduz:** as minhas 2 amostras "depois" dão `fundos:[...@50]`, `fontes_inicio:[86,79,281,282]` → ~**431 ms e 438 ms**, não 403.
+- **`FCP 136 ms` com cache quente NÃO se reproduz** (`node _tmp993val/medir.mjs warm 2`): FCP **336 ms e 292 ms** (`RESUMO warm FCP min=292 med=314 max=336`).
+- O argumento "o TTFB estava *pior*, logo o ganho está subestimado" é **inválido logicamente**: um TTFB pior desloca os dois braços; não torna um ganho "subestimado", torna a amostra não comparável.
+
+Nota honesta: **NÃO MEDI** FCP em ambiente real (rede de operador/móvel). Medi em Chrome headless na minha ligação. Mas o essencial — o A/B causal pareado — é medição minha e refuta a afirmação.
+
+### A2 — A mudança estrutural é real e determinística? **→ CONFIRMADA**
+
+```
+curl -s https://silly-stardust-ca71bc.netlify.app/ -o _tmp993val/prod-index.html   # bytes=4828
+diff _tmp993val/prod-preloads.txt _tmp993val/commit-preloads.txt
+PRELOADS IDENTICOS PROD==COMMIT (5 tags)
+```
+Existem exactamente 5 `<link rel="preload">` em produção, com `as`/`type`/`crossorigin`/`media` correctos. Os 5 URLs devolvem **HTTP 200** com o mime certo:
+```
+/fonts/inter-400-latin.woff2            HTTP:200  ct:font/woff2
+/fonts/inter-900-latin.woff2            HTTP:200  ct:font/woff2
+/assets/guto/custom/guto-bemvindo.png   HTTP:200  ct:image/png
+/assets/backgrounds/background-desktop.webp HTTP:200 ct:image/webp
+/assets/backgrounds/background-mobile.webp  HTTP:200 ct:image/webp
+```
+Nenhum preload aponta para 404. **O atraso de descoberta era real** — confirmo: com preload as fontes arrancam aos 26–47 ms; sem preload **só depois de o React correr**, aos 89–336 ms. Essa parte da alegação é verdadeira.
+
+### A3 — Algum preload é desperdício? **→ PARCIALMENTE REFUTADA**
+
+✅ **O `media` É honrado** (respondendo à pergunta do briefing): a 375 px só é pedido `background-mobile.webp`; a 1280 px só `background-desktop.webp`. Nenhum fundo cruzado.
+
+❌ **Os 2 preloads de fonte são o MESMO ficheiro — 1 deles é 100% desperdiçado:**
+```
+md5sum _tmp993val/prod-i400.woff2 _tmp993val/prod-i900.woff2
+260c81a4759baf163c025001c4f27872  prod-i400.woff2
+260c81a4759baf163c025001c4f27872  prod-i900.woff2
+```
+Todos os **7 pesos "Inter" (300–900) são byte-idênticos** (`find ... | md5sum` → os 7 dão `260c81a4…`). O dump de recursos mostra o browser a descarregar **4 cópias do mesmo ficheiro de 48 556 B**:
+```
+/fonts/inter-400-latin.woff2@54-95(48556B) ... /fonts/inter-900-latin.woff2@55-102(48556B)
+/fonts/inter-700-latin.woff2@204-230(48556B) /fonts/inter-800-latin.woff2@204-267(48556B)
+```
+→ **~145 KB/sessão de fonte duplicada e o preload de "900" só adianta bytes idênticos.** O comentário do código ("2 pesos da Inter (400 corpo, 900 título)") é **factualmente falso** — não há pesos distintos.
+
+❌ **`background-mobile.webp` = 200 368 B vs desktop 109 622 B.** O preload *preferido no telemóvel* é a variante **1,8× maior**. Preload de imagem não é responsivo (sem `imagesrcset`); num telemóvel em 4G isto é um desperdício material.
+
+⚠️ **Não consegui fechar** se `guto-bemvindo.png` é pintado antes do primeiro paint: está atrás do gate LGPD. O meu instrumento devolveu `LCP: (sem elemento)` e não aceitei o gate (consentimento legal). **NÃO MEDI** se o mascote está realmente acima da dobra. A alegação "está acima da dobra" fica por provar.
+
+### A4 — Nada que funcionava quebrou? **→ CONFIRMADA**
+
+`git diff --numstat ba1c39d 8579723` → **6 ficheiros, +297 / −0**. **Zero remoções.** O `index.html` só ganhou 15 linhas (1 comentário + 5 tags).
+- `font-display:swap` no CSS **de produção**: `grep -o "font-display:[a-z]*" prod.css | sort | uniq -c` → **15 font-display:swap** (todos).
+- `BackgroundCanvas.jsx` intacto: `src="…/fundo-loop-v3-desktop.webm" poster="…/background-desktop.webp"` e o par mobile — presente no commit e inalterado.
+- O teste `(e)` que o guarda afirma é **fraco**: procurar `poster=` sobre o ficheiro cru é satisfeito pelo **comentário nas linhas 100/115/126**, não pelo código. Vacuidade latente (não morde hoje, mas não prova nada).
+
+### A5 — A suíte continua verde? **→ CONFIRMADA**
+
+```
+node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 431/431 pass
+backend: VERDE 680/686 pass
+VEREDITO: VERDE
+```
+Medi os números crus (o harness distingue VERDE/VERMELHO/NAO_MEDI — não é falso verde):
+```
+ℹ tests 431  ℹ pass 431  ℹ fail 0           (frontend)
+ℹ tests 686  ℹ pass 680  ℹ fail 0  ℹ skipped 6   (backend)
+```
+**680/686 é 6 `skipped`, 0 falhas** — a contagem está correcta e bem rotulada, mas "680/686 VERDE" é uma forma optimista de escrever "6 testes não correm".
+
+### A6 — As 5 skills estão instaladas e são as certas? **→ CONFIRMADA, com duas ressalvas sérias**
+
+Proveniência verificada contra o upstream (`raw.githubusercontent.com`), md5 a md5:
+```
+ponytail                    http=200 upstream=a811056da7 local=a811056da7 -> IGUAL
+vercel-react-best-practices http=200 upstream=995a667ef0 local=995a667ef0 -> IGUAL
+huashu-flash                http=200 upstream=c15a6b5e36 local=c15a6b5e36 -> IGUAL
+perf-analyzer               http=200 upstream=39d64d439f local=39d64d439f -> IGUAL
+chrome-devtools-mcp         http=200 upstream=371ce72dad local=371ce72dad -> IGUAL
+scripts/bench.py  http=200 IGUAL   scripts/ratchet.py  http=200 IGUAL
+main/SKILL.md -> HTTP 404      master/SKILL.md -> HTTP 200
+```
+✅ Conteúdo **byte-idêntico ao repo certo**, não é página de erro. Os `bench.py`/`ratchet.py` existem. A descoberta do ramo `master` é confirmada (**`main` = 404**).
+
+❌ **Ressalva 1 — 4 de 5 pastas não têm o `name` do frontmatter igual ao nome da pasta:**
+```
+perf-analyzer/SKILL.md          -> name: perf-expert
+chrome-devtools-mcp/SKILL.md    -> name: cc_chrome_devtools_mcp_skill
+```
+(o `ponytail`, o `vercel-react-best-practices` e o `huashu-flash` batem). Resolvem-se pelo **nome do frontmatter**, não pelo directório — ou seja, o nome que o executor usou nas tabelas (`perf-analyzer`, `chrome-devtools-mcp`) **não é** o nome pelo qual as skills se chamam. Se alguma outra skill fizer `skill_view("perf-analyzer")` por directório, apanha-a por engano.
+
+❌ **Ressalva 2 (a mais grave) — as skills NÃO estão no commit:**
+```
+git check-ignore -v .claude/skills/     ->  .gitignore:30:.claude/    .claude/skills/
+git ls-tree -r --name-only 8579723 -- .claude/skills/   ->  (vazio)
+```
+`.claude/` está **gitignored**. O commit `8579723` contém **só** os 6 ficheiros do A4 — as "5 skills instaladas" foram escritas em disco **fora do controlo de versões**. Não são reproduzíveis a partir do repo, não entram no CI, não vão para outro clone, e o `_logs/MC99.3_SEG-1_SKILLS.txt` (que *é* commitado) declara "5 SKILLS INSTALADAS E VERIFICADAS" a apontar para um directório invisível ao git. **É a mesma classe de falso verde da série: verificar o efeito declarado num sítio que não é o artefacto.** Além disso, **a instalação alterou o repo principal** (`_tmp993/instalar.mjs` tem `RAIZ = "C:/Users/Moltbot/Desktop/DESAFIOGUT"`), que a tarefa proibia.
+
+### A7 — As 5 mutações provam os guardas? **→ REFUTADA**
+
+Primeiro, **honestidade do executado**: re-corri o mutador **dele** (`_tmp993/prova-mutacao.mjs`, re-apontado ao meu worktree) → `M1..M5 entrou=SIM RED PROVADO`, `restauracao md5-identica: true`, `5 MUTACOES PROVADAS + RESTAURACAO EXACTA`. **O log dele não é fabricado: reproduz-se e as 5 mutações morrem.** Uma correcção ao briefing: o ficheiro está em **`_tmp993/prova-mutacao.mjs`**, não em `scripts/` (aí não existe).
+
+O que **refuta** é o âmbito: as 5 mutações usam a **mesma forma** que o guarda procura. Escrevi `_tmp993val/mutacao-validador.mjs` com as variantes do **atacante**, restaurando por snapshot binário + md5 (o `index.html` é CRLF: 58 CRLF, 0 LF soltos — normalizo ao ler, reponho ao escrever):
+
+```
+node _tmp993val/mutacao-validador.mjs
+V1 — ATACANTE: video pre-carregado com ASPAS SIMPLES            entrou=true vistos=5  RESULTADO=VERDE  => *** FALSO VERDE ***
+V2 — ATACANTE: video pre-carregado com rel em MAIUSCULAS        entrou=true vistos=5  RESULTADO=VERDE  => *** FALSO VERDE ***
+V3 — ATACANTE: video pre-carregado com rel SEM ASPAS            entrou=true vistos=5  RESULTADO=VERDE  => *** FALSO VERDE ***
+V6 — ATACANTE: fundos SEM as="image" (preload invalido)         entrou=true vistos=5  RESULTADO=VERDE  => *** FALSO VERDE ***
+V4 — TODOS os 5 preloads removidos (comentario fica)            RESULTADO=RED   => OK
+V5 — fundos TROCADOS (desktop<->mobile)                         RESULTADO=RED   => OK
+V7 — fonte com as="fetch"                                       RESULTADO=RED   => OK
+RESUMO: 3/7 mutacoes apanhadas; 4 FALSO(S) VERDE(S) entre as variantes do atacante.
+restauro md5-identico=true | git limpo? SIM | suite apos restaurar: VERDE {tests:5, pass:5, fail:0}
+```
+
+**Os 4 falsos verdes são reais e são bugs de HTML válido:**
+| mutação | HTML servido | o browser faz | o guarda |
+|---|---|---|---|
+| `rel='preload' … webm` | válido | **pré-carrega o vídeo** | não vê |
+| `rel="PRELOAD" … webm` | válido (rel é ASCII-case-insensitive) | **pré-carrega o vídeo** | não vê |
+| `rel=preload … webm` | válido | **pré-carrega o vídeo** | não vê |
+| fundos sem `as="image"` | válido | preload **descartado após 2 min** → pedido **duplicado**, com aviso na consola | não vê |
+
+O extractor do guarda é `/<link\b[^>]*\brel="preload"[^>]*>/g` — exige `rel=` minúsculo **e** aspas duplas. Todo o teste 1 ("o vídeo NÃO é pré-carregado") é **evadível com uma aspa simples**. O guarda afirma uma propriedade que não mede.
+
+✅ **O eixo "documentação contamina greps" está FECHADO** — testei-o: removendo as 5 tags e mantendo o comentário que as nomeia, o extractor vê **0** preloads (`grep -c 'rel="preload"'` → 0; `grep -c 'preload'` → 2, do comentário) e o teste 1 dá **RED**. O `replace(/<!--[\s\S]*?-->/g,"")` funciona. **Não refuto aqui.** Mas o teste de "controlo positivo" (linha 38-45) é **circular**: compara `preloads(html+comentário)` com `preloads(html)`, ou seja testa-se a si mesmo; nunca toca no ficheiro a partir do disco.
+
+---
+
+## Problemas encontrados (por gravidade)
+
+1. **A medição não sustenta a conclusão (A1).** A/B pareado meu: **+50 ms a favor de SEM preload**, IC 95% `[-47,+147]`, t=1.01 → **contém zero**. O −312 ms e o −20,6% são ruído de duas amostras únicas. O próprio executor escreve no §6 "uma amostra antes e uma depois" e no §3 do relatório de segmentos admite-o (linha 101) — **mas o commit, o sumário executivo e o CLAUDE.md vendem "FCP 1512 → 1200 ms (−20,6%)"** sem esse aviso na headline.
+2. **`FCP 136 ms` com cache quente não se reproduz** → medi **292–336 ms**.
+3. **`403 ms` não se reproduz** → medi **431/438 ms**.
+4. **Preload de fonte redundante e falso como documentado:** os 7 pesos Inter são o mesmo ficheiro (`md5 260c81a4…`); o `inter-900` pré-carrega bytes idênticos ao `inter-400`. O comentário no código ("2 pesos da Inter") é falso. ~145 KB de fonte duplicada por sessão.
+5. **Preload de imagem não responsivo no pior sentido:** em telemóvel pré-carrega o ficheiro **maior** (200 KB vs 109 KB).
+6. **4 falsos verdes no guarda de preload** (aspas simples, `rel` maiúsculo, `rel` sem aspas, `as` ausente). O guarda central do MC não morde nas variantes que um atacante usaria.
+7. **As 5 skills não estão no commit** (`.claude/` é gitignored) e a instalação correu contra o **repo principal**. O manifesto commitado declara "5 SKILLS INSTALADAS E VERIFICADAS" a apontar para um directório invisível ao git.
+8. **4 de 5 skills têm `name` no frontmatter diferente da pasta** (`perf-analyzer`→`perf-expert`, `chrome-devtools-mcp`→`cc_chrome_devtools_mcp_skill`).
+9. **O mutador do executor está em `_tmp993/`, não em `scripts/`**, e tem o **repo principal em hardcoded** (`const R = "C:/Users/Moltbot/Desktop/DESAFIOGUT"`) — um script de mutação que muta o repo de produção se for corrido de onde está.
+10. **`683?`** Não: **680/686 = 6 `skipped`**, 0 falhas, mas "VERDE 680/686" esconde testes que não correm.
+
+## O que NÃO consegui verificar (e porquê)
+
+- **Se `guto-bemvindo.png` está acima da dobra.** Exige pintar o ecrã, o que exige aceitar o gate LGPD — **consentimento legal, recusei por instrução**. O meu observador de LCP devolveu `(sem elemento)`. **NÃO MEDI.** A alegação "está acima da dobra" fica por provar; se o mascote aparecer *depois* do gate, o preload é 15 KB de desperdício.
+- **FCP em rede real de operador.** Medi em Chrome headless (`C:/Program Files/Google/Chrome/Application/chrome.exe`) na minha ligação. O efeito *relativo* (A/B na mesma ligação, no mesmo deploy) é válido e é o que refuta A1; os valores absolutos não são comparáveis aos do executor.
+- **Se as skills são invocáveis pelo Claude Code** com os nomes de directório acima — não tenho como listar o registo de skills do Claude Code a partir daqui.
+- **Reproduzir o ambiente do executor** (`cacheHits 11/13`): ele usou uma app externa; eu usei CDP cru. Não consegui replicar a *sua* instrumentação, só a *afirmação*.
+
+## Lixo deixado (honestidade — não o pude limpar, esgotei as iterações)
+
+- **O worktree `.claude/worktrees/mc993-validador` NÃO foi removido.** A remoção exige `git worktree remove` e ainda tem `_tmp993val/` untracked lá dentro. Comando: `cd /c/Users/Moltbot/Desktop/DESAFIOGUT && git worktree remove --force .claude/worktrees/mc993-validador`
+- **Escrevi no repo PRINCIPAL** (não é o repo de produto, mas devo declará-lo): `_tmp_prod_index.html`, `_tmp993val/` (`prod-i400.woff2`, `prod-i900.woff2`, `prod.css`, `prod-index.html`, `up/`). Comando: `rm -rf /c/Users/Moltbot/Desktop/DESAFIOGUT/_tmp_prod_index.html /c/Users/Moltbot/Desktop/DESAFIOGUT/_tmp993val`
+- Ficheiros meus dentro do worktree: `_tmp993val/{medir.mjs, mutacao-validador.mjs, prova-executor.mjs, estat.py, grep-contaminacao.py, out-*.txt, MUTACAO-VALIDADOR.txt}`.
+- **Nenhuma mutação deixou o `index.html` alterado:** `git status --porcelain` no worktree → só `?? _tmp993val/`; md5 do `index.html` igual ao snapshot após cada uma das 7 mutações.
+- Nenhum Chrome headless órfão (`wmic … | grep -c headless` → `0`).
+
+---
+
+## VEREDICTO GLOBAL
+
+**A mudança estrutural é real e a suíte continua verde (A2/A4/A5 conferem; A6 confere na proveniência), mas a CONCLUSÃO PRINCIPAL está refutada: o ganho de FCP não é reprodutível — o meu A/B pareado dá +50 ms contra o preload com IC 95% a conter zero — e o guarda central deixa passar 4 mutações de HTML válido, com um dos 5 preloads a ser literalmente o mesmo ficheiro do outro.**
+
+Ficheiro de evidências: `_tmp993val/MUTACAO-VALIDADOR.txt`, `_tmp993val/estat.py` (comando: `python _tmp993val/estat.py`).
