@@ -3076,5 +3076,21 @@ return v4.length === 0 || v4.some((r) => isBlockedIp(r.address));
 
 **Custo declarado e ACEITE pelo operador:** hosts IPv6-only deixam de funcionar.
 
-**PENDENTE:** validador adversarial da 6.ª geração (`deleg_e238da85`). As 5 anteriores foram todas
-refutadas — **não se declara seguro antes de ele falar.**
+⚠️ **O VALIDADOR CHEGOU E REFUTOU (19/19, sha256 conferido).** A Opcao A fechou o ataque «só AAAA» e
+**abriu «A público + AAAA privado»**: o sslip.io deixa PREFIXAR — `1-1-1-1.<qualquer>.sslip.io`
+devolve um A PÚBLICO (1.1.1.1) **e** o AAAA privado embutido. A minha validação viu 1.1.1.1 e deixou
+passar; o `fetch` ligou-se depois ao `[::1]` (`handler(...)` -> **200, image/png**, medido contra o
+handler real com um isco local).
+
+**A causa-raiz é mais funda que o filtro:** eu valido a resolução DNS e **o `fetch` volta a resolver
+por conta própria** — duas resoluções independentes. Por isso nenhum filtro no resultado do meu
+lookup fecha o buraco, e o DNS rebinding derrota-o por construção.
+
+**7.ª geração (NÃO FEITA) — mudar ONDE a validação acontece, não o que ela filtra:** ligar ao
+endereço VALIDADO (com `Host:` do nome original) ou validar no momento da ligação com um
+`dispatcher`/`agent` próprio. **Validar todos os endereços, ou nenhum** — o erro da Opção A foi
+validar metade e achar que tinha validado o todo.
+
+**O SSRF NÃO ESTÁ FECHADO.** As 6 gerações foram todas refutadas, cada uma fechando o ataque da
+anterior e abrindo outro. *O padrão já não é «falta um caso»: é que eu valido num sítio e ligo
+noutro.*
