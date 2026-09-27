@@ -1,6 +1,6 @@
 M10 DNS: tirar o filtro dos AAAA (reabre o sslip.io que o 5.º validador explorou)
   entrou=true red=true provado=true
-  matou: MC99.5.2.1d/DNS · (f) o caminho do DNS: AAAA ignorados, A validados (decisao do operador)
+  matou: MC99.5.2.1d → 1e/DNS · (f) caminho do DNS: AAAA-only bloqueado, dominios legitimas passam | MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e a ligação é FIXADA
 
 M8 SSRF: tirar a INVERSÃO (literal IPv6 volta a passar, sem descodificar nada)
   entrou=true red=true provado=true
@@ -15,12 +15,12 @@ M1 SSRF: tirar a normalizacao dos brackets (reabre os 4 payloads)
   matou: 
 
 M2 SSRF: tirar o bloco 6to4 (reabre 2002:a9fe::1 = METADATA CLOUD)
-  entrou=true red=false provado=true
-  matou: 
+  entrou=true red=true provado=true
+  matou: MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e a ligação é FIXADA
 
 M7 SSRF: tirar o bloco Teredo (reabre 2001:0:0:0:0:0:80ff:fffe = 127.0.0.1)
-  entrou=true red=false provado=true
-  matou: 
+  entrou=true red=true provado=true
+  matou: MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e a ligação é FIXADA
 
 M6 SSRF: tirar o corte dominio-vs-IPv6 (bloqueia i.imgur.com — a regressao que EU introduzi)
   entrou=true red=true provado=true
@@ -37,5 +37,21 @@ M4 gate: tirar o botao (summary)
 M5 gate: meter os 4 aceites DENTRO do details (escondidos quando fechado)
   entrou=true red=true provado=true
   matou: MC99.5.2/gate · o texto legal esta atras de um botao (sem resumo), FECHADO por padrao
+
+M11 1e: tirar a autorizacao de IPv6 de TRANSICAO pelo marcador (reabre o «nome prefixado» ISATAP)
+  entrou=true red=true provado=true
+  matou: MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e a ligação é FIXADA
+
+M12 1e: tirar o `connect.lookup` do dispatcher (o fetch volta a resolver por si — TOCTOU)
+  entrou=true red=true provado=true
+  matou: MC99.5.2.1c/INVERSÃO · (c) o guard RECUSA sem descodificar, e a decisão de rede mantem-se
+
+M13 1e: voltar ao pre-check de DNS separado do fetch (as DUAS resolucoes independentes)
+  entrou=true red=true provado=true
+  matou: MC99.5.2.1c/INVERSÃO · (c) o guard RECUSA sem descodificar, e a decisão de rede mantem-se | MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e a ligação é FIXADA
+
+M14 1e: a recusa NA LIGACAO deixa de existir (a decisao passa a ser so informativa)
+  entrou=true red=true provado=true
+  matou: MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e a ligação é FIXADA
 
 md5_proxy=true md5_termos=true

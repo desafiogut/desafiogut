@@ -16,7 +16,9 @@ const md5 = (p) => createHash("md5").update(readFileSync(p)).digest("hex");
 const norm = (s) => s.replace(/\r\n/g, "\n");
 const escr = (p, s) => writeFileSync(p, s.replace(/\r\n/g, "\n").replace(/\n/g, "\r\n"), "utf8");
 const codigo = (s) => s.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "")
-  .split(/\r?\n/).map((l) => l.replace(/(^|[^:"'`])\/\/.*$/, "$1")).join("\n");
+  // MC99.5.2.1e — o `\\` no conjunto evita comer CÓDIGO real: sem ele a barra de `/^image\//i`
+  // conta como início de comentário e a linha desaparecia do texto onde os predicados medem.
+  .split(/\r?\n/).map((l) => l.replace(/(^|[^:"'`\\])\/\/.*$/, "$1")).join("\n");
 const suite = () => {
   const r = spawnSync("node", ["--test", "--test-concurrency=1", TESTE], { cwd: FE, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   const out = (r.stdout || "") + (r.stderr || "");
@@ -40,10 +42,14 @@ const M = [
     apl: (s) => s.replace('.replace(/^\\[|\\]$/g, "")', ""),
     entrou: (s) => !/replace\(\/\^\\\[\|\\\]\$\/g/.test(codigo(s)) },
   { id: "M2", nome: "SSRF: tirar o bloco 6to4 (reabre 2002:a9fe::1 = METADATA CLOUD)", f: "P",
-    apl: (s) => s.replace(/ *if \(he\[0\] === 0x2002\)[^\n]*\n/, ""),
+    // MC99.5.2.1e — a decisão 6to4 está agora em DOIS sítios (isBlockedIp + temIpv4EmbutidoPorTransicao):
+    // neutralizar UMA cópia não arranca a capacidade, e o predicado antigo (`!/he[0] === 0x2002/`)
+    // passou a encontrar a cópia da outra função e declarava «nao entrou». Neutraliza as duas.
+    apl: (s) => s.replace(/he\[0\] === 0x2002/g, "false"),
     entrou: (s) => !/he\[0\] === 0x2002/.test(codigo(s)) },
   { id: "M7", nome: "SSRF: tirar o bloco Teredo (reabre 2001:0:0:0:0:0:80ff:fffe = 127.0.0.1)", f: "P",
-    apl: (s) => s.replace(/ *if \(he\[0\] === 0x2001 && he\[1\] === 0x0000\)[^\n]*\n[^\n]*\n/, ""),
+    // idem M2: o predicado do Teredo existe nas duas funções — neutraliza-se o predicado, não a linha.
+    apl: (s) => s.replace(/he\[0\] === 0x2001 && he\[1\] === 0x0000/g, "false"),
     entrou: (s) => !/he\[1\] === 0x0000/.test(codigo(s)) },
   { id: "M6", nome: "SSRF: tirar o corte dominio-vs-IPv6 (bloqueia i.imgur.com — a regressao que EU introduzi)", f: "P",
     apl: (s) => s.replace('  if (!h.includes(":")) return false;\n', ""),
@@ -57,6 +63,20 @@ const M = [
   { id: "M5", nome: "gate: meter os 4 aceites DENTRO do details (escondidos quando fechado)", f: "T",
     apl: (s) => s.replace("        </details>\n\n        {/* Checkboxes de consentimento */}", "\n        {/* Checkboxes de consentimento */}").replace("          </p>\n        </div>\n\n        {/* Checkboxes", "          </p>\n        </div>\n        </details>\n\n        {/* Checkboxes"),
     entrou: (s) => { const c = codigo(s); const ab = c.indexOf("<details"), fe = c.indexOf("</details>"), cb = c.indexOf("estilos.checkboxes"); return cb > fe || (cb > ab && fe > cb); } },
+  // ═══ MC99.5.2.1e — 7.ª GERAÇÃO: as mutações atacam ONDE a decisão passou a acontecer ═══
+  { id: "M11", nome: "1e: tirar a autorizacao de IPv6 de TRANSICAO pelo marcador (reabre o «nome prefixado» ISATAP)", f: "P",
+    apl: (s) => s.replace("  return he[5] === 0x5efe;                                  // ISATAP      (RFC 5214, SGI 0x5EFE)", "  return false;"),
+    entrou: (s) => !/0x5efe/.test(codigo(s)) },
+  { id: "M12", nome: "1e: tirar o `connect.lookup` do dispatcher (o fetch volta a resolver por si — TOCTOU)", f: "P",
+    apl: (s) => s.replace("      ...(ehIpLiteral ? {} : { dispatcher: agenteValidado }),\n", ""),
+    entrou: (s) => !/dispatcher: agenteValidado/.test(codigo(s)) },
+  { id: "M13", nome: "1e: voltar ao pre-check de DNS separado do fetch (as DUAS resolucoes independentes)", f: "P",
+    apl: (s) => s.replace('  const ehIpLiteral = /^\\d+\\.\\d+\\.\\d+\\.\\d+$/.test(u.hostname) || u.hostname.includes(":");\n',
+      '  const ehIpLiteral = /^\\d+\\.\\d+\\.\\d+\\.\\d+$/.test(u.hostname) || u.hostname.includes(":");\n  if (!ehIpLiteral && await resolvesToBlocked(u.hostname)) return texto(403, "host not allowed");\n'),
+    entrou: (s) => /await resolvesToBlocked\(u\.hostname\)\) return texto\(403/.test(codigo(s)) },
+  { id: "M14", nome: "1e: a recusa NA LIGACAO deixa de existir (a decisao passa a ser so informativa)", f: "P",
+    apl: (s) => s.replace("    if (bloqueado) return callback(new Error(HOST_BLOQUEADO));\n", ""),
+    entrou: (s) => !/if \(bloqueado\) return callback\(new Error\(HOST_BLOQUEADO\)\)/.test(codigo(s)) },
 ];
 
 console.log("baseline: " + JSON.stringify(suite()) + "\n");
@@ -64,12 +84,11 @@ let todas = true; const linhas = [];
 // MC99.5.2.1c — mutações OBSOLETAS pela inversão: mexem em código que deixou de ser alcançável
 // pelo caminho dos literais (o `if (h.includes(":")) return true;` corta antes de lá chegar).
 // Um VERDE aqui NÃO é guarda fraca — é a inversão a ser mais forte do que os descodificadores.
-// ⚠️ MAS revela uma lacuna REAL: aquele código continua vivo no caminho do DNS
-// (`resolvesToBlocked` -> `isBlockedIp`), e ESSE caminho não tem teste. Fica registado.
+// MC99.5.2.1e — M2/M7 SAÍRAM desta lista: o teste (g) passou a cobrir as famílias de transição
+// pelo caminho do DNS (6to4 e Teredo com isca A pública), por isso deixaram de ser obsoletas e
+// passaram a PROVADO. Fica só a M1, cuja razão continua válida.
 const OBSOLETAS = {
   M1: "brackets: inalcancavel pelo caminho dos literais (a inversao corta antes)",
-  M2: "6to4: idem — so alcancavel via DNS, caminho nao testado",
-  M7: "Teredo: idem — so alcancavel via DNS, caminho nao testado",
 };
 for (const m of M) {
   const base = m.f === "P" ? baseP : baseT;
@@ -93,6 +112,6 @@ const exP = md5(PROXY) === mdP, exT = md5(TERMOS) === mdT;
 const rf = suite();
 const ok = todas && exP && exT && rf.exit === 0;
 console.log("\nrestauracao md5-identica: proxy=" + exP + " termos=" + exT + " | suite apos restaurar: " + (rf.exit === 0 ? "VERDE" : "VERMELHO"));
-console.log("\nMC99.5.2 mutacao: " + (ok ? M.length + " MUTACOES PROVADAS + RESTAURACAO EXACTA" : "FALHOU"));
+console.log("\nMC99.5.2 → MC99.5.2.1e mutacao: " + (ok ? M.length + " MUTACOES PROVADAS + RESTAURACAO EXACTA" : "FALHOU"));
 writeFileSync(R + "/_logs/MC99.5.2_PROVA-MUTACAO.txt", linhas.join("\n\n") + "\n\nmd5_proxy=" + exP + " md5_termos=" + exT + "\n", "utf8");
 process.exit(ok ? 0 : 1);

@@ -13,6 +13,12 @@
 // content-type image/*; limites de tempo e tamanho.
 
 import { lookup } from "node:dns/promises";
+// MC99.5.2.1e (7.ª GERAÇÃO) — o `Agent` do undici aceita um `connect.lookup` PRÓPRIO, que é
+// chamado NO MOMENTO DA LIGAÇÃO. É isso — e só isso — que fecha o TOCTOU: o `fetch` deixa de
+// fazer a sua própria resolução de DNS (a 2.ª, que escolhia livremente o AAAA e por onde o
+// ataque do «nome prefixado» entrava) e passa a ligar-se ao endereço que NÓS validámos.
+// `undici` é a implementação que serve o `fetch` global do Node, logo o dispatcher é aceite.
+import { Agent } from "undici";
 import { respostaPreflight } from "./_lib/cors.mjs";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -96,27 +102,82 @@ export function isBlockedHostname(hostname) {
   return isBlockedIp(h);
 }
 
-/** Resolve um nome DNS e bloqueia se QUALQUER endereço for privado (fail-closed). */
-// MC99.5.2.1d — `export` APENAS para instrumentação: o PoC mede esta função real (o caminho do DNS)
-// em vez de replicar a lógica. NÃO é a inversão: o comportamento mantém-se exactamente o implantado.
-export async function resolvesToBlocked(hostname) {
+// ═══ MC99.5.2.1e — 7.ª GERAÇÃO: VALIDAR ONDE A LIGAÇÃO ACONTECE ═══════════════════════════
+// As 6 gerações anteriores filtraram SEMPRE o resultado de uma resolução, e o `fetch` fazia
+// depois OUTRA resolução independente. Duas resoluções, duas escolhas, nenhuma garantia de
+// coincidirem — é TOCTOU, e é o que o DNS rebinding explora. A correcção não é mais uma regra
+// sobre o que filtrar: é mudar ONDE a validação acontece. Aqui resolve-se UMA vez (a nossa),
+// autoriza-se cada endereço, e devolve-se um ÚNICO endereço ao conector — que é o endereço que
+// a ligação usa. O `fetch` já não tem resolução própria para correr.
+
+/** True se um IPv6 transporta um IPv4 embutido por um mecanismo de TRANSIÇÃO conhecido.
+ *  `isBlockedIp` descodifica 6to4/Teredo/mapeado/traduzido/NAT64 e decide pelo ENDEREÇO; mas um
+ *  IPv6 de `2000::/3` com um IPv4 embutido PARECE global — foi por aí que
+ *  `1-1-1-1.2601--5efe-a9fe-a9fe.sslip.io` (A público + AAAA ISATAP -> 169.254.169.254) passou a
+ *  guarda da 6.ª geração. Aqui marca-se a FAMÍLIA pelo identificador do mecanismo (RFC 4291 §2.5.5
+ *  mapeado, RFC 3056 6to4, RFC 4380 Teredo, RFC 6052 NAT64, RFC 5214 ISATAP) — não é uma lista de
+ *  payloads: é a mesma leitura estrutural que `isBlockedIp` já faz, mais o ISATAP (0x5efe), cujo
+ *  marcador não tinha decisor nenhum. Falha para o lado fechado. */
+function temIpv4EmbutidoPorTransicao(h) {
+  const he = hextetos(h);
+  if (!he) return true;                                    // não compreendido -> fail-closed
+  if (he[0] === 0x2002) return true;                        // 6to4        (RFC 3056)
+  if (he[0] === 0x2001 && he[1] === 0x0000) return true;    // Teredo      (RFC 4380)
+  if (he[0] === 0x0064 && he[1] === 0xff9b) return true;    // NAT64       (RFC 6052)
+  if (he.includes(0xffff)) return true;                     // mapeado/traduzido (RFC 4291)
+  return he[5] === 0x5efe;                                  // ISATAP      (RFC 5214, SGI 0x5EFE)
+}
+
+/** UMA resolução: autoriza CADA endereço devolvido e escolhe o endereço a FIXAR (pin).
+ *  Devolve `{ bloqueado, pin }`. Fail-closed em tudo o que não se compreendeu.
+ *  - qualquer endereço (A ou AAAA) não autorizado  -> bloqueado  (o «nome prefixado» cai aqui)
+ *  - sem IPv4 (só AAAA)                            -> bloqueado  (não há endereço IPv4 a fixar)
+ *  - caso contrário                                -> `pin` = o IPv4 validado que a ligação usará */
+export async function resolverEEscolher(hostname) {
   try {
     const results = await lookup(hostname, { all: true });
-    // ── MC99.5.2.1d — DECISÃO DO OPERADOR (R18): ignorar AAAA, validar A. ──
-    // A inversão literal (`r.address.includes(":") || ...`) fechava o exploit MAS bloqueava
-    // `cdn.jsdelivr.net` — que é DUAL-STACK (2606:4700::6811:d005 + 104.17.207.5). Bloquear por
-    // QUALQUER IPv6 bloqueia todo o host dual-stack, ou seja a maior parte da web moderna e o CDN
-    // que esta app usa. Medido antes de decidir, não estimado.
-    // Regra aprovada: os endereços IPv6 são IGNORADOS; valida-se o IPv4 (`isBlockedIp`); e se não
-    // houver NENHUM IPv4, bloqueia-se (fail-closed).
-    //   cdn.jsdelivr.net (dual-stack) -> v4 publico -> PASSA
-    //   2601--5efe-a9fe-a9fe.sslip.io (só AAAA) -> v4=[] -> 403  (exploit fechado)
-    //   IPv6-ONLY -> v4=[] -> 403  (custo declarado e aceite pelo operador)
+    if (results.length === 0) return { bloqueado: true, pin: null };
+    const algumNaoAutorizado = results.some(
+      (r) => isBlockedIp(r.address) || (r.address.includes(":") && temIpv4EmbutidoPorTransicao(r.address))
+    );
+    if (algumNaoAutorizado) return { bloqueado: true, pin: null };
     const v4 = results.filter((r) => !r.address.includes(":"));
-    return v4.length === 0 || v4.some((r) => isBlockedIp(r.address));
+    if (v4.length === 0) return { bloqueado: true, pin: null };
+    return { bloqueado: false, pin: v4[0].address };
   } catch {
-    return true;
+    return { bloqueado: true, pin: null };                 // resolução falhou -> fail-closed
   }
+}
+
+/** Compatibilidade histórica (PoC/relatórios citam este nome): é a MESMA decisão de `resolverEEscolher`. */
+export async function resolvesToBlocked(hostname) {
+  return (await resolverEEscolher(hostname)).bloqueado;
+}
+
+/** Marca própria de recusa na LIGAÇÃO. Viaja no `cause` do `fetch failed` (medido) e é o que
+ *  permite responder 403 em vez de 502 quando é a NOSSA guarda a recusar. */
+const HOST_BLOQUEADO = "__img_proxy_host_bloqueado__";
+
+/** O `lookup` que a LIGAÇÃO usa. É chamado pelo conector no momento da ligação: resolve (uma só
+ *  vez), autoriza, e devolve um ÚNICO endereço. Se não autorizar, a ligação NÃO acontece —
+ *  a decisão e o endereço são o mesmo dado, logo o TOCTOU desaparece. */
+function lookupValidado(hostname, _options, callback) {
+  resolverEEscolher(hostname).then(({ bloqueado, pin }) => {
+    if (bloqueado) return callback(new Error(HOST_BLOQUEADO));
+    callback(null, [{ address: pin, family: pin.includes(":") ? 6 : 4 }]);
+  }).catch(() => callback(new Error(HOST_BLOQUEADO)));
+}
+
+/** Um único Agent, partilhado (keep-alive preservado): a decisão é por-requisição e acontece
+ *  dentro do `lookup`, não na construção do agent — logo não é preciso um por pedido. */
+const agenteValidado = new Agent({ connect: { lookup: lookupValidado } });
+
+/** True se o erro (ou a sua cadeia de `cause`) é a NOSSA recusa na ligação. */
+function erroEhHostBloqueado(e) {
+  for (let x = e, i = 0; x && i < 5; x = x.cause, i++) {
+    if (String(x.message || "").includes(HOST_BLOQUEADO)) return true;
+  }
+  return false;
 }
 
 function texto(status, msg) {
@@ -139,12 +200,22 @@ export default async (req) => {
   if (u.protocol !== "http:" && u.protocol !== "https:") return texto(400, "scheme not allowed");
   if (isBlockedHostname(u.hostname)) return texto(403, "host not allowed");
   const ehIpLiteral = /^\d+\.\d+\.\d+\.\d+$/.test(u.hostname) || u.hostname.includes(":");
-  if (!ehIpLiteral && await resolvesToBlocked(u.hostname)) return texto(403, "host not allowed");
+  // ── MC99.5.2.1e (7.ª geração) — A VALIDAÇÃO ACONTECE NA LIGAÇÃO ──
+  // Já NÃO há um pré-check de DNS seguido de um `fetch` que resolve outra vez (eram duas
+  // resoluções independentes — o TOCTOU). O `dispatcher` abaixo leva o `lookup` da casa: o
+  // conector pede o endereço NO MOMENTO DA LIGAÇÃO, nós resolvemos UMA vez, autorizamos, e
+  // devolvemos um único endereço validado. Se não autorizar, a ligação não chega a acontecer e
+  // o erro marcado sobe no `cause` -> 403. Literais de IP não passam pelo dispatcher (sem DNS).
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const r = await fetch(u.toString(), { signal: ctrl.signal, redirect: "error", headers: { Accept: "image/*" } });
+    const r = await fetch(u.toString(), {
+      signal: ctrl.signal,
+      redirect: "error",
+      headers: { Accept: "image/*" },
+      ...(ehIpLiteral ? {} : { dispatcher: agenteValidado }),
+    });
     if (!r.ok) return texto(502, "upstream error");
     const ct = r.headers.get("content-type") || "";
     if (!/^image\//i.test(ct)) return texto(415, "not an image");
@@ -159,7 +230,9 @@ export default async (req) => {
         "Content-Security-Policy": "default-src 'none'",
       },
     });
-  } catch {
+  } catch (e) {
+    // A recusa da NOSSA guarda na ligação chega aqui marcada -> 403 (não é uma falha de rede).
+    if (erroEhHostBloqueado(e)) return texto(403, "host not allowed");
     return texto(502, "fetch failed");
   } finally {
     clearTimeout(timer);

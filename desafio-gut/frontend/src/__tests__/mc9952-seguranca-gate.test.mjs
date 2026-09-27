@@ -13,9 +13,12 @@ import { fileURLToPath } from "node:url";
 const FE = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ler = (p) => readFileSync(p, "utf8");
 const codigo = (s) => s.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "")
-  .split(/\r?\n/).map((l) => l.replace(/(^|[^:"'`])\/\/.*$/, "$1")).join("\n");
+  // MC99.5.2.1e — o `[^:"'`\\]` (acrescentado o `\`) evita comer CÓDIGO real: sem ele, a barra
+  // de `/^image\//i` conta como início de comentário e a linha desaparecia do texto medido —
+  // a régua comia o alvo (classe «asserção mais estreita/mais larga que o alvo»).
+  .split(/\r?\n/).map((l) => l.replace(/(^|[^:"'`\\])\/\/.*$/, "$1")).join("\n");
 
-const { isBlockedHostname } = await import("file://" + resolve(FE, "netlify/functions/img-proxy.mjs").replace(/\\/g, "/"));
+const { isBlockedHostname, isBlockedIp } = await import("file://" + resolve(FE, "netlify/functions/img-proxy.mjs").replace(/\\/g, "/"));
 const passaria = (alvo) => { const u = new URL(alvo); if (isBlockedHostname(u.hostname)) return "403"; const l = /^\d+\.\d+\.\d+\.\d+$/.test(u.hostname) || u.hostname.includes(":"); return l ? "PASSA(dns saltada)" : "PASSA(dns corre)"; };
 
 test("controlo positivo do instrumento: a função REAL foi importada", () => {
@@ -59,10 +62,16 @@ test("MC99.5.2.1c/INVERSÃO · (c) o guard RECUSA sem descodificar, e a decisão
   const posInv = c.indexOf('if (h.includes(":")) return true;');
   const posIp = c.indexOf("return isBlockedIp(h);");
   assert.ok(posInv > 0 && posInv < posIp, "a inversao nao esta antes da chamada a isBlockedIp");
-  // o DNS continua a ser validado para dominios (a inversao nao pode ter matado a validacao de rede)
-  assert.match(c, /async function resolvesToBlocked/, "desapareceu o resolvesToBlocked");
-  assert.match(c, /if \(!ehIpLiteral && await resolvesToBlocked\(u\.hostname\)\) return texto\(403/,
-    "o handler deixou de chamar resolvesToBlocked para dominios — a validacao de DNS perdeu-se");
+  // MC99.5.2.1e — a validação de rede NÃO se perdeu: mudou de SÍTIO. Deixou de ser um pré-check
+  // de DNS seguido de um `fetch` que resolve OUTRA VEZ (duas resoluções independentes = TOCTOU,
+  // e foi por aí que o «nome prefixado» passou) e passou a acontecer DENTRO da ligação, no
+  // `connect.lookup` do dispatcher — o conector usa o endereço que NÓS autorizámos.
+  assert.match(c, /async function resolverEEscolher/, "desapareceu o resolverEEscolher (a decisao de rede)");
+  assert.match(c, /const agenteValidado = new Agent\(\{ connect: \{ lookup: lookupValidado \} \}\)/,
+    "desapareceu o dispatcher com lookup proprio — a validacao na ligacao perdeu-se");
+  assert.match(c, /dispatcher: agenteValidado/, "o fetch deixou de passar o dispatcher validado");
+  assert.ok(!/await resolvesToBlocked\(u\.hostname\)\) return texto\(403/.test(c),
+    "voltou o pre-check de DNS separado do fetch — sao DUAS resolucoes (TOCTOU reaberto)");
 });
 
 test("MC99.5.2.1c/INVERSÃO · (d) os internos classicos continuam recusados", () => {
@@ -73,26 +82,69 @@ test("MC99.5.2.1c/INVERSÃO · (d) os internos classicos continuam recusados", (
   }
 });
 
-test("MC99.5.2.1d/DNS · (f) o caminho do DNS: AAAA ignorados, A validados (decisao do operador)", async () => {
+test("MC99.5.2.1d → 1e/DNS · (f) caminho do DNS: AAAA-only bloqueado, dominios legitimas passam", async () => {
   // A lacuna que o 5.º validador explorou: o caminho do DNS nao tinha teste, e o sslip.io (DNS
-  // PUBLICO que codifica o endereco no nome) chegava ao fetch. Decisao do operador (R18): ignorar
-  // AAAA e validar A — fecha o exploit E mantem os CDNs dual-stack.
+  // PUBLICO que codifica o endereco no nome) chegava ao fetch. Decisao do operador (R18) na 6.ª
+  // geração: ignorar AAAA e validar A. ⚠️ ESSA regra FOI REFUTADA (MC99.5.2.1e) pelo «nome
+  // prefixado» (A publico + AAAA interno: o A validado passou e o fetch ligou-se ao AAAA). O que
+  // sobrevive dela — e continua a ser exigido — é o que este teste mede: sslip.io AAAA-only
+  // bloqueado e os domínios legítimos a passar. A decisão de AAAA passou a ser por-endereço.
   const { resolvesToBlocked } = await import("file://" + resolve(FE, "netlify/functions/img-proxy.mjs").replace(/\\/g, "/"));
   assert.equal(typeof resolvesToBlocked, "function", "resolvesToBlocked tem de estar exportada para ser testavel");
   // (a) o ataque: sslip.io resolve SO para o endereco embutido -> sem IPv4 -> bloqueado
-  for (const host of ["2601--5efe-a9fe-a9fe.sslip.io", "2600--5efe-0a00-0001.sslip.io"]) {
+  for (const host of ["2601--5efe-a9fe-a9fe.sslip.io", "2600--5efe-0a00-0001.sslip.io", "--1.sslip.io"]) {
     assert.equal(await resolvesToBlocked(host), true, host + " NAO e bloqueado (exploit do DNS reaberto)");
   }
   // (b) dominios legitimos: PASSA (o CDN dual-stack tem de continuar a funcionar)
   for (const host of ["i.imgur.com", "cdn.jsdelivr.net", "exemplo.com"]) {
     assert.equal(await resolvesToBlocked(host), false, host + " foi BLOQUEADO (o proxy de imagens morre)");
   }
-  // (c) o desenho: filtra os IPv6 e continua a chamar isBlockedIp para IPv4
+  // (c) o desenho: autoriza CADA endereco devolvido e isola os IPv4 para fixar
   const c = codigo(ler(FE + "/netlify/functions/img-proxy.mjs"));
   assert.match(c, /const v4 = results\.filter\(\(r\) => !r\.address\.includes\(":"\)\)/,
-    "falta o filtro que ignora os AAAA");
-  assert.match(c, /v4\.length === 0 \|\| v4\.some\(\(r\) => isBlockedIp\(r\.address\)\)/,
-    "o isBlockedIp deixou de validar os IPv4 (validacao de rede perdida)");
+    "falta o filtro que isola os IPv4");
+  assert.match(c, /algumNaoAutorizado = results\.some\(/,
+    "o guard deixou de autorizar CADA endereco devolvido (validacao de rede perdida)");
+  assert.match(c, /isBlockedIp\(r\.address\)/, "o isBlockedIp deixou de ser aplicado aos enderecos do DNS");
+});
+
+test("MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e a ligação é FIXADA", async () => {
+  // O ataque que REFUTOU a 6.ª geração: um A público (isca que a validação aprova) + um AAAA
+  // interno (o alvo, escolhido pela 2.ª resolução do próprio fetch). Agora resolve-se UMA vez, e
+  // o endereço que o conector usa é o que NÓS devolvemos — o fetch já não escolhe.
+  const { resolverEEscolher } = await import("file://" + resolve(FE, "netlify/functions/img-proxy.mjs").replace(/\\/g, "/"));
+  assert.equal(typeof resolverEEscolher, "function", "resolverEEscolher tem de estar exportada (a decisao que a ligacao usa)");
+  // (a) os nomes prefixados que antes passavam -> bloqueados, e SEM endereço para fixar.
+  //     Inclui as FAMÍLIAS DE TRANSIÇÃO, cada uma com a mesma isca A pública: era esta a
+  //     cobertura que faltava (as mutações do 6to4/Teredo ficavam OBSOLETAS por ninguém as medir).
+  for (const host of [
+    "1-1-1-1.--1.sslip.io",                          // AAAA ::1                      (o ataque que refutou a 6.ª)
+    "1-1-1-1.2601--5efe-a9fe-a9fe.sslip.io",         // AAAA ISATAP  -> 169.254.169.254 (metadata)
+    "1-1-1-1.fd00-ec2--254.sslip.io",                // AAAA fd00:ec2::254              (metadata AWS v6)
+    "1-1-1-1.2002-a9fe-a9fe--1.sslip.io",            // AAAA 6to4    -> 169.254.169.254 (metadata)
+    "1-1-1-1.2001-0-0-0-0-0-80ff-fffe.sslip.io",     // AAAA Teredo  -> 127.0.0.1
+    "1-1-1-1.64-ff9b--7f00-1.sslip.io",              // AAAA NAT64   -> 127.0.0.1
+  ]) {
+    const d = await resolverEEscolher(host);
+    assert.equal(d.bloqueado, true, host + " NAO e bloqueado — o ataque do nome prefixado esta aberto outra vez");
+    assert.equal(d.pin, null, host + " foi bloqueado mas devolveu um endereco para fixar");
+  }
+  // (b) legítimos dual-stack: passam E devolvem um IPv4 PÚBLICO — é esse endereço que a ligação usa
+  for (const host of ["cdn.jsdelivr.net", "i.imgur.com", "exemplo.com"]) {
+    const d = await resolverEEscolher(host);
+    assert.equal(d.bloqueado, false, host + " foi BLOQUEADO (o proxy de imagens morre)");
+    assert.match(String(d.pin), /^\d+\.\d+\.\d+\.\d+$/, host + " nao devolveu um IPv4 publico para fixar: " + d.pin);
+    assert.equal(isBlockedIp(d.pin), false, host + " devolveu para fixar um endereco que a guarda considera bloqueado: " + d.pin);
+  }
+  // (c) o desenho: UM Agent com lookup PRÓPRIO que devolve o endereço fixado (a ligação não resolve)
+  const c = codigo(ler(FE + "/netlify/functions/img-proxy.mjs"));
+  assert.match(c, /connect: \{ lookup: lookupValidado \}/, "falta o connect.lookup — a decisao deixou de estar na ligacao");
+  assert.match(c, /callback\(null, \[\{ address: pin, family: pin\.includes\(":"\) \? 6 : 4 \}\]\)/,
+    "o lookup deixou de devolver o endereco FIXADO (volta a haver resolucao propria no fetch)");
+  assert.match(c, /if \(bloqueado\) return callback\(new Error\(HOST_BLOQUEADO\)\)/,
+    "o lookup deixou de RECUSAR na ligacao (a decisao passou a ser so informativa)");
+  assert.ok(!/await resolvesToBlocked\(u\.hostname\)\) return texto\(403/.test(c),
+    "ha um pre-check de DNS separado do fetch — sao DUAS resolucoes (TOCTOU)");
 });
 
 test("MC99.5.2/gate · o texto legal esta atras de um botao (sem resumo), FECHADO por padrao", () => {

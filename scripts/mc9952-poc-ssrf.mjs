@@ -21,20 +21,26 @@ if (!existsSync(GUARD)) {
   console.error("(sem alvo, este PoC nao mede nada — e um instrumento cego mente nos dois sentidos)");
   process.exit(2);
 }
-const { isBlockedHostname, isBlockedIp, resolvesToBlocked } = await import("file://" + GUARD.replace(/\\/g, "/"));
-if (typeof isBlockedHostname !== "function" || typeof isBlockedIp !== "function" || typeof resolvesToBlocked !== "function") {
-  console.error("ABORTA: importei o ficheiro mas faltam funcoes (isBlockedHostname/isBlockedIp/resolvesToBlocked)");
+const { isBlockedHostname, isBlockedIp, resolvesToBlocked, resolverEEscolher } = await import("file://" + GUARD.replace(/\\/g, "/"));
+if (typeof isBlockedHostname !== "function" || typeof isBlockedIp !== "function" || typeof resolvesToBlocked !== "function" || typeof resolverEEscolher !== "function") {
+  console.error("ABORTA: importei o ficheiro mas faltam funcoes (isBlockedHostname/isBlockedIp/resolvesToBlocked/resolverEEscolher)");
   process.exit(2);
 }
 
-// Cadeia de decisao real do handler (linhas ~78-80): 403 se bloqueado; senao, se NAO for IP literal,
-// corre resolvesToBlocked (DNS); senao vai a fetch.
-const decidir = (alvo) => {
+// Cadeia de decisao REAL do handler. ⚠️ MC99.5.2.1e — ESTA FUNCAO ERA O PONTO CEGO DA SERIE:
+// replicava «se e IP literal salta o DNS, senao corre resolvesToBlocked» — mas o handler da
+// 6.ª geração validava num PRE-CHECK e o `fetch` resolvia OUTRA VEZ (duas resoluções: TOCTOU).
+// Por isso este PoC dizia «PASSA (dns corre)» ao nome prefixado enquanto o ataque era real.
+// Agora mede a decisão que a LIGAÇÃO usa (`resolverEEscolher` — a mesma que o `connect.lookup`
+// chama) e devolve 403 quando ela bloqueia.
+const decidir = async (alvo) => {
   let u; try { u = new URL(alvo); } catch { return "400 url invalida"; }
   if (u.protocol !== "http:" && u.protocol !== "https:") return "400 esquema";
   if (isBlockedHostname(u.hostname)) return "403";
   const lit = /^\d+\.\d+\.\d+\.\d+$/.test(u.hostname) || u.hostname.includes(":");
-  return lit ? "PASSA (dns saltada) -> fetch" : "PASSA (dns corre) -> fetch";
+  if (lit) return "PASSA (literal -> fetch)";
+  const d = await resolverEEscolher(u.hostname);
+  return d.bloqueado ? "403 (a ligacao recusa)" : "PASSA (ligacao FIXADA em " + d.pin + ")";
 };
 
 // ── os 8 payloads que o VALIDADOR ADVERSARIAL encontrou a passar (3.ª geração) ──
@@ -64,11 +70,27 @@ const ANTERIORES = [
   "http://2130706433/", "http://0177.0.0.1/", "http://0x7f.0.0.1/", "http://127.1/", "http://[ff02::1]/",
   "http://[100::1]/", "http://[::ffff:0:0:a00:1]/", "http://[0:0:0:0:0:ffff:7f00:1]/",
 ];
+// ── MC99.5.2.1e — os nomes PREFIXADOS que refutaram a 6.ª geração: uma isca A PÚBLICA mais o
+//    endereço interno no AAAA. A 6.ª validação aprovava o A e o `fetch` ligava-se ao AAAA.
+//    ⚠️ A lista anterior NÃO tinha NENHUM destes — era exactamente esse o ponto cego.
+const SEXTA_GERACAO = [
+  "http://1-1-1-1.--1.sslip.io/",                        // AAAA ::1
+  "http://1-1-1-1.2601--5efe-a9fe-a9fe.sslip.io/",       // AAAA ISATAP -> 169.254.169.254
+  "http://1-1-1-1.fd00-ec2--254.sslip.io/",              // AAAA fd00:ec2::254 (metadata AWS v6)
+  "http://1-1-1-1.2002-a9fe-a9fe--1.sslip.io/",          // AAAA 6to4 -> 169.254.169.254
+  "http://1-1-1-1.2001-0-0-0-0-0-80ff-fffe.sslip.io/",   // AAAA Teredo -> 127.0.0.1
+  "http://1-1-1-1.64-ff9b--7f00-1.sslip.io/",            // AAAA NAT64 -> 127.0.0.1
+];
 // ── controlos POSITIVOS: DOMÍNIOS. Se algum for bloqueado, o proxy de imagens morre (regressão) ──
+// ⚠️ MC99.5.2.1e — `a.b.c.d.com.br` SAIU desta lista: NÃO RESOLVE (NXDOMAIN), logo dá 403 nas duas
+// gerações (medido no A/B pareado: ANTIGA=403 NOVA=403). Estava aqui como «legítimo» e o PoC
+// acusava-o de regressão — era a asserção a ser mais estreita que o alvo (defeito do instrumento,
+// não da guarda). O fail-closed de NXDOMAIN é herdado e mede-se à parte.
 const LEGITIMOS = [
   "https://i.imgur.com/foto.png", "https://cdn.jsdelivr.net/x.png", "https://exemplo.com/a.jpg",
-  "https://images.unsplash.com/x.jpg", "https://a.b.c.d.com.br/img.png",
+  "https://images.unsplash.com/x.jpg",
 ];
+const NXDOMAIN = ["https://a.b.c.d.com.br/img.png", "https://nao-existe-99521e.example/a.jpg"];
 // ── MC99.5.2.1c — literais IPv6 são recusados POR DESENHO, mesmo públicos. A inversão troca
 //    «este IPv4 embutido é privado?» por «preciso mesmo de aceitar um literal IPv6?» — e a
 //    resposta é não: quem serve imagens legitimamente usa NOMES. Estes TÊM de dar 403; se um
@@ -76,11 +98,11 @@ const LEGITIMOS = [
 //    e o instrumento passa a medir a promessa NOVA.) ──
 const LITERAIS_V6 = ["http://[2606:4700::1111]/", "http://[2a00:1450:4001::1]/", "http://[::ffff:8.8.8.8]/"];
 
-const bloco = (nome, lista) => {
+const bloco = async (nome, lista) => {
   const passam = [];
   console.log("\n=== " + nome + " (" + lista.length + ") ===");
   for (const p of lista) {
-    const d = decidir(p);
+    const d = await decidir(p);
     const passa = /^PASSA|^400/.test(d);
     if (passa) passam.push(p);
     console.log("  " + (passa ? "PASSA " : "403   ") + p.padEnd(40) + " -> " + d);
@@ -88,12 +110,18 @@ const bloco = (nome, lista) => {
   return passam;
 };
 
-const mausDoValidador = bloco("OS 8 DO VALIDADOR (3.ª geração)", DO_VALIDADOR);
-const maus4a = bloco("ISATAP / 6rd / NAT64-CUSTOM (os que a 4.ª geração deixou passar)", QUARTA_GERACAO);
-const mausAnteriores = bloco("ANTERIORES (1.ª/2.ª geração)", ANTERIORES);
-const v6 = bloco("IPv6 LITERAL (recusado POR DESENHO — tem de dar 403)", LITERAIS_V6);
-const legitimos = bloco("CONTROLOS POSITIVOS: DOMINIOS (tem de PASSAR)", LEGITIMOS);
+const mausDoValidador = await bloco("OS 8 DO VALIDADOR (3.ª geração)", DO_VALIDADOR);
+const maus4a = await bloco("ISATAP / 6rd / NAT64-CUSTOM (os que a 4.ª geração deixou passar)", QUARTA_GERACAO);
+const maus6a = await bloco("NOME PREFIXADO, A PUBLICO + AAAA INTERNO (o que refutou a 6.ª geração)", SEXTA_GERACAO);
+const mausAnteriores = await bloco("ANTERIORES (1.ª/2.ª geração)", ANTERIORES);
+const v6 = await bloco("IPv6 LITERAL (recusado POR DESENHO — tem de dar 403)", LITERAIS_V6);
+const legitimos = await bloco("CONTROLOS POSITIVOS: DOMINIOS (tem de PASSAR)", LEGITIMOS);
 const bloqueadosLegitimos = LEGITIMOS.filter((p) => !legitimos.includes(p));
+
+// ── NXDOMAIN — herdado (A/B: ANTIGA=403 NOVA=403). Mede-se, não se confunde com regressão. ──
+console.log("\n=== NXDOMAIN (fail-closed herdado: 403 nas DUAS gerações) ===");
+let nxOk = 0;
+for (const p of NXDOMAIN) { const d = await decidir(p); const ok = d.startsWith("403"); if (ok) nxOk++; console.log("  " + (ok ? "403   " : "!     ") + p.padEnd(40) + " -> " + d); }
 
 // ── CAMINHO_DNS (MC99.5.2.1d) — a INVERSÃO QUE FALTAVA. O handler, para um DOMINIO, decide por
 //    resolvesToBlocked. Um atacante NAO precisa de DNS hostil: o sslip.io e um DNS PUBLICO que
@@ -119,12 +147,14 @@ console.log("  buracos do validador a passar: " + mausDoValidador.length + "/" +
 console.log("  buracos anteriores a passar:   " + mausAnteriores.length + "/" + ANTERIORES.length);
 console.log("  legítimos ACEITES:             " + legitimos.length + "/" + LEGITIMOS.length);
 console.log("  legítimos BLOQUEADOS (mau!):   " + bloqueadosLegitimos.length + (bloqueadosLegitimos.length ? " -> " + bloqueadosLegitimos.join(" ") : ""));
+console.log("  NXDOMAIN bloqueado (heredado, esperado " + NXDOMAIN.length + "/" + NXDOMAIN.length + "): " + nxOk + "/" + NXDOMAIN.length);
 
 console.log("  buracos da 4.ª geração a passar: " + maus4a.length + "/" + QUARTA_GERACAO.length);
+console.log("  NOME PREFIXADO a passar (era o buraco da 6.ª; tem de ser 0): " + maus6a.length + "/" + SEXTA_GERACAO.length);
 console.log("  literais IPv6 que PASSARAM (tem de ser 0): " + v6.length + "/" + LITERAIS_V6.length);
 console.log("  CAMINHO_DNS: maliciosos que PASSARAM (tem de ser 0): " + dnsBypass + "/" + MAL_DNS.length);
 console.log("  CAMINHO_DNS: legitimos BLOQUEADOS (tem de ser 0):    " + dnsRegressao + "/" + BOM_DNS.length);
-const total = mausDoValidador.length + maus4a.length + mausAnteriores.length + v6.length + dnsBypass;
+const total = mausDoValidador.length + maus4a.length + maus6a.length + mausAnteriores.length + v6.length + dnsBypass;
 if (bloqueadosLegitimos.length) {
   console.log("\nVEREDITO: REGRESSÃO — o guard bloqueia tráfego legítimo (" + bloqueadosLegitimos.length + ")");
   process.exit(1);
