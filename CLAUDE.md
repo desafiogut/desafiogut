@@ -2826,12 +2826,12 @@ configurado no MCP (a skill sim, o servidor não). API do GitHub sem token = 60 
 
 ## MC99.5 — Auditoria multi-departamental (2026-09-27) — AUDITORIA, nada corrigido
 
-**7 departamentos · 144 problemas medidos · 0 correcções.** Relatórios: `docs/MC99.5-DEP*.md`.
+**7 departamentos · 143 problemas medidos (144 linhas: o DEP-5 traz 1 linha de conformidade verificada, que não é um problema) · 0 correcções.** Relatórios: `docs/MC99.5-DEP*.md`.
 Lista mestra + plano: `docs/MC99.5-LISTA-MESTRA.md`. Relatório: `_logs/MC99.5-RELATORIO.md`.
 
 **Decisão da operadora (R18): OPÇÃO B** — aprovado Grupo 1 (verdades públicas) + Grupo 2
 (segurança) + Grupo 3 (performance) + Grupo 6 (design/tokens) + DEP-3 (React/Engenharia),
-≈ 91 itens. **NÃO aprovado: o Grupo 4** (as promessas ao utilizador — dropshipping, conta do
+≈ 90 itens. **NÃO aprovado: o Grupo 4** (as promessas ao utilizador — dropshipping, conta do
 ganhador Art. 27, pontuação com migração não aplicada, bónus on-chain, «EM BREVE» global):
 é decisão de produto, e reservá-la foi o acerto.
 
