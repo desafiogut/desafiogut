@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.5.2.1a) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.5.2.1b) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -2964,3 +2964,28 @@ commit. *Um instrumento que se para de correr não fica silencioso: repete a úl
 Próximo MC: PoC com caminho ABSOLUTO derivado + controlo positivo visível ANTES de acreditar em
 qualquer número. e a afirmação «caminho hardcoded corrigido» era **falsa** (corrigi o mutador do 9951, não
 o do 9952 — corrigido agora).
+
+---
+
+## MC99.5.2.1b — SSRF 4.ª geração: allowlist do PÚBLICO (2026-09-27)
+
+**Commit `e9df377` + deploy `dc870c6` (`Deploy is live!`) · frontend 447/447 · backend 680/686.**
+
+A 3.ª geração (`2000::/3` = seguro) caiu por **premissa**: 6to4 (`2002::/16`) e Teredo
+(`2001::/32`) **vivem dentro** de `2000::/3` e embutem IPv4 — passavam 8 payloads, incl.
+`[2002:a9fe::1]` = **metadata cloud**. **Causa de fundo: regex que exigiam hextetos presentes**, e
+a forma comprimida (`2002:a00::1`, o `::` come o 2.º hexteto) escapava. As 3 gerações sofreram
+disto de formas diferentes.
+
+**4.ª geração: parser de hextetos (`hextetos()`) + descodificação do IPv4 embutido** — 6to4 (bits
+16-48), Teredo (últimos 32 bits **XOR 0xffffffff**), mapeado/traduzido — tudo reutilizando o
+`isBlockedIp`; e allowlist `2000::/3` para o resto. Malformado → fail-closed.
+
+**O PoC foi reparado ANTES de se tocar no guard** (import derivado de `import.meta.url`, aborta se
+não achar o alvo, controlo positivo visível). Reproduziu o veredicto: **8/8 a passar**. Depois da
+correcção: **0/8 buracos, 0/32 anteriores, 6/6 legítimos, 0 legítimos bloqueados**. 10 testes,
+**7 mutações** (incl. M2 6to4 → RED e M7 Teredo → RED).
+
+⚠️ **O validador adversarial desta geração (`deleg_a225cfbf`) está PENDENTE.** As 3 anteriores
+foram refutadas — **este guard não é declarado seguro antes de o adversário falar.** Falta também
+a validação dos 8 payloads contra o endpoint em produção.
