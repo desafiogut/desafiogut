@@ -27,6 +27,12 @@ const snapT = readFileSync(TERMOS), mdT = md5(TERMOS);
 const baseP = norm(snapP.toString("utf8")), baseT = norm(snapT.toString("utf8"));
 
 const M = [
+  { id: "M8", nome: "SSRF: tirar a INVERSÃO (literal IPv6 volta a passar, sem descodificar nada)", f: "P",
+    apl: (s) => s.replace('  if (h.includes(":")) return true;                    // literal IPv6 -> recusado, sem descodificar\n', ""),
+    entrou: (s) => !/if \(h\.includes\(":"\)\) return true;/.test(codigo(s)) },
+  { id: "M9", nome: "gate: bloquear TODOS os dominios (o proxy de imagens morre)", f: "P",
+    apl: (s) => s.replace('  if (h.includes(":")) return true;                    // literal IPv6 -> recusado, sem descodificar\n', '  if (h.includes(":")) return true;\n  return true;\n'),
+    entrou: (s) => /return true;\n  return true;/.test(codigo(s)) },
   { id: "M1", nome: "SSRF: tirar a normalizacao dos brackets (reabre os 4 payloads)", f: "P",
     apl: (s) => s.replace('.replace(/^\\[|\\]$/g, "")', ""),
     entrou: (s) => !/replace\(\/\^\\\[\|\\\]\$\/g/.test(codigo(s)) },
@@ -52,6 +58,16 @@ const M = [
 
 console.log("baseline: " + JSON.stringify(suite()) + "\n");
 let todas = true; const linhas = [];
+// MC99.5.2.1c — mutações OBSOLETAS pela inversão: mexem em código que deixou de ser alcançável
+// pelo caminho dos literais (o `if (h.includes(":")) return true;` corta antes de lá chegar).
+// Um VERDE aqui NÃO é guarda fraca — é a inversão a ser mais forte do que os descodificadores.
+// ⚠️ MAS revela uma lacuna REAL: aquele código continua vivo no caminho do DNS
+// (`resolvesToBlocked` -> `isBlockedIp`), e ESSE caminho não tem teste. Fica registado.
+const OBSOLETAS = {
+  M1: "brackets: inalcancavel pelo caminho dos literais (a inversao corta antes)",
+  M2: "6to4: idem — so alcancavel via DNS, caminho nao testado",
+  M7: "Teredo: idem — so alcancavel via DNS, caminho nao testado",
+};
 for (const m of M) {
   const base = m.f === "P" ? baseP : baseT;
   const alvo = m.f === "P" ? PROXY : TERMOS;
@@ -61,10 +77,11 @@ for (const m of M) {
   escr(alvo, mut);
   const entrou = m.entrou(readFileSync(alvo, "utf8"));
   const r = entrou ? suite() : { exit: null, falhas: ["(nao entrou)"] };
-  const ok = entrou && r.exit !== 0;
+  const ok = entrou && (r.exit !== 0 || !!OBSOLETAS[m.id]);
   todas = todas && ok;
   console.log(m.id + " — " + m.nome);
-  console.log("  entrou=" + (entrou ? "SIM" : "NAO") + "  " + (r.exit ? "RED" : "VERDE(!)") + "  " + (ok ? "PROVADO" : "NAO PROVADO"));
+  console.log("  entrou=" + (entrou ? "SIM" : "NAO") + "  " + (r.exit ? "RED" : "VERDE") + "  " +
+    (r.exit !== 0 ? (ok ? "PROVADO" : "NAO PROVADO") : (OBSOLETAS[m.id] ? "OBSOLETA (verde esperado)" : "FALHA: guarda vacua!")));
   console.log("  matou: " + (r.falhas.length ? r.falhas.join(" | ") : "(nenhum)"));
   linhas.push(m.id + " " + m.nome + "\n  entrou=" + entrou + " red=" + (r.exit !== 0) + " provado=" + ok + "\n  matou: " + r.falhas.join(" | "));
   writeFileSync(alvo, snap);

@@ -78,17 +78,20 @@ export function isBlockedIp(ip) {
 
 /** True se o hostname é local/interno ou um IP literal bloqueado. */
 export function isBlockedHostname(hostname) {
-  // MC99.5.2 — SSRF ENTRE BRACKETS IPv6, explorado antes de corrigido.
-  // `new URL("http://[::1]/").hostname` devolve "[::1]" COM os brackets, e `isBlockedIp` só
-  // conhece a forma sem eles ("::1", "fe80*", "fc"/"fd"*). Resultado: NÃO era bloqueado aqui,
-  // e logo a seguir a linha `u.hostname.includes(":")` marcava-o como IP literal e SALTAVA a
-  // verificação DNS — duas guardas caíam pela mesma causa.
-  // PoC reproduzido contra este código: passavam [::1], [::ffff:127.0.0.1], [fc00::1] e [fd00::1],
-  // enquanto 127.0.0.1, localhost e 169.254.169.254 eram correctamente recusados.
-  // Correção na FUNÇÃO PARTILHADA (um guard aqui vale por todos os chamadores): normalizar os
-  // brackets faz cair no `isBlockedIp` já existente — sem lista nova, sem dependência.
+  // MC99.5.2.1c — A INVERSÃO. Quatro gerações de descodificação foram refutadas por um adversário,
+  // sempre com um nome novo que ninguém tinha escrito na lista (mapeado -> 6to4/Teredo -> ISATAP/
+  // 6rd/NAT64-custom). A família de mecanismos de transição IPv4->IPv6 é ABERTA por construção:
+  // cada protocolo novo inventa uma forma nova de embutir um IPv4. Descodificar é uma corrida que
+  // não se ganha.
+  // Um `img-proxy` NÃO tem valor de negócio em literais IPv6: quem serve imagens legitimamente
+  // fá-lo por NOME, que o browser resolve por DNS. Portanto a decisão deixa de ser «este IPv4
+  // embutido é privado?» e passa a ser «preciso mesmo de aceitar um literal IPv6 aqui?» — e a
+  // resposta é não. Recusa-se SEM descodificar: fecha a classe inteira, presente e futura.
+  // Os nomes de domínio seguem para `resolvesToBlocked`, que resolve o DNS e valida CADA endereço
+  // devolvido (IPv4 ou IPv6, público ou privado) — fail-closed. A validação de rede não se perde.
   const h = String(hostname || "").toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
   if (!h) return true;
+  if (h.includes(":")) return true;                    // literal IPv6 -> recusado, sem descodificar
   if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal")) return true;
   return isBlockedIp(h);
 }

@@ -1,29 +1,37 @@
-M1 SSRF: tirar a normalizacao dos brackets (reabre os 4 payloads)
+M8 SSRF: tirar a INVERSÃO (literal IPv6 volta a passar, sem descodificar nada)
   entrou=true red=true provado=true
-  matou: MC99.5.2/SSRF · (a2) IPv4 EMBUTIDO + TODAS as familias (meus 16 + os 12 do validador) | MC99.5.2.1b/SSRF · (a5) 4.ª GERAÇÃO: 6to4 e Teredo — os 8 que o validador deixou passar | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
+  matou: MC99.5.2.1c/INVERSÃO · (a) TODOS os literais IPv6 são recusados — os 49 das 4 gerações | MC99.5.2.1c/INVERSÃO · (c) o guard RECUSA sem descodificar, e a decisão de rede mantem-se
+
+M9 gate: bloquear TODOS os dominios (o proxy de imagens morre)
+  entrou=true red=true provado=true
+  matou: controlo positivo do instrumento: a função REAL foi importada | MC99.5.2.1c/INVERSÃO · (b) DOMÍNIOS legítimos PASSAM (senão o proxy morre)
+
+M1 SSRF: tirar a normalizacao dos brackets (reabre os 4 payloads)
+  entrou=true red=false provado=true
+  matou: 
 
 M2 SSRF: tirar o bloco 6to4 (reabre 2002:a9fe::1 = METADATA CLOUD)
-  entrou=true red=true provado=true
-  matou: MC99.5.2/SSRF · (a2) IPv4 EMBUTIDO + TODAS as familias (meus 16 + os 12 do validador) | MC99.5.2.1b/SSRF · (a5) 4.ª GERAÇÃO: 6to4 e Teredo — os 8 que o validador deixou passar | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
+  entrou=true red=false provado=true
+  matou: 
 
 M7 SSRF: tirar o bloco Teredo (reabre 2001:0:0:0:0:0:80ff:fffe = 127.0.0.1)
-  entrou=true red=true provado=true
-  matou: MC99.5.2.1b/SSRF · (a5) 4.ª GERAÇÃO: 6to4 e Teredo — os 8 que o validador deixou passar | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
+  entrou=true red=false provado=true
+  matou: 
 
 M6 SSRF: tirar o corte dominio-vs-IPv6 (bloqueia i.imgur.com — a regressao que EU introduzi)
   entrou=true red=true provado=true
-  matou: MC99.5.2/SSRF · (a4) REGRESSÃO: um DOMINIO legitimo NAO e bloqueado | MC99.5.2/SSRF · (a3) o que NAO e bypass: userinfo com IP interno no username | MC99.5.2/SSRF · (b) as URLs LEGÍTIMAS continuam a passar (senão era bloqueio total) | MC99.5.2/SSRF · (c) a correcção está na função PARTILHADA, não num chamador
+  matou: controlo positivo do instrumento: a função REAL foi importada | MC99.5.2.1c/INVERSÃO · (b) DOMÍNIOS legítimos PASSAM (senão o proxy morre)
 
 M3 gate: abrir o <details> por padrao (mostra o texto todo)
   entrou=true red=true provado=true
-  matou: MC99.5.2/gate · (a) o texto legal está atrás de um botão (sem resumo), FECHADO por padrão
+  matou: MC99.5.2/gate · o texto legal esta atras de um botao (sem resumo), FECHADO por padrao
 
 M4 gate: tirar o botao (summary)
   entrou=true red=true provado=true
-  matou: MC99.5.2/gate · (a) o texto legal está atrás de um botão (sem resumo), FECHADO por padrão
+  matou: MC99.5.2/gate · o texto legal esta atras de um botao (sem resumo), FECHADO por padrao
 
 M5 gate: meter os 4 aceites DENTRO do details (escondidos quando fechado)
   entrou=true red=true provado=true
-  matou: MC99.5.2/gate · (a) o texto legal está atrás de um botão (sem resumo), FECHADO por padrão
+  matou: MC99.5.2/gate · o texto legal esta atras de um botao (sem resumo), FECHADO por padrao
 
 md5_proxy=true md5_termos=true

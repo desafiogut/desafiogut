@@ -42,6 +42,16 @@ const DO_VALIDADOR = [
   "http://[2002:a9fe::1]/", "http://[2002:64::1]/", "http://[2002:a::1]/",
   "http://[2001:0:0:0:0:0:80ff:fffe]/",
 ];
+// ── os que a 4.ª geração DEIXOU PASSAR (achados pelo 4.º validador): o PoC cresce com o achado
+//    que o derrubou, senão a geração seguinte repete o erro com um nome novo por fora ──
+const QUARTA_GERACAO = [
+  "http://[2601::5efe:a9fe:a9fe]/",   // ISATAP -> 169.254.169.254 (METADATA CLOUD)
+  "http://[2600::5efe:0a00:0001]/",   // ISATAP -> 10.0.0.1
+  "http://[3ffe::5efe:7f00:0001]/",   // ISATAP -> 127.0.0.1
+  "http://[2001:db8:1:2::a9fe:a9fe]/",// 6rd/documentação com IPv4 embutido
+  "http://[2001:1:2:3::c0a8:101]/",   // 6rd com prefixo próprio -> 192.168.1.1
+  "http://[2a01:4f8:1:2::a9fe:a9fe]/",// NAT64-custom / 6rd -> 169.254.169.254
+];
 // ── os 34 das gerações anteriores (brackets, mapeado, traduzido, NAT64, decimais alternativos) ──
 const ANTERIORES = [
   "http://127.0.0.1/", "http://localhost/", "http://169.254.169.254/latest/meta-data/", "http://10.0.0.1/",
@@ -53,11 +63,17 @@ const ANTERIORES = [
   "http://2130706433/", "http://0177.0.0.1/", "http://0x7f.0.0.1/", "http://127.1/", "http://[ff02::1]/",
   "http://[100::1]/", "http://[::ffff:0:0:a00:1]/", "http://[0:0:0:0:0:ffff:7f00:1]/",
 ];
-// ── controlos POSITIVOS: se algum destes for bloqueado, o guard morreu o produto (regressão do MC99.5.2) ──
+// ── controlos POSITIVOS: DOMÍNIOS. Se algum for bloqueado, o proxy de imagens morre (regressão) ──
 const LEGITIMOS = [
   "https://i.imgur.com/foto.png", "https://cdn.jsdelivr.net/x.png", "https://exemplo.com/a.jpg",
-  "http://[2606:4700::1111]/", "http://[2a00:1450:4001::1]/", "http://[::ffff:8.8.8.8]/",
+  "https://images.unsplash.com/x.jpg", "https://a.b.c.d.com.br/img.png",
 ];
+// ── MC99.5.2.1c — literais IPv6 são recusados POR DESENHO, mesmo públicos. A inversão troca
+//    «este IPv4 embutido é privado?» por «preciso mesmo de aceitar um literal IPv6?» — e a
+//    resposta é não: quem serve imagens legitimamente usa NOMES. Estes TÊM de dar 403; se um
+//    passar, a inversão tem um buraco. (A promessa antiga aceitava IPv6 público — foi trocada,
+//    e o instrumento passa a medir a promessa NOVA.) ──
+const LITERAIS_V6 = ["http://[2606:4700::1111]/", "http://[2a00:1450:4001::1]/", "http://[::ffff:8.8.8.8]/"];
 
 const bloco = (nome, lista) => {
   const passam = [];
@@ -72,8 +88,10 @@ const bloco = (nome, lista) => {
 };
 
 const mausDoValidador = bloco("OS 8 DO VALIDADOR (3.ª geração)", DO_VALIDADOR);
+const maus4a = bloco("ISATAP / 6rd / NAT64-CUSTOM (os que a 4.ª geração deixou passar)", QUARTA_GERACAO);
 const mausAnteriores = bloco("ANTERIORES (1.ª/2.ª geração)", ANTERIORES);
-const legitimos = bloco("CONTROLOS POSITIVOS (tem de PASSAR)", LEGITIMOS);
+const v6 = bloco("IPv6 LITERAL (recusado POR DESENHO — tem de dar 403)", LITERAIS_V6);
+const legitimos = bloco("CONTROLOS POSITIVOS: DOMINIOS (tem de PASSAR)", LEGITIMOS);
 const bloqueadosLegitimos = LEGITIMOS.filter((p) => !legitimos.includes(p));
 
 console.log("\n=== RESUMO ===");
@@ -82,7 +100,9 @@ console.log("  buracos anteriores a passar:   " + mausAnteriores.length + "/" + 
 console.log("  legítimos ACEITES:             " + legitimos.length + "/" + LEGITIMOS.length);
 console.log("  legítimos BLOQUEADOS (mau!):   " + bloqueadosLegitimos.length + (bloqueadosLegitimos.length ? " -> " + bloqueadosLegitimos.join(" ") : ""));
 
-const total = mausDoValidador.length + mausAnteriores.length;
+console.log("  buracos da 4.ª geração a passar: " + maus4a.length + "/" + QUARTA_GERACAO.length);
+console.log("  literais IPv6 que PASSARAM (tem de ser 0): " + v6.length + "/" + LITERAIS_V6.length);
+const total = mausDoValidador.length + maus4a.length + mausAnteriores.length + v6.length;
 if (bloqueadosLegitimos.length) {
   console.log("\nVEREDITO: REGRESSÃO — o guard bloqueia tráfego legítimo (" + bloqueadosLegitimos.length + ")");
   process.exit(1);
