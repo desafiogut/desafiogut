@@ -63,6 +63,14 @@ export function isBlockedIp(ip) {
     if (a === 198 && (b === 18 || b === 19)) return true;        // 198.18.0.0/15  benchmarking (RFC 2544)
     if (a === 198 && b === 51 && c === 100) return true;         // 198.51.100.0/24 TEST-NET-2 (RFC 5737)
     if (a === 203 && b === 0 && c === 113) return true;          // 203.0.113.0/24 TEST-NET-3 (RFC 5737)
+    // ── MC99.5.3 — ALARGAMENTO POR MEDIÇÃO DO VALIDADOR (R15) ──
+    // O validador adversarial do MESMO commit mediu 3 faixas IRMÃS do mesmo registo IANA a passar a
+    // guarda (handler `502` = passou, ligação tentada e falhada) — a mesma forma de lacuna que a
+    // lista do autor não tinha. Aplicadas pela mesma medida que as 6 acima, com o mesmo risco nulo
+    // para imagens legítimas (nenhum CDN vive em AS112/AMT — medido: os CDNs resolvem fora das 9).
+    if (a === 192 && b === 31 && c === 196) return true;         // 192.31.196.0/24 AS112-v4 (RFC 7534)
+    if (a === 192 && b === 175 && c === 48) return true;         // 192.175.48.0/24 AS112 direct (RFC 7535)
+    if (a === 192 && b === 52 && c === 193) return true;         // 192.52.193.0/24  AMT (RFC 7450)
     if (a >= 224) return true;                                    // multicast / reservado
     return false;
   }

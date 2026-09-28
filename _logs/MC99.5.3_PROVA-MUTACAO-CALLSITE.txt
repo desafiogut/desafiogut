@@ -1,0 +1,10 @@
+C1 TIRAR a chamada à guarda no HANDLER (isBlockedHostname)
+  entrou=true red=true pass=9 provado=true
+  matou: SÍTIO DE CHAMADA · o handler REAL recusa um alvo bloqueado com 403 (não 502 — 502 seria deixar passar)
+
+C2 TIRAR isBlockedIp da autorização do DNS (resolverEEscolher)
+  entrou=true red=true pass=9 provado=true
+  matou: SÍTIO DE CHAMADA · resolverEEscolher recusa um NOME que resolve para loopback (a 2.ª porta)
+
+md5_restaurado_identico=true
+suite_final=VERDE 10

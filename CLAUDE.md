@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-27 (MC99.5.2.1e: 7.ª geração IMPLEMENTADA — validar no momento da ligação; deploy pendente) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-27 (MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -3211,4 +3211,93 @@ coisas diferentes em duas perguntas; o wildcard `sslip.io` é estático) — mas
 do `fetch` deixou de existir; 6rd e NAT64-custom **sem marcador** continuam a passar a classificação
 (a ligação, essa, fica fixada ao IPv4 validado); nomes **IPv6-only** → 403 (fail-closed, custo já
 aceite na 6.ª geração).
+
+---
+
+## MC99.5.3 — Performance + Opção A (faixas reservadas) + metodologia no repo (2026-09-27)
+
+**Suíte:** frontend **453/453** · backend **686/692** (harness `mc966`, foreground). Commit do
+trabalho `3fb6d1e`. **Nenhuma área fora do escopo tocada** (verificado por lista de permitidos sobre
+o diff — `scripts/mc9953-verificacao-adhoc.mjs`).
+
+### Frente B — Opção A: `isBlockedIp` passa a bloquear **9** faixas reservadas
+
+As 6 do pedido (`192.0.0.0/24`, `192.88.99.0/24`, `192.0.2.0/24`, `198.18.0.0/15`,
+`198.51.100.0/24`, `203.0.113.0/24`) **mais 3 que o validador adversarial mediu a passar** e que
+foram aplicadas por **R15**: `192.31.196.0/24` (AS112-v4, RFC 7534), `192.175.48.0/24` (AS112
+direct, RFC 7535) e `192.52.193.0/24` (AMT, RFC 7450). Medido antes: `isBlockedIp=false` e handler
+`502`; depois: `true` e `403`. **Classificação honesta:** passavam a guarda, **não** eram SSRF vivo.
+
+⚠️ **A classificação «não-roteável, risco nulo» é OTIMISTA — medido.** Em produção, as faixas
+devolveram `200 image/png` **esporadicamente** (3 de 21 sondas; corpo PNG real de 503 B, 161×337):
+o egress do Netlify **liga de facto** a alguma coisa nesses endereços. Não é SSRF a um serviço nosso,
+mas **não é inalcançável**. Nota de instrumento: a 1.ª sonda deu `200` e a 2.ª `502` — **uma sonda em
+produção não é uma medição** (cache de borda).
+
+**Testes** (`_tests/img-proxy.test.mjs`, 10 asserções) com as **três** direcções: as 9 faixas
+bloqueadas (incl. fronteiras), o **COMPLEMENTO** (16 vizinhos imediatos têm de continuar a PASSAR),
+CDNs como controlo positivo, e — acrescentado na sequência do validador — **2 asserções de SÍTIO DE
+CHAMADA** (handler → `403`; `resolverEEscolher("localhost")` → bloqueado). **Mutação:** 5/5 PROVADO
+(`scripts/mc9953-prova-mutacao.mjs`, incl. «alargar demais» e «bloquear tudo») **+ 2/2** no sítio de
+chamada (`scripts/mc9953-prova-callsite.mjs`).
+
+⚠️ **Erro meu que o validador apanhou:** as asserções anteriores (4 minhas + 4 antigas) só exercitavam
+`isBlockedIp`/`isBlockedHostname` **directamente** — 2 mutantes que abriam buracos **reais** no
+handler e no `resolverEEscolher` deixavam a suíte **8/8 VERDE** (VÁCUO, código vivo; com C2 aplicado
+`127.0.0.1.nip.io` chegou a `200` = SSRF vivo). **A suíte protegia a função, não o uso dela.** Fechado
+pelas 2 asserções de sítio de chamada.
+
+**PENDÊNCIA ESCALADA (decisão do operador):** 9 endereços **IPv6** de propósito especial dentro de
+`2000::/3` (`2001:1::/32`, `2001:2::/48`, `2001:3::/32`, `2001:4:112::/48`, `2001:10::/28`,
+`2001:20::/28`, `3fff::/20`, `2620:4f:8000::/48`) passam a **classificação** mas **não a guarda**, e
+não são SSRF vivo (o pin fixa o A público). Fechar a família exigiria recusar **qualquer** IPv6 no
+caminho do DNS — **parte os CDNs dual-stack**, o motivo da paragem do MC99.5.2.1d ⇒ **PARAR e
+escalar**.
+
+### Frente A — performance (A/B pareado obrigatório, cumprido)
+
+- **Fontes (DEP2-06):** 15 ficheiros eram **3 conteúdos** (md5 `260c81a4`/`b636a65d`/`5d281085`);
+  `src/fontes.css` aponta cada peso ao sobrevivente e os **12 duplicados foram removidos**
+  (510 720 → 91 488 B). O `index.html` perdeu o preload do `inter-900` (era o mesmo conteúdo do 400).
+  **Medido no browser, com o build real:** o gate usava os pesos 400/700/800/900 = **4 ficheiros do
+  mesmo conteúdo (193 024 B) → 1 ficheiro (48 256 B)**.
+- **A/B pareado:** braços alternados, mesmo build → **−144 859 B** exactos na 1.ª carga
+  (1 098 439 → 953 580) e FCP **−32 / −12 ms**; contabilidade fecha (3×48 256 + 91 B de HTML).
+- **Fundo mobile:** VP8 q75 — **200 068 → 106 942 B (−46,5 %)**, SSIM 0,9881, verificado a 1:1.
+- **Preloads do MC99.3: MANTER.** 2 pares pareados (só os preloads mudam): bytes **idênticos**
+  (953 580 nos dois) e **FCP melhor COM preload** (−24 e −12 ms). **Não** reproduz a refutação do
+  MC99.3 (+50 ms contra) — amostra pequena e **local** (a de lá era em produção), declarado.
+- **`ethers` no cold start: medido e NÃO TOCADO (HARD GATE 4).** 17 funções alcançam `ethers`, mas
+  **zero endpoints do painel** (`admin-*`, `recursos-app`, `edicoes`, `produtos`, `cotas`, `health`,
+  `banners`, `ranking`, `pontuacao`). A/B pareado (11 pares): `ethers` isolado **329 ms** vs builtin
+  **5,4 ms**; grafo de `_lib/contract.mjs` **543 ms** vs `_lib/cors.mjs` **2,1 ms**. A cauda de cold
+  start de 2,4–2,8 s (DEP2-13) é **idêntica em funções COM e SEM** `ethers` ⇒ **não é o ethers**.
+  ⚠️ O «~2 s» que este ficheiro citava (MC88.31) **não se reproduziu**: 324 ms isolado / 541 ms grafo
+  (máquina local, **não** Lambda — declarado). `lazy-load` em `auth-*` **não ganharia nada** (todo o
+  pedido precisa de `verifyMessage`).
+- ⚠️ **Erro do meu instrumento:** a 1.ª versão do servidor de A/B mandava `Cache-Control: no-store` —
+  o browser voltava a pedir o mesmo ficheiro (preload **+** `url()` do CSS) e a contagem de bytes saía
+  **dobrada**. Corrigido; a 1.ª medição foi **descartada**.
+- Mutação Frente A: **5/5 PROVADO** (`scripts/mc9953-prova-mutacao-frente-a.mjs`).
+
+### Frente C — `docs/METODOLOGIA-SEGURANCA.md`
+
+Documento novo no repo (~18,5 kB, 12 secções): o método das 7 gerações, PoC antes de tocar, A/B
+pareado, validador adversarial, controlos positivos, **pin no momento da ligação**, a lista como
+cegueira, medir risco > estimar risco, **integridade do instrumento** (9 modos de mentir sem dar
+erro), mutação de **3 estados**, e «passa a guarda» ≠ «SSRF vivo». **Complementa** as skills do
+agente (que vivem em `~/.hermes/skills/`), não as substitui. Fecha com a tabela instrumento → produto
+e a lista dos `scripts/mc9953-*.mjs` re-executáveis.
+
+### Instrumentos novos (re-executáveis)
+
+`scripts/mc9953-seg1-medir.mjs` · `mc9953-seg1-tempo.mjs` (A/B do ethers) ·
+`mc9953-ab-performance.mjs` (A/B byte-level do build) · `mc9953-servir-dist.mjs` (servidor de A/B,
+com o aviso do `no-store` no código) · `mc9953-prova-mutacao.mjs` · `mc9953-prova-mutacao-frente-a.mjs`
+· `mc9953-prova-callsite.mjs` · `mc9953-verificacao-adhoc.mjs`.
+
+⚠️ **Fica declarado, não corrigido:** `scripts/mc99521e-producao.mjs` imprime `VEREDITO PROD: FECHADO`
+apesar de medir 6/6 faixas reservadas a passar (só conta a lista `MAL`) — **o rótulo é mais forte que
+a medição que ele próprio imprime**; e `mc99521e-ab-guardas.mjs` **não inclui as faixas** na sua lista,
+logo o «0 diffs» dele não é evidência sobre este commit.
 
