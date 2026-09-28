@@ -1,0 +1,164 @@
+GUARD: C:/Users/Moltbot/Desktop/_VAL-9953/desafio-gut/frontend/netlify/functions/img-proxy.mjs
+md5  : 4c6d3a95f670099ed784d326fd5a730a
+
+═══ A) LIMITES das 6 faixas (N1 + N3 handler real) + vizinhos imediatos ═══
+  192.0.0.0                      N1=BLOQ   N3=403     BLOQUEOU                          192.0.0.0/24 primeiro
+  192.0.0.255                    N1=BLOQ   N3=403     BLOQUEOU                          192.0.0.0/24 último
+  192.88.99.0                    N1=BLOQ   N3=403     BLOQUEOU                          192.88.99.0/24 primeiro
+  192.88.99.255                  N1=BLOQ   N3=403     BLOQUEOU                          192.88.99.0/24 último
+  192.0.2.0                      N1=BLOQ   N3=403     BLOQUEOU                          192.0.2.0/24 primeiro
+  192.0.2.255                    N1=BLOQ   N3=403     BLOQUEOU                          192.0.2.0/24 último
+  198.18.0.0                     N1=BLOQ   N3=403     BLOQUEOU                          198.18.0.0/15 primeiro
+  198.19.255.255                 N1=BLOQ   N3=403     BLOQUEOU                          198.18.0.0/15 último
+  198.51.100.0                   N1=BLOQ   N3=403     BLOQUEOU                          198.51.100.0/24 primeiro
+  198.51.100.255                 N1=BLOQ   N3=403     BLOQUEOU                          198.51.100.0/24 último
+  203.0.113.0                    N1=BLOQ   N3=403     BLOQUEOU                          203.0.113.0/24 primeiro
+  203.0.113.255                  N1=BLOQ   N3=403     BLOQUEOU                          203.0.113.0/24 último
+  192.0.1.1                      N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***vizinho: 192.0.1.0/24
+  192.0.3.1                      N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***vizinho: depois TEST-NET-1
+  192.88.98.1                    N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***vizinho: antes 6to4 relay
+  192.88.100.1                   N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***vizinho: depois 6to4 relay
+  198.17.255.255                 N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***vizinho: antes /15
+  198.20.0.1                     N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***vizinho: depois /15
+  198.51.99.255                  N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***vizinho: antes TEST-NET-2
+  198.51.101.1                   N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***vizinho: depois TEST-NET-2
+  203.0.112.255                  N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***vizinho: antes TEST-NET-3
+  203.0.114.1                    N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***vizinho: depois TEST-NET-3
+  192.169.0.1                    N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***vizinho: 192.169/16 (não é privado)
+
+═══ B) IANA IPv4 SPECIAL-PURPOSE REGISTRY (RFC 6890/5737/2544/7534/7450) — N1 + N3 ═══
+  0.1.2.3                        N1=BLOQ   N3=403     BLOQUEOU                          0.0.0.0/8 This network
+  0.0.0.0/32                     N1=PASSA  N3=403     BLOQUEOU                          This host
+  10.1.2.3                       N1=BLOQ   N3=403     BLOQUEOU                          10/8 Private
+  100.64.0.1                     N1=BLOQ   N3=403     BLOQUEOU                          100.64/10 Shared
+  100.127.255.255                N1=BLOQ   N3=403     BLOQUEOU                          100.64/10 último
+  127.0.0.1                      N1=BLOQ   N3=403     BLOQUEOU                          127/8 Loopback
+  169.254.1.1                    N1=BLOQ   N3=403     BLOQUEOU                          169.254/16 LinkLocal
+  172.16.0.1                     N1=BLOQ   N3=403     BLOQUEOU                          172.16/12
+  172.31.255.255                 N1=BLOQ   N3=403     BLOQUEOU                          172.16/12 último
+  192.0.0.1                      N1=BLOQ   N3=403     BLOQUEOU                          192.0.0.0/24 IETF
+  192.0.0.8                      N1=BLOQ   N3=403     BLOQUEOU                          192.0.0.8/32 dummy
+  192.0.0.9                      N1=BLOQ   N3=403     BLOQUEOU                          192.0.0.9/32 PCP anycast
+  192.0.0.10                     N1=BLOQ   N3=403     BLOQUEOU                          192.0.0.10/32 TURN anycast
+  192.0.0.170                    N1=BLOQ   N3=403     BLOQUEOU                          192.0.0.170/32 NAT64 disc
+  192.0.0.171                    N1=BLOQ   N3=403     BLOQUEOU                          192.0.0.171/32 NAT64 disc
+  192.0.2.1                      N1=BLOQ   N3=403     BLOQUEOU                          192.0.2.0/24 TEST-NET-1
+  192.31.196.1                   N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***192.31.196.0/24 AS112-v4
+  192.31.196.255                 N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***192.31.196.0/24 último
+  192.52.193.1                   N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***192.52.193.0/24 AMT
+  192.52.193.255                 N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***192.52.193.0/24 último
+  192.88.99.1                    N1=BLOQ   N3=403     BLOQUEOU                          192.88.99.0/24 6to4 relay
+  192.168.1.1                    N1=BLOQ   N3=403     BLOQUEOU                          192.168/16
+  192.175.48.1                   N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***192.175.48.0/24 AS112 direct
+  192.175.48.255                 N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***192.175.48.0/24 último
+  198.18.0.1                     N1=BLOQ   N3=403     BLOQUEOU                          198.18/15 benchmarking
+  198.51.100.1                   N1=BLOQ   N3=403     BLOQUEOU                          198.51.100.0/24 TEST-NET-2
+  203.0.113.1                    N1=BLOQ   N3=403     BLOQUEOU                          203.0.113.0/24 TEST-NET-3
+  224.0.0.1                      N1=BLOQ   N3=403     BLOQUEOU                          224/4 multicast
+  233.252.0.1                    N1=BLOQ   N3=403     BLOQUEOU                          233.252.0.0/24 MCAST-TEST
+  239.255.255.255                N1=BLOQ   N3=403     BLOQUEOU                          224/4 último
+  240.0.0.1                      N1=BLOQ   N3=403     BLOQUEOU                          240/4 reserved
+  254.255.255.255                N1=BLOQ   N3=403     BLOQUEOU                          240/4 último
+  255.255.255.255                N1=BLOQ   N3=403     BLOQUEOU                          limited broadcast
+  1.1.1.1                        N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***PUBLICO (controlo)
+  8.8.8.8                        N1=PASSA  N3=502     *** passou a guarda (fetch failed) ***PUBLICO (controlo)
+  104.17.208.5                   N1=PASSA  N3=502     passou (upstream error)           PUBLICO Cloudflare (controlo)
+  >> N1 NÃO bloqueia (passa a classificação): 
+     - 0.0.0.0/32  [This host]  N3=403 BLOQUEOU
+     - 192.31.196.1  [192.31.196.0/24 AS112-v4]  N3=502 *** passou a guarda (fetch failed) ***
+     - 192.31.196.255  [192.31.196.0/24 último]  N3=502 *** passou a guarda (fetch failed) ***
+     - 192.52.193.1  [192.52.193.0/24 AMT]  N3=502 *** passou a guarda (fetch failed) ***
+     - 192.52.193.255  [192.52.193.0/24 último]  N3=502 *** passou a guarda (fetch failed) ***
+     - 192.175.48.1  [192.175.48.0/24 AS112 direct]  N3=502 *** passou a guarda (fetch failed) ***
+     - 192.175.48.255  [192.175.48.0/24 último]  N3=502 *** passou a guarda (fetch failed) ***
+     - 1.1.1.1  [PUBLICO (controlo)]  N3=502 *** passou a guarda (fetch failed) ***
+     - 8.8.8.8  [PUBLICO (controlo)]  N3=502 *** passou a guarda (fetch failed) ***
+     - 104.17.208.5  [PUBLICO Cloudflare (controlo)]  N3=502 passou (upstream error)
+
+═══ C) IPv6 SPECIAL-PURPOSE (RFC 6890) — N1 + N3 literal + N3 pelo caminho do DNS ═══
+  [2001::1]                      N1=BLOQ   N3=403     BLOQUEOU                          2001::/32 Teredo
+  [2001:1::1]                    N1=PASSA  N3=403     BLOQUEOU                          2001:1::1/128 PCP anycast
+  [2001:1::2]                    N1=PASSA  N3=403     BLOQUEOU                          2001:1::2/128 TURN anycast
+  [2001:2::1]                    N1=PASSA  N3=403     BLOQUEOU                          2001:2::/48 Benchmarking
+  [2001:3::1]                    N1=PASSA  N3=403     BLOQUEOU                          2001:3::/32 AMT
+  [2001:4:112::1]                N1=PASSA  N3=403     BLOQUEOU                          2001:4:112::/48 AS112-v6
+  [2001:10::1]                   N1=PASSA  N3=403     BLOQUEOU                          2001:10::/28 ORCHID
+  [2001:20::1]                   N1=PASSA  N3=403     BLOQUEOU                          2001:20::/28 ORCHIDv2
+  [2001:db8::1]                  N1=BLOQ   N3=403     BLOQUEOU                          2001:db8::/32 Documentation
+  [2002::1]                      N1=BLOQ   N3=403     BLOQUEOU                          2002::/16 6to4
+  [3fff::1]                      N1=PASSA  N3=403     BLOQUEOU                          3fff::/20 Documentation (RFC 9637)
+  [2620:4f:8000::1]              N1=PASSA  N3=403     BLOQUEOU                          2620:4f:8000::/48 AS112
+  [::1]                          N1=BLOQ   N3=403     BLOQUEOU                          loopback
+  [fd00::1]                      N1=BLOQ   N3=403     BLOQUEOU                          ULA
+  [fe80::1]                      N1=BLOQ   N3=403     BLOQUEOU                          link-local
+  [::ffff:127.0.0.1]             N1=BLOQ   N3=403     BLOQUEOU                          IPv4-mapped loopback
+  [2606:4700::1111]              N1=PASSA  N3=403     BLOQUEOU                          PUBLICO (controlo)
+  >> N1 NÃO bloqueia: 10 endereços
+     - 2001:1::1  [2001:1::1/128 PCP anycast]  literal N3=403
+     - 2001:1::2  [2001:1::2/128 TURN anycast]  literal N3=403
+     - 2001:2::1  [2001:2::/48 Benchmarking]  literal N3=403
+     - 2001:3::1  [2001:3::/32 AMT]  literal N3=403
+     - 2001:4:112::1  [2001:4:112::/48 AS112-v6]  literal N3=403
+     - 2001:10::1  [2001:10::/28 ORCHID]  literal N3=403
+     - 2001:20::1  [2001:20::/28 ORCHIDv2]  literal N3=403
+     - 3fff::1  [3fff::/20 Documentation (RFC 9637)]  literal N3=403
+     - 2620:4f:8000::1  [2620:4f:8000::/48 AS112]  literal N3=403
+     - 2606:4700::1111  [PUBLICO (controlo)]  literal N3=403
+
+  --- caminho do DNS (sslip.io): nome SÓ-AAAA vs nome A-público + AAAA ---
+  2001-2--1.sslip.io                       decisao=BLOQ pin=null             N3=403     BLOQUEOU   [AAAA 2001:2::1 só]
+      + A isco: 1-1-1-1.2001-2--1.sslip.io             decisao=PASSA pin=1.1.1.1          N3=502     passou (upstream error)
+  3fff--1.sslip.io                         decisao=BLOQ pin=null             N3=403     BLOQUEOU   [AAAA 3fff::1 só]
+      + A isco: 1-1-1-1.3fff--1.sslip.io               decisao=PASSA pin=1.1.1.1          N3=502     passou (upstream error)
+  2001-10--1.sslip.io                      decisao=BLOQ pin=null             N3=403     BLOQUEOU   [AAAA 2001:10::1 só]
+      + A isco: 1-1-1-1.2001-10--1.sslip.io            decisao=PASSA pin=1.1.1.1          N3=502     passou (upstream error)
+  2001-20--1.sslip.io                      decisao=BLOQ pin=null             N3=403     BLOQUEOU   [AAAA 2001:20::1 só]
+      + A isco: 1-1-1-1.2001-20--1.sslip.io            decisao=PASSA pin=1.1.1.1          N3=502     passou (upstream error)
+  2001-3--1.sslip.io                       decisao=BLOQ pin=null             N3=403     BLOQUEOU   [AAAA 2001:3::1 só]
+      + A isco: 1-1-1-1.2001-3--1.sslip.io             decisao=PASSA pin=1.1.1.1          N3=502     passou (upstream error)
+  2001-4-112--1.sslip.io                   decisao=BLOQ pin=null             N3=403     BLOQUEOU   [AAAA 2001:4:112::1 só]
+      + A isco: 1-1-1-1.2001-4-112--1.sslip.io         decisao=PASSA pin=1.1.1.1          N3=502     passou (upstream error)
+  2620-4f-8000--1.sslip.io                 decisao=BLOQ pin=null             N3=403     BLOQUEOU   [AAAA 2620:4f:8000::1 só]
+      + A isco: 1-1-1-1.2620-4f-8000--1.sslip.io       decisao=PASSA pin=1.1.1.1          N3=502     passou (upstream error)
+  2001-1--1.sslip.io                       decisao=BLOQ pin=null             N3=403     BLOQUEOU   [AAAA 2001:1::1 só]
+      + A isco: 1-1-1-1.2001-1--1.sslip.io             decisao=PASSA pin=1.1.1.1          N3=502     passou (upstream error)
+  2602-a9fe-a9fe--1.sslip.io               decisao=BLOQ pin=null             N3=403     BLOQUEOU   [AAAA 6rd só]
+      + A isco: 1-1-1-1.2602-a9fe-a9fe--1.sslip.io     decisao=PASSA pin=1.1.1.1          N3=502     passou (upstream error)
+  2a00-64--a9fe-a9fe.sslip.io              decisao=BLOQ pin=null             N3=403     BLOQUEOU   [AAAA NAT64-custom só]
+      + A isco: 1-1-1-1.2a00-64--a9fe-a9fe.sslip.io    decisao=PASSA pin=1.1.1.1          N3=502     passou (upstream error)
+  1-1-1-1.--1.sslip.io                     decisao=BLOQ pin=null             N3=403     BLOQUEOU   [A publico + AAAA ::1 (referencia)]
+  1-1-1-1.2601--5efe-a9fe-a9fe.sslip.io    decisao=BLOQ pin=null             N3=403     BLOQUEOU   [A publico + AAAA ISATAP (referencia)]
+
+═══ D) CONTROLO POSITIVO VIVO — CDNs (N1 + handler real 200 image/*) ═══
+  i.imgur.com            isBlockedHostname=passa  resolver=passa  pin=199.232.192.193     DNS: 199.232.192.193/4 199.232.196.193/4
+  cdn.jsdelivr.net       isBlockedHostname=passa  resolver=passa  pin=104.17.207.5        DNS: 2606:4700::6811:cf05/6 2606:4700::6811:d005/6 104.17.207.5/4 104.17.208.5/4
+  images.unsplash.com    isBlockedHostname=passa  resolver=passa  pin=151.101.66.208      DNS: 2a04:4e42:200::720/6 2a04:4e42:400::720/6 2a04:4e42::720/6 2a04:4e42:600::720/6 151.101.66.208/4 151.101.130.208/4 151.101.2.208/4 151.101.194.208/4
+  res.cloudinary.com     isBlockedHostname=passa  resolver=passa  pin=104.16.79.6         DNS: 2606:4700::6810:4e06/6 2606:4700::6810:4f06/6 104.16.79.6/4 104.16.78.6/4
+  OK    st=200    ct=image/svg+xml       https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/svgs/brands/g
+  OK    st=200    ct=image/png           https://cdn.jsdelivr.net/gh/github/explore@main/topics/nodejs/nodejs.png
+  OK    st=200    ct=image/jpeg          https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=100
+
+═══ E) REGRESSÃO noutros caminhos ═══
+  OK    st=403     BLOQUEOU                          metadata cloud   (http://169.254.169.254/latest/meta-data/)
+  OK    st=403     BLOQUEOU                          metadata AWS IPv6 (literal)   (http://[fd00:ec2::254]/x.png)
+  OK    st=403     BLOQUEOU                          loopback   (http://127.0.0.1/)
+  OK    st=403     BLOQUEOU                          IPv6 entre brackets   (http://[::1]/x.png)
+  OK    st=403     BLOQUEOU                          IPv6 mapped   (http://[::ffff:127.0.0.1]/)
+  OK    st=403     BLOQUEOU                          IPv4 decimal   (http://2130706433/)
+  OK    st=403     BLOQUEOU                          IPv4 hex   (http://0x7f.0.0.1/)
+  OK    st=403     BLOQUEOU                          prefixado A+AAAA ::1   (http://1-1-1-1.--1.sslip.io/x.png)
+  OK    st=403     BLOQUEOU                          prefixado A+AAAA ISATAP   (http://1-1-1-1.2601--5efe-a9fe-a9fe.sslip.io/x.png)
+  OK    st=403     BLOQUEOU                          prefixado A+AAAA metadata AWS   (http://1-1-1-1.fd00-ec2--254.sslip.io/x.png)
+  OK    st=403     BLOQUEOU                          prefixado A+AAAA ULA   (http://1-1-1-1.fd00--1.sslip.io/x.png)
+  OK    st=403     BLOQUEOU                          só AAAA ISATAP   (http://2601--5efe-a9fe-a9fe.sslip.io/x.png)
+  OK    st=403     BLOQUEOU                          nip.io loopback   (http://127.0.0.1.nip.io/x.png)
+  OK    st=400     400                               IPv6 cru sem brackets (URL inválida)   (http://2606:4700::1111/x.png)
+  OK    st=403     BLOQUEOU                          NXDOMAIN (fail-closed herdado)   (http://nao-existe-9953-val.example/x.png)
+  OK    st=403     BLOQUEOU                          faixa NOVA via DNS (A do DNS, nao literal)   (http://192-0-2-1.sslip.io/x.png)
+
+═══ RESUMO ═══
+  limites/complemento com problema: 0
+  faixas IPv4 do registo IANA que NÃO são bloqueadas (N1): 10
+  endereços IPv6 do registo IANA que NÃO são bloqueados (N1): 10
+  notas: nenhuma
+  EXITCODE_LOGICO=0

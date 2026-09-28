@@ -30,10 +30,25 @@ const PERMITIDO = [
   /^desafio-gut\/frontend\/public\/fonts\/[a-z0-9-]+\.woff2$/,
   /^desafio-gut\/frontend\/public\/assets\/backgrounds\/background-mobile\.webp$/,
   /^docs\/METODOLOGIA-SEGURANCA\.md$/,
-  /^scripts\/mc9953-[a-z-]+\.mjs$/,
+  /^scripts\/mc9953-[a-z0-9-]+\.mjs$/,
   /^_logs\/MC99\.5\.3[^/]*$/,
   /^CLAUDE\.md$/,
 ];
+// ⚠️ CONTROLO DA PRÓPRIA LISTA: a 1.ª versão usava `[a-z-]` (sem dígitos) e rejeitou
+// `mc9953-seg1-medir.mjs` / `mc9953-seg1-tempo.mjs` — um FALSO VERMELHO meu, não um ficheiro fora do
+// escopo (8.ª vez na série que a asserção é mais estreita que o alvo). Estas 4 asserções impedem o
+// regresso do mesmo defeito: cada padrão tem de casar os ficheiros que ele existe para autorizar.
+for (const [padrao, exemplo] of [
+  [PERMITIDO.find((r) => String(r).includes("scripts")), "scripts/mc9953-seg1-medir.mjs"],
+  [PERMITIDO.find((r) => String(r).includes("scripts")), "scripts/mc9953-prova-mutacao-frente-a.mjs"],
+  [PERMITIDO.find((r) => String(r).includes("_logs")), "_logs/MC99.5.3_PROVA-MUTACAO-CALLSITE.txt"],
+  [PERMITIDO.find((r) => String(r).includes("_logs")), "_logs/MC99.5.3-VEREDICTO-VALIDADOR.md"],
+]) {
+  if (!padrao || !padrao.test(exemplo)) {
+    console.error("ABORTA: a lista de permitidos é mais estreita que o alvo — não casa " + exemplo);
+    process.exit(2);
+  }
+}
 const r1 = spawnSync("git", ["-C", R, "diff", "--name-only", BASE + "..HEAD"], { encoding: "utf8" });
 if (r1.status !== 0) { console.error("ABORTA: git diff falhou"); process.exit(2); }
 const tocados = r1.stdout.trim().split("\n").filter(Boolean);

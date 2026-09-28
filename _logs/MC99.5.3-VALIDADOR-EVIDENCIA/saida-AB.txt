@@ -1,0 +1,58 @@
+NOVA   (3fb6d1e) md5=4c6d3a95f670099ed784d326fd5a730a
+ANTIGA (f0749a0) carregada | SEXTA (933de6d, controlo de capacidade) carregada
+
+isco escutando SÓ em [::1]:61910
+
+CASO                              ANTIGA(f0749a0)   NOVA(3fb6d1e)     marcas
+------------------------------------------------------------------------------------------------
+
+-- LIMITES das 6 faixas (o alvo da correcção) --
+192.0.0.0                         502 PASSOU        403 bloquou       <-- MUDOU
+192.0.0.255                       502 PASSOU        403 bloquou       <-- MUDOU
+192.88.99.0                       502 PASSOU        403 bloquou       <-- MUDOU
+192.88.99.255                     502 PASSOU        403 bloquou       <-- MUDOU
+192.0.2.0                         502 PASSOU        403 bloquou       <-- MUDOU
+192.0.2.255                       502 PASSOU        403 bloquou       <-- MUDOU
+198.18.0.0                        502 PASSOU        403 bloquou       <-- MUDOU
+198.19.255.255                    502 PASSOU        403 bloquou       <-- MUDOU
+198.51.100.0                      502 PASSOU        403 bloquou       <-- MUDOU
+198.51.100.255                    502 PASSOU        403 bloquou       <-- MUDOU
+203.0.113.0                       502 PASSOU        403 bloquou       <-- MUDOU
+203.0.113.255                     502 PASSOU        403 bloquou       <-- MUDOU
+
+-- faixa NOVA via DNS (A vindo do DNS, nao literal) --
+192-0-2-1.sslip.io                502 PASSOU        403 bloquou       <-- MUDOU
+198-18-0-1.sslip.io               502 PASSOU        403 bloquou       <-- MUDOU
+
+-- LACUNAS do registo IANA (fora do alvo) --
+192.31.196.1                      502 PASSOU        502 PASSOU        
+192.175.48.1                      502 PASSOU        502 PASSOU        
+192.52.193.1                      502 PASSOU        502 PASSOU        
+
+-- controlo positivo --
+cdn.jsdelivr.net                  200 VIVO          200 VIVO          
+exemplo.com (upstream 404)        502 PASSOU        502 PASSOU        
+
+═══ CONTROLO DE CAPACIDADE: isco em [::1] + nome A-publico/AAAA-::1 ═══
+  SEXTA (933de6d) st=200 iscoHits+=1   <- 200 = o rig PRODUZ SSRF VIVO
+  NOVA  (3fb6d1e) st=403 iscoHits+=0   <- 403 = bloqueou
+  CAPACIDADE PROVADA (o rig detecta 200 vivo)
+
+═══ RESUMO A/B ═══
+  casos com resultado IDENTICO: 5
+  casos que MUDARAM: 14
+    ~ 192.0.0.0: 502 -> 403
+    ~ 192.0.0.255: 502 -> 403
+    ~ 192.88.99.0: 502 -> 403
+    ~ 192.88.99.255: 502 -> 403
+    ~ 192.0.2.0: 502 -> 403
+    ~ 192.0.2.255: 502 -> 403
+    ~ 198.18.0.0: 502 -> 403
+    ~ 198.19.255.255: 502 -> 403
+    ~ 198.51.100.0: 502 -> 403
+    ~ 198.51.100.255: 502 -> 403
+    ~ 203.0.113.0: 502 -> 403
+    ~ 203.0.113.255: 502 -> 403
+    ~ 192-0-2-1.sslip.io: 502 -> 403
+    ~ 198-18-0-1.sslip.io: 502 -> 403
+  isco alcancado por payloads de nome-prefixado: 1 (esperado 1: so o controlo de capacidade)
