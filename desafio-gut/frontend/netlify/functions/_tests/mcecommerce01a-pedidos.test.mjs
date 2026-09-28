@@ -18,7 +18,7 @@ mock.module("@netlify/blobs", {
       const m = blobs.get(name);
       return {
         async get(k, { type } = {}) { const v = m.get(k); return v === undefined ? null : (type === "json" ? JSON.parse(v) : v); },
-        async setJSON(k, o) { m.set(k, JSON.stringify(o)); },
+        async setJSON(k, o) { if (ctx.falhaChave && ctx.falhaChave.test(k)) throw new Error("blobs em baixo"); m.set(k, JSON.stringify(o)); },
         async list({ prefix = "" } = {}) { return { blobs: [...m.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })) }; },
         async delete(k) { m.delete(k); },
       };
@@ -28,7 +28,7 @@ mock.module("@netlify/blobs", {
 mock.module("../_lib/cache.mjs", { namedExports: { cacheAside: async (_k, f) => f(), cacheDel: async () => {} } });
 mock.module("../_lib/rate-limiter.mjs", { namedExports: { aplicarRateLimit: async () => null } });
 
-const ctx = { user: null, admin: null, logRebenta: false, logs: [], cota: { ativa: true, categoria: "ouro" }, marcador: null };
+const ctx = { falhaChave: null, lances: [], user: null, admin: null, logRebenta: false, logs: [], cota: { ativa: true, categoria: "ouro" }, marcador: null };
 mock.module("../_lib/jwt.mjs", {
   namedExports: {
     verificarUserSession: async () => {
@@ -40,6 +40,7 @@ mock.module("../_lib/jwt.mjs", {
 });
 mock.module("../_lib/admin-auth.mjs", {
   namedExports: {
+    guardAdmin: async () => (ctx.admin ? null : new Response("{}", { status: 401 })),
     autenticarAdmin: async () => (ctx.admin
       ? { ok: true, endereco: ctx.admin.endereco, payload: { nivel: ctx.admin.nivel } } : { ok: false }),
   },
@@ -54,9 +55,12 @@ mock.module("../_lib/cotas-store.mjs", { namedExports: { getCota: async () => nu
 mock.module("../_lib/cota-utils.mjs", {
   namedExports: { validarCotaAtiva: async () => ctx.cota, MSG_COTA_INATIVA: "cota inativa" },
 });
-mock.module("../_lib/bids-store.mjs", { namedExports: { estaConsolidado: async () => ctx.marcador } });
+mock.module("../_lib/bids-store.mjs", { namedExports: { estaConsolidado: async () => ctx.marcador, marcarConsolidado: async () => {} } });
+mock.module("../_lib/data-store.mjs", { namedExports: { getLances: async () => ctx.lances } });
 
 const pedidosH  = (await import("../pedidos.mjs")).default;
+const edicoesH  = (await import("../edicoes.mjs")).default;
+const { buscarEdicao } = await import("../_lib/edicoes-core.mjs");
 const produtosH = (await import("../produtos.mjs")).default;
 const L = await import("../_lib/pedidos.mjs");
 
@@ -87,7 +91,7 @@ function semearVendido({ comMorada = false, comRastreio = false } = {}) {
 
 beforeEach(() => {
   blobs.clear(); ctx.user = null; ctx.admin = null; ctx.logRebenta = false; ctx.logs.length = 0;
-  ctx.cota = { ativa: true, categoria: "ouro" }; ctx.marcador = null;
+  ctx.cota = { ativa: true, categoria: "ouro" }; ctx.marcador = null; ctx.lances = []; ctx.falhaChave = null;
 });
 
 // ── validação pura ──────────────────────────────────────────────────────────
@@ -237,6 +241,96 @@ test("marcar-entregue: exige envio registado; DELETE de vendido recusado", async
   assert.equal(ler("produtos", `produto:${PID}`).status, "entregue");
   assert.equal((await json(req(produtosH, "DELETE", `id=${PID}`))).status, 409);
   assert.ok(ler("produtos", `produto:${PID}`), "o produto vendido continua lá");
+});
+
+// ── Achados do validador adversarial (cada teste mata a mutação que ele mediu a sobreviver) ──
+
+const ED_BODY = { tipo: "relampago", produto: "Air Fryer", produtoId: PID, duracaoMin: 60 };
+const criarEd = (body = ED_BODY) => json(req(edicoesH, "POST", "", body));
+const ativo = (extra = {}) => gravar("produtos", `produto:${PID}`,
+  { id: PID, nome: "Air Fryer 5L", preco: 50000, lojista: LOJISTA, endereco: LOJISTA, categoria: "ouro", status: "ativo", ...extra });
+
+test("[X1/X2] POST /edicoes com produtoId → edição ligada ao produto, e a ponte vende-o (caminho do uso)", async () => {
+  ativo(); ctx.admin = { ...ADMIN, nivel: "admin" };
+  const r = await criarEd();
+  assert.equal(r.status, 201);
+  const id = r.body.edicao.id;
+  assert.equal(r.body.edicao.produtoId, PID, "a resposta da criação mostra o produto ligado");
+  assert.equal(ler("edicoes-metadata", id).produtoId, PID, "a edição GRAVADA tem o produtoId (é o que a ponte lê)");
+  assert.equal(ler("produtos", `produto:${PID}`).edicaoVinculada, id);
+  const v = await L.registrarVendaDaEdicao({ edicaoId: id, vencedor: COMPRADOR, menorUnicoCentavos: 30, txHash: "0xr" }, { buscarEdicao });
+  assert.equal(v.ok, true, `a ponte não vendeu: ${v.code}`);
+  assert.equal(ler("produtos", `produto:${PID}`).status, "vendido");
+});
+
+test("[X3] a listagem do comprador só traz os SEUS pedidos (IDOR)", async () => {
+  semearVendido({ comMorada: true });
+  const PID2 = "99999999-8888-7777-6666-555555555555";
+  gravar("pedidos", `pedido:${PID2}`, { produtoId: PID2, comprador: OUTRO, morada: { cpf: "11144477735" }, historico: [] });
+  gravar("pedidos", `comprador:${OUTRO}`, { ids: [PID2] });
+  ctx.user = COMPRADOR;
+  const r = await json(req(pedidosH, "GET", ""));
+  assert.deepEqual(r.body.pedidos.map((p) => p.produtoId), [PID]);
+  assert.ok(!JSON.stringify(r.body).includes("11144477735"), "CPF de outro comprador na listagem");
+});
+
+test("[X4] DELETE de produto vinculado a uma edição é recusado", async () => {
+  ativo({ edicaoVinculada: "RELAMP-9" }); ctx.user = LOJISTA;
+  assert.equal((await json(req(produtosH, "DELETE", `id=${PID}`))).status, 409);
+  assert.ok(ler("produtos", `produto:${PID}`));
+});
+
+test("[achado 1] bait-and-switch: nome/preço/imagem não mudam com o produto numa edição ou vendido", async () => {
+  ctx.user = LOJISTA;
+  ativo({ edicaoVinculada: "RELAMP-9" });
+  assert.equal((await json(req(produtosH, "PUT", `id=${PID}`, { nome: "Chaveiro", preco: 100 }))).status, 409);
+  assert.equal(ler("produtos", `produto:${PID}`).nome, "Air Fryer 5L");
+  semearVendido();
+  assert.equal((await json(req(produtosH, "PUT", `id=${PID}`, { nome: "Outro" }))).status, 409);
+  assert.equal(ler("produtos", `produto:${PID}`).nome, "Air Fryer");
+  ativo(); // sem vínculo: a edição normal continua a funcionar
+  assert.equal((await json(req(produtosH, "PUT", `id=${PID}`, { nome: "Air Fryer 6L" }))).status, 200);
+});
+
+test("[achado 3] gravação da edição falha → o produto NÃO fica preso; vínculo órfão não bloqueia", async () => {
+  ativo(); ctx.admin = { ...ADMIN, nivel: "admin" }; ctx.falhaChave = /^RELAMP-/;
+  const r = await criarEd();
+  assert.equal(r.status, 503);
+  assert.equal(ler("produtos", `produto:${PID}`).edicaoVinculada, undefined, "rollback do vínculo");
+  ctx.falhaChave = null;
+  ativo({ edicaoVinculada: "RELAMP-77" }); // órfão: a edição RELAMP-77 não existe
+  assert.equal((await criarEd()).status, 201, "vínculo a uma edição inexistente não prende o produto");
+});
+
+test("[achado 3] liberar-produto: só com a edição terminada E sem vencedor possível", async () => {
+  ctx.admin = { ...ADMIN, nivel: "admin" };
+  const fim = new Date(Date.now() - 60_000).toISOString();
+  ativo({ edicaoVinculada: "RELAMP-9" });
+  gravar("edicoes-metadata", "RELAMP-9", { id: "RELAMP-9", status: "aberto", termino_em: new Date(Date.now() + 3600_000).toISOString(), produtoId: PID });
+  assert.equal((await json(req(pedidosH, "POST", `acao=liberar-produto&produtoId=${PID}`))).status, 409, "em curso");
+  gravar("edicoes-metadata", "RELAMP-9", { id: "RELAMP-9", status: "aberto", termino_em: fim, produtoId: PID });
+  ctx.lances = [{ endereco: COMPRADOR, valorCentavos: 30 }];
+  assert.equal((await json(req(pedidosH, "POST", `acao=liberar-produto&produtoId=${PID}`))).status, 409, "há vencedor possível");
+  assert.equal(ler("produtos", `produto:${PID}`).edicaoVinculada, "RELAMP-9");
+  ctx.lances = [{ endereco: COMPRADOR, valorCentavos: 30 }, { endereco: OUTRO, valorCentavos: 30 }];
+  assert.equal((await json(req(pedidosH, "POST", `acao=liberar-produto&produtoId=${PID}`))).status, 200);
+  assert.equal(ler("produtos", `produto:${PID}`).edicaoVinculada, undefined);
+});
+
+test("[achado 4] correcção do rastreio chega ao comprador (não é engolida pela dedupe)", async () => {
+  semearVendido({ comMorada: true }); ctx.admin = ADMIN;
+  await json(req(pedidosH, "PUT", `acao=rastreio&produtoId=${PID}`, { codigo: "AA111111111BR" }));
+  await json(req(pedidosH, "PUT", `acao=rastreio&produtoId=${PID}`, { codigo: "AA222222222BR" }));
+  const envios = ler("notificacoes", COMPRADOR).notificacoes.filter((n) => n.tipo === "pedido_enviado");
+  assert.ok(envios.some((n) => n.mensagem.includes("AA222222222BR")), "o código corrigido não chegou");
+});
+
+test("[achado 7] depois da NF-e o endereço/CPF já não muda", async () => {
+  semearVendido({ comMorada: true });
+  const p = ler("pedidos", `pedido:${PID}`); p.nfe = { numero: "1", serie: "1" }; gravar("pedidos", `pedido:${PID}`, p);
+  ctx.user = COMPRADOR;
+  assert.equal((await json(req(pedidosH, "PUT", `acao=endereco&produtoId=${PID}`, { endereco: { ...ENDERECO_OK, cpf: "111.444.777-35" } }))).status, 409);
+  assert.equal(ler("pedidos", `pedido:${PID}`).morada.cpf, "52998224725");
 });
 
 // MUTAÇÕES (cada uma pôs este ficheiro RED; ver o relatório do MC-ECOMMERCE-01a):

@@ -30,7 +30,10 @@ function abrirStore(name) {
 
 /** Chave de dedupe de uma notificação (tipo + edição + valor). */
 function chaveDedupe(n) {
-  return `${n.tipo}:${n.edicaoId ?? ""}:${n.valor ?? ""}`;
+  // MC-ECOMMERCE-01a — `ref` opcional distingue actualizações do mesmo evento (ex.: um
+  // código de rastreio corrigido). Sem ele, a 2.ª notificação era descartada enquanto a
+  // 1.ª estivesse por ler, e o comprador ficava com o código ERRADO (medido pelo validador).
+  return `${n.tipo}:${n.edicaoId ?? ""}:${n.valor ?? ""}` + (n.ref ? `:${n.ref}` : "");
 }
 
 /** Lê as notificações do participante (mais recentes ao fim). Fail-soft → []. */
@@ -72,6 +75,7 @@ export async function adicionarNotificacao(endereco, notif) {
       edicaoId: notif.edicaoId ?? null,
       valor: Number.isInteger(notif.valor) ? notif.valor : null,
       mensagem: String(notif.mensagem || "").slice(0, 500),
+      ...(notif.ref ? { ref: String(notif.ref).slice(0, 80) } : {}),
     };
     lista.push(entrada);
     const podada = lista.slice(-MAX_NOTIF); // FIFO: mantém as 50 mais recentes

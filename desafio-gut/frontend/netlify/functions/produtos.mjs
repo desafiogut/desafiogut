@@ -503,6 +503,14 @@ async function handlePut(req) {
   if (acao) return jsonError(400, "acao_invalida", "acao desconhecida");
 
   // ─── PUT normal (editar) ───
+  // MC-ECOMMERCE-01a (validador, achado 1) — um produto numa edição, ou já vendido, é
+  // o objecto de uma oferta em curso ou de uma venda: nome, preço, imagem e descrição
+  // não podem mudar por baixo de quem licitou ou comprou. Sem isto, trocava-se a
+  // «Air Fryer 5L» por um «Chaveiro» a meio da edição (medido pelo validador).
+  if (produto.edicaoVinculada || produto.status === "vendido" || produto.status === "entregue") {
+    return jsonError(409, "produto_bloqueado",
+      "produto vinculado a uma edição ou já vendido não pode ser editado");
+  }
   let body;
   try { body = await parseJsonBody(req); }
   catch (err) {

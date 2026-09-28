@@ -15,6 +15,7 @@ import { COR, brl } from "./_ui.jsx";
 import EstadoVazio from "../../components/admin/EstadoVazio.jsx";
 import EnderecoTruncado from "../../components/admin/EnderecoTruncado.jsx";
 import { estadoDoPedido, resumoEndereco, ROTULO_ESTADO } from "../../lib/pedidos.js";
+import { apiGet } from "../../lib/api.js";
 
 const ROTULO_OPERADOR = { ...ROTULO_ESTADO, sem_endereco: "Aguarda endereço do comprador", aguarda_envio: "Pronto para enviar" };
 
@@ -73,6 +74,9 @@ export default function Pedidos() {
         {lista.map((p) => <ItemPedido key={p.produtoId} p={p} chamarAdmin={chamarAdmin} isMobile={isMobile} aoGravar={carregar} />)}
       </ul>
 
+      <NovaEdicaoDeCatalogo chamarAdmin={chamarAdmin} />
+      <LiberarProduto chamarAdmin={chamarAdmin} />
+
       <details style={{ marginTop: "0.5rem", fontSize: "0.78rem", color: COR.muted }}>
         <summary style={{ cursor: "pointer" }}>Reprocessar a venda de uma edição consolidada</summary>
         <p style={{ margin: "0.4rem 0" }}>
@@ -86,6 +90,85 @@ export default function Pedidos() {
         </div>
       </details>
     </div>
+  );
+}
+
+/**
+ * Cria uma edição LIGADA a um produto do catálogo — é esta ligação que a ponte
+ * apuração → catálogo lê. Sem ela a consolidação não vende nada (achado 2 do validador:
+ * nenhum ecrã enviava `produtoId`). Mesmo endpoint e mesma auth do `POST /edicoes`.
+ */
+function NovaEdicaoDeCatalogo({ chamarAdmin }) {
+  const [produtos, setProdutos] = useState([]);
+  const [f, setF] = useState({ produtoId: "", tipo: "relampago", duracaoMin: "60" });
+  const [msg, setMsg] = useState("");
+
+  async function carregarProdutos() {
+    const cats = ["diamante", "ouro", "prata", "bronze"];
+    const rs = await Promise.all(cats.map((c) => apiGet(`produtos?categoria=${c}`).catch(() => null)));
+    setProdutos(rs.flatMap((r) => (r?.ok ? r.data?.produtos || [] : [])).filter((p) => !p.edicaoVinculada));
+  }
+  useEffect(() => { carregarProdutos(); }, []);
+
+  async function criar(e) {
+    e.preventDefault();
+    const p = produtos.find((x) => x.id === f.produtoId);
+    if (!p) { setMsg("✗ Escolha um produto"); return; }
+    if (!window.confirm(`Criar edição ${f.tipo} de ${f.duracaoMin} min para «${p.nome}»? O produto fica bloqueado para edição até o fim.`)) return;
+    setMsg("Enviando…");
+    try {
+      const d = await chamar(chamarAdmin, "/.netlify/functions/edicoes", {
+        method: "POST",
+        body: JSON.stringify({ tipo: f.tipo, produto: p.nome, produtoId: p.id, duracaoMin: Number(f.duracaoMin) }),
+      });
+      setMsg(`✓ Edição ${d.edicao?.id} criada e ligada a «${p.nome}»`);
+      carregarProdutos();
+    } catch (err) { setMsg(`✗ ${err.message}`); }
+  }
+
+  return (
+    <details style={{ marginTop: "0.5rem", fontSize: "0.78rem", color: COR.muted }}>
+      <summary style={{ cursor: "pointer" }}>Nova edição ligada a um produto do catálogo</summary>
+      <form onSubmit={criar} style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginTop: "0.4rem" }}>
+        <select value={f.produtoId} onChange={(e) => setF((x) => ({ ...x, produtoId: e.target.value }))} aria-label="Produto" style={campo}>
+          <option value="">{produtos.length ? "Produto ativo…" : "Nenhum produto ativo livre"}</option>
+          {produtos.map((p) => <option key={p.id} value={p.id}>{p.nome} ({p.categoria})</option>)}
+        </select>
+        <select value={f.tipo} onChange={(e) => setF((x) => ({ ...x, tipo: e.target.value }))} aria-label="Modalidade" style={campo}>
+          <option value="relampago">Relâmpago</option>
+          <option value="programado">Programado</option>
+        </select>
+        <input value={f.duracaoMin} onChange={(e) => setF((x) => ({ ...x, duracaoMin: e.target.value }))} aria-label="Duração em minutos"
+          inputMode="numeric" style={{ ...campo, width: "6rem" }} />
+        <Button type="submit" variant="ghost" size="sm">Criar edição</Button>
+        {msg && <span>{msg}</span>}
+      </form>
+    </details>
+  );
+}
+
+/** Libera um produto preso a uma edição terminada SEM vencedor possível (o servidor confirma). */
+function LiberarProduto({ chamarAdmin }) {
+  const [id, setId] = useState("");
+  const [msg, setMsg] = useState("");
+  async function liberar() {
+    const pid = id.trim();
+    if (!pid || !window.confirm("Liberar este produto da edição? Só funciona se a edição terminou sem vencedor.")) return;
+    setMsg("Enviando…");
+    try {
+      await chamar(chamarAdmin, `/.netlify/functions/pedidos?acao=liberar-produto&produtoId=${encodeURIComponent(pid)}`, { method: "POST" });
+      setMsg("✓ Produto liberado");
+    } catch (err) { setMsg(`✗ ${err.message}`); }
+  }
+  return (
+    <details style={{ fontSize: "0.78rem", color: COR.muted }}>
+      <summary style={{ cursor: "pointer" }}>Liberar produto de edição sem vencedor</summary>
+      <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginTop: "0.4rem" }}>
+        <input value={id} onChange={(e) => setId(e.target.value)} placeholder="id do produto" aria-label="Id do produto" style={campo} />
+        <Button variant="ghost" size="sm" onClick={liberar}>Liberar</Button>
+        {msg && <span>{msg}</span>}
+      </div>
+    </details>
   );
 }
 
@@ -141,7 +224,7 @@ function ItemPedido({ p, chamarAdmin, isMobile, aoGravar }) {
       )}
 
       {p.rastreio
-        ? <div style={{ fontSize: "0.78rem", color: COR.text }}>🚚 {p.rastreio.transportadora}: <code>{p.rastreio.codigo}</code></div>
+        ? <div style={{ fontSize: "0.78rem", color: COR.text }}>Envio · {p.rastreio.transportadora}: <code>{p.rastreio.codigo}</code></div>
         : p.morada && (
           <form onSubmit={(e) => { e.preventDefault(); enviar("rastreio", rastreio); }}
             style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
@@ -154,7 +237,7 @@ function ItemPedido({ p, chamarAdmin, isMobile, aoGravar }) {
         )}
 
       {p.nfe
-        ? <div style={{ fontSize: "0.78rem", color: COR.text }}>🧾 NF-e {p.nfe.numero} / série {p.nfe.serie}{p.nfe.chave ? ` · ${p.nfe.chave}` : ""}</div>
+        ? <div style={{ fontSize: "0.78rem", color: COR.text }}>NF-e {p.nfe.numero} / série {p.nfe.serie}{p.nfe.chave ? ` · ${p.nfe.chave}` : ""}</div>
         : (
           <form onSubmit={(e) => { e.preventDefault(); enviar("nfe", nfe); }}
             style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>

@@ -26,7 +26,7 @@
 import { getStore } from "@netlify/blobs";
 import { gerarResumosPosEdicao } from "./notificacoes-usuario.mjs";
 import { estaAgendada } from "./edicao-janela.mjs";
-import { vincularProdutoAEdicao } from "./pedidos.mjs"; // MC-ECOMMERCE-01a — ligação edição → produto
+import { vincularProdutoAEdicao, desvincularProduto } from "./pedidos.mjs"; // MC-ECOMMERCE-01a — ligação edição → produto
 
 const STORE_EDICOES   = "edicoes-metadata";
 const STORE_AUDITORIA = "auditoria";
@@ -269,7 +269,7 @@ export async function criarEdicao({ tipo, produto, duracaoSegundos, duracaoMin, 
     if (typeof produtoId !== "string" || !/^[0-9a-f-]{10,64}$/i.test(produtoId)) {
       return { ok: false, code: "produto_id_invalido", message: "produtoId inválido" };
     }
-    const v = await vincularProdutoAEdicao(produtoId, id);
+    const v = await vincularProdutoAEdicao(produtoId, id, { buscarEdicao });
     if (!v.ok) return { ok: false, code: v.code, message: v.message };
     produtoIdOk = produtoId;
   }
@@ -293,6 +293,10 @@ export async function criarEdicao({ tipo, produto, duracaoSegundos, duracaoMin, 
   try {
     await store.setJSON(id, meta);
   } catch (err) {
+    // MC-ECOMMERCE-01a (validador, achado 3E) — a edição não existe: o produto não
+    // pode ficar preso a ela. Rollback best-effort (o vínculo órfão também é
+    // reconhecido por vincularProdutoAEdicao, que confirma que a edição existe).
+    if (produtoIdOk) await desvincularProduto(produtoIdOk, id).catch(() => {});
     return { ok: false, code: "persistencia_falhou", message: err?.message || "falha ao gravar edição" };
   }
 

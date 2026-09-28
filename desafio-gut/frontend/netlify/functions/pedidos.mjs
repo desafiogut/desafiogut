@@ -19,10 +19,11 @@ import { registrarAcao, confirmarAcao } from "./_lib/admin-log.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { estaConsolidado } from "./_lib/bids-store.mjs";
+import { getLances } from "./_lib/data-store.mjs";
 import { buscarEdicao, EDICAO_ID_RE } from "./_lib/edicoes-core.mjs";
 import {
   lerPedido, listarPedidosDoComprador, listarTodosPedidos,
-  definirMorada, definirRastreio, definirNfe, reprocessarVendaDaEdicao,
+  definirMorada, definirRastreio, definirNfe, reprocessarVendaDaEdicao, liberarProdutoDeEdicaoSemVencedor,
 } from "./_lib/pedidos.mjs";
 
 const ID_RE = /^[0-9a-f-]{10,64}$/i;
@@ -49,7 +50,8 @@ async function adminComNivel(req, minimo) {
 const erroDe = (res) => {
   const status = {
     pedido_nao_encontrado: 404, produto_nao_encontrado: 404, edicao_nao_encontrada: 404,
-    pedido_ja_enviado: 409, morada_em_falta: 409, produto_ja_vendido: 409, produto_nao_ativo: 409,
+    pedido_ja_enviado: 409, nfe_ja_emitida: 409, morada_em_falta: 409,
+    edicao_em_curso: 409, edicao_com_vencedor: 409, produto_sem_vinculo: 409, produto_ja_vendido: 409, produto_nao_ativo: 409,
     edicao_nao_consolidada: 409, edicao_sem_produto: 409, store_indisponivel: 503,
   }[res.code] || 400;
   return jsonError(status, res.code, res.message || res.code);
@@ -161,5 +163,19 @@ export default async (req) => {
       () => reprocessarVendaDaEdicao(edicaoId, { estaConsolidado, buscarEdicao }));
   }
 
-  return jsonError(405, "metodo_invalido", "use GET, PUT ou POST ?acao=reprocessar-venda");
+  // Admin: liberta um produto preso a uma edição terminada SEM vencedor possível.
+  if (req.method === "POST" && acao === "liberar-produto") {
+    const admAlto = await adminComNivel(req, "admin");
+    if (!admAlto.ok) return jsonError(403, "nao_autorizado", "exige nível admin");
+    if (!produtoId) return jsonError(400, "produto_id_obrigatorio", "?produtoId= obrigatório");
+    return comLog(req, admAlto, "pedido_liberar_produto", produtoId, {},
+      async () => {
+        // Import dinâmico: a regra do menor único vive em consolidacao.mjs (fonte única, Art. VIII),
+        // mas esse módulo arrasta ethers + signer — só este ramo raro paga esse custo.
+        const { apurarMenorUnico } = await import("./_lib/consolidacao.mjs");
+        return liberarProdutoDeEdicaoSemVencedor(produtoId, { buscarEdicao, getLances, apurarMenorUnico });
+      });
+  }
+
+  return jsonError(405, "metodo_invalido", "use GET, PUT ou POST ?acao=reprocessar-venda|liberar-produto");
 };

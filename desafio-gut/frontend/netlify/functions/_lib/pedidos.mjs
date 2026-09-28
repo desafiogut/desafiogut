@@ -128,14 +128,18 @@ export function validarPrazo(v) {
  * como vinculado. Chamado por `criarEdicao` ANTES de gravar a edição.
  * @returns {Promise<{ok:true, produto}|{ok:false, code, message}>}
  */
-export async function vincularProdutoAEdicao(produtoId, edicaoId) {
+export async function vincularProdutoAEdicao(produtoId, edicaoId, { buscarEdicao = null } = {}) {
   const store = abrirStore(STORE_PRODUTOS);
   if (!store) return { ok: false, code: "store_indisponivel", message: "catálogo indisponível" };
   const produto = await store.get(chaveProduto(produtoId), { type: "json" }).catch(() => null);
   if (!produto) return { ok: false, code: "produto_nao_encontrado", message: "produtoId não existe no catálogo" };
   if (produto.status !== "ativo") return { ok: false, code: "produto_nao_ativo", message: `produto está "${produto.status}", não "ativo"` };
   if (produto.edicaoVinculada && produto.edicaoVinculada !== edicaoId) {
-    return { ok: false, code: "produto_ja_vinculado", message: `produto já vinculado à edição ${produto.edicaoVinculada}` };
+    // Vínculo órfão (a edição anterior nunca chegou a ser gravada) não prende o produto.
+    const anterior = buscarEdicao ? await buscarEdicao(produto.edicaoVinculada).catch(() => null) : { id: "?" };
+    if (anterior) {
+      return { ok: false, code: "produto_ja_vinculado", message: `produto já vinculado à edição ${produto.edicaoVinculada}` };
+    }
   }
   produto.edicaoVinculada = edicaoId;
   produto.edicaoId = edicaoId;
@@ -143,6 +147,48 @@ export async function vincularProdutoAEdicao(produtoId, edicaoId) {
   await store.setJSON(chaveProduto(produtoId), produto);
   await invalidarVitrine(produto.categoria);
   return { ok: true, produto };
+}
+
+/**
+ * Desfaz o vínculo edição → produto. Só mexe se o vínculo for EXACTAMENTE com esta edição
+ * e o produto continuar `ativo` (um produto vendido nunca se desvincula).
+ * Usado no rollback de `criarEdicao` e pelo admin (`liberar-produto`).
+ */
+export async function desvincularProduto(produtoId, edicaoId) {
+  const store = abrirStore(STORE_PRODUTOS);
+  if (!store) return { ok: false, code: "store_indisponivel" };
+  const produto = await store.get(chaveProduto(produtoId), { type: "json" }).catch(() => null);
+  if (!produto) return { ok: false, code: "produto_nao_encontrado" };
+  if (produto.edicaoVinculada !== edicaoId) return { ok: false, code: "vinculo_diferente" };
+  if (produto.status !== "ativo") return { ok: false, code: "produto_nao_ativo" };
+  delete produto.edicaoVinculada;
+  produto.atualizado_em = new Date().toISOString();
+  await store.setJSON(chaveProduto(produtoId), produto);
+  await invalidarVitrine(produto.categoria);
+  return { ok: true, produto };
+}
+
+/**
+ * Admin: liberta um produto preso a uma edição que JÁ TERMINOU e NÃO TEM vencedor
+ * possível (nenhum lance único). Com vencedor possível não se liberta — a venda tem de
+ * seguir pela consolidação (ou `reprocessar-venda`), senão o lojista trocava o produto
+ * entre o fim da edição e a consolidação.
+ * @param {{buscarEdicao, getLances, apurarMenorUnico, agoraMs?}} deps
+ */
+export async function liberarProdutoDeEdicaoSemVencedor(produtoId, deps) {
+  const store = abrirStore(STORE_PRODUTOS);
+  const produto = store ? await store.get(chaveProduto(produtoId), { type: "json" }).catch(() => null) : null;
+  if (!produto) return { ok: false, code: "produto_nao_encontrado" };
+  const edicaoId = produto.edicaoVinculada;
+  if (!edicaoId) return { ok: false, code: "produto_sem_vinculo" };
+  const meta = await deps.buscarEdicao(edicaoId);
+  const agora = deps.agoraMs ?? Date.now();
+  const terminou = !meta || meta.status !== "aberto" || Date.parse(meta.termino_em) <= agora;
+  if (!terminou) return { ok: false, code: "edicao_em_curso" };
+  if (meta && deps.apurarMenorUnico(await deps.getLances(edicaoId))) {
+    return { ok: false, code: "edicao_com_vencedor" };
+  }
+  return desvincularProduto(produtoId, edicaoId);
 }
 
 // ── A ponte: apuração → catálogo ──────────────────────────────────────────────
@@ -264,6 +310,8 @@ export async function definirMorada(produtoId, endereco, morada) {
   const pedido = await lerPedido(produtoId);
   if (!pedido || pedido.comprador !== String(endereco).toLowerCase()) return { ok: false, code: "pedido_nao_encontrado" };
   if (pedido.rastreio) return { ok: false, code: "pedido_ja_enviado" };
+  // A NF-e identifica o destinatário: depois de emitida, os dados já não mudam aqui.
+  if (pedido.nfe) return { ok: false, code: "nfe_ja_emitida" };
   pedido.morada = validarMorada(morada);
   return gravar(pedido, pedido.historico?.some((h) => h.evento === "morada_definida") ? "morada_alterada" : "morada_definida");
 }
@@ -276,7 +324,7 @@ export async function definirRastreio(produtoId, { codigo, transportadora }) {
   pedido.rastreio = { ...validarRastreio(codigo, transportadora), enviado_em: new Date().toISOString() };
   const r = await gravar(pedido, "enviado");
   await adicionarNotificacao(pedido.comprador, {
-    tipo: "pedido_enviado", edicaoId: pedido.edicaoId,
+    tipo: "pedido_enviado", edicaoId: pedido.edicaoId, ref: pedido.rastreio.codigo,
     mensagem: `🚚 «${pedido.produtoNome}» foi enviado (${pedido.rastreio.transportadora}). Código de rastreio: ${pedido.rastreio.codigo}.`,
   });
   return r;
@@ -289,7 +337,7 @@ export async function definirNfe(produtoId, dados) {
   pedido.nfe = { ...validarNfe(dados), registada_em: new Date().toISOString() };
   const r = await gravar(pedido, "nfe_registada");
   await adicionarNotificacao(pedido.comprador, {
-    tipo: "nfe_emitida", edicaoId: pedido.edicaoId,
+    tipo: "nfe_emitida", edicaoId: pedido.edicaoId, ref: `${pedido.nfe.serie}-${pedido.nfe.numero}`,
     mensagem: `🧾 A nota fiscal de «${pedido.produtoNome}» foi emitida: NF-e nº ${pedido.nfe.numero}, série ${pedido.nfe.serie}`
       + (pedido.nfe.chave ? `, chave de acesso ${pedido.nfe.chave}.` : "."),
   });
