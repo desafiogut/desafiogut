@@ -3220,6 +3220,10 @@ aceite na 6.ª geração).
 trabalho `3fb6d1e`. **Nenhuma área fora do escopo tocada** (verificado por lista de permitidos sobre
 o diff — `scripts/mc9953-verificacao-adhoc.mjs`).
 
+**✅ Em produção (verificado no SEG5):** as 9 faixas devolvem `403/403/403` (3 sondas cada, com
+cache-buster) e as fontes servidas são os 3 sobreviventes (`inter-400` 48 256 B, `jetbrains-400`
+31 432 B, `orbitron-600` 11 800 B). A qualificação «não estava em produção» do validador está fechada.
+
 ### Frente B — Opção A: `isBlockedIp` passa a bloquear **9** faixas reservadas
 
 As 6 do pedido (`192.0.0.0/24`, `192.88.99.0/24`, `192.0.2.0/24`, `198.18.0.0/15`,
