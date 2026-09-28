@@ -57,6 +57,7 @@ export default function CorporativoDashboard() {
   const [prodNome,       setProdNome]       = useState("");
   const [prodDesc,       setProdDesc]       = useState("");
   const [prodPreco,      setProdPreco]      = useState("");
+  const [prodPrazo,      setProdPrazo]      = useState(""); // MC-ECOMMERCE-01a — dias após o envio
   const [prodCategoria,  setProdCategoria]  = useState("prata");
   const [prodImagemUrl,  setProdImagemUrl]  = useState("");
   const [prodArquivo,    setProdArquivo]    = useState(null);
@@ -179,7 +180,7 @@ export default function CorporativoDashboard() {
 
   function abrirFormNovo() {
     setEditandoProduto(null);
-    setProdNome(""); setProdDesc(""); setProdPreco("");
+    setProdNome(""); setProdDesc(""); setProdPreco(""); setProdPrazo("");
     setProdCategoria("prata"); setProdImagemUrl("");
     setProdArquivo(null); setProdPreviewUrl(null);
     setProdErro(null); setProdOk(false);
@@ -191,6 +192,7 @@ export default function CorporativoDashboard() {
     setProdNome(p.nome || "");
     setProdDesc(p.descricao || "");
     setProdPreco(String(p.preco || ""));
+    setProdPrazo(Number.isInteger(p.prazo_entrega_dias) ? String(p.prazo_entrega_dias) : "");
     setProdCategoria(p.categoria || "prata");
     setProdImagemUrl(p.imagem_url || "");
     setProdArquivo(null); setProdPreviewUrl(null);
@@ -247,6 +249,7 @@ export default function CorporativoDashboard() {
       const body = {
         nome: prodNome.trim(),
         descricao: prodDesc.trim(),
+        prazo_entrega_dias: prodPrazo.trim() === "" ? null : Number(prodPrazo),
         preco,
         categoria: prodCategoria,
         cliente_id: clienteId,
@@ -498,6 +501,11 @@ export default function CorporativoDashboard() {
                 Preço (centavos) *
                 <Input value={prodPreco} onChange={(e) => setProdPreco(e.target.value)}
                   placeholder="Ex: 2990 (= R$ 29,90)" type="number" min="1" />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted }}>
+                Prazo de entrega (dias após o envio)
+                <Input value={prodPrazo} onChange={(e) => setProdPrazo(e.target.value)}
+                  placeholder="Ex: 10" type="number" min="1" max="90" />
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", color: COR.muted, gridColumn: isMobile ? "auto" : "1 / -1" }}>
                 Descrição

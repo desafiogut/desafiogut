@@ -100,6 +100,7 @@ export default async (req) => {
       produto:         body.produto,
       duracaoSegundos: body.duracaoSegundos,
       duracaoMin:      body.duracaoMin,
+      produtoId:       body.produtoId ?? null, // MC-ECOMMERCE-01a
       criadoPor:       adminEndereco,
       origem:          "endpoint",
     });

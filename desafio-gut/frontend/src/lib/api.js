@@ -78,3 +78,20 @@ export async function apiDelete(path, { token, signal, headers } = {}) {
   const resp = await fetch(BASE + path, { method: "DELETE", headers: montarHeaders(token, false, headers), signal });
   return lerResposta(resp, {});
 }
+
+/**
+ * PUT JSON numa Netlify Function (MC-ECOMMERCE-01a — pedidos de entrega).
+ * @param {string} path  nome da função + query (ex.: `pedidos?acao=endereco&produtoId=…`).
+ * @param {any} body     objeto serializado para o corpo (default {}).
+ * @param {{ token?: string, signal?: AbortSignal, headers?: Record<string,string> }} [opts]
+ * @returns {Promise<{ ok: boolean, status: number, data: any, text: string, headers: Headers }>}
+ */
+export async function apiPut(path, body, { token, signal, headers } = {}) {
+  const resp = await fetch(BASE + path, {
+    method: "PUT",
+    headers: montarHeaders(token, true, headers),
+    body: JSON.stringify(body ?? {}),
+    signal,
+  });
+  return lerResposta(resp, {});
+}

@@ -26,6 +26,7 @@
 import { getStore } from "@netlify/blobs";
 import { gerarResumosPosEdicao } from "./notificacoes-usuario.mjs";
 import { estaAgendada } from "./edicao-janela.mjs";
+import { vincularProdutoAEdicao } from "./pedidos.mjs"; // MC-ECOMMERCE-01a — ligação edição → produto
 
 const STORE_EDICOES   = "edicoes-metadata";
 const STORE_AUDITORIA = "auditoria";
@@ -98,6 +99,7 @@ function shapeEdicao(meta) {
     id:         meta.id,
     tipo:       meta.tipo,
     produto:    meta.produto ?? null,
+    produtoId:  meta.produtoId ?? null, // MC-ECOMMERCE-01a — produto do catálogo vendido por esta edição
     termino_em: meta.termino_em,
     lances:     Number.isInteger(meta.lances) ? meta.lances : 0,
     status:     meta.status || "aberto",
@@ -226,7 +228,7 @@ export async function buscarEdicao(id) {
  * @param {"endpoint"|"guto"} [args.origem]
  * @returns {Promise<{ ok: true, edicao: object } | { ok: false, code, message }>}
  */
-export async function criarEdicao({ tipo, produto, duracaoSegundos, duracaoMin, criadoPor = null, origem = "endpoint", valorBaseCentavos = null, incrementoCentavos = null }) {
+export async function criarEdicao({ tipo, produto, duracaoSegundos, duracaoMin, criadoPor = null, origem = "endpoint", valorBaseCentavos = null, incrementoCentavos = null, produtoId = null }) {
   const tipoNorm = normalizarTipo(tipo);
   if (!tipoNorm) {
     return { ok: false, code: "tipo_invalido", message: 'tipo deve ser "programado" ou "relampago"' };
@@ -259,11 +261,25 @@ export async function criarEdicao({ tipo, produto, duracaoSegundos, duracaoMin, 
     return { ok: false, code: "edicao_id_invalido", message: `id gerado inválido: ${id}` };
   }
 
+  // MC-ECOMMERCE-01a — ligação edição → produto do catálogo, decidida AQUI pelo admin.
+  // É a única fonte que a ponte apuração → catálogo lê (o `edicaoId` que o lojista
+  // escreve no produto não conta). Opcional: sem produtoId, a edição não vende do catálogo.
+  let produtoIdOk = null;
+  if (produtoId != null && produtoId !== "") {
+    if (typeof produtoId !== "string" || !/^[0-9a-f-]{10,64}$/i.test(produtoId)) {
+      return { ok: false, code: "produto_id_invalido", message: "produtoId inválido" };
+    }
+    const v = await vincularProdutoAEdicao(produtoId, id);
+    if (!v.ok) return { ok: false, code: v.code, message: v.message };
+    produtoIdOk = produtoId;
+  }
+
   const agora = Date.now();
   const meta = {
     id,
     tipo:       tipoNorm,
     produto:    produtoSan,
+    produtoId:  produtoIdOk,
     termino_em: new Date(agora + dur * 1000).toISOString(), // D2 — ISO-8601 UTC
     lances:     0,
     status:     "aberto",

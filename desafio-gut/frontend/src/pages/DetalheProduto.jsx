@@ -13,6 +13,7 @@ import GutoAvatar from "../components/GutoAvatar.jsx";
 import LanceStatusBadge from "../components/LanceStatusBadge.jsx";
 import { GlassCard } from "@/components/ui";
 import { imagemProdutoSrc } from "../lib/imagem.js";
+import { textoPrazo } from "../lib/pedidos.js"; // MC-ECOMMERCE-01a
 
 const COR = {
   bg: "#0a0f1a", surface: "rgba(8,30,64,0.82)", text: "#e8f0fe",
@@ -202,6 +203,13 @@ export default function DetalheProduto() {
           }}>
             R$ {(produto.preco / 100).toFixed(2)}
           </div>
+
+          {/* MC-ECOMMERCE-01a — prazo de entrega informado pelo lojista (Decreto 7.962/2013). */}
+          {textoPrazo(produto.prazo_entrega_dias) && (
+            <p style={{ margin: 0, fontSize: "0.8rem", color: COR.muted }}>
+              🚚 {textoPrazo(produto.prazo_entrega_dias)}
+            </p>
+          )}
 
           {/* Cronômetro */}
           <div style={{

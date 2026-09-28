@@ -65,6 +65,7 @@ const AdminNotificacoes    = lazy(() => import("./pages/admin/Comunicacao.jsx"))
 const AdminConfiguracoes   = lazy(() => import("./pages/admin/ConfiguracoesAdmins.jsx"));
 const AdminAprovacoes      = lazy(() => import("./pages/admin/Aprovacoes.jsx"));
 const AdminCotas           = lazy(() => import("./pages/admin/Cotas.jsx"));
+const AdminPedidos         = lazy(() => import("./pages/admin/Pedidos.jsx")); // MC-ECOMMERCE-01a
 const CorporativoDashboard = lazy(() => import("./pages/CorporativoDashboard.jsx"));
 const CorporativoCotas     = lazy(() => import("./pages/CorporativoCotas.jsx"));
 const CorporativoBanners   = lazy(() => import("./pages/CorporativoBanners.jsx"));
@@ -484,6 +485,7 @@ export default function App() {
                 Autónomas até o operador decidir onde pertencem. */}
             <Route path="aprovacoes"       element={<AdminAprovacoes />} />
             <Route path="cotas"            element={<AdminCotas />} />
+            <Route path="pedidos"          element={<AdminPedidos />} />
           </Route>
           {/* MC11.1 — rota pública: Seja Nosso Parceiro. Sem proteção. */}
           <Route path="/seja-nosso-parceiro" element={<SejaNossoParceiro />} />

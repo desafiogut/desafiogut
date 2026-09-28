@@ -11,6 +11,7 @@ import ProgressoBonus from "../components/meus-ativos/ProgressoBonus.jsx";
 import EstadoBonus from "../components/meus-ativos/EstadoBonus.jsx";
 import FeedbackLance from "../components/meus-ativos/FeedbackLance.jsx";
 import RankingCiclo from "../components/meus-ativos/RankingCiclo.jsx";
+import MeusPedidos from "../components/meus-ativos/MeusPedidos.jsx"; // MC-ECOMMERCE-01a
 
 // ⚠️ Espelha `REGRAS.ACERTOS_PARA_BONUS` de
 // `netlify/functions/_lib/pontuacao-utils.mjs`. O frontend não importa do
@@ -188,6 +189,11 @@ export default function MeusAtivos() {
           isMobile={isMobile}
           t={t}
         />
+      </div>
+
+      {/* MC-ECOMMERCE-01a — pedidos de entrega (endereço, envio, nota fiscal). */}
+      <div style={{ marginBottom: sectionGap }}>
+        <MeusPedidos temSessao={temSessao} authToken={authToken} isMobile={isMobile} />
       </div>
 
       {/* Filtros */}

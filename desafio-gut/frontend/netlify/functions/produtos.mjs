@@ -36,6 +36,8 @@ import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { cacheAside, cacheDel } from "./_lib/cache.mjs";
 import { jsonCacheavel } from "./_lib/http-cache.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
+// MC-ECOMMERCE-01a — prazo de entrega + estado do pedido (o envio tem de existir antes de "entregue").
+import { validarPrazo, lerPedido } from "./_lib/pedidos.mjs";
 
 // Chave de cache da listagem pública por categoria (vitrine).
 const cacheKeyCategoria = (cat) => `produtos:cat:${cat}`;
@@ -50,6 +52,7 @@ const BLOB_INDICE_CAT = "produtos-indice-cat";
 
 const CATEGORIAS = new Set(["bronze", "prata", "ouro", "diamante"]);
 const STATUS_VALIDOS = new Set(["rascunho", "ativo", "vendido", "entregue"]);
+const EDITAVEL_PELO_LOJISTA = new Set(["rascunho", "ativo"]); // MC-ECOMMERCE-01a
 
 const MAX_BASE64_LEN = 700_000;
 const MIMES_VALIDOS = new Set(["image/png", "image/jpeg", "image/webp"]);
@@ -258,6 +261,14 @@ async function handlePost(req) {
     throw err;
   }
 
+  // MC-ECOMMERCE-01a — prazo de entrega em dias (Decreto 7.962/2013; mostrado ao comprador).
+  let prazoEntregaDias;
+  try { prazoEntregaDias = validarPrazo(body.prazo_entrega_dias); }
+  catch (err) {
+    if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
+    throw err;
+  }
+
   // Imagem: imagemBase64 OU imagem_url (um dos dois obrigatório)
   const imagemBase64 = typeof body.imagemBase64 === "string" ? body.imagemBase64 : "";
   const mime = typeof body.mime === "string" ? body.mime : "";
@@ -390,6 +401,7 @@ async function handlePost(req) {
     categoria,
     status: "ativo",
     edicaoId: body.edicaoId || "R-1",
+    prazo_entrega_dias: prazoEntregaDias,
     vencedor: null,
     criado_em: agora,
     atualizado_em: agora,
@@ -465,6 +477,12 @@ async function handlePut(req) {
     if (produto.status !== "vendido") {
       return jsonError(400, "status_invalido", "apenas produtos vendidos podem ser marcados como entregues");
     }
+    // MC-ECOMMERCE-01a — "entregue" abre o prazo de arrependimento (CDC art. 49): não
+    // pode ser marcado sem um envio registado (rastreio) no pedido.
+    const pedido = await lerPedido(id);
+    if (!pedido?.rastreio) {
+      return jsonError(409, "envio_nao_registado", "registe o envio (código de rastreio) antes de marcar como entregue");
+    }
     produto.status = "entregue";
     produto.entregue_em = new Date().toISOString();
     produto.atualizado_em = new Date().toISOString();
@@ -474,22 +492,15 @@ async function handlePut(req) {
     return jsonResponse({ ok: true, produto });
   }
 
-  // ─── PUT ?acao=registrar-vencedor ───
+  // ─── PUT ?acao=registrar-vencedor — FECHADO (MC-ECOMMERCE-01a) ───
+  // Aceitava o vencedor do CORPO do pedido, chamado pelo lojista dono do produto: quem
+  // vendia escolhia quem ganhava. O vencedor passa a entrar SÓ pela consolidação
+  // (_lib/pedidos.mjs → registrarVendaDaEdicao). Recuperação: POST pedidos?acao=reprocessar-venda (admin).
   if (acao === "registrar-vencedor") {
-    const vencedorData = body && typeof body === "object" ? null : null;
-    // Lê body se enviado
-    let vencBody = null;
-    try { vencBody = await parseJsonBody(req); } catch {}
-
-    produto.vencedor = vencBody?.vencedor || { registrado_em: new Date().toISOString() };
-    produto.status = "vendido";
-    produto.vendido_em = new Date().toISOString();
-    produto.atualizado_em = new Date().toISOString();
-    await store.setJSON(`produto:${id}`, produto);
-    await invalidarCategoria(produto.categoria); // write-through (R11)
-    console.info("[produtos] vencedor registrado", { id });
-    return jsonResponse({ ok: true, produto });
+    return jsonError(410, "registo_pela_consolidacao",
+      "o vencedor é registado automaticamente pela consolidação da edição");
   }
+  if (acao) return jsonError(400, "acao_invalida", "acao desconhecida");
 
   // ─── PUT normal (editar) ───
   let body;
@@ -514,7 +525,28 @@ async function handlePut(req) {
     produto.preco = p;
   }
   if (body.categoria !== undefined) {
-    try { produto.categoria = validarCategoria(body.categoria); }
+    let nova;
+    try { nova = validarCategoria(body.categoria); }
+    catch (err) {
+      if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
+      throw err;
+    }
+    // MC-ECOMMERCE-01a — mudar de slot repete a regra D3 do POST (o nível da cota
+    // restringe o slot). Sem isto, publicava-se em bronze e editava-se para diamante.
+    if (nova !== produto.categoria) {
+      const estadoCota = await validarCotaAtiva(produto.lojista);
+      if (!estadoCota.ativa) return jsonError(403, "cota_inativa", MSG_COTA_INATIVA, { needsPayment: true });
+      if (nova !== estadoCota.categoria) {
+        return jsonError(403, "categoria_nao_permitida",
+          `A sua cota é ${estadoCota.categoria}; não pode publicar no slot ${nova}.`,
+          { categoriaPermitida: estadoCota.categoria });
+      }
+      await invalidarCategoria(produto.categoria); // sai da vitrine antiga
+    }
+    produto.categoria = nova;
+  }
+  if (body.prazo_entrega_dias !== undefined) {
+    try { produto.prazo_entrega_dias = validarPrazo(body.prazo_entrega_dias); }
     catch (err) {
       if (err instanceof ValidationError) return jsonError(400, err.code, err.message);
       throw err;
@@ -540,6 +572,16 @@ async function handlePut(req) {
   if (body.status !== undefined) {
     const s = String(body.status).toLowerCase();
     if (!STATUS_VALIDOS.has(s)) return jsonError(400, "status_invalido", `status deve ser: ${[...STATUS_VALIDOS].join(", ")}`);
+    // MC-ECOMMERCE-01a — "vendido" e "entregue" só pela consolidação e pelo marcar-entregue.
+    // Por aqui, só rascunho ↔ ativo, e nunca com o produto preso a uma edição.
+    if (s !== produto.status) {
+      if (!EDITAVEL_PELO_LOJISTA.has(s) || !EDITAVEL_PELO_LOJISTA.has(produto.status)) {
+        return jsonError(409, "transicao_invalida", `não é possível passar de "${produto.status}" para "${s}" por edição`);
+      }
+      if (produto.edicaoVinculada) {
+        return jsonError(409, "produto_em_edicao", `o produto está vinculado à edição ${produto.edicaoVinculada}`);
+      }
+    }
     produto.status = s;
   }
 
@@ -591,6 +633,11 @@ async function handleDelete(req) {
   );
   if (!isAdmin && !isOwner) {
     return jsonError(403, "nao_autorizado", "apenas o dono do produto pode removê-lo");
+  }
+  // MC-ECOMMERCE-01a — um produto vendido tem pedido (entrega, NF-e); um vinculado está à
+  // venda numa edição. Apagá-lo partia a ponte ou o pedido do comprador.
+  if (produto.edicaoVinculada || produto.status === "vendido" || produto.status === "entregue") {
+    return jsonError(409, "produto_em_uso", "produto vendido ou vinculado a uma edição não pode ser removido");
   }
 
   await atualizarIndices(produto, "remover");

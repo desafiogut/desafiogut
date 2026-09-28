@@ -76,6 +76,15 @@ export const TELAS_ADMIN = [
     ficheiro: "Cotas.jsx", index: false, pronta: true,
     nota: "herdada do AdminPanel (T-2 do MC89.6); arrumada em «Quem» no MC89.44",
   },
+
+  // ── Depois do plano do MC89.5 ─────────────────────────────────────────────
+  // `posPlano` distingue estas das 7 do plano sem as confundir com as herdadas
+  // (`nota`): TELAS_DO_PLANO continua a ser o registo histórico das sete.
+  {
+    id: "pedidos", rota: "pedidos", href: "/admin/pedidos", label: "Pedidos",
+    ficheiro: "Pedidos.jsx", index: false, pronta: true,
+    posPlano: "MC-ECOMMERCE-01a — despacho das vendas do catálogo (endereço, envio, NF-e)",
+  },
 ];
 
 /**
@@ -88,7 +97,7 @@ export const TELAS_ADMIN = [
  * APK, onde não há barra de endereços, isso é o mesmo que não existirem.
  * A navegação constrói-se de GRUPOS_ADMIN, que cobre as nove por construção.
  */
-export const TELAS_DO_PLANO = TELAS_ADMIN.filter((t) => !t.nota);
+export const TELAS_DO_PLANO = TELAS_ADMIN.filter((t) => !t.nota && !t.posPlano);
 
 // ── Agrupamento por PERGUNTA do administrador ───────────────────────────────
 //
@@ -122,7 +131,7 @@ export const TELAS_DO_PLANO = TELAS_ADMIN.filter((t) => !t.nota);
 export const GRUPOS_ADMIN = [
   {
     id: "quem", label: "Quem", pergunta: "Quem está na plataforma",
-    telas: ["usuarios", "aprovacoes", "cotas"],
+    telas: ["usuarios", "aprovacoes", "cotas", "pedidos"], // MC-ECOMMERCE-01a: pedidos = "o que preciso de despachar"
   },
   {
     id: "dinheiro", label: "Dinheiro", pergunta: "Quanto entrou e saiu",

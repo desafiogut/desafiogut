@@ -25,6 +25,8 @@ import { obterSignerCoordenacao, backendAssinatura } from "./signer.mjs";
 import { escolherRpc } from "./rpc-fallback.mjs"; // MC39.2 — fallback RPC/Flashbots (opt-in)
 import { registrarPontuacaoRodada } from "./pontuacao-store.mjs";
 import { EDICAO_ESPECIAL_RE } from "./edicao-janela.mjs"; // MC94.2 — especial não pontua
+import { registrarVendaDaEdicao } from "./pedidos.mjs";   // MC-ECOMMERCE-01a — ponte apuração → catálogo
+import { buscarEdicao } from "./edicoes-core.mjs";
 
 const ABI = [
   "function consolidarResultado(string idEdicao, address vencedor, uint256 menorUnico) public",
@@ -175,6 +177,26 @@ export async function consolidarEdicao(edicaoId, { timeoutMinerMs = TIMEOUT_MINE
     }
   }
 
+  // MC-ECOMMERCE-01a — PONTE apuração → catálogo. Mesmo lugar e mesma regra da
+  // pontuação: DEPOIS do recibo (só um resultado que existe on-chain vende o produto)
+  // e FAIL-SOFT (a tx já está minerada; rebentar aqui faria crer que a consolidação
+  // falhou). O vencedor é o `apurado`, nunca um valor de pedido HTTP.
+  // `venda.ok === false` na resposta = por reprocessar: `POST pedidos?acao=reprocessar-venda`
+  // (admin) relê o marcador de consolidação e repete — é idempotente.
+  let venda = null;
+  try {
+    venda = await registrarVendaDaEdicao(
+      { edicaoId, vencedor: apurado.vencedor, menorUnicoCentavos: apurado.menorUnico, txHash: receipt.hash },
+      { buscarEdicao },
+    );
+    if (!venda.ok && venda.code !== "edicao_sem_produto") {
+      console.error("[consolidacao] ponte para o catálogo não registou a venda", edicaoId, venda.code);
+    }
+  } catch (err) {
+    console.error("[consolidacao] ponte para o catálogo falhou (consolidação mantém-se)", edicaoId, err?.message);
+    venda = { ok: false, code: "excecao" };
+  }
+
   await marcarConsolidado(edicaoId, resultado);
-  return { status: 200, corpo: { ok: true, edicaoId, ...resultado, pontua, pontuacao } };
+  return { status: 200, corpo: { ok: true, edicaoId, ...resultado, pontua, pontuacao, venda } };
 }

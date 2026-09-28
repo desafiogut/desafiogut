@@ -88,6 +88,8 @@ const CARD_CORES = {
   resumo_edicao:        { titulo: "🏁 Edição encerrada",     bg: "rgba(59,130,246,0.12)", borda: "rgba(59,130,246,0.45)", barra: "#60a5fa" },
   // MC15.8.1 — Indique e Ganhe (roxo). Indução de conversão + card on-demand.
   indicacao:            { titulo: "👥 Indique e Ganhe",      bg: "rgba(168,85,247,0.12)", borda: "rgba(168,85,247,0.45)", barra: "#a855f7" },
+  // MC-ECOMMERCE-01a — pedido de entrega (endereço, envio, nota fiscal).
+  pedido:               { titulo: "📦 Seu pedido",           bg: "rgba(0,212,170,0.12)",  borda: "rgba(0,212,170,0.45)",  barra: "#00d4aa" },
   default:     { titulo: "GUTO",                 bg: "rgba(0,212,170,0.10)",  borda: "rgba(0,212,170,0.4)",  barra: "#00d4aa" },
 };
 
@@ -105,6 +107,10 @@ const NOTIF_CARD_KIND = {
   // MC15.8.1 — indução do Indique e Ganhe (card roxo) + relatório admin.
   indicacao_convertida: "indicacao",
   relatorio_indicacoes: "indicacao",
+  // MC-ECOMMERCE-01a — gerados por _lib/pedidos.mjs.
+  pedido_morada:        "pedido",
+  pedido_enviado:       "pedido",
+  nfe_emitida:          "pedido",
 };
 
 const GUTO_STATE_MAP = {

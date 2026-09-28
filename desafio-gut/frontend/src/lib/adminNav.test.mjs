@@ -40,7 +40,8 @@ test("Aprovações e Cotas continuam presentes e marcadas como herdadas (T-2)", 
   // lugar (grupo "Quem"). O que continua a ser verdade é que não fazem parte
   // do plano histórico de sete telas do MC89.5.
   assert.equal(TELAS_DO_PLANO.length, 7);
-  assert.equal(TELAS_ADMIN.length, 9);
+  // MC-ECOMMERCE-01a: 9 → 10 com «Pedidos» (posPlano), que não é herdada nem do plano.
+  assert.equal(TELAS_ADMIN.length, 10);
 });
 
 // ── MC89.44 · agrupamento por pergunta ──────────────────────────────────────
@@ -93,7 +94,7 @@ test("os cabeçalhos de grupo cabem num telemóvel e não têm emoji", () => {
 });
 
 test("telasDoGrupo devolve entradas reais, pela ordem declarada", () => {
-  assert.deepEqual(telasDoGrupo("quem").map((t) => t.id), ["usuarios", "aprovacoes", "cotas"]);
+  assert.deepEqual(telasDoGrupo("quem").map((t) => t.id), ["usuarios", "aprovacoes", "cotas", "pedidos"]);
   assert.deepEqual(telasDoGrupo("dinheiro").map((t) => t.id), ["financeiro"]);
   assert.deepEqual(telasDoGrupo("sistema").map((t) => t.id),
     ["operacoes", "logs", "notificacoes", "configuracoes"]);
