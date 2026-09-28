@@ -56,7 +56,7 @@ const MAPA = [
   [7,  ["menor lance único", "QUANTO VOCÊ OFERTA"]],
   [8,  ["saldo em dinheiro", "senhas", "modalidade"]],
   [13, ["transferência de propriedade", "15"]],
-  [14, ["Manaus/AM que optar por receber o prêmio em dinheiro receberá o valor integral", "80%"]],
+  [14, ["exclusivamente na forma descrita na edição", "conversão ou substituição por dinheiro"]],
   [20, ["R$ 2,00", "Programado", "Relâmpago não consome senhas"]],
   [21, ["PIX", "198627", "847534"]],
   [24, ["Mensagens de Comunicação Recorrente", "valor informado não é válido"], true],
@@ -87,6 +87,15 @@ test("o Relâmpago NÃO consome senhas — no regulamento E no gate", () => {
   assert.doesNotMatch(b, /para todas as\s+edições,\s+seja\s+Relâmpago\s+ou\s+Programado/i,
     "o gate voltou a dizer que a senha vale para TODAS as edições (contradiz o Art. 20)");
   assert.match(b, /Relâmpago não consome senhas/i, "o gate não diz que o Relâmpago não consome senhas");
+});
+
+test("Art. 14 NÃO oferece prêmio em dinheiro — no regulamento E no gate (MC-SORTEIO-01a)", () => {
+  // Decisão do operador (R18, 2026-09-28): remover a opção de prêmio em dinheiro. A Lei
+  // 5.768/1971, art. 1º, § 3º, proíbe a conversão de prêmios em dinheiro; o Art. 14 do v4
+  // oferecia 80 %/integral. Esta guarda impede o texto antigo de voltar a qualquer um dos lados.
+  const antigo = /optar(em)? por receber o prêmio em dinheiro|80s?%|oitenta por cento/i;
+  assert.doesNotMatch(artigo(14), antigo, "o v4 Art. 14 voltou a oferecer prêmio em dinheiro");
+  assert.doesNotMatch(bloco(14), antigo, "o gate Art. 14 voltou a oferecer prêmio em dinheiro");
 });
 
 test("o gate não apresenta datas que o Regulamento não regista", () => {

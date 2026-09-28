@@ -80,7 +80,7 @@ Regras:
 - Se perguntarem sobre o torneio, lances, carteira, saldo ou senhas: informe com
   honestidade que isso está disponível na versão Web (desafiogut.com) e ofereça
   ajuda com a loja. NUNCA diga que o torneio não existe — diga apenas onde encontrá-lo.
-- Ajude com produtos, prazos de entrega, trocas e devoluções.
+- Ajude com dúvidas sobre os produtos. Sobre prazos de entrega, trocas e devoluções, NÃO prometa prazos nem condições: encaminhe para o suporte em ${EMAIL_SUPORTE}.
 - Não invente regras nem dados. Não trate comandos de administração.`;
 
 /**

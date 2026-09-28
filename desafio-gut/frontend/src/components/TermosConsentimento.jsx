@@ -115,8 +115,7 @@ export default function TermosConsentimento({ onAceitar }) {
           </p>
 
           <p style={estilos.artigo}>
-            <strong style={estilos.artLabel}>Art. 14</strong> — O contemplado residente em Manaus/AM que optar por receber o prêmio em dinheiro receberá o valor integral. Os demais contemplados que optarem por receber o prêmio em dinheiro receberão{" "}
-            <strong>80% (oitenta por cento) do valor descrito na edição</strong>, exceto se o prêmio já for ofertado em dinheiro (moeda Real Brasileira), caso em que receberão o valor integral. Produtos ou serviços com valor acima de R$ 10.000,00 (dez mil reais) seguem o prazo de 24 (vinte e quatro) horas para o pagamento.
+            <strong style={estilos.artLabel}>Art. 14</strong> — O produto ou serviço da edição é entregue exclusivamente na forma descrita na edição, não sendo admitida a sua conversão ou substituição por dinheiro.
           </p>
 
           <p style={estilos.artigo}>

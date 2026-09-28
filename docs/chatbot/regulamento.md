@@ -72,10 +72,8 @@ conteúdo desactualizado e deve ser ignorado.
   de transferência de propriedade quando aplicável (Art. 11º).
 - Produtos acima de **R$ 10.000,00**: as despesas de transferência são do participante, com
   prazo de **15 dias** a contar do comunicado oficial (Art. 13º).
-- Prémio em dinheiro: o contemplado **residente em Manaus/AM** que optar por dinheiro recebe
-  o **valor integral**; os demais recebem **80%** do valor descrito na edição — **excepto**
-  se o prémio já for ofertado em dinheiro, caso em que recebem o **valor integral**. Produtos
-  acima de R$ 10.000,00 seguem o prazo de **24 horas** para pagamento (Art. 14º).
+- O produto ou serviço é entregue **exclusivamente na forma descrita na edição** — **não há
+  conversão nem substituição por dinheiro** (Art. 14º).
 - O **vale-crédito** é a diferença entre o valor real do produto e o valor do lance vencedor,
   e usa-se exclusivamente na loja do patrocinador (Art. 12º).
 - As edições especiais (`ESPECIAL-*`) **não pontuam** no torneio. São relâmpago e debitam

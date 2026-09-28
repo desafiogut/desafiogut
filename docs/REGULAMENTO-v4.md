@@ -28,7 +28,7 @@ Art. 12º - O vale-crédito corresponde à diferença entre o valor real do prod
 
 Art. 13º - Produtos e Serviços ofertados, tais como moto, carro, casa ou outros no valor acima de R$ 10.000,00 (dez mil reais), as despesas com a transferência de propriedade serão de total responsabilidade do participante que será o responsável pela retirada no endereço indicado na edição inclusive as despesas delas decorrente tendo o prazo máximo de 15 (quinze) dias contados a partir do comunicado oficial da coordenação do evento e caso extrapole o prazo o mesmo perderá o direito àquele produto ou serviço que passará à posse automática para a coordenação do aplicativo DesafioGUT.
 
-Art. 14º - O contemplado residente em Manaus/AM que optar por receber o prêmio em dinheiro receberá o valor integral. Os demais contemplados que optarem por receber o prêmio em dinheiro receberão 80% (oitenta por cento) do valor descrito na edição, exceto se o prêmio já for ofertado em dinheiro (moeda Real Brasileira), caso em que receberão o valor integral. Produtos ou serviços com valor acima de R$ 10.000,00 (dez mil reais) seguem o prazo de 24 (vinte e quatro) horas para o pagamento.
+Art. 14º - O produto ou serviço da edição é entregue exclusivamente na forma descrita na edição, não sendo admitida a sua conversão ou substituição por dinheiro.
 
 Art. 15º - Caso o ganhador seja menor de idade e tenha acessado indevidamente o cadastro do titular da conta, só poderá comprar o produto ou serviço em questão com o consentimento do titular por escrito com registro em cartório justificando o fato ocorrido e se responsabilizando por eventuais logros decorrentes de fraude roubo, furtos ou cessão indevida.
 
