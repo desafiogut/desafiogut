@@ -4,7 +4,9 @@ import {
   ENDERECO_VAZIO, UFS, erroDoEndereco, estadoDoPedido, formatarCep, interpretarRespostaRecebi, podeMarcarRecebido,
   resumoEndereco, ROTULO_ESTADO, textoPrazo,
 } from "../../lib/pedidos.js";
+import { timelineDoRastreio } from "../../lib/rastreio.js";
 import { COR, caixa, tituloSecao, legenda, reais } from "./_estilo.js";
+import TimelineRastreio from "./TimelineRastreio.jsx";
 
 /**
  * Meus pedidos — MC-ECOMMERCE-01a.
@@ -70,6 +72,8 @@ export function CartaoPedido({ pedido, authToken, endereco, isMobile, aoGravar }
   const passo = estadoDoPedido(pedido);
   const [editando, setEditando] = useState(passo === "sem_endereco");
   const prazo = textoPrazo(pedido.prazo_entrega_dias);
+  // MC102.1a — só há timeline quando o rastreio traz eventos; sem eles fica a linha do código em bruto (P9).
+  const timeline = timelineDoRastreio(pedido.rastreio);
   // MC102 — «Recebi»: um botão, uma chamada. O servidor valida o dono e a idempotência.
   const [recebendo, setRecebendo] = useState(false);
   const [erroRecebi, setErroRecebi] = useState(null);
@@ -100,6 +104,7 @@ export function CartaoPedido({ pedido, authToken, endereco, isMobile, aoGravar }
           🚚 {pedido.rastreio.transportadora}: <code>{pedido.rastreio.codigo}</code>
         </p>
       )}
+      {pedido.rastreio && timeline && <TimelineRastreio {...timeline} isMobile={isMobile} />}
       {podeMarcarRecebido(pedido, endereco) && (
         <p style={{ margin: "0.5rem 0 0" }}>
           <button type="button" onClick={marcarRecebi} disabled={recebendo} data-acao="recebi"
