@@ -1,21 +1,23 @@
-// Rastreio do pedido (MC102.1a) — o CONTRATO do adaptador, sem transportadora nenhuma ligada.
+// Rastreio do pedido (MC102.1a) — o CONTRATO do adaptador. MC102.1b: o real é a Frenet (`rastreio-frenet.mjs`).
 //
 //   consultarRastreio(codigo, transportadora) →
 //     sucesso: { ok: true,  eventos: [{ data, codigo, local, descricao }] }
 //     falha:   { ok: false, code, fallback: { codigo } }
 //
 // `eventos[].codigo` é o código GENÉRICO do mapa do frontend (`src/lib/rastreio.js`: "0"–"4" passos,
-// "A1"–"A3" alertas). Traduzir os códigos da transportadora para estes é tarefa do adaptador.
+// "A1"–"A5" alertas). Traduzir os códigos da transportadora para estes é tarefa do adaptador.
 //
 // ⛔ HARD GATE 13 — o mock NUNCA vai a produção. Por isso a escolha do adaptador é do CHAMADOR e este
 // módulo não importa o mock: um import, mesmo condicionado a uma variável de ambiente, levava o mock para
 // dentro do bundle da função (o esbuild segue imports estáticos). Os testes injectam o mock; em produção
-// vale `ADAPTADOR_REAL`, que só existe no MC102.1b (Frenet). Enquanto for `null`, a resposta é o fallback.
+// vale `ADAPTADOR_REAL` (Frenet). `{ adaptador: null }` explícito continua a dar o fallback.
 //
-// Fallback (P9): só o código em bruto. Nunca uma URL de rastreio inventada.
+// Fallback (P9): só o código em bruto. Nunca uma URL de rastreio inventada (nem a `TrackingUrl` da Frenet).
 
-/** Adaptador da transportadora real — MC102.1b. Enquanto não existir, tudo cai no fallback. */
-export const ADAPTADOR_REAL = null;
+import { adaptadorFrenet } from "./rastreio-frenet.mjs";
+
+/** Adaptador da transportadora real — MC102.1b: Frenet (só Correios; o resto cai no fallback). */
+export const ADAPTADOR_REAL = adaptadorFrenet;
 
 const textoOuNull = (v) => (typeof v === "string" || typeof v === "number" ? String(v) : null);
 

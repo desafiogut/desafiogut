@@ -6,8 +6,8 @@
 
 /** Os 5 passos, por ordem. Um passo mais adiantado implica os anteriores feitos. */
 export const PASSOS = Object.freeze(["0", "1", "2", "3", "4"]);
-/** Os 3 alertas: aparecem como banners, não avançam passos. */
-export const ALERTAS = Object.freeze(["A1", "A2", "A3"]);
+/** Os alertas: aparecem como banners, não avançam passos. A4/A5: DEC-102.1b-9 (vêm da Frenet). */
+export const ALERTAS = Object.freeze(["A1", "A2", "A3", "A4", "A5"]);
 
 export const MAPA_EVENTOS = Object.freeze({
   "0": "Postado",
@@ -18,6 +18,8 @@ export const MAPA_EVENTOS = Object.freeze({
   A1: "Tentativa de entrega sem sucesso",
   A2: "Aguardando retirada na agência",
   A3: "Devolvido ao remetente",
+  A4: "Entrega atrasada",
+  A5: "Objeto extraviado",
 });
 
 /** Texto PT-BR de um código genérico; código desconhecido → a descrição original (ou ""). */

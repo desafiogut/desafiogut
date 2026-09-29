@@ -433,6 +433,47 @@ export async function definirNfe(produtoId, dados) {
   return r;
 }
 
+/** MC102.1b — máximo de eventos de rastreio guardados por pedido (os mais recentes ficam). */
+export const MAX_EVENTOS_RASTREIO = 50;
+
+const normalizarCodigoRastreio = (c) => String(c ?? "").trim().toUpperCase();
+
+/**
+ * MC102.1b (Frente C) — acrescenta eventos da transportadora a `pedido.rastreio.eventos`, via `atualizarPedido`
+ * (CAS do MC102.0). DEC-102.1b-5 (LGPD): grava SÓ `{ data, codigo }` — o que vier a mais não entra.
+ * IDEMPOTENTE (HARD GATE 14): um evento com o mesmo `data` + `codigo` já gravado ignora-se (o código de rastreio
+ * é o do próprio pedido, logo a chave é TrackingNumber + EventDateTime + EventType). Sem nada de novo → não grava.
+ * O código de rastreio tem de ser o do pedido: um webhook atrasado de um código já corrigido não escreve.
+ */
+export async function registrarEventosRastreio(produtoId, codigoRastreio, eventos) {
+  return atualizarPedido(produtoId, (pedido) => {
+    if (!pedido?.rastreio) return { ok: false, code: "pedido_nao_encontrado" };
+    if (normalizarCodigoRastreio(pedido.rastreio.codigo) !== normalizarCodigoRastreio(codigoRastreio)) {
+      return { ok: false, code: "rastreio_diferente" };
+    }
+    const actuais = Array.isArray(pedido.rastreio.eventos) ? pedido.rastreio.eventos : [];
+    const vistos = new Set(actuais.map((e) => `${e.data}|${e.codigo}`));
+    const novos = [];
+    for (const e of Array.isArray(eventos) ? eventos : []) {
+      const ev = { data: typeof e?.data === "string" ? e.data : null, codigo: String(e?.codigo ?? "") };
+      if (!ev.codigo || vistos.has(`${ev.data}|${ev.codigo}`)) continue;
+      vistos.add(`${ev.data}|${ev.codigo}`);
+      novos.push(ev);
+    }
+    if (novos.length === 0) return { ok: true, idempotent: true, gravados: 0, pedido };
+    pedido.rastreio.eventos = [...actuais, ...novos].slice(-MAX_EVENTOS_RASTREIO);
+    return { evento: "rastreio_atualizado" };
+  });
+}
+
+/** MC102.1b — o pedido cujo rastreio tem este código (o webhook da Frenet só traz o TrackingNumber). */
+export async function encontrarPedidoPorRastreio(codigoRastreio) {
+  const alvo = normalizarCodigoRastreio(codigoRastreio);
+  if (!alvo) return null;
+  const todos = await listarTodosPedidos();
+  return todos.find((p) => normalizarCodigoRastreio(p?.rastreio?.codigo) === alvo) ?? null;
+}
+
 /**
  * Relê o resultado de uma edição JÁ consolidada e corre a ponte — recuperação manual
  * (admin) para quando a ponte falhou depois do recibo. O vencedor vem do marcador de

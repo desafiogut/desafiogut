@@ -9,12 +9,13 @@ import { MAPA_EVENTOS, PASSOS, ALERTAS, traduzirEvento, construirTimeline, timel
 
 const ev = (codigo, data, extra = {}) => ({ codigo, data, local: "Manaus/AM", descricao: `desc ${codigo}`, ...extra });
 
-test("o mapa tem exactamente 5 passos + 3 alertas, com os rótulos do operador", () => {
+test("o mapa tem exactamente 5 passos + 5 alertas, com os rótulos do operador (DEC-102.1-H + DEC-102.1b-9)", () => {
   assert.deepEqual(PASSOS, ["0", "1", "2", "3", "4"]);
-  assert.deepEqual(ALERTAS, ["A1", "A2", "A3"]);
+  assert.deepEqual(ALERTAS, ["A1", "A2", "A3", "A4", "A5"]);
   assert.deepEqual({ ...MAPA_EVENTOS }, {
     "0": "Postado", "1": "A caminho", "2": "Na cidade de destino", "3": "Saiu para entrega", "4": "Entregue",
     A1: "Tentativa de entrega sem sucesso", A2: "Aguardando retirada na agência", A3: "Devolvido ao remetente",
+    A4: "Entrega atrasada", A5: "Objeto extraviado",
   });
   assert.ok(Object.isFrozen(MAPA_EVENTOS) && Object.isFrozen(PASSOS) && Object.isFrozen(ALERTAS));
 });

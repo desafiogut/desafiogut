@@ -11,8 +11,13 @@ import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { consultarRastreio, ADAPTADOR_REAL } from "../_lib/rastreio.mjs";
 import { adaptadorMock, EVENTOS_MOCK } from "../_lib/rastreio-mock.mjs";
+import { adaptadorFrenet } from "../_lib/rastreio-frenet.mjs";
 
 const CODIGO = "AA123456789BR";
+// Nenhum teste deste ficheiro vai à rede nem usa o token real: sem token, o adaptador real falha ANTES do fetch,
+// e o fetch global rebenta se alguém lá chegar.
+delete process.env.FRENET_TOKEN;
+globalThis.fetch = async () => { throw new Error("rede proibida nos testes"); };
 
 test("mock injectado → ok:true com os eventos, só com os 4 campos do contrato", async () => {
   const r = await consultarRastreio(CODIGO, "Correios", { adaptador: adaptadorMock });
@@ -23,10 +28,15 @@ test("mock injectado → ok:true com os eventos, só com os 4 campos do contrato
   assert.equal(r.fallback, undefined);
 });
 
-test("produção de hoje (sem adaptador real) → ok:false adaptador_indisponivel + fallback só com o código", async () => {
-  assert.equal(ADAPTADOR_REAL, null, "o adaptador real é do MC102.1b");
-  const r = await consultarRastreio(CODIGO, "Correios");
+test("sem adaptador (null explícito) → ok:false adaptador_indisponivel + fallback só com o código", async () => {
+  const r = await consultarRastreio(CODIGO, "Correios", { adaptador: null });
   assert.deepEqual(r, { ok: false, code: "adaptador_indisponivel", fallback: { codigo: CODIGO } });
+});
+
+test("MC102.1b: o adaptador por omissão é a Frenet; sem FRENET_TOKEN cai no fallback, sem ir à rede", async () => {
+  assert.equal(ADAPTADOR_REAL, adaptadorFrenet);
+  const r = await consultarRastreio(CODIGO, "Correios");
+  assert.deepEqual(r, { ok: false, code: "falha_adaptador", fallback: { codigo: CODIGO } });
 });
 
 test("o fallback nunca traz URL (P9)", async () => {
@@ -68,7 +78,7 @@ test("campos só como texto: objectos aninhados caem para null; números viram t
     { data: null, codigo: "4", local: null, descricao: null },
     { data: "1758369600000", codigo: "0", local: "Manaus/AM", descricao: "Postado" },
   ]);
-  assert.deepEqual(await consultarRastreio(12345, "Correios"), { ok: false, code: "adaptador_indisponivel", fallback: { codigo: "12345" } });
+  assert.deepEqual(await consultarRastreio(12345, "Correios", { adaptador: null }), { ok: false, code: "adaptador_indisponivel", fallback: { codigo: "12345" } });
 });
 
 test("qualquer tipo de erro do adaptador fica no fallback (TypeError, rejeição sem Error)", async () => {
