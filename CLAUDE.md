@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-29 (MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-29 (MC102.0: **escrita condicional (CAS) no pedido** — `@netlify/blobs` 10.0.0, `set()` com If-Match (o `setJSON` não o envia), retry da operação 3×; ETag de produção por medir. Anterior: MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -3831,3 +3831,41 @@ Logs: `_logs/MC102_*.md` · Relatório: `Desktop/MC102-RELATORIO.md`.
 
 ### Lição de instrumento
 `grep -c $'$'` no MSYS «contou» CRLF em ficheiros que são **LF** (medido em bytes com Python). **Medir os fins de linha em bytes, nunca com o grep do MSYS.**
+
+---
+
+## MC102.0 — Escrita condicional (CAS) no pedido (2026-09-29)
+
+**Commits:** `d8a1547` (1.ª versão, REFUTADA) + `3730c6c` (correcção). Logs: `_logs/MC102.0_*.md` · Relatório: `Desktop/MC102.0-RELATORIO.md`.
+
+### Decisões do operador (R18)
+1. **Retry da operação inteira (opção C)**: o PoC do SEG-1 provou que «CAS só dentro do `gravar()`» **não fecha a corrida** (os 4 chamadores lêem antes; perdia-se o `recebido_em` com 200). Excepciona o HARD GATE 3 para os 4 chamadores, com as **assinaturas exportadas iguais**.
+2. **`pedidos.mjs` (handler): só o mapeamento** `conflito_escrita` → **409** e `etag_indisponivel` → **503**.
+
+### O que existe agora (`_lib/pedidos.mjs`)
+- **`atualizarPedido(produtoId, mutar)`**: `getWithMetadata` (etag) → `mutar(pedido)` → `gravar`, **no máximo `MAX_TENTATIVAS_CAS = 3`**. O retry só acontece em `conflito_escrita`, e as guardas voltam a ser avaliadas em cada tentativa. Consequência: uma morada concorrente com o envio passa a dar `pedido_ja_enviado`. Os chamadores são `definirMorada`, `marcarRecebido`, `definirRastreio` e `definirNfe`. **Qualquer escritor novo do pedido (webhook Frenet MC102.1b, repasse MC110, estorno MC109) TEM de passar por `atualizarPedido`.**
+- **`gravar(pedido, evento, etag)`** usa **`s.set(chave, JSON.stringify(pedido), { onlyIfMatch: etag })`**:
+  - sem etag → `etag_indisponivel` (fail-closed);
+  - `modified:false` → `conflito_escrita`;
+  - `modified:true` **sem** `etag` → `etag_indisponivel` (é erro do servidor, não gravação).
+- `definirRastreio` e `definirNfe` só notificam se a escrita teve sucesso.
+
+### ⛔ Três armadilhas do `@netlify/blobs`, medidas no `dist/`, não no `.d.ts`
+1. **O `setJSON` (10.0.0 até 10.4.x) NÃO envia `If-Match`**, porque espalha as condições com `...conditions`. **Usar `set()`.** Corrigido na 10.7.13.
+2. Com condição, **qualquer estado ≠ 412 (403, 5xx) devolve `modified:true`**, em todas as versões até à 11.1.1. Só um `etag` na resposta confirma a escrita.
+3. Um **`onlyIfMatch` falsy é ignorado em silêncio**, e a escrita sai incondicional.
+- O `BlobsServer` oficial **não envia ETag no GET**. Na 10.0.0 no Windows, dá 500 em chaves com `:`. **Não serve para provar CAS.** Usar `scripts/mc1020-cliente-real.mjs`: cliente real + `_lib` real + servidor HTTP com If-Match; tem controlo positivo, e com `setJSON` dá VERMELHO.
+
+### Validação
+- Suíte: **469/469 · 745/751**.
+- Mutação: **10/10** (`scripts/mc1020-prova-mutacao.mjs`, com M0 «voltar ao `setJSON`»).
+- Validador: **REFUTADO** na 1.ª ronda, **APROVADO COM RESSALVAS** na 2.ª.
+- O `npm audit` ficou igual (30 → 30).
+- O `setJSON` do 1.º commit deu 7/7 na mutação **porque os duplos eram mais estritos que a biblioteca real**. Um duplo de biblioteca externa copia-se do `dist/` real.
+
+### ⚠️ Riscos documentados (decisão do operador)
+- **O ETag no GET em produção NÃO está medido.** Produção tem **0 pedidos**. Se a produção não o devolver, as 4 escritas dão 503 (falha visível, sem perda). **A 1.ª escrita real é a medição.**
+- Falso sucesso residual: um erro que traga ETag. ETag fraco `W/` dá 409 sempre. Um 5xx leva 25 s de retries do cliente.
+- Continuam sem CAS: `garantirPedido` (criação, `setJSON` incondicional). Os pedidos também não são anonimizados pelo `conta-delete` (usa `endereco`, e o pedido tem `comprador`). As duas coisas são anteriores a este MC.
+- **O ESLint do projecto ignora `netlify/functions`**: não há lint efectivo no backend.
+- Disco C: esteve a **0 bytes** (ENOSPC) durante o MC. Libertados ~9 GB (cache do npm + 7 worktrees de validador). Continua a haver um consumidor externo por identificar. Há um directório órfão de 1,6 GB em `.claude/worktrees/agent-a910933…`, cópia antiga com `secrets/`, **não apagado** (decisão do operador).
