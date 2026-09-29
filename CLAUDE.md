@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-28 (MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-29 (MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -7,7 +7,123 @@
 
 ---
 
+## 🎯 ESCOPO-ALVO v6.0 — FONTE DE VERDADE: os 2 PDFs do Desktop (MC100, 2026-09-28)
+
+> **DECISÃO DO OPERADOR (R18, 2026-09-28, durante o MC100):** «os pdfs são a fonte de verdade, eles são a
+> versão mais atualizada do que vamos ser ao final». As fontes são:
+> - `Desktop/DesafioGUT - Visão Geral do Ecossistema Completo.pdf` (**VG**, 10 págs.)
+> - `Desktop/DesafioGUT - Modelo de Negócio e Conformidade.pdf` (**MN**, v1.0, 10 págs.)
+>
+> **Precedência:** esta secção descreve **o que o DesafioGUT vai ser**. Onde divergir da secção
+> «NORTE DO PRODUTO» (MC-NORTE-01/MC-PRODUTO-01, logo abaixo), **prevalece esta**. A NORTE continua a
+> descrever **o estado actual do código e o histórico das decisões**, e não se apaga (P2). O estado
+> medido e o plano de transformação estão em `_logs/MC100_*.md` e `Desktop/MC100-RELATORIO.md`.
+> ⚠️ Os PDFs são a fonte **do alvo**, não do estado: algumas afirmações de «✓ implementado» e duas
+> citações normativas neles não batem com o repo nem com as fontes primárias (ver «Errata dos PDFs»).
+
+### O que o DesafioGUT vai ser
+
+**Plataforma de e-commerce por dropshipping** que vende **produtos físicos** por duas modalidades:
+
+| Modalidade | Mecânica | Paga com | Critério de vitória | Duração | Autorização SPA/MF (segundo o PDF) |
+|---|---|---|---|---|---|
+| **Oferta Relâmpago** («Estratégia») | menor lance único | **saldo em R$** (PIX), lance ≥ R$ 0,01 | **menor lance único** | curta (horas) | ❌ dispensada («jogo de habilidade / estratégia pura») |
+| **Oferta Programada** («Previsão») | **concurso de previsões** | **Passe Desafio (R$ 2,00)** | **palpite mais próximo do nº real e exato de lances** | média/longa (dias ou semanas) | ✅ **requerida** (Lei 5.768/1971 + Dec. 70.951/1972) |
+
+**Passe Desafio (R$ 2,00):** **produto digital real**, **não** taxa de participação. Inclui **cupons de desconto
+de lojistas parceiros** + **dados analíticos** (participantes, faixas de lances, histórico) + **GUTO** + **direito
+a 1 palpite** (benefício complementar e subordinado; rácio 1 Passe = 1 palpite).
+**Prémio/produto:** sempre o **bem físico**, sem conversão em dinheiro. O vencedor **adquire o produto pelo valor
+do lance/palpite vencedor** (VG §3.5).
+**Posicionamento:** «Não é leilão, não é aposta e não é sorteio: é uma **compra inteligente com benefícios**.»
+Nas lojas: **Programa de Fidelidade Gamificado** (Play), classificação **AO / 18+**.
+
+### Os 4 pilares (VG §2)
+
+1. **Comprador:** login Google (Privy) → gate legal (LGPD + Termos) → carteira embedded → **18+** → PIX → saldo R$ →
+   Relâmpago (lance) ou Programada (Passe + palpite) → vitória → morada → **NF-e** → rastreio → **«recebi»** →
+   **7 dias de arrependimento com estorno real via Mercado Pago**.
+2. **Plataforma (MEI):** vende o Passe; organiza as edições; apura (Relâmpago on-chain; Programada «palpite mais
+   próximo»); notifica pelo GUTO; **emite a NF-e** (manual no início); gere a logística; **repassa ao lojista após a
+   confirmação de entrega**; gere as cotas.
+3. **Lojista:** onboarding com **CNPJ validado** → **cota de visibilidade** (Diamante/Ouro/Prata/Bronze = Nível 1..4)
+   → produtos nos slots da cota → **emite cupons** para o Passe → despacha (dropshipping) → recebe o repasse →
+   acede a leads.
+4. **GUTO (IA):** análise de dados, suporte estratégico, educação de regras, **pós-compra** (NF-e, rastreio,
+   devolução), triagem para suporte humano por e-mail; presente no chat, push/in-app, painel pós-compra e e-mail.
+
+### Estrutura legal (VG §4.2–4.3)
+
+| Item | PDF |
+|---|---|
+| Vendedor legal e emissor de NF-e | **MEI do DesafioGUT**, CNAE comércio varejista, exibido no rodapé legal |
+| Titular do MEI e da licença SPA/MF | **Ruan** (segundo o PDF) — ⚠️ **ver DEC-09 abaixo** |
+| Licença SPA/MF | taxa de fiscalização **R$ 334,00** (limite de R$ 10.000,00 em prémios), validade 12 meses (valores do PDF, não verificados pelo executor) |
+| NF-e | emitida em **100 %** das vendas com entrega física (MN §3.5) |
+
+### Leis e plataformas (MN §3–4) — o que o PDF declara
+
+Lei 5.768/1971 (autorização prévia; prémio não convertível em dinheiro) · Dec. 70.951/1972 (arts. 13, 14, 25, 30)
+· CDC art. 49 (7 dias, botão no app, estorno MP) · Dec. 7.962/2013 (arts. 2º e 5º) · LGPD (arts. 7º, 8º, 18) ·
+**não aplicáveis:** Lei 14.790/2023 (bets), DL 3.688/1941 (jogo de azar), Res. CMN 5.100/2026 (mercados
+preditivos: o palpite é sobre uma **métrica interna**) · Google Play: Gamified Loyalty (transação separada e
+genuína, benefício complementar, regras publicadas, nº fixo de vencedores, prazos, rácio, AO) · Apple: bens
+físicos fora do IAP.
+
+### ⛔ O que o PDF muda em relação à NORTE (MC-NORTE-01 / MC-PRODUTO-01) — **fica SUPERADO**
+
+| Tema | NORTE / estado actual do código | Alvo (PDF) |
+|---|---|---|
+| Programada | senha R$ 2 = 1 lance, **menor lance único** (`REGULAMENTO-v4.md:19,43`) | **Passe + palpite do nº de lances**, «mais próximo» |
+| Decisão MC-PRODUTO-01 «o Quiz de Previsão não entra; sem frontend novo» | registada como R18 a 28/09 | **revogada pelo PDF** (R18 do MC100): o concurso de previsões **entra** |
+| «Passe» = só a denominação comercial da senha | MC-PRODUTO-01 | Passe = **produto digital próprio, com cupons de lojistas** |
+| Tese «torneio de habilidade» (Portaria SPA/MF 1.207/2024, Art. 38º v4) | Regulamento v4 | Relâmpago = habilidade (dispensada); **Programada = concurso autorizado pela SPA/MF** |
+| Vendedor | GUT, CNPJ 23.040.066/0001-00 (na verdade uma associação: ver memória do CNPJ) | **MEI** |
+| Relâmpago: quem paga | cada lance é debitado do saldo (Art. 8º v4) e o vencedor paga o valor do seu lance pelo produto (Art. 11º) | **igual** no PDF VG §8 («lance debitado do saldo» + «vencedor paga o valor final do lance»). *Sem mudança: a divergência que o MC100 leu na 1.ª versão foi refutada pelo validador* |
+
+### ⚠️ Errata dos PDFs (medida no MC100 contra fontes primárias e contra o repo)
+
+1. **Apple «Diretriz 3.1.5(a)» para e-commerce (MN §4.2) está errada:** a 3.1.5 trata de *Cryptocurrencies* (o item de
+   carteiras é o 3.1.5(i)), não de e-commerce. A regra
+   de bens físicos é a **3.1.3(e)** (App Review Guidelines, lidas a 28/09).
+2. **«Vouchers e cupons digitais sob a mesma isenção de IAP» (MN §4.2):** a Apple 3.1.1 diz o contrário para vouchers
+   resgatáveis por bens/serviços **digitais**. E a Play Payments policy exige o **Billing** para «digital content or
+   goods» (excepções: bens físicos, *peer-to-peer*, **online auctions**, doações). ⇒ **Um Passe «produto digital» vendido
+   por PIX dentro do app é um risco de loja (R-01)**, não um ✓.
+3. **§12 «implementado ✓»:** a ponte apuração→catálogo, a entrega e os campos de NF-e existem **só no repo local**
+   (MC-ECOMMERCE-01a, `938173c`/`c56f899`, **não publicados**: produção serve o MC99.5.3). «Conversão de saldo em
+   senhas» existe, mas é a mecânica da Programada **a descontinuar**.
+4. **Relâmpago «dispensada»** com lances pagos contradiz a política Real-Money Gambling da Play já citada abaixo
+   (MC-PRODUTO-01) → **R-02, parecer jurídico obrigatório.**
+5. **A categoria Gamified Loyalty exige «not subject to additional gambling or gaming licensing requirements»**, e o
+   próprio PDF diz que a Programada **exige** a SPA/MF → **R-19, parecer obrigatório** (achado do validador do MC100).
+6. **O momento do repasse ao lojista contradiz-se:** antes do envio (VG §8, MN §6.1) vs depois da confirmação (VG §4.1/§5.3/§9,
+   MN §6.2) → DEC-06. **«AO»** não é classificação da Play/IARC (no Brasil: ClassInd 18). O PDF usa «Arremate» (MN §5.1).
+
+### ⛔ Decisões pendentes que bloqueiam execução (detalhe em `_logs/MC100_DECISOES-PENDENTES.md`)
+
+- **DEC-09 — titular:** o PDF diz **Ruan** (MEI + SPA/MF); o texto do MC100 (P5/P6) diz **Marinho (União e Trabalho)**, com
+  o Ruan como funcionário. O R18 manda seguir o PDF, **mas nada que dependa do titular avança sem confirmação**.
+- ~~DEC-11~~ **retirado** (refutado pelo validador: PDF e código coincidem). A pergunta de fundo passa ao jurista (R-02, R-19).
+- **DEC-01 — faturação do Passe:** PIX vs Google Play Billing / Apple IAP.
+- **DEC-02/03/04 — cupons (quem emite, valor); que lances o palpite conta; desempate e nº fixo de vencedores.**
+- **DEC-12 — Play Console:** o PDF manda **pausar o teste «imediato»**; o texto do MC100 manda **não sair do teste**.
+
+### Plano (resumo — detalhe em `_logs/MC100_MAPA-CAMADAS.md` e `_logs/MC100_MAPA-MCS-101+.md`)
+
+21 camadas activas (C0–C21; a C18 foi retirada após o validador), todas construídas sobre o que existe (P1) e sem apagar nada (P2). **Onda 1, autónoma:**
+MC101 publicar o feito (MC-SORTEIO-01a + MC-ECOMMERCE-01a) + medir flags/webhook · MC102 «recebi» pelo comprador ·
+MC103 mecanismo de descontinuação + medição do legado · MC104 LGPD técnico. **Onda 2** (decisões do cliente): Passe,
+concurso, estorno, repasse, cupons. **Onda 3** (MEI/SPA): Regulamento v5, rodapé, NF-e, LGPD v2, GUTO/RAG, copy/marca.
+**Onda 4:** ficha Play + AAB → iOS.
+
+---
+
 ## 🎯 NORTE DO PRODUTO — Definição Consolidada (MC-NORTE-01, 2026-09-28)
+
+> ⚠️ **SUPERADA ONDE DIVERGIR (MC100, 2026-09-28, R18).** O alvo passou a ser a secção «ESCOPO-ALVO v6.0» acima
+> (os 2 PDFs). Esta secção continua válida como **descrição do estado actual do código e histórico das decisões**; a
+> frase «esta secção prevalece» abaixo aplica-se ao resto do ficheiro, **não** à secção ESCOPO-ALVO.
 
 > **Esta é a definição de referência do produto.** Em caso de divergência entre esta secção e
 > qualquer outro trecho deste ficheiro, **esta secção prevalece** — e a divergência deve ser
@@ -3533,3 +3649,141 @@ apesar de medir 6/6 faixas reservadas a passar (só conta a lista `MAL`) — **o
 a medição que ele próprio imprime**; e `mc99521e-ab-guardas.mjs` **não inclui as faixas** na sua lista,
 logo o «0 diffs» dele não é evidência sobre este commit.
 
+
+---
+
+## MC100 — Prontidão para o Dia D: diagnóstico + plano de transformação (2026-09-28)
+
+**Natureza:** diagnóstico + plano. **Zero código alterado, zero commits, zero deploys.** Baseline `c56f899`
+(local; `origin/main` = `40da2fe`; produção = MC99.5.3). **Artefactos:** `_logs/MC100_*.md` (cópias em
+`Desktop/MC100_*.md`) · **Relatório:** `Desktop/MC100-RELATORIO.md`.
+
+### Decisões do operador tomadas durante o MC (R18, em 3 lugares: aqui, `_logs/MC100_SEG-1_MEDICAO.md` §0, relatório)
+
+1. **R18-1:** ler os 2 PDFs do Desktop («o objetivo final») e **actualizar este CLAUDE.md**. Revoga o «NÃO AUTORIZA
+   alterar CLAUDE.md» do texto do MC100.
+2. **R18-2:** relatório no Desktop ao final.
+3. **R18-3:** **os PDFs são a fonte de verdade** do que o DesafioGUT vai ser → secção «ESCOPO-ALVO v6.0» no topo.
+
+### Medido (SEG-1)
+
+frontend **457/457** · backend **714/720** (6 saltados, 0 falhas; harness `mc966`, foreground) · `vite build` **exit 0**
+(para o scratchpad, **não** para o `dist/`, que alimenta o APK) · **4 commits locais por publicar** (MC-SORTEIO-01a,
+MC-ECOMMERCE-01a) · os 2 últimos deploys de produção em **`error`** (28/09 00:14Z) · Play Console **NÃO MEDIDA** (sem
+sessão; os MCP de browser falharam a ligação); a evidência em disco é de 24/08 · **iOS inexistente**.
+
+### Os achados que mais pesam
+
+1. **R-01:** o Passe «produto digital» vendido por PIX esbarra no **Google Play Billing** e no **Apple 3.1.1**. O PDF
+   afirma o contrário.
+2. **R-02 + R-19:** a Relâmpago «dispensada» com **cada lance pago** (Regulamento v4 Art. 8º = PDF VG §8) choca com a
+   política Real-Money Gambling. E a Gamified Loyalty exclui programas sujeitos a licença adicional, mas a Programada exige
+   a SPA/MF. *A 1.ª versão lia uma divergência «só o vencedor paga»; foi refutada pelo validador (DEC-11 retirado).*
+3. **DEC-09:** titular = **Ruan** (PDF) vs **Marinho** (texto do MC100).
+4. **A ficha da Play preparada (MC90.4) diz «Leilão de menor lance único», categoria Finanças**
+   (`ARTEFACTOS-RUAN/2-Documentos/MC90.4-FICHA-LOJA.txt:12,19,109-110`).
+5. **Não existem:** Passe, cupons, palpite, estorno MP, repasse, «recebi» pelo comprador (hoje é o lojista/admin que
+   marca «entregue», `produtos.mjs:476-492`), push, iOS.
+6. **Base reutilizável (P1):** `voucher.mjs` → cupons · `recursos-app-config.mjs` → descontinuação · `mp-client.mjs` →
+   estorno · `_lib/pedidos.mjs` → recebimento/repasse.
+
+### Validador adversarial (SEG3): REFUTADO → corrigido
+
+12 achados, todos aceites depois de verificados: DEC-11 inexistente (retirado; C18/MC105 sem objecto) · cláusula de
+licenciamento da Play omitida (R-19) · contagem do checklist errada · IDs D-xx/DEC-xx desencontrados · dependências
+circulares (C13↔C3) · `wallet.mjs` Vale-Crédito omitido (2.º saldo: preservação P10) · contradição interna do PDF sobre o
+repasse · lacunas sem camada (C19 comunicações, C20 histórico, C21 saque) · errata 3.1.5(i)/AO/«Arremate» · normas
+acrescentadas à matriz (#35–#41: limite de prémios, IR, ECA Digital, Marco Civil art. 15, CDC 31/37, billing alternativo,
+Data Safety/analytics). Ver `_logs/MC100_SEG3_VALIDADOR.md`.
+
+### Erros dos meus próprios instrumentos (declarados)
+
+- A 1.ª versão do inventário tinha 3 contagens erradas (admin 21 → **22**, `_lib` 60 → **69**, páginas 22 → **31**),
+  apanhadas por uma re-contagem antes de fechar o artefacto. Rotas: 35 `path=` / 37 com `index`.
+- O verificador ad-hoc do SEG5 lia as colunas da matriz com o índice deslocado em 1. O controlo positivo expôs o
+  defeito e corrigi-o antes da corrida real.
+- As citações `REGULAMENTO-v4.md:15,43,55` que este ficheiro usa na secção NORTE estão **deslocadas**: `:15` é o Art. 6º
+  (maioridade). As modalidades estão em **`:19` (Art. 8º)**, `:43` (Art. 20º) e `:25` (Art. 11º). Não reescrevi a NORTE
+  (histórico); fica registado aqui.
+- Um `grep -r` sem exclusões entrou nos `node_modules` e estourou os 120 s; refeito com `git grep`.
+
+### Fecho
+
+SEG3: validador adversarial em worktree próprio, 2 rondas (**REFUTADO** → corrigido → **APROVADO COM RESSALVAS** → ressalvas
+corrigidas). SEG5: verificação ad-hoc **VERDE** (323 OK, 0 falhas; a 1.ª corrida foi um falso vermelho do instrumento, por
+`.trim()` a comer o espaço de ` M` no `git status`, e está declarada). Git: só este ficheiro modificado + `_logs/MC100_*.md` novos.
+
+### Não medido (L-4)
+
+Play Console e App Store Connect (capturas pedidas em `_logs/MC100_ESTADO-PLAY-CONSOLE.md` §4) · o valor vivo do Blob
+`config-experiencia:recursos_app` · se o webhook MP dispara hoje · o texto da Lei 5.768 art. 1º § 1º (planalto:
+`ECONNRESET`) e da Res. CMN 5.100/2026 · o teto actual do MEI. **Nada jurídico ou fiscal aqui é parecer.**
+
+
+---
+
+## MC101 — Publicar o feito + medir o que estava por medir (2026-09-28/29)
+
+**Natureza:** publicação + medição. **Zero código alterado.** Logs: `_logs/MC101_*.md` · Relatório: `Desktop/MC101-RELATORIO.md`.
+
+### Decisão do operador (R18-4, 2026-09-28 ~23:53)
+
+**«Só push»:** o `git push` dispara o auto-deploy (`stop_builds=false`) com `commit_ref`. **Não** se correu o `netlify deploy --prod
+--build` manual que o texto do MC pedia. Razões medidas: o plano é **por créditos** (conta `credit-pro`; `getSite.plan` =
+`nf_team_dev`), e um deploy manual por cima seria um 2.º deploy pago **sem `commit_ref`** (lição do MC93-F).
+
+### Estado de produção (novo)
+
+- `origin/main` = **`c56f899`** (push `40da2fe..c56f899`; o «Bypassed rule violations» é conhecido).
+- Deploy automático **`6abb286376b6a700083eb5ce`**, ready em 136 s, **`commit_ref c56f899`**. É o `published_deploy`.
+- `/.netlify/functions/pedidos`: **200 text/html (ausente) → 401 application/json `nao_autenticado`**. Funções 72 → 73.
+- Bundle (BFS, 132 chunks): tem o novo Art. 14 (MC-SORTEIO-01a) e o `MeusPedidos` (MC-ECOMMERCE-01a); o Art. 14 antigo tem 0;
+  o contrato mainnet está presente. Controlo: o URL permanente do deploy anterior dá o inverso. Sem regressão nos endpoints-chave.
+- ⚠️ O endereço Sepolia **existe** no bundle em minúsculas, como **constante de guarda** `CONTRATO_ABANDONADO`
+  (`src/components/AvisoRede.jsx:24`). É esperado. **Procurar endereços sempre sem distinguir maiúsculas.**
+
+### Os deploys `error`: não é falha, é «no content change»
+
+`6ab9b150…` (`59066bd`) e `6ab9b166…` (`40da2fe`), 2026-09-28T00:14Z: «Failed during stage 'checking build content for
+changes': **Canceled build due to no content change**». Commits que não tocam em `desafio-gut/frontend` (só `_logs/`,
+`scripts/` da raiz, docs). A hipótese do validador do MC100 («builds automáticos a falhar / Missing script: build») está
+**refutada**: o `netlify.toml` tem `base = "desafio-gut/frontend"`, e os builds do git com código ficam `ready`.
+
+### Flags: o valor vivo está no SUPABASE, não no Blob
+
+Em produção `DATA_STORE_BACKEND=supabase` ⇒ a fonte é `public.config_remota` (`chave='recursos_app'`, 1 linha,
+`atualizado_em 2026-06-21`). O Blob `config-experiencia` está **vazio**. Valor vivo = default do código
+(`isLeilaoAtivo {ios:false, pwa:true, android:false}`, `isPagamentoNativoAtivo` false×3). O frontend lê em 3 camadas:
+Supabase directo (chave anon) → função `/recursos-app` → `DEFAULT_RECURSOS` local.
+⛔ **O APK é classificado como `pwa`:** `detectarPlataforma()` (`src/hooks/useRecursosApp.js:45-57`) só devolve `android` com
+`window.GUT_NATIVE`/`__GUT_PLATAFORMA__`, e **nada os define** (o `MainActivity` é um `BridgeActivity` vazio). ⇒ o APK recebe
+`isLeilaoAtivo:true`, e a chave `android:false` é **letra morta**. O `EM_BREVE_MODE` pode esconder o efeito visual. **Por decidir
+pelo operador** (conformidade de loja); é código, candidato a MC futuro.
+
+### Webhook MP: nunca foi processado com sucesso
+
+| fonte de evidência | resultado |
+|---|---|
+| `saldo_rs_creditos` (Supabase) | 21 créditos, **21 `confirmar-pagamento` · 0 `webhook`** (06-21 → 09-23) |
+| Blob `mp-aprovados` | **24/24 `confirmar-pagamento`** (05-03 → 09-23) |
+| Blob `saldo-rs-creditos` (legado) | 8/8 `confirmar-pagamento` |
+
+O webhook grava `mp-aprovados` **sem condição e antes de creditar** (`webhook-mercadopago.mjs:174-182`), e o
+`confirmar-pagamento` nunca sobrescreve um `approved`. Logo **nenhum webhook passou da validação em 24 aprovações**. O
+`POST /v1/payments` **não envia `notification_url`** (`_lib/pix-provider/mercadopago.mjs:61-72`): a entrega depende só do painel
+do MP. Causas possíveis, **não distinguíveis sem o operador**: (a) não está registado no painel; (b) é rejeitado (por exemplo,
+segredo diferente → 401, visível no Sentry como `webhook_mp_rejeitado`). O endpoint está vivo (GET → 200 JSON). Env:
+`MP_WEBHOOK_SECRET` definida, `ALLOW_UNSIGNED` ausente.
+⇒ O **estorno automático (C3/MC109) não pode assumir um ciclo de notificações do MP que funcione.**
+
+### Validador (SEG3): APROVADO COM RESSALVAS → 2 ⛔ + 3 ⚠️ confirmados e corrigidos
+
+Os dois ⛔ eram **meus**: (1) o efeito das flags no APK (li o valor e não o detector de plataforma); (2) «um webhook tardio não deixa
+rasto» (li a idempotência do crédito e não a escrita incondicional no `mp-aprovados`). A correcção do (2) permitiu uma
+**conclusão mais forte**.
+
+### Para o operador
+
+1. Ver o registo do webhook no **painel do Mercado Pago** e os alertas `webhook_mp_rejeitado` no **Sentry**.
+2. Decidir sobre o **APK tratado como pwa** (`isLeilaoAtivo:true` no Android).
+3. (opcional) Um `ignore` no `netlify.toml` para commits só de docs. Não executado.
