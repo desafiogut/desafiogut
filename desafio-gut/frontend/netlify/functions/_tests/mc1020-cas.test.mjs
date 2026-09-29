@@ -1,7 +1,9 @@
 // MC102.0 — escrita condicional (CAS) no pedido: duas escritas concorrentes não se perdem.
-// Blobs em memória fiel ao @netlify/blobs 10.x: etag por conteúdo; `onlyIfMatch` com etag diferente
-// OU chave ausente → { modified:false }; um `onlyIfMatch` vazio é IGNORADO (como no cliente real,
-// `Store.getConditions`), para o duplo não esconder uma escrita que sairia incondicional.
+// Blobs em memória fiel ao @netlify/blobs 10.0.0 REAL (dist/main.js), nas duas direcções:
+//  - `set` aplica `onlyIfMatch`: etag diferente OU chave ausente → { modified:false };
+//  - `setJSON` IGNORA o `onlyIfMatch` (espalha as condições; o If-Match não sai) — medido pelo validador;
+//  - um `onlyIfMatch` vazio é ignorado (`Store.getConditions`);
+//  - com condição, um erro do servidor (≠ 412) devolve { etag:"", modified:true } sem gravar.
 //
 // node --test --experimental-test-module-mocks _tests/mc1020-cas.test.mjs
 
@@ -12,7 +14,7 @@ import { createHash } from "node:crypto";
 const etagDe = (v) => `"${createHash("sha1").update(v).digest("hex")}"`;
 const ceder = () => new Promise((r) => setImmediate(r));
 const blobs = new Map();
-const g = { ceder: false, semEtag: false, antesDeGravar: null, leituras: 0, escritas: 0 };
+const g = { ceder: false, semEtag: false, erroServidor: false, antesDeGravar: null, leituras: 0, escritas: 0 };
 
 mock.module("@netlify/blobs", {
   namedExports: {
@@ -28,11 +30,16 @@ mock.module("@netlify/blobs", {
           if (v === undefined) return null;
           return { data: type === "json" ? JSON.parse(v) : v, etag: g.semEtag ? undefined : etagDe(v), metadata: {} };
         },
-        async setJSON(k, o, opt = {}) {
-          if (name === "pedidos" && g.antesDeGravar) g.antesDeGravar(m, k);
-          if (opt.onlyIfMatch && (!m.has(k) || etagDe(m.get(k)) !== opt.onlyIfMatch)) return { modified: false };
+        async setJSON(k, o) { // ignora opções, como o real 10.0.0
           if (name === "pedidos") g.escritas++;
           const v = JSON.stringify(o); m.set(k, v); return { modified: true, etag: etagDe(v) };
+        },
+        async set(k, v, opt = {}) {
+          if (name === "pedidos" && g.antesDeGravar) g.antesDeGravar(m, k);
+          if (opt.onlyIfMatch && g.erroServidor) return { etag: "", modified: true };
+          if (opt.onlyIfMatch && (!m.has(k) || etagDe(m.get(k)) !== opt.onlyIfMatch)) return { modified: false };
+          if (name === "pedidos") g.escritas++;
+          m.set(k, v); return { modified: true, etag: etagDe(v) };
         },
         async list({ prefix = "" } = {}) { return { blobs: [...m.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })) }; },
         async delete(k) { m.delete(k); },
@@ -62,7 +69,18 @@ function semear({ comMorada = true, comRastreio = true } = {}) {
 
 beforeEach(() => {
   blobs.clear();
-  Object.assign(g, { ceder: false, semEtag: false, antesDeGravar: null, leituras: 0, escritas: 0 });
+  Object.assign(g, { ceder: false, semEtag: false, erroServidor: false, antesDeGravar: null, leituras: 0, escritas: 0 });
+});
+
+test("CONTROLO: setJSON com onlyIfMatch NÃO protege (o real ignora a condição) — só o set protege", async () => {
+  semear();
+  const s = (await import("@netlify/blobs")).getStore({ name: "pedidos" });
+  const { etag } = await s.getWithMetadata(K, { type: "json" });
+  await s.setJSON(K, { mexido: 1 });
+  assert.equal((await s.setJSON(K, { v: "velho" }, { onlyIfMatch: etag })).modified, true, "setJSON escreveu com etag velho");
+  const { etag: e2 } = await s.getWithMetadata(K, { type: "json" });
+  await s.setJSON(K, { mexido: 2 });
+  assert.equal((await s.set(K, JSON.stringify({ v: "velho" }), { onlyIfMatch: e2 })).modified, false, "set recusou o etag velho");
 });
 
 // ── Controlo positivo: a sonda VÊ a corrida ─────────────────────────────────
@@ -144,6 +162,15 @@ test("B: sem etag na leitura → etag_indisponivel e NÃO grava (fail-closed)", 
   assert.deepEqual(r, { ok: false, code: "etag_indisponivel" });
   assert.equal(ler().recebido_em, undefined);
   assert.equal(g.escritas, 0);
+});
+
+test("B: erro do servidor na escrita condicional ({etag:'', modified:true}) → etag_indisponivel, NÃO é sucesso nem notifica", async () => {
+  semear();
+  g.erroServidor = true;
+  const r = await L.definirNfe(PID, NFE);
+  assert.deepEqual(r, { ok: false, code: "etag_indisponivel" });
+  assert.equal(ler().nfe, null);
+  assert.equal(blobs.get("notificacoes")?.size ?? 0, 0, "nenhuma notificação de uma NF-e que não ficou gravada");
 });
 
 test("B: pedido inexistente → pedido_nao_encontrado, nenhuma escrita", async () => {

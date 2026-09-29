@@ -23,9 +23,12 @@ mock.module("@netlify/blobs", {
         async get(k, { type } = {}) { const v = m.get(k); return v === undefined ? null : (type === "json" ? JSON.parse(v) : v); },
         async getWithMetadata(k, { type } = {}) { const v = m.get(k); if (v === undefined) return null;
           return { data: type === "json" ? JSON.parse(v) : v, etag: etagDe(v), metadata: {} }; },
-        async setJSON(k, o, opt = {}) { if (ctx.falhaChave && ctx.falhaChave.test(k)) throw new Error("blobs em baixo"); 
+        // Fiel ao @netlify/blobs 10.0.0: o setJSON IGNORA o onlyIfMatch (espalha as condições e o
+        // If-Match não sai); só o set o aplica. Um duplo mais estrito esconderia esse defeito (MC102.0).
+        async setJSON(k, o) { if (ctx.falhaChave && ctx.falhaChave.test(k)) throw new Error("blobs em baixo"); const v = JSON.stringify(o); m.set(k, v); return { modified: true, etag: etagDe(v) }; },
+        async set(k, v, opt = {}) { if (ctx.falhaChave && ctx.falhaChave.test(k)) throw new Error("blobs em baixo"); 
           if (opt.onlyIfMatch && (!m.has(k) || etagDe(m.get(k)) !== opt.onlyIfMatch)) return { modified: false };
-          const v = JSON.stringify(o); m.set(k, v); return { modified: true, etag: etagDe(v) }; },
+          m.set(k, v); return { modified: true, etag: etagDe(v) }; },
         async list({ prefix = "" } = {}) { return { blobs: [...m.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })) }; },
         async delete(k) { m.delete(k); },
       };

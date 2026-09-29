@@ -55,6 +55,7 @@ const erroDe = (res) => {
     pedido_ja_enviado: 409, nfe_ja_emitida: 409, morada_em_falta: 409, pedido_nao_enviado: 409,
     edicao_em_curso: 409, edicao_com_vencedor: 409, produto_sem_vinculo: 409, produto_ja_vendido: 409, produto_nao_ativo: 409,
     edicao_nao_consolidada: 409, edicao_sem_produto: 409, store_indisponivel: 503,
+    conflito_escrita: 409, etag_indisponivel: 503, // MC102.0 (R18): escrita condicional do pedido
   }[res.code] || 400;
   return jsonError(status, res.code, res.message || res.code);
 };

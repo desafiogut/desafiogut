@@ -12,8 +12,14 @@ const LIB = join(FN, "_lib", "pedidos.mjs");
 const LOCK = join(FN, "package-lock.json");
 const md5 = (b) => createHash("md5").update(b).digest("hex");
 
+const HANDLER = join(FN, "pedidos.mjs");
+const SET = "const w = await s.set(chavePedido(pedido.produtoId), JSON.stringify(pedido), { onlyIfMatch: etag });";
 const MUTANTES = [
-  ["M1 escrever sem onlyIfMatch", LIB, "pedido, { onlyIfMatch: etag });", "pedido, {});"],
+  ["M0 voltar ao setJSON (defeito do validador: If-Match não sai)", LIB, SET,
+    "const w = await s.setJSON(chavePedido(pedido.produtoId), pedido, { onlyIfMatch: etag });"],
+  ["M1 escrever sem onlyIfMatch", LIB, "JSON.stringify(pedido), { onlyIfMatch: etag });", "JSON.stringify(pedido), {});"],
+  ["M8 aceitar modified:true sem etag (erro do servidor = sucesso)", LIB, 'if (!w.etag) return { ok: false, code: "etag_indisponivel" };', ""],
+  ["M9 sem mapeamento 409/503 no handler", HANDLER, "conflito_escrita: 409, etag_indisponivel: 503,", ""],
   ["M2 sem guarda de etag (fail-open)", LIB, 'if (!etag) return { ok: false, code: "etag_indisponivel" };', ""],
   ["M3 ignorar modified:false", LIB, 'if (!w?.modified) return { ok: false, code: "conflito_escrita" };', ""],
   ["M4 sem retry", LIB, 'if (r.code !== "conflito_escrita") return r;', "return r;"],

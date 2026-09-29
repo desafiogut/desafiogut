@@ -300,6 +300,11 @@ export async function listarTodosPedidos() {
  * MC102.0 — escrita condicional (CAS). Só grava se o pedido ainda tiver o ETag lido; senão
  * `conflito_escrita` e quem chamou relê e tenta de novo. SEM etag não grava (fail-closed): o
  * @netlify/blobs ignora em silêncio um `onlyIfMatch` vazio e a escrita sairia incondicional.
+ *
+ * ⛔ `set`, NUNCA `setJSON`: no @netlify/blobs 10.0.0–10.4.x o `setJSON` espalha as condições
+ * (`...conditions`) e o `If-Match` não chega ao servidor — a escrita sai incondicional com
+ * `modified:true` (medido pelo validador do MC102.0). E com condição o cliente devolve
+ * `modified:true` para QUALQUER estado ≠ 412 (403, 5xx): só um `etag` na resposta confirma a escrita.
  */
 async function gravar(pedido, evento, etag) {
   const s = abrirStore(STORE_PEDIDOS);
@@ -308,8 +313,9 @@ async function gravar(pedido, evento, etag) {
   const agora = new Date().toISOString();
   pedido.atualizado_em = agora;
   pedido.historico = [...(pedido.historico || []), { evento, em: agora }].slice(-30);
-  const w = await s.setJSON(chavePedido(pedido.produtoId), pedido, { onlyIfMatch: etag });
+  const w = await s.set(chavePedido(pedido.produtoId), JSON.stringify(pedido), { onlyIfMatch: etag });
   if (!w?.modified) return { ok: false, code: "conflito_escrita" };
+  if (!w.etag) return { ok: false, code: "etag_indisponivel" };
   return { ok: true, pedido };
 }
 

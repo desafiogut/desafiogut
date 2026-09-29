@@ -21,10 +21,14 @@ mock.module("@netlify/blobs", {
         async getWithMetadata(k, { type } = {}) { const v = m.get(k);
           if (ctx.ceder) await new Promise((r) => setImmediate(r)); // MC102.0: forçar a corrida
           if (v === undefined) return null;
-          return { data: type === "json" ? JSON.parse(v) : v, etag: etagDe(v), metadata: {} }; },
-        async setJSON(k, o, opt = {}) { if (ctx.falhaChave && ctx.falhaChave.test(k)) throw new Error("blobs em baixo"); 
+          return { data: type === "json" ? JSON.parse(v) : v, etag: ctx.semEtag ? undefined : etagDe(v), metadata: {} }; },
+        // Fiel ao @netlify/blobs 10.0.0: o setJSON IGNORA o onlyIfMatch (espalha as condições e o
+        // If-Match não sai); só o set o aplica. Um duplo mais estrito esconderia esse defeito (MC102.0).
+        async setJSON(k, o) { if (ctx.falhaChave && ctx.falhaChave.test(k)) throw new Error("blobs em baixo"); const v = JSON.stringify(o); m.set(k, v); return { modified: true, etag: etagDe(v) }; },
+        async set(k, v, opt = {}) { if (ctx.falhaChave && ctx.falhaChave.test(k)) throw new Error("blobs em baixo"); 
+          if (opt.onlyIfMatch && ctx.conflito) return { modified: false }; // MC102.0: outro escritor ganha sempre
           if (opt.onlyIfMatch && (!m.has(k) || etagDe(m.get(k)) !== opt.onlyIfMatch)) return { modified: false };
-          const v = JSON.stringify(o); m.set(k, v); return { modified: true, etag: etagDe(v) }; },
+          m.set(k, v); return { modified: true, etag: etagDe(v) }; },
         async list({ prefix = "" } = {}) { return { blobs: [...m.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })) }; },
         async delete(k) { m.delete(k); },
       };
@@ -290,4 +294,26 @@ test("MC102.0: PUT recebido (comprador) + PUT nfe (operador) em paralelo → 200
     assert.ok(p.recebido_em, "o recebido_em (início do prazo do CDC) não se perdeu");
     assert.equal(p.nfe?.numero, "123", "a NF-e não se perdeu");
   } finally { ctx.ceder = false; }
+});
+
+test("MC102.0: conflito persistente → 409 conflito_escrita e o pedido NÃO muda", async () => {
+  semearVendido({ comMorada: true, comRastreio: true });
+  ctx.user = COMPRADOR; ctx.conflito = true;
+  try {
+    const r = await PUT_RECEBIDO();
+    assert.equal(r.status, 409);
+    assert.equal(r.body.error.code, "conflito_escrita");
+    assert.equal(ler("pedidos", `pedido:${PID}`).recebido_em, undefined);
+  } finally { ctx.conflito = false; }
+});
+
+test("MC102.0: sem ETag na leitura → 503 etag_indisponivel e o pedido NÃO muda", async () => {
+  semearVendido({ comMorada: true, comRastreio: true });
+  ctx.user = COMPRADOR; ctx.semEtag = true;
+  try {
+    const r = await PUT_RECEBIDO();
+    assert.equal(r.status, 503);
+    assert.equal(r.body.error.code, "etag_indisponivel");
+    assert.equal(ler("pedidos", `pedido:${PID}`).recebido_em, undefined);
+  } finally { ctx.semEtag = false; }
 });
