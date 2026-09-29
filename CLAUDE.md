@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-29 (MC102.0: **escrita condicional (CAS) no pedido** — `@netlify/blobs` 10.0.0, `set()` com If-Match (o `setJSON` não o envia), retry da operação 3×; ETag de produção por medir. Anterior: MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-29 (MC102.1a: **estrutura do rastreio** — contrato `consultarRastreio` + mock só em testes (injecção; grafo esbuild provado), mapa PT-BR de 5 passos + 3 alertas (DEC-102.1-H), `TimelineRastreio` no cartão só com `rastreio.eventos`; produção visualmente igual até ao MC102.1b. Anterior: MC102.0: **escrita condicional (CAS) no pedido** — `@netlify/blobs` 10.0.0, `set()` com If-Match (o `setJSON` não o envia), retry da operação 3×; ETag de produção por medir. Anterior: MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -3869,3 +3869,47 @@ Logs: `_logs/MC102_*.md` · Relatório: `Desktop/MC102-RELATORIO.md`.
 - Continuam sem CAS: `garantirPedido` (criação, `setJSON` incondicional). Os pedidos também não são anonimizados pelo `conta-delete` (usa `endereco`, e o pedido tem `comprador`). As duas coisas são anteriores a este MC.
 - **O ESLint do projecto ignora `netlify/functions`**: não há lint efectivo no backend.
 - Disco C: esteve a **0 bytes** (ENOSPC) durante o MC. Libertados ~9 GB (cache do npm + 7 worktrees de validador). Continua a haver um consumidor externo por identificar. Há um directório órfão de 1,6 GB em `.claude/worktrees/agent-a910933…`, cópia antiga com `secrets/`, **não apagado** (decisão do operador).
+
+---
+
+## MC102.1a — Estrutura do rastreio: contrato + mock, mapa PT-BR, timeline (2026-09-29)
+
+**Commits:** `80c69fe` (feat) + `16095ba` (achados do validador). Logs: `_logs/MC102.1a_*.md` · Relatório: `Desktop/MC102.1a-RELATORIO.md`.
+Não integra a Frenet (MC102.1b), não tem webhook, não tem `FRENET_TOKEN`. `_lib/pedidos.mjs`, `pedidos.mjs` e `src/lib/pedidos.js` **não foram tocados**.
+
+### Decisões do operador (R18)
+- DEC-102.1-C…G: vêm do enunciado (Meus Ativos · webhook · 5 passos + banners · fallback só com o código em bruto · Frente B do MC102.1 fechada).
+- **DEC-102.1-H (tomada no SEG-1):** os rótulos. Passos: `0` Postado · `1` A caminho · `2` Na cidade de destino · `3` Saiu para entrega · `4` Entregue. Alertas: `A1` Tentativa de entrega sem sucesso · `A2` Aguardando retirada na agência · `A3` Devolvido ao remetente.
+
+### O que existe agora
+- **`netlify/functions/_lib/rastreio.mjs`**: `consultarRastreio(codigo, transportadora, { adaptador = ADAPTADOR_REAL })`.
+  - Sucesso: `{ ok:true, eventos:[{data,codigo,local,descricao}] }`, só estas 4 chaves e só como texto (os objectos passam a `null`).
+  - Falha: `{ ok:false, code, fallback:{codigo} }`, com `code` ∈ `adaptador_indisponivel` · `falha_adaptador` · `resposta_invalida`.
+  - **`ADAPTADOR_REAL = null`**: em produção tudo cai no fallback até ao MC102.1b.
+- **`_lib/rastreio-mock.mjs`: SÓ testes.** O mock **é injectado pelo chamador**; o módulo de produção não o importa. Um import condicionado a `NODE_ENV` meteria o mock no bundle, porque o esbuild segue imports estáticos.
+- **`src/lib/rastreio.js`**:
+  - `MAPA_EVENTOS` (frozen);
+  - `traduzirEvento(codigo, descricao)`: código desconhecido devolve a descrição original; usa `Object.hasOwn`;
+  - `construirTimeline(eventos)`: **sempre 5 passos**; um passo adiantado implica os anteriores; data mais antiga por `Date.parse`; alertas pela ordem de chegada; **`local`/`descricao` nunca saem**;
+  - `timelineDoRastreio(rastreio)`: devolve `null` sem `rastreio.eventos`.
+- **`TimelineRastreio.jsx`**: 5 passos ●/○ com data dd/mm em hora de Brasília; alertas como banners `role="status"`; `fallback` mostra só o `<code>`, sem `<a>`.
+  - No cartão de `MeusPedidos.jsx` (+5 linhas) entra **depois** da linha `🚚 transportadora: código`, que continua lá. O «Recebi» não mudou.
+- **Contrato proposto ao MC102.1b:** os eventos gravam-se em **`pedido.rastreio.eventos`**, com os códigos genéricos, **através de `atualizarPedido`** (regra MC102.0). Hoje nenhum pedido os tem ⇒ **o ecrã de produção fica igual**.
+
+### ⛔ HARD GATE 13 — uma varredura textual NÃO prova que o mock fica fora do bundle
+O 1.º teste procurava `rastreio-mock` no texto dos ficheiros. O validador mostrou que `export … from "./rastreio-mock.mjs"` (ou `\x2d`) deixava o teste **verde** e **o mock entrava no bundle esbuild**. Agora há um teste que segue o **grafo real**: `esbuild.build({bundle, write:false, metafile, packages:"external"})` sobre todas as functions + `_lib/rastreio.mjs`, e nenhum `inputs` pode ser o mock. Tem **controlo positivo pela forma escapada**. O `esbuild` 0.25.5 está no lockfile das functions (a guarda do MC93-E confirma-o com um teste próprio).
+> **Regra:** para provar que um módulo fica fora de um bundle, pergunta-se ao bundler (metafile), não ao grep.
+
+### Validação
+- Suíte: **495/495 · 756/762**. O backend tem +4 e não +3: o 4.º é o teste que a guarda do MC93-E gera por o `_tests` importar `esbuild` (medido por diff dos nomes de teste).
+- Mutação: ronda 1 **26/26** (A 7 · B 10 · C 9); ronda 2 **15/15** sobre os sobreviventes do validador.
+- Validador: **APROVADO COM RESSALVAS**. Os 3 ⚠️ e os 4 ℹ️ técnicos foram corrigidos; o ⚠️ de R20 foi escalado.
+- ⚠️ **Instrumento:** um escape `\\u002d` consumido ao escrever o spec fez um mutante entrar **sem o escape**. Deu RED pelo motivo errado. **Confirmar o CONTEÚDO do que entrou, não só que o ficheiro mudou.**
+
+### ⛔ Pendentes (decisão do operador, para o MC102.1b; nada disto é visível em produção antes dele)
+1. Os alertas continuam visíveis depois de «Entregue» (hoje A3 + 4 mostra «Devolvido ao remetente» ao lado de «● Entregue»).
+2. Deduplicação ou limite de alertas (hoje N tentativas geram N banners).
+3. A ordem dos alertas (hoje é a de chegada).
+4. Formato e fuso da data (hoje dd/mm em Brasília).
+5. Se `local`/`descricao` (texto livre, que pode trazer nome ou morada) se gravam no pedido; o validador recomenda gravar só `{data, codigo}`.
+6. UX com «4 Entregue»: o estado «Enviado» e o «Recebi» aparecem ao lado da timeline «Entregue».
