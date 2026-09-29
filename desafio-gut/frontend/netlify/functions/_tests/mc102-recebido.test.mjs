@@ -6,6 +6,9 @@
 
 import { test, mock, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+// MC102.0 — ETag do duplo: por conteúdo, como um servidor que versiona o blob.
+const etagDe = (v) => `"${createHash("sha1").update(v).digest("hex")}"`;
 
 const blobs = new Map();
 mock.module("@netlify/blobs", {
@@ -15,7 +18,13 @@ mock.module("@netlify/blobs", {
       const m = blobs.get(name);
       return {
         async get(k, { type } = {}) { const v = m.get(k); return v === undefined ? null : (type === "json" ? JSON.parse(v) : v); },
-        async setJSON(k, o) { if (ctx.falhaChave && ctx.falhaChave.test(k)) throw new Error("blobs em baixo"); m.set(k, JSON.stringify(o)); },
+        async getWithMetadata(k, { type } = {}) { const v = m.get(k);
+          if (ctx.ceder) await new Promise((r) => setImmediate(r)); // MC102.0: forçar a corrida
+          if (v === undefined) return null;
+          return { data: type === "json" ? JSON.parse(v) : v, etag: etagDe(v), metadata: {} }; },
+        async setJSON(k, o, opt = {}) { if (ctx.falhaChave && ctx.falhaChave.test(k)) throw new Error("blobs em baixo"); 
+          if (opt.onlyIfMatch && (!m.has(k) || etagDe(m.get(k)) !== opt.onlyIfMatch)) return { modified: false };
+          const v = JSON.stringify(o); m.set(k, v); return { modified: true, etag: etagDe(v) }; },
         async list({ prefix = "" } = {}) { return { blobs: [...m.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })) }; },
         async delete(k) { m.delete(k); },
       };
@@ -264,4 +273,21 @@ test("C (uso): o GET do admin por produtoId também traz o arrependimento (valid
   const g = await json(req(pedidosH, "GET", `produtoId=${PID}`));
   assert.equal(g.body.pedido.arrependimento.fonte, "recebido_em");
   assert.equal(g.body.pedido.arrependimento.fim, "2026-10-02T10:00:00.000Z");
+});
+
+// ── MC102.0: o USO — os dois handlers HTTP reais em paralelo não perdem escritas ──
+test("MC102.0: PUT recebido (comprador) + PUT nfe (operador) em paralelo → 200/200 e os DOIS campos gravados", async () => {
+  semearVendido({ comMorada: true, comRastreio: true });
+  ctx.user = COMPRADOR; ctx.admin = ADMIN; ctx.ceder = true;
+  try {
+    const [a, b] = await Promise.all([
+      PUT_RECEBIDO(),
+      json(req(pedidosH, "PUT", `acao=nfe&produtoId=${PID}`, { numero: "123", serie: "1" })),
+    ]);
+    assert.equal(a.status, 200);
+    assert.equal(b.status, 200);
+    const p = ler("pedidos", `pedido:${PID}`);
+    assert.ok(p.recebido_em, "o recebido_em (início do prazo do CDC) não se perdeu");
+    assert.equal(p.nfe?.numero, "123", "a NF-e não se perdeu");
+  } finally { ctx.ceder = false; }
 });

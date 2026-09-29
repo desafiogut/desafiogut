@@ -296,25 +296,55 @@ export async function listarTodosPedidos() {
   return regs.filter(Boolean);
 }
 
-async function gravar(pedido, evento) {
+/**
+ * MC102.0 — escrita condicional (CAS). Só grava se o pedido ainda tiver o ETag lido; senão
+ * `conflito_escrita` e quem chamou relê e tenta de novo. SEM etag não grava (fail-closed): o
+ * @netlify/blobs ignora em silêncio um `onlyIfMatch` vazio e a escrita sairia incondicional.
+ */
+async function gravar(pedido, evento, etag) {
   const s = abrirStore(STORE_PEDIDOS);
   if (!s) return { ok: false, code: "store_indisponivel" };
+  if (!etag) return { ok: false, code: "etag_indisponivel" };
   const agora = new Date().toISOString();
   pedido.atualizado_em = agora;
   pedido.historico = [...(pedido.historico || []), { evento, em: agora }].slice(-30);
-  await s.setJSON(chavePedido(pedido.produtoId), pedido);
+  const w = await s.setJSON(chavePedido(pedido.produtoId), pedido, { onlyIfMatch: etag });
+  if (!w?.modified) return { ok: false, code: "conflito_escrita" };
   return { ok: true, pedido };
+}
+
+export const MAX_TENTATIVAS_CAS = 3;
+
+/**
+ * MC102.0 — ler (com ETag) → `mutar(pedido)` → gravar condicional, até 3 vezes. A `mutar` corre
+ * sobre o pedido ACABADO DE LER, portanto as guardas voltam a ser avaliadas em cada tentativa. Devolve
+ * `{ evento }` para gravar, ou o resultado final (erro / idempotente) para devolver sem gravar.
+ */
+async function atualizarPedido(produtoId, mutar) {
+  const s = abrirStore(STORE_PEDIDOS);
+  if (!s) return { ok: false, code: "store_indisponivel" };
+  let r = { ok: false, code: "conflito_escrita" };
+  for (let i = 0; i < MAX_TENTATIVAS_CAS; i++) {
+    const lido = await s.getWithMetadata(chavePedido(produtoId), { type: "json" }).catch(() => null);
+    const pedido = lido?.data ?? null;
+    const passo = mutar(pedido);
+    if (!passo?.evento) return passo;
+    r = await gravar(pedido, passo.evento, lido.etag);
+    if (r.code !== "conflito_escrita") return r;
+  }
+  return r;
 }
 
 /** O comprador define a morada. Só antes do envio (depois do rastreio já não muda). */
 export async function definirMorada(produtoId, endereco, morada) {
-  const pedido = await lerPedido(produtoId);
-  if (!pedido || pedido.comprador !== String(endereco).toLowerCase()) return { ok: false, code: "pedido_nao_encontrado" };
-  if (pedido.rastreio) return { ok: false, code: "pedido_ja_enviado" };
-  // A NF-e identifica o destinatário: depois de emitida, os dados já não mudam aqui.
-  if (pedido.nfe) return { ok: false, code: "nfe_ja_emitida" };
-  pedido.morada = validarMorada(morada);
-  return gravar(pedido, pedido.historico?.some((h) => h.evento === "morada_definida") ? "morada_alterada" : "morada_definida");
+  return atualizarPedido(produtoId, (pedido) => {
+    if (!pedido || pedido.comprador !== String(endereco).toLowerCase()) return { ok: false, code: "pedido_nao_encontrado" };
+    if (pedido.rastreio) return { ok: false, code: "pedido_ja_enviado" };
+    // A NF-e identifica o destinatário: depois de emitida, os dados já não mudam aqui.
+    if (pedido.nfe) return { ok: false, code: "nfe_ja_emitida" };
+    pedido.morada = validarMorada(morada);
+    return { evento: pedido.historico?.some((h) => h.evento === "morada_definida") ? "morada_alterada" : "morada_definida" };
+  });
 }
 
 /**
@@ -325,12 +355,13 @@ export async function definirMorada(produtoId, endereco, morada) {
  * Coexiste com o `marcar-entregue` do lojista/admin (`produtos.mjs`), que não é tocado.
  */
 export async function marcarRecebido(produtoId, endereco) {
-  const pedido = await lerPedido(produtoId);
-  if (!pedido || pedido.comprador !== String(endereco).toLowerCase()) return { ok: false, code: "pedido_nao_encontrado" };
-  if (!pedido.rastreio) return { ok: false, code: "pedido_nao_enviado" };
-  if (pedido.recebido_em) return { ok: true, idempotent: true, pedido };
-  pedido.recebido_em = new Date().toISOString();
-  return gravar(pedido, "recebido");
+  return atualizarPedido(produtoId, (pedido) => {
+    if (!pedido || pedido.comprador !== String(endereco).toLowerCase()) return { ok: false, code: "pedido_nao_encontrado" };
+    if (!pedido.rastreio) return { ok: false, code: "pedido_nao_enviado" };
+    if (pedido.recebido_em) return { ok: true, idempotent: true, pedido };
+    pedido.recebido_em = new Date().toISOString();
+    return { evento: "recebido" };
+  });
 }
 
 /**
@@ -364,11 +395,14 @@ export async function anexarArrependimento(pedido) {
 
 /** O operador regista o envio. Exige morada. Notifica o comprador. */
 export async function definirRastreio(produtoId, { codigo, transportadora }) {
-  const pedido = await lerPedido(produtoId);
-  if (!pedido) return { ok: false, code: "pedido_nao_encontrado" };
-  if (!pedido.morada) return { ok: false, code: "morada_em_falta" };
-  pedido.rastreio = { ...validarRastreio(codigo, transportadora), enviado_em: new Date().toISOString() };
-  const r = await gravar(pedido, "enviado");
+  const r = await atualizarPedido(produtoId, (pedido) => {
+    if (!pedido) return { ok: false, code: "pedido_nao_encontrado" };
+    if (!pedido.morada) return { ok: false, code: "morada_em_falta" };
+    pedido.rastreio = { ...validarRastreio(codigo, transportadora), enviado_em: new Date().toISOString() };
+    return { evento: "enviado" };
+  });
+  if (!r.ok) return r;
+  const { pedido } = r;
   await adicionarNotificacao(pedido.comprador, {
     tipo: "pedido_enviado", edicaoId: pedido.edicaoId, ref: pedido.rastreio.codigo,
     mensagem: `🚚 «${pedido.produtoNome}» foi enviado (${pedido.rastreio.transportadora}). Código de rastreio: ${pedido.rastreio.codigo}.`,
@@ -378,10 +412,13 @@ export async function definirRastreio(produtoId, { codigo, transportadora }) {
 
 /** O operador regista a NF-e (emitida fora do app). Notifica o comprador. */
 export async function definirNfe(produtoId, dados) {
-  const pedido = await lerPedido(produtoId);
-  if (!pedido) return { ok: false, code: "pedido_nao_encontrado" };
-  pedido.nfe = { ...validarNfe(dados), registada_em: new Date().toISOString() };
-  const r = await gravar(pedido, "nfe_registada");
+  const r = await atualizarPedido(produtoId, (pedido) => {
+    if (!pedido) return { ok: false, code: "pedido_nao_encontrado" };
+    pedido.nfe = { ...validarNfe(dados), registada_em: new Date().toISOString() };
+    return { evento: "nfe_registada" };
+  });
+  if (!r.ok) return r;
+  const { pedido } = r;
   await adicionarNotificacao(pedido.comprador, {
     tipo: "nfe_emitida", edicaoId: pedido.edicaoId, ref: `${pedido.nfe.serie}-${pedido.nfe.numero}`,
     mensagem: `🧾 A nota fiscal de «${pedido.produtoNome}» foi emitida: NF-e nº ${pedido.nfe.numero}, série ${pedido.nfe.serie}`

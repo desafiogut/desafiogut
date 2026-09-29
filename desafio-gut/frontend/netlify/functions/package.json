@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Netlify Functions do DesafioGUT — server-only (não importar do frontend).",
   "dependencies": {
-    "@netlify/blobs": "^8.2.0",
+    "@netlify/blobs": "^10.0.0",
     "@netlify/functions": "^3.0.0",
     "@opentelemetry/instrumentation-http": "^0.57.2",
     "@sentry/node": "^9.0.0",

@@ -9,6 +9,9 @@
 
 import { test, mock, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+// MC102.0 — ETag do duplo: por conteúdo, como um servidor que versiona o blob.
+const etagDe = (v) => `"${createHash("sha1").update(v).digest("hex")}"`;
 
 const blobs = new Map();
 mock.module("@netlify/blobs", {
@@ -18,7 +21,11 @@ mock.module("@netlify/blobs", {
       const m = blobs.get(name);
       return {
         async get(k, { type } = {}) { const v = m.get(k); return v === undefined ? null : (type === "json" ? JSON.parse(v) : v); },
-        async setJSON(k, o) { if (ctx.falhaChave && ctx.falhaChave.test(k)) throw new Error("blobs em baixo"); m.set(k, JSON.stringify(o)); },
+        async getWithMetadata(k, { type } = {}) { const v = m.get(k); if (v === undefined) return null;
+          return { data: type === "json" ? JSON.parse(v) : v, etag: etagDe(v), metadata: {} }; },
+        async setJSON(k, o, opt = {}) { if (ctx.falhaChave && ctx.falhaChave.test(k)) throw new Error("blobs em baixo"); 
+          if (opt.onlyIfMatch && (!m.has(k) || etagDe(m.get(k)) !== opt.onlyIfMatch)) return { modified: false };
+          const v = JSON.stringify(o); m.set(k, v); return { modified: true, etag: etagDe(v) }; },
         async list({ prefix = "" } = {}) { return { blobs: [...m.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })) }; },
         async delete(k) { m.delete(k); },
       };
