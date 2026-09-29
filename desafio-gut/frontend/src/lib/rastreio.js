@@ -28,30 +28,50 @@ export function traduzirEvento(codigo, descricao) {
   return descricao == null ? "" : String(descricao);
 }
 
+// Por instante, não por texto: "…T10:00-03:00" é depois de "…T12:30Z". Sem data legível → +∞ (vai para o fim).
+const instante = (d) => { const t = Date.parse(d); return Number.isNaN(t) ? Infinity : t; };
+
 /**
  * Eventos `[{ data, codigo, local, descricao }]` → `{ passos, alertas }`.
  * `passos` tem SEMPRE 5 entradas `{ codigo, rotulo, feito, data }`; `data` é a mais antiga do próprio código
- * (null se o passo só está feito por implicação). `alertas` são `{ codigo, rotulo, data }`, pela ordem recebida.
+ * (null se o passo só está feito por implicação).
+ * `alertas` são `{ codigo, rotulo, data, quantidade }` (MC102.1b, decisões do operador):
+ *   - DEC-102.1b-1: com «Entregue» feito, NÃO há alertas (o estado final sobrepõe-se);
+ *   - DEC-102.1b-2/-7: um banner por código; A1 repetido diz «N tentativas de entrega», os outros ficam sem contagem;
+ *     `data` é a da ocorrência mais RECENTE;
+ *   - DEC-102.1b-3/-7: ordem cronológica pela PRIMEIRA ocorrência de cada código.
  * Códigos desconhecidos não avançam passos nem geram alertas. `local` e `descricao` não saem daqui (P8).
  */
 export function construirTimeline(eventos) {
   const lista = Array.isArray(eventos) ? eventos : [];
   let alcancado = -1;
   const datas = {};
-  const alertas = [];
+  const grupos = new Map();
   for (const e of lista) {
     const c = String(e?.codigo ?? "");
     const data = e?.data ?? null;
     const i = PASSOS.indexOf(c);
     if (i >= 0) {
       if (i > alcancado) alcancado = i;
-      // Por instante, não por texto: "…T10:00-03:00" é depois de "…T12:30Z".
-      if (data && (!datas[c] || Date.parse(data) < Date.parse(datas[c]))) datas[c] = data;
+      if (data && (!datas[c] || instante(data) < instante(datas[c]))) datas[c] = data;
     } else if (ALERTAS.includes(c)) {
-      alertas.push({ codigo: c, rotulo: MAPA_EVENTOS[c], data });
+      const g = grupos.get(c) ?? { codigo: c, quantidade: 0, primeira: null, ultima: null };
+      g.quantidade += 1;
+      if (data && (!g.primeira || instante(data) < instante(g.primeira))) g.primeira = data;
+      if (data && (!g.ultima || instante(data) > instante(g.ultima))) g.ultima = data;
+      grupos.set(c, g);
     }
   }
   const passos = PASSOS.map((c, i) => ({ codigo: c, rotulo: MAPA_EVENTOS[c], feito: i <= alcancado, data: datas[c] ?? null }));
+  if (alcancado === PASSOS.length - 1) return { passos, alertas: [] };
+  const alertas = [...grupos.values()]
+    .sort((a, b) => instante(a.primeira) - instante(b.primeira))
+    .map((g) => ({
+      codigo: g.codigo,
+      rotulo: g.codigo === "A1" && g.quantidade > 1 ? `${g.quantidade} tentativas de entrega` : MAPA_EVENTOS[g.codigo],
+      data: g.ultima,
+      quantidade: g.quantidade,
+    }));
   return { passos, alertas };
 }
 

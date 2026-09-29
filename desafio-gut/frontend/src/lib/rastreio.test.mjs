@@ -79,9 +79,45 @@ test("com alertas: 5 passos + os alertas como banners, pela ordem, sem avançar 
   assert.equal(t.passos.length, 5);
   assert.deepEqual(t.passos.map((p) => p.feito), [true, false, false, false, false]);
   assert.deepEqual(t.alertas, [
-    { codigo: "A1", rotulo: "Tentativa de entrega sem sucesso", data: "2026-09-23" },
-    { codigo: "A2", rotulo: "Aguardando retirada na agência", data: "2026-09-24" },
+    { codigo: "A1", rotulo: "Tentativa de entrega sem sucesso", data: "2026-09-23", quantidade: 1 },
+    { codigo: "A2", rotulo: "Aguardando retirada na agência", data: "2026-09-24", quantidade: 1 },
   ]);
+});
+
+// ── MC102.1b — Frente 0: decisões do operador (literais, bidireccional) ─────────────────────────
+test("DEC-102.1b-1: com «Entregue» feito não há alertas; sem ele, os alertas ficam", () => {
+  const antes = [ev("0", "2026-09-20T12:00:00Z"), ev("A1", "2026-09-22T12:00:00Z"), ev("A3", "2026-09-23T12:00:00Z")];
+  assert.equal(construirTimeline(antes).alertas.length, 2, "sem Entregue, os alertas aparecem");
+  const depois = construirTimeline([...antes, ev("4", "2026-09-24T12:00:00Z")]);
+  assert.deepEqual(depois.alertas, []);
+  assert.ok(depois.passos.every((p) => p.feito), "os 5 passos continuam lá, todos feitos");
+  assert.deepEqual(construirTimeline([ev("A2", "2026-09-22"), ev("3", "2026-09-23")]).alertas.length, 1, "«Saiu para entrega» não esconde");
+});
+
+test("DEC-102.1b-2/-7: A1 repetido → «N tentativas de entrega», com a data mais RECENTE", () => {
+  const t = construirTimeline([ev("A1", "2026-09-23T15:00:00Z"), ev("A1", "2026-09-22T15:00:00Z"), ev("A1", "2026-09-24T15:00:00Z")]);
+  assert.deepEqual(t.alertas, [{ codigo: "A1", rotulo: "3 tentativas de entrega", data: "2026-09-24T15:00:00Z", quantidade: 3 }]);
+  assert.equal(construirTimeline([ev("A1", "2026-09-22"), ev("A1", "2026-09-23")]).alertas[0].rotulo, "2 tentativas de entrega");
+  assert.equal(construirTimeline([ev("A1", "2026-09-22")]).alertas[0].rotulo, "Tentativa de entrega sem sucesso", "1 só: rótulo normal");
+});
+
+test("DEC-102.1b-7: A2/A3 repetidos → um só banner, SEM contagem no texto", () => {
+  const t = construirTimeline([ev("A2", "2026-09-25T10:00:00Z"), ev("A2", "2026-09-25T18:00:00Z"), ev("A3", "2026-09-26T10:00:00Z"), ev("A3", "2026-09-27T10:00:00Z")]);
+  assert.deepEqual(t.alertas.map((a) => [a.codigo, a.rotulo, a.quantidade, a.data]), [
+    ["A2", "Aguardando retirada na agência", 2, "2026-09-25T18:00:00Z"],
+    ["A3", "Devolvido ao remetente", 2, "2026-09-27T10:00:00Z"],
+  ]);
+});
+
+test("DEC-102.1b-3/-7: ordem cronológica pela PRIMEIRA ocorrência, qualquer que seja a ordem de chegada", () => {
+  // A2: 1.ª em 21, última em 27. A1: 1.ª em 22, última em 23. Pela 1.ª → A2, A1; pela última seria A1, A2.
+  const evs = [ev("A1", "2026-09-23T10:00:00Z"), ev("A2", "2026-09-27T10:00:00Z"), ev("A1", "2026-09-22T10:00:00Z"), ev("A2", "2026-09-21T10:00:00Z")];
+  for (const ordem of [evs, [...evs].reverse()]) {
+    assert.deepEqual(construirTimeline(ordem).alertas.map((a) => a.codigo), ["A2", "A1"]);
+  }
+  assert.deepEqual(construirTimeline([ev("A3", "2026-09-20T10:00:00-03:00"), ev("A2", "2026-09-20T12:30:00Z")]).alertas.map((a) => a.codigo),
+    ["A2", "A3"], "compara por instante (fuso no ISO), não por texto");
+  assert.deepEqual(construirTimeline([ev("A3", null), ev("A2", "2026-09-20")]).alertas.map((a) => a.codigo), ["A2", "A3"], "sem data vai para o fim");
 });
 
 test("a timeline não carrega local nem descrição (P8: podem trazer morada)", () => {

@@ -3,6 +3,8 @@
 // A validação AUTORITATIVA é a do servidor (`netlify/functions/_lib/pedidos.mjs`). Esta só
 // evita uma ida ao servidor com um formulário obviamente incompleto e dá a mensagem certa.
 
+import { timelineDoRastreio } from "./rastreio.js";
+
 export const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
   "PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -36,12 +38,14 @@ export function erroDoEndereco(f) {
 
 /**
  * Em que passo está o pedido, do ponto de vista do comprador.
- * sem_endereco → aguarda_envio → enviado → recebido (MC102: o comprador confirmou)
+ * sem_endereco → aguarda_envio → enviado → entregue (MC102.1b: a timeline chegou a «Entregue») →
+ * recebido (MC102: o comprador confirmou). «Recebido» ganha a «Entregue» (DEC-102.1b-8).
  */
 export function estadoDoPedido(p) {
   if (!p?.morada) return "sem_endereco";
   if (!p.rastreio) return "aguarda_envio";
   if (p.recebido_em) return "recebido";
+  if (timelineDoRastreio(p.rastreio)?.passos.at(-1).feito) return "entregue";
   return "enviado";
 }
 
@@ -49,6 +53,7 @@ export const ROTULO_ESTADO = {
   sem_endereco:  "Falta o endereço de entrega",
   aguarda_envio: "Endereço recebido — aguardando envio",
   enviado:       "Enviado",
+  entregue:      "Entregue",
   recebido:      "Recebido",
 };
 
