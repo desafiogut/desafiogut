@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-29 (MC102.1a: **estrutura do rastreio** — contrato `consultarRastreio` + mock só em testes (injecção; grafo esbuild provado), mapa PT-BR de 5 passos + 3 alertas (DEC-102.1-H), `TimelineRastreio` no cartão só com `rastreio.eventos`; produção visualmente igual até ao MC102.1b. Anterior: MC102.0: **escrita condicional (CAS) no pedido** — `@netlify/blobs` 10.0.0, `set()` com If-Match (o `setJSON` não o envia), retry da operação 3×; ETag de produção por medir. Anterior: MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-29 (MC102.1b: **Frenet real** — adaptador (só Correios, SEDEX 03220) + `webhook-frenet` idempotente e fail-closed (falta o operador definir `FRENET_WEBHOOK_TOKEN`) + eventos no pedido (só data+código, ISO UTC, via CAS) + 6 refinamentos da timeline (estado «Entregue»). Anterior: MC102.1a: **estrutura do rastreio** — contrato `consultarRastreio` + mock só em testes (injecção; grafo esbuild provado), mapa PT-BR de 5 passos + 3 alertas (DEC-102.1-H), `TimelineRastreio` no cartão só com `rastreio.eventos`; produção visualmente igual até ao MC102.1b. Anterior: MC102.0: **escrita condicional (CAS) no pedido** — `@netlify/blobs` 10.0.0, `set()` com If-Match (o `setJSON` não o envia), retry da operação 3×; ETag de produção por medir. Anterior: MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -3913,3 +3913,85 @@ O 1.º teste procurava `rastreio-mock` no texto dos ficheiros. O validador mostr
 4. Formato e fuso da data (hoje dd/mm em Brasília).
 5. Se `local`/`descricao` (texto livre, que pode trazer nome ou morada) se gravam no pedido; o validador recomenda gravar só `{data, codigo}`.
 6. UX com «4 Entregue»: o estado «Enviado» e o «Recebi» aparecem ao lado da timeline «Entregue».
+> ✅ As 6 foram decididas no MC102.1b (DEC-102.1b-1…6) e estão aplicadas: ver a secção seguinte.
+
+---
+
+## MC102.1b — Frenet real + refinamentos da timeline (2026-09-29)
+
+**Commits:** `0c99674` (Frente 0) · `0f68158` (A+B+C) · `7476330` (E2E) · `de3ead6` (achados do validador) + docs. Todos publicados pelo auto-deploy.
+Logs: `_logs/MC102.1b_*.md` · Relatório: `Desktop/MC102.1b-RELATORIO.md`.
+
+### Decisões do operador (R18)
+| # | Decisão |
+|---|---|
+| DEC-102.1b-1 | Alertas **escondidos** depois de «Entregue» |
+| DEC-102.1b-2/-7 | Um banner por código. A1 repetido → «N tentativas de entrega»; A2/A3/… sem contagem. Data = a ocorrência **mais recente**; ordem pela **1.ª ocorrência** |
+| DEC-102.1b-3 | Ordem cronológica |
+| DEC-102.1b-4 | `dd/mm`, hora de Brasília (já era) |
+| DEC-102.1b-5 | Grava-se no pedido **só `data` + `codigo`** (LGPD) |
+| DEC-102.1b-6/-8 | Estado do cartão: `recebido` (comprador) > **`entregue`** (a timeline chega ao passo 4) > `enviado`. O «Recebi» continua a aparecer com «Entregue» |
+| DEC-102.1b-9 | EventType Frenet → genérico: 0→`0` · 1→`1` · 5→`3` · 9→`4` · 18→`A2` · 3→`A3` · 2→**`A4` «Entrega atrasada»** · 4→**`A5` «Objeto extraviado»**. O passo `2` e o `A1` não têm equivalente Frenet |
+| DEC-102.1b-10 | Consulta só Correios, com serviço fixo **SEDEX 03220**; o webhook casa pelo **`TrackingNumber`**. O operador confirma o custo e o alcance do webhook com a Frenet |
+| DEC-102.1b-11 | Vários pedidos com o mesmo código (um pacote) → **todos** recebem o evento |
+| — | `FRENET_TOKEN` actual mantém-se até ao MC102.1b fechar; é rotacionado com a migração para o titular do MEI (DEC-09) ou via suporte |
+
+### O que existe agora
+- **`_lib/rastreio-frenet.mjs`**: `POST https://api.frenet.com.br/tracking/trackinginfo`, header `token` (de `process.env.FRENET_TOKEN`), `AbortSignal.timeout(8000)`.
+  - ⚠️ **A API responde HTTP 200 aos erros**, com a mensagem em `ErrorMessage`. Tem de ser lida (medido no PoC).
+  - Um código sem eventos dá 200 vazio. Sem `ShippingServiceCode`, a API recusa.
+  - `dataFrenetParaIso("dd/mm/aaaa hh:mm")` → ISO −03:00. ⚠️ **Assume Brasília** (a doc não diz o fuso). Valida o dia por ida e volta, porque o `Date.parse` do V8 aceita 31/02.
+  - `_lib/rastreio.mjs`: `ADAPTADOR_REAL = adaptadorFrenet`. ℹ️ **Nenhum handler chama o `consultarRastreio` hoje.** O caminho vivo é o webhook.
+- **`webhook-frenet.mjs`**, com esta ordem:
+  1. POST;
+  2. **fail-closed**: sem `FRENET_WEBHOOK_TOKEN` → **503**;
+  3. header **`x-frenet-token`** comparado com `timingSafeEqual` → 401;
+  4. `TrackingNumber` → `encontrarPedidosPorRastreio` (**estrita**: um store em falha dá 503; nunca é «não encontrado»);
+  5. código desconhecido → 200 `ignorado`;
+  6. `registrarEventosRastreio` em cada pedido que casa; **reenvio → 200 `duplicado`, sem escrita**; conflito CAS → 503.
+- **`_lib/pedidos.mjs`**:
+  - `registrarEventosRastreio` **via `atualizarPedido`** grava `rastreio.eventos[{data, codigo}]`:
+    - data em **ISO UTC canónico** (dedup por instante);
+    - só códigos `/^(?:[0-4]|A[1-5])$/`;
+    - dedup `data|codigo`;
+    - no máximo **50** (os mais recentes).
+  - `atualizarPedido`/`gravar` **não mudaram**.
+- **`src/lib/rastreio.js`** + **`src/lib/pedidos.js`**: as 6 decisões. `ROTULO_ESTADO.entregue = "Entregue"`.
+
+### ⛔ Para o webhook funcionar (operador; NÃO executado)
+1. Definir **`FRENET_WEBHOOK_TOKEN`** no Netlify (production). É um segredo **novo**, diferente do `FRENET_TOKEN` da API.
+2. Painel da Frenet → «Atualização de Tracking»:
+   - URL `…/.netlify/functions/webhook-frenet`;
+   - **TOKEN_NAME `x-frenet-token`**;
+   - TOKEN_VALUE = o mesmo segredo.
+3. Confirmar com o suporte: (a) o **custo por consulta** (a Frenet tem planos pagos; R2); (b) **se o webhook dispara para códigos não criados na Frenet**. Pela doc, o webhook envia `OrderId`/`ShipmentId` de envios da plataforma, e o nosso lojista escreve o código à mão.
+
+### Validação
+- Suíte **508/508 · 788/794**.
+- Mutação: 14/14 (F0) · 15/15 (A) · 17/17 (B+C) · 8/8 (correcções).
+- E2E contra a Frenet real e a produção: **VERDE 17/17** (`scripts/mc1021b-e2e-frenet.mjs`, v2). O token não está nos 1708 ficheiros versionados nem nos 131 chunks servidos.
+- Validador: **APROVADO COM RESSALVAS**. Corrigidos:
+  - o store em falha dava 200 e perdia o evento;
+  - um pacote com vários pedidos só gravava no 1.º;
+  - a dedup falhava entre fusos;
+  - a data ilegível ficava como a mais recente;
+  - a lib aceitava data ou código arbitrários;
+  - o script carregava todos os segredos.
+
+### ⚠️ Pendentes
+- O **fluxo com um pedido real** (webhook → pedido → timeline em produção) não foi medido: a produção tem 0 pedidos e o webhook está fail-closed.
+- `definirRastreio` (MC102) **apaga os eventos** se for chamado de novo com o mesmo código. Por decidir num MC próprio.
+- Um evento expulso (acima de 50) volta a entrar se reenviado (raro). Cada POST lista todos os pedidos (O(N)): precisa de índice com volume.
+- `src/pages/admin/Pedidos.jsx` mostra «Entregue» (e «Recebido») com a cor de aviso: só `enviado` é verde. Não autorizado neste MC.
+- `desafio-gut/frontend/package-lock.json` já estava **modificado antes do MC** (84 linhas, padrão do `netlify deploy --build`). Não foi commitado.
+
+---
+
+## ⚠️ Armadilhas de ambiente (registo contínuo)
+
+Consultar antes de mexer em segredos ou no CLI da Netlify.
+
+- **`netlify env:set` imprime o valor por defeito.** Usar `| Out-Null` e `--force` para o esconder. O `-AsSecureString` do PowerShell **não** cobre a saída do CLI da Netlify. *(Registo do operador, MC102.1b.)*
+- **`netlify env:list --json` devolve um OBJECTO** (`{ CHAVE: valor }`), não uma lista. Filtrar com `.CHAVE` na raiz, não com `Where-Object`. *(Registo do operador; confirmado por medição no SEG-1 do MC102.1b.)* ⚠️ Carrega **todos** os segredos do contexto para memória: para saber se uma variável existe, usar `env:get` dessa variável.
+- **`netlify env:get X` com X AUSENTE escreve «No value set in the <ctx> context for environment variable X» com exit 0.** Um teste de «saída não vazia» dá «definido» falso. *(Medido no MC102.1b.)*
+- **Para usar um segredo num script sem o imprimir:** capturar a saída do CLI **dentro** de um processo node (`spawnSync`), validar a forma com uma regex, e imprimir só o tamanho ou booleanos. Mascarar qualquer eco na resposta de terceiros.
