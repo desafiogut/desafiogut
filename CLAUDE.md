@@ -3958,6 +3958,8 @@ Logs: `_logs/MC102.1b_*.md` · Relatório: `Desktop/MC102.1b-RELATORIO.md`.
   - `atualizarPedido`/`gravar` **não mudaram**.
 - **`src/lib/rastreio.js`** + **`src/lib/pedidos.js`**: as 6 decisões. `ROTULO_ESTADO.entregue = "Entregue"`.
 
+> ⚠️ **Validação de 2026-09-30: PARADA no passo 1.** O operador reportou o segredo configurado, mas o `FRENET_WEBHOOK_TOKEN` **não existe no site** `silly-stardust-ca71bc`. Está ausente nos 4 contextos, e nenhuma variável com grafia parecida existe (controlo positivo: o `FRENET_TOKEN` é visto). A produção responde 503 `webhook_nao_configurado`. ⚠️ Um `netlify env:set … | Out-Null` também **esconde os erros** do CLI: confirmar pelo exit code ou pelo painel. Ver `_logs/MC102.1b_VALIDACAO-WEBHOOK.md`.
+
 ### ⛔ Para o webhook funcionar (operador; NÃO executado)
 1. Definir **`FRENET_WEBHOOK_TOKEN`** no Netlify (production). É um segredo **novo**, diferente do `FRENET_TOKEN` da API.
 2. Painel da Frenet → «Atualização de Tracking»:
