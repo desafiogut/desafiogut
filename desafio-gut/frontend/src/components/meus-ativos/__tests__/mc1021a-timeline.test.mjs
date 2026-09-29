@@ -1,6 +1,10 @@
 // MC102.1a — timeline do rastreio, RENDERIZADA (Frente C): o componente sozinho e ligado no cartão do pedido.
 // node --test src/components/meus-ativos/__tests__/mc1021a-timeline.test.mjs   (a partir de desafio-gut/frontend)
 
+// O processo corre em UTC de propósito: a data tem de sair em hora de Brasília venha o fuso da máquina que vier
+// (numa máquina já em America/Sao_Paulo, tirar o timeZone do componente passava despercebido — validador, C1).
+process.env.TZ = "UTC";
+
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { carregar, render, texto, fechar } from "./_render.mjs";
@@ -59,6 +63,30 @@ test("com alertas → banner(s) com role=status; sem alertas → nenhum banner",
   assert.equal(passos(com).length, 5, "o alerta não tira nem acrescenta passos");
   const sem = render(Timeline, construirTimeline(EVENTOS));
   assert.doesNotMatch(sem, /role="status"|data-alerta/);
+});
+
+test("vários alertas → um banner por alerta, pela ordem recebida", () => {
+  const html = render(Timeline, construirTimeline([{ codigo: "A1", data: "2026-09-23T15:00:00Z" }, { codigo: "A2", data: "2026-09-24T15:00:00Z" }]));
+  assert.deepEqual([...html.matchAll(/data-alerta="([^"]+)"/g)].map((m) => m[1]), ["A1", "A2"]);
+  assert.equal((html.match(/role="status"/g) || []).length, 2);
+});
+
+test("data em hora de Brasília, só dia/mês: 01:30Z do dia 24 é o dia 23 (com o processo em UTC)", () => {
+  const html = render(Timeline, construirTimeline([{ codigo: "0", data: "2026-09-24T01:30:00Z" }]));
+  assert.match(texto(html), /Postado 23\/09/);
+  assert.doesNotMatch(texto(html), /24\/09|2026|:30/);
+});
+
+test("sem passos recebidos, o componente mostra os 5 passos pendentes (não só a lib garante os 5)", () => {
+  assert.deepEqual(passos(render(Timeline, {})).map(([c, f]) => `${c}${f}`), ["0false", "1false", "2false", "3false", "4false"]);
+});
+
+test("isMobile: coluna no telemóvel, linha no desktop — e o cartão passa o isMobile", () => {
+  const t = construirTimeline(EVENTOS);
+  assert.match(render(Timeline, { ...t, isMobile: true }), /<ol[^>]*flex-direction:column/);
+  assert.match(render(Timeline, { ...t, isMobile: false }), /<ol[^>]*flex-direction:row/);
+  const noCartao = render(Cartao, { pedido: PEDIDO, endereco: DONO, authToken: "tok", isMobile: true, aoGravar() {} });
+  assert.match(blocoTimeline(noCartao), /<ol[^>]*flex-direction:column/);
 });
 
 test("fallback → só o código em bruto: sem timeline, sem link, sem URL (P9)", () => {

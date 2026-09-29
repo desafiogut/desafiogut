@@ -17,6 +17,8 @@
 /** Adaptador da transportadora real — MC102.1b. Enquanto não existir, tudo cai no fallback. */
 export const ADAPTADOR_REAL = null;
 
+const textoOuNull = (v) => (typeof v === "string" || typeof v === "number" ? String(v) : null);
+
 /**
  * @param {string} codigo código de rastreio gravado no pedido (`pedido.rastreio.codigo`)
  * @param {string} transportadora `pedido.rastreio.transportadora`
@@ -32,12 +34,13 @@ export async function consultarRastreio(codigo, transportadora, { adaptador = AD
     return { ok: false, code: "falha_adaptador", fallback };
   }
   if (!Array.isArray(r?.eventos)) return { ok: false, code: "resposta_invalida", fallback };
-  // Só os 4 campos do contrato: o que a transportadora devolver a mais (destinatário, documento…) não
-  // passa daqui (P8).
+  // Só os 4 campos do contrato, e só como texto: chaves a mais e objectos aninhados (destinatário, documento…)
+  // não passam daqui (P8). ⚠️ O TEXTO livre de `local`/`descricao` passa como vem — a timeline não o usa;
+  // gravá-lo ou não no pedido é decisão do MC102.1b.
   return {
     ok: true,
     eventos: r.eventos.map((e) => ({
-      data: e?.data ?? null, codigo: String(e?.codigo ?? ""), local: e?.local ?? null, descricao: e?.descricao ?? null,
+      data: textoOuNull(e?.data), codigo: String(e?.codigo ?? ""), local: textoOuNull(e?.local), descricao: textoOuNull(e?.descricao),
     })),
   };
 }

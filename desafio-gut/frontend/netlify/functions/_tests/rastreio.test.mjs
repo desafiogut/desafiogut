@@ -58,6 +58,27 @@ test("campos a mais da transportadora (nome, CPF, morada) não passam (P8)", asy
   assert.doesNotMatch(JSON.stringify(r), /Maria Silva|12345678909|Rua A/);
 });
 
+test("campos só como texto: objectos aninhados caem para null; números viram texto (P8, validador)", async () => {
+  const aninha = { async consultar() {
+    return { eventos: [{ data: { cpf: "12345678909" }, codigo: 4, local: { logradouro: "Rua A, 1", destinatario: "Maria Silva" },
+      descricao: ["Maria Silva"] }, { data: 1758369600000, codigo: "0", local: "Manaus/AM", descricao: "Postado" }] };
+  } };
+  const r = await consultarRastreio(12345, "Correios", { adaptador: aninha });
+  assert.deepEqual(r.eventos, [
+    { data: null, codigo: "4", local: null, descricao: null },
+    { data: "1758369600000", codigo: "0", local: "Manaus/AM", descricao: "Postado" },
+  ]);
+  assert.deepEqual(await consultarRastreio(12345, "Correios"), { ok: false, code: "adaptador_indisponivel", fallback: { codigo: "12345" } });
+});
+
+test("qualquer tipo de erro do adaptador fica no fallback (TypeError, rejeição sem Error)", async () => {
+  for (const adaptador of [{ async consultar() { return null.eventos; } }, { consultar() { return Promise.reject("x"); } }, {}]) {
+    const r = await consultarRastreio(CODIGO, "Correios", { adaptador });
+    assert.equal(r.ok, false);
+    assert.deepEqual(r.fallback, { codigo: CODIGO });
+  }
+});
+
 // ── HARD GATE 13: o mock não entra em produção ────────────────────────────────────────────────
 const FUNCOES = join(dirname(fileURLToPath(import.meta.url)), "..");
 const semComentarios = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -66,7 +87,7 @@ function ficheirosDeProducao(d = FUNCOES, out = []) {
     if (e === "node_modules" || e === "_tests") continue;
     const p = join(d, e);
     if (statSync(p).isDirectory()) ficheirosDeProducao(p, out);
-    else if (/\.(m?js|cjs|ts)$/.test(e) && e !== "rastreio-mock.mjs") out.push(p);
+    else if (/\.(m?[jt]sx?|c[jt]s)$/.test(e) && e !== "rastreio-mock.mjs") out.push(p);
   }
   return out;
 }
@@ -78,4 +99,25 @@ test("nenhum ficheiro de produção em netlify/functions importa o rastreio-mock
   assert.ok(ficheiros.some((p) => p.endsWith(join("_lib", "rastreio.mjs"))), "a varredura tem de ver _lib/rastreio.mjs");
   const culpados = ficheiros.filter((p) => /rastreio-mock/.test(semComentarios(readFileSync(p, "utf8"))));
   assert.deepEqual(culpados.map((p) => relative(FUNCOES, p)), []);
+});
+
+// A varredura acima é TEXTUAL: `export … from "./rastreio-mock.mjs"` escapava-lhe e o mock entrava no bundle
+// (medido pelo validador). Esta segue o grafo REAL, como o bundler da Netlify o segue: o esbuild resolve os imports
+// de todas as functions (+ _lib/rastreio.mjs, que ainda nenhuma importa) e nenhum input pode ser o mock.
+test("o grafo de imports de TODAS as functions (esbuild) não contém o rastreio-mock (HARD GATE 13)", async () => {
+  const { build } = await import("esbuild");
+  const grafo = (entryPoints, stdin) => build({
+    ...(stdin ? { stdin: { contents: stdin, resolveDir: join(FUNCOES, "_lib"), loader: "js" } } : { entryPoints }),
+    bundle: true, write: false, metafile: true, platform: "node", format: "esm", packages: "external", logLevel: "silent",
+    outdir: join(FUNCOES, "_nao_escrito"),
+  }).then((r) => Object.keys(r.metafile.inputs));
+  // Controlo positivo: o detector vê o mock quando ele é importado — também pela forma com escape.
+  const escapado = await grafo(null, 'export { adaptadorMock } from "./rastreio\\u002dmock.mjs";');
+  assert.ok(escapado.some((i) => i.endsWith("rastreio-mock.mjs")), "o controlo positivo tem de ver o mock");
+  const entradas = readdirSync(FUNCOES).filter((e) => /\.(m?[jt]s|c[jt]s)$/.test(e)).map((e) => join(FUNCOES, e));
+  assert.ok(entradas.length > 50, `só ${entradas.length} functions`);
+  const inputs = await grafo([...entradas, join(FUNCOES, "_lib", "rastreio.mjs")]);
+  assert.ok(inputs.some((i) => i.endsWith(join("_lib", "rastreio.mjs").replaceAll("\\", "/")) || i.endsWith("_lib/rastreio.mjs")),
+    "o grafo tem de incluir _lib/rastreio.mjs");
+  assert.deepEqual(inputs.filter((i) => /rastreio-mock/.test(i)), []);
 });

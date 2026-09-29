@@ -45,7 +45,8 @@ export function construirTimeline(eventos) {
     const i = PASSOS.indexOf(c);
     if (i >= 0) {
       if (i > alcancado) alcancado = i;
-      if (data && (!datas[c] || data < datas[c])) datas[c] = data;
+      // Por instante, não por texto: "…T10:00-03:00" é depois de "…T12:30Z".
+      if (data && (!datas[c] || Date.parse(data) < Date.parse(datas[c]))) datas[c] = data;
     } else if (ALERTAS.includes(c)) {
       alertas.push({ codigo: c, rotulo: MAPA_EVENTOS[c], data });
     }

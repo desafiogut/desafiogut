@@ -66,6 +66,14 @@ test("a ordem de chegada não importa: fica o passo mais adiantado e a data mais
   }
 });
 
+test("a data mais antiga compara-se por INSTANTE, não por texto (fuso no ISO — validador)", () => {
+  // "…T10:00:00-03:00" = 13:00Z, depois de "…T12:30:00Z"; por texto ganhava o -03:00.
+  for (const ordem of [["2026-09-20T10:00:00-03:00", "2026-09-20T12:30:00Z"], ["2026-09-20T12:30:00Z", "2026-09-20T10:00:00-03:00"]]) {
+    const t = construirTimeline(ordem.map((d) => ev("0", d)));
+    assert.equal(t.passos[0].data, "2026-09-20T12:30:00Z");
+  }
+});
+
 test("com alertas: 5 passos + os alertas como banners, pela ordem, sem avançar passos", () => {
   const t = construirTimeline([ev("0", "2026-09-20"), ev("A1", "2026-09-23"), ev("A2", "2026-09-24")]);
   assert.equal(t.passos.length, 5);

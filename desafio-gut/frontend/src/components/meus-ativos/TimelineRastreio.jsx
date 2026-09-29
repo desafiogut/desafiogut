@@ -1,4 +1,8 @@
 import { COR } from "./_estilo.js";
+import { construirTimeline } from "../../lib/rastreio.js";
+
+// Sem passos recebidos, os 5 passos pendentes: o componente também garante os 5, não só a lib.
+const PASSOS_VAZIOS = construirTimeline([]).passos;
 
 /**
  * Timeline do rastreio — MC102.1a. Apresentacional: recebe o que `construirTimeline` (src/lib/rastreio.js)
@@ -7,7 +11,7 @@ import { COR } from "./_estilo.js";
  * Fallback (P9): só o código em bruto, sem link nem URL inventada.
  * P8: não recebe nem mostra local, descrição, nome ou morada — só rótulos e datas.
  */
-export default function TimelineRastreio({ passos = [], alertas = [], fallback = null, isMobile = false }) {
+export default function TimelineRastreio({ passos = PASSOS_VAZIOS, alertas = [], fallback = null, isMobile = false }) {
   if (fallback) {
     return (
       <p data-rastreio="fallback" style={{ margin: "0.5rem 0 0", fontSize: "0.8rem", color: COR.muted }}>
