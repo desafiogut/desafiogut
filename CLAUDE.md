@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-29 (MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-29 (MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -3787,3 +3787,47 @@ rasto» (li a idempotência do crédito e não a escrita incondicional no `mp-ap
 1. Ver o registo do webhook no **painel do Mercado Pago** e os alertas `webhook_mp_rejeitado` no **Sentry**.
 2. Decidir sobre o **APK tratado como pwa** (`isLeilaoAtivo:true` no Android).
 3. (opcional) Um `ignore` no `netlify.toml` para commits só de docs. Não executado.
+
+
+---
+
+## MC102 — «Recebi» pelo comprador (C13) + prazo de arrependimento de 7 dias (2026-09-29)
+
+**Commits:** `814d3a3` (feat) + `c408dd0` (testes do validador) · **Produção:** deploy `6abb39cf…` (ready, `commit_ref c408dd0`).
+Logs: `_logs/MC102_*.md` · Relatório: `Desktop/MC102-RELATORIO.md`.
+
+### Decisões do operador (R18)
+1. Autorizados, além da lista do MC: **`src/lib/pedidos.js`** e **1 linha em `src/pages/MeusAtivos.jsx`** (`endereco={address}`).
+   Motivo: usar o contexto dentro do `MeusPedidos` quebraria o arnês do `MeusAtivos.test.mjs` (o alias só troca `../context/AppContext.jsx`).
+2. O prazo de arrependimento fica **só na API** (nenhum texto novo no ecrã).
+
+### O que existe agora
+- **Botão «Recebi»** no cartão do pedido (`src/components/meus-ativos/MeusPedidos.jsx`). Aparece só se `podeMarcarRecebido(pedido, endereco)`:
+  dono (sem distinguir maiúsculas) + há rastreio + ainda sem `recebido_em`. Estado novo **«Recebido»**.
+- **`PUT /pedidos?acao=recebido&produtoId=`** → `marcarRecebido()` (`_lib/pedidos.mjs`):
+  - sem sessão → 401;
+  - **outro endereço → 404 `pedido_nao_encontrado`** (padrão do ficheiro: não confirma que o pedido existe; o MC pedia 403, desvio declarado e aceite pelo validador);
+  - sem rastreio → 409 `pedido_nao_enviado`;
+  - idempotente em série: nunca reescreve `recebido_em`.
+  - O `marcar-entregue` do lojista/admin **coexiste, intocado**.
+- **`prazoArrependimento()` + `anexarArrependimento()`:** o `GET /pedidos` (comprador e admin, lista e por id) traz `arrependimento {inicio, fim, fonte, dias:7}`.
+  - Início = `recebido_em`; senão o **`entregue_em` do PRODUTO** (o pedido não tem esse campo); senão `null`.
+  - Calculado na leitura, nunca gravado.
+  - ⚠️ `fim` = +7×24 h. A contagem civil (CC art. 132) é decisão jurídica por tomar.
+
+### Validação
+- Suíte **469/469 · 730/736**.
+- Mutação **26/26** (A 10 · B 8 · C 8), incluindo os **6 mutantes do validador** que antes sobreviviam.
+- `validar:dist` corrido **no bundle servido** (o `dist/` local é o do APK), com controlo positivo e negativo.
+- SEG5 VERDE.
+
+### ⛔ Pendente (reportado, não corrigido)
+- **Corrida sem CAS em `gravar()`:** «Recebi» e NF-e em paralelo → a NF-e perde-se com 200.
+  - A causa é anterior ao MC102 (o escritor é partilhado).
+  - O `@netlify/blobs` instalado é o **8.2.0, sem `onlyIfMatch`** ⇒ a correcção exige actualizar a dependência.
+  - **Candidato a MC antes de haver volume real.**
+- Um rastreio corrigido depois do «Recebi» deixa `recebido_em < enviado_em` (decisão de produto).
+- Sem diálogo «tem a certeza?»: um toque acidental abre o prazo mais cedo (decisão de produto).
+
+### Lição de instrumento
+`grep -c $'$'` no MSYS «contou» CRLF em ficheiros que são **LF** (medido em bytes com Python). **Medir os fins de linha em bytes, nunca com o grep do MSYS.**
