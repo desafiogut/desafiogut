@@ -437,6 +437,10 @@ export async function definirNfe(produtoId, dados) {
 export const MAX_EVENTOS_RASTREIO = 50;
 
 const normalizarCodigoRastreio = (c) => String(c ?? "").trim().toUpperCase();
+/** Os códigos genéricos de `src/lib/rastreio.js` (passos 0–4, alertas A1–A5). Outro texto não entra no pedido. */
+const CODIGO_GENERICO_RE = /^(?:[0-4]|A[1-5])$/;
+/** Data canónica: o mesmo instante com fusos diferentes tem de dar a MESMA chave de dedup (validador MC102.1b). */
+const dataCanonica = (d) => { const t = typeof d === "string" ? Date.parse(d) : NaN; return Number.isNaN(t) ? null : new Date(t).toISOString(); };
 
 /**
  * MC102.1b (Frente C) — acrescenta eventos da transportadora a `pedido.rastreio.eventos`, via `atualizarPedido`
@@ -455,8 +459,8 @@ export async function registrarEventosRastreio(produtoId, codigoRastreio, evento
     const vistos = new Set(actuais.map((e) => `${e.data}|${e.codigo}`));
     const novos = [];
     for (const e of Array.isArray(eventos) ? eventos : []) {
-      const ev = { data: typeof e?.data === "string" ? e.data : null, codigo: String(e?.codigo ?? "") };
-      if (!ev.codigo || vistos.has(`${ev.data}|${ev.codigo}`)) continue;
+      const ev = { data: dataCanonica(e?.data), codigo: String(e?.codigo ?? "") };
+      if (!CODIGO_GENERICO_RE.test(ev.codigo) || vistos.has(`${ev.data}|${ev.codigo}`)) continue;
       vistos.add(`${ev.data}|${ev.codigo}`);
       novos.push(ev);
     }
@@ -466,12 +470,19 @@ export async function registrarEventosRastreio(produtoId, codigoRastreio, evento
   });
 }
 
-/** MC102.1b — o pedido cujo rastreio tem este código (o webhook da Frenet só traz o TrackingNumber). */
-export async function encontrarPedidoPorRastreio(codigoRastreio) {
+/**
+ * MC102.1b — TODOS os pedidos cujo rastreio tem este código (o webhook da Frenet só traz o TrackingNumber; um
+ * pacote pode levar vários pedidos: DEC-102.1b-11). ESTRITA: uma falha do store PROPAGA, em vez de parecer
+ * «não há pedido» — o `listarTodosPedidos` engole erros e o webhook respondia 200, perdendo o evento (validador).
+ */
+export async function encontrarPedidosPorRastreio(codigoRastreio) {
   const alvo = normalizarCodigoRastreio(codigoRastreio);
-  if (!alvo) return null;
-  const todos = await listarTodosPedidos();
-  return todos.find((p) => normalizarCodigoRastreio(p?.rastreio?.codigo) === alvo) ?? null;
+  if (!alvo) return [];
+  const s = abrirStore(STORE_PEDIDOS);
+  if (!s) throw new Error("store_indisponivel");
+  const { blobs = [] } = await s.list({ prefix: "pedido:" });
+  const regs = await Promise.all(blobs.map((b) => s.get(b.key, { type: "json" })));
+  return regs.filter((p) => p && normalizarCodigoRastreio(p?.rastreio?.codigo) === alvo);
 }
 
 /**

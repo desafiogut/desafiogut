@@ -11,13 +11,14 @@
 // NÃO é o FRENET_TOKEN da API: é um segredo só deste webhook, escolhido pelo operador.
 //
 // Casamento: pelo `TrackingNumber` (DEC-102.1b-10), não pelo OrderId — o nosso lojista escreve o código à mão.
+// Vários pedidos com o mesmo código (um pacote) recebem todos o evento (DEC-102.1b-11).
 // Idempotência (HARD GATE 14): `registrarEventosRastreio` ignora data+código já gravados; o reenvio dá 200.
 // Todo o escritor do pedido passa por `atualizarPedido` (MC102.0) — este também (via `registrarEventosRastreio`).
 
 import { timingSafeEqual } from "node:crypto";
 import { jsonResponse, jsonError, parseJsonBody } from "./_lib/validate.mjs";
 import { mapearEventosFrenet } from "./_lib/rastreio-frenet.mjs";
-import { encontrarPedidoPorRastreio, registrarEventosRastreio } from "./_lib/pedidos.mjs";
+import { encontrarPedidosPorRastreio, registrarEventosRastreio } from "./_lib/pedidos.mjs";
 
 export const HEADER_TOKEN = "x-frenet-token";
 
@@ -39,16 +40,20 @@ export default async (req) => {
   const codigo = String(corpo?.TrackingNumber ?? "").trim();
   if (!codigo) return jsonError(400, "tracking_ausente", "TrackingNumber em falta");
 
+  // Store em falha ≠ «não há pedido»: 503 para a Frenet voltar a tentar (um 200 aqui perdia o evento).
+  let pedidos;
+  try { pedidos = await encontrarPedidosPorRastreio(codigo); } catch { return jsonError(503, "store_indisponivel", "não foi possível ler os pedidos agora"); }
   // Um código que não é de nenhum pedido nosso responde 200: a Frenet não deve reenviar para sempre.
-  const pedido = await encontrarPedidoPorRastreio(codigo);
-  if (!pedido) return jsonResponse({ ok: true, ignorado: "pedido_nao_encontrado" });
+  if (pedidos.length === 0) return jsonResponse({ ok: true, ignorado: "pedido_nao_encontrado" });
 
   const eventos = mapearEventosFrenet(corpo?.TrackingEvents);
   if (eventos.length === 0) return jsonResponse({ ok: true, ignorado: "sem_eventos_mapeados" });
 
-  const r = await registrarEventosRastreio(pedido.produtoId, codigo, eventos);
-  if (r.ok) return jsonResponse({ ok: true, duplicado: Boolean(r.idempotent) });
-  if (r.code === "rastreio_diferente" || r.code === "pedido_nao_encontrado") return jsonResponse({ ok: true, ignorado: r.code });
-  // conflito_escrita / etag_indisponivel / store_indisponivel: 503 para a Frenet voltar a tentar.
-  return jsonError(503, r.code, "não foi possível gravar agora");
+  // DEC-102.1b-11: todos os pedidos do mesmo pacote recebem o evento, cada um pelo seu CAS. Se algum falhar,
+  // 503: o reenvio é seguro porque quem já gravou deduplica.
+  const rs = [];
+  for (const p of pedidos) rs.push(await registrarEventosRastreio(p.produtoId, codigo, eventos));
+  const falha = rs.find((r) => !r.ok && r.code !== "rastreio_diferente" && r.code !== "pedido_nao_encontrado");
+  if (falha) return jsonError(503, falha.code, "não foi possível gravar agora");
+  return jsonResponse({ ok: true, pedidos: pedidos.length, duplicado: rs.every((r) => !r.ok || r.idempotent) });
 };

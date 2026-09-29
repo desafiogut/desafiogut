@@ -60,7 +60,9 @@ export function construirTimeline(eventos) {
       const g = grupos.get(c) ?? { codigo: c, quantidade: 0, primeira: null, ultima: null };
       g.quantidade += 1;
       if (data && (!g.primeira || instante(data) < instante(g.primeira))) g.primeira = data;
-      if (data && (!g.ultima || instante(data) > instante(g.ultima))) g.ultima = data;
+      // Uma data ilegível que chegue primeiro não pode ficar como «a mais recente» para sempre (validador).
+      const tNovo = instante(data), tUltima = instante(g.ultima);
+      if (data && (!g.ultima || (Number.isFinite(tNovo) && (!Number.isFinite(tUltima) || tNovo > tUltima)))) g.ultima = data;
       grupos.set(c, g);
     }
   }

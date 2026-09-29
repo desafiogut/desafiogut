@@ -102,6 +102,13 @@ test("DEC-102.1b-2/-7: A1 repetido → «N tentativas de entrega», com a data m
   assert.equal(construirTimeline([ev("A1", "2026-09-22")]).alertas[0].rotulo, "Tentativa de entrega sem sucesso", "1 só: rótulo normal");
 });
 
+test("data ilegível que chega PRIMEIRO não fica como «a mais recente» (validador MC102.1b)", () => {
+  for (const ordem of [["lixo", "2026-09-22T10:00:00-03:00"], ["2026-09-22T10:00:00-03:00", "lixo"]]) {
+    assert.equal(construirTimeline(ordem.map((d) => ev("A1", d))).alertas[0].data, "2026-09-22T10:00:00-03:00", ordem.join(" → "));
+  }
+  assert.equal(construirTimeline([ev("A1", "lixo")]).alertas[0].data, "lixo", "só lixo: fica o que há (o componente não mostra data ilegível)");
+});
+
 test("DEC-102.1b-7: A2/A3 repetidos → um só banner, SEM contagem no texto", () => {
   const t = construirTimeline([ev("A2", "2026-09-25T10:00:00Z"), ev("A2", "2026-09-25T18:00:00Z"), ev("A3", "2026-09-26T10:00:00Z"), ev("A3", "2026-09-27T10:00:00Z")]);
   assert.deepEqual(t.alertas.map((a) => [a.codigo, a.rotulo, a.quantidade, a.data]), [

@@ -22,8 +22,11 @@ const sh = (cmd) => spawnSync(cmd, { encoding: "utf8", shell: true, cwd: RAIZ, m
 
 const TOKEN = (sh("netlify env:get FRENET_TOKEN --context production").stdout || "").trim().split(/\r?\n/).pop();
 ok(/^[\w-]{20,}$/.test(TOKEN), `FRENET_TOKEN lido para memória (${TOKEN.length} caracteres; valor não impresso)`);
-const envProd = JSON.parse(sh("netlify env:list --json --context production").stdout || "{}");
-const webhookConfigurado = typeof envProd.FRENET_WEBHOOK_TOKEN === "string" && envProd.FRENET_WEBHOOK_TOKEN.length > 0;
+// Só a PRESENÇA deste segredo (validador: o `env:list` carregava todos os segredos de produção para memória).
+// ⚠️ Medido: para uma variável AUSENTE o CLI escreve «No value set in the … context …» com exit 0 — um teste de
+// «saída não vazia» dava DEFINIDO falso.
+const saidaWh = (sh("netlify env:get FRENET_WEBHOOK_TOKEN --context production").stdout || "").trim().split(/\r?\n/).pop();
+const webhookConfigurado = saidaWh.length > 0 && !/^No value set/i.test(saidaWh);
 console.log(`      FRENET_WEBHOOK_TOKEN em produção: ${webhookConfigurado ? "DEFINIDO" : "AUSENTE"}`);
 
 // ── 1. Adaptador real contra a Frenet VIVA ──────────────────────────────────────────────────
@@ -61,8 +64,8 @@ ok(semHeader.status === esperado && /application\/json/.test(semHeader.tipo),
   `webhook-frenet POST sem token → ${semHeader.status} (esperado ${esperado}: ${webhookConfigurado ? "token inválido" : "fail-closed, segredo por configurar"}) · ${semHeader.corpo.slice(0, 120)}`);
 const tokErrado = await pedir("/.netlify/functions/webhook-frenet", { method: "POST", headers: { "content-type": "application/json", "x-frenet-token": "errado" }, body: corpo });
 ok(tokErrado.status === esperado, `webhook-frenet POST com token errado → ${tokErrado.status} (esperado ${esperado})`);
-const usaApiToken = await pedir("/.netlify/functions/webhook-frenet", { method: "POST", headers: { "content-type": "application/json", "x-frenet-token": TOKEN }, body: corpo });
-ok(usaApiToken.status === esperado, `o FRENET_TOKEN da API NÃO abre o webhook → ${usaApiToken.status} (segredos separados)`);
+// (O FRENET_TOKEN real deixou de ser enviado ao webhook — validador: mínimo manuseio. Os segredos são
+// separados por construção: o webhook só compara com FRENET_WEBHOOK_TOKEN; o «token errado» acima cobre-o.)
 const ped = await pedir("/.netlify/functions/pedidos");
 ok(ped.status === 401 && /application\/json/.test(ped.tipo), `/pedidos continua 401 JSON (não-regressão): ${ped.status}`);
 

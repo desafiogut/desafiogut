@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 
 const etagDe = (v) => `"${createHash("sha1").update(v).digest("hex")}"`;
 const blobs = new Map();
-const ctx = { ceder: false, conflito: false };
+const ctx = { ceder: false, conflito: false, listaRebenta: false };
 mock.module("@netlify/blobs", {
   namedExports: {
     getStore: ({ name }) => {
@@ -26,7 +26,7 @@ mock.module("@netlify/blobs", {
           if (opt.onlyIfMatch && ctx.conflito) return { modified: false };
           if (opt.onlyIfMatch && (!m.has(k) || etagDe(m.get(k)) !== opt.onlyIfMatch)) return { modified: false };
           m.set(k, v); return { modified: true, etag: etagDe(v) }; },
-        async list({ prefix = "" } = {}) { return { blobs: [...m.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })) }; },
+        async list({ prefix = "" } = {}) { if (ctx.listaRebenta) throw new Error("blobs em baixo"); return { blobs: [...m.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })) }; },
         async delete(k) { m.delete(k); },
       };
     },
@@ -56,7 +56,7 @@ const chamar = async (body, { token = SEGREDO, method = "POST", cru = null } = {
 };
 
 beforeEach(() => {
-  blobs.clear(); ctx.ceder = false; ctx.conflito = false;
+  blobs.clear(); ctx.ceder = false; ctx.conflito = false; ctx.listaRebenta = false;
   process.env.FRENET_WEBHOOK_TOKEN = SEGREDO;
   blobs.set("pedidos", new Map([[chave, JSON.stringify({
     produtoId: PID, edicaoId: "RELAMP-9", comprador: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", produtoNome: "Air Fryer",
@@ -90,9 +90,9 @@ test("só POST: GET → 405", async () => {
 // ── Gravação (Frente C) ─────────────────────────────────────────────────────────────────────
 test("evento novo → 200 e grava SÓ { data, codigo } (ISO Brasília), via CAS; nada da Frenet além disso", async () => {
   const r = await chamar(payload([evento("9", "24/09/2026 16:48")]));
-  assert.deepEqual(r, { status: 200, body: { ok: true, duplicado: false } });
+  assert.deepEqual(r, { status: 200, body: { ok: true, pedidos: 1, duplicado: false } });
   const p = lerPedido();
-  assert.deepEqual(p.rastreio.eventos, [{ data: "2026-09-24T16:48:00-03:00", codigo: "4" }]);
+  assert.deepEqual(p.rastreio.eventos, [{ data: "2026-09-24T19:48:00.000Z", codigo: "4" }], "16:48 BRT, gravado em ISO UTC canónico");
   assert.equal(p.historico.at(-1).evento, "rastreio_atualizado");
   assert.deepEqual(Object.keys(p.rastreio).sort(), ["codigo", "enviado_em", "eventos", "transportadora"]);
   assert.doesNotMatch(JSON.stringify(p.rastreio), /Boa Nova|Rua A|entregue ao|PLAT-ORDER|21255|frenet\.dev|SEDEX/);
@@ -102,7 +102,7 @@ test("HARD GATE 14: o MESMO evento reenviado → 200 duplicado, e o blob fica BY
   await chamar(payload([evento("1", "21/09/2026 10:30")]));
   const depoisDo1 = bruto();
   for (let i = 0; i < 3; i++) {
-    assert.deepEqual(await chamar(payload([evento("1", "21/09/2026 10:30")])), { status: 200, body: { ok: true, duplicado: true } });
+    assert.deepEqual(await chamar(payload([evento("1", "21/09/2026 10:30")])), { status: 200, body: { ok: true, pedidos: 1, duplicado: true } });
   }
   assert.equal(bruto(), depoisDo1);
   assert.equal(lerPedido().rastreio.eventos.length, 1);
@@ -168,7 +168,7 @@ test("dois webhooks EM PARALELO com eventos diferentes → os DOIS ficam gravado
 test("registrarEventosRastreio: campos a mais (local, descrição) NÃO entram — só data e código", async () => {
   const r = await L.registrarEventosRastreio(PID, CODIGO, [{ data: "2026-09-20T09:00:00-03:00", codigo: "0", local: "Rua A", descricao: "Maria", cpf: "1" }]);
   assert.equal(r.ok, true);
-  assert.deepEqual(lerPedido().rastreio.eventos, [{ data: "2026-09-20T09:00:00-03:00", codigo: "0" }]);
+  assert.deepEqual(lerPedido().rastreio.eventos, [{ data: "2026-09-20T12:00:00.000Z", codigo: "0" }]);
 });
 
 test("registrarEventosRastreio: > 50 eventos → ficam os 50 MAIS RECENTES", async () => {
@@ -189,4 +189,42 @@ test("registrarEventosRastreio: código de rastreio diferente do do pedido → r
 
 test("registrarEventosRastreio: pedido sem rastreio ou inexistente → pedido_nao_encontrado", async () => {
   assert.equal((await L.registrarEventosRastreio("nao-existe", CODIGO, [{ data: "x", codigo: "0" }])).code, "pedido_nao_encontrado");
+});
+
+// ── Achados do validador (MC102.1b) ─────────────────────────────────────────────────────────────
+test("store em falha ao procurar o pedido → 503 (a Frenet reenvia), NÃO 200 «não encontrado»", async () => {
+  const antes = bruto();
+  ctx.listaRebenta = true;
+  const r = await chamar(payload([evento("9", "24/09/2026 16:48")]));
+  assert.equal(r.status, 503);
+  assert.equal(r.body.error.code, "store_indisponivel");
+  assert.equal(bruto(), antes);
+});
+
+test("DEC-102.1b-11: dois pedidos com o MESMO código (um pacote) → os DOIS recebem o evento; o reenvio é duplicado nos dois", async () => {
+  const PID2 = "22222222-3333-4444-5555-666666666666";
+  const p1 = lerPedido();
+  blobs.get("pedidos").set(`pedido:${PID2}`, JSON.stringify({ ...p1, produtoId: PID2, produtoNome: "Cesto" }));
+  const r = await chamar(payload([evento("9", "24/09/2026 16:48")]));
+  assert.deepEqual(r.body, { ok: true, pedidos: 2, duplicado: false });
+  for (const id of [PID, PID2]) {
+    assert.deepEqual(JSON.parse(blobs.get("pedidos").get(`pedido:${id}`)).rastreio.eventos, [{ data: "2026-09-24T19:48:00.000Z", codigo: "4" }], id);
+  }
+  assert.deepEqual((await chamar(payload([evento("9", "24/09/2026 16:48")]))).body, { ok: true, pedidos: 2, duplicado: true });
+});
+
+test("dedup por INSTANTE: o mesmo momento com outro fuso (ISO) é duplicado, não um 2.º evento", async () => {
+  await chamar(payload([evento("1", "21/09/2026 10:30")]));
+  for (const d of ["2026-09-21T13:30:00Z", "2026-09-21T13:30:00.000Z", "2026-09-21T10:30:00-03:00"]) {
+    assert.equal((await chamar(payload([evento("1", d)]))).body.duplicado, true, d);
+  }
+  assert.equal(lerPedido().rastreio.eventos.length, 1);
+});
+
+test("lib: data que não é texto legível → null; código fora dos genéricos (0–4, A1–A5) não entra", async () => {
+  await L.registrarEventosRastreio(PID, CODIGO, [
+    { data: { cpf: "52998224725" }, codigo: "0" }, { data: "lixo", codigo: "1" },
+    { data: "2026-09-22T10:00:00Z", codigo: "Maria CPF 529" }, { data: "2026-09-22T10:00:00Z", codigo: "A6" }, { data: "2026-09-22T10:00:00Z", codigo: "9" },
+  ]);
+  assert.deepEqual(lerPedido().rastreio.eventos, [{ data: null, codigo: "0" }, { data: null, codigo: "1" }]);
 });
