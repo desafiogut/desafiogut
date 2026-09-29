@@ -65,6 +65,12 @@ export function podeMarcarRecebido(p, endereco) {
   return !p.recebido_em;
 }
 
+/** MC102 — o que o clique em «Recebi» faz com a resposta do servidor: só `ok` é sucesso. */
+export function interpretarRespostaRecebi(r) {
+  if (r?.ok) return { ok: true, erro: null };
+  return { ok: false, erro: r?.data?.error?.message || "Não foi possível confirmar o recebimento. Tente de novo." };
+}
+
 /** Texto do prazo de entrega de um produto/pedido; null se não informado. */
 export function textoPrazo(dias) {
   if (!Number.isInteger(dias) || dias < 1) return null;

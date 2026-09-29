@@ -2,7 +2,7 @@
 // node --test src/lib/pedidos.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { erroDoEndereco, estadoDoPedido, formatarCep, textoPrazo, resumoEndereco, ENDERECO_VAZIO, podeMarcarRecebido } from "./pedidos.js";
+import { erroDoEndereco, estadoDoPedido, formatarCep, textoPrazo, resumoEndereco, ENDERECO_VAZIO, podeMarcarRecebido, interpretarRespostaRecebi } from "./pedidos.js";
 
 const OK = { ...ENDERECO_VAZIO, nome: "Maria Silva", cpf: "529.982.247-25", cep: "69027-010",
   logradouro: "Rua 5 de Setembro", numero: "86", bairro: "São Raimundo", cidade: "Manaus", uf: "am" };
@@ -49,4 +49,11 @@ test("estadoDoPedido: recebido_em só conta depois do envio", () => {
   assert.equal(estadoDoPedido({ ...ENV, recebido_em: "2026-09-25T10:00:00.000Z" }), "recebido");
   assert.equal(estadoDoPedido(ENV), "enviado");
   assert.equal(estadoDoPedido({ ...ENV, rastreio: null, recebido_em: "x" }), "aguarda_envio");
+});
+
+test("interpretarRespostaRecebi: só ok é sucesso; 409/404/falha de rede dão erro legível (validador MC102, A3)", () => {
+  assert.deepEqual(interpretarRespostaRecebi({ ok: true, data: {} }), { ok: true, erro: null });
+  assert.equal(interpretarRespostaRecebi({ ok: false, data: { error: { message: "pedido ainda não enviado" } } }).erro, "pedido ainda não enviado");
+  assert.equal(interpretarRespostaRecebi({ ok: false, data: {} }).ok, false);
+  assert.match(interpretarRespostaRecebi(null).erro, /Não foi possível/);
 });

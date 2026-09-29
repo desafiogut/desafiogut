@@ -66,3 +66,20 @@ test("cablagem: o clique chama PUT pedidos?acao=recebido do próprio produto", (
   assert.match(f, /apiPut\(`pedidos\?acao=recebido&produtoId=\$\{encodeURIComponent\(pedido\.produtoId\)\}`/);
   assert.match(f, /onClick=\{marcarRecebi\}/);
 });
+
+// Achados do validador adversarial (mutantes A1, A2 e A4 sobreviviam).
+test("o botão nasce CLICÁVEL e VISÍVEL: sem hidden, sem disabled, sem display:none (A4)", () => {
+  const html = render(Cartao, props(ENVIADO, DONO));
+  const tag = html.match(/<button[^>]*data-acao="recebi"[^>]*>/)[0];
+  assert.doesNotMatch(tag, /\bhidden\b/);
+  assert.doesNotMatch(tag, /\bdisabled\b/);
+  assert.doesNotMatch(tag, /display:\s*none|visibility:\s*hidden/);
+});
+
+test("cablagem do clique: desactiva enquanto confirma, e só recarrega depois de sucesso (A1, A2, A3)", () => {
+  const f = fonte("../MeusPedidos.jsx");
+  const corpo = f.slice(f.indexOf("async function marcarRecebi()"), f.indexOf("async function marcarRecebi()") + 700);
+  assert.match(corpo, /setRecebendo\(true\)[\s\S]*apiPut\([\s\S]*setRecebendo\(false\)/);
+  assert.match(corpo, /const res = interpretarRespostaRecebi\(r\);\s*if \(!res\.ok\) \{ setErroRecebi\(res\.erro\); return; \}\s*aoGravar\(\);/);
+  assert.match(f, /onClick=\{marcarRecebi\} disabled=\{recebendo\}/);
+});

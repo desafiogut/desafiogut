@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiGet, apiPut } from "../../lib/api.js";
 import {
-  ENDERECO_VAZIO, UFS, erroDoEndereco, estadoDoPedido, formatarCep, podeMarcarRecebido, resumoEndereco, ROTULO_ESTADO,
-  textoPrazo,
+  ENDERECO_VAZIO, UFS, erroDoEndereco, estadoDoPedido, formatarCep, interpretarRespostaRecebi, podeMarcarRecebido,
+  resumoEndereco, ROTULO_ESTADO, textoPrazo,
 } from "../../lib/pedidos.js";
 import { COR, caixa, tituloSecao, legenda, reais } from "./_estilo.js";
 
@@ -78,7 +78,8 @@ export function CartaoPedido({ pedido, authToken, endereco, isMobile, aoGravar }
     const r = await apiPut(`pedidos?acao=recebido&produtoId=${encodeURIComponent(pedido.produtoId)}`, {}, { token: authToken })
       .catch(() => null);
     setRecebendo(false);
-    if (!r?.ok) { setErroRecebi(r?.data?.error?.message || "Não foi possível confirmar o recebimento. Tente de novo."); return; }
+    const res = interpretarRespostaRecebi(r);
+    if (!res.ok) { setErroRecebi(res.erro); return; }
     aoGravar();
   }
 

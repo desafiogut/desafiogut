@@ -124,10 +124,24 @@ test("B: OUTRO utilizador → 404 pedido_nao_encontrado (não confirma que exist
   assert.equal(ler("pedidos", `pedido:${PID}`).recebido_em, undefined);
 });
 
-test("B: o admin SEM sessão de comprador não marca pelo comprador (401)", async () => {
+test("B: o admin não marca pelo comprador — sem sessão (401) e com o token de admin aceite como sessão (404)", async () => {
   semearVendido({ comMorada: true, comRastreio: true });
   ctx.admin = ADMIN;
   assert.equal((await PUT_RECEBIDO()).status, 401);
+  // No servidor REAL, verificarUserSession também aceita tokens admin-access (jwt.mjs), e
+  // devolve o endereço do ADMIN. O duplo daqui rejeitava tudo — era mais permissivo que o
+  // real no sentido de esconder este caminho (achado do validador). Simula-se o real:
+  ctx.user = ADMIN.endereco;
+  const r = await PUT_RECEBIDO();
+  assert.equal(r.status, 404);
+  assert.equal(ler("pedidos", `pedido:${PID}`).recebido_em, undefined);
+});
+
+test("B: o endereço vem SÓ do token — um corpo a dizer que é o comprador não abre a porta (validador, B1)", async () => {
+  semearVendido({ comMorada: true, comRastreio: true });
+  ctx.user = OUTRO;
+  const r = await json(req(pedidosH, "PUT", `acao=recebido&produtoId=${PID}`, { endereco: COMPRADOR, comprador: COMPRADOR }));
+  assert.equal(r.status, 404);
   assert.equal(ler("pedidos", `pedido:${PID}`).recebido_em, undefined);
 });
 
@@ -240,4 +254,14 @@ test("C (uso): o admin também recebe o arrependimento calculado", async () => {
   ctx.admin = ADMIN;
   const g = await json(req(pedidosH, "GET", ""));
   assert.equal(g.body.pedidos[0].arrependimento.fim, "2026-10-02T10:00:00.000Z");
+});
+
+test("C (uso): o GET do admin por produtoId também traz o arrependimento (validador, B2)", async () => {
+  semearVendido({ comMorada: true, comRastreio: true });
+  const p0 = ler("pedidos", `pedido:${PID}`);
+  gravar("pedidos", `pedido:${PID}`, { ...p0, recebido_em: "2026-09-25T10:00:00.000Z" });
+  ctx.admin = ADMIN;
+  const g = await json(req(pedidosH, "GET", `produtoId=${PID}`));
+  assert.equal(g.body.pedido.arrependimento.fonte, "recebido_em");
+  assert.equal(g.body.pedido.arrependimento.fim, "2026-10-02T10:00:00.000Z");
 });
