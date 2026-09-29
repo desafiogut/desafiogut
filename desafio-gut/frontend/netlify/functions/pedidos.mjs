@@ -3,6 +3,7 @@
 // GET                                   comprador: os SEUS pedidos · admin: todos
 // GET  ?produtoId=<id>                  comprador (o seu) ou admin
 // PUT  ?acao=endereco&produtoId=<id>    comprador — dados de entrega { endereco: {...} }
+// PUT  ?acao=recebido&produtoId=<id>    comprador — «Recebi» (MC102): grava recebido_em, idempotente
 // PUT  ?acao=rastreio&produtoId=<id>    admin (operador+) — { codigo, transportadora? }
 // PUT  ?acao=nfe&produtoId=<id>         admin (operador+) — { numero, serie?, chave? }
 // POST ?acao=reprocessar-venda&edicaoId admin (admin+) — repete a ponte a partir do
@@ -24,6 +25,7 @@ import { buscarEdicao, EDICAO_ID_RE } from "./_lib/edicoes-core.mjs";
 import {
   lerPedido, listarPedidosDoComprador, listarTodosPedidos,
   definirMorada, definirRastreio, definirNfe, reprocessarVendaDaEdicao, liberarProdutoDeEdicaoSemVencedor,
+  marcarRecebido, anexarArrependimento,
 } from "./_lib/pedidos.mjs";
 
 const ID_RE = /^[0-9a-f-]{10,64}$/i;
@@ -50,7 +52,7 @@ async function adminComNivel(req, minimo) {
 const erroDe = (res) => {
   const status = {
     pedido_nao_encontrado: 404, produto_nao_encontrado: 404, edicao_nao_encontrada: 404,
-    pedido_ja_enviado: 409, nfe_ja_emitida: 409, morada_em_falta: 409,
+    pedido_ja_enviado: 409, nfe_ja_emitida: 409, morada_em_falta: 409, pedido_nao_enviado: 409,
     edicao_em_curso: 409, edicao_com_vencedor: 409, produto_sem_vinculo: 409, produto_ja_vendido: 409, produto_nao_ativo: 409,
     edicao_nao_consolidada: 409, edicao_sem_produto: 409, store_indisponivel: 503,
   }[res.code] || 400;
@@ -108,9 +110,10 @@ export default async (req) => {
     if (adm.ok) {
       if (produtoId) {
         const p = await lerPedido(produtoId);
-        return p ? jsonResponse({ pedido: p }) : jsonError(404, "pedido_nao_encontrado", "pedido não encontrado");
+        return p ? jsonResponse({ pedido: await anexarArrependimento(p) })
+          : jsonError(404, "pedido_nao_encontrado", "pedido não encontrado");
       }
-      const pedidos = await listarTodosPedidos();
+      const pedidos = await Promise.all((await listarTodosPedidos()).map(anexarArrependimento));
       pedidos.sort((a, b) => String(b.criado_em).localeCompare(String(a.criado_em)));
       return jsonResponse({ pedidos });
     }
@@ -120,9 +123,9 @@ export default async (req) => {
       const p = await lerPedido(produtoId);
       // Pedido de outro = 404 (não confirma que existe).
       if (!p || p.comprador !== eu) return jsonError(404, "pedido_nao_encontrado", "pedido não encontrado");
-      return jsonResponse({ pedido: p });
+      return jsonResponse({ pedido: await anexarArrependimento(p) });
     }
-    const pedidos = await listarPedidosDoComprador(eu);
+    const pedidos = await Promise.all((await listarPedidosDoComprador(eu)).map(anexarArrependimento));
     pedidos.sort((a, b) => String(b.criado_em).localeCompare(String(a.criado_em)));
     return jsonResponse({ pedidos });
   }
@@ -143,6 +146,13 @@ export default async (req) => {
         throw err;
       }
     }
+    // MC102 — «Recebi»: só o comprador autenticado, só o SEU pedido (a regra vive em marcarRecebido).
+    if (acao === "recebido") {
+      const eu = await comprador(req);
+      if (!eu) return jsonError(401, "nao_autenticado", "token obrigatório");
+      const res = await marcarRecebido(produtoId, eu);
+      return res.ok ? jsonResponse({ ok: true, idempotent: !!res.idempotent, pedido: res.pedido }) : erroDe(res);
+    }
     if (acao === "rastreio" || acao === "nfe") {
       if (!adm.ok) return jsonError(403, "nao_autorizado", "apenas o operador");
       const fn = acao === "rastreio"
@@ -151,7 +161,7 @@ export default async (req) => {
       return comLog(req, adm, acao === "rastreio" ? "pedido_rastreio" : "pedido_nfe", produtoId,
         acao === "rastreio" ? { codigo: body.codigo ?? null } : { numero: body.numero ?? null }, fn);
     }
-    return jsonError(400, "acao_invalida", "acao deve ser endereco, rastreio ou nfe");
+    return jsonError(400, "acao_invalida", "acao deve ser endereco, recebido, rastreio ou nfe");
   }
 
   if (req.method === "POST" && acao === "reprocessar-venda") {

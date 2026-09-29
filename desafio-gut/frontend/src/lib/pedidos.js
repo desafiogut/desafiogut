@@ -36,11 +36,12 @@ export function erroDoEndereco(f) {
 
 /**
  * Em que passo está o pedido, do ponto de vista do comprador.
- * sem_endereco → aguarda_envio → enviado
+ * sem_endereco → aguarda_envio → enviado → recebido (MC102: o comprador confirmou)
  */
 export function estadoDoPedido(p) {
   if (!p?.morada) return "sem_endereco";
   if (!p.rastreio) return "aguarda_envio";
+  if (p.recebido_em) return "recebido";
   return "enviado";
 }
 
@@ -48,7 +49,21 @@ export const ROTULO_ESTADO = {
   sem_endereco:  "Falta o endereço de entrega",
   aguarda_envio: "Endereço recebido — aguardando envio",
   enviado:       "Enviado",
+  recebido:      "Recebido",
 };
+
+/**
+ * MC102 — o botão «Recebi» aparece? Só ao DONO do pedido, só depois do envio (há rastreio),
+ * e só enquanto não confirmou. O servidor volta a verificar tudo (`marcarRecebido`): isto só
+ * decide o que se mostra. «Entregue» (marcado pelo lojista/admin no produto) exige rastreio,
+ * logo o caso «entregue» já está coberto por «há rastreio».
+ */
+export function podeMarcarRecebido(p, endereco) {
+  if (!p || !endereco) return false;
+  if (String(p.comprador ?? "").toLowerCase() !== String(endereco).toLowerCase()) return false;
+  if (!p.rastreio) return false;
+  return !p.recebido_em;
+}
 
 /** Texto do prazo de entrega de um produto/pedido; null se não informado. */
 export function textoPrazo(dias) {

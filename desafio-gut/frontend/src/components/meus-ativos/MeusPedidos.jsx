@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiGet, apiPut } from "../../lib/api.js";
 import {
-  ENDERECO_VAZIO, UFS, erroDoEndereco, estadoDoPedido, formatarCep, resumoEndereco, ROTULO_ESTADO, textoPrazo,
+  ENDERECO_VAZIO, UFS, erroDoEndereco, estadoDoPedido, formatarCep, podeMarcarRecebido, resumoEndereco, ROTULO_ESTADO,
+  textoPrazo,
 } from "../../lib/pedidos.js";
 import { COR, caixa, tituloSecao, legenda, reais } from "./_estilo.js";
 
@@ -15,7 +16,7 @@ import { COR, caixa, tituloSecao, legenda, reais } from "./_estilo.js";
  * Quatro estados, como as outras secções pessoais desta tela (lição do MC94): sem sessão,
  * a carregar, erro e vazio — nenhum deles afirma um facto sobre quem a app não identificou.
  */
-export default function MeusPedidos({ temSessao = false, authToken = null, isMobile = false }) {
+export default function MeusPedidos({ temSessao = false, authToken = null, endereco = null, isMobile = false }) {
   const [estado, setEstado] = useState({ carregando: false, erro: null, pedidos: [] });
 
   const carregar = useCallback(async () => {
@@ -50,7 +51,8 @@ export default function MeusPedidos({ temSessao = false, authToken = null, isMob
   else corpo = (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
       {estado.pedidos.map((p) => (
-        <CartaoPedido key={p.produtoId} pedido={p} authToken={authToken} isMobile={isMobile} aoGravar={carregar} />
+        <CartaoPedido key={p.produtoId} pedido={p} authToken={authToken} endereco={endereco} isMobile={isMobile}
+          aoGravar={carregar} />
       ))}
     </div>
   );
@@ -63,10 +65,22 @@ export default function MeusPedidos({ temSessao = false, authToken = null, isMob
   );
 }
 
-function CartaoPedido({ pedido, authToken, isMobile, aoGravar }) {
+// Exportado só para o teste de renderização do MC102 (o arnês carrega exports default).
+export function CartaoPedido({ pedido, authToken, endereco, isMobile, aoGravar }) {
   const passo = estadoDoPedido(pedido);
   const [editando, setEditando] = useState(passo === "sem_endereco");
   const prazo = textoPrazo(pedido.prazo_entrega_dias);
+  // MC102 — «Recebi»: um botão, uma chamada. O servidor valida o dono e a idempotência.
+  const [recebendo, setRecebendo] = useState(false);
+  const [erroRecebi, setErroRecebi] = useState(null);
+  async function marcarRecebi() {
+    setRecebendo(true); setErroRecebi(null);
+    const r = await apiPut(`pedidos?acao=recebido&produtoId=${encodeURIComponent(pedido.produtoId)}`, {}, { token: authToken })
+      .catch(() => null);
+    setRecebendo(false);
+    if (!r?.ok) { setErroRecebi(r?.data?.error?.message || "Não foi possível confirmar o recebimento. Tente de novo."); return; }
+    aoGravar();
+  }
 
   return (
     <article style={{ border: `1px solid ${COR.borda}`, borderRadius: "12px", padding: isMobile ? "0.75rem" : "0.9rem" }}>
@@ -83,6 +97,16 @@ function CartaoPedido({ pedido, authToken, isMobile, aoGravar }) {
       {pedido.rastreio && (
         <p style={{ margin: "0.5rem 0 0", fontSize: "0.82rem", color: COR.text }}>
           🚚 {pedido.rastreio.transportadora}: <code>{pedido.rastreio.codigo}</code>
+        </p>
+      )}
+      {podeMarcarRecebido(pedido, endereco) && (
+        <p style={{ margin: "0.5rem 0 0" }}>
+          <button type="button" onClick={marcarRecebi} disabled={recebendo} data-acao="recebi"
+            style={{ padding: "0.45rem 1rem", borderRadius: "10px", border: 0, fontWeight: 800, cursor: "pointer",
+              background: COR.success, color: "#050818", opacity: recebendo ? 0.6 : 1 }}>
+            {recebendo ? "Confirmando…" : "Recebi"}
+          </button>
+          {erroRecebi && <span role="alert" style={{ marginLeft: "0.5rem", fontSize: "0.8rem", color: COR.danger }}>{erroRecebi}</span>}
         </p>
       )}
       {pedido.nfe && (

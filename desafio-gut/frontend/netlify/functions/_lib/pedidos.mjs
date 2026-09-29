@@ -31,6 +31,7 @@ const ZERO = "0x0000000000000000000000000000000000000000";
 export const UFS = new Set(["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA",
   "PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"]);
 export const PRAZO_MAX_DIAS = 90;
+export const ARREPENDIMENTO_DIAS = 7; // CDC art. 49 (MC102)
 
 function abrirStore(name) {
   try { return getStore({ name, consistency: "strong" }); }
@@ -314,6 +315,51 @@ export async function definirMorada(produtoId, endereco, morada) {
   if (pedido.nfe) return { ok: false, code: "nfe_ja_emitida" };
   pedido.morada = validarMorada(morada);
   return gravar(pedido, pedido.historico?.some((h) => h.evento === "morada_definida") ? "morada_alterada" : "morada_definida");
+}
+
+/**
+ * MC102 (C13) — o COMPRADOR confirma que recebeu o produto. Só o dono do pedido (outro
+ * endereço = `pedido_nao_encontrado`, como em `definirMorada`: não confirma que o pedido
+ * existe); só depois do envio (há rastreio); IDEMPOTENTE — a 2.ª chamada devolve o pedido
+ * como está e NUNCA reescreve `recebido_em` (é a data que abre o prazo do CDC art. 49).
+ * Coexiste com o `marcar-entregue` do lojista/admin (`produtos.mjs`), que não é tocado.
+ */
+export async function marcarRecebido(produtoId, endereco) {
+  const pedido = await lerPedido(produtoId);
+  if (!pedido || pedido.comprador !== String(endereco).toLowerCase()) return { ok: false, code: "pedido_nao_encontrado" };
+  if (!pedido.rastreio) return { ok: false, code: "pedido_nao_enviado" };
+  if (pedido.recebido_em) return { ok: true, idempotent: true, pedido };
+  pedido.recebido_em = new Date().toISOString();
+  return gravar(pedido, "recebido");
+}
+
+/**
+ * MC102 (Frente C) — prazo de arrependimento do CDC art. 49 (7 dias). PURA.
+ * Início = `recebido_em` do pedido (o comprador confirmou); SEM ele, fallback para o
+ * `entregue_em` do PRODUTO (marcado pelo lojista/admin — o comportamento de antes), até o
+ * DEC-05 decidir o prazo automático. Sem nenhum dos dois → null (o prazo não abriu).
+ * `fim` = início + 7 × 24 h. ⚠️ A contagem civil (exclui o dia do início, vence no fim do 7.º
+ * dia) é decisão jurídica por tomar — aqui fica o cálculo simples, declarado.
+ * @returns {{inicio:string, fim:string, fonte:"recebido_em"|"entregue_em", dias:number}|null}
+ */
+export function prazoArrependimento(pedido, entregueEm = null) {
+  const fonte = pedido?.recebido_em ? "recebido_em" : (entregueEm ? "entregue_em" : null);
+  if (!fonte) return null;
+  const inicioMs = Date.parse(fonte === "recebido_em" ? pedido.recebido_em : entregueEm);
+  if (!Number.isFinite(inicioMs)) return null;
+  return {
+    inicio: new Date(inicioMs).toISOString(),
+    fim: new Date(inicioMs + ARREPENDIMENTO_DIAS * 86_400_000).toISOString(),
+    fonte, dias: ARREPENDIMENTO_DIAS,
+  };
+}
+
+/** Anexa `arrependimento` a uma cópia do pedido, lendo o `entregue_em` do produto (só leitura). */
+export async function anexarArrependimento(pedido) {
+  if (!pedido) return pedido;
+  const produtos = abrirStore(STORE_PRODUTOS);
+  const produto = produtos ? await produtos.get(chaveProduto(pedido.produtoId), { type: "json" }).catch(() => null) : null;
+  return { ...pedido, arrependimento: prazoArrependimento(pedido, produto?.entregue_em ?? null) };
 }
 
 /** O operador regista o envio. Exige morada. Notifica o comprador. */

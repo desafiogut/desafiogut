@@ -193,7 +193,7 @@ export default function MeusAtivos() {
 
       {/* MC-ECOMMERCE-01a — pedidos de entrega (endereço, envio, nota fiscal). */}
       <div style={{ marginBottom: sectionGap }}>
-        <MeusPedidos temSessao={temSessao} authToken={authToken} isMobile={isMobile} />
+        <MeusPedidos temSessao={temSessao} authToken={authToken} endereco={address} isMobile={isMobile} />
       </div>
 
       {/* Filtros */}
