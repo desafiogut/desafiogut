@@ -1,0 +1,19 @@
+backend (conta-delete do repo):
+  OK    ficheiro do repo = HEAD
+  OK    índice → anon:<sha256> = {ids:[]}, antigo fora
+  OK    notificações do titular em anon: (conteúdo igual)
+  OK    lances do titular anonimizados (bids + legado)
+  OK    NF-e, txHash e rastreio preservados
+  OK    CAS: escrita concorrente preservada
+  OK    terceiros intactos
+  OK    usa atualizarPedido (código sem comentários)
+  OK    pedidos.mjs exporta atualizarPedido
+controlos positivos (TÊM de falhar):
+  OK    base 7648192 detectada — índice/notificações/lances/evento concorrente
+  OK    cópia adulterada (NF-e apagada) detectada
+produção:
+  OK    deploy ready — 6abcff1b7d57160008857699
+  OK    deploy commit_ref = HEAD (c6609e7)
+  OK    página /excluir-conta servida com o texto novo — /assets/ExcluirConta-A95Tdw9c.js (54 chunks)
+  OK    CONTROLO: deploy anterior (MC104.2) NÃO tem o texto novo — /assets/ExcluirConta-rWJSm9Rb.js (54 chunks)
+VEREDITO SEG6: VERDE · 15 verificações
