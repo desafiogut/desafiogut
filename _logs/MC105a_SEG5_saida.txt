@@ -1,0 +1,13 @@
+produção:
+  OK    deploy ready — 6abd081305a28700081425f4
+  OK    commit_ref = HEAD (e95003f)
+  OK    comprar-passe vivo: 401 JSON token_ausente sem sessão — 401 application/json; charset=utf-8
+  OK    comprar-passe preflight 2xx — 204
+  OK    comprar-passe GET → 405 JSON — 405
+  OK    comprar-senhas continua vivo: 401 JSON sem token — 401
+  OK    CONTROLO: função inventada NÃO é JSON — 404 text/html; charset=utf-8
+local:
+  OK    testes MC105a verdes — 32 testes, 0 falhas
+  OK    CONTROLO: endpoint adulterado (sem idempotência) é apanhado — 1 falha(s)
+  OK    restauração md5 idêntica
+VEREDITO SEG5: VERDE · 10 verificações

@@ -1,6 +1,6 @@
 # MC105a — Passe Desafio: modelo + backend · RELATÓRIO (2026-09-30)
 
-## Veredito: ver `MC105a_SEG5_VERIFICACAO.md` (publicação + verificação em produção)
+## Veredito: **FECHADO** — publicado (deploy `6abd0813…`, `commit_ref e95003f`) e verificado (SEG5 VERDE 10/10, controlos positivos 2)
 
 ## O que existe agora
 | peça | o quê |
