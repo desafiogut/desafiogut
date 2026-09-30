@@ -4,6 +4,7 @@
 // híbrido e transparente). Lê a config remota em /.netlify/functions/recursos-app
 // (que por dentro usa o adapter data-store). Expõe:
 //   { isLeilaoAtivo, isPagamentoNativoAtivo, plataforma, isLoading }
+//   + as 5 flags de transição do MC103 (MC104.1; ver DEFAULT_FLAGS_TRANSICAO)
 //
 // Deteção de plataforma — honesta e SEM regressão para o utilizador real:
 //   1. override explícito ?plataforma= (validação/MCP) ou window.__GUT_PLATAFORMA__
@@ -24,11 +25,38 @@ const DEFAULT_RECURSOS = {
   isPagamentoNativoAtivo: { ios: false, android: false, pwa: false },
 };
 
+// MC104.1 — as 5 flags de TRANSIÇÃO do MC103 (preparação do MC111), espelho de
+// DEFAULT_FLAGS_TRANSICAO em _lib/recursos-app-config.mjs (há teste que exige igualdade).
+// Escalares GLOBAIS, não mapas por plataforma. Defaults = comportamento actual; nenhum
+// consumidor as lê ainda.
+export const DEFAULT_FLAGS_TRANSICAO = {
+  isProgramadaSenhasAtiva:  true,
+  isTorneioVisivel:         true,
+  isSenhaBonusAtiva:        true,
+  isCampanhaIndicacaoAtiva: false,
+  limitePassesIndicacao:    5,
+};
+
+/** Leitura ESTRITA, a mesma do backend: só chaves próprias (poluição de protótipo não
+ *  conta); boolean só `typeof boolean`; número só inteiro seguro >= 0. Resto → default. */
+function lerFlagsTransicao(fonte) {
+  const cfg = fonte && typeof fonte === "object" ? fonte : {};
+  const out = {};
+  for (const chave of Object.keys(DEFAULT_FLAGS_TRANSICAO)) {
+    const padrao = DEFAULT_FLAGS_TRANSICAO[chave];
+    const v = Object.hasOwn(cfg, chave) ? cfg[chave] : undefined;
+    out[chave] = typeof padrao === "boolean"
+      ? (typeof v === "boolean" ? v : padrao)
+      : (Number.isSafeInteger(v) && v >= 0 ? v : padrao);
+  }
+  return out;
+}
+
 const CHAVE_RECURSOS = "recursos_app";
 
 /** Resolve os booleanos da plataforma a partir do objeto de config (espelha
  *  resolverRecursos do backend — _lib/recursos-app-config.mjs). */
-function resolverParaPlataforma(config, plataforma) {
+export function resolverParaPlataforma(config, plataforma) {
   const plat = ["ios", "android", "pwa"].includes(plataforma) ? plataforma : "pwa";
   const cfg = config && typeof config === "object" ? config : DEFAULT_RECURSOS;
   const ler = (chave) => {
@@ -39,6 +67,7 @@ function resolverParaPlataforma(config, plataforma) {
     plataforma: plat,
     isLeilaoAtivo: ler("isLeilaoAtivo"),
     isPagamentoNativoAtivo: ler("isPagamentoNativoAtivo"),
+    ...lerFlagsTransicao(config),
   };
 }
 
@@ -62,6 +91,7 @@ function fallbackLocal(plataforma) {
     plataforma: plat,
     isLeilaoAtivo: Boolean(DEFAULT_RECURSOS.isLeilaoAtivo[plat]),
     isPagamentoNativoAtivo: Boolean(DEFAULT_RECURSOS.isPagamentoNativoAtivo[plat]),
+    ...DEFAULT_FLAGS_TRANSICAO,
   };
 }
 
@@ -69,7 +99,7 @@ function fallbackLocal(plataforma) {
 // partilhada por todos os consumidores (evita waterfall / duplo fetch).
 let _promessa = null;
 
-async function carregarRecursos() {
+export async function carregarRecursos() {
   const plataforma = detectarPlataforma();
 
   // MC32.1 — leitura direta de config_remota via Supabase (ANON_KEY, RLS pública),
@@ -99,6 +129,7 @@ async function carregarRecursos() {
       plataforma: data.plataforma ?? plataforma,
       isLeilaoAtivo: Boolean(data.isLeilaoAtivo),
       isPagamentoNativoAtivo: Boolean(data.isPagamentoNativoAtivo),
+      ...lerFlagsTransicao(data), // a mesma regra estrita sobre a resposta da função
     };
   } catch (err) {
     console.warn("[useRecursosApp] fallback local (config indisponível):", err?.message);
@@ -111,6 +142,7 @@ export function useRecursosApp() {
     isLeilaoAtivo: true, // durante o load o gate é isLoading; default não penaliza PWA
     isPagamentoNativoAtivo: false,
     plataforma: "pwa",
+    ...DEFAULT_FLAGS_TRANSICAO,
     isLoading: true,
   });
 
