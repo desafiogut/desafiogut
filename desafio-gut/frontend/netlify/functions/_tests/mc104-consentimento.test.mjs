@@ -43,7 +43,7 @@ const { default: handler } = await import("../consentimento.mjs");
 const lib = await import("../_lib/consentimento.mjs");
 
 const ACEITOS = { lido: true, maiores: true, termos: true, privacidade: true };
-const corpo = (extra = {}) => ({ endereco: TITULAR, versao: "2.0", aceitos: ACEITOS, aceiteDeclaradoEm: "2026-09-30T10:00:00.000Z", ...extra });
+const corpo = (extra = {}) => ({ endereco: TITULAR, versao: "2.0", aceitos: ACEITOS, aceiteDeclaradoEm: "2026-09-29T10:00:00.000Z", ...extra });
 const post = (body, token = "tok-titular") => handler(new Request("https://x.test/.netlify/functions/consentimento", {
   method: "POST", headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}), "x-nf-client-connection-ip": "203.0.113.9" },
   body: JSON.stringify(body),
@@ -64,7 +64,7 @@ test("aceitar → registo gravado no consent-log com data do servidor + declarad
   assert.match(r[0].key, new RegExp(`^\\d+:${TITULAR}$`));
   assert.equal(r[0].endereco, TITULAR);
   assert.equal(r[0].termoVersao, "2.0");
-  assert.equal(r[0].aceiteDeclaradoEm, "2026-09-30T10:00:00.000Z");
+  assert.equal(r[0].aceiteDeclaradoEm, "2026-09-29T10:00:00.000Z");
   assert.ok(Date.parse(r[0].aceiteEm) >= antes - 5 && Date.parse(r[0].aceiteEm) <= Date.now() + 5, "aceiteEm = relógio do servidor");
   assert.deepEqual(r[0].aceitos, ACEITOS);
   assert.equal(r[0].contexto, "gate-legal");
@@ -82,6 +82,8 @@ test("não aceitar (declaração em falta, false, string, extra, versão errada,
     corpo({ versao: 2 }),
     corpo({ aceiteDeclaradoEm: "ontem" }),
     corpo({ aceiteDeclaradoEm: "2026-02-31T10:00:00Z" }),
+    corpo({ aceiteDeclaradoEm: "9999-12-31T00:00:00.000Z" }),
+    corpo({ aceiteDeclaradoEm: new Date(Date.now() + 10 * 60 * 1000).toISOString() }),
   ];
   for (const b of maus) {
     const res = await post(b);
@@ -96,7 +98,7 @@ test("aceitar 2× o MESMO aceite → 1 registo (idempotente); um aceite NOVO →
   assert.equal(r2.status, 200);
   assert.equal((await r2.json()).criado, false);
   assert.equal(registos().length, 1);
-  assert.equal((await post(corpo({ aceiteDeclaradoEm: "2026-10-01T09:00:00.000Z" }))).status, 201);
+  assert.equal((await post(corpo({ aceiteDeclaradoEm: "2026-09-29T11:00:00.000Z" }))).status, 201);
   assert.equal(registos().length, 2);
 });
 

@@ -20,13 +20,14 @@ export const VERSAO_GATE = "2.0";
 // As 4 declarações do gate, pela ordem do ecrã.
 export const DECLARACOES_GATE = Object.freeze(["lido", "maiores", "termos", "privacidade"]);
 
+export const TOLERANCIA_RELOGIO_MS = 5 * 60 * 1000;
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 
 /**
  * Valida o corpo enviado pelo cliente. Estrito: nada de coerção.
  * @returns {{ ok:true, versao, aceitos, aceiteDeclaradoEm } | { ok:false, code, message }}
  */
-export function validarAceite(corpo) {
+export function validarAceite(corpo, agora = Date.now()) {
   const c = corpo && typeof corpo === "object" ? corpo : {};
   if (c.versao !== VERSAO_GATE) {
     return { ok: false, code: "versao_invalida", message: `versão do termo tem de ser "${VERSAO_GATE}"` };
@@ -44,6 +45,10 @@ export function validarAceite(corpo) {
   if (!ISO_RE.test(String(c.aceiteDeclaradoEm)) || Number.isNaN(ms)
       || new Date(ms).toISOString().slice(0, 19) !== c.aceiteDeclaradoEm.slice(0, 19)) {
     return { ok: false, code: "data_invalida", message: "aceiteDeclaradoEm tem de ser ISO 8601 UTC" };
+  }
+  // Plausibilidade: o clique não pode ser posterior à chegada ao servidor (5 min de tolerância de relógio).
+  if (ms > agora + TOLERANCIA_RELOGIO_MS) {
+    return { ok: false, code: "data_invalida", message: "aceiteDeclaradoEm no futuro" };
   }
   const aceitos = Object.fromEntries(DECLARACOES_GATE.map((k) => [k, true]));
   return { ok: true, versao: c.versao, aceitos, aceiteDeclaradoEm: c.aceiteDeclaradoEm };

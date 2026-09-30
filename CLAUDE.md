@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-30 (MC103: **5 flags de TRANSIÇÃO** em `recursos-app-config.mjs`, criadas e NÃO ligadas (defaults = comportamento actual, A/B 0/30) + **legado medido**: R$ 23,75 em 7 contas · 12 senhas on-chain em 1 conta · 0 dívidas de bónus · Vale-Crédito 0 · ⚠️ R$ 10,25 consumidos sem destino conhecido. Anterior: 2026-09-29, MC102.1b: **Frenet real** — adaptador (só Correios, SEDEX 03220) + `webhook-frenet` idempotente e fail-closed (falta o operador definir `FRENET_WEBHOOK_TOKEN`) + eventos no pedido (só data+código, ISO UTC, via CAS) + 6 refinamentos da timeline (estado «Entregue»). Anterior: MC102.1a: **estrutura do rastreio** — contrato `consultarRastreio` + mock só em testes (injecção; grafo esbuild provado), mapa PT-BR de 5 passos + 3 alertas (DEC-102.1-H), `TimelineRastreio` no cartão só com `rastreio.eventos`; produção visualmente igual até ao MC102.1b. Anterior: MC102.0: **escrita condicional (CAS) no pedido** — `@netlify/blobs` 10.0.0, `set()` com If-Match (o `setJSON` não o envia), retry da operação 3×; ETag de produção por medir. Anterior: MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-30 (MC104: **LGPD técnico** — aceite do gate registado no servidor (Blob `consent-log`, enviado pós-login, só para a 1.ª conta do aparelho) + `exportar-dados` completo e só do titular (pedidos por `comprador`, lances, pontos, tabelas Supabase). Anterior: MC103: **5 flags de TRANSIÇÃO** em `recursos-app-config.mjs`, criadas e NÃO ligadas (defaults = comportamento actual, A/B 0/30) + **legado medido**: R$ 23,75 em 7 contas · 12 senhas on-chain em 1 conta · 0 dívidas de bónus · Vale-Crédito 0 · ⚠️ R$ 10,25 consumidos sem destino conhecido. Anterior: 2026-09-29, MC102.1b: **Frenet real** — adaptador (só Correios, SEDEX 03220) + `webhook-frenet` idempotente e fail-closed (falta o operador definir `FRENET_WEBHOOK_TOKEN`) + eventos no pedido (só data+código, ISO UTC, via CAS) + 6 refinamentos da timeline (estado «Entregue»). Anterior: MC102.1a: **estrutura do rastreio** — contrato `consultarRastreio` + mock só em testes (injecção; grafo esbuild provado), mapa PT-BR de 5 passos + 3 alertas (DEC-102.1-H), `TimelineRastreio` no cartão só com `rastreio.eventos`; produção visualmente igual até ao MC102.1b. Anterior: MC102.0: **escrita condicional (CAS) no pedido** — `@netlify/blobs` 10.0.0, `set()` com If-Match (o `setJSON` não o envia), retry da operação 3×; ETag de produção por medir. Anterior: MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -4027,6 +4027,47 @@ Logs: `_logs/MC102.1b_*.md` · Relatório: `Desktop/MC102.1b-RELATORIO.md`.
 `rpc.flashbots.net` devolve **0 logs** para intervalos históricos (USDC em junho: 0; `rpc.mevblocker.io`: 8736).
 publicnode e drpc **recusam** (archive/plano pago). **Toda a leitura de logs on-chain precisa de controlo positivo num
 contrato movimentado no MESMO intervalo.** Sem ele, este MC teria reportado «0 senhas» com confiança.
+
+---
+
+## MC104 — LGPD técnico: prova do aceite + exportação completa (2026-09-30)
+
+Logs: `_logs/MC104_*.md` · Relatório: `Desktop/MC104-RELATORIO.md`. **Validador: APROVADO COM RESSALVAS** (1 ALTA → decidida e corrigida).
+
+### Decisões do operador (R18, durante o MC)
+1. O aceite vai para o Blob **`consent-log`** existente (não para tabela nova): já é exportado, apagado, retido 5 anos e salvaguardado.
+2. O aceite é enviado **depois do login**, a partir do `AppContext.jsx` (o gate corre ANTES do login: não há endereço no clique).
+3. A exportação cobre os 5 tipos **e** as tabelas que migraram para o Supabase.
+4. **O aceite do aparelho vale só para a 1.ª conta** que entra depois do clique. As seguintes ficam **sem** registo (não com um falso).
+
+### Frente A — prova do aceite (LGPD art. 8º §2º)
+- `POST /consentimento` (`consentimento.mjs` + `_lib/consentimento.mjs`): **só o próprio titular** (admin → 403). Grava em
+  `consent-log` com a chave `${ts}:${endereco}` de sempre: `{endereco, aceiteEm (SERVIDOR), aceiteDeclaradoEm (cliente),
+  termoVersao, aceitos:{lido,maiores,termos,privacidade}, ip, userAgent, contexto:"gate-legal"}`. `GET ?endereco=` = titular ou admin.
+- Validação estrita: versão = `VERSAO_GATE` (teste exige = `VERSAO_CONSENTIMENTO` do gate); as 4 declarações exactamente
+  `true`; data ISO **com ida e volta** (o V8 aceita `2026-02-31T…Z`!) e **não posterior à chegada** (+5 min).
+  Idempotente por (versão, hora declarada).
+- Cliente: o gate guarda `aceitos`; `src/lib/consentimento.js` fixa `titularLocal` **antes** do envio e marca `enviadoPara`
+  só com resposta ok; `useEffect([address, authToken])` no AppContext.
+- ⚠️ **Quem aceitou antes do MC104 não tem prova no servidor** (o aceite antigo não tem as declarações; P10). Forçar novo
+  aceite = subir `VERSAO_CONSENTIMENTO` → decisão de produto (MC115).
+- ⚠️ `comprar-senhas.mjs:41` continua com `termoVersao:"v2026-05"` fixo, dessincronizado do gate.
+- ⚠️ Escrita concorrente no mesmo ms perde um registo (Blobs 8.2.0 sem escrita condicional).
+
+### Frente B — exportação (LGPD art. 18) — `exportar-dados.mjs`
+- **Os pedidos nunca eram exportados**: o dono está em `comprador` e só se procurava `endereco`/`address`. Corrigido.
+- Novo: `lances_relampago` (só os lances DO titular dentro do Blob legado por edição) e `supabase` (`getSupabaseReadOnly`):
+  `saldo_rs`, `troco_senhas`, `wallet`, `saldo_rs_creditos`/`debitos` (`payload->>endereco`), `lances`, `lojistas`,
+  `atividade_utilizadores`, `pontuacoes`, `rankings_ciclo`, `cotas` (`cliente_id` OU `endereco`). Sem Supabase →
+  `{disponivel:false}`; erro numa tabela → `null` + `erros` (nunca parece vazio). Chaves antigas mantidas. Logs mascarados.
+- Palpites: **não existem** (nenhuma chave inventada).
+- ⚠️ **Ainda fora** (candidatos ao MC115): Blobs `referral-*`, `fingerprint`, `notificacoes`, `pedidos-pagos`/`-meta`;
+  tabelas `admin_logs`, `usuarios_bloqueio`, `notifications`.
+
+### Testes
+`_tests/mc104-consentimento.test.mjs` (9) · `_tests/mc104-exportar-dados.test.mjs` (8; Supabase em duplo com **esquema real**
+— coluna inexistente → 42703 — e dados de terceiro em todas as fontes) · `src/lib/consentimento.test.mjs` (8, incl. cablagem).
+Mutação **31/31** (`scripts/mc104-prova-mutacao.mjs todos`).
 
 ---
 

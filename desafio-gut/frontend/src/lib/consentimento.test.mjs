@@ -57,6 +57,26 @@ test("envio: servidor recusa ou rede cai → 'falhou' e NÃO marca (volta a tent
   assert.equal(JSON.parse(s.getItem(CHAVE_CONSENTIMENTO)).enviadoPara, undefined);
 });
 
+test("R18 #4: 2.ª conta no mesmo aparelho NÃO herda o aceite da 1.ª (nem depois de a 1.ª falhar)", async () => {
+  const B = "0xBBB0000000000000000000000000000000000BBB";
+  // (a) 1.ª conta envia; 2.ª conta → nada
+  const s = memoria(aceite());
+  const a = api();
+  assert.equal(await enviarConsentimentoPendente({ endereco: ENDER, token: "t", versaoAtual: "2.0", storage: s, apiPost: a.apiPost }), "enviado");
+  assert.equal(await enviarConsentimentoPendente({ endereco: B, token: "t", versaoAtual: "2.0", storage: s, apiPost: a.apiPost }), "nada");
+  assert.equal(a.chamadas.length, 1);
+  // (b) 1.ª conta FALHA o envio; 2.ª conta continua sem herdar; a 1.ª volta a tentar
+  const s2 = memoria(aceite());
+  assert.equal(await enviarConsentimentoPendente({ endereco: ENDER, token: "t", versaoAtual: "2.0", storage: s2, apiPost: api({ ok: false }).apiPost }), "falhou");
+  const a2 = api();
+  assert.equal(await enviarConsentimentoPendente({ endereco: B, token: "t", versaoAtual: "2.0", storage: s2, apiPost: a2.apiPost }), "nada");
+  assert.equal(a2.chamadas.length, 0);
+  assert.equal(await enviarConsentimentoPendente({ endereco: ENDER, token: "t", versaoAtual: "2.0", storage: s2, apiPost: a2.apiPost }), "enviado");
+  // (c) a fixação não estraga o que o Boot lê
+  const c = JSON.parse(s2.getItem(CHAVE_CONSENTIMENTO));
+  assert.equal(c.aceito, true); assert.equal(c.versao, "2.0");
+});
+
 test("envio: sem token não chama o servidor", async () => {
   const a = api();
   assert.equal(await enviarConsentimentoPendente({ endereco: ENDER, token: null, versaoAtual: "2.0", storage: memoria(aceite()), apiPost: a.apiPost }), "nada");

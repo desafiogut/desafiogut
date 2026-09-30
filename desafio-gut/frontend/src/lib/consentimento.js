@@ -17,6 +17,9 @@ export function consentimentoPendente(raw, endereco, versaoAtual) {
   if (!c || c.aceito !== true || c.versao !== versaoAtual) return null;
   if (!c.aceitos || typeof c.aceitos !== "object") return null; // aceite anterior ao MC104: sem declarações
   const ender = String(endereco).toLowerCase();
+  // O aceite é do APARELHO e vale só para a 1.ª conta que entra depois do clique (R18 MC104 #4):
+  // outra conta no mesmo aparelho NÃO herda uma prova de consentimento que não deu.
+  if (typeof c.titularLocal === "string" && c.titularLocal !== ender) return null;
   if (Array.isArray(c.enviadoPara) && c.enviadoPara.includes(ender)) return null;
   return {
     endereco: ender,
@@ -36,6 +39,11 @@ export async function enviarConsentimentoPendente({ endereco, token, versaoAtual
   try { raw = storage.getItem(CHAVE_CONSENTIMENTO); } catch { return "nada"; }
   const corpo = consentimentoPendente(raw, endereco, versaoAtual);
   if (!corpo) return "nada";
+  // Fixa a conta ANTES do envio: se este falhar, outra conta não o herda na tentativa seguinte.
+  try {
+    const c = JSON.parse(raw);
+    if (c.titularLocal !== corpo.endereco) storage.setItem(CHAVE_CONSENTIMENTO, JSON.stringify({ ...c, titularLocal: corpo.endereco }));
+  } catch { return "nada"; } // sem storage não se consegue fixar a conta → não enviar
   let resp;
   try { resp = await apiPost("consentimento", corpo, { token }); } catch { return "falhou"; }
   if (!resp?.ok) return "falhou";

@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 const TITULAR = "0xaaa0000000000000000000000000000000000aaa";
 const OUTRO   = "0xbbb0000000000000000000000000000000000bbb";
 const ADMIN   = "0xccc0000000000000000000000000000000000ccc";
+const PARECIDO = "0xaaa0000000000000000000000000000000000aab"; // difere do TITULAR só no último carácter
 
 const blobs = new Map();
 mock.module("@netlify/blobs", {
@@ -29,6 +30,19 @@ mock.module("@netlify/blobs", {
 
 // ── Supabase em duplo fiel aos filtros ────────────────────────────────────────────────────────────
 let db = {};
+// Esquema REAL (information_schema de produção, 2026-09-30): coluna inexistente → 42703, como o PostgREST.
+const SCHEMA = {
+  saldo_rs: ["cliente_id", "payload"], troco_senhas: ["cliente_id", "payload"], wallet: ["cliente_id", "payload"],
+  saldo_rs_creditos: ["pedido_id", "payload"], saldo_rs_debitos: ["operacao_id", "payload"],
+  lances: ["id", "edicao_id", "endereco"], lojistas: ["id", "endereco"], atividade_utilizadores: ["endereco", "acessos"],
+  pontuacoes: ["ciclo_id", "endereco", "pontos"], rankings_ciclo: ["ciclo_id", "endereco", "posicao"],
+  cotas: ["cliente_id", "endereco", "email"],
+};
+function exigirColuna(tabela, col) {
+  const base = col.split("->>")[0];
+  if (!SCHEMA[tabela]) throw new Error(`42P01: tabela ${tabela} não existe`);
+  if (!SCHEMA[tabela].includes(base)) throw new Error(`42703: coluna ${tabela}.${base} não existe`);
+}
 const ctx = { configurado: true, falharTabela: null };
 function valor(row, col) {
   const m = col.match(/^(\w+)->>(\w+)$/);
@@ -40,11 +54,12 @@ function consulta(tabela) {
   const q = {
     select(cols) { if (cols !== "*") throw new Error("duplo: só select('*')"); selecionado = true; return q; },
     eq(col, v) {
+      exigirColuna(tabela, col);
       if (v === null || v === undefined) throw new Error("22007: eq.null não é IS NULL");
       filtros.push((r) => String(valor(r, col)) === String(v)); return q;
     },
     or(expr) {
-      const alts = expr.split(",").map((p) => { const [c, op, ...v] = p.split("."); if (op !== "eq") throw new Error("duplo: só eq no or"); return [c, v.join(".")]; });
+      const alts = expr.split(",").map((p) => { const [c, op, ...v] = p.split("."); if (op !== "eq") throw new Error("duplo: só eq no or"); exigirColuna(tabela, c); return [c, v.join(".")]; });
       filtros.push((r) => alts.some(([c, v]) => String(r[c]) === v)); return q;
     },
     then(res, rej) {
@@ -85,7 +100,7 @@ const blob = (store, key, v) => { if (!blobs.has(store)) blobs.set(store, new Ma
 
 function semear() {
   // Blobs
-  blob("pedidos", "pedido:p1", { produtoId: "p1", comprador: TITULAR, morada: { cep: "69000-000" }, cpf: "111", nfe: { numero: "9" } });
+  blob("pedidos", "pedido:p1", { produtoId: "p1", comprador: TITULAR, morada: { cep: "69000-000" }, cpf: "111", nfe: { numero: "9" }, lojista: "cnpj:00000000000100" });
   blob("pedidos", "pedido:p2", { produtoId: "p2", comprador: OUTRO, morada: { cep: "01000-000" }, cpf: "222" });
   blob("pedidos", `comprador:${TITULAR}`, { ids: ["p1"] });
   blob("lances-relampago", "R-1", { lances: [
@@ -94,21 +109,22 @@ function semear() {
   ] });
   blob("consent-log", `100:${TITULAR}`, { endereco: TITULAR, contexto: "gate-legal", termoVersao: "2.0" });
   blob("consent-log", `101:${OUTRO}`, { endereco: OUTRO, contexto: "gate-legal" });
+  blob("consent-log", `102:${PARECIDO}`, { endereco: PARECIDO, contexto: "gate-legal", marca: "parecido" });
   blob("lance-idem", "k1", { endereco: TITULAR, lanceId: "l1" });
   blob("lance-idem", "k2", { endereco: OUTRO, lanceId: "l2" });
   // Supabase
   db = {
     saldo_rs: [{ cliente_id: TITULAR, payload: { centavos: 100 } }, { cliente_id: OUTRO, payload: { centavos: 999 } }],
-    troco_senhas: [{ cliente_id: OUTRO, payload: {} }],
+    troco_senhas: [{ cliente_id: TITULAR, payload: { senhas: 2 } }, { cliente_id: OUTRO, payload: {} }],
     wallet: [{ cliente_id: TITULAR, payload: { saldoCentavos: 3 } }],
     saldo_rs_creditos: [{ pedido_id: "c1", payload: { endereco: TITULAR, valorCentavos: 500 } }, { pedido_id: "c2", payload: { endereco: OUTRO } }],
-    saldo_rs_debitos: [{ operacao_id: "d1", payload: { endereco: OUTRO } }],
+    saldo_rs_debitos: [{ operacao_id: "d0", payload: { endereco: TITULAR } }, { operacao_id: "d1", payload: { endereco: OUTRO } }],
     lances: [{ id: 1, endereco: TITULAR, edicao_id: "R-1" }, { id: 2, endereco: OUTRO }],
-    lojistas: [{ id: 1, endereco: OUTRO }],
+    lojistas: [{ id: 7, endereco: TITULAR }, { id: 1, endereco: OUTRO }],
     atividade_utilizadores: [{ endereco: TITULAR, acessos: 4 }, { endereco: OUTRO, acessos: 9 }],
     pontuacoes: [{ ciclo_id: "R-1", endereco: TITULAR, pontos: 3 }, { ciclo_id: "R-1", endereco: OUTRO, pontos: 1 }],
     rankings_ciclo: [{ ciclo_id: "R-1", endereco: TITULAR, posicao: 1 }, { ciclo_id: "R-1", endereco: OUTRO, posicao: 2 }],
-    cotas: [{ cliente_id: TITULAR, endereco: TITULAR, email: "t@x" }, { cliente_id: "outro-id", endereco: TITULAR, email: "t2@x" }, { cliente_id: OUTRO, endereco: OUTRO, email: "o@x" }],
+    cotas: [{ cliente_id: TITULAR, endereco: TITULAR, email: "t@x" }, { cliente_id: "outro-id", endereco: TITULAR, email: "t2@x" }, { cliente_id: TITULAR, endereco: null, email: "t3@x" }, { cliente_id: OUTRO, endereco: OUTRO, email: "o@x" }],
   };
 }
 
@@ -134,7 +150,11 @@ test("titular com dados → pedidos (morada/CPF/NF-e), lances, pontos, consentim
   assert.deepEqual(t.saldo_rs_creditos.map((r) => r.pedido_id), ["c1"]);
   assert.deepEqual(t.wallet.length, 1);
   assert.deepEqual(t.atividade_utilizadores.map((r) => r.acessos), [4]);
-  assert.equal(t.cotas.length, 2, "cotas por cliente_id OU endereco");
+  assert.deepEqual(t.cotas.map((c) => c.email).sort(), ["t2@x", "t3@x", "t@x"], "cotas por cliente_id OU endereco (incl. endereco nulo)");
+  assert.deepEqual(t.troco_senhas.map((r) => r.payload.senhas), [2]);
+  assert.deepEqual(t.saldo_rs_debitos.map((r) => r.operacao_id), ["d0"]);
+  assert.deepEqual(t.lojistas.map((r) => r.id), [7]);
+  assert.deepEqual(Object.keys(t).sort(), ["atividade_utilizadores", "cotas", "lances", "lojistas", "pontuacoes", "rankings_ciclo", "saldo_rs", "saldo_rs_creditos", "saldo_rs_debitos", "troco_senhas", "wallet"]);
   assert.deepEqual(d.supabase.erros, []);
 });
 
@@ -143,6 +163,8 @@ test("HARD GATE 13: NADA de terceiros em nenhuma parte da exportação", async (
   const { corpo } = await exportar();
   const txt = JSON.stringify(corpo);
   assert.ok(!txt.includes(OUTRO), "endereço de terceiro na exportação");
+  assert.ok(!txt.includes(PARECIDO) && !txt.includes("parecido"), "endereço QUASE igual ao do titular entrou");
+  // Declarado: o pedido do titular traz o `lojista` (vendedor, já público na listagem) — é parte do registo DELE.
   for (const marca of ["01000-000", "\"222\"", "\"l2\"", "999", "o@x", "\"c2\""]) assert.ok(!txt.includes(marca), `dado de terceiro: ${marca}`);
 });
 

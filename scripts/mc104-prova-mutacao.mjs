@@ -51,7 +51,18 @@ const B = [
   ["B7 erro do Supabase engolido", EXP, "erros.push(`${tabela}: ${error.message}`);", "", T_B],
 ];
 
-const lista = qual === "A" ? A : qual === "B" ? B : [...A, ...B];
+// C — pós-validador (SEG2): os mutantes dele que sobreviviam + as correcções do R18 #4 e da plausibilidade.
+const C = [
+  ["C1 cotas só por endereco", EXP, ".or(`cliente_id.eq.${endereco},endereco.eq.${endereco}`);", ".or(`endereco.eq.${endereco}`);", T_B],
+  ["C2 troco_senhas fora", EXP, '  ["troco_senhas", "cliente_id"],\n', "", T_B],
+  ["C3 saldo_rs_debitos fora", EXP, '  ["saldo_rs_debitos", "payload->>endereco"],\n', "", T_B],
+  ["C4 lojistas coluna errada", EXP, '["lojistas", "endereco"],', '["lojistas", "cliente_id"],', T_B],
+  ["C5 consent_log por prefixo", EXP, 'if (!key.endsWith(":" + endereco)) continue;', 'if (!key.includes(":" + endereco.slice(0, 10))) continue;', T_B],
+  ["C6 2.ª conta herda o aceite", LFE, 'if (typeof c.titularLocal === "string" && c.titularLocal !== ender) return null;', "", T_A_FE],
+  ["C7 conta fixada só depois do envio", LFE, "if (c.titularLocal !== corpo.endereco) storage.setItem(", "if (false) storage.setItem(", T_A_FE],
+  ["C8 sem limite de plausibilidade", LIB, "if (ms > agora + TOLERANCIA_RELOGIO_MS) {", "if (false) {", T_A_BE],
+];
+const lista = qual === "A" ? A : qual === "B" ? B : qual === "C" ? C : [...A, ...B, ...C];
 let problemas = 0;
 for (const [nome, ficheiro, de, para, t] of lista) {
   const orig = readFileSync(ficheiro, "utf8");
