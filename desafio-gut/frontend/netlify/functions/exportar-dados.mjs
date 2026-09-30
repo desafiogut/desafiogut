@@ -10,12 +10,21 @@
 //
 // Stores coletados: saldo-rs, wallet, cotas, renovacao-adesao, voucher,
 // consent-log (entradas do address), lance-idem (idem) e pedidos (idem).
+//
+// MC104 (LGPD art. 18 — acesso a TODOS os dados do titular, e SÓ aos dele):
+//   - pedidos casam também por `comprador` (é o campo do pedido; antes nunca casavam);
+//   - `lances_relampago`: só os lances DO titular dentro do Blob legado por edição;
+//   - `supabase`: as tabelas onde o sistema vive desde o MC36.1 (saldo R$, créditos/débitos PIX,
+//     Vale-Crédito, troco, cotas, lances, lojista, actividade, pontuação e ranking do torneio),
+//     cada uma filtrada pelo titular. Os Blobs legados continuam exportados como antes (HARD GATE 4).
+//   - `consent_log` já inclui o aceite do gate legal (MC104 Frente A).
 
 import { getStore } from "@netlify/blobs";
 import {
   jsonResponse, jsonError, validarEndereco, ValidationError,
-  parseJsonBody, validarOwnerOuAdmin,
+  parseJsonBody, validarOwnerOuAdmin, mascararEndereco,
 } from "./_lib/validate.mjs";
+import { getSupabaseReadOnly, supabaseConfigurado } from "./_lib/supabase-client.mjs";
 import { aplicarRateLimit } from "./_lib/rate-limiter.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
 import { getAdminAddresses } from "./_lib/admin-helpers.mjs";
@@ -38,7 +47,7 @@ async function coletarPorChave(nome, endereco) {
   try {
     return await store.get(endereco, { type: "json" });
   } catch (err) {
-    console.warn(`[exportar-dados] get ${nome}:${endereco} falhou:`, err?.message);
+    console.warn(`[exportar-dados] get ${nome}:${mascararEndereco(endereco)} falhou:`, err?.message);
     return null;
   }
 }
@@ -71,7 +80,7 @@ async function coletarPorValor(nome, endereco) {
     for (const { key } of blobs) {
       try {
         const obj = await store.get(key, { type: "json" });
-        const enderecoObj = String(obj?.endereco || obj?.address || "").toLowerCase();
+        const enderecoObj = String(obj?.endereco || obj?.address || obj?.comprador || "").toLowerCase();
         if (enderecoObj === endereco) out.push({ key, ...obj });
       } catch {}
     }
@@ -79,6 +88,59 @@ async function coletarPorValor(nome, endereco) {
     console.warn(`[exportar-dados] list ${nome} falhou:`, err?.message);
   }
   return out;
+}
+
+// Blob legado `lances-relampago`: chave = edição, valor = { lances:[…de TODOS…] }. Só os do titular.
+async function coletarLancesLegado(endereco) {
+  const store = abrirStore("lances-relampago");
+  if (!store) return [];
+  const out = [];
+  try {
+    const { blobs } = await store.list();
+    for (const { key } of blobs) {
+      try {
+        const obj = await store.get(key, { type: "json" });
+        for (const l of Array.isArray(obj?.lances) ? obj.lances : []) {
+          if (String(l?.endereco || "").toLowerCase() === endereco) out.push({ edicaoId: key, ...l });
+        }
+      } catch {}
+    }
+  } catch (err) {
+    console.warn("[exportar-dados] list lances-relampago falhou:", err?.message);
+  }
+  return out;
+}
+
+// [tabela, coluna do titular]. `payload->>endereco` = registos fiscais (JSONB).
+const SUPA_POR_COLUNA = [
+  ["saldo_rs", "cliente_id"],
+  ["troco_senhas", "cliente_id"],
+  ["wallet", "cliente_id"],
+  ["saldo_rs_creditos", "payload->>endereco"],
+  ["saldo_rs_debitos", "payload->>endereco"],
+  ["lances", "endereco"],
+  ["lojistas", "endereco"],
+  ["atividade_utilizadores", "endereco"],
+  ["pontuacoes", "endereco"],
+  ["rankings_ciclo", "endereco"],
+];
+
+async function coletarSupabase(endereco) {
+  if (!supabaseConfigurado()) return { disponivel: false };
+  const sb = getSupabaseReadOnly();
+  const tabelas = {};
+  const erros = [];
+  for (const [tabela, coluna] of SUPA_POR_COLUNA) {
+    const { data, error } = await sb.from(tabela).select("*").eq(coluna, endereco);
+    if (error) { erros.push(`${tabela}: ${error.message}`); tabelas[tabela] = null; continue; }
+    tabelas[tabela] = data ?? [];
+  }
+  // cotas: o titular pode estar em cliente_id OU em endereco (como no conta-delete).
+  const { data: cotas, error: errCotas } = await sb.from("cotas").select("*")
+    .or(`cliente_id.eq.${endereco},endereco.eq.${endereco}`);
+  if (errCotas) { erros.push(`cotas: ${errCotas.message}`); tabelas.cotas = null; }
+  else tabelas.cotas = cotas ?? [];
+  return { disponivel: true, tabelas, erros };
 }
 
 export default async (req) => {
@@ -137,6 +199,8 @@ export default async (req) => {
   dados.consent_log = await coletarConsentLog(endereco);
   dados.lance_idem  = await coletarPorValor("lance-idem", endereco);
   dados.pedidos     = await coletarPorValor("pedidos", endereco);
+  dados.lances_relampago = await coletarLancesLegado(endereco);
+  dados.supabase = await coletarSupabase(endereco);
 
   const payload = {
     titular:   endereco,
@@ -146,6 +210,6 @@ export default async (req) => {
     dados,
   };
 
-  console.info("[exportar-dados] exportação concluída", { endereco, papel: guard.papel });
+  console.info("[exportar-dados] exportação concluída", { endereco: mascararEndereco(endereco), papel: guard.papel });
   return jsonResponse(payload);
 };

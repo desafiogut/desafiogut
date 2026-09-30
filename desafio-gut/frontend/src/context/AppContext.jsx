@@ -33,6 +33,8 @@ import {
   gravarPrazoStorage,
 } from "../lib/leilaoTimer.js";
 import { apiGet, apiPost } from "../lib/api.js";
+import { enviarConsentimentoPendente } from "../lib/consentimento.js";
+import { VERSAO_CONSENTIMENTO } from "../components/TermosConsentimento.jsx";
 import {
   enderecoSessaoSincrono,
   adminProvavel as lerAdminProvavel,
@@ -947,6 +949,15 @@ export function AppProvider({ children }) {
     }, atrasoDaTentativaAuth(tentativaAuth));
     return () => { morto = true; clearTimeout(id); };
   }, [address, authToken, obterAuthToken, tentativaAuth]);
+
+  // MC104 — o aceite do gate (pré-login, só em localStorage) segue para o servidor quando há sessão.
+  useEffect(() => {
+    if (!address || !authToken) return;
+    enviarConsentimentoPendente({
+      endereco: address, token: authToken, versaoAtual: VERSAO_CONSENTIMENTO,
+      storage: localStorage, apiPost,
+    }).catch(() => {});
+  }, [address, authToken]);
 
   // ── Saldo R$ off-chain: polling 5s (gated em authToken para anti-IDOR) ──
   const refetchSaldoRs = useCallback(async () => {

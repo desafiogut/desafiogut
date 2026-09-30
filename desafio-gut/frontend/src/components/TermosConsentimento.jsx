@@ -27,6 +27,8 @@ export default function TermosConsentimento({ onAceitar }) {
       aceito: true,
       timestamp: new Date().toISOString(),
       versao: VERSAO_CONSENTIMENTO,
+      // MC104 — as 4 declarações seguem para o servidor depois do login (prova do aceite, LGPD art. 8º §2º).
+      aceitos: { lido, maiores, termos, privacidade },
     };
     // MC88.31 (Achado 7 do MC88.30) — era sessionStorage, que morre com o
     // processo da WebView: no APK o gate reaparecia a CADA arranque (~2,5 s até
