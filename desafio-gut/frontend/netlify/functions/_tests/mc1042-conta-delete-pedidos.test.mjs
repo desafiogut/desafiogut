@@ -122,6 +122,29 @@ test("(f) dry-run conta os pedidos do titular SEM mutar", async () => {
   assert.deepEqual(stores.pedidos, antes);
 });
 
+// Validador (R1): nada além de comprador/morada muda — datas, rastreio, histórico, NF-e, txHash ficam.
+test("(h) só comprador e morada mudam: o resto do pedido é byte-igual (nada apagado)", async () => {
+  const stores = cenario();
+  const completo = { ...pedido("P1", ALVO), recebido_em: "2026-09-10T00:00:00.000Z",
+    rastreio: { codigo: "AA123456789BR", transportadora: "Correios", eventos: [{ data: "2026-09-05T00:00:00.000Z", codigo: "1" }] } };
+  stores.pedidos.set("pedido:P1", completo);
+  await excluirBlobs(getStoreDe(stores), ALVO, { dryRun: false });
+  const { comprador, morada, anonimizadoEm, anonimizadoPor, ...resto } = stores.pedidos.get("pedido:P1");
+  const { comprador: _c, morada: _m, ...restoOriginal } = completo;
+  assert.deepEqual(resto, restoOriginal);
+  assert.ok(comprador && morada && anonimizadoEm && anonimizadoPor);
+});
+
+// Validador (V5): um terceiro quase-colidente (mesmo prefixo) não pode casar.
+test("(i) terceiro com endereço quase igual ao titular fica intacto", async () => {
+  const stores = cenario();
+  const QUASE = ALVO.slice(0, -1) + "d";
+  stores.pedidos.set("pedido:P5", pedido("P5", QUASE));
+  const antes = structuredClone(stores.pedidos.get("pedido:P5"));
+  await excluirBlobs(getStoreDe(stores), ALVO, { dryRun: false });
+  assert.deepEqual(stores.pedidos.get("pedido:P5"), antes);
+});
+
 test("(g) o titular em maiúsculas casa o comprador (normalizado)", async () => {
   const stores = cenario();
   const r = await excluirBlobs(getStoreDe(stores), ALVO.toUpperCase(), { dryRun: false });

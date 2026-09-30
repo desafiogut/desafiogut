@@ -25,6 +25,14 @@ const MUTANTES = [
   ["M5 casa qualquer pedido (terceiros)", "if (e === endereco) alvo.push(key);", "alvo.push(key);"],
   ["M6 apaga em vez de anonimizar", "await store.setJSON(key, anonimizarPayload(obj));", "await store.delete(key);"],
   ["M7 morada só parcial (cpf fica)", '.map((k) => [k, "***"])', '.map((k) => [k, k === "cpf" ? obj.morada[k] : "***"])'],
+  // Mutantes do validador que sobreviviam (V1/V2/V3/V5) — agora têm de morrer.
+  ["V1 apaga edicaoId + criado_em", 'if ("comprador" in obj) obj.comprador = ENDERECO_ANONIMO;',
+    'if ("comprador" in obj) { obj.comprador = ENDERECO_ANONIMO; delete obj.edicaoId; delete obj.criado_em; }'],
+  ["V2 rastreio = null", 'if ("comprador" in obj) obj.comprador = ENDERECO_ANONIMO;',
+    'if ("comprador" in obj) { obj.comprador = ENDERECO_ANONIMO; obj.rastreio = null; }'],
+  ["V3 historico = []", 'if ("comprador" in obj) obj.comprador = ENDERECO_ANONIMO;',
+    'if ("comprador" in obj) { obj.comprador = ENDERECO_ANONIMO; obj.historico = []; }'],
+  ["V5 casa por prefixo", "if (e === endereco) alvo.push(key);", "if (e.slice(0, 40) === endereco.slice(0, 40)) alvo.push(key);"],
 ];
 
 function correr() {
