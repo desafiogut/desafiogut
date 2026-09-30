@@ -84,6 +84,36 @@ test("(c) tipo errado → default, sem coerção", () => {
   }
 });
 
+test("(c) mapa por plataforma numa flag nova NÃO é lido (as novas são escalares) → default", () => {
+  const r = resolverRecursos({ isTorneioVisivel: { ios: false, android: false, pwa: false }, limitePassesIndicacao: { pwa: 9 } }, "pwa");
+  assert.equal(r.isTorneioVisivel, true);
+  assert.equal(r.limitePassesIndicacao, 5);
+});
+
+test("(c) inteiro fora do intervalo seguro → default", () => {
+  for (const lixo of [2 ** 60, 1e300, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.equal(resolverRecursos({ limitePassesIndicacao: lixo }, "pwa").limitePassesIndicacao, 5, String(lixo));
+  }
+  assert.equal(resolverRecursos({ limitePassesIndicacao: Number.MAX_SAFE_INTEGER }, "pwa").limitePassesIndicacao, Number.MAX_SAFE_INTEGER);
+});
+
+test("(c) chave herdada pelo protótipo não conta como config (poluição de protótipo)", () => {
+  const nomes = ["isCampanhaIndicacaoAtiva", "isProgramadaSenhasAtiva", "limitePassesIndicacao"];
+  try {
+    Object.prototype.isCampanhaIndicacaoAtiva = true;
+    Object.prototype.isProgramadaSenhasAtiva = false;
+    Object.prototype.limitePassesIndicacao = 999;
+    for (const cfg of [null, {}, PROD_CFG]) {
+      const r = resolverRecursos(cfg, "pwa");
+      assert.equal(r.isCampanhaIndicacaoAtiva, false);
+      assert.equal(r.isProgramadaSenhasAtiva, true);
+      assert.equal(r.limitePassesIndicacao, 5);
+    }
+  } finally {
+    for (const n of nomes) delete Object.prototype[n];
+  }
+});
+
 // ── USO: o handler real ─────────────────────────────────────────────────────
 async function get(p) {
   const res = await handler(new Request(`https://x.test/.netlify/functions/recursos-app?plataforma=${p}`));

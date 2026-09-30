@@ -55,9 +55,10 @@ export function resolverRecursos(config, plataforma) {
   };
   const lerTransicao = (chave) => {
     const padrao = DEFAULT_FLAGS_TRANSICAO[chave];
-    const v = cfg[chave];
+    // Object.hasOwn: uma chave herdada (poluição de protótipo) não conta como config.
+    const v = Object.hasOwn(cfg, chave) ? cfg[chave] : undefined;
     if (typeof padrao === "boolean") return typeof v === "boolean" ? v : padrao;
-    return Number.isInteger(v) && v >= 0 ? v : padrao;
+    return Number.isSafeInteger(v) && v >= 0 ? v : padrao;
   };
   const transicao = {};
   for (const chave of Object.keys(DEFAULT_FLAGS_TRANSICAO)) transicao[chave] = lerTransicao(chave);

@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-29 (MC102.1b: **Frenet real** — adaptador (só Correios, SEDEX 03220) + `webhook-frenet` idempotente e fail-closed (falta o operador definir `FRENET_WEBHOOK_TOKEN`) + eventos no pedido (só data+código, ISO UTC, via CAS) + 6 refinamentos da timeline (estado «Entregue»). Anterior: MC102.1a: **estrutura do rastreio** — contrato `consultarRastreio` + mock só em testes (injecção; grafo esbuild provado), mapa PT-BR de 5 passos + 3 alertas (DEC-102.1-H), `TimelineRastreio` no cartão só com `rastreio.eventos`; produção visualmente igual até ao MC102.1b. Anterior: MC102.0: **escrita condicional (CAS) no pedido** — `@netlify/blobs` 10.0.0, `set()` com If-Match (o `setJSON` não o envia), retry da operação 3×; ETag de produção por medir. Anterior: MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-09-30 (MC103: **5 flags de TRANSIÇÃO** em `recursos-app-config.mjs`, criadas e NÃO ligadas (defaults = comportamento actual, A/B 0/30) + **legado medido**: R$ 23,75 em 7 contas · 12 senhas on-chain em 1 conta · 0 dívidas de bónus · Vale-Crédito 0 · ⚠️ R$ 10,25 consumidos sem destino conhecido. Anterior: 2026-09-29, MC102.1b: **Frenet real** — adaptador (só Correios, SEDEX 03220) + `webhook-frenet` idempotente e fail-closed (falta o operador definir `FRENET_WEBHOOK_TOKEN`) + eventos no pedido (só data+código, ISO UTC, via CAS) + 6 refinamentos da timeline (estado «Entregue»). Anterior: MC102.1a: **estrutura do rastreio** — contrato `consultarRastreio` + mock só em testes (injecção; grafo esbuild provado), mapa PT-BR de 5 passos + 3 alertas (DEC-102.1-H), `TimelineRastreio` no cartão só com `rastreio.eventos`; produção visualmente igual até ao MC102.1b. Anterior: MC102.0: **escrita condicional (CAS) no pedido** — `@netlify/blobs` 10.0.0, `set()` com If-Match (o `setJSON` não o envia), retry da operação 3×; ETag de produção por medir. Anterior: MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -3986,6 +3986,47 @@ Logs: `_logs/MC102.1b_*.md` · Relatório: `Desktop/MC102.1b-RELATORIO.md`.
 - Um evento expulso (acima de 50) volta a entrar se reenviado (raro). Cada POST lista todos os pedidos (O(N)): precisa de índice com volume.
 - `src/pages/admin/Pedidos.jsx` mostra «Entregue» (e «Recebido») com a cor de aviso: só `enviado` é verde. Não autorizado neste MC.
 - `desafio-gut/frontend/package-lock.json` já estava **modificado antes do MC** (84 linhas, padrão do `netlify deploy --build`). Não foi commitado.
+
+---
+
+## MC103 — Mecanismo de transição + medição do legado (2026-09-30)
+
+**Natureza:** preparação + medição. Nada ligado, nada escondido, nada apagado. Logs: `_logs/MC103_*.md` · Relatório:
+`Desktop/MC103-RELATORIO.md`. **Validador: APROVADO COM RESSALVAS** (0 bloqueantes; ressalvas técnicas corrigidas por R15).
+
+### Frente A — flags de TRANSIÇÃO (para o MC111)
+`_lib/recursos-app-config.mjs` → `DEFAULT_FLAGS_TRANSICAO`:
+`isProgramadaSenhasAtiva:true` · `isTorneioVisivel:true` · `isSenhaBonusAtiva:true` · `isCampanhaIndicacaoAtiva:false` ·
+`limitePassesIndicacao:5`. `resolverRecursos` devolve-as além das 2 antigas; `/recursos-app` expõe-nas sem alteração.
+- **Escalares GLOBAIS**, não mapas por plataforma (interpretação D5 do executor, literal do enunciado; reversível).
+  Um mapa `{ios,android,pwa}` gravado numa flag nova **cai no default** (testado).
+- Leitura **estrita**: `Object.hasOwn` (protótipo poluído não conta — regra MC93-D) + boolean só `typeof boolean`,
+  limite só `Number.isSafeInteger && >= 0`. Lixo → default, sem coerção.
+- **Nenhum consumidor as lê hoje.** A/B pareado 0/30 (e 0/252 no validador) nas chaves antigas.
+- Testes `_tests/mc103-flags-transicao.test.mjs` (12, incl. USO pelo handler real) · mutação **18/18**.
+- ⛔ **Para o MC111 ler uma flag no cliente:** `src/hooks/useRecursosApp.js` lê o Supabase **directamente** com espelho
+  próprio (`resolverParaPlataforma` + `fallbackLocal`) que devolve só as 2 chaves antigas → estender o espelho.
+- ⚠️ As 2 flags antigas continuam a ler pela cadeia de protótipos (`cfg[chave]`) — não tocadas (HARD GATE 4).
+- ⚠️ `src/lib/leilaoLock.js` **não lê flags** (é o `EM_BREVE_MODE`); o enunciado dizia o contrário.
+
+### Frente B — legado medido (só SELECT / leituras públicas; só agregados)
+| tipo | contas | valor |
+|---|---|---|
+| Saldo R$ (`saldo_rs`) | 7 de 8 | **R$ 23,75** (6 até R$ 10, 1 entre R$ 10–50) |
+| Créditos PIX históricos | 21 registos / 8 contas | R$ 58,00 · débitos registados: **0** |
+| Senhas on-chain | **1** | **12** (nominal R$ 24,00) — confirmado por logs completos desde o deploy |
+| Dívidas de bónus (`rankings_ciclo`) | 0 | 0 (tabela vazia) |
+| Vale-Crédito (`wallet` + Blob legado) | 0 | R$ 0,00 |
+
+- ⛔ **R$ 10,25 sem destino:** R$ 58,00 − R$ 23,75 = R$ 34,25 consumidos, as 12 senhas explicam R$ 24,00. O MC111 tem de
+  reconstituir antes de liquidar.
+- O Blob legado `saldo-rs` (5 chaves) está **todo sombreado** pelo Supabase (comparação por md5) → o saldo vivo é o do Supabase.
+- O Vale-Crédito vive no **Supabase `wallet`** (MC36.1); o Blob `wallet` é só fallback legado.
+
+### ⚠️ Instrumento: RPC público que devolve VAZIO em silêncio
+`rpc.flashbots.net` devolve **0 logs** para intervalos históricos (USDC em junho: 0; `rpc.mevblocker.io`: 8736).
+publicnode e drpc **recusam** (archive/plano pago). **Toda a leitura de logs on-chain precisa de controlo positivo num
+contrato movimentado no MESMO intervalo.** Sem ele, este MC teria reportado «0 senhas» com confiança.
 
 ---
 
