@@ -63,8 +63,9 @@ function normalizar(endereco) {
   return String(endereco || "").toLowerCase();
 }
 
-// Chaves de PII a REMOVER dos registros retidos (defesa em profundidade): hoje os
-// registros fiscais só carregam `endereco`, mas se um campo pessoal for adicionado
+// Chaves de PII a REMOVER dos registros retidos (defesa em profundidade): os
+// registros fiscais carregam `endereco` (ou `comprador` + `morada`, nos pedidos — tratados
+// em anonimizarPayload), mas se um campo pessoal de topo for adicionado
 // no futuro ele é limpo automaticamente ao anonimizar. `endereco`/`address` são
 // substituídos pelo token; os demais são removidos por completo.
 const PII_KEYS_REMOVER = ["email", "cpf", "cnpj", "nome", "name", "telefone", "phone", "payerEmail", "payer_email"];
@@ -74,6 +75,13 @@ function anonimizarPayload(payload) {
   const obj = { ...(payload || {}) };
   if ("endereco" in obj) obj.endereco = ENDERECO_ANONIMO;
   if ("address" in obj) obj.address = ENDERECO_ANONIMO;
+  // MC104.2 — pedidos (store "pedidos"): o dono está em `comprador` e a morada traz nome, CPF,
+  // morada e telefone. Substituem-se por "***" (anonimizar ≠ apagar); a `nfe` (nº/série/chave)
+  // fica intacta — obrigação fiscal, LGPD art. 16, I.
+  if ("comprador" in obj) obj.comprador = ENDERECO_ANONIMO;
+  if (obj.morada && typeof obj.morada === "object") {
+    obj.morada = Object.fromEntries(Object.keys(obj.morada).map((k) => [k, "***"]));
+  }
   for (const k of PII_KEYS_REMOVER) if (k in obj) delete obj[k];
   obj.anonimizadoEm = new Date().toISOString();
   obj.anonimizadoPor = "mc72-exclusao-conta";
@@ -210,7 +218,8 @@ async function chavesDoEndereco(store, endereco, { sufixoChave = false } = {}) {
     if (sufixoChave) continue;
     try {
       const obj = await store.get(key, { type: "json" });
-      const e = normalizar(obj?.endereco ?? obj?.address);
+      // MC104.2: `comprador` é o campo do dono nos pedidos (a mesma regra da exportação, MC104).
+      const e = normalizar(obj?.endereco ?? obj?.address ?? obj?.comprador);
       if (e === endereco) alvo.push(key);
     } catch { /* ignora chave ilegível */ }
   }
