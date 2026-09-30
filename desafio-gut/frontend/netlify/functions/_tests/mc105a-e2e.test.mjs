@@ -191,3 +191,60 @@ test("E15 P10: nenhum log do handler/libs leva o endereço completo", async () =
   assert.ok(linhas.length > 0, "controlo: houve logs");
   assert.equal(linhas.some((l) => l.toLowerCase().includes(A.slice(2))), false, linhas.join("\n"));
 });
+
+// ── Achados do validador (SEG3) ──────────────────────────────────────────────
+test("E16 corrida 23505 + releitura que FALHA → reembolso e 502 (antes: excepção, cobrado 2×, sem alerta)", async () => {
+  S.g.antesDeInserir = (tab, linha, t) => {
+    t.passes.push({ id: "00000000-0000-4000-8000-00000000000a", ...linha, comprado_em: "x", palpite_usado: false, cupons_ids: [], status: "activo" });
+    t.saldo_rs[0].payload = { centavos: t.saldo_rs[0].payload.centavos - 200 };
+    S.g.falhar.passes = { op: "select", code: "" }; // a releitura cai (falha de rede real vem com code "")
+  };
+  const r = await comprar();
+  assert.equal(r.status, 502, JSON.stringify(r.corpo)); assert.equal(r.corpo.error.reembolsado, true);
+  assert.equal(saldo(), 300, "só o débito do vencedor fica");
+});
+
+test("E17 EXCEPÇÃO depois do débito (from() lança no INSERT) → reembolso, 502", async () => {
+  let n = 0; const orig = S.cliente.from;
+  S.cliente.from = (t) => { if (t === "passes" && ++n === 2) throw new Error("rede"); return orig(t); };
+  const r = await comprar();
+  assert.equal(r.status, 502); assert.equal(r.corpo.error.reembolsado, true);
+  assert.equal(saldo(), 500); assert.equal(S.tabelas.passes.length, 0);
+});
+
+test("E18 10 cliques SIMULTÂNEOS na mesma chave → nenhum 402 falso: todos 200/201, 1 passe, 1 débito líquido", async () => {
+  const rs = await Promise.all(Array.from({ length: 10 }, () => comprar()));
+  const st = rs.map((r) => r.status);
+  assert.equal(st.filter((s) => s === 201).length, 1, JSON.stringify(st));
+  assert.ok(st.every((s) => s === 200 || s === 201), JSON.stringify(st));
+  assert.equal(S.tabelas.passes.length, 1);
+  assert.equal(saldo(), 300);
+});
+
+test("E19 a leitura dos passes falha ANTES do débito → 503, nada debitado", async () => {
+  S.g.falhar.passes = { op: "select", code: "" };
+  const r = await comprar();
+  assert.equal(r.status, 503); assert.equal(r.corpo.error.code, "store_indisponivel");
+  assert.equal(saldo(), 500);
+});
+
+test("E20 catálogo indisponível → 503, nada debitado", async () => {
+  const orig = B.getStore;
+  B.getStore = (o) => { if (o.name === "produtos") throw new Error("blobs em baixo"); return orig(o); };
+  const r = await comprar();
+  assert.equal(r.status, 503); assert.equal(saldo(), 500); assert.equal(S.tabelas.passes.length, 0);
+});
+
+test("E21 débito falha por outra razão (escrita do saldo) → 502 debito_falhou, não 402; nada criado", async () => {
+  S.g.falhar.saldo_rs = { op: "update", code: "XX000" };
+  const r = await comprar();
+  assert.equal(r.status, 502); assert.equal(r.corpo.error.code, "debito_falhou");
+  assert.equal(S.tabelas.passes.length, 0);
+});
+
+test("E22 token válido com endereço inválido → 401; produtoId fora do formato → 400", async () => {
+  assert.equal((await comprar(undefined, { token: await assinarUserSession("lixo") })).status, 401);
+  assert.equal((await comprar({ edicaoId: ED, produtoId: "../x" })).status, 400);
+  assert.equal((await comprar({ edicaoId: ED, produtoId: "abc" })).status, 400);
+  assert.equal(saldo(), 500);
+});

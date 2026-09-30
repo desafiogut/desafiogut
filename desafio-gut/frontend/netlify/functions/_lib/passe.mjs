@@ -37,7 +37,9 @@ export async function criarPasse({ endereco, edicaoId, produtoId }) {
     .insert({ endereco: e, edicao_id: edicaoId, produto_id: produtoId }).select("*").single();
   if (!error) return { ok: true, criado: true, passe: data };
   if (error.code !== UNIQUE_VIOLATION) return { ok: false, code: "gravar_passe_falhou" };
-  const existente = await lerPasse({ endereco: e, edicaoId, produtoId });
+  // A releitura pode falhar (rede): isso é falha tratada, nunca excepção — quem chama já debitou e tem de reembolsar.
+  let existente = null;
+  try { existente = await lerPasse({ endereco: e, edicaoId, produtoId }); } catch { existente = null; }
   return existente ? { ok: true, criado: false, passe: existente } : { ok: false, code: "gravar_passe_falhou" };
 }
 

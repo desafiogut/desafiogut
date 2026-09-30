@@ -93,3 +93,18 @@ test("A8 entrada inválida não grava; erro do Supabase não passa por sucesso",
   await assert.rejects(P.listarPassesDoComprador(A));
   assert.deepEqual(await P.marcarPalpiteUsado("00000000-0000-4000-8000-000000000001"), { ok: false, code: "gravar_passe_falhou" });
 });
+
+test("A9 corrida 23505 cuja releitura NÃO encontra o vencedor → ok:false (não passa por sucesso com passe null)", async () => {
+  S.g.antesDeInserir = (tab, linha, t) => { t.passes.push({ id: "00000000-0000-4000-8000-00000000000b", ...linha, comprado_em: "x", palpite_usado: false, cupons_ids: [], status: "activo" }); };
+  let n = 0; const orig = S.cliente.from;
+  S.cliente.from = (t) => { if (t === "passes" && ++n === 2) S.tabelas.passes.length = 0; return orig(t); };
+  assert.deepEqual(await P.criarPasse({ endereco: A, edicaoId: ED, produtoId: PROD }), { ok: false, code: "gravar_passe_falhou" });
+});
+
+test("A10 corrida 23505 cuja releitura LANÇA (rede) → ok:false, nunca excepção (quem chamou já debitou)", async () => {
+  S.g.antesDeInserir = (tab, linha, t) => {
+    t.passes.push({ id: "00000000-0000-4000-8000-00000000000c", ...linha, comprado_em: "x", palpite_usado: false, cupons_ids: [], status: "activo" });
+    S.g.falhar.passes = { op: "select", code: "" };
+  };
+  assert.deepEqual(await P.criarPasse({ endereco: A, edicaoId: ED, produtoId: PROD }), { ok: false, code: "gravar_passe_falhou" });
+});

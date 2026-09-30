@@ -24,7 +24,7 @@ const MUTANTES = [
   // Frente B — endpoint
   ["B1 sem verificação de idempotência", EP, "if (existente) return jsonResponse({ ok: true, idempotent: true, passe: existente }, 200);", ""],
   ["B2 corrida sem reembolso", EP, 'const reembolso = await reembolsarSaldoRs({ endereco, valorCentavos: VALOR_PASSE_CENTAVOS, motivo: "comprar-passe" });', "const reembolso = { ok: true };"],
-  ["B3 saldo insuficiente vira 502", EP, 'if (debito.code === "saldo_insuficiente") return jsonError(402,', 'if (debito.code === "saldo_insuficiente") return jsonError(502,'],
+  ["B3 saldo insuficiente vira 502", EP, 'return jsonError(402, "saldo_insuficiente",', 'return jsonError(502, "saldo_insuficiente",'],
   ["B4 aceita edição não Programada", EP, 'if (meta.tipo !== "programado") return', 'if (false) return'],
   ["B5 sem janela da edição", EP, "if (janela) return jsonError(409, janela.code, janela.message);", ""],
   ["B6 produto não vinculado aceite", EP, 'if (meta.produtoId !== produtoId) return', 'if (false) return'],
@@ -37,6 +37,19 @@ const MUTANTES = [
   ["B13 endereço no alerta", EP, "{ edicaoId, code: reembolso.code }", "{ edicaoId, endereco, code: reembolso.code }"],
   ["B14 falha do INSERT sem reembolso visível", EP, "return jsonError(502, \"gravar_passe_falhou\", \"não foi possível registar o Passe\", { reembolsado: reembolso.ok });",
     "return jsonError(502, \"gravar_passe_falhou\", \"não foi possível registar o Passe\", { reembolsado: true });"],
+  // Achados do validador (SEG3) — correcções + lacunas N1–N6
+  ["F1 releitura da corrida sem try", LIB, "try { existente = await lerPasse({ endereco: e, edicaoId, produtoId }); } catch { existente = null; }",
+    "existente = await lerPasse({ endereco: e, edicaoId, produtoId });"],
+  ["F2 excepção depois do débito sem reembolso", EP, 'try { r = await criarPasse({ endereco, edicaoId, produtoId }); }\n  catch { r = { ok: false, code: "gravar_passe_falhou" }; }',
+    "r = await criarPasse({ endereco, edicaoId, produtoId });"],
+  ["F3 402 falso em cliques concorrentes", EP, "if (jaTem) return jsonResponse({ ok: true, idempotent: true, passe: jaTem }, 200);", ""],
+  ["N1 leitura falhada segue para o débito", EP, 'catch { return jsonError(503, "store_indisponivel", "não foi possível ler os passes"); }', "catch { existente = null; }"],
+  ["N2 catálogo indisponível ignorado", EP, "if (indisponivel) return jsonError(503,", "if (false) return jsonError(503,"],
+  ["N3 debito_falhou vira 402", EP, 'return jsonError(502, "debito_falhou"', 'return jsonError(402, "debito_falhou"'],
+  ["N4 releitura vazia passa por sucesso", LIB, 'return existente ? { ok: true, criado: false, passe: existente } : { ok: false, code: "gravar_passe_falhou" };',
+    "return { ok: true, criado: false, passe: existente };"],
+  ["N5 token com endereço inválido aceite", EP, 'return /^0x[0-9a-f]{40}$/.test(e) ? { endereco: e } : { erro: "token_invalido" };', "return { endereco: e };"],
+  ["N6 produtoId permissivo", EP, "const PRODUTO_ID_RE = /^[0-9a-f-]{10,64}$/i;", "const PRODUTO_ID_RE = /^.+$/;"],
   ["B15 aceita token de outro tipo", EP, "const p = await verificarUserSession(bearer);", "const p = JSON.parse(Buffer.from(bearer.split(\".\")[1], \"base64url\").toString());"],
 ];
 

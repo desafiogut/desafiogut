@@ -89,12 +89,20 @@ export default async (req) => {
   // Débito atómico (CAS no saldoRs.mjs): recusa com `saldo_insuficiente` se não chega — nunca fica negativo (HG14).
   const debito = await debitarSaldoRs({ endereco, valorCentavos: VALOR_PASSE_CENTAVOS, motivo: "comprar-passe" });
   if (!debito.ok) {
-    if (debito.code === "saldo_insuficiente") return jsonError(402, "saldo_insuficiente", "saldo R$ insuficiente para o Passe (R$ 2,00)");
-    return jsonError(502, "debito_falhou", "não foi possível debitar o saldo R$", { code: debito.code });
+    if (debito.code === "saldo_insuficiente") {
+      // Cliques concorrentes na MESMA chave: o que ganhou já debitou e criou o passe — o perdedor devolve-o (HG13),
+      // em vez de um 402 falso (achado do validador).
+      const jaTem = await lerPasse({ endereco, edicaoId, produtoId }).catch(() => null);
+      if (jaTem) return jsonResponse({ ok: true, idempotent: true, passe: jaTem }, 200);
+      return jsonError(402, "saldo_insuficiente", "saldo R$ insuficiente para o Passe (R$ 2,00)");
+    }
+    return jsonError(502, "debito_falhou", "não foi possível debitar o saldo R$", { motivo: debito.code }); // `code` nos extras sobrescreveria error.code
   }
 
-  // Criação. Corrida perdida ou falha → devolve o R$ 2,00.
-  const r = await criarPasse({ endereco, edicaoId, produtoId });
+  // Criação. Corrida perdida, falha ou EXCEPÇÃO depois do débito → devolve o R$ 2,00 (nunca fica cobrado sem passe).
+  let r;
+  try { r = await criarPasse({ endereco, edicaoId, produtoId }); }
+  catch { r = { ok: false, code: "gravar_passe_falhou" }; }
   if (r.ok && r.criado) {
     return jsonResponse({
       ok: true, idempotent: false, passe: r.passe,
