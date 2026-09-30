@@ -4,8 +4,9 @@
 // paridade com o backend (HARD GATE 14) · os 3 caminhos do hook (USO).
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { carregarModulo, correr, fecharArnes } from "./__tests__/_recursos-arnes.mjs";
+import { montar } from "./__tests__/_hook-runner.mjs";
+import { emitirRealtime } from "./__tests__/_supabase-duplo.mjs";
 import * as backend from "../../netlify/functions/_lib/recursos-app-config.mjs";
 
 after(fecharArnes);
@@ -82,8 +83,10 @@ test("USO Supabase directo: flags gravadas no config_remota chegam ao cliente; a
 });
 
 test("USO Supabase com o valor de produção (sem as chaves) → defaults", async () => {
+  globalThis.__duploSupabase.pedidos.length = 0;
   const r = await correr(hook, { via: "supabase", valor: PROD }, "pwa");
   assert.deepEqual(r, { plataforma: "pwa", isLeilaoAtivo: true, isPagamentoNativoAtivo: false, ...ESPERADO });
+  assert.deepEqual(globalThis.__duploSupabase.pedidos, ["recursos_app"], "a query pede a chave certa");
 });
 
 test("USO função /recursos-app: as chaves que o servidor manda chegam; lixo → default", async () => {
@@ -102,8 +105,37 @@ test("USO Supabase falha → função; tudo falha → fallback local com os defa
   assert.deepEqual(local, { plataforma: "android", isLeilaoAtivo: false, isPagamentoNativoAtivo: false, ...ESPERADO });
 });
 
-test("estado inicial (antes do load) já traz as 5 flags no default", () => {
-  const src = readFileSync(new URL("./useRecursosApp.js", import.meta.url), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  assert.match(src, /useState\(\{[^}]*plataforma:\s*"pwa",\s*\.\.\.DEFAULT_FLAGS_TRANSICAO,\s*isLoading:\s*true/);
+// ── O HOOK montado (condutor do MC94): estado inicial e TEMPO REAL, por comportamento (V3/V9 do validador) ──
+async function montarHook(valor) {
+  const sb = globalThis.__duploSupabase;
+  sb.configurado = true; sb.erro = false; sb.valor = valor;
+  globalThis.window = { location: { search: "" }, __GUT_PLATAFORMA__: "pwa" };
+  return montar(hook.useRecursosApp);
+}
+
+test("estado inicial (1.ª renderização, antes do load) traz as 5 flags no default e isLoading", async () => {
+  const h = await montarHook(PROD);
+  try {
+    const r0 = h.resultado();
+    assert.equal(r0.isLoading, true);
+    assert.deepEqual(novas(r0), ESPERADO);
+    await h.assentar();
+    assert.equal(h.resultado().isLoading, false, "controlo: o load terminou");
+    assert.deepEqual(novas(h.resultado()), ESPERADO);
+  } finally { await h.desmontar(); }
+});
+
+test("TEMPO REAL: um UPDATE em config_remota muda as flags no cliente, com a regra estrita", async () => {
+  const h = await montarHook(PROD);
+  try {
+    await h.assentar();
+    const n = emitirRealtime("config_remota:recursos_app", { ...PROD, isTorneioVisivel: false, limitePassesIndicacao: 4, isCampanhaIndicacaoAtiva: "sim" });
+    assert.equal(n, 1, "controlo: havia um assinante de tempo real");
+    await h.assentar();
+    const r = h.resultado();
+    assert.equal(r.isTorneioVisivel, false);
+    assert.equal(r.limitePassesIndicacao, 4);
+    assert.equal(r.isCampanhaIndicacaoAtiva, false, "lixo continua a dar default");
+    assert.equal(r.isLeilaoAtivo, true);
+  } finally { await h.desmontar(); }
 });

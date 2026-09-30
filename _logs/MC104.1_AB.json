@@ -1,0 +1,869 @@
+{
+ "ref": "HEAD",
+ "casos": 39,
+ "difAntigas": 0,
+ "antes": {
+  "supabase:producao|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:producao|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:producao|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:nulo|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:nulo|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:nulo|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:vazio|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:vazio|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:vazio|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:string|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:string|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:string|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:leilaoTudoOn|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:leilaoTudoOn|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:leilaoTudoOn|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:malformado|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:malformado|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:malformado|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:comFlagsNovas|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:comFlagsNovas|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:comFlagsNovas|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:linhaAusente|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:linhaAusente|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase:linhaAusente|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase-erro→funcao|ios": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase-erro→funcao|android": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "supabase-erro→funcao|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "funcao:prodAntes|ios": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "funcao:prodAntes|android": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "funcao:prodAntes|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "funcao:prodDepoisMC103|ios": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "funcao:prodDepoisMC103|android": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "funcao:prodDepoisMC103|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "funcao:http500|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "funcao:http500|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "funcao:http500|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  },
+  "local|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "local|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false
+  },
+  "local|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false
+  }
+ },
+ "depois": {
+  "supabase:producao|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:producao|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:producao|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:nulo|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:nulo|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:nulo|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:vazio|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:vazio|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:vazio|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:string|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:string|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:string|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:leilaoTudoOn|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:leilaoTudoOn|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:leilaoTudoOn|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:malformado|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:malformado|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:malformado|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:comFlagsNovas|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": false,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 7
+  },
+  "supabase:comFlagsNovas|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": false,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 7
+  },
+  "supabase:comFlagsNovas|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": false,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 7
+  },
+  "supabase:linhaAusente|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:linhaAusente|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:linhaAusente|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase-erro→funcao|ios": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase-erro→funcao|android": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase-erro→funcao|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodAntes|ios": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodAntes|android": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodAntes|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodDepoisMC103|ios": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodDepoisMC103|android": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodDepoisMC103|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:http500|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:http500|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:http500|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "local|ios": {
+   "plataforma": "ios",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "local|android": {
+   "plataforma": "android",
+   "isLeilaoAtivo": false,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "local|pwa": {
+   "plataforma": "pwa",
+   "isLeilaoAtivo": true,
+   "isPagamentoNativoAtivo": false,
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  }
+ },
+ "novasPorCaso": {
+  "supabase:producao|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:producao|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:producao|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:nulo|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:nulo|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:nulo|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:vazio|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:vazio|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:vazio|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:string|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:string|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:string|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:leilaoTudoOn|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:leilaoTudoOn|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:leilaoTudoOn|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:malformado|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:malformado|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:malformado|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:comFlagsNovas|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": false,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 7
+  },
+  "supabase:comFlagsNovas|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": false,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 7
+  },
+  "supabase:comFlagsNovas|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": false,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 7
+  },
+  "supabase:linhaAusente|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:linhaAusente|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase:linhaAusente|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase-erro→funcao|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase-erro→funcao|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "supabase-erro→funcao|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodAntes|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodAntes|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodAntes|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodDepoisMC103|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodDepoisMC103|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:prodDepoisMC103|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:http500|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:http500|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "funcao:http500|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "local|ios": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "local|android": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  },
+  "local|pwa": {
+   "isProgramadaSenhasAtiva": true,
+   "isTorneioVisivel": true,
+   "isSenhaBonusAtiva": true,
+   "isCampanhaIndicacaoAtiva": false,
+   "limitePassesIndicacao": 5
+  }
+ }
+}

@@ -28,6 +28,9 @@ const M = [
   ["M14 estado inicial sem as flags", '    plataforma: "pwa",\n    ...DEFAULT_FLAGS_TRANSICAO,\n', '    plataforma: "pwa",\n'],
   ["M15 regressão numa chave antiga", 'isLeilaoAtivo: ler("isLeilaoAtivo"),', 'isLeilaoAtivo: ler("isPagamentoNativoAtivo"),'],
   ["M16 lê mapa por plataforma", "const v = Object.hasOwn(cfg, chave) ? cfg[chave] : undefined;", 'const v0 = Object.hasOwn(cfg, chave) ? cfg[chave] : undefined; const v = v0 && typeof v0 === "object" ? v0.pwa : v0;'],
+  // Pós-validador (SEG1): os 2 sobreviventes dele, agora com teste de COMPORTAMENTO (hook montado).
+  ["V3 tempo real ignora as flags", "setEstado({ ...resolverParaPlataforma(valor, detectarPlataforma()), isLoading: false });", "setEstado({ ...resolverParaPlataforma(valor, detectarPlataforma()), ...DEFAULT_FLAGS_TRANSICAO, isLoading: false });"],
+  ["V9 estado inicial sobrescreve uma flag", "    ...DEFAULT_FLAGS_TRANSICAO,\n    isLoading: true,\n", "    ...DEFAULT_FLAGS_TRANSICAO,\n    isLoading: true,\n    isTorneioVisivel: false,\n"],
 ];
 
 const orig = readFileSync(HOOK, "utf8");

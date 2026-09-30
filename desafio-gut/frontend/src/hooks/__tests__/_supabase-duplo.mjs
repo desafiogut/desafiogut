@@ -29,6 +29,27 @@ export function getSupabaseBrowser() {
         },
       };
     },
-    channel() { throw new Error("duplo: realtime não é exercitado pelo arnês"); },
+    // Tempo real (forma usada por useRealtimeConfig): channel(topic).on("postgres_changes", filtro, cb).subscribe(cbStatus).
+    // Os callbacks ficam em estado.realtime[topic]; o teste entrega um evento com `emitirRealtime`.
+    channel(topic) {
+      const canal = {
+        topic,
+        on(tipo, filtro, cb) {
+          if (tipo !== "postgres_changes" || filtro?.table !== "config_remota") throw new Error("duplo: subscrição inesperada");
+          (estado.realtime[topic] ??= []).push(cb);
+          return canal;
+        },
+        subscribe(cbStatus) { cbStatus?.("SUBSCRIBED"); return canal; },
+      };
+      return canal;
+    },
+    async removeChannel(canal) { delete estado.realtime[canal?.topic]; },
   });
+}
+
+estado.realtime ??= {};
+/** Entrega um evento de tempo real a todos os assinantes do topic (como o Supabase faria num UPDATE). */
+export function emitirRealtime(topic, valor) {
+  for (const cb of estado.realtime[topic] ?? []) cb({ eventType: "UPDATE", new: { chave: topic.split(":")[1], valor } });
+  return (estado.realtime[topic] ?? []).length;
 }
