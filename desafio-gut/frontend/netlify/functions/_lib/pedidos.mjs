@@ -326,7 +326,7 @@ export const MAX_TENTATIVAS_CAS = 3;
  * sobre o pedido ACABADO DE LER, portanto as guardas voltam a ser avaliadas em cada tentativa. Devolve
  * `{ evento }` para gravar, ou o resultado final (erro / idempotente) para devolver sem gravar.
  */
-async function atualizarPedido(produtoId, mutar) {
+export async function atualizarPedido(produtoId, mutar) { // MC104.3: exportado para o conta-delete (DEC-104.3-5)
   const s = abrirStore(STORE_PEDIDOS);
   if (!s) return { ok: false, code: "store_indisponivel" };
   let r = { ok: false, code: "conflito_escrita" };

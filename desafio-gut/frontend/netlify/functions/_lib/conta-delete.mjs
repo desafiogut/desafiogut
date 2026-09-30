@@ -17,8 +17,18 @@
 // dryRun=true calcula o manifesto (o que SERIA apagado/anonimizado) SEM mutar —
 // para o operador validar antes da execução real (Pilar 1 SUPERPERS).
 
+import { createHash } from "node:crypto";
+import { atualizarPedido } from "./pedidos.mjs";
+
 // Token de anonimização que substitui o endereço nos registros retidos.
 export const ENDERECO_ANONIMO = "0x000000000000000000000000000000000000dead";
+
+// MC104.3 (DEC-104.3-1/-4) — identificador anónimo DETERMINÍSTICO que substitui o endereço nas CHAVES
+// (índice de pedidos, notificações, lances): o mesmo endereço dá sempre o mesmo `anon:<sha256>`.
+// ⚠️ É pseudonimização: sem sal, quem já conhece o endereço recalcula o hash.
+export function chaveAnonima(endereco) {
+  return "anon:" + createHash("sha256").update(normalizar(endereco)).digest("hex");
+}
 
 // ── Alvos Supabase ───────────────────────────────────────────────────────────
 // Hard-delete por cliente_id = endereço (usuário individual).
@@ -53,9 +63,9 @@ export const DADOS_RETIDOS = [
   },
   {
     categoria: "fiscal",
-    descricao: "Registros contábeis de pagamentos PIX (valor, data, pedido) são " +
-      "anonimizados (desvinculados do titular) e retidos pelo prazo legal exigido pela " +
-      "legislação fiscal brasileira.",
+    descricao: "Registros contábeis de pagamentos PIX (valor, data, pedido) e a NF-e dos pedidos " +
+      "(número, série e chave de acesso) são anonimizados (desvinculados do titular) e retidos " +
+      "pelo prazo legal exigido pela legislação fiscal brasileira.",
   },
 ];
 
@@ -251,14 +261,123 @@ async function anonimizarBlob(getStore, nome, endereco, dryRun) {
   const chaves = await chavesDoEndereco(store, endereco);
   if (dryRun) return chaves.length;
   let n = 0;
+  const falhas = [];
   for (const key of chaves) {
     try {
+      // MC104.3 Frente D (DEC-104.3-5): o pedido de e-commerce escreve-se por `atualizarPedido` (CAS, MC102.0)
+      // — uma escrita concorrente (ex.: evento de rastreio) já não se perde. Uma falha não fica silenciosa:
+      // sobe para `erros` (o endpoint responde 500 e a exclusão pode ser repetida).
+      if (nome === "pedidos" && key.startsWith("pedido:")) {
+        const r = await anonimizarPedidoCAS(key.slice("pedido:".length), endereco);
+        if (r?.ok) n += 1;
+        else if (r?.code !== "pedido_nao_e_do_titular") falhas.push(r?.code ?? "desconhecido");
+        continue;
+      }
       const obj = await store.get(key, { type: "json" });
       if (!obj) continue;
       await store.setJSON(key, anonimizarPayload(obj));
       n += 1;
     } catch (err) {
       console.warn(`[conta-delete] anonimizar ${nome}:${key} falhou:`, err?.message);
+      if (nome === "pedidos" && key.startsWith("pedido:")) falhas.push("excepcao");
+    }
+  }
+  if (falhas.length) throw new Error(`${falhas.length} pedido(s) não anonimizado(s) (${falhas.join(",")}); ${n} anonimizado(s)`);
+  return n;
+}
+
+/** CAS: relê o pedido com ETag, volta a confirmar o dono, anonimiza no próprio objecto e grava condicional. */
+function anonimizarPedidoCAS(produtoId, endereco) {
+  return atualizarPedido(produtoId, (pedido) => {
+    if (!pedido || normalizar(pedido.endereco ?? pedido.address ?? pedido.comprador) !== endereco) {
+      return { ok: false, code: "pedido_nao_e_do_titular" };
+    }
+    const anon = anonimizarPayload(pedido);
+    for (const k of Object.keys(pedido)) if (!(k in anon)) delete pedido[k];
+    Object.assign(pedido, anon);
+    return { evento: "anonimizado" };
+  });
+}
+
+/**
+ * MC104.3 Frente A (DEC-104.3-1) — o índice `comprador:<endereço>` = { ids } do store "pedidos" passa a
+ * `anon:<sha256>` = { ids: [] }: a entrada fica (existiu), o valor é esvaziado e a chave com o endereço sai
+ * (decisão do operador: apagar só a chave antiga do índice). Devolve 1 se existia, 0 senão.
+ */
+async function anonimizarIndicePedidos(getStore, endereco, dryRun) {
+  const store = abrirStoreSeguro(getStore, "pedidos");
+  if (!store) return 0;
+  const antiga = `comprador:${endereco}`;
+  const existente = await store.get(antiga, { type: "json" });
+  if (existente == null) return 0;
+  if (!dryRun) {
+    await store.setJSON(chaveAnonima(endereco), { ids: [] });
+    await store.delete(antiga);
+  }
+  return 1;
+}
+
+/**
+ * MC104.3 Frente B (DEC-104.3-4) — notificações: o documento (chave = endereço) passa, sem alterações de
+ * conteúdo (tipo, data, referências de NF-e/rastreio), para a chave `anon:<sha256>`; a chave com o endereço
+ * sai. Nenhuma notificação traz nome/morada/CPF (medido no SEG-1): o elo à pessoa é a chave.
+ */
+async function anonimizarNotificacoes(getStore, endereco, dryRun) {
+  const store = abrirStoreSeguro(getStore, "notificacoes");
+  if (!store) return 0;
+  const doc = await store.get(endereco, { type: "json" });
+  if (doc == null) return 0;
+  if (!dryRun) {
+    await store.setJSON(chaveAnonima(endereco), doc);
+    await store.delete(endereco);
+  }
+  return 1;
+}
+
+/** Lance anonimizado: endereço → `anon:<sha256>`, nome de exibição → "***"; valor, edição, datas e commitmentHash ficam. */
+function anonimizarLance(lance, endereco) {
+  const out = { ...lance, endereco: chaveAnonima(endereco) };
+  if ("nomeExibicao" in out) out.nomeExibicao = "***";
+  return out;
+}
+
+/**
+ * MC104.3 Frente B (DEC-104.3-4) — lances Relâmpago nos Blobs (o Supabase `lances` continua a ser APAGADO,
+ * MC72 — decisão do operador):
+ *  - "bids" (Key-Per-Bid): chave `bid:{edição}:{endereço}:{sufixo}` → `bid:{edição}:anon:<sha256>:{sufixo}`
+ *    (continua sob o prefixo da edição) e o registo anonimizado; a chave com o endereço sai;
+ *  - "lances-relampago" (legado, fora de mainnet): chave = edição, anonimiza só os lances do titular.
+ */
+async function anonimizarLancesBlobs(getStore, endereco, dryRun) {
+  let n = 0;
+  const bids = abrirStoreSeguro(getStore, "bids");
+  if (bids) {
+    const { blobs = [] } = await bids.list({ prefix: "bid:" });
+    for (const { key } of blobs) {
+      const m = /^bid:(.+):(0x[0-9a-fA-F]{40}):([^:]+)$/.exec(key);
+      if (!m || normalizar(m[2]) !== endereco) continue;
+      n += 1;
+      if (dryRun) continue;
+      const nova = `bid:${m[1]}:${chaveAnonima(endereco)}:${m[3]}`;
+      const lance = await bids.get(key, { type: "json" });
+      if (lance == null) continue;
+      await bids.setJSON(nova, { ...anonimizarLance(lance, endereco), key: nova });
+      await bids.delete(key);
+    }
+  }
+  const legado = abrirStoreSeguro(getStore, "lances-relampago");
+  if (legado) {
+    const { blobs = [] } = await legado.list();
+    for (const { key } of blobs) {
+      const doc = await legado.get(key, { type: "json" });
+      if (!Array.isArray(doc?.lances)) continue;
+      const doTitular = (l) => normalizar(l?.endereco ?? l?.address ?? l?.comprador) === endereco;
+      const k = doc.lances.filter(doTitular).length;
+      if (k === 0) continue;
+      n += k;
+      if (!dryRun) {
+        await legado.setJSON(key, { ...doc, lances: doc.lances.map((l) => (doTitular(l) ? anonimizarLance(l, endereco) : l)) });
+      }
     }
   }
   return n;
@@ -289,6 +408,12 @@ export async function excluirBlobs(getStore, endereco, { dryRun = false } = {}) 
     try { anonimizado[nome] = await anonimizarBlob(getStore, nome, ender, dryRun); }
     catch (err) { erros.push(`blobs:${nome} (anon): ${err.message}`); }
   }
+  try { anonimizado["pedidos-indice"] = await anonimizarIndicePedidos(getStore, ender, dryRun); }
+  catch (err) { erros.push(`blobs:pedidos-indice (anon): ${err.message}`); }
+  try { anonimizado["notificacoes"] = await anonimizarNotificacoes(getStore, ender, dryRun); }
+  catch (err) { erros.push(`blobs:notificacoes (anon): ${err.message}`); }
+  try { anonimizado["lances"] = await anonimizarLancesBlobs(getStore, ender, dryRun); }
+  catch (err) { erros.push(`blobs:lances (anon): ${err.message}`); }
 
   return { deletado, anonimizado, erros };
 }

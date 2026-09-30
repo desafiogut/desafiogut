@@ -18,9 +18,13 @@ const COR = {
   success: "#10b981", gold: "#f5a623",
 };
 
+// MC104.3 (DEC-104.3-2): NF-e + histórico anonimizado + auditoria on-chain. O consent-log NÃO entra: o
+// conta-delete apaga-o na exclusão (decisão do operador: omitir a linha que o daria como retido).
 const RETIDOS = [
+  "NF-e (número, série e chave de acesso) — mantida por 5 anos (obrigação fiscal, CTN arts. 173 e 174).",
+  "Histórico de pedidos — mantido em forma anonimizada.",
   "Registros de pagamento (PIX) são anonimizados e mantidos pelo prazo fiscal exigido por lei.",
-  "Saldo de senhas e lances já registrados na blockchain são imutáveis e não podem ser apagados (identificados apenas pela carteira).",
+  "Dados de auditoria on-chain (txHash, commitmentHash), saldo de senhas e lances já registrados na blockchain são públicos e imutáveis e não podem ser apagados (identificados apenas pela carteira).",
 ];
 
 export default function ExcluirContaModal({ aberto, onFechar, address, authToken, onExcluido }) {

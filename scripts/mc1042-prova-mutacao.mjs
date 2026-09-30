@@ -36,7 +36,7 @@ const MUTANTES = [
 ];
 
 function correr() {
-  const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap", ...TESTES], { cwd: FN, encoding: "utf8" });
+  const r = spawnSync(process.execPath, ["--experimental-test-module-mocks", "--test", "--test-reporter=tap", ...TESTES], { cwd: FN, encoding: "utf8" });
   const n = (k) => Number((r.stdout.match(new RegExp(`^# ${k} (\\d+)`, "m")) || [])[1]);
   return { pass: n("pass"), fail: n("fail"), tests: n("tests") };
 }

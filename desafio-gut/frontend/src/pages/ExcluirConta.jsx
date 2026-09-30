@@ -59,20 +59,26 @@ export default function ExcluirConta() {
             O QUE ACONTECE AO EXCLUIR
           </h3>
           <p style={{ margin: "0 0 0.75rem", fontSize: "0.86rem", color: COR.text, fontWeight: 700 }}>
-            🗑️ Apagado permanentemente:
+            🗑️ Eliminado ou anonimizado:
           </p>
           <ul style={{ margin: "0 0 1rem", paddingLeft: "1.2rem", color: COR.muted, fontSize: "0.84rem", lineHeight: 1.55 }}>
             <li>Saldo em R$ e senhas disponíveis</li>
-            <li>Histórico de lances e perfil</li>
-            <li>Preferências e vínculos de indicação</li>
+            <li>Perfil, preferências e vínculos de indicação</li>
+            <li>Nome, CPF, endereço de entrega e telefone — anonimizados nos pedidos e notificações.</li>
+            <li>Lances Relâmpago — sua carteira é substituída por um identificador anônimo.</li>
           </ul>
           <p style={{ margin: "0 0 0.75rem", fontSize: "0.86rem", color: COR.gold, fontWeight: 700 }}>
-            🔒 Retido por imposição legal/técnica (anonimizado):
+            🔒 Retido para cumprimento legal:
           </p>
           <ul style={{ margin: 0, paddingLeft: "1.2rem", color: COR.muted, fontSize: "0.84rem", lineHeight: 1.55 }}>
+            <li>NF-e (número, série e chave de acesso) — 5 anos (obrigação fiscal, CTN arts. 173 e 174).</li>
+            <li>Histórico de pedidos — em forma anonimizada.</li>
             <li>Registros de pagamento (PIX) — mantidos pelo prazo fiscal exigido por lei, sem vínculo com sua identidade.</li>
-            <li>Saldo de senhas e lances já gravados na blockchain — imutáveis por natureza, identificados apenas pela carteira.</li>
+            <li>Dados de auditoria on-chain (txHash, commitmentHash), saldo de senhas e lances gravados na blockchain — públicos e imutáveis por natureza, identificados apenas pela carteira.</li>
           </ul>
+          <p style={{ margin: "0.75rem 0 0", fontSize: "0.8rem", color: COR.muted, lineHeight: 1.5 }}>
+            Fora do que está acima, não mantemos dados pessoais identificáveis depois da anonimização.
+          </p>
         </GlassCard>
 
         {/* Ação */}
