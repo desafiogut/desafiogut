@@ -1,0 +1,31 @@
+commitado (HEAD): VERDE
+  OK   procura por comprador
+  OK   pedidos em BLOBS_ANON
+  OK   pedido do titular anonimizado
+  OK   NF-e preservada
+  OK   nada apagado
+  OK   terceiro intacto
+  OK   sem comprador intacto
+CONTROLO b2a0414 (tem de FALHAR): VERMELHO
+  FALHA procura por comprador
+  OK   pedidos em BLOBS_ANON
+  FALHA pedido do titular anonimizado
+  OK   NF-e preservada
+  OK   nada apagado
+  OK   terceiro intacto
+  OK   sem comprador intacto
+CONTROLO adulterado NF-e (tem de FALHAR): VERMELHO
+  OK   procura por comprador
+  OK   pedidos em BLOBS_ANON
+  OK   pedido do titular anonimizado
+  FALHA NF-e preservada
+  OK   nada apagado
+  OK   terceiro intacto
+  OK   sem comprador intacto
+evidência delete-account: 400 · application/json; charset=utf-8 · {"error":{"code":"body_obrigatorio","message":"envie JSON com endereco"}}
+produção: VERDE
+  OK   deploy ready
+  OK   deploy commit_ref = HEAD (254d79b)
+  OK   delete-account vivo: 4xx JSON da própria função
+VEREDITO SEG3: VERDE (controlos positivos 2/2 detectados)
+Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 76
