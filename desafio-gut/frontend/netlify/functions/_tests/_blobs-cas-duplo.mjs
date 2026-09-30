@@ -5,13 +5,14 @@
 //  - um Map POR store (um Map partilhado faz um hard-delete de um store actuar noutro — MC104.2).
 // `g.antesDeGravar(nome, map, chave)` corre UMA vez antes da próxima escrita em (store, chave): simula
 // um escritor concorrente entre a leitura e a escrita de quem está a ser testado.
+// `g.semEtag` (leitura sem ETag), `g.falharLeitura` (o `getWithMetadata` do store "pedidos" lança) e `g.falharEscrita` (o `set` do store "pedidos" lança) simulam falhas do servidor.
 import { createHash } from "node:crypto";
 
 export const etagDe = (v) => `"${createHash("sha1").update(v).digest("hex")}"`;
 
 export function criarBlobs() {
   const blobs = new Map();
-  const g = { antesDeGravar: null, escritasSemCondicao: [] };
+  const g = { antesDeGravar: null, escritasSemCondicao: [], semEtag: false, falharEscrita: false, falharLeitura: false };
   const disparar = (name, m, k) => {
     if (!g.antesDeGravar) return;
     const f = g.antesDeGravar; if (f(name, m, k) === true) g.antesDeGravar = null;
@@ -22,9 +23,10 @@ export function criarBlobs() {
     return {
       async get(k, { type } = {}) { const v = m.get(k); return v === undefined ? null : (type === "json" ? JSON.parse(v) : v); },
       async getWithMetadata(k, { type } = {}) {
+        if (g.falharLeitura && name === "pedidos") throw new Error("falha de leitura simulada");
         const v = m.get(k);
         if (v === undefined) return null;
-        return { data: type === "json" ? JSON.parse(v) : v, etag: etagDe(v), metadata: {} };
+        return { data: type === "json" ? JSON.parse(v) : v, etag: g.semEtag ? undefined : etagDe(v), metadata: {} };
       },
       async setJSON(k, o) {
         disparar(name, m, k);
@@ -33,6 +35,7 @@ export function criarBlobs() {
       },
       async set(k, v, opt = {}) {
         disparar(name, m, k);
+        if (g.falharEscrita && name === "pedidos") throw new Error("falha de escrita simulada");
         if (opt.onlyIfMatch && (!m.has(k) || etagDe(m.get(k)) !== opt.onlyIfMatch)) return { modified: false };
         if (!opt.onlyIfMatch) g.escritasSemCondicao.push(`${name}:${k}`);
         m.set(k, String(v)); return { modified: true, etag: etagDe(String(v)) };

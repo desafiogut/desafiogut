@@ -42,6 +42,19 @@ const MUTANTES = [
   ["C2 página sem histórico anonimizado", PAGINA, "<li>Histórico de pedidos — em forma anonimizada.</li>", "", FRENTE_C],
   ["C3 modal sem on-chain", MODAL, "Dados de auditoria on-chain (txHash, commitmentHash), saldo", "Saldo", FRENTE_C],
   ["C4 modal diz consentimento retido", MODAL, "const RETIDOS = [", 'const RETIDOS = [\n  "Registros de consentimento — 5 anos.",', FRENTE_C],
+  // Achados do validador (SEG4) — os mutantes dele que sobreviviam + as correcções novas
+  ["V1 mutar do CAS sem normalizar", CD, "if (normalizar(pedido.endereco ?? pedido.address ?? pedido.comprador) !== endereco) {",
+    "if ((pedido.endereco ?? pedido.address ?? pedido.comprador) !== endereco) {", BACK],
+  ["V3 PII de topo não removida no CAS", CD, "for (const k of Object.keys(pedido)) if (!(k in anon)) delete pedido[k];", "", BACK],
+  ["V10 falha do CAS engolida", CD, 'else if (r?.code !== "pedido_nao_e_do_titular") falhas.push(r?.code ?? "desconhecido");', "", BACK],
+  ["V11 excepção no CAS engolida", CD, 'if (nome === "pedidos" && key.startsWith("pedido:")) falhas.push("excepcao");', "", BACK],
+  ["V12 notificação anon: sobrescrita", CD, "const juntas = Array.isArray(retidas?.notificacoes)", "const juntas = false", BACK],
+  ["V14 pedido ilegível tratado como terceiro", CD, 'if (!pedido) return { ok: false, code: "pedido_ilegivel" };',
+    'if (!pedido) return { ok: false, code: "pedido_nao_e_do_titular" };', BACK],
+  ["V15 anonimiza lance de edição aberta", CD, 'if ((await bids.get(`bid:${m[1]}:consolidado`, { type: "json" })) == null) {', "if (false) {", BACK],
+  ["C5 página volta a «anônimo»", PAGINA, "identificador pseudônimo", "identificador anônimo", FRENTE_C],
+  ["C6 página volta a prometer «não mantemos»", PAGINA, "<li>Histórico de pedidos — em forma anonimizada.</li>",
+    "<li>Histórico de pedidos — em forma anonimizada.</li><li>Não mantemos dados pessoais identificáveis.</li>", FRENTE_C],
 ];
 
 const md5 = (b) => createHash("md5").update(b).digest("hex");

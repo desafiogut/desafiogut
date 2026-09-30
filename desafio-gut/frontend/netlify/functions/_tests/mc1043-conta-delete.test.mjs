@@ -150,3 +150,49 @@ test("D4 a guarda do dono é REAVALIADA no retry: pedido que deixa de ser do tit
   assert.equal(p1.comprador, OUTRO);
   assert.equal(p1.morada.cpf, "52998224725", "dados de terceiro NÃO anonimizados");
 });
+
+// ── Achados do validador (SEG4) ──────────────────────────────────────────────
+test("B4 lance de edição AINDA ABERTA (sem marcador de consolidação) fica — e é declarado em `pendente`", async () => {
+  B.gravar("bids", `bid:R-2:${ALVO}:cccc3333`, { ...lance(ALVO, "e"), edicaoId: "R-2", key: `bid:R-2:${ALVO}:cccc3333` });
+  const m = await excluirConta({ supabase: semSupabase(), getStore: B.getStore, endereco: ALVO });
+  assert.ok(B.ler("bids", `bid:R-2:${ALVO}:cccc3333`), "a consolidação da R-2 continua a ver o endereço");
+  assert.equal(chaves("bids").some((k) => k.startsWith("bid:R-2:anon:")), false);
+  assert.deepEqual(m.blobs.pendente, { "lances-edicao-aberta": 1 });
+  assert.equal(m.blobs.anonimizado.lances, 2, "R-1 (consolidada) + legado");
+});
+
+test("B5 2.ª exclusão do mesmo endereço: as notificações retidas em `anon:` juntam-se, não se perdem", async () => {
+  B.gravar("notificacoes", ANON, notif("retida da 1.ª exclusão"));
+  await excluirBlobs(B.getStore, ALVO, { dryRun: false });
+  assert.deepEqual(B.ler("notificacoes", ANON).notificacoes.map((n) => n.mensagem), ["retida da 1.ª exclusão", "NF-e nº 123 emitida"]);
+});
+
+test("D5 leitura sem ETag: falha visível (etag_indisponivel), pedido intacto", async () => {
+  B.g.semEtag = true;
+  const p1 = B.ler("pedidos", "pedido:P1");
+  const r = await excluirBlobs(B.getStore, ALVO, { dryRun: false });
+  assert.ok(r.erros.some((e) => e.includes("etag_indisponivel")), JSON.stringify(r.erros));
+  assert.deepEqual(B.ler("pedidos", "pedido:P1"), p1);
+});
+
+test("D6 escrita que LANÇA: falha visível (excepcao), pedido intacto", async () => {
+  B.g.falharEscrita = true;
+  const r = await excluirBlobs(B.getStore, ALVO, { dryRun: false });
+  assert.ok(r.erros.some((e) => e.startsWith("blobs:pedidos (anon)") && e.includes("excepcao")), JSON.stringify(r.erros));
+  assert.equal(B.ler("pedidos", "pedido:P1").morada.cpf, "52998224725");
+});
+
+test("D7 leitura com ETag que falha: NÃO é «não é do titular» — é falha visível (pedido_ilegivel)", async () => {
+  B.g.falharLeitura = true;
+  const r = await excluirBlobs(B.getStore, ALVO, { dryRun: false });
+  assert.ok(r.erros.some((e) => e.includes("pedido_ilegivel")), JSON.stringify(r.erros));
+});
+
+test("D8 comprador gravado em MAIÚSCULAS e PII de topo: o CAS normaliza o dono e remove email/cpf/nome de topo", async () => {
+  B.gravar("pedidos", "pedido:P1", { ...pedido("P1", ALVO.toUpperCase().replace("0X", "0x")), email: "a@b.c", cpf: "1", nome: "N" });
+  const r = await excluirBlobs(B.getStore, ALVO, { dryRun: false });
+  assert.deepEqual(r.erros, []);
+  const p1 = B.ler("pedidos", "pedido:P1");
+  assert.equal(p1.morada.cpf, "***");
+  for (const k of ["email", "cpf", "nome"]) assert.equal(k in p1, false, k);
+});

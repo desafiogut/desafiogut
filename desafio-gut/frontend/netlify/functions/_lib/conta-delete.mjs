@@ -1,8 +1,10 @@
 // _lib/conta-delete.mjs — MC72 (Exclusão de conta / conformidade Play Store)
 //
-// Lógica PURA e INJETÁVEL da exclusão de conta. Não importa @netlify/blobs nem o
-// cliente Supabase diretamente — recebe-os por parâmetro para ser 100% testável
-// com mocks (node --test). Os handlers (delete-account.mjs) injetam as deps reais.
+// Lógica INJETÁVEL da exclusão de conta. Recebe o Supabase e o getStore dos Blobs por parâmetro,
+// para ser testável com mocks (node --test); os handlers (delete-account.mjs) injetam as deps reais.
+// ⚠️ MC104.3: a escrita dos pedidos passa por `atualizarPedido` (_lib/pedidos.mjs, CAS), que usa o
+// `@netlify/blobs` REAL — em produção é o mesmo store que o delete-account injecta; nos testes troca-se
+// o módulo (`mock.module("@netlify/blobs")`, ver _tests/_blobs-cas-duplo.mjs).
 //
 // Estratégia (decisões MC72, ver docs/MC72-delete-account.txt):
 //   1) HARD-DELETE dos dados PESSOAIS não-fiscais (Supabase + Blobs).
@@ -289,7 +291,10 @@ async function anonimizarBlob(getStore, nome, endereco, dryRun) {
 /** CAS: relê o pedido com ETag, volta a confirmar o dono, anonimiza no próprio objecto e grava condicional. */
 function anonimizarPedidoCAS(produtoId, endereco) {
   return atualizarPedido(produtoId, (pedido) => {
-    if (!pedido || normalizar(pedido.endereco ?? pedido.address ?? pedido.comprador) !== endereco) {
+    // Sem pedido lido (a leitura com ETag falhou ou o registo sumiu entre a listagem e aqui) é FALHA visível,
+    // não «não é do titular» — senão o pedido do titular ficava por anonimizar com ok:true.
+    if (!pedido) return { ok: false, code: "pedido_ilegivel" };
+    if (normalizar(pedido.endereco ?? pedido.address ?? pedido.comprador) !== endereco) {
       return { ok: false, code: "pedido_nao_e_do_titular" };
     }
     const anon = anonimizarPayload(pedido);
@@ -328,7 +333,14 @@ async function anonimizarNotificacoes(getStore, endereco, dryRun) {
   const doc = await store.get(endereco, { type: "json" });
   if (doc == null) return 0;
   if (!dryRun) {
-    await store.setJSON(chaveAnonima(endereco), doc);
+    // Uma exclusão anterior do mesmo endereço já pode ter deixado notificações em `anon:` — juntam-se, nunca
+    // se sobrescrevem (achado do validador: a 2.ª exclusão apagava as retidas da 1.ª).
+    const anon = chaveAnonima(endereco);
+    const retidas = await store.get(anon, { type: "json" });
+    const juntas = Array.isArray(retidas?.notificacoes)
+      ? { ...doc, notificacoes: [...retidas.notificacoes, ...(Array.isArray(doc.notificacoes) ? doc.notificacoes : [])] }
+      : doc;
+    await store.setJSON(anon, juntas);
     await store.delete(endereco);
   }
   return 1;
@@ -346,9 +358,12 @@ function anonimizarLance(lance, endereco) {
  * MC72 — decisão do operador):
  *  - "bids" (Key-Per-Bid): chave `bid:{edição}:{endereço}:{sufixo}` → `bid:{edição}:anon:<sha256>:{sufixo}`
  *    (continua sob o prefixo da edição) e o registo anonimizado; a chave com o endereço sai;
+ *    ⚠️ SÓ em edições já consolidadas (marcador `bid:{edição}:consolidado`): numa edição aberta, a apuração
+ *    elegeria `anon:…` como vencedor e a consolidação falharia sempre (endereço inválido na assinatura EIP-712 —
+ *    achado do validador; decisão do operador). Esses lances ficam e contam-se em `pendentes`;
  *  - "lances-relampago" (legado, fora de mainnet): chave = edição, anonimiza só os lances do titular.
  */
-async function anonimizarLancesBlobs(getStore, endereco, dryRun) {
+async function anonimizarLancesBlobs(getStore, endereco, dryRun, pendentes = {}) {
   let n = 0;
   const bids = abrirStoreSeguro(getStore, "bids");
   if (bids) {
@@ -356,6 +371,10 @@ async function anonimizarLancesBlobs(getStore, endereco, dryRun) {
     for (const { key } of blobs) {
       const m = /^bid:(.+):(0x[0-9a-fA-F]{40}):([^:]+)$/.exec(key);
       if (!m || normalizar(m[2]) !== endereco) continue;
+      if ((await bids.get(`bid:${m[1]}:consolidado`, { type: "json" })) == null) {
+        pendentes["lances-edicao-aberta"] = (pendentes["lances-edicao-aberta"] ?? 0) + 1;
+        continue;
+      }
       n += 1;
       if (dryRun) continue;
       const nova = `bid:${m[1]}:${chaveAnonima(endereco)}:${m[3]}`;
@@ -392,6 +411,7 @@ export async function excluirBlobs(getStore, endereco, { dryRun = false } = {}) 
   const deletado = {};
   const anonimizado = {};
   const erros = [];
+  const pendente = {}; // MC104.3: o que NÃO pôde ser anonimizado agora (ex.: lance de edição aberta)
 
   for (const nome of BLOBS_DELETE_POR_CHAVE) {
     try { deletado[nome] = await apagarBlobPorChave(getStore, nome, ender, dryRun); }
@@ -412,10 +432,10 @@ export async function excluirBlobs(getStore, endereco, { dryRun = false } = {}) 
   catch (err) { erros.push(`blobs:pedidos-indice (anon): ${err.message}`); }
   try { anonimizado["notificacoes"] = await anonimizarNotificacoes(getStore, ender, dryRun); }
   catch (err) { erros.push(`blobs:notificacoes (anon): ${err.message}`); }
-  try { anonimizado["lances"] = await anonimizarLancesBlobs(getStore, ender, dryRun); }
+  try { anonimizado["lances"] = await anonimizarLancesBlobs(getStore, ender, dryRun, pendente); }
   catch (err) { erros.push(`blobs:lances (anon): ${err.message}`); }
 
-  return { deletado, anonimizado, erros };
+  return { deletado, anonimizado, pendente, erros };
 }
 
 // ── Orquestração ─────────────────────────────────────────────────────────────
@@ -438,7 +458,7 @@ export async function excluirConta({ supabase, getStore, endereco, dryRun = fals
     dryRun,
     executadoEm: new Date().toISOString(),
     supabase: { deletado: supa.deletado, anonimizado: supa.anonimizado },
-    blobs: { deletado: blobs.deletado, anonimizado: blobs.anonimizado },
+    blobs: { deletado: blobs.deletado, anonimizado: blobs.anonimizado, pendente: blobs.pendente },
     retido: DADOS_RETIDOS,
     erros,
     ok: erros.length === 0,

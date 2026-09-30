@@ -35,7 +35,11 @@ test("página /excluir-conta (fonte sem comentários): as mesmas menções + o q
   const src = semComentarios(readFileSync(PAGINA, "utf8"));
   for (const [nome, re] of OBRIGATORIOS) assert.match(src, re, nome);
   assert.match(src, /Eliminado ou anonimizado/);
-  assert.match(src, /Nome, CPF, endereço de entrega e telefone — anonimizados nos pedidos e notificações/);
-  assert.match(src, /Lances Relâmpago — sua carteira é substituída por um identificador anônimo/);
+  assert.match(src, /Nome, CPF, endereço de entrega e telefone — anonimizados nos pedidos\./);
+  assert.match(src, /Notificações e lances Relâmpago — sua carteira é substituída por um identificador pseudônimo/);
   assert.doesNotMatch(src, /consentimento/i);
+  // Validador: `anon:<sha256>` recalcula-se a partir da carteira (pública) — é pseudônimo, e o texto não pode
+  // prometer mais (decisão do operador: «pseudônimo» e sem a frase final).
+  assert.doesNotMatch(src, /identificador anônimo/);
+  assert.doesNotMatch(src, /n[ãa]o (mantemos|retemos) (nenhum )?dados? pessoa(l|is) identific/i);
 });
