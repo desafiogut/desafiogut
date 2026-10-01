@@ -1,0 +1,7 @@
+OK  | chunks percorridos > 20 | 134
+OK  | CONTROLO +: rota antiga /corporativo/cotas encontrada | 
+OK  | CONTROLO −: string inventada NÃO encontrada | 
+OK  | rota /corporativo/cupons no bundle servido | /assets/PrivyRoot-CvhmWv01.js,/assets/CorporativoDashboard-CTZ0Jxym.js
+OK  | chunk da página CorporativoCupons servido | /assets/CorporativoCupons-sT6bbWpM.js
+OK  | texto da página no bundle («Meus cupons») | 
+VEREDITO: VERDE (6/6)

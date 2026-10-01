@@ -1,0 +1,10 @@
+OK  | produção cupons.mjs viva (JSON) e exige token | 401 application/json; charset=utf-8
+OK  | produção comprar-passe viva (JSON) | 401
+OK  | CONTROLO: função inventada dá HTML | 200
+FALHA | bundle servido tem a rota /corporativo/cupons | /assets/index-DNRiZbLm.js
+FALHA | bundle servido referencia o chunk CorporativoCupons | 
+OK  | CorporativoCupons.jsx existe | 
+OK  | valores da plataforma = [5, 10, 20] e validade 30 | 
+OK  | comprar-passe grava cuponsIds no INSERT | 
+OK  | CONTROLO: verificador detecta valores adulterados | 
+VEREDITO: VERMELHO (2)
