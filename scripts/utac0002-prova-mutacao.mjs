@@ -16,12 +16,20 @@ const MUT = {
     ["A-M4 template sem L1", `${SK}/review/template.md`, "Sem dados pessoais", "Com dados"],
     ["A-M5 INDEX sem coluna de decisão", "_logs/REVIEWS/INDEX.md", "| decisão do operador |", "| estado |"],
     ["A-M6 README fala de «este UTAC»", `${SK}/review/README.md`, "## Porquê", "## Porquê\nEste UTAC criou isto."],
+    ["A-V9 template sem «já coberta por?» nas lições", `${SK}/review/template.md`, "| origem | já coberta por? |", "| origem |"],
+    ["A-V12 template sem «— nada»", `${SK}/review/template.md`, "escrever «— nada»", "omitir"],
   ],
   B: [
     ["B-M1 remove a proibição de alterar a skill", `${SK}/review/prompt.md`, "- **Não alterar a skill** (`skills/utac01/**`, incluindo `review/` e `VERSAO.md`). **Não aplicar sugestões** — isso é do operador, pelo `aplicador.md`.\n", ""],
     ["B-M2 remove a proibição de alterar código", `${SK}/review/prompt.md`, "- **Não alterar código**", "- **Pode alterar código**"],
     ["B-M3 UTAC sem logs não pára", `${SK}/review/prompt.md`, "→ **sem logs: PARA**", "→ sem logs: continuar"],
-    ["B-M4 não lê o diff", `${SK}/review/prompt.md`, "`git diff --stat <baseline>..<último commit do UTAC>`", "o diff"],
+    ["B-M4 diff por intervalo em vez de git show por commit", `${SK}/review/prompt.md`, "git show --stat <commit>", "git diff --stat <baseline>..HEAD"],
+    ["B-V7 sem âmbito exacto (grep apanha sub-UTACs)", `${SK}/review/prompt.md`, "**âmbito exacto**", "nome"],
+    ["B-V8 não lê reviews anteriores", `${SK}/review/prompt.md`, "6. Reviews anteriores em", "6. Outros ficheiros em"],
+    ["B-V11 Passo 4 sem desfazer", `${SK}/review/prompt.md`, "desfaz a TUA alteração e reporta", "reporta"],
+    ["B-V14 CLAUDE.md fora do PROIBIDO", `${SK}/review/prompt.md`, "(`_logs/<UTAC>_*`, relatórios, `Desktop/`), nem `CLAUDE.md`.", "(`_logs/<UTAC>_*`, relatórios, `Desktop/`)."],
+    ["B-V15 sem prefixo MC", `${SK}/review/prompt.md`, "trocado por `MC`", "igual"],
+    ["B-V16 não lê o CLAUDE.md", `${SK}/review/prompt.md`, "`CLAUDE.md` do repo", "nada"],
     ["B-M5 proibição movida para fora da secção PROIBIDO", `${SK}/review/prompt.md`, "- Não fazer commit, push, deploy, nem tocar em Supabase/Netlify. Não instalar nada.\n", ""],
     ["B-M6 sobrescreve review existente", `${SK}/review/prompt.md`, "(não sobrescrever)", "(sobrescrever)"],
   ],
@@ -33,6 +41,8 @@ const MUT = {
     ["C-M5 R18 sem os 3 lugares", `${SK}/review/aplicador.md`, "## 4. Registo R18 em 3 lugares", "## 4. Registo"],
     ["C-M6 SKILL.md sem o ponteiro", `${SK}/SKILL.md`, "versão actual da skill em `review/VERSAO.md`", "versão algures"],
     ["C-M7 VERSAO sem versão actual", `${SK}/review/VERSAO.md`, "**Versão actual: 1.0**", "Versão: ?"],
+    ["C-V10 aplicador permite reescrever regras", `${SK}/review/aplicador.md`, "nunca reescrever regras existentes", "pode-se reescrever regras existentes"],
+    ["C-V17 aplicador permite renumerar lições", `${SK}/review/aplicador.md`, "Nunca renumerar lições existentes.", "Renumerar se preciso."],
   ],
   D: [
     ["D-M1 report sem a secção 3", "_logs/REVIEWS/UTAC105b_REVIEW.md", "## 3. Padrões maus (evitar)", "## Coisas"],
@@ -42,6 +52,13 @@ const MUT = {
     ["D-M5 INDEX com decisão tomada pelo revisor", "_logs/REVIEWS/INDEX.md", "| pendente | 1.0 |", "| aceite | 1.1 |"],
     ["D-M6 lição acrescentada a licoes.md", `${SK}/protocol/licoes.md`, "## Sobre o que corre mal", "## Sobre o que corre mal\n\n19. **x** *(UTAC105b)*. y"],
     ["D-M7 report sem as fontes lidas", "_logs/REVIEWS/UTAC105b_REVIEW.md", "Fontes lidas:", "Fontes:"],
+    ["D-V1 ficheiro da skill apagado (A-ambiente.md)", `${SK}/protocol/regras/A-ambiente.md`, "# ", "__APAGAR__"],
+    ["D-V2 revisor altera hard-gates.md", `${SK}/protocol/hard-gates.md`, "# ", "# (alterado) "],
+    ["D-V3 contagem 61→64 no SKILL.md", `${SK}/SKILL.md`, "61 regras em 9 categorias, lições", "64 regras em 9 categorias, lições"],
+    ["D-V4 §4 vazia com a tabela movida para o fim", "_logs/REVIEWS/UTAC105b_REVIEW.md", "## 4. Novas regras sugeridas", "__MOVER_S4__"],
+    ["D-V5 e-mail no report (L1)", "_logs/REVIEWS/UTAC105b_REVIEW.md", "## 7. Notas de contexto", "## 7. Notas de contexto\n- contacto fulano@exemplo.com"],
+    ["D-V5b CPF no report (L1)", "_logs/REVIEWS/UTAC105b_REVIEW.md", "## 7. Notas de contexto", "## 7. Notas de contexto\n- cpf 529.982.247-25"],
+    ["D-V6 linha 2.0 no changelog", `${SK}/review/VERSAO.md`, "| 1.0 | 2026-09-30 |", "| 2.0 | 2026-10-01 | x | y |\n| 1.0 | 2026-09-30 |"],
   ],
 };
 
@@ -59,7 +76,12 @@ for (const f of frentes) for (const [nome, rel, de, para] of MUT[f]) {
   const d = copia(); const p = path.join(d, rel);
   const txt = fs.readFileSync(p, "utf8").replace(/\r\n/g, "\n");
   if (!txt.includes(de)) { console.log(`${nome}: NAO ENTROU (alvo ausente)`); fs.rmSync(d, { recursive: true, force: true }); continue; }
-  fs.writeFileSync(p, txt.replace(de, () => para));
+  if (para === "__APAGAR__") fs.rmSync(p);                       // mutante: ficheiro apagado
+  else if (para === "__MOVER_S4__") {                               // mutante: §4 vazia, a tabela vai para o fim do ficheiro
+    const i = txt.indexOf("## 4. Novas regras sugeridas"), j = txt.indexOf("## 5.");
+    const corpo = txt.slice(i, j).replace("## 4. Novas regras sugeridas", "");
+    fs.writeFileSync(p, txt.slice(0, i) + "## 4. Novas regras sugeridas\n— nada\n\n" + txt.slice(j) + "\n" + corpo);
+  } else fs.writeFileSync(p, txt.replace(de, () => para));
   const r = spawnSync(process.execPath, [path.join(REAL, "scripts/utac0002-verifica-review.mjs"), f, "--raiz", d], { encoding: "utf8" });
   fs.rmSync(d, { recursive: true, force: true });
   const morto = r.status !== 0 && /VEREDITO: VERMELHO/.test(r.stdout);

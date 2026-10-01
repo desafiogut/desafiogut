@@ -6,4 +6,4 @@ A coluna «decisão» é preenchida **pelo operador** (aceite / rejeitada / adia
 
 | data | UTAC | report | revisor | sugestões (regras · lições) | decisão do operador | versão da skill depois |
 |---|---|---|---|---|---|---|
-| 2026-09-30 | UTAC105b | [UTAC105b_REVIEW.md](UTAC105b_REVIEW.md) | Claude Opus 5.5 (teste do mecanismo — UTAC000.2) | 3 · 3 | pendente | 1.0 |
+| 2026-09-30 | UTAC105b | [UTAC105b_REVIEW.md](UTAC105b_REVIEW.md) | Claude Opus 5.5 (teste do mecanismo — UTAC000.2) | 3 · 3 (1 regra e 1 lição novas; 4 reforço/migração) | pendente | 1.0 |

@@ -19,15 +19,20 @@ Para cada sugestão das secções 4 e 5 do report: **aceite**, **rejeitada** ou 
    <texto: 1-3 linhas, imperativo>
    Origem: <UTAC de origem>.
    ```
-6. **Actualizar as contagens** (ficam erradas se não): `protocol/regras/README.md` (linha da categoria, título e «Total»),
-   `protocol/regras-legado.md` («Total: N regras …»), `SKILL.md` (árvore, tabela «As 9 categorias de regras», texto «N regras»).
-   `exemplo.UTAC.md` é um exemplo histórico — não se actualiza.
+6. **Actualizar as contagens** (ficam erradas se não) — o total **e** a faixa da categoria (ex.: `T1-T5` → `T1-T6`):
+   - `protocol/regras/README.md` — título («N regras»), linha da categoria na tabela, «**Total: N regras.**»;
+   - `protocol/regras-legado.md` — «Total: **N regras** … (E9 · T5 · …)», incluindo a contagem por categoria entre parênteses;
+   - `SKILL.md` — texto «N regras» do topo, árvore (`T-testes.md ← T1-T5`), título e tabela «As 9 categorias de regras (N regras)».
+   `exemplo.UTAC.md` é um exemplo histórico — não se actualiza. Confirmar com `grep -rn "<total antigo>" desafio-gut/frontend/skills/utac01`.
 7. **Bump de versão** — ver §3.
 
 ## 2. Nova lição (aceite)
 1. **Abrir** `protocol/licoes.md`.
-2. **Acrescentar no FIM da secção** indicada no report (ou da última, se não houver).
-3. **Número** = o seguinte ao último da lista (a numeração é contínua no ficheiro inteiro).
+2. **Acrescentar no FIM da secção** indicada no report — só se essa for a **última** secção numerada do ficheiro. A numeração é
+   contínua no ficheiro inteiro (1…7 numa secção, 8…18 na seguinte): pôr a lição 19 no fim de uma secção do meio partia a sequência
+   (1…7, 19, 8…18). Por isso, se a secção sugerida não é a última, a lição vai para o **fim da última secção** e a secção sugerida
+   fica escrita entre parênteses no texto (ex.: «*(sobre como trabalhar)*»). Nunca renumerar lições existentes.
+3. **Número** = o seguinte ao último do ficheiro.
 4. **Formato** (igual às existentes): `N. **<título>** *(<UTAC de origem>)*. <texto, 1-3 linhas>`
 5. Não reescrever lições existentes. **Bump de versão** — ver §3.
 

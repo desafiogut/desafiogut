@@ -10,28 +10,35 @@ Correr na raiz do repo DesafioGUT. **Só leitura**, excepto os 2 ficheiros de sa
 Não refazes o trabalho, não o corriges, não decides nada — **sugeres**. Quem decide é o operador.
 
 ## Input
-`<UTAC>` — nome exacto (ex.: `UTAC105b`, `UTAC105a.1`). Os UTACs anteriores ao UTAC000 têm logs com prefixo
-`MC` (`_logs/MC105a_*` = UTAC105a).
+`<UTAC>` — nome exacto (ex.: `UTAC105b`, `UTAC105a.1`).
+**Prefixo `<P>`:** os UTACs anteriores ao UTAC000 têm logs e commits com prefixo `MC` (UTAC105a ↔ `_logs/MC105a_*`, commits `feat(MC105a): …`).
+Define `<P>` = `<UTAC>`; se `_logs/<UTAC>_*` não existir, tenta `<P>` = `<UTAC>` com `UTAC` trocado por `MC`. Usa `<P>` em todos os passos abaixo.
 
 ## Passo 0 — Pré-condições (se falhar, PARA e responde só com o erro)
-- `ls _logs/<UTAC>_*` → **sem logs: PARA** — «ERRO: <UTAC> sem logs em _logs/ — nada a rever». Não inventes um review.
-- Relatório: `_logs/<UTAC>-RELATORIO.md` ou `Desktop/<UTAC>-RELATORIO.md` → sem relatório: **PARA** — «ERRO: <UTAC> não está fechado (sem relatório)».
+- `ls _logs/<P>_*` (com as duas tentativas de prefixo) → **sem logs: PARA** — «ERRO: <UTAC> sem logs em _logs/ — nada a rever». Não inventes um review.
+- Relatório: `_logs/<P>-RELATORIO.md` ou `Desktop/<P>-RELATORIO.md` → sem relatório: **PARA** — «ERRO: <UTAC> não está fechado (sem relatório)».
 - `_logs/REVIEWS/<UTAC>_REVIEW.md` já existe → **PARA** — «ERRO: já revisto; apaga-o à mão se quiseres refazer» (não sobrescrever).
 
 ## Passo 1 — Ler (só leitura)
-1. **Todos** os logs `_logs/<UTAC>_*` e `_logs/<UTAC>.spec.yml` (se existir). Contar os ficheiros lidos.
+1. **Todos** os logs `_logs/<P>_*` e `_logs/<P>.spec.yml` (se existir). Contar os ficheiros lidos.
 2. O relatório final.
-3. O **diff**: baseline = campo `baseline` do spec ou o «HEAD» do `SEG-1_MEDICAO`; commits do UTAC =
-   `git log --oneline --grep="<UTAC>"`. Ler `git diff --stat <baseline>..<último commit do UTAC>` e o diff dos
-   ficheiros relevantes. ⚠️ Commits de **outros** UTACs entre os dois pontos não contam — filtra por mensagem.
+3. O **diff**, só dos commits DESTE UTAC (outros UTACs podem ter commits intercalados, e um intervalo `A..B` não se filtra):
+   - commits = os que têm o UTAC como **âmbito exacto** da mensagem, `tipo(<P>):` —
+     `git log --format="%h %s" | grep -E "\(<P com os pontos escapados>\):"` (ex.: `\(UTAC105b\):` não apanha `UTAC105b.1` nem um UTAC
+     que só **mencione** o UTAC105b);
+   - diff = a união de `git show --stat <commit>` de cada um (e `git show <commit> -- <ficheiro>` nos relevantes); o `baseline`
+     (spec ou «HEAD» do `SEG-1_MEDICAO`) serve só de referência. Declarar a lista de commits no report.
 4. A skill **actual**: `desafio-gut/frontend/skills/utac01/` — `protocol/regras/*.md`, `protocol/licoes.md`,
-   `protocol/hard-gates.md`, `types/`, `review/VERSAO.md` (versão lida).
-5. Reviews anteriores em `_logs/REVIEWS/` — não repetir sugestões já feitas (citar a anterior).
+   `protocol/ambiente.md`, `protocol/hard-gates.md`, `types/`, `review/VERSAO.md` (versão lida).
+5. As lições **fora** da skill: `CLAUDE.md` do repo (secções dos UTACs/MCs — ler com `grep -a`, tem bytes de controlo).
+   Uma sugestão que já lá esteja é «migrar para a skill», não «nova».
+6. Reviews anteriores em `_logs/REVIEWS/` — não repetir sugestões já feitas (citar a anterior).
 
 ## Passo 2 — Analisar
 - O UTAC seguiu a skill (spec, SEG-1 com conflitos, uma frente de cada vez, mutação, validador, R18 em 3 lugares)?
 - Onde houve retrabalho, falsos verdes, instrumentos errados, achados do validador, desvios do enunciado?
-- Para cada padrão mau: **já existe regra/lição que o cobria?** Se sim, a sugestão é «reforçar/aplicar», não regra nova.
+- Para cada padrão mau: **já existe regra/lição que o cobria** (skill, `ambiente.md` ou `CLAUDE.md`)? Se sim, a sugestão é
+  «reforçar/estender <ID>» ou «migrar do CLAUDE.md», não regra nova — e a coluna «já coberta por?» diz qual.
 - Cada afirmação tem **evidência**: ficheiro:linha, commit ou medição citada do log. Sem evidência → não escrever.
 
 ## Passo 3 — Escrever (os ÚNICOS 2 ficheiros que podes criar/alterar)

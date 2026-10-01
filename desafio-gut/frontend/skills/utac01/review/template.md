@@ -24,12 +24,12 @@ definitivo só é dado pelo `aplicador.md`, se o operador aceitar.
 ## 4. Novas regras sugeridas
 | ID provisório | categoria | texto (1-2 linhas, imperativo) | origem (evidência) | já coberta por? |
 |---|---|---|---|---|
-| <CAT>-novo-1 | <E/T/G/L/S/A/P/AU/ST> | <…> | <UTAC + ficheiro:linha> | <regra existente ou «não»> |
+| <CAT>-novo-1 | <E/T/G/L/S/A/P/AU/ST> | <…> | <UTAC + ficheiro:linha> | <regra/lição existente, secção do `CLAUDE.md`, ou «não»> |
 
 ## 5. Novas lições sugeridas
-| # provisório | secção de `licoes.md` | lição (1-2 linhas) | origem |
-|---|---|---|---|
-| L-novo-1 | <secção> | <…> | <UTAC + evidência> |
+| # provisório | secção de `licoes.md` | lição (1-2 linhas) | origem | já coberta por? |
+|---|---|---|---|---|
+| L-novo-1 | <secção> | <…> | <UTAC + evidência> | <lição/regra existente, secção do `CLAUDE.md`, ou «não»> |
 
 ## 6. Para o próximo UTAC
 - <aviso concreto e accionável>
