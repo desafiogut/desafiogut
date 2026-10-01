@@ -1,0 +1,110 @@
+UTAC000.8 — SEG-2: EVIDÊNCIA ANTES ↔ DEPOIS (OPÇÃO 2, decisão R18 do operador)
+=================================================================================
+data: 2026-10-01 · commit: eec94b8 (base: c64a5bb = origin/main; código de partida 93c286d)
+Sessão dedicada a este UTAC. Nada aqui é estimado: tudo colado de execução real.
+
+─────────────────────────────────────────────────────────────────────────────────
+1. SUÍTE — ANTES (medido no início desta sessão, antes de qualquer alteração)
+─────────────────────────────────────────────────────────────────────────────────
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 547/547 pass
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+
+Resumos TAP:
+frontend → # tests 547 · # pass 547 · # fail 0 · # skipped 0
+backend  → # tests 973 · # pass 967 · # fail 0 · # skipped 6
+
+─────────────────────────────────────────────────────────────────────────────────
+2. TESTE NOVO — DEPOIS da implementação
+─────────────────────────────────────────────────────────────────────────────────
+$ node --test --test-concurrency=1 --test-reporter=tap \
+    src/pages/__tests__/utac0008-resultado-oficial.test.mjs
+# tests 16
+# pass 16
+# fail 0
+
+─────────────────────────────────────────────────────────────────────────────────
+3. SUÍTE — DEPOIS (0 regressões: 547 → 563 = +16 testes novos)
+─────────────────────────────────────────────────────────────────────────────────
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 563/563 pass
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+
+─────────────────────────────────────────────────────────────────────────────────
+4. MUTAÇÃO M1 — «a página ignora o resultado oficial» (= repor a DEBT-007)
+─────────────────────────────────────────────────────────────────────────────────
+Alteração (1 linha, em `src/pages/MeusAtivos.jsx`):
+  -  const resultadoOficial = useResultadoOficial(EDICAO_ATIVA);
+  +  const resultadoOficial = null; // MUTANTE M1 (reproduz DEBT-007)
+
+Prova de que o mutante ENTROU: md5 do ficheiro mudou
+  antes   f2be94a5cb18d305a56a5284d1656203
+  mutado  94232cfd52ae38141871cbdb9c5b45c7
+
+$ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/utac0008-resultado-oficial.test.mjs
+not ok 1 - UTAC000.8 · Frente B — 🏆/«Menor Lance» leem o RESULTADO OFICIAL
+# tests 16
+# pass 11
+# fail 5          ← RED, como exigido
+
+(mordem os 4 testes «com resultado oficial» nas duas disposições + o teste de cablagem;
+os testes «SEM resultado oficial» continuam verdes — é o desenho: eles são o comportamento antigo.)
+
+Restauro:
+$ python mutar.py reverter "src/pages/MeusAtivos.jsx"
+RESTAURADO src/pages/MeusAtivos.jsx md5=f2be94a5cb18d305a56a5284d1656203
+           (mutante tinha md5 diferente do backup: True)
+→ md5 IDÊNTICO ao de antes da mutação.
+
+─────────────────────────────────────────────────────────────────────────────────
+5. MUTAÇÃO M2 — «aceitar uma edição NÃO consolidada» (perde a regra de honestidade)
+─────────────────────────────────────────────────────────────────────────────────
+Alteração (1 linha, em `src/hooks/useResultadoOficial.js`):
+  -  if (!r || r.consolidado !== true) return null;
+  +  if (!r) return null; // MUTANTE M2 (aceita edição NAO consolidada)
+
+Prova de que o mutante ENTROU: md5 mudou
+  antes   49c0c297f0feeeff02106e77338a683c
+  mutado  3a819ce256cfc63f9bf0a2af8afa633a
+
+$ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/utac0008-resultado-oficial.test.mjs
+not ok 2 - UTAC000.8 · normalizarResultadoOficial — só é «resultado» o que é utilizável
+# tests 16
+# pass 15
+# fail 1          ← RED, como exigido
+
+Restauro:
+$ python mutar.py reverter "src/hooks/useResultadoOficial.js"
+RESTAURADO src/hooks/useResultadoOficial.js md5=49c0c297f0feeeff02106e77338a683c
+           (mutante tinha md5 diferente do backup: True)
+
+Depois de ambos os restauros: 16/16 VERDE outra vez.
+
+─────────────────────────────────────────────────────────────────────────────────
+6. md5 DOS FICHEIROS DO COMMIT (estado entregue)
+─────────────────────────────────────────────────────────────────────────────────
+49c0c297f0feeeff02106e77338a683c  src/hooks/useResultadoOficial.js
+f2be94a5cb18d305a56a5284d1656203  src/pages/MeusAtivos.jsx
+aff267282a5550b48204b47c2d4c06cf  src/pages/__tests__/utac0008-resultado-oficial.test.mjs
+03d54bbe2e5aaa829b762c9aa612e1c6  src/pages/__tests__/_stubs/useResultadoOficial.js
+
+Diff do commit (contra c64a5bb):
+ .../frontend/src/hooks/useResultadoOficial.js      |  84 ++++++++
+ desafio-gut/frontend/src/pages/MeusAtivos.jsx      |  47 +++-
+ .../pages/__tests__/_stubs/useResultadoOficial.js  |  27 +++
+ .../__tests__/utac0008-resultado-oficial.test.mjs  | 237 +++++++++++++++++++++
+ 4 files changed, 387 insertions(+), 8 deletions(-)
+
+Ficheiros FORA do escopo tocados: NENHUM (contrato, GUTO, Passe, Concurso, `lancesFlash`,
+`_render.mjs`, `_ponte-ssr.mjs`, `vite.config.js` — intocados; DEBT-002/003/005/006 — intocadas).
+`desafio-gut/frontend/package-lock.json` aparece modificado mas é PRÉ-EXISTENTE (já estava
+assim no primeiro `git status` desta sessão, antes de qualquer edição minha).
+
+─────────────────────────────────────────────────────────────────────────────────
+7. FICHEIROS DE TRABALHO (fora do repo, removíveis)
+─────────────────────────────────────────────────────────────────────────────────
+C:/Users/Moltbot/tmp-utac0008/mutar.py        (ferramenta de mutação: backup/aplicar/reverter)
+C:/Users/Moltbot/tmp-utac0008/bak/            (cópias de segurança dos 2 ficheiros mutados)
+C:/Users/Moltbot/tmp-utac0008-val/            (worktree do validador adversarial, SEG3)

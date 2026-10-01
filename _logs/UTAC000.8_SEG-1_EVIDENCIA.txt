@@ -1,0 +1,68 @@
+UTAC000.8 — EVIDENCIA BRUTA (SEG-1, 2.ª sessão)
+data: 2026-10-01T22:03:32Z
+HEAD: c64a5bb168b0d70d7df78a0dbba7c763e9db50b3
+origin/main: c64a5bb168b0d70d7df78a0dbba7c763e9db50b3
+
+=== git status --short ===
+ M desafio-gut/frontend/package-lock.json
+?? _logs/MC100_BLOQUEIOS.md
+?? _logs/MC100_CHECKLIST-DIA-D.md
+?? _logs/MC100_DECISOES-PENDENTES.md
+?? _logs/MC100_ESTADO-APP-STORE.md
+?? _logs/MC100_ESTADO-PLAY-CONSOLE.md
+?? _logs/MC100_INVENTARIO-MODULOS.md
+?? _logs/MC100_LISTA-DESCONTINUACAO.md
+?? _logs/MC100_MAPA-CAMADAS.md
+?? _logs/MC100_MAPA-MCS-101+.md
+?? _logs/MC100_MATRIZ-CONFORMIDADE.md
+?? _logs/MC100_REGISTO-CLAUDE.md
+?? _logs/MC100_REGISTO-RISCOS.md
+?? _logs/MC100_SEG-1_MEDICAO.md
+?? _logs/MC100_SEG0.md
+?? _logs/MC100_SEG1.md
+?? _logs/MC100_SEG2.md
+?? _logs/MC100_SEG3_VALIDADOR.md
+?? _logs/MC100_SEG5_VERIFICACAO.md
+?? _logs/MC101_SEG-1_MEDICAO.md
+
+=== HARNESS (ambos) ===
+frontend: VERDE 547/547 pass
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+
+=== FRONTEND: resumo TAP ===
+# tests 547
+# pass 547
+# fail 0
+# cancelled 0
+# skipped 0
+
+=== BACKEND: resumo TAP ===
+# tests 973
+# pass 967
+# fail 0
+# cancelled 0
+# skipped 6
+
+=== PRODUCAO (leitura publica, sem auth) ===
+--- GET /edicoes ---
+{"edicoes":{"RELAMP-1":{"id":"RELAMP-1","tipo":"relampago","produto":"Smart TV","produtoId":null,"termino_em":"2026-05-30T23:02:11.284Z","lances":0,"status":"encerrado","valorBaseCentavos":null,"incrementoCentavos":null,"inicio_em":null,"imagem_url":null},"RELAMP-2":{"id":"RELAMP-2","tipo":"relampago","produto":"Smart TV","produtoId":null,"termino_em":"2026-05-30T23:10:34.547Z","lances":0,"status":"encerrado","valorBaseCentavos":null,"incrementoCentavos":null,"inicio_em":null,"imagem_url":null},"RELAMP-3":{"id":"RELAMP-3","tipo":"relampago","produto":"Smart TV","produtoId":null,"termino_em":"2026-05-31T03:52:13.827Z","lances":0,"status":"encerrado","valorBaseCentavos":null,"incrementoCentavos":null,"inicio_em":null,"imagem_url":null},"R-1":{"id":"R-1","tipo":"relampago","produto":null,"termino_em":"2026-10-02T22:05:41.677Z","lances":0,"status":"aberto"}},"agendadas":{"ESPECIAL-AIRFRYER":{"id":"ESPECIAL-AIRFRYER","tipo":"relampago","produto":"Air Fryer","produtoId":null,"termino_em":"2026-10-04T23:30:00.000Z","lances":0,"status":"agendado","valorBaseCentavos":null,"incrementoCentavos":null,"inicio_em":"2026-10-04T23:00:00.000Z","imagem_url":"/artes/edicao-especial-airfryer.jpg"}},"agora":"2026-10-01T22:05:41.532Z"}
+--- GET /lances-flash?edicaoId=R-1 ---
+{"edicaoId":"R-1","ocultoAteConsolidar":true,"lances":[]}
+HTTP=200
+--- GET /lances-flash?edicaoId=RELAMP-1 ---
+{"edicaoId":"RELAMP-1","ocultoAteConsolidar":true,"lances":[]}
+HTTP=200
+--- GET /ranking?cicloId=R-1 ---
+{"cicloId":"R-1","total":0,"ranking":[]}
+HTTP=200
+
+=== md5 dos ficheiros que a DEBT-007 envolve (estado ANTES de qualquer correcção) ===
+68fe2bd00c5c16c1feadfad224b676f7 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/netlify/functions/lances-flash.mjs
+cb5b2ae2f94374bc37aa33c234067cf7 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/netlify/functions/lance-relampago.mjs
+d27208e939ef69b7c3d0fa55f472e677 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/netlify/functions/_lib/data-store.mjs
+95e92dcf181b22f71f350ada4d2b9af0 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/netlify/functions/_lib/data-store-blobs.mjs
+5a4f7207233b314333d6772cbad025d2 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/netlify/functions/_lib/bids-store.mjs
+250324f90be532523d2b51023fa4fd03 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/context/AppContext.jsx
+9c95f0eba6784c884c7387232a695f6d *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/MeusAtivos.jsx
+aea2b8d97d8f1cbcc134998db399ba93 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/CardLance.jsx
