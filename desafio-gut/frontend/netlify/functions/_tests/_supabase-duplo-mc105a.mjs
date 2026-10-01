@@ -1,7 +1,8 @@
 // MC105a — duplo do cliente Supabase (postgrest-js) para `passes` e para o saldo R$ (`saldo_rs*`).
 // Fiel ao REAL nas direcções que já enganaram esta série (MC93-B/C/D, MC104):
 //  - colunas conhecidas por tabela: coluna desconhecida → erro 42703 (não é ignorada);
-//  - UNIQUE → 23505; CHECK → 23514 (as mesmas CHECKs da migração `_logs/MC105a_MIGRACAO.sql`); NOT NULL → 23502;
+//  - UNIQUE → 23505; CHECK → 23514 (as CHECKs de produção: MC105a + MC105a.1, que aceita `anon:<sha256>`); NOT NULL → 23502;
+//  - `select(col, { count: "exact", head: true })` → `data: null` + `count` (como o HEAD do PostgREST);
 //  - DEFAULTs aplicados como a tabela (id uuid, comprado_em, palpite_usado false, cupons_ids [], status 'activo');
 //  - `.eq(col, null)` LANÇA (o PostgREST gera `eq.null` e dá 400 — usar `.is()`);
 //  - `insert`/`update` SEM `.select()` devolvem `data: null` (o real devolve 204);
@@ -19,7 +20,7 @@ const ESQUEMA = {
     uuid: ["id"],
     defaults: () => ({ id: randomUUID(), comprado_em: new Date().toISOString(), palpite_usado: false, cupons_ids: [], status: "activo" }),
     checks: [
-      (l) => /^0x[0-9a-f]{40}$/.test(l.endereco),
+      (l) => /^0x[0-9a-f]{40}$/.test(l.endereco) || /^anon:[0-9a-f]{64}$/.test(l.endereco),
       (l) => ["activo", "expirado", "usado"].includes(l.status),
       (l) => Array.isArray(l.cupons_ids),
     ],
@@ -55,7 +56,7 @@ export function criarSupabase() {
     if (!ESQUEMA[tab]) throw new Error(`duplo: tabela ${tab} não modelada`);
     const st = { op: "select", filtros: [], ordem: null, retorno: false, dados: null, opcoes: {} };
     const api = {
-      select() { if (st.op === "select") st.op = "select"; else st.retorno = true; return api; },
+      select(_c, o) { if (st.op === "select") { if (o?.head) st.head = true; } else st.retorno = true; return api; },
       insert(d) { st.op = "insert"; st.dados = d; return api; },
       update(d) { st.op = "update"; st.dados = d; return api; },
       upsert(d, o = {}) { st.op = "upsert"; st.dados = d; st.opcoes = o; return api; },
@@ -107,6 +108,7 @@ export function criarSupabase() {
       }
       const copia = linhas.map((l) => structuredClone(l));
       if (st.op !== "select" && !st.retorno) return { data: null, error: null };
+      if (st.head) return { data: null, count: copia.length, error: null };
       if (st.terminal === "single") return copia.length === 1 ? { data: copia[0], error: null } : erro("PGRST116", "JSON object requested, multiple (or no) rows returned");
       if (st.terminal === "maybe") return copia.length > 1 ? erro("PGRST116", "multiple rows") : { data: copia[0] ?? null, error: null };
       return { data: copia, error: null };

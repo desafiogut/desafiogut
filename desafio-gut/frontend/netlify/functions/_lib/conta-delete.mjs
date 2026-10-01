@@ -165,6 +165,30 @@ async function anonimizarFiscalSupabase(supabase, tabela, pk, endereco, dryRun) 
 }
 
 /**
+ * MC105a.1 — `passes`: anonimizar ≠ apagar (o service_role nem tem DELETE na tabela). Só o
+ * `endereco` passa a `chaveAnonima` (o mesmo pseudónimo do MC104.3); edição, produto, datas,
+ * palpite, cupons e status ficam. O UNIQUE (endereco, edicao_id, produto_id) não colide: um
+ * endereço dá sempre o mesmo hash, e uma 2.ª exclusão já não encontra o endereço.
+ */
+async function anonimizarPasses(supabase, endereco, dryRun) {
+  if (dryRun) {
+    const { count, error } = await supabase
+      .from("passes")
+      .select("id", { count: "exact", head: true })
+      .eq("endereco", endereco);
+    if (error) throw new Error(`select passes (anon): ${error.message}`);
+    return count ?? 0;
+  }
+  const { data, error } = await supabase
+    .from("passes")
+    .update({ endereco: chaveAnonima(endereco) })
+    .eq("endereco", endereco)
+    .select("id");
+  if (error) throw new Error(`update passes (anon): ${error.message}`);
+  return Array.isArray(data) ? data.length : 0;
+}
+
+/**
  * Executa (ou simula) a exclusão no Supabase. Cada sub-operação é isolada: um erro
  * numa tabela não impede as outras — o erro entra em `erros` e o caller decide.
  * @returns {{ deletado: object, anonimizado: object, erros: string[] }}
@@ -190,6 +214,8 @@ export async function excluirSupabase(supabase, endereco, { dryRun = false } = {
     try { anonimizado[tabela] = await anonimizarFiscalSupabase(supabase, tabela, pk, ender, dryRun); }
     catch (err) { erros.push(`supabase:${tabela} (anon): ${err.message}`); }
   }
+  try { anonimizado["passes"] = await anonimizarPasses(supabase, ender, dryRun); }
+  catch (err) { erros.push(`supabase:passes (anon): ${err.message}`); }
 
   return { deletado, anonimizado, erros };
 }

@@ -37,6 +37,7 @@ const SCHEMA = {
   lances: ["id", "edicao_id", "endereco"], lojistas: ["id", "endereco"], atividade_utilizadores: ["endereco", "acessos"],
   pontuacoes: ["ciclo_id", "endereco", "pontos"], rankings_ciclo: ["ciclo_id", "endereco", "posicao"],
   cotas: ["cliente_id", "endereco", "email"],
+  passes: ["id", "endereco", "edicao_id", "produto_id", "comprado_em", "palpite_usado", "cupons_ids", "status"], // MC105a.1
 };
 function exigirColuna(tabela, col) {
   const base = col.split("->>")[0];
@@ -124,6 +125,7 @@ function semear() {
     atividade_utilizadores: [{ endereco: TITULAR, acessos: 4 }, { endereco: OUTRO, acessos: 9 }],
     pontuacoes: [{ ciclo_id: "R-1", endereco: TITULAR, pontos: 3 }, { ciclo_id: "R-1", endereco: OUTRO, pontos: 1 }],
     rankings_ciclo: [{ ciclo_id: "R-1", endereco: TITULAR, posicao: 1 }, { ciclo_id: "R-1", endereco: OUTRO, posicao: 2 }],
+    passes: [{ id: "ps1", endereco: TITULAR, edicao_id: "P-1", produto_id: "prod-1", status: "activo" }, { id: "ps2", endereco: OUTRO, edicao_id: "P-1", produto_id: "prod-1", status: "activo" }],
     cotas: [{ cliente_id: TITULAR, endereco: TITULAR, email: "t@x" }, { cliente_id: "outro-id", endereco: TITULAR, email: "t2@x" }, { cliente_id: TITULAR, endereco: null, email: "t3@x" }, { cliente_id: OUTRO, endereco: OUTRO, email: "o@x" }],
   };
 }
@@ -154,7 +156,8 @@ test("titular com dados → pedidos (morada/CPF/NF-e), lances, pontos, consentim
   assert.deepEqual(t.troco_senhas.map((r) => r.payload.senhas), [2]);
   assert.deepEqual(t.saldo_rs_debitos.map((r) => r.operacao_id), ["d0"]);
   assert.deepEqual(t.lojistas.map((r) => r.id), [7]);
-  assert.deepEqual(Object.keys(t).sort(), ["atividade_utilizadores", "cotas", "lances", "lojistas", "pontuacoes", "rankings_ciclo", "saldo_rs", "saldo_rs_creditos", "saldo_rs_debitos", "troco_senhas", "wallet"]);
+  assert.deepEqual(t.passes.map((r) => r.id), ["ps1"], "MC105a.1: passes do titular (e só dele)");
+  assert.deepEqual(Object.keys(t).sort(), ["atividade_utilizadores", "cotas", "lances", "lojistas", "passes", "pontuacoes", "rankings_ciclo", "saldo_rs", "saldo_rs_creditos", "saldo_rs_debitos", "troco_senhas", "wallet"]);
   assert.deepEqual(d.supabase.erros, []);
 });
 
@@ -165,7 +168,7 @@ test("HARD GATE 13: NADA de terceiros em nenhuma parte da exportação", async (
   assert.ok(!txt.includes(OUTRO), "endereço de terceiro na exportação");
   assert.ok(!txt.includes(PARECIDO) && !txt.includes("parecido"), "endereço QUASE igual ao do titular entrou");
   // Declarado: o pedido do titular traz o `lojista` (vendedor, já público na listagem) — é parte do registo DELE.
-  for (const marca of ["01000-000", "\"222\"", "\"l2\"", "999", "o@x", "\"c2\""]) assert.ok(!txt.includes(marca), `dado de terceiro: ${marca}`);
+  for (const marca of ["01000-000", "\"222\"", "\"l2\"", "999", "o@x", "\"c2\"", "\"ps2\""]) assert.ok(!txt.includes(marca), `dado de terceiro: ${marca}`);
 });
 
 test("chaves que já existiam continuam lá, com o mesmo significado (HARD GATE 4)", async () => {

@@ -123,6 +123,7 @@ const SUPA_POR_COLUNA = [
   ["atividade_utilizadores", "endereco"],
   ["pontuacoes", "endereco"],
   ["rankings_ciclo", "endereco"],
+  ["passes", "endereco"],   // MC105a.1 — Passe Desafio (LGPD art. 18)
 ];
 
 async function coletarSupabase(endereco) {
