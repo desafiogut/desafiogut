@@ -102,6 +102,27 @@ function trofeusNaLista(html) {
   return html.slice(ini, fim).split("🏆").length - 1;
 }
 
+/**
+ * Endereços (abreviados) das linhas que levam o selo «🏆 Menor e Único».
+ *
+ * PORQUE EXISTE (achado do validador adversarial): os primeiros testes limitavam-se a contar
+ * os 🏆 — e passavam com o código PRÉ-correcção quando o apuramento local calhava coincidir
+ * com o resultado oficial. «Verde que não morde» não prova nada. Este auxiliar diz **a quem**
+ * foi dado o 🏆: o endereço da linha aparece ANTES do selo, dentro da mesma linha (as duas
+ * disposições abreviem-no: 6 ou 8 caracteres + `...`), pelo que se procura o último padrão
+ * de endereço na janela imediatamente anterior ao selo.
+ */
+function enderecosVencedores(html) {
+  const out = [];
+  const alvo = "🏆 Menor e Único";
+  for (let i = html.indexOf(alvo); i >= 0; i = html.indexOf(alvo, i + 1)) {
+    const janela = html.slice(Math.max(0, i - 700), i);
+    const m = [...janela.matchAll(/0x[0-9a-f]{4,8}\.\.\./g)].pop();
+    out.push(m ? m[0] : null);
+  }
+  return out;
+}
+
 /** Valor do cartão «Menor Lance» (o valor é desenhado ANTES da legenda). */
 function valorMenorLance(html) {
   const m = texto(html).match(/(R\$ \d+\.\d{2}|—)\s*Menor Lance/);
@@ -150,21 +171,24 @@ describe("UTAC000.8 · Frente B — 🏆/«Menor Lance» leem o RESULTADO OFICIA
       assert.equal(valorMenorLance(html), "R$ 3.00");
     });
 
-    test(`${nome}: o vencedor oficial está na lista visível → o 🏆 vai para a linha DELE (endereço + valor)`, () => {
-      // ⚠️ Com sessão a lista são só os lances DESTA pessoa (`meusLances`): para a linha do
-      // vencedor oficial estar visível, a sessão tem de ser a dele. O caso «lista de todos»
-      // (sem sessão) está no teste seguinte.
+    test(`${nome}: o vencedor oficial está na lista visível → o 🏆 vai para a linha DELE, não para o menor local`, () => {
+      // ⚠️ ESTE TESTE TEM DE MORDER (achado do validador: a 1.ª versão era VÁCUA — o apuramento
+      // local calhava coincidir com o oficial). Aqui a vista local é PARCIAL (com sessão só se vê
+      // os lances desta pessoa) e tem um lance mais baixo do que o vencedor oficial: o local
+      // elegeria os 70, o oficial diz 100. Sem a correcção, o 🏆 ia para a linha errada.
       const lances = [
         { valor: 500, repetido: false, endereco: EU, txHash: "0x1" },
         { valor: 100, repetido: false, endereco: OUTRO, txHash: "0x2" },
+        { valor: 70,  repetido: false, endereco: OUTRO, txHash: "0x3" },
       ];
       const html = renderizar({
         contexto: { lances, address: OUTRO, isConnected: true },
         resultadoOficial: OFICIAL_OUTRO_100,
         mobile,
       });
-      assert.deepEqual(vencedoresNoEcra(html), ["1.00"]);
+      assert.deepEqual(vencedoresNoEcra(html), ["1.00"], "o selo foi para o menor local (70), não para o oficial (100)");
       assert.equal(trofeusNaLista(html), 2, "a linha vencedora tem 🏆 na posição e no selo — e mais nenhuma");
+      assert.ok(enderecosVencedores(html).every((e) => e && e.startsWith(OUTRO.slice(0, 6))), "o 🏆 foi para OUTRA pessoa");
       assert.equal(valorMenorLance(html), "R$ 1.00");
     });
 
@@ -182,15 +206,49 @@ describe("UTAC000.8 · Frente B — 🏆/«Menor Lance» leem o RESULTADO OFICIA
     });
   }
 
-  test("sem sessão (lista de todos) com resultado oficial do OUTRO → o 🏆 vai para a linha oficial", () => {
+  test("sem sessão: EMPATE de valor — o 🏆 vai para a linha do VENCEDOR OFICIAL, não para o 1.º da lista", () => {
+    // ⚠️ ESTE TESTE TEM DE MORDER (achado do validador: a 1.ª versão era VÁCUA — com o apuramento
+    // local a coincidir com o oficial, passava no código ANTIGO). Dois lances de valor IGUAL que a
+    // vista local ainda não sabia serem repetidos: o local elegeria o PRIMEIRO (EU), o oficial diz
+    // que o vencedor é o OUTRO. Sem a correcção, o 🏆 ia para a linha errada.
     const lances = [
-      { valor: 500, repetido: false, endereco: EU },
-      { valor: 100, repetido: false, endereco: OUTRO },
+      { valor: 100, repetido: false, endereco: EU, txHash: "0x1" },
+      { valor: 100, repetido: false, endereco: OUTRO, txHash: "0x2" },
     ];
     const html = renderizar({ contexto: { lances }, resultadoOficial: OFICIAL_OUTRO_100 });
-    assert.deepEqual(vencedoresNoEcra(html), ["1.00"]);
+    assert.deepEqual(vencedoresNoEcra(html), ["1.00"], "o selo foi para o 1.º da lista, não para o vencedor oficial");
+    assert.equal(trofeusNaLista(html), 2);
+    assert.ok(enderecosVencedores(html).every((e) => e && e.startsWith(OUTRO.slice(0, 6))), "o 🏆 foi para OUTRA pessoa");
     assert.equal(valorMenorLance(html), "R$ 1.00");
   });
+
+  // ── Achado do validador adversarial (2.ª ronda): caixa do endereço (EIP-55) ──
+  // A caixa NÃO faz parte da identidade de um endereço. O contrato devolve-o com
+  // checksum EIP-55 (caixa mista) e a lista pode trazê-lo em qualquer caixa.
+  const OUTRO_EIP55 = "0xBbBb000000000000000000000000000000000002";
+  for (const [nome, mobile] of LAYOUTS) {
+    test(`${nome}: endereço em caixa EIP-55 (mista) NA LISTA → o 🏆 vai para a linha certa`, () => {
+      const lances = [{ valor: 100, repetido: false, endereco: OUTRO_EIP55 }];
+      const html = renderizar({
+        contexto: { lances, address: OUTRO_EIP55, isConnected: true },
+        resultadoOficial: OFICIAL_OUTRO_100, // oficial em minúsculas
+        mobile,
+      });
+      assert.equal(trofeusNaLista(html), 2, "a caixa do endereço fez perder o 🏆");
+      assert.deepEqual(vencedoresNoEcra(html), ["1.00"]);
+    });
+
+    test(`${nome}: resultado OFICIAL em caixa EIP-55 (mista) → o 🏆 continua na linha certa`, () => {
+      const lances = [{ valor: 100, repetido: false, endereco: OUTRO }];
+      const html = renderizar({
+        contexto: { lances, address: OUTRO, isConnected: true },
+        resultadoOficial: { consolidado: true, vencedor: OUTRO_EIP55, menorUnicoCentavos: 100 },
+        mobile,
+      });
+      assert.equal(trofeusNaLista(html), 2, "a caixa do vencedor oficial fez perder o 🏆");
+      assert.deepEqual(vencedoresNoEcra(html), ["1.00"]);
+    });
+  }
 
   test("cablagem: a página pede o resultado da EDIÇÃO ACTIVA (não de outra)", () => {
     renderizar({ contexto: { lances: [] }, resultadoOficial: null });

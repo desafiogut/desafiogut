@@ -180,15 +180,23 @@ Ponytail. Autorizações: **commit + push em foreground: SIM**; **validador adve
 - **Bidirecionalidade:** os mesmos cenários, com e sem resultado oficial — *com* → nenhum 🏆 para o
   próprio e cartão com o valor oficial; *sem* → comportamento antigo (🏆 e valor locais). É a prova de
   que a correcção morde, não o contrário.
-- **Mutação (4 mutantes, todos mordem; todos restaurados com md5 idêntico ao pré-mutação):**
-  **M1** «a página ignora o resultado oficial» (= repor a DEBT-007) → **5 RED**;
+- **Mutação (6 mutantes, todos mordem; todos restaurados com md5 idêntico ao pré-mutação):**
+  **M1** «a página ignora o resultado oficial» (= repor a DEBT-007) → **8 RED**;
   **M2** «aceitar edição não consolidada» → **1 RED**;
   **M3** «nunca parar de reler depois de consolidar» → **1 RED**;
-  **M4** «sem limpeza do intervalo» → **1 RED**.
-- **Suíte:** frontend **547/547 → 571/571 VERDE** (+16 página, +8 hook); backend **967/973 VERDE**
+  **M4** «sem limpeza do intervalo» → **1 RED**;
+  **M5** «servir o resultado de OUTRA edição» → **3 RED** (ressalva R1 do validador);
+  **M6** «sem normalizar a caixa do vencedor» → **2 RED** (ressalva R2 do validador).
+- **Validador adversarial (SEG3):** despachado sobre o commit `eec94b8` em worktree próprio →
+  **APROVA (com ressalvas)**. Veredicto integral + resposta do executor:
+  `_logs/UTAC000.8_SEG-3_VALIDADOR.md`. **R1** (servia o vencedor da edição anterior), **R2**
+  (assimetria de caixa EIP-55), os **3 testes vácuos** que ele apontou e a **fragilidade que
+  pendurava a suíte** (assert antes de `desmontar()` → `setInterval` vivo → `exit=124`) foram todos
+  **fechados medidamente** na 3.ª ronda (§9 da evidência).
+- **Suíte:** frontend **547/547 → 579/579 VERDE** (+20 página, +12 hook); backend **967/973 VERDE**
   (0 regressões).
 - **Evidência bruta:** `_logs/UTAC000.8_SEG-2_ANTES-DEPOIS.txt` (md5s, diff do commit, saídas TAP,
-  os 4 mutantes).
+  os 6 mutantes).
 
 ## 11.4 Desvios declarados (o operador deve ver isto)
 1. **Escope:** o ESCOPO do R18-1 listava *endpoint de backend* e *carga inicial no `AppContext`*.
@@ -199,9 +207,11 @@ Ponytail. Autorizações: **commit + push em foreground: SIM**; **validador adve
 2. **Resíduo:** o `vencedor` do **Dashboard** (`AppContext.jsx` l. 698) **continua** a ser «o menor único
    que este browser viu». O R18-1 autorizou corrigir **só** o 🏆/«Menor Lance». Registado como
    **DEBT-008** (aberta, fora do escopo) — não se apaga nem se esconde.
-3. **Limite de tempo:** o pedido era **1 h** para a implementação. A sessão somou SEG-1 (verificação +
-   medição de produção), a escalada e a implementação — **passou o limite**. Declarado (GATE 18), não
-   escondido. Não se interrompeu a meio porque a alternativa seria deixar a árvore com a suíte vermelha.
+3. **Limite de tempo — REGRA ALTERADA PELO OPERADOR (R18-2, 2026-10-01):** o pedido era **1 h**;
+   medido, o UTAC somou 3 rondas (2.ª medição + escalada + implementação + ressalvas do validador) e
+   **passou o limite**. No fim da sessão o operador **estendeu o padrão de 1 h para 2 h** para os
+   UTACs seguintes (registo em `CLAUDE.md` e na memória do executor). O excesso desta sessão fica
+   declarado (GATE 18), não escondido.
 4. **`git add`:** ficheiros individuais, **nunca** `git add -A`. O `package-lock.json` modificado é
    **pré-existente** e ficou **de fora** do commit.
 

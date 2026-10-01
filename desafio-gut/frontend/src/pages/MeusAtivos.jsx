@@ -318,8 +318,11 @@ export default function MeusAtivos() {
 // NENHUMA linha leva 🏆 — não se assinala ninguém por aproximação.
 function ehLinhaVencedora(lance, menorUnico, resultadoOficial) {
   if (resultadoOficial) {
+    // Comparar SEMPRE em minúsculas dos DOIS lados: o endereço do contrato pode vir
+    // com caixa EIP-55 (checksum) e a caixa não faz parte da identidade do endereço.
+    // (O hook normaliza; esta guarda é para o objecto oficial chegar de outra fonte.)
     return Number(lance?.valor) === resultadoOficial.menorUnicoCentavos
-      && String(lance?.endereco ?? "").toLowerCase() === resultadoOficial.vencedor;
+      && String(lance?.endereco ?? "").toLowerCase() === String(resultadoOficial.vencedor ?? "").toLowerCase();
   }
   return lance === menorUnico;
 }

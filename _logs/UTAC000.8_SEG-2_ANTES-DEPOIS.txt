@@ -148,3 +148,51 @@ VEREDITO: VERDE
 
 TOTAL DE MUTANTES QUE MORDEM NESTA CORRECÇÃO: **4** (M1 5 RED · M2 1 RED · M3 1 RED · M4 1 RED),
 todos restaurados com md5 idêntico ao estado pré-mutação.
+
+─────────────────────────────────────────────────────────────────────────────────
+9. 3.ª RONDA — as RESSALVAS DO VALIDADOR ADVERSARIAL, fechadas
+─────────────────────────────────────────────────────────────────────────────────
+Veredicto: `_logs/UTAC000.8_SEG-3_VALIDADOR.md` (**APROVA com ressalvas**). R1 (o hook servia o
+vencedor da edição ANTERIOR ao mudar de edição / quando a leitura nova falha, fica pendente, ou a
+edição passa a vazio) e R2 (comparação de endereço assimétrica → perdia o 🏆 com caixa EIP-55)
+foram FECHADAS por medição; os «3 testes vácuos» apontados por ele foram REFORÇADOS; e a
+fragilidade que PENDURAVA a suíte (assert antes de `desmontar()` → `setInterval` vivo → exit=124)
+foi corrigida com `t.after(() => c.desmontar())` nos 12 testes do hook.
+
+MUTAÇÃO M5 — «servir o resultado de outra edição» (fecha R1)
+  -  return estado.edicaoId === edicaoId ? estado.resultado : null;
+  +  return estado.resultado; // MUTANTE M5
+  md5 antes f271b4b7fd985cf5a3a74c087608901e · mutado 0c9d86b6826ab6969ed562699219cecf
+  → # tests 12 · # pass 9 · # fail 3    (os 3 casos do validador: falha / pendente / edição vazia)
+  → E A SUÍTE TERMINA (antes pendurava: exit=124) — prova de que a limpeza por `t.after` funciona
+    mesmo quando um assert rebenta.
+  Restaurado: md5 de volta a f271b4b7fd985cf5a3a74c087608901e.
+
+MUTAÇÃO M6 — «sem normalizar a caixa do vencedor oficial» (fecha R2)
+  -  String(resultadoOficial.vencedor ?? "").toLowerCase();
+  +  resultadoOficial.vencedor; // MUTANTE M6
+  md5 mutado b09fa5879163924e5e3f8c9649a0197e
+  → # tests 20 · # pass 18 · # fail 2    (endereço EIP-55 na lista / no resultado oficial)
+  Restaurado: md5 aa482b3fb077916e258db94f773291a1.
+
+MUTAÇÃO M1 RE-MEDIDA — «a página ignora o resultado oficial» (prova de que os testes reforçados mordem)
+  → ANTES do reforço: # pass 11 · # fail 5
+  → DEPOIS do reforço (auxiliar `enderecosVencedores` + empate de valor + vista local parcial):
+    # tests 20 · # pass 12 · # fail 8      ← os 3 testes que eram VÁCUOS agora mordem
+  Restaurado: md5 aa482b3fb077916e258db94f773291a1.
+
+SUÍTE FINAL (depois de fechar as ressalvas):
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 579/579 pass       (547 baseline + 20 página + 12 hook)
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+
+TOTAL DE MUTANTES QUE MORDEM: **6** — M1 **8 RED** · M2 1 RED · M3 1 RED · M4 1 RED ·
+M5 3 RED · M6 2 RED. Todos restaurados com md5 idêntico ao pré-mutação.
+
+md5 DOS FICHEIROS ENTREGUES (3.ª ronda):
+f271b4b7fd985cf5a3a74c087608901e  src/hooks/useResultadoOficial.js
+aa482b3fb077916e258db94f773291a1  src/pages/MeusAtivos.jsx
+782d97d3544c14999e37982e577729b8  src/pages/__tests__/utac0008-resultado-oficial.test.mjs
+633c03e7520408ea892e2283230433c8  src/hooks/__tests__/utac0008-resultado-oficial-hook.test.mjs
+439037b9b000ab5ddb39f7cc076aa14f  _logs/UTAC000.8_SEG-3_VALIDADOR.md (veredicto + resposta do executor)
