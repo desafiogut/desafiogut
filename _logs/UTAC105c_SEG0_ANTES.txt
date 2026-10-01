@@ -1,0 +1,233 @@
+▶ UTAC105c · Frente B — o 🏆 vai para o menor lance único DA EDIÇÃO
+  ✖ desktop: outra pessoa tem o menor único → o meu lance NÃO leva 🏆 (20.2215ms)
+  ✖ desktop: o meu menor único não é o 1.º que dei → o 🏆 vai para ELE (2.9488ms)
+  ✖ desktop: um lance repetido mais baixo não conta — vence o menor ÚNICO (2.0226ms)
+  ✔ desktop: sem sessão, a lista de todos mostra o 🏆 no menor único (não regride) (1.7581ms)
+  ✖ mobile: outra pessoa tem o menor único → o meu lance NÃO leva 🏆 (2.3189ms)
+  ✖ mobile: o meu menor único não é o 1.º que dei → o 🏆 vai para ELE (1.7148ms)
+  ✖ mobile: um lance repetido mais baixo não conta — vence o menor ÚNICO (2.0274ms)
+  ✔ mobile: sem sessão, a lista de todos mostra o 🏆 no menor único (não regride) (1.5104ms)
+  ✔ só lances repetidos → ninguém leva 🏆 (1.4139ms)
+✖ UTAC105c · Frente B — o 🏆 vai para o menor lance único DA EDIÇÃO (5744.977ms)
+▶ UTAC105c · Frentes D/E — placeholders declarados
+  ✖ a secção «Meus cupons» existe e declara que ainda não está disponível (1.384ms)
+  ✖ a secção «Meus palpites» existe e declara que ainda não está disponível (1.0622ms)
+  ✖ os placeholders não inventam números sobre a pessoa (nem com sessão, nem sem) (1.4645ms)
+✖ UTAC105c · Frentes D/E — placeholders declarados (4.1704ms)
+ℹ tests 12
+ℹ suites 2
+ℹ pass 3
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6338.1995
+
+✖ failing tests:
+
+test at src\pages\__tests__\utac105c-meus-ativos.test.mjs:97:5
+✖ desktop: outra pessoa tem o menor único → o meu lance NÃO leva 🏆 (20.2215ms)
+  AssertionError [ERR_ASSERTION]: a página diz «Menor e Único» a quem não está a ganhar
+  + actual - expected
+  
+  + [
+  +   '5.00'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/__tests__/utac105c-meus-ativos.test.mjs:104:14)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.start (node:internal/test_runner/test:1015:17)
+      at node:internal/test_runner/test:1531:71
+      at node:internal/per_context/primordials:466:82
+      at new Promise (<anonymous>)
+      at new SafePromise (node:internal/per_context/primordials:435:3)
+      at node:internal/per_context/primordials:466:9
+      at Array.map (<anonymous>) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ '5.00' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at src\pages\__tests__\utac105c-meus-ativos.test.mjs:108:5
+✖ desktop: o meu menor único não é o 1.º que dei → o 🏆 vai para ELE (2.9488ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   '3.00'
+  -   '1.00'
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/__tests__/utac105c-meus-ativos.test.mjs:114:14)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1533:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '3.00' ],
+    expected: [ '1.00' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at src\pages\__tests__\utac105c-meus-ativos.test.mjs:117:5
+✖ desktop: um lance repetido mais baixo não conta — vence o menor ÚNICO (2.0226ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   '2.00'
+  - ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/__tests__/utac105c-meus-ativos.test.mjs:124:14)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ '2.00' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at src\pages\__tests__\utac105c-meus-ativos.test.mjs:97:5
+✖ mobile: outra pessoa tem o menor único → o meu lance NÃO leva 🏆 (2.3189ms)
+  AssertionError [ERR_ASSERTION]: a página diz «Menor e Único» a quem não está a ganhar
+  + actual - expected
+  
+  + [
+  +   '5.00'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/__tests__/utac105c-meus-ativos.test.mjs:104:14)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ '5.00' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at src\pages\__tests__\utac105c-meus-ativos.test.mjs:108:5
+✖ mobile: o meu menor único não é o 1.º que dei → o 🏆 vai para ELE (1.7148ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   '3.00'
+  -   '1.00'
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/__tests__/utac105c-meus-ativos.test.mjs:114:14)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ '3.00' ],
+    expected: [ '1.00' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at src\pages\__tests__\utac105c-meus-ativos.test.mjs:117:5
+✖ mobile: um lance repetido mais baixo não conta — vence o menor ÚNICO (2.0274ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   '2.00'
+  - ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/__tests__/utac105c-meus-ativos.test.mjs:124:14)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ '2.00' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at src\pages\__tests__\utac105c-meus-ativos.test.mjs:149:3
+✖ a secção «Meus cupons» existe e declara que ainda não está disponível (1.384ms)
+  AssertionError [ERR_ASSERTION]: a secção de cupons não está na página
+      at TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/__tests__/utac105c-meus-ativos.test.mjs:152:12)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.start (node:internal/test_runner/test:1015:17)
+      at node:internal/test_runner/test:1531:71
+      at node:internal/per_context/primordials:466:82
+      at new Promise (<anonymous>)
+      at new SafePromise (node:internal/per_context/primordials:435:3)
+      at node:internal/per_context/primordials:466:9
+      at Array.map (<anonymous>) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at src\pages\__tests__\utac105c-meus-ativos.test.mjs:159:3
+✖ a secção «Meus palpites» existe e declara que ainda não está disponível (1.0622ms)
+  AssertionError [ERR_ASSERTION]: a secção de palpites não está na página
+      at TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/__tests__/utac105c-meus-ativos.test.mjs:162:12)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1533:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at src\pages\__tests__\utac105c-meus-ativos.test.mjs:169:3
+✖ os placeholders não inventam números sobre a pessoa (nem com sessão, nem sem) (1.4645ms)
+  TypeError: Cannot read properties of null (reading '0')
+      at TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/__tests__/utac105c-meus-ativos.test.mjs:173:100)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:787:7)

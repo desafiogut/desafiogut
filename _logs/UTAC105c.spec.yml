@@ -1,0 +1,43 @@
+schema: utac/1
+name: UTAC105c
+title: "UI do cliente — adaptar as telas existentes do comprador (R18-A: nada novo)"
+type: produto
+baseline: f0f02a6
+motivo: >-
+  Falta ao comprador ver ofertas, acompanhar lances/pedidos e saber onde ficarão cupons e palpites.
+  R18-A (operador): não criar páginas nem componentes — adaptar MercadoLances/Vitrine/MeusAtivos/MeusPedidos.
+frentes:
+  - id: A
+    nome: Ofertas (Relâmpago/Programada) nas telas existentes
+    entrega: [src/pages/MercadoLances.jsx ou src/pages/Vitrine.jsx — só se o SEG-1 provar lacuna]
+  - id: B
+    nome: Acompanhamento de lances
+    entrega: [src/pages/MeusAtivos.jsx]
+  - id: C
+    nome: Acompanhamento de pedidos
+    entrega: [src/components/meus-ativos/MeusPedidos.jsx]
+  - id: D
+    nome: Secção de cupons (placeholder declarado)
+    entrega: [src/pages/MeusAtivos.jsx, src/i18n/pt.js]
+  - id: E
+    nome: Secção de palpites (placeholder declarado)
+    entrega: [src/pages/MeusAtivos.jsx, src/i18n/pt.js]
+autoriza:
+  - alterar src/pages/**, src/components/** (comprador), src/i18n/pt.js, src/App.jsx
+  - criar/actualizar testes src/**/__tests__/*.test.mjs
+  - _logs/UTAC105c_* + Desktop/UTAC105c-RELATORIO.md
+  - validador adversarial; commit + push em foreground (após autorização)
+proibe:
+  - criar páginas ou componentes novos (R18-A)
+  - netlify/functions/**, contrato on-chain, GUTO
+  - _ponte-ssr.mjs, _render.mjs
+  - Passe Desafio (UTAC106), Concurso de Previsões (UTAC108), decisões de produto (DEC-01..06)
+  - dependências novas, git add -A, deploy em background, inventar produtos
+dependencias:
+  - UTAC000.6 fechado (suíte do frontend 535/535) — medido no SEG-1
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+stop_conditions_extra: []
+ressalvas:
+  - placeholders declarados como tal no ecrã e no código
+  - toda secção com dados de uma pessoa tem os 4 estados (MC94)
+  - aprovação do operador antes de tocar no código (amendment)

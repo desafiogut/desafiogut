@@ -12,6 +12,7 @@ import EstadoBonus from "../components/meus-ativos/EstadoBonus.jsx";
 import FeedbackLance from "../components/meus-ativos/FeedbackLance.jsx";
 import RankingCiclo from "../components/meus-ativos/RankingCiclo.jsx";
 import MeusPedidos from "../components/meus-ativos/MeusPedidos.jsx"; // MC-ECOMMERCE-01a
+import { caixa, tituloSecao, legenda } from "../components/meus-ativos/_estilo.js"; // UTAC105c
 
 // ⚠️ Espelha `REGRAS.ACERTOS_PARA_BONUS` de
 // `netlify/functions/_lib/pontuacao-utils.mjs`. O frontend não importa do
@@ -196,6 +197,29 @@ export default function MeusAtivos() {
         <MeusPedidos temSessao={temSessao} authToken={authToken} endereco={address} isMobile={isMobile} />
       </div>
 
+      {/* UTAC105c — PLACEHOLDERS DECLARADOS. Cupons e palpites ainda não existem para o
+          comprador (não há endpoint que os leia; Passe = UTAC106, concurso = UTAC108). As duas
+          secções dizem isso e não afirmam nada sobre a pessoa — nenhum número, nenhum estado. */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
+        gap: isMobile ? "0.75rem" : "1rem",
+        marginBottom: sectionGap,
+      }}>
+        <section style={caixa(isMobile)} data-secao="meus-cupons">
+          <h2 style={tituloSecao(isMobile)}>{t("ativos.cupons.titulo", "🎟️ Meus cupons")}</h2>
+          <p style={legenda(isMobile)} data-estado="placeholder">
+            {t("ativos.cupons.placeholder", "Esta área ainda não está disponível. Seus cupons de desconto vão aparecer aqui quando o recurso for lançado.")}
+          </p>
+        </section>
+        <section style={caixa(isMobile)} data-secao="meus-palpites">
+          <h2 style={tituloSecao(isMobile)}>{t("ativos.palpites.titulo", "🎯 Meus palpites")}</h2>
+          <p style={legenda(isMobile)} data-estado="placeholder">
+            {t("ativos.palpites.placeholder", "Esta área ainda não está disponível. Seus palpites vão aparecer aqui quando o recurso for lançado.")}
+          </p>
+        </section>
+      </div>
+
       {/* Filtros */}
       <div style={{
         display: "flex",
@@ -243,9 +267,9 @@ export default function MeusAtivos() {
             </span>
           </div>
         ) : isMobile ? (
-          <MobileList lances={lancesExibidos} filtro={filtro} />
+          <MobileList lances={lancesExibidos} menorUnico={menorUnico} />
         ) : (
-          <DesktopTable lances={lancesExibidos} filtro={filtro} />
+          <DesktopTable lances={lancesExibidos} menorUnico={menorUnico} />
         )}
       </GlassCard>
 
@@ -267,11 +291,13 @@ export default function MeusAtivos() {
   );
 }
 
-function MobileList({ lances, filtro }) {
+// UTAC105c — o 🏆 é do menor lance único DA EDIÇÃO (`menorUnico`, calculado sobre todos os
+// lances), não do 1.º da lista: com sessão a lista são só os lances da pessoa, sem ordenar.
+function MobileList({ lances, menorUnico }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
       {lances.map((lance, i) => {
-        const isVencedor = !lance.repetido && i === 0 && filtro !== "repetidos";
+        const isVencedor = lance === menorUnico;
         const enderecoAbrev = `${lance.endereco?.slice(0, 6)}...${lance.endereco?.slice(-4)}`;
         return (
           <div key={i} style={{
@@ -330,7 +356,7 @@ function MobileList({ lances, filtro }) {
   );
 }
 
-function DesktopTable({ lances, filtro }) {
+function DesktopTable({ lances, menorUnico }) {
   return (
     <table style={{ width: "100%", borderCollapse: "collapse" }}>
       <thead>
@@ -346,7 +372,7 @@ function DesktopTable({ lances, filtro }) {
       </thead>
       <tbody>
         {lances.map((lance, i) => {
-          const isVencedor = !lance.repetido && i === 0 && filtro !== "repetidos";
+          const isVencedor = lance === menorUnico;
           return (
             <tr key={i} style={{
               borderBottom: "1px solid rgba(255,255,255,0.04)",

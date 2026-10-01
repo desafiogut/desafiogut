@@ -31,6 +31,7 @@ const COMPONENTES = [
   "src/components/meus-ativos/EstadoBonus.jsx",
   "src/components/meus-ativos/FeedbackLance.jsx",
   "src/components/meus-ativos/RankingCiclo.jsx",
+  "src/pages/MeusAtivos.jsx",   // UTAC105c — placeholders de cupons e palpites
 ];
 const IDIOMAS = ["pt"];   // MC98 — PT-BR only: en.js e es.js foram removidos (o DesafioGUT tem um idioma).
 

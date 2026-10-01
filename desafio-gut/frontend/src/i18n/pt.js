@@ -110,6 +110,11 @@ export default {
   "ativos.rank.de": "primeiros de",
   "ativos.rank.participante1": "participante",
   "ativos.rank.participantes": "participantes",
+  // UTAC105c — placeholders declarados em MeusAtivos (cupons = UTAC106, palpites = UTAC108).
+  "ativos.cupons.titulo": "🎟️ Meus cupons",
+  "ativos.cupons.placeholder": "Esta área ainda não está disponível. Seus cupons de desconto vão aparecer aqui quando o recurso for lançado.",
+  "ativos.palpites.titulo": "🎯 Meus palpites",
+  "ativos.palpites.placeholder": "Esta área ainda não está disponível. Seus palpites vão aparecer aqui quando o recurso for lançado.",
   // MC94.2 — edição especial (Dashboard). pt = fallbacks dos componentes.
   "edicao.especial.premio": "Prêmio especial",
   "edicao.especial.abreEm": "Abre em",

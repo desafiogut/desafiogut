@@ -1,0 +1,13 @@
+controlo (sem mutante): VERDE 18/18
+M1 PROVADO (pass 12 · fail 6) — repor o defeito: 🏆 = 1.º não repetido da lista
+M2 PROVADO (pass 12 · fail 6) — 🏆 a todos os lances únicos
+M3 PROVADO (pass 15 · fail 3) — MobileList deixa de receber o menorUnico
+M4 PROVADO (pass 15 · fail 3) — DesktopTable deixa de receber o menorUnico
+M5 PROVADO (pass 16 · fail 2) — remover a secção de cupons
+M6 PROVADO (pass 16 · fail 2) — remover a secção de palpites
+M7 PROVADO (pass 17 · fail 1) — o placeholder de cupons inventa um número (jsx + pt, para não ser a guarda i18n a morder)
+M8 PROVADO (pass 17 · fail 1) — o placeholder de palpites deixa de se declarar (jsx + pt)
+M9 PROVADO (pass 16 · fail 2) — tirar o data-estado dos placeholders
+M10 PROVADO (pass 17 · fail 1) — o dicionário diverge do fallback
+restauro: md5 idêntico em todos · suíte do UTAC VERDE 18/18
+RESULTADO: 10/10 mutantes PROVADOS

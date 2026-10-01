@@ -1,0 +1,38 @@
+UTAC105c — SEG3 · Antes / depois (2026-10-01)
+
+FRENTE B — o 🏆 «Menor e Único» em MeusAtivos
+---------------------------------------------
+Instrumento: src/pages/__tests__/utac105c-meus-ativos.test.mjs (render SSR da PÁGINA inteira,
+arnês do MeusAtivos.test.mjs; layouts desktop e mobile). Os valores abaixo são o que a página
+ESCREVE ao lado de «🏆 Menor e Único».
+
+| cenário (com sessão, eu = 0xaaaa…)                 | antes (f0f02a6) | depois | certo  |
+|----------------------------------------------------|-----------------|--------|--------|
+| eu R$ 5,00 único · outro R$ 1,00 único              | 5.00            | —      | —      |
+| eu R$ 3,00 (1.º) · eu R$ 1,00                        | 3.00            | 1.00   | 1.00   |
+| R$ 0,50 repetido ×2 · eu R$ 2,00 único              | —               | 2.00   | 2.00   |
+| sem sessão · R$ 5,00 e R$ 1,00                       | 1.00            | 1.00   | 1.00   |  (controlo: não regride)
+Evidência «antes»: _logs/UTAC105c_SEG0_ANTES.txt (9 falhas, 6 delas da Frente B, nos dois layouts).
+«depois»: 12/12 verdes; mutação 10/10 (_logs/UTAC105c_PROVA-MUTACAO.txt).
+
+FRENTES D/E — placeholders em /ativos
+-------------------------------------
+antes: não existiam.
+depois: «🎟️ Meus cupons» e «🎯 Meus palpites», data-estado="placeholder", texto
+«Esta área ainda não está disponível…», sem nenhum número.
+Capturas (vite local :3000, contexto de browser isolado, gate LGPD passado localmente):
+  _logs/UTAC105c_captura-ativos-desktop.png  (1280 px — duas colunas)
+  _logs/UTAC105c_captura-ativos-mobile.png   (500 px, isMobile — uma coluna, sem scroll horizontal)
+Ruído local declarado (não é deste UTAC): «Não foi possível carregar o ranking» e o aviso
+«rede Sepolia» — as Netlify Functions não correm sob o vite.
+NÃO capturado: o 🏆 com dados reais — exige sessão Privy (localhost não é origem permitida).
+
+Verificação (foreground)
+------------------------
+suíte: frontend 547/547 (535 + 12) · backend 967/973 — harness mc966, VERDE
+eslint (4 ficheiros tocados): 0 erros · 1 aviso pré-existente (cardPad, já no f0f02a6:80)
+vite build (outDir no scratchpad, não o dist/ do APK): exit 0
+escopo (git diff contra f0f02a6): MeusAtivos.jsx +32/−6 · pt.js +5 · ativos-i18n.test.mjs +1
+  + novos: utac105c-meus-ativos.test.mjs, scripts/utac105c-prova-mutacao.mjs, _logs/UTAC105c_*
+  netlify/functions/**, _ponte-ssr.mjs, _render.mjs: NÃO tocados.
+  package-lock.json: modificado ANTES do UTAC, por outra sessão — não é meu, não entra no commit.
