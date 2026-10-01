@@ -1,3 +1,14 @@
+# UTAC000.7 - SEG-1 - EVIDENCIA DA SKILL ANTES DA ALTERACAO (HI10/GATE 5)
+# base: 34b087b (= origin/main) | skill 1.1 | 10 categorias | 74 regras | A1-A11 | HI1-HI10
+# suite: frontend 535/535 VERDE | backend 967/973 VERDE | _ponte-ssr.mjs existe | _render.mjs carrega-a (linha 74)
+
+## md5 antes
+  0798b6e6e7dfc1e541b749a63d88e00c  protocol\regras\A-ambiente.md
+  d975f5a9e87c746fd12f85ee551492bc  review\VERSAO.md
+  681b8bbac21e751c9ded85d4020b0f32  SKILL.md
+  093c411ad2dcd530eb3254a868878cd2  protocol\regras\README.md
+
+## A-ambiente.md COMPLETO (antes)
 # A — Ambiente
 
 Armadilhas de Windows, MSYS, Netlify.
@@ -60,26 +71,3 @@ literal (ex.: dentro de um snippet que fala de CRLF) — o `git diff` acusou um 
 `CLAUDE.md` (que tem bytes de controlo — ver A3) editar reconstruindo o ficheiro a partir do `HEAD` e
 aplicando **só** a alteração pretendida, em bytes; confirmar depois que o `git diff` é **1 hunk, 1 linha**.
 Origem: UTAC105b.3.
-
-## A12 — Instância do React no runner SSR do Vite 8
-O runner SSR do Vite 8 serve a um módulo carregado **mais tarde** uma instância de React
-**diferente** da do primeiro: o `ReactCurrentDispatcher` fica a `null` e o componente rebenta com
-`Cannot read properties of null (reading 'useState')` (ou `'useContext'`). Medido: o **primeiro**
-`ssrLoadModule` de um processo acerta; os seguintes não. Foi isto que, no UTAC000.6, fez cair a suíte
-do frontend de **535/535 para 68 falhas** sem que uma única linha de `frontend/src/**` tivesse sido
-tocada — e o que explicou os sintomas cruzados (o componente carregado em 1.º passava; o 2.º caía;
-um ficheiro que carregava um só componente passava).
-
-**Solução:** o **primeiro** módulo que o servidor de testes carrega tem de importar os pacotes que
-trazem React — `react`, `react-dom/server`, `react-router-dom`, `framer-motion` — fixando a instância
-para tudo o que vem depois. É o papel de `src/__tests__/_ponte-ssr.mjs`, carregado antes de qualquer
-componente. Dependências que trazem o seu próprio React (react-router, framer-motion) têm de vir daí,
-não de um `import` do Node.
-
-**Como se verifica:** mutação que desliga o load da ponte → RED (medido: suíte **VERMELHO 15 falhas**,
-6+1+8, exactamente os ficheiros que dependem dela); religar → **VERDE 535/535**. Cuidado com a
-condição da medição: com `node_modules/.vite` **apagado** o mutante dá **0/15** e com a cache
-**quente** dá **6/15** — declarar sempre o estado da cache, porque a cifra muda (medido no UTAC000.6,
-onde a divergência foi apanhada pelo validador).
-Origem: op: 2026-10-01 (UTAC000.6).
-Cross-ref: HI10, A9, A11, T4.

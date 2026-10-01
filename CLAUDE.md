@@ -58,6 +58,17 @@
 > `_render.mjs` + uma via no `Dashboard` (**3 ficheiros, +21/−3**). **Erro do meu instrumento
 > declarado:** a cifra «0/15» dependia da cache estar apagada (com cache quente dá 6/15). Detalhe:
 > `_logs/UTAC000.6_SEG-3_VALIDADOR.md`. Re-verificado depois da redução: **535/535 · 967/973**.
+>
+> 📘 **UTAC000.7 (2026-10-01) — skill 1.2:** escrita a regra **A12** em
+> `skills/utac/protocol/regras/A-ambiente.md` — **instância do React no runner SSR do Vite 8**.
+> É a lição que fechou a regressão do frontend (68 → 0): o runner SSR serve a um módulo carregado
+> **mais tarde** uma instância de React **diferente** da do primeiro (`ReactCurrentDispatcher` a
+> null); a solução é o **primeiro** módulo que o servidor de testes carrega importar os pacotes que
+> trazem React (papel de `src/__tests__/_ponte-ssr.mjs`). Contagem **74 → 75** regras (A1-A12);
+> bump **minor** 1.1 → 1.2. Regra escrita **só com o que foi medido** (GATE 17), incluindo a
+> armadilha da condição de cache (0/15 com `.vite` apagado vs 6/15 a quente). As 74 regras
+> anteriores **intactas** (`+23/−0` em `A-ambiente.md`). **R18:** UTAC de skill próprio, autorizado
+> pelo operador, que fecha a lacuna de escopo do UTAC000.6.
 
 ---
 

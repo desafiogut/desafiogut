@@ -9,7 +9,7 @@ description: "Compor e executar UTACs (Unidade de Trabalho Auto Contido) do Desa
 auto-contida: contexto + HARD GATES + regras + frentes + SEG-1..SEG6 + validador adversarial + fecho.
 
 Esta skill existe para **eliminar a repetição**: as partes constantes de todos os UTACs vivem aqui
-(HARD GATES, 74 regras em 10 categorias, lições, armadilhas de ambiente, contexto do projeto); o
+(HARD GATES, 75 regras em 10 categorias, lições, armadilhas de ambiente, contexto do projeto); o
 co-construtor escreve só um **spec com menos de 60 linhas** e a skill compõe o UTAC completo
 (~350 linhas), no mesmo formato da série.
 
@@ -40,7 +40,7 @@ skills/utac/
 ├─ exemplo.UTAC.md     ← UTAC completo gerado a partir do exemplo (prova de que a skill funciona)
 ├─ protocol/           ← CONSTANTES
 │  ├─ hard-gates.md    ← os 16 HARD GATES (1-16, canónicos) + tabela de alias da série
-│  ├─ regras/          ← 74 REGRAS em 10 categorias (cada regra: ID, texto, origem)
+│  ├─ regras/          ← 75 REGRAS em 10 categorias (cada regra: ID, texto, origem)
 │  │  ├─ E-engenharia.md   ← E1-E9   ├─ S-seguranca.md    ← S1-S6
 │  │  ├─ T-testes.md       ← T1-T5   ├─ A-ambiente.md     ← A1-A8
 │  │  ├─ G-git-deploy.md   ← G1-G6   ├─ P-processo.md     ← P1-P7
@@ -57,10 +57,10 @@ skills/utac/
    ├─ seg-1.md · seg0-3.md · seg4.md · seg5-6.md
 ```
 
-## As 10 categorias de regras (74 regras)
+## As 10 categorias de regras (75 regras)
 | cat. | tema | regras | cat. | tema | regras |
 |---|---|---|---|---|---|
-| **E** | Engenharia | E1-E9 | **A** | Ambiente | A1-A11 |
+| **E** | Engenharia | E1-E9 | **A** | Ambiente | A1-A12 |
 | **T** | Testes | T1-T5 | **P** | Processo | P1-P7 |
 | **G** | Git e deploy | G1-G6 | **AU** | Autonomia | AU1-AU4 |
 | **L** | LGPD | L1-L6 | **ST** | Stop conditions | ST1-ST10 |
