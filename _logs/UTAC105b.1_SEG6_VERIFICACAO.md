@@ -51,5 +51,17 @@ conforme ao escopo**:
   decidir. O spec declara isso no cabeçalho.
 - A opção «abrir já o UTAC» continua disponível: basta dizê-lo.
 
+## 6.6b Alegação do validador REFUTADA pela medição do executor (mantida à vista)
+O veredicto do SEG3 afirma, na §4: «O executor **subdeclara** o M7 (mata A8, e não A4)».
+**Medido agora, isolando só o M7** (o 401 passa a responder 404): ficam RED **A3, A4, A5, A6 e A18**.
+Ou seja, a observação dele está **errada nos dois pontos** — o **A8 não morre** (não envolve token) e o
+**A4 morre**. Provavelmente porque comparou com a *sua* lista de mutação (18 mutantes), não com a minha.
+
+Do lado do executor, havia **subdeclaração real, mas noutra direcção**: eu tinha escrito «A3, A4» e o
+efeito é maior (**A3, A4, A5, A6, A18**). Corrigido no rodapé do teste e no mutador.
+⚠️ A regra da casa é «a conclusão errada fica **à vista**, marcada como refutada, nunca apagada» — é
+por isso que este parágrafo existe. Contradição entre instrumentos ≠ contradição nos dados: as duas
+medições foram feitas com listas diferentes.
+
 ## 6.7 VEREDITO DO SEG6: **FECHADO** (o UTAC105b.1) · **1 P0 escalado e documentado** em spec-candidato
 (fora do escopo deste UTAC; alheio a este commit; **não corrigido**).

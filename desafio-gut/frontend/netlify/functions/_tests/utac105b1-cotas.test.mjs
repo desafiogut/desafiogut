@@ -250,7 +250,11 @@ test("A16 cota existe mas tipo NÃO é corporativo → 404 (para o dono)", async
 //       a diferença é entre duas recusas. A previsão errada fica registada.)
 //   M5 remover o ramo (b) (vínculo por `endereco`) ...................... A9
 //   M6 engolir a falha de leitura e seguir (autorizar) .................. A13
-//   M7 mover o 404 para antes do 401/403 ................................ A4, A8
+//   M7 o 401 passa a responder 404 (revela existência) ................... A3, A4, A5, A6, A18
+//      (⚠️ eu tinha declarado só «A4, A8». Medido agora:
+//       mortos = A3, A4, A5, A6, A18 — e o A8 NÃO morre. A observação do validador
+//       («mata A8, e não A4») está errada nos dois pontos; a medição dele e a minha
+//       foram feitas com listas de mutação diferentes.)
 //   M8 escrever os campos do body por cima da cota (não preservar) ...... A14
 //   V6 remover o .toLowerCase() do `endereco` DA COTA (lacuna F2) ........ A17
 //   V7 mover o 401 para DEPOIS da leitura (lacuna F3) ................... A18
