@@ -48,6 +48,16 @@
 > **Zero código de produção tocado** (só testes + helpers). **R18:** correcção mínima provada por
 > mutação. Nota: a regra **A12** (`@vitejs/plugin-react`/instância do React) **não** foi escrita —
 > a autorização deste UTAC não incluía a skill; fica pendente de autorização.
+>
+> ⚠️ **REFUTAÇÕES do validador adversarial (UTAC000.6/SEG-3) — mantidas à vista:** o validador deu
+> **APROVADO COM RESSALVAS** e derrubou **3 sub-afirmações do executor**, todas sobre a *necessidade*
+> (não sobre a correcção, que verificou): (R1) «os 5 arnês carregam a ponte» era falso para 3 —
+> `MeusAtivos` e `utac105b-painel` não precisavam de nada; (R2) o alargamento do `ssr.external`/`dedupe`
+> não era o que resolvia os 3 ficheiros; (R3) o `Dashboard` ficava verde com **qualquer uma** das duas
+> vias → eram redundantes. **Correcção reduzida ao mínimo medido**: `_ponte-ssr.mjs` + load em
+> `_render.mjs` + uma via no `Dashboard` (**3 ficheiros, +21/−3**). **Erro do meu instrumento
+> declarado:** a cifra «0/15» dependia da cache estar apagada (com cache quente dá 6/15). Detalhe:
+> `_logs/UTAC000.6_SEG-3_VALIDADOR.md`. Re-verificado depois da redução: **535/535 · 967/973**.
 
 ---
 

@@ -58,8 +58,6 @@ import React from "react";
 import { opcoesServidorTeste } from "../../../__tests__/_servidor-teste.mjs";
 
 let servidor = null;
-let ReactSsr = React;
-let renderSsr = renderToStaticMarkup;
 
 /**
  * Levanta (uma vez por processo) o servidor Vite que transpila os componentes.
@@ -73,9 +71,7 @@ async function obterServidor() {
   if (servidor === null) {
     servidor = await createServer(opcoesServidorTeste());
     // ⚠️ A ponte traz React e o renderizador pelo MESMO pipeline que entrega os componentes.
-    const ponte = await servidor.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs");
-    ReactSsr = ponte.React;
-    renderSsr = ponte.renderToStaticMarkup;
+    await servidor.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs");
   }
   return servidor;
 }
@@ -107,7 +103,7 @@ export async function carregar(caminho) {
  * @returns {string} markup
  */
 export function render(Componente, props = {}) {
-  return renderSsr(ReactSsr.createElement(Componente, props));
+  return renderToStaticMarkup(React.createElement(Componente, props));
 }
 
 /** Atalho: carrega e renderiza de uma vez. */

@@ -42,11 +42,10 @@ export function opcoesServidorTeste(extra = {}) {
     // ⚠️ O runner SSR do Vite avalia o React por conta própria (grafo de módulos separado do
     // `require` do Node) e o componente ficava com uma SEGUNDA instância. Externalizar força
     // a virem pelo mesmo caminho nativo do Node que o ficheiro de teste usa.
-    ssr: { external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "scheduler",
-      "framer-motion", "react-router", "react-router-dom", "motion-dom", "motion-utils"] },
+    ssr: { external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "scheduler"] },
     ...resto,
     // Uma só instância de React em TODO o grafo (sem isto, pacotes que trazem o seu próprio
     // `react` — react-router, por ex. — ficam com um dispatcher diferente do renderizador).
-    resolve: { ...resolve, dedupe: ["react", "react-dom", "framer-motion", "react-router", "react-router-dom"], alias: [...ALIASES, ...alias] },
+    resolve: { ...resolve, dedupe: ["react", "react-dom"], alias: [...ALIASES, ...alias] },
   };
 }
