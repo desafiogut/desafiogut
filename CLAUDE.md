@@ -27,6 +27,15 @@
 > plugin e os arnês já não carregam a config (alterá-la seria mudança sem medição — E1/GATE 3).
 > **R18 (UTAC000.4):** paragem accionada pelo **HI5/GATE 4** (excedeu 1 h); o progresso parcial foi
 > commitado e a dívida **DEBT-004** mantida `aberta (parcial)` — retomar exige UTAC próprio.
+>
+> 🔬 **UTAC000.5 (2026-10-01) — PARADO no fim do SEG-1:** PoC do **`vite@7.3.6`** medido e
+> **REFUTADO** (a suíte do frontend foi de **25 → 152 falhas** — o downgrade agrava). Nada
+> aplicado (GATE 17); `vite@8.1.0` reposto. **Diagnóstico afiado:** o transporte dos testes está
+> CERTO (réplicas do mesmo componente renderizam OK, como script e sob `node --test`); falha só o
+> render que atravessa o ramo `MeusPedidos.jsx` → `TimelineRastreio.jsx` — logo **não é
+> configuração, é o grafo que o runner SSR do Vite 8 avalia**. A fase arquitectural (3-4 h) **não
+> foi iniciada por orçamento** (GATE 4/13). **R18:** operador decidiu não reverter o parcial
+> (68→25) e abrir este UTAC; o PoC mandou parar. `DEBT-004` continua **aberta (parcial)**.
 
 ---
 
