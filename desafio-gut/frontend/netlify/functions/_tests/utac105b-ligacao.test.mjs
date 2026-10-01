@@ -89,6 +89,13 @@ test("C6 concorrência: 10 compras em paralelo → 1 passe com os cupons, débit
   assert.equal(saldo(), 300);
 });
 
+test("C8 produto de OUTRO lojista → o passe leva os cupons DESSE lojista (V7 do validador)", async () => {
+  semear({ lojista: OUTRO_LOJ });
+  const r = await comprar();
+  assert.equal(r.status, 201);
+  assert.deepEqual(r.corpo.passe.cupons_ids, [ID(4)]);
+});
+
 test("C7 criarPasse: cuponsIds inválidos são recusados; omitidos → [] (comportamento do MC105a)", async () => {
   for (const cuponsIds of ["x", [1], ["nao-uuid"], [ID(1), ID(1)], null]) {
     assert.equal((await criarPasse({ endereco: A, edicaoId: ED, produtoId: PROD, cuponsIds })).code, "params_invalidos");

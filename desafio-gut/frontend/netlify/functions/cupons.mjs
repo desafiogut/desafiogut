@@ -20,6 +20,8 @@ import {
   VALORES_CUPOM, VALIDADE_CUPOM_DIAS, valorValido, lojistaValido, listarCuponsDoLojista, actualizarCupom,
 } from "./_lib/cupom.mjs";
 
+// `verificarUserSession` aceita user-session E admin-access (jwt.mjs:81) — por isso o admin NÃO se detecta aqui:
+// detecta-se em temPosse com `autenticarAdmin`, como em produtos.mjs (achado ⛔-1 do validador do UTAC105b).
 async function chamador(req) {
   const h = req.headers.get("authorization") || "";
   const bearer = h.startsWith("Bearer ") ? h.slice(7) : null;
@@ -28,14 +30,14 @@ async function chamador(req) {
     const p = await verificarUserSession(bearer);
     const e = String(p?.endereco || "").toLowerCase();
     if (/^0x[0-9a-f]{40}$/.test(e)) return { endereco: e };
-  } catch { /* pode ser um admin-JWT */ }
-  try { if ((await autenticarAdmin(req))?.ok) return { admin: true }; } catch { /* segue */ }
+  } catch { /* inválido/expirado */ }
   return { erro: "token_invalido" };
 }
 
-async function temPosse(quem, lojistaId) {
-  if (quem.admin) return true;
+// Regra MC89.38 (produtos.mjs:338-353): o próprio → admin (sempre que não é o próprio) → cota vinculada à carteira do JWT.
+async function temPosse(req, quem, lojistaId) {
   if (lojistaId === quem.endereco) return true;
+  try { if ((await autenticarAdmin(req))?.ok) return true; } catch { /* segue: não é admin */ }
   try {
     const e = (await getCota(lojistaId))?.endereco;
     return !!e && String(e).toLowerCase() === quem.endereco;
@@ -70,7 +72,7 @@ export default async (req) => {
   }
   const lojistaId = String(clienteId ?? "").trim().toLowerCase();
   if (!lojistaValido(lojistaId)) return jsonError(400, "params_invalidos", "cliente_id inválido");
-  if (!(await temPosse(quem, lojistaId))) return jsonError(403, "endereco_nao_corresponde", "JWT não pertence ao cliente_id informado");
+  if (!(await temPosse(req, quem, lojistaId))) return jsonError(403, "endereco_nao_corresponde", "JWT não pertence ao cliente_id informado");
 
   if (req.method === "PUT") {
     const itens = body?.cupons;

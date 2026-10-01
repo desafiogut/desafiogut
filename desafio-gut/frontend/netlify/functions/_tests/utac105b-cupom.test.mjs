@@ -77,6 +77,19 @@ test("A7 listarCuponsAtivosDoLojista: inactivos ficam fora", async () => {
   assert.deepEqual((await C.listarCuponsAtivosDoLojista(L)).map((c) => c.valor_rs), [5, 20]);
 });
 
+test("A7b corrida em actualizarCupom: outro pedido cria o cupom com o estado oposto → o pedido final prevalece (V3)", async () => {
+  S.g.antesDeInserir = (tab, linha, t) => { t.cupons.push({ id: "bbbbbbbb-0000-4000-8000-000000000001", lojista_id: L, valor_rs: 10, descricao: "", validade_dias: 30, ativo: true, criado_em: "x", atualizado_em: "x" }); };
+  const r = await C.actualizarCupom({ lojistaId: L, valorRs: 10, ativo: false });
+  assert.equal(r.ok, true); assert.equal(r.cupom.ativo, false);
+  assert.deepEqual(S.tabelas.cupons.map((c) => c.ativo), [false]);
+});
+
+test("A7c valor fora da plataforma gravado na BD (sem CHECK) não conta como activo (V2)", async () => {
+  S.tabelas.cupons.push({ id: "bbbbbbbb-0000-4000-8000-000000000002", lojista_id: L, valor_rs: 7, descricao: "", validade_dias: 30, ativo: true, criado_em: "x", atualizado_em: "x" });
+  await C.criarCupom({ lojistaId: L, valorRs: 5 });
+  assert.deepEqual((await C.listarCuponsAtivosDoLojista(L)).map((c) => c.valor_rs), [5]);
+});
+
 test("A8 erro do Supabase é visível (não lista vazia / não ok)", async () => {
   S.g.falhar.cupons = { op: "select" };
   await assert.rejects(C.listarCuponsDoLojista(L));

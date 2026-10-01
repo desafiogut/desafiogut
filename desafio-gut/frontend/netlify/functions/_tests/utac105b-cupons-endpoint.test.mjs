@@ -10,14 +10,16 @@ let S = criarSupabase();
 const COTAS = new Map();
 let cotaFalha = false;
 mock.module("../_lib/supabase-client.mjs", { namedExports: { getSupabase: () => S.cliente, getSupabaseReadOnly: () => S.cliente, supabaseConfigurado: () => true } });
-mock.module("../_lib/admin-auth.mjs", { namedExports: {
-  autenticarAdmin: async (req) => ({ ok: req.headers.get("authorization") === "Bearer admin-tk" }),
-  guardAdmin: async () => null,
+// ⛔-1 do validador: o duplo permissivo de autenticarAdmin escondia que um admin-JWT REAL nunca chegava ao ramo admin.
+// Agora corre o admin-auth REAL (verificarAdminAccess + lista de admins); só a lista de admins é fixada.
+const ADM = "0xdddddddddddddddddddddddddddddddddddddddd";
+mock.module("../_lib/admin-helpers.mjs", { namedExports: {
+  getAdminAddresses: async () => [ADM], resolverCoordenacao: () => ADM, COORDENACAO: ADM, invalidarCacheAdmins: () => {},
 } });
 mock.module("../_lib/cotas-store.mjs", { namedExports: { getCota: async (id) => { if (cotaFalha) throw new Error("x"); return COTAS.get(id) ?? null; } } });
 mock.module("../_lib/rate-limiter.mjs", { namedExports: { aplicarRateLimit: async () => null } });
 const { default: handler } = await import("../cupons.mjs");
-const { assinarUserSession } = await import("../_lib/jwt.mjs");
+const { assinarUserSession, assinarAdminAccess } = await import("../_lib/jwt.mjs");
 
 const A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -75,10 +77,16 @@ test("B5 posse (R18-B): outro lojista → 403; cota com endereco = JWT → ok; c
   COTAS.set(CNPJ, { tipo: "corporativo", endereco: A.toUpperCase().replace("0X", "0x") });
   assert.equal((await chamar("PUT", { quem: A, clienteId: CNPJ, cupons: [{ valorRs: 10, ativo: true }] })).status, 200);
   assert.equal((await chamar("PUT", { quem: B, clienteId: CNPJ, cupons: [{ valorRs: 10, ativo: false }] })).status, 403);
-  assert.equal((await chamar("PUT", { token: "admin-tk", clienteId: B, cupons: [{ valorRs: 20, ativo: true }] })).status, 200);
+  assert.equal((await chamar("PUT", { token: await assinarAdminAccess(ADM), clienteId: B, cupons: [{ valorRs: 20, ativo: true }] })).status, 200, "admin-JWT real");
+  assert.equal((await chamar("PUT", { token: await assinarAdminAccess(A), clienteId: B, cupons: [{ valorRs: 5, ativo: true }] })).status, 403, "admin-JWT de quem já não é admin");
   cotaFalha = true;
   assert.equal((await chamar("GET", { quem: A, clienteId: CNPJ })).status, 403);
   assert.deepEqual(S.tabelas.cupons.map((c) => [c.lojista_id, c.valor_rs]).sort(), [[B, 20], [CNPJ, 10]].sort());
+});
+
+test("B5b cliente_id do próprio em maiúsculas e com espaços é normalizado (não 403 falso)", async () => {
+  const r = await chamar("PUT", { clienteId: "  " + A.toUpperCase().replace("0X", "0x") + " ", cupons: [{ valorRs: 5, ativo: true }] });
+  assert.equal(r.status, 200); assert.equal(S.tabelas.cupons[0].lojista_id, A);
 });
 
 test("B6 sem token → 401; token inválido → 401; cliente_id inválido → 400; método → 405", async () => {
