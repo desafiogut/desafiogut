@@ -9,12 +9,18 @@ description: "Compor e executar UTACs (Unidade de Trabalho Auto Contido) do Desa
 auto-contida: contexto + HARD GATES + regras + frentes + SEG-1..SEG6 + validador adversarial + fecho.
 
 Esta skill existe para **eliminar a repetição**: as partes constantes de todos os UTACs vivem aqui
-(HARD GATES, 61 regras em 9 categorias, lições, armadilhas de ambiente, contexto do projeto); o
+(HARD GATES, 74 regras em 10 categorias, lições, armadilhas de ambiente, contexto do projeto); o
 co-construtor escreve só um **spec com menos de 60 linhas** e a skill compõe o UTAC completo
 (~350 linhas), no mesmo formato da série.
 
 > Substitui o nome «MC» (Mega Comando). A substância mantém-se; muda o nome — descreve melhor o que é.
 > Numeração: `UTAC100`, `UTAC101`, …, `UTAC105a`, `UTAC105a.1`, `UTAC105b`, …
+
+> ⚠️ **Todo o UTAC lê `_logs/DEBT.md` antes de começar.** É o registo único de dívida técnica
+> (tabela ID · Descrição · Origem · Severidade · Estado · Responsável) e faz parte do contexto
+> obrigatório do SEG-1: o que está lá não se redescobre, e cada pendência nova entra lá no fecho.
+> Regras do departamento **HI** (`protocol/regras/HI-higiene.md`) governam a higiene de
+> infraestrutura — detetar, provar que não é do UTAC, corrigir o mínimo e registar.
 
 ## Como se usa
 1. Escrever o spec a partir de `spec-template.yml` (menos de 60 linhas) — ou `/utac-new <nome>`.
@@ -34,7 +40,7 @@ skills/utac/
 ├─ exemplo.UTAC.md     ← UTAC completo gerado a partir do exemplo (prova de que a skill funciona)
 ├─ protocol/           ← CONSTANTES
 │  ├─ hard-gates.md    ← os 16 HARD GATES (1-16, canónicos) + tabela de alias da série
-│  ├─ regras/          ← 61 REGRAS em 9 categorias (cada regra: ID, texto, origem)
+│  ├─ regras/          ← 74 REGRAS em 10 categorias (cada regra: ID, texto, origem)
 │  │  ├─ E-engenharia.md   ← E1-E9   ├─ S-seguranca.md    ← S1-S6
 │  │  ├─ T-testes.md       ← T1-T5   ├─ A-ambiente.md     ← A1-A8
 │  │  ├─ G-git-deploy.md   ← G1-G6   ├─ P-processo.md     ← P1-P7
@@ -51,14 +57,14 @@ skills/utac/
    ├─ seg-1.md · seg0-3.md · seg4.md · seg5-6.md
 ```
 
-## As 9 categorias de regras (61 regras)
+## As 10 categorias de regras (74 regras)
 | cat. | tema | regras | cat. | tema | regras |
 |---|---|---|---|---|---|
-| **E** | Engenharia | E1-E9 | **A** | Ambiente | A1-A8 |
+| **E** | Engenharia | E1-E9 | **A** | Ambiente | A1-A11 |
 | **T** | Testes | T1-T5 | **P** | Processo | P1-P7 |
 | **G** | Git e deploy | G1-G6 | **AU** | Autonomia | AU1-AU4 |
 | **L** | LGPD | L1-L6 | **ST** | Stop conditions | ST1-ST10 |
-| **S** | Segurança | S1-S6 | | | |
+| **S** | Segurança | S1-S6 | **HI** | Higiene de Infraestrutura | HI1-HI10 |
 
 O spec cita regras **por ID**: `stop_conditions_extra: [ST3, ST5]`. A skill injecta automaticamente
 as categorias activas (`regras_activas`) e as condições de paragem extra do tipo.

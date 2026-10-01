@@ -1,4 +1,4 @@
-# Regras da Skill UTAC — 9 categorias, 61 regras
+# Regras da Skill UTAC — 10 categorias, 74 regras
 
 **Auto-contido.** Este directório contém as regras activas de todos os UTACs.
 
@@ -9,12 +9,13 @@
 | G — Git e deploy | `G-git-deploy.md` | G1-G6 |
 | L — LGPD | `L-lgpd.md` | L1-L6 |
 | S — Segurança | `S-seguranca.md` | S1-S6 |
-| A — Ambiente | `A-ambiente.md` | A1-A8 |
+| A — Ambiente | `A-ambiente.md` | A1-A11 |
 | P — Processo | `P-processo.md` | P1-P7 |
 | AU — Autonomia | `AU-autonomia.md` | AU1-AU4 |
 | ST — Stop conditions | `ST-stop.md` | ST1-ST10 |
+| HI — Higiene de Infraestrutura | `HI-higiene.md` | HI1-HI10 |
 
-**Total: 61 regras.** Mapa das antigas R1-R20 → categorias em `../regras-legado.md`.
+**Total: 74 regras.** Mapa das antigas R1-R20 → categorias em `../regras-legado.md`.
 
 ⚠️ **Nomenclatura:** o campo `Origem:` de cada regra cita o UTAC que a aprendeu com o prefixo **novo**
 (`UTAC100`…`UTAC105a`). Esses UTACs estão no repo com o prefixo **antigo** (`_logs/MC100*` … `_logs/MC105a*`)

@@ -10,6 +10,13 @@
 > referências **históricas** em `_logs/UTAC000*`, `_logs/REVIEWS/` e `scripts/utac0002-*.mjs`
 > **não foram reescritas** (GATE 15 — UTACs fechados não se alteram): são registos do que foi, não
 > fonte de verdade; apontam para o caminho antigo de propósito.
+>
+> 📚 **Skill UTAC 1.1 (UTAC000.3, 2026-10-01):** novo departamento **HI — Higiene de Infraestrutura**
+> (10 regras, HI1-HI10) + **A9-A11** + **registo único de dívida em `_logs/DEBT.md`**, que **todo o
+> UTAC lê antes de começar**. **R18 (UTAC000.3):** actualização da skill autorizada pelo operador como
+> **auto-referencial, sem UTAC próprio** — só a skill e os ficheiros de dívida/versão, zero código de
+> produção. A dívida **DEBT-004** (suíte do frontend vermelha, 25 falhas: React em duplicado pelo
+> Vite) fica registada e **exige UTAC próprio** (HI4/HI5).
 
 ---
 
