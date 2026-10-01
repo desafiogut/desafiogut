@@ -79,6 +79,7 @@ A partir do spec, monta-se:
 Ver `exemplo.UTAC.md` para o resultado desta composição.
 
 ## Como evoluir (cada UTAC novo pode enriquecer a skill)
+> **Review automático:** `review/` (`/utac-review <UTAC>` em `review/prompt.md`; aplicação manual em `review/aplicador.md`) · **versão actual da skill em `review/VERSAO.md`**.
 - **Nova regra** → acrescentar ao ficheiro da categoria certa em `protocol/regras/`, com **ID, texto
   e origem** (o UTAC que a aprendeu). Regra nova → ID novo no fim, nunca reutilizar.
 - **Nova lição** → `protocol/licoes.md` **com o UTAC de origem**.

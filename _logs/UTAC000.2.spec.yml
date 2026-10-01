@@ -1,0 +1,42 @@
+schema: utac/1
+name: UTAC000.2
+title: "Review automático: Opus lê UTACs fechados e sugere regras/lições (infra da skill)"
+type: infra
+baseline: 5e7ed24   # medido no SEG-1
+motivo: >-
+  Sem mecanismo de aprendizado cada UTAC é isolado. O review (só leitura) produz sugestões; o operador decide
+  e aplica à mão (aplicador); a skill sobe de versão.
+frentes:
+  - id: A
+    nome: Estrutura de review
+    entrega: [skills/utac01/review/README.md, skills/utac01/review/template.md, _logs/REVIEWS/INDEX.md]
+  - id: B
+    nome: Prompt /utac-review
+    entrega: [skills/utac01/review/prompt.md]
+  - id: C
+    nome: Aplicador manual
+    entrega: [skills/utac01/review/aplicador.md]
+  - id: D
+    nome: Teste real
+    entrega: [_logs/REVIEWS/UTAC105b_REVIEW.md, _logs/UTAC000.2_SEG3_TESTE.md]
+autoriza:
+  - criar skills/utac01/review/ (README, template, prompt, aplicador) e _logs/REVIEWS/
+  - actualizar skills/utac01/SKILL.md só para referir review/
+  - ler logs de UTACs fechados; correr o review sobre o UTAC105b
+  - _logs/UTAC000.2_*, Desktop/UTAC000.2_*, CLAUDE.md, commit + push foreground, validador adversarial
+  - scripts/utac0002-*.mjs (sondas de verificação/mutação; padrão do UTAC105b — declarado no SEG-1)
+proibe:
+  - git add -A · deploy em background · instalar dependências · UI · decisões de produto · inventar dados
+  - código de produção (src/, netlify/functions/, _lib/) · Supabase/Netlify
+  - alterar UTACs fechados, protocol/regras/, protocol/licoes.md, os 16 HARD GATES
+  - aplicar sugestões à skill automaticamente
+  - tocar nos ficheiros do UTAC105b.1 em curso (cotas.mjs, CorporativoDashboard.jsx, utac105b1-*)
+dependencias:
+  - Skill UTAC01 (UTAC000) · UTAC105b fechado com logs + relatório
+regras_activas: [E, T, G, S, A, P, AU, ST]
+regras_extra: [L1, G1]
+stop_conditions_extra: [ST2]
+ressalvas:
+  - Review é SÓ LEITURA (P8); aplicador é MANUAL (P9)
+  - Árvore partilhada com o UTAC105b.1 em curso — commits só com ficheiros nomeados deste UTAC
+subdivisoes: []
