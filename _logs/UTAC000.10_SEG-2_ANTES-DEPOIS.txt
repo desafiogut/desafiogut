@@ -1,0 +1,110 @@
+UTAC000.10 — SEG-2: EVIDÊNCIA ANTES ↔ DEPOIS (vencedor no AppContext + MercadoLances — DEBT-009)
+=================================================================================================
+data: 2026-10-01/02 · base: a122b18 = origin/main · sessão do mesmo ciclo (declarado no custo)
+Tudo colado de execução real.
+
+─────────────────────────────────────────────────────────────────────────────────
+1. SUÍTE — ANTES (SEG-1, antes de tocar em código)
+─────────────────────────────────────────────────────────────────────────────────
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 591/591 pass
+backend: VERDE 967/973 pass
+
+─────────────────────────────────────────────────────────────────────────────────
+2. TESTES NOVOS — DEPOIS
+─────────────────────────────────────────────────────────────────────────────────
+$ node --test --test-concurrency=1 --test-reporter=tap src/context/__tests__/utac0010-vencedor-contexto.test.mjs
+ok 1 - o Provider LÊ o resultado oficial da edição activa
+ok 2 - o vencedor exposto é o OFICIAL quando existe, com a forma { endereco, valor }
+ok 3 - sem resultado oficial, mantém-se o apuramento local (zero regressões)
+ok 4 - a API do contexto não mudou: expõe `vencedor`, e não um nome novo (HI9)
+ok 5 - CONTROLO: com a correcção revertida (em memória), a regra oficial FALHA e a reserva passa
+# tests 5 · # pass 5 · # fail 0
+
+$ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
+# tests 4 · # pass 4 · # fail 0
+
+─────────────────────────────────────────────────────────────────────────────────
+3. SUÍTE — DEPOIS (0 regressões: 591 → 600 = +5 contrato do contexto +4 da página)
+─────────────────────────────────────────────────────────────────────────────────
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 600/600 pass
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+
+─────────────────────────────────────────────────────────────────────────────────
+4. MUTAÇÃO M10 — «o AppContext volta a expor o vencedor LOCAL» (= repor a DEBT-009)
+─────────────────────────────────────────────────────────────────────────────────
+Alteração (`src/context/AppContext.jsx`, bloco de 4 linhas):
+  -  const resultadoOficial = useResultadoOficial(EDICAO_ATIVA);
+  -  const vencedor = resultadoOficial
+  -    ? { endereco: resultadoOficial.vencedor, valor: resultadoOficial.menorUnicoCentavos }
+  -    : vencedorLocal;
+  +  const vencedor = vencedorLocal; // MUTANTE M10 (ignora o resultado oficial)
+
+Prova de que o mutante ENTROU: md5
+  antes  ae868cf6cad8d4c080056ff56168057f
+  mutado 812d363c7e74ca3e16f45dc33eaf3065
+
+$ node --test ... src/context/__tests__/utac0010-vencedor-contexto.test.mjs
+# fail 2                                  ← RED, como exigido
+Restauro: md5 ae868cf6cad8d4c080056ff56168057f · IDENTICO: True
+
+─────────────────────────────────────────────────────────────────────────────────
+5. MUTAÇÃO M11 — «o MercadoLances re-deriva o vencedor dos lances LOCAIS»
+─────────────────────────────────────────────────────────────────────────────────
+Alteração (`src/pages/MercadoLances.jsx`, 1 linha):
+  -          vencedor={vencedor}
+  +          vencedor={[...lances].filter((l) => !l.repetido).sort((a, b) => a.valor - b.valor)[0] ?? null} // MUTANTE M11
+
+Prova de que o mutante ENTROU: md5
+  antes  3748a94bdc69d05d841b0b45ca1d3e06
+  mutado 42827c9935ca81f8c6322eba6da5aa0f
+
+$ node --test ... src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
+# fail 3                                  ← RED, como exigido
+Restauro: md5 3748a94bdc69d05d841b0b45ca1d3e06 · IDENTICO: True
+
+─────────────────────────────────────────────────────────────────────────────────
+6. ESCOPO (GATE 2/HI4) — `git diff --name-only` contra a base a122b18
+─────────────────────────────────────────────────────────────────────────────────
+desafio-gut/frontend/src/context/AppContext.jsx           (AUTORIZADO) ← o ÚNICO ficheiro de código
+desafio-gut/frontend/package-lock.json                    (PRÉ-EXISTENTE, de fora do commit)
+Novos (untracked): src/context/__tests__/utac0010-vencedor-contexto.test.mjs,
+src/pages/__tests__/utac0010-mercado-vencedor.test.mjs,
+src/pages/__tests__/_stubs/useRecursosApp.js, _logs/UTAC000.10_*, _logs/utac0010-evidencia.sh
+
+⚠️ `MercadoLances.jsx` NÃO aparece: **não foi alterado** — ficou correcto por ARRASTO, porque
+consome o `vencedor` do contexto (l. 157/195) e o contexto passou a expor o OFICIAL. É a correcção
+mínima (Ponytail): um ponto, não dois. A mutação M11 prova que, se alguém voltar a derivar
+localmente na página, o teste apanha.
+
+Fora do escopo e INTOCADOS: contrato on-chain, GUTO, Passe, Concurso, `_render.mjs`,
+`_ponte-ssr.mjs`, `vite.config.js`, `useResultadoOficial.js`, `MeusAtivos.jsx`, `Dashboard.jsx`,
+backend. DEBT-001/002/003/005/006: não tocadas.
+
+─────────────────────────────────────────────────────────────────────────────────
+7. md5 DOS ENTREGÁVEIS (estado final, após os restauros)
+─────────────────────────────────────────────────────────────────────────────────
+ae868cf6cad8d4c080056ff56168057f  src/context/AppContext.jsx
+1e57ca780eaaa3bb1ab8b9e88efb4796  src/context/__tests__/utac0010-vencedor-contexto.test.mjs
+7d324796dcc70469ee0dde0c5530bdf1  src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
+ec910ad5e820d286845fcc09f1a91b1f  src/pages/__tests__/_stubs/useRecursosApp.js
+3748a94bdc69d05d841b0b45ca1d3e06  src/pages/MercadoLances.jsx   (INALTERADO)
+
+─────────────────────────────────────────────────────────────────────────────────
+8. FRENTE F — LIMPEZA DOS WORKTREES ÓRFÃOS: **NÃO EXECUTADA — ESCALADA (GATE 10)**
+─────────────────────────────────────────────────────────────────────────────────
+O spec autoriza limpar «os 7 worktrees órfãos». Medição (antes de tocar em nada):
+
+  diretórios em .claude/worktrees/ .......... 12   (não 7)
+  + em AppData/Local/Temp/claude/.../scratchpad ... 1
+  com junction para o node_modules REAL ..... 2    (agent-a910933b732937233, zen-goldberg-ce8759)
+  com LOCK .................................. 1    (agent-a055938a81220e104, "locked ... pid 15932")
+  o pid do lock está vivo? .................. NÃO (morto → lock obsoleto)
+  processos `claude-code` vivos nesta máquina  SIM (1 CLI npm + 10 da app Claude Desktop)
+
+Um worktree `locked` por um pid morto é lixo; mas **um worktree de uma sessão Claude VIVA não é** —
+apagá-lo destrói trabalho em curso. Entre os 12 não consigo distinguir, com os instrumentos de que
+disponho, os órfãos dos activos: **paro e escalo** (HI8/GATE 10) em vez de arriscar. Opções medidas
+para o operador: relatório §6.

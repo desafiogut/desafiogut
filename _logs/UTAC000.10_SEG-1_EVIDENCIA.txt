@@ -1,0 +1,83 @@
+UTAC000.10 — EVIDENCIA BRUTA (SEG-1) · 2026-10-01 23:43 UTC
+===============================================================================
+
+## 1. BASELINE (estado antes de tocar)
+
+$ git rev-parse HEAD origin/main
+a122b18aa9f9289321d5992ab94b30b6537ef5fa
+a122b18aa9f9289321d5992ab94b30b6537ef5fa
+
+$ git status --short   (só o package-lock pré-existente)
+ M desafio-gut/frontend/package-lock.json
+ M desafio-gut/frontend/src/context/AppContext.jsx
+
+## 2. SUITE (comando canónico do repo)
+
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 600/600 pass
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+
+## 3. INVENTARIO — vencedor derivado dos lances locais (src/, sem testes)
+
+$ grep -rn "menorUnico|vencedor|OverlayVencedor|apurarMenor" src/ | grep -v __tests__
+src/components/edicao-especial/PainelVencedorEspecial.jsx:67:  const vencedor = typeof resultado.vencedor === "string" ? resultado.vencedor : "";
+src/components/edicao-especial/useResultadoEspecial.js:10:  "function resultados(string) view returns (uint256 menorUnico, address vencedor, bool consolidado)",
+src/components/edicao-especial/useResultadoEspecial.js:21:  const [menorUnico, vencedor, consolidado] = await contrato.resultados(edicaoId);
+src/components/FimEdicaoOverlay.jsx:11:export default function FimEdicaoOverlay({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA }) {
+src/context/AppContext.jsx:700:  const vencedorLocal = [...lancesExibidos]
+src/context/AppContext.jsx:714:  const vencedor = resultadoOficial
+src/context/AppContext.jsx:715:    ? { endereco: resultadoOficial.vencedor, valor: resultadoOficial.menorUnicoCentavos }
+src/context/AppContext.jsx:1408:    vencedor,
+src/hooks/useResultadoOficial.js:53:  const vencedor = String(r.vencedor ?? "").toLowerCase();
+src/hooks/useResultadoOficial.js:56:  return { consolidado: true, vencedor, menorUnicoCentavos: r.menorUnicoCentavos };
+src/pages/Dashboard.jsx:65:    lances, vencedor,
+src/pages/Dashboard.jsx:91:  const vencedorExibido = resultadoOficial
+src/pages/Dashboard.jsx:92:    ? { endereco: resultadoOficial.vencedor, valor: resultadoOficial.menorUnicoCentavos }
+src/pages/Dashboard.jsx:516:          vencedor={vencedorExibido}
+src/pages/DetalheProduto.jsx:39:  const { prazoFlash, prazoProgramado, lances, vencedor, encerrado } = useAppContext();
+src/pages/MercadoLances.jsx:69:function OverlayVencedor({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA, isMobile }) {
+src/pages/MercadoLances.jsx:157:    vencedor,
+src/pages/MercadoLances.jsx:195:          vencedor={vencedor}
+src/pages/Privacidade.jsx:110:            <li style={liStyle}>Finalidade: funcionamento do serviço, apuração do vencedor, resolução de disputas, melhoria da experiência e prevenção de abuso/fraude.</li>
+src/utils/web3.js:19:  "function resultados(string) view returns (uint256 menorUnico, address vencedor, bool consolidado)",
+
+## 4. TESTES NOVOS — TAP
+
+$ node --test --test-concurrency=1 --test-reporter=tap src/context/__tests__/utac0010-vencedor-contexto.test.mjs
+ok 1 - o Provider LÊ o resultado oficial da edição activa
+ok 2 - o vencedor exposto é o OFICIAL quando existe, com a forma { endereco, valor }
+ok 3 - sem resultado oficial, mantém-se o apuramento local (zero regressões)
+ok 4 - a API do contexto não mudou: expõe `vencedor`, e não um nome novo (HI9)
+ok 5 - CONTROLO: com a correcção revertida (em memória), a regra oficial FALHA e a reserva passa
+# tests 5
+# pass 5
+# fail 0
+
+$ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
+ok 1 - UTAC000.10 · MercadoLances — o overlay mostra o vencedor DO CONTEXTO (nunca re-derivado)
+# tests 4
+# pass 4
+# fail 0
+
+## 5. ESCOPO (vs a122b18)
+
+$ git diff --name-only
+desafio-gut/frontend/package-lock.json
+desafio-gut/frontend/src/context/AppContext.jsx
+
+## 6. md5 DOS ENTREGAVEIS
+
+ae868cf6cad8d4c080056ff56168057f *desafio-gut/frontend/src/context/AppContext.jsx
+1e57ca780eaaa3bb1ab8b9e88efb4796 *desafio-gut/frontend/src/context/__tests__/utac0010-vencedor-contexto.test.mjs
+7d324796dcc70469ee0dde0c5530bdf1 *desafio-gut/frontend/src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
+ec910ad5e820d286845fcc09f1a91b1f *desafio-gut/frontend/src/pages/__tests__/_stubs/useRecursosApp.js
+3748a94bdc69d05d841b0b45ca1d3e06 *desafio-gut/frontend/src/pages/MercadoLances.jsx
+
+## 7. SAUDE GLOBAL (HI1)
+
+- disco:
+C:              238G  227G   12G  96% /c
+- worktrees orfaos do Claude Code:
+11
+- junction do node_modules no worktree de validacao: (nenhuma montada neste UTAC)
