@@ -80,7 +80,10 @@ function enderecosVencedores(html) {
   const alvo = "Menor e Único";
   for (let i = html.indexOf(alvo); i >= 0; i = html.indexOf(alvo, i + 1)) {
     const janela = html.slice(Math.max(0, i - 900), i);
-    const m = [...janela.matchAll(/0x[0-9a-f]{4,8}\.\.\./g)].pop();
+    // ⚠️ `A-F` incluídos: a lista pode trazer a caixa EIP-55 (checksum) e um regex só de
+    // minúsculas devolvia `null` — bug do INSTRUMENTO que fez o teste do EIP-55 falhar primeiro
+    // (o código de produção estava certo). Medido e corrigido.
+    const m = [...janela.matchAll(/0x[0-9a-fA-F]{4,8}\.\.\./g)].pop();
     out.push(m ? m[0] : null);
   }
   return out;
@@ -139,5 +142,37 @@ describe("UTAC000.9 · TabelaLances — o 🏆 é o vencedor OFICIAL quando exis
   test("cablagem: a tabela pede o resultado da EDIÇÃO recebida por prop", () => {
     renderizar({ lances, resultadoOficial: null, idEdicao: "R-9" });
     assert.deepEqual(edicoesPedidas(), ["R-9"], "a tabela não pediu (ou pediu mal) o resultado oficial");
+  });
+
+  // ── Achado do validador adversarial (§7.2): o `.toLowerCase()` do lado da LISTA é
+  // LOAD-BEARING e não estava pinado — o mutante que o tirava sobrevivia aos 6 testes. Não é
+  // hipotético: os lances chegam por `subscribeLanceDado` → `contrato.on("LanceDado", …)` (ethers
+  // v6), que devolve endereços com caixa **EIP-55** (checksum) — `web3.js` leva essa caixa para a
+  // lista. Sem o `toLowerCase()` da lista, o 🏆 perdia-se em silêncio.
+  const EU_EIP55 = "0xAaAa000000000000000000000000000000000001";
+  test("endereço da LISTA em caixa EIP-55 + oficial em minúsculas → o 🏆 vai para a linha certa", () => {
+    const lancesEip55 = [
+      { endereco: OUTRO,        valor: 500, repetido: false },
+      { endereco: EU_EIP55,     valor: 300, repetido: false },
+    ];
+    const html = renderizar({
+      lances: lancesEip55,
+      resultadoOficial: { consolidado: true, vencedor: EU, menorUnicoCentavos: 300 },
+    });
+    const venc = enderecosVencedores(html);
+    // 1, não 2: este auxiliar conta o SELO «Menor e Único» (um por linha vencedora); o 🏆 da
+    // célula de posição é contado por `trofeus()`. (Expectativa minha errada na 1.ª versão.)
+    assert.equal(venc.length, 1, "o 🏆 desapareceu com a caixa EIP-55 na lista");
+    assert.ok(venc.every((e) => e && e.toLowerCase().startsWith(EU_EIP55.slice(0, 6).toLowerCase())),
+      `o 🏆 foi para OUTRA pessoa: ${JSON.stringify(venc)}`);
+  });
+
+  test("linha SEM valor (null) não casa um oficial de valor 0 (Number(null)===0)", () => {
+    const lancesSemValor = [{ endereco: EU, valor: null, repetido: false }];
+    const html = renderizar({
+      lances: lancesSemValor,
+      resultadoOficial: { consolidado: true, vencedor: EU, menorUnicoCentavos: 0 },
+    });
+    assert.equal(enderecosVencedores(html).length, 0, "casou uma linha sem valor com um vencedor de valor 0");
   });
 });

@@ -63,7 +63,11 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
   const idxVencedor = useMemo(() => {
     if (resultadoOficial) {
       return lancesOrdenados.findIndex((l) =>
-        Number(l?.valor) === resultadoOficial.menorUnicoCentavos
+        // `valor != null` explícito: `Number(null)` é 0 e um `menorUnicoCentavos: 0` legítimo
+        // casaria uma linha sem valor. Medido como não explorável (as linhas sem valor são
+        // descartadas no render), mas é a armadilha que o projecto já pagou uma vez (MC93-A).
+        l?.valor != null
+        && Number(l.valor) === resultadoOficial.menorUnicoCentavos
         && String(l?.endereco ?? "").toLowerCase() === resultadoOficial.vencedor);
     }
     return lancesOrdenados.findIndex((l) => !l.repetido);

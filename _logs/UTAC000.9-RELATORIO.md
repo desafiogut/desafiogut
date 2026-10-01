@@ -57,8 +57,32 @@ antigo**, sem regressões.
   `_logs/UTAC000.9_SEG-2_ANTES-DEPOIS.txt` (antes/depois, mutações, md5s, escopo).
 
 ## 5. Validador adversarial (SEG3) — obrigatório
-Despachado sobre o commit `e1aacda`, em worktree próprio, instruído a **tentar refutar** (e a fazer
-o seu PRÓPRIO inventário de sítios). Veredicto: ver **`_logs/UTAC000.9_SEG-3_VALIDADOR.md`**.
+Despachado sobre o commit `e1aacda`, em worktree próprio, instruído a **tentar refutar** e a fazer o
+seu **próprio inventário**. Veredicto: **APROVA (com ressalvas)** — integral + resposta do executor
+em `_logs/UTAC000.9_SEG-3_VALIDADOR.md`.
+
+- **Inventário independente: confirmou** que os dois sítios declarados fora de escopo
+  (`AppContext.jsx` l.697-700 e `MercadoLances.jsx` `OverlayVencedor`) são os **únicos** — «NÃO
+  encontrei mais nenhum».
+- **Casos adversariais (D1-D4, T1-T6): a página não mente em nenhum.** Contra-prova da normalização
+  com o **hook real** (H1-H6): caixa EIP-55 → minúsculas, valor em string → `null`, endereço nulo →
+  `null`, não-consolidado → `null`. «A produção é segura.»
+- **A/B independente:** os testes discriminantes morrem no código antigo (**3 RED** no Dashboard,
+  confirmado por ele).
+- **Ressalvas (§7) e o que fiz com cada uma:**
+  | # | ressalva | tratamento |
+  |---|---|---|
+  | 7.1 | «zero I/O novo» é impreciso (o hook faz 1 leitura por página, mount + 60 s) | **redacção corrigida** no registo (`DEBT.md` e `CLAUDE.md`): «sem mecanismo de I/O novo … **1 leitura on-chain read-only por página**» |
+  | 7.2 | o `.toLowerCase()` do lado da **lista** é load-bearing e **não estava pinado** (mutante sobrevivia) | **fechado:** teste novo (lista em caixa EIP-55 + oficial em minúsculas) + **mutante M9 → 1 RED** |
+  | 7.6 | `Number(null) === 0` podia casar uma linha sem valor | **guarda `l?.valor != null`** + teste novo (não explorável, mas a armadilha é a do MC93-A) |
+  | 7.3 | o `OverlayVencedor` do Mercado continua local → incoerência **mais visível** entre os dois overlays | declarado — é a **DEBT-009**, fora do escopo |
+  | 7.4 | sítios adjacentes que derivam local e não são «vencedor» (`DetalheProduto`, `FeedbackLance`, `MinhaCarteira`) | declarados para o próximo UTAC |
+  | 7.5 | tensão rótulo↔valor se consolidar antes do fecho | declarado (o rótulo vem de `estAtiva`, intocado) |
+
+**Erros dos MEUS instrumentos (declarados, do processo §7.2):** a 1.ª versão do teste EIP-55 falhou
+por **bug do meu helper** (regex só de minúsculas) e a 2.ª por **expectativa minha errada** (o
+auxiliar conta o selo: 1 por linha, não 2). O código de produção estava certo nas duas — o
+instrumento é que errava.
 
 ## 6. Fora do escopo — ESCALADO ao operador (GATE 10)
 Dois sítios com o mesmo defeito **não** foram corrigidos porque o spec não os autoriza
