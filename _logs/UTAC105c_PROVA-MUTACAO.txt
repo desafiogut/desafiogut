@@ -9,5 +9,8 @@ M7 PROVADO (pass 17 · fail 1) — o placeholder de cupons inventa um número (j
 M8 PROVADO (pass 17 · fail 1) — o placeholder de palpites deixa de se declarar (jsx + pt)
 M9 PROVADO (pass 16 · fail 2) — tirar o data-estado dos placeholders
 M10 PROVADO (pass 17 · fail 1) — o dicionário diverge do fallback
+M11 PROVADO (pass 14 · fail 4) — defeito só no avatar/posição (mobile e desktop), selo certo
+M13 PROVADO (pass 16 · fail 2) — defeito só no avatar do mobile
+M12 PROVADO (pass 16 · fail 2) — defeito só na coluna # do desktop
 restauro: md5 idêntico em todos · suíte do UTAC VERDE 18/18
-RESULTADO: 10/10 mutantes PROVADOS
+RESULTADO: 13/13 mutantes PROVADOS

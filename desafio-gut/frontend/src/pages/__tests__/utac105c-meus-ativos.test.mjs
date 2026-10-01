@@ -86,6 +86,18 @@ function vencedoresNoEcra(html) {
   return [...texto(html).matchAll(/R\$ (\d+\.\d{2}) 🏆 Menor e Único/g)].map((m) => m[1]);
 }
 
+/**
+ * Quantos 🏆 a LISTA de lances desenha (entre os filtros e o rodapé regulamentar). Uma linha
+ * vencedora desenha DOIS — o da posição/avatar e o do selo. Achado do validador (SEG4): o selo
+ * sozinho deixava passar o defeito reposto só na célula da posição.
+ */
+function trofeusNaLista(html) {
+  const ini = html.indexOf("Filtrar:");
+  const fim = html.indexOf("Art. 25", ini);
+  assert.ok(ini >= 0 && fim > ini, "controlo: não encontrei a lista de lances na página");
+  return html.slice(ini, fim).split("🏆").length - 1;
+}
+
 const EU    = "0xaaaa000000000000000000000000000000000001";
 const OUTRO = "0xbbbb000000000000000000000000000000000002";
 
@@ -103,6 +115,7 @@ describe("UTAC105c · Frente B — o 🏆 vai para o menor lance único DA EDIÇ
       assert.ok(texto(html).includes("R$ 5.00"), "controlo: o meu lance tem de estar na lista");
       assert.deepEqual(vencedoresNoEcra(html), [],
         "a página diz «Menor e Único» a quem não está a ganhar");
+      assert.equal(trofeusNaLista(html), 0, "há um 🏆 na lista de quem não está a ganhar");
     });
 
     test(`${nome}: o meu menor único não é o 1.º que dei → o 🏆 vai para ELE`, () => {
@@ -112,6 +125,7 @@ describe("UTAC105c · Frente B — o 🏆 vai para o menor lance único DA EDIÇ
       ];
       const html = renderizar({ contexto: { lances, address: EU, isConnected: true }, mobile });
       assert.deepEqual(vencedoresNoEcra(html), ["1.00"]);
+      assert.equal(trofeusNaLista(html), 2, "a linha vencedora tem de ter 🏆 na posição E no selo — e mais nenhuma");
     });
 
     test(`${nome}: um lance repetido mais baixo não conta — vence o menor ÚNICO`, () => {
@@ -122,6 +136,7 @@ describe("UTAC105c · Frente B — o 🏆 vai para o menor lance único DA EDIÇ
       ];
       const html = renderizar({ contexto: { lances, address: EU, isConnected: true }, mobile });
       assert.deepEqual(vencedoresNoEcra(html), ["2.00"]);
+      assert.equal(trofeusNaLista(html), 2);
     });
 
     test(`${nome}: sem sessão, a lista de todos mostra o 🏆 no menor único (não regride)`, () => {
@@ -131,6 +146,7 @@ describe("UTAC105c · Frente B — o 🏆 vai para o menor lance único DA EDIÇ
       ];
       const html = renderizar({ contexto: { lances }, mobile });
       assert.deepEqual(vencedoresNoEcra(html), ["1.00"]);
+      assert.equal(trofeusNaLista(html), 2);
     });
   }
 
@@ -141,6 +157,7 @@ describe("UTAC105c · Frente B — o 🏆 vai para o menor lance único DA EDIÇ
     ];
     const html = renderizar({ contexto: { lances, address: EU, isConnected: true } });
     assert.deepEqual(vencedoresNoEcra(html), []);
+    assert.equal(trofeusNaLista(html), 0);
   });
 });
 

@@ -4420,6 +4420,39 @@ escrita — e o teste tem de provar que **NÃO escreveu**, não apenas o código
 
 ---
 
+## UTAC105c — UI do cliente: adaptar as telas do comprador (2026-10-01)
+
+**FECHADO.** Logs `_logs/UTAC105c_*` · Relatório `_logs/UTAC105c-RELATORIO.md` + `Desktop/UTAC105c-RELATORIO.md`.
+Validador adversarial: **APROVADO COM RESSALVAS** (a ressalva de teste foi corrigida; a de dados foi escalada → DEBT-007).
+
+### Decisões do operador (R18)
+- **R18-A — «Não cria nada novo, adapta ao que já existe no app.»** Sem páginas `/ofertas-*` nem componentes `Meus*.jsx`.
+- **R18-B** Frente A (ofertas) não se toca: a Programada ainda gasta senhas, e falar do Passe ao lado do botão contradiz-o
+  (DEC-01/02 pendentes). **R18-C** Frente C (pedidos) não se toca: o prazo de 7 dias fica só na API (MC102).
+- **R18-D** cupons/palpites = placeholders inline no `MeusAtivos.jsx`. **R18-E** a Frente B avança (defeito real).
+
+### O que mudou
+- ⛔ **O 🏆 «Menor e Único» era falso.** `MeusAtivos.jsx` dava-o a `!repetido && i === 0` da lista exibida; com sessão a
+  lista são os lances da pessoa, **sem ordenar** ⇒ o 1.º lance pela ordem de chegada levava o 🏆, mesmo com outra pessoa
+  a ganhar. Agora `isVencedor = lance === menorUnico` (o `menorUnico` que a página já calculava sobre todos os lances).
+- «🎟️ Meus cupons» e «🎯 Meus palpites» (`data-estado="placeholder"`): declaram que ainda não existem, sem números.
+  O comprador não tem endpoint para cupons (`listarPassesDoComprador` não está exposto) nem para palpites (UTAC108).
+- A guarda `src/i18n/__tests__/ativos-i18n.test.mjs` passou a ler também o `MeusAtivos.jsx`.
+
+### Provas
+Testes `src/pages/__tests__/utac105c-meus-ativos.test.mjs` (12, página inteira em SSR, desktop + mobile) · mutação
+**13/13** (`scripts/utac105c-prova-mutacao.mjs`) · suíte **547/547 · 967/973** · build exit 0 · só frontend tocado.
+
+### Lições
+- **Um selo testado não é o ecrã testado.** O 🏆 é desenhado em DOIS sítios por linha (posição/avatar e selo). Os meus
+  testes só liam o selo; o validador repôs o defeito só no avatar e a suíte ficou verde. Contar o símbolo na região
+  inteira fecha a classe.
+- **O `_render.mjs` não renderiza páginas** (não troca o `AppContext`); para uma página, o arnês é o do `MeusAtivos.test.mjs`.
+- ⚠️ **DEBT-007:** o «menor único da edição» do frontend é o menor único **que este browser viu** — o contexto não carrega
+  o histórico da edição. Pré-existente; afecta o 🏆, o cartão «Menor Lance» e o Dashboard.
+- Árvore partilhada: à 1.ª leitura havia um **mutante de validador por restaurar** em `_render.mjs` (outra sessão). Medir
+  o baseline num worktree limpo; nunca restaurar ficheiros alheios.
+
 ## ⚠️ Armadilhas de ambiente (registo contínuo)
 
 Consultar antes de mexer em segredos ou no CLI da Netlify.

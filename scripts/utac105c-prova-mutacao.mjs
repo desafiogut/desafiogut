@@ -41,6 +41,13 @@ const MUTANTES = [
     de: 'data-estado="placeholder"', para: 'data-estado="x"', n: 2 },
   { id: "M10", alvo: PT, desc: "o dicionário diverge do fallback",
     de: '"ativos.cupons.titulo": "🎟️ Meus cupons"', para: '"ativos.cupons.titulo": "🎟️ Cupons"', n: 1 },
+  // SEG4 (validador): o defeito reposto SÓ na célula da posição/avatar sobrevivia aos testes do selo.
+  { id: "M11", alvo: PAGINA, desc: "defeito só no avatar/posição (mobile e desktop), selo certo",
+    de: '{isVencedor ? "🏆" : i + 1}', para: '{!lance.repetido && i === 0 ? "🏆" : i + 1}', n: 2 },
+  { id: "M13", alvo: PAGINA, desc: "defeito só no avatar do mobile",
+    de: '}}>{isVencedor ? "🏆" : i + 1}</div>', para: '}}>{!lance.repetido && i === 0 ? "🏆" : i + 1}</div>', n: 1 },
+  { id: "M12", alvo: PAGINA, desc: "defeito só na coluna # do desktop",
+    de: '                {isVencedor ? "🏆" : i + 1}', para: '                {!lance.repetido && i === 0 ? "🏆" : i + 1}', n: 1 },
 ];
 
 function correr() {
