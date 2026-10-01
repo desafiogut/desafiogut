@@ -4,7 +4,7 @@
 (não constroem feature). O risco é publicar o estado errado.
 
 ## HARD GATES extra
-- **HG10 (commit/deploy em FOREGROUND)** — reforçado: nunca background.
+- **GATE 10 + G3 (deploy/commit em FOREGROUND)** — reforçado: nunca background.
 - **A/B pareado obrigatório** — medir o que estava servido **antes** e o que passa a ser servido
   **depois** (ex.: `curl` ao endpoint real com o conteúdo esperado).
 - **Deploy com `--build`** quando o alvo for funções/Netlify.

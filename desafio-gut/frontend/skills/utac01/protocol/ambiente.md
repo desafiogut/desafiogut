@@ -37,6 +37,6 @@ Medido nos UTACs da série. **Auto-contido.** Host: Windows 10; shell do agente:
 
 - **Disco crítico** (~17 GB livres no ambiente medido). Um UTAC que precise dele **PARA se < 5 GB**.
 - **RAM crítica** (~0,7 GB livres, histórico de BSOD 0x50/0x20001). Evitar builds paralelos pesados.
-- ⚠️ **Não tocar em `.claude/settings.json` nem em credenciais** (R5). Ficam fora de qualquer UTAC.
+- ⚠️ **Não tocar em `.claude/settings.json` nem em credenciais** (S1). Ficam fora de qualquer UTAC.
 - **Android/Capacitor:** exige **JAVA 21** (`JAVA_HOME=… Android Studio\jbr`); APK com
   `npm run build:apk` (**nunca** `npm run build`) + `gradlew assembleDebug`.

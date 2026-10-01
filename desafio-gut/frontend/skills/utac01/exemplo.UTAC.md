@@ -10,7 +10,7 @@ CONTEXTO
 ═══════════════════════════════════════════════════════════════════════════
 
 Você é o EXECUTOR. Execute, meça, documente e reporte. Se algo estiver ambíguo ou fora
-do escopo, **PARE e reporte ao operador** (R20 / HARD GATE 12).
+do escopo, **PARE e reporte ao operador** (AU3 / HARD GATE 12).
 
 **Tipo:** `diagnostico` — UTAC que MEDE sem alterar (ver `types/diagnostico.md`).
 **Baseline do spec:** `160bf09`. **HARD GATE 1:** confirmar com `git rev-parse HEAD` antes de tocar.
@@ -31,16 +31,35 @@ HARD GATES APLICÁVEIS (os 16 de protocol/hard-gates.md)
 14 VERSIONADO · 15 NÃO ALTERAR UTACs FECHADOS · 16 EXEMPLO FUNCIONAL.
 
 Concretização para este tipo (`diagnostico`):
-- **HG7 (mutação) → controlo do medidor:** provar que o medidor distingue uma contagem errada
+- **GATE 7 (mutação) → controlo do medidor:** provar que o medidor distingue uma contagem errada
   (isca com valor conhecido) de uma correcta.
-- **HG2 (A/B) → A/B de ficheiros:** zero diff em `_logs/` existentes.
+- **A/B pareado (E8) → A/B de ficheiros:** zero diff em `_logs/` existentes.
 
 ═══════════════════════════════════════════════════════════════════════════
-REGRAS (R1-R20) + ARMADILHAS DE AMBIENTE
+REGRAS (61 regras em 9 categorias) + ARMADILHAS DE AMBIENTE
 ═══════════════════════════════════════════════════════════════════════════
-R1 zero alteração desnecessária · R3 rastreável · R4 sem dados sensíveis · R5 credenciais intocadas ·
-R8 veredito por segmento · R9 entregáveis definidos no arranque · R14 `CLAUDE.md` no fecho ·
-R16 mutação · R18 decisões em 3 lugares · R19/20 autonomia sem conceber.
+Activas por default (`regras_activas: [E, T, G, L, S, A, P, AU, ST]`):
+- **E — Engenharia (E1-E9):** E1 zero alteração inútil · E2 escopo cirúrgico · E3 uma correcção de
+  cada vez · E4 PoC antes de tocar · E5 não alterar o que funciona · E6 ponytail · E7 testar o USO ·
+  E8 A/B pareado · E9 não inventar.
+- **T — Testes (T1-T5):** T1 mutação em todo o verde · T2 saída vazia = «não medi» · T3 duplos do
+  `dist/` real · T4 bidirecional · T5 confirmar que o mutante entrou.
+- **G — Git/deploy (G1-G6):** G1 nunca `git add -A` · G2 ficheiros individuais · G3 foreground ·
+  G4 nunca `netlify deploy --dir` · G5 APK é `build:apk` · G6 auto-deploy com `commit_ref` (medir).
+- **L — LGPD (L1-L6):** L1 sem dados sensíveis expostos · L2 anonimizar ≠ apagar · L3 NF-e intacta ·
+  L4 exportação só do titular · L5 hash determinístico · L6 pseudónimo ≠ anónimo.
+- **S — Segurança (S1-S6):** S1 credenciais intocadas · S2 custo exige autorização · S3 tokens só em
+  env · S4 `Object.hasOwn` · S5 `Number.isSafeInteger && >= 0` · S6 soberania de dados.
+- **A — Ambiente (A1-A8):** A1 `C:/...` sempre · A2 fins de linha · A3 `grep -a` no `CLAUDE.md` ·
+  A4 `curl -o /dev/null` mente · A5 `env:set` imprime · A6 `env:list --json` é objecto ·
+  A7 `env:get` ausente = «No value set» exit 0 · A8 RPC pode devolver zeros em silêncio.
+- **P — Processo (P1-P7):** P1 rastreável · P2 veredito por segmento · P3 entregáveis no arranque ·
+  P4 decisões em 3 lugares · P5 `CLAUDE.md` antes do commit final · P6 skills ECC · P7 ritmo ∝ risco.
+- **AU — Autonomia (AU1-AU4):** AU1 autonomia com parcimónia · AU2 corrigir o que a medição provou
+  errado · AU3 o executor NÃO concebe · AU4 PARAR se ambíguo.
+- **ST — Stop (ST1-ST10):** ST1 A/B mostra diferença · ST2 disco < 5 GB · ST3 migração não autorizada ·
+  ST4 suíte vermelha · ST5 idempotência quebrada · ST6 saldo negativo · ST7 dado fiscal apagado ·
+  ST8 dado de terceiro anonimizado · ST9 token vaza · ST10 mock pode ir a produção.
 
 Ambiente: `node`/`python`/`curl` são binários Windows → caminhos `C:/...`; `.md`/`.mjs` = LF,
 `.jsx` = CRLF; `grep -r` com `--exclude-dir=node_modules`; harness e deploy em **foreground**;
@@ -58,23 +77,23 @@ FRENTES (uma de cada vez — HARD GATE 6)
   - `git rev-parse HEAD` → confirmar o baseline do spec (declarar desvio, se houver).
 
 ═══════════════════════════════════════════════════════════════════════════
-SEG-1 — MEDIÇÃO   (protocol/segments/seg-1.md)
+SEG-1 — MEDIÇÃO   (segments/seg-1.md)
 ═══════════════════════════════════════════════════════════════════════════
 -1.1 `git rev-parse HEAD` + `git status --short` — confirmar `160bf09` (declarar desvio).
 -1.2 `ls scripts/mc966-suite-harness.mjs` — existe? (senão PARAR).
 -1.3 `df -h /c` — **se < 5 GB, PARAR**.
 -1.4 Log `_logs/UTAC999_SEG-1_MEDICAO.md`. Veredito **SEGUIR** / PARAR / AJUSTAR.
--1.5 Secção obrigatória de conflitos (R20) — escalar, não resolver.
+-1.5 Secção obrigatória de conflitos (AU3) — escalar, não resolver.
 
 ═══════════════════════════════════════════════════════════════════════════
-SEG0-SEG3 — FRENTES   (protocol/segments/seg0-3.md)
+SEG0-SEG3 — FRENTES   (segments/seg0-3.md)
 ═══════════════════════════════════════════════════════════════════════════
 Por frente: PoC (o medidor corre primeiro com uma isca de valor conhecido) → correcção (n/a aqui) →
 bidirecional (a) contagem certa passa (b) contagem errada detectada (c) ficheiro ausente → erro
 visível → A/B (zero diff em `_logs/` existentes) → controlo do medidor → regressões (n/a) → log.
 
 ═══════════════════════════════════════════════════════════════════════════
-SEG4 — VALIDADOR ADVERSARIAL   (protocol/segments/seg4.md) — OBRIGATÓRIO
+SEG4 — VALIDADOR ADVERSARIAL   (segments/seg4.md) — OBRIGATÓRIO
 ═══════════════════════════════════════════════════════════════════════════
 Subagente independente, worktree próprio, instruído a **TENTAR REFUTAR**:
 «A contagem da suíte está certa? O baseline declarado bate com o `git rev-parse HEAD`? Algum
@@ -82,10 +101,10 @@ número foi inventado? Tocou fora do autorizado (escopo)?»
 → `_logs/UTAC999_SEG4_VALIDADOR.md`.
 
 ═══════════════════════════════════════════════════════════════════════════
-SEG5-SEG6 — VERIFICAÇÃO E FECHO   (protocol/segments/seg5-6.md)
+SEG5-SEG6 — VERIFICAÇÃO E FECHO   (segments/seg5-6.md)
 ═══════════════════════════════════════════════════════════════════════════
 SEG5: consolidar logs · relatório `Desktop/UTAC999-RELATORIO.md` (tabela `gate | resultado` ·
-R18 em 3 lugares · pendências declaradas) · R14 (`CLAUDE.md`) · commit/push foreground.
+P4 (decisões em 3 lugares) · pendências declaradas) · P5 (`CLAUDE.md`) · commit/push foreground.
 SEG6: script ad-hoc com nome único, correr 1×; verificações (entregáveis existem · `_logs/`
 existentes sem diff · suíte verde · disco OK) · **controlo positivo** · `_SEG6_saida.txt` · fecho.
 

@@ -1,6 +1,6 @@
 # SEGMENTO SEG4 — VALIDADOR ADVERSARIAL
 
-**Auto-contido.** Segmento de verificação independente. **Obrigatório** (HARD GATE 9 / R16).
+**Auto-contido.** Segmento de verificação independente. **Obrigatório** (HARD GATE 9).
 Aplica HARD GATES 9, 12, 15.
 
 ---
@@ -9,8 +9,10 @@ Aplica HARD GATES 9, 12, 15.
 Ficheiro: `_logs/UTAC<NNN>_SEG4_VALIDADOR.md` (ou `SEG<n>_VALIDADOR.md` conforme a posição).
 
 ## Padrão
-1. **Despachar subagente independente, em worktree próprio** (`git worktree add`, na prática
-   `references/` do projeto o passo exacto). **Não é o mesmo agente** que escreveu o código.
+1. **Despachar subagente independente, em worktree próprio.** Comando concreto (caminho
+   **Windows** `C:/...`, nunca `/c/...` — ver `../protocol/regras/A-ambiente.md` A1):
+   `git worktree add C:/Users/<user>/tmp-<utac>-val/wt <sha> --detach`. **Não é o mesmo agente**
+   que escreveu o código.
 2. **Input:** o commit actual (só o que o UTAC devia mudar) + os logs do executor
    (`_logs/UTAC<NNN>_SEG-1_MEDICAO.md` … `_logs/UTAC<NNN>_SEG<n>.md`).
 3. **Instrução:** **TENTAR REFUTAR** — não confirmar. O validador procura activamente o erro.

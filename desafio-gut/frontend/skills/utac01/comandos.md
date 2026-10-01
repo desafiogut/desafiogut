@@ -22,7 +22,7 @@ Corre **só** o validador adversarial (SEG4) sobre o trabalho actual.
 ## `/utac-close`
 Corre **só** o fecho (SEG5-SEG6).
 - **Faz:** consolida logs, escreve o relatório de fecho, faz a verificação ad-hoc (script 1× +
-  controlo positivo), R18 (3 lugares), R14 (`CLAUDE.md` ou nota `REGISTO-CLAUDE.md`), commit/push.
+  controlo positivo), P4 (decisões em 3 lugares), P5 (`CLAUDE.md` ou nota `REGISTO-CLAUDE.md`), commit/push.
 - **Escreve:** `_logs/UTAC<NNN>_SEG5_VERIFICACAO.md`, `_SEG6_VERIFICACAO.md`, `_*_saida.txt`,
   `Desktop/UTAC<NNN>-RELATORIO.md`.
 - **PARA se:** houver pendências não declaradas ou o controlo positivo falhar.
@@ -45,5 +45,5 @@ Lista os tipos disponíveis + o que cada um traz de extra.
 ## Regras transversais a todos os comandos
 - **Nunca `git add -A`** — ficheiros nomeados, um a um.
 - **Commit/push em foreground.**
-- **O executor não concebe** (R20): ambiguidade → PARA e escala.
+- **O executor não concebe** (AU3): ambiguidade → PARA e escala.
 - **Validador adversarial é obrigatório** antes de fechar.

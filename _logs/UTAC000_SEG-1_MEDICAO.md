@@ -32,6 +32,13 @@ Skill UTAC01 em `desafio-gut/frontend/skills/utac01/`. Nada foi alterado neste s
 | **MC104.3** | `_logs/MC104.3_{SEG-1_MEDICAO,SEG0,SEG1,SEG2,SEG3,SEG4_VALIDADOR,SEG6_VERIFICACAO}.md` | **LGPD** (anonimizar ≠ apagar, NF-e preservada, pseudónimo vs anónimo, `anon:<sha256>`) + padrão do validador (achados ⚠️/ℹ️ + mutantes RED) |
 | **MC102.1b** | `_logs/MC102.1b_{SEG-1_MEDICAO,SEG0_FRENTE-0,SEG1-3_FRENTES-A-B-C,SEG4_FRENTE-D,SEG5_VALIDADOR}.md` | **integração externa** (PoC com controlo positivo antes de tocar, segredo nunca impresso, fail-closed, idempotência de webhook) |
 
+## -1.4b Suíte (medida depois, no SEG6 — declarada aqui por GATE 2)
+`node scripts/mc966-suite-harness.mjs ambos` (do **raiz** do repo — o harness NÃO está em
+`frontend/scripts/`) → **frontend VERDE 530/530 · backend VERDE 885/891. VEREDITO VERDE.**
+⚠️ O enunciado do UTAC000 declara «backend 874/880». Esse número é o do **MC105a**; o
+`MC105a.1_SEG5_VERIFICACAO.md:10` declara **885/891** (o MC105a.1 acrescentou 11 testes). O medido
+agora bate com o fecho do MC105a.1 ⇒ o número do enunciado está **desactualizado**, não há regressão.
+
 ## -1.5 Disco
 `df -h /c` → **17 G livres** (≥ 5 GB). **SEGUE.**
 

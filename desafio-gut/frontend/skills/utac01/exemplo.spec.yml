@@ -49,6 +49,16 @@ proibe:
 dependencias:
   - scripts/mc966-suite-harness.mjs existe
 
+regras_activas: [E, T, G, L, S, A, P, AU, ST]
+
+regras_extra:
+  - E9   # nao inventar: o relatorio so publica o que a suite mediu
+  - T2   # saida vazia = "nao medi", nunca sucesso
+
+stop_conditions_extra:
+  - ST2  # disco < 5 GB
+  - ST4  # suite vermelha depois de uma alteracao
+
 ressalvas:
   - Se o disco < 5 GB, PARAR
   - Controlo positivo: o medidor tem de distinguir uma contagem errada de uma correcta

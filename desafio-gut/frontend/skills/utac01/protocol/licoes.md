@@ -1,7 +1,8 @@
 # LIÇÕES DA SÉRIE — protocolo da série UTAC (DesafioGUT)
 
-Extraído dos UTACs fechados (MC98 … MC105a.1). Cada lição indica o UTAC que a originou.
-**Auto-contido.**
+Extraído dos UTACs fechados de **duas janelas** da série: a recente (**MC100 … MC105a.1**, fonte
+primária) e citações mais antigas (**MC72 … MC99.5.3**, que vieram já referenciadas nos UTACs
+recentes). Cada lição indica o UTAC que a originou. **Auto-contido.**
 
 ---
 
@@ -19,7 +20,7 @@ Extraído dos UTACs fechados (MC98 … MC105a.1). Cada lição indica o UTAC que
 5. **Validador adversarial não é burocracia** *(MC98, MC99.5.1, MC104.3, MC105a)*. Subagente
    independente, em worktree próprio, instruído a **TENTAR REFUTAR**. Já derrubou conclusões em
    5 UTACs seguidos (MC98 refutou A2, A3 e A7).
-6. **Mutação obrigatória (R16)** *(toda a série)*. Todo o teste que nasce verde prova-se
+6. **Mutação obrigatória (T1)** *(toda a série)*. Todo o teste que nasce verde prova-se
    introduzindo a falha que devia apanhar → **RED** → restaurar → md5 idêntico.
 7. **NUNCA `git add -A`** *(8× na série)*. Arrasta `_tmp*`, scratch e ficheiros de sessão.
    Adicionar ficheiro a ficheiro.
@@ -29,7 +30,7 @@ Extraído dos UTACs fechados (MC98 … MC105a.1). Cada lição indica o UTAC que
 8. **O enunciado deriva do código** *(medido em todos os UTACs de 6 seguidos)*. Baseline errado,
    contagem redonda, caminho de ficheiro errado. **Sinais de alarme:** contagem redonda
    (528/826), lista explícita de ficheiros, um `find` que devolve nada. Protocolo: medir →
-   executar a INTENÇÃO → declarar o desvio com o número. *(ver `../references/` do projeto)*
+   executar a INTENÇÃO → declarar o desvio com o número.
 9. **`Object.hasOwn` para leitura estrita** *(MC103)*. Ler chaves de objecto sem herdar o protótipo;
    `in`/`obj[key]` mentem com `constructor`, `__proto__`, etc.
 10. **Duplos de bibliotecas copiados do `dist/` real** *(MC102.0)*. Um duplo inventado mente;

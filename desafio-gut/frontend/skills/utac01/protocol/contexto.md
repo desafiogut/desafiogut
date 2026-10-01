@@ -48,6 +48,7 @@ Leilão · aposta · sorteio · jogo de azar.
   (Vite/React; `src/`, `netlify/functions/`, `_lib/`, `supabase/migrations/`, `_tests/`, `scripts/`).
 - Backend: Netlify Functions + Supabase (produção) + `@netlify/blobs`. On-chain: Ethereum MAINNET
   (pipeline de lance), `DATA_STORE_BACKEND=supabase` em produção.
-- Suíte: harness `scripts/mc966-suite-harness.mjs` (frontend `node --test --test-concurrency=1`;
-  backend com `--experimental-test-module-mocks`).
+- Suíte: correr **da raiz do repo**: `node scripts/mc966-suite-harness.mjs ambos` (o harness vive
+  em `<raiz>/scripts/`, **não** em `desafio-gut/frontend/scripts/`). Internamente usa frontend
+  `node --test --test-concurrency=1` e backend com `--experimental-test-module-mocks`.
 - Ferramentas que leem markdown do repo: Hermes Agent + Claude Code.

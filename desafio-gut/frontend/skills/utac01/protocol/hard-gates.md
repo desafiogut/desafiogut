@@ -3,12 +3,29 @@
 Extraído dos UTACs fechados da série (MC100 … MC105a.1). **Auto-contido:** este ficheiro
 funciona sozinho, sem consultar UTACs antigos.
 
-A numeração **1-16 é fixa**; o que muda por UTAC é o **critério concreto** de cada gate
-(ex.: «HG2 A/B pareado» num UTAC de dados mede linhas de tabela; num UTAC de UI mede cliques).
-Ver `../types/*.md` para os critérios concretos por tipo.
+A numeração **1-16 e os nomes abaixo são canónicos** (vêm do enunciado do UTAC000). O que muda por
+UTAC é o **critério concreto** de cada gate (ex.: o GATE 1 num UTAC de dados mede linhas de tabela;
+num UTAC de UI mede cliques). Ver `../types/*.md` para os critérios concretos por tipo.
 
-Medido na série: no `MC105a-RELATORIO.md` os gates aparecem em tabela `HG1 medir · HG2 A/B ·
-HG7/8 · HG9 · HG13 · HG14 · HG15 · HG16` — confirma o mapa posicional abaixo.
+⚠️ **Atenção à numeração herdada da série.** Nos relatórios antigos o mesmo «HG<n>» aparece com
+significados **diferentes** do mapa canónico (medido pelo validador do UTAC000). Quem ler um log
+antigo deve usar esta tabela:
+
+| número | significado NO MAPA CANÓNICO (abaixo) | significado MEDIDO NA SÉRIE (logs MC100…MC105a.1) |
+|---|---|---|
+| HG1 | MEDIR ANTES DE CRIAR | medir antes ✅ igual |
+| HG2 | NÃO INVENTAR CONTEÚDO | A/B pareado (**≠**) |
+| HG3 | ESCOPO CIRÚRGICO | escopo ✅ igual |
+| HG4 | NÃO ALTERAR NADA QUE FUNCIONA | preservar ✅ igual |
+| HG7/HG8 | MUTAÇÃO / BIDIRECIONAL | mutação + bidirecional ✅ igual |
+| HG9 | VALIDADOR ADVERSARIAL | validador ✅ igual |
+| HG13 | AUTO-CONTIDO | fiscal (MC104.x) / concorrência (MC105a) (**≠**) |
+| HG14 | VERSIONADO | «sem apagar» (MC104.2) (**≠**) |
+| HG15 | NÃO ALTERAR OS UTACs FECHADOS | hash (MC104.3) / migração (MC105a) (**≠**) |
+| HG16 | EXEMPLO FUNCIONAL | (vário) (**≠**) |
+
+Regra: **nos ficheiros desta skill usa-se SEMPRE o nome canónico** (`GATE <n> — <NOME>`), nunca
+«HG<n>» como sinónimo de um conceito que não seja o do mapa acima.
 
 ---
 
@@ -45,11 +62,11 @@ Nada de features não pedidas.
 Executa-se A → B → C → D. Não se abre a frente seguinte antes de fechar a anterior com o seu log.
 - Como se verifica: um ficheiro de relatório por frente (`_logs/UTAC*_SEG<n>*.md`), sequencial.
 
-## GATE 7 — MUTAÇÃO OBRIGATÓRIA (R16)
+## GATE 7 — MUTAÇÃO OBRIGATÓRIA (T1)
 Todo teste que nasce verde precisa de prova de mutação: **introduzir a falha que o teste devia
 apanhar** e confirmar que o teste fica **RED**; depois restaurar e confirmar md5 idêntico.
 Mutante equivalente (não pode ser morto por construção, ex.: chave primária) declara-se como equivalente.
-- Como se verifica: `scripts/mc*-prova-mutacao.mjs`; contagem `n/n` mutantes RED; md5 restaurado.
+- Como se verifica: `scripts/mc*-prova-mutacao.mjs`; contagem `n/n` mutantes RED; md5 restaurado (T5: confirmar que o mutante ENTROU).
 - Exemplo medido: MC105a — mutação 30/30; MC104.3 — 27/27.
 
 ## GATE 8 — TESTE BIDIRECIONAL
@@ -73,10 +90,10 @@ Um UTAC só fecha com: entregáveis presentes, validador lido, logs escritos, ve
 verde, commit final. Pendências ficam **declaradas**, não escondidas.
 - Como se verifica: relatório com secção «Pendências (não executadas)» + critério de fecho cumprido.
 
-## GATE 12 — O EXECUTOR NÃO CONCEBE (R20)
+## GATE 12 — O EXECUTOR NÃO CONCEBE (AU3)
 O executor executa o spec. Se encontrar ambiguidade, conflito ou lacuna → **PARA e escala ao
 operador** com a pergunta e as opções. Não decide produto, não redesenha, não inventa.
-- Como se verifica: secção de conflitos/ambiguidades no SEG-1; decisões do operador (R18) registadas.
+- Como se verifica: secção de conflitos/ambiguidades no SEG-1; decisões do operador (P4) registadas.
 
 ## GATE 13 — AUTO-CONTIDO
 Cada ficheiro/log tem contexto suficiente para funcionar isolado. O executor de um UTAC futuro

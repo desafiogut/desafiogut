@@ -1,7 +1,7 @@
 # =============================================================================
 # TEMPLATE DE SPEC DE UTAC — Unidade de Trabalho Auto Contido (UTAC)
 # =============================================================================
-# Um spec completo tem ~35 linhas. A Skill UTAC01 compõe o UTAC inteiro
+# Um spec completo tem menos de 60 linhas. A Skill UTAC01 compõe o UTAC inteiro
 # (contexto + HARD GATES + regras + frente + SEG-1..SEG6 + validador + fecho)
 # a partir deste spec.
 #
@@ -67,6 +67,18 @@ proibe:
 #   Se uma dependência não estiver satisfeita, PARAR (HARD GATE 1).
 dependencias:
   - UTACs fechados em _logs/ como fonte de conteúdo
+
+# OBRIGATORIO — categorias de regras activas. Default: as 9.
+#   E=engenharia T=testes G=git/deploy L=lgpd S=seguranca A=ambiente P=processo AU=autonomia ST=stop
+regras_activas: [E, T, G, L, S, A, P, AU, ST]
+
+# OPCIONAL — regras extra por tipo (IDs de qualquer categoria).
+regras_extra: []
+
+# OPCIONAL — condições de paragem específicas deste UTAC (IDs ST*). Default: [].
+stop_conditions_extra: []
+#  - ST3   # migração SQL não autorizada
+#  - ST5   # idempotência quebrada
 
 # OPCIONAL — avisos/condições (ex.: «se o disco < 5 GB, PARAR»).
 ressalvas:

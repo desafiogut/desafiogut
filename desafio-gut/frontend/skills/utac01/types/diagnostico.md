@@ -5,11 +5,11 @@
 
 ## HARD GATES extra
 Nenhum gate adicional. Aplicam-se os 16 com este critério concreto:
-- **HG2 (A/B)** — não aplicável (não há causalidade); substitui-se por **A/B de ficheiros**
-  (zero diff nas fontes lidas).
-- **HG7 (mutação)** — adaptado: prova-se que o **medidor** distingue (controlo positivo com um
+- **A/B pareado (E8)** — não há causalidade; substitui-se por **A/B de ficheiros** (zero diff nas
+  fontes lidas).
+- **GATE 7 (mutação)** — adaptado: prova-se que o **medidor** distingue (controlo positivo com um
   caso de valor conhecido), não que um código foi mutado.
-- **HG4** — proibição reforçada: nada é escrito fora de `_logs/` e `Desktop/`.
+- **GATE 3 (escopo cirúrgico)** — reforçado: nada é escrito fora de `_logs/` e `Desktop/`.
 
 ## Segmentos típicos
 `SEG-1` (medir) → `SEG0` (todas as frentes de leitura) → `SEG3` (validador adversarial) → `SEG6`

@@ -20,7 +20,7 @@ posição do segmento antes do SEG0).
 - **-1.6 Log** — escrever `_logs/UTAC<NNN>_SEG-1_MEDICAO.md` (este ficheiro é o produto do segmento).
 - **-1.7 Veredito** — **SEGUIR** / **PARAR** / **AJUSTAR**, escrito no fim do log.
 
-## Secção obrigatória: conflitos e ambiguidades (R20 / HARD GATE 12)
+## Secção obrigatória: conflitos e ambiguidades (AU3 / HARD GATE 12)
 Listar **perguntas ao operador** — não as resolver sozinho:
 > ⚠️ Conflitos entre o enunciado e o medido (R20 — não resolvidos pelo executor)
 > 1. …

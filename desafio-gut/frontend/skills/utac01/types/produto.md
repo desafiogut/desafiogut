@@ -7,8 +7,8 @@
 - **Idempotência** — a operação tem de ser repetível sem efeito duplo (chave de idempotência, UNIQUE
   com compensação, ou CAS). Medir o efeito líquido.
 - **Testes E2E / teste do USO** — provar o caminho real de ponta a ponta, não só a função.
-- **HG13 (concorrência)** — testar com `Promise.all` (10 cliques simultâneos revelaram 402 falso e
-  cobrança sem reembolso no MC105a).
+- **Concorrência (T4)** — testar com `Promise.all` (10 cliques simultâneos revelaram 402 falso e
+  cobrança sem reembolso no UTAC105a); idempotência (S2/ST5).
 - **A/B pareado** dos consumidores existentes — zero diff onde não devia haver comportamento novo.
 - **Preservação fiscal** — NF-e, `txHash`, rastreio e commitment **nunca** alterados.
 

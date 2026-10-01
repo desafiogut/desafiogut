@@ -4,7 +4,7 @@
 irreversível (DDL) ou global (flag que muda comportamento).
 
 ## HARD GATES extra
-- **Migração SQL só com autorização explícita (HG15)** — o SQL vai para
+- **Migração SQL só com autorização explícita (ST3 / HARD GATE 12)** — o SQL vai para
   `desafio-gut/frontend/supabase/migrations/` e para `_logs/`; aplicar só com autorização do operador.
 - **Flags em default seguro** — criar e **NÃO ligar** (defaults = comportamento actual); A/B tempo
   zero de diferença.
