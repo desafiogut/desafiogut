@@ -1,0 +1,37 @@
+# UTAC105b.3 - SEG5 evidencia: os dois ficheiros de teste, corridos daqui
+# comando: node --test --experimental-test-module-mocks <ficheiro>
+
+## _tests/utac105b3-register-endereco.test.mjs (novo)
+✔ E1 [V-4] anónimo com `endereco` DE TERCEIROS (sem cota) → 401 e NÃO cria (26.6287ms)
+✔ E2 [V-4] anónimo com `endereco` de terceiros QUE JÁ TEM cota → 401 e cota intacta (2.3559ms)
+✔ E3 [V-4] LOGADO com token de OUTRO + `endereco` de terceiros → 403 e NÃO escreve (1.0086ms)
+✔ E4 logado com o PRÓPRIO `endereco` + token → 201 (contrato MC12.3.1 preservado) (3.0646ms)
+✔ E5 SEM `endereco` (cadastro directo — o único caminho do frontend) → 201 cria `cnpj:` (1.6233ms)
+✔ E6 admin + `endereco` de terceiros → 201 (acesso total) (1.0729ms)
+✔ E7 `endereco` com formato inválido → 400 (o formato é validado ANTES da posse) (2.0727ms)
+✔ E8 sem token E leitura do store em falha + `endereco` de terceiros → 401 (não 502, nem oráculo) (0.6818ms)
+✔ E9 `cliente_id` no corpo é IGNORADO por este ramo (não se aponta para a vítima) (0.9144ms)
+✔ E10 `endereco` próprio em CAIXA MISTA + token → 201 (normalização não bloqueia o dono) (0.9664ms)
+✔ E11 token inválido/expirado + `endereco` de terceiros → 401 e NÃO escreve (0.8845ms)
+ℹ tests 11
+ℹ pass 11
+ℹ fail 0
+
+## _tests/cotas-anti-fraude.test.mjs (legado, com R18-5/OPCAO A)
+✔ (a) anti-duplicidade CNPJ: mesmo CNPJ em cliente diferente → 409 (25.8586ms)
+✔ (b) anti-Sybil: mesmo fingerprint + CNPJ diferente em 24h → 429 (2.4271ms)
+✔ (c) login lookup por cliente_id → devolve a cota AO DONO (2.6618ms)
+✔ (d) lookup por email → devolve o registo a utilizador autenticado (2.2108ms)
+✔ MC87: ?cliente_id= anónimo → 401 (era 200 com cnpj+email) (2.0356ms)
+✔ MC87: ?cliente_id= de OUTRA carteira → 403 (IDOR fechado) (2.2939ms)
+✔ MC87: ?email= anónimo → 401 (1.4087ms)
+✔ MC87: ?cnpj= sem empresa → confirma duplicidade SEM revelar email/endereco (1.6827ms)
+✔ MC87: ?cnpj= com empresa CERTA → devolve contacto (fluxo de cadastro intacto) (1.6929ms)
+✔ MC87: ?cnpj= com empresa ERRADA → sem detalhes (1.4643ms)
+✔ MC87: ?categoria= anónimo → projeção pública, sem cnpj/email (1.3126ms)
+✔ MC87: ?categoria= como admin → registo completo preservado (1.5123ms)
+✔ MC87: resumo anónimo não enumera cliente_ids (2.1854ms)
+✔ (e) CRUD admin: upsert + delete (1.3019ms)
+ℹ tests 14
+ℹ pass 14
+ℹ fail 0

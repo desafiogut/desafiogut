@@ -445,7 +445,12 @@ async function handlePost(req) {
     // Regra (a mesma família do MC89.38): **se vem `endereco` no corpo, exige-se Bearer do
     // MESMO endereço — ou admin**. Sem `endereco` no corpo (o ÚNICO caminho que o frontend
     // usa: `SejaNossoParceiro.jsx:203-212`) nada muda — continua a criar `cnpj:…`.
-    // Ordem: ANTES da leitura do store (auth antes da existência), como no `update-corporativo`.
+    // Ordem: ANTES da leitura da COTA (`getCota`), como no `update-corporativo`.
+    // ⚠️ Precisão (achado ℹ️-1 do validador SEG3): a guarda corre DEPOIS de `getCotaByCnpj` (l.402)
+    // e de `getFingerprint` (l.410) — logo «anónimo + `endereco` de terceiros + CNPJ JÁ registado
+    // noutro `cliente_id`» devolve **409 `cnpj_duplicado`**, não 401. Não é grave: não há escrita
+    // nesse caminho e o 409 NÃO é oráculo novo (é alcançável anonimamente SEM `endereco`, pelo bloco
+    // anti-duplicidade do MC12.3, inalterado por este UTAC). Registado como limitação declarada.
     if (endereco && chamadorReg.papel !== "admin") {
       const enderecoDoCorpo = String(endereco).toLowerCase();
       const ehDonoDoEndereco = !!chamadorReg.endereco && chamadorReg.endereco === enderecoDoCorpo;

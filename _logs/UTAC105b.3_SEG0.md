@@ -78,7 +78,7 @@ corpo é ignorado), E10 (caixa mista), E11 (token inválido).
 | ME1 | **[EQUIVALENTE]** sem o `!!chamadorReg.endereco &&` | sobrevive ✅ declarado |
 
 5 mortos + 2 equivalentes; `md5` de `cotas.mjs` restaurado em todos (`48f0ba05befd…`, conferido).
-**Evidência:** `_logs/UTAC105b.3_SEG1_mutacao_saida.txt`.
+**Evidência:** `_logs/UTAC105b.3_SEG0_mutacao_saida.txt`.
 
 **Nota de defesa em profundidade (medida, não suposta):** `E2` **não** morre em MB1 nem MB4 porque
 a guarda do UTAC105b.2 (cota já existente) também a recusa. Foi preciso o mutante **combinado MC1**
@@ -124,11 +124,10 @@ tocada.** Medido: **14/14 VERDE**.
 ## Nota de consolidação da evidência
 
 O executor que retomou **re-correu os mesmos instrumentos** do PoC e da mutação e obteve saída
-**byte-idêntica** à da passagem interrompida (`diff` vazio). Por isso **não se duplicaram** ficheiros:
-a evidência do PoC/mutação continua em `_logs/UTAC105b.3_SEG-1_poc_ANTES.txt`,
-`_logs/UTAC105b.3_SEG-1_poc_DEPOIS.txt` e `_logs/UTAC105b.3_SEG1_mutacao_saida.txt`, apesar de o
-nome dizer «SEG-1». Acrescenta-se só a evidência **nova**:
-`_logs/UTAC105b.3_SEG0_bidirecional.txt`.
+**idêntica** à da passagem interrompida (`diff` vazio nas linhas de resultado). O PoC mantém os
+ficheiros existentes (`_logs/UTAC105b.3_SEG-1_poc_ANTES.txt`, `_logs/UTAC105b.3_SEG-1_poc_DEPOIS.txt`).
+A evidência da mutação foi **substituída** por `_logs/UTAC105b.3_SEG0_mutacao_saida.txt` e a antiga
+(`_SEG1_mutacao_saida.txt`) **removida** — ver «erros dos instrumentos», ponto 3, abaixo.
 
 ## Erros dos meus instrumentos (declarados)
 
@@ -140,6 +139,21 @@ nome dizer «SEG-1». Acrescenta-se só a evidência **nova**:
    de leitura de ficheiros, ela substituiu um template literal por `***` e o ficheiro resultante não
    compilava (`SyntaxError: Unexpected token '**'`). Corrigido lendo **bytes crus** (Python/`io`).
    **Lição: para copiar código com template literals, ler bytes, nunca a ferramenta de leitura.**
+3. **Evidência da mutação ficou inconsistente com o artefacto commitado.** Ao commitar, levou-se a
+   evidência da passagem interrompida (`_SEG1_mutacao_saida.txt`, que diz `md5 0e3a4284… (disco: CRLF)`)
+   em vez da re-medição (`md5 48f0ba05… (disco: LF)`) — ou seja, o ficheiro de evidência **contradizia**
+   o `cotas.mjs` que estava a ser commitado. Detectado por leitura do validador adversarial e
+   **corrigido** (ficheiro substituído e renomeado para `_SEG0_mutacao_saida.txt`). A lição: a evidência
+   tem de ser a do artefacto **que entra**, não a do ensaio anterior.
+4. **`patch` corrompeu o `CLAUDE.md`.** A ferramenta de edição partiu uma linha não relacionada por
+   conter um `\r` literal (num snippet sobre CRLF). Detectado pelo `git diff` (hunk extra). Corrigido
+   reconstruindo o ficheiro a partir do `HEAD` e aplicando **só** a alteração pretendida, em bytes —
+   confirmado: 1 hunk, 1 linha, região do snippet byte-idêntica.
+5. **`cmd //c mklink` não corre em git-bash.** A criação das junctions do worktree falhou em silêncio
+   (o `cmd` abria em modo interactivo). Resolvido com um `.bat` invocado por
+   `MSYS2_ARG_CONV_EXCL='*' cmd /c`. Faltava ainda uma **terceira** junction
+   (`netlify/functions/node_modules`, onde vive `@netlify/blobs`) — sem ela o worktree dava 69 falhas
+   em vez de 967/973. **Uma cópia "limpa" do repo não é a suíte: medir o ambiente antes de concluir.**
 
 ## VEREDITO SEG0-SEG2: **SEGUIR** para o SEG3 (validador adversarial)
 

@@ -1,4 +1,9 @@
-cotas.mjs md5 antes: 0e3a42844264d5deea1d953a5adafc9a  (disco: CRLF)
+# UTAC105b.3 - prova de mutacao (T1). Retomada 2026-10-01.
+# comando: node "C:/Users/Moltbot/tmp-utac105b3/mut-utac105b3.mjs"   (corrido da raiz do repo)
+# NOTA: o `cotas.mjs` em disco e LF (regra A2). O md5 48f0ba05... e o MESMO que esta commitado.
+#       (a passagem interrompida correra sobre um artefacto parqueado em CRLF, md5 0e3a4284...)
+
+cotas.mjs md5 antes: 48f0ba05befd289a34b4cce176036d20  (disco: LF)
 
 base (sem mutação): todos os 11 VERDE ✅
 
@@ -10,6 +15,6 @@ MB4  aceita qualquer token (ehDonoDoEndereco sempre true)       RED ✅         
 MB5  [EQUIVALENTE] sem `.toLowerCase()` no `endereco` do corpo  EQUIVALENTE ✅                (mortos=nenhum)  [restaurado md5=true]
 ME1  [EQUIVALENTE] sem o `!!chamadorReg.endereco &&` (null === x já é false) EQUIVALENTE ✅                (mortos=nenhum)  [restaurado md5=true]
 
-md5 depois: 0e3a42844264d5deea1d953a5adafc9a  = igual ao de antes ✅
+md5 depois: 48f0ba05befd289a34b4cce176036d20  = igual ao de antes ✅
 
 VEREDITO MUTACAO: TODOS OS MUTANTES COMO ESPERADO

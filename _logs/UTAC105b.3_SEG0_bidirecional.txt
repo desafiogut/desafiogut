@@ -1,3 +1,10 @@
+# UTAC105b.3 - Frente C, prova BIDIRECCIONAL (T4).
+# O MESMO ficheiro de teste, corrido contra o codigo ANTIGO (baseline 00610b0), TEM de cair.
+# comando: cd desafio-gut/frontend/netlify/functions && \
+#          node --test --experimental-test-module-mocks _tests/utac105b3-register-endereco.test.mjs
+#          (com `cotas.mjs` restaurado do 00610b0; a correccao foi reposta a seguir, md5 48f0ba05...)
+# Resultado: 7 passam / 4 FALHAM -> E1, E3, E8, E11 (exactamente os que exigem a correccao).
+
 ✖ E1 [V-4] anónimo com `endereco` DE TERCEIROS (sem cota) → 401 e NÃO cria (35.0854ms)
 ✔ E2 [V-4] anónimo com `endereco` de terceiros QUE JÁ TEM cota → 401 e cota intacta (2.6036ms)
 ✖ E3 [V-4] LOGADO com token de OUTRO + `endereco` de terceiros → 403 e NÃO escreve (1.9504ms)

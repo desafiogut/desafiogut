@@ -1,0 +1,51 @@
+=== 1. ENTREGAVEIS ===
+PASS   existe: cotas.mjs (codigo)
+PASS   existe: teste novo (11 testes)
+PASS   existe: legado (helper reqRegister)
+PASS   existe: _logs/SEG-1_MEDICAO.md
+PASS   existe: _logs/SEG0.md
+PASS   existe: _logs/SEG0_poc_ANTES.txt
+PASS   existe: _logs/SEG0_poc_DEPOIS.txt
+PASS   existe: _logs/SEG0_mutacao_saida.txt
+PASS   existe: _logs/SEG0_bidirecional.txt
+PASS   existe: _logs/SEG3_VALIDADOR.md
+PASS   existe: _logs/SEG4.md
+PASS   existe: _logs/SEG5_VERIFICACAO.md
+PASS   existe: Desktop/UTAC105b.3-RELATORIO.md
+PASS   existe: CLAUDE.md actualizado
+
+=== 2. A GUARDA (com CONTROLO POSITIVO) ===
+FALHA  cotas.mjs contem a guarda de posse do endereco
+PASS   cotas.mjs devolve 401 a anonimo (token_ausente)
+PASS   [CONTROLO POSITIVO] a MESMA verificacao FALHA no codigo antigo  — se der PASS, o detector e cego e o verde acima nao vale
+
+=== 3. ESCOPO (GATE 3) ===
+warning: in the working copy of 'desafio-gut/frontend/package-lock.json', CRLF will be replaced by LF the next time Git touches it
+PASS   nenhum ficheiro de CODIGO fora do autorizado mudou  — (nenhum)
+PASS   os 3 ficheiros de codigo autorizados estao alterados  — 16 caminhos alterados no total (incl. logs)
+PASS   package-lock.json NAO foi commitado
+
+=== 4. RAMOS PROIBIDOS INTACTOS (GATE 4) ===
+PASS   cotas.mjs: aditivo puro (0 linhas removidas)  — +32 / -0
+PASS   cotas.mjs: 1 unico hunk
+FALHA  update-corporativo NAO aparece no hunk
+PASS   guardAdmin / upsertCota NAO aparecem no hunk
+
+=== 5. ASSERCOES DO LEGADO INTACTAS (R18-5) ===
+PASS   nenhuma assercao do legado foi alterada/removida  — 45 assercoes, identicas antes/depois
+
+=== 6. DECISAO R18-5 NOS 3 LUGARES (P4/R18) ===
+PASS   _logs/
+PASS   CLAUDE.md
+PASS   Desktop/RELATORIO
+
+=== 7. SUITE CANONICA ===
+      frontend: VERDE 535/535 pass
+      backend: VERDE 967/973 pass
+      VEREDITO: VERDE
+PASS   suite canonicamente VERDE
+
+=== 8. DISCO ===
+PASS   disco >= 5 GB (21G livres)
+
+VEREDITO AD-HOC: 2 FALHA(S)

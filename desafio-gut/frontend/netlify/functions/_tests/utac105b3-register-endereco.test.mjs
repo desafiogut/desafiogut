@@ -181,10 +181,19 @@ test("E11 token inválido/expirado + `endereco` de terceiros → 401 e NÃO escr
   assert.equal(r.escreveu, false);
 });
 
-// ── LISTA DE MUTAÇÕES (T1) — cada uma tem de pôr o teste indicado RED ────────
-//   MB1 remover a guarda da posse do `endereco` .............. E1, E2, E3
-//   MB2 `papel === "anon"` → `false` (anónimo tratado como user) E1, E2
-//   MB3 remover a isenção do admin ........................... E6
-//   MB4 `===` → `true` (aceitar qualquer token) .............. E3
-//   MB5 sem `.toLowerCase()` no `endereco` do corpo .......... E10
-//   ME1 [EQUIVALENTE] `String(endereco)` (já é string) ....... — (no-op, declarado)
+// ── LISTA DE MUTAÇÕES (T1) — cada mutante tem de pôr os testes indicados RED ─
+//   Medido com `tmp-utac105b3/mut-utac105b3.mjs`. A coluna MORTOS é o conjunto COMPLETO observado.
+//   ⚠️ Revisão pós-validador (achado ℹ️-2 do SEG3): o mapa anterior estava errado — dizia que MB5
+//   matava E10 (não mata: é equivalente) e omitia o MC1; e a enumeração de mortos era só a
+//   INTERSECÇÃO com o esperado, o que sub-relatava (MB1 mata também E8/E11, como agora se vê).
+//   MB1 remover a guarda da posse do `endereco` ............... MORTOS: E1, E3, E8, E11
+//   MC1 tirar as DUAS guardas (V-4 e a do b.2) ................ MORTOS: E1, E2, E3, E8, E11
+//   MB2 `papel === "anon"` → `false` (anónimo tratado como user) MORTOS: E1, E2, E8, E11
+//   MB3 remover a isenção do admin ........................... MORTOS: E6
+//   MB4 `ehDonoDoEndereco` sempre `true` (aceita qualquer token) MORTOS: E1, E3, E8, E11
+//   MB5 [EQUIVALENTE] sem `.toLowerCase()` no `endereco` do corpo — sobrevive: `validarEndereco`
+//       (`_lib/validate.mjs`) JÁ devolve minúsculas, logo é defesa inalcançável. Declarado, não fingido.
+//   ME1 [EQUIVALENTE] sem o `!!chamadorReg.endereco &&` — sobrevive: `null === x` já é `false`.
+//   E2 não morre em MB1/MB2/MB4 por si só: a guarda do UTAC105b.2 (cota já existente) também a recusa
+//   (defesa em profundidade) — só o mutante COMBINADO MC1 a mata. E8/E11 morrem em qualquer mutante
+//   que remova a guarda, porque é ela que garante o 401 ANTES de se chegar ao store.
