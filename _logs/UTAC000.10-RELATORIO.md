@@ -133,10 +133,38 @@ com **7 ficheiros por commitar no total**, para o operador decidir.
    está no teste da página (que corre o componente a sério).
 5. **Contadores do Dashboard** (`totalLances`, `lancesUnicos`) continuam a derivar da lista local —
    declarados no UTAC000.9 §7.5, **não são o vencedor**, não se tocam (GATE 18).
+6. **Robustez em falta no overlay (achado do validador, novo):** `MercadoLances.jsx` l. 71 faz
+   `vencedor.endereco.slice(…)` **sem guarda** ⇒ rebenta com `vencedor` malformado
+   (`Cannot read properties of undefined/null (reading 'slice')`; reprodução: `{showOverlay:true,
+   vencedor:{}}`). **Pré-existente** (linha do overlay original) e **hoje inalcançável** pelo
+   contexto real; o cartão do Dashboard **tem** a guarda (`Dashboard.jsx` l. 410). **Torna-se
+   alcançável se o `showOverlay` for religado** — que é precisamente o item (a) que o validador
+   deixa ao operador (sem religar, este UTAC não tem efeito visível). Registado como **DEBT-011**
+   (correcção trivial, mas `MercadoLances.jsx` está fora do escopo autorizado deste UTAC).
+7. **Prova de travessia em runtime:** **DEBT-010** — o mutante M12 (de-wiring em runtime, texto da
+   regra intacto) passa **5/5**, logo nenhum teste prova a cablagem `AppContext → página`. O
+   validador sugere a via: um arnês que monte o `AppProvider` verdadeiro com duplos dos seus I/O
+   (Privy/Blobs/on-chain), ou um teste de integração no browser contra uma edição consolidada.
 
 ## 8. Custo
 Ver §9.
 
 ## 9. Custo da API (GATE 16)
-Lido de `state.db` no fecho — ver resposta final ao operador (mesma sessão do UTAC000.8/000.9;
-declarado).
+**Declaração:** este UTAC correu na **mesma sessão Hermes** dos UTAC000.8/000.9
+(`20261001_184741_207919`, `cli`) — a plataforma não abriu sessão nova. O custo **deste** UTAC é
+medido por **diferença** entre as leituras do `state.db` (`cost_status = estimated`):
+
+| | input | output | cache-read | ≈ USD |
+|---|---|---|---|---|
+| leitura no fecho do UTAC000.9 | 462 498 | 248 823 | 75 093 632 | 0,3447 |
+| leitura no fecho do UTAC000.10 | 592 506 | 331 622 | 94 893 184 | 0,4415 |
+| **diferença = UTAC000.10 (pai)** | **+130 008** | **+82 799** | **+19 799 552** | **≈ 0,0968** |
+
+Mais o **validador adversarial** (subagente próprio, sessão `20261001_204601_646b14`): **US$ 0,0345**.
+
+**⇒ UTAC000.10 ≈ US$ 0,131** (0,0968 + 0,0345).
+
+**Limite de tempo (HI5/R18-2):** o padrão são **2 h**; este UTAC somou a implementação, a frente de
+limpeza (medida por candidato), o fecho do veredicto e as correcções de registo — **excedeu as 2 h**.
+Declarado (não escondido): o trabalho remanescente eram **registos** (fechar o veredicto + as duas
+dívidas novas), não mais código.
