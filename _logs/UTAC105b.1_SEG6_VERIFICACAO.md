@@ -37,4 +37,19 @@ Recomendação: **resolver o P0 do `register-corporativo` antes de construir UI 
 (UTAC105c é UI do cliente, não do lojista — logo não é bloqueante estrito, mas o painel do lojista é
 vizinho directo). Escalado ao operador para decisão.
 
-## 6.6 VEREDITO DO SEG6: **FECHADO** (o UTAC105b.1) · **1 P0 escalado** (fora do escopo, alheio a este commit).
+## 6.6 Decisão pendente do operador — o que o executor fez e porquê
+Foi pedida uma decisão sobre o P0 do `register-corporativo` (4 opções). **O operador não respondeu
+dentro do tempo** («use o seu melhor juízo e prossiga»). O executor escolheu a opção **conservadora e
+conforme ao escopo**:
+- **NÃO tocou em código.** O UTAC105b.1 autoriza apenas a ação `update-corporativo`; o enunciado manda
+  **PARAR e reportar** antes de tocar em mais, e o GATE 12/AU3 proíbe o executor de alargar escopo.
+- Escreveu o **spec-candidato** `_logs/UTAC105b.2.spec.yml`, ao abrigo do mecanismo da própria skill
+  («ideia nova → candidato a UTAC futuro + reportar»). Contém o achado medido, as 3 frentes, as
+  autorizações/proibições propostas, as regras e as condições de paragem **extra** (ST5 idempotência).
+- **Validado com o verificador da Skill UTAC01** (`utac000-valida-spec.mjs`) → **VALIDO**.
+- ⚠️ **NÃO está executado, NÃO está aprovado e NÃO gera trabalho nenhum** até o co-construtor/operador
+  decidir. O spec declara isso no cabeçalho.
+- A opção «abrir já o UTAC» continua disponível: basta dizê-lo.
+
+## 6.7 VEREDITO DO SEG6: **FECHADO** (o UTAC105b.1) · **1 P0 escalado e documentado** em spec-candidato
+(fora do escopo deste UTAC; alheio a este commit; **não corrigido**).

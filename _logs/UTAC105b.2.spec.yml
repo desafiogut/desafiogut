@@ -1,0 +1,101 @@
+# =============================================================================
+# SPEC CANDIDATO — NÃO EXECUTADO.  Escrito pelo executor do UTAC105b.1 (2026-10-01)
+# ao abrigo do GATE 12 / AU3 da Skill UTAC01 («o executor não concebe: ideia nova →
+# candidato a UTAC futuro + reportar ao operador»).
+#
+# MOTIVO DE NÃO TER SIDO EXECUTADO: o UTAC105b.1 autorizava APENAS a ação
+# `update-corporativo`; o enunciado manda PARAR e reportar antes de tocar em mais.
+# O co-construtor/operador decide se este UTAC avança (e com que escopo).
+# =============================================================================
+
+schema: utac/1
+
+name: UTAC105b.2
+
+title: "P0 — register-corporativo: anónimo sobrescreve a cota de outra pessoa"
+
+type: saneamento
+
+baseline: b98f741   # medido por quem escreve este spec (HEAD no momento da escrita)
+
+motivo: >-
+  Achado ⚠️ F1 do validador adversarial do UTAC105b.1, da MESMA classe P0 que motivou
+  aquele UTAC (escrita sem autorização), mas num ramo IRMÃO que ficou fora do escopo.
+  MEDIDO no código real (sonda do validador, 2026-10-01): POST ANÓNIMO a
+  cotas?action=register-corporativo com {endereco: <0x da vítima>, cnpj: <novo válido>}
+  devolve 201 e upsertCota(clienteId, registro) SOBRESCREVE a cota da vítima — empresa,
+  cnpj, email, e via colunas() também categoria:null, vendida:false, payload — ou seja
+  DESTRÓI valor/categoria/vendida (o que a pessoa pagou). Com o PRÓPRIO CNPJ da vítima
+  também dá 201 (o 409 de duplicidade não dispara) e troca a empresa. O `endereco` vem
+  do CORPO, sem prova de posse.
+  Estado: NÃO corrigido. Produção afectada enquanto não for tratado.
+
+frentes:
+  - id: A
+    nome: Decidir o desenho do guard (R18 — o executor NÃO decide)
+    entrega: [_logs/UTAC105b.2_SEG-1_MEDICAO.md]
+    passos:
+      - "Medir: quem chama register-corporativo hoje? (auth-form, cadastro directo MC12.3.1, APK?)"
+      - "Medir: quantas cotas têm cliente_id 'cnpj:XXXX' vs endereço 0x… (produção, só SELECT)"
+      - "PERGUNTA AO OPERADOR: o registo anónimo de uma cota NOVA tem de continuar a funcionar?"
+      - "Consequência a decidir: se o anónimo passar a exigir JWT, o cadastro directo quebra?"
+  - id: B
+    nome: Guard no register-corporativo
+    entrega: [netlify/functions/cotas.mjs, _tests/utac105b2-register.test.mjs]
+    passos:
+      - "NUNCA deixar um pedido sem prova de posse SOBRESCREVER uma cota existente"
+      - "Se vier `endereco` no corpo: exigir Bearer do MESMO endereço, ou admin"
+      - "Registo de cota NOVA pelo fluxo legítimo (se o operador o mantiver): preservar"
+      - "Prever idempotência: repetir o próprio registo não pode virar 201 silencioso sobre dados alheios"
+  - id: C
+    nome: POST genérico de admin que apaga a coluna `endereco`
+    entrega: [netlify/functions/cotas.mjs]
+    passos:
+      - "cotas.mjs:567-580 constrói o registo SEM `endereco` → upsert apaga a coluna"
+      - "Agora que o ramo (b) do MC89.38 depende dessa coluna, essa cota perde o vínculo e o dono leva 403"
+      - "Correcção proposta (1 linha): `endereco: existente?.endereco ?? null`"
+
+autoriza:
+  - ler cotas.mjs, _lib/cotas-store.mjs e os consumidores do register-corporativo
+  - alterar netlify/functions/cotas.mjs (apenas o ramo register-corporativo e o POST genérico)
+  - criar/actualizar _tests/utac105b2-register.test.mjs
+  - registar migração SQL se for necessária — SEM aplicar sem autorização explícita
+  - commit + push (foreground)
+  - actualizar o CLAUDE.md (P5)
+  - despachar validador adversarial (obrigatório)
+
+proibe:
+  - git add -A
+  - alterar a ação update-corporativo (fechada no UTAC105b.1 — não se reabre)
+  - deploy em background
+  - alterar _lib/ sem reportar antes
+  - aplicar migrações sem autorização explícita
+  - apagar ou reescrever dados de cotas existentes
+  - quebrar o cadastro legítimo (se o operador decidir mantê-lo)
+  - tocar no Supabase (escrita) e no Netlify
+  - tomar decisões de produto / inventar dados
+
+dependencias:
+  - decisão do operador na Frente A (o desenho do guard depende dela)
+  - UTAC105b.1 fechado (b98f741) — é o precedente do guard e dos testes
+
+regras_activas: [E, T, G, L, S, A, P, AU, ST]
+
+regras_extra:
+  - S1   # credenciais: o guard usa o JWT, nunca um segredo novo
+  - S4   # Object.hasOwn na leitura estrita do corpo
+  - T3   # duplos fiéis (o ramo mexe com `colunas()` do store real)
+  - E8   # A/B pareado: o registo legítimo tem de continuar a funcionar
+
+stop_conditions_extra:
+  - ST5  # idempotência quebrada (re-registo a sobrescrever dados alheios)
+  - ST4  # suíte vermelha
+  - ST9  # token vaza
+
+ressalvas:
+  - "P0: considerar ABERTO em produção até este UTAC fechar"
+  - "PARAR e reportar se a correcção quebrar o fluxo anónimo legítimo (pode exigir alterar o frontend)"
+  - "A/B pareado obrigatório: registo legítimo antes/depois com os mesmos dados"
+  - "Não repetir o erro do UTAC105b.1: medir QUEM chama antes de impor autenticação (P10)"
+
+subdivisoes: []
