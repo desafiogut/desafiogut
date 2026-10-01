@@ -481,8 +481,48 @@ async function handlePost(req) {
     if (!clienteIdUpdate || typeof clienteIdUpdate !== "string") {
       return jsonError(400, "cliente_id_obrigatorio", "cliente_id é obrigatório");
     }
-    // auth: verifica se o email do body bate com o registro (simples, mas eficaz)
-    const existenteUpdate = await getCota(clienteIdUpdate);
+    // ── UTAC105b.1 (P0) — POSSE DO `cliente_id` (IDOR) ────────────────────────
+    // ⚠️ ANTES: este ramo NÃO autenticava nada. O comentário que aqui estava dizia
+    // «verifica se o email do body bate com o registro (simples, mas eficaz)» e a
+    // verificação NÃO EXISTIA — qualquer pessoa que conhecesse um `cliente_id` de
+    // cota corporativa alterava empresa/segmento/site/logoUrl/email, sem token
+    // (PoC em `_logs/UTAC105b.1_SEG0.md`: sem token → 200, e escreveu).
+    // Regra MC89.38, a mesma do `produtos.mjs:296-354`:
+    //   (a) `cliente_id` == endereço do JWT ................ é o próprio
+    //   (b) a cota tem `endereco` == endereço do JWT ....... está vinculada
+    //   (c) admin ......................................... mesma excepção dos irmãos
+    // Fora disto: 401 sem token, 403 com token de outro. A ausência de prova não
+    // pode valer como prova.
+    // Nota: o painel (`src/pages/CorporativoDashboard.jsx`) passou a enviar o token
+    // no mesmo UTAC — sem isso a correcção quebrava o dono legítimo (medido: o
+    // `apiPost` só envia Bearer se o token for passado, e a chamada não o passava).
+    const chamadorUpd = await resolverChamador(req);
+    if (chamadorUpd.papel === "anon") {
+      return jsonError(401, "token_ausente",
+        "Authorization: Bearer *** obrigatório para editar a cota corporativa");
+    }
+    let existenteUpdate;
+    try {
+      existenteUpdate = await getCota(clienteIdUpdate);
+    } catch (err) {
+      // Falha de leitura NÃO vira autorização. Fail-closed (igual ao produtos.mjs).
+      console.warn("[cotas] update-corporativo: leitura de cota falhou:", err?.message);
+      return jsonError(502, "store_indisponivel", "Não foi possível ler a cota");
+    }
+    if (chamadorUpd.papel !== "admin") {
+      const idNorm = String(clienteIdUpdate).toLowerCase();
+      const ehProprio = !!chamadorUpd.endereco && idNorm === chamadorUpd.endereco;
+      const enderecoDaCota = existenteUpdate?.endereco
+        ? String(existenteUpdate.endereco).toLowerCase() : null;
+      const vinculado = !!chamadorUpd.endereco && enderecoDaCota === chamadorUpd.endereco;
+      // ⚠️ Consequência ACEITE e documentada (decisão R18-2 do operador no UTAC105b.1):
+      // uma cota com `cliente_id` no formato `cnpj:XXXX` (cadastro directo, MC12.3.1)
+      // e sem campo `endereco` NÃO consegue demonstrar posse → o dono leva 403. É o
+      // mesmo trade-off que o `produtos.mjs` já assumiu e registou.
+      if (!ehProprio && !vinculado) {
+        return jsonError(403, "endereco_nao_corresponde", "JWT não pertence ao cliente_id informado");
+      }
+    }
     if (!existenteUpdate || existenteUpdate.tipo !== "corporativo") {
       return jsonError(404, "cota_nao_encontrada", "Registro corporativo não encontrado");
     }

@@ -97,6 +97,10 @@ export default function CorporativoDashboard() {
     setEditErro(null);
     try {
       const clienteId = cotaCorporativa?.cliente_id;
+      // UTAC105b.1 (P0) — esta chamada seguia SEM token, e o endpoint não autenticava
+      // (ver cotas.mjs): qualquer pessoa com um `cliente_id` alterava a cota. Mesmo
+      // idioma das outras chamadas autenticadas deste ficheiro (linhas 241/282/302).
+      const token = authToken || await obterAuthToken?.();
       const { ok, data } = await apiPost("cotas?action=update-corporativo", {
         cliente_id: clienteId,
         empresa: editEmpresa.trim(),
@@ -104,7 +108,7 @@ export default function CorporativoDashboard() {
         site: editSite.trim() || null,
         logoUrl: editLogoUrl.trim() || null,
         email: editEmail.trim().toLowerCase(),
-      });
+      }, { token });
       if (!ok) {
         throw new Error(data?.error?.message || "Erro ao salvar.");
       }
