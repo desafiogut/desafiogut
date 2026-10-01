@@ -84,9 +84,33 @@ mas exige autorização nova.
 4. **Worktree do UTAC000.8** (`tmp-utac0008-val/fe`) continua montado: o `cmd //c rmdir` das
    junctions é manglado pelo MSYS e a alternativa arriscava o `node_modules` real. Receita segura
    no relatório daquele UTAC.
+5. **Limitação declarada (não é o vencedor, e por isso NÃO se toca — GATE 18):** o Dashboard também
+   deriva **contadores** da lista local — `totalLances` e `lancesUnicos` (`Dashboard.jsx` l. 136-137).
+   Em mainnet esses números são «o que este browser viu» (a lista está vazia/blindada — achado já
+   registado no UTAC000.8 §-1.9). Não são o **vencedor**: corrigi-los mudaria comportamento visível
+   além do escopo autorizado. Ficam **declarados**, não escondidos.
+6. **Skill `git-worktree-validation`:** as duas armadilhas que o spec mandava acrescentar
+   (`cmd //c mklink/rmdir` manglado pelo MSYS e o `assert` antes de `desmontar()` que pendura a
+   suíte) **já lá estavam** — medidas e escritas na validação do UTAC000.8
+   (`references/worktree-deps-e-run-controlo.md` l. 96/167-187 e `references/probes-de-efeito-em-hooks.md`
+   «PITFALL 1», exit 124). Verifiquei-as e **acrescentei a terceira, medida neste UTAC**: o
+   `import DOMPurify from "dompurify"` não sobrevive ao interop do Vite SSR
+   (`default.sanitize is not a function`) → aliasar a **biblioteca**, não o `sanitize.js` real.
 
 ## 8. Custo
 Ver §9.
 
-## 9. Custo da API (sessão dedicada a este UTAC)
-Lido de `state.db` no fecho — ver a resposta final ao operador.
+## 9. Custo da API (GATE 16) — sessão dedicada a este UTAC
+**Declaração necessária:** o UTAC000.9 correu na **MESMA sessão Hermes** do UTAC000.8
+(`20261001_184741_207919`, `cli`) — a plataforma não abriu sessão nova. Como o operador pede uma
+sessão por UTAC, o custo **deste** UTAC é medido por **diferença** entre a leitura no fecho do
+UTAC000.8 e a leitura agora (`state.db`, `sessions`, `cost_status = estimated`):
+
+| | input | output | cache-read | ≈ USD |
+|---|---|---|---|---|
+| leitura no fecho do UTAC000.8 | 206 550 | 160 292 | 33 062 656 | 0,1664 |
+| leitura no fecho do UTAC000.9 | 266 534 | 218 211 | 56 464 512 | 0,2565 |
+| **diferença = UTAC000.9** | **+59 984** | **+57 919** | **+23 401 856** | **≈ 0,0901** |
+
+Mais o validador adversarial (subagente próprio, sessão separada) — valor lido no fecho e
+reportado ao operador.
