@@ -1,0 +1,18 @@
+cotas.mjs md5 antes: 3965732626899a1bee96ffe7586d8ac3  (disco: CRLF)
+
+base (sem mutação): todos os 18 VERDE ✅
+
+M1  sem o 401 (anon deixa de ser recusado)               RED ✅ (A3,A4,A5,A6)  [restaurado md5=true]
+M2  sem o 403 (qualquer autenticado passa)               RED ✅ (A7,A8,A10)  [restaurado md5=true]
+M3  sem a excepção do admin                              RED ✅ (A11,A12)  [restaurado md5=true]
+M4  sem normalizar a caixa na guarda                     RED ✅ (A2)  [restaurado md5=true]
+M5  sem o ramo (b) (vínculo por `endereco`)              RED ✅ (A9)  [restaurado md5=true]
+M6  falha de leitura engolida (fail-open)                RED ✅ (A13)  [restaurado md5=true]
+M7  404 antes do 401 (revela existência)                 RED ✅ (A3,A4)  [restaurado md5=true]
+M8  espalhar o body por cima da cota (campos proibidos entram) RED ✅ (A14)  [restaurado md5=true]
+V6  sem .toLowerCase() no `endereco` DA COTA (F2)        RED ✅ (A17)  [restaurado md5=true]
+V7  401 movido para DEPOIS da leitura (F3)               RED ✅ (A18)  [restaurado md5=true]
+
+md5 depois: 3965732626899a1bee96ffe7586d8ac3  = igual ao de antes ✅
+
+VEREDITO MUTACAO: TODOS OS MUTANTES COMO ESPERADO

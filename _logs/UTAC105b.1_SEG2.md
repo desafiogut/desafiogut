@@ -43,6 +43,9 @@ casos não é um endpoint quebrado a recusar tudo — o dono e o admin continuam
   **apenas** `cotas.mjs` e `CorporativoDashboard.jsx`.
 - Escopo provado ao carácter: em `cotas.mjs` tudo o que vem **antes** e **depois** do bloco
   `update-corporativo` é byte-idêntico ao HEAD.
-- Suíte **535/535 · 929/935 VERDE** (913/919 + os 16 testes novos); build do frontend **✓ 9.24s**.
+- Suíte **535/535 · 931/937 VERDE** (913/919 + os **18** testes finais); build do frontend **✓ 9.24s**.
+- **O commit `828f719` JÁ ESTÁ PUBLICADO em `origin/main`** — foi levado pelo push de **outro thread**
+  (UTAC000.2, commit `fbec18b`, que o declara na própria mensagem). Não fui eu que empurrei: o auto-deploy
+  do Netlify foi accionado por esse push. Declarado (P6/G3).
 
 ## 2.6 VEREDITO DO SEG2: **SEGUIR** — Frente C fechada, zero regressão para consumidores legítimos.

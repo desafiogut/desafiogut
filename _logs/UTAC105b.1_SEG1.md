@@ -16,6 +16,12 @@
 | `netlify/functions/cotas.mjs` | `0a30f401ac45c51e` → `4bfca3a8e7526a97` | 607 → 647 |
 | `src/pages/CorporativoDashboard.jsx` | `678ee34a2a2fed5e` → `fcdf830e42781712` | 638 → 642 |
 
+⚠️ **Errata do validador (SEG3 §0), aceite:** o md5 `3965732626899a1bee96ffe7586d8ac3` que uso na prova de mutação é a
+renderização **CRLF do working tree**; o md5 do **conteúdo LF** (= o que o git guarda) é `4bfca3a8e7526a9794e3755ee7dee446`.
+Nenhum desvio no repo — era a **minha régua** (md5sum sobre o ficheiro CRLF) a medir outra coisa. Confirmado por `tr -d '\r'`.
+
+O commit `828f719` tem **7 ficheiros**: os 3 de código/teste + os 4 `_logs/` deste UTAC. «Só 3 ficheiros» = só 3 **fora de `_logs/`**.
+
 **Verificação de escopo (medida):** em `cotas.mjs`, **tudo o que vem ANTES e tudo o que vem DEPOIS**
 do bloco `update-corporativo` é **byte-idêntico ao HEAD** (`== True` / `== True`); o
 `guardAdmin(req)` e o `export default` continuam intactos. Nenhum outro endpoint, nenhuma outra
@@ -33,7 +39,8 @@ função, nenhuma migração, nenhum dado.
 faz, com o PoC, a regra e o registo do defeito.
 
 **Frontend** (`CorporativoDashboard.jsx`): +2 linhas, no idioma **já usado 3× no mesmo ficheiro**
-(l.241/282/302): `const token = authToken || await obterAuthToken?.();` e `, { token }` no `apiPost`.
+(l.247/288/308): `const token = authToken || await obterAuthToken?.();` e `, { token }` no `apiPost`.
+⚠️ Errata: eu escrevi «l.241/282/302» e «~l.100»; o validador mediu **l.247/288/308** e o `apiPost` na **l.103**.
 
 ### ⚠️ Desvios declarados (R15/R20)
 1. **502 no caminho de erro de leitura** — o código antigo deixava a excepção subir (500). Passa a
@@ -69,6 +76,20 @@ md5 depois: 3965732626899a1bee96ffe7586d8ac3 = igual ao de antes ✅
 VEREDITO MUTACAO: TODOS OS MUTANTES COMO ESPERADO
 ```
 **8/8 mutantes mortos, md5 restaurado idêntico.**
+
+### 1.3b Correcções PÓS-VEREDICTO (achados F2/F3 do validador) — declaradas como não re-validadas
+O validador apontou duas **lacunas de teste** (não buracos na guarda) e propôs os casos. Foram acrescentados
+(os testes são ficheiro autorizado) + 2 mutantes novos:
+- **A17 (F2):** cota `cnpj:` com `endereco` em **caixa mista (EIP-55)** → **200**. Sem ele, o
+  `.toLowerCase()` aplicado ao `endereco` **da cota** não era exercido — e um payload legado em caixa mista
+  bloquearia o **dono legítimo** com 403.
+- **A18 (F3):** sem token **E** leitura em falha → **401** (e não 502). Fixa a **ordem** 401-antes-da-leitura;
+  sem ele, mover o 401 para depois do `try/catch` daria a um anónimo o oráculo «store em baixo» (502).
+- Mutantes **V6** (`toLowerCase` da cota) e **V7** (reordenar o 401 para depois da leitura) → **RED ✅ (A17/A18)**.
+⇒ **10/10 mutantes mortos** com **18/18 testes verdes**. Ferramenta: `mut-utac105b1.mjs` (saída em
+`C:/Users/Moltbot/tmp-utac105b1/mut-utac105b1_saida.txt`).
+⚠️ Estas adições vieram **depois** do veredicto ⇒ ficam declaradas como **não re-validadas por um agente
+independente** (verificadas por quem as escreveu + mutação), como manda o precedente da série.
 
 ### ⚠️ Dois erros MEUS, declarados (R8/precedente da série)
 1. **O script de mutação deixou o M1 aplicado.** A 1.ª versão usava `execFileSync`, que **lança** em

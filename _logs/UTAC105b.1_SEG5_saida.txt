@@ -1,0 +1,16 @@
+=== UTAC105b.1 — SEG5 verificacao ad-hoc ===
+VERDE  sem token → 401 e NAO escreve  [status=401 escreveu=false empresa="Original" (esperado 401/nao)]
+VERDE  token de OUTRO → 403 e NAO escreve  [status=403 escreveu=false empresa="Original" (esperado 403/nao)]
+VERDE  token do DONO → 200 e escreve  [status=200 escreveu=true empresa="Nova" (esperado 200/sim)]
+VERDE  ADMIN → 200 e escreve  [status=200 escreveu=true empresa="Nova" (esperado 200/sim)]
+VERDE  token EXPIRADO → 401 e NAO escreve  [status=401 escreveu=false empresa="Original" (esperado 401/nao)]
+VERDE  header 'bearer' minúsculo NAO autoriza (só o prefixo 'Bearer ')  [status=401]
+VERDE  header 'Bearer ' vazio NAO autoriza  [status=401]
+VERDE  conhecer o cliente_id NAO autoriza  [status=401]
+VERDE  dono de OUTRA cota (cliente_id de terceiro) → 403  [status=403 escreveu=false empresa="Original" (esperado 403/nao)]
+VERDE  GET ?cliente_id com token do dono continua a responder 200  [status=200]
+VERDE  GET ?cliente_id SEM token continua 401 (regra MC87 intacta)  [status=401]
+VERDE  [CONTROLO+] o efeito é VISÍVEL: empresa muda (senão o medidor não vê nada)  [empresa="ADULTERADO"]
+VERDE  [CONTROLO+] o mesmo efeito NÃO passa sem token (a guarda não é vacuidade)  [status=401 empresa="Original"]
+
+VEREDITO: VERDE  (13 verificacoes)

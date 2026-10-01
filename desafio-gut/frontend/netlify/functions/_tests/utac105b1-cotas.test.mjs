@@ -193,6 +193,28 @@ test("A13 falha de leitura da cota → 502 (fail-closed, NÃO autoriza nem grava
   assert.equal(upserts.length, 0);
 });
 
+// ── A17/A18 — lacunas apontadas pelo validador adversarial (SEG3, F2/F3) ──────
+test("A17 cota `cnpj:` com `endereco` em CAIXA MISTA (EIP-55) → 200 (normalização do lado da cota)", async () => {
+  // F2: o `.toLowerCase()` aplicado ao `endereco` DA COTA não era exercido por nenhum teste.
+  // Um payload legado com `endereco` em caixa mista faria o DONO LEGÍTIMO levar 403.
+  const eip55 = "0xAaBbCcDdEeFf00112233445566778899AaBbCcDd";   // caixa mista, mesma carteira de DONO
+  semear({ id: CNPJ_ID, endereco: eip55 });
+  const r = await cotasFn(pedido({ token: "tok", cliente_id: CNPJ_ID }));
+  assert.equal(r.status, 200, "o dono não pode ser bloqueado por causa da caixa do endereco da cota");
+  assert.equal(upserts.length, 1);
+});
+
+test("A18 sem token E LEITURA EM FALHA → 401 (o 401 precede a leitura; não é oráculo do store)", async () => {
+  // F3: nenhum teste fixava a ORDEM 401-antes-da-leitura. Se o 401 fosse movido para depois,
+  // um anónimo com o store em baixo receberia 502 — revelando o estado do armazenamento.
+  jwtEndereco = null;
+  getCotaRebenta = true;
+  const r = await cotasFn(pedido({}));
+  assert.equal(r.status, 401, "anónimo tem de levar 401, mesmo com a leitura a falhar");
+  assert.equal((await r.json()).error.code, "token_ausente");
+  assert.equal(upserts.length, 0);
+});
+
 // ── integridade do que é escrito ─────────────────────────────────────────────
 test("A14 campos protegidos (cnpj/tipo/categoria) NÃO são sobrescritos pelo body", async () => {
   const r = await cotasFn(pedido({ token: "tok", extra: { cnpj: "999", tipo: "pessoal", categoria: "diamante" } }));
@@ -230,4 +252,6 @@ test("A16 cota existe mas tipo NÃO é corporativo → 404 (para o dono)", async
 //   M6 engolir a falha de leitura e seguir (autorizar) .................. A13
 //   M7 mover o 404 para antes do 401/403 ................................ A4, A8
 //   M8 escrever os campos do body por cima da cota (não preservar) ...... A14
+//   V6 remover o .toLowerCase() do `endereco` DA COTA (lacuna F2) ........ A17
+//   V7 mover o 401 para DEPOIS da leitura (lacuna F3) ................... A18
 // ─────────────────────────────────────────────────────────────────────────────
