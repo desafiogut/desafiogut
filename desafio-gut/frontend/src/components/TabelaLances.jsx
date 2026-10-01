@@ -4,6 +4,9 @@ import { sanitizeAddress, sanitizeString, sanitizeLance } from "../utils/sanitiz
 import { Badge } from "@/components/ui/badge";
 import { THead, TH, TD } from "@/components/ui";
 import { useIsMobile } from "../hooks/useIsMobile.js";
+// UTAC000.9 (DEBT-008) — resultado OFICIAL da edição (UTAC000.8): o 🏆 da tabela passa a ser o
+// vencedor oficial quando ele existe, em vez do «menor único que este browser viu».
+import { useResultadoOficial } from "../hooks/useResultadoOficial.js";
 // MC88.43 — este cabeçalho era o lado que VAZAVA no B4: anunciava "🟢 Ativo" e
 // a data real do prazo enquanto o Dashboard, no mesmo instante, dizia "EM BREVE".
 import { getEstadoEdicao } from "../utils/edicao.js";
@@ -48,7 +51,23 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
   // MC39.20 (Onda 5, item 4) — memoiza a ordenação/apuração: evita re-sort a cada
   // re-render do pai (ex.: tick do timer) quando `lances` não mudou. Resultado idêntico.
   const lancesOrdenados = useMemo(() => ordenarLances(lances), [lances]);
-  const idxVencedor = useMemo(() => lancesOrdenados.findIndex((l) => !l.repetido), [lancesOrdenados]);
+
+  // ── UTAC000.9 (DEBT-008) — O 🏆 DA TABELA É O VENCEDOR OFICIAL QUANDO EXISTE ──────────
+  // Aqui o apuramento local («o 1.º único da lista») é, na prática, «o menor único que este
+  // browser viu» — e em mainnet o browser vê pouco ou nada. Com o resultado OFICIAL
+  // (`resultados()` on-chain, escrito pela consolidação) o 🏆 vai para o lance que corresponde
+  // ao vencedor publicado (endereço + valor). Sem resultado oficial mantém-se o apuramento
+  // local: exactamente o comportamento anterior. Linhas blindadas (`oculto`, valor null) nunca
+  // casam — durante o leilão a mainnet continua sem 🏆, como já estava (GATE 18).
+  const resultadoOficial = useResultadoOficial(idEdicao);
+  const idxVencedor = useMemo(() => {
+    if (resultadoOficial) {
+      return lancesOrdenados.findIndex((l) =>
+        Number(l?.valor) === resultadoOficial.menorUnicoCentavos
+        && String(l?.endereco ?? "").toLowerCase() === resultadoOficial.vencedor);
+    }
+    return lancesOrdenados.findIndex((l) => !l.repetido);
+  }, [lancesOrdenados, resultadoOficial]);
 
   return (
     <div style={{

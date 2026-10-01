@@ -5,6 +5,9 @@ import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import FimEdicaoOverlay from "../components/FimEdicaoOverlay.jsx";
+// UTAC000.9 (DEBT-008) — resultado OFICIAL da edição (UTAC000.8). O card «Menor Lance Único»
+// e o overlay de fim deixam de mostrar «o menor único que este browser viu».
+import { useResultadoOficial } from "../hooks/useResultadoOficial.js";
 import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
 import CarrosselGUTO from "../components/CarrosselGUTO.jsx";
 import StatTile from "../components/StatTile.jsx";
@@ -75,6 +78,19 @@ export default function Dashboard() {
     // para a contagem na hora do servidor; o resto é para o CardLance dela.
     agendadas, offsetRelogioMs, isConnected, ready, abrirModal, desconectar,
   } = useAppContext();
+
+  // ── UTAC000.9 (DEBT-008) — O VENCEDOR MOSTRADO É O OFICIAL QUANDO EXISTE ──────────
+  // O `vencedor` do contexto é derivado dos lances que ESTE browser viu (em mainnet: nada, ou
+  // só os do próprio). Com o resultado OFICIAL — `resultados()` on-chain, escrito pela
+  // consolidação, que é quem decide o vencedor — é ELE que manda. Sem resultado oficial
+  // (leilão a decorrer, edição por consolidar, rede em baixo) mantém-se o apuramento local:
+  // exactamente o comportamento anterior, zero regressões (GATE 18).
+  // A FORMA é a mesma que o card e o `FimEdicaoOverlay` já esperam ({ endereco, valor }) —
+  // por isso nenhum deles precisa de mudar.
+  const resultadoOficial = useResultadoOficial(EDICAO_ATIVA);
+  const vencedorExibido = resultadoOficial
+    ? { endereco: resultadoOficial.vencedor, valor: resultadoOficial.menorUnicoCentavos }
+    : vencedor;
   const { tempoRestante } = useAppTimer(); // MC44 P0 — timer isolado
   const t = useT();
 
@@ -388,16 +404,16 @@ export default function Dashboard() {
         {/* Vencedor atual */}
         <GlassCard className={`${cardCls} flex flex-col ${isMobile ? 'min-h-[152px]' : ''}`}>
           <h3 style={cardTitulo}>🏆 Menor Lance Único</h3>
-          {vencedor ? (
+          {vencedorExibido ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
               <div style={{ fontFamily: "monospace", fontSize: "0.78rem", color: COR.blue300 }}>
-                {vencedor.endereco ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}` : "—"}
+                {vencedorExibido.endereco ? `${vencedorExibido.endereco.slice(0, 10)}...${vencedorExibido.endereco.slice(-6)}` : "—"}
               </div>
               <div style={{
                 fontSize: isMobile ? "1.85rem" : "2rem",
                 fontWeight: "900", color: COR.gold, lineHeight: 1.1,
               }}>
-                R$ {(vencedor.valor / 100).toFixed(2)}
+                R$ {(vencedorExibido.valor / 100).toFixed(2)}
               </div>
               <div style={{ fontSize: "0.72rem", color: COR.muted }}>
                 {/* MC88.43 — "Vencedor final" é um encerramento; segue a fonte única. */}
@@ -497,7 +513,7 @@ export default function Dashboard() {
       {/* MC16 — overlay de fim de leilão (relâmpago e programado) */}
       {showOverlay && (
         <FimEdicaoOverlay
-          vencedor={vencedor}
+          vencedor={vencedorExibido}
           modalidade={modalidade}
           onNovaRodada={handleNovaRodada}
           EDICAO_ATIVA={EDICAO_ATIVA}

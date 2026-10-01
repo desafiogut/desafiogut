@@ -40,6 +40,9 @@ let vite = null;
 let Pagina = null;
 let MemoryRouter = null;
 let definirContexto = null;
+// UTAC000.9 (DEBT-008)
+let definirResultadoOficial = null;
+let edicoesPedidas = null;
 
 before(async () => {
   vite = await createServer({
@@ -53,12 +56,17 @@ before(async () => {
         { find: /^\.\.\/context\/AppContext\.jsx$/,    replacement: `${STUBS}/AppContext.jsx` },
         { find: /^\.\.\/context\/IdiomaContext\.jsx$/, replacement: `${STUBS}/IdiomaContext.jsx` },
         { find: /^\.\.\/components\/CardLance\.jsx$/,  replacement: `${STUBS}/CardLance.jsx` },
+        // UTAC000.9 (DEBT-008) — o resultado OFICIAL é o que este ficheiro controla.
+        { find: /^\.\.\/hooks\/useResultadoOficial\.js$/, replacement: `${STUBS}/useResultadoOficial.js` },
       ],
     },
   });
   // A ponte PRIMEIRO: é ela que fixa a instância de React do processo.
   ({ React, renderToStaticMarkup } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
   ({ definirContexto } = await vite.ssrLoadModule(`${STUBS}/AppContext.jsx`));
+  // UTAC000.9 — duplo do resultado oficial (mesmo ficheiro usado pelos testes do MeusAtivos).
+  ({ definirResultadoOficial, argumentos: edicoesPedidas } =
+    await vite.ssrLoadModule(`${STUBS}/useResultadoOficial.js`));
   // react-router-dom é CJS: carregado pelo node, que é o que o Vite externaliza em SSR.
   ({ MemoryRouter } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
   Pagina = (await vite.ssrLoadModule("/src/pages/Dashboard.jsx")).default;
@@ -94,6 +102,55 @@ const texto = (html) => html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").re
 const dentroDoSlot = (html) => /data-slot="edicao-especial"/.test(html);
 /** Lado do ícone de presente, em px, tal como saiu no `style` inline. */
 const ladoDoBanner = (html) => html.match(/width:\s*(\d+)px;\s*height:\s*\d+px;\s*flex-shrink:\s*0;\s*border-radius:\s*\d+px;\s*overflow:\s*hidden/)?.[1] ?? null;
+
+// ───────────────────────────────────────────────────────────────────────────
+// UTAC000.9 (DEBT-008) — o card «Menor Lance Único» do Dashboard mostra o VENCEDOR OFICIAL.
+// Antes: derivava dos lances locais (`vencedor` do contexto = «o menor único que este browser
+// viu»). Em mainnet o browser vê pouco ou nada da edição (medido no UTAC000.8 §-1.9).
+describe("UTAC000.9 · Dashboard — o vencedor mostrado é o OFICIAL", () => {
+  const EU    = "0xaaaa000000000000000000000000000000000001";
+  const OUTRO = "0xbbbb000000000000000000000000000000000002";
+  // ⚠️ CASO DISCRIMINANTE: o local (100, OUTRO) ≠ o oficial (300, EU). Com o fix o card tem de
+  // mostrar o OFICIAL; sem ele mostrava o local — é isso que faz o teste morder.
+  const LOCAL  = { endereco: OUTRO, valor: 100 };
+  const OFICIAL = { consolidado: true, vencedor: EU, menorUnicoCentavos: 300 };
+  const abrev = (e) => `${e.slice(0, 10)}...${e.slice(-6)}`;
+
+  test("com resultado oficial: o card mostra o ENDEREÇO e o VALOR oficiais", () => {
+    definirResultadoOficial(OFICIAL);
+    const html = renderizar({ vencedor: LOCAL, encerrado: true });
+    assert.ok(html.includes(abrev(EU)), "o card não mostra o endereço do vencedor OFICIAL");
+    assert.ok(html.includes("R$ 3.00"), "o card não mostra o valor do menor único OFICIAL");
+    assert.ok(!html.includes("R$ 1.00"), "o card continua a mostrar o vencedor LOCAL");
+  });
+
+  test("SEM resultado oficial: mantém-se o apuramento local (zero regressões)", () => {
+    definirResultadoOficial(null);
+    const html = renderizar({ vencedor: LOCAL, encerrado: true });
+    assert.ok(html.includes(abrev(OUTRO)), "o card deixou de mostrar o vencedor local");
+    assert.ok(html.includes("R$ 1.00"), "o card deixou de mostrar o valor local");
+  });
+
+  test("o overlay de FIM DE LEILÃO recebe o MESMO vencedor oficial", () => {
+    // ⚠️ Sem marcador no markup do overlay, assentar esta prova em `indexOf("FimEdicaoOverlay")`
+    // seria um teste VÁCUO (a string não existe no HTML — daria 0 e o `slice` media a página
+    // inteira). A prova é por CONTAGEM: com o overlay ligado, o endereço do vencedor oficial
+    // aparece DUAS vezes (card + overlay); sem ele, uma. O local não aparece nenhuma.
+    const contar = (s, alvo) => s.split(alvo).length - 1;
+    definirResultadoOficial(OFICIAL); // ⚠️ ANTES dos dois renders (é estado de módulo do duplo)
+    const semOverlay = renderizar({ vencedor: LOCAL, encerrado: true, showOverlay: false });
+    const comOverlay = renderizar({ vencedor: LOCAL, encerrado: true, showOverlay: true });
+    assert.equal(contar(semOverlay, abrev(EU)), 1, "controlo: o card devia mostrar o oficial uma vez");
+    assert.equal(contar(comOverlay, abrev(EU)), 2, "o overlay NÃO recebeu o vencedor oficial");
+    assert.equal(contar(comOverlay, abrev(OUTRO)), 0, "o overlay (ou o card) mostra o vencedor LOCAL");
+  });
+
+  test("cablagem: o Dashboard pede o resultado da EDIÇÃO ACTIVA", () => {
+    definirResultadoOficial(null);
+    renderizar({ vencedor: LOCAL });
+    assert.deepEqual(edicoesPedidas(), ["R-1"], "o Dashboard não pediu o resultado da edição activa");
+  });
+});
 
 describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
   test("antes da hora (em `agendadas`): a especial preenche o slot, com arte e cronómetro", () => {
