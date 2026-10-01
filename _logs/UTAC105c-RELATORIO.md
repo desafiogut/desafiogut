@@ -57,7 +57,12 @@ Os 12 mutantes dele: 8 mortos, 1 equivalente (comparar por valor), **3 sobrevive
    minutos depois; não lhe toquei); e um commit alheio (`4dd0403`, só docs, já no remoto) entrou entre o SEG-1 e o meu commit.
 
 ## Não medido
-O 🏆 com dados reais num ecrã (exige sessão Privy; localhost não é origem permitida). Produção depois do push: ver SEG5.
+O 🏆 com dados reais num ecrã (exige sessão Privy; localhost não é origem permitida).
+
+## SEG5 — produção
+Push `4dd0403..3a7a29c` (auto-deploy). BFS do bundle servido (131 chunks), marcadores `meus-cupons`, `meus-palpites`,
+«Esta área ainda não está disponível»: **0/3 antes do deploy → 3/3 às 16:48Z** (controlo positivo: o mesmo instrumento
+viu a ausência e depois a presença). `package-lock.json` alheio não foi commitado.
 
 ## Custo (GATE 16)
 Não tenho acesso ao medidor de custo da sessão; o operador lê-o em `/cost`. Subagente validador: ~136 k tokens, 34 chamadas, ~8,6 min.
