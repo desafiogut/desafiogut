@@ -81,6 +81,16 @@
 > passou também a dizer **onde se regista** o load (`_render.mjs`/`obterServidor()`/`ssrLoadModule`),
 > e o `SKILL.md` foi corrigido (dizia `A1-A8`). Pendente: `regras-legado.md` (fora do escopo) =
 > **DEBT-005**; e o estilo da A12 diverge de A9-A11 (conteúdo pedido pelo spec) — decisão do operador.
+>
+> ⏸️ **UTAC000.8 (2026-10-01) — PARADO no fim do SEG-1** (orçamento; HI5/GATE 4). Objectivo: fechar
+> **DEBT-007** (histórico de lances completo / 🏆 «Menor e Único» honesto). **Investigação feita e
+> abordagem decidida:** o defeito está **só no modo on-chain** — o `lances` do `AppContext` só tem
+> eventos `LanceDado` em tempo real + os lances do próprio utilizador (sem carga inicial); o
+> `lancesFlash` **já** carrega a lista completa do blob (l. 768-770). **Fix mínimo traçado:** endpoint
+> com `getLanceDadoEvents` (já existe em `_lib/contract.mjs`; modelo de paginação em
+> `monitor-onchain.mjs`) + carga inicial em `AppContext` espelhando o `lancesFlash`. **Nada
+> implementado; DEBT-007 mantida aberta.** Divergências declaradas: base real é `93c286d` (não
+> `f0f02a6`), suíte **547** (não 535) e a severidade registada é **média** (o spec dizia ALTA).
 
 ---
 
