@@ -54,7 +54,31 @@ página**, mount + a cada 60 s até consolidar).
 
 ## 5. Validador adversarial (SEG3) — obrigatório
 Despachado sobre o commit `7c5ac6b`, em worktree próprio, instruído a **tentar refutar** e a fazer o
-seu **próprio inventário de consumidores**. Veredicto: `_logs/UTAC000.10_SEG-3_VALIDADOR.md`.
+seu **próprio inventário de consumidores**. Veredicto: **APROVA (com ressalvas)** — «nada exige
+correcção antes do push» — com o integral + resposta do executor em
+`_logs/UTAC000.10_SEG-3_VALIDADOR.md`.
+
+**⚠️ Descoberta dele, que MUDA a leitura deste UTAC (e que eu não tinha):** o `OverlayVencedor` está
+atrás de `{showOverlay && …}` e **`setShowOverlay(true)` existe apenas comentado**
+(`AppContext.jsx` l. 1205 — «MC63/64: animação de vencedor desabilitada no front-end»); o setter
+**não é exposto** no `const value`; logo **os dois overlays nunca renderizam em produção**
+(pre-existente, confirmado por ele em `git show a122b18:…`). **Consequência dita sem rodeios:** a
+premissa do DEBT-009 — «o `OverlayVencedor` mostra esse vencedor» — **não confere**; a correcção está
+**correcta mas não altera um pixel** do que o utilizador vê hoje (ganho **defensivo**). Eu tinha
+aceitado a premissa sem verificar se o sítio era **alcançável** — o inventário classificou-o como
+«defeito a corrigir» e o UTAC000.9 até já tinha escrito que ambos os overlays partilham o
+`showOverlay`. Conclusão errada **mantida à vista** no `DEBT.md`, marcada como corrigida.
+
+**Ressalvas e tratamento:**
+| # | ressalva | tratamento |
+|---|---|---|
+| 1 | **Overlay inalcançável** (premissa do DEBT-009 não confere) | **aceite e registada** como correcção de conclusão (DEBT-009 + CLAUDE.md); o valor da correcção é **defensivo** |
+| 2 | **M10 declarado «2 RED», ele mediu 1 RED** | **ambos correctos:** a minha M10 removia o **bloco de 4 linhas** (incluindo a chamada do hook) → 2 RED; a forma **mínima** → 1 RED. Ambos registados |
+| 3 | **A/B contra o ancestral = 4 RED** (não 2) | evidência **mais forte** do que a minha; acrescentada ao registo |
+| 4 | **O «controlo negativo em memória» é decorativo** | crítica **aceite** (não defendida): substituir o literal no fonte não prova que o instrumento morde. Os controlos reais são a mutação no ficheiro e o A/B |
+| 5 | **M12 (de-wiring em runtime) passa 5/5** | **DEBT-010 ABERTA**: a travessia `AppContext → página` não tem prova de runtime — registado como **cobertura em falta**, não aprovada |
+| 6 | re-render do Provider | confirmado por ele como «real mas imaterial»; já declarado por mim em §7.1 |
+| 7 | 45 chaves do contexto idênticas; zero dependências; zero regressões | confirma as minhas alegações por medição melhor do que a minha |
 
 ## 6. FRENTE F — limpeza dos worktrees órfãos: **EXECUTADA NA PARTE SEGURA** (o resto preservado)
 O spec autoriza limpar «os **7** worktrees órfãos». **A medição (antes de tocar em nada) não
