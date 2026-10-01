@@ -1,0 +1,77 @@
+=== V1 — ANÓNIMO com o `endereco` DE OUTRA PESSOA (que não tem cota) ===
+[cotas] register-corporativo {
+  cliente_id: '0x1111111111111111111111111111111111111111',
+  endereco: '0x1111111111111111111111111111111111111111',
+  origem: 'autenticado',
+  empresa: 'INVASOR LTDA',
+  cnpj: '44455566000183',
+  visitorId: 'visitor-…'
+}
+   status=201 escreveu=true clienteId=0x1111111111111111111111111111111111111111
+   cota no endereco da vitima: existe: empresa="INVASOR LTDA" cnpj=44455566000183 endereco=0x1111111111111111111111111111111111111111
+
+=== V2 — ANÓNIMO com `endereco` de OUTRA PESSOA + CNPJ do atacante (2.º registo) ===
+[cotas] register-corporativo {
+  cliente_id: '0x1111111111111111111111111111111111111111',
+  endereco: '0x1111111111111111111111111111111111111111',
+  origem: 'autenticado',
+  empresa: 'INVASOR 2',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+   status=201 escreveu=true
+
+=== V3 — LEGÍTIMO: anónimo, SEM `endereco` (o que o frontend faz) ===
+[cotas] register-corporativo {
+  cliente_id: 'cnpj:77788899000183',
+  endereco: null,
+  origem: 'direto',
+  empresa: 'Empresa Legitima',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+   status=201 escreveu=true clienteId=cnpj:77788899000183
+
+=== V4 — LOGADO com o PRÓPRIO `endereco` + token (contrato MC12.3.1, deve continuar) ===
+[cotas] register-corporativo {
+  cliente_id: '0x2222222222222222222222222222222222222222',
+  endereco: '0x2222222222222222222222222222222222222222',
+  origem: 'autenticado',
+  empresa: 'A Minha Empresa',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+   status=201 escreveu=true clienteId=0x2222222222222222222222222222222222222222
+
+=== V5 — LOGADO com o `endereco` DE OUTRO + token próprio (deve ser 403) ===
+[cotas] register-corporativo {
+  cliente_id: '0x1111111111111111111111111111111111111111',
+  endereco: '0x1111111111111111111111111111111111111111',
+  origem: 'autenticado',
+  empresa: 'Sou Outro',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+   status=201 escreveu=true clienteId=0x1111111111111111111111111111111111111111
+   cota no endereco da vitima: existe: empresa="Sou Outro" cnpj=77788899000183 endereco=0x1111111111111111111111111111111111111111
+
+=== V6 — ADMIN com `endereco` de outro (acesso total — deve continuar) ===
+[cotas] register-corporativo {
+  cliente_id: '0x1111111111111111111111111111111111111111',
+  endereco: '0x1111111111111111111111111111111111111111',
+  origem: 'autenticado',
+  empresa: 'Admin',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+   status=201 escreveu=true
+
+=== VEREDITO (estado ACTUAL) ===
+V1 anon + endereco de OUTRA pessoa ..... 201  ⛔ PRÉ-CRIOU/POLUIU a cota no endereco dela
+V2 anon + endereco de outro (2.º) ...... 201  ⛔ escreveu
+V3 legitimo sem endereco ............... 201  ✅ criou cnpj:77788899000183
+V4 logado com o PROPRIO endereco ....... 201  ✅ criou (contrato MC12.3.1 preservado)
+V5 logado com endereco DE OUTRO ........ 201  ⛔ POLUIU a cota de outra pessoa
+V6 admin com endereco de outro ......... 201  ✅ acesso total (desenho)
+(node:7992) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

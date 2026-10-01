@@ -1,0 +1,19 @@
+✖ E1 [V-4] anónimo com `endereco` DE TERCEIROS (sem cota) → 401 e NÃO cria (35.0854ms)
+✔ E2 [V-4] anónimo com `endereco` de terceiros QUE JÁ TEM cota → 401 e cota intacta (2.6036ms)
+✖ E3 [V-4] LOGADO com token de OUTRO + `endereco` de terceiros → 403 e NÃO escreve (1.9504ms)
+✔ E4 logado com o PRÓPRIO `endereco` + token → 201 (contrato MC12.3.1 preservado) (1.7295ms)
+✔ E5 SEM `endereco` (cadastro directo — o único caminho do frontend) → 201 cria `cnpj:` (1.7181ms)
+✔ E6 admin + `endereco` de terceiros → 201 (acesso total) (1.8347ms)
+✔ E7 `endereco` com formato inválido → 400 (o formato é validado ANTES da posse) (2.5602ms)
+✖ E8 sem token E leitura do store em falha + `endereco` de terceiros → 401 (não 502, nem oráculo) (1.7714ms)
+✔ E9 `cliente_id` no corpo é IGNORADO por este ramo (não se aponta para a vítima) (1.158ms)
+✔ E10 `endereco` próprio em CAIXA MISTA + token → 201 (normalização não bloqueia o dono) (1.1727ms)
+✖ E11 token inválido/expirado + `endereco` de terceiros → 401 e NÃO escreve (1.5238ms)
+ℹ tests 11
+ℹ pass 7
+ℹ fail 4
+✖ failing tests:
+✖ E1 [V-4] anónimo com `endereco` DE TERCEIROS (sem cota) → 401 e NÃO cria (35.0854ms)
+✖ E3 [V-4] LOGADO com token de OUTRO + `endereco` de terceiros → 403 e NÃO escreve (1.9504ms)
+✖ E8 sem token E leitura do store em falha + `endereco` de terceiros → 401 (não 502, nem oráculo) (1.7714ms)
+✖ E11 token inválido/expirado + `endereco` de terceiros → 401 e NÃO escreve (1.5238ms)

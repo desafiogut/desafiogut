@@ -110,34 +110,38 @@ const CNPJ_C = gerarCnpj("336015730001");
 const ADDR1 = "0x1111111111111111111111111111111111111111";
 const ADDR2 = "0x2222222222222222222222222222222222222222";
 
-function reqRegister({ cnpj, empresa, endereco, email, visitorId }) {
+// UTAC105b.3 (OPCAO A) - o registo passa a provar a POSSE do `endereco` informado:
+// mesmo endereco no corpo => Bearer do MESMO endereco. As assercoes NAO mudam.
+async function reqRegister({ cnpj, empresa, endereco, email, visitorId }) {
+  const headers = { "content-type": "application/json", "x-visitor-id": visitorId };
+  if (endereco) headers.authorization = `Bearer ${await assinarUserSession(String(endereco).toLowerCase())}`;
   return new Request("http://x/?action=register-corporativo", {
     method: "POST",
-    headers: { "content-type": "application/json", "x-visitor-id": visitorId },
+    headers,
     body: JSON.stringify({ cnpj, empresa, endereco, email }),
   });
 }
 async function json(res) { return { status: res.status, body: await res.json() }; }
 
 test("(a) anti-duplicidade CNPJ: mesmo CNPJ em cliente diferente → 409", async () => {
-  const r1 = await json(await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-aaaaaaaa-1" })));
+  const r1 = await json(await handler(await reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-aaaaaaaa-1" })));
   assert.equal(r1.status, 201);
-  const r2 = await json(await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa B", endereco: ADDR2, email: "b@b.com", visitorId: "visitor-bbbbbbbb-2" })));
+  const r2 = await json(await handler(await reqRegister({ cnpj: CNPJ_A, empresa: "Empresa B", endereco: ADDR2, email: "b@b.com", visitorId: "visitor-bbbbbbbb-2" })));
   assert.equal(r2.status, 409);
   assert.equal(r2.body.error.code, "cnpj_duplicado");
 });
 
 test("(b) anti-Sybil: mesmo fingerprint + CNPJ diferente em 24h → 429", async () => {
   const vid = "visitor-cccccccc-3";
-  const r1 = await json(await handler(reqRegister({ cnpj: CNPJ_B, empresa: "Empresa B", endereco: ADDR1, email: "b@b.com", visitorId: vid })));
+  const r1 = await json(await handler(await reqRegister({ cnpj: CNPJ_B, empresa: "Empresa B", endereco: ADDR1, email: "b@b.com", visitorId: vid })));
   assert.equal(r1.status, 201);
-  const r2 = await json(await handler(reqRegister({ cnpj: CNPJ_C, empresa: "Empresa C", endereco: ADDR2, email: "c@c.com", visitorId: vid })));
+  const r2 = await json(await handler(await reqRegister({ cnpj: CNPJ_C, empresa: "Empresa C", endereco: ADDR2, email: "c@c.com", visitorId: vid })));
   assert.equal(r2.status, 429);
   assert.equal(r2.body.error.code, "sybil_detectado");
 });
 
 test("(c) login lookup por cliente_id → devolve a cota AO DONO", async () => {
-  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-dddddddd-4" }));
+  await handler(await reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-dddddddd-4" }));
   const r = await json(await getComoUsuario(`?cliente_id=${ADDR1}`, ADDR1));
   assert.equal(r.status, 200);
   assert.equal(r.body.tipo, "corporativo");
@@ -145,7 +149,7 @@ test("(c) login lookup por cliente_id → devolve a cota AO DONO", async () => {
 });
 
 test("(d) lookup por email → devolve o registo a utilizador autenticado", async () => {
-  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "lojista@x.com", visitorId: "visitor-eeeeeeee-5" }));
+  await handler(await reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "lojista@x.com", visitorId: "visitor-eeeeeeee-5" }));
   const r = await json(await getComoUsuario("?email=lojista@x.com", ADDR1));
   assert.equal(r.status, 200);
   assert.equal(r.body.tipo, "corporativo");
@@ -154,27 +158,27 @@ test("(d) lookup por email → devolve o registo a utilizador autenticado", asyn
 // ── MC87 (P0-1) — regressões de IDOR/divulgação no GET ──────────────────────
 
 test("MC87: ?cliente_id= anónimo → 401 (era 200 com cnpj+email)", async () => {
-  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000001" }));
+  await handler(await reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000001" }));
   const r = await json(await handler(new Request(`http://x/?cliente_id=${ADDR1}`, { method: "GET" })));
   assert.equal(r.status, 401);
   assert.equal(r.body.error.code, "token_ausente");
 });
 
 test("MC87: ?cliente_id= de OUTRA carteira → 403 (IDOR fechado)", async () => {
-  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000002" }));
+  await handler(await reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000002" }));
   const r = await json(await getComoUsuario(`?cliente_id=${ADDR1}`, ADDR2));
   assert.equal(r.status, 403);
   assert.equal(r.body.error.code, "acesso_negado");
 });
 
 test("MC87: ?email= anónimo → 401", async () => {
-  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "lojista@x.com", visitorId: "visitor-mc87-0000003" }));
+  await handler(await reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "lojista@x.com", visitorId: "visitor-mc87-0000003" }));
   const r = await json(await handler(new Request("http://x/?email=lojista@x.com", { method: "GET" })));
   assert.equal(r.status, 401);
 });
 
 test("MC87: ?cnpj= sem empresa → confirma duplicidade SEM revelar email/endereco", async () => {
-  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000004" }));
+  await handler(await reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000004" }));
   const r = await json(await handler(new Request(`http://x/?cnpj=${CNPJ_A}`, { method: "GET" })));
   assert.equal(r.status, 200);
   assert.equal(r.body.status, "cnpj_ja_registado");
@@ -184,7 +188,7 @@ test("MC87: ?cnpj= sem empresa → confirma duplicidade SEM revelar email/endere
 });
 
 test("MC87: ?cnpj= com empresa CERTA → devolve contacto (fluxo de cadastro intacto)", async () => {
-  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000005" }));
+  await handler(await reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000005" }));
   const r = await json(await handler(new Request(`http://x/?cnpj=${CNPJ_A}&empresa=${encodeURIComponent("empresa a")}`, { method: "GET" })));
   assert.equal(r.status, 200);
   assert.equal(r.body.email, "a@a.com");
@@ -192,7 +196,7 @@ test("MC87: ?cnpj= com empresa CERTA → devolve contacto (fluxo de cadastro int
 });
 
 test("MC87: ?cnpj= com empresa ERRADA → sem detalhes", async () => {
-  await handler(reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000006" }));
+  await handler(await reqRegister({ cnpj: CNPJ_A, empresa: "Empresa A", endereco: ADDR1, email: "a@a.com", visitorId: "visitor-mc87-0000006" }));
   const r = await json(await handler(new Request(`http://x/?cnpj=${CNPJ_A}&empresa=Outra`, { method: "GET" })));
   assert.equal(r.status, 200);
   assert.equal(r.body.detalhesOcultos, true);

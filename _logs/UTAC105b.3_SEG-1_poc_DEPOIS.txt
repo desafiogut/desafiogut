@@ -1,0 +1,53 @@
+=== V1 — ANÓNIMO com o `endereco` DE OUTRA PESSOA (que não tem cota) ===
+   status=401 escreveu=false clienteId=null
+   cota no endereco da vitima: NÃO existe
+
+=== V2 — ANÓNIMO com `endereco` de OUTRA PESSOA + CNPJ do atacante (2.º registo) ===
+   status=401 escreveu=false
+
+=== V3 — LEGÍTIMO: anónimo, SEM `endereco` (o que o frontend faz) ===
+[cotas] register-corporativo {
+  cliente_id: 'cnpj:77788899000183',
+  endereco: null,
+  origem: 'direto',
+  empresa: 'Empresa Legitima',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+   status=201 escreveu=true clienteId=cnpj:77788899000183
+
+=== V4 — LOGADO com o PRÓPRIO `endereco` + token (contrato MC12.3.1, deve continuar) ===
+[cotas] register-corporativo {
+  cliente_id: '0x2222222222222222222222222222222222222222',
+  endereco: '0x2222222222222222222222222222222222222222',
+  origem: 'autenticado',
+  empresa: 'A Minha Empresa',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+   status=201 escreveu=true clienteId=0x2222222222222222222222222222222222222222
+
+=== V5 — LOGADO com o `endereco` DE OUTRO + token próprio (deve ser 403) ===
+   status=403 escreveu=false clienteId=null
+   cota no endereco da vitima: NÃO existe
+
+=== V6 — ADMIN com `endereco` de outro (acesso total — deve continuar) ===
+[cotas] register-corporativo {
+  cliente_id: '0x1111111111111111111111111111111111111111',
+  endereco: '0x1111111111111111111111111111111111111111',
+  origem: 'autenticado',
+  empresa: 'Admin',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+   status=201 escreveu=true
+
+=== VEREDITO (estado ACTUAL) ===
+V1 anon + endereco de OUTRA pessoa ..... 401  ✅ recusou
+V2 anon + endereco de outro (2.º) ...... 401  ✅ recusou
+V3 legitimo sem endereco ............... 201  ✅ criou cnpj:77788899000183
+V4 logado com o PROPRIO endereco ....... 201  ✅ criou (contrato MC12.3.1 preservado)
+V5 logado com endereco DE OUTRO ........ 403  ✅ recusou
+V6 admin com endereco de outro ......... 201  ✅ acesso total (desenho)
+(node:6116) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

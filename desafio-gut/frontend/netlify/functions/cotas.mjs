@@ -433,6 +433,33 @@ async function handlePost(req) {
     // o cadastro directo (`cnpj:…`, sem endereço) — medido: é o ÚNICO caminho que o
     // frontend usa (`SejaNossoParceiro.jsx` só posta quando o GET de duplicidade deu 404).
     const chamadorReg = await resolverChamador(req);
+
+    // ── UTAC105b.3 (V-4) — POSSE DO `endereco` NA **CRIAÇÃO** ───────────────────
+    // ⚠️ ANTES: se o corpo trouxesse `endereco`, o `clienteId` passava a ser esse endereço
+    // (l.396) e a cota era CRIADA ali — sem prova de posse nenhuma. Um pedido ANÓNIMO com o
+    // `endereco` de outra pessoa (ou um pedido AUTENTICADO por OUTRA conta a apontar para o
+    // endereço de terceiros) pré-criava/poluía uma cota corporativa no endereço dela; e a
+    // fusão da activação (`_lib/cota-ativacao.mjs:41-47`, `{...existente}`) herdava esses
+    // dados (empresa/cnpj/email). Medido no PoC: V1/V2/V5 (ver
+    // `_logs/UTAC105b.3_SEG-1_MEDICAO.md` §-1.5).
+    // Regra (a mesma família do MC89.38): **se vem `endereco` no corpo, exige-se Bearer do
+    // MESMO endereço — ou admin**. Sem `endereco` no corpo (o ÚNICO caminho que o frontend
+    // usa: `SejaNossoParceiro.jsx:203-212`) nada muda — continua a criar `cnpj:…`.
+    // Ordem: ANTES da leitura do store (auth antes da existência), como no `update-corporativo`.
+    if (endereco && chamadorReg.papel !== "admin") {
+      const enderecoDoCorpo = String(endereco).toLowerCase();
+      const ehDonoDoEndereco = !!chamadorReg.endereco && chamadorReg.endereco === enderecoDoCorpo;
+      if (!ehDonoDoEndereco) {
+        if (chamadorReg.papel === "anon") {
+          return jsonError(401, "token_ausente",
+            "Authorization: Bearer *** obrigatório para registar uma cota num endereço de carteira");
+        }
+        // caso previsto nas notas de arranque do spec: `endereco` no corpo + token de OUTRO
+        return jsonError(403, "endereco_nao_corresponde",
+          "JWT não pertence ao endereço informado");
+      }
+    }
+
     let existenteReg;
     try {
       existenteReg = await getCota(clienteId);
