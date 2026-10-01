@@ -46,3 +46,44 @@ com controlo positivo · pendências **declaradas** (§9 do relatório) · `CLAU
 commit final em foreground, ficheiros nomeados, `git log origin/main..HEAD` conferido antes do push.
 
 ## 6.8 VEREDITO DO SEG6: **FECHADO**
+
+
+---
+
+## 6.9 ⚠️ CORRECÇÃO POSTERIOR AO FECHO (mesma sessão) — a suíte do FRONTEND está VERMELHA por causa ALHEIA a este UTAC
+
+**O que se afirmou em §6.5 e no relatório:** «frontend VERDE 535/535». **Essa leitura foi real** nas
+quatro medições do dia, **mas deixou de valer**. Re-medido no fecho: **frontend VERMELHO — 68 falhas**.
+*(A conclusão anterior fica À VISTA, marcada como deixou-de-valer — não se apaga.)*
+
+**A falha:** `TypeError: Cannot read properties of null (reading 'useState')` em componentes com hooks,
+no arnês `_render.mjs` (SSR por Vite + `react-dom/server`).
+
+**Não é deste UTAC — medido, não argumentado:**
+- nenhuma alteração do UTAC105b.3 vive em `desafio-gut/frontend/src/**`;
+- nenhum teste do frontend lê `skills/` nem `CLAUDE.md` (grep: 0 ocorrências);
+- **PROVA DECISIVA:** a suíte do frontend correu num **worktree isolado no baseline `00610b0`**, sem
+  nenhuma alteração minha → **as mesmas 68 falhas**. Reproduz-se sem o meu trabalho.
+
+**Causa raiz (medida com sonda própria):**
+| medição | resultado |
+|---|---|
+| `require.resolve("react")` (Node, do ficheiro de teste) | `frontend/node_modules/react/index.js` |
+| `resolveId` do Vite para `react` (importer em `src/`) | **`frontend/node_modules/.vite/deps/react.js`** (pré-empacotado) |
+| `React(componente) === React(teste)` | **`false`** |
+| mesmo objecto `ReactCurrentDispatcher` | **`false`** |
+
+⇒ **duas instâncias de React**: o `react-dom/server` instala o dispatcher numa e o componente usa a
+outra, logo `dispatcher.current === null`. Remover a cache `.vite` **não** resolve: o optimizador de
+dependências recria `deps/react.js` em execução.
+
+**O que NÃO fiz, e porquê:** não corrigi. `vite.config.js` e `_render.mjs` estão **fora do `autoriza`**
+deste UTAC (GATE 3) e a escolha da correcção é de engenharia — não do executor (GATE 12/AU3).
+**Escalado ao operador** com três opções: (A) `vite.config.js` com
+`ssr: { external: ["react","react-dom","react/jsx-runtime"] }`; (B) `_render.mjs` com
+`optimizeDeps: { exclude: [...] }`; (C) fixar a versão de Vite/Node — a regressão apareceu **sem
+alteração de ficheiros**, o que aponta para a interacção Vite 8 × Node 24 no optimizador em SSR.
+
+**Consequência para o fecho:** mantém-se válido **nos entregáveis do UTAC** (backend 967/973, os 11
+testes do V-4, o legado 14/14, o A/B pareado, a mutação e o bidireccional). A suíte do **frontend** é
+uma medição do *ambiente* e está vermelha por causa externa. **Pendência declarada, não escondida.**
