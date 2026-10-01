@@ -1,0 +1,56 @@
+# =============================================================================
+# EXEMPLO DE SPEC DE UTAC — UTAC999-demo
+# Prova que a Skill UTAC01 compõe um UTAC a partir de um spec curto.
+# Tipo escolhido: `diagnostico` (o mais simples — só mede, não altera nada).
+# =============================================================================
+
+schema: utac/1
+
+name: UTAC999-demo
+
+title: "Medir a suíte e reportar o estado (demo da Skill UTAC01)"
+
+type: diagnostico
+
+baseline: 160bf09
+
+motivo: >-
+  Demonstração da Skill UTAC01: um spec de ~35 linhas tem de produzir um UTAC
+  completo e válido. Este exemplo só mede a suíte e reporta — não escreve nada
+  em produção. Serve de prova documentada (HARD GATE 16 / P10).
+
+frentes:
+  - id: A
+    nome: Medir a suíte
+    entrega: [_logs/UTAC999_SEG0.md]
+    passos:
+      - "node scripts/mc966-suite-harness.mjs ambos (foreground)"
+      - registar frontend n/n e backend n/n
+  - id: B
+    nome: Inventário
+    entrega: [_logs/UTAC999_SEG1.md]
+    passos:
+      - "ls _logs/ | grep -c RELATORIO (UTACs fechados)"
+      - "git rev-parse HEAD (confirmar baseline)"
+
+autoriza:
+  - correr a suíte em foreground
+  - ler _logs/ e scripts/
+  - escrever _logs/UTAC999_*.md
+  - commit + push (foreground)
+
+proibe:
+  - alterar código de produção
+  - alterar _logs/ existentes
+  - git add -A
+  - tocar no Supabase ou Netlify
+  - inventar números (o relatório só publica o que a suíte mediu)
+
+dependencias:
+  - scripts/mc966-suite-harness.mjs existe
+
+ressalvas:
+  - Se o disco < 5 GB, PARAR
+  - Controlo positivo: o medidor tem de distinguir uma contagem errada de uma correcta
+
+subdivisoes: []

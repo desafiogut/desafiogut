@@ -1,0 +1,81 @@
+# =============================================================================
+# TEMPLATE DE SPEC DE UTAC — Unidade de Trabalho Auto Contido (UTAC)
+# =============================================================================
+# Um spec completo tem ~35 linhas. A Skill UTAC01 compõe o UTAC inteiro
+# (contexto + HARD GATES + regras + frente + SEG-1..SEG6 + validador + fecho)
+# a partir deste spec.
+#
+# REGRAS DO SPEC
+#  - Campos marcados OBRIGATORIO têm de estar presentes e não-vazios.
+#  - Campos marcados OPCIONAL podem ser omitidos.
+#  - Nada de dados pessoais, tokens ou chaves (R4/R5).
+#  - Sem valores inventados: o `baseline` sai de `git rev-parse HEAD`.
+# =============================================================================
+
+schema: utac/1
+
+# OBRIGATORIO — identificador curto. Formato UTAC<NNN>[a-z][.N]
+#   ex.: UTAC105b · UTAC105a.2 · UTAC106
+name: UTAC000
+
+# OBRIGATORIO — título legível (1 linha).
+title: "Criar o padrão reutilizável (Skill UTAC01)"
+
+# OBRIGATORIO — um dos 6 tipos de skills/utac01/types/
+#   diagnostico | publicacao | produto | infra | lgpd | saneamento
+type: produto
+
+# OBRIGATORIO — commit medido em SEG-1 (`git rev-parse HEAD` antes de tocar).
+baseline: 2f472c0
+
+# OBRIGATORIO — porquê este UTAC (1-3 linhas). O problema que resolve.
+motivo: >-
+  A série repete ~70% do texto em cada UTAC. As partes constantes passam a viver
+  numa skill; o co-construtor escreve specs curtos e a skill compõe o UTAC.
+
+# OBRIGATORIO — frentes do trabalho, por ordem (uma frente de cada vez).
+frentes:
+  - id: A
+    nome: Protocolo (constantes)
+    entrega: [protocol/hard-gates.md, protocol/regras.md, protocol/licoes.md,
+              protocol/ambiente.md, protocol/contexto.md]
+  - id: B
+    nome: Tipos (variações)
+    entrega: [types/diagnostico.md, types/publicacao.md, types/produto.md,
+              types/infra.md, types/lgpd.md, types/saneamento.md]
+
+# OBRIGATORIO — o que ESTE UTAC pode fazer (lista explícita).
+autoriza:
+  - criar desafio-gut/frontend/skills/utac01/ e subpastas
+  - criar ficheiros .md e .yml dentro dessa pasta
+  - ler UTACs existentes em _logs/ e Desktop/
+  - commit + push (foreground)
+  - despachar validador adversarial
+
+# OBRIGATORIO — o que ESTE UTAC NÃO pode fazer (lista explícita). R3.
+proibe:
+  - git add -A
+  - deploy em background
+  - alterar código de produção (excepto a pasta skills/ nova)
+  - alterar CLAUDE.md
+  - alterar _logs/ existentes (só criar os novos)
+  - alterar Desktop/ existentes
+  - tocar no Supabase ou Netlify
+  - instalar dependências / criar UI / decidir produto / inventar dados
+
+# OBRIGATORIO — o que tem de existir antes (UTACs, decisões, autorizações).
+#   Se uma dependência não estiver satisfeita, PARAR (HARD GATE 1).
+dependencias:
+  - UTACs fechados em _logs/ como fonte de conteúdo
+
+# OPCIONAL — avisos/condições (ex.: «se o disco < 5 GB, PARAR»).
+ressalvas:
+  - NÃO INVENTAR conteúdo da skill (HARD GATE 2)
+  - Validador adversarial OBRIGATÓRIO
+  - Deploy em foreground
+
+# OPCIONAL — subdivisões do UTAC (quando um UTAC se parte em .1, .2, …).
+subdivisoes: []
+#  - id: UTAC000.1
+#    nome: ...
+#    frentes: [...]
