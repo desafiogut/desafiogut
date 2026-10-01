@@ -1,0 +1,11 @@
+OK  | migração MC105a em supabase/migrations = _logs | 
+OK  | migração saneamento = _logs | 
+OK  | migração unique = _logs | 
+OK  | exportação inclui passes | 
+OK  | exclusão anonimiza passes com chaveAnonima | 
+OK  | exclusão nunca apaga passes | 
+OK  | produção exportar-dados viva (JSON) | 400 application/json; charset=utf-8
+OK  | produção delete-account viva (JSON) | 400 application/json; charset=utf-8
+OK  | produção comprar-passe viva (JSON) | 401 application/json; charset=utf-8
+OK  | CONTROLO: função inventada dá HTML | 404
+VEREDITO: VERDE (10/10)
