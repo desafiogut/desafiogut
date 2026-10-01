@@ -167,8 +167,9 @@ async function anonimizarFiscalSupabase(supabase, tabela, pk, endereco, dryRun) 
 /**
  * MC105a.1 — `passes`: anonimizar ≠ apagar (o service_role nem tem DELETE na tabela). Só o
  * `endereco` passa a `chaveAnonima` (o mesmo pseudónimo do MC104.3); edição, produto, datas,
- * palpite, cupons e status ficam. O UNIQUE (endereco, edicao_id, produto_id) não colide: um
- * endereço dá sempre o mesmo hash, e uma 2.ª exclusão já não encontra o endereço.
+ * palpite, cupons e status ficam. ⚠️ O UNIQUE (endereco, edicao_id, produto_id) COLIDE se a mesma
+ * carteira voltar, comprar o mesmo passe e excluir outra vez (23505, validador do MC105a.1): o erro
+ * sobe para `erros` e o passe fica com o endereço. Correcção pendente de decisão do operador.
  */
 async function anonimizarPasses(supabase, endereco, dryRun) {
   if (dryRun) {

@@ -87,6 +87,21 @@ test("B5 erro no Supabase é visível em `erros` (fail-soft, não silencioso)", 
   assert.ok(m.erros.some((e) => e.startsWith("supabase:passes (anon)")), JSON.stringify(m.erros));
 });
 
+test("B6 erro no dry-run também é visível (não reporta 0 limpo)", async () => {
+  S.g.falhar.passes = { op: "select", code: "42501" };
+  const r = await excluirSupabase(cliente(), ALVO, { dryRun: true });
+  assert.ok(r.erros.some((e) => e.startsWith("supabase:passes (anon)")), JSON.stringify(r.erros));
+  assert.equal(r.anonimizado.passes, undefined);
+});
+
+test("B7 recompra depois da exclusão: a 2.ª exclusão colide no UNIQUE e o erro é VISÍVEL (achado do validador; correcção por decidir)", async () => {
+  await excluirSupabase(cliente(), ALVO);
+  assert.equal((await S.cliente.from("passes").insert(passe(ALVO, "prod-2"))).error, null);
+  const r = await excluirSupabase(cliente(), ALVO);
+  assert.ok(r.erros.some((e) => e.startsWith("supabase:passes (anon)") && e.includes("duplicate key")), JSON.stringify(r.erros));
+  assert.equal(S.tabelas.passes.filter((p) => p.endereco === ALVO).length, 1, "nada aplicado (atómico)");
+});
+
 // ── Frente C + A (ficheiros de migração) ───────────────────────────────────────────────────────────
 const RAIZ = new URL("../../../../../", import.meta.url);
 const ler = (rel) => readFileSync(new URL(rel, RAIZ), "utf8").replace(/\r\n/g, "\n");

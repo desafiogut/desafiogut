@@ -2,6 +2,7 @@
 // Fiel ao REAL nas direcções que já enganaram esta série (MC93-B/C/D, MC104):
 //  - colunas conhecidas por tabela: coluna desconhecida → erro 42703 (não é ignorada);
 //  - UNIQUE → 23505; CHECK → 23514 (as CHECKs de produção: MC105a + MC105a.1, que aceita `anon:<sha256>`); NOT NULL → 23502;
+//  - UPDATE atómico e com UNIQUE (colisão → 23505, nada aplicado);
 //  - `select(col, { count: "exact", head: true })` → `data: null` + `count` (como o HEAD do PostgREST);
 //  - DEFAULTs aplicados como a tabela (id uuid, comprado_em, palpite_usado false, cupons_ids [], status 'activo');
 //  - `.eq(col, null)` LANÇA (o PostgREST gera `eq.null` e dá 400 — usar `.is()`);
@@ -101,7 +102,15 @@ export function criarSupabase() {
       } else if (st.op === "update") {
         for (const c of Object.keys(st.dados)) if (!esq.colunas.includes(c)) return erro("42703", `column "${c}" does not exist`);
         linhas = tabelas[tab].filter(casa);
-        for (const l of linhas) { const cand = { ...l, ...st.dados }; const e = validar(tab, cand); if (e) return e; Object.assign(l, st.dados); }
+        // Atómico como o Postgres: valida TODAS as linhas (CHECK + UNIQUE contra as outras e entre si) antes de aplicar.
+        const cands = linhas.map((l) => ({ ...l, ...st.dados }));
+        for (const c of cands) { const e = validar(tab, c); if (e) return e; }
+        const resto = tabelas[tab].filter((o) => !linhas.includes(o));
+        const choca = (x, y) => ESQUEMA[tab].unicos.some((cols) => cols.every((k) => x[k] === y[k]));
+        if (cands.some((c, i) => resto.some((o) => choca(c, o)) || cands.some((d, j) => j !== i && choca(c, d)))) {
+          return erro("23505", "duplicate key value violates unique constraint");
+        }
+        linhas.forEach((l) => Object.assign(l, st.dados));
       } else {
         linhas = tabelas[tab].filter(casa);
         if (st.ordem) { const [c, asc] = st.ordem; linhas = [...linhas].sort((a, b) => (a[c] < b[c] ? -1 : a[c] > b[c] ? 1 : 0) * (asc ? 1 : -1)); }
