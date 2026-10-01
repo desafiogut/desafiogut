@@ -20,6 +20,8 @@ import { getVisitorId, getCachedVisitorId } from "../lib/fingerprint.js";
 // autenticado no Privy e SEM sessão, sem qualquer tentativa de recuperação.
 import { atrasoDaTentativaAuth, deveTentarAuth, MAX_TENTATIVAS_AUTH } from "../lib/retryAuth.js";
 import { useEdicoes } from "../hooks/useEdicoes.js";
+// UTAC000.10 (DEBT-009) — o vencedor exposto pelo Provider passa a ser o OFICIAL quando existe.
+import { useResultadoOficial } from "../hooks/useResultadoOficial.js";
 import {
   trackPageview,
   trackClickComprar,
@@ -694,10 +696,24 @@ export function AppProvider({ children }) {
 
   const lancesExibidos = modalidade === "flash" ? lancesFlash : lances;
 
-  // Vencedor — Menor Lance Único (Art. 8)
-  const vencedor = [...lancesExibidos]
+  // Vencedor LOCAL — Menor Lance Único (Art. 8), apurado dos lances que ESTE browser viu.
+  const vencedorLocal = [...lancesExibidos]
     .filter((l) => !l.repetido)
     .sort((a, b) => a.valor - b.valor)[0] ?? null;
+
+  // ── UTAC000.10 (DEBT-009) — O VENCEDOR EXPOSTO É O OFICIAL QUANDO EXISTE ─────────
+  // O `vencedorLocal` acima é, em mainnet, «o menor único que ESTE browser viu»: o valor do
+  // lance nunca vai em claro para a cadeia (vai o `keccak256`, evento `LanceComprometido`) e a
+  // lista pública vem blindada até à consolidação — medido e documentado no UTAC000.8 §-1.9.
+  // O valor OFICIAL vive on-chain (mapping `resultados`, escrito por `consolidarResultado`) e é
+  // quem decide o vencedor. Este Provider passa a expor o OFICIAL quando existe e o local quando
+  // não existe (exactamente o comportamento anterior, sem regressões).
+  // A FORMA é a mesma (`{ endereco, valor }`) e o NOME (`vencedor`) não muda — nenhum consumidor
+  // (o overlay do MercadoLances, o card do Dashboard, o overlay de fim) precisa de ser tocado.
+  const resultadoOficial = useResultadoOficial(EDICAO_ATIVA);
+  const vencedor = resultadoOficial
+    ? { endereco: resultadoOficial.vencedor, valor: resultadoOficial.menorUnicoCentavos }
+    : vencedorLocal;
 
   // ── Reset versionado ─────────────────────────────────────────────────────
   // Limpa localStorage legado e desloga a sessão Privy UMA ÚNICA VEZ por
