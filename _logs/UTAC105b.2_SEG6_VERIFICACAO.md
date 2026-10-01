@@ -23,7 +23,8 @@
 | Deploy validado | ✅ commit final em foreground, com `git log origin/main..HEAD` antes do push |
 | `_logs/UTAC105b.2_*.md` + `Desktop/UTAC105b.2_*.md` | ✅ |
 | `CLAUDE.md` (P5) | ✅ requalificado e **commitado** (V-7) |
-| Zero alterações fora do escopo | ✅ `cotas.mjs` **+56/−0** (prefixo/sufixo byte-idênticos) + o ficheiro de teste novo |
+| Zero alterações fora do escopo | ✅ `cotas.mjs` **+67/−5** + o ficheiro de teste novo |
+| ⚠️ Errata | O commit do validador (`1170b1f`) era **+46/−0** (2 hunks, todos os bytes pré-existentes preservados). **Depois** das correcções V-1/V-2 o total passou a **+67/−5**: as **5 linhas removidas são exactamente os defaults de pagamento** (`cadastradoEm: agora`, `categoria: null`, `vendida: false`, `disponivel: false`, `valor: 0`) que o V-1 tornou condicionais. Medido e conferido linha a linha — nada mais foi alterado. |
 
 ## 6.4 Pendência escalada (fica para o operador)
 **V-4** — um anónimo pode pré-criar/poluir uma cota no `endereco` de outra pessoa (medido: A13 do SEG3).

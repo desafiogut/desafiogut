@@ -55,6 +55,10 @@ md5 depois = md5 antes (c5368150cc04b871f0f0e417d5a85de7) ✅
 - Suíte: `node scripts/mc966-suite-harness.mjs ambos` (foreground) → **frontend 535/535 (inalterado) ·
   backend 945/951** (= 931/937 **+14**, os testes deste UTAC) · **VEREDITO VERDE**.
 - **Escopo cirúrgico medido:** `cotas.mjs` **+46 linhas / −0** (647→693 no diff, 648→694 com o LF final);
+  ⚠️ **errata pós-V-1/V-2:** estas contagens são do commit `1170b1f` (o que o validador inspeccionou). No
+  estado **final** (`653b5d9`) o total é **+67/−5**, e as 5 remoções são exactamente os defaults de
+  pagamento que o V-1 passou a condicionais (`cadastradoEm: agora`, `categoria: null`, `vendida: false`,
+  `disponivel: false`, `valor: 0`) — conferido linha a linha na verificação ad-hoc;
   o **prefixo** e o **sufixo** do ficheiro, fora dos dois blocos inseridos, são **byte-idênticos** ao
   `966a587`. md5(LF) `4bfca3a8e7526a97` → `1898dc6bdbf458bd`. Único ficheiro de produção alterado.
 
