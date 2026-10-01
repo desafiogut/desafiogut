@@ -1,0 +1,45 @@
+# UTAC000.6 — ANTES / DEPOIS (GATE 6/7) — 2026-10-01
+
+**Baseline:** `f980651` · **Alvo:** as 25 falhas residuais da suíte do frontend.
+
+## Números
+| momento | frontend | backend |
+|---|---|---|
+| início do UTAC000.6 | **25 falhas** | 967/973 |
+| fim do SEG1 (3 ficheiros corrigidos) | 19 falhas | 967/973 |
+| **fim do UTAC000.6** | **VERDE 535/535** | **VERDE 967/973** |
+
+## A causa (medida, e é o oposto de «configuração»)
+O runner SSR do Vite 8 serve a um módulo carregado **mais tarde** uma instância de React
+**diferente** da do primeiro. Prova directa, mesmo processo, mesmo servidor:
+```
+1o  ssrLoadModule -> R === React(Node)?  true
+2o  ssrLoadModule -> R === React(Node)?  true        (num processo com 1 servidor)
+2o/3o SERVIDOR no mesmo processo -> FALHA            (o 1.º servidor passa, os seguintes não)
+```
+E a prova que importa — **mutação, na linha que fixa**:
+| estado do `_render.mjs` | `mc1021a` |
+|---|---|
+| **sem** o load da ponte (mutante) | **0 pass / 15 fail** |
+| **com** o load da ponte | **15 pass / 0 fail** |
+`md5` restaurado idêntico após a mutação: `dd464867ded6…` (confirmado).
+
+**Correcção (mínima):** o primeiro módulo que o servidor de testes carrega passa a ser
+`src/__tests__/_ponte-ssr.mjs`, que importa os pacotes que trazem React
+(`react`, `react-dom/server`, `react-router-dom`, `framer-motion`). Assim **todos** os módulos
+seguintes — os componentes e os pacotes que eles usam — recebem a MESMA instância.
+
+**Declaração honesta (o validador deve verificar):** a REATRIBUIÇÃO do renderizador
+(`renderSsr(ReactSsr.createElement(...))` em vez de `renderToStaticMarkup(React.createElement(...))`)
+foi medida e **NÃO é load-bearing** — o mutante que a reverte continua a passar 15/15. O que fixa é o
+**load** da ponte. Mantive-a por coerência (todas as peças vêm do mesmo sítio), mas está declarado
+que a mutação não a distingue.
+
+## Os 3 ficheiros que resistiram, e porque caíram
+| ficheiro | antes | stack |
+|---|---|---|
+| `src/pages/__tests__/Dashboard.test.mjs` | 10 | `useContext` no `react-router` (instância própria) |
+| `src/components/edicao-especial/__tests__/especial.test.mjs` | 8 | `useState` (idem) |
+| `src/components/__tests__/mc1043-retencao.test.mjs` | 1 | `useReducedMotion` do **`framer-motion`** (`Modal.jsx:24`) |
+Resolvidos ao acrescentar `react-router-dom` e `framer-motion` à ponte (e ao `MemoryRouter` do
+`Dashboard`, que passa a vir dela em vez do Node).

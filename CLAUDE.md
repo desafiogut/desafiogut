@@ -36,6 +36,18 @@
 > configuração, é o grafo que o runner SSR do Vite 8 avalia**. A fase arquitectural (3-4 h) **não
 > foi iniciada por orçamento** (GATE 4/13). **R18:** operador decidiu não reverter o parcial
 > (68→25) e abrir este UTAC; o PoC mandou parar. `DEBT-004` continua **aberta (parcial)**.
+>
+> ✅ **UTAC000.6 (2026-10-01) — suíte do frontend VERDE:** **535/535** (backend 967/973). A
+> regressão do React está **fechada** e `DEBT-004` foi encerrada. **Causa final (medida):** o runner
+> SSR do Vite 8 serve a um módulo carregado **mais tarde** uma instância de React **diferente** da do
+> primeiro (`ReactCurrentDispatcher` a null); o 1.º `ssrLoadModule` de um processo/servidor acerta, os
+> seguintes não. **Correcção:** `src/__tests__/_ponte-ssr.mjs` é o **PRIMEIRO** módulo que o servidor
+> de testes carrega e importa `react`, `react-dom/server`, `react-router-dom` e `framer-motion` —
+> assim todos os módulos seguintes partilham a mesma instância. **Mutação:** desligar esse load →
+> **0/15**; ligá-lo → **15/15**. O PoC do `vite@7.3.6` do UTAC000.5 foi **refutado** (152 falhas).
+> **Zero código de produção tocado** (só testes + helpers). **R18:** correcção mínima provada por
+> mutação. Nota: a regra **A12** (`@vitejs/plugin-react`/instância do React) **não** foi escrita —
+> a autorização deste UTAC não incluía a skill; fica pendente de autorização.
 
 ---
 

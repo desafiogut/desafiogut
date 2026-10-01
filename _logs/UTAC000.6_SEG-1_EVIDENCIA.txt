@@ -1,0 +1,15 @@
+# UTAC000.6 — EVIDÊNCIA DO ESTADO AVARIADO (25 falhas) — preservada ANTES (HI10/GATE 5)
+
+base: f980651 | cwd: desafio-gut/frontend | vite 8.1.0 | node 24
+comando: node --test --test-concurrency=1 --test-reporter=tap $(find src -name '*.test.mjs' | sort)
+
+# tests 535 | # pass 510 | # fail 25
+
+Ficheiros em falha (medidos um a um, contagem exacta):
+   10  src/pages/__tests__/Dashboard.test.mjs                    (useContext, react-router)
+    8  src/components/edicao-especial/__tests__/especial.test.mjs (useState)
+    6  src/components/meus-ativos/__tests__/mc1021a-timeline.test.mjs (useState, casos do Cartao)
+    1  src/components/__tests__/mc1043-retencao.test.mjs          (useReducedMotion, framer-motion)
+
+Causa: o runner SSR do Vite 8 dá a um módulo carregado mais tarde uma instância de React
+diferente da do primeiro -> ReactCurrentDispatcher a null.

@@ -15,8 +15,11 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "vite";
-import { renderToStaticMarkup } from "react-dom/server";
-import React from "react";
+// ⚠️ React e o renderizador vêm do MESMO pipeline do servidor (`_ponte-ssr.mjs`), não do Node:
+// importá-los pelo Node dá uma instância diferente da que o componente recebe pelo runner SSR,
+// deixando o `ReactCurrentDispatcher` a null (`Cannot read properties of null (reading 'useState')`).
+let React = null;
+let renderToStaticMarkup = null;
 import { fileURLToPath } from "node:url";
 import { dirname, resolve as caminho } from "node:path";
 import { opcoesServidorTeste, ALIASES } from "../../__tests__/_servidor-teste.mjs";
@@ -55,6 +58,8 @@ before(async () => {
       ],
     },
   });
+  // A ponte PRIMEIRO: é ela que fixa a instância de React do processo.
+  ({ React, renderToStaticMarkup } = await vite.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs"));
   ({ definirContexto } = await vite.ssrLoadModule(`${STUBS}/AppContext.jsx`));
   ({ definirHooks, argumentos } = await vite.ssrLoadModule(`${STUBS}/hooks.js`));
   Pagina = (await vite.ssrLoadModule("/src/pages/MeusAtivos.jsx")).default;
