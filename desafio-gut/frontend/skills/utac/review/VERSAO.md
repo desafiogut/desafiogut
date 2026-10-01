@@ -1,4 +1,4 @@
-# VERSÃO da Skill UTAC01
+# VERSÃO da Skill UTAC
 
 **Auto-contido.** Fonte única da versão da skill (decisão do operador, R18 do UTAC000.2). Sobe pelo
 `aplicador.md` §3: regra ou lição nova → minor; gate, tipo ou formato → major.

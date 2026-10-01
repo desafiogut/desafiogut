@@ -23,7 +23,7 @@ Para cada sugestão das secções 4 e 5 do report: **aceite**, **rejeitada** ou 
    - `protocol/regras/README.md` — título («N regras»), linha da categoria na tabela, «**Total: N regras.**»;
    - `protocol/regras-legado.md` — «Total: **N regras** … (E9 · T5 · …)», incluindo a contagem por categoria entre parênteses;
    - `SKILL.md` — texto «N regras» do topo, árvore (`T-testes.md ← T1-T5`), título e tabela «As 9 categorias de regras (N regras)».
-   `exemplo.UTAC.md` é um exemplo histórico — não se actualiza. Confirmar com `grep -rn "<total antigo>" desafio-gut/frontend/skills/utac01`.
+   `exemplo.UTAC.md` é um exemplo histórico — não se actualiza. Confirmar com `grep -rn "<total antigo>" desafio-gut/frontend/skills/utac`.
 7. **Bump de versão** — ver §3.
 
 ## 2. Nova lição (aceite)

@@ -5,7 +5,7 @@ Correr na raiz do repo DesafioGUT. **Só leitura**, excepto os 2 ficheiros de sa
 
 ---
 
-És o **revisor** da Skill UTAC01. O `<UTAC>` já foi executado e fechado por outro modelo. A tua tarefa é
+És o **revisor** da Skill UTAC. O `<UTAC>` já foi executado e fechado por outro modelo. A tua tarefa é
 **aprender com ele**: o que correu bem, o que correu mal, e que regras/lições a skill devia ganhar.
 Não refazes o trabalho, não o corriges, não decides nada — **sugeres**. Quem decide é o operador.
 
@@ -28,7 +28,7 @@ Define `<P>` = `<UTAC>`; se `_logs/<UTAC>_*` não existir, tenta `<P>` = `<UTAC>
      que só **mencione** o UTAC105b);
    - diff = a união de `git show --stat <commit>` de cada um (e `git show <commit> -- <ficheiro>` nos relevantes); o `baseline`
      (spec ou «HEAD» do `SEG-1_MEDICAO`) serve só de referência. Declarar a lista de commits no report.
-4. A skill **actual**: `desafio-gut/frontend/skills/utac01/` — `protocol/regras/*.md`, `protocol/licoes.md`,
+4. A skill **actual**: `desafio-gut/frontend/skills/utac/` — `protocol/regras/*.md`, `protocol/licoes.md`,
    `protocol/ambiente.md`, `protocol/hard-gates.md`, `types/`, `review/VERSAO.md` (versão lida).
 5. As lições **fora** da skill: `CLAUDE.md` do repo (secções dos UTACs/MCs — ler com `grep -a`, tem bytes de controlo).
    Uma sugestão que já lá esteja é «migrar para a skill», não «nova».
@@ -48,7 +48,7 @@ Define `<P>` = `<UTAC>`; se `_logs/<UTAC>_*` não existir, tenta `<P>` = `<UTAC>
 
 ## PROIBIDO (sem excepções)
 - **Não alterar código** (`src/`, `netlify/functions/`, `_lib/`, `scripts/`, testes).
-- **Não alterar a skill** (`skills/utac01/**`, incluindo `review/` e `VERSAO.md`). **Não aplicar sugestões** — isso é do operador, pelo `aplicador.md`.
+- **Não alterar a skill** (`skills/utac/**`, incluindo `review/` e `VERSAO.md`). **Não aplicar sugestões** — isso é do operador, pelo `aplicador.md`.
 - **Não alterar UTACs fechados** (`_logs/<UTAC>_*`, relatórios, `Desktop/`), nem `CLAUDE.md`.
 - Não fazer commit, push, deploy, nem tocar em Supabase/Netlify. Não instalar nada.
 - **Sem dados pessoais, tokens ou chaves** no report (L1) — mascarar endereços (`0xabcd…1234`).

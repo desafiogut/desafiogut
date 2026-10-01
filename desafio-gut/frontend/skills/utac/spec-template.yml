@@ -1,7 +1,7 @@
 # =============================================================================
 # TEMPLATE DE SPEC DE UTAC — Unidade de Trabalho Auto Contido (UTAC)
 # =============================================================================
-# Um spec completo tem menos de 60 linhas. A Skill UTAC01 compõe o UTAC inteiro
+# Um spec completo tem menos de 60 linhas. A Skill UTAC compõe o UTAC inteiro
 # (contexto + HARD GATES + regras + frente + SEG-1..SEG6 + validador + fecho)
 # a partir deste spec.
 #
@@ -19,9 +19,9 @@ schema: utac/1
 name: UTAC000
 
 # OBRIGATORIO — título legível (1 linha).
-title: "Criar o padrão reutilizável (Skill UTAC01)"
+title: "Criar o padrão reutilizável (Skill UTAC)"
 
-# OBRIGATORIO — um dos 6 tipos de skills/utac01/types/
+# OBRIGATORIO — um dos 6 tipos de skills/utac/types/
 #   diagnostico | publicacao | produto | infra | lgpd | saneamento
 type: produto
 
@@ -47,7 +47,7 @@ frentes:
 
 # OBRIGATORIO — o que ESTE UTAC pode fazer (lista explícita).
 autoriza:
-  - criar desafio-gut/frontend/skills/utac01/ e subpastas
+  - criar desafio-gut/frontend/skills/utac/ e subpastas
   - criar ficheiros .md e .yml dentro dessa pasta
   - ler UTACs existentes em _logs/ e Desktop/
   - commit + push (foreground)

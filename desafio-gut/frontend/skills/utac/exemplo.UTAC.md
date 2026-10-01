@@ -1,6 +1,6 @@
 # UTAC999-demo — Medir a suíte e reportar o estado
 
-> **Ficheiro de EXEMPLO.** Gerado pela Skill UTAC01 a partir de `exemplo.spec.yml`.
+> **Ficheiro de EXEMPLO.** Gerado pela Skill UTAC a partir de `exemplo.spec.yml`.
 > Prova que a skill compõe um UTAC completo (HARD GATE 16; premissa «P10 — TESTÁVEL» do UTAC000).
 > Não confundir «P10» com a categoria de regras P/Processo (só tem P1-P7). Este ficheiro não é
 > um UTAC real — não foi executado, existe para mostrar a **estrutura** do resultado.

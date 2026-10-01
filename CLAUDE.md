@@ -4,6 +4,12 @@
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
 > errado nos três pontos. Corrigido aqui.
+>
+> 🔤 **Skill renomeada (2026-10-01):** `UTAC01` → **`UTAC`** — `desafio-gut/frontend/skills/utac/`
+> (frontmatter `name: utac`). Pedido do operador, **fora do SPEC do UTAC105b.3** (declarado). As
+> referências **históricas** em `_logs/UTAC000*`, `_logs/REVIEWS/` e `scripts/utac0002-*.mjs`
+> **não foram reescritas** (GATE 15 — UTACs fechados não se alteram): são registos do que foi, não
+> fonte de verdade; apontam para o caminho antigo de propósito.
 
 ---
 

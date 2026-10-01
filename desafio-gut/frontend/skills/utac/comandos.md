@@ -1,4 +1,4 @@
-# COMANDOS da Skill UTAC01
+# COMANDOS da Skill UTAC
 
 **Auto-contido.** Os comandos que a skill expõe. Cada comando diz o que faz, o que lê, o que
 escreve e quando PARAR.

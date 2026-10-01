@@ -1,4 +1,4 @@
-# Regras da Skill UTAC01 — 9 categorias, 61 regras
+# Regras da Skill UTAC — 9 categorias, 61 regras
 
 **Auto-contido.** Este directório contém as regras activas de todos os UTACs.
 

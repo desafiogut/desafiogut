@@ -1,9 +1,9 @@
 ---
-name: utac01
+name: utac
 description: "Compor e executar UTACs (Unidade de Trabalho Auto Contido) do DesafioGUT a partir de um spec curto."
 ---
 
-# Skill UTAC01 — gerar Unidades de Trabalho Auto Contidas (UTAC)
+# Skill UTAC — gerar Unidades de Trabalho Auto Contidas (UTAC)
 
 **UTAC = Unidade de Trabalho Auto Contido.** Uma unidade de trabalho com princípio e fim,
 auto-contida: contexto + HARD GATES + regras + frentes + SEG-1..SEG6 + validador adversarial + fecho.
@@ -26,7 +26,7 @@ co-construtor escreve só um **spec com menos de 60 linhas** e a skill compõe o
 
 ## Estrutura das pastas
 ```
-skills/utac01/
+skills/utac/
 ├─ SKILL.md            ← este ficheiro (entry point)
 ├─ comandos.md         ← /utac-run, /utac-validate, /utac-close, /utac-new, /utac-types
 ├─ spec-template.yml   ← template do spec (obrigatórios + opcionais + regras por ID)

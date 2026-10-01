@@ -1,6 +1,6 @@
 # =============================================================================
 # EXEMPLO DE SPEC DE UTAC — UTAC999-demo
-# Prova que a Skill UTAC01 compõe um UTAC a partir de um spec curto.
+# Prova que a Skill UTAC compõe um UTAC a partir de um spec curto.
 # Tipo escolhido: `diagnostico` (o mais simples — só mede, não altera nada).
 # =============================================================================
 
@@ -8,14 +8,14 @@ schema: utac/1
 
 name: UTAC999-demo
 
-title: "Medir a suíte e reportar o estado (demo da Skill UTAC01)"
+title: "Medir a suíte e reportar o estado (demo da Skill UTAC)"
 
 type: diagnostico
 
 baseline: 160bf09
 
 motivo: >-
-  Demonstração da Skill UTAC01: um spec com menos de 60 linhas tem de produzir um UTAC
+  Demonstração da Skill UTAC: um spec com menos de 60 linhas tem de produzir um UTAC
   completo e válido. Este exemplo só mede a suíte e reporta — não escreve nada
   em produção. Serve de prova documentada (HARD GATE 16 — o enunciado do UTAC000 chama-lhe
   premissa «P10 — TESTÁVEL»; não confundir com a categoria de regras P/Processo, onde só
