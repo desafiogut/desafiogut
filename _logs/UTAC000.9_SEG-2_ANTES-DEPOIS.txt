@@ -1,0 +1,110 @@
+UTAC000.9 — SEG-2: EVIDÊNCIA ANTES ↔ DEPOIS (vencedor do Dashboard — DEBT-008)
+=================================================================================
+data: 2026-10-01/02 · base: e19306e = origin/main · sessão dedicada a este UTAC
+Tudo aqui colado de execução real. Nada estimado.
+
+─────────────────────────────────────────────────────────────────────────────────
+1. SUÍTE — ANTES (medido no SEG-1, antes de tocar em código)
+─────────────────────────────────────────────────────────────────────────────────
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 579/579 pass
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+(ficheiro: _logs/UTAC000.9_SEG-1_EVIDENCIA.txt)
+
+─────────────────────────────────────────────────────────────────────────────────
+2. TESTES NOVOS — DEPOIS
+─────────────────────────────────────────────────────────────────────────────────
+$ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/Dashboard.test.mjs
+# tests 14 · # pass 14 · # fail 0        (10 pré-existentes + 4 novos do UTAC000.9)
+
+$ node --test --test-concurrency=1 --test-reporter=tap \
+    src/components/__tests__/utac0009-tabela-vencedor.test.mjs
+# tests 6 · # pass 6 · # fail 0          (novo)
+
+─────────────────────────────────────────────────────────────────────────────────
+3. SUÍTE — DEPOIS (0 regressões: 579 → 589 = +4 Dashboard +6 Tabela)
+─────────────────────────────────────────────────────────────────────────────────
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 589/589 pass
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+
+─────────────────────────────────────────────────────────────────────────────────
+4. MUTAÇÃO M7 — «o Dashboard ignora o resultado oficial» (= repor a DEBT-008)
+─────────────────────────────────────────────────────────────────────────────────
+Alteração (1 linha, `src/pages/Dashboard.jsx`):
+  -  const resultadoOficial = useResultadoOficial(EDICAO_ATIVA);
+  +  const resultadoOficial = null; // MUTANTE M7 (Dashboard ignora o oficial)
+
+Prova de que o mutante ENTROU: md5 mudou
+  antes  8f1660f22835d1dd9313f12173c1470b
+  mutado d1317bfe047b50b2faca1b3cdd620105
+
+$ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/Dashboard.test.mjs
+# tests 14 · # pass 11 · # fail 3        ← RED, como exigido
+(mordem os 3 testes do vencedor: card oficial, overlay e cablagem; os 10 pré-existentes ficam verdes.)
+
+Restauro: RESTAURADO src/pages/Dashboard.jsx md5=8f1660f22835d1dd9313f12173c1470b
+          (mutante tinha md5 diferente do backup: True)  → md5 IDÊNTICO ao de antes.
+
+─────────────────────────────────────────────────────────────────────────────────
+5. MUTAÇÃO M8 — «a TabelaLances ignora o resultado oficial»
+─────────────────────────────────────────────────────────────────────────────────
+Alteração (1 linha, `src/components/TabelaLances.jsx`):
+  -  const resultadoOficial = useResultadoOficial(idEdicao);
+  +  const resultadoOficial = null; // MUTANTE M8 (Tabela ignora o oficial)
+
+Prova de que o mutante ENTROU: md5 mudou
+  antes  c7dc6136fdcebee1eef1633a39bed823
+  mutado 814c45c80a6c9a2da467f0feebb048a7
+
+$ node --test --test-concurrency=1 --test-reporter=tap \
+    src/components/__tests__/utac0009-tabela-vencedor.test.mjs
+# tests 6 · # pass 3 · # fail 3          ← RED, como exigido
+(o 🏆 ia para o OUTRO — o vencedor LOCAL — em vez do oficial.)
+
+Restauro: RESTAURADO src/components/TabelaLances.jsx md5=c7dc6136fdcebee1eef1633a39bed823
+          (mutante tinha md5 diferente do backup: True) → md5 IDÊNTICO ao de antes.
+
+─────────────────────────────────────────────────────────────────────────────────
+6. ESCOPO (GATE 2/HI4) — `git diff --name-only` contra a base e19306e
+─────────────────────────────────────────────────────────────────────────────────
+desafio-gut/frontend/src/pages/Dashboard.jsx            (AUTORIZADO)
+desafio-gut/frontend/src/components/TabelaLances.jsx    (AUTORIZADO — src/components/**)
+desafio-gut/frontend/src/pages/__tests__/Dashboard.test.mjs (AUTORIZADO — testes)
+desafio-gut/frontend/package-lock.json                  (PRÉ-EXISTENTE, de fora do commit)
+Novos (untracked): src/components/__tests__/utac0009-tabela-vencedor.test.mjs,
+src/components/__tests__/_stubs/{useResultadoOficial.js,dompurify.js}, _logs/UTAC000.9_*,
+_logs/utac0009-evidencia.sh.
+Fora do escopo: NENHUM. Contrato, GUTO, Passe, Concurso, `_render.mjs`, `_ponte-ssr.mjs`,
+`vite.config.js`, `MeusAtivos.jsx`, `useResultadoOficial.js`, backend: INTOCADOS.
+DEBT-001/002/003/005/006: não tocadas.
+
+─────────────────────────────────────────────────────────────────────────────────
+7. md5 DOS ENTREGÁVEIS (estado final, verificado após os restauros)
+─────────────────────────────────────────────────────────────────────────────────
+8f1660f22835d1dd9313f12173c1470b  src/pages/Dashboard.jsx
+c7dc6136fdcebee1eef1633a39bed823  src/components/TabelaLances.jsx
+b2e61d1cd839b16e8b2f72a31627be9f  src/pages/__tests__/Dashboard.test.mjs
+0355208ab462bb55b0668eb4b6dad248  src/components/__tests__/utac0009-tabela-vencedor.test.mjs
+
+─────────────────────────────────────────────────────────────────────────────────
+8. SÍTIOS DO INVENTÁRIO E O QUE FICOU FORA DO ESCOPO (declarado, não escondido)
+─────────────────────────────────────────────────────────────────────────────────
+CORRIGIDOS neste UTAC (2):
+  • src/pages/Dashboard.jsx — card «🏆 Menor Lance Único» + overlay de fim de leilão.
+  • src/components/TabelaLances.jsx — 🏆 da tabela de lances (MercadoLances).
+
+JÁ CORRECTO antes (1): src/components/edicao-especial/PainelVencedorEspecial.jsx (usa o
+resultado oficial via `useResultadoEspecial`, desde o MC94).
+
+POR CORRIGIR — FORA DO ESCOPO AUTORIZADO (escalado ao operador, GATE 10):
+  • src/context/AppContext.jsx l.697-700 — o `vencedor` do contexto continua a ser derivado
+    dos lances locais e continua exposto a quem o consuma.
+  • src/pages/MercadoLances.jsx l.157/195 — o `OverlayVencedor` do fim do leilão recebe esse
+    `vencedor` do contexto e mostra-o no fim da rodada.
+  (o spec deste UTAC autoriza `Dashboard.jsx` + `src/components/**`; estes dois ficheiros são
+  `src/context/**` e `src/pages/**` fora do Dashboard → precisam de autorização nova.)
+  Sem consumidores restantes: `src/pages/DetalheProduto.jsx` destrutura `vencedor` do contexto
+  mas usa `produto.vencedor` (do servidor) — a variável do contexto está morta ali (medido).

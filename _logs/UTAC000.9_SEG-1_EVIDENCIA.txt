@@ -1,0 +1,67 @@
+UTAC000.9 — EVIDENCIA BRUTA (SEG-1, antes de qualquer alteracao)
+data: 2026-10-01T23:05:58Z
+HEAD: e19306eab33f7c0dc681858008d0cc96f8a14b80
+origin/main: e19306eab33f7c0dc681858008d0cc96f8a14b80
+
+=== git status --short (por commitar) ===
+ M desafio-gut/frontend/package-lock.json
+
+=== SUITE (harness canonico do repo) ===
+frontend: VERDE 579/579 pass
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+
+=== FRONTEND: resumo TAP ===
+# tests 579
+# pass 579
+# fail 0
+# cancelled 0
+# skipped 0
+
+=== BACKEND: resumo TAP ===
+# tests 973
+# pass 967
+# fail 0
+# cancelled 0
+# skipped 6
+
+=== INVENTARIO: sitios onde o vencedor e calculado localmente ===
+--- contexto (derivacao local, exposta a todos) ---
+697:  // Vencedor — Menor Lance Único (Art. 8)
+698-  const vencedor = [...lancesExibidos]
+699-    .filter((l) => !l.repetido)
+700-    .sort((a, b) => a.valor - b.valor)[0] ?? null;
+701-
+--- consumidores do vencedor do contexto ---
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:62:    lances, vencedor,
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:391:          {vencedor ? (
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:394:                {vencedor.endereco ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}` : "—"}
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:400:                R$ {(vencedor.valor / 100).toFixed(2)}
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:500:          vencedor={vencedor}
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/MercadoLances.jsx:69:function OverlayVencedor({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA, isMobile }) {
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/MercadoLances.jsx:70:  const enderecoAbrev = vencedor
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/MercadoLances.jsx:71:    ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/MercadoLances.jsx:73:  const valorFmt = vencedor ? `R$ ${(vencedor.valor / 100).toFixed(2)}` : "—";
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/MercadoLances.jsx:115:          {vencedor ? (
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/MercadoLances.jsx:157:    vencedor,
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/MercadoLances.jsx:195:          vencedor={vencedor}
+C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/DetalheProduto.jsx:39:  const { prazoFlash, prazoProgramado, lances, vencedor, encerrado } = useAppContext();
+--- TabelaLances: apuracao local do 🏆 ---
+51:  const idxVencedor = useMemo(() => lancesOrdenados.findIndex((l) => !l.repetido), [lancesOrdenados]);
+52-
+--
+132:        <MobileList lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={encerrado} />
+133-      ) : (
+134:        <DesktopTable lancesOrdenados={lancesOrdenados} idxVencedor={idxVencedor} encerrado={encerrado} />
+135-      )}
+--- PainelVencedorEspecial (ja usa o oficial) ---
+18: * @param {{consolidado:boolean, vencedor?:string, menorUnicoCentavos?:number}|null} [props.resultado]
+67:  const vencedor = typeof resultado.vencedor === "string" ? resultado.vencedor : "";
+82:      {t("edicao.especial.menorUnico", "Menor lance único")}: <strong style={{ color: COR.text }}>{reais(resultado.menorUnicoCentavos)}</strong>
+
+=== md5 dos ficheiros em jogo (ANTES) ===
+489a750759d629de2f485dae24edced7 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/Dashboard.jsx
+667f5497748a0f98e1cb6fb0326af44d *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/TabelaLances.jsx
+250324f90be532523d2b51023fa4fd03 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/context/AppContext.jsx
+3748a94bdc69d05d841b0b45ca1d3e06 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/MercadoLances.jsx
+f271b4b7fd985cf5a3a74c087608901e *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/hooks/useResultadoOficial.js
