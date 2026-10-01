@@ -1,0 +1,13 @@
+VERDE  entregaveis da skill (30)
+VERDE  substituidos ja ausentes (protocol/regras.md)
+VERDE  caminhos citados dentro do pacote existem
+VERDE  spec-template.yml: YAML com campos obrigatorios
+VERDE  exemplo.spec.yml: YAML com campos obrigatorios
+VERDE  exemplo.UTAC.md: 8 seccoes
+VERDE  nenhum ficheiro fora do escopo no commit
+VERDE  _logs/MC* e Desktop sem modificacao
+VERDE  disco >= 5 GB  [13 GB livres]
+VERDE  [CONTROLO+] entregaveis -> caminho errado da FALHA
+VERDE  [CONTROLO+] secao inexistente e' detectada
+
+VEREDITO: VERDE  (11 verificacoes)

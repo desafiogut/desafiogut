@@ -1,0 +1,26 @@
+=== UTAC000 — provas de mutacao (scripts ad-hoc fora do repo) ===
+
+--- composer spec (M1 baseline / M2 tipo / M3 proibe / M5 categoria) ---
+OK   caso1-valido.yml             -> VALIDO  
+OK   caso2-mutante-sem-baseline.yml -> INVALIDO  campo obrigatorio ausente: baseline
+OK   caso3-mutante-tipo-invalido.yml -> INVALIDO  tipo desconhecido: inventado
+OK   caso4-mutante-sem-proibe.yml -> INVALIDO  campo obrigatorio ausente: proibe
+OK   caso5-mutante-categoria-invalida.yml -> COMPOSICAO-INCOMPLETA  regra_activa desconhecida: Z
+
+TODOS OS CASOS COMO ESPERADO
+
+--- consistencia dos HARD GATES ---
+VERDE  (a) nenhum 'HG<n>' fora de hard-gates.md
+VERDE  (b) nenhum rotulo canonico com sentido da serie
+VERDE  (c) 16 nomes canonicos presentes
+VERDE  [CONTROLO+] mutantes apanhados pela regra  [types/produto.md:HG13 (concorrência) -> APANHADO | segments/seg0-3.md:GATE 2 (A/B) -> APANHADO]
+
+VEREDITO: VERDE
+=== UTAC000 — teste de consistencia dos HARD GATES (fora do repo) ===
+--- SEMMUTANTE ---
+VERDE  (a) nenhum 'HG<n>' fora de hard-gates.md
+VERDE  (b) nenhum rotulo canonico com sentido da serie
+VERDE  (c) 16 nomes canonicos presentes
+VERDE  [CONTROLO+] mutantes apanhados pela regra  [types/produto.md:HG13 (concorrência) -> APANHADO | segments/seg0-3.md:GATE 2 (A/B) -> APANHADO]
+
+VEREDITO: VERDE
