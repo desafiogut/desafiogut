@@ -19,6 +19,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import React from "react";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve as caminho } from "node:path";
+import { opcoesServidorTeste, ALIASES } from "../../__tests__/_servidor-teste.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const STUBS = caminho(AQUI, "_stubs");
@@ -31,6 +32,7 @@ let argumentos = null;
 
 before(async () => {
   vite = await createServer({
+      ...opcoesServidorTeste(),
     server: { middlewareMode: true },
     appType: "custom",
     logLevel: "error",
@@ -41,7 +43,7 @@ before(async () => {
       // apenas essa parte — deixando o `..` do import à frente do caminho
       // absoluto (`..C:/Users/…`). O erro não era "não encontrei o duplo": era
       // um caminho impossível construído em silêncio.
-      alias: [
+      alias: [...ALIASES, 
         { find: /^\.\.\/context\/AppContext\.jsx$/,    replacement: `${STUBS}/AppContext.jsx` },
         { find: /^\.\.\/context\/IdiomaContext\.jsx$/, replacement: `${STUBS}/IdiomaContext.jsx` },
         { find: /^\.\.\/hooks\/useRanking\.js$/,       replacement: `${STUBS}/hooks.js` },

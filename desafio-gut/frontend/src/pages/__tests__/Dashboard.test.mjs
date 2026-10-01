@@ -29,6 +29,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import React from "react";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve as caminho } from "node:path";
+import { opcoesServidorTeste, ALIASES } from "../../__tests__/_servidor-teste.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const STUBS = caminho(AQUI, "_stubs");
@@ -39,12 +40,13 @@ let definirContexto = null;
 
 before(async () => {
   vite = await createServer({
+      ...opcoesServidorTeste(),
     server: { middlewareMode: true },
     appType: "custom",
     logLevel: "error",
     optimizeDeps: { noDiscovery: true },
     resolve: {
-      alias: [
+      alias: [...ALIASES, 
         { find: /^\.\.\/context\/AppContext\.jsx$/,    replacement: `${STUBS}/AppContext.jsx` },
         { find: /^\.\.\/context\/IdiomaContext\.jsx$/, replacement: `${STUBS}/IdiomaContext.jsx` },
         { find: /^\.\.\/components\/CardLance\.jsx$/,  replacement: `${STUBS}/CardLance.jsx` },

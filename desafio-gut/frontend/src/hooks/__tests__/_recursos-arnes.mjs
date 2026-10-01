@@ -9,6 +9,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { opcoesServidorTeste, ALIASES } from "../../__tests__/_servidor-teste.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const DUPLO = join(AQUI, "_supabase-duplo.mjs");
@@ -17,13 +18,14 @@ let servidor = null;
 async function obterServidor() {
   if (servidor === null) {
     servidor = await createServer({
+      ...opcoesServidorTeste(),
       root: join(AQUI, "..", "..", ".."),
       server: { middlewareMode: true },
       appType: "custom",
       logLevel: "error",
       optimizeDeps: { noDiscovery: true },
       envDir: mkdtempSync(join(tmpdir(), "mc1041-env-")), // sem VITE_* reais
-      resolve: { alias: [{ find: /^\.\.\/lib\/supabaseClient(\.js)?$/, replacement: DUPLO }] },
+      resolve: { alias: [...ALIASES, { find: /^\.\.\/lib\/supabaseClient(\.js)?$/, replacement: DUPLO }] },
     });
   }
   return servidor;

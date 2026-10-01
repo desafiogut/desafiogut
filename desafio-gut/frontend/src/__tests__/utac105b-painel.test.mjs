@@ -10,6 +10,7 @@ import React from "react";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve as caminho } from "node:path";
+import { opcoesServidorTeste, ALIASES } from "./_servidor-teste.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const RAIZ = caminho(AQUI, "../..");
@@ -18,8 +19,9 @@ let vite, Mod, definirContexto;
 
 before(async () => {
   vite = await createServer({
+      ...opcoesServidorTeste(),
     root: RAIZ, server: { middlewareMode: true }, appType: "custom", logLevel: "error", optimizeDeps: { noDiscovery: true },
-    resolve: { alias: [{ find: /^\.\.\/context\/AppContext\.jsx$/, replacement: `${STUBS}/AppContext.jsx` }] },
+    resolve: { alias: [...ALIASES, { find: /^\.\.\/context\/AppContext\.jsx$/, replacement: `${STUBS}/AppContext.jsx` }] },
   });
   ({ definirContexto } = await vite.ssrLoadModule(`${STUBS}/AppContext.jsx`));
   Mod = await vite.ssrLoadModule("/src/pages/CorporativoCupons.jsx");

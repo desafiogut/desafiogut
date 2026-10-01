@@ -17,6 +17,16 @@
 > **auto-referencial, sem UTAC próprio** — só a skill e os ficheiros de dívida/versão, zero código de
 > produção. A dívida **DEBT-004** (suíte do frontend vermelha, 25 falhas: React em duplicado pelo
 > Vite) fica registada e **exige UTAC próprio** (HI4/HI5).
+>
+> 🧪 **UTAC000.4 (2026-10-01) — PARADO por HI5:** a suíte do **frontend** passou de **68 → 25 falhas**
+> (backend 967/973 intacto). Causa medida: o `@vitejs/plugin-react` da `vite.config.js` injecta
+> `react` no `optimizeDeps.include` e o Vite entrega ao componente uma instância diferente da do
+> ficheiro de teste (`ReactCurrentDispatcher` a `null`). Correcção **parcial** commitada: novo
+> `src/__tests__/_servidor-teste.mjs` (transporte dos testes isolado da config de produção) + 5 arnês.
+> **A `vite.config.js` NÃO foi alterada** — medido: `optimizeDeps.exclude` perde para o `include` do
+> plugin e os arnês já não carregam a config (alterá-la seria mudança sem medição — E1/GATE 3).
+> **R18 (UTAC000.4):** paragem accionada pelo **HI5/GATE 4** (excedeu 1 h); o progresso parcial foi
+> commitado e a dívida **DEBT-004** mantida `aberta (parcial)` — retomar exige UTAC próprio.
 
 ---
 

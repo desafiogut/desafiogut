@@ -55,6 +55,7 @@
 import { createServer } from "vite";
 import { renderToStaticMarkup } from "react-dom/server";
 import React from "react";
+import { opcoesServidorTeste } from "../../../__tests__/_servidor-teste.mjs";
 
 let servidor = null;
 
@@ -68,12 +69,7 @@ let servidor = null;
  */
 async function obterServidor() {
   if (servidor === null) {
-    servidor = await createServer({
-      server: { middlewareMode: true },
-      appType: "custom",
-      logLevel: "error",
-      optimizeDeps: { noDiscovery: true },
-    });
+    servidor = await createServer(opcoesServidorTeste());
   }
   return servidor;
 }

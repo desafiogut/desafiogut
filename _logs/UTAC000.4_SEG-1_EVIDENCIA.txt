@@ -1,0 +1,3997 @@
+# UTAC000.4 - EVIDENCIA DO ESTADO AVARIADO (preservada ANTES de corrigir - HI10/GATE 5)
+# comando: node --test --test-concurrency=1 --test-reporter=tap $(find src -name '*.test.mjs' | sort)
+# cwd: desafio-gut/frontend | baseline 9f9c59d = origin/main
+# Resumo TAP: '# tests 535  # pass 510  # fail 25'   (baseline era 68 falhas)
+# Correccao PARCIAL ja aplicada no working tree (helper _servidor-teste.mjs + 5 arnes): 68 -> 25
+# Ficheiros AINDA em falha (medidos um a um):
+#   src/pages/__tests__/Dashboard.test.mjs ......................... 10 (useContext, react-router)
+#   src/components/meus-ativos/__tests__/mc1021a-timeline.test.mjs ... 6 (useState, so os casos do Cartao)
+#   src/components/__tests__/mc1043-retencao.test.mjs ............... 1 (useState, modal)
+#   src/components/edicao-especial/__tests__/especial-i18n.test.mjs . 0 isolado / falha so na suite (interferencia)
+
+--- NOMES DAS FALHAS ---
+cartão: o «Recebi» e o estado continuam como estavam (HARD GATE 4)
+cartão: o bloco da timeline não contém morada nem CPF do pedido (P8)
+cartão: rastreio com eventos → a timeline aparece dentro do cartão, com 5 passos
+cartão: rastreio SEM eventos (a produção de hoje) → sem timeline; fica a linha do código em bruto
+cartão: sem rastreio → sem timeline
+isMobile: coluna no telemóvel, linha no desktop — e o cartão passa o isMobile
+MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã
+MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT
+modal (renderizado): NF-e, histórico anonimizado e on-chain; sem «consentimento retido»
+
+--- TAP BRUTO ---
+TAP version 13
+# Subtest: MC99.1/a · toda a rota REFERENCIADA existe no router
+ok 1 - MC99.1/a · toda a rota REFERENCIADA existe no router
+  ---
+  duration_ms: 2.1742
+  type: 'test'
+  ...
+# Subtest: MC99.1/b · toda a rota REGISTADA é alcançável (ou está justificada)
+ok 2 - MC99.1/b · toda a rota REGISTADA é alcançável (ou está justificada)
+  ---
+  duration_ms: 2.8854
+  type: 'test'
+  ...
+# Subtest: controlo positivo: o stripper apaga comentários e poupa código
+ok 3 - controlo positivo: o stripper apaga comentários e poupa código
+  ---
+  duration_ms: 1.2604
+  type: 'test'
+  ...
+# Subtest: MC99.1/SEG2 · um único ponto de entrada para o painel do lojista
+ok 4 - MC99.1/SEG2 · um único ponto de entrada para o painel do lojista
+  ---
+  duration_ms: 2.5284
+  type: 'test'
+  ...
+# Subtest: MC99.1/SEG6 · «Cotas disponíveis» e «Exclusividade» são dados do LOJISTA
+ok 5 - MC99.1/SEG6 · «Cotas disponíveis» e «Exclusividade» são dados do LOJISTA
+  ---
+  duration_ms: 1.8071
+  type: 'test'
+  ...
+# Subtest: MC99.1/SEG6 · CONTROLO — o utilizador comum NÃO perdeu a informação das cotas
+ok 6 - MC99.1/SEG6 · CONTROLO — o utilizador comum NÃO perdeu a informação das cotas
+  ---
+  duration_ms: 1.196
+  type: 'test'
+  ...
+# Subtest: controlo positivo: o stripper apaga comentários e poupa código
+ok 7 - controlo positivo: o stripper apaga comentários e poupa código
+  ---
+  duration_ms: 2.3355
+  type: 'test'
+  ...
+# Subtest: MC99.2/SEG0 · o CSP deixa o browser falar com o Supabase (REST e WebSocket)
+ok 8 - MC99.2/SEG0 · o CSP deixa o browser falar com o Supabase (REST e WebSocket)
+  ---
+  duration_ms: 1.8578
+  type: 'test'
+  ...
+# Subtest: MC99.2/SEG0 · HARD GATE 4 — nunca um wildcard CSP genérico
+ok 9 - MC99.2/SEG0 · HARD GATE 4 — nunca um wildcard CSP genérico
+  ---
+  duration_ms: 2.341
+  type: 'test'
+  ...
+# Subtest: MC99.2/SEG1 · só existe UM sítio a criar cliente Supabase no frontend
+ok 10 - MC99.2/SEG1 · só existe UM sítio a criar cliente Supabase no frontend
+  ---
+  duration_ms: 0.9207
+  type: 'test'
+  ...
+# Subtest: MC99.2/SEG1 · nenhum hook/componente cria cliente por conta própria
+ok 11 - MC99.2/SEG1 · nenhum hook/componente cria cliente por conta própria
+  ---
+  duration_ms: 1.0723
+  type: 'test'
+  ...
+# Subtest: MC99.2/SEG2 · `.on()` vem ANTES de `.subscribe()`
+ok 12 - MC99.2/SEG2 · `.on()` vem ANTES de `.subscribe()`
+  ---
+  duration_ms: 0.6628
+  type: 'test'
+  ...
+# Subtest: MC99.2/SEG2 · a remoção do canal é AGUARDADA (a causa do subscribe-after-subscribe)
+ok 13 - MC99.2/SEG2 · a remoção do canal é AGUARDADA (a causa do subscribe-after-subscribe)
+  ---
+  duration_ms: 1.6835
+  type: 'test'
+  ...
+# Subtest: MC99.2/SEG2 · UM canal por topic — dois hooks com a mesma chave NÃO criam dois canais
+ok 14 - MC99.2/SEG2 · UM canal por topic — dois hooks com a mesma chave NÃO criam dois canais
+  ---
+  duration_ms: 0.7391
+  type: 'test'
+  ...
+# Subtest: MC99.2/SEG2 · o cleanup fecha o canal quando sai o ÚLTIMO assinante
+ok 15 - MC99.2/SEG2 · o cleanup fecha o canal quando sai o ÚLTIMO assinante
+  ---
+  duration_ms: 0.769
+  type: 'test'
+  ...
+# Subtest: controlo positivo: as tags lidas são reais, não comentários
+ok 16 - controlo positivo: as tags lidas são reais, não comentários
+  ---
+  duration_ms: 1.1522
+  type: 'test'
+  ...
+# Subtest: MC99.3/SEG2 · os recursos acima da dobra SÃO pré-carregados
+ok 17 - MC99.3/SEG2 · os recursos acima da dobra SÃO pré-carregados
+  ---
+  duration_ms: 0.3289
+  type: 'test'
+  ...
+# Subtest: MC99.5.3 · todos os preloads de fonte apontam para ficheiros que EXISTEM (dedup)
+ok 18 - MC99.5.3 · todos os preloads de fonte apontam para ficheiros que EXISTEM (dedup)
+  ---
+  duration_ms: 1.0954
+  type: 'test'
+  ...
+# Subtest: MC99.5.3 · nenhum preload de fonte duplica os bytes de outro (o defeito do MC99.3)
+ok 19 - MC99.5.3 · nenhum preload de fonte duplica os bytes de outro (o defeito do MC99.3)
+  ---
+  duration_ms: 2.4699
+  type: 'test'
+  ...
+# Subtest: MC99.5.3 · cada url() do fontes.css aponta para um ficheiro existente (dedup sem src morto)
+ok 20 - MC99.5.3 · cada url() do fontes.css aponta para um ficheiro existente (dedup sem src morto)
+  ---
+  duration_ms: 1.9482
+  type: 'test'
+  ...
+# Subtest: MC99.3/SEG2 · o vídeo decorativo NÃO é pré-carregado (decisão deliberada)
+ok 21 - MC99.3/SEG2 · o vídeo decorativo NÃO é pré-carregado (decisão deliberada)
+  ---
+  duration_ms: 0.3128
+  type: 'test'
+  ...
+# Subtest: MC99.3/SEG2 · (c) cada preload aponta para um ficheiro que EXISTE
+ok 22 - MC99.3/SEG2 · (c) cada preload aponta para um ficheiro que EXISTE
+  ---
+  duration_ms: 1.8378
+  type: 'test'
+  ...
+# Subtest: MC99.3/SEG2 · o preload não substitui o poster/vídeo (nada foi removido do fundo)
+ok 23 - MC99.3/SEG2 · o preload não substitui o poster/vídeo (nada foi removido do fundo)
+  ---
+  duration_ms: 0.5176
+  type: 'test'
+  ...
+# Subtest: controlo positivo: o stripper de comentários vê mesmo o comentário desta correcção
+ok 24 - controlo positivo: o stripper de comentários vê mesmo o comentário desta correcção
+  ---
+  duration_ms: 3.1551
+  type: 'test'
+  ...
+# Subtest: MC99.5.1 · (a) o texto legal é servido por inteiro (sem maxHeight nem scroll aninhado)
+ok 25 - MC99.5.1 · (a) o texto legal é servido por inteiro (sem maxHeight nem scroll aninhado)
+  ---
+  duration_ms: 0.9621
+  type: 'test'
+  ...
+# Subtest: MC99.5.1 · (b) os 4 aceites legais continuam presentes
+ok 26 - MC99.5.1 · (b) os 4 aceites legais continuam presentes
+  ---
+  duration_ms: 0.6805
+  type: 'test'
+  ...
+# Subtest: MC99.5.1 · robotstxt e sitemap existem e não devolvem HTML
+ok 27 - MC99.5.1 · robotstxt e sitemap existem e não devolvem HTML
+  ---
+  duration_ms: 4.518
+  type: 'test'
+  ...
+# Subtest: MC99.5.1 · a data de vigência é 5 de outubro em TODO o lado
+ok 28 - MC99.5.1 · a data de vigência é 5 de outubro em TODO o lado
+  ---
+  duration_ms: 3.6826
+  type: 'test'
+  ...
+# Subtest: MC99.5.1 · o titulo do Regulamento diz a versão que o ficheiro é
+ok 29 - MC99.5.1 · o titulo do Regulamento diz a versão que o ficheiro é
+  ---
+  duration_ms: 1.1582
+  type: 'test'
+  ...
+# Subtest: controlo positivo do instrumento: a função REAL foi importada
+ok 30 - controlo positivo do instrumento: a função REAL foi importada
+  ---
+  duration_ms: 1.5567
+  type: 'test'
+  ...
+# Subtest: MC99.5.2.1c/INVERSÃO · (a) TODOS os literais IPv6 são recusados — os 49 das 4 gerações
+ok 31 - MC99.5.2.1c/INVERSÃO · (a) TODOS os literais IPv6 são recusados — os 49 das 4 gerações
+  ---
+  duration_ms: 0.5259
+  type: 'test'
+  ...
+# Subtest: MC99.5.2.1c/INVERSÃO · (b) DOMÍNIOS legítimos PASSAM (senão o proxy morre)
+ok 32 - MC99.5.2.1c/INVERSÃO · (b) DOMÍNIOS legítimos PASSAM (senão o proxy morre)
+  ---
+  duration_ms: 0.5502
+  type: 'test'
+  ...
+# Subtest: MC99.5.2.1c/INVERSÃO · (c) o guard RECUSA sem descodificar, e a decisão de rede mantem-se
+ok 33 - MC99.5.2.1c/INVERSÃO · (c) o guard RECUSA sem descodificar, e a decisão de rede mantem-se
+  ---
+  duration_ms: 1.1138
+  type: 'test'
+  ...
+# Subtest: MC99.5.2.1c/INVERSÃO · (d) os internos classicos continuam recusados
+ok 34 - MC99.5.2.1c/INVERSÃO · (d) os internos classicos continuam recusados
+  ---
+  duration_ms: 0.2931
+  type: 'test'
+  ...
+# Subtest: MC99.5.2.1d → 1e/DNS · (f) caminho do DNS: AAAA-only bloqueado, dominios legitimas passam
+ok 35 - MC99.5.2.1d → 1e/DNS · (f) caminho do DNS: AAAA-only bloqueado, dominios legitimas passam
+  ---
+  duration_ms: 786.9957
+  type: 'test'
+  ...
+# Subtest: MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e a ligação é FIXADA
+ok 36 - MC99.5.2.1e/7.ª GERAÇÃO · (g) o «nome prefixado» deixou de passar, e a ligação é FIXADA
+  ---
+  duration_ms: 7.009
+  type: 'test'
+  ...
+# Subtest: MC99.5.2/gate · o texto legal esta atras de um botao (sem resumo), FECHADO por padrao
+ok 37 - MC99.5.2/gate · o texto legal esta atras de um botao (sem resumo), FECHADO por padrao
+  ---
+  duration_ms: 0.8749
+  type: 'test'
+  ...
+# Subtest: MC99.5.3 · public/fonts: nenhum .woff2 duplica os bytes de outro (o defeito DEP2-06)
+ok 38 - MC99.5.3 · public/fonts: nenhum .woff2 duplica os bytes de outro (o defeito DEP2-06)
+  ---
+  duration_ms: 5.933
+  type: 'test'
+  ...
+# Subtest: MC99.5.3 · public/fonts cabe no orçamento de bytes
+ok 39 - MC99.5.3 · public/fonts cabe no orçamento de bytes
+  ---
+  duration_ms: 4.435
+  type: 'test'
+  ...
+# Subtest: MC99.5.3 · os 3 ficheiros sobreviventes do dedup continuam a existir
+ok 40 - MC99.5.3 · os 3 ficheiros sobreviventes do dedup continuam a existir
+  ---
+  duration_ms: 0.7991
+  type: 'test'
+  ...
+# Subtest: MC99.5.3 · fundo mobile: cabe no orçamento e NÃO é maior que o desktop
+ok 41 - MC99.5.3 · fundo mobile: cabe no orçamento e NÃO é maior que o desktop
+  ---
+  duration_ms: 2.5878
+  type: 'test'
+  ...
+# Subtest: MC99.5.3 · as variantes de fundo continuam a ser WebP válido (o re-encode não corrompeu)
+ok 42 - MC99.5.3 · as variantes de fundo continuam a ser WebP válido (o re-encode não corrompeu)
+  ---
+  duration_ms: 2.7
+  type: 'test'
+  ...
+# [31mWebSocket server error: Port 24678 is already in use[39m
+# Subtest: P1 lê a resposta do servidor (os 3 valores e o estado) e recusa formas erradas
+ok 43 - P1 lê a resposta do servidor (os 3 valores e o estado) e recusa formas erradas
+  ---
+  duration_ms: 5546.4013
+  type: 'test'
+  ...
+# Subtest: P2 «Guardar» envia todos os valores mostrados com o estado escolhido e o cliente_id da cota
+ok 44 - P2 «Guardar» envia todos os valores mostrados com o estado escolhido e o cliente_id da cota
+  ---
+  duration_ms: 0.4396
+  type: 'test'
+  ...
+# Subtest: P3 a página renderiza: sem cota → aviso; com cota → «carregando» (nunca inventa os 3 desactivados antes de ler)
+ok 45 - P3 a página renderiza: sem cota → aviso; com cota → «carregando» (nunca inventa os 3 desactivados antes de ler)
+  ---
+  duration_ms: 13.4057
+  type: 'test'
+  ...
+# Subtest: P4 os valores não estão duplicados no frontend (fonte única = servidor)
+ok 46 - P4 os valores não estão duplicados no frontend (fonte única = servidor)
+  ---
+  duration_ms: 0.8046
+  type: 'test'
+  ...
+# Subtest: P5 rota /corporativo/cupons registada (gated por CorporativoRoute) e entrada «Meus cupons» no painel
+ok 47 - P5 rota /corporativo/cupons registada (gated por CorporativoRoute) e entrada «Meus cupons» no painel
+  ---
+  duration_ms: 1.0536
+  type: 'test'
+  ...
+# Subtest: o v4 é legível e tem os artigos citados (guarda contra medição vazia)
+ok 48 - o v4 é legível e tem os artigos citados (guarda contra medição vazia)
+  ---
+  duration_ms: 2.4956
+  type: 'test'
+  ...
+# Subtest: cada (Art. Nº) na UI aponta para o artigo certo — palavra-chave na mesma linha
+ok 49 - cada (Art. Nº) na UI aponta para o artigo certo — palavra-chave na mesma linha
+  ---
+  duration_ms: 70.535
+  type: 'test'
+  ...
+# Subtest: as palavras-chave exigidas constam mesmo do texto do artigo no v4 (não inventadas)
+ok 50 - as palavras-chave exigidas constam mesmo do texto do artigo no v4 (não inventadas)
+  ---
+  duration_ms: 1.3502
+  type: 'test'
+  ...
+# Subtest: mapeia as mensagens do widget para {role, content}
+ok 51 - mapeia as mensagens do widget para {role, content}
+  ---
+  duration_ms: 2.8533
+  type: 'test'
+  ...
+# Subtest: descarta itens sem texto e cartões decorativos
+ok 52 - descarta itens sem texto e cartões decorativos
+  ---
+  duration_ms: 0.2463
+  type: 'test'
+  ...
+# Subtest: limita aos últimos N turnos (o mais recente fica)
+ok 53 - limita aos últimos N turnos (o mais recente fica)
+  ---
+  duration_ms: 0.3957
+  type: 'test'
+  ...
+# Subtest: não é array → vazio, nunca lança
+ok 54 - não é array → vazio, nunca lança
+  ---
+  duration_ms: 0.2043
+  type: 'test'
+  ...
+# Subtest: CABLAGEM: o ChatbotWidget realmente passa o histórico no POST
+ok 55 - CABLAGEM: o ChatbotWidget realmente passa o histórico no POST
+  ---
+  duration_ms: 1.1762
+  type: 'test'
+  ...
+# Subtest: (c3) o system leva a instrução de contexto MESMO sem histórico (alteração declarada)
+ok 56 - (c3) o system leva a instrução de contexto MESMO sem histórico (alteração declarada)
+  ---
+  duration_ms: 0.891
+  type: 'test'
+  ...
+# Subtest: O DEFEITO DO CLOSURE: `mensagens` tem de estar nas deps do enviarMensagem
+ok 57 - O DEFEITO DO CLOSURE: `mensagens` tem de estar nas deps do enviarMensagem
+  ---
+  duration_ms: 2.3453
+  type: 'test'
+  ...
+# Subtest: cada artigo citado: o TEXTO do bloco corresponde ao TEXTO do artigo do v4 (dois sentidos)
+ok 58 - cada artigo citado: o TEXTO do bloco corresponde ao TEXTO do artigo do v4 (dois sentidos)
+  ---
+  duration_ms: 4.9612
+  type: 'test'
+  ...
+# Subtest: o Relâmpago NÃO consome senhas — no regulamento E no gate
+ok 59 - o Relâmpago NÃO consome senhas — no regulamento E no gate
+  ---
+  duration_ms: 0.8829
+  type: 'test'
+  ...
+# Subtest: Art. 14 NÃO oferece prêmio em dinheiro — no regulamento E no gate (MC-SORTEIO-01a)
+ok 60 - Art. 14 NÃO oferece prêmio em dinheiro — no regulamento E no gate (MC-SORTEIO-01a)
+  ---
+  duration_ms: 0.7913
+  type: 'test'
+  ...
+# Subtest: o gate não apresenta datas que o Regulamento não regista
+ok 61 - o gate não apresenta datas que o Regulamento não regista
+  ---
+  duration_ms: 0.6286
+  type: 'test'
+  ...
+# Subtest: nenhum bloco funde dois artigos, e não há texto que não seja de nenhum
+ok 62 - nenhum bloco funde dois artigos, e não há texto que não seja de nenhum
+  ---
+  duration_ms: 2.0427
+  type: 'test'
+  ...
+# Subtest: o gate só cita artigos que existem no Regulamento
+ok 63 - o gate só cita artigos que existem no Regulamento
+  ---
+  duration_ms: 0.5612
+  type: 'test'
+  ...
+# Subtest: os outros ficheiros que citam o Regulamento continuam alinhados, ocorrência a ocorrência
+ok 64 - os outros ficheiros que citam o Regulamento continuam alinhados, ocorrência a ocorrência
+  ---
+  duration_ms: 2.7278
+  type: 'test'
+  ...
+# Subtest: o PIX do gate é o oficial (CNPJ), como no Regulamento — não um e-mail
+ok 65 - o PIX do gate é o oficial (CNPJ), como no Regulamento — não um e-mail
+  ---
+  duration_ms: 2.1988
+  type: 'test'
+  ...
+# Subtest: a agência do Banco do Brasil é a 198627, como no Regulamento
+ok 66 - a agência do Banco do Brasil é a 198627, como no Regulamento
+  ---
+  duration_ms: 0.2601
+  type: 'test'
+  ...
+# Subtest: o e-mail institucional do Art. 1 é o oficial
+ok 67 - o e-mail institucional do Art. 1 é o oficial
+  ---
+  duration_ms: 0.1676
+  type: 'test'
+  ...
+# Subtest: o e-mail de SUPORTE (MC88.44) NÃO foi arrastado pelo alinhamento
+ok 68 - o e-mail de SUPORTE (MC88.44) NÃO foi arrastado pelo alinhamento
+  ---
+  duration_ms: 0.622
+  type: 'test'
+  ...
+# Subtest: o PIX de compra continua a ser GERADO dinamicamente (não fixado no código)
+ok 69 - o PIX de compra continua a ser GERADO dinamicamente (não fixado no código)
+  ---
+  duration_ms: 0.5016
+  type: 'test'
+  ...
+# [31mWebSocket server error: Port 24678 is already in use[39m
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Subtest: modal (renderizado): NF-e, histórico anonimizado e on-chain; sem «consentimento retido»
+not ok 70 - modal (renderizado): NF-e, histórico anonimizado e on-chain; sem «consentimento retido»
+  ---
+  duration_ms: 5079.4656
+  type: 'test'
+  location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\mc1043-retencao.test.mjs:26:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of null (reading 'useState')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+    useReducedMotion (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/framer-motion/dist/es/utils/reduced-motion/use-reduced-motion.mjs:37:34)
+    Modal (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/ui/Modal.jsx:24:59)
+    renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+    renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+    renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+    renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+    renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+    renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5790:7)
+    renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+  ...
+# Subtest: página /excluir-conta (fonte sem comentários): as mesmas menções + o que é anonimizado
+ok 71 - página /excluir-conta (fonte sem comentários): as mesmas menções + o que é anonimizado
+  ---
+  duration_ms: 2.3371
+  type: 'test'
+  ...
+# Subtest: (a) nenhum texto VISÍVEL da UI diz «leilão»
+ok 72 - (a) nenhum texto VISÍVEL da UI diz «leilão»
+  ---
+  duration_ms: 61.896
+  type: 'test'
+  ...
+# Subtest: (b) o vocabulário correcto está presente nos ficheiros tocados
+ok 73 - (b) o vocabulário correcto está presente nos ficheiros tocados
+  ---
+  duration_ms: 50.3415
+  type: 'test'
+  ...
+# Subtest: os IDENTIFICADORES e o NOME DO CONTRATO são preservados (não é um refactor)
+ok 74 - os IDENTIFICADORES e o NOME DO CONTRATO são preservados (não é um refactor)
+  ---
+  duration_ms: 1.5895
+  type: 'test'
+  ...
+# Subtest: há chaves (controlo positivo: o extractor não está cego)
+ok 75 - há chaves (controlo positivo: o extractor não está cego)
+  ---
+  duration_ms: 5.6357
+  type: 'test'
+  ...
+# Subtest: pt é IGUAL aos fallbacks, chave a chave
+ok 76 - pt é IGUAL aos fallbacks, chave a chave
+  ---
+  duration_ms: 2.3131
+  type: 'test'
+  ...
+# Subtest: nenhuma chave órfã nos dicionários
+ok 77 - nenhuma chave órfã nos dicionários
+  ---
+  duration_ms: 1.4933
+  type: 'test'
+  ...
+# [31mWebSocket server error: Port 24678 is already in use[39m
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Subtest: MC94.2 · os quatro estados (HARD GATE 4)
+    # Subtest: agendada até 60 s antes das 20:00
+    ok 1 - agendada até 60 s antes das 20:00
+      ---
+      duration_ms: 0.8248
+      type: 'test'
+      ...
+    # Subtest: a_abrir nos últimos 60 s (inclusive os 60 s em ponto)
+    ok 2 - a_abrir nos últimos 60 s (inclusive os 60 s em ponto)
+      ---
+      duration_ms: 0.1889
+      type: 'test'
+      ...
+    # Subtest: activa das 20:00 às 20:30, inclusive nas duas pontas
+    ok 3 - activa das 20:00 às 20:30, inclusive nas duas pontas
+      ---
+      duration_ms: 0.2056
+      type: 'test'
+      ...
+    # Subtest: encerrada depois das 20:30
+    ok 4 - encerrada depois das 20:30
+      ---
+      duration_ms: 0.1459
+      type: 'test'
+      ...
+    # Subtest: encerrada se o admin a encerrou, mesmo dentro da janela
+    ok 5 - encerrada se o admin a encerrou, mesmo dentro da janela
+      ---
+      duration_ms: 0.1391
+      type: 'test'
+      ...
+    # Subtest: sem datas legíveis não há estado (não se inventa um)
+    ok 6 - sem datas legíveis não há estado (não se inventa um)
+      ---
+      duration_ms: 0.1395
+      type: 'test'
+      ...
+    # Subtest: os valores dos estados são os do enunciado
+    ok 7 - os valores dos estados são os do enunciado
+      ---
+      duration_ms: 0.9164
+      type: 'test'
+      ...
+    # Subtest: a contagem aponta para as 20:00 antes de abrir e para as 20:30 depois
+    ok 8 - a contagem aponta para as 20:00 antes de abrir e para as 20:30 depois
+      ---
+      duration_ms: 0.2548
+      type: 'test'
+      ...
+    1..8
+ok 78 - MC94.2 · os quatro estados (HARD GATE 4)
+  ---
+  duration_ms: 4634.8865
+  type: 'suite'
+  ...
+# Subtest: MC94.2 · formato do cronómetro
+    # Subtest: dias, horas, minutos e segundos
+    ok 1 - dias, horas, minutos e segundos
+      ---
+      duration_ms: 0.5708
+      type: 'test'
+      ...
+    # Subtest: menos de um dia não mostra dias; arredonda para CIMA (nunca 00:00:00 antes da hora)
+    ok 2 - menos de um dia não mostra dias; arredonda para CIMA (nunca 00:00:00 antes da hora)
+      ---
+      duration_ms: 0.2555
+      type: 'test'
+      ...
+    # Subtest: negativo vira zero; não-finito não é contagem
+    ok 3 - negativo vira zero; não-finito não é contagem
+      ---
+      duration_ms: 0.1359
+      type: 'test'
+      ...
+    1..3
+ok 79 - MC94.2 · formato do cronómetro
+  ---
+  duration_ms: 1.181
+  type: 'suite'
+  ...
+# Subtest: MC94.2 · relógio do servidor (HARD GATE 3)
+    # Subtest: offset = hora do servidor − meio do pedido
+    ok 1 - offset = hora do servidor − meio do pedido
+      ---
+      duration_ms: 0.2213
+      type: 'test'
+      ...
+    # Subtest: dois aparelhos com relógios diferentes vêem o MESMO tempo restante
+    ok 2 - dois aparelhos com relógios diferentes vêem o MESMO tempo restante
+      ---
+      duration_ms: 1.3222
+      type: 'test'
+      ...
+    # Subtest: sem `agora` legível não há offset (null, nunca 0)
+    ok 3 - sem `agora` legível não há offset (null, nunca 0)
+      ---
+      duration_ms: 0.2549
+      type: 'test'
+      ...
+    1..3
+ok 80 - MC94.2 · relógio do servidor (HARD GATE 3)
+  ---
+  duration_ms: 1.9983
+  type: 'suite'
+  ...
+# Subtest: MC94.2 · escolher a especial entre os mapas
+    # Subtest: antes da hora vem de `agendadas`; depois, de `edicoes`
+    ok 1 - antes da hora vem de `agendadas`; depois, de `edicoes`
+      ---
+      duration_ms: 0.5134
+      type: 'test'
+      ...
+    # Subtest: ignora o que não é ESPECIAL-* e o que não tem datas
+    ok 2 - ignora o que não é ESPECIAL-* e o que não tem datas
+      ---
+      duration_ms: 0.1767
+      type: 'test'
+      ...
+    # Subtest: com várias, mostra a próxima por acabar, não uma já encerrada
+    ok 3 - com várias, mostra a próxima por acabar, não uma já encerrada
+      ---
+      duration_ms: 0.1327
+      type: 'test'
+      ...
+    # Subtest: ehEspecial: prefixo, não 'contém'
+    ok 4 - ehEspecial: prefixo, não 'contém'
+      ---
+      duration_ms: 0.1692
+      type: 'test'
+      ...
+    1..4
+ok 81 - MC94.2 · escolher a especial entre os mapas
+  ---
+  duration_ms: 1.151
+  type: 'suite'
+  ...
+# Subtest: MC94.2 · métricas e vencedor
+    # Subtest: conta lances e participantes distintos (endereço sem caixa)
+    ok 1 - conta lances e participantes distintos (endereço sem caixa)
+      ---
+      duration_ms: 0.223
+      type: 'test'
+      ...
+    # Subtest: o nome do vencedor vem do lance dele; sem nome → null
+    ok 2 - o nome do vencedor vem do lance dele; sem nome → null
+      ---
+      duration_ms: 0.1659
+      type: 'test'
+      ...
+    1..2
+ok 82 - MC94.2 · métricas e vencedor
+  ---
+  duration_ms: 0.5088
+  type: 'suite'
+  ...
+# Subtest: MC94.2 · ContagemDecrescente
+    # Subtest: mostra dias, horas, minutos e segundos com rótulo
+    ok 1 - mostra dias, horas, minutos e segundos com rótulo
+      ---
+      duration_ms: 5.8658
+      type: 'test'
+      ...
+    # Subtest: sem relógio do servidor ainda: '…', nunca um número inventado
+    ok 2 - sem relógio do servidor ainda: '…', nunca um número inventado
+      ---
+      duration_ms: 0.7524
+      type: 'test'
+      ...
+    1..2
+ok 83 - MC94.2 · ContagemDecrescente
+  ---
+  duration_ms: 6.7462
+  type: 'suite'
+  ...
+# Subtest: MC94.2 · PainelVencedorEspecial (D4)
+    # Subtest: consolidado: vencedor (nome), menor único em R$, lances e participantes
+    ok 1 - consolidado: vencedor (nome), menor único em R$, lances e participantes
+      ---
+      duration_ms: 1.2948
+      type: 'test'
+      ...
+    # Subtest: sem nome: endereço ENCURTADO, nunca inteiro (R4)
+    ok 2 - sem nome: endereço ENCURTADO, nunca inteiro (R4)
+      ---
+      duration_ms: 0.6287
+      type: 'test'
+      ...
+    # Subtest: ainda não consolidado: 'apuração em curso', sem vencedor
+    ok 3 - ainda não consolidado: 'apuração em curso', sem vencedor
+      ---
+      duration_ms: 0.5321
+      type: 'test'
+      ...
+    # Subtest: zero lances: diz que não houve lances
+    ok 4 - zero lances: diz que não houve lances
+      ---
+      duration_ms: 0.3848
+      type: 'test'
+      ...
+    # Subtest: consolidado com vencedor zero: sem lance único vencedor
+    ok 5 - consolidado com vencedor zero: sem lance único vencedor
+      ---
+      duration_ms: 0.3658
+      type: 'test'
+      ...
+    # Subtest: consolidado com métricas a ZERO (lances-flash falhou com 200): o vencedor on-chain manda
+    ok 6 - consolidado com métricas a ZERO (lances-flash falhou com 200): o vencedor on-chain manda
+      ---
+      duration_ms: 0.5343
+      type: 'test'
+      ...
+    # Subtest: a carregar e erro são estados próprios
+    ok 7 - a carregar e erro são estados próprios
+      ---
+      duration_ms: 0.674
+      type: 'test'
+      ...
+    1..7
+ok 84 - MC94.2 · PainelVencedorEspecial (D4)
+  ---
+  duration_ms: 4.7317
+  type: 'suite'
+  ...
+# Subtest: MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã
+    # Subtest: agendada: arte com alt, prémio, cronómetro para as 20:00, sem formulário
+    not ok 1 - agendada: arte com alt, prémio, cronómetro para as 20:00, sem formulário
+      ---
+      duration_ms: 12.7815
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\edicao-especial\\__tests__\\especial.test.mjs:236:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useState')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+        useReducedMotion (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/framer-motion/dist/es/utils/reduced-motion/use-reduced-motion.mjs:37:34)
+        GutoSpritePlayer (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/GutoSpritePlayer.jsx:103:59)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderNode (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6274:12)
+        renderChildrenArray (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6226:7)
+      ...
+    # Subtest: a hora mostrada é a de Brasília, qualquer que seja o fuso do aparelho
+    not ok 2 - a hora mostrada é a de Brasília, qualquer que seja o fuso do aparelho
+      ---
+      duration_ms: 1.5768
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\edicao-especial\\__tests__\\especial.test.mjs:247:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useState')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+        useReducedMotion (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/framer-motion/dist/es/utils/reduced-motion/use-reduced-motion.mjs:37:34)
+        GutoSpritePlayer (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/GutoSpritePlayer.jsx:103:59)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderNode (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6274:12)
+        renderChildrenArray (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6226:7)
+      ...
+    # Subtest: a_abrir: aviso de abertura + contagem, ainda sem formulário
+    not ok 3 - a_abrir: aviso de abertura + contagem, ainda sem formulário
+      ---
+      duration_ms: 1.421
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\edicao-especial\\__tests__\\especial.test.mjs:250:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useState')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+        useReducedMotion (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/framer-motion/dist/es/utils/reduced-motion/use-reduced-motion.mjs:37:34)
+        GutoSpritePlayer (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/GutoSpritePlayer.jsx:103:59)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderNode (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6274:12)
+        renderChildrenArray (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6226:7)
+      ...
+    # Subtest: activa: o formulário de lance é o DESTA edição, pago em SALDO (flash)
+    not ok 4 - activa: o formulário de lance é o DESTA edição, pago em SALDO (flash)
+      ---
+      duration_ms: 1.6536
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\edicao-especial\\__tests__\\especial.test.mjs:260:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useState')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+        useReducedMotion (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/framer-motion/dist/es/utils/reduced-motion/use-reduced-motion.mjs:37:34)
+        GutoSpritePlayer (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/GutoSpritePlayer.jsx:103:59)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderNode (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6274:12)
+        renderChildrenArray (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6226:7)
+      ...
+    # Subtest: encerrada: painel do vencedor, sem formulário nem cronómetro
+    not ok 5 - encerrada: painel do vencedor, sem formulário nem cronómetro
+      ---
+      duration_ms: 2.344
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\edicao-especial\\__tests__\\especial.test.mjs:268:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useState')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+        useReducedMotion (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/framer-motion/dist/es/utils/reduced-motion/use-reduced-motion.mjs:37:34)
+        GutoSpritePlayer (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/GutoSpritePlayer.jsx:103:59)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderNode (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6274:12)
+        renderChildrenArray (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6226:7)
+      ...
+    # Subtest: o cronómetro usa o offset do servidor, não o relógio do aparelho
+    not ok 6 - o cronómetro usa o offset do servidor, não o relógio do aparelho
+      ---
+      duration_ms: 1.4778
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\edicao-especial\\__tests__\\especial.test.mjs:278:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useState')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+        useReducedMotion (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/framer-motion/dist/es/utils/reduced-motion/use-reduced-motion.mjs:37:34)
+        GutoSpritePlayer (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/GutoSpritePlayer.jsx:103:59)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderNode (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6274:12)
+        renderChildrenArray (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6226:7)
+      ...
+    # Subtest: sem offset: o formulário NÃO abre por um relógio de aparelho adiantado
+    not ok 7 - sem offset: o formulário NÃO abre por um relógio de aparelho adiantado
+      ---
+      duration_ms: 1.4492
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\edicao-especial\\__tests__\\especial.test.mjs:285:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useState')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+        useReducedMotion (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/framer-motion/dist/es/utils/reduced-motion/use-reduced-motion.mjs:37:34)
+        GutoSpritePlayer (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/GutoSpritePlayer.jsx:103:59)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderNode (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6274:12)
+        renderChildrenArray (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6226:7)
+      ...
+    # Subtest: sem offset ainda: '…' em vez de uma contagem pelo relógio do aparelho
+    not ok 8 - sem offset ainda: '…' em vez de uma contagem pelo relógio do aparelho
+      ---
+      duration_ms: 1.5651
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\edicao-especial\\__tests__\\especial.test.mjs:292:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useState')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+        useReducedMotion (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/framer-motion/dist/es/utils/reduced-motion/use-reduced-motion.mjs:37:34)
+        GutoSpritePlayer (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/GutoSpritePlayer.jsx:103:59)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderNode (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6274:12)
+        renderChildrenArray (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6226:7)
+      ...
+    # Subtest: edição sem datas legíveis: não renderiza nada
+    ok 9 - edição sem datas legíveis: não renderiza nada
+      ---
+      duration_ms: 0.4975
+      type: 'test'
+      ...
+    1..9
+not ok 85 - MC94.2 · CardEdicaoEspecial — os quatro estados no ecrã
+  ---
+  duration_ms: 25.4497
+  type: 'suite'
+  location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\edicao-especial\\__tests__\\especial.test.mjs:231:1'
+  failureType: 'subtestsFailed'
+  error: '8 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: MC94.3.1 · retenção de 24 h depois do fim (R18, 2026-09-25)
+    # Subtest: o valor da retenção é 24 h
+    ok 1 - o valor da retenção é 24 h
+      ---
+      duration_ms: 0.2015
+      type: 'test'
+      ...
+    # Subtest: dentro das 24 h seguintes ao fim, continua a mostrar-se
+    ok 2 - dentro das 24 h seguintes ao fim, continua a mostrar-se
+      ---
+      duration_ms: 0.0908
+      type: 'test'
+      ...
+    # Subtest: passadas 24 h, deixa de se mostrar
+    ok 3 - passadas 24 h, deixa de se mostrar
+      ---
+      duration_ms: 0.0669
+      type: 'test'
+      ...
+    # Subtest: antes de abrir mostra-se — a retenção é sobre o FIM, não sobre o início
+    ok 4 - antes de abrir mostra-se — a retenção é sobre o FIM, não sobre o início
+      ---
+      duration_ms: 0.0642
+      type: 'test'
+      ...
+    # Subtest: sem `termino_em` legível ou sem `agora` legível, não se mostra
+    ok 5 - sem `termino_em` legível ou sem `agora` legível, não se mostra
+      ---
+      duration_ms: 0.0925
+      type: 'test'
+      ...
+    # Subtest: escolherEspecial deixa de a devolver 24 h depois do fim (o defeito real)
+    ok 6 - escolherEspecial deixa de a devolver 24 h depois do fim (o defeito real)
+      ---
+      duration_ms: 0.1312
+      type: 'test'
+      ...
+    1..6
+ok 86 - MC94.3.1 · retenção de 24 h depois do fim (R18, 2026-09-25)
+  ---
+  duration_ms: 0.8482
+  type: 'suite'
+  ...
+# Subtest: MC94.2 · useEdicoes — agendadas e relógio do servidor
+    # Subtest: expõe `agendadas` normalizadas, com inicio_em e imagem_url
+    ok 1 - expõe `agendadas` normalizadas, com inicio_em e imagem_url
+      ---
+      duration_ms: 25.3048
+      type: 'test'
+      ...
+    # Subtest: offset = hora do servidor − hora do aparelho (servidor 5 min à frente)
+    ok 2 - offset = hora do servidor − hora do aparelho (servidor 5 min à frente)
+      ---
+      duration_ms: 14.3315
+      type: 'test'
+      ...
+# [GUT-DEBUG] useEdicoes fallback R-1: payload_invalido
+    # Subtest: resposta sem `agora`: offset fica null — nunca um 0 inventado
+    ok 3 - resposta sem `agora`: offset fica null — nunca um 0 inventado
+      ---
+      duration_ms: 15.3273
+      type: 'test'
+      ...
+    # Subtest: index.html com 200 (SPA fallback): erro, e nenhuma agendada inventada
+    ok 4 - index.html com 200 (SPA fallback): erro, e nenhuma agendada inventada
+      ---
+      duration_ms: 16.1179
+      type: 'test'
+      ...
+    1..4
+ok 87 - MC94.2 · useEdicoes — agendadas e relógio do servidor
+  ---
+  duration_ms: 72.8238
+  type: 'suite'
+  ...
+# [31mWebSocket server error: Port 24678 is already in use[39m
+# Subtest: MC94 · PainelTorneio
+    # Subtest: renderiza posição, pontos e acertos — cada número com o SEU rótulo
+    ok 1 - renderiza posição, pontos e acertos — cada número com o SEU rótulo
+      ---
+      duration_ms: 8.5216
+      type: 'test'
+      ...
+    # Subtest: ⚠️ quantidades impossíveis não chegam ao painel
+    ok 2 - ⚠️ quantidades impossíveis não chegam ao painel
+      ---
+      duration_ms: 1.168
+      type: 'test'
+      ...
+    # Subtest: ⚠️ pontos ausentes mostram — , não um zero inventado
+    ok 3 - ⚠️ pontos ausentes mostram — , não um zero inventado
+      ---
+      duration_ms: 0.8298
+      type: 'test'
+      ...
+    # Subtest: ⚠️ `posicao: null` não vira 'nullº'
+    ok 4 - ⚠️ `posicao: null` não vira 'nullº'
+      ---
+      duration_ms: 0.8805
+      type: 'test'
+      ...
+    # Subtest: com ERRO e a carregar ao mesmo tempo, o erro ganha
+    ok 5 - com ERRO e a carregar ao mesmo tempo, o erro ganha
+      ---
+      duration_ms: 0.4858
+      type: 'test'
+      ...
+    # Subtest: sem sessão CONVIDA a entrar, e não mostra erro
+    ok 6 - sem sessão CONVIDA a entrar, e não mostra erro
+      ---
+      duration_ms: 0.3893
+      type: 'test'
+      ...
+    # Subtest: com erro, di-lo — e não finge zeros
+    ok 7 - com erro, di-lo — e não finge zeros
+      ---
+      duration_ms: 0.4466
+      type: 'test'
+      ...
+    # Subtest: ⚠️ com sessão e SEM dados, não finge que está a carregar
+    ok 8 - ⚠️ com sessão e SEM dados, não finge que está a carregar
+      ---
+      duration_ms: 0.6053
+      type: 'test'
+      ...
+    # Subtest: a carregar, não mostra números nem erro
+    ok 9 - a carregar, não mostra números nem erro
+      ---
+      duration_ms: 0.5993
+      type: 'test'
+      ...
+    # Subtest: sem dados ainda (ciclo novo) diz que não há, sem parecer avaria
+    ok 10 - sem dados ainda (ciclo novo) diz que não há, sem parecer avaria
+      ---
+      duration_ms: 0.8736
+      type: 'test'
+      ...
+    1..10
+ok 88 - MC94 · PainelTorneio
+  ---
+  duration_ms: 1605.8732
+  type: 'suite'
+  ...
+# Subtest: MC94 · ProgressoBonus
+    # Subtest: mostra a barra e quantos faltam
+    ok 1 - mostra a barra e quantos faltam
+      ---
+      duration_ms: 1.2366
+      type: 'test'
+      ...
+    # Subtest: a 5 de 5 diz sequência completa — mas NÃO declara o bónus conquistado
+    ok 2 - a 5 de 5 diz sequência completa — mas NÃO declara o bónus conquistado
+      ---
+      duration_ms: 0.5778
+      type: 'test'
+      ...
+    # Subtest: a barra anuncia-se a quem não a vê
+    ok 3 - a barra anuncia-se a quem não a vê
+      ---
+      duration_ms: 0.5734
+      type: 'test'
+      ...
+    # Subtest: a zero, mostra o alvo e não uma barra cheia
+    ok 4 - a zero, mostra o alvo e não uma barra cheia
+      ---
+      duration_ms: 0.7738
+      type: 'test'
+      ...
+    # Subtest: 7 acertos com alvo 5 mostra 2/5, não 7/5
+    ok 5 - 7 acertos com alvo 5 mostra 2/5, não 7/5
+      ---
+      duration_ms: 0.7723
+      type: 'test'
+      ...
+    # Subtest: ⚠️ `faltam: 0` com ZERO acertos não é sequência completa
+    ok 6 - ⚠️ `faltam: 0` com ZERO acertos não é sequência completa
+      ---
+      duration_ms: 0.5512
+      type: 'test'
+      ...
+    # Subtest: ⛔ quem FECHA uma sequência de 5 vê 5/5, não 0/5
+    ok 7 - ⛔ quem FECHA uma sequência de 5 vê 5/5, não 0/5
+      ---
+      duration_ms: 0.5575
+      type: 'test'
+      ...
+    # Subtest: a 10 acertos (dois ciclos) também está completa
+    ok 8 - a 10 acertos (dois ciclos) também está completa
+      ---
+      duration_ms: 0.7514
+      type: 'test'
+      ...
+    # Subtest: ⚠️ sem dados NÃO é 'a carregar' — um spinner eterno é uma afirmação falsa
+    ok 9 - ⚠️ sem dados NÃO é 'a carregar' — um spinner eterno é uma afirmação falsa
+      ---
+      duration_ms: 0.526
+      type: 'test'
+      ...
+    # Subtest: com ERRO e a carregar ao mesmo tempo, o erro ganha
+    ok 10 - com ERRO e a carregar ao mesmo tempo, o erro ganha
+      ---
+      duration_ms: 0.6214
+      type: 'test'
+      ...
+    # Subtest: um alvo inválido não parte a barra
+    ok 11 - um alvo inválido não parte a barra
+      ---
+      duration_ms: 1.9227
+      type: 'test'
+      ...
+    # Subtest: SEM SESSÃO não afirma zero acertos — convida a entrar
+    ok 12 - SEM SESSÃO não afirma zero acertos — convida a entrar
+      ---
+      duration_ms: 0.6626
+      type: 'test'
+      ...
+    # Subtest: COM ERRO não mostra zeros — di-lo
+    ok 13 - COM ERRO não mostra zeros — di-lo
+      ---
+      duration_ms: 0.4201
+      type: 'test'
+      ...
+    # Subtest: A CARREGAR não mostra progresso nem erro
+    ok 14 - A CARREGAR não mostra progresso nem erro
+      ---
+      duration_ms: 0.5489
+      type: 'test'
+      ...
+    1..14
+ok 89 - MC94 · ProgressoBonus
+  ---
+  duration_ms: 11.2554
+  type: 'suite'
+  ...
+# Subtest: MC94 · EstadoBonus
+    # Subtest: distingue PENDENTE de LIQUIDADO
+    ok 1 - distingue PENDENTE de LIQUIDADO
+      ---
+      duration_ms: 1.525
+      type: 'test'
+      ...
+    # Subtest: pendente e liquidado distinguem-se também na cor, não só nas palavras
+    ok 2 - pendente e liquidado distinguem-se também na cor, não só nas palavras
+      ---
+      duration_ms: 1.1744
+      type: 'test'
+      ...
+    # Subtest: `liquidado: undefined` conta como PENDENTE
+    ok 3 - `liquidado: undefined` conta como PENDENTE
+      ---
+      duration_ms: 0.8162
+      type: 'test'
+      ...
+    # Subtest: NUNCA chama isto de saldo
+    ok 4 - NUNCA chama isto de saldo
+      ---
+      duration_ms: 1.695
+      type: 'test'
+      ...
+    # Subtest: ⚠️ bónus emitido com quantidade ZERO não vira 'nenhum bónus'
+    ok 5 - ⚠️ bónus emitido com quantidade ZERO não vira 'nenhum bónus'
+      ---
+      duration_ms: 0.6907
+      type: 'test'
+      ...
+    # Subtest: com ERRO e a carregar ao mesmo tempo, o erro ganha
+    ok 6 - com ERRO e a carregar ao mesmo tempo, o erro ganha
+      ---
+      duration_ms: 0.4894
+      type: 'test'
+      ...
+    # Subtest: sem bónus nenhum, não promete nada
+    ok 7 - sem bónus nenhum, não promete nada
+      ---
+      duration_ms: 0.4752
+      type: 'test'
+      ...
+    # Subtest: mostra a quantidade que o livro-razão diz, não a constante
+    ok 8 - mostra a quantidade que o livro-razão diz, não a constante
+      ---
+      duration_ms: 0.8874
+      type: 'test'
+      ...
+    # Subtest: quantidades impossíveis não chegam ao ecrã
+    ok 9 - quantidades impossíveis não chegam ao ecrã
+      ---
+      duration_ms: 1.8518
+      type: 'test'
+      ...
+    # Subtest: SEM SESSÃO não afirma que não há bónus — convida a entrar
+    ok 10 - SEM SESSÃO não afirma que não há bónus — convida a entrar
+      ---
+      duration_ms: 0.566
+      type: 'test'
+      ...
+    # Subtest: COM ERRO não finge ausência de bónus
+    ok 11 - COM ERRO não finge ausência de bónus
+      ---
+      duration_ms: 0.6072
+      type: 'test'
+      ...
+    1..11
+ok 90 - MC94 · EstadoBonus
+  ---
+  duration_ms: 11.5453
+  type: 'suite'
+  ...
+# Subtest: MC94 · FeedbackLance
+    # Subtest: diz quanto cada lance VALE, nunca que já ganhou
+    ok 1 - diz quanto cada lance VALE, nunca que já ganhou
+      ---
+      duration_ms: 1.4962
+      type: 'test'
+      ...
+    # Subtest: o menor único vale 3, os outros únicos valem 1
+    ok 2 - o menor único vale 3, os outros únicos valem 1
+      ---
+      duration_ms: 0.7113
+      type: 'test'
+      ...
+    # Subtest: EMPATE no menor marca TODOS os empatados, não um à sorte
+    ok 3 - EMPATE no menor marca TODOS os empatados, não um à sorte
+      ---
+      duration_ms: 0.7751
+      type: 'test'
+      ...
+    # Subtest: um lance repetido vale zero e di-lo por palavras
+    ok 4 - um lance repetido vale zero e di-lo por palavras
+      ---
+      duration_ms: 0.5992
+      type: 'test'
+      ...
+    # Subtest: um repetido NÃO pode ser eleito menor único
+    ok 5 - um repetido NÃO pode ser eleito menor único
+      ---
+      duration_ms: 0.5551
+      type: 'test'
+      ...
+    # Subtest: ⚠️ `valor: null` não aparece como R$ 0,00 nem ganha 3 pontos
+    ok 6 - ⚠️ `valor: null` não aparece como R$ 0,00 nem ganha 3 pontos
+      ---
+      duration_ms: 0.4
+      type: 'test'
+      ...
+    # Subtest: valores impossíveis não entram na lista
+    ok 7 - valores impossíveis não entram na lista
+      ---
+      duration_ms: 0.8433
+      type: 'test'
+      ...
+    # Subtest: sem lances, não inventa linhas
+    ok 8 - sem lances, não inventa linhas
+      ---
+      duration_ms: 0.4711
+      type: 'test'
+      ...
+    # Subtest: só considera os lances do PRÓPRIO endereço
+    ok 9 - só considera os lances do PRÓPRIO endereço
+      ---
+      duration_ms: 0.5439
+      type: 'test'
+      ...
+    # Subtest: o endereço compara-se sem distinguir maiúsculas
+    ok 10 - o endereço compara-se sem distinguir maiúsculas
+      ---
+      duration_ms: 0.6374
+      type: 'test'
+      ...
+    # Subtest: com sessão mas sem endereço ainda não atribui lances a ninguém
+    ok 11 - com sessão mas sem endereço ainda não atribui lances a ninguém
+      ---
+      duration_ms: 0.44
+      type: 'test'
+      ...
+    # Subtest: ⛔ SEM SESSÃO convida a entrar — não afirma que não há lances seus
+    ok 12 - ⛔ SEM SESSÃO convida a entrar — não afirma que não há lances seus
+      ---
+      duration_ms: 0.5603
+      type: 'test'
+      ...
+    # Subtest: os lances aparecem do menor para o maior
+    ok 13 - os lances aparecem do menor para o maior
+      ---
+      duration_ms: 1.4927
+      type: 'test'
+      ...
+    # Subtest: `repetido: undefined` conta como ÚNICO, não como repetido
+    ok 14 - `repetido: undefined` conta como ÚNICO, não como repetido
+      ---
+      duration_ms: 0.5707
+      type: 'test'
+      ...
+    1..14
+ok 91 - MC94 · FeedbackLance
+  ---
+  duration_ms: 10.79
+  type: 'suite'
+  ...
+# Subtest: MC94 · RankingCiclo
+    # Subtest: destaca a posição do próprio utilizador
+    ok 1 - destaca a posição do próprio utilizador
+      ---
+      duration_ms: 1.506
+      type: 'test'
+      ...
+    # Subtest: não destaca ninguém quando não há endereço
+    ok 2 - não destaca ninguém quando não há endereço
+      ---
+      duration_ms: 0.7903
+      type: 'test'
+      ...
+    # Subtest: VAZIO e ERRO não são a mesma coisa
+    ok 3 - VAZIO e ERRO não são a mesma coisa
+      ---
+      duration_ms: 0.8115
+      type: 'test'
+      ...
+    # Subtest: com ERRO e a carregar ao mesmo tempo, o erro ganha
+    ok 4 - com ERRO e a carregar ao mesmo tempo, o erro ganha
+      ---
+      duration_ms: 0.5184
+      type: 'test'
+      ...
+    # Subtest: A CARREGAR não é vazio nem erro
+    ok 5 - A CARREGAR não é vazio nem erro
+      ---
+      duration_ms: 0.5725
+      type: 'test'
+      ...
+    # Subtest: mostra no máximo 10, mesmo com mais — e diz quantos há
+    ok 6 - mostra no máximo 10, mesmo com mais — e diz quantos há
+      ---
+      duration_ms: 1.4456
+      type: 'test'
+      ...
+    # Subtest: ⚠️ `total` a zero com linhas na lista não escreve '0 participantes'
+    ok 7 - ⚠️ `total` a zero com linhas na lista não escreve '0 participantes'
+      ---
+      duration_ms: 0.694
+      type: 'test'
+      ...
+    # Subtest: um só participante fala no singular
+    ok 8 - um só participante fala no singular
+      ---
+      duration_ms: 0.5155
+      type: 'test'
+      ...
+    # Subtest: ⚠️ a posição mostrada é a do backend, não o índice da lista
+    ok 9 - ⚠️ a posição mostrada é a do backend, não o índice da lista
+      ---
+      duration_ms: 0.4482
+      type: 'test'
+      ...
+    # Subtest: ⚠️ `posicao: null` cai na ordem da lista, sem 'º' solto nem '0º'
+    ok 10 - ⚠️ `posicao: null` cai na ordem da lista, sem 'º' solto nem '0º'
+      ---
+      duration_ms: 0.558
+      type: 'test'
+      ...
+    # Subtest: ⚠️ `pontosTotais` ausente mostra '—', não zero
+    ok 11 - ⚠️ `pontosTotais` ausente mostra '—', não zero
+      ---
+      duration_ms: 0.3852
+      type: 'test'
+      ...
+    # Subtest: quem está fora do top 10 vê a SUA linha à parte, com a posição real
+    ok 12 - quem está fora do top 10 vê a SUA linha à parte, com a posição real
+      ---
+      duration_ms: 0.7043
+      type: 'test'
+      ...
+    # Subtest: a ordem da lista é preservada — o 1.º do backend é o 1.º no ecrã
+    ok 13 - a ordem da lista é preservada — o 1.º do backend é o 1.º no ecrã
+      ---
+      duration_ms: 0.7263
+      type: 'test'
+      ...
+    # Subtest: um `total` que não é número não escreve lixo
+    ok 14 - um `total` que não é número não escreve lixo
+      ---
+      duration_ms: 1.3051
+      type: 'test'
+      ...
+    # Subtest: os endereços aparecem ABREVIADOS (R4)
+    ok 15 - os endereços aparecem ABREVIADOS (R4)
+      ---
+      duration_ms: 0.6874
+      type: 'test'
+      ...
+    # Subtest: o selo de bónus só aparece a quem o backend diz que o tem
+    ok 16 - o selo de bónus só aparece a quem o backend diz que o tem
+      ---
+      duration_ms: 0.5712
+      type: 'test'
+      ...
+    1..16
+ok 92 - MC94 · RankingCiclo
+  ---
+  duration_ms: 13.0297
+  type: 'suite'
+  ...
+# Subtest: MC94 · aparência das secções
+    # Subtest: as cinco secções usam o vidro SÓLIDO do projeto, não um fundo translúcido
+    ok 1 - as cinco secções usam o vidro SÓLIDO do projeto, não um fundo translúcido
+      ---
+      duration_ms: 1.0629
+      type: 'test'
+      ...
+    # Subtest: nenhuma secção usa backdrop-filter
+    ok 2 - nenhuma secção usa backdrop-filter
+      ---
+      duration_ms: 0.8846
+      type: 'test'
+      ...
+    # Subtest: as senhas aparecem em ROXO, que é a cor semântica delas no app
+    ok 3 - as senhas aparecem em ROXO, que é a cor semântica delas no app
+      ---
+      duration_ms: 0.3408
+      type: 'test'
+      ...
+    # Subtest: todas as secções se identificam com `data-secao` — é por aí que a página é medida
+    ok 4 - todas as secções se identificam com `data-secao` — é por aí que a página é medida
+      ---
+      duration_ms: 1.558
+      type: 'test'
+      ...
+    1..4
+ok 93 - MC94 · aparência das secções
+  ---
+  duration_ms: 4.0809
+  type: 'suite'
+  ...
+# Subtest: MC94 · _estilo — as guardas sem coerção
+    # Subtest: `reais` recusa tudo o que não é um valor, e NUNCA devolve R$ 0,00
+    ok 1 - `reais` recusa tudo o que não é um valor, e NUNCA devolve R$ 0,00
+      ---
+      duration_ms: 0.5129
+      type: 'test'
+      ...
+    # Subtest: ⚠️ `reais` recusa não-inteiros e inteiros não seguros
+    ok 2 - ⚠️ `reais` recusa não-inteiros e inteiros não seguros
+      ---
+      duration_ms: 0.417
+      type: 'test'
+      ...
+    # Subtest: `reais` formata em pt-BR, com vírgula
+    ok 3 - `reais` formata em pt-BR, com vírgula
+      ---
+      duration_ms: 0.3958
+      type: 'test'
+      ...
+    # Subtest: `valorUtilizavel` não coage — é o defeito do MC93-A
+    ok 4 - `valorUtilizavel` não coage — é o defeito do MC93-A
+      ---
+      duration_ms: 0.4097
+      type: 'test'
+      ...
+    # Subtest: `inteiroSeguro` devolve o número ou `null`, nunca zero inventado
+    ok 5 - `inteiroSeguro` devolve o número ou `null`, nunca zero inventado
+      ---
+      duration_ms: 0.3836
+      type: 'test'
+      ...
+    # Subtest: `encurtar` nunca devolve um endereço completo (R4)
+    ok 6 - `encurtar` nunca devolve um endereço completo (R4)
+      ---
+      duration_ms: 0.4062
+      type: 'test'
+      ...
+    1..6
+ok 94 - MC94 · _estilo — as guardas sem coerção
+  ---
+  duration_ms: 3.1267
+  type: 'suite'
+  ...
+# Subtest: aparece ao DONO de um pedido enviado e ainda não confirmado
+ok 95 - aparece ao DONO de um pedido enviado e ainda não confirmado
+  ---
+  duration_ms: 1414.8011
+  type: 'test'
+  ...
+# Subtest: o dono em maiúsculas (checksum EIP-55) continua a ser o dono
+ok 96 - o dono em maiúsculas (checksum EIP-55) continua a ser o dono
+  ---
+  duration_ms: 0.9085
+  type: 'test'
+  ...
+# Subtest: NÃO aparece a outro endereço, nem sem sessão
+ok 97 - NÃO aparece a outro endereço, nem sem sessão
+  ---
+  duration_ms: 1.0252
+  type: 'test'
+  ...
+# Subtest: NÃO aparece antes do envio (sem rastreio)
+ok 98 - NÃO aparece antes do envio (sem rastreio)
+  ---
+  duration_ms: 0.7895
+  type: 'test'
+  ...
+# Subtest: NÃO aparece depois de confirmado — e o estado passa a «Recebido»
+ok 99 - NÃO aparece depois de confirmado — e o estado passa a «Recebido»
+  ---
+  duration_ms: 0.8356
+  type: 'test'
+  ...
+# Subtest: cablagem: MeusAtivos passa o endereço da sessão ao MeusPedidos, e este ao cartão
+ok 100 - cablagem: MeusAtivos passa o endereço da sessão ao MeusPedidos, e este ao cartão
+  ---
+  duration_ms: 1.2688
+  type: 'test'
+  ...
+# Subtest: cablagem: o clique chama PUT pedidos?acao=recebido do próprio produto
+ok 101 - cablagem: o clique chama PUT pedidos?acao=recebido do próprio produto
+  ---
+  duration_ms: 0.6771
+  type: 'test'
+  ...
+# Subtest: o botão nasce CLICÁVEL e VISÍVEL: sem hidden, sem disabled, sem display:none (A4)
+ok 102 - o botão nasce CLICÁVEL e VISÍVEL: sem hidden, sem disabled, sem display:none (A4)
+  ---
+  duration_ms: 1.1534
+  type: 'test'
+  ...
+# Subtest: cablagem do clique: desactiva enquanto confirma, e só recarrega depois de sucesso (A1, A2, A3)
+ok 103 - cablagem do clique: desactiva enquanto confirma, e só recarrega depois de sucesso (A1, A2, A3)
+  ---
+  duration_ms: 0.9826
+  type: 'test'
+  ...
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Subtest: renderiza os 5 passos, por ordem, com os rótulos
+ok 104 - renderiza os 5 passos, por ordem, com os rótulos
+  ---
+  duration_ms: 1541.1563
+  type: 'test'
+  ...
+# Subtest: 5 passos mesmo sem evento nenhum — todos pendentes
+ok 105 - 5 passos mesmo sem evento nenhum — todos pendentes
+  ---
+  duration_ms: 1.1298
+  type: 'test'
+  ...
+# Subtest: passo feito vs pendente: marcador e estado
+ok 106 - passo feito vs pendente: marcador e estado
+  ---
+  duration_ms: 1.6228
+  type: 'test'
+  ...
+# Subtest: com alertas → banner(s) com role=status; sem alertas → nenhum banner
+ok 107 - com alertas → banner(s) com role=status; sem alertas → nenhum banner
+  ---
+  duration_ms: 3.0906
+  type: 'test'
+  ...
+# Subtest: vários alertas → um banner por alerta, pela ordem recebida
+ok 108 - vários alertas → um banner por alerta, pela ordem recebida
+  ---
+  duration_ms: 1.7018
+  type: 'test'
+  ...
+# Subtest: data em hora de Brasília, só dia/mês: 01:30Z do dia 24 é o dia 23 (com o processo em UTC)
+ok 109 - data em hora de Brasília, só dia/mês: 01:30Z do dia 24 é o dia 23 (com o processo em UTC)
+  ---
+  duration_ms: 1.448
+  type: 'test'
+  ...
+# Subtest: sem passos recebidos, o componente mostra os 5 passos pendentes (não só a lib garante os 5)
+ok 110 - sem passos recebidos, o componente mostra os 5 passos pendentes (não só a lib garante os 5)
+  ---
+  duration_ms: 0.8932
+  type: 'test'
+  ...
+# Subtest: isMobile: coluna no telemóvel, linha no desktop — e o cartão passa o isMobile
+not ok 111 - isMobile: coluna no telemóvel, linha no desktop — e o cartão passa o isMobile
+  ---
+  duration_ms: 5.1373
+  type: 'test'
+  location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\meus-ativos\\__tests__\\mc1021a-timeline.test.mjs:84:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of null (reading 'useState')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+    CartaoPedido (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/meus-ativos/MeusPedidos.jsx:156:68)
+    renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+    renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+    renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+    renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+    renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+    retryTask (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+    performWork (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+    C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+  ...
+# Subtest: fallback → só o código em bruto: sem timeline, sem link, sem URL (P9)
+ok 112 - fallback → só o código em bruto: sem timeline, sem link, sem URL (P9)
+  ---
+  duration_ms: 0.6958
+  type: 'test'
+  ...
+# Subtest: a timeline não mostra local, descrição, nome nem CPF (P8)
+ok 113 - a timeline não mostra local, descrição, nome nem CPF (P8)
+  ---
+  duration_ms: 1.4717
+  type: 'test'
+  ...
+# Subtest: cartão: rastreio com eventos → a timeline aparece dentro do cartão, com 5 passos
+not ok 114 - cartão: rastreio com eventos → a timeline aparece dentro do cartão, com 5 passos
+  ---
+  duration_ms: 0.5668
+  type: 'test'
+  location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\meus-ativos\\__tests__\\mc1021a-timeline.test.mjs:105:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of null (reading 'useState')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+    CartaoPedido (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/meus-ativos/MeusPedidos.jsx:156:68)
+    renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+    renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+    renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+    renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+    renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+    retryTask (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+    performWork (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+    C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+  ...
+# Subtest: cartão: rastreio SEM eventos (a produção de hoje) → sem timeline; fica a linha do código em bruto
+not ok 115 - cartão: rastreio SEM eventos (a produção de hoje) → sem timeline; fica a linha do código em bruto
+  ---
+  duration_ms: 0.3901
+  type: 'test'
+  location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\meus-ativos\\__tests__\\mc1021a-timeline.test.mjs:111:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of null (reading 'useState')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+    CartaoPedido (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/meus-ativos/MeusPedidos.jsx:156:68)
+    renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+    renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+    renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+    renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+    renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+    retryTask (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+    performWork (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+    C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+  ...
+# Subtest: cartão: sem rastreio → sem timeline
+not ok 116 - cartão: sem rastreio → sem timeline
+  ---
+  duration_ms: 0.3529
+  type: 'test'
+  location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\meus-ativos\\__tests__\\mc1021a-timeline.test.mjs:117:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of null (reading 'useState')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+    CartaoPedido (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/meus-ativos/MeusPedidos.jsx:156:68)
+    renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+    renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+    renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+    renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+    renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+    retryTask (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+    performWork (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+    C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+  ...
+# Subtest: cartão: o «Recebi» e o estado continuam como estavam (HARD GATE 4)
+not ok 117 - cartão: o «Recebi» e o estado continuam como estavam (HARD GATE 4)
+  ---
+  duration_ms: 0.4168
+  type: 'test'
+  location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\meus-ativos\\__tests__\\mc1021a-timeline.test.mjs:121:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of null (reading 'useState')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+    CartaoPedido (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/meus-ativos/MeusPedidos.jsx:156:68)
+    renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+    renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+    renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+    renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+    renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+    retryTask (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+    performWork (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+    C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+  ...
+# Subtest: cartão: o bloco da timeline não contém morada nem CPF do pedido (P8)
+not ok 118 - cartão: o bloco da timeline não contém morada nem CPF do pedido (P8)
+  ---
+  duration_ms: 0.3939
+  type: 'test'
+  location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\components\\meus-ativos\\__tests__\\mc1021a-timeline.test.mjs:128:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of null (reading 'useState')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    useState (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1622:21)
+    CartaoPedido (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/components/meus-ativos/MeusPedidos.jsx:156:68)
+    renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+    renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+    renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+    renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+    renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+    retryTask (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+    performWork (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+    C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+  ...
+# Subtest: DEC-102.1b-6: timeline em «Entregue» → o cartão diz «Entregue» e o «Recebi» continua lá
+ok 119 - DEC-102.1b-6: timeline em «Entregue» → o cartão diz «Entregue» e o «Recebi» continua lá
+  ---
+  duration_ms: 1436.8586
+  type: 'test'
+  ...
+# Subtest: DEC-102.1b-6 (oposto): sem «Entregue» o cartão diz «Enviado»; com o comprador confirmado diz «Recebido» (DEC-102.1b-8)
+ok 120 - DEC-102.1b-6 (oposto): sem «Entregue» o cartão diz «Enviado»; com o comprador confirmado diz «Recebido» (DEC-102.1b-8)
+  ---
+  duration_ms: 4.6848
+  type: 'test'
+  ...
+# Subtest: DEC-102.1b-1: com «Entregue», os banners desaparecem do cartão; sem ele, aparecem
+ok 121 - DEC-102.1b-1: com «Entregue», os banners desaparecem do cartão; sem ele, aparecem
+  ---
+  duration_ms: 5.234
+  type: 'test'
+  ...
+# Subtest: DEC-102.1b-2/-4/-7: 3 tentativas → UM banner «3 tentativas de entrega · 24/09» (a mais recente, dd/mm Brasília)
+ok 122 - DEC-102.1b-2/-4/-7: 3 tentativas → UM banner «3 tentativas de entrega · 24/09» (a mais recente, dd/mm Brasília)
+  ---
+  duration_ms: 2.1827
+  type: 'test'
+  ...
+# Subtest: DEC-102.1b-4: 01:30Z do dia 25 aparece como 24/09 (Brasília), sem ano nem hora
+ok 123 - DEC-102.1b-4: 01:30Z do dia 25 aparece como 24/09 (Brasília), sem ano nem hora
+  ---
+  duration_ms: 1.7005
+  type: 'test'
+  ...
+# Subtest: DEC-102.1b-3: os banners saem por ordem cronológica da 1.ª ocorrência
+ok 124 - DEC-102.1b-3: os banners saem por ordem cronológica da 1.ª ocorrência
+  ---
+  duration_ms: 2.9652
+  type: 'test'
+  ...
+# Subtest: MC94 · controlo positivo do condutor de hooks
+    # Subtest: vê deps erradas: `[]` ignora a mudança de argumento
+    ok 1 - vê deps erradas: `[]` ignora a mudança de argumento
+      ---
+      duration_ms: 43.5391
+      type: 'test'
+      ...
+    # Subtest: vê deps certas: com `[chave]` o efeito volta a correr
+    ok 2 - vê deps certas: com `[chave]` o efeito volta a correr
+      ---
+      duration_ms: 44.2534
+      type: 'test'
+      ...
+    # Subtest: vê falta de limpeza: escrita depois de desmontar
+    ok 3 - vê falta de limpeza: escrita depois de desmontar
+      ---
+      duration_ms: 16.7605
+      type: 'test'
+      ...
+    # Subtest: o duplo de fetch honra o AbortSignal, como o fetch real
+    ok 4 - o duplo de fetch honra o AbortSignal, como o fetch real
+      ---
+      duration_ms: 61.6223
+      type: 'test'
+      ...
+    1..4
+ok 125 - MC94 · controlo positivo do condutor de hooks
+  ---
+  duration_ms: 167.6213
+  type: 'suite'
+  ...
+# Subtest: MC94 · useRanking
+    # Subtest: sem cicloId não toca na rede e não fica pendurado a carregar
+    ok 1 - sem cicloId não toca na rede e não fica pendurado a carregar
+      ---
+      duration_ms: 14.4216
+      type: 'test'
+      ...
+    # Subtest: resposta boa dá ranking e total, e o URL leva o ciclo
+    ok 2 - resposta boa dá ranking e total, e o URL leva o ciclo
+      ---
+      duration_ms: 1.5569
+      type: 'test'
+      ...
+    # Subtest: ciclo com caracteres especiais vai codificado
+    ok 3 - ciclo com caracteres especiais vai codificado
+      ---
+      duration_ms: 0.878
+      type: 'test'
+      ...
+    # Subtest: 500 é erro — e NÃO um ranking vazio
+    ok 4 - 500 é erro — e NÃO um ranking vazio
+      ---
+      duration_ms: 1.0104
+      type: 'test'
+      ...
+    # Subtest: ⚠️ HTML com status 200 (o fallback SPA) é ERRO, não ranking vazio
+    ok 5 - ⚠️ HTML com status 200 (o fallback SPA) é ERRO, não ranking vazio
+      ---
+      duration_ms: 0.978
+      type: 'test'
+      ...
+    # Subtest: falha de rede é erro de rede
+    ok 6 - falha de rede é erro de rede
+      ---
+      duration_ms: 10.2275
+      type: 'test'
+      ...
+    # Subtest: `ranking` não-array não passa a lista
+    ok 7 - `ranking` não-array não passa a lista
+      ---
+      duration_ms: 1.2388
+      type: 'test'
+      ...
+    # Subtest: desmontar ABORTA e não escreve estado depois
+    ok 8 - desmontar ABORTA e não escreve estado depois
+      ---
+      duration_ms: 76.2381
+      type: 'test'
+      ...
+    # Subtest: mudar de cicloId refaz o pedido e a resposta ANTIGA não vence
+    ok 9 - mudar de cicloId refaz o pedido e a resposta ANTIGA não vence
+      ---
+      duration_ms: 77.5114
+      type: 'test'
+      ...
+    1..9
+ok 126 - MC94 · useRanking
+  ---
+  duration_ms: 185.24
+  type: 'suite'
+  ...
+# Subtest: MC94 · useRanking — a corrida que a guarda `vivo` trava
+    # Subtest: resposta JÁ resolvida que aterra depois do desmonte não escreve estado
+    ok 1 - resposta JÁ resolvida que aterra depois do desmonte não escreve estado
+      ---
+      duration_ms: 45.2795
+      type: 'test'
+      ...
+    # Subtest: um pedido novo limpa o erro do anterior
+    ok 2 - um pedido novo limpa o erro do anterior
+      ---
+      duration_ms: 30.8086
+      type: 'test'
+      ...
+    1..2
+ok 127 - MC94 · useRanking — a corrida que a guarda `vivo` trava
+  ---
+  duration_ms: 76.4416
+  type: 'suite'
+  ...
+# Subtest: MC94 · useFeedback
+    # Subtest: sem token não chama nada — o 401 é certo e poupa-se
+    ok 1 - sem token não chama nada — o 401 é certo e poupa-se
+      ---
+      duration_ms: 15.2411
+      type: 'test'
+      ...
+    # Subtest: sem endereço também não chama
+    ok 2 - sem endereço também não chama
+      ---
+      duration_ms: 15.4573
+      type: 'test'
+      ...
+    # Subtest: envia o Bearer e pede o recurso certo, com o endereço codificado
+    ok 3 - envia o Bearer e pede o recurso certo, com o endereço codificado
+      ---
+      duration_ms: 15.492
+      type: 'test'
+      ...
+    # Subtest: 401 é FALTA DE SESSÃO, não erro de rede
+    ok 4 - 401 é FALTA DE SESSÃO, não erro de rede
+      ---
+      duration_ms: 0.8635
+      type: 'test'
+      ...
+    # Subtest: 403 (anti-IDOR: sessão de outro endereço) também é falta de sessão
+    ok 5 - 403 (anti-IDOR: sessão de outro endereço) também é falta de sessão
+      ---
+      duration_ms: 0.793
+      type: 'test'
+      ...
+    # Subtest: 500 é erro, e NÃO falta de sessão
+    ok 6 - 500 é erro, e NÃO falta de sessão
+      ---
+      duration_ms: 0.7539
+      type: 'test'
+      ...
+    # Subtest: ⚠️ HTML com status 200 é erro, não feedback vazio
+    ok 7 - ⚠️ HTML com status 200 é erro, não feedback vazio
+      ---
+      duration_ms: 12.8088
+      type: 'test'
+      ...
+    # Subtest: resposta boa passa o corpo tal como vem, sem normalizar `liquidado`
+    ok 8 - resposta boa passa o corpo tal como vem, sem normalizar `liquidado`
+      ---
+      duration_ms: 1.2977
+      type: 'test'
+      ...
+    # Subtest: desmontar aborta e não escreve depois
+    ok 9 - desmontar aborta e não escreve depois
+      ---
+      duration_ms: 75.9578
+      type: 'test'
+      ...
+    # Subtest: entrar na conta (token aparece) dispara o pedido
+    ok 10 - entrar na conta (token aparece) dispara o pedido
+      ---
+      duration_ms: 46.0992
+      type: 'test'
+      ...
+    # Subtest: ⚠️ TROCAR DE CARTEIRA refaz o pedido e não deixa os dados do endereço anterior
+    ok 11 - ⚠️ TROCAR DE CARTEIRA refaz o pedido e não deixa os dados do endereço anterior
+      ---
+      duration_ms: 46.9657
+      type: 'test'
+      ...
+    # Subtest: ⚠️ RENOVAR O TOKEN refaz o pedido
+    ok 12 - ⚠️ RENOVAR O TOKEN refaz o pedido
+      ---
+      duration_ms: 46.2678
+      type: 'test'
+      ...
+    # Subtest: sair da conta (token desaparece) volta a SEM SESSÃO e não deixa dados à vista
+    ok 13 - sair da conta (token desaparece) volta a SEM SESSÃO e não deixa dados à vista
+      ---
+      duration_ms: 31.5704
+      type: 'test'
+      ...
+    1..13
+ok 128 - MC94 · useFeedback
+  ---
+  duration_ms: 310.8844
+  type: 'suite'
+  ...
+# Subtest: (a) defaults literais = enunciado = backend (MC103)
+ok 129 - (a) defaults literais = enunciado = backend (MC103)
+  ---
+  duration_ms: 2.9446
+  type: 'test'
+  ...
+# Subtest: (a) sem as chaves (null, {}, string, produção) → as 5 no default; antigas iguais ao antes
+ok 130 - (a) sem as chaves (null, {}, string, produção) → as 5 no default; antigas iguais ao antes
+  ---
+  duration_ms: 0.8564
+  type: 'test'
+  ...
+# Subtest: (b) casos do enunciado: explícito muda, lixo → default
+ok 131 - (b) casos do enunciado: explícito muda, lixo → default
+  ---
+  duration_ms: 0.4864
+  type: 'test'
+  ...
+# Subtest: (b) cada flag booleana, isolada, inverte — e só ela muda
+ok 132 - (b) cada flag booleana, isolada, inverte — e só ela muda
+  ---
+  duration_ms: 0.3106
+  type: 'test'
+  ...
+# Subtest: (c) poluição de protótipo não conta (Object.hasOwn)
+ok 133 - (c) poluição de protótipo não conta (Object.hasOwn)
+  ---
+  duration_ms: 0.4665
+  type: 'test'
+  ...
+# Subtest: HARD GATE 14: a regra do cliente é IDÊNTICA à do backend, input a input
+ok 134 - HARD GATE 14: a regra do cliente é IDÊNTICA à do backend, input a input
+  ---
+  duration_ms: 3.516
+  type: 'test'
+  ...
+# Subtest: USO Supabase directo: flags gravadas no config_remota chegam ao cliente; antigas iguais
+ok 135 - USO Supabase directo: flags gravadas no config_remota chegam ao cliente; antigas iguais
+  ---
+  duration_ms: 0.9481
+  type: 'test'
+  ...
+# Subtest: USO Supabase com o valor de produção (sem as chaves) → defaults
+ok 136 - USO Supabase com o valor de produção (sem as chaves) → defaults
+  ---
+  duration_ms: 0.2449
+  type: 'test'
+  ...
+# Subtest: USO função /recursos-app: as chaves que o servidor manda chegam; lixo → default
+ok 137 - USO função /recursos-app: as chaves que o servidor manda chegam; lixo → default
+  ---
+  duration_ms: 6.1122
+  type: 'test'
+  ...
+# Subtest: USO Supabase falha → função; tudo falha → fallback local com os defaults
+ok 138 - USO Supabase falha → função; tudo falha → fallback local com os defaults
+  ---
+  duration_ms: 0.8198
+  type: 'test'
+  ...
+# Subtest: estado inicial (1.ª renderização, antes do load) traz as 5 flags no default e isLoading
+ok 139 - estado inicial (1.ª renderização, antes do load) traz as 5 flags no default e isLoading
+  ---
+  duration_ms: 32.5661
+  type: 'test'
+  ...
+# Subtest: TEMPO REAL: um UPDATE em config_remota muda as flags no cliente, com a regra estrita
+ok 140 - TEMPO REAL: um UPDATE em config_remota muda as flags no cliente, com a regra estrita
+  ---
+  duration_ms: 46.157
+  type: 'test'
+  ...
+# Subtest: MC94 · i18n das secções do torneio
+    # Subtest: o dicionário pt é IGUAL aos fallbacks, entrada a entrada
+    ok 1 - o dicionário pt é IGUAL aos fallbacks, entrada a entrada
+      ---
+      duration_ms: 6.447
+      type: 'test'
+      ...
+    # Subtest: não há chaves órfãs: tudo o que está no dicionário é usado
+    ok 2 - não há chaves órfãs: tudo o que está no dicionário é usado
+      ---
+      duration_ms: 3.9084
+      type: 'test'
+      ...
+    # Subtest: não há chaves em falta: tudo o que o código usa existe no dicionário PT
+    ok 3 - não há chaves em falta: tudo o que o código usa existe no dicionário PT
+      ---
+      duration_ms: 3.304
+      type: 'test'
+      ...
+    # Subtest: nenhum dicionário promete um bónus que só o backend pode confirmar
+    ok 4 - nenhum dicionário promete um bónus que só o backend pode confirmar
+      ---
+      duration_ms: 1.0558
+      type: 'test'
+      ...
+    # Subtest: a copy portuguesa é pt-BR, como o resto da app
+    ok 5 - a copy portuguesa é pt-BR, como o resto da app
+      ---
+      duration_ms: 1.1309
+      type: 'test'
+      ...
+    # Subtest: a palavra 'saldo' não entra no dicionário PT
+    ok 6 - a palavra 'saldo' não entra no dicionário PT
+      ---
+      duration_ms: 1.3689
+      type: 'test'
+      ...
+    1..6
+ok 141 - MC94 · i18n das secções do torneio
+  ---
+  duration_ms: 19.7298
+  type: 'suite'
+  ...
+# Subtest: o dicionario PT e legivel e nao vazio (guarda contra medicao vazia)
+ok 142 - o dicionario PT e legivel e nao vazio (guarda contra medicao vazia)
+  ---
+  duration_ms: 2.7594
+  type: 'test'
+  ...
+# Subtest: MC98 — o dicionario PT e o UNICO (en.js/es.js nao voltaram)
+ok 143 - MC98 — o dicionario PT e o UNICO (en.js/es.js nao voltaram)
+  ---
+  duration_ms: 0.408
+  type: 'test'
+  ...
+# Subtest: NENHUM termo proibido nos VALORES do dicionario PT
+ok 144 - NENHUM termo proibido nos VALORES do dicionario PT
+  ---
+  duration_ms: 1.6732
+  type: 'test'
+  ...
+# Subtest: os termos OBRIGATORIOS do glossario estao presentes
+ok 145 - os termos OBRIGATORIOS do glossario estao presentes
+  ---
+  duration_ms: 0.6099
+  type: 'test'
+  ...
+# Subtest: nenhum valor esta VAZIO (chave presente mas por traduzir)
+ok 146 - nenhum valor esta VAZIO (chave presente mas por traduzir)
+  ---
+  duration_ms: 0.8676
+  type: 'test'
+  ...
+# Subtest: os termos obrigatorios sao medidos sobre os VALORES, nao sobre o ficheiro
+ok 147 - os termos obrigatorios sao medidos sobre os VALORES, nao sobre o ficheiro
+  ---
+  duration_ms: 0.7255
+  type: 'test'
+  ...
+# Subtest: PT respeita o proprio glossario (Senha continua «senha», nao «token»)
+ok 148 - PT respeita o proprio glossario (Senha continua «senha», nao «token»)
+  ---
+  duration_ms: 2.1715
+  type: 'test'
+  ...
+# Subtest: controlo positivo: o detector reconhece as variantes REAIS do selector
+ok 149 - controlo positivo: o detector reconhece as variantes REAIS do selector
+  ---
+  duration_ms: 2.821
+  type: 'test'
+  ...
+# Subtest: controlo positivo: o detector de dicionário cobre QUALQUER extensão
+ok 150 - controlo positivo: o detector de dicionário cobre QUALQUER extensão
+  ---
+  duration_ms: 0.4207
+  type: 'test'
+  ...
+# Subtest: MC98 · a pasta i18n só pode conter pt.js (seja qual for a extensão)
+ok 151 - MC98 · a pasta i18n só pode conter pt.js (seja qual for a extensão)
+  ---
+  duration_ms: 1.2181
+  type: 'test'
+  ...
+# Subtest: MC98 · nenhum ficheiro do produto importa um dicionário en/es removido
+ok 152 - MC98 · nenhum ficheiro do produto importa um dicionário en/es removido
+  ---
+  duration_ms: 46.4086
+  type: 'test'
+  ...
+# Subtest: MC98 · o IdiomaContext está fechado a PT (SUPPORTED, sem navigator.language)
+ok 153 - MC98 · o IdiomaContext está fechado a PT (SUPPORTED, sem navigator.language)
+  ---
+  duration_ms: 0.8847
+  type: 'test'
+  ...
+# Subtest: MC98 · nenhum selector de idioma na UI do produto
+ok 154 - MC98 · nenhum selector de idioma na UI do produto
+  ---
+  duration_ms: 45.4106
+  type: 'test'
+  ...
+# Subtest: MC98 · o dicionário PT existe e não está vazio (guarda contra medição vazia)
+ok 155 - MC98 · o dicionário PT existe e não está vazio (guarda contra medição vazia)
+  ---
+  duration_ms: 0.8162
+  type: 'test'
+  ...
+# Subtest: login com credenciais válidas → estado autenticado e refresh guardado
+ok 156 - login com credenciais válidas → estado autenticado e refresh guardado
+  ---
+  duration_ms: 3.0292
+  type: 'test'
+  ...
+# Subtest: login recusado pelo backend → estado erro com a mensagem do servidor
+ok 157 - login recusado pelo backend → estado erro com a mensagem do servidor
+  ---
+  duration_ms: 0.4456
+  type: 'test'
+  ...
+# Subtest: login sem carteira (assinar ausente) → erro, e NENHUM pedido sai para a rede
+ok 158 - login sem carteira (assinar ausente) → erro, e NENHUM pedido sai para a rede
+  ---
+  duration_ms: 0.2828
+  type: 'test'
+  ...
+# Subtest: assinatura rejeitada pelo utilizador → erro, sem sessão
+ok 159 - assinatura rejeitada pelo utilizador → erro, sem sessão
+  ---
+  duration_ms: 0.4645
+  type: 'test'
+  ...
+# Subtest: a mensagem assinada tem o formato que o backend exige
+ok 160 - a mensagem assinada tem o formato que o backend exige
+  ---
+  duration_ms: 0.4364
+  type: 'test'
+  ...
+# Subtest: SEGURANÇA: o access token nunca chega ao storage nem é devolvido por método nenhum
+ok 161 - SEGURANÇA: o access token nunca chega ao storage nem é devolvido por método nenhum
+  ---
+  duration_ms: 0.4275
+  type: 'test'
+  ...
+# Subtest: SEGURANÇA: o adminToken legado não é persistido
+ok 162 - SEGURANÇA: o adminToken legado não é persistido
+  ---
+  duration_ms: 0.303
+  type: 'test'
+  ...
+# Subtest: renovar rotaciona o refresh guardado
+ok 163 - renovar rotaciona o refresh guardado
+  ---
+  duration_ms: 0.4641
+  type: 'test'
+  ...
+# Subtest: renovar sem refresh guardado devolve false e não chama a rede
+ok 164 - renovar sem refresh guardado devolve false e não chama a rede
+  ---
+  duration_ms: 0.3135
+  type: 'test'
+  ...
+# Subtest: refresh recusado (401) apaga a sessão guardada
+ok 165 - refresh recusado (401) apaga a sessão guardada
+  ---
+  duration_ms: 0.5928
+  type: 'test'
+  ...
+# Subtest: falha de REDE no refresh NÃO apaga a sessão guardada
+ok 166 - falha de REDE no refresh NÃO apaga a sessão guardada
+  ---
+  duration_ms: 1.4975
+  type: 'test'
+  ...
+# Subtest: renovar a partir de autenticado passa por 'refreshing'; no arranque não pisca
+ok 167 - renovar a partir de autenticado passa por 'refreshing'; no arranque não pisca
+  ---
+  duration_ms: 0.7024
+  type: 'test'
+  ...
+# Subtest: chamarAdmin sem sessão lança em vez de fazer um pedido anónimo
+ok 168 - chamarAdmin sem sessão lança em vez de fazer um pedido anónimo
+  ---
+  duration_ms: 1.0647
+  type: 'test'
+  ...
+# Subtest: chamarAdmin envia o Bearer e preserva os cabeçalhos de quem chama
+ok 169 - chamarAdmin envia o Bearer e preserva os cabeçalhos de quem chama
+  ---
+  duration_ms: 0.3348
+  type: 'test'
+  ...
+# Subtest: 401 → renova UMA vez e repete o pedido com o token novo
+ok 170 - 401 → renova UMA vez e repete o pedido com o token novo
+  ---
+  duration_ms: 0.2729
+  type: 'test'
+  ...
+# Subtest: 401 com refresh também recusado → devolve o 401 sem entrar em ciclo
+ok 171 - 401 com refresh também recusado → devolve o 401 sem entrar em ciclo
+  ---
+  duration_ms: 0.1795
+  type: 'test'
+  ...
+# Subtest: logout revoga no backend e limpa tudo localmente
+ok 172 - logout revoga no backend e limpa tudo localmente
+  ---
+  duration_ms: 0.3342
+  type: 'test'
+  ...
+# Subtest: logout limpa localmente mesmo se a revogação no servidor falhar
+ok 173 - logout limpa localmente mesmo se a revogação no servidor falhar
+  ---
+  duration_ms: 0.357
+  type: 'test'
+  ...
+# Subtest: lerRefresh devolve null para expirado, corrompido, incompleto ou ausente
+ok 174 - lerRefresh devolve null para expirado, corrompido, incompleto ou ausente
+  ---
+  duration_ms: 0.3286
+  type: 'test'
+  ...
+# Subtest: sessaoValidaPara rejeita a sessão de OUTRA carteira
+ok 175 - sessaoValidaPara rejeita a sessão de OUTRA carteira
+  ---
+  duration_ms: 0.2033
+  type: 'test'
+  ...
+# Subtest: storage bloqueado (modo privado) não rebenta a sessão
+ok 176 - storage bloqueado (modo privado) não rebenta a sessão
+  ---
+  duration_ms: 0.2185
+  type: 'test'
+  ...
+# Subtest: as 7 telas do plano do MC89.5 estão todas declaradas
+ok 177 - as 7 telas do plano do MC89.5 estão todas declaradas
+  ---
+  duration_ms: 2.263
+  type: 'test'
+  ...
+# Subtest: Aprovações e Cotas continuam presentes e marcadas como herdadas (T-2)
+ok 178 - Aprovações e Cotas continuam presentes e marcadas como herdadas (T-2)
+  ---
+  duration_ms: 0.5677
+  type: 'test'
+  ...
+# Subtest: ⚠️ TODA a tela é alcançável: índice, ou exatamente um grupo
+ok 179 - ⚠️ TODA a tela é alcançável: índice, ou exatamente um grupo
+  ---
+  duration_ms: 0.4127
+  type: 'test'
+  ...
+# Subtest: nenhum grupo aponta para uma tela que não existe
+ok 180 - nenhum grupo aponta para uma tela que não existe
+  ---
+  duration_ms: 0.3454
+  type: 'test'
+  ...
+# Subtest: a ordem dos grupos é Quem → Dinheiro → Sistema
+ok 181 - a ordem dos grupos é Quem → Dinheiro → Sistema
+  ---
+  duration_ms: 0.2518
+  type: 'test'
+  ...
+# Subtest: os cabeçalhos de grupo cabem num telemóvel e não têm emoji
+ok 182 - os cabeçalhos de grupo cabem num telemóvel e não têm emoji
+  ---
+  duration_ms: 0.3168
+  type: 'test'
+  ...
+# Subtest: telasDoGrupo devolve entradas reais, pela ordem declarada
+ok 183 - telasDoGrupo devolve entradas reais, pela ordem declarada
+  ---
+  duration_ms: 0.4433
+  type: 'test'
+  ...
+# Subtest: grupoDaTela responde por tela, e o índice não tem grupo
+ok 184 - grupoDaTela responde por tela, e o índice não tem grupo
+  ---
+  duration_ms: 0.2362
+  type: 'test'
+  ...
+# Subtest: grupoAtivo abre o grupo certo — e no índice abre o primeiro
+ok 185 - grupoAtivo abre o grupo certo — e no índice abre o primeiro
+  ---
+  duration_ms: 0.4927
+  type: 'test'
+  ...
+# Subtest: há exatamente UM índice, e é a Visão Geral (D-NAV)
+ok 186 - há exatamente UM índice, e é a Visão Geral (D-NAV)
+  ---
+  duration_ms: 0.4434
+  type: 'test'
+  ...
+# Subtest: ids, rotas e hrefs são únicos
+ok 187 - ids, rotas e hrefs são únicos
+  ---
+  duration_ms: 0.3466
+  type: 'test'
+  ...
+# Subtest: cada href é /admin + rota — a navegação não pode inventar caminhos
+ok 188 - cada href é /admin + rota — a navegação não pode inventar caminhos
+  ---
+  duration_ms: 1.4192
+  type: 'test'
+  ...
+# Subtest: os rótulos são curtos o suficiente para um telemóvel
+ok 189 - os rótulos são curtos o suficiente para um telemóvel
+  ---
+  duration_ms: 0.2681
+  type: 'test'
+  ...
+# Subtest: sem emojis nos rótulos (regra do MC89.4)
+ok 190 - sem emojis nos rótulos (regra do MC89.4)
+  ---
+  duration_ms: 0.2001
+  type: 'test'
+  ...
+# Subtest: telaAtiva resolve o índice, as filhas e a barra final
+ok 191 - telaAtiva resolve o índice, as filhas e a barra final
+  ---
+  duration_ms: 0.2743
+  type: 'test'
+  ...
+# Subtest: telaAtiva casa o SEGMENTO, não um prefixo
+ok 192 - telaAtiva casa o SEGMENTO, não um prefixo
+  ---
+  duration_ms: 0.1885
+  type: 'test'
+  ...
+# Subtest: cada tela tem o seu ficheiro em pages/admin/
+ok 193 - cada tela tem o seu ficheiro em pages/admin/
+  ---
+  duration_ms: 1.5085
+  type: 'test'
+  ...
+# Subtest: App.jsx declara exatamente as rotas deste modelo
+ok 194 - App.jsx declara exatamente as rotas deste modelo
+  ---
+  duration_ms: 0.9501
+  type: 'test'
+  ...
+# Subtest: o painel está envolvido pelo AdminAuthProvider e por mais nada
+ok 195 - o painel está envolvido pelo AdminAuthProvider e por mais nada
+  ---
+  duration_ms: 0.7443
+  type: 'test'
+  ...
+# Subtest: ⚠️ a barra NÃO filtra telas por `nota` (foi assim que se perderam duas)
+ok 196 - ⚠️ a barra NÃO filtra telas por `nota` (foi assim que se perderam duas)
+  ---
+  duration_ms: 0.7627
+  type: 'test'
+  ...
+# Subtest: ⚠️ a barra NÃO trunca rótulos
+ok 197 - ⚠️ a barra NÃO trunca rótulos
+  ---
+  duration_ms: 0.6781
+  type: 'test'
+  ...
+# Subtest: a barra declara alvos de toque de 44 px e não tem ícones decorativos
+ok 198 - a barra declara alvos de toque de 44 px e não tem ícones decorativos
+  ---
+  duration_ms: 0.6571
+  type: 'test'
+  ...
+# Subtest: REGRESSÃO DE BUNDLE: o contexto admin não importa ethers no topo
+ok 199 - REGRESSÃO DE BUNDLE: o contexto admin não importa ethers no topo
+  ---
+  duration_ms: 0.7453
+  type: 'test'
+  ...
+# Subtest: critical vem antes de warning, que vem antes de info
+ok 200 - critical vem antes de warning, que vem antes de info
+  ---
+  duration_ms: 3.8287
+  type: 'test'
+  ...
+# Subtest: ⚠️ O CASO REAL: o critical do frontend deixa de ficar em último
+ok 201 - ⚠️ O CASO REAL: o critical do frontend deixa de ficar em último
+  ---
+  duration_ms: 0.3453
+  type: 'test'
+  ...
+# Subtest: um nível desconhecido cai para o FIM, não para o topo
+ok 202 - um nível desconhecido cai para o FIM, não para o topo
+  ---
+  duration_ms: 0.2966
+  type: 'test'
+  ...
+# Subtest: dentro do mesmo nível, a ordem de origem mantém-se
+ok 203 - dentro do mesmo nível, a ordem de origem mantém-se
+  ---
+  duration_ms: 0.5455
+  type: 'test'
+  ...
+# Subtest: não altera a lista recebida
+ok 204 - não altera a lista recebida
+  ---
+  duration_ms: 0.4589
+  type: 'test'
+  ...
+# Subtest: lista vazia, null e undefined devolvem []
+ok 205 - lista vazia, null e undefined devolvem []
+  ---
+  duration_ms: 0.3743
+  type: 'test'
+  ...
+# Subtest: pendente: aceite completo → corpo com endereço minúsculo, versão, declarações e hora declarada
+ok 206 - pendente: aceite completo → corpo com endereço minúsculo, versão, declarações e hora declarada
+  ---
+  duration_ms: 2.7612
+  type: 'test'
+  ...
+# Subtest: pendente: nada a enviar sem aceite, versão diferente, aceite antigo sem declarações, já enviado, JSON partido
+ok 207 - pendente: nada a enviar sem aceite, versão diferente, aceite antigo sem declarações, já enviado, JSON partido
+  ---
+  duration_ms: 0.3462
+  type: 'test'
+  ...
+# Subtest: envio: POST /consentimento com o token; marca enviadoPara SÓ com resposta ok
+ok 208 - envio: POST /consentimento com o token; marca enviadoPara SÓ com resposta ok
+  ---
+  duration_ms: 0.7501
+  type: 'test'
+  ...
+# Subtest: envio: servidor recusa ou rede cai → 'falhou' e NÃO marca (volta a tentar no próximo login)
+ok 209 - envio: servidor recusa ou rede cai → 'falhou' e NÃO marca (volta a tentar no próximo login)
+  ---
+  duration_ms: 0.4186
+  type: 'test'
+  ...
+# Subtest: R18 \#4: 2.ª conta no mesmo aparelho NÃO herda o aceite da 1.ª (nem depois de a 1.ª falhar)
+ok 210 - R18 \#4: 2.ª conta no mesmo aparelho NÃO herda o aceite da 1.ª (nem depois de a 1.ª falhar)
+  ---
+  duration_ms: 0.42
+  type: 'test'
+  ...
+# Subtest: envio: sem token não chama o servidor
+ok 211 - envio: sem token não chama o servidor
+  ---
+  duration_ms: 0.2374
+  type: 'test'
+  ...
+# Subtest: CABLAGEM: o AppContext chama enviarConsentimentoPendente com endereço, token e a versão do gate
+ok 212 - CABLAGEM: o AppContext chama enviarConsentimentoPendente com endereço, token e a versão do gate
+  ---
+  duration_ms: 1.7991
+  type: 'test'
+  ...
+# Subtest: CABLAGEM: o gate guarda as 4 declarações no aceite local
+ok 213 - CABLAGEM: o gate guarda as 4 declarações no aceite local
+  ---
+  duration_ms: 0.7167
+  type: 'test'
+  ...
+# Subtest: ⚠️ as listas de categorias do frontend e do backend não podem divergir
+ok 214 - ⚠️ as listas de categorias do frontend e do backend não podem divergir
+  ---
+  duration_ms: 5.4857
+  type: 'test'
+  ...
+# Subtest: a regra replicada é literalmente a que está no AppContext
+ok 215 - a regra replicada é literalmente a que está no AppContext
+  ---
+  duration_ms: 2.4708
+  type: 'test'
+  ...
+# Subtest: cota ainda não carregada → null (ainda não sei), nunca false
+ok 216 - cota ainda não carregada → null (ainda não sei), nunca false
+  ---
+  duration_ms: 0.3862
+  type: 'test'
+  ...
+# Subtest: o cadastro sem pagamento não é ativo
+ok 217 - o cadastro sem pagamento não é ativo
+  ---
+  duration_ms: 0.3505
+  type: 'test'
+  ...
+# Subtest: ⚠️ vendida=true sem categoria → inativa (a cota que o ADM consegue criar)
+ok 218 - ⚠️ vendida=true sem categoria → inativa (a cota que o ADM consegue criar)
+  ---
+  duration_ms: 0.5246
+  type: 'test'
+  ...
+# Subtest: `vendida` truthy mas não booleano não conta
+ok 219 - `vendida` truthy mas não booleano não conta
+  ---
+  duration_ms: 0.4052
+  type: 'test'
+  ...
+# Subtest: controlo positivo: paga e com categoria válida → ativa
+ok 220 - controlo positivo: paga e com categoria válida → ativa
+  ---
+  duration_ms: 0.6849
+  type: 'test'
+  ...
+# Subtest: categoria inventada → inativa
+ok 221 - categoria inventada → inativa
+  ---
+  duration_ms: 0.3518
+  type: 'test'
+  ...
+# Subtest: ⚠️ o gate de cota SUBSTITUI conteúdo — não pode redirecionar
+ok 222 - ⚠️ o gate de cota SUBSTITUI conteúdo — não pode redirecionar
+  ---
+  duration_ms: 2.7213
+  type: 'test'
+  ...
+# Subtest: ⚠️ o gate compara com `=== false`, não com `!cotaAtiva`
+ok 223 - ⚠️ o gate compara com `=== false`, não com `!cotaAtiva`
+  ---
+  duration_ms: 1.2837
+  type: 'test'
+  ...
+# Subtest: ⚠️ as rotas de COMPRA ficam fora do gate
+ok 224 - ⚠️ as rotas de COMPRA ficam fora do gate
+  ---
+  duration_ms: 1.229
+  type: 'test'
+  ...
+# Subtest: o ecrã de bloqueio tem saída e distingue 'incompleta' de 'não pagou'
+ok 225 - o ecrã de bloqueio tem saída e distingue 'incompleta' de 'não pagou'
+  ---
+  duration_ms: 0.75
+  type: 'test'
+  ...
+# Subtest: ⚠️ F3 não pode acrescentar poller: reutiliza o `carregar` que já existe
+ok 226 - ⚠️ F3 não pode acrescentar poller: reutiliza o `carregar` que já existe
+  ---
+  duration_ms: 0.8829
+  type: 'test'
+  ...
+# Subtest: ⚠️ F3 só propaga com dados: um 404 não pode reabrir o gate
+ok 227 - ⚠️ F3 só propaga com dados: um 404 não pode reabrir o gate
+  ---
+  duration_ms: 0.9765
+  type: 'test'
+  ...
+# Subtest: ⚠️ atualizarTipoCorporativo TEM de ser estável (senão é um ciclo de fetch)
+ok 228 - ⚠️ atualizarTipoCorporativo TEM de ser estável (senão é um ciclo de fetch)
+  ---
+  duration_ms: 1.2908
+  type: 'test'
+  ...
+# Subtest: confirma na 2ª verificação → { estado: confirmado } (sleep entre tentativas)
+ok 229 - confirma na 2ª verificação → { estado: confirmado } (sleep entre tentativas)
+  ---
+  duration_ms: 1.1842
+  type: 'test'
+  ...
+# Subtest: revertido → { estado: revertido }
+ok 230 - revertido → { estado: revertido }
+  ---
+  duration_ms: 0.2461
+  type: 'test'
+  ...
+# Subtest: sempre pendente → { estado: timeout } após maxTentativas
+ok 231 - sempre pendente → { estado: timeout } após maxTentativas
+  ---
+  duration_ms: 1.1209
+  type: 'test'
+  ...
+# Subtest: erro de rede em verificar → tratado como pendente, re-tenta e recupera
+ok 232 - erro de rede em verificar → tratado como pendente, re-tenta e recupera
+  ---
+  duration_ms: 0.4144
+  type: 'test'
+  ...
+# Subtest: cancelado() → para imediatamente sem verificar
+ok 233 - cancelado() → para imediatamente sem verificar
+  ---
+  duration_ms: 0.272
+  type: 'test'
+  ...
+# Subtest: verificar ausente → lança erro claro
+ok 234 - verificar ausente → lança erro claro
+  ---
+  duration_ms: 0.7479
+  type: 'test'
+  ...
+# Subtest: dica válida no mesmo endereço → lojista provável
+ok 235 - dica válida no mesmo endereço → lojista provável
+  ---
+  duration_ms: 1.5477
+  type: 'test'
+  ...
+# Subtest: dica de OUTRO endereço não vale para esta sessão
+ok 236 - dica de OUTRO endereço não vale para esta sessão
+  ---
+  duration_ms: 0.4243
+  type: 'test'
+  ...
+# Subtest: sem sessão em disco não há palpite
+ok 237 - sem sessão em disco não há palpite
+  ---
+  duration_ms: 0.3762
+  type: 'test'
+  ...
+# Subtest: dica expirada (mais de 24 h) não vale
+ok 238 - dica expirada (mais de 24 h) não vale
+  ---
+  duration_ms: 0.3667
+  type: 'test'
+  ...
+# Subtest: dica às 23 h 59 ainda vale
+ok 239 - dica às 23 h 59 ainda vale
+  ---
+  duration_ms: 0.3952
+  type: 'test'
+  ...
+# Subtest: corporativo:false não encaminha
+ok 240 - corporativo:false não encaminha
+  ---
+  duration_ms: 0.3584
+  type: 'test'
+  ...
+# Subtest: corporativo com valor truthy mas não booleano não conta
+ok 241 - corporativo com valor truthy mas não booleano não conta
+  ---
+  duration_ms: 0.4567
+  type: 'test'
+  ...
+# Subtest: dica sem `em` não vale (sem carimbo não há TTL)
+ok 242 - dica sem `em` não vale (sem carimbo não há TTL)
+  ---
+  duration_ms: 0.3817
+  type: 'test'
+  ...
+# Subtest: JSON corrompido não rebenta, devolve false
+ok 243 - JSON corrompido não rebenta, devolve false
+  ---
+  duration_ms: 0.5167
+  type: 'test'
+  ...
+# Subtest: comparação de endereço é insensível a maiúsculas
+ok 244 - comparação de endereço é insensível a maiúsculas
+  ---
+  duration_ms: 0.4685
+  type: 'test'
+  ...
+# Subtest: gravarDicaLojista com false APAGA em vez de gravar negativa
+ok 245 - gravarDicaLojista com false APAGA em vez de gravar negativa
+  ---
+  duration_ms: 0.3376
+  type: 'test'
+  ...
+# Subtest: gravarDicaLojista normaliza o endereço para minúsculas
+ok 246 - gravarDicaLojista normaliza o endereço para minúsculas
+  ---
+  duration_ms: 0.2207
+  type: 'test'
+  ...
+# Subtest: gravarDicaLojista sem endereço é no-op
+ok 247 - gravarDicaLojista sem endereço é no-op
+  ---
+  duration_ms: 0.1395
+  type: 'test'
+  ...
+# Subtest: a dica gravada tem exatamente três campos
+ok 248 - a dica gravada tem exatamente três campos
+  ---
+  duration_ms: 1.1247
+  type: 'test'
+  ...
+# Subtest: limparDicaLojista remove a dica e não rebenta sem storage
+ok 249 - limparDicaLojista remove a dica e não rebenta sem storage
+  ---
+  duration_ms: 0.4633
+  type: 'test'
+  ...
+# Subtest: a dica do lojista NÃO torna ninguém admin
+ok 250 - a dica do lojista NÃO torna ninguém admin
+  ---
+  duration_ms: 0.263
+  type: 'test'
+  ...
+# Subtest: o palpite do lojista NÃO pode voltar a viver dentro do gut_saldo_cache
+ok 251 - o palpite do lojista NÃO pode voltar a viver dentro do gut_saldo_cache
+  ---
+  duration_ms: 2.4064
+  type: 'test'
+  ...
+# Subtest: o estado neutro não pode voltar a depender de tipoCarregando
+ok 252 - o estado neutro não pode voltar a depender de tipoCarregando
+  ---
+  duration_ms: 1.2537
+  type: 'test'
+  ...
+# Subtest: enderecoSessaoSincrono extrai o endereço do privy:connections
+ok 253 - enderecoSessaoSincrono extrai o endereço do privy:connections
+  ---
+  duration_ms: 2.3242
+  type: 'test'
+  ...
+# Subtest: enderecoSessaoSincrono normaliza para minúsculas
+ok 254 - enderecoSessaoSincrono normaliza para minúsculas
+  ---
+  duration_ms: 0.3874
+  type: 'test'
+  ...
+# Subtest: enderecoSessaoSincrono devolve null sem sessão
+ok 255 - enderecoSessaoSincrono devolve null sem sessão
+  ---
+  duration_ms: 0.2558
+  type: 'test'
+  ...
+# Subtest: enderecoSessaoSincrono devolve null se não houver endereço no meio do JSON
+ok 256 - enderecoSessaoSincrono devolve null se não houver endereço no meio do JSON
+  ---
+  duration_ms: 0.3069
+  type: 'test'
+  ...
+# Subtest: dica válida do MESMO endereço da sessão → encaminha
+ok 257 - dica válida do MESMO endereço da sessão → encaminha
+  ---
+  duration_ms: 0.5444
+  type: 'test'
+  ...
+# Subtest: dica gravada em maiúsculas continua a bater certo com a sessão
+ok 258 - dica gravada em maiúsculas continua a bater certo com a sessão
+  ---
+  duration_ms: 0.4702
+  type: 'test'
+  ...
+# Subtest: dica com 23 h ainda vale; com 25 h já não
+ok 259 - dica com 23 h ainda vale; com 25 h já não
+  ---
+  duration_ms: 0.4725
+  type: 'test'
+  ...
+# Subtest: sem dica nenhuma → NÃO encaminha
+ok 260 - sem dica nenhuma → NÃO encaminha
+  ---
+  duration_ms: 0.5141
+  type: 'test'
+  ...
+# Subtest: ⚠️ SEGURANÇA: dica de OUTRO endereço → NÃO encaminha
+ok 261 - ⚠️ SEGURANÇA: dica de OUTRO endereço → NÃO encaminha
+  ---
+  duration_ms: 0.4254
+  type: 'test'
+  ...
+# Subtest: ⚠️ SEGURANÇA: dica forjada com o MEU endereço encaminha, mas isso não concede nada
+ok 262 - ⚠️ SEGURANÇA: dica forjada com o MEU endereço encaminha, mas isso não concede nada
+  ---
+  duration_ms: 0.5497
+  type: 'test'
+  ...
+# Subtest: sem sessão Privy em disco → NÃO encaminha, mesmo com dica
+ok 263 - sem sessão Privy em disco → NÃO encaminha, mesmo com dica
+  ---
+  duration_ms: 0.3768
+  type: 'test'
+  ...
+# Subtest: dica com isAdmin false → NÃO encaminha
+ok 264 - dica com isAdmin false → NÃO encaminha
+  ---
+  duration_ms: 0.2501
+  type: 'test'
+  ...
+# Subtest: dica com isAdmin truthy mas não booleano true → NÃO encaminha
+ok 265 - dica com isAdmin truthy mas não booleano true → NÃO encaminha
+  ---
+  duration_ms: 0.3051
+  type: 'test'
+  ...
+# Subtest: dica sem carimbo de tempo → NÃO encaminha (não se assume fresca)
+ok 266 - dica sem carimbo de tempo → NÃO encaminha (não se assume fresca)
+  ---
+  duration_ms: 0.2155
+  type: 'test'
+  ...
+# Subtest: dica corrompida (JSON inválido) → false, sem lançar
+ok 267 - dica corrompida (JSON inválido) → false, sem lançar
+  ---
+  duration_ms: 0.2512
+  type: 'test'
+  ...
+# Subtest: storage que rebenta ao ler → false, sem lançar
+ok 268 - storage que rebenta ao ler → false, sem lançar
+  ---
+  duration_ms: 0.2195
+  type: 'test'
+  ...
+# Subtest: sem storage nenhum (SSR) → false, sem lançar
+ok 269 - sem storage nenhum (SSR) → false, sem lançar
+  ---
+  duration_ms: 0.0832
+  type: 'test'
+  ...
+# Subtest: gravar com isAdmin false APAGA a dica — o ex-admin corrige-se na 1.ª resposta
+ok 270 - gravar com isAdmin false APAGA a dica — o ex-admin corrige-se na 1.ª resposta
+  ---
+  duration_ms: 0.2261
+  type: 'test'
+  ...
+# Subtest: gravar sem endereço não escreve nada
+ok 271 - gravar sem endereço não escreve nada
+  ---
+  duration_ms: 0.1324
+  type: 'test'
+  ...
+# Subtest: limparDicaAdmin remove a dica
+ok 272 - limparDicaAdmin remove a dica
+  ---
+  duration_ms: 0.1246
+  type: 'test'
+  ...
+# Subtest: storage que rebenta ao escrever não propaga o erro
+ok 273 - storage que rebenta ao escrever não propaga o erro
+  ---
+  duration_ms: 0.275
+  type: 'test'
+  ...
+# Subtest: a dica NÃO guarda nada além de endereço, isAdmin e carimbo (R4)
+ok 274 - a dica NÃO guarda nada além de endereço, isAdmin e carimbo (R4)
+  ---
+  duration_ms: 0.8988
+  type: 'test'
+  ...
+# Subtest: encaminhamento.js: o confirmado ganha sempre que houver address; o palpite só sem ele
+ok 275 - encaminhamento.js: o confirmado ganha sempre que houver address; o palpite só sem ele
+  ---
+  duration_ms: 1.3192
+  type: 'test'
+  ...
+# Subtest: ⚠️ o encaminhamento do ADM não tem exceções — o painel é a app dele
+ok 276 - ⚠️ o encaminhamento do ADM não tem exceções — o painel é a app dele
+  ---
+  duration_ms: 1.5072
+  type: 'test'
+  ...
+# Subtest: AdminLayout: não há botão que leve o ADM às telas comuns
+ok 277 - AdminLayout: não há botão que leve o ADM às telas comuns
+  ---
+  duration_ms: 0.8568
+  type: 'test'
+  ...
+# Subtest: AdminLayout: sair da conta revoga a sessão admin ANTES do logout do Privy
+ok 278 - AdminLayout: sair da conta revoga a sessão admin ANTES do logout do Privy
+  ---
+  duration_ms: 0.7433
+  type: 'test'
+  ...
+# Subtest: AdminLayout: o estado 'a restaurar' é testado ANTES do ecrã de login
+ok 279 - AdminLayout: o estado 'a restaurar' é testado ANTES do ecrã de login
+  ---
+  duration_ms: 0.9045
+  type: 'test'
+  ...
+# Subtest: reconciliar: estado do arranque (sem endereço) não responde por um endereço real
+ok 280 - reconciliar: estado do arranque (sem endereço) não responde por um endereço real
+  ---
+  duration_ms: 0.4571
+  type: 'test'
+  ...
+# Subtest: reconciliar: estado do MESMO endereço passa intacto
+ok 281 - reconciliar: estado do MESMO endereço passa intacto
+  ---
+  duration_ms: 0.1822
+  type: 'test'
+  ...
+# Subtest: reconciliar: compara sem distinguir maiúsculas
+ok 282 - reconciliar: compara sem distinguir maiúsculas
+  ---
+  duration_ms: 0.1299
+  type: 'test'
+  ...
+# Subtest: reconciliar: um isAdmin true de OUTRA conta nunca transita
+ok 283 - reconciliar: um isAdmin true de OUTRA conta nunca transita
+  ---
+  duration_ms: 0.0917
+  type: 'test'
+  ...
+# Subtest: reconciliar: sem endereço nenhum não fica 'a carregar' para sempre
+ok 284 - reconciliar: sem endereço nenhum não fica 'a carregar' para sempre
+  ---
+  duration_ms: 0.1649
+  type: 'test'
+  ...
+# Subtest: AdminAuthContext: a sessão admin continua a exigir isConnected ESTRITO
+ok 285 - AdminAuthContext: a sessão admin continua a exigir isConnected ESTRITO
+  ---
+  duration_ms: 0.8438
+  type: 'test'
+  ...
+# Subtest: visitante anónimo vê o Dashboard, não o estado neutro
+ok 286 - visitante anónimo vê o Dashboard, não o estado neutro
+  ---
+  duration_ms: 1.2992
+  type: 'test'
+  ...
+# Subtest: visitante continua no Dashboard mesmo com o tipo por resolver
+ok 287 - visitante continua no Dashboard mesmo com o tipo por resolver
+  ---
+  duration_ms: 0.2718
+  type: 'test'
+  ...
+# Subtest: A — logout seguido de login: estado neutro, nunca o Dashboard comum
+ok 288 - A — logout seguido de login: estado neutro, nunca o Dashboard comum
+  ---
+  duration_ms: 0.2085
+  type: 'test'
+  ...
+# Subtest: B — troca de conta: estado neutro, nunca o Dashboard comum
+ok 289 - B — troca de conta: estado neutro, nunca o Dashboard comum
+  ---
+  duration_ms: 0.1008
+  type: 'test'
+  ...
+# Subtest: C — reabertura passadas mais de 24 h: estado neutro, nunca o Dashboard comum
+ok 290 - C — reabertura passadas mais de 24 h: estado neutro, nunca o Dashboard comum
+  ---
+  duration_ms: 0.1044
+  type: 'test'
+  ...
+# Subtest: E — primeiro login de sempre: estado neutro, nunca o Dashboard comum
+ok 291 - E — primeiro login de sempre: estado neutro, nunca o Dashboard comum
+  ---
+  duration_ms: 0.123
+  type: 'test'
+  ...
+# Subtest: F — reinstalação / dados limpos: estado neutro, nunca o Dashboard comum
+ok 292 - F — reinstalação / dados limpos: estado neutro, nunca o Dashboard comum
+  ---
+  duration_ms: 0.0861
+  type: 'test'
+  ...
+# Subtest: G — sessão em disco sem endereço legível: estado neutro, nunca o Dashboard comum
+ok 293 - G — sessão em disco sem endereço legível: estado neutro, nunca o Dashboard comum
+  ---
+  duration_ms: 0.0743
+  type: 'test'
+  ...
+# Subtest: login fresco: OAuth no URL basta para esperar, sem cache nenhum
+ok 294 - login fresco: OAuth no URL basta para esperar, sem cache nenhum
+  ---
+  duration_ms: 0.2025
+  type: 'test'
+  ...
+# Subtest: reabertura com sessão em disco mas SEM cache de saldo
+ok 295 - reabertura com sessão em disco mas SEM cache de saldo
+  ---
+  duration_ms: 0.3121
+  type: 'test'
+  ...
+# Subtest: ⚠️ R-B continua de pé: nenhuma das três chaves é verdadeira num visitante
+ok 296 - ⚠️ R-B continua de pé: nenhuma das três chaves é verdadeira num visitante
+  ---
+  duration_ms: 0.2496
+  type: 'test'
+  ...
+# Subtest: o prazo trava as três chaves por igual
+ok 297 - o prazo trava as três chaves por igual
+  ---
+  duration_ms: 0.3172
+  type: 'test'
+  ...
+# Subtest: janela real do arranque: tipoCarregando false e tipo por resolver → estado neutro
+ok 298 - janela real do arranque: tipoCarregando false e tipo por resolver → estado neutro
+  ---
+  duration_ms: 0.1895
+  type: 'test'
+  ...
+# Subtest: com /cotas em voo também é estado neutro
+ok 299 - com /cotas em voo também é estado neutro
+  ---
+  duration_ms: 0.1212
+  type: 'test'
+  ...
+# Subtest: respondido e comum → Dashboard, que é a resposta certa
+ok 300 - respondido e comum → Dashboard, que é a resposta certa
+  ---
+  duration_ms: 1.2863
+  type: 'test'
+  ...
+# Subtest: prazo esgotado sem resposta → Dashboard (nunca preso no esqueleto)
+ok 301 - prazo esgotado sem resposta → Dashboard (nunca preso no esqueleto)
+  ---
+  duration_ms: 0.1928
+  type: 'test'
+  ...
+# Subtest: prazo esgotado NÃO rouba o lojista que já tem palpite
+ok 302 - prazo esgotado NÃO rouba o lojista que já tem palpite
+  ---
+  duration_ms: 0.1523
+  type: 'test'
+  ...
+# Subtest: o prazo é generoso face à janela quente medida
+ok 303 - o prazo é generoso face à janela quente medida
+  ---
+  duration_ms: 0.191
+  type: 'test'
+  ...
+# Subtest: palpite de lojista encaminha logo, sem esperar pelas cotas
+ok 304 - palpite de lojista encaminha logo, sem esperar pelas cotas
+  ---
+  duration_ms: 0.1032
+  type: 'test'
+  ...
+# Subtest: lojista confirmado espera que o carregamento termine
+ok 305 - lojista confirmado espera que o carregamento termine
+  ---
+  duration_ms: 0.091
+  type: 'test'
+  ...
+# Subtest: ADM com palpite vai direto ao painel, antes de haver address
+ok 306 - ADM com palpite vai direto ao painel, antes de haver address
+  ---
+  duration_ms: 0.0757
+  type: 'test'
+  ...
+# Subtest: com address, manda a resposta confirmada e não o palpite
+ok 307 - com address, manda a resposta confirmada e não o palpite
+  ---
+  duration_ms: 0.0846
+  type: 'test'
+  ...
+# Subtest: resposta de admin ainda a caminho não encaminha para /admin
+ok 308 - resposta de admin ainda a caminho não encaminha para /admin
+  ---
+  duration_ms: 0.0758
+  type: 'test'
+  ...
+# Subtest: o ADM ganha ao lojista quando é os dois (ordem do MC89.12)
+ok 309 - o ADM ganha ao lojista quando é os dois (ordem do MC89.12)
+  ---
+  duration_ms: 0.0692
+  type: 'test'
+  ...
+# Subtest: o encaminhamento do ADM é incondicional (decisão do MC89.34)
+ok 310 - o encaminhamento do ADM é incondicional (decisão do MC89.34)
+  ---
+  duration_ms: 0.2007
+  type: 'test'
+  ...
+# Subtest: a base do padrão de vidro é o navy sólido do MC82.1 (não a opacidade antiga)
+ok 311 - a base do padrão de vidro é o navy sólido do MC82.1 (não a opacidade antiga)
+  ---
+  duration_ms: 1.2749
+  type: 'test'
+  ...
+# Subtest: ⛔ o hover NUNCA é mais transparente que a base (o defeito medido)
+ok 312 - ⛔ o hover NUNCA é mais transparente que a base (o defeito medido)
+  ---
+  duration_ms: 0.5037
+  type: 'test'
+  ...
+# Subtest: o hover está limitado a dispositivos com hover real (evita o estado colado no toque)
+ok 313 - o hover está limitado a dispositivos com hover real (evita o estado colado no toque)
+  ---
+  duration_ms: 0.4089
+  type: 'test'
+  ...
+# Subtest: o padrão de vidro não reintroduz backdrop-filter (orçamento do MC82.1)
+ok 314 - o padrão de vidro não reintroduz backdrop-filter (orçamento do MC82.1)
+  ---
+  duration_ms: 0.4577
+  type: 'test'
+  ...
+# Subtest: formulário completo passa; cada campo obrigatório em falta é apontado
+ok 315 - formulário completo passa; cada campo obrigatório em falta é apontado
+  ---
+  duration_ms: 2.156
+  type: 'test'
+  ...
+# Subtest: estado do pedido segue o fluxo endereço → envio
+ok 316 - estado do pedido segue o fluxo endereço → envio
+  ---
+  duration_ms: 0.2433
+  type: 'test'
+  ...
+# Subtest: CEP, prazo e resumo
+ok 317 - CEP, prazo e resumo
+  ---
+  duration_ms: 0.2926
+  type: 'test'
+  ...
+# Subtest: podeMarcarRecebido: dono + enviado + por confirmar → true; qualquer condição a falhar → false
+ok 318 - podeMarcarRecebido: dono + enviado + por confirmar → true; qualquer condição a falhar → false
+  ---
+  duration_ms: 0.1884
+  type: 'test'
+  ...
+# Subtest: estadoDoPedido: recebido_em só conta depois do envio
+ok 319 - estadoDoPedido: recebido_em só conta depois do envio
+  ---
+  duration_ms: 0.2153
+  type: 'test'
+  ...
+# Subtest: estadoDoPedido: timeline em «Entregue» → entregue; antes disso → enviado; recebido_em ganha
+ok 320 - estadoDoPedido: timeline em «Entregue» → entregue; antes disso → enviado; recebido_em ganha
+  ---
+  duration_ms: 0.6204
+  type: 'test'
+  ...
+# Subtest: podeMarcarRecebido continua true com o pedido «entregue» (o comprador confirma)
+ok 321 - podeMarcarRecebido continua true com o pedido «entregue» (o comprador confirma)
+  ---
+  duration_ms: 0.1915
+  type: 'test'
+  ...
+# Subtest: interpretarRespostaRecebi: só ok é sucesso; 409/404/falha de rede dão erro legível (validador MC102, A3)
+ok 322 - interpretarRespostaRecebi: só ok é sucesso; 409/404/falha de rede dão erro legível (validador MC102, A3)
+  ---
+  duration_ms: 0.9875
+  type: 'test'
+  ...
+# Subtest: o mapa tem exactamente 5 passos + 5 alertas, com os rótulos do operador (DEC-102.1-H + DEC-102.1b-9)
+ok 323 - o mapa tem exactamente 5 passos + 5 alertas, com os rótulos do operador (DEC-102.1-H + DEC-102.1b-9)
+  ---
+  duration_ms: 4.0483
+  type: 'test'
+  ...
+# Subtest: traduzirEvento: código conhecido → PT-BR (inclui número vindo como número)
+ok 324 - traduzirEvento: código conhecido → PT-BR (inclui número vindo como número)
+  ---
+  duration_ms: 0.3579
+  type: 'test'
+  ...
+# Subtest: traduzirEvento: código desconhecido → a descrição original; sem descrição → ""
+ok 325 - traduzirEvento: código desconhecido → a descrição original; sem descrição → ""
+  ---
+  duration_ms: 0.2857
+  type: 'test'
+  ...
+# Subtest: timeline: SEMPRE 5 passos, mesmo sem eventos ou com lixo
+ok 326 - timeline: SEMPRE 5 passos, mesmo sem eventos ou com lixo
+  ---
+  duration_ms: 0.9056
+  type: 'test'
+  ...
+# Subtest: timeline sem alertas: 5 passos, feitos até ao mais adiantado, 0 alertas
+ok 327 - timeline sem alertas: 5 passos, feitos até ao mais adiantado, 0 alertas
+  ---
+  duration_ms: 0.6085
+  type: 'test'
+  ...
+# Subtest: um passo adiantado implica os anteriores feitos (sem data própria)
+ok 328 - um passo adiantado implica os anteriores feitos (sem data própria)
+  ---
+  duration_ms: 0.3997
+  type: 'test'
+  ...
+# Subtest: a ordem de chegada não importa: fica o passo mais adiantado e a data mais antiga de cada um
+ok 329 - a ordem de chegada não importa: fica o passo mais adiantado e a data mais antiga de cada um
+  ---
+  duration_ms: 0.4671
+  type: 'test'
+  ...
+# Subtest: a data mais antiga compara-se por INSTANTE, não por texto (fuso no ISO — validador)
+ok 330 - a data mais antiga compara-se por INSTANTE, não por texto (fuso no ISO — validador)
+  ---
+  duration_ms: 0.3422
+  type: 'test'
+  ...
+# Subtest: com alertas: 5 passos + os alertas como banners, pela ordem, sem avançar passos
+ok 331 - com alertas: 5 passos + os alertas como banners, pela ordem, sem avançar passos
+  ---
+  duration_ms: 1.2266
+  type: 'test'
+  ...
+# Subtest: DEC-102.1b-1: com «Entregue» feito não há alertas; sem ele, os alertas ficam
+ok 332 - DEC-102.1b-1: com «Entregue» feito não há alertas; sem ele, os alertas ficam
+  ---
+  duration_ms: 0.9907
+  type: 'test'
+  ...
+# Subtest: DEC-102.1b-2/-7: A1 repetido → «N tentativas de entrega», com a data mais RECENTE
+ok 333 - DEC-102.1b-2/-7: A1 repetido → «N tentativas de entrega», com a data mais RECENTE
+  ---
+  duration_ms: 0.521
+  type: 'test'
+  ...
+# Subtest: data ilegível que chega PRIMEIRO não fica como «a mais recente» (validador MC102.1b)
+ok 334 - data ilegível que chega PRIMEIRO não fica como «a mais recente» (validador MC102.1b)
+  ---
+  duration_ms: 0.5669
+  type: 'test'
+  ...
+# Subtest: DEC-102.1b-7: A2/A3 repetidos → um só banner, SEM contagem no texto
+ok 335 - DEC-102.1b-7: A2/A3 repetidos → um só banner, SEM contagem no texto
+  ---
+  duration_ms: 0.4774
+  type: 'test'
+  ...
+# Subtest: DEC-102.1b-3/-7: ordem cronológica pela PRIMEIRA ocorrência, qualquer que seja a ordem de chegada
+ok 336 - DEC-102.1b-3/-7: ordem cronológica pela PRIMEIRA ocorrência, qualquer que seja a ordem de chegada
+  ---
+  duration_ms: 0.6117
+  type: 'test'
+  ...
+# Subtest: a timeline não carrega local nem descrição (P8: podem trazer morada)
+ok 337 - a timeline não carrega local nem descrição (P8: podem trazer morada)
+  ---
+  duration_ms: 0.539
+  type: 'test'
+  ...
+# Subtest: timelineDoRastreio: sem eventos → null (o cartão fica no código em bruto); com eventos → a timeline
+ok 338 - timelineDoRastreio: sem eventos → null (o cartão fica no código em bruto); com eventos → a timeline
+  ---
+  duration_ms: 0.4273
+  type: 'test'
+  ...
+# Subtest: ⛔ o App.jsx DECLARA uma rota para o retorno do OAuth (o defeito era a rota ausente)
+ok 339 - ⛔ o App.jsx DECLARA uma rota para o retorno do OAuth (o defeito era a rota ausente)
+  ---
+  duration_ms: 2.3608
+  type: 'test'
+  ...
+# Subtest: o PrivyRoot continua a apontar para a mesma rota (as duas pontas têm de coincidir)
+ok 340 - o PrivyRoot continua a apontar para a mesma rota (as duas pontas têm de coincidir)
+  ---
+  duration_ms: 1.1085
+  type: 'test'
+  ...
+# Subtest: com sessão pronta, segue para o destino do login
+ok 341 - com sessão pronta, segue para o destino do login
+  ---
+  duration_ms: 1.1815
+  type: 'test'
+  ...
+# Subtest: sem sessão pronta, espera — navegar antes mandaria o utilizador ao login outra vez
+ok 342 - sem sessão pronta, espera — navegar antes mandaria o utilizador ao login outra vez
+  ---
+  duration_ms: 0.3372
+  type: 'test'
+  ...
+# Subtest: ao fim do prazo oferece-se saída manual (nunca página em branco sem clique)
+ok 343 - ao fim do prazo oferece-se saída manual (nunca página em branco sem clique)
+  ---
+  duration_ms: 0.2638
+  type: 'test'
+  ...
+# Subtest: sem endereço não se tenta — não há nada para assinar
+ok 344 - sem endereço não se tenta — não há nada para assinar
+  ---
+  duration_ms: 1.0467
+  type: 'test'
+  ...
+# Subtest: com token já obtido não se tenta de novo
+ok 345 - com token já obtido não se tenta de novo
+  ---
+  duration_ms: 0.2153
+  type: 'test'
+  ...
+# Subtest: tenta enquanto não houver token e houver endereço
+ok 346 - tenta enquanto não houver token e houver endereço
+  ---
+  duration_ms: 0.1377
+  type: 'test'
+  ...
+# Subtest: desiste em MAX_TENTATIVAS_AUTH — laço infinito seria pior que o defeito
+ok 347 - desiste em MAX_TENTATIVAS_AUTH — laço infinito seria pior que o defeito
+  ---
+  duration_ms: 0.1602
+  type: 'test'
+  ...
+# Subtest: o recuo é exponencial, nunca zero e tem tecto
+ok 348 - o recuo é exponencial, nunca zero e tem tecto
+  ---
+  duration_ms: 1.176
+  type: 'test'
+  ...
+# Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+#     at MemoryRouter (file:///C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+#     at MemoryRouter (file:///C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+#     at MemoryRouter (file:///C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+#     at MemoryRouter (file:///C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+#     at MemoryRouter (file:///C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+#     at MemoryRouter (file:///C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+#     at MemoryRouter (file:///C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+#     at MemoryRouter (file:///C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+#     at MemoryRouter (file:///C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+#     at MemoryRouter (file:///C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+# Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+# 1. You might have mismatching versions of React and the renderer (such as React DOM)
+# 2. You might be breaking the Rules of Hooks
+# 3. You might have more than one copy of React in the same app
+# See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+# Subtest: MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT
+    # Subtest: antes da hora (em `agendadas`): a especial preenche o slot, com arte e cronómetro
+    not ok 1 - antes da hora (em `agendadas`): a especial preenche o slot, com arte e cronómetro
+      ---
+      duration_ms: 6.7948
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\pages\\__tests__\\Dashboard.test.mjs:94:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useContext')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Module.useContext (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1618:21)
+        useNavigate (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:5912:32)
+        Dashboard (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:111:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderContextProvider (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5935:3)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6032:11)
+      ...
+    # Subtest: ⛔ a secção própria do MC94.2 DESAPARECEU (o teste que o MC94.2 tinha exigia o contrário)
+    not ok 2 - ⛔ a secção própria do MC94.2 DESAPARECEU (o teste que o MC94.2 tinha exigia o contrário)
+      ---
+      duration_ms: 0.8699
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\pages\\__tests__\\Dashboard.test.mjs:102:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useContext')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Module.useContext (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1618:21)
+        useNavigate (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:5912:32)
+        Dashboard (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:111:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderContextProvider (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5935:3)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6032:11)
+      ...
+    # Subtest: a especial fica DENTRO do slot — antes do card 'Menor Lance Único'
+    not ok 3 - a especial fica DENTRO do slot — antes do card 'Menor Lance Único'
+      ---
+      duration_ms: 0.8023
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\pages\\__tests__\\Dashboard.test.mjs:114:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useContext')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Module.useContext (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1618:21)
+        useNavigate (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:5912:32)
+        Dashboard (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:111:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderContextProvider (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5935:3)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6032:11)
+      ...
+    # Subtest: MC94.3.2 — o ícone da especial é IGUAL ao padrão das outras edições (não maior)
+    not ok 4 - MC94.3.2 — o ícone da especial é IGUAL ao padrão das outras edições (não maior)
+      ---
+      duration_ms: 0.9883
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\pages\\__tests__\\Dashboard.test.mjs:124:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useContext')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Module.useContext (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1618:21)
+        useNavigate (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:5912:32)
+        Dashboard (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:111:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderContextProvider (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5935:3)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6032:11)
+      ...
+    # Subtest: sem especial: nenhuma marca de slot, e a página é a de sempre
+    not ok 5 - sem especial: nenhuma marca de slot, e a página é a de sempre
+      ---
+      duration_ms: 0.9615
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\pages\\__tests__\\Dashboard.test.mjs:138:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useContext')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Module.useContext (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1618:21)
+        useNavigate (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:5912:32)
+        Dashboard (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:111:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderContextProvider (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5935:3)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6032:11)
+      ...
+    # Subtest: a contagem do slot usa o offset do servidor que vem do contexto
+    not ok 6 - a contagem do slot usa o offset do servidor que vem do contexto
+      ---
+      duration_ms: 0.7381
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\pages\\__tests__\\Dashboard.test.mjs:146:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useContext')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Module.useContext (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1618:21)
+        useNavigate (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:5912:32)
+        Dashboard (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:111:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderContextProvider (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5935:3)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6032:11)
+      ...
+    # Subtest: na hora (já em `edicoes`): o formulário é o da ESPECIAL, pago em SALDO (flash)
+    not ok 7 - na hora (já em `edicoes`): o formulário é o da ESPECIAL, pago em SALDO (flash)
+      ---
+      duration_ms: 0.9966
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\pages\\__tests__\\Dashboard.test.mjs:160:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useContext')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Module.useContext (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1618:21)
+        useNavigate (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:5912:32)
+        Dashboard (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:111:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderContextProvider (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5935:3)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6032:11)
+      ...
+    # Subtest: na hora, a especial NÃO aparece também em 'Outras Edições'
+    not ok 8 - na hora, a especial NÃO aparece também em 'Outras Edições'
+      ---
+      duration_ms: 0.6351
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\pages\\__tests__\\Dashboard.test.mjs:183:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useContext')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Module.useContext (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1618:21)
+        useNavigate (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:5912:32)
+        Dashboard (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:111:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderContextProvider (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5935:3)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6032:11)
+      ...
+    # Subtest: 'Outras Edições' continua a mostrar as outras
+    not ok 9 - 'Outras Edições' continua a mostrar as outras
+      ---
+      duration_ms: 0.7267
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\pages\\__tests__\\Dashboard.test.mjs:193:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useContext')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Module.useContext (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1618:21)
+        useNavigate (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:5912:32)
+        Dashboard (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:111:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderContextProvider (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5935:3)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6032:11)
+      ...
+    # Subtest: uma PROG-* em `agendadas` não vira card especial
+    not ok 10 - uma PROG-* em `agendadas` não vira card especial
+      ---
+      duration_ms: 0.6777
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\pages\\__tests__\\Dashboard.test.mjs:202:3'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'useContext')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        Module.useContext (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react\cjs\react.development.js:1618:21)
+        useNavigate (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:5912:32)
+        Dashboard (C:/Users/Moltbot/Desktop/DesafioGUT/desafio-gut/frontend/src/pages/Dashboard.jsx:111:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        renderContextProvider (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5935:3)
+        renderElement (C:\Users\Moltbot\Desktop\DesafioGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6032:11)
+      ...
+    1..10
+not ok 349 - MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT
+  ---
+  duration_ms: 6018.7864
+  type: 'suite'
+  location: 'C:\\Users\\Moltbot\\Desktop\\DesafioGUT\\desafio-gut\\frontend\\src\\pages\\__tests__\\Dashboard.test.mjs:93:1'
+  failureType: 'subtestsFailed'
+  error: '10 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: MC94 · MeusAtivos — HARD GATE 5: nada regride
+    # Subtest: as quatro estatísticas antigas continuam lá, com os mesmos números
+    ok 1 - as quatro estatísticas antigas continuam lá, com os mesmos números
+      ---
+      duration_ms: 17.016
+      type: 'test'
+      ...
+    # Subtest: o cabeçalho e o rodapé regulamentar continuam lá
+    ok 2 - o cabeçalho e o rodapé regulamentar continuam lá
+      ---
+      duration_ms: 1.8294
+      type: 'test'
+      ...
+    # Subtest: os filtros continuam lá
+    ok 3 - os filtros continuam lá
+      ---
+      duration_ms: 1.5279
+      type: 'test'
+      ...
+    # Subtest: o convite a entrar continua a aparecer quando não há sessão
+    ok 4 - o convite a entrar continua a aparecer quando não há sessão
+      ---
+      duration_ms: 1.2345
+      type: 'test'
+      ...
+    1..4
+ok 350 - MC94 · MeusAtivos — HARD GATE 5: nada regride
+  ---
+  duration_ms: 4801.7003
+  type: 'suite'
+  ...
+# Subtest: MC94 · MeusAtivos — as secções novas estão na página
+    # Subtest: as cinco secções do torneio renderizam
+    ok 1 - as cinco secções do torneio renderizam
+      ---
+      duration_ms: 1.3619
+      type: 'test'
+      ...
+    # Subtest: a ordem é a planeada: torneio ANTES do histórico
+    ok 2 - a ordem é a planeada: torneio ANTES do histórico
+      ---
+      duration_ms: 1.4717
+      type: 'test'
+      ...
+    # Subtest: com sessão e dados, mostra posição, pontos e senhas a creditar
+    ok 3 - com sessão e dados, mostra posição, pontos e senhas a creditar
+      ---
+      duration_ms: 3.1072
+      type: 'test'
+      ...
+    # Subtest: a palavra 'saldo' não aparece em toda a página do torneio
+    ok 4 - a palavra 'saldo' não aparece em toda a página do torneio
+      ---
+      duration_ms: 1.7233
+      type: 'test'
+      ...
+    1..4
+ok 351 - MC94 · MeusAtivos — as secções novas estão na página
+  ---
+  duration_ms: 8.0437
+  type: 'suite'
+  ...
+# Subtest: MC94 · MeusAtivos — resiliência
+    # Subtest: NÃO PARTE quando os dois endpoints falham, e o histórico sobrevive
+    ok 1 - NÃO PARTE quando os dois endpoints falham, e o histórico sobrevive
+      ---
+      duration_ms: 1.6884
+      type: 'test'
+      ...
+    # Subtest: a carregar, não mostra erro nem números inventados
+    ok 2 - a carregar, não mostra erro nem números inventados
+      ---
+      duration_ms: 1.1765
+      type: 'test'
+      ...
+    # Subtest: sem sessão, convida a entrar em vez de mostrar erro
+    ok 3 - sem sessão, convida a entrar em vez de mostrar erro
+      ---
+      duration_ms: 0.9336
+      type: 'test'
+      ...
+    # Subtest: o ranking é público: aparece mesmo sem sessão
+    ok 4 - o ranking é público: aparece mesmo sem sessão
+      ---
+      duration_ms: 0.8023
+      type: 'test'
+      ...
+    1..4
+ok 352 - MC94 · MeusAtivos — resiliência
+  ---
+  duration_ms: 4.854
+  type: 'suite'
+  ...
+# Subtest: MC94 · MeusAtivos — cablagem: os dados chegam às secções
+    # Subtest: `useFeedback` é chamado com ciclo, endereço E token — os três
+    ok 1 - `useFeedback` é chamado com ciclo, endereço E token — os três
+      ---
+      duration_ms: 0.8921
+      type: 'test'
+      ...
+    # Subtest: `useRanking` é chamado com a edição activa, não com `undefined`
+    ok 2 - `useRanking` é chamado com a edição activa, não com `undefined`
+      ---
+      duration_ms: 0.7176
+      type: 'test'
+      ...
+    # Subtest: a edição activa vem do contexto, não de um literal na página
+    ok 3 - a edição activa vem do contexto, não de um literal na página
+      ---
+      duration_ms: 0.5886
+      type: 'test'
+      ...
+    # Subtest: `address` chega ao RANKING: sem ele ninguém é destacado; com ele, o próprio é
+    ok 4 - `address` chega ao RANKING: sem ele ninguém é destacado; com ele, o próprio é
+      ---
+      duration_ms: 1.3097
+      type: 'test'
+      ...
+    # Subtest: `address` chega ao FEEDBACK DE LANCES: só os lances do próprio aparecem
+    ok 5 - `address` chega ao FEEDBACK DE LANCES: só os lances do próprio aparecem
+      ---
+      duration_ms: 0.9576
+      type: 'test'
+      ...
+    # Subtest: `erro` do feedback chega às TRÊS secções pessoais — e só a essas
+    ok 6 - `erro` do feedback chega às TRÊS secções pessoais — e só a essas
+      ---
+      duration_ms: 0.7194
+      type: 'test'
+      ...
+    # Subtest: `carregando` do feedback chega às três secções pessoais
+    ok 7 - `carregando` do feedback chega às três secções pessoais
+      ---
+      duration_ms: 0.5251
+      type: 'test'
+      ...
+    # Subtest: `semSessao` chega às três: um anónimo não lê factos sobre si próprio
+    ok 8 - `semSessao` chega às três: um anónimo não lê factos sobre si próprio
+      ---
+      duration_ms: 0.6948
+      type: 'test'
+      ...
+    # Subtest: os campos do feedback chegam ao sítio certo, cada um ao seu
+    ok 9 - os campos do feedback chegam ao sítio certo, cada um ao seu
+      ---
+      duration_ms: 1.1677
+      type: 'test'
+      ...
+    # Subtest: ⚠️ as secções NÃO se contradizem quando a sequência está completa
+    ok 10 - ⚠️ as secções NÃO se contradizem quando a sequência está completa
+      ---
+      duration_ms: 0.8927
+      type: 'test'
+      ...
+    # Subtest: com bónus já LIQUIDADO, a página não promete creditar outra vez
+    ok 11 - com bónus já LIQUIDADO, a página não promete creditar outra vez
+      ---
+      duration_ms: 0.9626
+      type: 'test'
+      ...
+    1..11
+ok 353 - MC94 · MeusAtivos — cablagem: os dados chegam às secções
+  ---
+  duration_ms: 9.8484
+  type: 'suite'
+  ...
+# Subtest: MC94 · MeusAtivos — a página não fala de quem não conhece
+    # Subtest: ⛔ ANÓNIMO: as QUATRO secções pessoais convidam a entrar, sem excepção
+    ok 1 - ⛔ ANÓNIMO: as QUATRO secções pessoais convidam a entrar, sem excepção
+      ---
+      duration_ms: 1.3305
+      type: 'test'
+      ...
+    # Subtest: ⛔ JANELA DO TOKEN: com sessão e sem token ainda, a página NÃO manda entrar
+    ok 2 - ⛔ JANELA DO TOKEN: com sessão e sem token ainda, a página NÃO manda entrar
+      ---
+      duration_ms: 0.9367
+      type: 'test'
+      ...
+    # Subtest: o token chega: a página passa a mostrar os dados, sem passar por 'entre na conta'
+    ok 3 - o token chega: a página passa a mostrar os dados, sem passar por 'entre na conta'
+      ---
+      duration_ms: 0.9755
+      type: 'test'
+      ...
+    # Subtest: o ranking é público: aparece com ou sem sessão, e não entra na conversa da sessão
+    ok 4 - o ranking é público: aparece com ou sem sessão, e não entra na conversa da sessão
+      ---
+      duration_ms: 2.0833
+      type: 'test'
+      ...
+    1..4
+ok 354 - MC94 · MeusAtivos — a página não fala de quem não conhece
+  ---
+  duration_ms: 5.5085
+  type: 'suite'
+  ...
+# Subtest: controlo positivo: o stripper apaga comentários (JSX multi-linha incluído) e poupa código
+ok 355 - controlo positivo: o stripper apaga comentários (JSX multi-linha incluído) e poupa código
+  ---
+  duration_ms: 1.4628
+  type: 'test'
+  ...
+# Subtest: MC99/SEG0 · Outras Edições em scroll LATERAL (não empilhado)
+ok 356 - MC99/SEG0 · Outras Edições em scroll LATERAL (não empilhado)
+  ---
+  duration_ms: 1.5346
+  type: 'test'
+  ...
+# Subtest: MC99/SEG1 · barra inferior na ordem Início · Carteira · Lances
+ok 357 - MC99/SEG1 · barra inferior na ordem Início · Carteira · Lances
+  ---
+  duration_ms: 2.4167
+  type: 'test'
+  ...
+# Subtest: MC99/SEG2 · a Carteira tem 2 vidros (login + saldo) e mais nenhum
+ok 358 - MC99/SEG2 · a Carteira tem 2 vidros (login + saldo) e mais nenhum
+  ---
+  duration_ms: 0.7794
+  type: 'test'
+  ...
+# Subtest: MC99/SEG2 · os 5 cards removidos não voltaram
+ok 359 - MC99/SEG2 · os 5 cards removidos não voltaram
+  ---
+  duration_ms: 0.8212
+  type: 'test'
+  ...
+# Subtest: MC99/SEG2 · «Minha Carteira» aparece UMA só vez — o cabeçalho não pode voltar
+ok 360 - MC99/SEG2 · «Minha Carteira» aparece UMA só vez — o cabeçalho não pode voltar
+  ---
+  duration_ms: 0.7434
+  type: 'test'
+  ...
+# Subtest: MC99/SEG2 · «Minha Carteira» está DENTRO do vidro de saldo, e «Saldo Disponível» etiqueta o número
+ok 361 - MC99/SEG2 · «Minha Carteira» está DENTRO do vidro de saldo, e «Saldo Disponível» etiqueta o número
+  ---
+  duration_ms: 0.7789
+  type: 'test'
+  ...
+# Subtest: MC99/SEG2 · o vidro de saldo usa o PADRÃO (sem background/borderColor inline)
+ok 362 - MC99/SEG2 · o vidro de saldo usa o PADRÃO (sem background/borderColor inline)
+  ---
+  duration_ms: 0.9848
+  type: 'test'
+  ...
+# Subtest: MC99/SEG2.3 · o rótulo técnico «MC10 · Growth» saiu do Indique e Ganhe
+ok 363 - MC99/SEG2.3 · o rótulo técnico «MC10 · Growth» saiu do Indique e Ganhe
+  ---
+  duration_ms: 0.7912
+  type: 'test'
+  ...
+# Subtest: MC99/SEG3.1 · o banner (2.º vidro) saiu dos Lances
+ok 364 - MC99/SEG3.1 · o banner (2.º vidro) saiu dos Lances
+  ---
+  duration_ms: 0.9362
+  type: 'test'
+  ...
+# Subtest: MC99/SEG3.2 · os heroes de Seja Nosso Parceiro estão em vidro padrão
+ok 365 - MC99/SEG3.2 · os heroes de Seja Nosso Parceiro estão em vidro padrão
+  ---
+  duration_ms: 1.1231
+  type: 'test'
+  ...
+# Subtest: MC99/SEG4 · o rodapé TÉCNICO da Vitrine não está exposto ao utilizador
+ok 366 - MC99/SEG4 · o rodapé TÉCNICO da Vitrine não está exposto ao utilizador
+  ---
+  duration_ms: 1.2948
+  type: 'test'
+  ...
+# Subtest: controlo positivo: o stripper também trata o comentário `//` de FIM DE LINHA
+ok 367 - controlo positivo: o stripper também trata o comentário `//` de FIM DE LINHA
+  ---
+  duration_ms: 0.3092
+  type: 'test'
+  ...
+# Subtest: MC99/F1 · o email de pagamento perdido voltou ao CÓDIGO da Carteira
+ok 368 - MC99/F1 · o email de pagamento perdido voltou ao CÓDIGO da Carteira
+  ---
+  duration_ms: 0.7141
+  type: 'test'
+  ...
+# Subtest: MC99/F2 · a acção «atualizar saldo on-chain» tem um controlo na UI
+ok 369 - MC99/F2 · a acção «atualizar saldo on-chain» tem um controlo na UI
+  ---
+  duration_ms: 0.6079
+  type: 'test'
+  ...
+1..369
+# tests 535
+# suites 28
+# pass 510
+# fail 25
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 43862.126
