@@ -1,5 +1,5 @@
 # DESAFIOGUT — Única Fonte de Verdade
-> Atualizado em: 2026-09-30 (UTAC105b.1: **autenticação em `cotas?action=update-corporativo`** (P0) — a ação **não autenticava NADA** (o comentário dizia que verificava o email; era falso): qualquer pessoa com um `cliente_id` alterava a cota. Passa a aplicar a regra **MC89.38** (dono OU cota vinculada por `endereco` OU admin — 401 sem token, 403 de outro, fail-closed 502) e o painel `CorporativoDashboard` passou a enviar o `Bearer`. Consequência aceite (R18-2): cota `cnpj:` sem `endereco` dá 403 ao próprio dono. Anterior: UTAC000.2: **review automático da skill UTAC01** — `review/` + `_logs/REVIEWS/`, versão em `review/VERSAO.md` (1.0). Anterior: UTAC105b: **cupons do Passe Desafio** — tabela `cupons`, painel do lojista, `comprar-passe` grava os cupons activos; **skill UTAC01 obrigatória**. Anterior: MC105a.1: **saneamento de `passes`** — DELETE/TRUNCATE revogados do `service_role`, `passes` na exportação e na exclusão (`anon:<sha256>`), CHECK e UNIQUE ajustados ao pseudónimo, migrações em `supabase/migrations/`. Anterior: MC105a: **Passe Desafio — tabela `passes` + `comprar-passe`** (off-chain, idempotente, débito atómico com compensação). Anterior: MC104.3: **pendências LGPD fechadas no conta-delete** — índice/notificações/lances → `anon:<sha256>`, texto de retenção com NF-e, pedido por CAS; LGPD fechada. Anterior: MC104.2: **conta-delete anonimiza os pedidos** — procura também `comprador`, morada → `***`, NF-e intacta; A/B 0→1; fecha a Onda 1. Anterior: MC104.1: **as 5 flags de transição visíveis no cliente** — `useRecursosApp` com a regra estrita do backend nos 3 caminhos, estado inicial e tempo real; A/B 0/39; destranca o MC111. Anterior: MC104: **LGPD técnico** — aceite do gate registado no servidor (Blob `consent-log`, enviado pós-login, só para a 1.ª conta do aparelho) + `exportar-dados` completo e só do titular (pedidos por `comprador`, lances, pontos, tabelas Supabase). Anterior: MC103: **5 flags de TRANSIÇÃO** em `recursos-app-config.mjs`, criadas e NÃO ligadas (defaults = comportamento actual, A/B 0/30) + **legado medido**: R$ 23,75 em 7 contas · 12 senhas on-chain em 1 conta · 0 dívidas de bónus · Vale-Crédito 0 · ⚠️ R$ 10,25 consumidos sem destino conhecido. Anterior: 2026-09-29, MC102.1b: **Frenet real** — adaptador (só Correios, SEDEX 03220) + `webhook-frenet` idempotente e fail-closed (falta o operador definir `FRENET_WEBHOOK_TOKEN`) + eventos no pedido (só data+código, ISO UTC, via CAS) + 6 refinamentos da timeline (estado «Entregue»). Anterior: MC102.1a: **estrutura do rastreio** — contrato `consultarRastreio` + mock só em testes (injecção; grafo esbuild provado), mapa PT-BR de 5 passos + 3 alertas (DEC-102.1-H), `TimelineRastreio` no cartão só com `rastreio.eventos`; produção visualmente igual até ao MC102.1b. Anterior: MC102.0: **escrita condicional (CAS) no pedido** — `@netlify/blobs` 10.0.0, `set()` com If-Match (o `setJSON` não o envia), retry da operação 3×; ETag de produção por medir. Anterior: MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
+> Atualizado em: 2026-10-01 (UTAC105b.2: **P0 do `register-corporativo`** — o `clienteId` vinha do CORPO (`endereco ?? "cnpj:…"`) sem prova NENHUMA e o `upsertCota` escrevia um registo completo com `categoria:null, vendida:false, valor:0`: um pedido ANÓNIMO com o `endereco`/CNPJ de outra pessoa devolvia 201 e DESTRUÍA a cota dela (`ouro/vendida:true/55000` → `null/false/0`, medido). Passa a exigir prova de posse (MC89.38) antes do upsert — 401 anónimo, 403 de outro, 502 fail-closed na falha de leitura — e o cadastro legítimo (só cria cotas NOVAS) fica intacto. Inclui a Frente C: o POST genérico de admin preserva a coluna `endereco` (apagava-a, e o ramo (b) do MC89.38 depende dela). Validador adversarial: (veredicto SEG3 ainda não disponível). Anterior: UTAC105b.1: **autenticação em `cotas?action=update-corporativo`** (P0) — a ação **não autenticava NADA** (o comentário dizia que verificava o email; era falso): qualquer pessoa com um `cliente_id` alterava a cota. Passa a aplicar a regra **MC89.38** (dono OU cota vinculada por `endereco` OU admin — 401 sem token, 403 de outro, fail-closed 502) e o painel `CorporativoDashboard` passou a enviar o `Bearer`. Consequência aceite (R18-2): cota `cnpj:` sem `endereco` dá 403 ao próprio dono. Anterior: UTAC000.2: **review automático da skill UTAC01** — `review/` + `_logs/REVIEWS/`, versão em `review/VERSAO.md` (1.0). Anterior: UTAC105b: **cupons do Passe Desafio** — tabela `cupons`, painel do lojista, `comprar-passe` grava os cupons activos; **skill UTAC01 obrigatória**. Anterior: MC105a.1: **saneamento de `passes`** — DELETE/TRUNCATE revogados do `service_role`, `passes` na exportação e na exclusão (`anon:<sha256>`), CHECK e UNIQUE ajustados ao pseudónimo, migrações em `supabase/migrations/`. Anterior: MC105a: **Passe Desafio — tabela `passes` + `comprar-passe`** (off-chain, idempotente, débito atómico com compensação). Anterior: MC104.3: **pendências LGPD fechadas no conta-delete** — índice/notificações/lances → `anon:<sha256>`, texto de retenção com NF-e, pedido por CAS; LGPD fechada. Anterior: MC104.2: **conta-delete anonimiza os pedidos** — procura também `comprador`, morada → `***`, NF-e intacta; A/B 0→1; fecha a Onda 1. Anterior: MC104.1: **as 5 flags de transição visíveis no cliente** — `useRecursosApp` com a regra estrita do backend nos 3 caminhos, estado inicial e tempo real; A/B 0/39; destranca o MC111. Anterior: MC104: **LGPD técnico** — aceite do gate registado no servidor (Blob `consent-log`, enviado pós-login, só para a 1.ª conta do aparelho) + `exportar-dados` completo e só do titular (pedidos por `comprador`, lances, pontos, tabelas Supabase). Anterior: MC103: **5 flags de TRANSIÇÃO** em `recursos-app-config.mjs`, criadas e NÃO ligadas (defaults = comportamento actual, A/B 0/30) + **legado medido**: R$ 23,75 em 7 contas · 12 senhas on-chain em 1 conta · 0 dívidas de bónus · Vale-Crédito 0 · ⚠️ R$ 10,25 consumidos sem destino conhecido. Anterior: 2026-09-29, MC102.1b: **Frenet real** — adaptador (só Correios, SEDEX 03220) + `webhook-frenet` idempotente e fail-closed (falta o operador definir `FRENET_WEBHOOK_TOKEN`) + eventos no pedido (só data+código, ISO UTC, via CAS) + 6 refinamentos da timeline (estado «Entregue»). Anterior: MC102.1a: **estrutura do rastreio** — contrato `consultarRastreio` + mock só em testes (injecção; grafo esbuild provado), mapa PT-BR de 5 passos + 3 alertas (DEC-102.1-H), `TimelineRastreio` no cartão só com `rastreio.eventos`; produção visualmente igual até ao MC102.1b. Anterior: MC102.0: **escrita condicional (CAS) no pedido** — `@netlify/blobs` 10.0.0, `set()` com If-Match (o `setJSON` não o envia), retry da operação 3×; ETag de produção por medir. Anterior: MC102: **«Recebi» pelo comprador + prazo de arrependimento de 7 dias** em produção (c408dd0); corrida sem CAS em gravar() pendente. Anterior: MC101: **c56f899 publicado** pelo auto-deploy (MC-SORTEIO-01a + MC-ECOMMERCE-01a em produção); deploys «error» = no content change; flags vivas no Supabase (APK lido como pwa); webhook MP nunca processado. Anterior: MC100: **escopo-alvo v6.0 = os 2 PDFs do Desktop, fonte de verdade (R18)** — e-commerce por dropshipping com Relâmpago (menor lance único, saldo R$) + Programada (concurso de previsões pago com o Passe Desafio de R$ 2,00, com cupons de lojistas), MEI como vendedor, SPA/MF para a Programada; diagnóstico + plano MC101+ em `_logs/MC100_*.md`. Anterior: MC-PRODUTO-01: **produto final fechado com o que JÁ existe** — a senha de R$ 2,00 como produto (crédito de lance + dados estratégicos do Art. 24 + GUTO + placar), sem frontend novo; + alerta jurídico com a premissa refutada. Anterior: MC-NORTE-01: **norte do produto definido** — e-commerce por dropshipping + 7 pilares + modalidades + cotas + leis; camadas e plano de migração. Anterior: 2026-09-27, MC99.5.3: performance — dedup de fontes + fundo mobile; Opção A do SSRF = 9 faixas reservadas; docs/METODOLOGIA-SEGURANCA.md; validador PARCIAL → qualificações corrigidas) | **Ethereum MAINNET ativa desde o MC60** | Pipeline de lance 100% on-chain | **App PT-BR only desde o MC98**
 >
 > ⚠️ Este ficheiro esteve desatualizado entre o MC60 e o MC89.50: descrevia a rede
 > como Sepolia, o contrato como `0x59A73Acc…` e o deploy como automático. Estava
@@ -4254,6 +4254,94 @@ Metáfora: uma porta com o letreiro «só entra quem tem chave» mas sempre aber
 ### Não medido
 - Não se leu nem escreveu no Supabase (as cotas em produção não foram inspeccionadas).
 - O painel real não foi exercitado num browser (a prova é: testes do handler + build do frontend + A/B do PoC).
+
+## UTAC105b.2 — P0 do `register-corporativo` + POST genérico (2026-10-01)
+
+**FECHADO** (P0 e integridade de dados). Corrige as **duas portas de escrita sem prova de posse** que o validador do UTAC105b.1
+descobriu fora do escopo. Um único ficheiro de produção alterado (+46 linhas / −0).
+
+### O defeito (medido por execução, não por leitura)
+`cotas.mjs` decidia `const clienteId = endereco ?? "cnpj:" + cnpj` a partir do **CORPO** (l.396), sem
+prova nenhuma — o `accessToken` é opcional e apenas se verifica que **começa por `"eyJ"`** (não é
+verificado) — e escrevia sempre com `upsertCota` (l.442) um registo **completo** que fixava
+`categoria:null, vendida:false, disponivel:false, valor:0`. PoC com o handler real:
+`empresa="LOJA DA VITIMA" cat=ouro vendida=true valor=55000` → **`empresa="INVASOR" cat=null
+vendida=false valor=0`**. O anti-duplicidade (409) não travava o ataque: usando o `endereco` **e** o CNPJ
+da vítima, o `cliente_id` coincide e o 409 não dispara.
+
+### A correcção
+- **Frentes A/B** — guarda de posse **antes do upsert**, com a estrutura do `update-corporativo`
+  (UTAC105b.1), reaproveitada e não reinventada: `resolverChamador` → `getCota(clienteId)` em `try/catch`
+  (**502 `store_indisponivel`**, fail-closed) → se a cota **existe** e não é admin: `ehProprio`
+  (cliente_id == JWT, normalizado) **ou** `vinculado` (cota.`endereco` == JWT) → senão **401** (anónimo) /
+  **403** (utilizador), **sem escrever**. Cota **nova** → segue como antes.
+- **Frente C** — `endereco: existente?.endereco ?? null,` no registo do POST genérico (1 linha). O
+  `colunas()` grava `endereco: registro?.endereco ?? null`; como o ramo (b) do MC89.38 depende dessa
+  coluna, apagá-la fazia o dono legítimo levar **403**.
+
+### Porque é que isto NÃO quebra o cadastro legítimo (medido, P10)
+`SejaNossoParceiro.jsx` (cadastro directo, sem login): a **FASE B** faz `GET ?cnpj&empresa` primeiro e,
+se o CNPJ já existe, **não chega ao POST** (navega, avisa «já registrado», ou envia OTP). A **FASE C**
+(POST) só corre quando o GET deu **404** — ou seja, **o fluxo legítimo só cria cotas NOVAS**, e não envia
+`accessToken` nem `endereco`. O caminho «sobrescrever cota existente» **não tem consumidor legítimo**.
+
+### Decisão declarada (idempotência)
+O enunciado pedia «repetir o próprio registo → **200**». Implementado: **401 sem escrita**. Razão: sem
+prova de posse não se distingue repetição de ataque, e devolver 200 exigiria ou **escrever** (destruir) ou
+**devolver o registo existente a um anónimo** — o que o **MC87 (P0-1)** proíbe (confirmaria a associação
+CNPJ ↔ carteira). Nenhum caso legítimo é partido (ver acima). Se o operador quiser o 200, é 1 linha.
+
+### Validador adversarial (SEG3) e o que ele mudou
+**APROVADO COM RESSALVAS** (`_logs/UTAC105b.2_SEG3_VALIDADOR.md`, 22.887 B, escrito por ele). **28/28
+tentativas de bypass falharam**, por duas razões **estruturais**: (a) a chave do guard é a chave da
+escrita (sem divergência de normalização); (b) a prova de posse é infalsificável (`user-session` só com
+assinatura EIP-191; a coluna `endereco` nunca diverge da chave `cliente_id` ⇒ o ramo `vinculado` não é
+forjável). Confirmou por leitura própria que o **cadastro legítimo não quebra**.
+
+As duas ressalvas ⚠️ **foram corrigidas** por decisão do operador (**R18-3**, «resolva o que for preciso
+pra concluir esse UTAC»), com os tratamentos propostos pelo próprio validador:
+- **V-1** (GRAVE) — o **dono comprovado**, ao repetir o registo, **destruía a própria cota paga**
+  (`ouro/vendida:true/55000` → `null/false/0`); e o meu teste **B4 aplaudia** a escrita destrutiva.
+  ⇒ os campos de **PAGAMENTO** passam a ser preservados quando a cota já existe (`existenteReg?.X ?? default`)
+  e só se inicializam na criação; `pedidoId` e campos desconhecidos sobrevivem pelo spread. Testes **B13**
+  (agora exige a cota **intacta**) e **B14**.
+- **V-2** (GRAVE-escopo) — a Frente C preservava `endereco` mas o POST genérico continuava a apagar
+  `tipo` ⇒ o **dono levava 404** no `update-corporativo`. Eu tinha classificado isto como «achado fora do
+  escopo»; o validador mostrou que **é o objectivo por cumprir da própria Frente C**. ⇒ o registo passa a
+  `{ ...(existente ?? {}), <campos da operação> }`: o payload corporativo **inteiro** sobrevive (`tipo`,
+  `empresa`, `segmento`, `site`, `logoUrl`, `origem`, `cadastradoEm`, `endereco`, `pedidoId`). Teste **C3**.
+
+Achados ℹ️: **V-3** (oráculo 401-vs-201) **aceite** — equivalente ao 409 do MC12.3, sem PII, limitado por
+rate-limit; **V-5** coberto (**F1–F8**: caixa, espaços, `%20`, tipos, esquemas de `Authorization`, sem
+`X-Visitor-ID`, `__proto__`; **F8 mata o mutante MS2**); **V-6** corrigido com o V-1; **V-7** esta secção.
+**⚠️ V-4 ESCALADO (não corrigido):** um anónimo pode pré-criar/poluir uma cota no `endereco` de outra
+pessoa (herdada na fusão da activação). Corrigir altera o **contrato de API** do MC12.3.1 ⇒ candidato a
+UTAC, decisão do operador. Exposição só por chamada directa à API (o frontend não envia `endereco`).
+
+### Verificação
+| gate | resultado |
+|---|---|
+| PoC A/B | anónimo `201+sobrescreve` → **401+intacto**; cadastro legítimo `201` → **201**; FC `endereco=null` → **preservado** |
+| Testes | **25/25** (`_tests/utac105b2-register.test.mjs`: B1-B14, C1-C3, F1-F8) |
+| Mutação | **9 RED + 3 equivalentes declarados** (MA1-MA5, MV1-MV3, MS2; MA6/MS1/MS3 confirmados no-op)
+| Suíte | frontend **535/535** (inalterado) · backend **956/962** (= 931/937 **+25**) **VERDE** |
+| Escopo | só `cotas.mjs` + o teste novo; prefixo/sufixo **byte-idênticos** ao `966a587` (as correcções V-1/V-2 só acrescentam) |
+| Validador | **APROVADO COM RESSALVAS** — V-1/V-2 corrigidos (R18-3); V-4 escalado |
+
+### Achado FORA do escopo, escalado (não corrigido — R20/AU3)
+**F-1: o POST genérico continua a destruir o resto do payload corporativo.** Como `colunas()` grava
+`payload: registro` (`cotas-store.mjs:34`) e o registo do POST genérico só tem campos de lance, o upsert
+elimina `tipo`, `empresa`, `segmento`, `site`, `logoUrl`, `origem` e `cadastradoEm` dessa cota. Como o
+`tipo` desaparece, o `update-corporativo` passa a responder **404** ao próprio dono. **Pré-existente**;
+exige decisão de desenho (que campos o POST genérico pode substituir) → **candidato a UTAC**.
+
+### Lição registada
+O `register-corporativo` provou que **«autenticado» num comentário não é autenticação**: o `accessToken`
+opcional só era testado por prefixo (`"eyJ"`) e servia de decoração. Corolário operacional: quando um
+endpoint aceita a identidade **do corpo**, a posse tem de ser provada contra o JWT **antes** de qualquer
+escrita — e o teste tem de provar que **NÃO escreveu**, não apenas o código de resposta.
+
+---
 
 ## ⚠️ Armadilhas de ambiente (registo contínuo)
 

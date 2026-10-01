@@ -1,0 +1,77 @@
+VERDE   anónimo + endereço da vítima → 401 e NÃO escreve  [status=401 escreveu=false]
+[cotas] register-corporativo {
+  cliente_id: '0xaabbccddeeff00112233445566778899aabbccdd',
+  endereco: '0xaabbccddeeff00112233445566778899aabbccdd',
+  origem: 'autenticado',
+  empresa: 'Empresa Nova',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+VERDE   dono legítimo → 201 e escreve  [status=201]
+[cotas] register-corporativo {
+  cliente_id: '0xaabbccddeeff00112233445566778899aabbccdd',
+  endereco: '0xaabbccddeeff00112233445566778899aabbccdd',
+  origem: 'autenticado',
+  empresa: 'Empresa Nova',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+VERDE   admin → 201 e escreve  [status=201]
+[cotas] register-corporativo {
+  cliente_id: 'cnpj:77788899000183',
+  endereco: null,
+  origem: 'direto',
+  empresa: 'Empresa Nova',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+VERDE   cota NOVA legítima → 201 e cria  [status=201 id=cnpj:77788899000183]
+[cotas] upsert {
+  endereco: '0xaabbccddeeff00112233445566778899aabbccdd',
+  categoria: 'prata',
+  vendida: true,
+  troco_senhas: null
+}
+VERDE   POST genérico PRESERVA `endereco`  [endereco=0xaabbccddeeff00112233445566778899aabbccdd]
+[cotas] register-corporativo: leitura de cota falhou: store em baixo (simulado)
+VERDE   falha de leitura do store → 502 e NÃO escreve  [status=502]
+VERDE   header 'bearer' minúsculo NÃO autoriza  [status=401]
+VERDE   autenticado NÃO dono → 403 e NÃO escreve  [status=403]
+[cotas] register-corporativo {
+  cliente_id: '0x1111111111111111111111111111111111111111',
+  endereco: '0x1111111111111111111111111111111111111111',
+  origem: 'autenticado',
+  empresa: 'Empresa Nova',
+  cnpj: '12312312000110',
+  visitorId: 'visitor-…'
+}
+VERDE   admin + cota nova → 201  [status=201]
+[cotas] register-corporativo {
+  cliente_id: '0xaabbccddeeff00112233445566778899aabbccdd',
+  endereco: '0xaabbccddeeff00112233445566778899aabbccdd',
+  origem: 'autenticado',
+  empresa: 'NOME NOVO',
+  cnpj: '11122233000183',
+  visitorId: 'visitor-…'
+}
+VERDE   [CONTROLO+] prova de posse → o registo É escrito (efeito visível)  [empresa=NOME NOVO]
+VERDE   [CONTROLO+] o mesmo efeito NÃO passa sem prova de posse  [status=401]
+[cotas] register-corporativo {
+  cliente_id: '0xaabbccddeeff00112233445566778899aabbccdd',
+  endereco: '0xaabbccddeeff00112233445566778899aabbccdd',
+  origem: 'autenticado',
+  empresa: 'PERFIL NOVO',
+  cnpj: '11122233000183',
+  visitorId: 'visitor-…'
+}
+VERDE   [V-1] dono repete → pagamento preservado (categoria/vendida/valor)  [cat=ouro vendida=true valor=55000]
+[cotas] upsert {
+  endereco: '0xaabbccddeeff00112233445566778899aabbccdd',
+  categoria: 'prata',
+  vendida: true,
+  troco_senhas: null
+}
+VERDE   [V-2] POST generico preserva tipo/empresa/segmento/pedidoId  [tipo=corporativo empresa=LOJA DA VITIMA pedidoId=ped-123]
+VERDE   [V-2] e o DONO continua a conseguir update-corporativo (200, nao 404)  [status=200]
+
+VEREDITO: VERDE  (14/14 verificacoes)

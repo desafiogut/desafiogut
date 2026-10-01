@@ -462,7 +462,15 @@ async function handlePost(req) {
     }
 
     const agora = new Date().toISOString();
+    // ⚠️ V-1 (achado GRAVE do validador adversarial do SEG3) — quando a cota JÁ EXISTE, este
+    // ramo DESTRUÍA o que estava pago: o registo fixava `categoria:null, vendida:false,
+    // disponivel:false, valor:0`, e o DONO COMPROVADO que repetisse o registo perdia a cota
+    // (`ouro/vendida:true/55000` → `null/false/0`, medido pelo validador: A11).
+    // Correcção (tratamento (ii) proposto pelo validador): o registo passa a ser o EXISTENTE
+    // com os campos de PERFIL sobrepostos; os campos de PAGAMENTO só se inicializam na
+    // CRIAÇÃO. O `pedidoId` e os restantes campos desconhecidos sobrevivem pelo spread.
     const registro = {
+      ...(existenteReg ?? {}),            // cota NOVA → {} (aplica os defaults de pagamento)
       cliente_id:   clienteId,
       endereco:     endereco, // null em cadastro direto, address em cadastro autenticado
       tipo:         "corporativo",
@@ -473,12 +481,13 @@ async function handlePost(req) {
       logoUrl:      logoUrl ? String(logoUrl).slice(0, 500) : null,
       email:        email ? String(email).slice(0, 120).toLowerCase() : null,
       origem:       endereco ? "autenticado" : "direto", // MC12.3.1
-      cadastradoEm: agora,
+      cadastradoEm: existenteReg?.cadastradoEm ?? agora,
       updatedAt:    agora,
-      categoria:    null,
-      vendida:      false,
-      disponivel:   false,
-      valor:        0,
+      // ── campos de PAGAMENTO: preservados se a cota já existia (V-1) ──
+      categoria:    existenteReg ? (existenteReg.categoria ?? null) : null,
+      vendida:      existenteReg ? !!existenteReg.vendida : false,
+      disponivel:   existenteReg ? !!existenteReg.disponivel : false,
+      valor:        existenteReg ? (existenteReg.valor ?? 0) : 0,
     };
     await upsertCota(clienteId, registro); // MC37 — escrita só Supabase (R11)
 
@@ -606,6 +615,13 @@ async function handlePost(req) {
 
   const agora = new Date().toISOString();
   const registro = {
+    // ⚠️ V-2 / F-1 (achados do validador adversarial do SEG3) — o registo era reconstruído de
+    // zero, e o `cotas-store.colunas()` grava `payload: registro` → o upsert APAGAVA o resto do
+    // payload corporativo (`tipo`, `empresa`, `segmento`, `site`, `logoUrl`, `origem`,
+    // `cadastradoEm`). Consequência medida: a cota perdia `tipo:"corporativo"` e o DONO passava
+    // a levar **404** no `update-corporativo`. Passa a ser o registo EXISTENTE com os campos da
+    // operação sobrepostos — preserva `tipo`, `empresa`, `cnpj`, `email` e tudo o mais.
+    ...(existente ?? {}),
     cliente_id:    endereco,
     // UTAC105b.2 (Frente C) — o registo era construído SEM `endereco`, e o
     // `cotas-store.colunas()` grava `endereco: registro?.endereco ?? null` → o upsert

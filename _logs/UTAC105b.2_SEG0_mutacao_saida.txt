@@ -1,0 +1,20 @@
+cotas.mjs md5 antes: 4a8d3d876beaa57366d83f4ecfe8fff3  (disco: CRLF)
+
+base (sem mutação): todos os 25 VERDE ✅
+
+MA1  sem a guarda de posse (volta a sobrescrever)       RED ✅                        (B1,B2,B7,B8,B10)  [restaurado md5=true]
+MA2  anónimo tratado como utilizador (401→403)          RED ✅                        (B1,B2,B8,B10)  [restaurado md5=true]
+MA3  sem a excepção do admin                            RED ✅                        (B6)  [restaurado md5=true]
+MA4  sem o ramo (b) `vinculado`                         RED ✅                        (B5)  [restaurado md5=true]
+MA5  leitura do store engolida (fail-open)              RED ✅                        (B9)  [restaurado md5=true]
+MA6  [EQUIVALENTE] linha explícita do `endereco` (coberta pela fusão V-2) EQUIVALENTE ✅                (mortos=nenhum)  [restaurado md5=true]
+MV3  Frente C/V-2: tirar a fusão E a linha do `endereco` RED ✅                        (C1)  [restaurado md5=true]
+MS2  sem `.toLowerCase()` no `endereco` DA COTA (V-5)   RED ✅                        (F8)  [restaurado md5=true]
+MV1  registo volta a fixar o pagamento a null/false/0 (V-1) RED ✅                        (B13)  [restaurado md5=true]
+MV2  POST genérico volta a reconstruir o registo de zero (V-2) RED ✅                        (C3)  [restaurado md5=true]
+MS1  [EQUIVALENTE] `idNorm` sem toLowerCase (no-op)     EQUIVALENTE ✅                (mortos=nenhum)  [restaurado md5=true]
+MS3  [EQUIVALENTE] `getCota(String(id))` -> `getCota(id)` (no-op) EQUIVALENTE ✅                (mortos=nenhum)  [restaurado md5=true]
+
+md5 depois: 4a8d3d876beaa57366d83f4ecfe8fff3  = igual ao de antes ✅
+
+VEREDITO MUTACAO: TODOS OS MUTANTES COMO ESPERADO

@@ -85,4 +85,50 @@ md5 depois = md5 antes (c5368150cc04b871f0f0e417d5a85de7) ✅
   ou escrever (destruir) ou revelar o registo a um anónimo (proibido pelo MC87/P0-1). Decisão declarada:
   **401 sem escrita**. Se o operador quiser o 200, é 1 linha — com o custo de informação descrito.
 
+## 0.9 PÓS-SEG3 — o que o validador adversarial mudou neste segmento (2026-10-01)
+
+**Veredicto dele: APROVADO COM RESSALVAS** (`_logs/UTAC105b.2_SEG3_VALIDADOR.md`). O P0 ficou
+**fechado contra terceiros**: 28/28 tentativas de bypass falharam (caixa/espaços/`%20`, tipos errados,
+esquemas de `Authorization`, duplo header, `__proto__`, admin forjado, matriz 409-vs-guarda, ramo
+`vinculado` forçado) e por **duas razões estruturais**, não só empíricas: (a) a chave do guard é a chave
+da escrita (`getCota(clienteId)` / `upsertCota(clienteId)`, match exacto, sem divergência de
+normalização); (b) a prova de posse não é forjável (o `user-session` só é emitido mediante assinatura
+EIP-191 pelo `auth-user.mjs`; a coluna `endereco` nunca pode divergir da chave `cliente_id` em nenhum
+caminho de escrita ⇒ o ramo `vinculado` não é forjável). Confirmou também, **por leitura própria**, que o
+cadastro legítimo nunca posta sobre cota existente (FASE B trava antes).
+
+### As duas ressalvas ⚠️ e o que foi feito — **corrigidas por decisão do operador (R18-3)**
+| achado | medido pelo validador | o que eu tinha escrito | correcção aplicada |
+|---|---|---|---|
+| **V-1** (GRAVE) | o **DONO COMPROVADO** a repetir o registo passava a `categoria:null, vendida:false, valor:0` — destruía a cota paga. E o **meu B4 aplaudia** (`escreveu:true` sem olhar ao estado final) | eu só tinha analisado o lado do **anónimo** (§-1.7) e declarei a decisão «internamente consistente» | campos de **PAGAMENTO preservados** quando a cota existe (`existenteReg?.X ?? default`); `pedidoId` e desconhecidos sobrevivem pelo spread. **B4** deixou de aplaudir; **B13** passou a exigir a cota **intacta**; **B14** guarda os defaults da cota nova |
+| **V-2** (GRAVE-escopo) | a Frente C preservava `endereco` mas o POST genérico continuava a apagar `tipo` ⇒ o **dono levava 404** no `update-corporativo`. Ou seja: **a Frente C não cumpria o objectivo que declara** | eu tinha classificado isso como «F-1, achado fora do escopo» | registo do POST genérico passa a `{ ...(existente ?? {}), <campos da operação> }` ⇒ o payload **inteiro** sobrevive e o dono volta a editar (**200**). Teste **C3**. |
+
+### Tratamentos dos achados ℹ️
+| achado | tratamento |
+|---|---|
+| **V-3** oráculo 401-vs-201 | **aceite** pelo validador (equivalente ao 409 `cnpj_duplicado` do MC12.3, sem PII, limitado por rate-limit 5/min + 1 CNPJ/24h); **registado** em R18-4. Opção futura: rate-limit por `cliente_id`-alvo |
+| **V-4** anónimo pré-cria/polui uma cota futura no endereço de outra pessoa | **ESCALADO, não corrigido**: tratar `endereco` vindo do corpo de um **anónimo** é uma decisão de **contrato de API** (o MC12.3.1 documenta «cadastro autenticado: cliente_id = endereco»), e o enunciado não a autoriza. Fica como candidato a UTAC |
+| **V-5** cobertura incompleta | **corrigido**: **F1–F8** acrescentados (caixa mista, espaços, `%20`, tipos, esquemas de `Authorization`, sem `X-Visitor-ID`, `__proto__`) e **F8 mata o mutante MS2**; MS1/MS3 declarados **equivalentes** (no-ops medidos) em vez de fingir cobertura |
+| **V-6** B4 aplaudia a escrita destrutiva | **corrigido** (ver V-1): B4 só mede a autorização; a integridade passou a ser exigida em B13 |
+| **V-7** `CLAUDE.md` dizia «FECHADO» antes do veredicto e estava por commitar | **corrigido**: secção requalificada e commitada |
+
+### Estado dos testes e da mutação depois disto
+**25 testes** (eram 14): `B13` invertido, `B14`, `C3`, `F1`–`F8`. **Mutação: 9 mortos + 3 equivalentes
+declarados** (`MA1`–`MA5`, `MV3`, `MS2`, `MV1`, `MV2` RED; `MA6`, `MS1`, `MS3` confirmados no-op). Suíte
+**535/535 · 956/962** (= 931/937 + 25) VERDE.
+⚠️ **`MA6` passou a EQUIVALENTE**: depois da fusão do V-2, o spread `...(existente ?? {})` já preserva
+`endereco`, logo remover a linha explícita da Frente C é um no-op. Os dois mecanismos são **redundantes**
+— declara-se, e o mutante combinado **`MV3`** (tira os dois) prova que o `C1` morde.
+
+### Erros NOVOS dos meus instrumentos (declarados, corrigidos)
+1. **`MA1` deixou de aplicar** — a âncora do mutador partia ao meio do bloco e eu mudei o texto do
+   `registro` no V-1; corrigida para uma âncora única (`const agora`). O mutador reportou
+   «NÃO APLICADO» em vez de fingir um RED — comportamento correcto do instrumento.
+2. **`MA6` sobreviveu** — não é defeito do teste: é a **redundância** criada pelo V-2 (acima).
+3. **`FC2` media ausência com um seed incompleto**: dizia «DESAPARECEU» de campos (`segmento`, `site`,
+   `logoUrl`, `origem`, `cadastradoEm`) que a cota semeada **nunca tinha tido**. Seed completado no PoC
+   **e** no teste (e o `C3` passou a exigir o payload todo). Ausência de prova ≠ prova de ausência.
+4. **Patch do seed no PoC deixou uma linha órfã** → o PoC deixou de compilar; corrigido.
+5. **A linha-resumo do `R5` lia o estado *depois* do caso `FC`** — rótulo corrigido para não induzir.
+
 ## 0.8 VEREDITO DO SEG0: **FECHADO** — P0 fechado, provado por A/B, 14 testes, 6/6 mutantes, suíte verde.

@@ -84,6 +84,16 @@ completo só sai para o DONO»). Nenhuma das duas é aceitável.
 caso legítimo** (ver -1.4: o fluxo legítimo nunca faz POST sobre cota existente). Se o operador quiser
 o 200 idempotente, é 1 linha — mas com o custo de informação descrito.
 
+## -1.7b ⚠️ CORRECÇÃO PÓS-SEG3 — a decisão de -1.7 era INCOMPLETA (fica à vista, marcada)
+O validador do SEG3 concordou com a recusa do 200 «idempotente» ao **anónimo** (⚠️ V-3: aceitou, é
+equivalente ao 409 pré-existente e sem PII). **Mas mostrou que a decisão era internamente inconsistente**
+(⚠️ **V-1**): o mesmo caminho «repetição» serve o **DONO COMPROVADO**, e aí a prova de posse **existe** —
+não devia haver escrita destrutiva. Medido (A11): o dono a repetir passava a `categoria:null,
+vendida:false, valor:0` — perdia a cota paga. Eu tinha olhado só para o lado do anónimo.
+**Corrigido** por decisão do operador (R18-3): os campos de PAGAMENTO passam a ser preservados quando a
+cota já existe (só se inicializam na criação). Medido depois (PoC §R5): o dono a repetir actualiza o
+perfil (`empresa="PERFIL NOVO"`) e mantém `cat=ouro vendida=true valor=55000`.
+
 ## -1.8 VEREDITO DO SEG-1: **SEGUIR**
 P0 confirmado por leitura **e** por execução; Frente C confirmada; **P10 não dispara** (medido: o
 cadastro legítimo cria sempre cota nova). Avança para a Frente A.

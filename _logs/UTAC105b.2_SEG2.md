@@ -36,5 +36,18 @@ campo listado como «DESAPARECEU do payload»). Consequência grave: a cota **de
 **pré-existente** e exige **decisão de desenho** (que campos o POST genérico pode substituir) → **achado
 F-1**, escalado como candidato a UTAC (R20/AU3: o executor não decide).
 
+## 2.5b ⚠️ CORRECÇÃO PÓS-SEG3 — o que escrevi em 2.5 está DESACTUALIZADO (fica à vista, marcado)
+O validador adversarial do SEG3 mediu (⚠️ **V-2**, e reformulou o meu **F-1**) que a Frente C, **como
+estava, não cumpria o objectivo que declara**: preservava `endereco`, mas o POST genérico continuava a
+apagar `tipo` → como o `update-corporativo` exige `tipo === "corporativo"`, o **dono continuava a levar
+404**. Ou seja, eu tinha declarado o F-1 como «achado grave fora do escopo» e o validador mostrou que ele
+**é o próprio objectivo por cumprir da Frente C**.
+**Corrigido** por decisão do operador (R18-3) com o tratamento proposto pelo validador: o registo do POST
+genérico passa a ser `{ ...(existente ?? {}), <campos da operação> }`. Medido depois (PoC §FC2): o payload
+corporativo **inteiro** sobrevive — `tipo`, `empresa`, `segmento`, `site`, `logoUrl`, `origem`,
+`cadastradoEm`, `endereco`, `pedidoId` — e o dono volta a conseguir `update-corporativo` (**200**).
+⇒ A afirmação de 2.5 («o POST genérico continua a destruir o resto do payload») **era verdadeira e deixou
+de ser**. Não é apagada: é o registo de que o meu enquadramento inicial era insuficiente.
+
 ## 2.6 VEREDITO DO SEG2: **FECHADO** para o que o UTAC autoriza (`endereco` preservado, com teste e
 mutante) · **1 achado escalado** (F-1) fora do escopo.

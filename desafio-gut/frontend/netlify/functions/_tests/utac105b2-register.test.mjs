@@ -44,9 +44,14 @@ let escritas = [];
 let jwtEndereco = null, admin = false, getCotaRebenta = false;
 
 function cotaVitima() {
+  // ⚠️ seed COMPLETO: inclui todos os campos do payload corporativo. Sem eles, medir
+  // «o campo sobreviveu?» daria falso (o campo nunca existiu) — defeito de instrumento
+  // que eu já tinha cometido no PoC (FC2 dizia «DESAPARECEU» o que o seed não tinha).
   return { cliente_id: DONO, tipo: "corporativo", empresa: "LOJA DA VITIMA", endereco: DONO,
-           cnpj: CNPJ_VITIMA, email: "vitima@loja.com", categoria: "ouro", vendida: true,
-           disponivel: false, valor: 55000 };
+           cnpj: CNPJ_VITIMA, email: "vitima@loja.com", segmento: "Varejo",
+           site: "https://loja.example", logoUrl: "https://loja.example/logo.png",
+           origem: "autenticado", cadastradoEm: "2026-01-15T10:00:00.000Z",
+           categoria: "ouro", vendida: true, disponivel: false, valor: 55000, pedidoId: "ped-123" };
 }
 function semear(extra) {
   cotas.clear(); escritas = [];
@@ -106,7 +111,7 @@ beforeEach(() => { jwtEndereco = null; admin = false; getCotaRebenta = false; })
 async function chamar(corpo, { token = null, ehAdmin = false, visitor = VISIT, acao = "register-corporativo" } = {}) {
   jwtEndereco = token; admin = ehAdmin;
   const h = { "content-type": "application/json" };
-  if (acao === "register-corporativo") h["x-visitor-id"] = visitor;
+  if (acao === "register-corporativo" && visitor) h["x-visitor-id"] = visitor;   // visitor:null → header ausente
   if (token) h.authorization = "Bearer tok";
   const url = acao ? `https://x/.netlify/functions/cotas?action=${acao}` : "https://x/.netlify/functions/cotas";
   const r = await cotasFn(new Request(url, { method: "POST", headers: h, body: JSON.stringify(corpo) }));
@@ -144,11 +149,13 @@ test("B3 CADASTRO LEGÍTIMO: anónimo, cota NOVA (cadastro directo) → 201 e CR
   assert.equal(cotas.get(`cnpj:${CNPJ_NOVO}`).empresa, "Empresa Nova");
 });
 
-test("B4 dono legítimo (JWT == cliente_id, cota existente) → 201", async () => {
+test("B4 dono legítimo (JWT == cliente_id, cota existente) → 201 (AUTORIZADO)", async () => {
   semear();
   const r = await chamar({ endereco: DONO, ...CADASTRO }, { token: DONO });
-  assert.equal(r.status, 201);
-  assert.equal(r.escreveu, true);
+  assert.equal(r.status, 201, "o dono comprovado tem de poder registar (prova de posse)");
+  // ⚠️ V-6 (validador do SEG3): este teste assertava `escreveu: true` SEM olhar ao estado
+  // final — ou seja, aplaudia uma escrita que destrói a cota paga do próprio dono. Isso é o
+  // DEFEITO V-1, caracterizado (e escalado) no B13. Aqui só se mede a AUTORIZAÇÃO.
 });
 
 test("B5 ramo (b): cota `cnpj:` com `endereco` == JWT → 201 (vinculado)", async () => {
@@ -229,6 +236,32 @@ test("B12 cota NOVA com `endereco` do próprio chamador autenticado → 201", as
   assert.equal(r.clienteId, OUTRO);
 });
 
+test("B13 [V-1 CORRIGIDO] o dono comprovado a repetir PRESERVA a cota paga", async () => {
+  // O validador do SEG3 mediu (⚠️ V-1) que o DONO COMPROVADO a repetir o registo destruía a
+  // própria cota paga (`ouro/vendida:true/55000` → `null/false/0`). Corrigido por decisão do
+  // operador (R18-3) com o tratamento proposto pelo validador: os campos de PAGAMENTO são
+  // preservados quando a cota já existe; só se inicializam na CRIAÇÃO.
+  // ⚠️ Antes desta correcção este teste caracterizava o DEFEITO (assertava `categoria:null`
+  // etc.). Era o que o SEG3 criticava em V-6 («um teste que aplaude a escrita destructiva»).
+  semear();
+  const r = await chamar({ endereco: DONO, ...CADASTRO }, { token: DONO });
+  assert.equal(r.status, 201);
+  const c = cotas.get(DONO);
+  assert.equal(c.categoria, "ouro",  "V-1: a categoria paga tem de sobreviver");
+  assert.equal(c.vendida, true,      "V-1: o estado 'vendida' tem de sobreviver");
+  assert.equal(c.valor, 55000,       "V-1: o valor pago tem de sobreviver");
+  assert.equal(c.empresa, "Empresa Nova", "os campos de PERFIL são actualizados (é um registo)");
+});
+
+test("B14 [V-1] cota NOVA continua a nascer com os defaults de pagamento", async () => {
+  semear();
+  const r = await chamar(CADASTRO);                     // cadastro directo, cota nova
+  assert.equal(r.status, 201);
+  const c = cotas.get(`cnpj:${CNPJ_NOVO}`);
+  assert.deepEqual([c.categoria, c.vendida, c.disponivel, c.valor], [null, false, false, 0],
+                   "cota nova tem de nascer sem pagamento (a preservação é só para cotas existentes)");
+});
+
 // ── FRENTE C — o POST genérico preserva `endereco` ───────────────────────────
 test("C1 POST genérico de admin sobre cota COM `endereco` → PRESERVA a coluna", async () => {
   semear();
@@ -249,6 +282,96 @@ test("C2 POST genérico de admin sobre cota NOVA → `endereco: null`", async ()
   assert.equal(cotas.get(novo).endereco, null);
 });
 
+// ── FRONTEIRAS (V-5) — casos que o SEG3 mediu como fail-closed mas NÃO tinham teste ──
+const UPPER = DONO.toUpperCase().replace("0X", "0x");
+
+test("F1 `endereco` da vítima em CAIXA MISTA (anónimo) → 401, sem escrita", async () => {
+  semear(); const antes = estadoVitima();
+  const r = await chamar({ endereco: "0xAaBbCcDdEeFf00112233445566778899AaBbCcDd", ...CADASTRO, cnpj: CNPJ_ATACANTE });
+  assert.equal(r.status, 401); assert.equal(r.escreveu, false); assert.equal(estadoVitima(), antes);
+});
+
+test("F2 `endereco` com ESPAÇOS → 400 `endereco_invalido`, sem escrita", async () => {
+  semear(); const antes = estadoVitima();
+  const r = await chamar({ endereco: ` ${DONO} `, ...CADASTRO });
+  assert.equal(r.status, 400); assert.equal(r.corpo.error.code, "endereco_invalido");
+  assert.equal(r.escreveu, false); assert.equal(estadoVitima(), antes);
+});
+
+test("F3 `endereco` com `%20` literal → 400, sem escrita", async () => {
+  semear();
+  const r = await chamar({ endereco: "0xaabb%20ccdd", ...CADASTRO });
+  assert.equal(r.status, 400); assert.equal(r.escreveu, false);
+});
+
+test("F4 `endereco` como array/objecto/número/booleano → 400 nos 4, sem escrita", async () => {
+  for (const mau of [[DONO], { endereco: DONO }, 12345, true]) {
+    semear();
+    const r = await chamar({ endereco: mau, ...CADASTRO });
+    assert.equal(r.status, 400, `endereco=${JSON.stringify(mau)} devia dar 400`);
+    assert.equal(r.escreveu, false);
+  }
+});
+
+test("F5 esquemas de `Authorization` (bearer/BEARER/'Bearer  '/Token/sem esquema) → 401 nos 5", async () => {
+  for (const h of ["bearer tok", "BEARER tok", "Bearer  tok", "Token tok", "tok"]) {
+    semear();
+    const r = await chamar({ endereco: DONO, ...CADASTRO }, { headerAuth: h });
+    assert.equal(r.status, 401, `Authorization=${JSON.stringify(h)} devia degradar para anónimo`);
+    assert.equal(r.escreveu, false);
+  }
+});
+
+test("F6 sem `X-Visitor-ID` → 400 `visitor_id_obrigatorio`, sem escrita", async () => {
+  semear();
+  const r = await chamar({ endereco: DONO, ...CADASTRO }, { visitor: null });
+  assert.equal(r.status, 400); assert.equal(r.corpo.error.code, "visitor_id_obrigatorio");
+  assert.equal(r.escreveu, false);
+});
+
+test("F7 `__proto__`/`constructor` no corpo → cota intacta e sem poluição de protótipo", async () => {
+  semear(); const antes = estadoVitima();
+  const r = await chamar(JSON.parse(`{"endereco":"${DONO}","cnpj":"${CNPJ_ATACANTE}","empresa":"X","__proto__":{"poluido":1},"constructor":{"x":1}}`));
+  assert.equal(r.status, 401);
+  assert.equal(r.escreveu, false); assert.equal(estadoVitima(), antes);
+  assert.equal(({}).poluido, undefined, "não pode haver poluição de Object.prototype");
+});
+
+test("F8 [MS2] cota com `endereco` em MAIÚSCULAS + JWT minúsculo → 201 (normalização do lado da cota)", async () => {
+  // mata o mutante MS2 (sobrevivente apontado pelo SEG3, §4.3): sem o `.toLowerCase()` do
+  // `endereco` DA COTA, o dono de uma cota com payload legado em caixa mista levaria 403.
+  const id = `cnpj:${CNPJ_VITIMA}`;
+  cotas.clear(); escritas = [];
+  cotas.set(id, { cliente_id: id, tipo: "corporativo", empresa: "E", endereco: UPPER,
+                  cnpj: CNPJ_VITIMA, categoria: null, vendida: false, valor: 0 });
+  const r = await chamar({ cnpj: CNPJ_VITIMA, empresa: "E2" }, { token: DONO });
+  assert.equal(r.status, 201, "a caixa do endereço guardado não pode bloquear o dono");
+});
+
+test("C3 [V-2 CORRIGIDO] após o POST genérico, o payload corporativo sobrevive e o dono continua a editar", async () => {
+  // O validador do SEG3 mediu (⚠️ V-2): o POST genérico apagava `tipo`, e como o
+  // `update-corporativo` exige `tipo === "corporativo"`, o DONO passava a levar **404**.
+  // Corrigido por decisão do operador (R18-3): o registo passa a ser o existente com os
+  // campos da operação sobrepostos (`...(existente ?? {})`).
+  semear();
+  let r = await chamar({ cliente_id: DONO, categoria: "prata", vendida: true, disponivel: false, valor: 55000 },
+                       { ehAdmin: true, acao: "" });
+  assert.equal(r.status, 200);
+  const c = cotas.get(DONO);
+  assert.equal(c.tipo, "corporativo", "V-2: o `tipo` não pode ser destruído pelo POST genérico");
+  assert.equal(c.empresa, "LOJA DA VITIMA", "V-2: a empresa corporativa não pode desaparecer");
+  assert.equal(c.endereco, DONO, "Frente C: o `endereco` é preservado");
+  // o payload todo tem de sobreviver (V-2/F-1): antes só sobreviviam os campos do lance
+  assert.deepEqual([c.segmento, c.site, c.logoUrl, c.origem, c.cadastradoEm, c.pedidoId, c.email],
+                   ["Varejo", "https://loja.example", "https://loja.example/logo.png", "autenticado",
+                    "2026-01-15T10:00:00.000Z", "ped-123", "vitima@loja.com"],
+                   "⚠️ V-2: o resto do payload corporativo tem de sobreviver ao POST genérico");
+  escritas = [];
+  r = await chamar({ cliente_id: DONO, empresa: "Loja Renovada" }, { token: DONO, acao: "update-corporativo" });
+  assert.equal(r.status, 200, "V-2: o dono não pode passar a levar 404 por causa do POST genérico");
+  assert.equal(cotas.get(DONO).empresa, "Loja Renovada");
+});
+
 // ── LISTA DE MUTAÇÕES (T1) — cada uma tem de pôr o teste indicado RED ────────
 //   MA1 remover o bloco da guarda de posse ................... B1, B2, B7, B8, B10
 //   MA2 `papel === "anon"` → `false` (anónimo tratado como utilizador) ... B1, B2, B8
@@ -256,3 +379,13 @@ test("C2 POST genérico de admin sobre cota NOVA → `endereco: null`", async ()
 //   MA4 remover o ramo (b) `vinculado` ...................... B5
 //   MA5 leitura do store engolida (fail-open) ............... B9
 //   MA6 Frente C: não preservar `endereco` .................. C1
+//   MS2 sem `.toLowerCase()` no `endereco` DA COTA .......... F8
+//   MV1 registo volta a fixar os campos de pagamento a null/false/0 (V-1) ... B13
+//   MV2 registo do POST genérico volta a ser reconstruído de zero (V-2/F-1) .. C3
+//
+// ⚠️ MUTANTES EQUIVALENTES (declarados, medidos pelo SEG3 §4.3 — nenhum teste os pode matar):
+//   MS1 `String(clienteId).toLowerCase()` na guarda — no-op: `validarEndereco` já devolve
+//       o `endereco` do corpo em minúsculas, e o ramo `cnpj:` é só dígitos.
+//   MS3 `getCota(String(clienteId))` — no-op: `clienteId` já é string nos dois ramos.
+//   São defesa-em-profundidade: ficam (não estorvam e protegem se `validarEndereco` mudar),
+//   mas NÃO se declara cobertura que não existe.

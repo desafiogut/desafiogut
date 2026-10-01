@@ -1,0 +1,70 @@
+CNPJs de teste (validos): vitima=11122233000183 atacante=44455566000183 novo=77788899000183
+
+=== R1 — ATACANTE anonimo passa o `endereco` DA VITIMA (cnpj novo) ===
+   status=401 escreveu=false clienteId=null
+   cota da vitima agora: empresa="LOJA DA VITIMA" cat=ouro vendida=true valor=55000 cnpj=11122233000183 endereco=0xaabbccddeeff00112233445566778899aabbccdd
+
+=== R2 — ATACANTE anonimo com o `endereco` E o CNPJ DA VITIMA ===
+   status=401 escreveu=false clienteId=null
+   cota da vitima agora: empresa="LOJA DA VITIMA" cat=ouro vendida=true valor=55000 cnpj=11122233000183 endereco=0xaabbccddeeff00112233445566778899aabbccdd
+
+=== R3 — CADASTRO LEGITIMO: anonimo, cota NOVA (sem endereco) ===
+[cotas] register-corporativo {
+  cliente_id: 'cnpj:77788899000183',
+  endereco: null,
+  origem: 'direto',
+  empresa: 'Empresa Nova',
+  cnpj: '77788899000183',
+  visitorId: 'visitor-…'
+}
+   status=201 escreveu=true clienteId=cnpj:77788899000183
+
+=== R4 — RE-REGISTO do mesmo CNPJ (idempotencia) — o que o UTAC pede para virar 200 ===
+   status=401 escreveu=false
+
+=== R5 — DONO comprovado (JWT) repete o registo — V-1: preserva o que esta pago? ===
+[cotas] register-corporativo {
+  cliente_id: '0xaabbccddeeff00112233445566778899aabbccdd',
+  endereco: '0xaabbccddeeff00112233445566778899aabbccdd',
+  origem: 'autenticado',
+  empresa: 'PERFIL NOVO',
+  cnpj: '11122233000183',
+  visitorId: 'visitor-…'
+}
+   status=201 escreveu=true
+   cota depois: empresa="PERFIL NOVO" cat=ouro vendida=true valor=55000 cnpj=11122233000183 endereco=0xaabbccddeeff00112233445566778899aabbccdd
+
+=== FC — POST GENERICO de admin sobre cota que TEM `endereco` (Frente C) ===
+[cotas] upsert {
+  endereco: '0xaabbccddeeff00112233445566778899aabbccdd',
+  categoria: 'prata',
+  vendida: true,
+  troco_senhas: null
+}
+   status=200   (POST generico, sem action)
+   cota depois: empresa="LOJA DA VITIMA" cat=prata vendida=true valor=55000 cnpj=11122233000183 endereco=0xaabbccddeeff00112233445566778899aabbccdd
+=== FC2 — que campos do payload corporativo sobrevivem ao POST generico? ===
+   tipo           "corporativo"
+   empresa        "LOJA DA VITIMA"
+   segmento       "Varejo"
+   site           "https://loja.example"
+   logoUrl        "https://loja.example/logo.png"
+   origem         "autenticado"
+   cadastradoEm   "2026-01-15T10:00:00.000Z"
+   disponivel     false
+   endereco       "0xaabbccddeeff00112233445566778899aabbccdd"
+   categoria      "prata"
+   vendida        true
+   valor          55000
+   pedidoId       "ped-123"
+
+=== VEREDITO (estado ACTUAL do codigo) ===
+R1 anonimo+endereco da vitima ...... 401  ✅ recusou
+R2 anonimo+cnpj da vitima .......... 401  ✅ recusou
+R3 cadastro legitimo (cota nova) ... 201  ✅ criou  clienteId=cnpj:77788899000183
+R4 re-registo do mesmo CNPJ ........ 401  (nao escreveu)
+FC POST admin preserva endereco .... endereco=0xaabbccddeeff00112233445566778899aabbccdd  ✅ preservou
+R5 dono repete (JWT) ............... (ver acima; esta linha le o estado FINAL, ja depois do FC)
+FC2 tipo sobreviveu ao POST gen ... tipo=corporativo
+(node:3288) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
