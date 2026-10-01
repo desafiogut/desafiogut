@@ -12,13 +12,13 @@
 
 **Linha 2 (cabeçalho), prefixo novo:**
 > Atualizado em: <DATA> (UTAC000: **nomenclatura «UTAC» = Unidade de Trabalho Auto Contido** substitui
-> «MC»; **Skill UTAC01** criada em `desafio-gut/frontend/skills/utac01/` — 29 ficheiros: protocolo
+> «MC»; **Skill UTAC01** criada em `desafio-gut/frontend/skills/utac01/` — 30 ficheiros: protocolo
 > (16 HARD GATES + **61 regras em 9 categorias** em `protocol/regras/` + legado R1-R20 + lições +
 > ambiente + contexto), 6 tipos, 4 segmentos, template de spec e exemplo funcional;
 > os UTACs futuros passam a ser escritos como **specs com menos de 60 linhas**. Anterior: MC105a.1: …)
 
 **Secção nova no fim (`## UTAC000`):**
-- **Entrega:** `desafio-gut/frontend/skills/utac01/` com **29 ficheiros** (20 da 1.ª entrega + 9 de
+- **Entrega:** `desafio-gut/frontend/skills/utac01/` com **30 ficheiros** (20 da 1.ª entrega − `regras.md` + 9 de
   `protocol/regras/` + `regras-legado.md` + `regras/README.md` − `regras.md`); `_logs/UTAC000_*.md`;
   `Desktop/UTAC000-RELATORIO.md`.
 - **Decisão (R18):** a série passa a chamar-se **UTAC** (Unidade de Trabalho Auto Contido). Os UTACs
