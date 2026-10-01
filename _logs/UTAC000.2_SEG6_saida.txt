@@ -1,0 +1,9 @@
+OK  | verificador versionado: ficheiros, prompt, template 7 secções, aplicador, review, nada aplicado | VEREDITO: VERDE (45/45)
+OK  | commits do UTAC000.2 (3) só tocam ficheiros autorizados | 
+OK  | nenhum código de produção (src/, netlify/functions/) nos commits | 
+OK  | nenhum UTAC fechado alterado (_logs de outros UTACs/MCs) | 
+OK  | CONTROLO: verificador detecta template adulterado | 
+VEREDITO: VERDE (5/5)
+frontend: VERDE 535/535 pass
+backend: VERDE 929/935 pass
+VEREDITO: VERDE
