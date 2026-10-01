@@ -5,6 +5,9 @@ import { GlassCard } from "@/components/ui";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 import { useT } from "../context/IdiomaContext.jsx";
 import { useRanking } from "../hooks/useRanking.js";
+// UTAC000.8 (DEBT-007) — resultado OFICIAL da edição (`resultados()` on-chain).
+// É a única fonte honesta do menor único: o browser não o consegue apurar (ver o hook).
+import { useResultadoOficial } from "../hooks/useResultadoOficial.js";
 import { useFeedback } from "../hooks/useFeedback.js";
 import PainelTorneio from "../components/meus-ativos/PainelTorneio.jsx";
 import ProgressoBonus from "../components/meus-ativos/ProgressoBonus.jsx";
@@ -75,7 +78,22 @@ export default function MeusAtivos() {
 
   const totalUnico = todosLances.filter((l) => !l.repetido).length;
   const totalRepet = todosLances.filter((l) => l.repetido).length;
-  const menorUnico = todosLances.filter((l) => !l.repetido)[0];
+
+  // ── UTAC000.8 (DEBT-007) — o 🏆 é do menor único DA EDIÇÃO «publicado», não do
+  // «que este browser viu». Com o resultado OFICIAL (`resultados()` on-chain, escrito
+  // pela consolidação) é ELE que manda: em mainnet o valor nunca vai em claro para a
+  // cadeia e a lista pública vem blindada durante o leilão, logo o browser NUNCA
+  // consegue apurar o menor único da edição sozinho. Sem resultado oficial
+  // (leilão a decorrer, edição por consolidar, rede em baixo) mantém-se o apuramento
+  // local — exactamente o comportamento anterior, sem regressão.
+  const resultadoOficial = useResultadoOficial(EDICAO_ATIVA);
+  const menorUnicoLocal = todosLances.filter((l) => !l.repetido)[0];
+  // Com resultado oficial não há «objecto local» a assinalar — a linha vencedora é
+  // identificada por endereço+valor (`ehLinhaVencedora`), e pode nem estar na lista.
+  const menorUnico = resultadoOficial ? null : menorUnicoLocal;
+  const valorMenorLance = resultadoOficial
+    ? `R$ ${(resultadoOficial.menorUnicoCentavos / 100).toFixed(2)}`
+    : menorUnicoLocal ? `R$ ${(menorUnicoLocal.valor / 100).toFixed(2)}` : "—";
 
   const pad        = isMobile ? "1rem" : "2rem";
   const cardPad    = isMobile ? "1rem" : "1.25rem";
@@ -85,7 +103,7 @@ export default function MeusAtivos() {
     { label: "Total de Lances",  value: todosLances.length, color: COR.blue300 },
     { label: "Lances Únicos",    value: totalUnico,         color: COR.success },
     { label: "Lances Repetidos", value: totalRepet,         color: COR.danger  },
-    { label: "Menor Lance",      value: menorUnico ? `R$ ${(menorUnico.valor / 100).toFixed(2)}` : "—", color: COR.gold },
+    { label: "Menor Lance",      value: valorMenorLance,     color: COR.gold },
   ];
 
   return (
@@ -267,9 +285,9 @@ export default function MeusAtivos() {
             </span>
           </div>
         ) : isMobile ? (
-          <MobileList lances={lancesExibidos} menorUnico={menorUnico} />
+          <MobileList lances={lancesExibidos} menorUnico={menorUnico} resultadoOficial={resultadoOficial} />
         ) : (
-          <DesktopTable lances={lancesExibidos} menorUnico={menorUnico} />
+          <DesktopTable lances={lancesExibidos} menorUnico={menorUnico} resultadoOficial={resultadoOficial} />
         )}
       </GlassCard>
 
@@ -293,11 +311,24 @@ export default function MeusAtivos() {
 
 // UTAC105c — o 🏆 é do menor lance único DA EDIÇÃO (`menorUnico`, calculado sobre todos os
 // lances), não do 1.º da lista: com sessão a lista são só os lances da pessoa, sem ordenar.
-function MobileList({ lances, menorUnico }) {
+//
+// UTAC000.8 (DEBT-007) — com o resultado OFICIAL publicado, o 🏆 vai para o lance que
+// corresponde ao vencedor oficial (endereço + valor), mesmo que ele não seja o menor único
+// apurado localmente (o browser não vê a edição inteira). Se essa linha não estiver na lista,
+// NENHUMA linha leva 🏆 — não se assinala ninguém por aproximação.
+function ehLinhaVencedora(lance, menorUnico, resultadoOficial) {
+  if (resultadoOficial) {
+    return Number(lance?.valor) === resultadoOficial.menorUnicoCentavos
+      && String(lance?.endereco ?? "").toLowerCase() === resultadoOficial.vencedor;
+  }
+  return lance === menorUnico;
+}
+
+function MobileList({ lances, menorUnico, resultadoOficial }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
       {lances.map((lance, i) => {
-        const isVencedor = lance === menorUnico;
+        const isVencedor = ehLinhaVencedora(lance, menorUnico, resultadoOficial);
         const enderecoAbrev = `${lance.endereco?.slice(0, 6)}...${lance.endereco?.slice(-4)}`;
         return (
           <div key={i} style={{
@@ -356,7 +387,7 @@ function MobileList({ lances, menorUnico }) {
   );
 }
 
-function DesktopTable({ lances, menorUnico }) {
+function DesktopTable({ lances, menorUnico, resultadoOficial }) {
   return (
     <table style={{ width: "100%", borderCollapse: "collapse" }}>
       <thead>
@@ -372,7 +403,7 @@ function DesktopTable({ lances, menorUnico }) {
       </thead>
       <tbody>
         {lances.map((lance, i) => {
-          const isVencedor = lance === menorUnico;
+          const isVencedor = ehLinhaVencedora(lance, menorUnico, resultadoOficial);
           return (
             <tr key={i} style={{
               borderBottom: "1px solid rgba(255,255,255,0.04)",
