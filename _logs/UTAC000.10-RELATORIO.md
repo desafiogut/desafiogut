@@ -56,30 +56,38 @@ página**, mount + a cada 60 s até consolidar).
 Despachado sobre o commit `7c5ac6b`, em worktree próprio, instruído a **tentar refutar** e a fazer o
 seu **próprio inventário de consumidores**. Veredicto: `_logs/UTAC000.10_SEG-3_VALIDADOR.md`.
 
-## 6. FRENTE F — limpeza dos worktrees órfãos: **ESCALADA, não executada (GATE 10)**
+## 6. FRENTE F — limpeza dos worktrees órfãos: **EXECUTADA NA PARTE SEGURA** (o resto preservado)
 O spec autoriza limpar «os **7** worktrees órfãos». **A medição (antes de tocar em nada) não
-confirma o número nem a premissa:**
+confirmou nem o número nem a premissa** — e por isso **não** se executou uma limpeza cega: cada
+candidato foi medido (sujo? junction? lock? mtime) e cada remoção passou pelo crivo do próprio git
+(`git worktree remove` **sem** `--force`, que **recusa** worktree sujo ou trancado — rede de
+segurança deliberada).
 ```
-directórios em .claude/worktrees/ .......... 12   (não 7)
-+ em AppData/Local/Temp/claude/.../scratchpad ... 1
-com junction para o node_modules REAL ..... 2    (agent-a910933b732937233, zen-goldberg-ce8759)
-com LOCK .................................. 1    (agent-a055938a81220e104 — "locked ... pid 15932")
-o pid do lock está vivo? .................. NÃO  (morto → lock obsoleto)
-processos claude-code vivos nesta máquina ... SIM (1 CLI npm + 10 da app Claude Desktop)
+directórios em .claude/worktrees/ .......... 11 em disco (não 7), + 1 entrada de registo órfã
+com junction para o node_modules REAL ..... 1 (zen-goldberg-ce8759)
+com junção (ver adiante) ................... 1 (agent-a910933b732937233) — na verdade CÓPIA real
+com LOCK ................................... 1 (agent-a055938a81220e104 — "locked ... pid 15932")
+o pid do lock está vivo? ................... NÃO  (morto → lock obsoleto) · dir JÁ NÃO existia
+processos claude-code vivos ................ SIM (1 CLI npm + 10 da app Claude Desktop)
 ```
-**Porque paro:** um worktree com lock de um pid morto é lixo, mas **um worktree de uma sessão Claude
-VIVA não é** — apagá-lo destrói trabalho em curso, e os meus instrumentos **não distinguem** os
-órfãos dos activos entre os 12. GATE 10 (ambiguidade/perigo → parar e reportar) aplica-se; o pedido
-de limpeza é legítimo, a execução cega é que não.
+### O que foi EXECUTADO (medido, por candidato)
+| worktree | estado medido | acção |
+|---|---|---|
+| `agent-a22046f29923e1d57`, `agent-a3721f309f72042e2`, `agent-aba81d44e6cd781c2`, `agent-ade6b43008da0a578`, `agitated-davinci-dcd049`, `romantic-shamir-b1ec10` | limpos (0 ficheiros por commitar), sem junction, sem lock | **removidos** com `git worktree remove` (sem `--force`) |
+| `zen-goldberg-ce8759` | limpo, com `node_modules` **CÓPIA REAL** (não junction — provado: `[System.IO.Directory]::Delete($false)` recusou com «a pasta não está vazia»), `git worktree remove` falhou por `Filename too long` | junction não havia; **`rm -rf`** do worktree (sem risco para a árvore real, verificado a seguir) |
+| `agent-a055938a81220e104` (trancado, pid morto) | o **directório já não existia** em disco — só a entrada de registo | `git worktree unlock` + **`git worktree prune`** |
+| `agent-a910933b732937233` | **31 ficheiros por commitar**; `.git` interno **ausente** (ligação quebrada) | **PRESERVADO** — o `prune` limpou só o registo; o **trabalho continua em disco** (verificado: 31 ficheiros) |
+| `agent-ab397f6377251548e` (1), `angry-faraday-46bb51` (3), `ecstatic-almeida-869832` (3) | **trabalho por commitar** | **PRESERVADOS** (não são lixo: alguém deixou trabalho ali) |
+| `AppData/Local/Temp/claude/.../scratchpad/wt-94` | fora do repo, do Claude Code | **não tocado** (fora do escopo autorizado) |
 
-**Opções medidas para o operador:**
-1. **Fechar as sessões Claude** e correr a limpeza depois (mais seguro): `git worktree remove` de cada
-   uma, com a receita de junctions do UTAC000.9 em primeiro lugar.
-2. **Limpar só as 10 sem lock nenhum** e nenhuma junction (deixando as 2 com junction e a trancada),
-   confirmando antes que nenhuma tem ficheiros por commitar (`git -C <dir> status --short`).
-3. **Limpar tudo com `--force`** — só se o operador garantir que não há sessões Claude a trabalhar.
+**Resultado verificado:** `node_modules` REAL **intacto (505 · 417)**, árvore principal limpa (só o
+`package-lock.json` pré-existente), `HEAD = origin/main = 5394b4f`, e `git worktree list` reduzido de
+**12** entradas para **4** (a principal + 3 com trabalho preservado).
 
-Nenhuma foi executada: aguardo decisão (não é um bloqueio do UTAC — é uma frente à parte).
+**Porque não limpei tudo:** um worktree com lock de um pid morto é lixo, mas **um worktree com
+trabalho por commitar não é** — e os meus instrumentos **não distinguem** órfão de sessão Claude
+viva. O pedido de limpeza era legítimo; a execução cega é que não. Ficam **3** worktrees preservados
+com **7 ficheiros por commitar no total**, para o operador decidir.
 
 ## 7. Limitações e desvios declarados
 1. **Re-render do Provider (observação medida, não corrigida):** o hook faz `setEstado({edicaoId,
