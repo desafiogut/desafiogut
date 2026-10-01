@@ -168,17 +168,27 @@ Ponytail. Autorizações: **commit + push em foreground: SIM**; **validador adve
 | `src/pages/MeusAtivos.jsx` | O 🏆 e o cartão «Menor Lance» usam o resultado oficial **quando existe**. `ehLinhaVencedora()` assinala a linha pelo **endereço + valor** do vencedor oficial; se essa linha não estiver na lista visível, **nenhuma** linha é assinalada (não se assinala ninguém por aproximação). **Sem** resultado oficial mantém-se o apuramento local: **exactamente o comportamento anterior** — é o que garante zero regressões (GATE 19). |
 
 ## 11.3 Provas
-- **Testes novos:** `src/pages/__tests__/utac0008-resultado-oficial.test.mjs` (**16 testes**) + duplo do
-  hook em `src/pages/__tests__/_stubs/useResultadoOficial.js` (regista a **edição pedida** — a lição do
-  `hooks.js`: um duplo que ignora o argumento dá verde a uma página mal ligada).
+- **Testes novos (24, em duas rondas):**
+  1. `src/pages/__tests__/utac0008-resultado-oficial.test.mjs` (**16**) — a PÁGINA, com duplo do hook
+     em `_stubs/` (regista a **edição pedida** — a lição do `hooks.js`: um duplo que ignora o argumento
+     dá verde a uma página mal ligada).
+  2. `src/hooks/__tests__/utac0008-resultado-oficial-hook.test.mjs` (**8**) — o **efeito real** do hook,
+     com o condutor do projeto (`_hook-runner.mjs`): leitura ao montar, **paragem** ao consolidar,
+     releitura enquanto o leilão corre, **limpeza** no desmonte (sem escritas tardias), **fail-soft** na
+     leitura que falha, edição vazia e mudança de edição. *Lacuna declarada e fechada antes do validador:*
+     os testes da página injectam o resultado por um duplo, logo o corpo do efeito não era exercitado.
 - **Bidirecionalidade:** os mesmos cenários, com e sem resultado oficial — *com* → nenhum 🏆 para o
   próprio e cartão com o valor oficial; *sem* → comportamento antigo (🏆 e valor locais). É a prova de
   que a correcção morde, não o contrário.
-- **Mutação (2 mutantes, ambos mordem; ambos restaurados com md5 idêntico):**
+- **Mutação (4 mutantes, todos mordem; todos restaurados com md5 idêntico ao pré-mutação):**
   **M1** «a página ignora o resultado oficial» (= repor a DEBT-007) → **5 RED**;
-  **M2** «aceitar edição não consolidada» → **1 RED**.
-- **Suíte:** frontend **547/547 → 563/563 VERDE**; backend **967/973 VERDE** (0 regressions).
-- **Evidência bruta:** `_logs/UTAC000.8_SEG-2_ANTES-DEPOIS.txt` (md5s, diff do commit, saídas TAP).
+  **M2** «aceitar edição não consolidada» → **1 RED**;
+  **M3** «nunca parar de reler depois de consolidar» → **1 RED**;
+  **M4** «sem limpeza do intervalo» → **1 RED**.
+- **Suíte:** frontend **547/547 → 571/571 VERDE** (+16 página, +8 hook); backend **967/973 VERDE**
+  (0 regressões).
+- **Evidência bruta:** `_logs/UTAC000.8_SEG-2_ANTES-DEPOIS.txt` (md5s, diff do commit, saídas TAP,
+  os 4 mutantes).
 
 ## 11.4 Desvios declarados (o operador deve ver isto)
 1. **Escope:** o ESCOPO do R18-1 listava *endpoint de backend* e *carga inicial no `AppContext`*.

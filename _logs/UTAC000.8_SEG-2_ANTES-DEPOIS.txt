@@ -108,3 +108,43 @@ assim no primeiro `git status` desta sessão, antes de qualquer edição minha).
 C:/Users/Moltbot/tmp-utac0008/mutar.py        (ferramenta de mutação: backup/aplicar/reverter)
 C:/Users/Moltbot/tmp-utac0008/bak/            (cópias de segurança dos 2 ficheiros mutados)
 C:/Users/Moltbot/tmp-utac0008-val/            (worktree do validador adversarial, SEG3)
+
+─────────────────────────────────────────────────────────────────────────────────
+8. LACUNA FECHADA — o EFEITO REAL do hook (2.ª ronda, antes do validador)
+─────────────────────────────────────────────────────────────────────────────────
+Lacuna declarada na 1.ª versão: os testes da PÁGINA injectam o resultado oficial por um
+DUPLO do hook — o corpo do efeito (await, setResultado, paragem ao consolidar, catch
+fail-soft, limpeza do intervalo) NUNCA era exercitado. Fechada com:
+  src/hooks/__tests__/utac0008-resultado-oficial-hook.test.mjs  (8 testes, o hook a correr
+  com o condutor do projeto `_hook-runner.mjs`, carregado pelo servidor Vite porque
+  `utils/web3.js` usa o alias `@/` e `import.meta.env` — medido: em Node puro falha com
+  «Cannot find package '@/lib'»).
+
+$ node --test --test-concurrency=1 --test-reporter=tap \
+    src/hooks/__tests__/utac0008-resultado-oficial-hook.test.mjs
+# tests 8
+# pass 8
+# fail 0
+
+MUTAÇÃO M3 — «nunca para de reler depois de consolidar»
+  -        if (r && intervalo) { clearInterval(intervalo); intervalo = null; }
+  +        // MUTANTE M3 (nunca para de reler)
+  md5 antes 49c0c297f0feeeff02106e77338a683c · mutado 3c8a389d6524f526413d0fb72b80cf96
+  → # tests 8 · # pass 7 · # fail 1   (morde o teste «DEPOIS de consolidar PARA de reler»)
+
+MUTAÇÃO M4 — «sem limpeza» (intervalo sobrevive ao desmonte)
+  -    return () => { cancelado = true; if (intervalo) clearInterval(intervalo); };
+  +    return undefined; // MUTANTE M4 (sem limpeza)
+  md5 mutado a8215ce394896a5852ba8611349e0ed0
+  → # tests 8 · # pass 7 · # fail 1   (morde o teste «o desmonte corta a releitura»)
+
+Restauros: md5 de volta a 49c0c297f0feeeff02106e77338a683c, 8/8 VERDE outra vez.
+
+SUÍTE COMPLETA COM AS DUAS RONDAS (estado final da frente de código):
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 571/571 pass        (547 baseline + 16 página + 8 hook)
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+
+TOTAL DE MUTANTES QUE MORDEM NESTA CORRECÇÃO: **4** (M1 5 RED · M2 1 RED · M3 1 RED · M4 1 RED),
+todos restaurados com md5 idêntico ao estado pré-mutação.
