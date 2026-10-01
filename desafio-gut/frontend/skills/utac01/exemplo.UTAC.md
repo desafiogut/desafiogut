@@ -1,7 +1,8 @@
 # UTAC999-demo — Medir a suíte e reportar o estado
 
 > **Ficheiro de EXEMPLO.** Gerado pela Skill UTAC01 a partir de `exemplo.spec.yml`.
-> Prova que a skill compõe um UTAC completo (HARD GATE 16 / P10). Este ficheiro não é
+> Prova que a skill compõe um UTAC completo (HARD GATE 16; premissa «P10 — TESTÁVEL» do UTAC000).
+> Não confundir «P10» com a categoria de regras P/Processo (só tem P1-P7). Este ficheiro não é
 > um UTAC real — não foi executado, existe para mostrar a **estrutura** do resultado.
 > ⚠️ Os números entre «…» são **placeholders**: um UTAC real só publica números medidos.
 
@@ -69,7 +70,7 @@ disco ≥ 5 GB.
 FRENTES (uma de cada vez — HARD GATE 6)
 ═══════════════════════════════════════════════════════════════════════════
 **FRENTE A — Medir a suíte** → `_logs/UTAC999_SEG0.md`
-  - `node scripts/mc966-suite-harness.mjs ambos` (foreground).
+  - `node scripts/mc966-suite-harness.mjs ambos` (da **raiz** do repo; foreground).
   - Registar: frontend «n/n» · backend «n/n». Se vermelho → declarar, não corrigir (não é o escopo).
 
 **FRENTE B — Inventário** → `_logs/UTAC999_SEG1.md`
@@ -80,7 +81,7 @@ FRENTES (uma de cada vez — HARD GATE 6)
 SEG-1 — MEDIÇÃO   (segments/seg-1.md)
 ═══════════════════════════════════════════════════════════════════════════
 -1.1 `git rev-parse HEAD` + `git status --short` — confirmar `160bf09` (declarar desvio).
--1.2 `ls scripts/mc966-suite-harness.mjs` — existe? (senão PARAR).
+-1.2 `ls scripts/mc966-suite-harness.mjs` (da raiz do repo) — existe? (senão PARAR).
 -1.3 `df -h /c` — **se < 5 GB, PARAR**.
 -1.4 Log `_logs/UTAC999_SEG-1_MEDICAO.md`. Veredito **SEGUIR** / PARAR / AJUSTAR.
 -1.5 Secção obrigatória de conflitos (AU3) — escalar, não resolver.

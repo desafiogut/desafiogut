@@ -37,7 +37,8 @@ motivo: >-
 frentes:
   - id: A
     nome: Protocolo (constantes)
-    entrega: [protocol/hard-gates.md, protocol/regras.md, protocol/licoes.md,
+    entrega: [protocol/hard-gates.md, protocol/regras/ (9 ficheiros),
+              protocol/regras-legado.md, protocol/licoes.md,
               protocol/ambiente.md, protocol/contexto.md]
   - id: B
     nome: Tipos (variações)

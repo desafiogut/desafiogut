@@ -10,8 +10,10 @@ lacuna». A medição do validador (SEG4) mostrou que isso só é verdade na jan
 - **R12 e R13 EXISTEM** no repo, no mesmo namespace R1..R20: `_logs/MC00.0-RELATORIO.md:173`
   («R13 — registo»), `_logs/MC93-RELATORIO.md:93`, `_logs/MC93B-RELATORIO.md:74` («execução é do
   operador (R12/R5)») e `:83`, `_logs/MC93C-RELATORIO.md:75`.
-- **R11 e R17 não foram encontrados** como regras (só como itens de recomendação/códigos de risco
-  fora do namespace) — para esses dois a lacuna resiste.
+- **R11 existe noutra era de numeração** — `MC37-plano.md:34` («Cutover anti-split-brain (R11)»),
+  `desafio-gut/docs/MC39.18-escalabilidade.md:192,231`, `cloud.md:835` — mas **não** no namespace
+  R1..R20 dos MC93x/MC10x. **R17 não foi encontrada** como regra em lado nenhum. A lacuna resiste
+  apenas para R17 no namespace R1..R20.
 
 Donde: **R13 = «registo operacional»** e **R12 = «execução é do operador»**, reconstruídos das fontes.
 

@@ -15,16 +15,18 @@ type: diagnostico
 baseline: 160bf09
 
 motivo: >-
-  Demonstração da Skill UTAC01: um spec de ~35 linhas tem de produzir um UTAC
+  Demonstração da Skill UTAC01: um spec com menos de 60 linhas tem de produzir um UTAC
   completo e válido. Este exemplo só mede a suíte e reporta — não escreve nada
-  em produção. Serve de prova documentada (HARD GATE 16 / P10).
+  em produção. Serve de prova documentada (HARD GATE 16 — o enunciado do UTAC000 chama-lhe
+  premissa «P10 — TESTÁVEL»; não confundir com a categoria de regras P/Processo, onde só
+  existem P1-P7).
 
 frentes:
   - id: A
     nome: Medir a suíte
     entrega: [_logs/UTAC999_SEG0.md]
     passos:
-      - "node scripts/mc966-suite-harness.mjs ambos (foreground)"
+      - "node scripts/mc966-suite-harness.mjs ambos (da RAIZ do repo; foreground)"
       - registar frontend n/n e backend n/n
   - id: B
     nome: Inventário
@@ -47,7 +49,7 @@ proibe:
   - inventar números (o relatório só publica o que a suíte mediu)
 
 dependencias:
-  - scripts/mc966-suite-harness.mjs existe
+  - scripts/mc966-suite-harness.mjs existe (na RAIZ do repo, não em frontend/scripts/)
 
 regras_activas: [E, T, G, L, S, A, P, AU, ST]
 

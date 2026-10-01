@@ -20,7 +20,7 @@ antigo deve usar esta tabela:
 | HG7/HG8 | MUTAÇÃO / BIDIRECIONAL | mutação + bidirecional ✅ igual |
 | HG9 | VALIDADOR ADVERSARIAL | validador ✅ igual |
 | HG13 | AUTO-CONTIDO | fiscal (MC104.x) / concorrência (MC105a) (**≠**) |
-| HG14 | VERSIONADO | «sem apagar» (MC104.2) (**≠**) |
+| HG14 | VERSIONADO | «sem apagar» (MC104.2) / «nunca negativo» (MC105a) (**≠**) |
 | HG15 | NÃO ALTERAR OS UTACs FECHADOS | hash (MC104.3) / migração (MC105a) (**≠**) |
 | HG16 | EXEMPLO FUNCIONAL | (vário) (**≠**) |
 
