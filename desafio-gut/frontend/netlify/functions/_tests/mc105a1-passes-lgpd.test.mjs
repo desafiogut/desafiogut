@@ -94,12 +94,27 @@ test("B6 erro no dry-run também é visível (não reporta 0 limpo)", async () =
   assert.equal(r.anonimizado.passes, undefined);
 });
 
-test("B7 recompra depois da exclusão: a 2.ª exclusão colide no UNIQUE e o erro é VISÍVEL (achado do validador; correcção por decidir)", async () => {
+test("B7 recompra depois da exclusão: a 2.ª exclusão também anonimiza (UNIQUE parcial, achado do validador)", async () => {
   await excluirSupabase(cliente(), ALVO);
-  assert.equal((await S.cliente.from("passes").insert(passe(ALVO, "prod-2"))).error, null);
+  assert.equal((await S.cliente.from("passes").insert(passe(ALVO, "prod-2"))).error, null, "a carteira volta e compra o mesmo passe");
   const r = await excluirSupabase(cliente(), ALVO);
-  assert.ok(r.erros.some((e) => e.startsWith("supabase:passes (anon)") && e.includes("duplicate key")), JSON.stringify(r.erros));
-  assert.equal(S.tabelas.passes.filter((p) => p.endereco === ALVO).length, 1, "nada aplicado (atómico)");
+  assert.deepEqual(r.erros, []);
+  assert.equal(r.anonimizado.passes, 1);
+  assert.equal(S.tabelas.passes.some((p) => p.endereco === ALVO), false);
+  assert.equal(S.tabelas.passes.filter((p) => p.endereco === ANON && p.produto_id === "prod-2").length, 2, "dois passes com o mesmo pseudónimo");
+});
+
+test("B8 a compra continua idempotente: o mesmo 0x não compra duas vezes o mesmo passe", async () => {
+  const { error } = await S.cliente.from("passes").insert(passe(ALVO, "prod-1"));
+  assert.equal(error?.code, "23505");
+});
+
+test("A2 a migração do UNIQUE parcial está em supabase/migrations/ e = _logs/", () => {
+  const sql = ler("desafio-gut/frontend/supabase/migrations/20260930_mc105a_passes_saneamento_unique.sql");
+  assert.equal(sql, ler("_logs/MC105a.1_MIGRACAO_UNIQUE.sql"));
+  assert.match(sql, /CREATE UNIQUE INDEX IF NOT EXISTS passes_endereco_edicao_produto_key[\s\S]*WHERE endereco LIKE '0x%';/);
+  const codigo = sql.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
+  assert.doesNotMatch(codigo, /DELETE FROM|TRUNCATE|DROP TABLE|REVOKE/i);
 });
 
 // ── Frente C + A (ficheiros de migração) ───────────────────────────────────────────────────────────

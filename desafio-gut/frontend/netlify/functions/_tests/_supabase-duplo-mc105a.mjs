@@ -2,7 +2,7 @@
 // Fiel ao REAL nas direcções que já enganaram esta série (MC93-B/C/D, MC104):
 //  - colunas conhecidas por tabela: coluna desconhecida → erro 42703 (não é ignorada);
 //  - UNIQUE → 23505; CHECK → 23514 (as CHECKs de produção: MC105a + MC105a.1, que aceita `anon:<sha256>`); NOT NULL → 23502;
-//  - UPDATE atómico e com UNIQUE (colisão → 23505, nada aplicado);
+//  - UPDATE atómico e com UNIQUE (colisão → 23505, nada aplicado); UNIQUE do trio PARCIAL (só endereços 0x…);
 //  - `select(col, { count: "exact", head: true })` → `data: null` + `count` (como o HEAD do PostgREST);
 //  - DEFAULTs aplicados como a tabela (id uuid, comprado_em, palpite_usado false, cupons_ids [], status 'activo');
 //  - `.eq(col, null)` LANÇA (o PostgREST gera `eq.null` e dá 400 — usar `.is()`);
@@ -17,7 +17,9 @@ const ESQUEMA = {
   passes: {
     colunas: ["id", "endereco", "edicao_id", "produto_id", "comprado_em", "palpite_usado", "cupons_ids", "status"],
     notNull: ["endereco", "edicao_id", "produto_id"],
+    // MC105a.1: o UNIQUE do trio é PARCIAL (índice WHERE endereco LIKE '0x%') — pseudónimos anon: podem repetir.
     unicos: [["id"], ["endereco", "edicao_id", "produto_id"]],
+    unicoSe: { "endereco,edicao_id,produto_id": (l) => String(l.endereco).startsWith("0x") },
     uuid: ["id"],
     defaults: () => ({ id: randomUUID(), comprado_em: new Date().toISOString(), palpite_usado: false, cupons_ids: [], status: "activo" }),
     checks: [
@@ -49,8 +51,15 @@ export function criarSupabase() {
     for (const ch of esq.checks) if (!ch(linha)) return erro("23514", "new row violates check constraint");
     return null;
   }
+  // Uma linha só conta para um UNIQUE parcial se cumprir o predicado (como o índice parcial do Postgres).
+  function chocam(tab, x, y) {
+    return ESQUEMA[tab].unicos.some((cols) => {
+      const se = ESQUEMA[tab].unicoSe?.[cols.join(",")];
+      return (!se || (se(x) && se(y))) && cols.every((c) => x[c] === y[c]);
+    });
+  }
   function colide(tab, linha, ignorar = null) {
-    return ESQUEMA[tab].unicos.some((cols) => tabelas[tab].some((o) => o !== ignorar && cols.every((c) => o[c] === linha[c])));
+    return tabelas[tab].some((o) => o !== ignorar && chocam(tab, o, linha));
   }
 
   function from(tab) {
@@ -106,8 +115,7 @@ export function criarSupabase() {
         const cands = linhas.map((l) => ({ ...l, ...st.dados }));
         for (const c of cands) { const e = validar(tab, c); if (e) return e; }
         const resto = tabelas[tab].filter((o) => !linhas.includes(o));
-        const choca = (x, y) => ESQUEMA[tab].unicos.some((cols) => cols.every((k) => x[k] === y[k]));
-        if (cands.some((c, i) => resto.some((o) => choca(c, o)) || cands.some((d, j) => j !== i && choca(c, d)))) {
+        if (cands.some((c, i) => resto.some((o) => chocam(tab, c, o)) || cands.some((d, j) => j !== i && chocam(tab, c, d)))) {
           return erro("23505", "duplicate key value violates unique constraint");
         }
         linhas.forEach((l) => Object.assign(l, st.dados));
