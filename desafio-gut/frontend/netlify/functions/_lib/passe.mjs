@@ -28,13 +28,17 @@ export async function lerPasse({ endereco, edicaoId, produtoId }) {
 
 /**
  * Cria o passe. Idempotente: se já existe (ou um INSERT concorrente ganhou), devolve o existente.
+ * UTAC105b (R18-D): `cuponsIds` (ids uuid dos cupons activos do lojista no momento da compra) vai no PRÓPRIO INSERT —
+ * não há janela entre o passe criado e os cupons gravados. Omitido → `[]` (o DEFAULT da tabela, comportamento do MC105a).
  * @returns {Promise<{ok:true, criado:boolean, passe:object} | {ok:false, code:string}>}
  */
-export async function criarPasse({ endereco, edicaoId, produtoId }) {
+export async function criarPasse({ endereco, edicaoId, produtoId, cuponsIds = [] }) {
   const e = normalizar(endereco);
   if (!chaveValida(e, edicaoId, produtoId)) return { ok: false, code: "params_invalidos" };
+  if (!Array.isArray(cuponsIds) || !cuponsIds.every((id) => typeof id === "string" && UUID_RE.test(id))
+    || new Set(cuponsIds).size !== cuponsIds.length) return { ok: false, code: "params_invalidos" };
   const { data, error } = await getSupabase().from(TABELA)
-    .insert({ endereco: e, edicao_id: edicaoId, produto_id: produtoId }).select("*").single();
+    .insert({ endereco: e, edicao_id: edicaoId, produto_id: produtoId, cupons_ids: [...cuponsIds] }).select("*").single();
   if (!error) return { ok: true, criado: true, passe: data };
   if (error.code !== UNIQUE_VIOLATION) return { ok: false, code: "gravar_passe_falhou" };
   // A releitura pode falhar (rede): isso é falha tratada, nunca excepção — quem chama já debitou e tem de reembolsar.

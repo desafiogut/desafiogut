@@ -71,6 +71,7 @@ const CorporativoCotas     = lazy(() => import("./pages/CorporativoCotas.jsx"));
 const CorporativoBanners   = lazy(() => import("./pages/CorporativoBanners.jsx"));
 const CorporativoAnalytics = lazy(() => import("./pages/CorporativoAnalytics.jsx"));
 const CorporativoCarteira  = lazy(() => import("./pages/CorporativoCarteira.jsx"));
+const CorporativoCupons    = lazy(() => import("./pages/CorporativoCupons.jsx")); // UTAC105b
 const SejaNossoParceiro    = lazy(() => import("./pages/SejaNossoParceiro.jsx"));
 // MC91.7 — rotas públicas de entrada por e-mail (usuário comum). Lazy: saem
 // do chunk inicial (code-splitting MC39.19), padrão das demais páginas.
@@ -496,6 +497,7 @@ export default function App() {
           <Route path="/corporativo/cotas"      element={<CorporativoRoute><CorporativoCotas /></CorporativoRoute>} />
           <Route path="/corporativo/banners"    element={<CorporativoRoute><CorporativoBanners /></CorporativoRoute>} />
           <Route path="/corporativo/analytics"  element={<CorporativoRoute><CorporativoAnalytics /></CorporativoRoute>} />
+          <Route path="/corporativo/cupons"     element={<CorporativoRoute><CorporativoCupons /></CorporativoRoute>} />{/* UTAC105b */}
           {/* MC17.1 — carteira do lojista + mercado dedicado (isolamento R4 preservado). */}
           <Route path="/corporativo/carteira"   element={<CorporativoRoute><CorporativoCarteira /></CorporativoRoute>} />
           <Route path="/corporativo/mercado"    element={<CorporativoRoute><MercadoLances /></CorporativoRoute>} />

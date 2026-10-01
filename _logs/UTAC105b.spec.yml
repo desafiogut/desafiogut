@@ -1,0 +1,41 @@
+schema: utac/1
+name: UTAC105b
+title: "Passe Desafio: cupons (modelo + painel do lojista + ligação ao Passe)"
+type: produto
+baseline: 5cac238   # medido no SEG-1 (git rev-parse HEAD)
+motivo: >-
+  O Passe (UTAC105a) tem `cupons_ids` vazio: sem cupons reais não tem valor intrínseco (MN §2.2).
+  Valores definidos pela plataforma (R$ 5/10/20), escolhidos pelo lojista, validade 30 dias (DEC-02/02b/02c).
+frentes:
+  - id: A
+    nome: Modelo de cupons
+    entrega: [_logs/UTAC105b_MIGRACAO.sql (tabela cupons), netlify/functions/_lib/cupom.mjs]
+  - id: B
+    nome: Painel do lojista
+    entrega: [netlify/functions/cupons.mjs (GET/PUT), src/pages/CorporativoCupons.jsx, entrada em CorporativoDashboard.jsx]
+  - id: C
+    nome: Ligação Passe ↔ cupons
+    entrega: [comprar-passe.mjs preenche cupons_ids com os cupons activos do lojista do produto da edição]
+autoriza:
+  - criar _lib/cupom.mjs, cupons.mjs, src/pages/CorporativoCupons.jsx
+  - alterar CorporativoDashboard.jsx (só a entrada «Meus cupons») e comprar-passe.mjs (cupons_ids)
+  - alterar voucher.mjs só de forma aditiva (o SEG-1 mediu que _lib/voucher.mjs NÃO existe)
+  - criar a tabela cupons COM autorização explícita do operador (GATE 15)
+  - testes, _logs/UTAC105b_*, Desktop/UTAC105b_*, CLAUDE.md, commit + push foreground, validador adversarial
+proibe:
+  - git add -A · deploy em background · netlify deploy --dir · instalar dependências
+  - tocar saldoRs.mjs, mp-client.mjs, _lib/pedidos.mjs, _lib/conta-delete.mjs, exportar-dados.mjs, comprar-senhas.mjs
+  - tocar _lib/passe.mjs (salvo helper reportado antes)
+  - UI do cliente final (UTAC105c), palpite/apuração (UTAC106), ligar flags (UTAC109)
+  - apagar dados · inventar dados · decidir produto
+dependencias:
+  - UTAC105a + UTAC105a.1 fechados (passes com cupons_ids, UNIQUE parcial, REVOKE)
+  - autorização da migração cupons (pendente — SEG-1 veredito AJUSTAR)
+regras_activas: [E, T, G, L, S, A, P, AU, ST]
+regras_extra: [T4]   # concorrência (Promise.all) — tipo produto
+stop_conditions_extra: [ST3, ST4, ST7]
+ressalvas:
+  - Valor não pré-definido aceite → PARAR
+  - Migração não autorizada → PARAR
+  - Disco < 5 GB → PARAR
+subdivisoes: []

@@ -28,6 +28,15 @@ const ESQUEMA = {
       (l) => Array.isArray(l.cupons_ids),
     ],
   },
+  // UTAC105b — migração utac105b_cupons (UNIQUE lojista+valor; sem CHECK de valor na BD: a regra vive em _lib/cupom.mjs).
+  cupons: {
+    colunas: ["id", "lojista_id", "valor_rs", "descricao", "validade_dias", "ativo", "criado_em", "atualizado_em"],
+    notNull: ["lojista_id", "valor_rs"],
+    unicos: [["id"], ["lojista_id", "valor_rs"]],
+    uuid: ["id"],
+    defaults: () => ({ id: randomUUID(), descricao: "", validade_dias: 30, ativo: true, criado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() }),
+    checks: [],
+  },
   saldo_rs: { colunas: ["cliente_id", "payload", "atualizado_em"], notNull: ["cliente_id"], unicos: [["cliente_id"]], uuid: [], defaults: () => ({}), checks: [] },
   saldo_rs_creditos: { colunas: ["pedido_id", "payload", "criado_em"], notNull: ["pedido_id"], unicos: [["pedido_id"]], uuid: [], defaults: () => ({ criado_em: new Date().toISOString() }), checks: [] },
   saldo_rs_debitos: { colunas: ["operacao_id", "payload", "criado_em"], notNull: ["operacao_id"], unicos: [["operacao_id"]], uuid: [], defaults: () => ({ criado_em: new Date().toISOString() }), checks: [] },

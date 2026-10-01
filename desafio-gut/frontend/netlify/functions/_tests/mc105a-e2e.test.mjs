@@ -20,12 +20,15 @@ const { assinarUserSession, assinarLanceAuth } = await import("../_lib/jwt.mjs")
 const A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const OUTRO = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const ED = "PROG-7", PROD = "11111111-2222-3333-4444-555555555555";
+const LOJISTA = "0xcccccccccccccccccccccccccccccccccccccccc", CUPOM_ID = "aaaaaaaa-0000-4000-8000-000000000010";
 const hora = (h) => new Date(Date.now() + h * 3600_000).toISOString();
 
 function semear({ saldo = 500, tipo = "programado", status = "aberto", inicio = -1, fim = 1, produtoStatus = "ativo", produtoId = PROD } = {}) {
   B = criarBlobs(); S = criarSupabase(); alertas.length = 0;
   B.gravar("edicoes-metadata", ED, { id: ED, tipo, status, inicio_em: hora(inicio), termino_em: hora(fim), produtoId });
-  B.gravar("produtos", `produto:${PROD}`, { id: PROD, status: produtoStatus, nome: "Air Fryer" });
+  // UTAC105b: o produto tem lojista com 1 cupom activo (sem cupons a compra dá 409 — R18-C; testado em utac105b-ligacao).
+  B.gravar("produtos", `produto:${PROD}`, { id: PROD, status: produtoStatus, nome: "Air Fryer", lojista: LOJISTA });
+  S.tabelas.cupons.push({ id: CUPOM_ID, lojista_id: LOJISTA, valor_rs: 10, descricao: "", validade_dias: 30, ativo: true, criado_em: "x", atualizado_em: "x" });
   if (saldo != null) S.tabelas.saldo_rs.push({ cliente_id: A, payload: { centavos: saldo }, atualizado_em: "x" });
 }
 beforeEach(() => semear());

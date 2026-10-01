@@ -344,6 +344,7 @@ export default function CorporativoDashboard() {
     { label: "Banners ativos", value: bannersAtivos,            color: COR.teal,    icon: "🖼️", to: "/corporativo/banners" },
     { label: "Impressões 30d", value: impressoes.toLocaleString("pt-BR"), color: COR.amber, icon: "📊", to: "/corporativo/analytics" },
     { label: "Saldo wallet",   value: saldoBrl,                 color: COR.success, icon: "💰", to: "/corporativo/carteira" },
+    { label: "Meus cupons",    value: "Gerir",                 color: COR.teal,    icon: "🎟️", to: "/corporativo/cupons" }, // UTAC105b
     // MC39.6 (#segurança): o acesso a "Segurança" saiu do grid de cards do painel ("menu
     // principal") e passou para a navegação — sheet "Mais" no BottomNav (mobile) e cauda da
     // Sidebar (desktop). A rota /seguranca permanece gated por CorporativoRoute.

@@ -4,7 +4,7 @@
 // 201 { ok, idempotent:false, passe, saldoRsAntesCentavos, saldoRsDepoisCentavos }   passe criado, R$ 2,00 debitado
 // 200 { ok, idempotent:true,  passe }                                                  já existia (nada debitado)
 // 400 params_invalidos · 401 token_ausente|token_invalido · 402 saldo_insuficiente · 404 edicao/produto_nao_encontrado
-// 409 edicao_nao_programada|edicao_encerrada|edicao_nao_iniciada|produto_nao_vinculado|produto_nao_ativo
+// 409 edicao_nao_programada|edicao_encerrada|edicao_nao_iniciada|produto_nao_vinculado|produto_nao_ativo|sem_cupons_ativos
 // 502 debito_falhou|gravar_passe_falhou (com reembolso) · 503 sistema_pausado|store_indisponivel
 //
 // Idempotência (HG13, decisão do operador no SEG-1): 1 passe por (endereco, edição, produto) — o UNIQUE da tabela.
@@ -12,6 +12,8 @@
 // perde uma corrida (23505), REEMBOLSA e devolve o existente. Em falha do INSERT, reembolsa. Reembolso falhado → alerta.
 // Edições aceites (decisão do operador): só `tipo === "programado"`, dentro da janela, e o produto tem de ser o vinculado
 // à edição (`meta.produtoId`) e estar `ativo` no catálogo. Sem dados pessoais em logs (P10).
+// UTAC105b: o passe nasce com os cupons ACTIVOS do lojista do produto (`produto.lojista`), lidos antes do débito e gravados no
+// próprio INSERT (R18-D). Sem cupons activos → 409 `sem_cupons_ativos`, nada debitado (R18-C).
 
 import { getStore } from "@netlify/blobs";
 import { jsonResponse, jsonError, parseJsonBody, ValidationError } from "./_lib/validate.mjs";
@@ -24,6 +26,7 @@ import { buscarEdicao, EDICAO_ID_RE } from "./_lib/edicoes-core.mjs";
 import { verificarJanelaLance } from "./_lib/edicao-janela.mjs";
 import { debitarSaldoRs, reembolsarSaldoRs } from "./_lib/saldoRs.mjs";
 import { criarPasse, lerPasse } from "./_lib/passe.mjs";
+import { listarCuponsAtivosDoLojista } from "./_lib/cupom.mjs";
 
 export const VALOR_PASSE_CENTAVOS = 200; // R$ 2,00
 const PRODUTO_ID_RE = /^[0-9a-f-]{10,64}$/i;
@@ -86,6 +89,13 @@ export default async (req) => {
   catch { return jsonError(503, "store_indisponivel", "não foi possível ler os passes"); }
   if (existente) return jsonResponse({ ok: true, idempotent: true, passe: existente }, 200);
 
+  // UTAC105b — cupons do lojista do produto (1 edição → 1 produto → 1 lojista), ANTES do débito.
+  let cupons;
+  try { cupons = await listarCuponsAtivosDoLojista(produto.lojista); }
+  catch { return jsonError(503, "store_indisponivel", "não foi possível ler os cupons"); }
+  if (cupons.length === 0) return jsonError(409, "sem_cupons_ativos", "o lojista desta edição não tem cupons activos");
+  const cuponsIds = cupons.map((c) => c.id);
+
   // Débito atómico (CAS no saldoRs.mjs): recusa com `saldo_insuficiente` se não chega — nunca fica negativo (HG14).
   const debito = await debitarSaldoRs({ endereco, valorCentavos: VALOR_PASSE_CENTAVOS, motivo: "comprar-passe" });
   if (!debito.ok) {
@@ -101,7 +111,7 @@ export default async (req) => {
 
   // Criação. Corrida perdida, falha ou EXCEPÇÃO depois do débito → devolve o R$ 2,00 (nunca fica cobrado sem passe).
   let r;
-  try { r = await criarPasse({ endereco, edicaoId, produtoId }); }
+  try { r = await criarPasse({ endereco, edicaoId, produtoId, cuponsIds }); }
   catch { r = { ok: false, code: "gravar_passe_falhou" }; }
   if (r.ok && r.criado) {
     return jsonResponse({
