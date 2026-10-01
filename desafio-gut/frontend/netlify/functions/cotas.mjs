@@ -420,6 +420,47 @@ async function handlePost(req) {
       console.warn("[cotas] anti-Sybil check falhou (não-fatal):", err?.message);
     }
 
+    // ── UTAC105b.2 (P0) — POSSE DO `cliente_id` NO REGISTO ─────────────────────
+    // ⚠️ ANTES: `clienteId` vinha do CORPO (`endereco ?? "cnpj:…"`) sem prova NENHUMA
+    // e o `upsertCota` escrevia por cima do registo existente: um pedido ANÓNIMO com o
+    // `endereco` (ou o CNPJ) de outra pessoa trocava empresa/cnpj/email e DESTRUÍA
+    // `categoria`/`vendida`/`valor` — o que a pessoa pagou (PoC no
+    // `_logs/UTAC105b.2_SEG-1_MEDICAO.md` §-1.5: `ouro/vendida:true/55000` → `null/false/0`).
+    // Regra MC89.38, a mesma do `update-corporativo` (UTAC105b.1):
+    //   (a) `cliente_id` == endereço do JWT · (b) a cota tem `endereco` == endereço do
+    //   JWT · (c) admin. Fora disto: 401 anónimo, 403 utilizador — e NUNCA escrever.
+    // Cota NOVA (não existe) continua a poder ser criada pelo fluxo legítimo, incluindo
+    // o cadastro directo (`cnpj:…`, sem endereço) — medido: é o ÚNICO caminho que o
+    // frontend usa (`SejaNossoParceiro.jsx` só posta quando o GET de duplicidade deu 404).
+    const chamadorReg = await resolverChamador(req);
+    let existenteReg;
+    try {
+      existenteReg = await getCota(clienteId);
+    } catch (err) {
+      // Falha de leitura NÃO vira autorização. Fail-closed (igual ao update-corporativo).
+      console.warn("[cotas] register-corporativo: leitura de cota falhou:", err?.message);
+      return jsonError(502, "store_indisponivel", "Não foi possível ler a cota");
+    }
+    if (existenteReg && chamadorReg.papel !== "admin") {
+      const idNorm = String(clienteId).toLowerCase();
+      const ehProprio = !!chamadorReg.endereco && idNorm === chamadorReg.endereco;
+      const enderecoDaCota = existenteReg.endereco
+        ? String(existenteReg.endereco).toLowerCase() : null;
+      const vinculado = !!chamadorReg.endereco && enderecoDaCota === chamadorReg.endereco;
+      if (!ehProprio && !vinculado) {
+        // ⚠️ NÃO se devolve o 200 «idempotente» que o SEG0 §0.3 pede: sem prova de posse
+        // não há como distinguir «repetição do próprio registo» de «ataque» (o
+        // `accessToken` não é verificado e o CNPJ é semi-público), e devolver o registo
+        // existente confirmaria a associação CNPJ ↔ carteira a um anónimo — o que o
+        // MC87 (P0-1) proíbe. Recusa sem escrita. Declarado na SEG-1 §-1.7.
+        if (chamadorReg.papel === "anon") {
+          return jsonError(401, "token_ausente",
+            "Authorization: Bearer *** obrigatório para alterar um registo corporativo existente");
+        }
+        return jsonError(403, "endereco_nao_corresponde", "JWT não pertence ao cliente_id informado");
+      }
+    }
+
     const agora = new Date().toISOString();
     const registro = {
       cliente_id:   clienteId,
@@ -566,6 +607,11 @@ async function handlePost(req) {
   const agora = new Date().toISOString();
   const registro = {
     cliente_id:    endereco,
+    // UTAC105b.2 (Frente C) — o registo era construído SEM `endereco`, e o
+    // `cotas-store.colunas()` grava `endereco: registro?.endereco ?? null` → o upsert
+    // APAGAVA a coluna. Como o ramo (b) do MC89.38 (UTAC105b.1) depende dela, a cota
+    // perdia o vínculo e o dono legítimo passava a levar 403. Preserva-se o existente.
+    endereco:      existente?.endereco ?? null,
     categoria,
     vendida:       !!body.vendida,
     disponivel:    body.disponivel === undefined ? !body.vendida : !!body.disponivel,
