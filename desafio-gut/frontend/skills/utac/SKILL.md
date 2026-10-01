@@ -42,13 +42,13 @@ skills/utac/
 │  ├─ hard-gates.md    ← os 16 HARD GATES (1-16, canónicos) + tabela de alias da série
 │  ├─ regras/          ← 75 REGRAS em 10 categorias (cada regra: ID, texto, origem)
 │  │  ├─ E-engenharia.md   ← E1-E9   ├─ S-seguranca.md    ← S1-S6
-│  │  ├─ T-testes.md       ← T1-T5   ├─ A-ambiente.md     ← A1-A8
+│  │  ├─ T-testes.md       ← T1-T5   ├─ A-ambiente.md     ← A1-A12
 │  │  ├─ G-git-deploy.md   ← G1-G6   ├─ P-processo.md     ← P1-P7
 │  │  ├─ L-lgpd.md         ← L1-L6   ├─ AU-autonomia.md   ← AU1-AU4
 │  │  └─ ST-stop.md        ← ST1-ST10
 │  ├─ regras-legado.md ← R1-R20 + mapa R→categoria (referência histórica)
 │  ├─ licoes.md        ← lições da série (com o UTAC de origem)
-│  ├─ ambiente.md      ← armadilhas Windows/MSYS/Netlify (prosa; as regras A1-A8 estão em regras/A)
+│  ├─ ambiente.md      ← armadilhas Windows/MSYS/Netlify (prosa; as regras A1-A12 estão em regras/A)
 │  └─ contexto.md      ← o que é o DesafioGUT v6.0
 ├─ types/              ← VARIAÇÕES (6 tipos de UTAC)
 │  ├─ diagnostico.md · publicacao.md · produto.md

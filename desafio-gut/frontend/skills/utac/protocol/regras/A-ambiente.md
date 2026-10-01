@@ -76,10 +76,22 @@ para tudo o que vem depois. É o papel de `src/__tests__/_ponte-ssr.mjs`, carreg
 componente. Dependências que trazem o seu próprio React (react-router, framer-motion) têm de vir daí,
 não de um `import` do Node.
 
+**Onde se regista:** criar a ponte **não chega** — o arnês tem de a carregar **antes de qualquer
+componente**. Em `src/components/meus-ativos/__tests__/_render.mjs`, dentro de `obterServidor()`:
+`await servidor.ssrLoadModule("/src/__tests__/_ponte-ssr.mjs")`. Sem esse load, a ponte não faz nada.
+
 **Como se verifica:** mutação que desliga o load da ponte → RED (medido: suíte **VERMELHO 15 falhas**,
-6+1+8, exactamente os ficheiros que dependem dela); religar → **VERDE 535/535**. Cuidado com a
-condição da medição: com `node_modules/.vite` **apagado** o mutante dá **0/15** e com a cache
-**quente** dá **6/15** — declarar sempre o estado da cache, porque a cifra muda (medido no UTAC000.6,
-onde a divergência foi apanhada pelo validador).
+6+1+8, exactamente os ficheiros que dependem dela); religar → **VERDE 535/535**.
+
+⚠️ **REFUTADO pelo validador (UTAC000.7/SEG-2) — afirmação errada mantida à vista, não apagada.** A
+redacção inicial desta regra dizia: «com `node_modules/.vite` **apagado** o mutante dá **0/15** e com a
+cache **quente** dá **6/15** — declarar sempre o estado da cache, porque a cifra muda». **É FALSO.** O
+validador mediu as **duas** condições e obteve o **mesmo** resultado: **6/15** (dos 15 testes de
+`mc1021a`, 9 não usam hooks — só o hook parte com o React em duplicado). O `0/15` que aqui se citava
+vinha de um **mutante diferente**: um que, além de desligar a ponte, também repunha o renderizador no
+React do Node — **dupla mutação**, no código de antes da redução do UTAC000.6. Com `configFile:false` +
+`optimizeDeps.noDiscovery` em `_servidor-teste.mjs`, as corridas **não consomem** pré-bundle: o estado
+da cache é **inerte** nesta medição. Lição de método: **comparar medições só entre o MESMO estado de
+código**.
 Origem: op: 2026-10-01 (UTAC000.6).
 Cross-ref: HI10, A9, A11, T4.

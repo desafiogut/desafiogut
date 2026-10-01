@@ -69,6 +69,18 @@
 > armadilha da condição de cache (0/15 com `.vite` apagado vs 6/15 a quente). As 74 regras
 > anteriores **intactas** (`+23/−0` em `A-ambiente.md`). **R18:** UTAC de skill próprio, autorizado
 > pelo operador, que fecha a lacuna de escopo do UTAC000.6.
+>
+> ⚠️ **REFUTAÇÃO do validador (UTAC000.7/SEG-2) — mantida à vista:** veredicto **APROVADO COM
+> RESSALVAS**. O **núcleo da A12 confirmou-se** (mutante → suíte 15 falhas, split 6+1+8; religar →
+> 535/535; soma real das regras = 75). Mas **1 sub-afirmação minha foi REFUTADA**: a cláusula da
+> cache («`.vite` apagado = 0/15 / cache quente = 6/15») é **FALSA** — mede **6/15 nas duas**
+> condições, a cache é **inerte** aqui. **Raiz do erro:** comparei medições de **estados de código
+> diferentes** (antes da redução, desligar a ponte também repunha o renderizador no React do Node =
+> dupla mutação). **Lição de método agora escrita na regra:** comparar medições só entre o MESMO
+> estado de código. A redacção errada ficou **dentro da A12 marcada REFUTADA** (não apagada). A A12
+> passou também a dizer **onde se regista** o load (`_render.mjs`/`obterServidor()`/`ssrLoadModule`),
+> e o `SKILL.md` foi corrigido (dizia `A1-A8`). Pendente: `regras-legado.md` (fora do escopo) =
+> **DEBT-005**; e o estilo da A12 diverge de A9-A11 (conteúdo pedido pelo spec) — decisão do operador.
 
 ---
 

@@ -30,6 +30,7 @@ fecho entra aqui em vez de morrer no histórico.
 > *Motivo do arquivo: o validador adversarial (UTAC000.6/SEG-3) assinalou que a linha anterior tinha
 > sido substituída em vez de arquivada à vista (GATE 14). O texto acima preserva-a.*
 
+| **DEBT-005** | `skills/utac/protocol/regras-legado.md` (linha 45) declara **«61 regras em 9 categorias»** e **`A8`** — obsoleto desde o v1.0 (hoje: **75 regras em 10 categorias**, A1-A12). Lacuna **pré-existente** do v1.1 (o UTAC000.3 também não a corrigiu); apanhada pelo validador do UTAC000.7. Os outros 2 sítios (`SKILL.md`) foram corrigidos nesse UTAC porque o `SKILL.md` estava no escopo autorizado; **este ficheiro não estava** (GATE 2/HI4 — o executor não estende o próprio escopo) | UTAC000.3 (origem) / UTAC000.7 (deteção) | baixa | **aberta** — precisa de autorização para tocar em `regras-legado.md` | operador |
 > **Nota de registo:** as três primeiras entradas são as pendências declaradas do UTAC105b.3, conforme
 > o pedido. A **DEBT-004 foi acrescentada** pelo executor (não constava da lista) porque é dívida de
 > infraestrutura de severidade **alta**, descoberta no fecho daquele UTAC, e o `DEBT.md` é exactamente

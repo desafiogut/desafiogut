@@ -53,6 +53,35 @@ veracidade da ligação causal («sem ponte → RED»), reprodutibilidade das ci
 `_logs/UTAC000.7_SEG-2_VALIDADOR.md`** (e, se refutar, corrigido — o erro fica à vista, marcado
 REFUTADO, nunca apagado).
 
+## 5bis. ⛔ REFUTAÇÃO DO VALIDADOR — cláusula da cache na A12 (afirmação minha, ERRADA)
+> Mantida **à vista** de propósito (HI6/GATE 15: o erro documenta-se, não se apaga).
+
+O validador deu **APROVADO COM RESSALVAS**: **0 refutações do núcleo da A12** (o mecanismo e a ligação
+«sem ponte → RED / com ponte → VERDE» reproduzem ao detalhe: 15 falhas, split **6+1+8**) mas **1
+sub-afirmação minha REFUTADA**:
+
+**O que eu escrevi na A12:** «com `.vite` apagado o mutante dá **0/15** e com a cache quente **6/15** —
+a cifra muda».
+
+**O que é verdade (medido nas DUAS condições):** **6/15 nas duas**. O estado da cache é **inerte** —
+com `configFile:false` + `optimizeDeps.noDiscovery`, as corridas não consomem pré-bundle.
+
+**A raiz do erro — o meu instrumento:** o `0/15` não vinha da cache. Vinha de eu ter comparado medições
+feitas em **estados de código diferentes**: no código de antes da redução do UTAC000.6, desligar o load
+da ponte **também** repunha o renderizador no React do Node (era uma **dupla mutação**). Depois da
+redução, o mutante isola o load → **6/15**. Atribuí a diferença à cache em vez de a atribuir à mudança
+de mutante — e escrevi-a na skill como «medido», contra o **GATE 17** da própria skill.
+
+**Correcção aplicada:** a cláusula falsa foi substituída, e a redacção errada **mantida dentro da
+própria A12 marcada REFUTADA**, com a lição de método («comparar medições só entre o MESMO estado de
+código»).
+
+**Outras correcções do veredicto:** (RES-2) a A12 passou a dizer **onde se regista** o load
+(`_render.mjs` / `obterServidor()` / `ssrLoadModule`) — sem isso a regra estava incompleta; (RES-1)
+`SKILL.md` dizia `A1-A8` em 2 sítios → corrigido; `regras-legado.md` está fora do escopo → **DEBT-005**.
+**Não corrigido (declarado):** o estilo da A12 (corpo longo, `Cross-ref:` em linha própria) diverge de
+A9-A11 — o spec do UTAC000.7 §0.2 pediu explicitamente esse conteúdo; a tensão fica para decisão.
+
 ## 6. Dívida (GATE 14)
 Nada de novo. **DEBT-004** continua **fechada** (UTAC000.6). **DEBT-001/002/003** inalteradas.
 
