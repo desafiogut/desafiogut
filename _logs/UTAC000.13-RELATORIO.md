@@ -87,6 +87,19 @@ Veredicto: `_logs/UTAC000.13_SEG-3_VALIDADOR.md`.
 | `_logs/DEBT.md` · `CLAUDE.md` · `_logs/UTAC000.13-RELATORIO.md` · `Desktop/UTAC000.13-RELATORIO.md` | registo em 3 lugares (R14/R18) |
 
 ## 6. Custo e tempo
-Ver a resposta final (mesma sessão do ciclo; medido por diferença no `state.db`, + **saldo da API**).
-**Tempo:** excedeu as 2 h — a caça ao flaky é tempo de máquina (60 corridas ≈ 50 min). Declarado: o
-excedente foi **medição**, não escopo novo.
+**Custo medido** (mesma sessão-mãe do ciclo, `state.db`, `cost_status = estimated`):
+
+| | input | output | cache-read | ≈ USD |
+|---|---|---|---|---|
+| leitura no fecho do UTAC000.12 | 936 347 | 489 611 | 142 890 496 | 0,6683 |
+| leitura no fecho do UTAC000.13 | 1 002 928 | 557 187 | 166 787 840 | 0,7634 |
+| **diferença = UTAC000.13 (pai)** | **+66 581** | **+67 576** | **+23 897 344** | **≈ 0,0951** |
+
+Mais o **validador adversarial** (subagente `20261001_235200_93b40f`): **US$ 0,0237**.
+**⇒ UTAC000.13 ≈ US$ 0,119.**
+**Saldo da API:** `GET https://api.deepseek.com/user/balance` → **US$ 1,73** no fecho (era **1,96** no
+fecho do UTAC000.12 ⇒ consumo real do ciclo ≈ **0,23**).
+**Deploy:** `index-BKCa0d9t.js` — **inalterado** (nenhum código mudou neste UTAC; o bundle é o mesmo do
+UTAC000.12) ⇒ verificação de que a afirmação «zero alterações de código» é verdadeira até em produção.
+**Tempo:** excedeu as 2 h — a caça ao flaky é tempo de máquina (66+ corridas ≈ 1 h de CPU, incluindo o
+*hammer* do validador que eu tive de matar). Declarado: o excedente foi **medição**, não escopo novo.
