@@ -57,5 +57,7 @@ Não tocou em contrato, GUTO, `_ponte-ssr.mjs`, `_render.mjs`, `vite.config.js`,
 - Medido: validador adversarial **142 985 tokens** (1.ª ronda, 29 chamadas, 441 s) + **176 406 tokens** (2.ª ronda, 20 chamadas, 367 s).
 - Tempo: dentro das 2 h (R18-2), contando as duas rondas.
 
-## 10. Deploy
-Push **pendente de autorização do operador** (o push dispara o auto-deploy do Netlify). Antes: `git log origin/main..HEAD` = só os commits deste UTAC.
+## 10. Deploy (autorizado pelo operador)
+- `git log origin/main..HEAD` antes do push = só `f635b32`, `9b9556e`, `04a842d`. Push `3a0f6fa..04a842d` (o «Bypassed rule violations» é o conhecido).
+- Auto-deploy **`6abf3c20df1454000984408b`** → **ready**, `commit_ref 04a842d` (sem `netlify deploy` manual — lição do MC93-F).
+- **Bundle servido verificado** (BFS, 131 chunks): guarda de tipo (`typeof …endereco=="string"` + `Number.isFinite(…?.valor)`) presente nos chunks dos DOIS overlays (`PrivyRoot-DZA5Lz9d.js` = Dashboard/`FimEdicaoOverlay`, `MercadoLances-DBvMdnwx.js`); o `setTimeout` de 1200 ms do `AppContext-DttfR1he.js` é `{de(!1),nt.current=null}` — **sem `setShowOverlay(true)`** (eliminado com `EM_BREVE_MODE = true`); contrato mainnet presente.
