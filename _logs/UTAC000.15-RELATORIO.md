@@ -48,4 +48,4 @@ As correcções **não passaram por 2.ª validação** (declarado).
 **USD não medido** — sessão Claude Code, sem `state.db`; e **não é sessão dedicada** (mesma conversa dos UTAC000.14/16). Medido: validador **109 996 tokens** (19 chamadas, 613 s).
 
 ## 8. Deploy
-Nenhum necessário (só testes). Push pendente de autorização do operador.
+Push autorizado pelo operador: `49bc141..2552faa`. Auto-deploy `6abf5b7411f49100086681e4` → **ready** (`commit_ref 2552faa`). **Bundle inalterado, medido:** `index.html` servido com md5 `1fe2bf37…` = o dos deploys do UTAC000.14/16 (mesmos chunks) — GATE 18.
