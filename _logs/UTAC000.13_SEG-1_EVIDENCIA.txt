@@ -1,0 +1,108 @@
+UTAC000.13 — SEG-1 · EVIDENCIA BRUTA: caca ao FLAKY (DEBT-014) · 2026-10-02 02:51 UTC
+===========================================================================================
+
+## 0. BASELINE
+$ git rev-parse HEAD origin/main
+d614b4c25c4d0de1e0929a9ae58b38a0449a2f9e
+d614b4c25c4d0de1e0929a9ae58b38a0449a2f9e
+$ git status --short
+ M desafio-gut/frontend/package-lock.json
+
+## 1. CACAR O FLAKY — 30 corridas da suite COMPLETA do frontend (comando identico ao do harness)
+   $ bash tmp-utac0013/cacar-flaky.sh 30
+   (node --test --test-concurrency=1 <49 ficheiros de src/**/*.test.mjs>)
+
+ficheiros de teste: 49 · corridas: 30
+corrida 01: tests=630 pass=630 fail=0 rc=0
+corrida 02: tests=630 pass=630 fail=0 rc=0
+corrida 03: tests=630 pass=630 fail=0 rc=0
+corrida 04: tests=630 pass=630 fail=0 rc=0
+corrida 05: tests=630 pass=630 fail=0 rc=0
+corrida 06: tests=630 pass=630 fail=0 rc=0
+corrida 07: tests=630 pass=630 fail=0 rc=0
+corrida 08: tests=630 pass=630 fail=0 rc=0
+corrida 09: tests=630 pass=630 fail=0 rc=0
+corrida 10: tests=630 pass=630 fail=0 rc=0
+corrida 11: tests=630 pass=630 fail=0 rc=0
+corrida 12: tests=630 pass=630 fail=0 rc=0
+corrida 13: tests=630 pass=630 fail=0 rc=0
+corrida 14: tests=630 pass=630 fail=0 rc=0
+corrida 15: tests=630 pass=630 fail=0 rc=0
+corrida 16: tests=630 pass=630 fail=0 rc=0
+corrida 17: tests=630 pass=630 fail=0 rc=0
+corrida 18: tests=630 pass=630 fail=0 rc=0
+corrida 19: tests=630 pass=630 fail=0 rc=0
+corrida 20: tests=630 pass=630 fail=0 rc=0
+corrida 21: tests=630 pass=630 fail=0 rc=0
+corrida 22: tests=630 pass=630 fail=0 rc=0
+corrida 23: tests=630 pass=630 fail=0 rc=0
+corrida 24: tests=630 pass=630 fail=0 rc=0
+corrida 25: tests=630 pass=630 fail=0 rc=0
+corrida 26: tests=630 pass=630 fail=0 rc=0
+corrida 27: tests=630 pass=630 fail=0 rc=0
+corrida 28: tests=630 pass=630 fail=0 rc=0
+corrida 29: tests=630 pass=630 fail=0 rc=0
+corrida 30: tests=630 pass=630 fail=0 rc=0
+
+corridas=30 · corridas com falha=0
+VEREDITO: sem flaky observado nestas 30 corridas
+
+   -> ficheiros de falha isolada: 0 (esperado 0 se nao reproduz)
+
+## 2. HIPOTESE: flaky INDUZIDO POR CARGA (o validador corria em paralelo com 2-3 suites minhas)
+   $ bash tmp-utac0013/flaky-sob-carga.sh
+   (4 workers node a queimar CPU 100 s + os 5 ficheiros com TEMPORIZADORES REAIS x 6 corridas)
+
+carga: 4 workers x 100s + 5 ficheiros x 6 corridas
+
+corridas=30 (5 ficheiros x 6) sob carga · falhas=0
+
+   -> ficheiros de falha isolada: 0
+
+## 3. VARREDURA DE SUSPEITOS (medida, nao palpite)
+   Math.random em testes ................ 0 ficheiros (o Confetti usa-o; nenhum teste assere a pagina inteira)
+   createHash/md5 em testes ............. 2 ficheiros, ambos sobre ASSETS estaticos (fontes/WebP) = deterministicos
+   temporizadores REAIS ................. 6 ficheiros; topo: hooks-torneio (7), cotaAtiva (3)
+   fakeTimers/mock.timers/advance ....... NENHUM (tudo depende do relogio real)
+   Suspeito nº1 lido antes do empirico: hooks-torneio.test.mjs l.82-91 (fetch + abort() imediato).
+   MEDIDO: o duplo trata o abort correctamente (regista listener + cobre 'ja abortado') -> ilibado pelo empirico
+
+## 4. CONCLUSAO (medida, com o limite declarado)
+   - 30 corridas da suite completa (maquina livre) ...... 630/630 em TODAS · 0 falhas
+   - 30 corridas dirigidas sob carga de CPU ............. 0 falhas
+   - TOTAL: 60 corridas minhas, 0 falhas. A taxa alegada (~1/15) teria dado ~4 falhas.
+   => NAO REPRODUZIVEL por mim. NAO se inventa correccao para um defeito nao observado (GATE 17).
+   => DEBT-014 fica ABERTA (parcial): resultado negativo registado, escopo ESTREITADO
+      (os 5 ficheiros com temporizadores reais estao ilibados a N=30 sob carga),
+      e os scripts de caca preservados para N maior / CI.
+   Observacao: a unica falha conhecida e a do validador do UTAC000.12 (1 em ~15 corridas,
+   nome nao capturado) — evidencia primaria que se preserva, sem explicacao (nao se inventa).
+
+## 5. FRENTE D — showOverlay: PREMISSA DO SPEC REFUTADA (medicao)
+   spec: 'setShowOverlay(true) comentado na l.1205 do MercadoLances.jsx'
+$ grep -n "setShowOverlay\|showOverlay" src/context/AppContext.jsx   (do dir do frontend)
+206:  const [showOverlay,     setShowOverlay]     = useState(false);
+757:    setShowOverlay(false);
+1205:            // setShowOverlay(true);
+1212:        setShowOverlay(false);
+1224:      // disparar showOverlay. O timeout é auto-limpante (seta
+1325:    setShowOverlay(false);
+1357:    showOverlay,
+$ sed -n "1198,1210p" src/context/AppContext.jsx   (o sítio exacto)
+          setLightningActive(true);
+          // Limpa timeout anterior (defesa em profundidade)
+          if (timeoutAnimRef.current) clearTimeout(timeoutAnimRef.current);
+          timeoutAnimRef.current = setTimeout(() => {
+            setLightningActive(false);
+            // MC63/64: animação de vencedor desabilitada no front-end (não dispara
+            // automaticamente ao encerrar). Encerrado/lightning permanecem ativos.
+            // setShowOverlay(true);
+            timeoutAnimRef.current = null;
+          }, 1200);
+        }
+      } else if (encerrado) {
+        // Caso o prazo seja atualizado on-chain depois do encerrado, reabre.
+$ grep -n "showOverlay" src/pages/MercadoLances.jsx   (ele so CONSOME)
+171:    prazoTimestamp, encerrado, showOverlay,
+209:      {showOverlay && (
+   => religar exige o AppContext.jsx, que este UTAC PROIBE expressamente: PARAR e ESCALAR (GATE 10/HI8).
