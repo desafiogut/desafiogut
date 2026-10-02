@@ -142,6 +142,12 @@ _(a preencher no fecho)_
 >   suites). **Hipótese declarada como hipótese**, não como conclusão: o instrumento certo para a
 >   fechar não é «o nome do teste que falhou» mas **capturar o `stderr` da corrida anómala** (é isso
 >   que distingue `rc=127` de uma falha de asserção).
+> - **TESTE DIRECTO À PISTA (feito pelo executor depois, `tmp-utac0013/testar-rc127.sh`):** **48 spawns**
+>   (5 lotes × 8 spawns simultâneos de um ficheiro rápido + 2 lotes × 4 **suítes completas**
+>   simultâneas, a replicar a condição do UTAC000.12) → **0 com `rc=127`, 0 com outro `rc≠0`,
+>   0 ficheiros com `fail>0`**. ⇒ **a anomalia de spawn NÃO se reproduz sob pressão deliberada**:
+>   a pista fica **indício, não mecanismo**. Contagem global do ciclo: **100+ corridas/spawns, com
+>   UMA única anomalia observada** (o `rc=127` do `A-14` dele) e **zero falhas de teste**.
 > - **FASE B (hammer ×120/ficheiro): NUNCA CORREU** — o cabeçalho está lá e mais nada: foi este o
 >   passo que **pendurou** e que me obrigou a matar os processos dele. Sem dados, e não os invento.
 > - **PASSO 4 (a hipótese mais agressiva): 3 rodadas × 4 suites do frontend SIMULTÂNEAS** (pressão de
