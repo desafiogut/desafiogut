@@ -131,9 +131,22 @@ _(a preencher no fecho)_
 >   espera longa escondida (o mais lento é ~10 s, um teste de página em SSR) e **0 falhas** em todos
 >   os medidos. Top-5 medido: MeusAtivos 9 981 ms · utac0008-resultado-oficial 9 448 · Dashboard 9 316 ·
 >   utac0010-mercado-vencedor 9 059 · utac105c-meus-ativos 8 703 — **todos rc=0 fail=0**.
-> - **FASE A (suíte completa ×15), parcial:** `A-1` a `A-6` → **tests=630 · pass=630 · fail=0** em todas
->   as corridas que registou antes de pendurar.
-> - **Harness com stdin não-TTY (`</dev/null`)**: lançado; resultado não chegou a ser registado.
+> - **FASE A (suíte completa ×15):** ele escreveu `_(a preencher)_`; **o artefacto dele
+>   (`tmp-utac0013-val/v2-hunt.out`, terminado depois de ele pendurar) tem os 15 resultados:**
+>   `A-1` a `A-13` e `A-15` → **tests=630 · pass=630 · fail=0 · rc=0**; ⚠️ **`A-14` → `tests=? pass=? fail=? rc=127`**.
+>   **`rc=127` é «command not found» nos shells POSIX — NÃO é um teste a falhar:** é uma anomalia de
+>   **arranque do processo** (o `node` não chegou a correr). É a **primeira anomalia medida com a taxa
+>   do flaky alegado (1 em 15)** e a **melhor pista** que existe para a DEBT-014: se a falha do
+>   UTAC000.12 foi do mesmo tipo, **não havia teste flaky nenhum** — havia um *spawn* que falhou sob
+>   carga (ele estava a correr este passo em paralelo com os outros passos dele, e eu corria as minhas
+>   suites). **Hipótese declarada como hipótese**, não como conclusão: o instrumento certo para a
+>   fechar não é «o nome do teste que falhou» mas **capturar o `stderr` da corrida anómala** (é isso
+>   que distingue `rc=127` de uma falha de asserção).
+> - **FASE B (hammer ×120/ficheiro): NUNCA CORREU** — o cabeçalho está lá e mais nada: foi este o
+>   passo que **pendurou** e que me obrigou a matar os processos dele. Sem dados, e não os invento.
+> - **PASSO 4 (a hipótese mais agressiva): 3 rodadas × 4 suites do frontend SIMULTÂNEAS** (pressão de
+>   processos/FD, a reproduzir a condição do UTAC000.12) → **12/12 com `fail=0 rc=0`** ✓. Ou seja:
+>   mesmo com **4 suites em paralelo**, o flaky **não** se reproduziu.
 > - §B e §C: **completos** (abaixo).
 
 
