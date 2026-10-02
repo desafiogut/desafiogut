@@ -65,6 +65,14 @@ M14 — repor o defeito (bloco de 3 linhas substituído pelo ternário truthy or
    `../../scripts/` é o padrão já usado por `build:rag`. Diff do package.json: 2 inserções, 1
    remoção (o `,` final) — SEM reformatação do ficheiro.
 Medição depois:  `$ npm test` → frontend 622/622 · backend 967/973 · exit 0.
+⚠️ PRECISÃO (refutação 1 do validador, tratada): o que o harness imprime é **`pass/tests`** — «967/973»
+   = **967 passaram de 973**. Medição crua minha, **2×**, pelo comando exacto do harness:
+   `ℹ tests 973 · ℹ pass 967 · ℹ fail 0 · ℹ skipped 6` (idêntico nas duas). O validador mediu
+   **959/966 + 7 skipped** — **7 testes a menos**, o que é coerente com o **flake que ele próprio
+   documentou** (§B do veredicto: uma corrida deu VERMELHO). Ou seja: o número é **variável entre
+   corridas**, não «falso». Passo a declarar sempre `tests/pass/fail/skipped` em cru.
+   Nota de rótulo: «backend» = **`desafio-gut/frontend/netlify/functions`** (o repo NÃO tem
+   `desafio-gut/backend/`) — é o rótulo do harness.
 
 ─────────────────────────────────────────────────────────────────────────────────
 7. FRENTE C — os 3 worktrees (arquivar ANTES de apagar)
@@ -81,8 +89,16 @@ Limpeza (receita segura; sem junctions em nenhum — medido):
 ANTES:  node_modules real 505 · 417  →  DEPOIS: 505 · 417   (INTACTO)
         dirs em .claude/worktrees: 3+1 → 0
         git worktree list: só a principal + o scratchpad do Claude em Temp/ (fora do repo)
-Branches: ficam 13 refs `worktree-agent-*`/`claude/*` (a limpeza de worktree NÃO apaga branches;
-  todas com 0 commits fora do main). NÃO apagadas — não autorizado; declarado.
+Branches: ficam 13 refs `worktree-agent-*`/`claude/*` (a limpeza de worktree NÃO apaga branches).
+  ⚠️ CORRECÇÃO (refutação 3 do validador adversarial, aceite) — eu tinha escrito «todas com 0 commits
+  fora do main»: é FALSO e eu NUNCA medi as 13 refs (generalizei a partir dos 3 worktrees que limpei).
+  **MEDIDO AGORA, uma a uma:** `claude/zen-goldberg-ce8759` = **4 commits fora do main**; as outras
+  **12** = **0**. Os 4 são trabalho real e NÃO integrado (`12b5b2c feat: integração Sepolia real +
+  Netlify deploy + 5 pontos blockchain`, `acab406`, `ce1e3dd`, `24f82af` — `fix(privy)`: App ID,
+  fallback hardcoded, `??`→`||`; **12 ficheiros, +603/−65**, incl. `src/utils/web3.js`, `erros.js`,
+  `validacao.js`, `netlify.toml`). **Nada se perdeu** — a branch nunca foi apagada — mas o UTAC000.10
+  removeu esse worktree por estar «limpo» **sem notar que a branch dele tinha 4 commits**: worktree
+  limpo ≠ branch limpa. Registado como **DEBT-015** (decisão do operador).
 
 ─────────────────────────────────────────────────────────────────────────────────
 8. ESCOPO (GATE 2/HI4) — `git diff --name-only` contra 8e19ed0

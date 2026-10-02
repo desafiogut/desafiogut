@@ -1,14 +1,15 @@
-UTAC000.12 — SEG-1 · EVIDENCIA BRUTA · 2026-10-02 01:18 UTC
+UTAC000.12 — SEG-1 · EVIDENCIA BRUTA · 2026-10-02 01:36 UTC
 ======================================================================
 
 ## 0. BASELINE
 $ git rev-parse HEAD origin/main
-8e19ed09c20fbf044bb32bcc9e29451114b9b9d0
+8e17e3a37145c49b24e8c1803091c294a4bf8172
 8e19ed09c20fbf044bb32bcc9e29451114b9b9d0
 $ git status --short  (só o package-lock pré-existente)
+ M CLAUDE.md
+ M _logs/DEBT.md
+ M _logs/UTAC000.12_SEG-1_EVIDENCIA.txt
  M desafio-gut/frontend/package-lock.json
- M desafio-gut/frontend/package.json
- M desafio-gut/frontend/src/pages/Dashboard.jsx
  M desafio-gut/frontend/src/pages/__tests__/Dashboard.test.mjs
 
 ## 1. FRENTE A — a linha do defeito (Dashboard.jsx l. 416, ANTES) e a guarda (DEPOIS)
@@ -48,17 +49,19 @@ $ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/Dashb
       not ok 5 - valor negativo: endereço «0xaaaa0000...000001», valor «—»
         error: 'o card formatou um valor NEGATIVO'
       not ok 6 - valor Infinity: endereço «0xaaaa0000...000001», valor «—»
+      not ok 9 - valor BigInt (o antigo lançava): endereço «0xaaaa0000...000001», valor «—»
+      not ok 10 - valor Symbol (o antigo lançava): endereço «0xaaaa0000...000001», valor «—»
   not ok 3 - UTAC000.12 · Dashboard — o VALOR do card não mostra NaN nem absurdo (DEBT-012)
-  # tests 22
-  # pass 16
-  # fail 6
+  # tests 26
+  # pass 18
+  # fail 8
 
 ## 3. RESTAURO por COPIA DE SEGURANCA + conferencia md5
   RESTAURADO md5=d7066379b7677841169a30ec87f7d3a0 (backup d7066379b7677841169a30ec87f7d3a0 · identico: True)
 
 ## 4. DEPOIS — o mesmo ficheiro de teste com o codigo entregue
-  # tests 22
-  # pass 22
+  # tests 26
+  # pass 26
   # fail 0
 
 ## 5. FRENTE B — o script no package.json + o comando canonico
@@ -67,7 +70,7 @@ $ grep -A1 \"\\\"lint\\\"\" (a vizinhanca do script novo)
   14:    "test": "node ../../scripts/mc966-suite-harness.mjs ambos"
 $ npm test   (corrido no dir do frontend)
   
-  frontend: VERDE 622/622 pass
+  frontend: VERDE 626/626 pass
   backend: VERDE 967/973 pass
   VEREDITO: VERDE
 
@@ -81,15 +84,18 @@ $ npm test   (corrido no dir do frontend)
    dirs em .claude/worktrees: 0
    node_modules real: frontend=505 · backend=417
 $ git worktree list
-   C:/Users/Moltbot/Desktop/DESAFIOGUT                                                                               8e19ed0 [main]
+   C:/Users/Moltbot/Desktop/DESAFIOGUT                                                                               8e17e3a [main]
    C:/Users/Moltbot/AppData/Local/Temp/claude/C--Users-Moltbot/ffd22ecc-fc8b-46a9-81c8-c3ae557144f6/scratchpad/wt-94 e3d8791 (detached HEAD)
+   C:/Users/Moltbot/tmp-utac0012-val/fe                                                                              8e17e3a (detached HEAD)
+   C:/Users/Moltbot/tmp-utac0012-val/fe-old                                                                          8e19ed0 (detached HEAD)
 
 ## 7. ESCOPO (git diff --name-only) e md5
-warning: in the working copy of 'desafio-gut/frontend/package.json', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of '_logs/UTAC000.12_SEG-1_EVIDENCIA.txt', LF will be replaced by CRLF the next time Git touches it
+  CLAUDE.md
+  _logs/DEBT.md
+  _logs/UTAC000.12_SEG-1_EVIDENCIA.txt
   desafio-gut/frontend/package-lock.json
-  desafio-gut/frontend/package.json
-  desafio-gut/frontend/src/pages/Dashboard.jsx
   desafio-gut/frontend/src/pages/__tests__/Dashboard.test.mjs
   d7066379b7677841169a30ec87f7d3a0 *desafio-gut/frontend/src/pages/Dashboard.jsx
   a5615f17a6f32f2583f524bf74fabbe3 *desafio-gut/frontend/package.json
-  a44968610e9f292379d1ef3963d2a4ef *desafio-gut/frontend/src/pages/__tests__/Dashboard.test.mjs
+  c0c66bf5a2e522e8310f791ccfccd0a0 *desafio-gut/frontend/src/pages/__tests__/Dashboard.test.mjs

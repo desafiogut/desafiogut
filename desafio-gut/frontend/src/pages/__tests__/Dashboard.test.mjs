@@ -302,6 +302,23 @@ describe("UTAC000.12 · Dashboard — o VALOR do card não mostra NaN nem absurd
     ["valor string (não numérico)",          { endereco: EU, valor: "abc" }, abrev(EU),        "—"],
     ["valor negativo",                       { endereco: EU, valor: -1 },    abrev(EU),        "—"],
     ["valor Infinity",                       { endereco: EU, valor: Infinity }, abrev(EU),     "—"],
+    // ── Limites (acrescentados na 2.ª ronda, depois de medir a semântica da guarda):
+    //    `0` é VÁLIDO (não é malformado!) e tem de continuar a formatar; `-0` é zero;
+    //    BigInt e Symbol são os dois casos em que o código ANTIGO **LANÇAVA EXCEPÇÃO**
+    //    («Cannot mix BigInt and other types» / «Cannot convert a Symbol value to a number»)
+    //    — medido: `Number.isFinite(bigint|symbol)` devolve `false` SEM lançar.
+    ["valor 0 (válido! não é malformado)",   { endereco: EU, valor: 0 },     abrev(EU),        "R$ 0.00"],
+    ["valor -0 (zero negativo)",             { endereco: EU, valor: -0 },    abrev(EU),        "R$ 0.00"],
+    ["valor BigInt (o antigo lançava)",      { endereco: EU, valor: 300n },  abrev(EU),        "—"],
+    ["valor Symbol (o antigo lançava)",      { endereco: EU, valor: Symbol("x") }, abrev(EU), "—"],
+    //    `0.5` centavo e `MAX_SAFE_INTEGER`/`1e21` (limites do Number) — ressalva (i) do validador;
+    //    e `"300"` (string): ⚠️ ALTERAÇÃO DECLARADA — o código ANTIGO mostrava «R$ 3.00» e agora
+    //    mostra «—» (a regra é «malformado = ausente»); strings não chegam em produção (os dois
+    //    produtores numerificam), mas é uma mudança real e fica coberta por teste.
+    ["0.5 centavo (arredonda)",              { endereco: EU, valor: 0.5 },   abrev(EU),        "R$ 0.01"],
+    ["MAX_SAFE_INTEGER",                     { endereco: EU, valor: Number.MAX_SAFE_INTEGER }, abrev(EU), "R$ 90071992547409.91"],
+    ["1e21 (fora do intervalo seguro)",      { endereco: EU, valor: 1e21 },  abrev(EU),        "R$ 10000000000000000000.00"],
+    ["string \"300\" (mudou: era «R$ 3.00»)",{ endereco: EU, valor: "300" }, abrev(EU),        "—"],
     ["VÁLIDO (o caso que não pode mudar)",   { endereco: EU, valor: 300 },   abrev(EU),        "R$ 3.00"],
   ];
 
