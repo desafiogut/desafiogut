@@ -2,6 +2,8 @@
 //
 // GET /.netlify/functions/minhas-participacoes
 //   ?edicaoId=R-1   (opcional) → filtra uma edição (útil para o overlay de uma edição)
+//     ⚠️ `?edicaoId=` VAZIO = sem filtro (devolve tudo) e a resposta reporta `filtro: null` — coerente:
+//     não se aplicou filtro nenhum. Um valor desconhecido (`?edicaoId=R-99`) devolve lista vazia (200).
 //   sem params                  → todas as edições em que o titular deu lance
 //
 // Auth: Authorization: Bearer <user-session|admin-access>  — OBRIGATÓRIA (GATE 21).

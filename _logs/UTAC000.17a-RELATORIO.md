@@ -137,3 +137,10 @@ efeito: o **estreitamento da listagem** já restringe o resultado ⇒ as duas de
 **Consequência declarada para o 17c:** `total` = nº de **EDIÇÕES** (agora documentado no cabeçalho do
 endpoint); sem filtro a listagem varre a store (custo documentado; hoje **0 chaves** em produção);
 com `?edicaoId=` é **estreita** — é o caminho que o 17c deve usar.
+
+## 8. Borda documentada do validador (aceite, sem correcção)
+
+O veredicto aponta uma borda menor em (A): **`?edicaoId=` vazio devolve TUDO mas a resposta reporta
+`filtro: null`**. **Aceite por coerência** — um parâmetro vazio significa «sem filtro», e é isso que a
+resposta diz; um valor desconhecido (`?edicaoId=R-99`) devolve lista vazia com 200 (já testado).
+Passou a estar **documentado no cabeçalho do endpoint** para o 17c não o ler como bug.
