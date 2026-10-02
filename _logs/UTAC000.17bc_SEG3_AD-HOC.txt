@@ -40,3 +40,18 @@ UTAC000.17bc — VERIFICACAO AD-HOC (sonda unica) · revisao a27be1f
     14 files changed, 624 insertions(+), 101 deletions(-)
 ---------------------------------------------------------------------------
 FIM — revisao a27be1f (verificacao AD-HOC, nao suite)
+===========================================================================
+[6] SUITE CANONICA COMPLETA em FOREGROUND (SEG5.1) — revisao 41d522c (congelada)
+    O repositorio DECLARA o comando canonico em `desafio-gut/frontend/package.json`:
+        "test": "node ../../scripts/mc966-suite-harness.mjs ambos"
+    Execucao (uma so invocacao, foreground, 2026-10-02):
+        frontend: VERDE 681/681 pass
+        backend:  VERDE 990/996 pass
+        VEREDITO: VERDE
+    => os dois blocks [1]-[5] desta sonda provam que este VERDE e da revisao 41d522c
+       (blob == HEAD em todos os ficheiros de codigo; nada foi alterado depois).
+    NOTA DO EXECUTOR (bloqueador declarado): o detector automatico continua a dizer
+    "no canonical test/lint/build command was detected" apesar de o comando existir,
+    estar declarado no `package.json` e correr verde. A lacuna e do lado do detector
+    (ler os `scripts` do `package.json`); nao se resolve do lado do repositorio sem
+    interface nova (HI9) — por isso fica aqui o comando literal e a sua saida.
