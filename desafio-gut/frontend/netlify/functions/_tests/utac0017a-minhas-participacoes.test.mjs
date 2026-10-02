@@ -151,6 +151,12 @@ test("filtro ?edicaoId= devolve só essa edição; edição sem participação �
   assert.equal(b.status, 200);
   assert.deepEqual(b.corpo.participacoes, []);
   assert.equal(b.corpo.total, 0);
+  // BORDA documentada no cabeçalho do endpoint: `?edicaoId=` VAZIO = sem filtro (devolve tudo) e a
+  // resposta reporta `filtro: null` — coerente com «não se aplicou filtro nenhum».
+  const c = await chamar({ edicaoId: "" });
+  assert.equal(c.status, 200);
+  assert.deepEqual(c.corpo.participacoes.map((p) => p.edicaoId), ["R-1", "R-2"]);
+  assert.equal(c.corpo.filtro, null, "filtro vazio tem de reportar null (não se aplicou filtro)");
 });
 
 test("titular sem lances → 200 e lista vazia (não é erro)", async () => {
