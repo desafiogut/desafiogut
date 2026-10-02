@@ -74,8 +74,33 @@ titulares, a lacuna materializa-se (o `exportar-dados` não o lê) — nota regi
    classifiquei 3 mutantes **válidos** como inválidos; corrigido e remedido (todos mordem);
 4. corrigi um gomo («duplu»→«duplo») no ficheiro de evidência.
 
-## 6. Custo
-Ver §8 (resposta final): medido por diferença no `state.db` + **saldo da API** da sessão dedicada.
+## 6. Custo e tempo (sessão dedicada, GATE 16)
+
+| | input | output | cache-read | ≈ USD |
+|---|---|---|---|---|
+| leitura no fecho do UTAC000.13 | 1 229 982 | 615 546 | 166 787 840 | 0,8766 |
+| leitura no fecho do UTAC000.17a | 1 316 732 | 741 503 | 225 018 112 | 1,0220 |
+| **diferença = UTAC000.17a (pai)** | **+86 750** | **+125 957** | **+58 230 272** | **≈ 0,1454** |
+
+Mais o **validador adversarial** (subagente `20261002_045842_9ba342`): **US$ 0,0349**
+⇒ **UTAC000.17a ≈ US$ 0,180**.
+**Saldo da API:** **US$ 1,09** no fecho (era 1,42 no fecho do UTAC000.13).
+**Tempo:** excedeu as 2 h (R18-2) — **declarado**: o excedente é o fecho das 4 ressalvas do validador
+(correcção do custo + 2 testes de sobreviventes + relabel + correcções de EOL) e a verificação de
+produção; não houve escopo novo.
+
+## 7-bis. Deploy verificado em produção (6/6)
+| verificação | resultado |
+|---|---|
+| GET sem token | **401** `token_ausente` |
+| GET token forjado | **401** `token_invalido` |
+| POST | **405** `metodo_invalido` (`allowed:["GET"]`) |
+| `?edicaoId=R-1` sem token | **401** (a query não contorna a auth) |
+| `?endereco=<terceiro>` | **401** — **não existe parâmetro de utilizador** ⇒ pedir dados de terceiros é **estruturalmente impossível** |
+| OPTIONS (preflight) | **204** com `Access-Control-Allow-*` |
+⚠️ Antes do deploy terminar, o caminho devolvia o **`index.html` do SPA** (200, `text/html`, 5207 bytes) —
+o *catch-all* do SPA engole qualquer função ainda não publicada: quem verificar produção cedo pode
+confundir 200 com «endpoint a funcionar». **Medir o `content-type`**, não só o status.
 
 ## 7. REVISÃO (2.ª ronda, 2026-10-02) — fecho das ressalvas do validador adversarial
 
