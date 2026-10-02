@@ -84,3 +84,15 @@ apagar a regra antiga): `utac00014-show-overlay.test.mjs` (a fonte do prazo pass
   adaptação do arnês consumiu a maior parte do excedente.
 - **Custo de API (sessão dedicada): ≈ US$ 0,165** — `state.db` 1 316 732→**1 591 620** in · 741 503→**849 199** out (leitura anterior no fecho do UTAC000.17a: US$ 1,0220 → **1,1872**). **Sem subagente** (o validador não chegou a ser despachado).
 - **Saldo da API no fecho: US$ 0,80** (era 1,09 no fecho do UTAC000.17a).
+
+## 8. Decisões do operador (R18, 2026-10-02)
+
+| # | Decisão | Efeito |
+|---|---|---|
+| **a** | **Duração da R-1 = 1800 s (30 min) CONFIRMADA**, mas **a R-1 real NÃO se cria em produção agora**: é a edição activa em `EM_BREVE_MODE` e dar-lhe prazo de 30 min antes de desligar o modo seria contraditório. **A criação passa para o UTAC que desligar o `EM_BREVE_MODE`** (duração já decidida). | DEBT-017: código pronto+testado; **criação de dados TRANSFERIDA** (não é falha deste UTAC). A justificação da Frente B deixa de ser «falta criar» e passa a ser «criar no UTAC certo». |
+| **b** | **Despachar o validador adversarial AGORA** sobre `1f446db`, corrigir o que ele apanhar e só então fechar DEBT-016/017. **Protocolo: veredicto primeiro, push depois.** | O commit fica LOCAL até ao veredicto; as correcções que ele exigir entram antes do push. |
+
+**Nota do executor sobre (a):** a restrição elimina o único item da Frente B que eu tinha declarado em
+falta por razões de autorização; o que resta da Frente B é uma **tarefa de dados agendada** para outro
+UTAC, com parâmetros já fixados (id `R-1`, 1800 s, via `criarEdicao({id:'R-1'})` — código já testado em
+`_tests/utac0017bc-edicao-r1.test.mjs`).
