@@ -71,3 +71,17 @@ que desligar o EM_BREVE_MODE.» ⇒ **DEBT-017 fica com o código pronto e testa
 TRANSFERIDA** para o UTAC que desligar o `EM_BREVE_MODE` (com a duração já decidida: 1800 s).
 **DEBT-016 fecha-se com o veredicto do validador adversarial (despachado nesta data, decisão (b)).**
 **Actualização (mesma data):** o item (1) — martelo de MUTAÇÃO — foi CORRIDO e fechado: 7 mutantes, 7 mordem, restauros md5-idênticos (`_logs/UTAC000.17bc_SEG-2_MUTACOES.txt`). Fica pendente só o VALIDADOR (despachado) e a criação da R-1 real (deferida por decisão R18 para o UTAC do EM_BREVE_MODE).
+
+### FECHO (2026-10-02, após o veredicto do validador adversarial)
+
+- **DEBT-016 — FECHADA.** Veredicto **APROVA (com ressalvas)**; as ressalvas que exigiam correcção foram
+  corrigidas na mesma ronda: teste dos dois handlers (`utac0017bc-handlers-visto.test.mjs` — mata o M4 que
+  sobrevivia), exigência do `agora` do servidor (a minha alegação «o relógio local nunca decide» era
+  imprecisa e passou a ser verdadeira), guarda de tipo na contagem de lances e contrato do agregado nos
+  dois overlays. Martelo final **10/10 mordem**; suíte canónica **694/694 + 992/998**.
+- **DEBT-017 — CÓDIGO FECHADO, CRIAÇÃO TRANSFERIDA (R18-a).** `criarEdicao({id:'R-1'})` existe, é testado
+  e **já não sobrescreve** uma R-1 viva. A criação REAL em produção fica para o UTAC que desligar o
+  `EM_BREVE_MODE` (duração 1800 s já decidida).
+- **Registado (não corrigido, do validador):** `address === null` ⇒ `jaVisto`/`marcarVisto` devolvem false
+  sem gravar e o overlay reabriria a cada mount. Inalcançável hoje (exige uma R-1 REAL, que não existe em
+  produção); a rever no UTAC que criar a R-1. Também por medir: o custo do `jaVisto` a 4 Hz (250 ms).

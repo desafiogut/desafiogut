@@ -57,14 +57,16 @@ function armazenamento(inicial = {}) {
 }
 
 /** Instala os globais de browser que o Provider toca (medido: `grep` ao AppContext.jsx no SEG-1). */
-function instalarGlobais(local = {}) {
+function instalarGlobais(local = {}, sessao = {}) {
   const antes = {};
   for (const k of ["window", "document", "localStorage", "sessionStorage", "navigator"]) {
     antes[k] = Object.getOwnPropertyDescriptor(globalThis, k);
   }
   const ouvintes = () => ({ addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; } });
   const localStorage = armazenamento(local);
-  const sessionStorage = armazenamento();
+  // UTAC000.17bc (17c) — o `authToken` do Provider é hidratado do sessionStorage (`gut_auth_user`);
+  // poder semeá-lo é o que permite provar o caminho AUTENTICADO (participações) no arnês.
+  const sessionStorage = armazenamento(sessao);
   const window = {
     ...ouvintes(),
     location: { pathname: "/", search: "", hash: "", href: "http://localhost/", origin: "http://localhost" },
@@ -136,9 +138,9 @@ export async function criarArnes({ leilaoAberto = false } = {}) {
    * @param {object|null} [o.resultadoOficial] `{ vencedor, menorUnicoCentavos }` consolidado on-chain (ou null)
    * @param {object} [o.localStorage] conteúdo inicial do localStorage
    */
-  async function montarProvider({ children, lancesFlash = [], resultadoOficial = null, localStorage = {}, edicoes = null }) {
+  async function montarProvider({ children, lancesFlash = [], resultadoOficial = null, localStorage = {}, edicoes = null, participacoes = null, sessao = {} }) {
     oficial.definirOnchain(resultadoOficial);
-    const repor = instalarGlobais(localStorage);
+    const repor = instalarGlobais(localStorage, sessao);
     const navegacoes = [];
     const locVal = rr.UNSAFE_LocationContext._currentValue;
     const navVal = rr.UNSAFE_NavigationContext._currentValue;
@@ -151,6 +153,10 @@ export async function criarArnes({ leilaoAberto = false } = {}) {
     };
     const fetchDuplo = duploDeFetch((url) => {
       if (url.includes("lances-flash")) return { json: { lances: lancesFlash } };
+      // UTAC000.17bc (17c) — as participações do titular (endpoint do 17a) para o overlay agregado.
+      if (participacoes && url.includes("minhas-participacoes")) {
+        return { json: { participacoes, total: participacoes.length, filtro: null } };
+      }
       // UTAC000.17bc (GATE 23) — o arnês passa a poder servir `/edicoes` com edições REAIS (com
       // `termino_em` do servidor): é por aqui que se prova a travessia servidor → AppContext → página
       // do prazo real. Sem esta opção o arnês responde 404 e o cliente cai na edição SINTÉTICA

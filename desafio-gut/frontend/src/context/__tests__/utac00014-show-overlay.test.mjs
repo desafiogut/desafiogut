@@ -153,6 +153,17 @@ describe("UTAC000.14/17bc · AppContext — o overlay abre no fim do leilão pel
     assert.equal(semOffset.temporizadores.length, 0, "sem offset o prazo ainda não venceu");
   });
 
+  // UTAC000.17bc — ressalva de PRECISÃO do validador adversarial (corrigida): sem o `agora` do servidor
+  // (`offsetRelogioMs === null`) o fim NÃO pode ser decidido pelo relógio do aparelho. Antes desta
+  // correcção o `|| 0` deixava o aparelho decidir — e a minha alegação «o relógio local NUNCA o decide»
+  // era, por isso, imprecisa.
+  test("GATE 26: sem o `agora` do servidor (offset null) o fim NÃO dispara, mesmo com prazo real vencido", () => {
+    const m = montar(extrairTick(fonte()), { terminoEm: iso(EPOCH), agoraSeg: EPOCH, offsetRelogioMs: null });
+    m.tick();
+    assert.equal(m.temporizadores.length, 0, "decidiu o fim sem o relógio do servidor");
+    assert.deepEqual(m.chamadas, [], "nada pode disparar sem o relógio do servidor");
+  });
+
   test("controlo: com a linha do overlay comentada (em memória), NÃO abre — o teste morde", () => {
     const desligado = extrairTick(fonte()).replace("if (!EM_BREVE_MODE && !jaVisto(address, EDICAO_ATIVA)) setShowOverlay(true);", "// setShowOverlay(true);");
     assert.notEqual(desligado, extrairTick(fonte()), "controlo mal construído: a substituição não entrou");

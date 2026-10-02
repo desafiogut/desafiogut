@@ -90,7 +90,7 @@ export default function FimEdicaoOverlay({
                 fontSize: isMobile ? "0.8rem" : "0.88rem" }}>
                 <span style={{ color: "#e8f0fe", fontFamily: "monospace" }}>{p.edicaoId}</span>
                 <span style={{ color: "#94a3b8" }}>
-                  {p.lances === 1 ? "1 lance" : `${p.lances} lances`}
+                  {Number.isFinite(p.lances) ? (p.lances === 1 ? "1 lance" : `${p.lances} lances`) : "—"}
                 </span>
                 {venceuAqui(p.edicaoId) && (
                   <span style={{ color: "#fbbf24", fontWeight: 800 }}>🏆 VENCEU</span>

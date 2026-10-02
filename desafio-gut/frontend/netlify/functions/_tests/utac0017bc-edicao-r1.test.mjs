@@ -85,3 +85,28 @@ test("GATE 26: sem R-1 no store, a sintética vem MARCADA (prazo inventado, não
   assert.equal(r1.sintetizada, true, "a R-1 sintética TEM de vir marcada (o cliente não pode confiar no prazo)");
   assert.equal(r1.produto, null);
 });
+
+// UTAC000.17bc — ressalva 2 do validador adversarial (corrigida): com id EXPLÍCITO não se sobrescreve
+// uma edição viva. Sem esta guarda, `criarEdicao({id:"R-1"})` apagava uma edição em curso (lances e
+// histórico incluídos) sem aviso.
+test("id explícito NÃO sobrescreve uma edição existente (edicao_ja_existe)", async () => {
+  const a = await criarEdicao({ tipo: "relampago", produto: "ORIGINAL", duracaoSegundos: 1800, id: "R-1" });
+  assert.equal(a.ok, true);
+  const b = await criarEdicao({ tipo: "relampago", produto: "INVASOR", duracaoSegundos: 60, id: "R-1" });
+  assert.equal(b.ok, false, "a segunda criação com o mesmo id tem de ser RECUSADA");
+  assert.equal(b.code, "edicao_ja_existe");
+  const { edicoes } = await listarEdicoes();
+  assert.equal(edicoes["R-1"].produto, "ORIGINAL", "a edição original não pode ter sido sobrescrita");
+});
+
+test("id explícito com leitura do store em falha RECUSA (falha-CLOSED numa operação destrutiva)", async () => {
+  const real = B.getStore.bind(B);
+  B.getStore = (o) => {
+    const s = real(o);
+    if (o && o.name === "edicoes-metadata") return { ...s, get: async () => { throw new Error("falha simulada de leitura"); } };
+    return s;
+  };
+  const r = await criarEdicao({ tipo: "relampago", produto: "P", duracaoSegundos: 1800, id: "R-1" });
+  assert.equal(r.ok, false, "sem conseguir confirmar a existência, não se pode gravar por cima");
+  assert.equal(r.code, "store_indisponivel");
+});

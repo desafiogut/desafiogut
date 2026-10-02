@@ -158,6 +158,32 @@ describe("UTAC000.15 · AppContext → MercadoLances: o overlay do fim abre e mo
     assert.ok(!bloco.includes(abrev(OUTRO)) && !bloco.includes("R$ 1.00"), "o overlay mostra o vencedor LOCAL");
     assert.equal(contar(html, "Carteira Vencedora"), 1, "esperava UM overlay do vencedor");
   });
+
+  // UTAC000.17bc (17c / ressalva E do validador adversarial): «a secção agregada e o botão FECHAR não
+  // têm teste». Aqui prova-se o que o arnês PODE provar, e o resto fica declarado (em vez de um teste
+  // que finge cobrir):
+  //   ✔ o botão FECHAR (a saída explícita) é renderizado pela página real com o overlay aberto;
+  //   ✔ SEM participações a secção agregada NÃO aparece (o comportamento desenhado: sem token o hook
+  //     nem chama o endpoint — medido com sonda própria: neste arnês o `authToken` é null, visitante);
+  //   ⚠️ LIMITE MEDIDO: o CONTEÚDO da secção (linhas + «🏆 VENCEU») não é renderizável neste arnês —
+  //     exigiria efeitos + sessão autenticada, e a hidratação do token (sessionStorage) não está
+  //     ligada no condutor do arnês (o `globalThis.sessionStorage` nem existe no contexto SSR).
+  //     Fica coberto por contrato em `src/components/__tests__/utac0017bc-overlay-agregado.test.mjs`.
+  test("o overlay aberto renderiza o botão FECHAR e NÃO mostra a secção agregada sem participações", async (t) => {
+    const Pagina = (await a.carregar("/src/pages/MercadoLances.jsx")).default;
+    const agora = Math.floor(Date.now() / 1000);
+    const p = await a.montarProvider({
+      children: a.React.createElement(a.MemoryRouter, null, a.React.createElement(Pagina)),
+      lancesFlash: LOCAIS, resultadoOficial: OFICIAL,
+      edicoes: edicaoR1Real(agora, { vencidoSeg: 5 }),
+    });
+    t.after(() => p.desmontar());
+    await esperarFimDoRelampago(p);
+    const html = p.html();
+    assert.ok(html.includes("Carteira Vencedora"), "controlo: o overlay não abriu");
+    assert.ok(html.includes("FECHAR"), "o botão FECHAR (onClose) não foi renderizado");
+    assert.ok(!html.includes("As suas participações"), "sem participações a secção não pode aparecer");
+  });
 });
 
 describe("UTAC000.15 · EM BREVE real: o mesmo fim NÃO abre o overlay (runtime do gate do UTAC000.14)", () => {

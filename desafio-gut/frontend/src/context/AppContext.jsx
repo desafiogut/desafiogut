@@ -1203,8 +1203,13 @@ export function AppProvider({ children }) {
         ? Date.parse(ativa.termino_em)
         : NaN;
       const prazoRealSeg = Number.isFinite(terminoMs) ? Math.floor(terminoMs / 1000) : null;
-      const agoraSeg    = Math.floor((Date.now() + (offsetRelogioMs || 0)) / 1000);
-      const restante = prazoRealSeg === null ? null : Math.max(0, prazoRealSeg - agoraSeg);
+      // UTAC000.17bc — validador adversarial (ressalva de precisão, corrigida): sem o `agora` do servidor
+      // (`offsetRelogioMs === null`) o fim NÃO se decide — o relógio do APARELHO não é fonte de prazo.
+      // O `/edicoes` manda sempre `agora`, logo este desvio existe em qualquer resposta válida.
+      const agoraSeg    = offsetRelogioMs == null ? null : Math.floor((Date.now() + offsetRelogioMs) / 1000);
+      const restante = prazoRealSeg === null || agoraSeg === null
+        ? null
+        : Math.max(0, prazoRealSeg - agoraSeg);
       if (restante === 0) {
         setEncerrado(true);
         // MC16 — flag impede múltiplos disparos quando encerrado

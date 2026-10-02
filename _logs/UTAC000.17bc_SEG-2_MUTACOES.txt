@@ -30,3 +30,31 @@ que MORREM, e so o verifiquei a mao (a licao da serie: medir no ALVO e desconfia
 
 **Consequencia para a leitura dos numeros:** a primeira tabela desta ronda (5/7) era FALSA nos dois
 mutantes do backend. Os numeros acima sao os da corrida com o instrumento corrigido.
+
+
+=========================================================================================
+## 2.ª RONDA (após o veredicto do validador adversarial) — 10 mutantes, 10 mordem
+=========================================================================================
+Acrescentados ao martelo: M29 (o mutante M4 DO VALIDADOR, que sobrevivia), M30 (a guarda da
+sobrescrita da R-1) e M31 (o relógio do servidor obrigatório). Repetidos os 7 anteriores.
+
+| mutante | regra | alvo | resultado |
+|---|---|---|---|
+| M22 | GATE 22 (já visto não reabre) | contrato do tick | 6 RED -> MORDE |
+| M23 | sintética nunca encerra | contrato do tick | 4 RED -> MORDE |
+| M24 | sem prazo não encerra | contrato do tick | 6 RED -> MORDE |
+| M25 | «visto» grava | visto | 12 RED -> MORDE |
+| M26 | «visto» por endereço | visto | 6 RED -> MORDE |
+| M27 | id explícito no `criarEdicao` | R-1 | 9 RED -> MORDE |
+| M28 | servidor marca o sintético | R-1 | 3 RED -> MORDE |
+| **M29** | **os dois handlers marcam visto (M4 do validador)** | **handlers** | **8 RED -> MORDE** |
+| M30 | guarda da sobrescrita | R-1 | 3 RED -> MORDE |
+| M31 | exige o `agora` do servidor | contrato do tick | 4 RED -> MORDE |
+
+Baseline e alvos finais: tick 13/13, visto 8/8, R-1 8/8, handlers 4/4 — VERDE.
+Suíte canónica final: frontend 694/694 · backend 992/998 (VERDE).
+
+⚠️ Nota de instrumento (3.ª vez na série, declarada): o M24 ficou com a âncora morta quando a correcção
+lhe mudou a linha, e o martelo classificou-o «ANCORA NAO UNICA (0)» em vez de o correr — detectado e
+corrigido (nova âncora + fallback de EOL no martelo para âncoras multi-linha). Sem este passo o M24
+teria ficado por correr sem ninguém dar por isso.

@@ -276,6 +276,22 @@ export async function criarEdicao({ tipo, produto, duracaoSegundos, duracaoMin, 
     }
   }
 
+  // UTAC000.17bc — validador adversarial (ressalva 2, corrigida): com id EXPLÍCITO não se sobrescreve
+  // uma edição que JÁ EXISTE. Recriar a R-1 por engano apagaria uma edição viva (com lances e histórico)
+  // sem aviso; a sobrescrita era incondicional (`setJSON`). Sem id explícito nada muda (o id sequencial
+  // é sempre novo). Falha-CLOSED: se a leitura falhar, RECUSA (uma operação destrutiva não pode arriscar).
+  if (idPedido != null && String(idPedido) !== "") {
+    let existente = null;
+    try {
+      existente = await store.get(id, { type: "json" });
+    } catch {
+      return { ok: false, code: "store_indisponivel", message: "não foi possível confirmar se a edição já existe" };
+    }
+    if (existente && existente.id) {
+      return { ok: false, code: "edicao_ja_existe", message: `já existe a edição ${id}` };
+    }
+  }
+
   // MC-ECOMMERCE-01a — ligação edição → produto do catálogo, decidida AQUI pelo admin.
   // É a única fonte que a ponte apuração → catálogo lê (o `edicaoId` que o lojista
   // escreve no produto não conta). Opcional: sem produtoId, a edição não vende do catálogo.

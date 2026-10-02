@@ -97,3 +97,35 @@ apagar a regra antiga): `utac00014-show-overlay.test.mjs` (a fonte do prazo pass
 falta por razões de autorização; o que resta da Frente B é uma **tarefa de dados agendada** para outro
 UTAC, com parâmetros já fixados (id `R-1`, 1800 s, via `criarEdicao({id:'R-1'})` — código já testado em
 `_tests/utac0017bc-edicao-r1.test.mjs`).
+
+## 9. 2.ª RONDA — veredicto do validador e correcções (2026-10-02)
+
+**Veredicto: APROVA (com ressalvas)** — transcrição verbatim em `_logs/UTAC000.17bc_SEG4_VALIDADOR.md`.
+Ele confirmou as alegações (A) (B) (C) (E) e **refutou parcialmente a (D)**: o mutante dele M4 (remover
+`marcarVisto` dos dois handlers) **sobrevivia às 4 suítes** ⇒ a cablagem «FECHAR/NOVA RODADA marca visto»
+não estava coberta. Corrigido tudo nesta ronda:
+
+| # | correcção | ficheiro | prova |
+|---|---|---|---|
+| 1 | NOVO teste que **executa os dois handlers** com duplos e exige `marcarVisto(address, EDICAO_ATIVA)` | `src/context/__tests__/utac0017bc-handlers-visto.test.mjs` (4 casos) | **M29 (o M4 dele) → 8 RED** |
+| 2 | guarda contra **sobrescrita** com id explícito (`edicao_ja_existe`) + **falha-CLOSED** se a leitura falhar | `_lib/edicoes-core.mjs` | 2 testes novos (8/8) + **M30 → 3 RED** |
+| 3 | o fim **exige o `agora` do servidor** (`offsetRelogioMs === null` ⇒ não decide) — corrige a minha alegação imprecisa | `src/context/AppContext.jsx` | teste novo (13/13) + **M31 → 4 RED** |
+| 4 | guarda de tipo na contagem de lances; contrato do agregado nos DOIS overlays; caso no arnês (FECHAR renderizado; sem participações, secção ausente) | overlays + `utac0017bc-overlay-agregado.test.mjs` (7 casos) + arnês (8 casos) | verde |
+
+**Martelo final: 10 mutantes, 10 mordem** (M22–M31), restauros md5-idênticos.
+**Suíte canónica final: frontend 694/694 · backend 992/998 (VERDE)** (era 681/681 + 990/996).
+
+**Limites medidos e declarados (não escondidos):**
+- o **conteúdo** da secção agregada (linhas + «🏆 VENCEU») não é renderizável no arnês: sonda própria
+  mediu `authToken = null` (visitante) e `globalThis.sessionStorage` inexistente no contexto SSR ⇒ não há
+  caminho para autenticar o fetch ali. Fica sob contrato de código (7 asserções nos dois sítios);
+- a ressalva (B) do validador — `address === null` ⇒ o «visto» não persiste e o overlay reabriria —
+  **registada no `DEBT.md`** (inalcançável com prazo real; resolve-se quando existir R-1 real);
+- o item 4 da lista dele («medir o `jaVisto` a 4 Hz») fica **por medir** (declarado).
+
+## 10. Fecho das dívidas
+
+| dívida | estado | nota |
+|---|---|---|
+| **DEBT-016** (prazo real do relâmpago + `onClose`) | **FECHADA** | prazo do servidor, sintético barrado, `onClose` + «visto» com veredicto adversarial e correcções aplicadas |
+| **DEBT-017** (R-1 sintética) | **CÓDIGO FECHADO · CRIAÇÃO TRANSFERIDA (R18-a)** | `criarEdicao({id:'R-1'})` criado, testado e agora sem sobrescrita; a criação REAL em produção passa para o UTAC que desligar o `EM_BREVE_MODE` (duração decidida: 1800 s) |
