@@ -69,12 +69,15 @@ export async function listarBids(edicaoId) {
  *
  * @returns {Promise<Array<{edicaoId: string, lances: number}>>} ordenado por edicaoId.
  */
-export async function listarEdicoesPorEndereco(endereco, store = abrir()) {
+export async function listarEdicoesPorEndereco(endereco, { edicaoId = null, store = abrir() } = {}) {
   const alvo = `:${String(endereco).toLowerCase()}:`;
   const contagem = new Map();
+  // Com uma edi\u00e7\u00e3o concreta a listagem estreita para `bid:{edicaoId}:` \u2014 o caso normal do 17c
+  // (o overlay pergunta por UMA edi\u00e7\u00e3o) deixa de varrer a store inteira. Sem filtro, varre tudo.
+  const prefix = edicaoId ? `bid:${edicaoId}:` : "bid:";
   let cursor;
   do {
-    const page = await store.list({ prefix: "bid:", cursor });
+    const page = await store.list({ prefix, cursor });
     for (const b of page.blobs || []) {
       const partes = b.key.split(":");           // ["bid", edicaoId, endereco, sufixo]
       if (partes.length !== 4) continue;         // ignora marcadores (ex.: bid:{edicao}:consolidado)

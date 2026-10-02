@@ -52,8 +52,8 @@ export async function getLances(edicaoId) {
  * Delega no Key-Per-Bid do MC28: lê SÓ as chaves (o endereço está na chave) ⇒
  * zero leitura de valores.
  */
-export async function listarEdicoesPorEndereco(endereco) {
-  return listarEdicoesNoStore(endereco);
+export async function listarEdicoesPorEndereco(endereco, opcoes = {}) {
+  return listarEdicoesNoStore(endereco, opcoes);
 }
 
 /**

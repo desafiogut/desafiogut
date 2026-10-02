@@ -118,7 +118,19 @@ test("backend supabase: a query NUNCA pede payload (GATE 22 ao nível do SQL)", 
 test("backend supabase: ?edicaoId= filtra e edição sem participação → vazio", async () => {
   const a = await chamar("?edicaoId=R-2");
   assert.deepEqual(a.corpo.participacoes, [{ edicaoId: "R-2", lances: 1 }]);
+  // ESTREITAMENTO: com ?edicaoId= a query filtra TAMBÉM por edicao_id (usa o índice dessa coluna).
+  const q = consultas.find((c) => c.filtros.some(([col]) => col === "edicao_id"));
+  assert.ok(q, "com ?edicaoId= a query tem de incluir o filtro edicao_id");
+  assert.deepEqual(q.filtros, [["endereco", TITULAR], ["edicao_id", "R-2"]]);
   const b = await chamar("?edicaoId=R-9");   // R-9 é de OUTRO
   assert.equal(b.status, 200);
   assert.deepEqual(b.corpo.participacoes, []);
+});
+
+test("camada supabase: chamada DIRECTA com endereço EIP-55 casa (mata o sobrevivente SURV-2 do validador)", async () => {
+  // Chamada directa à camada de dados: aqui o `.toLowerCase()` do alvo é a única defesa (o handler
+  // normaliza antes via `validarEndereco`, logo nenhum teste do endpoint o exercia).
+  const { listarEdicoesPorEndereco } = await import("../_lib/data-store-supabase.mjs");
+  const out = await listarEdicoesPorEndereco("0xAAA0000000000000000000000000000000000aAa");
+  assert.deepEqual(out, [{ edicaoId: "R-1", lances: 2 }, { edicaoId: "R-2", lances: 1 }]);
 });

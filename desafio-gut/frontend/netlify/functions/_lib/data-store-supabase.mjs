@@ -110,17 +110,20 @@ export async function getLances(edicaoId) {
  * `payload`/valores de lance (é o que distingue este endpoint do exportar-dados).
  * Paginado como o getLances (o PostgREST corta a resposta ~1000 linhas).
  */
-export async function listarEdicoesPorEndereco(endereco) {
+export async function listarEdicoesPorEndereco(endereco, { edicaoId = null } = {}) {
   const supabase = getSupabase();
   const alvo = String(endereco).toLowerCase();
   const contagem = new Map();
   let desde = 0;
   let total = Infinity;
   while (desde < total) {
-    const { data, error, count } = await supabase
+    let consulta = supabase
       .from(TABELA_LANCES)
       .select("edicao_id", { count: "exact" })
-      .eq("endereco", alvo)
+      .eq("endereco", alvo);
+    // Filtro opcional por edição concreta: estreita a leitura (e usa o índice de `edicao_id`).
+    if (edicaoId) consulta = consulta.eq("edicao_id", String(edicaoId));
+    const { data, error, count } = await consulta
       .order("edicao_id", { ascending: true })
       .order("id", { ascending: true }) // desempate estável → paginação determinística
       .range(desde, desde + PAGINA_LANCES - 1);

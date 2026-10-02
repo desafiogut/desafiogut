@@ -68,6 +68,6 @@ export function backendAtivo() {
  * (UTAC000.17a). Devolve `[{edicaoId, lances}]` — nunca valores de lance.
  * Fala SEMPRE com a implementação do backend ativo (blobs ou supabase).
  */
-export async function listarEdicoesPorEndereco(endereco) {
-  return (await impl()).listarEdicoesPorEndereco(endereco);
+export async function listarEdicoesPorEndereco(endereco, opcoes = {}) {
+  return (await impl()).listarEdicoesPorEndereco(endereco, opcoes);
 }

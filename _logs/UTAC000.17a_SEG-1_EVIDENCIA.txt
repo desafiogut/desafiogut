@@ -46,7 +46,11 @@ Suíte inicial: frontend 670/670 · backend 967/973 (medida com
 [7] FINS DE LINHA (medido em bytes, NÃO suposto)
     O backend é MISTO por ficheiro: funções 62 CRLF / 14 LF / 1 misto; _lib 53/21/1; _tests 58/50/2.
     Pares deste endpoint: exportar-dados.mjs CRLF · lances-flash.mjs CRLF · cotas.mjs LF.
-    Decisão: endpoint novo em CRLF (como os seus pares) e testes em LF (como mc104-*-test.mjs).
+    Decisão (PLANO): endpoint novo em CRLF (como os seus pares) e testes em LF (como mc104-*-test.mjs).
+    ⚠️ CORRECÇÃO MEDIDA (a imprecisão foi apanhada pelo validador adversarial): o ficheiro ESCRITO ficou
+    **LF** (CRLF=0; 96→97 linhas) — eu declarei «CRLF» por PLANO, sem o ter medido no ficheiro final.
+    Re-medido depois das correcções: endpoint LF · _lib CRLF · testes LF ⇒ todos internamente
+    CONSISTENTES (sem mistura). Lição: medir o ficheiro escrito, não o plano.
     Cada ficheiro ficou internamente CONSISTENTE (sem mistura) — verificado byte a byte.
 
 [8] ESCOPO DO DIFF (medido após a implementação, ANTES do commit)

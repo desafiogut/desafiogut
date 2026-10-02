@@ -9,6 +9,7 @@
 //   impossível pedir participações de terceiros (não há nada a comparar nem a forjar).
 //
 // Resposta: { participacoes: [{ edicaoId, lances }], total, filtro }
+//   ⚠️ `total` = número de EDIÇÕES (não de lances) — a contagem de lances vai em `lances` de cada item.
 //   — só EDIÇÕES e a contagem de lances do titular. ZERO valores de lance (GATE 22):
 //     o 17c não precisa deles e o exportar-dados LGPD já cobre a titularidade.
 //
@@ -78,7 +79,7 @@ export default async (req) => {
 
   let edicoes;
   try {
-    edicoes = await listarEdicoesPorEndereco(endereco);
+    edicoes = await listarEdicoesPorEndereco(endereco, { edicaoId: filtro });
   } catch (err) {
     console.error(`[${NOME}] falha a listar participações:`, err?.message);
     return jsonError(503, "store_indisponivel", "não foi possível ler as participações");

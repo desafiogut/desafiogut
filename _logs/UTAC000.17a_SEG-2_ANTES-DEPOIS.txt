@@ -48,7 +48,15 @@ DEPOIS: 2 ficheiros, 15 casos, todos VERDES:
 | M16 | `_lib/bids-store.mjs`: filtro do endereço neutralizado (`if (false) continue`) | **2 RED** (as duas provas de «só o titular») |
 | M17 | endpoint: acrescenta `payloadBruto` à resposta (viola GATE 22) | **1 RED** (o teste do GATE 22) |
 | M18 | endpoint: ignora o filtro `?edicaoId=` | **1 RED** (o teste do filtro) |
-Restauros: md5 idêntico ao backup nos 3 (9d0a96a8… / c23a95a1… / c23a95a1…). Estado final: 15/15 verde.
+Restauros: md5 idêntico ao backup nos 3. Estado final: 15/15 verde.
+
+⚠️ **2.ª RONDA (fecho das ressalvas do validador adversarial: ver §7 do relatório e
+`_logs/UTAC000.17a_SEG2_VALIDADOR.md`).** Corrigi o **custo** (prefixo estreito `bid:{edicaoId}:` em blobs
+`.eq("edicao_id")` em supabase), **matou os 2 sobreviventes** (testes directos com EIP-55) e
+**relabelou** o teste da paginação (a lib v10 devolve tudo; o laço é defensivo). Contagens REAIS contra
+os **dois** ficheiros: **M16 4 RED · M17 2 · M18 0 (mutante EQUIVALENTE — a correcção do custo tornou as
+duas defesas do filtro redundantes; o «1 RED» acima era da 1.ª ronda) · M19 2 · M20 2 · M21 2**, tudo
+restaurado com md5 idêntico. Testes: **15 → 17**; suíte backend **967/973 → 984/990**.
 
 ⚠️ Erros MEUS de instrumento nesta ronda (declarados):
   (a) patchei o `import` do `data-store-blobs.mjs` e esqueci-me de escrever a FUNÇÃO delegada —
