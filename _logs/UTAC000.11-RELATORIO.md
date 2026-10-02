@@ -117,4 +117,21 @@ fiz, pelo argumento de que o efeito é nulo; o argumento não substitui o fecho 
 Ver §9.
 
 ## 9. Custo da API (GATE 16)
-Lido de `state.db` no fecho — ver resposta final ao operador (mesma sessão do ciclo; declarado).
+**Declaração:** este UTAC correu na **mesma sessão Hermes** do ciclo (`20261001_184741_207919`,
+`cli`) — a plataforma não abriu sessão nova. Custo medido por **diferença** de leituras do `state.db`
+(`cost_status = estimated`):
+
+| | input | output | cache-read | ≈ USD |
+|---|---|---|---|---|
+| leitura no fecho do UTAC000.10 | 592 506 | 331 622 | 94 893 184 | 0,4415 |
+| leitura no fecho do UTAC000.11 | 678 081 | 396 279 | 117 671 168 | 0,5354 |
+| **diferença = UTAC000.11 (pai)** | **+85 575** | **+64 657** | **+22 777 984** | **≈ 0,0939** |
+
+Mais o **validador adversarial** (subagente próprio, sessão `20261001_210910_e6a8d8`): **US$ 0,0312**.
+
+**⇒ UTAC000.11 ≈ US$ 0,125** (0,0939 + 0,0312).
+
+**Limite de tempo (HI5/R18-2):** o padrão são **2 h**. Este UTAC somou a implementação, a 1.ª
+evidência, o **incidente do instrumento** (guardas apagadas e re-aplicadas), o fecho do veredicto e a
+**2.ª ronda** de guardas (que o validador obrigou) — **excedeu as 2 h**. Declarado: o trabalho
+posterior ao limite foram **fechos de ressalvas + registos**, não escopo novo.
