@@ -122,8 +122,15 @@ _(a preencher no fecho)_
 > background** (`process(wait proc_a2ec8941535 180s)`, log sem avançar desde 00:14:06). Os placeholders
 > `_(a preencher)_` do §A **não foram preenchidos por ele** — **não os invento**. Do transcript dele,
 > o que ficou **medido**:
-> - **Tempo por ficheiro:** nenhum ficheiro > 5,8 s; soma de todos = **49,7 s** (a «suíte de 90 s» é o
->   custo dos 49 spawns de `node`) ⇒ **não há teste com espera longa escondida** (hipótese descartada).
+> - **Tempo por ficheiro:** ele declarou «nenhum ficheiro > 5.8 s; soma de todos = **49,7 s**».
+>   ⚠️ **CORRECÇÃO MEDIDA (pelo artefacto DELE, `tmp-utac0013-val/v1-tempos.out`, que terminou depois
+>   de ele pendurar):** o ficheiro lista os **15 mais lentos**, com **max = 9 981 ms**
+>   (`src/pages/__tests__/MeusAtivos.test.mjs`) e **soma desses 15 = 83,8 s** — que **já excede** a
+>   «soma de todos = 49,7 s» por ele declarada ⇒ **os números dele não reconciliam** (o 5.8 s e o
+>   49,7 s foram lidos de um estado parcial). **A conclusão dele mantém-se válida:** não há teste com
+>   espera longa escondida (o mais lento é ~10 s, um teste de página em SSR) e **0 falhas** em todos
+>   os medidos. Top-5 medido: MeusAtivos 9 981 ms · utac0008-resultado-oficial 9 448 · Dashboard 9 316 ·
+>   utac0010-mercado-vencedor 9 059 · utac105c-meus-ativos 8 703 — **todos rc=0 fail=0**.
 > - **FASE A (suíte completa ×15), parcial:** `A-1` a `A-6` → **tests=630 · pass=630 · fail=0** em todas
 >   as corridas que registou antes de pendurar.
 > - **Harness com stdin não-TTY (`</dev/null`)**: lançado; resultado não chegou a ser registado.
