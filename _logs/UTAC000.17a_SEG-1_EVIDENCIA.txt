@@ -1,0 +1,57 @@
+UTAC000.17a — SEG-1: EVIDÊNCIA BRUTA (preservada ANTES de tocar em código) — 2026-10-02
+=========================================================================================
+Estado inicial: HEAD = origin/main = 7db1ff3 · árvore limpa (só package-lock pré-existente)
+Suíte inicial: frontend 670/670 · backend 967/973 (medida com
+`node scripts/mc966-suite-harness.mjs ambos`, foreground — em background o harness aborta com
+"stdin is not a tty").
+
+[1] STORE DE LANCES (backend ACTIVO = blobs)
+    ficheiro: netlify/functions/_lib/bids-store.mjs (73 linhas)
+    const STORE = "bids";            (consistency "strong")
+    Chave:  bid:{edicaoId}:{endereco}:{randomUUID().slice(0,8)}
+    Marcador de fecho: bid:{edicaoId}:consolidado
+    Funções: montarChaveBid / gravarBid / listarChavesBids(edicaoId) / listarBids(edicaoId)
+             / marcarConsolidado / estaConsolidado
+    -> listarChavesBids usa store.list({prefix: `bid:${edicaoId}:`, cursor}) => paginação por CURSOR.
+    -> NÃO existe listagem por endereço; MAS o endereço está DENTRO da chave.
+
+[2] FACADE DE DADOS (o sítio obrigatório para aceder a dados)
+    _lib/data-store.mjs (64 linhas): BACKEND = process.env.DATA_STORE_BACKEND || "blobs"
+    Interface ANTES:  getConfig / setConfig / getLances(edicaoId) / addLance(edicaoId, lance) / backendAtivo
+    Implementações: data-store-blobs.mjs (17-59) e data-store-supabase.mjs (129 linhas)
+
+[3] SUPABASE (implementação preparada para o flip) — é AQUI que está o «índice por endereço»
+    _lib/data-store-supabase.mjs, tabela `lances`, insert (l.120-126):
+        edicao_id, endereco (normalizado .toLowerCase()), hash_lance, valor_centavos, payload (JSONB)
+    -> colunas planas indexáveis: `endereco` e `edicao_id` => `.eq("endereco", x)` usa índice.
+
+[4] exportar-dados (LGPD art.18) — existe, mas NÃO serve para o overlay
+    POST, owner OU admin, body {endereco} (l.147-193)
+    l.156: aplicarRateLimit(req, "exportar-dados", 6)   <-- o «limite de 6» é RATE LIMIT (6 pedidos)
+    Devolve: saldo-rs, wallet, cotas, renovacao-adesao, voucher, consent-log, lance-idem, pedidos,
+             lances-relampago (do titular) e Supabase (12 tabelas: inclui lances por `endereco`)
+    -> devolve VALORES (payload com valorCentavos) => não é a forma que o 17c precisa.
+
+[5] lances-flash — NÃO vê os lances Key-Per-Bid
+    ficheiro: lances-flash.mjs (116 linhas); BLOB_LANCES = "lances-relampago" (blob LEGADO por edição)
+    -> os lances novos vivem em chaves `bid:*` individuais (Key-Per-Bid) => a lista flash fica vazia
+       de lances novos, e o «melhor lance» só existe APÓS consolidar (_lib/consolidacao.mjs).
+
+[6] ARNÊS DE TESTES DE FUNÇÕES
+    backend: node --test --experimental-test-module-mocks "_tests/*.test.mjs" (cwd = netlify/functions)
+    estilo: mock.module("@netlify/blobs", {...}) com Map em memória; mock.module("../_lib/jwt.mjs"),
+            "../_lib/rate-limiter.mjs", "../_lib/jwt-fail-counter.mjs"; depois await import(handler)
+    duplos reutilizáveis: _tests/_blobs-cas-duplo.mjs, _tests/_supabase-duplo-mc105a.mjs
+
+[7] FINS DE LINHA (medido em bytes, NÃO suposto)
+    O backend é MISTO por ficheiro: funções 62 CRLF / 14 LF / 1 misto; _lib 53/21/1; _tests 58/50/2.
+    Pares deste endpoint: exportar-dados.mjs CRLF · lances-flash.mjs CRLF · cotas.mjs LF.
+    Decisão: endpoint novo em CRLF (como os seus pares) e testes em LF (como mc104-*-test.mjs).
+    Cada ficheiro ficou internamente CONSISTENTE (sem mistura) — verificado byte a byte.
+
+[8] ESCOPO DO DIFF (medido após a implementação, ANTES do commit)
+    4 ficheiros alterados (+85 −1): _lib/bids-store.mjs, _lib/data-store.mjs,
+                                    _lib/data-store-blobs.mjs, _lib/data-store-supabase.mjs
+    3 ficheiros novos: minhas-participacoes.mjs, _tests/utac0017a-minhas-participacoes.test.mjs,
+                       _tests/utac0017a-minhas-participacoes-supabase.test.mjs
+    ZERO alterações fora disto (o exportar-dados NÃO foi tocado; nenhuma migração criada).

@@ -10,7 +10,7 @@
 // (ver recursos-app-config.mjs). Padrão herdado de system-state.mjs.
 
 import { getStore } from "@netlify/blobs";
-import { gravarBid, listarBids } from "./bids-store.mjs";
+import { gravarBid, listarBids, listarEdicoesPorEndereco as listarEdicoesNoStore } from "./bids-store.mjs";
 
 const STORE_CONFIG = "config-experiencia";
 
@@ -45,6 +45,15 @@ export async function setConfig(chave, valor) {
 /** Lê todos os lances de uma edição (delega na paginação/paralelismo do MC28). */
 export async function getLances(edicaoId) {
   return listarBids(edicaoId);
+}
+
+/**
+ * Lista as edições em que um endereço participou (UTAC000.17a).
+ * Delega no Key-Per-Bid do MC28: lê SÓ as chaves (o endereço está na chave) ⇒
+ * zero leitura de valores.
+ */
+export async function listarEdicoesPorEndereco(endereco) {
+  return listarEdicoesNoStore(endereco);
 }
 
 /**

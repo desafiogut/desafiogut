@@ -103,6 +103,43 @@ export async function getLances(edicaoId) {
 }
 
 /**
+ * Lista as EDIÇÕES em que um endereço participou (UTAC000.17a), pela coluna plana
+ * `endereco` da tabela `lances` (índice já existente — sem migração nova).
+ *
+ * Devolve `[{edicaoId, lances}]` ordenado por edicaoId; NUNCA lê nem devolve o
+ * `payload`/valores de lance (é o que distingue este endpoint do exportar-dados).
+ * Paginado como o getLances (o PostgREST corta a resposta ~1000 linhas).
+ */
+export async function listarEdicoesPorEndereco(endereco) {
+  const supabase = getSupabase();
+  const alvo = String(endereco).toLowerCase();
+  const contagem = new Map();
+  let desde = 0;
+  let total = Infinity;
+  while (desde < total) {
+    const { data, error, count } = await supabase
+      .from(TABELA_LANCES)
+      .select("edicao_id", { count: "exact" })
+      .eq("endereco", alvo)
+      .order("edicao_id", { ascending: true })
+      .order("id", { ascending: true }) // desempate estável → paginação determinística
+      .range(desde, desde + PAGINA_LANCES - 1);
+    if (error) throw new Error(`[data-store-supabase] listarEdicoesPorEndereco falhou: ${error.message}`);
+    if (typeof count === "number") total = count;
+    const lote = data ?? [];
+    for (const linha of lote) {
+      const id = linha.edicao_id;
+      if (id) contagem.set(id, (contagem.get(id) || 0) + 1);
+    }
+    if (lote.length === 0) break;  // salvaguarda anti-loop
+    desde += lote.length;
+  }
+  return [...contagem.entries()]
+    .map(([edicaoId, lances]) => ({ edicaoId, lances }))
+    .sort((a, b) => String(a.edicaoId).localeCompare(String(b.edicaoId)));
+}
+
+/**
  * Acrescenta um lance a uma edição. Espelha o gravarBid dos Blobs: gera a chave
  * Key-Per-Bid, guarda o registro completo (com a key) em payload e replica os
  * campos indexáveis nas colunas planas. Devolve a chave criada.

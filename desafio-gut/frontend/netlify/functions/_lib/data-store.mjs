@@ -62,3 +62,12 @@ export async function addLance(edicaoId, lance) {
 export function backendAtivo() {
   return BACKEND;
 }
+
+/**
+ * Lista as edições em que um endereço participou, só com a identidade do titular
+ * (UTAC000.17a). Devolve `[{edicaoId, lances}]` — nunca valores de lance.
+ * Fala SEMPRE com a implementação do backend ativo (blobs ou supabase).
+ */
+export async function listarEdicoesPorEndereco(endereco) {
+  return (await impl()).listarEdicoesPorEndereco(endereco);
+}

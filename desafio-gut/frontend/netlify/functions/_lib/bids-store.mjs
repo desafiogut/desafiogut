@@ -59,6 +59,35 @@ export async function listarBids(edicaoId) {
   return out;
 }
 
+/**
+ * Lista as EDIÇÕES em que um endereço deu lance (UTAC000.17a).
+ *
+ * Aproveita o Key-Per-Bid existente: o endereço está DENTRO da chave
+ * (`bid:{edicaoId}:{endereco}:{sufixo}`), logo as participações deduzem-se de uma
+ * única listagem de chaves — SEM ler um único valor (custo mínimo e zero exposição
+ * de dados de lance). Não é precisa migração nem índice novo.
+ *
+ * @returns {Promise<Array<{edicaoId: string, lances: number}>>} ordenado por edicaoId.
+ */
+export async function listarEdicoesPorEndereco(endereco, store = abrir()) {
+  const alvo = `:${String(endereco).toLowerCase()}:`;
+  const contagem = new Map();
+  let cursor;
+  do {
+    const page = await store.list({ prefix: "bid:", cursor });
+    for (const b of page.blobs || []) {
+      const partes = b.key.split(":");           // ["bid", edicaoId, endereco, sufixo]
+      if (partes.length !== 4) continue;         // ignora marcadores (ex.: bid:{edicao}:consolidado)
+      if (`:${partes[2]}:` !== alvo) continue;   // não é este endereço (endereços não têm ":")
+      contagem.set(partes[1], (contagem.get(partes[1]) || 0) + 1);
+    }
+    cursor = page.cursor;                        // undefined quando não há mais páginas
+  } while (cursor);
+  return [...contagem.entries()]
+    .map(([edicaoId, lances]) => ({ edicaoId, lances }))
+    .sort((a, b) => String(a.edicaoId).localeCompare(String(b.edicaoId)));
+}
+
 /** Marca a edição como consolidada (idempotência de fecho). */
 export async function marcarConsolidado(edicaoId, resultado) {
   await abrir().setJSON(`bid:${edicaoId}:consolidado`, {
