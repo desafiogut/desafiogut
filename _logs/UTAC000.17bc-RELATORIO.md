@@ -82,4 +82,5 @@ apagar a regra antiga): `utac00014-show-overlay.test.mjs` (a fonte do prazo pass
 - **Tempo: ~5 h** (limite 3 h, GATE 4) — **excedido e declarado**. O excedente tem causa medida: o arnês
   de runtime pendurava **6m40s** por causa do fixture antigo (prazo local) e a caça ao travamento +
   adaptação do arnês consumiu a maior parte do excedente.
-- Custo de API: ver §8 (medido no fecho da sessão).
+- **Custo de API (sessão dedicada): ≈ US$ 0,165** — `state.db` 1 316 732→**1 591 620** in · 741 503→**849 199** out (leitura anterior no fecho do UTAC000.17a: US$ 1,0220 → **1,1872**). **Sem subagente** (o validador não chegou a ser despachado).
+- **Saldo da API no fecho: US$ 0,80** (era 1,09 no fecho do UTAC000.17a).
