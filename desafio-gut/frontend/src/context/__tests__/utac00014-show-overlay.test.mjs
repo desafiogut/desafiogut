@@ -6,7 +6,9 @@
 // O QUE SE PROVA
 //   Quando o prazo da edição chega a 0, a máquina de fim de leilão do `AppContext` liga o
 //   relâmpago e, 1200 ms depois, ABRE o overlay do vencedor (`setShowOverlay(true)`) — UMA vez.
-//   Estava desligado desde o MC63/64 (linha comentada); o UTAC000.14 religou-o.
+//   Estava desligado desde o MC63/64 (linha comentada); o UTAC000.14 religou-o — mas SÓ com o
+//   leilão aberto: em EM BREVE (`EM_BREVE_MODE = true`) o prazo do relâmpago é um cronómetro LOCAL
+//   de 30 min e o overlay abria sozinho sobre ecrãs «Em breve» (refutação do validador, SEG-3).
 //
 // ARNÊS: o `AppContext.jsx` não se renderiza em teste (importa o Privy e faz I/O — ver a nota de
 // `utac0010-vencedor-contexto.test.mjs`). Aqui vai-se um passo além da extracção por regex: a
@@ -32,11 +34,11 @@ function extrairTick(src) {
 }
 
 /** Monta a `tick` com duplos e devolve o registo das chamadas. */
-function montar(codigoTick, { prazoTimestamp, encerrado = false, agoraSeg }) {
+function montar(codigoTick, { prazoTimestamp, encerrado = false, agoraSeg, emBreve = false }) {
   const chamadas = [];
   const temporizadores = [];
   const duplos = {
-    prazoTimestamp, encerrado,
+    prazoTimestamp, encerrado, EM_BREVE_MODE: emBreve,
     setEncerrado: (v) => chamadas.push(["setEncerrado", v]),
     setLightningActive: (v) => chamadas.push(["setLightningActive", v]),
     setShowOverlay: (v) => chamadas.push(["setShowOverlay", v]),
@@ -89,8 +91,25 @@ describe("UTAC000.14 · AppContext — o overlay do vencedor volta a abrir no fi
     assert.deepEqual(m.chamadas, [["setEncerrado", false], ["setShowOverlay", false]]);
   });
 
+  test("EM BREVE: o prazo chega a 0 mas o overlay NÃO abre (o relâmpago, sim)", () => {
+    const m = montar(extrairTick(fonte()), { prazoTimestamp: 1000, agoraSeg: 1000, emBreve: true });
+    m.tick(); m.temporizadores[0].fn();
+    assert.equal(disparos(m.chamadas, true), 0, "o overlay abriu em EM BREVE (o defeito do SEG-3)");
+    assert.deepEqual(m.chamadas.slice(-1), [["setLightningActive", false]], "a máquina do relâmpago mudou");
+  });
+
+  test("hoje (`EM_BREVE_MODE` real do leilaoLock.js): o AppContext usa ESSA flag, e o overlay não abre", async () => {
+    const { EM_BREVE_MODE } = await import("../../lib/leilaoLock.js");
+    assert.ok(fonte().includes('\nimport { EM_BREVE_MODE } from "../lib/leilaoLock.js";\n'),
+      "o AppContext deixou de ler a flag da fonte única (leilaoLock.js)");
+    const m = montar(extrairTick(fonte()), { prazoTimestamp: 1000, agoraSeg: 1000, emBreve: EM_BREVE_MODE });
+    m.tick(); m.temporizadores[0].fn();
+    assert.equal(disparos(m.chamadas, true), EM_BREVE_MODE ? 0 : 1,
+      `com EM_BREVE_MODE=${EM_BREVE_MODE} o overlay devia ${EM_BREVE_MODE ? "ficar fechado" : "abrir"}`);
+  });
+
   test("CONTROLO: com a linha de novo comentada (em memória), o overlay NÃO abre — o teste morde", () => {
-    const desligado = extrairTick(fonte()).replace("setShowOverlay(true);", "// setShowOverlay(true);");
+    const desligado = extrairTick(fonte()).replace("if (!EM_BREVE_MODE) setShowOverlay(true);", "// setShowOverlay(true);");
     assert.notEqual(desligado, extrairTick(fonte()), "controlo mal construído: a substituição não entrou");
     const m = montar(desligado, { prazoTimestamp: 1000, agoraSeg: 1000 });
     m.tick(); m.temporizadores[0].fn();

@@ -109,3 +109,66 @@ package-lock.json: já modificado no baseline (SEG-1 §1) — NÃO é deste UTAC
 Com showOverlay=true o vencedor aparece / sem ele não aparece: coberto pelos testes de página existentes, verdes na suíte:
   Dashboard.test.mjs 'o overlay de FIM DE LEILÃO recebe o MESMO vencedor oficial' (contagem 1 vs 2)
   utac0010-mercado-vencedor.test.mjs (overlay do Mercado com/sem showOverlay)
+
+================================================================
+== 2.ª RONDA — validador REFUTOU a Frente C (G1); decisão do operador: «Religar só fora do EM BREVE» (R18) ==
+Premissas do G1 confirmadas pelo executor no código: AppContext l.192-194 prazoFlash LOCAL (default now+1800s);
+leilaoTimer.lerPrazoStorage aceita prazo vencido há < 600 s; leilaoLock.js l.10 EM_BREVE_MODE = true.
+
+== Diff da 2.ª ronda (AppContext.jsx) ==
+diff --git a/desafio-gut/frontend/src/context/AppContext.jsx b/desafio-gut/frontend/src/context/AppContext.jsx
+index ea4a168..29a4fc3 100644
+--- a/desafio-gut/frontend/src/context/AppContext.jsx
++++ b/desafio-gut/frontend/src/context/AppContext.jsx
+@@ -36,6 +36,7 @@ import {
+ } from "../lib/leilaoTimer.js";
+ import { apiGet, apiPost } from "../lib/api.js";
+ import { enviarConsentimentoPendente } from "../lib/consentimento.js";
++import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
+ import { VERSAO_CONSENTIMENTO } from "../components/TermosConsentimento.jsx";
+ import {
+   enderecoSessaoSincrono,
+@@ -1202,7 +1203,9 @@ export function AppProvider({ children }) {
+             setLightningActive(false);
+             // UTAC000.14 — religado por decisão do operador (estava desligado desde o MC63/64).
+             // Os dois overlays que esta flag abre já têm guarda de tipo (UTAC000.11 / UTAC000.14).
+-            setShowOverlay(true);
++            // ⚠️ Validador do UTAC000.14: em EM BREVE o prazo do relâmpago é um cronómetro LOCAL de
++            // 30 min ⇒ o overlay abria sozinho sobre ecrãs «Em breve». Só abre com o leilão aberto.
++            if (!EM_BREVE_MODE) setShowOverlay(true);
+             timeoutAnimRef.current = null;
+           }, 1200);
+         }
+md5 AppContext.jsx: 9a64493b… (1.ª ronda) → e1e675369989d194039ffe91942c4ddb
+
+== Teste utac00014-show-overlay (7 casos) ==
+    ok 1 - prazo a 0: relâmpago já, e 1200 ms depois `setShowOverlay(true)`
+    ok 2 - anti-duplicação: ticks seguintes com prazo a 0 não reabrem o overlay
+    ok 3 - prazo no futuro: o overlay NÃO abre (controlo negativo)
+    ok 4 - prazo reaberto on-chain depois de encerrado: fecha o overlay (inalterado)
+    ok 5 - EM BREVE: o prazo chega a 0 mas o overlay NÃO abre (o relâmpago, sim)
+    ok 6 - hoje (`EM_BREVE_MODE` real do leilaoLock.js): o AppContext usa ESSA flag, e o overlay não abre
+    ok 7 - CONTROLO: com a linha de novo comentada (em memória), o overlay NÃO abre — o teste morde
+# pass 7
+# fail 0
+
+== Mutações (restauro da cópia AppContext.jsx.r2, md5 verificado após cada uma) ==
+M17: # pass 4 # fail 3 
+    not ok 5 - EM BREVE: o prazo chega a 0 mas o overlay NÃO abre (o relâmpago, sim)
+    not ok 6 - hoje (`EM_BREVE_MODE` real do leilaoLock.js): o AppContext usa ESSA flag, e o overlay não abre
+    not ok 7 - CONTROLO: com a linha de novo comentada (em memória), o overlay NÃO abre — o teste morde
+M16: # pass 5 # fail 2 
+    not ok 1 - prazo a 0: relâmpago já, e 1200 ms depois `setShowOverlay(true)`
+    not ok 2 - anti-duplicação: ticks seguintes com prazo a 0 não reabrem o overlay
+M18: # pass 6 # fail 1 
+    not ok 6 - hoje (`EM_BREVE_MODE` real do leilaoLock.js): o AppContext usa ESSA flag, e o overlay não abre
+M19: # pass 2 # fail 5 
+    not ok 1 - prazo a 0: relâmpago já, e 1200 ms depois `setShowOverlay(true)`
+    not ok 2 - anti-duplicação: ticks seguintes com prazo a 0 não reabrem o overlay
+    not ok 5 - EM BREVE: o prazo chega a 0 mas o overlay NÃO abre (o relâmpago, sim)
+    not ok 6 - hoje (`EM_BREVE_MODE` real do leilaoLock.js): o AppContext usa ESSA flag, e o overlay não abre
+    not ok 7 - CONTROLO: com a linha de novo comentada (em memória), o overlay NÃO abre — o teste morde
+M17 = EM_BREVE_MODE ignorado (pedido do operador) · M16 = linha comentada · M18 = import da fonte única removido · M19 = condição invertida
+
+== Suíte (foreground) ==
+frontend VERDE 661/661 · backend VERDE 967/973 · vite build (scratchpad, não dist/) exit 0

@@ -36,6 +36,7 @@ import {
 } from "../lib/leilaoTimer.js";
 import { apiGet, apiPost } from "../lib/api.js";
 import { enviarConsentimentoPendente } from "../lib/consentimento.js";
+import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
 import { VERSAO_CONSENTIMENTO } from "../components/TermosConsentimento.jsx";
 import {
   enderecoSessaoSincrono,
@@ -1202,7 +1203,9 @@ export function AppProvider({ children }) {
             setLightningActive(false);
             // UTAC000.14 — religado por decisão do operador (estava desligado desde o MC63/64).
             // Os dois overlays que esta flag abre já têm guarda de tipo (UTAC000.11 / UTAC000.14).
-            setShowOverlay(true);
+            // ⚠️ Validador do UTAC000.14: em EM BREVE o prazo do relâmpago é um cronómetro LOCAL de
+            // 30 min ⇒ o overlay abria sozinho sobre ecrãs «Em breve». Só abre com o leilão aberto.
+            if (!EM_BREVE_MODE) setShowOverlay(true);
             timeoutAnimRef.current = null;
           }, 1200);
         }
