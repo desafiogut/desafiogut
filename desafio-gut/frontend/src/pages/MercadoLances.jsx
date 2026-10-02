@@ -67,10 +67,21 @@ function CountdownOverlay() {
 }
 
 function OverlayVencedor({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA, isMobile }) {
-  const enderecoAbrev = vencedor
+  // UTAC000.11 (DEBT-011) — GUARDA. Um `vencedor` MALFORMADO não pode rebentar o overlay.
+  // Medido (validador adversarial do UTAC000.10 + reprodução própria): com `{}` ou
+  // `{ endereco: null }` isto lançava `TypeError: Cannot read properties of undefined/null
+  // (reading 'slice')`; e com endereço mas sem valor mostrava «R$ NaN».
+  // REGRA: malformado trata-se como AUSENTE («—»), CAMPO A CAMPO — exactamente o que o ramo
+  // `: "—"` já fazia quando `vencedor` era `null`. Espelha a guarda do cartão do Dashboard
+  // (`Dashboard.jsx` l. 410, `vencedorExibido.endereco ? … : "—"`), que já tinha este cuidado.
+  // Com um `vencedor` VÁLIDO nada muda (GATE 18): as duas condições são verdadeiras e as
+  // expressões são as mesmas de antes.
+  const enderecoAbrev = vencedor?.endereco
     ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
     : "—";
-  const valorFmt = vencedor ? `R$ ${(vencedor.valor / 100).toFixed(2)}` : "—";
+  const valorFmt = Number.isFinite(vencedor?.valor)
+    ? `R$ ${(vencedor.valor / 100).toFixed(2)}`
+    : "—";
 
   return (
     <>

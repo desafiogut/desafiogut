@@ -136,3 +136,54 @@ describe("UTAC000.10 · MercadoLances — o overlay mostra o vencedor DO CONTEXT
     assert.ok(!html.includes("EDIÇÃO ENCERRADA"), "o overlay apareceu sem o contexto o pedir");
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// UTAC000.11 (DEBT-011) — A GUARDA DO VENCEDOR.
+// Achado do validador adversarial do UTAC000.10: `MercadoLances.jsx` l. 70-73 fazia
+// `vencedor.endereco.slice(…)` SEM guarda ⇒ com `vencedor` malformado o overlay REBENTAVA:
+//     TypeError: Cannot read properties of undefined/null (reading 'slice')
+// Pré-existente e hoje inalcançável pelo contexto real (o ramo oficial passa por
+// `normalizarResultadoOficial`, que exige `0x`+40 hex), mas fica alcançável se o `showOverlay`
+// for religado. O cartão do Dashboard já tinha a guarda equivalente (`Dashboard.jsx` l. 410).
+// Regra: **malformado trata-se como AUSENTE** ("—"), que é o que o ramo `: "—"` já fazia quando
+// `vencedor` era `null`. Com `vencedor` válido, NADA muda (GATE 18).
+describe("UTAC000.11 · OverlayVencedor — vencedor malformado não rebenta (DEBT-011)", () => {
+  // ⚠️ SEMÂNTICA DECLARADA (a minha 1.ª versão do teste exigia «—» nos DOIS campos e ficou RED
+  // com o código correcto — expectativa minha sobre-especificada): a guarda é **CAMPO A CAMPO**,
+  // como a do Dashboard. Um objecto semi-válido mostra o que é utilizável e «—» no que falta;
+  // NÃO se inventa coerência global (isso seria comportamento novo). O que NÃO pode acontecer:
+  // (a) lançar; (b) mostrar «R$ NaN».
+  // Cada caso: `renderizar` LANÇA se a guarda não estiver lá — é o teste que morde.
+  const CASOS = [
+    // [nome,                                    vencedor,                        endereço esperado,   valor esperado]
+    ["objecto vazio",                           {},                              "—",                 "—"],
+    ["endereço null, valor 0",                  { endereco: null, valor: 0 },    "—",                 "R$ 0.00"],
+    ["sem endereço, valor presente",            { valor: 300 },                  "—",                 "R$ 3.00"],
+    ["endereço presente, sem valor",            { endereco: EU },                abrev(EU),           "—"],
+    ["endereço e valor null",                   { endereco: null, valor: null }, "—",                 "—"],
+    ["valor não numérico",                      { endereco: EU, valor: "300" },  abrev(EU),           "—"],
+    ["VÁLIDO (o caso que não pode mudar)",      { endereco: EU, valor: 300 },    abrev(EU),           "R$ 3.00"],
+  ];
+
+  for (const [nome, vencedor, enderecoEsperado, valorEsperado] of CASOS) {
+    test(`${nome}: não rebenta; endereço «${enderecoEsperado}», valor «${valorEsperado}»`, () => {
+      let html = null;
+      assert.doesNotThrow(() => { html = renderizar({ showOverlay: true, vencedor, lances: [] }); },
+        `o overlay rebentou com vencedor malformado (${nome}) — TypeError: Cannot read properties of undefined/null (reading 'slice')`);
+      assert.ok(html.includes("EDIÇÃO ENCERRADA"), "controlo: o overlay devia estar renderizado");
+      const bloco = blocoDoOverlay(html);
+      assert.ok(!/R\$ NaN/.test(bloco), "o overlay mostrou «R$ NaN»");
+      assert.ok(bloco.includes(enderecoEsperado), `endereço: esperava «${enderecoEsperado}»`);
+      assert.ok(bloco.includes(valorEsperado), `valor: esperava «${valorEsperado}»`);
+      // «—» é a MESMA string nos dois campos: conta-se o total esperado (1 por campo em falta),
+      // em vez de exigir 1 sempre — era o erro da minha 2.ª versão (dois «—» davam 2).
+      const tracos = (enderecoEsperado === "—" ? 1 : 0) + (valorEsperado === "—" ? 1 : 0);
+      assert.equal(contar(bloco, "—"), tracos, `esperava ${tracos} «—» no bloco`);
+    });
+  }
+
+  test("o caso VÁLIDO não ganhou nenhum «—» (GATE 18: nada mudou no que o utilizador vê)", () => {
+    const bloco = blocoDoOverlay(renderizar({ showOverlay: true, vencedor: { endereco: EU, valor: 300 }, lances: [] }));
+    assert.equal(contar(bloco, "—"), 0, "apareceu «—» num caso válido");
+  });
+});
