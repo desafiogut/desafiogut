@@ -51,6 +51,14 @@ o **gate** na l. 209 do `MercadoLances.jsx` (ficheiro autorizado) para
 `AppContext`. **Limites medidos:** **muda o gatilho** (não é «religar a flag»: abre por
 `encerrado && vencedor` e não pelos 1200 ms do lightning) e traz **apenas um** dos dois overlays (o do
 `Dashboard.jsx` l. 524 continua gateado pela flag, fora do escopo).
+**⚠️ REVISÃO DO PRÓPRIO VALIDADOR (e é decisiva):** depois de examinar os testes, ele **revogou** a
+refutação — a via do gate **colide com um teste-guarda deliberado** do UTAC000.10
+(`utac0010-mercado-vencedor.test.mjs`: «sem `showOverlay` não há overlay nenhum — o gate do contexto
+manda»), que codifica o contrato «**a página nunca re-deriva/decide o overlay; quem manda é o gate do
+contexto**» (DEBT-009). Usá-la **exigiria reescrever esse contrato testado** ⇒ não é uma solução de
+uma linha nem «religar o flag». **Conclusão dele: APROVA** (a minha medição estava correcta: o setter
+não está no `value`; o único produtor de `true` é a linha comentada no ficheiro **proibido**). A opção
+4ª fica na mesa **com esse custo medido** — o operador decide se quer mudar o contrato.
 ⚠️ **Determinante medido (e é um aviso):** religar torna **alcançáveis** os defeitos latentes das
 DEBT-011/012/013. As guardas do UTAC000.11/12 já estão no `OverlayVencedor` e no card do Dashboard;
 a do **`FimEdicaoOverlay` (DEBT-013) NÃO está** ⇒ religar sem fechar a DEBT-013 expõe «R$ NaN»/crash

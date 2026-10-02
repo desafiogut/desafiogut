@@ -79,6 +79,12 @@ produtor de `showOverlay = true`.
   esse ficheiro está **fora do escopo** deste UTAC; (c) o validador confirma a minha medição de base
   (o setter **não** está no `value`; o único produtor de `true` é a l.1205 comentada).
   ⇒ Escalado ao operador com **4 opções medidas** (ver §-1.6).
+  ⚠️ **REVISÃO DO VALIDADOR (decisiva):** ele **revogou** a própria refutação ao examinar os testes —
+  a via do gate **colide com um teste-guarda deliberado** do UTAC000.10
+  (`utac0010-mercado-vencedor.test.mjs` assere que, sem `showOverlay`, o overlay **não** aparece:
+  «o gate do contexto manda»), que codifica o contrato «a página nunca re-deriva/decide o overlay».
+  Usá-la **exigiria reescrever esse contrato** ⇒ **não é refutação limpa** e não é «religar o flag».
+  **Conclusão dele: APROVA** (a minha medição está correcta). A 4.ª opção fica com esse **custo medido**.
   ⚠️ **Correcção menor:** eu escrevi «`setShowOverlay(false)` em 4 sítios» — são **3 activos**
   (l.757, 1212, 1325) + a linha comentada.
 
