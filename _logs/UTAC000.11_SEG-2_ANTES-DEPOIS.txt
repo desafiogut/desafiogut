@@ -1,0 +1,101 @@
+UTAC000.11 — SEG-1/SEG-2: EVIDÊNCIA ANTES ↔ DEPOIS (guarda do vencedor em MercadoLances — DEBT-011)
+=====================================================================================================
+data: 2026-10-02 · base: 6282d8d = origin/main · sessão do mesmo ciclo (declarado no custo)
+
+─────────────────────────────────────────────────────────────────────────────────
+1. SUÍTE — ANTES (medido antes de tocar)
+─────────────────────────────────────────────────────────────────────────────────
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 600/600 pass
+backend: VERDE 967/973 pass
+
+─────────────────────────────────────────────────────────────────────────────────
+2. TESTE QUE FALHA ANTES (GATE 6a) — a reprodução é o RED
+─────────────────────────────────────────────────────────────────────────────────
+Escritos 7 casos (tabela) + 1 controlo, ainda SEM a guarda:
+$ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
+# tests 12 · # pass 7 · # fail 5        ← RED com os stack traces:
+    Cannot read properties of undefined (reading 'slice')   ({} e {valor:300})
+    Cannot read properties of null      (reading 'slice')   ({endereco:null,…} e {endereco:null,valor:null})
+    «o overlay mostrou «R$ NaN»»                            ({endereco:EU} sem valor)  ← 2.º defeito, achado agora
+
+─────────────────────────────────────────────────────────────────────────────────
+3. A GUARDA (Ponytail: 2 expressões, espelhando o Dashboard l.410)
+─────────────────────────────────────────────────────────────────────────────────
+-  const enderecoAbrev = vencedor
++  const enderecoAbrev = vencedor?.endereco
+     ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
+     : "—";
+-  const valorFmt = vencedor ? `R$ ${(vencedor.valor / 100).toFixed(2)}` : "—";
++  const valorFmt = Number.isFinite(vencedor?.valor)
++    ? `R$ ${(vencedor.valor / 100).toFixed(2)}`
++    : "—";
+
+─────────────────────────────────────────────────────────────────────────────────
+4. DEPOIS (GATE 6a/7) — o mesmo teste, com a guarda
+─────────────────────────────────────────────────────────────────────────────────
+$ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
+# tests 12 · # pass 12 · # fail 0
+
+$ node scripts/mc966-suite-harness.mjs ambos
+frontend: VERDE 608/608 pass        (600 + 8 novos: 7 casos + 1 controlo)
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+
+─────────────────────────────────────────────────────────────────────────────────
+5. MUTAÇÕES (GATE 6b/6c) — cada guarda tem o seu mutante
+─────────────────────────────────────────────────────────────────────────────────
+M13a — repor o defeito do ENDEREÇO
+  -  const enderecoAbrev = vencedor?.endereco
+  +  const enderecoAbrev = vencedor // MUTANTE M13a
+  md5 antes 48c619176a777765fa120938712a8509 · mutado 7a…(diferente = o mutante ENTROU)
+  $ node --test … utac0010-mercado-vencedor.test.mjs  →  # tests 12 · # fail 4     ← RED
+  RESTAURADO md5=48c619176a777765fa120938712a8509 (IDENTICO: True)
+
+M13b — repor o defeito do VALOR
+  -  const valorFmt = Number.isFinite(vencedor?.valor)
+  +  const valorFmt = vencedor // MUTANTE M13b
+  md5 antes 48c619176a777765fa120938712a8509 · mutado 86672ffa84c71bae426fc45270b9d461
+  $ node --test … utac0010-mercado-vencedor.test.mjs  →  # tests 12 · # fail 4     ← RED
+  RESTAURADO md5=48c619176a777765fa120938712a8509 (IDENTICO: True)
+
+─────────────────────────────────────────────────────────────────────────────────
+6. ESCOPO (GATE 2/HI4) — `git diff --name-only` contra 6282d8d
+─────────────────────────────────────────────────────────────────────────────────
+desafio-gut/frontend/src/pages/MercadoLances.jsx                        (AUTORIZADO)
+desafio-gut/frontend/src/pages/__tests__/utac0010-mercado-vencedor.test.mjs (AUTORIZADO — testes)
+desafio-gut/frontend/package-lock.json                                  (PRÉ-EXISTENTE, de fora do commit)
+Novos (untracked): _logs/UTAC000.11_*, _logs/utac0011-evidencia.sh.
+INTOCADOS: contrato, GUTO, Passe, Concurso, `_render.mjs`, `_ponte-ssr.mjs`, `vite.config.js`,
+`useResultadoOficial.js`, `MeusAtivos.jsx`, `Dashboard.jsx`, `AppContext.jsx`, backend.
+DEBT-001/002/003/005/006/010: não tocadas. `showOverlay`: NÃO religado (decisão de produto).
+
+─────────────────────────────────────────────────────────────────────────────────
+7. md5 DOS ENTREGÁVEIS (estado final, após os restauros)
+─────────────────────────────────────────────────────────────────────────────────
+48c619176a777765fa120938712a8509  src/pages/MercadoLances.jsx
+92ab72e0e4ae1f27e5b69cc1fa001770  src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
+
+─────────────────────────────────────────────────────────────────────────────────
+8. ⚠️ INCIDENTE DECLARADO (o meu instrumento apagou a minha própria correcção — recuperada)
+─────────────────────────────────────────────────────────────────────────────────
+A 1.ª versão de `_logs/utac0011-evidencia.sh` restaurava o ficheiro mutado com
+`git checkout -- desafio-gut/frontend/src/pages/MercadoLances.jsx`. Como a guarda AINDA NÃO ESTAVA
+COMMITADA, o checkout repôs o ficheiro do HEAD (= SEM guarda) e **apagou a correcção**: md5 voltou a
+`3748a94bdc69d05d841b0b45ca1d3e06` e o teste caiu a 6/12.
+  · detecção: o próprio script imprimiu «IDENTICO: NAO  <-- PARAR» e o `git diff` mostrou o ficheiro
+    sem a guarda;
+  · recuperação: guarda RE-APLICADA do patch conhecido → 12/12 verde (md5 novo
+    `48c619176a777765fa120938712a8509`, por o comentário ter sido reformulado);
+  · nada mais foi tocado; o `.bak` que o script deixou dentro do repo foi removido;
+  · **causa-raiz:** restaurar do HEAD um ficheiro com trabalho NÃO commitado — o restauro correcto é
+    de uma **cópia de segurança**. O script foi corrigido (copia para `tmp-utac0008/mercado-lances.bak`,
+    fora do repo) e o incidente ficou registado em comentário no próprio script.
+
+─────────────────────────────────────────────────────────────────────────────────
+9. DOIS DEFEITOS NO MESMO SÍTIO (declarado)
+─────────────────────────────────────────────────────────────────────────────────
+O veredicto do UTAC000.10 reportou o crash do ENDEREÇO (casos A4/A5). Ao escrever a tabela de casos
+encontrei um **segundo defeito na linha seguinte**: endereço presente + valor ausente mostrava
+«R$ NaN». Corrigido no mesmo passo (é o mesmo defeito, na expressão ao lado) e coberto por teste
+próprio + mutante próprio (M13b).

@@ -1,0 +1,91 @@
+# UTAC000.11 — Relatório: guarda do vencedor em MercadoLances (DEBT-011)
+
+**Data:** 2026-10-02 · **Executor:** Hermes Agent · **Base real medida:** `6282d8d` = `origin/main`
+**Objectivo:** fechar **DEBT-011** (achado do validador adversarial do UTAC000.10)
+**VEREDICTO: ENTREGUE** — 2 expressões guardadas (uma linha + a de baixo), suite verde, mutação que morde.
+
+---
+
+## 1. O defeito (reproduzido, com stack trace)
+`src/pages/MercadoLances.jsx` l. 69-73 (`OverlayVencedor`), **antes**:
+```js
+const enderecoAbrev = vencedor
+  ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`   // ← SEM guarda
+  : "—";
+const valorFmt = vencedor ? `R$ ${(vencedor.valor / 100).toFixed(2)}` : "—";
+```
+Reprodução real (capturada em `_logs/UTAC000.11_SEG-1_EVIDENCIA.txt` §3):
+| `vencedor` | resultado |
+|---|---|
+| `{}` | `TypeError: Cannot read properties of undefined (reading 'slice')` |
+| `{ endereco: null, valor: 0 }` | `TypeError: Cannot read properties of null (reading 'slice')` |
+| `{ valor: 300 }` | `TypeError: Cannot read properties of undefined (reading 'slice')` |
+| `{ endereco: null, valor: null }` | `TypeError: Cannot read properties of null (reading 'slice')` |
+| `{ endereco: EU }` | **Não rebenta — mostra «R$ NaN»** ← **2.º defeito, achado neste UTAC** |
+
+**Pré-existente e hoje inalcançável** pelo contexto real (o ramo oficial passa por
+`normalizarResultadoOficial`, que exige `0x`+40 hex). **Torna-se alcançável se o `showOverlay` for
+religado** — decisão de produto do operador, **não tomada aqui** (o spec proíbe).
+
+## 2. A correcção (Frente B) — Ponytail: 2 expressões
+```js
+const enderecoAbrev = vencedor?.endereco
+  ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
+  : "—";
+const valorFmt = Number.isFinite(vencedor?.valor)
+  ? `R$ ${(vencedor.valor / 100).toFixed(2)}`
+  : "—";
+```
+**Espelha a guarda que o cartão do Dashboard já tinha** (`Dashboard.jsx` l. 410:
+`vencedorExibido.endereco ? … : "—"`) — não inventa mecanismo novo. **Regra declarada:** malformado
+trata-se como **AUSENTE**, **campo a campo** (mostra o que é utilizável e «—» no que falta); não se
+inventa coerência global, que seria comportamento novo. **Com `vencedor` válido nada muda** (GATE 18).
+
+## 3. Provas (Frentes C/D)
+- **Teste que falha antes:** escritos os casos sem a guarda → **5 RED** com os stack traces (é a
+  reprodução, GATE 6a).
+- **Depois:** **12/12** no ficheiro; suíte **frontend 600/600 → 608/608 VERDE** (600 + 8 novos),
+  **backend 967/973 VERDE**.
+- **Mutação (cada guarda com o seu mutante):** **M13a** (tira a guarda do endereço) → **4 RED**;
+  **M13b** (tira a do valor) → **4 RED**; ambas restauradas com **md5 idêntico**.
+- **Escopo:** `git diff --name-only` = `MercadoLances.jsx` + o ficheiro de testes (+ `package-lock.json`
+  pré-existente). Nada mais. `showOverlay` **não** religado.
+- Evidência: `_logs/UTAC000.11_SEG-1_EVIDENCIA.txt` (reprodução + restauro conferido) e
+  `_logs/UTAC000.11_SEG-2_ANTES-DEPOIS.txt` (antes/depois, mutações, escopo, md5, incidente).
+
+## 4. ⚠️ Incidente do meu instrumento (declarado, com causa-raiz e correcção)
+A **1.ª versão** do script de evidência restaurava o ficheiro mutado com
+`git checkout -- MercadoLances.jsx`. Como a **guarda ainda não estava commitada**, o `checkout`
+repôs o ficheiro do HEAD (**sem guarda**) e **apagou a correcção** (md5 voltou a `3748a94b…`; teste
+caiu a 6/12). **Detecção:** o próprio script imprimiu «IDENTICO: NAO <-- PARAR». **Recuperação:**
+guarda re-aplicada do patch conhecido → 12/12 (md5 novo por o comentário ter sido reformulado).
+**Nada mais foi tocado.** **Causa-raiz:** restaurar **do HEAD** um ficheiro com trabalho **não
+commitado**. **Correcção:** o script passou a restaurar de **cópia de segurança fora do repo**
+(`tmp-utac0008/mercado-lances.bak`), com o incidente registado em comentário no próprio script, e o
+`.bak` que ficou dentro do repo foi removido.
+
+## 5. Validador adversarial (Frente SEG2) — obrigatório
+Despachado sobre o commit `dec577d`, em worktree próprio, instruído a **tentar refutar** (casos
+adversariais próprios, reprodução das mutações, varrimento de outros pontos sem guarda no ficheiro).
+Veredicto: `_logs/UTAC000.11_SEG-3_VALIDADOR.md`.
+
+## 6. O que este UTAC NÃO fez (declarado)
+- **Não religou o `showOverlay`** (decisão de produto, proibida ao executor) ⇒ a correcção continua
+  **sem efeito visível** hoje: é **robustez defensiva** para o dia em que o overlay for religado.
+- **Não tocou** em contrato, GUTO, Passe, Concurso, `_render.mjs`, `_ponte-ssr.mjs`, `vite.config.js`,
+  `useResultadoOficial.js`, `MeusAtivos.jsx`, `Dashboard.jsx`, `AppContext.jsx`, backend.
+- **Não fechou** DEBT-001/002/003/005/006/010.
+
+## 7. Ficheiros entregues
+| ficheiro | o que |
+|---|---|
+| `desafio-gut/frontend/src/pages/MercadoLances.jsx` | a guarda (l. 69-88), md5 `48c619176a777765fa120938712a8509` |
+| `desafio-gut/frontend/src/pages/__tests__/utac0010-mercado-vencedor.test.mjs` | +8 testes (7 casos + 1 controlo), md5 `92ab72e0e4ae1f27e5b69cc1fa001770` |
+| `_logs/UTAC000.11_SEG-1_MEDICAO.md` · `_logs/UTAC000.11_SEG-1_EVIDENCIA.txt` · `_logs/UTAC000.11_SEG-2_ANTES-DEPOIS.txt` · `_logs/utac0011-evidencia.sh` | medição, evidência bruta (reprodução), antes/depois e o script re-executável |
+| `_logs/DEBT.md` · `CLAUDE.md` · `_logs/UTAC000.11-RELATORIO.md` · `Desktop/UTAC000.11-RELATORIO.md` | registo em 3 lugares (R14/R18) |
+
+## 8. Custo
+Ver §9.
+
+## 9. Custo da API (GATE 16)
+Lido de `state.db` no fecho — ver resposta final ao operador (mesma sessão do ciclo; declarado).

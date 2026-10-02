@@ -1,0 +1,79 @@
+UTAC000.11 — SEG-1 · EVIDENCIA BRUTA (DEBT-011) · 2026-10-02 00:08 UTC
+======================================================================
+⚠️ O restauro usa CÓPIA DE SEGURANÇA (nunca `git checkout --`), porque o ficheiro tem
+   trabalho NÃO COMMITADO — lição do incidente do UTAC000.11 (ver §4).
+
+  copia de seguranca: C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/MercadoLances.jsx.bak (md5 48c619176a777765fa120938712a8509)
+
+## 1. BASELINE (antes de tocar)
+$ git rev-parse HEAD origin/main
+6282d8df65a2bf62f12919653b707a4080559fe7
+6282d8df65a2bf62f12919653b707a4080559fe7
+$ git status --short   (só o package-lock pré-existente)
+ M desafio-gut/frontend/package-lock.json
+ M desafio-gut/frontend/src/pages/MercadoLances.jsx
+ M desafio-gut/frontend/src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
+
+## 2. A LINHA DO DEFEITO (antes da correcção) — MercadoLances.jsx l. 69-73
+function OverlayVencedor({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA, isMobile }) {
+  // UTAC000.11 (DEBT-011) — GUARDA. Um `vencedor` MALFORMADO não pode rebentar o overlay.
+  // Medido (validador adversarial do UTAC000.10 + reprodução própria): com `{}` ou
+  // `{ endereco: null }` isto lançava `TypeError: Cannot read properties of undefined/null
+  // (reading 'slice')`; e com endereço mas sem valor mostrava «R$ NaN».
+
+## 3. REPRODUCAO — defeito REPOSTO por mutacao (o mutante foi provado entrar: md5 muda)
+   mutacao: 'const enderecoAbrev = vencedor?.endereco' -> '= vencedor'
+           'const valorFmt = Number.isFinite(vencedor?.valor)' -> '= vencedor'
+
+  mutante aplicado
+
+$ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
+    not ok 1 - objecto vazio: não rebenta; endereço «—», valor «—»
+      error: |-
+        Got unwanted exception: o overlay rebentou com vencedor malformado (objecto vazio) — TypeError: Cannot read properties of undefined/null (reading 'slice')
+        Actual message: "Cannot read properties of undefined (reading 'slice')"
+      error: "Cannot read properties of undefined (reading 'slice')"
+    not ok 2 - endereço null, valor 0: não rebenta; endereço «—», valor «R$ 0.00»
+      error: |-
+        Got unwanted exception: o overlay rebentou com vencedor malformado (endereço null, valor 0) — TypeError: Cannot read properties of undefined/null (reading 'slice')
+        Actual message: "Cannot read properties of null (reading 'slice')"
+      error: "Cannot read properties of null (reading 'slice')"
+    not ok 3 - sem endereço, valor presente: não rebenta; endereço «—», valor «R$ 3.00»
+      error: |-
+        Got unwanted exception: o overlay rebentou com vencedor malformado (sem endereço, valor presente) — TypeError: Cannot read properties of undefined/null (reading 'slice')
+        Actual message: "Cannot read properties of undefined (reading 'slice')"
+      error: "Cannot read properties of undefined (reading 'slice')"
+    not ok 4 - endereço presente, sem valor: não rebenta; endereço «0xaaaa0000...000001», valor «—»
+      error: 'o overlay mostrou «R$ NaN»'
+    not ok 5 - endereço e valor null: não rebenta; endereço «—», valor «—»
+      error: |-
+        Got unwanted exception: o overlay rebentou com vencedor malformado (endereço e valor null) — TypeError: Cannot read properties of undefined/null (reading 'slice')
+        Actual message: "Cannot read properties of null (reading 'slice')"
+      error: "Cannot read properties of null (reading 'slice')"
+    not ok 6 - valor não numérico: não rebenta; endereço «0xaaaa0000...000001», valor «—»
+      error: 'valor: esperava «—»'
+not ok 2 - UTAC000.11 · OverlayVencedor — vencedor malformado não rebenta (DEBT-011)
+  error: '6 subtests failed'
+# tests 12
+# pass 6
+# fail 6
+
+## 4. RESTAURO + CONFERENCIA
+  md5 restaurado: 48c619176a777765fa120938712a8509
+  md5 entregue  : 48c619176a777765fa120938712a8509
+  IDENTICO: SIM
+
+## 5. DEPOIS DA GUARDA — o mesmo teste com o codigo entregue
+# tests 12
+# pass 12
+# fail 0
+
+## 6. ESCOPO (vs 6282d8d)
+$ git diff --name-only
+desafio-gut/frontend/package-lock.json
+desafio-gut/frontend/src/pages/MercadoLances.jsx
+desafio-gut/frontend/src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
+
+## 7. md5 DOS ENTREGAVEIS
+48c619176a777765fa120938712a8509 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/MercadoLances.jsx
+92ab72e0e4ae1f27e5b69cc1fa001770 *C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
