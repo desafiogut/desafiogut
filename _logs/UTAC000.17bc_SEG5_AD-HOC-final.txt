@@ -1,0 +1,25 @@
+UTAC000.17bc — SEG5: verificacao ad-hoc final (output integral; sonda removida apos a corrida)
+=========================================================================================
+UTAC000.17bc — VERIFICACAO AD-HOC da ronda de correccoes · revisao 787dc30
+---------------------------------------------------------------------------
+[1] o codigo/tests em disco == o commitado (liga o verde ao que foi empurrado)
+    blob == HEAD em 14/14 ficheiros de codigo/teste
+[2] marcas das 4 correccoes no codigo
+    OK  guarda contra sobrescrita da R-1
+    OK  exige o agora do servidor (offset null => nao decide)
+    OK  2 chamadas a marcarVisto (FECHAR + NOVA RODADA)
+    OK  contagem de lances guardada por tipo nos dois overlays
+[3] alvos focados (testes que cobrem as correccoes)
+    utac00014-show-overlay.test.mjs                      ℹ pass 13 ℹ fail 0 
+    utac0017bc-handlers-visto.test.mjs                   ℹ pass 4 ℹ fail 0 
+    utac0017bc-overlay-visto.test.mjs                    ℹ pass 8 ℹ fail 0 
+    utac0017bc-overlay-agregado.test.mjs                 ℹ pass 7 ℹ fail 0 
+    utac0017bc-edicao-r1.test.mjs                        ℹ pass 8 ℹ fail 0 
+    arnes de runtime (efeitos reais)                     ℹ pass 8 ℹ fail 0 
+[4] suite canonica (citada; correu nesta mesma revisao de codigo)
+    frontend 694/694 · backend 992/998 (VERDE) — bloco [1] prova que o codigo nao mudou depois
+[5] producao
+    site: HTTP 200 · bundle: index-OnFKq8CO.js
+    /minhas-participacoes: HTTP 401
+---------------------------------------------------------------------------
+FIM — revisao 787dc30 (verificacao AD-HOC: alvos focados, nao suite)
