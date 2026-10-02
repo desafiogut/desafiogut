@@ -51,4 +51,4 @@ Veredicto + resposta: `_logs/UTAC000.16_SEG0_VALIDADOR.md`.
 Não alterou código de produção, contrato, GUTO, regras da skill, `_ponte-ssr.mjs`, `_render.mjs`, `vite.config.js`, `package.json`; não integrou a branch; não fechou DEBT-001/002/003/005/006/010/013.
 
 ## 9. Deploy
-Nenhum necessário (o app não muda). Push do commit de registo: pendente de autorização do operador.
+Push autorizado pelo operador: `3e80c64..5b9335a`. O auto-deploy `6abf4330…` fez build (o teste vive em `desafio-gut/frontend`) → **ready**, `commit_ref 5b9335a`. **Bundle inalterado, medido:** o `index.html` servido tem o md5 `1fe2bf37…` igual ao do deploy do UTAC000.14 (`6abf3c20`, URL permanente) e os mesmos chunks com hash (`AppContext-DttfR1he.js` 200 nos dois) — GATE 18 confirmado em produção.
