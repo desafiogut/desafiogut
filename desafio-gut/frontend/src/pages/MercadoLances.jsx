@@ -71,15 +71,20 @@ function OverlayVencedor({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA, isM
   // Medido (validador adversarial do UTAC000.10 + reprodução própria): com `{}` ou
   // `{ endereco: null }` isto lançava `TypeError: Cannot read properties of undefined/null
   // (reading 'slice')`; e com endereço mas sem valor mostrava «R$ NaN».
-  // REGRA: malformado trata-se como AUSENTE («—»), CAMPO A CAMPO — exactamente o que o ramo
-  // `: "—"` já fazia quando `vencedor` era `null`. Espelha a guarda do cartão do Dashboard
-  // (`Dashboard.jsx` l. 410, `vencedorExibido.endereco ? … : "—"`), que já tinha este cuidado.
-  // Com um `vencedor` VÁLIDO nada muda (GATE 18): as duas condições são verdadeiras e as
-  // expressões são as mesmas de antes.
-  const enderecoAbrev = vencedor?.endereco
+  // REGRA: malformado trata-se como AUSENTE («—»), CAMPO A CAMPO — não se inventa coerência global.
+  // ⚠️ 2.ª ronda (validador adversarial do UTAC000.11): a 1.ª guarda testava **truthiness**, não
+  // **tipo** — `{ endereco: 12345 }`, `{ endereco: true }` e `{ endereco: {} }` REBENTAVAM
+  // (`TypeError: vencedor.endereco.slice is not a function`) e `{ endereco: [] }` mostrava «...».
+  // A guarda passou a exigir **string não vazia** e **valor finito não negativo**, o que torna a
+  // regra «malformado = ausente» VERDADEIRA (não apenas a metade dos ausentes/null).
+  // O comentário anterior dizia que isto espelhava o Dashboard (l. 410): é verdade **só para o
+  // endereço** — a linha do VALOR do Dashboard continua sem guarda (é a DEBT-012).
+  // Com um `vencedor` VÁLIDO nada muda (GATE 18): as condições são verdadeiras e as expressões
+  // são as mesmas de antes.
+  const enderecoAbrev = typeof vencedor?.endereco === "string" && vencedor.endereco.length > 0
     ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
     : "—";
-  const valorFmt = Number.isFinite(vencedor?.valor)
+  const valorFmt = Number.isFinite(vencedor?.valor) && vencedor.valor >= 0
     ? `R$ ${(vencedor.valor / 100).toFixed(2)}`
     : "—";
 

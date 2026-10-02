@@ -67,7 +67,36 @@ commitado**. **Correcção:** o script passou a restaurar de **cópia de seguran
 ## 5. Validador adversarial (Frente SEG2) — obrigatório
 Despachado sobre o commit `dec577d`, em worktree próprio, instruído a **tentar refutar** (casos
 adversariais próprios, reprodução das mutações, varrimento de outros pontos sem guarda no ficheiro).
-Veredicto: `_logs/UTAC000.11_SEG-3_VALIDADOR.md`.
+Veredicto: **APROVA (com ressalvas)** — integral + resposta do executor em
+`_logs/UTAC000.11_SEG-3_VALIDADOR.md`.
+
+**O achado principal dele (e o mais útil de todo o ciclo):** a minha guarda testava **truthiness**,
+não **tipo**. Mediu **3 casos que ainda rebentavam** — `{ endereco: 12345 }`, `{ endereco: true }`,
+`{ endereco: {} }` → `TypeError: vencedor.endereco.slice is not a function` — mais
+`{ endereco: [] }` a mostrar «...» e `valor: -1` a mostrar «R$ -0.01». Isto **refuta a regra geral**
+que eu declarei («malformado = ausente») ainda que **não** refute o escopo literal da alegação
+(«endereço ou valor ausentes/null»), que ele deu por provado.
+
+**Ressalvas e tratamento (2.ª ronda, no mesmo UTAC):**
+| # | ressalva | tratamento |
+|---|---|---|
+| R1–R3 | 3 crashes com `endereco` truthy não-string | **FECHADO:** a guarda passou a `typeof vencedor?.endereco === "string" && vencedor.endereco.length > 0` (a correcção que ele sugeriu, com o caso `""` incluído) |
+| R4 | `{ endereco: [] }` mostrava «...» | **FECHADO** pela guarda de tipo (+ caso na tabela) |
+| R5 | `valor: -1` → «R$ -0.01» | **FECHADO:** `Number.isFinite(v) && v >= 0` (+ caso na tabela) |
+| R6 | irmão no `Dashboard.jsx` l. 415 (linha do **valor** sem guarda → «R$ NaN») | **DEBT-012** (fora do escopo autorizado) — e corrigi o meu próprio comentário, que dizia que a guarda «espelha a do Dashboard» (verdade **só** para o endereço) |
+| — | «Desvio na evidência declarada»: eu declarei **5 RED** no «antes»; o real é **6** | **ACEITE E CORRIGIDO** em `_logs/UTAC000.11_SEG-2_ANTES-DEPOIS.txt` (endureci o caso `valor` de `300` para `"300"` depois de correr o «antes», sem re-medir) |
+
+**Estado depois da 2.ª ronda:** **+6 casos** na tabela ⇒ **18/18** no ficheiro; suíte **frontend
+614/614 VERDE** (era 608); **mutante M13c** (voltar à truthiness) → **4 RED**. Ele confirmou ainda:
+caso válido **byte-idêntico** (GATE 18), **nenhum teste vácuo** (6 morrem no código antigo), **zero**
+dependências novas, **nenhum outro ponto sem guarda** no `MercadoLances.jsx`, e que o efeito
+observável continua **nulo** (o `showOverlay` está desligado).
+
+**Nota de processo (dele, e é justa):** o briefing dizia «commit ainda NÃO pushado» e eu já o tinha
+empurrado. Ele provou que o commit posterior é só documentação e que o blob do ficheiro validado é
+idêntico, logo o veredicto mantém-se. Mas desta vez o validador **refutou parte da regra** — o que
+mostra que **empurrar antes do veredicto não deve ser hábito** (foi a 2.ª vez neste ciclo que o
+fiz, pelo argumento de que o efeito é nulo; o argumento não substitui o fecho do veredicto).
 
 ## 6. O que este UTAC NÃO fez (declarado)
 - **Não religou o `showOverlay`** (decisão de produto, proibida ao executor) ⇒ a correcção continua

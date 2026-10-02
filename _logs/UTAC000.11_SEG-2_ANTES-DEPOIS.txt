@@ -14,10 +14,18 @@ backend: VERDE 967/973 pass
 ─────────────────────────────────────────────────────────────────────────────────
 Escritos 7 casos (tabela) + 1 controlo, ainda SEM a guarda:
 $ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/utac0010-mercado-vencedor.test.mjs
-# tests 12 · # pass 7 · # fail 5        ← RED com os stack traces:
+# tests 12 · # pass 7 · # fail 5        ← RED com os stack traces:  (5 grupos)
     Cannot read properties of undefined (reading 'slice')   ({} e {valor:300})
     Cannot read properties of null      (reading 'slice')   ({endereco:null,…} e {endereco:null,valor:null})
     «o overlay mostrou «R$ NaN»»                            ({endereco:EU} sem valor)  ← 2.º defeito, achado agora
+
+⚠️ CORRECÇÃO DE EVIDÊNCIA (achado do validador adversarial do UTAC000.11): o número REAL é
+**# pass 6 · # fail 6**, não 5. Ele re-mediu o ficheiro de teste **comitado** contra o código antigo
+(`6282d8d`) e contou 6: falta nesta lista o caso **`{ endereco: EU, valor: "300" }`** (valor não
+numérico), que no código antigo mostrava «R$ 3.00» e por isso **tem** de falhar. Causa: endu­reci
+esse caso de `valor: 300` para `valor: "300"` **depois** de correr o «antes», sem re-medir.
+Direcção do desvio: o RED real é **mais forte** do que o declarado (não enfraquece a prova); é
+imprecisão de evidência, declarada e corrigida aqui.
 
 ─────────────────────────────────────────────────────────────────────────────────
 3. A GUARDA (Ponytail: 2 expressões, espelhando o Dashboard l.410)

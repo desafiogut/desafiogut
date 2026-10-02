@@ -162,6 +162,14 @@ describe("UTAC000.11 · OverlayVencedor — vencedor malformado não rebenta (DE
     ["endereço presente, sem valor",            { endereco: EU },                abrev(EU),           "—"],
     ["endereço e valor null",                   { endereco: null, valor: null }, "—",                 "—"],
     ["valor não numérico",                      { endereco: EU, valor: "300" },  abrev(EU),           "—"],
+    // ── ⚠️ 2.ª ronda (achado do validador adversarial do UTAC000.11): a 1.ª guarda testava
+    // TRUTHINESS e estes casos REBENTAVAM com `vencedor.endereco.slice is not a function`.
+    ["endereço numérico (truthy, não string)",  { endereco: 12345 },             "—",                 "—"],
+    ["endereço boolean (truthy, não string)",   { endereco: true },              "—",                 "—"],
+    ["endereço objecto (truthy, não string)",   { endereco: {} },                "—",                 "—"],
+    ["endereço array (mostrava «...»)",         { endereco: [] },                "—",                 "—"],
+    ["endereço string vazia",                   { endereco: "" },                "—",                 "—"],
+    ["valor negativo (não é lance válido)",     { endereco: EU, valor: -1 },     abrev(EU),           "—"],
     ["VÁLIDO (o caso que não pode mudar)",      { endereco: EU, valor: 300 },    abrev(EU),           "R$ 3.00"],
   ];
 
