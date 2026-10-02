@@ -45,6 +45,12 @@ autorizado**. **Não contornei** — escalei, com as opções medidas:
    a flag é `useState(false)` na l. 206 e o gate do overlay já existe no MercadoLances l. 209);
 2. Abrir **UTAC próprio** para o `AppContext`;
 3. **Não religar** (manter o comportamento actual).
+**⚙️ 4.ª opção — IN-ESCOPO (achada pelo validador adversarial, que me refutou parcialmente):** mudar
+o **gate** na l. 209 do `MercadoLances.jsx` (ficheiro autorizado) para
+`{(showOverlay || (encerrado && vencedor)) && (…)}` — 1 linha, mesma efeito visível, **sem** tocar no
+`AppContext`. **Limites medidos:** **muda o gatilho** (não é «religar a flag»: abre por
+`encerrado && vencedor` e não pelos 1200 ms do lightning) e traz **apenas um** dos dois overlays (o do
+`Dashboard.jsx` l. 524 continua gateado pela flag, fora do escopo).
 ⚠️ **Determinante medido (e é um aviso):** religar torna **alcançáveis** os defeitos latentes das
 DEBT-011/012/013. As guardas do UTAC000.11/12 já estão no `OverlayVencedor` e no card do Dashboard;
 a do **`FimEdicaoOverlay` (DEBT-013) NÃO está** ⇒ religar sem fechar a DEBT-013 expõe «R$ NaN»/crash

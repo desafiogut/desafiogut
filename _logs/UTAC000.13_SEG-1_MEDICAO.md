@@ -62,8 +62,25 @@ expressamente PROIBIDO neste UTAC** («NÃO AUTORIZA alterar o `useResultadoOfic
 `Dashboard.jsx` nem `AppContext.jsx`»), enquanto o MercadoLances só é autorizado «apenas religar o
 `showOverlay`» — que é **impossível nesse ficheiro**.
 **Não há via alternativa dentro do escopo autorizado:** o setter não é exposto, e não existe outro
-produtor de `showOverlay = true` (só `setShowOverlay(false)` em 4 sítios e a linha comentada).
-⇒ **PARAR e ESCALAR** (GATE 10 / HI8), com as opções medidas para o operador decidir — ver §-1.6.
+produtor de `showOverlay = true`.
+  ⚠️ **CORRECÇÃO (refutação parcial do validador adversarial, ACEITE):** a minha conclusão «é
+  **impossível** no escopo autorizado» era **forte demais**. Existe uma via **in-escopo** que eu não
+  apresentei: o **gate** do overlay está no ficheiro **autorizado** (`MercadoLances.jsx` l.209) e
+  `encerrado` (l.171) e `vencedor` (l.173) **já lá estão** ⇒ **1 linha** no ficheiro autorizado
+  produz o efeito visível pretendido:
+  ```jsx
+  -  {showOverlay && (
+  +  {(showOverlay || (encerrado && vencedor)) && (
+  ```
+  **Ressalvas medidas a essa via** (para a decisão ser informada, não simplificada): (a) **não é
+  «religar a flag»** — **muda o gatilho** (o overlay passa a abrir por `encerrado && vencedor`, e não
+  pelos 1200 ms após o início do lightning que a l.1205 comentada fazia); (b) **só traz UM dos dois
+  overlays** — o do `Dashboard.jsx` (l.524, `FimEdicaoOverlay`) continua gateado por `showOverlay` e
+  esse ficheiro está **fora do escopo** deste UTAC; (c) o validador confirma a minha medição de base
+  (o setter **não** está no `value`; o único produtor de `true` é a l.1205 comentada).
+  ⇒ Escalado ao operador com **4 opções medidas** (ver §-1.6).
+  ⚠️ **Correcção menor:** eu escrevi «`setShowOverlay(false)` em 4 sítios» — são **3 activos**
+  (l.757, 1212, 1325) + a linha comentada.
 
 ## -1.5 Saúde global (HI1)
 Disco OK · suíte VERDE no baseline · árvore limpa (só o `package-lock.json` pré-existente) · nenhum
@@ -81,3 +98,11 @@ depois da limpeza dos worktrees do validador).
   ⚠️ **Determinante medido:** religar torna **alcançáveis** as dívidas latentes DEBT-011/012/013
   (o `OverlayVencedor` e o `FimEdicaoOverlay` só renderizam com a flag a `true`) — as guardas do
   UTAC000.11/12 já estão lá; a do `FimEdicaoOverlay` (DEBT-013) **não**.
+  ⚠️ **CORRECÇÃO (refutação parcial do validador, ACEITE):** a minha conclusão «impossível no escopo
+  autorizado» era **forte demais** — há uma **4.ª opção in-escopo**: mudar o **gate** na l.209 do
+  `MercadoLances.jsx` (ficheiro AUTORIZADO) para `{(showOverlay || (encerrado && vencedor)) && (…)}`
+  (1 linha; `encerrado`/`vencedor` já estão disponíveis no mesmo ficheiro). **Limites medidos dessa
+  via:** (a) **muda o gatilho** (não é «religar a flag»: abre por `encerrado && vencedor`, não pelos
+  1200 ms do lightning); (b) só traz **um** dos dois overlays (o do `Dashboard.jsx` l.524 continua
+  gateado por `showOverlay`, e esse ficheiro está fora do escopo). Correcção menor aceite:
+  «`setShowOverlay(false)` em 4 sítios» → **3 activos** (757/1212/1325) + a linha comentada.
