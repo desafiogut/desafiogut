@@ -149,13 +149,16 @@ de leituras do `state.db` (`cost_status = estimated`):
 | | input | output | cache-read | ≈ USD |
 |---|---|---|---|---|
 | leitura no fecho do UTAC000.11 | 678 081 | 396 279 | 117 671 168 | 0,5354 |
-| leitura no fecho do UTAC000.12 | 908 366 | 461 833 | 134 603 264 | 0,6334 |
-| **diferença = UTAC000.12 (pai)** | **+230 285** | **+65 554** | **+16 932 096** | **≈ 0,0980** |
+| leitura no fecho do UTAC000.12 | 936 347 | 489 611 | 142 890 496 | 0,6683 |
+| **diferença = UTAC000.12 (pai)** | **+258 266** | **+93 332** | **+25 219 328** | **≈ 0,1329** |
 
-Mais o **validador adversarial** (subagente próprio): **≈ US$ 0,03** (a confirmar na leitura do
-`state.db` no fecho). **⇒ UTAC000.12 ≈ US$ 0,13.**
+Mais o **validador adversarial** (subagente `20261001_222127_d41d42`): **US$ 0,0279**.
+**⇒ UTAC000.12 ≈ US$ 0,161.**
 **Saldo da API (a pedido do operador — novo padrão):** `GET https://api.deepseek.com/user/balance` →
-**US$ 2,08** disponíveis (`is_available: true`; `topped_up_balance` 2,08).
+**US$ 1,96** no fecho (era **2,08** no início do UTAC ⇒ consumo real do ciclo ≈ **0,12**;
+`is_available: true`).
+**Deploy verificado:** bundle `index-CZDR4cNs.js` → **`index-BKCa0d9t.js`** (o push mudou o bundle; site
+serve a nova build).
 **Limite de tempo (HI5/R18-2):** excedeu as **2 h** — o UTAC teve 3 frentes, 2 erros meus de
 instrumento, a 2.ª ronda de testes e o fecho de 3 ressalvas do validador. Declarado: o trabalho
 posterior ao limite foi **fecho de ressalvas e registos**, não escopo novo.
