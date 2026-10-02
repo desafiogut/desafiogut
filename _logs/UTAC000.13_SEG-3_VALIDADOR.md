@@ -243,3 +243,20 @@ Ele declarou no veredicto: «nenhum ficheiro > **5.8 s**; soma de todos = **49,7
 válida**: não há espera longa escondida (o mais lento é ~10 s, um teste de página em SSR) e **0
 falhas** em todos os medidos. Top-5: MeusAtivos 9 981 · utac0008-resultado-oficial 9 448 · Dashboard
 9 316 · utac0010-mercado-vencedor 9 059 · utac105c-meus-ativos 8 703 ms — todos `rc=0 fail=0`.
+
+### A1-bis. O `rc=127` foi observado TAMBÉM por MIM (adição posterior, 2026-10-02)
+No A/B sequencial do **mutante inválido** (M15: 22/200 falhas pelo `destravar()` órfão — experimento
+**descartado**, ver §3 do meu A/B) apareceu, na **corrida 22**, um **`rc=127`** — o mesmo código de
+saída da anomalia do `A-14` do validador. Foi medido por um loop de 200 corridas **sob carga**
+(4 burners + o próprio loop).
+
+⇒ **A anomalia de spawn é REAL e observada pelos DOIS** (ele no `A-14`; eu aqui), **sempre sob carga** —
+e continua **não reprodutível de propósito**: os meus 48 spawns deliberados deram **0** (§A1).
+Leitura final, honesta: é uma anomalia **rara e dependente de carga** («o `node` não chegou a arrancar»),
+**não** um teste flaky — e **não** é o que estava a partir a suíte: esse era o teste do relógio real,
+apanhado, reproduzido e corrigido (§A do veredicto + §3 da minha resposta).
+
+**Correcção de registo:** eu tinha declarado, no UTAC000.12/13, que o `rc=127` do `A-14` era a «melhor
+pista» para a DEBT-014 — **fica reclassificado**: é uma anomalia independente, com taxa ~1/200 sob
+carga, que **não** explica a falha da suíte do UTAC000.12 (essa era o flaky, agora corrigido). Nada
+disto muda a correcção; apenas arruma as causas.
