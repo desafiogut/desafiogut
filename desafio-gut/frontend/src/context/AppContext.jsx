@@ -37,6 +37,8 @@ import {
 import { apiGet, apiPost } from "../lib/api.js";
 import { enviarConsentimentoPendente } from "../lib/consentimento.js";
 import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
+// UTAC000.17bc (17c/GATE 22) — memória do «visto» no aparelho (localStorage).
+import { jaVisto, marcarVisto } from "../lib/overlayVisto.js";
 import { VERSAO_CONSENTIMENTO } from "../components/TermosConsentimento.jsx";
 import {
   enderecoSessaoSincrono,
@@ -1189,7 +1191,20 @@ export function AppProvider({ children }) {
   // re-renderiza apenas no fim do leilão, não a cada tick.
   useEffect(() => {
     const tick = () => {
-      const restante = Math.max(0, prazoTimestamp - Math.floor(Date.now() / 1000));
+      // UTAC000.17bc (DEBT-016 / GATE 26) — o FIM do leilão decide-se pelo prazo REAL do servidor:
+      //   · `edicoes[EDICAO_ATIVA].termino_em` é server-authoritative (chega pelo `useEdicoes`);
+      //   · uma edição SINTÉTICA (prazo inventado — `sintetizada: true`, vinda do servidor ou do
+      //     fallback do hook) NÃO conta como prazo real;
+      //   · e o instante é lido no relógio do SERVIDOR (`+ offsetRelogioMs`).
+      // ⇒ sem prazo real NÃO há fim: o overlay nunca mais abre pelo cronómetro local (era o defeito
+      //    da DEBT-016: abria a cada 30 min). Antes disto o `restante` vinha de `prazoTimestamp` local.
+      const ativa = edicoes?.[EDICAO_ATIVA];
+      const terminoMs = ativa && ativa.sintetizada !== true && typeof ativa.termino_em === "string"
+        ? Date.parse(ativa.termino_em)
+        : NaN;
+      const prazoRealSeg = Number.isFinite(terminoMs) ? Math.floor(terminoMs / 1000) : null;
+      const agoraSeg    = Math.floor((Date.now() + (offsetRelogioMs || 0)) / 1000);
+      const restante = prazoRealSeg === null ? null : Math.max(0, prazoRealSeg - agoraSeg);
       if (restante === 0) {
         setEncerrado(true);
         // MC16 — flag impede múltiplos disparos quando encerrado
@@ -1205,7 +1220,7 @@ export function AppProvider({ children }) {
             // Os dois overlays que esta flag abre já têm guarda de tipo (UTAC000.11 / UTAC000.14).
             // ⚠️ Validador do UTAC000.14: em EM BREVE o prazo do relâmpago é um cronómetro LOCAL de
             // 30 min ⇒ o overlay abria sozinho sobre ecrãs «Em breve». Só abre com o leilão aberto.
-            if (!EM_BREVE_MODE) setShowOverlay(true);
+            if (!EM_BREVE_MODE && !jaVisto(address, EDICAO_ATIVA)) setShowOverlay(true);
             timeoutAnimRef.current = null;
           }, 1200);
         }
@@ -1229,7 +1244,7 @@ export function AppProvider({ children }) {
       // cleanup explícito.
       document.removeEventListener("visibilitychange", vis);
     };
-  }, [prazoTimestamp, encerrado]);
+  }, [edicoes, offsetRelogioMs, encerrado]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -1324,6 +1339,9 @@ export function AppProvider({ children }) {
   }
 
   function handleNovaRodada() {
+    // UTAC000.17bc (GATE 22) — sair pelo «NOVA RODADA» também CONTA como visto: sem isto o overlay
+    // reabria ~1,2 s depois (o defeito que o validador do UTAC000.17 previu para o 17b sozinho).
+    marcarVisto(address, EDICAO_ATIVA);
     setEncerrado(false);
     setShowOverlay(false);
     setLightningActive(false);
@@ -1332,6 +1350,7 @@ export function AppProvider({ children }) {
     setShowCountdown(true);
     // MC16 — reseta flag para animação disparar na nova edição
     fimDisparadoRef.current = false;
+
     if (timeoutAnimRef.current) { clearTimeout(timeoutAnimRef.current); timeoutAnimRef.current = null; }
     setTimeout(() => {
       const dur = DURACAO[modalidade];
@@ -1341,6 +1360,14 @@ export function AppProvider({ children }) {
       setPrazoTimestamp(Math.floor(Date.now() / 1000) + dur);
       setShowCountdown(false);
     }, 3500);
+  }
+
+  // UTAC000.17bc (17c/DEBT-016) — saída EXPLÍCITA do overlay terminado (botão «FECHAR»). Fecha E marca
+  // a edição como vista no aparelho: sem o «visto», o próximo tick reabria o overlay (era o modal que
+  // não fechava — o risco que o validador do UTAC000.17 apontou ao 17b sozinho).
+  function fecharOverlay() {
+    marcarVisto(address, EDICAO_ATIVA);
+    setShowOverlay(false);
   }
 
   // ── Value ────────────────────────────────────────────────────────────────
@@ -1413,6 +1440,7 @@ export function AppProvider({ children }) {
     desconectar,
     handleLanceSucesso,
     handleNovaRodada,
+    fecharOverlay, // UTAC000.17bc (17c) — saída explícita do overlay (botão FECHAR)
     // ── Analytics (MC8) ────────────────────────────────────────────────────
     trackPageview, trackClickComprar, trackTempoSessao, trackScroll,
   };

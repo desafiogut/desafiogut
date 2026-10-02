@@ -28,6 +28,17 @@ const LOCAIS = [
 const OFICIAL = { vencedor: EU, menorUnicoCentavos: 300 };
 const contar = (s, alvo) => s.split(alvo).length - 1;
 
+/** UTAC000.17bc — R-1 REAL: a forma que o servidor devolve de `edicoes-metadata` (SEM o marcador de
+ *  sintética). É o fixture que prova a travessia do PRAZO REAL do servidor → AppContext → página. */
+const edicaoR1Real = (agoraSeg, { vencidoSeg = 5, sintetizada = false } = {}) => ({
+  "R-1": {
+    id: "R-1", tipo: "relampago", produto: null,
+    termino_em: new Date((agoraSeg - vencidoSeg) * 1000).toISOString(),
+    lances: 0, status: "aberto",
+    ...(sintetizada ? { sintetizada: true } : {}),
+  },
+});
+
 /** Espera (sem relógio fixo) até o temporizador REAL de 1200 ms do fim ter corrido: o relâmpago acende
  *  no tick e APAGA dentro desse temporizador — é ele que decide o overlay. Tecto de 5 s (sob carga). */
 async function esperarFimDoRelampago(p) {
@@ -124,8 +135,10 @@ describe("UTAC000.15 · AppContext → MercadoLances: o overlay do fim abre e mo
       children: a.React.createElement(a.MemoryRouter, null, a.React.createElement(Pagina)),
       lancesFlash: LOCAIS,
       resultadoOficial,
-      // prazo do relâmpago vencido há 5 s (o `lerPrazoStorage` real aceita até 10 min) ⇒ o tick real
-      // encerra, acende o relâmpago e, 1200 ms depois, abre o overlay (UTAC000.14).
+      // UTAC000.17bc (DEBT-016/GATE 23) — o fim vem do PRAZO REAL DO SERVIDOR: o arnês serve
+      // `/edicoes` com uma R-1 real vencida há 5 s. O prazo LOCAL vencido fica no localStorage DE
+      // PROPÓSITO: já não é ele que decide (era exactamente o defeito da DEBT-016).
+      edicoes: edicaoR1Real(agora, { vencidoSeg: 5 }),
       localStorage: { gut_prazo_flash: String(agora - 5) },
     });
     await esperarFimDoRelampago(p);
@@ -158,6 +171,7 @@ describe("UTAC000.15 · EM BREVE real: o mesmo fim NÃO abre o overlay (runtime 
     const p = await a.montarProvider({
       children: a.React.createElement(a.MemoryRouter, null, a.React.createElement(Pagina)),
       lancesFlash: LOCAIS, resultadoOficial: OFICIAL,
+      edicoes: edicaoR1Real(agora, { vencidoSeg: 5 }), // prazo REAL vencido (UTAC000.17bc)
       localStorage: { gut_prazo_flash: String(agora - 5) },
     });
     t.after(() => p.desmontar());
@@ -165,5 +179,25 @@ describe("UTAC000.15 · EM BREVE real: o mesmo fim NÃO abre o overlay (runtime 
     assert.equal(p.valor().encerrado, true, "controlo: o tick real não encerrou a edição");
     assert.equal(p.valor().showOverlay, false, "o overlay abriu em EM BREVE");
     assert.ok(!p.html().includes("Carteira Vencedora"), "o OverlayVencedor foi renderizado em EM BREVE");
+  });
+
+  // UTAC000.17bc (DEBT-016/GATE 26), em RUNTIME pela travessia servidor → AppContext → página: uma
+  // edição cujo prazo é INVENTADO (`sintetizada: true`) NÃO pode encerrar o leilão — mesmo com o prazo
+  // LOCAL vencido no localStorage (que era o que fazia abrir o overlay «a cada 30 min»).
+  test("DEBT-016: edição SINTÉTICA com prazo vencido NÃO encerra nem abre o overlay (prazo inventado)", async (t) => {
+    const Pagina = (await a.carregar("/src/pages/MercadoLances.jsx")).default;
+    const agora = Math.floor(Date.now() / 1000);
+    const p = await a.montarProvider({
+      children: a.React.createElement(a.MemoryRouter, null, a.React.createElement(Pagina)),
+      lancesFlash: LOCAIS, resultadoOficial: OFICIAL,
+      edicoes: edicaoR1Real(agora, { vencidoSeg: 5, sintetizada: true }),
+      localStorage: { gut_prazo_flash: String(agora - 5) },
+    });
+    t.after(() => p.desmontar());
+    await new Promise((r) => setTimeout(r, 1600)); // mais do que os 1200 ms do fim
+    await p.assentar();
+    assert.equal(p.valor().encerrado, false, "tratou um prazo INVENTADO como prazo real");
+    assert.equal(p.valor().showOverlay, false, "o overlay abriu com prazo inventado (DEBT-016)");
+    assert.ok(!p.html().includes("Carteira Vencedora"), "o overlay foi renderizado com prazo inventado");
   });
 });

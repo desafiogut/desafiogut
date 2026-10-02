@@ -10,6 +10,8 @@ import { GlassCard } from "@/components/ui";
 import GlassHeader from "../components/glass/GlassHeader.jsx";
 import { COR } from "../components/glass/glassTokens.js";
 import { useRecursosApp } from "../hooks/useRecursosApp.js";
+// UTAC000.17bc (17c) — participações do titular (endpoint `/minhas-participacoes` do UTAC000.17a).
+import { useMinhasParticipacoes } from "../hooks/useMinhasParticipacoes.js";
 
 // MC99 — `CATEGORIAS_POR_TIPO` + `buscarClienteDoLeilaoAtivo` viveram aqui para
 // alimentar o banner do cliente (REQ-01). Com o banner removido desta tela, o
@@ -66,7 +68,16 @@ function CountdownOverlay() {
   );
 }
 
-function OverlayVencedor({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA, isMobile }) {
+function OverlayVencedor({
+  vencedor, modalidade, onNovaRodada, EDICAO_ATIVA, isMobile,
+  // UTAC000.17bc (17c) — overlay AGREGADO + saída explícita (mesmo contrato do `FimEdicaoOverlay`).
+  participacoes = [], meuEndereco = null, onClose = null,
+}) {
+  // «VENCEU» = a linha é desta edição E o vencedor oficial é o titular.
+  const titular = typeof meuEndereco === "string" && meuEndereco.length > 0 ? meuEndereco.toLowerCase() : null;
+  const vencedorTitular = Boolean(titular) && typeof vencedor?.endereco === "string"
+    && vencedor.endereco.toLowerCase() === titular;
+  const venceuAqui = (id) => id === EDICAO_ATIVA && vencedorTitular;
   // UTAC000.11 (DEBT-011) — GUARDA. Um `vencedor` MALFORMADO não pode rebentar o overlay.
   // Medido (validador adversarial do UTAC000.10 + reprodução própria): com `{}` ou
   // `{ endereco: null }` isto lançava `TypeError: Cannot read properties of undefined/null
@@ -148,14 +159,50 @@ function OverlayVencedor({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA, isM
               Nenhum lance único registrado.
             </div>
           )}
-          <button
-            onClick={onNovaRodada}
-            style={{
-              width: "100%", padding: "0.85rem", borderRadius: "10px", border: "none",
-              background: "#fbbf24", color: "#0f172a", fontWeight: "800",
-              fontSize: "1rem", cursor: "pointer",
-            }}
-          >🔄 Nova Rodada</button>
+          {/* UTAC000.17bc (17c) — agregado: em que edições o titular deu lance (e se venceu esta). */}
+          {participacoes.length > 0 && (
+            <div style={{
+              background: "#0a1e38", border: "1px solid #334155",
+              borderRadius: "12px", padding: isMobile ? "0.9rem" : "1.1rem",
+              marginBottom: "1.25rem",
+            }}>
+              <p style={{ margin: "0 0 0.5rem", fontSize: "0.72rem", color: "#6b7db8",
+                textTransform: "uppercase", letterSpacing: "0.08em" }}>As suas participações</p>
+              {participacoes.map((p) => (
+                <div key={p.edicaoId} style={{ display: "flex", justifyContent: "space-between",
+                  alignItems: "center", gap: "0.5rem", padding: "0.3rem 0",
+                  fontSize: isMobile ? "0.8rem" : "0.88rem" }}>
+                  <span style={{ color: "#e8f0fe", fontFamily: "monospace" }}>{p.edicaoId}</span>
+                  <span style={{ color: "#94a3b8" }}>
+                    {p.lances === 1 ? "1 lance" : `${p.lances} lances`}
+                  </span>
+                  {venceuAqui(p.edicaoId) && (
+                    <span style={{ color: "#fbbf24", fontWeight: 800 }}>🏆 VENCEU</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button
+              onClick={onNovaRodada}
+              style={{
+                flex: 1, padding: "0.85rem", borderRadius: "10px", border: "none",
+                background: "#fbbf24", color: "#0f172a", fontWeight: "800",
+                fontSize: "1rem", cursor: "pointer",
+              }}
+            >🔄 Nova Rodada</button>
+            {onClose && (
+              <button
+                onClick={onClose}
+                style={{
+                  flex: 1, padding: "0.85rem", borderRadius: "10px", border: "1px solid #334155",
+                  background: "transparent", color: "#cbd5e1", fontWeight: "700",
+                  fontSize: "1rem", cursor: "pointer",
+                }}
+              >FECHAR</button>
+            )}
+          </div>
         </div>
       </div>
     </>
@@ -174,7 +221,10 @@ export default function MercadoLances() {
     showCountdown,
     abrirModal, desconectar,
     handleLanceSucesso, handleNovaRodada,
+    authToken, fecharOverlay, // UTAC000.17bc (17c) — token das participações e saída explícita do overlay
   } = useAppContext();
+  // UTAC000.17bc (17c/GATE 21) — em que EDIÇÕES o titular deu lance (filtrado pelo token, no servidor).
+  const { participacoes } = useMinhasParticipacoes(authToken);
   // MC66 (Direção C) — o cronômetro vivo foi removido da aba Lances ("EM BREVE"
   // permanente). useAppTimer/derivações de timer saíram junto. O Dashboard mantém
   // o seu próprio cronômetro (implementação separada), intocado.
@@ -213,6 +263,9 @@ export default function MercadoLances() {
           onNovaRodada={handleNovaRodada}
           EDICAO_ATIVA={EDICAO_ATIVA}
           isMobile={isMobile}
+          participacoes={participacoes}
+          meuEndereco={address}
+          onClose={fecharOverlay}
         />
       )}
 

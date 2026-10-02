@@ -56,3 +56,8 @@ fecho entra aqui em vez de morrer no histórico.
 > o pedido. A **DEBT-004 foi acrescentada** pelo executor (não constava da lista) porque é dívida de
 > infraestrutura de severidade **alta**, descoberta no fecho daquele UTAC, e o `DEBT.md` é exactamente
 > o lugar onde HI4/HI5 mandam registá-la. **Fica sujeita a veto do operador.**
+## DEBT-016 / DEBT-017 — estado no UTAC000.17bc (2026-10-02)
+
+**FECHADAS NO CÓDIGO, NÃO FECHADAS NO REGISTO.** O prazo do fim passou a vir do `termino_em` REAL do servidor (com marcador `sintetizada` a barrar o prazo inventado) e a R-1 passou a poder ser criada com id explícito (`criarEdicao({id:'R-1'})`), com overlay agregado + `onClose` + «visto» no aparelho.
+
+Pendente para fechar de facto: (1) martelo de MUTAÇÃO (GATE 6); (2) VALIDADOR adversarial (GATE 8); (3) criar a R-1 REAL em produção (Blob `edicoes-metadata` — exige a duração decidida pelo operador); (4) verificação em produção (Frente E). Suítes verdes: frontend 681/681 · backend 990/996.

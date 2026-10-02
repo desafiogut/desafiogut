@@ -77,12 +77,15 @@ test("a imagem referida pela edição existe em public/", async () => {
 
 // ── O id tem de ser legível pelo resto do sistema ────────────────────────────
 
-test("EDICAO_ID_RE aceita ESPECIAL-AIRFRYER e continua a aceitar PROG/RELAMP", () => {
-  for (const ok of ["ESPECIAL-AIRFRYER", "ESPECIAL-X1", "PROG-3", "RELAMP-12"]) {
+test("EDICAO_ID_RE aceita ESPECIAL-AIRFRYER e continua a aceitar PROG/RELAMP (+R-N, UTAC000.17bc)", () => {
+  // UTAC000.17bc (DEBT-017): `R-N` passou a ser um id VÁLIDO — é a edição activa do cliente (R-1), que
+  // até aqui só existia sintetizada. Antes desta data `R-1` estava na lista dos REJEITADOS; a mudança é
+  // deliberada e tem teste próprio em `_tests/utac0017bc-edicao-r1.test.mjs`.
+  for (const ok of ["ESPECIAL-AIRFRYER", "ESPECIAL-X1", "PROG-3", "RELAMP-12", "R-1", "R-42"]) {
     assert.ok(core.EDICAO_ID_RE.test(ok), ok);
   }
   for (const nao of ["ESPECIAL-", "especial-airfryer", "ESPECIAL-AIR FRYER", "ESPECIAL-AIR-FRYER",
-                     "PROG-3x", "PROG-", "R-1", "XESPECIAL-A", "ESPECIAL-A\n"]) {
+                     "PROG-3x", "PROG-", "R-", "R-x", "R1", "R-1;drop", "XESPECIAL-A", "ESPECIAL-A\n"]) {
     assert.ok(!core.EDICAO_ID_RE.test(nao), JSON.stringify(nao));
   }
 });

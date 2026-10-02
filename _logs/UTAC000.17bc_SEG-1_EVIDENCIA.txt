@@ -1,0 +1,65 @@
+UTAC000.17bc — SEG-1: EVIDÊNCIA BRUTA (preservada ANTES de tocar) — 2026-10-02
+=========================================================================================
+Baseline: HEAD = origin/main = dd3f151 · árvore limpa · suíte frontend 670/670 · backend 984/990.
+
+[1] O PRAZO LOCAL (AppContext.jsx l. 190-199) — a origem da DEBT-016
+    // Timer (Onda 5 FASE 0) — 2 prazos persistidos, prazoTimestamp deriva do tipo.
+    const [prazoFlash, setPrazoFlash] = useState(() =>
+      lerPrazoStorage(LS_PRAZO_FLASH) ?? (Math.floor(Date.now() / 1000) + DURACAO.flash)
+    );
+    const [prazoProgramado, setPrazoProgramado] = useState(() =>
+      lerPrazoStorage(LS_PRAZO_PROG) ?? (Math.floor(Date.now() / 1000) + DURACAO.programado)
+    );
+    const prazoTimestamp = modalidade === "flash" ? prazoFlash : prazoProgramado;
+    -> DURACAO.flash vem de VITE_DURACAO_FLASH_SECONDS (fallback 1800 s = 30 min).
+
+[2] O DISPARO DO OVERLAY (AppContext.jsx l. 1191-1212)
+    const restante = Math.max(0, prazoTimestamp - Math.floor(Date.now() / 1000));
+    if (restante === 0) {
+      setEncerrado(true);
+      if (!fimDisparadoRef.current) { fimDisparadoRef.current = true; setLightningActive(true);
+        timeoutAnimRef.current = setTimeout(() => { setLightningActive(false);
+          if (!EM_BREVE_MODE) setShowOverlay(true);      // <- l. 1208
+          timeoutAnimRef.current = null; }, 1200); } }
+    -> `prazoTimestamp` e `Date.now()` sao AMBOS locais => o fim do leilao e um cronometro do aparelho.
+
+[3] O SERVIDOR JA CHEGA AO APPCONTEXT (l. 184) mas NAO E USADO PARA O FIM
+    const { edicoes, edicoesStatus, agendadas, offsetRelogioMs } = useEdicoes();
+    -> `edicoes[EDICAO_ATIVA].termino_em` = server-authoritative; `offsetRelogioMs` = desvio
+       servidor/aparelho calculado em useEdicoes.js l. 110-115 (calcularOffset).
+
+[4] SINTETICOS SEM MARCADOR — nas DUAS pontas
+  (a) frontend, useEdicoes.js l. 42-57:
+      function sintetizarR1() { const prazoSeg = lerPrazoFlashSegundos();
+        const terminoMs = prazoSeg != null ? prazoSeg * 1000 : Date.now() + 60*60*1000;
+        return { [EDICAO_FALLBACK_ID]: { id, tipo:"relampago", produto:null,
+                 termino_em: new Date(terminoMs).toISOString(), lances:0, status:"aberto", imagem_url:null } }; }
+  (b) backend, edicoes-core.mjs l. 38 + 117-127:
+      const R1_FALLBACK_SEGUNDOS = 24 * 60 * 60; // 24h
+      function sintetizarR1() { ... termino_em: new Date(agora + R1_FALLBACK_SEGUNDOS*1000).toISOString(), ... }
+  -> NENHUM campo distingue sintetica de real (nem no servidor nem no cliente).
+
+[5] criarEdicao NAO ACEITA id (DEBT-017)
+    edicoes-core.mjs l. 44:  EDICAO_ID_RE = /^(?:(PROG|RELAMP)-\d+|ESPECIAL-[A-Z0-9]+)$/   (R-1 NAO casa)
+    edicoes-core.mjs l. 231: criarEdicao({ tipo, produto, duracaoSegundos, duracaoMin, criadoPor, origem,
+                                           valorBaseCentavos, incrementoCentavos, produtoId })
+    edicoes-core.mjs l. 77:  function proximoId(tipo){ return tipo === "programado" ? "PROG" : "RELAMP"; }
+    edicoes-core.mjs l. 320: encerrar valida por regex -> { ok:false, code:"edicao_id_invalido" }
+    edicoes.mjs l. 61-67:    POST /edicoes -> guardAdmin(req) ANTES de tudo (admin-only)
+  -> sem admin token, criar a R-1 em producao = escrita directa da chave R-1 no Blob edicoes-metadata.
+
+[6] OVERLAYS (17c)
+    FimEdicaoOverlay.jsx (84 l.): props { vencedor, modalidade, onNovaRodada, EDICAO_ATIVA } — SEM onClose;
+      saida unica = botao "⚡ NOVA RODADA" (l. 70-80); conteudo = 🏆 EDIÇÃO ENCERRADA + Carteira Vencedora
+      (endereco abreviado + valor) ou "Nenhum lance único registado".
+    Montado em: Dashboard.jsx l. 524-529 ({showOverlay && <FimEdicaoOverlay .../>}).
+    MercadoLances.jsx l. 69: OverlayVencedor — overlay PROPRIO (markup proprio), distinto do FimEdicaoOverlay.
+
+[7] API DO FRONTEND (para o filtro por utilizador)
+    src/lib/api.js l. 48: export async function apiGet(path, { token, signal, headers } = {})
+    l. 28: if (token) headers.Authorization = `Bearer ${token}`
+    -> o endpoint do 17a exige Bearer; o token tem de ser passado pelo chamador (sessao do utilizador).
+
+[8] ARNES DE RUNTIME (GATE 23)
+    src/__tests__/_arnes-provider.mjs (11 734 bytes; UTAC000.15) — provara a cablagem
+    servidor -> AppContext -> pagina.

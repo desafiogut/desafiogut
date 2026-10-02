@@ -5,6 +5,8 @@ import { useAppContext, useAppTimer } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import GutoAvatar from "../components/GutoAvatar.jsx";
 import FimEdicaoOverlay from "../components/FimEdicaoOverlay.jsx";
+// UTAC000.17bc (17c) — participações do titular (endpoint `/minhas-participacoes` do UTAC000.17a).
+import { useMinhasParticipacoes } from "../hooks/useMinhasParticipacoes.js";
 // UTAC000.9 (DEBT-008) — resultado OFICIAL da edição (UTAC000.8). O card «Menor Lance Único»
 // e o overlay de fim deixam de mostrar «o menor único que este browser viu».
 import { useResultadoOficial } from "../hooks/useResultadoOficial.js";
@@ -73,11 +75,14 @@ export default function Dashboard() {
     pareceAutenticado,
     address, userLabel, EDICAO_ATIVA,
     showOverlay, showCountdown, handleNovaRodada, setPrazoTimestamp,
+    authToken, fecharOverlay, // UTAC000.17bc (17c) — token das participações e saída explícita do overlay
     edicoes,
     // MC94.2 — edição especial: `agendadas` antes da hora, `offsetRelogioMs`
     // para a contagem na hora do servidor; o resto é para o CardLance dela.
     agendadas, offsetRelogioMs, isConnected, ready, abrirModal, desconectar,
   } = useAppContext();
+  // UTAC000.17bc (17c/GATE 21) — em que EDIÇÕES o titular deu lance (filtrado pelo token, no servidor).
+  const { participacoes } = useMinhasParticipacoes(authToken);
 
   // ── UTAC000.9 (DEBT-008) — O VENCEDOR MOSTRADO É O OFICIAL QUANDO EXISTE ──────────
   // O `vencedor` do contexto é derivado dos lances que ESTE browser viu (em mainnet: nada, ou
@@ -527,6 +532,9 @@ export default function Dashboard() {
           modalidade={modalidade}
           onNovaRodada={handleNovaRodada}
           EDICAO_ATIVA={EDICAO_ATIVA}
+          participacoes={participacoes}
+          meuEndereco={address}
+          onClose={fecharOverlay}
         />
       )}
 

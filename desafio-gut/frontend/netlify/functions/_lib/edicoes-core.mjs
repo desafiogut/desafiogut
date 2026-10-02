@@ -41,7 +41,9 @@ const R1_FALLBACK_SEGUNDOS = 24 * 60 * 60; // 24h
 const DUR_MIN_SEG = 30;            // 30s
 const DUR_MAX_SEG = 90 * 24 * 3600; // 90 dias
 
-export const EDICAO_ID_RE = /^(?:(PROG|RELAMP)-\d+|ESPECIAL-[A-Z0-9]+)$/;
+// UTAC000.17bc (DEBT-017) — `R-\d+` acrescentado: a R-1 é a edição ACTIVA do cliente e tem de poder
+// ser criada/encerrada por código (antes só existia sintetizada). Mantém os formatos anteriores.
+export const EDICAO_ID_RE = /^(?:(PROG|RELAMP|R)-\d+|ESPECIAL-[A-Z0-9]+)$/;
 // MC94.1 — ESPECIAL-* (id do operador, criado por seed; criarEdicao continua a
 // gerar só PROG/RELAMP). A janela temporal vive em ./edicao-janela.mjs.
 
@@ -123,6 +125,9 @@ function sintetizarR1() {
     termino_em: new Date(agora + R1_FALLBACK_SEGUNDOS * 1000).toISOString(),
     lances:     0,
     status:     "aberto",
+    // UTAC000.17bc (DEBT-016/GATE 26) — MARCADOR explícito: este prazo é INVENTADO (agora + 24h), não é
+    // um prazo real. Sem ele o cliente não conseguia distinguir e abria o overlay num prazo falso.
+    sintetizada: true,
   };
 }
 
@@ -228,7 +233,7 @@ export async function buscarEdicao(id) {
  * @param {"endpoint"|"guto"} [args.origem]
  * @returns {Promise<{ ok: true, edicao: object } | { ok: false, code, message }>}
  */
-export async function criarEdicao({ tipo, produto, duracaoSegundos, duracaoMin, criadoPor = null, origem = "endpoint", valorBaseCentavos = null, incrementoCentavos = null, produtoId = null }) {
+export async function criarEdicao({ tipo, produto, duracaoSegundos, duracaoMin, criadoPor = null, origem = "endpoint", valorBaseCentavos = null, incrementoCentavos = null, produtoId = null, id: idPedido = null }) {
   const tipoNorm = normalizarTipo(tipo);
   if (!tipoNorm) {
     return { ok: false, code: "tipo_invalido", message: 'tipo deve ser "programado" ou "relampago"' };
@@ -255,10 +260,20 @@ export async function criarEdicao({ tipo, produto, duracaoSegundos, duracaoMin, 
     return { ok: false, code: "store_indisponivel", message: "edicoes-metadata indisponível" };
   }
 
-  const id = await proximoId(store, tipoNorm);
-  // Defesa extra: garante que o id gerado bate o regex (D3) antes de virar chave.
-  if (!EDICAO_ID_RE.test(id)) {
-    return { ok: false, code: "edicao_id_invalido", message: `id gerado inválido: ${id}` };
+  // UTAC000.17bc (DEBT-017) — id EXPLÍCITO opcional (ex.: `R-1`, a edição activa do cliente).
+  // Sem ele mantém-se o id sequencial RELAMP-N/PROG-N (comportamento de sempre, byte a byte igual).
+  let id;
+  if (idPedido != null && String(idPedido) !== "") {
+    id = String(idPedido);
+    if (!EDICAO_ID_RE.test(id)) {
+      return { ok: false, code: "edicao_id_invalido", message: `id deve casar ${EDICAO_ID_RE}` };
+    }
+  } else {
+    id = await proximoId(store, tipoNorm);
+    // Defesa extra: garante que o id gerado bate o regex (D3) antes de virar chave.
+    if (!EDICAO_ID_RE.test(id)) {
+      return { ok: false, code: "edicao_id_invalido", message: `id gerado inválido: ${id}` };
+    }
   }
 
   // MC-ECOMMERCE-01a — ligação edição → produto do catálogo, decidida AQUI pelo admin.

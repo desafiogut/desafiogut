@@ -52,6 +52,9 @@ function sintetizarR1() {
       lances: 0,
       status: "aberto",
       imagem_url: null, // MC45 — fallback sem imagem → placeholder do EdicaoBanner
+      // UTAC000.17bc (DEBT-016/GATE 26) — MARCADOR: este prazo é INVENTADO (reutiliza o prazo local
+      // persistido ou agora+1h) ⇒ o AppContext não pode tratá-lo como prazo real.
+      sintetizada: true,
     },
   };
 }
@@ -87,6 +90,9 @@ function normalizarMapa(mapa) {
       imagem_url: e.imagem_url ?? e.banner_url ?? e.imagem ?? null,
       // MC94.2 — início da janela (edições especiais); null nas restantes.
       inicio_em: typeof e.inicio_em === "string" && !Number.isNaN(Date.parse(e.inicio_em)) ? e.inicio_em : null,
+      // UTAC000.17bc (DEBT-016) — passa o marcador do SERVIDOR: `true` só quando o próprio servidor
+      // sintetizou a edição (prazo inventado). Uma edição real não traz o campo ⇒ `false`.
+      sintetizada: e.sintetizada === true,
     };
   }
   return out;

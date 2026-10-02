@@ -136,7 +136,7 @@ export async function criarArnes({ leilaoAberto = false } = {}) {
    * @param {object|null} [o.resultadoOficial] `{ vencedor, menorUnicoCentavos }` consolidado on-chain (ou null)
    * @param {object} [o.localStorage] conteúdo inicial do localStorage
    */
-  async function montarProvider({ children, lancesFlash = [], resultadoOficial = null, localStorage = {} }) {
+  async function montarProvider({ children, lancesFlash = [], resultadoOficial = null, localStorage = {}, edicoes = null }) {
     oficial.definirOnchain(resultadoOficial);
     const repor = instalarGlobais(localStorage);
     const navegacoes = [];
@@ -151,6 +151,13 @@ export async function criarArnes({ leilaoAberto = false } = {}) {
     };
     const fetchDuplo = duploDeFetch((url) => {
       if (url.includes("lances-flash")) return { json: { lances: lancesFlash } };
+      // UTAC000.17bc (GATE 23) — o arnês passa a poder servir `/edicoes` com edições REAIS (com
+      // `termino_em` do servidor): é por aqui que se prova a travessia servidor → AppContext → página
+      // do prazo real. Sem esta opção o arnês responde 404 e o cliente cai na edição SINTÉTICA
+      // (marcada) — que por desenho já não encerra o leilão.
+      if (edicoes && url.includes("edicoes")) {
+        return { json: { edicoes, agendadas: {}, agora: new Date().toISOString() } };
+      }
       return { status: 404, json: { code: "nao_existe_no_arnes" } };
     });
     const avisos = [];
