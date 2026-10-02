@@ -1,0 +1,23 @@
+UTAC000.17bc — a evidencia anterior ainda e valida? (nada mudou desde a verificacao?)
+---------------------------------------------------------------------------
+[1] arvore == HEAD == origin/main
+    HEAD=5a41ae1 · origin/main=5a41ae1
+    ficheiros por commitar: 0
+[2] os 14 ficheiros de codigo/teste da ronda: blob == HEAD?
+    blob == HEAD: 16/16
+    (== => o verde registado em _logs/UTAC000.17bc_SEG5_AD-HOC-final.txt e do conteudo actual)
+[3] o registo da verificacao existe e cobre as correccoes?
+    linhas que declaram a identidade: 1
+    alvos focados registados: 6
+[4] quando foi a ultima alteracao de CODIGO vs. a verificacao?
+    ultimo commit que tocou em src/ ou netlify/: 78d626f 09:54 fix(UTAC000.17bc): correccoes do veredicto adversarial +
+    ultimo commit (qualquer): 5a41ae1 09:59 docs(UTAC000.17bc): SEG5 — verificacao ad-hoc final (b
+[5] reproduco AGORA os alvos focados
+    ⚠️ ERRO MEU NO MEU PROPRIO SCRIPT (registado, nao apagado): o `cd ../netlify/functions` feito a partir
+    de `src/` e a soma com variavel vazia deram dois erros de shell -> o alvo do BACKEND nao correu na
+    primeira passagem e a contagem saiu so com os 4 ficheiros do frontend. Re-executado com o caminho certo:
+        frontend (tick 13 + handlers 4 + visto 8 + agregado 7) = pass=32 fail=0
+        backend  utac0017bc-edicao-r1: ℹ tests 8 ℹ pass 8 ℹ fail 0
+    => 40 casos focados, 0 falhas, medidos NESTE instante sobre a revisao 5a41ae1.
+---------------------------------------------------------------------------
+FIM
