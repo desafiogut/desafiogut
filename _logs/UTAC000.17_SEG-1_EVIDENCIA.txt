@@ -1,0 +1,114 @@
+UTAC000.17 — SEG-1 — EVIDÊNCIA BRUTA (HI10)
+HEAD = origin/main = 85837bfbfba782ecd04b71fe1c34450fa5f6bc9f · 2026-10-02T04:30:55-03:00
+
+== 1. Prazo do relâmpago no cliente (AppContext.jsx l.190-199) ==
+  // Timer (Onda 5 FASE 0) — 2 prazos persistidos, prazoTimestamp deriva do tipo.
+  // Inicializa do localStorage; se ausente, computa default. Programado é
+  // hidratado on-chain via polling (getEdicaoPrazo) logo após o mount.
+  const [prazoFlash, setPrazoFlash] = useState(() =>
+    lerPrazoStorage(LS_PRAZO_FLASH) ?? (Math.floor(Date.now() / 1000) + DURACAO.flash)
+  );
+  const [prazoProgramado, setPrazoProgramado] = useState(() =>
+    lerPrazoStorage(LS_PRAZO_PROG) ?? (Math.floor(Date.now() / 1000) + DURACAO.programado)
+  );
+  const prazoTimestamp = modalidade === "flash" ? prazoFlash : prazoProgramado;
+
+== 2. leilaoTimer.lerPrazoStorage (aceita vencido < 600 s) ==
+export function lerPrazoStorage(chave) {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = window.localStorage.getItem(chave);
+    if (!v) return null;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    // Descarta prazos vencidos há mais de 10 min (evita prender em "encerrado").
+    if (n + 600 < Math.floor(Date.now() / 1000)) return null;
+    return n;
+  } catch { return null; }
+}
+
+
+== 3. GET /.netlify/functions/edicoes (produção, leitura pública) ==
+{"edicoes":{"RELAMP-1":{"id":"RELAMP-1","tipo":"relampago","produto":"Smart TV","produtoId":null,"termino_em":"2026-05-30T23:02:11.284Z","lances":0,"status":"encerrado","valorBaseCentavos":null,"incrementoCentavos":null,"inicio_em":null,"imagem_url":null},"RELAMP-2":{"id":"RELAMP-2","tipo":"relampago","produto":"Smart TV","produtoId":null,"termino_em":"2026-05-30T23:10:34.547Z","lances":0,"status":"encerrado","valorBaseCentavos":null,"incrementoCentavos":null,"inicio_em":null,"imagem_url":null},"RELAMP-3":{"id":"RELAMP-3","tipo":"relampago","produto":"Smart TV","produtoId":null,"termino_em":"2026-05-31T03:52:13.827Z","lances":0,"status":"encerrado","valorBaseCentavos":null,"incrementoCentavos":null,"inicio_em":null,"imagem_url":null},"R-1":{"id":"R-1","tipo":"relampago","produto":null,"termino_em":"2026-10-03T07:30:55.937Z","lances":0,"status":"aberto"}},"agendadas":{"ESPECIAL-AIRFRYER":{"id":"ESPECIAL-AIRFRYER","tipo":"relampago","produto":"Air Fryer","produtoId":null,"termino_em":"2026-10-04T23:30:00.000Z","lances":0,"status":"agendado","valorBaseCentavos":null,"incrementoCentavos":null,"inicio_em":"2026-10-04T23:00:00.000Z","imagem_url":"/artes/edicao-especial-airfryer.jpg"}},"agora":"2026-10-02T07:30:55.789Z"}
+
+== 4. R-1 é SINTETIZADA pelo servidor (edicoes-core.mjs) ==
+//   { PROG: <int>, RELAMP: <int> }. id gerado = `${PREFIX}-${++counter}`.
+//
+// Compat R-1 (D5): listarEdicoes() SEMPRE injeta R-1. Se não houver metadata
+//   para R-1, sintetiza uma edição relâmpago aberta com termino_em = agora +
+//   R1_FALLBACK_SEGUNDOS, para que clientes antigos / o fallback do hook nunca
+//   fiquem sem edição.
+//
+// Auditoria (D7): cada criação/encerramento grava Blob "auditoria" key
+//   `${timestamp}` = { acao, edicaoId, endereco, em, origem }.
+}
+
+/** Edição R-1 sintética (compat D5) quando não há metadata persistido. */
+function sintetizarR1() {
+  const agora = Date.now();
+  return {
+    id:         EDICAO_PADRAO,
+    tipo:       "relampago",
+    produto:    null,
+    termino_em: new Date(agora + R1_FALLBACK_SEGUNDOS * 1000).toISOString(),
+    lances:     0,
+    status:     "aberto",
+  }
+
+  // Compat R-1 (D5): garante presença mesmo sem metadata persistido.
+  if (!edicoes[EDICAO_PADRAO]) {
+    edicoes[EDICAO_PADRAO] = sintetizarR1();
+  }
+
+
+== 5. Prazo on-chain da R-1 (medido pelo validador do UTAC000.14, eth_call read-only): prazo = 0 ==
+
+== 6. lances-flash em mainnet: lê o Blob lances-relampago (nunca escrito em mainnet — UTAC000.8) e blinda valor/unicidade ==
+  // ── MC28.1 R9: em mainnet, o valor NUNCA sai em claro no corpo HTTP (G-2).
+  // Devolvem-se só participações blindadas (oculto:true) — sem valor nem
+  // unicidade — até à consolidação. Em Sepolia/localhost: comportamento legado.
+  const MAINNET = process.env.NETWORK_STAGE === "mainnet";
+  if (MAINNET) {
+    const lances = rawLances.map((l) => ({
+      lanceId:        l.lanceId,
+      endereco:       l.endereco,
+      valor:          null,            // blindado — não revelar durante o leilão
+      oculto:         true,
+      commitmentHash: l.commitmentHash ?? null,
+      nomeExibicao:   l.nomeExibicao ?? null,
+      txHash:         l.lanceId,
+      repetido:       null,            // não vazar unicidade ao bot
+    }));
+    return jsonResponse({ edicaoId, ocultoAteConsolidar: true, lances });
+
+== 7. ranking?recurso=feedback: lê rankings_ciclo (só existe DEPOIS de consolidar/pontuar) ==
+export async function lerFeedback(cicloId, endereco) {
+  const ciclo = String(cicloId || "").trim();
+  const addr = normalizar(endereco);
+  const vazio = {
+    cicloId: ciclo, endereco: addr, pontosTotais: 0, acertosTotais: 0, posicao: null,
+    sequenciaAtual: 0, faltamParaBonus: REGRAS.ACERTOS_PARA_BONUS,
+    bonusEmitido: false, senhasACreditar: 0,
+  };
+  if (!ciclo || !addr) return vazio;
+
+  const supabase = getSupabase();
+  const r = await supabase.from(T_RANKINGS)
+    .select("*").eq("ciclo_id", ciclo).eq("endereco", addr).maybeSingle();
+  const linha = exigir(r, "ler feedback");
+
+== 8. Overlays e onde são montados ==
+desafio-gut/frontend/src/pages/Dashboard.jsx:7:import FimEdicaoOverlay from "../components/FimEdicaoOverlay.jsx";
+desafio-gut/frontend/src/pages/Dashboard.jsx:88:  // A FORMA é a mesma que o card e o `FimEdicaoOverlay` já esperam ({ endereco, valor }) —
+desafio-gut/frontend/src/pages/Dashboard.jsx:97:  // corrigido no `OverlayVencedor` e no `MercadoLances`). O endereço já tinha guarda (l. 410).
+desafio-gut/frontend/src/pages/Dashboard.jsx:99:  // ⚠️ Nota: `FimEdicaoOverlay.jsx` (l. 16) tem o mesmo defeito e NÃO é corrigido aqui (fora do
+desafio-gut/frontend/src/pages/Dashboard.jsx:524:      {showOverlay && (
+desafio-gut/frontend/src/pages/Dashboard.jsx:525:        <FimEdicaoOverlay
+desafio-gut/frontend/src/pages/MercadoLances.jsx:69:function OverlayVencedor({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA, isMobile }) {
+desafio-gut/frontend/src/pages/MercadoLances.jsx:209:      {showOverlay && (
+desafio-gut/frontend/src/pages/MercadoLances.jsx:210:        <OverlayVencedor
+ls: cannot access 'desafio-gut/frontend/src/components/edicao-especial/FimEdicaoOverlay.jsx': No such file or directory
+desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx
+3:// MC23.3 — outer overlay migrado para <Modal> (spring entry + backdrop bg-black/60).
+37:      <Modal
+38:        open

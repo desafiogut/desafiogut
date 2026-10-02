@@ -1,0 +1,42 @@
+schema: utac/1
+name: UTAC000.17c
+title: "Overlay de fim agregado por edição + onClose + «visto» persistente"
+type: produto
+baseline: 85837bf   # remedir no SEG-1 (git rev-parse HEAD)
+motivo: >-
+  Decisões do operador (R18, 2026-10-02, UTAC000.17): feed de edições; dispara só para edições em que
+  o utilizador participou; várias que acabam juntas → 1 overlay agregado (lista, destaca vitórias,
+  mostra o vencedor nas derrotas, botão FECHAR); onClose sim; marcar como visto (não reabre).
+frentes:
+  - id: A
+    nome: Medir os 2 overlays actuais (FimEdicaoOverlay no Dashboard l.524; OverlayVencedor no MercadoLances l.209) e o gate showOverlay
+    entrega: [_logs/UTAC000.17c_SEG-1_MEDICAO.md]
+  - id: B
+    nome: Componente agregado (lista por edição; vitória vs derrota; FECHAR) montado num SÍTIO ÚNICO; retirar os 2 overlays antigos
+    entrega: [src/components/<OverlayFimAgregado>.jsx, montagem, Dashboard.jsx, MercadoLances.jsx]
+  - id: C
+    nome: «Visto» persistente por (endereço, edição) + filtro pelas participações (UTAC000.17a)
+    entrega: [src/lib/<visto>.js, AppContext.jsx]
+  - id: D
+    nome: Testes com o arnês (GATE 23) + mutação (sem filtro; sem visto; sem onClose)
+    entrega: [src/__tests__/utac00017c-*.test.mjs]
+autoriza:
+  - criar o componente agregado e o módulo «visto»
+  - alterar Dashboard.jsx e MercadoLances.jsx SÓ para retirar/substituir o overlay de fim
+  - alterar AppContext.jsx (estado do overlay agregado) e FimEdicaoOverlay.jsx (ou removê-lo, declarado)
+  - testes; usar/estender o _arnes-provider.mjs (declarado); commit + push foreground; validador
+proibe:
+  - git add -A; deploy em background; backend; dependências novas
+  - mudar a regra de vencedor (oficial primeiro — UTAC000.10) ou as guardas de tipo (UTAC000.11/14)
+  - abrir o overlay em EM BREVE (o gate do UTAC000.14 mantém-se)
+dependencias:
+  - UTAC000.17a (participações) e UTAC000.17b (prazo real) fechados
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: [T1, T4]
+stop_conditions_extra: []
+ressalvas:
+  - «Visto» onde? localStorage (por aparelho) vs servidor (multi-aparelho) — decisão do operador no SEG-1
+  - FECHAR não pode iniciar «nova rodada» (hoje o único botão do FimEdicaoOverlay rearma 30 min locais)
+  - O vencedor de cada edição vem do resultado OFICIAL dessa edição (useResultadoOficial por id)
+  - Alternativa sem tocar Dashboard/MercadoLances (validador 17): montar no AppLayout (App.jsx) e o AppContext deixar de pôr showOverlay=true — deixa código morto; decidir no SEG-1
+  - Activação: 17b + 17c juntos ANTES de desligar o EM BREVE (R-B1 do 17b)

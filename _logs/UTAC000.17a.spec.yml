@@ -1,0 +1,40 @@
+schema: utac/1
+name: UTAC000.17a
+title: "Endpoint autenticado «as minhas participações por edição» (base do filtro do overlay)"
+type: produto
+baseline: 85837bf   # remedir no SEG-1 (git rev-parse HEAD)
+motivo: >-
+  O overlay agregado só pode mostrar edições em que o utilizador deu lance (decisão R18 do
+  UTAC000.17), mas em mainnet isso não é observável no cliente: lances-flash lê o Blob
+  lances-relampago (não escrito em mainnet) e o ranking?recurso=feedback só existe após consolidar.
+frentes:
+  - id: A
+    nome: Medir onde vivem os lances em produção (data-store; DATA_STORE_BACKEND=supabase no MC101) e se há leitura por endereço
+    entrega: [_logs/UTAC000.17a_SEG-1_MEDICAO.md]
+  - id: B
+    nome: GET autenticado (user-session, só o próprio; admin opcional) que devolve as edições com participação — SEM valores nem unicidade enquanto a edição está aberta (G-2/MC28.1 R9)
+    entrega: [netlify/functions/<endpoint>.mjs, _lib/<leitura por endereço>]
+  - id: C
+    nome: Testes (duplo Supabase fiel ao esquema; anti-IDOR 401/403; fail-closed 502) + mutação
+    entrega: [netlify/functions/_tests/utac00017a-*.test.mjs]
+autoriza:
+  - criar 1 endpoint novo em netlify/functions/ + leitura por endereço em _lib/
+  - criar testes em netlify/functions/_tests/
+  - commit + push em foreground; validador adversarial
+proibe:
+  - git add -A; deploy em background
+  - alterar endpoints existentes (lances-flash, ranking, lance-relampago) ou o esquema Supabase
+  - revelar valor/unicidade de lances de edições abertas (anti-bot)
+  - frontend (src/**) — o consumo fica para o UTAC000.17c
+  - dependências novas; tocar credenciais (R5)
+dependencias:
+  - nenhuma (pode correr em paralelo com o 17b)
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: [T1, T4, S1]
+stop_conditions_extra: [ST3]
+ressalvas:
+  - Prova de posse = JWT user-session (regra MC89.38); o endereço NUNCA vem do corpo/query sem prova
+  - LGPD — o endpoint entra no exportar-dados? (medir; decisão do operador se não)
+  - Validar por content-type JSON, nunca por HTTP 200 (MC93-F)
+  - Já existe idx_lances_endereco (schema l.51) e precedente de leitura por endereço (exportar-dados) ⇒ ST3 não deve disparar
+  - NÃO reutilizar o POST /exportar-dados: finalidade LGPD, rate-limit 6, pesado, devolve valor_centavos de edições abertas

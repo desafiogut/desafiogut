@@ -1,0 +1,39 @@
+schema: utac/1
+name: UTAC000.17b
+title: "Prazo do relâmpago lido do servidor — fecha a ORIGEM LOCAL do prazo (parte da DEBT-016)"
+type: produto
+baseline: 85837bf   # remedir no SEG-1 (git rev-parse HEAD)
+motivo: >-
+  O prazo do relâmpago é local (AppContext l.193-195: localStorage ?? agora+1800 s). O servidor já
+  publica termino_em por edição + `agora` (GET /edicoes; useEdicoes + offsetRelogioMs). ⚠️ Sozinho NÃO
+  fecha a DEBT-016: sem o onClose do 17c, o «NOVA RODADA» reabre o overlay (R-B1). Não desligar o EM BREVE antes do 17c.
+frentes:
+  - id: A
+    nome: Medir (edição activa; useEdicoes; R-1 SINTETIZADA rolante; fallback do useEdicoes)
+    entrega: [_logs/UTAC000.17b_SEG-1_MEDICAO.md, _SEG-1_EVIDENCIA.txt]
+  - id: B
+    nome: prazoFlash = termino_em da edição activa vindo do servidor (só com edicoesStatus==="ok"), offset aplicado ao prazo num sítio só
+    entrega: [src/context/AppContext.jsx (só a origem do prazo do relâmpago)]
+  - id: C
+    nome: Prova em runtime com o arnês (servidor → AppContext → página) + mutação
+    entrega: [src/__tests__/utac00017b-prazo-servidor.test.mjs]
+autoriza:
+  - src/context/AppContext.jsx (só a origem do prazo do relâmpago)
+  - testes em src/**/__tests__/; usar o _arnes-provider.mjs (estender só declarando)
+  - commit + push em foreground; validador adversarial; _logs/DEBT.md (anotar, não fechar a DEBT-016)
+proibe:
+  - git add -A; deploy em background; backend (netlify/functions/**); dependências novas
+  - Dashboard.jsx, MercadoLances.jsx, FimEdicaoOverlay.jsx, useResultadoOficial.js, MeusAtivos.jsx
+  - abrir/criar edições em produção; desligar o EM_BREVE_MODE
+  - vite.config.js, package.json, _ponte-ssr.mjs, _render.mjs
+dependencias:
+  - UTAC000.15 (arnês de runtime) fechado
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: [T1, T4, HI10]
+stop_conditions_extra: []
+ressalvas:
+  - R-B1 (validador 17) — handleNovaRodada rearma o prazo local; com o servidor a prevalecer o overlay reabre ~1,2 s depois → testar e declarar
+  - R-B2 — o fallback do useEdicoes (estado inicial / erro) usa gut_prazo_flash = o PRÓPRIO prazo local ⇒ só aceitar edicoesStatus==="ok"; testar arranque e rede em erro
+  - R-B3 — definir a «edição activa» (EDICAO_ATIVA="R-1" fixo e a R-1 é sempre sintetizada ⇒ o overlay nunca abre; criarEdicao só gera RELAMP-N) — decisão do operador no SEG-1
+  - R-B4 — o prazoProgramado também é local (24 h; on-chain 0) — declarar fora de âmbito ou incluir
+  - offsetRelogioMs===null, ramo `else if (encerrado)`, re-render a cada poll, botões DEV de prazo — fixar em teste
