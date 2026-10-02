@@ -1,0 +1,923 @@
+diff --git a/desafio-gut/frontend/src/components/CardLance.jsx b/desafio-gut/frontend/src/components/CardLance.jsx
+index 25acc70..a01a2a2 100644
+--- a/desafio-gut/frontend/src/components/CardLance.jsx
++++ b/desafio-gut/frontend/src/components/CardLance.jsx
+@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
+ import { sanitizeLance, sanitizeEdicaoId } from "../utils/sanitize.js";
+ import { verificarRateLimit, registrarLance } from "../utils/rateLimiter.js";
+ import { gastarFicha } from "../utils/saldoInterno.js";
++import { validarLance } from "../utils/validacao.js";
+ import {
+   getSignerFromProvider,
+   assinarLance,
+@@ -40,10 +41,11 @@ export default function CardLance({
+   onConnect,
+   onDisconnect,
+   encerrado,
+-  tipoLeilao       = "flash",   // 'flash' | 'programado'
+-  carteiraFlash    = 0,          // number (R$) — passado pelo App
+-  fichasProgramadas = 0,         // number (int) — passado pelo App
+-  onRefreshSaldo,                // callback para atualizar saldos no App
++  tipoLeilao        = "flash",
++  carteiraFlash     = 0,
++  fichasProgramadas = 0,
++  isSepoliaOk       = null,     // null=verificando, true=OK, false=falhou
++  onRefreshSaldo,
+ }) {
+   const { wallets } = useWallets();
+   const privyWallet = wallets.find((w) => w.walletClientType === "privy") || wallets[0];
+@@ -67,20 +69,26 @@ export default function CardLance({
+     // 1. Sanitização
+     const valorCentavos = sanitizeLance(valor);
+     if (valorCentavos === null) {
+-      setErro("Valor inválido. Use um inteiro entre 1 e 999999 (centavos). Art. 27: mín R$ 0,01.");
++      setErro("Valor inválido. Use um inteiro entre 1 e 999999 (centavos). Art. 23: mín R$ 0,01.");
+       return;
+     }
+ 
+-    // 2. Rate Limit
++    // 2. Pré-validação de negócio (Ponto 3 — Validação de Transação)
++    const preCheck = validarLance({
++      valorEmCentavos: valorCentavos,
++      address,
++      isConnected,
++      encerrado,
++      tipoLeilao,
++      fichasProgramadas,
++      isSepoliaOk,
++    });
++    if (!preCheck.valido) { setErro(preCheck.motivo); return; }
++
++    // 3. Rate Limit
+     const { permitido, motivo } = verificarRateLimit(address);
+     if (!permitido) { setErro(motivo); return; }
+ 
+-    // 3. Valida fichas para leilão programado
+-    if (isProgramado && fichasProgramadas <= 0) {
+-      setErro("Sem fichas disponíveis. Converta saldo flash em fichas (Art. 20: R$ 2,00 / ficha).");
+-      return;
+-    }
+-
+     try {
+       // ── MOCK: pipeline simulado ──────────────────────────────────────────
+       if (MOCK_MODE) {
+diff --git a/desafio-gut/frontend/src/components/ui/NetworkAlert.jsx b/desafio-gut/frontend/src/components/ui/NetworkAlert.jsx
+new file mode 100644
+index 0000000..7a37203
+--- /dev/null
++++ b/desafio-gut/frontend/src/components/ui/NetworkAlert.jsx
+@@ -0,0 +1,87 @@
++import { useEffect } from "react";
++
++const VARIANTES = {
++  erro:    { fundo: "rgba(239,68,68,0.13)",   borda: "rgba(239,68,68,0.38)",   cor: "#ef4444", icone: "⚠️" },
++  aviso:   { fundo: "rgba(245,166,35,0.13)",  borda: "rgba(245,166,35,0.38)",  cor: "#f5a623", icone: "⚠️" },
++  sucesso: { fundo: "rgba(16,185,129,0.13)",  borda: "rgba(16,185,129,0.38)",  cor: "#10b981", icone: "✅" },
++  info:    { fundo: "rgba(37,99,235,0.13)",   borda: "rgba(37,99,235,0.38)",   cor: "#93c5fd", icone: "ℹ️" },
++};
++
++/**
++ * Toast de alerta posicionado no rodapé da tela.
++ * autoCloseMs=0 desativa o fechamento automático.
++ *
++ * Props:
++ *   mensagem     – string | null (null = oculto)
++ *   tipo         – "erro" | "aviso" | "sucesso" | "info"
++ *   onClose      – () => void
++ *   autoCloseMs  – número (default 6000)
++ */
++export function NetworkAlert({ mensagem, tipo = "erro", onClose, autoCloseMs = 6000 }) {
++  useEffect(() => {
++    if (!mensagem || !autoCloseMs) return;
++    const id = setTimeout(onClose, autoCloseMs);
++    return () => clearTimeout(id);
++  }, [mensagem, autoCloseMs, onClose]);
++
++  if (!mensagem) return null;
++
++  const v = VARIANTES[tipo] ?? VARIANTES.erro;
++
++  return (
++    <div
++      role="alert"
++      aria-live="assertive"
++      style={{
++        position:       "fixed",
++        bottom:         "1.25rem",
++        left:           "50%",
++        transform:      "translateX(-50%)",
++        zIndex:         9999,
++        display:        "flex",
++        alignItems:     "center",
++        gap:            "0.75rem",
++        borderRadius:   "12px",
++        border:         `1px solid ${v.borda}`,
++        background:     v.fundo,
++        padding:        "0.75rem 1.1rem",
++        boxShadow:      "0 8px 32px rgba(0,0,0,0.5)",
++        maxWidth:       "480px",
++        width:          "calc(100vw - 2rem)",
++        backdropFilter: "blur(14px)",
++        WebkitBackdropFilter: "blur(14px)",
++        color:          v.cor,
++        fontSize:       "0.85rem",
++        fontWeight:     "600",
++        lineHeight:     "1.4",
++        animation:      "gut-alert-in 0.22s ease-out both",
++      }}
++    >
++      <style>{`
++        @keyframes gut-alert-in {
++          from { transform: translateX(-50%) translateY(10px); opacity: 0; }
++          to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
++        }
++      `}</style>
++      <span style={{ fontSize: "1rem", flexShrink: 0 }}>{v.icone}</span>
++      <span style={{ flex: 1 }}>{mensagem}</span>
++      <button
++        onClick={onClose}
++        aria-label="Fechar alerta"
++        style={{
++          background:  "transparent",
++          border:      "none",
++          cursor:      "pointer",
++          color:       v.cor,
++          opacity:     0.65,
++          fontSize:    "1rem",
++          padding:     "0 0.1rem",
++          lineHeight:  1,
++          flexShrink:  0,
++        }}
++      >
++        ✕
++      </button>
++    </div>
++  );
++}
+diff --git a/desafio-gut/frontend/src/components/ui/Skeleton.jsx b/desafio-gut/frontend/src/components/ui/Skeleton.jsx
+new file mode 100644
+index 0000000..73234ed
+--- /dev/null
++++ b/desafio-gut/frontend/src/components/ui/Skeleton.jsx
+@@ -0,0 +1,46 @@
++import { cn } from "@/lib/utils";
++
++/** Bloco genérico animado — use className para dimensionar. */
++export function Skeleton({ className, ...props }) {
++  return (
++    <div
++      className={cn(
++        "animate-pulse rounded-md",
++        className
++      )}
++      style={{ background: "rgba(255,255,255,0.07)", ...props.style }}
++      {...props}
++    />
++  );
++}
++
++/** Par label + valor, usado em exibições de saldo. */
++export function SaldoSkeleton({ className } = {}) {
++  return (
++    <div className={cn("flex flex-col gap-1", className)}>
++      <Skeleton className="h-2.5 w-14" />
++      <Skeleton className="h-5 w-24" />
++    </div>
++  );
++}
++
++/** Linha de tabela esqueleto — 3 colunas. */
++export function LinhaSkeleton() {
++  return (
++    <div className="flex items-center gap-3 px-3 py-2">
++      <Skeleton className="h-3 w-28" />
++      <Skeleton className="h-3 w-16" />
++      <Skeleton className="h-3 w-20 ml-auto" />
++    </div>
++  );
++}
++
++/** Bloco de carregamento de saldo com ETH + fichas. */
++export function CarteiraSkeleton() {
++  return (
++    <div className="flex gap-6 items-center">
++      <SaldoSkeleton />
++      <SaldoSkeleton />
++    </div>
++  );
++}
+diff --git a/desafio-gut/frontend/src/context/AppContext.jsx b/desafio-gut/frontend/src/context/AppContext.jsx
+index 1a65d6e..bec23c9 100644
+--- a/desafio-gut/frontend/src/context/AppContext.jsx
++++ b/desafio-gut/frontend/src/context/AppContext.jsx
+@@ -7,6 +7,9 @@ import {
+   converterEmFichas,
+   CUSTO_FICHA_BRL,
+ } from "../utils/saldoInterno.js";
++import { useBlockchain }    from "../hooks/useBlockchain.js";
++import { useNetworkStatus } from "../hooks/useNetworkStatus.js";
++import { NetworkAlert }     from "../components/ui/NetworkAlert.jsx";
+ 
+ // ─── Constantes exportadas ────────────────────────────────────────────────────
+ export const MOCK_MODE    = import.meta.env.VITE_MOCK_MODE === "true";
+@@ -14,8 +17,8 @@ export const EDICAO_ATIVA = "R-1";
+ const LS_LANCES           = "gut_lances_r1";
+ 
+ export const DURACAO = {
+-  flash:      MOCK_MODE ? 30  : 300,   // Relâmpago: 5 min
+-  programado: MOCK_MODE ? 60  : 1800,  // Programado: 30 min
++  flash:      MOCK_MODE ? 30  : 300,
++  programado: MOCK_MODE ? 60  : 1800,
+ };
+ 
+ export const LANCES_MOCK = [
+@@ -36,10 +39,8 @@ export function useAppContext() {
+ 
+ // ─── Provider ─────────────────────────────────────────────────────────────────
+ export function AppProvider({ children }) {
+-  // Tipo de leilão (Art. 8)
+   const [tipoLeilao, setTipoLeilao] = useState("flash");
+ 
+-  // Lances — persistidos em localStorage
+   const [lances, setLances] = useState(() => {
+     try {
+       const salvo = localStorage.getItem(LS_LANCES);
+@@ -47,14 +48,12 @@ export function AppProvider({ children }) {
+     } catch { return LANCES_MOCK; }
+   });
+ 
+-  // Timer
+   const [prazoTimestamp,  setPrazoTimestamp]  = useState(() => Math.floor(Date.now() / 1000) + DURACAO.flash);
+   const [encerrado,       setEncerrado]       = useState(false);
+   const [showOverlay,     setShowOverlay]     = useState(false);
+   const [tempoRestante,   setTempoRestante]   = useState(DURACAO.flash);
+   const [lightningActive, setLightningActive] = useState(false);
+ 
+-  // Carteiras internas — Art. 20: R$ 2,00/senha
+   const [carteiraFlash,     setCarteiraFlash]     = useState(() => getCarteiraFlash());
+   const [fichasProgramadas, setFichasProgramadas] = useState(() => getFichasProgramadas());
+   const [erroCarteira,      setErroCarteira]      = useState("");
+@@ -70,19 +69,54 @@ export function AppProvider({ children }) {
+   const isConnected = MOCK_MODE ? Boolean(mockAddress) : (authenticated && Boolean(realAddress));
+   const userLabel   = user?.google?.name || user?.google?.email || user?.email?.address || user?.apple?.email || null;
+ 
+-  // Vencedor — Menor Lance Único (Art. 8)
+-  const vencedor = [...lances]
++  // ── Ponto 4: Monitoramento de rede ───────────────────────────────────────────
++  const {
++    isOnline,
++    isSepoliaOk,
++    networkError,
++    limparNetworkError,
++    recheckSepolia,
++  } = useNetworkStatus();
++
++  // ── Ponto 1 + 2: Saldo real e vencedor on-chain ───────────────────────────────
++  // Desabilitado em MOCK_MODE ou sem carteira conectada
++  const blockchainEnabled = !MOCK_MODE && Boolean(address);
++  const {
++    saldoSenhas:      saldoSenhasOnChain,
++    saldoETH,
++    vencedorOnChain,
++    isLoadingSaldo,
++    isLoadingVencedor,
++    erroBlockchain,
++    limparErroBlockchain,
++    refetchSaldo:    refetchSaldoOnChain,
++    refetchVencedor,
++  } = useBlockchain({
++    address,
++    idEdicao: EDICAO_ATIVA,
++    enabled:  blockchainEnabled,
++  });
++
++  // Alerta unificado: erros de rede têm prioridade sobre erros de contrato
++  const alertaMensagem = networkError || erroBlockchain || null;
++  const alertaTipo     = networkError ? "aviso" : "erro";
++  function limparAlerta() {
++    if (networkError)     limparNetworkError();
++    if (erroBlockchain)   limparErroBlockchain();
++  }
++
++  // Vencedor: prefere dado on-chain quando disponível; cai back para cálculo local
++  const vencedorLocal = [...lances]
+     .filter((l) => !l.repetido)
+     .sort((a, b) => a.valor - b.valor)[0] ?? null;
++  const vencedor = vencedorOnChain ?? vencedorLocal;
+ 
+   // ── Efeitos ──────────────────────────────────────────────────────────────────
+ 
+-  // Persistência de lances
+   useEffect(() => {
+     try { localStorage.setItem(LS_LANCES, JSON.stringify(lances)); } catch {}
+   }, [lances]);
+ 
+-  // Reset timer ao trocar tipo de leilão
+   useEffect(() => {
+     const dur = DURACAO[tipoLeilao];
+     setPrazoTimestamp(Math.floor(Date.now() / 1000) + dur);
+@@ -92,7 +126,6 @@ export function AppProvider({ children }) {
+     setLightningActive(false);
+   }, [tipoLeilao]);
+ 
+-  // Timer regressivo + disparo do efeito relâmpago
+   useEffect(() => {
+     const tick = () => {
+       const restante = Math.max(0, prazoTimestamp - Math.floor(Date.now() / 1000));
+@@ -100,6 +133,8 @@ export function AppProvider({ children }) {
+       if (restante === 0) {
+         setEncerrado(true);
+         setLightningActive(true);
++        // Ponto 2: ao encerrar, busca vencedor on-chain imediatamente
++        if (!MOCK_MODE) refetchVencedor();
+         setTimeout(() => { setLightningActive(false); setShowOverlay(true); }, 1200);
+       }
+     };
+@@ -113,6 +148,8 @@ export function AppProvider({ children }) {
+   function refreshSaldo() {
+     setCarteiraFlash(getCarteiraFlash());
+     setFichasProgramadas(getFichasProgramadas());
++    // Ponto 1: também recarrega saldo real da blockchain
++    if (!MOCK_MODE && address) refetchSaldoOnChain();
+   }
+ 
+   function handleSimularPix() {
+@@ -177,14 +214,21 @@ export function AppProvider({ children }) {
+     showOverlay,
+     tempoRestante,
+     lightningActive,
+-    // Carteiras
++    // Carteiras internas (localStorage)
+     carteiraFlash,
+     fichasProgramadas,
+     erroCarteira,
+     // Auth
+     address, isConnected, userLabel, ready, authenticated, user,
+-    // Vencedor
++    // Vencedor (on-chain preferred)
+     vencedor,
++    // ── Pontos 1, 2, 3, 4, 5 ──
++    saldoSenhasOnChain,   // fichas on-chain (null = carregando/desconectado)
++    saldoETH,             // ETH balance Sepolia ("0.001234")
++    isLoadingSaldo,       // Ponto 5: skeleton de saldo
++    isLoadingVencedor,    // Ponto 5: skeleton de vencedor
++    isOnline,             // Ponto 4: conectividade do browser
++    isSepoliaOk,          // Ponto 4: saúde do RPC Sepolia
+     // Handlers
+     refreshSaldo,
+     handleSimularPix,
+@@ -193,7 +237,19 @@ export function AppProvider({ children }) {
+     desconectar,
+     handleLanceSucesso,
+     handleNovaRodada,
++    recheckSepolia,       // Força re-check manual da rede
+   };
+ 
+-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
++  return (
++    <AppContext.Provider value={value}>
++      {children}
++      {/* Ponto 4: alerta global de erros de rede / blockchain */}
++      <NetworkAlert
++        mensagem={alertaMensagem}
++        tipo={alertaTipo}
++        onClose={limparAlerta}
++        autoCloseMs={alertaTipo === "aviso" ? 0 : 6000}
++      />
++    </AppContext.Provider>
++  );
+ }
+diff --git a/desafio-gut/frontend/src/hooks/useBlockchain.js b/desafio-gut/frontend/src/hooks/useBlockchain.js
+new file mode 100644
+index 0000000..d8d2a07
+--- /dev/null
++++ b/desafio-gut/frontend/src/hooks/useBlockchain.js
+@@ -0,0 +1,117 @@
++import { useState, useEffect, useCallback, useRef } from "react";
++import { JsonRpcProvider, Contract, formatEther } from "ethers";
++import { ABI, CONTRATO_SEPOLIA } from "../utils/web3.js";
++import { traduzirErro } from "../utils/erros.js";
++
++// Alchemy Sepolia como RPC primário; fallback público caso env não esteja definida
++const SEPOLIA_RPC =
++  import.meta.env.VITE_RPC_URL_SEPOLIA ??
++  "https://eth-sepolia.g.alchemy.com/v2/demo";
++
++const CONTRATO_ADDR =
++  import.meta.env.VITE_CONTRACT_ADDRESS ?? CONTRATO_SEPOLIA;
++
++const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
++
++// Verdadeiro apenas quando há um contrato real deployado
++const CONTRATO_ATIVO = CONTRATO_ADDR && CONTRATO_ADDR !== ZERO_ADDR;
++
++const POLL_MS = 15_000;
++
++function getReadProvider() {
++  return new JsonRpcProvider(SEPOLIA_RPC);
++}
++
++/**
++ * Hook de leitura blockchain — polling Sepolia via Alchemy.
++ *
++ * - fetchSaldo: ETH balance sempre; saldoSenhas só quando contrato deployado
++ * - fetchVencedor: só quando contrato deployado
++ * - Desabilitado em MOCK_MODE ou sem address
++ */
++export function useBlockchain({ address, idEdicao, enabled = true }) {
++  const [saldoSenhas,       setSaldoSenhas]       = useState(null);
++  const [saldoETH,          setSaldoETH]          = useState(null);
++  const [vencedorOnChain,   setVencedorOnChain]   = useState(null);
++  const [isLoadingSaldo,    setIsLoadingSaldo]    = useState(false);
++  const [isLoadingVencedor, setIsLoadingVencedor] = useState(false);
++  const [erroBlockchain,    setErroBlockchain]    = useState(null);
++  const pollRef = useRef(null);
++
++  const fetchSaldo = useCallback(async () => {
++    if (!address || !enabled) return;
++    setIsLoadingSaldo(true);
++    setErroBlockchain(null);
++    try {
++      const provider = getReadProvider();
++
++      if (CONTRATO_ATIVO) {
++        // Contrato deployado: busca ETH + fichas em paralelo
++        const contrato = new Contract(CONTRATO_ADDR, ABI, provider);
++        const [fichas, bal] = await Promise.all([
++          contrato.saldoSenhas(address),
++          provider.getBalance(address),
++        ]);
++        setSaldoSenhas(Number(fichas));
++        setSaldoETH(Number(formatEther(bal)).toFixed(6));
++      } else {
++        // Endereço nulo / sem deploy: busca apenas saldo ETH real
++        const bal = await provider.getBalance(address);
++        setSaldoSenhas(null);
++        setSaldoETH(Number(formatEther(bal)).toFixed(6));
++      }
++    } catch (err) {
++      setErroBlockchain(traduzirErro(err));
++    } finally {
++      setIsLoadingSaldo(false);
++    }
++  }, [address, enabled]);
++
++  const fetchVencedor = useCallback(async () => {
++    if (!idEdicao || !enabled || !CONTRATO_ATIVO) return;
++    setIsLoadingVencedor(true);
++    try {
++      const provider = getReadProvider();
++      const contrato = new Contract(CONTRATO_ADDR, ABI, provider);
++      const [valor, addr] = await contrato.apurarVencedor(idEdicao);
++      if (addr && addr !== ZERO_ADDR) {
++        setVencedorOnChain({ valor: Number(valor), endereco: addr });
++      }
++    } catch {
++      // sem vencedor ainda é estado normal — silencioso
++    } finally {
++      setIsLoadingVencedor(false);
++    }
++  }, [idEdicao, enabled]);
++
++  useEffect(() => {
++    if (!enabled) return;
++    fetchSaldo();
++    fetchVencedor();
++    pollRef.current = setInterval(() => {
++      fetchSaldo();
++      fetchVencedor();
++    }, POLL_MS);
++    return () => clearInterval(pollRef.current);
++  }, [fetchSaldo, fetchVencedor, enabled]);
++
++  useEffect(() => {
++    if (!address) {
++      setSaldoSenhas(null);
++      setSaldoETH(null);
++    }
++  }, [address]);
++
++  return {
++    saldoSenhas,
++    saldoETH,
++    vencedorOnChain,
++    isLoadingSaldo,
++    isLoadingVencedor,
++    erroBlockchain,
++    contratoAtivo: CONTRATO_ATIVO,
++    limparErroBlockchain: () => setErroBlockchain(null),
++    refetchSaldo:    fetchSaldo,
++    refetchVencedor: fetchVencedor,
++  };
++}
+diff --git a/desafio-gut/frontend/src/hooks/useNetworkStatus.js b/desafio-gut/frontend/src/hooks/useNetworkStatus.js
+new file mode 100644
+index 0000000..b70e70a
+--- /dev/null
++++ b/desafio-gut/frontend/src/hooks/useNetworkStatus.js
+@@ -0,0 +1,79 @@
++import { useState, useEffect, useCallback } from "react";
++
++// Mesmo RPC do useBlockchain — Alchemy Sepolia com fallback público
++const SEPOLIA_RPC =
++  import.meta.env.VITE_RPC_URL_SEPOLIA ??
++  "https://eth-sepolia.g.alchemy.com/v2/demo";
++
++const CHECK_MS   = 30_000;
++const TIMEOUT_MS = 5_000;
++
++/**
++ * Monitora conectividade do browser e saúde do RPC Sepolia/Alchemy.
++ * Verifica a cada 30s; re-verifica imediatamente ao voltar online.
++ *
++ * isSepoliaOk: null = verificando, true = OK, false = falhou
++ */
++export function useNetworkStatus() {
++  const [isOnline,    setIsOnline]    = useState(navigator.onLine);
++  const [isSepoliaOk, setIsSepoliaOk] = useState(null);
++  const [networkError, setNetworkError] = useState(null);
++
++  useEffect(() => {
++    const onOnline  = () => { setIsOnline(true);  setNetworkError(null); };
++    const onOffline = () => {
++      setIsOnline(false);
++      setIsSepoliaOk(false);
++      setNetworkError("Sem conexão com a internet. Verifique sua rede.");
++    };
++    window.addEventListener("online",  onOnline);
++    window.addEventListener("offline", onOffline);
++    return () => {
++      window.removeEventListener("online",  onOnline);
++      window.removeEventListener("offline", onOffline);
++    };
++  }, []);
++
++  const checkSepolia = useCallback(async () => {
++    if (!navigator.onLine) { setIsSepoliaOk(false); return; }
++    try {
++      const res = await fetch(SEPOLIA_RPC, {
++        method:  "POST",
++        headers: { "Content-Type": "application/json" },
++        body:    JSON.stringify({ jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 }),
++        signal:  AbortSignal.timeout(TIMEOUT_MS),
++      });
++      const data = await res.json();
++      if (data.result) {
++        setIsSepoliaOk(true);
++        setNetworkError(null);
++      } else {
++        throw new Error("sem resultado");
++      }
++    } catch {
++      setIsSepoliaOk(false);
++      if (navigator.onLine) {
++        setNetworkError("Rede Sepolia indisponível. Reconectando automaticamente…");
++      }
++    }
++  }, []);
++
++  useEffect(() => {
++    checkSepolia();
++    const pollId = setInterval(checkSepolia, CHECK_MS);
++    const onOnline = () => checkSepolia();
++    window.addEventListener("online", onOnline);
++    return () => {
++      clearInterval(pollId);
++      window.removeEventListener("online", onOnline);
++    };
++  }, [checkSepolia]);
++
++  return {
++    isOnline,
++    isSepoliaOk,
++    networkError,
++    limparNetworkError: () => setNetworkError(null),
++    recheckSepolia:     checkSepolia,
++  };
++}
+diff --git a/desafio-gut/frontend/src/main.jsx b/desafio-gut/frontend/src/main.jsx
+index 1c9910f..d95c1cb 100644
+--- a/desafio-gut/frontend/src/main.jsx
++++ b/desafio-gut/frontend/src/main.jsx
+@@ -6,39 +6,51 @@ import { PrivyProvider } from "@privy-io/react-auth";
+ import { sepolia as sepoliaChain } from "viem/chains"; // viem instalado como dep do Privy
+ import App from "./App.jsx";
+ 
+-const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || "cmo51f3v300l90clgzksivvad";
++/**
++ * PRIVY_APP_ID — credencial pública de frontend (semelhante ao Firebase API Key).
++ * É seguro estar no bundle; a segurança do Privy baseia-se em Allowed Origins,
++ * não em manter o App ID secreto.
++ *
++ * Fallback garante que o SDK sempre inicializa, mesmo que a env var seja omitida
++ * no painel Netlify ou num build local sem .env.local.
++ */
++// IMPORTANTE: usa || e não ?? porque ?? não captura string vazia "".
++// Se a env var estiver ausente OU vazia no build Netlify, o fallback garante
++// que o App ID correto sempre chega ao PrivyProvider.
++const PRIVY_APP_ID =
++  import.meta.env.VITE_PRIVY_APP_ID || "cmo51f3v300l90clgzksivvad";
+ 
+ createRoot(document.getElementById("root")).render(
+   <StrictMode>
+     <BrowserRouter>
+-    <PrivyProvider
+-      appId={PRIVY_APP_ID}
+-      config={{
+-        // ── Métodos de login: Google, E-mail, Apple ──────────────────────────
+-        loginMethods: ["google", "email", "apple"],
++      <PrivyProvider
++        appId={PRIVY_APP_ID}
++        config={{
++          // ── Métodos de login ─────────────────────────────────────────────────
++          loginMethods: ["google", "email", "apple"],
+ 
+-        // ── Embedded Wallet: criado automaticamente para todos os usuários ──
+-        embeddedWallets: {
+-          createOnLogin: "all-users",
+-          noPromptOnSignature: false,
+-        },
++          // ── Embedded Wallet criado automaticamente para todos os usuários ───
++          embeddedWallets: {
++            createOnLogin: "all-users",
++            noPromptOnSignature: false,
++          },
+ 
+-        // ── Rede: Sepolia via viem/chains (definição oficial) ────────────────
+-        defaultChain: sepoliaChain,
+-        supportedChains: [sepoliaChain],
++          // ── Rede padrão: Sepolia Testnet ─────────────────────────────────────
++          defaultChain: sepoliaChain,
++          supportedChains: [sepoliaChain],
+ 
+-        // ── Aparência: alinhada ao design DESAFIOGUT ─────────────────────────
+-        appearance: {
+-          theme: "dark",
+-          accentColor: "#00d4aa",
+-          logo: "https://frontend-one-tawny-20.vercel.app/favicon.ico",
+-          showWalletLoginFirst: false,
+-          walletList: ["metamask", "coinbase_wallet"],
+-        },
+-      }}
+-    >
+-      <App />
+-    </PrivyProvider>
++          // ── Aparência alinhada ao design DESAFIOGUT ──────────────────────────
++          appearance: {
++            theme: "dark",
++            accentColor: "#00d4aa",
++            logo: "/favicon.ico",
++            showWalletLoginFirst: false,
++            walletList: ["metamask", "coinbase_wallet"],
++          },
++        }}
++      >
++        <App />
++      </PrivyProvider>
+     </BrowserRouter>
+   </StrictMode>
+ );
+diff --git a/desafio-gut/frontend/src/pages/MercadoLances.jsx b/desafio-gut/frontend/src/pages/MercadoLances.jsx
+index 85ce597..cfd201b 100644
+--- a/desafio-gut/frontend/src/pages/MercadoLances.jsx
++++ b/desafio-gut/frontend/src/pages/MercadoLances.jsx
+@@ -2,6 +2,7 @@ import { useMemo } from "react";
+ import { useAppContext } from "../context/AppContext.jsx";
+ import CardLance from "../components/CardLance.jsx";
+ import TabelaLances from "../components/TabelaLances.jsx";
++import { SaldoSkeleton } from "../components/ui/Skeleton.jsx";
+ 
+ // ─── Paleta ───────────────────────────────────────────────────────────────────
+ const COR = {
+@@ -138,9 +139,11 @@ export default function MercadoLances() {
+     carteiraFlash, fichasProgramadas, erroCarteira,
+     address, isConnected, userLabel,
+     vencedor,
++    saldoSenhasOnChain, saldoETH, isLoadingSaldo, isOnline, isSepoliaOk,
+     handleSimularPix, handleConverterFicha,
+     abrirModal, desconectar,
+     handleLanceSucesso, handleNovaRodada, refreshSaldo,
++    recheckSepolia,
+   } = useAppContext();
+ 
+   // Timer display
+@@ -262,13 +265,48 @@ export default function MercadoLances() {
+         {/* ── Painel Beta: saldos + tipo ── */}
+         <div style={estilos.painelBeta}>
+           <div style={{ display: "flex", gap: "1.25rem", alignItems: "center", flexWrap: "wrap" }}>
+-            <div style={estilos.saldoItem}>
+-              <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>Flash</span>
+-              <span style={{ fontSize: "1rem", fontWeight: "800", color: COR.primary }}>R$ {carteiraFlash.toFixed(2)}</span>
+-            </div>
+-            <div style={estilos.saldoItem}>
+-              <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>Fichas</span>
+-              <span style={{ fontSize: "1rem", fontWeight: "800", color: "#a78bfa" }}>{fichasProgramadas} 🎫</span>
++            {/* Ponto 5: skeleton enquanto saldo carrega */}
++            {isLoadingSaldo && isConnected ? (
++              <SaldoSkeleton />
++            ) : (
++              <div style={estilos.saldoItem}>
++                <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>Flash</span>
++                <span style={{ fontSize: "1rem", fontWeight: "800", color: COR.primary }}>R$ {carteiraFlash.toFixed(2)}</span>
++              </div>
++            )}
++            {isLoadingSaldo && isConnected ? (
++              <SaldoSkeleton />
++            ) : (
++              <div style={estilos.saldoItem}>
++                <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>
++                  Fichas{saldoSenhasOnChain !== null ? " ⛓" : ""}
++                </span>
++                <span style={{ fontSize: "1rem", fontWeight: "800", color: "#a78bfa" }}>
++                  {saldoSenhasOnChain ?? fichasProgramadas} 🎫
++                </span>
++              </div>
++            )}
++            {/* Saldo ETH on-chain (só quando conectado em produção) */}
++            {!MOCK_MODE && isConnected && saldoETH !== null && (
++              <div style={estilos.saldoItem}>
++                <span style={{ fontSize: "0.68rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.07em" }}>ETH Sepolia</span>
++                <span style={{ fontSize: "1rem", fontWeight: "800", color: "#fbbf24" }}>{saldoETH}</span>
++              </div>
++            )}
++            {/* Ponto 4: indicador de status da rede */}
++            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginLeft: "0.5rem" }}>
++              <span style={{
++                width: "7px", height: "7px", borderRadius: "50%", flexShrink: 0,
++                background: !isOnline ? COR.danger : isSepoliaOk === null ? COR.warning : isSepoliaOk ? COR.success : COR.danger,
++                boxShadow: `0 0 5px ${!isOnline ? COR.danger : isSepoliaOk ? COR.success : COR.warning}`,
++              }} />
++              <span style={{ fontSize: "0.65rem", color: COR.muted }}>
++                {!isOnline ? "Sem rede" : isSepoliaOk === null ? "Verificando…" : isSepoliaOk ? "Sepolia OK" : (
++                  <button onClick={recheckSepolia} style={{ background: "none", border: "none", color: COR.warning, cursor: "pointer", fontSize: "0.65rem", padding: 0 }}>
++                    Sepolia ↻
++                  </button>
++                )}
++              </span>
+             </div>
+             <button onClick={handleSimularPix} style={estilos.botaoPix} title="Simula depósito PIX de R$ 10,00 (Art. 21)">
+               + PIX R$ 10,00
+@@ -319,7 +357,8 @@ export default function MercadoLances() {
+               encerrado={encerrado}
+               tipoLeilao={tipoLeilao}
+               carteiraFlash={carteiraFlash}
+-              fichasProgramadas={fichasProgramadas}
++              fichasProgramadas={saldoSenhasOnChain ?? fichasProgramadas}
++              isSepoliaOk={isSepoliaOk}
+               onRefreshSaldo={refreshSaldo}
+             />
+             {/* Segurança */}
+diff --git a/desafio-gut/frontend/src/utils/erros.js b/desafio-gut/frontend/src/utils/erros.js
+new file mode 100644
+index 0000000..3d472cc
+--- /dev/null
++++ b/desafio-gut/frontend/src/utils/erros.js
+@@ -0,0 +1,30 @@
++/**
++ * Traduz erros de ethers.js / blockchain para PT-BR legível.
++ * Centraliza a lógica de mensagens — nenhum componente lida com códigos raw.
++ */
++const MAP = {
++  ACTION_REJECTED:          "Assinatura cancelada pelo usuário.",
++  INSUFFICIENT_FUNDS:       "Saldo ETH insuficiente para cobrir o gás da transação.",
++  NETWORK_ERROR:            "Erro de rede. Verifique sua conexão com a Sepolia.",
++  CALL_EXCEPTION:           "Chamada ao contrato falhou. Verifique os dados da edição.",
++  TIMEOUT:                  "Tempo limite excedido. A rede Sepolia pode estar congestionada.",
++  UNPREDICTABLE_GAS_LIMIT:  "Não foi possível estimar o gás. A transação pode falhar.",
++  NONCE_EXPIRED:            "Transação expirada. Tente novamente.",
++  UNSUPPORTED_OPERATION:    "Operação não suportada pela carteira conectada.",
++  MISSING_PROVIDER:         "Provider não encontrado. Faça login novamente.",
++};
++
++export function traduzirErro(err) {
++  if (!err) return "Erro desconhecido.";
++  const code = err?.code ?? "";
++  if (MAP[code]) return MAP[code];
++  if (err?.revert?.args?.[0]) return `Contrato: ${err.revert.args[0]}`;
++  if (err?.reason)            return err.reason;
++  const msg = err?.message ?? "";
++  if (msg.includes("user rejected") || msg.includes("User rejected")) return MAP.ACTION_REJECTED;
++  if (msg.includes("insufficient funds"))  return MAP.INSUFFICIENT_FUNDS;
++  if (msg.includes("network"))             return MAP.NETWORK_ERROR;
++  if (msg.includes("timeout"))             return MAP.TIMEOUT;
++  if (msg.includes("nonce"))               return MAP.NONCE_EXPIRED;
++  return msg || "Erro desconhecido.";
++}
+diff --git a/desafio-gut/frontend/src/utils/validacao.js b/desafio-gut/frontend/src/utils/validacao.js
+new file mode 100644
+index 0000000..60d2bd1
+--- /dev/null
++++ b/desafio-gut/frontend/src/utils/validacao.js
+@@ -0,0 +1,41 @@
++/**
++ * Regras de negócio para validação pré-transação.
++ * Separado da UI — nenhuma dependência de React aqui.
++ *
++ * Art. 23: lance mínimo R$ 0,01 (1 centavo)
++ * Art. 20: leilão programado exige 1 ficha por lance
++ */
++export function validarLance({
++  valorEmCentavos,
++  address,
++  isConnected,
++  encerrado,
++  tipoLeilao,
++  fichasProgramadas,
++  isSepoliaOk,
++}) {
++  if (!isConnected || !address) {
++    return { valido: false, motivo: "Conecte sua carteira para dar um lance." };
++  }
++  if (encerrado) {
++    return { valido: false, motivo: "Este leilão já foi encerrado." };
++  }
++  // null significa ainda verificando; false é falha confirmada
++  if (isSepoliaOk === false) {
++    return { valido: false, motivo: "Rede Sepolia indisponível. Aguarde a reconexão automática." };
++  }
++  const valor = Number(valorEmCentavos);
++  if (!Number.isInteger(valor) || valor < 1) {
++    return { valido: false, motivo: "Lance mínimo: R$ 0,01 (1 centavo) — Art. 23." };
++  }
++  if (valor > 999_999) {
++    return { valido: false, motivo: "Lance máximo permitido: R$ 9.999,99." };
++  }
++  if (tipoLeilao === "programado" && fichasProgramadas < 1) {
++    return {
++      valido: false,
++      motivo: "Fichas insuficientes. Converta saldo flash em fichas para participar (Art. 20: R$ 2,00/ficha).",
++    };
++  }
++  return { valido: true, motivo: null };
++}
+diff --git a/desafio-gut/frontend/src/utils/web3.js b/desafio-gut/frontend/src/utils/web3.js
+index 7c736b3..508bac2 100644
+--- a/desafio-gut/frontend/src/utils/web3.js
++++ b/desafio-gut/frontend/src/utils/web3.js
+@@ -12,8 +12,15 @@ export const ABI = [
+   "function edicoes(string) view returns (string nome, bool ativa, uint256 prazo)",
+ ];
+ 
++// VITE_CONTRACT_ADDRESS tem prioridade; VITE_CONTRATO_SEPOLIA mantido como legado
+ export const CONTRATO_SEPOLIA =
+-  import.meta.env.VITE_CONTRATO_SEPOLIA ?? "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
++  import.meta.env.VITE_CONTRACT_ADDRESS ??
++  import.meta.env.VITE_CONTRATO_SEPOLIA ??
++  "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
++
++const SEPOLIA_RPC =
++  import.meta.env.VITE_RPC_URL_SEPOLIA ??
++  "https://eth-sepolia.g.alchemy.com/v2/demo";
+ 
+ /**
+  * Retorna um ethers BrowserProvider + Signer a partir de qualquer
+@@ -111,7 +118,7 @@ export async function getEdicaoPrazo(idEdicao) {
+     // Privy embedded wallet não injeta window.ethereum; usa RPC público como fallback
+     const provider = window.ethereum
+       ? new BrowserProvider(window.ethereum)
+-      : new JsonRpcProvider("https://rpc2.sepolia.org");
++      : new JsonRpcProvider(SEPOLIA_RPC);
+     const contrato = new Contract(CONTRATO_SEPOLIA, ABI, provider);
+     const result = await contrato.edicoes(idEdicao);
+     const prazo = Number(result[2]); // index 2 = uint256 prazo
+diff --git a/netlify.toml b/netlify.toml
+index 0a65d30..606aa92 100644
+--- a/netlify.toml
++++ b/netlify.toml
+@@ -1,17 +1,33 @@
+ [build]
+   base    = "desafio-gut/frontend"
+-  command = "npm install --legacy-peer-deps && npm run build"
++  command = "npm run build"
+   publish = "dist"
+ 
++# Variáveis de build — baked no bundle Vite durante npm run build.
++# VITE_PRIVY_APP_ID é credencial pública de frontend (sem segredo aqui).
++# VITE_RPC_URL_SEPOLIA e chaves privadas: definir SOMENTE no painel Netlify
++# (Site settings → Environment variables), nunca neste arquivo.
++[build.environment]
++  NODE_VERSION      = "20"
++  VITE_PRIVY_APP_ID = "cmo51f3v300l90clgzksivvad"
++
++# SPA rewrite — todas as rotas servem index.html (React Router)
+ [[redirects]]
+   from   = "/*"
+   to     = "/index.html"
+   status = 200
+ 
++# Headers de segurança globais
+ [[headers]]
+   for = "/*"
+   [headers.values]
+-    X-Content-Type-Options = "nosniff"
+     X-Frame-Options        = "DENY"
++    X-Content-Type-Options = "nosniff"
+     Referrer-Policy        = "strict-origin-when-cross-origin"
+-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://privy.io https://*.privy.io; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://privy.io https://*.privy.io; frame-src https://privy.io https://*.privy.io https://accounts.google.com; connect-src 'self' http://127.0.0.1:8545 https://privy.io https://*.privy.io wss://*.privy.io https://auth.privy.io https://telemetry.privy.io https://api.privy.io https://eth-sepolia.g.alchemy.com https://rpc.sepolia.org; worker-src blob:; object-src 'none'; base-uri 'self';"
++    Permissions-Policy     = "camera=(), microphone=(), geolocation=()"
++
++# Cache longo para assets com hash (JS/CSS/imagens do build)
++[[headers]]
++  for = "/assets/*"
++  [headers.values]
++    Cache-Control = "public, max-age=31536000, immutable"

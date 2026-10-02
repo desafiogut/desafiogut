@@ -51,3 +51,11 @@
 *.ico   binary
 *.woff  binary
 *.woff2 binary
+
+# UTAC000.16 — patches e mbox de ARQUIVO também LF. Medido pelo validador do UTAC000.16: com
+# `* text=auto` + `core.autocrlf=true` o checkout fresco de `_logs/DEBT-015_zen-goldberg.patch` saía
+# CRLF (CR=923) e `git apply --index` falhava (rc=1; 12 erros num worktree LF). Os 3 ficheiros
+# (.patch/.mbox) já estão LF no índice (CR=0), logo esta regra não altera conteúdo nenhum.
+*.patch text eol=lf
+*.mbox  text eol=lf
+*.diff  text eol=lf

@@ -99,18 +99,38 @@ describe("UTAC000.14 · AppContext — o overlay do vencedor volta a abrir no fi
   });
 
   // Validador (2.ª ronda, R5/R7): o caso EM BREVE só era testado com prazo 1000 e nunca com a reabertura.
-  test("EM BREVE: também com prazo 0 e com prazo já vencido há muito, o overlay NÃO abre", () => {
-    for (const [prazoTimestamp, agoraSeg] of [[0, 1000], [1000, 1000 + 30 * 86400]]) {
+  // Validador do UTAC000.16 (R-1/R-3): prazos de brinquedo (< 1e9) deixavam passar fugas condicionadas a um
+  // epoch real, e sem contar temporizadores o teste passava trivialmente se nenhum fosse armado.
+  const EPOCH = 1_760_000_000; // ≈ 2025-10, um prazo realista em segundos
+  test("EM BREVE: também com prazo 0, vencido há muito ou epoch real, o overlay NÃO abre (e o relâmpago corre)", () => {
+    for (const [prazoTimestamp, agoraSeg] of [[0, 1000], [1000, 1000 + 30 * 86400], [EPOCH, EPOCH + 5]]) {
       const m = montar(extrairTick(fonte()), { prazoTimestamp, agoraSeg, emBreve: true });
-      m.tick(); m.temporizadores.forEach((t) => t.fn()); m.tick();
+      m.tick();
+      assert.equal(m.temporizadores.length, 1, `o temporizador do relâmpago não foi armado (prazo=${prazoTimestamp})`);
+      m.temporizadores.forEach((t) => t.fn()); m.tick();
       assert.equal(disparos(m.chamadas, true), 0, `o overlay abriu em EM BREVE (prazo=${prazoTimestamp})`);
+      assert.deepEqual(m.chamadas.filter(([n]) => n === "setLightningActive"), [["setLightningActive", true], ["setLightningActive", false]],
+        `o relâmpago deixou de acender e apagar (prazo=${prazoTimestamp})`);
     }
   });
 
-  test("EM BREVE: prazo reaberto on-chain depois de encerrado continua a FECHAR o overlay", () => {
-    const m = montar(extrairTick(fonte()), { prazoTimestamp: 2000, agoraSeg: 1000, encerrado: true, emBreve: true });
+  // Validador do UTAC000.16 (R-1/R-2): epoch real + o reset de `fimDisparadoRef` (sem ele o fim seguinte não dispara).
+  test("EM BREVE: prazo reaberto on-chain depois de encerrado continua a FECHAR o overlay e a rearmar o fim", () => {
+    for (const [prazoTimestamp, agoraSeg] of [[2000, 1000], [EPOCH + 3600, EPOCH]]) {
+      const m = montar(extrairTick(fonte()), { prazoTimestamp, agoraSeg, encerrado: true, emBreve: true });
+      m.duplos.fimDisparadoRef.current = true; // o fim anterior já tinha disparado
+      m.tick();
+      assert.deepEqual(m.chamadas, [["setEncerrado", false], ["setShowOverlay", false]], `prazo=${prazoTimestamp}`);
+      assert.equal(m.duplos.fimDisparadoRef.current, false, `o fim não foi rearmado (prazo=${prazoTimestamp})`);
+    }
+  });
+
+  // Validador do UTAC000.16 (V7): EM BREVE com o prazo no futuro também não pode abrir.
+  test("EM BREVE: prazo no futuro (epoch real) — nada dispara", () => {
+    const m = montar(extrairTick(fonte()), { prazoTimestamp: EPOCH + 3600, agoraSeg: EPOCH, emBreve: true });
     m.tick();
-    assert.deepEqual(m.chamadas, [["setEncerrado", false], ["setShowOverlay", false]]);
+    assert.equal(m.temporizadores.length, 0);
+    assert.deepEqual(m.chamadas, [], "algo disparou antes do fim do leilão em EM BREVE");
   });
 
   test("hoje (`EM_BREVE_MODE` real do leilaoLock.js): o AppContext usa ESSA flag, e o overlay não abre", async () => {
