@@ -1,0 +1,42 @@
+UTAC000.17bc — SEG3: verificacao ad-hoc (output integral, sonda removida apos a corrida)
+===============================================================================
+UTAC000.17bc — VERIFICACAO AD-HOC (sonda unica) · revisao a27be1f
+---------------------------------------------------------------------------
+[1] o CODIGO em disco == o commitado? (o commit a27be1f foi so docs: isto prova-o)
+    edicoes-core.mjs                                     blob == HEAD
+    AppContext.jsx                                       blob == HEAD
+    FimEdicaoOverlay.jsx                                 blob == HEAD
+    Dashboard.jsx                                        blob == HEAD
+    MercadoLances.jsx                                    blob == HEAD
+    useEdicoes.js                                        blob == HEAD
+    useMinhasParticipacoes.js                            blob == HEAD
+    overlayVisto.js                                      blob == HEAD
+    (a suite 681/681 + 990/996 correu sobre estes mesmos blobs: nao houve alteracao de codigo depois)
+[2] marcas de comportamento no codigo (o que a correccao promete)
+    OK  servidor marca o sintetico
+    OK  cliente marca o sintetico
+    OK  cliente passa o marcador do servidor
+    OK  sem prazo real => restante null (nao encerra)
+    OK  fim lido no relogio do servidor
+    OK  edicao vista nao reabre (GATE 22)
+    OK  NOVA RODADA / FECHAR marcam visto
+    OK  criarEdicao aceita id explicito (R-1)
+    OK  onClose nos DOIS overlays
+[3] alvos focados (testes que cobrem a mudanca)
+    utac00014-show-overlay.test.mjs                            ℹ pass 12 ℹ fail 0 
+    utac0017bc-overlay-visto.test.mjs                          ℹ pass 8 ℹ fail 0 
+    utac0017bc-edicao-r1.test.mjs                              ℹ pass 6 ℹ fail 0 
+[4] EOL dos ficheiros tocados (medido em bytes)
+    edicoes-core.mjs                                     LF
+    AppContext.jsx                                       CRLF
+    FimEdicaoOverlay.jsx                                 CRLF
+    Dashboard.jsx                                        CRLF
+    MercadoLances.jsx                                    CRLF
+    useEdicoes.js                                        CRLF
+    useMinhasParticipacoes.js                            LF
+    overlayVisto.js                                      LF
+[5] escopo — RE-EXECUTADO com a forma correcta (o 1.º usou `git -C /c/...`, que o git nativo do
+    Windows REJEITA — erro MEU de instrumento, registado em vez de apagado):
+    14 files changed, 624 insertions(+), 101 deletions(-)
+---------------------------------------------------------------------------
+FIM — revisao a27be1f (verificacao AD-HOC, nao suite)
