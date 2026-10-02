@@ -1,0 +1,45 @@
+schema: utac/1
+name: UTAC000.14
+title: "Guarda do valor no FimEdicaoOverlay (DEBT-013) + religar o showOverlay"
+type: produto
+baseline: 3a0f6fa
+motivo: >-
+  DEBT-013: FimEdicaoOverlay formata valor/endereço sem guarda de tipo («R$ NaN», crash com
+  BigInt/Symbol/endereço não-string). O operador decidiu religar o showOverlay, que expõe o overlay.
+frentes:
+  - id: A
+    nome: Reproduzir o defeito + preservar evidência
+    entrega: [_logs/UTAC000.14_SEG-1_EVIDENCIA.txt, _logs/UTAC000.14_SEG-1_MEDICAO.md]
+  - id: B
+    nome: Guarda de tipo no FimEdicaoOverlay (l.14 + l.16)
+    entrega: [src/components/FimEdicaoOverlay.jsx, src/components/__tests__/utac00014-fim-edicao-overlay.test.mjs]
+  - id: C
+    nome: Religar o showOverlay (AppContext l.1205)
+    entrega: [src/context/AppContext.jsx, teste do disparo]
+  - id: D
+    nome: Verificação final + validador adversarial
+    entrega: [_logs/UTAC000.14_SEG-2_ANTES-DEPOIS.txt, _logs/UTAC000.14_SEG-3_VALIDADOR.md]
+  - id: E
+    nome: Fechar DEBT-013 + registo em 3 lugares
+    entrega: [_logs/DEBT.md, CLAUDE.md, _logs/UTAC000.14-RELATORIO.md, Desktop/UTAC000.14-RELATORIO.md]
+autoriza:
+  - FimEdicaoOverlay.jsx (guarda l.14 + l.16 — l.14 por decisão do operador no SEG-1, R18)
+  - AppContext.jsx (só descomentar l.1205 — decisão do operador no SEG-1, R18)
+  - criar/actualizar testes src/**/__tests__/*.test.mjs
+  - commit + push em foreground; validador adversarial; _logs/DEBT.md
+proibe:
+  - git add -A
+  - deploy em background
+  - qualquer outra linha de produção (MercadoLances, Dashboard, MeusAtivos, useResultadoOficial)
+  - _ponte-ssr.mjs, _render.mjs, vite.config.js, package.json, backend, contrato, GUTO
+  - fechar DEBT-001/002/003/005/006/010/015
+  - restaurar do HEAD ficheiros com trabalho não commitado
+dependencias:
+  - UTAC000.11 (guarda do OverlayVencedor) e UTAC000.12 (guarda do Dashboard) fechados
+regras_activas: [E, T, G, L, S, A, P, AU, ST, HI]
+regras_extra: [T1, T4, HI3, HI10]
+stop_conditions_extra: []
+ressalvas:
+  - ORDEM: DEBT-013 antes do showOverlay (GATE 21)
+  - GATE 22: {}, NaN, "abc", Infinity, -1, BigInt, Symbol — nenhum rebenta, nenhum «R$ NaN»
+  - Conflitos do spec original resolvidos pelo operador no SEG-1 (ver _SEG-1_MEDICAO.md §5)

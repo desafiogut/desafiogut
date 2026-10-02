@@ -1,0 +1,111 @@
+UTAC000.14 — SEG-2 — ANTES / DEPOIS
+Base: 3a0f6fa · 2026-10-02T01:42:19-03:00
+
+== 1. DIFF DE PRODUÇÃO (git diff, só os 2 ficheiros autorizados) ==
+diff --git a/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx b/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx
+index 00c8f6b..a4ec147 100644
+--- a/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx
++++ b/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx
+@@ -10,10 +10,16 @@ const COR = { gold: "#f5a623" };
+ 
+ export default function FimEdicaoOverlay({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA }) {
+   const isMobile = useIsMobile();
+-  const enderecoAbrev = vencedor
++  // UTAC000.14 (DEBT-013) — GUARDA DE TIPO, a mesma do `OverlayVencedor` (UTAC000.11) e do card do
++  // Dashboard (UTAC000.12). Medido no SEG-1: com valor malformado mostrava «R$ NaN»/«R$ -0.01», e
++  // `BigInt`/`Symbol` ou endereço não-string LANÇAVAM (página em branco). Malformado = AUSENTE («—»),
++  // campo a campo; com `vencedor` VÁLIDO as expressões são as mesmas de antes (GATE 18).
++  const enderecoAbrev = typeof vencedor?.endereco === "string" && vencedor.endereco.length > 0
+     ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
+     : "—";
+-  const valorFmt = vencedor ? `R$ ${(vencedor.valor / 100).toFixed(2)}` : "—";
++  const valorFmt = Number.isFinite(vencedor?.valor) && vencedor.valor >= 0
++    ? `R$ ${(vencedor.valor / 100).toFixed(2)}`
++    : "—";
+ 
+   return (
+     <>
+diff --git a/desafio-gut/frontend/src/context/AppContext.jsx b/desafio-gut/frontend/src/context/AppContext.jsx
+index 0360b49..ea4a168 100644
+--- a/desafio-gut/frontend/src/context/AppContext.jsx
++++ b/desafio-gut/frontend/src/context/AppContext.jsx
+@@ -1200,9 +1200,9 @@ export function AppProvider({ children }) {
+           if (timeoutAnimRef.current) clearTimeout(timeoutAnimRef.current);
+           timeoutAnimRef.current = setTimeout(() => {
+             setLightningActive(false);
+-            // MC63/64: animação de vencedor desabilitada no front-end (não dispara
+-            // automaticamente ao encerrar). Encerrado/lightning permanecem ativos.
+-            // setShowOverlay(true);
++            // UTAC000.14 — religado por decisão do operador (estava desligado desde o MC63/64).
++            // Os dois overlays que esta flag abre já têm guarda de tipo (UTAC000.11 / UTAC000.14).
++            setShowOverlay(true);
+             timeoutAnimRef.current = null;
+           }, 1200);
+         }
+
+== 2. md5 ==
+FimEdicaoOverlay.jsx  antes 2818b188eafe81f831e411ae298540d6 → depois 8f10fe1db9346b0a7d723d44112bb9a5
+AppContext.jsx        antes ae868cf6cad8d4c080056ff56168057f → depois 9a64493b11cc8486fb7bb71b5568bd20
+Line endings: ambos CRLF íntegros (FimEdicaoOverlay 84/84 CRLF; AppContext 1461 CRLF, 0 LF soltos).
+
+== 3. DEBT-013 — teste utac00014-fim-edicao-overlay (24 casos) ==
+ANTES (código antigo): # pass 7 # fail 17 
+DEPOIS (guardado):     # pass 24 # fail 0 
+
+== 4. Mutações DEBT-013 (restauro sempre da CÓPIA fora do repo, md5 8f10fe1d… verificado após cada uma) ==
+M15a: # pass 14 # fail 10 
+    not ok 1 - valor ausente: valor «—»
+    not ok 2 - valor objecto vazio: valor «—»
+    not ok 3 - valor NaN: valor «—»
+    not ok 4 - valor string (não numérico): valor «—»
+    not ok 5 - valor Infinity: valor «—»
+    not ok 6 - valor negativo: valor «—»
+    not ok 7 - valor BigInt (o antigo lançava): valor «—»
+    not ok 8 - valor Symbol (o antigo lançava): valor «—»
+    not ok 9 - string "300" (mudou: era «R$ 3.00»): valor «—»
+    not ok 16 - vencedor objecto vazio: endereço «—», valor «—»
+M15b: # pass 16 # fail 8 
+    not ok 16 - vencedor objecto vazio: endereço «—», valor «—»
+    not ok 17 - só valor (sem endereço): endereço «—», valor «R$ 3.00»
+    not ok 18 - endereço null: endereço «—», valor «R$ 3.00»
+    not ok 19 - endereço número: endereço «—», valor «R$ 3.00»
+    not ok 20 - endereço booleano: endereço «—», valor «R$ 3.00»
+    not ok 21 - endereço objecto: endereço «—», valor «R$ 3.00»
+    not ok 22 - endereço array: endereço «—», valor «R$ 3.00»
+    not ok 23 - endereço string vazia: endereço «—», valor «R$ 3.00»
+M15c: # pass 23 # fail 1 
+    not ok 6 - valor negativo: valor «—»
+M15d: # pass 20 # fail 4 
+    not ok 19 - endereço número: endereço «—», valor «R$ 3.00»
+    not ok 20 - endereço booleano: endereço «—», valor «R$ 3.00»
+    not ok 21 - endereço objecto: endereço «—», valor «R$ 3.00»
+    not ok 22 - endereço array: endereço «—», valor «R$ 3.00»
+M15a = guarda do valor → truthiness original · M15b = guarda do endereço → truthiness original
+M15c = só sai o '>= 0' · M15d = endereço por truthiness do campo (1.ª guarda refutada do UTAC000.11)
+
+== 5. showOverlay — teste utac00014-show-overlay (5 casos; executa a 'tick' REAL extraída do AppContext) ==
+ANTES (AppContext original, linha comentada): # pass 3 # fail 2 
+    not ok 1 - prazo a 0: relâmpago já, e 1200 ms depois `setShowOverlay(true)`
+    not ok 2 - anti-duplicação: ticks seguintes com prazo a 0 não reabrem o overlay
+    ok 3 - prazo no futuro: o overlay NÃO abre (controlo negativo)
+    ok 4 - prazo reaberto on-chain depois de encerrado: fecha o overlay (inalterado)
+    ok 5 - CONTROLO: com a linha de novo comentada (em memória), o overlay NÃO abre — o teste morde
+DEPOIS (religado): # pass 5 # fail 0 
+M16 (re-comentar a linha no ficheiro): # pass 3 # fail 2  — restauro md5 9a64493b… verificado
+
+== 6. Suíte completa (node scripts/mc966-suite-harness.mjs ambos </dev/null, foreground) ==
+ANTES: frontend VERDE 630/630 · backend VERDE 967/973
+DEPOIS: frontend VERDE 659/659 · backend VERDE 967/973   (+24 +5 = os dois ficheiros novos)
+
+== 7. Escopo (git status) ==
+ M desafio-gut/frontend/package-lock.json
+ M desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx
+ M desafio-gut/frontend/src/context/AppContext.jsx
+?? desafio-gut/frontend/src/components/__tests__/utac00014-fim-edicao-overlay.test.mjs
+?? desafio-gut/frontend/src/context/__tests__/utac00014-show-overlay.test.mjs
+package-lock.json: já modificado no baseline (SEG-1 §1) — NÃO é deste UTAC, não entra no commit.
+
+== 8. GATE 7 (bidireccional) — o render do overlay ==
+Com showOverlay=true o vencedor aparece / sem ele não aparece: coberto pelos testes de página existentes, verdes na suíte:
+  Dashboard.test.mjs 'o overlay de FIM DE LEILÃO recebe o MESMO vencedor oficial' (contagem 1 vs 2)
+  utac0010-mercado-vencedor.test.mjs (overlay do Mercado com/sem showOverlay)

@@ -1200,9 +1200,9 @@ export function AppProvider({ children }) {
           if (timeoutAnimRef.current) clearTimeout(timeoutAnimRef.current);
           timeoutAnimRef.current = setTimeout(() => {
             setLightningActive(false);
-            // MC63/64: animação de vencedor desabilitada no front-end (não dispara
-            // automaticamente ao encerrar). Encerrado/lightning permanecem ativos.
-            // setShowOverlay(true);
+            // UTAC000.14 — religado por decisão do operador (estava desligado desde o MC63/64).
+            // Os dois overlays que esta flag abre já têm guarda de tipo (UTAC000.11 / UTAC000.14).
+            setShowOverlay(true);
             timeoutAnimRef.current = null;
           }, 1200);
         }

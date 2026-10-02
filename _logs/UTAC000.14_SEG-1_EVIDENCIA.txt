@@ -1,0 +1,491 @@
+UTAC000.14 — SEG-1 — EVIDÊNCIA BRUTA (preservada ANTES da correcção, HI10)
+Data: 2026-10-02T01:37:31-03:00 · HEAD: 3a0f6fa77931d3237345c14fff5580aceb0b6792 · origin/main: 3a0f6fa77931d3237345c14fff5580aceb0b6792
+
+== md5 baseline ==
+2818b188eafe81f831e411ae298540d6 *src/components/FimEdicaoOverlay.jsx
+ae868cf6cad8d4c080056ff56168057f *src/context/AppContext.jsx
+7f40ab23bf17e2d3f391ab7f56f85535 *src/pages/MercadoLances.jsx
+
+== Suíte baseline (node scripts/mc966-suite-harness.mjs ambos </dev/null) ==
+frontend: VERDE 630/630 pass · backend: VERDE 967/973 pass · VEREDITO: VERDE
+
+== Código medido (src/components/FimEdicaoOverlay.jsx l.13-16) ==
+  const enderecoAbrev = vencedor
+    ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
+    : "—";
+  const valorFmt = vencedor ? `R$ ${(vencedor.valor / 100).toFixed(2)}` : "—";
+
+== showOverlay (src/context/AppContext.jsx l.1199-1208) ==
+          // Limpa timeout anterior (defesa em profundidade)
+          if (timeoutAnimRef.current) clearTimeout(timeoutAnimRef.current);
+          timeoutAnimRef.current = setTimeout(() => {
+            setLightningActive(false);
+            // MC63/64: animação de vencedor desabilitada no front-end (não dispara
+            // automaticamente ao encerrar). Encerrado/lightning permanecem ativos.
+            // setShowOverlay(true);
+            timeoutAnimRef.current = null;
+          }, 1200);
+        }
+
+== grep showOverlay (produtores/consumidores) ==
+src/context/AppContext.jsx:206:  const [showOverlay,     setShowOverlay]     = useState(false);
+src/context/AppContext.jsx:757:    setShowOverlay(false);
+src/context/AppContext.jsx:1205:            // setShowOverlay(true);
+src/context/AppContext.jsx:1212:        setShowOverlay(false);
+src/context/AppContext.jsx:1325:    setShowOverlay(false);
+src/pages/Dashboard.jsx:524:      {showOverlay && (
+src/pages/MercadoLances.jsx:209:      {showOverlay && (
+
+== Sonda do endereço (l.14), código antigo ==
+vencedor {}: LANÇOU TypeError: Cannot read properties of undefined (reading 'slice')
+endereco null: LANÇOU TypeError: Cannot read properties of null (reading 'slice')
+endereco 12345: LANÇOU TypeError: vencedor.endereco.slice is not a function
+endereco true: LANÇOU TypeError: vencedor.endereco.slice is not a function
+endereco {}: LANÇOU TypeError: vencedor.endereco.slice is not a function
+endereco []: OK -> Carteira Vencedora|...|R$ 3.00|<button style="width:100%;padding:0.85rem;border-radius:10px;border:none;background:#fbbf24;color:#0f172a;font-weight:800;font-size:0.95rem;cursor:pointer;
+endereco '': OK -> Carteira Vencedora|...|R$ 3.00|<button style="width:100%;padding:0.85rem;border-radius:10px;border:none;background:#fbbf24;color:#0f172a;font-weight:800;font-size:0.95rem;cursor:pointer;
+só valor: LANÇOU TypeError: Cannot read properties of undefined (reading 'slice')
+
+== Teste novo contra o código ANTIGO (TAP bruto) ==
+TAP version 13
+# Subtest: UTAC000.14 · FimEdicaoOverlay — o VALOR não mostra NaN, negativo, nem rebenta (DEBT-013)
+    # Subtest: valor ausente: valor «—»
+    not ok 1 - valor ausente: valor «—»
+      ---
+      duration_ms: 20.1351
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:83:5'
+      failureType: 'testCodeFailure'
+      error: 'o overlay mostrou «R$ NaN»'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/__tests__/utac00014-fim-edicao-overlay.test.mjs:86:14)
+        Test.runInAsyncScope (node:async_hooks:228:14)
+        Test.run (node:internal/test_runner/test:1118:25)
+        Test.start (node:internal/test_runner/test:1015:17)
+        node:internal/test_runner/test:1531:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: valor objecto vazio: valor «—»
+    not ok 2 - valor objecto vazio: valor «—»
+      ---
+      duration_ms: 3.0016
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:83:5'
+      failureType: 'testCodeFailure'
+      error: 'o overlay mostrou «R$ NaN»'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/__tests__/utac00014-fim-edicao-overlay.test.mjs:86:14)
+        Test.runInAsyncScope (node:async_hooks:228:14)
+        Test.run (node:internal/test_runner/test:1118:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+        Test.postRun (node:internal/test_runner/test:1247:19)
+        Test.run (node:internal/test_runner/test:1175:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1533:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)
+      ...
+    # Subtest: valor NaN: valor «—»
+    not ok 3 - valor NaN: valor «—»
+      ---
+      duration_ms: 2.8025
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:83:5'
+      failureType: 'testCodeFailure'
+      error: 'o overlay mostrou «R$ NaN»'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/__tests__/utac00014-fim-edicao-overlay.test.mjs:86:14)
+        Test.runInAsyncScope (node:async_hooks:228:14)
+        Test.run (node:internal/test_runner/test:1118:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+        Test.postRun (node:internal/test_runner/test:1247:19)
+        Test.run (node:internal/test_runner/test:1175:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:787:7)
+      ...
+    # Subtest: valor string (não numérico): valor «—»
+    not ok 4 - valor string (não numérico): valor «—»
+      ---
+      duration_ms: 2.1641
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:83:5'
+      failureType: 'testCodeFailure'
+      error: 'o overlay mostrou «R$ NaN»'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/__tests__/utac00014-fim-edicao-overlay.test.mjs:86:14)
+        Test.runInAsyncScope (node:async_hooks:228:14)
+        Test.run (node:internal/test_runner/test:1118:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+        Test.postRun (node:internal/test_runner/test:1247:19)
+        Test.run (node:internal/test_runner/test:1175:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:787:7)
+      ...
+    # Subtest: valor Infinity: valor «—»
+    not ok 5 - valor Infinity: valor «—»
+      ---
+      duration_ms: 2.2508
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:83:5'
+      failureType: 'testCodeFailure'
+      error: 'o overlay formatou Infinity'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/__tests__/utac00014-fim-edicao-overlay.test.mjs:88:14)
+        Test.runInAsyncScope (node:async_hooks:228:14)
+        Test.run (node:internal/test_runner/test:1118:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+        Test.postRun (node:internal/test_runner/test:1247:19)
+        Test.run (node:internal/test_runner/test:1175:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:787:7)
+      ...
+    # Subtest: valor negativo: valor «—»
+    not ok 6 - valor negativo: valor «—»
+      ---
+      duration_ms: 2.9331
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:83:5'
+      failureType: 'testCodeFailure'
+      error: 'o overlay formatou um valor NEGATIVO'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/__tests__/utac00014-fim-edicao-overlay.test.mjs:87:14)
+        Test.runInAsyncScope (node:async_hooks:228:14)
+        Test.run (node:internal/test_runner/test:1118:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+        Test.postRun (node:internal/test_runner/test:1247:19)
+        Test.run (node:internal/test_runner/test:1175:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:787:7)
+      ...
+    # Subtest: valor BigInt (o antigo lançava): valor «—»
+    not ok 7 - valor BigInt (o antigo lançava): valor «—»
+      ---
+      duration_ms: 1.2858
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:83:5'
+      failureType: 'testCodeFailure'
+      error: 'Cannot mix BigInt and other types, use explicit conversions'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        FimEdicaoOverlay (C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx:20:52)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        retryTask (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+        performWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+        C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+        scheduleWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:78:3)
+      ...
+    # Subtest: valor Symbol (o antigo lançava): valor «—»
+    not ok 8 - valor Symbol (o antigo lançava): valor «—»
+      ---
+      duration_ms: 0.2231
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:83:5'
+      failureType: 'testCodeFailure'
+      error: 'Cannot convert a Symbol value to a number'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        FimEdicaoOverlay (C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx:20:52)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        retryTask (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+        performWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+        C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+        scheduleWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:78:3)
+      ...
+    # Subtest: string "300" (mudou: era «R$ 3.00»): valor «—»
+    not ok 9 - string "300" (mudou: era «R$ 3.00»): valor «—»
+      ---
+      duration_ms: 1.9282
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:83:5'
+      failureType: 'testCodeFailure'
+      error: 'valor: esperava «—»'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/__tests__/utac00014-fim-edicao-overlay.test.mjs:90:14)
+        Test.runInAsyncScope (node:async_hooks:228:14)
+        Test.run (node:internal/test_runner/test:1118:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+        Test.postRun (node:internal/test_runner/test:1247:19)
+        Test.run (node:internal/test_runner/test:1175:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:787:7)
+      ...
+    # Subtest: valor 0 (válido! não é malformado): valor «R$ 0.00»
+    ok 10 - valor 0 (válido! não é malformado): valor «R$ 0.00»
+      ---
+      duration_ms: 2.3581
+      type: 'test'
+      ...
+    # Subtest: valor -0 (zero negativo): valor «R$ 0.00»
+    ok 11 - valor -0 (zero negativo): valor «R$ 0.00»
+      ---
+      duration_ms: 2.0805
+      type: 'test'
+      ...
+    # Subtest: valor 1: valor «R$ 0.01»
+    ok 12 - valor 1: valor «R$ 0.01»
+      ---
+      duration_ms: 1.5121
+      type: 'test'
+      ...
+    # Subtest: 0.5 centavo (arredonda): valor «R$ 0.01»
+    ok 13 - 0.5 centavo (arredonda): valor «R$ 0.01»
+      ---
+      duration_ms: 1.2916
+      type: 'test'
+      ...
+    # Subtest: valor 12345: valor «R$ 123.45»
+    ok 14 - valor 12345: valor «R$ 123.45»
+      ---
+      duration_ms: 1.1652
+      type: 'test'
+      ...
+    # Subtest: VÁLIDO (o caso que não pode mudar): valor «R$ 3.00»
+    ok 15 - VÁLIDO (o caso que não pode mudar): valor «R$ 3.00»
+      ---
+      duration_ms: 1.0827
+      type: 'test'
+      ...
+    # Subtest: vencedor objecto vazio: endereço «—», valor «—»
+    not ok 16 - vencedor objecto vazio: endereço «—», valor «—»
+      ---
+      duration_ms: 0.486
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:110:5'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of undefined (reading 'slice')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        FimEdicaoOverlay (C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx:19:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        retryTask (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+        performWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+        C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+        scheduleWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:78:3)
+      ...
+    # Subtest: só valor (sem endereço): endereço «—», valor «R$ 3.00»
+    not ok 17 - só valor (sem endereço): endereço «—», valor «R$ 3.00»
+      ---
+      duration_ms: 0.2034
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:110:5'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of undefined (reading 'slice')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        FimEdicaoOverlay (C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx:19:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        retryTask (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+        performWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+        C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+        scheduleWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:78:3)
+      ...
+    # Subtest: endereço null: endereço «—», valor «R$ 3.00»
+    not ok 18 - endereço null: endereço «—», valor «R$ 3.00»
+      ---
+      duration_ms: 0.2138
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:110:5'
+      failureType: 'testCodeFailure'
+      error: "Cannot read properties of null (reading 'slice')"
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        FimEdicaoOverlay (C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx:19:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        retryTask (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+        performWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+        C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+        scheduleWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:78:3)
+      ...
+    # Subtest: endereço número: endereço «—», valor «R$ 3.00»
+    not ok 19 - endereço número: endereço «—», valor «R$ 3.00»
+      ---
+      duration_ms: 0.3575
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:110:5'
+      failureType: 'testCodeFailure'
+      error: 'vencedor.endereco.slice is not a function'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        FimEdicaoOverlay (C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx:19:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        retryTask (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+        performWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+        C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+        scheduleWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:78:3)
+      ...
+    # Subtest: endereço booleano: endereço «—», valor «R$ 3.00»
+    not ok 20 - endereço booleano: endereço «—», valor «R$ 3.00»
+      ---
+      duration_ms: 0.374
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:110:5'
+      failureType: 'testCodeFailure'
+      error: 'vencedor.endereco.slice is not a function'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        FimEdicaoOverlay (C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx:19:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        retryTask (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+        performWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+        C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+        scheduleWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:78:3)
+      ...
+    # Subtest: endereço objecto: endereço «—», valor «R$ 3.00»
+    not ok 21 - endereço objecto: endereço «—», valor «R$ 3.00»
+      ---
+      duration_ms: 0.4435
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:110:5'
+      failureType: 'testCodeFailure'
+      error: 'vencedor.endereco.slice is not a function'
+      code: 'ERR_TEST_FAILURE'
+      name: 'TypeError'
+      stack: |-
+        FimEdicaoOverlay (C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/FimEdicaoOverlay.jsx:19:56)
+        renderWithHooks (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5662:16)
+        renderIndeterminateComponent (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5736:15)
+        renderElement (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5961:7)
+        renderNodeDestructiveImpl (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6119:11)
+        renderNodeDestructive (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6091:14)
+        retryTask (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6543:5)
+        performWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6591:7)
+        C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6915:12
+        scheduleWork (C:\Users\Moltbot\Desktop\DESAFIOGUT\desafio-gut\frontend\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:78:3)
+      ...
+    # Subtest: endereço array: endereço «—», valor «R$ 3.00»
+    not ok 22 - endereço array: endereço «—», valor «R$ 3.00»
+      ---
+      duration_ms: 1.7536
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:110:5'
+      failureType: 'testCodeFailure'
+      error: 'o overlay mostrou um endereço vazio «...»'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/__tests__/utac00014-fim-edicao-overlay.test.mjs:114:14)
+        Test.runInAsyncScope (node:async_hooks:228:14)
+        Test.run (node:internal/test_runner/test:1118:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+        Test.postRun (node:internal/test_runner/test:1247:19)
+        Test.run (node:internal/test_runner/test:1175:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:787:7)
+      ...
+    # Subtest: endereço string vazia: endereço «—», valor «R$ 3.00»
+    not ok 23 - endereço string vazia: endereço «—», valor «R$ 3.00»
+      ---
+      duration_ms: 1.4018
+      type: 'test'
+      location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:110:5'
+      failureType: 'testCodeFailure'
+      error: 'o overlay mostrou um endereço vazio «...»'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///C:/Users/Moltbot/Desktop/DESAFIOGUT/desafio-gut/frontend/src/components/__tests__/utac00014-fim-edicao-overlay.test.mjs:114:14)
+        Test.runInAsyncScope (node:async_hooks:228:14)
+        Test.run (node:internal/test_runner/test:1118:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:787:18)
+        Test.postRun (node:internal/test_runner/test:1247:19)
+        Test.run (node:internal/test_runner/test:1175:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:787:7)
+      ...
+    # Subtest: sem vencedor: «Nenhum lance único registrado.» (inalterado)
+    ok 24 - sem vencedor: «Nenhum lance único registrado.» (inalterado)
+      ---
+      duration_ms: 1.468
+      type: 'test'
+      ...
+    1..24
+not ok 1 - UTAC000.14 · FimEdicaoOverlay — o VALOR não mostra NaN, negativo, nem rebenta (DEBT-013)
+  ---
+  duration_ms: 4954.9267
+  type: 'suite'
+  location: 'C:\\Users\\Moltbot\\Desktop\\DESAFIOGUT\\desafio-gut\\frontend\\src\\components\\__tests__\\utac00014-fim-edicao-overlay.test.mjs:60:1'
+  failureType: 'subtestsFailed'
+  error: '17 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 24
+# suites 1
+# pass 7
+# fail 17
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5437.2426

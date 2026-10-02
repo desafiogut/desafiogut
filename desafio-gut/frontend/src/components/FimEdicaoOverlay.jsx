@@ -10,10 +10,16 @@ const COR = { gold: "#f5a623" };
 
 export default function FimEdicaoOverlay({ vencedor, modalidade, onNovaRodada, EDICAO_ATIVA }) {
   const isMobile = useIsMobile();
-  const enderecoAbrev = vencedor
+  // UTAC000.14 (DEBT-013) — GUARDA DE TIPO, a mesma do `OverlayVencedor` (UTAC000.11) e do card do
+  // Dashboard (UTAC000.12). Medido no SEG-1: com valor malformado mostrava «R$ NaN»/«R$ -0.01», e
+  // `BigInt`/`Symbol` ou endereço não-string LANÇAVAM (página em branco). Malformado = AUSENTE («—»),
+  // campo a campo; com `vencedor` VÁLIDO as expressões são as mesmas de antes (GATE 18).
+  const enderecoAbrev = typeof vencedor?.endereco === "string" && vencedor.endereco.length > 0
     ? `${vencedor.endereco.slice(0, 10)}...${vencedor.endereco.slice(-6)}`
     : "—";
-  const valorFmt = vencedor ? `R$ ${(vencedor.valor / 100).toFixed(2)}` : "—";
+  const valorFmt = Number.isFinite(vencedor?.valor) && vencedor.valor >= 0
+    ? `R$ ${(vencedor.valor / 100).toFixed(2)}`
+    : "—";
 
   return (
     <>
