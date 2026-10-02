@@ -91,6 +91,16 @@ export default function Dashboard() {
   const vencedorExibido = resultadoOficial
     ? { endereco: resultadoOficial.vencedor, valor: resultadoOficial.menorUnicoCentavos }
     : vencedor;
+  // UTAC000.12 (DEBT-012) — GUARDA DO VALOR. A linha `R$ {(vencedorExibido.valor / 100).toFixed(2)}`
+  // (l. 416, o valor do card) nunca teve guarda: com valor ausente/absurdo mostrava «R$ NaN» ou
+  // «R$ -0.01» (achado do validador adversarial do UTAC000.11 — é o IRMÃO da DEBT-011, que já foi
+  // corrigido no `OverlayVencedor` e no `MercadoLances`). O endereço já tinha guarda (l. 410).
+  // Mesma regra do UTAC000.11: malformado = AUSENTE («—»); com valor VÁLIDO nada muda (GATE 18).
+  // ⚠️ Nota: `FimEdicaoOverlay.jsx` (l. 16) tem o mesmo defeito e NÃO é corrigido aqui (fora do
+  // escopo autorizado deste UTAC) — ficou registado como DEBT-013.
+  const valorVencedorFmt = Number.isFinite(vencedorExibido?.valor) && vencedorExibido.valor >= 0
+    ? `R$ ${(vencedorExibido.valor / 100).toFixed(2)}`
+    : "—";
   const { tempoRestante } = useAppTimer(); // MC44 P0 — timer isolado
   const t = useT();
 
@@ -413,7 +423,7 @@ export default function Dashboard() {
                 fontSize: isMobile ? "1.85rem" : "2rem",
                 fontWeight: "900", color: COR.gold, lineHeight: 1.1,
               }}>
-                R$ {(vencedorExibido.valor / 100).toFixed(2)}
+                {valorVencedorFmt}
               </div>
               <div style={{ fontSize: "0.72rem", color: COR.muted }}>
                 {/* MC88.43 — "Vencedor final" é um encerramento; segue a fonte única. */}

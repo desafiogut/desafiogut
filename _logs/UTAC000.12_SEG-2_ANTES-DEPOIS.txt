@@ -1,0 +1,114 @@
+UTAC000.12 — SEG-1/SEG-2: EVIDÊNCIA ANTES ↔ DEPOIS (3 resíduos: DEBT-012 · harness · worktrees)
+================================================================================================
+data: 2026-10-02 · base: 8e19ed0 = origin/main · evidência bruta: _logs/UTAC000.12_SEG-1_EVIDENCIA.txt
+
+─────────────────────────────────────────────────────────────────────────────────
+1. SUÍTE — ANTES (medido antes de tocar)
+─────────────────────────────────────────────────────────────────────────────────
+frontend: VERDE 614/614 pass
+backend: VERDE 967/973 pass
+
+─────────────────────────────────────────────────────────────────────────────────
+2. FRENTE A (DEBT-012) — TESTE QUE FALHA ANTES (GATE 6a) e o RED é a reprodução
+─────────────────────────────────────────────────────────────────────────────────
+Escritos 7 casos (tabela) + 1 controlo, ainda SEM a guarda:
+$ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/Dashboard.test.mjs
+# tests 22 · # pass 16 · # fail 6
+    error: 'o card mostrou «R$ NaN»'            ({} · {endereco:EU} · NaN · "abc" · Infinity)
+    error: 'o card formatou um valor NEGATIVO'  (valor: -1)
+    error: 'esperava 1 campo(s) «—» no bloco'   (consequência do NaN no lugar do «—»)
+  → o caso VÁLIDO passa ANTES da correcção = GATE 18 confirmado à partida.
+
+─────────────────────────────────────────────────────────────────────────────────
+3. A GUARDA APLICADA (Ponytail: 1 expressão, ao lado de onde o vencedor é escolhido)
+─────────────────────────────────────────────────────────────────────────────────
++  const valorVencedorFmt = Number.isFinite(vencedorExibido?.valor) && vencedorExibido.valor >= 0
++    ? `R$ ${(vencedorExibido.valor / 100).toFixed(2)}`
++    : "—";
+   l. 416:  -  R$ {(vencedorExibido.valor / 100).toFixed(2)}
+            +  {valorVencedorFmt}
+Mesma regra do UTAC000.11: malformado = AUSENTE («—»); com valor válido nada muda (GATE 18).
+
+─────────────────────────────────────────────────────────────────────────────────
+4. DEPOIS (GATE 6a/7) — o mesmo ficheiro, e a suíte canónica
+─────────────────────────────────────────────────────────────────────────────────
+$ node --test --test-concurrency=1 --test-reporter=tap src/pages/__tests__/Dashboard.test.mjs
+# tests 22 · # pass 22 · # fail 0
+$ npm test        (Frente B — o comando canónico, agora exposto)
+frontend: VERDE 622/622 pass        (614 + 8 novos: 7 casos + 1 controlo)
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+
+─────────────────────────────────────────────────────────────────────────────────
+5. MUTAÇÕES (GATE 6b/6c)
+─────────────────────────────────────────────────────────────────────────────────
+M14 — repor o defeito (bloco de 3 linhas substituído pelo ternário truthy original, byte-exacto)
+  md5 antes d7066379b7677841169a30ec87f7d3a0 · mutado 1ebf778dfda77dad7e4634ff1d546438
+  linha do mutante (VERIFICADA no ficheiro): const valorVencedorFmt = vencedorExibido ? `R$ ${(…)}` : "—"; // MUTANTE M14
+  → # tests 22 · # pass 16 · # fail 6   ← RED **só** nos 6 casos da DEBT-012 (os 16 restantes,
+    incluindo todos os do UTAC000.9, passam ⇒ mutação DIRIGIDA, não quebra de sintaxe)
+  RESTAURADO de cópia de segurança: md5 d7066379b7677841169a30ec87f7d3a0 (IDENTICO: True)
+
+⚠️ ERRO DE INSTRUMENTO DECLARADO (2 tentativas, ambas minhas):
+  (1) 1.ª versão do mutante passou `"...\"R\$ \"..."` pelo shell ⇒ o `\$` ENTROU no ficheiro e deu
+      16 RED/0 pass por o ficheiro nem carregar (transform falhou) — experimento INVÁLIDO;
+  (2) 2.ª versão substituiu só a 1.ª das 3 linhas do ternário ⇒ linhas órfãs ⇒ erro de sintaxe.
+  Correcção: mutador próprio (`tmp-utac0008/mutar-m14.py`) que substitui o BLOCO inteiro com
+  âncoras em BYTES (\r\n incluído) e imprime a linha do mutante para conferência.
+
+─────────────────────────────────────────────────────────────────────────────────
+6. FRENTE B — o harness exposto (com o caminho MEDIDO, não o do spec)
+─────────────────────────────────────────────────────────────────────────────────
++  "test": "node ../../scripts/mc966-suite-harness.mjs ambos"
+⚠️ O spec dizia `node scripts/mc966-suite-harness.mjs ambos` — caminho INEXISTENTE no dir do
+   frontend (o harness vive em <repo>/scripts/ e auto-localiza-se por __dirname). O caminho
+   `../../scripts/` é o padrão já usado por `build:rag`. Diff do package.json: 2 inserções, 1
+   remoção (o `,` final) — SEM reformatação do ficheiro.
+Medição depois:  `$ npm test` → frontend 622/622 · backend 967/973 · exit 0.
+
+─────────────────────────────────────────────────────────────────────────────────
+7. FRENTE C — os 3 worktrees (arquivar ANTES de apagar)
+─────────────────────────────────────────────────────────────────────────────────
+Arquivo: _logs/UTAC000.12_worktrees-preservados.patch (126 linhas · 5 diffs · md5 d53f4fc2…)
+  - angary-faraday-46bb51: vite.config.js + netlify.toml + main.jsx (CSP/headers JÁ no main, medido)
+  - ecstatic-almeida-869832: Toast.jsx (caminho que já não existe no main) + globals.css (paleta)
+  - agent-ab397f6377251548e: sem edições locais
+  - nenhum tinha commits fora do main (0 em cada)
+Limpeza (receita segura; sem junctions em nenhum — medido):
+  $ git worktree remove --force .claude/worktrees/<cada um dos 3>   → removidos PELO GIT
+  $ rm -rf .claude/worktrees/agent-a910933b732937233                → fora do registo
+  $ git worktree prune
+ANTES:  node_modules real 505 · 417  →  DEPOIS: 505 · 417   (INTACTO)
+        dirs em .claude/worktrees: 3+1 → 0
+        git worktree list: só a principal + o scratchpad do Claude em Temp/ (fora do repo)
+Branches: ficam 13 refs `worktree-agent-*`/`claude/*` (a limpeza de worktree NÃO apaga branches;
+  todas com 0 commits fora do main). NÃO apagadas — não autorizado; declarado.
+
+─────────────────────────────────────────────────────────────────────────────────
+8. ESCOPO (GATE 2/HI4) — `git diff --name-only` contra 8e19ed0
+─────────────────────────────────────────────────────────────────────────────────
+desafio-gut/frontend/src/pages/Dashboard.jsx                            (AUTORIZADO — a guarda)
+desafio-gut/frontend/package.json                                       (AUTORIZADO — expor o harness)
+desafio-gut/frontend/src/pages/__tests__/Dashboard.test.mjs             (AUTORIZADO — testes)
+desafio-gut/frontend/package-lock.json                                  (PRÉ-EXISTENTE)
+Novos: _logs/UTAC000.12_SEG-1_EVIDENCIA.txt · _logs/UTAC000.12_SEG-1_MEDICAO.md ·
+       _logs/UTAC000.12_SEG-2_ANTES-DEPOIS.txt · _logs/utac0012-evidencia.sh ·
+       _logs/UTAC000.12_worktrees-preservados.patch
+INTOCADOS: contrato on-chain, GUTO, Passe, Concurso, `_render.mjs`, `_ponte-ssr.mjs`,
+`vite.config.js`, `useResultadoOficial.js`, `MeusAtivos.jsx`, `AppContext.jsx`,
+`MercadoLances.jsx`, backend. DEBT-001/002/003/005/006/010 não tocadas. `showOverlay`: NÃO religado.
+
+─────────────────────────────────────────────────────────────────────────────────
+9. md5 DOS ENTREGÁVEIS (estado final)
+─────────────────────────────────────────────────────────────────────────────────
+d7066379b7677841169a30ec87f7d3a0  src/pages/Dashboard.jsx
+a5615f17a6f32f2583f524bf74fabbe3  package.json
+a44968610e9f292379d1ef3963d2a4ef  src/pages/__tests__/Dashboard.test.mjs
+d53f4fc23d2be43ee3f01c9eb29eaecb  _logs/UTAC000.12_worktrees-preservados.patch
+
+─────────────────────────────────────────────────────────────────────────────────
+10. ACHADO NOVO (registado, não corrigido — fora do escopo)
+─────────────────────────────────────────────────────────────────────────────────
+`src/components/FimEdicaoOverlay.jsx` l. 16: `const valorFmt = vencedor ? \`R$ ${(vencedor.valor / 100).toFixed(2)}\` : "—";`
+(idem l. 14 para o endereço, por truthiness). Recebe `vencedor={vencedorExibido}` do Dashboard ⇒
+mesma exposição da DEBT-012. **DEBT-013**, à espera de autorização para tocar nesse ficheiro.

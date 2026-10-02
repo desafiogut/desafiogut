@@ -1,0 +1,126 @@
+UTAC000.12 — FRENTE C: ARQUIVO DOS PATCHES DOS WORKTREES ANTES DA LIMPEZA (2026-10-02 00:36 UTC)
+===============================================================================
+
+Motivo: a limpeza é autorizada, mas nenhum trabalho local de outra sessão se apaga
+sem ficar ARQUIVADO aqui (o conteudo integral, em formato de patch aplicável).
+
+MEDICAO (medida, nao suposta):
+  - nenhum dos 3 worktrees tem commits fora do main (0 em cada: git log main..<HEAD>)
+  - edicoes LOCAIS (git -C <wt> diff --stat):
+      agent-ab397f6377251548e : nenhuma (so o untracked _validacao-mc942/, 1.2M, transitório)
+      angry-faraday-46bb51    : 3 ficheiros (vite.config.js, netlify.toml, main.jsx)
+      ecstatic-almeida-869832 : 2 ficheiros (Toast.jsx, globals.css)
+  - as diferencas grandes que o diff byte-a-byte mostrou eram o MAIN ter avancado
+    (1984/2008 ficheiros) desde os HEADs desses worktrees, NAO trabalho local.
+
+===============================================================================
+PATCH 1/2 — angry-faraday-46bb51 (HEAD 39382d9, branch claude/angry-faraday-46bb51)
+===============================================================================
+diff --git a/desafio-gut/frontend/src/main.jsx b/desafio-gut/frontend/src/main.jsx
+index 1c9910f..3016bfd 100644
+--- a/desafio-gut/frontend/src/main.jsx
++++ b/desafio-gut/frontend/src/main.jsx
+@@ -6,7 +6,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
+ import { sepolia as sepoliaChain } from "viem/chains"; // viem instalado como dep do Privy
+ import App from "./App.jsx";
+ 
+-const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || "cmo51f3v300l90clgzksivvad";
++const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || "cmo5113v300l90clgzksivvad";
+ 
+ createRoot(document.getElementById("root")).render(
+   <StrictMode>
+diff --git a/desafio-gut/frontend/vite.config.js b/desafio-gut/frontend/vite.config.js
+index c49d6c5..b8c8325 100644
+--- a/desafio-gut/frontend/vite.config.js
++++ b/desafio-gut/frontend/vite.config.js
+@@ -18,7 +18,7 @@ export default defineConfig({
+     port: 3000,
+     headers: {
+       "Content-Security-Policy":
+-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://privy.io https://*.privy.io; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://privy.io https://*.privy.io; frame-src https://privy.io https://*.privy.io https://accounts.google.com; connect-src 'self' http://127.0.0.1:8545 https://privy.io https://*.privy.io wss://*.privy.io https://auth.privy.io https://telemetry.privy.io https://api.privy.io https://eth-sepolia.g.alchemy.com https://rpc.sepolia.org; worker-src blob:; object-src 'none'; base-uri 'self';",
++        "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://privy.io https://*.privy.io; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://privy.io https://*.privy.io https://*.googleusercontent.com; frame-src https://privy.io https://*.privy.io https://accounts.google.com; connect-src 'self' http://127.0.0.1:8545 https://privy.io https://*.privy.io wss://*.privy.io https://auth.privy.io https://telemetry.privy.io https://api.privy.io https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://eth-sepolia.g.alchemy.com https://rpc.sepolia.org; worker-src blob:; object-src 'none'; base-uri 'self';",
+       "X-Content-Type-Options": "nosniff",
+       "X-Frame-Options": "DENY",
+       "Referrer-Policy": "strict-origin-when-cross-origin",
+diff --git a/netlify.toml b/netlify.toml
+index 0a65d30..79941c5 100644
+--- a/netlify.toml
++++ b/netlify.toml
+@@ -12,6 +12,7 @@
+   for = "/*"
+   [headers.values]
+     X-Content-Type-Options = "nosniff"
+-    X-Frame-Options        = "DENY"
++    X-Frame-Options        = "SAMEORIGIN"
+     Referrer-Policy        = "strict-origin-when-cross-origin"
+-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://privy.io https://*.privy.io; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://privy.io https://*.privy.io; frame-src https://privy.io https://*.privy.io https://accounts.google.com; connect-src 'self' http://127.0.0.1:8545 https://privy.io https://*.privy.io wss://*.privy.io https://auth.privy.io https://telemetry.privy.io https://api.privy.io https://eth-sepolia.g.alchemy.com https://rpc.sepolia.org; worker-src blob:; object-src 'none'; base-uri 'self';"
++    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://privy.io https://*.privy.io; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://privy.io https://*.privy.io https://*.googleusercontent.com; frame-src https://privy.io https://*.privy.io https://accounts.google.com; connect-src 'self' http://127.0.0.1:8545 https://privy.io https://*.privy.io wss://*.privy.io https://auth.privy.io https://telemetry.privy.io https://api.privy.io https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://eth-sepolia.g.alchemy.com https://rpc.sepolia.org; worker-src blob:; object-src 'none'; base-uri 'self';"
++    Access-Control-Allow-Origin = "https://auth.privy.io"
+
+===============================================================================
+PATCH 2/2 — ecstatic-almeida-869832 (HEAD 79a923c, branch claude/ecstatic-almeida-869832)
+===============================================================================
+diff --git a/desafio-gut/frontend/src/components/Toast.jsx b/desafio-gut/frontend/src/components/Toast.jsx
+index fe6ec8f..6fbb23c 100644
+--- a/desafio-gut/frontend/src/components/Toast.jsx
++++ b/desafio-gut/frontend/src/components/Toast.jsx
+@@ -36,6 +36,13 @@ const toastStateMap = {
+     text: 'text-orange-300',
+     pulse: false,
+   },
++  info: {
++    icon: 'ℹ️',
++    bg: 'bg-sky-500/10',
++    border: 'border-sky-500/25',
++    text: 'text-sky-300',
++    pulse: false,
++  },
+ };
+ 
+ export default function Toast({ id, variant = 'info', message, eta = null, onDismiss }) {
+diff --git a/desafio-gut/frontend/src/globals.css b/desafio-gut/frontend/src/globals.css
+index 7d009ff..5aa1892 100644
+--- a/desafio-gut/frontend/src/globals.css
++++ b/desafio-gut/frontend/src/globals.css
+@@ -10,9 +10,9 @@
+   --color-gut-border-dim:  rgba(245,166,35,0.10);
+ 
+   /* Dourado — primário absoluto */
+-  --color-gut-primary:     #f5a623;
++  --color-gut-primary:     #ffa500;
+   --color-gut-primary-dim: rgba(245,166,35,0.15);
+-  --color-gut-gold:        #f5a623;
++  --color-gut-gold:        #ffa500;
+   --color-gut-gold-dim:    rgba(245,166,35,0.15);
+   --color-gut-gold-dark:   #e89400;
+ 
+@@ -22,21 +22,21 @@
+   --color-gut-warning:     #f97316;
+ 
+   /* Tipografia */
+-  --color-gut-text:        #e8f0fe;
++  --color-gut-text:        #e0e0e0;
+   --color-gut-muted:       #5a7090;
+ 
+   /* Shadcn compat */
+   --color-background:      #0a0f1a;
+-  --color-foreground:      #e8f0fe;
++  --color-foreground:      #e0e0e0;
+   --color-card:            rgba(12,18,38,0.75);
+-  --color-card-foreground: #e8f0fe;
++  --color-card-foreground: #e0e0e0;
+   --color-border:          rgba(245,166,35,0.22);
+-  --color-primary:         #f5a623;
++  --color-primary:         #ffa500;
+   --color-primary-foreground: #0a0f1a;
+   --color-muted:           #0d1630;
+   --color-muted-foreground:#5a7090;
+   --color-destructive:     #ef4444;
+-  --color-accent:          #f5a623;
++  --color-accent:          #ffa500;
+   --radius-card:           0.75rem;
+ 
+   /* Animações */
+
+Untracked de ecstatic (nao entra em patch): .runcomfy-requests.json
+Untracked de agent-ab397 (transitorio): _validacao-mc942/ (7 entradas, 1.2M)

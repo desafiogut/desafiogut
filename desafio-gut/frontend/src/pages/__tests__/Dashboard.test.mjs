@@ -267,3 +267,62 @@ describe("MC94.2/MC94.3.1 · Dashboard — a edição especial NO SLOT", () => {
     assert.match(texto(html), /🎯 Edição Ativa/);
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// UTAC000.12 (DEBT-012) — O VALOR do card «🏆 Menor Lance Único» do Dashboard.
+// Achado do validador adversarial do UTAC000.11: a guarda nova do `OverlayVencedor` «espelhava a
+// do Dashboard (l. 410)» — verdade SÓ para o endereço. A linha do VALOR do card
+// (`Dashboard.jsx` l. 416) nunca teve guarda: `R$ {(vencedorExibido.valor / 100).toFixed(2)}` ⇒
+// com valor ausente/absurdo mostrava «R$ NaN» ou «R$ -0.01». Latente (o caminho oficial valida o
+// valor), mas é a mesma classe da DEBT-011 — e é o IRMÃO dela.
+// Regra (a mesma do UTAC000.11): malformado = AUSENTE («—»), campo a campo; com valor válido NADA
+// muda (GATE 18).
+describe("UTAC000.12 · Dashboard — o VALOR do card não mostra NaN nem absurdo (DEBT-012)", () => {
+  const EU = "0xaaaa000000000000000000000000000000000001";
+  const abrev = (e) => `${e.slice(0, 10)}...${e.slice(-6)}`;
+
+  /** O bloco do card do vencedor: do título até ao fim do `<section>` dele.
+   *  ⚠️ Medido (sonda): o `</h3>` seguinte só aparece muito depois (a 2.ª secção usa outra
+   *  estrutura), e o texto de estado «🔄 Liderando — pode ser superado» TEM um travessão —
+   *  por isso os «—» dos CAMPOS contam-se como `>—<` (o div vazio), não como `/—/g`. */
+  function blocoDoCard(html) {
+    const i = html.indexOf("🏆 Menor Lance Único");
+    if (i < 0) return "";
+    const resto = html.slice(i);
+    const j = resto.indexOf("</section>");
+    return j > 0 ? resto.slice(0, j) : resto;
+  }
+  const camposVazios = (bloco) => (bloco.match(/>—</g) || []).length;
+
+  const CASOS = [
+    // [nome,                                vencedor (LOCAL, sem oficial),  endereço esperado, valor esperado]
+    ["objecto vazio",                        {},                             "—",              "—"],
+    ["endereço presente, valor ausente",     { endereco: EU },               abrev(EU),        "—"],
+    ["valor NaN",                            { endereco: EU, valor: NaN },   abrev(EU),        "—"],
+    ["valor string (não numérico)",          { endereco: EU, valor: "abc" }, abrev(EU),        "—"],
+    ["valor negativo",                       { endereco: EU, valor: -1 },    abrev(EU),        "—"],
+    ["valor Infinity",                       { endereco: EU, valor: Infinity }, abrev(EU),     "—"],
+    ["VÁLIDO (o caso que não pode mudar)",   { endereco: EU, valor: 300 },   abrev(EU),        "R$ 3.00"],
+  ];
+
+  for (const [nome, vencedor, enderecoEsperado, valorEsperado] of CASOS) {
+    test(`${nome}: endereço «${enderecoEsperado}», valor «${valorEsperado}»`, () => {
+      definirResultadoOficial(null); // o card usa o vencedor LOCAL do contexto
+      const bloco = blocoDoCard(renderizar({ vencedor, encerrado: true }));
+      assert.ok(bloco.includes("Menor Lance Único"), "controlo: o card do vencedor não foi encontrado");
+      assert.ok(!/R\$ NaN/.test(bloco), "o card mostrou «R$ NaN»");
+      assert.ok(!/R\$ -/.test(bloco), "o card formatou um valor NEGATIVO");
+      assert.ok(bloco.includes(enderecoEsperado), `endereço: esperava «${enderecoEsperado}»`);
+      assert.ok(bloco.includes(valorEsperado), `valor: esperava «${valorEsperado}»`);
+      const tracos = (enderecoEsperado === "—" ? 1 : 0) + (valorEsperado === "—" ? 1 : 0);
+      assert.equal(camposVazios(bloco), tracos, `esperava ${tracos} campo(s) «—» no bloco`);
+    });
+  }
+
+  test("o card VÁLIDO não ganhou nenhum «—» (GATE 18)", () => {
+    definirResultadoOficial(null);
+    const bloco = blocoDoCard(renderizar({ vencedor: { endereco: EU, valor: 300 }, encerrado: true }));
+    assert.equal(camposVazios(bloco), 0, "apareceu «—» num campo do caso válido");
+    assert.ok(bloco.includes("R$ 3.00"), "controlo: o valor válido devia estar no bloco");
+  });
+});

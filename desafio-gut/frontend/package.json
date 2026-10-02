@@ -10,7 +10,8 @@
     "build:rag": "node ../../scripts/build-rag-index.mjs",
     "validar:dist": "node scripts/validar-dist-rede.mjs",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives",
-    "build:apk": "cd ../.. && netlify build --context production && cd desafio-gut/frontend && npm run validar:dist && npx cap sync android"
+    "build:apk": "cd ../.. && netlify build --context production && cd desafio-gut/frontend && npm run validar:dist && npx cap sync android",
+    "test": "node ../../scripts/mc966-suite-harness.mjs ambos"
   },
   "dependencies": {
     "@aws-sdk/client-kms": "^3.1072.0",
