@@ -129,3 +129,25 @@ não estava coberta. Corrigido tudo nesta ronda:
 |---|---|---|
 | **DEBT-016** (prazo real do relâmpago + `onClose`) | **FECHADA** | prazo do servidor, sintético barrado, `onClose` + «visto» com veredicto adversarial e correcções aplicadas |
 | **DEBT-017** (R-1 sintética) | **CÓDIGO FECHADO · CRIAÇÃO TRANSFERIDA (R18-a)** | `criarEdicao({id:'R-1'})` criado, testado e agora sem sobrescrita; a criação REAL em produção passa para o UTAC que desligar o `EM_BREVE_MODE` (duração decidida: 1800 s) |
+
+## 11. Custo e deploy finais (consolidado)
+
+| | tokens (in / out) | ≈ USD |
+|---|---|---|
+| leitura no fecho do UTAC000.17a | 1 316 732 / 741 503 | 1,0220 |
+| leitura 1.ª ronda do 17bc | 1 591 620 / 849 199 | 1,1872 |
+| leitura FINAL (após as correcções) | 1 627 761 / 910 509 | **1,2473** |
+
+- **Sessão-pai (todo o UTAC000.17bc): ≈ US$ 0,225** (1,2473 − 1,0220).
+- **Validador adversarial** (subagente `20261002_093907_fd2059`): **US$ 0,0289**.
+- **Total do UTAC000.17bc ≈ US$ 0,254**. **Saldo da API no fecho: US$ 0,57** (era 1,09).
+
+**Deploy verificado em foreground (GATE 12):** bundle em produção `index-BKCa0d9t.js` → **`index-OnFKq8CO.js`**
+(o deploy aplicou); site HTTP 200; `/minhas-participacoes` a responder 401 + `application/json` (vivo).
+**Nota (GATE 18):** com `EM_BREVE_MODE` ligado o overlay NÃO abre em produção, logo a Frente E limita-se a
+provar que o site novo serve e o endpoint responde — o comportamento visível mantém-se o de antes, que era
+exactamente o exigido. A prova de que o prazo real abre o overlay está nos testes de runtime (arnês, 8/8).
+
+**Limite de tempo:** o UTAC excedeu largamente as 3 h (GATE 4). Declarado desde a 1.ª ronda; o excedente
+tem duas causas medidas: (1) o arnês de runtime a pendurar 6m40s pelo fixture antigo; (2) a ronda de
+correcções exigidas pelo veredicto (4 correcções de código + 4 ficheiros de teste + 10 mutantes + suítes).
