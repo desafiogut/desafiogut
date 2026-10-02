@@ -85,3 +85,14 @@ TRANSFERIDA** para o UTAC que desligar o `EM_BREVE_MODE` (com a duração já de
 - **Registado (não corrigido, do validador):** `address === null` ⇒ `jaVisto`/`marcarVisto` devolvem false
   sem gravar e o overlay reabriria a cada mount. Inalcançável hoje (exige uma R-1 REAL, que não existe em
   produção); a rever no UTAC que criar a R-1. Também por medir: o custo do `jaVisto` a 4 Hz (250 ms).
+
+### NOTA OPERATIVA PARA O UTAC QUE CRIAR A R-1 (medida pelo validador adversarial do 17bc)
+
+O validador mediu que `criarEdicao({ id })` **não é alcançável pelo HTTP hoje**: o `POST /edicoes` não
+reencaminha `body.id` para o `criarEdicao` (e o GUTO também não). Logo o UTAC que desligar o
+`EM_BREVE_MODE` não pode criar a R-1 pelo endpoint público tal como ele está — precisa de uma das vias:
+(a) um script/chamada directa a `criarEdicao({ id: "R-1", tipo: "relampago", produto: ..., duracaoSegundos: 1800 })`
+(mesma instância Netlify/Blob), ou (b) uma escrita directa da chave `R-1` no Blob `edicoes-metadata` com a
+forma de `shapeEdicao`. Em qualquer via, a guarda `edicao_ja_existe` (UTAC000.17bc) impede sobrescrever
+uma R-1 viva. **Recomendação:** fazer a criação por (a) e, se o operador quiser o endpoint como via, abrir
+esse campo no POST é alteração de interface (HI9) e pede autorização explícita.

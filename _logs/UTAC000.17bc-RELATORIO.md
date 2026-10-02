@@ -128,7 +128,7 @@ não estava coberta. Corrigido tudo nesta ronda:
 | dívida | estado | nota |
 |---|---|---|
 | **DEBT-016** (prazo real do relâmpago + `onClose`) | **FECHADA** | prazo do servidor, sintético barrado, `onClose` + «visto» com veredicto adversarial e correcções aplicadas |
-| **DEBT-017** (R-1 sintética) | **CÓDIGO FECHADO · CRIAÇÃO TRANSFERIDA (R18-a)** | `criarEdicao({id:'R-1'})` criado, testado e agora sem sobrescrita; a criação REAL em produção passa para o UTAC que desligar o `EM_BREVE_MODE` (duração decidida: 1800 s) |
+| **DEBT-017** (R-1 sintética) | **CÓDIGO FECHADO · CRIAÇÃO TRANSFERIDA (R18-a)** | `criarEdicao({id:'R-1'})` criado, testado e agora sem sobrescrita; a criação REAL em produção passa para o UTAC que desligar o `EM_BREVE_MODE` (duração decidida: 1800 s). **Via medida pelo validador:** o `POST /edicoes` NÃO reencaminha `body.id` ⇒ a criação terá de ser por script/chamada directa a `criarEdicao` (ou escrita directa no Blob); abrir o campo no POST seria alteração de interface (HI9) |
 
 ## 11. Custo e deploy finais (consolidado)
 
