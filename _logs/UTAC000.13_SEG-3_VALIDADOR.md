@@ -206,3 +206,40 @@ a minha amostra de **6** corridas «ilibrara» o ficheiro; era **amostra inútil
 **Total de capturas independentes do flaky neste ciclo (todas do MESMO teste):** validador
 1/120 (hammer) + 2/200 (quieto) + 7/200 (carga) ≈ **10** · executor 1/200 (sequencial) + 4/400
 (martelo paralelo) = **5** ⇒ **≈15 capturas antes da correcção** e **0 em 600 corridas depois**.
+
+
+---
+
+# ANEXO DO EXECUTOR (restaurado) — medições minhas que se perderam na re-registo
+
+> ⚠️ **Nota de integridade (verificação de 2026-10-02):** quando re-registei este ficheiro com o
+> veredicto **final** dele, o meu anexo anterior foi substituído e dois itens ficaram **fora de
+> registo**. Encontrei-os numa verificação de integridade dos registos e restaurо-os aqui —
+> **nada se apaga**: o que se perdeu volta, identificado como meu.
+
+## A1. Teste directo à pista `rc=127` (o meu, `tmp-utac0013/testar-rc127.sh`)
+Depois de descobrir, no artefacto dele, que **1 de 15** corridas da suíte dele morrera com `rc=127`
+(«command not found» = anomalia de **arranque**, não falha de teste — e com a taxa do flaky alegado),
+testei a hipótese de forma directa: **48 spawns** — 5 lotes × 8 spawns simultâneos de um ficheiro
+rápido **+ 2 lotes × 4 suítes COMPLETAS simultâneas** (a replicar a condição do UTAC000.12).
+
+**Resultado: 0 `rc=127` · 0 outros `rc≠0` · 0 ficheiros com `fail>0`.**
+⇒ a anomalia de *spawn* **não se reproduz sob pressão deliberada**: fica **indício, não mecanismo**.
+(O que **explica** o `rc=127` dele, e passa a ser a leitura correcta: foi um **spawn falhado sob a
+carga que ELE PRÓPRIO estava a gerar** — corria este passo em paralelo com os outros passos dele e
+com as minhas suítes.)
+
+## A2. Correco dos números de TEMPO do §A dele (artefacto dele, `v1-tempos.out`)
+Ele declarou no veredicto: «nenhum ficheiro > **5.8 s**; soma de todos = **49,7 s**». O artefacto dele
+(**que só terminou depois de ele pendurar**) mostra:
+
+| | medido por mim no artefacto dele |
+|---|---|
+| ficheiros listados | os **15 mais lentos** (não os 49) |
+| mais lento | **9 981 ms** — `src/pages/__tests__/MeusAtivos.test.mjs` |
+| soma desses 15 | **83,8 s** — **já excede** a «soma de todos = 49,7 s» que ele declarou |
+
+⇒ os números dele **não reconciliam** (vieram de um estado parcial). **A conclusão dele mantém-se
+válida**: não há espera longa escondida (o mais lento é ~10 s, um teste de página em SSR) e **0
+falhas** em todos os medidos. Top-5: MeusAtivos 9 981 · utac0008-resultado-oficial 9 448 · Dashboard
+9 316 · utac0010-mercado-vencedor 9 059 · utac105c-meus-ativos 8 703 ms — todos `rc=0 fail=0`.
