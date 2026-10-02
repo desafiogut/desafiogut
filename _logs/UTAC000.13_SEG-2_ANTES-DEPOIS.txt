@@ -87,3 +87,56 @@ DEBT-001/002/003/005/006/010/013/015 não tocadas.
 A caça ao flaky consome tempo de máquina por natureza: 30 corridas da suíte completa (~70 s cada) +
 30 dirigidas sob carga. **Excedeu as 2 h.** Declarado: o tempo pós-limite foi de **medição** (a caça),
 não de escopo novo — e o resultado é um **negativo medido**, que é o que o spec pede (GATE 21).
+
+
+================================================================================
+FRENTE B (REABERTA) — O FLAKY FOI APANHADO E CORRIGIDO — 2.ª ronda, 2026-10-02
+================================================================================
+⚠️ A minha conclusão da 1.ª ronda («flaky NÃO reproduzível em 60 corridas → escopo estreitado,
+sem objecto») foi **REFUTADA** pelo validador adversarial, que o **apanhou com nome** — e eu
+**reproduzi-o depois** (não aceito auto-relato de subagente sem verificação própria).
+
+**O DEFEITO (medido):**
+- Teste: `um pedido novo limpa o erro do anterior` — `src/hooks/__tests__/hooks-torneio.test.mjs:231`
+- Assert que falha: l. 244 — `assert.equal(c.resultado().carregando, true)` → `false !== true`
+- Causa: a 2.ª resposta do duplo usava `demora: 20` = **temporizador REAL** (a suíte não tem
+  `fakeTimers`); sob jitter de escalonamento o pedido resolvia **antes** do assert síncrono.
+- Taxa: **1/120** corridas do ficheiro em máquina quieta (validador) · muito maior sob carga.
+
+**A CORRECÇÃO (mínima, no ficheiro de teste — autorizado):** a 2.ª resposta deixa de usar o
+relógio e fica **presa numa promessa que o teste destrava** (o duplo já `await`a o retorno do
+responder, `_hook-runner.mjs` l. 281); o teste passou ainda a **fechar** o pedido e a verificar que
+o resultado novo assenta (`erro === null`, `total === 1`) ⇒ **mais forte**, não mais fracor.
+
+**A/B PAREADO (mesma máquina, mesma carga: 4 workers em CPU):**
+| fase | corridas | falhas | md5 do ficheiro |
+|---|---|---|---|
+| ANTES (original, `demora: 20`) | 200 | **1** (`um pedido novo limpa o erro do anterior`) | b57f7ea5… (pós-correcção) |
+| DEPOIS (correcção) | 200 | **0** | b57f7ea5… |
+**A/B PAREADO — MARTELO PARALELO FINAL (8 fluxos simultâneos = carga real; é a carga que
+revela a corrida):**
+
+| fase | corridas | falhas | todas do mesmo teste? |
+|---|---|---|---|
+| MUTANTE M15b (original byte-a-byte, defeito reposto) | **400** | **4** | **sim** — `um pedido novo limpa o erro do anterior` (`false !== true`) |
+| CORRIGIDO (promessa controlada, zero relógio) | **400** | **0** | — |
+
+Somando as duas rondas de medição: **pré-correcção 5 falhas em 600 corridas (≈0,8%)** — a FASE A do
+A/B sequencial (1/200) + o martelo (4/400) — e **pós-correcção 0 em 600 corridas** (0/200 + 0/400).
+O mutante **MORDE** e a correcção é **estável**. O repo foi restaurado por `trap` (mesmo se algo
+morresse a meio): md5 final **b57f7ea5…**, idêntico ao backup.
+| RESTAURO (do backup, fora do repo) | — | md5 **b57f7ea5…** = idêntico | b57f7ea5… |
+
+**Erros MEUS declarados nesta ronda (3, todos de instrumento):**
+1. O 1.º mutante (M15) repunha só o *responder* e deixava o `destravar()` no corpo ⇒ `TypeError`
+   em **todas** as corridas (falha pelo motivo errado) — experimento **inválido**, descartado.
+2. O 2.º mutante (M15b) tinha as âncoras em **CRLF** num ficheiro **`.mjs` (LF)** ⇒ zero correspondências.
+3. Na validação do M15b, as minhas duas guardas estavam mal formuladas (`destravar` aparece **3**×,
+   não 2; e o `demora: 20` aparece no **comentário** que documenta o defeito) — as guardas
+   dispararam com dados bons. Corrigidas e o mutante ficou **verificado** (`destravar`=0,
+   `demora: 20` de volta, md5 novo).
+
+**CORRECÇÃO DE OUTRA AFIRMAÇÃO MINHA:** «o harness exige TTY» está **errado** — o validador mediu
+`node scripts/mc966-suite-harness.mjs frontend < /dev/null` → VERDE 630/630, exit 0. O que falhou
+comigo foi o **stdin indisponível** (background sem redireccionamento), não a falta de TTY.
+A regra correcta: **em background, redireccionar `</dev/null`**.

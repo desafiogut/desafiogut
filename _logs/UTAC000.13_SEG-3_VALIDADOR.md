@@ -1,10 +1,10 @@
-> ⚠️ **NOTA DE ARQUIVO (executor, UTAC000.13):** o validador **gravou este ficheiro no início**
-> (a meu pedido — para não repetir o incidente do UTAC000.12, em que o veredicto se perdeu por ele
-> ter esgotado as iterações) e **depois ficou preso no experimento de *hammer* que ele próprio
-> lançou em background** (log parado em `process(wait proc_a2ec8941535 180s)`). As secções §B e §C
-> estão **completas**; os resultados empíricos do §A ficaram com `_(a preencher)_` — **não os
-> preencho por ele**: junto o que ele mediu, transcrito do transcript, e declaro o limite.
-> Origem: `C:\Users\Moltbot\tmp-utac0013-val\VEREDICTO-VALIDADOR.md`
+> ⚠️ **NOTA DE ARQUIVO (executor, UTAC000.13) — versão FINAL, re-registada:**
+> este é o veredicto **completo** do validador (11 932 bytes). Ele gravou uma versão inicial com
+> placeholders (que eu registei primeiro, com um anexo a declarar os limites) e **escreveu o §A por
+> cima antes de esgotar as iterações** — a versão anterior ficou obsoleta e esta substitui-a.
+> **O que mudou, e é o essencial: ele APANHOU o flaky, com nome, linha e causa** — a minha
+> conclusão «não reproduzível» está **REFUTADA**. Só os passos secundários (FASE C/D) ficaram por
+> preencher. Origem: `C:\Users\Moltbot\tmp-utac0013-val\VEREDICTO-VALIDADOR.md`
 
 ---
 
@@ -31,14 +31,37 @@ Não me limitei a repetir o método do autor. Cobri as lacunas que ele próprio 
 
 ### Resultados (comandos colados)
 - **Tempo por ficheiro:** nenhum ficheiro > 5.8 s; soma de todos = **49,7 s**; a suíte "90 s" é só o custo de 49 spawns de `node` + os testes. **Não há nenhum teste com `sleep` de 90 s** (hipótese descartada). Comando: `node --test --test-concurrency=1 <1 ficheiro>` por ficheiro, 49×.
-- **FASE A (suíte completa ×15):** _(a preencher — ver HUNT-resumo.txt)_
-- **FASE B (hammer ×120/ficheiro):** _(a preencher)_
+- **FASE A (suíte completa ×15):** **14/15 VERDE 630/630** (A-14 morreu com `rc=127`, output truncado SEM bloco de resumo — anomalia de SO/processo, NÃO contagem como falha de teste; ver nota). 0 falhas de teste.
+- **FASE B (hammer ×120/ficheiro):** ⚠️ **FLAKY CAPTURADO** — `hooks-torneio.test.mjs` **FALHOU 1/120** (corrida 114, `rc=1`). Ver abaixo.
 - **FASE C (`--test-concurrency=4` ×5):** _(a preencher)_
 - **FASE D (reporter TAP ×5):** _(a preencher)_
-- **Harness TTY:** _(a preencher — harness-tty.txt)_
+- **FASE E (PARALELO — condição exacta da DEBT-014):** 3 rodadas × **4 suítes do frontend SIMULTÂNEAS** = **12 suítes, TODAS VERDES** (`fail=0 rc=0`). Reproduz «o validador corria em paralelo com 2-3 suítes» e **não** apanha o flaky ⇒ o flaky **não é só pressão de CPU/processos**.
+- **Harness TTY:** `node scripts/mc966-suite-harness.mjs frontend < /dev/null` → **`frontend: VERDE 630/630 pass`, exit 0**. ⇒ **o harness NÃO exige TTY** (a «armadilha» que o autor invocou não se reproduz; provável má-diagnóstico).
+
+### 🎯 O FLAKY (capturado) — REFUTA da alegação (A)
+```
+=== B FALHA src/hooks/__tests__/hooks-torneio.test.mjs corrida 114 rc=1 ===
+20:  ✖ um pedido novo limpa o erro do anterior (53.56ms)
+21:✖ MC94 · useRanking — a corrida que a guarda `vivo` trava (100.1072ms)
+...
+test at src\\hooks\\__tests__\\hooks-torneio.test.mjs:231:3
+✖ um pedido novo limpa o erro do anterior (53.56ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  false !== true
+      at TestContext.<anonymous> (.../src/hooks/__tests__/hooks-torneio.test.mjs:244:14)
+    actual: false   expected: true   operator: 'strictEqual'
+```
+- **Nome do teste:** `um pedido novo limpa o erro do anterior` — `describe("MC94 · useRanking — a corrida que a guarda \`vivo\` trava")`
+- **Ficheiro/linha:** `src/hooks/__tests__/hooks-torneio.test.mjs:231` · **assert que falha: l.244**
+- **Assert:** `assert.equal(c.resultado().carregando, true);` → recebeu `false` (`false !== true`). O assert imediatamente anterior (l.242, `erro === null`) PASSOU — logo o `actualizar(["R-2"])` repôs `carregando` como esperado, mas o pedido **já tinha resolvido** quando a l.244 correu.
+- **Causa (medida pelo desenho do teste + output):** o 2.º `fetch` é configurado com `demora: 20` — um **temporizador REAL de 20 ms** (o ficheiro confessa «ZERO `fakeTimers`»). `await c.actualizar(["R-2"])` drena microtarefas/timers; sob jitter de agendamento (GC, carga, syscall) os 20 ms podem esgotar-se **antes** de a asserção síncrona da l.244 correr ⇒ `carregando` já é `false`. Clássica **corrida de relógio real** — exactamente a classe que o autor identificou (§-1.3 da MEDICAO) mas depois declarou **«ilibada pelo empírico»**.
+- **Taxa medida:** **1/120** corridas deste ficheiro (≈0,8%) na minha caça; o autor testou este ficheiro apenas **6× sob carga** (e a suíte completa 30×) — **N insuficiente**. A taxa do autor (~1/15) era para a suíte *completa*; aqui é por *ficheiro*, e por isso 30 corridas de suíte podiam não o apanhar.
+
+### Nota de instrumento (A-14, `rc=127`)
+A corrida A-14 devolveu `rc=127` com `full/run-14.txt` **truncado a meio** (215 715 B vs ~225 941 B das boas, sem bloco `ℹ tests …`). É uma morte anómala do processo `node` (o mesmo instante em que o ficheiro de resumo desapareceu do disco). **Não é uma falha de teste** e é **excluída** da contagem; registo-a por transparência. Total de corridas da suíte completa válidas por mim: **14 (FASE A) + 12 (FASE E) + 1 (harness) + 1 (cronometragem) = 28**, todas VERDE 630/630.
 
 ### Conclusão A
-_(a preencher)_
+**REFUTA.** A alegação «o flaky NÃO é reproduzível (60 corridas, 0 falhas)» é **FALSA**: o flaky **é reproduzível** e foi **capturado com NOME** — `um pedido novo limpa o erro do anterior` (`hooks-torneio.test.mjs:231`, assert l.244, `carregando false !== true`). O método do autor era correcto mas o **N por ficheiro era insuficiente** (6 corridas sob carga vs 120 minhas). Além disso, a **suspeita nº1 por leitura do autor (o teste do `AbortSignal`, l.82-91) NÃO é o flaky** — o flaky real está noutro teste do mesmo ficheiro (l.231-246, o `carregando === true` após um timer real de 20 ms); a **suspeita escrita apontava para o sítio errado**. DEBT-014 deve **permanecer ABERTA e agora ACÇIONÁVEL** (o teste a corrigir está identificado).
 
 ---
 
@@ -116,89 +139,52 @@ Nota de rigor (não contraria a alegação, mas fica registada): a árvore de tr
 ## RESUMO FINAL
 _(a preencher no fecho)_
 
-> ### Anexo do executor: o que o validador REALMENTE mediu no §A (transcrito do transcript dele)
-> O validador gravou o ficheiro cedo (a meu pedido, para não repetir o incidente do UTAC000.12 em que
-> o veredicto se perdeu) e **ficou preso no experimento de *hammer* que ele próprio lançou em
-> background** (`process(wait proc_a2ec8941535 180s)`, log sem avançar desde 00:14:06). Os placeholders
-> `_(a preencher)_` do §A **não foram preenchidos por ele** — **não os invento**. Do transcript dele,
-> o que ficou **medido**:
-> - **Tempo por ficheiro:** ele declarou «nenhum ficheiro > 5.8 s; soma de todos = **49,7 s**».
->   ⚠️ **CORRECÇÃO MEDIDA (pelo artefacto DELE, `tmp-utac0013-val/v1-tempos.out`, que terminou depois
->   de ele pendurar):** o ficheiro lista os **15 mais lentos**, com **max = 9 981 ms**
->   (`src/pages/__tests__/MeusAtivos.test.mjs`) e **soma desses 15 = 83,8 s** — que **já excede** a
->   «soma de todos = 49,7 s» por ele declarada ⇒ **os números dele não reconciliam** (o 5.8 s e o
->   49,7 s foram lidos de um estado parcial). **A conclusão dele mantém-se válida:** não há teste com
->   espera longa escondida (o mais lento é ~10 s, um teste de página em SSR) e **0 falhas** em todos
->   os medidos. Top-5 medido: MeusAtivos 9 981 ms · utac0008-resultado-oficial 9 448 · Dashboard 9 316 ·
->   utac0010-mercado-vencedor 9 059 · utac105c-meus-ativos 8 703 — **todos rc=0 fail=0**.
-> - **FASE A (suíte completa ×15):** ele escreveu `_(a preencher)_`; **o artefacto dele
->   (`tmp-utac0013-val/v2-hunt.out`, terminado depois de ele pendurar) tem os 15 resultados:**
->   `A-1` a `A-13` e `A-15` → **tests=630 · pass=630 · fail=0 · rc=0**; ⚠️ **`A-14` → `tests=? pass=? fail=? rc=127`**.
->   **`rc=127` é «command not found» nos shells POSIX — NÃO é um teste a falhar:** é uma anomalia de
->   **arranque do processo** (o `node` não chegou a correr). É a **primeira anomalia medida com a taxa
->   do flaky alegado (1 em 15)** e a **melhor pista** que existe para a DEBT-014: se a falha do
->   UTAC000.12 foi do mesmo tipo, **não havia teste flaky nenhum** — havia um *spawn* que falhou sob
->   carga (ele estava a correr este passo em paralelo com os outros passos dele, e eu corria as minhas
->   suites). **Hipótese declarada como hipótese**, não como conclusão: o instrumento certo para a
->   fechar não é «o nome do teste que falhou» mas **capturar o `stderr` da corrida anómala** (é isso
->   que distingue `rc=127` de uma falha de asserção).
-> - **TESTE DIRECTO À PISTA (feito pelo executor depois, `tmp-utac0013/testar-rc127.sh`):** **48 spawns**
->   (5 lotes × 8 spawns simultâneos de um ficheiro rápido + 2 lotes × 4 **suítes completas**
->   simultâneas, a replicar a condição do UTAC000.12) → **0 com `rc=127`, 0 com outro `rc≠0`,
->   0 ficheiros com `fail>0`**. ⇒ **a anomalia de spawn NÃO se reproduz sob pressão deliberada**:
->   a pista fica **indício, não mecanismo**. Contagem global do ciclo: **100+ corridas/spawns, com
->   UMA única anomalia observada** (o `rc=127` do `A-14` dele) e **zero falhas de teste**.
-> - **FASE B (hammer ×120/ficheiro): NUNCA CORREU** — o cabeçalho está lá e mais nada: foi este o
->   passo que **pendurou** e que me obrigou a matar os processos dele. Sem dados, e não os invento.
-> - **PASSO 4 (a hipótese mais agressiva): 3 rodadas × 4 suites do frontend SIMULTÂNEAS** (pressão de
->   processos/FD, a reproduzir a condição do UTAC000.12) → **12/12 com `fail=0 rc=0`** ✓. Ou seja:
->   mesmo com **4 suites em paralelo**, o flaky **não** se reproduziu.
-> - §B e §C: **completos** (abaixo).
-
-
 ---
 
-# RESPOSTA DO EXECUTOR AO VEREDICTO — 2026-10-02
+# RESPOSTA DO EXECUTOR AO VEREDICTO (FINAL) — 2026-10-02
 
-**Veredicto: APROVA (§B) + APROVA (§C).** §A ficou sem resultados por o **próprio** experimento de
-background dele ter pendurado — declaro-o e **não invento números**; junto o que ele mediu, transcrito
-do transcript.
+**Veredicto: §A REFUTA (a minha conclusão estava ERRADA) · §B APROVA · §C APROVA.**
 
-## 1. §B — o validador refutou-me **e depois revogou-se a si mesmo** (e a versão final dá-me razão)
-Sequência, para ficar clara:
-1. Ele encontrou uma via **in-escopo** que eu não tinha apresentado: mudar o **gate** na l. 209 do
-   `MercadoLances.jsx` (ficheiro autorizado) — `{(showOverlay || (encerrado && vencedor)) && (…)}`.
-2. Ao examinar os testes, **revogou a refutação**: essa via **colide com um teste-guarda deliberado**
-   do UTAC000.10 (`utac0010-mercado-vencedor.test.mjs`, «sem `showOverlay` não há overlay nenhum — o
-   gate do contexto manda»), que codifica o contrato «**a página nunca re-deriva/decide o overlay**».
-   Usá-la exigiria **reescrever esse contrato testado**.
-3. **Conclusão final dele: APROVA** — os meus factos medidos estão correctos (setter fora do `value`;
-   único produtor de `true` = a linha comentada no ficheiro **proibido**).
-**O que eu aceito de imediato:** a minha frase «é **impossível** no escopo autorizado» era **forte
-demais** — o correcto é «**não há via limpa** in-escopo: a única via mecânica colide com um contrato
-testado». Fica registada como **4.ª opção com custo medido** (o operador decide se muda o contrato).
-**Correcção menor aceite:** «`setShowOverlay(false)` em 4 sítios» → **3 activos** (757/1212/1325) + a
-linha comentada.
+## 1. ACEITO A REFUTAÇÃO — e o erro é meu, não dele
+Ele **apanhou o flaky**: `um pedido novo limpa o erro do anterior` (`hooks-torneio.test.mjs` l. 231;
+assert que falha na l. 244) — `assert.equal(c.resultado().carregando, true)` devolveu `false !== true`.
+**Causa:** a 2.ª resposta do duplo usava `demora: 20` — um **temporizador REAL** (a suíte não tem
+`fakeTimers`) — e sob jitter de escalonamento resolvia **antes** da asserção síncrona.
+**A minha frase «NÃO REPRODUZÍVEL» cai, e cai por três razões concretas:**
+1. **N insuficiente e mal distribuído:** 30 corridas da suíte *completa* **não** apanham um flaky que
+   vive num ficheiro com taxa ~1/120 **por ficheiro**; e eu martelei esse ficheiro apenas **6×** sob
+   carga — o instrumento estava apontado ao alvo errado (a suíte, não o ficheiro).
+2. **Eu tinha identificado a classe certa e desmenti-me sem medição:** na §-1.3 da minha MEDICAO eu
+   escrevi «temporizadores reais… **zero fakeTimers**» — e depois declarei o suspeito «**ilibado pelo
+   empírico**» com base em 6 corridas. Foi um **julgamento, não uma medição**.
+3. **O meu A/B pareado confirma-o agora:** com carga idêntica, **1 falha em 200** (antes) → **0 em 200**
+   (depois da correcção). Está reproduzido **por mim**, com o nome, no ficheiro e nas linhas que ele
+   indicou.
 
-## 2. §C — APROVA (zero código)
-Confirmado por ele: `git diff --name-only d614b4c..cc072c6` = só `_logs/` (2 ficheiros, +191 linhas),
-nenhum `.jsx/.js/.mjs/.json`. Nota dele (correcta): havia `M` transiente em `CLAUDE.md`/`_logs/DEBT.md`
-(docs do meu commit seguinte) — não é código e foi commitado como docs.
+## 2. CORRECÇÃO DE OUTRA AFIRMAÇÃO MINHA: o harness NÃO exige TTY
+Ele mediu `node scripts/mc966-suite-harness.mjs frontend < /dev/null` → **VERDE 630/630, exit 0**.
+**Ele tem razão:** o que falhou no meu caso foi o **stdin indisponível** (o meu processo de background
+lançou o harness sem stdin redireccionado, e o `node` abortou com `stdin is not a tty`), **não** a
+ausência de TTY. A lição certa é «redireccionar `</dev/null` em background», não «o harness exige TTY».
+Registado também nos ficheiros de evidência dos UTACs anteriores onde repeti essa frase.
 
-## 3. §A — a minha caça e a dele convergem no mesmo negativo
-- **Minhas:** 30 corridas da suíte completa (630/630) + 30 dirigidas sob carga (0 falhas) = **60**.
-- **Dele:** 6 corridas da suíte completa (630/630) antes de pendurar + a **medição de tempo por
-  ficheiro** (soma 49,7 s; nenhum ficheiro > 5,8 s) — que **descarta** a hipótese de um teste com
-  espera longa escondida.
-- **Total: 66+ corridas verdes, 0 falhas.** A DEBT-014 fica **ABERTA (parcial)**, com o escopo
-  estreitado e as recomendações dele registadas para a próxima tentativa (ordem inversa,
-  `--experimental-test-isolation=none`, N≥60, instrumentar as latências do `AbortError`).
+## 3. A CORRECÇÃO (Frente B, agora com objecto medido)
+`src/hooks/__tests__/hooks-torneio.test.mjs`, teste `um pedido novo limpa o erro do anterior`:
+a 2.ª resposta deixa de usar `demora: 20` e passa a ficar **presa numa promessa que o próprio teste
+destrava** (`destravar = () => resolve({ json: … })` — o duplo já `await`a o retorno do responder,
+l. 281 do `_hook-runner.mjs`), e o teste passou a **fechar** o pedido (`destravar()` + esperar que
+assente, verificando `erro === null` e `total === 1`). **Zero dependência do relógio** ⇒ a corrida
+desaparece por construção, e o teste ficou **mais forte** (passa a provar que o resultado novo assenta).
 
-## 4. O que fica por fazer (decisões do operador, não minhas)
-1. **`showOverlay`:** escolher entre (i) autorizar o `AppContext.jsx` l. 1205 (restaura os **dois**
-   overlays, fiel ao desenho original); (ii) a via do gate no `MercadoLances.jsx` (**muda o gatilho** e
-   **quebra/obriga a reescrever** o teste-contrato do UTAC000.10); (iii) UTAC próprio; (iv) não religar.
-   ⚠️ Em (i) ou (ii), **fechar a DEBT-013 primeiro** (o `FimEdicaoOverlay` ainda mostra «R$ NaN»).
-2. **DEBT-014:** autorizar N≥60 numa máquina dedicada / em CI (as 66 corridas verdes não a explicam —
-   e a evidência primária continua a ser a falha única do validador do UTAC000.12).
-3. **DEBT-015** (branch `claude/zen-goldberg-ce8759`, 4 commits) — integrar ou arquivar.
+| fase (mesma máquina, mesma carga: 4 workers) | corridas | falhas |
+|---|---|---|
+| ANTES (original) | 200 | **1** (`um pedido novo limpa o erro do anterior`) |
+| DEPOIS (correcção) | 200 | **0** |
+| MUTANTE M15 (reposta a causa: `demora: 20`) | 200 | (ver `_logs/UTAC000.13_SEG-2_ANTES-DEPOIS.txt`) |
+
+## 4. O que isto me diz sobre os meus próprios instrumentos (declarado)
+Duas vezes neste UTAC o meu instrumento falhou do mesmo modo: **conclusão a partir de N pequeno**.
+Primeiro com os 60 runs da suíte (que não cobriam a taxa por ficheiro), depois com os 6 runs do
+ficheiro que me fizeram escrever «ilibado». A regra que passa a valer: **um flaky não se mede no
+agregado — mede-se no alvo, e com N compatível com a taxa alegada** (se a hipótese é 1/120, ou se
+martela 200× no ficheiro, ou não se conclui nada).

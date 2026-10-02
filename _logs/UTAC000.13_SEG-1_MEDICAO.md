@@ -46,6 +46,16 @@ se a promessa resolver antes de o abort ser processado), a rejeição deixa de s
 1 em N, dependendo da carga. **Suspeito nº2:** l. 59-80, um `setTimeout(…, 1)` a que se segue
 `await … setTimeout(…, 5)` (margem de 5 ms sob carga).
 
+> ⚠️ **REFUTADO na 2.ª ronda (2026-10-02) — o flaky era um TERCEIRO teste do mesmo ficheiro.** Nem o
+> nº1 (l. 82-91) nem o nº2 (l. 59-80) era o flaky: o duplo trata o `abort` correctamente (medido) e
+> essas margens não se reproduzem. O flaky real é **`um pedido novo limpa o erro do anterior`**
+> (`hooks-torneio.test.mjs` **l. 231**; assert na **l. 244**: `assert.equal(c.resultado().carregando, true)`
+> → `false !== true`), por a 2.ª resposta do duplo usar **`demora: 20`** (temporizador REAL) e resolver
+> **antes** do assert síncrono sob jitter. **Taxa: 1/120** corridas do ficheiro (apanhado pelo validador
+> adversarial e **reproduzido por mim**: 1/200 sob carga). **O meu erro:** concluí «ilibado» para este
+> ficheiro com base em **6 corridas** — foi **julgamento, não medição**; e martelei a *suíte* (30×) em
+> vez do **alvo**. Lição: um flaky mede-se no alvo, com N compatível com a taxa alegada. Ver §7 do relatório.
+
 ## -1.4 Estado do `showOverlay` (Frente D) — **PREMISSA DO SPEC NÃO CONFERE**
 O spec diz: «o `setShowOverlay(true)` está comentado no código (**l.1205 do `MercadoLances.jsx`**)».
 **Medido:**

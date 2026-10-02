@@ -2,7 +2,10 @@
 
 **Data:** 2026-10-02 · **Executor:** Hermes Agent · **Base real medida:** `d614b4c` = `origin/main`
 **Objectivo:** fechar a DEBT-014 (suíte determinística) e, no fim, religar o `showOverlay` (decisão do operador).
-**VEREDICTO: PARCIAL** — Frente A/B: **resultado NEGATIVO medido** (flaky não reproduzível em 60 corridas);
+**VEREDICTO: PARCIAL → REVISÃO (2.ª ronda): a FRENTE B FECHOU (o flaky foi apanhado pelo validador
+adversarial, reproduzido pelo executor e CORRIGIDO) e a DEBT-014 está FECHADA; a FRENTE D
+(`showOverlay`) continua ESCALADA.** A minha conclusão da 1.ª ronda — «Frente A/B: **resultado
+NEGATIVO medido** (flaky não reproduzível em 60 corridas)» — **está REFUTADA: ver §7.**
 Frente D: **PARADA e ESCALADA** (exige um ficheiro que este UTAC proíbe).
 
 ---
@@ -103,3 +106,28 @@ fecho do UTAC000.12 ⇒ consumo real do ciclo ≈ **0,23**).
 UTAC000.12) ⇒ verificação de que a afirmação «zero alterações de código» é verdadeira até em produção.
 **Tempo:** excedeu as 2 h — a caça ao flaky é tempo de máquina (66+ corridas ≈ 1 h de CPU, incluindo o
 *hammer* do validador que eu tive de matar). Declarado: o excedente foi **medição**, não escopo novo.
+
+
+## 7. REVISÃO (2.ª ronda, 2026-10-02) — a minha conclusão do flaky foi REFUTADA e corrigida
+
+**Estado do UTAC muda de «PARCIAL sem objecto na Frente B» para: Frente B CONCLUÍDA (o flaky foi
+apanhado, reproduzido, corrigido e verificado por A/B pareado).** A DEBT-014 passa a **FECHADA**.
+
+1. **O que eu declarei (1.ª ronda):** «60 corridas, 0 falhas ⇒ não reproduzível; escopo estreitado;
+   não invento correcção para um defeito não observado.»
+2. **O que estava errado:** (a) **N insuficiente e no alvo errado** — um flaky com taxa ~1/120 **por
+   ficheiro** não se apanha correndo a suíte inteira 30×; e eu martelei o ficheiro suspeito só **6×**
+   sob carga; (b) **eu tinha identificado a classe certa** (a §-1.3 da MEDICAO diz «temporizadores
+   reais… zero `fakeTimers`») e **desmenti-me sem medição**, escrevendo «ilibado pelo empírico» com
+   base em 6 corridas — foi um **julgamento, não uma medição**.
+3. **O veredicto do validador (§A)** apanhou o teste, a linha, o assert e a causa; **eu reproduzi-o**
+   (1/200 sob carga, com o nome) e corrigi. **O histórico errado fica à vista** nesta §7 e no §3.
+4. **Correcção da afirmação do TTY:** o harness **não** exige TTY; exige **stdin redireccionado**
+   (`</dev/null`) quando corre em background. Afirmação minha corrigida nos registos.
+5. **A/B pareado do flaky (martelo paralelo, 8 fluxos = carga real):** MUTANTE fiel ao original **4/400** (4× `um pedido novo limpa o erro do anterior`) → CORRIGIDO **0/400**; somando as rondas: **5/600 pré (≈0,8%) → 0/600 pós**; mutante fiel ao original
+   ⇒ ver `_logs/UTAC000.13_SEG-2_ANTES-DEPOIS.txt` (que inclui os **3 erros meus** de instrumento
+   declarados nesta ronda).
+
+**Lição (para os próximos UTACs):** um flaky não se mede no agregado — **mede-se no alvo, com N
+compatível com a taxa alegada**; e «não reproduzível» só pode ser declarado depois de martelar o
+alvo, não a suíte.

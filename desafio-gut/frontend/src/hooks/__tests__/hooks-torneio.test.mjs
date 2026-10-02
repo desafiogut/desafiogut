@@ -231,17 +231,33 @@ describe("MC94 · useRanking — a corrida que a guarda `vivo` trava", () => {
   test("um pedido novo limpa o erro do anterior", async () => {
     // Sem isto, mudar de ciclo depois de uma falha mostrava o ERRO do ciclo antigo
     // em vez de "a carregar" — porque a secção testa `erro` antes de `carregando`.
+    // ⚠️ UTAC000.13 (DEBT-014) — CORRIDA REMOVIDA. A 2.ª resposta usava `demora: 20`
+    // (temporizador REAL — não há fakeTimers nesta suíte) e, sob jitter de escalonamento,
+    // resolvia ANTES desta asserção ⇒ `carregando` já era `false` e o teste falhava
+    // (~1/120 em máquina quieta, mais sob carga). APANHADO COM NOME pelo validador
+    // adversarial do UTAC000.13 e REPRODUZIDO pelo executor no A/B pareado (1/200 sob carga).
+    // Agora a 2.ª resposta fica PRESA numa promessa que é o TESTE que destrava: nada depende
+    // do relógio, e o pedido está garantidamente em voo quando se asserta `carregando === true`.
     let vez = 0;
+    let destravar = null;
     const f = duploDeFetch(() => (vez++ === 0
       ? { status: 500, json: { erro: "interno" } }
-      : { demora: 20, json: { total: 1, ranking: [{ endereco: "0xbb" }] } }));
+      : new Promise((resolve) => {
+          destravar = () => resolve({ json: { total: 1, ranking: [{ endereco: "0xbb" }] } });
+        })));
     try {
       const c = montar(useRanking, ["R-1"]);
       await ate(c, (e) => e.erro !== null, "não falhou como esperado");
       await c.actualizar(["R-2"]);
       assert.equal(c.resultado().erro, null,
         "manteve o erro do ciclo anterior enquanto o novo carregava");
-      assert.equal(c.resultado().carregando, true);
+      assert.equal(c.resultado().carregando, true,
+        "o pedido novo tinha de estar A CARREGAR (é o que limpa o erro do anterior)");
+      // Deixa o pedido terminar (sem promessa pendente) e confirma que o resultado assenta.
+      destravar();
+      await ate(c, (e) => e.carregando === false, "o pedido novo não chegou a terminar");
+      assert.equal(c.resultado().erro, null, "o resultado bom trouxe erro");
+      assert.equal(c.resultado().total, 1, "o ranking novo não assentou");
     } finally { f.restaurar(); }
   });
 });
