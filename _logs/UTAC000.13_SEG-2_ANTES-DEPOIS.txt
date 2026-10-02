@@ -1,0 +1,83 @@
+UTAC000.13 — SEG-2: ANTES ↔ DEPOIS (DEBT-014: flaky · showOverlay) — 2026-10-02
+===============================================================================
+base: d614b4c = origin/main · commit deste UTAC (só docs): cc072c6
+
+───────────────────────────────────────────────────────────────────────────────
+1. FRENTE A/B — CACA AO FLAKY: RESULTADO **NEGATIVO** (medido, 60 corridas)
+───────────────────────────────────────────────────────────────────────────────
+Método: `tmp-utac0013/cacar-flaky.sh 30` — corre a suíte do frontend (49 ficheiros de
+`src/**/*.test.mjs`, mesma lista do harness) 30×, guarda o output de CADA corrida e isola o NOME do
+teste em falha (`grep '^✖'`). Artefactos: `tmp-utac0013/flaky/{resumo.txt,FALHAS-ISOLADAS.txt}`.
+
+  corrida 01..30: tests=630 pass=630 fail=0 rc=0      ← TODAS, sem excepção
+  corridas com falha: 0
+
+Hipótese testada (a mais plausível, e NÃO refutada): **o flaky é INDUZIDO POR CARGA** — o validador do
+UTAC000.12 corria a suíte em paralelo com 2-3 suites minhas. Experimento
+`tmp-utac0013/flaky-sob-carga.sh`: 4 workers a queimar CPU durante 100 s + os 5 ficheiros com
+**temporizadores reais** × 6 corridas:
+
+  corridas=30 sob carga · falhas=0
+
+Varredura de suspeitos (medida, não palpite):
+  Math.random em testes ............ 0 ficheiros (o `Confetti` usa-o; nenhum teste assere a página inteira)
+  createHash/md5 em testes ......... 2 ficheiros — ambos sobre ASSETS estáticos (fontes/WebP) = determinísticos
+  temporizadores REAIS ............. 6 ficheiros; topo `hooks-torneio` (7), `cotaAtiva` (3)
+  fakeTimers/mock.timers/advance ... NENHUM (tudo depende do relógio real)
+  Suspeito nº1 (lido antes do empírico): `hooks-torneio.test.mjs` l. 82-91 (`fetch` + `abort()` imediato).
+    MEDIDO: o duplo `duploDeFetch` (`_hook-runner.mjs` l. 274+) regista o listener de abort e cobre o
+    caso «já abortado» ⇒ **ilibado** (30 corridas sob carga, 0 falhas).
+
+  ⇒ **60 corridas minhas, 0 falhas.** A taxa alegada (~1/15) teria produzido ~4 falhas.
+  ⇒ **NÃO SE INVENTA CORRECÇÃO** para um defeito que não se observa (GATE 17). A Frente B (corrigir a
+    causa) **não tem objecto medido**; a Frente C (verificar estabilidade) é o próprio resultado:
+    60 corridas verdes. **DEBT-014 fica ABERTA (parcial)**, com o escopo estreitado e a evidência
+    primária preservada (a única falha conhecida é a do validador do UTAC000.12, sem explicação).
+
+───────────────────────────────────────────────────────────────────────────────
+2. FRENTE D — `showOverlay`: **PREMISSA DO SPEC REFUTADA ⇒ PARAR E ESCALAR** (GATE 10/HI8)
+───────────────────────────────────────────────────────────────────────────────
+O spec afirma: «o `setShowOverlay(true)` está comentado no código (**l.1205 do `MercadoLances.jsx`**)».
+MEDIÇÃO (colada em `_logs/UTAC000.13_SEG-1_EVIDENCIA.txt` §5):
+```
+$ grep -n "setShowOverlay\|showOverlay" src/context/AppContext.jsx
+206:  const [showOverlay, setShowOverlay] = useState(false);
+757:    setShowOverlay(false);
+1205:            // setShowOverlay(true);          ← É AQUI (dentro do setTimeout de 1200 ms do lightning)
+1212:        setShowOverlay(false);
+1325:    setShowOverlay(false);
+1357:    showOverlay,                            ← exposto; `setShowOverlay` NÃO é exposto
+
+$ grep -n "showOverlay" src/pages/MercadoLances.jsx
+171:    prazoTimestamp, encerrado, showOverlay,     ← só CONSOME
+209:      {showOverlay && (                       ← o gate
+```
+⇒ Quem **produz** a flag é o `AppContext.jsx`; o `MercadoLances.jsx` (o único ficheiro autorizado para
+esta frente) só a consome e **não tem acesso ao setter** (não exposto no `value`, l. 1357). Não existe
+outro produtor de `showOverlay = true` (só `setShowOverlay(false)` em 4 sítios).
+⇒ Como o UTAC **proíbe expressamente** alterar o `AppContext.jsx`, a Frente D é **impossível no escopo
+autorizado**. **PARADO e ESCALADO** — opções medidas para o operador:
+  1. **Autorizar o `AppContext.jsx` (só a l.1205) neste UTAC** — correcção mínima: descomentar 1 linha
+     (a flag é `useState(false)` na l.206; o gate do overlay já existe no `MercadoLances.jsx` l.209).
+  2. Abrir **UTAC próprio** para o `AppContext` (mais lento, zero risco de escopo).
+  3. **Não religar** (comportamento actual: o overlay nunca renderiza).
+⚠️ **Determinante medido:** religar torne **alcançáveis** os defeitos latentes das DEBT-011/012/013 —
+as guardas do UTAC000.11/12 já estão no `OverlayVencedor` e no card do Dashboard; a do
+`FimEdicaoOverlay` (**DEBT-013**) **NÃO** está. Ou seja: religar sem fechar a DEBT-013 expõe o
+utilizador a «R$ NaN»/crash naquele overlay.
+
+───────────────────────────────────────────────────────────────────────────────
+3. ESCOPO — `git diff --name-only d614b4c..cc072c6`
+───────────────────────────────────────────────────────────────────────────────
+_logs/UTAC000.13_SEG-1_MEDICAO.md · _logs/UTAC000.13_SEG-1_EVIDENCIA.txt
+ZERO alterações de código neste UTAC (declarado). INTOCADOS: contrato on-chain, GUTO, Passe, Concurso,
+`_render.mjs`, `_ponte-ssr.mjs`, `vite.config.js`, `package.json`, `useResultadoOficial.js`,
+`MeusAtivos.jsx`, `Dashboard.jsx`, `AppContext.jsx`, `MercadoLances.jsx`, backend.
+DEBT-001/002/003/005/006/010/013/015 não tocadas.
+
+───────────────────────────────────────────────────────────────────────────────
+4. TEMPO (HI5/R18-2)
+───────────────────────────────────────────────────────────────────────────────
+A caça ao flaky consome tempo de máquina por natureza: 30 corridas da suíte completa (~70 s cada) +
+30 dirigidas sob carga. **Excedeu as 2 h.** Declarado: o tempo pós-limite foi de **medição** (a caça),
+não de escopo novo — e o resultado é um **negativo medido**, que é o que o spec pede (GATE 21).
