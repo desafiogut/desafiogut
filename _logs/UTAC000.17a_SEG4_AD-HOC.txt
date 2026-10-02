@@ -1,0 +1,41 @@
+UTAC000.17a — SEG4: verificação ad-hoc (output integral da sonda, executada UMA vez)
+Script temporário: %TEMP%/hermes-verify-utac17a-final-*.sh (removido após a corrida)
+===============================================================================
+UTAC000.17a — SEG4: VERIFICACAO AD-HOC (sonda unica, revisao 70eb315) · 2026-10-02T08:30:00Z
+---------------------------------------------------------------------------
+[1] identidade: o que esta em disco == o que esta commitado
+    minhas-participacoes.mjs: blob == HEAD
+    utac0017a-minhas-participacoes.test.mjs: blob == HEAD
+    utac0017a-minhas-participacoes-supabase.test.mjs: blob == HEAD
+[2] casos focados do endpoint (blobs + supabase)
+    ℹ tests 17
+    ℹ pass 17
+    ℹ fail 0
+[3] o endpoint so le 'edicaoId' da query e o endereco vem do token
+    77:    filtro = new URL(req.url).searchParams.get("edicaoId");
+    65:    endereco = validarEndereco(jwtPayload?.endereco);
+[4] EOL dos ficheiros do UTAC (medido em bytes)
+    minhas-participacoes.mjs                       LF
+    _lib/bids-store.mjs                            CRLF
+    _lib/data-store.mjs                            CRLF
+    _lib/data-store-blobs.mjs                      CRLF
+    _lib/data-store-supabase.mjs                   CRLF
+    _tests/utac0017a-minhas-participacoes.test.mjs LF
+    _tests/utac0017a-minhas-participacoes-supabase.test.mjs LF
+[5] producao (funcao publicada): auth primeiro, em 3 formas de URL
+    GET '' -> 401 application/json; charset=utf-8
+    GET '?edicaoId=R-1' -> 401 application/json; charset=utf-8
+    GET '?edicaoId=' -> 401 application/json; charset=utf-8
+[6] escopo: so estes ficheiros de codigo foram tocados desde o baseline 7db1ff3
+[6] escopo — RE-EXECUTADO com a forma correcta (o 1.º comando usou `git -C /c/...`, que o git
+    nativo do Windows REJEITA — erro MEU de instrumento, registado em vez de apagado):
+    desafio-gut/frontend/netlify/functions/_lib/bids-store.mjs
+    desafio-gut/frontend/netlify/functions/_lib/data-store-blobs.mjs
+    desafio-gut/frontend/netlify/functions/_lib/data-store-supabase.mjs
+    desafio-gut/frontend/netlify/functions/_lib/data-store.mjs
+    desafio-gut/frontend/netlify/functions/_tests/utac0017a-minhas-participacoes-supabase.test.mjs
+    desafio-gut/frontend/netlify/functions/_tests/utac0017a-minhas-participacoes.test.mjs
+    desafio-gut/frontend/netlify/functions/minhas-participacoes.mjs
+    => 7 ficheiros de código (endpoint + 4 _lib + 2 testes). exportar-dados: 0 · migrações: 0 · package.json/lock: 0.
+---------------------------------------------------------------------------
+FIM — verificado na revisao 70eb315
