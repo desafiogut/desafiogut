@@ -1,0 +1,42 @@
+UTAC000.15 — SEG-2 — ANTES / DEPOIS
+
+== Suíte ==
+ANTES: frontend 664/664 · backend 967/973 | DEPOIS: frontend 668/668 (+4) · backend 967/973
+
+== M12 contra a suíte frontend INTEIRA (bidireccional, GATE 7/22) ==
+ANTES do arnês: frontend: VERDE 664/664 pass VEREDITO: VERDE 
+DEPOIS do arnês: frontend: VERMELHO 2 falha(s) VEREDITO: VERMELHO 
+
+== Teste novo utac0015-provider-cablagem (4 casos) ==
+    ok 1 - CONTROLO: os lances locais CHEGAM ao Provider pelo efeito real (sem isto o M12 seria inócuo)
+    ok 2 - com resultado OFICIAL: a página lê EU/300 do contexto, e não o local OUTRO/100
+    ok 1 - o Provider real abre o overlay (showOverlay) e a página mostra o vencedor OFICIAL
+    ok 1 - prazo vencido + EM_BREVE_MODE real (true): encerra, mas showOverlay fica false e não há overlay
+# pass 4
+# fail 0
+
+== Mutação (script C:/Users/Moltbot/tmp-utac00015/mutar.mjs; restauro de cópias .orig fora do repo) ==
+M12: entrou=true rc=1 pass=2 fail=2
+   RED: com resultado OFICIAL: a página lê EU/300 do contexto, e não o local OUTRO/100
+   RED: o Provider real abre o overlay (showOverlay) e a página mostra o vencedor OFICIAL
+   restauro md5 IDÊNTICO (e1e675369989d194039ffe91942c4ddb)
+M12b: entrou=true rc=1 pass=2 fail=2
+   RED: com resultado OFICIAL: a página lê EU/300 do contexto, e não o local OUTRO/100
+   RED: o Provider real abre o overlay (showOverlay) e a página mostra o vencedor OFICIAL
+   restauro md5 IDÊNTICO (e1e675369989d194039ffe91942c4ddb)
+M16: entrou=true rc=1 pass=3 fail=1
+   RED: o Provider real abre o overlay (showOverlay) e a página mostra o vencedor OFICIAL
+   restauro md5 IDÊNTICO (e1e675369989d194039ffe91942c4ddb)
+M11: entrou=true rc=1 pass=3 fail=1
+   RED: o Provider real abre o overlay (showOverlay) e a página mostra o vencedor OFICIAL
+   restauro md5 IDÊNTICO (7f40ab23bf17e2d3f391ab7f56f85535)
+M12 = de-wiring em runtime (validador UTAC000.10) · M12b = vencedor sempre local (reverter UTAC000.10) · M16 = setShowOverlay re-desligado · M11 = página re-deriva dos lances locais
+
+== Anti-flaky (temporizador real de 1200 ms; espera por condição, tecto 5 s) ==
+20 corridas sequenciais: 20 verdes / 0 falhas · 12 corridas sob carga (3 rondas × 4 paralelas + 2 queimadores de CPU): 12 verdes / 0 falhas
+
+== Escopo (git status) ==
+?? desafio-gut/frontend/src/__tests__/_arnes-provider.mjs
+?? desafio-gut/frontend/src/__tests__/_stubs-provider/
+?? desafio-gut/frontend/src/__tests__/utac0015-provider-cablagem.test.mjs
+Nenhum ficheiro de produção alterado; _ponte-ssr.mjs, _render.mjs, vite.config.js e package.json intocados.

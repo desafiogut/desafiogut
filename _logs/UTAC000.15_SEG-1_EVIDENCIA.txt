@@ -1,0 +1,62 @@
+UTAC000.15 — SEG-1 — EVIDÊNCIA BRUTA (preservada ANTES do arnês, HI10)
+HEAD = origin/main = 49bc141 · 2026-10-02T03:52:01-03:00
+
+== Suíte baseline: frontend VERDE 664/664 · backend VERDE 967/973 ==
+
+== Imports do AppContext.jsx (l.1-48) ==
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import {
+} from "../utils/web3.js";
+import {
+} from "../lib/sentry-alerts.js";
+import { getVisitorId, getCachedVisitorId } from "../lib/fingerprint.js";
+import { atrasoDaTentativaAuth, deveTentarAuth, MAX_TENTATIVAS_AUTH } from "../lib/retryAuth.js";
+import { useEdicoes } from "../hooks/useEdicoes.js";
+import { useResultadoOficial } from "../hooks/useResultadoOficial.js";
+import {
+} from "../lib/analytics.js";
+import {
+} from "../lib/leilaoTimer.js";
+import { apiGet, apiPost } from "../lib/api.js";
+import { enviarConsentimentoPendente } from "../lib/consentimento.js";
+import { EM_BREVE_MODE } from "../lib/leilaoLock.js";
+import { VERSAO_CONSENTIMENTO } from "../components/TermosConsentimento.jsx";
+import {
+} from "../lib/dicaSessao.js";
+
+== Browser globals tocados (grep) ==
+      6 document.visibilityState
+      5 document.removeEventListener
+      5 document.addEventListener
+      4 sessionStorage.removeItem
+      3 window.location
+      2 window.removeEventListener
+      2 window.addEventListener
+      2 sessionStorage.getItem
+      2 localStorage.setItem
+      2 localStorage.removeItem
+      2 localStorage.getItem
+      2 localStorage.
+      1 window.scrollY
+      1 window.requestAnimationFrame
+      1 window.cancelAnimationFrame
+      1 sessionStorage.setItem
+      1 document.documentElement
+
+== M12 (validador UTAC000.10), reproduzido — script C:/Users/Moltbot/tmp-utac00015/m12.mjs ==
+inserido após '    : vencedorLocal;':
+  if (resultadoOficial && vencedorLocal) { vencedor.endereco = vencedorLocal.endereco; vencedor.valor = vencedorLocal.valor; }
+-- 3 ficheiros relacionados (contrato UTAC000.10 + mercado-vencedor + Dashboard):
+# tests 53
+# pass 53
+# fail 0
+-- suíte frontend INTEIRA com o M12:
+frontend: VERDE 664/664 pass
+VEREDITO: VERDE
+
+== PoC (SEG0.1) ==
+import do AppContext.jsx real pelo Vite SSR, sem mocks: OK em 41 102 ms (o Privy real carrega)
+execução do AppProvider pelo _hook-runner, sem mocks: Error: useLocation() may be used only in the context of a <Router> component. (AppContext.jsx:371)
+com o arnês, sem duplo do fingerprint: os 4 testes passam mas o processo NUNCA termina (rc=124 aos 300/400 s); sonda: 4 setTimeout(50) vivos em @fingerprintjs/fingerprintjs/dist/fp.cjs.js:22 (wait em ciclo sem DOM)
