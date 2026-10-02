@@ -70,3 +70,4 @@ Criar com prazo de 30 min antes de desligar o EM_BREVE_MODE é contraditório. A
 que desligar o EM_BREVE_MODE.» ⇒ **DEBT-017 fica com o código pronto e testado e a criação de dados
 TRANSFERIDA** para o UTAC que desligar o `EM_BREVE_MODE` (com a duração já decidida: 1800 s).
 **DEBT-016 fecha-se com o veredicto do validador adversarial (despachado nesta data, decisão (b)).**
+**Actualização (mesma data):** o item (1) — martelo de MUTAÇÃO — foi CORRIDO e fechado: 7 mutantes, 7 mordem, restauros md5-idênticos (`_logs/UTAC000.17bc_SEG-2_MUTACOES.txt`). Fica pendente só o VALIDADOR (despachado) e a criação da R-1 real (deferida por decisão R18 para o UTAC do EM_BREVE_MODE).

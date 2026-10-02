@@ -58,7 +58,8 @@ apagar a regra antiga): `utac00014-show-overlay.test.mjs` (a fonte do prazo pass
 
 ## 5. O que **NÃO** ficou feito (declarado, não maquilhado)
 
-- **GATE 6 (mutações): NÃO corridas.** Os testes existem e mordem por construção (os controlos negativos
+- **GATE 6 (mutações): CORRIDO nesta ronda** (7 mutantes, **7 mordem**, restauros md5-idênticos — ver `_logs/UTAC000.17bc_SEG-2_MUTACOES.txt`). Nota de instrumento: o meu martelo **mentiu duas vezes** antes (parser que só aceitava `ℹ fail N` e um comando sem o prefixo `_tests/`), classificando de «não morde» mutantes que MORREM — os números finais são os da corrida com o instrumento corrigido.
+- ~~(antigo) **GATE 6 (mutações): NÃO corridas.**~~ Os testes existem e mordem por construção (os controlos negativos
   já morrem: ex. «sem prazo NÃO abre» falharia se a condição desaparecesse), mas **não houve martelo de
   mutação** (backup fora do repo → mutar → exigir RED → restaurar → md5) nesta ronda.
 - **GATE 8 (validador adversarial): NÃO despachado** (o limite de tempo estourou antes).

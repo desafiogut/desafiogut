@@ -1,0 +1,32 @@
+UTAC000.17bc — SEG-2: MARTELO DE MUTACAO (GATE 6) — 7 mutantes, 7 mordem
+=========================================================================================
+Script: C:/Users/Moltbot/tmp-utac17bc-mut/mutar-17bc.py (backup FORA do repo, nome unico por mutante;
+nunca `git checkout`; md5 do restauro conferido contra o backup).
+
+| mutante | regra atacada | alvo | resultado | restauro md5 |
+|---|---|---|---|---|
+| M22 | GATE 22 (ja visto nao reabre) — gate perde o `!jaVisto(...)` | contrato do tick | **6 RED -> MORDE** | identico |
+| M23 | sintetica NUNCA encerra — perde `sintetizada !== true` | contrato do tick | **4 RED -> MORDE** | identico |
+| M24 | sem prazo NAO encerra — prazo ausente passa a valer como 0 | contrato do tick | **6 RED -> MORDE** | identico |
+| M25 | «visto» grava — `marcarVisto` deixa de gravar | visto (8 casos) | **12 RED -> MORDE** | identico |
+| M26 | «visto» e POR ENDERECO — le a lista de qualquer endereco | visto (8 casos) | **6 RED -> MORDE** | identico |
+| M27 | `criarEdicao` usa o id explicito — ignora-o e usa o sequencial | R-1 real (6 casos) | **7 RED -> MORDE** | identico |
+| M28 | o servidor marca o sintetico — remove o marcador | R-1 real (6 casos) | **3 RED -> MORDE** | identico |
+
+Baseline antes e depois: tick 12/12, visto 8/8, R-1 6/6 — VERDE.
+
+## ⚠️ ERROS DO MEU INSTRUMENTO NESTA RONDA (declarados, nao maquilhados)
+
+O martelo **mentiu duas vezes** antes de dar a verdade — as duas vezes disse «NAO MORDE» em mutantes
+que MORREM, e so o verifiquei a mao (a licao da serie: medir no ALVO e desconfiar do agregado):
+
+1. **Parser:** contava apenas a forma `ℹ fail N`. A saida do runner variou e o parser devolvia 0 ->
+   classificou M22-M28 como «NAO MORDE» sem sequer olhar para as falhas. Corrigido para contar o SINAL
+   REAL (`✖`, o marco de cada teste falhado) e usar o MAXIMO dos dois.
+2. **Comando errado no alvo:** para os testes do backend eu montava `node --test ... <basename>` SEM o
+   prefixo `_tests/` -> o ficheiro nao existia, o node saia sem correr nada e o resultado era
+   «0 falhas» = FALSO VERDE. So apareceu ao correr o M27 A MAO (que mostrou 3 assercoes vermelhas com
+   `actual: 'RELAMP-1', expected: 'R-1'`). Corrigido o caminho — e entao M27/M28 passaram a morder.
+
+**Consequencia para a leitura dos numeros:** a primeira tabela desta ronda (5/7) era FALSA nos dois
+mutantes do backend. Os numeros acima sao os da corrida com o instrumento corrigido.
