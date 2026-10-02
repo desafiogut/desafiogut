@@ -40,3 +40,51 @@ M12 = de-wiring em runtime (validador UTAC000.10) · M12b = vencedor sempre loca
 ?? desafio-gut/frontend/src/__tests__/_stubs-provider/
 ?? desafio-gut/frontend/src/__tests__/utac0015-provider-cablagem.test.mjs
 Nenhum ficheiro de produção alterado; _ponte-ssr.mjs, _render.mjs, vite.config.js e package.json intocados.
+
+================================================================
+== 2.ª RONDA (resposta ao validador: ⚠️1 duplo do oficial estático; ⚠️2 programado) ==
+Teste novo: 6 casos
+    ok 1 - CONTROLO: os lances locais CHEGAM ao Provider pelo efeito real (sem isto o M12 seria inócuo)
+    ok 2 - com resultado OFICIAL: a página lê EU/300 do contexto, e não o local OUTRO/100
+    ok 3 - programado: sem oficial → a reserva LOCAL dos lances on-chain
+    ok 4 - programado: com oficial → o OFICIAL, mesmo em programado
+    ok 1 - o Provider real abre o overlay (showOverlay) e a página mostra o vencedor OFICIAL
+    ok 1 - prazo vencido + EM_BREVE_MODE real (true): encerra, mas showOverlay fica false e não há overlay
+# pass 6
+# fail 0
+
+== Mutação (8) ==
+M12: entrou=true rc=1 pass=3 fail=3
+   RED: com resultado OFICIAL: a página lê EU/300 do contexto, e não o local OUTRO/100
+   RED: programado: com oficial → o OFICIAL, mesmo em programado
+   RED: o Provider real abre o overlay (showOverlay) e a página mostra o vencedor OFICIAL
+   restauro md5 IDÊNTICO (e1e675369989d194039ffe91942c4ddb)
+M12b: entrou=true rc=1 pass=3 fail=3
+   RED: com resultado OFICIAL: a página lê EU/300 do contexto, e não o local OUTRO/100
+   RED: programado: com oficial → o OFICIAL, mesmo em programado
+   RED: o Provider real abre o overlay (showOverlay) e a página mostra o vencedor OFICIAL
+   restauro md5 IDÊNTICO (e1e675369989d194039ffe91942c4ddb)
+M16: entrou=true rc=1 pass=5 fail=1
+   RED: o Provider real abre o overlay (showOverlay) e a página mostra o vencedor OFICIAL
+   restauro md5 IDÊNTICO (e1e675369989d194039ffe91942c4ddb)
+M11: entrou=true rc=1 pass=5 fail=1
+   RED: o Provider real abre o overlay (showOverlay) e a página mostra o vencedor OFICIAL
+   restauro md5 IDÊNTICO (7f40ab23bf17e2d3f391ab7f56f85535)
+V1: entrou=true rc=1 pass=5 fail=1
+   RED: programado: com oficial → o OFICIAL, mesmo em programado
+   restauro md5 IDÊNTICO (e1e675369989d194039ffe91942c4ddb)
+V2: entrou=true rc=1 pass=5 fail=1
+   RED: programado: com oficial → o OFICIAL, mesmo em programado
+   restauro md5 IDÊNTICO (e1e675369989d194039ffe91942c4ddb)
+V9: entrou=true rc=1 pass=5 fail=1
+   RED: programado: com oficial → o OFICIAL, mesmo em programado
+   restauro md5 IDÊNTICO (e1e675369989d194039ffe91942c4ddb)
+V11: entrou=true rc=1 pass=3 fail=3
+   RED: com resultado OFICIAL: a página lê EU/300 do contexto, e não o local OUTRO/100
+   RED: programado: com oficial → o OFICIAL, mesmo em programado
+   RED: o Provider real abre o overlay (showOverlay) e a página mostra o vencedor OFICIAL
+   restauro md5 IDÊNTICO (e1e675369989d194039ffe91942c4ddb)
+
+== M12 contra a suíte frontend INTEIRA: frontend: VERMELHO 3 falha(s) VEREDITO: VERMELHO  (1.ª ronda: VERMELHO 2; sem arnês: VERDE 664/664)
+== Anti-flaky: 10/10 sequencial · 8/8 sob carga (2 rondas × 4 paralelas + 2 queimadores) ==
+== Suíte: frontend: VERDE 670/670 pass backend: VERDE 967/973 pass VEREDITO: VERDE  ==

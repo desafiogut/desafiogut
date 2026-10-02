@@ -13,7 +13,8 @@
 //        @privy-io/react-auth  → `_stubs-provider/privy.js` (visitante não autenticado)
 //        ../utils/web3.js      → `_stubs-provider/web3.js` (sem RPC)
 //        ../lib/fingerprint.js → `_stubs-provider/fingerprint.js` (o real fica em ciclo sem DOM)
-//        ../hooks/useResultadoOficial.js → o duplo já existente dos testes das páginas (controla o OFICIAL)
+//        ../components/edicao-especial/useResultadoEspecial.js → `_stubs-provider/resultado-onchain.js`
+//          (SÓ a leitura on-chain; o `useResultadoOficial.js` REAL corre — 1.º render `null`, oficial depois)
 //        ../components/CardLance.jsx     → o duplo já existente (o formulário real puxa o Privy/ethers)
 //        (opcional) ../lib/leilaoLock.js → `_stubs-provider/leilaoLock-aberto.js` (EM_BREVE_MODE=false)
 //      O `apiGet` é o REAL: só o `fetch` global é duplo (lição do MC94: nunca duplo de `apiGet`). É
@@ -26,7 +27,10 @@
 //      pelo código verdadeiro.
 //
 // ⚠️ LIMITES DECLARADOS: a comparação de deps/agendamento é do condutor (ver `_hook-runner.mjs`); o
-// Privy é sempre «visitante pronto»; `window`/`document`/`localStorage` são globais mínimos (abaixo).
+// Privy é sempre «visitante pronto» (ramos com sessão NÃO exercitados); `window`/`document`/
+// `localStorage` são globais mínimos (abaixo). Cobre o `MercadoLances` (o consumidor do `vencedor` do
+// contexto); `Dashboard`/`MeusAtivos` lêem o oficial por si e ficam FORA do que este arnês prova.
+// A modalidade `programado` exercita-se mudando `setModalidade` e emitindo `LanceDado` pelo duplo.
 
 import { createServer } from "vite";
 import { mkdtempSync } from "node:fs";
@@ -96,7 +100,8 @@ export async function criarArnes({ leilaoAberto = false } = {}) {
     { find: /^\.\.\/utils\/web3\.js$/, replacement: join(STUBS, "web3.js") },
     // MEDIDO (SEG0): o @fingerprintjs real fica em ciclo de wait(50) sem DOM e o processo nunca termina.
     { find: /^\.\.\/lib\/fingerprint\.js$/, replacement: join(STUBS, "fingerprint.js") },
-    { find: /^\.\.\/hooks\/useResultadoOficial\.js$/, replacement: join(STUBS_PAGINAS, "useResultadoOficial.js") },
+    // Resposta à ⚠️1 do validador: o hook REAL do resultado oficial corre; o duplo é só a leitura on-chain.
+    { find: /^\.\.\/components\/edicao-especial\/useResultadoEspecial\.js$/, replacement: join(STUBS, "resultado-onchain.js") },
     { find: /^\.\.\/components\/CardLance\.jsx$/, replacement: join(STUBS_PAGINAS, "CardLance.jsx") },
     // Só para as PÁGINAS (o Provider não os importa) — os mesmos duplos do teste do UTAC000.10:
     // em SSR o `useRecursosApp` real fica em `isLoading` (só resolve por I/O num efeito) e o
@@ -120,18 +125,19 @@ export async function criarArnes({ leilaoAberto = false } = {}) {
   const { montar, duploDeFetch } = await vite.ssrLoadModule("/src/hooks/__tests__/_hook-runner.mjs");
   const rr = await vite.ssrLoadModule("/src/__tests__/_stubs-provider/rr-contextos.mjs");
   const ctx = await vite.ssrLoadModule("/src/context/AppContext.jsx");
-  const oficial = await vite.ssrLoadModule(join(STUBS_PAGINAS, "useResultadoOficial.js"));
+  const oficial = await vite.ssrLoadModule(join(STUBS, "resultado-onchain.js"));
+  const web3 = await vite.ssrLoadModule(join(STUBS, "web3.js"));
 
   /**
    * Monta o `AppProvider` REAL com `children`, deixa os efeitos reais correrem e devolve um controlo.
    * @param {object} o
    * @param {*} o.children            o que o Provider envolve (a página)
    * @param {Array} [o.lancesFlash]   o que o servidor responde em `lances-flash` (os lances LOCAIS)
-   * @param {object|null} [o.resultadoOficial] o que o hook do resultado oficial devolve
+   * @param {object|null} [o.resultadoOficial] `{ vencedor, menorUnicoCentavos }` consolidado on-chain (ou null)
    * @param {object} [o.localStorage] conteúdo inicial do localStorage
    */
   async function montarProvider({ children, lancesFlash = [], resultadoOficial = null, localStorage = {} }) {
-    oficial.definirResultadoOficial(resultadoOficial);
+    oficial.definirOnchain(resultadoOficial);
     const repor = instalarGlobais(localStorage);
     const navegacoes = [];
     const locVal = rr.UNSAFE_LocationContext._currentValue;
@@ -152,8 +158,12 @@ export async function criarArnes({ leilaoAberto = false } = {}) {
     console.warn = (...a) => avisos.push(a.map(String).join(" "));
     console.error = (...a) => avisos.push(a.map(String).join(" "));
     let c;
+    let valorInicial = null;
     try {
       c = montar(ctx.AppProvider, [{ children }]);
+      valorInicial = c.resultado().props.value; // o 1.º render, ANTES de qualquer efeito assentar
+      await c.assentar();
+      await oficial.aguardarLeituras(); // a leitura on-chain do resultado oficial é assíncrona (5 ms)
       await c.assentar();
     } catch (err) {
       console.warn = w; console.error = e;
@@ -170,7 +180,12 @@ export async function criarArnes({ leilaoAberto = false } = {}) {
       /** Renderiza a árvore devolvida (com as páginas como filhas) em HTML. */
       html: () => ponte.renderToStaticMarkup(c.resultado()),
       chamadasFetch: () => fetchDuplo.chamadas.map((x) => x.url),
-      edicoesPedidas: () => oficial.argumentos(),
+      /** O `value` do 1.º render (síncrono, antes dos efeitos). */
+      valorInicial: () => valorInicial,
+      /** Edições cujo resultado on-chain o hook REAL pediu. */
+      edicoesPedidas: () => oficial.pedidosOnchain(),
+      /** Emite um `LanceDado` on-chain (modalidade `programado`) e deixa assentar. */
+      async emitirLanceDado(lance) { const n = web3.emitirLanceDado("R-1", lance); await c.assentar(); return n; },
       avisos: () => avisos.slice(),
       navegacoes: () => navegacoes.slice(),
       assentar: () => c.assentar(),

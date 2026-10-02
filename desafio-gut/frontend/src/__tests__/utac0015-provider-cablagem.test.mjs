@@ -73,8 +73,44 @@ describe("UTAC000.15 · o Provider REAL expõe o vencedor oficial (valor do cont
     assert.doesNotMatch(html, new RegExp(OUTRO), "a página recebeu o vencedor LOCAL");
     assert.ok(p.edicoesPedidas().every((e) => e === "R-1") && p.edicoesPedidas().length > 0,
       "o Provider não pediu o resultado oficial da edição ACTIVA");
+    // Validador ⚠️1: o hook REAL do resultado oficial começa em `null` — no 1.º render ainda não há
+    // oficial nem lances. O oficial tem de chegar DEPOIS (efeito assíncrono). Um Provider que
+    // congelasse o 1.º render (`useRef`, `useMemo` com deps velhas) fica aqui.
+    assert.equal(p.valorInicial().vencedor, null, "controlo: no 1.º render ainda não devia haver vencedor");
+    assertSemErros(p);
   });
+
+  // Validador ⚠️2/ℹ️3: a modalidade `programado` (lances on-chain via `LanceDado`) e uma fixture com
+  // repetidos e o menor único LOCAL abaixo de 50 centavos.
+  for (const [nome, oficial, esperado] of [
+    ["sem oficial → a reserva LOCAL dos lances on-chain", null, `${OUTRO}|30`],
+    ["com oficial → o OFICIAL, mesmo em programado", OFICIAL, `${EU}|300`],
+  ]) {
+    test(`programado: ${nome}`, async (t) => {
+      const p = await a.montarProvider({ children: leitor(), lancesFlash: [], resultadoOficial: oficial });
+      t.after(() => p.desmontar());
+      p.valor().setModalidade("programado");
+      await p.assentar();
+      assert.equal(p.valor().modalidade, "programado", "controlo: a modalidade não mudou");
+      const ON = [
+        { endereco: EU,    valor: 300, repetido: false, txHash: "0x01" },
+        { endereco: OUTRO, valor: 30,  repetido: false, txHash: "0x02" }, // o menor único local
+        { endereco: EU,    valor: 20,  repetido: false, txHash: "0x03" }, // 20 repete-se ⇒ não é único
+        { endereco: OUTRO, valor: 20,  repetido: false, txHash: "0x04" },
+      ];
+      for (const l of ON) assert.equal(await p.emitirLanceDado(l), 1, "controlo: o Provider não subscreveu o LanceDado");
+      assert.equal(p.valor().lances.length, 4, "controlo: os 4 lances on-chain não entraram");
+      assert.match(p.html(), new RegExp(`data-vencedor="${esperado.replace("|", "\\|")}"`), `esperava ${esperado}`);
+      assertSemErros(p);
+    });
+  }
 });
+
+/** Validador ℹ️: os avisos capturados eram ignorados — um erro novo do Provider passaria em silêncio. */
+function assertSemErros(p) {
+  const maus = p.avisos().filter((x) => /TypeError|ReferenceError|RangeError|Warning: |Uncaught|unhandled/i.test(x));
+  assert.deepEqual(maus, [], "o Provider registou erros durante a montagem");
+}
 
 describe("UTAC000.15 · AppContext → MercadoLances: o overlay do fim abre e mostra o OFICIAL (leilão aberto)", () => {
   let a = null;
