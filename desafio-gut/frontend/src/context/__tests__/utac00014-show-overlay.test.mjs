@@ -98,6 +98,21 @@ describe("UTAC000.14 · AppContext — o overlay do vencedor volta a abrir no fi
     assert.deepEqual(m.chamadas.slice(-1), [["setLightningActive", false]], "a máquina do relâmpago mudou");
   });
 
+  // Validador (2.ª ronda, R5/R7): o caso EM BREVE só era testado com prazo 1000 e nunca com a reabertura.
+  test("EM BREVE: também com prazo 0 e com prazo já vencido há muito, o overlay NÃO abre", () => {
+    for (const [prazoTimestamp, agoraSeg] of [[0, 1000], [1000, 1000 + 30 * 86400]]) {
+      const m = montar(extrairTick(fonte()), { prazoTimestamp, agoraSeg, emBreve: true });
+      m.tick(); m.temporizadores.forEach((t) => t.fn()); m.tick();
+      assert.equal(disparos(m.chamadas, true), 0, `o overlay abriu em EM BREVE (prazo=${prazoTimestamp})`);
+    }
+  });
+
+  test("EM BREVE: prazo reaberto on-chain depois de encerrado continua a FECHAR o overlay", () => {
+    const m = montar(extrairTick(fonte()), { prazoTimestamp: 2000, agoraSeg: 1000, encerrado: true, emBreve: true });
+    m.tick();
+    assert.deepEqual(m.chamadas, [["setEncerrado", false], ["setShowOverlay", false]]);
+  });
+
   test("hoje (`EM_BREVE_MODE` real do leilaoLock.js): o AppContext usa ESSA flag, e o overlay não abre", async () => {
     const { EM_BREVE_MODE } = await import("../../lib/leilaoLock.js");
     assert.ok(fonte().includes('\nimport { EM_BREVE_MODE } from "../lib/leilaoLock.js";\n'),

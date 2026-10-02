@@ -127,3 +127,124 @@ O Dashboard (com o `FimEdicaoOverlay`) também existe no APK, sem a porta `isLei
 - Ficheiros temporários do validador (`_VAL_old_*.jsx`, `_val-adv.test.mjs`, `_val-arranque.test.mjs`) só existiram no worktree e foram apagados antes da remoção.
 - A árvore principal não foi alterada. Sem push, sem deploy, sem Supabase/Netlify. A única interacção com produção foi leitura: GET do bundle público e um `eth_call` só de leitura.
 - Junctions removidas com `rmdir` via `cmd`, e depois `git worktree remove`.
+
+---
+
+# RESPOSTA DO EXECUTOR À 1.ª RONDA
+
+- **G1 ACEITE.** Premissas confirmadas no código pelo executor (AppContext l.192-194, leilaoTimer.lerPrazoStorage 600 s, leilaoLock l.10). Escalado ao operador; decisão R18: «Religar só fora do EM BREVE» → commit `9b9556e` (`if (!EM_BREVE_MODE) setShowOverlay(true);` + import da fonte única + 2 testes + M16-M19).
+- **N1-N6 aceites.** N7 (APK) registado no relatório. O aviso N2 do dia em que a flag for desligada → **DEBT-016**.
+
+---
+
+# UTAC000.14 — SEG-3 (2.ª ronda) — Veredicto do validador adversarial independente
+
+**Data:** 2026-10-02 · **Commit validado:** `9b9556e` (sobre `f635b32`, base `3a0f6fa`) · **Worktree:** `C:/Users/Moltbot/tmp-utac00014-val/wt2` (destacado, junctions A9, removido no fim)
+
+## VEREDICTO: **APROVADO COM RESSALVAS**
+
+O G1 da 1.ª ronda está corrigido. Com `EM_BREVE_MODE = true` (hoje) o overlay **não abre em nenhum** dos cenários C1–C6. No bundle de produção o `setShowOverlay(true)` é **eliminado pelo minificador**. Há um só produtor, não há ciclo de módulos, o escopo está limpo e a suíte reproduz.
+
+As ressalvas são notas (ℹ️), nenhuma bloqueia:
+- uma fuga teórica que só um teste textual apanha;
+- um mutante equivalente-em-produção que sobrevive;
+- o que acontece no dia em que a flag for desligada.
+
+---
+
+## ℹ️ N1 — Com EM BREVE (hoje) o overlay nunca abre: 0 aberturas em C1–C6
+Uso a `tick` REAL de `9b9556e`, o `lerPrazoStorage` REAL e o `EM_BREVE_MODE` REAL importado de `lib/leilaoLock.js`, com relógio simulado a 250 ms e temporizadores executados (`_val-r2.test.mjs`, temporário):
+```
+[flag=true]  C1 1ª visita 90min: aos5s=0 total=0 encerrado=true | C2 F5 5min após expirar: 0 | C3 F5 11min: 0 | C4 programado -30d: 0 | C5 prazo=0: 0 | C6 prazo=NaN: 0
+```
+(Na 1.ª ronda, com `f635b32`: C1=1, C2=1, C4=1, C5=1.)
+
+Não há outro produtor de `true` (grep em `src`, fora dos testes):
+```
+AppContext.jsx:207  useState(false) · :758 setShowOverlay(false) · :1208 if (!EM_BREVE_MODE) setShowOverlay(true)
+AppContext.jsx:1215 setShowOverlay(false) · :1328 setShowOverlay(false)
+consumidores: Dashboard.jsx:524, MercadoLances.jsx:209 (só leem)
+```
+O value do contexto expõe `showOverlay`, mas não o setter.
+
+Prova no bundle (`vite build` com `f635b32` e com `9b9556e`, mesmo worktree). O callback do `setTimeout` minificado:
+```
+f635b32: nt.current=setTimeout(()=>{ue(!1),ce(!0),nt.current=null      ← ce(!0) = setShowOverlay(true)
+9b9556e: nt.current=setTimeout(()=>{ue(!1),nt.current=null             ← eliminado (EM_BREVE_MODE constante true)
+```
+Mantém-se como antes do UTAC: quando o prazo local chega a 0, liga-se `encerrado` e acende-se o relâmpago durante 1,2 s. Os ecrãs continuam a mostrar «Em breve» porque `getEstadoEdicao` dá prioridade à trava.
+
+## ℹ️ N2 — Com EM_BREVE_MODE = false (simulado) volta o comportamento anterior ao MC63/64, e é isso que o operador deve saber
+```
+[flag=false] C1 1ª visita 90min: aos5s=0 total=1 em t+1801.25s | C2 F5 5min após expirar: 1 (t+1.25) | C3 F5 11min: 0 | C4 programado -30d: 1 | C5 prazo=0: 1 | C6 prazo=NaN: 0
+```
+Abre uma vez, 1200 ms depois do prazo, tal como acontecia antes do MC63/64. Não é defeito novo.
+
+**Para o dia em que a flag for desligada:**
+- O prazo do relâmpago continua a ser um cronómetro **local de 30 min por browser** (`prazoFlash = LS ?? now + 1800`), e o programado só é real se o prazo on-chain for > 0. Hoje, na mainnet, a R-1 tem `prazo = 0` (medido na 1.ª ronda).
+- Um F5 até 10 min depois do prazo volta a abrir o overlay 1,25 s após carregar (janela `n + 600` do `lerPrazoStorage`).
+- O `FimEdicaoOverlay` não tem `onClose`: só sai com «NOVA RODADA», que arma mais 30 min locais.
+
+Antes de desligar a trava convém ligar o relâmpago a um prazo real (servidor ou on-chain).
+
+## ℹ️ N3 — O import novo não cria ciclo nem efeito colateral; o bundle muda +35 bytes
+- `lib/leilaoLock.js` não tem imports, só constantes e uma função pura. Já era importado por `utils/edicao.js`. Na fonte não há ciclo.
+- O build passa (exit 0): `✓ built in 6.16s`. Os avisos `advancedChunks`/`manualChunks` já existiam.
+- Total de JS: `5967838 → 5967873` bytes (+35). Os chunks que mudam são `AppContext 65891→65906`, `edicao 889→921`, mais ruído de hash em `MeusAtivos`/`PrivyRoot` (±7 bytes).
+- Efeito no grafo: o Rolldown mudou o módulo `leilaoLock` para dentro do chunk `AppContext`, e o chunk `edicao` passa a fazer `import{a as e}from"./AppContext-….js"`.
+  - Medi quem importa `edicao`: `CardLance`, `EdicaoDetalhe`, `MercadoLances` e `PrivyRoot`, que **já importavam todos o `AppContext`** (`importa_AppContext=1` em ambos os builds).
+  - O `AppContext` não importa `edicao`, por isso não há ciclo entre chunks.
+  - O grafo estático do `index` é igual nos dois builds (motion, react, rolldown-runtime, router, ui).
+  - Conclusão: nada novo é carregado de forma eager. É irrelevante para a performance. Regista-se por causa da lição «Vite 8/Rolldown ignora manualChunks».
+
+## ℹ️ N4 — Mutantes: quase todos mordem; um sobrevive e é inócuo; um só é apanhado pelo texto
+Usei âncoras exactas `\r\n`, confirmei que cada mutante «entrou» e restaurei de `.bak`. O `git status` ficou limpo no fim.
+```
+R1 if(true)                                  → pass=4 fail=3
+R2 `!EM_BREVE_MODE && setShowOverlay(true)`  → pass=6 fail=1   (equivalente; só o CONTROLO falha, por âncora textual)
+R3 if movido para fora do setTimeout         → pass=6 fail=1   (teste 1: «prazo a 0 … 1200 ms depois»)
+R4 flag local `const EM_BREVE_MODE = false`  → pass=6 fail=1   (teste 6: exige o import da fonte única)
+R5 fuga `if (!EM_BREVE_MODE || prazoTimestamp === 0)` → pass=6 fail=1   (só o CONTROLO, por âncora textual)
+R6 import mantido + sombra local             → pass=2 fail=5
+R7 `else if(encerrado)`: `if (!EM_BREVE_MODE) setShowOverlay(false)` → pass=7 fail=0  <<< SOBREVIVE
+R8 condição invertida                        → pass=2 fail=5
+```
+- **R5:** é uma fuga real em teoria («em EM BREVE, com prazo 0, abre»). Morre só porque o CONTROLO faz `replace` da linha exacta e falha com «controlo mal construído». Não há nenhum teste semântico «EM BREVE + prazo 0 ⇒ não abre». O impacto é baixo: em produção o prazo nunca é 0 (há sempre o fallback local `now + dur`). Ainda assim, o caso EM BREVE só é testado com `prazoTimestamp: 1000`.
+- **R2:** o reverso do R5. Uma refactorização equivalente fica vermelha pelo mesmo teste textual. É fragilidade ruidosa, não silenciosa: aceitável.
+- **R7 sobrevive** porque nenhum teste combina EM BREVE com «reaberto on-chain». É inócuo enquanto a flag está ligada, porque o overlay nunca chega a `true`; com a flag desligada, o fecho volta a ser incondicional. Não é defeito, mas é uma lacuna de cobertura.
+- Os mutantes que o executor declarou (M16, M17, M18 e M19) correspondem aos meus R1, R4 e R8, que também morrem.
+
+## ℹ️ N5 — Escopo está limpo
+```
+git diff --name-only f635b32 9b9556e
+_logs/UTAC000.14_SEG-2_ANTES-DEPOIS.txt · _logs/UTAC000.14_SEG-3_VALIDADOR.md
+desafio-gut/frontend/src/context/AppContext.jsx · desafio-gut/frontend/src/context/__tests__/utac00014-show-overlay.test.mjs
+git diff --name-only 3a0f6fa 9b9556e   → os 9 esperados (_logs ×5, FimEdicaoOverlay.jsx + teste, AppContext.jsx + teste)
+```
+No `AppContext.jsx` (`f635b32→9b9556e`) há 1 linha de import, a condição e 2 linhas de comentário. Não há `package.json`, lock, nem ficheiros proibidos. O `FimEdicaoOverlay.jsx` está igual ao `f635b32`, que foi aprovado na 1.ª ronda.
+
+## ℹ️ N6 — A suíte reproduz
+```
+node scripts/mc966-suite-harness.mjs ambos < /dev/null
+frontend: VERDE 661/661 pass
+backend: VERDE 967/973 pass
+VEREDITO: VERDE
+```
+
+---
+
+## Higiene
+- O ficheiro temporário (`_val-r2.test.mjs`) foi tirado do worktree antes de correr a suíte. O `AppContext.jsx` foi restaurado de `.bak` depois de cada mutante e o `git status --short` ficou vazio.
+- Os builds de comparação foram para `C:/Users/Moltbot/tmp-utac00014-val/dist-{old,new}`, fora do repo, e foram apagados.
+- A árvore principal não foi alterada. Não houve push, deploy, Supabase nem Netlify. Nesta ronda não houve nenhuma interacção com produção.
+- Junctions removidas com `rmdir` via `cmd`, e depois `git worktree remove`.
+
+---
+
+# RESPOSTA DO EXECUTOR À 2.ª RONDA
+
+- **APROVADO COM RESSALVAS — aceite.**
+- **R5 e R7 FECHADOS (R15, só ficheiro de teste):** +2 testes em `utac00014-show-overlay.test.mjs` — «EM BREVE: com prazo 0 e prazo vencido há 30 dias não abre» e «EM BREVE: reaberto on-chain continua a fechar». Mutantes do validador re-aplicados: **R5 → 2 RED** (o teste semântico novo morde, já não só o CONTROLO) · **R7 → 1 RED** (era sobrevivente). Restauro md5 `e1e67536…` idêntico. Teste 9/9; suíte **663/663 · 967/973**.
+- **R2** (refactor equivalente apanhado pelo CONTROLO textual): aceite como fragilidade ruidosa, não alterado.
+- **N2 → DEBT-016** (pré-condição de activar o leilão: prazo real para o relâmpago).
+- ⚠️ Estas 2 adições de teste **não passaram por 3.ª validação** (declarado).
