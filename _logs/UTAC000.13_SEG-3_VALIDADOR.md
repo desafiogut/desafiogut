@@ -188,3 +188,21 @@ Primeiro com os 60 runs da suíte (que não cobriam a taxa por ficheiro), depois
 ficheiro que me fizeram escrever «ilibado». A regra que passa a valer: **um flaky não se mede no
 agregado — mede-se no alvo, e com N compatível com a taxa alegada** (se a hipótese é 1/120, ou se
 martela 200× no ficheiro, ou não se conclui nada).
+
+
+## 5. Confirmação do validador, COMPLETA (o `v5-confirmar.out` terminou depois de ele gravar o veredicto)
+
+Ele só tinha registado o **5a** no ficheiro; o artefacto dele (`tmp-utac0013-val/v5-confirmar.out`)
+fechou depois com os dois números:
+
+| fase | corridas | falhas | teste |
+|---|---|---|---|
+| 5a · máquina quieta | 200 | **2** | `um pedido novo limpa o erro do anterior` |
+| 5b · **sob carga de CPU** | 200 | **7** | `um pedido novo limpa o erro do anterior` |
+
+⇒ **a taxa TRIPLICA com carga (1,0% → 3,5%)** — e é isso que explica, de forma directa, o meu erro:
+a minha amostra de **6** corridas «ilibrara» o ficheiro; era **amostra inútil, não ausência de defeito**.
+
+**Total de capturas independentes do flaky neste ciclo (todas do MESMO teste):** validador
+1/120 (hammer) + 2/200 (quieto) + 7/200 (carga) ≈ **10** · executor 1/200 (sequencial) + 4/400
+(martelo paralelo) = **5** ⇒ **≈15 capturas antes da correcção** e **0 em 600 corridas depois**.
