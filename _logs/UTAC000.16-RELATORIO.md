@@ -35,6 +35,7 @@ Veredicto + resposta: `_logs/UTAC000.16_SEG0_VALIDADOR.md`.
 - `_logs/DEBT-015_zen-goldberg.patch` (diff `main...branch`, 37 712 B — o pedido) + `_logs/DEBT-015_zen-goldberg.mbox` (format-patch, 45 234 B — acrescentado: o diff perde mensagens/autoria).
 - **GATE 21:** no merge-base `39382d9`, o patch dá a árvore `adfc078…` = `24f82af^{tree}`; o `git am` do mbox recria os 4 commits (o validador: **os 4 SHAs originais bit-a-bit**, comando na DEBT-015). 0 segredos.
 - ⚠️ **R-4 (validador):** o checkout fresco do `.patch` saía CRLF e o `git apply --index` falhava ⇒ `.gitattributes`: `*.patch`, `*.mbox`, `*.diff` `text eol=lf` (CR=0 nos 3 ficheiros; o patch do UTAC000.12 já era `i/lf` — diff vazio).
+- **Prova do R-4 a partir do commit `9341ed6`** (worktree fresco em HEAD): o `.patch` sai `i/lf w/lf`, CR=0; `git apply --index` no merge-base → rc=0 e árvore `adfc078…` (= ponta).
 - Ponta re-verificada (`24f82af`) imediatamente antes; `git branch -D` + `git push origin --delete` ⇒ refs locais **0**, remotas **0**.
 
 ## 6. Verificação final
