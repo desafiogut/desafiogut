@@ -156,3 +156,26 @@ Subagente independente em worktree próprio (criado com `scripts/worktree-helper
 3. **`docs/gabarito-play-console.md`** criado, mas as pendências que ele **mapeia** continuam abertas
    (DEC-01, R-01, R-02, R-17, DEC-04, DEC-08) — **mapear não é resolver**.
 4. **HI5:** este UTAC de arrumação também **excedeu 1 h** (validador + correcções). Declarado.
+
+---
+
+## §7 ADENDA — fecho do ℹ️6 (depois do fecho deste UTAC)
+
+O **ℹ️6** do UTAC106x.1 — «o banner do `CLAUDE.md:2` diz `Atualizado em: 2026-10-01` e não menciona os
+UTACs novos» — **ainda estava aberto** quando o x.4 fechou (o x.4 acrescentou lá a nota de estado, mas não
+mexeu na data). **Fechado a seguir**, a pedido do operador.
+
+**O que mudou:** só a **linha 2** do `CLAUDE.md` — a data passou a **2026-10-04** e foi **prependida** a
+entrada da série (`UTAC106x.1–x.4`: fonte de verdade Via B; ESCOPO-ALVO → HISTÓRICA; regra A13 + helper;
+P1–P5 fechadas), no formato que o banner já usa (`Atualizado em: <data> (<mais recente> … Anterior: …)`).
+
+**Prova (mecânica):** `dif = [2]` — **só a linha 2** difere do `HEAD` anterior; o **sufixo histórico** da
+linha 2 (a partir de `UTAC105b.3: **V-4 fechado`) é **byte-idêntico**; `len` de linhas inalterado
+(4457→4457); **4 bytes de controlo** intactos; suíte **694/694 · 992/998** e ficha **3/3** verdes.
+
+⚠️ **Proporcionalidade declarada:** **não** despachei validador adversarial para isto — é uma alteração de
+**uma linha**, verificada mecanicamente (diff, sufixo byte-a-byte, bytes de controlo, suíte). Se o
+operador quiser validação independente mesmo assim, é só pedir.
+
+Com isto, das 5 notas ℹ️ do x.1: **4 fechadas** (ℹ️1, ℹ️4, ℹ️6, ℹ️7) e **1 aberta** (ℹ️5 = **DEBT-006**,
+dívida registada).

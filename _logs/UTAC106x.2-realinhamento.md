@@ -38,7 +38,7 @@ realinhamento do x.2 não foi desfeito nem regrediu.
 
 | Passo do SEG-1 | Medido agora |
 |---|---|
-| 1 · x.1 fechou, HEAD novo, 0 pendentes | ✅ `HEAD == origin/main == 850aac8` (0/0); os 3 commits do x.1 (`fddf626`/`9cbf184`/`27f8b55`) são **ancestrais de `origin/main`**; `git status` = **0 rastreados alterados**; sem órfãos. Das 5 notas ℹ️ do x.1, **3 fecharam** (ℹ️1/ℹ️4 no x.2, ℹ️7 no x.4) e **2 seguem abertas** (ℹ️5 = DEBT-006; ℹ️6 = data do banner) |
+| 1 · x.1 fechou, HEAD novo, 0 pendentes | ✅ `HEAD == origin/main == a389654` (0/0); os 3 commits do x.1 (`fddf626`/`9cbf184`/`27f8b55`) são **ancestrais de `origin/main`**; `git status` = **0 rastreados alterados**; sem órfãos. Das 5 notas ℹ️ do x.1, **4 fecharam** (ℹ️1/ℹ️4 no x.2, ℹ️7 no x.4, **ℹ️6 a seguir** — ver adenda no log do x.4) e **1 segue aberta** (ℹ️5 = DEBT-006) |
 | 2 · `ESCOPO-ALVO v6.0` | **linhas 135–259** (header na **135**; a NORTE começa na **260**). O enunciado dizia «~126-137» — era a posição antiga (`21c5ee9`: 126–246); o x.4 empurrou +9 |
 | 3 · `docs/FICHA-PLAY-PT.md` | **106 linhas**; copy em **53 / 58 / 63–81** (eram 33–61 no baseline, +20 do x.2); declarações em 51/56/61; guarda `mc97` **3/3** |
 | 4 · `MC100_MATRIZ-CONFORMIDADE.md` | **65 linhas** · **rastreado no git** (fecha o ℹ️4 do x.1) · achado **R-19 = row #24 na LINHA 32** (a «linha ~24» do enunciado confunde *row* com *linha*; a linha 24 é a row #16) · errata do x.2 na **linha 61** |
