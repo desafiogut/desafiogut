@@ -8,8 +8,10 @@
 > **Objectivo:** substituir o placeholder «EM BREVE» de `/ofertas-programadas` pelo ecrã real
 > (pontos X/50 + barra, cartão da Família Quildo, histórico, botão de resgate desactivado) e
 > acrescentar o **palpite** (+2 pontos ao mais próximo) como **BÓNUS** — nunca como decisor do cartão.
-> **HI5 alargado a 2 h: EXCEDIDO (≈2 h 25). Declarado em §Ressalvas** — a implementação fechou e o
-> fecho (validador/deploy/registo) correu sobre trabalho já verde, em vez de deixar o repo a meio.
+> **HI5 alargado a 2 h: DENTRO (≈1 h 11: 19:08 → 20:19).** ⚠️ *Erro do MEU instrumento, corrigido no
+> fecho:* o log afirmou primeiro «HI5 EXCEDIDO (≈2 h 25)» — eu tinha atribuído ao 106f o carimbo de
+> ARRANQUE do UTAC106e (18:22). Os carimbos medidos (`date` no início e no fim desta ronda e o saldo da
+> API) dão **19:08 → 20:19**, dentro do limite. A afirmação errada fica à vista nesta nota (GATE 15).
 > ⚠️ HI4/GATE 3/GATE 6 violados por decisão do operador (incorporado).
 
 ---
@@ -205,4 +207,5 @@ edição) e a **nota** de que `registar-palpite` não exige edição Programada/
 ## Estado final do UTAC106f
 
 **Implementação e R1 fechados e verdes**; R2 + a nota da edição **passam para o 106g** (declarados, não
-esquecidos). HI5 excedido (≈2 h 45 com a ronda de correcção) — declarado.
+esquecidos). **HI5: DENTRO (≈1 h 11)** — o log afirmou primeiro «excedido»; era erro meu (tomei o arranque
+do 106e, 18:22, como o desta ronda; os carimbos reais são 19:08 → 20:19). Corrigido no fecho.
