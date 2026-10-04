@@ -62,11 +62,38 @@ test("UTAC106b · a frase de efeito existe e é renderizada no topo de MercadoLa
 
 test("UTAC106b · a frase NÃO sugere álea nem aposta (glossário oficial)", () => {
   const frase = fraseEfeito() ?? "";
-  // Mesma lista de PROIBIDOS de `src/i18n/__tests__/glossario.test.mjs` (plural incluído).
-  const PROIBIDOS = /\bleil[ãõa]o\b|\bleil[õo]es\b|\bapostas?\b|\bsortes?\b|\bazar\b|\bloterias?\b/i;
+  // Mesma lista de PROIBIDOS de `src/i18n/__tests__/glossario.test.mjs`, mas com o buraco
+  // que o validador do UTAC106b mediu FECHADO: a forma verbal («aposte/apostar/apostou»)
+  // escapava a `apostas?` (achado ℹN1). Aqui é `apost\w*`.
+  const PROIBIDOS = /\bleil[ãõa]o\b|\bleil[õo]es\b|\bapost\w*\b|\bsort\w*\b|\bazar\b|\bloterias?\b/i;
   assert.ok(!PROIBIDOS.test(frase), `a frase usa termo proibido (álea/aposta): «${frase}»`);
   assert.ok(!/aleat[óo]ri|chance|sorteio|previs/i.test(frase),
     `a frase sugere azar/previsão, não habilidade: «${frase}»`);
+});
+
+test("UTAC106b · a frase aplicada é LITERALMENTE uma das 3 opções autorizadas do enunciado", () => {
+  // Guarda contra o executor INVENTAR copy: a frase tem de ser uma das três opções que o
+  // enunciado fixou (A/B/C), verbatim. Mudar a copy é decisão do operador, não do executor.
+  const AUTORIZADAS = [
+    "Quanto você paga por esse item? O menor lance único leva!",
+    "Quanto você paga por esse item? O menor lance único compra!",
+    "Dê o seu menor lance único. Se ninguém der igual, o item é seu.",
+  ];
+  const frase = fraseEfeito();
+  assert.ok(AUTORIZADAS.includes(frase),
+    `a frase não é nenhuma das 3 opções autorizadas: «${frase}»`);
+});
+
+test("UTAC106b · /menor-lance-unico é ALIAS por REDIRECT (não um 2.º render)", () => {
+  // Um segundo render da MESMA página numa rota nova abriria um caminho que o isolamento
+  // corporativo (`rotasProibidas`, App.jsx do AppContext) não cobre — o achado ⚠A1 do
+  // validador. Com redirect, o pathname efectivo passa a `/mercado` e a lista continua a
+  // apanhar o lojista. Este teste fixa o desenho.
+  const app = ler("App.jsx");
+  const m = app.match(/<Route\s+path="\/menor-lance-unico"\s+element=\{([^}]+)\}/);
+  assert.ok(m, "a rota /menor-lance-unico desapareceu");
+  assert.match(m[1], /<Navigate\s+to="\/mercado"\s+replace\s*\/>/,
+    `a rota /menor-lance-unico deixou de ser redirect para /mercado: ${m[1]}`);
 });
 
 test("UTAC106b · a frase é consistente com o gate legal (Regulamento Art. 7)", () => {

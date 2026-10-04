@@ -76,7 +76,7 @@ test("MC99/SEG1 (UTAC106b) · barra inferior na ordem Carteira · Menor Lance Ú
   const bloco = b.match(/const MAIN_TABS = \[[\s\S]*?\];/)?.[0];
   assert.ok(bloco, "MAIN_TABS desapareceu");
   const ordem = [...bloco.matchAll(/path:\s*"([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(ordem, ["/carteira", "/menor-lance-unico", "/", "/ofertas-programadas"],
+  assert.deepEqual(ordem, ["/carteira", "/mercado", "/", "/ofertas-programadas"],
     `ordem das tabs mudou: ${JSON.stringify(ordem)} — tem de ser Carteira · Menor Lance Único · Início · Ofertas Programadas (UTAC106b)`);
   const rotulos = [...bloco.matchAll(/label:\s*"([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(rotulos, ["Carteira", "Menor Lance Único", "Início", "Ofertas Programadas"],
@@ -101,7 +101,7 @@ test("MC99/SEG1 (UTAC106b) · Sidebar em SINCRONIA com a barra (mesma ordem e r�
   assert.ok(bloco, "NAV_ITEMS desapareceu");
   const ordem = [...bloco.matchAll(/path:\s*"([^"]+)"/g)].map((m) => m[1]).slice(0, 4);
   const rotulos = [...bloco.matchAll(/label:\s*"([^"]+)"/g)].map((m) => m[1]).slice(0, 4);
-  assert.deepEqual(ordem, ["/carteira", "/menor-lance-unico", "/", "/ofertas-programadas"],
+  assert.deepEqual(ordem, ["/carteira", "/mercado", "/", "/ofertas-programadas"],
     `o rail dessincronizou da barra: ${JSON.stringify(ordem)}`);
   assert.deepEqual(rotulos, ["Carteira", "Menor Lance Único", "Início", "Ofertas Programadas"],
     `rótulos do rail dessincronizados: ${JSON.stringify(rotulos)}`);

@@ -28,9 +28,12 @@ const IconLogOut       = () => <NavIcon name="logout" size={16} />;
 // Programadas. A divergência antiga de rótulos («Dashboard»/«Mercado de Lances» no rail,
 // «Início»/«Lances» no mobile) foi SUPERSEDIDA pela decisão do operador (UTAC106b, decisão
 // 4: «BottomNav e Sidebar em sincronia»). O resto do rail (Vitrine…Parceiro) não muda.
+// ⚠️ O destino de «Menor Lance Único» é `/mercado` (rota canónica) — `/menor-lance-unico`
+// é o ALIAS por redirect (App.jsx). Manter a canónica aqui é o que preserva o `activeTab`
+// («lances») e o isolamento corporativo (`rotasProibidas`).
 const NAV_ITEMS = [
   { path: "/carteira",            label: "Carteira",            icon: <IconWallet />,    end: false },
-  { path: "/menor-lance-unico",   label: "Menor Lance Único",   icon: <IconTarget />,    end: false },
+  { path: "/mercado",             label: "Menor Lance Único",   icon: <IconTarget />,    end: false },
   { path: "/",                    label: "Início",              icon: <IconDashboard />, end: true  },
   { path: "/ofertas-programadas", label: "Ofertas Programadas", icon: <IconTicket />,    end: false },
   { path: "/vitrine",       label: "Vitrine (4 Slots)", icon: <IconTarget />,    end: false },

@@ -290,7 +290,12 @@ export default function MercadoLances() {
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
 
         {/* UTAC106b — frase de efeito da modalidade, no TOPO da página (acima do cabeçalho).
-            Escolha e justificação na constante FRASE_MENOR_LANCE_UNICO (topo do ficheiro). */}
+            Escolha e justificação na constante FRASE_MENOR_LANCE_UNICO (topo do ficheiro).
+            ⚠️ LIMITE DECLARADO (achado ℹN3 do validador do UTAC106b): este bloco vive no
+            return PRINCIPAL, DEPOIS dos early-returns de `recursosCarregando`/`!isLeilaoAtivo`
+            — logo na build das LOJAS (APK, onde o leilão não está activo) a aba abre na vista
+            de conformidade e a frase NÃO aparece. É intencional: não há copy de lances num
+            ecrã que declara que as edições acontecem na versão Web. */}
         <p style={{
           margin: 0,
           padding: isMobile ? "0.85rem 1rem 0" : "1rem 2rem 0",

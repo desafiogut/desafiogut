@@ -28,7 +28,7 @@ const IconClose     = (p) => <NavIcon name="close" size={22} {...p} />;
 // não da aba — a aba aparece, a oferta é que ainda não abre. "Mais" fecha sempre.
 const MAIN_TABS = [
   { path: "/carteira",            label: "Carteira",            Icon: IconWallet,    end: false, ariaLabel: "Ir para Minha Carteira" },
-  { path: "/menor-lance-unico",   label: "Menor Lance Único",   Icon: IconTarget,    end: false, ariaLabel: "Ir para Menor Lance Único" },
+  { path: "/mercado",             label: "Menor Lance Único",   Icon: IconTarget,    end: false, ariaLabel: "Ir para Menor Lance Único" },
   { path: "/",                    label: "Início",              Icon: IconDashboard, end: true,  ariaLabel: "Ir para Dashboard" },
   { path: "/ofertas-programadas", label: "Ofertas Programadas", Icon: IconTicket,    end: false, ariaLabel: "Ir para Ofertas Programadas" },
 ];

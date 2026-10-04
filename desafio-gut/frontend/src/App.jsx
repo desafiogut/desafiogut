@@ -457,10 +457,14 @@ export default function App() {
           <Route index              element={<DashboardOuCorporativo />} />
           <Route path="/carteira"   element={<MinhaCarteira />} />
           <Route path="/mercado"    element={<MercadoLances />} />
-          {/* UTAC106b — «Menor Lance Único» é ALIAS de /mercado (o mesmo ecrã): a rota
-              antiga continua a funcionar (nenhum link quebra) e a modalidade ganha o seu
-              nome próprio (NORTE Via B + Regulamento Art. 7). */}
-          <Route path="/menor-lance-unico" element={<MercadoLances />} />
+          {/* UTAC106b — «Menor Lance Único» é o nome da modalidade (NORTE Via B + Regulamento
+              Art. 7); `/mercado` continua a ser a rota CANÓNICA e a antiga continua viva.
+              O alias `/menor-lance-unico` é um REDIRECT (não um segundo render): assim o
+              `activeTab` (derivado da rota) fica em «lances» e — o que importa — o
+              isolamento corporativo (`rotasProibidas`, AppContext) continua a apanhar o
+              lojista, porque o pathname efectivo passa a `/mercado` (achado ⚠A1 do
+              validador do UTAC106b). */}
+          <Route path="/menor-lance-unico" element={<Navigate to="/mercado" replace />} />
           {/* UTAC106b — Ofertas Programadas (programa de fidelidade: Passe R$ 2,00 → pontos
               → cartão). Placeholder: o conteúdo real chega em UTAC próprio; enquanto isso a
               página está TRAVADA por EM_BREVE_MODE (a trava é do conteúdo, não da aba). */}
