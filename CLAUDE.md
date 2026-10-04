@@ -4481,7 +4481,15 @@ Consultar antes de mexer em segredos ou no CLI da Netlify.
 > ✅; **1 lacuna anotada**: «limite 5%» ausente e sem referente medido) e o gabarito Play verificado (§1-§9,
 > com lacunas anotadas). **(D)** `package-lock` **NÃO alterado**: medido que `solc`/`@nomicfoundation/edr`
 > **estão** nos locks (raiz e `desafio-gut`); o CI tem job dedicado `test-onchain` (instala as deps e exige
-> ≤1 skip) ⇒ **MC93-E não salta em CI**; resta **1 skip** local do teste de recompilação com `solc` (que não
-> está no `desafio-gut/package-lock.json`) — **DEBT-019 aberta** (decisão do operador). Suíte **frontend
+> ≤1 skip) ⇒ **MC93-E não salta em CI**; no CI o **único** skip tolerado é o do teste de recompilação com `solc` (que **não** está no
+> `desafio-gut/package-lock.json`; **localmente** o `solc` resolve-se, logo **não** há skip local) — **DEBT-019 aberta** (decisão do operador). Suíte **frontend
 > 694/694 · backend 992/998**. Zero código de produção e zero testes alterados. Log:
 > `_logs/UTAC106x.6-pendencias.md`.
+
+> 🔎 **UTAC106x.6 — ERRATA (pós-veredicto do validador adversarial, 2026-10-04).** O validador deu
+> **PARCIAL · 0 bloqueantes** e **refutou 1 afirmação minha** (frente C.2/gabarito): o gabarito **tem**
+> «regras oficiais» (`docs/gabarito-play-console.md:92`, row #14) e o `ESCOPO-ALVO` histórico
+> (`CLAUDE.md:204`) **já listava** «transação separada e genuína». A frente C.2 fica corrigida para
+> **1 lacuna real** — item (2) «transacção separada genuína», ausente do §6 do gabarito — **+ 1 candidata**
+> («Ads»/«App access» no §4). A afirmação errada fica **à vista, marcada REFUTADA** em `DEBT-020` (não
+> apagada). Veredicto verbatim: `_logs/UTAC106x.6_SEG4_VALIDADOR.md`.

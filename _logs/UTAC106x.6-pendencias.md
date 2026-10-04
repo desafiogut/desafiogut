@@ -188,19 +188,29 @@ Lido integralmente (126 linhas, 8 secções). Cobertura dos 8 requisitos do brie
 | # | Requisito (B1 §9.1) | Estado | Onde |
 |---|---|---|---|
 | 1 | Programa de Fidelidade Gamificado | ✅ | §1 + §2 (categoria) |
-| 2 | **Transacção separada genuína** | ❌ **ausente** | — (`grep transac/separad/genuin` → 0) |
+| 2 | **Transacção separada e genuína** | ❌ **ausente do §6** | ausente do §6 do gabarito; **presente** em `CLAUDE.md:204` (secção `ESCOPO-ALVO` histórica) |
 | 3 | Benefício complementar | ✅ | §6 #10 («benefício suplementar e subordinado»; §1 «palpite é bónus») |
-| 4 | **Regras oficiais no app** | ⚠️ **parcial** | §6 #10 cita «prazo de entrada; data de entrega», mas **não** «regras oficiais publicadas no app» (que a própria NORTE §10 atribui ao **UTAC106h**) |
+| 4 | **Regras oficiais no app** | ✅ (com ressalva) | gabarito §7 row #14 («concursos: regras oficiais», ❓ não avaliado) + `CLAUDE.md:205` («regras publicadas») — **NÃO é lacuna** |
 | 5 | Proporção fixa de acúmulo/resgate | ✅ | §6 #10 («rácio fixo») |
 | 6 | Classificação AO | ✅ (a refazer) | §2 («AO» **não** é classificação IARC/Play — é ClassInd 18; R-17) |
 | 7 | Data Safety | ✅ | §4 #1 e #2 |
 | 8 | Ficha da Play (título, descrição, categoria) | ✅ | §3 (+ medidor `mc97`: 29/30 · 74/80 · 1285/4000) |
 
-**Resultado: 6 ✅ / 1 ⚠️ / 1 ❌.** Lacunas:
-- **(2) «transacção separada genuína»** — requisito do *Gamified Loyalty* da Play **não nomeado** no gabarito
-  (a MATRIZ row #24 lista «benefício suplementar e subordinado; nº fixo de vencedores; prazo de entrada;
-  data de entrega; rácio fixo», mas não a expressão «transacção separada genuína»).
-- **(4) «regras oficiais no app»** — aparece na **NORTE §10** (UTAC106h) mas **não** no gabarito.
+**Resultado (pós-veredicto do validador): 7 ✅ / 0 ⚠️ / 1 ❌.** Lacuna real:
+- **(2) «transacção separada e genuína»** — requisito do *Gamified Loyalty* da Play **ausente do §6** do
+  gabarito (a row #10 lista «benefício suplementar e subordinado; nº fixo de vencedores; prazo de entrada;
+  data de entrega; rácio fixo», mas não essa expressão) — **embora exista no repo** (`CLAUDE.md:204`).
+- **CANDIDATA (não medida contra o B1 §9.1, que não é artefacto do repo):** o §4 **omite** as declarações
+  obrigatórias da consola **«Ads»** e **«App access»** (0 ocorrências no gabarito).
+
+> ⚠️ **ERRATA (achado ⚠1 do validador adversarial — afirmação minha REFUTADA, mantida à vista).** A minha
+> 1.ª redacção desta tabela marcava **dois** requisitos como lacuna, incluindo o **(4) «regras oficiais no
+> app»** («aparece só na NORTE §10, não no gabarito»). **É FALSO** — medido pelo validador:
+> `docs/gabarito-play-console.md:92` (row #14) diz «concursos: regras oficiais» e `CLAUDE.md:205` diz
+> «regras publicadas». O item (4) **não** é lacuna. E o item (2), que eu dizia «não documentado em lado
+> nenhum», **está em `CLAUDE.md:204`** (ESCOPO-ALVO histórico). ⇒ **1 lacuna real + 1 candidata.**
+> A causa-raiz do erro (declarada): o `grep` que usei só varreu termos exactos no §6, **sem varrer a §7**,
+> e **sem confrontar** o `ESCOPO-ALVO` histórico. Veredicto: `_logs/UTAC106x.6_SEG4_VALIDADOR.md`.
 
 **Tratamento:** **anotadas** neste log + **registadas em `_logs/DEBT.md` (DEBT-020)**. O
 `docs/gabarito-play-console.md` **NÃO foi editado** — está **fora da lista de autorizações** deste UTAC
@@ -244,10 +254,62 @@ alterado** (verificável: `git status --porcelain -- package-lock.json` → vazi
 
 ## §Validador adversarial (SEG4)
 
-_(a preencher com o veredicto verbatim — ver `_logs/UTAC106x.6_SEG4_VALIDADOR.md`)_
+**Despachado:** subagente Hermes independente, em **worktree próprio** (`tmp-utac106x6-val`) criado e
+removido com o próprio helper, instruído a **TENTAR REFUTAR** (veredicto verbatim + resposta do executor em
+`_logs/UTAC106x.6_SEG4_VALIDADOR.md`).
+
+> **VEREDICTO: PARCIAL · 0 bloqueantes.** Os **5 fechos substantivos sobrevivem** à refutação (A/B/C/E/F,
+> todos reproduzidos por execução). A frente **(D/gabarito)** tinha **1 afirmação factual falsa** minha.
+
+| # | Grav. | Achado | Tratamento |
+|---|---|---|---|
+| 1 | ⚠ grave | **DEBT-020 item (4) FALSO** — «regras oficiais publicadas no app» **está** no gabarito (`:92`, row #14) e «regras publicadas» em `CLAUDE.md:205`; e «transação separada e genuína» existe em `CLAUDE.md:204` | **CORRIGIDO** — `DEBT-020` reescrita (1 lacuna real + 1 candidata); erro **mantido à vista marcado REFUTADA**; n.º de ficheiros/`DEBT` actualizados |
+| 2 | ℹ nota | O resumo do `CLAUDE.md` dizia «1 skip **local** do solc» — localmente **não** há | **CORRIGIDO** no bloco R14 e neste log/relatório («no CI o único skip tolerado é o solc») |
+| 3 | ℹ nota | `solc` instalado em `desafio-gut/node_modules` mas ausente do respectivo lock | Já em **DEBT-019**; redacção alinhada |
+| 4 | ℹ nota | O §4 do gabarito omite as declarações **«Ads»** e **«App access»** | **REGISTADO** em `DEBT-020` como **candidata** (o B1 §9.1 não é artefacto do repo — o validador não o mediu) |
+| 5 | ℹ nota | `grep "5%"` no `CLAUDE.md` imprime «Binary file matches» (bytes de controlo) | **Declarado** (limite de instrumento); a conclusão mantém-se |
+
+**Alegações que o validador conseguiu REFUTAR (minhas):** (1) a «lacuna» do item 4 do gabarito; (2) o
+«skip local do solc»; (3) a ideia de que «transação separada e genuína» não estava documentada no repo.
+**Alegações que NÃO conseguiu refutar:** A13 = 4 junctions exactas (reproduzido end-to-end; 499/414
+intactos) · DEBT-001 (6 skips, 1+5, env-gated) e DEBT-005 (76/10) · NORTE 10/11 · `package-lock` fora do
+diff · 2×NUL + 2×0x1F inalterados.
+**O que o validador NÃO mediu** (declarado por ele): o briefing B1 §9.1 em si; a suíte **frontend** (correu
+só o backend); os runners de CI (leu o `ci.yml`, não os executou).
+
+**Correcções feitas depois do veredicto ficam declaradas como «não re-validadas»** (sem 2.ª ronda).
 
 ---
 
 ## §Registos, arquivos e custo (SEG5)
 
-_(a preencher no fecho)_
+**Registo em 3 lugares (R18):**
+1. `_logs/UTAC106x.6-pendencias.md` (este log, detalhado) + `_logs/UTAC106x.6_SEG4_VALIDADOR.md` (veredicto).
+2. `CLAUDE.md` — bloco **R14** resumido (no fim do ficheiro) + **anotação** na secção NORTE (§11), sem
+   substituir nada; **4 bytes de controlo intactos** (2×NUL + 2×0x1F).
+3. `Desktop/RELATORIO-UTAC106x.6-PENDENCIAS.txt` (relatório ao operador).
+
+**Ficheiros alterados/criados** (commits `73cdd59` + o commit de errata pós-veredicto):
+- `desafio-gut/frontend/skills/utac/protocol/regras/A-ambiente.md` (+19/−5)
+- `desafio-gut/frontend/skills/utac/protocol/regras-legado.md` (+8/−1)
+- `_logs/DEBT.md` (DEBT-001/005 fechadas · DEBT-019/020 novas · errata da DEBT-020)
+- `CLAUDE.md` (bloco R14 + nota NORTE + errata; +29/−0 no 1.º commit)
+- `_logs/UTAC106x.6-pendencias.md` (novo)
+- `_logs/UTAC106x.6_SEG4_VALIDADOR.md` (novo — veredicto + resposta)
+
+**Dívidas:** DEBT-001 **fechada** · DEBT-005 **fechada** · DEBT-019 **aberta** (package-lock/solc) ·
+DEBT-020 **aberta** (lacuna do gabarito Play — 1 real + 1 candidata).
+
+**Suíte:** frontend 694/694 · backend 992/998 (medida no baseline; **zero** código/testes alterados por
+este UTAC). **Não re-medida** após o fecho (o validador correu só o backend, também verde).
+
+**Custo de API (medido no fecho):**
+- Sessão do executor (Hermes CLI `20261004_104512_7dad39`, `source=cli`): 144 mensagens · 86 tool calls ·
+  148 854 tokens in · 71 365 out · **`estimated_cost_usd` ≈ US$ 0,0621**.
+- Validador adversarial (sessão própria `20261004_105746_79b0e6`, `source=subagent`): 62 mensagens ·
+  39 tool calls · 72 275 in · 30 597 out · **≈ US$ 0,0221**.
+- **Total estimado: ≈ US$ 0,084.** ⚠️ A plataforma **não** abriu sessão nova por UTAC (a CLI é uma só) —
+  o valor é estimativa da `state.db`.
+- **Saldo real da API (medido):** arranque **US$ 7,48** → fecho **US$ 7,34** ⇒ **consumo real ≈ US$ 0,14**
+  (conta também as delegações, que têm sessão própria). Reportadas as duas leituras separadas — *estimativa
+  da base* vs *saldo real*.
