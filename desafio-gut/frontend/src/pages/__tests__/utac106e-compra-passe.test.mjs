@@ -88,7 +88,7 @@ test("HOOK · chama POST /comprar-passe-pontos com Bearer e mapeia 201 → ok:tr
   assert.match(corpos[0].idempotencyKey, /^[A-Za-z0-9._:-]{8,200}$/, "a chave não casa a regex do servidor");
 });
 
-test("HOOK · gera uma idempotencyKey DIFERENTE por clique (é o que trava o duplo débito)", async () => {
+test("HOOK · gera uma idempotencyKey DIFERENTE por chamada (o RETRY do mesmo pedido é que a reusa)", async () => {
   definirContexto(CONECTADO);
   const { corpos } = await comFetch(() => ({ status: 201, json: { ok: true, pontos: 1 } }), async () => {
     const c = montar(useComprarPasse, []);
@@ -98,7 +98,24 @@ test("HOOK · gera uma idempotencyKey DIFERENTE por clique (é o que trava o dup
     await c.resultado().comprar();
   });
   assert.equal(corpos.length, 2);
-  assert.notEqual(corpos[0].idempotencyKey, corpos[1].idempotencyKey, "dois cliques com a MESMA chave = risco de duplo débito");
+  assert.notEqual(corpos[0].idempotencyKey, corpos[1].idempotencyKey,
+    "duas CHAMADAS com a mesma chave seriam o MESMO pedido para o servidor (perder-se-ia a 2.ª compra)");
+});
+
+test("HOOK · corrida no MESMO tick: 2 comprar() sem await entre eles → SÓ 1 ida à rede (guarda `emCurso`)", async () => {
+  definirContexto(CONECTADO);
+  const { corpos, dup } = await comFetch(() => ({ status: 201, json: { ok: true, pontos: 1 } }), async () => {
+    const c = montar(useComprarPasse, []);
+    await c.assentar();
+    // Achado ⚠️ R1 do validador: sem `await` entre as duas, o ESTADO `loading` ainda é o ANTIGO no
+    // closure. Sem o `ref`, as duas passariam e dariam DOIS débitos. Com o `ref`, a 2.ª sai sem rede.
+    const [r1, r2] = await Promise.all([c.resultado().comprar(), c.resultado().comprar()]);
+    assert.equal(r1.ok, true);
+    assert.equal(r2.ok, false);
+    assert.equal(r2.code, "em_curso");
+  });
+  assert.equal(dup.chamadas.length, 1, `o 2.º comprar() do mesmo tick foi à rede: ${dup.chamadas.length} pedidos`);
+  assert.equal(corpos.length, 1);
 });
 
 test("HOOK · 200 idempotente → ok:true", async () => {

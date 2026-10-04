@@ -14,7 +14,7 @@
 // Contrato devolvido: { comprar, loading, erro, pontos }
 //   comprar() → { ok:true, pontos, idempotent } | { ok:false, status, code, message }
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useTrocarPorSenhas } from "./useTrocarPorSenhas.js";
 import { apiPost } from "../lib/api.js";
@@ -34,16 +34,22 @@ export function useComprarPasse() {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
   const [pontos, setPontos] = useState(null);
+  // GUARDA DE CORRIDA (achado ⚠️ R1 do validador adversarial): `loading` é ESTADO — dentro do mesmo
+  // render o closure vê o valor ANTIGO, logo dois cliques no MESMO tick passariam os dois e dariam
+  // DOIS débitos com duas chaves. O `ref` é síncrono e independente do timing do render.
+  const emCurso = useRef(false);
 
   const comprar = useCallback(async () => {
     if (!address) return { ok: false, code: "sem_endereco", message: "Carteira não conectada" };
-    if (loading) return { ok: false, code: "em_curso", message: "Compra em curso" };
+    if (emCurso.current) return { ok: false, code: "em_curso", message: "Compra em curso" };
+    emCurso.current = true;
 
     setErro("");
     setLoading(true);
     try {
       const token = await getAuthToken();
-      // Chave NOVA por clique — é o que impede o duplo débito num duplo clique.
+      // Chave NOVA por CHAMADA (nunca reutilizada): a idempotência do servidor cobre o RETRY do
+      // MESMO pedido. Contra dois pedidos diferentes, a trava é a guarda de corrida (`emCurso`).
       const idempotencyKey = gerarIdempotencyKey();
       const { ok, status, data } = await apiPost("comprar-passe-pontos", { idempotencyKey }, { token });
 
@@ -64,9 +70,10 @@ export function useComprarPasse() {
       setErro(message);
       return { ok: false, message };
     } finally {
+      emCurso.current = false;
       setLoading(false);
     }
-  }, [address, loading, getAuthToken, refetchSaldoRs]);
+  }, [address, getAuthToken, refetchSaldoRs]);
 
   return { comprar, loading, erro, pontos };
 }

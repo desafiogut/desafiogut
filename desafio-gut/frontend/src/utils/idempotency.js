@@ -1,8 +1,9 @@
 // src/utils/idempotency.js — UTAC106e. Chave de idempotência POR CLIQUE (UUID v4).
 //
 // PORQUE EXISTE: o endpoint `comprar-passe-pontos` é idempotente por `idempotencyKey`
-// (UTAC106d-v2). O cliente tem de gerar uma chave NOVA por clique — assim um duplo clique
-// (ou um retry de rede) reusa a MESMA chave e o servidor cobra UMA vez.
+// (UTAC106d-v2). O cliente gera uma chave NOVA por CHAMADA — o RETRY do MESMO pedido reusa-a
+// (e o servidor cobra uma vez); dois pedidos DIFERENTES levam chaves diferentes, e contra esses
+// a trava é a guarda de corrida do `useComprarPasse` (achado R1), NÃO a chave.
 //
 // O repo não tinha gerador de UUID (medido: `grep -rn "randomUUID|uuid" src/` → 0 fora de
 // node_modules). Usa `crypto.randomUUID()` quando existe (browsers modernos / WebView

@@ -394,7 +394,7 @@ export default function MinhaCarteira() {
           ⚠️ Saldo insuficiente.{" "}
           <button
             type="button"
-            onClick={() => { setPasseSemSaldo(false); setToastPasse(null); setComprarAberto(true); }}
+            onClick={() => { setPasseSemSaldo(false); setToastPasse(null); setPasseAberto(false); setComprarAberto(true); }}
             style={{
               background: "none", border: "none", padding: 0, fontSize: "0.78rem",
               color: COR.blue300, fontWeight: 800, textDecoration: "underline", cursor: "pointer",

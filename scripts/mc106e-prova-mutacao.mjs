@@ -29,6 +29,7 @@ const MUTANTES = [
   ["MF4 Carteira: não fecha o balão no sucesso", CART, '            setPasseAberto(false);\n            setPasseSemSaldo(false);', '            setPasseSemSaldo(false);'],
   ["MF5 Carteira: sem toast de sucesso", CART, 'setToastPasse({ variant: "success", message: "1 ponto creditado" });', 'setToastPasse(null);'],
   ["MF7 Carteira: Confirmar não chama o hook", CART, 'const r = await comprarPasse();', 'const r = { ok: true };'],
+  ["MF9 hook: sem a guarda de corrida (ref)", LIB, '    if (emCurso.current) return { ok: false, code: "em_curso", message: "Compra em curso" };', '    if (false) return { ok: false, code: "em_curso", message: "Compra em curso" };'],
   ["MF6 modal: sem spinner", MODAL, 'data-spinner="true"', 'data-spinner="false"'],
 ];
 
