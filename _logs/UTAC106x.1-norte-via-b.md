@@ -99,7 +99,40 @@ pendente** (o próprio repositório exige-o). A correcção dos documentos-fonte
 
 ## §4 VALIDADOR ADVERSARIAL (SEG2)
 
-*(preenchido no fecho — ver §6)*
+**Subagente independente, em worktree próprio** (`C:/Users/Moltbot/tmp-utac106x1-val/wt`, detached em
+`fddf626`, com junctions de `node_modules` — A9). Instrução: **TENTAR REFUTAR** (não confirmar). Duração
+691 s. **Não alterou nada** (só leitura/medição).
+
+### Veredicto (verbatim do subagente)
+
+> # VEREDICTO ADVERSARIAL — UTAC106x.1 (`fddf626`) vs baseline `483576f`
+> ## **APROVADO** (com notas ℹ️ — nenhum achado ⚠️)
+> A alteração **resistiu a todas as tentativas de refutação (a)–(e)**. Faz exactamente o que declara,
+> respeita o escopo, preserva os bytes e a suíte está verde como afirmado. Nenhum defeito grave.
+
+**Alegações centrais confirmadas por medição:** NORTE reescrita (238–469 → 238–391) ✅ · R14 no FIM
+(linha 4429) ✅ · prefixo `[0:63460]` idêntico byte-a-byte e sufixo (base 470→EOF) = (nova 392→R14), única
+diferença o `\n`+R14 ✅ · bytes de controlo `{0x00×2,0x1F×2,0x7F×2}` idênticos (mesmos contextos; NORTE e
+R14 **sem** control bytes) ✅ · suíte **694/694 · 992/998** no repo principal ✅ · escopo = só `CLAUDE.md` +
+3 logs, **0** ficheiros de código ✅ · «0 ocorrências antes» de `5.910/5.102/9.532/Quildo/colecion` ✅ ·
+snapshot da NORTE anterior **verbatim** ✅ · Via B completa (todas as 10 rubricas presentes) ✅.
+
+### Achados ℹ️ e tratamento
+
+| # | Achado | Tratamento |
+|---|---|---|
+| **ℹ️1** | Contradição de precedência **mútua** (`CLAUDE.md:133-134` «prevalece esta» vs `:240` «ESTA SECÇÃO PREVALECE») — o Conflito-A, **declarado** e reservado ao x.2 | **Declarado** (§3 e `_logs/UTAC106x-consolidacao.md §3.1`); fora do escopo do x.1 (ESCOPO-ALVO é do x.2) |
+| **ℹ️2** | Refs obsoletas a MEI/DEC-09 **fora** das secções diferidas (`CLAUDE.md` §MC102.1b) | **CORRIGIDO** (pós-veredicto): o R14 passou a nomear também essas refs como diferidas ao x.2 |
+| **ℹ️3** | Citação imprecisa: o texto «Gamified Loyalty» está na **linha 32** (row #24), não «linha 24» | **CORRIGIDO** (pós-veredicto) na NORTE §6.3 e no R14 («linha 32 (row #24)») |
+| **ℹ️4** | Cross-ref nova para ficheiro **NÃO-rastreado** (`_logs/MC100_MATRIZ-CONFORMIDADE.md`, `git ls-files` vazio) | **Declarado** — fragilidade de proveniência; commitá-lo é do x.2 |
+| **ℹ️5** | No **worktree** o backend dá **984/991**, não 992/998 | **Declarado** — é a dívida **DEBT-006** (worktree ≠ árvore partilhada, 0 falhas nas duas); a medição canónica do enunciado é no **repo principal** (992/998 ✅) |
+| **ℹ️6** | Cabeçalho `CLAUDE.md:2` («Atualizado em: 2026-10-01») não menciona o x.1 | **Declarado** — fora do escopo (só NORTE + R14) |
+| **ℹ️7** | `docs/gabarito-play-console.md` sem dono no split x.1/x.2 | **Declarado** em §5 (abaixo) |
+
+> ⚠️ **As 2 correcções (ℹ️2, ℹ️3) foram feitas DEPOIS do veredicto** ⇒ ficam **declaradas como não
+> re-validadas** (regra do SEG4). São edições de texto dentro da própria secção NORTE/R14; o commit
+> validado (`fddf626`) mantém-se no histórico e a correcção é um commit separado.
+> As restantes 5 notas ℹ️ ficam **declaradas** (não escondidas), sem correcção neste UTAC (fora do escopo).
 
 ---
 
@@ -109,4 +142,8 @@ pendente** (o próprio repositório exige-o). A correcção dos documentos-fonte
    `docs/FICHA-PLAY-PT.md` + `_logs/MC100_MATRIZ-CONFORMIDADE.md` à Via B. **Fora do escopo deste UTAC.**
 2. **Parecer jurídico** (R-19/R-02) — pendente; não é deste UTAC.
 3. **`docs/gabarito-play-console.md`** — o enunciado do UTAC106x pedia-o; **não** é escopo do x.1
-   (o x.1 escreve só na NORTE + R14). Fica para o UTAC que o pedir.
+   (o x.1 escreve só na NORTE + R14). **Sem dono atribuído** no split x.1/x.2 — fica por atribuir.
+4. **Notas ℹ️ do validador não corrigidas aqui** (fora do escopo): ℹ️4 (cross-ref para
+   `_logs/MC100_MATRIZ-CONFORMIDADE.md`, que é **untracked** → o x.2 deve commitá-lo), ℹ️6 (cabeçalho
+   «Atualizado em: 2026-10-01» desactualizado), ℹ️1 (precedência mútua — é o x.2). ℹ️5 é a dívida
+   **DEBT-006** (worktree 984/991 vs árvore 992/998).
