@@ -15,6 +15,7 @@ const IconDashboard    = () => <NavIcon name="dashboard" />;
 const IconWallet       = () => <NavIcon name="wallet" />;
 const IconTarget       = () => <NavIcon name="target" />;
 const IconTrending     = () => <NavIcon name="trending" />;
+const IconTicket       = () => <NavIcon name="ticket" />;
 const IconShield       = () => <NavIcon name="shield" />;
 const IconSettings     = () => <NavIcon name="settings" />;
 const IconChevronLeft  = () => <NavIcon name="chevronLeft" size={16} strokeWidth={2.5} />;
@@ -22,10 +23,16 @@ const IconChevronRight = () => <NavIcon name="chevronRight" size={16} strokeWidt
 const IconLogOut       = () => <NavIcon name="logout" size={16} />;
 
 // ─── Itens de navegação ────────────────────────────────────────────────────────
+// UTAC106b — as 4 primeiras entradas ficam em SINCRONIA com o BottomNav (mesma ordem,
+// mesmos caminhos, mesmos rótulos): Carteira · Menor Lance Único · Início · Ofertas
+// Programadas. A divergência antiga de rótulos («Dashboard»/«Mercado de Lances» no rail,
+// «Início»/«Lances» no mobile) foi SUPERSEDIDA pela decisão do operador (UTAC106b, decisão
+// 4: «BottomNav e Sidebar em sincronia»). O resto do rail (Vitrine…Parceiro) não muda.
 const NAV_ITEMS = [
-  { path: "/",              label: "Dashboard",         icon: <IconDashboard />, end: true  },
-  { path: "/carteira",      label: "Minha Carteira",    icon: <IconWallet />,    end: false },
-  { path: "/mercado",       label: "Mercado de Lances", icon: <IconTarget />,    end: false },
+  { path: "/carteira",            label: "Carteira",            icon: <IconWallet />,    end: false },
+  { path: "/menor-lance-unico",   label: "Menor Lance Único",   icon: <IconTarget />,    end: false },
+  { path: "/",                    label: "Início",              icon: <IconDashboard />, end: true  },
+  { path: "/ofertas-programadas", label: "Ofertas Programadas", icon: <IconTicket />,    end: false },
   { path: "/vitrine",       label: "Vitrine (4 Slots)", icon: <IconTarget />,    end: false },
   { path: "/programacao",   label: "Programação",       icon: <IconTarget />,    end: false },
   { path: "/ativos",        label: "Meus Ativos",       icon: <IconTrending />,  end: false },

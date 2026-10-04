@@ -71,18 +71,46 @@ test("MC99/SEG0 · Outras Edições em scroll LATERAL (não empilhado)", () => {
 });
 
 // ═══ SEG1 — Barra inferior: Início · Carteira · Lances · Mais ═══════════════════
-test("MC99/SEG1 · barra inferior na ordem Início · Carteira · Lances", () => {
+test("MC99/SEG1 (UTAC106b) · barra inferior na ordem Carteira · Menor Lance Único · Início · Ofertas Programadas", () => {
   const b = codigo(ler("src/widgets/layout/BottomNav.jsx"));
   const bloco = b.match(/const MAIN_TABS = \[[\s\S]*?\];/)?.[0];
   assert.ok(bloco, "MAIN_TABS desapareceu");
   const ordem = [...bloco.matchAll(/path:\s*"([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(ordem, ["/", "/carteira", "/mercado"],
-    `ordem das tabs mudou: ${JSON.stringify(ordem)} — tem de ser Início · Carteira · Lances`);
+  assert.deepEqual(ordem, ["/carteira", "/menor-lance-unico", "/", "/ofertas-programadas"],
+    `ordem das tabs mudou: ${JSON.stringify(ordem)} — tem de ser Carteira · Menor Lance Único · Início · Ofertas Programadas (UTAC106b)`);
+  const rotulos = [...bloco.matchAll(/label:\s*"([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(rotulos, ["Carteira", "Menor Lance Único", "Início", "Ofertas Programadas"],
+    `rótulos das tabs mudaram: ${JSON.stringify(rotulos)}`);
   // "Mais" continua a ser o último (é um <button>, não um MAIN_TAB): garantir que o
   // dock o renderiza DEPOIS do map das tabs.
   const posMap = b.indexOf("tabsAtivas.map");
   const posMais = b.indexOf(">Mais<");
   assert.ok(posMap !== -1 && posMais > posMap, "«Mais» deixou de vir depois das tabs");
+  // UTAC106b — cada destino da barra TEM de existir como rota registada em App.jsx.
+  // Fecha o buraco do extractor de `mc991-rotas`: ele não vê `<NavLink to={path}>`
+  // (destino por VARIÁVEL), logo as rotas novas passariam como «órfãs justificadas».
+  const app = ler("src/App.jsx");
+  const semRota = ordem.filter((p) => p !== "/" && !app.includes(`path="${p}"`));
+  assert.deepEqual(semRota, [],
+    `destinos da barra SEM rota registada em App.jsx: ${semRota.join(", ")}`);
+});
+
+test("MC99/SEG1 (UTAC106b) · Sidebar em SINCRONIA com a barra (mesma ordem e rótulos)", () => {
+  const s = codigo(ler("src/widgets/layout/Sidebar.jsx"));
+  const bloco = s.match(/const NAV_ITEMS = \[[\s\S]*?\];/)?.[0];
+  assert.ok(bloco, "NAV_ITEMS desapareceu");
+  const ordem = [...bloco.matchAll(/path:\s*"([^"]+)"/g)].map((m) => m[1]).slice(0, 4);
+  const rotulos = [...bloco.matchAll(/label:\s*"([^"]+)"/g)].map((m) => m[1]).slice(0, 4);
+  assert.deepEqual(ordem, ["/carteira", "/menor-lance-unico", "/", "/ofertas-programadas"],
+    `o rail dessincronizou da barra: ${JSON.stringify(ordem)}`);
+  assert.deepEqual(rotulos, ["Carteira", "Menor Lance Único", "Início", "Ofertas Programadas"],
+    `rótulos do rail dessincronizados: ${JSON.stringify(rotulos)}`);
+});
+
+test("MC99/SEG1 (UTAC106b) · a rota antiga /mercado continua registada (alias)", () => {
+  const app = ler("src/App.jsx");
+  assert.ok(app.includes('path="/mercado"'),
+    "a rota /mercado desapareceu — links antigos passariam a 404 (UTAC106b mantém-na como alias)");
 });
 
 // ═══ SEG2 — Carteira limpa ══════════════════════════════════════════════════════

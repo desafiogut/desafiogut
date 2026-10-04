@@ -186,7 +186,12 @@ test("MC99.1/b · toda a rota REGISTADA é alcançável (ou está justificada)",
       "inacessível); documentado, não executado. Ver _logs/MC99.1-RELATORIO.md.",
   };
   // Justificadas por natureza (não se alcançam por <Link>/navigate):
-  const POR_CONFIG = /^\/(ativos|carteira|configuracoes|mercado|vitrine|programacao|seja-nosso-parceiro)$/;
+  // ⚠️ UTAC106b: `/menor-lance-unico` e `/ofertas-programadas` são DESTINOS DA BARRA
+  // DE NAVEGAÇÃO — chegam-se por `<NavLink to={path}>`, ou seja, por VARIÁVEL, e este
+  // extractor só vê literais/templates (blindspot declarado E5/E8/E9). A justificação
+  // não fica «em silêncio»: `src/__tests__/utac106b-navegacao-frases.test.mjs` e o teste
+  // MC99/SEG1 exigem que cada path de MAIN_TABS exista como `<Route path=...>` no App.jsx.
+  const POR_CONFIG = /^\/(ativos|carteira|configuracoes|mercado|menor-lance-unico|ofertas-programadas|vitrine|programacao|seja-nosso-parceiro)$/;
   const POR_PROVIDER = /^\/(redirect|excluir-conta|privacidade|seguranca|corp)$/;
   const orfas = [];
   for (const reg of registadas) {

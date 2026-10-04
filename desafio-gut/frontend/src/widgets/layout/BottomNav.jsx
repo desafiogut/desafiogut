@@ -12,19 +12,25 @@ const IconDashboard = (p) => <NavIcon name="dashboard" size={22} {...p} />;
 const IconTarget    = (p) => <NavIcon name="target" size={22} {...p} />;
 const IconTrending  = (p) => <NavIcon name="trending" size={22} {...p} />;
 const IconMore      = (p) => <NavIcon name="more" size={22} {...p} />;
+const IconTicket    = (p) => <NavIcon name="ticket" size={22} {...p} />;
 const IconWallet    = (p) => <NavIcon name="wallet" size={22} {...p} />;
 const IconShield    = (p) => <NavIcon name="shield" size={22} {...p} />;
 const IconSettings  = (p) => <NavIcon name="settings" size={22} {...p} />;
 const IconLogOut    = (p) => <NavIcon name="logout" size={22} {...p} />;
 const IconClose     = (p) => <NavIcon name="close" size={22} {...p} />;
 
-// MC99 — ordem: Início · Carteira · Lances · Mais (era Início · Lances · Carteira).
-// A Carteira sobe para 2.º porque é onde o utilizador COMUM deposita (PIX) e troca por
-// senhas — é a porta do dinheiro, e estava atrás dos Lances. "Mais" fecha sempre.
+// UTAC106b — nova ordem: Carteira · Menor Lance Único · Início · Ofertas Programadas · Mais.
+// (MC99 tinha: Início · Carteira · Lances · Mais.) A **Carteira abre a barra** (é a porta do
+// dinheiro: PIX → saldo); **«Menor Lance Único»** substitui «Lances» (nome da modalidade,
+// alinhado com a NORTE Via B e o Regulamento Art. 7); **«Início»** passa a 3.º (ponto de
+// chegada, não de partida); **«Ofertas Programadas»** entra como 4.ª (programa de fidelidade —
+// Passe R$ 2,00 → pontos → cartão). A trava EM_BREVE_MODE é do CONTEÚDO (na própria página),
+// não da aba — a aba aparece, a oferta é que ainda não abre. "Mais" fecha sempre.
 const MAIN_TABS = [
-  { path: "/",         label: "Início",   Icon: IconDashboard, end: true,  ariaLabel: "Ir para Dashboard" },
-  { path: "/carteira", label: "Carteira", Icon: IconWallet,    end: false, ariaLabel: "Ir para Minha Carteira" },
-  { path: "/mercado",  label: "Lances",   Icon: IconTarget,    end: false, ariaLabel: "Ir para Mercado de Lances" },
+  { path: "/carteira",            label: "Carteira",            Icon: IconWallet,    end: false, ariaLabel: "Ir para Minha Carteira" },
+  { path: "/menor-lance-unico",   label: "Menor Lance Único",   Icon: IconTarget,    end: false, ariaLabel: "Ir para Menor Lance Único" },
+  { path: "/",                    label: "Início",              Icon: IconDashboard, end: true,  ariaLabel: "Ir para Dashboard" },
+  { path: "/ofertas-programadas", label: "Ofertas Programadas", Icon: IconTicket,    end: false, ariaLabel: "Ir para Ofertas Programadas" },
 ];
 
 const SECONDARY_LINKS = [
@@ -326,7 +332,10 @@ const dockLinkStyle = {
   textDecoration: "none", padding: 0,
 };
 const dockLabelStyle = {
-  fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.02em", lineHeight: 1,
+  fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.02em",
+  // UTAC106b — com 4 abas + «Mais» os rótulos são mais longos («Menor Lance Único»,
+  // «Ofertas Programadas»): passa a permitir 2 linhas centradas em vez de transbordar.
+  lineHeight: 1.05, textAlign: "center", maxWidth: "100%", whiteSpace: "normal", wordBreak: "break-word",
 };
 
 // DockItem — cápsula de cada tab. Quando ativo e indicator=true, renderiza o
@@ -371,7 +380,7 @@ function DockItem({ active, reduce, indicator = true, children }) {
           zIndex: 0,
         }} />
       )}
-      <span style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px" }}>
+      <span style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", width: "100%" }}>
         {children}
       </span>
     </motion.span>

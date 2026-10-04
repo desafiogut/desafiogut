@@ -6,10 +6,12 @@
 // dos paths SVG, exposta via <NavIcon name size strokeWidth/>.
 //
 // O QUE NÃO está aqui (de propósito): as LISTAS de navegação e o agrupamento.
-// Sidebar é um rail plano; o mobile usa 3 tabs principais + overflow "Mais", com
-// rótulos curtos ("Início"/"Lances"/"Carteira") diferentes do desktop. Essa
-// divergência é de superfície (apresentação), não duplicação — fica em cada
-// componente. Aqui mora só o que era byte-a-byte igual: os desenhos dos ícones.
+// Sidebar é um rail plano; o mobile usa 4 tabs principais + overflow "Mais".
+// ⚠️ UTAC106b: os rótulos das 4 tabs principais são AGORA IGUAIS nos dois
+// componentes (decisão do operador: «BottomNav e Sidebar em sincronia») — a antiga
+// divergência de superfície («Início»/«Lances» no mobile vs «Dashboard»/«Mercado de
+// Lances» no rail) foi superseded. Aqui mora só o que é byte-a-byte igual: os desenhos
+// dos ícones (incl. o novo `ticket` de «Ofertas Programadas»).
 //
 // NavIcon emite o MESMO <svg> que os componentes antigos (viewBox 24, fill none,
 // stroke currentColor, linecap/linejoin round). Acresce `aria-hidden` (já usado
@@ -56,6 +58,13 @@ const PATHS = {
   ),
   chevronLeft: <polyline points="15 18 9 12 15 6"/>,
   chevronRight: <polyline points="9 18 15 12 9 6"/>,
+  // UTAC106b — ícone da aba «Ofertas Programadas» (bilhete/passe = o Passe Desafio).
+  ticket: (
+    <>
+      <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4Z"/>
+      <line x1="13" y1="7" x2="13" y2="17"/>
+    </>
+  ),
   more: (
     <>
       <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>

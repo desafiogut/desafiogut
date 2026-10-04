@@ -209,6 +209,24 @@ function OverlayVencedor({
   );
 }
 
+// UTAC106b — FRASE DE EFEITO da modalidade «Menor Lance Único» (topo da página).
+//
+// ESCOLHA = Opção A (das 3 propostas no enunciado) e porquê, medido contra as três fontes:
+//  · GATE LEGAL (`TermosConsentimento.jsx`, Art. 7): «O DesafioGUT funciona sempre através da
+//    pergunta: "QUANTO VOCÊ OFERTA POR... este produto ou serviço?" — O MENOR LANCE ÚNICO
+//    GANHA.» A frase usa o MESMO invariante («o menor lance único») e o verbo do desfecho em
+//    «leva» — sinónimo coloquial de «ganha», que é o verbo que o próprio Regulamento usa.
+//  · Opção B («compra») foi DESCARTADA: o Regulamento não caracteriza o desfecho como compra
+//    (usa «ganha»/«contemplado», Art. 13) e «compra» sugere um preço de venda fixo que a
+//    modalidade não tem — o valor é o lance do próprio participante.
+//  · Opção C («Se ninguém der igual, o item é seu») foi DESCARTADA por descrever MAL a regra:
+//    um lance único mas NÃO menor não ganha, e a frase omitia essa condição — risco de oferta
+//    enganosa (CDC arts. 30/31) e de contradição com os termos que o utilizador aceitou.
+//  · GOOGLE PLAY: zero termos de álea/aposta — nada de «sorte», «azar», «aposta», «loteria»,
+//    «leilão» (glossário oficial, `glossario.test.mjs`). O que decide é HABILIDADE (escolher o
+//    menor valor que fique ÚNICO), não o azar. Mantém-se «jogo de habilidade» (NORTE Via B).
+const FRASE_MENOR_LANCE_UNICO = "Quanto você paga por esse item? O menor lance único leva!";
+
 export default function MercadoLances() {
   const isMobile = useIsMobile();
   const {
@@ -270,6 +288,18 @@ export default function MercadoLances() {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+
+        {/* UTAC106b — frase de efeito da modalidade, no TOPO da página (acima do cabeçalho).
+            Escolha e justificação na constante FRASE_MENOR_LANCE_UNICO (topo do ficheiro). */}
+        <p style={{
+          margin: 0,
+          padding: isMobile ? "0.85rem 1rem 0" : "1rem 2rem 0",
+          textAlign: "center",
+          fontSize: isMobile ? "0.9rem" : "1.05rem",
+          fontWeight: 800, color: COR.gold, letterSpacing: "0.01em",
+        }}>
+          {FRASE_MENOR_LANCE_UNICO}
+        </p>
 
         {/* ── Cabeçalho (MC66 Direção C): GlassHeader compõe identidade+auth,
              HERO "EM BREVE" (foco) + seletor de modo, e o rodapé legal fino.

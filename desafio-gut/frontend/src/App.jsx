@@ -46,6 +46,7 @@ import { decidirDestino, DESTINO, PRAZO_ESTADO_NEUTRO_MS } from "./lib/encaminha
 
 const MinhaCarteira        = lazy(() => import("./pages/MinhaCarteira.jsx"));
 const MercadoLances        = lazy(() => import("./pages/MercadoLances.jsx"));
+const OfertasProgramadas   = lazy(() => import("./pages/OfertasProgramadas.jsx")); // UTAC106b
 const ScheduleView         = lazy(() => import("./components/ScheduleView.jsx"));
 const MeusAtivos           = lazy(() => import("./pages/MeusAtivos.jsx"));
 const Seguranca            = lazy(() => import("./pages/Seguranca.jsx"));
@@ -456,6 +457,14 @@ export default function App() {
           <Route index              element={<DashboardOuCorporativo />} />
           <Route path="/carteira"   element={<MinhaCarteira />} />
           <Route path="/mercado"    element={<MercadoLances />} />
+          {/* UTAC106b — «Menor Lance Único» é ALIAS de /mercado (o mesmo ecrã): a rota
+              antiga continua a funcionar (nenhum link quebra) e a modalidade ganha o seu
+              nome próprio (NORTE Via B + Regulamento Art. 7). */}
+          <Route path="/menor-lance-unico" element={<MercadoLances />} />
+          {/* UTAC106b — Ofertas Programadas (programa de fidelidade: Passe R$ 2,00 → pontos
+              → cartão). Placeholder: o conteúdo real chega em UTAC próprio; enquanto isso a
+              página está TRAVADA por EM_BREVE_MODE (a trava é do conteúdo, não da aba). */}
+          <Route path="/ofertas-programadas" element={<OfertasProgramadas />} />
           <Route path="/vitrine"       element={<Vitrine />} />
           <Route path="/vitrine/:slot" element={<Vitrine />} />
           {/* MC15 ITEM 4 — detalhe de produto do marketplace */}
