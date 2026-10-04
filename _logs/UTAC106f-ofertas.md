@@ -176,10 +176,33 @@ palpites e nova apuração).
 Não exige `tipo === "programado"` nem `status` aberto (o comentário do ficheiro dizia que sim). Pela API é
 possível palpitar numa edição Relâmpago/encerrada. A corrigir no 106g.
 
-## ⛔ UTAC106f NÃO FECHADO
+## ⛔→✅ FECHO PÓS-VEREDICTO — R1 corrigido (decisão do operador: OPÇÃO A)
 
-O ecrã, a infra do palpite, os testes, a migração aplicada e o deploy estão feitos e verdes — mas **R1 é
-um requisito crítico declarado** e a RESSALVA manda **PARAR e reportar**. Este registo fica assim, com a
-conclusão errada À VISTA marcada como REFUTADA (nunca apagada). **A produção está com o comportamento
-refutado** (48+2 → 50); a exposição real é baixa (não há edição Programada a decorrer ⇒ o campo do
-palpite não aparece a ninguém), mas fica declarado.
+O VALIDADOR REFUTOU a minha alegação «o palpite não decide o cartão» (acima, mantida À VISTA). O
+operador decidiu, na sequência, a **opção A**: **o cartão conta SÓ pontos de COMPRA.** Correcção
+aplicada no commit `1eb3ca1`:
+
+- `_lib/passe-pontos.mjs` — **adições**: `TIPOS_QUE_CONTAM_PARA_CARTAO` (compra/resgate), `pontosDeCompra(registo)`
+  e `podeResgatarCartaoComCompra(endereco)`. A `podeResgatarCartao()` ANTIGA (que compara o TOTAL) fica
+  **à vista marcada como NÃO usar para decidir o cartão** — nada apagado.
+- `ler-pontos.mjs` — devolve `pontosCartao` (o que conta para o cartão) e `bonusPalpite`; o limiar e o
+  `podeResgatarCartao` passam a usar `pontosCartao`.
+- `usePontos.js` / `OfertasProgramadas.jsx` — a **barra** e o «X / 50 pontos» usam os pontos de CARTÃO;
+  o bónus aparece em linha própria («🎯 Bónus de palpite: +N — não conta para o cartão»).
+- **Testes:** o teste que CODIFICAVA o defeito (`48+2=50, o bónus soma`) foi substituído por **4 testes
+  R1** no backend (incl. a regressão «48 de compra + 2 de bónus ⇒ NÃO desbloqueia») e **1 regressão de
+  render** no ecrã; **mutação 7/7** (novo **MP7** mata a regressão R1).
+- **Suíte:** frontend 752→**753/753** · backend 1024→**1028/1034** · `vite build` OK · deploy refeito
+  (bundle `index-BDo9ZgMU.js` → **`index-JXLwGXQc.js`**; home/health 200; `/ler-pontos` 401; o chunk ao
+  vivo traz «não conta para o cartão»; sha256 local == produção).
+
+**⚠️ Declarado: a correcção NÃO foi re-validada** (sem 2.ª ronda do validador). O `package-lock` foi
+sujado pelo build e restaurado (`5b40f11c…`); suíte re-corrida depois do deploy: VERDE.
+
+**Ainda em aberto (passam para o UTAC106g):** ⚠️ **R2** (idempotência da apuração por endereço, não por
+edição) e a **nota** de que `registar-palpite` não exige edição Programada/aberta.
+
+## Estado final do UTAC106f
+
+**Implementação e R1 fechados e verdes**; R2 + a nota da edição **passam para o 106g** (declarados, não
+esquecidos). HI5 excedido (≈2 h 45 com a ronda de correcção) — declarado.
