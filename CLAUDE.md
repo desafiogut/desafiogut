@@ -4531,3 +4531,41 @@ Consultar antes de mexer em segredos ou no CLI da Netlify.
 > `AppContext.rotasProibidas`; terminologia «paga» vs Art. 7 «OFERTA» (decisão de copy); guarda de álea
 > do `glossario.test.mjs` (`apostas?` não apanha a forma verbal); ordem dos itens secundários (cosmético).
 > Log: `_logs/UTAC106b-navegacao.md`; veredicto: `_logs/UTAC106b_SEG2_VALIDADOR.md`.
+
+> 🧾 **UTAC106c (2026-10-04) — CARTEIRA REDESENHADA + AS 4 PENDÊNCIAS DO UTAC106b FECHADAS.**
+> **SEG0** — `src/pages/MinhaCarteira.jsx`: o título do vidro de saldo passou de «💰 Minha Carteira» para
+> **«Carteira»** (nome canónico da navegação) e a etiqueta **«Saldo Disponível»** passou de cinza
+> (`COR.muted`) para **amarelo** (`COR.gold` = `#f5a623`) — título e subtítulo no mesmo par visual; o
+> **valor** do saldo continua a renderizar (`R$ …` / `R$ —` preservados). ⚠️ Isto partiu **3 guardas** do
+> `mc99-limpeza-ui.test.mjs` que fixavam o nome ANTIGO: foram actualizadas **mantendo a invariante**
+> (nome antigo = **0** ocorrências · **1 só** título · nenhum `<h1>`), contando `>Carteira<` (texto JSX) e
+> **não** `/Carteira/g` — o identificador `MinhaCarteira` inflacionaria a contagem. **SEG1** — o botão
+> «⚡ Lance Relâmpago» passou a **«⚡ Menor Lance Único»** (destino `/mercado` e modalidade `flash`
+> **inalterados** — GATE 4) e nasceu o botão **«Comprar Passe Desafio R$ 2,00»**, que abre um **balão de
+> confirmação** (`<Modal>` de `@/components/ui`); **Cancelar** fecha, **Confirmar** encaminha para
+> `/ofertas-programadas` (travada por `EM_BREVE_MODE`). ⚠️ **Zero lógica de compra no ecrã** (sem débito,
+> API ou gravação) — a compra do Passe é do **UTAC106e**; fixado por teste que proíbe `fetch(`/`apiPost`/
+> escrita no saldo nesse ficheiro. **SEG2 (pendência #1)** — `/ofertas-programadas` entrou no `Set
+> rotasProibidas` (`AppContext.jsx:640`), fechando o resíduo ⚠A1 do validador do 106b: o **lojista**
+> passa a ser expulso para `/corporativo`. **SEG3 (pendência #2)** — `FRASE_MENOR_LANCE_UNICO`
+> (`MercadoLances.jsx:234`) passou de «Quanto você **paga** por esse item?» para «Quanto você **oferta**
+> por esse item? O menor lance único leva!» — alinhamento com o **Art. 7** do Regulamento («QUANTO VOCÊ
+> OFERTA POR…»); a lista `AUTORIZADAS` do teste do 106b passou de **3 para 4** opções. **SEG4 (pendência
+> #3)** — `glossario.test.mjs`: `\bapostas?\b` → **`\bapost\w*\b`** e `\bsortes?\b` → **`\bsort\w*\b`**
+> (fecha o buraco das formas VERBAIS — «aposte», «apostar», «sorteio»); **provado nas DUAS direcções**
+> com o teste real (regex NOVO → RED; regex ANTIGO → GREEN, ou seja o buraco existia). **SEG5 (pendência
+> #4)** — a ordem dos itens **secundários** da `Sidebar` foi alinhada com o `SECONDARY_LINKS` do
+> `BottomNav` («Configurações» para o fim); **só a ordem**, estrutura do rail intacta. **Testes:** novo
+> `src/__tests__/utac106c-carteira.test.mjs` (12 testes, estático) e novo
+> `src/__tests__/utac106c-carteira-render.test.mjs` (**8 testes de RENDER + CLIQUE** com o
+> `_hook-runner`+`_ponte-ssr` do repo e duplos em `src/__tests__/_stubs-106c/` — fecha o limite ℹN5 do
+> 106b, «os testes são proxy de texto-fonte»); guardas do título no `mc99-limpeza-ui` e `AUTORIZADAS`
+> actualizados. Suíte **frontend 725/725 · backend 992/998** (era 705/705); `vite build` ✓. **Mutação:**
+> **6/6** do executor (1 por segmento) + **8/8** do validador adversarial. **Validador adversarial:
+> APROVADO COM RESSALVAS · 0 bloqueantes** (as **10** alíneas (a)-(j) resistiram todas); **3 notas ℹ️**,
+> duas **fechadas com teste/registo** (artefacto do render versionado; log commitado) e uma **escalada**
+> (copy contraditória do parágrafo do saldo, que continua a dizer «Lance Relâmpago»/«Lance Programado»).
+> **Resíduos declarados:** o parágrafo de apoio do saldo (P1) e o saldo em **outros** ecrãs (Dashboard,
+> modal PIX, Corporativo) ficam para UTAC próprio — **não** autorizados aqui. ⚠️ `_logs/DEBT.md` **não**
+> foi tocado (fora da lista AUTORIZA do enunciado — GATE 3): o registo da dívida de copy é decisão do
+> operador. Log: `_logs/UTAC106c-carteira.md`; veredicto: `_logs/UTAC106c_SEG7_VALIDADOR.md`.
