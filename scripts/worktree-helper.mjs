@@ -30,8 +30,19 @@ import { dirname, join, resolve } from "node:path";
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const RAIZ = resolve(AQUI, "..");
 
-/** Caminhos de node_modules que precisam de junction num worktree (A9). */
+/**
+ * Caminhos de node_modules que precisam de junction num worktree (A9).
+ *
+ * ⚠️ UTAC106x.5 (DEBT-006): a **raiz do monorepo** (`desafio-gut/node_modules`) também tem de
+ * ser ligada. As duas entradas `frontend/...` cobrem o que as apps importam em runtime; mas os
+ * testes do backend resolvem módulos com `createRequire(import.meta.url)` a partir de `_tests/`,
+ * e ao subir a árvore chegam a `desafio-gut/node_modules` — onde vivem as dependências **dev-only**
+ * (`solc`, `hardhat`, `@nomicfoundation/edr`). Sem esta 3.ª junction, o worktree dá
+ * **991/984/7 skipped** em vez de **998/992/6**: 7 testes não são sequer descobertos e 2 passam a
+ * skip. Medido nas duas direcções (com/sem a junction) — ver `_logs/UTAC106x.5-debt-006.md`.
+ */
 const JUNCTIONS = [
+  "desafio-gut/node_modules",
   "desafio-gut/frontend/node_modules",
   "desafio-gut/frontend/netlify/functions/node_modules",
 ];
