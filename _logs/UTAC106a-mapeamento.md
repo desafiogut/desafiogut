@@ -95,8 +95,10 @@ se `isAdmin`, `:72-74`).
 - **Navegação pelos dados:** tabs principais via **`<NavLink to=…>`** (`BottomNav.jsx:117`; Sidebar idem);
   itens do «Mais» via **`navigate(path)`** (`BottomNav.jsx:284`); botão «Sair» via `desconectar()` (`:304`).
 - **Quem esconde a navegação:** `src/lib/rotasTrabalho.js` — `ehRotaDeTrabalho()` (`:26-29`, prefixos
-  `/admin` e `/corporativo`) e `escondeNavegacaoConsumo()` (`:40-43`, só `/admin*`); consumidos em
-  `Layout.jsx:63-65` e `AppLayout.jsx:29`.
+  `/admin` e `/corporativo`) e `escondeNavegacaoConsumo()` (`:40-43`, só `/admin*`). **3 consumidores**
+  (declarados no próprio `rotasTrabalho.js:12`): `Layout.jsx:63-65`, `AppLayout.jsx:29` e
+  **`BackgroundCanvas.jsx:25` (import) / `:40` (uso)** — este último mede o 3.º uso (achado A2 do
+  validador, acrescentado no fecho).
 
 ### 1.5 Rotas do AppLayout (ordem do ficheiro, `App.jsx`)
 | Rota | Elemento | Linha |
@@ -122,6 +124,25 @@ Rotas públicas fora do `AppLayout`: `/excluir-conta` `:440` · `/privacidade` `
 (`BottomNav.jsx:25-38`) e de `NAV_ITEMS` (`Sidebar.jsx:26-38`) são strings directas.
 ⚠️ Existem chaves i18n correspondentes em `src/i18n/pt.js:6-23` (`nav.inicio`, `nav.carteira`, `nav.lances`,
 `nav.mais`, …) mas **nenhuma delas tem consumidor** (ver §i18n e a observação no fim do documento).
+
+### 1.7 Outras navegações (fora do escopo «nav de consumo» do UTAC106b — declaradas)
+- **Nav do painel ADM:** `src/components/admin/NavAdminPersistente.jsx` — **não** está no §Baseline de
+  candidatos (achado A5 do validador); é renderizado em **`src/components/admin/AdminLayout.jsx:276`**
+  (import `:36`). É a navegação do `/admin`, separada do BottomNav/Sidebar.
+- **Breadcrumbs (`<nav>` de trilha):** `src/pages/DetalheProduto.jsx:135` e
+  `src/pages/Vitrine.jsx:370` (esta com `aria-label="Trilha de navegação"`).
+- **Fronteira declarada:** o UTAC106b mexe na navegação **de consumo** (BottomNav + Sidebar); a nav do
+  admin, a do corporativo (`CORP_TABS`) e os breadcrumbs ficam **de fora** — ficam nomeados aqui para não
+  serem confundidos.
+
+### 1.8 Ficheiros DEPRECATED versionados — NÃO editar (achado A6 do validador)
+`git ls-files` mostra **5** backups `.bak-*` **tracked** (presentes no HEAD):
+`desafio-gut/frontend/src/App.jsx.bak-20260724145416` · `src/PrivyRoot.jsx.bak-20260724200959` ·
+`src/PrivyRoot.jsx.bak-custom-scheme-20260725182152` · `src/PrivyRoot.jsx.bak-oauth` ·
+`capacitor.config.ts.bak-20260725182152`.
+⚠️ O **`App.jsx.bak-*`** contém uma **tabela de rotas ANTIGA/divergente** (ex.: `/carteira` e `/mercado`
+**sem** o wrapper `AppLayout`). **O UTAC106b/106c NÃO devem editar estas cópias** — a fonte é
+`src/App.jsx`. Ficam declarados para evitar editar o ficheiro errado.
 
 ---
 
@@ -165,7 +186,16 @@ Desactivado quando `saldoReais < 2` ou `null` (`:223`, `:240`). Nota PIX + e-mai
   comentário de origem do blob em `MinhaCarteira.jsx:121-123` («Fonte: blob `saldo-rs:${address}`»).
 - **Auto-refresh:** ~30 s (comentário `MinhaCarteira.jsx:150-151`; botão manual «↻» em `:153-165`).
 - **Outro componente de saldo:** `src/components/WalletCard.jsx:42` (`WalletCard`) — lê
-  `apiGet("wallet?endereco=…")` (`WalletCard.jsx:53`); usado só no painel corporativo.
+  `apiGet("wallet?endereco=…")` (`WalletCard.jsx:53`); usado só no painel corporativo
+  (`CorporativoCarteira.jsx:307`).
+- ⚠️ **Outras superfícies onde o saldo aparece** (achado A4 do validador — **directamente relevante ao
+  UTAC106c**, que redesenha a Carteira: o saldo aparece em **mais de um ecrã**):
+  - **Dashboard:** `src/pages/Dashboard.jsx:174` (card «Senhas», `to:"/carteira"`) e `:177` (card «Saldo
+    (R$)», `to:"/carteira"`), com `pendente` quando o estado é `"stale"`.
+  - **Painel corporativo:** `src/pages/CorporativoDashboard.jsx:350` (card «Saldo wallet»,
+    `to:"/corporativo/carteira"`).
+  - **Modal de depósito PIX:** `src/components/ComprarFichasModal.jsx:308` («Saldo R$ disponível…») e
+    `:517-533` («Saldo Antes» / «Saldo Depois» = pré-visualização da compra).
 
 ---
 
@@ -209,7 +239,7 @@ Desactivado quando `saldoReais < 2` ou `null` (`:223`, `:240`). Nota PIX + e-mai
 | `TabelaLances` | `src/components/TabelaLances.jsx` | `lances, idEdicao, prazoTimestamp, encerrado` — `MercadoLances.jsx:327` |
 | `LanceStatusBadge` | `src/components/LanceStatusBadge.jsx:3` | `valor, status, mudou` — `MercadoLances.jsx:319-323`; também `DetalheProduto.jsx:229` |
 | `FeedbackLance` | `src/components/meus-ativos/FeedbackLance.jsx:37` | usado em `MeusAtivos.jsx:192` |
-| `GlassHeader` | `src/components/glass/GlassHeader.jsx:47-56` | compõe `AuthArea` + `ComingSoonHero` + `ModeSelector` + `AuctionStatusBar` |
+| `GlassHeader` | `src/components/glass/GlassHeader.jsx:12` (def) — compõe os filhos em `:41-57` | `AuthArea :41` · `ComingSoonHero :49` · `ModeSelector :50` · `AuctionStatusBar :54` |
 | `ComingSoonHero` / `ModeSelector` / `AuctionStatusBar` / `AuthArea` | `src/components/glass/` (`glassTokens.js` = `COR`) | herói, selector, rodapé fino, área de auth |
 | `OverlayVencedor` / `CountdownOverlay` / `MercadoConformidade` / `MercadoSkeleton` | `src/pages/MercadoLances.jsx` (`:71`, `:25`, `:372`, `:423`) | locais ao ficheiro |
 
@@ -307,10 +337,54 @@ Desactivado quando `saldoReais < 2` ou `null` (`:223`, `:240`). Nota PIX + e-mai
 
 ## §Validador adversarial (SEG3)
 
-_(a preencher — ver `_logs/UTAC106a_SEG3_VALIDADOR.md`)_
+**Despachado:** subagente Hermes independente, instruído a **TENTAR REFUTAR** (veredicto verbatim +
+resposta do executor em `_logs/UTAC106a_SEG3_VALIDADOR.md`).
+
+> **VEREDICTO: PARCIAL · 0 bloqueantes · 0 alegações REFUTADAS.** O validador confirmou **todos** os
+> `ficheiro:linha` do documento (incluindo as 10 contagens de linha: AppContext 1497 · pt.js 150 ·
+> BottomNav 381 · Sidebar 305 · Layout 115 · AppLayout 41 · MinhaCarteira 332 · MercadoLances 449 ·
+> App.jsx 517 · main.jsx 124) e a **alegação forte** («`nav.*` 18 + `dash.*` 10 sem consumidor»,
+> testada por 5 vias incluindo `t() ` dinâmico e testes → **verdadeira**). **PARCIAL** porque o mapeamento
+> **não era exaustivo**: apontou **5 lacunas de cobertura + 1 imprecisão**, todas **corrigidas neste
+> UTAC**.
+
+| Achado | Grav. | Lacuna | Tratamento (aplicado) |
+|---|---|---|---|
+| A1 | ⚠ | **Nenhum** `ficheiro:linha` errado / inexistente / `.bak-*` apresentado como produção | — |
+| A2 | ℹ | `rotasTrabalho.js` tem **3** consumidores (faltava `BackgroundCanvas.jsx:25/:40`) | §1.4 corrigido |
+| A3 | ℹ | `GlassHeader` localizado por intervalo impreciso (`:47-56` em vez de def `:12`, composição `:41-57`) | §3.3 corrigido |
+| A4 | ℹ | Superfícies de **saldo** não cobertas: `Dashboard.jsx:174/:177`, `CorporativoDashboard.jsx:350`, `ComprarFichasModal.jsx:308/:517-533` | §2.4 acrescentado |
+| A5 | ℹ | Navegação **admin** não coberta: `NavAdminPersistente.jsx` (`AdminLayout.jsx:276`) + breadcrumbs | §1.7 nova |
+| A6 | ℹ | **5 `.bak-*` DEPRECATED versionados** (incl. `App.jsx.bak-*` com rotas antigas) | §1.8 nova |
+
+**Erros dos meus instrumentos (declarados na resposta):** (1) cobertura inflacionada — não varri os
+**consumidores** de `rotasTrabalho.js` (que o próprio ficheiro declara) nem as superfícies alternativas
+de saldo; (2) citei `GlassHeader` pelo **fim** do bloco e tomei-o pelo **todo**; (3) não varri o repo por
+ficheiros deprecated versionados.
+**Limites do validador (declarados por ele):** não re-correu a suíte; sem verificação em runtime.
+**Correcções pós-veredicto: não re-validadas** (sem 2.ª ronda).
 
 ---
 
 ## §Registos e custo (SEG4)
 
-_(a preencher no fecho)_
+**Registo em 3 lugares (R18):**
+1. `_logs/UTAC106a-mapeamento.md` (este documento) + `_logs/UTAC106a_SEG3_VALIDADOR.md` (veredicto).
+2. `CLAUDE.md` — bloco **R14** resumido.
+3. `Desktop/RELATORIO-UTAC106a-MAPEAMENTO.txt` (relatório ao operador).
+
+**Ficheiros criados:** `_logs/UTAC106a-mapeamento.md` · `_logs/UTAC106a_SEG3_VALIDADOR.md` · bloco R14 no
+`CLAUDE.md`. **Zero** ficheiros de código tocados (verificável: `git diff --name-only` só lista docs/logs).
+
+**Dívida nova:** as **18 chaves `nav.*` + 10 `dash.*`** sem consumidor ficam **declaradas** (não
+registadas em `DEBT.md` — RESSALVA 7 manda reportar antes de registar). Candidata a `DEBT` própria.
+
+**Custo de API (medido no fecho):**
+- **Executor** (mesma sessão CLI do UTAC106x.6 — `20261004_104512_7dad39`, `source=cli`): a plataforma
+  **não** abre sessão por UTAC. Leitura no fecho do x.6 = US$ 0,0621; leitura agora = US$ 0,1191 ⇒
+  **106a ≈ US$ 0,057** (diferença). ⚠️ é **estimativa**.
+- **Validador adversarial** (sessão própria `20261004_123433_c76e1c`, `source=subagent`): 58 mensagens ·
+  36 tool calls · **≈ US$ 0,0228**.
+- **Total estimado do UTAC106a: ≈ US$ 0,080.**
+- **Saldo real da API (medido):** arranque **US$ 7,28** → fecho **US$ 7,22** ⇒ **consumo real ≈ US$ 0,06**
+  (inclui as delegações). Reportadas as duas leituras separadas — *estimativa da base* vs *saldo real*.

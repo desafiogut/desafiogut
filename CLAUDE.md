@@ -4493,3 +4493,20 @@ Consultar antes de mexer em segredos ou no CLI da Netlify.
 > **1 lacuna real** — item (2) «transacção separada genuína», ausente do §6 do gabarito — **+ 1 candidata**
 > («Ads»/«App access» no §4). A afirmação errada fica **à vista, marcada REFUTADA** em `DEBT-020` (não
 > apagada). Veredicto verbatim: `_logs/UTAC106x.6_SEG4_VALIDADOR.md`.
+
+> 🗺️ **UTAC106a (2026-10-04) — MAPEAMENTO DO FLUXO ACTUAL (base do UTAC106b/106c).** Documento
+> **`_logs/UTAC106a-mapeamento.md`** (só leitura — **zero código de produção alterado**). Medido no
+> `884eed9`: a **navegação actual** (mobile) é **Início (`/`) → Carteira (`/carteira`) → Lances
+> (`/mercado`) → botão «Mais»** (`src/widgets/layout/BottomNav.jsx:24-28` + `:132-143`), com o **desktop**
+> a divergir nos rótulos (`Sidebar.jsx:25-39`: «Dashboard»/«Minha Carteira»/«Mercado de Lances»); as abas
+> são **literais**, não chaves i18n. A **Carteira** (`src/pages/MinhaCarteira.jsx:31`) mostra «**Saldo
+> Disponível**» (`:174`, cor `#6b7db8`) com o valor em `#f5a623` (`:175-189`) e 3 botões (💰 Depositar PIX
+> `:203` · 🎫 Trocar R$ 2,00→1 Senha `:217` · ⚡ Lance Relâmpago `:238`→`/mercado`). Os **Lances**
+> (`MercadoLances.jsx:212`) abrem com o herói «**EM BREVE**» (`ComingSoonHero.jsx:48`) e a regra «Menor
+> lance único vence · Art. 8» (`:55`); ⚠️ a pergunta «QUANTO VOCÊ OFERTA POR…» **já não está** nessa tela
+> (só no gate legal, `TermosConsentimento.jsx:109`). Mapeados ainda o **AppContext**
+> (`AppContext.jsx:145/178/1454`) e o **i18n** (`src/i18n/pt.js` — **18 chaves `nav.*` + 10 `dash.*` SEM
+> consumidor**, declarado como possível dívida e **NÃO** registada — RESSALVA 7). **Validador
+> adversarial: PARCIAL · 0 bloqueantes · 0 alegações refutadas** — confirmou todos os `ficheiro:linha` e
+> apontou 5 lacunas de cobertura + 1 imprecisão, **todas corrigidas** (§1.4/§1.7/§1.8/§2.4/§3.3). Suíte
+> **694/694 · 992/998**. Log: `_logs/UTAC106a-mapeamento.md`; veredicto: `_logs/UTAC106a_SEG3_VALIDADOR.md`.
