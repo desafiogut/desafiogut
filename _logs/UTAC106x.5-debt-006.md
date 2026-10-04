@@ -2,7 +2,7 @@
 
 **Tipo:** infraestrutura de testes · **Skill UTAC** · **Data:** 2026-10-04 ·
 **Modelo:** deepseek-v4-flash (Hermes Agent) · **Baseline:** `49889cb` · **Estado:** **FECHADO**
-(`8499425` fix → `02bc335` DEBT/R14 → fecho)
+(`8499425` fix → `02bc335` DEBT/R14 → `44edfd5` correcção do F1 → fecho)
 
 > Corrige a **DEBT-006** (baixa severidade) antes do UTAC106a, para o mapeamento do fluxo correr com
 > medição fiável. Diferente do UTAC106x.3: ali documentou-se a **criação/remoção de junctions** (A13);
@@ -93,8 +93,9 @@ caminho relativo, encontra 991 em vez de 998 — a diferença vem de *imports* q
 A decisão é **(a) fechar**, porque é viável **sem** alterar testes, **sem** alterar produção e **sem**
 alterar a regra A13/A9 — os três limites do enunciado.
 
-**A correcção (Ponytail — uma linha, GATE 6):** acrescentar `"desafio-gut/node_modules"` à lista
-`JUNCTIONS` de `scripts/worktree-helper.mjs`. Nada mais.
+**A correcção (GATE 6):** a lista `JUNCTIONS` de `scripts/worktree-helper.mjs` passa a cobrir as
+**duas raízes** que faltavam — `desafio-gut/node_modules` (raiz do **monorepo**) e `node_modules`
+(raiz do **git**). A segunda veio da ronda 1 de validação (achado **F1**, §4.2).
 
 **GATE 8 — bidireccional, medido nas duas direcções:**
 
@@ -111,7 +112,7 @@ alterar a regra A13/A9 — os três limites do enunciado.
 - Repo principal: **VERDE 694/694 + 992/998** — **sem regressão**.
 - Teste do próprio helper: **12/12** (usa `res.junctions.length >= 1` e itera, por isso aceita a 3.ª
   junction sem alteração — verificado antes de mexer, porque o enunciado **proíbe alterar testes**).
-- As 3 junctions são criadas e **removidas** sem tocar no `node_modules` real (o helper faz `rmdir`
+- As **4** junctions são criadas e **removidas** sem tocar no `node_modules` real (o helper faz `rmdir`
   primeiro, A13) — o `remover` devolveu `ok:true`.
 
 **DEBT-006 → FECHADA**, com citação do commit (ver §5).
@@ -143,10 +144,10 @@ Subagente independente em worktree próprio (criado com `scripts/worktree-helper
 
 | # | Achado | Tratamento |
 |---|---|---|
-| **⚠️ F1** | **Residual latente:** o fix ligava só `desafio-gut/node_modules`. A **raiz do GIT** (`DESAFIOGUT/node_modules`, 449 pacotes) continuava por ligar ⇒ **105 pacotes** (ex.: `chai`, `ts-node`, `typechain`, `@solidity-parser/parser`) resolviam no main e **não** no worktree. **Impacto actual: nulo** (nenhum teste os importa — medido), mas a equivalência **não era total** e isso não estava documentado | **FECHADO** (§4.2) — 4.ª junction |
+| **⚠️ F1** | **Residual latente:** o fix ligava só `desafio-gut/node_modules`. A **raiz do GIT** (`DESAFIOGUT/node_modules`) continuava por ligar ⇒ **~93 pacotes** (ex.: `chai`, `ts-node`, `typechain`, `@solidity-parser/parser`) resolviam no main e **não** no worktree. **Impacto actual: nulo** (nenhum teste os importa — medido), mas a equivalência **não era total** e isso não estava documentado | **FECHADO** (§4.2) — 4.ª junction |
 | ℹ️ F2 | Deriva A13: a regra documenta **2** junctions, o helper passa a criar **4** | **Declarado** — o enunciado **proíbe** alterar a A13 (pendência para UTAC próprio) |
 | ℹ️ F3 | O log mantinha «Estado: em curso» e §4/§5 por preencher | **CORRIGIDO** (§4/§5 fechados agora) |
-| ℹ️ F4 | `solc`/`er` não estão no `package-lock.json` ⇒ em CI (`npm ci`) o grupo MC93-E volta a saltar | **Declarado** — o «verde» do worktree reproduz o **main local**, não o CI (limite pré-existente, documentado no próprio teste) |
+| ℹ️ F4 | `solc`/`edr` não estão no `package-lock.json` ⇒ em CI (`npm ci`) o grupo MC93-E volta a saltar | **Declarado** — o «verde» do worktree reproduz o **main local**, não o CI (limite pré-existente, documentado no próprio teste) |
 
 > **Veredicto (verbatim):** *«VEREDICTO: **APROVADO** (com 1 residual ⚠️ latente + 2 ℹ️)»*
 
@@ -159,7 +160,40 @@ worktree continua **0**. Adoptada: `JUNCTIONS` passa a ter **4** entradas (as **
 **694/694 + 992/998** (idêntico ao repo principal).
 
 > ⚠️ **Declarado:** a versão que o validador aprovou tinha **3** junctions; a versão final tem **4**. A
-> correcção do F1 **não passou por validação independente** (HI5 — ver §6).
+> correcção do F1 **não passou por validação independente** — resolvido pela ronda 2 (§4.3).
+
+### 4.3 Ronda 2 — commit `44edfd5` → **PARCIAL** (o CÓDIGO resistiu; a DOCUMENTAÇÃO não)
+
+Objectivo: refutar as **correcções** (a 4.ª junction). **Nenhum dos eixos 1–5 pegou**; o que ele refutou
+foi o **registo**.
+
+**Eixos 1–5 — REFUTAÇÃO FALHOU (tudo confirmado por medição própria):**
+
+- **(1)** enumerou os **450** pacotes top-level da raiz do GIT: main resolve **430** · worktree resolve
+  **430** · **0 resolvem só num lado** ⇒ equivalência de resolução **total**. ℹ️ O log declarava **105**;
+  medido = **93** (figura secundária — a afirmação substantiva mantém-se, e foi corrigida no §4.1).
+- **(2)** comparação **teste a teste** com reporter TAP: frontend **393/393** linhas iguais · backend
+  **955/955** iguais · **0 só num lado**; as 6 skips idênticas.
+- **(3)** `git status` do worktree **vazio**, mesmo **depois** de correr a suíte lá.
+- **(4)** exercido num worktree **descartável**: `criar` → 4 junctions; `remover` → «reparse points: 4» +
+  `rmdir` ×4 + exit 0; `node_modules` real **inalterado** (383/570/501/416 antes e depois).
+- **(5)** **nenhuma raiz por ligar** (as 43 sob `.netlify/functions-serve/*` são artefactos de build, **não**
+  ancestrais de nenhum `_tests/`).
+
+**Eixo 6 — ⚠️ REFUTADO (a documentação estava incoerente) — CORRIGIDO:**
+
+| Incoerência apontada | Correcção |
+|---|---|
+| O **R14** (`CLAUDE.md:4458`) dizia «as **duas** raízes» e, na cláusula final, «o helper cria **três**» — **auto-contraditório** (cria quatro) | ✅ «cria **três**» → «cria **quatro**» |
+| `DEBT.md:34` descrevia as duas raízes mas **fechava citando `8499425`** (o commit intermédio, de 3 junctions) | ✅ passa a citar `8499425` **e** `44edfd5` |
+| O **log** fechava em `8499425 → 02bc335` e o `44edfd5` **não aparecia em lado nenhum**; o §3 ainda dizia «3 junctions» | ✅ cabeçalho, §3 e §5 actualizados; §4.3 acrescentado |
+
+> **Veredicto (verbatim):** *«VEREDICTO: **PARCIAL** — a correcção do código resistiu a todas as tentativas de refutação (eixos 1–5 ✅), mas o eixo 6 (documentação) tem incoerências reais.»*
+
+**Lição (declarada):** o código estava certo na ronda 1 e continuou certo na ronda 2 — o que falhou **duas
+vezes** foram os **instrumentos de registo** (o R14 ficou meio-actualizado e o log não citava o commit que
+o fechou). É a mesma classe de defeito que a série vem apanhando: **não é o produto que erra, é o registo
+que não acompanha.**
 
 ---
 
@@ -172,9 +206,9 @@ worktree continua **0**. Adoptada: `JUNCTIONS` passa a ter **4** entradas (as **
 | Decisão | ✅ **(a) FECHAR** |
 | Worktree dá os mesmos números do repo | ✅ **694/694 + 992/998** nos dois |
 | Suíte no repo principal verde | ✅ sem regressão |
-| Validador adversarial + veredicto | ✅ **APROVADO** (§4.1) |
+| Validador adversarial + veredicto | ✅ ronda 1 **APROVADO** (§4.1) → ronda 2 **PARCIAL**, com as incoerências de **registo** corrigidas (§4.3) |
 | Registo em 3 lugares | ✅ abaixo |
-| Commit + push foreground | ✅ `8499425` (fix) → `02bc335` (+ DEBT/R14) → fecho |
+| Commit + push foreground | ✅ `8499425` (fix) → `02bc335` (+ DEBT/R14) → `44edfd5` (F1, 4.ª junction) → fecho |
 | Custo de API | ✅ §6 |
 
 **Registo em 3 lugares (R18):**
