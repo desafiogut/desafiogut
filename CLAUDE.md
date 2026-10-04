@@ -4569,3 +4569,16 @@ Consultar antes de mexer em segredos ou no CLI da Netlify.
 > modal PIX, Corporativo) ficam para UTAC próprio — **não** autorizados aqui. ⚠️ `_logs/DEBT.md` **não**
 > foi tocado (fora da lista AUTORIZA do enunciado — GATE 3): o registo da dívida de copy é decisão do
 > operador. Log: `_logs/UTAC106c-carteira.md`; veredicto: `_logs/UTAC106c_SEG7_VALIDADOR.md`.
+
+> 🚀 **UTAC106c — DEPLOY (2026-10-04, comando adicional do operador).** O push **não** disparou
+> auto-deploy (produção continuou em `index-Dv6PWHYo.js`; medido 3×). Correu-se `netlify deploy --prod`
+> em **foreground** a partir da raiz do repo → **`✔ Deploy is live!`** (build **3m49s**). Produção:
+> `https://silly-stardust-ca71bc.netlify.app` · bundle **`index-Dv6PWHYo.js` → `index-DrXuiYji.js`** · home
+> **200** e `/.netlify/functions/health` **200**. Verificado nos
+> **chunks lazy** (a app é code-split; medir só a entrada daria falso negativo): o chunk da Carteira traz
+> «Comprar Passe Desafio» + «Saldo Disponível» + `#f5a623` e **já não** traz «Minha Carteira»; o dos
+> Lances traz «Quanto você oferta por esse item?». ⚠️ O build da Netlify corre `npm install` e
+> **alterou `desafio-gut/frontend/package-lock.json`** (ficheiro do NÃO AUTORIZA): o mutado foi
+> **arquivado fora do repo** e o ficheiro **restaurado ao HEAD** (sha256 `5b40f11c…`); a suíte foi
+> **re-corrida DEPOIS do deploy** (**725/725 · 992/998 VERDE**). Custo: **≈ US$ 0,25** de saldo real
+> (arranque **6,77** → fecho **6,52**); ≈ US$ 0,176 pela estimativa da base.

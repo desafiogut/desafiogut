@@ -380,8 +380,60 @@ título, nenhum `<h1>`). A ordem dos secundários é guardada pelo **teste novo 
 
 ## §SEG9 — Deploy (comando adicional do operador)
 
-*(executado DEPOIS do push deste commit — os resultados entram em ADENDA própria, num commit seguinte,
-para que este log fique versionado: a ordem é push → medir produção → deploy se preciso → adenda.)*
+**PASSO 1 — estado em produção ANTES:** bundle `index-Dv6PWHYo.js`, home **200**, health **200**.
+O bundle **local** (build do 106c) era outro (`assets/index-DYEvILwG.js`) ⇒ **deploy manual necessário**
+(o push **não** disparou auto-deploy: medido 3× com 20 s de intervalo, produção continuou em `Dv6PWHYo`).
+
+**PASSO 2 — deploy (foreground, GATE 10):** `netlify deploy --prod` a partir da raiz do repo
+(`netlify.toml` → base `desafio-gut/frontend`), CLI global `netlify-cli/26.1.0`.
+**Resultado: `✔ Deploy is live!`** · build **3m49,3s** · 266 ficheiros e **78 functions** hasheados,
+54 assets enviados, 15 functions. URL de produção: `https://silly-stardust-ca71bc.netlify.app`
+(deploy único: `6ac28dbe516291c0d01bdd0a--silly-stardust-ca71bc.netlify.app`).
+
+**PASSO 3 — verificação em produção:**
+
+| # | Verificação | Resultado |
+|---|---|---|
+| 1 | Site responde | **home 200** · **health 200** |
+| 2 | O bundle MUDOU | `index-Dv6PWHYo.js` → **`index-DrXuiYji.js`** ✅ |
+| 3 | Navegação nova ao vivo | chunk `assets/index-DrXuiYji.js` contém **«Menor Lance Único»** |
+| 4 | Código do 106c ao vivo (chunks *lazy*) | `MinhaCarteira-Cui1hJkC.js`: **«Comprar Passe Desafio»** ✅ · **«Saldo Disponível»** ✅ · `#f5a623` ✅ · **«Minha Carteira» = 0** ✅ — e `MercadoLances-DaYZbdtC.js`: **«Quanto você oferta por esse item?»** ✅ |
+
+> Nota: a app é **code-split** — o `index-*.js` é só a entrada (27 KB) e as páginas são chunks `lazy`.
+> Medir só o HTML/entrada daria 0 ocorrências das frases novas e um **falso negativo**; a verificação
+> acima desce aos chunks (e os nomes batem com o `dist/` local ⇒ o build da Netlify produziu o **mesmo**
+> artefacto).
+
+**⚠️ Efeito colateral medido e REVERTIDO:** o build da Netlify corre
+`npm install --legacy-peer-deps` e **alterou `desafio-gut/frontend/package-lock.json`**
+(sha256 `5b40f11c…` → `d1f12aaf…`) — ficheiro da lista **NÃO AUTORIZA**. O mutado foi **arquivado fora
+do repo** (`%TEMP%/utac106c-deploy-dirt/package-lock.json.mutado-pelo-deploy`) e o ficheiro **restaurado
+ao HEAD** (`git checkout -- …` ⇒ sha256 volta a `5b40f11c…`, `git status` limpo). O `node_modules` do
+frontend oscilou **502 → 501** entradas com o `npm install`; **suíte re-corrida depois do deploy:
+frontend 725/725 · backend 992/998 · VERDE** ⇒ ambiente saudável. As outras raízes ficaram iguais
+(raiz 383 · `desafio-gut` 570 · `functions` 416).
+
+---
+
+## §Custo (API) e duração
+
+**Duração:** arranque ≈ **13:59** → fecho ≈ **15:00** (as duas leituras de saldo abaixo datam o
+intervalo) ⇒ **≈ 1 h** de relógio, **dentro** do limite HI5 alargado a 2 h por decisão do operador.
+**Não** foi preciso dividir em 106c.1/106c.2.
+
+| Medição | Valor |
+|---|---|
+| **Saldo da API — arranque** (1.ª chamada da sessão) | **US$ 6,77** |
+| **Saldo da API — fecho** | **US$ 6,52** |
+| **Consumo REAL (diferença de saldo)** | **≈ US$ 0,25** (inclui as delegações) |
+| **Executor** — sessão própria `20261004_135946_f3f813` (`source=cli`) | 299 mensagens · 165 tool calls · **US$ 0,1474** (estimativa da base) |
+| **Validador adversarial** — sessão própria `20261004_141632_4576ab` (`source=subagent`) | 114 mensagens · 61 tool calls · **US$ 0,0288** |
+| **Total estimado (base `state.db`)** | **≈ US$ 0,176** |
+
+⚠️ As duas leituras vão **separadas**: *estimativa da base* (`estimated_cost_usd`) vs *saldo real da API*
+(diferença 6,77 → 6,52). A plataforma **abriu sessão própria** para este UTAC (ao contrário do 106b, que
+partilhou sessão com o 106a) — o custo do executor é portanto **directamente atribuível**, não uma
+diferença entre leituras.
 
 ---
 
