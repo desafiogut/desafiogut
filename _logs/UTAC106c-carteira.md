@@ -456,3 +456,27 @@ diferença entre leituras.
 4. **A lista `AUTORIZADAS` mantém as 3 opções antigas** (incluindo a de «paga») — decisão literal do
    enunciado («passa a **incluir** a nova versão»). A copy **corrente** é fixada pelo teste dedicado do
    106c, que morde (mutante M1).
+
+---
+
+## §9 — ADENDA DE FECHO (UTAC106d) — as 3 pendências editoriais
+
+> Esta secção é **acrescentada** pelo UTAC106d. O corpo original do UTAC106c (§1 … §Pendências,
+> linhas 1–458) **não foi alterado** — zero remoções (verificado por `git diff --numstat`:
+> inserções > 0, remoções = 0; `grep -c '^-[^-]'` = 0).
+
+1. **Pendência #1 — escopo do `mc99-limpeza-ui.test.mjs`:** O UTAC106b autorizava expressamente
+   «Alterar testes de navegação afectados». O `mc99-limpeza-ui.test.mjs` é um teste de navegação.
+   **Dentro do escopo.** Não é dívida.
+
+2. **Pendência #2 — dívida de copy em `DEBT.md`:** A mudança «paga» → «oferta» alinha com o
+   Regulamento Art. 7 («QUANTO VOCÊ OFERTA POR…»). É **correcção, não dívida**. Não se registra
+   em `DEBT.md`.
+
+3. **Pendência #3 — sentido do alinhamento dos secundários:** **BottomNav é a referência**
+   (mobile-first). A Sidebar alinha-se. Direcção confirmada pelo operador.
+
+**Fecho:** as **3 pendências editoriais** (§8 do relatório `Desktop/RELATORIO-UTAC106c-CARTEIRA.txt`,
+itens 8.1/8.2/8.3) ficam **fechadas** por decisão do operador no UTAC106d. As pendências técnicas
+do §Pendências do 106c (parágrafo de apoio do saldo, saldo noutros ecrãs, `.md` não versionados,
+lista `AUTORIZADAS`) **não** são tocadas por esta adenda.
