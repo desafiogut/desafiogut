@@ -83,7 +83,7 @@ esta» e «Ruan» continuam no ficheiro).
   (**#1, #2, #10, #24, #32**) e dizendo explicitamente que ficam **anotadas, não apagadas**.
   ⚠️ **1.ª tentativa (corrigida):** a errata foi posta no **cabeçalho** e as **+5 linhas deslocaram a
   row #24 da linha 32 para a 37** — quebrando a referência «`MC100_MATRIZ` **linha 32**» que a NORTE faz
-  (`CLAUDE.md:342`). Apanhado pelo **validador (⚠️ A1)**; movida para o fim ⇒ a row #24 **volta à linha
+  (`CLAUDE.md:343`). Apanhado pelo **validador (⚠️ A1)**; movida para o fim ⇒ a row #24 **volta à linha
   32** e a referência da NORTE fica **válida outra vez**.
 - **Row #24** (linha **32**): + **«⛔ R-19 REVERTIDA pelo UTAC106x.1 (2026-10-04)»** com a razão (com a
   Via B o requisito *«not subject to additional gambling or gaming licensing requirements»* passa a ser
@@ -94,10 +94,80 @@ esta» e «Ruan» continuam no ficheiro).
 
 ## §4 VALIDADOR ADVERSARIAL (SEG2)
 
-*(preenchido no fecho)*
+Subagente independente em worktree próprio (criado com `scripts/worktree-helper.mjs`, A13). Instrução
+literal do enunciado: *«Tenta refutar este realinhamento…»*.
+
+### 4.1 Ronda 1 — commit `8427aa1` → **PARCIAL**
+
+**Confirmado (não refutado):** suíte **694/694 · 992/998**; guarda da ficha **3/3**; **escopo respeitado**
+(`git diff --name-status` = só os 4 ficheiros autorizados, **zero código de produção**); **NORTE
+byte-idêntica**; **contradições da secção ESCOPO-ALVO todas anotadas** (0 sem anotação); **D3 confirmado**
+(o gabarito Play **não existe**); control bytes **2×0x00 + 2×0x1F** intactos.
+
+| # | Achado | Tratamento |
+|---|---|---|
+| **⚠️ A1** | **Ref cruzada partida — era minha:** a errata no **cabeçalho** da MATRIZ (+5 linhas) deslocou a **row #24 de 32 → 37**, quebrando «`MC100_MATRIZ` **linha 32**» (`CLAUDE.md:342`, `:4441`) | **CORRIGIDO** — errata movida para o **FIM** ⇒ row #24 **de volta à linha 32** |
+| **⚠️ A2** | D1 declarava os bytes de controlo em 2047-2048; no artefacto final estão em **2060–2061** (+13) | **CORRIGIDO** no log; verificado que a **sequência de bytes é igual à do baseline** |
+| ℹ️ I1 | Histórico não 100% verbatim (título antigo e o bullet `2. **Plataforma (MEI):**` não estavam como string exacta) | **CORRIGIDO** — título antigo **citado verbatim** na nota; **`~~MEI~~`** riscado |
+| ℹ️ I2 | «gabarito» Play referido na NORTE (§11, §7.1) sem ficheiro | **Declarado** (pré-existente do x.1) |
+| ℹ️ I3 | «ver R14» referido 3× sem bloco ancorado | **Declarado** — o R14 é o banner do x.1 (`CLAUDE.md:4441`) |
+| ℹ️ I4 | Fora de escopo e não anotado: banner do topo (linha 2), `:3987`, `:3770` ainda com MEI/DEC-09 superados; o banner do x.1 **sobre-promete** que o x.2 os corrigiria | **Declarado** — o enunciado **não autoriza** tocar fora dos 3 alvos |
+
+### 4.2 Correcções — commit `8aae4d6`
+
+A1 (errata movida para o fim, row #24 de volta à linha **32**), A2/D1 (posições medidas: baseline
+2047–2048 → **2060–2061**; `0x0D` pré-existente 3871 → 3884), I1 (histórico verbatim: título antigo +
+`~~MEI~~`).
+
+**Verificação:** suíte **694/694 · 992/998**; ficha **3/3**; auto-verificação **33/33** (com controlo
+negativo a morder); **sequência de bytes de controlo idêntica** ao baseline
+(`[0x0,0x1f], [0x0,0x1f], [0xd]`); prefixo 1–125 e NORTE em diante **byte-idênticos**.
+
+### 4.3 Ronda 2 — commit `8aae4d6` → **APROVADO**
+
+O validador **não conseguiu refutar nenhuma das correcções**. Verificado por medição:
+
+1. **Ref cruzada** — `sed -n '32p'` da MATRIZ começa por `| 24 | Google Play |`; a errata está no **fim**
+   do ficheiro; a âncora `| # | Norma |` voltou da linha 12 para a **7** (as +5 linhas saíram do
+   cabeçalho); as rows `#1..#41` estão **contíguas, sem gaps**. As duas refs da NORTE
+   (`CLAUDE.md:343` e `:4442`) são **verdadeiras**.
+2. **Histórico verbatim** — título antigo exacto presente (linha **133**) e `~~MEI~~` presente (linha **172**).
+3. **Bytes de controlo** — sequência **idêntica** ao baseline (`[0x00,0x1F,0x00,0x1F,0x0D]`), contagem 5==5,
+   **nenhum byte novo**; os 4 em **2060–2061**, o `0x0D` pré-existente em 3884.
+4. **Nada partido** — ficha **3/3**; suíte no repo principal **694/694 · 992/998**; nenhuma outra linha da
+   MATRIZ deslocada; refs por *row number* intactas.
+5. **Nada pior** — escopo respeitado (`git diff --name-only … -- desafio-gut/ scripts/ package.json` =
+   **vazio**); **NORTE byte-idêntica** (1.º byte divergente no offset 54178, dentro do ESCOPO-ALVO);
+   `git diff --diff-filter=D` = **vazio** (nada apagado).
+
+ℹ️ **Cosméticos declarados:** ℹ️1 esta log citava `CLAUDE.md:342` (off-by-one — a linha real é a **343**;
+corrigido); ℹ️2 markdown aninhado no bullet `~~MEI~~` (a strikethrough envolve a lista — cosmético).
+ℹ️ Suíte **no worktree** = `694/694 · 984/991` (7 skips por resolução de módulos via junction) =
+**DEBT-006**, não regressão.
+
+> **Veredicto (verbatim):** *«VEREDICTO: **APROVADO** (correcções refutadas apenas em detalhes cosméticos ℹ️)»*
 
 ---
 
-## §5 PENDÊNCIAS
+## §5 ENTREGA FINAL (checklist do enunciado)
 
-*(preenchido no fecho)*
+| # | Item | Estado |
+|---|---|---|
+| 1 | ESCOPO-ALVO v6.0 realinhado (fidelidade, sem SPA/MF, sem auto-declaração de fonte de verdade) | ✅ |
+| 2 | `docs/FICHA-PLAY-PT.md` realinhado | ✅ (guarda 3/3) |
+| 3 | `MC100_MATRIZ` anotado (R-19 revertido, histórico preservado) | ✅ |
+| 4 | Nenhuma contradição remanescente (grep aos termos contraditórios) | ✅ (0 sem anotação) |
+| 5 | Validador adversarial despachado + veredicto | ✅ (§4) |
+| 6 | Registo em 3 lugares | ✅ (log · artefactos no repo · `Desktop/UTAC106x.2-RELATORIO.md`) |
+| 7 | Commit + push foreground | ✅ (ficheiros individuais; **nunca** `git add -A`) |
+| 8 | Custo de API reportado | ✅ (declarado: não mensurável neste ambiente) |
+
+### Pendências declaradas
+
+1. ⚠️ **Sem R14 no `CLAUDE.md`** — o enunciado não autoriza alterar o `CLAUDE.md` fora da secção
+   ESCOPO-ALVO (GATE 3/HI4). **Declarado, não feito.**
+2. ⚠️ **A nota do x.1 dentro da NORTE** («a correcção é o UTAC106x.2») fica **desactualizada** — corrigi-la
+   é alterar a NORTE ⇒ **não autorizado**.
+3. **`protocol/regras/README.md`, `README.md` (raiz), `CLAUDE.md:67`** ainda «75 regras / A1-A12».
+4. **`docs/gabarito-play-console.md`** continua a não existir.
+5. ⚠️ **HI5:** este UTAC **excedeu 1 h** (2 rondas de validador com correcção). Declarado.
