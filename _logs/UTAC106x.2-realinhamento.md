@@ -30,6 +30,31 @@
 
 ---
 
+### §1.1 RE-CONFIRMAÇÃO DO SEG-1 (medida a 2026-10-04, no HEAD actual `850aac8`)
+
+Os 6 passos do SEG-1 foram re-medidos **depois** de o x.3 e o x.4 terem corrido, para garantir que o
+baseline registado acima (`21c5ee9`) continua válido. **A suíte é verde e o estado é limpo** — o
+realinhamento do x.2 não foi desfeito nem regrediu.
+
+| Passo do SEG-1 | Medido agora |
+|---|---|
+| 1 · x.1 fechou, HEAD novo, 0 pendentes | ✅ `HEAD == origin/main == 850aac8` (0/0); os 3 commits do x.1 (`fddf626`/`9cbf184`/`27f8b55`) são **ancestrais de `origin/main`**; `git status` = **0 rastreados alterados**; sem órfãos. Das 5 notas ℹ️ do x.1, **3 fecharam** (ℹ️1/ℹ️4 no x.2, ℹ️7 no x.4) e **2 seguem abertas** (ℹ️5 = DEBT-006; ℹ️6 = data do banner) |
+| 2 · `ESCOPO-ALVO v6.0` | **linhas 135–259** (header na **135**; a NORTE começa na **260**). O enunciado dizia «~126-137» — era a posição antiga (`21c5ee9`: 126–246); o x.4 empurrou +9 |
+| 3 · `docs/FICHA-PLAY-PT.md` | **106 linhas**; copy em **53 / 58 / 63–81** (eram 33–61 no baseline, +20 do x.2); declarações em 51/56/61; guarda `mc97` **3/3** |
+| 4 · `MC100_MATRIZ-CONFORMIDADE.md` | **65 linhas** · **rastreado no git** (fecha o ℹ️4 do x.1) · achado **R-19 = row #24 na LINHA 32** (a «linha ~24» do enunciado confunde *row* com *linha*; a linha 24 é a row #16) · errata do x.2 na **linha 61** |
+| 5 · suíte | **VERDE 694/694 · 992/998** (`node scripts/mc966-suite-harness.mjs ambos`, exit 0) + guarda da ficha **3/3** (exit 0) |
+| 6 · baseline | registado: **`850aac8`** (0/0 vs `origin/main`) |
+
+**Integridade no HEAD actual:** `git status` = 0 rastreados alterados · `git worktree list` = 2 (repo +
+scratchpad pré-existente) · `CLAUDE.md` = 4456 linhas com **4 bytes de controlo** (`2×0x00 + 2×0x1F`; há
+ainda **1×`0x0D` pré-existente**, na linha 3884, que **não** faz parte dos 4).
+
+⚠️ **Armadilha de medição (declarada):** a suíte corrida **dentro de um worktree isolado** dá **984/991**
+(7 *skips*, 0 falhas) em vez de 992/998 — é a **DEBT-006** (resolução de módulos via junction), **não**
+regressão. A medição válida é a do **repo principal**.
+
+---
+
 ## §2 SEG0 — ESCOPO-ALVO REALINHADO
 
 **Alterado:** `CLAUDE.md` linhas 126–246 (a secção inteira). **+12 linhas**. Prefixo (1–125) e a partir da
