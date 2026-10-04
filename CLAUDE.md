@@ -235,235 +235,157 @@ concurso, estorno, repasse, cupons. **Onda 3** (MEI/SPA): Regulamento v5, rodap�
 
 ---
 
-## 🎯 NORTE DO PRODUTO — Definição Consolidada (MC-NORTE-01, 2026-09-28)
+## 🎯 NORTE DO PRODUTO — Definição Consolidada (Via B — programa de fidelidade, 2026-10-04)
 
-> ⚠️ **SUPERADA ONDE DIVERGIR (MC100, 2026-09-28, R18).** O alvo passou a ser a secção «ESCOPO-ALVO v6.0» acima
-> (os 2 PDFs). Esta secção continua válida como **descrição do estado actual do código e histórico das decisões**; a
-> frase «esta secção prevalece» abaixo aplica-se ao resto do ficheiro, **não** à secção ESCOPO-ALVO.
+> ✅ **ESTA SECÇÃO PREVALECE SOBRE «ESCOPO-ALVO v6.0» (linha ~126) E DEMAIS DOCUMENTOS REFERENCIADOS.**
+> Decisão do operador **R18-C (2026-10-04)**, registada no UTAC106x (`_logs/UTAC106x-consolidacao.md` §6) e
+> executada no **UTAC106x.1**. A definição anterior — *Oferta Programada = concurso de previsões, com
+> autorização SPA/MF* — fica **SUPERADA**; o seu texto mantém-se **à vista** em §11 e no snapshot integral
+> `_logs/UTAC106x_NORTE-ANTERIOR.md` (P2 · GATE 15: nada é apagado).
+> ⚠️ *(A secção `ESCOPO-ALVO v6.0` ainda contém a nota contrária — «prevalece esta». A sua correcção é o
+> **UTAC106x.2**; aqui regista-se só a precedência desta NORTE.)*
 
-> **Esta é a definição de referência do produto.** Em caso de divergência entre esta secção e
-> qualquer outro trecho deste ficheiro, **esta secção prevalece** — e a divergência deve ser
-> corrigida no trecho, não aqui. Fontes: `docs/REGULAMENTO-v4.md` (v4.0), `docs/GLOSSARIO-OFICIAL.md`,
-> `docs/FICHA-PLAY-PT.md`, e os MCs de mapeamento (MAPA-01 dinheiro, MAPA-02 produto, MAPA-03 conformidade).
+> ⚠️ **FONTE E LACUNA (declarada — GATE 2).** A fonte desta consolidação é o **enunciado do UTAC106x/x.1
+> (2026-10-04)**. **Não existe** no repositório artefacto-fonte anterior (o enunciado diz que «a consolidação
+> já foi feita»): `find ~/Desktop ~/Downloads -newermt '2026-10-04'` → **0 ficheiros**; o `CLAUDE.md` tinha
+> **0 ocorrências** de `5.910`, `5.102`, `9.532`, `Quildo`, `colecion` antes deste UTAC. ⇒ **Este UTAC cria
+> o registo, não o copia.** ⚖️ O enquadramento jurídico/fiscal abaixo **não foi validado por jurista**; o
+> próprio repositório já exigia parecer (achados **R-19** e **R-02** em `_logs/MC100_MATRIZ-CONFORMIDADE.md`).
+> Tratar como **posição do operador**, não como facto verificado.
 
-### O que o DesafioGUT É
+### 1. Produto
 
-**Um e-commerce por venda à ordem (dropshipping), operado como torneio de habilidade**, que usa as
-modalidades **Oferta Relâmpago** e **Oferta Programada** como **mecanismo promocional de definição de
-preço**. O vendedor é o **Grupo União e Trabalho — GUT, CNPJ 23.040.066/0001-00** (`REGULAMENTO-v4.md:5`).
+#### 1.1 Definição
+**E-commerce por dropshipping** com **duas modalidades**:
 
-### Os 7 pilares
-
-| # | Pilar | O que significa | Onde está no repo (medido) |
+| Modalidade | Mecânica | Pago com | Enquadramento |
 |---|---|---|---|
-| 1 | **E-commerce** | venda de produtos/serviços físicos, com preço definido pelo lance vencedor | `REGULAMENTO-v4.md:5,25`; `TermosConsentimento.jsx:82-84`; catálogo em `produtos.mjs:47-49` |
-| 2 | **Dropshipping** | entrega pela Loja do patrocinador, conforme a edição | `REGULAMENTO-v4.md:5,41,75`; `GlassHeader.jsx:35`; `TermosConsentimento.jsx:82` |
-| 3 | **Ofertas inteligentes** | Relâmpago (saldo) + Programada (senhas), cada edição indica a sua | `REGULAMENTO-v4.md:15,19,47`; `lance-relampago.mjs:187` (`ehProgramado`) |
-| 4 | **Habilidade** | o resultado vem da estratégia do participante — não de aleatoriedade | `REGULAMENTO-v4.md:17,96` (Art. 7 e Art. 38) |
-| 5 | **Transparência** | dados públicos em tempo real para permitir a estratégia | `REGULAMENTO-v4.md:110`; `_lib/pulso.mjs`, `lances-flash.mjs`, `/ranking` público |
-| 6 | **GUTO** | assistente de IA que explica o produto, o regulamento e a estratégia | `chatbot.mjs`, `_lib/rag.mjs`, `_lib/guto-perfis.mjs`, `ChatbotWidget.jsx` |
-| 7 | **Conformidade** | CDC + Decreto 7.962/2013 + LGPD + Lei 5.768/1971 (+ Portaria SPA/MF 1.207/2024) | `TermosConsentimento.jsx` (gate LGPD), `_lib/conta-delete.mjs`, `docs/FICHA-PLAY-PT.md` |
+| **Menor Lance Único** | menor lance **único** da edição | **saldo em R$** (PIX), a partir de R$ 0,01 | **jogo de habilidade**; produto **patrocinado**; **sem** SPA/MF |
+| **Ofertas Programadas** | **programa de fidelidade gamificado** | **Passe Desafio (R$ 2,00)** | **sem** concurso ⇒ **SPA/MF não se aplica** |
 
-### O que o DesafioGUT NÃO É
+#### 1.2 O que NÃO é
+⛔ **Não é leilão.** ⛔ **Não é aposta** (nem de quota fixa). ⛔ **Não é sorteio.** ⛔ **Não é jogo de azar.**
+⛔ **Não é mercado de previsão.** ⛔ **Não é concurso de previsões.**
 
-⛔ **Não é leilão.** ⛔ **Não é aposta de quota fixa.** ⛔ **Não é loteria.** ⛔ **Não é jogo de azar.**
-⛔ **Não é sorteio.** ⛔ **Não é um jogo de aleatoriedade nem usa RNG.**
+> Estas negações são o **núcleo da tese jurídica** e o que sustenta o enquadramento **«programa de
+> fidelidade gamificado»** perante a Google Play. Vocabulário **proibido** em PT («leilão/leilões,
+> aposta(s), sorte(s), azar, loteria(s)») — `docs/GLOSSARIO-OFICIAL.md`, com guardas executáveis em
+> `src/i18n/__tests__/glossario.test.mjs` e `pt-only.test.mjs`.
 
-> Estas negações **não são retórica**: são o núcleo da tese jurídica do produto
-> (`REGULAMENTO-v4.md:17` e `:96`) e o que sustenta a classificação «torneio de habilidade» perante
-> Apple/Google (`GLOSSARIO-OFICIAL.md:4-5,11`). O app **não pode usar essas palavras** —
-> `GLOSSARIO-OFICIAL.md:28` proíbe em PT «leilão/leilões, aposta(s), sorte(s), azar, loteria(s)», com
-> guardas executáveis em `src/i18n/__tests__/glossario.test.mjs` e `pt-only.test.mjs`.
+#### 1.3 O que É
+Um **e-commerce por dropshipping** que é, ao mesmo tempo:
+1. **jogo de habilidade** com produto **patrocinado** — modalidade **Menor Lance Único**;
+2. **programa de fidelidade gamificado** — modalidade **Ofertas Programadas**.
 
-> ⚠️ **Vocabulário herdado a corrigir (C-N2, medido no MC-NORTE-01).** Este próprio ficheiro usa a
-> palavra **proibida** «sorteio» **4 vezes** como nome da edição especial — secções **MC94.1**
-> (linha 2227), **MC94.2** (2291), **MC94.3** (2349) e **MC94.3** (2391), todas de 2026-09-25:
-> «sorteio com prémio físico e hora anunciada», «UI pública + sorteio com prémio físico», «impede que
-> um sorteio de teste entre no ranking do torneio», «o Dashboard ficava preso ao sorteio de 04/10».
-> **Contradizem o Art. 38 do Regulamento (`REGULAMENTO-v4.md:96`) e `GLOSSARIO-OFICIAL.md:28`.**
-> **Não foram reescritas neste MC**: o texto histórico de um MC registado não se apaga sem decisão do
-> operador. Fica a correcção de vocabulário escalada — ver §7 do relatório do MC-NORTE-01.
-> ✅ **RESOLVIDO no MC-SORTEIO-01a (2026-09-28, decisão do operador R18):** as 4 ocorrências passaram
-> a «edição especial». As citações acima ficam como registo do que estava escrito.
+### 2. Passe Desafio
 
-### As duas modalidades (definições do Regulamento — usar estas palavras)
+| # | Item | Definição |
+|---|---|---|
+| **2.1** | Definição | **R$ 2,00 = 1 Ponto de Fidelidade.** É **produto real pago**, não taxa de participação nem aposta. |
+| **2.2** | Componentes | (a) **ponto de fidelidade**; (b) **palpite bónus**; (c) **dados** da edição; (d) **GUTO** (assistente de IA). |
+| **2.3** | Como se obtém o cartão | **50 pontos = 1 cartão colecionável físico** (da **Família Quildo**), entregue em casa. Acumulação por rácio **fixo** (1 Passe = 1 ponto). |
+| **2.4** | Palpite é bónus | O palpite **não decide o prémio**: vale **+2 pontos** se acertar (benefício **complementar e subordinado**). |
 
-| Modalidade | O que consome | Regra | Referência |
+### 3. Vendedor legal
+
+| # | Item |
+|---|---|
+| **3.1** | **Associação Recreativa dos Nordestinos no Amazonas** |
+| **3.2** | CNPJ **23.040.066/0001-00** |
+| **3.3** | Natureza: **associação recreativa, sem fins lucrativos** (Grupo **União e Trabalho**). |
+| **3.4** | **Isenção fiscal**: **IR**, **CSLL** e **Cofins** (entidade sem fins lucrativos). |
+
+### 4. Modelo de negócio
+
+| # | Frente | Descrição |
+|---|---|---|
+| **4.1** | Receitas da associação | **Passes** (R$ 2,00 cada) **+ valor do lance** pago pelo vencedor. |
+| **4.2** | Custos | **Zero** — o produto é **patrocinado** (o lojista fornece). |
+| **4.3** | Patrocínio | O **lojista fornece** o produto e recebe **visibilidade + leads**. **Não vende** e **não entra no app**. |
+
+### 5. Estrutura fiscal (NF)
+
+| # | Operação | Documento |
+|---|---|---|
+| **5.1** | **Lojista → Associação** | **NF-e, CFOP 5.910** (patrocínio). |
+| **5.2** | **Associação → Cliente** | **NF-e, CFOP 5.102** (venda). |
+| **5.3** | Emissão | **NF-e automática por e-mail** — **a implementar** (UTAC106g). |
+
+### 6. Enquadramento legal
+
+#### 6.1 Leis que cumpre
+**Decreto 7.962/2013** (comércio electrónico) · **CDC** (Lei 8.078/1990) · **LGPD** (Lei 13.709/2018) ·
+**Lei 9.532/1997** · **Lei 9.249/1995** (isenção da entidade sem fins lucrativos).
+
+#### 6.2 Leis que evita
+**Lei 5.768/1971** · **Decreto 70.951/1972** · **Lei 14.790/2023** (bets) · **DL 3.688/1941** (jogo de azar) ·
+**Res. CMN 5.100/2026** (mercados preditivos).
+
+#### 6.3 SPA/MF: NÃO se aplica
+**Justificação:** o produto **não organiza concurso** de previsões nem distribui prémios por sorteio/concurso
+pago. As **Ofertas Programadas** são um **programa de fidelidade gamificado** (compra de Passe → pontos →
+cartão). A **Menor Lance Único** é **jogo de habilidade** com produto **patrocinado**. ⇒ **Fora do âmbito**
+da Lei 5.768/1971 e do Dec. 70.951/1972; **não há autorização a requerer**.
+> ⚖️ **Caveat:** esta é a **posição do operador** (fonte: enunciado UTAC106x §6.3). Reverte, ao nível
+> documental, o achado **R-19** (`_logs/MC100_MATRIZ-CONFORMIDADE.md` linha 24: «a categoria Gamified
+> Loyalty exige *not subject to additional gambling or gaming licensing requirements* e a Programada exigia
+> SPA/MF ⇒ parecer obrigatório»). **O parecer jurídico continua pendente** — ver §11 e o gabarito.
+
+### 7. Plataformas
+
+| # | Loja | Enquadramento |
+|---|---|---|
+| **7.1** | **Google Play** | **Programa de Fidelidade Gamificado** (*Gamified Loyalty Program*) — requisitos mapeados no gabarito da Play Console. |
+| **7.2** | **Apple** | **Bem físico** (consumido fora do app) ⇒ **sem IAP** (App Review 3.1.3(e)). |
+
+### 8. Fluxos
+
+#### 8.1 Financeiro
+**PIX** → **Saldo** (R$) → **Passe** (R$ 2,00 = 1 ponto) **ou** **Lance** → **NF-e** → **Entrega**.
+
+#### 8.2 Logístico
+**Morada** → **NF-e** → **Rastreio** → **Entrega**.
+
+### 9. Navegação alvo
+**Carteira → Menor Lance Único → Início → Ofertas Programadas → Mais.**
+
+### 10. UTAC106 (subdivisões 106a-h)
+
+**Ordem definida pelo enunciado:** `UTAC106x` → `UTAC106x.1` (esta NORTE + reversões) → `UTAC106x.2`
+(ESCOPO-ALVO / FICHA-PLAY / MC100_MATRIZ) → `106a` → `106b/106c/106d` (paralelo) → `106e` → `106f` →
+`106g` → `106h`.
+
+| UTAC | Escopo | Depende de | Estimativa |
 |---|---|---|---|
-| **Oferta Relâmpago** | **saldo em R$**, a partir de R$ 0,01 por lance | o valor do lance é debitado directamente do saldo | `REGULAMENTO-v4.md:15,43,55` |
-| **Oferta Programada** | **senhas** de R$ 2,00, obtidas por **conversão de saldo** | cada lance consome **1 senha**, independentemente do valor ofertado | `REGULAMENTO-v4.md:15,43,55` |
+| **106a** | mapeamento do fluxo actual (usa esta NORTE como referência) | 106x.2 | — |
+| **106b/c/d** | (paralelo) | 106a | — |
+| **106e / 106f / 106g** | sequenciais; 106g inclui a **NF-e automática** (§5.3) | 106b/c/d | — |
+| **106h** | **Regras oficiais publicadas no app** | 106g | — |
 
-**Critério de vitória (idêntico nas duas): o MENOR LANCE ÚNICO da edição** — o valor que aparece
-exactamente 1 vez (`REGULAMENTO-v4.md:17`; `CLAUDE.md:69`).
+> ⚠️ **LACUNA (GATE 2).** O enunciado **lista** as subdivisões 106a-h e a ordem, mas **não fornece** o
+> escopo, as dependências nem as estimativas de cada uma. **Não se inventam** (E9/GATE 2). Só o que o
+> enunciado fixa está acima; o resto fica **por especificar** (é trabalho do UTAC106a). O **UTAC119**
+> (classificação de conteúdo + Data Safety + screenshots) também é nomeado pelo enunciado, mas não pertence
+> a esta série.
 
-### O PRODUTO FINAL — resolvido com o que JÁ EXISTE (MC-PRODUTO-01)
+### 11. Histórico — definição ANTERIOR (SUPERADA, mantida à vista — P2 · GATE 15)
 
-> ⚠️ **CORRECÇÃO REGISTADA (MC-NORTE-01).** O briefing do MC-NORTE-01 descrevia a Oferta Programada
-> como «**sorteio** por carteira». **Isso está errado e não foi escrito aqui.** O Regulamento define a
-> Programada como a modalidade que usa **senhas**, com o **mesmo** critério de menor lance único
-> (`REGULAMENTO-v4.md:15,43,55`), e o Art. 38 nega expressamente «mecanismos de aleatoriedade,
-> geradores de números aleatórios (RNG) ou **sorteios**». «Sorte» é palavra **proibida** pelo
-> glossário (`:28`). Ver `Desktop/MC-NORTE-01-RELATORIO.md` §7 (C-N1).
+> ⛔ **SUPERADO pela Via B (R18-C, 2026-10-04).** Registado, **não** seguido. Snapshot integral em
+> `_logs/UTAC106x_NORTE-ANTERIOR.md`.
 
-**DECISÃO DO OPERADOR (R18, 2026-09-28 — MC-PRODUTO-01):** o produto final **não introduz frontend
-novo**. O que o briefing chamava «Passe de Desafio» é **o próprio produto que o R$ 2,00 já compra
-hoje**, e o «Quiz de Previsão» **não entra** (seria frontend novo e reintroduziria o enquadramento de
-«chance», que é exactamente o que se quer evitar).
+A versão anterior (MC-NORTE-01 / MC-PRODUTO-01, 2026-09-28) definia:
+- a **Oferta Programada** como modalidade de **senhas de R$ 2,00**, com **critério de vitória = MENOR LANCE
+  ÚNICO** (o mesmo da Relâmpago), e não como programa de fidelidade;
+- o produto como **«torneio de habilidade»** com **7 pilares** (E-commerce · Dropshipping · Ofertas
+  inteligentes · Habilidade · Transparência · GUTO · Conformidade);
+- **cotas de patrocinador** Bronze/Prata/Ouro/Diamante (níveis de visibilidade do lojista);
+- o vendedor como **Grupo União e Trabalho — GUT** (`REGULAMENTO-v4.md:5`);
+- vantagem/comportamento de **isenção** discutidos à luz da **Lei 5.768/1971** (depois **superada** pela
+  secção `ESCOPO-ALVO v6.0`, que passou a exigir **SPA/MF** para um «concurso de previsões» — agora
+  **também superada** por esta NORTE Via B).
 
-#### O que o R$ 2,00 (a senha) já compra — tudo medido no código existente
-
-| Componente do produto | O que é | Onde já existe |
-|---|---|---|
-| **Crédito de lance** | 1 senha = 1 lance na Programada, qualquer que seja o valor ofertado | `REGULAMENTO-v4.md:43,55`; `senhas-programado.mjs:12`; `Leilao.sol:21,87-88` |
-| **Dados estratégicos em tempo real** | as 6 mensagens do Art. 24 (menor e único · não é o menor mas é único · lance igual · valor inválido · lance mal escrito · olho no relógio) | `notificacoes-usuario.mjs:117` `detectarEventoUnicidade`, `:142` `registrarEventosDeLance`, `:153` `lance_unico`, `:158` `perdeu_exclusividade` |
-| **Placar público** | ranking do ciclo e lista de lances da edição | `/ranking` (público), `lances-flash.mjs`, `/edicoes` |
-| **Pulso da edição** | 4 métricas vitais em tempo real | `_lib/pulso.mjs:1` |
-| **GUTO (IA estratégica)** | assistente que explica regra e estratégia, sobre o regulamento | `chatbot.mjs`, `_lib/rag.mjs`, `_lib/guto-perfis.mjs` |
-| **Entrada no concurso de habilidade** | direito a concorrer ao menor lance único | `REGULAMENTO-v4.md:17`; apuração `consolidacao.mjs:40-49` |
-
-⇒ **Nada disto é novo.** O «Passe» é a **denominação comercial** deste conjunto; a implementação é a
-senha + as notificações + o GUTO + o racional público, que **já estão em produção**. O que falta é
-**copy** (nomear o produto na UI, em `src/i18n/pt.js`) e **termos publicados** — não engenharia.
-
-#### Porque isto é um produto real e não «dinheiro por uma chance»
-
-1. **A senha é um crédito de participação com preço fixo** (R$ 2,00), consumido 1-por-lance
-   (`REGULAMENTO-v4.md:43,55`) — não é uma aposta.
-2. **O resultado depende de estratégia**, não de aleatoriedade (`REGULAMENTO-v4.md:17,96`) — e a
-   estratégia é **informada** pelos dados que o próprio produto entrega (tabela acima).
-3. **O vencedor PAGA o produto, não o recebe como prémio:** «O valor a ser pago pelo participante
-   vencedor pelo produto ou serviço será o valor do lance ofertado e vitorioso»
-   (`REGULAMENTO-v4.md:25`, Art. 11º). **É uma venda, com o preço definido pelo concurso.**
-
-#### ⛔ ALERTA JURÍDICO — premissa REFUTADA pelas fontes primárias (não tratar como facto)
-
-O briefing do MC-PRODUTO-01 afirmava que esta estrutura **dispensa autorização** da SPA/MF ao abrigo do
-«**Art. 3º, II da Lei 5.768/1971**» e que o «concurso de previsões» do **Decreto 70.951/1972, art. 25**
-a cobria. **Lido o texto legal, a afirmação não se sustenta** (fontes: planalto.gov.br, lidas em
-2026-09-28 — `L5768.htm`, `D70951.htm`):
-
-- **Lei 5.768/1971, art. 3º, II** isenta «a distribuição **gratuita** de prêmios … em razão do resultado
-  de concurso **exclusivamente cultural, artístico, desportivo ou recreativo**, não subordinado a
-  qualquer modalidade de álea **ou pagamento pelos concorrentes**, **nem vinculação dêstes ou dos
-  contemplados à aquisição ou uso de qualquer bem, direito ou serviço**».
-  → A Programada **é paga** (R$ 2,00) e **é vinculada à aquisição de um bem** (a senha). **Falha os dois
-  requisitos cumulativos.** A isenção **não se aplica**.
-- **Decreto 70.951/1972, art. 30** repete a isenção com as mesmas três condições cumulativas — e é para
-  ele que o art. 25 remete.
-- **Decreto 70.951/1972, art. 25** diz o **oposto** do que o briefing assumia: o concurso de
-  **previsões**/cálculos/testes de inteligência «**está subordinado a este Regulamento**» — isto é,
-  sujeito ao regime de autorização.
-- **Decreto 70.951/1972, art. 13** — «É vedada a distribuição de prêmios mediante sorteio ou concurso,
-  **subordinada à cobrança de ingresso**…»; **art. 14** — «A empresa autorizada **não poderá cobrar dos
-  participantes** quaisquer taxas, emolumentos ou contribuições».
-- **Lei 5.768/1971, art. 1º, § 3º** — «É proibida a distribuição ou conversão dos prêmios **em
-  dinheiro**»; e o **art. 15 do Decreto** limita os prémios a mercadorias, títulos, imóveis, viagens e
-  bolsas. → ⚠️ **O Art. 14º do Regulamento (prémio em dinheiro, 80 %/integral) conflita com isto.**
-
-**A tese que se sustenta melhor é outra — e também é a que menos mexe no produto:** a Lei 5.768/1971
-regula a «distribuição **gratuita** de prêmios **a título de propaganda**» (`ementa` e `art. 1º`).
-O DesafioGUT **não distribui prémios a título de propaganda: vende o produto** e o concurso **define o
-preço** (Art. 11º). Sem gratuitidade e sem propaganda, a Lei **está fora do âmbito** — e então **não há
-autorização a dispensar**, porque não há promoção de distribuição gratuita de prêmios.
-⚠️ **Esta leitura é uma tese, não um facto medido** — foi construída por leitura das fontes primárias
-por um agente de engenharia, **não por jurista**. **Requer validação jurídica antes de ser afirmada ao
-utilizador ou à Google Play.**
-
-#### Conformidade com a Google Play — a mesma dependência
-
-Fonte: `Real-Money Gambling, Games, and Contests` (support.google.com, lida 2026-09-28):
-- **Proíbe** «content or services that enable or facilitate users' ability to wager, stake, or
-  participate **using real money** … **to obtain a prize of real world monetary value**», com exemplo
-  expresso: «**Games that accept money in exchange for an opportunity to win a physical or monetary
-  prize**».
-- **Permite** «loyalty programs with **gamified outcomes**» e há a categoria **Gamified Loyalty
-  Programs**, com dois requisitos que interessam directamente:
-  1. «**Where permitted by law** and not subject to additional gambling or gaming licensing
-     requirements» → **o requisito legal brasileiro entra pela porta da política da Play.** Se a
-     estrutura licenciar, a Play deixa de a cobrir.
-  2. «Loyalty program benefits, perks, or rewards must be clearly **supplementary and subordinate**» →
-     o benefício tem de ser suplementar, não a razão da compra.
-- Exige ainda: **número fixo de vencedores**, **prazo fixo de entrada** e **data de entrega do prémio**
-  publicados nos termos oficiais; e **rácio fixo** de acumulação/resgate documentado.
-  → ⚠️ **O DesafioGUT hoje não publica número fixo de vencedores nem data de entrega** — o número de
-  vencedores é 1 por edição e a entrega é manual (ver camadas 3 e 4). **Isto é trabalho de termos.**
-
-**Conclusão de conformidade:** as duas frentes **não são independentes** — a Play remete para a lei.
-Por isso o desbloqueio é **jurídico, não de frontend**, e a estrutura acima (senha + dados + GUTO, com
-o vencedor a **comprar** o produto) é a que **melhor** se apoia no que já existe.
-
-#### O que falta (não é frontend)
-
-| # | Item | Natureza |
-|---|---|---|
-| 1 | **Publicar as Regras Oficiais de cada edição** (modalidade, janela, número fixo de vencedores, data de entrega) | **termos** (Art. 22º já o exige) |
-| 2 | **Nomear o produto na UI** («senha» + o que ela inclui) | **copy** em `src/i18n/pt.js` |
-| 3 | **Direito de arrependimento — 7 dias** (CDC 49 + Dec. 7.962 art. 5º) | **termos** + ligar ao `reembolsarSaldoRs` que já existe |
-| 4 | **Endereço físico** no rodapé legal | **dado** |
-| 5 | **Campo para o nº da NF-e** | **campo** (emissão manual) |
-| 6 | **Validar a tese jurídica** (âmbito da Lei 5.768/1971) com jurista | **decisão** |
-| 7 | **Decidir sobre o Art. 14º do Regulamento** (prémio em dinheiro) | **decisão** |
-
-
-### As categorias de cota (patrocinador) — distintas das modalidades
-
-**Bronze · Prata · Ouro · Diamante.** São **níveis de patrocínio** e **não se confundem com as
-modalidades de lance** (`REGULAMENTO-v4.md:19`). Definem visibilidade e valor mínimo do produto:
-
-| Cota | Valor | Produto mínimo | Visibilidade no app |
-|---|---|---|---|
-| Bronze | R$ 2.640,00 | R$ 660,00 | 1 banner vitrine no site + 08 banners no app (semanal, horários alternados) |
-| Prata | R$ 5.600,00 | R$ 1.350,00 | 1 banner fixo no site + 12 banners no app (semanal triplicada) |
-| Ouro | R$ 11.000,00 | R$ 2.250,00 | 2 banners rotativos + 1 destaque no site + 1 banner nas redes + 20 no app (seg–sáb ×4) · **exclusividade** |
-| Diamante | R$ 18.000,00 | R$ 4.500,00 | 2 banners rotativos + 1 destaque no site + 1 banner nas redes + 28 no app (seg–dom ×4) · **exclusividade** |
-
-Fonte: `REGULAMENTO-v4.md:86-90` (m-p) e `:81` (h). No código: `produtos.mjs:51` (`CATEGORIAS`),
-`produtos.mjs:363-373` (o nível **restringe** o slot da vitrine — regra MC89.40 D3).
-
-### O papel do GUTO
-
-Assistente de IA do produto: explica o regulamento e o mecanismo, responde a dúvidas e acompanha o
-participante. Prompt de conformidade em `_lib/guto-perfis.mjs`; base de conhecimento em `_lib/rag.mjs`.
-⚠️ **`_lib/guto-perfis.mjs:83` promete «prazos de entrega, trocas e devoluções» que o sistema ainda
-não tem** — corrigir quando as camadas de Entrega e Arrependimento existirem (ver §«O que falta»).
-
-### Leis que o produto cumpre, e leis que evita
-
-| | Diploma | Papel |
-|---|---|---|
-| ✅ cumpre | **CDC (Lei 8.078/1990)** | relação de consumo: arts. 30, 49, 18, 12, 14 |
-| ✅ cumpre | **Decreto 7.962/2013** | informação obrigatória no comércio electrónico (art. 2 — nome, CNPJ, endereço físico e electrónico, características, despesas) |
-| ✅ cumpre | **LGPD (Lei 13.709/2018)** | gate de consentimento, direitos do titular, retenção fiscal |
-| ✅ cumpre | **Lei 5.768/1971** | distribuição de prémios — ⚠️ só se aplica enquanto o Art. 14 permitir prémio em dinheiro |
-| ✅ invoca | **Portaria SPA/MF 1.207/2024** | enquadramento como torneio de habilidade (`REGULAMENTO-v4.md:96`; `GLOSSARIO-OFICIAL.md:4`) |
-| ⛔ evita | **Lei 14.790/2023** | apostas de quota fixa («bets») — o produto **não** é aposta |
-| ⛔ evita | **DL 3.688/1941** | contravenções: jogo de azar |
-
-> ⚠️ **Caveat medido (MC-PRE-99.5.4, pesquisa de 2026-09-27).** Nos 7 diplomas descarregados do
-> planalto.gov.br, a expressão «torneio de habilidade» tem **0 ocorrências**; a única menção a
-> «habilidade» vive no *carve-out* de *fantasy sport* da Lei 14.790/2023. A classificação «torneio de
-> habilidade» apoiada na Portaria SPA/MF 1.207/2024 (`REGULAMENTO-v4.md:96`) **não foi verificável**
-> — o texto da Portaria não foi obtido. **Não tratar como facto verificado.**
-
-### O que já existe vs o que falta (resumo — detalhe no relatório do MC-NORTE-01)
-
-**Existe e funciona:** entrada de dinheiro por PIX/Mercado Pago com idempotência e reembolso
-automático; saldo R$ em Supabase; senhas on-chain com contrato a exigir saldo; lances nas duas
-modalidades com JWT de assinatura EIP-191; apuração on-chain (EIP-712 + Flashbots); notificação
-in-app ao ganhador; gate LGPD com 4 declarações; CNPJ em destaque; catálogo com 4 slots e ciclo de
-vida; edições em Blob com janela server-authoritative; GUTO com RAG.
-**Não existe:** entrega (morada/rastreio/NF-e/prazo), direito de arrependimento (CDC 49), frete,
-pagamento do prémio ao ganhador, saque do saldo, ponte apuração→catálogo, dados do destinatário,
-catálogo com conteúdo (0 produtos), edições a decorrer.
-
-### Índice de planos e fontes
-
-- `Desktop/MC-MAPA-01-RELATORIO.md` — fluxo do dinheiro
-- `Desktop/MC-MAPA-02-RELATORIO.md` — fluxo do produto
-- `Desktop/MC-MAPA-03-RELATORIO.md` — exigências externas (lei + lojas)
-- `Desktop/MC-NORTE-01-RELATORIO.md` — norte, camadas e plano de migração
-- `Desktop/MC-PRODUTO-01-RELATORIO.md` — **produto final** + conformidade + o que falta implementar
-- `docs/REGULAMENTO-v4.md` · `docs/GLOSSARIO-OFICIAL.md` · `docs/FICHA-PLAY-PT.md`
+> O texto completo desta versão, com os 7 pilares, as tabelas de cotas e o alerta jurídico de 2026-09-28,
+> está preservado **byte a byte** em `_logs/UTAC106x_NORTE-ANTERIOR.md`.
 
 ---
 
@@ -4503,3 +4425,5 @@ Consultar antes de mexer em segredos ou no CLI da Netlify.
 > ⏱️ **UTAC000.17bc (2026-10-02) — PRAZO REAL DO SERVIDOR + OVERLAY AGREGADO (DEBT-016 + DEBT-017): CÓDIGO ENTREGUE E VERDE; **registos por fechar** (sem veredicto).** O fim do leilão deixou de ser um cronómetro LOCAL de 30 min (`AppContext` l.193-197) e passou a ser o **`termino_em` REAL do servidor** (`edicoes[EDICAO_ATIVA]` do `useEdicoes`), lido no **relógio do servidor** (`+offsetRelogioMs`) ⇒ fecha a DEBT-016. Para isso as DUAS pontas passaram a **marcar o sintético** (`sintetizada: true` no `sintetizarR1()` do cliente E do servidor + passthrough no `normalizarMapa`) e o gate do overlay exige **prazo real E não-visto**: edição sintética ou ausente ⇒ **não encerra nem abre** (GATE 26 — o fallback não é prazo). A **DEBT-017** caiu por dois lados: `EDICAO_ID_RE` passou a aceitar `R-N` e `criarEdicao({id})` aceita id explícito (contador e caminho antigos intactos) ⇒ a R-1 deixou de ser só-sintética (**falta a criação REAL em produção**). **17c entregue:** `FimEdicaoOverlay` e o `OverlayVencedor` do MercadoLances ganharam o **agregado das participações do titular** (endpoint do 17a via novo `useMinhasParticipacoes`, com o `authToken` que o contexto já expõe), **destaque de vitória**, botão **FECHAR (`onClose`)** e **«visto» no aparelho** (`src/lib/overlayVisto.js`, por endereço E por edição) — «NOVA RODADA» também marca visto (senão o modal reabria 1,2 s depois). **Verificação:** frontend **681/681** · backend **990/996**; contrato do `tick` **12/12** (inclui sintética-não-abre, sem-prazo-não-abre, offset do servidor, já-visto-não-abre); **arnês de runtime 7/7** (GATE 23: servidor → AppContext → página, com o caso novo da edição sintética em runtime); R-1 real **6/6**; «visto» **8/8**. Testes de contrato ACTUALIZADOS porque o contrato mudou (`utac00014-show-overlay` — a fonte do prazo; `mc941-edicao-especial` — `R-1` saiu dos ids rejeitados), com a regra antiga documentada, não apagada. **⚠️ LIMITE DE TEMPO EXCEDIDO (~5 h / 3 h) e declarado** — a causa medida foi o arnês de runtime a pendurar 6m40s pelo fixture antigo (prazo local), cuja caça+adaptação consumiu o excedente. **FALTA (declarado, não maquilhado):** martelo de MUTAÇÃO (GATE 6), VALIDADOR adversarial (GATE 8), **criação da R-1 real em produção** (Blob `edicoes-metadata`; exige a duração decidida pelo operador — o `POST /edicoes` é admin-gated) e a verificação em produção (Frente E). **Commit local, NÃO empurrado** (protocolo: veredicto antes do push).
 > 📌 **UTAC000.17bc — decisões do operador (R18, 2026-10-02).** **(a)** Duração da R-1 = **1800 s** confirmada, **mas a R-1 real NÃO se cria em produção agora**: é a edição activa em `EM_BREVE_MODE` e dar-lhe prazo de 30 min antes de desligar o modo seria contraditório ⇒ **a criação passa para o UTAC que desligar o `EM_BREVE_MODE`** (parâmetros fixados: id `R-1`, 1800 s, `criarEdicao({id:'R-1'})` — código já testado). **(b)** Validador adversarial **despachado sobre `1f446db`**; corrigir o que ele apanhar e só então fechar DEBT-016/017. **Protocolo: veredicto primeiro, push depois** (o commit fica LOCAL).
 > ⚖️ **UTAC000.17bc — VEREDICTO ADVERSARIAL: APROVA (com ressalvas) e FECHO (2026-10-02).** O validador (`deleg_632f3f30`) confirmou (A)(B)(C)(E) e **refutou parcialmente a (D)**: o mutante dele M4 (remover `marcarVisto` dos DOIS handlers) **sobrevivia às 4 suítes** — a cablagem «FECHAR/NOVA RODADA marca visto» não tinha teste. Corrigido na mesma ronda: (1) NOVO `utac0017bc-handlers-visto.test.mjs` extrai e EXECUTA os dois handlers com duplos ⇒ **M29 (o M4 dele) → 8 RED**; (2) guarda contra **sobrescrita** com id explícito (`edicao_ja_existe`, falha-CLOSED) em `criarEdicao` ⇒ **M30 → 3 RED**; (3) o fim passou a **exigir o `agora` do servidor** (`offsetRelogioMs === null` ⇒ não decide — a minha alegação «o relógio local NUNCA decide» era imprecisa) ⇒ **M31 → 4 RED**; (4) guarda de tipo na contagem de lances + contrato do agregado nos DOIS overlays + caso no arnês (FECHAR renderizado; sem participações, secção ausente). **Martelo final: 10 mutantes, 10 mordem**; suíte canónica **frontend 694/694 · backend 992/998 (VERDE)**. **DEBT-016 FECHADA**; **DEBT-017: código fechado, criação da R-1 real TRANSFERIDA** para o UTAC que desligar o `EM_BREVE_MODE` (R18-a, duração 1800 s). Limites medidos e declarados: o CONTEÚDO da secção agregada não é renderizável no arnês (lá o `authToken` é null — visitante — e o `sessionStorage` nem existe no SSR; sonda própria, removida); `address === null` ⇒ «visto» não persiste (inalcançável sem R-1 real, registado); custo do `jaVisto` a 4 Hz por medir. Verdict verbatim em `_logs/UTAC000.17bc_SEG4_VALIDADOR.md`.
+
+> 🎯 **UTAC106x.1 (2026-10-04) — NORTE VIA B + REVERSÕES FORMAIS (R-19, DEC-09).** A secção «NORTE DO PRODUTO» passou a **fonte de verdade** do produto e recebeu a definição **Via B — programa de fidelidade**: e-commerce por dropshipping; **Menor Lance Único** = jogo de habilidade com produto patrocinado, **sem SPA/MF**; **Ofertas Programadas** = programa de fidelidade gamificado (Passe R$ 2,00 → 1 ponto → **50 pontos = cartão colecionável físico da Família Quildo**); o palpite é **bónus** (+2 pontos), **não decide**; vendedor legal = **Associação Recreativa dos Nordestinos no Amazonas** (CNPJ 23.040.066/0001-00, União e Trabalho); NF-e CFOP **5.910** (patrocínio) + **5.102** (venda). **Nota de precedência** no cabeçalho: esta secção **prevalece sobre «ESCOPO-ALVO v6.0» (linha ~126)** e demais documentos. **Reversões formais registadas (R18 — operador via co-construtor, 2026-10-04):** **(1) R-19** (`_logs/MC100_MATRIZ-CONFORMIDADE.md` linha ~24 — «Gamified Loyalty exige não estar sujeita a licenciamento de jogo; a Programada exigia SPA/MF ⇒ parecer obrigatório») → **REVERTIDA**: a Via B **elimina o concurso**, logo não há licenciamento de jogo a exigir. **(2) DEC-09** («titular Ruan/MEI») → **REVERTIDA**: o titular é a **Associação Recreativa dos Nordestinos no Amazonas (Marinho)**. ⚠️ O **parecer jurídico** (R-19/R-02) **continua pendente** — a reversão é documental, não jurídica. Baseline `483576f`; suíte **694/694 · 992/998**. Correcção das secções ESCOPO-ALVO / FICHA-PLAY-PT / MC100_MATRIZ = **UTAC106x.2**. Histórico da NORTE anterior preservado em `_logs/UTAC106x_NORTE-ANTERIOR.md`. Log: `_logs/UTAC106x.1-norte-via-b.md`.
