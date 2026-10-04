@@ -178,6 +178,13 @@ test("F6 debitarPontos com saldo insuficiente → PONTOS_INSUFICIENTES; nada mud
   assert.equal(S.tabelas.pontos[0].historico.length, 1);
 });
 
+// ⚠️ UTAC106f — ATENÇÃO AO LER ISTO (a asserção abaixo continua VÁLIDA para a função que testa, mas
+// essa função DEIXOU de decidir o cartão): o achado ⚠️ R1 do validador adversarial mostrou que
+// `podeResgatarCartao` compara o TOTAL (compra + bónus de palpite) ⇒ 48 de compra + 2 de bónus
+// desbloqueava o cartão, contra o requisito «o palpite NÃO decide o cartão» (Google Play). A decisão
+// do operador (opção A) passou a regra para `podeResgatarCartaoComCompra()` (só `compra`/`resgate`),
+// que é o que `ler-pontos` usa. **Quem for mexer no resgate (106g) usa a função NOVA**; esta fica
+// como está (nada apagado) e NÃO tem consumidores de produção.
 test("F7 podeResgatarCartao: 49 → false; 50 → true", async () => {
   await P.creditarPontos(A, 49, "compra", K(1));
   assert.equal(await P.podeResgatarCartao(A), false);
