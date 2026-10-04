@@ -113,16 +113,19 @@ test("T9 — criar() com caminho RELATIVO resolve contra o cwd (e nao contra o r
 test("T10 — worktree LOCKED/dirty: remover() recusa e NAO apaga nada", () => {
   const wtl = join(base, "wt-locked");
   H.criar(wtl, sha(), { junctions: false });
-  writeFileSync(join(wtl, "trabalho-lock.txt"), "nao me apagues");
-  const lk = spawnSync("git", ["-C", RAIZ, "worktree", "lock", wtl], { encoding: "utf8" });
-  assert.equal(lk.status, 0, "git worktree lock falhou: " + (lk.stdout || lk.stderr));
-  const res = H.remover(wtl);
-  assert.equal(res.ok, false, "remover() devia RECUSAR um worktree locked");
-  assert.ok(existsSync(wtl), "o worktree locked FOI apagado (perda de trabalho!)");
-  assert.ok(existsSync(join(wtl, "trabalho-lock.txt")), "o ficheiro nao commitado FOI apagado!");
-  // limpeza: unlock + remove --force so nesta arvore descartavel
-  spawnSync("git", ["-C", RAIZ, "worktree", "unlock", wtl], { encoding: "utf8" });
-  spawnSync("git", ["-C", RAIZ, "worktree", "remove", "--force", wtl], { encoding: "utf8" });
+  try {
+    writeFileSync(join(wtl, "trabalho-lock.txt"), "nao me apagues");
+    const lk = spawnSync("git", ["-C", RAIZ, "worktree", "lock", wtl], { encoding: "utf8" });
+    assert.equal(lk.status, 0, "git worktree lock falhou: " + (lk.stdout || lk.stderr));
+    const res = H.remover(wtl);
+    assert.equal(res.ok, false, "remover() devia RECUSAR um worktree locked");
+    assert.ok(existsSync(wtl), "o worktree locked FOI apagado (perda de trabalho!)");
+    assert.ok(existsSync(join(wtl, "trabalho-lock.txt")), "o ficheiro nao commitado FOI apagado!");
+  } finally {
+    // limpeza SEMPRE (mesmo quando a assercao falha — senao fica um worktree locked orfao)
+    spawnSync("git", ["-C", RAIZ, "worktree", "unlock", wtl], { encoding: "utf8" });
+    spawnSync("git", ["-C", RAIZ, "worktree", "remove", "--force", wtl], { encoding: "utf8" });
+  }
 });
 
 // G1/F1 — a decisao de seguranca e' PURA: testa-se exaustivamente (tabela de casos).
@@ -131,6 +134,7 @@ test("T11 — podeFallback(): recusa explicita ou sem prova de limpeza => NUNCA;
     ["fatal: '...' contains modified or untracked files, use --force to delete it", true, false, "sujo"],
     ["fatal: cannot remove a locked working tree;\nuse 'remove -f -f' to override or unlock first", true, false, "locked"],
     ["fatal: validation failed, cannot remove working tree: '.../.git' does not exist", true, false, "invalido"],
+    ["fatal: working trees containing submodules cannot be moved or removed", true, false, "submodulos (H1, mesmo com status vazio)"],
     ["error: failed to delete '.../wt': Filename too long", true, true, "falha tecnica + limpo (o caso que a A13 resolve)"],
     ["error: failed to delete '.../wt': Filename too long", false, false, "falha tecnica mas NAO provado limpo (ex.: «is not a working tree»)"],
     ["fatal: '...' is not a working tree", false, false, "estado incerto"],
@@ -146,16 +150,18 @@ test("T11 — podeFallback(): recusa explicita ou sem prova de limpeza => NUNCA;
 test("T12 — worktree LOCKED mas LIMPO: recusa explicita basta para NAO cair no fallback", () => {
   const wtc = join(base, "wt-lock-limpo");
   H.criar(wtc, sha(), { junctions: false });
-  spawnSync("git", ["-C", wtc, "checkout", "--", "."], { encoding: "utf8" });
-  const lk = spawnSync("git", ["-C", RAIZ, "worktree", "lock", wtc], { encoding: "utf8" });
-  assert.equal(lk.status, 0, "git worktree lock falhou");
-  const st = spawnSync("git", ["-C", wtc, "status", "--porcelain"], { encoding: "utf8" });
-  assert.equal(st.stdout.trim(), "", "o worktree devia estar LIMPO para o teste valer");
-  const res = H.remover(wtc);
-  assert.equal(res.ok, false, "remover() devia RECUSAR (estava locked), mesmo estando limpo");
-  assert.ok(existsSync(wtc), "o worktree locked-limpO foi apagado");
-  spawnSync("git", ["-C", RAIZ, "worktree", "unlock", wtc], { encoding: "utf8" });
-  spawnSync("git", ["-C", RAIZ, "worktree", "remove", "--force", wtc], { encoding: "utf8" });
+  try {
+    const lk = spawnSync("git", ["-C", RAIZ, "worktree", "lock", wtc], { encoding: "utf8" });
+    assert.equal(lk.status, 0, "git worktree lock falhou");
+    const st = spawnSync("git", ["-C", wtc, "status", "--porcelain"], { encoding: "utf8" });
+    assert.equal(st.stdout.trim(), "", "o worktree devia estar LIMPO para o teste valer");
+    const res = H.remover(wtc);
+    assert.equal(res.ok, false, "remover() devia RECUSAR (estava locked), mesmo estando limpo");
+    assert.ok(existsSync(wtc), "o worktree locked-limpo foi apagado");
+  } finally {
+    spawnSync("git", ["-C", RAIZ, "worktree", "unlock", wtc], { encoding: "utf8" });
+    spawnSync("git", ["-C", RAIZ, "worktree", "remove", "--force", wtc], { encoding: "utf8" });
+  }
 });
 
 // F5 — fecha a lacuna de cobertura: exercita o caminho de PRODUCAO (junctions:true).

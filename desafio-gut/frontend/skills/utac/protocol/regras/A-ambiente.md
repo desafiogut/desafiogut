@@ -131,4 +131,19 @@ Duas reprodutibilidades, ambas medidas (alvo descartável, NUNCA o `node_modules
 **Guarda:** **nunca** `git worktree remove` nem `rm -rf` enquanto houver junctions dentro do worktree —
 nenhum dos dois distingue «directoria real» de «reparse point».
 
+### Fallback `rm -rf` — política (medida em 3 rondas do validador)
+O `git worktree remove` pode falhar por **duas razões muito diferentes**, e tratá-las igual é o defeito
+que este UTAC corrigiu **três vezes** (F1 → G1 → H1):
+- **Falha técnica** (ex.: `failed to delete … : Filename too long`) ⇒ o worktree fica por apagar.
+- **RECUSA deliberada do git** (`contains modified or untracked files, use --force` · `cannot remove a
+  locked working tree` · `validation failed` · `working trees containing submodules cannot be moved or
+  removed`) ⇒ o git está **a proteger trabalho**; contornar com `rm -rf` **destrói trabalho não commitado**.
+
+**Invariante:** *uma recusa do git NÃO se contorna.* O `rm -rf` só é legítimo quando (a) **não** há
+reparse points, (b) **não** há recusa explícita, e (c) a árvore está **PROVADAMENTE limpa** —
+`git status --porcelain --ignore-submodules=none` vazio **E** `git submodule status` vazio (o `status`
+normal **mente** quando há submódulos com `ignore=all`).
+É isto que `scripts/worktree-helper.mjs` implementa em `podeFallback(saida, statusLimpo)`; o CLI
+`remover` sai com **exit 1** quando recusa. Em caso de recusa, **PARAR e resolver à mão** — não forçar.
+
 Origem: UTAC106x.3 (incidente do UTAC106x.1) · Cross-ref: A9, HI10, GATE 10.

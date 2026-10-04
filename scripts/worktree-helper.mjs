@@ -71,24 +71,26 @@ export function removerJunction(p) {
 }
 
 /**
- * DECISAO DE SEGURANCA (F1/G1 — 2.ª ronda). Isolada e pura para poder ser testada exaustivamente.
+ * DECISAO DE SEGURANCA (F1/G1/H1 — 2.ª e 3.ª rondas). Isolada e pura para poder ser testada exaustivamente.
  * Diz se e' permitido cair no `rm -rf` depois de o `git worktree remove` ter falhado.
  *
  * Regra (saida de muitas medicoes — ver _logs/UTAC106x.3-a13.md):
  *   • RECUSA EXPLICITA do git (proteccao deliberada) => NUNCA. Sao elas:
  *     «contains modified or untracked files, use --force» (sujo) ·
  *     «cannot remove a locked working tree» / «is locked» (locked) ·
- *     «validation failed, cannot remove working tree» (invalido).
- *   • Sem prova de que a arvore esta LIMPA (`git status --porcelain` vazio) => NUNCA
- *     (nao se apaga o que nao se conseguiu verificar).
+ *     «validation failed, cannot remove working tree» (invalido) ·
+ *     «working trees containing submodules cannot be moved or removed» (**submodulos** — H1).
+ *   • Sem PROVA de que a arvore esta limpa => NUNCA. A prova exige `status --porcelain`
+ *     vazio **com `--ignore-submodules=none`** E `submodule status` vazio — porque o
+ *     `status` normal MENTE quando ha submódulos com `ignore=all` (medido pelo validador).
  *   • So com a arvore PROVADAMENTE limpa E sem recusa explicita => sim.
  *
  * @param {string} saida  stdout+stderr do `git worktree remove` que falhou
- * @param {boolean} statusLimpo  `git -C <path> status --porcelain` devolveu vazio com exit 0
+ * @param {boolean} statusLimpo  limpeza PROVADA (ver acima)
  */
 export function podeFallback(saida, statusLimpo) {
   const s = saida || "";
-  if (/contains modified or untracked files|use --force|is locked|cannot remove a locked|validation failed/i.test(s)) return false;
+  if (/contains modified or untracked files|use --force|is locked|cannot remove a locked|validation failed|submodules cannot be moved or removed/i.test(s)) return false;
   if (!statusLimpo) return false;
   return true;
 }
@@ -137,9 +139,13 @@ export function remover(path, { log = () => {} } = {}) {
   log(`git worktree remove -> exit ${w.status}`);
   if (w.status !== 0) {
     const saida = `${w.stdout || ""}${w.stderr || ""}`;
-    // F1/G1 (1.ª e 2.ª rondas): a decisao de cair no `rm -rf` e' uma FUNCAO PURA e testada.
-    const st = git(["-C", path, "status", "--porcelain"]);
-    const statusLimpo = st.status === 0 && (st.stdout || "").trim() === "";
+    // F1/G1/H1: a decisao de cair no `rm -rf` e' uma FUNCAO PURA e testada.
+    // A prova de limpeza usa `--ignore-submodules=none` E `submodule status` porque o
+    // `status` normal omite submódulos com `ignore=all` (H1, medido pelo validador).
+    const st = git(["-C", path, "status", "--porcelain", "--ignore-submodules=none"]);
+    const sub = git(["-C", path, "submodule", "status"]);
+    const statusLimpo = st.status === 0 && (st.stdout || "").trim() === ""
+      && !(sub.status === 0 && (sub.stdout || "").trim() !== "");
     if (!podeFallback(saida, statusLimpo)) {
       return {
         ok: false,
