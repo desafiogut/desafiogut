@@ -48,7 +48,7 @@ skills/utac/
 │  │  └─ ST-stop.md        ← ST1-ST10
 │  ├─ regras-legado.md ← R1-R20 + mapa R→categoria (referência histórica)
 │  ├─ licoes.md        ← lições da série (com o UTAC de origem)
-│  ├─ ambiente.md      ← armadilhas Windows/MSYS/Netlify (prosa; as regras A1-A12 estão em regras/A)
+│  ├─ ambiente.md      ← armadilhas Windows/MSYS/Netlify (prosa; as regras A1-A13 estão em regras/A)
 │  └─ contexto.md      ← o que é o DesafioGUT v6.0
 ├─ types/              ← VARIAÇÕES (6 tipos de UTAC)
 │  ├─ diagnostico.md · publicacao.md · produto.md
@@ -60,7 +60,7 @@ skills/utac/
 ## As 10 categorias de regras (75 regras)
 | cat. | tema | regras | cat. | tema | regras |
 |---|---|---|---|---|---|
-| **E** | Engenharia | E1-E9 | **A** | Ambiente | A1-A12 |
+| **E** | Engenharia | E1-E9 | **A** | Ambiente | A1-A13 |
 | **T** | Testes | T1-T5 | **P** | Processo | P1-P7 |
 | **G** | Git e deploy | G1-G6 | **AU** | Autonomia | AU1-AU4 |
 | **L** | LGPD | L1-L6 | **ST** | Stop conditions | ST1-ST10 |

@@ -95,3 +95,40 @@ da cache é **inerte** nesta medição. Lição de método: **comparar mediçõe
 código**.
 Origem: op: 2026-10-01 (UTAC000.6).
 Cross-ref: HI10, A9, A11, T4.
+
+## A13 — Junctions em worktree: criar e remover (o delete SEGUE a junction)
+**Medido no UTAC106x.3.** Um `git worktree` não traz `node_modules` (ver **A9**); criar junctions para os
+`node_modules` resolve a **criação** — mas a **remoção é perigosa**: `git worktree remove` (tal como
+`rm -rf`) faz um delete recursivo que **segue o reparse point** e apaga o conteúdo do **alvo REAL**.
+
+Duas reprodutibilidades, ambas medidas (alvo descartável, NUNCA o `node_modules` real):
+- **Caminhos curtos: `git worktree remove` devolve exit 0 e o alvo fica VAZIO** — perda **silenciosa**
+  (alvo de 3 ficheiros → 0; o worktree sai e nada avisa).
+- **Caminho > MAX_PATH: exit 255 + `error: failed to delete '<wt>': Filename too long`** — aborta a meio.
+  Foi o que, no UTAC106x.1, deixou `frontend/node_modules` **505→498** e o
+  `netlify/functions/node_modules` **417→0**.
+
+### Criar
+1. `git worktree add C:/Users/<user>/tmp-<utac>/wt <sha> --detach`
+2. Junctions por **`.bat`** invocado com `cmd /c` (`mklink` é builtin do cmd — não existe em git-bash):
+   ```
+   mklink /J "<wt>\desafio-gut\frontend\node_modules" "<raiz>\desafio-gut\frontend\node_modules"
+   mklink /J "<wt>\desafio-gut\frontend\netlify\functions\node_modules" "<raiz>\...\netlify\functions\node_modules"
+   ```
+   invocar com `MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1 cmd /c "C:\...\junctions.bat"`.
+   ⚠️ A forma `cmd /c 'a & b'` do git-bash **falha em silêncio** (medido) — usar sempre `.bat`.
+   ✅ **Alternativa medida e fiável em Node** (é o que `scripts/worktree-helper.mjs` usa):
+   `spawnSync("cmd", ["/c", "mklink", "/J", link, alvo])` — sem `.bat`, sem quoting frágil.
+   ✅ **Detecção (o guarda do helper):** `lstatSync(p).isSymbolicLink()` devolve **true** para uma junction
+   (medido), logo dá para *varrer a árvore sem descer nos reparse points* e recusar o delete recursivo.
+
+### Remover — **A ORDEM É OBRIGATÓRIA**
+1. **`rmdir` das junctions PRIMEIRO** (por `.bat`; `rmdir` remove **só o link**, não o alvo):
+   `rmdir "<wt>\desafio-gut\frontend\node_modules"` (e o par de `netlify\functions`).
+2. Confirmar que os links desapareceram (`if exist` → «não existe»).
+3. **Só então** `git worktree remove <wt>` (sem `--force`) e `git worktree prune`.
+⇒ Medido: com esta ordem o alvo fica **INTACTO** (3/3 ficheiros) e o worktree sai limpo.
+**Guarda:** **nunca** `git worktree remove` nem `rm -rf` enquanto houver junctions dentro do worktree —
+nenhum dos dois distingue «directoria real» de «reparse point».
+
+Origem: UTAC106x.3 (incidente do UTAC106x.1) · Cross-ref: A9, HI10, GATE 10.
