@@ -70,7 +70,14 @@ export async function getPontos(endereco) {
   return Number(r?.pontos ?? 0);
 }
 
-/** Há pontos suficientes para 1 cartão? (`pontos >= PONTOS_POR_CARTAO`) */
+/** Há pontos suficientes para 1 cartão? (`pontos >= PONTOS_POR_CARTAO`)
+ *
+ * ⚠️ UTAC106f (achado ⚠️ R1 do validador adversarial, decisão do operador = opção A): **NÃO usar esta
+ * função para decidir o cartão.** Ela compara o TOTAL — e o bónus de palpite (`tipo:"palpite"`) entra
+ * nesse total, o que fazia `48 pontos de compra + 2 de bónus = 50` DESBLOQUEAR o cartão. Isso contradiz
+ * o requisito declarado «o palpite NÃO decide o cartão» (crítico Google Play). Quem decide o cartão é
+ * `podeResgatarCartaoComCompra()`, abaixo. Esta função fica À VISTA (nada foi apagado), sem uso.
+ */
 export async function podeResgatarCartao(endereco) {
   return (await getPontos(endereco)) >= PONTOS_POR_CARTAO;
 }
@@ -256,4 +263,33 @@ export async function apurarPalpite(edicaoId, valorReal) {
     vencedor: { endereco: vencedor.endereco, valor: vencedor.valor },
     pontosCreditados: PONTOS_POR_PALPITE_CERTO,
   };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════════════
+// UTAC106f — CORRECÇÃO R1 (achado ⚠️ do validador, decisão do operador = OPÇÃO A).
+//
+// O CARTÃO CONTA SÓ PONTOS DE COMPRA. O bónus do palpite é PRESTÍGIO: soma no `pontos` total e aparece
+// no histórico, mas **não** conta para o limiar do cartão. Medido antes da correcção: 48 de compra + 2
+// de bónus = 50 desbloqueava o cartão — o palpite «decidia» o cartão, contra o requisito crítico
+// (Google Play). `resgate` subtrai (gastar pontos de compra), `palpite` é ignorado.
+// ══════════════════════════════════════════════════════════════════════════════════════
+
+/** Tipos de movimento que CONTAM para o cartão. `palpite` NÃO está aqui, de propósito. */
+export const TIPOS_QUE_CONTAM_PARA_CARTAO = Object.freeze([TIPO_COMPRA, TIPO_RESGATE]);
+
+/**
+ * Soma dos movimentos que contam para o CARTÃO (compra soma, resgate subtrai; palpite ignorado).
+ * Recebe o registo já lido (`lerPontos`) — é pura sobre ele, não vai à rede.
+ */
+export function pontosDeCompra(registo) {
+  const hist = Array.isArray(registo?.historico) ? registo.historico : [];
+  return hist.reduce(
+    (soma, h) => (TIPOS_QUE_CONTAM_PARA_CARTAO.includes(h?.tipo) ? soma + Number(h?.pontos ?? 0) : soma),
+    0,
+  );
+}
+
+/** O endereço pode resgatar o cartão? SÓ com pontos de COMPRA (o bónus de palpite não conta). */
+export async function podeResgatarCartaoComCompra(endereco) {
+  return pontosDeCompra(await lerPontos(endereco)) >= PONTOS_POR_CARTAO;
 }

@@ -54,7 +54,7 @@ const ctx = (extra = {}) => ({
 });
 
 const LEITURA = (extra = {}) => ({
-  ok: true, pontos: 7, pontosParaCartao: 50, podeResgatarCartao: false,
+  ok: true, pontos: 7, pontosCartao: 7, bonusPalpite: 0, pontosParaCartao: 50, podeResgatarCartao: false,
   historico: [{ data: "2026-10-04T10:00:00.000Z", tipo: "compra", pontos: 1, ref: "k1" }],
   palpites: [], ...extra,
 });
@@ -145,7 +145,7 @@ test("RENDER · o histórico mostra os movimentos do titular", async () => {
 
 // ═══ RESGATE (visível a ≥50; lógica é do 106g) ══════════════════════════════════════════════════
 test("RENDER · com 49 pontos NÃO há botão «Resgatar» (mostra a meta)", async () => {
-  const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 49 }) }));
+  const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 49, pontosCartao: 49 }) }));
   try {
     const t = c.texto();
     assert.doesNotMatch(t, /Resgatar cartão/, "o resgate não pode aparecer antes dos 50 pontos");
@@ -154,7 +154,7 @@ test("RENDER · com 49 pontos NÃO há botão «Resgatar» (mostra a meta)", asy
 });
 
 test("RENDER · com 50 pontos o botão «Resgatar cartão» aparece (desactivado — 106g)", async () => {
-  const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 50, podeResgatarCartao: true }) }));
+  const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 50, pontosCartao: 50, podeResgatarCartao: true }) }));
   try {
     assert.match(c.texto(), /Resgatar cartão/);
     const b = c.botao("Resgatar cartão");
@@ -162,9 +162,26 @@ test("RENDER · com 50 pontos o botão «Resgatar cartão» aparece (desactivado
   } finally { c.dup.restaurar(); }
 });
 
+test("R1 REGRESSÃO · 48 de COMPRA + 2 de bónus (total 50) NÃO mostra «Resgatar»", async () => {
+  // Achado ⚠️ R1 do validador adversarial: o bónus do palpite entrava na soma que desbloqueia o
+  // cartão (48+2=50). Decisão do operador (opção A): o cartão conta SÓ pontos de COMPRA.
+  const c = await montarEcra(() => ({ status: 200, json: LEITURA({
+    pontos: 50, pontosCartao: 48, bonusPalpite: 2, podeResgatarCartao: false,
+  }) }));
+  try {
+    const t = c.texto();
+    assert.match(t, /48 \/ 50 pontos/, "a barra tem de mostrar os pontos de CARTÃO (48), não o total (50)");
+    assert.doesNotMatch(t, /50 \/ 50 pontos/, "o total não pode aparecer como progresso do cartão");
+    assert.doesNotMatch(t, /Resgatar cartão/, "48 de compra NÃO desbloqueia o cartão");
+    assert.match(t, /Bónus de palpite: \+2/, "o bónus tem de aparecer à parte, marcado como fora do cartão");
+    assert.match(t, /não conta para o cartão/);
+    assert.match(c.html(), /aria-valuenow="48"/, "o progressbar tem de reflectir os pontos de cartão");
+  } finally { c.dup.restaurar(); }
+});
+
 // ═══ ESTADO VAZIO ═══════════════════════════════════════════════════════════════════════════════
 test("RENDER · 0 pontos → estado vazio com caminho para a Carteira", async () => {
-  const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 0, historico: [] }) }));
+  const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 0, pontosCartao: 0, historico: [] }) }));
   try {
     const t = c.texto();
     assert.match(t, /Ainda não tens pontos\. Compra o teu primeiro Passe na Carteira\./);
@@ -238,7 +255,7 @@ test("INVARIANTE · o cartão NUNCA depende do palpite (Google Play: jogo de hab
   // 50 pontos de COMPRA, com um palpite apurado como PERDEDOR: o resgate tem de continuar a
   // aparecer. Se o cartão dependesse do palpite, este teste cairia.
   const c = await montarEcra(() => ({ status: 200, json: LEITURA({
-    pontos: 50, podeResgatarCartao: true,
+    pontos: 50, pontosCartao: 50, podeResgatarCartao: true,
     palpites: [{ edicaoId: "PROG-7", valor: 5, apurado: true, resultado: "perdeu" }],
   }) }));
   try {

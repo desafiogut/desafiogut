@@ -24,6 +24,8 @@ const MUTANTES = [
   ["MP4 vencedor marcado como «perdeu»", LIB, '.update({ apurado: true, resultado: "mais_proximo" })', '.update({ apurado: true, resultado: "perdeu" })', FN, ALVO_BE],
   ["MP5 «Resgatar» visível a <50", PAGINA, "{podeResgatarCartao ? (", "{false ? (", FE, ALVO_FE],
   ["MP6 cartão passa a DEPENDER do palpite", PAGINA, "{podeResgatarCartao ? (", "{podeResgatarCartao && !palpite ? (", FE, ALVO_FE],
+  // MP7 — R1: a barra/limiar volta a usar o TOTAL (com o bónus de palpite) em vez dos pontos de CARTÃO.
+  ["MP7 R1: cartão volta a contar o bónus (total)", PAGINA, "{pontosCartao} / {pontosParaCartao} pontos", "{pontos} / {pontosParaCartao} pontos", FE, ALVO_FE],
 ];
 
 const md5 = (b) => createHash("md5").update(b).digest("hex");

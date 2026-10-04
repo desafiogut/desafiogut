@@ -87,6 +87,7 @@ mock.module("../_lib/supabase-client.mjs", {
 
 const {
   PONTOS_POR_PALPITE_CERTO, registarPalpite, lerPalpite, lerPalpites, apurarPalpite, getPontos,
+  pontosDeCompra, podeResgatarCartaoComCompra, podeResgatarCartao,
 } = await import("../_lib/passe-pontos.mjs");
 
 const A = "0xaaa0000000000000000000000000000000000001";
@@ -221,7 +222,49 @@ test("apurarPalpite credita exactamente +2 (nunca mais), sobre pontos PREEXISTEN
   pontosDe(A).pontos = 48;
   await registarPalpite(A, ED, 10);
   await apurarPalpite(ED, 11);
-  assert.equal(await getPontos(A), 50, "48 + 2 = 50 (a regra do cartão é de COMPRA, o bónus soma)");
+  assert.equal(await getPontos(A), 50, "48 (compra) + 2 (bónus) = 50 no TOTAL");
+});
+
+// ── R1 (achado ⚠️ do validador adversarial) — o CARTÃO conta SÓ pontos de COMPRA ────────────────
+// ⚠️ ERRADO ANTES (mantido à vista, GATE 15): a 1.ª versão deste ficheiro afirmava
+// «48 + 2 = 50 (a regra do cartão é de COMPRA, o bónus soma)» — ou seja, codificava o DEFEITO como
+// comportamento esperado, e o mutante MP6 não o apanhava (testava o gate, não a soma). Os 4 testes
+// abaixo são a correcção (decisão do operador = opção A).
+test("R1 · pontosDeCompra conta compra/resgate e IGNORA o bónus de palpite", () => {
+  assert.equal(pontosDeCompra({ historico: [
+    { tipo: "compra", pontos: 1 }, { tipo: "palpite", pontos: 2 },
+    { tipo: "compra", pontos: 1 }, { tipo: "resgate", pontos: -50 },
+  ] }), -48);
+  assert.equal(pontosDeCompra({ historico: [{ tipo: "palpite", pontos: 2 }] }), 0);
+  assert.equal(pontosDeCompra(null), 0);
+  assert.equal(pontosDeCompra({}), 0);
+});
+
+test("R1 REGRESSÃO · 48 de COMPRA + 2 de bónus = 50 NÃO desbloqueia o cartão", async () => {
+  semear([A]);
+  pontosDe(A).pontos = 48;
+  pontosDe(A).historico = Array.from({ length: 48 }, (_, i) => ({ data: "2026-10-01T00:00:00.000Z", tipo: "compra", pontos: 1, ref: `k${i}` }));
+  await registarPalpite(A, ED, 10);
+  await apurarPalpite(ED, 10);
+  assert.equal(await getPontos(A), 50, "o TOTAL chega a 50 (48 compra + 2 bónus)");
+  assert.equal(await podeResgatarCartaoComCompra(A), false, "mas o CARTÃO conta só 48 ⇒ NÃO desbloqueia");
+  assert.equal(await podeResgatarCartao(A), true,
+    "a função ANTIGA (total) diria que sim — é exactamente por isso que deixou de decidir o cartão");
+});
+
+test("R1 · 50 pontos de COMPRA desbloqueiam o cartão", async () => {
+  semear([A]);
+  pontosDe(A).pontos = 50;
+  pontosDe(A).historico = Array.from({ length: 50 }, (_, i) => ({ data: "2026-10-01T00:00:00.000Z", tipo: "compra", pontos: 1, ref: `k${i}` }));
+  assert.equal(await podeResgatarCartaoComCompra(A), true);
+});
+
+test("R1 · um bónus de palpite SOZINHO nunca desbloqueia o cartão", async () => {
+  semear([A]);
+  await registarPalpite(A, ED, 10);
+  await apurarPalpite(ED, 10); // +2 pontos sem nenhuma compra
+  assert.equal(await getPontos(A), 2);
+  assert.equal(await podeResgatarCartaoComCompra(A), false, "bónus não compra cartão (prestígio)");
 });
 
 test("apurarPalpite é independente por edição (apurar a PROG-7 não toca na PROG-8)", async () => {

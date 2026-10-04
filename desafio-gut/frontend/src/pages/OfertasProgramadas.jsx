@@ -51,7 +51,9 @@ export default function OfertasProgramadas() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { edicoes } = useAppContext();
-  const { pontos, historico, palpites, pontosParaCartao, podeResgatarCartao, loading, erro } = usePontos();
+  // ⚠️ R1 (UTAC106f, decisão do operador = opção A): o CARTÃO conta SÓ pontos de COMPRA
+  // (`pontosCartao`); `pontos` é o TOTAL e `bonusPalpite` é a parte que NÃO conta (prestígio).
+  const { pontos, pontosCartao, bonusPalpite, historico, palpites, pontosParaCartao, podeResgatarCartao, loading, erro } = usePontos();
 
   const edicao = useMemo(() => edicaoProgramadaDe(edicoes), [edicoes]);
   const palpiteDesta = useMemo(
@@ -63,7 +65,7 @@ export default function OfertasProgramadas() {
   const [valorPalpite, setValorPalpite] = useState("");
   const [toast, setToast] = useState(null);
 
-  const progresso = Math.min(100, Math.round((pontos / Math.max(1, pontosParaCartao)) * 100));
+  const progresso = Math.min(100, Math.round((pontosCartao / Math.max(1, pontosParaCartao)) * 100));
   const semPontos = !loading && !erro && pontos === 0;
 
   async function palpitar() {
@@ -114,16 +116,24 @@ export default function OfertasProgramadas() {
           <GlassCard as="section" aria-label="Progresso de pontos" style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
               <span style={{ color: COR.text, fontWeight: 800, fontSize: "1.05rem" }}>
-                {pontos} / {pontosParaCartao} pontos
+                {pontosCartao} / {pontosParaCartao} pontos
               </span>
               <span style={{ color: COR.muted, fontSize: "0.78rem" }}>{progresso}%</span>
             </div>
             <div
-              role="progressbar" aria-valuenow={pontos} aria-valuemin={0} aria-valuemax={pontosParaCartao}
+              role="progressbar" aria-valuenow={pontosCartao} aria-valuemin={0} aria-valuemax={pontosParaCartao}
               style={{ marginTop: "0.6rem", height: "10px", borderRadius: "999px", background: "rgba(107,125,184,0.22)", overflow: "hidden" }}
             >
               <div style={{ width: `${progresso}%`, height: "100%", borderRadius: "999px", background: `linear-gradient(90deg, ${COR.gold}, ${COR.primary})` }} />
             </div>
+
+            {/* ⚠️ R1 — o bónus do palpite NÃO conta para o cartão (decisão do operador: opção A).
+                Mostra-se à parte para o utilizador saber exactamente o que falta. */}
+            {bonusPalpite > 0 && (
+              <p style={{ margin: "0.5rem 0 0", color: COR.muted, fontSize: "0.76rem" }}>
+                🎯 Bónus de palpite: <strong style={{ color: COR.gold }}>+{bonusPalpite}</strong> — não conta para o cartão.
+              </p>
+            )}
 
             {/* 5 — BOTÃO DE RESGATE (visível a ≥50; a lógica é do UTAC106g) */}
             {podeResgatarCartao ? (

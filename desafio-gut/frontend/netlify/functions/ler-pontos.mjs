@@ -6,7 +6,8 @@
 //
 // Header: Authorization: Bearer ***
 //
-// 200 { ok, pontos, pontosParaCartao, podeResgatarCartao, historico, palpites }
+// 200 { ok, pontos, pontosCartao, bonusPalpite, pontosParaCartao, podeResgatarCartao, historico, palpites }
+//   ⚠️ R1 (UTAC106f): `pontos` é o TOTAL; `pontosCartao` é o que CONTA para o cartão (só compra/resgate).
 // 401 token_ausente|token_invalido · 405 metodo_invalido · 503 sistema_pausado|store_indisponivel
 //
 // Padrão herdado POR LEITURA de `comprar-passe-pontos.mjs` (Bearer → endereco; erros snake_case).
@@ -15,7 +16,7 @@ import { jsonResponse, jsonError } from "./_lib/validate.mjs";
 import { verificarUserSession } from "./_lib/jwt.mjs";
 import { respostaPreflight } from "./_lib/cors.mjs";
 import { sistemaPausado, lerEstadoSistema } from "./_lib/system-state.mjs";
-import { lerPontos, lerPalpites, PONTOS_POR_CARTAO } from "./_lib/passe-pontos.mjs";
+import { lerPontos, lerPalpites, pontosDeCompra, PONTOS_POR_CARTAO } from "./_lib/passe-pontos.mjs";
 
 async function titular(req) {
   const h = req.headers.get("authorization") || "";
@@ -49,11 +50,17 @@ export default async (req) => {
   }
 
   const pontos = Number(registo?.pontos ?? 0);
+  // ⚠️ R1 (UTAC106f, decisão do operador = opção A): o CARTÃO conta SÓ pontos de COMPRA.
+  // `pontos` é o TOTAL (compra + bónus de palpite) e serve para mostrar o bónus; a BARRA e o LIMIAR
+  // do cartão usam `pontosCartao`. Sem isto, 48 de compra + 2 de bónus = 50 desbloqueava o cartão.
+  const pontosCartao = pontosDeCompra(registo);
   return jsonResponse({
     ok: true,
     pontos,
+    pontosCartao,
+    bonusPalpite: pontos - pontosCartao,
     pontosParaCartao: PONTOS_POR_CARTAO,
-    podeResgatarCartao: pontos >= PONTOS_POR_CARTAO,
+    podeResgatarCartao: pontosCartao >= PONTOS_POR_CARTAO,
     historico: Array.isArray(registo?.historico) ? registo.historico : [],
     palpites: palpites.map((p) => ({
       edicaoId: p.edicao_id, valor: p.valor, criadoEm: p.criado_em,

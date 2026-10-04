@@ -13,7 +13,8 @@ import { useTrocarPorSenhas } from "./useTrocarPorSenhas.js";
 import { apiGet } from "../lib/api.js";
 
 const VAZIO = Object.freeze({
-  pontos: 0, historico: [], palpites: [], pontosParaCartao: 50, podeResgatarCartao: false,
+  pontos: 0, pontosCartao: 0, bonusPalpite: 0,
+  historico: [], palpites: [], pontosParaCartao: 50, podeResgatarCartao: false,
 });
 
 export function usePontos() {
@@ -39,6 +40,9 @@ export function usePontos() {
       }
       const novo = {
         pontos: Number(data?.pontos ?? 0),
+        // ⚠️ R1 (UTAC106f): o CARTÃO conta SÓ pontos de COMPRA — a barra/limiar usam `pontosCartao`.
+        pontosCartao: Number(data?.pontosCartao ?? 0),
+        bonusPalpite: Number(data?.bonusPalpite ?? 0),
         historico: Array.isArray(data?.historico) ? data.historico : [],
         palpites: Array.isArray(data?.palpites) ? data.palpites : [],
         pontosParaCartao: Number(data?.pontosParaCartao ?? 50),
