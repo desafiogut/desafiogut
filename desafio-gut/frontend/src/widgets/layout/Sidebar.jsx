@@ -39,13 +39,17 @@ const NAV_ITEMS = [
   { path: "/vitrine",       label: "Vitrine (4 Slots)", icon: <IconTarget />,    end: false },
   { path: "/programacao",   label: "Programação",       icon: <IconTarget />,    end: false },
   { path: "/ativos",        label: "Meus Ativos",       icon: <IconTrending />,  end: false },
-  // MC39.4.1 (#segurança): "Segurança" removido do nav do utilizador COMUM (rota gated
-  // p/ corporativo desde o MC39.3.1; o comum era redirecionado para "/"). Lojista acede
-  // via card no CorporativoDashboard.
-  { path: "/configuracoes", label: "Configurações",     icon: <IconSettings />,  end: false },
   // MC11.1 — Seção pública "Seja Nosso Parceiro" (visível a TODOS: não logados,
   // comuns e lojistas). Porta de entrada para o fluxo corporativo.
   { path: "/seja-nosso-parceiro", label: "🤝 Seja nosso parceiro!", icon: <IconTrending />, end: false },
+  // MC39.4.1 (#segurança): "Segurança" removido do nav do utilizador COMUM (rota gated
+  // p/ corporativo desde o MC39.3.1; o comum era redirecionado para "/"). Lojista acede
+  // via card no CorporativoDashboard.
+  // UTAC106c — PENDÊNCIA #4 do 106b: «Configurações» passa para o FIM da lista, para a
+  // ordem dos SECUNDÁRIOS coincidir com a do BottomNav (`SECONDARY_LINKS`: Vitrine ·
+  // Programação · Meus Ativos · Seja nosso parceiro · Configurações). Só a ordem mudou —
+  // caminho, rótulo e ícone são os mesmos; a estrutura do rail fica intacta.
+  { path: "/configuracoes", label: "Configurações",     icon: <IconSettings />,  end: false },
 ];
 
 // MC11 — Itens exclusivos do Usuário Corporativo (Lojista). Renderizados

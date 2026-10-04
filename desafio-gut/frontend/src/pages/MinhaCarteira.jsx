@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
-import { GlassCard } from "@/components/ui";
+import { GlassCard, Modal } from "@/components/ui";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
 import CreditoStatus from "../components/CreditoStatus.jsx"; // MC59.6 — feedback do 202 assíncrono
@@ -10,6 +10,11 @@ import PainelIndicacao from "../components/PainelIndicacao.jsx";
 import BotaoLoginPrincipal from "../components/BotaoLoginPrincipal.jsx";
 
 const VALOR_POR_SENHA_BRL = 2;
+// UTAC106c — Passe Desafio: R$ 2,00 (NORTE Via B). Aqui vive só o PREÇO e o balão de
+// confirmação; a compra (débito/crédito/gravação) é do UTAC106e — este ecrã não toca em lógica.
+// Guardado como STRING (e não número + toFixed) para o rótulo sair exactamente «R$ 2,00»,
+// com vírgula decimal (pt-BR), como o enunciado o escreve.
+const PRECO_PASSE_DESAFIO = "R$ 2,00";
 
 const COR = {
   primary: "#f5a623", primaryDim: "rgba(245,166,35,0.15)",
@@ -60,6 +65,8 @@ export default function MinhaCarteira() {
   } = useTrocarPorSenhas();
 
   const [comprarAberto, setComprarAberto] = useState(false);
+  // UTAC106c — balão de confirmação do Passe Desafio (só o balão; a compra é do UTAC106e).
+  const [passeAberto, setPasseAberto] = useState(false);
   // MC59.6 — txHash de uma compra assíncrona (202); alimenta <CreditoStatus>.
   // Inerte enquanto CREDITO_ASSINCRONO=OFF (o caminho síncrono não retorna txHash).
   const [creditoTxHash, setCreditoTxHash] = useState(null);
@@ -74,7 +81,11 @@ export default function MinhaCarteira() {
   // saldoSenhas on-chain; Lance Relâmpago debita aqui em centavos.
   const saldoReais = saldoRsCentavos == null ? null : saldoRsCentavos / 100;
 
-  function irParaLanceRelampago() {
+  // UTAC106c — o botão «Lance Relâmpago» passou a «Menor Lance Único» (nome canónico da
+  // modalidade, alinhado com a aba do UTAC106b e com a NORTE Via B). O destino e a modalidade
+  // NÃO mudaram: `/mercado` é a rota canónica e `flash` é a modalidade do Menor Lance Único
+  // (GATE 4 — não se alterou lógica que funcionava; a rota indicação do enunciado é `/mercado`).
+  function irParaMenorLanceUnico() {
     try { setModalidade?.("flash"); } catch {}
     navigate("/mercado");
   }
@@ -132,7 +143,7 @@ export default function MinhaCarteira() {
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 marginBottom: "0.55rem", gap: "0.5rem",
               }}>
-                <h3 style={{ ...tituloStyle, margin: 0, color: COR.gold }}>💰 Minha Carteira</h3>
+                <h3 style={{ ...tituloStyle, margin: 0, color: COR.gold }}>Carteira</h3>
                 <span style={{
                   fontSize: "0.62rem", fontWeight: 700,
                   color: saldoRsStatus === "error" ? COR.danger : COR.muted,
@@ -166,9 +177,12 @@ export default function MinhaCarteira() {
               </div>
 
               {/* MC99 — a etiqueta veio do glass de cabeçalho removido: o número
-                  grande precisa de dizer o que é. */}
+                  grande precisa de dizer o que é. UTAC106c — o título passou a
+                  «Carteira» (o nome canónico da navegação) e a etiqueta a amarelo,
+                  a par do valor: os dois rótulos do topo passam a ser o mesmo par
+                  visual (COR.gold). */}
               <div style={{
-                fontSize: "0.62rem", color: COR.muted, fontWeight: 700,
+                fontSize: "0.62rem", color: COR.gold, fontWeight: 700,
                 textTransform: "uppercase", letterSpacing: "0.06em",
                 marginBottom: "0.15rem",
               }}>Saldo Disponível</div>
@@ -197,7 +211,7 @@ export default function MinhaCarteira() {
 
               <div style={{
                 display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
+                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
                 gap: "0.6rem",
               }}>
                 <button
@@ -236,10 +250,11 @@ export default function MinhaCarteira() {
                   {trocandoSenhas ? "Trocando…" : `🎫 Trocar R$ ${VALOR_POR_SENHA_BRL.toFixed(2)} → 1 Senha`}
                 </button>
                 <button
-                  onClick={irParaLanceRelampago}
+                  type="button"
+                  onClick={irParaMenorLanceUnico}
                   disabled={!saldoReais}
                   style={{
-                    // MC48 P2 — laranja suave (CTA de lance).
+                    // MC48 P2 — laranja suave (CTA de lance). UTAC106c — passa a «Menor Lance Único».
                     ...botaoPrimario,
                     background: "rgba(245,166,35,0.14)",
                     border: "1px solid rgba(245,166,35,0.4)",
@@ -248,9 +263,20 @@ export default function MinhaCarteira() {
                     cursor: !saldoReais ? "not-allowed" : "pointer",
                     opacity: !saldoReais ? 0.5 : 1,
                   }}
-                  title={!saldoReais ? "Deposite PIX primeiro" : "Vai ao Mercado de Lances em modo Relâmpago"}
+                  title={!saldoReais ? "Deposite PIX primeiro" : "Abre o Mercado no Menor Lance Único"}
                 >
-                  ⚡ Lance Relâmpago
+                  ⚡ Menor Lance Único
+                </button>
+                {/* UTAC106c — Passe Desafio: abre o BALÃO de confirmação (não compra nada aqui;
+                    a compra é do UTAC106e). Confirmar leva às Ofertas Programadas, travadas por
+                    EM_BREVE_MODE (a página mostra «EM BREVE»). */}
+                <button
+                  type="button"
+                  onClick={() => setPasseAberto(true)}
+                  style={{ ...botaoPrimario }}
+                  title={`Comprar o Passe Desafio por ${PRECO_PASSE_DESAFIO}`}
+                >
+                  {`Comprar Passe Desafio ${PRECO_PASSE_DESAFIO}`}
                 </button>
               </div>
 
@@ -316,6 +342,47 @@ export default function MinhaCarteira() {
 
         </>
       )}
+
+      {/* UTAC106c — BALÃO de confirmação do Passe Desafio.
+          ⚠️ Só o balão: NÃO há débito de saldo, chamada de API nem gravação — a compra é do
+          UTAC106e. «Confirmar» encaminha para as Ofertas Programadas, que estão travadas por
+          EM_BREVE_MODE e mostram «EM BREVE» (a oferta ainda não abre). */}
+      <Modal
+        open={passeAberto}
+        onClose={() => setPasseAberto(false)}
+        labelledBy="utac106c-passe-titulo"
+      >
+        <h2 id="utac106c-passe-titulo" style={{
+          margin: "0 0 0.5rem", fontSize: "1.05rem", fontWeight: 800, color: COR.gold,
+        }}>
+          Comprar Passe Desafio
+        </h2>
+        <p style={{ margin: "0 0 1rem", color: COR.muted, fontSize: "0.9rem", lineHeight: 1.5 }}>
+          Confirmar a compra do Passe Desafio por{" "}
+          <strong style={{ color: COR.gold }}>{PRECO_PASSE_DESAFIO}</strong>? O Passe é adquirido
+          nas Ofertas Programadas, que abrem em breve.
+        </p>
+        <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => setPasseAberto(false)}
+            style={{
+              padding: "0.6rem 1rem", borderRadius: "10px", cursor: "pointer",
+              background: "transparent", border: "1px solid rgba(107,125,184,0.45)",
+              color: COR.muted, fontWeight: 700, fontSize: "0.82rem",
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => { setPasseAberto(false); navigate("/ofertas-programadas"); }}
+            style={{ ...botaoPrimario, width: "auto", padding: "0.6rem 1.2rem" }}
+          >
+            Confirmar
+          </button>
+        </div>
+      </Modal>
 
       <ComprarFichasModal
         aberto={comprarAberto}

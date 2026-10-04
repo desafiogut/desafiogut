@@ -74,7 +74,12 @@ test("UTAC106b · a frase NÃO sugere álea nem aposta (glossário oficial)", ()
 test("UTAC106b · a frase aplicada é LITERALMENTE uma das 3 opções autorizadas do enunciado", () => {
   // Guarda contra o executor INVENTAR copy: a frase tem de ser uma das três opções que o
   // enunciado fixou (A/B/C), verbatim. Mudar a copy é decisão do operador, não do executor.
+  // UTAC106c — o enunciado do 106c acrescenta a versão decidida pelo operador (pendência #2:
+  // «paga» → «oferta», alinhada com o Art. 7 do Regulamento). A lista passa de 3 para 4 opções.
+  // As 3 originais ficam (é o registo do enunciado do 106b, GATE 15); a copy CORRENTE é fixada
+  // por um teste dedicado em `src/__tests__/utac106c-carteira.test.mjs`.
   const AUTORIZADAS = [
+    "Quanto você oferta por esse item? O menor lance único leva!",
     "Quanto você paga por esse item? O menor lance único leva!",
     "Quanto você paga por esse item? O menor lance único compra!",
     "Dê o seu menor lance único. Se ninguém der igual, o item é seu.",

@@ -634,6 +634,10 @@ export function AppProvider({ children }) {
     const rotasProibidas = new Set([
       "/", "/carteira", "/mercado", "/vitrine", "/programacao",
       "/ativos", "/seja-nosso-parceiro",
+      // UTAC106c — PENDÊNCIA #1 do 106b: a rota nova entra no isolamento corporativo.
+      // As páginas de CONSUMO expulsam o lojista para /corporativo; /ofertas-programadas
+      // nasceu no 106b e ficou de fora da lista, deixando o lojista entrar por URL directa.
+      "/ofertas-programadas",
     ]);
     if (rotasProibidas.has(location.pathname)) {
       navigate("/corporativo", { replace: true });

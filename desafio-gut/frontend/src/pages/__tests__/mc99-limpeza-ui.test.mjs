@@ -132,35 +132,43 @@ test("MC99/SEG2 · os 5 cards removidos não voltaram", () => {
     assert.ok(!c.includes(titulo), `${etiqueta} voltou ao ficheiro`);
   }
   // o glass de cabeçalho também não pode voltar (era um <h1> a repetir o título)
-  assert.ok(!/<h1[^>]*>\s*💰 Minha Carteira/.test(c), "o glass de cabeçalho voltou");
+  assert.ok(!/<h1[^>]*>\s*(?:💰\s*)?(?:Minha\s+)?Carteira/.test(c), "o glass de cabeçalho voltou");
 });
 
-test("MC99/SEG2 · «Minha Carteira» aparece UMA só vez — o cabeçalho não pode voltar", () => {
+test("MC99/SEG2 (UTAC106c) · o título «Carteira» aparece UMA só vez — o cabeçalho não pode voltar", () => {
   // ⚠️ REFUTAÇÃO do validador: a versão anterior procurava só o literal `<h1 …>💰 Minha Carteira`
   // e olhava apenas a PRIMEIRA ocorrência. Duas evasões passavam VERDE, ambas reintroduzindo
   // exactamente o defeito que o MC99 removeu (dois títulos iguais na mesma dobra):
   //   1. título escrito como {`💰 Minha Carteira`} ou com outro emoji;
   //   2. um segundo vidro de cabeçalho colocado DEPOIS do cartão de saldo.
   // A invariante certa é a CONTAGEM: o nome só pode existir no título do cartão de saldo.
+  //
+  // UTAC106c — o título do cartão passou de «Minha Carteira» para «Carteira» (nome canónico
+  // da navegação; decisão do operador no enunciado do UTAC106c). A invariante NÃO muda:
+  // zero ocorrências do nome antigo + UM só título, e nenhum <h1>.
   const c = codigo(ler("src/pages/MinhaCarteira.jsx"));
-  const ocorrencias = (c.match(/Minha Carteira/g) || []).length;
-  assert.equal(ocorrencias, 1,
-    `«Minha Carteira» aparece ${ocorrencias}× no código; tem de ser 1 (só o título do cartão de saldo)`);
+  assert.equal((c.match(/Minha Carteira/g) || []).length, 0,
+    "«Minha Carteira» voltou ao código — o UTAC106c renomeou o título para «Carteira»");
+  // ⚠️ contar por `>Carteira<` (texto JSX) e NÃO por /Carteira/g: o identificador
+  // `MinhaCarteira` do componente contém a palavra e inflacionaria a contagem (falso RED).
+  const titulos = (c.match(/>\s*Carteira\s*</g) || []).length;
+  assert.equal(titulos, 1,
+    `o título «Carteira» aparece ${titulos}× como texto JSX; tem de ser 1 (só o título do cartão de saldo)`);
   assert.ok(!/<h1/.test(c), "há um <h1> — o glass de cabeçalho voltou noutra forma");
 });
 
-test("MC99/SEG2 · «Minha Carteira» está DENTRO do vidro de saldo, e «Saldo Disponível» etiqueta o número", () => {
+test("MC99/SEG2 (UTAC106c) · «Carteira» está DENTRO do vidro de saldo, e «Saldo Disponível» etiqueta o número", () => {
   const c = codigo(ler("src/pages/MinhaCarteira.jsx"));
-  const posTitulo = c.indexOf("💰 Minha Carteira");
+  const posTitulo = c.search(/>\s*Carteira\s*</);
   const posEtiqueta = c.indexOf(">Saldo Disponível<");
-  assert.ok(posTitulo > -1, "o nome «💰 Minha Carteira» desapareceu do vidro de saldo");
+  assert.ok(posTitulo > -1, "o título «Carteira» desapareceu do vidro de saldo");
   assert.ok(posEtiqueta > -1, "falta a etiqueta «Saldo Disponível» sobre o número");
   assert.ok(posTitulo < posEtiqueta, "a ordem inverteu-se: a etiqueta tem de vir sob o título");
 });
 
 test("MC99/SEG2 · o vidro de saldo usa o PADRÃO (sem background/borderColor inline)", () => {
   const c = codigo(ler("src/pages/MinhaCarteira.jsx"));
-  const pos = c.indexOf("💰 Minha Carteira");
+  const pos = c.search(/>\s*Carteira\s*</);
   assert.ok(pos > -1, "não encontrei o vidro de saldo");
   // a abertura do GlassCard que contém o título: olhar para trás até ao <GlassCard
   const abre = c.lastIndexOf("<GlassCard", pos);

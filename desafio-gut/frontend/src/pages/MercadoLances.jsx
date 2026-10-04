@@ -225,7 +225,13 @@ function OverlayVencedor({
 //  · GOOGLE PLAY: zero termos de álea/aposta — nada de «sorte», «azar», «aposta», «loteria»,
 //    «leilão» (glossário oficial, `glossario.test.mjs`). O que decide é HABILIDADE (escolher o
 //    menor valor que fique ÚNICO), não o azar. Mantém-se «jogo de habilidade» (NORTE Via B).
-const FRASE_MENOR_LANCE_UNICO = "Quanto você paga por esse item? O menor lance único leva!";
+//
+// UTAC106c — PENDÊNCIA #2 do 106b FECHADA (decisão do operador, reversível): a 1.ª metade
+// passou de «Quanto você PAGA por esse item?» para «Quanto você OFERTA por esse item?».
+// Razão: alinhamento com o Art. 7 do Regulamento («QUANTO VOCÊ OFERTA POR...»), que era a
+// divergência apontada pelo validador do 106b (achado ℹN2). A 2.ª metade não muda:
+// «O menor lance único leva!».
+const FRASE_MENOR_LANCE_UNICO = "Quanto você oferta por esse item? O menor lance único leva!";
 
 export default function MercadoLances() {
   const isMobile = useIsMobile();

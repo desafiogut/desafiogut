@@ -42,7 +42,12 @@ const PROIBIDOS = {
   // que reintroduzia «Subastas» SOBREVIVEU — o plural não casava. Um padrão que só apanha
   // o singular é uma guarda com um buraco do tamanho do uso real: ninguém escreve
   // «Subasta» num botão.
-  pt: /\bleil[ãõa]o\b|\bleil[õo]es\b|\bapostas?\b|\bsortes?\b|\bazar\b|\bloterias?\b/i,
+  //
+  // UTAC106c — PENDÊNCIA #3 do 106b: `\bapostas?\b` só apanhava «aposta»/«apostas»; as formas
+  // VERBAIS («aposte», «apostar», «apostou», «apostando») escapavam. Passa a `\bapost\w*\b`,
+  // que cobre o radical inteiro — a mesma classe de buraco que o plural tinha aberto.
+  // `\bsortes?\b` → `\bsort\w*\b` pelo mesmo motivo (apanha «sorteio», «sortudo», …).
+  pt: /\bleil[ãõa]o\b|\bleil[õo]es\b|\bapost\w*\b|\bsort\w*\b|\bazar\b|\bloterias?\b/i,
 };
 const OBRIGATORIOS = {
   pt: [/torneio de habilidade/i, /menor lance[^.]{0,24}[úu]nico/i],
