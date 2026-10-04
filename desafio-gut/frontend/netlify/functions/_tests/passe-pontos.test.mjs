@@ -57,6 +57,8 @@ function criarPontos(tabelas, g) {
         tabelas.pontos.push(nova); linhas = [nova];
       } else if (st.op === "update") {
         for (const c of Object.keys(st.dados)) if (!COLS.includes(c)) return erro("42703", `column "${c}" does not exist`);
+        // Hook de concorrência: simula outro escritor a mudar a linha ENTRE a leitura e o UPDATE (antes do filtro).
+        if (g.antesDeActualizarPontos) { const hh = g.antesDeActualizarPontos; g.antesDeActualizarPontos = null; hh(tabelas.pontos); }
         linhas = tabelas.pontos.filter(casa);
         const cands = linhas.map((l) => ({ ...l, ...st.dados }));
         for (const c of cands) { const e = validar(c); if (e) return e; }
@@ -189,6 +191,17 @@ test("F8 argumentos inválidos são recusados sem tocar na BD", async () => {
   assert.equal((await P.creditarPontos(A, 1, "inventado", K(1))).code, "TIPO_INVALIDO");
   assert.equal((await P.creditarPontos(A, 1, "compra", "")).code, "REF_INVALIDA");
   assert.equal(S.tabelas.pontos.length, 0);
+});
+
+test("F9 CAS: se `pontos` muda entre a leitura e a gravação (escritor concorrente), o módulo RELÊ e aplica — sem lost update", async () => {
+  S.tabelas.pontos.push({ endereco: A, pontos: 0, historico: [], atualizado_em: h(0) });
+  // Outro escritor credita +5 no intervalo entre a leitura e o UPDATE: o CAS (.eq("pontos", base)) perde e relê.
+  S.g.antesDeActualizarPontos = (linhas) => { linhas[0].pontos = 5; };
+  const r = await P.creditarPontos(A, 1, "compra", K(1));
+  assert.equal(r.ok, true); assert.equal(r.criado, true);
+  assert.equal(r.pontos, 6, "5 (concorrente) + 1 (meu) — sem o CAS o +5 seria perdido (lost update)");
+  assert.equal(S.tabelas.pontos[0].pontos, 6);
+  assert.equal(S.tabelas.pontos[0].historico.length, 1);
 });
 
 // ── Endpoint ─────────────────────────────────────────────────────────────────────────────────────
