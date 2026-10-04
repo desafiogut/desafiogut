@@ -90,23 +90,33 @@ test("UTAC106c/SEG1 · existe o botão «Comprar Passe Desafio R$ 2,00»", () =>
     "o rótulo do botão «Comprar Passe Desafio R$ 2,00» desapareceu");
 });
 
-test("UTAC106c/SEG1 · o botão «Comprar Passe» abre um BALÃO de confirmação que fecha e confirma", () => {
+test("UTAC106c/SEG1 · o botão «Comprar Passe» abre o BALÃO, que fecha e COMPRA (UTAC106e)", () => {
+  // UTAC106e — o balão passou de inline a COMPONENTE (`ComprarPasseModal`) e «Confirmar» deixou de
+  // navegar: passou a COMPRAR. Guarda-se a invariante: o botão ABRE o balão, o balão FECHA por
+  // «Cancelar» e «Confirmar» está ligado à compra.
   assert.match(CART, /onClick=\{\(\) => setPasseAberto\(true\)\}/,
     "o botão não abre o balão (falta `setPasseAberto(true)`)");
-  assert.match(CART, /<Modal[\s\S]{0,160}open=\{passeAberto\}/,
-    "não há um <Modal> ligado ao estado `passeAberto` (o balão não existe)");
-  assert.match(CART, /onClose=\{\(\) => setPasseAberto\(false\)\}/,
-    "o balão não fecha (falta o `onClose`)");
-  assert.match(CART, /onClick=\{\(\) => \{ setPasseAberto\(false\); navigate\("\/ofertas-programadas"\); \}\}/,
-    "confirmar não encaminha para as Ofertas Programadas (travadas por EM_BREVE_MODE)");
-  // o balão tem de ter as DUAS saídas (cancelar e confirmar)
-  assert.match(CART, />\s*Cancelar\s*</, "o balão não tem o botão «Cancelar»");
-  assert.match(CART, />\s*Confirmar\s*</, "o balão não tem o botão «Confirmar»");
+  assert.match(CART, /<ComprarPasseModal[\s\S]{0,240}aberto=\{passeAberto\}/,
+    "não há um <ComprarPasseModal> ligado ao estado `passeAberto` (o balão não existe)");
+  assert.match(CART, /onCancelar=\{\(\) => setPasseAberto\(false\)\}/,
+    "o balão não fecha (falta o `onCancelar`)");
+  assert.match(CART, /onConfirmar=\{async \(\) => \{[\s\S]{0,140}await comprarPasse\(\)/,
+    "confirmar não chama `comprarPasse()` (o botão não está ligado ao endpoint do Passe)");
+  // as DUAS saídas continuam a existir — agora no componente do balão.
+  const MODAL = codigo(ler("components/ComprarPasseModal.jsx"));
+  assert.match(MODAL, />\s*Cancelar\s*</, "o balão não tem o botão «Cancelar»");
+  assert.match(MODAL, /"Confirmar"/, "o balão não tem o botão «Confirmar»");
 });
 
-test("UTAC106c/SEG1 · o ecrã NÃO ganhou lógica de compra (é do UTAC106e)", () => {
-  assert.doesNotMatch(CART, /fetch\(|apiPost|async function comprar|comprar-passe/,
-    "apareceu I/O ou chamada de compra no ecrã da Carteira — a compra do Passe é do UTAC106e");
+test("UTAC106c/SEG1 · a Carteira delega a compra ao hook (sem I/O inline) — UTAC106e", () => {
+  // UTAC106e — a Carteira PASSOU a comprar o Passe, mas SEM I/O inline: a chamada vive no hook
+  // `useComprarPasse`. Mantém-se a invariante do 106c (o ECRÃ não faz fetch/apiPost) e acrescenta-se
+  // a nova: o ecrã NUNCA referencia o endpoint da Via A (`comprar-passe`) — só o do Passe Via B.
+  assert.doesNotMatch(CART, /fetch\(|apiPost|async function comprar/,
+    "a Carteira voltou a fazer I/O inline — a chamada tem de viver no hook `useComprarPasse`");
+  assert.match(CART, /useComprarPasse\(\)/, "a Carteira deixou de usar o hook de compra do Passe");
+  assert.doesNotMatch(CART, /comprar-passe(?!-pontos)/,
+    "a Carteira referencia o endpoint da Via A (`comprar-passe`) — só o `comprar-passe-pontos` é dela");
   // ⚠️ ARMADILHA MEDIDA (erro do MEU instrumento, 1.ª versão): `/saldoRsCentavos\s*=/` casava a
   // COMPARAÇÃO `saldoRsCentavos == null` (o `\s*` deixa o `=` casar o 1.º `=` de `==`) e acusava
   // uma escrita que não existe. Exigir que o `=` NÃO seja seguido de `=` fecha isso.

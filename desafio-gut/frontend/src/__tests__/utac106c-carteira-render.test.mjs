@@ -75,6 +75,15 @@ function arvore(raiz) {
     if (Array.isArray(n)) { n.forEach(walk); return; }
     if (typeof n !== "object") return;
     fora.push(n);
+    // UTAC106e — o balão do Passe passou a COMPONENTE (`ComprarPasseModal`); a árvore de ELEMENTOS
+    // não desce para dentro de um componente (os filhos nascem no corpo dele, não em `props.children`).
+    // Como este componente é PURO (sem hooks), chamá-lo aqui materializa o seu output SEM correr hooks
+    // do React — e os botões «Cancelar»/«Confirmar» voltam a ser clicáveis. NÃO se chama o `Modal` do
+    // design system (tem hooks): só se andam os `children` do elemento que ele RECEBE.
+    if (typeof n.type === "function" && n.type.name === "ComprarPasseModal") {
+      const saida = n.type(n.props);
+      if (saida && saida.props) walk(saida.props.children);
+    }
     if (n.props) walk(n.props.children);
   })(raiz);
   return fora;
@@ -179,14 +188,16 @@ test("UTAC106c/RENDER · CLICAR «Comprar Passe» ABRE o balão (com o preço) e
   assert.ok(!c.html().includes("Cancelar"), "«Cancelar» NÃO fechou o balão");
 });
 
-test("UTAC106c/RENDER · CLICAR «Confirmar» NAVEGA para /ofertas-programadas e fecha o balão", async () => {
+test("UTAC106c/RENDER · CLICAR «Confirmar» NÃO navega (o balão passou a COMPRAR — UTAC106e)", async () => {
+  // UTAC106e — MUDANÇA DE CONTRATO (declarada): o 106c encaminhava «Confirmar» para as Ofertas
+  // Programadas. O 106e deu-lhe o trabalho real — chamar `POST /comprar-passe-pontos` e FICAR na
+  // Carteira (permite compras seguidas). Este teste guarda o que NÃO se perdeu: **não navega**.
   const c = await montarCarteira(CONECTADO);
   await c.clicar("Comprar Passe Desafio R$ 2,00");
   globalThis.__NAVEGADAS.length = 0;
   await c.clicar("Confirmar");
-  assert.deepEqual(globalThis.__NAVEGADAS, ["/ofertas-programadas"],
-    `«Confirmar» não encaminhou para as Ofertas Programadas: ${JSON.stringify(globalThis.__NAVEGADAS)}`);
-  assert.ok(!c.html().includes("Cancelar"), "«Confirmar» não fechou o balão");
+  assert.deepEqual(globalThis.__NAVEGADAS, [],
+    `«Confirmar» navegou — devia ficar na Carteira: ${JSON.stringify(globalThis.__NAVEGADAS)}`);
 });
 
 // ═══ SEG5 — BottomNav e Sidebar em SINCRONIA (por render) ═══════════════════════════

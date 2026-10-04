@@ -2,8 +2,11 @@
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
-import { GlassCard, Modal } from "@/components/ui";
+import { GlassCard } from "@/components/ui";
 import { useTrocarPorSenhas } from "../hooks/useTrocarPorSenhas.js";
+import { useComprarPasse } from "../hooks/useComprarPasse.js";
+import ComprarPasseModal from "../components/ComprarPasseModal.jsx";
+import Toast from "../widgets/toast/Toast.jsx";
 import ComprarFichasModal from "../components/ComprarFichasModal.jsx";
 import CreditoStatus from "../components/CreditoStatus.jsx"; // MC59.6 — feedback do 202 assíncrono
 import PainelIndicacao from "../components/PainelIndicacao.jsx";
@@ -65,8 +68,15 @@ export default function MinhaCarteira() {
   } = useTrocarPorSenhas();
 
   const [comprarAberto, setComprarAberto] = useState(false);
-  // UTAC106c — balão de confirmação do Passe Desafio (só o balão; a compra é do UTAC106e).
+  // UTAC106c — balão de confirmação do Passe Desafio. UTAC106e — o balão passou a COMPRAR
+  // (chama o endpoint `comprar-passe-pontos`); o estado do balão mantém o nome do 106c.
   const [passeAberto, setPasseAberto] = useState(false);
+  // UTAC106e — compra do Passe Desafio: hook que chama `POST /comprar-passe-pontos` (endpoint do
+  // UTAC106d-v2). Devolve o estado da chamada; o saldo R$ é relido pelo próprio hook.
+  const { comprar: comprarPasse, loading: comprandoPasse, pontos: pontosPasse } = useComprarPasse();
+  // UTAC106e — feedback da compra: toast do repo + atalho «Carregar agora» no caso 402.
+  const [toastPasse, setToastPasse] = useState(null);
+  const [passeSemSaldo, setPasseSemSaldo] = useState(false);
   // MC59.6 — txHash de uma compra assíncrona (202); alimenta <CreditoStatus>.
   // Inerte enquanto CREDITO_ASSINCRONO=OFF (o caminho síncrono não retorna txHash).
   const [creditoTxHash, setCreditoTxHash] = useState(null);
@@ -343,46 +353,57 @@ export default function MinhaCarteira() {
         </>
       )}
 
-      {/* UTAC106c — BALÃO de confirmação do Passe Desafio.
-          ⚠️ Só o balão: NÃO há débito de saldo, chamada de API nem gravação — a compra é do
-          UTAC106e. «Confirmar» encaminha para as Ofertas Programadas, que estão travadas por
-          EM_BREVE_MODE e mostram «EM BREVE» (a oferta ainda não abre). */}
-      <Modal
-        open={passeAberto}
-        onClose={() => setPasseAberto(false)}
-        labelledBy="utac106c-passe-titulo"
-      >
-        <h2 id="utac106c-passe-titulo" style={{
-          margin: "0 0 0.5rem", fontSize: "1.05rem", fontWeight: 800, color: COR.gold,
-        }}>
-          Comprar Passe Desafio
-        </h2>
-        <p style={{ margin: "0 0 1rem", color: COR.muted, fontSize: "0.9rem", lineHeight: 1.5 }}>
-          Confirmar a compra do Passe Desafio por{" "}
-          <strong style={{ color: COR.gold }}>{PRECO_PASSE_DESAFIO}</strong>? O Passe é adquirido
-          nas Ofertas Programadas, que abrem em breve.
-        </p>
-        <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end", flexWrap: "wrap" }}>
+      {/* UTAC106e — BALÃO de confirmação do Passe Desafio (componente próprio; o 106c tinha-o
+          inline). «Confirmar» CHAMA o endpoint `comprar-passe-pontos` (débito de R$ 2,00 +
+          crédito de 1 ponto) e, em sucesso, o balão FECHA e o utilizador FICA na Carteira
+          (permite compras seguidas — decisão do operador no UTAC106e). */}
+      <ComprarPasseModal
+        aberto={passeAberto}
+        loading={comprandoPasse}
+        pontos={pontosPasse}
+        onCancelar={() => setPasseAberto(false)}
+        onConfirmar={async () => {
+          const r = await comprarPasse();
+          if (r?.ok) {
+            setPasseAberto(false);
+            setPasseSemSaldo(false);
+            setToastPasse({ variant: "success", message: "1 ponto creditado" });
+          } else if (r?.status === 402 || r?.code === "saldo_insuficiente") {
+            setPasseSemSaldo(true);
+            setToastPasse({ variant: "error", message: "Saldo insuficiente. Carregar agora?" });
+          } else {
+            setToastPasse({ variant: "error", message: r?.message || "Erro. Tenta de novo." });
+          }
+        }}
+      />
+
+      {/* UTAC106e — TOAST do repo (`widgets/toast/Toast.jsx`; posiciona-se sozinho, auto-dismiss
+          4 s). O toast não aceita conteúdo rico, por isso o atalho do depósito PIX vive abaixo. */}
+      {toastPasse && (
+        <Toast
+          id={1}
+          variant={toastPasse.variant}
+          message={toastPasse.message}
+          onDismiss={() => setToastPasse(null)}
+        />
+      )}
+
+      {/* UTAC106e — 402 «Saldo insuficiente. Carregar agora?» → abre o depósito PIX do ecrã. */}
+      {passeSemSaldo && (
+        <p style={{ margin: "0.6rem 0 0", fontSize: "0.78rem", color: COR.danger, lineHeight: 1.4, fontWeight: 700 }}>
+          ⚠️ Saldo insuficiente.{" "}
           <button
             type="button"
-            onClick={() => setPasseAberto(false)}
+            onClick={() => { setPasseSemSaldo(false); setToastPasse(null); setComprarAberto(true); }}
             style={{
-              padding: "0.6rem 1rem", borderRadius: "10px", cursor: "pointer",
-              background: "transparent", border: "1px solid rgba(107,125,184,0.45)",
-              color: COR.muted, fontWeight: 700, fontSize: "0.82rem",
+              background: "none", border: "none", padding: 0, fontSize: "0.78rem",
+              color: COR.blue300, fontWeight: 800, textDecoration: "underline", cursor: "pointer",
             }}
           >
-            Cancelar
+            Carregar agora (PIX)
           </button>
-          <button
-            type="button"
-            onClick={() => { setPasseAberto(false); navigate("/ofertas-programadas"); }}
-            style={{ ...botaoPrimario, width: "auto", padding: "0.6rem 1.2rem" }}
-          >
-            Confirmar
-          </button>
-        </div>
-      </Modal>
+        </p>
+      )}
 
       <ComprarFichasModal
         aberto={comprarAberto}
