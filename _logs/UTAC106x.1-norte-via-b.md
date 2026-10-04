@@ -147,3 +147,56 @@ snapshot da NORTE anterior **verbatim** ✅ · Via B completa (todas as 10 rubri
    `_logs/MC100_MATRIZ-CONFORMIDADE.md`, que é **untracked** → o x.2 deve commitá-lo), ℹ️6 (cabeçalho
    «Atualizado em: 2026-10-01» desactualizado), ℹ️1 (precedência mútua — é o x.2). ℹ️5 é a dívida
    **DEBT-006** (worktree 984/991 vs árvore 992/998).
+
+---
+
+## §6 INCIDENTE DECLARADO — `git worktree remove` apagou o `node_modules` REAL via junctions (A9)
+
+**O que aconteceu (medido):** na limpeza do SEG3, `git worktree remove C:/Users/Moltbot/tmp-utac106x1-val/wt`
+falhou com **«Filename too long»** — mas **já tinha seguido as junctions de `node_modules`** (A9) e apagou
+conteúdo dos `node_modules` **reais** do repo principal:
+- `desafio-gut/frontend/netlify/functions/node_modules` → **417 → 0** itens (ficou **vazio**;
+  `@netlify/blobs` desapareceu);
+- `desafio-gut/frontend/node_modules` → **505 → 498** itens (7 em falta).
+
+A regra **A9** avisa sobre `rm -rf`; **medido agora: `git worktree remove` faz o mesmo** (é um delete
+recursivo e segue o reparse point). A ordem correcta é: **junctions fora (`rmdir`) ANTES** de
+`git worktree remove`.
+
+**Detecção:** verificação imediata após a limpeza (contagem de itens por `listdir`) — detectado **antes**
+do fecho do UTAC. **Não ficou escondido.**
+
+**Reparação (medida):**
+1. `npm ci` em `desafio-gut/frontend/netlify/functions` (560 pacotes) → `@netlify/blobs` restaurado.
+2. `npm install` em `desafio-gut/frontend` → restaurou, **mas alterou `package-lock.json` (ficheiro
+   rastreado!)**. ⇒ `git checkout -- desafio-gut/frontend/package-lock.json` (lock reposto ao `HEAD`) e
+   `npm ci` (1011 pacotes) a partir do lock **canónico**.
+
+**Estado final verificado:** `git status` → **só `??` pré-existentes** (repo limpo); suíte
+**VERDE 694/694 · 992/998**; deps-chave confirmadas (`vite`, `react`, `@privy-io/react-auth`,
+`@netlify/blobs`); worktree órfão removido; `git worktree list` sem entradas minhas.
+
+**Resíduo declarado:** o `node_modules` foi reinstalado a partir do **lock commitado** (`npm ci`) — é o
+estado canónico; se a árvore do operador tivesse *drift* manual, esse *drift* perdeu-se.
+
+**Lição (candidata a regra nova na skill: `A13`):** *nunca correr `git worktree remove` (nem `rm -rf`)
+enquanto existirem junctions de `node_modules` dentro do worktree — remover os links com `rmdir` primeiro;
+e invocar o `.bat` de remoção de forma a que o `rmdir` corra de facto (a forma `cmd /c 'a & b'` do git-bash
+falhou em silêncio).* **Não se corrige a skill neste UTAC** (escopo = NORTE + R14) — fica recomendado.
+
+---
+
+## §7 FECHO
+
+| Critério (GATE 11) | Estado |
+|---|---|
+| Entregáveis presentes | `CLAUDE.md` (NORTE Via B + R14) · log · snapshot · relatório em `Desktop/` |
+| Validador adversarial lido | **APROVADO** (§4), 2 correcções pós-veredicto declaradas |
+| Bytes de controlo | intactos (§2) |
+| Escopo | só `CLAUDE.md` + logs; 3 ficheiros diferidos revertidos |
+| Suíte | **VERDE 694/694 · 992/998** |
+| Commit + push foreground | `fddf626` (validado) + `9cbf184` (correcções, não re-validado) → `origin/main` **0/0** |
+| Incidente | declarado e reparado (§6) |
+| Pendências | declaradas (§5) |
+
+**UTAC106x.1: FECHADO** (com o incidente de `node_modules` declarado e reparado). Próximo: **UTAC106x.2**.
