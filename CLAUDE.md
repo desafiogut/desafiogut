@@ -4510,3 +4510,24 @@ Consultar antes de mexer em segredos ou no CLI da Netlify.
 > adversarial: PARCIAL · 0 bloqueantes · 0 alegações refutadas** — confirmou todos os `ficheiro:linha` e
 > apontou 5 lacunas de cobertura + 1 imprecisão, **todas corrigidas** (§1.4/§1.7/§1.8/§2.4/§3.3). Suíte
 > **694/694 · 992/998**. Log: `_logs/UTAC106a-mapeamento.md`; veredicto: `_logs/UTAC106a_SEG3_VALIDADOR.md`.
+
+> 🧭 **UTAC106b (2026-10-04) — NAVEGAÇÃO REESTRUTURADA + FRASE DE EFEITO.** Nova ordem das abas
+> (BottomNav **e** Sidebar, em sincronia): **Carteira → Menor Lance Único → Início → Ofertas
+> Programadas → Mais** (`BottomNav.jsx:29` / `Sidebar.jsx:34`). `/mercado` continua a **rota canónica**
+> («Menor Lance Único» é o rótulo da modalidade) e `/menor-lance-unico` é **alias por REDIRECT**
+> (`App.jsx:467`) — decisão medida: manter a canónica preserva o `activeTab` derivado da rota
+> (`useAppContextEnvironment.tabFromPath`) **e** o **isolamento corporativo** (`rotasProibidas` do
+> `AppContext`), achado ⚠A1 do validador. Nova rota/página **`/ofertas-programadas`**
+> (`OfertasProgramadas.jsx`), **travada por `EM_BREVE_MODE`** (a trava é do CONTEÚDO — a aba aparece; o
+> `EM_BREVE_MODE` continua **`true`**). Novo ícone `ticket` no `navModel`. **Frase de efeito** em
+> `MercadoLances.jsx:228` (render em `:301`): **«Quanto você paga por esse item? O menor lance único
+> leva!»** — **Opção A** das 3 do enunciado (sem álea/aposta; mantém «jogo de habilidade»); um teste
+> trava que a copy é **literalmente uma das 3 opções autorizadas**. Testes: `mc99-limpeza-ui` (SEG1
+> reescrito: ordem + rótulos + cada destino com rota registada + Sidebar em sincronia), `mc991-rotas`
+> (POR_CONFIG +2) e **novo** `utac106b-navegacao-frases.test.mjs` (7 testes). Suíte **frontend 705/705 ·
+> backend 992/998**; `vite build` ✓; **mutação própria**: «aposte agora» → **4 FAIL**. **Validador
+> adversarial: PARCIAL · 0 bloqueantes · 0 alegações refutadas** (9 mutações dele, todas mordem).
+> **Resíduos escalados (fora do escopo autorizado):** `/ofertas-programadas` precisa de **1 linha** no
+> `AppContext.rotasProibidas`; terminologia «paga» vs Art. 7 «OFERTA» (decisão de copy); guarda de álea
+> do `glossario.test.mjs` (`apostas?` não apanha a forma verbal); ordem dos itens secundários (cosmético).
+> Log: `_logs/UTAC106b-navegacao.md`; veredicto: `_logs/UTAC106b_SEG2_VALIDADOR.md`.

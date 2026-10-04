@@ -35,33 +35,41 @@ Suíte **coincide** com o esperado do enunciado (694/694 + 992/998) ⇒ ambiente
 | # | `path` | `label` | Antes (MC99) |
 |---|---|---|---|
 | 1 | `/carteira` | Carteira | 2.º, «Carteira» |
-| 2 | `/menor-lance-unico` | Menor Lance Único | 3.º, `/mercado`, «Lances» |
+| 2 | `/mercado` (**canónica**; `/menor-lance-unico` = alias por **redirect**) | Menor Lance Único | 3.º, `/mercado`, «Lances» |
 | 3 | `/` | Início | 1.º, «Início» |
 | 4 | `/ofertas-programadas` | Ofertas Programadas | **não existia** |
 | 5 | (botão) | Mais | igual |
 
-### Ficheiros e linhas (medidos no fecho)
+> ⚠️ **Porque a aba aponta para `/mercado` (e não para o alias)** — decisão medida no fecho, depois do
+> achado ⚠A1 do validador: `/mercado` é a rota **canónica** e a única que (a) mantém o `activeTab`
+> derivado da rota (`useAppContextEnvironment.tabFromPath` → «lances») e (b) **está** na lista
+> `rotasProibidas` do `AppContext` (isolamento corporativo). O alias `/menor-lance-unico` é um
+> **`<Navigate to="/mercado" replace />`** — não um segundo render — para não abrir um caminho que o
+> isolamento não cobre. Fixado por teste.
+
+### Ficheiros e linhas (re-medidos no fecho, pós-correcções)
 | Ficheiro | O que mudou | Linhas-chave |
 |---|---|---|
 | `src/widgets/layout/navModel.jsx` | **novo PATH `ticket`** (+ comentário de sincronia) | `ticket: (` → **:62** · comentário `:8-14` |
-| `src/widgets/layout/BottomNav.jsx` | `MAIN_TABS` (nova ordem/rótulos/`IconTicket`) + `dockLabelStyle` com quebra de linha | `MAIN_TABS` → **:29** · `IconTicket` → `:15` · `dockLabelStyle` → `:336-341` |
-| `src/widgets/layout/Sidebar.jsx` | `NAV_ITEMS` (mesma ordem/rótulos) + `IconTicket` | `NAV_ITEMS` → **:31** · `IconTicket` → `:18` |
-| `src/App.jsx` | rotas novas + `lazy` da página | `lazy` → **:49** · `/menor-lance-unico` → **:463** · `/ofertas-programadas` → **:467** |
+| `src/widgets/layout/BottomNav.jsx` | `MAIN_TABS` (nova ordem/rótulos/`IconTicket`) + `dockLabelStyle` com quebra de linha | `MAIN_TABS` → **:29** · `IconTicket` → `:15` |
+| `src/widgets/layout/Sidebar.jsx` | `NAV_ITEMS` (mesma ordem/rótulos) + `IconTicket` | `NAV_ITEMS` → **:34** · `IconTicket` → `:18` |
+| `src/App.jsx` | rotas: canónica `/mercado` (:459) · **alias por redirect** (:467) · `/ofertas-programadas` (:471) · `lazy` (:49) | ver coluna |
 | `src/pages/OfertasProgramadas.jsx` | **novo** — placeholder travado por `EM_BREVE_MODE` | `:17` (import) · `:46`/`:53` (gate) |
+| `src/pages/MercadoLances.jsx` | frase de efeito (constante + render + nota do limite nas lojas) | const **:228** · render **:301-306** |
 
-**Diff:** `+116/−19` em 7 ficheiros alterados + 2 novos (`OfertasProgramadas.jsx`,
-`utac106b-navegacao-frases.test.mjs`). **Zero** `.bak-*` tocados; **zero** alterações a
-saldo/lances/Passe/AppContext.
+**Diff total do UTAC:** 2 commits — `a1927ad` (feat, +416/−19) e `ba9443e` (correcções do validador,
+**+50/−11**). **Zero** `.bak-*` tocados; **zero** alterações a saldo/lances/Passe/AppContext.
 
 ### Decisões tomadas (todas reversíveis pelo operador — decisões 1-5 do enunciado)
 1. **Ordem** Carteira → Menor Lance Único → Início → Ofertas Programadas → Mais. ✅
 2. **Rotas antigas mantidas**: `/`, `/carteira`, `/mercado` continuam registadas ⇒ **nenhum link
-   quebra** (`/menor-lance-unico` é **alias** do mesmo ecrã `MercadoLances`). ✅
+   quebra**; `/mercado` é a **rota canónica** da modalidade e `/menor-lance-unico` é o **alias por
+   redirect** (ver a nota acima). ✅
 3. **Ofertas Programadas bloqueada por `EM_BREVE_MODE`** — a trava é do **CONTEÚDO** (a página
    mostra «EM BREVE»), não da aba: a aba aparece na barra, a oferta é que ainda não abre. ✅
 4. **BottomNav e Sidebar em sincronia** — mesma ordem, mesmos caminhos, **mesmos rótulos**. Isto
    **supersede** a divergência de rótulos que era intencional no desktop («Dashboard»/«Mercado de
-   Lances»); o comentário do `navModel.jsx` foi actualizado para o declarar. ✅
+   Lances»); os comentários do `navModel.jsx` e do `Sidebar.jsx` foram actualizados para o declarar. ✅
 5. **`EM_BREVE_MODE` fica ligado** (verificado por teste: `leilaoLock.js:10` = `true`). ✅
 
 ### Ajuste de apresentação (declarado)
@@ -82,9 +90,14 @@ transbordava o item. **Não** se alterou o tamanho da fonte nem a altura do dock
 - `src/__tests__/utac106b-navegacao-frases.test.mjs` — **novo** (7 testes): rota+página de Ofertas,
   gate `EM_BREVE_MODE`, `EM_BREVE_MODE` ainda `true`, frase presente/renderizada, frase sem
   álea/aposta, frase consistente com o gate legal, ícone `ticket` usado nas duas navegações.
-- **Suíte: frontend 703/703 · backend 992/998 (VERDE)** — era 694/694 + 992/998 (+9 testes).
-- **Build de produção:** `npx vite build` → **✓ built in 13.33 s** (exit 0) — valida que o `App.jsx`
-  e o `lazy` da página nova compilam (os testes de navegação são de análise estática e não o fariam).
+- **Suíte: frontend 705/705 · backend 992/998 (VERDE)** — era 694/694 + 992/998 (+11 testes).
+- **Mutação (GATE 7/8 — prova de que os testes MORDEM), em worktree próprio criado/removido com o
+  helper A13:** a frase do worktree foi trocada por «aposte agora» → **4 FAIL** (incl. a asserção de
+  álea, **que o regex antigo deixava passar** — achado ℹN1 fechado); restaurado → 9/9, **byte-idêntico**.
+  O validador independente fez **9 mutações** próprias (todas mordem) — tabela no veredicto.
+- **`node_modules` reais intactos** no fim (frontend **499** · functions **414**); `%TEMP%` limpo.
+- **Build de produção:** `npx vite build` → **✓ built** (exit 0) — valida que o `App.jsx`, o `lazy` da
+  página nova e o redirect compilam (os testes de navegação são de análise estática e não o fariam).
 
 ---
 
@@ -127,25 +140,81 @@ Glossário proibido (`glossario.test.mjs`): `leil[ãõ]o|leil[õo]es|apostas?|so
    valor que fique **único**), preservando o «jogo de habilidade» da NORTE Via B.
 
 **Onde foi aplicada:** `src/pages/MercadoLances.jsx` — constante `FRASE_MENOR_LANCE_UNICO` (**:228**,
-com a justificação completa em comentário) renderizada no **topo da página** (**:293-301**), acima do
-`GlassHeader`, em `COR.gold`. Coberta por teste (`utac106b-navegacao-frases.test.mjs`).
+com a justificação completa em comentário) renderizada no **topo da página** (**:301-306**), acima do
+`GlassHeader`, em `COR.gold`. Coberta por teste (`utac106b-navegacao-frases.test.mjs`), incluindo uma
+**trava de copy**: o teste exige que a frase seja **literalmente uma das 3 opções** do enunciado — o
+executor não inventa texto.
 
-> ⚠️ **Divergência declarada (não bloqueia):** a 1.ª metade da frase («Quanto você paga por esse
-> item?») **não é verbatim** a pergunta do Art. 7 («QUANTO VOCÊ OFERTA POR... este produto ou
-> serviço?»). O enunciado fixava 3 opções e nenhuma é verbatim ⇒ escolheu-se a mais próxima e
-> declarou-se a diferença. **Recomendação ao operador:** alinhar o Regulamento e a frase numa das
-> duas direcções (não executado — é decisão de produto/gate legal, fora do escopo).
+> ⚠️ **Correcção do meu próprio argumento (achado ℹN2 do validador) — declarada.** A razão com que
+> descartei a **opção B** («compra» *«sugere um preço de venda fixo que a modalidade não tem»*) aplica-se
+> em parte à própria opção A, que diz «Quanto você **paga** por esse item?». O validador tem razão: a
+> âncora ao Art. 7 («QUANTO VOCÊ **OFERTA** POR…») **não é 1:1**. **O descarte de B mantém-se** por outra
+> razão (o Regulamento **não** caracteriza o desfecho como compra — usa «ganha»/«contemplado», Art. 13),
+> mas o argumento «preço» era impreciso. **A frase NÃO foi alterada** (o enunciado fixou 3 opções e
+> manda escolher 1 — inventar copy é decisão do operador, GATE 12); fica **escalado** com a alternativa
+> pronta: «Quanto você **oferta** por esse item? O menor lance único leva!».
+
+> ⚠️ **Limite declarado (achado ℹN3):** a frase vive no `return` **principal** de `MercadoLances`, depois
+> dos early-returns de `recursosCarregando`/`!isLeilaoAtivo` ⇒ na **build das lojas** (APK) a aba abre na
+> vista de conformidade e a frase **não** aparece. É **intencional** (não há copy de lances num ecrã que
+> declara que as edições acontecem na versão Web) e ficou **documentado no código**.
+
+> ⚠️ **Divergência declarada (não bloqueia):** a 1.ª metade da frase («Quanto você paga por esse item?»)
+> **não é verbatim** a pergunta do Art. 7 («QUANTO VOCÊ OFERTA POR... este produto ou serviço?»). O
+> enunciado fixava 3 opções e nenhuma é verbatim ⇒ escolheu-se a mais próxima e declarou-se a diferença.
+> **Recomendação ao operador:** alinhar o Regulamento e a frase numa das duas direcções (não executado —
+> é decisão de produto/gate legal, fora do escopo).
 > **Não** foi tocado `CardLance.jsx` nem `ComingSoonHero.jsx` (autorizados): a frase é uma só, no
 > topo da página — editar os outros seria mudança sem pedido (GATE 3/Ponytail).
 
 ---
 
-## §Validador adversarial (SEG2)
+## §SEG2 — Validador adversarial
 
-_(a preencher — ver `_logs/UTAC106b_SEG2_VALIDADOR.md`)_
+**Despachado:** subagente Hermes independente, em **worktree próprio** (helper A13), instruído a
+**TENTAR REFUTAR** (veredicto verbatim + resposta do executor em `_logs/UTAC106b_SEG2_VALIDADOR.md`).
+
+> **VEREDICTO: PARCIAL · 0 bloqueantes · 0 alegações REFUTADAS.** As **7 alíneas (a)-(g)** do enunciado
+> foram atacadas e **todas resistiram**; o validador fez **9 mutações** no worktree dele e **todas
+> mordem** (frase→«aposta», «aposte agora», `EM_BREVE_MODE=false`, dessincronizar a Sidebar, remover
+> `/mercado`, remover `/ofertas-programadas`, neutralizar o gate, trocar a ordem, renomear rótulo).
+> É **PARCIAL** por **1 achado ⚠ não-bloqueante FORA das 7 alíneas** + **5 notas ℹ**.
+
+| # | Grav. | Achado | Tratamento |
+|---|---|---|---|
+| **A1** | ⚠ | `rotasProibidas` (isolamento corporativo, `AppContext.jsx:634-637`) **não estendida** às rotas novas ⇒ o lojista que abrisse `/menor-lance-unico` ou `/ofertas-programadas` **deixava de ser reencaminhado** | **CORRIGIDO o que é corrigível em escopo:** `/menor-lance-unico` passou a **REDIRECT** para `/mercado` (que está na lista) e as 4 abas apontam para a rota **canónica** ⇒ buraco fechado **sem tocar no `AppContext`** (proibido). **RESÍDUO ESCALADO:** `/ofertas-programadas` continua fora da lista ⇒ precisa de **1 linha** no `AppContext` (fora do escopo). Teste novo fixa o desenho do redirect. |
+| **N1** | ℹ | Guarda de álea não apanhava a **forma verbal** («aposte/apostar») | **CORRIGIDO** no teste novo (`apost\w*`, `sort\w*`) + **mutação própria**: «aposte agora» → **4 FAIL**. Buraco idêntico no `glossario.test.mjs` → **escalado** (teste fora da autorização). |
+| **N2** | ℹ | «paga» vs Art. 7 «OFERTA» — mesma família semântica usada para descartar B | **ACEITE + ESCALADO**; copy **não** alterada (era do operador; trava de copy por teste). Correcção do **meu argumento** declarada na §SEG1. |
+| **N3** | ℹ | A frase não renderiza na build das lojas (early-return de `!isLeilaoAtivo`) | **DOCUMENTADO no código** (comentário) + declarado. Intencional. |
+| **N4** | ℹ | Ordem dos itens **secundários** diverge entre as navs | Declarado (cosmético, **pré-existente**, fora do âmbito das 4 principais). |
+| **N5** | ℹ | Testes são proxy de texto-fonte, não de render | Declarado como limite (padrão do repo). |
+
+**Correcções pós-veredicto: NÃO re-validadas** (sem 2.ª ronda).
 
 ---
 
 ## §Registos e custo (SEG3)
 
-_(a preencher no fecho)_
+**Registo em 3 lugares (R18):**
+1. `_logs/UTAC106b-navegacao.md` (este log) + `_logs/UTAC106b_SEG2_VALIDADOR.md` (veredicto + resposta).
+2. `CLAUDE.md` — bloco **R14** resumido.
+3. `Desktop/RELATORIO-UTAC106b-NAVEGACAO.txt` (relatório ao operador).
+
+**Commits:** `a1927ad` (feat) → `ba9443e` (correcções do validador) → **este** (registo final).
+**Código:** `+466/−30` em 10 ficheiros (7 alterados + 3 novos: `OfertasProgramadas.jsx`,
+`utac106b-navegacao-frases.test.mjs`, este log). **Zero** `.bak-*`, **zero** AppContext, **zero**
+package-lock/package.json.
+
+**Pendências escaladas (fora do escopo autorizado):** (1) `/ofertas-programadas` no `rotasProibidas`
+(1 linha no `AppContext`); (2) terminologia «paga» vs «OFERTA» (copy/gate legal); (3) `glossario.test.mjs`
+com o buraco `apostas?`; (4) ordem dos itens secundários (cosmético).
+
+**Custo de API (medido no fecho):**
+- **Executor** (mesma sessão CLI da série — `20261004_104512_7dad39`; a plataforma **não** abre sessão por
+  UTAC): leitura no fecho do 106a = US$ 0,1191; leitura agora = US$ 0,2468 ⇒ **106b ≈ US$ 0,128**
+  (diferença — **estimativa**).
+- **Validador adversarial** (sessão própria `20261004_125829_80b509`, `source=subagent`): 62 mensagens ·
+  37 tool calls · **≈ US$ 0,0178**.
+- **Total estimado do UTAC106b: ≈ US$ 0,146.**
+- **Saldo real da API (medido):** arranque **US$ 7,11** → fecho **US$ 6,91** ⇒ **consumo real ≈ US$ 0,20**
+  (inclui as delegações). As duas leituras vão separadas — *estimativa da base* vs *saldo real*.
