@@ -57,7 +57,7 @@ regressão. A medição válida é a do **repo principal**.
 
 ```sh
 cd C:/Users/Moltbot/Desktop/DESAFIOGUT
-git rev-parse HEAD                       # 9756771
+git rev-parse HEAD                       # 9756771 na medição — avança com o commit DESTE registo
 git rev-list --left-right --count origin/main...HEAD   # 0   0
 git status --porcelain | grep -v '^??'   # (vazio)
 git worktree list                        # 2: repo + scratchpad pre-existente
@@ -75,6 +75,12 @@ repo (não são deste UTAC e não foram tocados).
 ⚠️ **Armadilha do próprio bloco (medida):** a 1.ª versão deste comando usava `grep -an '^## 🎯 '` e
 **não reproduzia nada** — o emoji `🎯` é **mangulado** no transporte para o git-bash/MSYS (mesma classe
 das armadilhas de `A-ambiente.md`). Substituído por `grep -an '^## '` + `awk`, que reproduz.
+
+⚠️ **Auto-referência do HEAD (declarada):** o `git rev-parse HEAD` desta lista **não pode** bater para
+sempre — o commit que **grava este próprio registo** move o HEAD (`9756771` → `e35ecd8`). Não é uma
+medição errada: é uma medida de um estado que a própria gravação altera. Todos os **outros** comandos do
+bloco foram corridos e reproduzem (ESCOPO-ALVO 135 · NORTE 260 · control bytes 4 · FICHA 106 linhas ·
+guarda `mc97` 3/3 · row #24 na linha 32 · suíte 694/694 + 992/998 · `0/0` · 0 rastreados · 2 worktrees).
 
 ---
 
