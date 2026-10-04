@@ -33,15 +33,19 @@ const RAIZ = resolve(AQUI, "..");
 /**
  * Caminhos de node_modules que precisam de junction num worktree (A9).
  *
- * ⚠️ UTAC106x.5 (DEBT-006): a **raiz do monorepo** (`desafio-gut/node_modules`) também tem de
- * ser ligada. As duas entradas `frontend/...` cobrem o que as apps importam em runtime; mas os
- * testes do backend resolvem módulos com `createRequire(import.meta.url)` a partir de `_tests/`,
- * e ao subir a árvore chegam a `desafio-gut/node_modules` — onde vivem as dependências **dev-only**
- * (`solc`, `hardhat`, `@nomicfoundation/edr`). Sem esta 3.ª junction, o worktree dá
- * **991/984/7 skipped** em vez de **998/992/6**: 7 testes não são sequer descobertos e 2 passam a
- * skip. Medido nas duas direcções (com/sem a junction) — ver `_logs/UTAC106x.5-debt-006.md`.
+ * ⚠️ UTAC106x.5 (DEBT-006): faltavam **duas** raízes. A resolução de módulos a partir de `_tests/`
+ * sobe a árvore toda, por isso além dos `frontend/...` é preciso ligar:
+ *   - `desafio-gut/node_modules` (raiz do MONOREPO) — é aqui que vivem as dev-only deps
+ *     (`solc`, `hardhat`, `@nomicfoundation/edr`) que o grupo MC93-E importa;
+ *   - `node_modules` (raiz do GIT) — 105 pacotes (ex.: `chai`, `ts-node`, `typechain`,
+ *     `@solidity-parser/parser`) resolvem daqui no repo principal e NÃO no worktree.
+ * Sem estas duas, o worktree dava **991/984/7 skipped** em vez de **998/992/6**: 7 testes não
+ * eram sequer descobertos e 2 passavam a skip. Medido nas duas direcções — ver
+ * `_logs/UTAC106x.5-debt-006.md`. Ambas as raízes são **gitignored** (`.gitignore:2`), por isso o
+ * `git status` do worktree continua limpo.
  */
 const JUNCTIONS = [
+  "node_modules",
   "desafio-gut/node_modules",
   "desafio-gut/frontend/node_modules",
   "desafio-gut/frontend/netlify/functions/node_modules",

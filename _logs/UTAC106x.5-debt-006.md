@@ -1,7 +1,8 @@
 # UTAC106x.5 — DEBT-006: DISCREPÂNCIA DE CONTAGEM EM WORKTREE (logs)
 
 **Tipo:** infraestrutura de testes · **Skill UTAC** · **Data:** 2026-10-04 ·
-**Modelo:** deepseek-v4-flash (Hermes Agent) · **Baseline:** `49889cb` · **Estado:** em curso
+**Modelo:** deepseek-v4-flash (Hermes Agent) · **Baseline:** `49889cb` · **Estado:** **FECHADO**
+(`8499425` fix → `02bc335` DEBT/R14 → fecho)
 
 > Corrige a **DEBT-006** (baixa severidade) antes do UTAC106a, para o mapeamento do fluxo correr com
 > medição fiável. Diferente do UTAC106x.3: ali documentou-se a **criação/remoção de junctions** (A13);
@@ -119,10 +120,93 @@ alterar a regra A13/A9 — os três limites do enunciado.
 
 ## §4 VALIDADOR ADVERSARIAL (SEG2)
 
-*(preenchido no fecho)*
+Subagente independente em worktree próprio (criado com `scripts/worktree-helper.mjs`).
+
+### 4.1 Ronda 1 — commit `02bc335` → **APROVADO** (1 ⚠️ latente + 2 ℹ️)
+
+**Não conseguiu refutar nenhum dos 5 eixos**, e reproduziu todas as provas por medição própria:
+
+- **(a) Resolve na totalidade?** Comparação **teste a teste** (não só totais): correu os dois lados com
+  `--test-reporter=tap` e comparou linha estrutural a linha estrutural — **1917 linhas iguais em cada
+  lado, 0 diferenças** no backend; **794 linhas, 0 diferenças** no frontend. Nenhum teste passa num lado e
+  não no outro. As 6 skips são as pré-existentes (1 R5 + 5 `SUPABASE_CONTRATO_URL/KEY`).
+- **(b) Introduz discrepância nova?** Não. `git status` do worktree = **0** (a junction é gitignored,
+  `.gitignore:2:node_modules/`); helper **12/12** (T7 lê `res.junctions.length >= 1` e itera).
+- **(c) Aceitação prematura?** Não — `npm ci` no worktree seria o oposto do propósito das junctions, e
+  tocar nos testes está proibido.
+- **(d) Causa raiz certa?** Confirmada por ele: `solc`/`hardhat`/`@nomicfoundation/edr` existem **só** em
+  `desafio-gut/node_modules` (ausentes nos dois `frontend/...`); a cadeia `createRequire` dá
+  `MODULE_NOT_FOUND` num worktree sem a raiz. **GATE 8 bidireccional reproduzido por ele** num worktree
+  descartável.
+- **(e) Números iguais?** Sim — e o helper cria **e remove** com segurança (`node_modules` real
+  **568/499/414** antes e depois, inalterado).
+
+| # | Achado | Tratamento |
+|---|---|---|
+| **⚠️ F1** | **Residual latente:** o fix ligava só `desafio-gut/node_modules`. A **raiz do GIT** (`DESAFIOGUT/node_modules`, 449 pacotes) continuava por ligar ⇒ **105 pacotes** (ex.: `chai`, `ts-node`, `typechain`, `@solidity-parser/parser`) resolviam no main e **não** no worktree. **Impacto actual: nulo** (nenhum teste os importa — medido), mas a equivalência **não era total** e isso não estava documentado | **FECHADO** (§4.2) — 4.ª junction |
+| ℹ️ F2 | Deriva A13: a regra documenta **2** junctions, o helper passa a criar **4** | **Declarado** — o enunciado **proíbe** alterar a A13 (pendência para UTAC próprio) |
+| ℹ️ F3 | O log mantinha «Estado: em curso» e §4/§5 por preencher | **CORRIGIDO** (§4/§5 fechados agora) |
+| ℹ️ F4 | `solc`/`er` não estão no `package-lock.json` ⇒ em CI (`npm ci`) o grupo MC93-E volta a saltar | **Declarado** — o «verde» do worktree reproduz o **main local**, não o CI (limite pré-existente, documentado no próprio teste) |
+
+> **Veredicto (verbatim):** *«VEREDICTO: **APROVADO** (com 1 residual ⚠️ latente + 2 ℹ️)»*
+
+### 4.2 Correcção do ⚠️ F1 — a 4.ª junction (raiz do GIT)
+
+Medido antes de adoptar: com a 4.ª junction os 105 pacotes **resolvem** (`chai`, `@solidity-parser/parser`,
+`ts-node`, `typechain` → `…\DESAFIOGUT\node_modules\…`), a suíte mantém **998/992/6** e o `git status` do
+worktree continua **0**. Adoptada: `JUNCTIONS` passa a ter **4** entradas (as **duas** raízes + os dois
+`frontend/...`). Prova end-to-end pelo caminho do helper: worktree recriado com **4** junctions ⇒
+**694/694 + 992/998** (idêntico ao repo principal).
+
+> ⚠️ **Declarado:** a versão que o validador aprovou tinha **3** junctions; a versão final tem **4**. A
+> correcção do F1 **não passou por validação independente** (HI5 — ver §6).
 
 ---
 
-## §5 ESTADO FINAL + REGISTO
+## §5 ESTADO FINAL + REGISTO (SEG3)
 
-*(preenchido no fecho)*
+| Item | Estado |
+|---|---|
+| Discrepância reproduzida com números exactos | ✅ §1 |
+| Causa raiz identificada com evidência | ✅ §2 (cadeia `createRequire` medida) |
+| Decisão | ✅ **(a) FECHAR** |
+| Worktree dá os mesmos números do repo | ✅ **694/694 + 992/998** nos dois |
+| Suíte no repo principal verde | ✅ sem regressão |
+| Validador adversarial + veredicto | ✅ **APROVADO** (§4.1) |
+| Registo em 3 lugares | ✅ abaixo |
+| Commit + push foreground | ✅ `8499425` (fix) → `02bc335` (+ DEBT/R14) → fecho |
+| Custo de API | ✅ §6 |
+
+**Registo em 3 lugares (R18):**
+1. `_logs/UTAC106x.5-debt-006.md` (este, detalhado)
+2. `CLAUDE.md` — bloco **R14** do x.5 (única zona autorizada; resto byte-idêntico)
+3. `Desktop/RELATORIO-UTAC106x.5-DEBT006.txt`
+
+**Ficheiros alterados:** `scripts/worktree-helper.mjs` (a lista `JUNCTIONS`), `_logs/DEBT.md` (DEBT-006 →
+FECHADA), `CLAUDE.md` (só o bloco R14), `_logs/UTAC106x.5-debt-006.md` (novo). **Zero** código de produção,
+**zero** testes, **zero** alterações à A13/A9.
+
+---
+
+## §6 CUSTO DE API + PENDÊNCIAS
+
+### Custo (SEG3.5)
+
+**NÃO MENSURÁVEL** neste ambiente (sem telemetria de tokens/facturação). **Declarado, não estimado.**
+Consumo observável: **1 subagente validador** (702 s) + ~55 chamadas de ferramenta no executor.
+
+### Pendências declaradas
+
+1. ⚠️ **HI5 EXCEDIDO** — este UTAC passou de 1 h (investigação + validador + correcção do F1). Declarado.
+2. ⚠️ **A correcção do F1 (4.ª junction) NÃO passou por validação independente** — o validador aprovou a
+   versão de **3** junctions; a final tem **4**. Verificado por medição própria (105 pacotes resolvem,
+   suíte 998/992/6, `git status` 0, worktree recriado pelo helper ⇒ 694/694 + 992/998).
+3. **Deriva A13 (ℹ️ F2)** — a regra `A-ambiente.md` (linhas ~115-116) documenta **2** junctions e o helper
+   cria **4**. **Não corrigida** (o enunciado proíbe alterar a A13). **Recomendação:** UTAC próprio de 1
+   linha para alinhar a regra ao helper.
+4. **CI vs local (ℹ️ F4)** — `solc`/`@nomicfoundation/edr` **não** estão no `package-lock.json`; em CI
+   (`npm ci`) o grupo MC93-E volta a *skip*. O «verde» do worktree reproduz o **main local**. Limite
+   pré-existente, documentado dentro do próprio teste.
+5. **O `node_modules` da raiz do GIT tem 449 pacotes** e é ligado inteiro ao worktree — só os que os
+   `_tests/` alcançam importam, mas a junction é total (não selectiva). Se algum dia pesar, a alternativa é
+   `NODE_PATH`, que o Node já não honra para ESM.
