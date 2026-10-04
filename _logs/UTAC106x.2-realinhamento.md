@@ -53,6 +53,29 @@ ainda **1×`0x0D` pré-existente**, na linha 3884, que **não** faz parte dos 4)
 (7 *skips*, 0 falhas) em vez de 992/998 — é a **DEBT-006** (resolução de módulos via junction), **não**
 regressão. A medição válida é a do **repo principal**.
 
+### §1.2 COMO REPRODUZIR (os comandos que produziram os números acima)
+
+```sh
+cd C:/Users/Moltbot/Desktop/DESAFIOGUT
+git rev-parse HEAD                       # 9756771
+git rev-list --left-right --count origin/main...HEAD   # 0   0
+git status --porcelain | grep -v '^??'   # (vazio)
+git worktree list                        # 2: repo + scratchpad pre-existente
+grep -an '^## ' CLAUDE.md | awk -F: '$1>100 && $1<400'    # ESCOPO-ALVO na 135 ; NORTE na 260
+python -c "d=open('CLAUDE.md','rb').read(); print(sum(1 for c in d if c<32 and c not in (9,10,13)))"  # 4
+wc -l < docs/FICHA-PLAY-PT.md            # 106
+node scripts/mc97-medir-ficha.mjs        # 3/3 (exit 0)
+grep -an '^| 24 |' _logs/MC100_MATRIZ-CONFORMIDADE.md   # linha 32
+node scripts/mc966-suite-harness.mjs ambos              # 694/694 + 992/998 (exit 0)
+```
+
+⚠️ O `git status` filtra os `??` de propósito: existem **30 ficheiros untracked pré-existentes** neste
+repo (não são deste UTAC e não foram tocados).
+
+⚠️ **Armadilha do próprio bloco (medida):** a 1.ª versão deste comando usava `grep -an '^## 🎯 '` e
+**não reproduzia nada** — o emoji `🎯` é **mangulado** no transporte para o git-bash/MSYS (mesma classe
+das armadilhas de `A-ambiente.md`). Substituído por `grep -an '^## '` + `awk`, que reproduz.
+
 ---
 
 ## §2 SEG0 — ESCOPO-ALVO REALINHADO
