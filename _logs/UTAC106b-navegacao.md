@@ -218,3 +218,31 @@ com o buraco `apostas?`; (4) ordem dos itens secundários (cosmético).
 - **Total estimado do UTAC106b: ≈ US$ 0,146.**
 - **Saldo real da API (medido):** arranque **US$ 7,11** → fecho **US$ 6,91** ⇒ **consumo real ≈ US$ 0,20**
   (inclui as delegações). As duas leituras vão separadas — *estimativa da base* vs *saldo real*.
+
+---
+
+## §Adenda — verificação por RENDER (fecha parcialmente o limite ℹN5)
+
+O validador assinalou (ℹN5) que os testes do UTAC são **proxy de texto-fonte**, não de render. Fechou-se
+esse limite com uma verificação **própria, ad-hoc e temporária** (script `hermes-verify-*` em `%TEMP%`,
+corrido e **removido** — não entrou no repo), usando a **ponte SSR** do próprio repo
+(`src/__tests__/_ponte-ssr.mjs` + `_servidor-teste.mjs`, `renderToStaticMarkup` + `MemoryRouter`):
+
+| # | Verificação de RENDER | Resultado |
+|---|---|---|
+| 1 | `BottomNav` renderizado: os **5 itens** estão no DOM | ✅ |
+| 2 | `BottomNav` renderizado: ordem **Carteira → Menor Lance Único → Início → Ofertas Programadas → Mais** (índices crescentes, medidos no texto do DOM) | ✅ |
+| 3 | `OfertasProgramadas` renderizada com o gate **LIGADO** (estado embarcado): mostra «EM BREVE» + a linha do programa de fidelidade | ✅ |
+| 4 | idem: **não** mostra o estado neutro «em preparação» | ✅ |
+| 5 | `OfertasProgramadas` renderizada com o gate **DESLIGADO** (A/B: **mesmo componente**, só o duplo de `leilaoLock` muda): cai no estado neutro «em preparação» | ✅ |
+| 6 | idem: **deixou** de dizer «EM BREVE» | ✅ |
+
+⇒ O gate `EM_BREVE_MODE` é **real e bidireccional ao nível do render** (não apenas um `?` no texto), e a
+ordem das abas **vê-se no DOM**. O aviso `useLayoutEffect` do `react-router` no `stderr` é o conhecido de
+SSR (benigno; igual nos testes do repo). **7/7 PASS.**
+
+**Verificação (resumo do UTAC):** suíte canónica **705/705 · 992/998 VERDE** · ad-hoc estático **19/19** ·
+ad-hoc de render **7/7** · mutação «aposte agora» → **4 FAIL** · `vite build` OK (exit 0).
+Nota de instrumento: o guard do ambiente não auto-detecta o comando canónico deste repo
+(`node scripts/mc966-suite-harness.mjs ambos`), daí a verificação ad-hoc ter sido feita por script
+temporário explícito.
