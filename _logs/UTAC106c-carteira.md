@@ -294,7 +294,14 @@ diferente do backup no fim. Os mutantes são **um por segmento** — cobre SEG0.
    filho-função; comentado no duplo.
 7. **Verificador ad-hoc: check 10c errado** — media os secundários da **barra** no 1.º render, mas eles
    vivem no sheet **«Mais»**, que só existe **aberto**. Era o MEU check que estava errado, não a app
-   (o rail, que os mostra sempre, passava). Corrigido abrindo o sheet por clique.
+   (o rail, que os mostra sempre, passou). Corrigido abrindo o sheet por clique.
+8. **Verificador ad-hoc (verificação de fecho): `bash -lc` a partir do Python** — o *wrapper* de
+   verificação do fecho invocava `bash -lc "<cmd>"`; no Windows, o `bash` resolvido a partir do Python cai
+   no **relay do WSL**, que falha (`execvpe(/bin/bash) failed`) ⇒ **7 FAIL FALSOS** em 4,4 s (impossível
+   para uma suíte + build), incluindo o `curl` a devolver vazio. Corrigido **sem shell**: `subprocess`
+   directo (`node`/`git` no PATH), **`stdin=DEVNULL`** para o harness (o equivalente ao `< /dev/null`) e
+   `urllib` para o HTTP. Re-corrido: **12/12 PASS**. Lição: **um `bash` que "existe" pode não ser o
+   bash** — e um FAIL em massa e instantâneo é sintoma de instrumento, não de código.
 
 ---
 
