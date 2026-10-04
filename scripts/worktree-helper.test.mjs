@@ -4,8 +4,9 @@
 // NAO faz parte da suite canonica (essa corre src/**/*.test.mjs e _tests/*.test.mjs).
 // Corre-se a mao:   node --test scripts/worktree-helper.test.mjs
 //
-// SEGURANCA: NUNCA se liga nem se apaga o node_modules REAL. O worktree e' criado
-// SEM junctions ({junctions:false}) e a unica junction e' para um alvo descartavel.
+// SEGURANCA: T1-T6/T8 usam alvos DESCARTÁVEIS. T7 exercita o caminho de PRODUCAO
+// (junctions para o node_modules real) mas termina com o `remover` do helper (rmdir
+// primeiro) e confirma que o node_modules REAL fica intacto.
 //
 // MUTACAO (R16/GATE 7): a copia mutada aponta-se por env WORKTREE_HELPER; o caso T5
 // («alvo intacto») TEM de ficar RED. Ver _logs/UTAC106x.3-a13.md.
@@ -24,8 +25,10 @@ const H = await import(HELPER);
 
 const RAIZ = resolve(fileURLToPath(import.meta.url), "..", "..");
 const sha = () => spawnSync("git", ["-C", RAIZ, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
+const NM = ["desafio-gut/frontend/node_modules", "desafio-gut/frontend/netlify/functions/node_modules"];
 
-let base, alvo, wt, link;
+let base, alvo, wt, link, wt7;
+const limpar = (p) => { if (p && existsSync(p)) spawnSync("cmd", ["/c", "rmdir", p], { encoding: "utf8" }); };
 
 before(() => {
   base = mkdtempSync(join(tmpdir(), "a13-test-"));
@@ -37,11 +40,13 @@ before(() => {
   link = join(wt, "desafio-gut", "frontend", "node_modules");
   const r = spawnSync("cmd", ["/c", "mklink", "/J", link, alvo], { encoding: "utf8" });
   assert.equal(r.status, 0, "mklink falhou: " + (r.stdout || r.stderr));
+  wt7 = join(base, "wt7");
 });
 
 after(() => {
-  // limpeza: rmdir da junction (so o link) ANTES de apagar a arvore de teste
-  if (link && existsSync(link)) spawnSync("cmd", ["/c", "rmdir", link], { encoding: "utf8" });
+  limpar(link);
+  // por seguranca: se T7 deixou junctions, remove-as so a elas antes de apagar a arvore
+  for (const rel of NM) limpar(join(wt7, rel));
   if (base) rmSync(base, { recursive: true, force: true });
   spawnSync("git", ["-C", RAIZ, "worktree", "prune"]);
 });
@@ -80,4 +85,36 @@ test("T5 — o ALVO ficou INTACTO (nao foi esvaziado pelo delete)", () => {
 test("T6 — remover() de um caminho inexistente e idempotente", () => {
   const res = H.remover(join(base, "nao-existe"));
   assert.equal(res.ok, true);
+});
+
+// F5 — fecha a lacuna de cobertura: exercita o caminho de PRODUCAO (junctions:true).
+// ⚠️ NUNCA corre sobre uma copia MUTADA: uma mutacao que desligue o guarda/RMDIR faria
+//    `git worktree remove` seguir a junction e DESTRUIR o node_modules real (ver A13).
+test("T7 — criar({junctions:true}) faz as junctions e remover() NAO toca no node_modules REAL",
+  { skip: process.env.WORKTREE_HELPER ? "modo mutacao: T7 mexe no node_modules REAL" : false },
+  () => {
+  const antes = NM.map((rel) => readdirSync(join(RAIZ, rel)).length);
+  const res = H.criar(wt7, sha());                       // default: junctions
+  assert.ok(res.junctions.length >= 1, `esperava junctions, vi ${JSON.stringify(res.junctions)}`);
+  for (const rel of res.junctions) {
+    assert.equal(lstatSync(join(wt7, rel)).isSymbolicLink(), true, `nao e reparse: ${rel}`);
+  }
+  const rem = H.remover(wt7);
+  assert.equal(rem.ok, true, `remover falhou: ${JSON.stringify(rem)}`);
+  assert.equal(existsSync(wt7), false, "worktree ainda existe");
+  const depois = NM.map((rel) => readdirSync(join(RAIZ, rel)).length);
+  assert.deepEqual(depois, antes, `o node_modules REAL mudou! ${antes} -> ${depois}`);
+});
+
+// F1 — a recusa do git por WORKTREE SUJO e' PROTECCAO: nao se contorna (nem se apaga nada).
+test("T8 — worktree SUJO: remover() recusa e NAO apaga trabalho nao commitado", () => {
+  const wtd = join(base, "wt-sujo");
+  H.criar(wtd, sha(), { junctions: false });
+  writeFileSync(join(wtd, "trabalho-nao-commitado.txt"), "nao me apagues");
+  const res = H.remover(wtd);
+  assert.equal(res.ok, false, "remover() nao devia ter sucesso num worktree sujo");
+  assert.ok(existsSync(wtd), "o worktree sujo FOI apagado (perda de trabalho!)");
+  assert.ok(existsSync(join(wtd, "trabalho-nao-commitado.txt")), "o ficheiro nao commitado FOI apagado!");
+  // limpeza: forcar so nesta arvore descartavel
+  spawnSync("git", ["-C", RAIZ, "worktree", "remove", "--force", wtd], { encoding: "utf8" });
 });

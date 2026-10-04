@@ -9,7 +9,7 @@ description: "Compor e executar UTACs (Unidade de Trabalho Auto Contido) do Desa
 auto-contida: contexto + HARD GATES + regras + frentes + SEG-1..SEG6 + validador adversarial + fecho.
 
 Esta skill existe para **eliminar a repetição**: as partes constantes de todos os UTACs vivem aqui
-(HARD GATES, 75 regras em 10 categorias, lições, armadilhas de ambiente, contexto do projeto); o
+(HARD GATES, 76 regras em 10 categorias, lições, armadilhas de ambiente, contexto do projeto); o
 co-construtor escreve só um **spec com menos de 60 linhas** e a skill compõe o UTAC completo
 (~350 linhas), no mesmo formato da série.
 
@@ -40,9 +40,9 @@ skills/utac/
 ├─ exemplo.UTAC.md     ← UTAC completo gerado a partir do exemplo (prova de que a skill funciona)
 ├─ protocol/           ← CONSTANTES
 │  ├─ hard-gates.md    ← os 16 HARD GATES (1-16, canónicos) + tabela de alias da série
-│  ├─ regras/          ← 75 REGRAS em 10 categorias (cada regra: ID, texto, origem)
+│  ├─ regras/          ← 76 REGRAS em 10 categorias (cada regra: ID, texto, origem)
 │  │  ├─ E-engenharia.md   ← E1-E9   ├─ S-seguranca.md    ← S1-S6
-│  │  ├─ T-testes.md       ← T1-T5   ├─ A-ambiente.md     ← A1-A12
+│  │  ├─ T-testes.md       ← T1-T5   ├─ A-ambiente.md     ← A1-A13
 │  │  ├─ G-git-deploy.md   ← G1-G6   ├─ P-processo.md     ← P1-P7
 │  │  ├─ L-lgpd.md         ← L1-L6   ├─ AU-autonomia.md   ← AU1-AU4
 │  │  └─ ST-stop.md        ← ST1-ST10
@@ -57,7 +57,7 @@ skills/utac/
    ├─ seg-1.md · seg0-3.md · seg4.md · seg5-6.md
 ```
 
-## As 10 categorias de regras (75 regras)
+## As 10 categorias de regras (76 regras)
 | cat. | tema | regras | cat. | tema | regras |
 |---|---|---|---|---|---|
 | **E** | Engenharia | E1-E9 | **A** | Ambiente | A1-A13 |
