@@ -4,9 +4,10 @@
 > **NORTE DO PRODUTO** (`CLAUDE.md` §7.1) e a ficha mandavam «alinhar com o **gabarito Play Console**» e
 > **o ficheiro não existia**.
 >
-> **Fonte única:** `_logs/MC100_MATRIZ-CONFORMIDADE.md` (rows citadas por número), `docs/FICHA-PLAY-PT.md`
-> e a NORTE DO PRODUTO. **Não introduz requisito novo, nem parecer, nem afirmação legal própria.** Onde a
-> MATRIZ diz **❓** (não verificado), aqui fica **❓** — não se herda confiança que não foi medida.
+> **Fonte única:** `_logs/MC100_MATRIZ-CONFORMIDADE.md` (rows citadas por número), `docs/FICHA-PLAY-PT.md`,
+> `_logs/MC100_DECISOES-PENDENTES.md` e a **NORTE DO PRODUTO** (§7 e §11). **Não introduz requisito novo,
+> nem parecer, nem afirmação legal própria.** Onde a MATRIZ diz **❓** (não verificado), aqui fica **❓** —
+> não se herda confiança que não foi medida.
 > ⚠️ **Isto não é parecer jurídico** (a MATRIZ é explícita: *«Nada jurídico ou fiscal aqui é parecer»*).
 
 ---
@@ -32,7 +33,7 @@
 
 | Campo | Valor |
 |---|---|
-| Categoria | **Programa de Fidelidade Gamificado** (*Gamified Loyalty Program*) — NORTE §7.1 |
+| Categoria | **Programa de Fidelidade Gamificado** (*Gamified Loyalty Program*) — NORTE §7 (linha da tabela §7.1) |
 | Classificação etária | **18+** (Público-alvo: Adultos) |
 | Classificação IARC | ⚠️ **a refazer** — a ficha anterior declarava «AO», que **não é** classificação da Play/IARC (no Brasil é **ClassInd 18**, R-17) — MATRIZ row #26 |
 
