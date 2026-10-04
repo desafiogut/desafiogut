@@ -43,13 +43,14 @@ export function ehReparse(p) {
 
 /**
  * Varre a arvore e devolve os reparse points SEM descer neles (nunca segue o alvo).
- * Fail-safe (F6): se o `lstat` de uma entrada falhar, ela e' DEVOLVIDA como possivel
- * reparse — assim o `remover` ABORTA em vez de arriscar um delete recursivo.
+ * **Fail-safe** (F6 + N2): se o `lstat` OU o `readdir` falharem, devolve um MARCADOR em
+ * vez de ignorar — assim o `remover` ABORTA em vez de arriscar um delete recursivo.
  */
 export function listarReparse(dir, acc = []) {
   if (!existsSync(dir)) return acc;
   let entradas;
-  try { entradas = readdirSync(dir, { withFileTypes: true }); } catch { return acc; }
+  try { entradas = readdirSync(dir, { withFileTypes: true }); }
+  catch { acc.push(join(dir, "*ILEGIVEL*")); return acc; }   // N2: incerto => recolhe e NAO desce
   for (const e of entradas) {
     const p = join(dir, e.name);
     let st;
@@ -67,6 +68,29 @@ const git = (args) => spawnSync("git", ["-C", RAIZ, ...args], { encoding: "utf8"
 export function removerJunction(p) {
   const r = cmd(["rmdir", p]);
   return { ok: r.status === 0 && !existsSync(p), status: r.status };
+}
+
+/**
+ * DECISAO DE SEGURANCA (F1/G1 — 2.ª ronda). Isolada e pura para poder ser testada exaustivamente.
+ * Diz se e' permitido cair no `rm -rf` depois de o `git worktree remove` ter falhado.
+ *
+ * Regra (saida de muitas medicoes — ver _logs/UTAC106x.3-a13.md):
+ *   • RECUSA EXPLICITA do git (proteccao deliberada) => NUNCA. Sao elas:
+ *     «contains modified or untracked files, use --force» (sujo) ·
+ *     «cannot remove a locked working tree» / «is locked» (locked) ·
+ *     «validation failed, cannot remove working tree» (invalido).
+ *   • Sem prova de que a arvore esta LIMPA (`git status --porcelain` vazio) => NUNCA
+ *     (nao se apaga o que nao se conseguiu verificar).
+ *   • So com a arvore PROVADAMENTE limpa E sem recusa explicita => sim.
+ *
+ * @param {string} saida  stdout+stderr do `git worktree remove` que falhou
+ * @param {boolean} statusLimpo  `git -C <path> status --porcelain` devolveu vazio com exit 0
+ */
+export function podeFallback(saida, statusLimpo) {
+  const s = saida || "";
+  if (/contains modified or untracked files|use --force|is locked|cannot remove a locked|validation failed/i.test(s)) return false;
+  if (!statusLimpo) return false;
+  return true;
 }
 
 /** Cria o worktree e as junctions. `path` e' resolvido UMA vez (F4: cwd vs RAIZ). */
@@ -102,10 +126,10 @@ export function remover(path, { log = () => {} } = {}) {
     log(`  rmdir ${p.replace(RAIZ, "<raiz>")} -> ${r.ok ? "OK" : "FALHOU"}`);
   }
 
-  // 2) GUARDA: se restar alguma junction, ABORTAR (nao ha delete recursivo seguro)
+  // 2) GUARDA: se restar alguma junction (ou directoria ilegivel), ABORTAR
   const restam = listarReparse(path);
   if (restam.length) {
-    return { ok: false, erro: `ABORTADO: ${restam.length} reparse point(s) ainda presentes`, restam };
+    return { ok: false, erro: `ABORTADO: ${restam.length} reparse point(s)/directoria(s) ilegivel(is) ainda presentes`, restam };
   }
 
   // 3) agora (e so agora) o worktree
@@ -113,17 +137,18 @@ export function remover(path, { log = () => {} } = {}) {
   log(`git worktree remove -> exit ${w.status}`);
   if (w.status !== 0) {
     const saida = `${w.stdout || ""}${w.stderr || ""}`;
-    // F1: a recusa por WORKTREE SUJO e' PROTECCAO do git. Nao se contorna com rm —
-    // faze-lo apagaria trabalho nao commitado e reportaria ok:true (achado do validador).
-    if (/modified or untracked files|use --force/i.test(saida)) {
+    // F1/G1 (1.ª e 2.ª rondas): a decisao de cair no `rm -rf` e' uma FUNCAO PURA e testada.
+    const st = git(["-C", path, "status", "--porcelain"]);
+    const statusLimpo = st.status === 0 && (st.stdout || "").trim() === "";
+    if (!podeFallback(saida, statusLimpo)) {
       return {
         ok: false,
-        erro: "worktree SUJO: o git recusou remover (ha trabalho nao commitado). NADA foi apagado.",
+        erro: "o git recusou/falhou remover o worktree e NAO ha prova de que esta limpo — nao e' seguro forcar. NADA foi apagado.",
         saida: saida.trim(),
+        statusLimpo,
       };
     }
-    // 4) fallback permitido: SEM junctions provadas e SEM recusa por sujidade, rm e' seguro
-    log("fallback: rm recursivo (sem reparse points, sem recusa por worktree sujo)");
+    log("fallback: rm recursivo (sem reparse points, sem recusa explicita, arvore PROVADAMENTE limpa)");
     rmSync(path, { recursive: true, force: true });
   }
   git(["worktree", "prune"]);
@@ -139,9 +164,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       if (!alvo || !arg3) throw new Error("uso: criar <path> <sha> [--no-junctions]");
       mostrar(criar(alvo, arg3, { junctions: !process.argv.includes("--no-junctions") }));
     } else if (acao === "check") {
-      mostrar({ alvo, reparse: listarReparse(alvo) });
+      if (!alvo) throw new Error("uso: check <path>");
+      mostrar({ alvo: resolve(alvo), reparse: listarReparse(resolve(alvo)) });   // N1: resolve como criar/remover
     } else if (acao === "remover") {
-      mostrar(remover(alvo, { log: (m) => console.error(m) }));
+      if (!alvo) throw new Error("uso: remover <path>");
+      const res = remover(alvo, { log: (m) => console.error(m) });
+      mostrar(res);
+      if (!res.ok) process.exit(1);      // N3: recusa => exit != 0 (quem lê o codigo de saida nao le sucesso)
     } else {
       console.error("uso: criar|check|remover <path>");
       process.exit(2);
