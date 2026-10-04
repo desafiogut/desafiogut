@@ -219,9 +219,55 @@ corrigido); ℹ️2 markdown aninhado no bullet `~~MEI~~` (a strikethrough envol
 ### Pendências declaradas
 
 1. ⚠️ **Sem R14 no `CLAUDE.md`** — o enunciado não autoriza alterar o `CLAUDE.md` fora da secção
-   ESCOPO-ALVO (GATE 3/HI4). **Declarado, não feito.**
+   ESCOPO-ALVO (GATE 3/HI4). **Declarado, não feito.** *(Fechado depois no UTAC106x.4, P1.)*
 2. ⚠️ **A nota do x.1 dentro da NORTE** («a correcção é o UTAC106x.2») fica **desactualizada** — corrigi-la
-   é alterar a NORTE ⇒ **não autorizado**.
+   é alterar a NORTE ⇒ **não autorizado**. *(Fechado depois no UTAC106x.4, P2 — só a nota, definição intacta.)*
 3. **`protocol/regras/README.md`, `README.md` (raiz), `CLAUDE.md:67`** ainda «75 regras / A1-A12».
-4. **`docs/gabarito-play-console.md`** continua a não existir.
+   *(README e DEBT-005 corrigidos no UTAC106x.4, P3; o da raiz mediu-se com 0 ocorrências — D4.)*
+4. **`docs/gabarito-play-console.md`** continua a não existir. *(Criado no UTAC106x.4, P4.)*
 5. ⚠️ **HI5:** este UTAC **excedeu 1 h** (2 rondas de validador com correcção). Declarado.
+
+---
+
+## §6 CUSTO DE API (SEG3.4)
+
+**NÃO MENSURÁVEL** neste ambiente — não há telemetria de tokens nem de facturação acessível ao executor.
+**Declarado, não estimado** (estimar seria inventar).
+
+Consumo de execução **observável** (o que é medível):
+
+| Recurso | Quantidade |
+|---|---|
+| Subagentes validadores | **2** — ronda 1: 363 s · ronda 2: 484 s (total ~847 s) |
+| Chamadas de ferramenta no executor | ~60 |
+| Commits | 3 (`8427aa1`, `8aae4d6`, `920ae4f`) |
+
+---
+
+## §7 RESSALVAS DO ENUNCIADO (as 10)
+
+| # | Ressalva | Estado |
+|---|---|---|
+| 1 | Anotar, não apagar | ✅ `git diff --diff-filter=D` **vazio**; as frases antigas continuam no ficheiro (verificado) |
+| 2 | **NÃO tocar na NORTE** | ✅ **medido**: a NORTE é **byte-idêntica** no intervalo do x.2 (`21c5ee9` → `920ae4f`) |
+| 3 | Contradição que exija a NORTE → PARAR | ✅ nenhuma exigiu |
+| 4 | Suíte 694/694 + 992/998 | ✅ verde (repo principal; em worktree dá 984/991 = **DEBT-006**, não regressão) |
+| 5 | HI5 (>1 h) → PARAR e reportar | ⚠️ **EXCEDIDO** — declarado (§4, §5 e no relatório) |
+| 6 | Sem validador, não fecha | ✅ **2 rondas**; fecha **APROVADO** |
+| 7 | NUNCA `git add -A` | ✅ `git add` sempre por **caminho explícito** (declarado: não há prova automática; é a prática observável nos comandos) |
+| 8 | Deploy em foreground | ✅ push em foreground |
+| 9 | Custo de API reportado | ✅ §6 |
+| 10 | Depois deste UTAC, o `CLAUDE.md` tem **uma só fonte de verdade** | ✅ ESCOPO-ALVO = HISTÓRICA; NORTE Via B = vigente (verificado por medição) |
+
+---
+
+## §8 REGISTO EM 3 LUGARES (R18)
+
+| # | Lugar | Ficheiro |
+|---|---|---|
+| 1 | **Log do UTAC** | `_logs/UTAC106x.2-realinhamento.md` (este, 227+ linhas) |
+| 2 | **Artefacto no repo** | os próprios documentos realinhados, **versionados**: `CLAUDE.md` (secção ESCOPO-ALVO), `docs/FICHA-PLAY-PT.md`, `_logs/MC100_MATRIZ-CONFORMIDADE.md` (este **adicionado** ao git — era untracked) |
+| 3 | **Relatório para o operador** | `Desktop/UTAC106x.2-RELATORIO.md` |
+
+**Commit + push em foreground:** `8427aa1` → `8aae4d6` → `920ae4f` (push individual, ficheiros nomeados,
+**nunca** `git add -A`). Estado no fecho da série: `HEAD == origin/main` (0/0).
