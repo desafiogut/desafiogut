@@ -23,7 +23,7 @@
 
 | # | Enunciado diz | Medido | Tratamento |
 |---|---|---|---|
-| **D1** | «4 bytes de controlo (**linhas 2125-2126**)» | estão nas linhas **2047–2048** — deslocaram-se porque o UTAC106x.1 **encurtou a NORTE** (que fica acima) | **declarado**; o requisito («não introduzir nem remover bytes de controlo») é cumprido — verifico a contagem (4) no fim |
+| **D1** | «4 bytes de controlo (**linhas 2125-2126**)» | os **4** bytes (2×`0x00` + 2×`0x1F`) estão nas linhas **2047–2048** no baseline (e em **2060–2061** depois do realinhamento, +13 linhas). ⚠️ Existe ainda um `0x0D` **solto e pré-existente** (linha 3871 → **3884**), que **não** faz parte dos 4 — está dentro de um texto que documenta `grep -c $'\r$'` | **declarado**; requisito cumprido — a contagem (4) e os **bytes exactos** ficam iguais (verificado byte a byte contra o baseline) |
 | **D2** | `MC100_MATRIZ`, «linha ~24» | o texto «Gamified Loyalty» está na **linha 32** (*row #24* da tabela) | **declarado** (já apontado no x.1, ℹ️3); anoto a linha certa |
 | **D3** | FICHA: «alinhar com o **gabarito Play Console**» | `docs/gabarito-play-console.md` **NÃO EXISTE** (foi pedido no enunciado do UTAC106x e nunca criado — ℹ️7 do x.1) | **declarado**; alinho a ficha com a **definição Via B** e com os requisitos da Play já mapeados na `MC100_MATRIZ` (rows #23–#28, #40, #41) |
 | — | «ESCOPO-ALVO (linha ~126-137)» | a secção vai da **126 à 237** (112 linhas); 126–137 é só o cabeçalho + a nota de precedência | **declarado**: trato a **secção inteira**, porque a ENTREGA exige «nenhuma contradição remanescente» (as contradições vivem na 147, 175, 194, 196-197) |
@@ -77,12 +77,16 @@ esta» e «Ruan» continuam no ficheiro).
   `docs/gabarito-play-console.md` **não existe**. Alinhado com a definição Via B + os requisitos da Play
   já mapeados na `MC100_MATRIZ` (rows #23–#28).
 
-### 3.2 `_logs/MC100_MATRIZ-CONFORMIDADE.md` (+5 linhas)
+### 3.2 `_logs/MC100_MATRIZ-CONFORMIDADE.md`
 
-- **Linha de errata** no cabeçalho (data + referências: NORTE + R14) listando as rows afectadas
+- **Linha de errata no FIM** do ficheiro (data + referências: NORTE + R14) listando as rows afectadas
   (**#1, #2, #10, #24, #32**) e dizendo explicitamente que ficam **anotadas, não apagadas**.
-- **Row #24** (linha 37): + **«⛔ R-19 REVERTIDA pelo UTAC106x.1 (2026-10-04)»** com a razão (com a Via B
-  o requisito *«not subject to additional gambling or gaming licensing requirements»* passa a ser
+  ⚠️ **1.ª tentativa (corrigida):** a errata foi posta no **cabeçalho** e as **+5 linhas deslocaram a
+  row #24 da linha 32 para a 37** — quebrando a referência «`MC100_MATRIZ` **linha 32**» que a NORTE faz
+  (`CLAUDE.md:342`). Apanhado pelo **validador (⚠️ A1)**; movida para o fim ⇒ a row #24 **volta à linha
+  32** e a referência da NORTE fica **válida outra vez**.
+- **Row #24** (linha **32**): + **«⛔ R-19 REVERTIDA pelo UTAC106x.1 (2026-10-04)»** com a razão (com a
+  Via B o requisito *«not subject to additional gambling or gaming licensing requirements»* passa a ser
   **satisfeito**). **Texto original preservado** (verificado).
 - **Untracked** → entra no git neste UTAC (resolvendo o achado ℹ️4 do x.1).
 

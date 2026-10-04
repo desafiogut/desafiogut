@@ -3,11 +3,6 @@
 > Estados: ✅ cumprido e medido · 🟨 parcial · ⛔ não existe · ❓ não verificado.
 > Responsável: **Cli** = cliente (titular: DEC-09) · **Jur** = jurista · **Cont** = contabilidade · **Nós** = operador + agente · **SPA** = SPA/MF.
 > ⚠️ A coluna «Estado actual» é **medida no repo**. As exigências legais citam as leituras de fonte primária já registadas no CLAUDE.md (MC-PRODUTO-01, 28/09) ou os PDFs. Onde nenhuma das duas foi lida, está ❓.
-> ⛔ **ERRATA do UTAC106x.2 (2026-10-04):** a premissa «a Programada exige SPA/MF» e o «Vendedor = MEI» foram
-> **REVERTIDOS pelo UTAC106x.1** — a Via B é **programa de fidelidade**, sem concurso e **sem SPA/MF**; o
-> vendedor legal é a **Associação Recreativa dos Nordestinos no Amazonas** (CNPJ 23.040.066/0001-00). Ver
-> `CLAUDE.md` (NORTE DO PRODUTO + bloco R14). As linhas **#1, #2, #10, #24 e #32** ficam **anotadas, NÃO
-> apagadas** — o histórico é o registo do MC100; lê-las **à luz desta errata**.
 
 | # | Norma | Artigo / regra | Exigência | Estado actual (evidência) | Acção | Camada | Dependência | Resp. |
 |---|---|---|---|---|---|---|---|---|
@@ -58,3 +53,13 @@
 - **Cada norma tem acção:** as linhas n/a (#4, #8, #9) têm uma acção de «manter/não invocar», e isso também é acção.
 - **Cada acção tem camada:** sim (coluna Camada). As linhas #28, #33 e #36 não têm camada: #28 já está cumprida, #33 e #36 são pareceres externos. #35–#41 foram acrescentadas após o SEG3.
 - **Nenhuma acção exige recriar (P1):** C3 usa o `mp-client`, C7 estende as páginas existentes, C9 reescreve documentos (não código).
+
+---
+
+---
+
+> ⛔ **ERRATA do UTAC106x.2 (2026-10-04):** a premissa «a Programada exige SPA/MF» e o «Vendedor = MEI» foram
+> **REVERTIDOS pelo UTAC106x.1** — a Via B é **programa de fidelidade**, sem concurso e **sem SPA/MF**; o
+> vendedor legal é a **Associação Recreativa dos Nordestinos no Amazonas** (CNPJ 23.040.066/0001-00). Ver
+> `CLAUDE.md` (NORTE DO PRODUTO + bloco R14). As linhas **#1, #2, #10, #24 e #32** ficam **anotadas, NÃO
+> apagadas** — o histórico é o registo do MC100; lê-las **à luz desta errata**.

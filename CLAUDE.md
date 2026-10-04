@@ -130,6 +130,7 @@
 > **Actualizado pelo UTAC106x.2 (2026-10-04) — ver NORTE DO PRODUTO para a definição vigente.** Fica como
 > **registo histórico** do alvo segundo os 2 PDFs de 2026-09-28; o texto antigo **mantém-se à vista**
 > (P2 · GATE 15: não se apaga) e as linhas contraditórias ficam **anotadas como SUPERADAS**.
+> ⛔ **Título anterior, verbatim (preservado):** «ESCOPO-ALVO v6.0 — FONTE DE VERDADE: os 2 PDFs do Desktop (MC100, 2026-09-28)». Substituído pelo cabeçalho acima (UTAC106x.2).
 > **DECISÃO DO OPERADOR (R18, 2026-09-28, durante o MC100):** «os pdfs são a fonte de verdade, eles são a
 > versão mais atualizada do que vamos ser ao final». As fontes são:
 > - `Desktop/DesafioGUT - Visão Geral do Ecossistema Completo.pdf` (**VG**, 10 págs.)
@@ -168,7 +169,7 @@ Nas lojas: **Programa de Fidelidade Gamificado** (Play), classificação **AO / 
 1. **Comprador:** login Google (Privy) → gate legal (LGPD + Termos) → carteira embedded → **18+** → PIX → saldo R$ →
    Relâmpago (lance) ou Programada (Passe + palpite) → vitória → morada → **NF-e** → rastreio → **«recebi»** →
    **7 dias de arrependimento com estorno real via Mercado Pago**.
-2. **Plataforma (Associação Recreativa dos Nordestinos no Amazonas — CNPJ 23.040.066/0001-00):** vende o Passe; organiza as edições; apura (Relâmpago on-chain; Programada «palpite mais
+2. **Plataforma (**~~MEI~~ **Associação Recreativa dos Nordestinos no Amazonas — CNPJ 23.040.066/0001-00**):** vende o Passe; organiza as edições; apura (Relâmpago on-chain; Programada «palpite mais
    próximo»); notifica pelo GUTO; **emite a NF-e** (manual no início); gere a logística; **repassa ao lojista após a
    confirmação de entrega**; gere as cotas.
 3. **Lojista:** onboarding com **CNPJ validado** → **cota de visibilidade** (Diamante/Ouro/Prata/Bronze = Nível 1..4)
