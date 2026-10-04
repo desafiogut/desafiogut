@@ -42,4 +42,11 @@ Donde: **R13 = «registo operacional»** e **R12 = «execução é do operador»
 | R19 | AU1 |
 | R20 | AU3 |
 
-Total: **61 regras** em 9 categorias (E9 · T5 · G6 · L6 · S6 · A8 · P7 · AU4 · ST10).
+Total: **76 regras** em **10 categorias** (E9 · T5 · G6 · L6 · S6 · **A13** · P7 · AU4 · ST10 · **HI10**).
+
+> ⚠️ **Correcção do UTAC106x.6 (DEBT-005, 2026-10-04).** Esta linha declarava «**61 regras** em 9 categorias
+> (… **A8** · …)» — obsoleto desde o v1.0; apanhado pelo validador do UTAC000.7, que **não podia tocar aqui**
+> (ficheiro fora do escopo desse UTAC). Contagem **re-medida literalmente por ficheiro** em
+> `protocol/regras/*.md` (`grep -cE '^## [A-Z]+[0-9]+'`): **E9·T5·G6·L6·S6·A13·P7·AU4·ST10·HI10 = 76**,
+> coerente com `README.md` e `SKILL.md` (que já diziam 76 / 10 categorias / A1-A13). Este ficheiro é
+> **legado** (referência histórica de R1-R20): a contagem corrigida refere-se às **categorias actuais**.

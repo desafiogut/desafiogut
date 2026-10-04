@@ -110,12 +110,24 @@ Duas reprodutibilidades, ambas medidas (alvo descartável, NUNCA o `node_modules
 
 ### Criar
 1. `git worktree add C:/Users/<user>/tmp-<utac>/wt <sha> --detach`
-2. Junctions por **`.bat`** invocado com `cmd /c` (`mklink` é builtin do cmd — não existe em git-bash):
+2. Junctions para as **QUATRO** raízes que a suíte precisa — é o array `JUNCTIONS` de
+   `scripts/worktree-helper.mjs`, **fonte de verdade desta contagem** (ver DEBT-006 · UTAC106x.5):
    ```
-   mklink /J "<wt>\desafio-gut\frontend\node_modules" "<raiz>\desafio-gut\frontend\node_modules"
+   mklink /J "<wt>\node_modules"                                        "<raiz>\node_modules"
+   mklink /J "<wt>\desafio-gut\node_modules"                            "<raiz>\desafio-gut\node_modules"
+   mklink /J "<wt>\desafio-gut\frontend\node_modules"                   "<raiz>\desafio-gut\frontend\node_modules"
    mklink /J "<wt>\desafio-gut\frontend\netlify\functions\node_modules" "<raiz>\...\netlify\functions\node_modules"
    ```
-   invocar com `MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1 cmd /c "C:\...\junctions.bat"`.
+   **Porquê 4** (medido no UTAC106x.5 / DEBT-006): os testes do backend resolvem módulos subindo **toda** a
+   árvore a partir de `_tests/`, logo os dois `frontend/...` não bastam — faltavam a **raiz do monorepo**
+   (`desafio-gut/node_modules`: `solc`, `hardhat`, `@nomicfoundation/edr`) e a **raiz do git**
+   (`node_modules`: `chai`, `ts-node`, `typechain`). Sem elas o worktree dava **991/984/7 skipped** em vez de
+   **998/992/6** (= repo principal); com as 4 volta a bater. As duas raízes são gitignored (`.gitignore:2`).
+   ⚠️ **Contagem corrigida no UTAC106x.6:** esta regra documentava **duas** junctions (divergência **2 vs 4**
+   com o helper, que sempre criou as quatro) — reproduzido por execução: `criar` devolve as 4 raízes e o
+   `remover` faz `rmdir` das 4 antes de remover o worktree.
+   As junctions fazem-se por **`.bat`** invocado com `cmd /c` (`mklink` é builtin do cmd — não existe em
+   git-bash): invocar com `MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1 cmd /c "C:\...\junctions.bat"`.
    ⚠️ A forma `cmd /c 'a & b'` do git-bash **falha em silêncio** (medido) — usar sempre `.bat`.
    ✅ **Alternativa medida e fiável em Node** (é o que `scripts/worktree-helper.mjs` usa):
    `spawnSync("cmd", ["/c", "mklink", "/J", link, alvo])` — sem `.bat`, sem quoting frágil.
@@ -123,8 +135,10 @@ Duas reprodutibilidades, ambas medidas (alvo descartável, NUNCA o `node_modules
    (medido), logo dá para *varrer a árvore sem descer nos reparse points* e recusar o delete recursivo.
 
 ### Remover — **A ORDEM É OBRIGATÓRIA**
-1. **`rmdir` das junctions PRIMEIRO** (por `.bat`; `rmdir` remove **só o link**, não o alvo):
-   `rmdir "<wt>\desafio-gut\frontend\node_modules"` (e o par de `netlify\functions`).
+1. **`rmdir` das junctions PRIMEIRO** (por `.bat`; `rmdir` remove **só o link**, não o alvo) — **as
+   QUATRO** que a criação ligou:
+   `rmdir "<wt>\node_modules"` · `rmdir "<wt>\desafio-gut\node_modules"` ·
+   `rmdir "<wt>\desafio-gut\frontend\node_modules"` · `rmdir "<wt>\desafio-gut\frontend\netlify\functions\node_modules"`.
 2. Confirmar que os links desapareceram (`if exist` → «não existe»).
 3. **Só então** `git worktree remove <wt>` (sem `--force`) e `git worktree prune`.
 ⇒ Medido: com esta ordem o alvo fica **INTACTO** (3/3 ficheiros) e o worktree sai limpo.

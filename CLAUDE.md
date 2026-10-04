@@ -410,6 +410,15 @@ A versão anterior (MC-NORTE-01 / MC-PRODUTO-01, 2026-09-28) definia:
 > O texto completo desta versão, com os 7 pilares, as tabelas de cotas e o alerta jurídico de 2026-09-28,
 > está preservado **byte a byte** em `_logs/UTAC106x_NORTE-ANTERIOR.md`.
 
+> 🔎 **VERIFICAÇÃO DA CONSOLIDAÇÃO — UTAC106x.6 (2026-10-04).** A checklist de consolidação do chat
+> (Passe R$ 2,00 = 1 ponto · 50 pontos = 1 cartão · palpite = +2 pontos · lojistas = patrocinadores, não
+> vendem nem entram no app · NF-e CFOP 5.910 + 5.102 · associação como vendedor legal · isenção IR/CSLL/
+> Cofins · sem SPA/MF · Google Play = loyalty program · Apple = bem físico sem IAP) está **coberta** por
+> esta secção. **Excepto um item: «limite 5% — NÃO se aplica»** — medido: `grep -in "5%"` no `CLAUDE.md`
+> e nos logs da série x dá **0 ocorrências**; o referente do «limite 5%» **não está documentado em nenhuma
+> fonte medida**, logo **não se inventa** (GATE 2). Fica **por esclarecer pelo operador**; **não bloqueia o
+> UTAC106a** (mapeamento do fluxo do código). Ver `_logs/UTAC106x.6-pendencias.md` §Frente C.
+
 ---
 
 ## Active Premium Skills
@@ -4456,3 +4465,23 @@ Consultar antes de mexer em segredos ou no CLI da Netlify.
 > 🔧 **UTAC106x.3 (2026-10-04) — REGRA A13: JUNCTIONS EM WORKTREE.** Nova regra **A13** em `skills/utac/protocol/regras/A-ambiente.md` (+ 2 referências no `SKILL.md`, que passou a **A1-A13** e a **76 regras**): o delete recursivo (`git worktree remove` **e** `rm -rf`) **SEGUE as junctions** e apaga o `node_modules` REAL — medido: com caminhos curtos devolve **exit 0 e o alvo fica VAZIO** (perda **silenciosa**); com caminho > MAX_PATH, **exit 255 «Filename too long»** (foi o que, no UTAC106x.1, deixou `frontend/node_modules` 505→498 e `netlify/functions/node_modules` 417→0). Procedimento: `rmdir` das junctions **PRIMEIRO**, depois `git worktree remove` + `prune`. Novo **`scripts/worktree-helper.mjs`** (`criar|check|remover`) com a invariante *«uma recusa do git NÃO se contorna»* — `podeFallback(saida, statusLimpo)` só permite o `rm -rf` sem reparse points, sem recusa explícita (sujo/locked/inválido/**submódulos**) e com limpeza PROVADA (`status --porcelain --ignore-submodules=none` + `submodule status`). Testes `scripts/worktree-helper.test.mjs` (fora da suíte canónica) **12/12**, **mutação 6/6**; suíte **694/694 · 992/998**. Validador adversarial em **3 rondas** (F1 → G1 → H1, cada uma corrigida; veredicto final **PARCIAL** — o H1 é **latente**, o repo não usa submódulos; as correcções finais ficam **declaradas como não re-validadas**). Log: `_logs/UTAC106x.3-a13.md`. Próximo: **UTAC106x.2**.
 
 > 🐞 **UTAC106x.5 (2026-10-04) — DEBT-006 FECHADA: O WORKTREE LIGA A RAIZ DO MONOREPO.** A suíte do backend num worktree isolado dava **991/984/7 skipped** em vez de **998/992/6** (7 testes não descobertos + 2 skips, todos no grupo **MC93-E** de `_tests/mc93e-fork-onchain.test.mjs`). **Causa raiz (medida):** os testes resolvem módulos com `createRequire(import.meta.url)` a partir de `_tests/`, **subindo a árvore** até `desafio-gut/node_modules` — onde vivem as dependências **dev-only** (`solc`, `hardhat`, `@nomicfoundation/edr`); o helper A9/A13 ligava só os **dois** `frontend/...` ⇒ `MODULE_NOT_FOUND` no worktree. **FIX:** a lista `JUNCTIONS` de `scripts/worktree-helper.mjs` passa a cobrir as **duas raízes** que faltavam — `desafio-gut/node_modules` (raiz do monorepo) e `node_modules` (raiz do git). **GATE 8 bidireccional:** 991/984/7 → **998/992/6** (= repo principal) → removida, volta a 991/984/7. Worktree completo **694/694 + 992/998**; repo principal **sem regressão**; teste do helper **12/12**. Sem tocar em testes, produção, nem na regra A13/A9. Commit `8499425`. Log: `_logs/UTAC106x.5-debt-006.md`. ⚠️ **Divergência declarada:** a regra **A13** documenta ainda **duas** junctions e o helper cria **quatro** — a arrumar em UTAC próprio (não autorizado aqui). Próximo: **UTAC106a**.
+
+> 🧹 **UTAC106x.6 (2026-10-04) — PENDÊNCIAS DA SÉRIE X FECHADAS (pré-UTAC106a).** **(A)** regra **A13**
+> corrigida: documentava **duas** junctions e o helper `scripts/worktree-helper.mjs` cria **quatro**
+> (`node_modules`, `desafio-gut/node_modules`, `desafio-gut/frontend/node_modules`,
+> `desafio-gut/frontend/netlify/functions/node_modules`) — a divergência **2 vs 4** (declarada no x.5) está
+> fechada; provado por execução (o helper cria 4 e o `remover` faz `rmdir` das 4 antes do worktree; os
+> `node_modules` reais ficam intactos: frontend **499** · functions **414**). **(B)** **DEBT-001 FECHADA
+> (aceite com enumeração):** os **6 skipped** do backend são **1** em `_tests/mc93d-contrato-onchain.test.mjs`
+> (fork mainnet — exige `MAINNET_RPC_URL`) + **5** em `_tests/mc93d-contrato-postgrest.test.mjs` (grupo
+> «SERVIDOR», exige `SUPABASE_CONTRATO_URL/KEY`) — ambos **bloqueados por credenciais do operador (R5)**, não
+> desbloqueáveis por código. **DEBT-005 FECHADA:** `protocol/regras-legado.md` dizia «61 regras em 9
+> categorias (… A8 …)» → corrigido para **76 regras / 10 categorias / A13 / +HI10** (re-medido por ficheiro:
+> E9·T5·G6·L6·S6·A13·P7·AU4·ST10·HI10 = 76). **(C)** NORTE verificada contra a consolidação (10 de 11 itens
+> ✅; **1 lacuna anotada**: «limite 5%» ausente e sem referente medido) e o gabarito Play verificado (§1-§9,
+> com lacunas anotadas). **(D)** `package-lock` **NÃO alterado**: medido que `solc`/`@nomicfoundation/edr`
+> **estão** nos locks (raiz e `desafio-gut`); o CI tem job dedicado `test-onchain` (instala as deps e exige
+> ≤1 skip) ⇒ **MC93-E não salta em CI**; resta **1 skip** local do teste de recompilação com `solc` (que não
+> está no `desafio-gut/package-lock.json`) — **DEBT-019 aberta** (decisão do operador). Suíte **frontend
+> 694/694 · backend 992/998**. Zero código de produção e zero testes alterados. Log:
+> `_logs/UTAC106x.6-pendencias.md`.
