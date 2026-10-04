@@ -144,7 +144,7 @@ Subagente independente em worktree próprio (criado com `scripts/worktree-helper
 | P1 · P2 · P3 · P4 · P5 | ✅ **fechadas** |
 | Suíte | **694/694 · 992/998** (repo real) |
 | Guarda da ficha | **3/3** |
-| `CLAUDE.md` | 4458 linhas · bytes de controlo **intactos (4)** |
+| `CLAUDE.md` | 4456 linhas · bytes de controlo **intactos (4)** |
 | Validador | **APROVADO** |
 | Commits | `59400b6` (+ o commit de fecho) — push em foreground |
 
