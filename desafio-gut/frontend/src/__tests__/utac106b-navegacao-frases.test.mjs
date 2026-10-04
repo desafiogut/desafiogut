@@ -38,11 +38,23 @@ test("UTAC106b · /ofertas-programadas tem rota e página própria", () => {
   assert.match(app, /import\("\.\/pages\/OfertasProgramadas\.jsx"\)/, "a página não é importada (lazy)");
 });
 
-test("UTAC106b · a página OfertasProgramadas é TRAVADA por EM_BREVE_MODE", () => {
+test("UTAC106b→f · a página OfertasProgramadas deixou de ser PLACEHOLDER (UTAC106f) — a trava GLOBAL fica", () => {
+  // UTAC106f — MUDANÇA DE CONTRATO (declarada): o 106b travava o CONTEÚDO da página com
+  // `EM_BREVE_MODE ? «EM BREVE» : …`. O 106f substitui o placeholder pelo ECRÃ REAL ⇒ a página
+  // deixa de usar a trava. A invariante do 106b mantém-se e reforça-se: a página é o ecrã real do
+  // programa (não um «em breve»), e `EM_BREVE_MODE` continua `true` (trava os CRONÓMETROS —
+  // testado no bloco seguinte, que NÃO foi alterado).
   const pg = ler("pages/OfertasProgramadas.jsx");
-  assert.match(pg, /from\s+"\.\.\/lib\/leilaoLock\.js"/, "a página não importa a trava única (leilaoLock)");
-  assert.match(pg, /EM_BREVE_MODE\s*\?/, "EM_BREVE_MODE não é usado como gate na renderização");
-  assert.match(pg, /EM_BREVE_LABEL/, "o rótulo «EM BREVE» não é usado");
+  // ⚠️ O ficheiro é lido CRU: o cabeçalho EXPLICA (em comentário) porque é que a página deixou de
+  // usar a trava — os comentários têm de sair antes da asserção, senão o teste acusa a explicação.
+  const codigo = pg
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(codigo, /EM_BREVE_LABEL/, "a página ainda mostra «EM BREVE» — devia ser o ecrã real");
+  assert.doesNotMatch(codigo, /EM_BREVE_MODE/, "a página ainda está travada por EM_BREVE_MODE");
+  assert.match(pg, /Ofertas Programadas/, "a página perdeu o título do ecrã real");
+  assert.match(pg, /usePontos\(\)/, "a página não lê os pontos (o ecrã real exige-o)");
 });
 
 test("UTAC106b · EM_BREVE_MODE continua LIGADO (nada foi desligado por engano)", () => {

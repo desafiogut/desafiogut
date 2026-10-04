@@ -17,6 +17,8 @@
 //   - sem dados pessoais em logs (P10): só códigos de erro.
 
 import { getSupabase } from "./supabase-client.mjs";
+// UTAC106f — a mesma regex de id de edição do resto do backend (uma só fonte de verdade).
+import { EDICAO_ID_RE } from "./edicoes-core.mjs";
 
 // ── Constantes de negócio (a REGRA vive aqui, nunca como número mágico no endpoint) ──
 export const PONTOS_POR_PASSE = 1;
@@ -141,4 +143,117 @@ export async function debitarPontos(endereco, quantidade, tipo, ref) {
   const invalido = validarArgs(endereco, quantidade, tipo, ref);
   if (invalido) return invalido;
   return aplicarMovimento(endereco, -quantidade, tipo, ref);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════════════
+// UTAC106f — PALPITE (bónus +2 pontos). ADITIVO: NADA acima desta linha foi alterado.
+//
+// Regra do operador: o palpite é sobre o Nº TOTAL DE LANCES de uma edição Programada; 1 palpite
+// por endereço e edição; apura-se quando a edição fecha; o MAIS PRÓXIMO do valor real recebe
+// `PONTOS_POR_PALPITE_CERTO` pontos; sem acertadores, ninguém recebe. **O palpite NÃO decide o
+// cartão** — o cartão é SÓ por pontos de compra (50). Store: `public.palpites` (UTAC106f).
+// ══════════════════════════════════════════════════════════════════════════════════════
+
+/** Bónus por ser o mais próximo do número real de lances. */
+export const PONTOS_POR_PALPITE_CERTO = 2;
+
+const TABELA_PALPITES = "palpites";
+const FK_VIOLATION = "23503";
+
+/** `ref` do crédito do bónus: UMA por edição ⇒ re-apurar NÃO credita duas vezes (idempotência por `ref`). */
+export const refBonusPalpite = (edicaoId) => `palpite-certo:${edicaoId}`;
+
+const edicaoValida = (id) => typeof id === "string" && EDICAO_ID_RE.test(id);
+
+/** Lê o palpite do endereço numa edição (ou `null`). Lança em erro do Supabase. */
+export async function lerPalpite(endereco, edicaoId) {
+  const e = normalizar(endereco);
+  if (!enderecoValido(e) || !edicaoValida(edicaoId)) return null;
+  const { data, error } = await getSupabase().from(TABELA_PALPITES).select("*")
+    .eq("endereco", e).eq("edicao_id", edicaoId).maybeSingle();
+  if (error) throw new Error(`[passe-pontos] lerPalpite falhou: ${error.code ?? error.message}`);
+  return data ?? null;
+}
+
+/** Lista os palpites do endereço (mais recentes primeiro). Lança em erro do Supabase. */
+export async function lerPalpites(endereco) {
+  const e = normalizar(endereco);
+  if (!enderecoValido(e)) return [];
+  const { data, error } = await getSupabase().from(TABELA_PALPITES).select("*")
+    .eq("endereco", e).order("criado_em", { ascending: false });
+  if (error) throw new Error(`[passe-pontos] lerPalpites falhou: ${error.code ?? error.message}`);
+  return Array.isArray(data) ? data : [];
+}
+
+/**
+ * Regista o palpite (nº de lances previstos) de um endereço numa edição.
+ * Idempotente por (endereco, edicao_id): a 2.ª tentativa devolve o existente (`criado:false`).
+ * @returns {Promise<{ok:true,criado:boolean,palpite:object}|{ok:false,code:string}>}
+ */
+export async function registarPalpite(endereco, edicaoId, valor) {
+  const e = normalizar(endereco);
+  if (!enderecoValido(e)) return { ok: false, code: "ENDERECO_INVALIDO" };
+  if (!edicaoValida(edicaoId)) return { ok: false, code: "EDICAO_INVALIDA" };
+  if (!Number.isInteger(valor) || valor < 0) return { ok: false, code: "VALOR_INVALIDO" };
+
+  const { data, error } = await getSupabase().from(TABELA_PALPITES)
+    .insert({ endereco: e, edicao_id: edicaoId, valor }).select("*").maybeSingle();
+  if (error) {
+    if (error.code === UNIQUE_VIOLATION) {
+      const existente = await lerPalpite(e, edicaoId);
+      return existente ? { ok: true, criado: false, palpite: existente } : { ok: false, code: "ERRO_DB" };
+    }
+    // FK para public.pontos: sem Passe comprado não há linha de pontos ⇒ não pode palpitar.
+    if (error.code === FK_VIOLATION) return { ok: false, code: "SEM_PASSE" };
+    return { ok: false, code: "ERRO_DB" };
+  }
+  return { ok: true, criado: true, palpite: data };
+}
+
+/**
+ * Apura os palpites AINDA POR APURAR de uma edição contra o número REAL de lances.
+ * Vence o MAIS PRÓXIMO; empate → o mais antigo (`criado_em`, depois `id`). O vencedor fica
+ * `mais_proximo` e recebe `PONTOS_POR_PALPITE_CERTO` pontos com a ref `palpite-certo:<edicaoId>`
+ * (re-apurar é idempotente). Sem palpites por apurar → `vencedor:null` e ninguém é creditado.
+ * @returns {Promise<{ok:true,total:number,vencedor:object|null,pontosCreditados:number}|{ok:false,code:string}>}
+ */
+export async function apurarPalpite(edicaoId, valorReal) {
+  if (!edicaoValida(edicaoId)) return { ok: false, code: "EDICAO_INVALIDA" };
+  if (!Number.isInteger(valorReal) || valorReal < 0) return { ok: false, code: "VALOR_INVALIDO" };
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase.from(TABELA_PALPITES).select("*")
+    .eq("edicao_id", edicaoId).eq("apurado", false)
+    .order("criado_em", { ascending: true }).order("id", { ascending: true });
+  if (error) return { ok: false, code: "ERRO_DB" };
+  const porApurar = Array.isArray(data) ? data : [];
+  if (porApurar.length === 0) return { ok: true, total: 0, vencedor: null, pontosCreditados: 0 };
+
+  let vencedor = porApurar[0];
+  for (const p of porApurar) {
+    if (Math.abs(p.valor - valorReal) < Math.abs(vencedor.valor - valorReal)) vencedor = p;
+  }
+
+  // Crédito PRIMEIRO, com ref idempotente: se a marcação falhar, repetir o apuramento não paga 2×.
+  const credito = await creditarPontos(
+    vencedor.endereco, PONTOS_POR_PALPITE_CERTO, TIPO_PALPITE, refBonusPalpite(edicaoId),
+  );
+  if (!credito.ok) return { ok: false, code: credito.code };
+
+  const perdedores = porApurar.filter((p) => p.id !== vencedor.id).map((p) => p.id);
+  if (perdedores.length > 0) {
+    const { error: e1 } = await supabase.from(TABELA_PALPITES)
+      .update({ apurado: true, resultado: "perdeu" }).in("id", perdedores);
+    if (e1) return { ok: false, code: "ERRO_DB" };
+  }
+  const { error: e2 } = await supabase.from(TABELA_PALPITES)
+    .update({ apurado: true, resultado: "mais_proximo" }).eq("id", vencedor.id);
+  if (e2) return { ok: false, code: "ERRO_DB" };
+
+  return {
+    ok: true,
+    total: porApurar.length,
+    vencedor: { endereco: vencedor.endereco, valor: vencedor.valor },
+    pontosCreditados: PONTOS_POR_PALPITE_CERTO,
+  };
 }
