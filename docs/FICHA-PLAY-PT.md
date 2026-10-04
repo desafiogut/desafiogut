@@ -26,6 +26,26 @@ honesto e mais simples do que manter três ficheiros que o produto não lê.
 
 ---
 
+## Classificação nas lojas (realinhada à Via B pelo UTAC106x.2, 2026-10-04)
+
+O produto é um **e-commerce por dropshipping com programa de fidelidade gamificado**. Duas modalidades:
+**(a) Oferta Relâmpago** — menor lance único, jogo de **habilidade**; **(b) Oferta Programada** —
+**programa de fidelidade** (o Passe de R$ 2,00 vale 1 ponto; **50 pontos = cartão colecionável físico da
+Família Quildo**; o palpite é **bónus de +2 pontos** e **não decide** o prémio).
+
+- **Google Play:** **programa de fidelidade** (*Gamified Loyalty*). **Não é** concurso de previsões, **não é**
+  aposta e **não é** sorteio. **SPA/MF não se aplica** (não há concurso) — achado **R-19**, revertido pelo
+  UTAC106x.1.
+- **Apple:** **bem físico** (fora do IAP).
+- **Vendedor legal:** **Associação Recreativa dos Nordestinos no Amazonas** — CNPJ **23.040.066/0001-00**
+  (Grupo União e Trabalho).
+
+> ⛔ **SUPERADO (UTAC106x.2, 2026-10-04):** a copy abaixo dizia «Programado: usa **senhas (tokens)** de
+> R$ 2,00, compradas na sua carteira» e «operado pelo **Grupo União e Trabalho**». A definição vigente é a
+> da **NORTE DO PRODUTO** (Via B). A copy foi corrigida e o texto antigo fica **anotado** aqui
+> (P2 · GATE 15: não se apaga).
+
+---
 ## PT-BR
 
 **Título** (máx. 30) — **29 caracteres**
@@ -38,7 +58,7 @@ DesafioGUT Torneio Habilidade
 Ofereça o menor lance único e vença por estratégia. Torneio de habilidade.
 ```
 
-**Descrição longa** (máx. 4000) — **1132 caracteres**
+**Descrição longa** (máx. 4000) — **1285 caracteres**
 ```
 O DesafioGUT é um torneio de habilidade onde vence quem fizer o menor lance único.
 
@@ -47,7 +67,7 @@ Você responde à pergunta «QUANTO VOCÊ OFERTA POR... este produto ou serviço
 
 DUAS MODALIDADES
 • Relâmpago: usa saldo, a partir de R$ 0,01 por oferta. Sem limite de participações.
-• Programado: usa senhas (tokens) de R$ 2,00, compradas na sua carteira.
+• Programado: o Passe de R$ 2,00 vale 1 ponto; 50 pontos dão direito ao cartão colecionável físico da Família Quildo. O palpite é um bónus de +2 pontos e não decide o prémio.
 
 PONTUAÇÃO
 Oferta única vale 1 ponto. Oferta única de menor valor vale 3 pontos. Sequências de acertos acumulam bónus. O ranking é público e acumulado por edição.
@@ -58,7 +78,7 @@ Produtos e serviços anunciados em cada edição. O ganhador é apurado automati
 SEGURANÇA E TRANSPARÊNCIA
 Cadastro gratuito, exclusivo para maiores de 18 anos. O regulamento completo está disponível no aplicativo e registrado em cartório (RTD — Manaus/AM).
 
-O DesafioGUT é operado pelo Grupo União e Trabalho (CNPJ 23.040.066/0001-00).
+O DesafioGUT é operado pela Associação Recreativa dos Nordestinos no Amazonas (CNPJ 23.040.066/0001-00), Grupo União e Trabalho.
 ```
 
 ---
@@ -69,7 +89,7 @@ O DesafioGUT é operado pelo Grupo União e Trabalho (CNPJ 23.040.066/0001-00).
 |---|---|---|
 | título | 30 | 29 ✅ |
 | descrição curta | 80 | 74 ✅ |
-| descrição longa | 4000 | 1132 ✅ |
+| descrição longa | 4000 | 1285 ✅ |
 
 > **Nota do MC97:** a 1.ª versão desta ficha tinha as contagens **escritas à mão** — e cinco
 > dos nove campos **excediam o limite**, com um ✅ inventado ao lado. Os títulos PT (34) e ES

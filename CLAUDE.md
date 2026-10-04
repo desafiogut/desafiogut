@@ -123,28 +123,37 @@
 
 ---
 
-## 🎯 ESCOPO-ALVO v6.0 — FONTE DE VERDADE: os 2 PDFs do Desktop (MC100, 2026-09-28)
+## 🎯 ESCOPO-ALVO v6.0 — os 2 PDFs do Desktop (MC100, 2026-09-28) — **HISTÓRICA** (realinhada pelo UTAC106x.2)
 
+> ⛔ **ESTA SECÇÃO JÁ NÃO É FONTE DE VERDADE.** A definição vigente do produto é a secção **«NORTE DO
+> PRODUTO»** (Via B — programa de fidelidade, 2026-10-04): onde divergirem, **prevalece a NORTE**.
+> **Actualizado pelo UTAC106x.2 (2026-10-04) — ver NORTE DO PRODUTO para a definição vigente.** Fica como
+> **registo histórico** do alvo segundo os 2 PDFs de 2026-09-28; o texto antigo **mantém-se à vista**
+> (P2 · GATE 15: não se apaga) e as linhas contraditórias ficam **anotadas como SUPERADAS**.
 > **DECISÃO DO OPERADOR (R18, 2026-09-28, durante o MC100):** «os pdfs são a fonte de verdade, eles são a
 > versão mais atualizada do que vamos ser ao final». As fontes são:
 > - `Desktop/DesafioGUT - Visão Geral do Ecossistema Completo.pdf` (**VG**, 10 págs.)
 > - `Desktop/DesafioGUT - Modelo de Negócio e Conformidade.pdf` (**MN**, v1.0, 10 págs.)
 >
-> **Precedência:** esta secção descreve **o que o DesafioGUT vai ser**. Onde divergir da secção
-> «NORTE DO PRODUTO» (MC-NORTE-01/MC-PRODUTO-01, logo abaixo), **prevalece esta**. A NORTE continua a
-> descrever **o estado actual do código e o histórico das decisões**, e não se apaga (P2). O estado
-> medido e o plano de transformação estão em `_logs/MC100_*.md` e `Desktop/MC100-RELATORIO.md`.
-> ⚠️ Os PDFs são a fonte **do alvo**, não do estado: algumas afirmações de «✓ implementado» e duas
+> ⛔ ~~**Precedência:** esta secção descreve **o que o DesafioGUT vai ser**. Onde divergir da secção «NORTE
+> DO PRODUTO» (MC-NORTE-01/MC-PRODUTO-01, logo abaixo), **prevalece esta**.~~ **REVOGADO pelo UTAC106x.2
+> (2026-10-04): removidas a auto-declaração de «fonte de verdade» e a precedência — prevalece a NORTE DO
+> PRODUTO.** A NORTE continua a descrever **o estado actual do código e o histórico das decisões**, e não se
+> apaga (P2). O estado medido e o plano de transformação estão em `_logs/MC100_*.md` e `Desktop/MC100-RELATORIO.md`.
 > citações normativas neles não batem com o repo nem com as fontes primárias (ver «Errata dos PDFs»).
 
 ### O que o DesafioGUT vai ser
 
 **Plataforma de e-commerce por dropshipping** que vende **produtos físicos** por duas modalidades:
 
-| Modalidade | Mecânica | Paga com | Critério de vitória | Duração | Autorização SPA/MF (segundo o PDF) |
+| Modalidade | Mecânica | Paga com | Critério de vitória | Duração | ⛔ ~~Autorização SPA/MF (segundo o PDF)~~ **histórico** |
 |---|---|---|---|---|---|
 | **Oferta Relâmpago** («Estratégia») | menor lance único | **saldo em R$** (PIX), lance ≥ R$ 0,01 | **menor lance único** | curta (horas) | ❌ dispensada («jogo de habilidade / estratégia pura») |
-| **Oferta Programada** («Previsão») | **concurso de previsões** | **Passe Desafio (R$ 2,00)** | **palpite mais próximo do nº real e exato de lances** | média/longa (dias ou semanas) | ✅ **requerida** (Lei 5.768/1971 + Dec. 70.951/1972) |
+| **Oferta Programada** (fidelidade) | **programa de fidelidade gamificado** (Passe → pontos) | **Passe Desafio (R$ 2,00)** | **50 pontos = cartão colecionável físico da Família Quildo**; o palpite é **bónus (+2 pontos)**, não decide o prémio | média/longa (dias ou semanas) | ❌ **não se aplica** (não é concurso) |
+
+> ⛔ **SUPERADO (UTAC106x.2, 2026-10-04):** esta linha dizia «**concurso de previsões**», com critério
+> «palpite mais próximo do nº real e exato de lances» e «✅ **requerida** (Lei 5.768/1971 + Dec. 70.951/1972)».
+> A definição vigente é a da **NORTE** (Via B): fidelidade, **sem SPA/MF**; o palpite é **bónus**, não decide o prémio.
 
 **Passe Desafio (R$ 2,00):** **produto digital real**, **não** taxa de participação. Inclui **cupons de desconto
 de lojistas parceiros** + **dados analíticos** (participantes, faixas de lances, histórico) + **GUTO** + **direito
@@ -159,7 +168,7 @@ Nas lojas: **Programa de Fidelidade Gamificado** (Play), classificação **AO / 
 1. **Comprador:** login Google (Privy) → gate legal (LGPD + Termos) → carteira embedded → **18+** → PIX → saldo R$ →
    Relâmpago (lance) ou Programada (Passe + palpite) → vitória → morada → **NF-e** → rastreio → **«recebi»** →
    **7 dias de arrependimento com estorno real via Mercado Pago**.
-2. **Plataforma (MEI):** vende o Passe; organiza as edições; apura (Relâmpago on-chain; Programada «palpite mais
+2. **Plataforma (Associação Recreativa dos Nordestinos no Amazonas — CNPJ 23.040.066/0001-00):** vende o Passe; organiza as edições; apura (Relâmpago on-chain; Programada «palpite mais
    próximo»); notifica pelo GUTO; **emite a NF-e** (manual no início); gere a logística; **repassa ao lojista após a
    confirmação de entrega**; gere as cotas.
 3. **Lojista:** onboarding com **CNPJ validado** → **cota de visibilidade** (Diamante/Ouro/Prata/Bronze = Nível 1..4)
@@ -172,9 +181,9 @@ Nas lojas: **Programa de Fidelidade Gamificado** (Play), classificação **AO / 
 
 | Item | PDF |
 |---|---|
-| Vendedor legal e emissor de NF-e | **MEI do DesafioGUT**, CNAE comércio varejista, exibido no rodapé legal |
-| Titular do MEI e da licença SPA/MF | **Ruan** (segundo o PDF) — ⚠️ **ver DEC-09 abaixo** |
-| Licença SPA/MF | taxa de fiscalização **R$ 334,00** (limite de R$ 10.000,00 em prémios), validade 12 meses (valores do PDF, não verificados pelo executor) |
+| ⛔ **SUPERADO** — ~~Vendedor legal e emissor de NF-e~~ | ~~**MEI do DesafioGUT**, CNAE comércio varejista, exibido no rodapé legal~~ → **Associação Recreativa dos Nordestinos no Amazonas** (CNPJ **23.040.066/0001-00**, Grupo União e Trabalho) — ver NORTE DO PRODUTO e o R14 do UTAC106x.1 |
+| ⛔ **REVERTIDO (DEC-09)** — ~~Titular do MEI e da licença SPA/MF~~ | ~~**Ruan** (segundo o PDF)~~ → titular = **Associação** (Marinho, Grupo União e Trabalho), Ruan como funcionário — **UTAC106x.1** |
+| ⛔ **NÃO SE APLICA** — ~~Licença SPA/MF~~ | ~~taxa de fiscalização **R$ 334,00** (limite de R$ 10.000,00 em prémios), validade 12 meses (valores do PDF, não verificados pelo executor)~~ → **sem concurso ⇒ SPA/MF não se aplica** (Via B; **R-19 revertida** pelo UTAC106x.1) |
 | NF-e | emitida em **100 %** das vendas com entrega física (MN §3.5) |
 
 ### Leis e plataformas (MN §3–4) — o que o PDF declara
@@ -190,11 +199,11 @@ físicos fora do IAP.
 
 | Tema | NORTE / estado actual do código | Alvo (PDF) |
 |---|---|---|
-| Programada | senha R$ 2 = 1 lance, **menor lance único** (`REGULAMENTO-v4.md:19,43`) | **Passe + palpite do nº de lances**, «mais próximo» |
-| Decisão MC-PRODUTO-01 «o Quiz de Previsão não entra; sem frontend novo» | registada como R18 a 28/09 | **revogada pelo PDF** (R18 do MC100): o concurso de previsões **entra** |
+| Programada | senha R$ 2 = 1 lance, **menor lance único** (`REGULAMENTO-v4.md:19,43`) | **Passe + palpite do nº de lances**, «mais próximo» |  ⛔ **SUPERADO pelo UTAC106x.2** — Via B: Passe → pontos → **cartão**; o palpite é **bónus** |
+| Decisão MC-PRODUTO-01 «o Quiz de Previsão não entra; sem frontend novo» | registada como R18 a 28/09 | **revogada pelo PDF** (R18 do MC100): o concurso de previsões **entra** |  ⛔ **SUPERADO pelo UTAC106x.2** — a Via B **não tem concurso** |
 | «Passe» = só a denominação comercial da senha | MC-PRODUTO-01 | Passe = **produto digital próprio, com cupons de lojistas** |
-| Tese «torneio de habilidade» (Portaria SPA/MF 1.207/2024, Art. 38º v4) | Regulamento v4 | Relâmpago = habilidade (dispensada); **Programada = concurso autorizado pela SPA/MF** |
-| Vendedor | GUT, CNPJ 23.040.066/0001-00 (na verdade uma associação: ver memória do CNPJ) | **MEI** |
+| Tese «torneio de habilidade» (Portaria SPA/MF 1.207/2024, Art. 38º v4) | Regulamento v4 | Relâmpago = habilidade (dispensada); **Programada = concurso autorizado pela SPA/MF** |  ⛔ **SUPERADO pelo UTAC106x.2** — Programada = fidelidade, **sem SPA/MF** |
+| Vendedor | GUT, CNPJ 23.040.066/0001-00 (na verdade uma associação: ver memória do CNPJ) | **MEI** |  ⛔ **REVERTIDO pelo UTAC106x.1** — vendedor = **Associação** |
 | Relâmpago: quem paga | cada lance é debitado do saldo (Art. 8º v4) e o vencedor paga o valor do seu lance pelo produto (Art. 11º) | **igual** no PDF VG §8 («lance debitado do saldo» + «vencedor paga o valor final do lance»). *Sem mudança: a divergência que o MC100 leu na 1.ª versão foi refutada pelo validador* |
 
 ### ⚠️ Errata dos PDFs (medida no MC100 contra fontes primárias e contra o repo)
@@ -212,14 +221,14 @@ físicos fora do IAP.
 4. **Relâmpago «dispensada»** com lances pagos contradiz a política Real-Money Gambling da Play já citada abaixo
    (MC-PRODUTO-01) → **R-02, parecer jurídico obrigatório.**
 5. **A categoria Gamified Loyalty exige «not subject to additional gambling or gaming licensing requirements»**, e o
-   próprio PDF diz que a Programada **exige** a SPA/MF → **R-19, parecer obrigatório** (achado do validador do MC100).
+   próprio PDF diz que a Programada **exige** a SPA/MF → **R-19, parecer obrigatório** (achado do validador do MC100). **⛔ REVERTIDA pelo UTAC106x.1 (2026-10-04):** sem concurso e sem SPA/MF, a premissa cai — ver R14.
 6. **O momento do repasse ao lojista contradiz-se:** antes do envio (VG §8, MN §6.1) vs depois da confirmação (VG §4.1/§5.3/§9,
    MN §6.2) → DEC-06. **«AO»** não é classificação da Play/IARC (no Brasil: ClassInd 18). O PDF usa «Arremate» (MN §5.1).
 
 ### ⛔ Decisões pendentes que bloqueiam execução (detalhe em `_logs/MC100_DECISOES-PENDENTES.md`)
 
 - **DEC-09 — titular:** o PDF diz **Ruan** (MEI + SPA/MF); o texto do MC100 (P5/P6) diz **Marinho (União e Trabalho)**, com
-  o Ruan como funcionário. O R18 manda seguir o PDF, **mas nada que dependa do titular avança sem confirmação**.
+  o Ruan como funcionário. O R18 manda seguir o PDF, **mas nada que dependa do titular avança sem confirmação**. **⛔ REVERTIDA pelo UTAC106x.1 (R14, 2026-10-04)** — o titular é a **Associação** (Marinho).
 - ~~DEC-11~~ **retirado** (refutado pelo validador: PDF e código coincidem). A pergunta de fundo passa ao jurista (R-02, R-19).
 - **DEC-01 — faturação do Passe:** PIX vs Google Play Billing / Apple IAP.
 - **DEC-02/03/04 — cupons (quem emite, valor); que lances o palpite conta; desempate e nº fixo de vencedores.**
@@ -232,6 +241,9 @@ MC101 publicar o feito (MC-SORTEIO-01a + MC-ECOMMERCE-01a) + medir flags/webhook
 MC103 mecanismo de descontinuação + medição do legado · MC104 LGPD técnico. **Onda 2** (decisões do cliente): Passe,
 concurso, estorno, repasse, cupons. **Onda 3** (MEI/SPA): Regulamento v5, rodapé, NF-e, LGPD v2, GUTO/RAG, copy/marca.
 **Onda 4:** ficha Play + AAB → iOS.
+
+> ⛔ **histórico (UTAC106x.2, 2026-10-04):** o plano das Ondas 2/3 é de 2026-09-28. Com a Via B, a decisão
+> «concurso» **caiu** (fidelidade), «MEI» caiu (vendedor = **Associação**) e «SPA» caiu (**não se aplica**).
 
 ---
 
