@@ -289,7 +289,8 @@ só o backend); os runners de CI (leu o `ci.yml`, não os executou).
    substituir nada; **4 bytes de controlo intactos** (2×NUL + 2×0x1F).
 3. `Desktop/RELATORIO-UTAC106x.6-PENDENCIAS.txt` (relatório ao operador).
 
-**Ficheiros alterados/criados** (commits `73cdd59` + o commit de errata pós-veredicto):
+**Ficheiros alterados/criados.** **Commits:** `73cdd59` (fecho: A13 · DEBT-001/005/019/020 · NORTE ·
+gabarito · package-lock) → `8f48019` (errata pós-veredicto do validador) → **este** (registo final).
 - `desafio-gut/frontend/skills/utac/protocol/regras/A-ambiente.md` (+19/−5)
 - `desafio-gut/frontend/skills/utac/protocol/regras-legado.md` (+8/−1)
 - `_logs/DEBT.md` (DEBT-001/005 fechadas · DEBT-019/020 novas · errata da DEBT-020)
