@@ -279,3 +279,56 @@ exigiria **estender o escopo** (GATE 3/12). ⇒ **PARADO e escalado** nesse item
 | Detalhado | `_logs/UTAC106f-R1t-reparacao.md` (este) |
 | Doc de estado (bloco R14) | `CLAUDE.md` (apêndice no EOF; 4 bytes de controlo intactos) |
 | Relatório do operador | `Desktop/RELATORIO-UTAC106f-R1t-REPARACAO.txt` |
+
+---
+
+## §SEG6 — Deploy (o frontend mudou: o rótulo do modal)
+
+Ao abrigo da RESSALVA 7 do enunciado (o SEG2 tocou frontend ⇒ SEG6). O repo **não tem** workflow de
+deploy em `.github/workflows/` — o Netlify publica por **integração Git** ao push (é o que explica a
+re-emissão de nomes de bundle já observada no R1v). Push feito (`e49e782..9f3129a`) e **deploy verificado
+em produção**:
+
+| Verificação (produção `https://silly-stardust-ca71bc.netlify.app`) | Resultado |
+|---|---|
+| `GET /` | **200** |
+| `GET /.netlify/functions/ler-pontos` | **401** (Bearer obrigatório — a decisão do cartão continua privada) |
+| `GET /.netlify/functions/comprar-passe-pontos` | **405** (só POST — inalterado) |
+| chunk servido `assets/MinhaCarteira-*.js` | contém **«o cartão conta só os pontos das compras»** e **«Teus pontos (total)»** ⇒ o rótulo da R1t está **no ar** |
+| chunk servido `assets/OfertasProgramadas-*.js` | contém **«não conta para o cartão»** (a R1 continua live) |
+
+⚠️ **Declarado:** os nomes do bundle servido (`index-DfMV3Cxe.js`) **diferem** dos do build local
+(`index-CeyNbKPY.js`) — é o build remoto do Netlify (mesma causa do R1v); o que prova o conteúdo é o
+**literal** presente no chunk servido, não o nome do ficheiro. Este UTAC **não** altera comportamento de
+produção: só o texto do rótulo do modal (e os testes/mutação, que não vão para produção).
+
+---
+
+## §SEG7 — Custo, commits e limpeza
+
+**Custo (deepseek):** a plataforma **partilha UMA sessão** entre UTACs (§8.d da skill) ⇒ mede-se por diferença.
+
+| Sessão | `source` | chamadas | custo estimado |
+|---|---|---|---|
+| `20261004_205634_2804b6` — no fecho do R1v era 53 chamadas / US$ 0,0388; agora **130 / US$ 0,1138** ⇒ **Δ deste UTAC ≈ US$ 0,075** | `cli` | +77 | ≈ 0,075 |
+| `20261004_221023_9cf21e` (validador adversarial) | `subagent` | 50 | 0,0402 |
+| **Total estimado do UTAC** | | | **≈ US$ 0,115** |
+
+- **Saldo da API:** abertura **US$ 5,48** → fecho **US$ 5,24** ⇒ **Δ = US$ 0,24** (medida **real**; conta
+  também as delegações). ⚠️ As duas leituras **não reconciliam** totalmente (0,115 estimado vs 0,24 medido) —
+  a contabilidade da base é instável e a estimativa pode subestimar; reportam-se **as duas, separadas**.
+
+**Commits (foreground, ficheiros individuais — NUNCA `git add -A`):**
+
+- `e49e782` — HEAD de arranque (= baseline).
+- `79ce968` — **o código/testes deste UTAC** (5 ficheiros: `_tests/ler-pontos.test.mjs` novo +
+  `mc106f-prova-mutacao.mjs` + guardas de barra/modal + rótulo do modal). Commit **local**, para o
+  validador poder ter o alvo no worktree.
+- `9f3129a` — **registo** (`_logs/UTAC106f-R1t-reparacao.md` + bloco R14 no `CLAUDE.md`). Empurrado:
+  `e49e782..9f3129a main -> main`.
+
+**Limpeza:** worktree `C:/Users/Moltbot/tmp-r1t-val/wt` removido pelo helper A13 (4 junctions por `rmdir`
+primeiro); `node_modules` real conferido antes/depois: **380/568/498/414 → 380/568/498/414** (idêntico).
+Os 4 `node.exe` **órfãos** deixados pelo subagente (3996/14620/5084/2972) foram mortos **por PID** — sem
+tocar nos 2 MCP do utilizador. Temporários `hermes-verify-r1t-*.py` removidos. O veredicto-fonte e os
+artefactos do validador ficam em `C:/Users/Moltbot/tmp-r1t-val/` (a prova que este registo cita).
