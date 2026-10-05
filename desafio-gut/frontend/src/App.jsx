@@ -51,6 +51,9 @@ const ScheduleView         = lazy(() => import("./components/ScheduleView.jsx"))
 const MeusAtivos           = lazy(() => import("./pages/MeusAtivos.jsx"));
 const Seguranca            = lazy(() => import("./pages/Seguranca.jsx"));
 const Configuracoes        = lazy(() => import("./pages/Configuracoes.jsx"));
+// UTAC106h — Regras Oficiais do programa de fidelidade (requisito da Google Play: regras
+// publicadas no app). Vive DENTRO do AppLayout para ser alcançável pelo menu «Mais».
+const RegrasOficiais       = lazy(() => import("./pages/RegrasOficiais.jsx"));
 // MC89.6 (Fase 0 / D-NAV) — o AdminPanel monolítico deu lugar a uma casca
 // (AdminLayout) com uma rota por tela. Cada tela é um chunk seu: quem abre
 // /admin não paga o custo de parse das outras oito, e o arranque da app não
@@ -481,6 +484,9 @@ export default function App() {
               Comum/visitante → CorporativoRoute redireciona para "/". */}
           <Route path="/seguranca"  element={<CorporativoRoute><Seguranca /></CorporativoRoute>} />
           <Route path="/configuracoes" element={<Configuracoes />} />
+          {/* UTAC106h — Regras Oficiais (fonte: docs/regras-oficiais.md). Dentro do AppLayout:
+              acessível pelo menu «Mais» com a navegação intacta. */}
+          <Route path="/regras-oficiais" element={<RegrasOficiais />} />
           {/* MC89.6 (D-NAV) — a Visão Geral é o ÍNDICE de /admin, não um separador
               entre outros. A lista canónica das telas vive em lib/adminNav.js e é a
               mesma que gera a navegação, por isso um link nunca pode apontar para

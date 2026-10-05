@@ -41,6 +41,10 @@ const SECONDARY_LINKS = [
   // /seguranca é gated (corporativo) desde o MC39.3.1; o comum era atirado para "/".
   // O lojista acede via card no CorporativoDashboard.
   { path: "/seja-nosso-parceiro", label: "🤝 Seja nosso parceiro!", Icon: IconTrending },
+  // UTAC106h — Regras Oficiais do programa de fidelidade (requisito Google Play: regras
+  // publicadas no app). Ícone reutilizado (`shield`) — não se acrescenta desenho novo ao
+  // `navModel.jsx`, que está fora do escopo autorizado deste UTAC.
+  { path: "/regras-oficiais",     label: "📜 Regras Oficiais",       Icon: IconShield   },
   { path: "/configuracoes",       label: "Configurações",          Icon: IconSettings },
 ];
 

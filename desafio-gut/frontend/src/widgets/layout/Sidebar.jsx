@@ -42,6 +42,9 @@ const NAV_ITEMS = [
   // MC11.1 — Seção pública "Seja Nosso Parceiro" (visível a TODOS: não logados,
   // comuns e lojistas). Porta de entrada para o fluxo corporativo.
   { path: "/seja-nosso-parceiro", label: "🤝 Seja nosso parceiro!", icon: <IconTrending />, end: false },
+  // UTAC106h — Regras Oficiais do programa de fidelidade. Mesma ordem do `SECONDARY_LINKS`
+  // do BottomNav (Vitrine · Programação · Meus Ativos · Parceiro · Regras Oficiais · Configurações).
+  { path: "/regras-oficiais", label: "📜 Regras Oficiais", icon: <IconShield />, end: false },
   // MC39.4.1 (#segurança): "Segurança" removido do nav do utilizador COMUM (rota gated
   // p/ corporativo desde o MC39.3.1; o comum era redirecionado para "/"). Lojista acede
   // via card no CorporativoDashboard.

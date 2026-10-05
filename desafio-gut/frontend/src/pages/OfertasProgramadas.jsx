@@ -19,7 +19,7 @@
 // ⚠️ O palpite é BÓNUS — NÃO decide o cartão (requisito crítico da Google Play: jogo de habilidade).
 //    O cartão é só por PONTOS DE COMPRA. Nenhuma linha deste ecrã faz depender o cartão do palpite.
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { GlassCard } from "@/components/ui";
 import Toast from "../widgets/toast/Toast.jsx";
@@ -269,6 +269,15 @@ export default function OfertasProgramadas() {
             )}
           </GlassCard>
         )}
+
+        {/* UTAC106h — as Regras Oficiais do programa de fidelidade ficam a um toque do ecrã onde
+            os pontos se acumulam (requisito Google Play: regras publicadas no app). Só acrescenta
+            o link — nenhuma outra alteração a este ecrã. */}
+        <p style={{ margin: "1.25rem 0 0", textAlign: "center" }}>
+          <Link to="/regras-oficiais" style={{ color: COR.muted, fontSize: "0.8rem", textDecoration: "underline" }}>
+            📜 Regras Oficiais do programa
+          </Link>
+        </p>
       </div>
 
       {/* UTAC106g — BALÃO de resgate do cartão (componente próprio; a lógica de rede vive no
