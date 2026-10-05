@@ -153,12 +153,16 @@ test("RENDER · com 49 pontos NÃO há botão «Resgatar» (mostra a meta)", asy
   } finally { c.dup.restaurar(); }
 });
 
-test("RENDER · com 50 pontos o botão «Resgatar cartão» aparece (desactivado — 106g)", async () => {
+test("RENDER · com 50 pontos o botão «Resgatar cartão» aparece ACTIVO (o 106g chegou)", async () => {
+  // UTAC106g: a guarda original do 106f exigia `disabled` («o resgate só abre no UTAC106g»). O 106g
+  // chegou ⇒ a INVARIANTE mudou: visível a ≥50 e OPERÁVEL (abre o balão de morada). Actualizada
+  // mantendo o espírito da guarda (o resgate só aparece a quem tem os 50 pontos de CARTÃO).
   const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 50, pontosCartao: 50, podeResgatarCartao: true }) }));
   try {
     assert.match(c.texto(), /Resgatar cartão/);
     const b = c.botao("Resgatar cartão");
-    assert.equal(b.props.disabled, true, "o resgate só abre no UTAC106g — tem de estar desactivado");
+    assert.notEqual(b.props.disabled, true, "com 50 pontos o resgate tem de estar activo (UTAC106g)");
+    assert.equal(typeof b.props.onClick, "function", "o botão tem de abrir o balão de resgate");
   } finally { c.dup.restaurar(); }
 });
 

@@ -87,7 +87,7 @@ mock.module("../_lib/supabase-client.mjs", {
 
 const {
   PONTOS_POR_PALPITE_CERTO, registarPalpite, lerPalpite, lerPalpites, apurarPalpite, getPontos,
-  pontosDeCompra, podeResgatarCartaoComCompra, podeResgatarCartao,
+  pontosDeCompra, podeResgatarCartaoComCompra, podeResgatarCartao, edicaoApurada,
 } = await import("../_lib/passe-pontos.mjs");
 
 const A = "0xaaa0000000000000000000000000000000000001";
@@ -274,4 +274,52 @@ test("apurarPalpite é independente por edição (apurar a PROG-7 não toca na P
   await apurarPalpite("PROG-7", 10);
   const p8 = dup.db.palpites.find((p) => p.edicao_id === "PROG-8");
   assert.equal(p8.apurado, false, "a PROG-8 continua por apurar");
+});
+
+// ── UTAC106g · R2 — idempotência da apuração POR EDIÇÃO ────────────────────────────────────────
+// Defeito medido pelo validador do R1v: a `ref` do bónus (`palpite-certo:<edicaoId>`) é verificada no
+// histórico DE CADA ENDEREÇO — um palpite NOVO na MESMA edição já apurada + uma 2.ª apuração creditava
+// +2 a OUTRO endereço (a edição pagava 4). Nota: a `ref` JÁ incluía o `edicaoId`, logo «acrescentar
+// edicaoId à chave» era no-op (premissa do enunciado refutada por medição). Fecha-se a edição a
+// palpites novos depois de apurada.
+
+test("R2 · edição JÁ APURADA não aceita palpites novos (fecha o pagamento duplo)", async () => {
+  semear([A, B, C]);
+  await registarPalpite(A, ED, 100);
+  await registarPalpite(B, ED, 500);
+
+  const r1 = await apurarPalpite(ED, 100);
+  assert.equal(r1.ok, true);
+  assert.equal(r1.vencedor.endereco, A, "o mais próximo (A) ganha");
+  assert.equal(await getPontos(A), 2);
+
+  // O CENÁRIO DA R2: um palpite novo na MESMA edição já apurada.
+  const rC = await registarPalpite(C, ED, 100);
+  assert.equal(rC.ok, false, "a edição apurada tem de RECUSAR palpites novos");
+  assert.equal(rC.code, "EDICAO_APURADA");
+
+  // 2.ª apuração: nada por apurar ⇒ ninguém mais é pago.
+  const r2 = await apurarPalpite(ED, 100);
+  assert.equal(r2.total, 0);
+  assert.equal(r2.pontosCreditados, 0);
+  assert.equal(await getPontos(C), 0, "a MESMA edição não pode pagar +2 duas vezes (R2)");
+  assert.equal(await getPontos(A), 2, "o bónus total da edição é UM só (+2)");
+});
+
+test("R2 · edicaoApurada() é false antes da apuração e true depois", async () => {
+  semear([A]);
+  await registarPalpite(A, ED, 10);
+  assert.equal(await edicaoApurada(ED), false, "ainda não há palpites apurados");
+  await apurarPalpite(ED, 10);
+  assert.equal(await edicaoApurada(ED), true, "depois de apurar, a edição está apurada");
+  assert.equal(await edicaoApurada("RELAMP-1"), false, "outra edição continua livre");
+});
+
+test("R2 · a recusa é POR EDIÇÃO — uma edição nova continua a aceitar palpites", async () => {
+  semear([A, B]);
+  await registarPalpite(A, ED, 100);
+  await apurarPalpite(ED, 100);
+  const outra = await registarPalpite(B, "PROG-8", 42);
+  assert.equal(outra.ok, true, "a PROG-8 não foi apurada — tem de aceitar");
+  assert.equal(outra.criado, true);
 });

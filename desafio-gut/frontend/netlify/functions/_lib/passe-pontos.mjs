@@ -19,6 +19,9 @@
 import { getSupabase } from "./supabase-client.mjs";
 // UTAC106f — a mesma regex de id de edição do resto do backend (uma só fonte de verdade).
 import { EDICAO_ID_RE } from "./edicoes-core.mjs";
+// UTAC106g — store dos pedidos de resgate do cartão (`public.resgates`). Sem ciclo: `resgates.mjs`
+// só importa `supabase-client.mjs`.
+import { criarResgate, lerResgatePorChave } from "./resgates.mjs";
 
 // ── Constantes de negócio (a REGRA vive aqui, nunca como número mágico no endpoint) ──
 export const PONTOS_POR_PASSE = 1;
@@ -193,8 +196,28 @@ export async function lerPalpites(endereco) {
 }
 
 /**
+ * A edição JÁ FOI APURADA? (existe pelo menos um palpite marcado `apurado`).
+ * UTAC106g (R2): é o guarda que fecha o buraco da idempotência «por endereço».
+ * @returns {Promise<boolean>} — `false` para um id inválido; **lança** em erro do Supabase.
+ */
+export async function edicaoApurada(edicaoId) {
+  if (!edicaoValida(edicaoId)) return false;
+  const { data, error } = await getSupabase().from(TABELA_PALPITES)
+    .select("id").eq("edicao_id", edicaoId).eq("apurado", true);
+  if (error) throw new Error(`[passe-pontos] edicaoApurada falhou: ${error.code ?? error.message}`);
+  return Array.isArray(data) && data.length > 0;
+}
+
+/**
  * Regista o palpite (nº de lances previstos) de um endereço numa edição.
  * Idempotente por (endereco, edicao_id): a 2.ª tentativa devolve o existente (`criado:false`).
+ *
+ * ⚠️ UTAC106g — CORRECÇÃO DA R2. O defeito medido pelo validador do R1v: a `ref` do bónus
+ * (`palpite-certo:<edicaoId>`) é verificada no histórico **DE CADA ENDEREÇO**, não globalmente por
+ * edição ⇒ um palpite NOVO na mesma edição já apurada + uma 2.ª apuração creditava +2 a OUTRO
+ * endereço (a mesma edição pagava 4). Como a `ref` já incluía o `edicaoId`, mudar a chave era
+ * **no-op** (premissa do enunciado refutada por medição) — a correcção CERTA é **fechar a edição a
+ * palpites novos depois de apurada**: sem palpite novo, a 2.ª apuração não encontra nada por apurar.
  * @returns {Promise<{ok:true,criado:boolean,palpite:object}|{ok:false,code:string}>}
  */
 export async function registarPalpite(endereco, edicaoId, valor) {
@@ -202,6 +225,12 @@ export async function registarPalpite(endereco, edicaoId, valor) {
   if (!enderecoValido(e)) return { ok: false, code: "ENDERECO_INVALIDO" };
   if (!edicaoValida(edicaoId)) return { ok: false, code: "EDICAO_INVALIDA" };
   if (!Number.isInteger(valor) || valor < 0) return { ok: false, code: "VALOR_INVALIDO" };
+
+  // UTAC106g (R2): edição já apurada ⇒ NÃO aceita palpites novos.
+  let jaApurada;
+  try { jaApurada = await edicaoApurada(edicaoId); }
+  catch { return { ok: false, code: "ERRO_DB" }; }
+  if (jaApurada) return { ok: false, code: "EDICAO_APURADA" };
 
   const { data, error } = await getSupabase().from(TABELA_PALPITES)
     .insert({ endereco: e, edicao_id: edicaoId, valor }).select("*").maybeSingle();
@@ -292,4 +321,64 @@ export function pontosDeCompra(registo) {
 /** O endereço pode resgatar o cartão? SÓ com pontos de COMPRA (o bónus de palpite não conta). */
 export async function podeResgatarCartaoComCompra(endereco) {
   return pontosDeCompra(await lerPontos(endereco)) >= PONTOS_POR_CARTAO;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════════════
+// UTAC106g — RESGATE DO CARTÃO (50 pontos de CARTÃO → 1 cartão colecionável físico). ADITIVO:
+// NADA acima desta linha foi alterado (excepto a linha de import acrescentada no topo).
+//
+// Ordem (decisão do operador + RESSALVA «rollback obrigatório»): (1) idempotência pela chave do
+// pedido; (2) o gate do cartão é `podeResgatarCartaoComCompra()` — a função NOVA, NUNCA a
+// `podeResgatarCartao()` antiga (marcada «NÃO usar»); (3) DÉBITO atómico dos 50 pontos, com `ref`
+// derivada da chave; (4) REGISTO do pedido em `public.resgates`; (5) se o registo falhar, ROLLBACK
+// do débito — a compensação é do MESMO tipo (`resgate`), para que o TOTAL *e* o contador do cartão
+// (`pontosDeCompra`) voltem exactamente ao valor anterior.
+// ══════════════════════════════════════════════════════════════════════════════════════
+
+/** `ref` do DÉBITO do resgate: uma por pedido (idempotência pela chave do cliente). */
+export const refResgate = (idempotencyKey) => `resgate:${idempotencyKey}`;
+/** `ref` da COMPENSAÇÃO (rollback) do débito, quando o registo do pedido falha. */
+export const refResgateRollback = (idempotencyKey) => `resgate-rollback:${idempotencyKey}`;
+
+/**
+ * Regista um pedido de RESGATE do cartão: debita `PONTOS_POR_CARTAO` pontos e grava o pedido.
+ * Atómico na prática: se o registo falhar, o débito é compensado (rollback) e o chamador recebe erro.
+ * Idempotente por `idempotencyKey`: repetir a MESMA chave devolve o pedido existente sem debitar.
+ * @returns {Promise<{ok:true,idempotent:boolean,resgate:object,pontos:number}
+ *   |{ok:false,code:string,pontosDevolvidos?:boolean}>}
+ */
+export async function registarResgate(endereco, { cartaoId, morada, idempotencyKey } = {}) {
+  const e = normalizar(endereco);
+  if (!enderecoValido(e)) return { ok: false, code: "ENDERECO_INVALIDO" };
+  const key = typeof idempotencyKey === "string" ? idempotencyKey.trim() : "";
+  if (!key) return { ok: false, code: "CHAVE_INVALIDA" };
+
+  // (1) Já existe pedido com esta chave? → idempotente, sem tocar nos pontos.
+  let jaExiste;
+  try { jaExiste = await lerResgatePorChave(key); }
+  catch { return { ok: false, code: "ERRO_DB" }; }
+  if (jaExiste) return { ok: true, idempotent: true, resgate: jaExiste, pontos: await getPontos(e) };
+
+  // (2) Gate do CARTÃO — só pontos de COMPRA (R1). Nunca a `podeResgatarCartao()` antiga.
+  let pode;
+  try { pode = await podeResgatarCartaoComCompra(e); }
+  catch { return { ok: false, code: "ERRO_DB" }; }
+  if (!pode) return { ok: false, code: "PONTOS_INSUFICIENTES" };
+
+  // (3) DÉBITO atómico (CAS + idempotente por `ref`).
+  const debito = await debitarPontos(e, PONTOS_POR_CARTAO, TIPO_RESGATE, refResgate(key));
+  if (!debito.ok) return { ok: false, code: debito.code };
+
+  // (4) REGISTO do pedido.
+  let pedido;
+  try { pedido = await criarResgate({ endereco: e, cartaoId, morada, idempotencyKey: key }); }
+  catch { pedido = { ok: false, code: "ERRO_DB" }; }
+
+  // (5) ROLLBACK OBRIGATÓRIO se o registo falhou: sem pedido, os pontos têm de voltar.
+  if (!pedido.ok) {
+    const devolve = await creditarPontos(e, PONTOS_POR_CARTAO, TIPO_RESGATE, refResgateRollback(key));
+    return { ok: false, code: "REGISTO_FALHOU", motivo: pedido.code, pontosDevolvidos: devolve.ok === true };
+  }
+
+  return { ok: true, idempotent: pedido.criado === false, resgate: pedido.resgate, pontos: debito.pontos };
 }

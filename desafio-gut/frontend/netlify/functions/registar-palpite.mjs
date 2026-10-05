@@ -58,11 +58,22 @@ export default async (req) => {
     return jsonError(400, "valor_invalido", "envie { valor } inteiro entre 0 e 1000000");
   }
 
-  // A edição tem de existir (e ser Programada — é a modalidade do palpite).
+  // A edição tem de existir E estar ACTIVA (UTAC106g, decisão #6): Programada (`tipo:"programado"`)
+  // e aberta (`status:"aberto"`). Sem isto, pela API podia palpitar-se numa edição Relâmpago ou já
+  // encerrada/terminada — desvio do contrato que o próprio ficheiro declarava.
+  // ⚠️ Medido no repo: os campos são `tipo` ("programado"|"relampago") e `status`
+  // ("agendado"|"aberto"|"encerrado"|"apurado") — NÃO `tipo:"programada"` nem `estado:"aberta"`
+  // (o enunciado usava esses nomes; refutados por medição em `_lib/edicoes-core.mjs`).
   let edicao;
   try { edicao = await buscarEdicao(edicaoId); }
   catch { return jsonError(503, "store_indisponivel", "não foi possível ler a edição"); }
   if (!edicao) return jsonError(404, "edicao_inexistente", "edição não encontrada");
+  if (edicao.tipo !== "programado") {
+    return jsonError(409, "edicao_nao_programada", "só se palpita em edições Programadas");
+  }
+  if (edicao.status !== "aberto") {
+    return jsonError(409, "edicao_nao_aberta", `a edição está "${edicao.status}" — o palpite só abre enquanto decorre`);
+  }
 
   let r;
   try { r = await registarPalpite(t.endereco, edicaoId, valor); }
@@ -74,6 +85,10 @@ export default async (req) => {
     }
     if (r.code === "EDICAO_INVALIDA") return jsonError(400, "edicaoId_invalido", "edicaoId inválido");
     if (r.code === "VALOR_INVALIDO") return jsonError(400, "valor_invalido", "valor inválido");
+    // UTAC106g (R2): a edição já foi apurada ⇒ não aceita palpites novos.
+    if (r.code === "EDICAO_APURADA") {
+      return jsonError(409, "edicao_apurada", "esta edição já foi apurada — não aceita palpites novos");
+    }
     return jsonError(502, "palpite_falhou", "não foi possível registar o palpite", { motivo: r.code });
   }
 
