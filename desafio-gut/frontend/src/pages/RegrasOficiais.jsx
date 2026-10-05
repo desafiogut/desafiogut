@@ -67,7 +67,8 @@ export default function RegrasOficiais() {
           Foro: Comarca de <strong style={forte}>Manaus/AM</strong> — Brasil.
         </p>
         <p style={p}>
-          O DesafioGUT oferece <strong style={forte}>duas modalidades distintas</strong>:
+          O DesafioGUT é uma plataforma de <strong style={forte}>comércio eletrónico por dropshipping</strong> que
+          oferece <strong style={forte}>duas modalidades distintas</strong>:
         </p>
         <ul style={ul}>
           <li style={li}>
@@ -127,7 +128,8 @@ export default function RegrasOficiais() {
         </p>
         <p style={p}>
           <strong style={forte}>3.2 Pontos de bónus do palpite.</strong> Em cada Oferta Programada o utilizador pode
-          registar <strong style={forte}>um palpite</strong> (a sua previsão de um número). O palpite cujo valor ficar
+          registar <strong style={forte}>um palpite</strong> (a sua previsão de um número) —{" "}
+          <strong style={forte}>um por Oferta Programada</strong>. O palpite cujo valor ficar
           mais próximo do número real apurado pela Associação recebe um <strong style={forte}>bónus de +2 pontos</strong>.
           O palpite é um <strong style={forte}>benefício complementar e subordinado</strong>: os pontos de bónus{" "}
           <strong style={forte}>NÃO</strong> contam para o resgate do cartão, <strong style={forte}>NÃO</strong>{" "}
@@ -215,7 +217,9 @@ export default function RegrasOficiais() {
           <strong style={forte}>Como exercer:</strong> contactar{" "}
           <a href={`mailto:${CONTACTO_OFICIAL}`} style={{ color: COR.blue300 }}>{CONTACTO_OFICIAL}</a> dentro desse
           prazo, indicando a compra e o pedido de desistência. A devolução é feita pelo mesmo meio de pagamento.
-          O valor devolvido implica o <strong style={forte}>estorno dos pontos</strong> correspondentes.
+          O valor devolvido implica o <strong style={forte}>estorno dos pontos</strong> correspondentes. Se o cartão
+          já tiver sido resgatado e enviado, aplicam-se as <strong style={forte}>regras de devolução de produto</strong>{" "}
+          do CDC.
         </p>
       </GlassCard>
 
@@ -266,6 +270,14 @@ export default function RegrasOficiais() {
           <strong style={forte}>Finalidade:</strong> exclusivamente a execução do programa — contabilizar pontos,
           apurar o bónus do palpite, processar o resgate, <strong style={forte}>emitir a nota fiscal</strong> e entregar
           o cartão. Os dados de entrega <strong style={forte}>não</strong> são usados para marketing nem vendidos.
+        </p>
+        <p style={p}>
+          <strong style={forte}>Partilha:</strong> apenas com os prestadores necessários à operação (pagamento, base
+          de dados, alojamento, transportadora) e com as autoridades quando legalmente exigido.
+        </p>
+        <p style={p}>
+          <strong style={forte}>Retenção:</strong> os registos fiscais (nota fiscal e respetivo pagamento) são
+          mantidos pelo prazo exigido pela legislação fiscal brasileira.
         </p>
         <p style={p}>
           <strong style={forte}>Direitos do titular (LGPD — Lei nº 13.709/2018):</strong> acesso, correção,

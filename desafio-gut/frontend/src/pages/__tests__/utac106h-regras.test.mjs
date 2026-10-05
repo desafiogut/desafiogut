@@ -46,8 +46,18 @@ test("RENDER · a página renderiza com título, versão e o vendedor legal", ()
   assert.match(texto, /Associação Recreativa dos Nordestinos no Amazonas/);
 });
 
-test("RENDER · hierarquia de títulos: um <h1> e as 9 secções em <h2>", () => {
+test("RENDER · hierarquia de títulos: um <h1> e as 9 secções em <h2>, IGUAIS às do documento fonte", () => {
   assert.equal((html.match(/<h1[\s>]/g) || []).length, 1);
+  // COBERTURA ESTRUTURAL (não amostra): os <h2> da página têm de ser EXACTAMENTE os cabeçalhos do
+  // `.md`. Foi esta a falha que o validador adversarial apanhou em 1.ª ronda: a página publicava
+  // MENOS do que a fonte legal e a guarda de factos, sendo amostra, não dava por isso.
+  const md = readFileSync(resolve(REPO, "docs", "regras-oficiais.md"), "utf8");
+  const doMd = [...md.matchAll(/^##\s+(\d)\.\s+(.+?)\s*$/gm)]
+    .map((m) => `${m[1]}. ${m[2]}`.replace(/\*\*/g, "").replace(/\s+/g, " ").trim());
+  assert.ok(doMd.length === 9, `o .md devia ter 9 secções, tem ${doMd.length}`);
+  for (const h of doMd) {
+    assert.ok(texto.includes(h), `a página não publica a secção «${h}»`);
+  }
   const h2 = html.match(/<h2[^>]*>([^<]*)</g) || [];
   assert.equal(h2.length, 9, `esperava 9 secções, vi ${h2.length}`);
   assert.match(h2[0], /1\. IDENTIFICAÇÃO/);
@@ -142,10 +152,20 @@ test("CONSISTÊNCIA · o docs/regras-oficiais.md e a página dizem os MESMOS fac
     "desafiogut01@gmail.com",
     "Manaus/AM",
     "Menor Lance Único",
+    // ⚠️ Acrescentados na 2.ª ronda (achado do validador adversarial): a página publicava MENOS que a
+    // fonte legal e a guarda — sendo amostra — não o apanhava. Cada um destes factos tem de estar nos
+    // DOIS ficheiros.
+    "comércio eletrónico por dropshipping",
+    "um por Oferta Programada",
+    "regras de devolução de produto",
+    "apenas com os prestadores necessários à operação",
+    "mantidos pelo prazo exigido pela legislação fiscal brasileira",
   ];
   for (const f of factos) {
-    assert.ok(md.includes(f), `o .md não traz «${f}»`);
-    assert.ok(jsx.includes(f), `a página não traz «${f}»`);
+    // Comparação com o ESPAÇO NORMALIZADO: os dois ficheiros partem frases em linhas diferentes
+    // (o .md por largura, o JSX por indentação) — a quebra de linha não é uma divergência de conteúdo.
+    assert.ok(md.replace(/\s+/g, " ").includes(f), `o .md não traz «${f}»`);
+    assert.ok(jsx.replace(/\s+/g, " ").includes(f), `a página não traz «${f}»`);
   }
 });
 

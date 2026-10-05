@@ -21,7 +21,7 @@
 | **Foro** | Comarca de **Manaus/AM** — Brasil |
 | **Idioma oficial** | Português (Brasil) |
 
-O DesafioGUT é uma plataforma de comércio eletrónico por *dropshipping* que oferece **duas
+O DesafioGUT é uma plataforma de comércio eletrónico por dropshipping que oferece **duas
 modalidades distintas**:
 
 1. **Menor Lance Único** — modalidade de **habilidade**: vence o participante que apresentar o **menor
