@@ -558,3 +558,26 @@ jogo de azar» (§7). Ou seja: o resumo afirmava um resultado que o próprio out
 exactamente o padrão «verificador próprio mente» que a série já registou. **Foi a medição que corrigiu a
 conclusão**: medido o ponto cego, a cláusula foi acrescentada à guarda e o F passou a morder (13/14 RED).
 Lição: **o resumo de um instrumento não é evidência — o output é.**
+
+#### §SEG7.c.1 — Verificação do fecho (2.ª medição) e o 3.º erro do meu instrumento
+
+O fecho de E/F foi **confirmado por uma segunda sonda** (`hermes-verify-106h-guarda-final.py`, mantida
+em `%TEMP%`), com as expectativas correctas por mutante: **E MORDE (13/1) · F MORDE (13/1) · D fica
+RESIDUAL (14/0, como declarado)** · restauros md5 idênticos · 14/14 no fim. Mas essa sonda só chegou lá
+**à terceira tentativa**, e as duas primeiras deram resultados falsos por **defeitos do instrumento**
+(não do código) — ficam registados porque são o mesmo vício de sempre, agora com mecanismo concreto:
+
+1. **Alvo do mutante construído contra o texto errado.** Copiei a frase do *render* (com espaços
+   simples), mas no **fonte JSX** ela atravessa quebras de linha → «alvo não encontrado» → o mutante
+   não entrava e a sonda reportava uma falha que não existia.
+2. **Expectativa invertida.** O mutante **D** é, por declaração, um **ponto cego residual** — a guarda
+   **não** deve morrer. Pus-lhe a asserção genérica «tem de morrer» → falso FAIL. Um ponto cego
+   declarado mede-se a **esperar verde**, não vermelho.
+3. **Escape errado no matcher do mutante.** `re.escape("frase com espaços")` escapa o **espaço**
+   (`\ `), pelo que a minha substituição de `\s+` (para tolerar quebras de linha) **nunca disparava**.
+   A correcção é construir o padrão palavra a palavra: `r"\s+".join(re.escape(p) for p in alvo.split())`.
+
+⇒ **Lição (a mesma, com prova):** um mutante que «não entra» ou que «morre inesperadamente» deve ser
+**suspeito do instrumento antes de ser conclusão sobre o código**. Antes de acreditar num resultado
+negativo, confirmar (i) que o alvo existe no **fonte real** (não no render), (ii) que o md5 mudou, e
+(iii) que a expectativa daquele mutante é a correcta (morder vs. ficar residual, por declaração).
