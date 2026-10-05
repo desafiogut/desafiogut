@@ -280,6 +280,15 @@ Os 4 endpoints existem e estão vivos. **Não** consegui assinar um `lance-auth`
    fora do repo e restaurado ao HEAD.
 4. Caminhos POSIX `/c/...` passados a binários nativos (`node`, `curl -o`) deram `MODULE_NOT_FOUND` /
    ficheiro em `C:\tmp` — re-corridos com `C:/...`.
+5. **A junction A13 faz um `npm install` do subagente LEAKAR para o `node_modules` REAL.** O validador
+   correu `npm install @aws-sdk/client-kms` (para uma sonda própria) e verificou que o `package.json`/
+   `package-lock` ficavam intactos (o que é verdade) — mas como o `node_modules` do worktree é uma
+   **junction** para o real, os 31 pacotes aterraram no `desafio-gut/frontend/netlify/functions/node_modules`
+   REAL: a contagem subiu **414 → 418** (+`@aws-sdk`, `@smithy`, `@aws-crypto`, `@aws`, mtime 04:29). Detetado
+   pela contagem antes/depois (a regra «415/417 é a única prova»), arquivado fora do repo e removido →
+   contagem **restaurada a 414** e suíte re-verificada **VERDE** (1061/1067). ⚠️ Lição: um instrumento que
+   faz `npm install` **dentro de um worktree com junctions** altera o `node_modules` real — medir as
+   contagens DOS DOIS LADOS antes e depois.
 
 ---
 
