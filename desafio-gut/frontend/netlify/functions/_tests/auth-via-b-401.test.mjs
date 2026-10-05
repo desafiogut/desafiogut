@@ -111,13 +111,26 @@ test("NEGATIVO — `lance-auth` (o que os 4 hooks enviavam) → 401 token_invali
   }
 });
 
-test("POSITIVO — `user-session` (o que o fix passa a enviar) → NÃO é 401 em TODOS", async () => {
+// Status esperado com `user-session` + corpo mínimo (`{}`) — fixa o resultado por endpoint para um
+// 500 (ou um 400 onde se espera 200) NÃO passar. ℹ️1 do validador: `!= 401` sozinho deixava passar
+// qualquer erro de negócio. Medido: 200/400/400/400 (o `ler-pontos` chega à leitura; os 3 POST ficam
+// na validação do corpo, DEPOIS da autenticação).
+const ESPERADO_USER = {
+  "ler-pontos": 200,
+  "comprar-passe-pontos": 400, // sem { idempotencyKey } válida
+  "registar-palpite": 400,     // sem { valor } válido
+  "resgatar-cartao": 400,      // sem { idempotencyKey } válida
+};
+
+test("POSITIVO — `user-session` (o que o fix passa a enviar) → passa a AUTENTICAÇÃO (status esperado) em TODOS", async () => {
   const tk = await assinarUserSession(A);
   for (const nome of NOMES) {
     DB = criarDuplo([{ endereco: A, pontos: 0, historico: [], atualizado_em: "2026-10-04T00:00:00.000Z" }]);
     const r = await chamar(nome, tk);
     assert.notEqual(r.status, 401, `${nome}: com user-session NÃO pode dar 401 (recebi ${r.status})`);
     assert.notEqual(r.corpo?.error?.code, "token_invalido", `${nome}: não pode ser token_invalido`);
+    assert.notEqual(r.status, 500, `${nome}: um 500 não é «passou a autenticação»`);
+    assert.equal(r.status, ESPERADO_USER[nome], `${nome}: status esperado (medido)`);
   }
 });
 
