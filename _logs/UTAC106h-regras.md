@@ -466,7 +466,7 @@ o repo mantém a **integração Git** (o push também publica). Verificação em
 | link nas Ofertas Programadas | **SIM** |
 | **Endpoints** (não tocados) | `ler-pontos` **401** · `comprar-passe-pontos` **405** · `POST resgatar-cartao` **401** — comportamento inalterado |
 | Referência inicial (90 s após o push) | A 1.ª sonda **não** encontrou o chunk: era **propagação** do deploy; re-medido após o deploy explícito, está lá. Declarado, não escondido. |
-| `package-lock.json` | **não sujado** (md5 `c648a597…` igual) — nada a restaurar |
+| `package-lock.json` | ⚠️ **CORRECÇÃO — ver §SEG9.b:** a 1.ª leitura (raiz) ficou limpa, mas o **lock do FRONTEND** ficou sujo com o build local do `netlify deploy --prod` e foi **restaurado** |
 | `npx vite build` | **OK**; chunk local `RegrasOficiais-*.js` |
 
 ## §SEG9 — Registo, candidatura e custo
@@ -503,3 +503,33 @@ capturas). **DEC-01/R-01** (Passe vs Play Billing) continua aberto e **não é d
 **Commits (foreground, ficheiros individuais — NUNCA `git add -A`):**
 `7f0774f` (baseline) → `55beab5` (1.ª entrega) → `a573144` (correcção do bloqueante) → `6c877b2`
 (achados não-bloqueantes + bloco R14). Empurrado: `7f0774f..6c877b2`.
+
+### §SEG9.b — Limpeza, restauro do lock e UM ERRO DO MEU INSTRUMENTO (declarado)
+
+**Restauro do `package-lock.json` (SEG8.4 do enunciado).** O `npx netlify deploy --prod` corre o build
+**localmente**, e o npm do build reescreveu `desafio-gut/frontend/package-lock.json` (31 inserções /
+53 deleções — só anotações `"dev": true` re-resolvidas; **nenhuma dependência mudou**). O mutado foi
+**arquivado FORA do repo** (`C:/Users/Moltbot/tmp-106h-val/package-lock.MUTADO-pelo-deploy.json`,
+md5 `10d5efeb…`) e **só então** restaurado do HEAD — o padrão da casa (nunca `git checkout --` sobre
+trabalho próprio; a excepção legítima é um ficheiro que **outro processo** ensujou e cujo HEAD era o
+correcto). Depois do restauro: `git status` **limpo** para esse ficheiro e suíte **VERDE 774/774**.
+
+⚠️ **Erro do MEU instrumento, declarado.** Em todo o UTAC (e no fecho do 106g) verifiquei o lock com
+`cd raiz && md5sum package-lock.json` — isto é, o lock da **RAIZ** (`c648a597…`, sempre intacto). O
+ficheiro que o deploy ensuja é o do **FRONTEND** (`desafio-gut/frontend/package-lock.json`), que eu
+**nunca tinha medido**. A afirmação «`package-lock.json` não sujado» que escrevi acima estava, por isso,
+**a olhar para o ficheiro errado** — mantida à vista e corrigida nesta secção. Nota de contexto: no
+106g o deploy foi por **integração Git** (o build corre nos servidores do Netlify e **não** toca no
+ficheiro local); aqui, o deploy **explícito** corre o build na máquina — foi a primeira vez que
+apareceu. **Lição:** verificar o ficheiro que o processo realmente escreve, não o que tem o nome
+parecido.
+
+**Limpeza.** Worktree `C:/Users/Moltbot/tmp-106h-val/wt` removido pelo helper A13 (rmdir das junctions
+primeiro). `node_modules` real conferido antes/depois: **380/568/498/414 → 380/568/498/414** (idêntico).
+**Nenhum** processo node pendurado (medido: 2 = os MCP do utilizador). Temporários de verificação
+(`hermes-verify-106h-*.py`) removidos. Artefactos do validador preservados em
+`C:/Users/Moltbot/tmp-106h-val/` (os veredictos que este registo cita, o `adversarial-guarda.mjs` e o
+lock mutado arquivado).
+
+**Verificação final (depois do restauro):** suíte **frontend VERDE 774/774 · backend VERDE 1054/1060** ·
+`git status` limpo (só untracked pré-existentes) · `HEAD = origin/main = 09af292`.
