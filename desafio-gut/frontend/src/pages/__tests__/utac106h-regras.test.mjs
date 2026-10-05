@@ -149,14 +149,17 @@ test("LINK · o ecrã das Ofertas Programadas liga às Regras Oficiais", () => {
 });
 
 // ── 4. GUARDA DE CONSISTÊNCIA: documento fonte ↔ página (sem deriva) ──────────────────────────
-// ⚠️ LIMITE DECLARADO (2.ª ronda do validador adversarial): esta guarda é **cabeçalhos + lista de
-// factos materiais**, NÃO igualdade byte-a-byte. Continua a ser possível apagar um parágrafo de
-// secção cujo conteúdo não esteja na lista de factos sem ela dar por isso (ponto cego MEDIDO por
-// mutação). O fecho completo seria **gerar a página a partir do `.md`** (o projecto não tem motor de
-// markdown — medido) ou comparar conteúdo normalizado unidade a unidade, o que colide com as
-// paráfrases legítimas entre a fonte e a página. Fica ESCALADO como melhoria própria; o que esta
-// guarda garante — e foi provado por mutação — é: (i) os cabeçalhos da fonte são os da página;
-// (ii) 20 factos materiais (incl. as divulgações LGPD) têm de estar nos DOIS ficheiros.
+// ⚠️ LIMITE DECLARADO (2.ª ronda do validador adversarial, re-medido no fecho): esta guarda é
+// **cabeçalhos + lista de factos materiais**, NÃO igualdade byte-a-byte. Continua a ser possível
+// apagar um PARÁGRAFO de secção cujo conteúdo não esteja na lista de factos sem ela dar por isso
+// (ponto cego D, medido por mutação e ainda ABERTO). Os outros dois pontos cegos que o validador
+// mediu foram FECHADOS: E (secção ≥ 10 na fonte — a contagem de cabeçalhos deixou de ser fixa) e
+// F (a cláusula anti-aposta do §2.1 — entrou na lista de factos). O fecho completo seria **gerar a
+// página a partir do `.md`** (o projecto não tem motor de markdown — medido) ou comparar conteúdo
+// normalizado unidade a unidade, o que colide com as paráfrases legítimas entre a fonte e a página.
+// Fica ESCALADO como melhoria própria; o que esta guarda garante — e foi provado por mutação — é:
+// (i) os cabeçalhos da fonte são os da página; (ii) 21 factos materiais (incl. as divulgações LGPD e
+// a cláusula anti-aposta) têm de estar nos DOIS ficheiros.
 test("CONSISTÊNCIA · o docs/regras-oficiais.md e a página dizem os MESMOS factos", () => {
   const md = readFileSync(resolve(REPO, "docs", "regras-oficiais.md"), "utf8");
   const jsx = readFileSync(resolve(FRONTEND, "src", "pages", "RegrasOficiais.jsx"), "utf8");
@@ -187,6 +190,11 @@ test("CONSISTÊNCIA · o docs/regras-oficiais.md e a página dizem os MESMOS fac
     "atrasos de transportadora serão comunicados",
     "A versão vigente é sempre a publicada nesta página",
     "medidas legais cabíveis",
+    // ⚠️ 4.ª passagem (fecho dos pontos cegos medidos pelo validador na 2.ª ronda): a cláusula
+    // ANTI-APOSTA do §2.1 podia ser apagada da página sem a guarda dar por isso. É material — entra.
+    // (A comparação é feita no TEXTO-FONTE dos dois ficheiros: a frase tem de ser CONTÍGUA ali, por
+    // isso entra a partir de «bilhete de sorteio…» e não desde «não é um…», que o `<strong>` parte.)
+    "bilhete de sorteio, uma aposta ou uma participação em concurso",
   ];
   for (const f of factos) {
     // Comparação com o matcher normalizado (ênfase markdown fora, espaço colapsado) nos DOIS lados.

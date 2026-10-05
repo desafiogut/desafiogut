@@ -533,3 +533,28 @@ lock mutado arquivado).
 
 **Verificação final (depois do restauro):** suíte **frontend VERDE 774/774 · backend VERDE 1054/1060** ·
 `git status` limpo (só untracked pré-existentes) · `HEAD = origin/main = 09af292`.
+
+### §SEG7.c — Fecho dos pontos cegos da 2.ª ronda, MEDIDO na árvore final
+
+A 2.ª ronda mediu **3 pontos cegos** da guarda por mutação (D/E/F). No fecho, re-executei-as contra a
+árvore final (`hermes-verify-106h-cegos.py`, corrida e preservada em `%TEMP%`), com md5 de entrada/saída
+confirmados e restaurados:
+
+| Ponto cego | Mutante | Antes | Agora | Estado |
+|---|---|---|---|---|
+| **E** — secção ≥ 10 acrescentada à FONTE | `## 10. …` no `.md` | 14/14 GREEN | **13/14 RED** | **FECHADO** (a contagem de cabeçalhos deixou de ser fixa em `6c877b2`) |
+| **F** — cláusula anti-aposta do §2.1 apagada DA PÁGINA | apagar «…bilhete de sorteio, uma aposta ou uma participação em concurso» | 14/14 GREEN | **13/14 RED** | **FECHADO** (a cláusula entrou na lista de factos) |
+| **D** — parágrafo de secção (§5.3) apagado da PÁGINA | apagar todo o §5.3 | 14/14 GREEN | 14/14 GREEN | **RESIDUAL, declarado** — sem gerar a página do `.md` não fecha |
+
+⇒ a guarda passou de **20 para 21 factos materiais** e de **3 para 1** ponto cego. O residual (D) está
+escrito **no cabeçalho do teste** e aqui, com o motivo: a alternativa real é gerar a página a partir da
+fonte legal (a projecto não tem motor de markdown) — melhoria própria, escalada.
+
+⚠️ **Segundo erro do MEU instrumento, declarado (mantido à vista).** A 1.ª corrida deste script imprimiu
+no resumo «E e F fechados» **quando a medição da mesma corrida dizia o contrário** — o mutante F ainda
+dava 14/14 GREEN. A causa: o mutante que eu construí apontava a **outra** cláusula (§2.1,
+«bilhete de sorteio…»), enquanto a frase que a guarda realmente protegia era «aposta de quota fixa ou
+jogo de azar» (§7). Ou seja: o resumo afirmava um resultado que o próprio output contradizia —
+exactamente o padrão «verificador próprio mente» que a série já registou. **Foi a medição que corrigiu a
+conclusão**: medido o ponto cego, a cláusula foi acrescentada à guarda e o F passou a morder (13/14 RED).
+Lição: **o resumo de um instrumento não é evidência — o output é.**
