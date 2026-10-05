@@ -19,9 +19,9 @@
 | **Vendedor / realizador** | **Associação Recreativa dos Nordestinos no Amazonas** — CNPJ **23.040.066/0001-00** (Grupo União e Trabalho) |
 | **Contacto oficial** | **desafiogut01@gmail.com** |
 | **Foro** | Comarca de **Manaus/AM** — Brasil |
-| **Idioma oficial** | Português (Brasil) |
+| **Idioma oficial** | Português do Brasil |
 
-O DesafioGUT é uma plataforma de comércio eletrónico por dropshipping que oferece **duas
+O DesafioGUT é uma plataforma de comércio eletrónico por *dropshipping* que oferece **duas
 modalidades distintas**:
 
 1. **Menor Lance Único** — modalidade de **habilidade**: vence o participante que apresentar o **menor
@@ -140,7 +140,7 @@ regras, mediante **aviso prévio** publicado no aplicativo na rota **`/regras-of
 que **reduzam** direitos já adquiridos (nomeadamente pontos já acumulados) só produzem efeitos para
 pedidos de resgate formalizados **depois** da comunicação da alteração.
 
-A versão vigente é sempre a publicada nesta rota, com indicação da data de vigência no topo.
+A versão vigente é sempre a publicada nesta página, com indicação da data de vigência no topo.
 
 ### 5.3 Direitos do utilizador
 

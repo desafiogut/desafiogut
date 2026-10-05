@@ -64,7 +64,8 @@ export default function RegrasOficiais() {
           <strong style={forte}>Associação Recreativa dos Nordestinos no Amazonas</strong> (Grupo União e
           Trabalho), CNPJ <strong style={forte}>{CNPJ_VENDEDOR}</strong>. Contacto oficial:{" "}
           <a href={`mailto:${CONTACTO_OFICIAL}`} style={{ color: COR.blue300 }}>{CONTACTO_OFICIAL}</a>.
-          Foro: Comarca de <strong style={forte}>Manaus/AM</strong> — Brasil.
+          Foro: Comarca de <strong style={forte}>Manaus/AM</strong> — Brasil.{" "}
+          <strong style={forte}>Idioma oficial:</strong> Português do Brasil.
         </p>
         <p style={p}>
           O DesafioGUT é uma plataforma de <strong style={forte}>comércio eletrónico por dropshipping</strong> que
@@ -178,6 +179,10 @@ export default function RegrasOficiais() {
         </ol>
         <div style={destaque}>
           Prazo de entrega: até <strong>30 (trinta) dias corridos</strong> contados da confirmação do resgate.
+          <span style={{ display: "block", marginTop: "0.4rem", fontWeight: 500, color: COR.muted }}>
+            Envio por transportadora/Correios para todo o Brasil; eventuais atrasos de transportadora serão
+            comunicados no acompanhamento do pedido.
+          </span>
         </div>
         <p style={p}>
           A morada fornecida é usada <strong style={forte}>exclusivamente</strong> para a emissão da nota fiscal e
@@ -201,6 +206,9 @@ export default function RegrasOficiais() {
         <p style={p}>
           <strong style={forte}>5.3 Direitos do utilizador.</strong> Consultar o saldo e o histórico de pontos;
           resgatar o cartão ao atingir 50 pontos de compra; e ser informado de qualquer alteração a estas regras.
+        </p>
+        <p style={p}>
+          A versão vigente é sempre a publicada nesta página, com indicação da data de vigência no topo.
         </p>
       </GlassCard>
 
@@ -297,7 +305,8 @@ export default function RegrasOficiais() {
           </li>
           <li style={li}>
             É vedado obter pontos por meios fraudulentos (pagamentos não liquidados, contas múltiplas ou
-            automatismos); a Associação pode <strong style={forte}>anular esses pontos</strong> e encerrar a conta.
+            automatismos); a Associação pode <strong style={forte}>anular esses pontos</strong> e encerrar a conta,
+            sem prejuízo das <strong style={forte}>medidas legais cabíveis</strong>.
           </li>
           <li style={li}>
             <strong style={forte}>Foro:</strong> Comarca de <strong style={forte}>Manaus/AM</strong> — Brasil.

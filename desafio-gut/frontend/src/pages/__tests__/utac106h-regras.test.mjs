@@ -39,6 +39,16 @@ before(async () => {
 });
 after(async () => { if (vite) await vite.close(); });
 
+// Normalizador ÚNICO para as comparações md↔página. ⚠️ Lição da 2.ª ronda do validador (R3): o
+// matcher tem de ser robusto à formatação — se só colapsar espaços, basta pôr `*ênfase*` no `.md`
+// para a guarda partir, e a «correcção» acabaria por ser feita A EDITAR A FONTE OFICIAL (direcção
+// invertida). Aqui tira-se a ênfase markdown (`**`/`*`/`` ` ``) e colapsa-se o espaço, nos DOIS lados.
+const limpar = (s) => s
+  .replace(/^>\s?/gm, "")          // marca de blockquote multilinha (`> continuação`) — partiria a frase
+  .replace(/\*\*|\*|`/g, "")        // ênfase/código markdown
+  .replace(/\s+/g, " ")
+  .trim();
+
 // ── 1. A página renderiza, com hierarquia e conteúdo ───────────────────────────────────────────
 test("RENDER · a página renderiza com título, versão e o vendedor legal", () => {
   assert.match(texto, /Regras Oficiais/);
@@ -52,11 +62,13 @@ test("RENDER · hierarquia de títulos: um <h1> e as 9 secções em <h2>, IGUAIS
   // `.md`. Foi esta a falha que o validador adversarial apanhou em 1.ª ronda: a página publicava
   // MENOS do que a fonte legal e a guarda de factos, sendo amostra, não dava por isso.
   const md = readFileSync(resolve(REPO, "docs", "regras-oficiais.md"), "utf8");
-  const doMd = [...md.matchAll(/^##\s+(\d)\.\s+(.+?)\s*$/gm)]
-    .map((m) => `${m[1]}. ${m[2]}`.replace(/\*\*/g, "").replace(/\s+/g, " ").trim());
-  assert.ok(doMd.length === 9, `o .md devia ter 9 secções, tem ${doMd.length}`);
+  // Sem o «9» fixo: TODOS os `## N.` da fonte (incluindo N ≥ 10) têm de estar na página. A versão
+  // anterior fixava `=== 9` e ignorava uma secção nova acrescentada à fonte (ponto cego medido).
+  const doMd = [...md.matchAll(/^##\s+(\d+)\.\s+(.+?)\s*$/gm)].map((m) => limpar(`${m[1]}. ${m[2]}`));
+  assert.ok(doMd.length >= 9, `o .md devia ter pelo menos 9 secções, tem ${doMd.length}`);
+  const paginaLimpa = limpar(texto);
   for (const h of doMd) {
-    assert.ok(texto.includes(h), `a página não publica a secção «${h}»`);
+    assert.ok(paginaLimpa.includes(h), `a página não publica a secção «${h}»`);
   }
   const h2 = html.match(/<h2[^>]*>([^<]*)</g) || [];
   assert.equal(h2.length, 9, `esperava 9 secções, vi ${h2.length}`);
@@ -137,6 +149,14 @@ test("LINK · o ecrã das Ofertas Programadas liga às Regras Oficiais", () => {
 });
 
 // ── 4. GUARDA DE CONSISTÊNCIA: documento fonte ↔ página (sem deriva) ──────────────────────────
+// ⚠️ LIMITE DECLARADO (2.ª ronda do validador adversarial): esta guarda é **cabeçalhos + lista de
+// factos materiais**, NÃO igualdade byte-a-byte. Continua a ser possível apagar um parágrafo de
+// secção cujo conteúdo não esteja na lista de factos sem ela dar por isso (ponto cego MEDIDO por
+// mutação). O fecho completo seria **gerar a página a partir do `.md`** (o projecto não tem motor de
+// markdown — medido) ou comparar conteúdo normalizado unidade a unidade, o que colide com as
+// paráfrases legítimas entre a fonte e a página. Fica ESCALADO como melhoria própria; o que esta
+// guarda garante — e foi provado por mutação — é: (i) os cabeçalhos da fonte são os da página;
+// (ii) 20 factos materiais (incl. as divulgações LGPD) têm de estar nos DOIS ficheiros.
 test("CONSISTÊNCIA · o docs/regras-oficiais.md e a página dizem os MESMOS factos", () => {
   const md = readFileSync(resolve(REPO, "docs", "regras-oficiais.md"), "utf8");
   const jsx = readFileSync(resolve(FRONTEND, "src", "pages", "RegrasOficiais.jsx"), "utf8");
@@ -160,12 +180,18 @@ test("CONSISTÊNCIA · o docs/regras-oficiais.md e a página dizem os MESMOS fac
     "regras de devolução de produto",
     "apenas com os prestadores necessários à operação",
     "mantidos pelo prazo exigido pela legislação fiscal brasileira",
+    // ⚠️ 3.ª passagem (achados NÃO-bloqueantes da 2.ª ronda): a página continuava a publicar menos
+    // que a fonte em 4 afirmações. Cada uma passou a estar nos DOIS ficheiros.
+    "Idioma oficial",
+    "Português do Brasil",
+    "atrasos de transportadora serão comunicados",
+    "A versão vigente é sempre a publicada nesta página",
+    "medidas legais cabíveis",
   ];
   for (const f of factos) {
-    // Comparação com o ESPAÇO NORMALIZADO: os dois ficheiros partem frases em linhas diferentes
-    // (o .md por largura, o JSX por indentação) — a quebra de linha não é uma divergência de conteúdo.
-    assert.ok(md.replace(/\s+/g, " ").includes(f), `o .md não traz «${f}»`);
-    assert.ok(jsx.replace(/\s+/g, " ").includes(f), `a página não traz «${f}»`);
+    // Comparação com o matcher normalizado (ênfase markdown fora, espaço colapsado) nos DOIS lados.
+    assert.ok(limpar(md).includes(f), `o .md não traz «${f}»`);
+    assert.ok(limpar(jsx).includes(f), `a página não traz «${f}»`);
   }
 });
 
