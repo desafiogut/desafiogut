@@ -4,12 +4,13 @@
 // (a migração do 106d-v2 não abre policy a anon/authenticated) — o cliente anónimo do frontend
 // NÃO as consegue ler. O `endereco` sai do Bearer, nunca do cliente. Endpoint: `GET /ler-pontos`.
 //
-// ⚠️ `getAuthToken` fica num REF: o efeito de montagem tem de depender SÓ de `address`. Se
-// dependesse da identidade da função, um `getAuthToken` que mude a cada render (o duplo de teste,
-// ou qualquer re-criação no hook vizinho) re-dispararia o efeito em ciclo.
-import { useCallback, useEffect, useRef, useState } from "react";
+// ⚠️ UTAC106j-fix: o token vem do `authToken` (user-session) do AppContext — o MESMO que o
+// `saldo-rs` usa — e NÃO do `getAuthToken` do `useTrocarPorSenhas` (JWT `lance-auth`, que o
+// `ler-pontos` rejeita com 401 token_invalido). O guarda `!authToken` evita o 401 enquanto a sessão
+// é cunhada (`address` chega ANTES do `authToken`); como o `authToken` está nas dependências, o
+// efeito RE-CORRE quando ele chega.
+import { useCallback, useEffect, useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
-import { useTrocarPorSenhas } from "./useTrocarPorSenhas.js";
 import { apiGet } from "../lib/api.js";
 
 const VAZIO = Object.freeze({
@@ -18,22 +19,18 @@ const VAZIO = Object.freeze({
 });
 
 export function usePontos() {
-  const { address } = useAppContext();
-  const { getAuthToken } = useTrocarPorSenhas();
-  const obterToken = useRef(getAuthToken);
-  obterToken.current = getAuthToken;
+  const { address, authToken } = useAppContext();
 
   const [dados, setDados] = useState(VAZIO);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
 
   const refetch = useCallback(async () => {
-    if (!address) { setLoading(false); setDados(VAZIO); return null; }
+    if (!address || !authToken) { setLoading(false); setDados(VAZIO); return null; }
     setLoading(true);
     setErro("");
     try {
-      const token = await obterToken.current();
-      const { ok, status, data } = await apiGet("ler-pontos", { token });
+      const { ok, status, data } = await apiGet("ler-pontos", { token: authToken });
       if (!ok) {
         setErro(status === 401 ? "Sessão expirada" : "Não foi possível carregar os pontos");
         return null;
@@ -56,7 +53,7 @@ export function usePontos() {
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [address, authToken]);
 
   useEffect(() => { refetch(); }, [refetch]);
 

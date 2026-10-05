@@ -5,16 +5,16 @@
 //
 // O palpite existente chega pelo `usePontos` (`palpiteInicial`) — NÃO se faz um 2.º fetch.
 // Guarda de corrida por `useRef` (o estado `loading` é obsoleto dentro do mesmo render).
+//
+// ⚠️ UTAC106j-fix: o token vem do `authToken` (user-session) do AppContext — o MESMO que o
+// `saldo-rs` usa — e NÃO do `getAuthToken` do `useTrocarPorSenhas` (JWT `lance-auth`, que o
+// `registar-palpite` rejeita com 401 token_invalido).
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTrocarPorSenhas } from "./useTrocarPorSenhas.js";
 import { apiPost } from "../lib/api.js";
 import { useAppContext } from "../context/AppContext.jsx";
 
 export function usePalpite(edicaoId, palpiteInicial = null) {
-  const { address } = useAppContext();
-  const { getAuthToken } = useTrocarPorSenhas();
-  const obterToken = useRef(getAuthToken);
-  obterToken.current = getAuthToken;
+  const { address, authToken } = useAppContext();
 
   const [palpite, setPalpite] = useState(palpiteInicial ?? null);
   const [loading, setLoading] = useState(false);
@@ -29,13 +29,14 @@ export function usePalpite(edicaoId, palpiteInicial = null) {
     if (!Number.isInteger(valor) || valor < 0) {
       return { ok: false, code: "valor_invalido", message: "Escreve um número inteiro de lances" };
     }
+    // ⚠️ UTAC106j-fix: sem `authToken` (user-session) o endpoint daria 401 — código próprio.
+    if (!authToken) return { ok: false, code: "sem_sessao", message: "Sessão ainda não pronta. Tente novamente." };
     if (emCurso.current) return { ok: false, code: "em_curso", message: "Palpite em curso" };
     emCurso.current = true;
     setLoading(true);
     setErro("");
     try {
-      const token = await obterToken.current();
-      const { ok, status, data } = await apiPost("registar-palpite", { edicaoId, valor }, { token });
+      const { ok, status, data } = await apiPost("registar-palpite", { edicaoId, valor }, { token: authToken });
       if (ok) {
         const p = data?.palpite ?? { edicaoId, valor };
         setPalpite(p);
@@ -55,7 +56,7 @@ export function usePalpite(edicaoId, palpiteInicial = null) {
       emCurso.current = false;
       setLoading(false);
     }
-  }, [edicaoId]);
+  }, [edicaoId, authToken]);
 
   return { palpite, registar, loading, erro, conectado: Boolean(address) };
 }

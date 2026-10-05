@@ -62,7 +62,7 @@ const CONECTADO = {
   isConnected: true, abrirModal: () => {}, address: A, user: { email: { address: "a@b.c" } },
   refetchSaldo: () => {}, saldoRsCentavos: 1234, saldoRsStatus: "ok", refetchSaldoRs: () => {},
   setModalidade: () => {}, privyWallet: null, saldoSenhas: 7, saldoSenhasStatus: "ok",
-  userLabel: "Teste", desconectar: () => {}, authToken: "TOKEN-DE-TESTE-106e",
+  userLabel: "Teste", desconectar: () => {}, authToken: "AUTHCTX-106e",
 };
 
 /** Instala o duplo de fetch, corre o corpo e restaura. Devolve também os corpos enviados. */
@@ -84,7 +84,7 @@ test("HOOK · chama POST /comprar-passe-pontos com Bearer e mapeia 201 → ok:tr
   assert.equal(r.pontos, 1);
   assert.equal(dup.chamadas.length, 1);
   assert.match(dup.chamadas[0].url, /\/\.netlify\/functions\/comprar-passe-pontos$/);
-  assert.equal(dup.chamadas[0].headers.Authorization, "Bearer TOKEN-DE-TESTE-106e");
+  assert.equal(dup.chamadas[0].headers.Authorization, "Bearer AUTHCTX-106e");
   assert.match(corpos[0].idempotencyKey, /^[A-Za-z0-9._:-]{8,200}$/, "a chave não casa a regex do servidor");
 });
 

@@ -53,7 +53,7 @@ const EDICAO_PROG = { "PROG-7": { id: "PROG-7", tipo: "programado", status: "abe
 const ctx = (extra = {}) => ({
   isConnected: true, address: A, edicoes: EDICAO_PROG, user: { email: { address: "a@b.c" } },
   refetchSaldo: () => {}, saldoRsCentavos: 1234, saldoRsStatus: "ok", refetchSaldoRs: () => {},
-  setModalidade: () => {}, privyWallet: null, authToken: "TOKEN-DE-TESTE-106g", userLabel: "Teste",
+  setModalidade: () => {}, privyWallet: null, authToken: "AUTHCTX-106g", userLabel: "Teste",
   ...extra,
 });
 
@@ -159,8 +159,9 @@ test("CLIQUE · a confirmação do balão faz POST /resgatar-cartao com Bearer e
 
     const post = c.dup.chamadas.find((h) => h.url.includes("resgatar-cartao"));
     assert.ok(post, "não houve POST para resgatar-cartao");
-    // O duplo de auth do repo (`_stubs-106e`) devolve um token FIXO — não se fixa o valor do 106g.
-    assert.match(post.headers.Authorization, /^Bearer TOKEN-DE-TESTE/);
+    // ⚠️ UTAC106j-fix: o token vem do `authToken` (user-session) do AppContext — valor DISTINTO do
+    // duplo de `getAuthToken` (`_stubs-106e`), para este teste MORDER se o hook voltar à Via A.
+    assert.equal(post.headers.Authorization, "Bearer AUTHCTX-106g");
     assert.match(post.url, /\/\.netlify\/functions\/resgatar-cartao$/);
     assert.equal(c.balao().props.aberto, false, "em sucesso o balão fecha");
     assert.match(c.texto(), /Pedido de resgate criado/);

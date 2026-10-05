@@ -49,7 +49,7 @@ const EDICAO_PROG = { "PROG-7": { id: "PROG-7", tipo: "programado", status: "abe
 const ctx = (extra = {}) => ({
   isConnected: true, address: A, edicoes: EDICAO_PROG, user: { email: { address: "a@b.c" } },
   refetchSaldo: () => {}, saldoRsCentavos: 1234, saldoRsStatus: "ok", refetchSaldoRs: () => {},
-  setModalidade: () => {}, privyWallet: null, authToken: "TOKEN-DE-TESTE-106e", userLabel: "Teste",
+  setModalidade: () => {}, privyWallet: null, authToken: "AUTHCTX-106f", userLabel: "Teste",
   ...extra,
 });
 
@@ -118,6 +118,8 @@ test("RENDER · mostra os pontos ACTUAIS do titular («7 / 50 pontos» + barra d
     assert.match(tags(c.html()), /role="progressbar"[^>]*aria-valuenow="7"[^>]*aria-valuemax="50"/,
       "a barra de progresso não reflecte os pontos reais");
     assert.match(c.dup.chamadas[0].url, /\/\.netlify\/functions\/ler-pontos$/);
+    assert.equal(c.dup.chamadas[0].headers.Authorization, "Bearer AUTHCTX-106f",
+      "o `ler-pontos` tem de levar o authToken (user-session) do AppContext, não o lance-auth");
   } finally { c.dup.restaurar(); }
 });
 
@@ -239,7 +241,7 @@ test("RENDER · PALPITAR envia POST com Bearer e passa a «Já palpitou»", asyn
 
     const post = c.dup.chamadas.find((h) => h.url.includes("registar-palpite"));
     assert.ok(post, "não houve POST para registar-palpite");
-    assert.equal(post.headers.Authorization, "Bearer TOKEN-DE-TESTE-106e");
+    assert.equal(post.headers.Authorization, "Bearer AUTHCTX-106f");
     assert.match(c.texto(), /Já palpitou: 120 lances/);
     assert.match(c.texto(), /À espera do fecho da edição\./);
     assert.equal(c.input(), undefined, "depois de palpitar o campo desaparece (não se muda o palpite)");

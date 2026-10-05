@@ -6,7 +6,9 @@
 //
 // REUTILIZA (não duplica) — o MESMO padrão do `useComprarPasse` (UTAC106e):
 //   · `apiPost` (`src/lib/api.js`) — o cliente HTTP do repo, que injecta o `Bearer`;
-//   · `getAuthToken` do `useTrocarPorSenhas` — a mesma cadeia de auth dos vizinhos;
+//   · o `authToken` (user-session) do AppContext — o MESMO token que o `saldo-rs` já usa.
+//     ⚠️ UTAC106j-fix: NÃO se usa o `getAuthToken` do `useTrocarPorSenhas` (JWT `lance-auth`), que
+//     o `resgatar-cartao` rejeita com 401 token_invalido;
 //   · `gerarIdempotencyKey` (`src/utils/idempotency.js`) — UUID v4 NOVO por clique.
 //
 // Contrato devolvido: { resgatar, loading, erro, resgate }
@@ -15,7 +17,6 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useAppContext } from "../context/AppContext.jsx";
-import { useTrocarPorSenhas } from "./useTrocarPorSenhas.js";
 import { apiPost } from "../lib/api.js";
 import { gerarIdempotencyKey } from "../utils/idempotency.js";
 
@@ -27,8 +28,7 @@ const MSG_POR_STATUS = {
 };
 
 export function useResgatarCartao() {
-  const { address } = useAppContext();
-  const { getAuthToken } = useTrocarPorSenhas();
+  const { address, authToken } = useAppContext();
 
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
@@ -39,17 +39,18 @@ export function useResgatarCartao() {
 
   const resgatar = useCallback(async ({ cartaoId, morada, idempotencyKey } = {}) => {
     if (!address) return { ok: false, code: "sem_endereco", message: "Carteira não conectada" };
+    // ⚠️ UTAC106j-fix: sem `authToken` (user-session) o endpoint daria 401 — código próprio.
+    if (!authToken) return { ok: false, code: "sem_sessao", message: "Sessão ainda não pronta. Tente novamente." };
     if (emCurso.current) return { ok: false, code: "em_curso", message: "Resgate em curso" };
     emCurso.current = true;
 
     setErro("");
     setLoading(true);
     try {
-      const token = await getAuthToken();
       // Chave NOVA por CLIQUE (nunca reutilizada): a idempotência do servidor cobre o RETRY do
       // MESMO pedido; contra dois pedidos diferentes a trava é a guarda de corrida (`emCurso`).
       const key = idempotencyKey || gerarIdempotencyKey();
-      const { ok, status, data } = await apiPost("resgatar-cartao", { cartaoId, morada, idempotencyKey: key }, { token });
+      const { ok, status, data } = await apiPost("resgatar-cartao", { cartaoId, morada, idempotencyKey: key }, { token: authToken });
 
       if (ok) {
         const info = { id: data?.resgateId ?? null, status: data?.status ?? "pendente", idempotent: data?.idempotent === true };
@@ -69,7 +70,7 @@ export function useResgatarCartao() {
       emCurso.current = false;
       setLoading(false);
     }
-  }, [address, getAuthToken]);
+  }, [address, authToken]);
 
   return { resgatar, loading, erro, resgate };
 }

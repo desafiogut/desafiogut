@@ -1,10 +1,18 @@
 // UTAC106f-R1t — REGRESSÃO DA R1 NO ENDPOINT `ler-pontos.mjs` (promovido do validador do R1v).
+// UTAC106j-fix — o verificador deixou de ser MOCKADO: os tokens são ASSINADOS a sério.
 //
 // PORQUE EXISTE (bloqueante 1 do veredicto `_logs/UTAC106f-R1v-revalidacao.md`): o `ler-pontos.mjs` é a
 // ÚNICA camada de produção que decide o cartão — a UI confia no flag `podeResgatarCartao` que ele devolve.
 // Até aqui NÃO tinha um único teste: reabrir o defeito da R1 nessa linha deixava a suíte canónica INTEIRA
 // verde e o gate de mutação `7/7` verde (os mutantes R-C e R-D sobreviviam). Estes testes medem o
 // COMPORTAMENTO REAL do endpoint — a resposta HTTP que a UI consome — não um proxy de texto.
+//
+// ⚠️ UTAC106j-fix — A SEGUNDA CEGUEIRA (fechada aqui): até este UTAC o teste fazia
+// `mock.module("../_lib/jwt.mjs", { namedExports: { verificarUserSession: async () => ({...}) } })`,
+// isto é, substituía o PRÓPRIO verificador — passava com QUALQUER token (mesmo `lance-auth`, o tipo que
+// o endpoint rejeita em produção). Agora o `_lib/jwt.mjs` é o REAL e os tokens são assinados com o
+// `JWT_SECRET` de teste via `assinarUserSession`/`assinarLanceAuth`. O teste tem de PASSAR com
+// `user-session` e FALHAR (401 `token_invalido`) com `lance-auth`.
 //
 // Duplo só nas fronteiras de I/O: um Supabase INLINE que modela `public.pontos` + `public.palpites` com a
 // semântica PostgREST MÍNIMA que o `ler-pontos.mjs` usa (select/eq/order/maybeSingle). Qualquer outra
@@ -67,9 +75,6 @@ mock.module("../_lib/supabase-client.mjs", {
     supabaseConfigurado: () => true,
   },
 });
-mock.module("../_lib/jwt.mjs", {
-  namedExports: { verificarUserSession: async () => ({ endereco: A, tipo: "user-session" }) },
-});
 mock.module("../_lib/system-state.mjs", {
   namedExports: {
     sistemaPausado: () => false,
@@ -79,14 +84,23 @@ mock.module("../_lib/system-state.mjs", {
   },
 });
 
+// ⚠️ UTAC106j-fix: o `_lib/jwt.mjs` NÃO é mockado — é o REAL. Só assim o teste exercita o TIPO do
+// token (a peça que o diagnóstico mediu ser a causa do 401 em produção).
+const { assinarUserSession, assinarLanceAuth } = await import("../_lib/jwt.mjs");
+const TOKEN_USER = await assinarUserSession(A); // `tipo:"user-session"` — o que os endpoints Via B aceitam
+const TOKEN_LANCE = await assinarLanceAuth(A);  // `tipo:"lance-auth"`  — o que os 4 hooks enviam (controlo negativo)
+
 const handler = (await import("../ler-pontos.mjs")).default;
 
 const compra = (n) => ({ tipo: "compra", pontos: n, ref: `c${n}`, data: "2026-10-01T00:00:00.000Z" });
 const palpite = (n) => ({ tipo: "palpite", pontos: n, ref: `p${n}`, data: "2026-10-02T00:00:00.000Z" });
 const resgate = (n) => ({ tipo: "resgate", pontos: -n, ref: `r${n}`, data: "2026-10-03T00:00:00.000Z" });
 
-const chamar = async () => {
-  const req = new Request("https://ex.test/ler-pontos", { method: "GET", headers: { authorization: "Bearer x" } });
+const chamar = async (tk = TOKEN_USER) => {
+  const req = new Request("https://ex.test/ler-pontos", {
+    method: "GET",
+    headers: tk ? { authorization: `Bearer ${tk}` } : {},
+  });
   const res = await handler(req);
   return { status: res.status, body: await res.json() };
 };
@@ -145,6 +159,20 @@ test("R1(f) — historico vazio mas coluna `pontos`=50: o cartão conta 0 (não 
   assert.equal(r.body.podeResgatarCartao, false);
 });
 
+// ═══ UTAC106j-fix — O TIPO DO TOKEN (a causa do 401 em produção) ═════════════════════════════════
+test("AUTH — Bearer `user-session` (o que o fix passa a enviar) → NÃO é 401", async () => {
+  const r = await cenario([compra(1)], 1);
+  assert.notEqual(r.status, 401, "com `user-session` o endpoint passa a autenticação");
+  assert.equal(r.status, 200);
+});
+
+test("AUTH — Bearer `lance-auth` (Via A, o que os hooks enviavam) → 401 token_invalido", async () => {
+  DB = criarDuplo([]);
+  const r = await chamar(TOKEN_LANCE);
+  assert.equal(r.status, 401, "o `ler-pontos` tem de REJEITAR o token da Via A (o 401 de produção)");
+  assert.equal(r.body.error.code, "token_invalido");
+});
+
 // ═══ Contratos de bordo do endpoint (o que a UI consome) ════════════════════════════════════════
 test("CONTRATO — sem Bearer → 401 token_ausente (a decisão do cartão não é pública)", async () => {
   DB = criarDuplo([]);
@@ -157,7 +185,7 @@ test("CONTRATO — sem Bearer → 401 token_ausente (a decisão do cartão não 
 
 test("CONTRATO — método != GET → 405", async () => {
   DB = criarDuplo([]);
-  const req = new Request("https://ex.test/ler-pontos", { method: "POST", headers: { authorization: "Bearer x" } });
+  const req = new Request("https://ex.test/ler-pontos", { method: "POST", headers: { authorization: `Bearer ${TOKEN_USER}` } });
   const res = await handler(req);
   assert.equal(res.status, 405);
 });
