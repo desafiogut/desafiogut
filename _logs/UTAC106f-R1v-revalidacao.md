@@ -325,3 +325,30 @@ real, `ComprarPasseModal` renderizado, deploy skew (raciocinado — falha fechad
 | Detalhado | `_logs/UTAC106f-R1v-revalidacao.md` (este) |
 | Doc de estado (bloco R14) | `CLAUDE.md` (apêndice no EOF; 4 bytes de controlo intactos) |
 | Relatório do operador | `Desktop/RELATORIO-UTAC106f-R1v-REVALIDACAO.txt` |
+
+### §SEG2.b — Custo do UTAC e commits
+
+**Custo (estimativa da base + saldo real da API):**
+
+| Sessão | `source` | chamadas | custo estimado |
+|---|---|---|---|
+| `20261004_205634_2804b6` (executor, esta sessão) | `cli` | 53 | US$ 0,0388 |
+| `20261004_210331_c9672a` (validador adversarial) | `subagent` | 50 | US$ 0,0340 |
+| **Total do UTAC** | | **103** | **≈ US$ 0,073** |
+
+- **Saldo da API:** abertura (referência, lida após o reconhecimento) **US$ 5,63** → fecho **US$ 5,52**
+  ⇒ **Δ = US$ 0,11** (o saldo conta também as delegações, que têm sessão própria). As duas leituras são
+  declaradas separadamente: uma é **estimativa da base** (`cost_status='estimated'`), a outra é **medida real**.
+
+**Commits (em foreground, ficheiros individuais — NUNCA `git add -A`):**
+
+- `1eb3ca1` — a **correcção R1** validada (pré-existente, UTAC106f).
+- `586f372` — HEAD de arranque deste UTAC (= baseline + `origin/main`).
+- `d86142c` — **registo deste UTAC** (`_logs/UTAC106f-R1v-revalidacao.md` + bloco R14 no `CLAUDE.md`;
+  2 inserções, 0 remoções; 4 bytes de controlo intactos). Empurrado: `586f372..d86142c main -> main`.
+
+**Limpeza:** worktree `C:/Users/Moltbot/tmp-r1v-val/wt` removido pelo helper A13 (4 junctions por `rmdir`
+primeiro; `node_modules` real conferido antes/depois: **380/568/498/414 → 380/568/498/414**, idêntico).
+O veredicto-fonte e a evidência do validador ficam preservados em `C:/Users/Moltbot/tmp-r1v-val/`
+(`VEREDICTO-R1.md` + `evidencia-r1/`) — é a prova que este registo cita. Nenhum processo node do
+subagente ficou pendurado (medido: só os 2 MCP do utilizador, das 20:56).
