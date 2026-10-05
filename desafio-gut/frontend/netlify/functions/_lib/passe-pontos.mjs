@@ -276,15 +276,27 @@ export async function apurarPalpite(edicaoId, valorReal) {
   );
   if (!credito.ok) return { ok: false, code: credito.code };
 
+  // ⚠️ UTAC106g (facet do B2, medido pelo validador adversarial na 2.ª ronda): se a MARCAÇÃO falhar,
+  // o crédito TEM de ser DESFEITO. Sem a marcação, o guarda `edicaoApurada()` fica falso (nenhum
+  // palpite com `apurado:true`) e uma 2.ª apuração voltaria a pagar +2 a OUTRO endereço — a mesma
+  // edição pagaria 4. Só se desfaz o crédito RECÉM-criado (`criado:true`): se a `ref` já existia, o
+  // bónus é de uma apuração anterior e não é nosso para apagar.
+  const desfazerCredito = async () => {
+    if (credito.criado === true) {
+      await reverterMovimento(vencedor.endereco, refBonusPalpite(edicaoId));
+    }
+    return { ok: false, code: "ERRO_DB" };
+  };
+
   const perdedores = porApurar.filter((p) => p.id !== vencedor.id).map((p) => p.id);
   if (perdedores.length > 0) {
     const { error: e1 } = await supabase.from(TABELA_PALPITES)
       .update({ apurado: true, resultado: "perdeu" }).in("id", perdedores);
-    if (e1) return { ok: false, code: "ERRO_DB" };
+    if (e1) return desfazerCredito();
   }
   const { error: e2 } = await supabase.from(TABELA_PALPITES)
     .update({ apurado: true, resultado: "mais_proximo" }).eq("id", vencedor.id);
-  if (e2) return { ok: false, code: "ERRO_DB" };
+  if (e2) return desfazerCredito();
 
   return {
     ok: true,

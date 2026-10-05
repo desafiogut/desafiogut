@@ -28,6 +28,10 @@ const MUTANTES = [
   ["R2-b edição apurada volta a aceitar palpites novos", LIB,
     "  if (jaApurada) return { ok: false, code: \"EDICAO_APURADA\" };",
     "  if (false && jaApurada) return { ok: false, code: \"EDICAO_APURADA\" };", FN, ALVO_PALPITE],
+  // R2-b (facet do B2, 2.ª ronda): sem desfazer o crédito quando a MARCAÇÃO falha, o guarda
+  // `edicaoApurada()` fica falso e uma 2.ª apuração paga +2 a outro endereço ⇒ a edição paga 4.
+  ["B2 credito do bonus sobrevive a marcacao falhada (edicao paga 4)", LIB,
+    "    if (credito.criado === true) {", "    if (false) {", FN, ALVO_PALPITE],
   // ── decisão #6 — a edição tem de estar ABERTA ─────────────────────────────────────────────────
   ["Nota validação da edição aberta removida", REG_PALPITE,
     'if (edicao.status !== "aberto") {', 'if (false) {', FN, ALVO_RESGATE],

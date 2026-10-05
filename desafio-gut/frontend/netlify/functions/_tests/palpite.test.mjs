@@ -59,6 +59,8 @@ function criarDuplo(seed = {}) {
         return { data: l, error: null };
       }
       if (st.op === "update") {
+        // UTAC106g (facet do B2, 2.ª ronda): permite FORÇAR a falha da MARCAÇÃO da apuração.
+        if (tabela === "palpites" && FALHAR_MARCACAO) return erro("XX000", "falha forçada na marcação");
         const alvo = t.filter(casa);
         for (const l of alvo) Object.assign(l, st.dados);
         return { data: alvo, error: null };
@@ -77,6 +79,7 @@ function criarDuplo(seed = {}) {
 }
 
 let dup;
+let FALHAR_MARCACAO = false;
 mock.module("../_lib/supabase-client.mjs", {
   namedExports: {
     getSupabase: () => ({ from: (t) => dup.from(t) }),
@@ -98,6 +101,7 @@ const pontosDe = (e) => dup.db.pontos.find((p) => p.endereco === e);
 
 function semear(enderecos = [A, B]) {
   dup = criarDuplo({ pontos: enderecos.map((e) => ({ endereco: e, pontos: 0, historico: [], atualizado_em: "2026-10-04T00:00:00.000Z" })) });
+  FALHAR_MARCACAO = false;
 }
 
 // ── Constante ───────────────────────────────────────────────────────────────────────────────────
@@ -322,4 +326,31 @@ test("R2 · a recusa é POR EDIÇÃO — uma edição nova continua a aceitar pa
   const outra = await registarPalpite(B, "PROG-8", 42);
   assert.equal(outra.ok, true, "a PROG-8 não foi apurada — tem de aceitar");
   assert.equal(outra.criado, true);
+});
+
+// ── UTAC106g · facet do B2 — o crédito do bónus NÃO pode sobreviver a uma marcação falhada ────────
+// Medido pelo validador adversarial na 2.ª ronda ([B2-4]): o crédito é aplicado ANTES da marcação;
+// se a marcação falhar, nenhum palpite fica `apurado:true` ⇒ `edicaoApurada()` é false ⇒ uma 2.ª
+// apuração volta a pagar +2 a OUTRO endereço ⇒ a MESMA edição paga 4. Fix in-escopo: desfazer o
+// crédito recém-criado com `reverterMovimento()`.
+
+test("B2 · se a MARCAÇÃO falhar, o crédito do bónus é DESFEITO (a edição não pode pagar 4)", async () => {
+  semear([A, B]);
+  await registarPalpite(A, ED, 100);
+  await registarPalpite(B, ED, 500);
+
+  FALHAR_MARCACAO = true;                       // a marcação da apuração falha
+  const r1 = await apurarPalpite(ED, 100);
+  assert.equal(r1.ok, false);
+  assert.equal(r1.code, "ERRO_DB");
+  assert.equal(await getPontos(A), 0, "o crédito do bónus tem de ser DESFEITO");
+  assert.equal(await edicaoApurada(ED), false, "nada ficou marcado");
+
+  FALHAR_MARCACAO = false;                      // a marcação volta a funcionar
+  const r2 = await apurarPalpite(ED, 100);
+  assert.equal(r2.ok, true);
+  assert.equal(r2.pontosCreditados, 2);
+  assert.equal(await getPontos(A), 2, "a edição paga UMA só vez (+2), nunca 4");
+  assert.equal(await getPontos(B), 0);
+  assert.equal(await edicaoApurada(ED), true, "agora sim a edição está apurada");
 });
