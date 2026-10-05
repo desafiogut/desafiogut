@@ -337,8 +337,50 @@ export async function podeResgatarCartaoComCompra(endereco) {
 
 /** `ref` do DÉBITO do resgate: uma por pedido (idempotência pela chave do cliente). */
 export const refResgate = (idempotencyKey) => `resgate:${idempotencyKey}`;
-/** `ref` da COMPENSAÇÃO (rollback) do débito, quando o registo do pedido falha. */
-export const refResgateRollback = (idempotencyKey) => `resgate-rollback:${idempotencyKey}`;
+
+/**
+ * REVERTE integralmente um movimento já aplicado: **remove do histórico** a entrada com essa `ref` e
+ * devolve o seu delta ao total (CAS: só grava se `pontos` não mudou entretanto).
+ *
+ * ⚠️ PORQUE É QUE O ROLLBACK NÃO PODE SER UMA COMPENSAÇÃO COM OUTRA `ref`
+ * (bloqueante **B1** do validador adversarial, medido — commit `7923e7a`):
+ * se o débito ficasse no histórico, uma 2.ª tentativa com a MESMA `idempotencyKey` encontraria a `ref`
+ * `resgate:<chave>` já lá ⇒ o débito seria um **NO-OP** (`aplicarMovimento` é idempotente por `ref`),
+ * mas o gate do cartão voltaria a passar (os pontos tinham sido devolvidos) ⇒ **criava-se o pedido
+ * SEM cobrar** — cartão grátis. Medido: `502 → 201 (pontos 50, 1 resgate)`. Reverter DE FACTO devolve
+ * o estado exacto anterior, e o retry debita como deve.
+ * @returns {Promise<{ok:true,revertido:boolean,pontos:number}|{ok:false,code:string}>}
+ */
+export async function reverterMovimento(endereco, ref) {
+  const e = normalizar(endereco);
+  if (!enderecoValido(e)) return { ok: false, code: "ENDERECO_INVALIDO" };
+  if (typeof ref !== "string" || ref.length === 0 || ref.length > REF_MAX) return { ok: false, code: "REF_INVALIDA" };
+
+  const supabase = getSupabase();
+  for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
+    let atual;
+    try { atual = await lerPontos(e); }
+    catch { return { ok: false, code: "ERRO_DB" }; }
+    if (atual == null) return { ok: true, revertido: false, pontos: 0 };
+
+    const hist = Array.isArray(atual.historico) ? atual.historico : [];
+    const alvo = hist.find((h) => h?.ref === ref);
+    if (!alvo) return { ok: true, revertido: false, pontos: Number(atual.pontos) }; // nada a reverter
+
+    const base = Number(atual.pontos ?? 0);
+    const novoPontos = base - Number(alvo.pontos ?? 0);
+    if (novoPontos < 0) return { ok: false, code: "REVERSAO_INVALIDA" };
+    const historico = hist.filter((h) => h?.ref !== ref);
+    const payload = { endereco: e, pontos: novoPontos, historico, atualizado_em: new Date().toISOString() };
+
+    const { data, error } = await supabase.from(TABELA)
+      .update(payload).eq("endereco", e).eq("pontos", base).select("endereco");
+    if (!error && Array.isArray(data) && data.length === 0) continue; // CAS perdeu → relê
+    if (error) return { ok: false, code: "ERRO_DB" };
+    return { ok: true, revertido: true, pontos: novoPontos };
+  }
+  return { ok: false, code: "CONFLITO_CONCORRENCIA" };
+}
 
 /**
  * Regista um pedido de RESGATE do cartão: debita `PONTOS_POR_CARTAO` pontos e grava o pedido.
@@ -374,10 +416,11 @@ export async function registarResgate(endereco, { cartaoId, morada, idempotencyK
   try { pedido = await criarResgate({ endereco: e, cartaoId, morada, idempotencyKey: key }); }
   catch { pedido = { ok: false, code: "ERRO_DB" }; }
 
-  // (5) ROLLBACK OBRIGATÓRIO se o registo falhou: sem pedido, os pontos têm de voltar.
+  // (5) ROLLBACK OBRIGATÓRIO se o registo falhou: sem pedido, os pontos têm de voltar — e a reversão
+  //     é INTEGRAL (remove a entrada do débito), não uma compensação com outra `ref` (ver B1 acima).
   if (!pedido.ok) {
-    const devolve = await creditarPontos(e, PONTOS_POR_CARTAO, TIPO_RESGATE, refResgateRollback(key));
-    return { ok: false, code: "REGISTO_FALHOU", motivo: pedido.code, pontosDevolvidos: devolve.ok === true };
+    const rev = await reverterMovimento(e, refResgate(key));
+    return { ok: false, code: "REGISTO_FALHOU", motivo: pedido.code, pontosDevolvidos: rev.ok === true && rev.revertido === true };
   }
 
   return { ok: true, idempotent: pedido.criado === false, resgate: pedido.resgate, pontos: debito.pontos };

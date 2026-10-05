@@ -184,10 +184,44 @@ test("RESGATE · ROLLBACK — se o registo do pedido falha, os 50 pontos VOLTAM"
   assert.equal(DB.db.resgates.length, 0);
   assert.equal(DB.db.pontos[0].pontos, 50, "o débito foi compensado (rollback): 50 → 0 → 50");
   const hist = DB.db.pontos[0].historico;
-  const tiposDeCompensacao = hist.slice(-2).map((h) => h.tipo);
-  assert.deepEqual(tiposDeCompensacao, ["resgate", "resgate"], "débito + compensação, ambos auditáveis no histórico");
-  assert.equal(hist.at(-2).pontos, -50);
-  assert.equal(hist.at(-1).pontos, 50);
+  assert.equal(hist.length, 1, "a reversão REMOVE a entrada do débito (não deixa compensação)");
+  assert.equal(hist.at(-1).tipo, "compra", "o histórico volta ao estado anterior");
+  assert.equal(hist.some((h) => h.tipo === "resgate"), false, "não pode sobrar nenhum movimento de resgate");
+});
+
+test("RESGATE · B1 — o RETRY com a mesma chave depois de uma falha de registo DEBITA de facto", async () => {
+  // BLOQUEANTE B1 do validador adversarial: se o rollback fosse uma COMPENSAÇÃO com outra `ref`, o
+  // débito original (`resgate:<k>`) ficava no histórico ⇒ no retry o débito era no-op mas o gate do
+  // cartão voltava a passar ⇒ criava-se o pedido SEM cobrar (medido: 502 → 201 com 50 pontos intactos).
+  semear([compra(50)], 50);
+  FALHAR_RESGATES = true;
+  const r1 = await post(resgatarCartao, corpoResgate({ idempotencyKey: "k-b1-retry" }));
+  assert.equal(r1.status, 502);
+  assert.equal(DB.db.pontos[0].pontos, 50, "a 1.ª tentativa devolveu os pontos");
+
+  FALHAR_RESGATES = false;
+  const r2 = await post(resgatarCartao, corpoResgate({ idempotencyKey: "k-b1-retry" }));
+  const b2 = await r2.json();
+  assert.equal(r2.status, 201, "o retry tem de criar o pedido");
+  assert.equal(DB.db.resgates.length, 1);
+  assert.equal(DB.db.pontos[0].pontos, 0, "…e TEM de debitar de facto (B1: nunca criar sem cobrar)");
+  assert.equal(DB.db.pontos[0].historico.filter((h) => h.ref === "resgate:k-b1-retry").length, 1,
+    "exactamente UMA entrada de débito no histórico");
+});
+
+test("RESGATE · Q1 — idempotência com EXACTAMENTE 50 pontos → 200 (não 402)", async () => {
+  // Caso-limiar medido pelo validador (Q1): sem o early-check por `idempotency_key`, o retry de um
+  // resgate já feito deixaria de ver os 50 pontos (foram debitados) e devolveria 402 em vez do 200
+  // idempotente. Com 100 pontos o defeito não aparece — é este o teste que o morde.
+  semear([compra(50)], 50);
+  const r1 = await post(resgatarCartao, corpoResgate({ idempotencyKey: "k-q1-50pts" }));
+  assert.equal(r1.status, 201);
+  const r2 = await post(resgatarCartao, corpoResgate({ idempotencyKey: "k-q1-50pts" }));
+  const b2 = await r2.json();
+  assert.equal(r2.status, 200, "o retry é IDEMPOTENTE, não «pontos insuficientes»");
+  assert.equal(b2.idempotent, true);
+  assert.equal(DB.db.pontos[0].pontos, 0, "só UMA vez debitados");
+  assert.equal(DB.db.resgates.length, 1);
 });
 
 test("RESGATE · sem Bearer → 401 (o resgate nunca é anónimo)", async () => {

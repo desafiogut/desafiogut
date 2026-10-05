@@ -36,21 +36,15 @@ const MUTANTES = [
   ["Resgate usa a podeResgatarCartao() ANTIGA (total)", LIB,
     "  try { pode = await podeResgatarCartaoComCompra(e); }",
     "  try { pode = await podeResgatarCartao(e); }", FN, ALVO_RESGATE],
-  // Idempotência do resgate removida ⇒ a mesma chave debita 2×.  [EQUIVALENTE — ver abaixo]
-  // Rollback removido ⇒ o registo falha e os pontos ficam debitados (cobrança sem pedido).
-  ["Resgate sem ROLLBACK quando o registo falha", LIB,
-    "    const devolve = await creditarPontos(e, PONTOS_POR_CARTAO, TIPO_RESGATE, refResgateRollback(key));",
-    "    const devolve = { ok: false };", FN, ALVO_RESGATE],
-];
-
-// ── MUTANTES EQUIVALENTES (declarados) — a mutação NÃO é um defeito, logo o verde está CERTO ─────
-// Medido: a idempotência do resgate tem TRÊS camadas independentes — (1) o early-check por
-// `idempotency_key`; (2) a `ref` do débito (`resgate:<chave>`, idempotente em `aplicarMovimento`);
-// (3) o UNIQUE da tabela (23505 → devolve o existente). Desligar UMA delas deixa as outras duas a
-// cobrir o caso ⇒ o comportamento NÃO regride e o teste manter-se verde é o resultado CORRECTO.
-// Um mutante só vale se a sua remoção for uma regressão (lição da série: «mutante equivalente»).
-const EQUIVALENTES = [
-  ["Resgate sem o early-check de idempotência (3 camadas)", LIB,
+  // Rollback COMPENSADO em vez de REVERTIDO ⇒ reintroduz o BLOQUEANTE B1: o retry com a mesma chave
+  // cria o pedido SEM debitar (cartão grátis). Medido pelo validador adversarial (commit 7923e7a).
+  ["B1 resgate: rollback COMPENSA em vez de reverter (cria sem cobrar)", LIB,
+    "    const rev = await reverterMovimento(e, refResgate(key));",
+    "    const rev = await creditarPontos(e, PONTOS_POR_CARTAO, TIPO_RESGATE, \"resgate-rollback:\" + key);",
+    FN, ALVO_RESGATE],
+  // Q1: sem o early-check por `idempotency_key`, o retry de um resgate com EXACTAMENTE 50 pontos
+  // devolve 402 em vez de 200 idempotente (o gate deixa de ver pontos de compra).
+  ["Q1 resgate: sem o early-check de idempotência (retry a 50 pontos → 402)", LIB,
     "  if (jaExiste) return { ok: true, idempotent: true, resgate: jaExiste, pontos: await getPontos(e) };",
     "  if (false && jaExiste) return { ok: true, idempotent: true, resgate: jaExiste, pontos: await getPontos(e) };",
     FN, ALVO_RESGATE],
@@ -87,29 +81,11 @@ try {
     if (!morto) falhas++;
     writeFileSync(f, orig);
   }
-  // Equivalentes declarados: a asserção é a INVERSA — têm de SOBREVIVER (senão a equivalência é falsa).
-  console.log("── mutantes equivalentes (declarados: remover UMA camada não é regressão) ──");
-  for (const [nome, f, de, para, cwd, args] of EQUIVALENTES) {
-    const orig = originais.get(f); const txt = orig.toString("utf8");
-    const crlf = txt.includes("\r\n");
-    const a = crlf ? de.replace(/\n/g, "\r\n") : de;
-    const b = crlf ? para.replace(/\n/g, "\r\n") : para;
-    const n = txt.split(a).length - 1;
-    if (n !== 1) { console.log(`${nome}: ALVO ${n}× — inválido`); falhas++; continue; }
-    writeFileSync(f, txt.replace(a, () => b));
-    if (md5(readFileSync(f)) === md5(orig)) { console.log(`${nome}: NÃO ENTROU`); falhas++; continue; }
-    const r = correr(cwd, args); const sobrevive = r.tests > 0 && r.fail === 0;
-    console.log(`${nome}: ${sobrevive ? "EQUIVALENTE (sobrevive, como esperado)" : "MORREU — a equivalência é FALSA"}`);
-    if (!sobrevive) falhas++;
-    writeFileSync(f, orig);
-  }
 } finally {
   for (const [f, orig] of originais) {
     writeFileSync(f, orig); const ok = md5(readFileSync(f)) === md5(orig); if (!ok) falhas++;
     console.log(`restauração ${f.split(/[\\/]/).pop()}: md5 ${ok ? "IDÊNTICO" : "DIFERENTE!"}`);
   }
 }
-console.log(falhas === 0
-  ? `VEREDITO: ${MUTANTES.length}/${MUTANTES.length} PROVADOS + ${EQUIVALENTES.length} EQUIVALENTE(S) DECLARADO(S)`
-  : `VEREDITO: ${falhas} FALHA(S)`);
+console.log(falhas === 0 ? `VEREDITO: ${MUTANTES.length}/${MUTANTES.length} PROVADOS` : `VEREDITO: ${falhas} FALHA(S)`);
 process.exit(falhas === 0 ? 0 : 1);
