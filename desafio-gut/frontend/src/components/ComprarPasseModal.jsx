@@ -7,6 +7,16 @@
 // Props: { aberto, onConfirmar, onCancelar, loading, pontos }
 //   · loading → o botão «Confirmar» mostra o spinner e ambos os botões ficam desactivados;
 //     o ESC/backdrop NÃO fecham durante o loading (não se abandona uma compra a meio).
+//
+// ⚠️ UTAC106f-R1t (rótulo, 2026-10-04): a linha «Teus pontos» passou a dizer **«(total)»** e a
+// declarar «o cartão conta só os pontos das compras». MOTIVO: o ℹ️ do validador do R1v mostrou que
+// este número (que vem de `useComprarPasse().pontos`, a resposta de `comprar-passe-pontos` — o TOTAL
+// da coluna `pontos`) era lido como se fosse o contador do cartão, contradizendo a barra «48 / 50» do
+// ecrã Ofertas. ⚠️ O valor aqui continua a ser o TOTAL: a Carteira NÃO tem acesso a `pontosCartao`
+// (medido: `pontosCartao` não existe em `MinhaCarteira.jsx`, `useComprarPasse.js`, `AppContext.jsx`
+// nem em `comprar-passe-pontos.mjs`) — mostrar os pontos de CARTÃO aqui exigiria alterar um desses
+// ficheiros, FORA do escopo autorizado. O rótulo honesto é o que o escopo permite; a decisão do
+// operador (mostrar `pontosCartao`) fica escalada.
 
 import { Modal } from "@/components/ui";
 
@@ -36,8 +46,9 @@ export default function ComprarPasseModal({ aberto, onConfirmar, onCancelar, loa
 
       {typeof pontos === "number" && (
         <p style={{ margin: "0 0 0.9rem", color: COR.muted, fontSize: "0.82rem" }}>
-          Teus pontos: <strong style={{ color: COR.gold }}>{pontos}</strong> →{" "}
-          <strong style={{ color: COR.gold }}>{pontos + PONTOS_POR_PASSE}</strong>
+          Teus pontos (total): <strong style={{ color: COR.gold }}>{pontos}</strong> →{" "}
+          <strong style={{ color: COR.gold }}>{pontos + PONTOS_POR_PASSE}</strong>{" "}
+          — o cartão conta só os pontos das compras.
         </p>
       )}
 

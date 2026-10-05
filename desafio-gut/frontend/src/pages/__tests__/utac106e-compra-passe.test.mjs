@@ -258,10 +258,16 @@ test("RENDER · durante o loading, «Confirmar» mostra o SPINNER e ambos os bot
   assert.equal(desactivados, 2, `os DOIS botões deviam estar desactivados; medidos ${desactivados}`);
 });
 
-test("RENDER · o balão mostra a progressão dos pontos (pontos → pontos + 1)", () => {
+test("RENDER · o balão mostra a progressão dos pontos, DECLARANDO que é o TOTAL (não o cartão)", () => {
+  // UTAC106f-R1t: o número aqui é o TOTAL (vem de `comprar-passe-pontos`, coluna `pontos`). O ℹ️ do
+  // validador do R1v apanhou a incoerência com a barra «48 / 50» do ecrã Ofertas; o rótulo passa a
+  // dizer «(total)» e a lembrar que o cartão só conta as compras. O valor de CARTÃO não é acessível
+  // aqui dentro do escopo (ver o cabeçalho do componente).
   const h = renderToStaticMarkup(React.createElement(ComprarPasseModal, {
     aberto: true, loading: false, pontos: 49, onConfirmar: () => {}, onCancelar: () => {},
   }));
   const t = semTags(h);
-  assert.match(t, /Teus pontos: 49 → 50/, `a progressão dos pontos não apareceu: «${t}»`);
+  assert.match(t, /Teus pontos \(total\): 49 → 50/, `a progressão (total) não apareceu: «${t}»`);
+  assert.match(t, /o cartão conta só os pontos das compras/,
+    "o rótulo tem de declarar que este número é o total — o cartão conta só as compras");
 });

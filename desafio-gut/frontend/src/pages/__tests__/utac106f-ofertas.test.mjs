@@ -179,6 +179,19 @@ test("R1 REGRESSÃO · 48 de COMPRA + 2 de bónus (total 50) NÃO mostra «Resga
   } finally { c.dup.restaurar(); }
 });
 
+test("R1 REGRESSÃO · a LARGURA da barra usa pontosCartao (não o TOTAL)", async () => {
+  // Achado R-F do validador do R1v: o TEXTO «48 / 50» e o `aria-valuenow` estavam guardados, mas a
+  // LARGURA (`style={{ width: `${progresso}%` }}`) podia reverter para o total e ficar verde — a barra
+  // enchia a 100 % enquanto o texto dizia 48/50. Com 48 de cartão sobre 50, a largura TEM de ser 96 %.
+  const c = await montarEcra(() => ({ status: 200, json: LEITURA({
+    pontos: 50, pontosCartao: 48, bonusPalpite: 2, podeResgatarCartao: false,
+  }) }));
+  try {
+    assert.match(c.html(), /role="progressbar"[\s\S]{0,400}?width:96%/,
+      "a LARGURA da barra tem de reflectir os pontos de CARTÃO (96 %), não o total (100 %)");
+  } finally { c.dup.restaurar(); }
+});
+
 // ═══ ESTADO VAZIO ═══════════════════════════════════════════════════════════════════════════════
 test("RENDER · 0 pontos → estado vazio com caminho para a Carteira", async () => {
   const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 0, pontosCartao: 0, historico: [] }) }));
