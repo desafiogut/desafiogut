@@ -380,3 +380,25 @@ Nenhum ficheiro de `src/` ou `netlify/` foi alterado; `useComprarPasse.js`,
 `comprar-passe-pontos.mjs`, `_lib/passe-pontos.mjs`, `ler-pontos.mjs`, `_lib/jwt.mjs`,
 `MinhaCarteira.jsx` e `ComprarPasseModal.jsx` ficaram **intocados** (só leitura). **Sem deploy.**
 O ruído `eth_getFilterChanges` **não** foi tocado. A decisão da correcção é do operador.
+
+### Custo e commits (R18)
+
+Medido por diferença — a plataforma **partilha a sessão CLI** entre UTACs:
+
+| Sessão | `source` | chamadas | custo estimado |
+|---|---|---|---|
+| `20261004_205634_2804b6` — no fecho do 106h era **365 chamadas / US$ 0,4695**; agora **451 / US$ 0,6025** ⇒ **Δ deste UTAC ≈ US$ 0,133** | `cli` | +86 | ≈ 0,133 |
+| `20261005_030322_cff20d` (validador adversarial) | `subagent` | 25 | 0,0191 |
+| **Total estimado do UTAC** | | | **≈ US$ 0,152** |
+
+- **Saldo da API:** abertura (referência, fecho do 106h) **US$ 4,28** → fecho **US$ 3,82** ⇒ **Δ = US$ 0,46**
+  (medida **real**). ⚠️ As duas leituras não reconciliam (0,152 estimado vs 0,46 medido) — a base é
+  instável; reportam-se **as duas, separadas**.
+
+**Commits (foreground, ficheiros individuais — NUNCA `git add -A`):** `b7dad75` (baseline) →
+`e587a53` (registo + bloco R14). Empurrado: `b7dad75..e587a53`. **Sem deploy** (o enunciado não autoriza).
+
+**Limpeza:** worktree `C:/Users/Moltbot/tmp-106j-val/wt` removido (helper A13); `node_modules` real
+380/568/498/414 → 380/568/498/414 (idêntico); nenhum processo node pendurado (2 = MCP do utilizador).
+Veredicto e sondas do validador preservados em `C:/Users/Moltbot/tmp-106j-val/` (a prova que este
+registo cita).
