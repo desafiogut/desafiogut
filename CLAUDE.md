@@ -4689,3 +4689,38 @@ bloqueantes**; N-1/N-4 corrigidos (nao re-validados), N-2/N-3 para o 107b. Verba
 e `_SEG6_VALIDADOR-R2.md`. Lacunas para o 107b: endpoint de lances de edicao Programada (E-1), senhas on-chain invisiveis no
 mobile (E-3), Dashboard sem `usePontos`, `/mercado` fixo na R-1. Custo em USD nao medido (sem `state.db`); subagente ≈ 470 k
 tokens. Log: `_logs/UTAC107a-front-mockups.md`; relatorio: `Desktop/RELATORIO-UTAC107a-front-MOCKUPS.txt`.
+
+
+## R14 (append) -- UTAC107b -- CARTEIRA: botoes, ordem, contraste, Regra 1 (hermes)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `3714bbe` (= origin/main). **Commits:**
+`3714bbe` -> `f1dc10f` (codigo) -> `f0da383` (correccoes pos-veredicto) -> registo. **Suite:**
+frontend VERDE **779/779** (+5) · backend VERDE 1061/1067. **Deploy:** live (entry
+`index-BGDcUbTp.js` -> `index-C85vkUz0.js`; chunk da Carteira `MinhaCarteira-Dxs6j9bI.js` ->
+`MinhaCarteira-jQnp-D7l.js`). Mockup aplicado: `docs/mockups-107a/carteira.html` (variante A).
+
+**As 7 decisoes:** (1) removido o botao «Trocar R$ 2,00 -> 1 Senha» (+ orfaos `useTrocarPorSenhas`/
+`CreditoStatus`/`creditoTxHash`/`trocaInfo`/`trocaErro`); (2) «⚡ Menor Lance Unico» -> `/mercado`;
+(3) «🎫 Ofertas Programadas» -> `/ofertas-programadas` (NOVO); (4) ordem Depositar PIX -> Comprar
+Passe -> MLC -> OP; (5) contraste do Passe: **dourado solido `#f5a623` + texto navy `#0a0f1a` =
+9,45:1** (era branco = 2,03:1); (6) Regra 1: o aviso 402 passou para DENTRO do vidro (R18-E
+removeu a pilula «R$ OFF-CHAIN» e a frase de apoio); (7) e-mail PIX MANTIDO -- SEG0 mediu que o
+modal de deposito mostra o codigo PIX, **nao** o destinatario (unico sitio: `MinhaCarteira.jsx:304`).
+
+**Testes/mutacao:** +5 testes (contraste WCAG, ordem, Regra 1, e-mail, clique das OP); **mutacao
+5/5 RED**, restaurado byte-identico.
+
+**Validador adversarial (worktree `f1dc10f`, A13):** **APROVADO · 0 bloqueantes (2 notas i)**,
+por sonda de render propria + AST (acorn/acorn-jsx) + mutacoes fora do worktree. **Uma alegacao
+minha REFUTADA (i-N1):** o guard `vocabularioUI` era satisfeito pelos `title=` -- apagar os rotulos
+visiveis mantinha-o VERDE; **fechado com codigo** em `f0da383` (exige os nomes como **rotulo
+VISIVEL**; a mutacao volta a dar RED). i-N2 (aliases mortos) fechado. **Erro do instrumento:** o
+validador esgotou as iteracoes ANTES de gravar o veredicto -- transcrito do resumo, com nota.
+Correccoes pos-veredicto NAO re-validadas.
+
+**RESIDUO ESCALADO (nao corrigido):** `ComprarFichasModal.jsx:547` (sucesso do deposito) diz «use
+Trocar R$ por Senhas na carteira» -- instrucao obsoleta desde a decisao 1; fora do escopo (RESSALVA 1).
+
+**Registo:** `_logs/UTAC107b-carteira.md` · `_logs/UTAC107b_SEG8_VALIDADOR.md` ·
+`Desktop/RELATORIO-UTAC107b-CARTEIRA.txt`. **Custo:** ~US$ 0,159 (executor ~0,126 + validador
+~0,033); saldo API 2,10 -> 1,78 (delta ~0,32); duracao ~45 min. **Proximo:** UTAC107c (Inicio).
