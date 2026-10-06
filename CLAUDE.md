@@ -4724,3 +4724,28 @@ Trocar R$ por Senhas na carteira» -- instrucao obsoleta desde a decisao 1; fora
 **Registo:** `_logs/UTAC107b-carteira.md` · `_logs/UTAC107b_SEG8_VALIDADOR.md` ·
 `Desktop/RELATORIO-UTAC107b-CARTEIRA.txt`. **Custo:** ~US$ 0,159 (executor ~0,126 + validador
 ~0,033); saldo API 2,10 -> 1,78 (delta ~0,32); duracao ~45 min. **Proximo:** UTAC107c (Inicio).
+
+## R14 (append) -- UTAC107c -- INICIO: Passe Desafio + destino + pendencia 107b (Claude Code, Opus 5.5)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `b4eb151`. **Commits:** `fc06e0a` (codigo) -> `5ce939b` (correccao
+pos-veredicto) -> registo. **Suite:** frontend VERDE **783/783** · backend VERDE 1061/1067. **Deploy:** live (entry
+`index-CTHlkxI4.js` -> `index-CTjgmNWO.js`; o Dashboard vive agora no chunk `PrivyRoot-DiNpEIuB.js`).
+
+**SEG0 PAROU (R20):** o mockup aprovado (`inicio.html`, variante A / R18-F) divergia do enunciado. Decisoes do operador
+(R18, 2026-10-06): **R18-A** os KPIs «Lances Unicos»/«Total de Lances» FICAM (a decisao 3 do enunciado foi revogada);
+**R18-B** sem barra de progresso; **R18-C** divisao Relampago/Programadas e rotulo do botao da Edicao Ativa FORA do escopo;
+**R18-D** o comentario `ComprarFichasModal.jsx:490` tambem actualizado.
+
+**Feito:** tile «Senhas» (saldoSenhas, Via A) -> **«🎟️ Passe Desafio» X / 50** com `pontosCartao` do `usePontos`
+(`/ler-pontos`), destino **`/ofertas-programadas`**; estados: sem conta «—», a carregar/token por cunhar = skeleton, erro «—»,
+vazio «0 / 50 · comece ja»; card **🏆 Menor Lance Unico removido** (o vencedor continua no `FimEdicaoOverlay`); Regra 1:
+«Outras Edicoes» dentro de `GlassCard`; contraste 9,07:1 / 4,60:1. `ComprarFichasModal.jsx:547` -> «Para o Lance Programado,
+o app converte R$ 2,00 em 1 senha automaticamente» (coerente com `CardLance.jsx:416`). **Mutacao 10/10 RED.**
+
+**Validador adversarial: APROVADO COM RESSALVAS** -- (a)-(l) resistiram; ⚠️ V1 «0 / 50» prematuro durante 1 commit na
+transicao de sessao (login; refresh com token em cache) -- **corrigido** com `estadoPasse(memo, …)` puro no Dashboard (o hook
+e partilhado com OP, fora do escopo) + 5 testes de sequencia; ℹ️ NaN -> «—», comentario do stub. Correccoes NAO re-validadas.
+⚠️ Lição do instrumento: asset inexistente devolve 200 (rewrite SPA) -- medir pelo nome referenciado + content-type.
+**Escopo:** backend, `_lib`, AppContext, App.jsx, Carteira/MLC/OP, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
+**Registo:** `_logs/UTAC107c-inicio.md` · `_logs/UTAC107c_SEG7_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107c-INICIO.txt`.
+**Custo:** USD nao medido (sem `state.db`); validador ≈ 105 k tokens; duracao ≈ 1 h. **Proximo:** UTAC107d (MLC).
