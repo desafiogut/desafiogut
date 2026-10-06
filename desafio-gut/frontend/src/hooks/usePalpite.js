@@ -24,8 +24,11 @@ export function usePalpite(edicaoId, palpiteInicial = null) {
   // O palpite que veio do `usePontos` é a fonte de verdade até haver um registo novo.
   useEffect(() => { setPalpite(palpiteInicial ?? null); }, [palpiteInicial]);
 
-  const registar = useCallback(async (valor) => {
-    if (!edicaoId) return { ok: false, code: "sem_edicao", message: "Sem edição a decorrer" };
+  // UTAC107e.1 — `edicaoIdArg` (opcional): a OP passou a ter UM cartão por edição Programada e
+  // regista o palpite na edição do cartão tocado. Omitido → a edição do hook (comportamento de antes).
+  const registar = useCallback(async (valor, edicaoIdArg = edicaoId) => {
+    const alvo = edicaoIdArg;
+    if (!alvo) return { ok: false, code: "sem_edicao", message: "Sem edição a decorrer" };
     if (!Number.isInteger(valor) || valor < 0) {
       return { ok: false, code: "valor_invalido", message: "Escreve um número inteiro de lances" };
     }
@@ -36,9 +39,9 @@ export function usePalpite(edicaoId, palpiteInicial = null) {
     setLoading(true);
     setErro("");
     try {
-      const { ok, status, data } = await apiPost("registar-palpite", { edicaoId, valor }, { token: authToken });
+      const { ok, status, data } = await apiPost("registar-palpite", { edicaoId: alvo, valor }, { token: authToken });
       if (ok) {
-        const p = data?.palpite ?? { edicaoId, valor };
+        const p = data?.palpite ?? { edicaoId: alvo, valor };
         setPalpite(p);
         return { ok: true, palpite: p, idempotent: data?.idempotent === true };
       }

@@ -703,11 +703,6 @@ export function AppProvider({ children }) {
 
   const lancesExibidos = modalidade === "flash" ? lancesFlash : lances;
 
-  // Vencedor LOCAL — Menor Lance Único (Art. 8), apurado dos lances que ESTE browser viu.
-  const vencedorLocal = [...lancesExibidos]
-    .filter((l) => !l.repetido)
-    .sort((a, b) => a.valor - b.valor)[0] ?? null;
-
   // ── UTAC000.10 (DEBT-009) — O VENCEDOR EXPOSTO É O OFICIAL QUANDO EXISTE ─────────
   // O `vencedorLocal` acima é, em mainnet, «o menor único que ESTE browser viu»: o valor do
   // lance nunca vai em claro para a cadeia (vai o `keccak256`, evento `LanceComprometido`) e a
@@ -718,9 +713,12 @@ export function AppProvider({ children }) {
   // A FORMA é a mesma (`{ endereco, valor }`) e o NOME (`vencedor`) não muda — nenhum consumidor
   // (o overlay do MercadoLances, o card do Dashboard, o overlay de fim) precisa de ser tocado.
   const resultadoOficial = useResultadoOficial(EDICAO_ATIVA);
+  // UTAC107e.1 (V2, decisão do operador) — o 🏆 só existe com o resultado OFICIAL: o apuramento local
+  // («vencedorLocal», UTAC000.10) SAIU — sem resultado oficial, `vencedor` é `null` (os overlays e o
+  // Dashboard já tratam o `null`). Única alteração neste ficheiro (extensão de escopo declarada).
   const vencedor = resultadoOficial
     ? { endereco: resultadoOficial.vencedor, valor: resultadoOficial.menorUnicoCentavos }
-    : vencedorLocal;
+    : null;
 
   // ── Reset versionado ─────────────────────────────────────────────────────
   // Limpa localStorage legado e desloga a sessão Privy UMA ÚNICA VEZ por

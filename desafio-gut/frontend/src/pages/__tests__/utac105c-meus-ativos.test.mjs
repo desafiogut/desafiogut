@@ -124,8 +124,10 @@ describe("UTAC105c · Frente B — o 🏆 vai para o menor lance único DA EDIÇ
         { valor: 100, repetido: false, endereco: EU },
       ];
       const html = renderizar({ contexto: { lances, address: EU, isConnected: true }, mobile });
-      assert.deepEqual(vencedoresNoEcra(html), ["1.00"]);
-      assert.equal(trofeusNaLista(html), 2, "a linha vencedora tem de ter 🏆 na posição E no selo — e mais nenhuma");
+      // ⚠️ UTAC107e.1 (V2): sem resultado oficial NINGUÉM leva 🏆 — nem o 1.º lance dado (o defeito
+      // que o UTAC105c fechou) nem o menor único local. Com oficial: `utac0008-resultado-oficial`.
+      assert.deepEqual(vencedoresNoEcra(html), []);
+      assert.equal(trofeusNaLista(html), 0, "há 🏆 sem resultado oficial (V2)");
     });
 
     test(`${nome}: um lance repetido mais baixo não conta — vence o menor ÚNICO`, () => {
@@ -135,8 +137,8 @@ describe("UTAC105c · Frente B — o 🏆 vai para o menor lance único DA EDIÇ
         { valor: 200, repetido: false, endereco: EU },
       ];
       const html = renderizar({ contexto: { lances, address: EU, isConnected: true }, mobile });
-      assert.deepEqual(vencedoresNoEcra(html), ["2.00"]);
-      assert.equal(trofeusNaLista(html), 2);
+      assert.deepEqual(vencedoresNoEcra(html), []); // V2
+      assert.equal(trofeusNaLista(html), 0);
     });
 
     test(`${nome}: sem sessão, a lista de todos mostra o 🏆 no menor único (não regride)`, () => {
@@ -145,8 +147,8 @@ describe("UTAC105c · Frente B — o 🏆 vai para o menor lance único DA EDIÇ
         { valor: 100, repetido: false, endereco: OUTRO },
       ];
       const html = renderizar({ contexto: { lances }, mobile });
-      assert.deepEqual(vencedoresNoEcra(html), ["1.00"]);
-      assert.equal(trofeusNaLista(html), 2);
+      assert.deepEqual(vencedoresNoEcra(html), []); // V2
+      assert.equal(trofeusNaLista(html), 0);
     });
   }
 

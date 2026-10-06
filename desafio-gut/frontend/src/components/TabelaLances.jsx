@@ -67,7 +67,10 @@ export default function TabelaLances({ lances = [], idEdicao, prazoTimestamp, en
         && Number(l.valor) === resultadoOficial.menorUnicoCentavos
         && String(l?.endereco ?? "").toLowerCase() === resultadoOficial.vencedor);
     }
-    return lancesOrdenados.findIndex((l) => !l.repetido);
+    // UTAC107e.1 (V2, decisão do operador) — o 🏆 só existe com o resultado OFICIAL (`resultados()`
+    // on-chain). Sem ele NINGUÉM leva 🏆 — o «1.º único da lista» era o menor único que ESTE browser
+    // viu, não o da edição. Muda o comportamento do UTAC000.9 (que mantinha o apuramento local).
+    return -1;
   }, [lancesOrdenados, resultadoOficial]);
 
   return (

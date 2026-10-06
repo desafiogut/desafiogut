@@ -90,7 +90,9 @@ export default function MeusAtivos() {
   const menorUnicoLocal = todosLances.filter((l) => !l.repetido)[0];
   // Com resultado oficial não há «objecto local» a assinalar — a linha vencedora é
   // identificada por endereço+valor (`ehLinhaVencedora`), e pode nem estar na lista.
-  const menorUnico = resultadoOficial ? null : menorUnicoLocal;
+  // UTAC107e.1 (V2, decisão do operador) — o 🏆 só existe com o resultado OFICIAL: sem ele, nenhuma
+  // linha é assinalada (era o `menorUnicoLocal` — UTAC000.8). O cartão «Menor Lance» (valor) mantém-se.
+  const menorUnico = null;
   const valorMenorLance = resultadoOficial
     ? `R$ ${(resultadoOficial.menorUnicoCentavos / 100).toFixed(2)}`
     : menorUnicoLocal ? `R$ ${(menorUnicoLocal.valor / 100).toFixed(2)}` : "—";

@@ -70,8 +70,9 @@ describe("UTAC000.15 · o Provider REAL expõe o vencedor oficial (valor do cont
     t.after(() => p.desmontar());
     assert.ok(p.chamadasFetch().some((u) => u.includes("lances-flash?edicaoId=R-1")), "o Provider não pediu os lances-flash");
     assert.equal(p.valor().lances.length, 2, "os lances locais não entraram no estado do Provider");
-    // Sem oficial → a reserva LOCAL (comportamento anterior, zero regressões).
-    assert.match(p.html(), new RegExp(`data-vencedor="${OUTRO}\\|100"`), "sem oficial devia expor o vencedor LOCAL");
+    // ⚠️ UTAC107e.1 (V2): sem oficial o Provider expõe vencedor NULO — a reserva LOCAL saiu (o 🏆
+    // só com resultado oficial). Os lances locais chegam (asserção acima), mas NÃO elegem ninguém.
+    assert.match(p.html(), /data-vencedor="nenhum"/, "sem oficial o Provider elegeu um vencedor LOCAL (V2)");
   });
 
   test("com resultado OFICIAL: a página lê EU/300 do contexto, e não o local OUTRO/100", async (t) => {
@@ -94,7 +95,7 @@ describe("UTAC000.15 · o Provider REAL expõe o vencedor oficial (valor do cont
   // Validador ⚠️2/ℹ️3: a modalidade `programado` (lances on-chain via `LanceDado`) e uma fixture com
   // repetidos e o menor único LOCAL abaixo de 50 centavos.
   for (const [nome, oficial, esperado] of [
-    ["sem oficial → a reserva LOCAL dos lances on-chain", null, `${OUTRO}|30`],
+    ["sem oficial → NENHUM vencedor (V2: a reserva LOCAL saiu)", null, "nenhum"],
     ["com oficial → o OFICIAL, mesmo em programado", OFICIAL, `${EU}|300`],
   ]) {
     test(`programado: ${nome}`, async (t) => {

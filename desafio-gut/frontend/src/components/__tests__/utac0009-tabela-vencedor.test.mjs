@@ -106,22 +106,23 @@ describe("UTAC000.9 · TabelaLances — o 🏆 é o vencedor OFICIAL quando exis
       `o 🏆 foi para OUTRA pessoa: ${JSON.stringify(venc)} (esperado ${EU.slice(0, 6)}...)`);
   });
 
-  test("fonte OFICIAL: o apuramento local elegeria OUTRO (100) — o teste morde se a correcção cair", () => {
+  // ⚠️ UTAC107e.1 (V2) — sem resultado oficial NINGUÉM leva 🏆 (era o apuramento local do UTAC000.9).
+  // `venc.every(...)` sobre uma lista vazia passaria SEMPRE (vácuo) — por isso a prova é o COMPRIMENTO.
+  test("V2: sem resultado oficial NINGUÉM leva 🏆 (o apuramento local elegeria OUTRO)", () => {
     const semOficial = renderizar({ lances, resultadoOficial: null });
-    const venc = enderecosVencedores(semOficial);
-    assert.ok(venc.every((e) => e && e.startsWith(OUTRO.slice(0, 6))),
-      `o comportamento local mudou (esperado ${OUTRO.slice(0, 6)}...): ${JSON.stringify(venc)}`);
+    assert.equal(enderecosVencedores(semOficial).length, 0, "deu 🏆 sem resultado oficial (V2)");
+    assert.equal(trofeus(semOficial), 0, "há 🏆 no ecrã sem resultado oficial (V2)");
   });
 
-  test("SEM resultado oficial: mantém-se o apuramento local (zero regressões)", () => {
+  test("V2: sem resultado oficial as linhas desenham-se, mas sem 🏆 (controlo: não são 0 linhas)", () => {
     const lancesSimples = [
       { endereco: EU,    valor: 500, repetido: false },
       { endereco: OUTRO, valor: 100, repetido: false },
     ];
     const html = renderizar({ lances: lancesSimples });
-    const venc = enderecosVencedores(html);
-    assert.ok(venc.every((e) => e && e.startsWith(OUTRO.slice(0, 6))), "o menor local deixou de vencer");
-    assert.equal(trofeus(html), 1, "a linha vencedora tem UM 🏆 (coluna «#») — e mais nenhuma (UTAC107d: o selo saiu)");
+    assert.equal((html.match(/<tr[\s\S]*?<\/tr>/g) || []).filter((l) => l.includes("0x")).length, 2,
+      "controlo: as duas linhas deviam ter sido desenhadas");
+    assert.equal(trofeus(html), 0, "há 🏆 sem resultado oficial (V2)");
   });
 
   test("o vencedor oficial AUSENTE da lista → nenhum 🏆 (não se assinala por aproximação)", () => {

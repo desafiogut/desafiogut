@@ -21,7 +21,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "../hooks/useIsMobile.js";
-import { GlassCard } from "@/components/ui";
+import { GlassCard, THead, TH } from "@/components/ui";
+// UTAC107e.1 — a etiqueta de estado de cada cartão vem da MESMA fonte única das outras abas.
+import { getEstadoEdicao } from "../utils/edicao.js";
 import Toast from "../widgets/toast/Toast.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
 import { usePontos } from "../hooks/usePontos.js";
@@ -39,11 +41,35 @@ const CARTAO_DESCRICAO =
   "Cartão colecionável físico, com a arte da Família Quildo. Acumula 50 pontos para trocar por ele. "
   + "O palpite dá pontos EXTRA, mas o cartão conquista-se só com os pontos das tuas compras.";
 
-/** Primeira edição PROGRAMADA aberta (o palpite é sobre o nº de lances dela). */
-function edicaoProgramadaDe(edicoes) {
-  const lista = Object.values(edicoes ?? {});
-  return lista.find((e) => e?.tipo === "programado" && e?.status !== "encerrado") ?? null;
+/** Edição Programada ainda a aceitar palpites (o backend exige `status === "aberto"`). */
+const estaAberta = (e) => e?.status === "aberto";
+
+/**
+ * UTAC107e.1 — TODAS as edições Programadas, abertas primeiro (era só a 1.ª aberta: o palpite
+ * ficava longe do produto e só servia uma edição — achado do mockup `ofertas-programadas.html`).
+ */
+function edicoesProgramadasDe(edicoes) {
+  const lista = Object.values(edicoes ?? {}).filter((e) => e?.tipo === "programado" && e?.id);
+  return lista.sort((a, b) => Number(estaAberta(b)) - Number(estaAberta(a)));
 }
+
+/**
+ * UTAC107e.1 — os 5 estados do palpite, cartão a cartão (mockup, variante A). A copy segue o
+ * mockup e não o enunciado: o backend premeia o palpite MAIS PRÓXIMO, não o exacto (`apurar-palpite`,
+ * `mais_proximo`/`perdeu`) — «Acertou!» seria falso (achado E-2 do validador do 107a-front).
+ */
+export function estadoPalpite(edicao, palpite) {
+  if (palpite?.apurado === true) return palpite.resultado === "mais_proximo" ? "mais_proximo" : "perdeu";
+  if (palpite) return "com_palpite";
+  return estaAberta(edicao) ? "sem_palpite" : "encerrada";
+}
+const PILULA = {
+  sem_palpite:  { texto: "SEM PALPITE",       cor: "#e8f0fe" },
+  com_palpite:  { texto: "COM PALPITE",       cor: "#f5a623" },
+  mais_proximo: { texto: "MAIS PRÓXIMO",      cor: "#3ddc84" },
+  perdeu:       { texto: "NÃO FOI DESSA VEZ", cor: "#ff8a8d" },
+  encerrada:    { texto: "ENCERRADA",         cor: "#6b7db8" },
+};
 
 const dataCurta = (iso) => {
   const d = new Date(iso);
@@ -59,16 +85,20 @@ export default function OfertasProgramadas() {
   // (`pontosCartao`); `pontos` é o TOTAL e `bonusPalpite` é a parte que NÃO conta (prestígio).
   const { pontos, pontosCartao, bonusPalpite, historico, palpites, pontosParaCartao, podeResgatarCartao, loading, erro, refetch: refetchPontos } = usePontos();
 
-  const edicao = useMemo(() => edicaoProgramadaDe(edicoes), [edicoes]);
-  const palpiteDesta = useMemo(
-    () => (Array.isArray(palpites) ? palpites.find((p) => p?.edicaoId === edicao?.id) ?? null : null),
-    [palpites, edicao],
-  );
-  const { palpite, registar, loading: aPalpitar, erro: erroPalpite } = usePalpite(edicao?.id, palpiteDesta);
+  const programadas = useMemo(() => edicoesProgramadasDe(edicoes), [edicoes]);
+  // A tabela do fim é da 1.ª edição da lista (a aberta, quando há).
+  const edicaoTabela = programadas[0] ?? null;
+  // Um só hook para todos os cartões: o `registar` recebe a edição do cartão tocado (UTAC107e.1).
+  const { registar, loading: aPalpitar, erro: erroPalpite } = usePalpite(null);
+  // Palpites registados nesta sessão (antes de o `ler-pontos` os devolver) e o rascunho de cada cartão.
+  const [registados, setRegistados] = useState({});
+  const [valores, setValores] = useState({});
+  const [cartaoEmErro, setCartaoEmErro] = useState(null);
+  const palpiteDe = (id) => registados[id]
+    ?? (Array.isArray(palpites) ? palpites.find((p) => p?.edicaoId === id) ?? null : null);
   // UTAC106g — resgate do cartão colecionável.
   const { resgatar, loading: aResgatar, erro: erroResgate } = useResgatarCartao();
 
-  const [valorPalpite, setValorPalpite] = useState("");
   const [toast, setToast] = useState(null);
   // UTAC106g — estado do balão de resgate.
   const [resgateAberto, setResgateAberto] = useState(false);
@@ -86,15 +116,89 @@ export default function OfertasProgramadas() {
   const progresso = Math.min(100, Math.round((pontosCartao / Math.max(1, pontosParaCartao)) * 100));
   const semPontos = !loading && !erro && pontos === 0;
 
-  async function palpitar() {
-    const n = Number(String(valorPalpite).trim());
-    const r = await registar(Number.isInteger(n) ? n : NaN);
+  async function palpitar(edicaoId) {
+    const n = Number(String(valores[edicaoId] ?? "").trim());
+    const r = await registar(Number.isInteger(n) ? n : NaN, edicaoId);
     if (r?.ok) {
-      setValorPalpite("");
-      setToast({ variant: "success", message: r.idempotent ? "Já tinhas palpitado nesta edição" : "Palpite registado!" });
+      setRegistados((m) => ({ ...m, [edicaoId]: r.palpite }));
+      setValores((m) => ({ ...m, [edicaoId]: "" }));
+      setCartaoEmErro(null);
+      setToast({ variant: "success", message: r.idempotent ? "Você já tinha palpitado nesta edição" : "Palpite registrado!" });
     } else {
-      setToast({ variant: "error", message: r?.message || "Não foi possível registar o palpite" });
+      setCartaoEmErro(edicaoId);
+      setToast({ variant: "error", message: r?.message || "Não foi possível registrar o palpite" });
     }
+  }
+
+  /** UM cartão de edição Programada (função, não componente: o palpite vive no estado da página). */
+  function cartaoEdicao(ed) {
+    const palpite = palpiteDe(ed.id);
+    const estado = estadoPalpite(ed, palpite);
+    const est = getEstadoEdicao(ed);
+    const pil = PILULA[estado];
+    const idCampo = `palpite-${ed.id}`;
+    return (
+      <div key={ed.id} data-testid="op-edicao-item" style={{ flex: "0 0 100%", minWidth: 0, scrollSnapAlign: "start" }}>
+        <GlassCard as="article" data-estado-palpite={estado} aria-label={`Edição ${ed.id}`} style={{ padding: isMobile ? "1rem" : "1.25rem", height: "100%" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+            <span style={{ fontSize: "0.72rem", fontWeight: 800, color: COR.gold, border: "1px solid rgba(245,166,35,0.35)", borderRadius: "999px", padding: "0.2rem 0.6rem" }}>{ed.id}</span>
+            <span style={{ fontSize: "0.72rem", fontWeight: 800, color: pil.cor, letterSpacing: "0.04em" }}>{pil.texto}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", margin: "0.75rem 0", padding: "0.6rem 0.75rem", background: "rgba(245,166,35,0.07)", border: "1px solid rgba(245,166,35,0.22)", borderRadius: "10px" }}>
+            <span aria-hidden="true" style={{ fontSize: "1.6rem" }}>🎁</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: "0.7rem", color: COR.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Prêmio</div>
+              <div style={{ color: COR.gold, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ed.produto || "Prêmio a anunciar"}</div>
+              <div style={{ color: COR.muted, fontSize: "0.78rem" }}>{est.timer ?? est.rotuloLongo}</div>
+            </div>
+          </div>
+
+          {estado === "sem_palpite" && (
+            <div>
+              <label htmlFor={idCampo} style={{ display: "block", color: COR.text, fontSize: "0.82rem", fontWeight: 700, marginBottom: "0.35rem" }}>Seu palpite (nº de lances)</label>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                <input
+                  id={idCampo} type="number" inputMode="numeric" min="0" step="1"
+                  value={valores[ed.id] ?? ""}
+                  onChange={(e) => setValores((m) => ({ ...m, [ed.id]: e.target.value }))}
+                  placeholder="Ex.: 120"
+                  style={{ flex: "1 1 120px", minHeight: "48px", padding: "0.6rem 0.75rem", borderRadius: "10px", border: "1px solid rgba(107,125,184,0.45)", background: "rgba(12,16,24,0.55)", color: COR.text, fontSize: "0.9rem" }}
+                />
+                <button
+                  type="button" onClick={() => palpitar(ed.id)} disabled={aPalpitar}
+                  style={{ minHeight: "48px", padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : "pointer", border: "none", background: aPalpitar ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
+                >
+                  {aPalpitar ? "Enviando…" : "Palpitar"}
+                </button>
+              </div>
+            </div>
+          )}
+          {estado === "com_palpite" && (
+            <div>
+              <p style={{ margin: 0, color: COR.ok, fontWeight: 700, fontSize: "0.86rem" }}>Seu palpite: {palpite.valor} lances</p>
+              <p style={{ margin: "0.3rem 0 0", color: COR.muted, fontSize: "0.78rem" }}>Resultado no fim da edição.</p>
+            </div>
+          )}
+          {estado === "mais_proximo" && (
+            <p style={{ margin: 0, color: COR.ok, fontWeight: 800, fontSize: "0.88rem" }}>
+              🎯 +2 pontos! Seu palpite de {palpite.valor} lances foi o mais próximo.
+            </p>
+          )}
+          {estado === "perdeu" && (
+            <div>
+              <p style={{ margin: 0, color: COR.text, fontWeight: 700, fontSize: "0.86rem" }}>Outro palpite ficou mais perto.</p>
+              <p style={{ margin: "0.3rem 0 0", color: COR.muted, fontSize: "0.78rem" }}>Seu palpite: {palpite.valor} lances.</p>
+            </div>
+          )}
+          {estado === "encerrada" && (
+            <p style={{ margin: 0, color: COR.muted, fontSize: "0.84rem" }}>Edição encerrada · sem palpite nesta edição.</p>
+          )}
+          {cartaoEmErro === ed.id && erroPalpite && (
+            <p role="alert" style={{ margin: "0.5rem 0 0", color: COR.danger, fontSize: "0.78rem", fontWeight: 700 }}>{erroPalpite}</p>
+          )}
+        </GlassCard>
+      </div>
+    );
   }
 
   const cartao = {
@@ -107,15 +211,15 @@ export default function OfertasProgramadas() {
     <div style={{ padding: isMobile ? "1rem" : "2rem", flex: 1, display: "flex", justifyContent: "center" }}>
       <div style={{ maxWidth: "640px", width: "100%", display: "grid", gap: "1rem" }}>
 
-        {/* 1 — CABEÇALHO */}
-        <header>
+        {/* 1 — CABEÇALHO (UTAC107e.1: dentro de vidro — Regra 1; era um <header> solto) */}
+        <GlassCard as="header" style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
           <h2 style={{ margin: 0, fontSize: isMobile ? "1.35rem" : "1.6rem", fontWeight: 800, color: COR.primary, letterSpacing: "0.04em" }}>
             Ofertas Programadas
           </h2>
           <p style={{ margin: "0.4rem 0 0", color: COR.muted, fontSize: "0.9rem", lineHeight: 1.5 }}>
-            Programa de fidelidade — acumula pontos e troca pelo cartão da Família Quildo
+            Junte 50 pontos e troque pelo cartão da Família Quildo
           </p>
-        </header>
+        </GlassCard>
 
         {loading && (
           <GlassCard as="section" aria-label="A carregar" style={{ padding: "1.25rem" }}>
@@ -203,50 +307,33 @@ export default function OfertasProgramadas() {
           </GlassCard>
         )}
 
-        {/* 4 — PALPITE (bónus) */}
+        {/* 4 — EDIÇÕES PROGRAMADAS (UTAC107e.1): a secção «Palpite» separada SAIU; o palpite vive
+            DENTRO do cartão de cada edição. Mesma estrutura das «Outras Edições» do Início (MC99):
+            título em vidro + rolagem lateral com UMA edição visível e `scroll-snap` ao início. */}
         {!loading && !erro && (
-          <GlassCard as="section" aria-label="Palpite" style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
-            <h3 style={{ margin: 0, color: COR.text, fontWeight: 800, fontSize: "0.95rem" }}>Palpite — bónus de +2 pontos</h3>
-            <p style={{ margin: "0.35rem 0 0.7rem", color: COR.muted, fontSize: "0.8rem", lineHeight: 1.5 }}>
-              Quantos lances achas que a edição vai ter? O mais próximo leva +2 pontos. É bónus: não
-              muda o cartão.
-            </p>
-
-            {!edicao ? (
-              <p style={{ margin: 0, color: COR.muted, fontSize: "0.85rem" }}>Sem edição a decorrer. Volta quando houver.</p>
-            ) : palpite ? (
-              <div>
-                <p style={{ margin: 0, color: COR.ok, fontWeight: 700, fontSize: "0.86rem" }}>
-                  Já palpitou: {palpite.valor} lances
-                </p>
-                <p style={{ margin: "0.3rem 0 0", color: COR.muted, fontSize: "0.78rem" }}>
-                  {palpite.apurado === true
-                    ? (palpite.resultado === "mais_proximo" ? "Acertou! +2 pontos" : "Não acertou")
-                    : "À espera do fecho da edição."}
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                <input
-                  type="number" inputMode="numeric" min="0" step="1" aria-label="Número de lances previstos"
-                  value={valorPalpite}
-                  onChange={(e) => setValorPalpite(e.target.value)}
-                  placeholder="Ex.: 120"
-                  style={{ flex: "1 1 120px", padding: "0.6rem 0.75rem", borderRadius: "10px", border: "1px solid rgba(107,125,184,0.45)", background: "rgba(12,16,24,0.55)", color: COR.text, fontSize: "0.9rem" }}
-                />
-                <button
-                  type="button" onClick={palpitar} disabled={aPalpitar}
-                  style={{ padding: "0.6rem 1.1rem", borderRadius: "10px", cursor: aPalpitar ? "wait" : "pointer", border: "none", background: aPalpitar ? "rgba(107,125,184,0.35)" : COR.gold, color: "#12161f", fontWeight: 800, fontSize: "0.86rem" }}
-                >
-                  {aPalpitar ? "A enviar…" : "Palpitar"}
-                </button>
+          <section aria-label="Edições programadas" style={{ display: "grid", gap: "0.75rem" }}>
+            <GlassCard style={{ padding: isMobile ? "1rem" : "1.25rem" }}>
+              <h3 style={{ margin: 0, color: COR.text, fontWeight: 800, fontSize: "0.95rem" }}>🎫 Edições programadas</h3>
+              <p style={{ margin: "0.35rem 0 0", color: COR.muted, fontSize: "0.8rem", lineHeight: 1.5 }}>
+                Palpite quantos lances a edição vai ter. O palpite mais próximo ganha +2 pontos — é bônus, não muda o cartão.
+              </p>
+              {programadas.length === 0 && (
+                <p style={{ margin: "0.6rem 0 0", color: COR.muted, fontSize: "0.85rem" }}>Sem edições programadas no momento. Volte quando houver.</p>
+              )}
+            </GlassCard>
+            {programadas.length > 0 && (
+              <div
+                data-testid="op-edicoes-scroll"
+                style={{
+                  display: "flex", gap: isMobile ? "0.75rem" : "1rem",
+                  overflowX: "auto", overflowY: "hidden",
+                  scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", paddingBottom: "0.25rem",
+                }}
+              >
+                {programadas.map(cartaoEdicao)}
               </div>
             )}
-
-            {erroPalpite && (
-              <p role="alert" style={{ margin: "0.5rem 0 0", color: COR.danger, fontSize: "0.78rem", fontWeight: 700 }}>{erroPalpite}</p>
-            )}
-          </GlassCard>
+          </section>
         )}
 
         {/* 4b — HISTÓRICO */}
@@ -273,11 +360,39 @@ export default function OfertasProgramadas() {
         {/* UTAC106h — as Regras Oficiais do programa de fidelidade ficam a um toque do ecrã onde
             os pontos se acumulam (requisito Google Play: regras publicadas no app). Só acrescenta
             o link — nenhuma outra alteração a este ecrã. */}
-        <p style={{ margin: "1.25rem 0 0", textAlign: "center" }}>
-          <Link to="/regras-oficiais" style={{ color: COR.muted, fontSize: "0.8rem", textDecoration: "underline" }}>
+        {/* UTAC107e.1 — Regra 1 + toque: o link passa a botão de 48 px DENTRO de vidro (tinha ≈ 13 px). */}
+        <GlassCard style={{ padding: "0.5rem" }}>
+          <Link to="/regras-oficiais" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "48px", color: COR.text, fontSize: "0.86rem", fontWeight: 700, textDecoration: "none" }}>
             📜 Regras Oficiais do programa
           </Link>
-        </p>
+        </GlassCard>
+
+        {/* 6 — TABELA «Palpites — Edição <id>» (UTAC107e.1, R18-C: SÓ ESTRUTURA). Último vidro, padrão
+            da Regra 2 (o mesmo vidro e as 3 colunas da tabela do Menor Lance Único). Ainda NÃO há
+            endpoint que liste os palpites de uma edição (só os do titular, em `ler-pontos`) — a tabela
+            mostra o estado vazio até um UTAC próprio ligar os dados (e a privacidade: valores 🔒 até
+            ao apuramento). */}
+        {!loading && !erro && edicaoTabela && (
+          <section data-testid="op-tabela-fim" aria-label={`Palpites — Edição ${edicaoTabela.id}`}
+            className="gut-glass-standard" style={{ color: COR.text, padding: isMobile ? "1rem" : "1.5rem" }}>
+            <h3 style={{ margin: "0 0 0.75rem", color: COR.gold, fontWeight: 800, fontSize: isMobile ? "0.95rem" : "1.05rem", letterSpacing: "0.04em" }}>
+              Palpites — Edição {edicaoTabela.id}
+            </h3>
+            <div className="w-full overflow-x-auto rounded-2xl">
+              <table className="w-full border-collapse text-sm">
+                <THead>
+                  <tr>
+                    <TH>#</TH>
+                    <TH>Participante</TH>
+                    <TH>Palpite</TH>
+                  </tr>
+                </THead>
+                <tbody />
+              </table>
+            </div>
+            <p style={{ margin: "0.9rem 0 0", textAlign: "center", color: COR.muted, fontSize: "0.85rem" }}>Ainda não há palpites.</p>
+          </section>
+        )}
       </div>
 
       {/* UTAC106g — BALÃO de resgate do cartão (componente próprio; a lógica de rede vive no

@@ -106,8 +106,13 @@ test("RENDER · o ecrã real substituiu o placeholder (título + subtítulo, sem
   try {
     const t = c.texto();
     assert.match(t, /Ofertas Programadas/);
-    assert.match(t, /Programa de fidelidade — acumula pontos e troca pelo cartão da Família Quildo/);
-    assert.doesNotMatch(t, /EM BREVE/, "o ecrã não pode mostrar «EM BREVE» — é o ecrã real");
+    // UTAC107e.1 — subtítulo do mockup (pt-BR), agora dentro de vidro.
+    assert.match(t, /Junte 50 pontos e troque pelo cartão da Família Quildo/);
+    // UTAC107e.1 — os CARTÕES das edições mostram o estado da fonte única (`getEstadoEdicao`, que com
+    // `EM_BREVE_MODE` diz «EM BREVE», como no Início). A invariante é o ECRÃ: fora dos cartões, nada
+    // de placeholder «EM BREVE».
+    const semCartoes = c.html().replace(/<div data-testid="op-edicao-item"[\s\S]*?<\/article><\/div>/g, "");
+    assert.doesNotMatch(semCartoes.replace(/<[^>]+>/g, " "), /EM BREVE/, "o ecrã não pode ser o placeholder «EM BREVE»");
   } finally { c.dup.restaurar(); }
 });
 
@@ -218,22 +223,29 @@ test("RENDER · com edição Programada a decorrer há campo + botão de palpite
     assert.ok(c.input(), "faltou o campo do palpite");
     assert.equal(c.input().props.type, "number");
     assert.ok(c.botao("Palpitar"), "faltou o botão «Palpitar»");
-    assert.match(c.texto(), /Palpite — bónus de \+2 pontos/);
+    // UTAC107e.1 — o palpite vive DENTRO do cartão da edição (a secção «Palpite» separada saiu).
+    assert.match(c.texto(), /Seu palpite \(nº de lances\)/);
+    assert.match(c.texto(), /SEM PALPITE/);
   } finally { c.dup.restaurar(); }
 });
 
 test("RENDER · sem edição Programada → «Sem edição a decorrer» (sem campo)", async () => {
   const c = await montarEcra(undefined, ctx({ edicoes: { "R-1": { id: "R-1", tipo: "relampago", status: "aberto", termino_em: "2026-12-31T00:00:00.000Z" } } }));
   try {
-    assert.match(c.texto(), /Sem edição a decorrer\. Volta quando houver\./);
+    assert.match(c.texto(), /Sem edições programadas no momento\. Volte quando houver\./);
     assert.equal(c.input(), undefined, "não pode haver campo de palpite sem edição");
   } finally { c.dup.restaurar(); }
 });
 
 test("RENDER · PALPITAR envia POST com Bearer e passa a «Já palpitou»", async () => {
-  const c = await montarEcra((url) => url.includes("registar-palpite")
-    ? { status: 201, json: { ok: true, idempotent: false, palpite: { edicaoId: "PROG-7", valor: 120 } } }
-    : { status: 200, json: LEITURA() });
+  let corpoPost = "";
+  const c = await montarEcra((url, opts) => {
+    if (url.includes("registar-palpite")) {
+      corpoPost = String(opts?.body ?? "");
+      return { status: 201, json: { ok: true, idempotent: false, palpite: { edicaoId: "PROG-7", valor: 120 } } };
+    }
+    return { status: 200, json: LEITURA() };
+  });
   try {
     c.input().props.onChange({ target: { value: "120" } });
     await c.ctrl.assentar();
@@ -242,8 +254,9 @@ test("RENDER · PALPITAR envia POST com Bearer e passa a «Já palpitou»", asyn
     const post = c.dup.chamadas.find((h) => h.url.includes("registar-palpite"));
     assert.ok(post, "não houve POST para registar-palpite");
     assert.equal(post.headers.Authorization, "Bearer AUTHCTX-106f");
-    assert.match(c.texto(), /Já palpitou: 120 lances/);
-    assert.match(c.texto(), /À espera do fecho da edição\./);
+    assert.match(corpoPost, /"edicaoId":"PROG-7"/, "o palpite tem de ir para a edição do CARTÃO");
+    assert.match(c.texto(), /Seu palpite: 120 lances/);
+    assert.match(c.texto(), /Resultado no fim da edição\./);
     assert.equal(c.input(), undefined, "depois de palpitar o campo desaparece (não se muda o palpite)");
   } finally { c.dup.restaurar(); }
 });
@@ -254,8 +267,9 @@ test("RENDER · palpite JÁ apurado como mais próximo → «Acertou! +2 pontos�
   }) }));
   try {
     const t = c.texto();
-    assert.match(t, /Já palpitou: 118 lances/);
-    assert.match(t, /Acertou! \+2 pontos/);
+    // UTAC107e.1 — copy do mockup: o backend premeia o MAIS PRÓXIMO, não o exacto («Acertou» seria falso).
+    assert.match(t, /\+2 pontos! Seu palpite de 118 lances foi o mais próximo\./);
+    assert.match(t, /MAIS PRÓXIMO/);
   } finally { c.dup.restaurar(); }
 });
 
@@ -264,8 +278,9 @@ test("RENDER · palpite apurado como PERDEDOR → «Não acertou» (ninguém gan
     palpites: [{ edicaoId: "PROG-7", valor: 5, apurado: true, resultado: "perdeu" }],
   }) }));
   try {
-    assert.match(c.texto(), /Não acertou/);
-    assert.doesNotMatch(c.texto(), /Acertou/);
+    assert.match(c.texto(), /Outro palpite ficou mais perto\./);
+    assert.match(c.texto(), /NÃO FOI DESSA VEZ/);
+    assert.doesNotMatch(c.texto(), /mais próximo\./, "o perdedor não pode ver a mensagem do vencedor");
   } finally { c.dup.restaurar(); }
 });
 
@@ -279,5 +294,111 @@ test("INVARIANTE · o cartão NUNCA depende do palpite (Google Play: jogo de hab
   }) }));
   try {
     assert.match(c.texto(), /Resgatar cartão/, "o cartão é só por pontos de compra — o palpite é bónus");
+  } finally { c.dup.restaurar(); }
+});
+
+// ═══ UTAC107e.1 — OP: carrossel de edições com o palpite DENTRO do cartão + tabela no fim ═══════
+const DUAS = {
+  "PROG-7": { id: "PROG-7", tipo: "programado", status: "aberto", produto: "Air Fryer", termino_em: "2026-12-31T00:00:00.000Z" },
+  "PROG-8": { id: "PROG-8", tipo: "programado", status: "aberto", produto: "Fones", termino_em: "2026-12-31T00:00:00.000Z" },
+};
+
+test("UTAC107e.1 · carrossel lateral: 1 cartão por edição Programada, snap ao início", async () => {
+  const c = await montarEcra(undefined, ctx({ edicoes: DUAS }));
+  try {
+    const h = c.html();
+    const m = h.match(/data-testid="op-edicoes-scroll"[^>]*style="([^"]*)"/);
+    assert.ok(m, "o contentor do carrossel não existe");
+    for (const re of [/display:flex/, /overflow-x:auto/, /scroll-snap-type:x mandatory/]) assert.match(m[1], re);
+    assert.equal((h.match(/data-testid="op-edicao-item"/g) || []).length, 2, "esperava 2 cartões");
+    assert.match(h, /data-testid="op-edicao-item" style="[^"]*flex:0 0 100%[^"]*scroll-snap-align:start/);
+  } finally { c.dup.restaurar(); }
+});
+
+test("UTAC107e.1 · o palpite está DENTRO do cartão e a secção «Palpite» separada saiu", async () => {
+  const c = await montarEcra();
+  try {
+    const h = c.html();
+    const i = h.indexOf('data-testid="op-edicao-item"');
+    const fim = h.indexOf("</article>", i);
+    assert.ok(i > 0 && fim > i, "cartão não encontrado");
+    assert.match(h.slice(i, fim), /id="palpite-PROG-7"/, "o campo do palpite não está dentro do cartão");
+    assert.match(h.slice(i, fim), /<label for="palpite-PROG-7"/, "o campo não tem rótulo ligado");
+    assert.doesNotMatch(c.texto(), /Palpite — bónus de \+2 pontos/, "a secção «Palpite» separada voltou");
+    assert.doesNotMatch(h, /aria-label="Palpite"/, "a secção «Palpite» separada voltou");
+  } finally { c.dup.restaurar(); }
+});
+
+test("UTAC107e.1 · palpitar no 2.º cartão regista na edição DESSE cartão", async () => {
+  let corpo = "";
+  const c = await montarEcra((url, opts) => {
+    if (url.includes("registar-palpite")) { corpo = String(opts?.body ?? ""); return { status: 201, json: { ok: true, palpite: { edicaoId: "PROG-8", valor: 7 } } }; }
+    return { status: 200, json: LEITURA() };
+  }, ctx({ edicoes: DUAS }));
+  try {
+    const inputs = c.nos().filter((n) => n.type === "input");
+    assert.equal(inputs.length, 2);
+    const segundo = inputs.find((n) => n.props.id === "palpite-PROG-8");
+    segundo.props.onChange({ target: { value: "7" } });
+    await c.ctrl.assentar();
+    const botoes = c.nos().filter((n) => n.type === "button" && texto(n).includes("Palpitar"));
+    await botoes[1].props.onClick();
+    await c.ctrl.assentar();
+    assert.match(corpo, /"edicaoId":"PROG-8"/);
+    assert.match(corpo, /"valor":7/);
+    const h = c.html();
+    assert.match(h, /data-estado-palpite="com_palpite"[\s\S]*?Seu palpite: 7 lances/, "o 2.º cartão não passou a «com palpite»");
+    assert.equal(c.nos().filter((n) => n.type === "input").length, 1, "o 1.º cartão devia continuar com o campo");
+  } finally { c.dup.restaurar(); }
+});
+
+test("UTAC107e.1 · os 5 estados do palpite (função pura)", async () => {
+  const { estadoPalpite } = await vite.ssrLoadModule("/src/pages/OfertasProgramadas.jsx");
+  const ab = { status: "aberto" }, enc = { status: "encerrado" };
+  assert.equal(estadoPalpite(ab, null), "sem_palpite");
+  assert.equal(estadoPalpite(ab, { valor: 1 }), "com_palpite");
+  assert.equal(estadoPalpite(enc, { valor: 1, apurado: true, resultado: "mais_proximo" }), "mais_proximo");
+  assert.equal(estadoPalpite(enc, { valor: 1, apurado: true, resultado: "perdeu" }), "perdeu");
+  assert.equal(estadoPalpite(enc, null), "encerrada");
+  assert.equal(estadoPalpite({ status: "apurado" }, null), "encerrada", "só `aberto` aceita palpite (é o que o backend exige)");
+});
+
+test("UTAC107e.1 · edição encerrada sem palpite: «Edição encerrada», sem campo", async () => {
+  const c = await montarEcra(undefined, ctx({ edicoes: { "PROG-9": { id: "PROG-9", tipo: "programado", status: "encerrado" } } }));
+  try {
+    assert.match(c.texto(), /Edição encerrada · sem palpite nesta edição\./);
+    assert.match(c.texto(), /ENCERRADA/);
+    assert.equal(c.input(), undefined);
+  } finally { c.dup.restaurar(); }
+});
+
+test("UTAC107e.1 · tabela «Palpites — Edição <id>» é o ÚLTIMO bloco, vidro padrão, 3 colunas, vazia", async () => {
+  const c = await montarEcra();
+  try {
+    const h = c.html();
+    const i = h.indexOf('data-testid="op-tabela-fim"');
+    assert.ok(i > 0, "a tabela não existe");
+    const resto = h.slice(i);
+    assert.doesNotMatch(resto.slice(resto.indexOf("</section>")), /<section|<header|<article/, "há blocos depois da tabela");
+    assert.match(h.slice(h.lastIndexOf("<section", i), i + 300), /class="gut-glass-standard"/, "a tabela não usa o vidro padrão");
+    assert.match(c.texto(), /Palpites — Edição PROG-7/);
+    const ths = [...resto.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]);
+    assert.deepEqual(ths, ["#", "Participante", "Palpite"]);
+    assert.match(c.texto(), /Ainda não há palpites\./);
+  } finally { c.dup.restaurar(); }
+});
+
+test("UTAC107e.1 · Regra 1: cabeçalho e link das Regras DENTRO de vidro; link com 48 px", async () => {
+  const c = await montarEcra();
+  try {
+    const h = c.html();
+    assert.match(h, /<header class="gut-glass-standard[^"]*"[^>]*>[\s\S]*?Ofertas Programadas/, "o título não está em vidro");
+    const iLink = h.indexOf('href="/regras-oficiais"');
+    const antes = h.slice(0, iLink);
+    assert.ok(antes.lastIndexOf("gut-glass-standard") > antes.lastIndexOf("</div>"), "o link das Regras está fora de vidro");
+    // O duplo do `Link` (`_stubs-106c/rr.jsx`) descarta o `style` — a altura prova-se pela FONTE.
+    const { readFileSync } = await import("node:fs");
+    const fonte = readFileSync(resolve(AQUI, "..", "OfertasProgramadas.jsx"), "utf8");
+    assert.match(fonte, /<Link to="\/regras-oficiais" style=\{\{[^}]*minHeight: "48px"/, "o link das Regras não tem 48 px");
   } finally { c.dup.restaurar(); }
 });

@@ -24,12 +24,12 @@ const semComentarios = (src) => src
   .split("\n").filter((l) => !l.trimStart().startsWith("//")).join("\n");
 
 // ── A REGRA (UTAC000.10 / DEBT-009) ─────────────────────────────────────────
-// O vencedor EXPOSTO pelo Provider tem de ser o OFICIAL quando existe, e o apurado dos lances
-// locais só quando NÃO existe (comportamento anterior — zero regressões).
+// O vencedor EXPOSTO pelo Provider tem de ser o OFICIAL quando existe.
+// ⚠️ UTAC107e.1 (V2, decisão do operador): SEM resultado oficial o vencedor é `null` — a reserva
+// LOCAL («o menor único que este browser viu», UTAC000.10) SAIU. O 🏆 só existe com o oficial.
 const REGRA_OFICIAL_PRIMEIRO =
-  /const vencedor = resultadoOficial\s*\?\s*\{\s*endereco: resultadoOficial\.vencedor,\s*valor: resultadoOficial\.menorUnicoCentavos\s*\}\s*:\s*vencedorLocal\s*;/;
-const REGRA_LOCAL_RESERVA =
-  /const vencedorLocal = \[\.\.\.lancesExibidos\]\s*\.filter\(\(l\) => !l\.repetido\)\s*\.sort\(\(a, b\) => a\.valor - b\.valor\)\[0\] \?\? null;/;
+  /const vencedor = resultadoOficial\s*\?\s*\{\s*endereco: resultadoOficial\.vencedor,\s*valor: resultadoOficial\.menorUnicoCentavos\s*\}\s*:\s*null\s*;/;
+const REGRA_LOCAL_RESERVA = /const vencedorLocal\b/;
 
 test("o Provider LÊ o resultado oficial da edição activa", () => {
   const s = semComentarios(ler());
@@ -46,10 +46,10 @@ test("o vencedor exposto é o OFICIAL quando existe, com a forma { endereco, val
     + "(ou mudou de forma — o overlay do MercadoLances espera `{ endereco, valor }`)");
 });
 
-test("sem resultado oficial, mantém-se o apuramento local (zero regressões)", () => {
+test("V2 (UTAC107e.1): sem resultado oficial NÃO há vencedor — a reserva local desapareceu", () => {
   const s = semComentarios(ler());
-  assert.match(s, REGRA_LOCAL_RESERVA,
-    "a derivação LOCAL (a reserva) foi alterada — o comportamento anterior está em risco");
+  assert.doesNotMatch(s, REGRA_LOCAL_RESERVA,
+    "a derivação LOCAL do vencedor voltou — o 🏆 apareceria sem resultado oficial (V2)");
 });
 
 test("a API do contexto não mudou: expõe `vencedor`, e não um nome novo (HI9)", () => {
@@ -64,10 +64,12 @@ test("a API do contexto não mudou: expõe `vencedor`, e não um nome novo (HI9)
 // Em vez de confiar no teste, emula-se aqui a reversão da correcção (é o que a mutação M10 faz
 // ao ficheiro, mais abaixo no registo) e verifica-se que as asserções da REGRA falham nessa
 // versão — e que a regra da RESERVA continua a passar (senão o teste seria «falha sempre»).
-test("CONTROLO: com a correcção revertida (em memória), a regra oficial FALHA e a reserva passa", () => {
+test("CONTROLO: com a correcção revertida (em memória), as regras FALHAM", () => {
   const revertido = semComentarios(ler()).replace(/resultadoOficial/g, "NADA");
   assert.doesNotMatch(revertido, REGRA_OFICIAL_PRIMEIRO,
     "o teste NÃO morde: a regra do oficial passaria mesmo sem a correcção");
-  assert.match(revertido, REGRA_LOCAL_RESERVA,
-    "o controlo negativo está mal construído — a reserva local também desapareceu");
+  // e repor a reserva local (o estado antes do V2) tem de ser apanhado pela guarda do V2
+  const comReserva = semComentarios(ler()).replace(/:\s*null\s*;/, ": vencedorLocal;")
+    + "\nconst vencedorLocal = null;";
+  assert.match(comReserva, REGRA_LOCAL_RESERVA, "o controlo do V2 está mal construído");
 });

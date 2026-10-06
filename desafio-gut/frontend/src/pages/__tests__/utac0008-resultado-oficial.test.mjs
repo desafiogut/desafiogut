@@ -159,15 +159,17 @@ describe("UTAC000.8 · Frente B — 🏆/«Menor Lance» leem o RESULTADO OFICIA
 
     // BIDIRECCIONALIDADE: sem o resultado oficial, o comportamento anterior mantém-se.
     // (É o estado que o defeito DEBT-007 produzia — o lance do próprio levava o 🏆.)
-    test(`${nome}: SEM resultado oficial o apuramento local mantém-se (prova do antes; zero regressões)`, () => {
+    // ⚠️ UTAC107e.1 (V2): sem resultado oficial NÃO há 🏆 (era o apuramento local). O cartão
+    // «Menor Lance» (o VALOR) mantém o apuramento local — não é troféu.
+    test(`${nome}: V2 — SEM resultado oficial nenhum 🏆; o «Menor Lance» mantém o valor local`, () => {
       const lances = [{ valor: 300, repetido: false, endereco: EU }];
       const html = renderizar({
         contexto: { lances, address: EU, isConnected: true },
         resultadoOficial: null,
         mobile,
       });
-      assert.deepEqual(vencedoresNoEcra(html), ["3.00"]);
-      assert.equal(trofeusNaLista(html), 2);
+      assert.deepEqual(vencedoresNoEcra(html), []);
+      assert.equal(trofeusNaLista(html), 0);
       assert.equal(valorMenorLance(html), "R$ 3.00");
     });
 
