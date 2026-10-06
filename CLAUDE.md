@@ -4907,3 +4907,42 @@ intactos; `EM_BREVE_MODE = true`. HI5: ~35 min (excedido ~5 min, declarado).
 **Registo:** `_logs/UTAC107g.3-rc1.md` · `_logs/UTAC107g.3_SEG4_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107g.3-RC1.txt`.
 **Custo:** validador 96 984 tokens = 1,9–194 ¢ (38,8 ¢ se tudo input); sessão ≈ 120 k tokens = 2,4–240 ¢ (48 ¢ se tudo input), não medida.
 **Próximo:** 106i (AAB novo).
+
+
+## R14 (append) -- UTAC107g.4 -- FECHAR a porta do `?rc=1` (seguranca) (hermes)
+
+**Tipo:** CODIGO (frontend + testes). **Baseline:** `2c51e5a`. **Commit do fix:** `7d4c5de` (push =
+auto-deploy Git do Netlify). **Suite:** frontend VERDE **849/849** · backend VERDE 1095/1101.
+
+**O que fecha:** o UTAC107g.3 passou o match de `?rc=1` de substring a EXATO, mas manteve o `?rc=1`
+exato a abrir a UI do lojista a um ANONIMO (decisao do operador desse UTAC). O 107g.4 fecha-a:
+`temAcessoDiretoCadastro()` (`src/lib/acessoDiretoCadastro.js`) devolve **`false` sempre** — assinatura
+preservada (1 parametro) e `App.jsx` **NAO tocado** (fora do diff). As 8 rotas de `CorporativoRoute`
+continuam guardadas; o `rc` so era consultado no ramo `!isConnected`, logo o lojista AUTENTICADO nao
+passa pela funcao (`isConnected===true` salta `App.jsx:147-151`) — sem regressao. A funcao mantem-se
+como **ponto unico de verdade**, com comentario de decisao (reabrir exige novo teste de seguranca).
+
+**⚠️ Nota de nomes (medicao):** o enunciado chama-lhe `acessoDiretoCadastro()`; o nome REAL e
+`temAcessoDiretoCadastro` (o FICHEIRO e que se chama `acessoDiretoCadastro.js`).
+
+**Testes/mutacao:** teste reescrito — bisseccao bidirecional (o predicado do 107g.3 ABRIA com `?rc=1`)
++ «nenhum URL abre» (27 URLs: ataques por substring, `#rc=1`, `&rc=1`, `?RC=1`, `?rc=01`, `?rc=true`,
+URL absoluto, sem parametro) + entrada nao-texto + aridade === 1 + cablagem. **Mutacao 2/2 RED**,
+restaurado byte-identico. Verificador ad-hoc: **13 PASS / 0 FAIL** (32 inputs => `false`).
+
+**Validador adversarial (worktree `7d4c5de`, A13):** **APROVADO · 0 bloqueantes (0 graves; 5 notas i)**.
+Testou a funcao REAL sobre **49 URLs + 14 entradas nao-texto**: 0 abriram. Provou que os testes mordem
+(M1/M2/M3 => RED), que o `App.jsx` esta fora do diff (md5 `93c092d4…`) e que o lojista autenticado nao
+passa pela funcao. **Todas as 8 tentativas de refutacao falharam.** Notas i (todas de escopo): I-1
+codigo morto no `CorporativoDashboard.jsx:30-36` (limpa `?rc=1`, agora inalcancavel); I-2
+`pareceAutenticado` e gate PRE-EXISTENTE; I-3 «0 produtores» e por leitura, nao runtime. **Sem
+correccoes pos-veredicto.**
+
+**DEBT-021:** **FECHADA SEM RESIDUO** (linha 56 do `_logs/DEBT.md`, historico a vista, cita `7d4c5de`;
+diff 1/1). Residuos fora de escopo declarados (I-1/I-2) -> candidatos a UTAC de limpeza.
+
+**Registo:** `_logs/UTAC107g.4-porta-rc1.md` · `_logs/UTAC107g.4_SEG4_VALIDADOR.md` ·
+`Desktop/RELATORIO-UTAC107g.4-PORTA-RC1.txt`. **Custo:** ~US$ 0,100 = **10 centavos** (executor ~0,087 +
+validador ~0,013); validador ~US$ 0,019/1M tokens (693 610 tokens); saldo API 1,12 -> 1,03 (delta ~9c).
+Duracao ~25 min activos (com a propagacao do auto-deploy, ~30-35 min — no limite do HI5, declarado).
+**Proximo:** 106i (AAB novo) -> Play Console (Ruan).
