@@ -209,6 +209,19 @@ export async function edicaoApurada(edicaoId) {
 }
 
 /**
+ * UTAC107e.2 (Frente C) — TODOS os palpites de uma edição (mais antigos primeiro), para a
+ * tabela das Ofertas Programadas. Só lê; a privacidade (esconder o valor durante a edição)
+ * é decidida por quem chama (`ler-palpites.mjs`). `[]` para um id inválido; **lança** em erro.
+ */
+export async function listarPalpitesDaEdicao(edicaoId) {
+  if (!edicaoValida(edicaoId)) return [];
+  const { data, error } = await getSupabase().from(TABELA_PALPITES)
+    .select("endereco,valor,criado_em").eq("edicao_id", edicaoId).order("criado_em", { ascending: true });
+  if (error) throw new Error(`[passe-pontos] listarPalpitesDaEdicao falhou: ${error.code ?? error.message}`);
+  return Array.isArray(data) ? data : [];
+}
+
+/**
  * Regista o palpite (nº de lances previstos) de um endereço numa edição.
  * Idempotente por (endereco, edicao_id): a 2.ª tentativa devolve o existente (`criado:false`).
  *

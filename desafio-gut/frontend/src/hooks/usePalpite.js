@@ -10,7 +10,7 @@
 // `saldo-rs` usa — e NÃO do `getAuthToken` do `useTrocarPorSenhas` (JWT `lance-auth`, que o
 // `registar-palpite` rejeita com 401 token_invalido).
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiPost } from "../lib/api.js";
+import { apiGet, apiPost } from "../lib/api.js";
 import { useAppContext } from "../context/AppContext.jsx";
 
 export function usePalpite(edicaoId, palpiteInicial = null) {
@@ -62,4 +62,34 @@ export function usePalpite(edicaoId, palpiteInicial = null) {
   }, [edicaoId, authToken]);
 
   return { palpite, registar, loading, erro, conectado: Boolean(address) };
+}
+
+/**
+ * UTAC107e.2 (Frente C) — os palpites de UMA edição, para a tabela «Palpites — Edição <id>» da OP.
+ * `GET ler-palpites?edicaoId=` com o `authToken` (user-session). Durante a edição o servidor NÃO
+ * manda o valor (`revelado:false`); depois do fecho manda. Sem sessão ⇒ lista vazia, sem pedido.
+ * Extensão declarada: o `registar` acima não mudou.
+ */
+export function usePalpitesDaEdicao(edicaoId) {
+  const { authToken } = useAppContext();
+  const [estado, setEstado] = useState({ palpites: [], revelado: false, erro: false });
+
+  useEffect(() => {
+    setEstado({ palpites: [], revelado: false, erro: false });
+    if (!edicaoId || !authToken) return undefined;
+    let cancelado = false;
+    (async () => {
+      try {
+        const { ok, data } = await apiGet(`ler-palpites?edicaoId=${encodeURIComponent(edicaoId)}`, { token: authToken });
+        if (cancelado) return;
+        if (!ok || !Array.isArray(data?.palpites)) { setEstado({ palpites: [], revelado: false, erro: true }); return; }
+        setEstado({ palpites: data.palpites, revelado: data.revelado === true, erro: false });
+      } catch {
+        if (!cancelado) setEstado({ palpites: [], revelado: false, erro: true });
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [edicaoId, authToken]);
+
+  return estado;
 }

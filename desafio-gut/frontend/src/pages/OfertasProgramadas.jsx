@@ -21,15 +21,18 @@
 import { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useIsMobile } from "../hooks/useIsMobile.js";
-import { GlassCard, THead, TH } from "@/components/ui";
+import { GlassCard, THead, TH, TD } from "@/components/ui";
 // UTAC107e.1 — a etiqueta de estado de cada cartão vem da MESMA fonte única das outras abas.
 import { getEstadoEdicao } from "../utils/edicao.js";
 import Toast from "../widgets/toast/Toast.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
 import { usePontos } from "../hooks/usePontos.js";
-import { usePalpite } from "../hooks/usePalpite.js";
+import { usePalpite, usePalpitesDaEdicao } from "../hooks/usePalpite.js";
 import { useResgatarCartao } from "../hooks/useResgatarCartao.js";
 import ResgatarCartaoModal, { CARTAO_ID } from "../components/ResgatarCartaoModal.jsx";
+
+// UTAC107e.2 — endereço curto na tabela de palpites (0x1234…abcd); nunca rebenta com lixo.
+const curto = (e) => (typeof e === "string" && e.length > 12 ? `${e.slice(0, 6)}…${e.slice(-4)}` : "—");
 
 const COR = {
   gold: "#f5a623", primary: "#ff6b35", text: "#e8f0fe", muted: "#6b7db8",
@@ -91,6 +94,8 @@ export default function OfertasProgramadas() {
   const programadas = useMemo(() => edicoesProgramadasDe(edicoes), [edicoes]);
   // A tabela do fim é da 1.ª edição da lista (a aberta, quando há).
   const edicaoTabela = programadas[0] ?? null;
+  // UTAC107e.2 (Frente C) — dados da tabela: `ler-palpites`; o valor só chega depois do fecho.
+  const tabelaPalpites = usePalpitesDaEdicao(edicaoTabela?.id ?? null);
   // Um só hook para todos os cartões: o `registar` recebe a edição do cartão tocado (UTAC107e.1).
   const { registar, loading: aPalpitar, erro: erroPalpite } = usePalpite(null);
   // Palpites registados nesta sessão (antes de o `ler-pontos` os devolver) e o rascunho de cada cartão.
@@ -373,11 +378,10 @@ export default function OfertasProgramadas() {
           </Link>
         </GlassCard>
 
-        {/* 6 — TABELA «Palpites — Edição <id>» (UTAC107e.1, R18-C: SÓ ESTRUTURA). Último vidro, padrão
-            da Regra 2 (o mesmo vidro e as 3 colunas da tabela do Menor Lance Único). Ainda NÃO há
-            endpoint que liste os palpites de uma edição (só os do titular, em `ler-pontos`) — a tabela
-            mostra o estado vazio até um UTAC próprio ligar os dados (e a privacidade: valores 🔒 até
-            ao apuramento). */}
+        {/* 6 — TABELA «Palpites — Edição <id>» (UTAC107e.1, R18-C: estrutura). Último vidro, padrão
+            da Regra 2 (o mesmo vidro e as 3 colunas da tabela do Menor Lance Único).
+            UTAC107e.2 (Frente C): os dados vêm do `ler-palpites`. Durante a edição o servidor NÃO manda
+            o valor — a coluna mostra 🔒; depois do fecho mostra o palpite. */}
         {!loading && !erro && edicaoTabela && (
           <section data-testid="op-tabela-fim" aria-label={`Palpites — Edição ${edicaoTabela.id}`}
             className="gut-glass-standard" style={{ color: COR.text, padding: isMobile ? "1rem" : "1.5rem" }}>
@@ -393,10 +397,20 @@ export default function OfertasProgramadas() {
                     <TH>Palpite</TH>
                   </tr>
                 </THead>
-                <tbody />
+                <tbody>
+                  {tabelaPalpites.palpites.map((p, i) => (
+                    <tr key={`${p.endereco}-${i}`} data-palpite-linha>
+                      <TD>{i + 1}</TD>
+                      <TD style={{ fontFamily: "monospace" }}>{curto(p.endereco)}</TD>
+                      <TD>{tabelaPalpites.revelado && Number.isInteger(p.valor) ? `${p.valor} lances` : "🔒"}</TD>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </div>
-            <p style={{ margin: "0.9rem 0 0", textAlign: "center", color: COR.muted, fontSize: "0.85rem" }}>Ainda não há palpites.</p>
+            {tabelaPalpites.palpites.length === 0 && (
+              <p style={{ margin: "0.9rem 0 0", textAlign: "center", color: COR.muted, fontSize: "0.85rem" }}>Ainda não há palpites.</p>
+            )}
           </section>
         )}
       </div>

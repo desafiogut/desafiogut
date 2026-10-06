@@ -16,6 +16,7 @@ import GutoSpritePlayer from "../components/GutoSpritePlayer.jsx";
 import CarrosselGUTO from "../components/CarrosselGUTO.jsx";
 import StatTile from "../components/StatTile.jsx";
 import EdicaoCard from "../components/EdicaoCard.jsx";
+import { EtiquetaMeuLance } from "../components/EtiquetaEstadoLance.jsx";
 import EdicaoBanner, { TAMANHO_BANNER_PADRAO } from "../components/EdicaoBanner.jsx";
 import { GlassCard } from "@/components/ui";
 // MC88.43 — fonte única do estado da edição. Antes o cronómetro obedecia à trava
@@ -440,6 +441,14 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          {/* UTAC107e.2 (Frente B) — etiqueta do PRÓPRIO lance na Edição Ativa, só com a edição
+              encerrada no ecrã (fonte única MC88.43) E consolidada no servidor. */}
+          {estAtiva.encerrada && (
+            <div style={{ display: "flex", justifyContent: "center", margin: "0 0 0.75rem" }}>
+              <EtiquetaMeuLance edicaoId={EDICAO_ATIVA} encerrado authToken={authToken} />
+            </div>
+          )}
 
           <button
             onClick={() => navigate("/mercado")}

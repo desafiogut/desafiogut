@@ -4,6 +4,7 @@ import Confetti from "../components/Confetti.jsx";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 import { useLanceFeedback } from "../hooks/useLanceFeedback.js";
 import CardLance from "../components/CardLance.jsx";
+import { EtiquetaMeuLance } from "../components/EtiquetaEstadoLance.jsx";
 import LanceStatusBadge from "../components/LanceStatusBadge.jsx";
 import TabelaLances from "../components/TabelaLances.jsx";
 import { GlassCard } from "@/components/ui";
@@ -357,6 +358,9 @@ export default function MercadoLances() {
               status={lanceStatus}
               mudou={lanceMudou}
             />
+            {/* UTAC107e.2 (Frente B) — etiqueta do PRÓPRIO lance, só depois do fecho (o servidor só
+                responde depois da consolidação; durante a edição não desenha nada — anti-bot MC28.1). */}
+            <EtiquetaMeuLance edicaoId={EDICAO_ATIVA} encerrado={encerrado} authToken={authToken} />
             {/* MC67 (item 8) — card "Segurança e Transparência" movido para Configurações. */}
           </section>
           <section data-testid="tabela-fim">
