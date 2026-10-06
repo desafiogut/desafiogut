@@ -4840,3 +4840,24 @@ candidatos a desligar, APK sem estas mudancas (106i).
 **Registo:** `_logs/UTAC107g-navegacao.md` · `_logs/UTAC107g_SEG7_VALIDADOR.md` · `Desktop/RELATORIO-UTAC107g-NAVEGACAO.txt`.
 **Custo:** validador 142 205 tokens = 2,8–284 ¢ (56,9 ¢ se tudo input); sessao principal ≈ 525 600 tokens de contexto = 10,5–1051 ¢
 (210 ¢ se tudo input), nao medida com precisao. **Proximo:** 106i (AAB novo).
+
+
+## R14 (append) -- UTAC107g.1 -- PENDENCIAS PEQUENAS DO 107g (Claude Code, Opus 5.5)
+
+**Tipo:** copy + comentarios + registo de divida. **Baseline:** `d1e150e`. **Commits:** `f7171f6` -> `0a9f425` -> registo.
+**Suite:** frontend VERDE **840/840** (+2) · backend VERDE 1095/1101. **Deploy:** push = auto-deploy; live `index-DDV4eNIE.js`. ~26 min (HI5 30).
+
+**A (copy pt-BR):** «Tens N senhas antigas…» -> **«Você tem N senhas antigas…»** (Meus Ativos e indicador da Carteira);
+«Não tens senhas antigas.» -> **«Você não tem senhas antigas.»**. Guarda nova nos testes contra marcadores pt-PT
+(tens/tu/teu/tua/usas/inicia/vê, «a verificar/carregar»). **B (comentarios):** `EdicaoCard.jsx`/`EdicaoBanner.jsx` ja nao dizem
+que o banner navega para `/edicao/:id` — abre MODAL (MC47) e a rota foi removida no 107g (so comentarios no diff).
+**C (divida):** **DEBT-021** — `?rc=1` lido em `App.jsx` (CorporativoRoute) e `CorporativoDashboard.jsx`, 0 produtores; abre 8 rotas
+do lojista a um anonimo (so UI; substring: `?src=1` tambem abre). **Codigo NAO apagado** (decisao do operador).
+
+**Validador adversarial: APROVADO** (0 graves); ℹ️1 alcance da DEBT-021 subestimado -> texto corrigido; ℹ️2 guarda de dialecto so
+via «tens» (4 mutantes sobreviviam) -> reforcada, **11/11 mutantes mortos**; correcoes nao re-validadas em 2.ª ronda.
+**Mutacao executor:** 4/4. **Escopo:** 8 ficheiros autorizados; backend, navegacao, package*, 5 `.bak-*` intactos; `EM_BREVE_MODE = true`.
+**Pendencias:** pt-PT fora do escopo em `OfertasProgramadas.jsx:310` e `ComprarPasseModal` («Vais comprar») — fechar antes do 106i.
+**Registo:** `_logs/UTAC107g.1-pendencias.md` · `Desktop/RELATORIO-UTAC107g.1-PENDENCIAS.txt`.
+**Custo:** validador 119 031 tokens = 2,4–238 ¢ (47,6 ¢ se tudo input); sessao ≈ 45 000 tokens = 0,9–90 ¢ (18 ¢ se tudo input).
+**Proximo:** 106i (AAB novo).

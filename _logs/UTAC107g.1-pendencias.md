@@ -104,3 +104,24 @@ Subagente independente, worktree `C:/Users/Moltbot/tmp-107g1-val/wt` @ `f7171f6`
 
 **Mutantes do validador re-corridos na árvore principal depois da correcção: 11/11 MORTOS** (A1-A7, B1-B4), md5 restaurado.
 Suíte final **840/840 · 1095/1101 VERDE**. Correcções pós-veredicto não re-validadas por 2.ª ronda (provadas por mutação).
+
+---
+
+## SEG4 — Verificação + deploy + registo
+
+- Suíte canónica **840/840 · 1095/1101 VERDE**; `vite build` ✓; ad-hoc: frases pt-BR nos chunks construídos, comentários só-comentário,
+  DEBT-021 presente, `.bak-*` ×5 = baseline, `EM_BREVE_MODE = true`, `package-lock.json` **não sujado** (nada a restaurar).
+- **Deploy:** `git push` `d1e150e..0a9f425` (foreground) → auto-deploy; ao vivo após ~140 s. Produção: site **200**, `/health` **200**,
+  entry **`index-DDV4eNIE.js`** (era `index-BYkHOleH.js`); `MeusAtivos-B_ObEdcr.js` e `MinhaCarteira-Z0fSleJO.js`
+  (`application/javascript`) com «Você tem» = 1 e «Tens/Não tens» = 0.
+- **Commits:** `f7171f6` (fix) · `0a9f425` (achados do validador) · registo (este).
+- **Duração:** 17:29 → ~17:55 ≈ **26 min** (HI5 = 30 min ✔).
+- **Custo (¢/1M tokens, Opus 5.5: 400 in · 2000 out · 20 cache):** validador **119 031 tokens** → 2,4 ¢ (tudo cache) · **47,6 ¢**
+  (tudo input) · 238 ¢ (tudo output). Sessão principal neste UTAC ≈ **45 000 tokens** de contexto (contador da sessão; não medido com
+  precisão) → 0,9 ¢ · **18 ¢** · 90 ¢.
+
+## Pendências (declaradas)
+1. pt-PT fora do escopo: `OfertasProgramadas.jsx:310` («Ainda não tens pontos. Compra o teu primeiro Passe…», 107e) e
+   `ComprarPasseModal.jsx` («Vais comprar…», 106e) — **recomendado fechar antes do 106i** (o app é pt-BR).
+2. DEBT-021 (`?rc=1`) aberta — remoção num UTAC próprio (abre 8 rotas do lojista a um anónimo, só UI).
+3. `App.jsx:85` diz «modal desde o MC45» (é MC47); comentário do `EdicaoBanner` não lista o `CardEdicaoEspecial`.
