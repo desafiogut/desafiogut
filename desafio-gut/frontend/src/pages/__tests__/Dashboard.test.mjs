@@ -443,3 +443,46 @@ describe("UTAC107c · Início — Passe Desafio, destino e remoções", () => {
     });
   });
 });
+
+// ═══ UTAC107g (Frente A, R18-A) — «Acesso Rápido» sem duplicações ═════════════════════════════
+// Saíram «Depositar PIX», «Converter Ficha» e «Dar Lance»: o destino de cada um (/carteira,
+// /mercado) já é uma aba da barra E já tem, NESTE ecrã, outro elemento que leva lá (KPI «Saldo»,
+// CTA da Edição Ativa). «Converter Ficha» prometia a troca R$→senha que o 107b removeu.
+describe("UTAC107g · Início — «Acesso Rápido» sem atalhos redundantes", () => {
+  /** Os rótulos dos <button> da secção «Acesso Rápido» (só dela — não da página inteira). */
+  function atalhos(html) {
+    const i = html.indexOf("Acesso Rápido");
+    assert.ok(i >= 0, "a secção «Acesso Rápido» desapareceu");
+    const fim = html.indexOf("</section>", i);
+    const bloco = html.slice(i, fim > i ? fim : undefined);
+    return (bloco.match(/<button[\s\S]*?<\/button>/g) || []).map(texto);
+  }
+
+  test("ficam EXACTAMENTE os 4 atalhos para destinos que no telemóvel só vivem no «Mais»", () => {
+    definirResultadoOficial(null);
+    const r = atalhos(renderizar());
+    assert.deepEqual(r.map((t) => t.replace(/^\S+\s+/, "")),
+      ["Vitrine 4 Slots", "Meus Ativos", "Seja Nosso Parceiro", "Configurações"],
+      `atalhos renderizados: ${JSON.stringify(r)}`);
+  });
+
+  test("os 3 removidos NÃO aparecem (nem como atalho, nem noutro sítio do Início)", () => {
+    const t = texto(renderizar());
+    for (const s of ["Depositar PIX", "Converter Ficha", "Dar Lance"]) {
+      assert.ok(!t.includes(s), `«${s}» continua no Início`);
+    }
+  });
+
+  test("cada atalho → destino ÚNICO, e os destinos removidos continuam alcançáveis no mesmo ecrã", async () => {
+    const { readFileSync } = await import("node:fs");
+    const fonte = readFileSync(caminho(AQUI, "../Dashboard.jsx"), "utf8");
+    const bloco = fonte.match(/const ATALHOS = \[[\s\S]*?\];/)?.[0];
+    assert.ok(bloco, "o array ATALHOS desapareceu");
+    const destinos = [...bloco.matchAll(/^\s*\{[^}]*\bto:\s*"([^"]+)"/gm)].map((m) => m[1]);
+    assert.deepEqual(destinos, ["/vitrine", "/ativos", "/seja-nosso-parceiro", "/configuracoes"]);
+    assert.equal(new Set(destinos).size, destinos.length, "dois atalhos para o mesmo destino");
+    // /carteira e /mercado continuam no ecrã: KPI «Saldo (R$)» e CTA da Edição Ativa
+    assert.match(fonte, /label: "Saldo \(R\$\)"[^\n]*to: "\/carteira"/, "o KPI «Saldo» deixou de levar à Carteira");
+    assert.match(fonte, /onClick=\{\(\) => navigate\("\/mercado"\)\}/, "o CTA da Edição Ativa deixou de levar ao /mercado");
+  });
+});

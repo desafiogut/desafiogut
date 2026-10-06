@@ -82,7 +82,8 @@ const SejaNossoParceiro    = lazy(() => import("./pages/SejaNossoParceiro.jsx"))
 const Cadastro             = lazy(() => import("./pages/Cadastro.jsx"));
 const LoginEmail           = lazy(() => import("./pages/LoginEmail.jsx"));
 const DetalheProduto       = lazy(() => import("./pages/DetalheProduto.jsx"));
-const EdicaoDetalhe        = lazy(() => import("./pages/EdicaoDetalhe.jsx"));
+// UTAC107g (R18-C) — `EdicaoDetalhe` (/edicao/:id) saiu: o banner abre um MODAL desde o MC45
+// (EdicaoBanner.jsx:6-7) e nenhum link levava lá. Ficheiro apagado; o histórico está no git.
 // MC72 — página pública de exclusão de conta (Play Store). Standalone (fora do
 // AppLayout) e fora do gate LGPD, mas dentro dos providers (Privy/AppContext).
 const ExcluirConta         = lazy(() => import("./pages/ExcluirConta.jsx"));
@@ -451,7 +452,10 @@ export default function App() {
         <Route path="/login-email" element={<LoginEmail />} />
         {/* MC94.3.2 — retorno do OAuth. STANDALONE (fora do AppLayout) de propósito:
             se estivesse dentro, os gates de cota/LGPD podiam bloquear a própria
-            página que existe para completar a entrada. */}
+            página que existe para completar a entrada.
+            UTAC107g — NÃO é caminho morto: não tem botão porque o destino é o Privy
+            (`customOAuthRedirectUrl`, PrivyRoot.jsx) e o App Link do Android
+            (AndroidManifest.xml). Rota técnica, mantida e documentada. */}
         <Route path="/redirect" element={<EntradaOAuth />} />
         {/* MC20.2 FASE 1 · ITEM 2 — AppLayout (3 camadas) substitui Layout como
             rota-mãe; renderiza o Layout existente intacto na superfície (zero
@@ -476,8 +480,6 @@ export default function App() {
           <Route path="/vitrine/:slot" element={<Vitrine />} />
           {/* MC15 ITEM 4 — detalhe de produto do marketplace */}
           <Route path="/produto/:id" element={<DetalheProduto />} />
-          {/* MC45 — informações de uma edição (destino do banner clicável) */}
-          <Route path="/edicao/:id" element={<EdicaoDetalhe />} />
           <Route path="/programacao"   element={<ScheduleView />} />
           <Route path="/ativos"     element={<MeusAtivos />}    />
           {/* MC39.3.1 (#7): checklist de segurança é só para o lojista (corporativo).
@@ -509,8 +511,9 @@ export default function App() {
           </Route>
           {/* MC11.1 — rota pública: Seja Nosso Parceiro. Sem proteção. */}
           <Route path="/seja-nosso-parceiro" element={<SejaNossoParceiro />} />
-          {/* MC17 — rota direta pós-cadastro (sem gate). */}
-          <Route path="/corp" element={<CorporativoDashboard />} />
+          {/* UTAC107g — `/corp` (MC17, painel do lojista SEM guarda) saiu: o único produtor,
+              SejaNossoParceiro, passou a `/corporativo` no MC99.1 (`irParaPainel`); zero
+              referências em src/, netlify/functions/ e e-mails. */}
           {/* MC11 — rotas corporativas (gated por CorporativoRoute). */}
           <Route path="/corporativo"            element={<CorporativoRoute><CorporativoDashboard /></CorporativoRoute>} />
           <Route path="/corporativo/cotas"      element={<CorporativoRoute><CorporativoCotas /></CorporativoRoute>} />
@@ -520,6 +523,10 @@ export default function App() {
           {/* MC17.1 — carteira do lojista + mercado dedicado (isolamento R4 preservado). */}
           <Route path="/corporativo/carteira"   element={<CorporativoRoute><CorporativoCarteira /></CorporativoRoute>} />
           <Route path="/corporativo/mercado"    element={<CorporativoRoute><MercadoLances /></CorporativoRoute>} />
+          {/* UTAC107g (R18-B) — URL desconhecida (incl. as rotas removidas `/edicao/:id` e
+              `/corp`, e links antigos) vai para o Início em vez de um ecrã em branco.
+              Fica no FIM: o React Router escolhe a rota mais específica, não a primeira. */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
       </Suspense>

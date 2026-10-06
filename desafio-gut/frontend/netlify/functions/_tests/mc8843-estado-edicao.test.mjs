@@ -161,7 +161,8 @@ test("timerTravado(): rótulo com a trava ligada, null sem ela", async () => {
 
 const CONSUMIDORES = [
   "pages/Dashboard.jsx",
-  "pages/EdicaoDetalhe.jsx",
+  // UTAC107g — `pages/EdicaoDetalhe.jsx` saiu desta lista porque o ficheiro foi APAGADO (rota
+  // `/edicao/:id` sem nenhum link; decisão do operador R18-C). Os consumidores vivos ficam todos.
   "components/EdicaoCard.jsx",
   "components/TabelaLances.jsx",
   "components/CardLance.jsx",

@@ -195,3 +195,62 @@ describe("UTAC105c · Frentes D/E — placeholders declarados", () => {
     }
   });
 });
+
+// ═══ UTAC107g (Frente B) — «Meus Ativos» é a casa das senhas antigas (Via A) ══════════════════
+// Discreta (R18-D): contagem + onde se usam, SEM botão. `saldoSenhas` é uma contagem do contexto.
+describe("UTAC107g · Meus Ativos — secção «Senhas antigas»", () => {
+  const SESSAO = { address: "0xaaaa000000000000000000000000000000000001", isConnected: true };
+
+  /** O HTML só da secção `data-secao="senhas-antigas"`. */
+  function secao(html) {
+    const m = html.match(/<section[^>]*data-secao="senhas-antigas"[\s\S]*?<\/section>/);
+    assert.ok(m, "a secção «Senhas antigas» não existe na página");
+    return m[0];
+  }
+  const estadoDe = (s) => s.match(/data-estado="([^"]+)"/)?.[1];
+
+  test("com senhas > 0: contagem + onde se usam, e NENHUM botão (não promove a Via A)", () => {
+    const s = secao(renderizar({ contexto: { ...SESSAO, saldoSenhas: 3, saldoSenhasStatus: "ok" } }));
+    assert.equal(estadoDe(s), "dados");
+    assert.match(texto(s), /Tens 3 senhas antigas\s?\./ /* o `texto()` troca </strong> por espaço */);
+    assert.match(texto(s), /Lance Programado do Menor Lance Único/);
+    assert.doesNotMatch(s, /<button|<a\b/, "a secção ganhou um botão/link (R18-D: só texto)");
+  });
+
+  test("singular: 1 → «1 senha antiga»", () => {
+    const s = secao(renderizar({ contexto: { ...SESSAO, saldoSenhas: 1, saldoSenhasStatus: "ok" } }));
+    assert.match(texto(s), /Tens 1 senha antiga\s?\./);
+  });
+
+  test("0 senhas → «Não tens senhas antigas» (sem número inventado)", () => {
+    const s = secao(renderizar({ contexto: { ...SESSAO, saldoSenhas: 0, saldoSenhasStatus: "ok" } }));
+    assert.equal(estadoDe(s), "vazio");
+    assert.match(texto(s), /Não tens senhas antigas\./);
+  });
+
+  test("sem sessão / a carregar / erro: não afirma nenhuma contagem", () => {
+    const casos = [
+      [{}, "sem-sessao"],
+      [{ ...SESSAO, saldoSenhas: null, saldoSenhasStatus: "loading" }, "carregando"],
+      [{ ...SESSAO, saldoSenhas: 9, saldoSenhasStatus: "error" }, "erro"],
+    ];
+    for (const [contexto, esperado] of casos) {
+      const s = secao(renderizar({ contexto }));
+      assert.equal(estadoDe(s), esperado, JSON.stringify(contexto));
+      assert.doesNotMatch(texto(s), /\d/, `${esperado}: a secção mostra um número`);
+    }
+  });
+
+  test("estadoSenhasAntigas — sem coerção (null/«3»/1.5/-1/NaN nunca viram contagem)", async () => {
+    const { estadoSenhasAntigas } = await vite.ssrLoadModule("/src/pages/MeusAtivos.jsx");
+    const e = (saldoSenhas, saldoSenhasStatus = "ok", temSessao = true) =>
+      estadoSenhasAntigas({ temSessao, saldoSenhas, saldoSenhasStatus }).estado;
+    assert.equal(e(5), "dados");
+    assert.equal(e(5, "stale"), "dados", "um valor antigo conhecido continua a ser um número");
+    assert.equal(e(0), "vazio");
+    assert.equal(e(null, "idle"), "carregando");
+    assert.equal(e(null, "ok"), "erro");
+    for (const v of ["3", 1.5, -1, NaN, undefined]) assert.equal(e(v), "erro", String(v));
+    assert.equal(e(5, "ok", false), "sem-sessao");
+  });
+});

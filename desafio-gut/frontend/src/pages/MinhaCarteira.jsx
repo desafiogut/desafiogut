@@ -58,7 +58,15 @@ export default function MinhaCarteira() {
     address, user,
     refetchSaldo,
     saldoRsCentavos, saldoRsStatus, refetchSaldoRs,
+    // UTAC107g (Frente B) — só para o indicador discreto das senhas antigas (Via A).
+    saldoSenhas, saldoSenhasStatus,
   } = useAppContext();
+
+  // UTAC107g — o indicador só aparece com um número CONHECIDO e > 0. `null` (ainda não lido),
+  // não-inteiros e o estado "error" não mostram nada: não se afirma o que não se sabe.
+  const senhasAntigas =
+    Number.isSafeInteger(saldoSenhas) && saldoSenhas > 0 && saldoSenhasStatus !== "error"
+      ? saldoSenhas : 0;
 
   // Email do pagador para o PIX (MC39.15.1): coletado automaticamente do login
   // Privy (e-mail/Google/Apple). O CPF NÃO é coletado — o documento do payer é
@@ -309,6 +317,25 @@ export default function MinhaCarteira() {
                 <p style={{ margin: "0.6rem 0 0", fontSize: "0.72rem", color: COR.danger, lineHeight: 1.4 }}>
                   ⚠️ Não foi possível ler o saldo R$ agora.
                 </p>
+              )}
+
+              {/* UTAC107g (Frente B) — as senhas on-chain (Via A) perderam o botão de troca
+                  (107b) e o tile (107c). A casa delas passa a ser «Meus Ativos»; aqui fica só
+                  um aviso DISCRETO (cor muted, sem fundo), dentro do vidro, e só com senhas > 0.
+                  Alvo de toque com 44 px de altura, mesmo sendo visualmente uma linha de texto. */}
+              {senhasAntigas > 0 && (
+                <button
+                  type="button"
+                  data-indicador="senhas-antigas"
+                  onClick={() => navigate("/ativos")}
+                  style={{
+                    display: "flex", alignItems: "center", width: "100%", minHeight: "44px",
+                    margin: "0.35rem 0 0", padding: 0, background: "none", border: "none",
+                    color: COR.muted, fontSize: "0.72rem", textAlign: "left", cursor: "pointer",
+                  }}
+                >
+                  Tens {senhasAntigas} {senhasAntigas === 1 ? "senha antiga" : "senhas antigas"} → ver em Meus Ativos
+                </button>
               )}
             </GlassCard>
 

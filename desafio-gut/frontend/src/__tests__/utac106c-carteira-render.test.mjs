@@ -252,3 +252,53 @@ test("UTAC106c/RENDER · barra e rail: 4 principais na ordem canónica e 5 secun
             tS.indexOf("🤝 Seja nosso parceiro!") < tS.indexOf("Configurações"),
     "a ordem antiga (Configurações antes de Parceiro) voltou ao rail");
 });
+
+// ═══ UTAC107g (Frente B) — indicador DISCRETO das senhas antigas na Carteira ══════════════════
+// Só com senhas > 0 (número conhecido); leva a «Meus Ativos», a casa das senhas (Via A).
+const INDICADOR = "senhas antigas → ver em Meus Ativos";
+
+test("UTAC107g/RENDER · com senhas > 0: «Tens 7 senhas antigas → ver em Meus Ativos», DENTRO do vidro e muted", async () => {
+  const { html, botaoCom } = await montarCarteira(CONECTADO); // saldoSenhas: 7
+  const b = botaoCom(INDICADOR);
+  assert.ok(b, "o indicador não aparece com 7 senhas");
+  assert.equal(texto(b), "Tens 7 senhas antigas → ver em Meus Ativos");
+  assert.equal(b.props.style.color, "#6b7db8", "o indicador não está na cor muted");
+  assert.ok(!b.props.style.background || b.props.style.background === "none", "o indicador ganhou fundo (devia ser discreto)");
+  assert.ok(parseFloat(b.props.style.minHeight) >= 44, "alvo de toque < 44 px");
+  // dentro do cartão de saldo (Regra 1): entre o título «Carteira» e o «Indique e Ganhe»
+  const h = html();
+  const iInd = h.indexOf("ver em Meus Ativos");
+  assert.ok(h.indexOf("Saldo Disponível") < iInd, "o indicador ficou antes do saldo");
+  // e no MESMO vidro do saldo: depois da nota do PIX (último texto do cartão) e antes de o
+  // GlassCard fechar — o fecho mais próximo do indicador tem de ser o desse cartão.
+  const iPix = h.indexOf("Depósito por PIX via Mercado Pago");
+  assert.ok(iPix >= 0 && iPix < iInd, "o indicador saiu do cartão de saldo (antes da nota do PIX ou fora)");
+  const vidro = h.slice(h.lastIndexOf("gut-glass-standard", iInd), iInd);
+  assert.ok(vidro.includes("Saldo Disponível"), "o indicador não está dentro do vidro do saldo (Regra 1)");
+});
+
+test("UTAC107g/RENDER · singular: 1 senha → «Tens 1 senha antiga → …»", async () => {
+  const { botaoCom } = await montarCarteira({ ...CONECTADO, saldoSenhas: 1 });
+  assert.equal(texto(botaoCom("ver em Meus Ativos")), "Tens 1 senha antiga → ver em Meus Ativos");
+});
+
+test("UTAC107g/RENDER · CLICAR o indicador NAVEGA para /ativos", async () => {
+  const c = await montarCarteira(CONECTADO);
+  globalThis.__NAVEGADAS.length = 0;
+  await c.clicar(INDICADOR);
+  assert.deepEqual(globalThis.__NAVEGADAS, ["/ativos"],
+    `o clique não navegou para /ativos: ${JSON.stringify(globalThis.__NAVEGADAS)}`);
+});
+
+test("UTAC107g/RENDER · NÃO aparece com 0, null, não-inteiro, «7» (string) ou status de erro", async () => {
+  for (const extra of [
+    { saldoSenhas: 0 },
+    { saldoSenhas: null, saldoSenhasStatus: "loading" },
+    { saldoSenhas: 2.5 },
+    { saldoSenhas: "7" },
+    { saldoSenhas: 7, saldoSenhasStatus: "error" },
+  ]) {
+    const { html } = await montarCarteira({ ...CONECTADO, ...extra });
+    assert.ok(!html().includes("ver em Meus Ativos"), `o indicador aparece com ${JSON.stringify(extra)}`);
+  }
+});

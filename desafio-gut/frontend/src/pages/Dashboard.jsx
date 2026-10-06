@@ -51,10 +51,12 @@ function timerColor(tempoRestante, totalSegundos) {
 
 const VALOR_POR_SENHA_BRL = 2;
 
+// UTAC107g (R18-A) — saíram «Depositar PIX», «Converter Ficha» e «Dar Lance»: o destino de
+// cada um (/carteira, /mercado) já é uma aba da barra principal E já tem, neste mesmo ecrã,
+// outro elemento que leva lá (KPI «Saldo», CTA da Edição Ativa). «Converter Ficha» ainda
+// prometia a troca R$→senha que o UTAC107b tirou da Carteira. Ficam os atalhos para destinos
+// que, no telemóvel, só existem dentro do «Mais» (1 toque em vez de 2).
 const ATALHOS = [
-  { label: "Depositar PIX",     icon: "💰", to: "/carteira"      },
-  { label: "Converter Ficha",   icon: "🎫", to: "/carteira"      },
-  { label: "Dar Lance",         icon: "🎯", to: "/mercado"       },
   { label: "Vitrine 4 Slots",   icon: "🪟", to: "/vitrine"       },
   { label: "Meus Ativos",       icon: "📊", to: "/ativos"        },
   // MC39.3.1 (#7): atalho "Segurança" removido do Dashboard do utilizador comum —

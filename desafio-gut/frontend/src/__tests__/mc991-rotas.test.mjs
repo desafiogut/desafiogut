@@ -176,15 +176,10 @@ test("MC99.1/b · toda a rota REGISTADA é alcançável (ou está justificada)",
   // Rotas SEM referência que estão DECLARADAS e medidas. Não é uma lista de "aprovado em
   // silêncio": cada entrada tem a medição que a sustenta, e qualquer rota NOVA sem
   // referência continua a morrer aqui (ver prova de mutação).
-  const ORFAS_CONHECIDAS = {
-    "/edicao/:id":
-      "MEDIA/PENDENCIA — a página EdicaoDetalhe NÃO TEM UM ÚNICO link de entrada: " +
-      "grep por /edicao/ em src/ só encontra a própria <Route> (App.jsx:462). A prova " +
-      "está no gémeo morto `hrefOverride` (Vitrine.jsx:167,342,353): o prop foi DESENHADO " +
-      "para apontar para a edição — o rótulo diz «Ir para a edição →» — e nenhum chamador " +
-      "o passa. Ligar isto é DECISÃO DE PRODUTO (a página pode ser intencionalmente " +
-      "inacessível); documentado, não executado. Ver _logs/MC99.1-RELATORIO.md.",
-  };
+  // UTAC107g — a única entrada (`/edicao/:id`, página EdicaoDetalhe sem link de entrada) SAIU:
+  // a rota e o ficheiro foram removidos (decisão do operador R18-C). Fica o objecto VAZIO de
+  // propósito: uma rota nova sem referência continua a morrer aqui.
+  const ORFAS_CONHECIDAS = {};
   // Justificadas por natureza (não se alcançam por <Link>/navigate):
   // ⚠️ UTAC106b: `/menor-lance-unico` e `/ofertas-programadas` são DESTINOS DA BARRA
   // DE NAVEGAÇÃO — chegam-se por `<NavLink to={path}>`, ou seja, por VARIÁVEL, e este
@@ -192,11 +187,16 @@ test("MC99.1/b · toda a rota REGISTADA é alcançável (ou está justificada)",
   // não fica «em silêncio»: `src/__tests__/utac106b-navegacao-frases.test.mjs` e o teste
   // MC99/SEG1 exigem que cada path de MAIN_TABS exista como `<Route path=...>` no App.jsx.
   const POR_CONFIG = /^\/(ativos|carteira|configuracoes|mercado|menor-lance-unico|ofertas-programadas|vitrine|programacao|seja-nosso-parceiro)$/;
-  const POR_PROVIDER = /^\/(redirect|excluir-conta|privacidade|seguranca|corp)$/;
+  // UTAC107g — `corp` saiu da lista: a rota `/corp` foi removida (só tinha sido produzida pelo
+  // SejaNossoParceiro, que o MC99.1 passou para `/corporativo`).
+  const POR_PROVIDER = /^\/(redirect|excluir-conta|privacidade|seguranca)$/;
+  // UTAC107g (R18-B) — o catch-all `*` (dentro do AppLayout → `/*`) não é um destino: é o
+  // que apanha URLs desconhecidas e as manda para o Início. Não se alcança por <Link>.
+  const CATCH_ALL = "/*";
   const orfas = [];
   for (const reg of registadas) {
     if (reg in ORFAS_CONHECIDAS) continue;
-    if (POR_CONFIG.test(reg) || POR_PROVIDER.test(reg)) continue;
+    if (reg === CATCH_ALL || POR_CONFIG.test(reg) || POR_PROVIDER.test(reg)) continue;
     if (reg.startsWith("/admin") || reg.startsWith("/corporativo")) {
       // sub-rotas de painel: alcançadas por navegação interna do próprio painel
       const alcancada = [...referenciadas.keys()].some((r) => casam(r).includes(reg) || reg.startsWith(r));

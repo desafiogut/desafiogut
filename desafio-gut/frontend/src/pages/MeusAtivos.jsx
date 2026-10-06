@@ -15,7 +15,7 @@ import EstadoBonus from "../components/meus-ativos/EstadoBonus.jsx";
 import FeedbackLance from "../components/meus-ativos/FeedbackLance.jsx";
 import RankingCiclo from "../components/meus-ativos/RankingCiclo.jsx";
 import MeusPedidos from "../components/meus-ativos/MeusPedidos.jsx"; // MC-ECOMMERCE-01a
-import { caixa, tituloSecao, legenda } from "../components/meus-ativos/_estilo.js"; // UTAC105c
+import { caixa, tituloSecao, legenda, COR as COR_SECAO } from "../components/meus-ativos/_estilo.js"; // UTAC105c · UTAC107g (COR.senhas)
 
 // ⚠️ Espelha `REGRAS.ACERTOS_PARA_BONUS` de
 // `netlify/functions/_lib/pontuacao-utils.mjs`. O frontend não importa do
@@ -36,9 +36,37 @@ const FILTROS = [
   { id: "repetidos", label: "❌ Repetidos" },
 ];
 
+/**
+ * UTAC107g (Frente B) — estado da secção «Senhas antigas» (Via A, on-chain).
+ *
+ * As senhas perderam o botão de troca (UTAC107b) e o tile do Início (UTAC107c); no telemóvel
+ * deixaram de ter onde se ver. Esta secção é a casa delas — DISCRETA: a Via A está a ser
+ * descontinuada, informa-se, não se promove (sem botão «usar», decisão R18-D).
+ *
+ * `saldoSenhas` é uma CONTAGEM (`AppContext`: `GET /saldo-senhas`, fallback on-chain), não
+ * uma lista. `null` = ainda não lido; o status é idle | loading | ok | stale | error.
+ * ⚠️ Sem coerção: só um inteiro seguro ≥ 0 é um número de senhas (`Number(null)` é 0).
+ *
+ * @returns {{ estado: "sem-sessao"|"carregando"|"erro"|"vazio"|"dados", n: number|null }}
+ */
+export function estadoSenhasAntigas({ temSessao, saldoSenhas, saldoSenhasStatus }) {
+  if (!temSessao) return { estado: "sem-sessao", n: null };
+  const conhecido = Number.isSafeInteger(saldoSenhas) && saldoSenhas >= 0;
+  if (saldoSenhasStatus === "error") return { estado: "erro", n: null };
+  if (!conhecido) {
+    return saldoSenhas == null && saldoSenhasStatus !== "ok"
+      ? { estado: "carregando", n: null }
+      : { estado: "erro", n: null };
+  }
+  return saldoSenhas === 0 ? { estado: "vazio", n: 0 } : { estado: "dados", n: saldoSenhas };
+}
+
 export default function MeusAtivos() {
   const isMobile = useIsMobile();
-  const { lances, address, isConnected, abrirModal, EDICAO_ATIVA, authToken } = useAppContext();
+  const {
+    lances, address, isConnected, abrirModal, EDICAO_ATIVA, authToken,
+    saldoSenhas, saldoSenhasStatus, // UTAC107g (Frente B) — a casa das senhas antigas (Via A)
+  } = useAppContext();
   const [filtro, setFiltro] = useState("todos");
   const t = useT();
 
@@ -61,6 +89,7 @@ export default function MeusAtivos() {
   // trata esta janela (`AppContext.jsx:458` — "`tipoCarregando` fica true; re-corre
   // com o token").
   const temSessao = isConnected && Boolean(address);
+  const senhas = estadoSenhasAntigas({ temSessao, saldoSenhas, saldoSenhasStatus });
   const aEsperarToken = temSessao && feedback.semSessao;
   const feedbackCarregando = feedback.carregando || aEsperarToken;
 
@@ -216,6 +245,25 @@ export default function MeusAtivos() {
       <div style={{ marginBottom: sectionGap }}>
         <MeusPedidos temSessao={temSessao} authToken={authToken} endereco={address} isMobile={isMobile} />
       </div>
+
+      {/* UTAC107g (Frente B) — «Mais» → «Meus Ativos» passa a ser a casa das senhas antigas
+          (Via A). Discreta: contagem + onde se usam, sem botão (decisão R18-D). Roxo = cor
+          semântica de senhas em todo o app (`_estilo.js`). */}
+      <section style={{ ...caixa(isMobile), marginBottom: sectionGap }} data-secao="senhas-antigas" data-estado={senhas.estado}>
+        <h2 style={tituloSecao(isMobile)}>🎫 Senhas antigas</h2>
+        <p style={legenda(isMobile)}>
+          {senhas.estado === "sem-sessao" && "Entre na sua conta para ver as senhas antigas."}
+          {senhas.estado === "carregando" && "Verificando as senhas…"}
+          {senhas.estado === "erro" && "Não foi possível ler as senhas agora."}
+          {senhas.estado === "vazio" && "Não tens senhas antigas."}
+          {senhas.estado === "dados" && (
+            <>
+              Tens <strong style={{ color: COR_SECAO.senhas }}>{senhas.n} {senhas.n === 1 ? "senha antiga" : "senhas antigas"}</strong>.
+              {" "}São usadas no Lance Programado do Menor Lance Único.
+            </>
+          )}
+        </p>
+      </section>
 
       {/* UTAC105c — PLACEHOLDERS DECLARADOS. Cupons e palpites ainda não existem para o
           comprador (não há endpoint que os leia; Passe = UTAC106, concurso = UTAC108). As duas
