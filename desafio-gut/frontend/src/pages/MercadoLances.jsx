@@ -431,9 +431,9 @@ function MercadoConformidade({ isMobile }) {
           margin: "0 0 1.5rem", color: COR.muted,
           fontSize: isMobile ? "0.9rem" : "0.95rem", lineHeight: 1.6,
         }}>
-          As edições do DesafioGUT acontecem na nossa versão Web. Abre{" "}
-          <strong style={{ color: COR.gold }}>desafiogut.com</strong> no teu navegador
-          para participar com saldo, lances e carteira — tudo o que já usas.
+          As edições do DesafioGUT acontecem na nossa versão Web. Abra{" "}
+          <strong style={{ color: COR.gold }}>desafiogut.com</strong> no seu navegador
+          para participar com saldo, lances e carteira — tudo o que você já usa.
           Por aqui, continua a explorar a loja e os produtos.
         </p>
         <a
@@ -475,7 +475,7 @@ function MercadoSkeleton({ isMobile }) {
         maxWidth: "520px", width: "100%",
         padding: isMobile ? "1.75rem 1.5rem" : "2.5rem 2.25rem",
         textAlign: "center",
-      }} aria-busy="true" aria-label="A carregar">
+      }} aria-busy="true" aria-label="Carregando">
         <div style={{
           width: "3rem", height: "3rem", borderRadius: "50%",
           background: "rgba(255,255,255,0.06)", margin: "0 auto 1rem",

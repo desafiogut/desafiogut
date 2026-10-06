@@ -208,7 +208,7 @@ test("RENDER · 0 pontos → estado vazio com caminho para a Carteira", async ()
   const c = await montarEcra(() => ({ status: 200, json: LEITURA({ pontos: 0, pontosCartao: 0, historico: [] }) }));
   try {
     const t = c.texto();
-    assert.match(t, /Ainda não tens pontos\. Compra o teu primeiro Passe na Carteira\./);
+    assert.match(t, /Você ainda não tem pontos\. Compre o seu primeiro Passe na Carteira\./);
     assert.match(t, /Ir para a Carteira/);
     globalThis.__NAVEGADAS.length = 0;
     await c.clicar("Ir para a Carteira");

@@ -368,7 +368,7 @@ export default function MinhaCarteira() {
             setPasseSemSaldo(true);
             setToastPasse({ variant: "error", message: "Saldo insuficiente. Carregar agora?" });
           } else {
-            setToastPasse({ variant: "error", message: r?.message || "Erro. Tenta de novo." });
+            setToastPasse({ variant: "error", message: r?.message || "Erro. Tente de novo." });
           }
         }}
       />

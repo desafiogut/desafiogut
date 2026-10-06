@@ -88,7 +88,7 @@ export default function Comunicacao() {
             onChange={(e) => setLink(e.target.value)} />
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <Button type="submit" variant="primary" size="sm" disabled={enviando || !mensagem.trim()}>
-              {enviando ? "A enviar…" : "Enviar"}
+              {enviando ? "Enviando…" : "Enviar"}
             </Button>
             {msg && <span style={{ fontSize: "0.72rem", color: msg.startsWith("Erro") ? COR.danger : COR.success }}>{msg}</span>}
           </div>

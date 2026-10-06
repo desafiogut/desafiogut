@@ -78,7 +78,7 @@ export default function PainelIndicacao({ isMobile: isMobileProp }) {
 
   async function compartilhar() {
     if (!linkConvite) return;
-    const texto = `🎯 Te convido para o DesafioGUT! Use meu código ${dados.codigo} e, no teu 1º lance, nós dois ganhamos +1 senha.`;
+    const texto = `🎯 Te convido para o DesafioGUT! Use meu código ${dados.codigo} e, no seu 1º lance, nós dois ganhamos +1 senha.`;
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({ title: "DesafioGUT — Indique e Ganhe", text: texto, url: linkConvite });

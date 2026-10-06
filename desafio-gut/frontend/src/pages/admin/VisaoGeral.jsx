@@ -164,7 +164,7 @@ export default function VisaoGeral() {
           {stats?.cache === "hit" ? " · em cache" : ""}
         </span>
         <Button variant="ghost" size="sm" onClick={() => { carregar(); carregarOnchain(); carregarSeries(); carregarAlertas(); }} disabled={carregando}>
-          {carregando ? "A ler…" : "↻ Atualizar"}
+          {carregando ? "Lendo…" : "↻ Atualizar"}
         </Button>
       </div>
 

@@ -55,8 +55,8 @@ export default function ResgatarCartaoModal({ aberto, onConfirmar, onCancelar, l
       </h2>
 
       <p style={{ margin: "0 0 0.9rem", color: COR.muted, fontSize: "0.9rem", lineHeight: 1.5 }}>
-        Vais trocar <strong style={{ color: COR.text }}>{PONTOS_DO_CARTAO} pontos</strong> pelo cartão da
-        Família Quildo. Confirma os dados de entrega.
+        Você vai trocar <strong style={{ color: COR.text }}>{PONTOS_DO_CARTAO} pontos</strong> pelo cartão da
+        Família Quildo. Confirme os dados de entrega.
       </p>
 
       {mensagem && (
@@ -140,7 +140,7 @@ export default function ResgatarCartaoModal({ aberto, onConfirmar, onCancelar, l
               ⏳
             </span>
           )}
-          {loading ? "A processar…" : "Confirmar resgate"}
+          {loading ? "Processando…" : "Confirmar resgate"}
         </button>
       </div>
     </Modal>

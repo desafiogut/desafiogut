@@ -142,7 +142,7 @@ test("CLIQUE · «Resgatar cartão» abre o balão com o formulário de morada",
     assert.equal(b.props.aberto, true, "o botão tem de abrir o balão");
     const t = c.texto();
     assert.match(t, /Resgatar cartão colecionável/);
-    assert.match(t, /Vais trocar 50 pontos pelo cartão da Família Quildo/);
+    assert.match(t, /Você vai trocar 50 pontos pelo cartão da Família Quildo/);
     const h = c.html();
     for (const id of ["rg-nome", "rg-cpf", "rg-cep", "rg-cidade", "rg-uf", "rg-logradouro", "rg-numero", "rg-bairro"]) {
       assert.match(h, new RegExp(`id="${id}"`), `faltou o campo ${id} no formulário`);
@@ -174,7 +174,7 @@ test("CLIQUE · 402 do servidor mostra a mensagem e mantém o balão aberto", as
     await c.clicar("Resgatar cartão");
     await c.balao().props.onConfirmar(MORADA);
     await c.ctrl.assentar();
-    assert.match(c.texto(), /Precisas de 50 pontos de compra para resgatar o cartão/);
+    assert.match(c.texto(), /Você precisa de 50 pontos de compra para resgatar o cartão/);
     assert.equal(c.balao().props.aberto, true, "no erro o balão NÃO fecha");
   } finally { c.dup.restaurar(); }
 });

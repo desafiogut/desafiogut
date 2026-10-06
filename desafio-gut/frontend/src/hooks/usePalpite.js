@@ -30,7 +30,7 @@ export function usePalpite(edicaoId, palpiteInicial = null) {
     const alvo = edicaoIdArg;
     if (!alvo) return { ok: false, code: "sem_edicao", message: "Sem edição a decorrer" };
     if (!Number.isInteger(valor) || valor < 0) {
-      return { ok: false, code: "valor_invalido", message: "Escreve um número inteiro de lances" };
+      return { ok: false, code: "valor_invalido", message: "Escreva um número inteiro de lances" };
     }
     // ⚠️ UTAC106j-fix: sem `authToken` (user-session) o endpoint daria 401 — código próprio.
     if (!authToken) return { ok: false, code: "sem_sessao", message: "Sessão ainda não pronta. Tente novamente." };
@@ -46,7 +46,7 @@ export function usePalpite(edicaoId, palpiteInicial = null) {
         return { ok: true, palpite: p, idempotent: data?.idempotent === true };
       }
       const message = status === 401 ? "Sessão expirada"
-        : status === 409 ? "Precisas de ter comprado um Passe para palpitar"
+        : status === 409 ? "Você precisa ter comprado um Passe para palpitar"
         : status === 404 ? "Essa edição não existe"
         : status === 400 ? "Palpite inválido"
         : "Erro do servidor";

@@ -41,8 +41,8 @@ const COR = {
 
 const CARTAO_NOME = "Cartão da Família Quildo";
 const CARTAO_DESCRICAO =
-  "Cartão colecionável físico, com a arte da Família Quildo. Acumula 50 pontos para trocar por ele. "
-  + "O palpite dá pontos EXTRA, mas o cartão conquista-se só com os pontos das tuas compras.";
+  "Cartão colecionável físico, com a arte da Família Quildo. Acumule 50 pontos para trocar por ele. "
+  + "O palpite dá pontos EXTRA, mas o cartão é conquistado só com os pontos das suas compras.";
 
 /** Edição Programada ainda a aceitar palpites (o backend exige `status === "aberto"`). */
 const estaAberta = (e) => e?.status === "aberto";
@@ -233,8 +233,8 @@ export default function OfertasProgramadas() {
         </GlassCard>
 
         {loading && (
-          <GlassCard as="section" aria-label="A carregar" style={{ padding: "1.25rem" }}>
-            <p style={{ margin: 0, color: COR.muted, fontSize: "0.9rem" }}>A carregar os teus pontos…</p>
+          <GlassCard as="section" aria-label="Carregando" style={{ padding: "1.25rem" }}>
+            <p style={{ margin: 0, color: COR.muted, fontSize: "0.9rem" }}>Carregando seus pontos…</p>
           </GlassCard>
         )}
 
@@ -278,7 +278,7 @@ export default function OfertasProgramadas() {
                   🎁 Resgatar cartão
                 </button>
                 <p style={{ margin: "0.4rem 0 0", color: COR.muted, fontSize: "0.74rem", textAlign: "center" }}>
-                  Vais trocar {pontosParaCartao} pontos pelo cartão da Família Quildo.
+                  Você vai trocar {pontosParaCartao} pontos pelo cartão da Família Quildo.
                 </p>
               </>
             ) : (
@@ -307,7 +307,7 @@ export default function OfertasProgramadas() {
         {semPontos && (
           <GlassCard as="section" aria-label="Sem pontos" style={{ padding: "1.25rem", textAlign: "center" }}>
             <p style={{ margin: 0, color: COR.text, fontSize: "0.9rem" }}>
-              Ainda não tens pontos. Compra o teu primeiro Passe na Carteira.
+              Você ainda não tem pontos. Compre o seu primeiro Passe na Carteira.
             </p>
             <button
               type="button" onClick={() => navigate("/carteira")}

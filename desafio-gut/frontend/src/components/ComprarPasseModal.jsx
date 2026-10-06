@@ -39,14 +39,14 @@ export default function ComprarPasseModal({ aberto, onConfirmar, onCancelar, loa
       </h2>
 
       <p style={{ margin: "0 0 0.9rem", color: COR.muted, fontSize: "0.9rem", lineHeight: 1.5 }}>
-        Vais comprar <strong style={{ color: COR.text }}>1 Passe</strong> por{" "}
-        <strong style={{ color: COR.gold }}>{PRECO_PASSE_DESAFIO}</strong>. Ganhas{" "}
+        Você vai comprar <strong style={{ color: COR.text }}>1 Passe</strong> por{" "}
+        <strong style={{ color: COR.gold }}>{PRECO_PASSE_DESAFIO}</strong>. Você ganha{" "}
         <strong style={{ color: COR.text }}>1 ponto</strong>. Continuar?
       </p>
 
       {typeof pontos === "number" && (
         <p style={{ margin: "0 0 0.9rem", color: COR.muted, fontSize: "0.82rem" }}>
-          Teus pontos (total): <strong style={{ color: COR.gold }}>{pontos}</strong> →{" "}
+          Seus pontos (total): <strong style={{ color: COR.gold }}>{pontos}</strong> →{" "}
           <strong style={{ color: COR.gold }}>{pontos + PONTOS_POR_PASSE}</strong>{" "}
           — o cartão conta só os pontos das compras.
         </p>
@@ -91,7 +91,7 @@ export default function ComprarPasseModal({ aberto, onConfirmar, onCancelar, loa
               ⏳
             </span>
           )}
-          {loading ? "A processar…" : "Confirmar"}
+          {loading ? "Processando…" : "Confirmar"}
         </button>
       </div>
     </Modal>

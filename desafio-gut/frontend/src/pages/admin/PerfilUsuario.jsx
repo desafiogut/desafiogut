@@ -94,7 +94,7 @@ export default function PerfilUsuario() {
   }
 
   if (!chamarAdmin) return <p style={{ color: COR.muted }}>Autentique-se para ver perfis.</p>;
-  if (carregando) return <p style={{ color: COR.muted }}>A carregar…</p>;
+  if (carregando) return <p style={{ color: COR.muted }}>Carregando…</p>;
   if (erro) return <p style={{ color: COR.danger }}>{erro}</p>;
 
   const p = perfil?.perfil || {};

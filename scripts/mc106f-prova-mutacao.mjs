@@ -42,7 +42,7 @@ const MUTANTES = [
   // R-F: a LARGURA da barra (o texto e o aria-valuenow já tinham guarda; a largura não).
   ["R-F barra: LARGURA volta a usar o TOTAL", PAGINA, "(pontosCartao / Math.max(1, pontosParaCartao))", "(pontos / Math.max(1, pontosParaCartao))", FE, ALVO_FE],
   // R-G: o rótulo do balão da Carteira volta a apresentar o TOTAL sem dizer que o é (incoerência com a barra).
-  ["R-G rótulo do modal: deixa de declarar «(total)»", MODAL, "Teus pontos (total):", "Teus pontos:", FE, ALVO_MODAL],
+  ["R-G rótulo do modal: deixa de declarar «(total)»", MODAL, "Seus pontos (total):", "Seus pontos:", FE, ALVO_MODAL],
 ];
 
 const md5 = (b) => createHash("md5").update(b).digest("hex");

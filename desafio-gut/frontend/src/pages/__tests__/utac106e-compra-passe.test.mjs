@@ -209,7 +209,7 @@ test("RENDER · CLICAR abre o balão com o TEXTO decidido (R$ 2,00 · 1 ponto ·
   assert.match(h, /Comprar Passe Desafio/, "o balão não abriu");
   // ⚠️ O `semTags` troca cada tag por um ESPAÇO (as tags `<strong>` interiores deixam um espaço
   // antes do ponto final) — a regex é tolerante a isso de propósito.
-  assert.match(h, /Vais comprar 1 Passe por R\$ 2,00\s*\.\s*Ganhas 1 ponto\s*\.\s*Continuar\?/, `texto do balão errado: «${h}»`);
+  assert.match(h, /Você vai comprar 1 Passe por R\$ 2,00\s*\.\s*Você ganha 1 ponto\s*\.\s*Continuar\?/, `texto do balão errado: «${h}»`);
   assert.match(html(), /aria-modal="true"/, "o balão não é um diálogo modal acessível");
 });
 
@@ -252,7 +252,7 @@ test("RENDER · durante o loading, «Confirmar» mostra o SPINNER e ambos os bot
     aberto: true, loading: true, pontos: 3, onConfirmar: () => {}, onCancelar: () => {},
   }));
   assert.match(h, /data-spinner="true"/, "faltou o spinner no botão «Confirmar»");
-  assert.match(h, /A processar…/, "faltou o rótulo de loading");
+  assert.match(h, /Processando…/, "faltou o rótulo de loading");
   assert.match(h, /aria-busy="true"/, "o botão não anuncia o estado ocupado");
   const desactivados = (h.match(/disabled=""/g) || []).length;
   assert.equal(desactivados, 2, `os DOIS botões deviam estar desactivados; medidos ${desactivados}`);
@@ -267,7 +267,7 @@ test("RENDER · o balão mostra a progressão dos pontos, DECLARANDO que é o TO
     aberto: true, loading: false, pontos: 49, onConfirmar: () => {}, onCancelar: () => {},
   }));
   const t = semTags(h);
-  assert.match(t, /Teus pontos \(total\): 49 → 50/, `a progressão (total) não apareceu: «${t}»`);
+  assert.match(t, /Seus pontos \(total\): 49 → 50/, `a progressão (total) não apareceu: «${t}»`);
   assert.match(t, /o cartão conta só os pontos das compras/,
     "o rótulo tem de declarar que este número é o total — o cartão conta só as compras");
 });

@@ -23,7 +23,7 @@ import { gerarIdempotencyKey } from "../utils/idempotency.js";
 // Mensagens por código HTTP do endpoint (UTAC106g): 401/402/400.
 const MSG_POR_STATUS = {
   401: "Sessão expirada",
-  402: "Precisas de 50 pontos de compra para resgatar o cartão",
+  402: "Você precisa de 50 pontos de compra para resgatar o cartão",
   400: "Confere os dados de entrega",
 };
 
